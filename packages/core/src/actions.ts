@@ -1,4 +1,4 @@
-import { BUILDING_BY_ID } from '@capital/content';
+import { BUILDING_BY_ID, STRUCTURE_BY_ID, getCeoModifiers } from '@capital/content';
 import { LAND_SELL_RATIO, tilePrice } from './systems/city';
 import type { CommandResult, GameState } from './types';
 
@@ -26,30 +26,98 @@ export function canBuild(state: GameState, companyId: string, defId: string): Co
       reason: `${def.name} için ${formatShort(def.unlockNetWorth)} şirket değeri gerekiyor.`,
     };
   }
-  if (company.cash < def.cost) {
-    return { ok: false, reason: `Nakit yetersiz — ${formatShort(def.cost)} gerekiyor.` };
+  const cost = buildCost(state, companyId, defId);
+  if (company.cash < cost) {
+    return { ok: false, reason: `Nakit yetersiz — ${formatShort(cost)} gerekiyor.` };
   }
   return { ok: true };
 }
 
-export function buyTile(state: GameState, companyId: string, tileId: number): CommandResult {
+/** CEO pazarlığı uygulanmış inşaat maliyeti. */
+export function buildCost(state: GameState, companyId: string, defId: string): number {
+  const def = BUILDING_BY_ID[defId];
+  if (!def) return 0;
+  const company = state.companies[companyId];
+  return Math.round(def.cost * getCeoModifiers(company?.ceoId ?? null).buildCost);
+}
+
+/** Parselin neden alınamadığını açıklar; alınabiliyorsa null döner. */
+export function purchaseBlocker(state: GameState, tileId: number): string | null {
   const tile = state.map.tiles[tileId];
-  if (!tile) return { ok: false, reason: 'Arsa bulunamadı.' };
+  if (!tile) return 'Parsel bulunamadı.';
+  if (tile.kind === 'road') return 'Burası sokak — satılık değil.';
+  if (tile.kind === 'civic') {
+    const structure = tile.structureId ? STRUCTURE_BY_ID[tile.structureId] : null;
+    return `${structure?.name ?? 'Kamu alanı'} — belediye malı, satılık değil.`;
+  }
   if (tile.ownerId) {
     const owner = state.companies[tile.ownerId];
-    return { ok: false, reason: `Bu arsa ${owner?.name ?? 'bir rakibe'} ait.` };
+    return `Bu parsel ${owner?.name ?? 'bir rakibe'} ait.`;
+  }
+  return null;
+}
+
+export function buyTile(state: GameState, companyId: string, tileId: number): CommandResult {
+  const blocker = purchaseBlocker(state, tileId);
+  if (blocker) return { ok: false, reason: blocker };
+
+  const tile = state.map.tiles[tileId]!;
+  if (tile.structureId) {
+    const structure = STRUCTURE_BY_ID[tile.structureId];
+    return {
+      ok: false,
+      reason: `Parselde ${structure?.name ?? 'mevcut bir yapı'} var — sahibinden devralman gerekiyor.`,
+    };
   }
 
   const company = state.companies[companyId];
   if (!company) return { ok: false, reason: 'Bilinmeyen şirket.' };
 
-  const price = tilePrice(state, tileId);
+  const price = tilePrice(state, tileId, companyId);
   if (company.cash < price) {
-    return { ok: false, reason: `Nakit yetersiz — arsa ${formatShort(price)}.` };
+    return { ok: false, reason: `Nakit yetersiz — parsel ${formatShort(price)}.` };
   }
 
   company.cash -= price;
   tile.ownerId = companyId;
+  return { ok: true };
+}
+
+/**
+ * Mevcut yapıyı sahibinden primli devralır ve yıkar.
+ *
+ * Sıkışık bir şehirde büyümenin asıl yolu bu: iyi bölgede boş parsel
+ * kalmadığında birinin işini satın alırsın.
+ */
+export function buyoutTile(state: GameState, companyId: string, tileId: number): CommandResult {
+  const blocker = purchaseBlocker(state, tileId);
+  if (blocker) return { ok: false, reason: blocker };
+
+  const tile = state.map.tiles[tileId]!;
+  if (!tile.structureId) {
+    return { ok: false, reason: 'Parsel zaten boş — doğrudan satın alabilirsin.' };
+  }
+
+  const structure = STRUCTURE_BY_ID[tile.structureId];
+  if (!structure || structure.buyoutMultiplier === null) {
+    return { ok: false, reason: 'Bu yapı hiçbir fiyata devredilmiyor.' };
+  }
+
+  const company = state.companies[companyId];
+  if (!company) return { ok: false, reason: 'Bilinmeyen şirket.' };
+
+  const price = tilePrice(state, tileId, companyId);
+  if (company.cash < price) {
+    return {
+      ok: false,
+      reason: `${structure.name} devralmak ${formatShort(price)} tutuyor — nakit yetersiz.`,
+    };
+  }
+
+  company.cash -= price;
+  tile.ownerId = companyId;
+  tile.structureId = null;
+  tile.structureHeight = 0;
   return { ok: true };
 }
 
@@ -74,17 +142,16 @@ export function build(
   defId: string,
 ): CommandResult {
   const tile = state.map.tiles[tileId];
-  if (!tile) return { ok: false, reason: 'Arsa bulunamadı.' };
-  if (tile.ownerId !== companyId) return { ok: false, reason: 'Önce bu arsayı satın alın.' };
-  if (tile.buildingId) return { ok: false, reason: 'Arsada zaten bir bina var.' };
+  if (!tile) return { ok: false, reason: 'Parsel bulunamadı.' };
+  if (tile.ownerId !== companyId) return { ok: false, reason: 'Önce bu parseli satın alın.' };
+  if (tile.buildingId) return { ok: false, reason: 'Parselde zaten bir bina var.' };
 
   const allowed = canBuild(state, companyId, defId);
   if (!allowed.ok) return allowed;
 
-  const def = BUILDING_BY_ID[defId]!;
   const company = state.companies[companyId]!;
 
-  company.cash -= def.cost;
+  company.cash -= buildCost(state, companyId, defId);
   const id = `b${state.nextId++}`;
   state.buildings[id] = {
     id,

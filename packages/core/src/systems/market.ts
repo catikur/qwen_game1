@@ -4,6 +4,7 @@ import {
   CONSUMER_CATEGORIES,
   DISTRICT_ARCHETYPES,
   EVENTS,
+  getCeoModifiers,
 } from '@capital/content';
 import type { CategoryId } from '@capital/content';
 import { zeroByCategory } from '../worldgen';
@@ -27,6 +28,21 @@ import type { BuildingInstance, GameState } from '../types';
  */
 
 const WAGE_PER_JOB = 42;
+
+/** CEO'nun bir binanın kalitesine kattığı prim. */
+function qualityFor(state: GameState, companyId: string, defId: string): number {
+  const def = BUILDING_BY_ID[defId];
+  if (!def) return 0;
+  const ceo = getCeoModifiers(state.companies[companyId]?.ceoId ?? null);
+  const bonus = ceo.categoryQuality?.category === def.category ? ceo.categoryQuality.bonus : 0;
+  return Math.max(0.05, Math.min(1, def.quality + bonus));
+}
+
+function upkeepFor(state: GameState, companyId: string, defId: string): number {
+  const def = BUILDING_BY_ID[defId];
+  if (!def) return 0;
+  return def.upkeepPerDay * getCeoModifiers(state.companies[companyId]?.ceoId ?? null).upkeep;
+}
 const WAREHOUSE_COST_BONUS = 0.88;
 const FACTORY_COST_BONUS = 0.85;
 /** Komşu district'ten gelen müşteri ağırlığı. */
@@ -171,7 +187,9 @@ export function estimateInvestment(
 
   const category = CATEGORIES[def.category];
   const wages = def.jobs * WAGE_PER_JOB * (0.6 + district.incomeLevel);
-  const fixedCosts = def.upkeepPerDay + wages;
+  const fixedCosts = upkeepFor(state, companyId, defId) + wages;
+  // Geri ödeme, oyuncunun gerçekten ödeyeceği maliyete göre hesaplanır.
+  const investmentCost = def.cost * getCeoModifiers(state.companies[companyId]?.ceoId ?? null).buildCost;
 
   if (def.role === 'logistics' || def.role === 'production') {
     return {
@@ -212,7 +230,7 @@ export function estimateInvestment(
       cogs,
       fixedCosts,
       dailyProfit,
-      paybackDays: dailyProfit > 0 ? def.cost / dailyProfit : Infinity,
+      paybackDays: dailyProfit > 0 ? investmentCost / dailyProfit : Infinity,
     };
   }
 
@@ -227,7 +245,7 @@ export function estimateInvestment(
 
   const brand = 0.45 + 0.55 * (company.brand[def.category] ?? 0);
   const selfAttractiveness =
-    Math.pow(Math.max(0.05, def.quality), 1.15) *
+    Math.pow(qualityFor(state, companyId, defId), 1.15) *
     brand *
     Math.pow(1 / priceMultiplier, category.elasticity);
 
@@ -240,7 +258,8 @@ export function estimateInvestment(
     const otherCompany = state.companies[other.companyId];
     const otherBrand = 0.45 + 0.55 * (otherCompany?.brand[def.category] ?? 0);
     const priceFactor = Math.pow(1 / other.priceMultiplier, category.elasticity);
-    rivalAttractiveness += Math.pow(Math.max(0.05, otherDef.quality), 1.15) * otherBrand * priceFactor;
+    rivalAttractiveness +=
+      Math.pow(qualityFor(state, other.companyId, other.defId), 1.15) * otherBrand * priceFactor;
   }
 
   const share = selfAttractiveness / (selfAttractiveness + rivalAttractiveness);
@@ -261,7 +280,7 @@ export function estimateInvestment(
     cogs,
     fixedCosts,
     dailyProfit,
-    paybackDays: dailyProfit > 0 ? def.cost / dailyProfit : Infinity,
+    paybackDays: dailyProfit > 0 ? investmentCost / dailyProfit : Infinity,
   };
 }
 
@@ -334,14 +353,15 @@ export function runMarketTick(state: GameState): void {
     // Sabit giderler her binada işler, satış olsun olmasın.
     const district = state.districts[building.districtId];
     const wages = def.jobs * WAGE_PER_JOB * (0.6 + (district?.incomeLevel ?? 0.5));
+    const upkeep = upkeepFor(state, building.companyId, building.defId);
     building.last = {
       unitsSold: 0,
       capacityUsed: 0,
       revenue: 0,
       cogs: 0,
-      upkeep: def.upkeepPerDay,
+      upkeep,
       wages,
-      profit: -def.upkeepPerDay - wages,
+      profit: -upkeep - wages,
       share: 0,
     };
 
@@ -411,7 +431,7 @@ export function runMarketTick(state: GameState): void {
           const price = category.basePrice * building.priceMultiplier;
           const priceFactor = Math.pow(category.basePrice / price, category.elasticity);
           const brand = 0.45 + 0.55 * (company.brand[categoryId] ?? 0);
-          const quality = Math.pow(Math.max(0.05, def.quality), 1.15);
+          const quality = Math.pow(qualityFor(state, building.companyId, building.defId), 1.15);
           const capacityLeft = Math.max(0, def.capacity - building.last.unitsSold);
 
           if (capacityLeft <= 0) continue;
@@ -569,8 +589,10 @@ export function runMarketTick(state: GameState): void {
       company.marketShare[categoryId] = share;
 
       // Marka payı takip eder ama yavaş: bir günde zirveye çıkılmaz.
+      // CEO'nun pazarlama kabiliyeti bu hızı belirler.
       const target = Math.min(1, share * 1.15);
-      company.brand[categoryId] += (target - company.brand[categoryId]) * 0.035;
+      const growth = 0.035 * getCeoModifiers(company.ceoId).brandGrowth;
+      company.brand[categoryId] += (target - company.brand[categoryId]) * growth;
       company.brand[categoryId] = Math.max(0.05, Math.min(1, company.brand[categoryId]));
     }
 

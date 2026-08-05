@@ -38,8 +38,9 @@ function playerStrategy(engine: GameEngine): void {
   let best: { tileId: number; defId: string; payback: number } | null = null;
 
   for (const district of districts.slice(0, 4)) {
+    // Yalnızca gerçekten satın alınabilir boş parseller.
     const tile = state.map.tiles
-      .filter((t) => t.districtId === district.id && !t.ownerId && !t.buildingId)
+      .filter((t) => t.districtId === district.id && t.kind === 'plot' && !t.ownerId && !t.structureId)
       .sort((a, b) => a.landValue - b.landValue)[0];
     if (!tile) continue;
 
@@ -170,7 +171,9 @@ for (const seed of [1, 7, 42]) {
   const district = [...state.districts].sort(
     (a, b) => districtOpportunity(b) - districtOpportunity(a),
   )[0]!;
-  const tile = state.map.tiles.find((t) => t.districtId === district.id && !t.ownerId)!;
+  const tile = state.map.tiles.find(
+    (t) => t.districtId === district.id && t.kind === 'plot' && !t.ownerId && !t.structureId,
+  )!;
   const estimate = estimateInvestment(state, district.id, 'corner_shop', state.playerCompanyId)!;
 
   engine.dispatch({ type: 'BUY_TILE', tileId: tile.id });
@@ -200,13 +203,83 @@ player.cash = 50_000_000;
 player.netWorth = 50_000_000;
 let built = 0;
 for (const def of BUILDINGS) {
-  const tile = engine.getState().map.tiles.find((t) => !t.ownerId && !t.buildingId);
+  const tile = engine
+    .getState()
+    .map.tiles.find((t) => t.kind === 'plot' && !t.ownerId && !t.structureId && !t.buildingId);
   if (!tile) break;
   engine.dispatch({ type: 'BUY_TILE', tileId: tile.id });
   if (engine.dispatch({ type: 'BUILD', tileId: tile.id, defId: def.id }).ok) built++;
   else console.log(`  kurulamadı: ${def.id}`);
 }
 expect('katalogdaki her bina kurulabiliyor', built === BUILDINGS.length, `${built}/${BUILDINGS.length}`);
+
+// Parsel kısıtı: şehir gerçekten kıt olmalı ama tıkanmamalı.
+{
+  const state = createNewGame({ seed: 3 });
+  const total = state.map.tiles.length;
+  const roads = state.map.tiles.filter((t) => t.kind === 'road').length;
+  const civic = state.map.tiles.filter((t) => t.kind === 'civic').length;
+  const occupied = state.map.tiles.filter((t) => t.kind === 'plot' && t.structureId).length;
+  const vacant = state.map.tiles.filter((t) => t.kind === 'plot' && !t.structureId).length;
+
+  console.log(
+    `\nŞehir dokusu: ${roads} sokak, ${civic} kamu, ${occupied} dolu parsel, ${vacant} boş parsel (toplam ${total})`,
+  );
+  expect('şehrin çoğu zaten dolu', (roads + civic + occupied) / total > 0.7, `%${Math.round(((roads + civic + occupied) / total) * 100)}`);
+  expect('yine de yeterli boş parsel var', vacant >= 80 && vacant <= 180, `${vacant} boş parsel`);
+  expect(
+    'her bölgede en az bir boş parsel var',
+    state.districts.every((d) =>
+      state.map.tiles.some((t) => t.districtId === d.id && t.kind === 'plot' && !t.structureId),
+    ),
+    'tüm bölgeler girilebilir',
+  );
+}
+
+// Devralma: dolu parsel primli alınabilmeli, kamu alanı hiçbir fiyata alınmamalı.
+{
+  const engine2 = new GameEngine(createNewGame({ seed: 4 }));
+  const s = engine2.getState();
+  getPlayer(s).cash = 5_000_000;
+
+  const occupied = s.map.tiles.find((t) => t.kind === 'plot' && t.structureId)!;
+  const directBuy = engine2.dispatch({ type: 'BUY_TILE', tileId: occupied.id });
+  const buyout = engine2.dispatch({ type: 'BUYOUT_TILE', tileId: occupied.id });
+  expect('dolu parsel doğrudan alınamıyor', !directBuy.ok, directBuy.reason ?? '');
+  expect(
+    'dolu parsel devralınabiliyor',
+    buyout.ok && s.map.tiles[occupied.id]!.structureId === null,
+    buyout.reason ?? 'devralındı, yapı yıkıldı',
+  );
+
+  const civicTile = s.map.tiles.find((t) => t.kind === 'civic');
+  if (civicTile) {
+    const attempt = engine2.dispatch({ type: 'BUYOUT_TILE', tileId: civicTile.id });
+    expect('kamu alanı satın alınamıyor', !attempt.ok, attempt.reason ?? '');
+  }
+
+  const roadTile = s.map.tiles.find((t) => t.kind === 'road')!;
+  const roadAttempt = engine2.dispatch({ type: 'BUY_TILE', tileId: roadTile.id });
+  expect('sokak satın alınamıyor', !roadAttempt.ok, roadAttempt.reason ?? '');
+}
+
+// CEO etkileri gerçekten ekonomiye dokunuyor mu?
+{
+  const plain = new GameEngine(createNewGame({ seed: 8, ceoId: null }));
+  const developer = new GameEngine(createNewGame({ seed: 8, ceoId: 'muteahhit' }));
+  const heir = new GameEngine(createNewGame({ seed: 8, ceoId: 'mirasci' }));
+
+  const plot = plain.getState().map.tiles.find((t) => t.kind === 'plot' && !t.structureId)!;
+  const basePrice = tilePrice(plain.getState(), plot.id, 'player');
+  const devPrice = tilePrice(developer.getState(), plot.id, 'player');
+
+  expect('CEO arsa pazarlığı fiyata yansıyor', devPrice < basePrice, `${basePrice} → ${devPrice}`);
+  expect(
+    'CEO başlangıç sermayesi farklı',
+    getPlayer(heir.getState()).cash > getPlayer(plain.getState()).cash,
+    `${formatMoney(getPlayer(plain.getState()).cash)} → ${formatMoney(getPlayer(heir.getState()).cash)}`,
+  );
+}
 
 console.log(`\n=== ${failures === 0 ? 'TÜMÜ GEÇTİ' : `${failures} KONTROL KALDI`} ===`);
 process.exit(failures === 0 ? 0 : 1);

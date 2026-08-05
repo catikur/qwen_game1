@@ -5,6 +5,6 @@ export * from './actions';
 export * from './selectors';
 export * from './news';
 export * from './engine';
-export { tilePrice, LAND_SELL_RATIO, BUILDING_BOOK_RATIO } from './systems/city';
+export { tilePrice, isPurchasable, LAND_SELL_RATIO, BUILDING_BOOK_RATIO } from './systems/city';
 export { collectEventModifiers, estimateInvestment } from './systems/market';
 export type { InvestmentEstimate } from './systems/market';

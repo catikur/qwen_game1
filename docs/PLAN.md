@@ -76,6 +76,28 @@ Bunlar `packages/core/test/balance.ts` ile her değişiklikte doğrulanıyor:
 - Rakipler canlı kalmalı ama oyuncuyu ezici üstünlükle geçmemeli.
 - Bir oyun yılı sonunda pazarda hâlâ karşılanmamış talep kalmalı.
 
+## v0.2 — oyuncu deneyimi turu
+
+Oynanış geri bildirimi sonrası eklenenler:
+
+- **Şirket kurulumu ekranı.** Oyun artık haritanın ortasında başlamıyor;
+  önce şirket adı ve CEO seçiliyor.
+- **CEO'lar.** Altı karakter, her biri parametrelerden çizilen SVG portre.
+  Seçim kozmetik değil: başlangıç sermayesi, arsa pazarlığı, inşaat
+  maliyeti, işletme gideri, marka büyüme hızı ve sektör kalitesi CEO'ya
+  göre değişiyor.
+- **Parsel sistemi.** Sınırsız tahta yerine gerçek şehir kısıtı: kareler
+  sokak / kamu alanı / parsel olarak ayrıldı. Şehrin %80'i zaten kurulu
+  geliyor; boş parsel kıt bir kaynak.
+- **Devralma.** Dolu bir parseli almak istiyorsan mevcut sahibine yapı
+  tipine göre 1,7x–3,6x prim ödeyip yapıyı yıkıyorsun. İyi bölgede boş
+  parsel bitince büyümenin yolu bu.
+- **Yaşayan şehir.** Sokak ızgarası, mevcut yapı dokusu (apartman,
+  rezidans, esnaf, depo, park, okul, meydan), sokaklarda akan trafik ve
+  bağımsız bir gece-gündüz döngüsü. Gece binaların pencereleri yanıyor.
+- **Uyarlanabilir kalite.** İlk 2,5 saniyede kare hızı ölçülüyor; zayıf
+  cihazda gölgeler kapatılıp akıcılık korunuyor.
+
 ## Bilinen dengesizlikler
 
 - Geç oyunda büyüme üstel: bir oyun yılında ~25-35M şirket değeri. Faz 3'ün

@@ -49,7 +49,31 @@ export type LoadOutcome =
  * kayıtlar kaybolmaz.
  */
 const MIGRATIONS: Record<number, (raw: Record<string, unknown>) => Record<string, unknown>> = {
-  // 1 -> 2 örneği ileride buraya gelecek.
+  /**
+   * v1 → v2: parsel sistemi ve CEO seçimi eklendi.
+   *
+   * Eski şehirlerde sokak ızgarası ve mevcut yapı dokusu yoktu. Kaydı
+   * yeniden üretmek ilerlemeyi silerdi; bunun yerine her kareyi boş parsel
+   * sayıyoruz. Eski şehir yolsuz görünmeye devam eder ama oynanır kalır.
+   */
+  1: (raw) => {
+    const tiles = (raw['map'] as { tiles?: Array<Record<string, unknown>> } | undefined)?.tiles;
+    if (Array.isArray(tiles)) {
+      for (const tile of tiles) {
+        tile['kind'] = 'plot';
+        tile['structureId'] = null;
+        tile['structureHeight'] = 0;
+      }
+    }
+
+    const companies = raw['companies'] as Record<string, Record<string, unknown>> | undefined;
+    if (companies) {
+      for (const company of Object.values(companies)) {
+        if (company['ceoId'] === undefined) company['ceoId'] = null;
+      }
+    }
+    return raw;
+  },
 };
 
 function migrate(raw: Record<string, unknown>): LoadOutcome {

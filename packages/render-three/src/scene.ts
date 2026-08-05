@@ -1,8 +1,9 @@
 import * as THREE from 'three';
-import { BUILDING_BY_ID, DISTRICT_ARCHETYPES } from '@capital/content';
+import { BUILDING_BY_ID, DISTRICT_ARCHETYPES, STRUCTURE_BY_ID } from '@capital/content';
 import { lensValue } from '@capital/core';
 import type { GameState, LensId } from '@capital/core';
 import { RtsCameraController } from './camera';
+import { TrafficSystem } from './traffic';
 
 /**
  * Şehir sahnesi.
@@ -39,6 +40,14 @@ export class CityRenderer {
   private scene = new THREE.Scene();
   private ground: THREE.InstancedMesh;
   private buildings: THREE.InstancedMesh;
+  /** Şehrin mevcut dokusu — oyuncuya ait olmayan yapılar. */
+  private fabric: THREE.InstancedMesh;
+  private traffic: TrafficSystem;
+  private sun!: THREE.DirectionalLight;
+  private hemisphere!: THREE.HemisphereLight;
+  private skyColor = new THREE.Color();
+  /** 0..1 arasında dönen gün döngüsü; simülasyondan bağımsız, tamamen görsel. */
+  private timeOfDay = 0.28;
   private hover: THREE.Mesh;
   private selection: THREE.Mesh;
   private ghost: THREE.Mesh;
@@ -60,12 +69,15 @@ export class CityRenderer {
   private color = new THREE.Color();
   private disposed = false;
   private cleanups: Array<() => void> = [];
+  private frameSamples = 0;
+  private frameTimeSum = 0;
+  private qualityReduced = false;
 
   constructor(
     private canvas: HTMLCanvasElement,
     private callbacks: RendererCallbacks,
-    mapWidth: number,
-    mapHeight: number,
+    private mapWidth: number,
+    private mapHeight: number,
   ) {
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
     this.renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
@@ -107,6 +119,25 @@ export class CityRenderer {
     this.buildings.count = 0;
     this.scene.add(this.buildings);
 
+    this.fabric = new THREE.InstancedMesh(
+      new THREE.BoxGeometry(0.8, 1, 0.8),
+      new THREE.MeshStandardMaterial({
+        roughness: 0.85,
+        metalness: 0.03,
+        emissive: new THREE.Color('#ffcf7a'),
+        emissiveIntensity: 0,
+      }),
+      tileCount,
+    );
+    this.fabric.castShadow = true;
+    this.fabric.receiveShadow = true;
+    this.fabric.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    this.fabric.count = 0;
+    this.scene.add(this.fabric);
+
+    this.traffic = new TrafficSystem(mapWidth, mapHeight, 4, 72);
+    this.scene.add(this.traffic.mesh);
+
     this.hover = makeMarker('#7fd4ff', 0.32);
     this.selection = makeMarker('#ffd166', 0.85);
     this.scene.add(this.hover, this.selection);
@@ -131,13 +162,18 @@ export class CityRenderer {
   }
 
   private setupLights(width: number, height: number): void {
-    this.scene.add(new THREE.HemisphereLight('#8fb6d9', '#12161d', 1.15));
+    this.hemisphere = new THREE.HemisphereLight('#8fb6d9', '#12161d', 1.15);
+    this.scene.add(this.hemisphere);
 
     const sun = new THREE.DirectionalLight('#ffe9c7', 2.1);
+    this.sun = sun;
     sun.position.set(width * 0.55, 42, height * 0.15);
     sun.target.position.set(width / 2, 0, height / 2);
     sun.castShadow = true;
-    sun.shadow.mapSize.set(2048, 2048);
+    // 1024, şehir ölçeğinde 2048 ile neredeyse aynı görünüyor ama gölge
+    // geçişinin dolgu maliyetini dörtte bire indiriyor — zayıf cihazlarda
+    // fark ciddi.
+    sun.shadow.mapSize.set(1024, 1024);
     sun.shadow.camera.near = 1;
     sun.shadow.camera.far = 140;
     const extent = Math.max(width, height) * 0.75;
@@ -272,8 +308,10 @@ export class CityRenderer {
     if (!this.groundPlaced) {
       for (let i = 0; i < tiles.length; i++) {
         const tile = tiles[i]!;
-        this.dummy.position.set(tile.x, 0, tile.y);
-        this.dummy.scale.set(1, 1, 1);
+        // Sokaklar biraz alçak ve kenarsız; parseller yükseltilmiş bloklar.
+        const road = tile.kind === 'road';
+        this.dummy.position.set(tile.x, road ? -0.03 : 0, tile.y);
+        this.dummy.scale.set(road ? 1.07 : 1, road ? 0.55 : 1, road ? 1.07 : 1);
         this.dummy.updateMatrix();
         this.ground.setMatrixAt(i, this.dummy.matrix);
       }
@@ -285,6 +323,30 @@ export class CityRenderer {
       this.ground.setColorAt(i, this.tileColor(state, tiles[i]!.id, view));
     }
     if (this.ground.instanceColor) this.ground.instanceColor.needsUpdate = true;
+
+    // Şehrin mevcut dokusu: oyuncuya ait olmayan yapılar.
+    let fabricIndex = 0;
+    for (const tile of tiles) {
+      if (!tile.structureId) continue;
+      const structure = STRUCTURE_BY_ID[tile.structureId];
+      if (!structure) continue;
+
+      const height = Math.max(0.03, tile.structureHeight) * 1.5;
+      this.dummy.position.set(tile.x, height / 2 + 0.07, tile.y);
+      this.dummy.scale.set(1, height, 1);
+      this.dummy.updateMatrix();
+      this.fabric.setMatrixAt(fabricIndex, this.dummy.matrix);
+
+      // Aynı yapı tipinden sıkıcı bir tekrar çıkmasın diye kareye göre
+      // deterministik küçük bir renk sapması veriyoruz.
+      const jitter = ((tile.id * 37) % 17) / 17 - 0.5;
+      this.color.set(structure.color).offsetHSL(jitter * 0.02, 0, jitter * 0.07);
+      this.fabric.setColorAt(fabricIndex, this.color);
+      fabricIndex++;
+    }
+    this.fabric.count = fabricIndex;
+    this.fabric.instanceMatrix.needsUpdate = true;
+    if (this.fabric.instanceColor) this.fabric.instanceColor.needsUpdate = true;
 
     let index = 0;
     for (const building of Object.values(state.buildings)) {
@@ -348,6 +410,10 @@ export class CityRenderer {
     const tile = state.map.tiles[tileId]!;
     const district = state.districts[tile.districtId];
 
+    // Sokaklar her lenste sokak kalır — şehrin okunabilirliği lensin
+    // altında kaybolmamalı.
+    if (tile.kind === 'road') return this.color.set('#12171f');
+
     if (view.lens === 'ownership') {
       if (!tile.ownerId) return this.color.copy(FREE_COLOR);
       const owner = state.companies[tile.ownerId];
@@ -355,8 +421,11 @@ export class CityRenderer {
     }
 
     if (view.lens === 'none') {
+      if (tile.kind === 'civic') return this.color.set('#25382c');
       const base = district ? DISTRICT_ARCHETYPES[district.archetype].color : '#2a3446';
       this.color.set(base);
+      // Boş parsel biraz daha aydınlık: "burası alınabilir" sinyali.
+      if (!tile.structureId && !tile.ownerId) this.color.offsetHSL(0, 0.02, 0.07);
       // Kendi arsan hafif yeşile çalsın; sahiplik lens açmadan da okunsun.
       if (tile.ownerId === view.playerCompanyId) this.color.lerp(OWN_COLOR, 0.35);
       else if (tile.ownerId) {
@@ -379,10 +448,49 @@ export class CityRenderer {
     this.controller.setAspect(width / height);
   }
 
+  /**
+   * Gün döngüsü.
+   *
+   * Simülasyon gününe bağlamıyoruz: 1× hızda bir oyun günü 2,6 saniye
+   * sürüyor, güneş o tempoda dönse ekran titrerdi. Bunun yerine sakin,
+   * bağımsız bir ritim — şehir sabaha ve akşama dönüyor, oyun akışı
+   * bozulmuyor.
+   */
+  private updateDaylight(dt: number): void {
+    const CYCLE_SECONDS = 210;
+    this.timeOfDay = (this.timeOfDay + dt / CYCLE_SECONDS) % 1;
+
+    const angle = this.timeOfDay * Math.PI * 2;
+    const elevation = Math.sin(angle);
+    const daylight = Math.max(0, Math.min(1, elevation * 1.6 + 0.35));
+
+    const radius = Math.max(this.mapWidth, this.mapHeight) * 0.9;
+    this.sun.position.set(
+      this.mapWidth / 2 + Math.cos(angle) * radius,
+      12 + elevation * 40,
+      this.mapHeight / 2 + Math.sin(angle * 0.6) * radius * 0.4,
+    );
+
+    this.sun.intensity = 0.25 + daylight * 2.0;
+    this.sun.color.setHSL(0.09, 0.55 - daylight * 0.3, 0.55 + daylight * 0.32);
+    this.hemisphere.intensity = 0.35 + daylight * 0.85;
+
+    // Gökyüzü ve sis birlikte kayar: gündüz açık mavi, gece derin lacivert.
+    this.skyColor.setHSL(0.58, 0.44 - daylight * 0.16, 0.05 + daylight * 0.42);
+    (this.scene.background as THREE.Color).copy(this.skyColor);
+    this.scene.fog?.color.copy(this.skyColor);
+
+    // Karanlıkta pencereler yanar.
+    const material = this.fabric.material as THREE.MeshStandardMaterial;
+    material.emissiveIntensity = Math.max(0, 0.55 - daylight * 0.7);
+  }
+
   render(dt: number): void {
     if (this.disposed) return;
 
     this.controller.update(dt);
+    this.updateDaylight(dt);
+    this.traffic.update(dt);
 
     if (this.hoveredTile !== null && this.state) {
       const tile = this.state.map.tiles[this.hoveredTile];
@@ -394,12 +502,50 @@ export class CityRenderer {
 
     if (this.state) this.syncGhost(this.state.map.width);
     this.renderer.render(this.scene, this.controller.camera);
+    this.adaptQuality(dt);
+  }
+
+  /**
+   * Uyarlanabilir kalite.
+   *
+   * Zayıf bir GPU'da (ya da yazılım rasterizasyonunda) gölgeler kare
+   * hızının çoğunu yiyor. İlk saniyelerde ölçüp gerekiyorsa gölgeleri
+   * kapatıyoruz: oyun biraz daha düz görünür ama akıcı kalır. Akıcılık
+   * bu oyunda görsel şıklıktan önce gelir.
+   */
+  private adaptQuality(dt: number): void {
+    if (this.qualityReduced || this.frameSamples < 0) return;
+
+    this.frameSamples++;
+    this.frameTimeSum += dt;
+
+    // Ölçüm penceresi KARE sayısıyla değil GEÇEN SÜREYLE kapanır. Kare
+    // sayısına baksaydık, en yavaş cihazda en geç tetiklenirdi — yani tam
+    // tersi. 2,5 saniye her hızda aynı sürede karar verdirir.
+    if (this.frameTimeSum < 2.5 || this.frameSamples < 12) return;
+
+    const averageFps = this.frameSamples / this.frameTimeSum;
+    if (averageFps < 24) {
+      this.qualityReduced = true;
+      this.renderer.shadowMap.enabled = false;
+      this.sun.castShadow = false;
+      this.fabric.castShadow = false;
+      this.buildings.castShadow = false;
+      this.scene.traverse((object) => {
+        const mesh = object as THREE.Mesh;
+        if (mesh.material) (mesh.material as THREE.Material).needsUpdate = true;
+      });
+      console.info(`Düşük kare hızı (${averageFps.toFixed(0)} FPS) — gölgeler kapatıldı.`);
+    }
+    // Ölçüm penceresini kapat: bir daha denemeyelim.
+    this.frameSamples = -1;
   }
 
   dispose(): void {
     this.disposed = true;
     for (const cleanup of this.cleanups) cleanup();
     this.cleanups = [];
+    this.traffic.dispose();
     this.scene.traverse((object) => {
       const mesh = object as THREE.Mesh;
       mesh.geometry?.dispose?.();

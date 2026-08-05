@@ -1,5 +1,5 @@
 import type { ReactElement } from 'react';
-import { EVENTS } from '@capital/content';
+import { CEO_BY_ID, EVENTS } from '@capital/content';
 import {
   LENSES,
   companyRanking,
@@ -8,6 +8,7 @@ import {
   getPlayer,
 } from '@capital/core';
 import type { GameSpeed } from '@capital/core';
+import { CeoPortrait } from './CeoPortrait';
 import { useGame, useGameState } from './useGame';
 
 /** Üst bar: oyuncunun her an görmesi gereken beş sayı ve zaman kontrolü. */
@@ -15,6 +16,7 @@ export function TopBar(): ReactElement {
   const { run, view, setView } = useGame();
   const state = useGameState();
   const player = getPlayer(state);
+  const ceo = player.ceoId ? CEO_BY_ID[player.ceoId] : undefined;
   const rank = companyRanking(state).find((row) => row.company.isPlayer)?.rank ?? 1;
   const profit = player.today.profit;
 
@@ -28,10 +30,19 @@ export function TopBar(): ReactElement {
   return (
     <header className="topbar">
       <div className="brand">
-        <span className="brand-mark" />
+        {ceo ? (
+          <span className="brand-ceo" title={`${ceo.name} · ${ceo.title}`}>
+            <CeoPortrait portrait={ceo.portrait} size={38} />
+          </span>
+        ) : (
+          <span className="brand-mark" />
+        )}
         <div>
           <div className="brand-name">{player.name}</div>
-          <div className="brand-sub">{formatDate(state.time.day)} · {state.time.day}. gün</div>
+          <div className="brand-sub">
+            {ceo ? `${ceo.name} · ` : ''}
+            {formatDate(state.time.day)}
+          </div>
         </div>
       </div>
 

@@ -24,6 +24,15 @@ pnpm preview
 
 ## Nasıl oynanır
 
+Oyun şirketini kurmakla başlar: bir isim ve altı CEO'dan biri. CEO seçimi
+kozmetik değil — sermayeni, arsa pazarlığını, işletme giderini ve marka
+büyüme hızını değiştirir.
+
+Şehir zaten kurulu gelir. Kareler üç türdür: **sokak** ve **kamu alanı**
+hiçbir fiyata satılmaz, **parsel** satılabilir. Parsellerin çoğunda mevcut
+bir yapı vardır; boşları doğrudan alırsın, dolularını sahibinden primli
+devralıp yıkarsın. Boş parsel kıt bir kaynaktır.
+
 1. **Fırsat lensini aç.** Harita, karşılanmamış talebe göre boyanır; sıcak
    bölgeler para bırakır.
 2. **Bir arsa seç ve satın al.** Merkeze yakın arsa pahalıdır ama daha çok

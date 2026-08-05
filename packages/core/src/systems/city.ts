@@ -1,4 +1,9 @@
-import { BUILDING_BY_ID, DISTRICT_ARCHETYPES } from '@capital/content';
+import {
+  BUILDING_BY_ID,
+  DISTRICT_ARCHETYPES,
+  STRUCTURE_BY_ID,
+  getCeoModifiers,
+} from '@capital/content';
 import type { GameState } from '../types';
 
 /** Sahip olunan arsanın satılabileceği oran (alım-satım sürtünmesi). */
@@ -23,9 +28,11 @@ export function runLandValueTick(state: GameState, eventDrift: number): void {
     if (!district) continue;
     const archetype = DISTRICT_ARCHETYPES[district.archetype];
 
-    // 3x3 komşulukta kaç bina var?
+    // 3x3 komşulukta ne kadar gelişme var? Park ve meydan komşuluğu
+    // gerçek şehirlerde olduğu gibi arsayı ayrıca değerlendirir.
     let developed = 0;
     let neighbors = 0;
+    let amenity = 0;
     for (let dy = -1; dy <= 1; dy++) {
       for (let dx = -1; dx <= 1; dx++) {
         if (dx === 0 && dy === 0) continue;
@@ -34,15 +41,19 @@ export function runLandValueTick(state: GameState, eventDrift: number): void {
         if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue;
         neighbors++;
         const neighbor = tiles[ny * width + nx];
-        if (neighbor?.buildingId) developed++;
+        if (!neighbor) continue;
+        if (neighbor.buildingId || neighbor.structureId) developed++;
+        if (neighbor.kind === 'civic') amenity++;
       }
     }
 
     const developmentRatio = neighbors > 0 ? developed / neighbors : 0;
+    const amenityBonus = neighbors > 0 ? (amenity / neighbors) * 0.25 : 0;
     // Nüfus arttıkça taban değer de yükselir.
     const populationFactor = district.population / Math.max(1, archetype.population);
     const target =
-      archetype.baseLandValue * (0.7 + 0.55 * developmentRatio + 0.35 * (populationFactor - 1));
+      archetype.baseLandValue *
+      (0.7 + 0.55 * developmentRatio + amenityBonus + 0.35 * (populationFactor - 1));
 
     // Hedefe yavaş yaklaş, üstüne olayların sürüklemesini ekle.
     tile.landValue += (target - tile.landValue) * 0.004 + tile.landValue * eventDrift;
@@ -79,10 +90,33 @@ export function runPopulationTick(state: GameState): void {
   }
 }
 
-/** Bir arsanın güncel satın alma fiyatı. */
-export function tilePrice(state: GameState, tileId: number): number {
+/**
+ * Bir parselin şirkete göre fiyatı.
+ *
+ * Boş parsel arsa değerine alınır; üzerinde mevcut yapı varsa sahibinden
+ * çıkarma primi uygulanır (yapı tipine göre 1,7x–3,6x). CEO'nun arsa
+ * pazarlığı da buraya girer.
+ */
+export function tilePrice(state: GameState, tileId: number, companyId?: string): number {
   const tile = state.map.tiles[tileId];
-  return tile ? Math.round(tile.landValue) : 0;
+  if (!tile) return 0;
+
+  let price = tile.landValue;
+  if (tile.structureId) {
+    const structure = STRUCTURE_BY_ID[tile.structureId];
+    if (!structure || structure.buyoutMultiplier === null) return 0;
+    price *= structure.buyoutMultiplier;
+  }
+
+  const company = companyId ? state.companies[companyId] : undefined;
+  price *= getCeoModifiers(company?.ceoId ?? null).landCost;
+
+  return Math.round(price);
+}
+
+/** Parsel satın alınabilir mi? Yol ve kamu alanları hiçbir koşulda satılmaz. */
+export function isPurchasable(tile: { kind: string; ownerId: string | null }): boolean {
+  return tile.kind === 'plot' && tile.ownerId === null;
 }
 
 export function recomputeNetWorth(state: GameState): void {

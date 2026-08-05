@@ -1,6 +1,6 @@
 import {useEffect, useState} from 'react';
 import type { ReactElement } from 'react';
-import { BUILDING_BY_ID, CATEGORIES, DISTRICT_ARCHETYPES } from '@capital/content';
+import { BUILDING_BY_ID, CATEGORIES, DISTRICT_ARCHETYPES, STRUCTURE_BY_ID } from '@capital/content';
 import {
   buildOptions,
   categoryBreakdown,
@@ -171,7 +171,7 @@ export function Inspector(): ReactElement | null {
   const archetype = DISTRICT_ARCHETYPES[district.archetype];
   const building = getBuildingOnTile(state, tile.id);
   const owner = tile.ownerId ? state.companies[tile.ownerId] : null;
-  const price = tilePrice(state, tile.id);
+  const price = tilePrice(state, tile.id, player.id);
 
   return (
     <aside className="inspector">
@@ -219,9 +219,9 @@ export function Inspector(): ReactElement | null {
       ) : owner ? (
         owner.id === player.id ? (
           <div className="actions">
-            <p className="muted">Boş arsan. Soldan bir yatırım seç.</p>
+            <p className="muted">Boş parselin. Soldan bir yatırım seç.</p>
             <button type="button" onClick={() => run({ type: 'SELL_TILE', tileId: tile.id })}>
-              Arsayı sat ({formatMoney(tile.landValue * 0.85)})
+              Parseli sat ({formatMoney(tile.landValue * 0.85)})
             </button>
           </div>
         ) : (
@@ -232,19 +232,79 @@ export function Inspector(): ReactElement | null {
           </div>
         )
       ) : (
-        <div className="actions">
-          <button
-            type="button"
-            className="primary"
-            disabled={player.cash < price}
-            onClick={() => run({ type: 'BUY_TILE', tileId: tile.id })}
-          >
-            Arsayı satın al · {formatMoney(price)}
-          </button>
-          {player.cash < price && <p className="muted">Nakit yetersiz.</p>}
-        </div>
+        <PlotActions tileId={tile.id} price={price} />
       )}
     </aside>
+  );
+}
+
+/**
+ * Sahipsiz bir parselin durumu.
+ *
+ * Gerçek şehirdeki gibi üç ayrı hâl var: satın alınamayan kamu alanı,
+ * doğrudan alınabilen boş parsel, ve ancak mevcut sahibinden primli
+ * devralınabilen dolu parsel.
+ */
+function PlotActions({ tileId, price }: { tileId: number; price: number }): ReactElement {
+  const { run } = useGame();
+  const state = useGameState();
+  const player = getPlayer(state);
+  const tile = state.map.tiles[tileId]!;
+  const structure = tile.structureId ? STRUCTURE_BY_ID[tile.structureId] : null;
+
+  if (tile.kind === 'road') {
+    return (
+      <div className="actions">
+        <p className="plot-note">🚧 Sokak — satılık değil.</p>
+      </div>
+    );
+  }
+
+  if (tile.kind === 'civic') {
+    return (
+      <div className="actions">
+        <p className="plot-note">
+          🏛️ {structure?.name ?? 'Kamu alanı'} — belediye malı, satılık değil.
+        </p>
+        {structure && <p className="muted">{structure.description}</p>}
+      </div>
+    );
+  }
+
+  if (structure) {
+    return (
+      <div className="actions">
+        <p className="plot-note">🏚️ Parselde {structure.name} var.</p>
+        <p className="muted">{structure.description}</p>
+        <button
+          type="button"
+          className="primary"
+          disabled={player.cash < price}
+          onClick={() => run({ type: 'BUYOUT_TILE', tileId })}
+        >
+          Sahibinden devral · {formatMoney(price)}
+        </button>
+        <p className="muted">
+          Devralınca yapı yıkılır ve parsel senin olur. Boş parsele göre{' '}
+          {structure.buyoutMultiplier?.toFixed(1)}× fiyat ödersin.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="actions">
+      <p className="plot-note vacant">✅ Boş parsel — doğrudan alınabilir.</p>
+      <button
+        type="button"
+        className="primary"
+        disabled={player.cash < price}
+        onClick={() => run({ type: 'BUY_TILE', tileId })}
+      >
+        Parseli satın al · {formatMoney(price)}
+      </button>
+      {player.cash < price && <p className="muted">Nakit yetersiz.</p>}
+    </div>
   );
 }
 

@@ -2,21 +2,27 @@ import {
   CATEGORY_LIST,
   CONTENT_VERSION,
   DISTRICT_ARCHETYPES,
+  DISTRICT_FABRIC,
   DISTRICT_LAYOUT,
   NPC_PROFILES,
+  STRUCTURE_BY_ID,
+  getCeoModifiers,
 } from '@capital/content';
 import type { CategoryId } from '@capital/content';
-import { createRng, nextRange } from './rng';
+import { createRng, nextRange, pickWeighted } from './rng';
 import { SCHEMA_VERSION } from './types';
-import type { CompanyState, DistrictState, GameState, Tile } from './types';
+import type { CompanyState, DistrictState, GameState, Tile, TileKind } from './types';
 
-export const GAME_VERSION = '0.1.0';
+export const GAME_VERSION = '0.2.0';
 
 export const DISTRICT_COLS = DISTRICT_LAYOUT[0]!.length;
 export const DISTRICT_ROWS = DISTRICT_LAYOUT.length;
 export const DISTRICT_SIZE = 8;
 export const MAP_WIDTH = DISTRICT_COLS * DISTRICT_SIZE;
 export const MAP_HEIGHT = DISTRICT_ROWS * DISTRICT_SIZE;
+
+/** Her 4 karede bir sokak; aralarda 3x3'lük yapı adaları kalır. */
+export const BLOCK_SIZE = 4;
 
 export const PLAYER_COMPANY_ID = 'player';
 export const STARTING_CASH = 250_000;
@@ -27,11 +33,9 @@ export function zeroByCategory(): Record<CategoryId, number> {
   return out;
 }
 
-function initialBrand(): Record<CategoryId, number> {
+function brandRecord(value: number): Record<CategoryId, number> {
   const out = {} as Record<CategoryId, number>;
-  // Yeni şirketin markası yok ama sıfır da değil; bilinirlik 0 olsa hiç
-  // müşteri gelmez ve oyuncu ilk mağazasından sonuç alamazdı.
-  for (const cat of CATEGORY_LIST) out[cat.id] = 0.12;
+  for (const cat of CATEGORY_LIST) out[cat.id] = value;
   return out;
 }
 
@@ -42,16 +46,19 @@ function makeCompany(
   color: string,
   cash: number,
   profileId: string | null,
+  ceoId: string | null,
+  startingBrand: number,
 ): CompanyState {
   return {
     id,
     name,
     isPlayer,
     profileId,
+    ceoId,
     color,
     cash,
     debt: 0,
-    brand: initialBrand(),
+    brand: brandRecord(startingBrand),
     netWorth: cash,
     marketShare: zeroByCategory(),
     today: { revenue: 0, cogs: 0, upkeep: 0, wages: 0, interest: 0, profit: 0 },
@@ -59,15 +66,23 @@ function makeCompany(
   };
 }
 
+/** Sokak mı? Şehir ızgarasının değişmez kuralı. */
+export function isRoad(x: number, y: number): boolean {
+  return x % BLOCK_SIZE === 0 || y % BLOCK_SIZE === 0;
+}
+
 export interface NewGameOptions {
   seed?: number;
   companyName?: string;
+  ceoId?: string | null;
   npcCount?: number;
 }
 
 export function createNewGame(options: NewGameOptions = {}): GameState {
   const seed = options.seed ?? Math.floor(Math.random() * 2 ** 31);
   const rng = createRng(seed);
+  const ceoId = options.ceoId ?? null;
+  const ceo = getCeoModifiers(ceoId);
 
   // ---- District'ler ----
   const districts: DistrictState[] = [];
@@ -85,7 +100,6 @@ export function createNewGame(options: NewGameOptions = {}): GameState {
         y0: dy * DISTRICT_SIZE,
         x1: dx * DISTRICT_SIZE + DISTRICT_SIZE - 1,
         y1: dy * DISTRICT_SIZE + DISTRICT_SIZE - 1,
-        // Nüfusa hafif sapma ver ki her oyun aynı olmasın.
         population: Math.round(archetype.population * nextRange(rng, 0.9, 1.1)),
         incomeLevel: archetype.incomeLevel,
         demand: zeroByCategory(),
@@ -96,7 +110,7 @@ export function createNewGame(options: NewGameOptions = {}): GameState {
     }
   }
 
-  // ---- Arsalar ----
+  // ---- Parseller ve şehir dokusu ----
   const tiles: Tile[] = [];
   const centerX = (MAP_WIDTH - 1) / 2;
   const centerY = (MAP_HEIGHT - 1) / 2;
@@ -106,7 +120,30 @@ export function createNewGame(options: NewGameOptions = {}): GameState {
     for (let x = 0; x < MAP_WIDTH; x++) {
       const districtId =
         Math.floor(y / DISTRICT_SIZE) * DISTRICT_COLS + Math.floor(x / DISTRICT_SIZE);
-      const archetype = DISTRICT_ARCHETYPES[districts[districtId]!.archetype];
+      const district = districts[districtId]!;
+      const archetype = DISTRICT_ARCHETYPES[district.archetype];
+
+      const road = isRoad(x, y);
+      let kind: TileKind = road ? 'road' : 'plot';
+      let structureId: string | null = null;
+      let structureHeight = 0;
+
+      if (!road) {
+        const fabric = DISTRICT_FABRIC[district.archetype] ?? [{ structureId: null, weight: 1 }];
+        const choice = pickWeighted(rng, fabric, (entry) => entry.weight);
+        structureId = choice.structureId;
+
+        if (structureId) {
+          const def = STRUCTURE_BY_ID[structureId];
+          if (def) {
+            structureHeight = nextRange(rng, def.minHeight, def.maxHeight);
+            // Kamu yapıları hiçbir fiyata satılmaz; parsel değil civic olur.
+            if (def.buyoutMultiplier === null) kind = 'civic';
+          } else {
+            structureId = null;
+          }
+        }
+      }
 
       // Arsa değeri: district tabanı + merkeze yakınlık primi + gürültü.
       const distance = Math.abs(x - centerX) + Math.abs(y - centerY);
@@ -119,8 +156,11 @@ export function createNewGame(options: NewGameOptions = {}): GameState {
         x,
         y,
         districtId,
+        kind,
         ownerId: null,
         buildingId: null,
+        structureId,
+        structureHeight,
         landValue: Math.round(landValue),
       });
     }
@@ -133,8 +173,10 @@ export function createNewGame(options: NewGameOptions = {}): GameState {
     options.companyName?.trim() || 'Yeni Girişim',
     true,
     '#4cc9f0',
-    STARTING_CASH,
+    Math.round(STARTING_CASH * ceo.startingCash),
     null,
+    ceoId,
+    ceo.startingBrand,
   );
 
   const npcCount = Math.min(options.npcCount ?? NPC_PROFILES.length, NPC_PROFILES.length);
@@ -147,6 +189,8 @@ export function createNewGame(options: NewGameOptions = {}): GameState {
       profile.color,
       profile.startingCash,
       profile.id,
+      null,
+      0.12,
     );
   }
 
@@ -173,7 +217,7 @@ export function createNewGame(options: NewGameOptions = {}): GameState {
         day: 0,
         tone: 'neutral',
         title: 'Şirket kuruldu',
-        body: 'Sermayen hazır. Talebin yüksek olduğu bir bölgede arsa al ve ilk mağazanı aç.',
+        body: 'Sermayen hazır. Boş bir parsel bul, ya da dolu bir parseli sahibinden devral.',
       },
     ],
     nextId: 2,

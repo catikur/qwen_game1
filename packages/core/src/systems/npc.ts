@@ -1,9 +1,10 @@
 import { BUILDINGS, CATEGORIES, CONSUMER_CATEGORIES, NPC_PROFILES } from '@capital/content';
 import type { BuildingDef, CategoryId, NpcProfileDef } from '@capital/content';
-import { build, buyTile } from '../actions';
+import { build, buyTile, buyoutTile } from '../actions';
 import { pushNews } from '../news';
 import { nextFloat } from '../rng';
 import { estimateInvestment } from './market';
+import { tilePrice } from './city';
 import type { GameState } from '../types';
 
 /**
@@ -106,30 +107,39 @@ function chooseBuilding(
   return candidates[0]!;
 }
 
-/** Hedef district'te alınabilecek en uygun boş arsayı bulur. */
+/**
+ * Hedef district'te alınabilecek en uygun parseli bulur.
+ *
+ * Rakipler de oyuncuyla aynı kısıtla yaşar: sokağa ve kamu alanına
+ * giremezler. Boş parsel kalmadıysa mevcut yapıyı primli devralmayı
+ * değerlendirirler — tıpkı oyuncunun yapabildiği gibi.
+ */
 function findTile(
   state: GameState,
   districtId: number,
   cash: number,
   preferExpensive: boolean,
-): number | null {
-  const district = state.districts[districtId];
-  if (!district) return null;
-
-  let best: number | null = null;
-  let bestValue = preferExpensive ? -Infinity : Infinity;
+): { tileId: number; needsBuyout: boolean } | null {
+  const candidates: Array<{ tileId: number; needsBuyout: boolean; price: number }> = [];
 
   for (const tile of state.map.tiles) {
     if (tile.districtId !== districtId) continue;
-    if (tile.ownerId || tile.buildingId) continue;
-    if (tile.landValue > cash) continue;
+    if (tile.kind !== 'plot' || tile.ownerId || tile.buildingId) continue;
 
-    if (preferExpensive ? tile.landValue > bestValue : tile.landValue < bestValue) {
-      bestValue = tile.landValue;
-      best = tile.id;
-    }
+    const price = tilePrice(state, tile.id);
+    if (price <= 0 || price > cash) continue;
+    candidates.push({ tileId: tile.id, needsBuyout: tile.structureId !== null, price });
   }
-  return best;
+
+  if (candidates.length === 0) return null;
+
+  candidates.sort((a, b) => {
+    // Boş parsel her zaman önce; devralma pahalı bir son çaredir.
+    if (a.needsBuyout !== b.needsBuyout) return a.needsBuyout ? 1 : -1;
+    return preferExpensive ? b.price - a.price : a.price - b.price;
+  });
+
+  return candidates[0]!;
 }
 
 function actFor(state: GameState, profile: NpcProfileDef): void {
@@ -145,8 +155,11 @@ function actFor(state: GameState, profile: NpcProfileDef): void {
       (a, b) => b.incomeLevel - a.incomeLevel,
     )[0];
     if (target) {
-      const tileId = findTile(state, target.id, budget, true);
-      if (tileId !== null) buyTile(state, profile.id, tileId);
+      const spot = findTile(state, target.id, budget, true);
+      if (spot) {
+        if (spot.needsBuyout) buyoutTile(state, profile.id, spot.tileId);
+        else buyTile(state, profile.id, spot.tileId);
+      }
     }
     return;
   }
@@ -161,14 +174,17 @@ function actFor(state: GameState, profile: NpcProfileDef): void {
     const estimate = estimateInvestment(state, opportunity.districtId, def.id, profile.id);
     if (!estimate || estimate.paybackDays > MAX_PAYBACK_DAYS) continue;
 
-    const tileId = findTile(state, opportunity.districtId, budget - def.cost, isLandlord);
-    if (tileId === null) continue;
+    const spot = findTile(state, opportunity.districtId, budget - def.cost, isLandlord);
+    if (!spot) continue;
 
-    if (!buyTile(state, profile.id, tileId).ok) continue;
-    if (!build(state, profile.id, tileId, def.id).ok) continue;
+    const acquired = spot.needsBuyout
+      ? buyoutTile(state, profile.id, spot.tileId)
+      : buyTile(state, profile.id, spot.tileId);
+    if (!acquired.ok) continue;
+    if (!build(state, profile.id, spot.tileId, def.id).ok) continue;
 
     // Fiyat politikası kişilikten gelir.
-    const tile = state.map.tiles[tileId];
+    const tile = state.map.tiles[spot.tileId];
     const buildingId = tile?.buildingId;
     const building = buildingId ? state.buildings[buildingId] : undefined;
     if (building && profile.priceMultiplier !== 1) {
@@ -181,7 +197,9 @@ function actFor(state: GameState, profile: NpcProfileDef): void {
       state,
       'rival',
       `${profile.name} genişliyor`,
-      `${district?.name ?? 'Şehirde'} bölgesinde ${def.name} açtı.`,
+      spot.needsBuyout
+        ? `${district?.name ?? 'Şehirde'} bölgesinde bir parseli devralıp ${def.name} açtı.`
+        : `${district?.name ?? 'Şehirde'} bölgesinde ${def.name} açtı.`,
     );
     return;
   }

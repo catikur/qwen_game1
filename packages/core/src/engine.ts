@@ -1,5 +1,5 @@
 import { BUILDING_BY_ID } from '@capital/content';
-import { build, buyTile, demolish, sellTile } from './actions';
+import { build, buyTile, buyoutTile, demolish, sellTile } from './actions';
 import { pushNews } from './news';
 import { collectEventModifiers, runMarketTick } from './systems/market';
 import { recomputeNetWorth, runLandValueTick, runPopulationTick } from './systems/city';
@@ -86,6 +86,9 @@ export class GameEngine {
 
       case 'BUY_TILE':
         return buyTile(state, playerId, command.tileId);
+
+      case 'BUYOUT_TILE':
+        return buyoutTile(state, playerId, command.tileId);
 
       case 'SELL_TILE':
         return sellTile(state, playerId, command.tileId);

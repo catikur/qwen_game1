@@ -10,7 +10,16 @@ import type { RngState } from './rng';
  * state'te sadece kimlik ve sayı taşınır.
  */
 
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
+
+/**
+ * Bir karenin şehirdeki rolü.
+ *
+ * `road` ve `civic` hiçbir zaman satılmaz; `plot` satılabilir ama üzerinde
+ * mevcut bir yapı varsa önce sahibinden primli devralınmalıdır. Gerçek
+ * şehirlerdeki "istediğin yeri alamazsın" kısıtı bu ayrımdan doğuyor.
+ */
+export type TileKind = 'road' | 'plot' | 'civic';
 
 export type GameSpeed = 0 | 1 | 2 | 3;
 
@@ -26,10 +35,15 @@ export interface Tile {
   x: number;
   y: number;
   districtId: number;
-  /** Sahip şirket kimliği; null = satılık. */
+  kind: TileKind;
+  /** Sahip şirket kimliği; null = sahipsiz. */
   ownerId: string | null;
-  /** Üzerindeki bina örneğinin kimliği. */
+  /** Üzerindeki bina örneğinin kimliği (oyuncu/rakip yapısı). */
   buildingId: string | null;
+  /** Şehrin mevcut yapısı (oyuna ait değil); doluysa parsel satılık değildir. */
+  structureId: string | null;
+  /** Mevcut yapının görsel yüksekliği. */
+  structureHeight: number;
   /** Arsanın güncel değeri. Satış fiyatı bunun üzerinden hesaplanır. */
   landValue: number;
 }
@@ -96,6 +110,8 @@ export interface CompanyState {
   isPlayer: boolean;
   /** NPC ise hangi profilden geldiği. */
   profileId: string | null;
+  /** Oyuncu ise seçtiği CEO; etkileri içerik tanımından okunur. */
+  ceoId: string | null;
   color: string;
   cash: number;
   debt: number;
@@ -176,6 +192,8 @@ export type GameCommand =
   | { type: 'SET_SPEED'; speed: GameSpeed }
   | { type: 'TOGGLE_PAUSE' }
   | { type: 'BUY_TILE'; tileId: number }
+  /** Mevcut yapıyı sahibinden primli devralıp yıkar. */
+  | { type: 'BUYOUT_TILE'; tileId: number }
   | { type: 'SELL_TILE'; tileId: number }
   | { type: 'BUILD'; tileId: number; defId: string }
   | { type: 'DEMOLISH'; tileId: number }

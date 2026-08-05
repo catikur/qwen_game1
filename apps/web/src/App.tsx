@@ -17,6 +17,7 @@ import {
   Inspector,
   LensBar,
   ModalHost,
+  NewGameScreen,
   NewsFeed,
   Toasts,
   TopBar,
@@ -26,47 +27,74 @@ import type { GameContextValue, ToastMessage, ViewState } from '@capital/ui';
 
 const AUTOSAVE_INTERVAL_MS = 30_000;
 
-/** Açılışta otomatik kaydı dener; yoksa yeni şehir kurar. */
-async function boot(): Promise<{ engine: GameEngine; message: string | null }> {
-  const outcome = await loadGame(AUTOSAVE_SLOT);
-  if (outcome.ok) {
-    return {
-      engine: new GameEngine(outcome.state),
-      message: outcome.migratedFrom
-        ? `Kayıt v${outcome.migratedFrom} sürümünden taşındı.`
-        : 'Otomatik kayıt yüklendi.',
-    };
-  }
-  return { engine: new GameEngine(createNewGame()), message: null };
-}
-
+/**
+ * Açılış akışı.
+ *
+ * Devam eden bir oyun varsa doğrudan oraya döneriz; yoksa oyuncuyu boş bir
+ * haritanın ortasına bırakmak yerine önce şirketini kurdururuz.
+ */
 export function App(): ReactElement {
+  const [phase, setPhase] = useState<'loading' | 'menu' | 'playing'>('loading');
   const [engine, setEngine] = useState<GameEngine | null>(null);
   const [bootMessage, setBootMessage] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    void boot().then((result) => {
+    void loadGame(AUTOSAVE_SLOT).then((outcome) => {
       if (cancelled) return;
-      setEngine(result.engine);
-      setBootMessage(result.message);
+      if (outcome.ok) {
+        setEngine(new GameEngine(outcome.state));
+        setBootMessage(
+          outcome.migratedFrom
+            ? `Kayıt v${outcome.migratedFrom} sürümünden taşındı.`
+            : 'Kaldığın yerden devam.',
+        );
+        setPhase('playing');
+      } else {
+        setPhase('menu');
+      }
     });
     return () => {
       cancelled = true;
     };
   }, []);
 
-  if (!engine) return <div className="loading">Şehir hazırlanıyor…</div>;
-  return <GameRoot engine={engine} bootMessage={bootMessage} onNewEngine={setEngine} />;
+  const start = (companyName: string, ceoId: string) => {
+    const next = createNewGame({ companyName, ceoId });
+    if (engine) engine.replaceState(next);
+    else setEngine(new GameEngine(next));
+    setBootMessage(null);
+    setPhase('playing');
+  };
+
+  if (phase === 'loading') return <div className="loading">Şehir hazırlanıyor…</div>;
+
+  if (phase === 'menu' || !engine) {
+    return (
+      <NewGameScreen
+        onStart={start}
+        {...(engine ? { onCancel: () => setPhase('playing') } : {})}
+      />
+    );
+  }
+
+  return (
+    <GameRoot
+      engine={engine}
+      bootMessage={bootMessage}
+      onRequestNewGame={() => setPhase('menu')}
+    />
+  );
 }
 
 function GameRoot({
   engine,
   bootMessage,
+  onRequestNewGame,
 }: {
   engine: GameEngine;
   bootMessage: string | null;
-  onNewEngine: (engine: GameEngine) => void;
+  onRequestNewGame: () => void;
 }): ReactElement {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rendererRef = useRef<CityRenderer | null>(null);
@@ -144,7 +172,10 @@ function GameRoot({
     let frame = 0;
     let last = performance.now();
     const loop = (now: number) => {
-      const dt = Math.min(0.1, (now - last) / 1000);
+      // Üst sınır yalnızca sekmeden dönüşteki devasa sıçramayı keser.
+      // Fazla dar tutulursa düşük kare hızında oyun saati gerçek zamanın
+      // gerisine düşüyor ve seçilen hız kademesi yalan söylüyordu.
+      const dt = Math.min(0.5, (now - last) / 1000);
       last = now;
       engine.advance(dt * 1000);
       renderer.render(dt);
@@ -204,6 +235,28 @@ function GameRoot({
     if (bootMessage) toast(bootMessage, 'info');
   }, [bootMessage, toast]);
 
+  /**
+   * Geliştirici kancası.
+   *
+   * Motoru ve seçimi dışarı açar; uçtan uca testler ile debug konsolu
+   * bunun üzerinden çalışır. Arayüzün kendi yolunu kullanır — state'e
+   * doğrudan yazmaz — böylece test ettiği şey gerçek akışın aynısı olur.
+   */
+  useEffect(() => {
+    const globals = window as unknown as Record<string, unknown>;
+    globals['__capital'] = {
+      engine,
+      getState: () => engine.getState(),
+      selectTile: (tileId: number | null) =>
+        setViewState((current) => ({ ...current, selectedTileId: tileId })),
+      setLens: (lens: ViewState['lens']) =>
+        setViewState((current) => ({ ...current, lens })),
+    };
+    return () => {
+      delete globals['__capital'];
+    };
+  }, [engine]);
+
   // ---- Kayıt işlemleri ----
   const saveTo = useCallback(
     async (slot: number, name?: string) => {
@@ -234,11 +287,12 @@ function GameRoot({
     [engine, toast],
   );
 
+  // "Yeni oyun" doğrudan rastgele bir şehir açmaz; oyuncuyu kurulum
+  // ekranına götürür ki şirketini ve CEO'sunu yeniden seçebilsin.
   const newGame = useCallback(() => {
-    engine.replaceState(createNewGame());
-    setViewState((current) => ({ ...current, selectedTileId: null, ghostDefId: null, openPanel: 'none' }));
-    toast('Yeni şehir kuruldu.', 'good');
-  }, [engine, toast]);
+    setViewState((current) => ({ ...current, openPanel: 'none' }));
+    onRequestNewGame();
+  }, [onRequestNewGame]);
 
   const exportSave = useCallback(() => {
     const state = engine.getState();
