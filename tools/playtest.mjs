@@ -1,9 +1,24 @@
 // Tarayıcıda uçtan uca oynanabilirlik testi.
 // Çalıştırma: pnpm build && node tools/playtest.mjs
-import { chromium } from 'playwright';
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
+import { createRequire } from 'node:module';
+
+// Playwright projenin bağımlılığı değil (yalnızca test aracı). Yerelde
+// kuruluysa oradan, değilse global kurulumdan çözülür.
+const require = createRequire(import.meta.url);
+function loadPlaywright() {
+  for (const id of ['playwright', '/opt/node22/lib/node_modules/playwright']) {
+    try {
+      return require(id);
+    } catch {
+      /* sıradakini dene */
+    }
+  }
+  throw new Error('Playwright bulunamadı. Kurulum: npm i -g playwright');
+}
+const { chromium } = loadPlaywright();
 
 const ROOT = process.env.DIST || new URL('../apps/web/dist', import.meta.url).pathname;
 const MIME = {
