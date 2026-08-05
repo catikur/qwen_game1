@@ -251,6 +251,8 @@ function GameRoot({
         setViewState((current) => ({ ...current, selectedTileId: tileId })),
       setLens: (lens: ViewState['lens']) =>
         setViewState((current) => ({ ...current, lens })),
+      renderInfo: () => rendererRef.current?.getDebugInfo() ?? null,
+      setTimeOfDay: (value: number) => rendererRef.current?.setTimeOfDay(value),
     };
     return () => {
       delete globals['__capital'];
