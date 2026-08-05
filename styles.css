@@ -11,6 +11,15 @@ body {
     min-height: 100vh;
 }
 
+.hidden {
+    display: none !important;
+}
+
+:focus-visible {
+    outline: 2px solid #4cc9f0;
+    outline-offset: 2px;
+}
+
 .game-container {
     display: flex;
     flex-direction: column;
@@ -39,6 +48,7 @@ body {
     display: flex;
     gap: 20px;
     flex-wrap: wrap;
+    align-items: center;
 }
 
 .stat {
@@ -61,6 +71,15 @@ body {
     color: #90be6d;
 }
 
+.badge {
+    background-color: #90be6d;
+    color: #0b1220;
+    font-size: 0.75rem;
+    font-weight: bold;
+    padding: 3px 8px;
+    border-radius: 999px;
+}
+
 .actions {
     display: flex;
     gap: 10px;
@@ -73,6 +92,8 @@ body {
     padding: 8px 15px;
     border-radius: 5px;
     cursor: pointer;
+    font-family: inherit;
+    font-size: 0.9rem;
     font-weight: bold;
     transition: all 0.2s;
 }
@@ -91,6 +112,8 @@ body {
 
 /* Sol Panel */
 .left-panel {
+    display: flex;
+    flex-direction: column;
     width: 300px;
     background-color: #111a2c;
     padding: 15px;
@@ -99,7 +122,13 @@ body {
 }
 
 .panel-section {
+    flex-shrink: 0;
     margin-bottom: 20px;
+}
+
+/* Aktif olay panelin en üstüne çıkar; oyuncu kaçırmasın. */
+#eventSection.active-event {
+    order: -1;
 }
 
 .panel-section h2 {
@@ -118,7 +147,14 @@ body {
 }
 
 .building-item {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    text-align: left;
     background-color: #1a2744;
+    color: inherit;
+    font-family: inherit;
+    font-size: 1rem;
     padding: 10px;
     border-radius: 8px;
     cursor: pointer;
@@ -134,7 +170,6 @@ body {
 .building-item.disabled,
 .building-item.locked {
     opacity: 0.5;
-    cursor: not-allowed;
 }
 
 .building-item.locked {
@@ -150,11 +185,13 @@ body {
 }
 
 .building-name {
+    display: block;
     font-weight: bold;
     margin-bottom: 5px;
 }
 
 .building-stats {
+    display: block;
     font-size: 0.85rem;
     color: #a0a0a0;
 }
@@ -230,20 +267,23 @@ body {
     cursor: pointer;
     border: none;
     color: #e0e0e0;
+    font-family: inherit;
+    font-size: 0.9rem;
     text-align: left;
     transition: all 0.2s;
 }
 
-.event-option:hover:not(.disabled) {
+.event-option:hover:not(:disabled) {
     background-color: #354570;
 }
 
-.event-option.disabled {
+.event-option:disabled {
     opacity: 0.5;
     cursor: not-allowed;
 }
 
 .event-effect {
+    display: block;
     font-size: 0.8rem;
     color: #a0a0a0;
     margin-top: 5px;
@@ -273,13 +313,17 @@ body {
 .tile {
     width: 50px;
     height: 50px;
+    padding: 0;
     border-radius: 5px;
     display: flex;
     justify-content: center;
     align-items: center;
+    font-family: inherit;
     font-size: 1.5rem;
+    line-height: 1;
+    color: inherit;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: transform 0.2s, background-color 0.2s;
     border: 2px solid transparent;
 }
 
@@ -310,34 +354,33 @@ body {
     box-shadow: 0 0 10px rgba(255, 209, 102, 0.5);
 }
 
-/* Arsa Detay Paneli */
+/* Arsa Detay Paneli — sabit sağ sütun, grid'in üstünü hiç kapatmaz */
 .tile-panel {
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
+    width: 280px;
+    flex-shrink: 0;
     background-color: #111a2c;
-    padding: 20px;
-    border-radius: 10px;
-    border: 2px solid rgba(255, 255, 255, 0.08);
-    z-index: 100;
-    min-width: 300px;
-    max-width: 400px;
+    padding: 15px;
+    overflow-y: auto;
+    border-left: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.tile-panel.hidden {
-    display: none;
+.tile-empty-hint {
+    color: #a0a0a0;
+    font-size: 0.9rem;
 }
 
 .tile-panel-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 15px;
+    margin-bottom: 10px;
+    padding-bottom: 5px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .tile-panel-header h3 {
     color: #4cc9f0;
+    font-size: 1.1rem;
 }
 
 #closeTilePanel {
@@ -345,6 +388,7 @@ body {
     border: none;
     color: #e0e0e0;
     font-size: 1.5rem;
+    line-height: 1;
     cursor: pointer;
 }
 
@@ -373,6 +417,8 @@ body {
     padding: 10px 15px;
     border-radius: 5px;
     cursor: pointer;
+    font-family: inherit;
+    font-size: 0.9rem;
     font-weight: bold;
     transition: all 0.2s;
 }
@@ -386,16 +432,83 @@ body {
     cursor: not-allowed;
 }
 
+/* Bildirimler */
+.toast-list {
+    position: fixed;
+    right: 20px;
+    bottom: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    z-index: 200;
+    max-width: 320px;
+    pointer-events: none;
+}
+
+.toast {
+    background-color: #1a2744;
+    border-left: 4px solid #4cc9f0;
+    border-radius: 6px;
+    padding: 10px 14px;
+    font-size: 0.9rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    animation: toast-in 0.2s ease-out;
+}
+
+.toast-success {
+    border-left-color: #90be6d;
+}
+
+.toast-warning {
+    border-left-color: #ffd166;
+}
+
+@keyframes toast-in {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    * {
+        animation: none !important;
+        transition: none !important;
+    }
+}
+
 /* Responsive */
 @media (max-width: 900px) {
+    /* Dar ekranda sayfa bütün olarak kayar; grid üstte, paneller altta. */
+    .game-container {
+        height: auto;
+        min-height: 100vh;
+        overflow: visible;
+    }
+
     .main-content {
         flex-direction: column;
+        overflow: visible;
+    }
+
+    .grid-area {
+        order: -1;
+        flex: none;
+        padding: 10px;
+    }
+
+    .tile-panel {
+        order: 0;
+        width: 100%;
+        overflow: visible;
+        border-left: none;
+        border-top: 1px solid rgba(255, 255, 255, 0.08);
     }
 
     .left-panel {
+        order: 1;
         width: 100%;
+        overflow: visible;
         border-right: none;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        border-top: 1px solid rgba(255, 255, 255, 0.08);
     }
 
     .game-grid {
@@ -415,5 +528,12 @@ body {
 
     .stat {
         font-size: 0.85rem;
+    }
+
+    .toast-list {
+        right: 10px;
+        left: 10px;
+        bottom: 10px;
+        max-width: none;
     }
 }
