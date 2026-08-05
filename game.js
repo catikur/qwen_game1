@@ -1,6 +1,32 @@
 // CapitalForge Lite - Oyun Mantığı
 
 // ==================== SABİTLER ====================
+const GRID_SIZE = 10;
+const STARTING_MONEY = 500;
+const STARTING_HAPPINESS = 10;
+const MIN_HAPPINESS = 0;
+const MAX_HAPPINESS = 100;
+const HAPPINESS_INCOME_BONUS = 0.005;
+const SCORE_PER_BUILDING = 10;
+const BANK_UNLOCK_THRESHOLD = 5000;
+
+const TILE_PRICE_MIN = 50;
+const TILE_PRICE_MAX = 500;
+const TILE_PRICE_JITTER = 50;
+
+const TICK_MS = 1000;
+const RIVAL_TURN_MS = 10000;
+const AUTOSAVE_MS = 10000;
+const FIRST_EVENT_MIN_MS = 20000;
+const FIRST_EVENT_RANGE_MS = 10000;
+const EVENT_MIN_MS = 25000;
+const EVENT_RANGE_MS = 15000;
+
+const TOAST_MS = 4000;
+const TOAST_MAX = 4;
+const SAVE_KEY = 'capitalforge_save';
+const SAVE_VERSION = 2;
+
 const BUILDINGS = {
     cafe: { id: 'cafe', name: 'Kafe', emoji: '☕', cost: 100, income: 1, happiness: 1 },
     market: { id: 'market', name: 'Market', emoji: '🛒', cost: 250, income: 3, happiness: 1 },
@@ -10,268 +36,355 @@ const BUILDINGS = {
     bank: { id: 'bank', name: 'Banka', emoji: '🏦', cost: 5000, income: 60, happiness: 0 }
 };
 
+// Görev tanımları sabittir; kayda sadece {id, completed} yazılır.
 const QUESTS = [
-    { id: 1, name: 'İlk Mülk', desc: '1 arsa satın al', condition: (state) => countPlayerTiles(state) >= 1, reward: 200, completed: false },
-    { id: 2, name: 'Girişimci', desc: '3 bina inşa et', condition: (state) => countPlayerBuildings(state) >= 3, reward: 500, completed: false },
-    { id: 3, name: 'Kafe Zinciri', desc: '3 kafe sahip ol', condition: (state) => countBuildingType(state, 'cafe') >= 3, reward: 300, completed: false },
-    { id: 4, name: 'Yeşil Şehir', desc: '2 park inşa et', condition: (state) => countBuildingType(state, 'park') >= 2, reward: 400, completed: false },
-    { id: 5, name: 'Zenginlik', desc: 'Toplam 5000 para kazan', condition: (state) => state.totalEarned >= 5000, reward: 1000, completed: false },
-    { id: 6, name: 'Rakibe Fark At', desc: 'Rakip skorundan 50 puan öne geç', condition: (state) => state.playerScore - state.rivalScore >= 50, reward: 800, completed: false }
+    { id: 1, name: 'İlk Mülk', desc: '1 arsa satın al', reward: 200, condition: (s) => countPlayerTiles(s) >= 1 },
+    { id: 2, name: 'Girişimci', desc: '3 bina inşa et', reward: 500, condition: (s) => countPlayerBuildings(s) >= 3 },
+    { id: 3, name: 'Kafe Zinciri', desc: '3 kafe sahip ol', reward: 300, condition: (s) => countBuildingType(s, 'cafe') >= 3 },
+    { id: 4, name: 'Yeşil Şehir', desc: '2 park inşa et', reward: 400, condition: (s) => countBuildingType(s, 'park') >= 2 },
+    { id: 5, name: 'Zenginlik', desc: 'Toplam 5000 para kazan', reward: 1000, condition: (s) => s.totalEarned >= 5000 },
+    { id: 6, name: 'Rakibe Fark At', desc: 'Rakip skorundan 50 puan öne geç', reward: 800, condition: (s) => s.playerScore - s.rivalScore >= 50 }
 ];
 
+// Olay tanımları sabittir; kayda sadece activeEventId yazılır.
+// cost = seçeneğin gerektirdiği peşin para (buton kilidi bu değere bakar).
 const EVENTS = [
     {
+        id: 'social_trend',
         title: 'Sosyal Medya Trendi',
-        desc: 'Kafenler sosyal medyada trend oldu.',
+        desc: 'Kafeler sosyal medyada trend oldu.',
         options: [
-            { text: 'Reklam kampanyası başlat', effect: (s) => { s.money -= 200; s.happiness = Math.min(100, s.happiness + 10); }, desc: '-200 para, +10 mutluluk' },
-            { text: 'Sakin kal', effect: (s) => { s.happiness = Math.min(100, s.happiness + 5); }, desc: '+5 mutluluk' }
+            { text: 'Reklam kampanyası başlat', desc: '-200 para, +10 mutluluk', cost: 200, apply: (s) => { addMoney(s, -200); addHappiness(s, 10); } },
+            { text: 'Sakin kal', desc: '+5 mutluluk', cost: 0, apply: (s) => { addHappiness(s, 5); } }
         ]
     },
     {
+        id: 'tax_cut',
         title: 'Vergi İndirimi',
         desc: 'Belediye kısa süreli vergi indirimi açıkladı.',
         options: [
-            { text: 'Nakit ödeyip teşvik al', effect: (s) => { s.money -= 300; s.money += 500; }, desc: '-300 para, +500 para' },
-            { text: 'Bekle', effect: (s) => {}, desc: 'Hiçbir şey olmaz' }
+            { text: 'Nakit ödeyip teşvik al', desc: '-300 para, +500 para', cost: 300, apply: (s) => { addMoney(s, -300); addMoney(s, 500); } },
+            { text: 'Bekle', desc: 'Hiçbir şey olmaz', cost: 0, apply: () => {} }
         ]
     },
     {
+        id: 'factory_protest',
         title: 'Fabrika Protestosu',
         desc: 'Fabrika bölgesinde küçük bir protesto var.',
         options: [
-            { text: 'Halkla ilişkiler yap', effect: (s) => { s.money -= 250; s.happiness = Math.min(100, s.happiness + 8); }, desc: '-250 para, +8 mutluluk' },
-            { text: 'Görmezden gel', effect: (s) => { s.happiness = Math.max(0, s.happiness - 8); }, desc: '-8 mutluluk' }
+            { text: 'Halkla ilişkiler yap', desc: '-250 para, +8 mutluluk', cost: 250, apply: (s) => { addMoney(s, -250); addHappiness(s, 8); } },
+            { text: 'Görmezden gel', desc: '-8 mutluluk', cost: 0, apply: (s) => { addHappiness(s, -8); } }
         ]
     },
     {
+        id: 'angel_investor',
         title: 'Yatırımcı Meleği',
         desc: 'Bir yatırımcı melek senin girişimine ilgi duyuyor.',
         options: [
-            { text: 'Yatırım kabul et', effect: (s) => { s.money += 800; s.happiness = Math.max(0, s.happiness - 5); }, desc: '+800 para, -5 mutluluk' },
-            { text: 'Reddet', effect: (s) => { s.happiness = Math.min(100, s.happiness + 5); }, desc: '+5 mutluluk' }
+            { text: 'Yatırım kabul et', desc: '+800 para, -5 mutluluk', cost: 0, apply: (s) => { addMoney(s, 800); addHappiness(s, -5); } },
+            { text: 'Reddet', desc: '+5 mutluluk', cost: 0, apply: (s) => { addHappiness(s, 5); } }
         ]
     },
     {
+        id: 'city_festival',
         title: 'Şehir Festivali',
         desc: 'Şehirde festival düzenleniyor.',
         options: [
-            { text: 'Stant aç', effect: (s) => { s.money -= 150; s.happiness = Math.min(100, s.happiness + 12); }, desc: '-150 para, +12 mutluluk' },
-            { text: 'Katılma', effect: (s) => { s.happiness = Math.max(0, s.happiness - 3); }, desc: '-3 mutluluk' }
+            { text: 'Stant aç', desc: '-150 para, +12 mutluluk', cost: 150, apply: (s) => { addMoney(s, -150); addHappiness(s, 12); } },
+            { text: 'Katılma', desc: '-3 mutluluk', cost: 0, apply: (s) => { addHappiness(s, -3); } }
         ]
     }
 ];
 
 // ==================== YARDIMCI FONKSİYONLAR ====================
-function countPlayerTiles(state) {
-    return state.tiles.filter(t => t.owner === 'player').length;
+function clamp(value, min, max) {
+    return Math.max(min, Math.min(max, value));
 }
 
-function countPlayerBuildings(state) {
-    return state.tiles.filter(t => t.owner === 'player' && t.building !== null).length;
+function getQuestDef(id) {
+    return QUESTS.find(q => q.id === id) || null;
 }
 
-function countBuildingType(state, buildingId) {
-    return state.tiles.filter(t => t.owner === 'player' && t.building === buildingId).length;
+function getEventDef(id) {
+    return EVENTS.find(e => e.id === id) || null;
 }
 
-function calculateBaseIncome(state) {
-    let income = 0;
-    state.tiles.forEach(tile => {
-        if (tile.owner === 'player' && tile.building) {
-            income += BUILDINGS[tile.building].income;
-        }
-    });
-    return income;
+function getActiveEvent(s) {
+    return s.activeEventId ? getEventDef(s.activeEventId) : null;
 }
 
-function calculateRealIncome(state) {
-    const baseIncome = calculateBaseIncome(state);
-    const bonus = 1 + (state.happiness * 0.005);
-    return baseIncome * bonus;
+function addMoney(s, amount) {
+    s.money = Math.max(0, s.money + amount);
 }
 
-function updateScores(state) {
-    state.playerScore = countPlayerBuildings(state) * 10;
-    state.rivalScore = state.tiles.filter(t => t.owner === 'rival' && t.building !== null).length * 10;
+function addHappiness(s, amount) {
+    s.happiness = clamp(s.happiness + amount, MIN_HAPPINESS, MAX_HAPPINESS);
+}
+
+function countPlayerTiles(s) {
+    return s.tiles.filter(t => t.owner === 'player').length;
+}
+
+function countPlayerBuildings(s) {
+    return s.tiles.filter(t => t.owner === 'player' && t.building !== null).length;
+}
+
+function countRivalBuildings(s) {
+    return s.tiles.filter(t => t.owner === 'rival' && t.building !== null).length;
+}
+
+function countBuildingType(s, buildingId) {
+    return s.tiles.filter(t => t.owner === 'player' && t.building === buildingId).length;
+}
+
+function calculateBaseIncome(s) {
+    return s.tiles.reduce((total, tile) => {
+        if (tile.owner !== 'player' || !tile.building) return total;
+        return total + BUILDINGS[tile.building].income;
+    }, 0);
+}
+
+function calculateRealIncome(s) {
+    return s.baseIncome * (1 + s.happiness * HAPPINESS_INCOME_BONUS);
+}
+
+// Bina sahipliği değiştiğinde türetilmiş alanları tazeler.
+function refreshDerived(s) {
+    s.baseIncome = calculateBaseIncome(s);
+    s.playerScore = countPlayerBuildings(s) * SCORE_PER_BUILDING;
+    s.rivalScore = countRivalBuildings(s) * SCORE_PER_BUILDING;
+}
+
+function isBuildingLocked(buildingId) {
+    return buildingId === 'bank' && !state.bankUnlocked;
 }
 
 function generateTiles() {
     const tiles = [];
-    for (let y = 0; y < 10; y++) {
-        for (let x = 0; x < 10; x++) {
-            const distFromCenter = Math.abs(x - 4.5) + Math.abs(y - 4.5);
-            const basePrice = 50 + Math.floor(Math.random() * 100);
-            const price = Math.min(500, Math.max(50, basePrice + Math.floor((9 - distFromCenter) * 15)));
-            tiles.push({
-                id: y * 10 + x,
-                x: x,
-                y: y,
-                owner: null,
-                building: null,
-                price: price
-            });
+    const center = (GRID_SIZE - 1) / 2;
+    const maxDistance = center * 2;
+    const priceSpan = TILE_PRICE_MAX - TILE_PRICE_MIN;
+
+    for (let y = 0; y < GRID_SIZE; y++) {
+        for (let x = 0; x < GRID_SIZE; x++) {
+            // Merkeze yakın arsalar daha pahalı, üstüne rastgele sapma.
+            const distance = Math.abs(x - center) + Math.abs(y - center);
+            const centrality = 1 - distance / maxDistance;
+            const jitter = Math.floor(Math.random() * (TILE_PRICE_JITTER * 2 + 1)) - TILE_PRICE_JITTER;
+            const price = clamp(
+                Math.round(TILE_PRICE_MIN + centrality * priceSpan + jitter),
+                TILE_PRICE_MIN,
+                TILE_PRICE_MAX
+            );
+
+            tiles.push({ id: y * GRID_SIZE + x, x: x, y: y, owner: null, building: null, price: price });
         }
     }
     return tiles;
 }
 
 // ==================== OYUN STATE ====================
-let state = {
-    money: 500,
-    baseIncome: 0,
-    happiness: 10,
-    totalEarned: 0,
-    playerScore: 0,
-    rivalScore: 0,
-    tiles: [],
-    quests: [],
-    activeEvent: null,
-    lastEventTime: Date.now(),
-    bankUnlocked: false,
-    selectedTileId: null
-};
-
-// ==================== INIT ====================
-function initGame() {
-    state = {
-        money: 500,
+// state içinde yalnızca JSON'a yazılabilen veri tutulur; fonksiyonlar
+// QUESTS / EVENTS sabitlerinde kalır ve id üzerinden bulunur.
+function createInitialState() {
+    return {
+        money: STARTING_MONEY,
         baseIncome: 0,
-        happiness: 10,
+        happiness: STARTING_HAPPINESS,
         totalEarned: 0,
         playerScore: 0,
         rivalScore: 0,
         tiles: generateTiles(),
-        quests: JSON.parse(JSON.stringify(QUESTS)),
-        activeEvent: null,
+        quests: QUESTS.map(q => ({ id: q.id, completed: false })),
+        activeEventId: null,
         lastEventTime: Date.now(),
+        nextEventDelay: FIRST_EVENT_MIN_MS + Math.random() * FIRST_EVENT_RANGE_MS,
         bankUnlocked: false,
         selectedTileId: null
     };
-    renderGrid();
-    renderBuildingList();
-    renderQuestList();
-    updateUI();
-    startGameLoop();
+}
+
+let state = createInitialState();
+
+// ==================== BİLDİRİMLER ====================
+function notify(message, type = 'info') {
+    const list = document.getElementById('toastList');
+    if (!list) return;
+
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+    toast.textContent = message;
+    list.appendChild(toast);
+
+    // Ekranı doldurmasın: en eskiler düşer.
+    while (list.children.length > TOAST_MAX) list.firstElementChild.remove();
+
+    setTimeout(() => toast.remove(), TOAST_MS);
 }
 
 // ==================== RENDER FONKSİYONLARI ====================
+const tileElements = new Map();
+const buildingElements = new Map();
+let renderedEventId; // undefined = "henüz çizilmedi", null = "aktif olay yok"
+
+function renderAll() {
+    renderGrid();
+    renderBuildingList();
+    renderQuestList();
+    renderEventPanel();
+    clearTileSelection();
+    updateUI();
+}
+
 function renderGrid() {
     const grid = document.getElementById('gameGrid');
     grid.innerHTML = '';
-    
+    tileElements.clear();
+
     state.tiles.forEach(tile => {
-        const tileEl = document.createElement('div');
+        const tileEl = document.createElement('button');
+        tileEl.type = 'button';
         tileEl.className = 'tile';
-        tileEl.id = `tile-${tile.id}`;
-        
-        // Durum belirleme
-        if (tile.owner === null) {
-            tileEl.classList.add('empty', 'for-sale');
-        } else if (tile.owner === 'player') {
-            tileEl.classList.add('player-owned');
-            if (tile.building) {
-                tileEl.textContent = BUILDINGS[tile.building].emoji;
-            }
-        } else if (tile.owner === 'rival') {
-            tileEl.classList.add('rival-owned');
-            if (tile.building) {
-                tileEl.textContent = BUILDINGS[tile.building].emoji;
-            }
-        }
-        
-        // Seçili mi?
-        if (state.selectedTileId === tile.id) {
-            tileEl.classList.add('selected');
-        }
-        
-        tileEl.addEventListener('click', () => selectTile(tile.id));
+        tileEl.dataset.tileId = String(tile.id);
+        tileElements.set(tile.id, tileEl);
         grid.appendChild(tileEl);
+        updateTileEl(tile);
     });
+}
+
+// Tek bir kareyi günceller; grid'in tamamı yeniden kurulmaz.
+function updateTileEl(tile) {
+    const tileEl = tileElements.get(tile.id);
+    if (!tileEl) return;
+
+    tileEl.className = 'tile';
+    let description;
+
+    if (tile.owner === null) {
+        tileEl.classList.add('empty', 'for-sale');
+        description = `satılık, ${tile.price} para`;
+    } else if (tile.owner === 'player') {
+        tileEl.classList.add('player-owned');
+        description = 'sizin arsanız';
+    } else {
+        tileEl.classList.add('rival-owned');
+        description = 'Rakip AŞ arsası';
+    }
+
+    if (tile.building) {
+        const building = BUILDINGS[tile.building];
+        tileEl.textContent = building.emoji;
+        description += `, ${building.name}`;
+    } else {
+        tileEl.textContent = '';
+    }
+
+    if (state.selectedTileId === tile.id) {
+        tileEl.classList.add('selected');
+    }
+
+    tileEl.setAttribute('aria-label', `Arsa ${tile.x + 1}-${tile.y + 1}: ${description}`);
+}
+
+function updateTileById(tileId) {
+    const tile = state.tiles.find(t => t.id === tileId);
+    if (tile) updateTileEl(tile);
 }
 
 function renderBuildingList() {
     const list = document.getElementById('buildingList');
     list.innerHTML = '';
-    
+    buildingElements.clear();
+
     Object.values(BUILDINGS).forEach(building => {
-        const item = document.createElement('div');
+        const item = document.createElement('button');
+        item.type = 'button';
         item.className = 'building-item';
-        
-        const isLocked = building.id === 'bank' && !state.bankUnlocked;
-        const canAfford = state.money >= building.cost;
-        
-        if (isLocked) {
-            item.classList.add('locked');
-        } else if (!canAfford) {
-            item.classList.add('disabled');
-        }
-        
+        item.dataset.buildingId = building.id;
         item.innerHTML = `
-            <div class="building-name">${building.emoji} ${building.name}</div>
-            <div class="building-stats">
+            <span class="building-name">${building.emoji} ${building.name}</span>
+            <span class="building-stats">
                 Maliyet: ${building.cost} | Gelir: ${building.income}/s
                 ${building.happiness !== 0 ? `| Mutluluk: ${building.happiness > 0 ? '+' : ''}${building.happiness}` : ''}
-            </div>
+            </span>
         `;
-        
-        if (!isLocked) {
-            item.addEventListener('click', () => tryBuildBuilding(building.id));
-        }
-        
+        buildingElements.set(building.id, item);
         list.appendChild(item);
+    });
+
+    refreshBuildingList();
+}
+
+// Sadece kilitli/pahalı durumunu tazeler, DOM'u yeniden kurmaz.
+function refreshBuildingList() {
+    buildingElements.forEach((item, buildingId) => {
+        const locked = isBuildingLocked(buildingId);
+        item.classList.toggle('locked', locked);
+        item.classList.toggle('disabled', !locked && state.money < BUILDINGS[buildingId].cost);
     });
 }
 
 function renderQuestList() {
     const list = document.getElementById('questList');
     list.innerHTML = '';
-    
-    state.quests.forEach(quest => {
+
+    state.quests.forEach(entry => {
+        const def = getQuestDef(entry.id);
+        if (!def) return;
+
         const item = document.createElement('div');
         item.className = 'quest-item';
-        if (quest.completed) {
-            item.classList.add('completed');
-        }
-        
+        if (entry.completed) item.classList.add('completed');
+
         item.innerHTML = `
-            <div class="quest-name">${quest.completed ? '✓' : '○'} ${quest.name}</div>
-            <div class="quest-desc">${quest.desc}</div>
-            <div class="quest-reward">Ödül: +${quest.reward} para</div>
+            <div class="quest-name">${entry.completed ? '✓' : '○'} ${def.name}</div>
+            <div class="quest-desc">${def.desc}</div>
+            <div class="quest-reward">Ödül: +${def.reward} para</div>
         `;
-        
+
         list.appendChild(item);
     });
 }
 
 function renderEventPanel() {
     const panel = document.getElementById('eventPanel');
-    
-    if (state.activeEvent) {
-        panel.classList.add('active');
-        const event = state.activeEvent;
-        
-        let optionsHtml = '';
-        event.options.forEach((opt, idx) => {
-            const disabled = opt.effect.toString().includes('money -=') && 
-                            parseInt(opt.effect.toString().match(/money -= (\d+)/)?.[1] || 0) > state.money;
-            optionsHtml += `
-                <button class="event-option${disabled ? ' disabled' : ''}" onclick="resolveEvent(${idx})">
-                    ${opt.text}
-                    <div class="event-effect">${opt.desc}</div>
-                </button>
-            `;
-        });
-        
-        panel.innerHTML = `
-            <div class="event-title">${event.title}</div>
-            <div class="event-desc">${event.desc}</div>
-            <div class="event-options">${optionsHtml}</div>
-        `;
-    } else {
+    const event = getActiveEvent(state);
+    const eventId = event ? event.id : null;
+
+    // Aktif olay değişmediyse sadece seçenek butonlarını tazele.
+    if (eventId === renderedEventId) {
+        refreshEventOptions();
+        return;
+    }
+    renderedEventId = eventId;
+    document.getElementById('eventSection').classList.toggle('active-event', Boolean(event));
+
+    if (!event) {
         panel.classList.remove('active');
         panel.innerHTML = '<p>Olay bekleniyor...</p>';
+        return;
     }
+
+    panel.classList.add('active');
+    const optionsHtml = event.options.map((option, index) => `
+        <button class="event-option" type="button" data-option-index="${index}" data-cost="${option.cost}">
+            ${option.text}
+            <span class="event-effect">${option.desc}</span>
+        </button>
+    `).join('');
+
+    panel.innerHTML = `
+        <div class="event-title">${event.title}</div>
+        <div class="event-desc">${event.desc}</div>
+        <div class="event-options">${optionsHtml}</div>
+    `;
+    refreshEventOptions();
+}
+
+function refreshEventOptions() {
+    document.querySelectorAll('#eventPanel .event-option').forEach(button => {
+        button.disabled = state.money < Number(button.dataset.cost);
+    });
 }
 
 function updateUI() {
@@ -280,296 +393,459 @@ function updateUI() {
     document.getElementById('happiness').textContent = state.happiness;
     document.getElementById('playerScore').textContent = state.playerScore;
     document.getElementById('rivalScore').textContent = state.rivalScore;
-    
-    // Banka kilidini kontrol et
-    if (!state.bankUnlocked && state.totalEarned >= 5000) {
-        state.bankUnlocked = true;
-        alert('🏦 Banka kilidi açıldı! Artık banka inşa edebilirsiniz.');
-    }
-    
-    renderBuildingList();
-    renderEventPanel();
+    document.getElementById('leadBadge').classList.toggle('hidden', state.playerScore <= state.rivalScore);
+
+    refreshBuildingList();
+    refreshEventOptions();
+    refreshTilePanelButtons();
 }
 
-// ==================== TILE SEÇİMİ ====================
-function selectTile(tileId) {
+// ==================== ARSA PANELİ ====================
+// Sadece grid'deki seçim vurgusunu değiştirir.
+function setSelectedTile(tileId) {
+    const previousId = state.selectedTileId;
     state.selectedTileId = tileId;
-    renderGrid();
-    showTilePanel(tileId);
+
+    if (previousId !== null && previousId !== tileId) updateTileById(previousId);
+    if (tileId !== null) updateTileById(tileId);
 }
 
-function showTilePanel(tileId) {
-    const tile = state.tiles.find(t => t.id === tileId);
-    const panel = document.getElementById('tilePanel');
+function selectTile(tileId) {
+    setSelectedTile(tileId);
+    renderTilePanel();
+}
+
+// Sağ paneli seçili arsaya göre çizer; seçim yoksa yönlendirme metni gösterir.
+function renderTilePanel() {
+    const title = document.getElementById('tilePanelTitle');
     const content = document.getElementById('tilePanelContent');
-    
-    if (!tile) return;
-    
-    let html = `<div class="tile-info">Arsa #${tile.id} (${tile.x}, ${tile.y})</div>`;
-    
+    const closeButton = document.getElementById('closeTilePanel');
+    const tile = state.tiles.find(t => t.id === state.selectedTileId);
+
+    if (!tile) {
+        title.textContent = 'Arsa Detayı';
+        content.innerHTML = '<p class="tile-empty-hint">Bilgi ve işlemler için grid üzerinden bir arsa seçin.</p>';
+        closeButton.classList.add('hidden');
+        return;
+    }
+
+    title.textContent = `Arsa ${tile.x + 1}-${tile.y + 1}`;
+    closeButton.classList.remove('hidden');
+
+    let html = '';
+
     if (tile.owner === null) {
-        html += `<div class="tile-info">Fiyat: ${tile.price} para</div>`;
+        html += `<div class="tile-info">Satılık arsa — Fiyat: ${tile.price} para</div>`;
         html += `<div class="tile-actions">
-            <button ${state.money < tile.price ? 'disabled' : ''} onclick="buyTile(${tile.id})">
+            <button type="button" data-action="buy" data-tile-id="${tile.id}" data-cost="${tile.price}">
                 Satın Al (${tile.price} para)
             </button>
         </div>`;
+    } else if (tile.owner === 'player' && tile.building) {
+        const building = BUILDINGS[tile.building];
+        html += `<div class="tile-info">Bina: ${building.emoji} ${building.name}</div>`;
+        html += `<div class="tile-info">Gelir: ${building.income}/s${building.happiness !== 0 ? ` | Mutluluk: ${building.happiness > 0 ? '+' : ''}${building.happiness}` : ''}</div>`;
     } else if (tile.owner === 'player') {
-        if (tile.building) {
-            const b = BUILDINGS[tile.building];
-            html += `<div class="tile-info">Bina: ${b.emoji} ${b.name}</div>`;
-            html += `<div class="tile-info">Gelir: ${b.income}/s ${b.happiness !== 0 ? `| Mutluluk: ${b.happiness > 0 ? '+' : ''}${b.happiness}` : ''}</div>`;
-        } else {
-            html += `<div class="tile-info">Boş arsanız</div>`;
-            html += `<div class="tile-actions">`;
-            
-            Object.values(BUILDINGS).forEach(b => {
-                const isLocked = b.id === 'bank' && !state.bankUnlocked;
-                const canAfford = state.money >= b.cost;
-                
-                if (!isLocked) {
-                    html += `<button ${!canAfford ? 'disabled' : ''} onclick="buildOnTile(${tile.id}, '${b.id}')">
-                        ${b.emoji} ${b.name} (${b.cost})
-                    </button>`;
-                }
-            });
-            
-            html += `</div>`;
-        }
-    } else if (tile.owner === 'rival') {
+        html += `<div class="tile-info">Boş arsanız — bir bina seçin</div>`;
+        html += `<div class="tile-actions">`;
+        Object.values(BUILDINGS).forEach(building => {
+            if (isBuildingLocked(building.id)) return;
+            html += `<button type="button" data-action="build" data-tile-id="${tile.id}" data-building-id="${building.id}" data-cost="${building.cost}">
+                ${building.emoji} ${building.name} (${building.cost})
+            </button>`;
+        });
+        html += `</div>`;
+    } else {
         html += `<div class="tile-info">Rakip AŞ'ye ait</div>`;
         if (tile.building) {
-            const b = BUILDINGS[tile.building];
-            html += `<div class="tile-info">Bina: ${b.emoji} ${b.name}</div>`;
+            const building = BUILDINGS[tile.building];
+            html += `<div class="tile-info">Bina: ${building.emoji} ${building.name}</div>`;
         }
     }
-    
+
     content.innerHTML = html;
-    panel.classList.remove('hidden');
+    refreshTilePanelButtons();
 }
 
-function closeTilePanel() {
-    document.getElementById('tilePanel').classList.add('hidden');
-    state.selectedTileId = null;
-    renderGrid();
+// Para arttıkça panel butonları kendiliğinden aktifleşir.
+function refreshTilePanelButtons() {
+    document.getElementById('tilePanel').querySelectorAll('button[data-cost]').forEach(button => {
+        button.disabled = state.money < Number(button.dataset.cost);
+    });
+}
+
+// Seçili arsa hâlâ aynıysa panel içeriğini tazeler.
+function refreshTilePanel(tileId) {
+    if (state.selectedTileId === tileId) renderTilePanel();
+}
+
+function clearTileSelection() {
+    setSelectedTile(null);
+    renderTilePanel();
 }
 
 // ==================== AKSİYONLAR ====================
 function buyTile(tileId) {
     const tile = state.tiles.find(t => t.id === tileId);
-    if (tile && tile.owner === null && state.money >= tile.price) {
-        state.money -= tile.price;
-        tile.owner = 'player';
-        updateScores(state);
-        renderGrid();
-        showTilePanel(tileId);
-        updateUI();
-        checkQuests();
+    if (!tile || tile.owner !== null) return;
+
+    if (state.money < tile.price) {
+        notify('Bu arsa için yeterli paranız yok.', 'warning');
+        return;
     }
+
+    state.money -= tile.price;
+    tile.owner = 'player';
+    refreshDerived(state);
+    updateTileEl(tile);
+    refreshTilePanel(tileId);
+    checkQuests();
+    updateUI();
 }
 
 function buildOnTile(tileId, buildingId) {
     const tile = state.tiles.find(t => t.id === tileId);
     const building = BUILDINGS[buildingId];
-    
-    if (tile && tile.owner === 'player' && tile.building === null && state.money >= building.cost) {
-        state.money -= building.cost;
-        tile.building = buildingId;
-        state.happiness = Math.max(0, Math.min(100, state.happiness + building.happiness));
-        updateScores(state);
-        renderGrid();
-        showTilePanel(tileId);
-        updateUI();
-        checkQuests();
+    if (!tile || !building) return false;
+
+    if (tile.owner !== 'player') {
+        notify('Önce bu arsayı satın almalısınız.', 'warning');
+        return false;
     }
+    if (tile.building) {
+        notify('Bu arsada zaten bir bina var.', 'warning');
+        return false;
+    }
+    if (isBuildingLocked(buildingId)) {
+        notify(`${building.name} henüz kilitli.`, 'warning');
+        return false;
+    }
+    if (state.money < building.cost) {
+        notify(`${building.name} için ${building.cost} para gerekiyor.`, 'warning');
+        return false;
+    }
+
+    state.money -= building.cost;
+    tile.building = buildingId;
+    addHappiness(state, building.happiness);
+    refreshDerived(state);
+    updateTileEl(tile);
+    refreshTilePanel(tileId);
+    checkQuests();
+    updateUI();
+    return true;
 }
 
+// Sol paneldeki bina kartına tıklanınca hedef arsayı seçer.
 function tryBuildBuilding(buildingId) {
-    // Seçili oyuncu arsası varsa oraya inşa et
+    const building = BUILDINGS[buildingId];
+    if (!building) return;
+
+    if (isBuildingLocked(buildingId)) {
+        notify(`Banka, toplam ${BANK_UNLOCK_THRESHOLD} para kazandığınızda açılır.`, 'warning');
+        return;
+    }
+
     if (state.selectedTileId !== null) {
-        const tile = state.tiles.find(t => t.id === state.selectedTileId);
-        if (tile && tile.owner === 'player' && tile.building === null) {
-            buildOnTile(state.selectedTileId, buildingId);
+        const selected = state.tiles.find(t => t.id === state.selectedTileId);
+        if (selected && selected.owner === 'player' && !selected.building) {
+            buildOnTile(selected.id, buildingId);
             return;
         }
     }
-    
-    // Oyuncuya ait boş arsa ara
+
     const emptyTile = state.tiles.find(t => t.owner === 'player' && t.building === null);
-    if (emptyTile) {
-        buildOnTile(emptyTile.id, buildingId);
-    } else {
-        alert('Önce boş bir arsa satın alın!');
+    if (!emptyTile) {
+        notify('Önce boş bir arsa satın alın.', 'warning');
+        return;
+    }
+
+    // Otomatik seçilen arsa vurgulanır ve oyuncuya nereye inşa edildiği söylenir.
+    setSelectedTile(emptyTile.id);
+    if (buildOnTile(emptyTile.id, buildingId)) {
+        notify(`${building.emoji} ${building.name}, ${emptyTile.x + 1}-${emptyTile.y + 1} arsasına inşa edildi.`, 'success');
     }
 }
 
-// ==================== GÖREV KONTROLÜ ====================
+// ==================== GÖREV VE KİLİT KONTROLÜ ====================
 function checkQuests() {
-    state.quests.forEach(quest => {
-        if (!quest.completed && quest.condition(state)) {
-            quest.completed = true;
-            state.money += quest.reward;
-            alert(`🎉 Görev Tamamlandı: ${quest.name}\nÖdül: +${quest.reward} para`);
-            renderQuestList();
-            updateUI();
-        }
+    state.quests.forEach(entry => {
+        if (entry.completed) return;
+
+        const def = getQuestDef(entry.id);
+        if (!def || !def.condition(state)) return;
+
+        entry.completed = true;
+        addMoney(state, def.reward);
+        notify(`🎉 Görev tamamlandı: ${def.name} (+${def.reward} para)`, 'success');
+        renderQuestList();
     });
+}
+
+function checkUnlocks() {
+    if (state.bankUnlocked || state.totalEarned < BANK_UNLOCK_THRESHOLD) return;
+
+    state.bankUnlocked = true;
+    notify('🏦 Banka kilidi açıldı! Artık banka inşa edebilirsiniz.', 'success');
+    refreshBuildingList();
+    if (state.selectedTileId !== null) refreshTilePanel(state.selectedTileId);
 }
 
 // ==================== RAKİP HAMLESİ ====================
 function rivalTurn() {
     const availableTiles = state.tiles.filter(t => t.owner === null);
     if (availableTiles.length === 0) return;
-    
-    const randomTile = availableTiles[Math.floor(Math.random() * availableTiles.length)];
-    randomTile.owner = 'rival';
-    
+
+    const tile = availableTiles[Math.floor(Math.random() * availableTiles.length)];
+    tile.owner = 'rival';
+
     const buildingIds = Object.keys(BUILDINGS).filter(id => id !== 'bank');
-    const randomBuilding = buildingIds[Math.floor(Math.random() * buildingIds.length)];
-    randomTile.building = randomBuilding;
-    
-    updateScores(state);
-    renderGrid();
+    tile.building = buildingIds[Math.floor(Math.random() * buildingIds.length)];
+
+    refreshDerived(state);
+    updateTileEl(tile);
+    // Oyuncu tam o arsanın panelini açık tutuyorsa panel tazelenir.
+    refreshTilePanel(tile.id);
     updateUI();
 }
 
 // ==================== RASTGELE OLAY ====================
 function checkRandomEvent() {
-    if (state.activeEvent) return;
-    
-    const now = Date.now();
-    const timeSinceLastEvent = now - state.lastEventTime;
-    
-    // İlk olay 20 saniyeden önce gelmez
-    if (timeSinceLastEvent < 20000) return;
-    
-    // Sonraki olaylar 25-40 saniye arasında
-    const nextEventTime = 25000 + Math.random() * 15000;
-    
-    if (timeSinceLastEvent >= nextEventTime) {
-        triggerRandomEvent();
-    }
+    if (state.activeEventId) return;
+    if (Date.now() - state.lastEventTime < state.nextEventDelay) return;
+    triggerRandomEvent();
 }
 
 function triggerRandomEvent() {
-    const randomEvent = EVENTS[Math.floor(Math.random() * EVENTS.length)];
-    state.activeEvent = randomEvent;
+    const event = EVENTS[Math.floor(Math.random() * EVENTS.length)];
+    state.activeEventId = event.id;
     renderEventPanel();
+
+    // Panel sol sütunun en üstüne çıkar, ayrıca bildirimle duyurulur.
+    notify(`📣 Yeni olay: ${event.title}`, 'info');
 }
 
 function resolveEvent(optionIndex) {
-    if (!state.activeEvent) return;
-    
-    const option = state.activeEvent.options[optionIndex];
-    option.effect(state);
-    
-    state.happiness = Math.max(0, Math.min(100, state.happiness));
-    state.activeEvent = null;
+    const event = getActiveEvent(state);
+    if (!event) return;
+
+    const option = event.options[optionIndex];
+    if (!option) return;
+
+    if (state.money < option.cost) {
+        notify('Bu seçenek için yeterli paranız yok.', 'warning');
+        return;
+    }
+
+    option.apply(state);
+    state.activeEventId = null;
     state.lastEventTime = Date.now();
-    
+    state.nextEventDelay = EVENT_MIN_MS + Math.random() * EVENT_RANGE_MS;
+
     renderEventPanel();
     updateUI();
 }
 
 // ==================== GAME LOOP ====================
-let gameLoopInterval;
-let rivalInterval;
-let autosaveInterval;
+let gameLoopInterval = null;
+let rivalInterval = null;
+let autosaveInterval = null;
 
-function startGameLoop() {
-    // Her saniye gelir
-    gameLoopInterval = setInterval(() => {
-        const realIncome = calculateRealIncome(state);
-        state.money += realIncome;
-        state.totalEarned += realIncome;
-        state.baseIncome = calculateBaseIncome(state);
-        
-        updateScores(state);
-        updateUI();
-        checkQuests();
-        checkRandomEvent();
-    }, 1000);
-    
-    // Rakip her 10 saniye
-    rivalInterval = setInterval(() => {
-        rivalTurn();
-    }, 10000);
-    
-    // Autosave her 10 saniye
-    autosaveInterval = setInterval(() => {
-        saveGame(true);
-    }, 10000);
+function tick() {
+    refreshDerived(state);
+
+    const income = calculateRealIncome(state);
+    state.money += income;
+    state.totalEarned += income;
+
+    checkUnlocks();
+    checkQuests();
+    checkRandomEvent();
+    updateUI();
 }
 
-// ==================== SAVE/LOAD ====================
+function startGameLoop() {
+    stopGameLoop();
+    gameLoopInterval = setInterval(tick, TICK_MS);
+    rivalInterval = setInterval(rivalTurn, RIVAL_TURN_MS);
+    autosaveInterval = setInterval(() => saveGame(true), AUTOSAVE_MS);
+}
+
+function stopGameLoop() {
+    clearInterval(gameLoopInterval);
+    clearInterval(rivalInterval);
+    clearInterval(autosaveInterval);
+    gameLoopInterval = null;
+    rivalInterval = null;
+    autosaveInterval = null;
+}
+
+// ==================== SAVE / LOAD ====================
 function saveGame(isAutosave = false) {
     try {
-        localStorage.setItem('capitalforge_save', JSON.stringify(state));
-        if (!isAutosave) {
-            alert('Oyun kaydedildi!');
-        }
+        const payload = {
+            version: SAVE_VERSION,
+            state: state,
+            // Olay sayacı mutlak zaman yerine "geçen süre" olarak saklanır.
+            eventElapsed: Date.now() - state.lastEventTime
+        };
+        localStorage.setItem(SAVE_KEY, JSON.stringify(payload));
+        if (!isAutosave) notify('Oyun kaydedildi.', 'success');
     } catch (e) {
         console.error('Kayıt hatası:', e);
-        if (!isAutosave) {
-            alert('Kayıt başarısız!');
-        }
+        if (!isAutosave) notify('Kayıt başarısız oldu.', 'warning');
+    }
+}
+
+function isValidSave(payload) {
+    return Boolean(
+        payload &&
+        payload.version === SAVE_VERSION &&
+        payload.state &&
+        typeof payload.state.money === 'number' &&
+        Array.isArray(payload.state.tiles) &&
+        payload.state.tiles.length === GRID_SIZE * GRID_SIZE
+    );
+}
+
+// Kayıttaki ham veriyi güvenli bir state objesine dönüştürür.
+function normalizeSave(payload) {
+    const fresh = createInitialState();
+    const saved = payload.state;
+
+    const loaded = Object.assign(fresh, saved, {
+        tiles: saved.tiles.map((tile, index) => ({
+            id: Number.isInteger(tile.id) ? tile.id : index,
+            x: Number.isInteger(tile.x) ? tile.x : index % GRID_SIZE,
+            y: Number.isInteger(tile.y) ? tile.y : Math.floor(index / GRID_SIZE),
+            owner: tile.owner === 'player' || tile.owner === 'rival' ? tile.owner : null,
+            building: BUILDINGS[tile.building] ? tile.building : null,
+            price: clamp(Number(tile.price) || TILE_PRICE_MIN, TILE_PRICE_MIN, TILE_PRICE_MAX)
+        })),
+        // Görev fonksiyonları sabitlerden gelir, kayıttan sadece durum okunur.
+        quests: QUESTS.map(def => {
+            const entry = Array.isArray(saved.quests) ? saved.quests.find(q => q && q.id === def.id) : null;
+            return { id: def.id, completed: Boolean(entry && entry.completed) };
+        }),
+        activeEventId: getEventDef(saved.activeEventId) ? saved.activeEventId : null,
+        selectedTileId: null,
+        bankUnlocked: Boolean(saved.bankUnlocked)
+    });
+
+    loaded.money = Math.max(0, Number(loaded.money) || 0);
+    loaded.totalEarned = Math.max(0, Number(loaded.totalEarned) || 0);
+    loaded.happiness = clamp(Number(loaded.happiness) || 0, MIN_HAPPINESS, MAX_HAPPINESS);
+    if (!(loaded.nextEventDelay > 0)) loaded.nextEventDelay = EVENT_MIN_MS;
+
+    const elapsed = clamp(Number(payload.eventElapsed) || 0, 0, loaded.nextEventDelay);
+    loaded.lastEventTime = Date.now() - elapsed;
+
+    refreshDerived(loaded);
+    return loaded;
+}
+
+function readSave() {
+    let raw;
+    try {
+        raw = localStorage.getItem(SAVE_KEY);
+    } catch (e) {
+        console.warn('localStorage okunamadı:', e);
+        return null;
+    }
+    if (!raw) return null;
+
+    try {
+        const payload = JSON.parse(raw);
+        if (!isValidSave(payload)) return null;
+        return normalizeSave(payload);
+    } catch (e) {
+        console.warn('Kayıt okunamadı, yeni oyun başlatılıyor:', e);
+        return null;
     }
 }
 
 function loadGame() {
-    try {
-        const saved = localStorage.getItem('capitalforge_save');
-        if (saved) {
-            state = JSON.parse(saved);
-            renderGrid();
-            renderBuildingList();
-            renderQuestList();
-            renderEventPanel();
-            updateUI();
-            alert('Oyun yüklendi!');
-        } else {
-            alert('Kayıtlı oyun bulunamadı!');
-        }
-    } catch (e) {
-        console.error('Yükleme hatası:', e);
-        alert('Kayıt yüklenemedi!');
+    const loaded = readSave();
+    if (!loaded) {
+        notify('Geçerli bir kayıt bulunamadı.', 'warning');
+        return;
     }
+
+    state = loaded;
+    renderedEventId = undefined;
+    renderAll();
+    notify('Oyun yüklendi.', 'success');
+}
+
+function initGame() {
+    state = createInitialState();
+    renderedEventId = undefined;
+    renderAll();
+    startGameLoop();
 }
 
 function resetGame() {
-    if (confirm('Tüm ilerlemeniz silinecek. Emin misiniz?')) {
-        localStorage.removeItem('capitalforge_save');
-        clearInterval(gameLoopInterval);
-        clearInterval(rivalInterval);
-        clearInterval(autosaveInterval);
+    if (!confirm('Tüm ilerlemeniz silinecek. Emin misiniz?')) return;
+
+    try {
+        localStorage.removeItem(SAVE_KEY);
+    } catch (e) {
+        console.warn('Kayıt silinemedi:', e);
+    }
+
+    initGame();
+    notify('Oyun sıfırlandı.', 'info');
+}
+
+// ==================== EVENT LISTENER'LAR ====================
+function bindEventListeners() {
+    document.getElementById('saveBtn').addEventListener('click', () => saveGame(false));
+    document.getElementById('loadBtn').addEventListener('click', loadGame);
+    document.getElementById('resetBtn').addEventListener('click', resetGame);
+    document.getElementById('closeTilePanel').addEventListener('click', clearTileSelection);
+
+    document.getElementById('gameGrid').addEventListener('click', (e) => {
+        const tileEl = e.target.closest('.tile');
+        if (tileEl) selectTile(Number(tileEl.dataset.tileId));
+    });
+
+    document.getElementById('buildingList').addEventListener('click', (e) => {
+        const item = e.target.closest('.building-item');
+        if (item) tryBuildBuilding(item.dataset.buildingId);
+    });
+
+    document.getElementById('tilePanelContent').addEventListener('click', (e) => {
+        const button = e.target.closest('button[data-action]');
+        if (!button || button.disabled) return;
+
+        if (button.dataset.action === 'buy') {
+            buyTile(Number(button.dataset.tileId));
+        } else if (button.dataset.action === 'build') {
+            buildOnTile(Number(button.dataset.tileId), button.dataset.buildingId);
+        }
+    });
+
+    document.getElementById('eventPanel').addEventListener('click', (e) => {
+        const button = e.target.closest('.event-option');
+        if (button && !button.disabled) resolveEvent(Number(button.dataset.optionIndex));
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') clearTileSelection();
+    });
+}
+
+function bootstrap() {
+    bindEventListeners();
+
+    const loaded = readSave();
+    if (loaded) {
+        state = loaded;
+        renderAll();
+        startGameLoop();
+    } else {
         initGame();
     }
 }
 
-// ==================== EVENT LISTENERS ====================
-document.getElementById('saveBtn').addEventListener('click', () => saveGame(false));
-document.getElementById('loadBtn').addEventListener('click', loadGame);
-document.getElementById('resetBtn').addEventListener('click', resetGame);
-document.getElementById('closeTilePanel').addEventListener('click', closeTilePanel);
-
-// Sayfa yüklendiğinde
-window.addEventListener('DOMContentLoaded', () => {
-    // Kayıtlı oyun var mı kontrol et
-    const saved = localStorage.getItem('capitalforge_save');
-    if (saved) {
-        try {
-            state = JSON.parse(saved);
-            renderGrid();
-            renderBuildingList();
-            renderQuestList();
-            renderEventPanel();
-            updateUI();
-            startGameLoop();
-        } catch (e) {
-            console.error('Kayıtlı oyun bozuk, yeni oyun başlatılıyor:', e);
-            initGame();
-        }
-    } else {
-        initGame();
-    }
-});
+window.addEventListener('DOMContentLoaded', bootstrap);

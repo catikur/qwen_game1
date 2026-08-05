@@ -18,21 +18,32 @@ Basit, eğlenceli, 2D grid tabanlı iş kurma / şehir büyütme oyunu.
 - Görevleri tamamlayın
 - Rakip şirketten daha büyük olun
 
+### Ekran Düzeni
+
+| Bölge | İçerik |
+|-------|--------|
+| Üst bar | Kaynaklar (Para, Gelir/s, Mutluluk, Skorlar) ve Kaydet / Yükle / Sıfırla |
+| Sol panel | Bina listesi, görevler, aktif rastgele olay |
+| Orta alan | 10x10 oyun grid'i |
+| Sağ panel | Seçili arsanın detayı ve işlemleri |
+
+Aktif bir olay çıktığında olay kartı sol panelin en üstüne taşınır ve sağ alt köşede
+bir bildirim gösterilir.
+
 ### Oyun Kontrolleri
 
 **Grid üzerindeki arsaya tıklayarak:**
 - Satılık arsaları satın alabilirsiniz
 - Sahip olduğunuz arsalara bina inşa edebilirsiniz
-- Bilgi görebilirsiniz
+- Rakip arsalarının bilgisini görebilirsiniz
 
-**Sol panel:**
-- Mevcut binaları görüntüleyin ve inşa edin
-- Görevleri takip edin
-- Rastgele olayları görün
+Detay paneli grid'in yanında sabit durur, oyun tahtasını kapatmaz — arsadan arsaya
+tıklayarak gezinebilirsiniz. `Esc` tuşu seçimi temizler. Kareler ve bina kartları
+klavye ile de gezilebilir (Tab / Enter).
 
-**Üst bar:**
-- Kaynaklarınızı izleyin (Para, Gelir/s, Mutluluk, Skorlar)
-- Oyunu kaydedin/yükleyin/sıfırlayın
+**Sol paneldeki bina kartına tıklamak:**
+- Seçili boş arsanız varsa oraya inşa eder
+- Seçim yoksa ilk boş arsanıza inşa eder ve hangi arsaya inşa edildiğini bildirir
 
 ## Oyun Mekanikleri
 
@@ -42,6 +53,13 @@ Basit, eğlenceli, 2D grid tabanlı iş kurma / şehir büyütme oyunu.
 - **Mutluluk**: 0-100 arası, geliri %0-%50 arasında artırır
 - **Oyuncu Skoru**: Her binanız +10 puan
 - **Rakip Skoru**: Rakibin her binası +10 puan
+
+Rakibin skorunu geçtiğinizde üst barda "Öndesin" rozeti belirir.
+
+### Arsalar
+
+10x10 = 100 arsa. Fiyatlar 50-500 para arasında rastgele belirlenir; merkeze yakın
+arsalar belirgin şekilde daha pahalıdır.
 
 ### Binalar
 
@@ -76,7 +94,10 @@ Gerçek Gelir = Temel Gelir × (1 + Mutluluk × 0.005)
 
 ### Rastgele Olaylar
 
-20 saniye sonra rastgele olaylar gerçekleşir. Her olayda iki seçenek bulunur:
+İlk olay 20-30 saniye arasında, sonraki olaylar bir öncekinin çözülmesinden
+25-40 saniye sonra gelir. Aynı anda yalnızca bir olay aktif olur. Her olayda iki
+seçenek bulunur; peşin para gerektiren seçenek paranız yetmiyorsa pasif kalır.
+
 - Sosyal Medya Trendi
 - Vergi İndirimi
 - Fabrika Protestosu
@@ -86,17 +107,22 @@ Gerçek Gelir = Temel Gelir × (1 + Mutluluk × 0.005)
 ### Rakip Şirket
 
 - **Rakip AŞ** her 10 saniyede bir hamle yapar
-- Boş bir arsa satın alır ve bina inşa eder
-- Skorınızı rakiple karşılaştırarak ilerlemenizi görebilirsiniz
+- Boş bir arsa satın alır ve rastgele bir bina inşa eder (banka hariç)
+- Skorunuzu rakiple karşılaştırarak ilerlemenizi görebilirsiniz
 
 ## Save Sistemi
 
-Oyun `localStorage` kullanarak otomatik kayıt alır:
+Oyun `localStorage` kullanarak kayıt alır:
 
 - **Autosave**: Her 10 saniyede otomatik kaydedilir
 - **Manuel Kaydet**: Üst bardaki "Kaydet" butonu ile
 - **Yükle**: "Yükle" butonu ile son kaydı yükleyin
 - **Sıfırla**: "Sıfırla" butonu ile oyunu başa döndürün (onay ister)
+
+Kayda yalnızca veri yazılır (para, mutluluk, arsalar, görev durumları, aktif olayın
+kimliği, banka kilidi). Görev koşulları ve olay etkileri kod tarafında sabit tutulur
+ve yükleme sırasında kimlik üzerinden yeniden bağlanır. Bozuk veya eski sürüm bir
+kayıt bulunursa oyun sessizce yeni oyun başlatır, konsola hata düşürmez.
 
 ## Dosyalar
 
@@ -113,7 +139,9 @@ Oyun `localStorage` kullanarak otomatik kayıt alır:
 - Framework kullanılmamıştır (Vanilla JavaScript)
 - Harici bağımlılık yoktur
 - Emoji tabanlı grafikler
-- Responsive tasarım (mobil uyumlu)
+- Responsive tasarım (dar ekranda grid üstte, paneller altta)
+- Klavye erişilebilirliği ve `prefers-reduced-motion` desteği
+- Engelleyici `alert` yerine geçici bildirimler (yalnızca sıfırlama onayı `confirm` kullanır)
 - Türkçe arayüz
 
 ## Gelecek Fikirler

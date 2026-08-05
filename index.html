@@ -17,11 +17,12 @@
                 <div class="stat"><span class="label">Mutluluk:</span><span id="happiness" class="value">10</span></div>
                 <div class="stat"><span class="label">Oyuncu Skoru:</span><span id="playerScore" class="value">0</span></div>
                 <div class="stat"><span class="label">Rakip Skoru:</span><span id="rivalScore" class="value">0</span></div>
+                <div class="stat lead"><span id="leadBadge" class="badge hidden">Öndesin</span></div>
             </div>
             <div class="actions">
-                <button id="saveBtn">Kaydet</button>
-                <button id="loadBtn">Yükle</button>
-                <button id="resetBtn">Sıfırla</button>
+                <button id="saveBtn" type="button">Kaydet</button>
+                <button id="loadBtn" type="button">Yükle</button>
+                <button id="resetBtn" type="button">Sıfırla</button>
             </div>
         </header>
 
@@ -37,7 +38,7 @@
                     <h2>Görevler</h2>
                     <div id="questList" class="quest-list"></div>
                 </div>
-                <div class="panel-section">
+                <div class="panel-section" id="eventSection">
                     <h2>Rastgele Olay</h2>
                     <div id="eventPanel" class="event-panel">
                         <p>Olay bekleniyor...</p>
@@ -49,16 +50,19 @@
             <main class="grid-area">
                 <div id="gameGrid" class="game-grid"></div>
             </main>
+
+            <!-- Sağ Panel - Arsa Detayı -->
+            <aside id="tilePanel" class="tile-panel" aria-labelledby="tilePanelTitle">
+                <div class="tile-panel-header">
+                    <h3 id="tilePanelTitle">Arsa Detayı</h3>
+                    <button id="closeTilePanel" type="button" class="hidden" aria-label="Seçimi temizle">&times;</button>
+                </div>
+                <div id="tilePanelContent" class="tile-panel-content"></div>
+            </aside>
         </div>
 
-        <!-- Arsa Detay Paneli -->
-        <div id="tilePanel" class="tile-panel hidden">
-            <div class="tile-panel-header">
-                <h3 id="tilePanelTitle">Arsa Detayı</h3>
-                <button id="closeTilePanel">&times;</button>
-            </div>
-            <div id="tilePanelContent" class="tile-panel-content"></div>
-        </div>
+        <!-- Bildirimler -->
+        <div id="toastList" class="toast-list" role="status" aria-live="polite"></div>
     </div>
 
     <script src="game.js"></script>
