@@ -67,7 +67,7 @@ export const LENSES: LensDef[] = [
   { id: 'ownership', name: 'Mülkiyet', hint: 'Arsalar kimin elinde?' },
 ];
 
-/** Bir bölgenin toplam karşılanmamış talebi (0..1 normalize). */
+/** Bir bölgenin karşılanmamış talep ORANI (0..1) — panelde "%X boş". */
 export function districtOpportunity(district: DistrictState): number {
   let weighted = 0;
   let total = 0;
@@ -80,6 +80,22 @@ export function districtOpportunity(district: DistrictState): number {
 }
 
 /**
+ * Bir bölgede masada kalan MUTLAK talep (birim/gün).
+ *
+ * Lens bunu kullanır, oranı değil: oyunun başında her bölge %100 boştur ve
+ * oran haritayı tek renk boyar — hiçbir şey söylemez. Oysa 5.800 nüfuslu
+ * bir bölgedeki %100 ile 1.100 nüfuslu bir bölgedeki %100 aynı fırsat
+ * değildir. Oyuncunun aradığı bilgi "nerede daha çok para var".
+ */
+export function districtOpportunityUnits(district: DistrictState): number {
+  let units = 0;
+  for (const category of CONSUMER_CATEGORIES) {
+    units += (district.demand[category] ?? 0) * (district.unmet[category] ?? 0);
+  }
+  return units;
+}
+
+/**
  * Lens için tile başına 0..1 değer. `ownership` ve `none` sayısal değildir,
  * onları render katmanı ayrıca ele alır.
  */
@@ -89,15 +105,14 @@ export function lensValue(state: GameState, tile: Tile, lens: LensId): number {
 
   switch (lens) {
     case 'opportunity': {
-      // Ham oran oyunun başında her yerde ~1 çıkıyor ve harita tek renk
-      // kalıyordu. Bölgeler arası FARKI göstermek için en yüksek değere
-      // göre normalize ediyoruz — lensin işi karşılaştırma yaptırmak.
+      // Mutlak karşılanmamış talebi, şehirdeki en yüksek değere göre
+      // normalize et. Lensin işi bölgeleri KARŞILAŞTIRTMAK.
       let max = 0;
       for (const other of state.districts) {
-        const value = districtOpportunity(other);
+        const value = districtOpportunityUnits(other);
         if (value > max) max = value;
       }
-      return max > 0 ? districtOpportunity(district) / max : 0;
+      return max > 0 ? districtOpportunityUnits(district) / max : 0;
     }
     case 'landValue': {
       let max = 1;

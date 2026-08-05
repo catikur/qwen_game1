@@ -28,6 +28,15 @@ export interface RendererCallbacks {
   onSelect(tileId: number): void;
 }
 
+/** Veri lensinde binaların siluet saydamlığı. */
+const SILHOUETTE_OPACITY = 0.26;
+
+/** Gün döngüsünün iki ucu — ton üzerinden geçmemek için sabit renkler. */
+const MOONLIGHT = new THREE.Color('#9db9e8');
+const SUNLIGHT = new THREE.Color('#ffe6bd');
+const NIGHT_SKY_LIGHT = new THREE.Color('#5f7796');
+const DAY_SKY_LIGHT = new THREE.Color('#8fb6d9');
+
 const LENS_COLD = new THREE.Color('#1d3b57');
 const LENS_HOT = new THREE.Color('#f0654a');
 const OWN_COLOR = new THREE.Color('#3ba55d');
@@ -39,6 +48,8 @@ export class CityRenderer {
   private renderer: THREE.WebGLRenderer;
   private scene = new THREE.Scene();
   private ground: THREE.InstancedMesh;
+  private groundLit!: THREE.MeshStandardMaterial;
+  private groundFlat!: THREE.MeshBasicMaterial;
   private buildings: THREE.InstancedMesh;
   /** Şehrin mevcut dokusu — oyuncuya ait olmayan yapılar. */
   private fabric: THREE.InstancedMesh;
@@ -48,6 +59,8 @@ export class CityRenderer {
   private skyColor = new THREE.Color();
   /** 0..1 arasında dönen gün döngüsü; simülasyondan bağımsız, tamamen görsel. */
   private timeOfDay = 0.28;
+  /** Veri lensi açıkken sahne "bilgi modu"na geçer. */
+  private dataLensActive = false;
   private hover: THREE.Mesh;
   private selection: THREE.Mesh;
   private ghost: THREE.Mesh;
@@ -99,9 +112,15 @@ export class CityRenderer {
 
     const tileCount = mapWidth * mapHeight;
 
+    // Zemin için iki malzeme: şehir görünümünde ışık alan, veri lensinde
+    // ışıktan bağımsız. Bir ısı haritası akşam olunca okunaksızlaşmamalı —
+    // lens bilgi taşır, manzara değil.
+    this.groundLit = new THREE.MeshStandardMaterial({ roughness: 0.92, metalness: 0.02 });
+    this.groundFlat = new THREE.MeshBasicMaterial();
+
     this.ground = new THREE.InstancedMesh(
       new THREE.BoxGeometry(0.94, 0.14, 0.94),
-      new THREE.MeshStandardMaterial({ roughness: 0.92, metalness: 0.02 }),
+      this.groundLit,
       tileCount,
     );
     this.ground.receiveShadow = true;
@@ -296,10 +315,47 @@ export class CityRenderer {
 
   // ------------------------------------------------------------ senkron
 
+  /**
+   * Görünüm modunu uygular.
+   *
+   * "Şehir" görünümünde sahne bir şehirdir: ışık, gölge, trafik, katı
+   * binalar. Herhangi bir veri lensinde sahne bir haritaya dönüşür:
+   * zemin ışıktan bağımsız çizilir (renk tam olarak veriyi gösterir),
+   * binalar saydam siluete iner, gölge ve trafik susar.
+   */
+  private applyLensMode(lens: LensId): void {
+    const dataLens = lens !== 'none';
+    this.dataLensActive = dataLens;
+
+    this.ground.material = dataLens ? this.groundFlat : this.groundLit;
+    this.ground.receiveShadow = !dataLens;
+
+    for (const mesh of [this.buildings, this.fabric]) {
+      const material = mesh.material as THREE.MeshStandardMaterial;
+      if (material.transparent !== dataLens) {
+        material.transparent = dataLens;
+        material.needsUpdate = true;
+      }
+      material.opacity = dataLens ? SILHOUETTE_OPACITY : 1;
+      material.depthWrite = !dataLens;
+      mesh.castShadow = !dataLens && !this.qualityReduced;
+      mesh.receiveShadow = !dataLens;
+    }
+
+    this.traffic.mesh.visible = !dataLens;
+    this.renderer.shadowMap.enabled = !dataLens && !this.qualityReduced;
+
+    // Pencere parıltısını burada da sıfırla. Bir sonraki gün-döngüsü
+    // karesini beklemek, lens açılırken bir karelik amber parlama
+    // bırakıyordu.
+    if (dataLens) (this.fabric.material as THREE.MeshStandardMaterial).emissiveIntensity = 0;
+  }
+
   /** State veya görünüm değiştiğinde çağrılır; her karede değil. */
   syncState(state: GameState, view: ViewOptions): void {
     this.state = state;
     this.view = view;
+    this.applyLensMode(view.lens);
 
     const { width, tiles } = state.map;
 
@@ -465,24 +521,41 @@ export class CityRenderer {
     const daylight = Math.max(0, Math.min(1, elevation * 1.6 + 0.35));
 
     const radius = Math.max(this.mapWidth, this.mapHeight) * 0.9;
+    // Işık kaynağı ASLA yer düzleminin altına inmez. İnerse sahne alttan
+    // aydınlanır: binaların altı parlar, üstleri kararır ve şehir sarı bir
+    // kütleye dönüşür. Gece "güneş batar" değil, "ay yükselir" demek.
+    const height = 14 + Math.max(0.2, elevation) * 38;
     this.sun.position.set(
       this.mapWidth / 2 + Math.cos(angle) * radius,
-      12 + elevation * 40,
+      height,
       this.mapHeight / 2 + Math.sin(angle * 0.6) * radius * 0.4,
     );
 
-    this.sun.intensity = 0.25 + daylight * 2.0;
-    this.sun.color.setHSL(0.09, 0.55 - daylight * 0.3, 0.55 + daylight * 0.32);
-    this.hemisphere.intensity = 0.35 + daylight * 0.85;
+    // TABANLAR ÖNEMLİ: gece atmosfer olmalı, karartma değil. Önceki
+    // değerlerde döngünün gece yarısında sahne fiilen görünmez oluyordu ve
+    // sadece binaların amber emissive'i kalıyordu — oyun oynanamaz hale
+    // geliyordu. Artık en karanlık anda bile şehir okunuyor.
+    this.sun.intensity = 1.1 + daylight * 1.35;
+    // Renk iki sabit ton arasında geçer: gece soğuk ay ışığı, gündüz ılık
+    // güneş. Ton (hue) üzerinden geçmek yeşilden geçirirdi.
+    this.sun.color.copy(MOONLIGHT).lerp(SUNLIGHT, daylight);
+    this.hemisphere.intensity = 1.0 + daylight * 0.4;
+    this.hemisphere.color.copy(NIGHT_SKY_LIGHT).lerp(DAY_SKY_LIGHT, daylight);
 
-    // Gökyüzü ve sis birlikte kayar: gündüz açık mavi, gece derin lacivert.
-    this.skyColor.setHSL(0.58, 0.44 - daylight * 0.16, 0.05 + daylight * 0.42);
+    // Gökyüzü ve sis birlikte kayar: gündüz açık mavi, gece koyu lacivert.
+    this.skyColor.setHSL(0.58, 0.44 - daylight * 0.16, 0.13 + daylight * 0.3);
     (this.scene.background as THREE.Color).copy(this.skyColor);
     this.scene.fog?.color.copy(this.skyColor);
 
-    // Karanlıkta pencereler yanar.
+    // Karanlıkta hafif bir pencere sıcaklığı.
+    //
+    // DİKKAT: emissive burada binanın TÜM yüzeyine düz uygulanıyor, gerçek
+    // pencerelere değil. Yüksek tutulursa gece bütün yapılar aynı amber
+    // tona yakınsıyor, kendi renklerini ve gölgelenmelerini kaybediyor —
+    // şehir tek parça altın bir kütleye dönüşüyordu. Değer bilinçli olarak
+    // "ima" seviyesinde; veri lensinde ise tamamen susuyor.
     const material = this.fabric.material as THREE.MeshStandardMaterial;
-    material.emissiveIntensity = Math.max(0, 0.55 - daylight * 0.7);
+    material.emissiveIntensity = this.dataLensActive ? 0 : Math.max(0, 0.03 - daylight * 0.04);
   }
 
   render(dt: number): void {
@@ -541,8 +614,51 @@ export class CityRenderer {
     this.frameSamples = -1;
   }
 
+  /**
+   * Testler ve hata ayıklama için sahnenin ölçülebilir durumu.
+   * Piksel okumak WebGL'de güvenilir değil; bunun yerine sahnenin kendi
+   * sayılarını doğruluyoruz.
+   */
+  getDebugInfo(): {
+    dataLens: boolean;
+    sunIntensity: number;
+    hemisphereIntensity: number;
+    skyLightness: number;
+    sunHeight: number;
+    buildingOpacity: number;
+    fabricEmissive: number;
+    groundColorSum: number;
+    timeOfDay: number;
+  } {
+    const hsl = { h: 0, s: 0, l: 0 };
+    this.skyColor.getHSL(hsl);
+
+    let groundColorSum = 0;
+    const colors = this.ground.instanceColor?.array;
+    if (colors) for (let i = 0; i < colors.length; i++) groundColorSum += colors[i]!;
+
+    return {
+      dataLens: this.dataLensActive,
+      sunIntensity: this.sun.intensity,
+      hemisphereIntensity: this.hemisphere.intensity,
+      skyLightness: hsl.l,
+      sunHeight: this.sun.position.y,
+      buildingOpacity: (this.buildings.material as THREE.MeshStandardMaterial).opacity,
+      fabricEmissive: (this.fabric.material as THREE.MeshStandardMaterial).emissiveIntensity,
+      groundColorSum,
+      timeOfDay: this.timeOfDay,
+    };
+  }
+
+  /** Testlerin gün döngüsünü beklemeden istediği saate atlaması için. */
+  setTimeOfDay(value: number): void {
+    this.timeOfDay = ((value % 1) + 1) % 1;
+  }
+
   dispose(): void {
     this.disposed = true;
+    this.groundLit.dispose();
+    this.groundFlat.dispose();
     for (const cleanup of this.cleanups) cleanup();
     this.cleanups = [];
     this.traffic.dispose();
