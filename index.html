@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CapitalForge Lite</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="game-container">
+        <!-- Üst Bar -->
+        <header class="topbar">
+            <h1>CapitalForge Lite</h1>
+            <div class="stats">
+                <div class="stat"><span class="label">Para:</span><span id="money" class="value money">500</span></div>
+                <div class="stat"><span class="label">Gelir/s:</span><span id="income" class="value">0</span></div>
+                <div class="stat"><span class="label">Mutluluk:</span><span id="happiness" class="value">10</span></div>
+                <div class="stat"><span class="label">Oyuncu Skoru:</span><span id="playerScore" class="value">0</span></div>
+                <div class="stat"><span class="label">Rakip Skoru:</span><span id="rivalScore" class="value">0</span></div>
+            </div>
+            <div class="actions">
+                <button id="saveBtn">Kaydet</button>
+                <button id="loadBtn">Yükle</button>
+                <button id="resetBtn">Sıfırla</button>
+            </div>
+        </header>
+
+        <!-- Ana İçerik -->
+        <div class="main-content">
+            <!-- Sol Panel -->
+            <aside class="left-panel">
+                <div class="panel-section">
+                    <h2>Binalar</h2>
+                    <div id="buildingList" class="building-list"></div>
+                </div>
+                <div class="panel-section">
+                    <h2>Görevler</h2>
+                    <div id="questList" class="quest-list"></div>
+                </div>
+                <div class="panel-section">
+                    <h2>Rastgele Olay</h2>
+                    <div id="eventPanel" class="event-panel">
+                        <p>Olay bekleniyor...</p>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Orta Alan - Grid -->
+            <main class="grid-area">
+                <div id="gameGrid" class="game-grid"></div>
+            </main>
+        </div>
+
+        <!-- Arsa Detay Paneli -->
+        <div id="tilePanel" class="tile-panel hidden">
+            <div class="tile-panel-header">
+                <h3 id="tilePanelTitle">Arsa Detayı</h3>
+                <button id="closeTilePanel">&times;</button>
+            </div>
+            <div id="tilePanelContent" class="tile-panel-content"></div>
+        </div>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+</html>
