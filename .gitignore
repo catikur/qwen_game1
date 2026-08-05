@@ -55,3 +55,6 @@ htmlcov/
 *.tar.bz2
 *.tar.xz
 *.tar.zst
+# Vite / pnpm
+apps/*/dist/
+.pnpm-store/
