@@ -1,159 +1,134 @@
-# CapitalForge Lite
+# CapitalForge
 
-Basit, eğlenceli, 2D grid tabanlı iş kurma / şehir büyütme oyunu.
+Tarayıcıda çalışan 3B kapitalizm simülasyonu. Three.js ile şehir, saf
+TypeScript ile ekonomi.
 
-## Nasıl Çalıştırılır?
+**Tasarım sözü:** simülasyon derin, oynanış sakin. Altta arz-talep, fiyat
+esnekliği, marka gücü, pazar payı ve arsa değeri dinamikleri işler; üstte
+oyuncu bir ısı haritasına bakıp bir kareye tıklar. Hesabı oyun yapar, kararı
+oyuncu verir.
 
-1. `index.html` dosyasını herhangi bir modern web tarayıcısında açın (Chrome, Firefox, Edge, Safari).
-2. Herhangi bir kurulum veya build adımı gerekmez.
-3. Oyun otomatik olarak başlayacaktır.
+## Çalıştırma
 
-## Nasıl Oynanır?
-
-### Temel Amaç
-- Arsalar satın alın
-- Binalar inşa edin
-- Gelir elde edin
-- Mutluluğu yönetin
-- Görevleri tamamlayın
-- Rakip şirketten daha büyük olun
-
-### Ekran Düzeni
-
-| Bölge | İçerik |
-|-------|--------|
-| Üst bar | Kaynaklar (Para, Gelir/s, Mutluluk, Skorlar) ve Kaydet / Yükle / Sıfırla |
-| Sol panel | Bina listesi, görevler, aktif rastgele olay |
-| Orta alan | 10x10 oyun grid'i |
-| Sağ panel | Seçili arsanın detayı ve işlemleri |
-
-Aktif bir olay çıktığında olay kartı sol panelin en üstüne taşınır ve sağ alt köşede
-bir bildirim gösterilir.
-
-### Oyun Kontrolleri
-
-**Grid üzerindeki arsaya tıklayarak:**
-- Satılık arsaları satın alabilirsiniz
-- Sahip olduğunuz arsalara bina inşa edebilirsiniz
-- Rakip arsalarının bilgisini görebilirsiniz
-
-Detay paneli grid'in yanında sabit durur, oyun tahtasını kapatmaz — arsadan arsaya
-tıklayarak gezinebilirsiniz. `Esc` tuşu seçimi temizler. Kareler ve bina kartları
-klavye ile de gezilebilir (Tab / Enter).
-
-**Sol paneldeki bina kartına tıklamak:**
-- Seçili boş arsanız varsa oraya inşa eder
-- Seçim yoksa ilk boş arsanıza inşa eder ve hangi arsaya inşa edildiğini bildirir
-
-## Oyun Mekanikleri
-
-### Kaynaklar
-- **Para**: Başlangıçta 500 para
-- **Gelir/saniye**: Binalarınızdan gelen gelir
-- **Mutluluk**: 0-100 arası, geliri %0-%50 arasında artırır
-- **Oyuncu Skoru**: Her binanız +10 puan
-- **Rakip Skoru**: Rakibin her binası +10 puan
-
-Rakibin skorunu geçtiğinizde üst barda "Öndesin" rozeti belirir.
-
-### Arsalar
-
-10x10 = 100 arsa. Fiyatlar 50-500 para arasında rastgele belirlenir; merkeze yakın
-arsalar belirgin şekilde daha pahalıdır.
-
-### Binalar
-
-| Bina | Emoji | Maliyet | Gelir/s | Mutluluk |
-|------|-------|---------|---------|----------|
-| Kafe | ☕ | 100 | 1 | +1 |
-| Market | 🛒 | 250 | 3 | +1 |
-| Ofis | 🏢 | 600 | 7 | 0 |
-| Park | 🌳 | 300 | 0 | +8 |
-| Fabrika | 🏭 | 1500 | 18 | -2 |
-| Banka | 🏦 | 5000 | 60 | 0 |
-
-**Not:** Banka, toplam 5000 para kazanana kadar kilitlidir.
-
-### Gelir Formülü
-```
-Gerçek Gelir = Temel Gelir × (1 + Mutluluk × 0.005)
+```bash
+pnpm install
+pnpm dev        # http://127.0.0.1:5173
 ```
 
-Örnek:
-- Mutluluk 10 → %5 bonus
-- Mutluluk 100 → %50 bonus
+Üretim derlemesi ve önizleme:
 
-### Görevler
+```bash
+pnpm build
+pnpm preview
+```
 
-1. **İlk Mülk**: 1 arsa satın al → +200 para
-2. **Girişimci**: 3 bina inşa et → +500 para
-3. **Kafe Zinciri**: 3 kafe sahip ol → +300 para
-4. **Yeşil Şehir**: 2 park inşa et → +400 para
-5. **Zenginlik**: Toplam 5000 para kazan → +1000 para
-6. **Rakibe Fark At**: Rakip skorundan 50 puan öne geç → +800 para
+## Nasıl oynanır
 
-### Rastgele Olaylar
+1. **Fırsat lensini aç.** Harita, karşılanmamış talebe göre boyanır; sıcak
+   bölgeler para bırakır.
+2. **Bir arsa seç ve satın al.** Merkeze yakın arsa pahalıdır ama daha çok
+   müşteri görür ve zamanla değerlenir.
+3. **Soldan bir yatırım seç.** Her kartta o bölge için tahmini günlük kâr ve
+   geri ödeme süresi yazar. Rakip şirketler de aynı hesabı yapıyor.
+4. **Kâr etmeyen şubeye bak.** Arsa panelinde ciro, satılan malın maliyeti,
+   personel ve kâr kalem kalem görünür — neden kaybettiğin hep okunur.
+5. **Fiyatı oyuna bırak ya da devral.** Varsayılan otomatik fiyat makul
+   oynar; fiyat savaşı açmak istersen kontrolü sen alırsın.
 
-İlk olay 20-30 saniye arasında, sonraki olaylar bir öncekinin çözülmesinden
-25-40 saniye sonra gelir. Aynı anda yalnızca bir olay aktif olur. Her olayda iki
-seçenek bulunur; peşin para gerektiren seçenek paranız yetmiyorsa pasif kalır.
+Kontroller: sürükle = kaydır · sağ tık sürükle = döndür · tekerlek =
+yakınlaş · WASD = kaydır · Boşluk = duraklat · Esc = seçimi bırak
 
-- Sosyal Medya Trendi
-- Vergi İndirimi
-- Fabrika Protestosu
-- Yatırımcı Meleği
-- Şehir Festivali
+## Mimari
 
-### Rakip Şirket
+Plandaki katman ayrımı korunuyor: **çekirdek Three.js bilmez, render katmanı
+oyun kurallarını bilmez.**
 
-- **Rakip AŞ** her 10 saniyede bir hamle yapar
-- Boş bir arsa satın alır ve rastgele bir bina inşa eder (banka hariç)
-- Skorunuzu rakiple karşılaştırarak ilerlemenizi görebilirsiniz
+```
+apps/web              Vite + React kabuğu; motoru, sahneyi ve arayüzü bağlar
+packages/core         Simülasyon: ekonomi, şirketler, rakipler, olaylar, komutlar
+packages/content      Saf veri: kategoriler, binalar, bölgeler, NPC profilleri, olaylar
+packages/render-three Three.js sahnesi ve RTS kamerası
+packages/ui           React HUD, paneller, lensler
+packages/persistence  IndexedDB kayıt, şema sürümleme, göç, JSON dışa/içe aktarma
+tools/                Geliştirici araçları (tarayıcı testi)
+```
 
-## Save Sistemi
+Uygulanan ilkeler:
 
-Oyun `localStorage` kullanarak kayıt alır:
+- **Tek yönlü akış.** Arayüz state'i değiştirmez, komut gönderir
+  (`BUY_TILE`, `BUILD`, `SET_PRICE_MULTIPLIER` …). Motor değişimi bir sürüm
+  sayacıyla duyurur.
+- **Deterministik simülasyon.** `Math.random` çekirdekte kullanılmaz; RNG
+  durumu tek bir sayıdır ve kayda yazılır. Aynı seed + aynı komutlar = aynı
+  sonuç.
+- **State yalnızca veridir.** `GameState` ağacında fonksiyon, `Map` veya
+  sınıf örneği bulunmaz; davranış içerik tanımlarında ve sistemlerde durur.
+  Kayıt sistemi bu yüzden kırılamaz.
+- **Rakipler ayrıcalıksız.** NPC'ler oyuncuyla aynı `actions.ts`
+  fonksiyonlarını, aynı fiyatları ve aynı nakit kısıtını kullanır. Zorluk,
+  görünmez bonuslarla değil kişilik ağırlıklarıyla ayarlanır.
+- **Tek doğru matematik.** Yapı menüsündeki "≈ 82 günde geri öder" tahmini
+  ile rakip yapay zekânın kârlılık kapısı aynı `estimateInvestment`
+  fonksiyonundan gelir.
 
-- **Autosave**: Her 10 saniyede otomatik kaydedilir
-- **Manuel Kaydet**: Üst bardaki "Kaydet" butonu ile
-- **Yükle**: "Yükle" butonu ile son kaydı yükleyin
-- **Sıfırla**: "Sıfırla" butonu ile oyunu başa döndürün (onay ister)
+## Ekonomi modeli
 
-Kayda yalnızca veri yazılır (para, mutluluk, arsalar, görev durumları, aktif olayın
-kimliği, banka kilidi). Görev koşulları ve olay etkileri kod tarafında sabit tutulur
-ve yükleme sırasında kimlik üzerinden yeniden bağlanır. Bozuk veya eski sürüm bir
-kayıt bulunursa oyun sessizce yeni oyun başlatır, konsola hata düşürmez.
+Her oyun günü, her bölgenin her sektörü için:
 
-## Dosyalar
+1. Talep hesaplanır — nüfus × kişi başı talep × bölge arketip ağırlığı ×
+   gelir duyarlılığı × aktif olay çarpanı.
+2. O talebe erişebilen mağazalar toplanır (kendi bölgesi tam ağırlıkla,
+   komşu bölgeler kısmi ağırlıkla).
+3. Her mağazanın çekiciliği bulunur: kalite, marka gücü, fiyat esnekliği ve
+   erişilebilirlik.
+4. Talep çekicilik oranında paylaştırılır, kapasite sınırı uygulanır, taşan
+   talep ikinci turda yeniden dağıtılır.
+5. Defterler işlenir; arsa değerleri gelişmeye göre kayar, nüfus istihdama
+   göre büyür.
 
-| Dosya | Açıklama |
-|-------|----------|
-| `index.html` | Ana HTML iskeleti |
-| `styles.css` | Koyu temalı UI stilleri |
-| `game.js` | Tüm oyun mantığı (vanilla JS) |
-| `README.md` | Bu dokümantasyon dosyası |
-| `CAPITALFORGE_LITE_SPEC.md` | Oyun şartname dosyası |
+## Testler
 
-## Teknik Özellikler
+**Denge simülasyonu** (başlıksız, tarayıcısız — 360 günü saniyeler içinde
+koşturur):
 
-- Framework kullanılmamıştır (Vanilla JavaScript)
-- Harici bağımlılık yoktur
-- Emoji tabanlı grafikler
-- Responsive tasarım (dar ekranda grid üstte, paneller altta)
-- Klavye erişilebilirliği ve `prefers-reduced-motion` desteği
-- Engelleyici `alert` yerine geçici bildirimler (yalnızca sıfırlama onayı `confirm` kullanır)
-- Türkçe arayüz
+```bash
+node_modules/.pnpm/esbuild@*/node_modules/esbuild/bin/esbuild \
+  packages/core/test/balance.ts --bundle --platform=node --format=esm \
+  --outfile=/tmp/balance.mjs && node /tmp/balance.mjs
+```
 
-## Gelecek Fikirler
+Doğruladıkları: yatırım yapan oyuncu büyür, atıl oyuncu büyümez, rakipler
+canlı kalır, pazar doymaz, oyuncu borç sarmalına girmez, aynı seed aynı
+sonucu verir, katalogdaki her bina kurulabilir ve **yapı menüsündeki tahmin
+gerçekleşen kârla tutar**.
 
-Potansiyel geliştirmeler:
-- Daha fazla bina türü
-- Daha fazla görev ve olay
-- Ses efektleri
-- Liderlik tablosu
-- Başarımlar sistemi
-- Daha gelişmiş rakip AI
+`packages/core/test/calibrate.ts` bina maliyetlerini hedef geri ödeme
+süresine göre yeniden türetir; denge ayarlarken kullanılır.
 
----
+**Tarayıcı testi** (Playwright gerekir):
 
-**CapitalForge Lite** - Eğlenceli ve basit bir kapitalizm simülasyonu!
+```bash
+pnpm build && node tools/playtest.mjs
+```
+
+Doğruladıkları: WebGL sahnesi açılır, zaman akar, duraklatma ve hız
+kademeleri çalışır, arsa alınıp bina kurulur, lensler ve kamera hatasız
+çalışır, IndexedDB kaydı yazılır ve geri yüklenir, sayfa yenilenince
+ilerleme korunur, bozuk kayıtta oyun çökmeden yeni oyuna düşer.
+
+## Yol haritası
+
+Ayrıntılı plan ve verilen kararlar: [`docs/PLAN.md`](docs/PLAN.md).
+
+Bu sürüm **Faz 0 + Faz 1 + Faz 2'nin çekirdeği**: 3B şehir, kamera, seçim,
+yerleştirme, gerçek zamanlı ekonomi, kira ve lojistik katmanları, kişilikli
+rakipler, ekonomik olaylar, veri lensleri, kayıt/göç sistemi.
+
+Sırada: derin şehir katmanı (imar, altyapı, kredi, vergi), AR-GE ve
+pazarlama, borsa ve halka arz, lobicilik, sendika, şirket satın alma.
+
+## Eski sürüm
+
+`legacy/capitalforge-lite/` içinde, farklı bir şartnameden (`SPEC.md`)
+üretilmiş 2B emoji tabanlı prototip duruyor. Tarayıcıda `index.html`
+açılarak çalışır; bu projeyle kod paylaşmaz.

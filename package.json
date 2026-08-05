@@ -1,0 +1,17 @@
+{
+  "name": "capital-game",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "packageManager": "pnpm@10.33.0",
+  "scripts": {
+    "dev": "pnpm --filter @capital/web dev",
+    "build": "pnpm --filter @capital/web build",
+    "preview": "pnpm --filter @capital/web preview",
+    "typecheck": "tsc -b",
+    "test": "node --test --experimental-strip-types packages/core/test/*.test.ts"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.0"
+  }
+}
