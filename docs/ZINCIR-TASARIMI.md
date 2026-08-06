@@ -1,9 +1,11 @@
 # Tur 1 — Ürün ve Zincir · Tasarım Belgesi
 
-> Durum: **tasarım taslağı**, kodlanmadı. Amaç, `Capitalism.md`'deki "sofistike
-> simülasyon, casual oynanış" sözünü tutarak oyuna türün kimliğini veren
-> katmanı eklemek: satılan şeyin bir maliyeti, o maliyetin bir zinciri, o
-> zincirin de bir sahibi olsun.
+> Durum: **A parçası kodlandı** (motor katmanı — ürünler, spot pazar, birim
+> maliyet, imar, şema v3). Zincir kartı arayüzü ve NPC zincir kararları
+> henüz yok; §10'daki iş sırasına bakın. Amaç, `Capitalism.md`'deki
+> "sofistike simülasyon, casual oynanış" sözünü tutarak oyuna türün
+> kimliğini veren katmanı eklemek: satılan şeyin bir maliyeti, o maliyetin
+> bir zinciri, o zincirin de bir sahibi olsun.
 
 ---
 
@@ -45,12 +47,27 @@ export interface GoodDef {
   category: CategoryId | null;
   /** Bu ürünü üretmek için gereken bir alt kademe ürün (raw ise null). */
   inputGoodId: string | null;
-  /** Şehrin referans spot fiyatı; gerçek fiyat bunun etrafında dolaşır. */
+  /** Spot pazar referans fiyatı. Tüketici ürünlerinde 0 — işlem görmez. */
   basePrice: number;
+  /**
+   * Yalnızca consumer: zincirden bağımsız perakende işleme maliyeti.
+   * Ambalaj, fire, raf işçiliği — zincire sahip olmak bunu ucuzlatmaz,
+   * yalnızca depo menzili kısmen hafifletir.
+   */
+  retailCost: number;
   /** Kategori talebinin bu ürüne düşen payı (aynı kategoride toplam 1). */
   demandShare: number;
   color: string;
 }
+```
+
+Tüketici ürünü spot pazarda işlem görmez: tüketiciye satılır, şirketler
+arasında değil. Zincirin son halkası **outlet'in kendisidir** — ara malı
+alır, `retailCost` kadar işler ve satar. Dolayısıyla denge kısıtı şu kimliğe
+indirgenir ve `goods.ts` bunu birebir sağlar:
+
+```
+basePrice(ara mal) + retailCost(tüketici ürünü)  ===  basePrice × costRatio
 ```
 
 **Zincir derinliği sabit: 3.** Hammadde → ara mal → tüketici ürünü. Değişken
@@ -97,29 +114,36 @@ marjın ince olur. Dikey entegrasyon bir zorunluluk değil, bir optimizasyon.
 Her ürün için şehir geneli tek bir spot fiyat:
 
 ```
-produced[g] = tüm şirketlerin dünkü toplam üretimi + şehrin taban ithalatı
-consumed[g] = tüm şirketlerin dünkü toplam tüketimi
-balance     = produced / max(1, consumed)
-target      = basePrice[g] * clamp(0.60, 1.80, balance ^ -0.6) * olayÇarpanı
-spot[g]    += (target - spot[g]) * 0.15
+fazla   = max(0, üretim[g] - tüketim[g])          // şirketlerin yarattığı arz fazlası
+doluluk = min(1, fazla / referansHacim[g])
+hedef   = basePrice[g] * olayÇarpanı * (1 - 0.40 * doluluk)
+spot[g] += (hedef - spot[g]) * 0.15
+spot[g]  = clamp(basePrice * 0.60, basePrice * 1.80, spot[g])
 ```
+
+> **Uygulama sırasında değişen tek şey bu formül.** Taslakta fiyat, arz/talep
+> oranıyla iki yönde de hareket ediyordu (`balance ^ -0.6`). Ama o kural
+> §6.1'deki denge kısıtını çiğniyor: mağaza açan ama üretmeyen bir oyuncu
+> talep yarattığı anda fiyat yükselirdi, yani zincirsiz oyun zincir öncesine
+> göre pahalılaşırdı. Bunun yerine: **fiyat yalnızca arz fazlasıyla düşer;
+> yukarı baskı olaylardan gelir.** Kısıt korunuyor ve kıtlık dramı haber
+> akışında okunabilen bir yere — olaylara — taşınıyor.
 
 Dört sonuç:
 
-- **Kıtlık fiyatı yükseltir.** Kimse un üretmiyorsa un pahalıdır; bu bir
-  yatırım sinyalidir.
 - **Bolluk fiyatı düşürür.** Üç rakip aynı anda çip fabrikası kurarsa hepsi
   zarar eder. Aşırı yatırımın bir cezası olur — bugün yok.
 - **Olaylar gerçekten acıtır.** "Kahve rekoltesi kötü" artık soyut bir talep
-  çarpanı değil, çiftliği olmayanın maliyetine binen somut bir yük.
+  çarpanı değil, çiftliği olmayanın maliyetine binen somut bir yük. Ölçülen
+  asimetri: kriz anında pazardan alanın birim maliyeti 12,60 → 15,59 ₺
+  çıkarken kendi bahçesi olanınki 8,80 ₺'de sabit kalıyor.
 - **Fazla üretim bir iştir.** Tükettiğinden fazla üretiyorsan farkı spot'a
   satarsın. Hiç mağazası olmayan, sadece un satan bir oyuncu geçerli bir
-  stratejidir — sıfır ek arayüzle.
-
-**Şehrin taban ithalatı** kilitlenmeye karşı emniyet supabı: hiç kimse
-üretmezse fiyat sonsuza gitmesin. Taban miktar `basePrice`'ın 1.8× tavanına
-denk gelecek şekilde ayarlanır. Liman bölgesindeki üniteler ithalatı %8 ucuza
-alır — limana bir sebep.
+  stratejidir — sıfır ek arayüzle. Hacim döken taraf sen olduğun için fazla
+  üretim %15 iskontoyla satılır.
+- **Referans hacim haritadan türer.** Şehir büyürse referans da büyür; yani
+  bir fabrikanın fiyat üzerindeki etkisi harita boyutuna göre kendiliğinden
+  dengelenir, elle ayarlanmış bir sabit değildir.
 
 ---
 
@@ -154,35 +178,43 @@ sürükle-bırak yok.
 > şirket şehir geneli havuzu kullanır ama birim başına ek dağıtım öder.
 
 ```
-depoKapsamı  = depo menzilindeki kendi outlet'lerin / tüm outlet'lerin
-dağıtım      = tabanDağıtım × (1 - 0.7 × depoKapsamı)
+depoKapsamında = outlet, kendi deposunun menzilinde mi (0 veya 1)
+perakendeMaliyeti = good.retailCost × (1 - 0.25 × depoKapsamında)
 ```
 
-Mevcut `warehouse.radius = 8` mekaniği aynen korunur; sabit %12 indirim
-yerine gerçek bir kaleme bağlanır.
+Mevcut `warehouse.radius = 8` mekaniği aynen korunur; sabit %12 COGS
+indirimi yerine gerçek bir kaleme — perakende işleme maliyetine — bağlanır.
+Kapsam outlet başına ikili (menzilde ya da değil), şirket geneli bir oran
+değil: hem daha okunaklı hem de günlük maliyeti düşük.
 
 ---
 
 ## 5. Günlük tick sırası
 
-Üretim bugünkü satışa bağlı, satış da bugünkü maliyete bağlı — döngüyü
-kırmak için **üretim hızı dünkü tüketimden** okunur. Bu gecikme bir kusur
+Üretim bugünkü satışa bağlı, satış da bugünkü maliyete bağlı. Döngüyü
+kırmak için **rafların çekişi dünkü satıştan** okunur. Bu gecikme bir kusur
 değil, tasarımın parçası: fazla/eksik üretim salınımı "darboğaz" durumunu
 anlamlı kılar.
 
 ```mermaid
 flowchart TD
-  E["1 · Olaylar"] --> P["2 · Üretim<br/>extract → process<br/>hız = dünkü tüketim"]
-  P --> S["3 · Spot fiyat<br/>dünkü arz/talep dengesi"]
-  S --> C["4 · Birim maliyet<br/>şirket × ürün harmanı"]
-  C --> M["5 · Pazar<br/>mevcut çözümleyici,<br/>COGS artık birim maliyetten"]
-  M --> R["6 · Mutabakat<br/>fazlayı sat, açığı al"]
-  R --> L["7 · Arsa, nüfus, net değer"]
+  E["1 · Olaylar"] --> R["2 · Defterleri sıfırla"]
+  R --> P["3 · Üretim<br/>extract → process, tam kapasite<br/>havuz, birim maliyet, spot alım/satım"]
+  P --> M["4 · Pazar<br/>mevcut çözümleyici,<br/>COGS artık birim maliyetten"]
+  M --> S["5 · Spot fiyat<br/>bugünkü arz fazlası → yarının fiyatı"]
+  S --> L["6 · Arsa, nüfus, rakipler, net değer"]
 ```
 
-Adım 5 — pazar çözümleyicisinin kendisi — **değişmiyor.** Talep, çekicilik,
-iki turlu kapasite dağıtımı aynı kalıyor; tek fark döngünün artık kategori
-yerine ürün üzerinde dönmesi ve COGS'un sabit orandan gelmemesi.
+**Her üretim ünitesi tam kapasite çalışır.** Böylece bir çiftlik asla atıl
+kalmaz: ya kendi zincirini besler ya da fazlasını pazara satar. Aşırı
+yatırımın cezası boş kapasite değil, düşen spot fiyattır.
+
+Adım 4 — pazar çözümleyicisinin kendisi — **değişmiyor.** Talep, çekicilik,
+iki turlu kapasite dağıtımı aynı kalıyor; tek fark iç döngünün artık kategori
+yerine ürün üzerinde dönmesi ve COGS'un sabit orandan gelmemesi. Bölge
+kayıtları (`demand`, `unmet`, `priceIndex`, `outletCount`) kategori bazında
+kaldı: kategori başına tek ürün olduğu sürece ikisi aynı şey, ve bu sayede
+lensler ile NPC mantığı hiç değişmedi.
 
 ---
 
@@ -368,20 +400,48 @@ rastgelesiz bir fonksiyon.
 
 ## 10. İş sırası
 
-| # | Parça | Çıktı | Doğrulama |
-|---|---|---|---|
-| A | `goods.ts`, spot pazar, birim maliyet çözümleyicisi | motor katmanı, UI yok | harness: zincirli/zincirsiz A/B, 400 gün |
-| B | extract/process binaları, imar kısıtı, raf yuvaları | oynanabilir zincir | denge kalibrasyonu |
-| C | Zincir kartı + "en iyi hamle" önerisi | oyuncunun gördüğü katman | playtest betiği |
-| D | NPC zincir kararları | rekabet | rakip 400 günde iflas etmiyor / oyuncuyu ezmiyor |
-| E | Zincir kamyonları | görsel okunabilirlik | gözle |
+| # | Parça | Çıktı | Doğrulama | Durum |
+|---|---|---|---|---|
+| A | `goods.ts`, spot pazar, birim maliyet çözümleyicisi, imar, şema v3 | motor katmanı, UI yok | harness: zincirli/zincirsiz A/B | **bitti** |
+| B | Zincir kartı + "en iyi hamle" önerisi | oyuncunun gördüğü katman | playtest betiği | sırada |
+| C | NPC zincir kararları | rekabet | rakip 400 günde iflas etmiyor / oyuncuyu ezmiyor | |
+| D | Kategori başına ikinci ürün, raf yuvaları devrede | ürün seçimi | denge kalibrasyonu | |
+| E | Zincir kamyonları | görsel okunabilirlik | gözle | |
+
+> Taslakta B ve C ayrı sıralardı; uygulamada imar kısıtı ve raf şeması A ile
+> birlikte gelmesi daha ucuzdu (aynı şema göçü). Raf yuvaları şemada ve
+> komutta hazır ama kategori başına tek ürün olduğu sürece pasif duruyor —
+> ikinci ürün eklendiğinde yeni bir göç gerekmeyecek.
 
 ---
 
-## 11. Karara açık dört nokta
+## 11. A parçası — ölçülen sonuçlar
 
-Aşağıdakiler için bir tercih yaptım ve gerekçesini yazdım, ama başka bir
-karar da savunulabilir. Kod yazılmadan önce netleşmesi gerekenler bunlar.
+`packages/core/test/balance.ts` her koşuda bunları doğruluyor:
+
+| Kontrol | Sonuç |
+|---|---|
+| Zincirsiz birim maliyet eski dengeyle aynı | 12,60 ₺ beklenen, 12,60 ₺ gerçek (sapma %0,0) |
+| Zincir birim maliyeti düşürüyor | 12,60 → 2,60 ₺ (outlet defterine düşen dış alım payı) |
+| Zincirin geri ödemesi | **174 gün** (5 kafe + kavurma + bahçe, ₺565.000 yatırım) |
+| Aşırı üretim spot fiyatı kırıyor | 10,00 → 9,26 ₺ (mağazasız üç kavurma tesisi, 90 gün) |
+| Tedarik krizi pazardan alanı vuruyor | 12,60 → 15,59 ₺ |
+| Tedarik krizi kendi üretene dokunmuyor | 8,80 → 8,80 ₺ |
+| İmar kısıtı | merkeze kurulamıyor, sanayiye kurulabiliyor |
+| Determinizm | aynı seed = birebir aynı sonuç |
+
+Bağımsız maliyet türetici (`calibrate.ts`) sekiz üretim ünitesinin de
+**170–173 gün** bandında olduğunu doğruluyor — elle seçilen maliyetler ile
+formülden çıkanlar birbirini tutuyor.
+
+Tarayıcı testleri (`tools/playtest.mjs`): **55/55 geçiyor.**
+
+---
+
+## 12. Karara açık dört nokta
+
+Aşağıdakilerin dördü de **onaylandı ve A parçasında uygulandı**; gerekçeler
+ileride "bu neden böyle" diye sorulduğunda kayıtta kalsın diye duruyor.
 
 **1. Hammadde üniteleri nereye kurulur?**
 Önerim: **yalnızca `industrial` ve `port` bölgelerine.** Şehir haritasında

@@ -61,6 +61,7 @@ export class CityRenderer {
   private timeOfDay = 0.28;
   /** Veri lensi açıkken sahne "bilgi modu"na geçer. */
   private dataLensActive = false;
+  private activeLens: LensId = 'none';
   private hover: THREE.Mesh;
   private selection: THREE.Mesh;
   private ghost: THREE.Mesh;
@@ -326,6 +327,7 @@ export class CityRenderer {
   private applyLensMode(lens: LensId): void {
     const dataLens = lens !== 'none';
     this.dataLensActive = dataLens;
+    this.activeLens = lens;
 
     this.ground.material = dataLens ? this.groundFlat : this.groundLit;
     this.ground.receiveShadow = !dataLens;
@@ -620,6 +622,8 @@ export class CityRenderer {
    * sayılarını doğruluyoruz.
    */
   getDebugInfo(): {
+    /** Sahnenin GERÇEKTEN uyguladığı lens; testler buna göre senkronlanır. */
+    activeLens: LensId;
     dataLens: boolean;
     sunIntensity: number;
     hemisphereIntensity: number;
@@ -638,6 +642,7 @@ export class CityRenderer {
     if (colors) for (let i = 0; i < colors.length; i++) groundColorSum += colors[i]!;
 
     return {
+      activeLens: this.activeLens,
       dataLens: this.dataLensActive,
       sunIntensity: this.sun.intensity,
       hemisphereIntensity: this.hemisphere.intensity,

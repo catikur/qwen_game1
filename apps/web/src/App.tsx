@@ -1,6 +1,6 @@
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import type { ReactElement } from 'react';
-import { GameEngine, createNewGame, getPlayer } from '@capital/core';
+import { GameEngine, SCHEMA_VERSION, createNewGame, getPlayer } from '@capital/core';
 import type { GameCommand } from '@capital/core';
 import { CityRenderer } from '@capital/render-three';
 import {
@@ -252,6 +252,7 @@ function GameRoot({
       setLens: (lens: ViewState['lens']) =>
         setViewState((current) => ({ ...current, lens })),
       renderInfo: () => rendererRef.current?.getDebugInfo() ?? null,
+      schemaVersion: SCHEMA_VERSION,
       setTimeOfDay: (value: number) => rendererRef.current?.setTimeOfDay(value),
     };
     return () => {

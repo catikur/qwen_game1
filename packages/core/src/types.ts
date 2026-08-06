@@ -10,7 +10,7 @@ import type { RngState } from './rng';
  * state'te sadece kimlik ve sayı taşınır.
  */
 
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 3;
 
 /**
  * Bir karenin şehirdeki rolü.
@@ -79,6 +79,10 @@ export interface BuildingLedger {
   profit: number;
   /** Bulunduğu district+kategoride aldığı pazar payı 0..1. */
   share: number;
+  /** Üretim üniteleri: bugün ürettiği birim. */
+  producedUnits: number;
+  /** Üretim üniteleri: pazara satılan fazla üretim. */
+  soldToMarket: number;
 }
 
 export interface BuildingInstance {
@@ -92,6 +96,12 @@ export interface BuildingInstance {
   /** Açıkken motor fiyatı kendi ayarlar (casual mod). */
   autoPrice: boolean;
   builtDay: number;
+  /**
+   * Outlet: raflarındaki tüketici ürünleri. Kapasite bu ürünler arasında
+   * çekicilik oranında paylaşılır. Üretim ünitelerinde boştur — onların
+   * çıktısı bina tanımından gelir.
+   */
+  stocked: string[];
   last: BuildingLedger;
 }
 
@@ -123,6 +133,38 @@ export interface CompanyState {
   today: CompanyLedger;
   /** Son 90 günün net değeri — grafikler için. */
   netWorthHistory: number[];
+  /**
+   * Ürün → ihtiyacının kendi üretiminden karşılanan oranı 0..1.
+   * Zincir kartındaki "Sende / Darboğaz / Pazardan" durumu buradan okunur.
+   */
+  supplyRatio: Record<string, number>;
+  /**
+   * Ürün → bir birimin şirkete harmanlanmış maliyeti.
+   * Kendi ürettiğin oran kadar kendi maliyetin, kalanı spot fiyat.
+   * Tüketici ürünlerinde perakende işleme maliyeti de dahildir.
+   */
+  unitCost: Record<string, number>;
+}
+
+/**
+ * Şehir geneli spot pazar.
+ *
+ * Sahip olmadığın her halkayı buradan alırsın; fazla ürettiğini buraya
+ * satarsın. Fiyat, şirketlerin yarattığı arz fazlasıyla hareket eder —
+ * kimse üretmiyorsa referans fiyattadır, herkes üretiyorsa çöker.
+ */
+export interface MarketState {
+  /** Ürün → güncel spot fiyat. */
+  spot: Record<string, number>;
+  /** Ürün → dünkü şehir geneli üretim. */
+  produced: Record<string, number>;
+  /** Ürün → dünkü şehir geneli tüketim. */
+  consumed: Record<string, number>;
+  /**
+   * Ürün → şehrin taban işlem hacmi. Fazla üretimin fiyatı ne kadar
+   * kırdığı buna göre ölçeklenir; harita büyüdükçe kendi kendine büyür.
+   */
+  reference: Record<string, number>;
 }
 
 export interface ActiveEvent {
@@ -181,6 +223,7 @@ export interface GameState {
   companies: Record<string, CompanyState>;
   playerCompanyId: string;
   buildings: Record<string, BuildingInstance>;
+  market: MarketState;
   activeEvents: ActiveEvent[];
   news: NewsItem[];
   nextId: number;
@@ -199,6 +242,8 @@ export type GameCommand =
   | { type: 'DEMOLISH'; tileId: number }
   | { type: 'SET_PRICE_MULTIPLIER'; buildingId: string; multiplier: number }
   | { type: 'SET_AUTO_PRICE'; buildingId: string; auto: boolean }
+  /** Bir outlet'in raflarındaki ürünleri değiştirir. */
+  | { type: 'SET_STOCK'; buildingId: string; goodIds: string[] }
   | { type: 'RENAME_COMPANY'; name: string }
   | { type: 'SET_FLAG'; flag: keyof FeatureFlags; value: boolean };
 

@@ -9,6 +9,7 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@capital/core": "workspace:*"
+    "@capital/core": "workspace:*",
+    "@capital/content": "workspace:*"
   }
 }

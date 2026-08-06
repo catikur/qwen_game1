@@ -3,24 +3,32 @@ import {
   CATEGORIES,
   CONSUMER_CATEGORIES,
   DISTRICT_ARCHETYPES,
-  EVENTS,
+  GOODS_BY_CATEGORY,
+  GOOD_BY_ID,
+  defaultGoodFor,
   getCeoModifiers,
 } from '@capital/content';
 import type { CategoryId } from '@capital/content';
-import { zeroByCategory } from '../worldgen';
+import { estimateBaselineDemand, zeroByCategory } from './demand';
+import { collectEventModifiers } from './events';
+import { SURPLUS_HAIRCUT, distributionRelief, unitCogsFor } from './supply';
 import type { BuildingInstance, GameState } from '../types';
 
 /**
  * Pazar çözümlemesi — oyunun ekonomik kalbi.
  *
- * Her gün, her district'in her kategorisi için:
+ * Her gün, her district'in her ürünü için:
  *   1. Talep hesaplanır (nüfus × gelir × arketip ağırlığı × olay çarpanı).
- *   2. O talebe erişebilen tüm outlet'ler toplanır (kendi bölgesi tam,
- *      komşu bölgeler kısmi ağırlıkla).
+ *   2. O talebe erişebilen, ürünü rafında taşıyan outlet'ler toplanır
+ *      (kendi bölgesi tam, komşu bölgeler kısmi ağırlıkla).
  *   3. Her outlet'in çekiciliği hesaplanır: kalite, marka, fiyat esnekliği
  *      ve erişilebilirlik.
  *   4. Talep çekicilik oranında paylaştırılır, kapasite sınırı uygulanır.
  *   5. Kapasiteden taşan talep ikinci turda kalanlara dağıtılır.
+ *
+ * Satış maliyeti artık sabit bir orandan gelmiyor: tedarik zincirinden
+ * geliyor (`systems/supply.ts`). Zincirini kuran oyuncu aynı ürünü
+ * rakibinden ucuza satabilir — fiyat savaşının tabanı budur.
  *
  * Oyuncu bu formülü bilmek zorunda değil: karşılanmamış talep bir ısı
  * lensinde renk olarak görünür, dükkânın kâr/zarar satırı da nedenini
@@ -28,6 +36,10 @@ import type { BuildingInstance, GameState } from '../types';
  */
 
 const WAGE_PER_JOB = 42;
+
+/** Komşu district'ten gelen müşteri ağırlığı. */
+const NEIGHBOR_ACCESS = 0.3;
+const DIAGONAL_ACCESS = 0.14;
 
 /** CEO'nun bir binanın kalitesine kattığı prim. */
 function qualityFor(state: GameState, companyId: string, defId: string): number {
@@ -42,54 +54,6 @@ function upkeepFor(state: GameState, companyId: string, defId: string): number {
   const def = BUILDING_BY_ID[defId];
   if (!def) return 0;
   return def.upkeepPerDay * getCeoModifiers(state.companies[companyId]?.ceoId ?? null).upkeep;
-}
-const WAREHOUSE_COST_BONUS = 0.88;
-const FACTORY_COST_BONUS = 0.85;
-/** Komşu district'ten gelen müşteri ağırlığı. */
-const NEIGHBOR_ACCESS = 0.3;
-const DIAGONAL_ACCESS = 0.14;
-
-interface EventModifiers {
-  demand: Record<CategoryId, number>;
-  /** Sadece belirli arketipe uygulanan çarpanlar. */
-  archetypeDemand: Array<{ archetype: string; multipliers: Partial<Record<CategoryId, number>> }>;
-  costMultiplier: number;
-  landValueDrift: number;
-}
-
-export function collectEventModifiers(state: GameState): EventModifiers {
-  const demand = zeroByCategory();
-  for (const key of Object.keys(demand) as CategoryId[]) demand[key] = 1;
-
-  const mods: EventModifiers = {
-    demand,
-    archetypeDemand: [],
-    costMultiplier: 1,
-    landValueDrift: 0,
-  };
-
-  for (const active of state.activeEvents) {
-    const def = EVENTS.find((e) => e.id === active.defId);
-    if (!def) continue;
-
-    if (def.effects.costMultiplier) mods.costMultiplier *= def.effects.costMultiplier;
-    if (def.effects.landValueDrift) mods.landValueDrift += def.effects.landValueDrift;
-
-    if (def.effects.demandMultiplier) {
-      if (def.effects.districtArchetype) {
-        mods.archetypeDemand.push({
-          archetype: def.effects.districtArchetype,
-          multipliers: def.effects.demandMultiplier,
-        });
-      } else {
-        for (const [cat, mult] of Object.entries(def.effects.demandMultiplier)) {
-          mods.demand[cat as CategoryId] *= mult as number;
-        }
-      }
-    }
-  }
-
-  return mods;
 }
 
 /** İki district arasındaki erişim ağırlığı (aynı = 1, komşu = kısmi). */
@@ -106,38 +70,6 @@ function accessWeight(state: GameState, fromDistrict: number, toDistrict: number
 
   if (dx <= 1 && dy <= 1) return dx === 1 && dy === 1 ? DIAGONAL_ACCESS : NEIGHBOR_ACCESS;
   return 0;
-}
-
-function tileOf(state: GameState, tileId: number) {
-  return state.map.tiles[tileId];
-}
-
-/** Bir outlet'in maliyet çarpanı: kendi depo/fabrikası menzilindeyse düşer. */
-function costModifierFor(state: GameState, outlet: BuildingInstance): number {
-  const outletTile = tileOf(state, outlet.tileId);
-  if (!outletTile) return 1;
-
-  let modifier = 1;
-  let hasWarehouse = false;
-  let hasFactory = false;
-
-  for (const other of Object.values(state.buildings)) {
-    if (other.companyId !== outlet.companyId) continue;
-    const def = BUILDING_BY_ID[other.defId];
-    if (!def || (def.role !== 'logistics' && def.role !== 'production')) continue;
-
-    const tile = tileOf(state, other.tileId);
-    if (!tile) continue;
-    const distance = Math.abs(tile.x - outletTile.x) + Math.abs(tile.y - outletTile.y);
-    if (distance > def.radius) continue;
-
-    if (def.role === 'logistics') hasWarehouse = true;
-    if (def.role === 'production') hasFactory = true;
-  }
-
-  if (hasWarehouse) modifier *= WAREHOUSE_COST_BONUS;
-  if (hasFactory) modifier *= FACTORY_COST_BONUS;
-  return modifier;
 }
 
 /**
@@ -167,6 +99,37 @@ export interface InvestmentEstimate {
   paybackDays: number;
 }
 
+/** Bir şirketin bir üründe bugünkü üretim ve tüketim hacmi. */
+function companyFlow(
+  state: GameState,
+  companyId: string,
+  goodId: string,
+): { produced: number; consumed: number } {
+  let produced = 0;
+  let consumed = 0;
+
+  for (const building of Object.values(state.buildings)) {
+    if (building.companyId !== companyId) continue;
+    const def = BUILDING_BY_ID[building.defId];
+    if (!def) continue;
+
+    if (def.outputGoodId === goodId) produced += def.capacity;
+
+    if (def.role === 'process' && def.outputGoodId) {
+      if (GOOD_BY_ID[def.outputGoodId]?.inputGoodId === goodId) consumed += def.capacity;
+    }
+    if (def.role === 'outlet') {
+      const draw = building.last.unitsSold > 0 ? building.last.unitsSold : def.capacity;
+      const shelf = building.stocked;
+      for (const stockedId of shelf) {
+        if (GOOD_BY_ID[stockedId]?.inputGoodId === goodId) consumed += draw / shelf.length;
+      }
+    }
+  }
+
+  return { produced, consumed };
+}
+
 /**
  * Bir binanın belirli bir district'te ne kazandıracağının tahmini.
  *
@@ -189,9 +152,66 @@ export function estimateInvestment(
   const wages = def.jobs * WAGE_PER_JOB * (0.6 + district.incomeLevel);
   const fixedCosts = upkeepFor(state, companyId, defId) + wages;
   // Geri ödeme, oyuncunun gerçekten ödeyeceği maliyete göre hesaplanır.
-  const investmentCost = def.cost * getCeoModifiers(state.companies[companyId]?.ceoId ?? null).buildCost;
+  const investmentCost = def.cost * getCeoModifiers(company.ceoId).buildCost;
 
-  if (def.role === 'logistics' || def.role === 'production') {
+  // ---- Üretim üniteleri: değeri kârda değil, TASARRUFTA ----
+  // Bir fabrika kendi başına para basmaz; ürünü pazardan almak yerine
+  // kendin ürettiğin için birim maliyetini düşürür. Fazlası pazara
+  // satılır ama hacim döken taraf sen olduğun için fiyat kırılır.
+  if (def.role === 'extract' || def.role === 'process') {
+    const good = def.outputGoodId ? GOOD_BY_ID[def.outputGoodId] : undefined;
+    if (!good || def.capacity <= 0) {
+      return {
+        direct: false,
+        expectedUnits: 0,
+        utilisation: 0,
+        revenue: 0,
+        cogs: 0,
+        fixedCosts,
+        dailyProfit: -fixedCosts,
+        paybackDays: Infinity,
+      };
+    }
+
+    const output = def.capacity;
+    const spot = state.market.spot[good.id] ?? good.basePrice;
+
+    // Girdinin marjinal maliyeti: kendi üretiminde fazlan varsa kendi
+    // maliyetin, yoksa pazardan alacağın için spot fiyat.
+    let inputCost = 0;
+    if (good.inputGoodId) {
+      const input = companyFlow(state, companyId, good.inputGoodId);
+      const inputSpot =
+        state.market.spot[good.inputGoodId] ?? GOOD_BY_ID[good.inputGoodId]?.basePrice ?? 0;
+      inputCost =
+        input.produced > input.consumed
+          ? (company.unitCost[good.inputGoodId] ?? inputSpot)
+          : inputSpot;
+    }
+
+    const flow = companyFlow(state, companyId, good.id);
+    const uncovered = Math.max(0, flow.consumed - flow.produced);
+    const internalUnits = Math.min(output, uncovered);
+    const surplusUnits = output - internalUnits;
+
+    const revenue = internalUnits * spot + surplusUnits * spot * SURPLUS_HAIRCUT;
+    const cogs = output * inputCost;
+    const dailyProfit = revenue - cogs - fixedCosts;
+
+    return {
+      direct: true,
+      expectedUnits: output,
+      utilisation: 1,
+      revenue,
+      cogs,
+      fixedCosts,
+      dailyProfit,
+      paybackDays: dailyProfit > 0 ? investmentCost / dailyProfit : Infinity,
+    };
+  }
+
+  // Depo doğrudan gelir üretmez; değeri menzilindeki mağazalara dağılır.
+  if (def.role === 'logistics') {
     return {
       direct: false,
       expectedUnits: 0,
@@ -268,8 +288,13 @@ export function estimateInvestment(
   const spillover = neighbourDemand(state, districtId, def.category);
   const expectedUnits = Math.min(def.capacity, (ownDemand + spillover) * share);
 
+  // Birim maliyet artık zincirden geliyor. Yeni bina için depo indirimi
+  // varsayılmaz — tahmin temkinli olsun.
+  const goodId = defaultGoodFor(def.category);
+  const unitCogs = goodId ? unitCogsFor(state, companyId, goodId, 0, 1) : 0;
+
   const revenue = expectedUnits * salePrice;
-  const cogs = expectedUnits * category.basePrice * category.costRatio;
+  const cogs = expectedUnits * unitCogs;
   const dailyProfit = revenue - cogs - fixedCosts;
 
   return {
@@ -297,18 +322,6 @@ function neighbourDemand(state: GameState, districtId: number, categoryId: Categ
   return total;
 }
 
-/** Henüz hiç tick koşmadıysa talep 0 görünür; kaba bir taban üret. */
-function estimateBaselineDemand(
-  district: { population: number; incomeLevel: number; archetype: string },
-  categoryId: CategoryId,
-): number {
-  const category = CATEGORIES[categoryId];
-  const archetype = DISTRICT_ARCHETYPES[district.archetype as keyof typeof DISTRICT_ARCHETYPES];
-  const weight = archetype?.demandWeights[categoryId] ?? 1;
-  const incomeFactor = 1 + (district.incomeLevel - 0.5) * 2 * category.incomeSensitivity * 0.5;
-  return district.population * category.demandPerCapita * weight * Math.max(0.2, incomeFactor);
-}
-
 /**
  * Otomatik fiyatları bir önceki günün sinyallerine göre günceller.
  * Manuel fiyata geçmiş binalara dokunmaz.
@@ -331,46 +344,36 @@ function applyAutoPricing(state: GameState): void {
   }
 }
 
+/**
+ * Tüketici pazarı.
+ *
+ * Defterler `resetDailyLedgers` ile sıfırlanmış, üretim `runProductionTick`
+ * ile çözülmüş olarak gelir — bu adım yalnızca satışı yapar.
+ */
 export function runMarketTick(state: GameState): void {
   applyAutoPricing(state);
 
   const mods = collectEventModifiers(state);
   const buildings = Object.values(state.buildings);
 
-  // Şirket defterlerini sıfırla.
-  for (const company of Object.values(state.companies)) {
-    company.today = { revenue: 0, cogs: 0, upkeep: 0, wages: 0, interest: 0, profit: 0 };
-  }
-
-  // Outlet'leri district+kategori kırılımıyla indeksle.
+  // Outlet'leri district kırılımıyla indeksle ve rakip sayacını kur.
+  // Depo indirimi outlet başına bir kez çözülür; iç döngüde tekrar
+  // hesaplamak günlük maliyeti kare kadar büyütürdü.
   const outletsByDistrict = new Map<number, BuildingInstance[]>();
-  const costModifiers = new Map<string, number>();
+  const reliefByOutlet = new Map<string, number>();
+  for (const district of state.districts) district.outletCount = zeroByCategory();
 
   for (const building of buildings) {
     const def = BUILDING_BY_ID[building.defId];
-    if (!def) continue;
+    if (def?.role !== 'outlet') continue;
 
-    // Sabit giderler her binada işler, satış olsun olmasın.
+    const list = outletsByDistrict.get(building.districtId) ?? [];
+    list.push(building);
+    outletsByDistrict.set(building.districtId, list);
+    reliefByOutlet.set(building.id, distributionRelief(state, building));
+
     const district = state.districts[building.districtId];
-    const wages = def.jobs * WAGE_PER_JOB * (0.6 + (district?.incomeLevel ?? 0.5));
-    const upkeep = upkeepFor(state, building.companyId, building.defId);
-    building.last = {
-      unitsSold: 0,
-      capacityUsed: 0,
-      revenue: 0,
-      cogs: 0,
-      upkeep,
-      wages,
-      profit: -upkeep - wages,
-      share: 0,
-    };
-
-    if (def.role === 'outlet') {
-      const list = outletsByDistrict.get(building.districtId) ?? [];
-      list.push(building);
-      outletsByDistrict.set(building.districtId, list);
-      costModifiers.set(building.id, costModifierFor(state, building));
-    }
+    if (district) district.outletCount[def.category] += 1;
   }
 
   // Şehir geneli pazar payı için birikimler.
@@ -379,7 +382,6 @@ export function runMarketTick(state: GameState): void {
 
   for (const district of state.districts) {
     const archetype = DISTRICT_ARCHETYPES[district.archetype];
-    district.outletCount = zeroByCategory();
 
     for (const categoryId of CONSUMER_CATEGORIES) {
       const category = CATEGORIES[categoryId];
@@ -388,7 +390,7 @@ export function runMarketTick(state: GameState): void {
       const weight = archetype.demandWeights[categoryId] ?? 1;
       const incomeFactor =
         1 + (district.incomeLevel - 0.5) * 2 * category.incomeSensitivity * 0.5;
-      let eventMultiplier = mods.demand[categoryId];
+      let eventMultiplier = mods.demand[categoryId] ?? 1;
       for (const entry of mods.archetypeDemand) {
         if (entry.archetype === district.archetype) {
           eventMultiplier *= entry.multipliers[categoryId] ?? 1;
@@ -405,117 +407,134 @@ export function runMarketTick(state: GameState): void {
       );
       district.demand[categoryId] = demandUnits;
 
-      // ---- 2. Bu talebe erişebilen outlet'ler ----
-      interface Candidate {
-        building: BuildingInstance;
-        price: number;
-        attractiveness: number;
-        capacityLeft: number;
-      }
-      const candidates: Candidate[] = [];
-
-      for (const [sourceDistrictId, list] of outletsByDistrict) {
-        const access = accessWeight(state, district.id, sourceDistrictId);
-        if (access <= 0) continue;
-
-        for (const building of list) {
-          const def = BUILDING_BY_ID[building.defId]!;
-          if (def.category !== categoryId) continue;
-
-          if (sourceDistrictId === district.id) district.outletCount[categoryId] += 1;
-
-          const company = state.companies[building.companyId];
-          if (!company) continue;
-
-          // ---- 3. Çekicilik ----
-          const price = category.basePrice * building.priceMultiplier;
-          const priceFactor = Math.pow(category.basePrice / price, category.elasticity);
-          const brand = 0.45 + 0.55 * (company.brand[categoryId] ?? 0);
-          const quality = Math.pow(qualityFor(state, building.companyId, building.defId), 1.15);
-          const capacityLeft = Math.max(0, def.capacity - building.last.unitsSold);
-
-          if (capacityLeft <= 0) continue;
-
-          candidates.push({
-            building,
-            price,
-            attractiveness: quality * brand * priceFactor * access,
-            capacityLeft,
-          });
-        }
-      }
-
-      if (candidates.length === 0) {
-        district.unmet[categoryId] = demandUnits > 0 ? 1 : 0;
-        district.priceIndex[categoryId] = 1;
-        continue;
-      }
-
-      // ---- 4-5. Payları dağıt, kapasiteyi uygula, artanı yeniden dağıt ----
-      let remaining = demandUnits;
-      const soldHere = new Map<string, number>();
-
-      for (let pass = 0; pass < 2 && remaining > 0.01; pass++) {
-        const open = candidates.filter((c) => c.capacityLeft > 0.01);
-        if (open.length === 0) break;
-
-        let totalAttractiveness = 0;
-        for (const c of open) totalAttractiveness += c.attractiveness;
-        if (totalAttractiveness <= 0) break;
-
-        let consumed = 0;
-        for (const c of open) {
-          const wanted = remaining * (c.attractiveness / totalAttractiveness);
-          const sold = Math.min(wanted, c.capacityLeft);
-          if (sold <= 0) continue;
-
-          c.capacityLeft -= sold;
-          consumed += sold;
-          soldHere.set(c.building.id, (soldHere.get(c.building.id) ?? 0) + sold);
-        }
-
-        remaining -= consumed;
-        if (consumed <= 0.01) break;
-      }
-
-      const servedUnits = demandUnits - remaining;
-      district.unmet[categoryId] = demandUnits > 0 ? remaining / demandUnits : 0;
-
-      // ---- Defterleri işle ----
+      let unservedTotal = 0;
       let priceSum = 0;
       let priceWeight = 0;
 
-      for (const candidate of candidates) {
-        const units = soldHere.get(candidate.building.id) ?? 0;
-        if (units <= 0) continue;
+      // Aynı kategoride birden çok ürün olabilir; her biri kendi talep
+      // payı için ayrı yarışır. Kapasite ise raflar arasında ORTAKTIR.
+      for (const good of GOODS_BY_CATEGORY[categoryId] ?? []) {
+        const goodDemand = demandUnits * good.demandShare;
+        if (goodDemand <= 0) continue;
 
-        const building = candidate.building;
-        const def = BUILDING_BY_ID[building.defId]!;
-        const company = state.companies[building.companyId]!;
-        const costModifier = costModifiers.get(building.id) ?? 1;
+        // ---- 2. Bu talebe erişebilen, ürünü rafında taşıyan outlet'ler ----
+        interface Candidate {
+          building: BuildingInstance;
+          price: number;
+          attractiveness: number;
+          capacityLeft: number;
+        }
+        const candidates: Candidate[] = [];
 
-        const revenue = units * candidate.price;
-        const cogs =
-          units * category.basePrice * category.costRatio * costModifier * mods.costMultiplier;
+        for (const [sourceDistrictId, list] of outletsByDistrict) {
+          const access = accessWeight(state, district.id, sourceDistrictId);
+          if (access <= 0) continue;
 
-        building.last.unitsSold += units;
-        building.last.revenue += revenue;
-        building.last.cogs += cogs;
-        building.last.profit += revenue - cogs;
-        building.last.capacityUsed = def.capacity > 0 ? building.last.unitsSold / def.capacity : 0;
-        building.last.share = servedUnits > 0 ? units / servedUnits : 0;
+          for (const building of list) {
+            const def = BUILDING_BY_ID[building.defId]!;
+            if (def.category !== categoryId) continue;
+            if (!building.stocked.includes(good.id)) continue;
 
-        company.today.revenue += revenue;
-        company.today.cogs += cogs;
+            const company = state.companies[building.companyId];
+            if (!company) continue;
 
-        const key = `${building.companyId}|${categoryId}`;
-        soldByCompanyCategory.set(key, (soldByCompanyCategory.get(key) ?? 0) + units);
-        soldByCategory[categoryId] += units;
+            // ---- 3. Çekicilik ----
+            const price = category.basePrice * building.priceMultiplier;
+            const priceFactor = Math.pow(category.basePrice / price, category.elasticity);
+            const brand = 0.45 + 0.55 * (company.brand[categoryId] ?? 0);
+            const quality = Math.pow(qualityFor(state, building.companyId, building.defId), 1.15);
+            const capacityLeft = Math.max(0, def.capacity - building.last.unitsSold);
 
-        priceSum += candidate.price * units;
-        priceWeight += units;
+            if (capacityLeft <= 0) continue;
+
+            candidates.push({
+              building,
+              price,
+              attractiveness: quality * brand * priceFactor * access,
+              capacityLeft,
+            });
+          }
+        }
+
+        if (candidates.length === 0) {
+          unservedTotal += goodDemand;
+          continue;
+        }
+
+        // ---- 4-5. Payları dağıt, kapasiteyi uygula, artanı yeniden dağıt ----
+        let remaining = goodDemand;
+        const soldHere = new Map<string, number>();
+
+        for (let pass = 0; pass < 2 && remaining > 0.01; pass++) {
+          const open = candidates.filter((c) => c.capacityLeft > 0.01);
+          if (open.length === 0) break;
+
+          let totalAttractiveness = 0;
+          for (const c of open) totalAttractiveness += c.attractiveness;
+          if (totalAttractiveness <= 0) break;
+
+          let consumed = 0;
+          for (const c of open) {
+            const wanted = remaining * (c.attractiveness / totalAttractiveness);
+            const sold = Math.min(wanted, c.capacityLeft);
+            if (sold <= 0) continue;
+
+            c.capacityLeft -= sold;
+            consumed += sold;
+            soldHere.set(c.building.id, (soldHere.get(c.building.id) ?? 0) + sold);
+          }
+
+          remaining -= consumed;
+          if (consumed <= 0.01) break;
+        }
+
+        unservedTotal += remaining;
+        const servedUnits = goodDemand - remaining;
+
+        // ---- Defterleri işle ----
+        for (const candidate of candidates) {
+          const units = soldHere.get(candidate.building.id) ?? 0;
+          if (units <= 0) continue;
+
+          const building = candidate.building;
+          const def = BUILDING_BY_ID[building.defId]!;
+          const company = state.companies[building.companyId]!;
+
+          const revenue = units * candidate.price;
+          // Satış maliyeti zincirden: dışarıdan alınan girdi payı +
+          // perakende işleme. Kendi ürettiğin kısmın maliyeti zaten
+          // üretim ünitesinin defterinde duruyor.
+          const cogs =
+            units *
+            unitCogsFor(
+              state,
+              building.companyId,
+              good.id,
+              reliefByOutlet.get(building.id) ?? 0,
+              mods.costMultiplier,
+            );
+
+          building.last.unitsSold += units;
+          building.last.revenue += revenue;
+          building.last.cogs += cogs;
+          building.last.profit += revenue - cogs;
+          building.last.capacityUsed =
+            def.capacity > 0 ? building.last.unitsSold / def.capacity : 0;
+          building.last.share += servedUnits > 0 ? units / servedUnits : 0;
+
+          company.today.revenue += revenue;
+          company.today.cogs += cogs;
+
+          const key = `${building.companyId}|${categoryId}`;
+          soldByCompanyCategory.set(key, (soldByCompanyCategory.get(key) ?? 0) + units);
+          soldByCategory[categoryId] += units;
+
+          priceSum += candidate.price * units;
+          priceWeight += units;
+        }
       }
 
+      district.unmet[categoryId] = demandUnits > 0 ? unservedTotal / demandUnits : 0;
       district.priceIndex[categoryId] =
         priceWeight > 0 ? priceSum / priceWeight / category.basePrice : 1;
     }

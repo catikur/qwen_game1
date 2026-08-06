@@ -1,9 +1,10 @@
-import { BUILDING_BY_ID } from '@capital/content';
+import { BUILDING_BY_ID, GOODS_BY_CATEGORY } from '@capital/content';
 import { build, buyTile, buyoutTile, demolish, sellTile } from './actions';
 import { pushNews } from './news';
-import { collectEventModifiers, runMarketTick } from './systems/market';
+import { runMarketTick } from './systems/market';
+import { resetDailyLedgers, runProductionTick, runSpotPriceTick } from './systems/supply';
 import { recomputeNetWorth, runLandValueTick, runPopulationTick } from './systems/city';
-import { runEventTick } from './systems/events';
+import { collectEventModifiers, runEventTick } from './systems/events';
 import { runNpcTick } from './systems/npc';
 import { SPEED_MS } from './types';
 import type { CommandResult, GameCommand, GameState } from './types';
@@ -116,6 +117,28 @@ export class GameEngine {
         return { ok: true };
       }
 
+      case 'SET_STOCK': {
+        const building = state.buildings[command.buildingId];
+        if (!building) return { ok: false, reason: 'Bina bulunamadı.' };
+        if (building.companyId !== playerId) return { ok: false, reason: 'Bu bina sizin değil.' };
+
+        const def = BUILDING_BY_ID[building.defId];
+        if (def?.role !== 'outlet') return { ok: false, reason: 'Bu binanın rafı yok.' };
+
+        // Yalnızca kendi kategorisinin ürünleri, yuva sayısı kadar.
+        const allowed = new Set((GOODS_BY_CATEGORY[def.category] ?? []).map((good) => good.id));
+        const picked = [...new Set(command.goodIds)].filter((id) => allowed.has(id));
+        if (picked.length === 0) return { ok: false, reason: 'En az bir ürün seçilmeli.' };
+
+        const slots = def.slots ?? 1;
+        if (picked.length > slots) {
+          return { ok: false, reason: `${def.name} en fazla ${slots} ürün taşıyabilir.` };
+        }
+
+        building.stocked = picked;
+        return { ok: true };
+      }
+
       case 'RENAME_COMPANY': {
         const name = command.name.trim();
         if (!name) return { ok: false, reason: 'Şirket adı boş olamaz.' };
@@ -157,13 +180,22 @@ export class GameEngine {
     if (ticks > 0) this.notify();
   }
 
-  /** Tek bir oyun gününü işler. Testler bunu doğrudan çağırabilir. */
+  /**
+   * Tek bir oyun gününü işler. Testler bunu doğrudan çağırabilir.
+   *
+   * Sıra tesadüf değil: üretim bugünkü satıştan önce çözülür (birim
+   * maliyet pazarın girdisidir), spot fiyat ise günün sonunda — yani
+   * yarının fiyatı bugünkü arz fazlasından doğar.
+   */
   runDay(): void {
     const state = this.state;
     state.time.day += 1;
 
     runEventTick(state);
+    resetDailyLedgers(state);
+    runProductionTick(state);
     runMarketTick(state);
+    runSpotPriceTick(state);
 
     const mods = collectEventModifiers(state);
     runLandValueTick(state, mods.landValueDrift);
