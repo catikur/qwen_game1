@@ -20,6 +20,7 @@ export {
   MARKETING_CAP,
   RESEARCH_CAP,
 } from './systems/focus';
+export { auctionHint, minimumBid, valuationFor } from './systems/auction';
 export { collectEventModifiers } from './systems/events';
 export type { EventModifiers } from './systems/events';
 export {

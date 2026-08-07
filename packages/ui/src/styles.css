@@ -1541,3 +1541,75 @@ button.icon {
   line-height: 1.5;
   color: var(--muted);
 }
+
+/* -------------------------------------------------------------- ihale */
+
+.auction-chip {
+  cursor: pointer;
+  border: 1px solid rgba(224, 180, 92, 0.4);
+  background: rgba(224, 180, 92, 0.12);
+  color: inherit;
+  font: inherit;
+}
+
+.auction-chip:hover {
+  border-color: rgba(224, 180, 92, 0.7);
+}
+
+/* Öndeyken çip yeşile döner — panele girmeden durum okunabilsin. */
+.auction-chip.leading {
+  border-color: rgba(59, 165, 93, 0.5);
+  background: rgba(59, 165, 93, 0.14);
+}
+
+.auction {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.auction-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.auction-place {
+  font-weight: 650;
+  font-size: 15px;
+}
+
+.auction-state {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
+.auction-state.pos {
+  border-color: rgba(59, 165, 93, 0.4);
+  background: rgba(59, 165, 93, 0.08);
+}
+
+.auction-actions {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+
+.auction-custom {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+}
+
+.auction-custom input {
+  width: 120px;
+  font-variant-numeric: tabular-nums;
+}

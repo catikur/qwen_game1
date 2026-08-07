@@ -5,6 +5,7 @@ import { runMarketTick } from './systems/market';
 import { resetDailyLedgers, runProductionTick, runSpotPriceTick } from './systems/supply';
 import { recomputeNetWorth, runLandValueTick, runPopulationTick } from './systems/city';
 import { collectEventModifiers, runEventTick } from './systems/events';
+import { placeBid, runAuctionTick } from './systems/auction';
 import { runResearchTick } from './systems/focus';
 import { runNpcTick } from './systems/npc';
 import { SPEED_MS } from './types';
@@ -161,6 +162,9 @@ export class GameEngine {
         return { ok: true };
       }
 
+      case 'PLACE_BID':
+        return placeBid(state, playerId, command.amount);
+
       case 'RENAME_COMPANY': {
         const name = command.name.trim();
         if (!name) return { ok: false, reason: 'Şirket adı boş olamaz.' };
@@ -227,6 +231,9 @@ export class GameEngine {
     runLandValueTick(state, mods.landValueDrift);
     runPopulationTick(state);
     runNpcTick(state);
+    // İhale NPC turundan sonra: rakip aynı gün hem mağaza açıp hem teklif
+    // vermesin, nakit iki kez harcanmış gibi görünmesin.
+    runAuctionTick(state);
 
     this.settleCredit();
     recomputeNetWorth(state);

@@ -9,6 +9,7 @@ import {
 } from '@capital/core';
 import type { GameSpeed } from '@capital/core';
 import { CeoPortrait } from './CeoPortrait';
+import { AuctionChip } from './AuctionPanel';
 import { useGame, useGameState } from './useGame';
 
 /** Üst bar: oyuncunun her an görmesi gereken beş sayı ve zaman kontrolü. */
@@ -189,10 +190,13 @@ export function Toasts(): ReactElement {
 /** Aktif ekonomik olaylar — piyasanın neden değiştiğini gösterir. */
 export function ActiveEvents(): ReactElement | null {
   const state = useGameState();
-  if (state.activeEvents.length === 0) return null;
+  // İhale çipi de buraya düşüyor: ikisi de "şu an olan bir şey" ve
+  // ikisi de akışı kesmiyor.
+  if (state.activeEvents.length === 0 && !state.auction) return null;
 
   return (
     <div className="active-events">
+      <AuctionChip />
       {state.activeEvents.map((active) => {
         const def = EVENTS.find((event) => event.id === active.defId);
         if (!def) return null;

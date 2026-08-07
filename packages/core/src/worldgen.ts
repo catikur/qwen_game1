@@ -272,6 +272,8 @@ export function createNewGame(options: NewGameOptions = {}): GameState {
       randomEvents: true,
       manualPricing: false,
       landValueDrift: true,
+      landAuctions: true,
     },
+    auction: null,
   };
 }

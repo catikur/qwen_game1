@@ -83,6 +83,12 @@ export function purchaseBlocker(state: GameState, tileId: number): string | null
     const owner = state.companies[tile.ownerId];
     return `Bu parsel ${owner?.name ?? 'bir rakibe'} ait.`;
   }
+  // İhaledeki parsel normal yoldan alınamaz. Alınabilseydi ihale bir
+  // mekanik değil, sadece bir bildirim olurdu: oyuncu teklif vermek
+  // yerine doğrudan satın alıp geçerdi.
+  if (state.auction?.tileId === tileId) {
+    return 'Bu parsel ihalede — satın almak yerine teklif vermelisin.';
+  }
   return null;
 }
 

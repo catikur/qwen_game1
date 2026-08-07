@@ -148,6 +148,21 @@ const MIGRATIONS: Record<number, (raw: Record<string, unknown>) => Record<string
 
     return raw;
   },
+
+  /**
+   * v4 → v5: parsel ihalesi eklendi.
+   *
+   * Eski kayıtta açık ihale olamaz; `auction: null` ile başlıyorlar ve
+   * bir sonraki periyotta ilk ihale kendiliğinden açılıyor. Bayrak
+   * varsayılan olarak açık — mekanik yeni oyunla eski kayıtta aynı
+   * davransın.
+   */
+  4: (raw) => {
+    raw['auction'] = null;
+    const flags = raw['flags'] as Record<string, unknown> | undefined;
+    if (flags && flags['landAuctions'] === undefined) flags['landAuctions'] = true;
+    return raw;
+  },
 };
 
 /**

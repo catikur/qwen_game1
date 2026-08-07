@@ -38,6 +38,7 @@ import {
   shelfReach,
   supplyRoutes,
   tilePrice,
+  valuationFor,
   MARKETING_CAP,
   RESEARCH_CAP,
 } from '../src/index';
@@ -1580,6 +1581,167 @@ function fmtDays(days: number): string {
     `${premiumResearch.toFixed(2)} > ${cutterResearch.toFixed(2)}`);
   expect('doktrin farkı rekabet kartına yansıyor', spread > 0.02 || withLeader.length < 2,
     `kalite yayılımı ${spread.toFixed(2)}`);
+}
+
+// ================================================================ İhale
+//
+// Sorulan şey "ihale çalışıyor mu" değil, "arazi gerçekten çekişiyor mu":
+// oyuncu kaybedebiliyor mu, rakip mantıklı bir fiyat veriyor mu, ve
+// mekanik oyunu kilitliyor mu.
+
+console.log('\n=== Parsel ihalesi ===\n');
+
+{
+  const engine = new GameEngine(createNewGame({ seed: 17, companyName: 'İhale AŞ' }));
+  const state = engine.getState();
+  const player = getPlayer(state);
+  player.cash = 20_000_000;
+
+  // İlk ihaleye kadar koş.
+  for (let day = 0; day < 31 && !state.auction; day++) engine.runDay();
+  expect('belediye ihale açıyor', state.auction !== null, `${state.time.day}. gün`);
+
+  if (state.auction) {
+    const auction = state.auction;
+    const tile = state.map.tiles[auction.tileId]!;
+    expect('ihaledeki parsel boş ve sahipsiz',
+      tile.kind === 'plot' && !tile.ownerId && !tile.structureId && !tile.buildingId,
+      `parsel ${tile.id}`);
+    expect('taban fiyat normal parsel fiyatına eşit',
+      Math.abs(auction.reserve - tilePrice(state, auction.tileId)) < 1,
+      `${Math.round(auction.reserve)} ₺`);
+
+    // İhaledeki parsel normal yoldan alınamamalı; yoksa ihale sadece bir
+    // bildirim olurdu.
+    const direct = engine.dispatch({ type: 'BUY_TILE', tileId: auction.tileId });
+    expect('ihaledeki parsel doğrudan satın alınamıyor', !direct.ok, direct.reason ?? '');
+
+    // Taban altı teklif reddedilmeli.
+    const low = engine.dispatch({ type: 'PLACE_BID', amount: auction.reserve - 1 });
+    expect('taban altı teklif reddediliyor', !low.ok, low.reason ?? '');
+
+    const ok = engine.dispatch({ type: 'PLACE_BID', amount: auction.reserve });
+    expect('taban fiyattan teklif kabul ediliyor', ok.ok, ok.reason ?? `${Math.round(auction.reserve)} ₺`);
+    expect('en yüksek teklif oyuncunun', auction.bidderId === state.playerCompanyId, auction.bidderId ?? '—');
+
+    const again = engine.dispatch({ type: 'PLACE_BID', amount: auction.reserve * 2 });
+    expect('kendi teklifinin üstüne çıkılamıyor', !again.ok, again.reason ?? '');
+  }
+}
+
+// ---- Oyuncu ihaleyi kaybedebiliyor mu? ----
+//
+// Kaybedemiyorsa mekanik bir çekişme değil, sadece ikinci bir satın alma
+// düğmesi olurdu.
+{
+  const engine = new GameEngine(createNewGame({ seed: 17, companyName: 'İhale AŞ' }));
+  const state = engine.getState();
+  // Oyuncu fakir: taban fiyatı verse bile rakip üstüne çıkabilmeli.
+  getPlayer(state).cash = 3_000;
+
+  // İhaleleri HABERDEN saymak yanlıştı: haber listesi kapaklı, yeni
+  // öğeler eskileri düşürüyor ve delta sıfıra iniyor. Bunun yerine
+  // `state.auction` geçişlerini izliyoruz.
+  let opened = 0;
+  let settledWithWinner = 0;
+  let noSale = 0;
+  let previous: { bidderId: string | null } | null = null;
+
+  for (let day = 0; day < 400; day++) {
+    const before = state.auction;
+    engine.runDay();
+    if (!before && state.auction) opened += 1;
+    if (before && !state.auction) {
+      if (previous?.bidderId) settledWithWinner += 1;
+      else noSale += 1;
+    }
+    previous = state.auction ? { bidderId: state.auction.bidderId } : previous;
+  }
+
+  console.log(`  400 günde: ${opened} ihale açıldı, ${settledWithWinner} kazananla kapandı, ${noSale} sonuçsuz`);
+  expect('ihaleler düzenli açılıyor', opened >= 10, `${opened} ihale`);
+  expect('ihaleler sonuçlanıyor', settledWithWinner + noSale >= 10,
+    `${settledWithWinner + noSale} kapanış`);
+  expect('rakipler ihale kazanıyor (oyuncu kaybedebiliyor)', settledWithWinner > 0,
+    `${settledWithWinner} kez`);
+  expect('kazanan parselin sahibi oluyor',
+    Object.values(state.companies).some((company) =>
+      state.map.tiles.some((tile) => tile.ownerId === company.id),
+    ),
+    'sahiplik devredildi',
+  );
+}
+
+// ---- Rakip değerlemesi mantıklı mı? ----
+{
+  const engine = new GameEngine(createNewGame({ seed: 17, companyName: 'İhale AŞ' }));
+  const state = engine.getState();
+  for (let day = 0; day < 60; day++) engine.runDay();
+
+  const merkez = [...state.districts].sort((a, b) => b.population - a.population)[0]!;
+  const sanayi = state.districts.find((d) => d.archetype === 'industrial');
+
+  const tileIn = (districtId: number): number | null =>
+    state.map.tiles.find(
+      (t) => t.districtId === districtId && t.kind === 'plot' && !t.ownerId && !t.structureId,
+    )?.id ?? null;
+
+  const rival = NPC_PROFILES[0]!.id;
+  const busy = tileIn(merkez.id);
+  const quiet = sanayi ? tileIn(sanayi.id) : null;
+
+  if (busy !== null && quiet !== null) {
+    const busyValue = valuationFor(state, rival, busy);
+    const quietValue = valuationFor(state, rival, quiet);
+    console.log(
+      `  rakip değerlemesi: ${merkez.name} ${formatMoney(busyValue)} · Sanayi ${formatMoney(quietValue)}`,
+    );
+    expect('rakip kalabalık bölgeye daha çok değer biçiyor', busyValue > quietValue,
+      `${formatMoney(busyValue)} > ${formatMoney(quietValue)}`);
+  }
+
+  // Değerleme bir NİYET, ödeme gücü ayrı bir kısıt. Nakit sınırını
+  // değerlemenin içine koymak her parseli aynı değere indiriyordu (ikisi
+  // de nakdin yarısı) — yani teklif hiçbir bilgi taşımıyordu. Sınır artık
+  // teklif anında uygulanıyor; doğrulanması gereken değişmez bu.
+  const engine2 = new GameEngine(createNewGame({ seed: 19, companyName: 'İhale AŞ' }));
+  const state2 = engine2.getState();
+  getPlayer(state2).cash = 5_000;
+  for (const profile of NPC_PROFILES) state2.companies[profile.id]!.cash = 60_000;
+
+  let overBid = 0;
+  for (let day = 0; day < 300; day++) {
+    engine2.runDay();
+    const auction = state2.auction;
+    if (!auction?.bidderId) continue;
+    const bidder = state2.companies[auction.bidderId]!;
+    if (auction.bid > bidder.cash) overBid += 1;
+  }
+  expect('kimse nakdinin üstüne teklif vermiyor', overBid === 0, `${overBid} ihlal`);
+}
+
+// ---- İhale kapatılabiliyor mu, ekonomi bozuluyor mu? ----
+{
+  const withAuctions = new GameEngine(createNewGame({ seed: 21, companyName: 'A' }));
+  const without = new GameEngine(createNewGame({ seed: 21, companyName: 'A' }));
+  without.getState().flags.landAuctions = false;
+
+  for (const engine of [withAuctions, without]) {
+    getPlayer(engine.getState()).cash = 40_000_000;
+    for (let day = 1; day <= 400; day++) {
+      if (day % 5 === 0) playerStrategy(engine);
+      engine.runDay();
+    }
+  }
+
+  const on = getPlayer(withAuctions.getState()).netWorth;
+  const off = getPlayer(without.getState()).netWorth;
+  console.log(`  ihaleli oyuncu ${formatMoney(on)} · ihalesiz ${formatMoney(off)}`);
+  expect('ihale bayrağı kapatılabiliyor', without.getState().auction === null, 'açık ihale yok');
+  // İhale araziyi ZORLAŞTIRIR ama oyunu kilitlememeli: %35'ten fazla fark
+  // mekaniğin ekonomiyi ele geçirdiği anlamına gelirdi.
+  expect('ihale ekonomiyi ele geçirmiyor', Math.abs(on / off - 1) < 0.35,
+    `%${Math.round((on / off - 1) * 100)} fark`);
 }
 
 console.log(`\n=== ${failures === 0 ? 'TÜMÜ GEÇTİ' : `${failures} KONTROL KALDI`} ===`);

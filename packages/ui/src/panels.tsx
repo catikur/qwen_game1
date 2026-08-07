@@ -26,6 +26,7 @@ import { AUTOSAVE_SLOT, MAX_SLOTS, listSaves } from '@capital/persistence';
 import type { SaveMeta } from '@capital/persistence';
 import { ChainPanel } from './ChainPanel';
 import { CompetitionPanel } from './CompetitionPanel';
+import { AuctionPanel } from './AuctionPanel';
 import { useGame, useGameState } from './useGame';
 
 /* ------------------------------------------------------------------ yapı */
@@ -623,6 +624,7 @@ export function ModalHost(): ReactElement | null {
   const titles: Record<string, string> = {
     chain: 'Tedarik Zinciri',
     rivalry: 'Rekabet',
+    auction: 'Parsel İhalesi',
     company: 'Şirket',
     rivals: 'Rakipler',
     saves: 'Kayıtlar',
@@ -641,6 +643,7 @@ export function ModalHost(): ReactElement | null {
         <div className="modal-body">
           {view.openPanel === 'chain' && <ChainPanel />}
           {view.openPanel === 'rivalry' && <CompetitionPanel />}
+          {view.openPanel === 'auction' && <AuctionPanel />}
           {view.openPanel === 'company' && <CompanyPanel />}
           {view.openPanel === 'rivals' && <RivalsPanel />}
           {view.openPanel === 'saves' && <SavePanel />}

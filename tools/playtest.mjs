@@ -671,6 +671,79 @@ const findTile = (page, kind) =>
 
   await page.evaluate(() => window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 1 }));
 
+  // ---------- Parsel ihalesi ----------
+  // İhale oyunun akışını KESMEYEN ilk mekanik: üstte bir çip, tıklanınca
+  // panel. Burada bakılan şey oyuncunun gerçekten teklif verebilmesi ve
+  // ihaledeki parseli normal yoldan alamaması.
+  section('Parsel ihalesi');
+
+  await page.evaluate(async () => {
+    const { engine, getState } = window.__capital;
+    const s = getState();
+    s.companies[s.playerCompanyId].cash = 50_000_000;
+    engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+    // Bir sonraki ihale gününe kadar koş.
+    for (let i = 0; i < 40 && !s.auction; i++) engine.runDay();
+  });
+  await page.waitForTimeout(500);
+
+  const auctionOpen = await page.evaluate(() => window.__capital.getState().auction !== null);
+  check('Belediye ihale açıyor', auctionOpen);
+
+  if (auctionOpen) {
+    check('İhale çipi üstte görünüyor', (await page.locator('.auction-chip').count()) === 1,
+      (await page.locator('.auction-chip').textContent())?.trim());
+
+    // Oyun duraklamamalı: ihale akışı kesmiyor.
+    const speed = await page.evaluate(() => window.__capital.getState().time.speed);
+    check('İhale oyunu duraklatmıyor (hız oyuncunun bıraktığı yerde)', speed === 0, `hız ${speed}`);
+
+    await page.locator('.auction-chip').click();
+    await page.waitForTimeout(400);
+    check('İhale paneli açılıyor', (await page.locator('.auction').count()) === 1);
+
+    // İhale açıldıktan sonra rakipler kendi değerlemelerine göre teklif
+    // veriyor; oyuncu panele geldiğinde ortada zaten bir teklif olabilir.
+    // Panelin işi bunu GÖSTERMEK.
+    const before = await page.evaluate(() => {
+      const s = window.__capital.getState();
+      return {
+        bid: s.auction.bid,
+        bidder: s.auction.bidderId,
+        reserve: s.auction.reserve,
+        playerId: s.playerCompanyId,
+      };
+    });
+    const stateText = (await page.locator('.auction-state').textContent()) || '';
+    check('Panel ihalenin güncel durumunu yazıyor',
+      before.bidder === null
+        ? /Henüz teklif yok/.test(stateText)
+        : /değer biçti|teklif senin/.test(stateText),
+      stateText.trim().slice(0, 70));
+    check('Teklif tabanın altına düşmüyor', before.bid === 0 || before.bid >= before.reserve,
+      `${before.bid} ≥ ${before.reserve}`);
+
+    await page.locator('.auction-actions button.primary').click();
+    await page.waitForTimeout(400);
+    const after = await page.evaluate(() => {
+      const s = window.__capital.getState();
+      return { bid: s.auction.bid, bidder: s.auction.bidderId, playerId: s.playerCompanyId };
+    });
+    check('Teklif verilebiliyor', after.bidder === after.playerId, `${after.bid} ₺`);
+    check('Öndeyken buton kilitleniyor',
+      await page.locator('.auction-actions button.primary').isDisabled());
+
+    // İhaledeki parsel normal yoldan alınamamalı.
+    const blocked = await page.evaluate(() => {
+      const s = window.__capital.getState();
+      return window.__capital.engine.dispatch({ type: 'BUY_TILE', tileId: s.auction.tileId });
+    });
+    check('İhaledeki parsel doğrudan satın alınamıyor', !blocked.ok, blocked.reason || '');
+
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(200);
+  }
+
   // ---------- Kayıt ----------
   section('Kayıt sistemi');
   await page.locator('.topbar-actions button', { hasText: 'Kayıt' }).click();

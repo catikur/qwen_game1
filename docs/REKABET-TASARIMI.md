@@ -1,6 +1,6 @@
 # Tur 2 — Kalite, Marka ve Toprak · Tasarım Belgesi
 
-> Durum: **A, B ve C parçaları kodlandı**. §9'daki iş sırasına bakın.
+> Durum: **Tur 2 tamamlandı (A–D)**. §9'daki iş sırasına bakın.
 >
 > Tur 1 (`ZINCIR-TASARIMI.md`) satılan şeyin bir maliyeti olmasını sağladı.
 > Tur 2 aynı rafta duran iki şirketten hangisinin kazanacağı sorusuna
@@ -386,7 +386,7 @@ Göç (`v3 → v4`): `research` sıfırlarla, `focus` null, `auction` null.
 | A | `research`/`marketing` rolleri, `SET_FOCUS`, kalite/marka/fiyat formülleri, şema v4 | motor katmanı, UI yok | denge kimliği + iki kanal A/B + kalibrasyon | **bitti** |
 | B | Rekabet kartı: kategoride sen vs lider (kalite, marka, fiyat), Ar-Ge/pazarlama atama arayüzü | oyuncunun gördüğü katman | harness + playtest | **bitti** |
 | C | Rakip doktrinleri: Ar-Ge ve pazarlama iştahı, haber akışı | rekabet | her doktrin ayrışıyor; hiçbiri batmıyor | **bitti** |
-| D | Parsel ihalesi | arazi çekişmesi | rakip değerlemesi tutarlı; oyuncu kaybedebiliyor | sırada |
+| D | Parsel ihalesi | arazi çekişmesi | rakip değerlemesi tutarlı; oyuncu kaybedebiliyor | **bitti** |
 
 ### A parçasının ölçülen sonuçları
 
@@ -478,6 +478,48 @@ kartındaki **rakip sütununa** yansıyor. Harness bunu ayrıca doğruluyor —
 doktrin oyuncuya görünmüyorsa hiçbir şey değişmemiş demektir.
 
 Denge harness'ı: **128 kontrol**.
+
+### D parçası — ihale iki kez düzeltildi
+
+**Değerleme.** İlk model "en iyi binanın 220 günlük kârı" idi ve iki
+yönden bozuktu: parseller kazandırdıkları şeye göre çok ucuz olduğu için
+7.000 ₺'lik bir parsele 780.000 ₺ teklif ettiriyordu; sonucu nakitle
+kırpınca da **her parsel aynı değere iniyordu** — yani teklif hiçbir
+bilgi taşımıyordu, oysa açık artırmanın tek amacı rakibin değerlemesini
+oyuncuya öğretmek. Model taban fiyatın katına çevrildi: fırsatın geri
+ödemesi ne kadar kısaysa kat o kadar yüksek (en fazla 4×). Nakit sınırı
+değerlemeden çıkıp **teklif anına** taşındı.
+
+**Fiyat keşfi.** Teklif turu günde yalnızca bir geçiş yapıyordu ve ihale
+fiyat keşfi yapamıyordu: dört teklifçi, üç gün ve %5'lik adımlarla fiyat
+en fazla 1,05¹² ≈ 1,8 katına çıkabiliyordu, yani kimsenin değerlemesine
+ulaşamıyordu. Ekranda tuhaf bir çelişki olarak göründü — panel *"burada
+günde 30.690 ₺ kazanırsın"* derken en yüksek teklif **5.239 ₺**'ydi.
+
+Gerçek bir açık artırma hızlıdır: tur artık kimse artırmayana kadar
+sürüyor ve fiyat ikinci en yüksek değerlemede duruyor. Aynı parsel
+3.188 ₺ tabandan **13.803 ₺**'ye, 31 artırımla çıkıyor. Fiyat artık
+bilgi taşıyor.
+
+Üçüncü düzeltme okunabilirlikte: `formatMoney` bin ölçeğine yuvarladığı
+için "en yüksek teklif 16 B ₺" ile "en az teklifi ver · 16 B ₺" aynı
+görünüyordu — oysa aradaki 776 ₺ kararın kendisi. İhalede rakam tam
+yazılıyor (zincir panelinde birim maliyet için aynı kararı vermiştik).
+
+| Kontrol | Sonuç |
+|---|---|
+| İhale düzenli açılıyor | 400 günde **13** ihale |
+| Oyuncu kaybedebiliyor | fakir oyuncuda 13/13 ihaleyi rakip kazandı |
+| Rakip değerlemesi ayrışıyor | Orta Gelir Konut 10 B ₺ · Sanayi 3.728 ₺ |
+| Kimse nakdinin üstüne teklif vermiyor | 0 ihlal (300 gün) |
+| İhaledeki parsel doğrudan alınamıyor | engelleniyor |
+| Bayrak kapatılabiliyor | evet |
+| İhale ekonomiyi ele geçirmiyor | ihaleli/ihalesiz oyuncu farkı **%0** |
+
+Son satır bilinçli: ihale, ilgilenmeyen oyuncuyu **cezalandırmıyor**.
+Kaçırılan ihale bir ceza değil, kaçırılmış bir fırsat.
+
+Denge harness'ı: **144 kontrol**. Tarayıcı testleri: **97/97**.
 
 Sıralama Tur 1 ile aynı mantıkta: **önce motor, sonra oyuncunun gördüğü
 katman, sonra rakip, en son yeni akış.** B'den önce C yazılırsa rakibin
