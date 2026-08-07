@@ -25,6 +25,13 @@ export interface EventDef {
     costMultiplier?: number;
     /** Arsa değerine günlük çarpan. */
     landValueDrift?: number;
+    /**
+     * Belirli ürünlerin spot fiyatına çarpan.
+     *
+     * Tedarik krizinin oyundaki karşılığı bu: zinciri kuran oyuncu kendi
+     * maliyetiyle üretmeye devam eder, pazardan alan ise zamma yakalanır.
+     */
+    goodPriceMultiplier?: Record<string, number>;
   };
 }
 
@@ -103,5 +110,35 @@ export const EVENTS: EventDef[] = [
     weight: 7,
     tone: 'bad',
     effects: { costMultiplier: 1.1 },
+  },
+
+  // ---- Tedarik zinciri olayları ----
+  // Bunlar kendi üretimi olan oyuncuyu vurmaz; pazardan alanı vurur.
+  {
+    id: 'coffee_blight',
+    title: 'Kahve Rekoltesi Kötü',
+    body: 'Hasat yarıya düştü; çekirdek fiyatı uçtu. Kendi bahçesi olan gülüyor.',
+    durationDays: 30,
+    weight: 8,
+    tone: 'bad',
+    effects: { goodPriceMultiplier: { coffee_bean: 1.55, roasted_coffee: 1.3 } },
+  },
+  {
+    id: 'cotton_glut',
+    title: 'Pamukta Bereket',
+    body: 'Rekor hasat pazarı doldurdu; pamuk ve kumaş ucuzladı.',
+    durationDays: 26,
+    weight: 7,
+    tone: 'good',
+    effects: { goodPriceMultiplier: { cotton: 0.72, fabric: 0.85 } },
+  },
+  {
+    id: 'chip_shortage',
+    title: 'Çip Krizi',
+    body: 'Küresel arz tıkandı. Kendi fabrikası olmayan elektronikçi zor günler geçirecek.',
+    durationDays: 35,
+    weight: 6,
+    tone: 'bad',
+    effects: { goodPriceMultiplier: { silicon: 1.35, chip: 1.6 } },
   },
 ];

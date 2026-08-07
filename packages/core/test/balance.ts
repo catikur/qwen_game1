@@ -5,7 +5,7 @@
  * olmadığını raporlar. Amaç, denge bozukluğunu tarayıcıyı açmadan görmek:
  * oyuncu hiç kaybedemiyorsa oyun kolay, NPC'ler hep batıyorsa rekabet yok.
  */
-import { BUILDINGS } from '@capital/content';
+import { BUILDINGS, BUILDING_BY_ID, CATEGORIES } from '@capital/content';
 import {
   GameEngine,
   buildOptions,
@@ -197,16 +197,23 @@ const b = JSON.stringify(run(99, 120, true));
 expect('determinizm: aynı seed = aynı sonuç', a === b, a === b ? 'birebir aynı' : 'FARKLI');
 
 // Her binanın gerçekten kurulabildiğini doğrula (ölü içerik kalmasın).
+// Üretim üniteleri imar kısıtlı olduğu için parsel de ona göre seçilir.
 const engine = new GameEngine(createNewGame({ seed: 5 }));
 const player = getPlayer(engine.getState());
 player.cash = 50_000_000;
 player.netWorth = 50_000_000;
 let built = 0;
 for (const def of BUILDINGS) {
-  const tile = engine
-    .getState()
-    .map.tiles.find((t) => t.kind === 'plot' && !t.ownerId && !t.structureId && !t.buildingId);
-  if (!tile) break;
+  const s = engine.getState();
+  const tile = s.map.tiles.find((t) => {
+    if (t.kind !== 'plot' || t.ownerId || t.structureId || t.buildingId) return false;
+    const district = s.districts[t.districtId]!;
+    return !def.zones || def.zones.includes(district.archetype);
+  });
+  if (!tile) {
+    console.log(`  parsel bulunamadı: ${def.id}`);
+    continue;
+  }
   engine.dispatch({ type: 'BUY_TILE', tileId: tile.id });
   if (engine.dispatch({ type: 'BUILD', tileId: tile.id, defId: def.id }).ok) built++;
   else console.log(`  kurulamadı: ${def.id}`);
@@ -278,6 +285,213 @@ expect('katalogdaki her bina kurulabiliyor', built === BUILDINGS.length, `${buil
     'CEO başlangıç sermayesi farklı',
     getPlayer(heir.getState()).cash > getPlayer(plain.getState()).cash,
     `${formatMoney(getPlayer(plain.getState()).cash)} → ${formatMoney(getPlayer(heir.getState()).cash)}`,
+  );
+}
+
+// ---------------------------------------------------------------- Zincir
+//
+// Tur 1'in asıl sınavı. Dört soruyu ayrı ayrı cevaplıyoruz:
+//   1. Zincir kurmamış oyuncunun ekonomisi zincir öncesiyle aynı mı?
+//   2. Zincir gerçekten marj açıyor mu, ne kadar sürede geri dönüyor?
+//   3. Aşırı üretim cezalandırılıyor mu (spot fiyat kırılıyor mu)?
+//   4. Tedarik krizi zinciri olmayanı vurup olanı es geçiyor mu?
+
+console.log('\n=== Tedarik zinciri ===\n');
+
+/** İzole senaryo: rakipsiz, olaysız, sınırsız sermaye. */
+function labEngine(seed: number): GameEngine {
+  const engine = new GameEngine(createNewGame({ seed, companyName: 'Lab AŞ' }));
+  const state = engine.getState();
+  state.flags.npcCompetition = false;
+  state.flags.randomEvents = false;
+  const lab = getPlayer(state);
+  lab.cash = 500_000_000;
+  lab.netWorth = 500_000_000;
+  return engine;
+}
+
+/** Belirli bir arketipteki ilk uygun parsele istenen binayı diker. */
+function place(engine: GameEngine, defId: string, archetype: string): boolean {
+  const state = engine.getState();
+  const tile = state.map.tiles.find((t) => {
+    if (t.kind !== 'plot' || t.ownerId || t.structureId || t.buildingId) return false;
+    return state.districts[t.districtId]!.archetype === archetype;
+  });
+  if (!tile) return false;
+  if (!engine.dispatch({ type: 'BUY_TILE', tileId: tile.id }).ok) return false;
+  return engine.dispatch({ type: 'BUILD', tileId: tile.id, defId }).ok;
+}
+
+/** Şirketin outlet'lerinin toplam günlük satış maliyeti / satılan birim. */
+function outletUnitCost(state: GameState): number {
+  let cogs = 0;
+  let units = 0;
+  for (const building of Object.values(state.buildings)) {
+    if (building.companyId !== state.playerCompanyId) continue;
+    if (BUILDING_BY_ID[building.defId]?.role !== 'outlet') continue;
+    cogs += building.last.cogs;
+    units += building.last.unitsSold;
+  }
+  return units > 0 ? cogs / units : 0;
+}
+
+// ---- 1. Zincirsiz ekonomi bozulmadı ----
+// Kural: bir tüketici ürününün "her şeyi pazardan alan" oyuncuya birim
+// maliyeti kategorinin basePrice × costRatio değerine BİREBİR eşit olmalı.
+// Bu tutmazsa zincir eklemek mevcut kalibrasyonu çöpe atmış demektir.
+{
+  const engine2 = labEngine(21);
+  for (let i = 0; i < 5; i++) place(engine2, 'cafe', 'student');
+  for (let i = 0; i < 40; i++) engine2.runDay();
+
+  const state = engine2.getState();
+  const actual = outletUnitCost(state);
+  const expected = CATEGORIES.dining.basePrice * CATEGORIES.dining.costRatio;
+  const drift = Math.abs(actual - expected) / expected;
+
+  expect(
+    'zincirsiz birim maliyet eski dengeyle aynı',
+    drift < 0.02,
+    `beklenen ${expected.toFixed(2)} ₺, gerçek ${actual.toFixed(2)} ₺ (sapma %${(drift * 100).toFixed(1)})`,
+  );
+}
+
+// ---- 2. Zincir marj açıyor, ne kadar sürede dönüyor? ----
+{
+  const plain = labEngine(21);
+  const chained = labEngine(21);
+
+  for (const engine2 of [plain, chained]) {
+    for (let i = 0; i < 5; i++) place(engine2, 'cafe', 'student');
+  }
+  place(chained, 'coffee_roastery', 'industrial');
+  place(chained, 'coffee_estate', 'industrial');
+
+  for (let i = 0; i < 120; i++) {
+    plain.runDay();
+    chained.runDay();
+  }
+
+  const plainProfit = getPlayer(plain.getState()).today.profit;
+  const chainedProfit = getPlayer(chained.getState()).today.profit;
+  const plainCost = outletUnitCost(plain.getState());
+  const chainedCost = outletUnitCost(chained.getState());
+
+  const investment = BUILDING_BY_ID['coffee_roastery']!.cost + BUILDING_BY_ID['coffee_estate']!.cost;
+  const gain = chainedProfit - plainProfit;
+  const payback = gain > 0 ? investment / gain : Infinity;
+
+  console.log(
+    `  5 kafe          → günlük kâr ${formatMoney(plainProfit).padStart(11)} | birim maliyet ${plainCost.toFixed(2)} ₺`,
+  );
+  console.log(
+    `  5 kafe + zincir → günlük kâr ${formatMoney(chainedProfit).padStart(11)} | birim maliyet ${chainedCost.toFixed(2)} ₺`,
+  );
+  console.log(
+    `  zincir yatırımı ${formatMoney(investment)} · günlük kazanç ${formatMoney(gain)} · geri ödeme ${payback.toFixed(0)} gün\n`,
+  );
+
+  expect('zincir birim maliyeti düşürüyor', chainedCost < plainCost * 0.6, `${plainCost.toFixed(2)} → ${chainedCost.toFixed(2)} ₺`);
+  expect('zincir günlük kârı artırıyor', gain > 0, `+${formatMoney(gain)}/gün`);
+  expect(
+    'zincirin geri ödemesi makul (100–260 gün)',
+    payback >= 100 && payback <= 260,
+    `${payback.toFixed(0)} gün`,
+  );
+}
+
+// ---- 3. Aşırı üretimin cezası var mı? ----
+// Hiç mağazası olmadan üç kavurma tesisi kuran oyuncu, ürettiğini pazara
+// dökmek zorunda kalır ve fiyatı kendi eliyle kırar.
+{
+  const engine2 = labEngine(33);
+  const before = engine2.getState().market.spot['roasted_coffee']!;
+  for (let i = 0; i < 3; i++) place(engine2, 'coffee_roastery', 'industrial');
+  for (let i = 0; i < 90; i++) engine2.runDay();
+  const after = engine2.getState().market.spot['roasted_coffee']!;
+
+  expect(
+    'aşırı üretim spot fiyatı kırıyor',
+    after < before * 0.95,
+    `${before.toFixed(2)} → ${after.toFixed(2)} ₺ (%${(((after - before) / before) * 100).toFixed(1)})`,
+  );
+}
+
+// ---- 4. Tedarik krizi asimetrisi ----
+// Kahve rekoltesi kötüyse pazardan alan zamma yakalanır, kendi bahçesi
+// olan aynı maliyetle üretmeye devam eder. Zincirin asıl vaadi bu.
+{
+  const buyer = labEngine(44);
+  const grower = labEngine(44);
+
+  for (const engine2 of [buyer, grower]) {
+    for (let i = 0; i < 5; i++) place(engine2, 'cafe', 'student');
+  }
+  place(grower, 'coffee_roastery', 'industrial');
+  place(grower, 'coffee_estate', 'industrial');
+
+  for (let i = 0; i < 40; i++) {
+    buyer.runDay();
+    grower.runDay();
+  }
+
+  const calmBuyer = getPlayer(buyer.getState()).unitCost['coffee']!;
+  const calmGrower = getPlayer(grower.getState()).unitCost['coffee']!;
+
+  // Krizi zorla başlat; rastgeleliğe güvenmeyelim.
+  for (const engine2 of [buyer, grower]) {
+    engine2.getState().activeEvents.push({
+      defId: 'coffee_blight',
+      startedDay: engine2.getState().time.day,
+      remainingDays: 60,
+    });
+  }
+  for (let i = 0; i < 40; i++) {
+    buyer.runDay();
+    grower.runDay();
+  }
+
+  const crisisBuyer = getPlayer(buyer.getState()).unitCost['coffee']!;
+  const crisisGrower = getPlayer(grower.getState()).unitCost['coffee']!;
+
+  console.log(
+    `  kriz öncesi → pazardan alan ${calmBuyer.toFixed(2)} ₺ | kendi üreten ${calmGrower.toFixed(2)} ₺`,
+  );
+  console.log(
+    `  kriz anında → pazardan alan ${crisisBuyer.toFixed(2)} ₺ | kendi üreten ${crisisGrower.toFixed(2)} ₺\n`,
+  );
+
+  expect(
+    'tedarik krizi pazardan alanı vuruyor',
+    crisisBuyer > calmBuyer * 1.1,
+    `${calmBuyer.toFixed(2)} → ${crisisBuyer.toFixed(2)} ₺`,
+  );
+  expect(
+    'tedarik krizi kendi üretene dokunmuyor',
+    Math.abs(crisisGrower - calmGrower) / calmGrower < 0.05,
+    `${calmGrower.toFixed(2)} → ${crisisGrower.toFixed(2)} ₺`,
+  );
+}
+
+// ---- 5. İmar kısıtı ----
+{
+  const engine2 = labEngine(55);
+  const state = engine2.getState();
+
+  const downtown = state.districts.find((d) => d.archetype === 'downtown')!;
+  const industrial = state.districts.find((d) => d.archetype === 'industrial')!;
+
+  const cityTile = state.map.tiles.find(
+    (t) => t.districtId === downtown.id && t.kind === 'plot' && !t.structureId && !t.ownerId,
+  )!;
+  engine2.dispatch({ type: 'BUY_TILE', tileId: cityTile.id });
+  const cityAttempt = engine2.dispatch({ type: 'BUILD', tileId: cityTile.id, defId: 'coffee_estate' });
+
+  expect('merkeze hammadde ünitesi kurulamıyor', !cityAttempt.ok, cityAttempt.reason ?? '');
+  expect(
+    'sanayiye hammadde ünitesi kurulabiliyor',
+    place(engine2, 'coffee_estate', 'industrial'),
+    `${industrial.name} bölgesine kuruldu`,
   );
 }
 

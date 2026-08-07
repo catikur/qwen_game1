@@ -4,14 +4,18 @@ import {
   DISTRICT_ARCHETYPES,
   DISTRICT_FABRIC,
   DISTRICT_LAYOUT,
+  GOODS,
+  GOOD_BY_ID,
   NPC_PROFILES,
   STRUCTURE_BY_ID,
   getCeoModifiers,
 } from '@capital/content';
 import type { CategoryId } from '@capital/content';
 import { createRng, nextRange, pickWeighted } from './rng';
+import { seedSpotPrices, zeroByGood } from './systems/supply';
+import { estimateBaselineDemand, zeroByCategory } from './systems/demand';
 import { SCHEMA_VERSION } from './types';
-import type { CompanyState, DistrictState, GameState, Tile, TileKind } from './types';
+import type { CompanyState, DistrictState, GameState, MarketState, Tile, TileKind } from './types';
 
 export const GAME_VERSION = '0.2.0';
 
@@ -27,11 +31,7 @@ export const BLOCK_SIZE = 4;
 export const PLAYER_COMPANY_ID = 'player';
 export const STARTING_CASH = 250_000;
 
-export function zeroByCategory(): Record<CategoryId, number> {
-  const out = {} as Record<CategoryId, number>;
-  for (const cat of CATEGORY_LIST) out[cat.id] = 0;
-  return out;
-}
+export { estimateBaselineDemand, zeroByCategory } from './systems/demand';
 
 function brandRecord(value: number): Record<CategoryId, number> {
   const out = {} as Record<CategoryId, number>;
@@ -63,6 +63,47 @@ function makeCompany(
     marketShare: zeroByCategory(),
     today: { revenue: 0, cogs: 0, upkeep: 0, wages: 0, interest: 0, profit: 0 },
     netWorthHistory: [cash],
+    supplyRatio: zeroByGood(),
+    unitCost: seedSpotPrices(),
+  };
+}
+
+/**
+ * Spot pazarın referans hacmi — fazla üretimin fiyatı ne kadar kırdığını
+ * ölçekler.
+ *
+ * Haritadan türetiliyor, sabit değil: şehir büyürse referans da büyür,
+ * yani bir fabrikanın fiyat üzerindeki etkisi harita boyutuna göre
+ * kendiliğinden dengelenir.
+ */
+function referenceVolumes(districts: DistrictState[]): Record<string, number> {
+  const reference = zeroByGood();
+
+  for (const good of GOODS) {
+    if (good.tier !== 'consumer' || !good.category) continue;
+
+    let cityDemand = 0;
+    for (const district of districts) {
+      cityDemand += estimateBaselineDemand(district, good.category) * good.demandShare;
+    }
+
+    // Tüketici ürününün talebi zincirin her kademesine 1:1 iner.
+    let current = GOOD_BY_ID[good.inputGoodId ?? ''];
+    while (current) {
+      reference[current.id] = (reference[current.id] ?? 0) + cityDemand;
+      current = GOOD_BY_ID[current.inputGoodId ?? ''];
+    }
+  }
+
+  return reference;
+}
+
+function makeMarket(districts: DistrictState[]): MarketState {
+  return {
+    spot: seedSpotPrices(),
+    produced: zeroByGood(),
+    consumed: zeroByGood(),
+    reference: referenceVolumes(districts),
   };
 }
 
@@ -210,6 +251,7 @@ export function createNewGame(options: NewGameOptions = {}): GameState {
     companies,
     playerCompanyId: PLAYER_COMPANY_ID,
     buildings: {},
+    market: makeMarket(districts),
     activeEvents: [],
     news: [
       {

@@ -62,6 +62,9 @@ importers:
 
   packages/persistence:
     dependencies:
+      '@capital/content':
+        specifier: workspace:*
+        version: link:../content
       '@capital/core':
         specifier: workspace:*
         version: link:../core

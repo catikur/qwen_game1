@@ -267,20 +267,25 @@ const findTile = (page, kind) =>
   await page.evaluate(() => window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 }));
   await page.waitForTimeout(300);
 
-  const readAfterLens = (lens, wait = 220) =>
-    page.evaluate(
-      async ([l, w]) => {
-        window.__capital.setLens(l);
-        await new Promise((r) => setTimeout(r, w));
-        return window.__capital.renderInfo();
-      },
-      [lens, wait],
-    );
+  // Sabit süre beklemek yazılım rasterizasyonunda yetmiyor: bir kare ~170ms
+  // sürdüğü için React'in efekti sahneye taşıması gecikiyor ve test bir adım
+  // geriden okuyordu. Sahnenin lensi GERÇEKTEN uyguladığını bekliyoruz.
+  const readAfterLens = (lens) =>
+    page.evaluate(async (l) => {
+      window.__capital.setLens(l);
+      const deadline = Date.now() + 5000;
+      while (Date.now() < deadline) {
+        const info = window.__capital.renderInfo();
+        if (info && info.activeLens === l) return info;
+        await new Promise((r) => setTimeout(r, 25));
+      }
+      return window.__capital.renderInfo();
+    }, lens);
 
   const cityFirst = (await readAfterLens('none')).groundColorSum;
 
   for (let round = 0; round < 3; round++) {
-    for (const lens of lensCycle) await readAfterLens(lens, 60);
+    for (const lens of lensCycle) await readAfterLens(lens);
   }
 
   const cityAgain = (await readAfterLens('none')).groundColorSum;
@@ -410,7 +415,9 @@ const findTile = (page, kind) =>
   );
   check('IndexedDB slotuna yazıldı', savedMeta !== null,
     savedMeta ? `${savedMeta.companyName}, ${savedMeta.day}. gün` : '');
-  check('Kayıt şeması v2', savedMeta?.schemaVersion === 2, `v${savedMeta?.schemaVersion}`);
+  const schemaVersion = await page.evaluate(() => window.__capital.schemaVersion);
+  check('Kayıt güncel şemayla yazılıyor', savedMeta?.schemaVersion === schemaVersion,
+    `v${savedMeta?.schemaVersion} (güncel v${schemaVersion})`);
   await page.keyboard.press('Escape');
 
   // ---------- Yenileme ----------
@@ -472,7 +479,7 @@ const findTile = (page, kind) =>
       allTilesHaveKind: s.map.tiles.every((t) => typeof t.kind === 'string'),
     };
   });
-  check('v1 kaydı v2 şemasına taşındı', migrated.version === 2, `v${migrated.version}`);
+  check('v1 kaydı güncel şemaya taşındı', migrated.version === schemaVersion, `v${migrated.version}`);
   check('Göç sonrası tüm kareler geçerli', migrated.allTilesHaveKind);
   check('Göç sırasında konsol temiz', consoleErrors.length === 0, consoleErrors.slice(0, 3).join(' | '));
 
@@ -504,22 +511,37 @@ const findTile = (page, kind) =>
   await page.locator('button:has-text("Şirketi kur")').click();
   await page.waitForSelector('.topbar');
   await page.click('.speed:nth-child(4)');
-  const fps = await page.evaluate(
+  // Ham FPS'i eşik olarak kullanmak kabı ölçer, kodu değil: burada GPU yok
+  // ve SwiftShader tavanı 6-8 FPS. Asıl korunması gereken şey zaten kare
+  // hızı değil — OYUN SAATİNİN GERÇEK ZAMANLA UYUMU. Düşük kare hızında
+  // simülasyon sessizce yavaşlarsa seçilen hız kademesi yalan söyler;
+  // motorun dt üst sınırı tam olarak bunu engellemek için var.
+  const pace = await page.evaluate(
     () =>
       new Promise((resolve) => {
         let frames = 0;
+        const startDay = window.__capital.getState().time.day;
         const start = performance.now();
         const tick = () => {
           frames++;
-          if (performance.now() - start < 3000) requestAnimationFrame(tick);
-          else resolve(Math.round((frames * 1000) / (performance.now() - start)));
+          const elapsed = performance.now() - start;
+          if (elapsed < 4000) requestAnimationFrame(tick);
+          else
+            resolve({
+              fps: Math.round((frames * 1000) / elapsed),
+              days: window.__capital.getState().time.day - startDay,
+              expected: elapsed / 480, // 3x hızda bir oyun günü = 480ms
+            });
         };
         requestAnimationFrame(tick);
       }),
   );
-  // Eşik kabın yazılım rasterizasyon tavanına göre; gerçek GPU'da ölçüm
-  // kat kat yüksek olur. Amaç regresyon yakalamak, mutlak hız ölçmek değil.
-  check('Yazılım rasterizasyonunda oyun akıcı kalıyor', fps >= 8, `${fps} FPS (SwiftShader, GPU yok)`);
+  const paceRatio = pace.days / pace.expected;
+  check(
+    'Düşük kare hızında oyun saati gerçek zamanla uyumlu',
+    paceRatio > 0.75,
+    `${pace.days}/${pace.expected.toFixed(0)} gün (%${Math.round(paceRatio * 100)}) · ${pace.fps} FPS (SwiftShader, GPU yok)`,
+  );
 
   await page.waitForTimeout(6000);
   await page.screenshot({ path: `${OUT}/city-later.png` });

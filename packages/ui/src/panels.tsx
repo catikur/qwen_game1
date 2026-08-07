@@ -82,7 +82,9 @@ export function BuildPanel(): ReactElement {
                     {CATEGORIES[def.category].name}
                     {def.role === 'rental' && ' · kira'}
                     {def.role === 'logistics' && ' · lojistik'}
-                    {def.role === 'production' && ' · üretim'}
+                    {def.role === 'extract' && ' · hammadde'}
+                    {def.role === 'process' && ' · işleme'}
+                    {def.zones && ' · sanayi/liman'}
                   </span>
                   {!unlocked ? (
                     <span className="buildcard-lock">

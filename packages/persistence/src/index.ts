@@ -1,5 +1,6 @@
-import { SCHEMA_VERSION } from '@capital/core';
+import { SCHEMA_VERSION, seedSpotPrices, zeroByGood } from '@capital/core';
 import type { GameState } from '@capital/core';
+import { BUILDING_BY_ID, GOODS, GOOD_BY_ID, defaultGoodFor } from '@capital/content';
 
 /**
  * Kalıcılık katmanı.
@@ -74,7 +75,83 @@ const MIGRATIONS: Record<number, (raw: Record<string, unknown>) => Record<string
     }
     return raw;
   },
+
+  /**
+   * v2 → v3: tedarik zinciri eklendi.
+   *
+   * Eski kayıtlarda ürün, spot pazar ve raf kavramı yoktu. Hiçbiri
+   * ilerlemeyi etkilemiyor, hepsi türetilebilir:
+   *   - her outlet kategorisinin varsayılan ürününü rafına alır,
+   *   - spot fiyatlar referans değerleriyle başlar (yani eski kayıt
+   *     "hiç üretimi olmayan oyuncu" olarak devam eder — ekonomisi
+   *     birebir aynı kalır),
+   *   - referans hacimler bölgelerin nüfusundan yeniden türetilir,
+   *   - eski `factory` binası artık kumaş üreten dokuma fabrikasıdır.
+   */
+  2: (raw) => {
+    const buildings = raw['buildings'] as Record<string, Record<string, unknown>> | undefined;
+    if (buildings) {
+      for (const building of Object.values(buildings)) {
+        if (building['defId'] === 'factory') building['defId'] = 'textile_mill';
+
+        const def = BUILDING_BY_ID[String(building['defId'])];
+        const good = def?.role === 'outlet' ? defaultGoodFor(def.category) : null;
+        building['stocked'] = good ? [good] : [];
+
+        const ledger = building['last'] as Record<string, unknown> | undefined;
+        if (ledger) {
+          ledger['producedUnits'] = 0;
+          ledger['soldToMarket'] = 0;
+        }
+      }
+    }
+
+    const companies = raw['companies'] as Record<string, Record<string, unknown>> | undefined;
+    if (companies) {
+      for (const company of Object.values(companies)) {
+        company['supplyRatio'] = zeroByGood();
+        company['unitCost'] = seedSpotPrices();
+      }
+    }
+
+    raw['market'] = {
+      spot: seedSpotPrices(),
+      produced: zeroByGood(),
+      consumed: zeroByGood(),
+      reference: legacyReferenceVolumes(raw),
+    };
+
+    return raw;
+  },
 };
+
+/**
+ * v2 kaydından spot pazar referans hacimlerini türetir.
+ *
+ * `worldgen` bunu talep modelinden hesaplıyor; burada kaydın kendi
+ * nüfusundan kaba bir karşılığını üretiyoruz. Referans yalnızca fazla
+ * üretimin fiyatı ne kadar kırdığını ölçekler, bu yüzden yaklaşık olması
+ * yeterli — ve göç anında hiç üretim olmadığı için etkisi sıfırdır.
+ */
+function legacyReferenceVolumes(raw: Record<string, unknown>): Record<string, number> {
+  const districts = (raw['districts'] as Array<{ population?: number }> | undefined) ?? [];
+  let population = 0;
+  for (const district of districts) population += district.population ?? 0;
+
+  const reference = zeroByGood();
+  for (const good of GOODS) {
+    if (good.tier !== 'consumer' || !good.category) continue;
+
+    // Kategorinin kişi başı talebi içerikte; burada kaba bir taban yeter.
+    const cityDemand = population * 0.15 * good.demandShare;
+    let current = GOOD_BY_ID[good.inputGoodId ?? ''];
+    while (current) {
+      reference[current.id] = (reference[current.id] ?? 0) + cityDemand;
+      current = GOOD_BY_ID[current.inputGoodId ?? ''];
+    }
+  }
+  return reference;
+}
 
 function migrate(raw: Record<string, unknown>): LoadOutcome {
   const meta = raw['meta'] as { schemaVersion?: number } | undefined;

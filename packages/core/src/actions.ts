@@ -1,4 +1,10 @@
-import { BUILDING_BY_ID, STRUCTURE_BY_ID, getCeoModifiers } from '@capital/content';
+import {
+  BUILDING_BY_ID,
+  DISTRICT_ARCHETYPES,
+  STRUCTURE_BY_ID,
+  defaultGoodFor,
+  getCeoModifiers,
+} from '@capital/content';
 import { LAND_SELL_RATIO, tilePrice } from './systems/city';
 import type { CommandResult, GameState } from './types';
 
@@ -31,6 +37,28 @@ export function canBuild(state: GameState, companyId: string, defId: string): Co
     return { ok: false, reason: `Nakit yetersiz — ${formatShort(cost)} gerekiyor.` };
   }
   return { ok: true };
+}
+
+/**
+ * İmar kontrolü — bir bina bu bölgeye kurulabilir mi?
+ *
+ * Üretim üniteleri yalnızca sanayi ve limana kurulur. Şehir haritasının
+ * ortasına çiftlik dikmek hem tuhaf olurdu hem de kolay; kısıt sayesinde
+ * sanayi bölgesi — en düşük arsa değerine ve en az tüketici talebine
+ * sahip olmasına rağmen — şehrin en çekişmeli arazisi haline geliyor.
+ *
+ * Kural oyuncuya da NPC'ye de aynı şekilde uygulanır.
+ */
+export function zoningBlocker(state: GameState, districtId: number, defId: string): string | null {
+  const def = BUILDING_BY_ID[defId];
+  if (!def?.zones || def.zones.length === 0) return null;
+
+  const district = state.districts[districtId];
+  if (!district) return 'Bölge bulunamadı.';
+  if (def.zones.includes(district.archetype)) return null;
+
+  const names = def.zones.map((zone) => DISTRICT_ARCHETYPES[zone].name).join(' veya ');
+  return `${def.name} yalnızca ${names} bölgesine kurulabilir.`;
 }
 
 /** CEO pazarlığı uygulanmış inşaat maliyeti. */
@@ -146,13 +174,22 @@ export function build(
   if (tile.ownerId !== companyId) return { ok: false, reason: 'Önce bu parseli satın alın.' };
   if (tile.buildingId) return { ok: false, reason: 'Parselde zaten bir bina var.' };
 
+  const zoning = zoningBlocker(state, tile.districtId, defId);
+  if (zoning) return { ok: false, reason: zoning };
+
   const allowed = canBuild(state, companyId, defId);
   if (!allowed.ok) return allowed;
 
   const company = state.companies[companyId]!;
+  const def = BUILDING_BY_ID[defId]!;
 
   company.cash -= buildCost(state, companyId, defId);
   const id = `b${state.nextId++}`;
+
+  // Outlet açılır açılmaz kategorisinin varsayılan ürününü rafa koyar;
+  // oyuncu boş bir mağazayla baş başa kalmasın.
+  const defaultGood = def.role === 'outlet' ? defaultGoodFor(def.category) : null;
+
   state.buildings[id] = {
     id,
     defId,
@@ -162,6 +199,7 @@ export function build(
     priceMultiplier: 1,
     autoPrice: true,
     builtDay: state.time.day,
+    stocked: defaultGood ? [defaultGood] : [],
     last: {
       unitsSold: 0,
       capacityUsed: 0,
@@ -171,6 +209,8 @@ export function build(
       wages: 0,
       profit: 0,
       share: 0,
+      producedUnits: 0,
+      soldToMarket: 0,
     },
   };
   tile.buildingId = id;
