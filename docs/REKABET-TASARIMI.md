@@ -1,6 +1,6 @@
 # Tur 2 — Kalite, Marka ve Toprak · Tasarım Belgesi
 
-> Durum: **A ve B parçaları kodlandı** (motor katmanı + oyuncunun gördüğü katman). §9'daki iş sırasına bakın.
+> Durum: **A, B ve C parçaları kodlandı**. §9'daki iş sırasına bakın.
 >
 > Tur 1 (`ZINCIR-TASARIMI.md`) satılan şeyin bir maliyeti olmasını sağladı.
 > Tur 2 aynı rafta duran iki şirketten hangisinin kazanacağı sorusuna
@@ -385,8 +385,8 @@ Göç (`v3 → v4`): `research` sıfırlarla, `focus` null, `auction` null.
 |---|---|---|---|---|
 | A | `research`/`marketing` rolleri, `SET_FOCUS`, kalite/marka/fiyat formülleri, şema v4 | motor katmanı, UI yok | denge kimliği + iki kanal A/B + kalibrasyon | **bitti** |
 | B | Rekabet kartı: kategoride sen vs lider (kalite, marka, fiyat), Ar-Ge/pazarlama atama arayüzü | oyuncunun gördüğü katman | harness + playtest | **bitti** |
-| C | Rakip doktrinleri: Ar-Ge ve pazarlama iştahı, haber akışı | rekabet | her doktrin ayrışıyor; hiçbiri batmıyor | sırada |
-| D | Parsel ihalesi | arazi çekişmesi | rakip değerlemesi tutarlı; oyuncu kaybedebiliyor | — |
+| C | Rakip doktrinleri: Ar-Ge ve pazarlama iştahı, haber akışı | rekabet | her doktrin ayrışıyor; hiçbiri batmıyor | **bitti** |
+| D | Parsel ihalesi | arazi çekişmesi | rakip değerlemesi tutarlı; oyuncu kaybedebiliyor | sırada |
 
 ### A parçasının ölçülen sonuçları
 
@@ -434,6 +434,50 @@ fiyattadır.
 Üçüncüsü depoyu da kapsıyor — yani Tur 1'den beri duran bir sorun.
 
 Denge harness'ı: **120 kontrol**. Tarayıcı testleri: **88/88**.
+
+### C parçası — doktrin sırası bir ölçümle bulundu
+
+Rakipler oyuncunun rekabet kartını besleyen `competitionCards`
+fonksiyonunun **aynısını** okuyup karar veriyor — zincirde kurduğumuz
+kuralın aynısı, "NPC hile yapıyor" hissi mimari olarak imkânsız.
+
+İlk sürümde kol hamlesi zincirden hemen sonra, **genişlemeden önce**
+değerlendiriliyordu. Kontrollü A/B (aynı tohum, tek fark rakiplerin kol
+iştahı) bunun rakipleri çökerttiğini gösterdi:
+
+| Tohum | Rakip toplamı (kolsuz) | Kol iştahı önde | Kol iştahı en sonda |
+|---|---|---|---|
+| 12 | 162,25 M ₺ | **89,20 M ₺** | 159,78 M ₺ |
+| 5 | 156,28 M ₺ | **79,18 M ₺** | 155,22 M ₺ |
+| 33 | 162,05 M ₺ | **86,53 M ₺** | 162,40 M ₺ |
+
+Kalite avcısı tek başına 77 M ₺'den 19 M ₺'ye düşüyordu.
+
+Sebep basit ve kalibrasyonda zaten yazılıydı: **mağaza 60–110 günde,
+kol 124–225 günde dönüyor.** Her hafta mağaza yerine kol kuran rakip
+kendi büyümesini durduruyordu. Zincirde bu sorun yoktu çünkü zincirin bir
+geri ödeme kapısı var (220 gün); kolun yok.
+
+Kapı yerine **sıra** kullanıldı: kol, kârlı bir genişleme bulunamadığı
+haftalarda kuruluyor — gerçek hayattaki gibi, büyüme yavaşladığında
+verimliliğe dönülüyor. Bu değişiklikten sonra rakipler kolsuz tabana
+döndü ve doktrinler ayrışmaya devam etti.
+
+#### Ölçülen doktrinler (500 gün, tohum 12)
+
+| Rakip | Doktrin | Ar-Ge | Pazarlama | Değer |
+|---|---|---|---|---|
+| Nova Holding | Yayılmacı | 3 | 6 | 75,74 M ₺ |
+| Kilit Market | Ucuzcu | 0 | 3 | 4,25 M ₺ |
+| Meridyen Grup | Kalite avcısı | 3 | 2 | 78,00 M ₺ |
+| Atlas Yapı | Toprak ağası | 0 | 0 | 1,79 M ₺ |
+
+Ayrışma yalnızca bina sayısında kalmıyor: kalite avcısının kalite primi
+0,20'ye çıkarken ucuzcununki 0,00'da kalıyor ve fark oyuncunun rekabet
+kartındaki **rakip sütununa** yansıyor. Harness bunu ayrıca doğruluyor —
+doktrin oyuncuya görünmüyorsa hiçbir şey değişmemiş demektir.
+
+Denge harness'ı: **128 kontrol**.
 
 Sıralama Tur 1 ile aynı mantıkta: **önce motor, sonra oyuncunun gördüğü
 katman, sonra rakip, en son yeni akış.** B'den önce C yazılırsa rakibin

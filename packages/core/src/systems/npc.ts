@@ -2,6 +2,7 @@ import { BUILDINGS, CATEGORIES, CONSUMER_CATEGORIES, NPC_PROFILES } from '@capit
 import type { BuildingDef, CategoryId, NpcProfileDef } from '@capital/content';
 import { build, buyTile, buyoutTile } from '../actions';
 import { chainCards } from '../chain';
+import { competitionCards } from '../competition';
 import { pushNews } from '../news';
 import { nextFloat } from '../rng';
 import { estimateInvestment } from './market';
@@ -119,6 +120,97 @@ function tryChainMove(state: GameState, profile: NpcProfileDef): boolean {
       'rival',
       `${profile.name} dikey entegrasyona gidiyor`,
       `${move.districtName} bölgesinde ${move.name} kurdu — ${card.goodName} maliyetini kendi eline alıyor.`,
+    );
+    return true;
+  }
+
+  return false;
+}
+
+/**
+ * Rakibin rekabet kollarına iştahı — doktrinin ikinci boyutu.
+ *
+ * Tur 1'de kişilikler yalnızca zincir iştahıyla ayrışıyordu. Kalite ve
+ * marka kolları eklenince her doktrin kendi silahını seçebiliyor ve —
+ * asıl kazanç bu — her doktrinin OKUNABİLİR bir karşı hamlesi oluyor:
+ *
+ *   Ucuzcu       maliyetle savaşır  → fiyatla yenilmez, KALİTEYLE yenilir
+ *   Kalite avcısı Ar-Ge'ye yatırır  → kaliteyle yenilmez, FİYATLA yenilir
+ *   Yayılmacı    markayla tutunur   → her yere girer, ARAZİDE durdurulur
+ *   Teknoloji    dar ama derin      → kendi kategorisinde sert
+ *   Toprak ağası tüketici pazarında rakip değil
+ */
+function traitArmAppetite(profile: NpcProfileDef, kind: 'research' | 'marketing'): number {
+  switch (profile.trait) {
+    case 'price_cutter':
+      return kind === 'research' ? 0.2 : 0.4;
+    case 'premium':
+      return kind === 'research' ? 1.5 : 1;
+    case 'expansionist':
+      return kind === 'research' ? 0.7 : 1.3;
+    case 'tech':
+      return kind === 'research' ? 1.3 : 0.8;
+    case 'landlord':
+      return kind === 'research' ? 0.1 : 0.2;
+    default:
+      return 1;
+  }
+}
+
+/**
+ * Rakibin kol hamlesi.
+ *
+ * Oyuncunun rekabet kartını besleyen `competitionCards` fonksiyonunun
+ * AYNISI kullanılır — yani rakip, oyuncuya gösterilen tabloyu okuyup
+ * karar veriyor. Zincirde kurduğumuz kuralın aynısı: "NPC hile yapıyor"
+ * hissi mimari olarak imkânsız.
+ *
+ * Kartın "henüz erken" işareti rakip için de geçerli; yalnızca iştahı çok
+ * yüksek olan (kalite avcısı) onu görmezden gelebilir.
+ */
+function tryArmMove(state: GameState, profile: NpcProfileDef): boolean {
+  const company = state.companies[profile.id];
+  if (!company) return false;
+
+  // Kol yatırımı da zincir gibi ayrı bir bütçeden ödenir. Haftalık
+  // genişleme bütçesinden ödeseydi, marjı ince olan kişilikler kola hiç
+  // ulaşamazdı — zincirde tam bu hatayı yapmıştık.
+  const budget = company.cash * Math.min(0.7, profile.aggression + 0.2);
+
+  for (const card of competitionCards(state, profile.id)) {
+    const move = card.move;
+    if (!move) continue;
+
+    const appetite = traitArmAppetite(profile, move.kind);
+    if (appetite <= 0.25) continue;
+    if (move.premature && appetite < 1.2) continue;
+
+    // İştah, kolun ne kadar dolu olduğuyla birlikte azalır: doktrini
+    // gereği kola meyilli olmayan rakip birinciden sonrasını kurmaz.
+    const arm = card.arms.find((entry) => entry.kind === move.kind);
+    if (arm && arm.count > 0 && arm.count >= Math.round(appetite * 2)) continue;
+
+    const total = move.cost + tilePrice(state, move.tileId, profile.id);
+    if (total > budget) continue;
+
+    const acquired = move.needsBuyout
+      ? buyoutTile(state, profile.id, move.tileId)
+      : buyTile(state, profile.id, move.tileId);
+    if (!acquired.ok) continue;
+    if (!build(state, profile.id, move.tileId, move.defId).ok) continue;
+
+    // Kart hangi kategoriye önerdiyse ona ata; varsayılan atama en çok
+    // mağazası olan kategoriye gider ve o her zaman doğru olmaz.
+    const tile = state.map.tiles[move.tileId];
+    if (tile?.buildingId) state.buildings[tile.buildingId]!.focus = card.category;
+
+    pushNews(
+      state,
+      'rival',
+      move.kind === 'research'
+        ? `${profile.name} kaliteye yatırıyor`
+        : `${profile.name} markasını büyütüyor`,
+      `${move.districtName} bölgesinde ${move.name} açtı — hedefi ${card.categoryName} kategorisi.`,
     );
     return true;
   }
@@ -297,6 +389,21 @@ function actFor(state: GameState, profile: NpcProfileDef): void {
     );
     return;
   }
+
+  // ---- Kol hamlesi EN SON ----
+  //
+  // Sıra ölçümle bulundu. İlk sürümde kol, genişlemeden ÖNCE
+  // değerlendiriliyordu ve rakipleri çökertiyordu: aynı tohumda rakiplerin
+  // toplam değeri 160 M ₺'den 85 M ₺'ye düşüyordu (3/3 tohum), kalite
+  // avcısı 77 M ₺'den 19 M ₺'ye.
+  //
+  // Sebebi basit: mağaza 60–110 günde, kol 124–225 günde dönüyor. Her
+  // hafta mağaza yerine kol kuran rakip, kendi büyümesini durduruyordu.
+  // Zincirde bu sorun yoktu çünkü zincirin bir geri ödeme kapısı var;
+  // kolun yok. Kapı yerine SIRA kullanıyoruz: kol, kârlı bir genişleme
+  // bulunamadığı haftalarda kuruluyor — gerçek hayattaki gibi, büyüme
+  // yavaşladığında verimliliğe dönülüyor.
+  tryArmMove(state, profile);
 }
 
 export function runNpcTick(state: GameState): void {

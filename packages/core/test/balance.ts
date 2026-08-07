@@ -1473,5 +1473,114 @@ function fmtDays(days: number): string {
     `pay %${Math.round((card?.share ?? 0) * 100)}, kol ${card?.move?.kind ?? '—'}`);
 }
 
+// ---- 12. Rakip doktrinleri ----
+//
+// Asıl sorulan şey "rakip zorlaştı mı" değil, "rakip AYRIŞTI mı":
+// her kişiliğin farklı bir silahı ve dolayısıyla farklı bir karşı
+// hamlesi olmalı. Hepsi aynı şeyi yapıyorsa doktrin diye bir şey yok.
+{
+  const engine = new GameEngine(createNewGame({ seed: 12, companyName: 'Doktrin AŞ' }));
+  const player = getPlayer(engine.getState());
+  player.cash = 40_000_000;
+  for (let day = 1; day <= 500; day++) {
+    if (day % 5 === 0) playerStrategy(engine);
+    engine.runDay();
+  }
+  const state = engine.getState();
+
+  console.log('\n--- rakiplerin kol yatırımı (500 gün) ---');
+  const rows = NPC_PROFILES.map((profile) => {
+    let research = 0;
+    let marketing = 0;
+    for (const building of Object.values(state.buildings)) {
+      if (building.companyId !== profile.id) continue;
+      const role = BUILDING_BY_ID[building.defId]?.role;
+      if (role === 'research') research += 1;
+      if (role === 'marketing') marketing += 1;
+    }
+    const company = state.companies[profile.id]!;
+    return { profile, research, marketing, company };
+  });
+
+  for (const row of rows) {
+    console.log(
+      `  ${row.profile.name.padEnd(16)} ${row.profile.trait.padEnd(14)}` +
+        ` Ar-Ge ${String(row.research).padStart(2)} · pazarlama ${String(row.marketing).padStart(2)}` +
+        ` · değer ${formatMoney(row.company.netWorth).padStart(11)} · borç ${formatMoney(row.company.debt)}`,
+    );
+  }
+
+  const armed = rows.filter((row) => row.research + row.marketing > 0);
+  expect('rakipler kol kuruyor', armed.length >= 2, `${armed.length}/${rows.length} rakip`);
+
+  const quality = rows.find((row) => row.profile.trait === 'premium');
+  const cutter = rows.find((row) => row.profile.trait === 'price_cutter');
+  if (quality && cutter) {
+    expect(
+      'kalite avcısı ucuzcudan daha çok Ar-Ge kuruyor',
+      quality.research > cutter.research,
+      `${quality.research} > ${cutter.research}`,
+    );
+  }
+
+  const landlord = rows.find((row) => row.profile.trait === 'landlord');
+  expect('arsa spekülatörü kola girmiyor (kişilik ayrışıyor)',
+    (landlord?.research ?? 0) + (landlord?.marketing ?? 0) === 0,
+    `${(landlord?.research ?? 0) + (landlord?.marketing ?? 0)} bina`);
+
+  expect(
+    'kol yatırımı rakipleri batırmıyor',
+    rows.every((row) => row.company.debt < row.company.netWorth),
+    rows.map((row) => `${row.company.name}: ${formatMoney(row.company.debt)}`).join(' · '),
+  );
+
+  // Doktrinler birbirinden gerçekten ayrışıyor mu? Tek tip davranıyorlarsa
+  // "kişilik" bir etiketten ibaret demektir.
+  const shapes = new Set(rows.map((row) => `${Math.min(row.research, 3)}/${Math.min(row.marketing, 3)}`));
+  expect('doktrinler birbirinden ayrışıyor', shapes.size >= 3,
+    `${shapes.size} farklı kol profili: ${[...shapes].join(' ')}`);
+
+  // Kol kuran rakip onu boşa kurmasın: atadığı kategoride mağazası olsun.
+  let misfocused = 0;
+  for (const building of Object.values(state.buildings)) {
+    const role = BUILDING_BY_ID[building.defId]?.role;
+    if (role !== 'research' && role !== 'marketing') continue;
+    if (building.companyId === state.playerCompanyId) continue;
+    const outlets = Object.values(state.buildings).filter(
+      (other) =>
+        other.companyId === building.companyId &&
+        BUILDING_BY_ID[other.defId]?.role === 'outlet' &&
+        BUILDING_BY_ID[other.defId]?.category === building.focus,
+    ).length;
+    if (outlets === 0) misfocused += 1;
+  }
+  expect('rakip kolunu boşa çalıştırmıyor', misfocused === 0, `${misfocused} yanlış atama`);
+
+  // Doktrin OYUNCUYA GÖRÜNÜR mü? Ayrışma yalnızca bina sayısında kalırsa
+  // oyuncu için hiçbir şey değişmemiş demektir. Rekabet kartındaki rakip
+  // sütunu farkı taşımalı.
+  const cards = competitionCards(state, state.playerCompanyId);
+  const withLeader = cards.filter((card) => card.leader !== null);
+  const qualities = withLeader.map((card) => card.leader!.quality);
+  const spread = qualities.length > 1 ? Math.max(...qualities) - Math.min(...qualities) : 0;
+  console.log(
+    `  kartta görünen rakip kaliteleri: ${withLeader
+      .map((card) => `${card.categoryName} ${card.leader!.name.split(' ')[0]} ${card.leader!.quality.toFixed(2)}`)
+      .join(' · ')}`,
+  );
+
+  const premiumResearch = Math.max(
+    ...CONSUMER_CATEGORIES.map((c) => state.companies[NPC_PROFILES.find((p) => p.trait === 'premium')!.id]!.research[c] ?? 0),
+  );
+  const cutterResearch = Math.max(
+    ...CONSUMER_CATEGORIES.map((c) => state.companies[NPC_PROFILES.find((p) => p.trait === 'price_cutter')!.id]!.research[c] ?? 0),
+  );
+  expect('kalite avcısının kalite primi ucuzcununkinden yüksek',
+    premiumResearch > cutterResearch + 0.05,
+    `${premiumResearch.toFixed(2)} > ${cutterResearch.toFixed(2)}`);
+  expect('doktrin farkı rekabet kartına yansıyor', spread > 0.02 || withLeader.length < 2,
+    `kalite yayılımı ${spread.toFixed(2)}`);
+}
+
 console.log(`\n=== ${failures === 0 ? 'TÜMÜ GEÇTİ' : `${failures} KONTROL KALDI`} ===`);
 process.exit(failures === 0 ? 0 : 1);
