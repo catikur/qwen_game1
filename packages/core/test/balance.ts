@@ -9,6 +9,7 @@ import { BUILDINGS, BUILDING_BY_ID, CATEGORIES } from '@capital/content';
 import {
   GameEngine,
   buildOptions,
+  chainCards,
   companyRanking,
   createNewGame,
   districtOpportunity,
@@ -473,7 +474,115 @@ function outletUnitCost(state: GameState): number {
   );
 }
 
-// ---- 5. İmar kısıtı ----
+// ---- 5. Zincir kartı ----
+// Oyuncunun gördüğü katman motorla aynı şeyi söylemeli. Kart yanlış
+// sayı gösteriyorsa oyun oyuncuya yalan söylüyor demektir.
+{
+  const engine2 = labEngine(21);
+  for (let i = 0; i < 5; i++) place(engine2, 'cafe', 'student');
+  for (let i = 0; i < 40; i++) engine2.runDay();
+
+  const before = chainCards(engine2.getState(), engine2.getState().playerCompanyId);
+  const coffee = before.find((card) => card.goodId === 'coffee');
+
+  expect('zincir kartı sattığın ürün için çıkıyor', coffee !== undefined, `${before.length} kart`);
+
+  if (coffee) {
+    // Kart yalnızca sattığın ürünleri listeler.
+    expect(
+      'zincir kartı yalnızca satılan ürünü listeliyor',
+      before.length === 1,
+      before.map((c) => c.goodName).join(', '),
+    );
+    expect(
+      'kart birim maliyeti motorunkiyle aynı',
+      Math.abs(coffee.unitCost - outletUnitCost(engine2.getState())) < 0.01,
+      `kart ${coffee.unitCost.toFixed(2)} ₺ / motor ${outletUnitCost(engine2.getState()).toFixed(2)} ₺`,
+    );
+    expect('zincirsiz kartta dört yuva var', coffee.slots.length === 4, `${coffee.slots.length} yuva`);
+    expect(
+      'zincirsiz kartta üretim halkaları pazardan',
+      coffee.slots[0]!.state === 'market' && coffee.slots[1]!.state === 'market',
+      `${coffee.slots[0]!.stateLabel} / ${coffee.slots[1]!.stateLabel}`,
+    );
+
+    // Kartın önerdiği hamle, zincirin ilk EKSİK halkası olmalı: kafeler
+    // kavrulmuş kahve tüketiyor, henüz kimse çekirdek tüketmiyor.
+    expect(
+      'kart doğru hamleyi öneriyor (önce kavurma)',
+      coffee.move?.defId === 'coffee_roastery',
+      coffee.move ? `${coffee.move.name} · ${Math.round(coffee.move.paybackDays)} gün` : 'hamle yok',
+    );
+    expect(
+      'önerilen hamle marjı yükseltiyor',
+      (coffee.move?.projectedMargin ?? 0) > coffee.margin,
+      `%${Math.round(coffee.margin * 100)} → %${Math.round((coffee.move?.projectedMargin ?? 0) * 100)}`,
+    );
+  }
+
+  // Hamleyi uygula: kart bir sonraki halkaya geçmeli.
+  place(engine2, 'coffee_roastery', 'industrial');
+  for (let i = 0; i < 40; i++) engine2.runDay();
+  const mid = chainCards(engine2.getState(), engine2.getState().playerCompanyId)[0]!;
+
+  expect('kavurma kurulunca yuva "Sende" oluyor', mid.slots[1]!.state === 'own', mid.slots[1]!.stateLabel);
+  expect(
+    'kart sıradaki halkayı öneriyor (bahçe)',
+    mid.move?.defId === 'coffee_estate',
+    mid.move ? mid.move.name : 'hamle yok',
+  );
+  expect(
+    'kartın vaat ettiği marj gerçekleşti',
+    mid.margin > (coffee?.margin ?? 0),
+    `%${Math.round((coffee?.margin ?? 0) * 100)} → %${Math.round(mid.margin * 100)}`,
+  );
+
+  // Zinciri tamamla: önerilecek hamle kalmamalı.
+  place(engine2, 'coffee_estate', 'industrial');
+  for (let i = 0; i < 40; i++) engine2.runDay();
+  const full = chainCards(engine2.getState(), engine2.getState().playerCompanyId)[0]!;
+
+  expect(
+    'zincir tamamlanınca hamle önerisi susuyor',
+    full.move === null,
+    full.move ? full.move.name : 'öneri yok',
+  );
+  expect(
+    'tam zincirde iki üretim halkası da Sende',
+    full.slots[0]!.state === 'own' && full.slots[1]!.state === 'own',
+    `${full.slots[0]!.stateLabel} / ${full.slots[1]!.stateLabel}`,
+  );
+
+  console.log(
+    `  kart marjı: zincirsiz %${Math.round((coffee?.margin ?? 0) * 100)}` +
+      ` → kavurma %${Math.round(mid.margin * 100)}` +
+      ` → tam zincir %${Math.round(full.margin * 100)}\n`,
+  );
+}
+
+// Ölçek uyarısı: tek kafeyle kavurma tesisi kurmak teknik olarak mümkün
+// ama kapasitenin altıda biri dolar. Kart bunu gizlemek yerine söylemeli.
+{
+  const small = labEngine(63);
+  place(small, 'cafe', 'student');
+  for (let i = 0; i < 40; i++) small.runDay();
+  const card = chainCards(small.getState(), small.getState().playerCompanyId)[0]!;
+
+  expect(
+    'tek mağazada hamle "henüz erken" işaretleniyor',
+    card.move?.premature === true,
+    card.move
+      ? `kapasitenin %${Math.round((card.move.utilisation ?? 0) * 100)}'i dolar, ${Math.round(card.move.paybackDays)} gün`
+      : 'hamle yok',
+  );
+  expect(
+    'erken hamlenin gerekçesi ölçeği açıklıyor',
+    (card.move?.reason ?? '').includes('kapasitenin'),
+    card.move?.reason ?? '',
+  );
+}
+
+// ---- 6. İmar kısıtı ----
 {
   const engine2 = labEngine(55);
   const state = engine2.getState();

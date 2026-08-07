@@ -15,6 +15,7 @@ import {
 import type { InvestmentEstimate } from '@capital/core';
 import { AUTOSAVE_SLOT, MAX_SLOTS, listSaves } from '@capital/persistence';
 import type { SaveMeta } from '@capital/persistence';
+import { ChainPanel } from './ChainPanel';
 import { useGame, useGameState } from './useGame';
 
 /* ------------------------------------------------------------------ yapı */
@@ -411,6 +412,7 @@ export function ModalHost(): ReactElement | null {
   if (view.openPanel === 'none') return null;
 
   const titles: Record<string, string> = {
+    chain: 'Tedarik Zinciri',
     company: 'Şirket',
     rivals: 'Rakipler',
     saves: 'Kayıtlar',
@@ -427,6 +429,7 @@ export function ModalHost(): ReactElement | null {
           </button>
         </header>
         <div className="modal-body">
+          {view.openPanel === 'chain' && <ChainPanel />}
           {view.openPanel === 'company' && <CompanyPanel />}
           {view.openPanel === 'rivals' && <RivalsPanel />}
           {view.openPanel === 'saves' && <SavePanel />}
