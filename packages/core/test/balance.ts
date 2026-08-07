@@ -5,7 +5,7 @@
  * olmadığını raporlar. Amaç, denge bozukluğunu tarayıcıyı açmadan görmek:
  * oyuncu hiç kaybedemiyorsa oyun kolay, NPC'ler hep batıyorsa rekabet yok.
  */
-import { BUILDINGS, BUILDING_BY_ID, CATEGORIES } from '@capital/content';
+import { BUILDINGS, BUILDING_BY_ID, CATEGORIES, NPC_PROFILES } from '@capital/content';
 import {
   GameEngine,
   buildOptions,
@@ -21,10 +21,38 @@ import {
 import type { GameState } from '../src/types';
 
 /**
- * Oyuncu vekili: "Fırsat lensine bakıp geri ödemesi iyi olan yere yatırım
- * yap" davranışını taklit eder. Yani oyunun oyuncuya önerdiği oynanışı.
+ * Oyuncu vekili — oyunun oyuncuya ÖNERDİĞİ oynanış.
+ *
+ * Önce zincir kartının hamlesi (kart "henüz erken" demiyorsa), sonra
+ * fırsat lensinin gösterdiği yere mağaza. Vekilin akıllanması bilinçli:
+ * harness "bilgili bir oyuncu ne yaşar" sorusunu ölçmeli, oyunun
+ * tavsiyesini görmezden gelen birini değil.
  */
 function playerStrategy(engine: GameEngine): void {
+  if (followChainAdvice(engine)) return;
+  expandOutlets(engine);
+}
+
+/** Zincir kartının önerdiği hamleyi uygular; "erken" olanı atlar. */
+function followChainAdvice(engine: GameEngine): boolean {
+  const state = engine.getState();
+  const player = getPlayer(state);
+
+  for (const card of chainCards(state, player.id)) {
+    const move = card.move;
+    if (!move || move.premature) continue;
+    if (move.cost + tilePrice(state, move.tileId, player.id) > player.cash * 0.6) continue;
+
+    const acquired = move.needsBuyout
+      ? engine.dispatch({ type: 'BUYOUT_TILE', tileId: move.tileId })
+      : engine.dispatch({ type: 'BUY_TILE', tileId: move.tileId });
+    if (!acquired.ok) continue;
+    if (engine.dispatch({ type: 'BUILD', tileId: move.tileId, defId: move.defId }).ok) return true;
+  }
+  return false;
+}
+
+function expandOutlets(engine: GameEngine): void {
   const state = engine.getState();
   const player = getPlayer(state);
 
@@ -582,7 +610,116 @@ function outletUnitCost(state: GameState): number {
   );
 }
 
-// ---- 6. İmar kısıtı ----
+// ---- 6. Rakipler de zincir kuruyor mu? ----
+// Tur 1'in C parçası. Rakipler zincir kurmazsa oyuncu, kurduğu anda
+// kalıcı ve tek taraflı bir maliyet avantajı elde eder — yani zincir
+// bir rekabet ekseni değil, bedava bir kazanç olur.
+{
+  const engine2 = new GameEngine(createNewGame({ seed: 1, companyName: 'Test AŞ' }));
+  for (let day = 1; day <= 400; day++) {
+    if (day % 5 === 0) playerStrategy(engine2);
+    engine2.runDay();
+  }
+  const s = engine2.getState();
+
+  const byProfile = new Map<string, { name: string; trait: string; chain: number; netWorth: number; debt: number }>();
+  for (const profile of NPC_PROFILES) {
+    const company = s.companies[profile.id];
+    if (!company) continue;
+    const chain = Object.values(s.buildings).filter((b) => {
+      if (b.companyId !== profile.id) return false;
+      const def = BUILDING_BY_ID[b.defId];
+      return def?.role === 'extract' || def?.role === 'process';
+    }).length;
+    byProfile.set(profile.id, {
+      name: profile.name,
+      trait: profile.trait,
+      chain,
+      netWorth: company.netWorth,
+      debt: company.debt,
+    });
+  }
+
+  console.log('\n--- rakiplerin zincir yatırımı (400 gün) ---');
+  for (const row of byProfile.values()) {
+    console.log(
+      `  ${row.name.padEnd(16)} ${row.trait.padEnd(14)} zincir ${String(row.chain).padStart(2)}` +
+        ` · değer ${formatMoney(row.netWorth).padStart(11)} · borç ${formatMoney(row.debt)}`,
+    );
+  }
+
+  const builders = [...byProfile.values()].filter((row) => row.chain > 0);
+  expect(
+    'rakipler zincir kuruyor',
+    builders.length >= 2,
+    `${builders.length}/${byProfile.size} rakip zincir kurdu`,
+  );
+  expect(
+    'arsa spekülatörü zincire girmiyor (kişilik ayrışıyor)',
+    (byProfile.get('atlas_yapi')?.chain ?? 0) === 0,
+    `${byProfile.get('atlas_yapi')?.chain ?? 0} ünite`,
+  );
+  expect(
+    'zincir yatırımı rakipleri batırmıyor',
+    [...byProfile.values()].every((row) => row.debt < Math.max(200_000, row.netWorth)),
+    [...byProfile.values()].map((r) => `${r.name}: ${formatMoney(r.debt)}`).join(' · '),
+  );
+}
+
+// ---- 7. Zinciri izlemek gerçekten kazandırıyor mu? ----
+// Kartın tavsiyesi işe yaramıyorsa oyun oyuncuyu yanlış yönlendiriyor
+// demektir. Kontrollü karşılaştırma: aynı seed, aynı mağaza stratejisi,
+// tek fark zincir kartını izleyip izlememek.
+{
+  function runStrategy(seed: number, useChain: boolean): { netWorth: number; profit: number; chain: number } {
+    const engine2 = new GameEngine(createNewGame({ seed, companyName: 'Test AŞ' }));
+    for (let day = 1; day <= 500; day++) {
+      if (day % 5 === 0) {
+        if (!(useChain && followChainAdvice(engine2))) expandOutlets(engine2);
+      }
+      engine2.runDay();
+    }
+    const s = engine2.getState();
+    const player = getPlayer(s);
+    const chain = Object.values(s.buildings).filter((b) => {
+      if (b.companyId !== player.id) return false;
+      const def = BUILDING_BY_ID[b.defId];
+      return def?.role === 'extract' || def?.role === 'process';
+    }).length;
+    return { netWorth: player.netWorth, profit: player.today.profit, chain };
+  }
+
+  console.log('\n--- zincir kartını izleyen vs izlemeyen (500 gün) ---');
+  let plainProfit = 0;
+  let chainProfit = 0;
+  let wins = 0;
+
+  for (const seed of [1, 7, 42]) {
+    const plain = runStrategy(seed, false);
+    const chained = runStrategy(seed, true);
+    plainProfit += plain.profit;
+    chainProfit += chained.profit;
+    if (chained.profit > plain.profit) wins++;
+    console.log(
+      `  seed ${String(seed).padStart(2)} | zincirsiz ${formatMoney(plain.netWorth).padStart(11)} · ${formatMoney(plain.profit).padStart(9)}/gün` +
+        ` | zincirli ${formatMoney(chained.netWorth).padStart(11)} · ${formatMoney(chained.profit).padStart(9)}/gün · ${chained.chain} ünite`,
+    );
+  }
+
+  const gain = plainProfit > 0 ? chainProfit / plainProfit - 1 : 0;
+  expect(
+    'zincir kartını izlemek günlük kârı artırıyor',
+    gain > 0.1,
+    `ortalama %${Math.round(gain * 100)} daha yüksek günlük kâr`,
+  );
+  expect(
+    'kazanç seed\'e bağlı bir tesadüf değil',
+    wins === 3,
+    `${wins}/3 seed'de zincirli strateji önde`,
+  );
+}
+
+// ---- 8. İmar kısıtı ----
 {
   const engine2 = labEngine(55);
   const state = engine2.getState();

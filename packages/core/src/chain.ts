@@ -6,7 +6,9 @@ import {
   chainOf,
 } from '@capital/content';
 import type { BuildingDef, CategoryId, GoodDef } from '@capital/content';
+import { STRUCTURE_BY_ID } from '@capital/content';
 import { buildCost } from './actions';
+import { tilePrice } from './systems/city';
 import { estimateInvestment } from './systems/market';
 import { distributionRelief } from './systems/supply';
 import type { BuildingInstance, GameState } from './types';
@@ -77,6 +79,10 @@ export interface ChainMove {
   cost: number;
   districtId: number;
   districtName: string;
+  /** Kurulacak parsel — hesaplanmış, oyuncu haritada aramaz. */
+  tileId: number;
+  /** Parselde mevcut bir yapı var; önce sahibinden devralınacak. */
+  needsBuyout: boolean;
   paybackDays: number;
   /** Hamleden sonra beklenen brüt marj 0..1. */
   projectedMargin: number;
@@ -111,6 +117,8 @@ export interface ChainCard {
   unitsPerDay: number;
   outlets: number;
   move: ChainMove | null;
+  /** Hamle önerilemiyorsa gerekçesi; öneri varsa null. */
+  blocked: string | null;
 }
 
 const STATE_LABEL: Record<ChainSlotState, string> = {
@@ -194,21 +202,46 @@ function projectedUnitCost(
   return inputCost + (def.upkeepPerDay + wages) / def.capacity;
 }
 
-/** Bir bina tanımının kurulabileceği, en ucuz boş parseli olan bölge. */
-function bestDistrictFor(state: GameState, def: BuildingDef): number | null {
-  let best: { districtId: number; landValue: number } | null = null;
+/**
+ * Bir bina tanımının kurulabileceği en ucuz parsel.
+ *
+ * Boş parsel her zaman önce; kalmadıysa mevcut yapısı devralınabilecek
+ * parsel. Bu ikinci kademe olmadan oyun geç safhada tıkanıyordu: sanayi
+ * ve liman dolduğu anda tüm zincir kartları sessizce "hamle yok" demeye
+ * başlıyor, oyuncu neden olduğunu göremiyordu. Şehir kıt — ama kapalı
+ * değil; tıkanınca devralırsın.
+ */
+function bestPlotFor(
+  state: GameState,
+  def: BuildingDef,
+): { districtId: number; tileId: number; needsBuyout: boolean } | null {
+  let best: { districtId: number; tileId: number; needsBuyout: boolean; price: number } | null = null;
 
   for (const tile of state.map.tiles) {
-    if (tile.kind !== 'plot' || tile.ownerId || tile.structureId || tile.buildingId) continue;
+    if (tile.kind !== 'plot' || tile.ownerId || tile.buildingId) continue;
     const district = state.districts[tile.districtId];
     if (!district) continue;
     if (def.zones && !def.zones.includes(district.archetype)) continue;
-    if (!best || tile.landValue < best.landValue) {
-      best = { districtId: tile.districtId, landValue: tile.landValue };
+
+    const needsBuyout = tile.structureId !== null;
+    if (needsBuyout) {
+      const structure = STRUCTURE_BY_ID[tile.structureId!];
+      // Hiçbir fiyata devredilmeyen yapılar (kamu) hesaba girmez.
+      if (!structure || structure.buyoutMultiplier === null) continue;
     }
+
+    const price = tilePrice(state, tile.id);
+    if (price <= 0) continue;
+
+    // Boş parsel her zaman devralmadan önce gelir.
+    const better =
+      !best ||
+      (best.needsBuyout && !needsBuyout) ||
+      (best.needsBuyout === needsBuyout && price < best.price);
+    if (better) best = { districtId: tile.districtId, tileId: tile.id, needsBuyout, price };
   }
 
-  return best?.districtId ?? null;
+  return best ? { districtId: best.districtId, tileId: best.tileId, needsBuyout: best.needsBuyout } : null;
 }
 
 /**
@@ -221,13 +254,16 @@ function bestDistrictFor(state: GameState, def: BuildingDef): number | null {
 function bestMove(
   state: GameState,
   companyId: string,
-  good: GoodDef,
   chain: GoodDef[],
   currentUnitCost: number,
   salePrice: number,
-): ChainMove | null {
+): { move: ChainMove | null; blocked: string | null } {
   const company = state.companies[companyId];
-  if (!company) return null;
+  if (!company) return { move: null, blocked: null };
+
+  // Hamle önerilemiyorsa SEBEBİ söylenir. Sessiz bir "hamle yok",
+  // oyuncuya zincirin bittiğini sanmasına yol açıyordu.
+  let blocked: string | null = null;
 
   // Kökten yaprağa: önce hammadde, sonra ara mal. Zincirin ilk eksik
   // halkasını kapatmak her zaman en çok kazandıran hamledir, çünkü
@@ -241,10 +277,18 @@ function bestMove(
 
     const def = unitDefFor(link.id);
     if (!def) continue;
-    if (company.netWorth < def.unlockNetWorth) continue;
 
-    const districtId = bestDistrictFor(state, def);
-    if (districtId === null) continue;
+    if (company.netWorth < def.unlockNetWorth) {
+      blocked ??= `${def.name} için ${Math.round(def.unlockNetWorth / 1000)} B ₺ şirket değeri gerekiyor.`;
+      continue;
+    }
+
+    const plot = bestPlotFor(state, def);
+    if (!plot) {
+      blocked ??= `${def.name} kurulacak parsel kalmadı — sanayi ve liman dolu.`;
+      continue;
+    }
+    const districtId = plot.districtId;
 
     const estimate = estimateInvestment(state, districtId, def.id, companyId);
     if (!estimate || !Number.isFinite(estimate.paybackDays)) continue;
@@ -271,11 +315,14 @@ function bestMove(
       : `${link.name} tamamen pazardan geliyor: birim ${money(spot)}.`;
 
     return {
+      move: {
       defId: def.id,
       name: def.name,
       cost,
       districtId,
       districtName: state.districts[districtId]?.name ?? '',
+      tileId: plot.tileId,
+      needsBuyout: plot.needsBuyout,
       paybackDays: estimate.paybackDays,
       projectedMargin,
       reason: premature
@@ -284,10 +331,12 @@ function bestMove(
       affordable: company.cash >= cost,
       utilisation,
       premature,
+      },
+      blocked: null,
     };
   }
 
-  return null;
+  return { move: null, blocked };
 }
 
 /**
@@ -415,7 +464,7 @@ export function chainCards(state: GameState, companyId: string): ChainCard[] {
       marketShare: company.marketShare[good.category] ?? 0,
       unitsPerDay: units,
       outlets: outlets.length,
-      move: bestMove(state, companyId, good, chain, unitCost, salePrice),
+      ...bestMove(state, companyId, chain, unitCost, salePrice),
     });
   }
 
