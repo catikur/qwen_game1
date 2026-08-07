@@ -211,7 +211,7 @@ function projectedUnitCost(
  * başlıyor, oyuncu neden olduğunu göremiyordu. Şehir kıt — ama kapalı
  * değil; tıkanınca devralırsın.
  */
-function bestPlotFor(
+export function bestPlotFor(
   state: GameState,
   def: BuildingDef,
 ): { districtId: number; tileId: number; needsBuyout: boolean } | null {

@@ -1,6 +1,6 @@
 # Tur 2 — Kalite, Marka ve Toprak · Tasarım Belgesi
 
-> Durum: **A parçası kodlandı** (motor katmanı). §9'daki iş sırasına bakın.
+> Durum: **A ve B parçaları kodlandı** (motor katmanı + oyuncunun gördüğü katman). §9'daki iş sırasına bakın.
 >
 > Tur 1 (`ZINCIR-TASARIMI.md`) satılan şeyin bir maliyeti olmasını sağladı.
 > Tur 2 aynı rafta duran iki şirketten hangisinin kazanacağı sorusuna
@@ -384,8 +384,8 @@ Göç (`v3 → v4`): `research` sıfırlarla, `focus` null, `auction` null.
 | # | Parça | Çıktı | Doğrulama | Durum |
 |---|---|---|---|---|
 | A | `research`/`marketing` rolleri, `SET_FOCUS`, kalite/marka/fiyat formülleri, şema v4 | motor katmanı, UI yok | denge kimliği + iki kanal A/B + kalibrasyon | **bitti** |
-| B | Rekabet kartı: kategoride sen vs bölge lideri (kalite, marka, fiyat), Ar-Ge/pazarlama atama arayüzü | oyuncunun gördüğü katman | harness + playtest | sırada |
-| C | Rakip doktrinleri: Ar-Ge ve pazarlama iştahı, haber akışı | rekabet | her doktrin ayrışıyor; hiçbiri batmıyor | — |
+| B | Rekabet kartı: kategoride sen vs lider (kalite, marka, fiyat), Ar-Ge/pazarlama atama arayüzü | oyuncunun gördüğü katman | harness + playtest | **bitti** |
+| C | Rakip doktrinleri: Ar-Ge ve pazarlama iştahı, haber akışı | rekabet | her doktrin ayrışıyor; hiçbiri batmıyor | sırada |
 | D | Parsel ihalesi | arazi çekişmesi | rakip değerlemesi tutarlı; oyuncu kaybedebiliyor | — |
 
 ### A parçasının ölçülen sonuçları
@@ -404,7 +404,36 @@ Göç (`v3 → v4`): `research` sıfırlarla, `focus` null, `auction` null.
 | Ar-Ge geri ödemesi | 1 mağaza: hiç dönmüyor · 4 mağaza: **225 gün** |
 | Pazarlama geri ödemesi | 4 mağaza: **124 gün** |
 
-Tarayıcı testleri (`tools/playtest.mjs`): **77/77**, 0 konsol hatası.
+Tarayıcı testleri (`tools/playtest.mjs`): **88/88**, 0 konsol hatası.
+
+### B parçası — kartın söylediği şey
+
+`packages/core/src/competition.ts` de `chain.ts` gibi tamamen türetilmiş:
+state'e yazmaz. Kart kategoride payı, lideri, üç ölçüyü (kalite, marka,
+fiyat) ve iki kolun doluluğunu gösterir; altında tek bir hamle vardır.
+
+**Kartın taşıdığı asıl fikir: kolun karşılığı hangi kanaldan geliyor.**
+İlk sürüm bunu bölgenin boş talebinden okuyordu ve YANLIŞTI — bir outlet
+kapasitesini komşu bölgelere de dağıtıyor, dolayısıyla kendi bölgesinde
+boş talep düşük görünürken outlet yine tepede çalışabiliyor. Test tam
+bunu yakaladı: kart "pazar doymuş, kalite paya döner" diyordu, oysa aynı
+kurulumda ölçüm kârın tamamının fiyattan geldiğini göstermişti.
+
+Doğru sinyal doğrudan mekanizmanın kendisi: **kendi kapasite doluluğun.**
+%95'in üstündeyse çekicilik sana bir birim daha getiremez; getirisi
+fiyattadır.
+
+#### Ekrana bakarken çıkan üç sorun
+
+| Sorun | Neden yanlıştı | Çözüm |
+|---|---|---|
+| Her ölçüde önde olup payı düşük olmak çelişki gibi görünüyordu (kalite 1,00 vs 0,51, marka 0,47 vs 0,24, üstelik daha ucuz — ama pay %24 vs %26) | Pay çekicilikle değil kapasiteyle sınırlıydı; tablo bunu söylemiyordu | Tablonun altına, yalnızca gerektiğinde çıkan bir açıklama satırı |
+| Fiyat satırı oyuncu tarafında hep yeşildi | Ucuz olmak "iyi", pahalı olmak "kötü" değil — ikisi de strateji | Fiyat satırı nötr çiziliyor |
+| Ar-Ge merkezi kartı "günlük kâr −1.802 ₺, doluluk %0, bölge payı %0" gösteriyordu | Destek binası kendi defterinde asla kâr göstermez; oyuncu bunu bozuk sanıp yıkardı | Depo/Ar-Ge/pazarlama için satış defteri yerine **gider defteri** ve karşılığın nerede göründüğünü söyleyen bir cümle |
+
+Üçüncüsü depoyu da kapsıyor — yani Tur 1'den beri duran bir sorun.
+
+Denge harness'ı: **120 kontrol**. Tarayıcı testleri: **88/88**.
 
 Sıralama Tur 1 ile aynı mantıkta: **önce motor, sonra oyuncunun gördüğü
 katman, sonra rakip, en son yeni akış.** B'den önce C yazılırsa rakibin

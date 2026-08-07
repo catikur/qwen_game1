@@ -25,6 +25,7 @@ import {
   buildOptions,
   chainCards,
   companyRanking,
+  competitionCards,
   createNewGame,
   districtOpportunity,
   estimateInvestment,
@@ -1379,6 +1380,97 @@ let researchPayback = Infinity;
 /** Sonsuz geri ödemeyi okunur yazar. */
 function fmtDays(days: number): string {
   return Number.isFinite(days) ? `${Math.round(days)} gün` : 'hiç dönmüyor';
+}
+
+// ---- 9. Rekabet kartı ----
+//
+// Kart tamamen türetilmiş; sorulan şey oyuncuya DOĞRU şeyi söyleyip
+// söylemediği. Yanlış kanal ("kalite paya döner" derken aslında fiyata
+// dönüyorsa) oyuncuyu haklı ama yanlış bir sonuca götürür.
+{
+  const { engine, districtIds } = duel(11, 4, true);
+  const state = engine.getState();
+  const playerId = state.playerCompanyId;
+  getPlayer(state).netWorth = 50_000_000;
+  for (let day = 0; day < 200; day++) engine.runDay();
+
+  const cards = competitionCards(state, playerId);
+  const grocery = cards.find((card) => card.category === 'grocery');
+  expect('sattığın kategori için kart çıkıyor', Boolean(grocery), `${cards.length} kart`);
+  expect(
+    'satmadığın kategori için kart çıkmıyor',
+    cards.every((card) => card.outlets > 0),
+    cards.map((card) => `${card.categoryName}:${card.outlets}`).join(' · '),
+  );
+
+  if (grocery) {
+    expect('kartta rakip lider görünüyor', grocery.leader !== null, grocery.leader?.name ?? '—');
+    expect(
+      'kartın payı motorun payıyla aynı',
+      Math.abs(grocery.share - (getPlayer(state).marketShare.grocery ?? 0)) < 1e-9,
+      `%${Math.round(grocery.share * 100)}`,
+    );
+    // Bu düelloda mağazalar kapasitesinde çalışıyor; ölçüm de aynı
+    // kurulumda kârın tamamının fiyattan geldiğini gösteriyordu. Kart
+    // aynı şeyi söylemeli.
+    expect('kanal doğru okunuyor', grocery.channel === 'price',
+      `${grocery.channel} · doluluk %${Math.round(grocery.utilisation * 100)}`);
+    expect('kart bir hamle öneriyor', grocery.move !== null, grocery.move?.name ?? grocery.blocked ?? '—');
+    expect('4 mağazada hamle erken sayılmıyor', grocery.move?.premature === false,
+      `${grocery.outlets} mağaza`);
+  }
+
+  // Kartın kalite değeri motorun kullandığıyla aynı olmalı: Ar-Ge kurunca
+  // ikisi birlikte yükseliyor mu?
+  const beforeQuality = grocery?.quality ?? 0;
+  addLabs(engine, playerId, districtIds[0]!, 2, 'grocery');
+  for (let day = 0; day < 300; day++) engine.runDay();
+  const after = competitionCards(state, playerId).find((card) => card.category === 'grocery')!;
+  expect('Ar-Ge kartın kalitesine yansıyor', after.quality > beforeQuality + 0.15,
+    `${beforeQuality.toFixed(2)} → ${after.quality.toFixed(2)}`);
+  const arm = after.arms.find((a) => a.kind === 'research')!;
+  expect('kol tavanı doğru gösteriyor', Math.abs(arm.ceiling - 0.24) < 1e-9, arm.detail);
+}
+
+// ---- 10. Kart tek mağazalı oyuncuyu uyarıyor mu? ----
+{
+  const { engine } = duel(11, 1, true);
+  const state = engine.getState();
+  getPlayer(state).netWorth = 50_000_000;
+  for (let day = 0; day < 60; day++) engine.runDay();
+
+  const card = competitionCards(state, state.playerCompanyId).find((c) => c.category === 'grocery');
+  expect('tek mağazalı oyuncuya hamle "erken" işaretleniyor', card?.move?.premature === true,
+    card?.move ? `${card.move.name} · erken=${card.move.premature}` : (card?.blocked ?? '—'));
+  expect('erken hamlenin gerekçesi ölçeği açıklıyor',
+    Boolean(card?.move?.reason.includes('mağaza')), card?.move?.reason ?? '—');
+}
+
+// ---- 11. Payı düşük oyuncuya pazarlama, yüksekse Ar-Ge öneriliyor mu? ----
+{
+  // Rakip dört mağaza açar, oyuncu bir tane: payı düşük kalır.
+  const engine = labEngine(41);
+  const state = engine.getState();
+  const rival = state.companies[RIVAL_ID]!;
+  rival.cash = 500_000_000;
+  rival.netWorth = 500_000_000;
+  getPlayer(state).netWorth = 50_000_000;
+
+  // Rakip altı, oyuncu bir mağaza: pay gerçekten düşük kalsın. İlk
+  // denemede 4'e 3 kurulmuştu ve oyuncunun payı %42 çıkıyordu — yani
+  // senaryo "payı düşük oyuncu" üretmiyordu.
+  const order = [...state.districts].sort((a, b) => a.population - b.population).map((d) => d.id);
+  for (let i = 0; i < 6; i++) placeFor(engine, RIVAL_ID, 'supermarket', order[i % 3]!);
+  placeFor(engine, state.playerCompanyId, 'supermarket', order[0]!);
+  for (let day = 0; day < 200; day++) engine.runDay();
+
+  const card = competitionCards(state, state.playerCompanyId).find((c) => c.category === 'grocery');
+  console.log(
+    `  payı %${Math.round((card?.share ?? 0) * 100)} olan oyuncuya önerilen kol: ${card?.move?.kind ?? '—'}`,
+  );
+  expect('payı düşükken pazarlama öneriliyor (giriş silahı)',
+    card !== undefined && card.share < 0.35 && card.move?.kind === 'marketing',
+    `pay %${Math.round((card?.share ?? 0) * 100)}, kol ${card?.move?.kind ?? '—'}`);
 }
 
 console.log(`\n=== ${failures === 0 ? 'TÜMÜ GEÇTİ' : `${failures} KONTROL KALDI`} ===`);

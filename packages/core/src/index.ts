@@ -4,6 +4,7 @@ export * from './worldgen';
 export * from './actions';
 export * from './selectors';
 export * from './chain';
+export * from './competition';
 export * from './routes';
 export * from './news';
 export * from './engine';
