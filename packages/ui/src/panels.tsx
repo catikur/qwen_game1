@@ -1,6 +1,13 @@
 import {useEffect, useState} from 'react';
 import type { ReactElement } from 'react';
-import { BUILDING_BY_ID, CATEGORIES, DISTRICT_ARCHETYPES, STRUCTURE_BY_ID } from '@capital/content';
+import {
+  BUILDING_BY_ID,
+  CATEGORIES,
+  DISTRICT_ARCHETYPES,
+  GOODS_BY_CATEGORY,
+  GOOD_BY_ID,
+  STRUCTURE_BY_ID,
+} from '@capital/content';
 import {
   buildOptions,
   categoryBreakdown,
@@ -10,6 +17,7 @@ import {
   formatMoney,
   getBuildingOnTile,
   getPlayer,
+  goodShares,
   tilePrice,
 } from '@capital/core';
 import type { InvestmentEstimate } from '@capital/core';
@@ -349,6 +357,8 @@ function BuildingDetail({ buildingId }: { buildingId: string }): ReactElement | 
         <Stat label="Fiyat" value={`×${building.priceMultiplier.toFixed(2)}`} />
       </div>
 
+      {isPlayer && def.role === 'outlet' && <ShelfEditor buildingId={buildingId} />}
+
       {isPlayer && def.role === 'outlet' && (
         <div className="pricing">
           <label>
@@ -383,6 +393,99 @@ function BuildingDetail({ buildingId }: { buildingId: string }): ReactElement | 
           Yık (maliyetin %25'i geri döner)
         </button>
       )}
+    </div>
+  );
+}
+
+/**
+ * Raf düzenleyici.
+ *
+ * Aynı kategorideki iki ürünün birim maliyeti denge kimliği yüzünden
+ * AYNIDIR — yani raf seçimi bir maliyet kararı değil, bir KONUM kararı.
+ * Bu yüzden her ürünün yanında o bölgedeki talep payı yazıyor: karar
+ * verirken bakılacak tek sayı o.
+ *
+ * Yuva sayısı gerçek bir kısıt: tek yuvalı bakkal uzmanlaşmak zorunda,
+ * kategorinin diğer ürününü rakibe bırakır.
+ */
+function ShelfEditor({ buildingId }: { buildingId: string }): ReactElement | null {
+  const { run, toast } = useGame();
+  const state = useGameState();
+
+  const building = state.buildings[buildingId];
+  const def = building ? BUILDING_BY_ID[building.defId] : undefined;
+  const district = building ? state.districts[building.districtId] : undefined;
+  if (!building || !def || !district) return null;
+
+  const goods = GOODS_BY_CATEGORY[def.category] ?? [];
+  if (goods.length < 2) return null;
+
+  const slots = def.slots ?? 1;
+  const shares = new Map(
+    goodShares(district.archetype, def.category).map((entry) => [entry.good.id, entry.share]),
+  );
+
+  const toggle = (goodId: string): void => {
+    // Raftaki ürüne tıklamak onu çıkarır — son ürün değilse.
+    if (building.stocked.includes(goodId)) {
+      if (building.stocked.length === 1) {
+        toast('Rafta en az bir ürün kalmalı. Değiştirmek için diğerine tıkla.', 'info');
+        return;
+      }
+      run({ type: 'SET_STOCK', buildingId, goodIds: building.stocked.filter((id) => id !== goodId) });
+      return;
+    }
+
+    // Yuva doluysa DEĞİŞTİRİR, reddetmez. Reddetmek tek yuvalı dükkânı
+    // çıkmaza sokuyordu: tek ürünü çıkaramıyor, ikinciyi ekleyemiyordu —
+    // yani bakkalın "seçimi" hiç yapılamıyordu. Yerine bölgede en az
+    // satan ürün rafı bırakır.
+    if (building.stocked.length >= slots) {
+      const weakest = [...building.stocked].sort(
+        (a, b) => (shares.get(a) ?? 0) - (shares.get(b) ?? 0),
+      )[0]!;
+      const next = building.stocked.filter((id) => id !== weakest).concat(goodId);
+      if (run({ type: 'SET_STOCK', buildingId, goodIds: next }) && slots > 1) {
+        toast(`${GOOD_BY_ID[weakest]?.name ?? 'Bir ürün'} raftan çıktı.`, 'info');
+      }
+      return;
+    }
+
+    run({ type: 'SET_STOCK', buildingId, goodIds: [...building.stocked, goodId] });
+  };
+
+  return (
+    <div className="shelf">
+      <div className="shelf-head">
+        <span>Raf</span>
+        <span className="muted">
+          {building.stocked.length}/{slots} yuva · {district.name} talebi
+        </span>
+      </div>
+      <ul className="shelf-list">
+        {goods.map((good) => {
+          const on = building.stocked.includes(good.id);
+          return (
+            <li key={good.id}>
+              <button
+                type="button"
+                className={on ? 'shelf-chip on' : 'shelf-chip'}
+                onClick={() => toggle(good.id)}
+                aria-pressed={on}
+              >
+                <span className="shelf-dot" style={{ background: good.color }} />
+                <span className="shelf-name">{good.name}</span>
+                <span className="shelf-share">%{Math.round((shares.get(good.id) ?? 0) * 100)}</span>
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+      <p className="muted">
+        {slots === 1
+          ? 'Tek yuvan var: diğerine tıklarsan raf değişir, taşımadığın ürünün payı rakibe kalır.'
+          : 'Bu bölgede talebin ne kadarını yakaladığın rafına bağlı. Taşımadığın ürünün payı rakibe kalır.'}
+      </p>
     </div>
   );
 }

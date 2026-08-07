@@ -62,8 +62,21 @@ export interface GoodDef {
    * yalnızca depo menzili kısmen hafifletir.
    */
   retailCost: number;
-  /** Kategori talebinin bu ürüne düşen payı; aynı kategoride toplam 1. */
+  /** Kategori talebinin bu ürüne düşen taban payı; aynı kategoride toplam 1. */
   demandShare: number;
+  /**
+   * Yalnızca `consumer`: bölge arketipine göre talep ağırlığı.
+   *
+   * Aynı kategorideki iki ürün, denge kimliği yüzünden AYNI birim
+   * maliyete sahiptir — yani tek başına "hangisini satayım" diye bir
+   * karar doğmaz. Kararı doğuran şey bu: ekmek orta gelir mahallesinde,
+   * bisküvi turizm bölgesinde daha çok satar. Raf seçimi böylece bir
+   * KONUM kararına dönüşür.
+   *
+   * Verilmeyen arketipte 1 kabul edilir. Paylar bölge içinde
+   * normalize edilir, yani kategorinin toplam talebi değişmez.
+   */
+  archetypeWeights?: Partial<Record<DistrictArchetypeId, number>>;
   color: string;
 }
 

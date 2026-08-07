@@ -5,7 +5,15 @@
  * olmadığını raporlar. Amaç, denge bozukluğunu tarayıcıyı açmadan görmek:
  * oyuncu hiç kaybedemiyorsa oyun kolay, NPC'ler hep batıyorsa rekabet yok.
  */
-import { BUILDINGS, BUILDING_BY_ID, CATEGORIES, NPC_PROFILES } from '@capital/content';
+import {
+  BUILDINGS,
+  BUILDING_BY_ID,
+  CATEGORIES,
+  CONSUMER_CATEGORIES,
+  DISTRICT_ARCHETYPES,
+  GOODS_BY_CATEGORY,
+  NPC_PROFILES,
+} from '@capital/content';
 import {
   GameEngine,
   buildOptions,
@@ -16,6 +24,8 @@ import {
   estimateInvestment,
   formatMoney,
   getPlayer,
+  goodShares,
+  shelfReach,
   tilePrice,
 } from '../src/index';
 import type { GameState } from '../src/types';
@@ -719,7 +729,155 @@ function outletUnitCost(state: GameState): number {
   );
 }
 
-// ---- 8. İmar kısıtı ----
+// ---- 8. İkinci ürün: raf seçimi gerçek bir karar mı? ----
+// Denge kimliği yüzünden aynı kategorideki iki ürünün birim maliyeti
+// AYNIDIR. Karar ancak ürünler bölgeye göre ayrışırsa doğar — ve her
+// ürünün en az bir bölgede kazanması gerekir, yoksa seçim sahtedir.
+{
+  console.log('\n--- ürünlerin bölgesel üstünlüğü ---');
+  let fake = 0;
+
+  for (const categoryId of CONSUMER_CATEGORIES) {
+    const goods = GOODS_BY_CATEGORY[categoryId] ?? [];
+    if (goods.length < 2) continue;
+
+    const wins = new Map<string, number>();
+    let spread = 0;
+    for (const archetype of Object.keys(DISTRICT_ARCHETYPES) as Array<keyof typeof DISTRICT_ARCHETYPES>) {
+      const rows = goodShares(archetype, categoryId).slice().sort((a, b) => b.share - a.share);
+      wins.set(rows[0]!.good.id, (wins.get(rows[0]!.good.id) ?? 0) + 1);
+      spread = Math.max(spread, rows[0]!.share - rows[rows.length - 1]!.share);
+    }
+
+    const never = goods.filter((good) => !wins.has(good.id));
+    if (never.length > 0) fake++;
+    console.log(
+      `  ${CATEGORIES[categoryId].name.padEnd(12)} ${goods
+        .map((g) => `${g.name} ${wins.get(g.id) ?? 0} bölge`)
+        .join(' · ')} · en geniş fark %${Math.round(spread * 100)}`,
+    );
+  }
+
+  expect('her ürün en az bir bölgede kazanıyor', fake === 0, `${fake} kategoride sahte seçim`);
+
+  // Bölge payları normalize edilir: ikinci ürün eklemek kategorinin
+  // TOPLAM talebini değiştirmemeli, yoksa mevcut kalibrasyon bozulurdu.
+  let worst = 0;
+  for (const categoryId of CONSUMER_CATEGORIES) {
+    for (const archetype of Object.keys(DISTRICT_ARCHETYPES) as Array<keyof typeof DISTRICT_ARCHETYPES>) {
+      const rows = goodShares(archetype, categoryId);
+      if (rows.length === 0) continue;
+      const total = rows.reduce((sum, row) => sum + row.share, 0);
+      worst = Math.max(worst, Math.abs(total - 1));
+    }
+  }
+  expect('paylar normalize (kategori talebi korunuyor)', worst < 1e-9, `en büyük sapma ${worst.toExponential(1)}`);
+}
+
+// ---- 9. Raf yuvaları ----
+{
+  const engine2 = labEngine(77);
+  // Süpermarket üç yuvalı: kategorinin tamamını toplar.
+  // Bakkal tek yuvalı: uzmanlaşmak zorunda, diğerini rakibe bırakır.
+  place(engine2, 'supermarket', 'mid_residential');
+  place(engine2, 'corner_shop', 'mid_residential');
+  for (let i = 0; i < 20; i++) engine2.runDay();
+
+  const s = engine2.getState();
+  const own = Object.values(s.buildings).filter((b) => b.companyId === s.playerCompanyId);
+  const market = own.find((b) => b.defId === 'supermarket')!;
+  const shop = own.find((b) => b.defId === 'corner_shop')!;
+  const archetype = s.districts[market.districtId]!.archetype;
+
+  expect(
+    'çok yuvalı mağaza kategorinin tamamını taşıyor',
+    market.stocked.length === 2,
+    market.stocked.join(', '),
+  );
+  expect('tek yuvalı dükkân tek ürün taşıyor', shop.stocked.length === 1, shop.stocked.join(', '));
+  expect(
+    'tek yuvalı dükkân talebin bir kısmını rakibe bırakıyor',
+    shelfReach(archetype, 'grocery', shop.stocked) < 0.95,
+    `erişim %${Math.round(shelfReach(archetype, 'grocery', shop.stocked) * 100)}`,
+  );
+  expect(
+    'çok yuvalı mağaza talebin tamamına erişiyor',
+    Math.abs(shelfReach(archetype, 'grocery', market.stocked) - 1) < 1e-9,
+    'erişim %100',
+  );
+
+  // Raf değiştirme komutu: yuva sayısını aşamaz, boş bırakılamaz.
+  const both = GOODS_BY_CATEGORY.grocery.map((g) => g.id);
+  expect(
+    'bakkal iki ürünü birden rafa koyamıyor',
+    !engine2.dispatch({ type: 'SET_STOCK', buildingId: shop.id, goodIds: both }).ok,
+    'yuva sınırı uygulanıyor',
+  );
+  expect(
+    'raf boş bırakılamıyor',
+    !engine2.dispatch({ type: 'SET_STOCK', buildingId: shop.id, goodIds: [] }).ok,
+    'en az bir ürün gerekli',
+  );
+  const other = both.find((id) => id !== shop.stocked[0])!;
+  expect(
+    'raf değiştirilebiliyor',
+    engine2.dispatch({ type: 'SET_STOCK', buildingId: shop.id, goodIds: [other] }).ok &&
+      s.buildings[shop.id]!.stocked[0] === other,
+    `${other} rafa kondu`,
+  );
+}
+
+// ---- 10. Pazar payı ve sıra bağımsızlığı ----
+// Bir outlet komşu bölgelere de satar. Kapasiteyi bölgeleri sırayla
+// gezerek harcarsak hangi bölgenin doyacağını haritadaki İNDEKS SIRASI
+// belirler — kendi mahallesindeki süpermarket tüm kapasitesini komşuya
+// satıp kendi bölgesini "%100 boş" bırakabiliyordu. Kapasite artık
+// bölgelere talep oranında ayrılıyor; bu iki kontrol o düzeltmeyi tutuyor.
+{
+  const engine2 = new GameEngine(createNewGame({ seed: 31, companyName: 'Test AŞ' }));
+  for (let day = 1; day <= 220; day++) {
+    if (day % 5 === 0) playerStrategy(engine2);
+    engine2.runDay();
+  }
+  const s = engine2.getState();
+
+  let worstShare = 0;
+
+  for (const district of s.districts) {
+    for (const categoryId of CONSUMER_CATEGORIES) {
+      let shareSum = 0;
+      for (const building of Object.values(s.buildings)) {
+        if (building.districtId !== district.id) continue;
+        const def = BUILDING_BY_ID[building.defId];
+        if (def?.role !== 'outlet' || def.category !== categoryId) continue;
+        shareSum += building.last.share;
+      }
+      if (shareSum > 0) worstShare = Math.max(worstShare, shareSum);
+    }
+  }
+
+  // Kapasite artık bölgelere PARÇALI dağıtılıyor; parçaların toplamı
+  // kapasiteyi aşarsa bir outlet birden çok bölgeye aynı malı satar.
+  let worstFill = 0;
+  for (const building of Object.values(s.buildings)) {
+    const def = BUILDING_BY_ID[building.defId];
+    if (def?.role !== 'outlet' || def.capacity <= 0) continue;
+    worstFill = Math.max(worstFill, building.last.unitsSold / def.capacity);
+  }
+
+  expect(
+    'bölge payları toplamı %100\'ü aşmıyor',
+    worstShare <= 1.001,
+    `en yüksek toplam %${Math.round(worstShare * 100)}`,
+  );
+  expect(
+    'hiçbir outlet kapasitesinden fazla satmıyor',
+    worstFill <= 1.001,
+    `en yüksek doluluk %${Math.round(worstFill * 100)}`,
+  );
+}
+
+// ---- 11. İmar kısıtı ----
 {
   const engine2 = labEngine(55);
   const state = engine2.getState();

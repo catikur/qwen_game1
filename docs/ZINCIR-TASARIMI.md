@@ -1,8 +1,8 @@
 # Tur 1 — Ürün ve Zincir · Tasarım Belgesi
 
-> Durum: **A, B ve C parçaları kodlandı** — motor katmanı (ürünler, spot
-> pazar, birim maliyet, imar, şema v3), zincir kartı arayüzü ve rakiplerin
-> zincir kararları. §10'daki iş sırasına bakın. Amaç, `Capitalism.md`'deki
+> Durum: **A, B, C ve D parçaları kodlandı** — motor katmanı, zincir kartı
+> arayüzü, rakiplerin zincir kararları ve kategori başına ikinci ürün
+> (raf yuvaları devrede). §10'daki iş sırasına bakın. Amaç, `Capitalism.md`'deki
 > "sofistike simülasyon, casual oynanış" sözünü tutarak oyuna türün
 > kimliğini veren katmanı eklemek: satılan şeyin bir maliyeti, o maliyetin
 > bir zinciri, o zincirin de bir sahibi olsun.
@@ -347,10 +347,48 @@ vermez, sadece hesabı gösterir.
 
 ### 7.2 Outlet rafları
 
-Outlet'ler artık **raf yuvası** taşır: Bakkal 1, Süpermarket 3, Mağazalar
-Zinciri 4. Aynı kategoriden hangi ürünleri stoklayacağını oyuncu seçer.
-İlk sürümde kategori başına tek ürün olduğu için bu yuva pasif durur —
-kategori başına ikinci ürün eklendiğinde (Tur 1.5) devreye girer.
+Outlet'ler **raf yuvası** taşır: Bakkal 1, Kafe 1, Butik 1, Restoran 2,
+Elektronik 2, Süpermarket 3, Mağazalar Zinciri 4. Yuva sayısı gerçek bir
+kısıt: tek yuvalı bakkal uzmanlaşmak zorunda ve kategorinin diğer ürününün
+talebini rakibe bırakır; üç yuvalı süpermarket kategorinin tamamını toplar.
+"Küçük dükkân uzmanlaşır, büyük mağaza her şeyi satar" ayrımı buradan
+çıkıyor.
+
+#### Kararı ne canlı tutuyor?
+
+Denge kimliği (§6.1) yüzünden aynı kategorideki iki ürünün birim maliyeti
+**birebir aynıdır**. Yani ürün seçimi tek başına bir maliyet kararı değil —
+öyle bırakılsaydı hangi ürünü seçtiğin hiç fark etmezdi.
+
+Kararı doğuran şey **bölgesel talep farkı**: her tüketici ürününün arketip
+bazlı bir ağırlığı var (`GoodDef.archetypeWeights`). Ekmek orta gelir
+mahallesinde, bisküvi turizmde; kahve öğrenci bölgesinde, hazır yemek
+sanayide daha çok satar. Raf seçimi böylece bir **konum kararına** dönüşüyor
+ve arayüz her ürünün yanına o bölgedeki talep payını yazıyor.
+
+Paylar bölge içinde **normalize edilir**: kategorinin toplam talebi
+değişmez, yalnızca ürünler arasında farklı dağılır. Bu sayede ikinci ürün
+eklemek mevcut kalibrasyonu bozmuyor.
+
+| Kategori | Ürünler | Kaç bölgede kazanıyor | En geniş fark |
+|---|---|---|---|
+| Market | Ekmek / Bisküvi | 5 / 4 | %26 |
+| Yeme-içme | Kahve / Hazır Yemek | 5 / 4 | %43 |
+| Perakende | Giyim / Ev Tekstili | 4 / 5 | %44 |
+| Elektronik | Telefon / Ev Elektroniği | 5 / 4 | %25 |
+
+> İlk denemede taban paylar 0,6 / 0,4 idi ve ikinci ürün **hiçbir bölgede**
+> kazanamıyordu: 1,4'lük en yüksek ağırlık bile 0,4 × 1,4 = 0,56 < 0,6 ile
+> yeniliyordu. Yani tek yuvalı dükkânın "seçimi" sahteydi. Taban pay 0,5 /
+> 0,5 yapıldı; kararı artık yalnızca bölge ağırlıkları veriyor.
+
+#### İkinci ürün hatları hammaddeyi paylaşır
+
+Buğday çiftliği hem değirmeni hem nişasta tesisini, pamuk tarlası hem
+dokumayı hem döşemeyi, silikon ocağı hem çipi hem sensörü besler. Hammadde
+kademesine sahip olmak böylece iki üründe birden karşılık veriyor — dikey
+entegrasyonun ödülü ölçekle birlikte büyüyor. Yalnızca hazır yemek hattı
+kendi hammaddesini (sebze) getiriyor.
 
 ### 7.3 Kamyonlar — Tur 4'ten öne çekilen tek madde
 
@@ -432,8 +470,8 @@ rastgelesiz bir fonksiyon.
 | A | `goods.ts`, spot pazar, birim maliyet çözümleyicisi, imar, şema v3 | motor katmanı, UI yok | harness: zincirli/zincirsiz A/B | **bitti** |
 | B | Zincir kartı + "en iyi hamle" önerisi + ölçek uyarısı | oyuncunun gördüğü katman | harness + playtest betiği | **bitti** |
 | C | NPC zincir kararları | rekabet | rakipler zincir kuruyor, batmıyor; kartı izlemek kazandırıyor | **bitti** |
-| D | Kategori başına ikinci ürün, raf yuvaları devrede | ürün seçimi | denge kalibrasyonu | sırada |
-| E | Zincir kamyonları | görsel okunabilirlik | gözle | |
+| D | Kategori başına ikinci ürün, raf yuvaları devrede | ürün seçimi | her ürün bir bölgede kazanıyor, paylar normalize | **bitti** |
+| E | Zincir kamyonları | görsel okunabilirlik | gözle | sırada |
 
 > Taslakta B ve C ayrı sıralardı; uygulamada imar kısıtı ve raf şeması A ile
 > birlikte gelmesi daha ucuzdu (aynı şema göçü). Raf yuvaları şemada ve
@@ -528,8 +566,47 @@ sessizce "hamle yok"** diyordu. Oyuncu zincirin bittiğini sanıyordu.
 - **Hamle önerilemiyorsa sebebi yazılıyor:** "Değirmen için 900 B ₺ şirket
   değeri gerekiyor" ya da "kurulacak parsel kalmadı — sanayi ve liman dolu".
 
-Tarayıcı testleri (`tools/playtest.mjs`): **63/63 geçiyor.**
-Denge harness'ı: **55 kontrol, hepsi geçiyor.**
+### D parçası — ikinci ürün ve raf seçimi
+
+| Kontrol | Sonuç |
+|---|---|
+| Her ürün en az bir bölgede kazanıyor | 0 kategoride sahte seçim |
+| Paylar normalize (kategori talebi korunuyor) | sapma 0 |
+| Çok yuvalı mağaza kategorinin tamamını taşıyor | ekmek + bisküvi |
+| Tek yuvalı dükkân talebin bir kısmını rakibe bırakıyor | erişim %57 |
+| Yuva sınırı ve boş raf kuralı uygulanıyor | reddediliyor |
+| Yeni beş ünitenin geri ödemesi | 173–174 gün |
+| Zincir kartını izlemek | 3/3 seed'de önde, +%13 günlük kâr |
+
+Zincir avantajı %24'ten %13'e düştü: ürün yelpazesi ikiye çıkınca şirketin
+tek bir ara maldaki tüketimi bölünüyor ve üretim ünitesinin doluluğu
+azalıyor. Bu bir kusur değil, yeni bir gerilim — **uzmanlaşmak zincirini
+güçlendirir**, her rafa yerelin en iyisini koymak ise erişimi artırır ama
+zinciri seyreltir.
+
+#### Yol üstünde çıkan iki pazar hatası
+
+İkinci ürün ikisini de görünür kıldı; ikisi de D'den eski:
+
+- **Bölge payı %100'ü aşabiliyordu** (ekranda "%134" görüldü). Pay her
+  (bölge, ürün) turunda bir kesir olarak toplanıyordu; iki ürün taşıyan ve
+  komşulara da satan bir mağaza birden fazla kesir biriktiriyordu. Pay artık
+  yalnızca outlet'in **kendi** bölgesindeki kategori satışından hesaplanıyor.
+- **Tek yuvalı dükkânın seçimi hiç yapılamıyordu.** Rafta olmayan ürüne
+  tıklamak "yuva dolu" diye reddediliyor, tek ürünü çıkarmak "raf boş
+  kalamaz" diye reddediliyordu — yani bakkal ilk kurulduğu ürüne mahkûmdu.
+  Artık dolu yuvada tıklama **değiştirir**: bölgede en az satan ürün rafı
+  bırakır.
+- **Kapasite bölge indeks sırasına göre tükeniyordu.** Bir outlet komşu
+  bölgelere de satar; kapasiteyi bölgeleri sırayla gezerek harcayınca hangi
+  bölgenin doyacağını haritadaki indeks sırası belirliyordu — kendi
+  mahallesindeki süpermarket tüm kapasitesini önce işlenen komşuya satıp
+  kendi bölgesini **"%100 boş"** bırakabiliyordu. Kapasite artık her outlet
+  için erişebildiği bölgelere **talep oranında** ayrılıyor; sonuç sıradan
+  bağımsız.
+
+Tarayıcı testleri (`tools/playtest.mjs`): **70/70 geçiyor.**
+Denge harness'ı: **66 kontrol, hepsi geçiyor.**
 
 ---
 

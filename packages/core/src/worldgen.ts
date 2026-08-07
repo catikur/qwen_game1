@@ -13,7 +13,7 @@ import {
 import type { CategoryId } from '@capital/content';
 import { createRng, nextRange, pickWeighted } from './rng';
 import { seedSpotPrices, zeroByGood } from './systems/supply';
-import { estimateBaselineDemand, zeroByCategory } from './systems/demand';
+import { estimateBaselineDemand, goodShares, zeroByCategory } from './systems/demand';
 import { SCHEMA_VERSION } from './types';
 import type { CompanyState, DistrictState, GameState, MarketState, Tile, TileKind } from './types';
 
@@ -84,7 +84,10 @@ function referenceVolumes(districts: DistrictState[]): Record<string, number> {
 
     let cityDemand = 0;
     for (const district of districts) {
-      cityDemand += estimateBaselineDemand(district, good.category) * good.demandShare;
+      const share =
+        goodShares(district.archetype, good.category).find((entry) => entry.good.id === good.id)
+          ?.share ?? good.demandShare;
+      cityDemand += estimateBaselineDemand(district, good.category) * share;
     }
 
     // Tüketici ürününün talebi zincirin her kademesine 1:1 iner.

@@ -456,6 +456,68 @@ const findTile = (page, kind) =>
 
   await page.keyboard.press('Escape');
   await page.waitForTimeout(200);
+
+  // ---------- Raf seçimi ----------
+  // Aynı kategorideki iki ürünün birim maliyeti aynıdır; karar bölgesel
+  // talep farkından doğar. Burada bakılan şey oyuncunun o kararı gerçekten
+  // verebiliyor olması.
+  section('Raf seçimi');
+
+  const shelfTile = await page.evaluate(() => {
+    const { engine, getState } = window.__capital;
+    const s = getState();
+    for (const t of s.map.tiles) {
+      if (t.kind !== 'plot' || t.ownerId || t.structureId || t.buildingId) continue;
+      if (s.districts[t.districtId].archetype !== 'mid_residential') continue;
+      if (!engine.dispatch({ type: 'BUY_TILE', tileId: t.id }).ok) continue;
+      if (engine.dispatch({ type: 'BUILD', tileId: t.id, defId: 'corner_shop' }).ok) return t.id;
+    }
+    return null;
+  });
+  check('Raf testi için bakkal kuruldu', shelfTile !== null);
+
+  if (shelfTile !== null) {
+    await page.evaluate((id) => window.__capital.selectTile(id), shelfTile);
+    await page.waitForTimeout(400);
+
+    const chips = page.locator('.shelf-chip');
+    const chipCount = await chips.count();
+    check('Raf düzenleyici çıkıyor', chipCount === 2, `${chipCount} ürün`);
+
+    const shares = await page.locator('.shelf-share').allTextContents();
+    check('Her ürünün yanında bölge talep payı yazıyor',
+      shares.length === 2 && shares.every((t) => /%\d+/.test(t)), shares.join(' · '));
+
+    const before = await page.evaluate((id) => {
+      const s = window.__capital.getState();
+      return s.buildings[s.map.tiles[id].buildingId].stocked.slice();
+    }, shelfTile);
+    check('Bakkal tek yuvalı: tek ürün taşıyor', before.length === 1, before.join(', '));
+
+    // Rafta olmayan ürüne TEK tıklama rafı değiştirmeli. Reddetmek, tek
+    // yuvalı dükkânı çıkmaza sokuyordu: tek ürünü çıkaramıyor, ikinciyi
+    // ekleyemiyordu — yani bakkalın seçimi hiç yapılamıyordu.
+    const offIndex = (await chips.nth(0).getAttribute('aria-pressed')) === 'true' ? 1 : 0;
+    await chips.nth(offIndex).click();
+    await page.waitForTimeout(400);
+    const swapped = await page.evaluate((id) => {
+      const s = window.__capital.getState();
+      return s.buildings[s.map.tiles[id].buildingId].stocked.slice();
+    }, shelfTile);
+    check('Tek tıkla raf değişiyor', swapped.length === 1 && swapped[0] !== before[0],
+      `${before[0]} → ${swapped[0]}`);
+    check('Yuva sınırı korunuyor', swapped.length === 1, `${swapped.length}/1 yuva`);
+
+    // Son ürünü çıkarmak reddedilmeli; raf boş kalamaz.
+    await chips.nth(offIndex).click();
+    await page.waitForTimeout(400);
+    const kept = await page.evaluate((id) => {
+      const s = window.__capital.getState();
+      return s.buildings[s.map.tiles[id].buildingId].stocked.slice();
+    }, shelfTile);
+    check('Son ürün raftan çıkarılamıyor', kept.length === 1, kept.join(', '));
+  }
+
   await page.evaluate(() => window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 1 }));
 
   // ---------- Kayıt ----------
