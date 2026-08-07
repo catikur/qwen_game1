@@ -104,28 +104,21 @@ function MoveView({ card, move }: { card: ChainCard; move: ChainMove }): ReactEl
   const { run, toast, setView } = useGame();
   const state = useGameState();
 
-  const tile = state.map.tiles.find(
-    (t) =>
-      t.districtId === move.districtId &&
-      t.kind === 'plot' &&
-      !t.ownerId &&
-      !t.structureId &&
-      !t.buildingId,
-  );
-  const landPrice = tile ? tilePrice(state, tile.id, state.playerCompanyId) : 0;
+  const landPrice = tilePrice(state, move.tileId, state.playerCompanyId);
   const total = move.cost + landPrice;
   const player = getPlayer(state);
   const canPay = player.cash >= total;
 
   const build = (): void => {
-    if (!tile) {
-      toast('Uygun parsel kalmamış.', 'bad');
-      return;
-    }
-    if (!run({ type: 'BUY_TILE', tileId: tile.id })) return;
-    if (!run({ type: 'BUILD', tileId: tile.id, defId: move.defId })) return;
+    // Parsel doluysa önce sahibinden devralınır — oyuncunun elle yaptığı
+    // iki adımın aynısı, aynı fiyattan.
+    const acquired = move.needsBuyout
+      ? run({ type: 'BUYOUT_TILE', tileId: move.tileId })
+      : run({ type: 'BUY_TILE', tileId: move.tileId });
+    if (!acquired) return;
+    if (!run({ type: 'BUILD', tileId: move.tileId, defId: move.defId })) return;
     toast(`${move.name} kuruldu — ${move.districtName}.`, 'good');
-    setView({ selectedTileId: tile.id });
+    setView({ selectedTileId: move.tileId });
   };
 
   return (
@@ -136,12 +129,14 @@ function MoveView({ card, move }: { card: ChainCard; move: ChainMove }): ReactEl
           type="button"
           className={move.premature ? '' : 'primary'}
           onClick={build}
-          disabled={!canPay || !tile}
+          disabled={!canPay}
         >
           {move.name} kur · {formatMoney(total)}
         </button>
         <span className="chain-gain">
-          {move.districtName} · {Math.round(move.paybackDays)} günde geri öder · marj %
+          {move.districtName}
+          {move.needsBuyout && ' · parsel devralınacak'} · {Math.round(move.paybackDays)} günde geri
+          öder · marj %
           {Math.round(card.margin * 100)} → <strong className="pos">%{Math.round(move.projectedMargin * 100)}</strong>
         </span>
       </div>
@@ -155,14 +150,21 @@ function MoveView({ card, move }: { card: ChainCard; move: ChainMove }): ReactEl
   );
 }
 
-/** Zincirin tamamı kendi elindeyse söylenecek tek şey. */
+/**
+ * Hamle yoksa neden yok.
+ *
+ * Sessiz bir "hamle yok" oyuncuya zincirin bittiğini sandırıyordu; oysa
+ * sebep çoğu zaman geçici: sermaye yetmiyor ya da sanayide parsel kalmamış.
+ */
 function SettledView({ card }: { card: ChainCard }): ReactElement {
+  if (card.blocked) return <p className="chain-settled">{card.blocked}</p>;
+
   const complete = card.slots.every((slot) => slot.state === 'own' || slot.kind === 'distribution');
   return (
     <p className="chain-settled">
       {complete
         ? 'Zincirin tamamı sende. Marjını buradan daha fazla açmanın yolu ölçek: daha çok mağaza.'
-        : 'Şu an kapatılacak bir halka yok — ya kapasite yetiyor ya da bir üst kademe henüz açılmadı.'}
+        : 'Şu an kapatılacak bir halka yok — kapasiten ihtiyacını karşılıyor.'}
     </p>
   );
 }

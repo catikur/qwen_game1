@@ -1,6 +1,7 @@
 import { BUILDINGS, CATEGORIES, CONSUMER_CATEGORIES, NPC_PROFILES } from '@capital/content';
 import type { BuildingDef, CategoryId, NpcProfileDef } from '@capital/content';
 import { build, buyTile, buyoutTile } from '../actions';
+import { chainCards } from '../chain';
 import { pushNews } from '../news';
 import { nextFloat } from '../rng';
 import { estimateInvestment } from './market';
@@ -15,10 +16,11 @@ import type { GameState } from '../types';
  * aynı kilit kuralları. Zorluk, görünmez bonuslarla değil kişilik
  * ağırlıklarıyla ayarlanır.
  *
- * Kişilik, üç yerde kendini gösterir:
+ * Kişilik, dört yerde kendini gösterir:
  *   - hangi fırsatı seçtiği (talep mi, marj mı),
  *   - nereye girdiği (gelir seviyesi tercihi),
- *   - fiyatı nasıl kurduğu.
+ *   - fiyatı nasıl kurduğu,
+ *   - zincire ne kadar meyilli olduğu.
  */
 
 const DECISION_PERIOD_DAYS = 7;
@@ -30,11 +32,98 @@ const PLAYER_THREAT_SHARE = 0.4;
  * makul olmayan yatırımdan kaçınır.
  */
 const MAX_PAYBACK_DAYS = 170;
+/**
+ * Zincir yatırımı altyapıdır: outlet'ten yavaş döner, karşılığında kalıcı
+ * bir maliyet avantajı bırakır. Rakipler bu kalemde daha sabırlı.
+ */
+const CHAIN_MAX_PAYBACK_DAYS = 220;
 
 interface Opportunity {
   districtId: number;
   category: CategoryId;
   score: number;
+}
+
+/**
+ * Rakibin tedarik zincirine iştahı.
+ *
+ * Ucuzcunun tek silahı maliyet olduğu için zincir onun doğal hamlesidir;
+ * kaliteyle yarışan premium rakip aynı parayı ürüne harcamayı tercih eder;
+ * arsa spekülatörü hiç ilgilenmez. Böylece zincir, oyuncuya karşı tek
+ * tip bir baskı değil, rakibin kim olduğuna göre değişen bir tehdit olur.
+ */
+function traitChainAppetite(profile: NpcProfileDef): number {
+  switch (profile.trait) {
+    case 'price_cutter':
+      return 1.4;
+    case 'expansionist':
+      return 1;
+    case 'tech':
+      return 0.9;
+    case 'premium':
+      // Kaliteyle yarışır, maliyetle değil: yalnızca zincirin EN iyi
+      // halkasını kurar, gerisini geçer. 0,6'da hiç kuramıyordu ve
+      // şehrin en büyük şirketi maliyet oyununun tamamen dışında
+      // kalıyordu — oyuncu için hedefsiz bir dev.
+      return 0.8;
+    case 'landlord':
+      return 0.2;
+    default:
+      return 1;
+  }
+}
+
+/**
+ * Rakibin zincir hamlesi.
+ *
+ * Oyuncunun zincir kartını besleyen `chainCards` fonksiyonunun AYNISI
+ * kullanılır — yani rakip, oyuncuya gösterilen tabloyu okuyup karar verir.
+ * "NPC hile yapıyor" hissi burada da mimari olarak imkânsız: aynı hesap,
+ * aynı fiyat, aynı imar kısıtı.
+ *
+ * Kartın "henüz erken" işareti rakip için de geçerli: ölçek yetmeden
+ * fabrika kuran rakip, tıpkı oyuncu gibi boş kapasiteye para öder. Yalnızca
+ * iştahı yüksek olanlar (ucuzcu) bu uyarıyı görmezden gelebilir.
+ */
+function tryChainMove(state: GameState, profile: NpcProfileDef): boolean {
+  const appetite = traitChainAppetite(profile);
+  if (appetite <= 0.25) return false;
+
+  const company = state.companies[profile.id];
+  if (!company) return false;
+
+  // Zincir, haftalık genişleme bütçesinden DEĞİL ayrı bir kalemden ödenir.
+  // İlk denemede ucuzcu rakip hiç zincir kuramıyordu: fiyat kırdığı için
+  // marjı ince, marjı ince olduğu için nakdi az, nakdi az olduğu için
+  // haftalık bütçesi bir fabrikaya asla yetmiyordu. Yani maliyet silahına
+  // en çok ihtiyacı olan kişilik, o silaha hiç ulaşamıyordu.
+  const budget = company.cash * Math.min(0.85, profile.aggression + 0.3);
+  const maxPayback = CHAIN_MAX_PAYBACK_DAYS * appetite;
+
+  for (const card of chainCards(state, profile.id)) {
+    const move = card.move;
+    if (!move) continue;
+    if (move.premature && appetite < 1.2) continue;
+    if (move.paybackDays > maxPayback) continue;
+    if (move.cost > budget) continue;
+
+    // Parseli kart zaten hesapladı; rakip aynı parseli kullanır.
+    const acquired = move.needsBuyout
+      ? buyoutTile(state, profile.id, move.tileId)
+      : buyTile(state, profile.id, move.tileId);
+    if (!acquired.ok) continue;
+    if (!build(state, profile.id, move.tileId, move.defId).ok) continue;
+
+    pushNews(
+      state,
+      'rival',
+      `${profile.name} dikey entegrasyona gidiyor`,
+      `${move.districtName} bölgesinde ${move.name} kurdu — ${card.goodName} maliyetini kendi eline alıyor.`,
+    );
+    return true;
+  }
+
+  return false;
 }
 
 function traitDistrictFit(profile: NpcProfileDef, incomeLevel: number): number {
@@ -163,6 +252,11 @@ function actFor(state: GameState, profile: NpcProfileDef): void {
     }
     return;
   }
+
+  // Zincir hamlesi önce değerlendirilir ama kart "henüz erken" dediği
+  // sürece geçmez; yani rakipler de doğal olarak önce mağaza açıp ölçek
+  // kurar, zinciri sonra kapatır. Ayrı bir sıralama kuralına gerek yok.
+  if (tryChainMove(state, profile)) return;
 
   const opportunities = findOpportunities(state, profile);
 

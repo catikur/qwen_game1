@@ -1,8 +1,8 @@
 # Tur 1 — Ürün ve Zincir · Tasarım Belgesi
 
-> Durum: **A ve B parçaları kodlandı** — motor katmanı (ürünler, spot pazar,
-> birim maliyet, imar, şema v3) ve zincir kartı arayüzü. NPC'ler henüz
-> zincir kurmuyor; §10'daki iş sırasına bakın. Amaç, `Capitalism.md`'deki
+> Durum: **A, B ve C parçaları kodlandı** — motor katmanı (ürünler, spot
+> pazar, birim maliyet, imar, şema v3), zincir kartı arayüzü ve rakiplerin
+> zincir kararları. §10'daki iş sırasına bakın. Amaç, `Capitalism.md`'deki
 > "sofistike simülasyon, casual oynanış" sözünü tutarak oyuna türün
 > kimliğini veren katmanı eklemek: satılan şeyin bir maliyeti, o maliyetin
 > bir zinciri, o zincirin de bir sahibi olsun.
@@ -431,8 +431,8 @@ rastgelesiz bir fonksiyon.
 |---|---|---|---|---|
 | A | `goods.ts`, spot pazar, birim maliyet çözümleyicisi, imar, şema v3 | motor katmanı, UI yok | harness: zincirli/zincirsiz A/B | **bitti** |
 | B | Zincir kartı + "en iyi hamle" önerisi + ölçek uyarısı | oyuncunun gördüğü katman | harness + playtest betiği | **bitti** |
-| C | NPC zincir kararları | rekabet | rakip 400 günde iflas etmiyor / oyuncuyu ezmiyor | sırada |
-| D | Kategori başına ikinci ürün, raf yuvaları devrede | ürün seçimi | denge kalibrasyonu | |
+| C | NPC zincir kararları | rekabet | rakipler zincir kuruyor, batmıyor; kartı izlemek kazandırıyor | **bitti** |
+| D | Kategori başına ikinci ürün, raf yuvaları devrede | ürün seçimi | denge kalibrasyonu | sırada |
 | E | Zincir kamyonları | görsel okunabilirlik | gözle | |
 
 > Taslakta B ve C ayrı sıralardı; uygulamada imar kısıtı ve raf şeması A ile
@@ -473,7 +473,63 @@ formülden çıkanlar birbirini tutuyor.
 | Tek mağazada "henüz erken" uyarısı | kapasitenin %18'i dolar, 720 gün |
 | Buton parseli alıp üniteyi kuruyor | imarlı bölgeye, tek tıkla |
 
+### C parçası — rakiplerin zincir kararları
+
+Rakipler oyuncunun zincir kartını besleyen **aynı `chainCards` fonksiyonunu**
+okuyup karar veriyor. "NPC hile yapıyor" hissi burada da mimari olarak
+imkânsız: aynı hesap, aynı fiyat, aynı imar kısıtı, kartın "henüz erken"
+uyarısı dahil.
+
+Kişilik, iştah katsayısıyla ayrışıyor:
+
+| Kişilik | İştah | Davranış |
+|---|---|---|
+| Ucuzcu | 1,4 | Tek silahı maliyet; "erken" uyarısını bile göze alır |
+| Genişlemeci | 1,0 | Açıkça dönen zinciri kurar |
+| Teknoloji | 0,9 | Benzer, elektroniğe meyilli |
+| Kalite avcısı | 0,8 | Yalnızca zincirin **en iyi** halkasını kurar |
+| Arsa spekülatörü | 0,2 | Hiç girmez |
+
+400 günlük koşuda ölçülen: 4 rakipten 3'ü zincir kuruyor (17 / 11 / 1 ünite),
+arsa spekülatörü hiç girmiyor, hiçbiri borç sarmalına düşmüyor.
+
+### Kartı izlemek kazandırıyor mu?
+
+Kontrollü karşılaştırma — aynı seed, aynı mağaza stratejisi, tek fark
+zincir kartını izleyip izlememek (500 gün):
+
+| Seed | Zincirsiz | Zincirli | Fark |
+|---|---|---|---|
+| 1 | 81 B ₺/gün | **94 B ₺/gün** | +%16 |
+| 7 | 64 B ₺/gün | **79 B ₺/gün** | +%23 |
+| 42 | 98 B ₺/gün | **129 B ₺/gün** | +%32 |
+
+Ortalama **%24 daha yüksek günlük kâr**, 3/3 seed'de önde. Net değerde
+fark daha küçük çünkü zincirin geri ödemesi ~170 gün: geç kurulan üniteler
+500. günde henüz sermayesini çıkarmış olmuyor. Günlük kâr öncü gösterge,
+net değer gecikmeli.
+
+> Bu ölçüm bir yanlış alarmı da düzeltti. Rakip koşusunda kalite avcısının
+> zincire girdikten sonra net değeri düşük görünüyordu; kontrolsüz bir
+> gözlemdi — rekabet koşulları da değişmişti. Kontrollü A/B, zincirin her
+> seed'de kazandırdığını gösterdi.
+
+### Yol üstünde çıkan tıkanma
+
+Rakip koşusu B parçasında kalan bir çıkmazı ortaya çıkardı: sanayi ve liman
+dolduğunda `bestPlotFor` boş parsel bulamıyor ve **tüm zincir kartları
+sessizce "hamle yok"** diyordu. Oyuncu zincirin bittiğini sanıyordu.
+
+İki düzeltme:
+
+- **Devralma ikinci kademe olarak eklendi.** Boş parsel her zaman önce;
+  kalmadıysa mevcut yapısı devralınabilecek parsel. Şehir kıt — ama kapalı
+  değil.
+- **Hamle önerilemiyorsa sebebi yazılıyor:** "Değirmen için 900 B ₺ şirket
+  değeri gerekiyor" ya da "kurulacak parsel kalmadı — sanayi ve liman dolu".
+
 Tarayıcı testleri (`tools/playtest.mjs`): **63/63 geçiyor.**
+Denge harness'ı: **55 kontrol, hepsi geçiyor.**
 
 ---
 
