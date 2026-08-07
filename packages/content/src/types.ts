@@ -91,7 +91,11 @@ export type BuildingRole =
   /** Hammadde üretir; girdisi yoktur. */
   | 'extract'
   /** Hammaddeyi ara mala dönüştürür. */
-  | 'process';
+  | 'process'
+  /** Atandığı kategorideki kendi outlet'lerinin kalitesini yükseltir. */
+  | 'research'
+  /** Atandığı kategorideki marka hedefini payının üstüne çeker. */
+  | 'marketing';
 
 export interface BuildingDef {
   id: string;
@@ -120,6 +124,15 @@ export interface BuildingDef {
   outputGoodId?: string;
   /** `outlet`: rafında kaç farklı ürün taşıyabilir (varsayılan 1). */
   slots?: number;
+  /**
+   * `research` / `marketing`: atandığı kategoriye kattığı tavan.
+   *
+   * `def.category` bu binalar için ANLAMSIZDIR — hangi kategoriye
+   * çalıştığını bina örneğinin `focus` alanı söyler. Kataloğa yine de bir
+   * kategori yazıyoruz çünkü `CategoryId` zorunlu; menüde nerede
+   * görüneceğini o belirliyor.
+   */
+  focusPotency?: number;
   /**
    * Kurulabileceği district arketipleri. Verilmezse her yere kurulur.
    *

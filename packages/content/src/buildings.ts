@@ -207,6 +207,59 @@ export const BUILDINGS: BuildingDef[] = [
     description: 'Menzilindeki kendi mağazalarının dağıtım maliyetini düşürür.',
   },
 
+  // ---- Rekabet kolları ----
+  //
+  // İkisi de bir KATEGORİYE atanır ve o kategorideki bütün mağazalarına
+  // birden çalışır. Değerleri outlet sayınla çarpıldığı için iki dükkânlı
+  // oyuncuya tuzak, on iki dükkânlıya en iyi hamle. Aynı özellik zincirde
+  // de vardı; tutarlılık kasıtlı.
+  {
+    id: 'research_center',
+    name: 'Ar-Ge Merkezi',
+    role: 'research',
+    category: 'grocery',
+    tier: 1,
+    // Kalibre edilmiş değerler. İlk denemede (240 B ₺ / 640 ₺) dört
+    // mağazalı bir kategoride 164 günde dönüyordu — zincirin 170 günlük
+    // bandından bile hızlı. Ar-Ge zincirden YAVAŞ olmalı: getirisi kalıcı
+    // ve rakip azaldıkça büyüyor.
+    cost: 280_000,
+    upkeepPerDay: 860,
+    capacity: 0,
+    quality: 0,
+    jobs: 22,
+    radius: 0,
+    color: '#5b7fb0',
+    height: 1.6,
+    unlockNetWorth: 1_500_000,
+    description:
+      'Bir kategoriye atanır; o kategorideki bütün mağazalarının kalitesini kalıcı olarak yükseltir. Yavaş döner, rakip çok olduğunda kazandırır.',
+    focusPotency: 0.12,
+  },
+  {
+    id: 'marketing_office',
+    name: 'Pazarlama Ofisi',
+    role: 'marketing',
+    category: 'retail',
+    tier: 1,
+    // Ağırlık bilinçli olarak İŞLETME GİDERİNDE. İlk denemede
+    // (168 B ₺ / 520 ₺) 68 günde dönüyordu — en iyi mağazadan bile hızlı,
+    // yani düşünmeden kurulacak bir bina. Reklam gerçek hayatta da tek
+    // seferlik bir yatırım değil sürekli bir gider; kesersen etkisi biter.
+    cost: 190_000,
+    upkeepPerDay: 1_450,
+    capacity: 0,
+    quality: 0,
+    jobs: 16,
+    radius: 0,
+    color: '#a86fb0',
+    height: 1.3,
+    unlockNetWorth: 900_000,
+    description:
+      'Bir kategoriye atanır; markanı pazar payının hak ettiğinin üstüne çeker. Payın düşükken en çok işe yarar.',
+    focusPotency: 0.15,
+  },
+
   // ---- Zincir: hammadde (yalnızca sanayi ve liman) ----
   {
     id: 'coffee_estate',

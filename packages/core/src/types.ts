@@ -10,7 +10,7 @@ import type { RngState } from './rng';
  * state'te sadece kimlik ve sayı taşınır.
  */
 
-export const SCHEMA_VERSION = 3;
+export const SCHEMA_VERSION = 4;
 
 /**
  * Bir karenin şehirdeki rolü.
@@ -102,6 +102,15 @@ export interface BuildingInstance {
    * çıktısı bina tanımından gelir.
    */
   stocked: string[];
+  /**
+   * `research` / `marketing`: hangi kategoriye çalıştığı. Diğer rollerde
+   * null.
+   *
+   * Bina tanımındaki `category` bu iki rol için anlamsız — menüde nerede
+   * göründüğünü belirlemekten başka işi yok. Asıl karar bu alanda ve
+   * oyuncu istediği zaman değiştirebiliyor.
+   */
+  focus: CategoryId | null;
   last: BuildingLedger;
 }
 
@@ -127,6 +136,15 @@ export interface CompanyState {
   debt: number;
   /** Kategori bazlı marka gücü 0..1; pazar payında çarpan. */
   brand: Record<CategoryId, number>;
+  /**
+   * Kategori bazlı birikmiş Ar-Ge kalite primi 0..0,30.
+   *
+   * Atanmış Ar-Ge merkezlerinin belirlediği tavana doğru yavaşça ilerler,
+   * merkez yıkılınca aynı hızla geri erir. Çekicilik formülünde
+   * `def.quality` üstüne TOPLAMSAL girer — sıfırken ekonomi Tur 1 ile
+   * birebir aynı kalır.
+   */
+  research: Record<CategoryId, number>;
   netWorth: number;
   /** Kategori bazlı şehir geneli pazar payı 0..1. */
   marketShare: Record<CategoryId, number>;
@@ -244,6 +262,8 @@ export type GameCommand =
   | { type: 'SET_AUTO_PRICE'; buildingId: string; auto: boolean }
   /** Bir outlet'in raflarındaki ürünleri değiştirir. */
   | { type: 'SET_STOCK'; buildingId: string; goodIds: string[] }
+  /** Bir Ar-Ge merkezinin veya pazarlama ofisinin çalıştığı kategoriyi değiştirir. */
+  | { type: 'SET_FOCUS'; buildingId: string; category: CategoryId }
   | { type: 'RENAME_COMPANY'; name: string }
   | { type: 'SET_FLAG'; flag: keyof FeatureFlags; value: boolean };
 

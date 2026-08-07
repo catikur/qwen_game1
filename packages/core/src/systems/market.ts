@@ -15,6 +15,7 @@ import {
   zeroByCategory,
 } from './demand';
 import { collectEventModifiers } from './events';
+import { marketingLeverage } from './focus';
 import { SURPLUS_HAIRCUT, distributionRelief, unitCogsFor } from './supply';
 import type { BuildingInstance, GameState } from '../types';
 
@@ -45,13 +46,21 @@ const WAGE_PER_JOB = 42;
 const NEIGHBOR_ACCESS = 0.3;
 const DIAGONAL_ACCESS = 0.14;
 
-/** CEO'nun bir binanın kalitesine kattığı prim. */
+/**
+ * Bir binanın gerçek kalitesi.
+ *
+ * Üç toplamsal kaynak: bina tanımı, CEO'nun sektör primi ve şirketin o
+ * kategoride biriktirdiği Ar-Ge. Üçü de toplamsal olduğu için Ar-Ge
+ * merkezi kurmayan bir şirkette formül Tur 1'deki haline indirgeniyor.
+ */
 function qualityFor(state: GameState, companyId: string, defId: string): number {
   const def = BUILDING_BY_ID[defId];
   if (!def) return 0;
-  const ceo = getCeoModifiers(state.companies[companyId]?.ceoId ?? null);
+  const company = state.companies[companyId];
+  const ceo = getCeoModifiers(company?.ceoId ?? null);
   const bonus = ceo.categoryQuality?.category === def.category ? ceo.categoryQuality.bonus : 0;
-  return Math.max(0.05, Math.min(1, def.quality + bonus));
+  const research = company?.research[def.category] ?? 0;
+  return Math.max(0.05, Math.min(1, def.quality + bonus + research));
 }
 
 function upkeepFor(state: GameState, companyId: string, defId: string): number {
@@ -77,17 +86,49 @@ function accessWeight(state: GameState, fromDistrict: number, toDistrict: number
 }
 
 /**
+ * Bir şirketin bir kategorideki "prim gücü": Ar-Ge primi + pazarlama
+ * kaldıracı. Hiçbirine yatırım yapmamışsa TAM SIFIR.
+ */
+function premiumEdge(state: GameState, companyId: string, categoryId: CategoryId): number {
+  const company = state.companies[companyId];
+  if (!company) return 0;
+  return (company.research[categoryId] ?? 0) + marketingLeverage(state, companyId, categoryId);
+}
+
+/**
  * Otomatik fiyatlama — "casual" varsayılan.
  *
  * Bölgede talep karşılanmıyorsa fiyatı yukarı, arz fazlaysa aşağı iter.
  * Oyuncu isterse manuel fiyata geçip bu davranışı devralabilir.
+ *
+ * ---- Neden `edge` diye ikinci bir kanal var ----
+ *
+ * Kalite ve marka, çekicilik formülünde talebi paylaştırıyor. Ama ÖLÇÜM
+ * şunu gösterdi: bu şehirde talep kronik olarak kapasiteyi aşıyor
+ * (400. günde bile boş talep %19–40), yani herkes zaten kapasitesinin
+ * tamamını satıyor ve pay yarışı hiç yaşanmıyor. Şehre 40 süpermarket
+ * dikildiğinde bile tam Ar-Ge primi hacme yalnızca **+%3,4** ekliyordu;
+ * 24 süpermarketle +%0,7.
+ *
+ * Yani kaliteyi sadece paya bağlamak, oyuncunun fark edemeyeceği bir
+ * mekanik demekti. Arz-kıt bir pazarda kalitenin gerçek karşılığı zaten
+ * hacim değil FİYATTIR: malın kapış kapış gidiyorsa, daha iyi olanı daha
+ * pahalıya satarsın.
+ *
+ * `edge` tam olarak bunu yapıyor ve kıtlıkla ÇARPILIYOR:
+ *   - Bölgede boş talep yoksa prim de yok — orada yarış paya döner,
+ *     kalite kendi asıl kanalından (çekicilik) çalışır.
+ *   - Boş talep yüksekse prim büyür — kalite marj olarak ödenir.
+ *
+ * `edge = 0` olduğunda formül Tur 1'deki haline BİREBİR indirgeniyor;
+ * denge kimliği bozulmuyor.
  */
-function autoPriceMultiplier(unmetRatio: number, competitors: number): number {
-  const scarcity = 1 + unmetRatio * 0.5;
+function autoPriceMultiplier(unmetRatio: number, competitors: number, edge = 0): number {
+  const scarcity = 1 + unmetRatio * 0.5 * (1 + edge * 1.8);
   const crowding = 1 - Math.min(0.1, competitors * 0.02);
   // Taban 0.95: otomatik fiyat asla marjı eritecek kadar kırmaz. Fiyat
   // savaşı bilinçli bir tercih olmalı, varsayılan davranış değil.
-  return Math.max(0.95, Math.min(1.4, scarcity * crowding));
+  return Math.max(0.95, Math.min(1.4 + edge * 0.3, scarcity * crowding));
 }
 
 export interface InvestmentEstimate {
@@ -214,8 +255,13 @@ export function estimateInvestment(
     };
   }
 
-  // Depo doğrudan gelir üretmez; değeri menzilindeki mağazalara dağılır.
-  if (def.role === 'logistics') {
+  // ---- Depo, Ar-Ge, pazarlama: değeri kendi defterinde görünmez ----
+  //
+  // Üçü de doğrudan gelir üretmez; katkıları BAŞKA binaların satırına
+  // dağılır. Buraya uydurma bir "beklenen kâr" yazmak yerine dürüst
+  // davranıyoruz: `direct: false` diyoruz ve gerçek değerlendirmeyi
+  // rekabet kartına bırakıyoruz — tıpkı zincirde deponun yaptığı gibi.
+  if (def.role === 'logistics' || def.role === 'research' || def.role === 'marketing') {
     return {
       direct: false,
       expectedUnits: 0,
@@ -264,6 +310,7 @@ export function estimateInvestment(
   const priceMultiplier = autoPriceMultiplier(
     district.unmet[def.category] ?? 0,
     district.outletCount[def.category] ?? 0,
+    premiumEdge(state, companyId, def.category),
   );
   const salePrice = category.basePrice * priceMultiplier;
 
@@ -348,6 +395,7 @@ function applyAutoPricing(state: GameState): void {
     const target = autoPriceMultiplier(
       district.unmet[def.category] ?? 0,
       district.outletCount[def.category] ?? 0,
+      premiumEdge(state, building.companyId, def.category),
     );
     // Fiyat bir günde zıplamasın; oyuncu grafikte anlamlı bir eğri görsün.
     building.priceMultiplier += (target - building.priceMultiplier) * 0.25;
@@ -688,7 +736,13 @@ export function runMarketTick(state: GameState): void {
 
       // Marka payı takip eder ama yavaş: bir günde zirveye çıkılmaz.
       // CEO'nun pazarlama kabiliyeti bu hızı belirler.
-      const target = Math.min(1, share * 1.15);
+      //
+      // Pazarlama ofisi hedefi payın hak ettiğinin ÜSTÜNE çeker. Bu,
+      // markanın "zengini daha zengin yapan" döngüsüne küçük oyuncunun
+      // girebileceği tek kapı: kaldıraç toplamsal olduğu için düşük
+      // markada oransal katkısı daha büyük (%37'ye karşı %21).
+      const leverage = marketingLeverage(state, company.id, categoryId);
+      const target = Math.min(1, share * 1.15 + leverage);
       const growth = 0.035 * getCeoModifiers(company.ceoId).brandGrowth;
       company.brand[categoryId] += (target - company.brand[categoryId]) * growth;
       company.brand[categoryId] = Math.max(0.05, Math.min(1, company.brand[categoryId]));

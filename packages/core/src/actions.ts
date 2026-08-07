@@ -5,6 +5,7 @@ import {
   getCeoModifiers,
 } from '@capital/content';
 import { defaultShelf } from './systems/demand';
+import { defaultFocus } from './systems/focus';
 import { LAND_SELL_RATIO, tilePrice } from './systems/city';
 import type { CommandResult, GameState } from './types';
 
@@ -196,6 +197,12 @@ export function build(
       ? defaultShelf(district.archetype, def.category, def.slots ?? 1)
       : [];
 
+  // Ar-Ge merkezi / pazarlama ofisi kurulur kurulmaz şirketin en çok
+  // mağazası olan kategoriye atanır. Boş bir binaya bakıp "bu ne işe
+  // yarıyor" dedirtmek yerine, makul olanı yapıp oyuncunun değiştirmesine
+  // bırakıyoruz — rafta izlediğimiz yolun aynısı.
+  const focus = defaultFocus(state, companyId, defId);
+
   state.buildings[id] = {
     id,
     defId,
@@ -206,6 +213,7 @@ export function build(
     autoPrice: true,
     builtDay: state.time.day,
     stocked,
+    focus,
     last: {
       unitsSold: 0,
       capacityUsed: 0,
