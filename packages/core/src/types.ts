@@ -10,7 +10,7 @@ import type { RngState } from './rng';
  * state'te sadece kimlik ve sayı taşınır.
  */
 
-export const SCHEMA_VERSION = 4;
+export const SCHEMA_VERSION = 5;
 
 /**
  * Bir karenin şehirdeki rolü.
@@ -207,6 +207,33 @@ export interface FeatureFlags {
   randomEvents: boolean;
   manualPricing: boolean;
   landValueDrift: boolean;
+  /** Belediye periyodik olarak parsel ihalesine çıkarsın mı. */
+  landAuctions: boolean;
+}
+
+/**
+ * Açık parsel ihalesi.
+ *
+ * Bugüne kadar parsel alımı "ilk gelen alır"dı ve bu, arazi rekabetini
+ * fiilen yok ediyordu: rakip haftada bir karar veriyor, oyuncu istediği
+ * an alabiliyordu. İhale araziyi gerçekten çekişmeli hale getiriyor.
+ *
+ * Açık artırma seçildi (kapalı zarf değil) çünkü kapalı zarf oyuncuya
+ * GERİ BİLDİRİM vermez: kaybettiğinde neden kaybettiğini bilmez. Açık
+ * artırma rakibin değerlemesini öğretiyor — bir sayı tablosu vermeden
+ * rakibin kafasının içini göstermenin en ucuz yolu.
+ */
+export interface AuctionState {
+  tileId: number;
+  /** Bu günün sonunda ihale kapanır. */
+  endsOnDay: number;
+  /** Taban fiyat; kimse geçmezse parsel normal satışa döner. */
+  reserve: number;
+  /** Şu anki en yüksek teklif. */
+  bid: number;
+  bidderId: string | null;
+  /** Kaç kez artırıldı — oyuncuya çekişmenin sertliğini gösterir. */
+  rounds: number;
 }
 
 export interface GameMeta {
@@ -246,6 +273,8 @@ export interface GameState {
   news: NewsItem[];
   nextId: number;
   flags: FeatureFlags;
+  /** Açık ihale; yoksa null. */
+  auction: AuctionState | null;
 }
 
 /** UI'nin çekirdeğe gönderdiği tek yönlü niyet bildirimleri. */
@@ -264,6 +293,8 @@ export type GameCommand =
   | { type: 'SET_STOCK'; buildingId: string; goodIds: string[] }
   /** Bir Ar-Ge merkezinin veya pazarlama ofisinin çalıştığı kategoriyi değiştirir. */
   | { type: 'SET_FOCUS'; buildingId: string; category: CategoryId }
+  /** Açık ihaleye teklif verir. */
+  | { type: 'PLACE_BID'; amount: number }
   | { type: 'RENAME_COMPANY'; name: string }
   | { type: 'SET_FLAG'; flag: keyof FeatureFlags; value: boolean };
 

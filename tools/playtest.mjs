@@ -507,6 +507,107 @@ const findTile = (page, kind) =>
   check('Bina değişmedikçe rota imzası sabit', stable.before === stable.after,
     `${stable.after.split('|').length} bacak`);
 
+  // ---------- Rekabet kartı ----------
+  // Kollar A parçasında motorda çalışıyordu ama oyuncunun göreceği bir
+  // yüzü yoktu. Burada bakılan şey kartın DOĞRU şeyi söyleyip söylemediği
+  // ve hamlenin gerçekten çalışması.
+  section('Rekabet kartı');
+
+  await page.evaluate(() => {
+    const s = window.__capital.getState();
+    const p = s.companies[s.playerCompanyId];
+    p.cash = 50_000_000;
+    p.netWorth = 50_000_000;
+    window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+  });
+
+  await page.locator('.topbar-actions button', { hasText: 'Rekabet' }).click();
+  await page.waitForTimeout(400);
+  check('Rekabet paneli açılıyor', (await page.locator('.modal').count()) === 1);
+
+  const rivalCards = await page.locator('.rival-card').count();
+  check('Sattığın kategori için rekabet kartı çıkıyor', rivalCards >= 1, `${rivalCards} kart`);
+
+  const channelText = await page.locator('.rival-channel').first().textContent();
+  check('Kart hangi kanaldan kazandığını söylüyor',
+    /dolu/.test(channelText || ''), (channelText || '').slice(0, 70));
+
+  const armCount = await page.locator('.rival-card').first().locator('.rival-arm').count();
+  check('Kartta iki kol var', armCount === 2, `${armCount} kol`);
+
+  const rows = await page.locator('.rival-card').first().locator('.rival-table tbody tr').count();
+  check('Sen/rakip tablosu dört satır', rows === 4, `${rows} satır`);
+
+  const armMove = page.locator('.rival-card').first().locator('.chain-action button');
+  const hasArmMove = (await armMove.count()) === 1;
+  check('Kart tek bir kol hamlesi öneriyor', hasArmMove,
+    hasArmMove ? await armMove.textContent() : 'öneri yok');
+
+  if (hasArmMove) {
+    const before = await page.evaluate(() => {
+      const s = window.__capital.getState();
+      return Object.values(s.buildings).filter(
+        (b) => b.companyId === s.playerCompanyId && b.focus !== null,
+      ).length;
+    });
+    await armMove.click();
+    await page.waitForTimeout(600);
+    const after = await page.evaluate(() => {
+      const s = window.__capital.getState();
+      const armed = Object.values(s.buildings).filter(
+        (b) => b.companyId === s.playerCompanyId && b.focus !== null,
+      );
+      return { count: armed.length, focuses: armed.map((b) => b.focus) };
+    });
+    check('Hamle kol binasını kuruyor ve bir kategoriye atıyor',
+      after.count === before + 1, `${before} → ${after.count} · odak ${after.focuses.join(', ')}`);
+  }
+
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(200);
+
+  // ---------- Odak düzenleyici ----------
+  section('Odak düzenleyici');
+
+  const focusTile = await page.evaluate(() => {
+    const s = window.__capital.getState();
+    for (const b of Object.values(s.buildings)) {
+      if (b.companyId !== s.playerCompanyId) continue;
+      if (b.focus === null) continue;
+      return b.tileId;
+    }
+    return null;
+  });
+  check('Kol binası bulundu', focusTile !== null);
+
+  if (focusTile !== null) {
+    await page.evaluate((id) => window.__capital.selectTile(id), focusTile);
+    await page.waitForTimeout(400);
+
+    const chips = page.locator('.shelf-chip');
+    const chipCount = await chips.count();
+    check('Odak düzenleyici çıkıyor', chipCount >= 4, `${chipCount} kategori`);
+
+    const counts = await page.locator('.shelf-share').allTextContents();
+    check('Her kategorinin yanında mağaza sayısı yazıyor',
+      counts.length >= 4 && counts.every((t) => /\d+ mağaza/.test(t)), counts.join(' · '));
+
+    const before = await page.evaluate((id) => {
+      const s = window.__capital.getState();
+      return s.buildings[s.map.tiles[id].buildingId].focus;
+    }, focusTile);
+
+    // Seçili olmayan ilk kategoriye tıkla.
+    const offIndex = (await chips.nth(0).getAttribute('aria-pressed')) === 'true' ? 1 : 0;
+    await chips.nth(offIndex).click();
+    await page.waitForTimeout(400);
+    const moved = await page.evaluate((id) => {
+      const s = window.__capital.getState();
+      return s.buildings[s.map.tiles[id].buildingId].focus;
+    }, focusTile);
+    check('Odak değiştirilebiliyor', moved !== before, `${before} → ${moved}`);
+  }
+
   // ---------- Raf seçimi ----------
   // Aynı kategorideki iki ürünün birim maliyeti aynıdır; karar bölgesel
   // talep farkından doğar. Burada bakılan şey oyuncunun o kararı gerçekten
@@ -569,6 +670,79 @@ const findTile = (page, kind) =>
   }
 
   await page.evaluate(() => window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 1 }));
+
+  // ---------- Parsel ihalesi ----------
+  // İhale oyunun akışını KESMEYEN ilk mekanik: üstte bir çip, tıklanınca
+  // panel. Burada bakılan şey oyuncunun gerçekten teklif verebilmesi ve
+  // ihaledeki parseli normal yoldan alamaması.
+  section('Parsel ihalesi');
+
+  await page.evaluate(async () => {
+    const { engine, getState } = window.__capital;
+    const s = getState();
+    s.companies[s.playerCompanyId].cash = 50_000_000;
+    engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+    // Bir sonraki ihale gününe kadar koş.
+    for (let i = 0; i < 40 && !s.auction; i++) engine.runDay();
+  });
+  await page.waitForTimeout(500);
+
+  const auctionOpen = await page.evaluate(() => window.__capital.getState().auction !== null);
+  check('Belediye ihale açıyor', auctionOpen);
+
+  if (auctionOpen) {
+    check('İhale çipi üstte görünüyor', (await page.locator('.auction-chip').count()) === 1,
+      (await page.locator('.auction-chip').textContent())?.trim());
+
+    // Oyun duraklamamalı: ihale akışı kesmiyor.
+    const speed = await page.evaluate(() => window.__capital.getState().time.speed);
+    check('İhale oyunu duraklatmıyor (hız oyuncunun bıraktığı yerde)', speed === 0, `hız ${speed}`);
+
+    await page.locator('.auction-chip').click();
+    await page.waitForTimeout(400);
+    check('İhale paneli açılıyor', (await page.locator('.auction').count()) === 1);
+
+    // İhale açıldıktan sonra rakipler kendi değerlemelerine göre teklif
+    // veriyor; oyuncu panele geldiğinde ortada zaten bir teklif olabilir.
+    // Panelin işi bunu GÖSTERMEK.
+    const before = await page.evaluate(() => {
+      const s = window.__capital.getState();
+      return {
+        bid: s.auction.bid,
+        bidder: s.auction.bidderId,
+        reserve: s.auction.reserve,
+        playerId: s.playerCompanyId,
+      };
+    });
+    const stateText = (await page.locator('.auction-state').textContent()) || '';
+    check('Panel ihalenin güncel durumunu yazıyor',
+      before.bidder === null
+        ? /Henüz teklif yok/.test(stateText)
+        : /değer biçti|teklif senin/.test(stateText),
+      stateText.trim().slice(0, 70));
+    check('Teklif tabanın altına düşmüyor', before.bid === 0 || before.bid >= before.reserve,
+      `${before.bid} ≥ ${before.reserve}`);
+
+    await page.locator('.auction-actions button.primary').click();
+    await page.waitForTimeout(400);
+    const after = await page.evaluate(() => {
+      const s = window.__capital.getState();
+      return { bid: s.auction.bid, bidder: s.auction.bidderId, playerId: s.playerCompanyId };
+    });
+    check('Teklif verilebiliyor', after.bidder === after.playerId, `${after.bid} ₺`);
+    check('Öndeyken buton kilitleniyor',
+      await page.locator('.auction-actions button.primary').isDisabled());
+
+    // İhaledeki parsel normal yoldan alınamamalı.
+    const blocked = await page.evaluate(() => {
+      const s = window.__capital.getState();
+      return window.__capital.engine.dispatch({ type: 'BUY_TILE', tileId: s.auction.tileId });
+    });
+    check('İhaledeki parsel doğrudan satın alınamıyor', !blocked.ok, blocked.reason || '');
+
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(200);
+  }
 
   // ---------- Kayıt ----------
   section('Kayıt sistemi');

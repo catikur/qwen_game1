@@ -25,6 +25,7 @@ import {
   buildOptions,
   chainCards,
   companyRanking,
+  competitionCards,
   createNewGame,
   districtOpportunity,
   estimateInvestment,
@@ -37,6 +38,7 @@ import {
   shelfReach,
   supplyRoutes,
   tilePrice,
+  valuationFor,
   MARKETING_CAP,
   RESEARCH_CAP,
 } from '../src/index';
@@ -1379,6 +1381,367 @@ let researchPayback = Infinity;
 /** Sonsuz geri ödemeyi okunur yazar. */
 function fmtDays(days: number): string {
   return Number.isFinite(days) ? `${Math.round(days)} gün` : 'hiç dönmüyor';
+}
+
+// ---- 9. Rekabet kartı ----
+//
+// Kart tamamen türetilmiş; sorulan şey oyuncuya DOĞRU şeyi söyleyip
+// söylemediği. Yanlış kanal ("kalite paya döner" derken aslında fiyata
+// dönüyorsa) oyuncuyu haklı ama yanlış bir sonuca götürür.
+{
+  const { engine, districtIds } = duel(11, 4, true);
+  const state = engine.getState();
+  const playerId = state.playerCompanyId;
+  getPlayer(state).netWorth = 50_000_000;
+  for (let day = 0; day < 200; day++) engine.runDay();
+
+  const cards = competitionCards(state, playerId);
+  const grocery = cards.find((card) => card.category === 'grocery');
+  expect('sattığın kategori için kart çıkıyor', Boolean(grocery), `${cards.length} kart`);
+  expect(
+    'satmadığın kategori için kart çıkmıyor',
+    cards.every((card) => card.outlets > 0),
+    cards.map((card) => `${card.categoryName}:${card.outlets}`).join(' · '),
+  );
+
+  if (grocery) {
+    expect('kartta rakip lider görünüyor', grocery.leader !== null, grocery.leader?.name ?? '—');
+    expect(
+      'kartın payı motorun payıyla aynı',
+      Math.abs(grocery.share - (getPlayer(state).marketShare.grocery ?? 0)) < 1e-9,
+      `%${Math.round(grocery.share * 100)}`,
+    );
+    // Bu düelloda mağazalar kapasitesinde çalışıyor; ölçüm de aynı
+    // kurulumda kârın tamamının fiyattan geldiğini gösteriyordu. Kart
+    // aynı şeyi söylemeli.
+    expect('kanal doğru okunuyor', grocery.channel === 'price',
+      `${grocery.channel} · doluluk %${Math.round(grocery.utilisation * 100)}`);
+    expect('kart bir hamle öneriyor', grocery.move !== null, grocery.move?.name ?? grocery.blocked ?? '—');
+    expect('4 mağazada hamle erken sayılmıyor', grocery.move?.premature === false,
+      `${grocery.outlets} mağaza`);
+  }
+
+  // Kartın kalite değeri motorun kullandığıyla aynı olmalı: Ar-Ge kurunca
+  // ikisi birlikte yükseliyor mu?
+  const beforeQuality = grocery?.quality ?? 0;
+  addLabs(engine, playerId, districtIds[0]!, 2, 'grocery');
+  for (let day = 0; day < 300; day++) engine.runDay();
+  const after = competitionCards(state, playerId).find((card) => card.category === 'grocery')!;
+  expect('Ar-Ge kartın kalitesine yansıyor', after.quality > beforeQuality + 0.15,
+    `${beforeQuality.toFixed(2)} → ${after.quality.toFixed(2)}`);
+  const arm = after.arms.find((a) => a.kind === 'research')!;
+  expect('kol tavanı doğru gösteriyor', Math.abs(arm.ceiling - 0.24) < 1e-9, arm.detail);
+}
+
+// ---- 10. Kart tek mağazalı oyuncuyu uyarıyor mu? ----
+{
+  const { engine } = duel(11, 1, true);
+  const state = engine.getState();
+  getPlayer(state).netWorth = 50_000_000;
+  for (let day = 0; day < 60; day++) engine.runDay();
+
+  const card = competitionCards(state, state.playerCompanyId).find((c) => c.category === 'grocery');
+  expect('tek mağazalı oyuncuya hamle "erken" işaretleniyor', card?.move?.premature === true,
+    card?.move ? `${card.move.name} · erken=${card.move.premature}` : (card?.blocked ?? '—'));
+  expect('erken hamlenin gerekçesi ölçeği açıklıyor',
+    Boolean(card?.move?.reason.includes('mağaza')), card?.move?.reason ?? '—');
+}
+
+// ---- 11. Payı düşük oyuncuya pazarlama, yüksekse Ar-Ge öneriliyor mu? ----
+{
+  // Rakip dört mağaza açar, oyuncu bir tane: payı düşük kalır.
+  const engine = labEngine(41);
+  const state = engine.getState();
+  const rival = state.companies[RIVAL_ID]!;
+  rival.cash = 500_000_000;
+  rival.netWorth = 500_000_000;
+  getPlayer(state).netWorth = 50_000_000;
+
+  // Rakip altı, oyuncu bir mağaza: pay gerçekten düşük kalsın. İlk
+  // denemede 4'e 3 kurulmuştu ve oyuncunun payı %42 çıkıyordu — yani
+  // senaryo "payı düşük oyuncu" üretmiyordu.
+  const order = [...state.districts].sort((a, b) => a.population - b.population).map((d) => d.id);
+  for (let i = 0; i < 6; i++) placeFor(engine, RIVAL_ID, 'supermarket', order[i % 3]!);
+  placeFor(engine, state.playerCompanyId, 'supermarket', order[0]!);
+  for (let day = 0; day < 200; day++) engine.runDay();
+
+  const card = competitionCards(state, state.playerCompanyId).find((c) => c.category === 'grocery');
+  console.log(
+    `  payı %${Math.round((card?.share ?? 0) * 100)} olan oyuncuya önerilen kol: ${card?.move?.kind ?? '—'}`,
+  );
+  expect('payı düşükken pazarlama öneriliyor (giriş silahı)',
+    card !== undefined && card.share < 0.35 && card.move?.kind === 'marketing',
+    `pay %${Math.round((card?.share ?? 0) * 100)}, kol ${card?.move?.kind ?? '—'}`);
+}
+
+// ---- 12. Rakip doktrinleri ----
+//
+// Asıl sorulan şey "rakip zorlaştı mı" değil, "rakip AYRIŞTI mı":
+// her kişiliğin farklı bir silahı ve dolayısıyla farklı bir karşı
+// hamlesi olmalı. Hepsi aynı şeyi yapıyorsa doktrin diye bir şey yok.
+{
+  const engine = new GameEngine(createNewGame({ seed: 12, companyName: 'Doktrin AŞ' }));
+  const player = getPlayer(engine.getState());
+  player.cash = 40_000_000;
+  for (let day = 1; day <= 500; day++) {
+    if (day % 5 === 0) playerStrategy(engine);
+    engine.runDay();
+  }
+  const state = engine.getState();
+
+  console.log('\n--- rakiplerin kol yatırımı (500 gün) ---');
+  const rows = NPC_PROFILES.map((profile) => {
+    let research = 0;
+    let marketing = 0;
+    for (const building of Object.values(state.buildings)) {
+      if (building.companyId !== profile.id) continue;
+      const role = BUILDING_BY_ID[building.defId]?.role;
+      if (role === 'research') research += 1;
+      if (role === 'marketing') marketing += 1;
+    }
+    const company = state.companies[profile.id]!;
+    return { profile, research, marketing, company };
+  });
+
+  for (const row of rows) {
+    console.log(
+      `  ${row.profile.name.padEnd(16)} ${row.profile.trait.padEnd(14)}` +
+        ` Ar-Ge ${String(row.research).padStart(2)} · pazarlama ${String(row.marketing).padStart(2)}` +
+        ` · değer ${formatMoney(row.company.netWorth).padStart(11)} · borç ${formatMoney(row.company.debt)}`,
+    );
+  }
+
+  const armed = rows.filter((row) => row.research + row.marketing > 0);
+  expect('rakipler kol kuruyor', armed.length >= 2, `${armed.length}/${rows.length} rakip`);
+
+  const quality = rows.find((row) => row.profile.trait === 'premium');
+  const cutter = rows.find((row) => row.profile.trait === 'price_cutter');
+  if (quality && cutter) {
+    expect(
+      'kalite avcısı ucuzcudan daha çok Ar-Ge kuruyor',
+      quality.research > cutter.research,
+      `${quality.research} > ${cutter.research}`,
+    );
+  }
+
+  const landlord = rows.find((row) => row.profile.trait === 'landlord');
+  expect('arsa spekülatörü kola girmiyor (kişilik ayrışıyor)',
+    (landlord?.research ?? 0) + (landlord?.marketing ?? 0) === 0,
+    `${(landlord?.research ?? 0) + (landlord?.marketing ?? 0)} bina`);
+
+  expect(
+    'kol yatırımı rakipleri batırmıyor',
+    rows.every((row) => row.company.debt < row.company.netWorth),
+    rows.map((row) => `${row.company.name}: ${formatMoney(row.company.debt)}`).join(' · '),
+  );
+
+  // Doktrinler birbirinden gerçekten ayrışıyor mu? Tek tip davranıyorlarsa
+  // "kişilik" bir etiketten ibaret demektir.
+  const shapes = new Set(rows.map((row) => `${Math.min(row.research, 3)}/${Math.min(row.marketing, 3)}`));
+  expect('doktrinler birbirinden ayrışıyor', shapes.size >= 3,
+    `${shapes.size} farklı kol profili: ${[...shapes].join(' ')}`);
+
+  // Kol kuran rakip onu boşa kurmasın: atadığı kategoride mağazası olsun.
+  let misfocused = 0;
+  for (const building of Object.values(state.buildings)) {
+    const role = BUILDING_BY_ID[building.defId]?.role;
+    if (role !== 'research' && role !== 'marketing') continue;
+    if (building.companyId === state.playerCompanyId) continue;
+    const outlets = Object.values(state.buildings).filter(
+      (other) =>
+        other.companyId === building.companyId &&
+        BUILDING_BY_ID[other.defId]?.role === 'outlet' &&
+        BUILDING_BY_ID[other.defId]?.category === building.focus,
+    ).length;
+    if (outlets === 0) misfocused += 1;
+  }
+  expect('rakip kolunu boşa çalıştırmıyor', misfocused === 0, `${misfocused} yanlış atama`);
+
+  // Doktrin OYUNCUYA GÖRÜNÜR mü? Ayrışma yalnızca bina sayısında kalırsa
+  // oyuncu için hiçbir şey değişmemiş demektir. Rekabet kartındaki rakip
+  // sütunu farkı taşımalı.
+  const cards = competitionCards(state, state.playerCompanyId);
+  const withLeader = cards.filter((card) => card.leader !== null);
+  const qualities = withLeader.map((card) => card.leader!.quality);
+  const spread = qualities.length > 1 ? Math.max(...qualities) - Math.min(...qualities) : 0;
+  console.log(
+    `  kartta görünen rakip kaliteleri: ${withLeader
+      .map((card) => `${card.categoryName} ${card.leader!.name.split(' ')[0]} ${card.leader!.quality.toFixed(2)}`)
+      .join(' · ')}`,
+  );
+
+  const premiumResearch = Math.max(
+    ...CONSUMER_CATEGORIES.map((c) => state.companies[NPC_PROFILES.find((p) => p.trait === 'premium')!.id]!.research[c] ?? 0),
+  );
+  const cutterResearch = Math.max(
+    ...CONSUMER_CATEGORIES.map((c) => state.companies[NPC_PROFILES.find((p) => p.trait === 'price_cutter')!.id]!.research[c] ?? 0),
+  );
+  expect('kalite avcısının kalite primi ucuzcununkinden yüksek',
+    premiumResearch > cutterResearch + 0.05,
+    `${premiumResearch.toFixed(2)} > ${cutterResearch.toFixed(2)}`);
+  expect('doktrin farkı rekabet kartına yansıyor', spread > 0.02 || withLeader.length < 2,
+    `kalite yayılımı ${spread.toFixed(2)}`);
+}
+
+// ================================================================ İhale
+//
+// Sorulan şey "ihale çalışıyor mu" değil, "arazi gerçekten çekişiyor mu":
+// oyuncu kaybedebiliyor mu, rakip mantıklı bir fiyat veriyor mu, ve
+// mekanik oyunu kilitliyor mu.
+
+console.log('\n=== Parsel ihalesi ===\n');
+
+{
+  const engine = new GameEngine(createNewGame({ seed: 17, companyName: 'İhale AŞ' }));
+  const state = engine.getState();
+  const player = getPlayer(state);
+  player.cash = 20_000_000;
+
+  // İlk ihaleye kadar koş.
+  for (let day = 0; day < 31 && !state.auction; day++) engine.runDay();
+  expect('belediye ihale açıyor', state.auction !== null, `${state.time.day}. gün`);
+
+  if (state.auction) {
+    const auction = state.auction;
+    const tile = state.map.tiles[auction.tileId]!;
+    expect('ihaledeki parsel boş ve sahipsiz',
+      tile.kind === 'plot' && !tile.ownerId && !tile.structureId && !tile.buildingId,
+      `parsel ${tile.id}`);
+    expect('taban fiyat normal parsel fiyatına eşit',
+      Math.abs(auction.reserve - tilePrice(state, auction.tileId)) < 1,
+      `${Math.round(auction.reserve)} ₺`);
+
+    // İhaledeki parsel normal yoldan alınamamalı; yoksa ihale sadece bir
+    // bildirim olurdu.
+    const direct = engine.dispatch({ type: 'BUY_TILE', tileId: auction.tileId });
+    expect('ihaledeki parsel doğrudan satın alınamıyor', !direct.ok, direct.reason ?? '');
+
+    // Taban altı teklif reddedilmeli.
+    const low = engine.dispatch({ type: 'PLACE_BID', amount: auction.reserve - 1 });
+    expect('taban altı teklif reddediliyor', !low.ok, low.reason ?? '');
+
+    const ok = engine.dispatch({ type: 'PLACE_BID', amount: auction.reserve });
+    expect('taban fiyattan teklif kabul ediliyor', ok.ok, ok.reason ?? `${Math.round(auction.reserve)} ₺`);
+    expect('en yüksek teklif oyuncunun', auction.bidderId === state.playerCompanyId, auction.bidderId ?? '—');
+
+    const again = engine.dispatch({ type: 'PLACE_BID', amount: auction.reserve * 2 });
+    expect('kendi teklifinin üstüne çıkılamıyor', !again.ok, again.reason ?? '');
+  }
+}
+
+// ---- Oyuncu ihaleyi kaybedebiliyor mu? ----
+//
+// Kaybedemiyorsa mekanik bir çekişme değil, sadece ikinci bir satın alma
+// düğmesi olurdu.
+{
+  const engine = new GameEngine(createNewGame({ seed: 17, companyName: 'İhale AŞ' }));
+  const state = engine.getState();
+  // Oyuncu fakir: taban fiyatı verse bile rakip üstüne çıkabilmeli.
+  getPlayer(state).cash = 3_000;
+
+  // İhaleleri HABERDEN saymak yanlıştı: haber listesi kapaklı, yeni
+  // öğeler eskileri düşürüyor ve delta sıfıra iniyor. Bunun yerine
+  // `state.auction` geçişlerini izliyoruz.
+  let opened = 0;
+  let settledWithWinner = 0;
+  let noSale = 0;
+  let previous: { bidderId: string | null } | null = null;
+
+  for (let day = 0; day < 400; day++) {
+    const before = state.auction;
+    engine.runDay();
+    if (!before && state.auction) opened += 1;
+    if (before && !state.auction) {
+      if (previous?.bidderId) settledWithWinner += 1;
+      else noSale += 1;
+    }
+    previous = state.auction ? { bidderId: state.auction.bidderId } : previous;
+  }
+
+  console.log(`  400 günde: ${opened} ihale açıldı, ${settledWithWinner} kazananla kapandı, ${noSale} sonuçsuz`);
+  expect('ihaleler düzenli açılıyor', opened >= 10, `${opened} ihale`);
+  expect('ihaleler sonuçlanıyor', settledWithWinner + noSale >= 10,
+    `${settledWithWinner + noSale} kapanış`);
+  expect('rakipler ihale kazanıyor (oyuncu kaybedebiliyor)', settledWithWinner > 0,
+    `${settledWithWinner} kez`);
+  expect('kazanan parselin sahibi oluyor',
+    Object.values(state.companies).some((company) =>
+      state.map.tiles.some((tile) => tile.ownerId === company.id),
+    ),
+    'sahiplik devredildi',
+  );
+}
+
+// ---- Rakip değerlemesi mantıklı mı? ----
+{
+  const engine = new GameEngine(createNewGame({ seed: 17, companyName: 'İhale AŞ' }));
+  const state = engine.getState();
+  for (let day = 0; day < 60; day++) engine.runDay();
+
+  const merkez = [...state.districts].sort((a, b) => b.population - a.population)[0]!;
+  const sanayi = state.districts.find((d) => d.archetype === 'industrial');
+
+  const tileIn = (districtId: number): number | null =>
+    state.map.tiles.find(
+      (t) => t.districtId === districtId && t.kind === 'plot' && !t.ownerId && !t.structureId,
+    )?.id ?? null;
+
+  const rival = NPC_PROFILES[0]!.id;
+  const busy = tileIn(merkez.id);
+  const quiet = sanayi ? tileIn(sanayi.id) : null;
+
+  if (busy !== null && quiet !== null) {
+    const busyValue = valuationFor(state, rival, busy);
+    const quietValue = valuationFor(state, rival, quiet);
+    console.log(
+      `  rakip değerlemesi: ${merkez.name} ${formatMoney(busyValue)} · Sanayi ${formatMoney(quietValue)}`,
+    );
+    expect('rakip kalabalık bölgeye daha çok değer biçiyor', busyValue > quietValue,
+      `${formatMoney(busyValue)} > ${formatMoney(quietValue)}`);
+  }
+
+  // Değerleme bir NİYET, ödeme gücü ayrı bir kısıt. Nakit sınırını
+  // değerlemenin içine koymak her parseli aynı değere indiriyordu (ikisi
+  // de nakdin yarısı) — yani teklif hiçbir bilgi taşımıyordu. Sınır artık
+  // teklif anında uygulanıyor; doğrulanması gereken değişmez bu.
+  const engine2 = new GameEngine(createNewGame({ seed: 19, companyName: 'İhale AŞ' }));
+  const state2 = engine2.getState();
+  getPlayer(state2).cash = 5_000;
+  for (const profile of NPC_PROFILES) state2.companies[profile.id]!.cash = 60_000;
+
+  let overBid = 0;
+  for (let day = 0; day < 300; day++) {
+    engine2.runDay();
+    const auction = state2.auction;
+    if (!auction?.bidderId) continue;
+    const bidder = state2.companies[auction.bidderId]!;
+    if (auction.bid > bidder.cash) overBid += 1;
+  }
+  expect('kimse nakdinin üstüne teklif vermiyor', overBid === 0, `${overBid} ihlal`);
+}
+
+// ---- İhale kapatılabiliyor mu, ekonomi bozuluyor mu? ----
+{
+  const withAuctions = new GameEngine(createNewGame({ seed: 21, companyName: 'A' }));
+  const without = new GameEngine(createNewGame({ seed: 21, companyName: 'A' }));
+  without.getState().flags.landAuctions = false;
+
+  for (const engine of [withAuctions, without]) {
+    getPlayer(engine.getState()).cash = 40_000_000;
+    for (let day = 1; day <= 400; day++) {
+      if (day % 5 === 0) playerStrategy(engine);
+      engine.runDay();
+    }
+  }
+
+  const on = getPlayer(withAuctions.getState()).netWorth;
+  const off = getPlayer(without.getState()).netWorth;
+  console.log(`  ihaleli oyuncu ${formatMoney(on)} · ihalesiz ${formatMoney(off)}`);
+  expect('ihale bayrağı kapatılabiliyor', without.getState().auction === null, 'açık ihale yok');
+  // İhale araziyi ZORLAŞTIRIR ama oyunu kilitlememeli: %35'ten fazla fark
+  // mekaniğin ekonomiyi ele geçirdiği anlamına gelirdi.
+  expect('ihale ekonomiyi ele geçirmiyor', Math.abs(on / off - 1) < 0.35,
+    `%${Math.round((on / off - 1) * 100)} fark`);
 }
 
 console.log(`\n=== ${failures === 0 ? 'TÜMÜ GEÇTİ' : `${failures} KONTROL KALDI`} ===`);

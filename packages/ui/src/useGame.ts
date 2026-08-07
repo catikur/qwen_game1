@@ -20,7 +20,7 @@ export interface ViewState {
    * katmanı kendi içinde yönetir.
    */
   ghostDefId: string | null;
-  openPanel: 'none' | 'chain' | 'company' | 'rivals' | 'saves' | 'help';
+  openPanel: 'none' | 'chain' | 'rivalry' | 'auction' | 'company' | 'rivals' | 'saves' | 'help';
 }
 
 export interface ToastMessage {

@@ -4,6 +4,7 @@ import {
   BUILDING_BY_ID,
   CATEGORIES,
   DISTRICT_ARCHETYPES,
+  CONSUMER_CATEGORIES,
   GOODS_BY_CATEGORY,
   GOOD_BY_ID,
   STRUCTURE_BY_ID,
@@ -24,6 +25,8 @@ import type { InvestmentEstimate } from '@capital/core';
 import { AUTOSAVE_SLOT, MAX_SLOTS, listSaves } from '@capital/persistence';
 import type { SaveMeta } from '@capital/persistence';
 import { ChainPanel } from './ChainPanel';
+import { CompetitionPanel } from './CompetitionPanel';
+import { AuctionPanel } from './AuctionPanel';
 import { useGame, useGameState } from './useGame';
 
 /* ------------------------------------------------------------------ yapı */
@@ -331,6 +334,8 @@ function BuildingDetail({ buildingId }: { buildingId: string }): ReactElement | 
 
   const isPlayer = owner.id === state.playerCompanyId;
   const ledger = building.last;
+  const support =
+    def.role === 'logistics' || def.role === 'research' || def.role === 'marketing';
 
   return (
     <div className="building">
@@ -343,21 +348,49 @@ function BuildingDetail({ buildingId }: { buildingId: string }): ReactElement | 
         </p>
       )}
 
-      <div className="ledger">
-        <LedgerRow label="Ciro" value={ledger.revenue} />
-        <LedgerRow label="Satılan malın maliyeti" value={-ledger.cogs} />
-        <LedgerRow label="İşletme gideri" value={-ledger.upkeep} />
-        <LedgerRow label="Personel" value={-ledger.wages} />
-        <LedgerRow label="Günlük kâr" value={ledger.profit} strong />
-      </div>
+      {/*
+        Destek binaları (depo, Ar-Ge, pazarlama) kendi defterlerinde
+        ASLA kâr göstermez: değerleri başka binaların satırına dağılır.
+        Onlara satış defteri çizmek "bu bina bozuk" dedirtiyordu — ciro 0,
+        doluluk %0, bölge payı %0 ve kırmızı bir günlük kâr. Bunun yerine
+        gideri dürüstçe gider diye yazıp ne işe yaradığını söylüyoruz.
+      */}
+      {support ? (
+        <>
+          <div className="ledger">
+            <LedgerRow label="İşletme gideri" value={-ledger.upkeep} />
+            <LedgerRow label="Personel" value={-ledger.wages} />
+            <LedgerRow label="Günlük gider" value={-(ledger.upkeep + ledger.wages)} strong />
+          </div>
+          <p className="muted">
+            {def.role === 'logistics'
+              ? 'Bu bina satış yapmaz. Karşılığı, menzilindeki mağazalarının satış maliyetinde görünür.'
+              : 'Bu bina satış yapmaz. Karşılığı, atandığı kategorideki mağazalarının kalitesinde ve markasında görünür — Rekabet panelinde ölçebilirsin.'}
+          </p>
+        </>
+      ) : (
+        <>
+          <div className="ledger">
+            <LedgerRow label="Ciro" value={ledger.revenue} />
+            <LedgerRow label="Satılan malın maliyeti" value={-ledger.cogs} />
+            <LedgerRow label="İşletme gideri" value={-ledger.upkeep} />
+            <LedgerRow label="Personel" value={-ledger.wages} />
+            <LedgerRow label="Günlük kâr" value={ledger.profit} strong />
+          </div>
 
-      <div className="statgrid small">
-        <Stat label="Doluluk" value={`%${Math.round(ledger.capacityUsed * 100)}`} />
-        <Stat label="Bölge payı" value={`%${Math.round(ledger.share * 100)}`} />
-        <Stat label="Fiyat" value={`×${building.priceMultiplier.toFixed(2)}`} />
-      </div>
+          <div className="statgrid small">
+            <Stat label="Doluluk" value={`%${Math.round(ledger.capacityUsed * 100)}`} />
+            <Stat label="Bölge payı" value={`%${Math.round(ledger.share * 100)}`} />
+            <Stat label="Fiyat" value={`×${building.priceMultiplier.toFixed(2)}`} />
+          </div>
+        </>
+      )}
 
       {isPlayer && def.role === 'outlet' && <ShelfEditor buildingId={buildingId} />}
+
+      {isPlayer && (def.role === 'research' || def.role === 'marketing') && (
+        <FocusEditor buildingId={buildingId} />
+      )}
 
       {isPlayer && def.role === 'outlet' && (
         <div className="pricing">
@@ -490,6 +523,80 @@ function ShelfEditor({ buildingId }: { buildingId: string }): ReactElement | nul
   );
 }
 
+/**
+ * Odak düzenleyici — Ar-Ge merkezi ve pazarlama ofisi hangi kategoriye
+ * çalışıyor.
+ *
+ * Bina tanımındaki `category` bu iki rol için anlamsız; asıl karar burada.
+ * Her kategorinin yanında o kategorideki mağaza sayın yazıyor, çünkü
+ * kolun faydası mağaza sayınla çarpılıyor — karar verirken bakılacak tek
+ * sayı o. Sıfır mağazalı bir kategoriye atamak parayı boşa harcamaktır ve
+ * arayüz bunu engellemek yerine SÖYLÜYOR.
+ *
+ * Kategori değiştirmek bedava değil: Ar-Ge primi eski kategoride tavansız
+ * kalıp erimeye başlar. Ayrıca bir ceza yazılmadı, `runResearchTick` iki
+ * yönlü çalıştığı için kendiliğinden oluyor.
+ */
+function FocusEditor({ buildingId }: { buildingId: string }): ReactElement | null {
+  const { run, toast } = useGame();
+  const state = useGameState();
+
+  const building = state.buildings[buildingId];
+  const def = building ? BUILDING_BY_ID[building.defId] : undefined;
+  if (!building || !def) return null;
+
+  const outletCounts = new Map<string, number>();
+  for (const other of Object.values(state.buildings)) {
+    if (other.companyId !== building.companyId) continue;
+    const otherDef = BUILDING_BY_ID[other.defId];
+    if (otherDef?.role !== 'outlet') continue;
+    outletCounts.set(otherDef.category, (outletCounts.get(otherDef.category) ?? 0) + 1);
+  }
+
+  const arm = def.role === 'research' ? 'kalite' : 'marka';
+
+  return (
+    <div className="shelf">
+      <div className="shelf-head">
+        <span>Odak</span>
+        <span className="muted">
+          {building.focus ? CATEGORIES[building.focus].name : 'atanmamış'} · {arm} kolu
+        </span>
+      </div>
+      <ul className="shelf-list">
+        {CONSUMER_CATEGORIES.map((categoryId) => {
+          const on = building.focus === categoryId;
+          const outlets = outletCounts.get(categoryId) ?? 0;
+          return (
+            <li key={categoryId}>
+              <button
+                type="button"
+                className={on ? 'shelf-chip on' : 'shelf-chip'}
+                onClick={() => {
+                  if (on) return;
+                  if (run({ type: 'SET_FOCUS', buildingId, category: categoryId })) {
+                    toast(`${def.name} artık ${CATEGORIES[categoryId].name} kategorisine çalışıyor.`, 'info');
+                  }
+                }}
+                aria-pressed={on}
+              >
+                <span className="shelf-dot" style={{ background: CATEGORIES[categoryId].color }} />
+                <span className="shelf-name">{CATEGORIES[categoryId].name}</span>
+                <span className="shelf-share">{outlets} mağaza</span>
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+      <p className="muted">
+        {(outletCounts.get(building.focus ?? '') ?? 0) === 0
+          ? 'Bu kategoride hiç mağazan yok — kol boşa çalışıyor. Mağazanın olduğu bir kategoriye ata.'
+          : 'Kolun faydası mağaza sayınla çarpılır. Kategori değiştirirsen eski kategorideki birikim erimeye başlar.'}
+      </p>
+    </div>
+  );
+}
+
 function LedgerRow({ label, value, strong }: { label: string; value: number; strong?: boolean }): ReactElement {
   return (
     <div className={`ledgerrow${strong ? ' strong' : ''}`}>
@@ -516,6 +623,8 @@ export function ModalHost(): ReactElement | null {
 
   const titles: Record<string, string> = {
     chain: 'Tedarik Zinciri',
+    rivalry: 'Rekabet',
+    auction: 'Parsel İhalesi',
     company: 'Şirket',
     rivals: 'Rakipler',
     saves: 'Kayıtlar',
@@ -533,6 +642,8 @@ export function ModalHost(): ReactElement | null {
         </header>
         <div className="modal-body">
           {view.openPanel === 'chain' && <ChainPanel />}
+          {view.openPanel === 'rivalry' && <CompetitionPanel />}
+          {view.openPanel === 'auction' && <AuctionPanel />}
           {view.openPanel === 'company' && <CompanyPanel />}
           {view.openPanel === 'rivals' && <RivalsPanel />}
           {view.openPanel === 'saves' && <SavePanel />}

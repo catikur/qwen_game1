@@ -4,6 +4,7 @@ export * from './worldgen';
 export * from './actions';
 export * from './selectors';
 export * from './chain';
+export * from './competition';
 export * from './routes';
 export * from './news';
 export * from './engine';
@@ -19,6 +20,7 @@ export {
   MARKETING_CAP,
   RESEARCH_CAP,
 } from './systems/focus';
+export { auctionHint, minimumBid, valuationFor } from './systems/auction';
 export { collectEventModifiers } from './systems/events';
 export type { EventModifiers } from './systems/events';
 export {

@@ -1352,3 +1352,264 @@ button.icon {
 .shelf-chip.on .shelf-share {
   color: var(--accent);
 }
+
+/* ---------------------------------------------------------- rekabet kartı */
+/*
+ * Zincir kartıyla aynı dil: aynı kenarlık, aynı nokta, aynı hamle bloğu.
+ * İki panel aynı oyunun iki yüzü olduğu için görsel olarak da kardeş
+ * durmaları gerekiyor.
+ */
+
+.rivalry {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.rival-card {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 14px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.rival-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.rival-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 650;
+  font-size: 15px;
+}
+
+.rival-meta {
+  font-size: 12.5px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/*
+ * Kanal satırı. Kartın taşıdığı tek zor fikir burada: kolun karşılığı
+ * pazarın durumuna göre fiyat ya da pay oluyor. Renk tek başına anlam
+ * taşımıyor — cümlenin kendisi zaten yazıyor.
+ */
+.rival-channel {
+  margin: 0 0 12px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  line-height: 1.45;
+  border: 1px solid var(--line);
+}
+
+.rival-channel.channel-price {
+  background: rgba(224, 180, 92, 0.09);
+  border-color: rgba(224, 180, 92, 0.32);
+}
+
+.rival-channel.channel-share {
+  background: rgba(127, 212, 255, 0.08);
+  border-color: rgba(127, 212, 255, 0.28);
+}
+
+.rival-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+  margin-bottom: 12px;
+}
+
+.rival-table th,
+.rival-table td {
+  text-align: right;
+  padding: 5px 8px;
+  border-bottom: 1px solid var(--line);
+}
+
+.rival-table thead th {
+  color: var(--muted);
+  font-weight: 500;
+  font-size: 11.5px;
+}
+
+.rival-table tbody th {
+  text-align: left;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.rival-table tbody tr:last-child th,
+.rival-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.rival-arms {
+  display: flex;
+  gap: 10px;
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+  flex-wrap: wrap;
+}
+
+.rival-arms > li {
+  flex: 1 1 200px;
+  min-width: 0;
+}
+
+.rival-arm {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 9px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.015);
+}
+
+.rival-arm-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12.5px;
+}
+
+.rival-arm-value {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/*
+ * İki katmanlı çubuk: koyu olan mevcut binaların TAVANI, açık olan
+ * bugün ulaşılmış DEĞER. Aradaki boşluk "hâlâ ilerliyor" demek —
+ * Ar-Ge'nin yavaşlığı böylece bir sayı değil, bir görüntü oluyor.
+ */
+.rival-bar {
+  position: relative;
+  display: block;
+  height: 5px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.07);
+  overflow: hidden;
+}
+
+.rival-bar-ceiling,
+.rival-bar-value {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 3px;
+}
+
+.rival-bar-ceiling {
+  background: rgba(127, 212, 255, 0.22);
+}
+
+.arm-research .rival-bar-value {
+  background: #5b7fb0;
+}
+
+.arm-marketing .rival-bar-value {
+  background: #a86fb0;
+}
+
+.rival-arm-detail {
+  font-size: 11.5px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+/*
+ * Kartın tablosunun söyleyemediği şeyi söyleyen satır. Yalnızca gerçekten
+ * gerektiğinde çiziliyor; her karta iliştirilen bir "ipucu" kutusu üçüncü
+ * karttan sonra okunmaz hale gelirdi.
+ */
+.rival-note {
+  margin: 0 0 12px;
+  padding: 8px 10px;
+  border-left: 2px solid var(--line);
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+/* -------------------------------------------------------------- ihale */
+
+.auction-chip {
+  cursor: pointer;
+  border: 1px solid rgba(224, 180, 92, 0.4);
+  background: rgba(224, 180, 92, 0.12);
+  color: inherit;
+  font: inherit;
+}
+
+.auction-chip:hover {
+  border-color: rgba(224, 180, 92, 0.7);
+}
+
+/* Öndeyken çip yeşile döner — panele girmeden durum okunabilsin. */
+.auction-chip.leading {
+  border-color: rgba(59, 165, 93, 0.5);
+  background: rgba(59, 165, 93, 0.14);
+}
+
+.auction {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.auction-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.auction-place {
+  font-weight: 650;
+  font-size: 15px;
+}
+
+.auction-state {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
+.auction-state.pos {
+  border-color: rgba(59, 165, 93, 0.4);
+  background: rgba(59, 165, 93, 0.08);
+}
+
+.auction-actions {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+
+.auction-custom {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+}
+
+.auction-custom input {
+  width: 120px;
+  font-variant-numeric: tabular-nums;
+}
