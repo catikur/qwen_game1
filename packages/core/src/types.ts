@@ -10,7 +10,7 @@ import type { RngState } from './rng';
  * state'te sadece kimlik ve sayı taşınır.
  */
 
-export const SCHEMA_VERSION = 5;
+export const SCHEMA_VERSION = 6;
 
 /**
  * Bir karenin şehirdeki rolü.
@@ -145,6 +145,15 @@ export interface CompanyState {
    * birebir aynı kalır.
    */
   research: Record<CategoryId, number>;
+  /**
+   * Şirket kimliği → elindeki hisse adedi (toplam 10.000).
+   *
+   * Kendi hisseleri burada TUTULMAZ; serbest dolaşım
+   * `10.000 − başkalarının elindeki` olarak türetilir. Hiç hisse
+   * almamış bir şirkette bu sözlük boştur ve net değer formülü Tur 3'teki
+   * haline birebir indirgenir.
+   */
+  shares: Record<string, number>;
   netWorth: number;
   /** Kategori bazlı şehir geneli pazar payı 0..1. */
   marketShare: Record<CategoryId, number>;
@@ -295,6 +304,10 @@ export type GameCommand =
   | { type: 'SET_FOCUS'; buildingId: string; category: CategoryId }
   /** Açık ihaleye teklif verir. */
   | { type: 'PLACE_BID'; amount: number }
+  /** Bir rakibin hisselerini alır. */
+  | { type: 'BUY_SHARES'; companyId: string; count: number }
+  /** Elindeki hisseleri satar. */
+  | { type: 'SELL_SHARES'; companyId: string; count: number }
   | { type: 'RENAME_COMPANY'; name: string }
   | { type: 'SET_FLAG'; flag: keyof FeatureFlags; value: boolean };
 

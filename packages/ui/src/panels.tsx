@@ -27,6 +27,7 @@ import type { SaveMeta } from '@capital/persistence';
 import { ChainPanel } from './ChainPanel';
 import { CompetitionPanel } from './CompetitionPanel';
 import { AuctionPanel } from './AuctionPanel';
+import { MarketPanel } from './MarketPanel';
 import { useGame, useGameState } from './useGame';
 
 /* ------------------------------------------------------------------ yapı */
@@ -625,6 +626,7 @@ export function ModalHost(): ReactElement | null {
     chain: 'Tedarik Zinciri',
     rivalry: 'Rekabet',
     auction: 'Parsel İhalesi',
+    bourse: 'Borsa',
     company: 'Şirket',
     rivals: 'Rakipler',
     saves: 'Kayıtlar',
@@ -644,6 +646,7 @@ export function ModalHost(): ReactElement | null {
           {view.openPanel === 'chain' && <ChainPanel />}
           {view.openPanel === 'rivalry' && <CompetitionPanel />}
           {view.openPanel === 'auction' && <AuctionPanel />}
+          {view.openPanel === 'bourse' && <MarketPanel />}
           {view.openPanel === 'company' && <CompanyPanel />}
           {view.openPanel === 'rivals' && <RivalsPanel />}
           {view.openPanel === 'saves' && <SavePanel />}

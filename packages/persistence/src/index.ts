@@ -163,6 +163,22 @@ const MIGRATIONS: Record<number, (raw: Record<string, unknown>) => Record<string
     if (flags && flags['landAuctions'] === undefined) flags['landAuctions'] = true;
     return raw;
   },
+
+  /**
+   * v5 → v6: borsa eklendi.
+   *
+   * Eski kayıtta hisse portföyü olamaz; boş sözlükle başlıyorlar. Portföy
+   * değeri net değere TOPLAMSAL girdiği ve boşken sıfır olduğu için eski
+   * kaydın ekonomisi birebir aynı kalıyor — v3 → v4 göçündeki Ar-Ge primi
+   * için kurduğumuz mantığın aynısı.
+   */
+  5: (raw) => {
+    const companies = raw['companies'] as Record<string, Record<string, unknown>> | undefined;
+    if (companies) {
+      for (const company of Object.values(companies)) company['shares'] = {};
+    }
+    return raw;
+  },
 };
 
 /**

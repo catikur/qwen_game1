@@ -36,13 +36,21 @@ import {
   researchCeiling,
   routeSignature,
   shelfReach,
+  bookValue,
+  confidence,
+  freeFloat,
+  marketCap,
+  portfolioValue,
+  sharePrice,
   supplyRoutes,
   tilePrice,
   valuationFor,
+  TOTAL_SHARES,
   MARKETING_CAP,
   RESEARCH_CAP,
 } from '../src/index';
 import { build, buyTile } from '../src/actions';
+import { buyShares } from '../src/systems/equity';
 import type { GameState } from '../src/types';
 
 /**
@@ -1853,6 +1861,178 @@ console.log('\n=== Parsel ihalesi ===\n');
 /** Sonsuz geri ödemeyi okunur yazar. */
 function fmtDays(days: number): string {
   return Number.isFinite(days) ? `${Math.round(days)} gün` : 'hiç dönmüyor';
+}
+
+// ================================================================ Borsa
+//
+// Turun vaadi: rakibini pazarda değil SAHİPLİKTE yenmek. Sorulan şeyler:
+// değerleme tutarlı mı, para yaratılıyor mu, devralma kaçak veriyor mu,
+// ve hisse almayan oyuncunun ekonomisi bozuluyor mu.
+
+console.log('\n=== Borsa ===\n');
+
+// ---- 1. Denge kimliği: hisse almayanın ekonomisi değişmiyor ----
+{
+  const engine = new GameEngine(createNewGame({ seed: 12, companyName: 'Borsa AŞ' }));
+  const state = engine.getState();
+  getPlayer(state).cash = 40_000_000;
+  for (let day = 1; day <= 300; day++) {
+    if (day % 5 === 0) playerStrategy(engine);
+    engine.runDay();
+  }
+
+  let maxPortfolio = 0;
+  for (const company of Object.values(state.companies)) {
+    maxPortfolio = Math.max(maxPortfolio, portfolioValue(state, company.id));
+  }
+  expect('kimse hisse almadıysa portföy değeri tam sıfır', maxPortfolio === 0, `${maxPortfolio}`);
+
+  // Değerleme tutarlılığı: piyasa değeri = defter × güven.
+  const player = getPlayer(state);
+  const cap = marketCap(state, player.id);
+  const expected = Math.max(0, bookValue(state, player.id)) * confidence(state, player.id);
+  expect('piyasa değeri = defter × güven', Math.abs(cap - expected) < 1, formatMoney(cap));
+  expect('hisse fiyatı piyasa değerinin 1/10.000\'i',
+    Math.abs(sharePrice(state, player.id) * TOTAL_SHARES - cap) < 1,
+    `${sharePrice(state, player.id).toFixed(2)} ₺`);
+  expect('serbest dolaşım başlangıçta tam', freeFloat(state, NPC_PROFILES[0]!.id) === TOTAL_SHARES,
+    `${freeFloat(state, NPC_PROFILES[0]!.id)} hisse`);
+
+  // Güvenin TEK işi şirketleri birbirinden ayırmak. İlk kalibrasyonda
+  // referans getiri çok düşüktü ve dört rakipten üçü tavana yapışıyordu —
+  // ekranda hepsi aynı görünüyordu, yani sinyal ölüydü.
+  const trusts = Object.values(state.companies).map((c) => confidence(state, c.id));
+  const spread = Math.max(...trusts) - Math.min(...trusts);
+  console.log(`  güven aralığı: ${trusts.map((t) => t.toFixed(2)).join(' · ')}`);
+  expect('güven şirketleri ayırıyor', spread > 0.1, `yayılım ${spread.toFixed(2)}`);
+
+  // Zarar eden şirket defter değerinin ALTINDA işlem görmeli.
+  const sick = state.companies[NPC_PROFILES[1]!.id]!;
+  const healthy = confidence(state, sick.id);
+  sick.today.profit = -Math.abs(bookValue(state, sick.id)) * 0.01;
+  const ill = confidence(state, sick.id);
+  expect('zarar eden şirket iskontolu işlem görüyor', ill < 1 && ill < healthy,
+    `${healthy.toFixed(2)} → ${ill.toFixed(2)}`);
+}
+
+// ---- 2. Alım-satım ve temettü ----
+{
+  const engine = new GameEngine(createNewGame({ seed: 12, companyName: 'Borsa AŞ' }));
+  const state = engine.getState();
+  const player = getPlayer(state);
+  player.cash = 60_000_000;
+  const targetId = NPC_PROFILES[0]!.id;
+  for (let day = 1; day <= 200; day++) {
+    if (day % 5 === 0) playerStrategy(engine);
+    engine.runDay();
+  }
+
+  const price = sharePrice(state, targetId);
+  const cashBefore = player.cash;
+  const buy = engine.dispatch({ type: 'BUY_SHARES', companyId: targetId, count: 1_000 });
+  expect('hisse alınabiliyor', buy.ok, buy.reason ?? `${Math.round(price)} ₺/hisse`);
+  expect('nakit doğru düşüyor', Math.abs(cashBefore - player.cash - price * 1_000) < 1,
+    formatMoney(cashBefore - player.cash));
+  expect('serbest dolaşım azalıyor', freeFloat(state, targetId) === TOTAL_SHARES - 1_000,
+    `${freeFloat(state, targetId)} hisse`);
+
+  const own = engine.dispatch({ type: 'BUY_SHARES', companyId: player.id, count: 10 });
+  expect('kendi hisseni alamıyorsun', !own.ok, own.reason ?? '');
+  const tooMany = engine.dispatch({ type: 'SELL_SHARES', companyId: targetId, count: 5_000 });
+  expect('elinde olmayanı satamıyorsun', !tooMany.ok, tooMany.reason ?? '');
+
+  // Temettü: para yaratılmıyor, el değiştiriyor.
+  const totalBefore = Object.values(state.companies).reduce((sum, c) => sum + c.cash, 0);
+  const playerBefore = player.cash;
+  const rival = state.companies[targetId]!;
+  const rivalBefore = rival.cash;
+  engine.runDay();
+  const totalAfter = Object.values(state.companies).reduce((sum, c) => sum + c.cash, 0);
+  const dayProfit = Object.values(state.companies).reduce((sum, c) => sum + c.today.profit, 0);
+
+  console.log(
+    `  ${Math.round(price)} ₺/hisse · 1.000 hisse = ${formatMoney(price * 1000)} · ` +
+      `rakip günlük kâr ${formatMoney(rival.today.profit)}`,
+  );
+  expect('temettü para yaratmıyor', Math.abs(totalAfter - totalBefore - dayProfit) < 1,
+    `${Math.round(totalAfter - totalBefore - dayProfit)} ₺ sapma`);
+  expect('temettü hissedara ödeniyor',
+    rival.today.profit <= 0 || player.cash - playerBefore > rival.today.profit * 0.001,
+    formatMoney(player.cash - playerBefore),
+  );
+  void rivalBefore;
+}
+
+// ---- 3. Devralma ----
+{
+  const engine = new GameEngine(createNewGame({ seed: 12, companyName: 'Borsa AŞ' }));
+  const state = engine.getState();
+  const player = getPlayer(state);
+  player.cash = 400_000_000;
+  const targetId = NPC_PROFILES[0]!.id;
+  for (let day = 1; day <= 250; day++) {
+    if (day % 5 === 0) playerStrategy(engine);
+    engine.runDay();
+  }
+
+  const targetName = state.companies[targetId]!.name;
+  const targetBuildings = Object.values(state.buildings).filter((b) => b.companyId === targetId).length;
+  const targetTiles = state.map.tiles.filter((t) => t.ownerId === targetId).length;
+  const price = sharePrice(state, targetId);
+  const ownBefore = Object.values(state.buildings).filter((b) => b.companyId === player.id).length;
+
+  // Azınlık hissedar kur: ikinci bir rakip de biraz alsın.
+  const minorityId = NPC_PROFILES[1]!.id;
+  const minority = state.companies[minorityId]!;
+  minority.cash = 50_000_000;
+  buyShares(state, minorityId, targetId, 500);
+  const minorityCashBefore = minority.cash;
+
+  const cost = price * 5_100;
+  const bought = engine.dispatch({ type: 'BUY_SHARES', companyId: targetId, count: 5_100 });
+  expect('kontrol payı satın alınabiliyor', bought.ok, bought.reason ?? formatMoney(cost));
+  console.log(`  ${targetName} devralma maliyeti: ${formatMoney(cost)} (%51 · ${targetBuildings} bina)`);
+
+  engine.runDay();
+
+  expect('devralınan şirket oyundan çıkıyor', state.companies[targetId] === undefined, targetName);
+  const ownAfter = Object.values(state.buildings).filter((b) => b.companyId === player.id).length;
+  expect('binalar devralana geçiyor', ownAfter === ownBefore + targetBuildings,
+    `${ownBefore} → ${ownAfter} (+${targetBuildings})`);
+  expect('devralınan şirkete ait bina kalmıyor',
+    Object.values(state.buildings).every((b) => b.companyId !== targetId), 'temiz');
+  expect('parseller devralana geçiyor',
+    state.map.tiles.filter((t) => t.ownerId === targetId).length === 0,
+    `${targetTiles} parsel devredildi`);
+  expect('azınlık hissedar nakde çevrildi', minority.cash > minorityCashBefore,
+    formatMoney(minority.cash - minorityCashBefore));
+  expect('kimsenin elinde ölü şirketin hissesi kalmıyor',
+    Object.values(state.companies).every((c) => (c.shares[targetId] ?? 0) === 0), 'temiz');
+  expect('devralma haberi düşüyor',
+    state.news.some((n) => n.title.includes('devraldı')),
+    state.news.find((n) => n.title.includes('devraldı'))?.title ?? '—');
+}
+
+// ---- 4. Devralma bir KAÇAK değil: ucuza şirket alınamıyor ----
+{
+  const engine = new GameEngine(createNewGame({ seed: 33, companyName: 'Borsa AŞ' }));
+  const state = engine.getState();
+  getPlayer(state).cash = 400_000_000;
+  for (let day = 1; day <= 250; day++) {
+    if (day % 5 === 0) playerStrategy(engine);
+    engine.runDay();
+  }
+
+  const targetId = NPC_PROFILES[0]!.id;
+  const target = state.companies[targetId]!;
+  const cost = sharePrice(state, targetId) * TOTAL_SHARES * 0.51;
+  const ratio = cost / Math.max(1, target.netWorth);
+  console.log(
+    `  %51 maliyeti ${formatMoney(cost)} · hedefin net değeri ${formatMoney(target.netWorth)} · oran ${ratio.toFixed(2)}`,
+  );
+  // Tasarım hedefi: net değerin %50–90'ı (güvene göre). Bunun altına
+  // inerse şirket toplamak bedava para basmak olurdu.
+  expect('devralma bedavaya gelmiyor', ratio > 0.35, `oran ${ratio.toFixed(2)}`);
 }
 
 console.log(`\n=== ${failures === 0 ? 'TÜMÜ GEÇTİ' : `${failures} KONTROL KALDI`} ===`);

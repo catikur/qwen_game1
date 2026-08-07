@@ -744,6 +744,80 @@ const findTile = (page, kind) =>
     await page.waitForTimeout(200);
   }
 
+  // ---------- Borsa ----------
+  // Turun vaadi: rakibini pazarda değil sahiplikte yenmek. Burada
+  // bakılan şey oyuncunun gerçekten hisse alabilmesi ve devralmanın
+  // haritada karşılık bulması.
+  section('Borsa');
+
+  await page.evaluate(() => {
+    const s = window.__capital.getState();
+    s.companies[s.playerCompanyId].cash = 500_000_000;
+    s.companies[s.playerCompanyId].netWorth = 500_000_000;
+    window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+    for (let i = 0; i < 120; i++) window.__capital.engine.runDay();
+  });
+  await page.waitForTimeout(500);
+
+  await page.locator('.topbar-actions button', { hasText: 'Borsa' }).click();
+  await page.waitForTimeout(400);
+  check('Borsa paneli açılıyor', (await page.locator('.bourse').count()) === 1);
+
+  const listings = await page.locator('.bourse-row').count();
+  check('Rakipler listeleniyor', listings >= 3, `${listings} şirket`);
+
+  const trust = await page.locator('.bourse-trust').first().textContent();
+  check('Hisse fiyatının yanında güven yazıyor', /primli|iskontolu/.test(trust || ''), (trust || '').trim());
+
+  const stakeText = await page.locator('.bourse-stake-text').first().textContent();
+  check('Kontrole ne kadar kaldığı yazıyor', /kontrol için/.test(stakeText || ''),
+    (stakeText || '').trim().slice(0, 60));
+
+  const before = await page.evaluate(() => {
+    const s = window.__capital.getState();
+    const target = Object.values(s.companies).find((c) => c.id !== s.playerCompanyId);
+    return { id: target.id, held: s.companies[s.playerCompanyId].shares[target.id] || 0 };
+  });
+  await page.locator('.bourse-row').first().locator('button', { hasText: '100 al' }).click();
+  await page.waitForTimeout(400);
+  const after = await page.evaluate((id) => {
+    const s = window.__capital.getState();
+    return s.companies[s.playerCompanyId].shares[id] || 0;
+  }, before.id);
+  check('Hisse alınabiliyor', after > before.held, `${before.held} → ${after} hisse`);
+
+  // Devralma: haritada gerçekten karşılığı var mı?
+  const takeover = await page.evaluate(() => {
+    const { engine, getState } = window.__capital;
+    const s = getState();
+    const rows = Object.values(s.companies).filter((c) => c.id !== s.playerCompanyId);
+    const target = rows[0];
+    const mine = Object.values(s.buildings).filter((b) => b.companyId === s.playerCompanyId).length;
+    const theirs = Object.values(s.buildings).filter((b) => b.companyId === target.id).length;
+    engine.dispatch({ type: 'BUY_SHARES', companyId: target.id, count: 5100 });
+    engine.runDay();
+    return {
+      name: target.name,
+      gone: getState().companies[target.id] === undefined,
+      mine,
+      theirs,
+      after: Object.values(getState().buildings).filter((b) => b.companyId === getState().playerCompanyId).length,
+    };
+  });
+  check('Devralınan şirket oyundan çıkıyor', takeover.gone, takeover.name);
+  check('Devralınan binalar haritada el değiştiriyor',
+    takeover.after === takeover.mine + takeover.theirs,
+    `${takeover.mine} → ${takeover.after} (+${takeover.theirs})`);
+
+  await page.waitForTimeout(400);
+  const remaining = await page.locator('.bourse-row').count();
+  check('Devralınan şirket listeden düşüyor', remaining === listings - 1,
+    `${listings} → ${remaining}`);
+
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(200);
+  await page.evaluate(() => window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 1 }));
+
   // ---------- Kayıt ----------
   section('Kayıt sistemi');
   await page.locator('.topbar-actions button', { hasText: 'Kayıt' }).click();

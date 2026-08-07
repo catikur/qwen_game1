@@ -6,6 +6,7 @@ import { resetDailyLedgers, runProductionTick, runSpotPriceTick } from './system
 import { recomputeNetWorth, runLandValueTick, runPopulationTick } from './systems/city';
 import { collectEventModifiers, runEventTick } from './systems/events';
 import { placeBid, runAuctionTick } from './systems/auction';
+import { buyShares, runDividendTick, runTakeoverTick, sellShares } from './systems/equity';
 import { runResearchTick } from './systems/focus';
 import { runNpcTick } from './systems/npc';
 import { SPEED_MS } from './types';
@@ -165,6 +166,12 @@ export class GameEngine {
       case 'PLACE_BID':
         return placeBid(state, playerId, command.amount);
 
+      case 'BUY_SHARES':
+        return buyShares(state, playerId, command.companyId, command.count);
+
+      case 'SELL_SHARES':
+        return sellShares(state, playerId, command.companyId, command.count);
+
       case 'RENAME_COMPANY': {
         const name = command.name.trim();
         if (!name) return { ok: false, reason: 'Şirket adı boş olamaz.' };
@@ -235,6 +242,12 @@ export class GameEngine {
     // vermesin, nakit iki kez harcanmış gibi görünmesin.
     runAuctionTick(state);
 
+    // Temettü kredi kapatmadan ÖNCE: hissedarın parası, borcunu
+    // kapatmak için o gün elinde olsun.
+    runDividendTick(state);
+    // Devralma temettüden SONRA: devralınan şirket son gününün payını
+    // dağıtmış olsun, hissedar ortada kalmasın.
+    runTakeoverTick(state, (title, body) => pushNews(state, 'rival', title, body));
     this.settleCredit();
     recomputeNetWorth(state);
     this.checkMilestones();

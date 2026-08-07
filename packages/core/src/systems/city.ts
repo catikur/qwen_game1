@@ -4,6 +4,7 @@ import {
   STRUCTURE_BY_ID,
   getCeoModifiers,
 } from '@capital/content';
+import { portfolioValue } from './equity';
 import type { GameState } from '../types';
 
 /** Sahip olunan arsanın satılabileceği oran (alım-satım sürtünmesi). */
@@ -158,7 +159,12 @@ export function recomputeNetWorth(state: GameState): void {
   }
 
   for (const company of Object.values(state.companies)) {
-    company.netWorth = company.cash + (assets[company.id] ?? 0) - company.debt;
+    // Portföy değeri de net değere girer: başka bir şirketin %20'sine
+    // sahipsen onun büyümesi seni de büyütür. Hiç hisse almamış şirkette
+    // `portfolioValue` sıfır döner ve formül Tur 3'teki haline birebir
+    // indirgenir — denge kimliği bu sayede korunuyor.
+    company.netWorth =
+      company.cash + (assets[company.id] ?? 0) - company.debt + portfolioValue(state, company.id);
     company.netWorthHistory.push(Math.round(company.netWorth));
     if (company.netWorthHistory.length > 120) company.netWorthHistory.shift();
   }

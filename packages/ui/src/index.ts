@@ -5,5 +5,6 @@ export { BuildPanel, Inspector, ModalHost } from './panels';
 export { ChainPanel } from './ChainPanel';
 export { CompetitionPanel } from './CompetitionPanel';
 export { AuctionChip, AuctionPanel } from './AuctionPanel';
+export { MarketPanel } from './MarketPanel';
 export { CeoPortrait } from './CeoPortrait';
 export { NewGameScreen } from './NewGame';
