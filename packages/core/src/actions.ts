@@ -2,9 +2,10 @@ import {
   BUILDING_BY_ID,
   DISTRICT_ARCHETYPES,
   STRUCTURE_BY_ID,
-  defaultGoodFor,
   getCeoModifiers,
 } from '@capital/content';
+import { defaultShelf } from './systems/demand';
+import { defaultFocus } from './systems/focus';
 import { LAND_SELL_RATIO, tilePrice } from './systems/city';
 import type { CommandResult, GameState } from './types';
 
@@ -186,9 +187,21 @@ export function build(
   company.cash -= buildCost(state, companyId, defId);
   const id = `b${state.nextId++}`;
 
-  // Outlet açılır açılmaz kategorisinin varsayılan ürününü rafa koyar;
-  // oyuncu boş bir mağazayla baş başa kalmasın.
-  const defaultGood = def.role === 'outlet' ? defaultGoodFor(def.category) : null;
+  // Outlet açılır açılmaz raflarını BÖLGEDE en çok satan ürünlerle
+  // doldurur — yuvası kaç taneyse o kadar. Tek yuvalı bakkal gerçekten
+  // seçim yapmak zorunda; üç yuvalı süpermarket kategorinin tamamını
+  // taşır. Oyuncu isterse rafı sonra değiştirir.
+  const district = state.districts[tile.districtId];
+  const stocked =
+    def.role === 'outlet' && district
+      ? defaultShelf(district.archetype, def.category, def.slots ?? 1)
+      : [];
+
+  // Ar-Ge merkezi / pazarlama ofisi kurulur kurulmaz şirketin en çok
+  // mağazası olan kategoriye atanır. Boş bir binaya bakıp "bu ne işe
+  // yarıyor" dedirtmek yerine, makul olanı yapıp oyuncunun değiştirmesine
+  // bırakıyoruz — rafta izlediğimiz yolun aynısı.
+  const focus = defaultFocus(state, companyId, defId);
 
   state.buildings[id] = {
     id,
@@ -199,7 +212,8 @@ export function build(
     priceMultiplier: 1,
     autoPrice: true,
     builtDay: state.time.day,
-    stocked: defaultGood ? [defaultGood] : [],
+    stocked,
+    focus,
     last: {
       unitsSold: 0,
       capacityUsed: 0,

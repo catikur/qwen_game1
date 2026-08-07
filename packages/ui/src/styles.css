@@ -1275,3 +1275,80 @@ button.icon {
   font-size: 12px;
   color: var(--warn);
 }
+
+/* ------------------------------------------------------------------- raf */
+
+/*
+ * Raf seçimi bir maliyet kararı değil, konum kararı: aynı kategorideki
+ * iki ürünün birim maliyeti aynıdır, ayrıştıkları yer bölge talebidir.
+ * O yüzden her çipin üstünde o bölgedeki talep payı yazıyor.
+ */
+.shelf {
+  margin-top: 12px;
+  padding-top: 11px;
+  border-top: 1px solid var(--line);
+}
+
+.shelf-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 12.5px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+.shelf-head .muted {
+  font-weight: 400;
+  font-size: 11.5px;
+}
+
+.shelf-list {
+  list-style: none;
+  margin: 0 0 8px;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.shelf-chip {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 10px;
+  font-size: 12.5px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: transparent;
+}
+
+.shelf-chip.on {
+  border-color: rgba(127, 212, 255, 0.55);
+  background: rgba(127, 212, 255, 0.1);
+}
+
+.shelf-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: none;
+  opacity: 0.5;
+}
+.shelf-chip.on .shelf-dot {
+  opacity: 1;
+}
+
+.shelf-name {
+  font-weight: 550;
+}
+
+.shelf-share {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 11.5px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.shelf-chip.on .shelf-share {
+  color: var(--accent);
+}

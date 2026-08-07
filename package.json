@@ -8,7 +8,7 @@
     "dev": "pnpm --filter @capital/web dev",
     "build": "pnpm --filter @capital/web build",
     "preview": "pnpm --filter @capital/web preview",
-    "typecheck": "tsc -b",
+    "typecheck": "tsc -p packages/content && tsc -p packages/core && tsc -p packages/persistence && tsc -p packages/render-three && tsc -p packages/ui && tsc -p apps/web",
     "test": "node --test --experimental-strip-types packages/core/test/*.test.ts"
   },
   "devDependencies": {

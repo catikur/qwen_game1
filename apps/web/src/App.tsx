@@ -1,6 +1,13 @@
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import type { ReactElement } from 'react';
-import { GameEngine, SCHEMA_VERSION, createNewGame, getPlayer } from '@capital/core';
+import {
+  GameEngine,
+  SCHEMA_VERSION,
+  createNewGame,
+  getPlayer,
+  routeSignature,
+  supplyRoutes,
+} from '@capital/core';
 import type { GameCommand } from '@capital/core';
 import { CityRenderer } from '@capital/render-three';
 import {
@@ -254,6 +261,8 @@ function GameRoot({
       renderInfo: () => rendererRef.current?.getDebugInfo() ?? null,
       schemaVersion: SCHEMA_VERSION,
       setTimeOfDay: (value: number) => rendererRef.current?.setTimeOfDay(value),
+      routeCount: () => supplyRoutes(engine.getState()).length,
+      routeSignature: () => routeSignature(supplyRoutes(engine.getState())),
     };
     return () => {
       delete globals['__capital'];

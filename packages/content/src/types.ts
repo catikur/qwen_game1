@@ -62,8 +62,21 @@ export interface GoodDef {
    * yalnızca depo menzili kısmen hafifletir.
    */
   retailCost: number;
-  /** Kategori talebinin bu ürüne düşen payı; aynı kategoride toplam 1. */
+  /** Kategori talebinin bu ürüne düşen taban payı; aynı kategoride toplam 1. */
   demandShare: number;
+  /**
+   * Yalnızca `consumer`: bölge arketipine göre talep ağırlığı.
+   *
+   * Aynı kategorideki iki ürün, denge kimliği yüzünden AYNI birim
+   * maliyete sahiptir — yani tek başına "hangisini satayım" diye bir
+   * karar doğmaz. Kararı doğuran şey bu: ekmek orta gelir mahallesinde,
+   * bisküvi turizm bölgesinde daha çok satar. Raf seçimi böylece bir
+   * KONUM kararına dönüşür.
+   *
+   * Verilmeyen arketipte 1 kabul edilir. Paylar bölge içinde
+   * normalize edilir, yani kategorinin toplam talebi değişmez.
+   */
+  archetypeWeights?: Partial<Record<DistrictArchetypeId, number>>;
   color: string;
 }
 
@@ -78,7 +91,11 @@ export type BuildingRole =
   /** Hammadde üretir; girdisi yoktur. */
   | 'extract'
   /** Hammaddeyi ara mala dönüştürür. */
-  | 'process';
+  | 'process'
+  /** Atandığı kategorideki kendi outlet'lerinin kalitesini yükseltir. */
+  | 'research'
+  /** Atandığı kategorideki marka hedefini payının üstüne çeker. */
+  | 'marketing';
 
 export interface BuildingDef {
   id: string;
@@ -107,6 +124,15 @@ export interface BuildingDef {
   outputGoodId?: string;
   /** `outlet`: rafında kaç farklı ürün taşıyabilir (varsayılan 1). */
   slots?: number;
+  /**
+   * `research` / `marketing`: atandığı kategoriye kattığı tavan.
+   *
+   * `def.category` bu binalar için ANLAMSIZDIR — hangi kategoriye
+   * çalıştığını bina örneğinin `focus` alanı söyler. Kataloğa yine de bir
+   * kategori yazıyoruz çünkü `CategoryId` zorunlu; menüde nerede
+   * görüneceğini o belirliyor.
+   */
+  focusPotency?: number;
   /**
    * Kurulabileceği district arketipleri. Verilmezse her yere kurulur.
    *

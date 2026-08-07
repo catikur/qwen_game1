@@ -1,4 +1,4 @@
-import { SCHEMA_VERSION, seedSpotPrices, zeroByGood } from '@capital/core';
+import { SCHEMA_VERSION, seedSpotPrices, zeroByCategoryRecord, zeroByGood } from '@capital/core';
 import type { GameState } from '@capital/core';
 import { BUILDING_BY_ID, GOODS, GOOD_BY_ID, defaultGoodFor } from '@capital/content';
 
@@ -120,6 +120,31 @@ const MIGRATIONS: Record<number, (raw: Record<string, unknown>) => Record<string
       consumed: zeroByGood(),
       reference: legacyReferenceVolumes(raw),
     };
+
+    return raw;
+  },
+
+  /**
+   * v3 → v4: rekabet kolları eklendi.
+   *
+   * Ar-Ge primi ve odak alanı, eski kayıtta karşılığı olmayan iki yeni
+   * alan. İkisi de SIFIRDAN başlıyor ve bu bilinçli: Ar-Ge primi
+   * toplamsal, tabanı sıfır olduğu için eski kayıt "hiç Ar-Ge yapmamış
+   * oyuncu" olarak devam ediyor ve ekonomisi birebir aynı kalıyor —
+   * v2 → v3 göçünde spot fiyatlar için kurduğumuz mantığın aynısı.
+   */
+  3: (raw) => {
+    const companies = raw['companies'] as Record<string, Record<string, unknown>> | undefined;
+    if (companies) {
+      for (const company of Object.values(companies)) {
+        company['research'] = zeroByCategoryRecord();
+      }
+    }
+
+    const buildings = raw['buildings'] as Record<string, Record<string, unknown>> | undefined;
+    if (buildings) {
+      for (const building of Object.values(buildings)) building['focus'] = null;
+    }
 
     return raw;
   },

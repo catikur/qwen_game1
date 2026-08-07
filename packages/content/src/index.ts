@@ -9,4 +9,4 @@ export * from './ceos';
 export * from './structures';
 
 /** İçerik sürümü — save migration'ında denge değişikliklerini izlemek için. */
-export const CONTENT_VERSION = 3;
+export const CONTENT_VERSION = 4;

@@ -58,3 +58,6 @@ htmlcov/
 # Vite / pnpm
 apps/*/dist/
 .pnpm-store/
+
+# TypeScript artıkları — `tsc -b` her pakete bunlardan bırakıyor
+*.tsbuildinfo

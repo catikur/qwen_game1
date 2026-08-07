@@ -207,6 +207,59 @@ export const BUILDINGS: BuildingDef[] = [
     description: 'Menzilindeki kendi mağazalarının dağıtım maliyetini düşürür.',
   },
 
+  // ---- Rekabet kolları ----
+  //
+  // İkisi de bir KATEGORİYE atanır ve o kategorideki bütün mağazalarına
+  // birden çalışır. Değerleri outlet sayınla çarpıldığı için iki dükkânlı
+  // oyuncuya tuzak, on iki dükkânlıya en iyi hamle. Aynı özellik zincirde
+  // de vardı; tutarlılık kasıtlı.
+  {
+    id: 'research_center',
+    name: 'Ar-Ge Merkezi',
+    role: 'research',
+    category: 'grocery',
+    tier: 1,
+    // Kalibre edilmiş değerler. İlk denemede (240 B ₺ / 640 ₺) dört
+    // mağazalı bir kategoride 164 günde dönüyordu — zincirin 170 günlük
+    // bandından bile hızlı. Ar-Ge zincirden YAVAŞ olmalı: getirisi kalıcı
+    // ve rakip azaldıkça büyüyor.
+    cost: 280_000,
+    upkeepPerDay: 860,
+    capacity: 0,
+    quality: 0,
+    jobs: 22,
+    radius: 0,
+    color: '#5b7fb0',
+    height: 1.6,
+    unlockNetWorth: 1_500_000,
+    description:
+      'Bir kategoriye atanır; o kategorideki bütün mağazalarının kalitesini kalıcı olarak yükseltir. Yavaş döner, rakip çok olduğunda kazandırır.',
+    focusPotency: 0.12,
+  },
+  {
+    id: 'marketing_office',
+    name: 'Pazarlama Ofisi',
+    role: 'marketing',
+    category: 'retail',
+    tier: 1,
+    // Ağırlık bilinçli olarak İŞLETME GİDERİNDE. İlk denemede
+    // (168 B ₺ / 520 ₺) 68 günde dönüyordu — en iyi mağazadan bile hızlı,
+    // yani düşünmeden kurulacak bir bina. Reklam gerçek hayatta da tek
+    // seferlik bir yatırım değil sürekli bir gider; kesersen etkisi biter.
+    cost: 190_000,
+    upkeepPerDay: 1_450,
+    capacity: 0,
+    quality: 0,
+    jobs: 16,
+    radius: 0,
+    color: '#a86fb0',
+    height: 1.3,
+    unlockNetWorth: 900_000,
+    description:
+      'Bir kategoriye atanır; markanı pazar payının hak ettiğinin üstüne çeker. Payın düşükken en çok işe yarar.',
+    focusPotency: 0.15,
+  },
+
   // ---- Zincir: hammadde (yalnızca sanayi ve liman) ----
   {
     id: 'coffee_estate',
@@ -360,6 +413,107 @@ export const BUILDINGS: BuildingDef[] = [
     unlockNetWorth: 5_000_000,
     description: 'Oyunun en pahalı halkası, en yüksek birim tasarrufu da onda.',
     outputGoodId: 'chip',
+    zones: ['industrial', 'port'],
+  },
+
+  // ---- Zincir: ikinci ürün hatları ----
+  // Bu üniteler mevcut hammaddeleri paylaşır: buğday çiftliği hem
+  // değirmeni hem nişasta tesisini, pamuk tarlası hem dokumayı hem
+  // döşemeyi, silikon ocağı hem çipi hem sensörü besler. Hammadde
+  // kademesine sahip olmak böylece iki üründe birden karşılık verir.
+  {
+    id: 'greenhouse',
+    name: 'Sera',
+    role: 'extract',
+    category: 'dining',
+    tier: 1,
+    cost: 390_000,
+    upkeepPerDay: 1_246,
+    capacity: 1_350,
+    quality: 0,
+    jobs: 55,
+    radius: 0,
+    color: '#5f8f52',
+    height: 0.35,
+    unlockNetWorth: 800_000,
+    description: 'Hazır gıda tesisinin girdisi. Sebze pazarda ucuz; kendin üretince daha da ucuz.',
+    outputGoodId: 'vegetable',
+    zones: ['industrial', 'port'],
+  },
+  {
+    id: 'starch_plant',
+    name: 'Nişasta Tesisi',
+    role: 'process',
+    category: 'grocery',
+    tier: 1,
+    cost: 221_000,
+    upkeepPerDay: 818,
+    capacity: 2_000,
+    quality: 0,
+    jobs: 36,
+    radius: 0,
+    color: '#a8a086',
+    height: 0.95,
+    unlockNetWorth: 900_000,
+    description: 'Buğdayı nişastaya çevirir — bisküvi hattının halkası. Buğday çiftliğini ikinci kez değerlendirir.',
+    outputGoodId: 'starch',
+    zones: ['industrial', 'port'],
+  },
+  {
+    id: 'meal_plant',
+    name: 'Hazır Gıda Tesisi',
+    role: 'process',
+    category: 'dining',
+    tier: 1,
+    cost: 260_000,
+    upkeepPerDay: 840,
+    capacity: 900,
+    quality: 0,
+    jobs: 43,
+    radius: 0,
+    color: '#9c6b3e',
+    height: 0.95,
+    unlockNetWorth: 600_000,
+    description: 'Sebzeyi hazır yemeğe çevirir. Sanayi ve limanda öğle yemeği talebi yüksektir.',
+    outputGoodId: 'prepared_food',
+    zones: ['industrial', 'port'],
+  },
+  {
+    id: 'upholstery_mill',
+    name: 'Döşeme Fabrikası',
+    role: 'process',
+    category: 'retail',
+    tier: 2,
+    cost: 367_000,
+    upkeepPerDay: 1_141,
+    capacity: 450,
+    quality: 0,
+    jobs: 51,
+    radius: 0,
+    color: '#7d6a8c',
+    height: 1.05,
+    unlockNetWorth: 1_900_000,
+    description: 'Pamuğu ev tekstiline çevirir. Pamuk tarlası hem giyimi hem burayı besler.',
+    outputGoodId: 'upholstery',
+    zones: ['industrial', 'port'],
+  },
+  {
+    id: 'sensor_fab',
+    name: 'Sensör Fabrikası',
+    role: 'process',
+    category: 'electronics',
+    tier: 2,
+    cost: 789_000,
+    upkeepPerDay: 3_413,
+    capacity: 160,
+    quality: 0,
+    jobs: 92,
+    radius: 0,
+    color: '#4d6a86',
+    height: 1.25,
+    unlockNetWorth: 4_500_000,
+    description: 'Silikonu sensöre çevirir — ev elektroniğinin halkası. Ocak iki fabrikayı birden besler.',
+    outputGoodId: 'sensor',
     zones: ['industrial', 'port'],
   },
 ];

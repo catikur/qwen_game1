@@ -456,6 +456,118 @@ const findTile = (page, kind) =>
 
   await page.keyboard.press('Escape');
   await page.waitForTimeout(200);
+
+  // ---------- Zincir kamyonları ----------
+  // Zincir görünür olmadan anlaşılmıyor. Burada bakılan şey kamyonların
+  // GERÇEKTEN kurulan zincire bağlı olması: tesis yoksa kamyon yok, tesis
+  // kurulunca yola çıkıyor, ve yerinde durmuyorlar.
+  section('Zincir kamyonları');
+
+  await page.evaluate(() => window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 1 }));
+  await page.waitForTimeout(600);
+
+  const fleet = await page.evaluate(() => ({
+    trucks: window.__capital.renderInfo().truckCount,
+    legs: window.__capital.routeCount(),
+  }));
+  check('Kurulan zincir için kamyon yola çıkıyor', fleet.trucks > 0,
+    `${fleet.trucks} kamyon / ${fleet.legs} bacak`);
+  check('Kamyon sayısı bacak sayısını aşmıyor', fleet.trucks <= fleet.legs * 3,
+    `${fleet.trucks} kamyon / ${fleet.legs} bacak`);
+
+  const moved = await page.evaluate(async () => {
+    const a = window.__capital.renderInfo().truckPositionSum;
+    await new Promise((r) => setTimeout(r, 900));
+    return { a, b: window.__capital.renderInfo().truckPositionSum };
+  });
+  check('Kamyonlar rotada ilerliyor', Math.abs(moved.b - moved.a) > 0.05,
+    `ilerleme ${(moved.b - moved.a).toFixed(2)}`);
+
+  // Kamyon BİLGİ taşıyor, manzara değil: lensin altında da görünmeye
+  // devam ediyor. Fon araçları ise susuyor.
+  const trucksUnderLens = await readAfterLens('opportunity');
+  check('Veri lensinde fon araçları susuyor', trucksUnderLens.carsVisible === false);
+  check('Veri lensinde kamyonlar kalıyor', trucksUnderLens.truckCount > 0,
+    `${trucksUnderLens.truckCount} kamyon`);
+  await page.screenshot({ path: `${OUT}/trucks-lens.png` });
+
+  const backToCity = await readAfterLens('none');
+  check('Şehir görünümünde fon araçları geri geliyor', backToCity.carsVisible === true);
+  await page.screenshot({ path: `${OUT}/trucks-city.png` });
+
+  // Rota listesi değişmediği sürece kamyonlar kurulmamalı — yoksa her gün
+  // başa ışınlanırlar ve akış yerine titreşim görürsün.
+  const stable = await page.evaluate(async () => {
+    const before = window.__capital.routeSignature();
+    window.__capital.engine.runDay();
+    window.__capital.engine.runDay();
+    await new Promise((r) => setTimeout(r, 300));
+    return { before, after: window.__capital.routeSignature() };
+  });
+  check('Bina değişmedikçe rota imzası sabit', stable.before === stable.after,
+    `${stable.after.split('|').length} bacak`);
+
+  // ---------- Raf seçimi ----------
+  // Aynı kategorideki iki ürünün birim maliyeti aynıdır; karar bölgesel
+  // talep farkından doğar. Burada bakılan şey oyuncunun o kararı gerçekten
+  // verebiliyor olması.
+  section('Raf seçimi');
+
+  const shelfTile = await page.evaluate(() => {
+    const { engine, getState } = window.__capital;
+    const s = getState();
+    for (const t of s.map.tiles) {
+      if (t.kind !== 'plot' || t.ownerId || t.structureId || t.buildingId) continue;
+      if (s.districts[t.districtId].archetype !== 'mid_residential') continue;
+      if (!engine.dispatch({ type: 'BUY_TILE', tileId: t.id }).ok) continue;
+      if (engine.dispatch({ type: 'BUILD', tileId: t.id, defId: 'corner_shop' }).ok) return t.id;
+    }
+    return null;
+  });
+  check('Raf testi için bakkal kuruldu', shelfTile !== null);
+
+  if (shelfTile !== null) {
+    await page.evaluate((id) => window.__capital.selectTile(id), shelfTile);
+    await page.waitForTimeout(400);
+
+    const chips = page.locator('.shelf-chip');
+    const chipCount = await chips.count();
+    check('Raf düzenleyici çıkıyor', chipCount === 2, `${chipCount} ürün`);
+
+    const shares = await page.locator('.shelf-share').allTextContents();
+    check('Her ürünün yanında bölge talep payı yazıyor',
+      shares.length === 2 && shares.every((t) => /%\d+/.test(t)), shares.join(' · '));
+
+    const before = await page.evaluate((id) => {
+      const s = window.__capital.getState();
+      return s.buildings[s.map.tiles[id].buildingId].stocked.slice();
+    }, shelfTile);
+    check('Bakkal tek yuvalı: tek ürün taşıyor', before.length === 1, before.join(', '));
+
+    // Rafta olmayan ürüne TEK tıklama rafı değiştirmeli. Reddetmek, tek
+    // yuvalı dükkânı çıkmaza sokuyordu: tek ürünü çıkaramıyor, ikinciyi
+    // ekleyemiyordu — yani bakkalın seçimi hiç yapılamıyordu.
+    const offIndex = (await chips.nth(0).getAttribute('aria-pressed')) === 'true' ? 1 : 0;
+    await chips.nth(offIndex).click();
+    await page.waitForTimeout(400);
+    const swapped = await page.evaluate((id) => {
+      const s = window.__capital.getState();
+      return s.buildings[s.map.tiles[id].buildingId].stocked.slice();
+    }, shelfTile);
+    check('Tek tıkla raf değişiyor', swapped.length === 1 && swapped[0] !== before[0],
+      `${before[0]} → ${swapped[0]}`);
+    check('Yuva sınırı korunuyor', swapped.length === 1, `${swapped.length}/1 yuva`);
+
+    // Son ürünü çıkarmak reddedilmeli; raf boş kalamaz.
+    await chips.nth(offIndex).click();
+    await page.waitForTimeout(400);
+    const kept = await page.evaluate((id) => {
+      const s = window.__capital.getState();
+      return s.buildings[s.map.tiles[id].buildingId].stocked.slice();
+    }, shelfTile);
+    check('Son ürün raftan çıkarılamıyor', kept.length === 1, kept.join(', '));
+  }
+
   await page.evaluate(() => window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 1 }));
 
   // ---------- Kayıt ----------

@@ -1,10 +1,11 @@
-import { BUILDING_BY_ID, GOODS_BY_CATEGORY } from '@capital/content';
+import { BUILDING_BY_ID, CONSUMER_CATEGORIES, GOODS_BY_CATEGORY } from '@capital/content';
 import { build, buyTile, buyoutTile, demolish, sellTile } from './actions';
 import { pushNews } from './news';
 import { runMarketTick } from './systems/market';
 import { resetDailyLedgers, runProductionTick, runSpotPriceTick } from './systems/supply';
 import { recomputeNetWorth, runLandValueTick, runPopulationTick } from './systems/city';
 import { collectEventModifiers, runEventTick } from './systems/events';
+import { runResearchTick } from './systems/focus';
 import { runNpcTick } from './systems/npc';
 import { SPEED_MS } from './types';
 import type { CommandResult, GameCommand, GameState } from './types';
@@ -139,6 +140,27 @@ export class GameEngine {
         return { ok: true };
       }
 
+      case 'SET_FOCUS': {
+        const building = state.buildings[command.buildingId];
+        if (!building) return { ok: false, reason: 'Bina bulunamadı.' };
+        if (building.companyId !== playerId) return { ok: false, reason: 'Bu bina sizin değil.' };
+
+        const def = BUILDING_BY_ID[building.defId];
+        if (def?.role !== 'research' && def?.role !== 'marketing') {
+          return { ok: false, reason: 'Bu bina bir kategoriye atanmaz.' };
+        }
+        if (!CONSUMER_CATEGORIES.includes(command.category)) {
+          return { ok: false, reason: 'Bu kategoriye atanamaz.' };
+        }
+
+        // Atama serbestçe değişebilir ama BEDAVA DEĞİL: Ar-Ge primi
+        // eski kategoride tavansız kalıp erimeye başlar. Ceza ayrıca
+        // yazılmadı, `runResearchTick` iki yönlü çalıştığı için
+        // kendiliğinden oluyor.
+        building.focus = command.category;
+        return { ok: true };
+      }
+
       case 'RENAME_COMPANY': {
         const name = command.name.trim();
         if (!name) return { ok: false, reason: 'Şirket adı boş olamaz.' };
@@ -193,6 +215,10 @@ export class GameEngine {
 
     runEventTick(state);
     resetDailyLedgers(state);
+    // Ar-Ge primi pazardan ÖNCE ilerler: bugünkü kalite bugünkü satışa
+    // girsin. Spot fiyatın tersi (o günün sonunda çözülüyor) çünkü orada
+    // yarının fiyatı bugünkü arz fazlasından doğuyor.
+    runResearchTick(state);
     runProductionTick(state);
     runMarketTick(state);
     runSpotPriceTick(state);

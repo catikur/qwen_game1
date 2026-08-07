@@ -13,7 +13,7 @@ import {
 import type { CategoryId } from '@capital/content';
 import { createRng, nextRange, pickWeighted } from './rng';
 import { seedSpotPrices, zeroByGood } from './systems/supply';
-import { estimateBaselineDemand, zeroByCategory } from './systems/demand';
+import { estimateBaselineDemand, goodShares, zeroByCategory } from './systems/demand';
 import { SCHEMA_VERSION } from './types';
 import type { CompanyState, DistrictState, GameState, MarketState, Tile, TileKind } from './types';
 
@@ -59,6 +59,7 @@ function makeCompany(
     cash,
     debt: 0,
     brand: brandRecord(startingBrand),
+    research: brandRecord(0),
     netWorth: cash,
     marketShare: zeroByCategory(),
     today: { revenue: 0, cogs: 0, upkeep: 0, wages: 0, interest: 0, profit: 0 },
@@ -84,7 +85,10 @@ function referenceVolumes(districts: DistrictState[]): Record<string, number> {
 
     let cityDemand = 0;
     for (const district of districts) {
-      cityDemand += estimateBaselineDemand(district, good.category) * good.demandShare;
+      const share =
+        goodShares(district.archetype, good.category).find((entry) => entry.good.id === good.id)
+          ?.share ?? good.demandShare;
+      cityDemand += estimateBaselineDemand(district, good.category) * share;
     }
 
     // Tüketici ürününün talebi zincirin her kademesine 1:1 iner.
