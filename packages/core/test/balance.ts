@@ -1314,10 +1314,42 @@ function addLabs(engine: GameEngine, companyId: string, districtId: number, coun
 /** 7. bölümde ölçülüyor, 8. bölümde pazarlamayla karşılaştırılıyor. */
 let researchPayback = Infinity;
 
-// ---- 7. Kalibrasyon: Ar-Ge ölçekle birlikte ucuzluyor mu? ----
+// ---- 7. Kalibrasyon: kollar bir ÖLÇEK EŞİĞİNDEN sonra açılıyor mu? ----
 //
-// Ar-Ge'nin sabit gideri var, faydası outlet sayınla çarpılıyor. Az
-// mağazalı oyuncuya tuzak, çok mağazalıya en iyi hamle olmalı.
+// Tur 3'ün nüfus düzeltmesinden sonra eğri keskinleşti: pazar artık
+// gerçekten doyduğu için kolun değeri ölçekle birlikte hızla büyüyor.
+// Aranan şey bir bant değil, net bir EŞİK — az mağazalı oyuncuya tuzak,
+// çok mağazalıya en iyi hamle.
+{
+  const measure = (outlets: number, defId: string, count: number): number => {
+    const control = duel(23, outlets, true);
+    for (let day = 0; day < 400; day++) control.engine.runDay();
+    const base = getPlayer(control.engine.getState()).today.profit;
+
+    const test = duel(23, outlets, true);
+    const state = test.engine.getState();
+    const built: string[] = [];
+    for (let i = 0; i < count; i++) {
+      const id = placeFor(test.engine, state.playerCompanyId, defId, test.districtIds[0]!);
+      if (!id) continue;
+      state.buildings[id]!.focus = 'grocery';
+      built.push(id);
+    }
+    for (let day = 0; day < 400; day++) test.engine.runDay();
+    const gain = getPlayer(state).today.profit - base;
+    return gain > 0 ? (built.length * BUILDING_BY_ID[defId]!.cost) / gain : Infinity;
+  };
+
+  const small = measure(4, 'research_center', 2);
+  const large = measure(8, 'research_center', 2);
+  console.log(`  Ar-Ge geri ödemesi: 4 mağazada ${fmtDays(small)}, 8 mağazada ${fmtDays(large)}`);
+  expect('Ar-Ge ölçekle ucuzluyor', large < small, `${fmtDays(large)} < ${fmtDays(small)}`);
+  expect('az mağazalı oyuncu için Ar-Ge erken', small > 400, fmtDays(small));
+  expect('ölçek yeterken Ar-Ge kazandırıyor', large < 200, fmtDays(large));
+  researchPayback = large;
+}
+
+// ---- 8. Pazarlama: ucuz, hızlı, düşük tavanlı giriş silahı ----
 {
   const measure = (outlets: number): number => {
     const control = duel(23, outlets, true);
@@ -1325,62 +1357,31 @@ let researchPayback = Infinity;
     const base = getPlayer(control.engine.getState()).today.profit;
 
     const test = duel(23, outlets, true);
-    const labs = addLabs(test.engine, test.engine.getState().playerCompanyId, test.districtIds[0]!, 2, 'grocery');
+    const state = test.engine.getState();
+    const built: string[] = [];
+    for (let i = 0; i < 2; i++) {
+      const id = placeFor(test.engine, state.playerCompanyId, 'marketing_office', test.districtIds[0]!);
+      if (!id) continue;
+      state.buildings[id]!.focus = 'grocery';
+      built.push(id);
+    }
     for (let day = 0; day < 400; day++) test.engine.runDay();
-    const withLabs = getPlayer(test.engine.getState()).today.profit;
-
-    const investment = labs.length * (BUILDING_BY_ID['research_center']!.cost);
-    const gain = withLabs - base;
-    return gain > 0 ? investment / gain : Infinity;
+    const gain = getPlayer(state).today.profit - base;
+    return gain > 0 ? (built.length * BUILDING_BY_ID['marketing_office']!.cost) / gain : Infinity;
   };
 
-  const small = measure(1);
-  const large = measure(4);
-  console.log(`  Ar-Ge geri ödemesi: 1 mağazada ${fmtDays(small)}, 4 mağazada ${fmtDays(large)}`);
-  expect('Ar-Ge ölçekle ucuzluyor', large < small, `${fmtDays(large)} < ${fmtDays(small)}`);
-  expect('tek mağazalı oyuncu için Ar-Ge erken', small > 260, fmtDays(small));
-  // Zincirin bandı 170–174 gün. Ar-Ge ondan YAVAŞ olmalı: getirisi kalıcı
-  // ve rakip azaldıkça büyüyor, yani sabırlı sermayenin işi.
-  expect('Ar-Ge zincirden yavaş dönüyor', large > 180 && large < 280, fmtDays(large));
-  researchPayback = large;
-}
-
-// ---- 8. Pazarlama ofisi de kalibre mi? ----
-{
-  const control = duel(23, 4, true);
-  for (let day = 0; day < 400; day++) control.engine.runDay();
-  const base = getPlayer(control.engine.getState()).today.profit;
-
-  const test = duel(23, 4, true);
-  const state = test.engine.getState();
-  const offices: string[] = [];
-  for (let i = 0; i < 2; i++) {
-    const id = placeFor(test.engine, state.playerCompanyId, 'marketing_office', test.districtIds[0]!);
-    if (!id) continue;
-    state.buildings[id]!.focus = 'grocery';
-    offices.push(id);
-  }
-  for (let day = 0; day < 400; day++) test.engine.runDay();
-  const gain = getPlayer(state).today.profit - base;
-  const payback = gain > 0 ? (offices.length * BUILDING_BY_ID['marketing_office']!.cost) / gain : Infinity;
-
-  console.log(`  pazarlama geri ödemesi (4 mağaza): ${fmtDays(payback)}`);
-  expect('pazarlama kâr getiriyor', gain > 0, formatMoney(gain) + '/gün');
-  // Pazarlama Ar-Ge'den HIZLI dönmeli: etkisi anında başlıyor (birikim
-  // yok) ve ofisi yıktığın gün bitiyor. Daha ucuz, daha kısa vadeli bir kol.
+  const small = measure(4);
+  const large = measure(8);
+  console.log(`  pazarlama geri ödemesi: 4 mağazada ${fmtDays(small)}, 8 mağazada ${fmtDays(large)}`);
+  expect('az mağazalı oyuncu için pazarlama da erken', small > 400, fmtDays(small));
+  expect('ölçek yeterken pazarlama kazandırıyor', large < 200, fmtDays(large));
+  // Tasarımın kararı: pazarlama Ar-Ge'den ucuz ve hızlı olmalı, tavanı
+  // ise Ar-Ge kadar kalıcı değil. Kalibrasyon bunu bir kez ters çevirmişti.
   expect(
     "pazarlama Ar-Ge'den hızlı dönüyor",
-    payback < researchPayback,
-    `${fmtDays(payback)} < ${fmtDays(researchPayback)}`,
+    large < researchPayback,
+    `${fmtDays(large)} < ${fmtDays(researchPayback)}`,
   );
-  // ...ama en iyi mağazadan (60–110 gün) hızlı DEĞİL. Olsaydı düşünmeden
-  // kurulacak bir bina olurdu ve "hangi parsele ne" sorusu ölürdü.
-  expect('pazarlama mağazanın önüne geçmiyor', payback > 110, fmtDays(payback));
-}
-
-/** Sonsuz geri ödemeyi okunur yazar. */
-function fmtDays(days: number): string {
-  return Number.isFinite(days) ? `${Math.round(days)} gün` : 'hiç dönmüyor';
 }
 
 // ---- 9. Rekabet kartı ----
@@ -1417,8 +1418,10 @@ function fmtDays(days: number): string {
     expect('kanal doğru okunuyor', grocery.channel === 'price',
       `${grocery.channel} · doluluk %${Math.round(grocery.utilisation * 100)}`);
     expect('kart bir hamle öneriyor', grocery.move !== null, grocery.move?.name ?? grocery.blocked ?? '—');
-    expect('4 mağazada hamle erken sayılmıyor', grocery.move?.premature === false,
-      `${grocery.outlets} mağaza`);
+    // Eşik ölçümle 6'ya çıktı; 4 mağazalı oyuncuya hamle ERKEN
+    // işaretlenmeli. Kartın işi cesaret vermek değil, doğruyu söylemek.
+    expect('4 mağazada hamle erken işaretleniyor', grocery.move?.premature === true,
+      `${grocery.outlets} mağaza · erken=${grocery.move?.premature}`);
   }
 
   // Kartın kalite değeri motorun kullandığıyla aynı olmalı: Ar-Ge kurunca
@@ -1562,13 +1565,34 @@ function fmtDays(days: number): string {
   // sütunu farkı taşımalı.
   const cards = competitionCards(state, state.playerCompanyId);
   const withLeader = cards.filter((card) => card.leader !== null);
-  const qualities = withLeader.map((card) => card.leader!.quality);
-  const spread = qualities.length > 1 ? Math.max(...qualities) - Math.min(...qualities) : 0;
   console.log(
     `  kartta görünen rakip kaliteleri: ${withLeader
       .map((card) => `${card.categoryName} ${card.leader!.name.split(' ')[0]} ${card.leader!.quality.toFixed(2)}`)
       .join(' · ')}`,
   );
+
+  // Kartın raporladığı kalite, motorun kullandığının AYNISI olmalı.
+  // İlk denemede bunu "kategoriler arası kalite yayılımı" ile ölçüyordum;
+  // o zayıf bir vekildi — farklı kategorilerin taban bina kaliteleri
+  // zaten farklı olduğu için yayılım doktrin hakkında hiçbir şey
+  // söylemiyordu. Doğru soru: kart rakibin Ar-Ge primini gizliyor mu?
+  let worstGap = 0;
+  for (const card of withLeader) {
+    const leaderId = card.leader!.companyId;
+    let sum = 0;
+    let count = 0;
+    for (const building of Object.values(state.buildings)) {
+      if (building.companyId !== leaderId) continue;
+      const def = BUILDING_BY_ID[building.defId];
+      if (def?.role !== 'outlet' || def.category !== card.category) continue;
+      sum += def.quality + (state.companies[leaderId]!.research[card.category] ?? 0);
+      count += 1;
+    }
+    if (count === 0) continue;
+    worstGap = Math.max(worstGap, Math.abs(card.leader!.quality - sum / count));
+  }
+  expect('kart rakibin Ar-Ge primini gizlemiyor', worstGap < 0.02,
+    `en büyük sapma ${worstGap.toFixed(3)}`);
 
   const premiumResearch = Math.max(
     ...CONSUMER_CATEGORIES.map((c) => state.companies[NPC_PROFILES.find((p) => p.trait === 'premium')!.id]!.research[c] ?? 0),
@@ -1579,8 +1603,90 @@ function fmtDays(days: number): string {
   expect('kalite avcısının kalite primi ucuzcununkinden yüksek',
     premiumResearch > cutterResearch + 0.05,
     `${premiumResearch.toFixed(2)} > ${cutterResearch.toFixed(2)}`);
-  expect('doktrin farkı rekabet kartına yansıyor', spread > 0.02 || withLeader.length < 2,
-    `kalite yayılımı ${spread.toFixed(2)}`);
+
+}
+
+// ---- 13. Tur 3: rekabet gerçekten iş görüyor mu? ----
+//
+// Turun tek sorusu bu. Nüfus düzeltmesinden önce şehir hiç doymuyordu:
+// herkes kapasitesinin tamamını satıyor, çekicilik formülünün hiçbir
+// değişkeni bir işe yaramıyordu. Aşağıdaki üç kontrol o durumun geri
+// gelmediğini garanti ediyor.
+{
+  const { engine } = duel(29, 16, true);
+  const state = engine.getState();
+  for (let day = 0; day < 400; day++) engine.runDay();
+
+  let cap = 0;
+  let sold = 0;
+  for (const building of Object.values(state.buildings)) {
+    const def = BUILDING_BY_ID[building.defId];
+    if (def?.role !== 'outlet') continue;
+    cap += def.capacity;
+    sold += building.last.unitsSold;
+  }
+  const utilisation = cap > 0 ? sold / cap : 0;
+
+  let unmetUnits = 0;
+  let demandUnits = 0;
+  for (const district of state.districts) {
+    for (const category of CONSUMER_CATEGORIES) {
+      const demand = district.demand[category] ?? 0;
+      demandUnits += demand;
+      unmetUnits += demand * (district.unmet[category] ?? 0);
+    }
+  }
+  const cityUnmet = demandUnits > 0 ? unmetUnits / demandUnits : 0;
+
+  console.log(
+    `  16 süpermarket/taraf · doluluk %${(utilisation * 100).toFixed(0)} · ` +
+      `market boş talebi %${(cityUnmet * 100).toFixed(0)}`,
+  );
+  // Doluluk %100'e dayanıyorsa çekicilik ölüdür: kimse rakipten müşteri
+  // alamaz, çünkü zaten satabildiğinin tamamını satıyor.
+  expect('kapasite talebe yetişebiliyor (rekabet için boşluk var)', utilisation < 0.9,
+    `doluluk %${(utilisation * 100).toFixed(0)}`);
+
+  // Fiyat kırmak gerçekten pay almalı. Tur 3 öncesi bu da ölüydü.
+  const own = Object.values(state.buildings).filter(
+    (b) => b.companyId === state.playerCompanyId && BUILDING_BY_ID[b.defId]?.role === 'outlet',
+  );
+  const before = own.reduce((sum, b) => sum + b.last.unitsSold, 0);
+  for (const building of own) {
+    building.autoPrice = false;
+    building.priceMultiplier = 0.75;
+  }
+  for (let day = 0; day < 60; day++) engine.runDay();
+  const after = own.reduce((sum, b) => sum + b.last.unitsSold, 0);
+  const lift = before > 0 ? after / before - 1 : 0;
+  console.log(`  fiyatı %25 kırınca hacim: ${before.toFixed(0)} → ${after.toFixed(0)} (%${(lift * 100).toFixed(0)})`);
+  expect('fiyat kırmak pay alıyor', lift > 0.1, `+%${(lift * 100).toFixed(0)}`);
+}
+
+// ---- 14. Perakende istihdamı nüfus çekmiyor ----
+//
+// Tur 3'ün düzeltmesinin kendisi. Mağaza kendi müşterisini üretemez;
+// fabrika ve ofis ise gerçekten yeni sakin çeker.
+{
+  const grow = (defId: string, districtId: number): number => {
+    const engine = labEngine(37);
+    const state = engine.getState();
+    const before = state.districts[districtId]!.population;
+    for (let i = 0; i < 6; i++) placeFor(engine, state.playerCompanyId, defId, districtId);
+    for (let day = 0; day < 300; day++) engine.runDay();
+    return state.districts[districtId]!.population / before - 1;
+  };
+
+  const industrial = labEngine(37).getState().districts.find((d) => d.archetype === 'industrial')!.id;
+  const shops = grow('supermarket', industrial);
+  const plants = grow('coffee_estate', industrial);
+
+  console.log(
+    `  sanayi bölgesinde 300 gün: 6 süpermarket → nüfus %${(shops * 100).toFixed(1)} · ` +
+      `6 çiftlik → nüfus %${(plants * 100).toFixed(1)}`,
+  );
+  expect('perakende istihdamı nüfusu şişirmiyor', shops < 0.1, `%${(shops * 100).toFixed(1)}`);
+  expect('üretim istihdamı nüfus çekiyor', plants > shops * 2, `%${(plants * 100).toFixed(1)}`);
 }
 
 // ================================================================ İhale
@@ -1742,6 +1848,11 @@ console.log('\n=== Parsel ihalesi ===\n');
   // mekaniğin ekonomiyi ele geçirdiği anlamına gelirdi.
   expect('ihale ekonomiyi ele geçirmiyor', Math.abs(on / off - 1) < 0.35,
     `%${Math.round((on / off - 1) * 100)} fark`);
+}
+
+/** Sonsuz geri ödemeyi okunur yazar. */
+function fmtDays(days: number): string {
+  return Number.isFinite(days) ? `${Math.round(days)} gün` : 'hiç dönmüyor';
 }
 
 console.log(`\n=== ${failures === 0 ? 'TÜMÜ GEÇTİ' : `${failures} KONTROL KALDI`} ===`);

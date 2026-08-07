@@ -242,12 +242,18 @@ export const BUILDINGS: BuildingDef[] = [
     role: 'marketing',
     category: 'retail',
     tier: 1,
-    // Ağırlık bilinçli olarak İŞLETME GİDERİNDE. İlk denemede
-    // (168 B ₺ / 520 ₺) 68 günde dönüyordu — en iyi mağazadan bile hızlı,
-    // yani düşünmeden kurulacak bir bina. Reklam gerçek hayatta da tek
-    // seferlik bir yatırım değil sürekli bir gider; kesersen etkisi biter.
-    cost: 190_000,
-    upkeepPerDay: 1_450,
+    // Ağırlık bilinçli olarak İŞLETME GİDERİNDE: reklam gerçek hayatta da
+    // tek seferlik bir yatırım değil sürekli bir gider; kesersen etkisi
+    // biter.
+    //
+    // İki kez kalibre edildi. İlk değerler (168 B ₺ / 520 ₺) 68 gün
+    // veriyordu — en iyi mağazadan bile hızlı, yani düşünmeden kurulacak
+    // bir bina. İkinci değerler (190 B ₺ / 1.450 ₺) Tur 3'ün nüfus
+    // düzeltmesinden sonra ters yöne kaçtı: pazarlama Ar-Ge'den YAVAŞ
+    // döner hale geldi ve tasarımın "ucuz, hızlı giriş silahı" kararı
+    // bozuldu. Şimdiki değerler o kararı geri getiriyor.
+    cost: 175_000,
+    upkeepPerDay: 1_050,
     capacity: 0,
     quality: 0,
     jobs: 16,

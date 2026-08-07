@@ -76,6 +76,26 @@ export function runPopulationTick(state: GameState): void {
   for (const building of Object.values(state.buildings)) {
     const def = BUILDING_BY_ID[building.defId];
     if (!def) continue;
+    // YALNIZCA TEMEL İSTİHDAM nüfus çeker.
+    //
+    // Perakende istihdamı nüfusu çekmez, nüfusu TAKİP eder: bir mahalleye
+    // süpermarket açılması oraya yeni sakin getirmez, oradaki sakinlere
+    // hizmet eder. Üretim, ofis, lojistik ve Ar-Ge ise gerçekten dışarıdan
+    // insan çeker — şehir ekonomisinde buna "temel/temel olmayan istihdam"
+    // ayrımı deniyor.
+    //
+    // Bu ayrım olmadan oyunun en temel döngüsü kısır bir hale geliyordu:
+    // açtığın dükkân istihdam yaratıyor, istihdam nüfusu, nüfus da o
+    // dükkânın hizmet ettiği talebi büyütüyordu. Yani DÜKKÂN KENDİ
+    // MÜŞTERİSİNİ ÜRETİYORDU. Ölçüm: talebe orantılı 30 süpermarketle
+    // 200 günde nüfus %93 artıyor, mağazalar %100 dolu çalışıyor ve
+    // talebin %57'si karşılanamıyor — kapasite asla yetişemiyor.
+    //
+    // Kapasite yetişemeyince de çekicilik formülünün (kalite, marka,
+    // fiyat) hiçbir değişkeni bir işe yaramıyor: herkes zaten satabildiği
+    // kadarını satıyor. Aynı kurulum temel istihdam modeliyle %69 doluluk
+    // veriyor — yani müşteriyi artık gerçekten REKABET belirliyor.
+    if (def.role === 'outlet') continue;
     jobsByDistrict.set(building.districtId, (jobsByDistrict.get(building.districtId) ?? 0) + def.jobs);
   }
 
