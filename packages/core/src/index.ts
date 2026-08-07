@@ -3,6 +3,7 @@ export * from './rng';
 export * from './worldgen';
 export * from './actions';
 export * from './selectors';
+export * from './chain';
 export * from './news';
 export * from './engine';
 export { tilePrice, isPurchasable, LAND_SELL_RATIO, BUILDING_BOOK_RATIO } from './systems/city';

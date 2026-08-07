@@ -1,8 +1,8 @@
 # Tur 1 — Ürün ve Zincir · Tasarım Belgesi
 
-> Durum: **A parçası kodlandı** (motor katmanı — ürünler, spot pazar, birim
-> maliyet, imar, şema v3). Zincir kartı arayüzü ve NPC zincir kararları
-> henüz yok; §10'daki iş sırasına bakın. Amaç, `Capitalism.md`'deki
+> Durum: **A ve B parçaları kodlandı** — motor katmanı (ürünler, spot pazar,
+> birim maliyet, imar, şema v3) ve zincir kartı arayüzü. NPC'ler henüz
+> zincir kurmuyor; §10'daki iş sırasına bakın. Amaç, `Capitalism.md`'deki
 > "sofistike simülasyon, casual oynanış" sözünü tutarak oyuna türün
 > kimliğini veren katmanı eklemek: satılan şeyin bir maliyeti, o maliyetin
 > bir zinciri, o zincirin de bir sahibi olsun.
@@ -316,7 +316,34 @@ taşımaz):
 
 **Alt satırdaki tek buton** kartın asıl ürünü. Hesabı `estimateInvestment`
 yeniden koşarak yapılır: mevcut zincire varsayımsal +1 ünite eklenip marj
-farkı ölçülür. Oyuncu formülü görmez, sonucu görür.
+farkı ölçülür. Oyuncu formülü görmez, sonucu görür. Buton yalnızca öneri
+değil — tıklayınca parseli de satın alır ve üniteyi kurar, yani oyuncu
+haritada doğru bölgeyi arayıp bulmak zorunda kalmaz.
+
+Öneri **zincirin kökünden yaprağına** yürür: ilk eksik halka hangisiyse o
+önerilir. Bu sıra tesadüf değil — üstündeki her kademenin maliyeti alttakine
+bağlı olduğu için, en alttaki eksiği kapatmak her zaman en çok kazandıran
+hamledir. Zincirsiz bir oyuncuya önce kavurma tesisi önerilir (kafeler
+kavrulmuş kahve tüketir, henüz kimse çekirdek tüketmez); tesis kurulunca
+öneri kendiliğinden bahçeye kayar.
+
+### 7.1.1 Ölçek uyarısı
+
+Bir hamle doğru ama zamanı değilse kart bunu **gizlemez, söyler**:
+
+```
+Un tamamen pazardan geliyor: birim ₺5,80. Ama Değirmen günde 1.800 birim
+üretir; sen 660 birim tüketiyorsun — kapasitenin ancak %37 kadarı dolar.
+
+[ Değirmen kur · 250 B ₺ ]   Sanayi · 395 günde geri öder · marj %50 → %56
+⚠ Henüz erken — bu halkayı kurmak, ölçeğin büyüdüğünde asıl karşılığını verir.
+```
+
+§6.4'teki ölçek kuralının oyuncuya öğretildiği yer burası. Kapasitenin
+yarısından azı dolacaksa ya da geri ödeme 240 günü aşıyorsa hamle "henüz
+erken" işaretlenir: buton birincil vurgusunu kaybeder, gerekçe kapasite
+sayılarını açıkça yazar. Oyuncu isterse yine de kurabilir — oyun karar
+vermez, sadece hesabı gösterir.
 
 ### 7.2 Outlet rafları
 
@@ -403,8 +430,8 @@ rastgelesiz bir fonksiyon.
 | # | Parça | Çıktı | Doğrulama | Durum |
 |---|---|---|---|---|
 | A | `goods.ts`, spot pazar, birim maliyet çözümleyicisi, imar, şema v3 | motor katmanı, UI yok | harness: zincirli/zincirsiz A/B | **bitti** |
-| B | Zincir kartı + "en iyi hamle" önerisi | oyuncunun gördüğü katman | playtest betiği | sırada |
-| C | NPC zincir kararları | rekabet | rakip 400 günde iflas etmiyor / oyuncuyu ezmiyor | |
+| B | Zincir kartı + "en iyi hamle" önerisi + ölçek uyarısı | oyuncunun gördüğü katman | harness + playtest betiği | **bitti** |
+| C | NPC zincir kararları | rekabet | rakip 400 günde iflas etmiyor / oyuncuyu ezmiyor | sırada |
 | D | Kategori başına ikinci ürün, raf yuvaları devrede | ürün seçimi | denge kalibrasyonu | |
 | E | Zincir kamyonları | görsel okunabilirlik | gözle | |
 
@@ -434,7 +461,19 @@ Bağımsız maliyet türetici (`calibrate.ts`) sekiz üretim ünitesinin de
 **170–173 gün** bandında olduğunu doğruluyor — elle seçilen maliyetler ile
 formülden çıkanlar birbirini tutuyor.
 
-Tarayıcı testleri (`tools/playtest.mjs`): **55/55 geçiyor.**
+### B parçası — zincir kartı
+
+| Kontrol | Sonuç |
+|---|---|
+| Kart birim maliyeti motorunkiyle aynı | 12,60 ₺ / 12,60 ₺ |
+| Yalnızca satılan ürün listeleniyor | 1 ürün satan oyuncuya 1 kart |
+| Öneri zincirin ilk eksik halkası | zincirsizken kavurma, sonra bahçe |
+| Vaat edilen marj gerçekleşiyor | %67 vaat → %71 gerçek → %77 tam zincir |
+| Zincir tamamlanınca öneri susuyor | hamle yok |
+| Tek mağazada "henüz erken" uyarısı | kapasitenin %18'i dolar, 720 gün |
+| Buton parseli alıp üniteyi kuruyor | imarlı bölgeye, tek tıkla |
+
+Tarayıcı testleri (`tools/playtest.mjs`): **63/63 geçiyor.**
 
 ---
 

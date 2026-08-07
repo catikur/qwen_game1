@@ -395,6 +395,69 @@ const findTile = (page, kind) =>
   check('Şirket paneli açılıyor', (await page.locator('.company').count()) === 1);
   await page.keyboard.press('Escape');
 
+  // ---------- Zincir kartı ----------
+  // Motor katmanı A parçasında doğrulandı; burada bakılan şey oyuncunun
+  // gerçekten görüp kullanabildiği mi.
+  section('Zincir kartı');
+
+  // Oyuncuya zinciri kurabilecek sermaye ver; test parayı değil arayüzü ölçüyor.
+  await page.evaluate(() => {
+    const s = window.__capital.getState();
+    const p = s.companies[s.playerCompanyId];
+    p.cash = 50_000_000;
+    p.netWorth = 50_000_000;
+    window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+  });
+
+  await page.locator('.topbar-actions button', { hasText: 'Zincir' }).click();
+  await page.waitForTimeout(400);
+  check('Zincir paneli açılıyor', (await page.locator('.modal').count()) === 1);
+
+  const cardCount = await page.locator('.chain').count();
+  check('Satılan ürün için zincir kartı çıkıyor', cardCount >= 1, `${cardCount} kart`);
+
+  const slots = await page.locator('.chain').first().locator('.chain-slot').count();
+  check('Kartta dört yuva var', slots === 4, `${slots} yuva`);
+
+  const stateLabels = await page.locator('.chain').first().locator('.chain-state').allTextContents();
+  check(
+    'Her yuvada metin etiketi var (renk tek başına anlam taşımıyor)',
+    stateLabels.length === 4 && stateLabels.every((t) => t.trim().length > 0),
+    stateLabels.join(' · '),
+  );
+
+  const moveButton = page.locator('.chain').first().locator('.chain-action button');
+  const hasMove = (await moveButton.count()) === 1;
+  check('Kart tek bir hamle öneriyor', hasMove, hasMove ? await moveButton.textContent() : 'öneri yok');
+
+  if (hasMove) {
+    const before = await page.evaluate(() => {
+      const s = window.__capital.getState();
+      return Object.values(s.buildings).filter((b) => b.companyId === s.playerCompanyId).length;
+    });
+    await moveButton.click();
+    await page.waitForTimeout(600);
+    const after = await page.evaluate(() => {
+      const s = window.__capital.getState();
+      const own = Object.values(s.buildings).filter((b) => b.companyId === s.playerCompanyId);
+      return {
+        count: own.length,
+        zoned: own.some((b) => ['coffee_roastery', 'flour_mill', 'textile_mill', 'chip_fab',
+          'coffee_estate', 'wheat_farm', 'cotton_farm', 'silicon_mine'].includes(b.defId)),
+        districts: own.map((b) => s.districts[b.districtId].archetype),
+      };
+    });
+    check('Hamle butonu parseli alıp üniteyi kuruyor', after.count === before + 1,
+      `${before} → ${after.count} bina`);
+    check('Kurulan ünite bir üretim ünitesi', after.zoned);
+    check('Üretim ünitesi imarlı bölgeye kuruldu',
+      after.districts.some((a) => a === 'industrial' || a === 'port'), after.districts.join(', '));
+  }
+
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(200);
+  await page.evaluate(() => window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 1 }));
+
   // ---------- Kayıt ----------
   section('Kayıt sistemi');
   await page.locator('.topbar-actions button', { hasText: 'Kayıt' }).click();
