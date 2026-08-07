@@ -1,8 +1,8 @@
 # Tur 1 — Ürün ve Zincir · Tasarım Belgesi
 
-> Durum: **A, B, C ve D parçaları kodlandı** — motor katmanı, zincir kartı
-> arayüzü, rakiplerin zincir kararları ve kategori başına ikinci ürün
-> (raf yuvaları devrede). §10'daki iş sırasına bakın. Amaç, `Capitalism.md`'deki
+> Durum: **Tur 1 tamamlandı (A–E)** — motor katmanı, zincir kartı arayüzü,
+> rakiplerin zincir kararları, kategori başına ikinci ürün (raf yuvaları
+> devrede) ve zincir kamyonları. §10'daki iş sırasına bakın. Amaç, `Capitalism.md`'deki
 > "sofistike simülasyon, casual oynanış" sözünü tutarak oyuna türün
 > kimliğini veren katmanı eklemek: satılan şeyin bir maliyeti, o maliyetin
 > bir zinciri, o zincirin de bir sahibi olsun.
@@ -401,6 +401,58 @@ Yan fayda: şehir bir anda "senin lojistiğinin haritası" oluyor. Hangi ürün�
 darboğazda olduğunu tablo açmadan, akışa bakarak anlıyorsun. "Sofistike
 simülasyon, casual oynanış" sözünün görsel karşılığı tam olarak bu.
 
+#### Rota türetimi motorda, çizim değil
+
+`packages/core/src/routes.ts`, `chain.ts` gibi tamamen türetilmiş bir dosya:
+state'e hiçbir şey yazmaz, aynı state'e aynı bacakları aynı sırayla verir.
+Çizim katmanı içerik kataloğunu tanımak zorunda kalmıyor, biz de kamyonların
+doğru zinciri gösterip göstermediğini tarayıcı açmadan test edebiliyoruz.
+
+Bacaklar üç kademede kuruluyor:
+
+| Bacak | Kaynak → Hedef | Kural |
+|---|---|---|
+| `raw` | çiftlik → tesis | Çiftliğin ürününü işleyen en yakın kendi tesisi |
+| `intermediate` | tesis → depo | Yalnızca mağaza deponun menzilindeyse |
+| `delivery` | tesis (veya depo) → mağaza | Mağazanın RAFINDAKİ ürünün ara malını üreten en yakın kendi tesisi |
+
+Depo kuralı, dağıtım indirimiyle birebir aynı ölçüyü kullanıyor (Manhattan
+uzaklığı ≤ yarıçap). Yani deponun ne işe yaradığı tabloya bakmadan,
+kamyonların nereye uğradığından anlaşılıyor.
+
+İki tavan var ve ikisi de bilinçli: bir tesisten en fazla **3 mağazaya**
+kamyon çıkıyor (on mağazalı zincirde şehir kamyon çorbasına dönüyordu),
+toplam bacak sayısı **64** ile sınırlı. Sıralama oyuncuyu başa aldığı için
+tavan bağladığında kırpılan taraf rakip oluyor — kendi lojistiğin her zaman
+görünür kalıyor.
+
+#### Kamyon = bilgi, fon aracı = manzara
+
+İki katman ayrı işler yapıyor, bu yüzden ayrı kurallara tabi:
+
+- **Fon araçları** (48 adet, soluk gri) sokakların boş kalmaması için var.
+  Veri lensinde **susuyorlar** — lenste manzara gürültüdür.
+- **Kamyonlar** (en fazla 44) gerçek bir tedarik bacağında yürüyor, şirket
+  renginde, yüklüyken parlak ve dönüşte sönük. Veri lensinde **kalıyorlar**,
+  çünkü onlar da veri: ısı haritasının üstünde akan zincir iki bilgiyi üst
+  üste okutuyor ("talep burada yüksek ama kamyonlarım oraya gitmiyor").
+
+Kamyonlar ışıktan bağımsız (`MeshBasicMaterial`) çiziliyor — zemin veri
+lensinde tam olarak aynı gerekçeyle öyle çiziliyor. Bilgi taşıyan bir şey
+gece yarısında ve gökdelen gölgesinde de gündüzkü kadar okunmalı.
+
+#### Ölçerken değil, BAKARKEN çıkan üç sorun
+
+| Sorun | Belirti | Çözüm |
+|---|---|---|
+| Kamyonlar şehir görünümünde kayboluyordu | Testler yeşil, ekranda hiçbir şey yok: gökdelenler sokakları örtüyor, kalan boşlukta 0,46 × 0,26'lık gövde bir noktaya iniyordu | Gövde 0,6 × 0,3'e çıktı, malzeme ışıktan bağımsız oldu |
+| Teslimat kamyonları beyaza kaçıyordu | Kademe parlaklığı (+0,32) ışıksız malzemeyle birleşince şirket rengi kayboluyordu | Parlaklık artışı yarıya indi, oyuncunun tonu doygunlaştı (`#3fd39a`) |
+| Kamyon binanın içinden geçebiliyordu | Rota parsele sapıyordu; blok içindeki bir bina sokağa iki kare uzaksa aradaki parselin — çoğu zaman başka bir binanın — içinden geçiliyordu | Rota artık **tamamen sokakta**: binanın önünde başlayıp önünde bitiyor |
+
+Üçüncüsü rotayı hem doğru hem daha basit yaptı: kırılma noktası sayısı
+altıdan dörde indi ve "kamyonlar sokakları takip eder" sözü artık bir
+niyet değil, kodun sağladığı bir garanti.
+
 ---
 
 ## 8. Şema değişikliği (v2 → v3)
@@ -471,7 +523,7 @@ rastgelesiz bir fonksiyon.
 | B | Zincir kartı + "en iyi hamle" önerisi + ölçek uyarısı | oyuncunun gördüğü katman | harness + playtest betiği | **bitti** |
 | C | NPC zincir kararları | rekabet | rakipler zincir kuruyor, batmıyor; kartı izlemek kazandırıyor | **bitti** |
 | D | Kategori başına ikinci ürün, raf yuvaları devrede | ürün seçimi | her ürün bir bölgede kazanıyor, paylar normalize | **bitti** |
-| E | Zincir kamyonları | görsel okunabilirlik | gözle | sırada |
+| E | Zincir kamyonları | görsel okunabilirlik | rota bacakları harness'ta, akış gözle | **bitti** |
 
 > Taslakta B ve C ayrı sıralardı; uygulamada imar kısıtı ve raf şeması A ile
 > birlikte gelmesi daha ucuzdu (aynı şema göçü). Raf yuvaları şemada ve
@@ -605,8 +657,26 @@ zinciri seyreltir.
   için erişebildiği bölgelere **talep oranında** ayrılıyor; sonuç sıradan
   bağımsız.
 
-Tarayıcı testleri (`tools/playtest.mjs`): **70/70 geçiyor.**
-Denge harness'ı: **66 kontrol, hepsi geçiyor.**
+### E parçası — kamyonlar
+
+Rota türetimi harness'ta doğrulanıyor; akışın kendisi ekrandan okunuyor.
+
+| Kontrol | Sonuç |
+|---|---|
+| Zincirsiz şehirde rota | 0 bacak — kamyon yok |
+| Tesissiz mağaza | 0 bacak (mağaza tek başına kamyon doğurmuyor) |
+| Çiftlik + değirmen + bakkal | 1 hammadde + 1 teslimat bacağı, doğru mallar (buğday, ekmek) |
+| Depo menzile girince | akış tesis → depo → mağaza olarak yeniden kuruluyor |
+| 400 gün rekabetli şehir | 64 bacak (tavan), 24 oyuncu / 40 rakip, hepsi tesisi olan şirketlerin |
+| Rota imzası | aynı state = aynı imza; bina değişmedikçe kamyonlar yerinden oynamıyor |
+
+Tarayıcı testleri (`tools/playtest.mjs`): **77/77 geçiyor**, 0 konsol hatası.
+Denge harness'ı: **80 kontrol, hepsi geçiyor.**
+
+> Yan not: `pnpm typecheck` kök `tsconfig.json` olmadığı için hiç
+> çalışmıyordu (`tsc -b` dosyayı bulamayıp hata veriyordu). Paketleri tek
+> tek gezecek şekilde düzeltildi ve `packages/core/test` de kapsama alındı —
+> harness artık esbuild'e gitmeden önce tip kontrolünden geçiyor.
 
 ---
 

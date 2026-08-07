@@ -457,6 +457,56 @@ const findTile = (page, kind) =>
   await page.keyboard.press('Escape');
   await page.waitForTimeout(200);
 
+  // ---------- Zincir kamyonları ----------
+  // Zincir görünür olmadan anlaşılmıyor. Burada bakılan şey kamyonların
+  // GERÇEKTEN kurulan zincire bağlı olması: tesis yoksa kamyon yok, tesis
+  // kurulunca yola çıkıyor, ve yerinde durmuyorlar.
+  section('Zincir kamyonları');
+
+  await page.evaluate(() => window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 1 }));
+  await page.waitForTimeout(600);
+
+  const fleet = await page.evaluate(() => ({
+    trucks: window.__capital.renderInfo().truckCount,
+    legs: window.__capital.routeCount(),
+  }));
+  check('Kurulan zincir için kamyon yola çıkıyor', fleet.trucks > 0,
+    `${fleet.trucks} kamyon / ${fleet.legs} bacak`);
+  check('Kamyon sayısı bacak sayısını aşmıyor', fleet.trucks <= fleet.legs * 3,
+    `${fleet.trucks} kamyon / ${fleet.legs} bacak`);
+
+  const moved = await page.evaluate(async () => {
+    const a = window.__capital.renderInfo().truckPositionSum;
+    await new Promise((r) => setTimeout(r, 900));
+    return { a, b: window.__capital.renderInfo().truckPositionSum };
+  });
+  check('Kamyonlar rotada ilerliyor', Math.abs(moved.b - moved.a) > 0.05,
+    `ilerleme ${(moved.b - moved.a).toFixed(2)}`);
+
+  // Kamyon BİLGİ taşıyor, manzara değil: lensin altında da görünmeye
+  // devam ediyor. Fon araçları ise susuyor.
+  const trucksUnderLens = await readAfterLens('opportunity');
+  check('Veri lensinde fon araçları susuyor', trucksUnderLens.carsVisible === false);
+  check('Veri lensinde kamyonlar kalıyor', trucksUnderLens.truckCount > 0,
+    `${trucksUnderLens.truckCount} kamyon`);
+  await page.screenshot({ path: `${OUT}/trucks-lens.png` });
+
+  const backToCity = await readAfterLens('none');
+  check('Şehir görünümünde fon araçları geri geliyor', backToCity.carsVisible === true);
+  await page.screenshot({ path: `${OUT}/trucks-city.png` });
+
+  // Rota listesi değişmediği sürece kamyonlar kurulmamalı — yoksa her gün
+  // başa ışınlanırlar ve akış yerine titreşim görürsün.
+  const stable = await page.evaluate(async () => {
+    const before = window.__capital.routeSignature();
+    window.__capital.engine.runDay();
+    window.__capital.engine.runDay();
+    await new Promise((r) => setTimeout(r, 300));
+    return { before, after: window.__capital.routeSignature() };
+  });
+  check('Bina değişmedikçe rota imzası sabit', stable.before === stable.after,
+    `${stable.after.split('|').length} bacak`);
+
   // ---------- Raf seçimi ----------
   // Aynı kategorideki iki ürünün birim maliyeti aynıdır; karar bölgesel
   // talep farkından doğar. Burada bakılan şey oyuncunun o kararı gerçekten

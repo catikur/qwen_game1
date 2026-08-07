@@ -4,7 +4,12 @@
  * Oyunu UI olmadan yüzlerce gün koşturur ve ekonominin sağlıklı olup
  * olmadığını raporlar. Amaç, denge bozukluğunu tarayıcıyı açmadan görmek:
  * oyuncu hiç kaybedemiyorsa oyun kolay, NPC'ler hep batıyorsa rekabet yok.
+ *
+ * Node altında koşuyor ama `@types/node` bağımlılığı taşımıyoruz; tek
+ * kullandığımız şey çıkış kodu.
  */
+declare const process: { exit(code: number): never };
+
 import {
   BUILDINGS,
   BUILDING_BY_ID,
@@ -25,7 +30,9 @@ import {
   formatMoney,
   getPlayer,
   goodShares,
+  routeSignature,
   shelfReach,
+  supplyRoutes,
   tilePrice,
 } from '../src/index';
 import type { GameState } from '../src/types';
@@ -896,6 +903,120 @@ function outletUnitCost(state: GameState): number {
     'sanayiye hammadde ünitesi kurulabiliyor',
     place(engine2, 'coffee_estate', 'industrial'),
     `${industrial.name} bölgesine kuruldu`,
+  );
+}
+
+// ---- 12. Tedarik rotaları (kamyonların izlediği bacaklar) ----
+//
+// Kamyonlar görsel bir katman ama besledikleri veri kural işi: yanlış
+// bacak, oyuncuya yanlış zincir gösterir. Ekranı açmadan burada
+// doğruluyoruz.
+{
+  const engine2 = labEngine(61);
+  const state = engine2.getState();
+
+  expect('zincirsiz şehirde rota yok', supplyRoutes(state).length === 0, `${supplyRoutes(state).length} bacak`);
+
+  // Zincirsiz mağaza: tesis olmadığı için kamyon çıkmamalı.
+  place(engine2, 'corner_shop', 'mid_residential');
+  expect(
+    'tesissiz mağazaya kamyon gitmiyor',
+    supplyRoutes(state).length === 0,
+    `${supplyRoutes(state).length} bacak`,
+  );
+
+  // Tam zincir: buğday çiftliği + değirmen + mağaza.
+  place(engine2, 'wheat_farm', 'industrial');
+  place(engine2, 'flour_mill', 'industrial');
+  const withChain = supplyRoutes(state);
+
+  const rawLegs = withChain.filter((leg) => leg.kind === 'raw');
+  const deliveryLegs = withChain.filter((leg) => leg.kind === 'delivery');
+  expect('çiftlikten tesise bacak var', rawLegs.length === 1, `${rawLegs.length} hammadde bacağı`);
+  expect('tesisten mağazaya bacak var', deliveryLegs.length === 1, `${deliveryLegs.length} teslimat bacağı`);
+  expect(
+    'hammadde bacağı buğday taşıyor',
+    rawLegs[0]?.goodId === 'wheat',
+    rawLegs[0]?.goodId ?? '—',
+  );
+  expect(
+    'teslimat bacağı raftaki ürünü taşıyor',
+    deliveryLegs[0]?.goodId === 'bread',
+    deliveryLegs[0]?.goodId ?? '—',
+  );
+  expect(
+    'her bacağın iki ucu farklı',
+    withChain.every((leg) => leg.fromTileId !== leg.toTileId),
+    `${withChain.length} bacak`,
+  );
+
+  // Depo devreye girince akış onun üzerinden geçmeli: tesis → depo → mağaza.
+  const outletTile = state.map.tiles[deliveryLegs[0]!.toTileId]!;
+  const depotTile = state.map.tiles.find(
+    (t) =>
+      t.kind === 'plot' &&
+      !t.ownerId &&
+      !t.structureId &&
+      !t.buildingId &&
+      Math.abs(t.x - outletTile.x) + Math.abs(t.y - outletTile.y) <= 4,
+  );
+  if (depotTile) {
+    engine2.dispatch({ type: 'BUY_TILE', tileId: depotTile.id });
+    engine2.dispatch({ type: 'BUILD', tileId: depotTile.id, defId: 'warehouse' });
+    const withDepot = supplyRoutes(state);
+    const hub = withDepot.filter((leg) => leg.kind === 'intermediate');
+    const toOutlet = withDepot.filter(
+      (leg) => leg.kind === 'delivery' && leg.toTileId === outletTile.id,
+    );
+    expect('depo varsa tesisten depoya bacak açılıyor', hub.length === 1, `${hub.length} ara bacak`);
+    expect(
+      'mağazaya giden kamyon artık depodan çıkıyor',
+      toOutlet.length === 1 && toOutlet[0]!.fromTileId === depotTile.id,
+      toOutlet.length === 1 ? `kaynak parsel ${toOutlet[0]!.fromTileId}` : `${toOutlet.length} bacak`,
+    );
+  }
+
+  // Determinizm: çizim katmanı imzaya bakıp kamyonları koruyor, imza
+  // aynı state'te oynarsa kamyonlar her gün ışınlanır.
+  const first = routeSignature(supplyRoutes(state));
+  const second = routeSignature(supplyRoutes(state));
+  expect('rota imzası deterministik', first === second, `${first.split('|').length} bacak`);
+}
+
+// ---- 13. Rotalar rekabet altında da makul mü? ----
+{
+  const engine2 = new GameEngine(createNewGame({ seed: 71, companyName: 'Rota AŞ' }));
+  const player = getPlayer(engine2.getState());
+  player.cash = 40_000_000;
+  for (let day = 1; day <= 400; day++) {
+    if (day % 5 === 0) playerStrategy(engine2);
+    engine2.runDay();
+  }
+  const state = engine2.getState();
+  const legs = supplyRoutes(state);
+
+  expect('gelişmiş şehirde rotalar oluşuyor', legs.length > 0, `${legs.length} bacak`);
+  expect('rota sayısı tavanı aşmıyor', legs.length <= 64, `${legs.length} bacak`);
+
+  const playerLegs = legs.filter((leg) => leg.companyId === state.playerCompanyId);
+  const rivalLegs = legs.filter((leg) => leg.companyId !== state.playerCompanyId);
+  // Tavan bağlarsa kırpılan taraf rakip olmalı — kendi lojistiğin her
+  // zaman görünür kalsın diye oyuncu başa sıralanıyor.
+  expect(
+    'oyuncunun bacakları listenin başında',
+    legs.slice(0, playerLegs.length).every((leg) => leg.companyId === state.playerCompanyId),
+    `${playerLegs.length} oyuncu / ${rivalLegs.length} rakip bacağı`,
+  );
+
+  const chainOwners = new Set(
+    Object.values(state.buildings)
+      .filter((b) => BUILDING_BY_ID[b.defId]?.role === 'process')
+      .map((b) => b.companyId),
+  );
+  expect(
+    'yalnızca tesisi olan şirketin kamyonu var',
+    legs.every((leg) => chainOwners.has(leg.companyId)),
+    `${chainOwners.size} tesisli şirket`,
   );
 }
 

@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { BUILDING_BY_ID, DISTRICT_ARCHETYPES, STRUCTURE_BY_ID } from '@capital/content';
-import { lensValue } from '@capital/core';
+import { BLOCK_SIZE, lensValue, supplyRoutes } from '@capital/core';
 import type { GameState, LensId } from '@capital/core';
 import { RtsCameraController } from './camera';
 import { TrafficSystem } from './traffic';
@@ -155,8 +155,11 @@ export class CityRenderer {
     this.fabric.count = 0;
     this.scene.add(this.fabric);
 
-    this.traffic = new TrafficSystem(mapWidth, mapHeight, 4, 72);
-    this.scene.add(this.traffic.mesh);
+    // Fon aracı sayısı 72'den 48'e indi: kamyonlar geldiğinde sokaklar
+    // eskisinden daha kalabalıktı ve zincir akışı gürültünün içinde
+    // kayboluyordu. Fon araçları ortamı kurar, kamyonlar bilgi taşır.
+    this.traffic = new TrafficSystem(mapWidth, mapHeight, BLOCK_SIZE, 48);
+    this.scene.add(this.traffic.group);
 
     this.hover = makeMarker('#7fd4ff', 0.32);
     this.selection = makeMarker('#ffd166', 0.85);
@@ -344,7 +347,7 @@ export class CityRenderer {
       mesh.receiveShadow = !dataLens;
     }
 
-    this.traffic.mesh.visible = !dataLens;
+    this.traffic.setDataLens(dataLens);
     this.renderer.shadowMap.enabled = !dataLens && !this.qualityReduced;
 
     // Pencere parıltısını burada da sıfırla. Bir sonraki gün-döngüsü
@@ -440,7 +443,34 @@ export class CityRenderer {
       this.selection.visible = false;
     }
 
+    this.syncRoutes(state, view.playerCompanyId);
     this.syncGhost(width);
+  }
+
+  /**
+   * Zincir kamyonlarını state'e bağlar.
+   *
+   * Rotanın kendisini motor türetiyor (`supplyRoutes`); burada yapılan tek
+   * şey bacakları şehir koordinatına ve şirket rengine çevirmek. Liste
+   * değişmediyse `setRoutes` erken çıkıyor, yani kamyonlar her gün
+   * yeniden kurulmuyor.
+   */
+  private syncRoutes(state: GameState, playerCompanyId: string): void {
+    const legs = supplyRoutes(state, playerCompanyId);
+    this.traffic.setRoutes(legs, (leg) => {
+      const from = state.map.tiles[leg.fromTileId];
+      const to = state.map.tiles[leg.toTileId];
+      if (!from || !to) return null;
+      const company = state.companies[leg.companyId];
+      return {
+        from: { x: from.x, y: from.y },
+        to: { x: to.x, y: to.y },
+        // Oyuncunun kamyonları kendi şirket rengini değil, binalarında
+        // kullanılan nane yeşilinin daha doygun tonunu taşıyor: "benimki"
+        // tek bakışta ayrılsın ama ışıksız çizildiği için beyaza kaçmasın.
+        color: company?.isPlayer ? '#3fd39a' : (company?.color ?? '#8899aa'),
+      };
+    });
   }
 
   private syncGhost(width: number): void {
@@ -633,6 +663,12 @@ export class CityRenderer {
     fabricEmissive: number;
     groundColorSum: number;
     timeOfDay: number;
+    /** Yolda olan zincir kamyonu sayısı. */
+    truckCount: number;
+    /** Kamyon konumlarının toplamı; hareket ettiklerini ölçmek için. */
+    truckPositionSum: number;
+    /** Fon araçları görünür mü (veri lensinde susarlar). */
+    carsVisible: boolean;
   } {
     const hsl = { h: 0, s: 0, l: 0 };
     this.skyColor.getHSL(hsl);
@@ -652,6 +688,9 @@ export class CityRenderer {
       fabricEmissive: (this.fabric.material as THREE.MeshStandardMaterial).emissiveIntensity,
       groundColorSum,
       timeOfDay: this.timeOfDay,
+      truckCount: this.traffic.truckCount,
+      truckPositionSum: this.traffic.truckPositionSum,
+      carsVisible: this.traffic.carsVisible,
     };
   }
 
