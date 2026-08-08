@@ -1174,6 +1174,50 @@ const findTile = (page, kind) =>
     const mx = canvasBox.x + canvasBox.width / 2;
     const my = canvasBox.y + canvasBox.height * 0.42;
 
+    // Kaydırma YÖNÜ. Doğru kaydırmanın tanımı: parmağın tuttuğu zemin
+    // noktası, sürükleme boyunca parmağın altında kalır. Kameranın ne
+    // kadar hareket ettiğine bakmak yönü doğrulamaz — eski formül
+    // hareket ediyordu ama yanlış yöne, 120px'lik sürüklemede tutulan
+    // nokta 7,7–8,4 birim kayıyordu.
+    //
+    // BU KONTROL PINCH'TEN ÖNCE. Yakınlaştırma sonrası kamera 9 birime
+    // iniyor ve eğimle birlikte ekranın üstü ufka yaklaşıyor; orada
+    // zemin izdüşümü kötü koşullu (ışın yere neredeyse paralel) ve
+    // ölçüm kaydırmayı değil ufku ölçüyor. Kameranın merkezli ve
+    // varsayılan uzaklıktaki hali, jestin doğruluğunu sınamak için
+    // gereken iyi koşullu durum.
+    const groundAt = (x, y) =>
+      m.evaluate(([px, py]) => {
+        const c = document.querySelector('canvas.scene');
+        const r = c.getBoundingClientRect();
+        return window.__capital.groundAt(
+          ((px - r.left) / r.width) * 2 - 1,
+          -((py - r.top) / r.height) * 2 + 1,
+        );
+      }, [x, y]);
+
+    const dragDrift = async (fromX, fromY, toX, toY) => {
+      const before = await groundAt(fromX, fromY);
+      await touch('touchStart', [[fromX, fromY]]);
+      for (let i = 1; i <= 6; i++) {
+        await touch('touchMove', [[fromX + ((toX - fromX) * i) / 6, fromY + ((toY - fromY) * i) / 6]]);
+      }
+      await touch('touchEnd', []);
+      await m.waitForTimeout(700);
+      const after = await groundAt(toX, toY);
+      if (!before || !after) return null;
+      return Math.hypot(after.x - before.x, after.z - before.z);
+    };
+
+    // Harita bandının içinde kal: üst bar ve paneller dışında bir şerit.
+    const py = canvasBox.y + canvasBox.height * 0.3;
+    const rightDrift = await dragDrift(mx - 55, py, mx + 55, py);
+    const downDrift = await dragDrift(mx, py - 40, mx, py + 40);
+    check(`${deviceName}: yatay sürüklemede tutulan kare kaymıyor`,
+      rightDrift !== null && rightDrift < 0.5, `sapma ${rightDrift?.toFixed(2) ?? '—'} birim`);
+    check(`${deviceName}: dikey sürüklemede tutulan kare kaymıyor`,
+      downDrift !== null && downDrift < 0.5, `sapma ${downDrift?.toFixed(2) ?? '—'} birim`);
+
     const zoomBefore = await info();
     await touch('touchStart', [[mx - 50, my], [mx + 50, my]]);
     for (let i = 1; i <= 8; i++) {
@@ -1242,6 +1286,50 @@ const findTile = (page, kind) =>
           `ara ${Math.round(gap)}ms ≥ ${windowMs}ms · kamera yerinde`);
       }
     }
+
+    // Parsel detayı ve satın alma butonu ekrana geliyor mu.
+    //
+    // Bildirilen hata: "arsaya tıklayınca detayını görüp alamıyorsun, o
+    // butonun olduğu yer gelmiyor bile ekrana". Ölçüldüğünde panel
+    // 664px'lik bir ekranda 913px'te başlıyordu ve butona ulaşmak için
+    // HUD'u ~645px kaydırmak gerekiyordu.
+    const vacantTile = await m.evaluate(() => {
+      const tile = window.__capital
+        .getState()
+        .map.tiles.find((t) => t.kind === 'plot' && !t.structureId && !t.ownerId);
+      if (tile) window.__capital.selectTile(tile.id);
+      return tile ? tile.id : null;
+    });
+    await m.waitForTimeout(500);
+    const sheet = await m.evaluate(() => {
+      const vh = window.innerHeight;
+      const onScreen = (el) => {
+        if (!el) return false;
+        const r = el.getBoundingClientRect();
+        return r.top >= 0 && r.bottom <= vh && r.height > 0;
+      };
+      const buy = [...document.querySelectorAll('button')].find((b) =>
+        /Parseli satın al/.test(b.textContent || ''),
+      );
+      const close = document.querySelector('.inspector .inspector-head button.icon');
+      const closeRect = close?.getBoundingClientRect();
+      return {
+        buyExists: Boolean(buy),
+        buyOnScreen: onScreen(buy),
+        headOnScreen: onScreen(document.querySelector('.inspector .inspector-head')),
+        // Kapatma düğmesi olmadan alt sayfa haritayı kilitler.
+        closeBigEnough: Boolean(closeRect && closeRect.width >= 40 && closeRect.height >= 40),
+        scrollNeeded: buy ? Math.max(0, Math.round(buy.getBoundingClientRect().bottom - vh)) : -1,
+      };
+    });
+    check(`${deviceName}: boş parselde satın alma butonu çıkıyor`, sheet.buyExists,
+      `kare ${vacantTile}`);
+    check(`${deviceName}: satın alma butonu KAYDIRMADAN görünüyor`, sheet.buyOnScreen,
+      `gereken kaydırma ${sheet.scrollNeeded}px`);
+    check(`${deviceName}: detay başlığı ve kapatma düğmesi erişilebilir`,
+      sheet.headOnScreen && sheet.closeBigEnough, '44px dokunma hedefi');
+    await m.evaluate(() => window.__capital.selectTile(null));
+    await m.waitForTimeout(300);
 
     check(`${deviceName}: konsol temiz`, mobileErrors.length === 0, mobileErrors.slice(0, 2).join(' | '));
     await m.screenshot({ path: `${OUT}/mobile-${deviceName.replace(/\W+/g, '')}.png` });

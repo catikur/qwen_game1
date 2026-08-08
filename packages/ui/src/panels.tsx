@@ -211,7 +211,10 @@ export function Inspector(): ReactElement | null {
   const price = tilePrice(state, tile.id, player.id);
 
   return (
-    <aside className="inspector">
+    // `has-selection`: dar ekranda bu panel haritanın HEMEN ALTINA
+    // taşınıyor. Bir kareye dokunmak doğrudan bir eylem; detayının ve
+    // satın alma butonunun kaydırma gerektirmeden görünmesi gerekiyor.
+    <aside className="inspector has-selection">
       <header className="inspector-head">
         <div>
           <h2>{district.name}</h2>
