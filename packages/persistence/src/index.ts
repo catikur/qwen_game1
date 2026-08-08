@@ -288,19 +288,78 @@ function openDb(): Promise<IDBDatabase | null> {
       resolve(null);
       return;
     }
-    const request = indexedDB.open(DB_NAME, DB_VERSION);
+    // `indexedDB.open` gizli sekmede ve bölümlenmiş (partitioned) bir
+    // çerçevede SENKRON SecurityError atar — onerror'a hiç gelmez. Bu
+    // yüzden çağrının kendisi de sarmalanmalı, yoksa açılıştaki
+    // `loadGame` yakalanmamış bir reddetmeye düşer ve oyun boot olmaz.
+    let request: IDBOpenDBRequest;
+    try {
+      request = indexedDB.open(DB_NAME, DB_VERSION);
+    } catch (error) {
+      console.warn('IndexedDB açılamadı, yerel depolamaya düşülüyor.', error);
+      resolve(null);
+      return;
+    }
     request.onupgradeneeded = () => {
       const db = request.result;
       if (!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE, { keyPath: 'meta.slot' });
     };
     request.onsuccess = () => resolve(request.result);
     request.onerror = () => {
-      console.warn('IndexedDB açılamadı, localStorage kullanılacak.', request.error);
+      console.warn('IndexedDB açılamadı, yerel depolamaya düşülüyor.', request.error);
       resolve(null);
     };
   });
 
   return dbPromise;
+}
+
+// ------------------------------------------------------- Yerel depolama
+
+/**
+ * `localStorage` da her ortamda yok: gizli sekme kotayı sıfırlar,
+ * bölümlenmiş çerçevede erişimin kendisi hata atar. İkisi de olmadığında
+ * kayıt sessizce ölmesin diye bellek içi son bir kademe var — o oturum
+ * boyunca kaydet/yükle çalışır, sekme kapanınca gider.
+ */
+const memoryStore = new Map<string, string>();
+let localStorageOk: boolean | null = null;
+
+function hasLocalStorage(): boolean {
+  if (localStorageOk !== null) return localStorageOk;
+  try {
+    const probe = LS_PREFIX + 'probe';
+    localStorage.setItem(probe, '1');
+    localStorage.removeItem(probe);
+    localStorageOk = true;
+  } catch {
+    console.warn('Yerel depolama kullanılamıyor; kayıtlar yalnızca bu oturumda tutulacak.');
+    localStorageOk = false;
+  }
+  return localStorageOk;
+}
+
+function storeWrite(key: string, value: string): void {
+  if (hasLocalStorage()) {
+    try {
+      localStorage.setItem(key, value);
+      return;
+    } catch {
+      // kota doldu — bellek kademesine düş
+      localStorageOk = false;
+    }
+  }
+  memoryStore.set(key, value);
+}
+
+function storeRead(key: string): string | null {
+  if (hasLocalStorage()) return localStorage.getItem(key);
+  return memoryStore.get(key) ?? null;
+}
+
+function storeRemove(key: string): void {
+  if (hasLocalStorage()) localStorage.removeItem(key);
+  else memoryStore.delete(key);
 }
 
 function tx<T>(db: IDBDatabase, mode: IDBTransactionMode, run: (store: IDBObjectStore) => IDBRequest<T>): Promise<T> {
@@ -322,7 +381,7 @@ export async function saveGame(state: GameState, slot: number, name?: string): P
   if (db) {
     await tx(db, 'readwrite', (store) => store.put(record));
   } else {
-    localStorage.setItem(LS_PREFIX + slot, JSON.stringify(record));
+    storeWrite(LS_PREFIX + slot, JSON.stringify(record));
   }
   return meta;
 }
@@ -335,7 +394,7 @@ export async function listSaves(): Promise<SaveMeta[]> {
     records = await tx<SaveRecord[]>(db, 'readonly', (store) => store.getAll() as IDBRequest<SaveRecord[]>);
   } else {
     for (let slot = 0; slot < MAX_SLOTS; slot++) {
-      const raw = localStorage.getItem(LS_PREFIX + slot);
+      const raw = storeRead(LS_PREFIX + slot);
       if (!raw) continue;
       try {
         records.push(JSON.parse(raw) as SaveRecord);
@@ -359,7 +418,7 @@ export async function loadGame(slot: number): Promise<LoadOutcome> {
     if (db) {
       record = await tx<SaveRecord>(db, 'readonly', (store) => store.get(slot) as IDBRequest<SaveRecord>);
     } else {
-      const raw = localStorage.getItem(LS_PREFIX + slot);
+      const raw = storeRead(LS_PREFIX + slot);
       if (raw) record = JSON.parse(raw) as SaveRecord;
     }
   } catch (error) {
@@ -373,7 +432,7 @@ export async function loadGame(slot: number): Promise<LoadOutcome> {
 export async function deleteSave(slot: number): Promise<void> {
   const db = await openDb();
   if (db) await tx(db, 'readwrite', (store) => store.delete(slot));
-  else localStorage.removeItem(LS_PREFIX + slot);
+  else storeRemove(LS_PREFIX + slot);
 }
 
 export function exportToJson(state: GameState): string {
