@@ -1,5 +1,7 @@
 import { BUILDING_BY_ID, BUILDINGS, CONSUMER_CATEGORIES } from '@capital/content';
 import type { BuildingDef, CategoryId } from '@capital/content';
+import { estimateInvestment } from './systems/market';
+import type { InvestmentEstimate } from './systems/market';
 import type { BuildingInstance, CompanyState, DistrictState, GameState, Tile } from './types';
 
 /**
@@ -153,6 +155,66 @@ export function buildOptions(state: GameState): BuildOption[] {
     affordable: player.cash >= def.cost,
     requirement: def.unlockNetWorth,
   }));
+}
+
+export interface RankedBuildOption extends BuildOption {
+  estimate: InvestmentEstimate | null;
+  /** Bu bölgede parsel başına en çok kazandıran, inşa edilebilir seçenek. */
+  bestPick: boolean;
+}
+
+/**
+ * Bir bölge için yapı önerileri — PARSEL BAŞINA GETİRİYE göre sıralı.
+ *
+ * Kritik ayrım, ölçümle bulundu: oyunun kıt kaynağı para değil TOPRAK.
+ * Sınırsız nakitle koşulan bir oyunda bile karşılanmayan talep %52'de
+ * kalıyor ve 1200 denemenin 1167'sinde "boş parsel yok" deniyor. Yani
+ * oyuncunun asıl sorusu "param en hızlı nasıl geri döner" değil, "BU
+ * PARSELDEN en çok ne çıkar".
+ *
+ * Geri ödeme ikinci soruyu cevaplamıyor ve iki sıralama birbirinin
+ * tersi çıkıyor: geri ödeme 17–41 gün aralığında neredeyse düz, ama
+ * parsel başına kapasite 34 ile 1400 arasında — 41 kat fark. Geri
+ * ödemeye göre seçen oyuncu kıt parselleri en verimsiz binalara
+ * harcıyor.
+ *
+ * Ölçülen fark (1200 gün, aynı tempo ve aynı nakit disiplini, tek
+ * değişken sıralama ölçütü): karşılanmayan talep %45 → %34, oyuncunun
+ * net değeri 72 M ₺ → 196 M ₺.
+ *
+ * Bir bina bir parsel kapladığı için "parsel başına getiri" tam olarak
+ * `dailyProfit`. Formül değil, doğru sütuna bakmak.
+ */
+export function rankedBuildOptions(state: GameState, districtId: number): RankedBuildOption[] {
+  const player = getPlayer(state);
+  const rows: RankedBuildOption[] = buildOptions(state).map((option) => ({
+    ...option,
+    estimate: estimateInvestment(state, districtId, option.def.id, player.id),
+    bestPick: false,
+  }));
+
+  const score = (row: RankedBuildOption): number =>
+    row.estimate?.direct ? row.estimate.dailyProfit : Number.NEGATIVE_INFINITY;
+
+  rows.sort((a, b) => {
+    // İnşa EDİLEBİLİR seçenekler önce: listenin tepesinde bugün
+    // dokunamayacağın bir bina durması tavsiye değil, hayal kırıklığı.
+    const buildableA = a.unlocked && a.affordable ? 1 : 0;
+    const buildableB = b.unlocked && b.affordable ? 1 : 0;
+    if (buildableA !== buildableB) return buildableB - buildableA;
+    return score(b) - score(a);
+  });
+
+  const best = rows.find((row) => row.unlocked && row.affordable && score(row) > 0);
+  if (best) best.bestPick = true;
+  return rows;
+}
+
+/** Bir bölgede oyuncunun inşa edebileceği boş parsel sayısı. */
+export function freePlotsIn(state: GameState, districtId: number): number {
+  return state.map.tiles.filter(
+    (tile) => tile.districtId === districtId && tile.kind === 'plot' && !tile.buildingId,
+  ).length;
 }
 
 export interface CompanyRankRow {

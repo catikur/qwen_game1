@@ -1938,3 +1938,34 @@ button.icon {
   width: 90px;
   font-variant-numeric: tabular-nums;
 }
+
+/* ------------------------------------------------- parsel kıtlığı uyarısı */
+
+/*
+ * Oyunun kıt kaynağı para değil TOPRAK — ölçüm bunu gösterdi. Bölgede
+ * kaç parsel kaldığı, yapı menüsündeki sıralamanın neden getiriye göre
+ * olduğunu açıklayan bilgi.
+ */
+.buildpanel-scarce {
+  margin: 2px 0 0;
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+.buildpanel-scarce.tight {
+  color: var(--warn);
+}
+
+.buildcard-best {
+  margin-left: 7px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--good);
+  background: rgba(89, 217, 142, 0.13);
+  border: 1px solid rgba(89, 217, 142, 0.35);
+  border-radius: 999px;
+  padding: 1px 7px;
+  white-space: nowrap;
+}

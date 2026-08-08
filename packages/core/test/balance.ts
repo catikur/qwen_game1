@@ -33,6 +33,7 @@ import {
   getPlayer,
   goodShares,
   marketingLeverage,
+  rankedBuildOptions,
   researchCeiling,
   routeSignature,
   shelfReach,
@@ -97,7 +98,7 @@ function expandOutlets(engine: GameEngine): void {
     (a, b) => districtOpportunity(b) - districtOpportunity(a),
   );
 
-  let best: { tileId: number; defId: string; payback: number } | null = null;
+  let best: { tileId: number; defId: string; profit: number } | null = null;
 
   for (const district of districts.slice(0, 4)) {
     // Yalnızca gerçekten satın alınabilir boş parseller.
@@ -112,9 +113,18 @@ function expandOutlets(engine: GameEngine): void {
       if (tilePrice(state, tile.id) + option.def.cost > budget) continue;
 
       const estimate = estimateInvestment(state, district.id, option.def.id, player.id);
+      // SIRALAMA GERİ ÖDEMEYE GÖRE DEĞİL, GÜNLÜK KÂRA GÖRE.
+      //
+      // Bir bina bir parsel kaplıyor ve ölçüm oyunun kıt kaynağının
+      // toprak olduğunu gösterdi (sınırsız nakitle bile karşılanmayan
+      // talep %52). O yüzden doğru ölçüt paranın getirisi değil
+      // PARSELİN getirisi — o da tam olarak `dailyProfit`.
+      //
+      // Geri ödeme sınırı elenmiş adayları ayıklamak için duruyor;
+      // seçimi artık o yapmıyor.
       if (!estimate || estimate.paybackDays > 150) continue;
-      if (!best || estimate.paybackDays < best.payback) {
-        best = { tileId: tile.id, defId: option.def.id, payback: estimate.paybackDays };
+      if (!best || estimate.dailyProfit > best.profit) {
+        best = { tileId: tile.id, defId: option.def.id, profit: estimate.dailyProfit };
       }
     }
   }
@@ -1942,6 +1952,16 @@ console.log('\n=== Borsa ===\n');
   expect('elinde olmayanı satamıyorsun', !tooMany.ok, tooMany.reason ?? '');
 
   // Temettü: para yaratılmıyor, el değiştiriyor.
+  //
+  // ÖLÇÜLEN GÜN İZOLE EDİLMELİ. İddia "şehir geneli nakit değişimi =
+  // günlük kâr toplamı" ve bu yalnızca SERMAYE hareketi olmadığında
+  // doğru: bir rakibin o gün arsa alması ya da inşaat yapması nakdi
+  // varlığa çevirir, kârda görünmez ve identite kırılır. Kontrol
+  // eskiden bunu garanti etmiyordu, sadece o senaryoda rakipler
+  // tesadüfen hareketsizdi — yani şans eseri geçiyordu.
+  state.flags.npcCompetition = false;
+  state.flags.landAuctions = false;
+
   const totalBefore = Object.values(state.companies).reduce((sum, c) => sum + c.cash, 0);
   const playerBefore = player.cash;
   const rival = state.companies[targetId]!;
@@ -2033,6 +2053,109 @@ console.log('\n=== Borsa ===\n');
   // Tasarım hedefi: net değerin %50–90'ı (güvene göre). Bunun altına
   // inerse şirket toplamak bedava para basmak olurdu.
   expect('devralma bedavaya gelmiyor', ratio > 0.35, `oran ${ratio.toFixed(2)}`);
+}
+
+// ================================================================
+//  PARSEL GETİRİSİ — oyunun kıt kaynağı para değil toprak
+// ================================================================
+//
+// Bu bölüm Tur 7'nin bulgusunu SABİTLİYOR. Ölçüm şunu gösterdi:
+// sınırsız nakitle koşulan bir oyunda bile karşılanmayan talep %52'de
+// kalıyor ve 1200 denemenin 1167'sinde "boş parsel yok" çıkıyor. Yani
+// kısıt sermaye değil parsel.
+//
+// Bir bina bir parsel kapladığına göre doğru ölçüt paranın getirisi
+// (geri ödeme) değil PARSELİN getirisi (günlük kâr). İkisi aynı şeyi
+// söylemiyor: geri ödeme dar bir aralıkta düz, parsel başına kapasite
+// ise 41 kat değişiyor.
+console.log('\n--- parsel getirisi ---');
+{
+  const engine = new GameEngine(createNewGame({ seed: 7, companyName: 'Parsel AŞ' }));
+  const state = engine.getState();
+  const player = getPlayer(state);
+  player.cash = 50_000_000;
+  player.netWorth = 50_000_000;
+  for (let day = 1; day <= 60; day++) engine.runDay();
+
+  const district = state.districts.find((d) => d.archetype === 'mid_residential')!;
+  const ranked = rankedBuildOptions(state, district.id);
+  const buildable = ranked.filter((r) => r.unlocked && r.affordable && r.estimate?.direct);
+
+  // Kilitli ya da pahalı seçenekler listenin sonuna düşmeli: tepede
+  // bugün dokunamayacağın bir bina durması tavsiye değil.
+  const reachable = ranked.filter((r) => r.unlocked && r.affordable).length;
+  const firstUnreachable = ranked.findIndex((r) => !(r.unlocked && r.affordable));
+  expect(
+    'kilitli ve pahalı seçenekler listenin sonunda',
+    firstUnreachable === -1 || firstUnreachable === reachable,
+    `${reachable} ulaşılabilir seçenek, ilk ulaşılamayan ${firstUnreachable}. sırada`,
+  );
+
+  const profits = buildable.map((r) => r.estimate!.dailyProfit);
+  const sortedByProfit = profits.every((value, i) => i === 0 || profits[i - 1]! >= value);
+  expect('sıralama günlük kâra göre azalan', sortedByProfit,
+    profits.slice(0, 3).map((p) => formatMoney(p)).join(' > '));
+
+  const best = ranked.find((r) => r.bestPick);
+  expect('en iyi seçim işaretleniyor ve en kârlı olan',
+    Boolean(best) && best!.estimate!.dailyProfit === Math.max(...profits),
+    best ? `${best.def.name} · ${formatMoney(best.estimate!.dailyProfit)}/gün` : 'yok');
+
+  // BULGUNUN KENDİSİ: geri ödemeye göre sıralamak farklı bir bina
+  // seçtiriyor. Bu iki sıralama bir gün aynı çıkarsa ya kalibrasyon
+  // değişmiştir ya da bulgu geçersizleşmiştir — ikisi de bilinmeli.
+  const byPayback = [...buildable].sort(
+    (a, b) => a.estimate!.paybackDays - b.estimate!.paybackDays,
+  );
+  const paybackPick = byPayback[0]!;
+  expect(
+    'geri ödemeye göre seçmek FARKLI bina seçtiriyor',
+    paybackPick.def.id !== best?.def.id,
+    `geri ödeme → ${paybackPick.def.name} (${paybackPick.def.capacity} kapasite) · ` +
+      `parsel getirisi → ${best?.def.name} (${best?.def.capacity} kapasite)`,
+  );
+  expect(
+    'parsel getirisi daha yüksek kapasiteli binayı seçiyor',
+    (best?.def.capacity ?? 0) > paybackPick.def.capacity,
+    `${paybackPick.def.capacity} → ${best?.def.capacity} birim`,
+  );
+
+  // Yapısal tavan: harita kendi nüfus tavanının talebini karşılayabilmeli.
+  // Karşılayamıyorsa hiçbir strateji doygunluğa ulaşamaz.
+  const plots = state.map.tiles.filter((t) => t.kind === 'plot').length;
+  const ceilingRatio =
+    state.districts.reduce((s, d) => s + DISTRICT_ARCHETYPES[d.archetype].population * 2.6, 0) /
+    state.districts.reduce((s, d) => s + d.population, 0);
+  let neededPlots = 0;
+  for (const category of CONSUMER_CATEGORIES) {
+    let demand = 0;
+    for (const d of state.districts) demand += (d.demand[category] ?? 0) * ceilingRatio;
+    const options = BUILDINGS.filter((b) => b.role === 'outlet' && b.category === category);
+    if (!options.length) continue;
+    const bestCapacity = Math.max(...options.map((o) => o.capacity));
+    neededPlots += Math.ceil(demand / bestCapacity);
+  }
+  //
+  // ABONMAN ORANI — Tur 8'in gerekçesi.
+  //
+  // Nüfus tavanındaki talebi karşılamak için gereken parsel sayısının
+  // haritadaki parsele oranı. Bugün ~%100: yani şehir ancak HER parsel
+  // kategorisinin en büyük outlet'i olursa doyar ve geriye fabrikaya,
+  // depoya, Ar-Ge'ye ve dört rakibe hiç yer kalmaz. Karşılanmayan
+  // talebin sıfıra inememesinin sebebi bu — sermaye değil.
+  //
+  // Eşik %100'de duruyor çünkü bugünkü gerçek bu. Tur 8 haritayı
+  // büyütünce bu sayı düşecek ve o zaman eşik de sıkılaştırılmalı.
+  const subscription = neededPlots / plots;
+  expect(
+    'harita nüfus tavanının talebini karşılayabiliyor',
+    neededPlots <= plots,
+    `gereken ${neededPlots} / mevcut ${plots} parsel — abonman %${Math.round(subscription * 100)}`,
+  );
+  console.log(
+    `  NOT: abonman %${Math.round(subscription * 100)} — şehrin doyması için parsellerin ` +
+      `neredeyse tamamı outlet olmalı. Fabrika, depo ve rakipler için yer yok (bkz. DURUM.md §4.1).`,
+  );
 }
 
 console.log(`\n=== ${failures === 0 ? 'TÜMÜ GEÇTİ' : `${failures} KONTROL KALDI`} ===`);
