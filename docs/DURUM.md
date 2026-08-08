@@ -4,7 +4,7 @@
 > `pnpm bench` çıktısından; iddialar `pnpm balance` ve `pnpm playtest`
 > tarafından her koşuda doğrulanıyor.
 >
-> Son güncelleme: şema **v6**, 4 tur tamamlandı.
+> Son güncelleme: şema **v6**, 6 tur tamamlandı.
 
 ---
 
@@ -20,6 +20,14 @@ dördü de kapandı:
 | Rekabetin tek silahı fiyattı | **2** | Kalite (Ar-Ge) ve marka (pazarlama) kolları |
 | Pazar payı yarışı fiilen yaşanmıyordu | **3** | Nüfus modelinin onarımı |
 | Rakibi yenmenin tek yolu pazardı | **4** | Borsa: hisse, temettü, devralma |
+
+Dördü kapandıktan sonra ölçüm iki şey daha gösterdi — ikisi de oyun
+mantığıyla ilgili değil:
+
+| Eksik | Tur | Ne yapıldı |
+|---|---|---|
+| Telefonda oyun açılıyor ama oynanamıyordu | **5** | Sarma, alt rıhtım, pinch zoom, dokunarak seçim |
+| Görsel bütçenin %95'i harcanmamıştı | **6** | Bina kütlesi, pencere ışıkları, asfalt, bloom |
 
 ---
 
@@ -67,6 +75,20 @@ türetiliyor, kâr temettü olarak dağılıyor ve %50'yi geçen devralıyor:
 bütün binalar ve parseller el değiştiriyor, azınlık hissedar nakde
 çevriliyor.
 
+### Tur 5 ve Tur 6 — Mobil ve Görsel · `docs/GORSEL-TASARIMI.md`
+
+İkisi de oyun mantığına dokunmuyor; denge sayıları ve şema sürümü aynı.
+
+| Tur | Ne değişti |
+|---|---|
+| **5** | Telefonda ulaşılabilen panel **0/8 → 7/7**. Pinch zoom, iki parmakla döndürme, dokunarak seçim (üçü de yoktu). Kalite tek kademeden dört kademeye. |
+| **6** | Bina tek kutudan üç parçaya (taban, gövde, çatı). Pencere ışıkları gerçek pencerelerden geliyor — emisyon **0,03 → 1,15**. Sokaklar asfalt dokusu ve şerit çizgisi kazandı. Ortam haritası, bloom, vinyet, inşaat animasyonu. |
+
+Kök sebepler ilginçti: üst bar sarmayan bir flex satırıydı ve min-content
+genişliği **1002px**'e sabitlenmişti; `controller.zoom()` için kodda tek
+bir çağrı yeri vardı (`wheel`); ve dokunmatikte seçim `pointermove`'a
+bağlı olduğu için hiç çalışmıyordu.
+
 ---
 
 ## 3. Ölçülen durum
@@ -108,8 +130,20 @@ bütün binalar ve parseller el değiştiriyor, azınlık hissedar nakde
 | Determinizm | birebir |
 | Simülasyon hızı | ~70 gün/sn |
 | Denge testi | **170 kontrol, hepsi geçiyor** |
-| Tarayıcı testi | **105/105**, 0 konsol hatası |
-| Kapsam | 26 bina · 22 ürün · 5 kategori · 4 rakip profili |
+| Tarayıcı testi | **134 kontrol**, 0 konsol hatası |
+| Kapsam | 26 bina · 22 ürün · 7 kategori · 4 rakip profili |
+
+### Render (Tur 6 sonrası)
+
+| | Önce | Sonra |
+|---|---|---|
+| Çizim çağrısı / kare | 5 | **16** |
+| Üçgen / kare | 10,5 K | **25,2 K** |
+| İçerik dokusu | 0 | 3 (pencere, cephe, asfalt) |
+| Telefonda ulaşılabilen panel | 0 / 8 | **7 / 7** |
+
+Yaygın mobil hedef bandı 50–150 çizim çağrısı, 100–300 K üçgen — yani
+bütçe hâlâ fazlasıyla açık.
 
 ---
 
@@ -153,7 +187,27 @@ Bir outlet kendi bölgesine tam, komşulara kısmi (0,30 / 0,14) erişiyor;
 uzak bölgenin talebine kimse ulaşamıyor. Bu bir arıza değil coğrafya,
 ama "boş talep" sayısını okurken akılda tutulmalı.
 
-### 4.5 Daha küçük kalemler
+### 4.5 Şehir küçük — ama büyütmek tek başına işe yaramıyor
+
+Ölçüldü: bölge yerleşimi geçici olarak 3×3'ten 5×5'e çıkarıldı.
+
+| | Bugün (3×3) | Deney (5×5) |
+|---|---|---|
+| Harita | 24 × 24 | 40 × 40 |
+| Parsel | 283 | 808 |
+| Simülasyon hızı | 207 gün/sn | 166 gün/sn |
+| Çizim çağrısı | değişmiyor | değişmiyor |
+| **360. günde bina** | **137** | **143** |
+
+Teknik maliyet ihmal edilebilir — harita boyutu tamamen
+`DISTRICT_LAYOUT`'tan türetiliyor, hiçbir yerde sabit kodlanmamış. Ama
+harita 2,9 katına çıktığında şehir yalnızca 6 bina büyüdü: kısıt harita
+değil **sermaye**, yani §4.1. Bugün büyütmek daha büyük bir *boş* şehir
+üretir.
+
+Sıra: §4.1 (doygunluk) → ızgarayı büyüt → çoklu şehir.
+
+### 4.6 Daha küçük kalemler
 
 - `estimateInvestment` depo, Ar-Ge ve pazarlama için `direct: false`
   dönüyor; bu binaların geri ödemesi yapı menüsünde görünmüyor
@@ -202,3 +256,27 @@ açıp bakmak, testlerin kaçırdığı yedi ayrı hatayı buldu — %134 pazar
 payı, "%100 boş" bölge, yuvarlanmış birim fiyatlar, 395 günlük tavsiye,
 sahte raf seçimi, bozuk sanılıp yıkılacak Ar-Ge merkezi, ve fiyat keşfi
 yapamayan ihale.
+
+Tur 5 ve 6 aynı iki dersi bir kez daha, ama daha keskin biçimde verdi.
+
+**Bir kontrol, başarısız OLABİLİYOR mu?** "Dar ekranda yatay taşma yok"
+kontrolü aylarca yeşil yandı ve hiçbir şey ölçmüyordu: `body`'de
+`overflow: hidden` varken `scrollWidth − clientWidth` her koşulda 0'dır.
+Bu yüzden 1002px genişliğinde takılı bir üst barı ve telefonda hiçbir
+panele ulaşılamamasını kaçırdı. Bir kontrolü yazarken sorulacak soru
+"geçiyor mu" değil, **"bu kontrol hangi durumda kırmızı yanar"**.
+
+**Ortamın ölçemediği şeyi kontrolü kapatarak değil, soruyu değiştirerek
+çöz.** İki şey bu ortamda doğrudan test edilemedi: 400 ms'lik çift
+dokunuş penceresi (yazılım rasterizasyonunda iki dokunuş arası 1 saniye)
+ve üst kalite kademeleri (uyarlama saniyeler içinde en ucuza iniyor).
+İkisi de kontrol kapatılarak değil, sorunun yeniden kurulmasıyla çözüldü
+— çift dokunuş gözlenen aralığa göre iki yönlü kontrol ediliyor, kalite
+kademesi ise sabitlenebilir hale getirildi.
+
+Bir de üç ayrı "doğru görünen ama yanlış" CSS/render tuzağı çıktı, üçü de
+ancak ekrana bakınca görüldü: `backdrop-filter` sabit konumlu alt öğe
+için kapsayıcı blok yaratıyor (alt rıhtım ekranın tepesine yapışmıştı);
+`map` binanın kendi rengiyle çarpıldığı için ortalaması 0,72 olan bir
+doku bütün şehri karartıyordu; ve flex kolonunda paneller doğal
+yüksekliklerini koruyamayıp birbirini eziyordu.

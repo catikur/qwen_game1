@@ -333,12 +333,24 @@ const findTile = (page, kind) =>
   // ---------- Gece oynanabilirliği ----------
   section('Gece oynanabilirliği');
 
+  //
+  // SABİT `sleep` KULLANMA. Bu ortamda kare süresi sahnenin ağırlığına
+  // göre 20 ms ile 1 sn arasında değişiyor; sabit bir bekleme yavaş
+  // koşumda bir adım geriden okur ve ÇALIŞAN bir özelliği hatalı
+  // raporlar. `timeOfDay` her karede biraz ilerlediği için 0,75'in
+  // üstüne çıkmış olması en az bir karenin çizildiğinin kanıtı.
+  //
   const atNight = async (lens) =>
     page.evaluate(
       async (l) => {
         window.__capital.setLens(l);
         window.__capital.setTimeOfDay(0.75); // güneşin en alçak olduğu an
-        await new Promise((r) => setTimeout(r, 400));
+        const deadline = Date.now() + 10000;
+        while (Date.now() < deadline) {
+          const info = window.__capital.renderInfo();
+          if (info && info.activeLens === l && info.timeOfDay > 0.75) return info;
+          await new Promise((r) => setTimeout(r, 25));
+        }
         return window.__capital.renderInfo();
       },
       lens,
@@ -349,10 +361,16 @@ const findTile = (page, kind) =>
     `güneş ${darkest.sunIntensity.toFixed(2)}`);
   check('Gecenin en karanlık anında ortam ışığı yeterli', darkest.hemisphereIntensity >= 0.7,
     `ortam ${darkest.hemisphereIntensity.toFixed(2)}`);
-  // Pencere parıltısı binanın tüm yüzeyine düz uygulanıyor; yüksek olursa
-  // gece bütün şehir tek parça altın bir kütleye dönüşüyor.
-  check('Pencere parıltısı binaların rengini bastırmıyor', darkest.fabricEmissive <= 0.05,
-    `emissive ${darkest.fabricEmissive.toFixed(3)}`);
+  // Bu kontrol Tur 6'da anlamını değiştirdi ve BİLEREK gevşetildi.
+  //
+  // Eskiden emisyon binanın TÜM yüzeyine düz uygulanıyordu; yükseltmek
+  // şehri tek parça amber bir kütleye çeviriyordu, o yüzden tavan 0,05'ti.
+  // Artık emisyon bir dokudan geliyor: siyah zemin üzerinde yalnızca
+  // pencereler parlıyor. Korunması gereken şey artık parlaklığın DÜŞÜK
+  // olması değil, emisyonun DOKUDAN gelmesi — asıl güvence bu.
+  check('Gece pencereler yanıyor', darkest.fabricEmissive > 0.5,
+    `emissive ${darkest.fabricEmissive.toFixed(2)}`);
+  check('Emisyon dokudan geliyor, düz yüzeyden değil', darkest.emissiveMapped === true);
   check('Işık kaynağı yer altına inmiyor', darkest.sunHeight > 5,
     `ışık yüksekliği ${darkest.sunHeight.toFixed(1)}`);
   check('Gece gökyüzü tamamen siyaha inmiyor', darkest.skyLightness >= 0.1,
@@ -935,10 +953,18 @@ const findTile = (page, kind) =>
   await page.waitForSelector('.topbar');
   await page.click('.speed:nth-child(4)');
   // Ham FPS'i eşik olarak kullanmak kabı ölçer, kodu değil: burada GPU yok
-  // ve SwiftShader tavanı 6-8 FPS. Asıl korunması gereken şey zaten kare
+  // ve SwiftShader tavanı düşük. Asıl korunması gereken şey zaten kare
   // hızı değil — OYUN SAATİNİN GERÇEK ZAMANLA UYUMU. Düşük kare hızında
   // simülasyon sessizce yavaşlarsa seçilen hız kademesi yalan söyler;
   // motorun dt üst sınırı tam olarak bunu engellemek için var.
+  //
+  // Kalite en ucuz kademeye SABİTLENİYOR. Aksi halde ölçüm motorun
+  // saatini değil, o an hangi kademede olduğumuzu ölçer: Tur 6'nın
+  // dokuları ve ortam haritasıyla yazılım rasterizasyonu 1 FPS'e
+  // inebiliyor ve dt üst sınırı devreye girip saat geride kalıyor.
+  // Bu bir motor arızası değil, kabın sınırı.
+  await page.evaluate(() => window.__capital.setQuality(3));
+  await page.waitForTimeout(600);
   const pace = await page.evaluate(
     () =>
       new Promise((resolve) => {
@@ -970,6 +996,59 @@ const findTile = (page, kind) =>
   await page.screenshot({ path: `${OUT}/city-later.png` });
   check('Uzun oturumda konsol temiz', consoleErrors.length === 0, consoleErrors.slice(0, 3).join(' | '));
 
+  // ---------- Görsel katman ----------
+  section('Görsel katman');
+  const visual = await page.evaluate(() => window.__capital.renderInfo());
+  check('Bina kütlesi üç parçalı', visual.massParts === 3, `${visual.massParts} parça (taban, gövde, çatı)`);
+  check(
+    'Sokaklar parsellerden ayrı çiziliyor',
+    visual.roadInstances > 0 && visual.plotInstances > 0,
+    `${visual.roadInstances} sokak · ${visual.plotInstances} parsel`,
+  );
+  check(
+    'Sokak ve parsel toplamı haritayı kapatıyor',
+    visual.roadInstances + visual.plotInstances ===
+      (await page.evaluate(() => window.__capital.getState().map.tiles.length)),
+    'kayıp kare yok',
+  );
+
+  // Pencere ışıkları: gündüz sönük, gece yanıyor. Emisyon artık düz bir
+  // yüzey parlaklığı değil bir DOKUDAN geldiği için değer serbestçe
+  // yükselebiliyor — eskiden 0,03 gibi bir "ima" seviyesindeydi.
+  await page.evaluate(() => window.__capital.setTimeOfDay(0.25));
+  await page.waitForTimeout(400);
+  const noon = await page.evaluate(() => window.__capital.renderInfo());
+  await page.evaluate(() => window.__capital.setTimeOfDay(0.76));
+  await page.waitForTimeout(400);
+  const midnight = await page.evaluate(() => window.__capital.renderInfo());
+  check('Gündüz pencere ışığı sönük', noon.fabricEmissive === 0, `${noon.fabricEmissive.toFixed(2)}`);
+  check('Gece pencereler yanıyor', midnight.fabricEmissive > 0.5,
+    `${midnight.fabricEmissive.toFixed(2)} (eski düz emisyon 0,03 idi)`);
+
+  // İnşaat animasyonu: bina yerden yükseliyor mu.
+  //
+  // Oyun ÖNCE durduruluyor. Rakipler sürekli dükkân açıyor ve her yeni
+  // bina animasyonu yeniden tetikliyor; duraklatılmadan "animasyon bitti"
+  // kontrolü rakiplerin inşaat temposunu ölçerdi, bizim animasyonumuzu
+  // değil.
+  await page.evaluate(() => window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 }));
+  const grewTile = await page.evaluate(() => {
+    const engine = window.__capital.engine;
+    const state = engine.getState();
+    for (const tile of state.map.tiles) {
+      if (tile.kind !== 'plot' || tile.structureId || tile.ownerId) continue;
+      if (!engine.dispatch({ type: 'BUY_TILE', tileId: tile.id }).ok) continue;
+      if (engine.dispatch({ type: 'BUILD', tileId: tile.id, defId: 'corner_shop' }).ok) return tile.id;
+    }
+    return null;
+  });
+  await page.waitForTimeout(120);
+  const during = await page.evaluate(() => window.__capital.renderInfo());
+  check('Yeni bina yerden yükseliyor', grewTile !== null && during.buildingsGrowing, 'animasyon sürüyor');
+  await page.waitForTimeout(1400);
+  const settled = await page.evaluate(() => window.__capital.renderInfo());
+  check('Animasyon bitiyor, takılı kalmıyor', !settled.buildingsGrowing, 'tamamlandı');
+
   // ---------- Kalite kademeleri ----------
   section('Kalite kademeleri');
   const quality = await page.evaluate(() => window.__capital.renderInfo());
@@ -987,6 +1066,27 @@ const findTile = (page, kind) =>
     'İnen kademede gölge haritası küçülüyor ya da gölge kapanıyor',
     quality.shadowMapSize <= 1024,
     `gölge haritası ${quality.shadowMapSize}`,
+  );
+
+  // Üst kademeler bu ortamda kendiliğinden HİÇ çalışmaz — GPU yok,
+  // uyarlama saniyeler içinde en ucuza iniyor. Sabitlemeden test edilseydi
+  // bloom zinciri ve 2048'lik gölge hiçbir zaman sınanmamış olurdu.
+  await page.evaluate(() => window.__capital.setQuality(0));
+  await page.waitForTimeout(1200);
+  const top = await page.evaluate(() => window.__capital.renderInfo());
+  check('En üst kademede bloom zinciri kuruluyor', top.postProcessing === true, top.qualityName);
+  check('En üst kademede gölge haritası 2048', top.shadowMapSize === 2048, `${top.shadowMapSize}`);
+  await page.screenshot({ path: `${OUT}/city-bloom.png` });
+
+  await page.evaluate(() => window.__capital.setQuality(3));
+  await page.waitForTimeout(900);
+  const bottom = await page.evaluate(() => window.__capital.renderInfo());
+  check('En alt kademede bloom sökülüyor', bottom.postProcessing === false, bottom.qualityName);
+  check('En alt kademede piksel oranı 1', bottom.pixelRatio === 1, `${bottom.pixelRatio}`);
+  check(
+    'Kademeler arası geçiş konsolu kirletmiyor',
+    consoleErrors.length === 0,
+    consoleErrors.slice(0, 2).join(' | '),
   );
 
   // ---------- Mobil ----------

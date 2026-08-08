@@ -125,10 +125,39 @@ button.icon {
   touch-action: none;
 }
 
+/*
+ * Vinyet.
+ *
+ * Tam ekran bir son işlem geçişi yerine tek bir CSS gradyanı: aynı işi
+ * yapıyor ve GPU'ya hiçbir geçiş eklemiyor. Bloom'un aksine bunun
+ * sahnenin içeriğini bilmesi gerekmiyor, dolayısıyla shader'a gerek yok.
+ *
+ * `pointer-events: none` şart — kamerayı sürüklemek bunun altından
+ * geçmeli.
+ */
+.app::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  background: radial-gradient(
+    ellipse at 50% 45%,
+    rgba(0, 0, 0, 0) 42%,
+    rgba(0, 0, 0, 0.28) 100%
+  );
+}
+
 .hud {
   position: absolute;
   inset: 0;
   pointer-events: none;
+  /*
+   * Vinyetin ÜSTÜNDE. `.app::after` son çocuk sayıldığı için z-index
+   * verilmeseydi panellerin kenarları da kararırdı — vinyet sahneye ait
+   * bir efekt, arayüze değil.
+   */
+  z-index: 2;
   display: grid;
   grid-template-columns: 300px 1fr 330px;
   grid-template-rows: auto 1fr auto;
