@@ -21,6 +21,18 @@ export {
   RESEARCH_CAP,
 } from './systems/focus';
 export { auctionHint, minimumBid, valuationFor } from './systems/auction';
+export {
+  bookValue,
+  confidence,
+  freeFloat,
+  marketCap,
+  portfolioValue,
+  sharePrice,
+  sharesHeld,
+  controllerOf,
+  CONTROL_THRESHOLD,
+  TOTAL_SHARES,
+} from './systems/equity';
 export { collectEventModifiers } from './systems/events';
 export type { EventModifiers } from './systems/events';
 export {

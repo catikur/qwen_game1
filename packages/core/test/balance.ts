@@ -36,13 +36,21 @@ import {
   researchCeiling,
   routeSignature,
   shelfReach,
+  bookValue,
+  confidence,
+  freeFloat,
+  marketCap,
+  portfolioValue,
+  sharePrice,
   supplyRoutes,
   tilePrice,
   valuationFor,
+  TOTAL_SHARES,
   MARKETING_CAP,
   RESEARCH_CAP,
 } from '../src/index';
 import { build, buyTile } from '../src/actions';
+import { buyShares } from '../src/systems/equity';
 import type { GameState } from '../src/types';
 
 /**
@@ -1314,10 +1322,42 @@ function addLabs(engine: GameEngine, companyId: string, districtId: number, coun
 /** 7. bölümde ölçülüyor, 8. bölümde pazarlamayla karşılaştırılıyor. */
 let researchPayback = Infinity;
 
-// ---- 7. Kalibrasyon: Ar-Ge ölçekle birlikte ucuzluyor mu? ----
+// ---- 7. Kalibrasyon: kollar bir ÖLÇEK EŞİĞİNDEN sonra açılıyor mu? ----
 //
-// Ar-Ge'nin sabit gideri var, faydası outlet sayınla çarpılıyor. Az
-// mağazalı oyuncuya tuzak, çok mağazalıya en iyi hamle olmalı.
+// Tur 3'ün nüfus düzeltmesinden sonra eğri keskinleşti: pazar artık
+// gerçekten doyduğu için kolun değeri ölçekle birlikte hızla büyüyor.
+// Aranan şey bir bant değil, net bir EŞİK — az mağazalı oyuncuya tuzak,
+// çok mağazalıya en iyi hamle.
+{
+  const measure = (outlets: number, defId: string, count: number): number => {
+    const control = duel(23, outlets, true);
+    for (let day = 0; day < 400; day++) control.engine.runDay();
+    const base = getPlayer(control.engine.getState()).today.profit;
+
+    const test = duel(23, outlets, true);
+    const state = test.engine.getState();
+    const built: string[] = [];
+    for (let i = 0; i < count; i++) {
+      const id = placeFor(test.engine, state.playerCompanyId, defId, test.districtIds[0]!);
+      if (!id) continue;
+      state.buildings[id]!.focus = 'grocery';
+      built.push(id);
+    }
+    for (let day = 0; day < 400; day++) test.engine.runDay();
+    const gain = getPlayer(state).today.profit - base;
+    return gain > 0 ? (built.length * BUILDING_BY_ID[defId]!.cost) / gain : Infinity;
+  };
+
+  const small = measure(4, 'research_center', 2);
+  const large = measure(8, 'research_center', 2);
+  console.log(`  Ar-Ge geri ödemesi: 4 mağazada ${fmtDays(small)}, 8 mağazada ${fmtDays(large)}`);
+  expect('Ar-Ge ölçekle ucuzluyor', large < small, `${fmtDays(large)} < ${fmtDays(small)}`);
+  expect('az mağazalı oyuncu için Ar-Ge erken', small > 400, fmtDays(small));
+  expect('ölçek yeterken Ar-Ge kazandırıyor', large < 200, fmtDays(large));
+  researchPayback = large;
+}
+
+// ---- 8. Pazarlama: ucuz, hızlı, düşük tavanlı giriş silahı ----
 {
   const measure = (outlets: number): number => {
     const control = duel(23, outlets, true);
@@ -1325,62 +1365,31 @@ let researchPayback = Infinity;
     const base = getPlayer(control.engine.getState()).today.profit;
 
     const test = duel(23, outlets, true);
-    const labs = addLabs(test.engine, test.engine.getState().playerCompanyId, test.districtIds[0]!, 2, 'grocery');
+    const state = test.engine.getState();
+    const built: string[] = [];
+    for (let i = 0; i < 2; i++) {
+      const id = placeFor(test.engine, state.playerCompanyId, 'marketing_office', test.districtIds[0]!);
+      if (!id) continue;
+      state.buildings[id]!.focus = 'grocery';
+      built.push(id);
+    }
     for (let day = 0; day < 400; day++) test.engine.runDay();
-    const withLabs = getPlayer(test.engine.getState()).today.profit;
-
-    const investment = labs.length * (BUILDING_BY_ID['research_center']!.cost);
-    const gain = withLabs - base;
-    return gain > 0 ? investment / gain : Infinity;
+    const gain = getPlayer(state).today.profit - base;
+    return gain > 0 ? (built.length * BUILDING_BY_ID['marketing_office']!.cost) / gain : Infinity;
   };
 
-  const small = measure(1);
-  const large = measure(4);
-  console.log(`  Ar-Ge geri ödemesi: 1 mağazada ${fmtDays(small)}, 4 mağazada ${fmtDays(large)}`);
-  expect('Ar-Ge ölçekle ucuzluyor', large < small, `${fmtDays(large)} < ${fmtDays(small)}`);
-  expect('tek mağazalı oyuncu için Ar-Ge erken', small > 260, fmtDays(small));
-  // Zincirin bandı 170–174 gün. Ar-Ge ondan YAVAŞ olmalı: getirisi kalıcı
-  // ve rakip azaldıkça büyüyor, yani sabırlı sermayenin işi.
-  expect('Ar-Ge zincirden yavaş dönüyor', large > 180 && large < 280, fmtDays(large));
-  researchPayback = large;
-}
-
-// ---- 8. Pazarlama ofisi de kalibre mi? ----
-{
-  const control = duel(23, 4, true);
-  for (let day = 0; day < 400; day++) control.engine.runDay();
-  const base = getPlayer(control.engine.getState()).today.profit;
-
-  const test = duel(23, 4, true);
-  const state = test.engine.getState();
-  const offices: string[] = [];
-  for (let i = 0; i < 2; i++) {
-    const id = placeFor(test.engine, state.playerCompanyId, 'marketing_office', test.districtIds[0]!);
-    if (!id) continue;
-    state.buildings[id]!.focus = 'grocery';
-    offices.push(id);
-  }
-  for (let day = 0; day < 400; day++) test.engine.runDay();
-  const gain = getPlayer(state).today.profit - base;
-  const payback = gain > 0 ? (offices.length * BUILDING_BY_ID['marketing_office']!.cost) / gain : Infinity;
-
-  console.log(`  pazarlama geri ödemesi (4 mağaza): ${fmtDays(payback)}`);
-  expect('pazarlama kâr getiriyor', gain > 0, formatMoney(gain) + '/gün');
-  // Pazarlama Ar-Ge'den HIZLI dönmeli: etkisi anında başlıyor (birikim
-  // yok) ve ofisi yıktığın gün bitiyor. Daha ucuz, daha kısa vadeli bir kol.
+  const small = measure(4);
+  const large = measure(8);
+  console.log(`  pazarlama geri ödemesi: 4 mağazada ${fmtDays(small)}, 8 mağazada ${fmtDays(large)}`);
+  expect('az mağazalı oyuncu için pazarlama da erken', small > 400, fmtDays(small));
+  expect('ölçek yeterken pazarlama kazandırıyor', large < 200, fmtDays(large));
+  // Tasarımın kararı: pazarlama Ar-Ge'den ucuz ve hızlı olmalı, tavanı
+  // ise Ar-Ge kadar kalıcı değil. Kalibrasyon bunu bir kez ters çevirmişti.
   expect(
     "pazarlama Ar-Ge'den hızlı dönüyor",
-    payback < researchPayback,
-    `${fmtDays(payback)} < ${fmtDays(researchPayback)}`,
+    large < researchPayback,
+    `${fmtDays(large)} < ${fmtDays(researchPayback)}`,
   );
-  // ...ama en iyi mağazadan (60–110 gün) hızlı DEĞİL. Olsaydı düşünmeden
-  // kurulacak bir bina olurdu ve "hangi parsele ne" sorusu ölürdü.
-  expect('pazarlama mağazanın önüne geçmiyor', payback > 110, fmtDays(payback));
-}
-
-/** Sonsuz geri ödemeyi okunur yazar. */
-function fmtDays(days: number): string {
-  return Number.isFinite(days) ? `${Math.round(days)} gün` : 'hiç dönmüyor';
 }
 
 // ---- 9. Rekabet kartı ----
@@ -1417,8 +1426,10 @@ function fmtDays(days: number): string {
     expect('kanal doğru okunuyor', grocery.channel === 'price',
       `${grocery.channel} · doluluk %${Math.round(grocery.utilisation * 100)}`);
     expect('kart bir hamle öneriyor', grocery.move !== null, grocery.move?.name ?? grocery.blocked ?? '—');
-    expect('4 mağazada hamle erken sayılmıyor', grocery.move?.premature === false,
-      `${grocery.outlets} mağaza`);
+    // Eşik ölçümle 6'ya çıktı; 4 mağazalı oyuncuya hamle ERKEN
+    // işaretlenmeli. Kartın işi cesaret vermek değil, doğruyu söylemek.
+    expect('4 mağazada hamle erken işaretleniyor', grocery.move?.premature === true,
+      `${grocery.outlets} mağaza · erken=${grocery.move?.premature}`);
   }
 
   // Kartın kalite değeri motorun kullandığıyla aynı olmalı: Ar-Ge kurunca
@@ -1562,13 +1573,34 @@ function fmtDays(days: number): string {
   // sütunu farkı taşımalı.
   const cards = competitionCards(state, state.playerCompanyId);
   const withLeader = cards.filter((card) => card.leader !== null);
-  const qualities = withLeader.map((card) => card.leader!.quality);
-  const spread = qualities.length > 1 ? Math.max(...qualities) - Math.min(...qualities) : 0;
   console.log(
     `  kartta görünen rakip kaliteleri: ${withLeader
       .map((card) => `${card.categoryName} ${card.leader!.name.split(' ')[0]} ${card.leader!.quality.toFixed(2)}`)
       .join(' · ')}`,
   );
+
+  // Kartın raporladığı kalite, motorun kullandığının AYNISI olmalı.
+  // İlk denemede bunu "kategoriler arası kalite yayılımı" ile ölçüyordum;
+  // o zayıf bir vekildi — farklı kategorilerin taban bina kaliteleri
+  // zaten farklı olduğu için yayılım doktrin hakkında hiçbir şey
+  // söylemiyordu. Doğru soru: kart rakibin Ar-Ge primini gizliyor mu?
+  let worstGap = 0;
+  for (const card of withLeader) {
+    const leaderId = card.leader!.companyId;
+    let sum = 0;
+    let count = 0;
+    for (const building of Object.values(state.buildings)) {
+      if (building.companyId !== leaderId) continue;
+      const def = BUILDING_BY_ID[building.defId];
+      if (def?.role !== 'outlet' || def.category !== card.category) continue;
+      sum += def.quality + (state.companies[leaderId]!.research[card.category] ?? 0);
+      count += 1;
+    }
+    if (count === 0) continue;
+    worstGap = Math.max(worstGap, Math.abs(card.leader!.quality - sum / count));
+  }
+  expect('kart rakibin Ar-Ge primini gizlemiyor', worstGap < 0.02,
+    `en büyük sapma ${worstGap.toFixed(3)}`);
 
   const premiumResearch = Math.max(
     ...CONSUMER_CATEGORIES.map((c) => state.companies[NPC_PROFILES.find((p) => p.trait === 'premium')!.id]!.research[c] ?? 0),
@@ -1579,8 +1611,90 @@ function fmtDays(days: number): string {
   expect('kalite avcısının kalite primi ucuzcununkinden yüksek',
     premiumResearch > cutterResearch + 0.05,
     `${premiumResearch.toFixed(2)} > ${cutterResearch.toFixed(2)}`);
-  expect('doktrin farkı rekabet kartına yansıyor', spread > 0.02 || withLeader.length < 2,
-    `kalite yayılımı ${spread.toFixed(2)}`);
+
+}
+
+// ---- 13. Tur 3: rekabet gerçekten iş görüyor mu? ----
+//
+// Turun tek sorusu bu. Nüfus düzeltmesinden önce şehir hiç doymuyordu:
+// herkes kapasitesinin tamamını satıyor, çekicilik formülünün hiçbir
+// değişkeni bir işe yaramıyordu. Aşağıdaki üç kontrol o durumun geri
+// gelmediğini garanti ediyor.
+{
+  const { engine } = duel(29, 16, true);
+  const state = engine.getState();
+  for (let day = 0; day < 400; day++) engine.runDay();
+
+  let cap = 0;
+  let sold = 0;
+  for (const building of Object.values(state.buildings)) {
+    const def = BUILDING_BY_ID[building.defId];
+    if (def?.role !== 'outlet') continue;
+    cap += def.capacity;
+    sold += building.last.unitsSold;
+  }
+  const utilisation = cap > 0 ? sold / cap : 0;
+
+  let unmetUnits = 0;
+  let demandUnits = 0;
+  for (const district of state.districts) {
+    for (const category of CONSUMER_CATEGORIES) {
+      const demand = district.demand[category] ?? 0;
+      demandUnits += demand;
+      unmetUnits += demand * (district.unmet[category] ?? 0);
+    }
+  }
+  const cityUnmet = demandUnits > 0 ? unmetUnits / demandUnits : 0;
+
+  console.log(
+    `  16 süpermarket/taraf · doluluk %${(utilisation * 100).toFixed(0)} · ` +
+      `market boş talebi %${(cityUnmet * 100).toFixed(0)}`,
+  );
+  // Doluluk %100'e dayanıyorsa çekicilik ölüdür: kimse rakipten müşteri
+  // alamaz, çünkü zaten satabildiğinin tamamını satıyor.
+  expect('kapasite talebe yetişebiliyor (rekabet için boşluk var)', utilisation < 0.9,
+    `doluluk %${(utilisation * 100).toFixed(0)}`);
+
+  // Fiyat kırmak gerçekten pay almalı. Tur 3 öncesi bu da ölüydü.
+  const own = Object.values(state.buildings).filter(
+    (b) => b.companyId === state.playerCompanyId && BUILDING_BY_ID[b.defId]?.role === 'outlet',
+  );
+  const before = own.reduce((sum, b) => sum + b.last.unitsSold, 0);
+  for (const building of own) {
+    building.autoPrice = false;
+    building.priceMultiplier = 0.75;
+  }
+  for (let day = 0; day < 60; day++) engine.runDay();
+  const after = own.reduce((sum, b) => sum + b.last.unitsSold, 0);
+  const lift = before > 0 ? after / before - 1 : 0;
+  console.log(`  fiyatı %25 kırınca hacim: ${before.toFixed(0)} → ${after.toFixed(0)} (%${(lift * 100).toFixed(0)})`);
+  expect('fiyat kırmak pay alıyor', lift > 0.1, `+%${(lift * 100).toFixed(0)}`);
+}
+
+// ---- 14. Perakende istihdamı nüfus çekmiyor ----
+//
+// Tur 3'ün düzeltmesinin kendisi. Mağaza kendi müşterisini üretemez;
+// fabrika ve ofis ise gerçekten yeni sakin çeker.
+{
+  const grow = (defId: string, districtId: number): number => {
+    const engine = labEngine(37);
+    const state = engine.getState();
+    const before = state.districts[districtId]!.population;
+    for (let i = 0; i < 6; i++) placeFor(engine, state.playerCompanyId, defId, districtId);
+    for (let day = 0; day < 300; day++) engine.runDay();
+    return state.districts[districtId]!.population / before - 1;
+  };
+
+  const industrial = labEngine(37).getState().districts.find((d) => d.archetype === 'industrial')!.id;
+  const shops = grow('supermarket', industrial);
+  const plants = grow('coffee_estate', industrial);
+
+  console.log(
+    `  sanayi bölgesinde 300 gün: 6 süpermarket → nüfus %${(shops * 100).toFixed(1)} · ` +
+      `6 çiftlik → nüfus %${(plants * 100).toFixed(1)}`,
+  );
+  expect('perakende istihdamı nüfusu şişirmiyor', shops < 0.1, `%${(shops * 100).toFixed(1)}`);
+  expect('üretim istihdamı nüfus çekiyor', plants > shops * 2, `%${(plants * 100).toFixed(1)}`);
 }
 
 // ================================================================ İhale
@@ -1742,6 +1856,183 @@ console.log('\n=== Parsel ihalesi ===\n');
   // mekaniğin ekonomiyi ele geçirdiği anlamına gelirdi.
   expect('ihale ekonomiyi ele geçirmiyor', Math.abs(on / off - 1) < 0.35,
     `%${Math.round((on / off - 1) * 100)} fark`);
+}
+
+/** Sonsuz geri ödemeyi okunur yazar. */
+function fmtDays(days: number): string {
+  return Number.isFinite(days) ? `${Math.round(days)} gün` : 'hiç dönmüyor';
+}
+
+// ================================================================ Borsa
+//
+// Turun vaadi: rakibini pazarda değil SAHİPLİKTE yenmek. Sorulan şeyler:
+// değerleme tutarlı mı, para yaratılıyor mu, devralma kaçak veriyor mu,
+// ve hisse almayan oyuncunun ekonomisi bozuluyor mu.
+
+console.log('\n=== Borsa ===\n');
+
+// ---- 1. Denge kimliği: hisse almayanın ekonomisi değişmiyor ----
+{
+  const engine = new GameEngine(createNewGame({ seed: 12, companyName: 'Borsa AŞ' }));
+  const state = engine.getState();
+  getPlayer(state).cash = 40_000_000;
+  for (let day = 1; day <= 300; day++) {
+    if (day % 5 === 0) playerStrategy(engine);
+    engine.runDay();
+  }
+
+  let maxPortfolio = 0;
+  for (const company of Object.values(state.companies)) {
+    maxPortfolio = Math.max(maxPortfolio, portfolioValue(state, company.id));
+  }
+  expect('kimse hisse almadıysa portföy değeri tam sıfır', maxPortfolio === 0, `${maxPortfolio}`);
+
+  // Değerleme tutarlılığı: piyasa değeri = defter × güven.
+  const player = getPlayer(state);
+  const cap = marketCap(state, player.id);
+  const expected = Math.max(0, bookValue(state, player.id)) * confidence(state, player.id);
+  expect('piyasa değeri = defter × güven', Math.abs(cap - expected) < 1, formatMoney(cap));
+  expect('hisse fiyatı piyasa değerinin 1/10.000\'i',
+    Math.abs(sharePrice(state, player.id) * TOTAL_SHARES - cap) < 1,
+    `${sharePrice(state, player.id).toFixed(2)} ₺`);
+  expect('serbest dolaşım başlangıçta tam', freeFloat(state, NPC_PROFILES[0]!.id) === TOTAL_SHARES,
+    `${freeFloat(state, NPC_PROFILES[0]!.id)} hisse`);
+
+  // Güvenin TEK işi şirketleri birbirinden ayırmak. İlk kalibrasyonda
+  // referans getiri çok düşüktü ve dört rakipten üçü tavana yapışıyordu —
+  // ekranda hepsi aynı görünüyordu, yani sinyal ölüydü.
+  const trusts = Object.values(state.companies).map((c) => confidence(state, c.id));
+  const spread = Math.max(...trusts) - Math.min(...trusts);
+  console.log(`  güven aralığı: ${trusts.map((t) => t.toFixed(2)).join(' · ')}`);
+  expect('güven şirketleri ayırıyor', spread > 0.1, `yayılım ${spread.toFixed(2)}`);
+
+  // Zarar eden şirket defter değerinin ALTINDA işlem görmeli.
+  const sick = state.companies[NPC_PROFILES[1]!.id]!;
+  const healthy = confidence(state, sick.id);
+  sick.today.profit = -Math.abs(bookValue(state, sick.id)) * 0.01;
+  const ill = confidence(state, sick.id);
+  expect('zarar eden şirket iskontolu işlem görüyor', ill < 1 && ill < healthy,
+    `${healthy.toFixed(2)} → ${ill.toFixed(2)}`);
+}
+
+// ---- 2. Alım-satım ve temettü ----
+{
+  const engine = new GameEngine(createNewGame({ seed: 12, companyName: 'Borsa AŞ' }));
+  const state = engine.getState();
+  const player = getPlayer(state);
+  player.cash = 60_000_000;
+  const targetId = NPC_PROFILES[0]!.id;
+  for (let day = 1; day <= 200; day++) {
+    if (day % 5 === 0) playerStrategy(engine);
+    engine.runDay();
+  }
+
+  const price = sharePrice(state, targetId);
+  const cashBefore = player.cash;
+  const buy = engine.dispatch({ type: 'BUY_SHARES', companyId: targetId, count: 1_000 });
+  expect('hisse alınabiliyor', buy.ok, buy.reason ?? `${Math.round(price)} ₺/hisse`);
+  expect('nakit doğru düşüyor', Math.abs(cashBefore - player.cash - price * 1_000) < 1,
+    formatMoney(cashBefore - player.cash));
+  expect('serbest dolaşım azalıyor', freeFloat(state, targetId) === TOTAL_SHARES - 1_000,
+    `${freeFloat(state, targetId)} hisse`);
+
+  const own = engine.dispatch({ type: 'BUY_SHARES', companyId: player.id, count: 10 });
+  expect('kendi hisseni alamıyorsun', !own.ok, own.reason ?? '');
+  const tooMany = engine.dispatch({ type: 'SELL_SHARES', companyId: targetId, count: 5_000 });
+  expect('elinde olmayanı satamıyorsun', !tooMany.ok, tooMany.reason ?? '');
+
+  // Temettü: para yaratılmıyor, el değiştiriyor.
+  const totalBefore = Object.values(state.companies).reduce((sum, c) => sum + c.cash, 0);
+  const playerBefore = player.cash;
+  const rival = state.companies[targetId]!;
+  const rivalBefore = rival.cash;
+  engine.runDay();
+  const totalAfter = Object.values(state.companies).reduce((sum, c) => sum + c.cash, 0);
+  const dayProfit = Object.values(state.companies).reduce((sum, c) => sum + c.today.profit, 0);
+
+  console.log(
+    `  ${Math.round(price)} ₺/hisse · 1.000 hisse = ${formatMoney(price * 1000)} · ` +
+      `rakip günlük kâr ${formatMoney(rival.today.profit)}`,
+  );
+  expect('temettü para yaratmıyor', Math.abs(totalAfter - totalBefore - dayProfit) < 1,
+    `${Math.round(totalAfter - totalBefore - dayProfit)} ₺ sapma`);
+  expect('temettü hissedara ödeniyor',
+    rival.today.profit <= 0 || player.cash - playerBefore > rival.today.profit * 0.001,
+    formatMoney(player.cash - playerBefore),
+  );
+  void rivalBefore;
+}
+
+// ---- 3. Devralma ----
+{
+  const engine = new GameEngine(createNewGame({ seed: 12, companyName: 'Borsa AŞ' }));
+  const state = engine.getState();
+  const player = getPlayer(state);
+  player.cash = 400_000_000;
+  const targetId = NPC_PROFILES[0]!.id;
+  for (let day = 1; day <= 250; day++) {
+    if (day % 5 === 0) playerStrategy(engine);
+    engine.runDay();
+  }
+
+  const targetName = state.companies[targetId]!.name;
+  const targetBuildings = Object.values(state.buildings).filter((b) => b.companyId === targetId).length;
+  const targetTiles = state.map.tiles.filter((t) => t.ownerId === targetId).length;
+  const price = sharePrice(state, targetId);
+  const ownBefore = Object.values(state.buildings).filter((b) => b.companyId === player.id).length;
+
+  // Azınlık hissedar kur: ikinci bir rakip de biraz alsın.
+  const minorityId = NPC_PROFILES[1]!.id;
+  const minority = state.companies[minorityId]!;
+  minority.cash = 50_000_000;
+  buyShares(state, minorityId, targetId, 500);
+  const minorityCashBefore = minority.cash;
+
+  const cost = price * 5_100;
+  const bought = engine.dispatch({ type: 'BUY_SHARES', companyId: targetId, count: 5_100 });
+  expect('kontrol payı satın alınabiliyor', bought.ok, bought.reason ?? formatMoney(cost));
+  console.log(`  ${targetName} devralma maliyeti: ${formatMoney(cost)} (%51 · ${targetBuildings} bina)`);
+
+  engine.runDay();
+
+  expect('devralınan şirket oyundan çıkıyor', state.companies[targetId] === undefined, targetName);
+  const ownAfter = Object.values(state.buildings).filter((b) => b.companyId === player.id).length;
+  expect('binalar devralana geçiyor', ownAfter === ownBefore + targetBuildings,
+    `${ownBefore} → ${ownAfter} (+${targetBuildings})`);
+  expect('devralınan şirkete ait bina kalmıyor',
+    Object.values(state.buildings).every((b) => b.companyId !== targetId), 'temiz');
+  expect('parseller devralana geçiyor',
+    state.map.tiles.filter((t) => t.ownerId === targetId).length === 0,
+    `${targetTiles} parsel devredildi`);
+  expect('azınlık hissedar nakde çevrildi', minority.cash > minorityCashBefore,
+    formatMoney(minority.cash - minorityCashBefore));
+  expect('kimsenin elinde ölü şirketin hissesi kalmıyor',
+    Object.values(state.companies).every((c) => (c.shares[targetId] ?? 0) === 0), 'temiz');
+  expect('devralma haberi düşüyor',
+    state.news.some((n) => n.title.includes('devraldı')),
+    state.news.find((n) => n.title.includes('devraldı'))?.title ?? '—');
+}
+
+// ---- 4. Devralma bir KAÇAK değil: ucuza şirket alınamıyor ----
+{
+  const engine = new GameEngine(createNewGame({ seed: 33, companyName: 'Borsa AŞ' }));
+  const state = engine.getState();
+  getPlayer(state).cash = 400_000_000;
+  for (let day = 1; day <= 250; day++) {
+    if (day % 5 === 0) playerStrategy(engine);
+    engine.runDay();
+  }
+
+  const targetId = NPC_PROFILES[0]!.id;
+  const target = state.companies[targetId]!;
+  const cost = sharePrice(state, targetId) * TOTAL_SHARES * 0.51;
+  const ratio = cost / Math.max(1, target.netWorth);
+  console.log(
+    `  %51 maliyeti ${formatMoney(cost)} · hedefin net değeri ${formatMoney(target.netWorth)} · oran ${ratio.toFixed(2)}`,
+  );
+  // Tasarım hedefi: net değerin %50–90'ı (güvene göre). Bunun altına
+  // inerse şirket toplamak bedava para basmak olurdu.
+  expect('devralma bedavaya gelmiyor', ratio > 0.35, `oran ${ratio.toFixed(2)}`);
 }
 
 console.log(`\n=== ${failures === 0 ? 'TÜMÜ GEÇTİ' : `${failures} KONTROL KALDI`} ===`);

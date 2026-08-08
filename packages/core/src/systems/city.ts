@@ -4,6 +4,7 @@ import {
   STRUCTURE_BY_ID,
   getCeoModifiers,
 } from '@capital/content';
+import { portfolioValue } from './equity';
 import type { GameState } from '../types';
 
 /** Sahip olunan arsanın satılabileceği oran (alım-satım sürtünmesi). */
@@ -76,6 +77,26 @@ export function runPopulationTick(state: GameState): void {
   for (const building of Object.values(state.buildings)) {
     const def = BUILDING_BY_ID[building.defId];
     if (!def) continue;
+    // YALNIZCA TEMEL İSTİHDAM nüfus çeker.
+    //
+    // Perakende istihdamı nüfusu çekmez, nüfusu TAKİP eder: bir mahalleye
+    // süpermarket açılması oraya yeni sakin getirmez, oradaki sakinlere
+    // hizmet eder. Üretim, ofis, lojistik ve Ar-Ge ise gerçekten dışarıdan
+    // insan çeker — şehir ekonomisinde buna "temel/temel olmayan istihdam"
+    // ayrımı deniyor.
+    //
+    // Bu ayrım olmadan oyunun en temel döngüsü kısır bir hale geliyordu:
+    // açtığın dükkân istihdam yaratıyor, istihdam nüfusu, nüfus da o
+    // dükkânın hizmet ettiği talebi büyütüyordu. Yani DÜKKÂN KENDİ
+    // MÜŞTERİSİNİ ÜRETİYORDU. Ölçüm: talebe orantılı 30 süpermarketle
+    // 200 günde nüfus %93 artıyor, mağazalar %100 dolu çalışıyor ve
+    // talebin %57'si karşılanamıyor — kapasite asla yetişemiyor.
+    //
+    // Kapasite yetişemeyince de çekicilik formülünün (kalite, marka,
+    // fiyat) hiçbir değişkeni bir işe yaramıyor: herkes zaten satabildiği
+    // kadarını satıyor. Aynı kurulum temel istihdam modeliyle %69 doluluk
+    // veriyor — yani müşteriyi artık gerçekten REKABET belirliyor.
+    if (def.role === 'outlet') continue;
     jobsByDistrict.set(building.districtId, (jobsByDistrict.get(building.districtId) ?? 0) + def.jobs);
   }
 
@@ -138,7 +159,12 @@ export function recomputeNetWorth(state: GameState): void {
   }
 
   for (const company of Object.values(state.companies)) {
-    company.netWorth = company.cash + (assets[company.id] ?? 0) - company.debt;
+    // Portföy değeri de net değere girer: başka bir şirketin %20'sine
+    // sahipsen onun büyümesi seni de büyütür. Hiç hisse almamış şirkette
+    // `portfolioValue` sıfır döner ve formül Tur 3'teki haline birebir
+    // indirgenir — denge kimliği bu sayede korunuyor.
+    company.netWorth =
+      company.cash + (assets[company.id] ?? 0) - company.debt + portfolioValue(state, company.id);
     company.netWorthHistory.push(Math.round(company.netWorth));
     if (company.netWorthHistory.length > 120) company.netWorthHistory.shift();
   }

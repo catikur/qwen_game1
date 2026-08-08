@@ -80,6 +80,9 @@ export function TopBar(): ReactElement {
         <button type="button" onClick={() => setView({ openPanel: view.openPanel === 'rivalry' ? 'none' : 'rivalry' })}>
           Rekabet
         </button>
+        <button type="button" onClick={() => setView({ openPanel: view.openPanel === 'bourse' ? 'none' : 'bourse' })}>
+          Borsa
+        </button>
         <button type="button" onClick={() => setView({ openPanel: view.openPanel === 'company' ? 'none' : 'company' })}>
           Şirket
         </button>

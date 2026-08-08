@@ -60,6 +60,7 @@ function makeCompany(
     debt: 0,
     brand: brandRecord(startingBrand),
     research: brandRecord(0),
+    shares: {},
     netWorth: cash,
     marketShare: zeroByCategory(),
     today: { revenue: 0, cogs: 0, upkeep: 0, wages: 0, interest: 0, profit: 0 },

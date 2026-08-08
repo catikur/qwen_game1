@@ -9,7 +9,10 @@
     "build": "pnpm --filter @capital/web build",
     "preview": "pnpm --filter @capital/web preview",
     "typecheck": "tsc -p packages/content && tsc -p packages/core && tsc -p packages/persistence && tsc -p packages/render-three && tsc -p packages/ui && tsc -p apps/web",
-    "test": "node --test --experimental-strip-types packages/core/test/*.test.ts"
+    "test": "node --test --experimental-strip-types packages/core/test/*.test.ts",
+    "balance": "node tools/run-node-script.mjs packages/core/test/balance.ts",
+    "bench": "node tools/run-node-script.mjs packages/core/test/benchmark.ts",
+    "playtest": "pnpm build && node tools/playtest.mjs"
   },
   "devDependencies": {
     "typescript": "^5.9.0"

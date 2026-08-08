@@ -40,11 +40,23 @@ import type { GameState } from './types';
  */
 const PRICE_CHANNEL_UTILISATION = 0.95;
 
-/** Ar-Ge'nin karşılığını vermeye başladığı mağaza sayısı (ölçüm: 4'te 225 gün). */
-const RESEARCH_MIN_OUTLETS = 3;
-
-/** Pazarlama daha ucuz ve daha hızlı; eşiği de daha düşük. */
-const MARKETING_MIN_OUTLETS = 2;
+/**
+ * Kolların karşılığını vermeye başladığı mağaza sayısı.
+ *
+ * Eşikler ölçümden geliyor, tahminden değil. Tur 3'ün nüfus düzeltmesinden
+ * sonra kolların geri ödeme eğrisi keskinleşti — çünkü artık pazar
+ * gerçekten doyuyor ve kolun değeri ölçekle birlikte hızla büyüyor:
+ *
+ *   mağaza |  Ar-Ge  | Pazarlama
+ *        4 | 604 gün |  802 gün
+ *        6 | 246 gün |  245 gün
+ *        8 | 134 gün |   89 gün
+ *
+ * Kart eskiden 3 mağazada Ar-Ge öneriyordu; o tavsiye artık yanlış olurdu.
+ * Kartın işi oyuncuya doğruyu söylemek, cesaret vermek değil.
+ */
+const RESEARCH_MIN_OUTLETS = 6;
+const MARKETING_MIN_OUTLETS = 6;
 
 /** Payın bu değerin altındaysa savunma değil GİRİŞ silahı gerekiyor. */
 const ENTRY_SHARE = 0.35;
