@@ -18,7 +18,7 @@ function loadPlaywright() {
   }
   throw new Error('Playwright bulunamadı. Kurulum: npm i -g playwright');
 }
-const { chromium } = loadPlaywright();
+const { chromium, devices } = loadPlaywright();
 
 const ROOT = process.env.DIST || new URL('../apps/web/dist', import.meta.url).pathname;
 const OUT = process.env.SHOTS || '/tmp';
@@ -970,15 +970,176 @@ const findTile = (page, kind) =>
   await page.screenshot({ path: `${OUT}/city-later.png` });
   check('Uzun oturumda konsol temiz', consoleErrors.length === 0, consoleErrors.slice(0, 3).join(' | '));
 
-  // ---------- Responsive ----------
-  section('Responsive');
-  await page.setViewportSize({ width: 900, height: 800 });
-  await page.waitForTimeout(500);
-  const overflow = await page.evaluate(
-    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  // ---------- Kalite kademeleri ----------
+  section('Kalite kademeleri');
+  const quality = await page.evaluate(() => window.__capital.renderInfo());
+  check(
+    'Kalite kademesi bildiriliyor',
+    typeof quality.qualityTier === 'number' && typeof quality.qualityName === 'string',
+    `${quality.qualityTier} · "${quality.qualityName}" · piksel oranı ${quality.pixelRatio} · gölge ${quality.shadowMapSize}`,
   );
-  check('Dar ekranda yatay taşma yok', overflow <= 0, `taşma ${overflow}px`);
-  await page.screenshot({ path: `${OUT}/city-mobile.png` });
+  check(
+    'Yazılım rasterizasyonunda kademe indi',
+    quality.qualityTier > 0,
+    `bu ortamda GPU yok; kademe ${quality.qualityTier}`,
+  );
+  check(
+    'İnen kademede gölge haritası küçülüyor ya da gölge kapanıyor',
+    quality.shadowMapSize <= 1024,
+    `gölge haritası ${quality.shadowMapSize}`,
+  );
+
+  // ---------- Mobil ----------
+  //
+  // Bu bölüm eskiden tek satırdı: "dar ekranda yatay taşma yok". O kontrol
+  // HİÇBİR ZAMAN başarısız olamıyordu, çünkü `body`'de `overflow: hidden`
+  // varken `scrollWidth − clientWidth` her koşulda 0 çıkar. Oysa üst bar
+  // 1002px genişliğinde takılı kalıyordu ve telefonda hiçbir panel
+  // düğmesine ulaşılamıyordu. Şimdi eleman kutuları görüntü alanına karşı
+  // ölçülüyor ve jestler gerçek dokunuş olaylarıyla sürülüyor.
+  //
+  section('Mobil');
+  for (const deviceName of ['iPhone 13', 'Pixel 7']) {
+    const mobileContext = await browser.newContext({ ...devices[deviceName] });
+    const m = await mobileContext.newPage();
+    const mobileErrors = [];
+    m.on('console', (msg) => {
+      if (msg.type() === 'error') mobileErrors.push(msg.text());
+    });
+    m.on('pageerror', (e) => mobileErrors.push('pageerror: ' + e.message));
+
+    await m.goto('http://127.0.0.1:8811/');
+    await m.waitForSelector('.newgame', { timeout: 20000 });
+    await m.fill('.newgame-field input[type="text"]', 'Mobil Holding');
+    await m.locator('button:has-text("Şirketi kur")').click();
+    await m.waitForSelector('.topbar', { timeout: 20000 });
+    await m.waitForTimeout(1200);
+
+    // Ulaşılabilirlik: kaydırılabilir bir şeridin içinde ekran dışında
+    // kalan düğme ULAŞILABİLİR sayılır; başka türlü taşma hatadır.
+    const reach = await m.evaluate(() => {
+      const vw = window.innerWidth;
+      const scrollableAncestor = (el) => {
+        for (let p = el.parentElement; p; p = p.parentElement) {
+          const ox = getComputedStyle(p).overflowX;
+          if ((ox === 'auto' || ox === 'scroll') && p.scrollWidth - p.clientWidth > 2) return true;
+        }
+        return false;
+      };
+      const stranded = [];
+      for (const el of document.querySelectorAll('body *')) {
+        const r = el.getBoundingClientRect();
+        if (r.width === 0 || r.height === 0) continue;
+        if (r.right - vw <= 4) continue;
+        if (scrollableAncestor(el)) continue;
+        stranded.push(`${el.tagName.toLowerCase()}.${String(el.className).slice(0, 24)} +${Math.round(r.right - vw)}px`);
+      }
+      return stranded.slice(0, 5);
+    });
+    check(`${deviceName}: ulaşılamayan taşma yok`, reach.length === 0, reach.join(', ') || 'temiz');
+
+    // Her panel düğmesi gerçekten bir panel açıyor mu.
+    const buttonCount = await m.locator('.topbar-actions button').count();
+    let opened = 0;
+    for (let i = 0; i < buttonCount; i++) {
+      const button = m.locator('.topbar-actions button').nth(i);
+      await button.scrollIntoViewIfNeeded();
+      await button.click();
+      if (await m.locator('.modal').count()) {
+        opened++;
+        await m.locator('.modal-head button.icon').click();
+      }
+    }
+    check(`${deviceName}: bütün panel düğmeleri açılıyor`, opened === buttonCount && buttonCount > 0,
+      `${opened}/${buttonCount}`);
+
+    // Jestler: CDP ile GERÇEK dokunuş olayları. Sentetik PointerEvent
+    // üretmek yerine tarayıcının kendi dokunuş → pointer çevirisini
+    // kullanıyoruz, yani test edilen şey gerçek akışın aynısı.
+    const cdp = await mobileContext.newCDPSession(m);
+    const touch = (type, points) =>
+      cdp.send('Input.dispatchTouchEvent', {
+        type,
+        touchPoints: points.map(([x, y], i) => ({ x, y, id: i })),
+      });
+    const info = () => m.evaluate(() => window.__capital.renderInfo());
+    const canvasBox = await m.locator('canvas.scene').boundingBox();
+    const mx = canvasBox.x + canvasBox.width / 2;
+    const my = canvasBox.y + canvasBox.height * 0.42;
+
+    const zoomBefore = await info();
+    await touch('touchStart', [[mx - 50, my], [mx + 50, my]]);
+    for (let i = 1; i <= 8; i++) {
+      await touch('touchMove', [[mx - 50 - i * 14, my], [mx + 50 + i * 14, my]]);
+    }
+    await touch('touchEnd', []);
+    await m.waitForTimeout(400);
+    const zoomAfter = await info();
+    check(`${deviceName}: pinch yakınlaştırıyor`,
+      zoomAfter.cameraDistance < zoomBefore.cameraDistance - 0.5,
+      `uzaklık ${zoomBefore.cameraDistance.toFixed(1)} → ${zoomAfter.cameraDistance.toFixed(1)}`);
+
+    const spinBefore = await info();
+    await touch('touchStart', [[mx - 60, my], [mx + 60, my]]);
+    for (let i = 1; i <= 8; i++) {
+      await touch('touchMove', [[mx - 60 + i * 10, my], [mx + 60 + i * 10, my]]);
+    }
+    await touch('touchEnd', []);
+    await m.waitForTimeout(400);
+    const spinAfter = await info();
+    check(`${deviceName}: iki parmak kamerayı döndürüyor`,
+      Math.abs(spinAfter.cameraAzimuth - spinBefore.cameraAzimuth) > 0.05,
+      `azimut ${spinBefore.cameraAzimuth.toFixed(3)} → ${spinAfter.cameraAzimuth.toFixed(3)}`);
+
+    // Tek dokunuşla seçim. Bu eskiden çalışmıyordu: seçim `hoveredTile`'a
+    // bakıyor, o da yalnızca `pointermove`'da güncelleniyordu — parmakla
+    // dokunmakta hareket olmadığı için hep boş kalıyordu.
+    const inspectorBefore = (await m.locator('.inspector').textContent()) ?? '';
+    await touch('touchStart', [[mx, my]]);
+    await touch('touchEnd', []);
+    await m.waitForTimeout(400);
+    const inspectorAfter = (await m.locator('.inspector').textContent()) ?? '';
+    check(`${deviceName}: dokunmak parsel seçiyor`,
+      inspectorAfter !== inspectorBefore && /Arsa \d+-\d+/.test(inspectorAfter),
+      (/Arsa \d+-\d+/.exec(inspectorAfter) ?? ['seçim yok'])[0]);
+
+    // Çift dokunuş: saat bağımsız iki yönlü kontrol. Yazılım
+    // rasterizasyonunda ana iş parçacığı kare başına yüzlerce ms bloke
+    // olduğu için iki dokunuş arası 1 saniyeyi bulabiliyor; o yüzden
+    // GÖZLENEN aralığa göre doğru davranışı bekliyoruz. İki dal da sert
+    // bir iddia — hiçbiri kontrolü sessizce kapatmıyor.
+    const fx = canvasBox.x + canvasBox.width * 0.3;
+    const fy = canvasBox.y + canvasBox.height * 0.52;
+    await touch('touchStart', [[fx, fy]]);
+    await touch('touchEnd', []);
+    await touch('touchStart', [[fx, fy]]);
+    await touch('touchEnd', []);
+    await m.waitForTimeout(800);
+    const tapped = (await m.locator('.inspector').textContent()) ?? '';
+    const coords = /Arsa (\d+)-(\d+)/.exec(tapped);
+    const focusInfo = await info();
+    if (!coords) {
+      check(`${deviceName}: çift dokunuş`, false, 'dokunulan nokta haritaya düşmedi');
+    } else {
+      const off = Math.hypot(
+        focusInfo.cameraTarget.x - Number(coords[1]),
+        focusInfo.cameraTarget.z - Number(coords[2]),
+      );
+      const gap = focusInfo.lastTapGapMs;
+      const windowMs = focusInfo.doubleTapWindowMs;
+      if (gap < windowMs) {
+        check(`${deviceName}: pencere içinde çift dokunuş odaklanıyor`, off < 0.6,
+          `ara ${Math.round(gap)}ms < ${windowMs}ms · sapma ${off.toFixed(2)}`);
+      } else {
+        check(`${deviceName}: pencere dışında ikinci dokunuş odaklanmıyor`, off > 0.6,
+          `ara ${Math.round(gap)}ms ≥ ${windowMs}ms · kamera yerinde`);
+      }
+    }
+
+    check(`${deviceName}: konsol temiz`, mobileErrors.length === 0, mobileErrors.slice(0, 2).join(' | '));
+    await m.screenshot({ path: `${OUT}/mobile-${deviceName.replace(/\W+/g, '')}.png` });
+    await mobileContext.close();
+  }
 
   console.log('\n================================');
   console.log(`TOPLAM: ${pass} geçti, ${fail} kaldı`);

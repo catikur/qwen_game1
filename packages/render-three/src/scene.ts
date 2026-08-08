@@ -31,6 +31,68 @@ export interface RendererCallbacks {
 /** Veri lensinde binaların siluet saydamlığı. */
 const SILHOUETTE_OPACITY = 0.26;
 
+/**
+ * Çift dokunuş penceresi.
+ *
+ * 400 ms, iOS ve Android'in tipik 300–500 ms bandının ortası. Daha dar bir
+ * pencere (ilk denediğimiz 320 ms) hızlı dokunamayanlar için jesti fiilen
+ * erişilemez yapıyor.
+ */
+const DOUBLE_TAP_MS = 400;
+
+/** Dokunuşun "tıklama" sayılması için izin verilen kayma (piksel toplamı). */
+const TAP_SLOP = 6;
+
+/**
+ * Kalite kademeleri.
+ *
+ * Önceki sürümde tek bir karar vardı: "gölge açık" ya da "gölge kapalı".
+ * Bu iki sorunu birden yaratıyordu — zayıf bir cihazda gölgeyi kapatmak
+ * yetmiyor (asıl yük piksel sayısında), güçlü bir telefonda ise gereksiz
+ * yere gölgeden vazgeçiliyordu. Kademeler pahalıdan ucuza sırayla iner ve
+ * her kademede önce SÜS kısılır: piksel yoğunluğu, gölge çözünürlüğü,
+ * gölgenin kendisi, en son fon araçları.
+ */
+interface QualityLevel {
+  name: string;
+  maxPixelRatio: number;
+  shadows: boolean;
+  shadowMapSize: number;
+  carBudget: number;
+}
+
+const QUALITY_LEVELS: QualityLevel[] = [
+  { name: 'yüksek', maxPixelRatio: 2, shadows: true, shadowMapSize: 2048, carBudget: 1 },
+  { name: 'orta', maxPixelRatio: 1.75, shadows: true, shadowMapSize: 1024, carBudget: 1 },
+  { name: 'düşük', maxPixelRatio: 1.35, shadows: false, shadowMapSize: 1024, carBudget: 0.6 },
+  { name: 'asgari', maxPixelRatio: 1, shadows: false, shadowMapSize: 512, carBudget: 0.3 },
+];
+
+/** Ölçüm penceresi: bu kadar saniye ve bu kadar kare toplanmadan karar yok. */
+const QUALITY_WINDOW_SECONDS = 2.5;
+const QUALITY_WINDOW_FRAMES = 12;
+/** Altına düşülürse kademe iner. */
+const QUALITY_FLOOR_FPS = 24;
+/** Üstüne çıkılırsa kademe yükselir — ama yalnızca hiç düşülmemiş kademeye. */
+const QUALITY_CEILING_FPS = 52;
+
+/**
+ * Açılış kademesi.
+ *
+ * Cihazı ölçmeden önce makul bir tahmin gerekiyor, yoksa zayıf bir telefon
+ * ilk 2,5 saniyeyi en pahalı kademede geçirir — yani oyunun ilk izlenimi
+ * en kötü hali olur. Tahmin yanlışsa uyarlama zaten düzeltiyor.
+ */
+function initialQualityTier(): number {
+  if (typeof navigator === 'undefined') return 0;
+  const cores = navigator.hardwareConcurrency ?? 8;
+  const touch = (navigator.maxTouchPoints ?? 0) > 0;
+  if (cores <= 2) return 3;
+  if (touch && cores <= 6) return 2;
+  if (touch) return 1;
+  return 0;
+}
+
 /** Gün döngüsünün iki ucu — ton üzerinden geçmemek için sabit renkler. */
 const MOONLIGHT = new THREE.Color('#9db9e8');
 const SUNLIGHT = new THREE.Color('#ffe6bd');
@@ -85,7 +147,12 @@ export class CityRenderer {
   private cleanups: Array<() => void> = [];
   private frameSamples = 0;
   private frameTimeSum = 0;
-  private qualityReduced = false;
+  /** Şu anki kalite kademesi (0 = en yüksek). */
+  private qualityTier = 0;
+  /** Bir kez inilen kademenin üstüne bir daha çıkılmaz — salınımı keser. */
+  private qualityCeilingTier = 0;
+  /** Son iki dokunuş arasındaki süre — çift dokunuş testinin okuduğu sayı. */
+  private lastTapGapMs = Number.POSITIVE_INFINITY;
 
   constructor(
     private canvas: HTMLCanvasElement,
@@ -94,7 +161,6 @@ export class CityRenderer {
     private mapHeight: number,
   ) {
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-    this.renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.05;
@@ -182,6 +248,8 @@ export class CityRenderer {
 
     this.bindInput();
     this.resize();
+    // Cihaz tahmininden başla; uyarlama ilk 2,5 saniyede düzeltir.
+    this.applyQuality(initialQualityTier());
   }
 
   private setupLights(width: number, height: number): void {
@@ -193,9 +261,8 @@ export class CityRenderer {
     sun.position.set(width * 0.55, 42, height * 0.15);
     sun.target.position.set(width / 2, 0, height / 2);
     sun.castShadow = true;
-    // 1024, şehir ölçeğinde 2048 ile neredeyse aynı görünüyor ama gölge
-    // geçişinin dolgu maliyetini dörtte bire indiriyor — zayıf cihazlarda
-    // fark ciddi.
+    // Çözünürlük kalite kademesinden geliyor (bkz. QUALITY_LEVELS);
+    // buradaki değer yalnızca ilk kare için geçerli.
     sun.shadow.mapSize.set(1024, 1024);
     sun.shadow.camera.near = 1;
     sun.shadow.camera.far = 140;
@@ -210,21 +277,110 @@ export class CityRenderer {
 
   // ------------------------------------------------------------- girdi
 
+  /**
+   * Girdi.
+   *
+   * Tek işaretçi (fare ya da tek parmak) kaydırır; sağ tık veya Shift ile
+   * döndürür. İKİ PARMAK ise ayrı bir kip: parmakların arasındaki mesafe
+   * oranı zoom'a, orta noktanın kayması döndürme ve eğime gider.
+   *
+   * Bunun neden gerektiği: zoom eskiden YALNIZCA `wheel` olayından
+   * çağrılıyordu. Dokunmatik bir cihazda tekerlek yoktur, canvas'ta
+   * `touch-action: none` olduğu için tarayıcının kendi pinch'i de
+   * bastırılıyordu — yani telefonda hiçbir şekilde yakınlaşılamıyordu.
+   * Döndürme de sağ tuş ya da Shift istediği için erişilemezdi.
+   */
   private bindInput(): void {
     let dragging: 'none' | 'pan' | 'rotate' = 'none';
     let moved = 0;
     let lastX = 0;
     let lastY = 0;
 
+    /** Ekranda o an basılı olan işaretçiler. */
+    const pointers = new Map<number, { x: number; y: number }>();
+    let pinchDistance = 0;
+    let pinchX = 0;
+    let pinchY = 0;
+    let lastTapMs = 0;
+    let lastTapX = 0;
+    let lastTapY = 0;
+
+    const setNdc = (clientX: number, clientY: number) => {
+      const rect = this.canvas.getBoundingClientRect();
+      this.pointer.set(
+        ((clientX - rect.left) / rect.width) * 2 - 1,
+        -((clientY - rect.top) / rect.height) * 2 + 1,
+      );
+    };
+
+    /** İki parmağın mesafesi ve orta noktası. */
+    const gesture = () => {
+      const [a, b] = [...pointers.values()];
+      if (!a || !b) return null;
+      return {
+        distance: Math.hypot(a.x - b.x, a.y - b.y),
+        x: (a.x + b.x) / 2,
+        y: (a.y + b.y) / 2,
+      };
+    };
+
+    const beginPinch = () => {
+      const g = gesture();
+      if (!g) return;
+      pinchDistance = g.distance;
+      pinchX = g.x;
+      pinchY = g.y;
+      dragging = 'none';
+    };
+
     const onPointerDown = (e: PointerEvent) => {
       this.canvas.setPointerCapture(e.pointerId);
+      pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+      if (pointers.size >= 2) {
+        beginPinch();
+        return;
+      }
+
       dragging = e.button === 2 || e.shiftKey ? 'rotate' : 'pan';
       moved = 0;
       lastX = e.clientX;
       lastY = e.clientY;
+
+      // DOKUNUŞTA BU ŞART. Seçim `hoveredTile`'a bakıyor, o da eskiden
+      // yalnızca `pointermove`'da güncelleniyordu. Parmakla dokunup
+      // kaldırmakta hareket olmadığı için hover hep boş kalıyor ve
+      // hiçbir parsel seçilemiyordu.
+      setNdc(e.clientX, e.clientY);
+      this.updateHover();
     };
 
     const onPointerMove = (e: PointerEvent) => {
+      if (!pointers.has(e.pointerId)) {
+        // Basılı değilken de imleç takip edilir (fare).
+        setNdc(e.clientX, e.clientY);
+        this.updateHover();
+        return;
+      }
+      pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+      if (pointers.size >= 2) {
+        const g = gesture();
+        if (g && pinchDistance > 0) {
+          // Mesafe oranı → zoom. Eşik, tek parmakla başlayan bir jestin
+          // ikinci parmak değince zıplamasını engelliyor.
+          if (Math.abs(g.distance - pinchDistance) > 1) {
+            this.controller.zoomBy(g.distance / pinchDistance);
+          }
+          // Orta noktanın kayması → azimut ve eğim.
+          this.controller.rotate(g.x - pinchX, g.y - pinchY);
+          pinchDistance = g.distance;
+          pinchX = g.x;
+          pinchY = g.y;
+        }
+        return;
+      }
+
       const dx = e.clientX - lastX;
       const dy = e.clientY - lastY;
       lastX = e.clientX;
@@ -238,23 +394,56 @@ export class CityRenderer {
         this.controller.rotate(dx, dy);
       }
 
-      const rect = this.canvas.getBoundingClientRect();
-      this.pointer.set(
-        ((e.clientX - rect.left) / rect.width) * 2 - 1,
-        -((e.clientY - rect.top) / rect.height) * 2 + 1,
-      );
+      setNdc(e.clientX, e.clientY);
       this.updateHover();
     };
 
     const onPointerUp = (e: PointerEvent) => {
-      // Sürükleme değil tıklama ise seçim yap.
-      if (dragging === 'pan' && moved < 6 && this.hoveredTile !== null) {
-        this.callbacks.onSelect(this.hoveredTile);
-      }
-      dragging = 'none';
+      const wasPinching = pointers.size >= 2;
+      pointers.delete(e.pointerId);
+
       if (this.canvas.hasPointerCapture(e.pointerId)) {
         this.canvas.releasePointerCapture(e.pointerId);
       }
+
+      if (wasPinching) {
+        // İki parmaktan bire düşerken kalan parmağın konumunu tazele,
+        // yoksa sahne bir kare boyunca sıçrar.
+        const rest = [...pointers.values()][0];
+        if (rest) {
+          lastX = rest.x;
+          lastY = rest.y;
+          dragging = 'pan';
+          moved = 999; // bu artık bir tıklama sayılmaz
+        }
+        return;
+      }
+
+      if (dragging === 'pan' && moved < TAP_SLOP && this.hoveredTile !== null) {
+        this.callbacks.onSelect(this.hoveredTile);
+
+        // Çift dokunuş: seçilen kareye odaklan. Dokunmatikte klavye
+        // kısayolu olmadığı için haritada gezinmenin hızlı yolu bu.
+        const now = performance.now();
+        const near = Math.hypot(e.clientX - lastTapX, e.clientY - lastTapY) < 32;
+        this.lastTapGapMs = lastTapMs > 0 ? now - lastTapMs : Number.POSITIVE_INFINITY;
+        if (now - lastTapMs < DOUBLE_TAP_MS && near && this.state) {
+          const tile = this.state.map.tiles[this.hoveredTile];
+          if (tile) this.controller.focusOn(tile.x, tile.y);
+          lastTapMs = 0;
+        } else {
+          lastTapMs = now;
+          lastTapX = e.clientX;
+          lastTapY = e.clientY;
+        }
+      }
+
+      dragging = 'none';
+    };
+
+    const onPointerCancel = (e: PointerEvent) => {
+      pointers.delete(e.pointerId);
+      dragging = 'none';
     };
 
     const onWheel = (e: WheelEvent) => {
@@ -277,6 +466,7 @@ export class CityRenderer {
     this.canvas.addEventListener('pointerdown', onPointerDown);
     this.canvas.addEventListener('pointermove', onPointerMove);
     this.canvas.addEventListener('pointerup', onPointerUp);
+    this.canvas.addEventListener('pointercancel', onPointerCancel);
     this.canvas.addEventListener('pointerleave', onLeave);
     this.canvas.addEventListener('wheel', onWheel, { passive: false });
     this.canvas.addEventListener('contextmenu', onContextMenu);
@@ -288,6 +478,7 @@ export class CityRenderer {
       this.canvas.removeEventListener('pointerdown', onPointerDown);
       this.canvas.removeEventListener('pointermove', onPointerMove);
       this.canvas.removeEventListener('pointerup', onPointerUp);
+      this.canvas.removeEventListener('pointercancel', onPointerCancel);
       this.canvas.removeEventListener('pointerleave', onLeave);
       this.canvas.removeEventListener('wheel', onWheel);
       this.canvas.removeEventListener('contextmenu', onContextMenu);
@@ -343,12 +534,12 @@ export class CityRenderer {
       }
       material.opacity = dataLens ? SILHOUETTE_OPACITY : 1;
       material.depthWrite = !dataLens;
-      mesh.castShadow = !dataLens && !this.qualityReduced;
+      mesh.castShadow = !dataLens && QUALITY_LEVELS[this.qualityTier]!.shadows;
       mesh.receiveShadow = !dataLens;
     }
 
     this.traffic.setDataLens(dataLens);
-    this.renderer.shadowMap.enabled = !dataLens && !this.qualityReduced;
+    this.renderer.shadowMap.enabled = !dataLens && QUALITY_LEVELS[this.qualityTier]!.shadows;
 
     // Pencere parıltısını burada da sıfırla. Bir sonraki gün-döngüsü
     // karesini beklemek, lens açılırken bir karelik amber parlama
@@ -610,40 +801,78 @@ export class CityRenderer {
     this.adaptQuality(dt);
   }
 
+  /** Bir kalite kademesini sahneye uygular. */
+  private applyQuality(tier: number): void {
+    const level = QUALITY_LEVELS[Math.max(0, Math.min(QUALITY_LEVELS.length - 1, tier))]!;
+    this.qualityTier = tier;
+
+    this.renderer.setPixelRatio(Math.min(devicePixelRatio, level.maxPixelRatio));
+    this.resize();
+
+    // Gölge haritasının boyutu çalışma anında değişebilmesi için eskisinin
+    // atılması gerekiyor; three aksi halde ilk ayrılan dokuyu kullanmayı
+    // sürdürür ve `mapSize` sessizce etkisiz kalır.
+    if (this.sun.shadow.map && this.sun.shadow.mapSize.width !== level.shadowMapSize) {
+      this.sun.shadow.map.dispose();
+      this.sun.shadow.map = null as unknown as THREE.WebGLRenderTarget;
+    }
+    this.sun.shadow.mapSize.set(level.shadowMapSize, level.shadowMapSize);
+
+    const shadows = level.shadows && !this.dataLensActive;
+    this.renderer.shadowMap.enabled = shadows;
+    this.sun.castShadow = level.shadows;
+    this.buildings.castShadow = shadows;
+    this.fabric.castShadow = shadows;
+    this.ground.receiveShadow = shadows;
+
+    this.traffic.setCarBudget(level.carBudget);
+
+    this.scene.traverse((object) => {
+      const mesh = object as THREE.Mesh;
+      if (mesh.material) (mesh.material as THREE.Material).needsUpdate = true;
+    });
+  }
+
   /**
    * Uyarlanabilir kalite.
    *
-   * Zayıf bir GPU'da (ya da yazılım rasterizasyonunda) gölgeler kare
-   * hızının çoğunu yiyor. İlk saniyelerde ölçüp gerekiyorsa gölgeleri
-   * kapatıyoruz: oyun biraz daha düz görünür ama akıcı kalır. Akıcılık
-   * bu oyunda görsel şıklıktan önce gelir.
+   * Her 2,5 saniyede bir kare hızını ölçer ve kademeyi değiştirir. Ölçüm
+   * penceresi KARE sayısıyla değil GEÇEN SÜREYLE kapanır: kare sayısına
+   * baksaydık en yavaş cihazda karar en geç verilirdi — yani tam tersi.
+   *
+   * Yukarı çıkış, bir kez inilen kademenin üstüne ASLA geçmiyor. Aksi
+   * halde kademe düşer, hız artar, kademe yükselir, hız düşer diye
+   * salınan bir döngü olurdu ve oyuncu bunu titreme olarak görürdü.
    */
   private adaptQuality(dt: number): void {
-    if (this.qualityReduced || this.frameSamples < 0) return;
-
     this.frameSamples++;
     this.frameTimeSum += dt;
 
-    // Ölçüm penceresi KARE sayısıyla değil GEÇEN SÜREYLE kapanır. Kare
-    // sayısına baksaydık, en yavaş cihazda en geç tetiklenirdi — yani tam
-    // tersi. 2,5 saniye her hızda aynı sürede karar verdirir.
-    if (this.frameTimeSum < 2.5 || this.frameSamples < 12) return;
+    if (this.frameTimeSum < QUALITY_WINDOW_SECONDS || this.frameSamples < QUALITY_WINDOW_FRAMES) {
+      return;
+    }
 
     const averageFps = this.frameSamples / this.frameTimeSum;
-    if (averageFps < 24) {
-      this.qualityReduced = true;
-      this.renderer.shadowMap.enabled = false;
-      this.sun.castShadow = false;
-      this.fabric.castShadow = false;
-      this.buildings.castShadow = false;
-      this.scene.traverse((object) => {
-        const mesh = object as THREE.Mesh;
-        if (mesh.material) (mesh.material as THREE.Material).needsUpdate = true;
-      });
-      console.info(`Düşük kare hızı (${averageFps.toFixed(0)} FPS) — gölgeler kapatıldı.`);
+    this.frameSamples = 0;
+    this.frameTimeSum = 0;
+
+    if (averageFps < QUALITY_FLOOR_FPS && this.qualityTier < QUALITY_LEVELS.length - 1) {
+      const next = this.qualityTier + 1;
+      this.qualityCeilingTier = next;
+      this.applyQuality(next);
+      console.info(
+        `Kare hızı ${averageFps.toFixed(0)} — kalite "${QUALITY_LEVELS[next]!.name}" kademesine indi.`,
+      );
+      return;
     }
-    // Ölçüm penceresini kapat: bir daha denemeyelim.
-    this.frameSamples = -1;
+
+    if (averageFps > QUALITY_CEILING_FPS && this.qualityTier > this.qualityCeilingTier) {
+      const next = this.qualityTier - 1;
+      this.applyQuality(next);
+      console.info(
+        `Kare hızı ${averageFps.toFixed(0)} — kalite "${QUALITY_LEVELS[next]!.name}" kademesine çıktı.`,
+      );
+    }
   }
 
   /**
@@ -669,6 +898,20 @@ export class CityRenderer {
     truckPositionSum: number;
     /** Fon araçları görünür mü (veri lensinde susarlar). */
     carsVisible: boolean;
+    /** Kameranın hedef uzaklığı — pinch jestini doğrulamak için. */
+    cameraDistance: number;
+    /** Kameranın hedef azimutu — döndürme jestini doğrulamak için. */
+    cameraAzimuth: number;
+    /** Kameranın baktığı nokta — odaklanma jestini doğrulamak için. */
+    cameraTarget: { x: number; z: number };
+    /** Çift dokunuş penceresi ve son gözlenen dokunuş aralığı. */
+    doubleTapWindowMs: number;
+    lastTapGapMs: number;
+    /** Kalite kademesi: 0 en yüksek. */
+    qualityTier: number;
+    qualityName: string;
+    pixelRatio: number;
+    shadowMapSize: number;
   } {
     const hsl = { h: 0, s: 0, l: 0 };
     this.skyColor.getHSL(hsl);
@@ -691,6 +934,15 @@ export class CityRenderer {
       truckCount: this.traffic.truckCount,
       truckPositionSum: this.traffic.truckPositionSum,
       carsVisible: this.traffic.carsVisible,
+      cameraDistance: this.controller.targetDistance,
+      cameraAzimuth: this.controller.targetAzimuth,
+      cameraTarget: this.controller.targetPoint,
+      doubleTapWindowMs: DOUBLE_TAP_MS,
+      lastTapGapMs: this.lastTapGapMs,
+      qualityTier: this.qualityTier,
+      qualityName: QUALITY_LEVELS[this.qualityTier]!.name,
+      pixelRatio: this.renderer.getPixelRatio(),
+      shadowMapSize: this.sun.shadow.mapSize.width,
     };
   }
 
