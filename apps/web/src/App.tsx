@@ -60,6 +60,10 @@ export function App(): ReactElement {
       } else {
         setPhase('menu');
       }
+    }).catch(() => {
+      // Depolama tamamen kapalıysa açılış menüye düşer, oyun boot olmayı
+      // bırakmaz — kayıt okumak oyuna girmenin ön koşulu değil.
+      if (!cancelled) setPhase('menu');
     });
     return () => {
       cancelled = true;
