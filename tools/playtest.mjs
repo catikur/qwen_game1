@@ -211,7 +211,14 @@ const findTile = (page, kind) =>
   check('Boş parsel satın alınabiliyor',
     await page.evaluate((id) => window.__capital.getState().map.tiles[id].ownerId === 'player', vacantId));
 
-  await page.locator('.buildcard').first().click();
+  // Kartı SIRAYA göre değil ADINA göre seç.
+  //
+  // Liste artık katalog sırasında değil, parsel getirisine göre sıralı
+  // (Tur 7). Sıraya bağlı bir tıklama, sıralama ölçütü her
+  // değiştiğinde başka bir bina kurar ve buradan sonraki bütün
+  // kontroller (zincir kartının kaç yuvası olduğu dahil) sessizce
+  // başka bir şeyi ölçmeye başlar.
+  await page.locator('.buildcard:has(.buildcard-name:text-is("Bakkal"))').click();
   await page.waitForTimeout(200);
   const placeButton = page.locator('button:has-text("Seçili arsaya inşa et")');
   if ((await placeButton.count()) > 0) await placeButton.click();

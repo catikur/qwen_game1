@@ -57,7 +57,7 @@ function playerStrategy(engine: GameEngine): void {
   const budget = player.cash * 0.5;
   if (budget < 30_000) return;
   const districts = [...state.districts].sort((a, b) => districtOpportunity(b) - districtOpportunity(a));
-  let best: { tileId: number; defId: string; payback: number } | null = null;
+  let best: { tileId: number; defId: string; profit: number } | null = null;
   for (const district of districts.slice(0, 4)) {
     const tile = state.map.tiles
       .filter((t) => t.districtId === district.id && t.kind === 'plot' && !t.ownerId && !t.structureId)
@@ -68,9 +68,18 @@ function playerStrategy(engine: GameEngine): void {
       if (option.def.role !== 'outlet' && option.def.role !== 'rental') continue;
       if (tilePrice(state, tile.id) + option.def.cost > budget) continue;
       const estimate = estimateInvestment(state, district.id, option.def.id, player.id);
+      // SIRALAMA GERİ ÖDEMEYE GÖRE DEĞİL, GÜNLÜK KÂRA GÖRE.
+      //
+      // Bir bina bir parsel kaplıyor ve ölçüm oyunun kıt kaynağının
+      // toprak olduğunu gösterdi (sınırsız nakitle bile karşılanmayan
+      // talep %52). O yüzden doğru ölçüt paranın getirisi değil
+      // PARSELİN getirisi — o da tam olarak `dailyProfit`.
+      //
+      // Geri ödeme sınırı elenmiş adayları ayıklamak için duruyor;
+      // seçimi artık o yapmıyor.
       if (!estimate || estimate.paybackDays > 150) continue;
-      if (!best || estimate.paybackDays < best.payback) {
-        best = { tileId: tile.id, defId: option.def.id, payback: estimate.paybackDays };
+      if (!best || estimate.dailyProfit > best.profit) {
+        best = { tileId: tile.id, defId: option.def.id, profit: estimate.dailyProfit };
       }
     }
   }
@@ -87,7 +96,7 @@ function expandOnly(engine: GameEngine): void {
   if (budget < 30_000) return;
 
   const districts = [...state.districts].sort((a, b) => districtOpportunity(b) - districtOpportunity(a));
-  let best: { tileId: number; defId: string; payback: number } | null = null;
+  let best: { tileId: number; defId: string; profit: number } | null = null;
   for (const district of districts.slice(0, 4)) {
     const tile = state.map.tiles
       .filter((t) => t.districtId === district.id && t.kind === 'plot' && !t.ownerId && !t.structureId)
@@ -98,9 +107,18 @@ function expandOnly(engine: GameEngine): void {
       if (option.def.role !== 'outlet' && option.def.role !== 'rental') continue;
       if (tilePrice(state, tile.id) + option.def.cost > budget) continue;
       const estimate = estimateInvestment(state, district.id, option.def.id, player.id);
+      // SIRALAMA GERİ ÖDEMEYE GÖRE DEĞİL, GÜNLÜK KÂRA GÖRE.
+      //
+      // Bir bina bir parsel kaplıyor ve ölçüm oyunun kıt kaynağının
+      // toprak olduğunu gösterdi (sınırsız nakitle bile karşılanmayan
+      // talep %52). O yüzden doğru ölçüt paranın getirisi değil
+      // PARSELİN getirisi — o da tam olarak `dailyProfit`.
+      //
+      // Geri ödeme sınırı elenmiş adayları ayıklamak için duruyor;
+      // seçimi artık o yapmıyor.
       if (!estimate || estimate.paybackDays > 150) continue;
-      if (!best || estimate.paybackDays < best.payback) {
-        best = { tileId: tile.id, defId: option.def.id, payback: estimate.paybackDays };
+      if (!best || estimate.dailyProfit > best.profit) {
+        best = { tileId: tile.id, defId: option.def.id, profit: estimate.dailyProfit };
       }
     }
   }
@@ -235,10 +253,12 @@ console.log('  \x1b[2mherkes zaten satabildiğinin tamamını satıyor demektir.
   row('', ...marks.map((m) => `${m.day}. gün`));
   row('Outlet doluluğu (uzun koşu)', ...marks.map((m) => pct(m.utilisation)));
   row('Karşılanmayan talep', ...marks.map((m) => pct(m.unmet)));
-  console.log('  \x1b[2mCANLI OYUNDA PAZAR DOYMUYOR. Tur 3 patolojik döngüyü (dükkânın\x1b[0m');
-  console.log('  \x1b[2mkendi müşterisini üretmesi) kapattı ve kontrollü düelloda doluluk\x1b[0m');
-  console.log('  \x1b[2m%66\'ya iniyor; ama canlı oyunda oyuncunun sermayesi talebin\x1b[0m');
-  console.log('  \x1b[2mbileşik büyümesine yetişemiyor. Sıradaki denge işi burada.\x1b[0m');
+  console.log('  \x1b[2mKISIT SERMAYE DEĞİL TOPRAK. Tur 7 bunu ölçtü: sınırsız nakitle\x1b[0m');
+  console.log('  \x1b[2mkoşulan bir oyunda bile karşılanmayan talep %52\'de kalıyor ve\x1b[0m');
+  console.log('  \x1b[2m1200 denemenin 1167\'sinde "boş parsel yok" çıkıyor. Nüfus\x1b[0m');
+  console.log('  \x1b[2mtavanındaki talebi karşılamak haritanın parsellerinin ~%100\'ünü\x1b[0m');
+  console.log('  \x1b[2mgerektiriyor — fabrikaya, depoya ve dört rakibe yer kalmıyor.\x1b[0m');
+  console.log('  \x1b[2mSıradaki iş haritayı büyütmek (Tur 8), denge değil.\x1b[0m');
 }
 
 // ---- 3. Stratejilerin karşılığı ----

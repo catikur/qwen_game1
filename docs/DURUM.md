@@ -21,13 +21,14 @@ dördü de kapandı:
 | Pazar payı yarışı fiilen yaşanmıyordu | **3** | Nüfus modelinin onarımı |
 | Rakibi yenmenin tek yolu pazardı | **4** | Borsa: hisse, temettü, devralma |
 
-Dördü kapandıktan sonra ölçüm iki şey daha gösterdi — ikisi de oyun
-mantığıyla ilgili değil:
+Dördü kapandıktan sonra ölçüm üç eksik daha gösterdi. İlk ikisi oyun
+mantığının dışında; üçüncüsü ise oyunun kendi **tavsiyesindeydi**:
 
 | Eksik | Tur | Ne yapıldı |
 |---|---|---|
 | Telefonda oyun açılıyor ama oynanamıyordu | **5** | Sarma, alt rıhtım, pinch zoom, dokunarak seçim |
 | Görsel bütçenin %95'i harcanmamıştı | **6** | Bina kütlesi, pencere ışıkları, asfalt, bloom |
+| Tavsiye kıt olan parseli en verimsiz binaya harcatıyordu | **7** | Yapı menüsü parsel getirisine göre sıralanıyor |
 
 ---
 
@@ -89,6 +90,22 @@ genişliği **1002px**'e sabitlenmişti; `controller.zoom()` için kodda tek
 bir çağrı yeri vardı (`wheel`); ve dokunmatikte seçim `pointermove`'a
 bağlı olduğu için hiç çalışmıyordu.
 
+### Tur 7 — Kıt olan para değil toprak · `docs/TOPRAK-TASARIMI.md`
+
+Dört tur boyunca §4.1'de "sermaye yetişemiyor" yazıyordu. Sınandı,
+yanlış çıktı: sermaye sınırsız olduğunda bile karşılanmayan talep
+%52'de kalıyor ve denemelerin %97'sinde "boş parsel yok" deniyor.
+
+Asıl sebep tavsiyedeydi. Bir bina bir parsel kapladığına göre doğru
+ölçüt paranın getirisi (geri ödeme) değil **parselin getirisi** (günlük
+kâr). İkisi aynı şeyi söylemiyor: geri ödeme 17–41 gün aralığında düz,
+parsel başına kapasite ise **41 kat** değişiyor. Yapı menüsü artık
+getiriye göre sıralıyor.
+
+Ölçülen etki — tek değişken sıralama ölçütü, aynı tempo ve nakit:
+karşılanmayan talep 1200. günde %48 → **%33**, oyuncu/rakip oranı
+0,76 → **1,28**.
+
 ---
 
 ## 3. Ölçülen durum
@@ -99,11 +116,17 @@ bağlı olduğu için hiç çalışmıyordu.
 
 | | Değer |
 |---|---|
-| Oyuncu net değeri | **22,06 M ₺** |
-| En iyi rakip | 28,91 M ₺ |
-| Oyuncu / rakip oranı | **0,76** — rakipler oyuncuyu geçebiliyor |
-| Oyuncu bina sayısı | 48 |
+| Oyuncu / rakip oranı | **1,28** — Tur 7 öncesi 0,76 idi |
+| Oyuncu bina sayısı | 52 |
+| Günlük kâr | 168 B ₺ |
 | Batan şirket | **0/5** |
+
+### Doygunluk (Tur 7 sonrası)
+
+| Karşılanmayan talep | 360. gün | 700. gün | 1200. gün |
+|---|---|---|---|
+| Önce | %35 | %38 | %48 |
+| **Sonra** | **%20** | **%34** | **%33** |
 
 ### Stratejilerin karşılığı (aynı tohum, tek değişken)
 
@@ -129,7 +152,7 @@ bağlı olduğu için hiç çalışmıyordu.
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~70 gün/sn |
-| Denge testi | **170 kontrol, hepsi geçiyor** |
+| Denge testi | **176 kontrol, hepsi geçiyor** |
 | Tarayıcı testi | **134 kontrol**, 0 konsol hatası |
 | Kapsam | 26 bina · 22 ürün · 7 kategori · 4 rakip profili |
 
@@ -149,24 +172,31 @@ bütçe hâlâ fazlasıyla açık.
 
 ## 4. Açık kalan işler
 
-### 4.1 Canlı oyunda pazar hâlâ doymuyor ← en önemlisi
+### 4.1 Harita %100 abone ← en önemlisi · `docs/TOPRAK-TASARIMI.md`
 
-Tur 3 patolojik döngüyü kapattı ve **kontrollü koşullarda** rekabeti
-canlandırdı. Ama canlı oyunda:
+> **Bu maddenin eski teşhisi yanlıştı ve Tur 7'de düzeltildi.** Dört tur
+> boyunca burada "oyuncunun sermayesi talebe yetişemiyor" yazıyordu.
+> Sınandığında yanlış çıktı: sermaye sınırsız yapıldığında karşılanmayan
+> talep **%52'de kalıyor**. Kısıt para değil **toprak**.
+
+Tur 7 tavsiyeyi düzeltti (yapı menüsü artık parsel getirisine göre
+sıralıyor) ve sayılar belirgin şekilde iyileşti:
 
 | | 360. gün | 700. gün | 1200. gün |
 |---|---|---|---|
-| Outlet doluluğu | %100 | %100 | %100 |
-| Karşılanmayan talep | %35 | %38 | **%48** |
+| Karşılanmayan talep · önce | %35 | %38 | %48 |
+| Karşılanmayan talep · **sonra** | **%20** | **%34** | **%33** |
 
-Yani oyuncunun sermayesi talebin bileşik büyümesine yetişemiyor ve
-karşılanmayan talep zamanla **artıyor**. Bunun sonucu: kalite ve marka
-kolları canlı oyunda tasarlandıkları kadar ısırmıyor; büyük ölçüde fiyat
-primi kanalından ödüyorlar.
+Ama tamamen çözülmedi ve kalan sebep yapısal: nüfus tavanındaki talebi
+karşılamak, her kategoride **en büyük** outlet kullanılsa bile **284
+parsel** gerektiriyor. Haritada **285** parsel var — yani **abonman
+%100**. Şehir ancak parsellerinin tamamı outlet olursa doyar; fabrikaya,
+depoya ve dört rakibe yer kalmaz.
 
-**Sıradaki teşhis:** talebi ne büyütüyor — taban nüfus artışı mı, konut
-mu, üretim istihdamı mı? Sermaye tarafında ne kısıtlıyor — geri ödeme
-bandı mı, parsel sayısı mı, kredi limiti mi?
+Bu sayı denge testinde bir kontrol olarak duruyor, sessizce
+kötüleşemiyor.
+
+**Sıradaki iş:** haritayı büyütmek (§4.5) — artık ölçümle gerekçeli.
 
 ### 4.2 Rakipler oyuncunun hissesini toplamıyor
 
@@ -200,12 +230,20 @@ ama "boş talep" sayısını okurken akılda tutulmalı.
 | **360. günde bina** | **137** | **143** |
 
 Teknik maliyet ihmal edilebilir — harita boyutu tamamen
-`DISTRICT_LAYOUT`'tan türetiliyor, hiçbir yerde sabit kodlanmamış. Ama
-harita 2,9 katına çıktığında şehir yalnızca 6 bina büyüdü: kısıt harita
-değil **sermaye**, yani §4.1. Bugün büyütmek daha büyük bir *boş* şehir
-üretir.
+`DISTRICT_LAYOUT`'tan türetiliyor, hiçbir yerde sabit kodlanmamış.
 
-Sıra: §4.1 (doygunluk) → ızgarayı büyüt → çoklu şehir.
+> **Bu maddenin sonucu da Tur 7'de düzeltildi.** Burada şöyle yazıyordu:
+> *"harita 2,9 katına çıktığında şehir yalnızca 6 bina büyüdü, demek ki
+> kısıt harita değil sermaye."* Çıkarım yanlıştı ve sebebi ölçümün
+> kendisiydi: o deney 360 günde ve **5 günde bir tek bina kuran** botla
+> yapılmıştı, yani bot-sınırlıydı. 1200 günlük ve sınırsız sermayeli
+> ölçüm tersini gösteriyor — kısıt toprak.
+
+**Haritayı büyütmek artık doğru sıradaki iş.** §4.1'deki abonman oranı
+(%100) bunun gerekçesi: şehrin fabrikaya, depoya ve rakiplere yer
+bırakacak kadar parseli yok.
+
+Sıra: ızgarayı büyüt → bölge açma → çoklu şehir.
 
 ### 4.6 Daha küçük kalemler
 
@@ -280,3 +318,17 @@ için kapsayıcı blok yaratıyor (alt rıhtım ekranın tepesine yapışmışt�
 `map` binanın kendi rengiyle çarpıldığı için ortalaması 0,72 olan bir
 doku bütün şehri karartıyordu; ve flex kolonunda paneller doğal
 yüksekliklerini koruyamayıp birbirini eziyordu.
+
+Tur 7 ise dersin en pahalı halini verdi: **makul görünen bir sebep, hiç
+sınanmadan dört tur boyunca kayıtta kaldı.** §4.1'de "sermaye
+yetişemiyor" yazıyordu; sermayeyi sonsuz yapan tek bir kontrollü deney
+onu çürüttü — hiçbir şey değişmedi, çünkü kısıt paranın değil toprağın
+kıtlığıydı.
+
+Ölçüm aracının kendisi de suçluydu. Benchmark'ın botu 5 günde bir tek
+bina kuruyor, dört bölgeye bakıyor ve geri ödemeye göre seçiyordu; o
+botun ürettiği sayı "oyunun davranışı" diye okundu ve **§4.5'in sonucu
+da bu yüzden yanlış çıktı.** Bir ölçüm aracının kısıtları, ölçtüğü
+şeyin özelliği sanılırsa yanlış sonuç kaçınılmaz.
+
+Kural: **bir sebebi kaydetmeden önce onu değiştirip ne olduğuna bak.**

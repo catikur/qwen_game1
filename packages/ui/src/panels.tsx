@@ -16,9 +16,11 @@ import {
   districtOpportunity,
   estimateInvestment,
   formatMoney,
+  freePlotsIn,
   getBuildingOnTile,
   getPlayer,
   goodShares,
+  rankedBuildOptions,
   tilePrice,
 } from '@capital/core';
 import type { InvestmentEstimate } from '@capital/core';
@@ -49,7 +51,16 @@ export function BuildPanel(): ReactElement {
   const districtId = selectedTile?.districtId ?? null;
   const district = districtId !== null ? state.districts[districtId] : undefined;
 
-  const options = buildOptions(state);
+  // Bölge seçiliyse liste PARSEL BAŞINA GETİRİYE göre sıralanır.
+  //
+  // Oyunun kıt kaynağı para değil toprak: sınırsız nakitle koşulan bir
+  // oyunda bile karşılanmayan talep %52'de kalıyor ve denemelerin
+  // neredeyse tamamında "boş parsel yok" çıkıyor. Bir bina bir parsel
+  // kapladığına göre oyuncunun sorusu "param ne zaman geri döner" değil,
+  // "bu parselden en çok ne çıkar" — cevabı da günlük kâr.
+  const ranked = districtId !== null ? rankedBuildOptions(state, districtId) : null;
+  const options = ranked ?? buildOptions(state).map((o) => ({ ...o, estimate: null, bestPick: false }));
+  const freePlots = districtId !== null ? freePlotsIn(state, districtId) : null;
 
   return (
     <section className="buildpanel" aria-label="Yapı menüsü">
@@ -57,15 +68,20 @@ export function BuildPanel(): ReactElement {
         <h2>Yatırımlar</h2>
         <p className="muted">
           {district
-            ? `Tahminler ${district.name} bölgesi için`
+            ? `${district.name} · parsel başına getiriye göre sıralı`
             : 'Bir arsa seç, tahminler o bölgeye göre hesaplansın'}
         </p>
+        {district && freePlots !== null && (
+          <p className={freePlots <= 4 ? 'buildpanel-scarce tight' : 'buildpanel-scarce'}>
+            {freePlots === 0
+              ? 'Bu bölgede boş parsel kalmadı — dolu bir parseli sahibinden devralman gerekiyor.'
+              : `Bu bölgede ${freePlots} boş parsel kaldı.`}
+          </p>
+        )}
       </header>
 
       <ul className="buildlist">
-        {options.map(({ def, unlocked, affordable }) => {
-          const estimate: InvestmentEstimate | null =
-            districtId !== null ? estimateInvestment(state, districtId, def.id, player.id) : null;
+        {options.map(({ def, unlocked, affordable, estimate, bestPick }) => {
           const selected = view.ghostDefId === def.id;
 
           return (
@@ -86,7 +102,10 @@ export function BuildPanel(): ReactElement {
                 <span className="buildcard-swatch" style={{ background: def.color }} />
                 <span className="buildcard-body">
                   <span className="buildcard-top">
-                    <span className="buildcard-name">{def.name}</span>
+                    <span className="buildcard-name">
+                      {def.name}
+                      {bestPick && <span className="buildcard-best">bu parsel için en iyi</span>}
+                    </span>
                     <span className={affordable ? 'buildcard-cost' : 'buildcard-cost short'}>
                       {formatMoney(def.cost)}
                     </span>
@@ -148,7 +167,10 @@ function EstimateLine({ estimate }: { estimate: InvestmentEstimate }): ReactElem
   if (!estimate.direct) {
     return <span className="buildcard-hint">Dolaylı fayda — kendi mağazalarının maliyetini düşürür.</span>;
   }
-  const good = estimate.dailyProfit > 0 && estimate.paybackDays < 160;
+  // "İyi" ölçütü artık geri ödeme değil, kârın kendisi. Geri ödeme
+  // ikinci sırada duruyor çünkü paranın ne zaman döneceği hâlâ önemli —
+  // ama parsel kıtken belirleyici olan soru bu değil.
+  const good = estimate.dailyProfit > 0;
   return (
     <span className={`estimate ${good ? 'ok' : 'weak'}`}>
       ≈ {formatMoney(estimate.dailyProfit)}/gün ·{' '}
