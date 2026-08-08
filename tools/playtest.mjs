@@ -1261,6 +1261,11 @@ const findTile = (page, kind) =>
     // bir iddia — hiçbiri kontrolü sessizce kapatmıyor.
     const fx = canvasBox.x + canvasBox.width * 0.3;
     const fy = canvasBox.y + canvasBox.height * 0.52;
+    // Kameranın çift dokunuştan ÖNCEKİ hedefi. Negatif dalın ölçütü bu:
+    // "odaklanmadı" demek "kamera kareden uzak" değil, "kamera HAREKET
+    // ETMEDİ" demek. Kamera zaten tesadüfen o karenin üstündeyse uzaklığa
+    // bakan bir kontrol yanlış kırmızı yakar.
+    const beforeTapTarget = (await info()).cameraTarget;
     await touch('touchStart', [[fx, fy]]);
     await touch('touchEnd', []);
     await touch('touchStart', [[fx, fy]]);
@@ -1282,8 +1287,12 @@ const findTile = (page, kind) =>
         check(`${deviceName}: pencere içinde çift dokunuş odaklanıyor`, off < 0.6,
           `ara ${Math.round(gap)}ms < ${windowMs}ms · sapma ${off.toFixed(2)}`);
       } else {
-        check(`${deviceName}: pencere dışında ikinci dokunuş odaklanmıyor`, off > 0.6,
-          `ara ${Math.round(gap)}ms ≥ ${windowMs}ms · kamera yerinde`);
+        const moved = Math.hypot(
+          focusInfo.cameraTarget.x - beforeTapTarget.x,
+          focusInfo.cameraTarget.z - beforeTapTarget.z,
+        );
+        check(`${deviceName}: pencere dışında ikinci dokunuş kamerayı oynatmıyor`, moved < 0.2,
+          `ara ${Math.round(gap)}ms ≥ ${windowMs}ms · kamera ${moved.toFixed(2)} birim oynadı`);
       }
     }
 

@@ -319,7 +319,7 @@ bütçe hâlâ fazlasıyla açık; sonraki görsel işler için yer var.
 
 | | Önce | Sonra |
 |---|---|---|
-| Tarayıcı kontrolü | 105 | **134** |
+| Tarayıcı kontrolü | 105 | **144** |
 | Responsive kontrolü | 1 (hiç başarısız olamayan) | 14 (iki cihaz profili, gerçek dokunuş olayları) |
 | Denge kontrolü | 170 | 170 (değişmedi) |
 
