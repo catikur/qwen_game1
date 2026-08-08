@@ -73,6 +73,39 @@ export class RtsCameraController {
     );
   }
 
+  /**
+   * Oransal zoom — pinch jesti için.
+   *
+   * Tekerlekten farklı bir birim gerekiyor: `zoom()` bir delta alır ve
+   * adımın büyüklüğünü kendi seçer. Pinch'te ise oran zaten parmakların
+   * arasındaki mesafeden geliyor — iki parmağı iki katına açmak sahneyi
+   * tam iki katı yakınlaştırmalı, yoksa jest "kayıyor" hissi verir.
+   */
+  zoomBy(factor: number): void {
+    if (!Number.isFinite(factor) || factor <= 0) return;
+    this.desiredDistance = clamp(this.desiredDistance / factor, MIN_DISTANCE, MAX_DISTANCE);
+  }
+
+  /** Kameranın o anki uzaklığı — testlerin jestleri doğrulaması için. */
+  get currentDistance(): number {
+    return this.distance;
+  }
+
+  /** Hedef uzaklık; yumuşama beklemeden okunur. */
+  get targetDistance(): number {
+    return this.desiredDistance;
+  }
+
+  /** Hedef azimut — döndürme jestini doğrulamak için. */
+  get targetAzimuth(): number {
+    return this.desiredAzimuth;
+  }
+
+  /** Kameranın baktığı nokta — odaklanma jestini doğrulamak için. */
+  get targetPoint(): { x: number; z: number } {
+    return { x: this.desiredTarget.x, z: this.desiredTarget.z };
+  }
+
   focusOn(x: number, z: number): void {
     this.desiredTarget.set(x, 0, z);
     this.clampTarget();

@@ -18,7 +18,7 @@ function loadPlaywright() {
   }
   throw new Error('Playwright bulunamadı. Kurulum: npm i -g playwright');
 }
-const { chromium } = loadPlaywright();
+const { chromium, devices } = loadPlaywright();
 
 const ROOT = process.env.DIST || new URL('../apps/web/dist', import.meta.url).pathname;
 const OUT = process.env.SHOTS || '/tmp';
@@ -333,12 +333,24 @@ const findTile = (page, kind) =>
   // ---------- Gece oynanabilirliği ----------
   section('Gece oynanabilirliği');
 
+  //
+  // SABİT `sleep` KULLANMA. Bu ortamda kare süresi sahnenin ağırlığına
+  // göre 20 ms ile 1 sn arasında değişiyor; sabit bir bekleme yavaş
+  // koşumda bir adım geriden okur ve ÇALIŞAN bir özelliği hatalı
+  // raporlar. `timeOfDay` her karede biraz ilerlediği için 0,75'in
+  // üstüne çıkmış olması en az bir karenin çizildiğinin kanıtı.
+  //
   const atNight = async (lens) =>
     page.evaluate(
       async (l) => {
         window.__capital.setLens(l);
         window.__capital.setTimeOfDay(0.75); // güneşin en alçak olduğu an
-        await new Promise((r) => setTimeout(r, 400));
+        const deadline = Date.now() + 10000;
+        while (Date.now() < deadline) {
+          const info = window.__capital.renderInfo();
+          if (info && info.activeLens === l && info.timeOfDay > 0.75) return info;
+          await new Promise((r) => setTimeout(r, 25));
+        }
         return window.__capital.renderInfo();
       },
       lens,
@@ -349,10 +361,16 @@ const findTile = (page, kind) =>
     `güneş ${darkest.sunIntensity.toFixed(2)}`);
   check('Gecenin en karanlık anında ortam ışığı yeterli', darkest.hemisphereIntensity >= 0.7,
     `ortam ${darkest.hemisphereIntensity.toFixed(2)}`);
-  // Pencere parıltısı binanın tüm yüzeyine düz uygulanıyor; yüksek olursa
-  // gece bütün şehir tek parça altın bir kütleye dönüşüyor.
-  check('Pencere parıltısı binaların rengini bastırmıyor', darkest.fabricEmissive <= 0.05,
-    `emissive ${darkest.fabricEmissive.toFixed(3)}`);
+  // Bu kontrol Tur 6'da anlamını değiştirdi ve BİLEREK gevşetildi.
+  //
+  // Eskiden emisyon binanın TÜM yüzeyine düz uygulanıyordu; yükseltmek
+  // şehri tek parça amber bir kütleye çeviriyordu, o yüzden tavan 0,05'ti.
+  // Artık emisyon bir dokudan geliyor: siyah zemin üzerinde yalnızca
+  // pencereler parlıyor. Korunması gereken şey artık parlaklığın DÜŞÜK
+  // olması değil, emisyonun DOKUDAN gelmesi — asıl güvence bu.
+  check('Gece pencereler yanıyor', darkest.fabricEmissive > 0.5,
+    `emissive ${darkest.fabricEmissive.toFixed(2)}`);
+  check('Emisyon dokudan geliyor, düz yüzeyden değil', darkest.emissiveMapped === true);
   check('Işık kaynağı yer altına inmiyor', darkest.sunHeight > 5,
     `ışık yüksekliği ${darkest.sunHeight.toFixed(1)}`);
   check('Gece gökyüzü tamamen siyaha inmiyor', darkest.skyLightness >= 0.1,
@@ -935,10 +953,18 @@ const findTile = (page, kind) =>
   await page.waitForSelector('.topbar');
   await page.click('.speed:nth-child(4)');
   // Ham FPS'i eşik olarak kullanmak kabı ölçer, kodu değil: burada GPU yok
-  // ve SwiftShader tavanı 6-8 FPS. Asıl korunması gereken şey zaten kare
+  // ve SwiftShader tavanı düşük. Asıl korunması gereken şey zaten kare
   // hızı değil — OYUN SAATİNİN GERÇEK ZAMANLA UYUMU. Düşük kare hızında
   // simülasyon sessizce yavaşlarsa seçilen hız kademesi yalan söyler;
   // motorun dt üst sınırı tam olarak bunu engellemek için var.
+  //
+  // Kalite en ucuz kademeye SABİTLENİYOR. Aksi halde ölçüm motorun
+  // saatini değil, o an hangi kademede olduğumuzu ölçer: Tur 6'nın
+  // dokuları ve ortam haritasıyla yazılım rasterizasyonu 1 FPS'e
+  // inebiliyor ve dt üst sınırı devreye girip saat geride kalıyor.
+  // Bu bir motor arızası değil, kabın sınırı.
+  await page.evaluate(() => window.__capital.setQuality(3));
+  await page.waitForTimeout(600);
   const pace = await page.evaluate(
     () =>
       new Promise((resolve) => {
@@ -970,15 +996,250 @@ const findTile = (page, kind) =>
   await page.screenshot({ path: `${OUT}/city-later.png` });
   check('Uzun oturumda konsol temiz', consoleErrors.length === 0, consoleErrors.slice(0, 3).join(' | '));
 
-  // ---------- Responsive ----------
-  section('Responsive');
-  await page.setViewportSize({ width: 900, height: 800 });
-  await page.waitForTimeout(500);
-  const overflow = await page.evaluate(
-    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  // ---------- Görsel katman ----------
+  section('Görsel katman');
+  const visual = await page.evaluate(() => window.__capital.renderInfo());
+  check('Bina kütlesi üç parçalı', visual.massParts === 3, `${visual.massParts} parça (taban, gövde, çatı)`);
+  check(
+    'Sokaklar parsellerden ayrı çiziliyor',
+    visual.roadInstances > 0 && visual.plotInstances > 0,
+    `${visual.roadInstances} sokak · ${visual.plotInstances} parsel`,
   );
-  check('Dar ekranda yatay taşma yok', overflow <= 0, `taşma ${overflow}px`);
-  await page.screenshot({ path: `${OUT}/city-mobile.png` });
+  check(
+    'Sokak ve parsel toplamı haritayı kapatıyor',
+    visual.roadInstances + visual.plotInstances ===
+      (await page.evaluate(() => window.__capital.getState().map.tiles.length)),
+    'kayıp kare yok',
+  );
+
+  // Pencere ışıkları: gündüz sönük, gece yanıyor. Emisyon artık düz bir
+  // yüzey parlaklığı değil bir DOKUDAN geldiği için değer serbestçe
+  // yükselebiliyor — eskiden 0,03 gibi bir "ima" seviyesindeydi.
+  await page.evaluate(() => window.__capital.setTimeOfDay(0.25));
+  await page.waitForTimeout(400);
+  const noon = await page.evaluate(() => window.__capital.renderInfo());
+  await page.evaluate(() => window.__capital.setTimeOfDay(0.76));
+  await page.waitForTimeout(400);
+  const midnight = await page.evaluate(() => window.__capital.renderInfo());
+  check('Gündüz pencere ışığı sönük', noon.fabricEmissive === 0, `${noon.fabricEmissive.toFixed(2)}`);
+  check('Gece pencereler yanıyor', midnight.fabricEmissive > 0.5,
+    `${midnight.fabricEmissive.toFixed(2)} (eski düz emisyon 0,03 idi)`);
+
+  // İnşaat animasyonu: bina yerden yükseliyor mu.
+  //
+  // Oyun ÖNCE durduruluyor. Rakipler sürekli dükkân açıyor ve her yeni
+  // bina animasyonu yeniden tetikliyor; duraklatılmadan "animasyon bitti"
+  // kontrolü rakiplerin inşaat temposunu ölçerdi, bizim animasyonumuzu
+  // değil.
+  await page.evaluate(() => window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 }));
+  const grewTile = await page.evaluate(() => {
+    const engine = window.__capital.engine;
+    const state = engine.getState();
+    for (const tile of state.map.tiles) {
+      if (tile.kind !== 'plot' || tile.structureId || tile.ownerId) continue;
+      if (!engine.dispatch({ type: 'BUY_TILE', tileId: tile.id }).ok) continue;
+      if (engine.dispatch({ type: 'BUILD', tileId: tile.id, defId: 'corner_shop' }).ok) return tile.id;
+    }
+    return null;
+  });
+  await page.waitForTimeout(120);
+  const during = await page.evaluate(() => window.__capital.renderInfo());
+  check('Yeni bina yerden yükseliyor', grewTile !== null && during.buildingsGrowing, 'animasyon sürüyor');
+  await page.waitForTimeout(1400);
+  const settled = await page.evaluate(() => window.__capital.renderInfo());
+  check('Animasyon bitiyor, takılı kalmıyor', !settled.buildingsGrowing, 'tamamlandı');
+
+  // ---------- Kalite kademeleri ----------
+  section('Kalite kademeleri');
+  const quality = await page.evaluate(() => window.__capital.renderInfo());
+  check(
+    'Kalite kademesi bildiriliyor',
+    typeof quality.qualityTier === 'number' && typeof quality.qualityName === 'string',
+    `${quality.qualityTier} · "${quality.qualityName}" · piksel oranı ${quality.pixelRatio} · gölge ${quality.shadowMapSize}`,
+  );
+  check(
+    'Yazılım rasterizasyonunda kademe indi',
+    quality.qualityTier > 0,
+    `bu ortamda GPU yok; kademe ${quality.qualityTier}`,
+  );
+  check(
+    'İnen kademede gölge haritası küçülüyor ya da gölge kapanıyor',
+    quality.shadowMapSize <= 1024,
+    `gölge haritası ${quality.shadowMapSize}`,
+  );
+
+  // Üst kademeler bu ortamda kendiliğinden HİÇ çalışmaz — GPU yok,
+  // uyarlama saniyeler içinde en ucuza iniyor. Sabitlemeden test edilseydi
+  // bloom zinciri ve 2048'lik gölge hiçbir zaman sınanmamış olurdu.
+  await page.evaluate(() => window.__capital.setQuality(0));
+  await page.waitForTimeout(1200);
+  const top = await page.evaluate(() => window.__capital.renderInfo());
+  check('En üst kademede bloom zinciri kuruluyor', top.postProcessing === true, top.qualityName);
+  check('En üst kademede gölge haritası 2048', top.shadowMapSize === 2048, `${top.shadowMapSize}`);
+  await page.screenshot({ path: `${OUT}/city-bloom.png` });
+
+  await page.evaluate(() => window.__capital.setQuality(3));
+  await page.waitForTimeout(900);
+  const bottom = await page.evaluate(() => window.__capital.renderInfo());
+  check('En alt kademede bloom sökülüyor', bottom.postProcessing === false, bottom.qualityName);
+  check('En alt kademede piksel oranı 1', bottom.pixelRatio === 1, `${bottom.pixelRatio}`);
+  check(
+    'Kademeler arası geçiş konsolu kirletmiyor',
+    consoleErrors.length === 0,
+    consoleErrors.slice(0, 2).join(' | '),
+  );
+
+  // ---------- Mobil ----------
+  //
+  // Bu bölüm eskiden tek satırdı: "dar ekranda yatay taşma yok". O kontrol
+  // HİÇBİR ZAMAN başarısız olamıyordu, çünkü `body`'de `overflow: hidden`
+  // varken `scrollWidth − clientWidth` her koşulda 0 çıkar. Oysa üst bar
+  // 1002px genişliğinde takılı kalıyordu ve telefonda hiçbir panel
+  // düğmesine ulaşılamıyordu. Şimdi eleman kutuları görüntü alanına karşı
+  // ölçülüyor ve jestler gerçek dokunuş olaylarıyla sürülüyor.
+  //
+  section('Mobil');
+  for (const deviceName of ['iPhone 13', 'Pixel 7']) {
+    const mobileContext = await browser.newContext({ ...devices[deviceName] });
+    const m = await mobileContext.newPage();
+    const mobileErrors = [];
+    m.on('console', (msg) => {
+      if (msg.type() === 'error') mobileErrors.push(msg.text());
+    });
+    m.on('pageerror', (e) => mobileErrors.push('pageerror: ' + e.message));
+
+    await m.goto('http://127.0.0.1:8811/');
+    await m.waitForSelector('.newgame', { timeout: 20000 });
+    await m.fill('.newgame-field input[type="text"]', 'Mobil Holding');
+    await m.locator('button:has-text("Şirketi kur")').click();
+    await m.waitForSelector('.topbar', { timeout: 20000 });
+    await m.waitForTimeout(1200);
+
+    // Ulaşılabilirlik: kaydırılabilir bir şeridin içinde ekran dışında
+    // kalan düğme ULAŞILABİLİR sayılır; başka türlü taşma hatadır.
+    const reach = await m.evaluate(() => {
+      const vw = window.innerWidth;
+      const scrollableAncestor = (el) => {
+        for (let p = el.parentElement; p; p = p.parentElement) {
+          const ox = getComputedStyle(p).overflowX;
+          if ((ox === 'auto' || ox === 'scroll') && p.scrollWidth - p.clientWidth > 2) return true;
+        }
+        return false;
+      };
+      const stranded = [];
+      for (const el of document.querySelectorAll('body *')) {
+        const r = el.getBoundingClientRect();
+        if (r.width === 0 || r.height === 0) continue;
+        if (r.right - vw <= 4) continue;
+        if (scrollableAncestor(el)) continue;
+        stranded.push(`${el.tagName.toLowerCase()}.${String(el.className).slice(0, 24)} +${Math.round(r.right - vw)}px`);
+      }
+      return stranded.slice(0, 5);
+    });
+    check(`${deviceName}: ulaşılamayan taşma yok`, reach.length === 0, reach.join(', ') || 'temiz');
+
+    // Her panel düğmesi gerçekten bir panel açıyor mu.
+    const buttonCount = await m.locator('.topbar-actions button').count();
+    let opened = 0;
+    for (let i = 0; i < buttonCount; i++) {
+      const button = m.locator('.topbar-actions button').nth(i);
+      await button.scrollIntoViewIfNeeded();
+      await button.click();
+      if (await m.locator('.modal').count()) {
+        opened++;
+        await m.locator('.modal-head button.icon').click();
+      }
+    }
+    check(`${deviceName}: bütün panel düğmeleri açılıyor`, opened === buttonCount && buttonCount > 0,
+      `${opened}/${buttonCount}`);
+
+    // Jestler: CDP ile GERÇEK dokunuş olayları. Sentetik PointerEvent
+    // üretmek yerine tarayıcının kendi dokunuş → pointer çevirisini
+    // kullanıyoruz, yani test edilen şey gerçek akışın aynısı.
+    const cdp = await mobileContext.newCDPSession(m);
+    const touch = (type, points) =>
+      cdp.send('Input.dispatchTouchEvent', {
+        type,
+        touchPoints: points.map(([x, y], i) => ({ x, y, id: i })),
+      });
+    const info = () => m.evaluate(() => window.__capital.renderInfo());
+    const canvasBox = await m.locator('canvas.scene').boundingBox();
+    const mx = canvasBox.x + canvasBox.width / 2;
+    const my = canvasBox.y + canvasBox.height * 0.42;
+
+    const zoomBefore = await info();
+    await touch('touchStart', [[mx - 50, my], [mx + 50, my]]);
+    for (let i = 1; i <= 8; i++) {
+      await touch('touchMove', [[mx - 50 - i * 14, my], [mx + 50 + i * 14, my]]);
+    }
+    await touch('touchEnd', []);
+    await m.waitForTimeout(400);
+    const zoomAfter = await info();
+    check(`${deviceName}: pinch yakınlaştırıyor`,
+      zoomAfter.cameraDistance < zoomBefore.cameraDistance - 0.5,
+      `uzaklık ${zoomBefore.cameraDistance.toFixed(1)} → ${zoomAfter.cameraDistance.toFixed(1)}`);
+
+    const spinBefore = await info();
+    await touch('touchStart', [[mx - 60, my], [mx + 60, my]]);
+    for (let i = 1; i <= 8; i++) {
+      await touch('touchMove', [[mx - 60 + i * 10, my], [mx + 60 + i * 10, my]]);
+    }
+    await touch('touchEnd', []);
+    await m.waitForTimeout(400);
+    const spinAfter = await info();
+    check(`${deviceName}: iki parmak kamerayı döndürüyor`,
+      Math.abs(spinAfter.cameraAzimuth - spinBefore.cameraAzimuth) > 0.05,
+      `azimut ${spinBefore.cameraAzimuth.toFixed(3)} → ${spinAfter.cameraAzimuth.toFixed(3)}`);
+
+    // Tek dokunuşla seçim. Bu eskiden çalışmıyordu: seçim `hoveredTile`'a
+    // bakıyor, o da yalnızca `pointermove`'da güncelleniyordu — parmakla
+    // dokunmakta hareket olmadığı için hep boş kalıyordu.
+    const inspectorBefore = (await m.locator('.inspector').textContent()) ?? '';
+    await touch('touchStart', [[mx, my]]);
+    await touch('touchEnd', []);
+    await m.waitForTimeout(400);
+    const inspectorAfter = (await m.locator('.inspector').textContent()) ?? '';
+    check(`${deviceName}: dokunmak parsel seçiyor`,
+      inspectorAfter !== inspectorBefore && /Arsa \d+-\d+/.test(inspectorAfter),
+      (/Arsa \d+-\d+/.exec(inspectorAfter) ?? ['seçim yok'])[0]);
+
+    // Çift dokunuş: saat bağımsız iki yönlü kontrol. Yazılım
+    // rasterizasyonunda ana iş parçacığı kare başına yüzlerce ms bloke
+    // olduğu için iki dokunuş arası 1 saniyeyi bulabiliyor; o yüzden
+    // GÖZLENEN aralığa göre doğru davranışı bekliyoruz. İki dal da sert
+    // bir iddia — hiçbiri kontrolü sessizce kapatmıyor.
+    const fx = canvasBox.x + canvasBox.width * 0.3;
+    const fy = canvasBox.y + canvasBox.height * 0.52;
+    await touch('touchStart', [[fx, fy]]);
+    await touch('touchEnd', []);
+    await touch('touchStart', [[fx, fy]]);
+    await touch('touchEnd', []);
+    await m.waitForTimeout(800);
+    const tapped = (await m.locator('.inspector').textContent()) ?? '';
+    const coords = /Arsa (\d+)-(\d+)/.exec(tapped);
+    const focusInfo = await info();
+    if (!coords) {
+      check(`${deviceName}: çift dokunuş`, false, 'dokunulan nokta haritaya düşmedi');
+    } else {
+      const off = Math.hypot(
+        focusInfo.cameraTarget.x - Number(coords[1]),
+        focusInfo.cameraTarget.z - Number(coords[2]),
+      );
+      const gap = focusInfo.lastTapGapMs;
+      const windowMs = focusInfo.doubleTapWindowMs;
+      if (gap < windowMs) {
+        check(`${deviceName}: pencere içinde çift dokunuş odaklanıyor`, off < 0.6,
+          `ara ${Math.round(gap)}ms < ${windowMs}ms · sapma ${off.toFixed(2)}`);
+      } else {
+        check(`${deviceName}: pencere dışında ikinci dokunuş odaklanmıyor`, off > 0.6,
+          `ara ${Math.round(gap)}ms ≥ ${windowMs}ms · kamera yerinde`);
+      }
+    }
+
+    check(`${deviceName}: konsol temiz`, mobileErrors.length === 0, mobileErrors.slice(0, 2).join(' | '));
+    await m.screenshot({ path: `${OUT}/mobile-${deviceName.replace(/\W+/g, '')}.png` });
+    await mobileContext.close();
+  }
 
   console.log('\n================================');
   console.log(`TOPLAM: ${pass} geçti, ${fail} kaldı`);

@@ -1,9 +1,20 @@
 import * as THREE from 'three';
+import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { BUILDING_BY_ID, DISTRICT_ARCHETYPES, STRUCTURE_BY_ID } from '@capital/content';
 import { BLOCK_SIZE, lensValue, supplyRoutes } from '@capital/core';
 import type { GameState, LensId } from '@capital/core';
 import { RtsCameraController } from './camera';
 import { TrafficSystem } from './traffic';
+import { BuildingMass, tileByInstanceScale } from './mass';
+import {
+  makeFacadeTexture,
+  makeRoadTexture,
+  makeSkyEnvironment,
+  makeWindowTexture,
+} from './textures';
 
 /**
  * Şehir sahnesi.
@@ -31,6 +42,90 @@ export interface RendererCallbacks {
 /** Veri lensinde binaların siluet saydamlığı. */
 const SILHOUETTE_OPACITY = 0.26;
 
+/**
+ * Çift dokunuş penceresi.
+ *
+ * 400 ms, iOS ve Android'in tipik 300–500 ms bandının ortası. Daha dar bir
+ * pencere (ilk denediğimiz 320 ms) hızlı dokunamayanlar için jesti fiilen
+ * erişilemez yapıyor.
+ */
+const DOUBLE_TAP_MS = 400;
+
+/** Dokunuşun "tıklama" sayılması için izin verilen kayma (piksel toplamı). */
+const TAP_SLOP = 6;
+
+/** İnşaatın yerden yükselme süresi. */
+const BUILD_ANIM_MS = 900;
+
+/**
+ * Kalite kademeleri.
+ *
+ * Önceki sürümde tek bir karar vardı: "gölge açık" ya da "gölge kapalı".
+ * Bu iki sorunu birden yaratıyordu — zayıf bir cihazda gölgeyi kapatmak
+ * yetmiyor (asıl yük piksel sayısında), güçlü bir telefonda ise gereksiz
+ * yere gölgeden vazgeçiliyordu. Kademeler pahalıdan ucuza sırayla iner ve
+ * her kademede önce SÜS kısılır: piksel yoğunluğu, gölge çözünürlüğü,
+ * gölgenin kendisi, en son fon araçları.
+ */
+interface QualityLevel {
+  name: string;
+  maxPixelRatio: number;
+  shadows: boolean;
+  shadowMapSize: number;
+  carBudget: number;
+  /** Bloom zinciri — tam ekran ek geçişler demek, ilk kısılan şey. */
+  postProcessing: boolean;
+  /**
+   * Ortam haritası (IBL). Güzel ama ucuz değil: her parçacık için
+   * ön-filtrelenmiş küpten örnekleme demek ve zayıf GPU'larda kare
+   * hızının hatırı sayılır kısmını yiyor.
+   */
+  environment: boolean;
+}
+
+const QUALITY_LEVELS: QualityLevel[] = [
+  { name: 'yüksek', maxPixelRatio: 2, shadows: true, shadowMapSize: 2048, carBudget: 1, postProcessing: true, environment: true },
+  { name: 'orta', maxPixelRatio: 1.75, shadows: true, shadowMapSize: 1024, carBudget: 1, postProcessing: true, environment: true },
+  { name: 'düşük', maxPixelRatio: 1.35, shadows: false, shadowMapSize: 1024, carBudget: 0.6, postProcessing: false, environment: false },
+  { name: 'asgari', maxPixelRatio: 1, shadows: false, shadowMapSize: 512, carBudget: 0.3, postProcessing: false, environment: false },
+];
+
+/**
+ * Bloom ayarları.
+ *
+ * Eşik yüksek tutuluyor: yalnızca pencere ışıkları ve güneş gören en
+ * parlak yüzeyler taşsın. Düşük eşikte bütün sahne pusa dönüyor ve
+ * şehir okunmaz oluyor — bloom atmosfer katmalı, bilgi silmemeli.
+ */
+const BLOOM_STRENGTH = 0.62;
+const BLOOM_RADIUS = 0.45;
+const BLOOM_THRESHOLD = 0.82;
+
+/** Ölçüm penceresi: bu kadar saniye ve bu kadar kare toplanmadan karar yok. */
+const QUALITY_WINDOW_SECONDS = 2.5;
+const QUALITY_WINDOW_FRAMES = 12;
+/** Altına düşülürse kademe iner. */
+const QUALITY_FLOOR_FPS = 24;
+/** Üstüne çıkılırsa kademe yükselir — ama yalnızca hiç düşülmemiş kademeye. */
+const QUALITY_CEILING_FPS = 52;
+
+/**
+ * Açılış kademesi.
+ *
+ * Cihazı ölçmeden önce makul bir tahmin gerekiyor, yoksa zayıf bir telefon
+ * ilk 2,5 saniyeyi en pahalı kademede geçirir — yani oyunun ilk izlenimi
+ * en kötü hali olur. Tahmin yanlışsa uyarlama zaten düzeltiyor.
+ */
+function initialQualityTier(): number {
+  if (typeof navigator === 'undefined') return 0;
+  const cores = navigator.hardwareConcurrency ?? 8;
+  const touch = (navigator.maxTouchPoints ?? 0) > 0;
+  if (cores <= 2) return 3;
+  if (touch && cores <= 6) return 2;
+  if (touch) return 1;
+  return 0;
+}
+
 /** Gün döngüsünün iki ucu — ton üzerinden geçmemek için sabit renkler. */
 const MOONLIGHT = new THREE.Color('#9db9e8');
 const SUNLIGHT = new THREE.Color('#ffe6bd');
@@ -50,13 +145,24 @@ export class CityRenderer {
   private ground: THREE.InstancedMesh;
   private groundLit!: THREE.MeshStandardMaterial;
   private groundFlat!: THREE.MeshBasicMaterial;
-  private buildings: THREE.InstancedMesh;
+  /** Sokaklar ayrı bir mesh: asfalt dokusunu ve yön döndürmesini taşıyor. */
+  private roads: THREE.InstancedMesh;
+  private roadMaterial!: THREE.MeshStandardMaterial;
+  private roadFlat!: THREE.MeshBasicMaterial;
+  private buildings: BuildingMass;
   /** Şehrin mevcut dokusu — oyuncuya ait olmayan yapılar. */
-  private fabric: THREE.InstancedMesh;
+  private fabric: BuildingMass;
+  private bodyMaterials: THREE.MeshStandardMaterial[] = [];
   private traffic: TrafficSystem;
   private sun!: THREE.DirectionalLight;
   private hemisphere!: THREE.HemisphereLight;
   private skyColor = new THREE.Color();
+  /** Işığın kamera hedefine göre ötelemesi — gün döngüsünden gelir. */
+  private sunOffset = new THREE.Vector3();
+  /** Son işlem zinciri; yalnızca üst kalite kademelerinde kurulur. */
+  private composer: EffectComposer | null = null;
+  /** Ortam haritası; kademe düşünce sahneden sökülür, yükselince takılır. */
+  private envTexture: THREE.Texture | null = null;
   /** 0..1 arasında dönen gün döngüsü; simülasyondan bağımsız, tamamen görsel. */
   private timeOfDay = 0.28;
   /** Veri lensi açıkken sahne "bilgi modu"na geçer. */
@@ -77,6 +183,12 @@ export class CityRenderer {
 
   private hoveredTile: number | null = null;
   private groundPlaced = false;
+  /** Kare kimliğinden zemin örnek yuvasına eşleme; sokaklarda -1. */
+  private groundSlotOfTile = new Int32Array(0);
+  /** Bina kimliği → inşaatın başladığı an (0 = animasyonsuz). */
+  private buildStart = new Map<string, number>();
+  private sawBuildings = false;
+  private buildingsGrowing = false;
   private pointer = new THREE.Vector2();
   private groundPoint = new THREE.Vector3();
   private dummy = new THREE.Object3D();
@@ -85,7 +197,14 @@ export class CityRenderer {
   private cleanups: Array<() => void> = [];
   private frameSamples = 0;
   private frameTimeSum = 0;
-  private qualityReduced = false;
+  /** Şu anki kalite kademesi (0 = en yüksek). */
+  private qualityTier = 0;
+  /** Bir kez inilen kademenin üstüne bir daha çıkılmaz — salınımı keser. */
+  private qualityCeilingTier = 0;
+  /** Elle sabitlendiyse uyarlama susar. */
+  private qualityLocked = false;
+  /** Son iki dokunuş arasındaki süre — çift dokunuş testinin okuduğu sayı. */
+  private lastTapGapMs = Number.POSITIVE_INFINITY;
 
   constructor(
     private canvas: HTMLCanvasElement,
@@ -94,7 +213,6 @@ export class CityRenderer {
     private mapHeight: number,
   ) {
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-    this.renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.05;
@@ -126,34 +244,73 @@ export class CityRenderer {
     );
     this.ground.receiveShadow = true;
     this.ground.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    this.ground.count = 0;
     this.scene.add(this.ground);
 
-    this.buildings = new THREE.InstancedMesh(
-      new THREE.BoxGeometry(0.68, 1, 0.68),
-      new THREE.MeshStandardMaterial({ roughness: 0.62, metalness: 0.08 }),
+    // Sokaklar parsellerden ayrıldı. Haritanın %44'ü sokak ve hepsi tek
+    // düz renkti; asfalt dokusu yolun yönünü (kesikli orta çizgi) ve
+    // kenarını (kaldırım bandı) anlatıyor. Yön, örnek matrisinin
+    // döndürülmesiyle geliyor — ikinci bir doku gerekmiyor.
+    const roadTexture = makeRoadTexture();
+    this.roadMaterial = new THREE.MeshStandardMaterial({
+      map: roadTexture,
+      roughness: 0.95,
+      metalness: 0.0,
+    });
+    // Zeminle aynı gerekçe: veri lensinde sahne bir haritaya dönüşüyor ve
+    // ışıktan bağımsız çizilmesi gerekiyor, yoksa akşam olunca okunmuyor.
+    this.roadFlat = new THREE.MeshBasicMaterial({ map: roadTexture, color: '#6b7788' });
+    this.roads = new THREE.InstancedMesh(
+      new THREE.BoxGeometry(1.0, 0.08, 1.0),
+      this.roadMaterial,
       tileCount,
     );
-    this.buildings.castShadow = true;
-    this.buildings.receiveShadow = true;
-    this.buildings.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-    this.buildings.count = 0;
-    this.scene.add(this.buildings);
+    this.roads.receiveShadow = true;
+    this.roads.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    this.roads.count = 0;
+    this.scene.add(this.roads);
 
-    this.fabric = new THREE.InstancedMesh(
-      new THREE.BoxGeometry(0.8, 1, 0.8),
-      new THREE.MeshStandardMaterial({
-        roughness: 0.85,
-        metalness: 0.03,
-        emissive: new THREE.Color('#ffcf7a'),
+    // Pencere ve cephe dokuları gövde parçasına gidiyor; taban ve çatı
+    // düz kalıyor. Bu bir tercih değil zorunluluk: doku örnek ölçeğine
+    // göre döşendiği için gövdenin üst yüzüne de pencere düşerdi, çatı
+    // kapağı o yüzü örtüyor.
+    const windowTexture = makeWindowTexture();
+    const facadeTexture = makeFacadeTexture();
+
+    const makeBody = (roughness: number, metalness: number): THREE.MeshStandardMaterial => {
+      const material = new THREE.MeshStandardMaterial({
+        map: facadeTexture,
+        emissiveMap: windowTexture,
+        emissive: new THREE.Color('#ffd79a'),
         emissiveIntensity: 0,
-      }),
+        roughness,
+        metalness,
+      });
+      // Birim başına doku tekrarı = kat yoğunluğu. 1,35'te pencereler ince
+      // bir tanecik gibi okunuyordu; 1,05 kat çizgilerini ayırt edilebilir
+      // tutuyor.
+      tileByInstanceScale(material, 1.05);
+      this.bodyMaterials.push(material);
+      return material;
+    };
+
+    this.buildings = new BuildingMass(
       tileCount,
+      makeBody(0.62, 0.1),
+      new THREE.MeshStandardMaterial({ roughness: 0.7, metalness: 0.06 }),
     );
-    this.fabric.castShadow = true;
-    this.fabric.receiveShadow = true;
-    this.fabric.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-    this.fabric.count = 0;
-    this.scene.add(this.fabric);
+    this.fabric = new BuildingMass(
+      tileCount,
+      makeBody(0.82, 0.04),
+      new THREE.MeshStandardMaterial({ roughness: 0.88, metalness: 0.02 }),
+    );
+    this.scene.add(...this.buildings.meshes, ...this.fabric.meshes);
+
+    // Ortam haritası: camlar ve metal yüzeyler artık gökyüzünü yansıtıyor.
+    // Doku saklanıyor çünkü kalite kademesi düşünce sahneden sökülüp
+    // yükselince geri takılıyor — her seferinde yeniden üretmek gereksiz.
+    this.envTexture = makeSkyEnvironment(this.renderer);
+    this.scene.environmentIntensity = 0.35;
 
     // Fon aracı sayısı 72'den 48'e indi: kamyonlar geldiğinde sokaklar
     // eskisinden daha kalabalıktı ve zincir akışı gürültünün içinde
@@ -182,6 +339,8 @@ export class CityRenderer {
 
     this.bindInput();
     this.resize();
+    // Cihaz tahmininden başla; uyarlama ilk 2,5 saniyede düzeltir.
+    this.applyQuality(initialQualityTier());
   }
 
   private setupLights(width: number, height: number): void {
@@ -193,9 +352,8 @@ export class CityRenderer {
     sun.position.set(width * 0.55, 42, height * 0.15);
     sun.target.position.set(width / 2, 0, height / 2);
     sun.castShadow = true;
-    // 1024, şehir ölçeğinde 2048 ile neredeyse aynı görünüyor ama gölge
-    // geçişinin dolgu maliyetini dörtte bire indiriyor — zayıf cihazlarda
-    // fark ciddi.
+    // Çözünürlük kalite kademesinden geliyor (bkz. QUALITY_LEVELS);
+    // buradaki değer yalnızca ilk kare için geçerli.
     sun.shadow.mapSize.set(1024, 1024);
     sun.shadow.camera.near = 1;
     sun.shadow.camera.far = 140;
@@ -210,21 +368,110 @@ export class CityRenderer {
 
   // ------------------------------------------------------------- girdi
 
+  /**
+   * Girdi.
+   *
+   * Tek işaretçi (fare ya da tek parmak) kaydırır; sağ tık veya Shift ile
+   * döndürür. İKİ PARMAK ise ayrı bir kip: parmakların arasındaki mesafe
+   * oranı zoom'a, orta noktanın kayması döndürme ve eğime gider.
+   *
+   * Bunun neden gerektiği: zoom eskiden YALNIZCA `wheel` olayından
+   * çağrılıyordu. Dokunmatik bir cihazda tekerlek yoktur, canvas'ta
+   * `touch-action: none` olduğu için tarayıcının kendi pinch'i de
+   * bastırılıyordu — yani telefonda hiçbir şekilde yakınlaşılamıyordu.
+   * Döndürme de sağ tuş ya da Shift istediği için erişilemezdi.
+   */
   private bindInput(): void {
     let dragging: 'none' | 'pan' | 'rotate' = 'none';
     let moved = 0;
     let lastX = 0;
     let lastY = 0;
 
+    /** Ekranda o an basılı olan işaretçiler. */
+    const pointers = new Map<number, { x: number; y: number }>();
+    let pinchDistance = 0;
+    let pinchX = 0;
+    let pinchY = 0;
+    let lastTapMs = 0;
+    let lastTapX = 0;
+    let lastTapY = 0;
+
+    const setNdc = (clientX: number, clientY: number) => {
+      const rect = this.canvas.getBoundingClientRect();
+      this.pointer.set(
+        ((clientX - rect.left) / rect.width) * 2 - 1,
+        -((clientY - rect.top) / rect.height) * 2 + 1,
+      );
+    };
+
+    /** İki parmağın mesafesi ve orta noktası. */
+    const gesture = () => {
+      const [a, b] = [...pointers.values()];
+      if (!a || !b) return null;
+      return {
+        distance: Math.hypot(a.x - b.x, a.y - b.y),
+        x: (a.x + b.x) / 2,
+        y: (a.y + b.y) / 2,
+      };
+    };
+
+    const beginPinch = () => {
+      const g = gesture();
+      if (!g) return;
+      pinchDistance = g.distance;
+      pinchX = g.x;
+      pinchY = g.y;
+      dragging = 'none';
+    };
+
     const onPointerDown = (e: PointerEvent) => {
       this.canvas.setPointerCapture(e.pointerId);
+      pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+      if (pointers.size >= 2) {
+        beginPinch();
+        return;
+      }
+
       dragging = e.button === 2 || e.shiftKey ? 'rotate' : 'pan';
       moved = 0;
       lastX = e.clientX;
       lastY = e.clientY;
+
+      // DOKUNUŞTA BU ŞART. Seçim `hoveredTile`'a bakıyor, o da eskiden
+      // yalnızca `pointermove`'da güncelleniyordu. Parmakla dokunup
+      // kaldırmakta hareket olmadığı için hover hep boş kalıyor ve
+      // hiçbir parsel seçilemiyordu.
+      setNdc(e.clientX, e.clientY);
+      this.updateHover();
     };
 
     const onPointerMove = (e: PointerEvent) => {
+      if (!pointers.has(e.pointerId)) {
+        // Basılı değilken de imleç takip edilir (fare).
+        setNdc(e.clientX, e.clientY);
+        this.updateHover();
+        return;
+      }
+      pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+      if (pointers.size >= 2) {
+        const g = gesture();
+        if (g && pinchDistance > 0) {
+          // Mesafe oranı → zoom. Eşik, tek parmakla başlayan bir jestin
+          // ikinci parmak değince zıplamasını engelliyor.
+          if (Math.abs(g.distance - pinchDistance) > 1) {
+            this.controller.zoomBy(g.distance / pinchDistance);
+          }
+          // Orta noktanın kayması → azimut ve eğim.
+          this.controller.rotate(g.x - pinchX, g.y - pinchY);
+          pinchDistance = g.distance;
+          pinchX = g.x;
+          pinchY = g.y;
+        }
+        return;
+      }
+
       const dx = e.clientX - lastX;
       const dy = e.clientY - lastY;
       lastX = e.clientX;
@@ -238,23 +485,56 @@ export class CityRenderer {
         this.controller.rotate(dx, dy);
       }
 
-      const rect = this.canvas.getBoundingClientRect();
-      this.pointer.set(
-        ((e.clientX - rect.left) / rect.width) * 2 - 1,
-        -((e.clientY - rect.top) / rect.height) * 2 + 1,
-      );
+      setNdc(e.clientX, e.clientY);
       this.updateHover();
     };
 
     const onPointerUp = (e: PointerEvent) => {
-      // Sürükleme değil tıklama ise seçim yap.
-      if (dragging === 'pan' && moved < 6 && this.hoveredTile !== null) {
-        this.callbacks.onSelect(this.hoveredTile);
-      }
-      dragging = 'none';
+      const wasPinching = pointers.size >= 2;
+      pointers.delete(e.pointerId);
+
       if (this.canvas.hasPointerCapture(e.pointerId)) {
         this.canvas.releasePointerCapture(e.pointerId);
       }
+
+      if (wasPinching) {
+        // İki parmaktan bire düşerken kalan parmağın konumunu tazele,
+        // yoksa sahne bir kare boyunca sıçrar.
+        const rest = [...pointers.values()][0];
+        if (rest) {
+          lastX = rest.x;
+          lastY = rest.y;
+          dragging = 'pan';
+          moved = 999; // bu artık bir tıklama sayılmaz
+        }
+        return;
+      }
+
+      if (dragging === 'pan' && moved < TAP_SLOP && this.hoveredTile !== null) {
+        this.callbacks.onSelect(this.hoveredTile);
+
+        // Çift dokunuş: seçilen kareye odaklan. Dokunmatikte klavye
+        // kısayolu olmadığı için haritada gezinmenin hızlı yolu bu.
+        const now = performance.now();
+        const near = Math.hypot(e.clientX - lastTapX, e.clientY - lastTapY) < 32;
+        this.lastTapGapMs = lastTapMs > 0 ? now - lastTapMs : Number.POSITIVE_INFINITY;
+        if (now - lastTapMs < DOUBLE_TAP_MS && near && this.state) {
+          const tile = this.state.map.tiles[this.hoveredTile];
+          if (tile) this.controller.focusOn(tile.x, tile.y);
+          lastTapMs = 0;
+        } else {
+          lastTapMs = now;
+          lastTapX = e.clientX;
+          lastTapY = e.clientY;
+        }
+      }
+
+      dragging = 'none';
+    };
+
+    const onPointerCancel = (e: PointerEvent) => {
+      pointers.delete(e.pointerId);
+      dragging = 'none';
     };
 
     const onWheel = (e: WheelEvent) => {
@@ -277,6 +557,7 @@ export class CityRenderer {
     this.canvas.addEventListener('pointerdown', onPointerDown);
     this.canvas.addEventListener('pointermove', onPointerMove);
     this.canvas.addEventListener('pointerup', onPointerUp);
+    this.canvas.addEventListener('pointercancel', onPointerCancel);
     this.canvas.addEventListener('pointerleave', onLeave);
     this.canvas.addEventListener('wheel', onWheel, { passive: false });
     this.canvas.addEventListener('contextmenu', onContextMenu);
@@ -288,6 +569,7 @@ export class CityRenderer {
       this.canvas.removeEventListener('pointerdown', onPointerDown);
       this.canvas.removeEventListener('pointermove', onPointerMove);
       this.canvas.removeEventListener('pointerup', onPointerUp);
+      this.canvas.removeEventListener('pointercancel', onPointerCancel);
       this.canvas.removeEventListener('pointerleave', onLeave);
       this.canvas.removeEventListener('wheel', onWheel);
       this.canvas.removeEventListener('contextmenu', onContextMenu);
@@ -334,26 +616,30 @@ export class CityRenderer {
 
     this.ground.material = dataLens ? this.groundFlat : this.groundLit;
     this.ground.receiveShadow = !dataLens;
+    this.roads.material = dataLens ? this.roadFlat : this.roadMaterial;
+    this.roads.receiveShadow = !dataLens;
 
-    for (const mesh of [this.buildings, this.fabric]) {
-      const material = mesh.material as THREE.MeshStandardMaterial;
-      if (material.transparent !== dataLens) {
-        material.transparent = dataLens;
-        material.needsUpdate = true;
+    const shadows = QUALITY_LEVELS[this.qualityTier]!.shadows;
+    for (const mass of [this.buildings, this.fabric]) {
+      for (const mesh of mass.meshes) {
+        const material = mesh.material as THREE.MeshStandardMaterial;
+        if (material.transparent !== dataLens) {
+          material.transparent = dataLens;
+          material.needsUpdate = true;
+        }
+        material.opacity = dataLens ? SILHOUETTE_OPACITY : 1;
+        material.depthWrite = !dataLens;
       }
-      material.opacity = dataLens ? SILHOUETTE_OPACITY : 1;
-      material.depthWrite = !dataLens;
-      mesh.castShadow = !dataLens && !this.qualityReduced;
-      mesh.receiveShadow = !dataLens;
+      mass.setShadows(!dataLens && shadows, !dataLens);
     }
 
     this.traffic.setDataLens(dataLens);
-    this.renderer.shadowMap.enabled = !dataLens && !this.qualityReduced;
+    this.renderer.shadowMap.enabled = !dataLens && shadows;
 
     // Pencere parıltısını burada da sıfırla. Bir sonraki gün-döngüsü
     // karesini beklemek, lens açılırken bir karelik amber parlama
     // bırakıyordu.
-    if (dataLens) (this.fabric.material as THREE.MeshStandardMaterial).emissiveIntensity = 0;
+    if (dataLens) for (const material of this.bodyMaterials) material.emissiveIntensity = 0;
   }
 
   /** State veya görünüm değiştiğinde çağrılır; her karede değil. */
@@ -367,73 +653,75 @@ export class CityRenderer {
     // Zemin karelerinin konumu hiç değişmez; matrisleri yalnızca bir kez yaz.
     // Her günde 576 matris yeniden hesaplamak boşa işti.
     if (!this.groundPlaced) {
+      let plotIndex = 0;
+      let roadIndex = 0;
+      this.groundSlotOfTile = new Int32Array(tiles.length).fill(-1);
+
       for (let i = 0; i < tiles.length; i++) {
         const tile = tiles[i]!;
-        // Sokaklar biraz alçak ve kenarsız; parseller yükseltilmiş bloklar.
-        const road = tile.kind === 'road';
-        this.dummy.position.set(tile.x, road ? -0.03 : 0, tile.y);
-        this.dummy.scale.set(road ? 1.07 : 1, road ? 0.55 : 1, road ? 1.07 : 1);
+        if (tile.kind === 'road') {
+          // Yolun yönü örnek döndürmesinden geliyor: doku kesikli çizgiyi
+          // +X ekseninde taşıyor, yani yatay sokak (y sabit) dönmeden
+          // doğru duruyor; düşey sokak çeyrek tur dönüyor.
+          const horizontal = tile.y % BLOCK_SIZE === 0;
+          this.dummy.position.set(tile.x, -0.02, tile.y);
+          this.dummy.scale.set(1, 1, 1);
+          this.dummy.rotation.set(0, horizontal ? 0 : Math.PI / 2, 0);
+          this.dummy.updateMatrix();
+          this.roads.setMatrixAt(roadIndex, this.dummy.matrix);
+          roadIndex++;
+          continue;
+        }
+
+        this.dummy.position.set(tile.x, 0, tile.y);
+        this.dummy.scale.set(1, 1, 1);
+        this.dummy.rotation.set(0, 0, 0);
         this.dummy.updateMatrix();
-        this.ground.setMatrixAt(i, this.dummy.matrix);
+        this.ground.setMatrixAt(plotIndex, this.dummy.matrix);
+        this.groundSlotOfTile[i] = plotIndex;
+        plotIndex++;
       }
+
+      this.ground.count = plotIndex;
+      this.roads.count = roadIndex;
       this.ground.instanceMatrix.needsUpdate = true;
+      this.roads.instanceMatrix.needsUpdate = true;
       this.groundPlaced = true;
     }
 
+    // Sokaklar renk taşımıyor — her lenste sokak kalıyorlar. Yalnızca
+    // parsellerin rengi lense göre değişiyor.
     for (let i = 0; i < tiles.length; i++) {
-      this.ground.setColorAt(i, this.tileColor(state, tiles[i]!.id, view));
+      const slot = this.groundSlotOfTile[i]!;
+      if (slot < 0) continue;
+      this.ground.setColorAt(slot, this.tileColor(state, tiles[i]!.id, view));
     }
     if (this.ground.instanceColor) this.ground.instanceColor.needsUpdate = true;
 
     // Şehrin mevcut dokusu: oyuncuya ait olmayan yapılar.
-    let fabricIndex = 0;
+    this.fabric.begin();
     for (const tile of tiles) {
       if (!tile.structureId) continue;
       const structure = STRUCTURE_BY_ID[tile.structureId];
       if (!structure) continue;
 
-      const height = Math.max(0.03, tile.structureHeight) * 1.5;
-      this.dummy.position.set(tile.x, height / 2 + 0.07, tile.y);
-      this.dummy.scale.set(1, height, 1);
-      this.dummy.updateMatrix();
-      this.fabric.setMatrixAt(fabricIndex, this.dummy.matrix);
-
       // Aynı yapı tipinden sıkıcı bir tekrar çıkmasın diye kareye göre
       // deterministik küçük bir renk sapması veriyoruz.
       const jitter = ((tile.id * 37) % 17) / 17 - 0.5;
       this.color.set(structure.color).offsetHSL(jitter * 0.02, 0, jitter * 0.07);
-      this.fabric.setColorAt(fabricIndex, this.color);
-      fabricIndex++;
+
+      this.fabric.place({
+        x: tile.x,
+        z: tile.y,
+        height: Math.max(0.03, tile.structureHeight) * 1.5,
+        width: 0.8,
+        groundY: 0.07,
+        color: this.color,
+      });
     }
-    this.fabric.count = fabricIndex;
-    this.fabric.instanceMatrix.needsUpdate = true;
-    if (this.fabric.instanceColor) this.fabric.instanceColor.needsUpdate = true;
+    this.fabric.end();
 
-    let index = 0;
-    for (const building of Object.values(state.buildings)) {
-      const def = BUILDING_BY_ID[building.defId];
-      const tile = tiles[building.tileId];
-      if (!def || !tile) continue;
-
-      const height = Math.max(0.3, def.height) * 1.5;
-      this.dummy.position.set(tile.x, height / 2 + 0.07, tile.y);
-      this.dummy.scale.set(1, height, 1);
-      this.dummy.rotation.y = 0;
-      this.dummy.updateMatrix();
-      this.buildings.setMatrixAt(index, this.dummy.matrix);
-
-      // Rakip binaları sahibinin rengiyle hafifçe boyanır: kimin nerede
-      // olduğu haritaya bakınca anlaşılmalı.
-      const company = state.companies[building.companyId];
-      this.color.set(def.color);
-      if (company && !company.isPlayer) this.color.lerp(new THREE.Color(company.color), 0.55);
-      else this.color.lerp(new THREE.Color('#8ef0c0'), 0.12);
-      this.buildings.setColorAt(index, this.color);
-      index++;
-    }
-    this.buildings.count = index;
-    this.buildings.instanceMatrix.needsUpdate = true;
-    if (this.buildings.instanceColor) this.buildings.instanceColor.needsUpdate = true;
+    this.syncBuildings(state);
 
     if (view.selectedTileId !== null) {
       const tile = tiles[view.selectedTileId];
@@ -445,6 +733,78 @@ export class CityRenderer {
 
     this.syncRoutes(state, view.playerCompanyId);
     this.syncGhost(width);
+  }
+
+  /**
+   * Oyuncunun ve rakiplerin binaları.
+   *
+   * Ayrı bir yöntem olmasının sebebi inşaat animasyonu: bina yerden
+   * yükselirken her karede yeniden yerleştirilmesi gerekiyor, ama şehrin
+   * geri kalanı (221 yapı, zemin, sokaklar) yalnızca state değişince.
+   */
+  private syncBuildings(state: GameState): void {
+    const tiles = state.map.tiles;
+    let growing = false;
+
+    this.buildings.begin();
+    for (const building of Object.values(state.buildings)) {
+      const def = BUILDING_BY_ID[building.defId];
+      const tile = tiles[building.tileId];
+      if (!def || !tile) continue;
+
+      // Rakip binaları sahibinin rengiyle hafifçe boyanır: kimin nerede
+      // olduğu haritaya bakınca anlaşılmalı.
+      const company = state.companies[building.companyId];
+      this.color.set(def.color);
+      if (company && !company.isPlayer) this.color.lerp(new THREE.Color(company.color), 0.55);
+      else this.color.lerp(new THREE.Color('#8ef0c0'), 0.12);
+
+      const growth = this.growthOf(building.id);
+      if (growth < 1) growing = true;
+
+      this.buildings.place({
+        x: tile.x,
+        z: tile.y,
+        height: Math.max(0.3, def.height) * 1.5,
+        width: 0.68,
+        groundY: 0.07,
+        color: this.color,
+        growth,
+      });
+    }
+    this.buildings.end();
+
+    this.buildingsGrowing = growing;
+    this.sawBuildings = true;
+
+    // Yıkılan binaların kaydı birikmesin.
+    if (this.buildStart.size > Object.keys(state.buildings).length * 2 + 16) {
+      for (const id of this.buildStart.keys()) {
+        if (!state.buildings[id]) this.buildStart.delete(id);
+      }
+    }
+  }
+
+  /**
+   * İnşaat ilerlemesi.
+   *
+   * Bina kurmak bugüne kadar "pat" diye oluyordu — tıklıyorsun, kutu
+   * beliriyor. Yerden yükselmesi hem eylemi görünür kılıyor hem de
+   * gözün yeni binayı bulmasını sağlıyor.
+   *
+   * İLK senkronda var olan binalar animasyonsuz: kayıt yüklerken bütün
+   * şehrin yerden bitmesi doğru olmazdı.
+   */
+  private growthOf(id: string): number {
+    let start = this.buildStart.get(id);
+    if (start === undefined) {
+      start = this.sawBuildings ? performance.now() : 0;
+      this.buildStart.set(id, start);
+    }
+    if (start === 0) return 1;
+    const t = Math.min(1, (performance.now() - start) / BUILD_ANIM_MS);
+    // Yumuşak giriş-çıkış: sert bir doğrusal yükseliş mekanik duruyor.
+    return t * t * (3 - 2 * t);
   }
 
   /**
@@ -534,6 +894,10 @@ export class CityRenderer {
     const height = this.canvas.clientHeight || 1;
     this.renderer.setSize(width, height, false);
     this.controller.setAspect(width / height);
+    if (this.composer) {
+      this.composer.setPixelRatio(this.renderer.getPixelRatio());
+      this.composer.setSize(width, height);
+    }
   }
 
   /**
@@ -557,10 +921,13 @@ export class CityRenderer {
     // aydınlanır: binaların altı parlar, üstleri kararır ve şehir sarı bir
     // kütleye dönüşür. Gece "güneş batar" değil, "ay yükselir" demek.
     const height = 14 + Math.max(0.2, elevation) * 38;
-    this.sun.position.set(
-      this.mapWidth / 2 + Math.cos(angle) * radius,
+    // Konum değil ÖTELEME saklanıyor: gölge hacmi kameranın baktığı yere
+    // taşındığında ışığın yönü aynı kalsın diye ışık da onunla birlikte
+    // taşınıyor (bkz. updateShadowVolume).
+    this.sunOffset.set(
+      Math.cos(angle) * radius,
       height,
-      this.mapHeight / 2 + Math.sin(angle * 0.6) * radius * 0.4,
+      Math.sin(angle * 0.6) * radius * 0.4,
     );
 
     // TABANLAR ÖNEMLİ: gece atmosfer olmalı, karartma değil. Önceki
@@ -579,15 +946,53 @@ export class CityRenderer {
     (this.scene.background as THREE.Color).copy(this.skyColor);
     this.scene.fog?.color.copy(this.skyColor);
 
-    // Karanlıkta hafif bir pencere sıcaklığı.
+    // Ortam yansıması da günle birlikte kısılıyor: gece gökyüzü karanlık,
+    // dolayısıyla camların yansıttığı şey de karanlık olmalı.
+    this.scene.environmentIntensity = 0.12 + daylight * 0.3;
+
+    // PENCERE IŞIKLARI.
     //
-    // DİKKAT: emissive burada binanın TÜM yüzeyine düz uygulanıyor, gerçek
-    // pencerelere değil. Yüksek tutulursa gece bütün yapılar aynı amber
-    // tona yakınsıyor, kendi renklerini ve gölgelenmelerini kaybediyor —
-    // şehir tek parça altın bir kütleye dönüşüyordu. Değer bilinçli olarak
-    // "ima" seviyesinde; veri lensinde ise tamamen susuyor.
-    const material = this.fabric.material as THREE.MeshStandardMaterial;
-    material.emissiveIntensity = this.dataLensActive ? 0 : Math.max(0, 0.03 - daylight * 0.04);
+    // Bu değer eskiden 0,03 gibi bir "ima" seviyesindeydi ve bilinçliydi:
+    // emissive binanın TÜM yüzeyine düz uygulandığı için yükseltmek bütün
+    // şehri tek parça amber bir kütleye çeviriyordu. Artık emisyon bir
+    // DOKUDAN geliyor — siyah zemin üzerinde yalnızca pencereler parlıyor.
+    // Ödünleşim ortadan kalktığı için parlaklık serbestçe yükselebiliyor
+    // ve gece şehrin en iyi göründüğü an oluyor.
+    const glow = this.dataLensActive ? 0 : Math.max(0, 1.15 - daylight * 1.5);
+    for (const material of this.bodyMaterials) material.emissiveIntensity = glow;
+  }
+
+  /**
+   * Gölge kamerasını görüş alanına oturtur.
+   *
+   * Tek bir gölge haritası bütün şehri kaplıyordu: 24×24'lük alanı 1024
+   * texel'e yaydığında texel başına düşen alan çok büyük oluyor ve gölge
+   * kenarları bulanıklaşıyordu. Kamera nereye bakıyorsa gölge hacmini
+   * oraya daraltmak, aynı çözünürlükte belirgin şekilde daha keskin bir
+   * gölge veriyor — maliyeti yok, sadece doğru yeri kaplıyor.
+   */
+  private updateShadowVolume(): void {
+    const target = this.controller.targetPoint;
+    const distance = this.controller.currentDistance;
+    // Görüş alanı uzaklıkla büyüyor; pay ekliyoruz ki kadraja giren ama
+    // merkezden uzak binalar gölgesiz kalmasın.
+    const extent = Math.max(10, distance * 0.85);
+
+    const shadowCamera = this.sun.shadow.camera;
+    if (shadowCamera.left !== -extent) {
+      shadowCamera.left = -extent;
+      shadowCamera.right = extent;
+      shadowCamera.top = extent;
+      shadowCamera.bottom = -extent;
+      shadowCamera.updateProjectionMatrix();
+    }
+    this.sun.position.set(
+      target.x + this.sunOffset.x,
+      this.sunOffset.y,
+      target.z + this.sunOffset.z,
+    );
+    this.sun.target.position.set(target.x, 0, target.z);
+    this.sun.target.updateMatrixWorld();
   }
 
   render(dt: number): void {
@@ -595,7 +1000,12 @@ export class CityRenderer {
 
     this.controller.update(dt);
     this.updateDaylight(dt);
+    this.updateShadowVolume();
     this.traffic.update(dt);
+
+    // İnşaat animasyonu sürerken binalar her karede yeniden yerleşiyor;
+    // şehrin geri kalanı yalnızca state değişince.
+    if (this.buildingsGrowing && this.state) this.syncBuildings(this.state);
 
     if (this.hoveredTile !== null && this.state) {
       const tile = this.state.map.tiles[this.hoveredTile];
@@ -606,44 +1016,129 @@ export class CityRenderer {
     }
 
     if (this.state) this.syncGhost(this.state.map.width);
-    this.renderer.render(this.scene, this.controller.camera);
+    if (this.composer) this.composer.render();
+    else this.renderer.render(this.scene, this.controller.camera);
     this.adaptQuality(dt);
+  }
+
+  /**
+   * Bloom zincirini kurar ya da söker.
+   *
+   * Zincir kurulunca ton eşleme ve renk uzayı dönüşümü `OutputPass`'e
+   * geçiyor — three, ara hedeflere çizerken ton eşlemeyi zaten atlıyor,
+   * yani çifte uygulanma riski yok.
+   *
+   * Ara hedef çok örneklemeli (`samples: 4`): zincir devreye girdiğinde
+   * tuvalin kendi MSAA'sı devre dışı kalır ve bina kenarları tırtıklanır.
+   */
+  private setPostProcessing(enabled: boolean): void {
+    if (enabled === Boolean(this.composer)) return;
+
+    if (!enabled) {
+      this.composer?.dispose();
+      this.composer = null;
+      return;
+    }
+
+    const width = Math.max(1, this.canvas.clientWidth);
+    const height = Math.max(1, this.canvas.clientHeight);
+    const target = new THREE.WebGLRenderTarget(width, height, {
+      samples: 4,
+      type: THREE.HalfFloatType,
+    });
+
+    const composer = new EffectComposer(this.renderer, target);
+    composer.addPass(new RenderPass(this.scene, this.controller.camera));
+    composer.addPass(
+      new UnrealBloomPass(
+        new THREE.Vector2(width, height),
+        BLOOM_STRENGTH,
+        BLOOM_RADIUS,
+        BLOOM_THRESHOLD,
+      ),
+    );
+    composer.addPass(new OutputPass());
+    composer.setPixelRatio(this.renderer.getPixelRatio());
+    composer.setSize(width, height);
+    this.composer = composer;
+  }
+
+  /** Bir kalite kademesini sahneye uygular. */
+  private applyQuality(tier: number): void {
+    const level = QUALITY_LEVELS[Math.max(0, Math.min(QUALITY_LEVELS.length - 1, tier))]!;
+    this.qualityTier = tier;
+
+    this.renderer.setPixelRatio(Math.min(devicePixelRatio, level.maxPixelRatio));
+    this.resize();
+
+    // Gölge haritasının boyutu çalışma anında değişebilmesi için eskisinin
+    // atılması gerekiyor; three aksi halde ilk ayrılan dokuyu kullanmayı
+    // sürdürür ve `mapSize` sessizce etkisiz kalır.
+    if (this.sun.shadow.map && this.sun.shadow.mapSize.width !== level.shadowMapSize) {
+      this.sun.shadow.map.dispose();
+      this.sun.shadow.map = null as unknown as THREE.WebGLRenderTarget;
+    }
+    this.sun.shadow.mapSize.set(level.shadowMapSize, level.shadowMapSize);
+
+    const shadows = level.shadows && !this.dataLensActive;
+    this.renderer.shadowMap.enabled = shadows;
+    this.sun.castShadow = level.shadows;
+    this.buildings.setShadows(shadows, shadows);
+    this.fabric.setShadows(shadows, shadows);
+    this.ground.receiveShadow = shadows;
+    this.roads.receiveShadow = shadows;
+
+    this.traffic.setCarBudget(level.carBudget);
+    this.setPostProcessing(level.postProcessing);
+    this.scene.environment = level.environment ? this.envTexture : null;
+
+    this.scene.traverse((object) => {
+      const mesh = object as THREE.Mesh;
+      if (mesh.material) (mesh.material as THREE.Material).needsUpdate = true;
+    });
   }
 
   /**
    * Uyarlanabilir kalite.
    *
-   * Zayıf bir GPU'da (ya da yazılım rasterizasyonunda) gölgeler kare
-   * hızının çoğunu yiyor. İlk saniyelerde ölçüp gerekiyorsa gölgeleri
-   * kapatıyoruz: oyun biraz daha düz görünür ama akıcı kalır. Akıcılık
-   * bu oyunda görsel şıklıktan önce gelir.
+   * Her 2,5 saniyede bir kare hızını ölçer ve kademeyi değiştirir. Ölçüm
+   * penceresi KARE sayısıyla değil GEÇEN SÜREYLE kapanır: kare sayısına
+   * baksaydık en yavaş cihazda karar en geç verilirdi — yani tam tersi.
+   *
+   * Yukarı çıkış, bir kez inilen kademenin üstüne ASLA geçmiyor. Aksi
+   * halde kademe düşer, hız artar, kademe yükselir, hız düşer diye
+   * salınan bir döngü olurdu ve oyuncu bunu titreme olarak görürdü.
    */
   private adaptQuality(dt: number): void {
-    if (this.qualityReduced || this.frameSamples < 0) return;
-
+    if (this.qualityLocked) return;
     this.frameSamples++;
     this.frameTimeSum += dt;
 
-    // Ölçüm penceresi KARE sayısıyla değil GEÇEN SÜREYLE kapanır. Kare
-    // sayısına baksaydık, en yavaş cihazda en geç tetiklenirdi — yani tam
-    // tersi. 2,5 saniye her hızda aynı sürede karar verdirir.
-    if (this.frameTimeSum < 2.5 || this.frameSamples < 12) return;
+    if (this.frameTimeSum < QUALITY_WINDOW_SECONDS || this.frameSamples < QUALITY_WINDOW_FRAMES) {
+      return;
+    }
 
     const averageFps = this.frameSamples / this.frameTimeSum;
-    if (averageFps < 24) {
-      this.qualityReduced = true;
-      this.renderer.shadowMap.enabled = false;
-      this.sun.castShadow = false;
-      this.fabric.castShadow = false;
-      this.buildings.castShadow = false;
-      this.scene.traverse((object) => {
-        const mesh = object as THREE.Mesh;
-        if (mesh.material) (mesh.material as THREE.Material).needsUpdate = true;
-      });
-      console.info(`Düşük kare hızı (${averageFps.toFixed(0)} FPS) — gölgeler kapatıldı.`);
+    this.frameSamples = 0;
+    this.frameTimeSum = 0;
+
+    if (averageFps < QUALITY_FLOOR_FPS && this.qualityTier < QUALITY_LEVELS.length - 1) {
+      const next = this.qualityTier + 1;
+      this.qualityCeilingTier = next;
+      this.applyQuality(next);
+      console.info(
+        `Kare hızı ${averageFps.toFixed(0)} — kalite "${QUALITY_LEVELS[next]!.name}" kademesine indi.`,
+      );
+      return;
     }
-    // Ölçüm penceresini kapat: bir daha denemeyelim.
-    this.frameSamples = -1;
+
+    if (averageFps > QUALITY_CEILING_FPS && this.qualityTier > this.qualityCeilingTier) {
+      const next = this.qualityTier - 1;
+      this.applyQuality(next);
+      console.info(
+        `Kare hızı ${averageFps.toFixed(0)} — kalite "${QUALITY_LEVELS[next]!.name}" kademesine çıktı.`,
+      );
+    }
   }
 
   /**
@@ -669,6 +1164,38 @@ export class CityRenderer {
     truckPositionSum: number;
     /** Fon araçları görünür mü (veri lensinde susarlar). */
     carsVisible: boolean;
+    /** Kameranın hedef uzaklığı — pinch jestini doğrulamak için. */
+    cameraDistance: number;
+    /** Kameranın hedef azimutu — döndürme jestini doğrulamak için. */
+    cameraAzimuth: number;
+    /** Kameranın baktığı nokta — odaklanma jestini doğrulamak için. */
+    cameraTarget: { x: number; z: number };
+    /** Çift dokunuş penceresi ve son gözlenen dokunuş aralığı. */
+    doubleTapWindowMs: number;
+    lastTapGapMs: number;
+    /** Kalite kademesi: 0 en yüksek. */
+    qualityTier: number;
+    qualityName: string;
+    pixelRatio: number;
+    shadowMapSize: number;
+    /** Bloom zinciri açık mı. */
+    postProcessing: boolean;
+    /** Çizilen bina parçası sayısı — kütlenin üç parçalı olduğunu doğrular. */
+    massParts: number;
+    /** En az bir bina hâlâ yerden yükseliyor mu. */
+    buildingsGrowing: boolean;
+    /** Sokak ve parsel örnek sayıları — ikisinin ayrıldığını doğrular. */
+    roadInstances: number;
+    plotInstances: number;
+    /**
+     * Emisyon bir dokudan mı geliyor.
+     *
+     * Ayrım kritik: düz emisyon binanın tüm yüzeyini parlatır ve şehri
+     * tek parça amber bir kütleye çevirir. Dokudan gelen emisyon
+     * yalnızca pencerelerden çıkar. Parlaklığın yüksek olabilmesi tam
+     * olarak buna bağlı.
+     */
+    emissiveMapped: boolean;
   } {
     const hsl = { h: 0, s: 0, l: 0 };
     this.skyColor.getHSL(hsl);
@@ -684,13 +1211,28 @@ export class CityRenderer {
       hemisphereIntensity: this.hemisphere.intensity,
       skyLightness: hsl.l,
       sunHeight: this.sun.position.y,
-      buildingOpacity: (this.buildings.material as THREE.MeshStandardMaterial).opacity,
-      fabricEmissive: (this.fabric.material as THREE.MeshStandardMaterial).emissiveIntensity,
+      buildingOpacity: (this.buildings.body.material as THREE.MeshStandardMaterial).opacity,
+      fabricEmissive: (this.fabric.body.material as THREE.MeshStandardMaterial).emissiveIntensity,
       groundColorSum,
       timeOfDay: this.timeOfDay,
       truckCount: this.traffic.truckCount,
       truckPositionSum: this.traffic.truckPositionSum,
       carsVisible: this.traffic.carsVisible,
+      cameraDistance: this.controller.targetDistance,
+      cameraAzimuth: this.controller.targetAzimuth,
+      cameraTarget: this.controller.targetPoint,
+      doubleTapWindowMs: DOUBLE_TAP_MS,
+      lastTapGapMs: this.lastTapGapMs,
+      qualityTier: this.qualityTier,
+      qualityName: QUALITY_LEVELS[this.qualityTier]!.name,
+      pixelRatio: this.renderer.getPixelRatio(),
+      shadowMapSize: this.sun.shadow.mapSize.width,
+      postProcessing: Boolean(this.composer),
+      massParts: this.buildings.meshes.length,
+      buildingsGrowing: this.buildingsGrowing,
+      roadInstances: this.roads.count,
+      plotInstances: this.ground.count,
+      emissiveMapped: this.bodyMaterials.every((material) => Boolean(material.emissiveMap)),
     };
   }
 
@@ -699,10 +1241,41 @@ export class CityRenderer {
     this.timeOfDay = ((value % 1) + 1) % 1;
   }
 
+  /**
+   * Kalite kademesini elle sabitler.
+   *
+   * Testler için gerekli: GPU'su olmayan bir ortamda uyarlama hemen en
+   * ucuz kademeye iniyor ve üst kademelerin kodu (bloom zinciri, 2048'lik
+   * gölge) hiç çalışmıyor — yani hiç sınanmıyor olurdu. Sabitleme
+   * uyarlamayı da durduruyor, yoksa bir sonraki ölçüm penceresi kademeyi
+   * geri düşürürdü.
+   */
+  setQuality(tier: number, lock = true): void {
+    this.applyQuality(Math.max(0, Math.min(QUALITY_LEVELS.length - 1, tier)));
+    this.qualityLocked = lock;
+    this.frameSamples = 0;
+    this.frameTimeSum = 0;
+  }
+
   dispose(): void {
     this.disposed = true;
     this.groundLit.dispose();
     this.groundFlat.dispose();
+    this.roadMaterial.dispose();
+    this.roadFlat.dispose();
+    this.roadMaterial.map?.dispose();
+    for (const material of this.bodyMaterials) {
+      material.map?.dispose();
+      material.emissiveMap?.dispose();
+    }
+    this.buildings.dispose();
+    this.fabric.dispose();
+    // `scene.environment` düşük kademede null oluyor; dokunun kendisini
+    // saklayan alandan atmak gerekiyor, yoksa sızar.
+    this.envTexture?.dispose();
+    this.envTexture = null;
+    this.composer?.dispose();
+    this.composer = null;
     for (const cleanup of this.cleanups) cleanup();
     this.cleanups = [];
     this.traffic.dispose();

@@ -283,7 +283,10 @@ export class TrafficSystem {
   }
 
   private updateCars(dt: number): void {
-    for (let i = 0; i < this.cars.length; i++) {
+    // Yalnızca çizilenleri güncelle: bütçe kısıldığında CPU tarafı da
+    // kısılsın, sadece görüntü değil.
+    const drawn = Math.min(this.cars.length, this.carMesh.count);
+    for (let i = 0; i < drawn; i++) {
       const car = this.cars[i]!;
       const span = car.axis === 0 ? this.width : this.height;
 
@@ -380,6 +383,17 @@ export class TrafficSystem {
    */
   setDataLens(active: boolean): void {
     this.carMesh.visible = !active;
+  }
+
+  /**
+   * Kalite kademesi: fon araçlarının kaçta kaçı çizilsin.
+   *
+   * Kamyonlar bu bütçeye DAHİL DEĞİL — onlar zincirin nerede aktığını
+   * anlatıyor, yani bilgi. Kısılacak ilk şey her zaman süs olmalı.
+   */
+  setCarBudget(ratio: number): void {
+    const budget = Math.max(0, Math.min(1, ratio));
+    this.carMesh.count = Math.round(this.cars.length * budget);
   }
 
   /** Testler için: kaç kamyon yolda. */

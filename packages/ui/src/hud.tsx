@@ -59,21 +59,31 @@ export function TopBar(): ReactElement {
         <Metric label="Sıralama" value={`${rank}.`} tone={rank === 1 ? 'good' : 'plain'} />
       </div>
 
-      <div className="topbar-actions">
-        <div className="speeds" role="group" aria-label="Oyun hızı">
-          {speeds.map((speed) => (
-            <button
-              key={speed.value}
-              type="button"
-              className={state.time.speed === speed.value ? 'speed active' : 'speed'}
-              onClick={() => run({ type: 'SET_SPEED', speed: speed.value })}
-              aria-pressed={state.time.speed === speed.value}
-              title={speed.value === 0 ? 'Duraklat (Boşluk)' : `${speed.value}× hız`}
-            >
-              {speed.label}
-            </button>
-          ))}
-        </div>
+      {/*
+       * Hız kontrolü ve panel düğmeleri AYRI kaplar.
+       *
+       * Dar ekranda ikisi farklı yere gidiyor: hız üst barda kalıyor (zamanı
+       * durdurmak her an gerekir), panel düğmeleri ise alt rıhtıma iniyor —
+       * başparmağın ulaştığı yer orası. Tek kapta olsalardı ikisini ayıramaz,
+       * ya da düğmeleri iki kez çizmek zorunda kalırdık; aynı düğmeyi iki
+       * yerde çizmek hem erişilebilirlik hem test tarafında karışıklık olurdu.
+       */}
+      <div className="speeds" role="group" aria-label="Oyun hızı">
+        {speeds.map((speed) => (
+          <button
+            key={speed.value}
+            type="button"
+            className={state.time.speed === speed.value ? 'speed active' : 'speed'}
+            onClick={() => run({ type: 'SET_SPEED', speed: speed.value })}
+            aria-pressed={state.time.speed === speed.value}
+            title={speed.value === 0 ? 'Duraklat (Boşluk)' : `${speed.value}× hız`}
+          >
+            {speed.label}
+          </button>
+        ))}
+      </div>
+
+      <nav className="topbar-actions" aria-label="Paneller">
         <button type="button" onClick={() => setView({ openPanel: view.openPanel === 'chain' ? 'none' : 'chain' })}>
           Zincir
         </button>
@@ -95,7 +105,7 @@ export function TopBar(): ReactElement {
         <button type="button" onClick={() => setView({ openPanel: view.openPanel === 'help' ? 'none' : 'help' })} title="Nasıl oynanır">
           ?
         </button>
-      </div>
+      </nav>
     </header>
   );
 }
