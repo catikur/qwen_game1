@@ -153,7 +153,7 @@ karşılanmayan talep 1200. günde %48 → **%33**, oyuncu/rakip oranı
 | Determinizm | birebir |
 | Simülasyon hızı | ~70 gün/sn |
 | Denge testi | **176 kontrol, hepsi geçiyor** |
-| Tarayıcı testi | **134 kontrol**, 0 konsol hatası |
+| Tarayıcı testi | **144 kontrol**, 0 konsol hatası |
 | Kapsam | 26 bina · 22 ürün · 7 kategori · 4 rakip profili |
 
 ### Render (Tur 6 sonrası)
@@ -164,6 +164,8 @@ karşılanmayan talep 1200. günde %48 → **%33**, oyuncu/rakip oranı
 | Üçgen / kare | 10,5 K | **25,2 K** |
 | İçerik dokusu | 0 | 3 (pencere, cephe, asfalt) |
 | Telefonda ulaşılabilen panel | 0 / 8 | **7 / 7** |
+| Sürüklemede tutulan karenin kayması | 7,7 birim | **0,00** |
+| Satın alma butonuna gereken kaydırma | ~645 px | **0 px** |
 
 Yaygın mobil hedef bandı 50–150 çizim çağrısı, 100–300 K üçgen — yani
 bütçe hâlâ fazlasıyla açık.

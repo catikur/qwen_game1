@@ -955,6 +955,48 @@ button.icon {
   .hud::before {
     content: '';
     flex: 0 0 32vh;
+    order: -1;
+  }
+
+  .leftcol {
+    order: 1;
+  }
+
+  .news {
+    order: 2;
+  }
+
+  /*
+   * PARSEL DETAYI ALT SAYFA OLUYOR.
+   *
+   * Ölçüm: panel 664px'lik bir ekranda 913px'te başlıyordu — tamamen
+   * fold'un altında, satın alma butonuna ulaşmak için HUD'u ~645px
+   * kaydırmak gerekiyordu. Bildirilen hata tam olarak buydu.
+   *
+   * Panel akış içinde kaldığı sürece bu kırılgan: yerini üstündeki
+   * her şeyin yüksekliği belirliyor ve bir yerde mutlaka taşıyor.
+   * Akıştan çıkarıp ekrana sabitlemek sorunu tanım gereği çözüyor —
+   * harita panelin üstünde açık kalıyor, panel her zaman görünür ve
+   * butonları alt rıhtımın hemen üstünde duruyor. Harita uygulamalarının
+   * yer kartı deseni.
+   */
+  .inspector.has-selection {
+    position: fixed;
+    left: 10px;
+    right: 10px;
+    bottom: calc(62px + env(safe-area-inset-bottom, 0px));
+    z-index: 25;
+    max-height: 52vh;
+    margin: 0;
+  }
+
+  /*
+   * Seçim yokken yer tutucu gizleniyor. "Haritadan bir arsa seç" demek
+   * için dar ekranda yer harcamaya değmez; masaüstünde sağ sütun zaten
+   * boş duruyor, mobilde her piksel harita.
+   */
+  .inspector.empty {
+    display: none;
   }
 
   /* Panelleri doğal yüksekliklerinde tut: kolon kısaltmasın, HUD kaydırsın. */
@@ -963,7 +1005,7 @@ button.icon {
   }
 
   .topbar {
-    order: -2;
+    order: -3;
     gap: 8px 14px;
     padding: 8px 12px;
     /*
@@ -978,7 +1020,7 @@ button.icon {
   }
 
   .active-events {
-    order: -1;
+    order: -2;
     align-self: center;
   }
 
@@ -1000,6 +1042,46 @@ button.icon {
 
   .inspector {
     max-height: 50vh;
+  }
+
+  /*
+   * Başlık panelin içinde üste yapışıyor.
+   *
+   * Kapatma düğmesi burada: panel kendi içinde kaydığında başlık gözden
+   * kaybolursa alt sayfayı kapatmanın yolu kalmıyor ve harita panelin
+   * altında kilitli kalıyor.
+   */
+  .inspector.has-selection .inspector-head {
+    position: sticky;
+    top: -14px;
+    z-index: 1;
+    margin: -14px -14px 0;
+    padding: 12px 14px 10px;
+    background: var(--panel-solid);
+    border-bottom: 1px solid var(--line);
+  }
+
+  .inspector-head button.icon {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  /*
+   * Eylem butonları panelin içinde alta yapışıyor. Panel kendi içinde
+   * kayabildiği için "Parseli satın al" bir kez daha gözden kaybolabilir;
+   * yapışkan bir alt şerit bunu imkânsız kılıyor.
+   */
+  .inspector .actions {
+    position: sticky;
+    bottom: -14px;
+    margin: 0 -14px -14px;
+    padding: 10px 14px calc(14px + env(safe-area-inset-bottom, 0px));
+    background: var(--panel-solid);
+    border-top: 1px solid var(--line);
+  }
+
+  .inspector .actions button {
+    min-height: 44px;
   }
 
   .news {

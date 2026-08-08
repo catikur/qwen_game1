@@ -404,6 +404,15 @@ export class CityRenderer {
       );
     };
 
+    /** Ekran pikselini NDC'ye çevirir — kaydırma bunu kameraya veriyor. */
+    const toNdc = (clientX: number, clientY: number): [number, number] => {
+      const rect = this.canvas.getBoundingClientRect();
+      return [
+        ((clientX - rect.left) / rect.width) * 2 - 1,
+        -((clientY - rect.top) / rect.height) * 2 + 1,
+      ];
+    };
+
     /** İki parmağın mesafesi ve orta noktası. */
     const gesture = () => {
       const [a, b] = [...pointers.values()];
@@ -479,7 +488,12 @@ export class CityRenderer {
 
       if (dragging === 'pan') {
         moved += Math.abs(dx) + Math.abs(dy);
-        this.controller.pan(dx, dy);
+        // Yaklaşık `pan` yerine KESİN kaydırma: tutulan zemin noktası
+        // parmağın altında kalıyor. Sürüklemede mutlak iki ekran noktası
+        // olduğu için doğrusu bu.
+        const [fromX, fromY] = toNdc(e.clientX - dx, e.clientY - dy);
+        const [toX, toY] = toNdc(e.clientX, e.clientY);
+        this.controller.panFromGround(fromX, fromY, toX, toY);
       } else if (dragging === 'rotate') {
         moved += Math.abs(dx) + Math.abs(dy);
         this.controller.rotate(dx, dy);
@@ -1234,6 +1248,19 @@ export class CityRenderer {
       plotInstances: this.ground.count,
       emissiveMapped: this.bodyMaterials.every((material) => Boolean(material.emissiveMap)),
     };
+  }
+
+  /**
+   * Bir ekran noktasının altındaki zemin koordinatı.
+   *
+   * Kaydırmanın DOĞRULUĞUNU ölçmenin tek dürüst yolu bu: parmağın
+   * tuttuğu dünya noktası, sürükleme boyunca parmağın altında kalmalı.
+   * Kameranın ne kadar hareket ettiğine bakmak yönü doğrulamaz.
+   */
+  groundAt(ndcX: number, ndcY: number): { x: number; z: number } | null {
+    const point = new THREE.Vector3();
+    if (!this.controller.screenToGround(ndcX, ndcY, point)) return null;
+    return { x: point.x, z: point.z };
   }
 
   /** Testlerin gün döngüsünü beklemeden istediği saate atlaması için. */

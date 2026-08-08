@@ -93,6 +93,62 @@ güncelleniyordu. Parmakla dokunup kaldırmakta hareket olmadığı için hover
 hep boş kalıyor ve **hiçbir parsel seçilemiyordu**. `pointerdown` artık
 hover'ı tazeliyor.
 
+### 2.4b Oynayınca çıkan iki hata
+
+Tur 5 telefonu "açılabilir" yaptı ama gerçekten oynanınca iki şey daha
+çıktı. İkisi de testlerin göremediği, ancak elde tutunca fark edilen
+türden.
+
+#### Parsel detayı ekrana hiç gelmiyordu
+
+Bir kareye dokununca panel açılıyor ama satın alma butonu görünmüyordu.
+Ölçüldü: 664px'lik bir ekranda panel **913px**'te başlıyor, butona
+ulaşmak için HUD'u **~645px** kaydırmak gerekiyordu.
+
+Sebep yapısaldı. Panel akış içindeyken yerini üstündeki her şeyin
+yüksekliği belirliyor: üst bar + harita ayırıcısı + lens çubuğu + yapı
+menüsü + haber akışı. Bunların toplamı bir yerde mutlaka ekranı aşıyor ve
+hangi sabit yüksekliği kısarsan kıs, başka bir cihazda yine taşıyor.
+
+Çözüm panelin akıştan çıkması: seçim varken **alt sayfa** oluyor
+(`position: fixed`, rıhtımın hemen üstünde, en fazla 52vh). Harita
+üstünde açık kalıyor, panel her zaman ekranda. Harita uygulamalarının yer
+kartı deseni.
+
+İki ek kural, ikisi de aynı sebepten — panel kendi içinde kayabiliyor:
+
+- **Başlık üste yapışıyor.** Kapatma düğmesi orada; kaybolursa alt
+  sayfayı kapatmanın yolu kalmıyor ve harita panelin altında kilitleniyor.
+- **Eylem butonları alta yapışıyor.** "Parseli satın al" bir kez daha
+  gözden kaybolamıyor.
+
+Seçim yokken panel mobilde tamamen gizleniyor: "haritadan bir arsa seç"
+demek için dar ekranda yer harcamaya değmez.
+
+#### Kaydırma ters yöndeydi
+
+Kullanıcının tarifi: *"sağa doğru çekince ekran sağa gitsin, şu an baya
+ters."*
+
+`pan(dx, dy)` ekran eksenini dünyaya **yanlış yönde** döndürüyordu.
+Ekranda sağ dünyada `(cos, −sin)`, ekranda yukarı `(−sin, −cos)`; formülün
+çapraz terimlerinin işareti tersti. Azimut sıfırken fark edilmiyordu ama
+varsayılan azimut π/4 ve orada yatay bir sürükleme kamerayı **çapraz**
+kaydırıyordu. Aynı hata klavye kaydırmasında da vardı.
+
+Doğru kaydırmanın tanımı ölçülebilir: **parmağın tuttuğu zemin noktası,
+sürükleme boyunca parmağın altında kalır.** Ölçüm, 120 piksellik bir
+sürüklemede tutulan noktanın **7,7–8,4 birim** kaydığını gösterdi.
+
+İşaretleri düzeltmek yetmezdi: ölçek de yanlıştı. `distance * 0.0016`
+sabit bir katsayı ve gerçek piksel→dünya oranı FOV'a, eğime ve uzaklığa
+bağlı. Bunun yerine `panFromGround` iki ekran noktasının zemin izdüşümünü
+alıp farkı hedefe uyguluyor — hem yön hem ölçek kameranın kendi
+projeksiyonundan geliyor.
+
+Sapma **7,7 → 0,00**. Yaklaşık formül tamamen silindi; düzeltilmiş ama
+ölü bir formül bırakmak sonraki kişi için tuzak olurdu.
+
 ### 2.5 Kalite tek kademeden dört kademeye
 
 Eskiden tek karar vardı: gölge açık ya da kapalı. Bu iki sorunu birden
@@ -263,7 +319,7 @@ bütçe hâlâ fazlasıyla açık; sonraki görsel işler için yer var.
 
 | | Önce | Sonra |
 |---|---|---|
-| Tarayıcı kontrolü | 105 | **134** |
+| Tarayıcı kontrolü | 105 | **144** |
 | Responsive kontrolü | 1 (hiç başarısız olamayan) | 14 (iki cihaz profili, gerçek dokunuş olayları) |
 | Denge kontrolü | 170 | 170 (değişmedi) |
 

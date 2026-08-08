@@ -266,6 +266,7 @@ function GameRoot({
       schemaVersion: SCHEMA_VERSION,
       setTimeOfDay: (value: number) => rendererRef.current?.setTimeOfDay(value),
       setQuality: (tier: number) => rendererRef.current?.setQuality(tier),
+      groundAt: (ndcX: number, ndcY: number) => rendererRef.current?.groundAt(ndcX, ndcY) ?? null,
       routeCount: () => supplyRoutes(engine.getState()).length,
       routeSignature: () => routeSignature(supplyRoutes(engine.getState())),
     };

@@ -16,6 +16,10 @@ const MAX_POLAR = 1.16;
 const DAMPING = 9;
 const KEY_PAN_SPEED = 14;
 
+/** `panFromGround` için yeniden kullanılan tamponlar. */
+const PAN_FROM = new THREE.Vector3();
+const PAN_TO = new THREE.Vector3();
+
 export interface CameraBounds {
   width: number;
   height: number;
@@ -49,13 +53,24 @@ export class RtsCameraController {
     this.camera.updateProjectionMatrix();
   }
 
-  /** Ekran düzleminde kaydır — yön kameranın bakış açısına göre döner. */
-  pan(dx: number, dy: number): void {
-    const scale = this.distance * 0.0016;
-    const sin = Math.sin(this.azimuth);
-    const cos = Math.cos(this.azimuth);
-    this.desiredTarget.x -= (dx * cos - dy * sin) * scale;
-    this.desiredTarget.z -= (dx * sin + dy * cos) * scale;
+  /**
+   * Sürükleme kaydırması — tutulan zemin noktasını parmağın altında tutar.
+   *
+   * Doğru kaydırmanın TANIMI bu: bastığın kare, parmağını bırakana kadar
+   * parmağının altında kalır. Yaklaşık bir ölçek çarpanıyla (FOV, eğim ve
+   * uzaklıktan bağımsız sabit bir katsayı) bunu tutturmak mümkün değil —
+   * hem yön hem hız kamera durumuna göre değişiyor. Burada iki ekran
+   * noktasının zemin izdüşümü alınıp aradaki fark hedefe uygulanıyor,
+   * yani ölçek de yön de kameranın kendi projeksiyonundan geliyor.
+   *
+   * Ölçüm: eski yaklaşık formülde 120 piksellik bir sürüklemede tutulan
+   * nokta 7,7–8,4 birim kayıyordu.
+   */
+  panFromGround(fromNdcX: number, fromNdcY: number, toNdcX: number, toNdcY: number): void {
+    if (!this.screenToGround(fromNdcX, fromNdcY, PAN_FROM)) return;
+    if (!this.screenToGround(toNdcX, toNdcY, PAN_TO)) return;
+    this.desiredTarget.x += PAN_FROM.x - PAN_TO.x;
+    this.desiredTarget.z += PAN_FROM.z - PAN_TO.z;
     this.clampTarget();
   }
 
@@ -133,8 +148,11 @@ export class RtsCameraController {
       const sin = Math.sin(this.azimuth);
       const cos = Math.cos(this.azimuth);
       const speed = step * this.distance * 0.08;
-      this.desiredTarget.x += (kx * cos - kz * sin) * speed;
-      this.desiredTarget.z += (kx * sin + kz * cos) * speed;
+      // `pan` ile aynı düzeltme: W tuşu ekranda yukarı, D tuşu ekranda
+      // sağa götürmeli. Eskiden çapraz terimlerin işareti ters olduğu
+      // için tuşlar da azimuta göre kayıyordu.
+      this.desiredTarget.x += (kx * cos + kz * sin) * speed;
+      this.desiredTarget.z += (kz * cos - kx * sin) * speed;
       this.clampTarget();
     }
 
