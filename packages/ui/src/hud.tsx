@@ -84,29 +84,134 @@ export function TopBar(): ReactElement {
       </div>
 
       <nav className="topbar-actions" aria-label="Paneller">
-        <button type="button" onClick={() => setView({ openPanel: view.openPanel === 'chain' ? 'none' : 'chain' })}>
-          Zincir
-        </button>
-        <button type="button" onClick={() => setView({ openPanel: view.openPanel === 'rivalry' ? 'none' : 'rivalry' })}>
-          Rekabet
-        </button>
-        <button type="button" onClick={() => setView({ openPanel: view.openPanel === 'bourse' ? 'none' : 'bourse' })}>
-          Borsa
-        </button>
-        <button type="button" onClick={() => setView({ openPanel: view.openPanel === 'company' ? 'none' : 'company' })}>
-          Şirket
-        </button>
-        <button type="button" onClick={() => setView({ openPanel: view.openPanel === 'rivals' ? 'none' : 'rivals' })}>
-          Rakipler
-        </button>
-        <button type="button" onClick={() => setView({ openPanel: view.openPanel === 'saves' ? 'none' : 'saves' })}>
-          Kayıt
-        </button>
-        <button type="button" onClick={() => setView({ openPanel: view.openPanel === 'help' ? 'none' : 'help' })} title="Nasıl oynanır">
-          ?
-        </button>
+        {PANEL_TABS.map((tab) => {
+          const open = view.openPanel === tab.id;
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              className={open ? 'dock-tab active' : 'dock-tab'}
+              /*
+               * Kimlik etiketten ayrı duruyor. Testler eskiden görünen
+               * yazıya göre seçiyordu ("Rakipler"); etiket dar ekrana
+               * sığsın diye kısalınca sessizce başka bir düğmeyi tıklamaya
+               * başlarlardı. Yazı bir sunum ayrıntısı, `data-panel` ise
+               * sözleşme.
+               */
+              data-panel={tab.id}
+              onClick={() => setView({ openPanel: open ? 'none' : tab.id })}
+              aria-pressed={open}
+              /*
+               * `aria-label` BİLEREK yok. Koysaydık erişilebilir ad görünen
+               * yazının yerine geçerdi: ekranda "Yardım" yazarken ad "Nasıl
+               * oynanır" olurdu ve sesle kontrol eden biri gördüğü kelimeyi
+               * söyleyince eşleşme olmazdı (WCAG 2.5.3). Ad görünen
+               * etiketten geliyor; `title` yalnızca ek bağlam veriyor.
+               */
+              title={tab.title}
+            >
+              <PanelIcon name={tab.id} />
+              <span className="dock-label">{tab.label}</span>
+            </button>
+          );
+        })}
       </nav>
     </header>
+  );
+}
+
+/**
+ * Rıhtımın sekmeleri.
+ *
+ * Yazı yerine ikon + minik etiket taşıyorlar ve sebebi ölçüm: yalnızca
+ * yazıyla yedi düğme 516 px yer istiyordu, dar ekran 390 px. Son iki
+ * düğme ("Kayıt", "?") ekranın DIŞINDA kalıyordu ve rıhtımın yatay
+ * kaydırılabildiğini gösteren hiçbir işaret yoktu — yani o iki panele
+ * ulaşmanın görünür bir yolu yoktu.
+ *
+ * Etiket tamamen atılmadı: ikon tek başına ne olduğunu söylemiyor.
+ * Rıhtım eşit sütunlu bir ızgara olduğu için 320 px'de bile taşmıyor.
+ */
+const PANEL_TABS: Array<{ id: 'chain' | 'rivalry' | 'bourse' | 'company' | 'rivals' | 'saves' | 'help'; label: string; title: string }> = [
+  { id: 'chain', label: 'Zincir', title: 'Tedarik zinciri' },
+  { id: 'rivalry', label: 'Rekabet', title: 'Rekabet kartı' },
+  { id: 'bourse', label: 'Borsa', title: 'Borsa' },
+  { id: 'company', label: 'Şirket', title: 'Şirket' },
+  { id: 'rivals', label: 'Rakip', title: 'Rakipler' },
+  { id: 'saves', label: 'Kayıt', title: 'Kayıtlar' },
+  { id: 'help', label: 'Yardım', title: 'Nasıl oynanır' },
+];
+
+/** Rıhtım ikonları — `currentColor` ile çizilir, iki temada da çalışır. */
+function PanelIcon({ name }: { name: string }): ReactElement {
+  const paths: Record<string, ReactElement> = {
+    chain: (
+      <>
+        <path d="M10.6 13.4a3.8 3.8 0 0 0 5.4 0l2.2-2.2a3.8 3.8 0 0 0-5.4-5.4l-1.1 1.1" />
+        <path d="M13.4 10.6a3.8 3.8 0 0 0-5.4 0l-2.2 2.2a3.8 3.8 0 0 0 5.4 5.4l1.1-1.1" />
+      </>
+    ),
+    rivalry: (
+      <>
+        <path d="M4 20V10" />
+        <path d="M10 20V5" />
+        <path d="M16 20v-7" />
+        <path d="M3 20h18" />
+      </>
+    ),
+    bourse: (
+      <>
+        <path d="M3 16l5-5 4 3 8-8" />
+        <path d="M15 6h5v5" />
+      </>
+    ),
+    company: (
+      <>
+        <path d="M4 20V6l7-3v17" />
+        <path d="M11 10h8v10" />
+        <path d="M3 20h18" />
+        <path d="M7 9v0M7 13v0M15 14v0" />
+      </>
+    ),
+    rivals: (
+      <>
+        <circle cx="8.5" cy="8" r="2.8" />
+        <path d="M3.5 19a5 5 0 0 1 10 0" />
+        <path d="M16 6.2a2.8 2.8 0 0 1 0 5.6" />
+        <path d="M16.5 14.4A5 5 0 0 1 20.5 19" />
+      </>
+    ),
+    saves: (
+      <>
+        <path d="M5 4h11l3 3v13H5z" />
+        <path d="M8 4v5h7V4" />
+        <path d="M8 20v-6h8v6" />
+      </>
+    ),
+    help: (
+      <>
+        <circle cx="12" cy="12" r="8.5" />
+        <path d="M9.6 9.4a2.5 2.5 0 1 1 3.3 2.4c-.6.2-.9.7-.9 1.3v.6" />
+        <path d="M12 17v0" />
+      </>
+    ),
+  };
+  return (
+    <svg
+      className="dock-icon"
+      viewBox="0 0 24 24"
+      width="20"
+      height="20"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.7"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      focusable="false"
+    >
+      {paths[name]}
+    </svg>
   );
 }
 

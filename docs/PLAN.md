@@ -9,7 +9,7 @@ hâlidir. Kapsam daraltılmadı; sistemler modüler kuruldu ve fazlara yayıldı
 |---|-------|-------|
 | 1 | Tema | Modern, stilize kapitalist şehir |
 | 2 | Görsel stil | Low-poly, temiz ışıklandırma, stilize |
-| 3 | Harita | District'lere bölünmüş grid şehir (3×3 bölge, 24×24 kare) |
+| 3 | Harita | District'lere bölünmüş grid şehir (3×3 bölge, 30×30 kare — Tur 8'de 24×24'ten büyütüldü) |
 | 4 | Oyun odağı | Hibrit: perakende + hizmet + üretim + gayrimenkul + şirket yönetimi |
 | 5 | Ekonomi derinliği | Katmanlı — yüzeyde basit, panelde derin |
 | 6 | Rakipler | Kişilik bazlı, aktif ama adil |

@@ -38,6 +38,20 @@ const MAX_PAYBACK_DAYS = 170;
  * bir maliyet avantajı bırakır. Rakipler bu kalemde daha sabırlı.
  */
 const CHAIN_MAX_PAYBACK_DAYS = 220;
+/**
+ * Kol yatırımının amorti olduğu ölçek — kategorideki mağaza sayısı.
+ *
+ * Kolun getirisi bina başına değil, kategorideki BÜTÜN mağazalara
+ * dağılır; yani değeri mağaza sayısıyla doğrusal artarken maliyeti
+ * sabittir. Benchmark eşiği doğrudan ölçüyor:
+ *
+ *     Ar-Ge · 4 mağaza → %6 kâr, 622 gün geri ödeme
+ *     Ar-Ge · 8 mağaza → %14 kâr, 140 gün geri ödeme
+ *
+ * Sekizin altında kol kurmak rakibi kendi büyümesinden ediyor; üstünde
+ * kurmamak masada para bırakıyor.
+ */
+const ARM_SCALE_OUTLETS = 8;
 
 interface Opportunity {
   districtId: number;
@@ -168,7 +182,7 @@ function traitArmAppetite(profile: NpcProfileDef, kind: 'research' | 'marketing'
  * Kartın "henüz erken" işareti rakip için de geçerli; yalnızca iştahı çok
  * yüksek olan (kalite avcısı) onu görmezden gelebilir.
  */
-function tryArmMove(state: GameState, profile: NpcProfileDef): boolean {
+function tryArmMove(state: GameState, profile: NpcProfileDef, stalled = false): boolean {
   const company = state.companies[profile.id];
   if (!company) return false;
 
@@ -180,6 +194,13 @@ function tryArmMove(state: GameState, profile: NpcProfileDef): boolean {
   for (const card of competitionCards(state, profile.id)) {
     const move = card.move;
     if (!move) continue;
+
+    // ÖLÇEK KAPISI — kolun erken kurulmasını engelleyen asıl şey bu.
+    // Eskiden bu işi "önce genişle, kol en son" sırası yapıyordu; o sıra
+    // toprak kıt olduğu için çalışıyordu (genişleme er geç tıkanır,
+    // sonra kol gelirdi). Tur 8 toprağı bollaştırınca sıra hiç kola
+    // gelmedi ve rakipler 0/4 kol kurdu. Kapı artık ölçeğe bakıyor.
+    if (!stalled && card.outlets < ARM_SCALE_OUTLETS) continue;
 
     const appetite = traitArmAppetite(profile, move.kind);
     if (appetite <= 0.25) continue;
@@ -350,6 +371,19 @@ function actFor(state: GameState, profile: NpcProfileDef): void {
   // kurar, zinciri sonra kapatır. Ayrı bir sıralama kuralına gerek yok.
   if (tryChainMove(state, profile)) return;
 
+  // Kol hamlesi genişlemeden ÖNCE, ama yalnızca ölçek kapısını geçenler.
+  //
+  // İlk sürümde kol kapısızca öndeydi ve rakipleri çökertiyordu (aynı
+  // tohumda toplam değer 160 M ₺ → 85 M ₺). Çare olarak sıraya alınmıştı:
+  // "kârlı genişleme bulunamadığı haftalarda kol". O çare toprağın
+  // kıtlığına yaslanıyordu — genişleme er geç tıkanıyor, sıra kola
+  // geliyordu. Tur 8'de toprak bollaşınca sıra hiç gelmedi.
+  //
+  // Koruma artık sıradan değil ölçek kapısından geliyor: mağaza 60–110
+  // günde döner, kol ancak sekiz mağazaya dağıldığında 140 günde döner.
+  // Kapı bunu doğrudan söylüyor, dolaylı olarak değil.
+  if (tryArmMove(state, profile)) return;
+
   const opportunities = findOpportunities(state, profile);
 
   for (const opportunity of opportunities.slice(0, 6)) {
@@ -390,20 +424,9 @@ function actFor(state: GameState, profile: NpcProfileDef): void {
     return;
   }
 
-  // ---- Kol hamlesi EN SON ----
-  //
-  // Sıra ölçümle bulundu. İlk sürümde kol, genişlemeden ÖNCE
-  // değerlendiriliyordu ve rakipleri çökertiyordu: aynı tohumda rakiplerin
-  // toplam değeri 160 M ₺'den 85 M ₺'ye düşüyordu (3/3 tohum), kalite
-  // avcısı 77 M ₺'den 19 M ₺'ye.
-  //
-  // Sebebi basit: mağaza 60–110 günde, kol 124–225 günde dönüyor. Her
-  // hafta mağaza yerine kol kuran rakip, kendi büyümesini durduruyordu.
-  // Zincirde bu sorun yoktu çünkü zincirin bir geri ödeme kapısı var;
-  // kolun yok. Kapı yerine SIRA kullanıyoruz: kol, kârlı bir genişleme
-  // bulunamadığı haftalarda kuruluyor — gerçek hayattaki gibi, büyüme
-  // yavaşladığında verimliliğe dönülüyor.
-  tryArmMove(state, profile);
+  // Ölçek kapısını geçemeyen kol, kârlı genişleme de bulunamadıysa yine
+  // de denenir: büyüme tıkandığında verimliliğe dönmek doğru hamle.
+  tryArmMove(state, profile, true);
 }
 
 export function runNpcTick(state: GameState): void {

@@ -167,10 +167,15 @@ export interface RankedBuildOption extends BuildOption {
  * Bir bölge için yapı önerileri — PARSEL BAŞINA GETİRİYE göre sıralı.
  *
  * Kritik ayrım, ölçümle bulundu: oyunun kıt kaynağı para değil TOPRAK.
- * Sınırsız nakitle koşulan bir oyunda bile karşılanmayan talep %52'de
- * kalıyor ve 1200 denemenin 1167'sinde "boş parsel yok" deniyor. Yani
- * oyuncunun asıl sorusu "param en hızlı nasıl geri döner" değil, "BU
- * PARSELDEN en çok ne çıkar".
+ * Sınırsız nakitle koşulan bir oyunda bile karşılanmayan talep sıfıra
+ * inmiyor ve inşa denemelerinin ezici çoğunluğu "boş parsel yok" diye
+ * bitiyor (`pnpm constraint`). Yani oyuncunun asıl sorusu "param en
+ * hızlı nasıl geri döner" değil, "BU PARSELDEN en çok ne çıkar".
+ *
+ * Tur 8 haritayı bollaştırdı ama bu ölçütü DEĞİŞTİRMEDİ ve değiştirmesi
+ * de gerekmiyor: bir bina hâlâ bir parsel kaplıyor, dolayısıyla parsel
+ * başına getiri hâlâ doğru soru. Toprak ucuzladı, bedava olmadı —
+ * abonman oranı %57 ve denge testi onu bir bantta tutuyor.
  *
  * Geri ödeme ikinci soruyu cevaplamıyor ve iki sıralama birbirinin
  * tersi çıkıyor: geri ödeme 17–41 gün aralığında neredeyse düz, ama

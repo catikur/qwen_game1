@@ -114,6 +114,18 @@ gerçekleşen kârla tutar**.
 `packages/core/test/calibrate.ts` bina maliyetlerini hedef geri ödeme
 süresine göre yeniden türetir; denge ayarlarken kullanılır.
 
+**Deneyler** — bir sınav ya da termometre değil, bir SORUYA cevap verirler:
+
+```bash
+pnpm constraint    # oyunu ne sınırlıyor: para mı, toprak mı, tempo mu?
+pnpm land          # bir geometri değişikliği abonman oranını ne yapar?
+```
+
+`constraint` oyuncunun politikasını sabit tutup kısıtı değiştirir ve her
+başarısız inşa denemesinin sebebini sayar. Sermaye sonsuz yapıldığında
+hiçbir şey düzelmiyorsa kısıt para değildir — Tur 7 bunu böyle buldu,
+Tur 8 de "haritayı büyüt" reçetesinin yanlış olduğunu böyle gördü.
+
 **Tarayıcı testi** (Playwright gerekir):
 
 ```bash

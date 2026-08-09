@@ -29,6 +29,7 @@ mantığının dışında; üçüncüsü ise oyunun kendi **tavsiyesindeydi**:
 | Telefonda oyun açılıyor ama oynanamıyordu | **5** | Sarma, alt rıhtım, pinch zoom, dokunarak seçim |
 | Görsel bütçenin %95'i harcanmamıştı | **6** | Bina kütlesi, pencere ışıkları, asfalt, bloom |
 | Tavsiye kıt olan parseli en verimsiz binaya harcatıyordu | **7** | Yapı menüsü parsel getirisine göre sıralanıyor |
+| Şehrin nüfusu haritasına sığmıyordu | **8** | Izgara geometrisi: 285 → 504 parsel, abonman %101 → %57 |
 
 ---
 
@@ -90,6 +91,24 @@ genişliği **1002px**'e sabitlenmişti; `controller.zoom()` için kodda tek
 bir çağrı yeri vardı (`wheel`); ve dokunmatikte seçim `pointermove`'a
 bağlı olduğu için hiç çalışmıyordu.
 
+Oynanınca üç hata daha çıktı ve üçü de ancak elde tutunca görülüyordu
+(`GORSEL-TASARIMI.md` §2.4b–c):
+
+| Rapor | Ölçülen kök sebep | Sonuç |
+|---|---|---|
+| "arsaya tıklayınca butonu göremiyorsun" | panel 664px ekranda 913px'te başlıyor | alt sayfa · kaydırma **645px → 0** |
+| "kaydırma baya ters" | ekran ekseni dünyaya ters işaretle dönüyor | sapma **7,7 → 0,00** |
+| "menü sorunumuz devam ediyor" | yedi yazılı düğme 516px istiyor, ekran 390px | ikon ızgarası · taşma **126px → 0** |
+
+Üçüncüsünde asıl ders testteydi: kontrol vardı, yeşil yanıyordu ve
+`scrollIntoViewIfNeeded()` çağırdığı için ekran dışındaki düğmeyi önce
+kendisi görünür yapıyordu.
+
+İkinci bir ders de aynı turda çıktı: yeni eklenen kontrol paneli açık
+bırakınca sonraki sürükleme ölçümü bozuldu ve sapma **iki koşumda da tam
+6,75** verdi. Önce zamanlama sandım, yanlıştı — **tekrarlayan aynı sayı
+zamanlama sorunu değildir**; rastgeleliğin izi dağılımdır.
+
 ### Tur 7 — Kıt olan para değil toprak · `docs/TOPRAK-TASARIMI.md`
 
 Dört tur boyunca §4.1'de "sermaye yetişemiyor" yazıyordu. Sınandı,
@@ -106,6 +125,30 @@ getiriye göre sıralıyor.
 karşılanmayan talep 1200. günde %48 → **%33**, oyuncu/rakip oranı
 0,76 → **1,28**.
 
+### Tur 8 — Şehir geometrisi · `docs/SEHIR-GEOMETRISI.md`
+
+Tur 7 sıradaki iş olarak "haritayı büyütmek" demişti. Sınandı, **reçete
+yanlış çıktı**: bölge eklemek nüfusu da parseli de aynı oranda büyüttüğü
+için abonman oranı yerinde sayıyor (%101 → %95).
+
+Kaldıraç bölge sayısı değil ızgara geometrisi. Bölge kenarı 8→10, sokak
+aralığı 4→5: harita 24×24'ten **30×30**'a, parsel 285'ten **504**'e
+çıktı, abonman **%101 → %57**'ye indi. Merkez %98'de kaldı — şehir
+doyabiliyor ama merkezde parsel hâlâ kıt.
+
+Karşılanmayan talebin **yönü** tersine döndü: eskiden zamanla artıyordu
+(%20 → %34 → %33), şimdi azalıyor (%30 → %12 → %13).
+
+Geometri değişince rakipler kol kurmayı bıraktı (0/4) — kol hamlesi
+"kârlı genişleme bulunamazsa" tetikleniyordu, yani örtük olarak toprağın
+tükenmesini bekliyordu. Kapı ölçeğe taşındı: kategoride 8 mağazası olan
+rakip kolu genişlemeden önce kuruyor.
+
+5×5 yerleşim de ölçüldü ve **ertelendi**: sorun harita değil inşaatçı
+sayısı. Dört rakip 2,7 kat şehri yıllarca boş bırakıyor (360. günde %53
+boş talep); tempo artırılınca açık %13'e iniyor. Önkoşul, rakip
+sayısının şehirle ölçeklenmesi.
+
 ---
 
 ## 3. Ölçülen durum
@@ -116,27 +159,37 @@ karşılanmayan talep 1200. günde %48 → **%33**, oyuncu/rakip oranı
 
 | | Değer |
 |---|---|
-| Oyuncu / rakip oranı | **1,28** — Tur 7 öncesi 0,76 idi |
-| Oyuncu bina sayısı | 52 |
-| Günlük kâr | 168 B ₺ |
+| Oyuncu / rakip oranı | **1,58** — Tur 7 öncesi 0,76 idi |
+| Oyuncu bina sayısı | 70 |
+| Günlük kâr | 235 B ₺ |
 | Batan şirket | **0/5** |
 
-### Doygunluk (Tur 7 sonrası)
+### Doygunluk (Tur 8 sonrası)
 
 | Karşılanmayan talep | 360. gün | 700. gün | 1200. gün |
 |---|---|---|---|
-| Önce | %35 | %38 | %48 |
-| **Sonra** | **%20** | **%34** | **%33** |
+| Tur 7 öncesi | %35 | %38 | %48 |
+| Tur 7 sonu | %20 | %34 | %33 |
+| **Tur 8** | %30 | **%12** | **%13** |
+
+Okunması gereken şey sayı değil **yön**. İlk iki satırda boş talep
+zamanla artıyor: şehir büyüdükçe geri kalıyor. Üçüncüde azalıyor — erken
+oyunda fırsat bol, geç oyunda şehir doyuyor. Erken oyundaki %20 → %30
+bir bedel değil, 1,8 kat parselin aynı beş inşaatçıya dağılması.
 
 ### Stratejilerin karşılığı (aynı tohum, tek değişken)
 
 | Strateji | Kâr etkisi | Geri ödeme |
 |---|---|---|
-| Ar-Ge · 4 mağaza | %6 | 604 gün *(erken)* |
-| Ar-Ge · 8 mağaza | **%13** | 134 gün |
-| Pazarlama · 8 mağaza | **%12** | 89 gün |
-| Fiyatı %25 kırmak | **%13 hacim** | — |
-| Zincir kurmak | %5 | — |
+| Ar-Ge · 4 mağaza | %6 | 622 gün *(erken)* |
+| Ar-Ge · 8 mağaza | **%14** | 140 gün |
+| Pazarlama · 8 mağaza | **%12** | 103 gün |
+| Fiyatı %25 kırmak | **%17 hacim** | — |
+| Zincir · normal nakit | **%12** | ~190 gün |
+| Zincir · bol nakit (20 M ₺) | %1 | — |
+
+Son iki satır ayrı duruyor çünkü farkları bir bulgu: bol nakitle parseli
+outlet'le doldurmak zinciri geçiyor. **Zincir bir nakit kısıtı oyunu.**
 
 ### Kalibrasyon bantları
 
@@ -174,31 +227,29 @@ bütçe hâlâ fazlasıyla açık.
 
 ## 4. Açık kalan işler
 
-### 4.1 Harita %100 abone ← en önemlisi · `docs/TOPRAK-TASARIMI.md`
+### 4.1 ~~Harita %100 abone~~ — Tur 8'de kapandı · `docs/SEHIR-GEOMETRISI.md`
 
-> **Bu maddenin eski teşhisi yanlıştı ve Tur 7'de düzeltildi.** Dört tur
-> boyunca burada "oyuncunun sermayesi talebe yetişemiyor" yazıyordu.
-> Sınandığında yanlış çıktı: sermaye sınırsız yapıldığında karşılanmayan
-> talep **%52'de kalıyor**. Kısıt para değil **toprak**.
+Bu madde iki tur boyunca listenin başındaydı ve iki kez yanlış teşhis
+edildi:
 
-Tur 7 tavsiyeyi düzeltti (yapı menüsü artık parsel getirisine göre
-sıralıyor) ve sayılar belirgin şekilde iyileşti:
+| tur | teşhis | sonuç |
+|---|---|---|
+| Tur 3–6 | "sermaye talebe yetişemiyor" | **yanlış** — sınırsız sermayeyle bile boş talep %52 |
+| Tur 7 | "harita küçük, bölge ekle" | teşhis doğru, **reçete yanlış** — bölge eklemek oranı değiştirmiyor |
+| Tur 8 | "nüfus başına parsel az" | **doğru** — ızgara geometrisi |
 
-| | 360. gün | 700. gün | 1200. gün |
-|---|---|---|---|
-| Karşılanmayan talep · önce | %35 | %38 | %48 |
-| Karşılanmayan talep · **sonra** | **%20** | **%34** | **%33** |
+Bölge kenarı 8→10, sokak aralığı 4→5. Abonman **%101 → %57**, boş talep
+1200. günde **%33 → %13** ve eğri artıştan azalışa döndü.
 
-Ama tamamen çözülmedi ve kalan sebep yapısal: nüfus tavanındaki talebi
-karşılamak, her kategoride **en büyük** outlet kullanılsa bile **284
-parsel** gerektiriyor. Haritada **285** parsel var — yani **abonman
-%100**. Şehir ancak parsellerinin tamamı outlet olursa doyar; fabrikaya,
-depoya ve dört rakibe yer kalmaz.
+Kapanmış sayılmasının şartı, geri gelmemesi: denge testi abonman oranını
+**%35–%75 bandında** tutuyor. Üst sınır tıkanmayı, alt sınır toprağın
+bedavalaşmasını engelliyor — ikincisi olmadan "harita ne kadar büyükse o
+kadar iyi" gibi yanlış bir yöne kayılabilirdi.
 
-Bu sayı denge testinde bir kontrol olarak duruyor, sessizce
-kötüleşemiyor.
-
-**Sıradaki iş:** haritayı büyütmek (§4.5) — artık ölçümle gerekçeli.
+Geriye kalan: 1200. günde harita hâlâ tamamen tükeniyor (0 boş parsel),
+ama artık **talebi karşıladıktan sonra**. Bu bir kusur değil bir şehrin
+olgunlaşması; geç oyunun rekabeti fiyat, kalite ve devralma üzerinden
+yürüyor.
 
 ### 4.2 Rakipler oyuncunun hissesini toplamıyor
 
@@ -219,33 +270,31 @@ Bir outlet kendi bölgesine tam, komşulara kısmi (0,30 / 0,14) erişiyor;
 uzak bölgenin talebine kimse ulaşamıyor. Bu bir arıza değil coğrafya,
 ama "boş talep" sayısını okurken akılda tutulmalı.
 
-### 4.5 Şehir küçük — ama büyütmek tek başına işe yaramıyor
+### 4.5 Daha büyük şehrin önkoşulu: rakip sayısı ← sıradaki iş
 
-Ölçüldü: bölge yerleşimi geçici olarak 3×3'ten 5×5'e çıkarıldı.
+Harita Tur 8'de 24×24'ten 30×30'a çıktı. **Bölge sayısını** artırmak
+(3×3 → 5×5) ayrıca ölçüldü ve ertelendi:
 
-| | Bugün (3×3) | Deney (5×5) |
-|---|---|---|
-| Harita | 24 × 24 | 40 × 40 |
-| Parsel | 283 | 808 |
-| Simülasyon hızı | 207 gün/sn | 166 gün/sn |
-| Çizim çağrısı | değişmiyor | değişmiyor |
-| **360. günde bina** | **137** | **143** |
+| yerleşim | harita | parsel | 360g boş talep | 1200g | oyn/rak |
+|---|---|---|---|---|---|
+| **3×3** *(bugün)* | 30×30 | 504 | %13 | %9 | 0,66 |
+| 5×5 | 50×50 | 1377 | **%53** | %9 | 0,52 |
+| 5×5 · hızlı bot | 50×50 | 1377 | **%13** | %14 | 7,62 |
 
-Teknik maliyet ihmal edilebilir — harita boyutu tamamen
-`DISTRICT_LAYOUT`'tan türetiliyor, hiçbir yerde sabit kodlanmamış.
+Üçüncü satır ayırt edici: tek değişken inşa temposu. Tempo artınca
+5×5'in erken oyun açığı 3×3 seviyesine iniyor — yani sorun harita değil
+**inşaatçı sayısı.** Dört rakip ve bir oyuncu, 2,7 kat şehri yıllarca
+boş bırakıyor.
 
-> **Bu maddenin sonucu da Tur 7'de düzeltildi.** Burada şöyle yazıyordu:
-> *"harita 2,9 katına çıktığında şehir yalnızca 6 bina büyüdü, demek ki
-> kısıt harita değil sermaye."* Çıkarım yanlıştı ve sebebi ölçümün
-> kendisiydi: o deney 360 günde ve **5 günde bir tek bina kuran** botla
-> yapılmıştı, yani bot-sınırlıydı. 1200 günlük ve sınırsız sermayeli
-> ölçüm tersini gösteriyor — kısıt toprak.
+Önkoşul: `NPC_PROFILES` bugün dört tane ve `npcCount` onunla sınırlı.
+Rakip sayısı (ya da rakiplerin genişleme temposu) şehir boyutuyla
+ölçeklenmeden büyük şehir boş bir dekor olur.
 
-**Haritayı büyütmek artık doğru sıradaki iş.** §4.1'deki abonman oranı
-(%100) bunun gerekçesi: şehrin fabrikaya, depoya ve rakiplere yer
-bırakacak kadar parseli yok.
+Dikiş hazır: `createNewGame` artık bir `layout` argümanı alıyor, harita
+boyutu hiçbir yerde sabit değil. Bölge açma ve çoklu şehir işleri o
+dikişten geçecek.
 
-Sıra: ızgarayı büyüt → bölge açma → çoklu şehir.
+Sıra: rakip ölçeklemesi → 5×5 → bölge açma → çoklu şehir.
 
 ### 4.6 Daha küçük kalemler
 
@@ -261,15 +310,28 @@ Sıra: ızgarayı büyüt → bölge açma → çoklu şehir.
 
 ```bash
 pnpm typecheck     # altı paketin tamamı
-pnpm balance       # denge testi — 170 kontrol, geçti/kaldı
+pnpm balance       # denge testi — 178 kontrol, geçti/kaldı
 pnpm bench         # benchmark — sayıların kendisi
-pnpm playtest      # tarayıcı testi (build dahil), 105 kontrol
+pnpm constraint    # kısıt deneyi — bağlayıcı kısıt hangisi?
+pnpm land          # abonman oranı — geometri varyantları
+pnpm playtest      # tarayıcı testi (build dahil), 151 kontrol
 pnpm dev           # oyunu aç
 ```
 
 `balance` bir **sınav**, `bench` bir **termometre**: ilki bir şey
 bozulduğunda bağırır, ikincisi neyin ne kadar değiştiğini gösterir. İki
 sürüm karşılaştırırken `bench` çıktılarını yan yana koymak yeterli.
+
+`constraint` ve `land` ise **deney**: bir sınav gibi geçip kalmazlar,
+bir termometre gibi sürekli okunmazlar — bir SORUYA cevap verirler.
+Tur 7'nin sınırsız-sermaye deneyi bir kez koşulmuş, sayıları alıntılanmış
+ama kendisi repoda kalmamıştı; sonraki tur onu tekrarlayamadı, yalnızca
+güvenebildi. Artık ikisi de koşulabilir:
+
+| | cevapladığı soru |
+|---|---|
+| `pnpm constraint` | Oyunu ne sınırlıyor — para mı, toprak mı, tempo mu? |
+| `pnpm land` | Bir geometri değişikliği abonman oranını ne yapar? |
 
 ---
 
@@ -306,6 +368,14 @@ Bu yüzden 1002px genişliğinde takılı bir üst barı ve telefonda hiçbir
 panele ulaşılamamasını kaçırdı. Bir kontrolü yazarken sorulacak soru
 "geçiyor mu" değil, **"bu kontrol hangi durumda kırmızı yanar"**.
 
+Aynı sorunun daha sinsi bir hâli sonra çıktı: kontrol kırmızı
+yanabiliyordu, ama **testin kendisi hatayı onarıyordu.** "Bütün panel
+düğmeleri açılıyor" kontrolü tıklamadan önce
+`scrollIntoViewIfNeeded()` çağırıyordu; ekranın dışında kalmış iki
+düğmeyi önce kendisi görünür yapıp sonra tıklıyor ve yeşil yanıyordu.
+Gerçek oyuncunun elinde öyle bir imkân yok. **Bir testin kolaylık için
+yaptığı her şey, ölçtüğü gerçeği değiştirmiş olabilir.**
+
 **Ortamın ölçemediği şeyi kontrolü kapatarak değil, soruyu değiştirerek
 çöz.** İki şey bu ortamda doğrudan test edilemedi: 400 ms'lik çift
 dokunuş penceresi (yazılım rasterizasyonunda iki dokunuş arası 1 saniye)
@@ -334,3 +404,44 @@ da bu yüzden yanlış çıktı.** Bir ölçüm aracının kısıtları, ölçt�
 şeyin özelliği sanılırsa yanlış sonuç kaçınılmaz.
 
 Kural: **bir sebebi kaydetmeden önce onu değiştirip ne olduğuna bak.**
+
+Tur 8 aynı kuralı bir adım öteye taşıdı: **bir reçeteyi uygulamadan önce
+de sına.** Tur 7'nin teşhisi doğruydu (kısıt toprak) ama reçetesi
+yanlıştı (bölge ekle). Bölge eklemek nüfusu da parseli de aynı oranda
+büyüttüğü için abonman oranı yerinde sayıyor — %101'den ancak %95'e
+iniyor. Doğru kaldıraç ızgara geometrisiydi. Ölçüm on dakika sürdü,
+yanlış reçeteyi uygulamak günler alırdı.
+
+İkinci ders daha ince: **bir çözüm, çözmediği bir şeye yaslanmış
+olabilir.** Rakiplerin kol yatırımı "kârlı genişleme bulunamazsa"
+tetikleniyordu. Bu kural Tur 2'de ölçümle bulunmuştu ve gerçek bir
+sorunu çözüyordu, ama sessizce toprağın kıtlığına yaslanıyordu:
+genişleme er geç tıkanır, sıra kola gelirdi. Toprak bollaşınca sıra hiç
+gelmedi ve rakipler 0/4 kol kurdu. Bir kuralın neye yaslandığı yazılı
+değilse, değişen her şeyle birlikte sessizce bozulabilir.
+
+Üçüncüsü tanıdık ama yeni bir kılıkta: **bir eşik, neye bağlıysa onunla
+ölçülmeli.** `vacant >= 80 && vacant <= 180` kontrolü harita büyüyünce
+kırıldı; oysa ölçtüğü şey (şehrin ne kadar boş başladığı) %38'den %39'a
+gitmişti, yani hiç değişmemişti. Aynı hata tarayıcı testinde de vardı.
+Mutlak sayıya bağlanan eşik, gerçek bir sorun yokken kırmızı yakar ve
+asıl sorunu gölgeler.
+
+Ve yine: **yeni yazılan ölçüm aracı da şüphelidir.** `constraint.ts`'in
+ilk hali `district.unmet`'i birim sanıp doğrudan topladı, oysa oran
+tutuyor; payda payı ezince her satır %0 çıktı — yani kontrol hiçbir
+koşulda kırmızı yanamazdı.
+
+Dördüncüsü en uzun süredir gizleniyordu: **zincir yatırımının karşılığı,
+o yatırımın geri ödemesinden kısa bir pencerede ölçülüyordu.** Benchmark
+-%11 derken denge testi +%21 diyordu ve iki sayı yan yana durdu. Üç
+hipotez elendi (tek gün, tek tohum, nakit koşulu); sebep ufuktu —
+zincirin geri ödemesi ~190 gün, benchmark 400 günde kesiyordu. 500'e
+çıkınca iki ölçüm birebir aynı sayıyı verdi: **+%12**.
+
+> Bir yatırımın karşılığını ölçen pencere, o yatırımın geri ödemesinden
+> belirgin şekilde uzun olmalı.
+
+Yan ürün olarak çıkan şey de kayda değer: zincirin getirisi normal
+nakitte +%12, bol nakitte (20 M ₺) +%1. **Zincir bir nakit kısıtı
+oyunu** — toprak bollaşınca bunu bilmek daha önemli hale geldi.

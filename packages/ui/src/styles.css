@@ -15,6 +15,8 @@
   --text: #dce6f2;
   --muted: #8397ad;
   --accent: #7fd4ff;
+  /* Vurgunun zemin hâli — seçili sekme gibi "açık" durumları boyar. */
+  --accent-soft: rgba(127, 212, 255, 0.14);
   --good: #59d98e;
   --bad: #e2574c;
   --warn: #ffd166;
@@ -267,6 +269,26 @@ button.icon {
   flex-wrap: wrap;
   gap: 8px;
   min-width: 0;
+}
+
+.dock-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.dock-tab.active {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.dock-icon {
+  flex: 0 0 auto;
+  opacity: 0.85;
+}
+
+.dock-tab.active .dock-icon {
+  opacity: 1;
 }
 
 .speeds {
@@ -1101,49 +1123,93 @@ button.icon {
   }
 
   /* Alt rıhtım: yatay kaydırmalı düğme şeridi. */
+  /*
+   * RIHTIM: KAYDIRILAN ŞERİT DEĞİL, EŞİT SÜTUNLU IZGARA.
+   *
+   * Eskiden `overflow-x: auto` bir yatay şeritti ve ölçüm şunu gösterdi:
+   * yedi düğme 516 px istiyordu, ekran 390 px. "Kayıt" (x=400) ve "?"
+   * (x=468) ekranın dışında kalıyordu — üstelik kaydırılabildiğini
+   * gösteren hiçbir işaret yoktu, yani o iki panele ulaşmanın GÖRÜNÜR
+   * bir yolu yoktu. Gizli kaydırma keşfedilmeyen bir arayüzdür.
+   *
+   * Izgara taşmayı imkânsız kılıyor: sütunlar `1fr` olduğu için ekran ne
+   * kadar darsa o kadar daralıyorlar, ama hepsi hep ekranda. 320 px'de
+   * bile sütun ~42 px, yükseklik 48 px — dokunma hedefi ayakta.
+   */
   .topbar-actions {
     position: fixed;
     left: 0;
     right: 0;
     bottom: 0;
     z-index: 30;
-    flex-wrap: nowrap;
-    justify-content: flex-start;
-    gap: 6px;
-    padding: 8px 10px calc(8px + env(safe-area-inset-bottom, 0px));
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
+    gap: 2px;
+    padding: 4px 4px calc(4px + env(safe-area-inset-bottom, 0px));
     background: var(--panel-solid);
     border-top: 1px solid var(--line);
-    overflow-x: auto;
-    overscroll-behavior-x: contain;
-    scrollbar-width: none;
   }
 
-  .topbar-actions::-webkit-scrollbar {
-    display: none;
-  }
-
-  .topbar-actions button {
-    flex: 0 0 auto;
+  .topbar-actions .dock-tab {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
     /* Dokunma hedefi: 44px Apple ve Google'ın ortak tavsiyesi. */
-    min-height: 44px;
-    padding: 8px 14px;
+    min-height: 48px;
+    padding: 4px 2px;
+    border-color: transparent;
+    background: transparent;
+  }
+
+  .topbar-actions .dock-tab.active {
+    background: var(--accent-soft, rgba(127, 212, 255, 0.14));
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .dock-label {
+    font-size: 9px;
+    line-height: 1.1;
+    letter-spacing: 0.02em;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .speed {
     min-height: 38px;
   }
 
-  /* Modal alt sayfaya döner: başparmakla kapatılabilir mesafede. */
+  /*
+   * Modal alt sayfaya döner ama RIHTIMIN ÜSTÜNDE durur.
+   *
+   * Tam ekranı kaplasaydı rıhtım örtülür ve panel değiştirmek için önce
+   * kapatmak gerekirdi — iki dokunuş, üstelik hangi panelin açık olduğu
+   * görünmez. Sayfa rıhtımın üstünde bitince rıhtım bir sekme çubuğuna
+   * dönüşüyor: açık sekme işaretli, geçiş tek dokunuş.
+   */
   .modal-backdrop {
     place-items: end stretch;
+    bottom: calc(56px + env(safe-area-inset-bottom, 0px));
   }
 
   .modal {
     width: 100%;
-    max-height: 88vh;
+    /*
+     * Sınır GÖRÜNTÜ ALANINA bağlı, kapsayıcıya değil.
+     *
+     * `max-height: 100%` burada hiçbir şey sınırlamıyor: ızgara satırı
+     * içerik boyunda olduğu için yüzde çözülmüyor ve panel 664 px'lik
+     * ekranda 956 px'e taşıyor. Rıhtımın yüksekliği (56 px) düşülmüş bir
+     * `vh` hesabı hem sınırı hem sekme çubuğunun yerini garanti ediyor.
+     */
+    max-height: calc(100vh - 56px - env(safe-area-inset-bottom, 0px));
     border-radius: var(--radius) var(--radius) 0 0;
     border-bottom: none;
-    padding-bottom: env(safe-area-inset-bottom, 0px);
   }
 
   .modal-head {
