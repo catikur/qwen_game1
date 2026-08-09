@@ -247,6 +247,21 @@ Ve bir kez daha: **eklediğin kontrol, sonraki kontrolün ortamını
 değiştirebilir.** Aynı tuzağa Tur 5'te de düşülmüştü (alt sayfa açıkken
 ölçülen sürükleme).
 
+Dördüncüsü de bu turda ortaya çıktı ve tanı koyduran şey yine sayının
+kendisiydi: **"Devralınan binalar haritada el değiştiriyor"** kontrolü
+`after === mine + theirs` diye tam eşitlik arıyordu ve bir koşumda 29
+yerine 30 gördü. Hata değil — devralma bir gün içinde oluyor ve o gün
+şehir çalışmaya devam ediyor; oyuncu ilgisiz bir sebeple bir bina daha
+kazanabiliyor. Tarayıcı testinde adımlar arası geçen gün sayısı
+makinenin hızına bağlı olduğu için bu her koşumda aynı yere denk
+gelmiyor.
+
+Sorulan şey "oyuncunun tam kaç binası var" değildi, "hedefin binaları el
+değiştirdi mi". Ölçüt ikiye ayrıldı: oyuncu en az o kadar bina kazandı
+**ve** devralınan şirkete ait bina kalmadı. **Bir kontrolün ölçütü,
+sorduğu sorudan dar olmamalı** — daha dar bir ölçüt, doğru davranışı
+yanlış raporlar.
+
 ### 2.5 Kalite tek kademeden dört kademeye
 
 Eskiden tek karar vardı: gölge açık ya da kapalı. Bu iki sorunu birden

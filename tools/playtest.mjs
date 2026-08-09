@@ -851,18 +851,32 @@ const findTile = (page, kind) =>
     const theirs = Object.values(s.buildings).filter((b) => b.companyId === target.id).length;
     engine.dispatch({ type: 'BUY_SHARES', companyId: target.id, count: 5100 });
     engine.runDay();
+    const next = getState();
     return {
       name: target.name,
-      gone: getState().companies[target.id] === undefined,
+      gone: next.companies[target.id] === undefined,
       mine,
       theirs,
-      after: Object.values(getState().buildings).filter((b) => b.companyId === getState().playerCompanyId).length,
+      after: Object.values(next.buildings).filter((b) => b.companyId === next.playerCompanyId).length,
+      orphans: Object.values(next.buildings).filter((b) => b.companyId === target.id).length,
     };
   });
   check('Devralınan şirket oyundan çıkıyor', takeover.gone, takeover.name);
+  // TAM EŞİTLİK DEĞİL, DEVRİN KENDİSİ ÖLÇÜLÜYOR.
+  //
+  // Burada `after === mine + theirs` yazıyordu ve arada sırada bir fazla
+  // sayıyla kırılıyordu (4 → 30, beklenen 29). Sebep hata değil: devralma
+  // bir GÜN İÇİNDE oluyor ve o gün şehir çalışmaya devam ediyor, oyuncu
+  // ilgisiz bir sebeple bir bina daha kazanabiliyor. Tarayıcı testinde
+  // adımlar arası geçen gün sayısı makinenin hızına göre değiştiği için
+  // bu her koşumda aynı yere denk gelmiyor.
+  //
+  // Sorulan şey "oyuncunun tam kaç binası var" değil, "hedefin binaları
+  // el değiştirdi mi". İki koşullu ölçüt bunu doğrudan söylüyor ve
+  // ilgisiz bir inşaattan etkilenmiyor.
   check('Devralınan binalar haritada el değiştiriyor',
-    takeover.after === takeover.mine + takeover.theirs,
-    `${takeover.mine} → ${takeover.after} (+${takeover.theirs})`);
+    takeover.after >= takeover.mine + takeover.theirs && takeover.orphans === 0,
+    `${takeover.mine} → ${takeover.after} (en az +${takeover.theirs}) · sahipsiz kalan ${takeover.orphans}`);
 
   await page.waitForTimeout(400);
   const remaining = await page.locator('.bourse-row').count();
