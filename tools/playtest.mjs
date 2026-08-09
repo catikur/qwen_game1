@@ -1224,6 +1224,99 @@ const findTile = (page, kind) =>
       });
       return { vw, overflow: nav.scrollWidth - nav.clientWidth, buttons };
     });
+    // KATLANABİLİR PANELLER — dar ekranın dikey bütçesi.
+    //
+    // Ölçüm: lens çubuğu 104 px, yapı menüsü 292 px, haber akışı 102 px.
+    // HUD içeriği 967 px olduğu için 664 px'lik ekranda 303 px kaydırma
+    // gerekiyordu ve haritaya kesintisiz kalan pay %38'e düşüyordu.
+    //
+    // Kontrol üç şeyi birden tutuyor: paneller katlanabiliyor, katlıyken
+    // kaydırma gerekmiyor, ve harita ekranın yarısına yakınını alıyor.
+    const hud = await m.evaluate(() => {
+      const el = document.querySelector('.hud');
+      const vh = innerHeight;
+      const heads = [...document.querySelectorAll('.collapse-head')].map((b) => ({
+        kind: b.dataset.collapse,
+        h: Math.round(b.getBoundingClientRect().height),
+        expanded: b.getAttribute('aria-expanded') === 'true',
+        labelled: b.textContent.trim().length > 0,
+      }));
+      // Haritanın kesintisiz görünen dikey payı: opak kutuların
+      // kaplamadığı satırlar.
+      const rows = new Array(vh).fill(false);
+      for (const box of document.querySelectorAll(
+        '.topbar, .lensbar, .buildpanel, .news, .inspector.has-selection, .topbar-actions',
+      )) {
+        const r = box.getBoundingClientRect();
+        if (r.height <= 0) continue;
+        for (let y = Math.max(0, Math.floor(r.top)); y < Math.min(vh, Math.ceil(r.bottom)); y++) {
+          rows[y] = true;
+        }
+      }
+      const free = rows.filter((on) => !on).length;
+      return {
+        scrollNeeded: Math.round(el.scrollHeight - el.clientHeight),
+        heads,
+        mapShare: free / vh,
+      };
+    });
+
+    check(
+      `${deviceName}: lens, yapı ve haber panelleri katlanabiliyor`,
+      hud.heads.length === 3 && hud.heads.every((h) => !h.expanded && h.labelled),
+      hud.heads.map((h) => `${h.kind}${h.expanded ? ' AÇIK' : ''}`).join(', ') || 'başlık yok',
+    );
+    check(
+      `${deviceName}: katlı panellerin dokunma hedefi yeterli`,
+      hud.heads.every((h) => h.h >= 44),
+      `en kısa başlık ${Math.min(...hud.heads.map((h) => h.h))}px`,
+    );
+    check(
+      `${deviceName}: paneller katlıyken HUD kaydırma istemiyor`,
+      hud.scrollNeeded <= 8,
+      `gereken kaydırma ${hud.scrollNeeded}px`,
+    );
+    check(
+      `${deviceName}: harita ekranın en az %45'ini alıyor`,
+      hud.mapShare >= 0.45,
+      `harita payı %${Math.round(hud.mapShare * 100)}`,
+    );
+
+    // Katlama gerçekten açıyor mu — ve açılan içerik ekranda mı?
+    const lensHead = m.locator('.collapse-head[data-collapse="lens"]');
+    await lensHead.click();
+    const lensOpen = await m.evaluate(() => {
+      const body = document.querySelector('.lens-body');
+      if (!body) return null;
+      const r = body.getBoundingClientRect();
+      return {
+        visible: r.height > 0,
+        onScreen: r.top >= 0 && r.bottom <= innerHeight + 1,
+        buttons: document.querySelectorAll('.lens-buttons .lens').length,
+      };
+    });
+    check(
+      `${deviceName}: lens katmanı açılıyor ve ekranda kalıyor`,
+      Boolean(lensOpen && lensOpen.visible && lensOpen.onScreen && lensOpen.buttons === 6),
+      lensOpen ? `${lensOpen.buttons} lens, ${lensOpen.onScreen ? 'ekranda' : 'TAŞIYOR'}` : 'açılmadı',
+    );
+
+    // Lens seçince katman kendini kapatmalı: seçtikten sonra elle
+    // kapatmak zorunda bırakmak fazladan bir dokunuş.
+    await m.locator('.lens-buttons .lens').nth(1).click();
+    const afterPick = await m.evaluate(() => ({
+      closed: document.querySelector('.lensbar')?.classList.contains('closed') ?? false,
+      title: document.querySelector('[data-collapse="lens"] .collapse-title')?.textContent ?? '',
+    }));
+    check(
+      `${deviceName}: lens seçilince katman kapanıyor ve seçimi yazıyor`,
+      afterPick.closed && afterPick.title.includes('Fırsat'),
+      `${afterPick.closed ? 'kapandı' : 'AÇIK KALDI'} · başlık "${afterPick.title.trim()}"`,
+    );
+    await m.evaluate(() => {
+      document.querySelector('.lens-buttons .lens')?.click();
+    });
+
     const outside = dock.buttons.filter((b) => !b.inside);
     check(
       `${deviceName}: rıhtımdaki her düğme ekranda`,

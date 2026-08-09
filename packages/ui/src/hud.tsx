@@ -10,6 +10,7 @@ import {
 import type { GameSpeed } from '@capital/core';
 import { CeoPortrait } from './CeoPortrait';
 import { AuctionChip } from './AuctionPanel';
+import { useCollapsible } from './collapse';
 import { useGame, useGameState } from './useGame';
 
 /** Üst bar: oyuncunun her an görmesi gereken beş sayı ve zaman kontrolü. */
@@ -242,24 +243,141 @@ function Metric({
 export function LensBar(): ReactElement {
   const { view, setView } = useGame();
   const active = LENSES.find((lens) => lens.id === view.lens);
+  const { open, toggle, setOpen } = useCollapsible();
 
   return (
-    <div className="lensbar">
-      <div className="lens-buttons">
-        {LENSES.map((lens) => (
-          <button
-            key={lens.id}
-            type="button"
-            className={view.lens === lens.id ? 'lens active' : 'lens'}
-            onClick={() => setView({ lens: lens.id })}
-            aria-pressed={view.lens === lens.id}
-          >
-            {lens.name}
-          </button>
-        ))}
+    <div className={open ? 'lensbar' : 'lensbar closed'}>
+      {/*
+       * Katlama başlığı yalnızca dar ekranda görünüyor (CSS).
+       *
+       * Kapalıyken bile AKTİF LENSİ yazıyor: bir kontrolü katlamak onun
+       * ne durumda olduğunu gizlemeyi gerektirmiyor. Harita renkleri
+       * lense göre değiştiği için "hangi lens açık" sorusunun cevabı her
+       * an görünür kalmalı — yoksa oyuncu renkleri yanlış okur.
+       */}
+      <button
+        type="button"
+        className="collapse-head"
+        onClick={toggle}
+        aria-expanded={open}
+        data-collapse="lens"
+      >
+        <LensIcon name={active?.id ?? 'none'} />
+        <span className="collapse-title">Harita: {active?.name ?? 'Şehir'}</span>
+        <span className="collapse-chevron" aria-hidden="true" />
+      </button>
+
+      <div className="lens-body">
+        <div className="lens-buttons">
+          {LENSES.map((lens) => (
+            <button
+              key={lens.id}
+              type="button"
+              className={view.lens === lens.id ? 'lens active' : 'lens'}
+              onClick={() => {
+                setView({ lens: lens.id });
+                // Seçim yapıldı — katman kendini kapatsın ki harita
+                // hemen görünsün. Dar ekranda seçtikten sonra elle
+                // kapatmak zorunda bırakmak fazladan bir dokunuş.
+                if (window.matchMedia?.('(max-width: 860px)').matches) setOpen(false);
+              }}
+              aria-pressed={view.lens === lens.id}
+              title={lens.hint}
+            >
+              <LensIcon name={lens.id} />
+              <span className="lens-name">{lens.name}</span>
+            </button>
+          ))}
+        </div>
+        {active && <p className="lens-hint">{active.hint}</p>}
       </div>
-      {active && <p className="lens-hint">{active.hint}</p>}
     </div>
+  );
+}
+
+/** Lens ikonları — `currentColor` ile çizilir, iki temada da çalışır. */
+function LensIcon({ name }: { name: string }): ReactElement {
+  const paths: Record<string, ReactElement> = {
+    none: (
+      <>
+        <path d="M4 20V9l6-4v15" />
+        <path d="M10 12h9v8" />
+        <path d="M3 20h18" />
+      </>
+    ),
+    opportunity: (
+      <>
+        <path d="M12 3.5c2.6 3 4 5.2 4 7.3a4 4 0 0 1-8 0c0-2.1 1.4-4.3 4-7.3Z" />
+        <path d="M9.5 20.5h5" />
+      </>
+    ),
+    landValue: (
+      <>
+        <path d="M20 12.5 12.5 20a1.6 1.6 0 0 1-2.3 0l-6.2-6.2a1.6 1.6 0 0 1 0-2.3L11.5 4H19a1 1 0 0 1 1 1v7.5Z" />
+        <path d="M16 8v0" />
+      </>
+    ),
+    competition: (
+      <>
+        <path d="M8 21V10" />
+        <path d="M16 21V4" />
+        <path d="M4 21h16" />
+        <path d="M8 10 4.5 6.5M16 4l3.5 3.5" />
+      </>
+    ),
+    income: (
+      <>
+        <ellipse cx="12" cy="7" rx="7" ry="3" />
+        <path d="M5 7v10c0 1.7 3.1 3 7 3s7-1.3 7-3V7" />
+        <path d="M5 12c0 1.7 3.1 3 7 3s7-1.3 7-3" />
+      </>
+    ),
+    ownership: (
+      <>
+        <circle cx="8.5" cy="9.5" r="3.5" />
+        <path d="M11 12l7 7" />
+        <path d="M16 17l2-2" />
+      </>
+    ),
+  };
+  return (
+    <svg
+      className="lens-icon"
+      viewBox="0 0 24 24"
+      width="18"
+      height="18"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.7"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      focusable="false"
+    >
+      {paths[name] ?? paths.none}
+    </svg>
+  );
+}
+
+/** Haber akışının katlama ikonu — megafon. */
+function NewsIcon(): ReactElement {
+  return (
+    <svg
+      className="collapse-icon"
+      viewBox="0 0 24 24"
+      width="18"
+      height="18"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.7"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path d="M4 10v4a1 1 0 0 0 1 1h3l6 4V5L8 9H5a1 1 0 0 0-1 1Z" />
+      <path d="M18 9.5a3.5 3.5 0 0 1 0 5" />
+    </svg>
   );
 }
 
@@ -272,9 +390,34 @@ const TONE_LABEL: Record<string, string> = {
 
 export function NewsFeed(): ReactElement {
   const state = useGameState();
+  const { open, toggle } = useCollapsible();
+  const latest = state.news[0];
 
   return (
-    <section className="news" aria-label="Haber akışı">
+    <section className={open ? 'news' : 'news closed'} aria-label="Haber akışı">
+      {/*
+       * Haber akışı da dar ekranda katlanıyor. Lens ve yapı menüsü
+       * katlandıktan sonra boşalan yeri BU yutuyordu: 102 px'den 153 px'e
+       * büyüyüp haritaya kalan payı %38'de bırakmıştı.
+       *
+       * Kapalıyken en son haberin başlığı görünüyor — akış bir bildirim
+       * kanalı, tamamen susturmak yeni bir olayı kaçırmak demek olurdu.
+       */}
+      <button
+        type="button"
+        className="collapse-head"
+        onClick={toggle}
+        aria-expanded={open}
+        data-collapse="news"
+      >
+        <NewsIcon />
+        <span className="collapse-title">
+          {latest ? latest.title : 'Şehir Haberleri'}
+          {latest && <span className="collapse-badge">{latest.day}. gün</span>}
+        </span>
+        <span className="collapse-chevron" aria-hidden="true" />
+      </button>
+
       <h2>Şehir Haberleri</h2>
       <ul>
         {state.news.slice(0, 8).map((item) => (
