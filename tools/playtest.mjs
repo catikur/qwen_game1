@@ -1513,8 +1513,28 @@ const findTile = (page, kind) =>
       return false;
     };
 
+    /**
+     * Sürüklemenin başladığı noktada ne var?
+     *
+     * Bu ölçüm iki kez kırmızı yandı ve iki kez "kamera hiç hareket
+     * etmedi" anlamına gelen aynı sayıyı verdi (6,75). Birincisinde sebep
+     * açık kalmış bir paneldi. Sebebi her seferinde elle aramak yerine
+     * sondaj artık çarptığı şeyi rapor ediyor: bir daha kırmızı yanarsa
+     * hangi öğenin dokunuşu yediğini kendisi söyleyecek.
+     */
+    const hitAt = (x, y) =>
+      m.evaluate(([px, py]) => {
+        const el = document.elementFromPoint(px, py);
+        if (!el) return 'yok';
+        return `${el.tagName.toLowerCase()}.${String(el.className).split(' ')[0] || '-'}`;
+      }, [x, y]);
+
     const dragDrift = async (fromX, fromY, toX, toY) => {
       await cameraSettled();
+      const hit = await hitAt(fromX, fromY);
+      if (!hit.startsWith('canvas')) {
+        return { drift: null, hit };
+      }
       const before = await groundAt(fromX, fromY);
       await touch('touchStart', [[fromX, fromY]]);
       for (let i = 1; i <= 6; i++) {
@@ -1523,18 +1543,24 @@ const findTile = (page, kind) =>
       await touch('touchEnd', []);
       await cameraSettled();
       const after = await groundAt(toX, toY);
-      if (!before || !after) return null;
-      return Math.hypot(after.x - before.x, after.z - before.z);
+      if (!before || !after) return { drift: null, hit };
+      return { drift: Math.hypot(after.x - before.x, after.z - before.z), hit };
     };
 
     // Harita bandının içinde kal: üst bar ve paneller dışında bir şerit.
     const py = canvasBox.y + canvasBox.height * 0.3;
     const rightDrift = await dragDrift(mx - 55, py, mx + 55, py);
     const downDrift = await dragDrift(mx, py - 40, mx, py + 40);
-    check(`${deviceName}: yatay sürüklemede tutulan kare kaymıyor`,
-      rightDrift !== null && rightDrift < 0.5, `sapma ${rightDrift?.toFixed(2) ?? '—'} birim`);
-    check(`${deviceName}: dikey sürüklemede tutulan kare kaymıyor`,
-      downDrift !== null && downDrift < 0.5, `sapma ${downDrift?.toFixed(2) ?? '—'} birim`);
+    check(
+      `${deviceName}: yatay sürüklemede tutulan kare kaymıyor`,
+      rightDrift.drift !== null && rightDrift.drift < 0.5,
+      `sapma ${rightDrift.drift?.toFixed(2) ?? '—'} birim · dokunulan: ${rightDrift.hit}`,
+    );
+    check(
+      `${deviceName}: dikey sürüklemede tutulan kare kaymıyor`,
+      downDrift.drift !== null && downDrift.drift < 0.5,
+      `sapma ${downDrift.drift?.toFixed(2) ?? '—'} birim · dokunulan: ${downDrift.hit}`,
+    );
 
     const zoomBefore = await info();
     await touch('touchStart', [[mx - 50, my], [mx + 50, my]]);
