@@ -100,6 +100,7 @@ Oynanınca üç hata daha çıktı ve üçü de ancak elde tutunca görülüyord
 | "kaydırma baya ters" | ekran ekseni dünyaya ters işaretle dönüyor | sapma **7,7 → 0,00** |
 | "menü sorunumuz devam ediyor" | yedi yazılı düğme 516px istiyor, ekran 390px | ikon ızgarası · taşma **126px → 0** |
 | "hep ekranda duran panelleri açılır kapanır yap" | üç panel 498px, HUD içeriği 967px | katlanabilir · harita payı **%38 → %49** |
+| "üst blok küçülsün, paneller sağa ikon olsun, zincir taşıyor" | üst bar 177px (%27); zincir şeridi 490px'i 388px'e sığdırmaya çalışıyor | ikon metrikler + yüzen sütun + dikey zincir · harita payı **%49 → %68** |
 
 Üçüncüsünde asıl ders testteydi: kontrol vardı, yeşil yanıyordu ve
 `scrollIntoViewIfNeeded()` çağırdığı için ekran dışındaki düğmeyi önce
@@ -116,6 +117,13 @@ indi, kaydırma 303 → 51 px'e düştü, **ama harita payı %38'den ancak
 ayırıcısı sabit `32vh`'ti ve kazanılan alandan pay almıyordu. **Bir yeri
 boşaltmak, o yerin istediğin şeye gideceği anlamına gelmiyor** —
 kazanılan alanı kimin alacağını düzenin kendisi belirler.
+
+Dördüncüsü bir tur sonra, aynı ölçütün kendisinde çıktı: harita payı
+**satır** bazında ölçülüyordu ve paneller tam genişlikteyken doğruydu.
+Paneller 44 px'lik ikonlara inince ölçüt yanlış oldu — bir ikon,
+bulunduğu satırın tamamını kapalı sayıyor ve haritayı %68 yerine **%5**
+gösteriyordu. **Bir ölçüt, ölçtüğü şeyin şekli değişince sessizce
+geçersizleşebilir.**
 
 ### Tur 7 — Kıt olan para değil toprak · `docs/TOPRAK-TASARIMI.md`
 

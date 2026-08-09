@@ -48,16 +48,30 @@ export function TopBar(): ReactElement {
         </div>
       </div>
 
+      {/*
+       * Metrikler dar ekranda İKON + DEĞER, geniş ekranda etiket + değer.
+       *
+       * Ölçüm: üst bar 177 px, yani 664 px'lik ekranın %27'si — kalan en
+       * büyük sabit blok oydu. Yerin çoğunu değerler değil ETİKETLER
+       * yiyordu: "ŞİRKET DEĞERİ" 13 karakter, gösterdiği sayı 8.
+       *
+       * Etiket silinmiyor, ikona dönüşüyor: `title` ve `aria-label` tam
+       * adı taşımaya devam ediyor, yani ekran okuyucu ve uzun basma
+       * ipucu bir şey kaybetmiyor.
+       */}
       <div className="metrics">
-        <Metric label="Nakit" value={formatMoney(player.cash)} tone="accent" />
+        <Metric icon="cash" label="Nakit" value={formatMoney(player.cash)} tone="accent" />
         <Metric
+          icon="profit"
           label="Günlük kâr"
           value={formatMoney(profit)}
           tone={profit >= 0 ? 'good' : 'bad'}
         />
-        <Metric label="Şirket değeri" value={formatMoney(player.netWorth)} />
-        {player.debt > 0 && <Metric label="Borç" value={formatMoney(player.debt)} tone="bad" />}
-        <Metric label="Sıralama" value={`${rank}.`} tone={rank === 1 ? 'good' : 'plain'} />
+        <Metric icon="worth" label="Şirket değeri" value={formatMoney(player.netWorth)} />
+        {player.debt > 0 && (
+          <Metric icon="debt" label="Borç" value={formatMoney(player.debt)} tone="bad" />
+        )}
+        <Metric icon="rank" label="Sıralama" value={`${rank}.`} tone={rank === 1 ? 'good' : 'plain'} />
       </div>
 
       {/*
@@ -217,19 +231,81 @@ function PanelIcon({ name }: { name: string }): ReactElement {
 }
 
 function Metric({
+  icon,
   label,
   value,
   tone = 'plain',
 }: {
+  icon: string;
   label: string;
   value: string;
   tone?: 'plain' | 'accent' | 'good' | 'bad';
 }): ReactElement {
   return (
-    <div className={`metric metric-${tone}`}>
+    <div className={`metric metric-${tone}`} title={label}>
+      <MetricIcon name={icon} />
       <span className="metric-label">{label}</span>
-      <span className="metric-value">{value}</span>
+      <span className="metric-value" aria-label={`${label}: ${value}`}>
+        {value}
+      </span>
     </div>
+  );
+}
+
+/** Metrik ikonları — dar ekranda etiketin yerini alırlar. */
+function MetricIcon({ name }: { name: string }): ReactElement {
+  const paths: Record<string, ReactElement> = {
+    cash: (
+      <>
+        <rect x="2.5" y="6" width="19" height="12" rx="2" />
+        <circle cx="12" cy="12" r="2.6" />
+        <path d="M6 12v0M18 12v0" />
+      </>
+    ),
+    profit: (
+      <>
+        <path d="M3 17l6-6 4 3 8-8" />
+        <path d="M16 6h5v5" />
+      </>
+    ),
+    worth: (
+      <>
+        <path d="M4 20V7l8-3v16" />
+        <path d="M12 11h8v9" />
+        <path d="M3 20h18" />
+      </>
+    ),
+    debt: (
+      <>
+        <path d="M12 3.8 21 19.5H3L12 3.8Z" />
+        <path d="M12 10v4" />
+        <path d="M12 17v0" />
+      </>
+    ),
+    rank: (
+      <>
+        <path d="M7 4h10v5a5 5 0 0 1-10 0V4Z" />
+        <path d="M7 6H4.5V8a3 3 0 0 0 3 3M17 6h2.5V8a3 3 0 0 1-3 3" />
+        <path d="M9.5 20h5M12 14v6" />
+      </>
+    ),
+  };
+  return (
+    <svg
+      className="metric-icon"
+      viewBox="0 0 24 24"
+      width="15"
+      height="15"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.7"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      focusable="false"
+    >
+      {paths[name]}
+    </svg>
   );
 }
 

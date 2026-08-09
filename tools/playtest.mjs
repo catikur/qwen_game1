@@ -371,21 +371,26 @@ const findTile = (page, kind) =>
   // kare hesaplıyor. İkisinin arasında okunan değer 0 çıkıyor ve ÇALIŞAN
   // bir özellik hatalı raporlanıyordu.
   //
-  // `timeOfDay` her karede biraz ilerlediği için "değer değişti" ölçütü
-  // bir karenin çizildiğinin kanıtı. Lens değişiminden SONRAKİ ilk
-  // örnek referans alınıyor.
+  // KARE SAYACINI BEKLE, SİMÜLASYON SAATİNİ DEĞİL.
+  //
+  // İlk düzeltmem "kare çizildi mi"yi `timeOfDay`'in ilerlemesinden
+  // çıkarıyordu. O çıkarım oyun DURAKLATILMIŞKEN yanlış: saat durunca
+  // koşul hiç sağlanmıyor, sondaj 10 sn zaman aşımına düşüyor ve
+  // ÇALIŞAN bir özelliği "emissive 0.00" diye raporluyordu — üstelik
+  // düzeltmeden önceki halinden daha sık.
+  //
+  // Çizim döngüsü simülasyon saatinden bağımsız döner; doğru gösterge
+  // sahnenin kendi kare sayacı.
   const atNight = async (lens) =>
     page.evaluate(
       async (l) => {
+        const before = window.__capital.renderInfo()?.frameCount ?? 0;
         window.__capital.setLens(l);
         window.__capital.setTimeOfDay(0.75); // güneşin en alçak olduğu an
-        const baseline = window.__capital.renderInfo()?.timeOfDay ?? -1;
         const deadline = Date.now() + 10000;
         while (Date.now() < deadline) {
           const info = window.__capital.renderInfo();
-          if (info && info.activeLens === l && info.timeOfDay > 0.75 && info.timeOfDay !== baseline) {
-            return info;
-          }
+          if (info && info.activeLens === l && info.frameCount > before + 1) return info;
           await new Promise((r) => setTimeout(r, 25));
         }
         return window.__capital.renderInfo();
@@ -473,6 +478,70 @@ const findTile = (page, kind) =>
 
   const slots = await page.locator('.chain').first().locator('.chain-slot').count();
   check('Kartta dört yuva var', slots === 4, `${slots} yuva`);
+
+  // ZİNCİR YUVALARI DAR EKRANDA KESİLMEMELİ.
+  //
+  // Yatay şerittiler ve aritmetik tutmuyordu: 4 yuva × en az 118 px + 3 ×
+  // 6 px boşluk = 490 px, telefonda modal gövdesi 388 px. `overflow-x:
+  // auto` bunu taşırmıyor ama GİZLİYOR — sağdaki iki halka kesiliyor ve
+  // kaydırılabildiğine dair hiçbir işaret yok.
+  //
+  // Kontrol burada, çünkü zincir kartı ancak gerçekten ürün satan bir
+  // oyuncuda doğuyor; mobil bölümde sıfırdan o duruma gelmek pahalı.
+  // Aynı sayfayı daraltmak hem ucuz hem gerçek.
+  await page.setViewportSize({ width: 390, height: 664 });
+  await page.waitForTimeout(500);
+  const chainNarrow = await page.evaluate(() => {
+    const strip = document.querySelector('.chain-slots');
+    if (!strip) return null;
+    const r = strip.getBoundingClientRect();
+    return {
+      hidden: Math.round(strip.scrollWidth - strip.clientWidth),
+      overflowsRight: Math.round(Math.max(0, r.right - innerWidth)),
+      slots: strip.querySelectorAll('.chain-slot').length,
+    };
+  });
+  check(
+    'Dar ekranda zincir yuvaları kesilmiyor',
+    Boolean(chainNarrow && chainNarrow.hidden <= 2 && chainNarrow.overflowsRight === 0),
+    chainNarrow
+      ? `${chainNarrow.slots} yuva · gizli ${chainNarrow.hidden}px · taşan ${chainNarrow.overflowsRight}px`
+      : 'şerit yok',
+  );
+
+  // Aynı daraltmada bütün panellerde gizli yatay kaydırıcı var mı?
+  const hiddenScrollers = [];
+  for (const panel of ['chain', 'rivalry', 'bourse', 'company', 'rivals', 'saves', 'help']) {
+    await page.evaluate(() => document.querySelector('.modal-head button.icon')?.click());
+    await page.waitForTimeout(150);
+    await page.locator(`.topbar-actions [data-panel="${panel}"]`).click();
+    await page.waitForTimeout(250);
+    const found = await page.evaluate(() => {
+      const body = document.querySelector('.modal-body');
+      if (!body) return [];
+      const out = [];
+      for (const el of body.querySelectorAll('*')) {
+        const r = el.getBoundingClientRect();
+        if (r.width === 0 || r.height === 0) continue;
+        if (el.scrollWidth - el.clientWidth > 2) {
+          out.push(`${String(el.className).split(' ')[0] || el.tagName.toLowerCase()}`);
+        }
+      }
+      return out;
+    });
+    if (found.length) hiddenScrollers.push(`${panel}: ${found[0]}`);
+  }
+  check(
+    'Hiçbir panelde gizli yatay kaydırıcı yok',
+    hiddenScrollers.length === 0,
+    hiddenScrollers.join(', ') || '7 panel temiz',
+  );
+  await page.evaluate(() => document.querySelector('.modal-head button.icon')?.click());
+  await page.waitForTimeout(200);
+  await page.setViewportSize({ width: 1280, height: 860 });
+  await page.waitForTimeout(500);
+  await page.locator('.topbar-actions [data-panel="chain"]').click();
+  await page.waitForTimeout(400);
 
   const stateLabels = await page.locator('.chain').first().locator('.chain-state').allTextContents();
   check(
@@ -1235,29 +1304,41 @@ const findTile = (page, kind) =>
     const hud = await m.evaluate(() => {
       const el = document.querySelector('.hud');
       const vh = innerHeight;
+      const vw = innerWidth;
       const heads = [...document.querySelectorAll('.collapse-head')].map((b) => ({
         kind: b.dataset.collapse,
         h: Math.round(b.getBoundingClientRect().height),
         expanded: b.getAttribute('aria-expanded') === 'true',
         labelled: b.textContent.trim().length > 0,
       }));
-      // Haritanın kesintisiz görünen dikey payı: opak kutuların
-      // kaplamadığı satırlar.
-      const rows = new Array(vh).fill(false);
+      // Haritanın görünen payı: opak kutuların kaplamadığı ALAN.
+      //
+      // Bu ölçüt önce satır bazlıydı ve paneller tam genişlikteyken
+      // doğru cevabı veriyordu. Kapalı paneller 44 px'lik ikonlara
+      // inince yanlış oldu: 44 px genişliğindeki bir ikon, bulunduğu
+      // satırın TAMAMINI kapalı sayıyor ve harita payını %68 yerine %5
+      // gösteriyordu. Genişlik önemli hale geldiği anda ölçüt de
+      // genişliği görmek zorunda.
+      const STEP = 4;
+      const cols = Math.ceil(vw / STEP);
+      const rowCount = Math.ceil(vh / STEP);
+      const grid = new Array(cols * rowCount).fill(false);
       for (const box of document.querySelectorAll(
         '.topbar, .lensbar, .buildpanel, .news, .inspector.has-selection, .topbar-actions',
       )) {
         const r = box.getBoundingClientRect();
-        if (r.height <= 0) continue;
-        for (let y = Math.max(0, Math.floor(r.top)); y < Math.min(vh, Math.ceil(r.bottom)); y++) {
-          rows[y] = true;
+        if (r.height <= 0 || r.width <= 0) continue;
+        for (let y = Math.max(0, Math.floor(r.top / STEP)); y < Math.min(rowCount, Math.ceil(r.bottom / STEP)); y++) {
+          for (let x = Math.max(0, Math.floor(r.left / STEP)); x < Math.min(cols, Math.ceil(r.right / STEP)); x++) {
+            grid[y * cols + x] = true;
+          }
         }
       }
-      const free = rows.filter((on) => !on).length;
+      const free = grid.filter((on) => !on).length;
       return {
         scrollNeeded: Math.round(el.scrollHeight - el.clientHeight),
         heads,
-        mapShare: free / vh,
+        mapShare: free / grid.length,
       };
     });
 
@@ -1277,8 +1358,8 @@ const findTile = (page, kind) =>
       `gereken kaydırma ${hud.scrollNeeded}px`,
     );
     check(
-      `${deviceName}: harita ekranın en az %45'ini alıyor`,
-      hud.mapShare >= 0.45,
+      `${deviceName}: harita ekranın en az %60'ını alıyor`,
+      hud.mapShare >= 0.6,
       `harita payı %${Math.round(hud.mapShare * 100)}`,
     );
 

@@ -318,6 +318,79 @@ Ders: **bir yeri boşaltmak, o yerin istediğin şeye gideceği anlamına
 gelmiyor.** Kazanılan alanı kimin alacağını düzenin kendisi belirliyor;
 ölçmeseydik "paneller küçüldü, iş bitti" derdik.
 
+### 2.4e Üst bar, yüzen ikon sütunu ve kesilen zincir
+
+Beşinci oyun raporu üç madde getirdi ve üçü de ölçülebilirdi.
+
+#### Üst bar: etiketler ikona döndü
+
+Paneller katlandıktan sonra kalan en büyük sabit blok üst bardı: **177
+px**, yani 664 px'lik ekranın **%27**'si. Yerin çoğunu değerler değil
+**etiketler** yiyordu — "ŞİRKET DEĞERİ" 13 karakter, gösterdiği sayı 8 —
+ve her metrik iki satır kaplıyordu.
+
+Dar ekranda etiket ikona dönüyor, metrik tek satıra iniyor. Etiket
+silinmedi: `title` ve `aria-label` tam adı taşımaya devam ediyor, yani
+ekran okuyucu ve uzun basma ipucu bir şey kaybetmiyor.
+
+**177 → 128 px** (%27 → %19).
+
+#### Üç panel haritanın sağ kenarına toplandı
+
+Katlanabilir hâlleriyle bile üç tam genişlikte şerit demekti: 3 × 46 px
+artı boşluklar. Kapalı bir panelin taşıdığı tek şey ikonu ve tek satırlık
+özeti olduğuna göre tam genişlik gereksiz.
+
+Şimdi kapalıyken **44 px'lik ikon düğmeleri** olarak sağ kenarda
+duruyorlar; açıldıklarında tam genişlikte bir sayfaya dönüşüp rıhtımın
+üstünde bitiyorlar.
+
+> **İlk denemem yanlıştı ve ölçüm onu çürüttü.** Üçünü `position: fixed`
+> ile sağ *alta* çivilemiştim. Parsel sayfası açıldığında sütunun
+> çakışmaması için yukarı itilmesi gerekiyor ve itmenin miktarı sayfanın
+> gerçek yüksekliğine bağlı; `52vh` gibi bir tahminle yazınca sütun
+> ekranın **dışına** çıktı (üst kenar −1 px).
+>
+> Akışta kalıp sağa yaslanmak aynı görsel sonucu sabit sayı olmadan
+> veriyor. Parsel sayfası alttan gelince kimse kimseyi itmiyor, çünkü
+> ikisi de kendi yerinde duruyor.
+
+#### Zincir yuvaları kesiliyordu
+
+Rapor: *"zincir'e tıkladığımda sağdan ekrandan taşıyor."*
+
+Aritmetik tutmuyordu: 4 yuva × en az 118 px + 3 × 6 px boşluk = **490
+px**, telefonda modal gövdesi **388 px**. `overflow-x: auto` bunu
+taşırmıyor ama **gizliyor** — sağdaki iki halka kesiliyor ve
+kaydırılabildiğine dair hiçbir işaret yok. Rıhtımda düzelttiğimiz gizli
+kaydırmanın aynısı, başka bir yerde.
+
+Zincir zaten sıralı bir anlatı (hammadde → ara mal → raf); telefonda
+doğal yönü dikey. Yuvalar alt alta akıyor, oklar aşağı bakıyor.
+
+Kontrol yedi panelin **hepsinde** gizli yatay kaydırıcı arıyor, çünkü
+aynı desen başka bir panelde de olabilirdi.
+
+#### Ölçülen sonuç
+
+| | Tur 8 sonu | şimdi |
+|---|---|---|
+| Üst bar | 177 px (%27) | **128 px (%19)** |
+| Harita payı | %49 | **%68** |
+| Zincir yuvaları | 490 px'i 388 px'e sığdırmaya çalışıyor | dikey, kesilme yok |
+
+#### Ölçütün kendisi yanlış hale geldi
+
+Harita payını **satır** bazında ölçüyorduk: opak kutuların kaplamadığı
+yatay şeritler. Paneller tam genişlikteyken doğru cevabı veriyordu.
+
+İkonlara inince yanlış oldu — 44 px genişliğindeki bir ikon, bulunduğu
+satırın **tamamını** kapalı sayıyor ve harita payını %68 yerine **%5**
+gösteriyordu. Genişlik önemli hale geldiği anda ölçüt de genişliği görmek
+zorunda; ölçüm alana çevrildi.
+
+**Bir ölçüt, ölçtüğü şeyin şekli değişince sessizce geçersizleşebilir.**
+
 ### 2.5 Kalite tek kademeden dört kademeye
 
 Eskiden tek karar vardı: gölge açık ya da kapalı. Bu iki sorunu birden
