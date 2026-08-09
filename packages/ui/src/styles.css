@@ -342,8 +342,28 @@ button.icon {
 }
 
 .lens {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   padding: 5px 10px;
   font-size: 12px;
+}
+
+.lens-icon {
+  flex: 0 0 auto;
+  opacity: 0.85;
+}
+
+/*
+ * KATLAMA BAŞLIĞI — geniş ekranda YOK.
+ *
+ * Masaüstünde bu panelleri katlamak bilgiyi bir dokunuş uzağa itmekten
+ * başka bir şey yapmaz; sıkışıklık yalnızca dar ekranda var (ölçüm:
+ * 390×664'te yapı menüsü 292 px, lens çubuğu 104 px, ikisi ekranın
+ * %60'ı). O yüzden başlık burada gizli, mobil bloğunda açılıyor.
+ */
+.collapse-head {
+  display: none;
 }
 
 .lens.active {
@@ -1064,6 +1084,153 @@ button.icon {
 
   .inspector {
     max-height: 50vh;
+  }
+
+  /*
+   * KATLANABİLİR PANELLER — dar ekranın asıl kazancı burada.
+   *
+   * Ölçüm (390×664): yapı menüsü 292 px, lens çubuğu 104 px. HUD'un
+   * toplam içeriği 967 px olduğu için 303 px kaydırma gerekiyordu ve
+   * haritaya kesintisiz kalan pay %38'e düşüyordu. İkisi de kapalı
+   * başlayınca panel yüksekliği başlık kadar kalıyor.
+   *
+   * Başlık BİLGİ TAŞIYOR: kapalıyken de aktif lensi, seçili bölgeyi ve
+   * kalan boş parseli yazıyor. Katlamak, durumu gizlemek demek değil.
+   */
+  .collapse-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    min-height: 44px;
+    padding: 8px 10px;
+    background: transparent;
+    border: none;
+    text-align: left;
+    font-size: 13px;
+    color: var(--text);
+  }
+
+  .collapse-title {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .collapse-badge {
+    flex: 0 0 auto;
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  .collapse-badge.tight {
+    color: var(--warn);
+  }
+
+  /* Şerit: kapalıyken sağa, açıkken aşağı bakar. */
+  .collapse-chevron {
+    flex: 0 0 auto;
+    width: 8px;
+    height: 8px;
+    border-right: 2px solid var(--muted);
+    border-bottom: 2px solid var(--muted);
+    transform: rotate(-45deg);
+    transition: transform 140ms ease;
+  }
+
+  .lensbar:not(.closed) .collapse-chevron,
+  .buildpanel:not(.closed) .collapse-chevron {
+    transform: rotate(45deg);
+  }
+
+  .lensbar,
+  .buildpanel {
+    padding: 0;
+  }
+
+  .lensbar.closed .lens-body,
+  .buildpanel.closed > header,
+  .buildpanel.closed > .buildlist,
+  .buildpanel.closed > .buildpanel-empty,
+  .news.closed > h2,
+  .news.closed > ul {
+    display: none;
+  }
+
+  .news {
+    padding: 0;
+  }
+
+  .news:not(.closed) > h2,
+  .news:not(.closed) > ul {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
+  .news:not(.closed) > ul {
+    padding-bottom: 10px;
+  }
+
+  .news:not(.closed) .collapse-chevron {
+    transform: rotate(45deg);
+  }
+
+  /*
+   * HARİTA BOŞALAN YERİN TAMAMINI ALIYOR.
+   *
+   * Ayırıcı sabit 32vh iken paneller katlandığında kazanılan yer haritaya
+   * DEĞİL haber akışına gidiyordu (102 → 153 px) ve harita payı %38'de
+   * kalıyordu. Ayırıcı esnek olunca artan yer yukarı, yani haritaya
+   * yazılıyor; paneller alt rıhtımın üstüne yığılıyor.
+   *
+   * Alt sınır duruyor: paneller tamamen açıldığında bile haritadan bir
+   * şerit görünsün, oyuncu neye baktığını kaybetmesin.
+   */
+  .hud::before {
+    flex: 1 1 auto;
+    min-height: 22vh;
+  }
+
+  .lensbar:not(.closed) .lens-body {
+    padding: 0 10px 10px;
+  }
+
+  .buildpanel:not(.closed) > header,
+  .buildpanel:not(.closed) > .buildlist {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
+  .buildpanel:not(.closed) > .buildlist {
+    padding-bottom: 10px;
+  }
+
+  /* Lens seçenekleri ikon ızgarası: üç sütun, dokunma hedefi 44px. */
+  .lens-buttons {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .lens {
+    flex-direction: column;
+    gap: 3px;
+    min-height: 52px;
+    padding: 6px 4px;
+    font-size: 11px;
+    text-align: center;
+  }
+
+  .lens-name {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   /*

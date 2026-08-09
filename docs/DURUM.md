@@ -99,6 +99,7 @@ Oynanınca üç hata daha çıktı ve üçü de ancak elde tutunca görülüyord
 | "arsaya tıklayınca butonu göremiyorsun" | panel 664px ekranda 913px'te başlıyor | alt sayfa · kaydırma **645px → 0** |
 | "kaydırma baya ters" | ekran ekseni dünyaya ters işaretle dönüyor | sapma **7,7 → 0,00** |
 | "menü sorunumuz devam ediyor" | yedi yazılı düğme 516px istiyor, ekran 390px | ikon ızgarası · taşma **126px → 0** |
+| "hep ekranda duran panelleri açılır kapanır yap" | üç panel 498px, HUD içeriği 967px | katlanabilir · harita payı **%38 → %49** |
 
 Üçüncüsünde asıl ders testteydi: kontrol vardı, yeşil yanıyordu ve
 `scrollIntoViewIfNeeded()` çağırdığı için ekran dışındaki düğmeyi önce
@@ -108,6 +109,13 @@ kendisi görünür yapıyordu.
 bırakınca sonraki sürükleme ölçümü bozuldu ve sapma **iki koşumda da tam
 6,75** verdi. Önce zamanlama sandım, yanlıştı — **tekrarlayan aynı sayı
 zamanlama sorunu değildir**; rastgeleliğin izi dağılımdır.
+
+Üçüncüsü panelleri katlarken çıktı: üçü de 292/104/102 px'den 46 px'e
+indi, kaydırma 303 → 51 px'e düştü, **ama harita payı %38'den ancak
+%39'a çıktı.** Boşalan yeri haber akışı yutmuştu, çünkü haritanın
+ayırıcısı sabit `32vh`'ti ve kazanılan alandan pay almıyordu. **Bir yeri
+boşaltmak, o yerin istediğin şeye gideceği anlamına gelmiyor** —
+kazanılan alanı kimin alacağını düzenin kendisi belirler.
 
 ### Tur 7 — Kıt olan para değil toprak · `docs/TOPRAK-TASARIMI.md`
 
@@ -314,7 +322,7 @@ pnpm balance       # denge testi — 178 kontrol, geçti/kaldı
 pnpm bench         # benchmark — sayıların kendisi
 pnpm constraint    # kısıt deneyi — bağlayıcı kısıt hangisi?
 pnpm land          # abonman oranı — geometri varyantları
-pnpm playtest      # tarayıcı testi (build dahil), 151 kontrol
+pnpm playtest      # tarayıcı testi (build dahil), 163 kontrol
 pnpm dev           # oyunu aç
 ```
 

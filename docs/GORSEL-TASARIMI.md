@@ -262,6 +262,62 @@ değiştirdi mi". Ölçüt ikiye ayrıldı: oyuncu en az o kadar bina kazandı
 sorduğu sorudan dar olmamalı** — daha dar bir ölçüt, doğru davranışı
 yanlış raporlar.
 
+### 2.4d Dikey bütçe: üç panel ekranın %60'ını tutuyordu
+
+Dördüncü oyun raporu, rıhtım düzeldikten sonra: *"hep ekranda görünen
+şehir/fırsat ekranını ikonlardan oluşan, açılıp kapanan bir katman
+yapsak; bakkal seçtiğim menüyü de açılır kapanır yapsan."*
+
+Ölçüm teşhisi doğruladı ve büyüklüğünü verdi (390 × 664):
+
+| öğe | yükseklik | ekranın payı |
+|---|---|---|
+| Yapı menüsü | **292 px** | %44 |
+| Lens çubuğu | **104 px** | %16 |
+| Haber akışı | 102 px | tamamen fold'un altında |
+
+HUD'un toplam içeriği **967 px**, ekran 664 px — yani **303 px kaydırma**
+gerekiyordu ve haritaya kesintisiz kalan pay **%38**'e düşüyordu.
+
+#### Üçü de katlanabilir
+
+Lens çubuğu ikon ızgarasına döndü (üç sütun, 52 px hedef) ve üçü de bir
+başlıkla katlanıyor. Başlık **bilgi taşıyor** — katlamak durumu gizlemek
+demek değil:
+
+| panel | kapalıyken ne yazıyor |
+|---|---|
+| Lens | aktif lens: *"Harita: Fırsat"* |
+| Yapı menüsü | seçili bölge + kalan boş parsel |
+| Haber akışı | en son haberin başlığı ve günü |
+
+Lens seçilince katman kendini kapatıyor: seçtikten sonra elle kapatmak
+zorunda bırakmak fazladan bir dokunuş.
+
+#### Katlamak tek başına yetmedi
+
+İlk ölçüm bunu gösterdi: paneller 292/104 → 46/46 px'e indi, kaydırma
+303 → 51 px'e düştü, **ama harita payı %38'den ancak %39'a çıktı.**
+
+Boşalan yer haritaya gitmiyordu — **haber akışı yutuyordu** (102 → 153
+px, üstelik alt 44 px'i rıhtımın altında kalıyordu). Sebep haritanın
+ayırıcısının sabit `32vh` olmasıydı: harita penceresi kazanılan yerden
+pay almıyor, aradaki fark en esnek bloğa yazılıyordu.
+
+Ayırıcı `flex: 1 1 auto` olunca artan yer yukarı, yani haritaya yazıldı.
+Alt sınır (`min-height: 22vh`) duruyor ki paneller tamamen açıldığında
+bile haritadan bir şerit görünsün.
+
+| | önce | sonra |
+|---|---|---|
+| HUD içeriği | 967 px | **664 px** (= ekran) |
+| Gereken kaydırma | 303 px | **0** |
+| Harita payı | %38 | **%49** |
+
+Ders: **bir yeri boşaltmak, o yerin istediğin şeye gideceği anlamına
+gelmiyor.** Kazanılan alanı kimin alacağını düzenin kendisi belirliyor;
+ölçmeseydik "paneller küçüldü, iş bitti" derdik.
+
 ### 2.5 Kalite tek kademeden dört kademeye
 
 Eskiden tek karar vardı: gölge açık ya da kapalı. Bu iki sorunu birden

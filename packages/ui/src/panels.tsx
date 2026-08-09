@@ -27,6 +27,7 @@ import type { InvestmentEstimate } from '@capital/core';
 import { AUTOSAVE_SLOT, MAX_SLOTS, listSaves } from '@capital/persistence';
 import type { SaveMeta } from '@capital/persistence';
 import { ChainPanel } from './ChainPanel';
+import { useCollapsible } from './collapse';
 import { CompetitionPanel } from './CompetitionPanel';
 import { AuctionPanel } from './AuctionPanel';
 import { MarketPanel } from './MarketPanel';
@@ -42,6 +43,30 @@ import { useGame, useGameState } from './useGame';
  * hesabı oyun yapar, karar oyuncunun kalır. Bu tahmin, rakip yapay zekânın
  * kullandığı formülün birebir aynısıdır.
  */
+/** Yapı menüsünün katlama ikonu — vinç/iskele. */
+function BuildIcon(): ReactElement {
+  return (
+    <svg
+      className="collapse-icon"
+      viewBox="0 0 24 24"
+      width="18"
+      height="18"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.7"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path d="M4 21V6l8-3v18" />
+      <path d="M12 10h8v11" />
+      <path d="M3 21h18" />
+      <path d="M7 8v0M7 12v0M7 16v0M16 14v0" />
+    </svg>
+  );
+}
+
 export function BuildPanel(): ReactElement {
   const { view, setView, run, toast } = useGame();
   const state = useGameState();
@@ -61,9 +86,38 @@ export function BuildPanel(): ReactElement {
   const ranked = districtId !== null ? rankedBuildOptions(state, districtId) : null;
   const options = ranked ?? buildOptions(state).map((o) => ({ ...o, estimate: null, bestPick: false }));
   const freePlots = districtId !== null ? freePlotsIn(state, districtId) : null;
+  const { open, toggle } = useCollapsible();
 
   return (
-    <section className="buildpanel" aria-label="Yapı menüsü">
+    <section className={open ? 'buildpanel' : 'buildpanel closed'} aria-label="Yapı menüsü">
+      {/*
+       * Katlama başlığı yalnızca dar ekranda görünüyor (CSS).
+       *
+       * Ölçüm: bu panel 390×664'lük bir ekranda 292 px kaplıyordu, yani
+       * ekranın %44'ü. Sürekli açık durması gereken bir şey değil —
+       * oyuncu bir arsa seçtikten SONRA bakıyor. Kapalıyken hangi
+       * bölgeye baktığını ve kaç parsel kaldığını yine söylüyor, çünkü
+       * katlamak durumu gizlemek anlamına gelmemeli.
+       */}
+      <button
+        type="button"
+        className="collapse-head"
+        onClick={toggle}
+        aria-expanded={open}
+        data-collapse="build"
+      >
+        <BuildIcon />
+        <span className="collapse-title">
+          {district ? `Yatırımlar · ${district.name}` : 'Yatırımlar'}
+          {district && freePlots !== null && (
+            <span className={freePlots === 0 ? 'collapse-badge tight' : 'collapse-badge'}>
+              {freePlots === 0 ? 'boş parsel yok' : `${freePlots} boş parsel`}
+            </span>
+          )}
+        </span>
+        <span className="collapse-chevron" aria-hidden="true" />
+      </button>
+
       <header>
         <h2>Yatırımlar</h2>
         <p className="muted">
