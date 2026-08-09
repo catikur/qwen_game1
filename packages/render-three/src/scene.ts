@@ -141,6 +141,8 @@ export class CityRenderer {
   readonly controller: RtsCameraController;
 
   private renderer: THREE.WebGLRenderer;
+  /** Çizilen kare sayısı — testler "bir kare geçti mi" diye sorabilsin. */
+  private frameCount = 0;
   private scene = new THREE.Scene();
   private ground: THREE.InstancedMesh;
   private groundLit!: THREE.MeshStandardMaterial;
@@ -1016,6 +1018,18 @@ export class CityRenderer {
   render(dt: number): void {
     if (this.disposed) return;
 
+    /*
+     * Kare sayacı — testlerin "bir kare çizildi mi" sorusunu sorabilmesi
+     * için.
+     *
+     * Sondajlar bunu önce `timeOfDay`'in ilerlemesinden çıkarıyordu ve o
+     * çıkarım oyun DURAKLATILMIŞKEN yanlıştı: saat durunca sondaj hiç
+     * tatmin olmuyor, zaman aşımına düşüyor ve çalışan bir özelliği
+     * hatalı raporluyordu. Çizim döngüsü simülasyon saatinden bağımsız
+     * döndüğü için doğru gösterge bu sayaç.
+     */
+    this.frameCount++;
+
     this.controller.update(dt);
     this.updateDaylight(dt);
     this.updateShadowVolume();
@@ -1224,6 +1238,8 @@ export class CityRenderer {
      * büyütmek mümkün olmaz.
      */
     drawCalls: number;
+    /** Çizilen kare sayısı; sondajlar kare beklemek için okur. */
+    frameCount: number;
   } {
     const hsl = { h: 0, s: 0, l: 0 };
     this.skyColor.getHSL(hsl);
@@ -1262,6 +1278,7 @@ export class CityRenderer {
       plotInstances: this.ground.count,
       emissiveMapped: this.bodyMaterials.every((material) => Boolean(material.emissiveMap)),
       drawCalls: this.renderer.info.render.calls,
+      frameCount: this.frameCount,
     };
   }
 

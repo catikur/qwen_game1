@@ -240,6 +240,11 @@ button.icon {
   gap: 1px;
 }
 
+/* İkon geniş ekranda gereksiz: etiket zaten yazıyor. */
+.metric-icon {
+  display: none;
+}
+
 .metric-label {
   font-size: 11px;
   text-transform: uppercase;
@@ -1061,6 +1066,54 @@ button.icon {
     background: var(--panel-solid);
   }
 
+  /*
+   * ÜST BAR: ETİKETLER İKONA DÖNÜYOR.
+   *
+   * Ölçüm: bar 177 px, 664 px'lik ekranın %27'si — paneller katlandıktan
+   * sonra kalan en büyük sabit blok buydu. Yerin çoğunu değerler değil
+   * ETİKETLER yiyordu ("ŞİRKET DEĞERİ" 13 karakter, gösterdiği sayı 8) ve
+   * her metrik iki satır kaplıyordu.
+   *
+   * Etiket silinmedi, ikona döndü: `title` ve `aria-label` tam adı
+   * taşımaya devam ediyor.
+   */
+  .metrics {
+    gap: 6px 12px;
+  }
+
+  .metric {
+    flex-direction: row;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .metric-icon {
+    display: block;
+    flex: 0 0 auto;
+    opacity: 0.75;
+  }
+
+  .metric-label {
+    display: none;
+  }
+
+  .metric-value {
+    font-size: 14px;
+  }
+
+  /* Marka bloğu: portre kalıyor, şirket adı ve tarih küçülüyor. */
+  .brand {
+    gap: 8px;
+  }
+
+  .brand-name {
+    font-size: 13px;
+  }
+
+  .brand-sub {
+    font-size: 11px;
+  }
+
   .active-events {
     order: -2;
     align-self: center;
@@ -1181,19 +1234,97 @@ button.icon {
   }
 
   /*
-   * HARİTA BOŞALAN YERİN TAMAMINI ALIYOR.
+   * ÜÇ PANEL AKIŞTAN ÇIKIP HARİTANIN SAĞ ALTINA TOPLANIYOR.
    *
-   * Ayırıcı sabit 32vh iken paneller katlandığında kazanılan yer haritaya
-   * DEĞİL haber akışına gidiyordu (102 → 153 px) ve harita payı %38'de
-   * kalıyordu. Ayırıcı esnek olunca artan yer yukarı, yani haritaya
-   * yazılıyor; paneller alt rıhtımın üstüne yığılıyor.
+   * Katlanabilir hâlleri bile tam genişlikte üç şerit demekti: 3 × 46 px
+   * artı boşluklar, yani ekranın ~%23'ü hâlâ panel başlığıydı. Oysa
+   * kapalı bir panelin taşıdığı tek şey ikonu ve tek satırlık özeti.
    *
-   * Alt sınır duruyor: paneller tamamen açıldığında bile haritadan bir
-   * şerit görünsün, oyuncu neye baktığını kaybetmesin.
+   * Şimdi kapalıyken 44 px'lik ikon düğmeleri olarak haritanın sağ alt
+   * köşesinde duruyorlar — haritanın en az kullanılan yeri orası, çünkü
+   * kamera hedefi ekranın ortasında. Açıldıklarında tam genişlikte bir
+   * sayfaya dönüşüp rıhtımın üstünde bitiyorlar.
+   */
+  /*
+   * KAPALIYKEN AKIŞTA KALIYORLAR — sadece 44 px GENİŞ.
+   *
+   * İlk denemem üçünü `position: fixed` ile sağ alta çivilemekti ve
+   * ölçüm onu çürüttü: parsel sayfası açıldığında sütunun onunla
+   * çakışmaması için yukarı itilmesi gerekiyor, itmenin miktarı da
+   * sayfanın GERÇEK yüksekliğine bağlı. `52vh` gibi bir tahminle
+   * yazınca sütun ekranın dışına çıktı (ölçümde üst kenar −1 px).
+   *
+   * Akışta kalıp sağa yaslanmak aynı görsel sonucu sabit sayı olmadan
+   * veriyor: üst barın altında, sağ kenarda 44 px'lik bir ikon sütunu,
+   * solunda ve altında harita. Parsel sayfası alttan gelince kimse
+   * kimseyi itmiyor, çünkü ikisi de kendi yerinde duruyor.
+   */
+  .leftcol {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-end;
+    align-self: flex-end;
+    width: auto;
+  }
+
+  .news {
+    align-self: flex-end;
+    width: auto;
+  }
+
+  /* Kapalı: yalnızca ikon. */
+  .lensbar.closed,
+  .buildpanel.closed,
+  .news.closed {
+    width: 44px;
+  }
+
+  .closed > .collapse-head {
+    justify-content: center;
+    padding: 0;
+    min-height: 44px;
+  }
+
+  .closed .collapse-title,
+  .closed .collapse-chevron {
+    display: none;
+  }
+
+  /* Açık: tam genişlikte sayfa, rıhtımın üstünde. */
+  .lensbar:not(.closed),
+  .buildpanel:not(.closed),
+  .news:not(.closed) {
+    position: fixed;
+    left: 10px;
+    right: 10px;
+    bottom: calc(70px + env(safe-area-inset-bottom, 0px));
+    width: auto;
+    max-height: 56vh;
+    overflow-y: auto;
+    z-index: 25;
+  }
+
+  /*
+   * Ayırıcı artık gerekmiyor: kapalı paneller 44 px'lik ikonlara indiği
+   * için kolonun geri kalanı zaten boş ve harita oradan görünüyor.
+   * Ayırıcıyı bırakmak, kazanılan yeri ikinci kez ayırmak olurdu.
    */
   .hud::before {
-    flex: 1 1 auto;
-    min-height: 22vh;
+    display: none;
+  }
+
+  /*
+   * Kolonun boş kısmı haritaya ait: dokunuş oradan geçmeli, yoksa
+   * ikonların solundaki bütün alan ölü bir şeride dönerdi.
+   */
+  .hud {
+    pointer-events: none;
+  }
+
+  .hud > *,
+  .leftcol > * {
+    pointer-events: auto;
   }
 
   .lensbar:not(.closed) .lens-body {
@@ -1393,6 +1524,37 @@ button.icon {
 
   .toasts {
     bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+  }
+
+  /*
+   * ZİNCİR YUVALARI DAR EKRANDA DİKEY AKAR.
+   *
+   * Yatay şeritti ve aritmetik tutmuyordu: 4 yuva × en az 118 px + 3 × 6
+   * px boşluk = **490 px**, modal gövdesi ise **388 px**. `overflow-x:
+   * auto` bunu taşırmıyor ama GİZLİYOR — sağdaki iki halka kesiliyor ve
+   * kaydırılabildiğine dair hiçbir işaret yok. Rıhtımda düzelttiğimiz
+   * gizli kaydırmanın aynısı.
+   *
+   * Zincir zaten sıralı bir anlatı (hammadde → ara mal → raf); telefonda
+   * doğal yönü dikey. Oklar da aşağı bakıyor.
+   */
+  .chain-slots {
+    flex-direction: column;
+    overflow-x: visible;
+    gap: 14px;
+  }
+
+  .chain-slots > li {
+    min-width: 0;
+    flex: 0 0 auto;
+  }
+
+  .chain-slots > li + li::before {
+    content: "⌄";
+    left: 50%;
+    top: -12px;
+    transform: translateX(-50%);
+    font-size: 14px;
   }
 }
 

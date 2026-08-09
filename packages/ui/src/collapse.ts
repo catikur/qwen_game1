@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 /** Dar ekran eşiği — `styles.css` içindeki mobil media query ile aynı. */
 const NARROW = '(max-width: 860px)';
@@ -28,13 +28,42 @@ export function useCollapsible(): {
     if (typeof window === 'undefined' || !window.matchMedia) return true;
     return !window.matchMedia(NARROW).matches;
   });
+  /** Kullanıcı bu paneli bir kez açıp kapattı mı? */
+  const touched = useRef(false);
 
-  // Ekran gerçekten dar mı geniş mi — ilk karar tarayıcı hazır olmadan
-  // verilmiş olabilir (SSR yok ama test ortamları için güvenli taraf).
+  /*
+   * Genişlik değişince varsayılan YENİDEN uygulanır — ama yalnızca
+   * kullanıcı henüz karışmadıysa.
+   *
+   * İlk sürüm kararı yalnızca mount anında veriyordu ve bu sessiz bir
+   * hataydı: masaüstü genişliğinde açılan bir sekme telefon boyutuna
+   * inince açık kalıyor, tam genişlikte üç panel üst üste biniyor ve
+   * biri ekranın dışına taşıyordu (ölçümde y = −122 px). Telefonda
+   * gerçek karşılığı ekranı döndürmek.
+   *
+   * `touched` kapısı olmasa düzeltme kendi başına bir hataya dönerdi:
+   * oyuncunun açtığı panel, ekran her döndüğünde kapanırdı.
+   */
   useEffect(() => {
     if (typeof window === 'undefined' || !window.matchMedia) return;
-    setOpen(!window.matchMedia(NARROW).matches);
+    const query = window.matchMedia(NARROW);
+    const apply = (): void => {
+      if (!touched.current) setOpen(!query.matches);
+    };
+    apply();
+    query.addEventListener('change', apply);
+    return () => query.removeEventListener('change', apply);
   }, []);
 
-  return { open, toggle: () => setOpen((value) => !value), setOpen };
+  return {
+    open,
+    toggle: () => {
+      touched.current = true;
+      setOpen((value) => !value);
+    },
+    setOpen: (value: boolean) => {
+      touched.current = true;
+      setOpen(value);
+    },
+  };
 }
