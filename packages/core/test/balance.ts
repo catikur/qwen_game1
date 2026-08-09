@@ -305,7 +305,20 @@ expect('katalogdaki her bina kurulabiliyor', built === BUILDINGS.length, `${buil
     `\nŞehir dokusu: ${roads} sokak, ${civic} kamu, ${occupied} dolu parsel, ${vacant} boş parsel (toplam ${total})`,
   );
   expect('şehrin çoğu zaten dolu', (roads + civic + occupied) / total > 0.7, `%${Math.round(((roads + civic + occupied) / total) * 100)}`);
-  expect('yine de yeterli boş parsel var', vacant >= 80 && vacant <= 180, `${vacant} boş parsel`);
+  // ORAN, MUTLAK SAYI DEĞİL.
+  //
+  // Burada eskiden `vacant >= 80 && vacant <= 180` yazıyordu ve Tur 8'de
+  // harita büyüyünce kırıldı — oysa ölçmek istediği şey (şehrin ne kadar
+  // boş başladığı) hiç değişmemişti: 108/285 = %38, 193/500 = %39. Bir
+  // eşiği haritanın mutlak boyutuna bağlamak, harita her değiştiğinde
+  // gerçek bir sorun varmış gibi kırmızı yakar.
+  const plots = occupied + vacant;
+  const vacantShare = vacant / plots;
+  expect(
+    'yine de yeterli boş parsel var',
+    vacantShare >= 0.25 && vacantShare <= 0.55,
+    `${vacant}/${plots} parsel boş — %${Math.round(vacantShare * 100)}`,
+  );
   expect(
     'her bölgede en az bir boş parsel var',
     state.districts.every((d) =>
@@ -714,13 +727,23 @@ function outletUnitCost(state: GameState): number {
 // demektir. Kontrollü karşılaştırma: aynı seed, aynı mağaza stratejisi,
 // tek fark zincir kartını izleyip izlememek.
 {
+  // KÂR SON GÜNDEN DEĞİL SON 60 GÜNDEN OKUNUYOR.
+  //
+  // Burada `player.today.profit` vardı: 500 günlük bir deneyin sonucu
+  // tek bir günün kârıyla veriliyordu. Kontrol geçiyordu, ama geçmesi
+  // ölçtüğü şeyin doğru olduğunu göstermiyordu — benchmark aynı soruyu
+  // 60 günlük ortalamayla sorunca ters işaret çıktı ve fark buradan
+  // geldi. Tek günlük örneklem bir olayın, bir fiyat dalgasının ya da o
+  // gün açılan bir mağazanın üstüne denk gelebilir.
   function runStrategy(seed: number, useChain: boolean): { netWorth: number; profit: number; chain: number } {
     const engine2 = new GameEngine(createNewGame({ seed, companyName: 'Test AŞ' }));
+    let tail = 0;
     for (let day = 1; day <= 500; day++) {
       if (day % 5 === 0) {
         if (!(useChain && followChainAdvice(engine2))) expandOutlets(engine2);
       }
       engine2.runDay();
+      if (day > 440) tail += getPlayer(engine2.getState()).today.profit;
     }
     const s = engine2.getState();
     const player = getPlayer(s);
@@ -729,7 +752,7 @@ function outletUnitCost(state: GameState): number {
       const def = BUILDING_BY_ID[b.defId];
       return def?.role === 'extract' || def?.role === 'process';
     }).length;
-    return { netWorth: player.netWorth, profit: player.today.profit, chain };
+    return { netWorth: player.netWorth, profit: tail / 60, chain };
   }
 
   console.log('\n--- zincir kartını izleyen vs izlemeyen (500 gün) ---');
@@ -1535,6 +1558,52 @@ let researchPayback = Infinity;
   const armed = rows.filter((row) => row.research + row.marketing > 0);
   expect('rakipler kol kuruyor', armed.length >= 2, `${armed.length}/${rows.length} rakip`);
 
+  // KOL KARARI TOPRAĞA DUYARLI OLMAMALI.
+  //
+  // Tur 8'in bulduğu hata tam buydu: kol "kârlı genişleme bulunamazsa"
+  // kuruluyordu, yani örtük olarak toprağın tükenmesini bekliyordu.
+  // Harita büyüyünce genişleme hiç tıkanmadı ve rakipler 0/4 kol kurdu.
+  //
+  // Kontrol iki dünyayı yan yana koşuyor: biri bugünkü harita, diğeri
+  // boş parseli iki katına çıkarılmış bir harita. Kol sayısı ikincide
+  // çökerse kapı yine toprağa bağlanmış demektir.
+  {
+    const roomy = new GameEngine(createNewGame({ seed: 12, companyName: 'Doktrin AŞ' }));
+    const roomyState = roomy.getState();
+    // Yapılı parsellerin yarısını boşalt — genişleme asla tıkanmasın.
+    let cleared = 0;
+    for (const tile of roomyState.map.tiles) {
+      if (tile.kind !== 'plot' || !tile.structureId) continue;
+      if (cleared % 2 === 0) {
+        tile.structureId = null;
+        tile.structureHeight = 0;
+      }
+      cleared++;
+    }
+    const roomyPlayer = getPlayer(roomyState);
+    roomyPlayer.cash = 40_000_000;
+    for (let day = 1; day <= 500; day++) {
+      if (day % 5 === 0) playerStrategy(roomy);
+      roomy.runDay();
+    }
+    const after = roomy.getState();
+    let roomyArms = 0;
+    for (const building of Object.values(after.buildings)) {
+      if (building.companyId === after.playerCompanyId) continue;
+      const role = BUILDING_BY_ID[building.defId]?.role;
+      if (role === 'research' || role === 'marketing') roomyArms++;
+    }
+    const baseArms = rows.reduce((sum, row) => sum + row.research + row.marketing, 0);
+    const freeAfter = after.map.tiles.filter(
+      (t) => t.kind === 'plot' && !t.ownerId && !t.structureId,
+    ).length;
+    expect(
+      'toprak bollaşınca da kol kuruluyor',
+      roomyArms > 0,
+      `bol toprakta ${roomyArms} kol (normalde ${baseArms}) · ${freeAfter} parsel hâlâ boş`,
+    );
+  }
+
   const quality = rows.find((row) => row.profile.trait === 'premium');
   const cutter = rows.find((row) => row.profile.trait === 'price_cutter');
   if (quality && cutter) {
@@ -2136,25 +2205,36 @@ console.log('\n--- parsel getirisi ---');
     neededPlots += Math.ceil(demand / bestCapacity);
   }
   //
-  // ABONMAN ORANI — Tur 8'in gerekçesi.
+  // ABONMAN ORANI — Tur 8'in ölçtüğü sayı.
   //
   // Nüfus tavanındaki talebi karşılamak için gereken parsel sayısının
-  // haritadaki parsele oranı. Bugün ~%100: yani şehir ancak HER parsel
-  // kategorisinin en büyük outlet'i olursa doyar ve geriye fabrikaya,
-  // depoya, Ar-Ge'ye ve dört rakibe hiç yer kalmaz. Karşılanmayan
-  // talebin sıfıra inememesinin sebebi bu — sermaye değil.
+  // haritadaki parsele oranı. Tur 8 öncesi ~%100'dü: şehir ancak HER
+  // parsel kategorisinin en büyük outlet'i olursa doyuyordu, fabrikaya
+  // ve dört rakibe yer kalmıyordu.
   //
-  // Eşik %100'de duruyor çünkü bugünkü gerçek bu. Tur 8 haritayı
-  // büyütünce bu sayı düşecek ve o zaman eşik de sıkılaştırılmalı.
+  // Izgara geometrisi (bölge 8→10, ada 4→5) bunu %57'ye indirdi. Eşik
+  // ÇİFT TARAFLI, çünkü iki yönde de bozulabilir:
+  //
+  //   üst sınır — %75'i geçerse şehir yine tıkanır
+  //   alt sınır — %35'in altına inerse toprak bedava olur ve oyunun
+  //               konum kararı anlamını yitirir
+  //
+  // İkinci sınır olmadan "haritayı büyütmek her zaman iyidir" gibi
+  // yanlış bir yöne kayılabilirdi; bu kontrol o yönü kapatıyor.
   const subscription = neededPlots / plots;
   expect(
     'harita nüfus tavanının talebini karşılayabiliyor',
     neededPlots <= plots,
     `gereken ${neededPlots} / mevcut ${plots} parsel — abonman %${Math.round(subscription * 100)}`,
   );
+  expect(
+    'abonman oranı bandında — ne tıkalı ne bedava',
+    subscription >= 0.35 && subscription <= 0.75,
+    `abonman %${Math.round(subscription * 100)} (bant %35–%75)`,
+  );
   console.log(
-    `  NOT: abonman %${Math.round(subscription * 100)} — şehrin doyması için parsellerin ` +
-      `neredeyse tamamı outlet olmalı. Fabrika, depo ve rakipler için yer yok (bkz. DURUM.md §4.1).`,
+    `  NOT: abonman %${Math.round(subscription * 100)} — geriye fabrika, depo ve ` +
+      `rakipler için ${plots - neededPlots} parsel kalıyor.`,
   );
 }
 

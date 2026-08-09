@@ -159,8 +159,9 @@ Yani şehir ancak parsellerinin neredeyse tamamı outlet olursa doyar ve
 geriye fabrikaya, depoya, Ar-Ge'ye, pazarlamaya ve **dört rakibe** hiç
 yer kalmaz. Karşılanmayan talebin sıfıra inememesinin sebebi bu.
 
-Bu sayı denge testinde bir kontrol olarak duruyor (`abonman %100`), yani
-sessizce kötüleşemez.
+Bu sayı denge testinde bir kontrol olarak duruyor, yani sessizce
+kötüleşemez. *(Tur 8 bu oranı %57'ye indirdi ve kontrolü %35–%75
+bandına çevirdi.)*
 
 ### §4.5'in düzeltilmesi
 
@@ -175,6 +176,15 @@ gösteriyor: kısıt toprak.
 **Haritayı büyütmek artık doğru sıradaki iş.** Teknik maliyeti zaten
 ölçülmüştü (harita boyutu tamamen `DISTRICT_LAYOUT`'tan türetiliyor,
 simülasyon %20 yavaşlıyor, çizim çağrısı değişmiyor).
+
+> **Bu bölümün reçetesi de Tur 8'de düzeltildi** — teşhis doğruydu,
+> reçete yanlıştı. "Haritayı büyütmek" bölge eklemek diye okunuyordu ve
+> bölge eklemek abonman oranını değiştirmiyor: nüfus da parsel de
+> bölgeden geldiği için pay ve payda birlikte büyüyor (%101 → %95).
+>
+> Doğru kaldıraç nüfus başına parsel, yani ızgara geometrisiydi: bölge
+> kenarı 8→10, sokak aralığı 4→5, abonman **%57**. Ayrıntı
+> `docs/SEHIR-GEOMETRISI.md`.
 
 ---
 

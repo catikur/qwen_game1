@@ -253,12 +253,12 @@ console.log('  \x1b[2mherkes zaten satabildiğinin tamamını satıyor demektir.
   row('', ...marks.map((m) => `${m.day}. gün`));
   row('Outlet doluluğu (uzun koşu)', ...marks.map((m) => pct(m.utilisation)));
   row('Karşılanmayan talep', ...marks.map((m) => pct(m.unmet)));
-  console.log('  \x1b[2mKISIT SERMAYE DEĞİL TOPRAK. Tur 7 bunu ölçtü: sınırsız nakitle\x1b[0m');
-  console.log('  \x1b[2mkoşulan bir oyunda bile karşılanmayan talep %52\'de kalıyor ve\x1b[0m');
-  console.log('  \x1b[2m1200 denemenin 1167\'sinde "boş parsel yok" çıkıyor. Nüfus\x1b[0m');
-  console.log('  \x1b[2mtavanındaki talebi karşılamak haritanın parsellerinin ~%100\'ünü\x1b[0m');
-  console.log('  \x1b[2mgerektiriyor — fabrikaya, depoya ve dört rakibe yer kalmıyor.\x1b[0m');
-  console.log('  \x1b[2mSıradaki iş haritayı büyütmek (Tur 8), denge değil.\x1b[0m');
+  console.log('  \x1b[2mEĞRİNİN YÖNÜ SAYISINDAN ÖNEMLİ. Tur 8 öncesi boş talep zamanla\x1b[0m');
+  console.log('  \x1b[2mARTIYORDU (%20 → %34 → %33): şehir büyüdükçe geri kalıyordu,\x1b[0m');
+  console.log('  \x1b[2mçünkü nüfus tavanının talebi haritanın parsellerinin ~%100\'ünü\x1b[0m');
+  console.log('  \x1b[2mistiyordu. Izgara geometrisi (bölge 8→10, ada 4→5) abonmanı\x1b[0m');
+  console.log('  \x1b[2m%57\'ye indirdi ve eğri tersine döndü: erken oyunda fırsat bol,\x1b[0m');
+  console.log('  \x1b[2mgeç oyunda şehir doyuyor. Ölçüm: `pnpm constraint`.\x1b[0m');
 }
 
 // ---- 3. Stratejilerin karşılığı ----
@@ -340,21 +340,58 @@ row('Pazarlama · 8 mağaza', pct(marketing8.profit), days(marketing8.payback));
 // bu para yaktığı için farkı şişiriyordu — kontrol grubuna ceza
 // vermeyen bir A/B kurmak gerekiyor.
 {
-  const runChain = (follow: boolean): number => {
-    const engine = new GameEngine(createNewGame({ seed: 5, companyName: 'Bench' }));
-    getPlayer(engine.getState()).cash = 20_000_000;
-    for (let day = 1; day <= 400; day++) {
+  // BİR YATIRIMI GERİ ÖDEMESİNDEN KISA BİR PENCEREDE ÖLÇEMEZSİN.
+  //
+  // Bu satır uzun süre denge testiyle ters işaret verdi: benchmark
+  // "-%11", sınav "+%21". İki sayı yan yana durdu ve ikisine de
+  // güvenildi.
+  //
+  // Üç hipotez sırayla elendi. (1) Günlük dalgalanma: son 60 günün
+  // ortalamasına geçmek işareti değiştirmedi. (2) Tohum: üç tohuma
+  // çıkmak da değiştirmedi. (3) Nakit koşulu: fark daralttı ama
+  // kapatmadı.
+  //
+  // Sebep UFUKTU. Zincirin geri ödemesi ~190 gün; benchmark 400 günde
+  // kesip son 60 günü okuyordu, sınav 500 günde. 500'e çıkarınca
+  // benchmark da +%12 diyor — sınavla birebir. Yani ölçüm, ölçtüğü
+  // yatırımın geri dönmesine fırsat vermeden sonucu açıklıyordu.
+  //
+  // Kural: bir yatırımın karşılığını ölçen pencere, o yatırımın geri
+  // ödemesinden belirgin şekilde uzun olmalı.
+  //
+  // Nakit koşulu ayrı bir satır olarak duruyor çünkü kendisi de bir
+  // bulgu: bol nakit + bol toprak, parseli outlet'le doldurmayı zincire
+  // tercih ettiriyor (+%12 → +%1). Her inşa yuvası bir parsel; zincire
+  // harcanan yuva bir mağaza etmiyor. Zincir bir NAKİT KISITI oyunudur.
+  const CHAIN_DAYS = 500;
+  const CHAIN_TAIL = 60;
+  const runChain = (seed: number, follow: boolean, cash: number | null): number => {
+    const engine = new GameEngine(createNewGame({ seed, companyName: 'Bench' }));
+    if (cash !== null) getPlayer(engine.getState()).cash = cash;
+    let tail = 0;
+    for (let day = 1; day <= CHAIN_DAYS; day++) {
       if (day % 5 === 0) {
         if (follow) playerStrategy(engine);
         else expandOnly(engine);
       }
       engine.runDay();
+      if (day > CHAIN_DAYS - CHAIN_TAIL) tail += getPlayer(engine.getState()).today.profit;
     }
-    return getPlayer(engine.getState()).today.profit;
+    return tail / CHAIN_TAIL;
   };
-  const withChain = runChain(true);
-  const without = runChain(false);
-  row('Zincir kurmak (tohum 5)', pct(withChain / Math.max(1, without) - 1), 'günlük kâr');
+  const liftFor = (cash: number | null): { mean: number; spread: string } => {
+    const lifts = SEEDS.map(
+      (seed) => runChain(seed, true, cash) / Math.max(1, runChain(seed, false, cash)) - 1,
+    );
+    return {
+      mean: lifts.reduce((sum, lift) => sum + lift, 0) / lifts.length,
+      spread: `${pct(Math.min(...lifts))}…${pct(Math.max(...lifts))}`,
+    };
+  };
+  const lean = liftFor(null);
+  const rich = liftFor(20_000_000);
+  row('Zincir · normal nakit', pct(lean.mean), lean.spread);
+  row('Zincir · bol nakit (20 M ₺)', pct(rich.mean), rich.spread);
 }
 
 // ---- 4. Kalibrasyon bantları ----

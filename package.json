@@ -12,6 +12,8 @@
     "test": "node --test --experimental-strip-types packages/core/test/*.test.ts",
     "balance": "node tools/run-node-script.mjs packages/core/test/balance.ts",
     "bench": "node tools/run-node-script.mjs packages/core/test/benchmark.ts",
+    "constraint": "node tools/run-node-script.mjs packages/core/test/constraint.ts",
+    "land": "node tools/run-node-script.mjs packages/core/test/land-experiment.ts",
     "playtest": "pnpm build && node tools/playtest.mjs"
   },
   "devDependencies": {

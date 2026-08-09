@@ -979,11 +979,15 @@ export class CityRenderer {
   /**
    * Gölge kamerasını görüş alanına oturtur.
    *
-   * Tek bir gölge haritası bütün şehri kaplıyordu: 24×24'lük alanı 1024
-   * texel'e yaydığında texel başına düşen alan çok büyük oluyor ve gölge
-   * kenarları bulanıklaşıyordu. Kamera nereye bakıyorsa gölge hacmini
-   * oraya daraltmak, aynı çözünürlükte belirgin şekilde daha keskin bir
-   * gölge veriyor — maliyeti yok, sadece doğru yeri kaplıyor.
+   * Tek bir gölge haritası bütün şehri kaplıyordu: harita kenarı ne
+   * kadarsa o alan 1024 texel'e yayılıyor, texel başına düşen alan
+   * büyüdükçe gölge kenarları bulanıklaşıyordu. Kamera nereye bakıyorsa
+   * gölge hacmini oraya daraltmak, aynı çözünürlükte belirgin şekilde
+   * daha keskin bir gölge veriyor — maliyeti yok, sadece doğru yeri
+   * kaplıyor.
+   *
+   * Harita boyutundan bağımsız olması bu yüzden önemli: Tur 8 şehri
+   * 24×24'ten 30×30'a çıkardı ve gölge kalitesi hiç etkilenmedi.
    */
   private updateShadowVolume(): void {
     const target = this.controller.targetPoint;
@@ -1210,6 +1214,16 @@ export class CityRenderer {
      * olarak buna bağlı.
      */
     emissiveMapped: boolean;
+    /**
+     * Son karede yapılan çizim çağrısı sayısı.
+     *
+     * Şehrin tamamı InstancedMesh ile çizildiği için bu sayının harita
+     * boyutundan BAĞIMSIZ olması gerekiyor. Tur 8 haritayı 576'dan 900
+     * kareye çıkardı; sayı sabit kaldıysa toplu çizim çalışıyor, arttıysa
+     * bir yerde kare başına çizime düşmüşüz demektir ve haritayı bir daha
+     * büyütmek mümkün olmaz.
+     */
+    drawCalls: number;
   } {
     const hsl = { h: 0, s: 0, l: 0 };
     this.skyColor.getHSL(hsl);
@@ -1247,6 +1261,7 @@ export class CityRenderer {
       roadInstances: this.roads.count,
       plotInstances: this.ground.count,
       emissiveMapped: this.bodyMaterials.every((material) => Boolean(material.emissiveMap)),
+      drawCalls: this.renderer.info.render.calls,
     };
   }
 

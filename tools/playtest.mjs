@@ -142,11 +142,26 @@ const findTile = (page, kind) =>
       civic: tiles.filter((t) => t.kind === 'civic').length,
       occupied: tiles.filter((t) => t.kind === 'plot' && t.structureId).length,
       vacant: tiles.filter((t) => t.kind === 'plot' && !t.structureId).length,
+      total: tiles.length,
     };
   });
-  check('Şehirde sokak ızgarası var', fabric.roads > 200, `${fabric.roads} sokak karesi`);
-  check('Şehir mevcut yapılarla dolu', fabric.occupied > 120, `${fabric.occupied} dolu parsel`);
-  check('Boş parsel kıt ama var', fabric.vacant > 60 && fabric.vacant < 200, `${fabric.vacant} boş parsel`);
+  // Bu üç kontrol ORANLA ölçüyor, mutlak sayıyla değil.
+  //
+  // Eskiden `vacant > 60 && vacant < 200` yazıyordu ve Tur 8'de harita
+  // 285'ten 504 parsele çıkınca kırıldı — oysa ölçtüğü şey (şehrin ne
+  // kadar boş başladığı) %38'den %39'a gitmişti, yani hiç değişmemişti.
+  // Haritanın boyutuna bağlanan bir eşik, gerçek bir sorun yokken
+  // kırmızı yakar ve asıl sorunu gölgeler.
+  const plots = fabric.occupied + fabric.vacant;
+  const roadShare = fabric.roads / fabric.total;
+  const vacantShare = fabric.vacant / plots;
+  check('Şehirde sokak ızgarası var', roadShare > 0.25, `karelerin %${Math.round(roadShare * 100)}'i sokak`);
+  check('Şehir mevcut yapılarla dolu', fabric.occupied / plots > 0.5, `${fabric.occupied}/${plots} parsel dolu`);
+  check(
+    'Boş parsel kıt ama var',
+    vacantShare > 0.2 && vacantShare < 0.55,
+    `${fabric.vacant}/${plots} parsel boş — %${Math.round(vacantShare * 100)}`,
+  );
 
   await page.waitForTimeout(1500);
   await page.screenshot({ path: `${OUT}/city-day.png` });
@@ -1012,11 +1027,20 @@ const findTile = (page, kind) =>
     visual.roadInstances > 0 && visual.plotInstances > 0,
     `${visual.roadInstances} sokak · ${visual.plotInstances} parsel`,
   );
+  const tileCount = await page.evaluate(() => window.__capital.getState().map.tiles.length);
   check(
     'Sokak ve parsel toplamı haritayı kapatıyor',
-    visual.roadInstances + visual.plotInstances ===
-      (await page.evaluate(() => window.__capital.getState().map.tiles.length)),
+    visual.roadInstances + visual.plotInstances === tileCount,
     'kayıp kare yok',
+  );
+  // Tur 8 haritayı 576'dan 900 kareye çıkardı. Şehrin tamamı
+  // InstancedMesh ile çizildiği için çizim çağrısı kare sayısıyla
+  // BÜYÜMEMELİ — büyüyorsa toplu çizim bir yerde bozulmuş demektir ve
+  // haritayı bir daha büyütmek mümkün olmaz.
+  check(
+    'Harita büyümesi çizim çağrısını artırmıyor',
+    visual.drawCalls > 0 && visual.drawCalls < 60,
+    `${tileCount} kare · ${visual.drawCalls} çizim çağrısı`,
   );
 
   // Pencere ışıkları: gündüz sönük, gece yanıyor. Emisyon artık düz bir

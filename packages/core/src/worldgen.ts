@@ -10,7 +10,7 @@ import {
   STRUCTURE_BY_ID,
   getCeoModifiers,
 } from '@capital/content';
-import type { CategoryId } from '@capital/content';
+import type { CategoryId, DistrictArchetypeId } from '@capital/content';
 import { createRng, nextRange, pickWeighted } from './rng';
 import { seedSpotPrices, zeroByGood } from './systems/supply';
 import { estimateBaselineDemand, goodShares, zeroByCategory } from './systems/demand';
@@ -19,14 +19,26 @@ import type { CompanyState, DistrictState, GameState, MarketState, Tile, TileKin
 
 export const GAME_VERSION = '0.2.0';
 
-export const DISTRICT_COLS = DISTRICT_LAYOUT[0]!.length;
-export const DISTRICT_ROWS = DISTRICT_LAYOUT.length;
-export const DISTRICT_SIZE = 8;
-export const MAP_WIDTH = DISTRICT_COLS * DISTRICT_SIZE;
-export const MAP_HEIGHT = DISTRICT_ROWS * DISTRICT_SIZE;
+/**
+ * Bir bölgenin kenar uzunluğu (kare).
+ *
+ * Haritanın genişliği burada DEĞİL, `createNewGame`'in aldığı
+ * yerleşimden çıkar; çalışma anında tek doğru kaynak `state.map.width`.
+ * Eskiden burada duran `MAP_WIDTH`/`MAP_HEIGHT`/`DISTRICT_COLS` sabitleri
+ * silindi: yerleşim argüman olduktan sonra artık hiçbir şeyi
+ * belirlemiyorlardı, yalnızca belirliyormuş gibi duruyorlardı.
+ */
+export const DISTRICT_SIZE = 10;
 
-/** Her 4 karede bir sokak; aralarda 3x3'lük yapı adaları kalır. */
-export const BLOCK_SIZE = 4;
+/**
+ * Her 5 karede bir sokak; aralarda 4x4'lük yapı adaları kalır.
+ *
+ * Bu sayı bölge sayısından daha belirleyici. Bir bölge eklemek hem arzı
+ * hem talebi büyüttüğü için abonman oranını yerinde bırakır; adayı
+ * büyütmek ise nüfusu sabit tutarken parsel üretir. Ölçüm
+ * `land-experiment.ts` içinde.
+ */
+export const BLOCK_SIZE = 5;
 
 export const PLAYER_COMPANY_ID = 'player';
 export const STARTING_CASH = 250_000;
@@ -122,6 +134,15 @@ export interface NewGameOptions {
   companyName?: string;
   ceoId?: string | null;
   npcCount?: number;
+  /**
+   * Bölge yerleşimi. Varsayılan `DISTRICT_LAYOUT`.
+   *
+   * Parametre olmasının sebebi ölçüm: "haritayı büyütmek işe yarıyor mu"
+   * sorusu ancak farklı yerleşimler yan yana koşulabilirse
+   * cevaplanabilir (`land-experiment.ts`, `constraint.ts`). Harita boyutu
+   * zaten yerleşimden türetiliyordu; burada sabit yerine argüman oluyor.
+   */
+  layout?: DistrictArchetypeId[][];
 }
 
 export function createNewGame(options: NewGameOptions = {}): GameState {
@@ -130,13 +151,19 @@ export function createNewGame(options: NewGameOptions = {}): GameState {
   const ceoId = options.ceoId ?? null;
   const ceo = getCeoModifiers(ceoId);
 
+  const layout = options.layout ?? DISTRICT_LAYOUT;
+  const cols = layout[0]!.length;
+  const rows = layout.length;
+  const mapWidth = cols * DISTRICT_SIZE;
+  const mapHeight = rows * DISTRICT_SIZE;
+
   // ---- District'ler ----
   const districts: DistrictState[] = [];
-  for (let dy = 0; dy < DISTRICT_ROWS; dy++) {
-    for (let dx = 0; dx < DISTRICT_COLS; dx++) {
-      const archetypeId = DISTRICT_LAYOUT[dy]![dx]!;
+  for (let dy = 0; dy < rows; dy++) {
+    for (let dx = 0; dx < cols; dx++) {
+      const archetypeId = layout[dy]![dx]!;
       const archetype = DISTRICT_ARCHETYPES[archetypeId];
-      const id = dy * DISTRICT_COLS + dx;
+      const id = dy * cols + dx;
 
       districts.push({
         id,
@@ -158,14 +185,13 @@ export function createNewGame(options: NewGameOptions = {}): GameState {
 
   // ---- Parseller ve şehir dokusu ----
   const tiles: Tile[] = [];
-  const centerX = (MAP_WIDTH - 1) / 2;
-  const centerY = (MAP_HEIGHT - 1) / 2;
+  const centerX = (mapWidth - 1) / 2;
+  const centerY = (mapHeight - 1) / 2;
   const maxDistance = centerX + centerY;
 
-  for (let y = 0; y < MAP_HEIGHT; y++) {
-    for (let x = 0; x < MAP_WIDTH; x++) {
-      const districtId =
-        Math.floor(y / DISTRICT_SIZE) * DISTRICT_COLS + Math.floor(x / DISTRICT_SIZE);
+  for (let y = 0; y < mapHeight; y++) {
+    for (let x = 0; x < mapWidth; x++) {
+      const districtId = Math.floor(y / DISTRICT_SIZE) * cols + Math.floor(x / DISTRICT_SIZE);
       const district = districts[districtId]!;
       const archetype = DISTRICT_ARCHETYPES[district.archetype];
 
@@ -198,7 +224,7 @@ export function createNewGame(options: NewGameOptions = {}): GameState {
         archetype.baseLandValue * (0.72 + 0.55 * centrality) * nextRange(rng, 0.88, 1.12);
 
       tiles.push({
-        id: y * MAP_WIDTH + x,
+        id: y * mapWidth + x,
         x,
         y,
         districtId,
@@ -251,7 +277,7 @@ export function createNewGame(options: NewGameOptions = {}): GameState {
     },
     time: { day: 0, speed: 1, accumulatorMs: 0 },
     rng,
-    map: { width: MAP_WIDTH, height: MAP_HEIGHT, tiles },
+    map: { width: mapWidth, height: mapHeight, tiles },
     districts,
     companies,
     playerCompanyId: PLAYER_COMPANY_ID,
