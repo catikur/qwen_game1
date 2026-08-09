@@ -362,15 +362,30 @@ const findTile = (page, kind) =>
   // raporlar. `timeOfDay` her karede biraz ilerlediği için 0,75'in
   // üstüne çıkmış olması en az bir karenin çizildiğinin kanıtı.
   //
+  //
+  // LENS DEĞİŞTİKTEN SONRA BİR KARE ÇİZİLMİŞ OLMALI.
+  //
+  // Sondaj eskiden yalnızca `activeLens` ve `timeOfDay`'e bakıyordu ve
+  // arada sırada kırmızı yanıyordu: `setLens` veri lensinden çıkarken
+  // pencere parıltısını ANINDA sıfırlıyor, gerçek değeri ise bir sonraki
+  // kare hesaplıyor. İkisinin arasında okunan değer 0 çıkıyor ve ÇALIŞAN
+  // bir özellik hatalı raporlanıyordu.
+  //
+  // `timeOfDay` her karede biraz ilerlediği için "değer değişti" ölçütü
+  // bir karenin çizildiğinin kanıtı. Lens değişiminden SONRAKİ ilk
+  // örnek referans alınıyor.
   const atNight = async (lens) =>
     page.evaluate(
       async (l) => {
         window.__capital.setLens(l);
         window.__capital.setTimeOfDay(0.75); // güneşin en alçak olduğu an
+        const baseline = window.__capital.renderInfo()?.timeOfDay ?? -1;
         const deadline = Date.now() + 10000;
         while (Date.now() < deadline) {
           const info = window.__capital.renderInfo();
-          if (info && info.activeLens === l && info.timeOfDay > 0.75) return info;
+          if (info && info.activeLens === l && info.timeOfDay > 0.75 && info.timeOfDay !== baseline) {
+            return info;
+          }
           await new Promise((r) => setTimeout(r, 25));
         }
         return window.__capital.renderInfo();
@@ -425,12 +440,12 @@ const findTile = (page, kind) =>
 
   // ---------- Paneller ----------
   section('Paneller');
-  await page.locator('.topbar-actions button', { hasText: 'Rakipler' }).click();
+  await page.locator('.topbar-actions [data-panel="rivals"]').click();
   await page.waitForTimeout(300);
   check('Rakip tablosu doluyor', (await page.locator('.modal .table tbody tr').count()) >= 5);
   await page.keyboard.press('Escape');
 
-  await page.locator('.topbar-actions button', { hasText: 'Şirket' }).click();
+  await page.locator('.topbar-actions [data-panel="company"]').click();
   await page.waitForTimeout(300);
   check('Şirket paneli açılıyor', (await page.locator('.company').count()) === 1);
   await page.keyboard.press('Escape');
@@ -449,7 +464,7 @@ const findTile = (page, kind) =>
     window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
   });
 
-  await page.locator('.topbar-actions button', { hasText: 'Zincir' }).click();
+  await page.locator('.topbar-actions [data-panel="chain"]').click();
   await page.waitForTimeout(400);
   check('Zincir paneli açılıyor', (await page.locator('.modal').count()) === 1);
 
@@ -561,7 +576,7 @@ const findTile = (page, kind) =>
     window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
   });
 
-  await page.locator('.topbar-actions button', { hasText: 'Rekabet' }).click();
+  await page.locator('.topbar-actions [data-panel="rivalry"]').click();
   await page.waitForTimeout(400);
   check('Rekabet paneli açılıyor', (await page.locator('.modal').count()) === 1);
 
@@ -799,7 +814,7 @@ const findTile = (page, kind) =>
   });
   await page.waitForTimeout(500);
 
-  await page.locator('.topbar-actions button', { hasText: 'Borsa' }).click();
+  await page.locator('.topbar-actions [data-panel="bourse"]').click();
   await page.waitForTimeout(400);
   check('Borsa paneli açılıyor', (await page.locator('.bourse').count()) === 1);
 
@@ -860,7 +875,7 @@ const findTile = (page, kind) =>
 
   // ---------- Kayıt ----------
   section('Kayıt sistemi');
-  await page.locator('.topbar-actions button', { hasText: 'Kayıt' }).click();
+  await page.locator('.topbar-actions [data-panel="saves"]').click();
   await page.waitForTimeout(300);
   await page.locator('.slot').nth(1).locator('button:has-text("Kaydet")').click();
   await page.waitForTimeout(700);
@@ -1169,12 +1184,52 @@ const findTile = (page, kind) =>
     });
     check(`${deviceName}: ulaşılamayan taşma yok`, reach.length === 0, reach.join(', ') || 'temiz');
 
-    // Her panel düğmesi gerçekten bir panel açıyor mu.
-    const buttonCount = await m.locator('.topbar-actions button').count();
+    // RIHTIM: HER DÜĞME EKRANDA MI?
+    //
+    // Bu kontrol uzun süre `scrollIntoViewIfNeeded()` çağırıyordu ve tam
+    // da yakalaması gereken hatayı gizliyordu: yedi düğme 516 px istiyor,
+    // ekran 390 px, son ikisi ekranın dışında kalıyordu. Test onları
+    // önce görünür yapıp sonra tıklıyor ve yeşil yanıyordu — oysa gerçek
+    // oyuncu için o iki panele ulaşmanın görünür bir yolu yoktu.
+    //
+    // Artık önce KONUM ölçülüyor, sonra kaydırmadan tıklanıyor.
+    const dock = await m.evaluate(() => {
+      const nav = document.querySelector('.topbar-actions');
+      if (!nav) return null;
+      const vw = innerWidth;
+      const vh = innerHeight;
+      const buttons = [...nav.querySelectorAll('button')].map((b) => {
+        const r = b.getBoundingClientRect();
+        return {
+          panel: b.dataset.panel ?? '?',
+          inside: r.left >= -1 && r.right <= vw + 1 && r.top >= -1 && r.bottom <= vh + 1,
+          width: Math.round(r.width),
+          height: Math.round(r.height),
+          right: Math.round(r.right),
+        };
+      });
+      return { vw, overflow: nav.scrollWidth - nav.clientWidth, buttons };
+    });
+    const outside = dock.buttons.filter((b) => !b.inside);
+    check(
+      `${deviceName}: rıhtımdaki her düğme ekranda`,
+      outside.length === 0 && dock.buttons.length > 0,
+      outside.length
+        ? outside.map((b) => `${b.panel} sağ kenarı ${b.right} > ${dock.vw}`).join(', ')
+        : `${dock.buttons.length} düğme, taşma ${dock.overflow}px`,
+    );
+    const smallest = Math.min(...dock.buttons.map((b) => b.height));
+    check(
+      `${deviceName}: rıhtım dokunma hedefleri yeterli`,
+      smallest >= 44,
+      `en kısa düğme ${smallest}px`,
+    );
+
+    // Her panel düğmesi gerçekten bir panel açıyor mu — KAYDIRMADAN.
+    const buttonCount = dock.buttons.length;
     let opened = 0;
     for (let i = 0; i < buttonCount; i++) {
       const button = m.locator('.topbar-actions button').nth(i);
-      await button.scrollIntoViewIfNeeded();
       await button.click();
       if (await m.locator('.modal').count()) {
         opened++;
@@ -1183,6 +1238,34 @@ const findTile = (page, kind) =>
     }
     check(`${deviceName}: bütün panel düğmeleri açılıyor`, opened === buttonCount && buttonCount > 0,
       `${opened}/${buttonCount}`);
+
+    // Açılan panel görünen ekranda mı? Kullanıcının istediği tam buydu:
+    // "ekranın görünen kısmında açılsın".
+    await m.locator('.topbar-actions [data-panel="bourse"]').click();
+    const openSheet = await m.evaluate(() => {
+      const modal = document.querySelector('.modal');
+      if (!modal) return null;
+      const r = modal.getBoundingClientRect();
+      const head = modal.querySelector('.modal-head')?.getBoundingClientRect();
+      return {
+        visible: Math.max(0, Math.min(r.bottom, innerHeight) - Math.max(r.top, 0)) / Math.max(1, r.height),
+        headInside: Boolean(head && head.top >= 0 && head.bottom <= innerHeight),
+      };
+    });
+    check(
+      `${deviceName}: açılan panel görünen ekranda`,
+      Boolean(openSheet && openSheet.visible > 0.95 && openSheet.headInside),
+      openSheet ? `görünür %${Math.round(openSheet.visible * 100)}, başlık ${openSheet.headInside ? 'ekranda' : 'DIŞARIDA'}` : 'panel açılmadı',
+    );
+    // PANEL GERÇEKTEN KAPANDI MI — jestlerden önce zorunlu.
+    //
+    // Kapatmaya tıklamak yetmiyor: React yeniden çizene kadar alt sayfa
+    // hâlâ DOM'da ve ekranın büyük kısmını kaplıyor. Sürükleme o aralıkta
+    // başlarsa ilk dokunuş paneli kapatmakla harcanıyor, kamera hiç
+    // hareket etmiyor ve ölçüm "kaydırma bozuk" diyor. Sapma iki koşumda
+    // da tam 6,75 çıkmıştı — rastgele değil, testin kendi bıraktığı durum.
+    await m.locator('.modal-head button.icon').click();
+    await m.locator('.modal').waitFor({ state: 'detached' });
 
     // Jestler: CDP ile GERÇEK dokunuş olayları. Sentetik PointerEvent
     // üretmek yerine tarayıcının kendi dokunuş → pointer çevirisini
@@ -1220,14 +1303,37 @@ const findTile = (page, kind) =>
         );
       }, [x, y]);
 
+    //
+    // KAMERANIN DURMASINI BEKLE, SABİT SÜREYİ DEĞİL.
+    //
+    // Burada `waitForTimeout(700)` vardı ve bu ortamda arada sırada
+    // kırmızı yanıyordu: kamera hedefe yumuşatılarak gidiyor, 4 FPS'te
+    // 700 ms yalnızca üç kare demek ve hareket henüz bitmemiş oluyor.
+    // Ölçüm o zaman kaydırmanın doğruluğunu değil, yumuşatmanın ortasını
+    // okuyor. Koşul zamanla değil DURUMLA kurulmalı.
+    const cameraSettled = async () => {
+      let previous = null;
+      const deadline = Date.now() + 8000;
+      while (Date.now() < deadline) {
+        const target = await m.evaluate(() => window.__capital.renderInfo()?.cameraTarget ?? null);
+        if (previous && target && Math.abs(target.x - previous.x) < 1e-4 && Math.abs(target.z - previous.z) < 1e-4) {
+          return true;
+        }
+        previous = target;
+        await m.waitForTimeout(120);
+      }
+      return false;
+    };
+
     const dragDrift = async (fromX, fromY, toX, toY) => {
+      await cameraSettled();
       const before = await groundAt(fromX, fromY);
       await touch('touchStart', [[fromX, fromY]]);
       for (let i = 1; i <= 6; i++) {
         await touch('touchMove', [[fromX + ((toX - fromX) * i) / 6, fromY + ((toY - fromY) * i) / 6]]);
       }
       await touch('touchEnd', []);
-      await m.waitForTimeout(700);
+      await cameraSettled();
       const after = await groundAt(toX, toY);
       if (!before || !after) return null;
       return Math.hypot(after.x - before.x, after.z - before.z);

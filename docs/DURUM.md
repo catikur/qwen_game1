@@ -91,6 +91,24 @@ genişliği **1002px**'e sabitlenmişti; `controller.zoom()` için kodda tek
 bir çağrı yeri vardı (`wheel`); ve dokunmatikte seçim `pointermove`'a
 bağlı olduğu için hiç çalışmıyordu.
 
+Oynanınca üç hata daha çıktı ve üçü de ancak elde tutunca görülüyordu
+(`GORSEL-TASARIMI.md` §2.4b–c):
+
+| Rapor | Ölçülen kök sebep | Sonuç |
+|---|---|---|
+| "arsaya tıklayınca butonu göremiyorsun" | panel 664px ekranda 913px'te başlıyor | alt sayfa · kaydırma **645px → 0** |
+| "kaydırma baya ters" | ekran ekseni dünyaya ters işaretle dönüyor | sapma **7,7 → 0,00** |
+| "menü sorunumuz devam ediyor" | yedi yazılı düğme 516px istiyor, ekran 390px | ikon ızgarası · taşma **126px → 0** |
+
+Üçüncüsünde asıl ders testteydi: kontrol vardı, yeşil yanıyordu ve
+`scrollIntoViewIfNeeded()` çağırdığı için ekran dışındaki düğmeyi önce
+kendisi görünür yapıyordu.
+
+İkinci bir ders de aynı turda çıktı: yeni eklenen kontrol paneli açık
+bırakınca sonraki sürükleme ölçümü bozuldu ve sapma **iki koşumda da tam
+6,75** verdi. Önce zamanlama sandım, yanlıştı — **tekrarlayan aynı sayı
+zamanlama sorunu değildir**; rastgeleliğin izi dağılımdır.
+
 ### Tur 7 — Kıt olan para değil toprak · `docs/TOPRAK-TASARIMI.md`
 
 Dört tur boyunca §4.1'de "sermaye yetişemiyor" yazıyordu. Sınandı,
@@ -296,7 +314,7 @@ pnpm balance       # denge testi — 178 kontrol, geçti/kaldı
 pnpm bench         # benchmark — sayıların kendisi
 pnpm constraint    # kısıt deneyi — bağlayıcı kısıt hangisi?
 pnpm land          # abonman oranı — geometri varyantları
-pnpm playtest      # tarayıcı testi (build dahil), 145 kontrol
+pnpm playtest      # tarayıcı testi (build dahil), 151 kontrol
 pnpm dev           # oyunu aç
 ```
 
@@ -349,6 +367,14 @@ kontrolü aylarca yeşil yandı ve hiçbir şey ölçmüyordu: `body`'de
 Bu yüzden 1002px genişliğinde takılı bir üst barı ve telefonda hiçbir
 panele ulaşılamamasını kaçırdı. Bir kontrolü yazarken sorulacak soru
 "geçiyor mu" değil, **"bu kontrol hangi durumda kırmızı yanar"**.
+
+Aynı sorunun daha sinsi bir hâli sonra çıktı: kontrol kırmızı
+yanabiliyordu, ama **testin kendisi hatayı onarıyordu.** "Bütün panel
+düğmeleri açılıyor" kontrolü tıklamadan önce
+`scrollIntoViewIfNeeded()` çağırıyordu; ekranın dışında kalmış iki
+düğmeyi önce kendisi görünür yapıp sonra tıklıyor ve yeşil yanıyordu.
+Gerçek oyuncunun elinde öyle bir imkân yok. **Bir testin kolaylık için
+yaptığı her şey, ölçtüğü gerçeği değiştirmiş olabilir.**
 
 **Ortamın ölçemediği şeyi kontrolü kapatarak değil, soruyu değiştirerek
 çöz.** İki şey bu ortamda doğrudan test edilemedi: 400 ms'lik çift

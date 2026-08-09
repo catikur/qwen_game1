@@ -149,6 +149,104 @@ projeksiyonundan geliyor.
 Sapma **7,7 → 0,00**. Yaklaşık formül tamamen silindi; düzeltilmiş ama
 ölü bir formül bırakmak sonraki kişi için tuzak olurdu.
 
+### 2.4c Rıhtımın iki düğmesine ulaşmanın yolu yoktu
+
+Üçüncü oyun raporu: *"mobilde yine menü sorunumuz devam ediyor."*
+
+Ölçüm sorunu ilk denemede yerini gösterdi ve beklediğim yerde değildi.
+Paneller sorunsuz açılıyordu — yedisi de **%100 görünür**, HUD tabana
+kaydırılmışken bile. Kırık olan **rıhtımın kendisiydi**:
+
+```
+taşma: scrollWidth 516 vs width 390 → YATAY KAYDIRMA GEREKİYOR
+  Kayıt  x=400   ← ekranın dışında
+  ?      x=468   ← ekranın dışında
+```
+
+Rıhtım `overflow-x: auto` bir şeritti. Yedi yazılı düğme 516 px istiyor,
+ekran 390 px veriyordu; son ikisi ekranın dışında kalıyordu ve
+kaydırılabildiğini gösteren **hiçbir işaret yoktu**. Gizli kaydırma,
+keşfedilmeyen bir arayüzdür — o iki panele ulaşmanın görünür bir yolu
+yoktu.
+
+#### Şerit yerine ızgara
+
+Yazılar ikona indi (etiket minik bir alt yazı olarak kaldı — ikon tek
+başına ne olduğunu söylemiyor) ve rıhtım eşit sütunlu bir ızgaraya
+döndü. Izgara taşmayı **imkânsız** kılıyor: sütunlar `1fr` olduğu için
+ekran daraldıkça daralıyorlar, ama hepsi hep ekranda.
+
+| ekran | taşma | ekran dışı düğme | düğme boyu |
+|---|---|---|---|
+| 320 px | 0 | 0 | 43 × 48 |
+| 360 px | 0 | 0 | 49 × 48 |
+| 430 px | 0 | 0 | 59 × 48 |
+
+#### Panel rıhtımın üstünde bitiyor
+
+İkinci değişiklik kullanıcının istediği "menü gibi" davranış: alt sayfa
+artık tam ekranı değil, **rıhtımın üstünü** kaplıyor. Tam ekran olsaydı
+rıhtım örtülür, panel değiştirmek iki dokunuş olur ve hangi panelin açık
+olduğu görünmezdi. Şimdi rıhtım bir sekme çubuğu: açık sekme işaretli,
+geçiş tek dokunuş.
+
+Bu arada bir CSS tuzağı daha çıktı: `max-height: 100%` hiçbir şeyi
+sınırlamıyordu. Izgara satırı içerik boyunda olduğu için yüzde
+çözülmüyor ve panel 664 px'lik ekranda **956 px**'e taşıyordu. Sınır
+görüntü alanına bağlanınca (`calc(100vh - 56px - safe-area)`) düzeldi.
+
+#### Hatayı gizleyen kontrol
+
+En kayda değeri şu: bu hatayı yakalaması gereken kontrol vardı ve
+**yeşil yanıyordu.**
+
+```js
+await button.scrollIntoViewIfNeeded();   // ← hatayı burada gizliyordu
+await button.click();
+```
+
+Kontrol "bütün panel düğmeleri açılıyor" diyordu ve doğru söylüyordu —
+çünkü ekran dışındaki düğmeyi önce kendisi görünür yapıyordu. Gerçek
+oyuncunun elinde öyle bir imkân yok. Kontrol artık önce **konumu**
+ölçüyor, sonra kaydırmadan tıklıyor.
+
+Testler ayrıca görünen yazıya göre seçiyordu (`hasText: 'Rakipler'`);
+etiket dar ekrana sığsın diye kısalınca sessizce başka bir düğmeyi
+tıklamaya başlarlardı. Artık `data-panel` kimliğine göre seçiyorlar —
+yazı bir sunum ayrıntısı, kimlik ise sözleşme.
+
+#### İki sondaj daha zamana yaslanıyordu
+
+Aynı koşumda iki kontrol dönüşümlü kırmızı yandı ve ikisinin de sebebi
+aynıydı: **koşul zamanla kurulmuştu, durumla değil.**
+
+- **"Gece pencereler yanıyor."** Veri lensinden çıkarken parıltı ANINDA
+  sıfırlanıyor, gerçek değeri bir sonraki kare hesaplıyor. Sondaj
+  `activeLens` doğru olur olmaz okuyordu; ikisinin arasına denk gelince
+  0 görüyor ve **çalışan** bir özelliği hatalı raporluyordu. Artık lens
+  değişiminden sonra bir karenin çizildiğini de bekliyor (`timeOfDay`
+  değişti mi).
+- **"Dikey sürüklemede tutulan kare kaymıyor."** Bunun sebebi zamanlama
+  DEĞİLDİ ve ilk teşhisim yanlıştı. Sabit 700 ms'lik beklemeyi kamera
+  durana kadar beklemeye çevirdim; sapma **iki koşumda da tam 6,75**
+  kaldı. Aynı sayının tekrarlaması rastgeleliği eler.
+
+  Asıl sebep testin **kendi bıraktığı durumdu**: yeni eklediğim "açılan
+  panel görünen ekranda" kontrolü paneli kapatıyor ama React yeniden
+  çizene kadar alt sayfa DOM'da kalıyor. Sürükleme o aralıkta başlayınca
+  ilk dokunuş paneli kapatmakla harcanıyor, kamera hiç hareket etmiyor ve
+  ölçüm "kaydırma bozuk" diyor. Panelin DOM'dan düştüğü artık
+  bekleniyor.
+
+İki ders bir arada: **sabit bir uyku, ölçtüğün şeyin hızına dair bir
+varsayımdır** — ama **tekrarlayan aynı sayı zamanlama sorunu değildir.**
+Rastgeleliğin izi dağılımdır; 6,75'in iki kez birebir çıkması sebebin
+başka yerde olduğunu söylüyordu.
+
+Ve bir kez daha: **eklediğin kontrol, sonraki kontrolün ortamını
+değiştirebilir.** Aynı tuzağa Tur 5'te de düşülmüştü (alt sayfa açıkken
+ölçülen sürükleme).
+
 ### 2.5 Kalite tek kademeden dört kademeye
 
 Eskiden tek karar vardı: gölge açık ya da kapalı. Bu iki sorunu birden
