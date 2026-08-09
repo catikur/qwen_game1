@@ -330,7 +330,7 @@ pnpm balance       # denge testi — 178 kontrol, geçti/kaldı
 pnpm bench         # benchmark — sayıların kendisi
 pnpm constraint    # kısıt deneyi — bağlayıcı kısıt hangisi?
 pnpm land          # abonman oranı — geometri varyantları
-pnpm playtest      # tarayıcı testi (build dahil), 163 kontrol
+pnpm playtest      # tarayıcı testi (build dahil), 165 kontrol
 pnpm dev           # oyunu aç
 ```
 
