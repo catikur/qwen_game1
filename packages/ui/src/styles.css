@@ -1053,8 +1053,8 @@ button.icon {
 
   .topbar {
     order: -3;
-    gap: 8px 14px;
-    padding: 8px 12px;
+    gap: 6px 14px;
+    padding: 6px 12px;
     /*
      * `backdrop-filter` KALDIRILMALI, süs olduğu için değil:
      * sabit konumlu bir alt öğe için KAPSAYICI BLOK yaratıyor. Alt rıhtım
@@ -1077,14 +1077,63 @@ button.icon {
    * Etiket silinmedi, ikona döndü: `title` ve `aria-label` tam adı
    * taşımaya devam ediyor.
    */
+  /*
+   * ÜÇ SATIR İKİYE İNİYOR.
+   *
+   * İkinci ölçüm, ilk turda neyin optimize edilmediğini gösterdi: bar
+   * 128 px ve bunun yalnızca 18 px'i metrikler. Kalanı marka bloğu (38 px,
+   * boyunu CEO portresi belirliyor), hız düğmeleri (38 px) ve üç satırın
+   * arasındaki boşluklar. Yani geçen tur küçülttüğümüz şey zaten barın en
+   * ucuz parçasıydı.
+   *
+   * Yeni düzen:
+   *   1. satır — metrikler, tam genişlik
+   *   2. satır — portre + tarih solda, hız düğmeleri sağda
+   *
+   * Şirket adı ve CEO adı dar ekranda gizleniyor: ikisi de oyun başında
+   * bir kez seçilip bir daha değişmeyen bilgiler. Tarih kalıyor, çünkü
+   * ona her gün bakılıyor.
+   */
   .metrics {
-    gap: 6px 12px;
+    order: 1;
+    /*
+     * Tam satırı kaplıyor ki beşinci metrik (borç) çıktığında hız
+     * düğmelerini aşağı itmesin. Metriklerin kendi içinde sarması ise
+     * kaçınılmaz: "250 B ₺" 7 karakter, "999.99 Mr ₺" 11 — para dizgeleri
+     * oyun ilerledikçe uzuyor ve beşi birden 390 px'e sığmıyor. Boşluklar
+     * bu yüzden dar tutuldu; amaç sarmayı ENGELLEMEK değil, oyunun büyük
+     * bölümünde gerekmemesi.
+     */
+    flex: 1 1 100%;
+    gap: 6px 10px;
+  }
+
+  .speeds {
+    order: 3;
+    /* Portre + tarih solda kalırken düğmeler sağ kenara yaslanıyor. */
+    margin-left: auto;
+  }
+
+  /*
+   * Hız düğmeleri 38 → 34 px.
+   *
+   * Boyu belirleyen şey padding değil, `line-height: normal`'dı: ▶ ve ❚
+   * karakterleri yedek bir fontla çiziliyor ve o fontun satır kutusu 12 px
+   * yazı için 24 px yer istiyor. Satır yüksekliğini sabitleyince yükseklik
+   * yeniden padding'in kontrolüne giriyor. 34 px, WCAG 2.5.8'in istediği
+   * 24 px'lik dokunma hedefinin üstünde kalıyor.
+   */
+  .speed {
+    min-width: 40px;
+    min-height: 34px;
+    padding: 10px 6px;
+    line-height: 1;
   }
 
   .metric {
     flex-direction: row;
     align-items: center;
-    gap: 5px;
+    gap: 4px;
   }
 
   .metric-icon {
@@ -1101,13 +1150,25 @@ button.icon {
     font-size: 14px;
   }
 
-  /* Marka bloğu: portre kalıyor, şirket adı ve tarih küçülüyor. */
+  /*
+   * Marka bloğu ikinci satıra iniyor ve yalnızca portre + tarihe düşüyor.
+   * Portre 38 → 22 px: barın ilk satırının boyunu belirleyen oydu, ikinci
+   * satırda ise hız düğmelerinden (34 px) kısa kaldığı için artık boya
+   * hiç katkısı yok — yani bedava kalıyor.
+   */
   .brand {
-    gap: 8px;
+    order: 2;
+    gap: 6px;
   }
 
-  .brand-name {
-    font-size: 13px;
+  .brand-ceo svg {
+    width: 22px;
+    height: 22px;
+  }
+
+  .brand-name,
+  .brand-ceo-name {
+    display: none;
   }
 
   .brand-sub {
@@ -1476,10 +1537,6 @@ button.icon {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-  }
-
-  .speed {
-    min-height: 38px;
   }
 
   /*

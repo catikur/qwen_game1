@@ -391,6 +391,99 @@ zorunda; ölçüm alana çevrildi.
 
 **Bir ölçüt, ölçtüğü şeyin şekli değişince sessizce geçersizleşebilir.**
 
+### 2.4f Üst bar üç satırdan iki satıra
+
+Oyun raporu: *"üst bölüm yine büyük kalmış."* Bir önceki tur barı 177'den
+128 px'e indirmişti; demek ki yeterli değildi.
+
+İkinci ölçüm, ilk turda **neyin optimize edilmediğini** gösterdi:
+
+| satır | yükseklik | payı |
+|---|---|---|
+| marka bloğu (portre + şirket adı + tarih) | 38 px | %30 |
+| metrikler | **18 px** | %14 |
+| hız düğmeleri | 38 px | %30 |
+| dolgu + boşluklar | 34 px | %26 |
+
+Yani geçen tur ikonlara çevirdiğimiz metrik satırı, barın **en ucuz**
+parçasıydı. Boyu belirleyen iki şey vardı ve ikisi de sayı değildi: CEO
+portresi (38 px) ve hız düğmeleri.
+
+**Portre boyu bedavaya geldi.** İlk satırın yüksekliğini o belirlediği
+sürece 38 px'in tamamı ona aitti. İkinci satıra, hız düğmelerinin (34 px)
+yanına inince 22 px'e küçültüldü ve artık satırın en uzun öğesi olmadığı
+için yüksekliğe **hiç** katkı vermiyor. Aynı portre, sıfır piksele.
+
+**Şirket adı ve CEO adı dar ekranda gizlendi, tarih kaldı.** Üçü de tek
+bir metin dizgesiydi; CSS birini tutup diğerini atamıyordu. Ayrı kaplara
+bölündüler — ayrımın ölçütü şu: tarihe her gün bakılır (kredi vadesi,
+sözleşme günü), diğer ikisi oyun başında bir kez seçilip bir daha
+değişmez.
+
+**Hız düğmelerinin boyu padding'den gelmiyordu.** 6 px dolgu ve 12 px
+yazıyla 32 px beklenirken 38 px çıkıyordu. Sebep `line-height: normal`:
+`▶` ve `❚` karakterleri yedek bir fontla çiziliyor ve o fontun satır
+kutusu 12 px'lik yazı için 24 px yer istiyor. Satır yüksekliği
+sabitlenince boy yeniden dolgunun kontrolüne girdi.
+
+> **Bir kutunun boyu, o kutuya yazdığınız değerden gelmiyor olabilir.**
+> Padding'i kısmak burada hiçbir şeyi değiştirmezdi; ölçülmesi gereken
+> şey, boyu kimin belirlediğiydi.
+
+Yeni düzen iki satır: **metrikler tam genişlikte üstte**, altta solda
+portre + tarih, sağda hız düğmeleri.
+
+Metriklerin tam satırı kaplaması bir yer kaybı değil, **istikrar
+kararı**: beşinci metrik (borç) yalnızca oyuncu kredi çektiğinde çıkıyor.
+Metrikler diğerleriyle satır paylaşsaydı bu beşinci öğe satırı taşırır,
+bar bir satır uzar ve haritanın tamamı aşağı kayardı — oyuncu kamerasına
+hiç dokunmadığı halde şehir yerinden oynamış gibi görünürdü. Kontrol bunu
+sınıyor: borç eklenip bar aynı yükseklikte kalmazsa test kırılır.
+
+| | Tur 8 sonu | bir önceki | **şimdi** |
+|---|---|---|---|
+| Üst bar | 177 px (%27) | 128 px (%19) | **72 px (%11)** |
+| Satır sayısı | 3 | 3 | **2** |
+
+Kontroller satır **sayısını** da tutuyor, yalnızca yüksekliği değil:
+yalnız yüksekliğe bakan bir eşik, satırlardan biri sessizce ikiye bölünüp
+diğeri kısalınca aynı sayıyı vermeye devam ederdi.
+
+#### Tutulamayacak bir söz verdim, kontrol yakaladı
+
+İlk yazdığım kontrol şuydu: *"borç metriği çıkınca bar uzamasın."*
+iPhone 13'te kırıldı (95 px), Pixel 7'de geçti (72 px) — aradaki fark
+ekran genişliği: 390'a karşı 412.
+
+Aritmetiğe bakınca sözün baştan tutulamaz olduğu görüldü. Para dizgeleri
+oyun ilerledikçe uzuyor:
+
+| değer | biçim | karakter |
+|---|---|---|
+| 250 000 | `250 B ₺` | 7 |
+| 12 500 000 | `12.50 M ₺` | 9 |
+| 999 000 000 000 | `999.00 Mr ₺` | 11 |
+
+En geniş hâlleriyle beş metrik ~535 px istiyor, barın iç genişliği ise
+344 px. Sığdırmanın iki yolu vardı ve ikisi de kötüydü: yazıyı okunmaz
+küçültmek, ya da rakamı kırpmak. Para kırpılmaz.
+
+Söz düzeltildi: **metrikler en fazla iki satıra çıkar, bar üç satırlık
+bir bloğa dönüşmez.** Kontrol artık oyuncuyu milyarder ve borçlu yapıp
+tam bunu sınıyor; boşluklar da (12 → 10 px) sarmanın oyunun büyük
+bölümünde hiç gerekmemesi için daraltıldı.
+
+> **Bir kontrolün kırılması her zaman kodun yanlış olduğu anlamına
+> gelmez; bazen yanlış olan verdiğiniz sözdür.** Buradaki fayda, sözün
+> tutulamaz olduğunun oyuncunun ekranında değil testte ortaya çıkması.
+
+Aynı turda ölçüm aletinde bir hata daha çıktı: bar satırlarını öğelerin
+**üst kenarına** göre sayıyordum. Aynı satırdaki öğeler dikeyde
+ortalandığı için boyları farklıysa üst kenarları da farklı oluyor — 34
+px'lik hız düğmeleri 48'de, 22 px'lik portre 54'te başlıyor — ve tek
+satır "üç satır" olarak sayılıyordu. Ölçüt kenar değil, dikey aralıkların
+çakışması olmalıydı.
+
 ### 2.5 Kalite tek kademeden dört kademeye
 
 Eskiden tek karar vardı: gölge açık ya da kapalı. Bu iki sorunu birden

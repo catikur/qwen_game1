@@ -39,11 +39,20 @@ export function TopBar(): ReactElement {
         ) : (
           <span className="brand-mark" />
         )}
-        <div>
+        {/*
+         * CEO adı ve tarih AYRI kaplarda duruyor, tek bir metin değil.
+         *
+         * Dar ekranda ikisinin değeri aynı değil: tarihe her gün bakılır
+         * (kredi vadesi, sözleşme günü), CEO'nun adı ise oyun başında bir
+         * kez seçilip bir daha değişmez. Tek bir dizge olsalardı CSS
+         * birini tutup diğerini atamaz, ya ikisi de kalır ya ikisi de
+         * giderdi.
+         */}
+        <div className="brand-text">
           <div className="brand-name">{player.name}</div>
           <div className="brand-sub">
-            {ceo ? `${ceo.name} · ` : ''}
-            {formatDate(state.time.day)}
+            {ceo && <span className="brand-ceo-name">{ceo.name} · </span>}
+            <span className="brand-date">{formatDate(state.time.day)}</span>
           </div>
         </div>
       </div>
