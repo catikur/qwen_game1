@@ -1432,9 +1432,15 @@ const findTile = (page, kind) =>
       rich.metrics === 5 && richRows.rows === 2,
       `${rich.metrics} metrik, ${richRows.rows} satır, en uzun değer "${rich.widest}"`,
     );
+    // Eşik 100, ölçülen 96 — arada bilerek pay var. İki metrik satırının
+    // geometrisi 96 px veriyor (6 dolgu + 18 + 6 + 18 metrik + 6 + 34 hız
+    // + 6 dolgu + 2 kenarlık); üçüncü bir satır çıksaydı ~118 px olurdu.
+    // Tam 96'ya kurulmuş bir eşik, font metriği bir piksel oynadığında
+    // gerçek bir bozulma olmadan kırmızı yanardı — kontrolün işi şekli
+    // korumak, pikseli değil.
     check(
-      `${deviceName}: en geniş rakamlarda bar 96px'i geçmiyor`,
-      rich.h <= 96,
+      `${deviceName}: en geniş rakamlarda bar 100px'i geçmiyor`,
+      rich.h <= 100,
       `${rich.h}px (normalde ${bar.h}px)`,
     );
     await m.evaluate(() => {

@@ -444,6 +444,9 @@ sınıyor: borç eklenip bar aynı yükseklikte kalmazsa test kırılır.
 |---|---|---|---|
 | Üst bar | 177 px (%27) | 128 px (%19) | **72 px (%11)** |
 | Satır sayısı | 3 | 3 | **2** |
+| Harita payı · iPhone 13 | %49 | %68 | **%78** |
+| Harita payı · Pixel 7 | — | %76 | **%82** |
+| En kötü durum (milyarder + borçlu) | — | — | 96 px, hâlâ iki satır |
 
 Kontroller satır **sayısını** da tutuyor, yalnızca yüksekliği değil:
 yalnız yüksekliğe bakan bir eşik, satırlardan biri sessizce ikiye bölünüp

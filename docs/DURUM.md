@@ -101,7 +101,7 @@ Oynanınca üç hata daha çıktı ve üçü de ancak elde tutunca görülüyord
 | "menü sorunumuz devam ediyor" | yedi yazılı düğme 516px istiyor, ekran 390px | ikon ızgarası · taşma **126px → 0** |
 | "hep ekranda duran panelleri açılır kapanır yap" | üç panel 498px, HUD içeriği 967px | katlanabilir · harita payı **%38 → %49** |
 | "üst blok küçülsün, paneller sağa ikon olsun, zincir taşıyor" | üst bar 177px (%27); zincir şeridi 490px'i 388px'e sığdırmaya çalışıyor | ikon metrikler + yüzen sütun + dikey zincir · harita payı **%49 → %68** |
-| "üst bölüm yine büyük kalmış" | barın 128px'inin yalnızca **18px**'i metrik; boyu CEO portresi (38) ve hız düğmeleri (38) belirliyor | üç satır → iki satır · üst bar **128px → 72px (%19 → %11)** |
+| "üst bölüm yine büyük kalmış" | barın 128px'inin yalnızca **18px**'i metrik; boyu CEO portresi (38) ve hız düğmeleri (38) belirliyor | üç satır → iki satır · üst bar **128px → 72px** · harita payı **%68 → %78** |
 
 Üçüncüsünde asıl ders testteydi: kontrol vardı, yeşil yanıyordu ve
 `scrollIntoViewIfNeeded()` çağırdığı için ekran dışındaki düğmeyi önce
