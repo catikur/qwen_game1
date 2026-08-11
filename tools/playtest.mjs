@@ -1363,6 +1363,92 @@ const findTile = (page, kind) =>
       `harita payı %${Math.round(hud.mapShare * 100)}`,
     );
 
+    // ---- Üst bar: kaç satır, kaç piksel ----
+    //
+    // Ölçüm, ilk turda neyi optimize etmediğimizi gösterdi: bar 128 px ve
+    // bunun yalnızca 18 px'i metriklerdi. Kalanı marka bloğu (boyunu CEO
+    // portresi belirliyordu) ve hız düğmeleriydi — üç ayrı satır.
+    //
+    // Kontrol satır SAYISINI de tutuyor, çünkü asıl kural o: iki satır.
+    // Yalnız yüksekliğe bakan bir eşik, satırlardan biri sessizce üçe
+    // bölünüp diğeri kısalınca aynı sayıyı vermeye devam ederdi.
+    const barRows = () =>
+      m.evaluate(() => {
+        const el = document.querySelector('.topbar');
+        const kids = [...el.children].filter((c) => !c.classList.contains('topbar-actions'));
+        // Satırları ÜST KENARA göre saymak yanlış olur.
+        //
+        // Aynı satırdaki öğeler dikeyde ortalandığı için boyları farklıysa
+        // üst kenarları da farklı çıkıyor: 34 px'lik hız düğmeleri 48'de,
+        // 22 px'lik portre 54'te başlıyor. Üst kenarları sayan ilk sürüm
+        // bu yüzden tek satıra "3 satır" dedi. Doğru ölçüt kenar değil,
+        // dikey aralıkların ÇAKIŞMASI.
+        const spans = [...kids]
+          .map((c) => c.getBoundingClientRect())
+          .filter((r) => r.height > 0)
+          .map((r) => [r.top, r.bottom])
+          .sort((a, b) => a[0] - b[0]);
+        let rows = 0;
+        let end = -Infinity;
+        for (const [top, bottom] of spans) {
+          if (top >= end) rows++;
+          end = Math.max(end, bottom);
+        }
+        return { h: Math.round(el.getBoundingClientRect().height), rows };
+      });
+
+    const bar = await barRows();
+    check(`${deviceName}: üst bar iki satır`, bar.rows === 2, `${bar.rows} satır`);
+    check(`${deviceName}: üst bar 80px'i geçmiyor`, bar.h <= 80, `${bar.h}px`);
+
+    // ---- En kötü durum: milyarder ve borçlu ----
+    //
+    // "Bar hiç uzamasın" TUTULAMAZ bir söz: para dizgeleri oyun ilerledikçe
+    // uzuyor ("250 B ₺" 7 karakter, "999.99 Mr ₺" 11) ve beş metrik en geniş
+    // hâlleriyle 390 px'lik bir ekrana tek satıra sığmıyor. Sığdırmaya
+    // çalışmak ya yazıyı okunmaz küçültmek ya da rakamı kırpmak olurdu.
+    //
+    // Tutulabilir söz şu: metrikler EN FAZLA iki satıra çıkar, yani bar üç
+    // satırlık bir bloğa dönüşmez. Kontrol de tam bunu sınıyor.
+    const rich = await m.evaluate(async () => {
+      const s = window.__capital.getState();
+      s.companies.player.cash = 999_000_000_000;
+      s.companies.player.netWorth = 999_000_000_000;
+      s.companies.player.debt = 123_000_000_000;
+      window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 1 });
+      await new Promise((r) => setTimeout(r, 600));
+      const el = document.querySelector('.topbar');
+      return {
+        h: Math.round(el.getBoundingClientRect().height),
+        metrics: document.querySelectorAll('.metric').length,
+        widest: [...document.querySelectorAll('.metric-value')]
+          .map((v) => v.textContent.trim())
+          .sort((a, b) => b.length - a.length)[0],
+      };
+    });
+    const richRows = await barRows();
+    check(
+      `${deviceName}: en geniş rakamlarda bile bar iki satır`,
+      rich.metrics === 5 && richRows.rows === 2,
+      `${rich.metrics} metrik, ${richRows.rows} satır, en uzun değer "${rich.widest}"`,
+    );
+    // Eşik 100, ölçülen 96 — arada bilerek pay var. İki metrik satırının
+    // geometrisi 96 px veriyor (6 dolgu + 18 + 6 + 18 metrik + 6 + 34 hız
+    // + 6 dolgu + 2 kenarlık); üçüncü bir satır çıksaydı ~118 px olurdu.
+    // Tam 96'ya kurulmuş bir eşik, font metriği bir piksel oynadığında
+    // gerçek bir bozulma olmadan kırmızı yanardı — kontrolün işi şekli
+    // korumak, pikseli değil.
+    check(
+      `${deviceName}: en geniş rakamlarda bar 100px'i geçmiyor`,
+      rich.h <= 100,
+      `${rich.h}px (normalde ${bar.h}px)`,
+    );
+    await m.evaluate(() => {
+      const s = window.__capital.getState();
+      s.companies.player.debt = 0;
+      window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+    });
+
     // Katlama gerçekten açıyor mu — ve açılan içerik ekranda mı?
     const lensHead = m.locator('.collapse-head[data-collapse="lens"]');
     await lensHead.click();
