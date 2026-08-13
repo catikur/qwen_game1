@@ -15,7 +15,7 @@ export const DISTRICT_ARCHETYPES: Record<DistrictArchetypeId, DistrictArchetypeD
     incomeLevel: 0.82,
     baseLandValue: 5_400,
     demandWeights: { dining: 1.5, retail: 1.3, electronics: 1.4, services: 1.2, grocery: 0.8 },
-    color: '#33415c',
+    color: '#aab6cc',
   },
   retail_strip: {
     id: 'retail_strip',
@@ -24,7 +24,7 @@ export const DISTRICT_ARCHETYPES: Record<DistrictArchetypeId, DistrictArchetypeD
     incomeLevel: 0.55,
     baseLandValue: 3_200,
     demandWeights: { retail: 1.6, grocery: 1.3, dining: 1.2, services: 1.0 },
-    color: '#4a3554',
+    color: '#c0aecb',
   },
   industrial: {
     id: 'industrial',
@@ -33,7 +33,7 @@ export const DISTRICT_ARCHETYPES: Record<DistrictArchetypeId, DistrictArchetypeD
     incomeLevel: 0.38,
     baseLandValue: 1_100,
     demandWeights: { grocery: 1.2, dining: 0.9, retail: 0.4, electronics: 0.3, services: 0.5 },
-    color: '#4a4230',
+    color: '#c8bfa1',
   },
   port: {
     id: 'port',
@@ -42,7 +42,7 @@ export const DISTRICT_ARCHETYPES: Record<DistrictArchetypeId, DistrictArchetypeD
     incomeLevel: 0.42,
     baseLandValue: 1_500,
     demandWeights: { grocery: 1.1, dining: 1.0, retail: 0.5, services: 0.6 },
-    color: '#24444f',
+    color: '#a3c0c9',
   },
   tech_park: {
     id: 'tech_park',
@@ -51,7 +51,7 @@ export const DISTRICT_ARCHETYPES: Record<DistrictArchetypeId, DistrictArchetypeD
     incomeLevel: 0.9,
     baseLandValue: 4_100,
     demandWeights: { electronics: 1.8, dining: 1.3, services: 1.3, grocery: 0.8, retail: 0.9 },
-    color: '#1f4a52',
+    color: '#9dc4c6',
   },
   lux_residential: {
     id: 'lux_residential',
@@ -60,7 +60,7 @@ export const DISTRICT_ARCHETYPES: Record<DistrictArchetypeId, DistrictArchetypeD
     incomeLevel: 0.95,
     baseLandValue: 6_200,
     demandWeights: { retail: 1.7, dining: 1.4, services: 1.5, electronics: 1.2, grocery: 1.0 },
-    color: '#3c5148',
+    color: '#adc4b8',
   },
   mid_residential: {
     id: 'mid_residential',
@@ -69,7 +69,7 @@ export const DISTRICT_ARCHETYPES: Record<DistrictArchetypeId, DistrictArchetypeD
     incomeLevel: 0.5,
     baseLandValue: 2_400,
     demandWeights: { grocery: 1.5, dining: 1.0, services: 1.1, retail: 0.9, electronics: 0.7 },
-    color: '#2f4a3c',
+    color: '#a8c2ac',
   },
   student: {
     id: 'student',
@@ -78,7 +78,7 @@ export const DISTRICT_ARCHETYPES: Record<DistrictArchetypeId, DistrictArchetypeD
     incomeLevel: 0.28,
     baseLandValue: 1_900,
     demandWeights: { dining: 1.9, grocery: 1.3, services: 0.9, retail: 0.7, electronics: 0.6 },
-    color: '#3d3a5e',
+    color: '#b3b0d0',
   },
   tourism: {
     id: 'tourism',
@@ -87,7 +87,7 @@ export const DISTRICT_ARCHETYPES: Record<DistrictArchetypeId, DistrictArchetypeD
     incomeLevel: 0.72,
     baseLandValue: 4_600,
     demandWeights: { dining: 1.8, retail: 1.5, services: 1.0, grocery: 0.7 },
-    color: '#553a42',
+    color: '#ccadb2',
   },
 };
 

@@ -1,27 +1,91 @@
+@import './fonts.css';
+
 /*
- * Oyun arayüzü.
+ * Oyun arayüzü — "Kadastro".
  *
- * Tasarım kuralı: 3D sahne yıldız, UI onun önüne geçmez. Paneller sahnenin
- * üstünde yüzen yarı saydam katmanlar; renk paleti sahnenin kendi
- * paletinden türetildi. Sayılar tabular-nums ile hizalı, çünkü bu bir
- * kontrol paneli — okunurluk süslemeden önce gelir.
+ * Tasarım kuralı: 3D sahne yıldız, UI onun önüne geçmez. Sayılar
+ * tabular-nums ile hizalı, çünkü bu bir kontrol paneli — okunurluk
+ * süslemeden önce gelir.
+ *
+ * TEMA NEREDEN GELİYOR. Oyun temelde toprak üzerine: parsel alıyorsun,
+ * imar kısıtına bakıyorsun, ihaleye giriyorsun, tapu el değiştiriyor.
+ * Arayüz de bunu söylüyor — bir gösterge paneli değil, bir KÜTÜK:
+ * kireçtaşı kâğıt, mürekkep yazı, kılcal çizgiler, ve senin olanı
+ * işaretleyen bir mühür.
+ *
+ * Karanlık tema bırakıldı. Eski palet sahnenin gece hâlinden türemişti
+ * ve gündüz şehrin üstünde ağır duruyordu; ayrıca oyunun konusu olan
+ * toprak hiçbir yerde görünmüyordu.
+ *
+ * NÖTRLER SEÇİLDİ, DEVRALINMADI: gri tonların hepsinde hafif bir yeşil
+ * sapma var (H≈150). Saf gri "düşünülmemiş" okunuyor; paletin kendi
+ * yeşiline yaslanan bir gri seçilmiş okunuyor.
  */
 
 :root {
-  --bg: #0a1017;
-  --panel: rgba(14, 21, 31, 0.88);
-  --panel-solid: #0e151f;
-  --line: rgba(255, 255, 255, 0.09);
-  --text: #dce6f2;
-  --muted: #8397ad;
-  --accent: #7fd4ff;
+  /*
+   * Tarayıcıya temanın aydınlık olduğunu söylüyor: form denetimleri,
+   * kaydırma çubuğu ve odak halkası kendiliğinden uyuyor.
+   */
+  color-scheme: light;
+
+  /* --- kâğıt --- */
+  --bg: #e4e8e0;
+  --paper: #edefe9;
+  --panel: rgba(250, 251, 247, 0.94);
+  --panel-solid: #fafbf7;
+
+  /* --- mürekkep --- */
+  --text: #16211c;
+  --muted: #5c6b62;
+  --line: rgba(22, 33, 28, 0.14);
+
+  /* --- mühür --- */
+  --accent: #0e6b4f;
   /* Vurgunun zemin hâli — seçili sekme gibi "açık" durumları boyar. */
-  --accent-soft: rgba(127, 212, 255, 0.14);
-  --good: #59d98e;
-  --bad: #e2574c;
-  --warn: #ffd166;
-  --radius: 12px;
-  --shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+  --accent-soft: rgba(14, 107, 79, 0.1);
+  /* Mührün madeni: "senin olan" ve kilometre taşları. */
+  --brass: #8a6620;
+  /* Vurgunun üstüne yazılan yazı — yeşil zeminde mürekkep okunmaz. */
+  --on-accent: #f4f7f2;
+
+  --good: #1f7a4d;
+  --bad: #a33227;
+  --warn: #a9761a;
+
+  /*
+   * Yüzey tonları.
+   *
+   * Karanlık temada bunların hepsi "beyazla aydınlat" idi (21 ayrı
+   * `rgba(255,255,255,x)`), çünkü koyu zeminde kabartma beyazla yapılır.
+   * Aydınlık zeminde tam tersi: kabartma MÜREKKEPLE yapılır. Token'a
+   * bağlanmalarının sebebi bu — tema değişince her birini tek tek
+   * bulmak gerekmesin.
+   */
+  --tint-1: rgba(22, 33, 28, 0.028);
+  --tint-2: rgba(22, 33, 28, 0.055);
+  --tint-3: rgba(22, 33, 28, 0.085);
+  --tint-4: rgba(22, 33, 28, 0.13);
+
+  /* --- biçim --- */
+  --radius: 10px;
+  --radius-sm: 8px;
+  /*
+   * Aydınlık temada gölge koyu temadakinin aynısı olamaz: %45 siyah
+   * kâğıdın üstünde kir gibi duruyor. Yumuşak ve alçak bir gölge, üstüne
+   * de içeriden ince bir beyaz çizgi — kâğıdın kenarının ışığı yakalaması.
+   */
+  --shadow: 0 10px 28px rgba(22, 33, 28, 0.1), 0 1px 0 rgba(255, 255, 255, 0.72) inset;
+
+  /* --- yazı --- */
+  --font-sans: 'IBM Plex Sans', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  /*
+   * Başlıklar tırnaklı. Kütük fikrinin taşıyıcısı bu: panel adları ve
+   * şirket adı bir belgeye yazılmış gibi duruyor, veriler ise sans ile
+   * dizili. İkisi aynı aileden (Plex) olduğu için birlikte durdukları
+   * yerde çakışmıyorlar.
+   */
+  --font-display: 'IBM Plex Serif', ui-serif, Georgia, 'Times New Roman', serif;
 }
 
 * {
@@ -38,10 +102,28 @@ body,
 body {
   background: var(--bg);
   color: var(--text);
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: var(--font-sans);
   font-size: 14px;
   overflow: hidden;
   -webkit-font-smoothing: antialiased;
+}
+
+/*
+ * TIRNAKLI OLAN YALNIZCA BAŞLIKLAR.
+ *
+ * Serif her yere yayılsaydı yoğun bir kontrol panelinde okunurluk
+ * düşerdi — özellikle rakamlarda. Ayrım işlevsel: tırnaklı yazı bir
+ * ŞEYİN ADI (panel başlığı, şirket, CEO), sans ise onun HAKKINDAKİ
+ * veri. Kütükte de böyledir; başlık elle yazılır, rakamlar tabloya.
+ */
+.modal-head h2,
+.news h2,
+.ceo-detail h2,
+.brand-name,
+.building h3 {
+  font-family: var(--font-display);
+  font-weight: 500;
+  letter-spacing: 0;
 }
 
 button,
@@ -52,7 +134,7 @@ select {
 }
 
 button {
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--tint-2);
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 7px 12px;
@@ -61,8 +143,8 @@ button {
 }
 
 button:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.12);
-  border-color: rgba(255, 255, 255, 0.2);
+  background: var(--tint-4);
+  border-color: var(--tint-4);
 }
 
 button:active:not(:disabled) {
@@ -77,12 +159,12 @@ button:disabled {
 button.primary {
   background: var(--accent);
   border-color: transparent;
-  color: #06101a;
+  color: var(--on-accent);
   font-weight: 600;
 }
 
 button.primary:hover:not(:disabled) {
-  background: #9fe0ff;
+  background: #12805f;
 }
 
 button.icon {
@@ -213,7 +295,7 @@ button.icon {
   width: 10px;
   height: 26px;
   border-radius: 3px;
-  background: linear-gradient(180deg, var(--accent), #2c6f95);
+  background: linear-gradient(180deg, var(--accent), var(--brass));
 }
 
 .brand-name {
@@ -310,7 +392,7 @@ button.icon {
 
 .speed.active {
   background: var(--accent);
-  color: #06101a;
+  color: var(--on-accent);
   border-color: transparent;
 }
 
@@ -373,7 +455,7 @@ button.icon {
 
 .lens.active {
   background: var(--accent);
-  color: #06101a;
+  color: var(--on-accent);
   border-color: transparent;
   font-weight: 600;
 }
@@ -512,6 +594,20 @@ button.icon {
   gap: 12px;
 }
 
+/*
+ * SEÇİM YOKKEN PANEL İÇERİĞİ KADAR.
+ *
+ * Izgara satırını doldurduğu için boş hâlde de tepeden tırnağa uzanıyordu.
+ * Koyu temada yarı saydam olduğu için fark edilmiyordu; aydınlık temada
+ * ekranın sağ üçte biri bir buçuk satır yazı taşıyan beyaz bir levhaya
+ * dönüştü. İki cümlelik bir ipucu için harcanacak yer değil — geri kalanı
+ * haritaya bırakıyor.
+ */
+.inspector.empty {
+  grid-row: 2;
+  align-self: start;
+}
+
 .inspector-head {
   display: flex;
   justify-content: space-between;
@@ -530,7 +626,7 @@ button.icon {
 }
 
 .stat {
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--tint-2);
   border-radius: 8px;
   padding: 7px 9px;
   display: flex;
@@ -571,7 +667,7 @@ button.icon {
 
 .bar {
   height: 6px;
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--tint-3);
   border-radius: 999px;
   overflow: hidden;
 }
@@ -579,7 +675,7 @@ button.icon {
 .bar-fill {
   display: block;
   height: 100%;
-  background: linear-gradient(90deg, #3d7fa8, var(--bad));
+  background: linear-gradient(90deg, var(--good), var(--bad));
 }
 
 .demandvalue {
@@ -786,7 +882,7 @@ button.icon {
 
 .table td {
   padding: 7px 8px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid var(--tint-2);
 }
 
 .table tr.me {
@@ -811,7 +907,7 @@ button.icon {
 
 .rename input,
 .fileinput {
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--tint-2);
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 8px 10px;
@@ -830,7 +926,7 @@ button.icon {
 .sparkline svg {
   width: 100%;
   height: 60px;
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--tint-1);
   border-radius: 8px;
 }
 
@@ -858,7 +954,7 @@ button.icon {
   justify-content: space-between;
   align-items: center;
   gap: 12px;
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--tint-2);
   border-radius: 8px;
   padding: 9px 11px;
 }
@@ -1673,7 +1769,7 @@ button.icon {
 }
 
 .newgame-field input[type='text'] {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--tint-2);
   border: 1px solid var(--line);
   border-radius: 10px;
   padding: 13px 15px;
@@ -1703,7 +1799,7 @@ button.icon {
   gap: 4px;
   padding: 12px 8px 10px;
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--tint-2);
 }
 
 .ceo-card.selected {
@@ -1802,7 +1898,7 @@ button.icon {
   font-weight: 560;
   padding: 8px 10px;
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--tint-2);
 }
 
 .plot-note.vacant {
@@ -1833,7 +1929,7 @@ button.icon {
   border: 1px solid var(--line);
   border-radius: var(--radius);
   padding: 14px;
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--tint-1);
 }
 
 .chain-head {
@@ -1902,7 +1998,7 @@ button.icon {
   display: flex;
   flex-direction: column;
   gap: 3px;
-  background: rgba(255, 255, 255, 0.025);
+  background: var(--tint-1);
 }
 
 .chain-state {
@@ -1962,7 +2058,7 @@ button.icon {
   margin-top: 3px;
   height: 3px;
   border-radius: 2px;
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--tint-3);
   overflow: hidden;
 }
 .chain-bar > span {
@@ -2111,7 +2207,7 @@ button.icon {
   border: 1px solid var(--line);
   border-radius: var(--radius);
   padding: 14px;
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--tint-1);
 }
 
 .rival-head {
@@ -2214,7 +2310,7 @@ button.icon {
   padding: 9px 10px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.015);
+  background: var(--tint-1);
 }
 
 .rival-arm-head {
@@ -2240,7 +2336,7 @@ button.icon {
   display: block;
   height: 5px;
   border-radius: 3px;
-  background: rgba(255, 255, 255, 0.07);
+  background: var(--tint-3);
   overflow: hidden;
 }
 
@@ -2252,15 +2348,15 @@ button.icon {
 }
 
 .rival-bar-ceiling {
-  background: rgba(127, 212, 255, 0.22);
+  background: var(--accent-soft);
 }
 
 .arm-research .rival-bar-value {
-  background: #5b7fb0;
+  background: #2f6f8f;
 }
 
 .arm-marketing .rival-bar-value {
-  background: #a86fb0;
+  background: #7a5a9c;
 }
 
 .rival-arm-detail {
@@ -2373,7 +2469,7 @@ button.icon {
   border: 1px solid var(--line);
   border-radius: var(--radius);
   padding: 12px 14px;
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--tint-1);
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -2436,14 +2532,14 @@ button.icon {
   display: block;
   height: 6px;
   border-radius: 3px;
-  background: rgba(255, 255, 255, 0.07);
+  background: var(--tint-3);
   overflow: hidden;
 }
 
 .bourse-bar-fill {
   position: absolute;
   inset: 0 auto 0 0;
-  background: #3ba55d;
+  background: var(--good);
   border-radius: 3px;
 }
 

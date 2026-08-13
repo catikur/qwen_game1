@@ -631,6 +631,98 @@ const findTile = (page, kind) =>
   check('Bina değişmedikçe rota imzası sabit', stable.before === stable.after,
     `${stable.after.split('|').length} bacak`);
 
+  // ---------- Müşteri akışı ----------
+  //
+  // Şehrin bugüne kadarki tek canlı katmanı oyuncunun KENDİ kamyonlarıydı:
+  // senden dışarı akan bir şey. Müşteri akışı ters yönü ekliyor — dün kaç
+  // birim sattığın mağazanın kapısına gelen araç sayısına dönüşüyor.
+  //
+  // Burada sınanan şey akışın gerçekten SATIŞA bağlı olması. Sokakta
+  // rastgele araç yürütmek kolay; anlamlı olan, araç sayısının pazar payını
+  // izlemesi — yoksa dekordan farkı kalmaz.
+  section('Müşteri akışı');
+
+  await page.evaluate(() => window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 2 }));
+  await page.waitForTimeout(1400);
+  await page.evaluate(() => window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 }));
+  await page.waitForTimeout(400);
+
+  const flow = await page.evaluate(() => {
+    const state = window.__capital.getState();
+    const info = window.__capital.renderInfo();
+    const flows = window.__capital.customerFlows();
+
+    const colorOf = {};
+    for (const c of Object.values(state.companies)) {
+      colorOf[(c.isPlayer ? '#3fd39a' : c.color).toLowerCase()] = c.id;
+    }
+    const carsBy = {};
+    for (const hex of info.shopperColors) {
+      const id = colorOf[hex.toLowerCase()] ?? hex;
+      carsBy[id] = (carsBy[id] ?? 0) + 1;
+    }
+    const unitsBy = {};
+    for (const f of flows) unitsBy[f.companyId] = (unitsBy[f.companyId] ?? 0) + f.units;
+
+    const rank = (obj) =>
+      Object.entries(obj)
+        .sort((a, b) => b[1] - a[1])
+        .map(([id]) => id);
+
+    return {
+      shoppers: info.shopperCount,
+      stores: flows.length,
+      playerId: state.playerCompanyId,
+      playerUnits: unitsBy[state.playerCompanyId] ?? 0,
+      playerCars: carsBy[state.playerCompanyId] ?? 0,
+      unitLeader: rank(unitsBy)[0],
+      carLeader: rank(carsBy)[0],
+      companies: Object.keys(carsBy).length,
+    };
+  });
+
+  check('Satan mağaza için müşteri yola çıkıyor', flow.shoppers > 0,
+    `${flow.shoppers} araç / ${flow.stores} mağaza`);
+  check(
+    'Oyuncunun mağazasına kendi renginde müşteri geliyor',
+    flow.playerUnits > 0 ? flow.playerCars > 0 : true,
+    `oyuncu ${flow.playerUnits.toFixed(0)} birim → ${flow.playerCars} araç`,
+  );
+  // Asıl kontrol bu: en çok satan şirketin kapısı en kalabalık olmalı.
+  // Bu tutmazsa akış "canlı görünen ama yalan söyleyen" bir süse dönüşür.
+  check(
+    'En çok satanın kapısı en kalabalık',
+    flow.unitLeader === flow.carLeader,
+    `birimde ${flow.unitLeader}, araçta ${flow.carLeader}`,
+  );
+  check('Akış birden fazla şirketi gösteriyor', flow.companies >= 2,
+    `${flow.companies} şirket sokakta`);
+
+  const shopperMoved = await page.evaluate(async () => {
+    const a = window.__capital.renderInfo().shopperPositionSum;
+    await new Promise((r) => setTimeout(r, 900));
+    return { a, b: window.__capital.renderInfo().shopperPositionSum };
+  });
+  check('Müşteriler yolda ilerliyor', Math.abs(shopperMoved.b - shopperMoved.a) > 0.05,
+    `ilerleme ${(shopperMoved.b - shopperMoved.a).toFixed(2)}`);
+
+  // Müşteri de kamyon gibi BİLGİ: veri lensinin altında susmamalı.
+  const shoppersUnderLens = await readAfterLens('opportunity');
+  check('Veri lensinde müşteriler kalıyor', shoppersUnderLens.shopperCount > 0,
+    `${shoppersUnderLens.shopperCount} araç`);
+  await readAfterLens('none');
+
+  // Dağıtım değişmedikçe filo yeniden kurulmamalı: araçların hepsi aynı
+  // anda başa ışınlanırsa akış yerine titreşim görülür.
+  const fleetStable = await page.evaluate(async () => {
+    const before = window.__capital.renderInfo().shopperPositionSum;
+    await new Promise((r) => setTimeout(r, 250));
+    const mid = window.__capital.renderInfo().shopperCount;
+    return { before, mid };
+  });
+  check('Filo satış oynamasıyla sıfırlanmıyor', fleetStable.mid === flow.shoppers,
+    `${fleetStable.mid} araç`);
+
   // ---------- Rekabet kartı ----------
   // Kollar A parçasında motorda çalışıyordu ama oyuncunun göreceği bir
   // yüzü yoktu. Burada bakılan şey kartın DOĞRU şeyi söyleyip söylemediği

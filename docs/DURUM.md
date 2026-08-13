@@ -4,7 +4,7 @@
 > `pnpm bench` çıktısından; iddialar `pnpm balance` ve `pnpm playtest`
 > tarafından her koşuda doğrulanıyor.
 >
-> Son güncelleme: şema **v6**, 6 tur tamamlandı.
+> Son güncelleme: şema **v6**, 9 tur tamamlandı.
 
 ---
 
@@ -30,6 +30,8 @@ mantığının dışında; üçüncüsü ise oyunun kendi **tavsiyesindeydi**:
 | Görsel bütçenin %95'i harcanmamıştı | **6** | Bina kütlesi, pencere ışıkları, asfalt, bloom |
 | Tavsiye kıt olan parseli en verimsiz binaya harcatıyordu | **7** | Yapı menüsü parsel getirisine göre sıralanıyor |
 | Şehrin nüfusu haritasına sığmıyordu | **8** | Izgara geometrisi: 285 → 504 parsel, abonman %101 → %57 |
+| Şehir oyuncuyu içine almıyordu | **9** | Müşteri akışı: satış, mağazanın kapısına gelen araca dönüştü |
+| Arayüz karanlıktı, şehir boşlukta yüzüyordu | **10** | Kadastro teması (aydınlık, gömülü tipografi) + kırsal, ufuk eğriliği, uzak yerleşimler |
 
 ---
 
@@ -166,6 +168,66 @@ sayısı. Dört rakip 2,7 kat şehri yıllarca boş bırakıyor (360. günde %53
 boş talep); tempo artırılınca açık %13'e iniyor. Önkoşul, rakip
 sayısının şehirle ölçeklenmesi.
 
+### Tur 9 — Müşteri akışı · `docs/GORSEL-TASARIMI.md` §3.8
+
+Oyun raporu bu kez bir hata değil bir eksiklikti: *"şehir beni içine
+almıyor."*
+
+Koda bakınca eksik tek cümleye indi: **şehirden oyuncuya doğru akan
+hiçbir şey yoktu.** Sokaktaki tek anlamlı katman oyuncunun kendi
+kamyonlarıydı — senden dışarı akan bir şey. Talep ise bir sayıydı ve
+kime gittiği ancak tablo açılınca görülüyordu.
+
+`shoppers.ts` her outlet'in dünkü satışını (`last.unitsSold`) mağazanın
+kapısına gelen araca çeviriyor; araç sahibinin rengini taşıyor. Rakip
+senden pay aldığında akış onun kapısına bükülüyor — panel açmadan.
+
+İki karar ölçümle değişti:
+
+- **Dağıtım sıralı turlarla değil, satış oranında.** İlk sürümde 42 satan
+  mağazaya 54 araç düşüyor, herkes 1 araç alıyor ve "kimin kapısı daha
+  kalabalık" sorusu kayboluyordu. En büyük kalan yöntemine geçilince araç
+  payı satış payını birebir izler oldu (%55,6 → %55,6).
+- **Müşteri aracı küçültüldü.** İlk boyda kamyonla ayırt edilemiyordu;
+  sokakta "renkli kutu" görünüyor ama hangisinin mal hangisinin müşteri
+  taşıdığı bilinmiyordu.
+
+Filo her değişimde sıfırdan kurulmuyor, fark kadar güncelleniyor: yoksa
+satış her oynadığında bütün araçlar aynı anda başa ışınlanırdı.
+
+Bu tur öncekiler gibi **ölçülemez** — "şehir beni içine aldı" bir teste
+yazılamaz. Kontroller öncülleri tutuyor; kararı oynayan veriyor.
+
+### Tur 10 — Kadastro · `docs/GORSEL-TASARIMI.md` §3.9
+
+İki oyun raporu, tek tur: *"dark tema istemiyorum, daha premium bir şey
+olsun"* ve *"harita dışı uzay gibi boşlukta, orayı da yeşillik yapsana."*
+
+**Tema.** Oyun toprak üzerine; arayüz artık bunu söylüyor. Kireçtaşı
+kâğıt, mürekkep yazı, mühür yeşili vurgu, pirinç ikincil. Başlıklar
+tırnaklı (IBM Plex Serif), veriler sans (IBM Plex Sans) — ayrım işlevsel:
+tırnaklı yazı bir şeyin ADI, sans onun hakkındaki VERİ. Fontlar CDN'den
+değil gömülü, çünkü oyun internetsiz açılabilen tek bir HTML dosyası
+olarak da dağıtılıyor.
+
+İki şey ölçümle çıktı:
+
+- **Karanlık varsayımı 21 yerde gizliydi** — koyu temada kabartma beyazla
+  yapılıyordu. Hepsi dört basamaklı bir yüzey tonu ölçeğine bağlandı.
+- **Asıl karartma CSS'te değildi.** Tema aydınlığa döndüğünde şehir hâlâ
+  kara bir kütleydi; sebep yapı ve bölge renklerinin koyu sahneye göre
+  seçilmiş olmasıydı (yapılar L≈%35). Doku zaten açıktı. **Bir temanın
+  rengi CSS'te bitmiyor.**
+
+**Dünya.** Zemin yalnızca harita karelerinden oluşuyordu; onun bittiği
+yerde hiçbir şey yoktu. Şehir artık kırsalın içinde, zemin uzaklaştıkça
+küresel bir formla alçalıyor ve ufukta yedi yerleşim kümesi duruyor.
+
+Bunun da bir ölçüm dersi vardı: kırsal bitti, ekran görüntüsü alındı ve
+**görünmedi**. Kamera 46 birimde kilitliydi — şehir boşlukta yüzerken
+doğru olan sınır, dünya eklenince hataya dönüşmüştü. **Bir şeyi yapmak,
+oyuncunun onu görebileceği anlamına gelmiyor.**
+
 ---
 
 ## 3. Ölçülen durum
@@ -222,8 +284,8 @@ outlet'le doldurmak zinciri geçiyor. **Zincir bir nakit kısıtı oyunu.**
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~70 gün/sn |
-| Denge testi | **176 kontrol, hepsi geçiyor** |
-| Tarayıcı testi | **144 kontrol**, 0 konsol hatası |
+| Denge testi | **178 kontrol, hepsi geçiyor** |
+| Tarayıcı testi | **180 kontrol**, 0 konsol hatası |
 | Kapsam | 26 bina · 22 ürün · 7 kategori · 4 rakip profili |
 
 ### Render (Tur 6 sonrası)
@@ -321,6 +383,21 @@ Sıra: rakip ölçeklemesi → 5×5 → bölge açma → çoklu şehir.
   azalıyor
 - İhale yalnızca boş parsel için; dolu parsel ihalesi yok
 
+### 4.7 Şehrin oyuncuyu içine alması — Tur 9'da başladı, bitmedi
+
+Rapor üç şey istiyordu; Tur 9 birincisini yaptı:
+
+| istenen | durum |
+|---|---|
+| şehirden sana akan bir şey olsun | **yapıldı** — müşteri akışı |
+| kurduğun imparatorluk "senin" olsun | açık — şirketin adresi yok; ilk mağaza genel merkeze dönüşebilir |
+| rakip seni geçince hırslanasın | açık — geçilme anı bir olay değil; rakibin yüzü ve kaybettiğinin adı yok |
+
+İkincisi ve üçüncüsü ayrı turlar. Üçüncüsü için malzeme hazır: rakiplerin
+adı, rengi, doktrini ve karakter tarifi zaten var (`NPC_PROFILES`), CEO
+portreleri de öyle — eksik olan, geçilme anını yakalayan bir olay ve onu
+oyuncunun kaybettiği şeyle birlikte söyleyen bir kart.
+
 ---
 
 ## 5. Nasıl koşulur
@@ -331,7 +408,7 @@ pnpm balance       # denge testi — 178 kontrol, geçti/kaldı
 pnpm bench         # benchmark — sayıların kendisi
 pnpm constraint    # kısıt deneyi — bağlayıcı kısıt hangisi?
 pnpm land          # abonman oranı — geometri varyantları
-pnpm playtest      # tarayıcı testi (build dahil), 165 kontrol
+pnpm playtest      # tarayıcı testi (build dahil), 180 kontrol
 pnpm dev           # oyunu aç
 ```
 

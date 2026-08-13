@@ -4,10 +4,11 @@ import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { BUILDING_BY_ID, DISTRICT_ARCHETYPES, STRUCTURE_BY_ID } from '@capital/content';
-import { BLOCK_SIZE, lensValue, supplyRoutes } from '@capital/core';
+import { BLOCK_SIZE, customerFlows, lensValue, supplyRoutes } from '@capital/core';
 import type { GameState, LensId } from '@capital/core';
 import { RtsCameraController } from './camera';
 import { TrafficSystem } from './traffic';
+import { World } from './world';
 import { BuildingMass, tileByInstanceScale } from './mass';
 import {
   makeFacadeTexture,
@@ -156,6 +157,7 @@ export class CityRenderer {
   private fabric: BuildingMass;
   private bodyMaterials: THREE.MeshStandardMaterial[] = [];
   private traffic: TrafficSystem;
+  private world!: World;
   private sun!: THREE.DirectionalLight;
   private hemisphere!: THREE.HemisphereLight;
   private skyColor = new THREE.Color();
@@ -221,8 +223,21 @@ export class CityRenderer {
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
-    this.scene.background = new THREE.Color('#0a1017');
-    this.scene.fog = new THREE.Fog('#0a1017', 55, 130);
+    /*
+     * İlk kare de aydınlık. Eski değer koyu laciverttir ve sahne
+     * yüklenirken bir an karanlık bir kare görünüyordu; tema aydınlığa
+     * dönünce bu bir "yanıp sönme" hâline gelirdi.
+     */
+    this.scene.background = new THREE.Color('#bcd0dc');
+    /*
+     * Sis artık ŞEHRİN KENARINI GİZLEMİYOR, ufku yumuşatıyor.
+     *
+     * Eski aralık (55–130) haritanın bittiği yerdeki boşluğu saklamak
+     * içindi. Kırsal eklendikten sonra saklanacak bir kenar kalmadı;
+     * sisin işi değişti ve aralık dışarı taşındı: şehir tamamen berrak,
+     * uzak kırsal gökyüzüne karışıyor.
+     */
+    this.scene.fog = new THREE.Fog('#bcd0dc', 78, 195);
 
     this.controller = new RtsCameraController(canvas.clientWidth / canvas.clientHeight, {
       width: mapWidth,
@@ -319,6 +334,12 @@ export class CityRenderer {
     // kayboluyordu. Fon araçları ortamı kurar, kamyonlar bilgi taşır.
     this.traffic = new TrafficSystem(mapWidth, mapHeight, BLOCK_SIZE, 48);
     this.scene.add(this.traffic.group);
+
+    // Şehrin dışındaki dünya. Trafik'ten SONRA ekleniyor ki sahnedeki
+    // sıra "önce şehir, sonra çevresi" okunsun; çizim sırası açısından
+    // farkı yok, okuma açısından var.
+    this.world = new World(mapWidth, mapHeight);
+    this.scene.add(this.world.group);
 
     this.hover = makeMarker('#7fd4ff', 0.32);
     this.selection = makeMarker('#ffd166', 0.85);
@@ -650,6 +671,7 @@ export class CityRenderer {
     }
 
     this.traffic.setDataLens(dataLens);
+    this.world.setDataLens(dataLens);
     this.renderer.shadowMap.enabled = !dataLens && shadows;
 
     // Pencere parıltısını burada da sıfırla. Bir sonraki gün-döngüsü
@@ -748,6 +770,7 @@ export class CityRenderer {
     }
 
     this.syncRoutes(state, view.playerCompanyId);
+    this.syncShoppers(state);
     this.syncGhost(width);
   }
 
@@ -844,6 +867,29 @@ export class CityRenderer {
         // Oyuncunun kamyonları kendi şirket rengini değil, binalarında
         // kullanılan nane yeşilinin daha doygun tonunu taşıyor: "benimki"
         // tek bakışta ayrılsın ama ışıksız çizildiği için beyaza kaçmasın.
+        color: company?.isPlayer ? '#3fd39a' : (company?.color ?? '#8899aa'),
+      };
+    });
+  }
+
+  /**
+   * Müşteri araçlarını state'e bağlar.
+   *
+   * `syncRoutes` ile aynı disiplin: akışı motor türetiyor
+   * (`customerFlows`), burada yapılan tek şey mağazayı şehir koordinatına
+   * ve sahibinin rengine çevirmek.
+   *
+   * Renk kuralı kamyonlarınkiyle AYNI olmak zorunda. Oyuncunun kamyonu
+   * nane yeşili, müşterisi başka bir yeşil olsaydı sokakta iki ayrı
+   * "benim" rengi olurdu ve hangisinin ne anlattığı karışırdı.
+   */
+  private syncShoppers(state: GameState): void {
+    this.traffic.setShoppers(customerFlows(state), (flow) => {
+      const tile = state.map.tiles[flow.tileId];
+      if (!tile) return null;
+      const company = state.companies[flow.companyId];
+      return {
+        at: { x: tile.x, y: tile.y },
         color: company?.isPlayer ? '#3fd39a' : (company?.color ?? '#8899aa'),
       };
     });
@@ -957,14 +1003,25 @@ export class CityRenderer {
     this.hemisphere.intensity = 1.0 + daylight * 0.4;
     this.hemisphere.color.copy(NIGHT_SKY_LIGHT).lerp(DAY_SKY_LIGHT, daylight);
 
-    // Gökyüzü ve sis birlikte kayar: gündüz açık mavi, gece koyu lacivert.
-    this.skyColor.setHSL(0.58, 0.44 - daylight * 0.16, 0.13 + daylight * 0.3);
+    /*
+     * Gökyüzü ve sis birlikte kayar: gündüz açık mavi, gece lacivert.
+     *
+     * Aydınlık tema gökyüzünü de yukarı çekti. Eski aralık (L 0,13–0,43)
+     * gündüzü bile alacakaranlıkta bırakıyordu; şehir güzel görünüyordu
+     * ama oyunun tamamı koyu bir yerde geçiyordu. Gece hâlâ gece —
+     * pencere ışıkları oyunun en iyi göründüğü an ve o korundu — ama
+     * gündüz artık gerçekten gündüz.
+     */
+    this.skyColor.setHSL(0.57, 0.4 - daylight * 0.17, 0.2 + daylight * 0.38);
     (this.scene.background as THREE.Color).copy(this.skyColor);
     this.scene.fog?.color.copy(this.skyColor);
 
     // Ortam yansıması da günle birlikte kısılıyor: gece gökyüzü karanlık,
     // dolayısıyla camların yansıttığı şey de karanlık olmalı.
     this.scene.environmentIntensity = 0.12 + daylight * 0.3;
+
+    // Kırsal da günle birlikte kararıyor; sebebi `world.ts` içinde.
+    this.world.setDaylight(daylight);
 
     // PENCERE IŞIKLARI.
     //
@@ -1196,6 +1253,12 @@ export class CityRenderer {
     truckPositionSum: number;
     /** Fon araçları görünür mü (veri lensinde susarlar). */
     carsVisible: boolean;
+    /** Mağazalara akan müşteri aracı sayısı. */
+    shopperCount: number;
+    /** Müşteri konumlarının toplamı; hareket ettiklerini ölçmek için. */
+    shopperPositionSum: number;
+    /** Müşteri araçlarının rengi — akışın kime gittiğini sınamak için. */
+    shopperColors: string[];
     /** Kameranın hedef uzaklığı — pinch jestini doğrulamak için. */
     cameraDistance: number;
     /** Kameranın hedef azimutu — döndürme jestini doğrulamak için. */
@@ -1262,6 +1325,9 @@ export class CityRenderer {
       truckCount: this.traffic.truckCount,
       truckPositionSum: this.traffic.truckPositionSum,
       carsVisible: this.traffic.carsVisible,
+      shopperCount: this.traffic.shopperCount,
+      shopperPositionSum: this.traffic.shopperPositionSum,
+      shopperColors: this.traffic.shopperColors,
       cameraDistance: this.controller.targetDistance,
       cameraAzimuth: this.controller.targetAzimuth,
       cameraTarget: this.controller.targetPoint,
@@ -1338,6 +1404,7 @@ export class CityRenderer {
     for (const cleanup of this.cleanups) cleanup();
     this.cleanups = [];
     this.traffic.dispose();
+    this.world.dispose();
     this.scene.traverse((object) => {
       const mesh = object as THREE.Mesh;
       mesh.geometry?.dispose?.();
