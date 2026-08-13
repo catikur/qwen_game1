@@ -30,6 +30,7 @@ mantığının dışında; üçüncüsü ise oyunun kendi **tavsiyesindeydi**:
 | Görsel bütçenin %95'i harcanmamıştı | **6** | Bina kütlesi, pencere ışıkları, asfalt, bloom |
 | Tavsiye kıt olan parseli en verimsiz binaya harcatıyordu | **7** | Yapı menüsü parsel getirisine göre sıralanıyor |
 | Şehrin nüfusu haritasına sığmıyordu | **8** | Izgara geometrisi: 285 → 504 parsel, abonman %101 → %57 |
+| Şehir oyuncuyu içine almıyordu | **9** | Müşteri akışı: satış, mağazanın kapısına gelen araca dönüştü |
 
 ---
 
@@ -165,6 +166,36 @@ rakip kolu genişlemeden önce kuruyor.
 sayısı. Dört rakip 2,7 kat şehri yıllarca boş bırakıyor (360. günde %53
 boş talep); tempo artırılınca açık %13'e iniyor. Önkoşul, rakip
 sayısının şehirle ölçeklenmesi.
+
+### Tur 9 — Müşteri akışı · `docs/GORSEL-TASARIMI.md` §3.8
+
+Oyun raporu bu kez bir hata değil bir eksiklikti: *"şehir beni içine
+almıyor."*
+
+Koda bakınca eksik tek cümleye indi: **şehirden oyuncuya doğru akan
+hiçbir şey yoktu.** Sokaktaki tek anlamlı katman oyuncunun kendi
+kamyonlarıydı — senden dışarı akan bir şey. Talep ise bir sayıydı ve
+kime gittiği ancak tablo açılınca görülüyordu.
+
+`shoppers.ts` her outlet'in dünkü satışını (`last.unitsSold`) mağazanın
+kapısına gelen araca çeviriyor; araç sahibinin rengini taşıyor. Rakip
+senden pay aldığında akış onun kapısına bükülüyor — panel açmadan.
+
+İki karar ölçümle değişti:
+
+- **Dağıtım sıralı turlarla değil, satış oranında.** İlk sürümde 42 satan
+  mağazaya 54 araç düşüyor, herkes 1 araç alıyor ve "kimin kapısı daha
+  kalabalık" sorusu kayboluyordu. En büyük kalan yöntemine geçilince araç
+  payı satış payını birebir izler oldu (%55,6 → %55,6).
+- **Müşteri aracı küçültüldü.** İlk boyda kamyonla ayırt edilemiyordu;
+  sokakta "renkli kutu" görünüyor ama hangisinin mal hangisinin müşteri
+  taşıdığı bilinmiyordu.
+
+Filo her değişimde sıfırdan kurulmuyor, fark kadar güncelleniyor: yoksa
+satış her oynadığında bütün araçlar aynı anda başa ışınlanırdı.
+
+Bu tur öncekiler gibi **ölçülemez** — "şehir beni içine aldı" bir teste
+yazılamaz. Kontroller öncülleri tutuyor; kararı oynayan veriyor.
 
 ---
 
@@ -320,6 +351,21 @@ Sıra: rakip ölçeklemesi → 5×5 → bölge açma → çoklu şehir.
 - Devralınan şirketin yerine yenisi gelmiyor; geç oyunda rakip sayısı
   azalıyor
 - İhale yalnızca boş parsel için; dolu parsel ihalesi yok
+
+### 4.7 Şehrin oyuncuyu içine alması — Tur 9'da başladı, bitmedi
+
+Rapor üç şey istiyordu; Tur 9 birincisini yaptı:
+
+| istenen | durum |
+|---|---|
+| şehirden sana akan bir şey olsun | **yapıldı** — müşteri akışı |
+| kurduğun imparatorluk "senin" olsun | açık — şirketin adresi yok; ilk mağaza genel merkeze dönüşebilir |
+| rakip seni geçince hırslanasın | açık — geçilme anı bir olay değil; rakibin yüzü ve kaybettiğinin adı yok |
+
+İkincisi ve üçüncüsü ayrı turlar. Üçüncüsü için malzeme hazır: rakiplerin
+adı, rengi, doktrini ve karakter tarifi zaten var (`NPC_PROFILES`), CEO
+portreleri de öyle — eksik olan, geçilme anını yakalayan bir olay ve onu
+oyuncunun kaybettiği şeyle birlikte söyleyen bir kart.
 
 ---
 

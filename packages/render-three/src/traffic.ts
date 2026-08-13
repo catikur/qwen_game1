@@ -1,22 +1,29 @@
 import * as THREE from 'three';
-import type { SupplyLeg } from '@capital/core';
+import type { CustomerFlow, SupplyLeg } from '@capital/core';
 
 /**
- * Trafik: fon araçları + zincir kamyonları.
+ * Trafik: fon araçları + zincir kamyonları + müşteri araçları.
  *
- * İKİ KATMAN, İKİ İŞ.
+ * ÜÇ KATMAN, ÜÇ İŞ — ve ikisi bilgi taşıyor.
  *
  * Fon araçları şehrin "yaşıyor" hissi: sokak ızgarasında rastgele akarlar,
  * simülasyonla hiçbir bağları yoktur, soluk gri tonlardadır. Tek işleri
  * boş sokak bırakmamak.
  *
- * Zincir kamyonları ise BİLGİDİR. Her kamyon gerçek bir tedarik bacağında
+ * Zincir kamyonları BİLGİDİR. Her kamyon gerçek bir tedarik bacağında
  * yürür — çiftlikten tesise, tesisten depoya, depodan mağazaya — ve sahibi
  * olan şirketin rengini taşır. Yüklüyken parlak, dönüşte sönük. Böylece
  * lojistiğin haritası tablo açmadan, akışa bakarak okunuyor: hangi tesis
  * hangi mağazayı besliyor, rakip nereye yayılıyor, deponun ne işe yaradığı.
  *
- * Kamyonlar sokakları takip eder. Rota L şeklinde kırılır: parselden en
+ * Müşteri araçları da bilgidir ama TERS YÖNDE akar, ve eksik olan buydu.
+ * Kamyonlar senden dışarı gider: şehre yaptığın şeyi anlatırlar. Müşteri
+ * araçları şehirden sana gelir — dün kaç birim sattığın (`unitsSold`)
+ * mağazanın kapısına akan araç sayısına dönüşüyor. Rakip senden pay
+ * aldığında bunu tabloda değil, sokakta görüyorsun: akış onun kapısına
+ * bükülüyor.
+ *
+ * Üçü de sokakları takip eder. Rota L şeklinde kırılır: parselden en
  * yakın yatay sokağa çıkar, o sokakta hedefin sütununa kadar gider, dikey
  * sokakta hedefin satırına iner, oradan parsele sapar. Köşelerde şerit
  * kayması ani olmasın diye yumuşatılır.
@@ -38,6 +45,59 @@ const TRUCK_CAP = 44;
 
 /** Bir bacağa düşebilecek en fazla kamyon — az bacakta yol boş kalmasın. */
 const TRUCKS_PER_LEG_CAP = 3;
+
+/**
+ * Müşteri aracı: fon aracı boyunda, kamyonun yarısı.
+ *
+ * SİLUET BİR SÖZLÜK. Sokakta üç şey akıyor ve üçü de renkli kutu olsaydı
+ * hiçbiri okunmazdı. Ayrım şöyle kuruldu:
+ *
+ *   iri + renkli  → kamyon, yani tedarik (senden dışarı)
+ *   küçük + renkli → müşteri, yani satış (şehirden sana)
+ *   küçük + gri   → fon aracı, yani hiçbir şey
+ *
+ * İlk denemede müşteri 0,4 × 0,22 idi — kamyonun yalnızca üçte bir
+ * altında. Ekran görüntüsünde ikisi ayırt edilemiyordu: "renkli kutu"
+ * görüyordun ama hangisinin mal hangisinin müşteri taşıdığını
+ * bilmiyordun. Boy farkı iki katına çıkarıldı.
+ */
+const SHOPPER_HEIGHT = 0.15;
+const SHOPPER_LENGTH = 0.3;
+const SHOPPER_WIDTH = 0.17;
+
+/** Aynı anda yolda olabilecek en fazla müşteri aracı. */
+const SHOPPER_CAP = 54;
+
+/** Bir mağazaya düşebilecek en fazla araç — tek mağaza bütçeyi yutmasın. */
+const SHOPPERS_PER_STORE_CAP = 6;
+
+/**
+ * Müşterinin mağaza önünde durduğu süre (sn).
+ *
+ * Bu bekleme olmadan araç kapıya değip anında geri dönüyordu ve "gelip
+ * alışveriş etti" değil "U dönüşü yaptı" gibi okunuyordu. Varış bir an
+ * olmalı ki gözle yakalanabilsin.
+ */
+const SHOPPER_DWELL = 1.1;
+
+/**
+ * Müşterinin geldiği mesafe, sokak bloğu cinsinden.
+ *
+ * Mahalleyi temsil ediyor: müşteri şehrin öbür ucundan değil, çevredeki
+ * birkaç adadan geliyor. Uzak tutmak akışı okunmaz yapıyor (araç yolda
+ * kayboluyor), çok yakın tutmak ise kapının önünde titreşim gibi duruyor.
+ */
+const SHOPPER_ORIGIN_BLOCKS = 2;
+
+/** Müşterinin nereden geleceği: yön tablosu, araç sırasına göre dönüyor. */
+const SHOPPER_ORIGINS: Array<[number, number]> = [
+  [-1, 0],
+  [1, 0],
+  [0, -1],
+  [0, 1],
+  [-1, -1],
+  [1, 1],
+];
 
 /** Şerit kayması: sağdan gitsinler. */
 const LANE_OFFSET = 0.2;
@@ -67,6 +127,16 @@ export interface PlacedLeg {
 }
 
 export type LegResolver = (leg: SupplyLeg) => PlacedLeg | null;
+
+/** Bir müşteri akışının şehir üzerindeki karşılığı. */
+export interface PlacedFlow {
+  /** Mağazanın konumu. */
+  at: { x: number; y: number };
+  /** Mağaza sahibinin rengi. */
+  color: string;
+}
+
+export type FlowResolver = (flow: CustomerFlow) => PlacedFlow | null;
 
 interface Car {
   axis: 0 | 1;
@@ -98,17 +168,55 @@ interface Truck {
   offsetZ: number;
 }
 
+/**
+ * Müşteri aracı.
+ *
+ * Kamyondan tek farkı bekleme sayacı: uçlara varınca hemen dönmüyor,
+ * mağazanın önünde duruyor. Rota mantığı aynı olduğu için `buildPath`
+ * ikisi tarafından da kullanılıyor.
+ */
+interface Shopper {
+  /** Hangi mağazaya gidiyor — filo güncellenirken kimin kalacağını bu belirliyor. */
+  storeId: string;
+  path: THREE.Vector2[];
+  lengths: number[];
+  totalLength: number;
+  travelled: number;
+  /** 1 = mağazaya gidiş, -1 = dönüş. */
+  heading: 1 | -1;
+  speed: number;
+  /** Mağaza önünde kalan bekleme (sn); 0 ise yolda. */
+  dwell: number;
+  inboundColor: THREE.Color;
+  outboundColor: THREE.Color;
+  paintedInbound: boolean | null;
+  offsetX: number;
+  offsetZ: number;
+}
+
 export class TrafficSystem {
-  /** Sahneye eklenecek tek nesne; iki instanced mesh içerir. */
+  /** Sahneye eklenecek tek nesne; üç instanced mesh içerir. */
   readonly group = new THREE.Group();
 
   private carMesh: THREE.InstancedMesh;
   private truckMesh: THREE.InstancedMesh;
+  private shopperMesh: THREE.InstancedMesh;
   private cars: Car[] = [];
   private trucks: Truck[] = [];
+  private shoppers: Shopper[] = [];
   private dummy = new THREE.Object3D();
   private scratch = new THREE.Color();
   private signature = '';
+  private flowSignature = '';
+  /**
+   * En son uygulanan kalite bütçesi.
+   *
+   * Saklanması şart: filo state senkronunda yeniden kuruluyor, bütçe ise
+   * kalite kademesi değişince. İkisi `count`'u ayrı ayrı yazsaydı hangisi
+   * sonra çağrılırsa o kazanırdı — kalite düşürüp yeni mağaza açan oyuncu
+   * bütçesini sessizce geri almış olurdu.
+   */
+  private budget = 1;
 
   constructor(
     private width: number,
@@ -139,7 +247,19 @@ export class TrafficSystem {
     // instanceColor'ı şimdiden ayır; ilk setRoutes çağrısında hazır olsun.
     this.truckMesh.setColorAt(0, this.scratch.set('#ffffff'));
 
-    this.group.add(this.carMesh, this.truckMesh);
+    this.shopperMesh = new THREE.InstancedMesh(
+      new THREE.BoxGeometry(SHOPPER_LENGTH, SHOPPER_HEIGHT, SHOPPER_WIDTH),
+      // Kamyonlarla aynı gerekçe: müşteri akışı bilgi taşıyor, manzara
+      // değil. Gece yarısında da gündüzkü kadar okunmalı.
+      new THREE.MeshBasicMaterial(),
+      SHOPPER_CAP,
+    );
+    this.shopperMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    this.shopperMesh.frustumCulled = false;
+    this.shopperMesh.count = 0;
+    this.shopperMesh.setColorAt(0, this.scratch.set('#ffffff'));
+
+    this.group.add(this.carMesh, this.truckMesh, this.shopperMesh);
 
     const horizontalLanes: number[] = [];
     for (let y = 0; y < height; y += blockSize) horizontalLanes.push(y);
@@ -234,6 +354,183 @@ export class TrafficSystem {
     this.truckMesh.count = this.trucks.length;
   }
 
+  // ---------------------------------------------------------- müşteriler
+
+  /**
+   * Müşteri filosunu mağazaların dünkü satışına göre kurar.
+   *
+   * DAĞITIM SIRAYLA DEĞİL, ORANLA — ve bu bir düzeltme.
+   *
+   * İlk yazdığım sürüm bütçeyi sıralı turlarla dağıtıyordu: liste çoktan
+   * aza sıralı, her mağazaya sırayla bir araç, bütçe bitene kadar. Mantıklı
+   * görünüyordu ama ölçünce çöktü — 120. günde şehirde 42 satan mağaza ve
+   * 54 araç vardı, yani ilk tur zaten 42'sini dağıtıyor, geriye 12 kalıyor.
+   * Sonuç: mağazaların çoğu 1 araç, en işlekleri 2. Oyuncunun okumak
+   * istediği şey ("benim kapım mı rakibinki mi daha kalabalık") tam olarak
+   * bu farkın içinde kayboluyordu.
+   *
+   * Şimdi araçlar satış oranına göre, EN BÜYÜK KALAN yöntemiyle
+   * paylaştırılıyor: tam sayı kısımlar dağıtılıyor, artan araçlar en büyük
+   * kesirli paya sahip mağazalara gidiyor. Böylece iki katı satan mağazanın
+   * kapısında iki katı araç oluyor.
+   *
+   * Sıfır araç alan mağaza olabilir ve bu KASITLI. Çok az satan bir dükkân
+   * sessiz görünmeli; "her mağazaya en az bir araç" kuralı, işlemeyen bir
+   * mağazayı işliyor gibi gösterip oyuncunun görmesi gereken tek şeyi —
+   * nerede geride kaldığını — saklardı.
+   */
+  setShoppers(flows: CustomerFlow[], resolve: FlowResolver): void {
+    if (flows.length === 0) {
+      this.shoppers = [];
+      this.shopperMesh.count = 0;
+      this.flowSignature = '';
+      return;
+    }
+
+    const placed = flows
+      .map((flow) => ({ flow, spot: resolve(flow) }))
+      .filter((entry): entry is { flow: CustomerFlow; spot: PlacedFlow } => entry.spot !== null);
+    if (placed.length === 0) {
+      this.shoppers = [];
+      this.shopperMesh.count = 0;
+      this.flowSignature = '';
+      return;
+    }
+
+    const allocation = this.allocate(placed);
+
+    /*
+     * FİLO BAŞTAN KURULMUYOR, FARK KADAR GÜNCELLENİYOR.
+     *
+     * Kamyonlarda imza yöntemi yetiyordu çünkü bir tedarik bacağı ya var
+     * ya yok. Müşteri dağıtımı ise satış oranına bağlı ve o oran her gün
+     * oynuyor — filoyu her değişimde sıfırdan kursaydık bütün araçlar aynı
+     * anda başa ışınlanırdı. Oysa asıl istediğimiz şey akışın KAYMASI:
+     * rakip pay aldıkça onun kapısına bir araç ekleniyor, seninkinden bir
+     * tanesi eksiliyor, kalanlar yollarına devam ediyor.
+     *
+     * Bu yüzden imza mağaza-başına-araç vektörü: dağıtım aynıysa hiçbir
+     * şey yapılmıyor, değiştiyse yalnızca farkı olan mağazalara dokunuluyor.
+     */
+    const signature = allocation.map((a) => `${a.storeId}:${a.count}`).join('|');
+    if (signature === this.flowSignature) return;
+    this.flowSignature = signature;
+
+    const surviving = new Map<string, Shopper[]>();
+    for (const shopper of this.shoppers) {
+      const list = surviving.get(shopper.storeId);
+      if (list) list.push(shopper);
+      else surviving.set(shopper.storeId, [shopper]);
+    }
+
+    this.shoppers = [];
+    for (const { storeId, spot, count } of allocation) {
+      // Hâlâ yolda olanlar korunuyor: konumlarını, hızlarını, bekleme
+      // sayaçlarını kaybetmiyorlar.
+      const kept = (surviving.get(storeId) ?? []).slice(0, count);
+      this.shoppers.push(...kept);
+
+      for (let n = kept.length; n < count; n++) {
+        const index = this.shoppers.length;
+        const [dx, dy] = SHOPPER_ORIGINS[(index + n) % SHOPPER_ORIGINS.length]!;
+        const origin = {
+          x: spot.at.x + dx * SHOPPER_ORIGIN_BLOCKS * this.blockSize,
+          y: spot.at.y + dy * SHOPPER_ORIGIN_BLOCKS * this.blockSize,
+        };
+
+        const path = this.buildPath(origin, spot.at);
+        if (path.length < 2) continue;
+
+        const lengths: number[] = [];
+        let totalLength = 0;
+        for (let s = 0; s + 1 < path.length; s++) {
+          const length = path[s]!.distanceTo(path[s + 1]!);
+          lengths.push(length);
+          totalLength += length;
+        }
+        if (totalLength <= 0.01) continue;
+
+        const inboundColor = new THREE.Color(spot.color);
+        // Dönüşteki sönüklük kamyonlardakiyle aynı dil: parlak = iş
+        // oluyor, sönük = bitti. Aynı sahnede iki farklı "geri dönüş"
+        // gösterimi olsaydı ikisi de okunmazdı.
+        const outboundColor = inboundColor.clone().lerp(new THREE.Color('#39414f'), 0.58);
+
+        this.shoppers.push({
+          storeId,
+          path,
+          lengths,
+          totalLength,
+          // Aynı mağazaya giden araçlar rotaya yayılıyor: kapıda kuyruk
+          // değil, süregelen bir akış görünsün.
+          travelled: (totalLength * ((n + 0.17) / (count + 1))) % totalLength,
+          heading: 1,
+          speed: 1.35 + ((index * 11) % 7) * 0.11,
+          dwell: 0,
+          inboundColor,
+          outboundColor,
+          paintedInbound: null,
+          offsetX: 0,
+          offsetZ: 0,
+        });
+      }
+    }
+
+    /*
+     * Sıra değişti: korunan araçlar yeni dizide başka indekslere düştü.
+     * Renk buffer'ı indekse yazıldığı ve `paintedInbound` "zaten boyandım"
+     * dediği için, sıfırlanmazsa bir aracın rengi başka bir mağazanın
+     * aracında kalırdı — rakip yeşile, oyuncu kırmızıya boyanırdı.
+     */
+    for (const shopper of this.shoppers) shopper.paintedInbound = null;
+
+    this.applyShopperBudget();
+  }
+
+  /**
+   * Araç bütçesini mağazalara satış oranında böler — en büyük kalan yöntemi.
+   *
+   * Basit yuvarlama neden yetmiyor: 54 aracı 42 mağazaya oranla dağıtırken
+   * paylar çoğunlukla 0,5'in altında kalır, `Math.round` hepsini sıfırlar
+   * ve sokak boşalır. Tam sayı kısımları dağıtıp ARTANI en büyük kesirlere
+   * vermek hem toplamı bütçeye eşitliyor hem de sıralamayı koruyor.
+   */
+  private allocate(
+    placed: Array<{ flow: CustomerFlow; spot: PlacedFlow }>,
+  ): Array<{ storeId: string; spot: PlacedFlow; count: number }> {
+    let total = 0;
+    for (const entry of placed) total += entry.flow.units;
+    if (total <= 0) return [];
+
+    const quotas = placed.map((entry, index) => {
+      const exact = (entry.flow.units / total) * SHOPPER_CAP;
+      const whole = Math.min(SHOPPERS_PER_STORE_CAP, Math.floor(exact));
+      return {
+        index,
+        storeId: entry.flow.buildingId,
+        spot: entry.spot,
+        count: whole,
+        remainder: exact - Math.floor(exact),
+      };
+    });
+
+    let used = quotas.reduce((sum, q) => sum + q.count, 0);
+    // Artan araçlar en büyük kesirden başlayarak dağıtılıyor. Eşitlik
+    // hâlinde liste sırası (yani satış sırası) belirliyor — sabit bir
+    // ölçüt olmasa filo her senkronda başka bir mağazaya kayardı.
+    const byRemainder = [...quotas].sort((a, b) => b.remainder - a.remainder || a.index - b.index);
+    for (const quota of byRemainder) {
+      if (used >= SHOPPER_CAP) break;
+      if (quota.count >= SHOPPERS_PER_STORE_CAP) continue;
+      quota.count++;
+      used++;
+    }
+
+    return quotas
+      .filter((q) => q.count > 0)
+      .map((q) => ({ storeId: q.storeId, spot: q.spot, count: q.count }));
+  }
+
   /**
    * İki binanın kapısı önünü birleştiren, TAMAMI SOKAKTA geçen L rotası.
    *
@@ -280,6 +577,7 @@ export class TrafficSystem {
   update(dt: number): void {
     this.updateCars(dt);
     this.updateTrucks(dt);
+    this.updateShoppers(dt);
   }
 
   private updateCars(dt: number): void {
@@ -373,13 +671,80 @@ export class TrafficSystem {
     if (repaint && this.truckMesh.instanceColor) this.truckMesh.instanceColor.needsUpdate = true;
   }
 
+  private updateShoppers(dt: number): void {
+    if (this.shoppers.length === 0) return;
+    let repaint = false;
+
+    const drawn = Math.min(this.shoppers.length, this.shopperMesh.count);
+    for (let i = 0; i < drawn; i++) {
+      const shopper = this.shoppers[i]!;
+
+      // Mağaza önünde bekliyorsa yalnızca sayaç işliyor; araç duruyor ve
+      // matris zaten doğru yerde olduğu için yeniden yazmaya gerek yok.
+      if (shopper.dwell > 0) {
+        shopper.dwell -= dt;
+        if (shopper.dwell <= 0) shopper.heading = -1;
+        continue;
+      }
+
+      shopper.travelled += shopper.speed * shopper.heading * dt;
+
+      if (shopper.travelled >= shopper.totalLength) {
+        shopper.travelled = shopper.totalLength;
+        // Kapıya vardı: alışverişi bitene kadar duruyor. Dönüş kararı
+        // bekleme bitince veriliyor, burada değil.
+        shopper.dwell = SHOPPER_DWELL;
+      } else if (shopper.travelled <= 0) {
+        shopper.travelled = 0;
+        shopper.heading = 1;
+      }
+
+      const inbound = shopper.heading === 1;
+      if (shopper.paintedInbound !== inbound) {
+        this.shopperMesh.setColorAt(i, inbound ? shopper.inboundColor : shopper.outboundColor);
+        shopper.paintedInbound = inbound;
+        repaint = true;
+      }
+
+      let remaining = shopper.travelled;
+      let segment = 0;
+      while (segment < shopper.lengths.length - 1 && remaining > shopper.lengths[segment]!) {
+        remaining -= shopper.lengths[segment]!;
+        segment++;
+      }
+      const a = shopper.path[segment]!;
+      const b = shopper.path[segment + 1]!;
+      const length = shopper.lengths[segment] || 1;
+      const t = Math.max(0, Math.min(1, remaining / length));
+
+      const x = a.x + (b.x - a.x) * t;
+      const z = a.y + (b.y - a.y) * t;
+      const dx = (b.x - a.x) * shopper.heading;
+      const dz = (b.y - a.y) * shopper.heading;
+
+      const targetX = Math.abs(dz) > Math.abs(dx) ? (dz > 0 ? LANE_OFFSET : -LANE_OFFSET) : 0;
+      const targetZ = Math.abs(dx) > Math.abs(dz) ? (dx > 0 ? -LANE_OFFSET : LANE_OFFSET) : 0;
+      const settle = Math.min(1, OFFSET_SETTLE * dt);
+      shopper.offsetX += (targetX - shopper.offsetX) * settle;
+      shopper.offsetZ += (targetZ - shopper.offsetZ) * settle;
+
+      this.dummy.position.set(x + shopper.offsetX, SHOPPER_HEIGHT / 2 + 0.07, z + shopper.offsetZ);
+      this.dummy.rotation.y = Math.atan2(-dz, dx);
+      this.dummy.updateMatrix();
+      this.shopperMesh.setMatrixAt(i, this.dummy.matrix);
+    }
+
+    this.shopperMesh.instanceMatrix.needsUpdate = true;
+    if (repaint && this.shopperMesh.instanceColor) this.shopperMesh.instanceColor.needsUpdate = true;
+  }
+
   /**
    * Veri lensi modu.
    *
-   * Fon araçları susar — lenste manzara gürültüdür. Kamyonlar KALIR, çünkü
-   * onlar da veridir: ısı haritasının üstünde akan zincir, iki bilgiyi
-   * üst üste okumanı sağlıyor ("talep burada yüksek, ama kamyonlarım
-   * oraya gitmiyor").
+   * Fon araçları susar — lenste manzara gürültüdür. Kamyonlar ve müşteri
+   * araçları KALIR, çünkü onlar da veridir: ısı haritasının üstünde akan
+   * zincir ve müşteri, iki bilgiyi üst üste okumanı sağlıyor ("talep
+   * burada yüksek, ama müşteri rakibin kapısına gidiyor").
    */
   setDataLens(active: boolean): void {
     this.carMesh.visible = !active;
@@ -392,13 +757,51 @@ export class TrafficSystem {
    * anlatıyor, yani bilgi. Kısılacak ilk şey her zaman süs olmalı.
    */
   setCarBudget(ratio: number): void {
-    const budget = Math.max(0, Math.min(1, ratio));
-    this.carMesh.count = Math.round(this.cars.length * budget);
+    this.budget = Math.max(0, Math.min(1, ratio));
+    this.carMesh.count = Math.round(this.cars.length * this.budget);
+    this.applyShopperBudget();
+  }
+
+  /**
+   * Müşteri araçları da kısılıyor ama TABANLA.
+   *
+   * Kamyonlar hiç kısılmıyor çünkü sayıları zincirin kendi büyüklüğüyle
+   * sınırlı. Müşteri araçları ise şehir büyüdükçe tavana dayanıyor, yani
+   * zayıf cihazda gerçek bir yük. Buna karşılık sıfıra indirmek olmaz:
+   * kısılacak ilk şey süs olmalı, bilgi değil. Taban, en düşük kademede
+   * bile akışın hangi kapıya gittiğinin okunabildiği yer.
+   */
+  private applyShopperBudget(): void {
+    const floor = 0.45;
+    const ratio = floor + (1 - floor) * this.budget;
+    this.shopperMesh.count = Math.round(this.shoppers.length * ratio);
   }
 
   /** Testler için: kaç kamyon yolda. */
   get truckCount(): number {
     return this.trucks.length;
+  }
+
+  /** Testler için: kaç müşteri aracı yolda. */
+  get shopperCount(): number {
+    return this.shoppers.length;
+  }
+
+  /** Testler için: müşteri araçlarının rota üzerindeki toplam ilerlemesi. */
+  get shopperPositionSum(): number {
+    let sum = 0;
+    for (const shopper of this.shoppers) sum += shopper.travelled;
+    return sum;
+  }
+
+  /**
+   * Testler için: müşteri araçlarının rengi, sahiplerine göre.
+   *
+   * Rekabetin görünürlüğünü sınayan kontrol buradan okuyor — sokakta
+   * yalnızca oyuncunun rengi varsa akış rakibi anlatmıyor demektir.
+   */
+  get shopperColors(): string[] {
+    return this.shoppers.map((shopper) => `#${shopper.inboundColor.getHexString()}`);
   }
 
   /** Testler için: kamyonların rota üzerindeki toplam ilerlemesi. */
@@ -414,7 +817,7 @@ export class TrafficSystem {
   }
 
   dispose(): void {
-    for (const mesh of [this.carMesh, this.truckMesh]) {
+    for (const mesh of [this.carMesh, this.truckMesh, this.shopperMesh]) {
       mesh.geometry.dispose();
       (mesh.material as THREE.Material).dispose();
     }

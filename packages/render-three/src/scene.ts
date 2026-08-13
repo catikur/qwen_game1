@@ -4,7 +4,7 @@ import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { BUILDING_BY_ID, DISTRICT_ARCHETYPES, STRUCTURE_BY_ID } from '@capital/content';
-import { BLOCK_SIZE, lensValue, supplyRoutes } from '@capital/core';
+import { BLOCK_SIZE, customerFlows, lensValue, supplyRoutes } from '@capital/core';
 import type { GameState, LensId } from '@capital/core';
 import { RtsCameraController } from './camera';
 import { TrafficSystem } from './traffic';
@@ -748,6 +748,7 @@ export class CityRenderer {
     }
 
     this.syncRoutes(state, view.playerCompanyId);
+    this.syncShoppers(state);
     this.syncGhost(width);
   }
 
@@ -844,6 +845,29 @@ export class CityRenderer {
         // Oyuncunun kamyonları kendi şirket rengini değil, binalarında
         // kullanılan nane yeşilinin daha doygun tonunu taşıyor: "benimki"
         // tek bakışta ayrılsın ama ışıksız çizildiği için beyaza kaçmasın.
+        color: company?.isPlayer ? '#3fd39a' : (company?.color ?? '#8899aa'),
+      };
+    });
+  }
+
+  /**
+   * Müşteri araçlarını state'e bağlar.
+   *
+   * `syncRoutes` ile aynı disiplin: akışı motor türetiyor
+   * (`customerFlows`), burada yapılan tek şey mağazayı şehir koordinatına
+   * ve sahibinin rengine çevirmek.
+   *
+   * Renk kuralı kamyonlarınkiyle AYNI olmak zorunda. Oyuncunun kamyonu
+   * nane yeşili, müşterisi başka bir yeşil olsaydı sokakta iki ayrı
+   * "benim" rengi olurdu ve hangisinin ne anlattığı karışırdı.
+   */
+  private syncShoppers(state: GameState): void {
+    this.traffic.setShoppers(customerFlows(state), (flow) => {
+      const tile = state.map.tiles[flow.tileId];
+      if (!tile) return null;
+      const company = state.companies[flow.companyId];
+      return {
+        at: { x: tile.x, y: tile.y },
         color: company?.isPlayer ? '#3fd39a' : (company?.color ?? '#8899aa'),
       };
     });
@@ -1196,6 +1220,12 @@ export class CityRenderer {
     truckPositionSum: number;
     /** Fon araçları görünür mü (veri lensinde susarlar). */
     carsVisible: boolean;
+    /** Mağazalara akan müşteri aracı sayısı. */
+    shopperCount: number;
+    /** Müşteri konumlarının toplamı; hareket ettiklerini ölçmek için. */
+    shopperPositionSum: number;
+    /** Müşteri araçlarının rengi — akışın kime gittiğini sınamak için. */
+    shopperColors: string[];
     /** Kameranın hedef uzaklığı — pinch jestini doğrulamak için. */
     cameraDistance: number;
     /** Kameranın hedef azimutu — döndürme jestini doğrulamak için. */
@@ -1262,6 +1292,9 @@ export class CityRenderer {
       truckCount: this.traffic.truckCount,
       truckPositionSum: this.traffic.truckPositionSum,
       carsVisible: this.traffic.carsVisible,
+      shopperCount: this.traffic.shopperCount,
+      shopperPositionSum: this.traffic.shopperPositionSum,
+      shopperColors: this.traffic.shopperColors,
       cameraDistance: this.controller.targetDistance,
       cameraAzimuth: this.controller.targetAzimuth,
       cameraTarget: this.controller.targetPoint,

@@ -598,6 +598,92 @@ bilmesi gerekmiyor.
 
 ---
 
+## 3.8 Tur 9 — Müşteri akışı: şehirden sana doğru akan ilk şey
+
+Oyun raporu: *"şehir beni içine almıyor. Benzin istasyonuna gelen araçlar
+gibi… kurduğum imparatorluk benim gibi olmalı."*
+
+Koda bakınca boşluk tek bir cümleye indi: **şehirden sana doğru akan
+hiçbir şey yoktu.** `traffic.ts` bunu kendi yorumunda zaten söylüyordu —
+fon araçları için *"simülasyonla hiçbir bağları yoktur, tek işleri boş
+sokak bırakmamak"*. Bilgi taşıyan tek katman senin kamyonlarındı, yani
+yine sen: senden dışarı. Talep ise bir sayıydı (`district.demand`), kime
+gittiği ancak tablo açılınca görülüyordu.
+
+### Veri zaten oradaydı
+
+Her outlet dün kaç birim sattığını (`last.unitsSold`) ve bölgesindeki
+payını (`last.share`) zaten tutuyor. `shoppers.ts` bu sayıyı sokak
+seviyesine indiriyor: satış → mağazanın kapısına gelen araç sayısı.
+`routes.ts` ile aynı disiplin — tamamen türetilmiş, state'e yazmıyor.
+
+### Siluet bir sözlük
+
+Sokakta artık üç şey akıyor ve üçü de renkli kutu olsaydı hiçbiri
+okunmazdı:
+
+| görünüm | anlamı | yön |
+|---|---|---|
+| iri + renkli | kamyon — tedarik | senden dışarı |
+| küçük + renkli | müşteri — satış | şehirden sana |
+| küçük + gri | fon aracı — hiçbir şey | — |
+
+İlk denemede müşteri aracı kamyonun yalnızca üçte bir altındaydı ve ekran
+görüntüsünde ikisi ayırt edilemiyordu: "renkli kutu" görüyordun ama
+hangisinin mal hangisinin müşteri taşıdığını bilmiyordun. Boy farkı iki
+katına çıkarıldı.
+
+### Dağıtım kuralını ölçüm değiştirdi
+
+İlk sürüm bütçeyi sıralı turlarla dağıtıyordu: liste çoktan aza sıralı,
+her mağazaya sırayla bir araç. Mantıklı görünüyordu, ölçünce çöktü —
+120. günde şehirde **42 satan mağaza ve 54 araç** vardı, yani ilk tur
+zaten 42'sini dağıtıyor, geriye 12 kalıyordu. Sonuç: mağazaların çoğu
+1 araç, en işlekleri 2. Oyuncunun okumak istediği tek şey — *benim kapım
+mı rakibinki mi daha kalabalık* — tam olarak bu farkın içinde kayboluyordu.
+
+Şimdi **en büyük kalan** yöntemiyle, satış oranında paylaştırılıyor:
+
+| şirket | birim payı | araç payı |
+|---|---|---|
+| Nova Holding | %55,6 | **%55,6** |
+| Meridyen Grup | %23,4 | %24,1 |
+| Kilit Market | %21,0 | %20,4 |
+
+Sıfır araç alan mağaza olabiliyor ve bu **kasıtlı**. Çok az satan bir
+dükkân sessiz görünmeli; "her mağazaya en az bir araç" kuralı işlemeyen
+bir mağazayı işliyor gibi gösterip oyuncunun görmesi gereken tek şeyi —
+nerede geride kaldığını — saklardı.
+
+### Filo baştan kurulmuyor, fark kadar güncelleniyor
+
+Kamyonlarda imza yöntemi yetiyordu çünkü bir tedarik bacağı ya var ya
+yok. Müşteri dağıtımı ise satış oranına bağlı ve o oran her gün oynuyor —
+filoyu her değişimde sıfırdan kursaydık bütün araçlar aynı anda başa
+ışınlanırdı. Oysa istenen şey akışın **kayması**: rakip pay aldıkça onun
+kapısına bir araç ekleniyor, seninkinden bir tanesi eksiliyor, kalanlar
+yollarına devam ediyor.
+
+Bunun bir yan etkisi vardı ve gözden kaçması kolaydı: korunan araçlar
+yeni dizide başka indekslere düşüyor, renk buffer'ı ise indekse yazılıyor.
+Sıfırlanmasaydı bir aracın rengi başka bir mağazanın aracında kalırdı —
+rakip yeşile, oyuncu kırmızıya boyanırdı.
+
+### Ölçülemeyen şey ve ölçülen şey
+
+Bu tur öncekiler gibi ölçülemez: *"şehir beni içine aldı"* bir teste
+yazılamaz, kararı oynayan verir. Ölçülebilen şey **öncülleri** ve
+kontroller onları tutuyor:
+
+- satan mağaza için araç yola çıkıyor, satmayan için çıkmıyor
+- **en çok satanın kapısı en kalabalık** — akış yalan söylemiyor
+- oyuncunun mağazasına kendi renginde müşteri geliyor
+- akışta birden fazla şirket var (tek renkse rekabeti anlatmıyor demektir)
+- araçlar yolda ilerliyor, veri lensinde susmuyor, satış oynayınca filo
+  sıfırlanmıyor
+
+---
+
 ## 4. Neyi eklemedik, neden
 
 | Aday | Neden bu turda değil |

@@ -4,6 +4,7 @@ import {
   GameEngine,
   SCHEMA_VERSION,
   createNewGame,
+  customerFlows,
   getPlayer,
   routeSignature,
   supplyRoutes,
@@ -269,6 +270,7 @@ function GameRoot({
       groundAt: (ndcX: number, ndcY: number) => rendererRef.current?.groundAt(ndcX, ndcY) ?? null,
       routeCount: () => supplyRoutes(engine.getState()).length,
       routeSignature: () => routeSignature(supplyRoutes(engine.getState())),
+      customerFlows: () => customerFlows(engine.getState()),
     };
     return () => {
       delete globals['__capital'];
