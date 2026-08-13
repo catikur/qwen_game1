@@ -11,7 +11,14 @@ export function pushNews(
   tone: NewsTone,
   title: string,
   body: string,
+  /**
+   * Haberin bir yüzü varsa hangi şirketin.
+   *
+   * Seçime bağlı ve eski kayıtlarda yok — bu yüzden şema sürümü
+   * değişmiyor: alanı olmayan bir haber yalnızca portresiz görünür.
+   */
+  companyId?: string,
 ): void {
-  state.news.unshift({ id: state.nextId++, day: state.time.day, tone, title, body });
+  state.news.unshift({ id: state.nextId++, day: state.time.day, tone, title, body, companyId });
   if (state.news.length > MAX_NEWS) state.news.length = MAX_NEWS;
 }

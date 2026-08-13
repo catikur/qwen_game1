@@ -1,6 +1,7 @@
 import { BUILDING_BY_ID, CONSUMER_CATEGORIES, GOODS_BY_CATEGORY } from '@capital/content';
 import { build, buyTile, buyoutTile, demolish, sellTile } from './actions';
 import { pushNews } from './news';
+import { companyRanking, formatMoney } from './selectors';
 import { runMarketTick } from './systems/market';
 import { resetDailyLedgers, runProductionTick, runSpotPriceTick } from './systems/supply';
 import { recomputeNetWorth, runLandValueTick, runPopulationTick } from './systems/city';
@@ -34,6 +35,15 @@ export class GameEngine {
   private listeners = new Set<Listener>();
   private version = 0;
   private reachedMilestones = new Set<number>();
+  /**
+   * Oyuncunun dünkü sırası; geçilme ANINI yakalamak için.
+   *
+   * State'te DEĞİL, motorda: bir sıralama zaten her gün net değerden
+   * türetiliyor, saklamaya değer bir bilgi değil. Kayıt yüklendiğinde
+   * null olması da doğru davranış — oyunu açar açmaz "seni geçtiler"
+   * demek, olmamış bir olayı bildirmek olurdu.
+   */
+  private lastRank: number | null = null;
 
   constructor(state: GameState) {
     this.state = state;
@@ -251,6 +261,78 @@ export class GameEngine {
     this.settleCredit();
     recomputeNetWorth(state);
     this.checkMilestones();
+    this.checkOvertaking();
+  }
+
+  /**
+   * Sıralama değişimini bir OLAYA çeviriyor.
+   *
+   * Bugüne kadar sıralama üst barda "4." diye duran bir sayıydı. Rakip
+   * seni geçtiğinde hiçbir şey olmuyordu: haber akışında "Nova Holding
+   * genişliyor" geçiyor, senin ne kaybettiğin yazmıyordu. Oysa oyunu
+   * sürükleyen duygu tam orada — geçildiğini görmek.
+   *
+   * İki yön de bildiriliyor. Yalnızca kötü haberi vermek oyuncuyu
+   * cezalandırırdı; geri almanın da bir karşılığı olmalı.
+   */
+  private checkOvertaking(): void {
+    const state = this.state;
+    const ranking = companyRanking(state);
+    const mine = ranking.find((row) => row.company.isPlayer);
+    if (!mine) return;
+
+    const previous = this.lastRank;
+    this.lastRank = mine.rank;
+    // İlk gün kıyaslanacak bir dün yok.
+    if (previous === null || previous === mine.rank) return;
+
+    if (mine.rank > previous) {
+      // Geçen kim: şimdi senin ESKİ sıranda duran şirket.
+      const passer = ranking.find((row) => row.rank === previous);
+      if (!passer || passer.company.isPlayer) return;
+      const gap = passer.company.netWorth - mine.company.netWorth;
+      /*
+       * İkinci cümle KOŞULLU.
+       *
+       * İlk hâli her zaman bina sayısını yazıyordu ve sondajda "Nova
+       * Holding 0 binayla çalışıyor" gibi saçma bir cümle çıktı. Bir
+       * karşılaştırma ancak karşılaştırılacak bir şey varsa bilgi taşır;
+       * yoksa oyuncuya yalnızca gürültü verir.
+       *
+       * Kıyas bina sayısı üzerinden, çünkü oyuncunun yapabileceği şey o:
+       * para bir sonuç, bina bir hamle.
+       */
+      const lead = passer.buildings - mine.buildings;
+      const detail =
+        lead > 0
+          ? ` Elinde senden ${lead} fazla bina var.`
+          : mine.buildings > passer.buildings
+            ? ' Senin binan daha çok — fark arsada ve markada.'
+            : '';
+      pushNews(
+        state,
+        'bad',
+        `${passer.company.name} seni geçti`,
+        `Artık ${mine.rank}. sıradasın. Aradaki fark ${formatMoney(gap)}.${detail}`,
+        passer.company.id,
+      );
+      return;
+    }
+
+    // Sıra iyileşti: geçtiğin şirket şimdi senin bir altında.
+    const passed = ranking.find((row) => row.rank === mine.rank + 1);
+    const ahead = ranking.find((row) => row.rank === mine.rank - 1);
+    // Bir üstteki de yazılıyor: "geçtim" duygusunun devamı "sıradaki kim".
+    const next = ahead
+      ? ` Önünde ${ahead.company.name} var — fark ${formatMoney(ahead.company.netWorth - mine.company.netWorth)}.`
+      : ' Şehrin en değerli şirketi sensin.';
+    pushNews(
+      state,
+      'good',
+      passed ? `${passed.company.name}'i geçtin` : `${mine.rank}. sıraya yükseldin`,
+      `${mine.rank}. sıradasın.${next}`,
+      passed?.company.id,
+    );
   }
 
   /** Nakit eksiye düşerse otomatik kredi devreye girer; oyun sert bitmez. */

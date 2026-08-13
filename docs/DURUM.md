@@ -4,7 +4,7 @@
 > `pnpm bench` çıktısından; iddialar `pnpm balance` ve `pnpm playtest`
 > tarafından her koşuda doğrulanıyor.
 >
-> Son güncelleme: şema **v6**, 9 tur tamamlandı.
+> Son güncelleme: şema **v6**, 11 tur tamamlandı.
 
 ---
 
@@ -32,6 +32,7 @@ mantığının dışında; üçüncüsü ise oyunun kendi **tavsiyesindeydi**:
 | Şehrin nüfusu haritasına sığmıyordu | **8** | Izgara geometrisi: 285 → 504 parsel, abonman %101 → %57 |
 | Şehir oyuncuyu içine almıyordu | **9** | Müşteri akışı: satış, mağazanın kapısına gelen araca dönüştü |
 | Arayüz karanlıktı, şehir boşlukta yüzüyordu | **10** | Kadastro teması (aydınlık, gömülü tipografi) + kırsal, ufuk eğriliği, uzak yerleşimler |
+| İmparatorluğun adresi yoktu, rakip seni geçince hiçbir şey olmuyordu | **11** | Genel merkez işareti + geçilme olayı, rakiplerin yüzü |
 
 ---
 
@@ -228,6 +229,37 @@ Bunun da bir ölçüm dersi vardı: kırsal bitti, ekran görüntüsü alındı 
 doğru olan sınır, dünya eklenince hataya dönüşmüştü. **Bir şeyi yapmak,
 oyuncunun onu görebileceği anlamına gelmiyor.**
 
+### Tur 11 — Adres ve hırs · `docs/GORSEL-TASARIMI.md` §3.10
+
+Tur 9 raporunun kalan iki isteği:
+
+**"Kurduğun imparatorluk senin olsun."** Şirketin bir adı vardı ama bir
+YERİ yoktu. Artık en eski binan genel merkez: tepesinde şirket renginde
+bir bayrak, parsel panelinde bir rozet.
+
+Merkez **saklanmıyor, türetiliyor** (`headquarters.ts`). Şema alanı açmak,
+migration yazmak ve bina yıkıldığında ortada kalan kimliği temizlemek
+gerekirdi; oysa kural tek cümlede duruyor: *en eski binan merkezindir.*
+Kural kendini onarıyor da — merkezi yıkarsan şirket bir sonraki en eski
+binaya taşınıyor.
+
+**"Rakip seni geçince hırslanasın."** Sıralama üst barda "4." diye duran
+bir sayıydı; geçildiğin an hiçbir şey olmuyordu. Artık bir olay: kimin
+geçtiği, aradaki fark ve elinde senden kaç bina fazla olduğu. Geri
+aldığında da bir olay — yalnızca kötü haberi vermek oyuncuyu
+cezalandırırdı.
+
+Rakiplerin bugüne kadar `ceoId`'si null'dı: adları, renkleri, karakter
+tarifleri vardı ama **bir yüzleri yoktu**. Dördüne de portre ve CEO adı
+verildi. `ceoId` üzerinden değil ayrı bir alanla, çünkü CEO tanımları
+oyuncunun perk'lerini de taşıyor — rakiplere ceoId vermek onlara görünmez
+avantaj dağıtmak olurdu. Yüz var, avantaj yok.
+
+Yol boyunca küçük bir ders: olay metni her zaman bina sayısını yazıyordu
+ve sondajda *"Nova Holding 0 binayla çalışıyor"* çıktı. **Bir karşılaştırma
+ancak karşılaştırılacak bir şey varsa bilgi taşır**; cümle koşullu hâle
+geldi.
+
 ---
 
 ## 3. Ölçülen durum
@@ -387,16 +419,16 @@ Sıra: rakip ölçeklemesi → 5×5 → bölge açma → çoklu şehir.
 
 Rapor üç şey istiyordu; Tur 9 birincisini yaptı:
 
-| istenen | durum |
-|---|---|
-| şehirden sana akan bir şey olsun | **yapıldı** — müşteri akışı |
-| kurduğun imparatorluk "senin" olsun | açık — şirketin adresi yok; ilk mağaza genel merkeze dönüşebilir |
-| rakip seni geçince hırslanasın | açık — geçilme anı bir olay değil; rakibin yüzü ve kaybettiğinin adı yok |
+| istenen | tur | durum |
+|---|---|---|
+| şehirden sana akan bir şey olsun | 9 | **yapıldı** — müşteri akışı |
+| kurduğun imparatorluk "senin" olsun | 11 | **yapıldı** — genel merkez işareti ve rozeti |
+| rakip seni geçince hırslanasın | 11 | **yapıldı** — geçilme olayı, rakibin yüzü ve aradaki fark |
 
-İkincisi ve üçüncüsü ayrı turlar. Üçüncüsü için malzeme hazır: rakiplerin
-adı, rengi, doktrini ve karakter tarifi zaten var (`NPC_PROFILES`), CEO
-portreleri de öyle — eksik olan, geçilme anını yakalayan bir olay ve onu
-oyuncunun kaybettiği şeyle birlikte söyleyen bir kart.
+Üçü de kapandı. Geriye kalan, aynı damardaki daha küçük kalemler: bölge
+liderliğini kaybetme anı henüz bir olay değil (yalnızca net değer
+sıralaması izleniyor), ve devralınan şirketin yerine yenisi gelmediği
+için geç oyunda rakip sayısı azalıyor.
 
 ---
 

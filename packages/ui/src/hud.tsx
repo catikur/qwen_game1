@@ -1,5 +1,5 @@
 import type { ReactElement } from 'react';
-import { CEO_BY_ID, EVENTS } from '@capital/content';
+import { CEO_BY_ID, EVENTS, NPC_PROFILES } from '@capital/content';
 import {
   LENSES,
   companyRanking,
@@ -473,6 +473,27 @@ const TONE_LABEL: Record<string, string> = {
   neutral: 'Haber',
 };
 
+/**
+ * Bir haberin taşıdığı yüz.
+ *
+ * Portre rakibin kendi profilinden geliyor (`NPC_PROFILES`), oyuncunun
+ * CEO kataloğundan değil: rakiplere `ceoId` vermek onlara CEO
+ * perk'lerini de vermek olurdu. Yüz var, görünmez avantaj yok.
+ */
+function RivalFace({ companyId }: { companyId: string }): ReactElement | null {
+  const state = useGameState();
+  const company = state.companies[companyId];
+  const profile = company?.profileId
+    ? NPC_PROFILES.find((p) => p.id === company.profileId)
+    : undefined;
+  if (!profile) return null;
+  return (
+    <span className="news-portrait" title={`${profile.ceoName} · ${profile.name}`}>
+      <CeoPortrait portrait={profile.portrait} size={34} />
+    </span>
+  );
+}
+
 export function NewsFeed(): ReactElement {
   const state = useGameState();
   const { open, toggle } = useCollapsible();
@@ -511,8 +532,18 @@ export function NewsFeed(): ReactElement {
               <span className="news-tag">{TONE_LABEL[item.tone] ?? 'Haber'}</span>
               <span className="news-day">{item.day}. gün</span>
             </div>
-            <div className="news-title">{item.title}</div>
-            <p className="news-body">{item.body}</p>
+            {/*
+             * Yüzü olan haberler farklı dizilir: portre solda, metin
+             * sağda. Bu ayrım süs değil — bir RAKİBİN hamlesiyle piyasa
+             * olayı arasındaki farkı, okumadan önce görünür kılıyor.
+             */}
+            <div className={item.companyId ? 'news-face' : undefined}>
+              {item.companyId && <RivalFace companyId={item.companyId} />}
+              <div>
+                <div className="news-title">{item.title}</div>
+                <p className="news-body">{item.body}</p>
+              </div>
+            </div>
           </li>
         ))}
       </ul>

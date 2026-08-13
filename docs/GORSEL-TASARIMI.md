@@ -802,6 +802,81 @@ içeriği kadar.
 
 ---
 
+## 3.10 Tur 11 — Adres ve hırs
+
+Tur 9 raporunun kalan iki isteği.
+
+### "Kurduğun imparatorluk senin olsun"
+
+Şirketin bir adı vardı ama bir **yeri** yoktu: ilk açtığın dükkân sıradan
+bir kutuydu, haritada hiçbir bina "burası benim merkezim" demiyordu.
+
+Artık en eski binan genel merkez — tepesinde şirket renginde bir bayrak,
+parsel panelinde bir rozet.
+
+**Saklanmıyor, türetiliyor.** Şema alanı açmak, migration yazmak ve bina
+yıkıldığında ortada kalan bir kimliği temizlemek gerekirdi. Oysa kural tek
+cümlede duruyor: *en eski binan merkezindir.* Kural kendini onarıyor da —
+merkezi yıkarsan şirket bir sonraki en eski binaya taşınıyor, ki gerçek
+bir şirketin yapacağı şey de bu.
+
+Eşitlik durumunda kimlik sırasına bakılıyor: aynı günde kurulan iki bina
+arasında sabit bir seçim olmazsa merkez her karede yer değiştirir ve
+haritada titreşen bir işaret olurdu.
+
+Bayrak ışıktan bağımsız çizilmiyor — kamyon ve müşteriden farklı olarak bu
+bir **veri** değil, bir mülkiyet nişanı; şehrin ışığına uyması gerekiyor
+ki sahnenin parçası gibi dursun, üstüne yapıştırılmış bir arayüz öğesi
+gibi değil.
+
+### "Rakip seni geçince hırslanasın"
+
+Sıralama üst barda "4." diye duran bir sayıydı. Geçildiğin an **hiçbir şey
+olmuyordu**: haber akışında "Nova Holding genişliyor" geçiyor, senin ne
+kaybettiğin yazmıyordu.
+
+Artık bir olay ve üç şey söylüyor: **kim** geçti, **fark** ne kadar, ve
+elinde senden **kaç bina fazla** var. Kıyas bina üzerinden, çünkü oyuncunun
+yapabileceği şey o — para bir sonuç, bina bir hamle.
+
+Geri aldığında da bir olay düşüyor. Yalnızca kötü haberi vermek oyuncuyu
+cezalandırırdı; üstelik geri alma haberinde bir sonraki hedef de yazıyor,
+çünkü "geçtim" duygusunun devamı "sıradaki kim".
+
+Sıralama motorda saklanıyor, state'te değil: bir sıralama zaten her gün
+net değerden türetiliyor. Kayıt yüklendiğinde null olması da doğru
+davranış — oyunu açar açmaz "seni geçtiler" demek, olmamış bir olayı
+bildirmek olurdu.
+
+### Rakiplerin yüzü
+
+Rakiplerin `ceoId`'si bugüne kadar null'dı: adları, renkleri, hatta
+karakter tarifleri vardı ama **bir yüzleri yoktu**. Seni geçtiklerinde
+ekranda beliren şey bir şirket adıydı; kaybettiğin kişinin kim olduğunu
+göremiyordun.
+
+Dördüne de portre ve CEO adı verildi. `ceoId` üzerinden değil, ayrı bir
+alanla — CEO tanımları oyuncunun seçtiği **perk'leri** de taşıyor ve
+rakiplere ceoId vermek onlara görünmez avantaj dağıtmak olurdu. Yüz var,
+avantaj yok.
+
+Portreler karakterin kendisinden çıkıyor: kıyafet rengi şirket rengiyle
+akraba, zemin o rengin koyu hâli. Böylece haberdeki yüz, haritadaki
+binayla aynı şeyi söylüyor.
+
+### Yol boyunca
+
+Olay metni ilk hâlinde her zaman bina sayısını yazıyordu ve sondajda
+*"Nova Holding 0 binayla çalışıyor"* çıktı — rakip yapay olarak
+zenginleştirildiği için binası yoktu.
+
+> **Bir karşılaştırma ancak karşılaştırılacak bir şey varsa bilgi taşır.**
+> Yoksa oyuncuya yalnızca gürültü verir.
+
+Cümle koşullu hâle geldi: fark varsa yazılıyor, yoksa yazılmıyor.
+
+---
+
 ## 5. Test edilemeyen iki şey ve nasıl ele alındıkları
 
 Bu ortamda GPU yok; Chromium yazılım rasterizasyonu kullanıyor. İki
