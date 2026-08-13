@@ -875,6 +875,21 @@ zenginleştirildiği için binası yoktu.
 
 Cümle koşullu hâle geldi: fark varsa yazılıyor, yoksa yazılmıyor.
 
+İkinci ders testte çıktı ve motorun bir özelliğini açığa vurdu. "Rakip
+haberinde yüz görünüyor" kontrolü **0 portre** dedi — oysa state'te haber
+vardı, yüzü de vardı.
+
+Sebep: **`runDay()` dinleyicileri uyarmıyor, yalnızca `tick()` uyarıyor.**
+Testin elle çevirdiği günler ekrana hiç yansımıyordu; React eski listeyi
+çizmeye devam ediyordu. Gerçek oyunda günler `tick()` ile geçtiği için bu
+bir ürün hatası değil — ama kontrolün yanlış şeyi sınadığı doğruydu.
+
+> **Bir kontrol, state'i değil oyuncunun gördüğünü sınamalı.** İkisi
+> arasında bir uyarı katmanı varsa, o katman da testin kapsamındadır.
+
+Kontrol artık önce bir uyarı tetikliyor, sonra haberin DOM'a düşmesini
+bekliyor.
+
 ---
 
 ## 5. Test edilemeyen iki şey ve nasıl ele alındıkları

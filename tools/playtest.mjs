@@ -778,10 +778,28 @@ const findTile = (page, kind) =>
   check('Sırayı geri alınca da olay düşüyor', reclaim?.tone === 'good',
     reclaim ? reclaim.title : 'haber yok');
 
-  await page.waitForTimeout(300);
+  /*
+   * ARAYÜZÜN HABERİ OLMASI İÇİN BİR UYARI GEREKİYOR.
+   *
+   * İlk yazdığım kontrol doğrudan portre sayıyordu ve "0 portre" dedi —
+   * oysa state'te haber vardı ve yüzü de vardı. Sebep motorda: `runDay()`
+   * dinleyicileri UYARMIYOR, yalnızca `tick()` uyarıyor. Yani testin
+   * elle çevirdiği günler ekrana hiç yansımıyordu; React eski listeyi
+   * çiziyordu.
+   *
+   * Gerçek oyunda günler `tick()` ile geçtiği için bu bir ürün hatası
+   * değil. Ama kontrol, oyuncunun GÖRDÜĞÜ şeyi sınamalı: bu yüzden önce
+   * bir uyarı tetikleniyor (hızı yeniden atamak yeterli), sonra da
+   * haberin DOM'a düşmesi bekleniyor.
+   */
+  await page.evaluate(() => window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 }));
+  const faceShown = await page
+    .waitForFunction(() => document.querySelectorAll('.news-portrait').length > 0, null, { timeout: 5000 })
+    .then(() => true)
+    .catch(() => false);
   check(
     'Rakip haberinde yüz görünüyor',
-    (await page.locator('.news-portrait').count()) > 0,
+    faceShown,
     `${await page.locator('.news-portrait').count()} portre`,
   );
 
