@@ -31,6 +31,7 @@ mantığının dışında; üçüncüsü ise oyunun kendi **tavsiyesindeydi**:
 | Tavsiye kıt olan parseli en verimsiz binaya harcatıyordu | **7** | Yapı menüsü parsel getirisine göre sıralanıyor |
 | Şehrin nüfusu haritasına sığmıyordu | **8** | Izgara geometrisi: 285 → 504 parsel, abonman %101 → %57 |
 | Şehir oyuncuyu içine almıyordu | **9** | Müşteri akışı: satış, mağazanın kapısına gelen araca dönüştü |
+| Arayüz karanlıktı, şehir boşlukta yüzüyordu | **10** | Kadastro teması (aydınlık, gömülü tipografi) + kırsal, ufuk eğriliği, uzak yerleşimler |
 
 ---
 
@@ -196,6 +197,36 @@ satış her oynadığında bütün araçlar aynı anda başa ışınlanırdı.
 
 Bu tur öncekiler gibi **ölçülemez** — "şehir beni içine aldı" bir teste
 yazılamaz. Kontroller öncülleri tutuyor; kararı oynayan veriyor.
+
+### Tur 10 — Kadastro · `docs/GORSEL-TASARIMI.md` §3.9
+
+İki oyun raporu, tek tur: *"dark tema istemiyorum, daha premium bir şey
+olsun"* ve *"harita dışı uzay gibi boşlukta, orayı da yeşillik yapsana."*
+
+**Tema.** Oyun toprak üzerine; arayüz artık bunu söylüyor. Kireçtaşı
+kâğıt, mürekkep yazı, mühür yeşili vurgu, pirinç ikincil. Başlıklar
+tırnaklı (IBM Plex Serif), veriler sans (IBM Plex Sans) — ayrım işlevsel:
+tırnaklı yazı bir şeyin ADI, sans onun hakkındaki VERİ. Fontlar CDN'den
+değil gömülü, çünkü oyun internetsiz açılabilen tek bir HTML dosyası
+olarak da dağıtılıyor.
+
+İki şey ölçümle çıktı:
+
+- **Karanlık varsayımı 21 yerde gizliydi** — koyu temada kabartma beyazla
+  yapılıyordu. Hepsi dört basamaklı bir yüzey tonu ölçeğine bağlandı.
+- **Asıl karartma CSS'te değildi.** Tema aydınlığa döndüğünde şehir hâlâ
+  kara bir kütleydi; sebep yapı ve bölge renklerinin koyu sahneye göre
+  seçilmiş olmasıydı (yapılar L≈%35). Doku zaten açıktı. **Bir temanın
+  rengi CSS'te bitmiyor.**
+
+**Dünya.** Zemin yalnızca harita karelerinden oluşuyordu; onun bittiği
+yerde hiçbir şey yoktu. Şehir artık kırsalın içinde, zemin uzaklaştıkça
+küresel bir formla alçalıyor ve ufukta yedi yerleşim kümesi duruyor.
+
+Bunun da bir ölçüm dersi vardı: kırsal bitti, ekran görüntüsü alındı ve
+**görünmedi**. Kamera 46 birimde kilitliydi — şehir boşlukta yüzerken
+doğru olan sınır, dünya eklenince hataya dönüşmüştü. **Bir şeyi yapmak,
+oyuncunun onu görebileceği anlamına gelmiyor.**
 
 ---
 

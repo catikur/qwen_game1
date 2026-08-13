@@ -696,6 +696,112 @@ kontroller onları tutuyor:
 
 ---
 
+## 3.9 Tur 10 — Kadastro: aydınlık tema ve şehrin dışındaki dünya
+
+İki oyun raporu, tek tur:
+
+> *"Dark tema istemiyorum. Daha premium bir şey olsun — renkler, şekiller,
+> fontlar."*
+>
+> *"Belirlediğin harita dışı uzay gibi boşlukta. Orayı da yeşillik yapsana,
+> hafif yuvarlağımsı — dünyada olduğunu ve birçok alan olduğunu belirtmek
+> için."*
+
+### Tema nereden geliyor
+
+Oyun temelde toprak üzerine: parsel alıyorsun, imar kısıtına bakıyorsun,
+ihaleye giriyorsun, tapu el değiştiriyor. Eski arayüz bunu hiçbir yerde
+söylemiyordu — sahnenin gece paletinden türetilmiş genel bir gösterge
+paneliydi.
+
+Yeni tema bir **kütük**: kireçtaşı kâğıt, mürekkep yazı, kılcal çizgiler,
+ve senin olanı işaretleyen bir mühür.
+
+| parametre | değer |
+|---|---|
+| kâğıt | `#edefe9` — nötrler yeşile sapıyor (H≈150), saf gri değil |
+| mürekkep | `#16211c` |
+| mühür | `#0e6b4f` |
+| pirinç | `#8a6620` |
+| başlık | IBM Plex Serif 500 |
+| veri | IBM Plex Sans 400/600 |
+
+Tırnaklı yazı yalnızca **başlıklarda**: panel adı, şirket, CEO. Serif her
+yere yayılsaydı yoğun bir kontrol panelinde okunurluk düşerdi, özellikle
+rakamlarda. Ayrım işlevsel — tırnaklı yazı bir şeyin ADI, sans onun
+hakkındaki VERİ. Kütükte de böyledir.
+
+Fontlar CDN'den değil **gömülü** (`fonts.css`, data URI). Oyun tek bir
+HTML dosyası olarak da dağıtılıyor ve o dosyanın internetsiz açılması
+gerekiyor; bir CDN bağlantısı sessizce yedek fonta düşer ve tipografi
+kararının hiçbir karşılığı kalmazdı.
+
+### Karanlık varsayımı 21 yerde gizliydi
+
+Koyu temada kabartma BEYAZLA yapılır: `rgba(255,255,255,0.06)` gibi 21
+ayrı kaplama vardı. Aydınlık zeminde tam tersi gerekiyor — kabartma
+mürekkeple yapılır. Hepsi dört basamaklı bir yüzey tonu ölçeğine
+(`--tint-1..4`) bağlandı; bir daha tema değişirse tek tek aranmayacaklar.
+
+### Asıl karartma veri katmanındaydı
+
+Tema aydınlığa döndüğünde şehir hâlâ kara bir kütleydi. Sebep CSS değildi:
+**yapı ve bölge renkleri** koyu sahneye göre seçilmişti (yapılar L≈%35,
+bölgeler koyu lacivert). Doku zaten açıktı (`#eeeeee`), yani sorun
+çizimde değil içerik verisindeydi.
+
+Yapılar kireçtaşı/kum taşı bandına (L≈%70), bölge zeminleri düşük
+doygunluklu açık tonlara taşındı. Ayırt edilebilirlik korundu — her bölge
+hâlâ kendi tonunda.
+
+> **Bir temanın rengi CSS'te bitmez.** Sahnedeki her renk kararı da o
+> temanın parçası; biri eski dünyada kalırsa tema yarım görünür.
+
+### Dünya: şehir artık bir yerin içinde
+
+Zemin yalnızca harita KARELERİNDEN oluşuyordu. Onun bittiği yerde hiçbir
+şey yoktu — şehir bir gezegenin üstünde değil, boşlukta yüzen bir tepsiydi.
+
+`world.ts` üç şey ekliyor:
+
+1. **Kırsal** — haritanın 4,2 katı genişlikte bir zemin; tarla parçaları,
+   ağaç kümeleri, tanecik.
+2. **Eğrilik** — zemin uzaklaştıkça `y = -(r²/2R)` ile alçalıyor
+   (R = 520). Düz bir tabak da boşluğu doldururdu ama ufuk bıçak gibi düz
+   kalırdı. Alçalma şehrin altında **bastırılıyor**: içeride tam düz,
+   dışarıda kübik bir geçişle küresel forma açılıyor — yoksa harita
+   kareleri kırsalın içine gömülürdü.
+3. **Uzak yerleşimler** — ufukta yedi küme. "Birçok alan" fikrini taşıyan
+   şey bu.
+
+Sis de işini değiştirdi: eskiden haritanın kenarındaki boşluğu
+saklıyordu (55–130), artık ufku yumuşatıyor (78–195).
+
+### Dünyayı görebilmek bir kamera işiymiş
+
+Kırsal bitti, ekran görüntüsü alındı ve **görünmedi**. Sondaj sebebi
+söyledi: kamerayı sonuna kadar geri çekince uzaklık **46'da duruyordu.**
+
+46, şehir boşlukta yüzerken doğru sınırdı — daha geri çekilmenin karşılığı
+yoktu, yalnızca hiçlik büyüyordu. Kırsal eklendikten sonra aynı sayı bir
+hataya dönüştü. Sınır 95'e, en alçak bakış açısı 1,16 → 1,30 rad'a açıldı.
+
+> **Bir şeyi yapmak, oyuncunun onu görebileceği anlamına gelmiyor.**
+> Dünya ilk denemede eksiksiz çalışıyordu; eksik olan ona bakma izniydi.
+
+Yerleşimler de ilk denemede 3–12 birim yayılımdaydı ve ufukta köy gibi
+değil, zemine saçılmış moloz gibi okunuyordu. Mesafeyi kümelerin ARASI
+taşımalı, kümenin içi değil: yayılım 1,6–5 birime indi.
+
+### Yan kazanç: boş parsel paneli
+
+Sağ sütun seçim yokken de ızgara satırını dolduruyordu. Koyu temada yarı
+saydam olduğu için fark edilmiyordu; aydınlık temada ekranın sağ üçte
+biri, iki cümlelik bir ipucu taşıyan beyaz bir levhaya dönüştü. Artık
+içeriği kadar.
+
+---
+
 ## 5. Test edilemeyen iki şey ve nasıl ele alındıkları
 
 Bu ortamda GPU yok; Chromium yazılım rasterizasyonu kullanıyor. İki

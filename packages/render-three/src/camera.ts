@@ -10,9 +10,25 @@ import * as THREE from 'three';
  */
 
 const MIN_DISTANCE = 8;
-const MAX_DISTANCE = 46;
+/*
+ * En uzak bakış 46'dan 95'e çıktı.
+ *
+ * 46, şehir boşlukta yüzerken doğru sınırdı: daha geri çekilmenin bir
+ * karşılığı yoktu, yalnızca haritanın kenarındaki hiçlik büyüyordu.
+ * Kırsal eklendikten sonra bu sınır bir HATA hâline geldi — dünya vardı
+ * ama oyuncu onu göremiyordu. Ölçüm bunu açıkça gösterdi: kamerayı sonuna
+ * kadar geri çekince uzaklık 46'da duruyor ve ufuk hiç görünmüyordu.
+ *
+ * 95, uzak yerleşimlerin ve zemin eğriliğinin çerçeveye girdiği yer.
+ */
+const MAX_DISTANCE = 95;
 const MIN_POLAR = 0.32;
-const MAX_POLAR = 1.16;
+/*
+ * En alçak bakış açısı da açıldı (1,16 → 1,30 rad, yaklaşık 66° → 75°).
+ * Ufuk çizgisini görmek için kameranın yere daha çok yaklaşması gerekiyor;
+ * eski sınırda dünya hep yukarıdan, bir masa gibi görünüyordu.
+ */
+const MAX_POLAR = 1.3;
 const DAMPING = 9;
 const KEY_PAN_SPEED = 14;
 
