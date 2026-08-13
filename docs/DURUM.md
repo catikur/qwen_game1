@@ -4,7 +4,7 @@
 > `pnpm bench` çıktısından; iddialar `pnpm balance` ve `pnpm playtest`
 > tarafından her koşuda doğrulanıyor.
 >
-> Son güncelleme: şema **v6**, 6 tur tamamlandı.
+> Son güncelleme: şema **v6**, 9 tur tamamlandı.
 
 ---
 
@@ -253,8 +253,8 @@ outlet'le doldurmak zinciri geçiyor. **Zincir bir nakit kısıtı oyunu.**
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~70 gün/sn |
-| Denge testi | **176 kontrol, hepsi geçiyor** |
-| Tarayıcı testi | **144 kontrol**, 0 konsol hatası |
+| Denge testi | **178 kontrol, hepsi geçiyor** |
+| Tarayıcı testi | **180 kontrol**, 0 konsol hatası |
 | Kapsam | 26 bina · 22 ürün · 7 kategori · 4 rakip profili |
 
 ### Render (Tur 6 sonrası)
@@ -377,7 +377,7 @@ pnpm balance       # denge testi — 178 kontrol, geçti/kaldı
 pnpm bench         # benchmark — sayıların kendisi
 pnpm constraint    # kısıt deneyi — bağlayıcı kısıt hangisi?
 pnpm land          # abonman oranı — geometri varyantları
-pnpm playtest      # tarayıcı testi (build dahil), 165 kontrol
+pnpm playtest      # tarayıcı testi (build dahil), 180 kontrol
 pnpm dev           # oyunu aç
 ```
 
