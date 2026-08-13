@@ -6,6 +6,8 @@
  */
 
 /** Tüketici talebinin toplandığı sektörler. */
+import type { CeoPortrait } from './ceos';
+
 export type CategoryId =
   | 'grocery'
   | 'dining'
@@ -193,4 +195,19 @@ export interface NpcProfileDef {
   aggression: number;
   color: string;
   description: string;
+  /**
+   * Rakibin yüzü ve adı.
+   *
+   * Bugüne kadar rakiplerin `ceoId`'si null'dı: adları, renkleri, hatta
+   * karakter tarifleri vardı ama BİR YÜZLERİ YOKTU. Seni geçtiklerinde
+   * ekranda beliren şey bir şirket adıydı; kaybettiğin kişinin kim
+   * olduğunu göremiyordun.
+   *
+   * `ceoId` yerine doğrudan portre tutuluyor, çünkü CEO tanımları
+   * oyuncunun seçtiği PERK'leri de taşıyor — rakiplere ceoId vermek
+   * onlara görünmez avantajlar dağıtmak olurdu. Rakipler oyuncuyla aynı
+   * kurallara tabi; değişen tek şey artık bir yüzlerinin olması.
+   */
+  ceoName: string;
+  portrait: CeoPortrait;
 }

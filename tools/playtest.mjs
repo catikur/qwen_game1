@@ -723,6 +723,124 @@ const findTile = (page, kind) =>
   check('Filo satış oynamasıyla sıfırlanmıyor', fleetStable.mid === flow.shoppers,
     `${fleetStable.mid} araç`);
 
+  // ---------- Geçilme anı ve genel merkez ----------
+  //
+  // Sıralama bugüne kadar üst barda "4." diye duran bir sayıydı; rakip
+  // seni geçtiğinde hiçbir şey olmuyordu. Burada sınanan şey o anın bir
+  // OLAY hâline gelmesi — ve olayın kimin geçtiğini söylemesi.
+  section('Geçilme anı ve genel merkez');
+
+  const overtake = await page.evaluate(async () => {
+    const cap = window.__capital;
+    const s = cap.getState();
+    const rival = Object.values(s.companies).find((c) => !c.isPlayer);
+
+    // Önce oyuncuyu tepeye çıkar ve sıranın oturmasını bekle.
+    s.companies[s.playerCompanyId].cash = 90_000_000;
+    cap.engine.runDay();
+    const before = cap.getState().news.length;
+
+    // Sonra rakibi oyuncunun üstüne çıkar.
+    cap.getState().companies[rival.id].cash = 400_000_000;
+    cap.engine.runDay();
+    const after = cap.getState();
+    const fresh = after.news.slice(0, after.news.length - before);
+    const hit = fresh.find((n) => n.title.includes('seni geçti'));
+
+    return {
+      haber: hit ? { tone: hit.tone, title: hit.title, yuz: hit.companyId ?? null } : null,
+      rakip: rival.id,
+    };
+  });
+  check(
+    'Rakip geçince olay düşüyor',
+    Boolean(overtake.haber) && overtake.haber.tone === 'bad',
+    overtake.haber ? overtake.haber.title : 'haber yok',
+  );
+  check(
+    'Geçilme olayı kimin geçtiğini söylüyor',
+    overtake.haber?.yuz === overtake.rakip,
+    `yüz: ${overtake.haber?.yuz ?? 'yok'}`,
+  );
+
+  // Geri almanın da bir karşılığı olmalı: yalnızca kötü haberi vermek
+  // oyuncuyu cezalandırırdı.
+  const reclaim = await page.evaluate(async () => {
+    const cap = window.__capital;
+    const before = cap.getState().news.length;
+    cap.getState().companies[cap.getState().playerCompanyId].cash = 900_000_000;
+    cap.engine.runDay();
+    const after = cap.getState();
+    const fresh = after.news.slice(0, after.news.length - before);
+    const hit = fresh.find((n) => n.title.includes('geçtin'));
+    return hit ? { tone: hit.tone, title: hit.title } : null;
+  });
+  check('Sırayı geri alınca da olay düşüyor', reclaim?.tone === 'good',
+    reclaim ? reclaim.title : 'haber yok');
+
+  /*
+   * ARAYÜZÜN HABERİ OLMASI İÇİN BİR UYARI GEREKİYOR.
+   *
+   * İlk yazdığım kontrol doğrudan portre sayıyordu ve "0 portre" dedi —
+   * oysa state'te haber vardı ve yüzü de vardı. Sebep motorda: `runDay()`
+   * dinleyicileri UYARMIYOR, yalnızca `tick()` uyarıyor. Yani testin
+   * elle çevirdiği günler ekrana hiç yansımıyordu; React eski listeyi
+   * çiziyordu.
+   *
+   * Gerçek oyunda günler `tick()` ile geçtiği için bu bir ürün hatası
+   * değil. Ama kontrol, oyuncunun GÖRDÜĞÜ şeyi sınamalı: bu yüzden önce
+   * bir uyarı tetikleniyor (hızı yeniden atamak yeterli), sonra da
+   * haberin DOM'a düşmesi bekleniyor.
+   */
+  await page.evaluate(() => window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 }));
+  const faceShown = await page
+    .waitForFunction(() => document.querySelectorAll('.news-portrait').length > 0, null, { timeout: 5000 })
+    .then(() => true)
+    .catch(() => false);
+  check(
+    'Rakip haberinde yüz görünüyor',
+    faceShown,
+    `${await page.locator('.news-portrait').count()} portre`,
+  );
+
+  // GENEL MERKEZ: en eski bina. Saklanmıyor, türetiliyor.
+  const hq = await page.evaluate(async () => {
+    const cap = window.__capital;
+    const s = cap.getState();
+    s.companies[s.playerCompanyId].cash = 90_000_000;
+    const bos = s.map.tiles
+      .filter((t) => t.kind === 'plot' && !t.buildingId && !t.structureId)
+      .slice(0, 2);
+    for (const tile of bos) {
+      cap.engine.dispatch({ type: 'BUY_TILE', tileId: tile.id });
+      cap.engine.dispatch({ type: 'BUILD', tileId: tile.id, defId: 'corner_shop' });
+      cap.engine.runDay();
+    }
+    await new Promise((r) => setTimeout(r, 900));
+
+    const after = cap.getState();
+    const mine = Object.values(after.buildings).filter((b) => b.companyId === after.playerCompanyId);
+    const eldest = mine.slice().sort((a, b) => a.builtDay - b.builtDay || (a.id < b.id ? -1 : 1))[0];
+    const tile = after.map.tiles[eldest.tileId];
+    const info = cap.renderInfo();
+    return {
+      binalar: mine.length,
+      gorunur: info.hqVisible,
+      konum: info.hqPosition,
+      beklenen: { x: tile.x, z: tile.y },
+    };
+  });
+  check('Genel merkez işareti haritada', hq.gorunur === true, `${hq.binalar} bina`);
+  check(
+    'İşaret EN ESKİ binanın üstünde',
+    hq.konum !== null &&
+      Math.abs(hq.konum.x - hq.beklenen.x) < 0.01 &&
+      Math.abs(hq.konum.z - hq.beklenen.z) < 0.01,
+    hq.konum ? `(${hq.konum.x}, ${hq.konum.z}) beklenen (${hq.beklenen.x}, ${hq.beklenen.z})` : 'konum yok',
+  );
+  // İşaret binanın TEPESİNDE olmalı, zemininde değil.
+  check('İşaret binanın tepesinde', (hq.konum?.y ?? 0) > 0.3, `y = ${(hq.konum?.y ?? 0).toFixed(2)}`);
+
   // ---------- Rekabet kartı ----------
   // Kollar A parçasında motorda çalışıyordu ama oyuncunun göreceği bir
   // yüzü yoktu. Burada bakılan şey kartın DOĞRU şeyi söyleyip söylemediği

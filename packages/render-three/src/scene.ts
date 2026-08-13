@@ -4,7 +4,7 @@ import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { BUILDING_BY_ID, DISTRICT_ARCHETYPES, STRUCTURE_BY_ID } from '@capital/content';
-import { BLOCK_SIZE, customerFlows, lensValue, supplyRoutes } from '@capital/core';
+import { BLOCK_SIZE, customerFlows, headquarters, lensValue, supplyRoutes } from '@capital/core';
 import type { GameState, LensId } from '@capital/core';
 import { RtsCameraController } from './camera';
 import { TrafficSystem } from './traffic';
@@ -175,6 +175,15 @@ export class CityRenderer {
   private hover: THREE.Mesh;
   private selection: THREE.Mesh;
   private ghost: THREE.Mesh;
+  /**
+   * Genel merkez işareti — direk + bayrak.
+   *
+   * Tek bina için tek nesne; örnek ağı (InstancedMesh) gereksiz olurdu.
+   * `Group` olmasının sebebi iki parçadan oluşması: ince bir direk ve
+   * ucunda şirket renginde bir bayrak.
+   */
+  private hqMarker: THREE.Group;
+  private hqFlag: THREE.Mesh;
   private districtLines: THREE.LineSegments;
 
   private state: GameState | null = null;
@@ -356,6 +365,32 @@ export class CityRenderer {
     );
     this.ghost.visible = false;
     this.scene.add(this.ghost);
+
+    /*
+     * GENEL MERKEZ İŞARETİ.
+     *
+     * Şirketin bir adı vardı ama bir yeri yoktu. Bu işaret haritada
+     * "burası benim merkezim" diyen tek şey.
+     *
+     * Işıktan bağımsız çizilmiyor — kamyon ve müşteriden farklı olarak
+     * bu bir VERİ değil, bir mülkiyet nişanı; şehrin ışığına uyması
+     * gerekiyor ki sahnenin parçası gibi dursun, üstüne yapıştırılmış
+     * bir arayüz öğesi gibi değil.
+     */
+    this.hqMarker = new THREE.Group();
+    const mast = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.035, 0.045, 1.5, 6),
+      new THREE.MeshStandardMaterial({ color: '#d8d3c6', roughness: 0.6, metalness: 0.3 }),
+    );
+    mast.position.y = 0.75;
+    this.hqFlag = new THREE.Mesh(
+      new THREE.BoxGeometry(0.5, 0.3, 0.04),
+      new THREE.MeshStandardMaterial({ roughness: 0.55, metalness: 0.05 }),
+    );
+    this.hqFlag.position.set(0.26, 1.32, 0);
+    this.hqMarker.add(mast, this.hqFlag);
+    this.hqMarker.visible = false;
+    this.scene.add(this.hqMarker);
 
     this.districtLines = makeDistrictLines(mapWidth, mapHeight);
     this.scene.add(this.districtLines);
@@ -771,6 +806,7 @@ export class CityRenderer {
 
     this.syncRoutes(state, view.playerCompanyId);
     this.syncShoppers(state);
+    this.syncHeadquarters(state, view.playerCompanyId);
     this.syncGhost(width);
   }
 
@@ -893,6 +929,37 @@ export class CityRenderer {
         color: company?.isPlayer ? '#3fd39a' : (company?.color ?? '#8899aa'),
       };
     });
+  }
+
+  /**
+   * Genel merkez işaretini oyuncunun en eski binasının tepesine koyar.
+   *
+   * Merkez state'te saklanmıyor, `headquarters()` türetiyor: en eski
+   * bina. Kural kendini onarıyor — merkezi yıkarsan işaret bir sonraki
+   * en eski binaya taşınıyor.
+   */
+  private syncHeadquarters(state: GameState, playerCompanyId: string): void {
+    const hq = headquarters(state, playerCompanyId);
+    if (!hq) {
+      this.hqMarker.visible = false;
+      return;
+    }
+    const tile = state.map.tiles[hq.tileId];
+    const def = BUILDING_BY_ID[hq.defId];
+    if (!tile || !def) {
+      this.hqMarker.visible = false;
+      return;
+    }
+
+    // Bina yüksekliği `syncBuildings` ile aynı formülden geliyor; iki
+    // yerde farklı hesaplanırsa bayrak çatının içine gömülür.
+    const height = Math.max(0.3, def.height) * 1.5;
+    const company = state.companies[playerCompanyId];
+    (this.hqFlag.material as THREE.MeshStandardMaterial).color.set(
+      company?.isPlayer ? '#3fd39a' : (company?.color ?? '#8899aa'),
+    );
+    this.hqMarker.position.set(tile.x, 0.07 + height * this.growthOf(hq.id), tile.y);
+    this.hqMarker.visible = true;
   }
 
   private syncGhost(width: number): void {
@@ -1259,6 +1326,9 @@ export class CityRenderer {
     shopperPositionSum: number;
     /** Müşteri araçlarının rengi — akışın kime gittiğini sınamak için. */
     shopperColors: string[];
+    /** Genel merkez işareti görünür mü ve nerede duruyor. */
+    hqVisible: boolean;
+    hqPosition: { x: number; y: number; z: number } | null;
     /** Kameranın hedef uzaklığı — pinch jestini doğrulamak için. */
     cameraDistance: number;
     /** Kameranın hedef azimutu — döndürme jestini doğrulamak için. */
@@ -1328,6 +1398,10 @@ export class CityRenderer {
       shopperCount: this.traffic.shopperCount,
       shopperPositionSum: this.traffic.shopperPositionSum,
       shopperColors: this.traffic.shopperColors,
+      hqVisible: this.hqMarker.visible,
+      hqPosition: this.hqMarker.visible
+        ? { x: this.hqMarker.position.x, y: this.hqMarker.position.y, z: this.hqMarker.position.z }
+        : null,
       cameraDistance: this.controller.targetDistance,
       cameraAzimuth: this.controller.targetAzimuth,
       cameraTarget: this.controller.targetPoint,

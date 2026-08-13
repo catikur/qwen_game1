@@ -208,6 +208,8 @@ export interface NewsItem {
   tone: NewsTone;
   title: string;
   body: string;
+  /** Haberin yüzü — rakip hamlelerinde o şirketin portresi gösterilir. */
+  companyId?: string;
 }
 
 /** Sistemleri kademeli açmak için — plandaki feature flag katmanı. */

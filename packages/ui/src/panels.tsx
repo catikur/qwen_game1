@@ -20,6 +20,7 @@ import {
   getBuildingOnTile,
   getPlayer,
   goodShares,
+  headquarters,
   rankedBuildOptions,
   tilePrice,
 } from '@capital/core';
@@ -274,6 +275,16 @@ export function Inspector(): ReactElement | null {
           <h2>{district.name}</h2>
           <p className="muted">
             Arsa {tile.x + 1}-{tile.y + 1} · {archetype.name}
+            {/*
+             * Merkez rozeti burada, binanın satırında değil: oyuncu bir
+             * kareye "burası neresi" diye bakıyor ve merkez o sorunun
+             * cevabının parçası.
+             */}
+            {building && headquarters(state, player.id)?.id === building.id && (
+              <span className="hq-badge" title="Şirketinin en eski binası — genel merkez">
+                Genel Merkez
+              </span>
+            )}
           </p>
         </div>
         <button type="button" className="icon" onClick={() => setView({ selectedTileId: null })} aria-label="Kapat">
