@@ -4,7 +4,7 @@
 > `pnpm bench` çıktısından; iddialar `pnpm balance` ve `pnpm playtest`
 > tarafından her koşuda doğrulanıyor.
 >
-> Son güncelleme: şema **v6**, 11 tur tamamlandı.
+> Son güncelleme: şema **v6**, 13 tur tamamlandı.
 
 ---
 
@@ -33,6 +33,8 @@ mantığının dışında; üçüncüsü ise oyunun kendi **tavsiyesindeydi**:
 | Şehir oyuncuyu içine almıyordu | **9** | Müşteri akışı: satış, mağazanın kapısına gelen araca dönüştü |
 | Arayüz karanlıktı, şehir boşlukta yüzüyordu | **10** | Kadastro teması (aydınlık, gömülü tipografi) + kırsal, ufuk eğriliği, uzak yerleşimler |
 | İmparatorluğun adresi yoktu, rakip seni geçince hiçbir şey olmuyordu | **11** | Genel merkez işareti + geçilme olayı, rakiplerin yüzü |
+| Arayüz "klasik yapım" diye bağırıyordu | **12** | Kambiyo: terminal dili — sıfır yuvarlaklık, sıfır gölge, mürekkep vurgu, Archivo + Martian Mono |
+| Oyun tekrara düşüyordu, kaybetmek imkânsızdı | **13** | Rakip ölçeklemesi, çift yönlü borsa + oyun sonu, dönemler, sözleşmeler |
 
 ---
 
@@ -260,6 +262,54 @@ ve sondajda *"Nova Holding 0 binayla çalışıyor"* çıktı. **Bir karşılaş
 ancak karşılaştırılacak bir şey varsa bilgi taşır**; cümle koşullu hâle
 geldi.
 
+### Tur 12 — Kambiyo · PR #21
+
+Rapor: *"her şey klasik yapım diye bağırıyor; modern ve elit bir çerçeve
+istiyorum."* Yeni dil üç şeyi YAPMAMAKTAN kuruluyor: yuvarlaklık yok
+(31 sabit köşe sıfırlandı), gölge yok (katmanlar kılcal çizgiyle),
+renkli vurgu yok (vurgu mürekkebin kendisi; renk yalnızca anlamda —
+yükseliş, düşüş, uyarı — ve 3B sahnenin kimlik renkleriyle çakışmıyor).
+Denetimler bölmeli ızgara; tipografi Archivo + Martian Mono (mono
+yalnızca alt alta gelen rakamlarda), bütçe 112 → 107 KB.
+
+### Tur 13 — Derinlik: kaybedilebilir ve mevsimli oyun
+
+Rapor: *"oyun bir süre sonra tekrara düşüp sıkıcı hale gelebilir."*
+Teşhis dörttü: ana fiil (parsel al-kur) haritayla birlikte tükeniyor,
+kaybetme ihtimali yok (benchmark: batan 0/5), rakipler sana bir şey
+yapmıyor, yeni fiil gelmiyor. Bu tur üçünü kapattı:
+
+- **Rakip ölçeklemesi** — profil kataloğu 4 → 8 (tech doktrini ilk kez
+  sahada), `npcCount` parsel sayısından türüyor. 3×3 varsayılan birebir
+  aynı (4 rakip); 5×5'te 8 rakip, erken açık %56 → %38.
+- **Çift yönlü borsa** — rakipler zayıf şirketlerin (oyuncu dahil)
+  hissesini topluyor; %10/%25/%40 eşiklerinde baskıncının yüzüyle uyarı;
+  %50'de OYUN BİTİYOR (şirket silinmiyor, takvim duruyor, ekran iniyor).
+  Savunma: geri alım — hazineye çekilen hisse dolaşımdan düşer; rakipler
+  de aynı kalkanı kullanıyor. Boştaki oyuncu 543. günde kaybediyor;
+  güçlü oyuncu (benchmark 1,48) hedef olmuyor — zayıfa vurulur.
+- **Dönemler** — beş makro mevsim (200-260 gün), olaylarla aynı çarpan
+  hattı, kapanış 20 gün önceden bildiriliyor. İklim DIŞSAL: tohum+güne
+  bağlı zar — sonra aynı ilke kısa olaylara da uygulandı.
+- **Sözleşmeler** — belediyeden süreli hedef (inşaat / pazar payı),
+  teslimatta ödül, süre aşımında cayma bedeli; teklif çipten kabul
+  ediliyor, ret bedava.
+
+Tur boyunca üç ölçüm dersi ve bir ürün hatası:
+
+1. **Deney, ölçtüğü değişkeni kilitliyordu** — constraint deneyi
+   `npcCount: 4` sabitliyordu; kaldırılınca 5×5 gerçeği çıktı.
+2. **"Ayrı bütçe" yorumu yanlıştı, tempo ölçümden çıktı** — baskın 7
+   günlük karar kapısındayken tek hedefi yutmak 500+ gün sürüyor,
+   oyuncuya baskı hiç ulaşmıyordu. Zar günlük oldu.
+3. **İklim dışsal olmalı** — dönemler ve olaylar paylaşılan rng'den
+   zamanlanırken eşli deneylerin kolları farklı fırtınalar yaşıyordu;
+   zincir A/B'si 3/3'ten 1/3'e düşüp geri geldi. Ayrıca kuyruk penceresi
+   geriye değil İLERİ uzatıldı (440-560) — Tur 8'in horizon dersi.
+4. **Hazine mirası** — yutulan şirketin kendi hissesi "portföy" diye
+   devralana geçiyor, devralan ölü şirketin hissedarı kalıyordu. Geri
+   alım savunması bu yolu açmıştı; denge kontrolü yakaladı (player:350).
+
 ---
 
 ## 3. Ölçülen durum
@@ -316,9 +366,9 @@ outlet'le doldurmak zinciri geçiyor. **Zincir bir nakit kısıtı oyunu.**
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~70 gün/sn |
-| Denge testi | **178 kontrol, hepsi geçiyor** |
+| Denge testi | **197 kontrol, hepsi geçiyor** |
 | Tarayıcı testi | **187 kontrol**, 0 konsol hatası |
-| Kapsam | 26 bina · 22 ürün · 7 kategori · 4 rakip profili |
+| Kapsam | 26 bina · 22 ürün · 7 kategori · 8 rakip profili |
 
 ### Render (Tur 6 sonrası)
 
@@ -362,11 +412,13 @@ ama artık **talebi karşıladıktan sonra**. Bu bir kusur değil bir şehrin
 olgunlaşması; geç oyunun rekabeti fiyat, kalite ve devralma üzerinden
 yürüyor.
 
-### 4.2 Rakipler oyuncunun hissesini toplamıyor
+### 4.2 ~~Rakipler oyuncunun hissesini toplamıyor~~ — Tur 13'te kapandı
 
-Borsa şu an tek yönlü (`BORSA-TASARIMI.md` §6.3). İki yönlü devralma
-daha adil ama oyuncunun haberi olmadan oyunu kaybetmesi anlamına
-gelebilir; ölçümle değerlendirilmesi gereken bir karar.
+"Oyuncunun haberi olmadan kaybetmesi" endişesi üç katmanla çözüldü:
+eşik uyarıları (%10/%25/%40, baskıncının yüzüyle), günlük alım tavanı
+(%3,5 — baskın dalga dalga gelir, sıçramaz) ve geri alım savunması.
+Eşik aşılırsa şirket silinmiyor; takvim duruyor, oyun sonu ekranı
+iniyor, son duruma bakılabiliyor.
 
 ### 4.3 Taban bina kalitesi fiyata dönmüyor
 
@@ -381,7 +433,7 @@ Bir outlet kendi bölgesine tam, komşulara kısmi (0,30 / 0,14) erişiyor;
 uzak bölgenin talebine kimse ulaşamıyor. Bu bir arıza değil coğrafya,
 ama "boş talep" sayısını okurken akılda tutulmalı.
 
-### 4.5 Daha büyük şehrin önkoşulu: rakip sayısı ← sıradaki iş
+### 4.5 Daha büyük şehrin önkoşulu: rakip sayısı — ölçekleme Tur 13'te geldi
 
 Harita Tur 8'de 24×24'ten 30×30'a çıktı. **Bölge sayısını** artırmak
 (3×3 → 5×5) ayrıca ölçüldü ve ertelendi:
@@ -405,7 +457,9 @@ Dikiş hazır: `createNewGame` artık bir `layout` argümanı alıyor, harita
 boyutu hiçbir yerde sabit değil. Bölge açma ve çoklu şehir işleri o
 dikişten geçecek.
 
-Sıra: rakip ölçeklemesi → 5×5 → bölge açma → çoklu şehir.
+Rakip ölçeklemesi Tur 13'te kapandı: profil kataloğu sekize çıktı,
+`npcCount` parselden türüyor, 5×5'te erken açık %56 → %38. Varsayılan
+harita hâlâ 3×3 — kalan sıra: **kademeli bölge açma → 5×5 → çoklu şehir.**
 
 ### 4.6 Daha küçük kalemler
 

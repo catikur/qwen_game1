@@ -1428,6 +1428,93 @@ const findTile = (page, kind) =>
     consoleErrors.slice(0, 2).join(' | '),
   );
 
+  // ---------- Dönem, sözleşme ve oyun sonu ----------
+  //
+  // Tur 13'ün üç yüzü: mevsim çipi, sözleşme teklifi ve kaybedilebilir
+  // oyunun ekranı. Üçü de state'i elle kurup ARAYÜZDE doğrulanıyor —
+  // "runDay dinleyici uyarmaz" dersi (Tur 11) burada baştan uygulanıyor:
+  // her kurulumdan sonra bir uyarı tetikleniyor ve DOM bekleniyor.
+  section('Dönem, sözleşme ve oyun sonu');
+
+  await page.evaluate(() => {
+    const s = window.__capital.getState();
+    s.era = { defId: 'era_genisleme', startedDay: s.time.day, remainingDays: 200 };
+    window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+  });
+  const eraChip = await page
+    .waitForFunction(() => document.querySelector('.era-chip')?.textContent ?? null, null, { timeout: 5000 })
+    .then((h) => h.jsonValue())
+    .catch(() => null);
+  check('Dönem çipi ekranda', Boolean(eraChip), String(eraChip));
+
+  await page.evaluate(() => {
+    const s = window.__capital.getState();
+    const district = s.districts[0];
+    s.contractOffer = {
+      kind: 'build',
+      title: `${district.name} bölgesine 2 Market işletmesi`,
+      districtId: district.id,
+      category: 'grocery',
+      targetCount: 2,
+      targetShare: 0,
+      durationDays: 120,
+      reward: 44000,
+      penalty: 17600,
+      offeredDay: s.time.day,
+      acceptedDay: s.time.day,
+      deadlineDay: s.time.day + 120,
+    };
+    window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+  });
+  await page.waitForSelector('.contract-chip', { timeout: 5000 }).catch(() => null);
+  check('Sözleşme teklifi çipte görünüyor',
+    (await page.locator('.contract-chip').count()) === 1 &&
+      (await page.locator('.contract-chip button:has-text("Kabul")').count()) === 1,
+    (await page.locator('.contract-chip').textContent().catch(() => '')) ?? '');
+
+  await page.locator('.contract-chip button:has-text("Kabul")').click();
+  const accepted = await page
+    .waitForFunction(() => document.querySelector('.contract-chip.active') !== null, null, { timeout: 5000 })
+    .then(() => true)
+    .catch(() => false);
+  check('Kabul, teklifi aktif sözleşmeye çeviriyor', accepted,
+    accepted ? 'çip ilerleme moduna geçti' : 'aktif çip yok');
+  await page.evaluate(() => {
+    // Sonraki bölümler sözleşme cezasıyla kirlenmesin.
+    delete window.__capital.getState().contract;
+  });
+
+  // Oyun sonu: state kur, ekran insin; sonra temizle, oyun devam etsin.
+  await page.evaluate(() => {
+    const s = window.__capital.getState();
+    const rival = Object.values(s.companies).find((c) => !c.isPlayer);
+    s.gameOver = { day: s.time.day, byCompanyId: rival.id };
+    window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+  });
+  const overShown = await page
+    .waitForFunction(() => document.querySelector('.gameover') !== null, null, { timeout: 5000 })
+    .then(() => true)
+    .catch(() => false);
+  check('Oyun sonu ekranı iniyor', overShown, overShown ? 'ekran görünür' : 'ekran yok');
+  check('Oyun sonu devralanın yüzünü gösteriyor',
+    (await page.locator('.gameover .ceo-portrait, .gameover svg').count()) > 0,
+    `${await page.locator('.gameover svg').count()} portre`);
+  const frozen = await page.evaluate(async () => {
+    const cap = window.__capital;
+    const before = cap.getState().time.day;
+    cap.engine.dispatch({ type: 'SET_SPEED', speed: 3 });
+    await new Promise((r) => setTimeout(r, 700));
+    cap.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+    return { before, after: cap.getState().time.day };
+  });
+  check('Kaybedilmiş oyunda takvim akmıyor', frozen.before === frozen.after,
+    `gün ${frozen.before} → ${frozen.after}`);
+  await page.evaluate(() => {
+    delete window.__capital.getState().gameOver;
+    window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+  });
+  await page.waitForFunction(() => document.querySelector('.gameover') === null, null, { timeout: 5000 }).catch(() => null);
+
   // ---------- Mobil ----------
   //
   // Bu bölüm eskiden tek satırdı: "dar ekranda yatay taşma yok". O kontrol
