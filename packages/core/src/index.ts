@@ -36,6 +36,7 @@ export {
   TOTAL_SHARES,
 } from './systems/equity';
 export { collectEventModifiers } from './systems/events';
+export { activeContract, contractProgress } from './systems/contracts';
 export type { EventModifiers } from './systems/events';
 export {
   distributionRelief,

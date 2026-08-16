@@ -3,6 +3,7 @@ import { CEO_BY_ID, ERA_BY_ID, EVENTS, NPC_PROFILES } from '@capital/content';
 import {
   LENSES,
   companyRanking,
+  contractProgress,
   formatDate,
   formatMoney,
   getPlayer,
@@ -615,12 +616,65 @@ export function Toasts(): ReactElement {
 }
 
 /** Aktif ekonomik olaylar — piyasanın neden değiştiğini gösterir. */
+
+/**
+ * Sözleşme çipi — teklif ve aktif hâl aynı yerde.
+ *
+ * Teklif MASADA görünür durur (yalnızca haberde kalsaydı akışta kaybolur,
+ * "teklif geldi mi" sorusunun cevabı bir kaydırma olurdu) ve kabul/geç
+ * düğmeleri çipin üstünde: karar iki dokunuş, panel açmak yok.
+ *
+ * Aktif sözleşme ilerlemeyi motorla AYNI seçiciden okur
+ * (`contractProgress`) — çip %100 derken motorun "bitmedi" demesi diye
+ * bir durum olamaz.
+ */
+function ContractChip(): ReactElement | null {
+  const { run } = useGame();
+  const state = useGameState();
+
+  const offer = state.contractOffer;
+  if (offer) {
+    const left = Math.max(0, offer.offeredDay + 20 - state.time.day);
+    return (
+      <span className="event-chip contract-chip" title={`Ödül ${formatMoney(offer.reward)} · cayma ${formatMoney(offer.penalty)} · süre ${offer.durationDays} gün`}>
+        <span className="contract-label">Teklif</span>
+        {offer.title}
+        <span className="contract-days">{left}g</span>
+        <button type="button" onClick={() => run({ type: 'ACCEPT_CONTRACT' })}>Kabul</button>
+        <button type="button" onClick={() => run({ type: 'DECLINE_CONTRACT' })}>Geç</button>
+      </span>
+    );
+  }
+
+  const contract = state.contract;
+  if (!contract) return null;
+  const progress = contractProgress(state, contract);
+  const left = Math.max(0, contract.deadlineDay - state.time.day);
+  return (
+    <span
+      className="event-chip contract-chip active"
+      title={`Ödül ${formatMoney(contract.reward)} · cayma ${formatMoney(contract.penalty)}`}
+    >
+      <span className="contract-label">Sözleşme</span>
+      {contract.title}
+      <span className="contract-days">%{Math.round(progress * 100)} · {left}g</span>
+    </span>
+  );
+}
+
 export function ActiveEvents(): ReactElement | null {
   const state = useGameState();
   const era = state.era ? ERA_BY_ID[state.era.defId] : undefined;
   // İhale çipi de buraya düşüyor: ikisi de "şu an olan bir şey" ve
   // ikisi de akışı kesmiyor.
-  if (state.activeEvents.length === 0 && !state.auction && !era) return null;
+  if (
+    state.activeEvents.length === 0 &&
+    !state.auction &&
+    !era &&
+    !state.contract &&
+    !state.contractOffer
+  )
+    return null;
 
   return (
     <div className="active-events">
@@ -636,6 +690,7 @@ export function ActiveEvents(): ReactElement | null {
           {era.title}
         </span>
       )}
+      <ContractChip />
       {state.activeEvents.map((active) => {
         const def = EVENTS.find((event) => event.id === active.defId);
         if (!def) return null;

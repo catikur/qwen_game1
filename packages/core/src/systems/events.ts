@@ -92,12 +92,27 @@ export function runEventTick(state: GameState): void {
   if (!state.flags.randomEvents) return;
   if (state.time.day < GRACE_DAYS) return;
   if (state.activeEvents.length >= MAX_CONCURRENT) return;
-  if (nextFloat(state.rng) > DAILY_CHANCE) return;
+
+  /*
+   * OLAY TAKVİMİ DE DIŞSAL — dönemlerle aynı ilke, sonuna kadar.
+   *
+   * Olaylar paylaşılan rng'den zamanlanırken, aynı tohumla açılan iki
+   * koşu farklı kararlar verdiği anda farklı GÜNLERDE farklı krizler
+   * yaşıyordu. Zincir A/B'si bunun ilk kurbanıydı: dönemler dışsal zara
+   * alındıktan sonra bile tohum 1'de kollardan biri kuyruk penceresinde
+   * fazladan bir kriz yiyor ve kıyas devriliyordu (2/3, −%11'lik sapma).
+   *
+   * "Çip Krizi" kimin ne kurduğuna bakmaz. Aynı tohum aynı fırtına
+   * takvimini vermeli — böylece eşli deneylerde tek fark gerçekten
+   * verilen KARAR oluyor, şansın o kolda nasıl aktığı değil.
+   */
+  const dice = createRng((state.meta.seed ^ (state.time.day * 918273645)) >>> 0);
+  if (nextFloat(dice) > DAILY_CHANCE) return;
 
   const available = EVENTS.filter((e) => !state.activeEvents.some((a) => a.defId === e.id));
   if (available.length === 0) return;
 
-  const def = pickWeighted(state.rng, available, (e) => e.weight);
+  const def = pickWeighted(dice, available, (e) => e.weight);
   state.activeEvents.push({
     defId: def.id,
     startedDay: state.time.day,

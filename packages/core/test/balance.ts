@@ -770,12 +770,30 @@ function outletUnitCost(state: GameState): number {
      * o yüzden yalnızca dönemler dışarıda.
      */
     engine2.getState().flags.eras = false;
+    /*
+     * Baskınlar da kapalı — dönemlerle aynı gerekçenin daha serti:
+     * NPC-NPC devralmaları kollar arasında YAPISAL fark yaratıyor (bir
+     * kolda rakip 370. günde yutuluyor, ötekinde yaşıyor) ve 60 günlük
+     * kuyruk penceresi iki farklı rakip manzarasını kıyaslıyor. Kısa
+     * olaylar gürültü, devralma kalıcı — gürültü eşlemede sönümlenir,
+     * yapısal fark sönümlenmez.
+     */
+    engine2.getState().flags.raids = false;
     let tail = 0;
-    for (let day = 1; day <= 500; day++) {
+    for (let day = 1; day <= 560; day++) {
       if (day % 5 === 0) {
         if (!(useChain && followChainAdvice(engine2))) expandOutlets(engine2);
       }
       engine2.runDay();
+      /*
+       * Kuyruk 120 gün — ama İLERİ doğru uzatılmış (440-560), geriye
+       * değil. İlk deneme 380'den başlatmıştı ve Tur 8'in horizon dersini
+       * çiğniyordu: zincirin geri ödemesi ~190 gün, erken pencere henüz
+       * amorti olmamış üniteleri ölçüyor ve avantajı yarıya gösteriyordu
+       * (tohumlar arası fark da büyüyordu, çünkü kolların kuruluş
+       * temposu farklı). Uzun pencere olay gürültüsünü eşitliyor, geç
+       * başlangıç olgun zinciri ölçüyor.
+       */
       if (day > 440) tail += getPlayer(engine2.getState()).today.profit;
     }
     const s = engine2.getState();
@@ -785,7 +803,7 @@ function outletUnitCost(state: GameState): number {
       const def = BUILDING_BY_ID[b.defId];
       return def?.role === 'extract' || def?.role === 'process';
     }).length;
-    return { netWorth: player.netWorth, profit: tail / 60, chain };
+    return { netWorth: player.netWorth, profit: tail / 120, chain };
   }
 
   console.log('\n--- zincir kartını izleyen vs izlemeyen (500 gün) ---');
@@ -1558,6 +1576,11 @@ let researchPayback = Infinity;
 // hamlesi olmalı. Hepsi aynı şeyi yapıyorsa doktrin diye bir şey yok.
 {
   const engine = new GameEngine(createNewGame({ seed: 12, companyName: 'Doktrin AŞ' }));
+  // Baskınlar kapalı: bu bölüm doktrinlerin İNŞAAT davranışını ölçüyor
+  // ve yutulmuş bir rakip hiç kol kuramaz — devralma, ayrışma sinyalini
+  // örnekten silip kontrolü kişiliklerle ilgisi olmayan bir sebepten
+  // kırıyordu.
+  engine.getState().flags.raids = false;
   const player = getPlayer(engine.getState());
   player.cash = 40_000_000;
   for (let day = 1; day <= 500; day++) {
@@ -2151,8 +2174,13 @@ console.log('\n=== Borsa ===\n');
     `${targetTiles} parsel devredildi`);
   expect('azınlık hissedar nakde çevrildi', minority.cash > minorityCashBefore,
     formatMoney(minority.cash - minorityCashBefore));
-  expect('kimsenin elinde ölü şirketin hissesi kalmıyor',
-    Object.values(state.companies).every((c) => (c.shares[targetId] ?? 0) === 0), 'temiz');
+  // Detay statik "temiz" idi ve kontrol kırıldığında bile öyle yazıyordu —
+  // kırık bir kontrolün detayı SUÇLUYU göstermeli.
+  const deadHolders = Object.values(state.companies)
+    .filter((c) => (c.shares[targetId] ?? 0) > 0)
+    .map((c) => `${c.id}:${c.shares[targetId]}`);
+  expect('kimsenin elinde ölü şirketin hissesi kalmıyor', deadHolders.length === 0,
+    deadHolders.join(' ') || 'temiz');
   expect('devralma haberi düşüyor',
     state.news.some((n) => n.title.includes('devraldı')),
     state.news.find((n) => n.title.includes('devraldı'))?.title ?? '—');
@@ -2296,6 +2324,104 @@ console.log('\n--- parsel getirisi ---');
 
 
 
+
+console.log('\n=== Sözleşmeler: dışarıdan gelen hedef ===\n');
+
+/*
+ * Sözleşme, "en kârlı hamleyi bul" döngüsünün dışına çıkan ilk sebep.
+ * Sınanan dört şey: teklif kendiliğinden geliyor, kabul çalışıyor,
+ * teslimat ödülü ödüyor, süre aşımı cezayı kesiyor.
+ */
+{
+  // Organik yol: teklifler gerçekten üretiliyor mu?
+  const engine = new GameEngine(createNewGame({ seed: 9, companyName: 'Taahhüt AŞ' }));
+  const state = engine.getState();
+  getPlayer(state).cash = 80_000_000; // baskın yemesin, takvim donmasın
+  let offers = 0;
+  let seenId = -1;
+  for (let day = 1; day <= 400; day++) {
+    engine.runDay();
+    for (const item of state.news) {
+      if (item.id <= seenId) break;
+      if (item.title.includes('sözleşme teklifi')) offers++;
+    }
+    seenId = state.news[0]?.id ?? seenId;
+    // Teklifler masada beklemesin: sayaç yalnızca ÜRETİMİ ölçüyor.
+    if (state.contractOffer) engine.dispatch({ type: 'DECLINE_CONTRACT' });
+  }
+  expect('teklifler kendiliğinden geliyor', offers >= 2, `400 günde ${offers} teklif`);
+
+  // Kurgulu yol: inşaat sözleşmesinin tam döngüsü.
+  const engine2 = new GameEngine(createNewGame({ seed: 10, companyName: 'Teslimat AŞ' }));
+  const s2 = engine2.getState();
+  getPlayer(s2).cash = 5_000_000;
+  const district = s2.districts.find((d) =>
+    s2.map.tiles.some((t) => t.districtId === d.id && t.kind === 'plot' && !t.buildingId && !t.structureId),
+  )!;
+  s2.contractOffer = {
+    kind: 'build',
+    title: `${district.name} bölgesine 2 Market işletmesi`,
+    districtId: district.id,
+    category: 'grocery',
+    targetCount: 2,
+    targetShare: 0,
+    durationDays: 120,
+    reward: 44_000,
+    penalty: 17_600,
+    offeredDay: s2.time.day,
+    acceptedDay: s2.time.day,
+    deadlineDay: s2.time.day + 120,
+  };
+
+  const accept = engine2.dispatch({ type: 'ACCEPT_CONTRACT' });
+  expect('teklif kabul edilebiliyor', accept.ok, accept.ok ? 'aktif' : (accept as { reason?: string }).reason ?? '');
+  expect('kabul teklifi masadan kaldırıyor', !s2.contractOffer && Boolean(s2.contract), 'masada tek kopya');
+
+  /*
+   * Ödül İÇERİDE ödeniyor: ikinci bina kurulup gün işlediği anda
+   * `runContractTick` teslimatı görüyor ve parayı AYNI runDay içinde
+   * yatırıyor. İlk yazdığım kontrol ödemeyi sonraki güne bakarak arıyordu
+   * ve "+2125" (sıradan günlük kâr) ölçtü — ödeme çoktan olmuştu.
+   * Para hareketi güvenilir pencereye sığmadığı için doğrulama OLAYDAN:
+   * teslimat haberi + sözleşmenin kapanması.
+   */
+  const spots = s2.map.tiles
+    .filter((t) => t.districtId === district.id && t.kind === 'plot' && !t.buildingId && !t.structureId)
+    .slice(0, 2);
+  for (const tile of spots) {
+    engine2.dispatch({ type: 'BUY_TILE', tileId: tile.id });
+    const built = engine2.dispatch({ type: 'BUILD', tileId: tile.id, defId: 'corner_shop' });
+    if (!built.ok) console.log('  kurulum hatası:', (built as { reason?: string }).reason);
+    engine2.runDay();
+  }
+  engine2.runDay();
+  const delivered = s2.news.find((n) => n.title === 'Sözleşme teslim edildi');
+  expect('teslimat ödülü ödeniyor', !s2.contract && Boolean(delivered),
+    delivered ? delivered.body : 'teslimat haberi yok');
+
+  // Süre aşımı: hedefi imkânsız bir sözleşme cezayla kapanıyor.
+  s2.contract = {
+    kind: 'build',
+    title: 'imkânsız hedef',
+    districtId: district.id,
+    category: 'grocery',
+    targetCount: 99,
+    targetShare: 0,
+    durationDays: 3,
+    reward: 10_000,
+    penalty: 4_000,
+    offeredDay: s2.time.day,
+    acceptedDay: s2.time.day,
+    deadlineDay: s2.time.day + 3,
+  };
+  // Aynı gerekçe: dükkânların günlük kârı cezayı gölgeliyor (5 günde
+  // +10 B ₺ kazanç, −4 B ₺ ceza = net artı). Doğrulama olaydan.
+  for (let i = 0; i < 5; i++) engine2.runDay();
+  const expired = s2.news.find((n) => n.title === 'Sözleşme süresi doldu');
+  expect('süre aşımı cezayı kesiyor', !s2.contract && Boolean(expired),
+    expired ? expired.body : 'süre aşımı haberi yok');
+}
+
 console.log('\n=== Dönemler: şehrin makro iklimi ===\n');
 
 /*
@@ -2339,6 +2465,14 @@ console.log('\n=== Dönemler: şehrin makro iklimi ===\n');
     `${closingNotices} uyarı / ${eraLog.length} dönem`);
 
   // Çarpan boru hattı: dönemin talep çarpanı birleşik etkiye giriyor.
+  //
+  // Aktif OLAYLAR önce temizleniyor: kontrol dönemin katkısını ölçüyor
+  // ve o an yaşayan bir tüketim patlaması (yeme-içme ×1,22) dönemin
+  // 0,88'ini 1,07'ye çevirip kontrolü yalancı çıkarabiliyor — çıkardı da:
+  // sözleşme sistemi rng akışını kaydırınca tam o güne bir olay denk
+  // geldi ve kontrol kırıldı. Paylaşılan rng'ye yaslanan her kontrol,
+  // akıştaki her yeni tüketiciyle kayar; yalıtım şart.
+  state.activeEvents.length = 0;
   state.era = { defId: 'era_sikilasma', startedDay: state.time.day, remainingDays: 100 };
   const mods = collectEventModifiers(state);
   expect('dönem çarpanı pazara ulaşıyor', (mods.demand.dining ?? 1) < 1,

@@ -467,6 +467,7 @@ const RAID_CASH_RESERVE = 320_000;
  *   sağlıyor: rakipler önce şehir kurar, artan parayla avlanır.
  */
 function tryRaidMove(state: GameState, profile: NpcProfileDef): void {
+  if (state.flags.raids === false) return;
   if (state.time.day < RAID_WARMUP_DAYS) return;
 
   const raider = state.companies[profile.id];
@@ -475,8 +476,21 @@ function tryRaidMove(state: GameState, profile: NpcProfileDef): void {
   const budget = (raider.cash - RAID_CASH_RESERVE) * 0.5;
   if (budget <= 0) return;
 
-  // Sıklık kişilikten: agresif olan daha sık avlanır.
-  if (nextFloat(state.rng) > profile.aggression * 0.35) return;
+  /*
+   * Zar HER GÜN atılır, karar gününde değil — tempo ölçümden çıktı.
+   *
+   * İlk sürüm baskını 7 günlük karar döngüsüne bağlamıştı: zar oradan
+   * geçince etkin baskın sıklığı ~27 güne düşüyor, 350'lik günlük tavanla
+   * tek bir küçük hedefi yutmak 500+ gün sürüyordu. Sondajda Nova 161.
+   * günden itibaren Kilit Market'i kemiriyor ama 900. günde bile işi
+   * bitmemişti — oyuncuya sıra hiç gelmiyordu ve "kaybedilebilir oyun"
+   * kâğıt üstünde kalıyordu.
+   *
+   * Günlük zarla (agresyon × 0,12) baskıncı ortalama 3-4 günde bir alım
+   * yapar: bir hedefi kontrol etmek ~2 ay — görülür, tepki verilebilir,
+   * ama sonsuza kadar sürmez.
+   */
+  if (nextFloat(state.rng) > profile.aggression * 0.12) return;
 
   // Hedef: kendinden küçükler. Elinde payı olduğu varsa önce o.
   const candidates = Object.values(state.companies).filter(
@@ -514,6 +528,7 @@ function tryRaidMove(state: GameState, profile: NpcProfileDef): void {
  * Oyuncuyla aynı araç, aynı fiyat — görünmez kalkan yok.
  */
 function tryBuybackDefense(state: GameState, profile: NpcProfileDef): void {
+  if (state.flags.raids === false) return;
   const company = state.companies[profile.id];
   if (!company) return;
 
@@ -543,12 +558,23 @@ export function runNpcTick(state: GameState): void {
 
   NPC_PROFILES.forEach((profile, index) => {
     if (!state.companies[profile.id]) return;
+
+    /*
+     * Baskın ve savunma GÜNLÜK, inşaat karar gününde.
+     *
+     * İnşaat 7 günlük döngüye bağlı çünkü pahalı: fırsat taraması ve
+     * yatırım tahmini her ada için hesap ister. Baskın ise tek zar ve en
+     * fazla tek alım — her gün değerlendirilecek kadar ucuz, ve ölçüm
+     * bunu şart koştu: karar gününe bağlıyken etkin baskın sıklığı ~27
+     * güne düşüyor, tek bir hedefi yutmak 500 günü aşıyor ve oyuncuya
+     * baskı hiç ulaşmıyordu. Savunma da günlük — kalkan, saldırıdan
+     * yavaş kalkarsa kalkan değildir.
+     */
+    tryRaidMove(state, profile);
+    tryBuybackDefense(state, profile);
+
     // Kararları güne yay: hepsi aynı gün hamle yapmasın.
     if ((state.time.day + index * 2) % DECISION_PERIOD_DAYS !== 0) return;
     actFor(state, profile);
-    // Baskın ve savunma inşaat kararından AYRI bütçelerle çalışır:
-    // avlanmak şehir kurmayı yavaşlatmasın (denge bunun üstüne kalibre).
-    tryRaidMove(state, profile);
-    tryBuybackDefense(state, profile);
   });
 }

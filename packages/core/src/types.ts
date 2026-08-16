@@ -212,6 +212,29 @@ export interface NewsItem {
   companyId?: string;
 }
 
+/**
+ * Sözleşme — belediyeden gelen süreli hedef.
+ *
+ * `build`: belirli bölgeye belirli kategoride N outlet (kabulden sonra
+ * kurulanlar sayılır). `share`: bir kategoride şehir payını hedefe çıkar.
+ * Teklif ve aktif hâl aynı biçimi taşır; kabul yalnızca `acceptedDay` ve
+ * `deadlineDay`i gerçek değerlerine çeker.
+ */
+export interface ContractState {
+  kind: 'build' | 'share';
+  title: string;
+  districtId: number;
+  category: CategoryId;
+  targetCount: number;
+  targetShare: number;
+  durationDays: number;
+  reward: number;
+  penalty: number;
+  offeredDay: number;
+  acceptedDay: number;
+  deadlineDay: number;
+}
+
 /** Sistemleri kademeli açmak için — plandaki feature flag katmanı. */
 export interface FeatureFlags {
   npcCompetition: boolean;
@@ -229,6 +252,14 @@ export interface FeatureFlags {
    * KAPALI tutmak zorunda — tek bayrak olsaydı ikisi ayrılamazdı.
    */
   eras?: boolean;
+  /**
+   * Düşmanca hisse baskınları. `eras` ile aynı sözleşme: yokluğu AÇIK
+   * demek. Ayrı bayrak olması yine ölçüm zorunluluğu — zincir A/B'si ve
+   * doktrin ayrışması gibi eşli deneyler, kollar arasında YAPISAL
+   * ayrışma yaratan tek sistemi (NPC-NPC devralmaları) kapatabilmeli;
+   * kalan her şey açık kalıyor.
+   */
+  raids?: boolean;
 }
 
 /**
@@ -309,6 +340,14 @@ export interface GameState {
    * ilk tick doğal olarak başlatır. Şema sürümü değişmiyor.
    */
   era?: { defId: string; startedDay: number; remainingDays: number };
+  /**
+   * Masadaki sözleşme teklifi ve aktif sözleşme. Üçü de seçime bağlı:
+   * eski kayıtlarda yoklukları "teklif yok" demek, şema sürümü sabit.
+   */
+  contractOffer?: ContractState;
+  contract?: ContractState;
+  /** Son teklifin kapandığı gün — soğuma süresi buradan sayılır. */
+  lastContractDay?: number;
   flags: FeatureFlags;
   /** Açık ihale; yoksa null. */
   auction: AuctionState | null;
@@ -337,6 +376,8 @@ export type GameCommand =
   /** Elindeki hisseleri satar. */
   | { type: 'SELL_SHARES'; companyId: string; count: number }
   | { type: 'RENAME_COMPANY'; name: string }
+  | { type: 'ACCEPT_CONTRACT' }
+  | { type: 'DECLINE_CONTRACT' }
   | { type: 'SET_FLAG'; flag: keyof FeatureFlags; value: boolean };
 
 /** Komut reddedildiğinde UI'ye dönen açıklama. */

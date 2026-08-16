@@ -2853,3 +2853,36 @@ button.icon {
   text-transform: uppercase;
   font-size: 10.5px;
 }
+
+/* --- sözleşme çipi --- */
+.contract-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* "Teklif" / "Sözleşme" ön eki: seyreltilmiş etiket dili. */
+.contract-label {
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.contract-days {
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  letter-spacing: -0.04em;
+  color: var(--muted);
+}
+
+.contract-chip button {
+  padding: 2px 8px;
+  font-size: 11px;
+}
+
+/* Aktif sözleşme "senin" işaret diliyle: sol kenarda mürekkep çubuk. */
+.contract-chip.active {
+  box-shadow: inset 3px 0 0 var(--accent);
+}

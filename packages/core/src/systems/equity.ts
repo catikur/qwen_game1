@@ -246,6 +246,18 @@ function absorb(state: GameState, acquirerId: string, targetId: string): void {
   for (const [issuerId, count] of Object.entries(target.shares)) {
     if (!count) continue;
     if (issuerId === acquirerId) continue; // kendi hissesi yutulur
+    /*
+     * HEDEFİN HAZİNESİ DE YUTULUR — mirasa karışmaz.
+     *
+     * Geri alım savunması gelince şirketler kendi hisselerini tutabilir
+     * oldu ve bu satırın yokluğu bir hata doğurdu: yutulan şirketin
+     * hazinesindeki kendi hisseleri "portföy" diye devralana geçiyor,
+     * devralan ölü bir şirketin hissedarı olarak kalıyordu (denge
+     * kontrolü yakaladı: "player:350"). Ölü şirketin kendi hissesinin
+     * değeri zaten varlıklarıyla birlikte devralana geçti; kâğıdın
+     * kendisi şirketle birlikte ölür.
+     */
+    if (issuerId === targetId) continue;
     acquirer.shares[issuerId] = (acquirer.shares[issuerId] ?? 0) + count;
   }
 

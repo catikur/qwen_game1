@@ -7,6 +7,7 @@ import { runMarketTick } from './systems/market';
 import { resetDailyLedgers, runProductionTick, runSpotPriceTick } from './systems/supply';
 import { recomputeNetWorth, runLandValueTick, runPopulationTick } from './systems/city';
 import { collectEventModifiers, runEraTick, runEventTick } from './systems/events';
+import { acceptContract, declineContract, runContractTick } from './systems/contracts';
 import { placeBid, runAuctionTick } from './systems/auction';
 import { buyShares, runDividendTick, runTakeoverTick, sellShares } from './systems/equity';
 import { runResearchTick } from './systems/focus';
@@ -184,6 +185,12 @@ export class GameEngine {
       case 'PLACE_BID':
         return placeBid(state, playerId, command.amount);
 
+      case 'ACCEPT_CONTRACT':
+        return acceptContract(state);
+
+      case 'DECLINE_CONTRACT':
+        return declineContract(state);
+
       case 'BUY_SHARES':
         return buyShares(state, playerId, command.companyId, command.count);
 
@@ -247,6 +254,7 @@ export class GameEngine {
 
     runEventTick(state);
     runEraTick(state);
+    runContractTick(state);
     resetDailyLedgers(state);
     // Ar-Ge primi pazardan ÖNCE ilerler: bugünkü kalite bugünkü satışa
     // girsin. Spot fiyatın tersi (o günün sonunda çözülüyor) çünkü orada
