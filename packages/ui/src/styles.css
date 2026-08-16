@@ -1,91 +1,93 @@
 @import './fonts.css';
 
 /*
- * Oyun arayüzü — "Kadastro".
+ * Oyun arayüzü — "Kambiyo".
  *
- * Tasarım kuralı: 3D sahne yıldız, UI onun önüne geçmez. Sayılar
- * tabular-nums ile hizalı, çünkü bu bir kontrol paneli — okunurluk
- * süslemeden önce gelir.
+ * TASARIM DİLİ. Oyun bir sermaye oyunu: pay, fiyat, sıralama, devralma.
+ * Arayüz de bir borsa terminali gibi davranıyor — yoğun, kesin, süssüz.
  *
- * TEMA NEREDEN GELİYOR. Oyun temelde toprak üzerine: parsel alıyorsun,
- * imar kısıtına bakıyorsun, ihaleye giriyorsun, tapu el değiştiriyor.
- * Arayüz de bunu söylüyor — bir gösterge paneli değil, bir KÜTÜK:
- * kireçtaşı kâğıt, mürekkep yazı, kılcal çizgiler, ve senin olanı
- * işaretleyen bir mühür.
+ * Bir önceki dil ("Kadastro") doğru konsepti taşıyordu ama uygulaması
+ * genel geçerdi: yuvarlak köşeli kartlar, yumuşak gölgeler, nötr kâğıt,
+ * tek vurgu rengi. Bu kombinasyon her yerde var ve hiçbir şey söylemiyor.
  *
- * Karanlık tema bırakıldı. Eski palet sahnenin gece hâlinden türemişti
- * ve gündüz şehrin üstünde ağır duruyordu; ayrıca oyunun konusu olan
- * toprak hiçbir yerde görünmüyordu.
+ * Üç kural bu dili kuruyor ve üçü de bir ŞEYİ YAPMAMAKTAN ibaret:
  *
- * NÖTRLER SEÇİLDİ, DEVRALINMADI: gri tonların hepsinde hafif bir yeşil
- * sapma var (H≈150). Saf gri "düşünülmemiş" okunuyor; paletin kendi
- * yeşiline yaslanan bir gri seçilmiş okunuyor.
+ *   1. YUVARLAKLIK YOK. Bütün köşeler keskin. Yuvarlaklık yumuşaklık
+ *      söyler; bir terminalin söyleyecek şeyi hassasiyettir.
+ *   2. GÖLGE YOK. Katmanlar gölgeyle değil KILCAL ÇİZGİYLE ayrılıyor.
+ *      Gölge bir yüzeyi "yüzdürür"; çizgi onu yerine oturtur.
+ *   3. RENKLİ VURGU YOK. Vurgu MÜREKKEBİN KENDİSİ: seçili olan şey
+ *      dolu siyah bir düzlem, üstündeki yazı kâğıt rengi. Renk yalnızca
+ *      ANLAM taşıdığı yerde var — yükseliş, düşüş, uyarı.
+ *
+ * Üçüncüsü aynı zamanda bir ayrım: 3B sahnede renk kimliği anlatıyor
+ * (senin yeşilin, rakibin kırmızısı). Arayüz de renkli olsaydı iki ayrı
+ * renk dili çakışırdı. Arayüz siyah-beyaz kalıyor, renk haritanın.
  */
 
 :root {
-  /*
-   * Tarayıcıya temanın aydınlık olduğunu söylüyor: form denetimleri,
-   * kaydırma çubuğu ve odak halkası kendiliğinden uyuyor.
-   */
   color-scheme: light;
 
-  /* --- kâğıt --- */
-  --bg: #e4e8e0;
-  --paper: #edefe9;
-  --panel: rgba(250, 251, 247, 0.94);
-  --panel-solid: #fafbf7;
+  /* --- yüzeyler --- */
+  /* Zemin, panelden bir tık koyu: panel "üstte" görünsün diye gölge
+     değil DEĞER farkı kullanılıyor. */
+  --bg: #e6e7e4;
+  --paper: #f1f2f0;
+  /*
+   * Panel neredeyse opak. Yarı saydamlık koyu temanın alışkanlığıydı;
+   * aydınlık bir terminalde arkadan sızan şehir, rakamların okunmasını
+   * zorlaştırmaktan başka bir şey yapmıyor.
+   */
+  --panel: rgba(255, 255, 255, 0.97);
+  --panel-solid: #ffffff;
 
   /* --- mürekkep --- */
-  --text: #16211c;
-  --muted: #5c6b62;
-  --line: rgba(22, 33, 28, 0.14);
+  --text: #0d1210;
+  --muted: #5f6764;
+  /* Kılcal çizgi: bu dilin taşıyıcı öğesi, o yüzden gölgeden koyu. */
+  --line: rgba(13, 18, 16, 0.18);
+  --line-strong: rgba(13, 18, 16, 0.34);
 
-  /* --- mühür --- */
-  --accent: #0e6b4f;
-  /* Vurgunun zemin hâli — seçili sekme gibi "açık" durumları boyar. */
-  --accent-soft: rgba(14, 107, 79, 0.1);
-  /* Mührün madeni: "senin olan" ve kilometre taşları. */
-  --brass: #8a6620;
-  /* Vurgunun üstüne yazılan yazı — yeşil zeminde mürekkep okunmaz. */
-  --on-accent: #f4f7f2;
+  /* --- vurgu: mürekkebin kendisi --- */
+  --accent: #0d1210;
+  --accent-soft: rgba(13, 18, 16, 0.07);
+  --on-accent: #f6f7f5;
+  /* Sahibinin nişanı — haritadaki oyuncu yeşiliyle akraba, tek yerde. */
+  --brass: #0b6a4f;
 
-  --good: #1f7a4d;
-  --bad: #a33227;
-  --warn: #a9761a;
+  /* --- anlam renkleri: yalnızca yön ve durum --- */
+  --good: #0f7a45;
+  --bad: #b02a1e;
+  --warn: #9a6a10;
 
-  /*
-   * Yüzey tonları.
-   *
-   * Karanlık temada bunların hepsi "beyazla aydınlat" idi (21 ayrı
-   * `rgba(255,255,255,x)`), çünkü koyu zeminde kabartma beyazla yapılır.
-   * Aydınlık zeminde tam tersi: kabartma MÜREKKEPLE yapılır. Token'a
-   * bağlanmalarının sebebi bu — tema değişince her birini tek tek
-   * bulmak gerekmesin.
-   */
-  --tint-1: rgba(22, 33, 28, 0.028);
-  --tint-2: rgba(22, 33, 28, 0.055);
-  --tint-3: rgba(22, 33, 28, 0.085);
-  --tint-4: rgba(22, 33, 28, 0.13);
+  /* Yüzey tonları — kabartma mürekkeple yapılıyor, beyazla değil. */
+  --tint-1: rgba(13, 18, 16, 0.03);
+  --tint-2: rgba(13, 18, 16, 0.055);
+  --tint-3: rgba(13, 18, 16, 0.09);
+  --tint-4: rgba(13, 18, 16, 0.14);
 
   /* --- biçim --- */
-  --radius: 10px;
-  --radius-sm: 8px;
-  /*
-   * Aydınlık temada gölge koyu temadakinin aynısı olamaz: %45 siyah
-   * kâğıdın üstünde kir gibi duruyor. Yumuşak ve alçak bir gölge, üstüne
-   * de içeriden ince bir beyaz çizgi — kâğıdın kenarının ışığı yakalaması.
-   */
-  --shadow: 0 10px 28px rgba(22, 33, 28, 0.1), 0 1px 0 rgba(255, 255, 255, 0.72) inset;
+  /* Sıfır. Tek istisna yok; bir yerde yuvarlaklık kalırsa dil kırılır. */
+  --radius: 0px;
+  --radius-sm: 0px;
+  /* Gölge yerine çizgi. Token korunuyor çünkü çok yerde çağrılıyor. */
+  --shadow: none;
 
   /* --- yazı --- */
-  --font-sans: 'IBM Plex Sans', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-sans: 'Archivo', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
   /*
-   * Başlıklar tırnaklı. Kütük fikrinin taşıyıcısı bu: panel adları ve
-   * şirket adı bir belgeye yazılmış gibi duruyor, veriler ise sans ile
-   * dizili. İkisi aynı aileden (Plex) olduğu için birlikte durdukları
-   * yerde çakışmıyorlar.
+   * Mono YALNIZCA sütuna giren rakamlarda. Monospace rakamlar belirgin
+   * biçimde geniş ve üst bar beş metriği 344 px'e sığdırmak zorunda
+   * (§2.4f); terminal hissi yoğunluğun olduğu yerde, panellerde kuruluyor.
    */
-  --font-display: 'IBM Plex Serif', ui-serif, Georgia, 'Times New Roman', serif;
+  --font-mono: 'Martian Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  /*
+   * Başlıklar ayrı bir aile DEĞİL: aynı grotesk, seyreltilmiş ve
+   * büyütülmüş hâli. İki aile kullanmak bir tercihti; burada hiyerarşi
+   * harf aralığı ve ağırlıkla kuruluyor, çünkü bu dilde fark bağırarak
+   * değil ayarla anlatılır.
+   */
+  --font-display: 'Archivo', ui-sans-serif, system-ui, sans-serif;
 }
 
 * {
@@ -109,21 +111,63 @@ body {
 }
 
 /*
- * TIRNAKLI OLAN YALNIZCA BAŞLIKLAR.
+ * BAŞLIKLAR AYRI BİR AİLE DEĞİL, AYRI BİR AYAR.
  *
- * Serif her yere yayılsaydı yoğun bir kontrol panelinde okunurluk
- * düşerdi — özellikle rakamlarda. Ayrım işlevsel: tırnaklı yazı bir
- * ŞEYİN ADI (panel başlığı, şirket, CEO), sans ise onun HAKKINDAKİ
- * veri. Kütükte de böyledir; başlık elle yazılır, rakamlar tabloya.
+ * Bir öncekinde başlıklar tırnaklıydı; iki aile bir tercihti. Bu dilde
+ * hiyerarşi harf aralığıyla kuruluyor: başlıklar küçük, kalın ve
+ * SEYRELTİLMİŞ büyük harf. Terminal etiketlerinin dili bu — bağırmıyor,
+ * ayarla anlatıyor.
  */
 .modal-head h2,
 .news h2,
 .ceo-detail h2,
-.brand-name,
-.building h3 {
+.building h3,
+.lens-body h3,
+.demandlist h3 {
   font-family: var(--font-display);
-  font-weight: 500;
-  letter-spacing: 0;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text);
+}
+
+/* Şirket adı bir etiket değil bir isim: seyreltilmiyor. */
+.brand-name {
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+/*
+ * RAKAMLAR SÜTUNA GİRDİĞİ YERDE MONO.
+ *
+ * Bir pazar oyununda sayıların alt alta hizalanması süs değil okuma
+ * aracı: iki mağazanın cirosunu karşılaştırmak, hizalı olmadıklarında
+ * okumak değil hesaplamak olur.
+ */
+/*
+ * Liste DAR tutuldu ve ölçüm bunu zorunlu kıldı.
+ *
+ * İlk denemede üst bar metrikleri ve yapı kartının kategori yazısı da
+ * monoydu. İkisi de yanlıştı: Martian Mono belirgin biçimde geniş,
+ * "1.23 M ₺" satırı yarıyor; kategori adı ise zaten SAYI DEĞİL —
+ * monospace'in orada anlatacağı bir hizalama yok.
+ *
+ * Kural: mono yalnızca ALT ALTA GELEN ve karşılaştırılan sayılarda.
+ * Tek başına duran bir sayı hizalanacak bir şey bulamaz.
+ */
+.stat-value,
+.demandvalue,
+.buildcard-cost,
+.news-day,
+.table td.pos,
+.table td.neg,
+.table .num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  /* Mono, aynı punto sansa göre iri görünüyor: optik olarak eşitleniyor. */
+  font-size: 0.9em;
+  letter-spacing: -0.05em;
 }
 
 button,
@@ -133,22 +177,43 @@ select {
   color: inherit;
 }
 
+/*
+ * DÜĞME BİR DÜZLEM, BİR HAP DEĞİL.
+ *
+ * Köşeler keskin, zemin kâğıt, kenar kılcal çizgi. Dolgu yerine ÇİZGİ
+ * kullanmak bu dilin merkezinde: dolgulu düğmeler sayfayı lekeler,
+ * çizgili düğmeler ızgarayı korur.
+ *
+ * Üstüne gelince zemin değil KENAR koyulaşıyor — hareket eden şey
+ * yüzey değil sınır.
+ */
 button {
-  background: var(--tint-2);
+  background: var(--panel-solid);
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   padding: 7px 12px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
   cursor: pointer;
-  transition: background 0.15s, border-color 0.15s, transform 0.1s;
+  transition: border-color 0.12s, background 0.12s, color 0.12s;
 }
 
 button:hover:not(:disabled) {
-  background: var(--tint-4);
-  border-color: var(--tint-4);
+  background: var(--panel-solid);
+  border-color: var(--line-strong);
 }
 
+/*
+ * Basılı hâlde düğme YERİNDEN OYNAMIYOR.
+ *
+ * Eski dil 1 px aşağı itiyordu; keskin köşeli, ızgaraya oturmuş bir
+ * arayüzde o hareket bütün satırı titretiyor. Geri bildirim bunun
+ * yerine tam kontrastla veriliyor: bir an için dolu mürekkep.
+ */
 button:active:not(:disabled) {
-  transform: translateY(1px);
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent);
 }
 
 button:disabled {
@@ -294,7 +359,7 @@ button.icon {
 .brand-mark {
   width: 10px;
   height: 26px;
-  border-radius: 3px;
+  border-radius: 0;
   background: linear-gradient(180deg, var(--accent), var(--brass));
 }
 
@@ -350,18 +415,25 @@ button.icon {
   color: var(--bad);
 }
 
+/*
+ * Panel sekmeleri de aynı blok dilinde: aralarında 1 px, kenarda tek
+ * çizgi. Sekmeler bir "düğme grubu" değil, tek bir denetim şeridi.
+ */
 .topbar-actions {
   display: flex;
-  align-items: center;
+  align-items: stretch;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 1px;
   min-width: 0;
+  background: var(--line);
+  border: 1px solid var(--line);
 }
 
 .dock-tab {
   display: inline-flex;
   align-items: center;
   gap: 7px;
+  border: 0;
 }
 
 .dock-tab.active {
@@ -380,14 +452,17 @@ button.icon {
 
 .speeds {
   display: flex;
-  gap: 4px;
+  gap: 1px;
   flex: 0 0 auto;
+  background: var(--line);
+  border: 1px solid var(--line);
 }
 
 .speed {
   min-width: 42px;
   padding: 6px 8px;
   font-size: 12px;
+  border: 0;
 }
 
 .speed.active {
@@ -412,7 +487,11 @@ button.icon {
 .news,
 .lensbar {
   background: var(--panel);
-  backdrop-filter: blur(14px);
+  /*
+   * BULANIKLIK KALDIRILDI. Arkadan sızan şehir bir gölge etkisiydi ve
+   * bu dil gölgeyi bırakıyor; ayrıca mobilde en pahalı efektlerden biri
+   * ve orada zaten kaldırılmıştı — iki kod yolu tutmanın anlamı yok.
+   */
   border: 1px solid var(--line);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
@@ -422,17 +501,40 @@ button.icon {
   padding: 10px 12px;
 }
 
+/*
+ * BÖLMELİ IZGARA — bu dilin denetim bloğu.
+ *
+ * Eskiden sarmalı bir flex satırıydı ve altı düğme üç düzensiz sıraya
+ * bölünüyordu; her sıranın sağında farklı bir boşluk kalıyor, blok
+ * kırık görünüyordu. Eşit sütunlu ızgarada böyle bir artık yok.
+ *
+ * Ayraçlar ayrı bir kenarlık DEĞİL: hücreler arasındaki 1 px boşluktan
+ * arkadaki çizgi rengi görünüyor. Böylece komşu iki hücrenin kenarlığı
+ * üst üste binip 2 px'e çıkmıyor — ızgara her yerde tek kılcal çizgi.
+ */
 .lens-buttons {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 5px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1px;
+  background: var(--line);
+  border: 1px solid var(--line);
 }
 
+/*
+ * Hücreler eşit boyda: biri satır kırarsa ızgaranın o satırı büyüyor ve
+ * blok basamaklı görünüyor. Yazı sarmıyor, sığmazsa punto küçülüyor.
+ */
 .lens {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 5px 10px;
+  justify-content: flex-start;
+  gap: 5px;
+  border: 0;
+  background: var(--panel-solid);
+  font-size: 11px;
+  white-space: nowrap;
+  min-height: 32px;
+  padding: 0 7px;
   font-size: 12px;
 }
 
@@ -506,7 +608,7 @@ button.icon {
 
 .buildcard.selected {
   border-color: var(--accent);
-  background: rgba(127, 212, 255, 0.14);
+  background: var(--accent-soft);
 }
 
 .buildcard.locked {
@@ -516,7 +618,7 @@ button.icon {
 .buildcard-swatch {
   width: 9px;
   height: 34px;
-  border-radius: 3px;
+  border-radius: 0;
   flex-shrink: 0;
   margin-top: 2px;
 }
@@ -577,9 +679,9 @@ button.icon {
   gap: 8px;
   font-size: 12px;
   padding: 8px 10px;
-  border-radius: 8px;
-  background: rgba(127, 212, 255, 0.12);
-  border: 1px solid rgba(127, 212, 255, 0.3);
+  border-radius: 0;
+  background: var(--accent-soft);
+  border: 1px solid var(--line-strong);
 }
 
 /* --------------------------------------------------------- sağ inspector */
@@ -627,7 +729,7 @@ button.icon {
 
 .stat {
   background: var(--tint-2);
-  border-radius: 8px;
+  border-radius: 0;
   padding: 7px 9px;
   display: flex;
   flex-direction: column;
@@ -668,7 +770,7 @@ button.icon {
 .bar {
   height: 6px;
   background: var(--tint-3);
-  border-radius: 999px;
+  border-radius: 0;
   overflow: hidden;
 }
 
@@ -805,7 +907,7 @@ button.icon {
 .event-chip {
   background: var(--panel);
   border: 1px solid var(--line);
-  border-radius: 999px;
+  border-radius: 0;
   padding: 5px 12px;
   font-size: 12px;
   backdrop-filter: blur(10px);
@@ -870,14 +972,19 @@ button.icon {
   font-variant-numeric: tabular-nums;
 }
 
+/*
+ * Sütun başlıkları seyreltilmiş küçük kapital. Terminal etiketinin dili
+ * bu: küçük, geniş aralıklı, sessiz — okunacak şey başlık değil sayı.
+ */
 .table th {
   text-align: left;
-  font-size: 11px;
+  font-size: 10px;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.12em;
+  font-weight: 600;
   color: var(--muted);
-  padding: 6px 8px;
-  border-bottom: 1px solid var(--line);
+  padding: 7px 8px;
+  border-bottom: 1px solid var(--line-strong);
 }
 
 .table td {
@@ -885,8 +992,20 @@ button.icon {
   border-bottom: 1px solid var(--tint-2);
 }
 
-.table tr.me {
-  background: rgba(127, 212, 255, 0.08);
+/*
+ * SENİN SATIRIN RENKLE DEĞİL ÇİZGİYLE İŞARETLİ.
+ *
+ * Zemin boyamak bu dilde bir leke; ayrıca renk 3B sahnede kimlik
+ * anlatıyor ve tabloda ikinci bir renk dili açmak istemiyoruz. Sol
+ * kenardaki kalın mürekkep çubuk aynı işi süssüz yapıyor.
+ */
+.table tr.me td {
+  background: var(--tint-1);
+  font-weight: 600;
+}
+
+.table tr.me td:first-child {
+  box-shadow: inset 3px 0 0 var(--accent);
 }
 
 .dot {
@@ -909,7 +1028,7 @@ button.icon {
 .fileinput {
   background: var(--tint-2);
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 0;
   padding: 8px 10px;
   color: var(--text);
 }
@@ -927,7 +1046,7 @@ button.icon {
   width: 100%;
   height: 60px;
   background: var(--tint-1);
-  border-radius: 8px;
+  border-radius: 0;
 }
 
 .sparkline {
@@ -955,7 +1074,7 @@ button.icon {
   align-items: center;
   gap: 12px;
   background: var(--tint-2);
-  border-radius: 8px;
+  border-radius: 0;
   padding: 9px 11px;
 }
 
@@ -997,7 +1116,7 @@ button.icon {
   background: var(--panel-solid);
   border: 1px solid var(--line);
   border-left-width: 3px;
-  border-radius: 8px;
+  border-radius: 0;
   padding: 9px 13px;
   font-size: 13px;
   box-shadow: var(--shadow);
@@ -1620,7 +1739,7 @@ button.icon {
   }
 
   .topbar-actions .dock-tab.active {
-    background: var(--accent-soft, rgba(127, 212, 255, 0.14));
+    background: var(--accent-soft, var(--accent-soft));
     border-color: var(--accent);
     color: var(--accent);
   }
@@ -1718,7 +1837,7 @@ button.icon {
   inset: 0;
   overflow-y: auto;
   background:
-    radial-gradient(1100px 600px at 20% -10%, rgba(127, 212, 255, 0.16), transparent 65%),
+    radial-gradient(1100px 600px at 20% -10%, var(--accent-soft), transparent 65%),
     radial-gradient(900px 500px at 90% 110%, rgba(226, 87, 76, 0.12), transparent 60%),
     var(--bg);
   display: grid;
@@ -1771,7 +1890,7 @@ button.icon {
 .newgame-field input[type='text'] {
   background: var(--tint-2);
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: 0;
   padding: 13px 15px;
   font-size: 17px;
   color: var(--text);
@@ -1798,17 +1917,17 @@ button.icon {
   align-items: center;
   gap: 4px;
   padding: 12px 8px 10px;
-  border-radius: 12px;
+  border-radius: 0;
   background: var(--tint-2);
 }
 
 .ceo-card.selected {
   border-color: var(--accent);
-  background: rgba(127, 212, 255, 0.14);
+  background: var(--accent-soft);
 }
 
 .ceo-portrait {
-  border-radius: 12px;
+  border-radius: 0;
   display: block;
 }
 
@@ -1860,7 +1979,7 @@ button.icon {
   text-transform: uppercase;
   letter-spacing: 0.07em;
   padding: 2px 7px;
-  border-radius: 999px;
+  border-radius: 0;
   border: 1px solid currentColor;
 }
 
@@ -1885,7 +2004,7 @@ button.icon {
 .brand-ceo {
   display: block;
   line-height: 0;
-  border-radius: 10px;
+  border-radius: 0;
   overflow: hidden;
   flex-shrink: 0;
 }
@@ -1897,7 +2016,7 @@ button.icon {
   font-size: 13px;
   font-weight: 560;
   padding: 8px 10px;
-  border-radius: 8px;
+  border-radius: 0;
   background: var(--tint-2);
 }
 
@@ -1952,7 +2071,7 @@ button.icon {
 .chain-dot {
   width: 10px;
   height: 10px;
-  border-radius: 3px;
+  border-radius: 0;
   flex: none;
 }
 
@@ -1993,7 +2112,7 @@ button.icon {
 .chain-slot {
   height: 100%;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 0;
   padding: 9px 10px;
   display: flex;
   flex-direction: column;
@@ -2057,7 +2176,7 @@ button.icon {
 .chain-bar {
   margin-top: 3px;
   height: 3px;
-  border-radius: 2px;
+  border-radius: 0;
   background: var(--tint-3);
   overflow: hidden;
 }
@@ -2156,13 +2275,13 @@ button.icon {
   padding: 6px 10px;
   font-size: 12.5px;
   border: 1px solid var(--line);
-  border-radius: 999px;
+  border-radius: 0;
   background: transparent;
 }
 
 .shelf-chip.on {
-  border-color: rgba(127, 212, 255, 0.55);
-  background: rgba(127, 212, 255, 0.1);
+  border-color: var(--line-strong);
+  background: var(--accent-soft);
 }
 
 .shelf-dot {
@@ -2241,7 +2360,7 @@ button.icon {
 .rival-channel {
   margin: 0 0 12px;
   padding: 7px 10px;
-  border-radius: 8px;
+  border-radius: 0;
   font-size: 12.5px;
   line-height: 1.45;
   border: 1px solid var(--line);
@@ -2253,8 +2372,8 @@ button.icon {
 }
 
 .rival-channel.channel-share {
-  background: rgba(127, 212, 255, 0.08);
-  border-color: rgba(127, 212, 255, 0.28);
+  background: var(--accent-soft);
+  border-color: var(--line-strong);
 }
 
 .rival-table {
@@ -2309,7 +2428,7 @@ button.icon {
   gap: 5px;
   padding: 9px 10px;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 0;
   background: var(--tint-1);
 }
 
@@ -2335,7 +2454,7 @@ button.icon {
   position: relative;
   display: block;
   height: 5px;
-  border-radius: 3px;
+  border-radius: 0;
   background: var(--tint-3);
   overflow: hidden;
 }
@@ -2344,7 +2463,7 @@ button.icon {
 .rival-bar-value {
   position: absolute;
   inset: 0 auto 0 0;
-  border-radius: 3px;
+  border-radius: 0;
 }
 
 .rival-bar-ceiling {
@@ -2421,7 +2540,7 @@ button.icon {
 .auction-state {
   margin: 0;
   padding: 8px 10px;
-  border-radius: 8px;
+  border-radius: 0;
   border: 1px solid var(--line);
   font-size: 12.5px;
   line-height: 1.45;
@@ -2504,7 +2623,7 @@ button.icon {
   font-size: 11.5px;
   font-weight: 500;
   padding: 1px 6px;
-  border-radius: 999px;
+  border-radius: 0;
   border: 1px solid var(--line);
 }
 
@@ -2531,7 +2650,7 @@ button.icon {
   position: relative;
   display: block;
   height: 6px;
-  border-radius: 3px;
+  border-radius: 0;
   background: var(--tint-3);
   overflow: hidden;
 }
@@ -2540,7 +2659,7 @@ button.icon {
   position: absolute;
   inset: 0 auto 0 0;
   background: var(--good);
-  border-radius: 3px;
+  border-radius: 0;
 }
 
 .bourse-bar-mark {
@@ -2595,7 +2714,7 @@ button.icon {
   color: var(--good);
   background: rgba(89, 217, 142, 0.13);
   border: 1px solid rgba(89, 217, 142, 0.35);
-  border-radius: 999px;
+  border-radius: 0;
   padding: 1px 7px;
   white-space: nowrap;
 }
@@ -2615,18 +2734,17 @@ button.icon {
 .news-portrait {
   flex: 0 0 auto;
   line-height: 0;
-  border-radius: 8px;
+  border-radius: 0;
   overflow: hidden;
-  box-shadow: 0 1px 3px rgba(22, 33, 28, 0.18);
+  border: 1px solid var(--line);
 }
 
 /* Genel merkez rozeti — mührün pirinç tonunda, küçük ve iddiasız. */
 .hq-badge {
   display: inline-block;
   margin-left: 8px;
-  padding: 1px 7px;
-  border-radius: 999px;
-  background: rgba(138, 102, 32, 0.14);
+  padding: 1px 6px;
+  border: 1px solid var(--brass);
   color: var(--brass);
   font-size: 10.5px;
   font-weight: 600;
