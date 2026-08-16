@@ -251,7 +251,27 @@ export function createNewGame(options: NewGameOptions = {}): GameState {
     ceo.startingBrand,
   );
 
-  const npcCount = Math.min(options.npcCount ?? NPC_PROFILES.length, NPC_PROFILES.length);
+  /*
+   * RAKİP SAYISI HARİTAYLA ÖLÇEKLENİYOR.
+   *
+   * Tur 8'de 5×5 yerleşim denendi ve ertelendi: 2,7 kat büyük şehirde
+   * 360. günde boş talep %13'ten %53'e fırlıyordu. Tek değişkenli deney
+   * sorunun harita değil İNŞAATÇI SAYISI olduğunu gösterdi — bot
+   * temposu artırılınca açık %13'e geri iniyordu.
+   *
+   * Ölçüt parsel: rakip sayısı haritanın kaç bina alabileceğine bağlı,
+   * kaç bölgesi olduğuna değil. Bölge sayısına bağlasaydık bölgeleri
+   * küçültüp çoğaltmak sahte bir rakip enflasyonu yaratırdı.
+   *
+   * 3×3 (504 parsel) → 4 rakip, yani bugünkü denge birebir korunuyor.
+   * 5×5 (1377 parsel) → 8, listenin tavanı.
+   */
+  const plotCapacity = tiles.filter((tile) => tile.kind === 'plot').length;
+  const scaledNpcCount = Math.max(4, Math.round(plotCapacity / 126));
+  const npcCount = Math.min(
+    options.npcCount ?? scaledNpcCount,
+    NPC_PROFILES.length,
+  );
   for (let i = 0; i < npcCount; i++) {
     const profile = NPC_PROFILES[i]!;
     companies[profile.id] = makeCompany(

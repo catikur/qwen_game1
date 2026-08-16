@@ -294,10 +294,22 @@ interface LayoutResult {
   buildings: number;
   ratio: number;
   daysPerSecond: number;
+  rivals: number;
 }
 
 function runLayout(label: string, layout: DistrictArchetypeId[][], run: Run): LayoutResult {
-  const engine = new GameEngine(createNewGame({ seed: SEED, npcCount: 4, layout }));
+  /*
+   * RAKİP SAYISI BURADA SABİTLENMİYOR — VE BU BİR DÜZELTME.
+   *
+   * Önceki hâli `npcCount: 4` diyordu. Deneyin amacı "bu harita kaç
+   * inşaatçı istiyor" sorusuydu ve ölçüm tam da o değişkeni kilitliyordu:
+   * 5×5 haritada 4 rakiple koşup "harita çok büyük" sonucuna varmak,
+   * sorulan soruyu cevaplamıyor.
+   *
+   * Artık sayı `createNewGame`'in kendi ölçekleme kuralından geliyor ve
+   * tabloya YAZILIYOR — okuyan kişi hangi şartta ölçüldüğünü görmeli.
+   */
+  const engine = new GameEngine(createNewGame({ seed: SEED, layout }));
   const marks = [360, 700, 1200];
   const unmet: number[] = [];
   const started = Date.now();
@@ -325,6 +337,7 @@ function runLayout(label: string, layout: DistrictArchetypeId[][], run: Run): La
     buildings: Object.values(state.buildings).filter((b) => b.companyId === player.id).length,
     ratio: bestRival > 0 ? player.netWorth / bestRival : 0,
     daysPerSecond: DAYS / elapsed,
+    rivals: Object.values(state.companies).filter((c) => !c.isPlayer).length,
   };
 }
 
@@ -333,6 +346,7 @@ console.log(
   'yerleşim'.padEnd(12),
   'harita'.padStart(9),
   'parsel'.padStart(7),
+  'rakip'.padStart(6),
   '360g'.padStart(6),
   '700g'.padStart(6),
   '1200g'.padStart(6),
@@ -356,6 +370,7 @@ for (const [label, layout, run] of CASES) {
     r.label.padEnd(12),
     `${r.side}×${r.side}`.padStart(9),
     String(r.plots).padStart(7),
+    String(r.rivals).padStart(6),
     ...r.unmet.map((u) => `%${Math.round(u * 100)}`.padStart(6)),
     String(r.buildings).padStart(6),
     r.ratio.toFixed(2).padStart(8),

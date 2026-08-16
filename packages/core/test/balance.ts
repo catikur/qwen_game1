@@ -62,6 +62,21 @@ import type { GameState } from '../src/types';
  * harness "bilgili bir oyuncu ne yaşar" sorusunu ölçmeli, oyunun
  * tavsiyesini görmezden gelen birini değil.
  */
+/*
+ * OYUNDA OLAN RAKİPLER, KATALOGDAKİLER DEĞİL.
+ *
+ * Test bugüne kadar `NPC_PROFILES` üzerinde dönüyordu ve profil sayısı
+ * ile şirket sayısı aynı olduğu sürece bu doğru çalışıyordu. Rakip
+ * sayısı haritayla ölçeklenmeye başlayınca varsayım kırıldı: katalogda
+ * sekiz profil var, varsayılan haritada dört şirket kuruluyor ve kalan
+ * dördü için `state.companies[id]` undefined dönüyor.
+ *
+ * Doğru kaynak state: kimin sahaya çıktığını dünya kurulumu belirliyor.
+ */
+function activeProfiles(state: GameState) {
+  return NPC_PROFILES.filter((profile) => state.companies[profile.id]);
+}
+
 function playerStrategy(engine: GameEngine): void {
   if (followChainAdvice(engine)) return;
   expandOutlets(engine);
@@ -679,7 +694,7 @@ function outletUnitCost(state: GameState): number {
   const s = engine2.getState();
 
   const byProfile = new Map<string, { name: string; trait: string; chain: number; netWorth: number; debt: number }>();
-  for (const profile of NPC_PROFILES) {
+  for (const profile of activeProfiles(s)) {
     const company = s.companies[profile.id];
     if (!company) continue;
     const chain = Object.values(s.buildings).filter((b) => {
@@ -1534,7 +1549,7 @@ let researchPayback = Infinity;
   const state = engine.getState();
 
   console.log('\n--- rakiplerin kol yatırımı (500 gün) ---');
-  const rows = NPC_PROFILES.map((profile) => {
+  const rows = activeProfiles(state).map((profile) => {
     let research = 0;
     let marketing = 0;
     for (const building of Object.values(state.buildings)) {
@@ -1900,7 +1915,7 @@ console.log('\n=== Parsel ihalesi ===\n');
   const engine2 = new GameEngine(createNewGame({ seed: 19, companyName: 'İhale AŞ' }));
   const state2 = engine2.getState();
   getPlayer(state2).cash = 5_000;
-  for (const profile of NPC_PROFILES) state2.companies[profile.id]!.cash = 60_000;
+  for (const profile of activeProfiles(state2)) state2.companies[profile.id]!.cash = 60_000;
 
   let overBid = 0;
   for (let day = 0; day < 300; day++) {
