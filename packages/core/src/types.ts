@@ -283,6 +283,16 @@ export interface GameState {
   activeEvents: ActiveEvent[];
   news: NewsItem[];
   nextId: number;
+  /**
+   * Oyun sonu — düşmanca devralma oyuncuyu yuttuğunda dolar.
+   *
+   * Seçime bağlı alan: eski kayıtlarda yokluğu "oyun sürüyor" demek,
+   * yani şema sürümü değişmiyor (NewsItem.companyId ile aynı gerekçe).
+   * Şirket SİLİNMİYOR — arayüz her karede oyuncuyu okumaya devam ediyor;
+   * silmek her paneli "şirket bulunamadı" hatasına düşürürdü. Bunun
+   * yerine motor bu alan doluyken günü ilerletmeyi bırakıyor.
+   */
+  gameOver?: { day: number; byCompanyId: string };
   flags: FeatureFlags;
   /** Açık ihale; yoksa null. */
   auction: AuctionState | null;

@@ -7,6 +7,7 @@ import { pushNews } from '../news';
 import { nextFloat } from '../rng';
 import { estimateInvestment } from './market';
 import { tilePrice } from './city';
+import { buyShares, freeFloat, sharePrice, sharesHeld, TOTAL_SHARES } from './equity';
 import type { GameState } from '../types';
 
 /**
@@ -429,6 +430,114 @@ function actFor(state: GameState, profile: NpcProfileDef): void {
   tryArmMove(state, profile, true);
 }
 
+
+/** Baskınların başlamadığı ısınma dönemi (gün). Erken oyun inşaatın. */
+const RAID_WARMUP_DAYS = 160;
+
+/** Bir baskıncının tek günde alabileceği en fazla hisse. */
+const RAID_DAILY_CAP = 350;
+
+/** Baskın bütçesine dokunulmayan nakit tabanı. */
+const RAID_CASH_RESERVE = 320_000;
+
+/**
+ * Düşmanca hisse baskını — borsanın İKİNCİ yönü.
+ *
+ * Borsa bugüne kadar tek yönlüydü: oyuncu rakip hissesi toplayabiliyor,
+ * tersi olmuyordu (DURUM.md §4.2). Yani baskı tek taraflıydı ve oyunun
+ * kaybetme riski yoktu — benchmark her koşuda "batan şirket 0/5" diyor.
+ *
+ * Kurallar:
+ *
+ * - KUYUNUN DİBİNDEKİNE VURULUR: hedef, baskıncıdan belirgin küçük
+ *   şirketler (net değer < baskıncının %90'ı). Güçlüyken saldırıya
+ *   uğramazsın; düşerken uğrarsın. "Rakip seni geçince hırslan" döngüsünün
+ *   devamı bu — geride kalmak artık yalnızca bir sıra numarası değil,
+ *   somut bir tehdit.
+ *
+ * - GÜNLÜK TAVAN VAR (350 hisse, %3,5): baskın bir anda değil dalga
+ *   dalga gelir. Bu bir merhamet değil OKUNABİLİRLİK kuralı — motor
+ *   eşiklerde haber düşürüyor (%10/%25/%40) ve tek günde %0'dan %50'ye
+ *   sıçrayan bir baskın o uyarıların hepsini atlardı.
+ *
+ * - BAŞLADIĞI İŞİ BİTİRİR: elinde payı olduğu hedefi yeni hedefe tercih
+ *   eder. Dağınık beş küçük pay değil, büyüyen tek bir tehdit.
+ *
+ * - Isınma süresi ve nakit tabanı, baskının inşaat bütçesini yememesini
+ *   sağlıyor: rakipler önce şehir kurar, artan parayla avlanır.
+ */
+function tryRaidMove(state: GameState, profile: NpcProfileDef): void {
+  if (state.time.day < RAID_WARMUP_DAYS) return;
+
+  const raider = state.companies[profile.id];
+  if (!raider) return;
+
+  const budget = (raider.cash - RAID_CASH_RESERVE) * 0.5;
+  if (budget <= 0) return;
+
+  // Sıklık kişilikten: agresif olan daha sık avlanır.
+  if (nextFloat(state.rng) > profile.aggression * 0.35) return;
+
+  // Hedef: kendinden küçükler. Elinde payı olduğu varsa önce o.
+  const candidates = Object.values(state.companies).filter(
+    (c) => c.id !== raider.id && c.netWorth < raider.netWorth * 0.9,
+  );
+  if (candidates.length === 0) return;
+
+  candidates.sort((a, b) => {
+    const stakeA = sharesHeld(state, raider.id, a.id);
+    const stakeB = sharesHeld(state, raider.id, b.id);
+    if (stakeA !== stakeB) return stakeB - stakeA;
+    return a.netWorth - b.netWorth;
+  });
+  const target = candidates[0]!;
+
+  const price = sharePrice(state, target.id);
+  if (price <= 0) return;
+
+  const wanted = Math.min(
+    RAID_DAILY_CAP,
+    Math.floor(budget / price),
+    freeFloat(state, target.id),
+  );
+  if (wanted <= 0) return;
+
+  buyShares(state, raider.id, target.id, wanted);
+}
+
+/**
+ * Geri alım savunması — oyuncuya verilen kalkanın aynısı rakiplere de.
+ *
+ * Bir baskıncı payın %30'unu geçtiyse ve hedefin nakdi varsa hedef kendi
+ * hissesini toplamaya başlar. Bu olmadan rakipler birbirine karşı
+ * savunmasız kalırdı ve borsa "ilk saldıran kazanır" oyununa dönerdi.
+ * Oyuncuyla aynı araç, aynı fiyat — görünmez kalkan yok.
+ */
+function tryBuybackDefense(state: GameState, profile: NpcProfileDef): void {
+  const company = state.companies[profile.id];
+  if (!company) return;
+
+  let threat = 0;
+  for (const other of Object.values(state.companies)) {
+    if (other.id === company.id) continue;
+    threat = Math.max(threat, sharesHeld(state, other.id, company.id));
+  }
+  if (threat / TOTAL_SHARES < 0.3) return;
+
+  const budget = (company.cash - RAID_CASH_RESERVE) * 0.6;
+  const price = sharePrice(state, company.id);
+  if (budget <= 0 || price <= 0) return;
+
+  const wanted = Math.min(
+    RAID_DAILY_CAP,
+    Math.floor(budget / price),
+    freeFloat(state, company.id),
+  );
+  if (wanted <= 0) return;
+
+  buyShares(state, company.id, company.id, wanted);
+}
+
 export function runNpcTick(state: GameState): void {
   if (!state.flags.npcCompetition) return;
 
@@ -437,5 +546,9 @@ export function runNpcTick(state: GameState): void {
     // Kararları güne yay: hepsi aynı gün hamle yapmasın.
     if ((state.time.day + index * 2) % DECISION_PERIOD_DAYS !== 0) return;
     actFor(state, profile);
+    // Baskın ve savunma inşaat kararından AYRI bütçelerle çalışır:
+    // avlanmak şehir kurmayı yavaşlatmasın (denge bunun üstüne kalibre).
+    tryRaidMove(state, profile);
+    tryBuybackDefense(state, profile);
   });
 }

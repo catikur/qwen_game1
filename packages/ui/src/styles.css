@@ -2752,3 +2752,96 @@ button.icon {
   text-transform: uppercase;
   vertical-align: 1px;
 }
+
+/*
+ * Oyun sonu.
+ *
+ * Perde YARI saydam: şehir kaybedilirken bile görünür kalıyor — oyuncu
+ * neyi kaybettiğine bakabilmeli. Kart ise bu dilin en sert hâli: dolu
+ * mürekkep zemin, kâğıt yazı. Vurgunun tersine çevrilmesi, olayın
+ * tersliğini söylüyor.
+ */
+.gameover {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  background: rgba(230, 231, 228, 0.55);
+  pointer-events: auto;
+}
+
+.gameover-card {
+  width: min(430px, calc(100vw - 32px));
+  background: var(--accent);
+  color: var(--on-accent);
+  border: 1px solid var(--accent);
+  padding: 28px 26px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  text-align: center;
+  align-items: center;
+}
+
+.gameover-card h2 {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.gameover-card p {
+  font-size: 13.5px;
+  line-height: 1.55;
+}
+
+.gameover-card .muted {
+  color: rgba(246, 247, 245, 0.62);
+}
+
+.gameover-face {
+  line-height: 0;
+  border: 1px solid rgba(246, 247, 245, 0.35);
+}
+
+/* Kartın içindeki düğme ters şemada: kâğıt zemin, mürekkep yazı. */
+.gameover-card button.primary {
+  background: var(--on-accent);
+  color: var(--accent);
+  border-color: var(--on-accent);
+  font-weight: 600;
+  padding: 10px 18px;
+}
+
+/* --- borsa savunma bloğu --- */
+.defense {
+  border: 1px solid var(--line);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Tehdit varken sol kenarda kalın uyarı çubuğu — tablodaki "sen"
+   işaretiyle aynı dil, ters anlamda. */
+.defense.threatened {
+  box-shadow: inset 3px 0 0 var(--bad);
+}
+
+.defense-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.defense-threat {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  font-size: 13px;
+}

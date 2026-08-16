@@ -103,11 +103,17 @@ export function sharesHeld(state: GameState, holderId: string, issuerId: string)
   return state.companies[holderId]?.shares[issuerId] ?? 0;
 }
 
-/** Bir şirketin serbest dolaşımdaki (kimsenin almadığı) hissesi. */
+/**
+ * Bir şirketin serbest dolaşımdaki hissesi.
+ *
+ * Şirketin KENDİ elindeki hisseler de (hazine, geri alım) dolaşımdan
+ * düşer. Eskiden issuer atlanıyordu çünkü kendi hissesini almak
+ * yasaktı; geri alım savunması gelince hazine gerçek bir kavram oldu —
+ * hazinedeki her hisse, bir baskıncının ASLA alamayacağı bir hissedir.
+ */
 export function freeFloat(state: GameState, issuerId: string): number {
   let held = 0;
   for (const company of Object.values(state.companies)) {
-    if (company.id === issuerId) continue;
     held += company.shares[issuerId] ?? 0;
   }
   return Math.max(0, TOTAL_SHARES - held);
@@ -131,14 +137,21 @@ export function portfolioValue(state: GameState, companyId: string): number {
   return total;
 }
 
-/** Alım maliyeti; kural ihlali varsa sebebini döner. */
+/**
+ * Alım maliyeti; kural ihlali varsa sebebini döner.
+ *
+ * KENDİ HİSSENİ ALMAK SERBEST — ve bu bir savunma. Rakipler oyuncunun
+ * hissesini toplayabildiği andan itibaren "geri alım" tek kalkan:
+ * hazineye çekilen her hisse dolaşımdan düşer ve %50 eşiği o kadar
+ * uzaklaşır. Eski kural ("kendi hisseni alamazsın") tek yönlü borsanın
+ * kalıntısıydı; kimse sana saldıramıyorken savunmaya da gerek yoktu.
+ */
 export function buyShares(
   state: GameState,
   buyerId: string,
   issuerId: string,
   count: number,
 ): { ok: boolean; reason?: string } {
-  if (buyerId === issuerId) return { ok: false, reason: 'Kendi hisseni alamazsın.' };
   const buyer = state.companies[buyerId];
   const issuer = state.companies[issuerId];
   if (!buyer || !issuer) return { ok: false, reason: 'Bilinmeyen şirket.' };
@@ -261,6 +274,25 @@ export function runTakeoverTick(state: GameState, announce: (title: string, body
     const target = state.companies[issuerId];
     const acquirer = state.companies[controllerId];
     if (!target || !acquirer) continue;
+
+    /*
+     * OYUNCU YUTULMUYOR — OYUN BİTİYOR.
+     *
+     * `absorb` şirketi state'ten siler ve arayüz her karede oyuncuyu
+     * okur; silmek her paneli çökertir. Daha önemlisi bu bir mekanik
+     * değil bir SON: kontrolün yarısını kaptırdıysan imparatorluk artık
+     * senin değil. Motor `gameOver` doluyken günü ilerletmeyi bırakıyor.
+     */
+    if (target.isPlayer) {
+      if (!state.gameOver) {
+        state.gameOver = { day: state.time.day, byCompanyId: controllerId };
+        announce(
+          `${acquirer.name} şirketini devraldı`,
+          'Hisselerinin yarısından fazlası el değiştirdi. İmparatorluk artık onun.',
+        );
+      }
+      continue;
+    }
 
     const buildings = Object.values(state.buildings).filter((b) => b.companyId === issuerId).length;
     absorb(state, controllerId, issuerId);

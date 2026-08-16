@@ -494,6 +494,56 @@ function RivalFace({ companyId }: { companyId: string }): ReactElement | null {
   );
 }
 
+
+/**
+ * Oyun sonu ekranı — düşmanca devralma imparatorluğu aldığında.
+ *
+ * Motor `gameOver` doluyken günü ilerletmeyi bırakıyor; bu ekran da
+ * sahnenin üstüne iniyor. Kapatılamaz ve bu bilinçli: kaybetmek bir
+ * bildirim değil bir SON. Oyuncunun iki çıkışı var — son duruma bakmak
+ * (arka plandaki şehir ve paneller hâlâ okunuyor, ekran haritayı
+ * örtmüyor) ya da yeni imparatorluk kurmak.
+ *
+ * Devralanın yüzü burada büyük: kaybettiğin kişinin kim olduğunu görmek,
+ * "tekrar dene" düğmesine basmanın sebebi.
+ */
+export function GameOverScreen({ onNewGame }: { onNewGame: () => void }): ReactElement | null {
+  const state = useGameState();
+  const over = state.gameOver;
+  if (!over) return null;
+
+  const raider = state.companies[over.byCompanyId];
+  const profile = raider?.profileId
+    ? NPC_PROFILES.find((p) => p.id === raider.profileId)
+    : undefined;
+  const player = getPlayer(state);
+
+  return (
+    <div className="gameover" role="alertdialog" aria-label="Oyun sonu">
+      <div className="gameover-card">
+        {profile && (
+          <span className="gameover-face">
+            <CeoPortrait portrait={profile.portrait} size={72} />
+          </span>
+        )}
+        <h2>İmparatorluk el değiştirdi</h2>
+        <p>
+          {over.day}. gün: {raider?.name ?? 'Bir rakip'}
+          {profile ? ` — başında ${profile.ceoName} —` : ''} {player.name}
+          {"'"}in hisselerinin yarısından fazlasını topladı.
+        </p>
+        <p className="muted">
+          Şehir olduğu yerde duruyor; panellerden son durumuna bakabilirsin.
+          Takvim bir daha ilerlemeyecek.
+        </p>
+        <button type="button" className="primary" onClick={onNewGame}>
+          Yeni imparatorluk kur
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export function NewsFeed(): ReactElement {
   const state = useGameState();
   const { open, toggle } = useCollapsible();

@@ -39,6 +39,7 @@ import {
   shelfReach,
   bookValue,
   confidence,
+  controllerOf,
   freeFloat,
   marketCap,
   portfolioValue,
@@ -1975,11 +1976,25 @@ console.log('\n=== Borsa ===\n');
     engine.runDay();
   }
 
-  let maxPortfolio = 0;
+  /*
+   * ESKİ KONTROL "kimse hisse almadıysa portföy tam sıfır" İDİ ve
+   * rakipler baskın yapmaya başlayınca ÖNCÜLÜ bozuldu: 160. günden sonra
+   * NPC'ler kendiliğinden hisse topluyor, yani 300 günlük koşuda "kimse
+   * almadı" varsayımı artık yanlış. Denge kimliğinin kendisi duruyor —
+   * hisse TUTMAYAN şirketin portföyü sıfırdır — ve oyuncu bu koşuda hiç
+   * almadığı için kimlik onun üzerinden sınanıyor.
+   */
+  expect(
+    'hisse almayan şirketin portföyü tam sıfır',
+    portfolioValue(state, getPlayer(state).id) === 0,
+    `${portfolioValue(state, getPlayer(state).id)}`,
+  );
+  // Baskının POZİTİF kanıtı: 300 günde en az bir rakip pay toplamış olmalı.
+  let raidedPortfolio = 0;
   for (const company of Object.values(state.companies)) {
-    maxPortfolio = Math.max(maxPortfolio, portfolioValue(state, company.id));
+    if (!company.isPlayer) raidedPortfolio = Math.max(raidedPortfolio, portfolioValue(state, company.id));
   }
-  expect('kimse hisse almadıysa portföy değeri tam sıfır', maxPortfolio === 0, `${maxPortfolio}`);
+  expect('rakipler kendiliğinden hisse topluyor', raidedPortfolio > 0, formatMoney(raidedPortfolio));
 
   // Değerleme tutarlılığı: piyasa değeri = defter × güven.
   const player = getPlayer(state);
@@ -2030,8 +2045,17 @@ console.log('\n=== Borsa ===\n');
   expect('serbest dolaşım azalıyor', freeFloat(state, targetId) === TOTAL_SHARES - 1_000,
     `${freeFloat(state, targetId)} hisse`);
 
+  /*
+   * ESKİ KURAL "kendi hisseni alamazsın" idi — tek yönlü borsanın
+   * kalıntısı. Baskınlar gelince geri alım tek savunma oldu: hazineye
+   * çekilen her hisse dolaşımdan düşer.
+   */
+  const floatBefore = freeFloat(state, player.id);
   const own = engine.dispatch({ type: 'BUY_SHARES', companyId: player.id, count: 10 });
-  expect('kendi hisseni alamıyorsun', !own.ok, own.reason ?? '');
+  expect('geri alım yapılabiliyor', own.ok, own.ok ? '10 hisse hazinede' : ((own as { reason?: string }).reason ?? ''));
+  expect('geri alım dolaşımı düşürüyor', freeFloat(state, player.id) === floatBefore - 10,
+    `${floatBefore} → ${freeFloat(state, player.id)}`);
+  expect('hazine payı kontrol saymıyor', controllerOf(state, player.id) === null, 'kontrol boş');
   const tooMany = engine.dispatch({ type: 'SELL_SHARES', companyId: targetId, count: 5_000 });
   expect('elinde olmayanı satamıyorsun', !tooMany.ok, tooMany.reason ?? '');
 
@@ -2251,6 +2275,79 @@ console.log('\n--- parsel getirisi ---');
     `  NOT: abonman %${Math.round(subscription * 100)} — geriye fabrika, depo ve ` +
       `rakipler için ${plots - neededPlots} parsel kalıyor.`,
   );
+}
+
+
+console.log('\n=== Düşmanca devralma: oyun kaybedilebiliyor ===\n');
+
+/*
+ * Oyunun bugüne kadarki en büyük eksiği ölçülebilir bir cümleydi:
+ * benchmark her koşuda "batan şirket 0/5" diyordu — kaybetme riski
+ * olmayan bir büyümenin gerilimi de olmuyordu.
+ *
+ * Senaryo kasıtlı olarak eğik: oyuncu küçük kalıyor, bir rakip nakit
+ * zengini. Sınanan zincir üç halka —
+ *
+ *   1. baskın eşik uyarıları SIRAYLA düşüyor (%10 → %25 → %40); oyuncu
+ *      kaybı gelirken görmeli, bitince öğrenmemeli
+ *   2. eşik aşılınca `gameOver` doluyor ve oyuncu şirketi SİLİNMİYOR
+ *      (arayüz son duruma bakmaya devam edebilmeli)
+ *   3. takvim duruyor — kaybedilmiş oyunda günler akmaya devam etmiyor
+ */
+{
+  const engine = new GameEngine(createNewGame({ seed: 41, companyName: 'Av AŞ' }));
+  const state = engine.getState();
+  const raiderId = NPC_PROFILES[0]!.id;
+  state.companies[raiderId]!.cash = 60_000_000;
+
+  /*
+   * Uyarılar KOŞU SIRASINDA toplanıyor, sondan okunmuyor. İlk sürüm
+   * bitişte `state.news`e bakıyordu ve "1 uyarı" diye kırıldı — haber
+   * tamponu 60 kayıt tutuyor ve 500 günlük koşuda erken uyarılar çoktan
+   * dışarı itilmişti. Tampon bir EKRAN aracı, olay kaydı değil; kalıcı
+   * bir şey sınanacaksa akarken yakalanmalı.
+   */
+  const warnings: { title: string; companyId?: string }[] = [];
+  let seenNewsId = -1;
+  for (let day = 1; day <= 900 && !state.gameOver; day++) {
+    engine.runDay();
+    // Haberler tamponda YENİDEN ESKİYE duruyor; günün yenilerini önce
+    // kendi içinde eskiden yeniye çevirip sona ekliyoruz — yoksa günler
+    // arası sıra tersine döner ve kontrol kendi topladığı listeyi yanlış
+    // diye işaretler (ilk koşuda tam olarak bu oldu).
+    const fresh: { title: string; companyId?: string }[] = [];
+    for (const item of state.news) {
+      if (item.id <= seenNewsId) break;
+      if (
+        item.title.includes('göz dikti') ||
+        item.title.includes('payını') ||
+        item.title.includes('kontrolüne yaklaşıyor')
+      ) {
+        fresh.unshift({ title: item.title, ...(item.companyId ? { companyId: item.companyId } : {}) });
+      }
+    }
+    warnings.push(...fresh);
+    seenNewsId = state.news[0]?.id ?? seenNewsId;
+  }
+  expect('baskın uyarıları düşüyor', warnings.length >= 3, `${warnings.length} uyarı`);
+  const ordered =
+    warnings.findIndex((n) => n.title.includes('göz dikti')) <
+      warnings.findIndex((n) => n.title.includes('payını')) &&
+    warnings.findIndex((n) => n.title.includes('payını')) <
+      warnings.findIndex((n) => n.title.includes('kontrolüne yaklaşıyor'));
+  expect('uyarılar eşik sırasında', ordered,
+    warnings.map((n) => n.title.split(' ').slice(-2).join(' ')).join(' → '));
+  expect('uyarılar baskıncının yüzünü taşıyor', warnings.every((n) => n.companyId === raiderId),
+    raiderId);
+
+  expect('devralma oyunu bitiriyor', Boolean(state.gameOver),
+    state.gameOver ? `${state.gameOver.day}. gün, ${state.companies[state.gameOver.byCompanyId]?.name}` : 'bitmedi');
+  expect('oyuncu şirketi silinmiyor', Boolean(state.companies[state.playerCompanyId]), 'duruyor');
+
+  const frozenDay = state.time.day;
+  engine.runDay();
+  engine.runDay();
+  expect('kaybedilmiş oyunda takvim duruyor', state.time.day === frozenDay, `gün ${state.time.day}`);
 }
 
 console.log(`\n=== ${failures === 0 ? 'TÜMÜ GEÇTİ' : `${failures} KONTROL KALDI`} ===`);
