@@ -2845,3 +2845,11 @@ button.icon {
   flex-wrap: wrap;
   font-size: 13px;
 }
+
+/* Dönem çipi: olay çipinden bir tık daha ağır — mevsim, haber değil. */
+.era-chip {
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-size: 10.5px;
+}

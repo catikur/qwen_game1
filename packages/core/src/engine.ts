@@ -6,7 +6,7 @@ import { TOTAL_SHARES, sharesHeld } from './systems/equity';
 import { runMarketTick } from './systems/market';
 import { resetDailyLedgers, runProductionTick, runSpotPriceTick } from './systems/supply';
 import { recomputeNetWorth, runLandValueTick, runPopulationTick } from './systems/city';
-import { collectEventModifiers, runEventTick } from './systems/events';
+import { collectEventModifiers, runEraTick, runEventTick } from './systems/events';
 import { placeBid, runAuctionTick } from './systems/auction';
 import { buyShares, runDividendTick, runTakeoverTick, sellShares } from './systems/equity';
 import { runResearchTick } from './systems/focus';
@@ -246,6 +246,7 @@ export class GameEngine {
     state.time.day += 1;
 
     runEventTick(state);
+    runEraTick(state);
     resetDailyLedgers(state);
     // Ar-Ge primi pazardan ÖNCE ilerler: bugünkü kalite bugünkü satışa
     // girsin. Spot fiyatın tersi (o günün sonunda çözülüyor) çünkü orada

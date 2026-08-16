@@ -220,6 +220,15 @@ export interface FeatureFlags {
   landValueDrift: boolean;
   /** Belediye periyodik olarak parsel ihalesine çıkarsın mı. */
   landAuctions: boolean;
+  /**
+   * Dönemler (makro iklim). SEÇİME BAĞLI ve yokluğu AÇIK demek: eski
+   * kayıtlarda alan yok ve o kayıtlar dönemleri almalı — kapalı başlasa
+   * özellik eski oyunculara hiç ulaşmazdı. `randomEvents`ten ayrı bir
+   * bayrak olması ölçüm zorunluluğu: zincir A/B deneyi kısa olayları
+   * AÇIK (zincirin sigorta değeri onların üstüne kurulu) ama dönemleri
+   * KAPALI tutmak zorunda — tek bayrak olsaydı ikisi ayrılamazdı.
+   */
+  eras?: boolean;
 }
 
 /**
@@ -293,6 +302,13 @@ export interface GameState {
    * yerine motor bu alan doluyken günü ilerletmeyi bırakıyor.
    */
   gameOver?: { day: number; byCompanyId: string };
+  /**
+   * Aktif dönem — şehrin makro iklimi (`ERAS` kataloğundan).
+   *
+   * Seçime bağlı: eski kayıtlarda yokluğu "henüz dönem başlamadı" demek,
+   * ilk tick doğal olarak başlatır. Şema sürümü değişmiyor.
+   */
+  era?: { defId: string; startedDay: number; remainingDays: number };
   flags: FeatureFlags;
   /** Açık ihale; yoksa null. */
   auction: AuctionState | null;

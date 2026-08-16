@@ -1,5 +1,5 @@
 import type { ReactElement } from 'react';
-import { CEO_BY_ID, EVENTS, NPC_PROFILES } from '@capital/content';
+import { CEO_BY_ID, ERA_BY_ID, EVENTS, NPC_PROFILES } from '@capital/content';
 import {
   LENSES,
   companyRanking,
@@ -617,13 +617,25 @@ export function Toasts(): ReactElement {
 /** Aktif ekonomik olaylar — piyasanın neden değiştiğini gösterir. */
 export function ActiveEvents(): ReactElement | null {
   const state = useGameState();
+  const era = state.era ? ERA_BY_ID[state.era.defId] : undefined;
   // İhale çipi de buraya düşüyor: ikisi de "şu an olan bir şey" ve
   // ikisi de akışı kesmiyor.
-  if (state.activeEvents.length === 0 && !state.auction) return null;
+  if (state.activeEvents.length === 0 && !state.auction && !era) return null;
 
   return (
     <div className="active-events">
       <AuctionChip />
+      {/*
+       * Dönem çipi en solda ve süre YAZMIYOR. Olay çipi geri sayar,
+       * çünkü olay kısa ve "ne zaman bitecek" sorusu taktik. Dönem bir
+       * mevsim: aylarca ekranda duracak bir sayaç gürültü olurdu —
+       * kapanış zaten 20 gün kala haberle bildiriliyor.
+       */}
+      {era && state.era && (
+        <span className={`event-chip era-chip tone-${era.tone}`} title={era.body}>
+          {era.title}
+        </span>
+      )}
       {state.activeEvents.map((active) => {
         const def = EVENTS.find((event) => event.id === active.defId);
         if (!def) return null;
