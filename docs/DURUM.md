@@ -4,7 +4,7 @@
 > `pnpm bench` çıktısından; iddialar `pnpm balance` ve `pnpm playtest`
 > tarafından her koşuda doğrulanıyor.
 >
-> Son güncelleme: şema **v6**, 13 tur tamamlandı.
+> Son güncelleme: şema **v6**, 14 tur tamamlandı.
 
 ---
 
@@ -35,6 +35,7 @@ mantığının dışında; üçüncüsü ise oyunun kendi **tavsiyesindeydi**:
 | İmparatorluğun adresi yoktu, rakip seni geçince hiçbir şey olmuyordu | **11** | Genel merkez işareti + geçilme olayı, rakiplerin yüzü |
 | Arayüz "klasik yapım" diye bağırıyordu | **12** | Kambiyo: terminal dili — sıfır yuvarlaklık, sıfır gölge, mürekkep vurgu, Archivo + Martian Mono |
 | Oyun tekrara düşüyordu, kaybetmek imkânsızdı | **13** | Rakip ölçeklemesi, çift yönlü borsa + oyun sonu, dönemler, sözleşmeler |
+| Arazi oyunu ilk yılda sönüyordu | **14** | Kademeli imar: köşeler köy başlıyor, 130-520. günlerde açılıyor + kademeli bina silueti |
 
 ---
 
@@ -310,6 +311,59 @@ Tur boyunca üç ölçüm dersi ve bir ürün hatası:
    devralana geçiyor, devralan ölü şirketin hissedarı kalıyordu. Geri
    alım savunması bu yolu açmıştı; denge kontrolü yakaladı (player:350).
 
+### Tur 14 · A — Kademeli imar: arazi kıtlığı yenileniyor
+
+Tur 13'ün kapatamadığı dördüncü teşhis: ana fiil (parsel al-kur)
+haritayla birlikte tükeniyor. Haritayı büyütmek çözüm değil — büyük
+harita ilk günden bol arsa demek, kıtlık hiç yaşanmıyor. Kademeli imar
+ikisini birden veriyor:
+
+- **Köşe bölgeler kilitli başlıyor** — düşük nüfuslu köy (%32), seyrek
+  doku, iskontolu arsa (×0,55). Sırayla 130/260/390/520. günlerde imara
+  açılıyorlar; sıra tohumdan, günler sabit (dışsal iklim ilkesi: eşli
+  deneyler eşli kalır).
+- **Tek kapı** — `isDistrictOpen` kontrolü `purchaseBlocker`'da; oyuncu,
+  NPC, ihale ve sözleşme üreticisi aynı kapıdan geçiyor. 560 günlük
+  koşuda 0 ihlal.
+- **Açılış bir olay** — 30 gün önceden "imar planı açıklandı" duyurusu,
+  açılış günü haber + göç rampası (köy ~95 günde şehir tabanına).
+  Zeminde kilitli bölge her lenste kırsal yeşil.
+- **Laboratuvar kapısı** — `districtUnlocks: false` eski dünyayı rng
+  tüketimi dahil birebir geri getiriyor; zincir kalibrasyonu gibi "Tur 1
+  kimliği" iddialı ölçümler o sabit zeminde koşuyor.
+
+Üç bulgu: (1) `bestPlotFor` "en ucuz parseli" ararken iskontolu kilitli
+limanı seçiyor, her zincir kartı alınamaz hamle öneriyordu — üç tohumda
+0 rakip zinciri; kilit filtresiyle A/B **+%30, 3/3**'e çıktı (kıt sanayi
+arazisi zincirin değerini artırdı). (2) İhale sayacı gibi kasıtlı fakir
+oyunculu senaryolar baskında yutulup takvimi donduruyor — bu tür izole
+ölçümler artık `flags.raids = false` ile koşuyor. (3) Vekil oyuncunun
+repertuvarında devralma yoktu; dar şehirde boş parsel ~60. günde bitince
+vekil dururken NPC'ler devralmayla büyüdü ve oyuncu/rakip oranı 0,20'ye
+çöktü — ölçülen şey denge değil vekilin kör noktasıydı. Devralmayı
+öğrenen vekille oran **1,86** (repertuvar farkı: yeni ürün sorusu §4.8'e
+düştü).
+
+### Tur 14 · B — Prosedürel kütle: siluet çeşitliliği
+
+Rapor "binalar klasik yapım diye bağırıyor" demişti; seçilen yön hazır
+model değil prosedürel zenginleştirme. Üç yeni öğe, üçü de MEVCUT üç
+InstancedMesh'e ek örnek — **çizim çağrısı sabit** (örnek kapasitesi
+gövde ×2, çatı ×5):
+
+- **Kademe (setback)** — 1,6 birimden yüksek gövde iki bloğa ayrılıyor:
+  alt geniş, üst dar (%66-80), arada teras kapağı. Teras aynı zamanda
+  alt bloğun açığa çıkan üst yüzünü örtüyor (pencere dokusu o yüze de
+  düşerdi — Tur 6'daki çatı kapağı dersinin devamı).
+- **Korniş** — orta boy binaların ~%60'ında çatı altına ince bant.
+- **Çatı ekipmanı** — yüksek yapılarda 1-2 klima/asansör kutusu.
+
+Varyasyon zarı KONUMDAN türetiliyor (`x·151 + z·73` karması): kütle her
+karede yeniden yerleştirildiği için durum taşımadan aynı binanın hep
+aynı görünmesinin tek yolu kimliği koordinattan okumak. Köşe pahı
+bilinçli atlandı: pahlı prizmanın açılı yüzlerinde pencere dokusu
+yayılırdı; siluet çeşitliliğini kademe zaten veriyor.
+
 ---
 
 ## 3. Ölçülen durum
@@ -320,10 +374,14 @@ Tur boyunca üç ölçüm dersi ve bir ürün hatası:
 
 | | Değer |
 |---|---|
-| Oyuncu / rakip oranı | **1,58** — Tur 7 öncesi 0,76 idi |
-| Oyuncu bina sayısı | 70 |
-| Günlük kâr | 235 B ₺ |
-| Batan şirket | **0/5** |
+| Oyuncu / rakip oranı | **1,86** — Tur 7 öncesi 0,76 idi |
+| Oyuncu bina sayısı | 101 |
+| Günlük kâr | 300 B ₺ |
+| Batan şirket | **0/4** |
+
+Not: vekil Tur 14'te devralmayı öğrendi (boş parsel bitince mevcut
+yapıyı primli alıyor — oyunun kendi öğretisi). Önceki satırlarla kıyasta
+bu repertuvar farkının payı var.
 
 ### Doygunluk (Tur 8 sonrası)
 
@@ -331,43 +389,49 @@ Tur boyunca üç ölçüm dersi ve bir ürün hatası:
 |---|---|---|---|
 | Tur 7 öncesi | %35 | %38 | %48 |
 | Tur 7 sonu | %20 | %34 | %33 |
-| **Tur 8** | %30 | **%12** | **%13** |
+| Tur 8 | %30 | **%12** | **%13** |
+| **Tur 14** | %10 | **%0** | **%0** |
 
 Okunması gereken şey sayı değil **yön**. İlk iki satırda boş talep
-zamanla artıyor: şehir büyüdükçe geri kalıyor. Üçüncüde azalıyor — erken
-oyunda fırsat bol, geç oyunda şehir doyuyor. Erken oyundaki %20 → %30
-bir bedel değil, 1,8 kat parselin aynı beş inşaatçıya dağılması.
+zamanla artıyor: şehir büyüdükçe geri kalıyor. Son ikisinde azalıyor —
+erken oyunda fırsat bol, geç oyunda şehir doyuyor. Tur 14 satırındaki
+düşüşün iki kaynağı var: kademeli imar erken şehri küçük tuttuğu için
+360. günde kapasite talebe kolay yetişiyor, ve devralmayı öğrenen vekil
+geç oyunda talebi süpürüyor. Doluluk %66'ya indiği için çekicilik
+rekabeti (kalite/marka/fiyat) canlı.
 
 ### Stratejilerin karşılığı (aynı tohum, tek değişken)
 
 | Strateji | Kâr etkisi | Geri ödeme |
 |---|---|---|
-| Ar-Ge · 4 mağaza | %6 | 622 gün *(erken)* |
-| Ar-Ge · 8 mağaza | **%14** | 140 gün |
-| Pazarlama · 8 mağaza | **%12** | 103 gün |
+| Ar-Ge · 4 mağaza | %4 | 970 gün *(erken)* |
+| Ar-Ge · 8 mağaza | **%14** | 141 gün |
+| Pazarlama · 8 mağaza | **%11** | 111 gün |
 | Fiyatı %25 kırmak | **%17 hacim** | — |
-| Zincir · normal nakit | **%12** | ~190 gün |
-| Zincir · bol nakit (20 M ₺) | %1 | — |
+| Zincir · normal nakit | **%14** | ~190 gün |
+| Zincir · bol nakit (20 M ₺) | **−%10** | — |
 
 Son iki satır ayrı duruyor çünkü farkları bir bulgu: bol nakitle parseli
 outlet'le doldurmak zinciri geçiyor. **Zincir bir nakit kısıtı oyunu.**
+Bol nakit satırının eksiye dönmesi yeni ve önemli: kart ölçekte de ünite
+önermeye devam ediyor ve marjinal üniteler kârı yiyor — §4.8.
 
 ### Kalibrasyon bantları
 
 | | Değer |
 |---|---|
-| Outlet geri ödemesi | 18–42 gün |
-| Zincir geri ödemesi | 194 gün |
-| Devralma maliyeti | **0,84× net değer** |
+| Outlet geri ödemesi | 17–55 gün |
+| Zincir geri ödemesi | 190 gün |
+| Devralma maliyeti | **0,76× net değer** |
 
 ### Sağlık
 
 | | Değer |
 |---|---|
 | Determinizm | birebir |
-| Simülasyon hızı | ~70 gün/sn |
-| Denge testi | **197 kontrol, hepsi geçiyor** |
-| Tarayıcı testi | **187 kontrol**, 0 konsol hatası |
+| Simülasyon hızı | ~570 gün/sn |
+| Denge testi | **206 kontrol, hepsi geçiyor** |
+| Tarayıcı testi | **196 kontrol**, 0 konsol hatası |
 | Kapsam | 26 bina · 22 ürün · 7 kategori · 8 rakip profili |
 
 ### Render (Tur 6 sonrası)
@@ -458,8 +522,11 @@ boyutu hiçbir yerde sabit değil. Bölge açma ve çoklu şehir işleri o
 dikişten geçecek.
 
 Rakip ölçeklemesi Tur 13'te kapandı: profil kataloğu sekize çıktı,
-`npcCount` parselden türüyor, 5×5'te erken açık %56 → %38. Varsayılan
-harita hâlâ 3×3 — kalan sıra: **kademeli bölge açma → 5×5 → çoklu şehir.**
+`npcCount` parselden türüyor, 5×5'te erken açık %56 → %38. Kademeli
+bölge açma Tur 14'te geldi: köşeler 130-520. günlerde sırayla imara
+açılıyor, arazi kıtlığı dört kez yenileniyor. Varsayılan harita hâlâ
+3×3 — kalan sıra: **5×5 → çoklu şehir.** (5×5'te kilit deseni aynı:
+köşeler; açılış takvimi büyük haritada yeniden ölçülmeli.)
 
 ### 4.6 Daha küçük kalemler
 
@@ -483,6 +550,22 @@ Rapor üç şey istiyordu; Tur 9 birincisini yaptı:
 liderliğini kaybetme anı henüz bir olay değil (yalnızca net değer
 sıralaması izleniyor), ve devralınan şirketin yerine yenisi gelmediği
 için geç oyunda rakip sayısı azalıyor.
+
+### 4.8 Zincir kartı ölçekte fren bilmiyor
+
+Vekil devralmayı öğrenince ortaya çıktı: kart, üretim ünitesini yalnızca
+ALT uçta gate'liyor ("kapasitenin %50'si dolmadan kurma"). Üst uçta fren
+yok — tüketim büyüdükçe ünite önermeye devam ediyor. 560 günlük koşuda
+kartı harfiyen izleyen kol 27-43 üniteye çıktı ve marjinal üniteler kârı
+yedi (tohuma göre −%1…−%22; bol nakit satırı benchmark'ta −%10).
+
+Doğru fren muhtemelen fırsat maliyeti: Tur 7'nin yapı menüsüne verdiği
+dersin (tavsiyeyi parsel getirisine çevir) zincir kartına uygulanması —
+"bu ünite, aynı paranın kurabileceği en iyi mağazadan az kazandıracaksa
+önerme". Kalibrasyonu bozmadan yapılması gereken ayrı bir tur işi.
+Regresyon A/B'si bu soruyu bilerek ölçmüyor; düzeneği tarihsel seriyle
+(+%12/+%19/+%30) kıyaslanabilir kalsın diye donduruldu
+(`expandOutletsVacantOnly`).
 
 ---
 
