@@ -1,7 +1,7 @@
 import { BUILDINGS, NPC_PROFILES } from '@capital/content';
 import { pushNews } from '../news';
 import { estimateInvestment } from './market';
-import { tilePrice } from './city';
+import { isDistrictOpen, tilePrice } from './city';
 import type { AuctionState, GameState } from '../types';
 
 /**
@@ -75,6 +75,9 @@ function pickTile(state: GameState): number | null {
     if (tile.kind !== 'plot' || tile.ownerId || tile.buildingId || tile.structureId) continue;
     const district = state.districts[tile.districtId];
     if (!district) continue;
+    // Kilitli bölgede ihale açılmaz: satılamayan parsele teklif toplamak
+    // mekaniği anlamsız kılardı.
+    if (!isDistrictOpen(state, tile.districtId)) continue;
 
     // Değer = arsa değeri × bölgenin nüfusu. İkisi birlikte "burası
     // gerçekten istenen bir yer mi" sorusunu cevaplıyor.

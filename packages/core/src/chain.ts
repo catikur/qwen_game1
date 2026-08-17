@@ -8,7 +8,7 @@ import {
 import type { BuildingDef, CategoryId, GoodDef } from '@capital/content';
 import { STRUCTURE_BY_ID } from '@capital/content';
 import { buildCost } from './actions';
-import { tilePrice } from './systems/city';
+import { isDistrictOpen, tilePrice } from './systems/city';
 import { estimateInvestment } from './systems/market';
 import { distributionRelief } from './systems/supply';
 import type { BuildingInstance, GameState } from './types';
@@ -222,6 +222,12 @@ export function bestPlotFor(
     const district = state.districts[tile.districtId];
     if (!district) continue;
     if (def.zones && !def.zones.includes(district.archetype)) continue;
+    // Kilitli bölge atlanır — YOKSA HEP ORAYI SEÇERDİ: imarsız arazi
+    // iskontolu, yani "en ucuz parsel" araması kilitli limanı bulur ve
+    // kart alınamaz bir hamle önerirdi. Ölçüldü: bu satır yokken üç
+    // seed'de de tek bir rakip zincir kuramadı — hamleleri her hafta
+    // imar kapısından dönüyordu.
+    if (!isDistrictOpen(state, tile.districtId)) continue;
 
     const needsBuyout = tile.structureId !== null;
     if (needsBuyout) {

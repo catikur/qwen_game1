@@ -5,7 +5,12 @@ import { companyRanking, formatMoney } from './selectors';
 import { TOTAL_SHARES, sharesHeld } from './systems/equity';
 import { runMarketTick } from './systems/market';
 import { resetDailyLedgers, runProductionTick, runSpotPriceTick } from './systems/supply';
-import { recomputeNetWorth, runLandValueTick, runPopulationTick } from './systems/city';
+import {
+  recomputeNetWorth,
+  runDistrictUnlockTick,
+  runLandValueTick,
+  runPopulationTick,
+} from './systems/city';
 import { collectEventModifiers, runEraTick, runEventTick } from './systems/events';
 import { acceptContract, declineContract, runContractTick } from './systems/contracts';
 import { placeBid, runAuctionTick } from './systems/auction';
@@ -254,6 +259,9 @@ export class GameEngine {
 
     runEventTick(state);
     runEraTick(state);
+    // İmar takvimi sözleşmeden ÖNCE: açılış günü gelen bir inşaat
+    // teklifi yeni bölgeyi hedefleyebilmeli.
+    runDistrictUnlockTick(state);
     runContractTick(state);
     resetDailyLedgers(state);
     // Ar-Ge primi pazardan ÖNCE ilerler: bugünkü kalite bugünkü satışa

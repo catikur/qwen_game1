@@ -59,6 +59,18 @@ export interface DistrictState {
   y1: number;
   population: number;
   incomeLevel: number;
+  /**
+   * Bölgenin imara açıldığı gün. Bu günden ÖNCE parsel alınamaz, bina
+   * kurulamaz, ihale açılmaz — bölge düşük nüfuslu bir köy olarak yaşar.
+   *
+   * Seçime bağlı alan: yokluğu "baştan açık" demek. Eski kayıtlarda alan
+   * yok ve o kayıtların bütün bölgeleri açık kalmalı — şema sürümü
+   * değişmiyor (NewsItem.companyId ile aynı gerekçe). Takvim GÜN tabanlı
+   * ve tohumdan geliyor; şirket kararları açılışı ne hızlandırır ne
+   * geciktirir. Bu bilinçli: eşli deneylerin iki kolu aynı günlerde aynı
+   * bölgeleri görür.
+   */
+  opensOnDay?: number;
   /** Günlük talep (birim), son tick'te hesaplanan. */
   demand: Record<CategoryId, number>;
   /** Karşılanamayan talep oranı 0..1 — NPC ve oyuncu için ana sinyal. */

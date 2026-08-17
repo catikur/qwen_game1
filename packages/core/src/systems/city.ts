@@ -4,8 +4,58 @@ import {
   STRUCTURE_BY_ID,
   getCeoModifiers,
 } from '@capital/content';
+import { pushNews } from '../news';
 import { portfolioValue } from './equity';
 import type { GameState } from '../types';
+
+/**
+ * Bölge imara açık mı?
+ *
+ * Tek doğru kaynak: `opensOnDay` alanı yoksa bölge baştan açıktır (eski
+ * kayıtlar böyle okunur), varsa güne bakılır. Satın alma, inşaat, ihale
+ * ve NPC taraması hep BU fonksiyondan geçer — kilit kuralı iki yerde
+ * yazılsaydı biri eninde sonunda unutulurdu.
+ */
+export function isDistrictOpen(state: GameState, districtId: number): boolean {
+  const district = state.districts[districtId];
+  if (!district) return false;
+  return district.opensOnDay === undefined || state.time.day >= district.opensOnDay;
+}
+
+/** Açılışın kaç gün önceden duyurulacağı. */
+const UNLOCK_NOTICE_DAYS = 30;
+
+/**
+ * İmar takvimi haberleri.
+ *
+ * İki haber var: 30 gün önceden duyuru (nakit biriktir, plan yap) ve
+ * açılış günü. Duyurusuz açılış bir fırsat değil bir sürpriz olurdu —
+ * arsa koşusunu kazanmak hazırlanana ait olmalı.
+ */
+export function runDistrictUnlockTick(state: GameState): void {
+  for (const district of state.districts) {
+    if (district.opensOnDay === undefined) continue;
+
+    if (state.time.day === district.opensOnDay - UNLOCK_NOTICE_DAYS) {
+      pushNews(
+        state,
+        'neutral',
+        `İmar planı açıklandı: ${district.name}`,
+        `${district.name} bölgesi ${UNLOCK_NOTICE_DAYS} gün sonra imara açılıyor. ` +
+          'Arsa şimdilik ucuz — açılış günü koşu başlar.',
+      );
+    }
+
+    if (state.time.day === district.opensOnDay) {
+      pushNews(
+        state,
+        'good',
+        `${district.name} imara açıldı`,
+        'Yeni parseller satışta. Bölge nüfusu hızla büyüyecek — erken giren, talebi rakipsiz karşılar.',
+      );
+    }
+  }
+}
 
 /** Sahip olunan arsanın satılabileceği oran (alım-satım sürtünmesi). */
 export const LAND_SELL_RATIO = 0.85;
@@ -104,6 +154,19 @@ export function runPopulationTick(state: GameState): void {
     const archetype = DISTRICT_ARCHETYPES[district.archetype];
     const ceiling = archetype.population * 2.6;
     if (district.population >= ceiling) continue;
+
+    // Yeni açılan bölgeye göç rampası: köy (%32) şehir tabanına ~95
+    // günde tırmanır. Normal büyüme (%0,02/gün) burada işe yaramazdı —
+    // taban için 5.700 gün gerekirdi ve açılış hiç "açılış" gibi
+    // hissettirmezdi. Rampa tabana varınca kendiliğinden normale döner.
+    if (
+      district.opensOnDay !== undefined &&
+      state.time.day >= district.opensOnDay &&
+      district.population < archetype.population
+    ) {
+      district.population = Math.min(archetype.population, district.population * 1.012);
+      continue;
+    }
 
     const jobs = jobsByDistrict.get(district.id) ?? 0;
     const growth = BASE_GROWTH_PER_DAY + jobs * JOB_GROWTH_FACTOR;

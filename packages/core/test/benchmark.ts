@@ -25,6 +25,7 @@ import {
   estimateInvestment,
   formatMoney,
   getPlayer,
+  isDistrictOpen,
   sharePrice,
   supplyRoutes,
   tilePrice,
@@ -38,7 +39,12 @@ const DAYS = 360;
 
 // --------------------------------------------------------------- yardımcı
 
-/** Oyunun oyuncuya ÖNERDİĞİ oynanış — harness'takinin aynısı. */
+/**
+ * Oyunun oyuncuya ÖNERDİĞİ oynanış — harness'takinin aynısı.
+ * Zincir ve mağaza AYNI tikte: gerçek oyuncu nakdi yetiyorsa ikisini de
+ * yapar; "ya zincir ya mağaza" kurgusu zincir A/B'sini iki değişkenli
+ * bir deneye çeviriyordu (balance.ts'teki not).
+ */
 function playerStrategy(engine: GameEngine): void {
   const state = engine.getState();
   const player = getPlayer(state);
@@ -51,56 +57,43 @@ function playerStrategy(engine: GameEngine): void {
       ? engine.dispatch({ type: 'BUYOUT_TILE', tileId: move.tileId })
       : engine.dispatch({ type: 'BUY_TILE', tileId: move.tileId });
     if (!acquired.ok) continue;
-    if (engine.dispatch({ type: 'BUILD', tileId: move.tileId, defId: move.defId }).ok) return;
+    if (engine.dispatch({ type: 'BUILD', tileId: move.tileId, defId: move.defId }).ok) break;
   }
 
-  const budget = player.cash * 0.5;
-  if (budget < 30_000) return;
-  const districts = [...state.districts].sort((a, b) => districtOpportunity(b) - districtOpportunity(a));
-  let best: { tileId: number; defId: string; profit: number } | null = null;
-  for (const district of districts.slice(0, 4)) {
-    const tile = state.map.tiles
-      .filter((t) => t.districtId === district.id && t.kind === 'plot' && !t.ownerId && !t.structureId)
-      .sort((a, b) => a.landValue - b.landValue)[0];
-    if (!tile) continue;
-    for (const option of buildOptions(state)) {
-      if (!option.unlocked) continue;
-      if (option.def.role !== 'outlet' && option.def.role !== 'rental') continue;
-      if (tilePrice(state, tile.id) + option.def.cost > budget) continue;
-      const estimate = estimateInvestment(state, district.id, option.def.id, player.id);
-      // SIRALAMA GERİ ÖDEMEYE GÖRE DEĞİL, GÜNLÜK KÂRA GÖRE.
-      //
-      // Bir bina bir parsel kaplıyor ve ölçüm oyunun kıt kaynağının
-      // toprak olduğunu gösterdi (sınırsız nakitle bile karşılanmayan
-      // talep %52). O yüzden doğru ölçüt paranın getirisi değil
-      // PARSELİN getirisi — o da tam olarak `dailyProfit`.
-      //
-      // Geri ödeme sınırı elenmiş adayları ayıklamak için duruyor;
-      // seçimi artık o yapmıyor.
-      if (!estimate || estimate.paybackDays > 150) continue;
-      if (!best || estimate.dailyProfit > best.profit) {
-        best = { tileId: tile.id, defId: option.def.id, profit: estimate.dailyProfit };
-      }
-    }
-  }
-  if (!best) return;
-  if (!engine.dispatch({ type: 'BUY_TILE', tileId: best.tileId }).ok) return;
-  engine.dispatch({ type: 'BUILD', tileId: best.tileId, defId: best.defId });
+  expandOnly(engine);
 }
 
-/** Zincir kartını GÖRMEZDEN GELEN strateji — A/B'nin kontrol grubu. */
+/**
+ * Zincir kartını GÖRMEZDEN GELEN genişleme — A/B'nin kontrol grubu ve
+ * `playerStrategy`nin genişleme yarısı (harness'takiyle aynı repertuvar).
+ *
+ * BOŞ PARSEL ÖNCE, YOKSA DEVRALMA — oyunun kendi öğretisi (Tur 8:
+ * "bölge dolduğunda çıkış devralma") ve NPC'lerin oynadığı sıra.
+ * Vekil yalnızca boş parsel ararken kademeli imar gerçek bir kör nokta
+ * açtı: dar şehirde boş parsel ~60. günde bitiyor, NPC'ler devralmayla
+ * büyürken vekil duruyordu — oyuncu/rakip oranı 1,58'den 0,20'ye düşen
+ * şey oyun dengesi değil vekilin eksik repertuvarıydı.
+ */
 function expandOnly(engine: GameEngine): void {
   const state = engine.getState();
   const player = getPlayer(state);
   const budget = player.cash * 0.5;
   if (budget < 30_000) return;
 
-  const districts = [...state.districts].sort((a, b) => districtOpportunity(b) - districtOpportunity(a));
+  const districts = [...state.districts]
+    .filter((district) => isDistrictOpen(state, district.id))
+    .sort((a, b) => districtOpportunity(b) - districtOpportunity(a));
   let best: { tileId: number; defId: string; profit: number } | null = null;
   for (const district of districts.slice(0, 4)) {
     const tile = state.map.tiles
-      .filter((t) => t.districtId === district.id && t.kind === 'plot' && !t.ownerId && !t.structureId)
-      .sort((a, b) => a.landValue - b.landValue)[0];
+      .filter((t) => t.districtId === district.id && t.kind === 'plot' && !t.ownerId && !t.buildingId)
+      .map((t) => ({ tile: t, price: tilePrice(state, t.id, player.id) }))
+      .filter((entry) => entry.price > 0)
+      .sort(
+        (a, b) =>
+          (a.tile.structureId !== null ? 1 : 0) - (b.tile.structureId !== null ? 1 : 0) ||
+          a.price - b.price,
+      )[0]?.tile;
     if (!tile) continue;
     for (const option of buildOptions(state)) {
       if (!option.unlocked) continue;
@@ -123,12 +116,21 @@ function expandOnly(engine: GameEngine): void {
     }
   }
   if (!best) return;
-  if (!engine.dispatch({ type: 'BUY_TILE', tileId: best.tileId }).ok) return;
+  const needsBuyout = state.map.tiles[best.tileId]!.structureId !== null;
+  const bought = needsBuyout
+    ? engine.dispatch({ type: 'BUYOUT_TILE', tileId: best.tileId })
+    : engine.dispatch({ type: 'BUY_TILE', tileId: best.tileId });
+  if (!bought.ok) return;
   engine.dispatch({ type: 'BUILD', tileId: best.tileId, defId: best.defId });
 }
 
 function labEngine(seed: number): GameEngine {
-  const engine = new GameEngine(createNewGame({ seed, companyName: 'Bench' }));
+  // İmar takvimi kapalı: strateji kurguları student/liman gibi SABİT
+  // bölgelere kuruyor ve kilitli köşe denk gelince "%0 etki" ölçüyordu —
+  // dengeyi değil takvimi. Balance'taki laboratuvar kuralının aynısı.
+  const engine = new GameEngine(
+    createNewGame({ seed, companyName: 'Bench', districtUnlocks: false }),
+  );
   const state = engine.getState();
   state.flags.npcCompetition = false;
   state.flags.randomEvents = false;

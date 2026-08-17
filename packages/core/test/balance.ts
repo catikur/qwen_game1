@@ -28,10 +28,12 @@ import {
   competitionCards,
   createNewGame,
   districtOpportunity,
+  DISTRICT_UNLOCK_DAYS,
   estimateInvestment,
   formatMoney,
   getPlayer,
   goodShares,
+  isDistrictOpen,
   marketingLeverage,
   rankedBuildOptions,
   researchCeiling,
@@ -79,8 +81,18 @@ function activeProfiles(state: GameState) {
   return NPC_PROFILES.filter((profile) => state.companies[profile.id]);
 }
 
+/*
+ * ZİNCİR VE MAĞAZA AYNI TİKTE — ya biri ya öteki değil.
+ *
+ * Eski hâli `if (followChainAdvice()) return;` idi: zincir hamlesi olan
+ * hafta mağaza açılmıyordu. Devralma repertuvara girince bu, zincir
+ * A/B'sini iki değişkenli bir deneye çevirdi — zincirli kol hem üretim
+ * ekliyor HEM mağaza eksiltiyordu (42 ünite = 42 eksik mağaza) ve fark
+ * −%1'e düştü. Gerçek oyuncu nakdi yetiyorsa ikisini de yapar; vekil de
+ * öyle yapınca kollar arasında tek fark zincirin KENDİSİ kalıyor.
+ */
 function playerStrategy(engine: GameEngine): void {
-  if (followChainAdvice(engine)) return;
+  followChainAdvice(engine);
   expandOutlets(engine);
 }
 
@@ -111,17 +123,34 @@ function expandOutlets(engine: GameEngine): void {
   const budget = player.cash * 0.5;
   if (budget < 30_000) return;
 
-  const districts = [...state.districts].sort(
-    (a, b) => districtOpportunity(b) - districtOpportunity(a),
-  );
+  const districts = [...state.districts]
+    // Kilitli bölge hedef değil: orada seçim yapıp satın alma kapısından
+    // dönmek vekilin 5 günlük hamlesini boşa yakıyordu.
+    .filter((district) => isDistrictOpen(state, district.id))
+    .sort((a, b) => districtOpportunity(b) - districtOpportunity(a));
 
   let best: { tileId: number; defId: string; profit: number } | null = null;
 
   for (const district of districts.slice(0, 4)) {
-    // Yalnızca gerçekten satın alınabilir boş parseller.
+    /*
+     * BOŞ PARSEL ÖNCE, YOKSA DEVRALMA — oyunun kendi öğretisi (Tur 8:
+     * "bölge dolduğunda çıkış devralma") ve NPC'lerin oynadığı sıra.
+     *
+     * Vekil bugüne kadar yalnızca boş parsel arıyordu ve bu, kademeli
+     * imarla gerçek bir kör nokta oldu: dar başlayan şehirde boş parsel
+     * ~60. günde bitiyor, NPC'ler devralmayla büyümeye devam ederken
+     * vekil duruyordu — oyuncu/rakip oranı 1,58'den 0,20'ye düşmüştü.
+     * Ölçülen şey oyun dengesi değil vekilin eksik repertuvarıydı.
+     */
     const tile = state.map.tiles
-      .filter((t) => t.districtId === district.id && t.kind === 'plot' && !t.ownerId && !t.structureId)
-      .sort((a, b) => a.landValue - b.landValue)[0];
+      .filter((t) => t.districtId === district.id && t.kind === 'plot' && !t.ownerId && !t.buildingId)
+      .map((t) => ({ tile: t, price: tilePrice(state, t.id, player.id) }))
+      .filter((entry) => entry.price > 0)
+      .sort(
+        (a, b) =>
+          (a.tile.structureId !== null ? 1 : 0) - (b.tile.structureId !== null ? 1 : 0) ||
+          a.price - b.price,
+      )[0]?.tile;
     if (!tile) continue;
 
     for (const option of buildOptions(state)) {
@@ -139,6 +168,56 @@ function expandOutlets(engine: GameEngine): void {
       //
       // Geri ödeme sınırı elenmiş adayları ayıklamak için duruyor;
       // seçimi artık o yapmıyor.
+      if (!estimate || estimate.paybackDays > 150) continue;
+      if (!best || estimate.dailyProfit > best.profit) {
+        best = { tileId: tile.id, defId: option.def.id, profit: estimate.dailyProfit };
+      }
+    }
+  }
+
+  if (!best) return;
+  const needsBuyout = state.map.tiles[best.tileId]!.structureId !== null;
+  const bought = needsBuyout
+    ? engine.dispatch({ type: 'BUYOUT_TILE', tileId: best.tileId })
+    : engine.dispatch({ type: 'BUY_TILE', tileId: best.tileId });
+  if (!bought.ok) return;
+  engine.dispatch({ type: 'BUILD', tileId: best.tileId, defId: best.defId });
+}
+
+/**
+ * Zincir A/B'sinin TARİHSEL genişleme kolu — bilerek dondurulmuş kopya.
+ *
+ * `expandOutlets` devralmayı ve kilit filtresini öğrendi; bu kopya
+ * öğrenmedi ve öğrenmeyecek. Regresyon deneyi +%12/+%19/+%30 serisiyle
+ * bu düzenekte kalibre edildi; düzeneği vekille birlikte evriltmek her
+ * turda "yeni bir deney" yaratır ve seri kıyaslanamaz hale gelirdi.
+ * (Vekilin yeni repertuvarıyla çıkan ürün sorusu DURUM §4.8'de.)
+ */
+function expandOutletsVacantOnly(engine: GameEngine): void {
+  const state = engine.getState();
+  const player = getPlayer(state);
+
+  const budget = player.cash * 0.5;
+  if (budget < 30_000) return;
+
+  const districts = [...state.districts].sort(
+    (a, b) => districtOpportunity(b) - districtOpportunity(a),
+  );
+
+  let best: { tileId: number; defId: string; profit: number } | null = null;
+
+  for (const district of districts.slice(0, 4)) {
+    const tile = state.map.tiles
+      .filter((t) => t.districtId === district.id && t.kind === 'plot' && !t.ownerId && !t.structureId)
+      .sort((a, b) => a.landValue - b.landValue)[0];
+    if (!tile) continue;
+
+    for (const option of buildOptions(state)) {
+      if (!option.unlocked) continue;
+      if (option.def.role !== 'outlet' && option.def.role !== 'rental') continue;
+      if (tilePrice(state, tile.id) + option.def.cost > budget) continue;
+
+      const estimate = estimateInvestment(state, district.id, option.def.id, player.id);
       if (!estimate || estimate.paybackDays > 150) continue;
       if (!best || estimate.dailyProfit > best.profit) {
         best = { tileId: tile.id, defId: option.def.id, profit: estimate.dailyProfit };
@@ -287,6 +366,9 @@ expect('determinizm: aynı seed = aynı sonuç', a === b, a === b ? 'birebir ayn
 
 // Her binanın gerçekten kurulabildiğini doğrula (ölü içerik kalmasın).
 // Üretim üniteleri imar kısıtlı olduğu için parsel de ona göre seçilir.
+// Parsel AÇIK bölgeden seçilir: gün 0'da köşeler kilitli ve bu doğru —
+// katalog kontrolünün iddiası "her bina bir yerde kurulabilir", "her
+// bina limanda kurulabilir" değil (üretim için sanayi hep açık).
 const engine = new GameEngine(createNewGame({ seed: 5 }));
 const player = getPlayer(engine.getState());
 player.cash = 50_000_000;
@@ -296,6 +378,7 @@ for (const def of BUILDINGS) {
   const s = engine.getState();
   const tile = s.map.tiles.find((t) => {
     if (t.kind !== 'plot' || t.ownerId || t.structureId || t.buildingId) return false;
+    if (!isDistrictOpen(s, t.districtId)) return false;
     const district = s.districts[t.districtId]!;
     return !def.zones || def.zones.includes(district.archetype);
   });
@@ -310,18 +393,28 @@ for (const def of BUILDINGS) {
 expect('katalogdaki her bina kurulabiliyor', built === BUILDINGS.length, `${built}/${BUILDINGS.length}`);
 
 // Parsel kısıtı: şehir gerçekten kıt olmalı ama tıkanmamalı.
+//
+// Doku oranları AÇIK şehirden ölçülür: kilitli köşeler bilerek boş
+// (açılınca kurulacak arazi onlar) ve pazarda değiller — onları saymak
+// "bol arsa var" yalanı söylerdi. Kilitli taraf ayrıca raporlanır.
 {
   const state = createNewGame({ seed: 3 });
-  const total = state.map.tiles.length;
-  const roads = state.map.tiles.filter((t) => t.kind === 'road').length;
-  const civic = state.map.tiles.filter((t) => t.kind === 'civic').length;
-  const occupied = state.map.tiles.filter((t) => t.kind === 'plot' && t.structureId).length;
-  const vacant = state.map.tiles.filter((t) => t.kind === 'plot' && !t.structureId).length;
+  const openTiles = state.map.tiles.filter((t) => isDistrictOpen(state, t.districtId));
+  const lockedTiles = state.map.tiles.length - openTiles.length;
+  const roads = openTiles.filter((t) => t.kind === 'road').length;
+  const civic = openTiles.filter((t) => t.kind === 'civic').length;
+  const occupied = openTiles.filter((t) => t.kind === 'plot' && t.structureId).length;
+  const vacant = openTiles.filter((t) => t.kind === 'plot' && !t.structureId).length;
 
   console.log(
-    `\nŞehir dokusu: ${roads} sokak, ${civic} kamu, ${occupied} dolu parsel, ${vacant} boş parsel (toplam ${total})`,
+    `\nAçık şehir dokusu: ${roads} sokak, ${civic} kamu, ${occupied} dolu parsel, ` +
+      `${vacant} boş parsel (açık ${openTiles.length} + kilitli ${lockedTiles} kare)`,
   );
-  expect('şehrin çoğu zaten dolu', (roads + civic + occupied) / total > 0.7, `%${Math.round(((roads + civic + occupied) / total) * 100)}`);
+  expect(
+    'açık şehrin çoğu zaten dolu',
+    (roads + civic + occupied) / openTiles.length > 0.7,
+    `%${Math.round(((roads + civic + occupied) / openTiles.length) * 100)}`,
+  );
   // ORAN, MUTLAK SAYI DEĞİL.
   //
   // Burada eskiden `vacant >= 80 && vacant <= 180` yazıyordu ve Tur 8'de
@@ -334,7 +427,7 @@ expect('katalogdaki her bina kurulabiliyor', built === BUILDINGS.length, `${buil
   expect(
     'yine de yeterli boş parsel var',
     vacantShare >= 0.25 && vacantShare <= 0.55,
-    `${vacant}/${plots} parsel boş — %${Math.round(vacantShare * 100)}`,
+    `${vacant}/${plots} açık parsel boş — %${Math.round(vacantShare * 100)}`,
   );
   expect(
     'her bölgede en az bir boş parsel var',
@@ -351,7 +444,9 @@ expect('katalogdaki her bina kurulabiliyor', built === BUILDINGS.length, `${buil
   const s = engine2.getState();
   getPlayer(s).cash = 5_000_000;
 
-  const occupied = s.map.tiles.find((t) => t.kind === 'plot' && t.structureId)!;
+  const occupied = s.map.tiles.find(
+    (t) => t.kind === 'plot' && t.structureId && isDistrictOpen(s, t.districtId),
+  )!;
   const directBuy = engine2.dispatch({ type: 'BUY_TILE', tileId: occupied.id });
   const buyout = engine2.dispatch({ type: 'BUYOUT_TILE', tileId: occupied.id });
   expect('dolu parsel doğrudan alınamıyor', !directBuy.ok, directBuy.reason ?? '');
@@ -400,9 +495,19 @@ expect('katalogdaki her bina kurulabiliyor', built === BUILDINGS.length, `${buil
 
 console.log('\n=== Tedarik zinciri ===\n');
 
-/** İzole senaryo: rakipsiz, olaysız, sınırsız sermaye. */
+/**
+ * İzole senaryo: rakipsiz, olaysız, sınırsız sermaye, imar takvimi yok.
+ *
+ * `districtUnlocks: false` şart: laboratuvar ölçümleri (zincir birim
+ * maliyet kimliği, geri ödeme penceresi) Tur 1'den beri student/port gibi
+ * SABİT bölgeler üzerinde kurulu. İmar takvimi açık olsaydı bu bölgeler
+ * kilitli köşe çıkabilir, senaryo hiç kurulamaz ve ölçüm kalibrasyonu
+ * değil takvimi ölçerdi.
+ */
 function labEngine(seed: number): GameEngine {
-  const engine = new GameEngine(createNewGame({ seed, companyName: 'Lab AŞ' }));
+  const engine = new GameEngine(
+    createNewGame({ seed, companyName: 'Lab AŞ', districtUnlocks: false }),
+  );
   const state = engine.getState();
   state.flags.npcCompetition = false;
   state.flags.randomEvents = false;
@@ -782,7 +887,22 @@ function outletUnitCost(state: GameState): number {
     let tail = 0;
     for (let day = 1; day <= 560; day++) {
       if (day % 5 === 0) {
-        if (!(useChain && followChainAdvice(engine2))) expandOutlets(engine2);
+        /*
+         * A/B TARİHSEL TASARIMINI KORUYOR: boş-parsel genişleme, "ya
+         * zincir ya mağaza" temposu. Bu deney bir REGRESYON ölçümü —
+         * +%12/+%19/+%30 serisiyle kalibre edildi ve işi "zincir
+         * mekanizması hâlâ kazandırıyor mu"yu aynı düzenekte sormak.
+         *
+         * Vekil devralmayı öğrenince aynı düzeneği ona da açmayı
+         * denedik; sonuç kartın BAŞKA bir kusurunu çıkardı: sınırsız
+         * devralma çağında kart üniteyi üst uçta da önermeye devam
+         * ediyor (27-43 ünite) ve marjinal üniteler kârı yiyor
+         * (−%1…−%22). Bu, deney düzeneği değil ÜRÜN sorusu — açık
+         * kalemlere yazıldı (DURUM §4.8). Regresyon deneyi o soruyu
+         * cevaplamaz; düzeneğini değiştirmek iki ölçümü birbirine
+         * karıştırmak olurdu.
+         */
+        if (!(useChain && followChainAdvice(engine2))) expandOutletsVacantOnly(engine2);
       }
       engine2.runDay();
       /*
@@ -1887,6 +2007,10 @@ console.log('\n=== Parsel ihalesi ===\n');
   const state = engine.getState();
   // Oyuncu fakir: taban fiyatı verse bile rakip üstüne çıkabilmeli.
   getPlayer(state).cash = 3_000;
+  // Baskınlar kapalı: kasıtlı fakir bırakılan oyuncu ~250. günde yutulup
+  // takvimi donduruyor ve 400 günlük sayım 8 ihalede kalıyordu. Senaryo
+  // ihale temposunu ölçüyor — baskın kaybedilebilirlik bölümünün konusu.
+  state.flags.raids = false;
 
   // İhaleleri HABERDEN saymak yanlıştı: haber listesi kapaklı, yeni
   // öğeler eskileri düşürüyor ve delta sıfıra iniyor. Bunun yerine
@@ -2355,8 +2479,16 @@ console.log('\n=== Sözleşmeler: dışarıdan gelen hedef ===\n');
   const engine2 = new GameEngine(createNewGame({ seed: 10, companyName: 'Teslimat AŞ' }));
   const s2 = engine2.getState();
   getPlayer(s2).cash = 5_000_000;
-  const district = s2.districts.find((d) =>
-    s2.map.tiles.some((t) => t.districtId === d.id && t.kind === 'plot' && !t.buildingId && !t.structureId),
+  // AÇIK bölge şartı: ilk aday (0 = Liman) artık kilitli köşe olabiliyor
+  // ve oradaki kurulum "imara kapalı" kapısından döner. Motorun kendi
+  // teklif üreticisi de aynı filtreyi uyguluyor — kurgu gerçeği taklit
+  // etmeli.
+  const district = s2.districts.find(
+    (d) =>
+      isDistrictOpen(s2, d.id) &&
+      s2.map.tiles.some(
+        (t) => t.districtId === d.id && t.kind === 'plot' && !t.buildingId && !t.structureId,
+      ),
   )!;
   s2.contractOffer = {
     kind: 'build',
@@ -2554,6 +2686,107 @@ console.log('\n=== Düşmanca devralma: oyun kaybedilebiliyor ===\n');
   engine.runDay();
   engine.runDay();
   expect('kaybedilmiş oyunda takvim duruyor', state.time.day === frozenDay, `gün ${state.time.day}`);
+}
+
+console.log('\n=== Kademeli imar: arazi kıtlığı yenileniyor ===\n');
+
+/*
+ * Sınanan iddia üç katmanlı:
+ *
+ *   1. YAPI — köşeler kilitli başlar, takvim `DISTRICT_UNLOCK_DAYS`
+ *   2. KURAL — açılıştan önce O BÖLGEYE HİÇ KİMSE giremez (oyuncu, NPC,
+ *      ihale; hepsi aynı kapıdan geçtiği için ihlal tek sayıyla ölçülür)
+ *   3. YAŞAM — açılış duyurulur, haber olur, göç gelir, parsel satılır
+ */
+{
+  const engine3 = new GameEngine(createNewGame({ seed: 19, companyName: 'İmar AŞ' }));
+  const state = engine3.getState();
+  // Baskın değil harita sınanıyor: atıl oyuncu 560 günde yutulup takvimi
+  // dondurabilirdi — `flags.raids` tam bu tür eşli/izole ölçümler için var.
+  state.flags.raids = false;
+
+  const locked = state.districts.filter((d) => d.opensOnDay !== undefined);
+  expect(
+    'köşe bölgeler kilitli başlıyor',
+    locked.length === 4,
+    locked.map((d) => `${d.name}@${d.opensOnDay}`).join(', '),
+  );
+  const unlockDays = locked.map((d) => d.opensOnDay!).sort((a, b) => a - b);
+  expect(
+    'açılış takvimi kademeli',
+    JSON.stringify(unlockDays) === JSON.stringify(DISTRICT_UNLOCK_DAYS),
+    unlockDays.join(', '),
+  );
+
+  const firstDistrict = locked.reduce((a, b) => (a.opensOnDay! < b.opensOnDay! ? a : b));
+  const lastDistrict = locked.reduce((a, b) => (a.opensOnDay! > b.opensOnDay! ? a : b));
+  const imarPlayer = getPlayer(state);
+  imarPlayer.cash = 30_000_000;
+  imarPlayer.netWorth = 30_000_000;
+
+  const vacantPlotIn = (districtId: number) =>
+    state.map.tiles.find(
+      (t) => t.districtId === districtId && t.kind === 'plot' && !t.ownerId && !t.structureId,
+    )!;
+
+  const early = engine3.dispatch({ type: 'BUY_TILE', tileId: vacantPlotIn(firstDistrict.id).id });
+  expect(
+    'kilitli parsel satın alınamıyor',
+    !early.ok && (early.reason ?? '').includes('imara kapalı'),
+    early.reason ?? 'alındı!',
+  );
+
+  // Haberler ve ihlaller KOŞU SIRASINDA toplanıyor — tampon 60 kayıt,
+  // baskın senaryosundaki dersin aynısı.
+  let notices = 0;
+  let openings = 0;
+  let violations = 0;
+  let seenNewsId = -1;
+  for (let day = 1; day <= 560; day++) {
+    engine3.runDay();
+    for (const item of state.news) {
+      if (item.id <= seenNewsId) break;
+      if (item.title.includes('İmar planı açıklandı')) notices++;
+      if (item.title.includes('imara açıldı')) openings++;
+    }
+    seenNewsId = state.news[0]?.id ?? seenNewsId;
+    for (const district of locked) {
+      if (state.time.day >= district.opensOnDay!) continue;
+      if (state.map.tiles.some((t) => t.districtId === district.id && t.ownerId !== null)) {
+        violations++;
+      }
+    }
+  }
+
+  expect('açılışlar 30 gün önceden duyuruluyor', notices === 4, `${notices}/4 duyuru`);
+  expect('her açılış haber oluyor', openings === 4, `${openings}/4 haber`);
+  expect(
+    'kilitli bölgeye açılıştan önce kimse giremiyor',
+    violations === 0,
+    violations === 0 ? 'oyuncu + NPC + ihale — 560 günde 0 ihlal' : `${violations} gün×bölge ihlali`,
+  );
+
+  const firstArchetype = DISTRICT_ARCHETYPES[firstDistrict.archetype];
+  expect(
+    'açılan bölgeye göç geliyor',
+    firstDistrict.population >= firstArchetype.population * 0.95,
+    `${firstDistrict.name} nüfusu ${Math.round(firstDistrict.population)} / taban ${firstArchetype.population}`,
+  );
+
+  const lateBuy = engine3.dispatch({ type: 'BUY_TILE', tileId: vacantPlotIn(lastDistrict.id).id });
+  expect(
+    'açılan bölgeden parsel alınabiliyor',
+    lateBuy.ok,
+    lateBuy.reason ?? `${lastDistrict.name} — alındı`,
+  );
+
+  // Laboratuvar kapısı: takvim kapalıyken eski dünya birebir geri gelmeli.
+  const flat = createNewGame({ seed: 19, districtUnlocks: false });
+  expect(
+    'imar takvimi kapatılabiliyor (laboratuvar zemini)',
+    flat.districts.every((d) => d.opensOnDay === undefined),
+    'tüm bölgeler baştan açık',
+  );
 }
 
 console.log(`\n=== ${failures === 0 ? 'TÜMÜ GEÇTİ' : `${failures} KONTROL KALDI`} ===`);

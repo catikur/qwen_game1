@@ -6,7 +6,7 @@ import { competitionCards } from '../competition';
 import { pushNews } from '../news';
 import { nextFloat } from '../rng';
 import { estimateInvestment } from './market';
-import { tilePrice } from './city';
+import { isDistrictOpen, tilePrice } from './city';
 import { buyShares, freeFloat, sharePrice, sharesHeld, TOTAL_SHARES } from './equity';
 import type { GameState } from '../types';
 
@@ -258,6 +258,11 @@ function findOpportunities(state: GameState, profile: NpcProfileDef): Opportunit
   const opportunities: Opportunity[] = [];
 
   for (const district of state.districts) {
+    // Kilitli bölge fırsat değil: köyün %100 boş talebi puanı şişirir,
+    // NPC oraya yönelir ve alım kapıda reddedilir — haftalık hamlesi
+    // boşa yanardı. Kural oyuncuyla aynı, sadece NPC bunu "bilerek"
+    // oynuyor.
+    if (!isDistrictOpen(state, district.id)) continue;
     for (const category of CONSUMER_CATEGORIES) {
       const demand = district.demand[category] ?? 0;
       if (demand <= 0) continue;
@@ -354,9 +359,9 @@ function actFor(state: GameState, profile: NpcProfileDef): void {
 
   // Arsa spekülatörü: bazen sadece arsa toplar, bina kurmaz.
   if (isLandlord && nextFloat(state.rng) < 0.45) {
-    const target = [...state.districts].sort(
-      (a, b) => b.incomeLevel - a.incomeLevel,
-    )[0];
+    const target = state.districts
+      .filter((district) => isDistrictOpen(state, district.id))
+      .sort((a, b) => b.incomeLevel - a.incomeLevel)[0];
     if (target) {
       const spot = findTile(state, target.id, budget, true);
       if (spot) {

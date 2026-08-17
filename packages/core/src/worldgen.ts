@@ -43,6 +43,30 @@ export const BLOCK_SIZE = 5;
 export const PLAYER_COMPANY_ID = 'player';
 export const STARTING_CASH = 250_000;
 
+/**
+ * Kademeli imar takvimi: köşe bölgeler bu günlerde sırayla açılır.
+ *
+ * Arazi kıtlığını YENİLEMEK için var. Tur 8'in ölçümü şehrin ilk yılda
+ * dolduğunu göstermişti; sonrasında arazi oyunu (ihale, devralma,
+ * spekülasyon) sönüyordu. Haritayı baştan büyütmek çözüm değil — büyük
+ * harita ilk günden bol arsa demek, kıtlık hiç yaşanmıyor. Kademeli
+ * açılış ikisini birden veriyor: erken oyun DAR bir şehirde sıkışıyor,
+ * her açılış günü yeni bir arsa koşusu başlatıyor.
+ *
+ * ~130 gün arayla: ihale dönemi 30 gün olduğuna göre her açılış arasında
+ * 4 ihale yaşanıyor — açılışlar ritmi boğmuyor, noktalıyor.
+ */
+export const DISTRICT_UNLOCK_DAYS = [130, 260, 390, 520];
+
+/** Kilitli bölge köy olarak başlar: nüfusun bu oranı. */
+export const LOCKED_POPULATION_RATIO = 0.32;
+
+/** Kilitli bölgede mevcut yapı dokusunun korunma olasılığı (seyrekleştirme). */
+const LOCKED_FABRIC_KEEP = 0.22;
+
+/** Kilitli bölgede arsa ucuz başlar; açılış bir fırsat penceresi olmalı. */
+const LOCKED_LAND_DISCOUNT = 0.55;
+
 export { estimateBaselineDemand, zeroByCategory } from './systems/demand';
 
 function brandRecord(value: number): Record<CategoryId, number> {
@@ -143,6 +167,17 @@ export interface NewGameOptions {
    * zaten yerleşimden türetiliyordu; burada sabit yerine argüman oluyor.
    */
   layout?: DistrictArchetypeId[][];
+  /**
+   * Kademeli imar takvimi. Varsayılan AÇIK (oyunun kendisi).
+   *
+   * `false` yalnızca laboratuvar senaryoları için: kilit, doku
+   * seyrekleştirme ve arsa iskontosu tamamen atlanır, rng tüketimi dahil
+   * ESKİ şehirle birebir aynı dünya üretilir. Zincir kalibrasyonu gibi
+   * "Tur 1 dengesiyle kimlik" iddiası taşıyan ölçümler ancak böyle bir
+   * sabit zeminde anlamlı — imar takvimi o ölçümlerin konusu değil,
+   * gürültüsü olurdu.
+   */
+  districtUnlocks?: boolean;
 }
 
 export function createNewGame(options: NewGameOptions = {}): GameState {
@@ -183,6 +218,26 @@ export function createNewGame(options: NewGameOptions = {}): GameState {
     }
   }
 
+  // ---- Kademeli imar: köşe bölgeler kilitli başlar ----
+  //
+  // Köşeler seçildi çünkü şehrin çekirdeği (merkez + kenar ortaları)
+  // bitişik bir oyun alanı olarak kalıyor; köşe açılışı her seferinde
+  // haritanın yeni bir ucunu oyuna katıyor. 3×3'ten küçük yerleşimlerde
+  // kilit yok — çekirdek zaten oyun alanının tamamı.
+  const lockedDistricts = new Set<number>();
+  if ((options.districtUnlocks ?? true) && rows >= 3 && cols >= 3) {
+    const corners = [0, cols - 1, (rows - 1) * cols, rows * cols - 1];
+    // Açılış sırası tohumdan: her şehirde farklı bir köşe önce açılır.
+    for (let i = corners.length - 1; i > 0; i--) {
+      const j = Math.floor(nextRange(rng, 0, i + 1));
+      [corners[i], corners[j]] = [corners[j]!, corners[i]!];
+    }
+    corners.forEach((districtId, index) => {
+      districts[districtId]!.opensOnDay = DISTRICT_UNLOCK_DAYS[index]!;
+      lockedDistricts.add(districtId);
+    });
+  }
+
   // ---- Parseller ve şehir dokusu ----
   const tiles: Tile[] = [];
   const centerX = (mapWidth - 1) / 2;
@@ -205,6 +260,13 @@ export function createNewGame(options: NewGameOptions = {}): GameState {
         const choice = pickWeighted(rng, fabric, (entry) => entry.weight);
         structureId = choice.structureId;
 
+        // Kilitli bölge köy dokusuyla başlar: mevcut yapıların çoğu yok.
+        // Açılış gününde oyuncuyu bekleyen şey dolu bir mahalle değil,
+        // kurulmayı bekleyen boş arazi olmalı.
+        if (structureId && lockedDistricts.has(districtId) && nextRange(rng, 0, 1) > LOCKED_FABRIC_KEEP) {
+          structureId = null;
+        }
+
         if (structureId) {
           const def = STRUCTURE_BY_ID[structureId];
           if (def) {
@@ -218,10 +280,16 @@ export function createNewGame(options: NewGameOptions = {}): GameState {
       }
 
       // Arsa değeri: district tabanı + merkeze yakınlık primi + gürültü.
+      // İmarsız arazi iskontolu: açılış günü bir fırsat penceresi olmalı,
+      // erken giren ucuza kapatmalı. Değer sonra `runLandValueTick`in
+      // gelişme takibiyle kendiliğinden şehir seviyesine tırmanıyor.
       const distance = Math.abs(x - centerX) + Math.abs(y - centerY);
       const centrality = 1 - distance / maxDistance;
       const landValue =
-        archetype.baseLandValue * (0.72 + 0.55 * centrality) * nextRange(rng, 0.88, 1.12);
+        archetype.baseLandValue *
+        (0.72 + 0.55 * centrality) *
+        nextRange(rng, 0.88, 1.12) *
+        (lockedDistricts.has(districtId) ? LOCKED_LAND_DISCOUNT : 1);
 
       tiles.push({
         id: y * mapWidth + x,
@@ -236,6 +304,16 @@ export function createNewGame(options: NewGameOptions = {}): GameState {
         landValue: Math.round(landValue),
       });
     }
+  }
+
+  // Pazar referansı ŞEHRİN NİHAİ ölçeğinden okunur: kilitli köşeler
+  // açılıp büyüyecek. Referans köy nüfusundan hesaplansaydı geç oyunda
+  // spot fiyat arz fazlasına aşırı duyarlı hale gelirdi — bu yüzden
+  // nüfus indirimi referanstan SONRA uygulanıyor.
+  const market = makeMarket(districts);
+  for (const districtId of lockedDistricts) {
+    const district = districts[districtId]!;
+    district.population = Math.round(district.population * LOCKED_POPULATION_RATIO);
   }
 
   // ---- Şirketler ----
@@ -302,7 +380,7 @@ export function createNewGame(options: NewGameOptions = {}): GameState {
     companies,
     playerCompanyId: PLAYER_COMPANY_ID,
     buildings: {},
-    market: makeMarket(districts),
+    market,
     activeEvents: [],
     news: [
       {

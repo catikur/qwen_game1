@@ -376,6 +376,23 @@ function PlotActions({ tileId, price }: { tileId: number; price: number }): Reac
     );
   }
 
+  // Kilitli bölge: buton yerine takvim. Butonu gösterip komutu motorda
+  // reddettirmek de "çalışırdı" ama oyuncuya neden'i söylemezdi.
+  const district = state.districts[tile.districtId];
+  if (district?.opensOnDay !== undefined && state.time.day < district.opensOnDay) {
+    return (
+      <div className="actions">
+        <p className="plot-note">
+          🌱 {district.name} imara kapalı — {district.opensOnDay - state.time.day} gün sonra
+          açılıyor.
+        </p>
+        <p className="muted">
+          Arsa burada şimdilik ucuz. Açılış günü koşu başlar — nakdi hazır tutmakta fayda var.
+        </p>
+      </div>
+    );
+  }
+
   if (structure) {
     return (
       <div className="actions">

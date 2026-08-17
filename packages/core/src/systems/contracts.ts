@@ -2,6 +2,7 @@ import { BUILDING_BY_ID, CATEGORIES, CONSUMER_CATEGORIES } from '@capital/conten
 import type { CategoryId } from '@capital/content';
 import { nextFloat, nextInt, pick } from '../rng';
 import { pushNews } from '../news';
+import { isDistrictOpen } from './city';
 import type { ContractState, GameState } from '../types';
 
 /**
@@ -176,13 +177,17 @@ function generateOffer(state: GameState): ContractState {
    * kollarına (fiyat, kalite, marka). İkisi 60/40 — ana fiil önde.
    */
   if (nextFloat(state.rng) < 0.6) {
-    // Boş talebi en yüksek bölgeye inşaat isteği: sözleşme, oyuncuyu
-    // zaten gitmesi gereken yere davet ediyor — tuzağa değil.
-    const district = [...state.districts].sort((a, b) => {
-      const unmetA = Object.values(a.unmet).reduce((s, u) => s + u, 0);
-      const unmetB = Object.values(b.unmet).reduce((s, u) => s + u, 0);
-      return unmetB - unmetA;
-    })[0]!;
+    // Boş talebi en yüksek AÇIK bölgeye inşaat isteği: sözleşme, oyuncuyu
+    // zaten gitmesi gereken yere davet ediyor — tuzağa değil. Kilitli
+    // bölge filtrelenir: belediyenin kendi imara kapattığı yere bina
+    // istemesi hem saçma hem yerine getirilemez bir sözleşme olurdu.
+    const district = state.districts
+      .filter((candidate) => isDistrictOpen(state, candidate.id))
+      .sort((a, b) => {
+        const unmetA = Object.values(a.unmet).reduce((s, u) => s + u, 0);
+        const unmetB = Object.values(b.unmet).reduce((s, u) => s + u, 0);
+        return unmetB - unmetA;
+      })[0]!;
 
     const category = pick(state.rng, CONSUMER_CATEGORIES);
     const targetCount = nextInt(state.rng, 2, 3);
