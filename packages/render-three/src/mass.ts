@@ -32,6 +32,13 @@ const CAP_SPREAD = 0.82;
 const BASE_SHADE = 0.82;
 const CAP_SHADE = 0.66;
 
+/** Gövde bu yükseklikten sonra kademeli (setback) kütleye geçer. */
+const SETBACK_MIN_BODY = 1.6;
+/** Korniş bandı bu gövde yüksekliğinden sonra görülebilir. */
+const CORNICE_MIN_BODY = 0.7;
+/** Çatı ekipmanı bu toplam yükseklikten sonra çıkar. */
+const ROOF_GEAR_MIN_TOTAL = 1.3;
+
 export interface MassPlacement {
   x: number;
   z: number;
@@ -67,12 +74,16 @@ export class BuildingMass {
   ) {
     const unit = new THREE.BoxGeometry(1, 1, 1);
 
-    this.body = new THREE.InstancedMesh(unit, bodyMaterial, capacity);
+    // Kapasiteler parça başına farklı: kademeli bina 2 gövde örneği,
+    // çatı katmanı ise kapak + korniş/teras + 2 ekipman kutusuna kadar
+    // çıkabiliyor. Örnek sayısı artıyor, ÇİZİM ÇAĞRISI artmıyor — üç
+    // mesh üç çağrı; zenginleşme bütçeye örnek matrisi olarak giriyor.
+    this.body = new THREE.InstancedMesh(unit, bodyMaterial, capacity * 2);
     // Taban ve çatı aynı malzemeyi paylaşıyor ama AYRI mesh olmak
     // zorundalar: örnek matrisi tek bir mesh içinde parça başına
     // değişemez.
     this.base = new THREE.InstancedMesh(unit.clone(), trimMaterial, capacity);
-    this.cap = new THREE.InstancedMesh(unit.clone(), trimMaterial, capacity);
+    this.cap = new THREE.InstancedMesh(unit.clone(), trimMaterial, capacity * 5);
 
     for (const mesh of this.meshes) {
       mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
@@ -92,10 +103,43 @@ export class BuildingMass {
     this.capCount = 0;
   }
 
+  /** Bir kutu örneği yerleştirir — üç parça da aynı yolu kullanır. */
+  private put(
+    mesh: THREE.InstancedMesh,
+    index: number,
+    x: number,
+    y: number,
+    z: number,
+    sx: number,
+    sy: number,
+    sz: number,
+    color: THREE.Color,
+  ): void {
+    this.dummy.position.set(x, y, z);
+    this.dummy.scale.set(sx, sy, sz);
+    this.dummy.rotation.y = 0;
+    this.dummy.updateMatrix();
+    mesh.setMatrixAt(index, this.dummy.matrix);
+    mesh.setColorAt(index, color);
+  }
+
   place(placement: MassPlacement): void {
     const growth = placement.growth ?? 1;
     const total = Math.max(0.04, placement.height * growth);
     const width = placement.width;
+    const { x, z } = placement;
+
+    /*
+     * Konumdan türeyen deterministik varyasyon.
+     *
+     * Aynı yükseklikteki iki bina artık aynı siluet değil: kademe oranı,
+     * korniş var/yok ve çatı ekipmanının yeri bu zardan geliyor. Zar
+     * KONUMDAN türetiliyor (ayrı bir tohum alanı değil) çünkü kütle her
+     * karede yeniden yerleştiriliyor — durum taşımadan aynı binanın hep
+     * aynı görünmesinin tek yolu, kimliği koordinattan okumak.
+     */
+    const seed = ((x * 151 + z * 73 + 1) * 2654435761) >>> 0;
+    const pick = (slot: number): number => ((seed >>> (slot * 4)) & 15) / 15;
 
     // Taban ve çatı payları toplam yükseklikten alınıyor; çok alçak
     // yapılarda ikisi de kısalıyor ki bina "şapkalı bir kutu" olmasın.
@@ -106,31 +150,84 @@ export class BuildingMass {
     let y = placement.groundY;
 
     // --- taban ---
-    this.dummy.position.set(placement.x, y + baseHeight / 2, placement.z);
-    this.dummy.scale.set(width * BASE_SPREAD, baseHeight, width * BASE_SPREAD);
-    this.dummy.rotation.y = 0;
-    this.dummy.updateMatrix();
-    this.base.setMatrixAt(this.baseCount, this.dummy.matrix);
-    this.base.setColorAt(this.baseCount, this.shade.copy(placement.color).multiplyScalar(BASE_SHADE));
-    this.baseCount++;
+    this.put(
+      this.base,
+      this.baseCount++,
+      x,
+      y + baseHeight / 2,
+      z,
+      width * BASE_SPREAD,
+      baseHeight,
+      width * BASE_SPREAD,
+      this.shade.copy(placement.color).multiplyScalar(BASE_SHADE),
+    );
     y += baseHeight;
 
-    // --- gövde ---
-    this.dummy.position.set(placement.x, y + bodyHeight / 2, placement.z);
-    this.dummy.scale.set(width, bodyHeight, width);
-    this.dummy.updateMatrix();
-    this.body.setMatrixAt(this.bodyCount, this.dummy.matrix);
-    this.body.setColorAt(this.bodyCount, placement.color);
-    this.bodyCount++;
-    y += bodyHeight;
+    // `trim` tek karalama rengin (this.shade) takma adı. setColorAt
+    // değeri çağrı anında tampona kopyaladığı için bu güvenli — ama
+    // ancak SIRAYLA: trim tabandan sonra hesaplanmalı (yoksa taban
+    // rengi onu ezer) ve tüm trim kullanıcıları ekipman renginden önce
+    // gelmeli.
+    const trim = this.shade.copy(placement.color).multiplyScalar(CAP_SHADE);
+
+    // --- gövde: yüksek binada kademeli, alçakta tek blok ---
+    //
+    // Kademe (setback) gökdelen siluetinin asıl imzası: alt blok geniş,
+    // üst blok dar. Aradaki teras kapağı iki iş görüyor — silueti çiziyor
+    // VE alt bloğun açığa çıkan üst yüzünü örtüyor (pencere dokusu örnek
+    // ölçeğine döşendiği için o yüze de pencere düşerdi; Tur 6'daki çatı
+    // kapağı dersinin aynısı).
+    let topWidth = width;
+    if (bodyHeight > SETBACK_MIN_BODY) {
+      const lowerHeight = bodyHeight * (0.5 + pick(0) * 0.2);
+      const upperHeight = bodyHeight - lowerHeight;
+      const upperWidth = width * (0.66 + pick(1) * 0.14);
+
+      this.put(this.body, this.bodyCount++, x, y + lowerHeight / 2, z, width, lowerHeight, width, placement.color);
+      y += lowerHeight;
+
+      const terraceHeight = Math.min(0.05, upperHeight * 0.2);
+      this.put(this.cap, this.capCount++, x, y + terraceHeight / 2, z, width * 1.03, terraceHeight, width * 1.03, trim);
+      y += terraceHeight;
+
+      this.put(this.body, this.bodyCount++, x, y + upperHeight / 2, z, upperWidth, upperHeight, upperWidth, placement.color);
+      y += upperHeight;
+      topWidth = upperWidth;
+    } else {
+      this.put(this.body, this.bodyCount++, x, y + bodyHeight / 2, z, width, bodyHeight, width, placement.color);
+      y += bodyHeight;
+
+      // Korniş: orta boy binaların bir kısmında çatı altına ince bant.
+      // Hepsine koysak yeni bir tekdüzelik olurdu; zar %60'ına koyuyor.
+      if (bodyHeight > CORNICE_MIN_BODY && pick(2) > 0.4) {
+        const corniceHeight = 0.035;
+        this.put(this.cap, this.capCount++, x, y + corniceHeight / 2, z, width * 1.07, corniceHeight, width * 1.07, trim);
+        y += corniceHeight;
+      }
+    }
 
     // --- çatı ---
-    this.dummy.position.set(placement.x, y + capHeight / 2, placement.z);
-    this.dummy.scale.set(width * CAP_SPREAD, capHeight, width * CAP_SPREAD);
-    this.dummy.updateMatrix();
-    this.cap.setMatrixAt(this.capCount, this.dummy.matrix);
-    this.cap.setColorAt(this.capCount, this.shade.copy(placement.color).multiplyScalar(CAP_SHADE));
-    this.capCount++;
+    const capWidth = topWidth * CAP_SPREAD;
+    this.put(this.cap, this.capCount++, x, y + capHeight / 2, z, capWidth, capHeight, capWidth, trim);
+    y += capHeight;
+
+    // --- çatı ekipmanı: klima/asansör dairesi kutuları ---
+    //
+    // Düz çatı boş bir kapaktı; bir-iki küçük kutu onu "bakılan" bir
+    // yüzeye çeviriyor. Yükseklikler toplamdan oranlanıyor ki inşaat
+    // animasyonunda bina ekipmanıyla birlikte yükselsin.
+    if (total > ROOF_GEAR_MIN_TOTAL) {
+      const gearCount = pick(3) > 0.55 ? 2 : 1;
+      const gearShade = this.shade.copy(trim).multiplyScalar(0.85);
+      for (let i = 0; i < gearCount; i++) {
+        const gearWidth = capWidth * (0.14 + pick(4 + i) * 0.1);
+        const gearHeight = Math.min(0.09, total * 0.05);
+        const offsetRange = capWidth * 0.3;
+        const gx = x + (pick(6 + i) - 0.5) * 2 * offsetRange;
+        const gz = z + (pick(5 - i) - 0.5) * 2 * offsetRange;
+        this.put(this.cap, this.capCount++, gx, y + gearHeight / 2, gz, gearWidth, gearHeight, gearWidth, gearShade);
+      }
+    }
   }
 
   end(): void {
