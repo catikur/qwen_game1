@@ -190,7 +190,10 @@ function generateOffer(state: GameState): ContractState {
       })[0]!;
 
     const category = pick(state.rng, CONSUMER_CATEGORIES);
-    const targetCount = nextInt(state.rng, 2, 3);
+    // nextInt YARI-AÇIK [min, max): 2-3 hedefi için üst sınır 4 olmalı.
+    // İlk hâli (2, 3) yazıyordu ve hedef HEP 2 çıkıyordu — süre, ödül ve
+    // ceza da ondan türediği için 3 binalık sözleşme hiç doğmamıştı.
+    const targetCount = nextInt(state.rng, 2, 4);
     const durationDays = targetCount * BUILD_DAYS_PER_UNIT;
     // Ödül kabaca hedef binaların maliyetinin %60'ı: bedava büyüme değil,
     // yönlendirilmiş büyümeye prim.
