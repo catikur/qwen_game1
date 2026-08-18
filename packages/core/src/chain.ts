@@ -86,6 +86,15 @@ export interface ChainMove {
   paybackDays: number;
   /** Hamleden sonra beklenen brüt marj 0..1. */
   projectedMargin: number;
+  /**
+   * Hamlenin halka maliyetine etkisi (₺/birim, pozitif = ucuzlatıyor).
+   *
+   * Kartın satış cümlesi "bu ünite girdini ucuzlatır"; bu alan o cümlenin
+   * sayısı. §4.8 teşhis deneyi bunun ölçekte eksiye döndüğünü ölçebilsin
+   * diye dışarı açıldı — spot çökmüşken kendi üretimin pazardan pahalı
+   * hale gelebiliyor ve hamle maliyeti YÜKSELTİYOR.
+   */
+  costDelta: number;
   /** Neden bu hamle: "Kavurma kapasiten kafelerini besleyemiyor." */
   reason: string;
   affordable: boolean;
@@ -99,6 +108,20 @@ export interface ChainMove {
   utilisation: number;
   /** Ölçek henüz yetmiyor: hamle doğru ama zamanı değil. */
   premature: boolean;
+  /**
+   * Hamle doğru ama SIRASI değil: şirketin önünde daha hızlı dönen bir
+   * mağaza fırsatı var.
+   *
+   * `premature`den ayrı bir alan olması bilinçli — ikisi farklı soruların
+   * cevabı. Premature ölçeğe bakar ("bu ünite boş çalışır"), deferred
+   * fırsat maliyetine ("ünite dolu çalışır ama aynı nakit mağazada daha
+   * hızlı döner"). §4.8 ölçümü frenin gerekçesi: kartı harfiyen izleyen
+   * kol 27-43 üniteye çıkıp kuyruk kârının %20-25'ini yiyordu; ünitelerin
+   * hiçbirinde delta ≤ 0 ya da kötü geri ödeme yoktu — zarar tamamen
+   * 17-55 günlük mağaza fırsatları dururken 100-200 günlük üniteye para
+   * bağlamanın bileşik maliyetiydi.
+   */
+  deferred: boolean;
 }
 
 export interface ChainCard {
@@ -251,6 +274,66 @@ export function bestPlotFor(
 }
 
 /**
+ * "İyi mağaza fırsatı" eşiği (gün) — kalibrasyon bandının (17-55g) hemen
+ * üstü. Şirketin önünde bu kadar hızlı dönen ve GERÇEKTEN alınabilir bir
+ * parsele kurulabilen bir mağaza varken, kart üniteyi TEMPOYA bağlar.
+ */
+const OUTLET_GOOD_PAYBACK_DAYS = 60;
+
+/**
+ * Fren TEMPO, YASAK DEĞİL: iyi mağaza fırsatı varken iki ünite arasında
+ * en az bu kadar gün istenir.
+ *
+ * Mutlak yasak denendi ve ölçüm reddetti: erteleme hiç kalkmıyor (bu
+ * şehirde iyi mağaza fırsatı neredeyse daima var), üç tohumda da ünite
+ * sayısı sıfıra indi — fren bir sistemi öldürmüştü. Ölçülen optimum ~8-10
+ * ünite: yıkım, ünitenin varlığından değil 5 günde bir ünite alıp mağaza
+ * bileşiğini boğmaktan geliyordu (§4.8 deneyi). 45 gün, kartı o sarmaldan
+ * çıkarırken zinciri oyunda tutuyor; İLK ünite hiç frenlenmez (giriş
+ * kapısı ölçek uyarısı, tempo değil) ve mağaza fırsatları kuruduğunda
+ * fren kendiliğinden kalkar.
+ */
+const CHAIN_PACE_DAYS = 45;
+
+/**
+ * Şirketin bugün kurabileceği en hızlı dönen mağazanın geri ödemesi.
+ *
+ * Parsel şartı pazarlık değil: tahmin bölge düzeyinde ve arsa stokunu
+ * görmüyor. Şart olmasaydı arazi tamamen tükenmiş bir şehirde bile
+ * "mağaza fırsatı var" sanıp zinciri sonsuza dek ertelerdik — fren tam
+ * da arazi bittiğinde ELİNİ ÇEKMEK zorunda.
+ */
+function bestOutletPaybackFor(state: GameState, companyId: string): number {
+  const company = state.companies[companyId];
+  if (!company) return Number.POSITIVE_INFINITY;
+
+  // Bölgede alınabilir parsel (boş ya da devralınabilir yapı) var mı?
+  const acquirable = new Set<number>();
+  for (const tile of state.map.tiles) {
+    if (tile.kind !== 'plot' || tile.ownerId || tile.buildingId) continue;
+    if (!isDistrictOpen(state, tile.districtId)) continue;
+    if (tile.structureId) {
+      const structure = STRUCTURE_BY_ID[tile.structureId];
+      if (!structure || structure.buyoutMultiplier === null) continue;
+    }
+    acquirable.add(tile.districtId);
+  }
+
+  let best = Number.POSITIVE_INFINITY;
+  for (const def of BUILDINGS) {
+    if (def.role !== 'outlet' && def.role !== 'rental') continue;
+    if (company.netWorth < def.unlockNetWorth) continue;
+    for (const district of state.districts) {
+      if (!acquirable.has(district.id)) continue;
+      const estimate = estimateInvestment(state, district.id, def.id, companyId);
+      if (!estimate?.direct) continue;
+      if (estimate.paybackDays < best) best = estimate.paybackDays;
+    }
+  }
+  return best;
+}
+
+/**
  * Kartın alt satırındaki tek hamle.
  *
  * Zincirin en zayıf halkasından başlar: hiç üretimin olmayan ya da
@@ -263,6 +346,8 @@ function bestMove(
   chain: GoodDef[],
   currentUnitCost: number,
   salePrice: number,
+  outletPayback: number,
+  daysSinceLastUnit: number,
 ): { move: ChainMove | null; blocked: string | null } {
   const company = state.companies[companyId];
   if (!company) return { move: null, blocked: null };
@@ -315,10 +400,23 @@ function bestMove(
     const covered = flow.produced / flow.consumed;
     const utilisation = Math.min(1, flow.consumed / (flow.produced + def.capacity));
     const premature = utilisation < 0.5 || estimate.paybackDays > PREMATURE_PAYBACK_DAYS;
+    // Fırsat maliyeti freni (§4.8): önünde hızlı dönen GERÇEK bir mağaza
+    // fırsatı varken ünite tempoya bağlanır. Premature'la yarışmaz —
+    // ölçek uyarısı her zaman önce gelir (daha temel bir itiraz).
+    const deferred =
+      !premature &&
+      outletPayback <= OUTLET_GOOD_PAYBACK_DAYS &&
+      daysSinceLastUnit < CHAIN_PACE_DAYS;
 
     const shortfall = flow.produced > 0
       ? `${link.name} üretimin ihtiyacının ${percent(covered)} kadarını karşılıyor; farkı ${money(spot)} üzerinden pazardan alıyorsun.`
       : `${link.name} tamamen pazardan geliyor: birim ${money(spot)}.`;
+
+    const reason = premature
+      ? `${shortfall} Ama ${def.name} günde ${Math.round(def.capacity).toLocaleString('tr-TR')} birim üretir; sen ${Math.round(flow.consumed).toLocaleString('tr-TR')} birim tüketiyorsun — kapasitenin ancak ${percent(utilisation)} kadarı dolar.`
+      : deferred
+        ? `${shortfall} Ama acelesi yok: aynı nakit bir mağazada ~${Math.round(outletPayback)} günde dönüyor ve son ünitenin üstünden ${Math.max(0, Math.round(daysSinceLastUnit))} gün geçti. Zincir sırası ~${Math.max(1, Math.round(CHAIN_PACE_DAYS - daysSinceLastUnit))} gün sonra.`
+        : shortfall;
 
     return {
       move: {
@@ -331,12 +429,12 @@ function bestMove(
       needsBuyout: plot.needsBuyout,
       paybackDays: estimate.paybackDays,
       projectedMargin,
-      reason: premature
-        ? `${shortfall} Ama ${def.name} günde ${Math.round(def.capacity).toLocaleString('tr-TR')} birim üretir; sen ${Math.round(flow.consumed).toLocaleString('tr-TR')} birim tüketiyorsun — kapasitenin ancak ${percent(utilisation)} kadarı dolar.`
-        : shortfall,
+      costDelta: delta,
+      reason,
       affordable: company.cash >= cost,
       utilisation,
       premature,
+      deferred,
       },
       blocked: null,
     };
@@ -368,6 +466,22 @@ export function chainCards(state: GameState, companyId: string): ChainCard[] {
   }
 
   const cards: ChainCard[] = [];
+
+  // Fırsat maliyeti freni için TEK SEFER hesaplanır: kart başına
+  // hesaplansaydı parsel + tahmin taraması kart sayısıyla çarpılırdı.
+  const outletPayback = bestOutletPaybackFor(state, companyId);
+
+  // Tempo çapası: şirketin EN YENİ üretim ünitesi. Hiç ünite yoksa
+  // sonsuz geçmiş — ilk ünite frene takılmaz, zincire giriş serbest.
+  let lastUnitDay = Number.NEGATIVE_INFINITY;
+  for (const building of Object.values(state.buildings)) {
+    if (building.companyId !== companyId) continue;
+    const role = BUILDING_BY_ID[building.defId]?.role;
+    if (role === 'extract' || role === 'process') {
+      lastUnitDay = Math.max(lastUnitDay, building.builtDay);
+    }
+  }
+  const daysSinceLastUnit = state.time.day - lastUnitDay;
 
   for (const [goodId, outlets] of outletsByGood) {
     const good = GOOD_BY_ID[goodId];
@@ -470,7 +584,7 @@ export function chainCards(state: GameState, companyId: string): ChainCard[] {
       marketShare: company.marketShare[good.category] ?? 0,
       unitsPerDay: units,
       outlets: outlets.length,
-      ...bestMove(state, companyId, chain, unitCost, salePrice),
+      ...bestMove(state, companyId, chain, unitCost, salePrice, outletPayback, daysSinceLastUnit),
     });
   }
 

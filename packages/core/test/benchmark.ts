@@ -51,7 +51,7 @@ function playerStrategy(engine: GameEngine): void {
 
   for (const card of chainCards(state, player.id)) {
     const move = card.move;
-    if (!move || move.premature) continue;
+    if (!move || move.premature || move.deferred) continue;
     if (move.cost + tilePrice(state, move.tileId, player.id) > player.cash * 0.6) continue;
     const acquired = move.needsBuyout
       ? engine.dispatch({ type: 'BUYOUT_TILE', tileId: move.tileId })

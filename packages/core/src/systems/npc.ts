@@ -120,6 +120,12 @@ function tryChainMove(state: GameState, profile: NpcProfileDef): boolean {
     const move = card.move;
     if (!move) continue;
     if (move.premature && appetite < 1.2) continue;
+    // Erteleme freni (`move.deferred`) BİLEREK okunmuyor: o bir OYUNCU
+    // tavsiye politikası. Rakipler 42-ünite sarmalını hiç yaşamadı —
+    // iştah kapıları ve `CHAIN_MAX_PAYBACK` onları zaten sınırlıyor.
+    // Denendi ve ölçüm reddetti: rakipler de frenlenince kalibre edilmiş
+    // rakip üretimi düştü, şehrin spot dengesi kaydı ve zincir A/B'si
+    // +%30'dan −%7'ye indi — fren, sahibi olmayan bir sorunu "çözmüştü".
     if (move.paybackDays > maxPayback) continue;
     if (move.cost > budget) continue;
 

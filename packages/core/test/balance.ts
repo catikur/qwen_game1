@@ -96,8 +96,34 @@ function playerStrategy(engine: GameEngine): void {
   expandOutlets(engine);
 }
 
-/** Zincir kartının önerdiği hamleyi uygular; "erken" olanı atlar. */
+/** Zincir kartının önerdiği hamleyi uygular; "erken" ve "ertelendi" olanı atlar. */
 function followChainAdvice(engine: GameEngine): boolean {
+  const state = engine.getState();
+  const player = getPlayer(state);
+
+  for (const card of chainCards(state, player.id)) {
+    const move = card.move;
+    if (!move || move.premature || move.deferred) continue;
+    if (move.cost + tilePrice(state, move.tileId, player.id) > player.cash * 0.6) continue;
+
+    const acquired = move.needsBuyout
+      ? engine.dispatch({ type: 'BUYOUT_TILE', tileId: move.tileId })
+      : engine.dispatch({ type: 'BUY_TILE', tileId: move.tileId });
+    if (!acquired.ok) continue;
+    if (engine.dispatch({ type: 'BUILD', tileId: move.tileId, defId: move.defId }).ok) return true;
+  }
+  return false;
+}
+
+/**
+ * A/B'nin TARİHSEL zincir kolu — dondurulmuş kopya
+ * (`expandOutletsVacantOnly` ile aynı gerekçe). Yalnızca `premature`
+ * atlar; erteleme frenini BİLEREK görmez. Regresyon deneyi mekanizmayı
+ * ölçüyor (ünite kurmak maliyeti düşürüyor mu), tavsiye politikasını
+ * değil — fren politika katmanı ve kendi ölçümünü
+ * `chain-scale-experiment.ts` yapıyor.
+ */
+function followChainAdviceFrozen(engine: GameEngine): boolean {
   const state = engine.getState();
   const player = getPlayer(state);
 
@@ -788,6 +814,56 @@ function outletUnitCost(state: GameState): number {
   );
 }
 
+// ---- 5b. Fırsat maliyeti freni (§4.8): tempo, yasak değil ----
+//
+// Sınanan üç şey: (1) taze bir üniteden hemen sonra, iyi mağaza fırsatı
+// varken kart SIRADAKİ üniteyi erteliyor; (2) erteleme premature değil
+// (iki durum ayrı sorulara cevap); (3) tempo dolunca — başka hiçbir şey
+// değişmeden — aynı hamle öneriye dönüyor. Üçüncüsü durum ameliyatıyla
+// (builtDay geri çekilir): 45 gün koşmak aynı şeyi daha yavaş ve daha
+// gürültülü sınardı.
+{
+  const engine2 = new GameEngine(createNewGame({ seed: 65, companyName: 'Fren AŞ' }));
+  const s = engine2.getState();
+  s.flags.raids = false;
+  const player = getPlayer(s);
+  player.cash = 30_000_000;
+  player.netWorth = 30_000_000;
+
+  for (let i = 0; i < 6; i++) place(engine2, 'cafe', 'mid_residential');
+  for (let i = 0; i < 30; i++) engine2.runDay();
+  place(engine2, 'coffee_estate', 'industrial');
+
+  const freshCard = chainCards(s, player.id)[0];
+  const freshMove = freshCard?.move;
+  expect(
+    'taze üniteden sonra kart sıradakini erteliyor',
+    Boolean(freshMove && !freshMove.premature && freshMove.deferred),
+    freshMove
+      ? `${freshMove.name}: premature=${freshMove.premature} deferred=${freshMove.deferred}`
+      : 'hamle yok',
+  );
+  expect(
+    'erteleme gerekçesi fırsat maliyetini söylüyor',
+    (freshMove?.reason ?? '').includes('acelesi yok'),
+    freshMove?.reason ?? '',
+  );
+
+  // Tempo çapasını geriye çek: son ünite 50 gün önce kurulmuş olsun.
+  for (const building of Object.values(s.buildings)) {
+    if (building.companyId !== player.id) continue;
+    if (BUILDING_BY_ID[building.defId]?.role === 'extract') building.builtDay -= 50;
+  }
+  const pacedMove = chainCards(s, player.id)[0]?.move;
+  expect(
+    'tempo dolunca aynı hamle öneriye dönüyor',
+    Boolean(pacedMove && !pacedMove.premature && !pacedMove.deferred),
+    pacedMove
+      ? `${pacedMove.name}: premature=${pacedMove.premature} deferred=${pacedMove.deferred}`
+      : 'hamle yok',
+  );
+}
+
 // ---- 6. Rakipler de zincir kuruyor mu? ----
 // Tur 1'in C parçası. Rakipler zincir kurmazsa oyuncu, kurduğu anda
 // kalıcı ve tek taraflı bir maliyet avantajı elde eder — yani zincir
@@ -902,7 +978,7 @@ function outletUnitCost(state: GameState): number {
          * cevaplamaz; düzeneğini değiştirmek iki ölçümü birbirine
          * karıştırmak olurdu.
          */
-        if (!(useChain && followChainAdvice(engine2))) expandOutletsVacantOnly(engine2);
+        if (!(useChain && followChainAdviceFrozen(engine2))) expandOutletsVacantOnly(engine2);
       }
       engine2.runDay();
       /*
@@ -1803,7 +1879,13 @@ let researchPayback = Infinity;
 
   // Doktrinler birbirinden gerçekten ayrışıyor mu? Tek tip davranıyorlarsa
   // "kişilik" bir etiketten ibaret demektir.
-  const shapes = new Set(rows.map((row) => `${Math.min(row.research, 3)}/${Math.min(row.marketing, 3)}`));
+  //
+  // Şapka 3'ten 6'ya çıktı — ENSTRÜMAN SİNYALİ EZİYORDU: Tur 15'te
+  // vekil güçlenince iki kol kuran rakip de 3'ün üstüne çıktı ve
+  // `min(x,3)` 3/6 ile 3/4'ü aynı "3/3"e indirip gerçek ayrışmayı
+  // (tabloda apaçık) kontrolden sildi. 6, küçük sayıları hâlâ sabit
+  // tutarken "yoğun yatırım" farklarını ayırt ediyor.
+  const shapes = new Set(rows.map((row) => `${Math.min(row.research, 6)}/${Math.min(row.marketing, 6)}`));
   expect('doktrinler birbirinden ayrışıyor', shapes.size >= 3,
     `${shapes.size} farklı kol profili: ${[...shapes].join(' ')}`);
 
