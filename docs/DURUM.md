@@ -4,7 +4,7 @@
 > `pnpm bench` çıktısından; iddialar `pnpm balance` ve `pnpm playtest`
 > tarafından her koşuda doğrulanıyor.
 >
-> Son güncelleme: şema **v6**, 14 tur tamamlandı.
+> Son güncelleme: şema **v6**, 15 tur tamamlandı.
 
 ---
 
@@ -36,6 +36,7 @@ mantığının dışında; üçüncüsü ise oyunun kendi **tavsiyesindeydi**:
 | Arayüz "klasik yapım" diye bağırıyordu | **12** | Kambiyo: terminal dili — sıfır yuvarlaklık, sıfır gölge, mürekkep vurgu, Archivo + Martian Mono |
 | Oyun tekrara düşüyordu, kaybetmek imkânsızdı | **13** | Rakip ölçeklemesi, çift yönlü borsa + oyun sonu, dönemler, sözleşmeler |
 | Arazi oyunu ilk yılda sönüyordu | **14** | Kademeli imar: köşeler köy başlıyor, 130-520. günlerde açılıyor + kademeli bina silueti |
+| Zincir kartı ölçekte kötü tavsiye veriyordu | **15** | Fırsat maliyeti freni: "ertelendi" durumu — tempo, yasak değil |
 
 ---
 
@@ -364,6 +365,34 @@ aynı görünmesinin tek yolu kimliği koordinattan okumak. Köşe pahı
 bilinçli atlandı: pahlı prizmanın açılı yüzlerinde pencere dokusu
 yayılırdı; siluet çeşitliliğini kademe zaten veriyor.
 
+### Tur 15 — Zincir kartına fırsat maliyeti freni (§4.8 kapandı)
+
+Teşhis deneyi (`chain-scale-experiment.ts`, ünite tavanı kolları +
+satın alma günlüğü) iki hipotezi öldürdü: 42 alımın HİÇBİRİNDE delta ≤ 0
+ya da kötü geri ödeme tahmini yok. Yıkım ünitenin kendisinden değil,
+17-55 günde dönen mağaza fırsatları dururken 5 günde bir 100-200 günlük
+üniteye para bağlamanın bileşik maliyetinden geliyor. Ölçülen sağlıklı
+sınır ~8-10 ünite.
+
+Fren: karta `deferred` ("ertelendi") durumu — `premature`den ayrı, çünkü
+farklı soruların cevabı (ölçek vs sıra). Kural: iyi bir mağaza fırsatı
+(≤60g, GERÇEKTEN alınabilir parselli) varken iki ünite arasında en az
+45 gün istenir. İlk ünite hiç frenlenmez; fırsat kuruyunca fren
+kendiliğinden kalkar. Gerekçe metni pazarlık etmiyor: "aynı nakit
+mağazada ~17 günde dönüyor, zincir sırası ~45 gün sonra."
+
+Üç ölçüm dersi: (1) mutlak yasak denendi, ölçüm reddetti — ertelme hiç
+kalkmıyor, ünite üç tohumda da 0'a iniyor, sistem ölüyor; (2) fren
+NPC'lere de uygulanınca kalibre edilmiş rakip üretimi düşüp A/B'yi
+−%7'ye indirdi — fren bir OYUNCU tavsiye politikası, rakipler zaten
+iştah kapılarıyla sınırlı; (3) doktrin ayrışması kontrolünün `min(x,3)`
+şapkası 3/6 ile 3/4'ü aynı hücreye ezip gerçek ayrışmayı silmişti —
+enstrüman yine sinyalin önündeydi. Frenle sınırsız kol kendiliğinden
+7-11 ünitede duruyor; 560g kuyruğunda iki tohumda +%15/+%19, birinde
+başa baş. Benchmark'ın 360g'lük zincir satırları frenle EKSİ okur —
+ufuk dersi: fren geç oyunu optimize ediyor, 360. gün penceresi olgun
+temposunu henüz görmüyor (gerçek ölçü 560g deneyi).
+
 ---
 
 ## 3. Ölçülen durum
@@ -408,13 +437,16 @@ rekabeti (kalite/marka/fiyat) canlı.
 | Ar-Ge · 8 mağaza | **%14** | 141 gün |
 | Pazarlama · 8 mağaza | **%11** | 111 gün |
 | Fiyatı %25 kırmak | **%17 hacim** | — |
-| Zincir · normal nakit | **%14** | ~190 gün |
-| Zincir · bol nakit (20 M ₺) | **−%10** | — |
+| Zincir · normal nakit | −%9 *(360g penceresi)* | ~190 gün |
+| Zincir · bol nakit (20 M ₺) | −%4 *(360g penceresi)* | — |
 
-Son iki satır ayrı duruyor çünkü farkları bir bulgu: bol nakitle parseli
-outlet'le doldurmak zinciri geçiyor. **Zincir bir nakit kısıtı oyunu.**
-Bol nakit satırının eksiye dönmesi yeni ve önemli: kart ölçekte de ünite
-önermeye devam ediyor ve marjinal üniteler kârı yiyor — §4.8.
+Son iki satır ayrı duruyor çünkü farkları bir bulgu: sınırsız devralma
+çağında parseli outlet'le doldurmak zinciri geçiyor. **Zincir bir nakit
+kısıtı oyunu** — arazi kısıtlı dünyada (dondurulmuş A/B) +%30, 3/3.
+Eksili satırlar 360 günlük pencerenin eseri: Tur 15 freni zinciri geç
+oyun temposuna bağladı; 560g deneyinde frenli kol iki tohumda taban
+çizgisinin +%15/+%19 üstünde, birinde başa baş (Tur 15 bölümündeki
+ufuk dersi).
 
 ### Kalibrasyon bantları
 
@@ -430,7 +462,7 @@ Bol nakit satırının eksiye dönmesi yeni ve önemli: kart ölçekte de ünite
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~570 gün/sn |
-| Denge testi | **206 kontrol, hepsi geçiyor** |
+| Denge testi | **209 kontrol, hepsi geçiyor** |
 | Tarayıcı testi | **196 kontrol**, 0 konsol hatası |
 | Kapsam | 26 bina · 22 ürün · 7 kategori · 8 rakip profili |
 
@@ -551,21 +583,13 @@ liderliğini kaybetme anı henüz bir olay değil (yalnızca net değer
 sıralaması izleniyor), ve devralınan şirketin yerine yenisi gelmediği
 için geç oyunda rakip sayısı azalıyor.
 
-### 4.8 Zincir kartı ölçekte fren bilmiyor
+### 4.8 ~~Zincir kartı ölçekte fren bilmiyor~~ — Tur 15'te kapandı
 
-Vekil devralmayı öğrenince ortaya çıktı: kart, üretim ünitesini yalnızca
-ALT uçta gate'liyor ("kapasitenin %50'si dolmadan kurma"). Üst uçta fren
-yok — tüketim büyüdükçe ünite önermeye devam ediyor. 560 günlük koşuda
-kartı harfiyen izleyen kol 27-43 üniteye çıktı ve marjinal üniteler kârı
-yedi (tohuma göre −%1…−%22; bol nakit satırı benchmark'ta −%10).
-
-Doğru fren muhtemelen fırsat maliyeti: Tur 7'nin yapı menüsüne verdiği
-dersin (tavsiyeyi parsel getirisine çevir) zincir kartına uygulanması —
-"bu ünite, aynı paranın kurabileceği en iyi mağazadan az kazandıracaksa
-önerme". Kalibrasyonu bozmadan yapılması gereken ayrı bir tur işi.
-Regresyon A/B'si bu soruyu bilerek ölçmüyor; düzeneği tarihsel seriyle
-(+%12/+%19/+%30) kıyaslanabilir kalsın diye donduruldu
-(`expandOutletsVacantOnly`).
+Kart artık fırsat maliyeti freni taşıyor: iyi mağaza fırsatı varken
+üniteler 45 günlük tempoya bağlanıyor (`deferred` durumu — ölçek uyarısı
+`premature`den ayrı). Teşhis, tasarım ve üç ölçüm dersi Tur 15
+bölümünde. Regresyon A/B'si dondurulmuş düzeneğinde (+%30, 3/3);
+tempolu tavsiyenin kendi ölçüsü `chain-scale-experiment.ts`.
 
 ---
 
