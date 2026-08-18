@@ -142,3 +142,80 @@ export const EVENTS: EventDef[] = [
     effects: { goodPriceMultiplier: { silicon: 1.35, chip: 1.6 } },
   },
 ];
+
+/**
+ * Dönemler — şehrin makro iklimi.
+ *
+ * Olaylardan ayrı bir katalog, çünkü farklı bir soruya cevap veriyorlar.
+ * Olay bir HABERDİR: kısa, rastgele, tepki istersen verirsin. Dönem bir
+ * MEVSİMDİR: aylarca sürer, bütün kararların zeminini değiştirir ve
+ * "300. gün ile 900. gün aynı oyun olmasın" diye vardır — oyunun tekrara
+ * düşme şikâyetinin doğrudan cevabı.
+ *
+ * Aynı `EventDef` biçimini kullanıyorlar ki çarpan boru hattı
+ * (`collectEventModifiers`) ikisini tek yerden uygulasın. `weight`
+ * burada "bir sonraki dönem hangisi" seçiminin ağırlığı.
+ *
+ * Etkiler bilinçli olarak ILIMLI (±%8–12): dönem bir zemin eğimi,
+ * bir uçurum değil. Sert makro şoklar olayların işi.
+ */
+export const ERAS: EventDef[] = [
+  {
+    id: 'era_genisleme',
+    title: 'Genişleme Dönemi',
+    body: 'Ekonomi büyüyor: talep her kategoride canlı, arsa değerleri yükselişte.',
+    durationDays: 260,
+    weight: 10,
+    tone: 'good',
+    effects: {
+      demandMultiplier: { grocery: 1.08, dining: 1.1, retail: 1.12, services: 1.08, electronics: 1.12 },
+      landValueDrift: 0.0004,
+    },
+  },
+  {
+    id: 'era_sikilasma',
+    title: 'Sıkılaşma Dönemi',
+    body: 'Kemerler sıkıldı: talep zayıf, arsa piyasası soğuk. Nakit tutan kazanır.',
+    durationDays: 220,
+    weight: 8,
+    tone: 'bad',
+    effects: {
+      demandMultiplier: { grocery: 0.96, dining: 0.88, retail: 0.9, services: 0.94, electronics: 0.86 },
+      landValueDrift: -0.0003,
+    },
+  },
+  {
+    id: 'era_enflasyon',
+    title: 'Enflasyon Dönemi',
+    body: 'Girdi maliyetleri tırmanıyor. Zinciri olan kendi maliyetiyle üretir; pazardan alan zamma yakalanır.',
+    durationDays: 240,
+    weight: 8,
+    tone: 'bad',
+    effects: {
+      costMultiplier: 1.1,
+      demandMultiplier: { dining: 0.94, retail: 0.94, electronics: 0.92 },
+    },
+  },
+  {
+    id: 'era_istikrar',
+    title: 'İstikrar Dönemi',
+    body: 'Piyasa sakin. Büyük dalga yok — planını rahat kur.',
+    durationDays: 200,
+    weight: 10,
+    tone: 'neutral',
+    effects: {},
+  },
+  {
+    id: 'era_tuketim',
+    title: 'Tüketim Çağı',
+    body: 'Alışveriş kültürü zirvede: perakende ve elektronik uçuyor, mütevazı esnaf geride.',
+    durationDays: 240,
+    weight: 8,
+    tone: 'good',
+    effects: {
+      demandMultiplier: { retail: 1.15, electronics: 1.16, dining: 1.06, grocery: 0.98 },
+    },
+  },
+];
+
+export const ERA_BY_ID: Record<string, EventDef> = Object.fromEntries(ERAS.map((e) => [e.id, e]));

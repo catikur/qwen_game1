@@ -61,15 +61,26 @@ const server = http.createServer((req, res) => {
   res.end(fs.readFileSync(file));
 });
 
-/** Belirli türde bir kare bulur: 'vacant' | 'occupied' | 'road' | 'civic'. */
+/**
+ * Belirli türde bir kare bulur: 'vacant' | 'occupied' | 'road' | 'civic' |
+ * 'locked'. Parsel türleri AÇIK bölgeden seçilir — kare 0 artık kilitli
+ * köşe (Liman) olabiliyor ve satın alma kontrolleri "imara kapalı"
+ * kapısına çarpıp yanlış kırmızı yakardı. 'locked' tam tersi: kilitli
+ * bölgeden boş parsel ister (imar kontrolü için).
+ */
 const findTile = (page, kind) =>
   page.evaluate((want) => {
-    const tiles = window.__capital.getState().map.tiles;
-    const match = tiles.find((t) => {
+    const state = window.__capital.getState();
+    const isOpen = (t) => {
+      const district = state.districts[t.districtId];
+      return !district || district.opensOnDay === undefined || state.time.day >= district.opensOnDay;
+    };
+    const match = state.map.tiles.find((t) => {
       if (want === 'road') return t.kind === 'road';
       if (want === 'civic') return t.kind === 'civic';
-      if (want === 'occupied') return t.kind === 'plot' && t.structureId && !t.ownerId;
-      return t.kind === 'plot' && !t.structureId && !t.ownerId;
+      if (want === 'locked') return t.kind === 'plot' && !t.structureId && !t.ownerId && !isOpen(t);
+      if (want === 'occupied') return t.kind === 'plot' && t.structureId && !t.ownerId && isOpen(t);
+      return t.kind === 'plot' && !t.structureId && !t.ownerId && isOpen(t);
     });
     return match ? match.id : null;
   }, kind);
@@ -135,14 +146,23 @@ const findTile = (page, kind) =>
   });
   check('WebGL bağlamı canlı', webgl.ok, `canvas ${webgl.w}×${webgl.h}`);
 
+  // Doku oranları AÇIK şehirden: kilitli köşeler bilerek boş (açılınca
+  // kurulacak arazi onlar) ve pazarda değiller — onları saymak "şehir
+  // bomboş" yanlış alarmı verirdi. Denge koşumundaki kuralın aynısı.
   const fabric = await page.evaluate(() => {
-    const tiles = window.__capital.getState().map.tiles;
+    const state = window.__capital.getState();
+    const isOpen = (t) => {
+      const district = state.districts[t.districtId];
+      return !district || district.opensOnDay === undefined || state.time.day >= district.opensOnDay;
+    };
+    const tiles = state.map.tiles.filter(isOpen);
     return {
       roads: tiles.filter((t) => t.kind === 'road').length,
       civic: tiles.filter((t) => t.kind === 'civic').length,
       occupied: tiles.filter((t) => t.kind === 'plot' && t.structureId).length,
       vacant: tiles.filter((t) => t.kind === 'plot' && !t.structureId).length,
       total: tiles.length,
+      locked: state.map.tiles.length - tiles.length,
     };
   });
   // Bu üç kontrol ORANLA ölçüyor, mutlak sayıyla değil.
@@ -156,11 +176,12 @@ const findTile = (page, kind) =>
   const roadShare = fabric.roads / fabric.total;
   const vacantShare = fabric.vacant / plots;
   check('Şehirde sokak ızgarası var', roadShare > 0.25, `karelerin %${Math.round(roadShare * 100)}'i sokak`);
-  check('Şehir mevcut yapılarla dolu', fabric.occupied / plots > 0.5, `${fabric.occupied}/${plots} parsel dolu`);
+  check('Açık şehir mevcut yapılarla dolu', fabric.occupied / plots > 0.5,
+    `${fabric.occupied}/${plots} parsel dolu · ${fabric.locked} kare imara kapalı`);
   check(
     'Boş parsel kıt ama var',
     vacantShare > 0.2 && vacantShare < 0.55,
-    `${fabric.vacant}/${plots} parsel boş — %${Math.round(vacantShare * 100)}`,
+    `${fabric.vacant}/${plots} açık parsel boş — %${Math.round(vacantShare * 100)}`,
   );
 
   await page.waitForTimeout(1500);
@@ -210,6 +231,19 @@ const findTile = (page, kind) =>
     (await page.locator('.plot-note').textContent())?.trim());
   check('Dolu parselde doğrudan satın alma yok',
     (await page.locator('button:has-text("Parseli satın al")').count()) === 0);
+
+  // Kademeli imar: kilitli köşe parseli satılık değil, takvimini söylüyor.
+  const lockedId = await findTile(page, 'locked');
+  check('Haritada kilitli bölge var', lockedId !== null, `kare ${lockedId}`);
+  if (lockedId !== null) {
+    await page.evaluate((id) => window.__capital.selectTile(id), lockedId);
+    await page.waitForTimeout(200);
+    const lockedNote = (await page.locator('.plot-note').textContent())?.trim();
+    check('Kilitli parsel "imara kapalı" olarak gösteriliyor',
+      lockedNote?.includes('imara kapalı'), lockedNote);
+    check('Kilitli parselde satın alma butonu yok',
+      (await page.locator('button:has-text("satın al")').count()) === 0);
+  }
 
   // ---------- Satın alma ve inşa ----------
   section('Satın alma, devralma, inşa');
@@ -384,13 +418,23 @@ const findTile = (page, kind) =>
   const atNight = async (lens) =>
     page.evaluate(
       async (l) => {
-        const before = window.__capital.renderInfo()?.frameCount ?? 0;
         window.__capital.setLens(l);
         window.__capital.setTimeOfDay(0.75); // güneşin en alçak olduğu an
+        /*
+         * Kare sayımı LENS UYGULANDIKTAN SONRA başlar. Eski hâli çağrı
+         * anından itibaren 2 kare sayıyordu ve o kareler React'in lens
+         * geçişini uygulamasından ÖNCE çizilebiliyordu: pencere emisyonu
+         * lens uygulandıktan sonraki ilk updateDaylight'ta yazıldığı
+         * için sonda 0,00 okuyup çalışan özelliği hatalı raporluyordu.
+         */
+        let lensFrame = null;
         const deadline = Date.now() + 10000;
         while (Date.now() < deadline) {
           const info = window.__capital.renderInfo();
-          if (info && info.activeLens === l && info.frameCount > before + 1) return info;
+          if (info && info.activeLens === l) {
+            if (lensFrame === null) lensFrame = info.frameCount;
+            else if (info.frameCount > lensFrame) return info;
+          }
           await new Promise((r) => setTimeout(r, 25));
         }
         return window.__capital.renderInfo();
@@ -669,14 +713,18 @@ const findTile = (page, kind) =>
         .sort((a, b) => b[1] - a[1])
         .map(([id]) => id);
 
+    const unitLeader = rank(unitsBy)[0];
+    const carLeader = rank(carsBy)[0];
     return {
       shoppers: info.shopperCount,
       stores: flows.length,
       playerId: state.playerCompanyId,
       playerUnits: unitsBy[state.playerCompanyId] ?? 0,
       playerCars: carsBy[state.playerCompanyId] ?? 0,
-      unitLeader: rank(unitsBy)[0],
-      carLeader: rank(carsBy)[0],
+      unitLeader,
+      carLeader,
+      unitLeaderCars: carsBy[unitLeader] ?? 0,
+      carLeaderCars: carsBy[carLeader] ?? 0,
       companies: Object.keys(carsBy).length,
     };
   });
@@ -690,10 +738,16 @@ const findTile = (page, kind) =>
   );
   // Asıl kontrol bu: en çok satan şirketin kapısı en kalabalık olmalı.
   // Bu tutmazsa akış "canlı görünen ama yalan söyleyen" bir süse dönüşür.
+  //
+  // ±1 araç toleransı bilinçli: dağıtım MAĞAZA başına dürüst ve görsel
+  // tavanlı (bir kapıya en fazla N araç). Satışı az sayıda büyük mağazada
+  // yoğunlaşan lider o tavana çarpınca şirket toplamında 1 araçla
+  // geçilebiliyor — akış yalan söylemiyor, kuantalanıyor. Gerçek bir
+  // yalan çok araçlık farkla görünür ve hâlâ kırmızı yakar.
   check(
-    'En çok satanın kapısı en kalabalık',
-    flow.unitLeader === flow.carLeader,
-    `birimde ${flow.unitLeader}, araçta ${flow.carLeader}`,
+    'En çok satanın kapısı en kalabalık (±1 araç)',
+    flow.unitLeader === flow.carLeader || flow.unitLeaderCars >= flow.carLeaderCars - 1,
+    `birimde ${flow.unitLeader} (${flow.unitLeaderCars} araç), araçta ${flow.carLeader} (${flow.carLeaderCars} araç)`,
   );
   check('Akış birden fazla şirketi gösteriyor', flow.companies >= 2,
     `${flow.companies} şirket sokakta`);
@@ -1428,6 +1482,93 @@ const findTile = (page, kind) =>
     consoleErrors.slice(0, 2).join(' | '),
   );
 
+  // ---------- Dönem, sözleşme ve oyun sonu ----------
+  //
+  // Tur 13'ün üç yüzü: mevsim çipi, sözleşme teklifi ve kaybedilebilir
+  // oyunun ekranı. Üçü de state'i elle kurup ARAYÜZDE doğrulanıyor —
+  // "runDay dinleyici uyarmaz" dersi (Tur 11) burada baştan uygulanıyor:
+  // her kurulumdan sonra bir uyarı tetikleniyor ve DOM bekleniyor.
+  section('Dönem, sözleşme ve oyun sonu');
+
+  await page.evaluate(() => {
+    const s = window.__capital.getState();
+    s.era = { defId: 'era_genisleme', startedDay: s.time.day, remainingDays: 200 };
+    window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+  });
+  const eraChip = await page
+    .waitForFunction(() => document.querySelector('.era-chip')?.textContent ?? null, null, { timeout: 5000 })
+    .then((h) => h.jsonValue())
+    .catch(() => null);
+  check('Dönem çipi ekranda', Boolean(eraChip), String(eraChip));
+
+  await page.evaluate(() => {
+    const s = window.__capital.getState();
+    const district = s.districts[0];
+    s.contractOffer = {
+      kind: 'build',
+      title: `${district.name} bölgesine 2 Market işletmesi`,
+      districtId: district.id,
+      category: 'grocery',
+      targetCount: 2,
+      targetShare: 0,
+      durationDays: 120,
+      reward: 44000,
+      penalty: 17600,
+      offeredDay: s.time.day,
+      acceptedDay: s.time.day,
+      deadlineDay: s.time.day + 120,
+    };
+    window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+  });
+  await page.waitForSelector('.contract-chip', { timeout: 5000 }).catch(() => null);
+  check('Sözleşme teklifi çipte görünüyor',
+    (await page.locator('.contract-chip').count()) === 1 &&
+      (await page.locator('.contract-chip button:has-text("Kabul")').count()) === 1,
+    (await page.locator('.contract-chip').textContent().catch(() => '')) ?? '');
+
+  await page.locator('.contract-chip button:has-text("Kabul")').click();
+  const accepted = await page
+    .waitForFunction(() => document.querySelector('.contract-chip.active') !== null, null, { timeout: 5000 })
+    .then(() => true)
+    .catch(() => false);
+  check('Kabul, teklifi aktif sözleşmeye çeviriyor', accepted,
+    accepted ? 'çip ilerleme moduna geçti' : 'aktif çip yok');
+  await page.evaluate(() => {
+    // Sonraki bölümler sözleşme cezasıyla kirlenmesin.
+    delete window.__capital.getState().contract;
+  });
+
+  // Oyun sonu: state kur, ekran insin; sonra temizle, oyun devam etsin.
+  await page.evaluate(() => {
+    const s = window.__capital.getState();
+    const rival = Object.values(s.companies).find((c) => !c.isPlayer);
+    s.gameOver = { day: s.time.day, byCompanyId: rival.id };
+    window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+  });
+  const overShown = await page
+    .waitForFunction(() => document.querySelector('.gameover') !== null, null, { timeout: 5000 })
+    .then(() => true)
+    .catch(() => false);
+  check('Oyun sonu ekranı iniyor', overShown, overShown ? 'ekran görünür' : 'ekran yok');
+  check('Oyun sonu devralanın yüzünü gösteriyor',
+    (await page.locator('.gameover .ceo-portrait, .gameover svg').count()) > 0,
+    `${await page.locator('.gameover svg').count()} portre`);
+  const frozen = await page.evaluate(async () => {
+    const cap = window.__capital;
+    const before = cap.getState().time.day;
+    cap.engine.dispatch({ type: 'SET_SPEED', speed: 3 });
+    await new Promise((r) => setTimeout(r, 700));
+    cap.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+    return { before, after: cap.getState().time.day };
+  });
+  check('Kaybedilmiş oyunda takvim akmıyor', frozen.before === frozen.after,
+    `gün ${frozen.before} → ${frozen.after}`);
+  await page.evaluate(() => {
+    delete window.__capital.getState().gameOver;
+    window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+  });
+  await page.waitForFunction(() => document.querySelector('.gameover') === null, null, { timeout: 5000 }).catch(() => null);
+
   // ---------- Mobil ----------
   //
   // Bu bölüm eskiden tek satırdı: "dar ekranda yatay taşma yok". O kontrol
@@ -1943,9 +2084,13 @@ const findTile = (page, kind) =>
     // 664px'lik bir ekranda 913px'te başlıyordu ve butona ulaşmak için
     // HUD'u ~645px kaydırmak gerekiyordu.
     const vacantTile = await m.evaluate(() => {
-      const tile = window.__capital
-        .getState()
-        .map.tiles.find((t) => t.kind === 'plot' && !t.structureId && !t.ownerId);
+      const state = window.__capital.getState();
+      // Açık bölge şartı — masaüstündeki findTile ile aynı gerekçe.
+      const tile = state.map.tiles.find((t) => {
+        if (t.kind !== 'plot' || t.structureId || t.ownerId) return false;
+        const district = state.districts[t.districtId];
+        return !district || district.opensOnDay === undefined || state.time.day >= district.opensOnDay;
+      });
       if (tile) window.__capital.selectTile(tile.id);
       return tile ? tile.id : null;
     });

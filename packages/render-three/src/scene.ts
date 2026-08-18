@@ -991,6 +991,15 @@ export class CityRenderer {
     // altında kaybolmamalı.
     if (tile.kind === 'road') return this.color.set('#12171f');
 
+    // Kilitli bölge HER lenste kırsal yeşil: oradaki veri henüz karar
+    // verisi değil, lens orayı boyasaydı "oynanabilir alan" gibi
+    // okunurdu. Renk ailesi dünya zeminiyle aynı (#8ea375), kare başına
+    // hafif kırpma — düz tek renk halı gibi durmasın.
+    if (district?.opensOnDay !== undefined && state.time.day < district.opensOnDay) {
+      const jitter = ((tile.x * 73 + tile.y * 151) % 7) - 3;
+      return this.color.set('#7f9468').offsetHSL(jitter * 0.004, 0, jitter * 0.012);
+    }
+
     if (view.lens === 'ownership') {
       if (!tile.ownerId) return this.color.copy(FREE_COLOR);
       const owner = state.companies[tile.ownerId];

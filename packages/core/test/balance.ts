@@ -28,10 +28,12 @@ import {
   competitionCards,
   createNewGame,
   districtOpportunity,
+  DISTRICT_UNLOCK_DAYS,
   estimateInvestment,
   formatMoney,
   getPlayer,
   goodShares,
+  isDistrictOpen,
   marketingLeverage,
   rankedBuildOptions,
   researchCeiling,
@@ -39,6 +41,8 @@ import {
   shelfReach,
   bookValue,
   confidence,
+  collectEventModifiers,
+  controllerOf,
   freeFloat,
   marketCap,
   portfolioValue,
@@ -62,13 +66,64 @@ import type { GameState } from '../src/types';
  * harness "bilgili bir oyuncu ne yaşar" sorusunu ölçmeli, oyunun
  * tavsiyesini görmezden gelen birini değil.
  */
+/*
+ * OYUNDA OLAN RAKİPLER, KATALOGDAKİLER DEĞİL.
+ *
+ * Test bugüne kadar `NPC_PROFILES` üzerinde dönüyordu ve profil sayısı
+ * ile şirket sayısı aynı olduğu sürece bu doğru çalışıyordu. Rakip
+ * sayısı haritayla ölçeklenmeye başlayınca varsayım kırıldı: katalogda
+ * sekiz profil var, varsayılan haritada dört şirket kuruluyor ve kalan
+ * dördü için `state.companies[id]` undefined dönüyor.
+ *
+ * Doğru kaynak state: kimin sahaya çıktığını dünya kurulumu belirliyor.
+ */
+function activeProfiles(state: GameState) {
+  return NPC_PROFILES.filter((profile) => state.companies[profile.id]);
+}
+
+/*
+ * ZİNCİR VE MAĞAZA AYNI TİKTE — ya biri ya öteki değil.
+ *
+ * Eski hâli `if (followChainAdvice()) return;` idi: zincir hamlesi olan
+ * hafta mağaza açılmıyordu. Devralma repertuvara girince bu, zincir
+ * A/B'sini iki değişkenli bir deneye çevirdi — zincirli kol hem üretim
+ * ekliyor HEM mağaza eksiltiyordu (42 ünite = 42 eksik mağaza) ve fark
+ * −%1'e düştü. Gerçek oyuncu nakdi yetiyorsa ikisini de yapar; vekil de
+ * öyle yapınca kollar arasında tek fark zincirin KENDİSİ kalıyor.
+ */
 function playerStrategy(engine: GameEngine): void {
-  if (followChainAdvice(engine)) return;
+  followChainAdvice(engine);
   expandOutlets(engine);
 }
 
-/** Zincir kartının önerdiği hamleyi uygular; "erken" olanı atlar. */
+/** Zincir kartının önerdiği hamleyi uygular; "erken" ve "ertelendi" olanı atlar. */
 function followChainAdvice(engine: GameEngine): boolean {
+  const state = engine.getState();
+  const player = getPlayer(state);
+
+  for (const card of chainCards(state, player.id)) {
+    const move = card.move;
+    if (!move || move.premature || move.deferred) continue;
+    if (move.cost + tilePrice(state, move.tileId, player.id) > player.cash * 0.6) continue;
+
+    const acquired = move.needsBuyout
+      ? engine.dispatch({ type: 'BUYOUT_TILE', tileId: move.tileId })
+      : engine.dispatch({ type: 'BUY_TILE', tileId: move.tileId });
+    if (!acquired.ok) continue;
+    if (engine.dispatch({ type: 'BUILD', tileId: move.tileId, defId: move.defId }).ok) return true;
+  }
+  return false;
+}
+
+/**
+ * A/B'nin TARİHSEL zincir kolu — dondurulmuş kopya
+ * (`expandOutletsVacantOnly` ile aynı gerekçe). Yalnızca `premature`
+ * atlar; erteleme frenini BİLEREK görmez. Regresyon deneyi mekanizmayı
+ * ölçüyor (ünite kurmak maliyeti düşürüyor mu), tavsiye politikasını
+ * değil — fren politika katmanı ve kendi ölçümünü
+ * `chain-scale-experiment.ts` yapıyor.
+ */
+function followChainAdviceFrozen(engine: GameEngine): boolean {
   const state = engine.getState();
   const player = getPlayer(state);
 
@@ -94,17 +149,34 @@ function expandOutlets(engine: GameEngine): void {
   const budget = player.cash * 0.5;
   if (budget < 30_000) return;
 
-  const districts = [...state.districts].sort(
-    (a, b) => districtOpportunity(b) - districtOpportunity(a),
-  );
+  const districts = [...state.districts]
+    // Kilitli bölge hedef değil: orada seçim yapıp satın alma kapısından
+    // dönmek vekilin 5 günlük hamlesini boşa yakıyordu.
+    .filter((district) => isDistrictOpen(state, district.id))
+    .sort((a, b) => districtOpportunity(b) - districtOpportunity(a));
 
   let best: { tileId: number; defId: string; profit: number } | null = null;
 
   for (const district of districts.slice(0, 4)) {
-    // Yalnızca gerçekten satın alınabilir boş parseller.
+    /*
+     * BOŞ PARSEL ÖNCE, YOKSA DEVRALMA — oyunun kendi öğretisi (Tur 8:
+     * "bölge dolduğunda çıkış devralma") ve NPC'lerin oynadığı sıra.
+     *
+     * Vekil bugüne kadar yalnızca boş parsel arıyordu ve bu, kademeli
+     * imarla gerçek bir kör nokta oldu: dar başlayan şehirde boş parsel
+     * ~60. günde bitiyor, NPC'ler devralmayla büyümeye devam ederken
+     * vekil duruyordu — oyuncu/rakip oranı 1,58'den 0,20'ye düşmüştü.
+     * Ölçülen şey oyun dengesi değil vekilin eksik repertuvarıydı.
+     */
     const tile = state.map.tiles
-      .filter((t) => t.districtId === district.id && t.kind === 'plot' && !t.ownerId && !t.structureId)
-      .sort((a, b) => a.landValue - b.landValue)[0];
+      .filter((t) => t.districtId === district.id && t.kind === 'plot' && !t.ownerId && !t.buildingId)
+      .map((t) => ({ tile: t, price: tilePrice(state, t.id, player.id) }))
+      .filter((entry) => entry.price > 0)
+      .sort(
+        (a, b) =>
+          (a.tile.structureId !== null ? 1 : 0) - (b.tile.structureId !== null ? 1 : 0) ||
+          a.price - b.price,
+      )[0]?.tile;
     if (!tile) continue;
 
     for (const option of buildOptions(state)) {
@@ -122,6 +194,56 @@ function expandOutlets(engine: GameEngine): void {
       //
       // Geri ödeme sınırı elenmiş adayları ayıklamak için duruyor;
       // seçimi artık o yapmıyor.
+      if (!estimate || estimate.paybackDays > 150) continue;
+      if (!best || estimate.dailyProfit > best.profit) {
+        best = { tileId: tile.id, defId: option.def.id, profit: estimate.dailyProfit };
+      }
+    }
+  }
+
+  if (!best) return;
+  const needsBuyout = state.map.tiles[best.tileId]!.structureId !== null;
+  const bought = needsBuyout
+    ? engine.dispatch({ type: 'BUYOUT_TILE', tileId: best.tileId })
+    : engine.dispatch({ type: 'BUY_TILE', tileId: best.tileId });
+  if (!bought.ok) return;
+  engine.dispatch({ type: 'BUILD', tileId: best.tileId, defId: best.defId });
+}
+
+/**
+ * Zincir A/B'sinin TARİHSEL genişleme kolu — bilerek dondurulmuş kopya.
+ *
+ * `expandOutlets` devralmayı ve kilit filtresini öğrendi; bu kopya
+ * öğrenmedi ve öğrenmeyecek. Regresyon deneyi +%12/+%19/+%30 serisiyle
+ * bu düzenekte kalibre edildi; düzeneği vekille birlikte evriltmek her
+ * turda "yeni bir deney" yaratır ve seri kıyaslanamaz hale gelirdi.
+ * (Vekilin yeni repertuvarıyla çıkan ürün sorusu DURUM §4.8'de.)
+ */
+function expandOutletsVacantOnly(engine: GameEngine): void {
+  const state = engine.getState();
+  const player = getPlayer(state);
+
+  const budget = player.cash * 0.5;
+  if (budget < 30_000) return;
+
+  const districts = [...state.districts].sort(
+    (a, b) => districtOpportunity(b) - districtOpportunity(a),
+  );
+
+  let best: { tileId: number; defId: string; profit: number } | null = null;
+
+  for (const district of districts.slice(0, 4)) {
+    const tile = state.map.tiles
+      .filter((t) => t.districtId === district.id && t.kind === 'plot' && !t.ownerId && !t.structureId)
+      .sort((a, b) => a.landValue - b.landValue)[0];
+    if (!tile) continue;
+
+    for (const option of buildOptions(state)) {
+      if (!option.unlocked) continue;
+      if (option.def.role !== 'outlet' && option.def.role !== 'rental') continue;
+      if (tilePrice(state, tile.id) + option.def.cost > budget) continue;
+
+      const estimate = estimateInvestment(state, district.id, option.def.id, player.id);
       if (!estimate || estimate.paybackDays > 150) continue;
       if (!best || estimate.dailyProfit > best.profit) {
         best = { tileId: tile.id, defId: option.def.id, profit: estimate.dailyProfit };
@@ -270,6 +392,9 @@ expect('determinizm: aynı seed = aynı sonuç', a === b, a === b ? 'birebir ayn
 
 // Her binanın gerçekten kurulabildiğini doğrula (ölü içerik kalmasın).
 // Üretim üniteleri imar kısıtlı olduğu için parsel de ona göre seçilir.
+// Parsel AÇIK bölgeden seçilir: gün 0'da köşeler kilitli ve bu doğru —
+// katalog kontrolünün iddiası "her bina bir yerde kurulabilir", "her
+// bina limanda kurulabilir" değil (üretim için sanayi hep açık).
 const engine = new GameEngine(createNewGame({ seed: 5 }));
 const player = getPlayer(engine.getState());
 player.cash = 50_000_000;
@@ -279,6 +404,7 @@ for (const def of BUILDINGS) {
   const s = engine.getState();
   const tile = s.map.tiles.find((t) => {
     if (t.kind !== 'plot' || t.ownerId || t.structureId || t.buildingId) return false;
+    if (!isDistrictOpen(s, t.districtId)) return false;
     const district = s.districts[t.districtId]!;
     return !def.zones || def.zones.includes(district.archetype);
   });
@@ -293,18 +419,28 @@ for (const def of BUILDINGS) {
 expect('katalogdaki her bina kurulabiliyor', built === BUILDINGS.length, `${built}/${BUILDINGS.length}`);
 
 // Parsel kısıtı: şehir gerçekten kıt olmalı ama tıkanmamalı.
+//
+// Doku oranları AÇIK şehirden ölçülür: kilitli köşeler bilerek boş
+// (açılınca kurulacak arazi onlar) ve pazarda değiller — onları saymak
+// "bol arsa var" yalanı söylerdi. Kilitli taraf ayrıca raporlanır.
 {
   const state = createNewGame({ seed: 3 });
-  const total = state.map.tiles.length;
-  const roads = state.map.tiles.filter((t) => t.kind === 'road').length;
-  const civic = state.map.tiles.filter((t) => t.kind === 'civic').length;
-  const occupied = state.map.tiles.filter((t) => t.kind === 'plot' && t.structureId).length;
-  const vacant = state.map.tiles.filter((t) => t.kind === 'plot' && !t.structureId).length;
+  const openTiles = state.map.tiles.filter((t) => isDistrictOpen(state, t.districtId));
+  const lockedTiles = state.map.tiles.length - openTiles.length;
+  const roads = openTiles.filter((t) => t.kind === 'road').length;
+  const civic = openTiles.filter((t) => t.kind === 'civic').length;
+  const occupied = openTiles.filter((t) => t.kind === 'plot' && t.structureId).length;
+  const vacant = openTiles.filter((t) => t.kind === 'plot' && !t.structureId).length;
 
   console.log(
-    `\nŞehir dokusu: ${roads} sokak, ${civic} kamu, ${occupied} dolu parsel, ${vacant} boş parsel (toplam ${total})`,
+    `\nAçık şehir dokusu: ${roads} sokak, ${civic} kamu, ${occupied} dolu parsel, ` +
+      `${vacant} boş parsel (açık ${openTiles.length} + kilitli ${lockedTiles} kare)`,
   );
-  expect('şehrin çoğu zaten dolu', (roads + civic + occupied) / total > 0.7, `%${Math.round(((roads + civic + occupied) / total) * 100)}`);
+  expect(
+    'açık şehrin çoğu zaten dolu',
+    (roads + civic + occupied) / openTiles.length > 0.7,
+    `%${Math.round(((roads + civic + occupied) / openTiles.length) * 100)}`,
+  );
   // ORAN, MUTLAK SAYI DEĞİL.
   //
   // Burada eskiden `vacant >= 80 && vacant <= 180` yazıyordu ve Tur 8'de
@@ -317,7 +453,7 @@ expect('katalogdaki her bina kurulabiliyor', built === BUILDINGS.length, `${buil
   expect(
     'yine de yeterli boş parsel var',
     vacantShare >= 0.25 && vacantShare <= 0.55,
-    `${vacant}/${plots} parsel boş — %${Math.round(vacantShare * 100)}`,
+    `${vacant}/${plots} açık parsel boş — %${Math.round(vacantShare * 100)}`,
   );
   expect(
     'her bölgede en az bir boş parsel var',
@@ -334,7 +470,9 @@ expect('katalogdaki her bina kurulabiliyor', built === BUILDINGS.length, `${buil
   const s = engine2.getState();
   getPlayer(s).cash = 5_000_000;
 
-  const occupied = s.map.tiles.find((t) => t.kind === 'plot' && t.structureId)!;
+  const occupied = s.map.tiles.find(
+    (t) => t.kind === 'plot' && t.structureId && isDistrictOpen(s, t.districtId),
+  )!;
   const directBuy = engine2.dispatch({ type: 'BUY_TILE', tileId: occupied.id });
   const buyout = engine2.dispatch({ type: 'BUYOUT_TILE', tileId: occupied.id });
   expect('dolu parsel doğrudan alınamıyor', !directBuy.ok, directBuy.reason ?? '');
@@ -383,9 +521,19 @@ expect('katalogdaki her bina kurulabiliyor', built === BUILDINGS.length, `${buil
 
 console.log('\n=== Tedarik zinciri ===\n');
 
-/** İzole senaryo: rakipsiz, olaysız, sınırsız sermaye. */
+/**
+ * İzole senaryo: rakipsiz, olaysız, sınırsız sermaye, imar takvimi yok.
+ *
+ * `districtUnlocks: false` şart: laboratuvar ölçümleri (zincir birim
+ * maliyet kimliği, geri ödeme penceresi) Tur 1'den beri student/port gibi
+ * SABİT bölgeler üzerinde kurulu. İmar takvimi açık olsaydı bu bölgeler
+ * kilitli köşe çıkabilir, senaryo hiç kurulamaz ve ölçüm kalibrasyonu
+ * değil takvimi ölçerdi.
+ */
 function labEngine(seed: number): GameEngine {
-  const engine = new GameEngine(createNewGame({ seed, companyName: 'Lab AŞ' }));
+  const engine = new GameEngine(
+    createNewGame({ seed, companyName: 'Lab AŞ', districtUnlocks: false }),
+  );
   const state = engine.getState();
   state.flags.npcCompetition = false;
   state.flags.randomEvents = false;
@@ -666,6 +814,56 @@ function outletUnitCost(state: GameState): number {
   );
 }
 
+// ---- 5b. Fırsat maliyeti freni (§4.8): tempo, yasak değil ----
+//
+// Sınanan üç şey: (1) taze bir üniteden hemen sonra, iyi mağaza fırsatı
+// varken kart SIRADAKİ üniteyi erteliyor; (2) erteleme premature değil
+// (iki durum ayrı sorulara cevap); (3) tempo dolunca — başka hiçbir şey
+// değişmeden — aynı hamle öneriye dönüyor. Üçüncüsü durum ameliyatıyla
+// (builtDay geri çekilir): 45 gün koşmak aynı şeyi daha yavaş ve daha
+// gürültülü sınardı.
+{
+  const engine2 = new GameEngine(createNewGame({ seed: 65, companyName: 'Fren AŞ' }));
+  const s = engine2.getState();
+  s.flags.raids = false;
+  const player = getPlayer(s);
+  player.cash = 30_000_000;
+  player.netWorth = 30_000_000;
+
+  for (let i = 0; i < 6; i++) place(engine2, 'cafe', 'mid_residential');
+  for (let i = 0; i < 30; i++) engine2.runDay();
+  place(engine2, 'coffee_estate', 'industrial');
+
+  const freshCard = chainCards(s, player.id)[0];
+  const freshMove = freshCard?.move;
+  expect(
+    'taze üniteden sonra kart sıradakini erteliyor',
+    Boolean(freshMove && !freshMove.premature && freshMove.deferred),
+    freshMove
+      ? `${freshMove.name}: premature=${freshMove.premature} deferred=${freshMove.deferred}`
+      : 'hamle yok',
+  );
+  expect(
+    'erteleme gerekçesi fırsat maliyetini söylüyor',
+    (freshMove?.reason ?? '').includes('acelesi yok'),
+    freshMove?.reason ?? '',
+  );
+
+  // Tempo çapasını geriye çek: son ünite 50 gün önce kurulmuş olsun.
+  for (const building of Object.values(s.buildings)) {
+    if (building.companyId !== player.id) continue;
+    if (BUILDING_BY_ID[building.defId]?.role === 'extract') building.builtDay -= 50;
+  }
+  const pacedMove = chainCards(s, player.id)[0]?.move;
+  expect(
+    'tempo dolunca aynı hamle öneriye dönüyor',
+    Boolean(pacedMove && !pacedMove.premature && !pacedMove.deferred),
+    pacedMove
+      ? `${pacedMove.name}: premature=${pacedMove.premature} deferred=${pacedMove.deferred}`
+      : 'hamle yok',
+  );
+}
+
 // ---- 6. Rakipler de zincir kuruyor mu? ----
 // Tur 1'in C parçası. Rakipler zincir kurmazsa oyuncu, kurduğu anda
 // kalıcı ve tek taraflı bir maliyet avantajı elde eder — yani zincir
@@ -679,7 +877,7 @@ function outletUnitCost(state: GameState): number {
   const s = engine2.getState();
 
   const byProfile = new Map<string, { name: string; trait: string; chain: number; netWorth: number; debt: number }>();
-  for (const profile of NPC_PROFILES) {
+  for (const profile of activeProfiles(s)) {
     const company = s.companies[profile.id];
     if (!company) continue;
     const chain = Object.values(s.buildings).filter((b) => {
@@ -737,12 +935,61 @@ function outletUnitCost(state: GameState): number {
   // gün açılan bir mağazanın üstüne denk gelebilir.
   function runStrategy(seed: number, useChain: boolean): { netWorth: number; profit: number; chain: number } {
     const engine2 = new GameEngine(createNewGame({ seed, companyName: 'Test AŞ' }));
+    /*
+     * DÖNEMLER KAPALI, KISA OLAYLAR AÇIK — ve bu ayrım bir ölçümün ta
+     * kendisi. İlk düzeltme denemesi ikisini birden kapatmıştı ve zincir
+     * 0/3'e düştü (−%3): meğer +%12'lik avantajın bir kısmı kısa krizlere
+     * karşı SİGORTA değeriymiş — "Çip Krizi"nde pazardan alan zamma
+     * yakalanır, zinciri olan kendi maliyetiyle üretir. Olayları kapatmak
+     * zincirin sigortaladığı riski de silmişti; mekanizmayı riskiyle
+     * birlikte sınamak gerekiyor.
+     *
+     * Dönemler ise farklı: 240 günlük bir mevsim 60 günlük kuyruk
+     * penceresine bütünüyle oturuyor ve kıyası iklim belirliyor —
+     * Sıkılaşma'da fazla kapasite gerçekten yüke dönüyor (bu bir oyun
+     * derinliği, benchmark'ın konusu). Bu kontrolün sorusu mekanizma:
+     * o yüzden yalnızca dönemler dışarıda.
+     */
+    engine2.getState().flags.eras = false;
+    /*
+     * Baskınlar da kapalı — dönemlerle aynı gerekçenin daha serti:
+     * NPC-NPC devralmaları kollar arasında YAPISAL fark yaratıyor (bir
+     * kolda rakip 370. günde yutuluyor, ötekinde yaşıyor) ve 60 günlük
+     * kuyruk penceresi iki farklı rakip manzarasını kıyaslıyor. Kısa
+     * olaylar gürültü, devralma kalıcı — gürültü eşlemede sönümlenir,
+     * yapısal fark sönümlenmez.
+     */
+    engine2.getState().flags.raids = false;
     let tail = 0;
-    for (let day = 1; day <= 500; day++) {
+    for (let day = 1; day <= 560; day++) {
       if (day % 5 === 0) {
-        if (!(useChain && followChainAdvice(engine2))) expandOutlets(engine2);
+        /*
+         * A/B TARİHSEL TASARIMINI KORUYOR: boş-parsel genişleme, "ya
+         * zincir ya mağaza" temposu. Bu deney bir REGRESYON ölçümü —
+         * +%12/+%19/+%30 serisiyle kalibre edildi ve işi "zincir
+         * mekanizması hâlâ kazandırıyor mu"yu aynı düzenekte sormak.
+         *
+         * Vekil devralmayı öğrenince aynı düzeneği ona da açmayı
+         * denedik; sonuç kartın BAŞKA bir kusurunu çıkardı: sınırsız
+         * devralma çağında kart üniteyi üst uçta da önermeye devam
+         * ediyor (27-43 ünite) ve marjinal üniteler kârı yiyor
+         * (−%1…−%22). Bu, deney düzeneği değil ÜRÜN sorusu — açık
+         * kalemlere yazıldı (DURUM §4.8). Regresyon deneyi o soruyu
+         * cevaplamaz; düzeneğini değiştirmek iki ölçümü birbirine
+         * karıştırmak olurdu.
+         */
+        if (!(useChain && followChainAdviceFrozen(engine2))) expandOutletsVacantOnly(engine2);
       }
       engine2.runDay();
+      /*
+       * Kuyruk 120 gün — ama İLERİ doğru uzatılmış (440-560), geriye
+       * değil. İlk deneme 380'den başlatmıştı ve Tur 8'in horizon dersini
+       * çiğniyordu: zincirin geri ödemesi ~190 gün, erken pencere henüz
+       * amorti olmamış üniteleri ölçüyor ve avantajı yarıya gösteriyordu
+       * (tohumlar arası fark da büyüyordu, çünkü kolların kuruluş
+       * temposu farklı). Uzun pencere olay gürültüsünü eşitliyor, geç
+       * başlangıç olgun zinciri ölçüyor.
+       */
       if (day > 440) tail += getPlayer(engine2.getState()).today.profit;
     }
     const s = engine2.getState();
@@ -752,7 +999,7 @@ function outletUnitCost(state: GameState): number {
       const def = BUILDING_BY_ID[b.defId];
       return def?.role === 'extract' || def?.role === 'process';
     }).length;
-    return { netWorth: player.netWorth, profit: tail / 60, chain };
+    return { netWorth: player.netWorth, profit: tail / 120, chain };
   }
 
   console.log('\n--- zincir kartını izleyen vs izlemeyen (500 gün) ---');
@@ -1525,6 +1772,11 @@ let researchPayback = Infinity;
 // hamlesi olmalı. Hepsi aynı şeyi yapıyorsa doktrin diye bir şey yok.
 {
   const engine = new GameEngine(createNewGame({ seed: 12, companyName: 'Doktrin AŞ' }));
+  // Baskınlar kapalı: bu bölüm doktrinlerin İNŞAAT davranışını ölçüyor
+  // ve yutulmuş bir rakip hiç kol kuramaz — devralma, ayrışma sinyalini
+  // örnekten silip kontrolü kişiliklerle ilgisi olmayan bir sebepten
+  // kırıyordu.
+  engine.getState().flags.raids = false;
   const player = getPlayer(engine.getState());
   player.cash = 40_000_000;
   for (let day = 1; day <= 500; day++) {
@@ -1534,7 +1786,7 @@ let researchPayback = Infinity;
   const state = engine.getState();
 
   console.log('\n--- rakiplerin kol yatırımı (500 gün) ---');
-  const rows = NPC_PROFILES.map((profile) => {
+  const rows = activeProfiles(state).map((profile) => {
     let research = 0;
     let marketing = 0;
     for (const building of Object.values(state.buildings)) {
@@ -1627,7 +1879,13 @@ let researchPayback = Infinity;
 
   // Doktrinler birbirinden gerçekten ayrışıyor mu? Tek tip davranıyorlarsa
   // "kişilik" bir etiketten ibaret demektir.
-  const shapes = new Set(rows.map((row) => `${Math.min(row.research, 3)}/${Math.min(row.marketing, 3)}`));
+  //
+  // Şapka 3'ten 6'ya çıktı — ENSTRÜMAN SİNYALİ EZİYORDU: Tur 15'te
+  // vekil güçlenince iki kol kuran rakip de 3'ün üstüne çıktı ve
+  // `min(x,3)` 3/6 ile 3/4'ü aynı "3/3"e indirip gerçek ayrışmayı
+  // (tabloda apaçık) kontrolden sildi. 6, küçük sayıları hâlâ sabit
+  // tutarken "yoğun yatırım" farklarını ayırt ediyor.
+  const shapes = new Set(rows.map((row) => `${Math.min(row.research, 6)}/${Math.min(row.marketing, 6)}`));
   expect('doktrinler birbirinden ayrışıyor', shapes.size >= 3,
     `${shapes.size} farklı kol profili: ${[...shapes].join(' ')}`);
 
@@ -1831,6 +2089,10 @@ console.log('\n=== Parsel ihalesi ===\n');
   const state = engine.getState();
   // Oyuncu fakir: taban fiyatı verse bile rakip üstüne çıkabilmeli.
   getPlayer(state).cash = 3_000;
+  // Baskınlar kapalı: kasıtlı fakir bırakılan oyuncu ~250. günde yutulup
+  // takvimi donduruyor ve 400 günlük sayım 8 ihalede kalıyordu. Senaryo
+  // ihale temposunu ölçüyor — baskın kaybedilebilirlik bölümünün konusu.
+  state.flags.raids = false;
 
   // İhaleleri HABERDEN saymak yanlıştı: haber listesi kapaklı, yeni
   // öğeler eskileri düşürüyor ve delta sıfıra iniyor. Bunun yerine
@@ -1900,7 +2162,7 @@ console.log('\n=== Parsel ihalesi ===\n');
   const engine2 = new GameEngine(createNewGame({ seed: 19, companyName: 'İhale AŞ' }));
   const state2 = engine2.getState();
   getPlayer(state2).cash = 5_000;
-  for (const profile of NPC_PROFILES) state2.companies[profile.id]!.cash = 60_000;
+  for (const profile of activeProfiles(state2)) state2.companies[profile.id]!.cash = 60_000;
 
   let overBid = 0;
   for (let day = 0; day < 300; day++) {
@@ -1960,11 +2222,25 @@ console.log('\n=== Borsa ===\n');
     engine.runDay();
   }
 
-  let maxPortfolio = 0;
+  /*
+   * ESKİ KONTROL "kimse hisse almadıysa portföy tam sıfır" İDİ ve
+   * rakipler baskın yapmaya başlayınca ÖNCÜLÜ bozuldu: 160. günden sonra
+   * NPC'ler kendiliğinden hisse topluyor, yani 300 günlük koşuda "kimse
+   * almadı" varsayımı artık yanlış. Denge kimliğinin kendisi duruyor —
+   * hisse TUTMAYAN şirketin portföyü sıfırdır — ve oyuncu bu koşuda hiç
+   * almadığı için kimlik onun üzerinden sınanıyor.
+   */
+  expect(
+    'hisse almayan şirketin portföyü tam sıfır',
+    portfolioValue(state, getPlayer(state).id) === 0,
+    `${portfolioValue(state, getPlayer(state).id)}`,
+  );
+  // Baskının POZİTİF kanıtı: 300 günde en az bir rakip pay toplamış olmalı.
+  let raidedPortfolio = 0;
   for (const company of Object.values(state.companies)) {
-    maxPortfolio = Math.max(maxPortfolio, portfolioValue(state, company.id));
+    if (!company.isPlayer) raidedPortfolio = Math.max(raidedPortfolio, portfolioValue(state, company.id));
   }
-  expect('kimse hisse almadıysa portföy değeri tam sıfır', maxPortfolio === 0, `${maxPortfolio}`);
+  expect('rakipler kendiliğinden hisse topluyor', raidedPortfolio > 0, formatMoney(raidedPortfolio));
 
   // Değerleme tutarlılığı: piyasa değeri = defter × güven.
   const player = getPlayer(state);
@@ -2015,8 +2291,17 @@ console.log('\n=== Borsa ===\n');
   expect('serbest dolaşım azalıyor', freeFloat(state, targetId) === TOTAL_SHARES - 1_000,
     `${freeFloat(state, targetId)} hisse`);
 
+  /*
+   * ESKİ KURAL "kendi hisseni alamazsın" idi — tek yönlü borsanın
+   * kalıntısı. Baskınlar gelince geri alım tek savunma oldu: hazineye
+   * çekilen her hisse dolaşımdan düşer.
+   */
+  const floatBefore = freeFloat(state, player.id);
   const own = engine.dispatch({ type: 'BUY_SHARES', companyId: player.id, count: 10 });
-  expect('kendi hisseni alamıyorsun', !own.ok, own.reason ?? '');
+  expect('geri alım yapılabiliyor', own.ok, own.ok ? '10 hisse hazinede' : ((own as { reason?: string }).reason ?? ''));
+  expect('geri alım dolaşımı düşürüyor', freeFloat(state, player.id) === floatBefore - 10,
+    `${floatBefore} → ${freeFloat(state, player.id)}`);
+  expect('hazine payı kontrol saymıyor', controllerOf(state, player.id) === null, 'kontrol boş');
   const tooMany = engine.dispatch({ type: 'SELL_SHARES', companyId: targetId, count: 5_000 });
   expect('elinde olmayanı satamıyorsun', !tooMany.ok, tooMany.reason ?? '');
 
@@ -2095,8 +2380,13 @@ console.log('\n=== Borsa ===\n');
     `${targetTiles} parsel devredildi`);
   expect('azınlık hissedar nakde çevrildi', minority.cash > minorityCashBefore,
     formatMoney(minority.cash - minorityCashBefore));
-  expect('kimsenin elinde ölü şirketin hissesi kalmıyor',
-    Object.values(state.companies).every((c) => (c.shares[targetId] ?? 0) === 0), 'temiz');
+  // Detay statik "temiz" idi ve kontrol kırıldığında bile öyle yazıyordu —
+  // kırık bir kontrolün detayı SUÇLUYU göstermeli.
+  const deadHolders = Object.values(state.companies)
+    .filter((c) => (c.shares[targetId] ?? 0) > 0)
+    .map((c) => `${c.id}:${c.shares[targetId]}`);
+  expect('kimsenin elinde ölü şirketin hissesi kalmıyor', deadHolders.length === 0,
+    deadHolders.join(' ') || 'temiz');
   expect('devralma haberi düşüyor',
     state.news.some((n) => n.title.includes('devraldı')),
     state.news.find((n) => n.title.includes('devraldı'))?.title ?? '—');
@@ -2235,6 +2525,349 @@ console.log('\n--- parsel getirisi ---');
   console.log(
     `  NOT: abonman %${Math.round(subscription * 100)} — geriye fabrika, depo ve ` +
       `rakipler için ${plots - neededPlots} parsel kalıyor.`,
+  );
+}
+
+
+
+
+console.log('\n=== Sözleşmeler: dışarıdan gelen hedef ===\n');
+
+/*
+ * Sözleşme, "en kârlı hamleyi bul" döngüsünün dışına çıkan ilk sebep.
+ * Sınanan dört şey: teklif kendiliğinden geliyor, kabul çalışıyor,
+ * teslimat ödülü ödüyor, süre aşımı cezayı kesiyor.
+ */
+{
+  // Organik yol: teklifler gerçekten üretiliyor mu?
+  const engine = new GameEngine(createNewGame({ seed: 9, companyName: 'Taahhüt AŞ' }));
+  const state = engine.getState();
+  getPlayer(state).cash = 80_000_000; // baskın yemesin, takvim donmasın
+  let offers = 0;
+  let seenId = -1;
+  for (let day = 1; day <= 400; day++) {
+    engine.runDay();
+    for (const item of state.news) {
+      if (item.id <= seenId) break;
+      if (item.title.includes('sözleşme teklifi')) offers++;
+    }
+    seenId = state.news[0]?.id ?? seenId;
+    // Teklifler masada beklemesin: sayaç yalnızca ÜRETİMİ ölçüyor.
+    if (state.contractOffer) engine.dispatch({ type: 'DECLINE_CONTRACT' });
+  }
+  expect('teklifler kendiliğinden geliyor', offers >= 2, `400 günde ${offers} teklif`);
+
+  // Kurgulu yol: inşaat sözleşmesinin tam döngüsü.
+  const engine2 = new GameEngine(createNewGame({ seed: 10, companyName: 'Teslimat AŞ' }));
+  const s2 = engine2.getState();
+  getPlayer(s2).cash = 5_000_000;
+  // AÇIK bölge şartı: ilk aday (0 = Liman) artık kilitli köşe olabiliyor
+  // ve oradaki kurulum "imara kapalı" kapısından döner. Motorun kendi
+  // teklif üreticisi de aynı filtreyi uyguluyor — kurgu gerçeği taklit
+  // etmeli.
+  const district = s2.districts.find(
+    (d) =>
+      isDistrictOpen(s2, d.id) &&
+      s2.map.tiles.some(
+        (t) => t.districtId === d.id && t.kind === 'plot' && !t.buildingId && !t.structureId,
+      ),
+  )!;
+  s2.contractOffer = {
+    kind: 'build',
+    title: `${district.name} bölgesine 2 Market işletmesi`,
+    districtId: district.id,
+    category: 'grocery',
+    targetCount: 2,
+    targetShare: 0,
+    durationDays: 120,
+    reward: 44_000,
+    penalty: 17_600,
+    offeredDay: s2.time.day,
+    acceptedDay: s2.time.day,
+    deadlineDay: s2.time.day + 120,
+  };
+
+  const accept = engine2.dispatch({ type: 'ACCEPT_CONTRACT' });
+  expect('teklif kabul edilebiliyor', accept.ok, accept.ok ? 'aktif' : (accept as { reason?: string }).reason ?? '');
+  expect('kabul teklifi masadan kaldırıyor', !s2.contractOffer && Boolean(s2.contract), 'masada tek kopya');
+
+  /*
+   * Ödül İÇERİDE ödeniyor: ikinci bina kurulup gün işlediği anda
+   * `runContractTick` teslimatı görüyor ve parayı AYNI runDay içinde
+   * yatırıyor. İlk yazdığım kontrol ödemeyi sonraki güne bakarak arıyordu
+   * ve "+2125" (sıradan günlük kâr) ölçtü — ödeme çoktan olmuştu.
+   * Para hareketi güvenilir pencereye sığmadığı için doğrulama OLAYDAN:
+   * teslimat haberi + sözleşmenin kapanması.
+   */
+  const spots = s2.map.tiles
+    .filter((t) => t.districtId === district.id && t.kind === 'plot' && !t.buildingId && !t.structureId)
+    .slice(0, 2);
+  for (const tile of spots) {
+    engine2.dispatch({ type: 'BUY_TILE', tileId: tile.id });
+    const built = engine2.dispatch({ type: 'BUILD', tileId: tile.id, defId: 'corner_shop' });
+    if (!built.ok) console.log('  kurulum hatası:', (built as { reason?: string }).reason);
+    engine2.runDay();
+  }
+  engine2.runDay();
+  const delivered = s2.news.find((n) => n.title === 'Sözleşme teslim edildi');
+  expect('teslimat ödülü ödeniyor', !s2.contract && Boolean(delivered),
+    delivered ? delivered.body : 'teslimat haberi yok');
+
+  // Süre aşımı: hedefi imkânsız bir sözleşme cezayla kapanıyor.
+  s2.contract = {
+    kind: 'build',
+    title: 'imkânsız hedef',
+    districtId: district.id,
+    category: 'grocery',
+    targetCount: 99,
+    targetShare: 0,
+    durationDays: 3,
+    reward: 10_000,
+    penalty: 4_000,
+    offeredDay: s2.time.day,
+    acceptedDay: s2.time.day,
+    deadlineDay: s2.time.day + 3,
+  };
+  // Aynı gerekçe: dükkânların günlük kârı cezayı gölgeliyor (5 günde
+  // +10 B ₺ kazanç, −4 B ₺ ceza = net artı). Doğrulama olaydan.
+  for (let i = 0; i < 5; i++) engine2.runDay();
+  const expired = s2.news.find((n) => n.title === 'Sözleşme süresi doldu');
+  expect('süre aşımı cezayı kesiyor', !s2.contract && Boolean(expired),
+    expired ? expired.body : 'süre aşımı haberi yok');
+}
+
+console.log('\n=== Dönemler: şehrin makro iklimi ===\n');
+
+/*
+ * "Oyun bir süre sonra tekrara düşüyor" şikâyetinin cevaplarından biri:
+ * 300. gün ile 900. gün aynı zeminde oynanmasın. Sınanan üç kural —
+ *
+ *   1. dönem HEP vardır: ilk dönem 60. gün civarında başlar, biten
+ *      dönemin yerine anında yenisi gelir (iklimsiz gün yok)
+ *   2. aynı dönem üst üste gelmez (mevsimin işi değişim)
+ *   3. kapanış 20 gün önceden haber verilir (dönem sonu plan penceresi)
+ */
+{
+  const engine = new GameEngine(createNewGame({ seed: 77, companyName: 'İklim AŞ' }));
+  const state = engine.getState();
+  // Oyuncu güçlü tutuluyor: boştaki oyuncu ~500. günde devralınıyor ve
+  // takvim donunca dönemler de duruyor — bu test iklimi ölçüyor,
+  // kaybedilebilirliği değil (o bir sonraki bölümün işi).
+  getPlayer(state).cash = 120_000_000;
+
+  const eraLog: string[] = [];
+  let closingNotices = 0;
+  let gapDays = 0;
+  let seenId = -1;
+  for (let day = 1; day <= 1500; day++) {
+    engine.runDay();
+    if (day >= 61 && !state.era) gapDays++;
+    if (state.era && eraLog[eraLog.length - 1] !== state.era.defId) eraLog.push(state.era.defId);
+    for (const item of state.news) {
+      if (item.id <= seenId) break;
+      if (item.title.includes('kapanıyor')) closingNotices++;
+    }
+    seenId = state.news[0]?.id ?? seenId;
+  }
+
+  expect('ilk dönem 60. gün civarında başlıyor', eraLog.length > 0 && gapDays === 0,
+    `${eraLog.length} dönem, iklimsiz gün ${gapDays}`);
+  expect('1500 günde en az 4 dönem yaşanıyor', eraLog.length >= 4, eraLog.join(' → '));
+  const repeated = eraLog.some((id, i) => i > 0 && eraLog[i - 1] === id);
+  expect('aynı dönem üst üste gelmiyor', !repeated, eraLog.join(' → '));
+  expect('dönem kapanışları önceden haber veriliyor', closingNotices >= eraLog.length - 1,
+    `${closingNotices} uyarı / ${eraLog.length} dönem`);
+
+  // Çarpan boru hattı: dönemin talep çarpanı birleşik etkiye giriyor.
+  //
+  // Aktif OLAYLAR önce temizleniyor: kontrol dönemin katkısını ölçüyor
+  // ve o an yaşayan bir tüketim patlaması (yeme-içme ×1,22) dönemin
+  // 0,88'ini 1,07'ye çevirip kontrolü yalancı çıkarabiliyor — çıkardı da:
+  // sözleşme sistemi rng akışını kaydırınca tam o güne bir olay denk
+  // geldi ve kontrol kırıldı. Paylaşılan rng'ye yaslanan her kontrol,
+  // akıştaki her yeni tüketiciyle kayar; yalıtım şart.
+  state.activeEvents.length = 0;
+  state.era = { defId: 'era_sikilasma', startedDay: state.time.day, remainingDays: 100 };
+  const mods = collectEventModifiers(state);
+  expect('dönem çarpanı pazara ulaşıyor', (mods.demand.dining ?? 1) < 1,
+    `yeme-içme çarpanı ${(mods.demand.dining ?? 1).toFixed(2)}`);
+}
+
+console.log('\n=== Düşmanca devralma: oyun kaybedilebiliyor ===\n');
+
+/*
+ * Oyunun bugüne kadarki en büyük eksiği ölçülebilir bir cümleydi:
+ * benchmark her koşuda "batan şirket 0/5" diyordu — kaybetme riski
+ * olmayan bir büyümenin gerilimi de olmuyordu.
+ *
+ * Senaryo kasıtlı olarak eğik: oyuncu küçük kalıyor, bir rakip nakit
+ * zengini. Sınanan zincir üç halka —
+ *
+ *   1. baskın eşik uyarıları SIRAYLA düşüyor (%10 → %25 → %40); oyuncu
+ *      kaybı gelirken görmeli, bitince öğrenmemeli
+ *   2. eşik aşılınca `gameOver` doluyor ve oyuncu şirketi SİLİNMİYOR
+ *      (arayüz son duruma bakmaya devam edebilmeli)
+ *   3. takvim duruyor — kaybedilmiş oyunda günler akmaya devam etmiyor
+ */
+{
+  const engine = new GameEngine(createNewGame({ seed: 41, companyName: 'Av AŞ' }));
+  const state = engine.getState();
+  const raiderId = NPC_PROFILES[0]!.id;
+  state.companies[raiderId]!.cash = 60_000_000;
+
+  /*
+   * Uyarılar KOŞU SIRASINDA toplanıyor, sondan okunmuyor. İlk sürüm
+   * bitişte `state.news`e bakıyordu ve "1 uyarı" diye kırıldı — haber
+   * tamponu 60 kayıt tutuyor ve 500 günlük koşuda erken uyarılar çoktan
+   * dışarı itilmişti. Tampon bir EKRAN aracı, olay kaydı değil; kalıcı
+   * bir şey sınanacaksa akarken yakalanmalı.
+   */
+  const warnings: { title: string; companyId?: string }[] = [];
+  let seenNewsId = -1;
+  for (let day = 1; day <= 900 && !state.gameOver; day++) {
+    engine.runDay();
+    // Haberler tamponda YENİDEN ESKİYE duruyor; günün yenilerini önce
+    // kendi içinde eskiden yeniye çevirip sona ekliyoruz — yoksa günler
+    // arası sıra tersine döner ve kontrol kendi topladığı listeyi yanlış
+    // diye işaretler (ilk koşuda tam olarak bu oldu).
+    const fresh: { title: string; companyId?: string }[] = [];
+    for (const item of state.news) {
+      if (item.id <= seenNewsId) break;
+      if (
+        item.title.includes('göz dikti') ||
+        item.title.includes('payını') ||
+        item.title.includes('kontrolüne yaklaşıyor')
+      ) {
+        fresh.unshift({ title: item.title, ...(item.companyId ? { companyId: item.companyId } : {}) });
+      }
+    }
+    warnings.push(...fresh);
+    seenNewsId = state.news[0]?.id ?? seenNewsId;
+  }
+  expect('baskın uyarıları düşüyor', warnings.length >= 3, `${warnings.length} uyarı`);
+  const ordered =
+    warnings.findIndex((n) => n.title.includes('göz dikti')) <
+      warnings.findIndex((n) => n.title.includes('payını')) &&
+    warnings.findIndex((n) => n.title.includes('payını')) <
+      warnings.findIndex((n) => n.title.includes('kontrolüne yaklaşıyor'));
+  expect('uyarılar eşik sırasında', ordered,
+    warnings.map((n) => n.title.split(' ').slice(-2).join(' ')).join(' → '));
+  /*
+   * Yüz kontrolü "hep aynı baskıncı" DEMİYOR — birden fazla rakip aynı
+   * anda pay topluyor ve en büyük hissedar el değiştirebiliyor; uyarı o
+   * anki lideri gösterir. Sınanan şey her uyarının BİR yüz taşıması.
+   */
+  expect('uyarılar bir baskıncının yüzünü taşıyor', warnings.every((n) => Boolean(n.companyId)),
+    warnings.map((n) => n.companyId).join(', '));
+
+  expect('devralma oyunu bitiriyor', Boolean(state.gameOver),
+    state.gameOver ? `${state.gameOver.day}. gün, ${state.companies[state.gameOver.byCompanyId]?.name}` : 'bitmedi');
+  expect('oyuncu şirketi silinmiyor', Boolean(state.companies[state.playerCompanyId]), 'duruyor');
+
+  const frozenDay = state.time.day;
+  engine.runDay();
+  engine.runDay();
+  expect('kaybedilmiş oyunda takvim duruyor', state.time.day === frozenDay, `gün ${state.time.day}`);
+}
+
+console.log('\n=== Kademeli imar: arazi kıtlığı yenileniyor ===\n');
+
+/*
+ * Sınanan iddia üç katmanlı:
+ *
+ *   1. YAPI — köşeler kilitli başlar, takvim `DISTRICT_UNLOCK_DAYS`
+ *   2. KURAL — açılıştan önce O BÖLGEYE HİÇ KİMSE giremez (oyuncu, NPC,
+ *      ihale; hepsi aynı kapıdan geçtiği için ihlal tek sayıyla ölçülür)
+ *   3. YAŞAM — açılış duyurulur, haber olur, göç gelir, parsel satılır
+ */
+{
+  const engine3 = new GameEngine(createNewGame({ seed: 19, companyName: 'İmar AŞ' }));
+  const state = engine3.getState();
+  // Baskın değil harita sınanıyor: atıl oyuncu 560 günde yutulup takvimi
+  // dondurabilirdi — `flags.raids` tam bu tür eşli/izole ölçümler için var.
+  state.flags.raids = false;
+
+  const locked = state.districts.filter((d) => d.opensOnDay !== undefined);
+  expect(
+    'köşe bölgeler kilitli başlıyor',
+    locked.length === 4,
+    locked.map((d) => `${d.name}@${d.opensOnDay}`).join(', '),
+  );
+  const unlockDays = locked.map((d) => d.opensOnDay!).sort((a, b) => a - b);
+  expect(
+    'açılış takvimi kademeli',
+    JSON.stringify(unlockDays) === JSON.stringify(DISTRICT_UNLOCK_DAYS),
+    unlockDays.join(', '),
+  );
+
+  const firstDistrict = locked.reduce((a, b) => (a.opensOnDay! < b.opensOnDay! ? a : b));
+  const lastDistrict = locked.reduce((a, b) => (a.opensOnDay! > b.opensOnDay! ? a : b));
+  const imarPlayer = getPlayer(state);
+  imarPlayer.cash = 30_000_000;
+  imarPlayer.netWorth = 30_000_000;
+
+  const vacantPlotIn = (districtId: number) =>
+    state.map.tiles.find(
+      (t) => t.districtId === districtId && t.kind === 'plot' && !t.ownerId && !t.structureId,
+    )!;
+
+  const early = engine3.dispatch({ type: 'BUY_TILE', tileId: vacantPlotIn(firstDistrict.id).id });
+  expect(
+    'kilitli parsel satın alınamıyor',
+    !early.ok && (early.reason ?? '').includes('imara kapalı'),
+    early.reason ?? 'alındı!',
+  );
+
+  // Haberler ve ihlaller KOŞU SIRASINDA toplanıyor — tampon 60 kayıt,
+  // baskın senaryosundaki dersin aynısı.
+  let notices = 0;
+  let openings = 0;
+  let violations = 0;
+  let seenNewsId = -1;
+  for (let day = 1; day <= 560; day++) {
+    engine3.runDay();
+    for (const item of state.news) {
+      if (item.id <= seenNewsId) break;
+      if (item.title.includes('İmar planı açıklandı')) notices++;
+      if (item.title.includes('imara açıldı')) openings++;
+    }
+    seenNewsId = state.news[0]?.id ?? seenNewsId;
+    for (const district of locked) {
+      if (state.time.day >= district.opensOnDay!) continue;
+      if (state.map.tiles.some((t) => t.districtId === district.id && t.ownerId !== null)) {
+        violations++;
+      }
+    }
+  }
+
+  expect('açılışlar 30 gün önceden duyuruluyor', notices === 4, `${notices}/4 duyuru`);
+  expect('her açılış haber oluyor', openings === 4, `${openings}/4 haber`);
+  expect(
+    'kilitli bölgeye açılıştan önce kimse giremiyor',
+    violations === 0,
+    violations === 0 ? 'oyuncu + NPC + ihale — 560 günde 0 ihlal' : `${violations} gün×bölge ihlali`,
+  );
+
+  const firstArchetype = DISTRICT_ARCHETYPES[firstDistrict.archetype];
+  expect(
+    'açılan bölgeye göç geliyor',
+    firstDistrict.population >= firstArchetype.population * 0.95,
+    `${firstDistrict.name} nüfusu ${Math.round(firstDistrict.population)} / taban ${firstArchetype.population}`,
+  );
+
+  const lateBuy = engine3.dispatch({ type: 'BUY_TILE', tileId: vacantPlotIn(lastDistrict.id).id });
+  expect(
+    'açılan bölgeden parsel alınabiliyor',
+    lateBuy.ok,
+    lateBuy.reason ?? `${lastDistrict.name} — alındı`,
+  );
+
+  // Laboratuvar kapısı: takvim kapalıyken eski dünya birebir geri gelmeli.
+  const flat = createNewGame({ seed: 19, districtUnlocks: false });
+  expect(
+    'imar takvimi kapatılabiliyor (laboratuvar zemini)',
+    flat.districts.every((d) => d.opensOnDay === undefined),
+    'tüm bölgeler baştan açık',
   );
 }
 

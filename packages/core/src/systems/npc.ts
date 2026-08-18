@@ -6,7 +6,8 @@ import { competitionCards } from '../competition';
 import { pushNews } from '../news';
 import { nextFloat } from '../rng';
 import { estimateInvestment } from './market';
-import { tilePrice } from './city';
+import { isDistrictOpen, tilePrice } from './city';
+import { buyShares, freeFloat, sharePrice, sharesHeld, TOTAL_SHARES } from './equity';
 import type { GameState } from '../types';
 
 /**
@@ -119,6 +120,12 @@ function tryChainMove(state: GameState, profile: NpcProfileDef): boolean {
     const move = card.move;
     if (!move) continue;
     if (move.premature && appetite < 1.2) continue;
+    // Erteleme freni (`move.deferred`) BİLEREK okunmuyor: o bir OYUNCU
+    // tavsiye politikası. Rakipler 42-ünite sarmalını hiç yaşamadı —
+    // iştah kapıları ve `CHAIN_MAX_PAYBACK` onları zaten sınırlıyor.
+    // Denendi ve ölçüm reddetti: rakipler de frenlenince kalibre edilmiş
+    // rakip üretimi düştü, şehrin spot dengesi kaydı ve zincir A/B'si
+    // +%30'dan −%7'ye indi — fren, sahibi olmayan bir sorunu "çözmüştü".
     if (move.paybackDays > maxPayback) continue;
     if (move.cost > budget) continue;
 
@@ -257,6 +264,11 @@ function findOpportunities(state: GameState, profile: NpcProfileDef): Opportunit
   const opportunities: Opportunity[] = [];
 
   for (const district of state.districts) {
+    // Kilitli bölge fırsat değil: köyün %100 boş talebi puanı şişirir,
+    // NPC oraya yönelir ve alım kapıda reddedilir — haftalık hamlesi
+    // boşa yanardı. Kural oyuncuyla aynı, sadece NPC bunu "bilerek"
+    // oynuyor.
+    if (!isDistrictOpen(state, district.id)) continue;
     for (const category of CONSUMER_CATEGORIES) {
       const demand = district.demand[category] ?? 0;
       if (demand <= 0) continue;
@@ -353,9 +365,9 @@ function actFor(state: GameState, profile: NpcProfileDef): void {
 
   // Arsa spekülatörü: bazen sadece arsa toplar, bina kurmaz.
   if (isLandlord && nextFloat(state.rng) < 0.45) {
-    const target = [...state.districts].sort(
-      (a, b) => b.incomeLevel - a.incomeLevel,
-    )[0];
+    const target = state.districts
+      .filter((district) => isDistrictOpen(state, district.id))
+      .sort((a, b) => b.incomeLevel - a.incomeLevel)[0];
     if (target) {
       const spot = findTile(state, target.id, budget, true);
       if (spot) {
@@ -429,11 +441,149 @@ function actFor(state: GameState, profile: NpcProfileDef): void {
   tryArmMove(state, profile, true);
 }
 
+
+/** Baskınların başlamadığı ısınma dönemi (gün). Erken oyun inşaatın. */
+const RAID_WARMUP_DAYS = 160;
+
+/** Bir baskıncının tek günde alabileceği en fazla hisse. */
+const RAID_DAILY_CAP = 350;
+
+/** Baskın bütçesine dokunulmayan nakit tabanı. */
+const RAID_CASH_RESERVE = 320_000;
+
+/**
+ * Düşmanca hisse baskını — borsanın İKİNCİ yönü.
+ *
+ * Borsa bugüne kadar tek yönlüydü: oyuncu rakip hissesi toplayabiliyor,
+ * tersi olmuyordu (DURUM.md §4.2). Yani baskı tek taraflıydı ve oyunun
+ * kaybetme riski yoktu — benchmark her koşuda "batan şirket 0/5" diyor.
+ *
+ * Kurallar:
+ *
+ * - KUYUNUN DİBİNDEKİNE VURULUR: hedef, baskıncıdan belirgin küçük
+ *   şirketler (net değer < baskıncının %90'ı). Güçlüyken saldırıya
+ *   uğramazsın; düşerken uğrarsın. "Rakip seni geçince hırslan" döngüsünün
+ *   devamı bu — geride kalmak artık yalnızca bir sıra numarası değil,
+ *   somut bir tehdit.
+ *
+ * - GÜNLÜK TAVAN VAR (350 hisse, %3,5): baskın bir anda değil dalga
+ *   dalga gelir. Bu bir merhamet değil OKUNABİLİRLİK kuralı — motor
+ *   eşiklerde haber düşürüyor (%10/%25/%40) ve tek günde %0'dan %50'ye
+ *   sıçrayan bir baskın o uyarıların hepsini atlardı.
+ *
+ * - BAŞLADIĞI İŞİ BİTİRİR: elinde payı olduğu hedefi yeni hedefe tercih
+ *   eder. Dağınık beş küçük pay değil, büyüyen tek bir tehdit.
+ *
+ * - Isınma süresi ve nakit tabanı, baskının inşaat bütçesini yememesini
+ *   sağlıyor: rakipler önce şehir kurar, artan parayla avlanır.
+ */
+function tryRaidMove(state: GameState, profile: NpcProfileDef): void {
+  if (state.flags.raids === false) return;
+  if (state.time.day < RAID_WARMUP_DAYS) return;
+
+  const raider = state.companies[profile.id];
+  if (!raider) return;
+
+  const budget = (raider.cash - RAID_CASH_RESERVE) * 0.5;
+  if (budget <= 0) return;
+
+  /*
+   * Zar HER GÜN atılır, karar gününde değil — tempo ölçümden çıktı.
+   *
+   * İlk sürüm baskını 7 günlük karar döngüsüne bağlamıştı: zar oradan
+   * geçince etkin baskın sıklığı ~27 güne düşüyor, 350'lik günlük tavanla
+   * tek bir küçük hedefi yutmak 500+ gün sürüyordu. Sondajda Nova 161.
+   * günden itibaren Kilit Market'i kemiriyor ama 900. günde bile işi
+   * bitmemişti — oyuncuya sıra hiç gelmiyordu ve "kaybedilebilir oyun"
+   * kâğıt üstünde kalıyordu.
+   *
+   * Günlük zarla (agresyon × 0,12) baskıncı ortalama 3-4 günde bir alım
+   * yapar: bir hedefi kontrol etmek ~2 ay — görülür, tepki verilebilir,
+   * ama sonsuza kadar sürmez.
+   */
+  if (nextFloat(state.rng) > profile.aggression * 0.12) return;
+
+  // Hedef: kendinden küçükler. Elinde payı olduğu varsa önce o.
+  const candidates = Object.values(state.companies).filter(
+    (c) => c.id !== raider.id && c.netWorth < raider.netWorth * 0.9,
+  );
+  if (candidates.length === 0) return;
+
+  candidates.sort((a, b) => {
+    const stakeA = sharesHeld(state, raider.id, a.id);
+    const stakeB = sharesHeld(state, raider.id, b.id);
+    if (stakeA !== stakeB) return stakeB - stakeA;
+    return a.netWorth - b.netWorth;
+  });
+  const target = candidates[0]!;
+
+  const price = sharePrice(state, target.id);
+  if (price <= 0) return;
+
+  const wanted = Math.min(
+    RAID_DAILY_CAP,
+    Math.floor(budget / price),
+    freeFloat(state, target.id),
+  );
+  if (wanted <= 0) return;
+
+  buyShares(state, raider.id, target.id, wanted);
+}
+
+/**
+ * Geri alım savunması — oyuncuya verilen kalkanın aynısı rakiplere de.
+ *
+ * Bir baskıncı payın %30'unu geçtiyse ve hedefin nakdi varsa hedef kendi
+ * hissesini toplamaya başlar. Bu olmadan rakipler birbirine karşı
+ * savunmasız kalırdı ve borsa "ilk saldıran kazanır" oyununa dönerdi.
+ * Oyuncuyla aynı araç, aynı fiyat — görünmez kalkan yok.
+ */
+function tryBuybackDefense(state: GameState, profile: NpcProfileDef): void {
+  if (state.flags.raids === false) return;
+  const company = state.companies[profile.id];
+  if (!company) return;
+
+  let threat = 0;
+  for (const other of Object.values(state.companies)) {
+    if (other.id === company.id) continue;
+    threat = Math.max(threat, sharesHeld(state, other.id, company.id));
+  }
+  if (threat / TOTAL_SHARES < 0.3) return;
+
+  const budget = (company.cash - RAID_CASH_RESERVE) * 0.6;
+  const price = sharePrice(state, company.id);
+  if (budget <= 0 || price <= 0) return;
+
+  const wanted = Math.min(
+    RAID_DAILY_CAP,
+    Math.floor(budget / price),
+    freeFloat(state, company.id),
+  );
+  if (wanted <= 0) return;
+
+  buyShares(state, company.id, company.id, wanted);
+}
+
 export function runNpcTick(state: GameState): void {
   if (!state.flags.npcCompetition) return;
 
   NPC_PROFILES.forEach((profile, index) => {
     if (!state.companies[profile.id]) return;
+
+    /*
+     * Baskın ve savunma GÜNLÜK, inşaat karar gününde.
+     *
+     * İnşaat 7 günlük döngüye bağlı çünkü pahalı: fırsat taraması ve
+     * yatırım tahmini her ada için hesap ister. Baskın ise tek zar ve en
+     * fazla tek alım — her gün değerlendirilecek kadar ucuz, ve ölçüm
+     * bunu şart koştu: karar gününe bağlıyken etkin baskın sıklığı ~27
+     * güne düşüyor, tek bir hedefi yutmak 500 günü aşıyor ve oyuncuya
+     * baskı hiç ulaşmıyordu. Savunma da günlük — kalkan, saldırıdan
+     * yavaş kalkarsa kalkan değildir.
+     */
+    tryRaidMove(state, profile);
+    tryBuybackDefense(state, profile);
+
     // Kararları güne yay: hepsi aynı gün hamle yapmasın.
     if ((state.time.day + index * 2) % DECISION_PERIOD_DAYS !== 0) return;
     actFor(state, profile);

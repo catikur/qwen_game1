@@ -1,6 +1,6 @@
-import { EVENTS } from '@capital/content';
+import { ERAS, ERA_BY_ID, EVENTS } from '@capital/content';
 import type { CategoryId } from '@capital/content';
-import { nextFloat, pickWeighted } from '../rng';
+import { createRng, nextFloat, pickWeighted } from '../rng';
 import { pushNews } from '../news';
 import type { GameState } from '../types';
 
@@ -31,8 +31,17 @@ export function collectEventModifiers(state: GameState): EventModifiers {
     landValueDrift: 0,
   };
 
-  for (const active of state.activeEvents) {
-    const def = EVENTS.find((e) => e.id === active.defId);
+  /*
+   * Dönem, olaylarla AYNI boru hattından geçer: ikisi de birer çarpan
+   * kaynağı ve pazarın tek bir "birleşik etki" görmesi gerekiyor. Ayrı
+   * bir uygulama noktası, "dönem × olay hangi sırayla çarpılır" gibi
+   * cevabı olmayan bir soru doğururdu.
+   */
+  const sources: Array<{ defId: string }> = [...state.activeEvents];
+  if (state.era) sources.push({ defId: state.era.defId });
+
+  for (const active of sources) {
+    const def = EVENTS.find((e) => e.id === active.defId) ?? ERA_BY_ID[active.defId];
     if (!def) continue;
 
     if (def.effects.costMultiplier) mods.costMultiplier *= def.effects.costMultiplier;
@@ -83,12 +92,27 @@ export function runEventTick(state: GameState): void {
   if (!state.flags.randomEvents) return;
   if (state.time.day < GRACE_DAYS) return;
   if (state.activeEvents.length >= MAX_CONCURRENT) return;
-  if (nextFloat(state.rng) > DAILY_CHANCE) return;
+
+  /*
+   * OLAY TAKVİMİ DE DIŞSAL — dönemlerle aynı ilke, sonuna kadar.
+   *
+   * Olaylar paylaşılan rng'den zamanlanırken, aynı tohumla açılan iki
+   * koşu farklı kararlar verdiği anda farklı GÜNLERDE farklı krizler
+   * yaşıyordu. Zincir A/B'si bunun ilk kurbanıydı: dönemler dışsal zara
+   * alındıktan sonra bile tohum 1'de kollardan biri kuyruk penceresinde
+   * fazladan bir kriz yiyor ve kıyas devriliyordu (2/3, −%11'lik sapma).
+   *
+   * "Çip Krizi" kimin ne kurduğuna bakmaz. Aynı tohum aynı fırtına
+   * takvimini vermeli — böylece eşli deneylerde tek fark gerçekten
+   * verilen KARAR oluyor, şansın o kolda nasıl aktığı değil.
+   */
+  const dice = createRng((state.meta.seed ^ (state.time.day * 918273645)) >>> 0);
+  if (nextFloat(dice) > DAILY_CHANCE) return;
 
   const available = EVENTS.filter((e) => !state.activeEvents.some((a) => a.defId === e.id));
   if (available.length === 0) return;
 
-  const def = pickWeighted(state.rng, available, (e) => e.weight);
+  const def = pickWeighted(dice, available, (e) => e.weight);
   state.activeEvents.push({
     defId: def.id,
     startedDay: state.time.day,
@@ -96,3 +120,79 @@ export function runEventTick(state: GameState): void {
   });
   pushNews(state, def.tone, def.title, def.body);
 }
+
+/** İlk dönem bu günden önce başlamaz — erken oyun nötr zeminde otursun. */
+const ERA_START_DAY = 60;
+
+/** Kapanış uyarısının verildiği kalan gün sayısı. */
+const ERA_CLOSING_NOTICE_DAYS = 20;
+
+/**
+ * Dönem zamanlayıcısı.
+ *
+ * Olay zamanlayıcısından iki farkı var ve ikisi de bilinçli:
+ *
+ * - RASTGELE DEĞİL SIRALI ÇALIŞIR: her zaman tam bir dönem aktiftir,
+ *   biten dönemin yerine hemen yenisi gelir. Şehrin iklimsiz bir günü
+ *   olmaz — "dönemsiz aralık" diye bir üçüncü durum, hem dengeyi hem
+ *   anlatımı bulanıklaştırırdı.
+ *
+ * - AYNI DÖNEM ÜST ÜSTE GELMEZ: mevsimlerin işi değişim; iki kez üst
+ *   üste gelen İstikrar, hiç gelmemiş gibi hissettirir.
+ *
+ * Kapanmadan 20 gün önce haber düşer: dönem sonu bir plan penceresi —
+ * "enflasyon bitiyor, zincire yatırmayı bekle" gibi kararların yeri.
+ */
+/**
+ * Dönem seçimi PAYLAŞILAN rng'den DEĞİL, tohum+güne bağlı yerel bir
+ * zardan yapılır — iklim dışsaldır.
+ *
+ * İlk sürüm `state.rng` kullanıyordu ve zincir A/B deneyini bozdu: aynı
+ * tohumla açılan iki kol, farklı kararlar verdikçe rng akışları ayrışıyor
+ * ve İKLİMLERİ de ayrışıyordu — biri kuyruk penceresini Genişleme'de,
+ * öteki Sıkılaşma'da ölçüyordu. 60 günlük kâr kıyası ±%10'luk mevsim
+ * farkının altında kayboldu (3/3 tohum → 1/3'e düştü).
+ *
+ * Hava durumu şirket kararlarına bağlı olmamalı; aynı tohum aynı iklim
+ * takvimini vermeli — kim ne kurarsa kursun.
+ */
+function pickEra(state: GameState, excludeId: string | null): (typeof ERAS)[number] {
+  const dice = createRng((state.meta.seed ^ (state.time.day * 2654435761)) >>> 0);
+  const candidates = excludeId ? ERAS.filter((e) => e.id !== excludeId) : ERAS;
+  return pickWeighted(dice, candidates, (e) => e.weight);
+}
+
+export function runEraTick(state: GameState): void {
+  // `=== false` bilinçli: alan yoksa (eski kayıt) dönemler AÇIK.
+  if (state.flags.eras === false) return;
+
+  if (!state.era) {
+    if (state.time.day < ERA_START_DAY) return;
+    const def = pickEra(state, null);
+    state.era = { defId: def.id, startedDay: state.time.day, remainingDays: def.durationDays };
+    pushNews(state, def.tone, def.title, def.body);
+    return;
+  }
+
+  state.era.remainingDays -= 1;
+
+  if (state.era.remainingDays === ERA_CLOSING_NOTICE_DAYS) {
+    const def = ERA_BY_ID[state.era.defId];
+    if (def) {
+      pushNews(
+        state,
+        'neutral',
+        `${def.title} kapanıyor`,
+        `Yaklaşık ${ERA_CLOSING_NOTICE_DAYS} gün içinde yeni bir dönem başlayacak. Planını ona göre kur.`,
+      );
+    }
+    return;
+  }
+
+  if (state.era.remainingDays > 0) return;
+
+  const def = pickEra(state, state.era.defId);
+  state.era = { defId: def.id, startedDay: state.time.day, remainingDays: def.durationDays };
+  pushNews(state, def.tone, def.title, def.body);
+}
+

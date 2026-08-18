@@ -50,6 +50,8 @@ export function MarketPanel(): ReactElement {
         <Stat label="Şirket değeri" value={formatMoney(player.netWorth)} />
       </div>
 
+      <Defense state={state} />
+
       <p className="muted">
         Bir şirketin hisselerinin %{Math.round(CONTROL_THRESHOLD * 100)}'ini
         geçersen onu devralırsın: bütün binaları ve parselleri senin olur.
@@ -64,6 +66,73 @@ export function MarketPanel(): ReactElement {
             <Listing key={company.id} company={company} state={state} />
           ))}
       </div>
+    </div>
+  );
+}
+
+
+/**
+ * Kendi hissenin durumu — borsanın savunma tarafı.
+ *
+ * Rakipler artık oyuncunun hissesini toplayabiliyor; bu blok "kim, ne
+ * kadar" sorusunun tek adresi. Geri alım düğmesi `BUY_SHARES`in kendisi:
+ * savunma için ayrı bir mekanik yok, aynı piyasa iki yönde de çalışıyor.
+ *
+ * Tehdit yokken tek satırlık bir özet. Blok yalnızca biri gerçekten pay
+ * topladığında büyür — panel her gün "saldırı yok" diye bağırmamalı.
+ */
+function Defense({ state }: { state: GameState }): ReactElement {
+  const { run, toast } = useGame();
+  const player = getPlayer(state);
+
+  const price = sharePrice(state, player.id);
+  const treasury = sharesHeld(state, player.id, player.id);
+  const float = freeFloat(state, player.id);
+
+  let topHolder: CompanyState | null = null;
+  let topCount = 0;
+  for (const company of Object.values(state.companies)) {
+    if (company.id === player.id) continue;
+    const count = sharesHeld(state, company.id, player.id);
+    if (count > topCount) {
+      topCount = count;
+      topHolder = company;
+    }
+  }
+  const percent = (topCount / TOTAL_SHARES) * 100;
+
+  const buyback = (count: number): void => {
+    if (count <= 0) return;
+    if (run({ type: 'BUY_SHARES', companyId: player.id, count })) {
+      toast(`${count} hisse hazineye çekildi — ${formatMoney(count * price)}.`, 'good');
+    }
+  };
+  const affordable = Math.min(100, Math.floor(player.cash / Math.max(1, price)), float);
+
+  return (
+    <div className={topCount > 0 ? 'defense threatened' : 'defense'}>
+      <div className="defense-head">
+        <h3>Kendi Hissen</h3>
+        <span className="muted">
+          dolaşımda {float} · hazinede {treasury} · {formatMoney(price)}/hisse
+        </span>
+      </div>
+      {topHolder ? (
+        <div className="defense-threat">
+          <span>
+            <strong>{topHolder.name}</strong> payının %{percent.toFixed(1)}
+            {"'"}ini topladı — eşik %{Math.round(CONTROL_THRESHOLD * 100)}.
+          </span>
+          <button type="button" disabled={affordable <= 0} onClick={() => buyback(affordable)}>
+            {affordable} hisse geri al
+          </button>
+        </div>
+      ) : (
+        <p className="muted">
+          Hissene talip yok. Rakipler zayıflayan şirketlerin payını toplar —
+          sıralamada düşersen burası ilk bakacağın yer.
+        </p>
+      )}
     </div>
   );
 }

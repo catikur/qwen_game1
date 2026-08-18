@@ -22,6 +22,7 @@ import {
   ActiveEvents,
   BuildPanel,
   GameContext,
+  GameOverScreen,
   Inspector,
   LensBar,
   ModalHost,
@@ -373,6 +374,7 @@ function GameRoot({
         </div>
         <ModalHost />
         <Toasts />
+        <GameOverScreen onNewGame={newGame} />
       </div>
     </GameContext.Provider>
   );

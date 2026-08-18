@@ -121,13 +121,17 @@ function MoveView({ card, move }: { card: ChainCard; move: ChainMove }): ReactEl
     setView({ selectedTileId: move.tileId });
   };
 
+  // İki bekleme hali de aynı gri stili giyer; ayrım metinde. Buton yine
+  // de çalışır durumda: kart tavsiye verir, karar oyuncunundur.
+  const waiting = move.premature || move.deferred;
+
   return (
-    <div className={move.premature ? 'chain-move early' : 'chain-move'}>
+    <div className={waiting ? 'chain-move early' : 'chain-move'}>
       <p className="chain-reason">{move.reason}</p>
       <div className="chain-action">
         <button
           type="button"
-          className={move.premature ? '' : 'primary'}
+          className={waiting ? '' : 'primary'}
           onClick={build}
           disabled={!canPay}
         >
@@ -144,6 +148,9 @@ function MoveView({ card, move }: { card: ChainCard; move: ChainMove }): ReactEl
         <p className="chain-early">
           Henüz erken — bu halkayı kurmak, ölçeğin büyüdüğünde asıl karşılığını verir.
         </p>
+      )}
+      {!move.premature && move.deferred && (
+        <p className="chain-early">Hamle doğru, sırası değil — önce hızlı dönen mağazalar.</p>
       )}
       {!canPay && <p className="chain-warn">Nakit yetersiz — {formatMoney(total)} gerekiyor.</p>}
     </div>

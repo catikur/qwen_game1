@@ -23,7 +23,7 @@ Bunun bugün hiçbir karşılığı yok. Şirketler kapalı kutular: değerleri
 |---|---|
 | Gerçek zamanlı emir defteri (alış/satış kuyruğu) | Tek tıkla anlaşılmıyor; casual sözünü doğrudan çiğner |
 | Tahvil, opsiyon, kaldıraçlı işlem | Borsa daha oturmadan ikinci bir finans katmanı |
-| Rakiplerin oyuncunun hissesini toplaması | Turun sonunda değerlendirilecek — önce oyuncu tarafı dursun (§6.3) |
+| ~~Rakiplerin oyuncunun hissesini toplaması~~ | Tur 13'te geldi (§7) |
 
 ---
 
@@ -204,3 +204,46 @@ değerlemesinde yapmıştık (bkz. `REKABET-TASARIMI.md` §9, D parçası):
 bir sayı her nesne için aynı çıkıyorsa o sayı ölçüm değil süstür.
 
 Tarayıcı testleri (`tools/playtest.mjs`): **105/105**, 0 konsol hatası.
+
+## 7. Tur 13 — İkinci yön: baskın, savunma ve oyun sonu
+
+§6.3'teki erteleme gerekçesi "oyuncunun haberi olmadan kaybetmesi"ydi.
+Endişe üç katmanla çözüldü ve tek yön kalktı:
+
+**Baskın.** Isınma (160 gün) sonrası rakipler kendilerinden belirgin
+küçük şirketlerin (net değer < baskıncının %90'ı) hissesini toplar —
+oyuncu dahil. Zar günlük ve kişilikten (agresyon × 0,12); günlük alım
+tavanı 350 hisse (%3,5): baskın dalga dalga gelir, sıçramaz. Elinde payı
+olduğu hedefi yeni hedefe tercih eder — dağınık beş pay değil, büyüyen
+tek tehdit.
+
+**Görünürlük.** Motor %10/%25/%40 eşiklerinde baskıncının YÜZÜYLE haber
+düşürür. Günlük tavan sayesinde eşik atlanamaz; kayıp gelirken görülür,
+bitince öğrenilmez.
+
+**Savunma: geri alım.** "Kendi hisseni alamazsın" kuralı kalktı; hazine
+hissesi gerçek bir kavram oldu. Hazineye çekilen her hisse dolaşımdan
+düşer — baskıncının asla alamayacağı bir hisse. Rakipler de aynı kalkanı
+kullanır (%30 tehditte, nakit varsa): görünmez kalkan yok.
+
+**Oyun sonu.** Eşik aşılırsa oyuncu YUTULMAZ — `absorb` şirketi siler ve
+arayüz her karede oyuncuyu okur; silmek her paneli çökertirdi. Bunun
+yerine `gameOver` dolar: takvim durur, ekran iner, şehir son hâliyle
+okunur kalır.
+
+İki ölçüm dersi, bir ürün hatası:
+
+- **Tempo karar kapısına bağlanamaz.** İlk sürüm baskını 7 günlük karar
+  döngüsüne bağlamıştı; etkin sıklık ~27 güne düşüyor, tek küçük hedefi
+  yutmak 500 günü aşıyor ve oyuncuya baskı hiç ulaşmıyordu. Zar günlük;
+  boştaki oyuncu 543. günde kaybediyor, benchmark'taki güçlü oyuncu
+  (1,48) hedef bile olmuyor.
+
+- **Hazine mirasa karışmaz.** Yutulan şirketin kendi hissesi "portföy"
+  diye devralana geçiyor, devralan ölü şirketin hissedarı kalıyordu
+  (denge kontrolü yakaladı: `player:350`). Kâğıt, şirketle birlikte ölür.
+
+- **Eşli deneyler için `raids` bayrağı** (yokluğu açık): NPC-NPC
+  devralmaları kollar arasında yapısal fark yaratıyor; zincir A/B'si
+  gibi kontrollü kıyaslar baskınları kapatıp koşuyor.
+

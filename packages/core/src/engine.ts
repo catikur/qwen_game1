@@ -2,10 +2,17 @@ import { BUILDING_BY_ID, CONSUMER_CATEGORIES, GOODS_BY_CATEGORY } from '@capital
 import { build, buyTile, buyoutTile, demolish, sellTile } from './actions';
 import { pushNews } from './news';
 import { companyRanking, formatMoney } from './selectors';
+import { TOTAL_SHARES, sharesHeld } from './systems/equity';
 import { runMarketTick } from './systems/market';
 import { resetDailyLedgers, runProductionTick, runSpotPriceTick } from './systems/supply';
-import { recomputeNetWorth, runLandValueTick, runPopulationTick } from './systems/city';
-import { collectEventModifiers, runEventTick } from './systems/events';
+import {
+  recomputeNetWorth,
+  runDistrictUnlockTick,
+  runLandValueTick,
+  runPopulationTick,
+} from './systems/city';
+import { collectEventModifiers, runEraTick, runEventTick } from './systems/events';
+import { acceptContract, declineContract, runContractTick } from './systems/contracts';
 import { placeBid, runAuctionTick } from './systems/auction';
 import { buyShares, runDividendTick, runTakeoverTick, sellShares } from './systems/equity';
 import { runResearchTick } from './systems/focus';
@@ -44,6 +51,13 @@ export class GameEngine {
    * demek, olmamış bir olayı bildirmek olurdu.
    */
   private lastRank: number | null = null;
+  /**
+   * Baskın uyarısının son seviyesi (0–3). Motorda, state'te değil —
+   * `lastRank` ile aynı gerekçe: eşik geçişi ANLIK bir olay, saklanacak
+   * bir bilgi değil. Kayıt yüklendiğinde sıfırlanır ve bir sonraki eşik
+   * geçişinde yeniden uyarır.
+   */
+  private lastRaidStage = 0;
 
   constructor(state: GameState) {
     this.state = state;
@@ -176,6 +190,12 @@ export class GameEngine {
       case 'PLACE_BID':
         return placeBid(state, playerId, command.amount);
 
+      case 'ACCEPT_CONTRACT':
+        return acceptContract(state);
+
+      case 'DECLINE_CONTRACT':
+        return declineContract(state);
+
       case 'BUY_SHARES':
         return buyShares(state, playerId, command.companyId, command.count);
 
@@ -232,9 +252,17 @@ export class GameEngine {
    */
   runDay(): void {
     const state = this.state;
+    // Oyun bittiyse takvim durur. Şirket silinmediği için paneller hâlâ
+    // okunabilir — oyuncu son durumuna bakabilmeli.
+    if (state.gameOver) return;
     state.time.day += 1;
 
     runEventTick(state);
+    runEraTick(state);
+    // İmar takvimi sözleşmeden ÖNCE: açılış günü gelen bir inşaat
+    // teklifi yeni bölgeyi hedefleyebilmeli.
+    runDistrictUnlockTick(state);
+    runContractTick(state);
     resetDailyLedgers(state);
     // Ar-Ge primi pazardan ÖNCE ilerler: bugünkü kalite bugünkü satışa
     // girsin. Spot fiyatın tersi (o günün sonunda çözülüyor) çünkü orada
@@ -262,6 +290,63 @@ export class GameEngine {
     recomputeNetWorth(state);
     this.checkMilestones();
     this.checkOvertaking();
+    this.checkRaid();
+  }
+
+  /**
+   * Oyuncunun hissesine yönelen baskını eşiklerde haber yapıyor.
+   *
+   * Kaybedilebilir bir oyunun ilk şartı, kaybın GELDİĞİNİ GÖRMEK.
+   * Devralma eşiği %50 ve baskıncı günde en fazla %3,5 toplayabiliyor;
+   * %10/%25/%40 uyarıları oyuncuya tepki verecek günler bırakıyor —
+   * geri alım yap, nakit biriktir, ya da bile bile riske gir.
+   */
+  private checkRaid(): void {
+    const state = this.state;
+    const player = state.companies[state.playerCompanyId];
+    if (!player) return;
+
+    let topHolder: string | null = null;
+    let topCount = 0;
+    for (const company of Object.values(state.companies)) {
+      if (company.isPlayer) continue;
+      const count = sharesHeld(state, company.id, player.id);
+      if (count > topCount) {
+        topCount = count;
+        topHolder = company.id;
+      }
+    }
+
+    const fraction = topCount / TOTAL_SHARES;
+    const stage = fraction >= 0.4 ? 3 : fraction >= 0.25 ? 2 : fraction >= 0.1 ? 1 : 0;
+    if (stage <= this.lastRaidStage) {
+      // Eşik aşağı inince seviye sessizce düşer: baskıncı satıp geri
+      // dönerse aynı uyarı yeniden atılabilmeli.
+      this.lastRaidStage = stage;
+      return;
+    }
+    this.lastRaidStage = stage;
+
+    const raider = topHolder ? state.companies[topHolder] : null;
+    if (!raider) return;
+
+    const percent = Math.round(fraction * 100);
+    const messages: Record<number, [string, string]> = {
+      1: [
+        `${raider.name} hissene göz dikti`,
+        `Payının %${percent}'i onda. Henüz tehdit değil — ama alımlar sürerse büyür.`,
+      ],
+      2: [
+        `${raider.name} payını %${percent}'e çıkardı`,
+        'Devralma eşiği %50. Geri alım yapmayı düşün: hazineye çektiğin her hisse onun alamayacağı bir hisse.',
+      ],
+      3: [
+        `${raider.name} kontrolüne yaklaşıyor: %${percent}`,
+        'Eşiğe çok az kaldı. Nakdin varsa geri alım son şansın; yoksa imparatorluk el değiştirecek.',
+      ],
+    };
+    const [title, body] = messages[stage]!;
+    pushNews(state, 'bad', title, body, raider.id);
   }
 
   /**

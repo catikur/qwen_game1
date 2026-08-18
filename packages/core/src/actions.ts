@@ -79,6 +79,11 @@ export function purchaseBlocker(state: GameState, tileId: number): string | null
     const structure = tile.structureId ? STRUCTURE_BY_ID[tile.structureId] : null;
     return `${structure?.name ?? 'Kamu alanı'} — belediye malı, satılık değil.`;
   }
+  // Kilitli bölge: oyuncu da NPC de bu kapıdan geçer, kural tek yerde.
+  const district = state.districts[tile.districtId];
+  if (district?.opensOnDay !== undefined && state.time.day < district.opensOnDay) {
+    return `${district.name} imara kapalı — ${district.opensOnDay - state.time.day} gün sonra açılıyor.`;
+  }
   if (tile.ownerId) {
     const owner = state.companies[tile.ownerId];
     return `Bu parsel ${owner?.name ?? 'bir rakibe'} ait.`;
