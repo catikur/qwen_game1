@@ -4,7 +4,7 @@
 > `pnpm bench` çıktısından; iddialar `pnpm balance` ve `pnpm playtest`
 > tarafından her koşuda doğrulanıyor.
 >
-> Son güncelleme: şema **v6**, 15 tur tamamlandı.
+> Son güncelleme: şema **v6**, 16 tur tamamlandı.
 
 ---
 
@@ -37,6 +37,7 @@ mantığının dışında; üçüncüsü ise oyunun kendi **tavsiyesindeydi**:
 | Oyun tekrara düşüyordu, kaybetmek imkânsızdı | **13** | Rakip ölçeklemesi, çift yönlü borsa + oyun sonu, dönemler, sözleşmeler |
 | Arazi oyunu ilk yılda sönüyordu | **14** | Kademeli imar: köşeler köy başlıyor, 130-520. günlerde açılıyor + kademeli bina silueti |
 | Zincir kartı ölçekte kötü tavsiye veriyordu | **15** | Fırsat maliyeti freni: "ertelendi" durumu — tempo, yasak değil |
+| Şehir gün 0'da bitmiş bir dekordu | **16** | Kasabadan metropole: yayılma, yükselme, kademe atlama + bölgeyi silüetten okutan formlar |
 
 ---
 
@@ -393,6 +394,66 @@ başa baş. Benchmark'ın 360g'lük zincir satırları frenle EKSİ okur —
 ufuk dersi: fren geç oyunu optimize ediyor, 360. gün penceresi olgun
 temposunu henüz görmüyor (gerçek ölçü 560g deneyi).
 
+### Tur 16 — Şehir oyunla birlikte gelişiyor
+
+Rapor: *"en başta her yer boş olsa da sonra bazı yerler gelişse, üstelik
+apartmanlar gökdelenler çok önce az katlı olsa"* ve *"bölgeler tam
+anlaşılmıyor — fabrika, tarım, yaşam alanı ayrı tarzda olsa."*
+
+**Kuruluş artık şehrin bugünü değil dünü.** Doku tablosu (olgun karışım)
+yerinde duruyor ama her seçim `rootStructureOf` ile zincirin atasına
+iniyor: merkezde rezidans yerine sıra evler, sanayide fabrika yerine
+bostan. Yükseklik de aralığın yalnızca alt %25'inden geliyor. Üstüne
+yoğunluk merkezden kenara düşüyor (%62 → %28), yani harita bir çekirdek
+ve etrafında yapılaşmamış arazi olarak açılıyor.
+
+**Üç hareket, tek basınç.** `runCityGrowthTick` üç gün arayla çalışıyor:
+yayılma (boş parseller yapılaşır), yükselme (yapı kat kazanır), dönüşüm
+(bostan → depo → fabrika, sıra ev → apartman → rezidans). Basınç iki
+kaynaklı — zaman (şehir kendi başına ~900 günde olgunlaşır) ve nüfus
+(oyuncunun ürettiği istihdam). İkincisi mekaniğin can alıcı yeri: şehir
+oyuncuyla birlikte büyüyor. Zar DIŞSAL (tohum+gün), sınırlar sert:
+kilitli bölge gelişmez, şirket parseline dokunulmaz, kamu yapısı
+üretilmez (park satılmaz — bir gecede parsel kaybı olurdu) ve bölgede
+dört boş parselden azı kalmışsa şehir durur.
+
+**Kıtlık kaybolmadı, ZAMANA yayıldı.** Gün 0'da arazi bol; şehir ve
+rakipler onu yiyor. Yeni baskı bu: bugün almadığın parsele yarın bina
+dikilir ve primli devralman gerekir. Statik kıtlık yerine ilerleyen
+kıtlık.
+
+**Bölge kimliği artık silüette.** Kütleye altı form geldi — kule
+(kademeli), blok (kornişli), ev (beşik çatılı), hangar (geniş, bacalı),
+tarla (karık şeritli), düzlük (park/meydan). Oyuncu binaları formunu
+ROLDEN alıyor: `extract` → tarla, `process`/`logistics` → hangar,
+`rental` → kule/blok. Yirmi altı bina tanımına elle form yazmak aynı
+gerçeği ikinci kez yazmak olurdu. Altı formun tamamı MEVCUT üç
+InstancedMesh'i paylaşıyor: çizim çağrısı sabit.
+
+Ölçüm: gün 0'da 101 yapı · ort. yükseklik 0,46 · silüet {ev, tarla};
+gün 700'de 162 yapı · 0,99 · {ev, tarla, blok, hangar, kule}.
+
+Üç ölçüm dersi:
+
+1. **Payda yanlışsa sistem sessizce kapanır.** Yayılma hedefi ilk sürümde
+   şirket parsellerini de "gelişmiş" sayıyordu; rakipler ilk 120 günde
+   58 parsel kapatınca hedef zaten aşılıyor ve şehir TEK yapı bile
+   eklemiyordu (87 → 87). Payda "şehrin kendi arazisi" olunca hareket
+   geri geldi (87 → 181).
+2. **Pencereyi uzatmak rejimi değiştirebilir.** Zincir A/B'si bir
+   tohumda kırılınca ufuk 900 güne çıkarıldı ve üç tohumda da eksiye
+   döndü: oyuncu 28-46 M ₺'ye çıkıp NAKİT KISITLI rejimden BOL NAKİT
+   rejimine geçmişti — benchmark'ın yıllardır yazdığı satırın aynısı.
+   `districtUnlocks:false` de aynı tuzak: kilitsiz harita araziyi
+   bollaştırıp aynı rejime düşürüyor. Doğru düzeltme pencerede değil
+   kontroldeydi: *kurulamamış bir zincir ölçülemez* — sanayisi geç
+   açılan tohum artık adıyla ölçüm dışı yazılıyor.
+3. **Kontrol iki aktörü tek sayıda toplamamalı.** "Hiçbir bölge
+   tıkanmasın" kontrolü kırıldı ama kırdığı şey şehir değil rakiplerdi
+   (geç oyun olgunlaşması, §4.1'den beri bilinen). Soru daraltıldı:
+   şehir boş parsel tabanının altına inerken yapı dikiyor mu? 700 günde
+   sıfır ihlal.
+
 ---
 
 ## 3. Ölçülen durum
@@ -403,9 +464,9 @@ temposunu henüz görmüyor (gerçek ölçü 560g deneyi).
 
 | | Değer |
 |---|---|
-| Oyuncu / rakip oranı | **1,86** — Tur 7 öncesi 0,76 idi |
-| Oyuncu bina sayısı | 101 |
-| Günlük kâr | 300 B ₺ |
+| Oyuncu / rakip oranı | **1,99** — Tur 7 öncesi 0,76 idi |
+| Oyuncu bina sayısı | 78 |
+| Günlük kâr | 244 B ₺ |
 | Batan şirket | **0/4** |
 
 Not: vekil Tur 14'te devralmayı öğrendi (boş parsel bitince mevcut
@@ -419,7 +480,8 @@ bu repertuvar farkının payı var.
 | Tur 7 öncesi | %35 | %38 | %48 |
 | Tur 7 sonu | %20 | %34 | %33 |
 | Tur 8 | %30 | **%12** | **%13** |
-| **Tur 14** | %10 | **%0** | **%0** |
+| Tur 14 | %10 | **%0** | **%0** |
+| **Tur 16** | %11 | **%1** | **%0** |
 
 Okunması gereken şey sayı değil **yön**. İlk iki satırda boş talep
 zamanla artıyor: şehir büyüdükçe geri kalıyor. Son ikisinde azalıyor —
@@ -462,9 +524,9 @@ ufuk dersi).
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~570 gün/sn |
-| Denge testi | **209 kontrol, hepsi geçiyor** |
+| Denge testi | **216 kontrol, hepsi geçiyor** |
 | Tarayıcı testi | **196 kontrol**, 0 konsol hatası |
-| Kapsam | 26 bina · 22 ürün · 7 kategori · 8 rakip profili |
+| Kapsam | 26 bina · 22 ürün · 7 kategori · 8 rakip profili · 10 şehir yapısı (6 siluet) |
 
 ### Render (Tur 6 sonrası)
 
