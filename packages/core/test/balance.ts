@@ -1048,18 +1048,12 @@ function outletUnitCost(state: GameState): number {
   }
 
   console.log(`\n--- zincir kartını izleyen vs izlemeyen (${CHAIN_AB_DAYS} gün) ---`);
-  let plainProfit = 0;
-  let chainProfit = 0;
-  let wins = 0;
 
   const seedRows: Array<{ seed: number; plain: StrategyRun; chained: StrategyRun }> = [];
   for (const seed of [1, 7, 42]) {
     const plain = runStrategy(seed, false);
     const chained = runStrategy(seed, true);
     seedRows.push({ seed, plain, chained });
-    plainProfit += plain.profit;
-    chainProfit += chained.profit;
-    if (chained.profit > plain.profit) wins++;
     console.log(
       `  seed ${String(seed).padStart(2)} | zincirsiz ${formatMoney(plain.netWorth).padStart(11)} · ${formatMoney(plain.profit).padStart(9)}/gün` +
         ` | zincirli ${formatMoney(chained.netWorth).padStart(11)} · ${formatMoney(chained.profit).padStart(9)}/gün · ${chained.chain} ünite`,
@@ -1083,12 +1077,23 @@ function outletUnitCost(state: GameState): number {
    */
   const established = seedRows.filter((row) => row.chained.chain >= 2);
   const skipped = seedRows.filter((row) => row.chained.chain < 2);
-  const gain = plainProfit > 0 ? chainProfit / plainProfit - 1 : 0;
+
+  /*
+   * ORTALAMA DA ÖLÇÜM DIŞI TOHUMLARI SAYMIYOR.
+   *
+   * İlk sürüm toplamı bütün tohumlardan alıyordu: rapor "seed 42 ölçüm
+   * dışı" derken aynı tohum ortalamayı aşağı çekmeye devam ediyordu —
+   * yani kontrol, dışladığını söylediği veriyle karar veriyordu. İki
+   * iddia da aynı örneklem üzerinden konuşmalı.
+   */
+  const establishedPlain = established.reduce((sum, row) => sum + row.plain.profit, 0);
+  const establishedChain = established.reduce((sum, row) => sum + row.chained.profit, 0);
+  const gain = establishedPlain > 0 ? establishedChain / establishedPlain - 1 : 0;
 
   expect(
     'zincir kartını izlemek günlük kârı artırıyor',
     gain > 0.1,
-    `ortalama %${Math.round(gain * 100)} daha yüksek günlük kâr`,
+    `ölçülen ${established.length} tohumda ortalama %${Math.round(gain * 100)} daha yüksek günlük kâr`,
   );
   expect(
     'zincir kurulabilen her tohumda kazandırıyor',

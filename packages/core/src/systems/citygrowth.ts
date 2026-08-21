@@ -72,16 +72,25 @@ const UPGRADE_CHANCE = 0.45;
 /** Yeni yapı bu basıncın üstünde bir üst kademeden başlar. */
 const SECOND_TIER_PRESSURE = 0.55;
 
+/** Nüfus tavanı taban nüfusun 2,6 katı; aradaki 1,6'lık aralık tam basınç. */
+const POPULATION_SPAN = 1.6;
+
 /**
  * Bölgenin gelişme basıncı 0..1.
  *
- * Nüfus payı `population / archetype.population - 1` üzerinden okunuyor:
- * tavan 2,6 kat olduğu için 1,6'lık aralık tam basınca karşılık geliyor.
+ * Nüfus payı `population / archetype.population - 1` üzerinden okunuyor
+ * ve ÖNCE aralığa bölünüp SONRA kırpılıyor. Sıra önemli: ilk sürüm
+ * fazlalığı 1'e kırpıp sonra 1,6'ya bölüyordu, yani nüfus bileşeni
+ * tavanda 0,625'te kalıyor ve toplam basınç 900 günden sonra bile
+ * 0,794'ü geçemiyordu. Kalabalıklaşan bölge hak ettiği hızda
+ * gelişmiyor, arayüzdeki "Gelişme" göstergesi de %100'ü hiç
+ * göremiyordu.
  */
 export function districtPressure(state: GameState, district: DistrictState): number {
   const archetype = DISTRICT_ARCHETYPES[district.archetype];
   const time = Math.min(1, state.time.day / SELF_GROWTH_DAYS);
-  const population = Math.max(0, Math.min(1, district.population / archetype.population - 1) / 1.6);
+  const excess = district.population / archetype.population - 1;
+  const population = Math.max(0, Math.min(1, excess / POPULATION_SPAN));
   return TIME_WEIGHT * time + POPULATION_WEIGHT * population;
 }
 
