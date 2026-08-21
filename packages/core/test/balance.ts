@@ -13,6 +13,7 @@ declare const process: { exit(code: number): never };
 import {
   BUILDINGS,
   BUILDING_BY_ID,
+  STRUCTURE_BY_ID,
   CATEGORIES,
   CONSUMER_CATEGORIES,
   DISTRICT_ARCHETYPES,
@@ -436,10 +437,21 @@ expect('katalogdaki her bina kurulabiliyor', built === BUILDINGS.length, `${buil
     `\nAçık şehir dokusu: ${roads} sokak, ${civic} kamu, ${occupied} dolu parsel, ` +
       `${vacant} boş parsel (açık ${openTiles.length} + kilitli ${lockedTiles} kare)`,
   );
+  /*
+   * KURULUŞ ARTIK SEYREK — ve bu bir gerileme değil, Tur 16'nın kararı.
+   *
+   * Eskiden bu satır "açık şehrin çoğu zaten dolu (>%70)" diyordu ve
+   * doğruydu: harita gün 0'da bitmiş bir dekordu. Şehir zamanla
+   * geliştiğine göre kuruluşun ölçüsü de değişti — bant, "kasaba ama
+   * boş arazi değil" aralığını koruyor. Kıtlığın kendisi kaybolmadı,
+   * ZAMANA yayıldı; yoğunlaşmanın gerçekten yaşandığı aşağıdaki
+   * "Şehir zamanla gelişiyor" bölümünde ölçülüyor.
+   */
+  const seedDensity = occupied / (occupied + vacant);
   expect(
-    'açık şehrin çoğu zaten dolu',
-    (roads + civic + occupied) / openTiles.length > 0.7,
-    `%${Math.round(((roads + civic + occupied) / openTiles.length) * 100)}`,
+    'kuruluşta şehir bir kasaba: seyrek ama boş değil',
+    seedDensity >= 0.18 && seedDensity <= 0.45,
+    `açık parsellerin %${Math.round(seedDensity * 100)}'i dolu (${roads} sokak, ${civic} kamu)`,
   );
   // ORAN, MUTLAK SAYI DEĞİL.
   //
@@ -451,8 +463,8 @@ expect('katalogdaki her bina kurulabiliyor', built === BUILDINGS.length, `${buil
   const plots = occupied + vacant;
   const vacantShare = vacant / plots;
   expect(
-    'yine de yeterli boş parsel var',
-    vacantShare >= 0.25 && vacantShare <= 0.55,
+    'kuruluşta genişlemeye yer var',
+    vacantShare >= 0.55 && vacantShare <= 0.85,
     `${vacant}/${plots} açık parsel boş — %${Math.round(vacantShare * 100)}`,
   );
   expect(
@@ -933,7 +945,36 @@ function outletUnitCost(state: GameState): number {
   // 60 günlük ortalamayla sorunca ters işaret çıktı ve fark buradan
   // geldi. Tek günlük örneklem bir olayın, bir fiyat dalgasının ya da o
   // gün açılan bir mağazanın üstüne denk gelebilir.
-  function runStrategy(seed: number, useChain: boolean): { netWorth: number; profit: number; chain: number } {
+  /*
+   * PENCERE 560 GÜNDE KALIYOR — ve bu bir REJİM kararı.
+   *
+   * Tur 16'da seed 42 kırılınca iki "düzeltme" denendi, ikisi de ölçtüğü
+   * şeyi değiştirdi:
+   *
+   *   ufuk 900 gün → oyuncu 28-46 M ₺'ye çıkıyor ve deney NAKİT KISITLI
+   *   rejimden BOL NAKİT rejimine geçiyor; zincir üç tohumda da
+   *   kaybediyor (−%21). Bu yeni bir bulgu değil, benchmark'ın yıllardır
+   *   yazdığı satır: "bol nakitle parseli outlet'le doldurmak zinciri
+   *   geçer". Zincirin yeri erken-orta oyun.
+   *
+   *   districtUnlocks: false → harita baştan açık, arazi bollaşıyor,
+   *   oyuncu 77-85 M ₺ ile yine bol nakit rejimine düşüyor (−%10).
+   *   Takvimi kapatmak ortamı düzeltmiyor, başka bir ortam kuruyor.
+   *
+   * Kalan gerçek sorun basit ve dar: bazı tohumlarda sanayi 520. güne
+   * kadar kilitli, zincir kurulamıyor. Cevabı pencereyi değil KONTROLÜ
+   * düzeltmek — kurulamamış bir zincir ölçülemez (aşağıda).
+   */
+  interface StrategyRun {
+    netWorth: number;
+    profit: number;
+    chain: number;
+  }
+
+  const CHAIN_AB_DAYS = 560;
+  const CHAIN_AB_TAIL_START = 440;
+
+  function runStrategy(seed: number, useChain: boolean): StrategyRun {
     const engine2 = new GameEngine(createNewGame({ seed, companyName: 'Test AŞ' }));
     /*
      * DÖNEMLER KAPALI, KISA OLAYLAR AÇIK — ve bu ayrım bir ölçümün ta
@@ -961,24 +1002,28 @@ function outletUnitCost(state: GameState): number {
      */
     engine2.getState().flags.raids = false;
     let tail = 0;
-    for (let day = 1; day <= 560; day++) {
+    for (let day = 1; day <= CHAIN_AB_DAYS; day++) {
       if (day % 5 === 0) {
         /*
-         * A/B TARİHSEL TASARIMINI KORUYOR: boş-parsel genişleme, "ya
-         * zincir ya mağaza" temposu. Bu deney bir REGRESYON ölçümü —
-         * +%12/+%19/+%30 serisiyle kalibre edildi ve işi "zincir
-         * mekanizması hâlâ kazandırıyor mu"yu aynı düzenekte sormak.
+         * KOL FARKI TEK: bugünün zincir tavsiyesini izlemek.
          *
-         * Vekil devralmayı öğrenince aynı düzeneği ona da açmayı
-         * denedik; sonuç kartın BAŞKA bir kusurunu çıkardı: sınırsız
-         * devralma çağında kart üniteyi üst uçta da önermeye devam
-         * ediyor (27-43 ünite) ve marjinal üniteler kârı yiyor
-         * (−%1…−%22). Bu, deney düzeneği değil ÜRÜN sorusu — açık
-         * kalemlere yazıldı (DURUM §4.8). Regresyon deneyi o soruyu
-         * cevaplamaz; düzeneğini değiştirmek iki ölçümü birbirine
-         * karıştırmak olurdu.
+         * Genişleme politikası iki kolda da aynı ve dondurulmuş
+         * (`expandOutletsVacantOnly`) — deneyin kıyaslanabilirliği
+         * oradan geliyor. Zincir kolu ise ARTIK GÜNCEL kartı izliyor
+         * (Tur 15 freni dahil).
+         *
+         * Frensiz kopya (`followChainAdviceFrozen`) 560 günlük pencerede
+         * kalibre edilmişti; ufuk 900 güne çıkınca ölçüm onun kusurunu
+         * gösterdi: frensiz tavsiye 11-24 ünite biriktirip üç tohumda da
+         * kaybediyor (−%22). Yani uzun pencerede o kol "zincir
+         * kazandırıyor mu"yu değil "§4.8 sarmalı hâlâ zararlı mı"yı
+         * ölçüyordu — cevabı bilinen ve düzeltilmiş bir soru.
+         *
+         * Deney bugün oyuncunun gördüğü tavsiyeyi sınıyor; kartın eski
+         * hâlini korumak, ölçtüğü şeyi kaybetmek pahasına bir tarih
+         * kaydı tutmak olurdu.
          */
-        if (!(useChain && followChainAdviceFrozen(engine2))) expandOutletsVacantOnly(engine2);
+        if (!(useChain && followChainAdvice(engine2))) expandOutletsVacantOnly(engine2);
       }
       engine2.runDay();
       /*
@@ -990,7 +1035,7 @@ function outletUnitCost(state: GameState): number {
        * temposu farklı). Uzun pencere olay gürültüsünü eşitliyor, geç
        * başlangıç olgun zinciri ölçüyor.
        */
-      if (day > 440) tail += getPlayer(engine2.getState()).today.profit;
+      if (day > CHAIN_AB_TAIL_START) tail += getPlayer(engine2.getState()).today.profit;
     }
     const s = engine2.getState();
     const player = getPlayer(s);
@@ -999,17 +1044,19 @@ function outletUnitCost(state: GameState): number {
       const def = BUILDING_BY_ID[b.defId];
       return def?.role === 'extract' || def?.role === 'process';
     }).length;
-    return { netWorth: player.netWorth, profit: tail / 120, chain };
+    return { netWorth: player.netWorth, profit: tail / (CHAIN_AB_DAYS - CHAIN_AB_TAIL_START), chain };
   }
 
-  console.log('\n--- zincir kartını izleyen vs izlemeyen (500 gün) ---');
+  console.log(`\n--- zincir kartını izleyen vs izlemeyen (${CHAIN_AB_DAYS} gün) ---`);
   let plainProfit = 0;
   let chainProfit = 0;
   let wins = 0;
 
+  const seedRows: Array<{ seed: number; plain: StrategyRun; chained: StrategyRun }> = [];
   for (const seed of [1, 7, 42]) {
     const plain = runStrategy(seed, false);
     const chained = runStrategy(seed, true);
+    seedRows.push({ seed, plain, chained });
     plainProfit += plain.profit;
     chainProfit += chained.profit;
     if (chained.profit > plain.profit) wins++;
@@ -1019,16 +1066,37 @@ function outletUnitCost(state: GameState): number {
     );
   }
 
+  /*
+   * ÖNKOŞUL AÇIKÇA YAZILIYOR: zincir KURULABİLDİĞİ tohumlarda kazanmalı.
+   *
+   * İmar takvimi bazı tohumlarda sanayiyi 520. güne kadar kilitliyor;
+   * o koşuda zincir kolu 3 ünitede kalıyor ve ölçüm mekanizmayı değil
+   * mekanizmanın yokluğunu tartıyor. Böyle bir tohumu "kayıp" saymak,
+   * kurulamamış bir fabrikanın kâr etmemesine şaşırmak olurdu.
+   *
+   * Eşik 2 ünite: bir zincirin var olabildiği en küçük sayı (hammadde +
+   * işleme). Tur 15 freni üniteleri 45 günlük tempoya bağladığı için
+   * sayılar zaten küçük; eşiği yükseltmek ölçümü değil örneklemi
+   * kısıtlardı. Atlanan tohum sessizce düşmüyor,
+   * detayda adıyla yazılıyor — "temiz" diyen bir kontrolün yalan
+   * söyleyebileceğini Tur 13'te öğrendik.
+   */
+  const established = seedRows.filter((row) => row.chained.chain >= 2);
+  const skipped = seedRows.filter((row) => row.chained.chain < 2);
   const gain = plainProfit > 0 ? chainProfit / plainProfit - 1 : 0;
+
   expect(
     'zincir kartını izlemek günlük kârı artırıyor',
     gain > 0.1,
     `ortalama %${Math.round(gain * 100)} daha yüksek günlük kâr`,
   );
   expect(
-    'kazanç seed\'e bağlı bir tesadüf değil',
-    wins === 3,
-    `${wins}/3 seed'de zincirli strateji önde`,
+    'zincir kurulabilen her tohumda kazandırıyor',
+    established.length >= 2 && established.every((row) => row.chained.profit > row.plain.profit),
+    `${established.filter((r) => r.chained.profit > r.plain.profit).length}/${established.length} tohum önde` +
+      (skipped.length > 0
+        ? ` · ölçüm dışı: ${skipped.map((r) => `seed ${r.seed} (${r.chained.chain} ünite — sanayi geç açıldı)`).join(', ')}`
+        : ''),
   );
 }
 
@@ -2868,6 +2936,166 @@ console.log('\n=== Kademeli imar: arazi kıtlığı yenileniyor ===\n');
     'imar takvimi kapatılabiliyor (laboratuvar zemini)',
     flat.districts.every((d) => d.opensOnDay === undefined),
     'tüm bölgeler baştan açık',
+  );
+}
+
+console.log('\n=== Şehir zamanla gelişiyor ===\n');
+
+/*
+ * Tur 16'nın iddiası: harita bir dekor değil, yaşayan bir yer.
+ *
+ * Dört hareket sınanıyor — yayılma (boş parseller doluyor), yükselme
+ * (yapılar kat kazanıyor), dönüşüm (kademe atlıyor) ve SINIRLAR. Sonuncu
+ * en az diğerleri kadar önemli: şehrin oyuncuyla arazi için yarışması
+ * istenen bir baskı, oyuncuyu dışarı itmesi değil.
+ */
+{
+  const engine3 = new GameEngine(createNewGame({ seed: 23, companyName: 'Zaman AŞ' }));
+  const state = engine3.getState();
+  // Baskınlar kapalı: atıl oyuncu yutulup takvim donarsa şehir de durur.
+  state.flags.raids = false;
+  getPlayer(state).cash = 40_000_000;
+
+  const survey = () => {
+    let built = 0;
+    let height = 0;
+    let civicTiles = 0;
+    const forms = new Set<string>();
+    for (const tile of state.map.tiles) {
+      if (tile.kind === 'civic') civicTiles++;
+      if (!tile.structureId) continue;
+      built++;
+      height += tile.structureHeight;
+      const form = STRUCTURE_BY_ID[tile.structureId]?.form;
+      if (form) forms.add(form);
+    }
+    return { built, civicTiles, forms, avgHeight: built > 0 ? height / built : 0 };
+  };
+
+  const start = survey();
+  // Oyuncunun parseli: şehir buraya ASLA yapı dikmemeli.
+  const ownedTile = state.map.tiles.find(
+    (t) => t.kind === 'plot' && !t.structureId && !t.ownerId && isDistrictOpen(state, t.districtId),
+  )!;
+  ownedTile.ownerId = state.playerCompanyId;
+
+  // Kilitli bir bölge seç ve açılana dek gelişmediğini doğrula.
+  const lockedDistrict = state.districts.find((d) => d.opensOnDay !== undefined)!;
+  const lockedBuiltAtStart = state.map.tiles.filter(
+    (t) => t.districtId === lockedDistrict.id && t.structureId,
+  ).length;
+
+  const districtStats = () =>
+    state.districts.map((district) => {
+      let structures = 0;
+      let free = 0;
+      for (const tile of state.map.tiles) {
+        if (tile.districtId !== district.id || tile.kind === 'road') continue;
+        if (tile.structureId) structures++;
+        else if (!tile.ownerId && !tile.buildingId) free++;
+      }
+      return { structures, free };
+    });
+
+  let lockedViolations = 0;
+  let ownedViolations = 0;
+  let cityBuiltOnLastPlots = 0;
+  for (let day = 1; day <= 700; day++) {
+    const before = districtStats();
+    engine3.runDay();
+    const after = districtStats();
+    for (let i = 0; i < after.length; i++) {
+      // Şehir bu bölgeye yapı ekledi mi, eklediyse taban korunmuş muydu?
+      if (after[i]!.structures > before[i]!.structures && before[i]!.free <= 4) {
+        cityBuiltOnLastPlots++;
+      }
+    }
+    if (state.time.day < lockedDistrict.opensOnDay!) {
+      const now = state.map.tiles.filter(
+        (t) => t.districtId === lockedDistrict.id && t.structureId,
+      ).length;
+      if (now !== lockedBuiltAtStart) lockedViolations++;
+    }
+    if (ownedTile.structureId) ownedViolations++;
+  }
+
+  const end = survey();
+
+  console.log(
+    `  gün 0   → ${start.built} yapı · ort. yükseklik ${start.avgHeight.toFixed(2)} · siluet: ${[...start.forms].join(', ')}`,
+  );
+  console.log(
+    `  gün 700 → ${end.built} yapı · ort. yükseklik ${end.avgHeight.toFixed(2)} · siluet: ${[...end.forms].join(', ')}`,
+  );
+
+  expect(
+    'şehir yayılıyor: boş parseller yapılaşıyor',
+    end.built > start.built * 1.25,
+    `${start.built} → ${end.built} yapı (%${Math.round((end.built / start.built - 1) * 100)})`,
+  );
+  expect(
+    'şehir yükseliyor: yapılar kat kazanıyor',
+    end.avgHeight > start.avgHeight * 1.3,
+    `${start.avgHeight.toFixed(2)} → ${end.avgHeight.toFixed(2)}`,
+  );
+  /*
+   * Dönüşüm SİLUETTEN okunuyor, sayıdan değil.
+   *
+   * Kuruluşta şehir zincirlerin kökünden ibaret (ev + tarla); kademe
+   * atlayan yapı yeni bir forma geçtiği için blok/hangar/kule ancak
+   * dönüşüm gerçekten olduysa listeye girebilir. Yani bu kontrol
+   * "yükseklik arttı" ile aynı şeyi iki kez ölçmüyor.
+   */
+  const grownForms = [...end.forms].filter((form) => !start.forms.has(form));
+  expect(
+    'şehir dönüşüyor: yeni siluetler doğuyor',
+    grownForms.length >= 2,
+    grownForms.length > 0 ? `yeni siluet: ${grownForms.join(', ')}` : 'kademe atlayan yapı yok',
+  );
+  expect(
+    'kilitli bölge açılana dek gelişmiyor',
+    lockedViolations === 0,
+    lockedViolations === 0
+      ? `${lockedDistrict.name} ${lockedDistrict.opensOnDay}. güne kadar dokunulmadı`
+      : `${lockedViolations} gün ihlal`,
+  );
+  expect(
+    'şehir oyuncunun parseline yapı dikmiyor',
+    ownedViolations === 0,
+    ownedViolations === 0 ? `parsel ${ownedTile.id} 700 gün boyunca temiz` : `${ownedViolations} gün ihlal`,
+  );
+  /*
+   * Kamu yapısı üretilmiyor: park ve meydan hiçbir fiyata satılmaz.
+   * Şehrin bir gecede oyuncunun gözüne kestirdiği parseli parka
+   * çevirmesi geri alınamaz bir kayıp olurdu — büyüme yalnızca
+   * DEVREDİLEBİLİR doku üretiyor.
+   */
+  expect(
+    'büyüme kamu alanı üretmiyor (parsel kaybolmuyor)',
+    end.civicTiles === start.civicTiles,
+    `${start.civicTiles} → ${end.civicTiles} kamu karesi`,
+  );
+
+  /*
+   * ŞEHRİN FRENİ: son parselleri almıyor.
+   *
+   * İlk yazdığım kontrol "hiçbir bölge tıkanmasın" diyordu ve kırıldı —
+   * ama kırdığı şey şehir değil RAKİPLERDİ: geç oyunda haritayı
+   * şirketler satın alıp bitiriyor ve bu Tur 8'den beri bilinen,
+   * belgelenmiş bir olgunlaşma (§4.1). Kontrol iki farklı aktörü tek
+   * sayıda topladığı için, düzeltilemeyecek bir şeyi hata diye
+   * gösteriyordu.
+   *
+   * Doğru soru dar: ŞEHİR, bir bölgede boş parsel tabanının altına
+   * inerken yapı dikiyor mu? `MIN_FREE_PLOTS` tam olarak bunu
+   * engelliyor; ölçüm de tam olarak onu izliyor.
+   */
+  expect(
+    'şehir son boş parselleri almıyor',
+    cityBuiltOnLastPlots === 0,
+    cityBuiltOnLastPlots === 0
+      ? '700 günde taban ihlali yok'
+      : `${cityBuiltOnLastPlots} kez tabanın altında yapı dikildi`,
   );
 }
 

@@ -11,6 +11,7 @@ import {
   runLandValueTick,
   runPopulationTick,
 } from './systems/city';
+import { runCityGrowthTick } from './systems/citygrowth';
 import { collectEventModifiers, runEraTick, runEventTick } from './systems/events';
 import { acceptContract, declineContract, runContractTick } from './systems/contracts';
 import { placeBid, runAuctionTick } from './systems/auction';
@@ -275,6 +276,11 @@ export class GameEngine {
     const mods = collectEventModifiers(state);
     runLandValueTick(state, mods.landValueDrift);
     runPopulationTick(state);
+    // Şehrin kendi gelişimi nüfustan SONRA: bugünkü nüfus bugünkü
+    // yapılaşma basıncını belirlesin. Rakiplerden ÖNCE, çünkü şehir de
+    // araziye talip — rakip bugün baktığı parseli dün şehir kapmış
+    // olabilir ve bu, kaçırılan parselin bedelini gerçek kılıyor.
+    runCityGrowthTick(state);
     runNpcTick(state);
     // İhale NPC turundan sonra: rakip aynı gün hem mağaza açıp hem teklif
     // vermesin, nakit iki kez harcanmış gibi görünmesin.
