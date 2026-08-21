@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import type { MassForm } from '@capital/content';
 
 /**
  * Bina kütlesi.
@@ -54,6 +55,11 @@ export interface MassPlacement {
    * bina yerden yükseliyor.
    */
   growth?: number;
+  /**
+   * Siluet ailesi. Verilmezse yükseklikten seçilir (kule/blok) — yani
+   * form bilmeyen çağıranlar Tur 14 davranışını birebir korur.
+   */
+  form?: MassForm;
 }
 
 export class BuildingMass {
@@ -65,7 +71,9 @@ export class BuildingMass {
   private baseCount = 0;
   private capCount = 0;
   private dummy = new THREE.Object3D();
-  private shade = new THREE.Color();
+  private baseColor = new THREE.Color();
+  private trimColor = new THREE.Color();
+  private accentColor = new THREE.Color();
 
   constructor(
     capacity: number,
@@ -78,7 +86,7 @@ export class BuildingMass {
     // çatı katmanı ise kapak + korniş/teras + 2 ekipman kutusuna kadar
     // çıkabiliyor. Örnek sayısı artıyor, ÇİZİM ÇAĞRISI artmıyor — üç
     // mesh üç çağrı; zenginleşme bütçeye örnek matrisi olarak giriyor.
-    this.body = new THREE.InstancedMesh(unit, bodyMaterial, capacity * 2);
+    this.body = new THREE.InstancedMesh(unit, bodyMaterial, capacity * 3);
     // Taban ve çatı aynı malzemeyi paylaşıyor ama AYRI mesh olmak
     // zorundalar: örnek matrisi tek bir mesh içinde parça başına
     // değişemez.
@@ -123,11 +131,21 @@ export class BuildingMass {
     mesh.setColorAt(index, color);
   }
 
+  /**
+   * Bir yapıyı sahneye koyar.
+   *
+   * FORM, RENKTEN ÖNCE OKUNUR. Dokuz arketip dokuz soluk tonla
+   * ayrılmaya çalışıyordu ve şehre bakınca hangi bölgenin ne olduğu
+   * anlaşılmıyordu — hepsi aynı kutuydu. Siluet ayrımı geometriye
+   * taşıyor: hangarın bacası, evin beşik çatısı, tarlanın karıkları ve
+   * kulenin kademesi uzaktan bile okunuyor.
+   *
+   * Hepsi AYNI ÜÇ mesh'i paylaşıyor — form zenginliği bütçeye çizim
+   * çağrısı olarak değil, örnek matrisi olarak giriyor.
+   */
   place(placement: MassPlacement): void {
     const growth = placement.growth ?? 1;
     const total = Math.max(0.04, placement.height * growth);
-    const width = placement.width;
-    const { x, z } = placement;
 
     /*
      * Konumdan türeyen deterministik varyasyon.
@@ -138,8 +156,47 @@ export class BuildingMass {
      * karede yeniden yerleştiriliyor — durum taşımadan aynı binanın hep
      * aynı görünmesinin tek yolu, kimliği koordinattan okumak.
      */
-    const seed = ((x * 151 + z * 73 + 1) * 2654435761) >>> 0;
+    const seed = ((placement.x * 151 + placement.z * 73 + 1) * 2654435761) >>> 0;
     const pick = (slot: number): number => ((seed >>> (slot * 4)) & 15) / 15;
+
+    // Üç ayrı karalama renk: taban, çatı/korniş ve ekipman aynı anda
+    // canlı olmalı. (Tek renk paylaşılırken sıra bağımlılığı vardı;
+    // ayrı alanlar o tuzağı tamamen kaldırıyor.)
+    this.baseColor.copy(placement.color).multiplyScalar(BASE_SHADE);
+    this.trimColor.copy(placement.color).multiplyScalar(CAP_SHADE);
+    this.accentColor.copy(placement.color).multiplyScalar(CAP_SHADE * 0.82);
+
+    // Form verilmemişse yükseklikten seçilir — form bilmeyen çağıranlar
+    // için Tur 14 davranışı birebir korunuyor.
+    const form: MassForm = placement.form ?? (total > 2.2 ? 'tower' : 'block');
+
+    switch (form) {
+      case 'field':
+        this.placeField(placement, total);
+        return;
+      case 'flat':
+        this.placeFlat(placement, total);
+        return;
+      case 'house':
+        this.placeHouse(placement, total, pick);
+        return;
+      case 'shed':
+        this.placeShed(placement, total, pick);
+        return;
+      default:
+        this.placeVertical(placement, total, pick, form === 'tower');
+    }
+  }
+
+  /** Kule ve blok: podyum + (kademeli) gövde + çatı + ekipman. */
+  private placeVertical(
+    placement: MassPlacement,
+    total: number,
+    pick: (slot: number) => number,
+    allowSetback: boolean,
+  ): void {
+    const { x, z } = placement;
+    const width = placement.width;
 
     // Taban ve çatı payları toplam yükseklikten alınıyor; çok alçak
     // yapılarda ikisi de kısalıyor ki bina "şapkalı bir kutu" olmasın.
@@ -159,16 +216,9 @@ export class BuildingMass {
       width * BASE_SPREAD,
       baseHeight,
       width * BASE_SPREAD,
-      this.shade.copy(placement.color).multiplyScalar(BASE_SHADE),
+      this.baseColor,
     );
     y += baseHeight;
-
-    // `trim` tek karalama rengin (this.shade) takma adı. setColorAt
-    // değeri çağrı anında tampona kopyaladığı için bu güvenli — ama
-    // ancak SIRAYLA: trim tabandan sonra hesaplanmalı (yoksa taban
-    // rengi onu ezer) ve tüm trim kullanıcıları ekipman renginden önce
-    // gelmeli.
-    const trim = this.shade.copy(placement.color).multiplyScalar(CAP_SHADE);
 
     // --- gövde: yüksek binada kademeli, alçakta tek blok ---
     //
@@ -178,7 +228,7 @@ export class BuildingMass {
     // ölçeğine döşendiği için o yüze de pencere düşerdi; Tur 6'daki çatı
     // kapağı dersinin aynısı).
     let topWidth = width;
-    if (bodyHeight > SETBACK_MIN_BODY) {
+    if (allowSetback && bodyHeight > SETBACK_MIN_BODY) {
       const lowerHeight = bodyHeight * (0.5 + pick(0) * 0.2);
       const upperHeight = bodyHeight - lowerHeight;
       const upperWidth = width * (0.66 + pick(1) * 0.14);
@@ -187,7 +237,7 @@ export class BuildingMass {
       y += lowerHeight;
 
       const terraceHeight = Math.min(0.05, upperHeight * 0.2);
-      this.put(this.cap, this.capCount++, x, y + terraceHeight / 2, z, width * 1.03, terraceHeight, width * 1.03, trim);
+      this.put(this.cap, this.capCount++, x, y + terraceHeight / 2, z, width * 1.03, terraceHeight, width * 1.03, this.trimColor);
       y += terraceHeight;
 
       this.put(this.body, this.bodyCount++, x, y + upperHeight / 2, z, upperWidth, upperHeight, upperWidth, placement.color);
@@ -201,33 +251,158 @@ export class BuildingMass {
       // Hepsine koysak yeni bir tekdüzelik olurdu; zar %60'ına koyuyor.
       if (bodyHeight > CORNICE_MIN_BODY && pick(2) > 0.4) {
         const corniceHeight = 0.035;
-        this.put(this.cap, this.capCount++, x, y + corniceHeight / 2, z, width * 1.07, corniceHeight, width * 1.07, trim);
+        this.put(this.cap, this.capCount++, x, y + corniceHeight / 2, z, width * 1.07, corniceHeight, width * 1.07, this.trimColor);
         y += corniceHeight;
       }
     }
 
     // --- çatı ---
     const capWidth = topWidth * CAP_SPREAD;
-    this.put(this.cap, this.capCount++, x, y + capHeight / 2, z, capWidth, capHeight, capWidth, trim);
+    this.put(this.cap, this.capCount++, x, y + capHeight / 2, z, capWidth, capHeight, capWidth, this.trimColor);
     y += capHeight;
 
     // --- çatı ekipmanı: klima/asansör dairesi kutuları ---
-    //
-    // Düz çatı boş bir kapaktı; bir-iki küçük kutu onu "bakılan" bir
-    // yüzeye çeviriyor. Yükseklikler toplamdan oranlanıyor ki inşaat
-    // animasyonunda bina ekipmanıyla birlikte yükselsin.
     if (total > ROOF_GEAR_MIN_TOTAL) {
       const gearCount = pick(3) > 0.55 ? 2 : 1;
-      const gearShade = this.shade.copy(trim).multiplyScalar(0.85);
       for (let i = 0; i < gearCount; i++) {
         const gearWidth = capWidth * (0.14 + pick(4 + i) * 0.1);
         const gearHeight = Math.min(0.09, total * 0.05);
         const offsetRange = capWidth * 0.3;
         const gx = x + (pick(6 + i) - 0.5) * 2 * offsetRange;
         const gz = z + (pick(5 - i) - 0.5) * 2 * offsetRange;
-        this.put(this.cap, this.capCount++, gx, y + gearHeight / 2, gz, gearWidth, gearHeight, gearWidth, gearShade);
+        this.put(this.cap, this.capCount++, gx, y + gearHeight / 2, gz, gearWidth, gearHeight, gearWidth, this.accentColor);
       }
     }
+  }
+
+  /**
+   * Ev: alçak, dar, BEŞİK ÇATILI.
+   *
+   * Çatı iki kademeli kapakla yapılıyor — eğik yüz için ayrı geometri
+   * gerekirdi ve o da dördüncü bir çizim çağrısı demekti. İki daralan
+   * kapak, uzaktan bakıldığında kırma çatıyı fazlasıyla okutuyor ve
+   * konut dokusunu apartman bloklarından ilk bakışta ayırıyor.
+   */
+  private placeHouse(placement: MassPlacement, total: number, pick: (slot: number) => number): void {
+    const { x, z } = placement;
+    const width = placement.width * (0.82 + pick(0) * 0.1);
+    const baseHeight = Math.min(0.06, total * 0.14);
+    const roofHeight = Math.max(0.07, total * 0.32);
+    const bodyHeight = Math.max(0.05, total - baseHeight - roofHeight);
+
+    let y = placement.groundY;
+    this.put(this.base, this.baseCount++, x, y + baseHeight / 2, z, width * 1.12, baseHeight, width * 1.12, this.baseColor);
+    y += baseHeight;
+
+    this.put(this.body, this.bodyCount++, x, y + bodyHeight / 2, z, width, bodyHeight, width, placement.color);
+    y += bodyHeight;
+
+    const lower = roofHeight * 0.55;
+    this.put(this.cap, this.capCount++, x, y + lower / 2, z, width * 1.1, lower, width * 1.1, this.trimColor);
+    y += lower;
+    const upper = roofHeight - lower;
+    this.put(this.cap, this.capCount++, x, y + upper / 2, z, width * 0.6, upper, width * 0.6, this.trimColor);
+  }
+
+  /**
+   * Hangar: geniş, alçak, BACALI.
+   *
+   * Sanayiyi okunur kılan üç şey — taban alanı gövdeden geniş (fabrikalar
+   * yatay büyür), çatı düz ve tek parça, ve bir baca. Baca kütlenin
+   * kendisinden küçük ama siluetteki tek dikey öğe olduğu için bölgeyi
+   * uzaktan işaretleyen şey o oluyor.
+   */
+  private placeShed(placement: MassPlacement, total: number, pick: (slot: number) => number): void {
+    const { x, z } = placement;
+    const width = placement.width * 1.2;
+    const baseHeight = Math.min(0.05, total * 0.1);
+    const roofHeight = Math.max(0.04, total * 0.09);
+    const bodyHeight = Math.max(0.05, total - baseHeight - roofHeight);
+
+    let y = placement.groundY;
+    this.put(this.base, this.baseCount++, x, y + baseHeight / 2, z, width * 1.06, baseHeight, width * 1.06, this.baseColor);
+    y += baseHeight;
+
+    this.put(this.body, this.bodyCount++, x, y + bodyHeight / 2, z, width, bodyHeight, width * 0.92, placement.color);
+    y += bodyHeight;
+
+    this.put(this.cap, this.capCount++, x, y + roofHeight / 2, z, width * 1.04, roofHeight, width * 0.96, this.trimColor);
+    y += roofHeight;
+
+    // Baca: köşeye yakın, gövdenin yarısı kadar yükselen ince kütle.
+    const stackHeight = Math.max(0.12, total * 0.55);
+    const stackWidth = width * 0.14;
+    const sx = x + (pick(1) - 0.5) * width * 0.5;
+    const sz = z + (pick(2) - 0.5) * width * 0.45;
+    this.put(this.cap, this.capCount++, sx, y + stackHeight / 2, sz, stackWidth, stackHeight, stackWidth, this.accentColor);
+
+    // Büyük tesislerde ikinci bir havalandırma kütlesi.
+    if (total > 0.9) {
+      const ventHeight = Math.max(0.05, total * 0.16);
+      const vx = x - (pick(3) - 0.5) * width * 0.45;
+      const vz = z - (pick(4) - 0.5) * width * 0.4;
+      this.put(this.cap, this.capCount++, vx, y + ventHeight / 2, vz, width * 0.22, ventHeight, width * 0.22, this.accentColor);
+    }
+  }
+
+  /**
+   * Tarla: zemine yakın bir tava ve üstünde karık şeritleri.
+   *
+   * Yükseklik burada neredeyse hiç iş görmüyor; ekili araziyi okutan şey
+   * ÇİZGİ. Üç şerit, çiftliği hem boş parselden hem park zemininden
+   * ayırmaya yetiyor — ve tarlaya "bina" muamelesi yapan kutu siluetini
+   * ortadan kaldırıyor.
+   */
+  private placeField(placement: MassPlacement, total: number): void {
+    const { x, z } = placement;
+    const width = placement.width * 1.12;
+    const padHeight = Math.max(0.02, Math.min(0.05, total));
+
+    this.put(
+      this.base,
+      this.baseCount++,
+      x,
+      placement.groundY + padHeight / 2,
+      z,
+      width,
+      padHeight,
+      width,
+      this.baseColor,
+    );
+
+    const rows = 3;
+    const rowDepth = width * 0.13;
+    const rowHeight = padHeight * 0.9;
+    for (let i = 0; i < rows; i++) {
+      const offset = (i / (rows - 1) - 0.5) * width * 0.62;
+      this.put(
+        this.body,
+        this.bodyCount++,
+        x,
+        placement.groundY + padHeight + rowHeight / 2,
+        z + offset,
+        width * 0.88,
+        rowHeight,
+        rowDepth,
+        placement.color,
+      );
+    }
+  }
+
+  /** Düzlük: park ve meydan — yalnızca bir platform. */
+  private placeFlat(placement: MassPlacement, total: number): void {
+    const height = Math.max(0.02, total);
+    this.put(
+      this.base,
+      this.baseCount++,
+      placement.x,
+      placement.groundY + height / 2,
+      placement.z,
+      placement.width * 1.14,
+      height,
+      placement.width * 1.14,
+      this.baseColor,
+    );
   }
 
   end(): void {

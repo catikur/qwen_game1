@@ -14,6 +14,7 @@ import {
   categoryBreakdown,
   companyRanking,
   districtOpportunity,
+  districtPressure,
   estimateInvestment,
   formatMoney,
   freePlotsIn,
@@ -297,6 +298,12 @@ export function Inspector(): ReactElement | null {
         <Stat label="Gelir seviyesi" value={`%${Math.round(district.incomeLevel * 100)}`} />
         <Stat label="Arsa değeri" value={formatMoney(tile.landValue)} />
         <Stat label="Boş talep" value={`%${Math.round(districtOpportunity(district) * 100)}`} />
+        {/*
+          Gelişme basıncı: şehrin BURAYA ne kadar yığıldığı. Yüksekse
+          boş parseller yakında yapılaşır ve devralma primi devreye
+          girer — yani bu sayı "acele et" demenin sayısal hâli.
+        */}
+        <Stat label="Gelişme" value={`%${Math.round(districtPressure(state, district) * 100)}`} />
       </div>
 
       <div className="demandlist">
