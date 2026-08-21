@@ -118,10 +118,19 @@ function surveyDistrict(state: GameState, districtId: number) {
   for (const tile of state.map.tiles) {
     if (tile.districtId !== districtId || tile.kind === 'road') continue;
     plots.push(tile);
+
+    // KAMU KARESİ PAYDAYA GİRMEZ. Park, meydan ve okul ne şehrin
+    // yapılaşabileceği ne de şirketin alabileceği arazi; paydada
+    // durunca park ağırlıklı bölgeler (lüks konut, teknopark: %14 park)
+    // hep "az gelişmiş" okunuyor ve şehir hedefe varamadığı için boş
+    // parsel tabanına kadar yayılmaya devam ediyordu. Oran, ancak
+    // GELİŞEBİLİR arazi üzerinden anlamlı.
+    if (tile.kind !== 'plot') continue;
+
     const companyLand = Boolean(tile.ownerId || tile.buildingId);
     if (!companyLand) cityPlots++;
     if (!companyLand && !tile.structureId) free.push(tile);
-    if (tile.structureId && tile.kind === 'plot') structured.push(tile);
+    if (tile.structureId) structured.push(tile);
   }
 
   return { plots, free, structured, cityPlots };
