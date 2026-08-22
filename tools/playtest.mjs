@@ -176,11 +176,15 @@ const findTile = (page, kind) =>
   const roadShare = fabric.roads / fabric.total;
   const vacantShare = fabric.vacant / plots;
   check('Şehirde sokak ızgarası var', roadShare > 0.25, `karelerin %${Math.round(roadShare * 100)}'i sokak`);
-  check('Açık şehir mevcut yapılarla dolu', fabric.occupied / plots > 0.5,
+  // Tur 16: şehir gün 0'da bitmiş bir dekor değil, bir KASABA. Yoğunluk
+  // artık kuruluşta değil zaman içinde geliyor (denge koşumundaki
+  // "Şehir zamanla gelişiyor" bölümü onu ölçüyor); buradaki bant
+  // kasabanın ne çorak ne dolu olduğunu koruyor.
+  check('Kuruluşta şehir bir kasaba', fabric.occupied / plots >= 0.18 && fabric.occupied / plots <= 0.45,
     `${fabric.occupied}/${plots} parsel dolu · ${fabric.locked} kare imara kapalı`);
   check(
-    'Boş parsel kıt ama var',
-    vacantShare > 0.2 && vacantShare < 0.55,
+    'Kuruluşta genişlemeye yer var',
+    vacantShare >= 0.55 && vacantShare <= 0.85,
     `${fabric.vacant}/${plots} açık parsel boş — %${Math.round(vacantShare * 100)}`,
   );
 

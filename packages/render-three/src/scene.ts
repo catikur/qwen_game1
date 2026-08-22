@@ -4,6 +4,7 @@ import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { BUILDING_BY_ID, DISTRICT_ARCHETYPES, STRUCTURE_BY_ID } from '@capital/content';
+import type { BuildingDef, MassForm } from '@capital/content';
 import { BLOCK_SIZE, customerFlows, headquarters, lensValue, supplyRoutes } from '@capital/core';
 import type { GameState, LensId } from '@capital/core';
 import { RtsCameraController } from './camera';
@@ -790,6 +791,7 @@ export class CityRenderer {
         width: 0.8,
         groundY: 0.07,
         color: this.color,
+        form: structure.form,
       });
     }
     this.fabric.end();
@@ -845,6 +847,7 @@ export class CityRenderer {
         groundY: 0.07,
         color: this.color,
         growth,
+        form: massFormOf(def),
       });
     }
     this.buildings.end();
@@ -1534,4 +1537,33 @@ function isTypingTarget(target: EventTarget | null): boolean {
   const element = target as HTMLElement | null;
   if (!element) return false;
   return element.tagName === 'INPUT' || element.tagName === 'TEXTAREA' || element.isContentEditable;
+}
+
+
+/**
+ * Oyuncu binasının siluet ailesi — ROLDEN türetiliyor.
+ *
+ * Bina kataloğuna ayrı bir `form` alanı eklenmedi: rol zaten tam olarak
+ * bu bilgiyi taşıyor (çiftlik toplar, fabrika işler, kule kiralar) ve
+ * yirmi altı tanımı elle işaretlemek aynı gerçeği ikinci kez yazmak
+ * olurdu. Kural burada, tek yerde.
+ */
+function massFormOf(def: BuildingDef): MassForm {
+  switch (def.role) {
+    // Tarla ve maden: yatay, karıklı, binaya benzemeyen kütle.
+    case 'extract':
+      return 'field';
+    // Üretim ve lojistik: geniş bacalı hangar.
+    case 'process':
+    case 'logistics':
+      return 'shed';
+    case 'rental':
+      return def.height > 2 ? 'tower' : 'block';
+    case 'research':
+    case 'marketing':
+      return 'block';
+    default:
+      // Perakende: küçük dükkân ev formunda, büyük mağaza blok.
+      return def.height < 0.8 ? 'house' : 'block';
+  }
 }

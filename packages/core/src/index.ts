@@ -41,6 +41,7 @@ export {
   CONTROL_THRESHOLD,
   TOTAL_SHARES,
 } from './systems/equity';
+export { districtPressure } from './systems/citygrowth';
 export { collectEventModifiers } from './systems/events';
 export { activeContract, contractProgress } from './systems/contracts';
 export type { EventModifiers } from './systems/events';

@@ -892,6 +892,58 @@ bekliyor.
 
 ---
 
+## 3.11 Tur 16 — Bölge kimliği: silüetten okunan şehir
+
+Rapor kısa ve netti: *"bölgeler tam anlaşılmıyor. Fabrika, tarım, yaşam
+alanı için farklı tarzda evler olsa da anlaşılsa."*
+
+Teşhis, renk katmanındaydı. Dokuz arketip dokuz soluk tonla ayrılmaya
+çalışıyordu ve bu iki sebeple işe yaramıyordu: tonlar birbirine yakındı
+(okunurluk için bilerek — Tur 10'da kimlik renkleri 3B sahneyle
+çakışmasın diye kısılmıştı) ve daha önemlisi, **her şey aynı kutuydu.**
+Bir kutunun rengini değiştirmek onu başka bir yapı yapmıyor.
+
+Ayrım geometriye taşındı. Kütle artık altı FORM tanıyor:
+
+| Form | Siluet | Nerede |
+|---|---|---|
+| `tower` | kademeli gövde + teras + çatı ekipmanı | rezidans, ofis kulesi |
+| `block` | korniş bantlı orta yükseklik | apartman, okul, büyük mağaza |
+| `house` | dar gövde + iki kademeli beşik çatı | sıra evler, esnaf dükkânı, bakkal |
+| `shed` | geniş, alçak, **bacalı** | depo, fabrika, üretim tesisi |
+| `field` | zemine yakın tava + karık şeritleri | bostan, çiftlik, maden |
+| `flat` | yalnızca platform | park, meydan |
+
+Üç uygulama kararı:
+
+**Beşik çatı iki kademeli kapakla yapılıyor, eğik yüzle değil.** Gerçek
+bir eğim ayrı geometri isterdi ve o da dördüncü bir çizim çağrısı
+demekti. Daralan iki kapak, uzaktan bakıldığında kırma çatıyı fazlasıyla
+okutuyor.
+
+**Bacanın işi büyüklüğünden fazla.** Hangarın kendisi alçak ve yatay;
+siluetteki tek dikey öğe baca olduğu için sanayi bölgesini uzaktan
+işaretleyen şey o oluyor.
+
+**Oyuncu binası formunu ROLDEN alıyor.** `extract` → tarla,
+`process`/`logistics` → hangar, `rental` → kule/blok, `outlet` →
+ev/blok. Bina kataloğuna ayrı bir `form` alanı eklenmedi: rol zaten tam
+olarak bu bilgiyi taşıyor ve yirmi altı tanımı elle işaretlemek aynı
+gerçeği ikinci kez yazmak olurdu.
+
+Bütçe değişmedi: altı formun tamamı **mevcut üç InstancedMesh'i**
+paylaşıyor (taban / gövde / çatı). Zenginlik çizim çağrısı olarak değil,
+örnek matrisi olarak giriyor — gövde kapasitesi ×2'den ×3'e çıktı
+(tarlanın üç karığı), çatı zaten ×5'ti.
+
+Aynı turda şehir zaman içinde gelişmeye de başladı (`DURUM.md` Tur 16):
+kuruluşta her yapı zincirinin atası ve en alçak hâliyle doğuyor, sonra
+kat kazanıp kademe atlıyor. Formlar bu yüzden iki kat iş görüyor — bir
+bölgenin ne olduğunu değil, **ne hâle geldiğini** de gösteriyorlar:
+bostanın yerini depo, deponun yerini bacalı fabrika alıyor.
+
+---
+
 ## 5. Test edilemeyen iki şey ve nasıl ele alındıkları
 
 Bu ortamda GPU yok; Chromium yazılım rasterizasyonu kullanıyor. İki

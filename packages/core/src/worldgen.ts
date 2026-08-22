@@ -9,6 +9,7 @@ import {
   NPC_PROFILES,
   STRUCTURE_BY_ID,
   getCeoModifiers,
+  rootStructureOf,
 } from '@capital/content';
 import type { CategoryId, DistrictArchetypeId } from '@capital/content';
 import { createRng, nextRange, pickWeighted } from './rng';
@@ -66,6 +67,31 @@ const LOCKED_FABRIC_KEEP = 0.22;
 
 /** Kilitli bölgede arsa ucuz başlar; açılış bir fırsat penceresi olmalı. */
 const LOCKED_LAND_DISCOUNT = 0.55;
+
+/**
+ * Kuruluş yoğunluğu: şehir ÇEKİRDEKTEN DIŞA kuruluyor.
+ *
+ * Eskiden doku haritanın her yerine aynı olasılıkla dağılıyordu ve şehir
+ * daha ilk karede bitmiş bir dekor gibi duruyordu — oyuncunun geldiği
+ * gün her şey zaten yapılmıştı. Şimdi merkez dolu, çevre boş: gerçek
+ * şehirler gibi bir çekirdek ve etrafında henüz yapılaşmamış arazi.
+ *
+ * Kıtlık kaybolmuyor, YER DEĞİŞTİRİYOR. Gün 0'da bol olan arazi zamanla
+ * `runCityGrowthTick` tarafından yenip azalıyor; yani "şimdi almazsam
+ * yarın üstüne bina dikilir ve primli devralmam gerekir" baskısı
+ * doğuyor. Statik kıtlık yerine ilerleyen kıtlık.
+ */
+const SEED_DENSITY_EDGE = 0.28;
+const SEED_DENSITY_CORE = 0.62;
+
+/**
+ * Kuruluşta yükseklik, aralığın yalnızca alt diliminden seçilir.
+ *
+ * "Apartmanlar gökdelenler çok önce az katlı olsun" isteğinin karşılığı:
+ * bir yapı en alçak hâliyle doğuyor ve kat sayısını yıllar içinde
+ * kazanıyor.
+ */
+const SEED_HEIGHT_BAND = 0.25;
 
 export { estimateBaselineDemand, zeroByCategory } from './systems/demand';
 
@@ -255,10 +281,23 @@ export function createNewGame(options: NewGameOptions = {}): GameState {
       let structureId: string | null = null;
       let structureHeight = 0;
 
+      // Merkeze yakınlık hem dokuyu hem arsa değerini besliyor; bu yüzden
+      // ikisinden de ÖNCE hesaplanıyor.
+      const distance = Math.abs(x - centerX) + Math.abs(y - centerY);
+      const centrality = 1 - distance / maxDistance;
+
       if (!road) {
         const fabric = DISTRICT_FABRIC[district.archetype] ?? [{ structureId: null, weight: 1 }];
         const choice = pickWeighted(rng, fabric, (entry) => entry.weight);
-        structureId = choice.structureId;
+        // Doku tablosu şehrin OLGUN hâlini tarif ediyor; kuruluşta her
+        // seçim zincirin atasına iniyor. Merkezde rezidans yerine sıra
+        // evler, sanayide fabrika yerine bostan doğuyor.
+        structureId = choice.structureId ? rootStructureOf(choice.structureId) : null;
+
+        // Çekirdekten dışa: kenarda parsellerin çoğu henüz boş.
+        const seedDensity =
+          SEED_DENSITY_EDGE + (SEED_DENSITY_CORE - SEED_DENSITY_EDGE) * Math.pow(centrality, 1.2);
+        if (structureId && nextRange(rng, 0, 1) > seedDensity) structureId = null;
 
         // Kilitli bölge köy dokusuyla başlar: mevcut yapıların çoğu yok.
         // Açılış gününde oyuncuyu bekleyen şey dolu bir mahalle değil,
@@ -270,7 +309,12 @@ export function createNewGame(options: NewGameOptions = {}): GameState {
         if (structureId) {
           const def = STRUCTURE_BY_ID[structureId];
           if (def) {
-            structureHeight = nextRange(rng, def.minHeight, def.maxHeight);
+            // Alt dilimden: kat sayısı sonradan kazanılacak.
+            structureHeight = nextRange(
+              rng,
+              def.minHeight,
+              def.minHeight + (def.maxHeight - def.minHeight) * SEED_HEIGHT_BAND,
+            );
             // Kamu yapıları hiçbir fiyata satılmaz; parsel değil civic olur.
             if (def.buyoutMultiplier === null) kind = 'civic';
           } else {
@@ -283,8 +327,6 @@ export function createNewGame(options: NewGameOptions = {}): GameState {
       // İmarsız arazi iskontolu: açılış günü bir fırsat penceresi olmalı,
       // erken giren ucuza kapatmalı. Değer sonra `runLandValueTick`in
       // gelişme takibiyle kendiliğinden şehir seviyesine tırmanıyor.
-      const distance = Math.abs(x - centerX) + Math.abs(y - centerY);
-      const centrality = 1 - distance / maxDistance;
       const landValue =
         archetype.baseLandValue *
         (0.72 + 0.55 * centrality) *
