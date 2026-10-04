@@ -146,6 +146,14 @@ async function finish(browser, consoleErrors) {
     (await page.locator('.ceo-perk').first().textContent())?.trim(),
   );
 
+  check('Zorluk seçenekleri listeleniyor', (await page.locator('.difficulty-option').count()) === 3);
+  check('Varsayılan zorluk Dengeli',
+    (await page.locator('.difficulty-option[aria-checked="true"]').getAttribute('data-difficulty')) === 'normal');
+  await page.locator('.difficulty-option[data-difficulty="hard"]').click();
+  const hardDetail = ((await page.locator('.difficulty-detail').textContent()) ?? '').trim();
+  check('Zorluk seçimi farkları açıkça yazıyor', hardDetail.includes('150M'), hardDetail.slice(0, 90));
+  await page.locator('.difficulty-option[data-difficulty="normal"]').click();
+
   await page.screenshot({ path: `${OUT}/newgame.png` });
 
   await page.fill('.newgame-field input[type="text"]', 'Karaca Holding');
@@ -160,6 +168,8 @@ async function finish(browser, consoleErrors) {
     (await page.locator('.brand-ceo svg').count()) === 1,
     (await page.locator('.brand-sub').textContent())?.trim(),
   );
+  check('Dengeli oyun kayda zorluk alanı yazmıyor',
+    await page.evaluate(() => window.__capital.getState().difficulty === undefined));
 
   // ---------- Sahne ----------
   section('Şehir sahnesi');
@@ -530,6 +540,91 @@ async function finish(browser, consoleErrors) {
   // ---------- Zincir kartı ----------
   // Motor katmanı A parçasında doğrulandı; burada bakılan şey oyuncunun
   // gerçekten görüp kullanabildiği mi.
+  // ---------- Gündem ve hedefler ----------
+  section('Gündem ve hedefler');
+  const goalChip = page.locator('.agenda [data-agenda="goal"] button');
+  check('Gündemde sıradaki hedef duruyor', (await goalChip.count()) === 1,
+    ((await goalChip.textContent().catch(() => '')) ?? '').trim());
+  await goalChip.click();
+  await page.waitForTimeout(250);
+  const ladder = await page.evaluate(() => ({
+    rows: document.querySelectorAll('.goal-list .goal').length,
+    done: document.querySelectorAll('.goal-list .goal-done').length,
+    next: document.querySelectorAll('.goal-list .goal-next').length,
+  }));
+  check('Hedef çipi merdiveni açıyor', ladder.rows === 10, `${ladder.rows} basamak`);
+  check('İnşa edilen dükkân merdivende işaretli', ladder.done >= 1 && ladder.next === 1,
+    `${ladder.done} tamam · ${ladder.next} sıradaki`);
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(150);
+
+  // Aciliyet sırası: kontrole yaklaşan baskın şeridin başına geçmeli.
+  await page.evaluate(() => {
+    const s = window.__capital.getState();
+    const rival = Object.values(s.companies).find((c) => !c.isPlayer);
+    rival.shares[s.playerCompanyId] = 4200;
+    window.__capital.raidProbe = rival.id;
+  });
+  await page.waitForFunction(() => document.querySelector('.agenda [data-agenda="raid"]') !== null, null, { timeout: 5000 }).catch(() => null);
+  const firstAgenda = await page.evaluate(() => document.querySelector('.agenda [data-agenda]')?.getAttribute('data-agenda'));
+  check('Acil baskın gündemin başına geçiyor', firstAgenda === 'raid', `ilk kalem: ${firstAgenda}`);
+  await page.evaluate(() => {
+    const s = window.__capital.getState();
+    delete s.companies[window.__capital.raidProbe].shares[s.playerCompanyId];
+  });
+
+  // İmar geri sayımı: tıklanınca kamera bölgeye gider.
+  const unlockProbe = await page.evaluate(() => {
+    const s = window.__capital.getState();
+    const district = s.districts.find((d) => d.opensOnDay !== undefined && d.opensOnDay > s.time.day);
+    if (!district) return null;
+    window.__capital.unlockProbe = { id: district.id, was: district.opensOnDay };
+    district.opensOnDay = s.time.day + 12;
+    return { id: district.id, cx: (district.x0 + district.x1) / 2, cz: (district.y0 + district.y1) / 2 };
+  });
+  if (unlockProbe) {
+    await page.waitForFunction(() => document.querySelector('.agenda [data-agenda="unlock"] button') !== null, null, { timeout: 5000 }).catch(() => null);
+    const unlockButton = page.locator('.agenda [data-agenda="unlock"] button');
+    check('Yaklaşan imar açılışı gündemde geri sayıyor', (await unlockButton.count()) === 1,
+      ((await unlockButton.textContent().catch(() => '')) ?? '').trim());
+    if ((await unlockButton.count()) === 1) await unlockButton.click();
+    await page.waitForTimeout(200);
+    const target = await page.evaluate(() => window.__capital.cameraTarget());
+    const dist = target ? Math.hypot(target.x - unlockProbe.cx, target.z - unlockProbe.cz) : 999;
+    check('İmar çipi kamerayı bölgeye götürüyor', dist < 6, `merkeze ${dist.toFixed(1)} kare`);
+    await page.evaluate(() => {
+      const probe = window.__capital.unlockProbe;
+      window.__capital.getState().districts[probe.id].opensOnDay = probe.was;
+    });
+  }
+
+  // Olay yerine git: yeri olan haber bir dokunuşla oraya götürür.
+  const newsProbe = await page.evaluate(() => {
+    const s = window.__capital.getState();
+    const tile = s.map.tiles.find((t) => t.kind === 'plot' && t.x > 20 && t.y > 20);
+    s.news.unshift({ id: s.nextId++, day: s.time.day, tone: 'rival', title: 'Deneme haberi', body: 'Yeri olan haber.', tileId: tile.id });
+    window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 1 });
+    return { tileId: tile.id, x: tile.x, z: tile.y };
+  });
+  await page.waitForFunction(() => document.querySelector('.news .news-goto') !== null, null, { timeout: 5000 }).catch(() => null);
+  const gotoButtons = await page.locator('.news .news-goto').count();
+  check('Yeri olan haberde "Git" var', gotoButtons >= 1, `${gotoButtons} haber`);
+  if (gotoButtons >= 1) {
+    await page.evaluate(() => {
+      const item = [...document.querySelectorAll('.news .news-item')].find((li) => li.textContent.includes('Deneme haberi'));
+      item?.querySelector('.news-goto')?.click();
+    });
+    await page.waitForTimeout(250);
+    const after = await page.evaluate(() => ({
+      target: window.__capital.cameraTarget(),
+      selected: document.querySelector('.inspector') !== null,
+    }));
+    const gap = after.target ? Math.hypot(after.target.x - newsProbe.x, after.target.z - newsProbe.z) : 999;
+    check('"Git" kamerayı olay yerine götürüyor', gap < 6, `kareye ${gap.toFixed(1)}`);
+    check('"Git" kareyi seçip ayrıntısını açıyor', after.selected);
+  }
+  await page.evaluate(() => window.__capital.selectTile(null));
+
   if (SMOKE) {
     await finish(browser, consoleErrors);
     return;
@@ -1658,6 +1753,32 @@ async function finish(browser, consoleErrors) {
     window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
   });
   await page.waitForFunction(() => document.querySelector('.gameover') === null, null, { timeout: 5000 }).catch(() => null);
+
+  // Zafer: ekran insin, "devam" serbest oyuna döndürsün.
+  await page.evaluate(() => {
+    const s = window.__capital.getState();
+    s.victory = { day: s.time.day, kind: 'tycoon' };
+    window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+  });
+  const victoryShown = await page
+    .waitForFunction(() => document.querySelector('.gameover.victory') !== null, null, { timeout: 5000 })
+    .then(() => true)
+    .catch(() => false);
+  check('Zafer ekranı iniyor', victoryShown);
+  if (victoryShown) {
+    await page.locator('.gameover.victory button:has-text("Serbest oyuna devam")').click();
+    await page.waitForTimeout(300);
+    const resumed = await page.evaluate(() => {
+      const s = window.__capital.getState();
+      return { gone: document.querySelector('.gameover.victory') === null, dismissed: s.victory?.dismissed === true, speed: s.time.speed };
+    });
+    check('Zaferden sonra serbest oyun sürüyor', resumed.gone && resumed.dismissed && resumed.speed === 1,
+      `ekran ${resumed.gone ? 'kapandı' : 'açık'} · hız ${resumed.speed}`);
+  }
+  await page.evaluate(() => {
+    delete window.__capital.getState().victory;
+    window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+  });
 
   // ---------- Mobil ----------
   //

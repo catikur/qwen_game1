@@ -43,6 +43,7 @@ export function runDistrictUnlockTick(state: GameState): void {
         `İmar planı açıklandı: ${district.name}`,
         `${district.name} bölgesi ${UNLOCK_NOTICE_DAYS} gün sonra imara açılıyor. ` +
           'Arsa şimdilik ucuz — açılış günü koşu başlar.',
+        { districtId: district.id },
       );
     }
 
@@ -52,6 +53,7 @@ export function runDistrictUnlockTick(state: GameState): void {
         'good',
         `${district.name} imara açıldı`,
         'Yeni parseller satışta. Bölge nüfusu hızla büyüyecek — erken giren, talebi rakipsiz karşılar.',
+        { districtId: district.id },
       );
     }
   }

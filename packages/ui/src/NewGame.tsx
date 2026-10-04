@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { ReactElement } from 'react';
-import { CEOS, DEFAULT_CEO_ID } from '@capital/content';
+import { CEOS, DEFAULT_CEO_ID, DEFAULT_DIFFICULTY, DIFFICULTIES } from '@capital/content';
+import type { DifficultyId } from '@capital/content';
 import { CeoPortrait } from './CeoPortrait';
 
 /**
@@ -14,14 +15,16 @@ export function NewGameScreen({
   onStart,
   onCancel,
 }: {
-  onStart: (companyName: string, ceoId: string) => void;
+  onStart: (companyName: string, ceoId: string, difficulty: DifficultyId) => void;
   onCancel?: () => void;
 }): ReactElement {
   const [name, setName] = useState('');
   const [ceoId, setCeoId] = useState(DEFAULT_CEO_ID);
+  const [difficulty, setDifficulty] = useState<DifficultyId>(DEFAULT_DIFFICULTY);
   const selected = CEOS.find((c) => c.id === ceoId) ?? CEOS[0]!;
+  const level = DIFFICULTIES.find((d) => d.id === difficulty) ?? DIFFICULTIES[1]!;
 
-  const submit = () => onStart(name.trim() || 'Yeni Girişim', ceoId);
+  const submit = () => onStart(name.trim() || 'Yeni Girişim', ceoId, difficulty);
 
   return (
     <div className="newgame">
@@ -83,6 +86,37 @@ export function NewGameScreen({
             <p className="ceo-perk">
               <span className="tag bad">Zayıf yanı</span> {selected.drawback}
             </p>
+          </div>
+        </div>
+
+        {/*
+          Zorluk görünmez bir bonus değil: seçilen kademenin farkları
+          açıkça yazıyor. Oyuncu neye razı olduğunu bilerek başlamalı.
+        */}
+        <div className="newgame-field">
+          <span>Şehir ne kadar acımasız?</span>
+          <div className="difficulty-picker" role="radiogroup" aria-label="Zorluk">
+            {DIFFICULTIES.map((option) => (
+              <button
+                key={option.id}
+                type="button"
+                role="radio"
+                aria-checked={option.id === difficulty}
+                className={`difficulty-option${option.id === difficulty ? ' selected' : ''}`}
+                data-difficulty={option.id}
+                onClick={() => setDifficulty(option.id)}
+              >
+                {option.name}
+              </button>
+            ))}
+          </div>
+          <div className="difficulty-detail">
+            <p>{level.blurb}</p>
+            <ul>
+              {level.facts.map((fact) => (
+                <li key={fact}>{fact}</li>
+              ))}
+            </ul>
           </div>
         </div>
 

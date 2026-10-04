@@ -165,6 +165,8 @@ export function runContractTick(state: GameState): void {
     'neutral',
     'Belediyeden sözleşme teklifi',
     `${generated.title} — ödül ${formatShort(generated.reward)}, süre ${generated.durationDays} gün. Teklif ~${OFFER_LIFETIME_DAYS} gün masada.`,
+    // Pay sözleşmesi şehir geneli; yalnızca inşaat sözleşmesinin bir yeri var.
+    generated.kind === 'build' ? { districtId: generated.districtId } : undefined,
   );
 }
 

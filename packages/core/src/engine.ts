@@ -4,6 +4,7 @@ import { pushNews } from './news';
 import { companyRanking, formatMoney } from './selectors';
 import { TOTAL_SHARES, sharesHeld } from './systems/equity';
 import { runMarketTick } from './systems/market';
+import { runGoalTick } from './systems/goals';
 import { resetDailyLedgers, runProductionTick, runProfitTrendTick, runSpotPriceTick } from './systems/supply';
 import {
   recomputeNetWorth,
@@ -214,6 +215,11 @@ export class GameEngine {
         state.flags[command.flag] = command.value;
         return { ok: true };
 
+      case 'DISMISS_VICTORY':
+        if (!state.victory) return { ok: false, reason: 'Henüz bir zafer yok.' };
+        state.victory.dismissed = true;
+        return { ok: true };
+
       default:
         return { ok: false, reason: 'Bilinmeyen komut.' };
     }
@@ -296,6 +302,7 @@ export class GameEngine {
     this.settleCredit();
     recomputeNetWorth(state);
     this.checkMilestones();
+    runGoalTick(state);
     this.checkOvertaking();
     this.checkRaid();
   }

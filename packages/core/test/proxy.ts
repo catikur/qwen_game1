@@ -19,9 +19,13 @@ import {
   chainCards,
   districtOpportunity,
   estimateInvestment,
+  freeFloat,
   getPlayer,
   isDistrictOpen,
+  sharePrice,
+  sharesHeld,
   tilePrice,
+  TOTAL_SHARES,
 } from '../src/index';
 import type { ChainMove } from '../src/index';
 import type { GameState } from '../src/types';
@@ -204,4 +208,28 @@ export function expandOutletsVacantOnly(engine: GameEngine): void {
 export function playerStrategy(engine: GameEngine): void {
   followChainAdvice(engine);
   expandOutlets(engine);
+}
+
+/**
+ * Baskın savunması — oyunun uyarısına uyan oyuncu.
+ *
+ * Motor %10/%25/%40 eşiklerinde "kendi hisseni geri al" diye haber
+ * düşüyor. `playerStrategy` bunu BİLEREK yapmıyor (dengenin tarihsel
+ * ölçümleri savunmasız vekille kalibre edildi); zorluk kalibrasyonu ise
+ * uyarıyı okuyan bir oyuncuyla ölçülmeli — yoksa ölçülen şey zorluk
+ * değil vekilin sağırlığı olur.
+ */
+export function defendAgainstRaids(engine: GameEngine): void {
+  const state = engine.getState();
+  const player = getPlayer(state);
+  let threat = 0;
+  for (const other of Object.values(state.companies)) {
+    if (other.id === player.id) continue;
+    threat = Math.max(threat, sharesHeld(state, other.id, player.id));
+  }
+  if (threat / TOTAL_SHARES < 0.2) return;
+  const price = sharePrice(state, player.id);
+  if (price <= 0) return;
+  const count = Math.min(350, freeFloat(state, player.id), Math.floor((player.cash * 0.4) / price));
+  if (count > 0) engine.dispatch({ type: 'BUY_SHARES', companyId: player.id, count });
 }

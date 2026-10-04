@@ -1,7 +1,9 @@
+import { useState } from 'react';
 import type { ReactElement } from 'react';
 import { CEO_BY_ID, ERA_BY_ID, EVENTS, NPC_PROFILES } from '@capital/content';
 import {
   LENSES,
+  agenda,
   companyRanking,
   contractProgress,
   formatDate,
@@ -13,6 +15,7 @@ import { CeoPortrait } from './CeoPortrait';
 import { AuctionChip } from './AuctionPanel';
 import { useCollapsible } from './collapse';
 import { useGame, useGameState } from './useGame';
+import type { ViewState } from './useGame';
 
 /** Üst bar: oyuncunun her an görmesi gereken beş sayı ve zaman kontrolü. */
 export function TopBar(): ReactElement {
@@ -547,6 +550,7 @@ export function GameOverScreen({ onNewGame }: { onNewGame: () => void }): ReactE
 
 export function NewsFeed(): ReactElement {
   const state = useGameState();
+  const { focusOn } = useGame();
   const { open, toggle } = useCollapsible();
   const latest = state.news[0];
 
@@ -582,6 +586,23 @@ export function NewsFeed(): ReactElement {
             <div className="news-head">
               <span className="news-tag">{TONE_LABEL[item.tone] ?? 'Haber'}</span>
               <span className="news-day">{item.day}. gün</span>
+              {/*
+                Yeri olan haber bir kapı: "Liman imara açıldı" okunup
+                geçilmesin, bir dokunuşla oraya gidilsin. Yalnızca yeri
+                bilinen haberlerde var — boş bir "Git" yalan söylerdi.
+              */}
+              {(item.tileId !== undefined || item.districtId !== undefined) && (
+                <button
+                  type="button"
+                  className="news-goto"
+                  onClick={() =>
+                    focusOn(item.tileId !== undefined ? { tileId: item.tileId } : { districtId: item.districtId! })
+                  }
+                  title="Olay yerine git"
+                >
+                  Git
+                </button>
+              )}
             </div>
             {/*
              * Yüzü olan haberler farklı dizilir: portre solda, metin
@@ -662,44 +683,129 @@ function ContractChip(): ReactElement | null {
   );
 }
 
+/**
+ * Gündem şeridi.
+ *
+ * Çekirdeğin `agenda()` listesini aciliyet sırasıyla çiziyor. İhale ve
+ * sözleşme kendi etkileşimli çiplerini taşıyor (teklif ver, kabul et);
+ * diğerleri tıklanınca ilgili paneli açıyor ya da kamerayı olay yerine
+ * götürüyor.
+ *
+ * Dar ekranda ilk üç kalem görünür, kalanı "+N" ile açılır. Şerit iki
+ * satıra taşsaydı haritanın payını yiyordu; yatay kaydırma da yok —
+ * gizli kaydırma keşfedilmeyen bir arayüz (rıhtımın dersi).
+ */
+const AGENDA_VISIBLE_NARROW = 3;
+
 export function ActiveEvents(): ReactElement | null {
   const state = useGameState();
-  const era = state.era ? ERA_BY_ID[state.era.defId] : undefined;
-  // İhale çipi de buraya düşüyor: ikisi de "şu an olan bir şey" ve
-  // ikisi de akışı kesmiyor.
-  if (
-    state.activeEvents.length === 0 &&
-    !state.auction &&
-    !era &&
-    !state.contract &&
-    !state.contractOffer
-  )
-    return null;
+  const { view, setView, focusOn } = useGame();
+  const [expanded, setExpanded] = useState(false);
+  const items = agenda(state);
+  if (items.length === 0) return null;
 
-  return (
-    <div className="active-events">
-      <AuctionChip />
-      {/*
-       * Dönem çipi en solda ve süre YAZMIYOR. Olay çipi geri sayar,
-       * çünkü olay kısa ve "ne zaman bitecek" sorusu taktik. Dönem bir
-       * mevsim: aylarca ekranda duracak bir sayaç gürültü olurdu —
-       * kapanış zaten 20 gün kala haberle bildiriliyor.
-       */}
-      {era && state.era && (
-        <span className={`event-chip era-chip tone-${era.tone}`} title={era.body}>
-          {era.title}
-        </span>
-      )}
-      <ContractChip />
-      {state.activeEvents.map((active) => {
-        const def = EVENTS.find((event) => event.id === active.defId);
-        if (!def) return null;
-        return (
-          <span key={active.defId} className={`event-chip tone-${def.tone}`} title={def.body}>
-            {def.title} · {active.remainingDays} gün
+  const extra = Math.max(0, items.length - AGENDA_VISIBLE_NARROW);
+  const togglePanel = (panel: ViewState['openPanel']) =>
+    setView({ openPanel: view.openPanel === panel ? 'none' : panel });
+
+  let contractDrawn = false;
+  const chips = items.map((item, index) => {
+    const className = index >= AGENDA_VISIBLE_NARROW && !expanded ? 'agenda-extra' : undefined;
+    const days = item.daysLeft !== null ? <span className="agenda-days">{item.daysLeft}g</span> : null;
+    let chip: ReactElement | null = null;
+
+    switch (item.kind) {
+      case 'auction':
+        chip = <AuctionChip />;
+        break;
+      case 'contract':
+      case 'contractOffer':
+        if (contractDrawn) return null;
+        contractDrawn = true;
+        chip = <ContractChip />;
+        break;
+      case 'era':
+        chip = (
+          <span className={`event-chip era-chip tone-${item.tone}`} title={ERA_BY_ID[state.era?.defId ?? '']?.body}>
+            {item.label}
           </span>
         );
-      })}
+        break;
+      case 'event':
+        chip = (
+          <span
+            className={`event-chip tone-${item.tone}`}
+            title={EVENTS.find((e) => `event:${e.id}` === item.key)?.body}
+          >
+            {item.label} · {item.daysLeft} gün
+          </span>
+        );
+        break;
+      case 'raid':
+        chip = (
+          <button
+            type="button"
+            className={`event-chip raid-chip urgency-${item.urgency}`}
+            onClick={() => togglePanel('bourse')}
+            title="Hisse baskını — borsadan geri alım yapabilirsin"
+          >
+            <span className="agenda-label">Baskın</span>
+            {item.label}
+          </button>
+        );
+        break;
+      case 'unlock':
+        chip = (
+          <button
+            type="button"
+            className="event-chip unlock-chip"
+            onClick={() => item.districtId !== undefined && focusOn({ districtId: item.districtId })}
+            title="Bölgeye git"
+          >
+            {item.label}
+            {days}
+          </button>
+        );
+        break;
+      case 'goal':
+        chip = (
+          <button
+            type="button"
+            className="event-chip goal-chip"
+            onClick={() => togglePanel('goals')}
+            title="Hedef merdiveni"
+          >
+            <span className="agenda-label">Hedef</span>
+            {item.label}
+            <span className="goal-chip-bar" aria-hidden="true">
+              <span style={{ width: `${Math.round((item.progress ?? 0) * 100)}%` }} />
+            </span>
+            <span className="agenda-days">%{Math.round((item.progress ?? 0) * 100)}</span>
+          </button>
+        );
+        break;
+    }
+    if (!chip) return null;
+    return (
+      <span key={item.key} className={className} data-agenda={item.kind}>
+        {chip}
+      </span>
+    );
+  });
+
+  return (
+    <div className="active-events agenda" aria-label="Gündem">
+      {chips}
+      {extra > 0 && (
+        <button
+          type="button"
+          className="event-chip agenda-more"
+          onClick={() => setExpanded((open) => !open)}
+          aria-expanded={expanded}
+        >
+          {expanded ? 'Daralt' : `+${extra}`}
+        </button>
+      )}
     </div>
   );
 }

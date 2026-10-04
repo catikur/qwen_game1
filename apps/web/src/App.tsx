@@ -10,6 +10,7 @@ import {
   supplyRoutes,
 } from '@capital/core';
 import type { GameCommand } from '@capital/core';
+import type { DifficultyId } from '@capital/content';
 import { CityRenderer } from '@capital/render-three';
 import {
   AUTOSAVE_SLOT,
@@ -24,6 +25,7 @@ import {
   GameContext,
   GameOverScreen,
   Inspector,
+  VictoryScreen,
   LensBar,
   ModalHost,
   NewGameScreen,
@@ -32,7 +34,7 @@ import {
   TopBar,
   useGameVersion,
 } from '@capital/ui';
-import type { ExportOutcome, GameContextValue, ToastMessage, ViewState } from '@capital/ui';
+import type { ExportOutcome, FocusTarget, GameContextValue, ToastMessage, ViewState } from '@capital/ui';
 import { deliverTextFile } from './host';
 
 const AUTOSAVE_INTERVAL_MS = 30_000;
@@ -73,8 +75,8 @@ export function App(): ReactElement {
     };
   }, []);
 
-  const start = (companyName: string, ceoId: string) => {
-    const next = createNewGame({ companyName, ceoId });
+  const start = (companyName: string, ceoId: string, difficulty: DifficultyId) => {
+    const next = createNewGame({ companyName, ceoId, difficulty });
     if (engine) engine.replaceState(next);
     else setEngine(new GameEngine(next));
     setBootMessage(null);
@@ -273,6 +275,7 @@ function GameRoot({
       routeCount: () => supplyRoutes(engine.getState()).length,
       routeSignature: () => routeSignature(supplyRoutes(engine.getState())),
       customerFlows: () => customerFlows(engine.getState()),
+      cameraTarget: () => rendererRef.current?.cameraTarget() ?? null,
     };
     return () => {
       delete globals['__capital'];
@@ -367,6 +370,31 @@ function GameRoot({
     [applyImported],
   );
 
+  /*
+   * Olay yerine git: kare verilirse seçilir ve kamera ona kayar; bölge
+   * verilirse merkezine. Açık panel kapanıyor — haritayı göstermek için
+   * çağrıldı, modalın arkasında kalmasın.
+   */
+  const focusOn = useCallback(
+    (target: FocusTarget) => {
+      const state = engine.getState();
+      if (target.tileId !== undefined) {
+        const tile = state.map.tiles[target.tileId];
+        if (!tile) return;
+        setViewState((current) => ({ ...current, selectedTileId: tile.id, openPanel: 'none' }));
+        rendererRef.current?.focusWorld(tile.x, tile.y);
+        return;
+      }
+      if (target.districtId !== undefined) {
+        const district = state.districts[target.districtId];
+        if (!district) return;
+        setViewState((current) => ({ ...current, openPanel: 'none' }));
+        rendererRef.current?.focusWorld((district.x0 + district.x1) / 2, (district.y0 + district.y1) / 2);
+      }
+    },
+    [engine],
+  );
+
   const context = useMemo<GameContextValue>(
     () => ({
       engine,
@@ -382,6 +410,7 @@ function GameRoot({
       exportSaveText,
       importSave,
       importSaveText,
+      focusOn,
     }),
     [
       engine,
@@ -397,6 +426,7 @@ function GameRoot({
       exportSaveText,
       importSave,
       importSaveText,
+      focusOn,
     ],
   );
 
@@ -417,6 +447,7 @@ function GameRoot({
         <ModalHost />
         <Toasts />
         <GameOverScreen onNewGame={newGame} />
+        <VictoryScreen onNewGame={newGame} />
       </div>
     </GameContext.Provider>
   );

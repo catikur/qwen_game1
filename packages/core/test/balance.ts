@@ -32,6 +32,7 @@ import {
   estimateInvestment,
   formatMoney,
   getPlayer,
+  goalLadder,
   goodShares,
   isDistrictOpen,
   marketingLeverage,
@@ -60,6 +61,7 @@ import { PRUNE_MEMORY_DAYS } from '../src/systems/npc';
 import type { GameState } from '../src/types';
 import {
   activeProfiles,
+  defendAgainstRaids,
   expandOutletsVacantOnly,
   followChainAdvice,
   playerStrategy,
@@ -3048,6 +3050,99 @@ section('Rakipler zarar eden şubeyi kapatıyor', () => {
     'kâr eden şube kapatılmıyor',
     healthyClosed === 0,
     healthyClosed === 0 ? 'kapanan her bina eğilimde zarardaydı' : `${healthyClosed} kârlı bina kapandı`,
+  );
+});
+
+section('Hedefler, zafer ve zorluk', () => {
+  /*
+   * İ1 + İ2 (değerlendirme): oyunun kaybetme koşulu vardı, kazanma
+   * koşulu yoktu; zorluk tekti. Kalibrasyon iki vekille yapıldı —
+   * bilgili (5 günde bir hamle) ve yavaş (15 günde bir, savunmasız).
+   *
+   * Ölçülen eğri (tohum 1/7/42):
+   *   Rahat     bilgili 449-467. günde kazanıyor · yavaş hayatta kalıyor
+   *   Dengeli   bilgili 617-914                  · yavaş 540-785'te düşüyor
+   *   Acımasız  bilgili 950-1065                 · yavaş 485-605'te düşüyor
+   *
+   * Sınanan iddialar: zafer erişilebilir ama bedava değil; kademeler
+   * sıralı; oyun Dengeli ve Acımasız'da kaybedilebilir kalıyor, Rahat'ta
+   * yavaş oyuncu affediliyor; uyarıyı okuyup savunan yavaş oyuncu
+   * Dengeli'de hayatta kalıyor.
+   */
+  type Outcome = { victoryDay: number | null; lostDay: number | null; ladder: ReturnType<typeof goalLadder> };
+  function play(seed: number, difficulty: 'easy' | 'normal' | 'hard', every: number, defend: boolean, days: number): Outcome {
+    const engine = new GameEngine(createNewGame({ seed, difficulty, companyName: 'Hedef AŞ' }));
+    for (let day = 1; day <= days; day++) {
+      if (day % every === 0) playerStrategy(engine);
+      if (defend && day % 3 === 0) defendAgainstRaids(engine);
+      engine.runDay();
+      const state = engine.getState();
+      if (state.gameOver) return { victoryDay: null, lostDay: day, ladder: goalLadder(state) };
+      if (state.victory) return { victoryDay: state.victory.day, lostDay: null, ladder: goalLadder(state) };
+    }
+    return { victoryDay: null, lostDay: null, ladder: goalLadder(engine.getState()) };
+  }
+
+  const mean = (values: number[]) => values.reduce((a, b) => a + b, 0) / values.length;
+  const victoryDays: Record<string, number[]> = {};
+  for (const difficulty of ['easy', 'normal', 'hard'] as const) {
+    // Süre bütçesi: bilgili koşular zafere dek sürüyor ve geç oyun pahalı.
+    // Dengeli iki tohum, uç kademeler birer tohum (tam eğri yukarıdaki notta).
+    const seeds = difficulty === 'normal' ? [1, 42] : [1];
+    victoryDays[difficulty] = [];
+    for (const seed of seeds) {
+      const outcome = play(seed, difficulty, 5, false, 1300);
+      if (outcome.victoryDay !== null) victoryDays[difficulty]!.push(outcome.victoryDay);
+      if (difficulty === 'normal' && seed === 1) {
+        const first = outcome.ladder.find((g) => g.def.id === 'first_shop')?.completedDay ?? null;
+        const done = outcome.ladder.filter((g) => g.completedDay !== null).length;
+        expect(
+          'merdiven ilk basamaktan başlıyor ve tırmanılıyor',
+          first !== null && first <= 10 && done >= 7,
+          `ilk dükkân ${first}. gün · ${done}/${outcome.ladder.length} basamak`,
+        );
+      }
+    }
+  }
+  const normal = victoryDays['normal']!;
+  expect(
+    'Dengeli: bilgili oyuncu kazanabiliyor',
+    normal.length === 2,
+    normal.length === 2 ? `zafer günleri ${normal.join(', ')}` : `${normal.length}/2 tohumda zafer`,
+  );
+  expect(
+    'Dengeli: zafer bedava değil (400. günden önce yok)',
+    normal.every((day) => day >= 400),
+    `en erken ${Math.min(...normal)}. gün`,
+  );
+  const easyMean = mean(victoryDays['easy']!);
+  const normalMean = mean(normal);
+  const hardMean = mean(victoryDays['hard']!);
+  expect(
+    'kademeler sıralı: Rahat < Dengeli < Acımasız',
+    victoryDays['easy']!.length === 1 && victoryDays['hard']!.length === 1 && easyMean < normalMean && normalMean < hardMean,
+    `ortalama zafer günü ${Math.round(easyMean)} / ${Math.round(normalMean)} / ${Math.round(hardMean)}`,
+  );
+
+  const slowEasy = play(7, 'easy', 15, false, 900);
+  const slowNormal = play(7, 'normal', 15, false, 900);
+  const slowHard = play(7, 'hard', 15, false, 900);
+  const slowDefended = play(7, 'normal', 15, true, 900);
+  expect(
+    'oyun kaybedilebilir kalıyor: savunmasız yavaş oyuncu Dengeli ve Acımasız\'da düşüyor',
+    slowNormal.lostDay !== null && slowHard.lostDay !== null,
+    `Dengeli ${slowNormal.lostDay ?? 'ayakta'} · Acımasız ${slowHard.lostDay ?? 'ayakta'}`,
+  );
+  expect(
+    'Acımasız daha erken düşürüyor',
+    slowNormal.lostDay !== null && slowHard.lostDay !== null && slowHard.lostDay < slowNormal.lostDay,
+    `${slowHard.lostDay} < ${slowNormal.lostDay}`,
+  );
+  expect('Rahat yavaş oyuncuyu affediyor', slowEasy.lostDay === null, slowEasy.lostDay === null ? '900 gün ayakta' : `${slowEasy.lostDay}. günde düştü`);
+  expect(
+    'uyarıyı okuyup savunan yavaş oyuncu Dengeli\'de hayatta kalıyor',
+    slowDefended.lostDay === null,
+    slowDefended.lostDay === null ? '900 gün ayakta' : `${slowDefended.lostDay}. günde düştü`,
   );
 });
 

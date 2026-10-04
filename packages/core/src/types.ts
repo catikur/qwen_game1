@@ -1,4 +1,4 @@
-import type { CategoryId, DistrictArchetypeId } from '@capital/content';
+import type { CategoryId, DifficultyId, DistrictArchetypeId } from '@capital/content';
 import type { RngState } from './rng';
 
 /**
@@ -200,6 +200,8 @@ export interface CompanyState {
   unitCost: Record<string, number>;
   /** Rakip: son kapattığı şubeler (hafıza penceresi kadar). */
   pruned?: PrunedBranch[];
+  /** Devraldığı şirket sayısı (hedef merdiveni okur). */
+  acquisitions?: number;
 }
 
 /**
@@ -386,7 +388,22 @@ export interface GameState {
   flags: FeatureFlags;
   /** Açık ihale; yoksa null. */
   auction: AuctionState | null;
+  /**
+   * Zorluk kademesi. Yokluğu "Dengeli" demek — eski kayıtlar oyunun
+   * tasarlandığı hâliyle devam eder, şema sürümü sabit.
+   */
+  difficulty?: DifficultyId;
+  /** Hedef merdiveni: hedef kimliği → tamamlandığı gün. */
+  goals?: Record<string, number>;
+  /**
+   * Zafer — `gameOver`un ikizi ama bir SON değil: oyuncu serbest oyuna
+   * devam edebilir. `dismissed` ekranın bir kez görüldüğünü tutar.
+   */
+  victory?: { day: number; kind: VictoryKind; dismissed?: boolean };
 }
+
+/** Zafer yolu: değer + birincilik ya da bütün rakipleri devralmak. */
+export type VictoryKind = 'tycoon' | 'monopoly';
 
 /** UI'nin çekirdeğe gönderdiği tek yönlü niyet bildirimleri. */
 export type GameCommand =
@@ -413,7 +430,9 @@ export type GameCommand =
   | { type: 'RENAME_COMPANY'; name: string }
   | { type: 'ACCEPT_CONTRACT' }
   | { type: 'DECLINE_CONTRACT' }
-  | { type: 'SET_FLAG'; flag: keyof FeatureFlags; value: boolean };
+  | { type: 'SET_FLAG'; flag: keyof FeatureFlags; value: boolean }
+  /** Zafer ekranını kapatıp serbest oyuna devam eder. */
+  | { type: 'DISMISS_VICTORY' };
 
 /** Komut reddedildiğinde UI'ye dönen açıklama. */
 export interface CommandResult {

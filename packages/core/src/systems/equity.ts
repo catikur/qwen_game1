@@ -241,6 +241,7 @@ function absorb(state: GameState, acquirerId: string, targetId: string): void {
   }
   acquirer.cash += target.cash;
   acquirer.debt += target.debt;
+  acquirer.acquisitions = (acquirer.acquisitions ?? 0) + 1;
 
   // Devralınan şirketin kendi portföyü de devralana geçer.
   for (const [issuerId, count] of Object.entries(target.shares)) {

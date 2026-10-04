@@ -9,9 +9,10 @@ import {
   NPC_PROFILES,
   STRUCTURE_BY_ID,
   getCeoModifiers,
+  getDifficulty,
   rootStructureOf,
 } from '@capital/content';
-import type { CategoryId, DistrictArchetypeId } from '@capital/content';
+import type { CategoryId, DifficultyId, DistrictArchetypeId } from '@capital/content';
 import { createRng, nextRange, pickWeighted } from './rng';
 import { seedSpotPrices, zeroByGood } from './systems/supply';
 import { estimateBaselineDemand, goodShares, zeroByCategory } from './systems/demand';
@@ -204,6 +205,8 @@ export interface NewGameOptions {
    * gürültüsü olurdu.
    */
   districtUnlocks?: boolean;
+  /** Zorluk kademesi; varsayılan Dengeli (alan state'e yazılmaz). */
+  difficulty?: DifficultyId;
 }
 
 export function createNewGame(options: NewGameOptions = {}): GameState {
@@ -365,7 +368,7 @@ export function createNewGame(options: NewGameOptions = {}): GameState {
     options.companyName?.trim() || 'Yeni Girişim',
     true,
     '#4cc9f0',
-    Math.round(STARTING_CASH * ceo.startingCash),
+    Math.round(STARTING_CASH * ceo.startingCash * getDifficulty(options.difficulty).startingCashMultiplier),
     null,
     ceoId,
     ceo.startingBrand,
@@ -442,5 +445,7 @@ export function createNewGame(options: NewGameOptions = {}): GameState {
       landAuctions: true,
     },
     auction: null,
+    // Dengeli kayıt alanı taşımaz: yokluğu zaten Dengeli demek.
+    ...(options.difficulty && options.difficulty !== 'normal' ? { difficulty: options.difficulty } : {}),
   };
 }

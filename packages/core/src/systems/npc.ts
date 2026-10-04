@@ -1,4 +1,11 @@
-import { BUILDINGS, BUILDING_BY_ID, CATEGORIES, CONSUMER_CATEGORIES, NPC_PROFILES } from '@capital/content';
+import {
+  BUILDINGS,
+  BUILDING_BY_ID,
+  CATEGORIES,
+  CONSUMER_CATEGORIES,
+  NPC_PROFILES,
+  getDifficulty,
+} from '@capital/content';
 import type { BuildingDef, CategoryId, NpcProfileDef } from '@capital/content';
 import { build, buyTile, buyoutTile, demolish, sellTile } from '../actions';
 import { chainCards } from '../chain';
@@ -142,6 +149,7 @@ function tryChainMove(state: GameState, profile: NpcProfileDef): boolean {
       'rival',
       `${profile.name} dikey entegrasyona gidiyor`,
       `${move.districtName} bölgesinde ${move.name} kurdu — ${card.goodName} maliyetini kendi eline alıyor.`,
+      { companyId: profile.id, tileId: move.tileId },
     );
     return true;
   }
@@ -240,6 +248,7 @@ function tryArmMove(state: GameState, profile: NpcProfileDef, stalled = false): 
         ? `${profile.name} kaliteye yatırıyor`
         : `${profile.name} markasını büyütüyor`,
       `${move.districtName} bölgesinde ${move.name} açtı — hedefi ${card.categoryName} kategorisi.`,
+      { companyId: profile.id, tileId: move.tileId },
     );
     return true;
   }
@@ -451,7 +460,10 @@ function actFor(state: GameState, profile: NpcProfileDef): void {
   // şubenin nakdi aynı hafta daha iyi bir yere gidebilir.
   tryPruneMove(state, profile);
 
-  const budget = company.cash * profile.aggression;
+  // Zorluk rakibin cesaretini ölçekliyor, nakdini değil: tavan nakdin
+  // tamamı — rakip olmayan parayı harcamaz.
+  const nerve = profile.aggression * getDifficulty(state.difficulty).rivalBudgetMultiplier;
+  const budget = company.cash * Math.min(1, nerve);
   const isLandlord = profile.trait === 'landlord';
 
   // Arsa spekülatörü: bazen sadece arsa toplar, bina kurmaz.
@@ -524,6 +536,7 @@ function actFor(state: GameState, profile: NpcProfileDef): void {
       spot.needsBuyout
         ? `${district?.name ?? 'Şehirde'} bölgesinde bir parseli devralıp ${def.name} açtı.`
         : `${district?.name ?? 'Şehirde'} bölgesinde ${def.name} açtı.`,
+      { companyId: profile.id, tileId: spot.tileId },
     );
     return;
   }
@@ -534,11 +547,10 @@ function actFor(state: GameState, profile: NpcProfileDef): void {
 }
 
 
-/** Baskınların başlamadığı ısınma dönemi (gün). Erken oyun inşaatın. */
-const RAID_WARMUP_DAYS = 160;
-
-/** Bir baskıncının tek günde alabileceği en fazla hisse. */
-const RAID_DAILY_CAP = 350;
+/*
+ * Baskının ısınma süresi (erken oyun inşaatın) ve günlük tavanı zorluktan
+ * okunur: Dengeli'de 160 gün ve 350 hisse (%3,5).
+ */
 
 /** Baskın bütçesine dokunulmayan nakit tabanı. */
 const RAID_CASH_RESERVE = 320_000;
@@ -571,7 +583,8 @@ const RAID_CASH_RESERVE = 320_000;
  */
 function tryRaidMove(state: GameState, profile: NpcProfileDef): void {
   if (state.flags.raids === false) return;
-  if (state.time.day < RAID_WARMUP_DAYS) return;
+  const difficulty = getDifficulty(state.difficulty);
+  if (state.time.day < difficulty.raidWarmupDays) return;
 
   const raider = state.companies[profile.id];
   if (!raider) return;
@@ -613,7 +626,7 @@ function tryRaidMove(state: GameState, profile: NpcProfileDef): void {
   if (price <= 0) return;
 
   const wanted = Math.min(
-    RAID_DAILY_CAP,
+    difficulty.raidDailyCap,
     Math.floor(budget / price),
     freeFloat(state, target.id),
   );
@@ -647,7 +660,7 @@ function tryBuybackDefense(state: GameState, profile: NpcProfileDef): void {
   if (budget <= 0 || price <= 0) return;
 
   const wanted = Math.min(
-    RAID_DAILY_CAP,
+    getDifficulty(state.difficulty).raidDailyCap,
     Math.floor(budget / price),
     freeFloat(state, company.id),
   );

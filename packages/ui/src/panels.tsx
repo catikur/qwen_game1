@@ -33,6 +33,7 @@ import { useCollapsible } from './collapse';
 import { CompetitionPanel } from './CompetitionPanel';
 import { AuctionPanel } from './AuctionPanel';
 import { MarketPanel } from './MarketPanel';
+import { GoalsPanel } from './GoalsPanel';
 import { useGame, useGameState } from './useGame';
 
 /* ------------------------------------------------------------------ yapı */
@@ -753,6 +754,7 @@ export function ModalHost(): ReactElement | null {
     rivals: 'Rakipler',
     saves: 'Kayıtlar',
     help: 'Nasıl oynanır',
+    goals: 'Hedefler',
   };
 
   return (
@@ -773,6 +775,7 @@ export function ModalHost(): ReactElement | null {
           {view.openPanel === 'rivals' && <RivalsPanel />}
           {view.openPanel === 'saves' && <SavePanel />}
           {view.openPanel === 'help' && <HelpPanel />}
+          {view.openPanel === 'goals' && <GoalsPanel />}
         </div>
       </div>
     </div>

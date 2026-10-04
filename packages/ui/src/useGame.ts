@@ -20,7 +20,17 @@ export interface ViewState {
    * katmanı kendi içinde yönetir.
    */
   ghostDefId: string | null;
-  openPanel: 'none' | 'chain' | 'rivalry' | 'auction' | 'bourse' | 'company' | 'rivals' | 'saves' | 'help';
+  openPanel:
+    | 'none'
+    | 'chain'
+    | 'rivalry'
+    | 'auction'
+    | 'bourse'
+    | 'company'
+    | 'rivals'
+    | 'saves'
+    | 'help'
+    | 'goals';
 }
 
 export interface ToastMessage {
@@ -52,6 +62,16 @@ export interface GameContextValue {
   exportSaveText: () => string;
   importSave: (file: File) => Promise<void>;
   importSaveText: (text: string) => void;
+  /**
+   * Kamerayı bir yere götürür; kare verilirse onu seçer de. Gündem
+   * çipleri ve haberler "olay yerine git" için bunu çağırıyor.
+   */
+  focusOn: (target: FocusTarget) => void;
+}
+
+export interface FocusTarget {
+  tileId?: number;
+  districtId?: number;
 }
 
 export const GameContext = createContext<GameContextValue | null>(null);

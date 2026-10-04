@@ -7,6 +7,8 @@ export * from './npc';
 export * from './events';
 export * from './ceos';
 export * from './structures';
+export * from './difficulty';
+export * from './goals';
 
 /** İçerik sürümü — save migration'ında denge değişikliklerini izlemek için. */
 export const CONTENT_VERSION = 5;
