@@ -5,6 +5,8 @@ import { companyRanking, formatMoney } from './selectors';
 import { TOTAL_SHARES, sharesHeld } from './systems/equity';
 import { runMarketTick } from './systems/market';
 import { runGoalTick } from './systems/goals';
+import { runEntrantTick } from './systems/entrants';
+import { lobby, runCouncilTick } from './systems/council';
 import { resetDailyLedgers, runProductionTick, runProfitTrendTick, runSpotPriceTick } from './systems/supply';
 import {
   recomputeNetWorth,
@@ -215,6 +217,9 @@ export class GameEngine {
         state.flags[command.flag] = command.value;
         return { ok: true };
 
+      case 'LOBBY':
+        return lobby(state, playerId, command.motionId, command.side, command.amount);
+
       case 'DISMISS_VICTORY':
         if (!state.victory) return { ok: false, reason: 'Henüz bir zafer yok.' };
         state.victory.dismissed = true;
@@ -269,6 +274,9 @@ export class GameEngine {
     // İmar takvimi sözleşmeden ÖNCE: açılış günü gelen bir inşaat
     // teklifi yeni bölgeyi hedefleyebilmeli.
     runDistrictUnlockTick(state);
+    // Meclis imar takvimini değiştirebilir; sözleşmeden önce otursun ki
+    // aynı gün üretilen teklif güncel takvimi görsün.
+    runCouncilTick(state);
     runContractTick(state);
     resetDailyLedgers(state);
     // Ar-Ge primi pazardan ÖNCE ilerler: bugünkü kalite bugünkü satışa
@@ -299,6 +307,8 @@ export class GameEngine {
     // Devralma temettüden SONRA: devralınan şirket son gününün payını
     // dağıtmış olsun, hissedar ortada kalmasın.
     runTakeoverTick(state, (title, body) => pushNews(state, 'rival', title, body));
+    // Boşalan koltuk: devralma sonrası kadro eksikse yeni rakip girer.
+    runEntrantTick(state);
     this.settleCredit();
     recomputeNetWorth(state);
     this.checkMilestones();

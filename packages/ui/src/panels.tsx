@@ -34,6 +34,7 @@ import { CompetitionPanel } from './CompetitionPanel';
 import { AuctionPanel } from './AuctionPanel';
 import { MarketPanel } from './MarketPanel';
 import { GoalsPanel } from './GoalsPanel';
+import { CouncilPanel } from './CouncilPanel';
 import { useGame, useGameState } from './useGame';
 
 /* ------------------------------------------------------------------ yapı */
@@ -755,6 +756,7 @@ export function ModalHost(): ReactElement | null {
     saves: 'Kayıtlar',
     help: 'Nasıl oynanır',
     goals: 'Hedefler',
+    council: 'Belediye Meclisi',
   };
 
   return (
@@ -776,6 +778,7 @@ export function ModalHost(): ReactElement | null {
           {view.openPanel === 'saves' && <SavePanel />}
           {view.openPanel === 'help' && <HelpPanel />}
           {view.openPanel === 'goals' && <GoalsPanel />}
+          {view.openPanel === 'council' && <CouncilPanel />}
         </div>
       </div>
     </div>

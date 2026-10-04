@@ -44,6 +44,8 @@ export {
 } from './systems/equity';
 export { districtPressure } from './systems/citygrowth';
 export { goalLadder, nextGoal, victoryNetWorth, victoryReached } from './systems/goals';
+export { categoryRevenueRate, interestOf, motionSupport, permitMultiplier } from './systems/council';
+export type { SupportBreakdown } from './systems/council';
 export type { GoalStatus } from './systems/goals';
 export { collectEventModifiers } from './systems/events';
 export { activeContract, contractProgress } from './systems/contracts';

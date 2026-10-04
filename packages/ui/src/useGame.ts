@@ -30,7 +30,8 @@ export interface ViewState {
     | 'rivals'
     | 'saves'
     | 'help'
-    | 'goals';
+    | 'goals'
+    | 'council';
 }
 
 export interface ToastMessage {

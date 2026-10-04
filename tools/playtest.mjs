@@ -625,6 +625,46 @@ async function finish(browser, consoleErrors) {
   }
   await page.evaluate(() => window.__capital.selectTile(null));
 
+  // Meclis: oturumu bugüne çek, önergeler gündeme düşsün, lobi işlesin.
+  await page.evaluate(() => {
+    const s = window.__capital.getState();
+    s.council = { nextSessionDay: s.time.day, session: null, history: [] };
+    window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 1 });
+  });
+  const councilChip = page.locator('.agenda [data-agenda="council"] button');
+  await page.waitForFunction(() => document.querySelector('.agenda [data-agenda="council"] button') !== null, null, { timeout: 6000 }).catch(() => null);
+  check('Meclis toplanınca gündemde geri sayıyor', (await councilChip.count()) === 1,
+    ((await councilChip.textContent().catch(() => '')) ?? '').trim());
+  await page.evaluate(() => window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 }));
+  if ((await councilChip.count()) === 1) {
+    await councilChip.click();
+    await page.waitForTimeout(250);
+    const motions = await page.locator('.council-motion').count();
+    check('Meclis paneli önergeleri listeliyor', motions === 2, `${motions} önerge`);
+    const before = await page.evaluate(() => {
+      const s = window.__capital.getState();
+      return { cash: s.companies[s.playerCompanyId].cash, fill: document.querySelector('.council-motion .council-bar-fill')?.style.width };
+    });
+    await page.locator('.council-motion').first().locator('.council-give.for').first().click();
+    await page.waitForTimeout(250);
+    const after = await page.evaluate(() => {
+      const s = window.__capital.getState();
+      const first = document.querySelector('.council-motion');
+      return {
+        cash: s.companies[s.playerCompanyId].cash,
+        fill: first?.querySelector('.council-bar-fill')?.style.width,
+        listed: [...(first?.querySelectorAll('.council-lobby li') ?? [])].some((li) => li.textContent.includes('Karaca')),
+      };
+    });
+    check('Lobi bağışı nakitten düşüyor', Math.round(before.cash - after.cash) === 50_000,
+      `${Math.round(before.cash - after.cash)} ₺`);
+    check('Bağış desteği kaydırıyor ve kamuya açık listede', parseFloat(after.fill) > parseFloat(before.fill) && after.listed,
+      `${before.fill} → ${after.fill}`);
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(150);
+  }
+  check('Rıhtımda meclis sekmesi var', (await page.locator('.topbar-actions [data-panel="council"]').count()) === 1);
+
   if (SMOKE) {
     await finish(browser, consoleErrors);
     return;
@@ -1027,6 +1067,20 @@ async function finish(browser, consoleErrors) {
   // Kollar A parçasında motorda çalışıyordu ama oyuncunun göreceği bir
   // yüzü yoktu. Burada bakılan şey kartın DOĞRU şeyi söyleyip söylemediği
   // ve hamlenin gerçekten çalışması.
+  // Yukarıdaki sondaj oyuncuya 900M ₺ nakit verdi: bu gerçek bir zafer
+  // koşulu. Ekran inmeli ve "devam" ile serbest oyuna dönülebilmeli —
+  // yoksa sonraki her tıklama zafer kartına çarpar.
+  const organicVictory = await page
+    .waitForFunction(() => document.querySelector('.gameover.victory') !== null, null, { timeout: 4000 })
+    .then(() => true)
+    .catch(() => false);
+  check('Hedef değeri aşan bir numara için zafer ilan ediliyor', organicVictory,
+    organicVictory ? 'zafer ekranı indi' : 'ekran yok');
+  if (organicVictory) {
+    await page.locator('.gameover.victory button:has-text("Serbest oyuna devam")').click();
+    await page.waitForTimeout(200);
+  }
+
   section('Rekabet kartı');
 
   await page.evaluate(() => {
@@ -1776,7 +1830,9 @@ async function finish(browser, consoleErrors) {
       `ekran ${resumed.gone ? 'kapandı' : 'açık'} · hız ${resumed.speed}`);
   }
   await page.evaluate(() => {
-    delete window.__capital.getState().victory;
+    // Silmek yerine "görüldü": koşul hâlâ sağlanıyor, silinse ertesi gün
+    // yeniden ilan edilirdi.
+    window.__capital.getState().victory.dismissed = true;
     window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
   });
 
@@ -1974,6 +2030,10 @@ async function finish(browser, consoleErrors) {
     // satırlık bir bloğa dönüşmez. Kontrol de tam bunu sınıyor.
     const rich = await m.evaluate(async () => {
       const s = window.__capital.getState();
+      // Bu sondaj yalnızca rakamların genişliğini ölçüyor; 999 milyar ₺
+      // gerçek bir zafer koşulu ve zafer kartı alttaki her şeyi örterdi.
+      // Zafer "görülmüş" sayılıyor ki ekran inmesin.
+      s.victory = { day: s.time.day, kind: 'tycoon', dismissed: true };
       s.companies.player.cash = 999_000_000_000;
       s.companies.player.netWorth = 999_000_000_000;
       s.companies.player.debt = 123_000_000_000;

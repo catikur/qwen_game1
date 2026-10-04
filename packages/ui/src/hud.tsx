@@ -160,10 +160,15 @@ export function TopBar(): ReactElement {
  * Etiket tamamen atılmadı: ikon tek başına ne olduğunu söylemiyor.
  * Rıhtım eşit sütunlu bir ızgara olduğu için 320 px'de bile taşmıyor.
  */
-const PANEL_TABS: Array<{ id: 'chain' | 'rivalry' | 'bourse' | 'company' | 'rivals' | 'saves' | 'help'; label: string; title: string }> = [
+const PANEL_TABS: Array<{
+  id: 'chain' | 'rivalry' | 'bourse' | 'council' | 'company' | 'rivals' | 'saves' | 'help';
+  label: string;
+  title: string;
+}> = [
   { id: 'chain', label: 'Zincir', title: 'Tedarik zinciri' },
   { id: 'rivalry', label: 'Rekabet', title: 'Rekabet kartı' },
   { id: 'bourse', label: 'Borsa', title: 'Borsa' },
+  { id: 'council', label: 'Meclis', title: 'Belediye meclisi' },
   { id: 'company', label: 'Şirket', title: 'Şirket' },
   { id: 'rivals', label: 'Rakip', title: 'Rakipler' },
   { id: 'saves', label: 'Kayıt', title: 'Kayıtlar' },
@@ -191,6 +196,13 @@ function PanelIcon({ name }: { name: string }): ReactElement {
       <>
         <path d="M3 16l5-5 4 3 8-8" />
         <path d="M15 6h5v5" />
+      </>
+    ),
+    council: (
+      <>
+        <path d="M3 9.5L12 4l9 5.5" />
+        <path d="M5 10v8M9.5 10v8M14.5 10v8M19 10v8" />
+        <path d="M3 20h18" />
       </>
     ),
     company: (
@@ -761,6 +773,19 @@ export function ActiveEvents(): ReactElement | null {
             className="event-chip unlock-chip"
             onClick={() => item.districtId !== undefined && focusOn({ districtId: item.districtId })}
             title="Bölgeye git"
+          >
+            {item.label}
+            {days}
+          </button>
+        );
+        break;
+      case 'council':
+        chip = (
+          <button
+            type="button"
+            className="event-chip council-chip"
+            onClick={() => togglePanel('council')}
+            title="Belediye meclisi — önergeler ve lobi"
           >
             {item.label}
             {days}

@@ -1,4 +1,4 @@
-import type { CategoryId, DifficultyId, DistrictArchetypeId } from '@capital/content';
+import type { CategoryId, DifficultyId, DistrictArchetypeId, MotionKind } from '@capital/content';
 import type { RngState } from './rng';
 
 /**
@@ -79,6 +79,8 @@ export interface DistrictState {
   priceIndex: Record<CategoryId, number>;
   /** Bu bölgede kaç rakip outlet var (kategori bazlı). */
   outletCount: Record<CategoryId, number>;
+  /** Meclisin geçirdiği metro hattı sayısı — nüfus tavanını büyütür. */
+  infrastructure?: number;
 }
 
 export interface BuildingLedger {
@@ -202,6 +204,8 @@ export interface CompanyState {
   pruned?: PrunedBranch[];
   /** Devraldığı şirket sayısı (hedef merdiveni okur). */
   acquisitions?: number;
+  /** Kurucu kilidi: bu güne kadar hisseleri başkası alamaz (yeni gelen). */
+  lockedUntilDay?: number;
 }
 
 /**
@@ -297,6 +301,14 @@ export interface FeatureFlags {
    * kalan her şey açık kalıyor.
    */
   raids?: boolean;
+  /**
+   * Yeni rakip girişi (boşalan koltuğa katalogdan yeni şirket). Aynı
+   * sözleşme: yokluğu AÇIK. Rakip kadrosunu sabit tutması gereken
+   * deneyler kapatabilsin.
+   */
+  rivalEntry?: boolean;
+  /** Belediye meclisi. Aynı sözleşme: yokluğu AÇIK. */
+  council?: boolean;
 }
 
 /**
@@ -395,11 +407,52 @@ export interface GameState {
   difficulty?: DifficultyId;
   /** Hedef merdiveni: hedef kimliği → tamamlandığı gün. */
   goals?: Record<string, number>;
+  /** Sahneye çıkmış bütün rakip kimlikleri (devralınanlar dahil). */
+  rivalHistory?: string[];
+  /** Son yeni rakip girişinin günü. */
+  lastEntryDay?: number;
+  /** Rakip koltuğunun boşaldığı gün (giriş bu günden 45 gün sonra). */
+  rivalVacancyDay?: number;
+  /** Belediye meclisi: oturum takvimi, açık önergeler, geçmiş. */
+  council?: CouncilState;
+  /** Meclisin yürürlükteki kararları (vergi, teşvik, ruhsat). */
+  policies?: PolicyState[];
   /**
    * Zafer — `gameOver`un ikizi ama bir SON değil: oyuncu serbest oyuna
    * devam edebilir. `dismissed` ekranın bir kez görüldüğünü tutar.
    */
   victory?: { day: number; kind: VictoryKind; dismissed?: boolean };
+}
+
+/** Meclis önergesi — açıkken lobi toplar, oylanınca sonucu taşır. */
+export interface MotionState {
+  id: string;
+  kind: MotionKind;
+  title: string;
+  summary: string;
+  districtId?: number;
+  category?: CategoryId;
+  /** Meclisin kendi eğilimi 0..1 — lobisiz destek. */
+  baseSupport: number;
+  /** Şirket → imzalı lobi harcaması (+ lehte, − aleyhte). */
+  lobby: Record<string, number>;
+  /** Oylandıysa: sonuç ve destek. */
+  result?: { passed: boolean; support: number; day: number };
+}
+
+export interface CouncilState {
+  nextSessionDay: number;
+  session: { openedDay: number; voteDay: number; motions: MotionState[] } | null;
+  /** Son oylanan önergeler (en yeni başta). */
+  history: MotionState[];
+}
+
+export interface PolicyState {
+  kind: 'category_tax' | 'category_relief' | 'permit_relief';
+  category?: CategoryId;
+  rate: number;
+  untilDay: number;
+  title: string;
 }
 
 /** Zafer yolu: değer + birincilik ya da bütün rakipleri devralmak. */
@@ -432,7 +485,9 @@ export type GameCommand =
   | { type: 'DECLINE_CONTRACT' }
   | { type: 'SET_FLAG'; flag: keyof FeatureFlags; value: boolean }
   /** Zafer ekranını kapatıp serbest oyuna devam eder. */
-  | { type: 'DISMISS_VICTORY' };
+  | { type: 'DISMISS_VICTORY' }
+  /** Açık bir meclis önergesine lobi bağışı. */
+  | { type: 'LOBBY'; motionId: string; side: 'for' | 'against'; amount: number };
 
 /** Komut reddedildiğinde UI'ye dönen açıklama. */
 export interface CommandResult {

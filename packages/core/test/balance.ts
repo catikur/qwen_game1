@@ -842,6 +842,15 @@ function outletUnitCost(state: GameState): number {
      * yapısal fark sönümlenmez.
      */
     engine2.getState().flags.raids = false;
+    /*
+     * Meclis de kapalı — aynı ailenin üçüncü üyesi. Önergeler dışsal
+     * zardan geliyor ama SONUÇ lobiden doğuyor ve lobi kolların pazar
+     * payına bakıyor: bir kolda kategori vergisi geçip ötekinde
+     * reddedilince kuyruk penceresi iki farklı vergi rejimini kıyaslıyor.
+     * Ölçüldü: meclis açıkken zincir farkı +%29'dan +%1'e iniyordu —
+     * zincir değil kararlar ayrışıyordu.
+     */
+    engine2.getState().flags.council = false;
     let tail = 0;
     for (let day = 1; day <= CHAIN_AB_DAYS; day++) {
       if (day % 5 === 0) {
@@ -3059,10 +3068,13 @@ section('Hedefler, zafer ve zorluk', () => {
    * koşulu yoktu; zorluk tekti. Kalibrasyon iki vekille yapıldı —
    * bilgili (5 günde bir hamle) ve yavaş (15 günde bir, savunmasız).
    *
-   * Ölçülen eğri (tohum 1/7/42):
+   * Ölçülen eğri (bilgili: tohum 1/7/42 · yavaş: tohum 1/7/42/101/202):
    *   Rahat     bilgili 449-467. günde kazanıyor · yavaş hayatta kalıyor
-   *   Dengeli   bilgili 617-914                  · yavaş 540-785'te düşüyor
-   *   Acımasız  bilgili 950-1065                 · yavaş 485-605'te düşüyor
+   *   Dengeli   bilgili 608-779                  · yavaş 589-835'te düşüyor (4/5)
+   *   Acımasız  bilgili ~900                     · yavaş 432-548'de düşüyor (5/5)
+   * (Meclis, yeni rakip girişi ve baskın kilidi düzeltmesinden sonra.
+   * Girişler ilk ölçümde oyunu kaybedilemez yapmıştı — sebep girişin
+   * kendisi değil, hissesi tükenmiş hedefe çakılan baskıncılardı.)
    *
    * Sınanan iddialar: zafer erişilebilir ama bedava değil; kademeler
    * sıralı; oyun Dengeli ve Acımasız'da kaybedilebilir kalıyor, Rahat'ta
@@ -3143,6 +3155,80 @@ section('Hedefler, zafer ve zorluk', () => {
     'uyarıyı okuyup savunan yavaş oyuncu Dengeli\'de hayatta kalıyor',
     slowDefended.lostDay === null,
     slowDefended.lostDay === null ? '900 gün ayakta' : `${slowDefended.lostDay}. günde düştü`,
+  );
+});
+
+section('Belediye meclisi ve yeni rakipler', () => {
+  /*
+   * Y1 + İ3. Sınanan iddialar:
+   *   - meclis takvimine uyuyor (120. günden sonra her 90 günde bir),
+   *   - önergeler hem geçiyor hem reddediliyor (tek yönlü bir "her şey
+   *     geçer" değil),
+   *   - rakipler çıkarına göre lobi yapıyor: vergi gelen kategoride en
+   *     büyük paylı (ve bağışa nakdi yeten) rakip aleyhte bağış yapıyor,
+   *   - devralmalarla boşalan koltuk doluyor ve kadro erimiyor,
+   *   - ekonomi sağlıklı kalıyor (oyuncu büyüyor).
+   */
+  const engine = new GameEngine(createNewGame({ seed: 1, companyName: 'Meclis AŞ' }));
+  const sessions = new Set<number>();
+  const decided = new Map<string, boolean>();
+  let taxMotions = 0;
+  let taxOpposedByLeader = 0;
+  let minRivalsLate = Infinity;
+
+  for (let day = 1; day <= 900; day++) {
+    if (day % 5 === 0) playerStrategy(engine);
+    const before = engine.getState().council?.session ?? null;
+    if (before && engine.getState().time.day + 1 >= before.voteDay) {
+      // Oylamadan hemen önce: vergi önergesinde en büyük paylı rakip ne yaptı?
+      const state = engine.getState();
+      for (const motion of before.motions) {
+        if (motion.kind !== 'category_tax' || decided.has(motion.id)) continue;
+        const leader = Object.values(state.companies)
+          .filter((c) => !c.isPlayer)
+          .sort((a, b) => (b.marketShare[motion.category!] ?? 0) - (a.marketShare[motion.category!] ?? 0))[0];
+        // Bütçesi yetmeyen rakip bağış yapamaz (rakip lobisi nakdinin %4'ü,
+        // 10 binin altı gürültü sayılıyor) — iddia "çıkarı VE imkânı olan".
+        if (!leader || (leader.marketShare[motion.category!] ?? 0) < 0.05 || leader.cash < 1_000_000) continue;
+        taxMotions++;
+        if ((motion.lobby[leader.id] ?? 0) < 0) taxOpposedByLeader++;
+      }
+    }
+    engine.runDay();
+    const state = engine.getState();
+    if (state.council?.session) sessions.add(state.council.session.openedDay);
+    for (const motion of state.council?.history ?? []) {
+      if (motion.result && !decided.has(motion.id)) decided.set(motion.id, motion.result.passed);
+    }
+    if (day >= 400) minRivalsLate = Math.min(minRivalsLate, Object.values(state.companies).filter((c) => !c.isPlayer).length);
+  }
+
+  const state = engine.getState();
+  const passed = [...decided.values()].filter(Boolean).length;
+  const rejected = decided.size - passed;
+  const entrants = (state.rivalHistory?.length ?? 0) - 4;
+  const firstSession = Math.min(...sessions);
+
+  expect(
+    'meclis takvime uyuyor',
+    sessions.size >= 8 && firstSession === 120,
+    `${sessions.size} oturum, ilki ${firstSession}. gün`,
+  );
+  expect('önergeler hem geçiyor hem reddediliyor', passed >= 2 && rejected >= 2, `${passed} kabul · ${rejected} ret`);
+  expect(
+    'vergide en büyük paylı rakip aleyhte lobi yapıyor',
+    taxMotions === 0 || taxOpposedByLeader === taxMotions,
+    taxMotions === 0 ? 'bu tohumda pay sahibi rakibe vergi önergesi gelmedi' : `${taxOpposedByLeader}/${taxMotions} vergi önergesinde`,
+  );
+  expect(
+    'boşalan rakip koltuğu doluyor, kadro erimiyor',
+    minRivalsLate >= 3,
+    `400. günden sonra en az ${minRivalsLate} rakip · ${Math.max(0, entrants)} yeni giriş`,
+  );
+  expect(
+    'meclis ve yeni rakiplerle oyuncu büyümeye devam ediyor',
+    getPlayer(state).netWorth > 50_000_000,
+    `900. günde ${formatMoney(getPlayer(state).netWorth)}`,
   );
 });
 

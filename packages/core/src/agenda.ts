@@ -22,6 +22,7 @@ export type AgendaKind =
   | 'contract'
   | 'auction'
   | 'unlock'
+  | 'council'
   | 'event'
   | 'era'
   | 'goal';
@@ -130,6 +131,19 @@ export function agenda(state: GameState): AgendaItem[] {
       label: `${district.name} imara açılıyor`,
       tone: 'good',
       districtId: district.id,
+    });
+  }
+
+  const session = state.council?.session;
+  if (session) {
+    const left = Math.max(0, session.voteDay - day);
+    items.push({
+      kind: 'council',
+      key: `council:${session.openedDay}`,
+      urgency: left <= 3 ? 2 : 1,
+      daysLeft: left,
+      label: `Meclis · ${session.motions.length} önerge`,
+      tone: 'neutral',
     });
   }
 

@@ -610,7 +610,20 @@ function tryRaidMove(state: GameState, profile: NpcProfileDef): void {
 
   // Hedef: kendinden küçükler. Elinde payı olduğu varsa önce o.
   const candidates = Object.values(state.companies).filter(
-    (c) => c.id !== raider.id && c.netWorth < raider.netWorth * 0.9,
+    (c) =>
+      c.id !== raider.id &&
+      c.netWorth < raider.netWorth * 0.9 &&
+      // Kilitli yeni gelen hedef değil: zarı ona harcamak baskını boşa yakar.
+      !(c.lockedUntilDay !== undefined && state.time.day < c.lockedUntilDay) &&
+      /*
+       * Piyasada hissesi kalmamış şirket de hedef değil. Ölçüm bir kilit
+       * buldu: üç baskıncı küçük bir rakibin hisselerinin TAMAMINI
+       * aralarında bölüşüyor (%38 + %25 + %37), kimse %50'yi geçemiyor
+       * ve "başladığı işi bitirir" kuralı yüzünden üçü de 400 gün aynı
+       * hedefe çakılı kalıyordu. Baskın fiilen duruyor, oyuncu hiç
+       * hedef olmuyordu. Alınacak hisse yoksa avcı sıradakine geçer.
+       */
+      freeFloat(state, c.id) > 0,
   );
   if (candidates.length === 0) return;
 

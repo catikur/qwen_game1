@@ -1,5 +1,6 @@
 import {
   BUILDING_BY_ID,
+  COUNCIL,
   DISTRICT_ARCHETYPES,
   STRUCTURE_BY_ID,
   getCeoModifiers,
@@ -154,7 +155,8 @@ export function runPopulationTick(state: GameState): void {
 
   for (const district of state.districts) {
     const archetype = DISTRICT_ARCHETYPES[district.archetype];
-    const ceiling = archetype.population * 2.6;
+    // Meclisin geçirdiği her metro hattı tavanı büyütür.
+    const ceiling = archetype.population * 2.6 * (1 + COUNCIL.infrastructurePopulationBoost * (district.infrastructure ?? 0));
     if (district.population >= ceiling) continue;
 
     // Yeni açılan bölgeye göç rampası: köy (%32) şehir tabanına ~95

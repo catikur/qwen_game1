@@ -7,6 +7,7 @@ import {
 import { defaultShelf } from './systems/demand';
 import { defaultFocus } from './systems/focus';
 import { LAND_SELL_RATIO, tilePrice } from './systems/city';
+import { permitMultiplier } from './systems/council';
 import type { CommandResult, GameState } from './types';
 
 /**
@@ -67,7 +68,8 @@ export function buildCost(state: GameState, companyId: string, defId: string): n
   const def = BUILDING_BY_ID[defId];
   if (!def) return 0;
   const company = state.companies[companyId];
-  return Math.round(def.cost * getCeoModifiers(company?.ceoId ?? null).buildCost);
+  // Meclisin ruhsat kolaylığı herkese aynı: oyuncu da rakip de ucuz kurar.
+  return Math.round(def.cost * getCeoModifiers(company?.ceoId ?? null).buildCost * permitMultiplier(state));
 }
 
 /** Parselin neden alınamadığını açıklar; alınabiliyorsa null döner. */

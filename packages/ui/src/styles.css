@@ -3193,3 +3193,141 @@ button.icon {
   outline: 2px solid var(--brass);
   outline-offset: 1px;
 }
+
+/* --- belediye meclisi --- */
+.council {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.council h3 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.council-motion {
+  border: 1px solid var(--line);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.council-summary {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.council-bar {
+  position: relative;
+  height: 10px;
+  background: var(--tint-3);
+}
+
+.council-bar-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: var(--brass);
+}
+
+.council-bar-base {
+  position: absolute;
+  top: -3px;
+  bottom: -3px;
+  width: 2px;
+  background: var(--text);
+}
+
+.council-bar-half {
+  position: absolute;
+  left: 50%;
+  top: -4px;
+  bottom: -4px;
+  border-left: 1px dashed var(--line-strong);
+}
+
+.council-support-text {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 4px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.council-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+}
+
+.council-side {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.council-give {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 5px 8px;
+}
+
+.council-give.for:hover:not(:disabled) {
+  border-color: var(--good);
+}
+
+.council-give.against:hover:not(:disabled) {
+  border-color: var(--bad);
+}
+
+.council-give:focus-visible {
+  outline: 2px solid var(--brass);
+  outline-offset: 1px;
+}
+
+.council-lobby,
+.council-policies ul,
+.council-history ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+}
+
+.council-lobby li {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-variant-numeric: tabular-nums;
+}
+
+.council-who {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.council-who .swatch {
+  width: 8px;
+  height: 8px;
+  display: inline-block;
+}
+
+.council-empty {
+  margin: 0;
+  font-size: 12px;
+}
+
+.council-chip {
+  border-color: var(--line-strong);
+}

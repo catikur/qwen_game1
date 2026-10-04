@@ -159,6 +159,15 @@ export function buyShares(
   const wanted = Math.floor(count);
   if (wanted <= 0) return { ok: false, reason: 'Geçersiz adet.' };
 
+  // Kurucu kilidi: yeni gelen şirketin hisseleri bir süre piyasada yok.
+  // Şirketin kendi geri alımı serbest.
+  if (buyerId !== issuerId && issuer.lockedUntilDay !== undefined && state.time.day < issuer.lockedUntilDay) {
+    return {
+      ok: false,
+      reason: `${issuer.name} kurucu kilidinde — hisseleri ${issuer.lockedUntilDay - state.time.day} gün sonra piyasaya çıkıyor.`,
+    };
+  }
+
   const available = freeFloat(state, issuerId);
   if (wanted > available) {
     return { ok: false, reason: `Piyasada yalnızca ${available} hisse var.` };

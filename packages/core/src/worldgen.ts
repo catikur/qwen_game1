@@ -102,7 +102,7 @@ function brandRecord(value: number): Record<CategoryId, number> {
   return out;
 }
 
-function makeCompany(
+export function makeCompany(
   id: string,
   name: string,
   isPlayer: boolean,
@@ -207,6 +207,11 @@ export interface NewGameOptions {
   districtUnlocks?: boolean;
   /** Zorluk kademesi; varsayılan Dengeli (alan state'e yazılmaz). */
   difficulty?: DifficultyId;
+}
+
+/** Haritanın taşıyabileceği rakip sayısı (parsel / 126, en az 4, katalog tavanı). */
+export function rivalSlotsFor(plotCapacity: number): number {
+  return Math.min(NPC_PROFILES.length, Math.max(4, Math.round(plotCapacity / 126)));
 }
 
 export function createNewGame(options: NewGameOptions = {}): GameState {
@@ -390,11 +395,7 @@ export function createNewGame(options: NewGameOptions = {}): GameState {
    * 5×5 (1377 parsel) → 8, listenin tavanı.
    */
   const plotCapacity = tiles.filter((tile) => tile.kind === 'plot').length;
-  const scaledNpcCount = Math.max(4, Math.round(plotCapacity / 126));
-  const npcCount = Math.min(
-    options.npcCount ?? scaledNpcCount,
-    NPC_PROFILES.length,
-  );
+  const npcCount = Math.min(options.npcCount ?? rivalSlotsFor(plotCapacity), NPC_PROFILES.length);
   for (let i = 0; i < npcCount; i++) {
     const profile = NPC_PROFILES[i]!;
     companies[profile.id] = makeCompany(
@@ -445,6 +446,9 @@ export function createNewGame(options: NewGameOptions = {}): GameState {
       landAuctions: true,
     },
     auction: null,
+    // Sahneye çıkmış her rakip — devralınıp silinse bile adı tekrar
+    // kullanılmasın diye (yeni rakip girişi buradan seçiyor).
+    rivalHistory: Object.keys(companies).filter((id) => id !== PLAYER_COMPANY_ID),
     // Dengeli kayıt alanı taşımaz: yokluğu zaten Dengeli demek.
     ...(options.difficulty && options.difficulty !== 'normal' ? { difficulty: options.difficulty } : {}),
   };
