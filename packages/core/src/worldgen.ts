@@ -14,6 +14,7 @@ import {
 } from '@capital/content';
 import type { CategoryId, DifficultyId, DistrictArchetypeId } from '@capital/content';
 import { createRng, nextRange, pickWeighted } from './rng';
+import { LEAGUE_DAYS, leagueSeed } from './systems/league';
 import { seedSpotPrices, zeroByGood } from './systems/supply';
 import { estimateBaselineDemand, goodShares, zeroByCategory } from './systems/demand';
 import { SCHEMA_VERSION } from './types';
@@ -207,6 +208,12 @@ export interface NewGameOptions {
   districtUnlocks?: boolean;
   /** Zorluk kademesi; varsayılan Dengeli (alan state'e yazılmaz). */
   difficulty?: DifficultyId;
+  /**
+   * Tohum Ligi koşusu: tohum haftadan türer, zorluk Dengeli'ye sabitlenir
+   * ve oyuncunun komutları günlüğe yazılır. Verilen `seed`/`difficulty`
+   * yok sayılır — herkes aynı şehirde oynamalı.
+   */
+  league?: { weekId: string };
 }
 
 /** Haritanın taşıyabileceği rakip sayısı (parsel / 126, en az 4, katalog tavanı). */
@@ -214,7 +221,10 @@ export function rivalSlotsFor(plotCapacity: number): number {
   return Math.min(NPC_PROFILES.length, Math.max(4, Math.round(plotCapacity / 126)));
 }
 
-export function createNewGame(options: NewGameOptions = {}): GameState {
+export function createNewGame(input: NewGameOptions = {}): GameState {
+  const options: NewGameOptions = input.league
+    ? { ...input, seed: leagueSeed(input.league.weekId), difficulty: 'normal' }
+    : input;
   const seed = options.seed ?? Math.floor(Math.random() * 2 ** 31);
   const rng = createRng(seed);
   const ceoId = options.ceoId ?? null;
@@ -438,6 +448,7 @@ export function createNewGame(options: NewGameOptions = {}): GameState {
       },
     ],
     nextId: 2,
+    newsSeq: 1,
     flags: {
       npcCompetition: true,
       randomEvents: true,
@@ -449,6 +460,12 @@ export function createNewGame(options: NewGameOptions = {}): GameState {
     // Sahneye çıkmış her rakip — devralınıp silinse bile adı tekrar
     // kullanılmasın diye (yeni rakip girişi buradan seçiyor).
     rivalHistory: Object.keys(companies).filter((id) => id !== PLAYER_COMPANY_ID),
+    ...(options.league
+      ? {
+          league: { weekId: options.league.weekId, endDay: LEAGUE_DAYS, curve: [Math.round(companies[PLAYER_COMPANY_ID]!.cash)] },
+          commandLog: [],
+        }
+      : {}),
     // Dengeli kayıt alanı taşımaz: yokluğu zaten Dengeli demek.
     ...(options.difficulty && options.difficulty !== 'normal' ? { difficulty: options.difficulty } : {}),
   };

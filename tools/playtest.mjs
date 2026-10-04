@@ -146,9 +146,11 @@ async function finish(browser, consoleErrors) {
     (await page.locator('.ceo-perk').first().textContent())?.trim(),
   );
 
-  check('Zorluk seçenekleri listeleniyor', (await page.locator('.difficulty-option').count()) === 3);
+  check('Zorluk seçenekleri listeleniyor', (await page.locator('.difficulty-option[data-difficulty]').count()) === 3);
   check('Varsayılan zorluk Dengeli',
-    (await page.locator('.difficulty-option[aria-checked="true"]').getAttribute('data-difficulty')) === 'normal');
+    (await page.locator('.difficulty-option[data-difficulty][aria-checked="true"]').getAttribute('data-difficulty')) === 'normal');
+  check('Varsayılan oyun türü serbest şehir',
+    (await page.locator('.mode-picker [data-mode="free"][aria-checked="true"]').count()) === 1);
   await page.locator('.difficulty-option[data-difficulty="hard"]').click();
   const hardDetail = ((await page.locator('.difficulty-detail').textContent()) ?? '').trim();
   check('Zorluk seçimi farkları açıkça yazıyor', hardDetail.includes('150M'), hardDetail.slice(0, 90));
@@ -664,6 +666,30 @@ async function finish(browser, consoleErrors) {
     await page.waitForTimeout(150);
   }
   check('Rıhtımda meclis sekmesi var', (await page.locator('.topbar-actions [data-panel="council"]').count()) === 1);
+
+  // Ses manzarası: dokunuşlardan sonra bağlam açık, olaylar tetikleniyor,
+  // sessize alma çalışıyor ve hatırlanıyor.
+  await page.evaluate(() => window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 1 }));
+  await page.waitForTimeout(1200);
+  const sound = await page.evaluate(() => window.__capital.audio?.() ?? null);
+  await page.evaluate(() => window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 }));
+  check('Ses manzarası ilk dokunuştan sonra başlıyor', sound !== null && sound.context !== 'none',
+    sound ? `bağlam ${sound.context}` : 'kanca yok');
+  check('Oyun olayları ses tetikliyor (inşaat, iyi haber)',
+    sound !== null && sound.played.build >= 1 && sound.played.cash >= 1,
+    sound ? JSON.stringify(sound.played) : '');
+  check('Ses katmanları şehirden besleniyor', sound !== null && sound.levels.hum > 0.05 && sound.levels.traffic > 0,
+    sound ? `uğultu ${sound.levels.hum.toFixed(3)} · trafik ${sound.levels.traffic.toFixed(3)} · gece ${sound.levels.night.toFixed(2)}` : '');
+  await page.locator('.sound-toggle').click();
+  await page.waitForTimeout(150);
+  const mutedNow = await page.evaluate(() => ({
+    muted: window.__capital.audio().muted,
+    stored: localStorage.getItem('capitalforge.audio.muted'),
+    pressed: document.querySelector('.sound-toggle')?.getAttribute('aria-pressed'),
+  }));
+  check('Sessize alma çalışıyor ve hatırlanıyor', mutedNow.muted && mutedNow.stored === '1' && mutedNow.pressed === 'false',
+    JSON.stringify(mutedNow));
+  await page.locator('.sound-toggle').click();
 
   if (SMOKE) {
     await finish(browser, consoleErrors);
@@ -1835,6 +1861,123 @@ async function finish(browser, consoleErrors) {
     window.__capital.getState().victory.dismissed = true;
     window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
   });
+
+  // ---------- Tohum Ligi ----------
+  //
+  // Ayrı bir bağlamda: lig yeni oyun ekranından başlıyor ve ana sayfanın
+  // kayıtlarına dokunmamalı. Koşu GERÇEK — 360 gün motorun kendi gün
+  // adımıyla koşturuluyor (arayüzün hızıyla üç dakika sürerdi), komutlar
+  // arayüzden veriliyor, doğrulama tarayıcıda baştan tekrar oynuyor.
+  section('Tohum Ligi');
+  {
+    const leagueContext = await browser.newContext({ viewport: { width: 1280, height: 860 } });
+    const lp = await leagueContext.newPage();
+    const leagueErrors = [];
+    lp.on('pageerror', (e) => leagueErrors.push(e.message));
+    lp.on('console', (m) => { if (m.type() === 'error') leagueErrors.push(m.text()); });
+    await lp.goto('http://127.0.0.1:8811/');
+    await lp.waitForSelector('.newgame', { timeout: 20000 });
+    await lp.locator('.mode-picker [data-mode="league"]').click();
+    check('Kurulumda Tohum Ligi seçilebiliyor', (await lp.locator('.mode-picker [data-mode="league"][aria-checked="true"]').count()) === 1,
+      ((await lp.locator('.mode-picker [data-mode="league"]').textContent()) ?? '').trim());
+    check('Ligde zorluk seçimi kalkıyor', (await lp.locator('.difficulty-option[data-difficulty]').count()) === 0);
+    await lp.fill('.newgame-field input[type="text"]', 'Lig Holding');
+    await lp.locator('button:has-text("Şirketi kur")').click();
+    await lp.waitForSelector('.topbar', { timeout: 20000 });
+    const leagueBoot = await lp.evaluate(() => {
+      const s = window.__capital.getState();
+      return { week: s.league?.weekId, log: s.commandLog?.length ?? -1 };
+    });
+    check('Lig koşusu haftanın kimliğiyle başlıyor', /^\d{4}-W\d{2}$/.test(leagueBoot.week ?? ''), leagueBoot.week);
+    check('Gündemde lig geri sayıyor', (await lp.locator('.agenda [data-agenda="league"]').count()) === 1);
+    const silent = await lp.evaluate(() => window.__capital.audio?.().context ?? 'kanca yok');
+    check('Oyun açılınca dokunuşa kadar ses yok', silent === 'none', `bağlam: ${silent}`);
+
+    // Arayüzden bir hamle: parsel al + dükkân kur → günlüğe düşmeli.
+    const leagueTile = await lp.evaluate(() => {
+      const s = window.__capital.getState();
+      const t = s.map.tiles.find((x) => {
+        const d = s.districts[x.districtId];
+        return x.kind === 'plot' && !x.ownerId && !x.structureId && (d.opensOnDay === undefined || d.opensOnDay <= s.time.day);
+      });
+      window.__capital.engine.dispatch({ type: 'BUY_TILE', tileId: t.id });
+      window.__capital.engine.dispatch({ type: 'BUILD', tileId: t.id, defId: 'corner_shop' });
+      return t.id;
+    });
+    const logged = await lp.evaluate(() => window.__capital.getState().commandLog.length);
+    check('Lig hamleleri günlüğe yazılıyor', logged === 2, `${logged} kayıt (kare ${leagueTile})`);
+
+    const finished = await lp.evaluate(() => {
+      const cap = window.__capital;
+      cap.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+      let guard = 0;
+      while (cap.getState().league.finishedDay === undefined && guard++ < 400) cap.engine.runDay();
+      cap.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+      const l = cap.getState().league;
+      return { day: l.finishedDay, score: l.score, outcome: l.outcome };
+    });
+    check('360. günde lig koşusu bitiyor', finished.day === 360, `${finished.day}. gün · ${finished.outcome} · ${finished.score}`);
+    const resultShown = await lp
+      .waitForFunction(() => document.querySelector('.league-result') !== null, null, { timeout: 5000 })
+      .then(() => true)
+      .catch(() => false);
+    check('Lig sonucu ekranı iniyor', resultShown);
+    if (resultShown) {
+      await lp.locator('.league-result button:has-text("Tabloya")').click();
+      await lp.waitForTimeout(300);
+      await lp.locator('.league-result button:has-text("Tabloyu aç")').click();
+      await lp.waitForSelector('.league-table li', { timeout: 5000 }).catch(() => null);
+      const rows = await lp.locator('.league-table li').count();
+      check('Skor tabloya yazılıyor', rows === 1, `${rows} satır`);
+      if (rows >= 1) {
+        await lp.locator('.league-table li').first().locator('button:has-text("Doğrula")').click();
+        const verdict = await lp
+          .waitForFunction(
+            () => {
+              const text = document.querySelector('.league-table li .league-verdict')?.textContent ?? '';
+              return text.includes('doğrulandı') || text.includes('tutmadı') ? text : null;
+            },
+            null,
+            { timeout: 90000 },
+          )
+          .then((h) => h.jsonValue())
+          .catch(() => 'zaman aşımı');
+        check('Koşu tarayıcıda yeniden oynanıp doğrulanıyor', verdict === 'doğrulandı', verdict);
+      }
+
+      // Sahte kod: skoru şişirilmiş bir koşu tekrarda tutmamalı.
+      const forgedCode = await lp.evaluate(() => {
+        const entries = JSON.parse(localStorage.getItem('capitalforge.league.local') ?? '[]');
+        const code = entries.at(-1)?.code;
+        if (!code) return null;
+        const bytes = Uint8Array.from(atob(code.slice(4)), (c) => c.charCodeAt(0));
+        const run = JSON.parse(new TextDecoder().decode(bytes));
+        run.score += 5_000_000;
+        const out = new TextEncoder().encode(JSON.stringify(run));
+        let binary = '';
+        for (const b of out) binary += String.fromCharCode(b);
+        return 'CF1.' + btoa(binary);
+      });
+      if (forgedCode) {
+        await lp.locator('.league-paste textarea').fill(forgedCode);
+        await lp.locator('.league-paste button:has-text("Tekrar oynat")').click();
+        const forgedVerdict = await lp
+          .waitForFunction(
+            () => {
+              const text = document.querySelector('.league-paste .manual-actions')?.textContent ?? '';
+              return text.includes('doğrulandı') || text.includes('tutmadı') ? text : null;
+            },
+            null,
+            { timeout: 90000 },
+          )
+          .then((h) => h.jsonValue())
+          .catch(() => 'zaman aşımı');
+        check('Şişirilmiş skorlu kod doğrulamadan geçemiyor', forgedVerdict.includes('tutmadı'), forgedVerdict.slice(0, 90));
+      }
+    }
+    check('Lig akışında konsol temiz', leagueErrors.length === 0, leagueErrors.slice(0, 2).join(' | '));
+    await leagueContext.close();
+  }
 
   // ---------- Mobil ----------
   //

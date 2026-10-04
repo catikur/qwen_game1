@@ -23,6 +23,7 @@ export type AgendaKind =
   | 'auction'
   | 'unlock'
   | 'council'
+  | 'league'
   | 'event'
   | 'era'
   | 'goal';
@@ -131,6 +132,20 @@ export function agenda(state: GameState): AgendaItem[] {
       label: `${district.name} imara açılıyor`,
       tone: 'good',
       districtId: district.id,
+    });
+  }
+
+  const league = state.league;
+  if (league && league.finishedDay === undefined) {
+    const left = Math.max(0, league.endDay - day);
+    items.push({
+      kind: 'league',
+      key: `league:${league.weekId}`,
+      urgency: left <= 10 ? 2 : 0,
+      daysLeft: left,
+      label: `Lig ${league.weekId}`,
+      tone: 'neutral',
+      progress: day / league.endDay,
     });
   }
 

@@ -13,13 +13,14 @@ import {
 import type { GameSpeed } from '@capital/core';
 import { CeoPortrait } from './CeoPortrait';
 import { AuctionChip } from './AuctionPanel';
+import { ghostValueAt, useGhost } from './LeaguePanel';
 import { useCollapsible } from './collapse';
 import { useGame, useGameState } from './useGame';
 import type { ViewState } from './useGame';
 
 /** Üst bar: oyuncunun her an görmesi gereken beş sayı ve zaman kontrolü. */
 export function TopBar(): ReactElement {
-  const { run, view, setView } = useGame();
+  const { run, view, setView, audio } = useGame();
   const state = useGameState();
   const player = getPlayer(state);
   const ceo = player.ceoId ? CEO_BY_ID[player.ceoId] : undefined;
@@ -109,6 +110,23 @@ export function TopBar(): ReactElement {
             {speed.label}
           </button>
         ))}
+        {/*
+          Ses düğmesi hız grubunda: ikisi de "oyunun akışını" yönetiyor ve
+          dar ekranda üst barda kalan tek grup bu.
+        */}
+        <button
+          type="button"
+          className={audio.muted ? 'speed sound-toggle muted' : 'speed sound-toggle'}
+          onClick={audio.toggle}
+          aria-pressed={!audio.muted}
+          aria-label={audio.muted ? 'Sesi aç' : 'Sesi kapat'}
+          title={audio.muted ? 'Sesi aç' : 'Sesi kapat'}
+        >
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
+            <path d="M4 10v4h3l5 4V6L7 10z" />
+            {audio.muted ? <path d="M16 9l5 6M21 9l-5 6" /> : <path d="M16 9.5a3.5 3.5 0 0 1 0 5M18.5 7a7 7 0 0 1 0 10" />}
+          </svg>
+        </button>
       </div>
 
       <nav className="topbar-actions" aria-label="Paneller">
@@ -713,6 +731,7 @@ export function ActiveEvents(): ReactElement | null {
   const state = useGameState();
   const { view, setView, focusOn } = useGame();
   const [expanded, setExpanded] = useState(false);
+  const ghost = useGhost(state);
   const items = agenda(state);
   if (items.length === 0) return null;
 
@@ -792,6 +811,29 @@ export function ActiveEvents(): ReactElement | null {
           </button>
         );
         break;
+      case 'league': {
+        // Hayalet: tablodaki en iyi koşu bu gün neredeydi? Fark yeşil/kırmızı.
+        const ghostNow = ghost ? ghostValueAt(ghost, state.time.day) : null;
+        const gap = ghostNow !== null ? getPlayer(state).netWorth - ghostNow : null;
+        chip = (
+          <button
+            type="button"
+            className="event-chip league-chip"
+            onClick={() => togglePanel('league')}
+            title="Tohum Ligi — tablo ve hayalet"
+          >
+            <span className="agenda-label">Lig</span>
+            {days}
+            {gap !== null && (
+              <span className={gap >= 0 ? 'pos' : 'neg'}>
+                {gap >= 0 ? '+' : '−'}
+                {formatMoney(Math.abs(gap))} hayalete
+              </span>
+            )}
+          </button>
+        );
+        break;
+      }
       case 'goal':
         chip = (
           <button

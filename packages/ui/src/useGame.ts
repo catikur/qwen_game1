@@ -31,7 +31,8 @@ export interface ViewState {
     | 'saves'
     | 'help'
     | 'goals'
-    | 'council';
+    | 'council'
+    | 'league';
 }
 
 export interface ToastMessage {
@@ -68,6 +69,40 @@ export interface GameContextValue {
    * çipleri ve haberler "olay yerine git" için bunu çağırıyor.
    */
   focusOn: (target: FocusTarget) => void;
+  /** Tohum Ligi tablosu — barındırıcıda paylaşılan, değilse bu tarayıcıya ait. */
+  league: LeagueBoard;
+  /** Ses manzarası: ilk dokunuşta başlar; sessize alma hatırlanır. */
+  audio: { muted: boolean; toggle: () => void };
+}
+
+/** Tablodaki bir koşu. Kimlik ve "kim" barındırıcıdan gelir. */
+export interface LeagueEntry {
+  id: string;
+  weekId: string;
+  companyName: string;
+  ceoId: string | null;
+  score: number;
+  curve: number[];
+  /** Doğrulama için koşu kodu (encodeRun). */
+  code: string;
+  submittedAt: string;
+  /** Bu tarayıcının / bu kişinin koşusu mu. */
+  mine?: boolean;
+  /** Gönderen kişinin görünen adı (biliniyorsa). */
+  who?: string;
+}
+
+export type LeagueSubmitOutcome = 'saved' | 'kept-better' | 'error';
+
+/**
+ * Lig tablosu sözleşmesi. Arayüz nerede saklandığını bilmiyor: paylaşılan
+ * sayfada herkesin gördüğü bir tablo, yerelde yalnızca bu tarayıcının
+ * koşuları. `kind` bunu oyuncuya dürüstçe söylemek için var.
+ */
+export interface LeagueBoard {
+  kind: 'shared' | 'local';
+  subscribe(weekId: string, onChange: (entries: LeagueEntry[]) => void): () => void;
+  submit(entry: Omit<LeagueEntry, 'id' | 'mine' | 'who'>): Promise<LeagueSubmitOutcome>;
 }
 
 export interface FocusTarget {

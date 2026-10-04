@@ -372,6 +372,8 @@ export interface GameState {
   activeEvents: ActiveEvent[];
   news: NewsItem[];
   nextId: number;
+  /** Haber kimliği sayacı (bina kimliklerinden ayrı). */
+  newsSeq?: number;
   /**
    * Oyun sonu — düşmanca devralma oyuncuyu yuttuğunda dolar.
    *
@@ -413,6 +415,10 @@ export interface GameState {
   lastEntryDay?: number;
   /** Rakip koltuğunun boşaldığı gün (giriş bu günden 45 gün sonra). */
   rivalVacancyDay?: number;
+  /** Tohum Ligi koşusu; yoksa serbest oyun. */
+  league?: LeagueState;
+  /** Lig koşusunda oyuncunun komut günlüğü: [gün, komut]. */
+  commandLog?: LoggedCommand[];
   /** Belediye meclisi: oturum takvimi, açık önergeler, geçmiş. */
   council?: CouncilState;
   /** Meclisin yürürlükteki kararları (vergi, teşvik, ruhsat). */
@@ -455,6 +461,22 @@ export interface PolicyState {
   title: string;
 }
 
+/** Tohum Ligi — herkesin aynı şehirde oynadığı haftalık koşu. */
+export interface LeagueState {
+  weekId: string;
+  endDay: number;
+  /** Net değer örnekleri (her `LEAGUE_SAMPLE_DAYS` günde bir) — hayalet eğrisi. */
+  curve: number[];
+  finishedDay?: number;
+  score?: number;
+  outcome?: 'finished' | 'lost';
+  /** Sonuç ekranı görüldü mü. */
+  resultSeen?: boolean;
+}
+
+/** Günlükteki tek kayıt: komutun verildiği gün ve komutun kendisi. */
+export type LoggedCommand = [number, GameCommand];
+
 /** Zafer yolu: değer + birincilik ya da bütün rakipleri devralmak. */
 export type VictoryKind = 'tycoon' | 'monopoly';
 
@@ -486,6 +508,8 @@ export type GameCommand =
   | { type: 'SET_FLAG'; flag: keyof FeatureFlags; value: boolean }
   /** Zafer ekranını kapatıp serbest oyuna devam eder. */
   | { type: 'DISMISS_VICTORY' }
+  /** Lig sonuç ekranını kapatır. */
+  | { type: 'DISMISS_LEAGUE' }
   /** Açık bir meclis önergesine lobi bağışı. */
   | { type: 'LOBBY'; motionId: string; side: 'for' | 'against'; amount: number };
 

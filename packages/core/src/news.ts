@@ -28,8 +28,17 @@ export function pushNews(
   ref?: string | NewsRef,
 ): void {
   const where: NewsRef = typeof ref === 'string' ? { companyId: ref } : (ref ?? {});
+  /*
+   * Haber kimliği kendi sayacından — binaların `nextId`'sinden DEĞİL.
+   * Motorun bazı haberleri kayıt yüklenince yeniden düşüyor (aşılmış
+   * değer eşikleri gibi); ortak sayaç bu yüzden bina kimliklerini
+   * kaydırıyordu. Lig tekrarı komutları bina kimliğiyle oynattığı için
+   * kayan bir kimlik tekrarı bozardı.
+   */
+  const newsId = (state.newsSeq ?? state.news.reduce((max, item) => Math.max(max, item.id), 0)) + 1;
+  state.newsSeq = newsId;
   state.news.unshift({
-    id: state.nextId++,
+    id: newsId,
     day: state.time.day,
     tone,
     title,

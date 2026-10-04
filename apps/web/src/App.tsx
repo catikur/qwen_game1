@@ -3,9 +3,11 @@ import type { ReactElement } from 'react';
 import {
   GameEngine,
   SCHEMA_VERSION,
+  createLeagueGame,
   createNewGame,
   customerFlows,
   getPlayer,
+  leagueWeekId,
   routeSignature,
   supplyRoutes,
 } from '@capital/core';
@@ -25,6 +27,7 @@ import {
   GameContext,
   GameOverScreen,
   Inspector,
+  LeagueResultScreen,
   VictoryScreen,
   LensBar,
   ModalHost,
@@ -34,8 +37,10 @@ import {
   TopBar,
   useGameVersion,
 } from '@capital/ui';
-import type { ExportOutcome, FocusTarget, GameContextValue, ToastMessage, ViewState } from '@capital/ui';
+import type { ExportOutcome, FocusTarget, GameContextValue, LeagueBoard, ToastMessage, ViewState } from '@capital/ui';
 import { deliverTextFile } from './host';
+import { createLeagueBoard, fallbackLeagueBoard } from './league-board';
+import { Soundscape } from './audio';
 
 const AUTOSAVE_INTERVAL_MS = 30_000;
 
@@ -75,8 +80,10 @@ export function App(): ReactElement {
     };
   }, []);
 
-  const start = (companyName: string, ceoId: string, difficulty: DifficultyId) => {
-    const next = createNewGame({ companyName, ceoId, difficulty });
+  const start = (companyName: string, ceoId: string, difficulty: DifficultyId, league: boolean) => {
+    const next = league
+      ? createLeagueGame(leagueWeekId(), companyName, ceoId)
+      : createNewGame({ companyName, ceoId, difficulty });
     if (engine) engine.replaceState(next);
     else setEngine(new GameEngine(next));
     setBootMessage(null);
@@ -375,6 +382,39 @@ function GameRoot({
    * verilirse merkezine. Açık panel kapanıyor — haritayı göstermek için
    * çağrıldı, modalın arkasında kalmasın.
    */
+  // Ses manzarası: tek örnek, ilk dokunuşta kendini başlatıyor.
+  const soundscape = useMemo(() => new Soundscape(), []);
+  const [muted, setMuted] = useState(() => soundscape.isMuted());
+  useEffect(() => soundscape.subscribe(() => setMuted(soundscape.isMuted())), [soundscape]);
+  useEffect(() => {
+    const timer = setInterval(() => {
+      soundscape.update(engine.getState(), rendererRef.current?.daylight() ?? 1);
+    }, 500);
+    return () => clearInterval(timer);
+  }, [engine, soundscape]);
+  const audio = useMemo(
+    () => ({ muted, toggle: () => soundscape.setMuted(!soundscape.isMuted()) }),
+    [muted, soundscape],
+  );
+  // Test kancası: ses durumu (bağlam, sessiz, tetiklenen olaylar). Köprü
+  // motor değişince yeniden kurulduğu için motor da bağımlılıkta.
+  useEffect(() => {
+    const bridge = (window as unknown as Record<string, Record<string, unknown> | undefined>)['__capital'];
+    if (bridge) bridge['audio'] = () => soundscape.debug();
+  }, [engine, soundscape]);
+
+  // Lig tablosu: yerel tabloyla açılır, barındırıcı paylaşılanı verirse ona geçer.
+  const [league, setLeague] = useState<LeagueBoard>(fallbackLeagueBoard);
+  useEffect(() => {
+    let cancelled = false;
+    void createLeagueBoard().then((board) => {
+      if (!cancelled) setLeague(board);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const focusOn = useCallback(
     (target: FocusTarget) => {
       const state = engine.getState();
@@ -411,6 +451,8 @@ function GameRoot({
       importSave,
       importSaveText,
       focusOn,
+      league,
+      audio,
     }),
     [
       engine,
@@ -427,6 +469,8 @@ function GameRoot({
       importSave,
       importSaveText,
       focusOn,
+      league,
+      audio,
     ],
   );
 
@@ -448,6 +492,7 @@ function GameRoot({
         <Toasts />
         <GameOverScreen onNewGame={newGame} />
         <VictoryScreen onNewGame={newGame} />
+        <LeagueResultScreen onNewGame={newGame} />
       </div>
     </GameContext.Provider>
   );
