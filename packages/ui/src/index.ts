@@ -1,5 +1,5 @@
 export { GameContext, useGame, useGameState, useGameVersion } from './useGame';
-export type { GameContextValue, ToastMessage, ViewState } from './useGame';
+export type { ExportOutcome, GameContextValue, ToastMessage, ViewState } from './useGame';
 export { ActiveEvents, GameOverScreen, LensBar, NewsFeed, Toasts, TopBar } from './hud';
 export { BuildPanel, Inspector, ModalHost } from './panels';
 export { ChainPanel } from './ChainPanel';

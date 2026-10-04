@@ -29,6 +29,12 @@ export interface ToastMessage {
   tone: 'info' | 'good' | 'bad';
 }
 
+/**
+ * Dışa aktarmanın gerçekte ne olduğu. Arayüz oyuncuya bunun dışında bir
+ * şey söylemez: "indirildi" yalnızca `saved` iken doğru bir cümle.
+ */
+export type ExportOutcome = 'saved' | 'started' | 'copied' | 'declined' | 'blocked';
+
 export interface GameContextValue {
   engine: GameEngine;
   view: ViewState;
@@ -40,8 +46,12 @@ export interface GameContextValue {
   newGame: () => void;
   saveTo: (slot: number, name?: string) => Promise<void>;
   loadFrom: (slot: number) => Promise<void>;
-  exportSave: () => void;
+  /** Kaydı dosya olarak verir; sonucu dürüstçe bildirir. */
+  exportSave: () => Promise<ExportOutcome>;
+  /** Kaydın JSON metni — her yerde çalışan elle aktarım yolu. */
+  exportSaveText: () => string;
   importSave: (file: File) => Promise<void>;
+  importSaveText: (text: string) => void;
 }
 
 export const GameContext = createContext<GameContextValue | null>(null);

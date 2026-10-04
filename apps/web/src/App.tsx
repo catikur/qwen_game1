@@ -32,7 +32,8 @@ import {
   TopBar,
   useGameVersion,
 } from '@capital/ui';
-import type { GameContextValue, ToastMessage, ViewState } from '@capital/ui';
+import type { ExportOutcome, GameContextValue, ToastMessage, ViewState } from '@capital/ui';
+import { deliverTextFile } from './host';
 
 const AUTOSAVE_INTERVAL_MS = 30_000;
 
@@ -315,30 +316,55 @@ function GameRoot({
     onRequestNewGame();
   }, [onRequestNewGame]);
 
-  const exportSave = useCallback(() => {
+  const exportSaveText = useCallback(() => exportToJson(engine.getState()), [engine]);
+
+  const exportSave = useCallback(async (): Promise<ExportOutcome> => {
     const state = engine.getState();
-    const blob = new Blob([exportToJson(state)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `capitalforge-${getPlayer(state).name}-gun${state.time.day}.json`;
-    link.click();
-    URL.revokeObjectURL(url);
-    toast('Kayıt dosyası indirildi.', 'good');
+    const filename = `capitalforge-${getPlayer(state).name}-gun${state.time.day}.json`;
+    const outcome = await deliverTextFile(filename, exportToJson(state));
+    /*
+     * OYUN OYUNCUYA YALAN SÖYLEMEZ — dışa aktarmada da.
+     *
+     * Eski hâli her durumda "Kayıt dosyası indirildi" diyordu; yayınlanmış
+     * sayfada tarayıcı indirmeyi engellerken bile. Şimdi cümle sonucu
+     * izliyor: doğrulanmış kayıt, başlatılmış indirme, panoya kopyalama
+     * ya da açık bir "engellendi" — sonuncusunda panel metin kutusunu
+     * açıp elle kopyalamayı öneriyor.
+     */
+    const messages: Record<ExportOutcome, [string, ToastMessage['tone']]> = {
+      saved: ['Kayıt dosyası kaydedildi.', 'good'],
+      started: ['İndirme başlatıldı.', 'good'],
+      copied: ['Bu görünümde indirme yok — kayıt panoya kopyalandı. Bir metin dosyasına yapıştırıp sakla.', 'info'],
+      declined: ['Kaydetme iptal edildi.', 'info'],
+      blocked: ['İndirme bu görünümde engelli — kaydı aşağıdaki metin kutusundan kopyala.', 'bad'],
+    };
+    const [text, tone] = messages[outcome];
+    toast(text, tone);
+    return outcome;
   }, [engine, toast]);
 
-  const importSave = useCallback(
-    async (file: File) => {
-      const outcome = importFromJson(await file.text());
+  const applyImported = useCallback(
+    (raw: string, label: string) => {
+      const outcome = importFromJson(raw);
       if (!outcome.ok) {
         toast(outcome.reason, 'bad');
         return;
       }
       engine.replaceState(outcome.state);
       setViewState((current) => ({ ...current, selectedTileId: null, ghostDefId: null, openPanel: 'none' }));
-      toast('Kayıt içe aktarıldı.', 'good');
+      toast(label, 'good');
     },
     [engine, toast],
+  );
+
+  const importSave = useCallback(
+    async (file: File) => applyImported(await file.text(), 'Kayıt içe aktarıldı.'),
+    [applyImported],
+  );
+
+  const importSaveText = useCallback(
+    (text: string) => applyImported(text, 'Kayıt metinden yüklendi.'),
+    [applyImported],
   );
 
   const context = useMemo<GameContextValue>(
@@ -353,9 +379,25 @@ function GameRoot({
       saveTo,
       loadFrom,
       exportSave,
+      exportSaveText,
       importSave,
+      importSaveText,
     }),
-    [engine, view, setView, run, toast, toasts, newGame, saveTo, loadFrom, exportSave, importSave],
+    [
+      engine,
+      view,
+      setView,
+      run,
+      toast,
+      toasts,
+      newGame,
+      saveTo,
+      loadFrom,
+      exportSave,
+      exportSaveText,
+      importSave,
+      importSaveText,
+    ],
   );
 
   return (

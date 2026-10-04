@@ -2886,3 +2886,29 @@ button.icon {
 .contract-chip.active {
   box-shadow: inset 3px 0 0 var(--accent);
 }
+
+/* ---- Elle kayıt aktarımı (D1) ---- */
+.manual-transfer {
+  display: grid;
+  gap: 8px;
+  padding: 10px 0 12px;
+  border-bottom: 1px solid var(--line);
+}
+.manual-text {
+  width: 100%;
+  min-height: 96px;
+  max-height: 180px;
+  resize: vertical;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.35;
+  color: var(--ink);
+  background: var(--surface-2, var(--surface));
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  padding: 8px;
+}
+.manual-actions {
+  display: flex;
+  gap: 8px;
+}

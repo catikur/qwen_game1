@@ -899,10 +899,19 @@ function RivalsPanel(): ReactElement {
 }
 
 function SavePanel(): ReactElement {
-  const { saveTo, loadFrom, newGame, exportSave, importSave } = useGame();
+  const { saveTo, loadFrom, newGame, exportSave, exportSaveText, importSave, importSaveText } = useGame();
   const state = useGameState();
   const [slots, setSlots] = useState<SaveMeta[]>([]);
   const [busy, setBusy] = useState(false);
+  /*
+   * Elle aktarım kutusu — her ortamda çalışan tek yol.
+   *
+   * Yayınlanmış sayfada dosya indirme engelli olabilir ve dosya seçici
+   * bazı çerçevelerde açılmaz. Metin her yerde kopyalanıp
+   * yapıştırılabildiği için bu kutu son çare değil, eşit bir yol: dışa
+   * aktarma engellenince kendiliğinden açılıyor.
+   */
+  const [manual, setManual] = useState<string | null>(null);
 
   const refresh = () => {
     void listSaves().then(setSlots);
@@ -918,7 +927,22 @@ function SavePanel(): ReactElement {
     <div className="saves">
       <div className="saverow-actions">
         <button type="button" onClick={newGame}>Yeni oyun</button>
-        <button type="button" onClick={exportSave}>JSON dışa aktar</button>
+        <button
+          type="button"
+          onClick={async () => {
+            const outcome = await exportSave();
+            if (outcome === 'blocked') setManual(exportSaveText());
+          }}
+        >
+          JSON dışa aktar
+        </button>
+        <button
+          type="button"
+          onClick={() => setManual((current) => (current === null ? exportSaveText() : null))}
+          aria-expanded={manual !== null}
+        >
+          Metinle aktar
+        </button>
         <label className="fileinput">
           JSON içe aktar
           <input
@@ -932,6 +956,36 @@ function SavePanel(): ReactElement {
           />
         </label>
       </div>
+
+      {manual !== null && (
+        <div className="manual-transfer">
+          <p className="muted">
+            Kaydını korumak için bu metnin tamamını kopyala. Başka bir oyunu yüklemek için kendi
+            metnini buraya yapıştır ve yükle.
+          </p>
+          <textarea
+            className="manual-text"
+            value={manual}
+            spellCheck={false}
+            onChange={(e) => setManual(e.target.value)}
+            onFocus={(e) => e.target.select()}
+            aria-label="Kayıt metni"
+          />
+          <div className="manual-actions">
+            <button
+              type="button"
+              className="primary"
+              disabled={manual.trim().length === 0}
+              onClick={() => importSaveText(manual)}
+            >
+              Bu metni yükle
+            </button>
+            <button type="button" onClick={() => setManual('')}>
+              Temizle
+            </button>
+          </div>
+        </div>
+      )}
 
       <ul className="slotlist">
         {rows.map(({ slot, meta }) => (

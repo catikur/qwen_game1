@@ -1247,6 +1247,63 @@ const findTile = (page, kind) =>
   const schemaVersion = await page.evaluate(() => window.__capital.schemaVersion);
   check('Kayıt güncel şemayla yazılıyor', savedMeta?.schemaVersion === schemaVersion,
     `v${savedMeta?.schemaVersion} (güncel v${schemaVersion})`);
+
+  // Dışa aktarma her ortamda olanı söylemeli: kendi sunucusunda gerçek bir
+  // indirme, barındırıcıda yetenek yoksa açık bir "engellendi" + elle aktarım.
+  const lastToast = () => page.evaluate(() => {
+    const all = document.querySelectorAll('.toasts .toast');
+    return all.length ? all[all.length - 1].textContent : '';
+  });
+  const exportButton = page.locator('.saverow-actions button:has-text("JSON dışa aktar")');
+  const download = page.waitForEvent('download', { timeout: 5000 }).catch(() => null);
+  await exportButton.click();
+  const downloaded = await download;
+  check('Dışa aktarma tarayıcıda gerçek bir indirme başlatıyor', downloaded !== null,
+    downloaded ? downloaded.suggestedFilename() : 'indirme olayı yok');
+  check('İndirme sonucu dürüstçe bildiriliyor', (await lastToast()).includes('başlatıldı'), await lastToast());
+
+  await page.evaluate(() => {
+    window.claude = { use: async () => null };
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText: () => Promise.reject(new Error('izin yok')) },
+    });
+  });
+  await exportButton.click();
+  await page.waitForTimeout(300);
+  const manualBox = await page.evaluate(() => {
+    const box = document.querySelector('.manual-text');
+    return box ? box.value : null;
+  });
+  check('Engelli ortamda indirildi denmiyor', (await lastToast()).includes('engelli'), await lastToast());
+  check('Engelli ortamda elle aktarım kutusu açılıyor', typeof manualBox === 'string' && manualBox.startsWith('{'),
+    manualBox ? `${Math.round(manualBox.length / 1024)} KB metin` : 'kutu yok');
+
+  await page.evaluate(() => {
+    window.claude = {
+      use: async (name) => (name === 'downloads'
+        ? { save: () => Promise.reject({ code: 'declined', message: 'hayır' }) }
+        : null),
+    };
+  });
+  await exportButton.click();
+  await page.waitForTimeout(300);
+  check('Kaydetmeyi reddetmek "iptal" olarak bildiriliyor', (await lastToast()).includes('iptal'), await lastToast());
+  await page.evaluate(() => { delete window.claude; });
+
+  // Kutu düzenlenebilir: metindeki kaydı duraklatılmış hâle getirip
+  // yüklüyoruz — böylece yükleme sonrası gün tam olarak metindeki gün olmalı.
+  const edited = manualBox ? JSON.parse(manualBox) : null;
+  if (edited) edited.state.time.speed = 0;
+  const textDay = edited?.state.time.day ?? null;
+  if (edited) await page.locator('.manual-text').fill(JSON.stringify(edited));
+  await page.locator('.manual-actions button:has-text("Bu metni yükle")').click();
+  await page.waitForTimeout(300);
+  check('Elle aktarım metni geri yükleniyor', (await lastToast()).includes('metinden yüklendi'), await lastToast());
+  const dayAfterManual = await page.evaluate(() => window.__capital.getState().time.day);
+  check('Metinden yükleme metindeki günü getiriyor', dayAfterManual === textDay,
+    `metin ${textDay}. gün → oyun ${dayAfterManual}. gün`);
+  await page.evaluate(() => window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 1 }));
   await page.keyboard.press('Escape');
 
   // ---------- Yenileme ----------
