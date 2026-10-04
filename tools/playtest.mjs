@@ -1,5 +1,9 @@
 // Tarayıcıda uçtan uca oynanabilirlik testi.
-// Çalıştırma: pnpm build && node tools/playtest.mjs
+// Çalıştırma: pnpm build && node tools/playtest.mjs [--smoke]
+//
+// --smoke (ya da PLAYTEST=smoke): yalnızca açılış, şehir, döngü, parsel,
+// inşa, harita, görünüm ve panel bölümleri — birkaç dakikada "oyun açılıyor
+// ve oynanıyor" cevabı. Tam koşu birleştirmeden önce; duman her değişiklikte.
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -9,7 +13,8 @@ import { createRequire } from 'node:module';
 // kuruluysa oradan, değilse global kurulumdan çözülür.
 const require = createRequire(import.meta.url);
 function loadPlaywright() {
-  for (const id of ['playwright', '/opt/node22/lib/node_modules/playwright']) {
+  const candidates = [process.env.PLAYWRIGHT_MODULE, 'playwright', '/opt/node22/lib/node_modules/playwright'];
+  for (const id of candidates.filter(Boolean)) {
     try {
       return require(id);
     } catch {
@@ -42,7 +47,14 @@ function check(name, ok, detail = '') {
     console.log(`  FAIL  ${name}${detail ? ' — ' + detail : ''}`);
   }
 }
-const section = (t) => console.log(`\n=== ${t} ===`);
+const startedAt = Date.now();
+const section = (t) => console.log(`\n=== ${t} === (${Math.round((Date.now() - startedAt) / 1000)} sn)`);
+const SMOKE = process.argv.includes('--smoke') || process.env.PLAYTEST === 'smoke';
+
+// Kapta önceden kurulmuş Chromium varsa o; yoksa (CI) Playwright'ın kendi
+// indirdiği tarayıcı. Yol elle de verilebilir.
+const CHROMIUM = process.env.CHROMIUM_PATH
+  || (fs.existsSync('/opt/pw-browsers/chromium') ? '/opt/pw-browsers/chromium' : undefined);
 
 const server = http.createServer((req, res) => {
   const rel = req.url === '/' ? '/index.html' : req.url.split('?')[0];
@@ -85,10 +97,22 @@ const findTile = (page, kind) =>
     return match ? match.id : null;
   }, kind);
 
+async function finish(browser, consoleErrors) {
+  console.log('\n================================');
+  console.log(`TOPLAM: ${pass} geçti, ${fail} kaldı${SMOKE ? ' (duman koşusu)' : ''}`);
+  if (fail) console.log('Kalanlar:\n - ' + failures.join('\n - '));
+  console.log(`Konsol hataları: ${consoleErrors.length}`);
+  console.log(`Süre: ${Math.round((Date.now() - startedAt) / 1000)} sn`);
+
+  await browser.close();
+  server.close();
+  process.exit(fail ? 1 : 0);
+}
+
 (async () => {
   await new Promise((r) => server.listen(8811, r));
   const browser = await chromium.launch({
-    executablePath: '/opt/pw-browsers/chromium',
+    ...(CHROMIUM ? { executablePath: CHROMIUM } : {}),
     args: ['--use-gl=swiftshader', '--enable-unsafe-swiftshader', '--disable-dev-shm-usage'],
   });
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
@@ -506,6 +530,11 @@ const findTile = (page, kind) =>
   // ---------- Zincir kartı ----------
   // Motor katmanı A parçasında doğrulandı; burada bakılan şey oyuncunun
   // gerçekten görüp kullanabildiği mi.
+  if (SMOKE) {
+    await finish(browser, consoleErrors);
+    return;
+  }
+
   section('Zincir kartı');
 
   // Oyuncuya zinciri kurabilecek sermaye ver; test parayı değil arayüzü ölçüyor.
@@ -2191,14 +2220,7 @@ const findTile = (page, kind) =>
     await mobileContext.close();
   }
 
-  console.log('\n================================');
-  console.log(`TOPLAM: ${pass} geçti, ${fail} kaldı`);
-  if (fail) console.log('Kalanlar:\n - ' + failures.join('\n - '));
-  console.log(`Konsol hataları: ${consoleErrors.length}`);
-
-  await browser.close();
-  server.close();
-  process.exit(fail ? 1 : 0);
+  await finish(browser, consoleErrors);
 })().catch((e) => {
   console.error('TEST ÇÖKTÜ:', e);
   process.exit(2);

@@ -14,7 +14,8 @@
     "bench": "node tools/run-node-script.mjs packages/core/test/benchmark.ts",
     "constraint": "node tools/run-node-script.mjs packages/core/test/constraint.ts",
     "land": "node tools/run-node-script.mjs packages/core/test/land-experiment.ts",
-    "playtest": "pnpm build && node tools/playtest.mjs"
+    "playtest": "pnpm build && node tools/playtest.mjs",
+    "playtest:smoke": "pnpm build && node tools/playtest.mjs --smoke"
   },
   "devDependencies": {
     "typescript": "^5.9.0"
