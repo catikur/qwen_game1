@@ -57,6 +57,7 @@ htmlcov/
 *.tar.zst
 # Vite / pnpm
 apps/*/dist/
+apps/*/dist-single/
 .pnpm-store/
 
 # TypeScript artıkları — `tsc -b` her pakete bunlardan bırakıyor

@@ -12,7 +12,7 @@ import { createRequire } from 'node:module';
 
 const require = createRequire(import.meta.url);
 function loadPlaywright() {
-  for (const id of ['playwright', '/opt/node22/lib/node_modules/playwright']) {
+  for (const id of [process.env.PLAYWRIGHT_MODULE, 'playwright', '/opt/node22/lib/node_modules/playwright'].filter(Boolean)) {
     try {
       return require(id);
     } catch {
@@ -81,7 +81,9 @@ async function boot(browser, { blockStorage }) {
 (async () => {
   await new Promise((r) => server.listen(8812, r));
   const browser = await chromium.launch({
-    executablePath: '/opt/pw-browsers/chromium',
+    ...(process.env.CHROMIUM_PATH || fs.existsSync('/opt/pw-browsers/chromium')
+      ? { executablePath: process.env.CHROMIUM_PATH || '/opt/pw-browsers/chromium' }
+      : {}),
     args: ['--use-gl=swiftshader', '--enable-unsafe-swiftshader', '--disable-dev-shm-usage'],
   });
 

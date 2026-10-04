@@ -6,19 +6,33 @@
  * hiçbir etiket kalmıyor — JS ve CSS satır içine giriyor, sourcemap
  * referansı düşüyor.
  *
+ * Normal paket kütüphaneleri ayrı parçalara bölüyor (önbellek için);
+ * gömülü sayfada parçalar arası içe aktarma çözülemeyeceği için bu betik
+ * önce TEK PARÇALIK ayrı bir paket üretiyor (`SINGLE_FILE=1`,
+ * `apps/web/dist-single/`), sonra onu gömüyor.
+ *
  * Kullanım: node tools/build-single-file.mjs [çıktı.html]
  */
+import { execFileSync } from 'node:child_process';
 import { readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 
-const DIST = resolve('apps/web/dist');
+execFileSync('pnpm', ['--filter', '@capital/web', 'exec', 'vite', 'build', '--logLevel', 'warn'], {
+  stdio: 'inherit',
+  env: { ...process.env, SINGLE_FILE: '1' },
+});
+
+const DIST = resolve('apps/web/dist-single');
 const ASSETS = join(DIST, 'assets');
-const out = resolve(process.argv[2] ?? 'apps/web/dist/capital-single.html');
+const out = resolve(process.argv[2] ?? 'apps/web/dist-single/capital-single.html');
 
 const files = readdirSync(ASSETS);
-const jsName = files.find((f) => f.endsWith('.js'));
+const jsFiles = files.filter((f) => f.endsWith('.js'));
 const cssName = files.find((f) => f.endsWith('.css'));
-if (!jsName || !cssName) throw new Error('dist/assets içinde js/css bulunamadı — önce `pnpm build`.');
+if (jsFiles.length !== 1 || !cssName) {
+  throw new Error(`dist-single/assets içinde tek js + css bekleniyordu, bulunan: ${files.join(', ')}`);
+}
+const jsName = jsFiles[0];
 
 const css = readFileSync(join(ASSETS, cssName), 'utf8');
 const js = readFileSync(join(ASSETS, jsName), 'utf8')
