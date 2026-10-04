@@ -23,7 +23,6 @@ import {
 import type { CategoryId } from '@capital/content';
 import {
   GameEngine,
-  buildOptions,
   chainCards,
   companyRanking,
   competitionCards,
@@ -58,204 +57,14 @@ import {
 import { build, buyTile } from '../src/actions';
 import { buyShares } from '../src/systems/equity';
 import type { GameState } from '../src/types';
+import {
+  activeProfiles,
+  expandOutletsVacantOnly,
+  followChainAdvice,
+  playerStrategy,
+} from './proxy';
 
-/**
- * Oyuncu vekili — oyunun oyuncuya ÖNERDİĞİ oynanış.
- *
- * Önce zincir kartının hamlesi (kart "henüz erken" demiyorsa), sonra
- * fırsat lensinin gösterdiği yere mağaza. Vekilin akıllanması bilinçli:
- * harness "bilgili bir oyuncu ne yaşar" sorusunu ölçmeli, oyunun
- * tavsiyesini görmezden gelen birini değil.
- */
-/*
- * OYUNDA OLAN RAKİPLER, KATALOGDAKİLER DEĞİL.
- *
- * Test bugüne kadar `NPC_PROFILES` üzerinde dönüyordu ve profil sayısı
- * ile şirket sayısı aynı olduğu sürece bu doğru çalışıyordu. Rakip
- * sayısı haritayla ölçeklenmeye başlayınca varsayım kırıldı: katalogda
- * sekiz profil var, varsayılan haritada dört şirket kuruluyor ve kalan
- * dördü için `state.companies[id]` undefined dönüyor.
- *
- * Doğru kaynak state: kimin sahaya çıktığını dünya kurulumu belirliyor.
- */
-function activeProfiles(state: GameState) {
-  return NPC_PROFILES.filter((profile) => state.companies[profile.id]);
-}
-
-/*
- * ZİNCİR VE MAĞAZA AYNI TİKTE — ya biri ya öteki değil.
- *
- * Eski hâli `if (followChainAdvice()) return;` idi: zincir hamlesi olan
- * hafta mağaza açılmıyordu. Devralma repertuvara girince bu, zincir
- * A/B'sini iki değişkenli bir deneye çevirdi — zincirli kol hem üretim
- * ekliyor HEM mağaza eksiltiyordu (42 ünite = 42 eksik mağaza) ve fark
- * −%1'e düştü. Gerçek oyuncu nakdi yetiyorsa ikisini de yapar; vekil de
- * öyle yapınca kollar arasında tek fark zincirin KENDİSİ kalıyor.
- */
-function playerStrategy(engine: GameEngine): void {
-  followChainAdvice(engine);
-  expandOutlets(engine);
-}
-
-/** Zincir kartının önerdiği hamleyi uygular; "erken" ve "ertelendi" olanı atlar. */
-function followChainAdvice(engine: GameEngine): boolean {
-  const state = engine.getState();
-  const player = getPlayer(state);
-
-  for (const card of chainCards(state, player.id)) {
-    const move = card.move;
-    if (!move || move.premature || move.deferred) continue;
-    if (move.cost + tilePrice(state, move.tileId, player.id) > player.cash * 0.6) continue;
-
-    const acquired = move.needsBuyout
-      ? engine.dispatch({ type: 'BUYOUT_TILE', tileId: move.tileId })
-      : engine.dispatch({ type: 'BUY_TILE', tileId: move.tileId });
-    if (!acquired.ok) continue;
-    if (engine.dispatch({ type: 'BUILD', tileId: move.tileId, defId: move.defId }).ok) return true;
-  }
-  return false;
-}
-
-/**
- * A/B'nin TARİHSEL zincir kolu — dondurulmuş kopya
- * (`expandOutletsVacantOnly` ile aynı gerekçe). Yalnızca `premature`
- * atlar; erteleme frenini BİLEREK görmez. Regresyon deneyi mekanizmayı
- * ölçüyor (ünite kurmak maliyeti düşürüyor mu), tavsiye politikasını
- * değil — fren politika katmanı ve kendi ölçümünü
- * `chain-scale-experiment.ts` yapıyor.
- */
-function followChainAdviceFrozen(engine: GameEngine): boolean {
-  const state = engine.getState();
-  const player = getPlayer(state);
-
-  for (const card of chainCards(state, player.id)) {
-    const move = card.move;
-    if (!move || move.premature) continue;
-    if (move.cost + tilePrice(state, move.tileId, player.id) > player.cash * 0.6) continue;
-
-    const acquired = move.needsBuyout
-      ? engine.dispatch({ type: 'BUYOUT_TILE', tileId: move.tileId })
-      : engine.dispatch({ type: 'BUY_TILE', tileId: move.tileId });
-    if (!acquired.ok) continue;
-    if (engine.dispatch({ type: 'BUILD', tileId: move.tileId, defId: move.defId }).ok) return true;
-  }
-  return false;
-}
-
-function expandOutlets(engine: GameEngine): void {
-  const state = engine.getState();
-  const player = getPlayer(state);
-
-  // Nakdin yarısını riske at, gerisini yedekte tut.
-  const budget = player.cash * 0.5;
-  if (budget < 30_000) return;
-
-  const districts = [...state.districts]
-    // Kilitli bölge hedef değil: orada seçim yapıp satın alma kapısından
-    // dönmek vekilin 5 günlük hamlesini boşa yakıyordu.
-    .filter((district) => isDistrictOpen(state, district.id))
-    .sort((a, b) => districtOpportunity(b) - districtOpportunity(a));
-
-  let best: { tileId: number; defId: string; profit: number } | null = null;
-
-  for (const district of districts.slice(0, 4)) {
-    /*
-     * BOŞ PARSEL ÖNCE, YOKSA DEVRALMA — oyunun kendi öğretisi (Tur 8:
-     * "bölge dolduğunda çıkış devralma") ve NPC'lerin oynadığı sıra.
-     *
-     * Vekil bugüne kadar yalnızca boş parsel arıyordu ve bu, kademeli
-     * imarla gerçek bir kör nokta oldu: dar başlayan şehirde boş parsel
-     * ~60. günde bitiyor, NPC'ler devralmayla büyümeye devam ederken
-     * vekil duruyordu — oyuncu/rakip oranı 1,58'den 0,20'ye düşmüştü.
-     * Ölçülen şey oyun dengesi değil vekilin eksik repertuvarıydı.
-     */
-    const tile = state.map.tiles
-      .filter((t) => t.districtId === district.id && t.kind === 'plot' && !t.ownerId && !t.buildingId)
-      .map((t) => ({ tile: t, price: tilePrice(state, t.id, player.id) }))
-      .filter((entry) => entry.price > 0)
-      .sort(
-        (a, b) =>
-          (a.tile.structureId !== null ? 1 : 0) - (b.tile.structureId !== null ? 1 : 0) ||
-          a.price - b.price,
-      )[0]?.tile;
-    if (!tile) continue;
-
-    for (const option of buildOptions(state)) {
-      if (!option.unlocked) continue;
-      if (option.def.role !== 'outlet' && option.def.role !== 'rental') continue;
-      if (tilePrice(state, tile.id) + option.def.cost > budget) continue;
-
-      const estimate = estimateInvestment(state, district.id, option.def.id, player.id);
-      // SIRALAMA GERİ ÖDEMEYE GÖRE DEĞİL, GÜNLÜK KÂRA GÖRE.
-      //
-      // Bir bina bir parsel kaplıyor ve ölçüm oyunun kıt kaynağının
-      // toprak olduğunu gösterdi (sınırsız nakitle bile karşılanmayan
-      // talep %52). O yüzden doğru ölçüt paranın getirisi değil
-      // PARSELİN getirisi — o da tam olarak `dailyProfit`.
-      //
-      // Geri ödeme sınırı elenmiş adayları ayıklamak için duruyor;
-      // seçimi artık o yapmıyor.
-      if (!estimate || estimate.paybackDays > 150) continue;
-      if (!best || estimate.dailyProfit > best.profit) {
-        best = { tileId: tile.id, defId: option.def.id, profit: estimate.dailyProfit };
-      }
-    }
-  }
-
-  if (!best) return;
-  const needsBuyout = state.map.tiles[best.tileId]!.structureId !== null;
-  const bought = needsBuyout
-    ? engine.dispatch({ type: 'BUYOUT_TILE', tileId: best.tileId })
-    : engine.dispatch({ type: 'BUY_TILE', tileId: best.tileId });
-  if (!bought.ok) return;
-  engine.dispatch({ type: 'BUILD', tileId: best.tileId, defId: best.defId });
-}
-
-/**
- * Zincir A/B'sinin TARİHSEL genişleme kolu — bilerek dondurulmuş kopya.
- *
- * `expandOutlets` devralmayı ve kilit filtresini öğrendi; bu kopya
- * öğrenmedi ve öğrenmeyecek. Regresyon deneyi +%12/+%19/+%30 serisiyle
- * bu düzenekte kalibre edildi; düzeneği vekille birlikte evriltmek her
- * turda "yeni bir deney" yaratır ve seri kıyaslanamaz hale gelirdi.
- * (Vekilin yeni repertuvarıyla çıkan ürün sorusu DURUM §4.8'de.)
- */
-function expandOutletsVacantOnly(engine: GameEngine): void {
-  const state = engine.getState();
-  const player = getPlayer(state);
-
-  const budget = player.cash * 0.5;
-  if (budget < 30_000) return;
-
-  const districts = [...state.districts].sort(
-    (a, b) => districtOpportunity(b) - districtOpportunity(a),
-  );
-
-  let best: { tileId: number; defId: string; profit: number } | null = null;
-
-  for (const district of districts.slice(0, 4)) {
-    const tile = state.map.tiles
-      .filter((t) => t.districtId === district.id && t.kind === 'plot' && !t.ownerId && !t.structureId)
-      .sort((a, b) => a.landValue - b.landValue)[0];
-    if (!tile) continue;
-
-    for (const option of buildOptions(state)) {
-      if (!option.unlocked) continue;
-      if (option.def.role !== 'outlet' && option.def.role !== 'rental') continue;
-      if (tilePrice(state, tile.id) + option.def.cost > budget) continue;
-
-      const estimate = estimateInvestment(state, district.id, option.def.id, player.id);
-      if (!estimate || estimate.paybackDays > 150) continue;
-      if (!best || estimate.dailyProfit > best.profit) {
-        best = { tileId: tile.id, defId: option.def.id, profit: estimate.dailyProfit };
-      }
-    }
-  }
-
-  if (!best) return;
-  if (!engine.dispatch({ type: 'BUY_TILE', tileId: best.tileId }).ok) return;
-  engine.dispatch({ type: 'BUILD', tileId: best.tileId, defId: best.defId });
-}
+// Oyuncu vekili ve aktif rakip listesi tek kopya: `./proxy`.
 
 interface Report {
   day: number;
@@ -1012,8 +821,8 @@ function outletUnitCost(state: GameState): number {
          * oradan geliyor. Zincir kolu ise ARTIK GÜNCEL kartı izliyor
          * (Tur 15 freni dahil).
          *
-         * Frensiz kopya (`followChainAdviceFrozen`) 560 günlük pencerede
-         * kalibre edilmişti; ufuk 900 güne çıkınca ölçüm onun kusurunu
+         * Frensiz kopya (eski `followChainAdviceFrozen`, artık silindi)
+         * 560 günlük pencerede kalibre edilmişti; ufuk 900 güne çıkınca ölçüm onun kusurunu
          * gösterdi: frensiz tavsiye 11-24 ünite biriktirip üç tohumda da
          * kaybediyor (−%22). Yani uzun pencerede o kol "zincir
          * kazandırıyor mu"yu değil "§4.8 sarmalı hâlâ zararlı mı"yı
