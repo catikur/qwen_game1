@@ -124,6 +124,14 @@ export interface BuildingInstance {
    */
   focus: CategoryId | null;
   last: BuildingLedger;
+  /**
+   * Günlük kârın 30 günlük üstel ortalaması.
+   *
+   * Tek günün defteri gürültülü (olay, dönem, rakip açılışı); "bu şube
+   * zarar ediyor mu" sorusunun cevabı eğilimde. Eski kayıtlarda yok —
+   * ilk gün o günün kârıyla başlıyor.
+   */
+  profitTrend?: number;
 }
 
 export interface CompanyLedger {
@@ -133,6 +141,13 @@ export interface CompanyLedger {
   wages: number;
   interest: number;
   profit: number;
+}
+
+/** Rakibin kapattığı şube — aynı yere aynı hatayı tekrar etmesin diye. */
+export interface PrunedBranch {
+  districtId: number;
+  defId: string;
+  day: number;
 }
 
 export interface CompanyState {
@@ -183,6 +198,8 @@ export interface CompanyState {
    * Tüketici ürünlerinde perakende işleme maliyeti de dahildir.
    */
   unitCost: Record<string, number>;
+  /** Rakip: son kapattığı şubeler (hafıza penceresi kadar). */
+  pruned?: PrunedBranch[];
 }
 
 /**
@@ -222,6 +239,12 @@ export interface NewsItem {
   body: string;
   /** Haberin yüzü — rakip hamlelerinde o şirketin portresi gösterilir. */
   companyId?: string;
+  /**
+   * Haberin yeri — tıklanınca kamera oraya uçar. Kare bölgeden önce
+   * gelir (daha kesin); ikisi de yoksa haber bir yere bağlı değildir.
+   */
+  tileId?: number;
+  districtId?: number;
 }
 
 /**

@@ -1,14 +1,15 @@
-import { BUILDINGS, CATEGORIES, CONSUMER_CATEGORIES, NPC_PROFILES } from '@capital/content';
+import { BUILDINGS, BUILDING_BY_ID, CATEGORIES, CONSUMER_CATEGORIES, NPC_PROFILES } from '@capital/content';
 import type { BuildingDef, CategoryId, NpcProfileDef } from '@capital/content';
-import { build, buyTile, buyoutTile } from '../actions';
+import { build, buyTile, buyoutTile, demolish, sellTile } from '../actions';
 import { chainCards } from '../chain';
 import { competitionCards } from '../competition';
+import { formatMoney } from '../selectors';
 import { pushNews } from '../news';
 import { nextFloat } from '../rng';
 import { estimateInvestment } from './market';
 import { isDistrictOpen, tilePrice } from './city';
 import { buyShares, freeFloat, sharePrice, sharesHeld, TOTAL_SHARES } from './equity';
-import type { GameState } from '../types';
+import type { BuildingInstance, CompanyState, GameState } from '../types';
 
 /**
  * Rakip yapay zekâsı.
@@ -356,9 +357,99 @@ function findTile(
   return candidates[0]!;
 }
 
+/**
+ * Zarar eden şubeyi kapatma.
+ *
+ * Ölçüm (Tur 17 değerlendirmesi): oyuncu baskısı altında geç oyunda
+ * rakipler süreğen zarar eden mağazaları sonsuza dek açık tutuyordu —
+ * 900. günde bir tohumda 21 zararda outlet, 14'ü 60 gündür hiç kâr
+ * görmemiş, günde ~8.000 ₺ kanama. Rakip oyuncuyla aynı fiyatı ödüyor
+ * ama oyuncunun yapabildiği en basit şeyi yapamıyordu: hatasını kapatmak.
+ *
+ * Kural üç parça:
+ *   - yalnızca satış yapan binalar (outlet, kiralık) — üretim ünitesi ve
+ *     Ar-Ge/pazarlama kendi defterinde zaten "zarar" gösterir, değerleri
+ *     başka binaların satırında,
+ *   - kâr EĞİLİMİ (30 günlük ortalama) bakım giderinin %5'inden fazla
+ *     ekside ve bina en az 120 günlük — açılışın ilk aylarında müşteri
+ *     tabanı oturuyor, erken kesmek sabırsızlık olurdu,
+ *   - kapanan şube hafızada: aynı bölgeye aynı türü 180 gün açmıyor.
+ *     Hafıza olmasaydı tahmin "kârlı" dediği için aynı yere ertesi hafta
+ *     yeniden kurar, döngü kurulurdu.
+ *
+ * Arsa spekülatörü binayı yıkar ama arsayı tutar; diğerleri arsayı da
+ * satar ve parsel şehre — oyuncuya — geri döner. Haber bunu söylüyor:
+ * rakibin hatası oyuncunun fırsatı.
+ */
+const PRUNE_MIN_AGE_DAYS = 120;
+const PRUNE_LOSS_FLOOR = 0.05;
+export const PRUNE_MEMORY_DAYS = 180;
+
+function isPrunable(state: GameState, building: BuildingInstance): boolean {
+  const def = BUILDING_BY_ID[building.defId];
+  if (!def || (def.role !== 'outlet' && def.role !== 'rental')) return false;
+  if (state.time.day - building.builtDay < PRUNE_MIN_AGE_DAYS) return false;
+  return (building.profitTrend ?? 0) < -def.upkeepPerDay * PRUNE_LOSS_FLOOR;
+}
+
+/** Bu şirket bu bölgede bu türü yakın zamanda kapattı mı? */
+export function recentlyPruned(
+  state: GameState,
+  company: CompanyState,
+  districtId: number,
+  defId: string,
+): boolean {
+  return (company.pruned ?? []).some(
+    (entry) =>
+      entry.districtId === districtId &&
+      entry.defId === defId &&
+      state.time.day - entry.day < PRUNE_MEMORY_DAYS,
+  );
+}
+
+function tryPruneMove(state: GameState, profile: NpcProfileDef): boolean {
+  const company = state.companies[profile.id];
+  if (!company) return false;
+
+  let worst: BuildingInstance | null = null;
+  for (const building of Object.values(state.buildings)) {
+    if (building.companyId !== profile.id || !isPrunable(state, building)) continue;
+    if (!worst || (building.profitTrend ?? 0) < (worst.profitTrend ?? 0)) worst = building;
+  }
+  if (!worst) return false;
+
+  const def = BUILDING_BY_ID[worst.defId]!;
+  const district = state.districts[worst.districtId];
+  const trend = worst.profitTrend ?? 0;
+  const { tileId, districtId, defId } = worst;
+  if (!demolish(state, profile.id, tileId).ok) return false;
+
+  const keepsLand = profile.trait === 'landlord';
+  if (!keepsLand) sellTile(state, profile.id, tileId);
+
+  company.pruned = [
+    ...(company.pruned ?? []).filter((entry) => state.time.day - entry.day < PRUNE_MEMORY_DAYS),
+    { districtId, defId, day: state.time.day },
+  ];
+
+  pushNews(
+    state,
+    'rival',
+    `${profile.name} şube kapattı`,
+    `${district?.name ?? 'Şehirdeki'} ${def.name} ayda ~${formatMoney(Math.round(-trend * 30))} zarar ediyordu. ` +
+      (keepsLand ? 'Bina yıkıldı, arsa elinde kalıyor.' : 'Parsel yeniden satışta.'),
+    { companyId: profile.id, tileId },
+  );
+  return true;
+}
+
 function actFor(state: GameState, profile: NpcProfileDef): void {
   const company = state.companies[profile.id];
   if (!company) return;
+
+  // Önce kanayan yara: kapatma haftanın hamlesini harcamıyor — kapanan
+  // şubenin nakdi aynı hafta daha iyi bir yere gidebilir.
+  tryPruneMove(state, profile);
 
   const budget = company.cash * profile.aggression;
   const isLandlord = profile.trait === 'landlord';
@@ -401,6 +492,7 @@ function actFor(state: GameState, profile: NpcProfileDef): void {
   for (const opportunity of opportunities.slice(0, 6)) {
     const def = chooseBuilding(state, profile.id, opportunity.category, budget, isLandlord);
     if (!def) continue;
+    if (recentlyPruned(state, company, opportunity.districtId, def.id)) continue;
 
     // Kârlılık kapısı: oyuncuya gösterilen tahminin aynısı.
     const estimate = estimateInvestment(state, opportunity.districtId, def.id, profile.id);

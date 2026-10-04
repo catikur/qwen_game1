@@ -491,6 +491,14 @@ function BuildingDetail({ buildingId }: { buildingId: string }): ReactElement | 
             <LedgerRow label="İşletme gideri" value={-ledger.upkeep} />
             <LedgerRow label="Personel" value={-ledger.wages} />
             <LedgerRow label="Günlük kâr" value={ledger.profit} strong />
+            {/*
+              Tek günün defteri gürültülü; asıl soru "bu şube kazanıyor
+              mu". Rakipler kapatma kararını bu eğilime bakarak veriyor —
+              oyuncu da aynı sayıyı görmeli.
+            */}
+            {building.profitTrend !== undefined && (
+              <LedgerRow label="30 günlük ortalama" value={Math.round(building.profitTrend)} />
+            )}
           </div>
 
           <div className="statgrid small">

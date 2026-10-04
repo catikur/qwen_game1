@@ -1,5 +1,12 @@
 import type { GameState, NewsTone } from './types';
 
+/** Haberin kime ve nereye bağlı olduğu — hepsi seçime bağlı. */
+export interface NewsRef {
+  companyId?: string;
+  tileId?: number;
+  districtId?: number;
+}
+
 const MAX_NEWS = 60;
 
 /**
@@ -12,13 +19,24 @@ export function pushNews(
   title: string,
   body: string,
   /**
-   * Haberin bir yüzü varsa hangi şirketin.
+   * Haberin bir yüzü (şirket) ve yeri (kare/bölge) varsa.
    *
-   * Seçime bağlı ve eski kayıtlarda yok — bu yüzden şema sürümü
-   * değişmiyor: alanı olmayan bir haber yalnızca portresiz görünür.
+   * Hepsi seçime bağlı ve eski kayıtlarda yok — bu yüzden şema sürümü
+   * değişmiyor: alanı olmayan bir haber yalnızca portresiz ve yersiz
+   * görünür. Düz metin verilirse şirket kimliği sayılır (eski çağrılar).
    */
-  companyId?: string,
+  ref?: string | NewsRef,
 ): void {
-  state.news.unshift({ id: state.nextId++, day: state.time.day, tone, title, body, companyId });
+  const where: NewsRef = typeof ref === 'string' ? { companyId: ref } : (ref ?? {});
+  state.news.unshift({
+    id: state.nextId++,
+    day: state.time.day,
+    tone,
+    title,
+    body,
+    ...(where.companyId !== undefined ? { companyId: where.companyId } : {}),
+    ...(where.tileId !== undefined ? { tileId: where.tileId } : {}),
+    ...(where.districtId !== undefined ? { districtId: where.districtId } : {}),
+  });
   if (state.news.length > MAX_NEWS) state.news.length = MAX_NEWS;
 }

@@ -13,6 +13,8 @@ import react from '@vitejs/plugin-react';
  * `tools/build-single-file.mjs` bunu tek bir HTML'e gömüyor. Gömülü
  * sayfada parçalar arası içe aktarma çözülemez; orada bölmek kırmak olur.
  */
+// @types/node bilinçli olarak yok; yapılandırmanın tek ihtiyacı ortam değişkeni.
+declare const process: { env: Record<string, string | undefined> };
 const single = process.env.SINGLE_FILE === '1';
 
 function vendorChunk(id: string): string | undefined {

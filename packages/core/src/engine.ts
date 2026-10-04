@@ -4,7 +4,7 @@ import { pushNews } from './news';
 import { companyRanking, formatMoney } from './selectors';
 import { TOTAL_SHARES, sharesHeld } from './systems/equity';
 import { runMarketTick } from './systems/market';
-import { resetDailyLedgers, runProductionTick, runSpotPriceTick } from './systems/supply';
+import { resetDailyLedgers, runProductionTick, runProfitTrendTick, runSpotPriceTick } from './systems/supply';
 import {
   recomputeNetWorth,
   runDistrictUnlockTick,
@@ -272,6 +272,7 @@ export class GameEngine {
     runProductionTick(state);
     runMarketTick(state);
     runSpotPriceTick(state);
+    runProfitTrendTick(state);
 
     const mods = collectEventModifiers(state);
     runLandValueTick(state, mods.landValueDrift);
