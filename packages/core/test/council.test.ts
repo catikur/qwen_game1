@@ -125,3 +125,30 @@ describe('kararların etkisi', () => {
     assert.equal(state.policies.length, 0);
   });
 });
+
+describe('inceleme düzeltmeleri', () => {
+  test('meclis kapatılınca kararlar yine sona eriyor, açık oturum bağışları iade ediliyor', () => {
+    const engine = new GameEngine(openSession());
+    const state = engine.getState();
+    const target = state.council!.session!.motions[0]!;
+    const cash = state.companies['player']!.cash;
+    engine.dispatch({ type: 'LOBBY', motionId: target.id, side: 'for', amount: 50_000 });
+    state.policies = [{ kind: 'permit_relief', rate: 0.1, untilDay: state.time.day + 1, title: 't' }];
+    state.flags.council = false;
+    state.time.day += 1;
+    runCouncilTick(state);
+    assert.equal(state.council!.session, null);
+    assert.equal(state.companies['player']!.cash, cash, 'bağış iade');
+    assert.equal(state.policies.length, 0, 'karar süresinde bitti');
+    assert.equal(engine.dispatch({ type: 'LOBBY', motionId: target.id, side: 'for', amount: 1 }).ok, false);
+  });
+
+  test('bir önergede taraf değiştirilemiyor', () => {
+    const engine = new GameEngine(openSession());
+    const id = engine.getState().council!.session!.motions[0]!.id;
+    assert.ok(engine.dispatch({ type: 'LOBBY', motionId: id, side: 'for', amount: 50_000 }).ok);
+    assert.ok(engine.dispatch({ type: 'LOBBY', motionId: id, side: 'for', amount: 50_000 }).ok, 'aynı tarafa ekleme serbest');
+    assert.equal(engine.dispatch({ type: 'LOBBY', motionId: id, side: 'against', amount: 50_000 }).ok, false);
+  });
+});
+

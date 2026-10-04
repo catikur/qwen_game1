@@ -1,3 +1,4 @@
+import { TOTAL_SHARES, sharesHeld } from '@capital/core';
 import type { GameState } from '@capital/core';
 
 /**
@@ -80,8 +81,10 @@ export class Soundscape {
   private night: GainNode | null = null;
   private tension: GainNode | null = null;
   private muted = readMuted();
+  /** Olay tabanı hangi durum nesnesine ait — yeni oyun/kayıt tabanı sıfırlar. */
+  private baseline: GameState | null = null;
   private lastNewsId = 0;
-  private lastPlayerBuildings = -1;
+  private lastPlayerBuildings = 0;
   private readonly listeners = new Set<() => void>();
   private readonly played: Record<SoundName, number> = { cash: 0, build: 0, bad: 0, gavel: 0 };
   private readonly levels = { hum: 0, traffic: 0, night: 0, tension: 0 };
@@ -216,7 +219,7 @@ export class Soundscape {
     if (player) {
       for (const company of Object.values(state.companies)) {
         if (company.isPlayer) continue;
-        raid = Math.max(raid, (company.shares[player.id] ?? 0) / 10_000);
+        raid = Math.max(raid, sharesHeld(state, company.id, player.id) / TOTAL_SHARES);
       }
     }
     const stage = raid >= 0.4 ? 3 : raid >= 0.25 ? 2 : raid >= 0.1 ? 1 : 0;
@@ -235,20 +238,26 @@ export class Soundscape {
       this.tension.gain.setTargetAtTime(this.levels.tension, now, 1.5);
     }
 
-    // Olaylar: yeni haberler ve oyuncunun yeni binaları.
-    const fresh = state.news.filter((item) => item.id > this.lastNewsId);
-    if (this.lastNewsId === 0) {
-      // İlk okuma: geçmiş haberleri çalma.
+    // Olaylar: yeni haberler ve oyuncunun yeni binaları. Durum nesnesi
+    // değiştiyse (yeni oyun, kayıt yükleme) taban sıfırlanıyor: haber
+    // kimlikleri her oyunda baştan sayıyor ve eski taban yeni oyunun
+    // bütün seslerini susturur, geçmiş haberleri de çalmamak gerekir.
+    const own = player ? Object.values(state.buildings).filter((b) => b.companyId === player.id).length : 0;
+    if (state !== this.baseline) {
+      this.baseline = state;
       this.lastNewsId = state.news[0]?.id ?? 0;
-    } else if (fresh.length > 0) {
+      this.lastPlayerBuildings = own;
+      return;
+    }
+    const fresh = state.news.filter((item) => item.id > this.lastNewsId);
+    if (fresh.length > 0) {
       this.lastNewsId = fresh[0]!.id;
       const item = fresh[0]!;
       if (item.title.startsWith('Meclis')) this.play('gavel');
       else if (item.tone === 'good') this.play('cash');
       else if (item.tone === 'bad') this.play('bad');
     }
-    const own = player ? Object.values(state.buildings).filter((b) => b.companyId === player.id).length : 0;
-    if (this.lastPlayerBuildings >= 0 && own > this.lastPlayerBuildings) this.play('build');
+    if (own > this.lastPlayerBuildings) this.play('build');
     this.lastPlayerBuildings = own;
   }
 

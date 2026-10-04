@@ -50,7 +50,7 @@ export { categoryRevenueRate, interestOf, motionSupport, permitMultiplier } from
 export type { SupportBreakdown } from './systems/council';
 export type { GoalStatus } from './systems/goals';
 export { collectEventModifiers } from './systems/events';
-export { activeContract, contractProgress } from './systems/contracts';
+export { activeContract, contractProgress, OFFER_LIFETIME_DAYS } from './systems/contracts';
 export type { EventModifiers } from './systems/events';
 export {
   distributionRelief,

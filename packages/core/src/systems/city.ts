@@ -105,8 +105,12 @@ export function runLandValueTick(state: GameState, eventDrift: number): void {
     const amenityBonus = neighbors > 0 ? (amenity / neighbors) * 0.25 : 0;
     // Nüfus arttıkça taban değer de yükselir.
     const populationFactor = district.population / Math.max(1, archetype.population);
+    // Meclisin metro hattı hedefi kalıcı olarak yükseltiyor; tek seferlik
+    // artış hedefe yazılmasaydı sürüklenme onu birkaç ayda silerdi.
+    const metro = 1 + COUNCIL.infrastructureLandBoost * (district.infrastructure ?? 0);
     const target =
       archetype.baseLandValue *
+      metro *
       (0.7 + 0.55 * developmentRatio + amenityBonus + 0.35 * (populationFactor - 1));
 
     // Hedefe yavaş yaklaş, üstüne olayların sürüklemesini ekle.

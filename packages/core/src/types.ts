@@ -411,6 +411,8 @@ export interface GameState {
   goals?: Record<string, number>;
   /** Sahneye çıkmış bütün rakip kimlikleri (devralınanlar dahil). */
   rivalHistory?: string[];
+  /** Kuruluştaki rakip sayısı — yeni girişler bu kadar koltuğu doldurur. */
+  rivalSlots?: number;
   /** Son yeni rakip girişinin günü. */
   lastEntryDay?: number;
   /** Rakip koltuğunun boşaldığı gün (giriş bu günden 45 gün sonra). */

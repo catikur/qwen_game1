@@ -33,7 +33,7 @@ import type { ContractState, GameState } from '../types';
 const FIRST_OFFER_DAY = 80;
 
 /** Teklifin masada kaldığı süre. */
-const OFFER_LIFETIME_DAYS = 20;
+export const OFFER_LIFETIME_DAYS = 20;
 
 /** İki teklif arasındaki en az gün (kabul edilsin edilmesin). */
 const OFFER_COOLDOWN_DAYS = 30;

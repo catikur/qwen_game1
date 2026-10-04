@@ -224,7 +224,9 @@ function applyMotion(state: GameState, motion: MotionState): string {
       const district = state.districts[motion.districtId!]!;
       if (district.opensOnDay === undefined) return 'Bölge zaten açık.';
       district.opensOnDay = Math.max(day + COUNCIL.zoningMinLeadDays, district.opensOnDay - COUNCIL.zoningAdvanceDays);
-      return `${district.name} artık ${district.opensOnDay - day} gün sonra açılıyor.`;
+      // Bu haber imar duyurusunun yerine de geçiyor: 30 gün kala düşen
+      // duyuru günü öne çekmeyle geride kalmış olabilir.
+      return `İmar planı açıklandı: ${district.name} ${district.opensOnDay - day} gün sonra imara açılıyor — arsa koşusu o gün başlar.`;
     }
   }
 }
@@ -253,8 +255,23 @@ function expirePolicies(state: GameState): void {
 }
 
 export function runCouncilTick(state: GameState): void {
-  if (state.flags.council === false) return;
+  // Kararlar meclis kapatılsa da süresinde biter — yoksa vergi sonsuza
+  // dek yürürlükte kalırdı.
   expirePolicies(state);
+  if (state.flags.council === false) {
+    const session = state.council?.session;
+    if (session) {
+      // Açık oturum oylanmadan dağılıyor: bağışlar sahiplerine dönüyor.
+      for (const motion of session.motions) {
+        for (const [companyId, amount] of Object.entries(motion.lobby)) {
+          const company = state.companies[companyId];
+          if (company) company.cash += Math.abs(amount);
+        }
+      }
+      state.council!.session = null;
+    }
+    return;
+  }
   const council = ensureCouncil(state);
   const day = state.time.day;
 
@@ -308,9 +325,15 @@ export function lobby(
   amount: number,
 ): CommandResult {
   const session = state.council?.session;
-  if (!session) return { ok: false, reason: 'Meclis şu an toplantıda değil.' };
+  if (state.flags.council === false || !session) return { ok: false, reason: 'Meclis şu an toplantıda değil.' };
   const motion = session.motions.find((m) => m.id === motionId);
   if (!motion) return { ok: false, reason: 'Bu önerge gündemde değil.' };
+  // Bir önergede tek taraf: iki tarafa birden bağış kamuya açık kayıtta
+  // birbirini silerdi, harcanan para ise gerçek olurdu.
+  const previous = motion.lobby[companyId] ?? 0;
+  if ((previous > 0 && side === 'against') || (previous < 0 && side === 'for')) {
+    return { ok: false, reason: 'Bu önergede zaten öteki tarafa bağış yaptın — taraf değiştirilemez.' };
+  }
   const company = state.companies[companyId];
   if (!company) return { ok: false, reason: 'Bilinmeyen şirket.' };
   const spend = Math.round(amount);

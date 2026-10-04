@@ -68,4 +68,12 @@ describe('yeni rakip girişi', () => {
     runEntrantTick(off);
     assert.equal(off.rivalVacancyDay, undefined);
   });
+
+  test('az rakiple kurulan şehre koltuk boşalmadan kimse girmiyor', () => {
+    const state = createNewGame({ seed: 4, npcCount: 2 });
+    state.time.day = 400;
+    runEntrantTick(state);
+    assert.equal(rivals(state), 2);
+    assert.equal(state.rivalVacancyDay, undefined);
+  });
 });

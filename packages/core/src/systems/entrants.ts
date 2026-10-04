@@ -50,8 +50,10 @@ export function runEntrantTick(state: GameState): void {
   if (state.lastEntryDay !== undefined && day - state.lastEntryDay < ENTRY_COOLDOWN_DAYS) return;
 
   const rivals = Object.values(state.companies).filter((company) => !company.isPlayer);
-  const plots = state.map.tiles.filter((tile) => tile.kind === 'plot').length;
-  if (rivals.length >= rivalSlotsFor(plots)) {
+  // Koltuk sayısı kuruluştaki kadro (deney az rakiple kurduysa o kadar);
+  // eski kayıtlarda alan yok, haritanın taşıdığı sayıya düşülüyor.
+  const slots = state.rivalSlots ?? rivalSlotsFor(state.map.tiles.filter((tile) => tile.kind === 'plot').length);
+  if (rivals.length >= slots) {
     delete state.rivalVacancyDay;
     return;
   }

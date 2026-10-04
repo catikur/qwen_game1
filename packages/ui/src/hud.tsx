@@ -3,6 +3,7 @@ import type { ReactElement } from 'react';
 import { CEO_BY_ID, ERA_BY_ID, EVENTS, NPC_PROFILES } from '@capital/content';
 import {
   LENSES,
+  OFFER_LIFETIME_DAYS,
   agenda,
   companyRanking,
   contractProgress,
@@ -685,7 +686,7 @@ function ContractChip(): ReactElement | null {
 
   const offer = state.contractOffer;
   if (offer) {
-    const left = Math.max(0, offer.offeredDay + 20 - state.time.day);
+    const left = Math.max(0, offer.offeredDay + OFFER_LIFETIME_DAYS - state.time.day);
     return (
       <span className="event-chip contract-chip" title={`Ödül ${formatMoney(offer.reward)} · cayma ${formatMoney(offer.penalty)} · süre ${offer.durationDays} gün`}>
         <span className="contract-label">Teklif</span>

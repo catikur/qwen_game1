@@ -1,6 +1,6 @@
 import { ERA_BY_ID, EVENTS } from '@capital/content';
 import { nextGoal } from './systems/goals';
-import { contractProgress } from './systems/contracts';
+import { OFFER_LIFETIME_DAYS, contractProgress } from './systems/contracts';
 import { sharesHeld, TOTAL_SHARES } from './systems/equity';
 import type { GameState } from './types';
 
@@ -79,7 +79,7 @@ export function agenda(state: GameState): AgendaItem[] {
   }
 
   if (state.contractOffer) {
-    const left = Math.max(0, state.contractOffer.offeredDay + 20 - day);
+    const left = Math.max(0, state.contractOffer.offeredDay + OFFER_LIFETIME_DAYS - day);
     items.push({
       kind: 'contractOffer',
       key: 'contractOffer',

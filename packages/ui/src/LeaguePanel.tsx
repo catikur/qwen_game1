@@ -4,7 +4,7 @@ import { CEO_BY_ID } from '@capital/content';
 import { LEAGUE_SAMPLE_DAYS, decodeRun, encodeRun, formatMoney, getPlayer, replayRun, runFromState } from '@capital/core';
 import type { GameState } from '@capital/core';
 import { useGame, useGameState } from './useGame';
-import type { LeagueEntry } from './useGame';
+import type { LeagueBoard, LeagueEntry } from './useGame';
 
 /**
  * Tohum Ligi arayüzü: tablo, hayalet karşılaştırması, tekrar doğrulaması
@@ -34,13 +34,50 @@ function writeGhostId(id: string | null): void {
   }
 }
 
-/** Bu haftanın tablosuna abone olur (bir kez, hafta değişince yeniden). */
+/*
+ * TEK ABONELİK. Gündem çipi (hayalet farkı) ve lig paneli aynı tabloyu
+ * okuyor; ikisi ayrı abone olunca paylaşılan depoda iki özdeş sorgu ve
+ * her teslimatta iki ad çözümü koşuyordu. Tablo + hafta başına bir
+ * abonelik açılıyor, okuyanlar onu paylaşıyor, son okuyan gidince kapanıyor.
+ */
+interface SharedFeed {
+  entries: LeagueEntry[];
+  listeners: Set<(entries: LeagueEntry[]) => void>;
+  stop: () => void;
+}
+const feeds = new Map<LeagueBoard, Map<string, SharedFeed>>();
+
+function joinFeed(board: LeagueBoard, weekId: string, listener: (entries: LeagueEntry[]) => void): () => void {
+  let byWeek = feeds.get(board);
+  if (!byWeek) feeds.set(board, (byWeek = new Map()));
+  let feed = byWeek.get(weekId);
+  if (!feed) {
+    const created: SharedFeed = { entries: [], listeners: new Set(), stop: () => undefined };
+    created.stop = board.subscribe(weekId, (next) => {
+      created.entries = [...next].sort((a, b) => b.score - a.score);
+      created.listeners.forEach((notify) => notify(created.entries));
+    });
+    byWeek.set(weekId, created);
+    feed = created;
+  }
+  feed.listeners.add(listener);
+  listener(feed.entries);
+  return () => {
+    feed!.listeners.delete(listener);
+    if (feed!.listeners.size === 0) {
+      feed!.stop();
+      byWeek!.delete(weekId);
+    }
+  };
+}
+
+/** Bu haftanın tablosu (paylaşılan tek abonelikten). */
 export function useLeagueEntries(weekId: string | null): LeagueEntry[] {
   const { league } = useGame();
   const [entries, setEntries] = useState<LeagueEntry[]>([]);
   useEffect(() => {
     if (!weekId) return;
-    return league.subscribe(weekId, (next) => setEntries([...next].sort((a, b) => b.score - a.score)));
+    return joinFeed(league, weekId, setEntries);
   }, [league, weekId]);
   return entries;
 }
@@ -61,7 +98,7 @@ export function ghostValueAt(ghost: LeagueEntry, day: number): number | null {
   return ghost.curve[Math.min(index, ghost.curve.length - 1)] ?? null;
 }
 
-function Sparks({ mine, ghost }: { mine: number[]; ghost: number[] | null }): ReactElement {
+function Sparks({ mine, ghost, slots }: { mine: number[]; ghost: number[] | null; slots: number }): ReactElement {
   const width = 320;
   const height = 96;
   const all = [...mine, ...(ghost ?? [])];
@@ -69,7 +106,7 @@ function Sparks({ mine, ghost }: { mine: number[]; ghost: number[] | null }): Re
   const points = (series: number[]) =>
     series
       .map((value, index) => {
-        const x = (index / Math.max(1, 36)) * (width - 8) + 4;
+        const x = (index / Math.max(1, slots)) * (width - 8) + 4;
         const y = height - 6 - (value / max) * (height - 16);
         return `${x.toFixed(1)},${y.toFixed(1)}`;
       })
@@ -87,10 +124,22 @@ type Verdict = { status: 'running'; day: number } | { status: 'ok' } | { status:
 
 function useVerifier() {
   const [verdicts, setVerdicts] = useState<Record<string, Verdict>>({});
-  const verify = async (key: string, code: string) => {
+  /**
+   * Tablo satırı doğrulanırken koşu kodu yetmez: satırın GÖSTERDİĞİ skor
+   * ve hafta da kodla aynı olmalı. Yoksa biri dürüst bir koşunun kodunu
+   * şişirilmiş bir skorun yanına koyar ve tekrar "doğrulandı" derdi.
+   */
+  const verify = async (key: string, code: string, expected?: { score: number; weekId: string }) => {
     const run = decodeRun(code);
     if (!run) {
       setVerdicts((v) => ({ ...v, [key]: { status: 'bad', reason: 'Kod okunamadı.' } }));
+      return;
+    }
+    if (expected && (run.score !== expected.score || run.weekId !== expected.weekId)) {
+      setVerdicts((v) => ({
+        ...v,
+        [key]: { status: 'bad', reason: 'Tablodaki skor ya da hafta koşu koduyla aynı değil.' },
+      }));
       return;
     }
     setVerdicts((v) => ({ ...v, [key]: { status: 'running', day: 0 } }));
@@ -148,7 +197,7 @@ export function LeaguePanel(): ReactElement {
       </p>
 
       <section className="league-compare">
-        <Sparks mine={mine} ghost={ghost?.curve ?? null} />
+        <Sparks mine={mine} ghost={ghost?.curve ?? null} slots={state.league.endDay / LEAGUE_SAMPLE_DAYS} />
         <div className="league-legend">
           <span>
             <span className="league-key mine" aria-hidden="true" /> Sen · {formatMoney(now)}
@@ -180,7 +229,10 @@ export function LeaguePanel(): ReactElement {
                 </span>
                 <span className="league-score">{formatMoney(entry.score)}</span>
                 <span className="league-actions">
-                  <button type="button" onClick={() => void verify(entry.id, entry.code)}>
+                  <button
+                    type="button"
+                    onClick={() => void verify(entry.id, entry.code, { score: entry.score, weekId: entry.weekId })}
+                  >
                     Doğrula
                   </button>
                   <button

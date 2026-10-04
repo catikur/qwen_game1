@@ -460,6 +460,7 @@ export function createNewGame(input: NewGameOptions = {}): GameState {
     // Sahneye çıkmış her rakip — devralınıp silinse bile adı tekrar
     // kullanılmasın diye (yeni rakip girişi buradan seçiyor).
     rivalHistory: Object.keys(companies).filter((id) => id !== PLAYER_COMPANY_ID),
+    rivalSlots: npcCount,
     ...(options.league
       ? {
           league: { weekId: options.league.weekId, endDay: LEAGUE_DAYS, curve: [Math.round(companies[PLAYER_COMPANY_ID]!.cash)] },
