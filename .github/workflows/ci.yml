@@ -52,6 +52,10 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: 22
+          # v5, package.json'daki packageManager alanını görünce pnpm
+          # önbelleğini kendiliğinden açıyor; bu iş bağımlılık kurmuyor ve
+          # pnpm'i hiç kurmadığı için adım "pnpm bulunamadı" diye düşüyordu.
+          package-manager-cache: false
       - uses: actions/download-artifact@v5
         with:
           name: web-dist
