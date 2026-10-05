@@ -16,6 +16,7 @@ import {
   zeroByCategory,
 } from './demand';
 import { collectEventModifiers } from './events';
+import { wageFor } from './labor';
 import { marketingLeverage } from './focus';
 import { SURPLUS_HAIRCUT, distributionRelief, unitCogsFor } from './supply';
 import type { BuildingInstance, GameState } from '../types';
@@ -40,8 +41,6 @@ import type { BuildingInstance, GameState } from '../types';
  * lensinde renk olarak görünür, dükkânın kâr/zarar satırı da nedenini
  * kalem kalem yazar.
  */
-
-const WAGE_PER_JOB = 42;
 
 /** Komşu district'ten gelen müşteri ağırlığı. */
 const NEIGHBOR_ACCESS = 0.3;
@@ -195,7 +194,7 @@ export function estimateInvestment(
   if (!def || !district || !company) return null;
 
   const category = CATEGORIES[def.category];
-  const wages = def.jobs * WAGE_PER_JOB * (0.6 + district.incomeLevel);
+  const wages = wageFor(state, companyId, defId, districtId);
   const fixedCosts = upkeepFor(state, companyId, defId) + wages;
   // Geri ödeme, oyuncunun gerçekten ödeyeceği maliyete göre hesaplanır.
   const investmentCost = def.cost * getCeoModifiers(company.ceoId).buildCost * permitMultiplier(state);

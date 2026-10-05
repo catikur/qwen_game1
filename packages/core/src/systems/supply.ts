@@ -6,6 +6,7 @@ import {
   getCeoModifiers,
 } from '@capital/content';
 import { collectEventModifiers } from './events';
+import { wageFor } from './labor';
 import type { BuildingInstance, GameState } from '../types';
 
 /**
@@ -29,8 +30,6 @@ import type { BuildingInstance, GameState } from '../types';
  * ekonomisi zincir öncesiyle birebir aynı kalır. Zincir o maliyeti aşağı
  * çeker, tedarik krizi yukarı iter.
  */
-
-const WAGE_PER_JOB = 42;
 
 /** Fazla üretim satarken fiyat kırılır — hacim döken taraf sensin. */
 export const SURPLUS_HAIRCUT = 0.85;
@@ -62,10 +61,7 @@ export function seedSpotPrices(): Record<string, number> {
 }
 
 function wagesFor(state: GameState, building: BuildingInstance): number {
-  const def = BUILDING_BY_ID[building.defId];
-  if (!def) return 0;
-  const district = state.districts[building.districtId];
-  return def.jobs * WAGE_PER_JOB * (0.6 + (district?.incomeLevel ?? 0.5));
+  return wageFor(state, building.companyId, building.defId, building.districtId);
 }
 
 function upkeepFor(state: GameState, building: BuildingInstance): number {
