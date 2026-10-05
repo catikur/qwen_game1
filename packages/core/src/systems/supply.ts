@@ -137,6 +137,27 @@ export function resetDailyLedgers(state: GameState): void {
   }
 }
 
+/** Kâr eğiliminin penceresi (gün) — üstel ortalamanın zaman sabiti. */
+export const PROFIT_TREND_DAYS = 30;
+
+/**
+ * Her binanın kâr eğilimini günün defteriyle günceller.
+ *
+ * Pazar ve üretim çözüldükten SONRA koşmalı: `last.profit` ancak o zaman
+ * günün son hâli. Zar atmıyor, yalnızca okuyor — eklenmesi simülasyonun
+ * kendisini değiştirmez, ona bakan kararları (rakibin şube kapatması,
+ * oyuncunun "zararda" uyarısı) besler.
+ */
+export function runProfitTrendTick(state: GameState): void {
+  for (const building of Object.values(state.buildings)) {
+    const today = building.last.profit;
+    building.profitTrend =
+      building.profitTrend === undefined
+        ? today
+        : building.profitTrend + (today - building.profitTrend) / PROFIT_TREND_DAYS;
+  }
+}
+
 interface CompanyFlow {
   /** Ürün → bugün üretilen birim. */
   produced: Record<string, number>;

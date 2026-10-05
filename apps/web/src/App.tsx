@@ -3,13 +3,16 @@ import type { ReactElement } from 'react';
 import {
   GameEngine,
   SCHEMA_VERSION,
+  createLeagueGame,
   createNewGame,
   customerFlows,
   getPlayer,
+  leagueWeekId,
   routeSignature,
   supplyRoutes,
 } from '@capital/core';
 import type { GameCommand } from '@capital/core';
+import type { DifficultyId } from '@capital/content';
 import { CityRenderer } from '@capital/render-three';
 import {
   AUTOSAVE_SLOT,
@@ -24,6 +27,8 @@ import {
   GameContext,
   GameOverScreen,
   Inspector,
+  LeagueResultScreen,
+  VictoryScreen,
   LensBar,
   ModalHost,
   NewGameScreen,
@@ -32,7 +37,10 @@ import {
   TopBar,
   useGameVersion,
 } from '@capital/ui';
-import type { GameContextValue, ToastMessage, ViewState } from '@capital/ui';
+import type { ExportOutcome, FocusTarget, GameContextValue, LeagueBoard, ToastMessage, ViewState } from '@capital/ui';
+import { deliverTextFile } from './host';
+import { createLeagueBoard, fallbackLeagueBoard } from './league-board';
+import { Soundscape } from './audio';
 
 const AUTOSAVE_INTERVAL_MS = 30_000;
 
@@ -72,8 +80,10 @@ export function App(): ReactElement {
     };
   }, []);
 
-  const start = (companyName: string, ceoId: string) => {
-    const next = createNewGame({ companyName, ceoId });
+  const start = (companyName: string, ceoId: string, difficulty: DifficultyId, league: boolean) => {
+    const next = league
+      ? createLeagueGame(leagueWeekId(), companyName, ceoId)
+      : createNewGame({ companyName, ceoId, difficulty });
     if (engine) engine.replaceState(next);
     else setEngine(new GameEngine(next));
     setBootMessage(null);
@@ -272,6 +282,7 @@ function GameRoot({
       routeCount: () => supplyRoutes(engine.getState()).length,
       routeSignature: () => routeSignature(supplyRoutes(engine.getState())),
       customerFlows: () => customerFlows(engine.getState()),
+      cameraTarget: () => rendererRef.current?.cameraTarget() ?? null,
     };
     return () => {
       delete globals['__capital'];
@@ -315,30 +326,113 @@ function GameRoot({
     onRequestNewGame();
   }, [onRequestNewGame]);
 
-  const exportSave = useCallback(() => {
+  const exportSaveText = useCallback(() => exportToJson(engine.getState()), [engine]);
+
+  const exportSave = useCallback(async (): Promise<ExportOutcome> => {
     const state = engine.getState();
-    const blob = new Blob([exportToJson(state)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `capitalforge-${getPlayer(state).name}-gun${state.time.day}.json`;
-    link.click();
-    URL.revokeObjectURL(url);
-    toast('Kayıt dosyası indirildi.', 'good');
+    const filename = `capitalforge-${getPlayer(state).name}-gun${state.time.day}.json`;
+    const outcome = await deliverTextFile(filename, exportToJson(state));
+    /*
+     * OYUN OYUNCUYA YALAN SÖYLEMEZ — dışa aktarmada da.
+     *
+     * Eski hâli her durumda "Kayıt dosyası indirildi" diyordu; yayınlanmış
+     * sayfada tarayıcı indirmeyi engellerken bile. Şimdi cümle sonucu
+     * izliyor: doğrulanmış kayıt, başlatılmış indirme, panoya kopyalama
+     * ya da açık bir "engellendi" — sonuncusunda panel metin kutusunu
+     * açıp elle kopyalamayı öneriyor.
+     */
+    const messages: Record<ExportOutcome, [string, ToastMessage['tone']]> = {
+      saved: ['Kayıt dosyası kaydedildi.', 'good'],
+      started: ['İndirme başlatıldı.', 'good'],
+      copied: ['Bu görünümde indirme yok — kayıt panoya kopyalandı. Bir metin dosyasına yapıştırıp sakla.', 'info'],
+      declined: ['Kaydetme iptal edildi.', 'info'],
+      blocked: ['İndirme bu görünümde engelli — kaydı aşağıdaki metin kutusundan kopyala.', 'bad'],
+    };
+    const [text, tone] = messages[outcome];
+    toast(text, tone);
+    return outcome;
   }, [engine, toast]);
 
-  const importSave = useCallback(
-    async (file: File) => {
-      const outcome = importFromJson(await file.text());
+  const applyImported = useCallback(
+    (raw: string, label: string) => {
+      const outcome = importFromJson(raw);
       if (!outcome.ok) {
         toast(outcome.reason, 'bad');
         return;
       }
       engine.replaceState(outcome.state);
       setViewState((current) => ({ ...current, selectedTileId: null, ghostDefId: null, openPanel: 'none' }));
-      toast('Kayıt içe aktarıldı.', 'good');
+      toast(label, 'good');
     },
     [engine, toast],
+  );
+
+  const importSave = useCallback(
+    async (file: File) => applyImported(await file.text(), 'Kayıt içe aktarıldı.'),
+    [applyImported],
+  );
+
+  const importSaveText = useCallback(
+    (text: string) => applyImported(text, 'Kayıt metinden yüklendi.'),
+    [applyImported],
+  );
+
+  /*
+   * Olay yerine git: kare verilirse seçilir ve kamera ona kayar; bölge
+   * verilirse merkezine. Açık panel kapanıyor — haritayı göstermek için
+   * çağrıldı, modalın arkasında kalmasın.
+   */
+  // Ses manzarası: tek örnek, ilk dokunuşta kendini başlatıyor.
+  const soundscape = useMemo(() => new Soundscape(), []);
+  const [muted, setMuted] = useState(() => soundscape.isMuted());
+  useEffect(() => soundscape.subscribe(() => setMuted(soundscape.isMuted())), [soundscape]);
+  useEffect(() => {
+    const timer = setInterval(() => {
+      soundscape.update(engine.getState(), rendererRef.current?.daylight() ?? 1);
+    }, 500);
+    return () => clearInterval(timer);
+  }, [engine, soundscape]);
+  const audio = useMemo(
+    () => ({ muted, toggle: () => soundscape.setMuted(!soundscape.isMuted()) }),
+    [muted, soundscape],
+  );
+  // Test kancası: ses durumu (bağlam, sessiz, tetiklenen olaylar). Köprü
+  // motor değişince yeniden kurulduğu için motor da bağımlılıkta.
+  useEffect(() => {
+    const bridge = (window as unknown as Record<string, Record<string, unknown> | undefined>)['__capital'];
+    if (bridge) bridge['audio'] = () => soundscape.debug();
+  }, [engine, soundscape]);
+
+  // Lig tablosu: yerel tabloyla açılır, barındırıcı paylaşılanı verirse ona geçer.
+  const [league, setLeague] = useState<LeagueBoard>(fallbackLeagueBoard);
+  useEffect(() => {
+    let cancelled = false;
+    void createLeagueBoard().then((board) => {
+      if (!cancelled) setLeague(board);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const focusOn = useCallback(
+    (target: FocusTarget) => {
+      const state = engine.getState();
+      if (target.tileId !== undefined) {
+        const tile = state.map.tiles[target.tileId];
+        if (!tile) return;
+        setViewState((current) => ({ ...current, selectedTileId: tile.id, openPanel: 'none' }));
+        rendererRef.current?.focusWorld(tile.x, tile.y);
+        return;
+      }
+      if (target.districtId !== undefined) {
+        const district = state.districts[target.districtId];
+        if (!district) return;
+        setViewState((current) => ({ ...current, openPanel: 'none' }));
+        rendererRef.current?.focusWorld((district.x0 + district.x1) / 2, (district.y0 + district.y1) / 2);
+      }
+    },
+    [engine],
   );
 
   const context = useMemo<GameContextValue>(
@@ -353,9 +447,31 @@ function GameRoot({
       saveTo,
       loadFrom,
       exportSave,
+      exportSaveText,
       importSave,
+      importSaveText,
+      focusOn,
+      league,
+      audio,
     }),
-    [engine, view, setView, run, toast, toasts, newGame, saveTo, loadFrom, exportSave, importSave],
+    [
+      engine,
+      view,
+      setView,
+      run,
+      toast,
+      toasts,
+      newGame,
+      saveTo,
+      loadFrom,
+      exportSave,
+      exportSaveText,
+      importSave,
+      importSaveText,
+      focusOn,
+      league,
+      audio,
+    ],
   );
 
   return (
@@ -375,6 +491,8 @@ function GameRoot({
         <ModalHost />
         <Toasts />
         <GameOverScreen onNewGame={newGame} />
+        <VictoryScreen onNewGame={newGame} />
+        <LeagueResultScreen onNewGame={newGame} />
       </div>
     </GameContext.Provider>
   );

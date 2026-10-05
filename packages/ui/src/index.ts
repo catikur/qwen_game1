@@ -1,6 +1,18 @@
 export { GameContext, useGame, useGameState, useGameVersion } from './useGame';
-export type { GameContextValue, ToastMessage, ViewState } from './useGame';
+export type {
+  FocusTarget,
+  ExportOutcome,
+  GameContextValue,
+  LeagueBoard,
+  LeagueEntry,
+  LeagueSubmitOutcome,
+  ToastMessage,
+  ViewState,
+} from './useGame';
 export { ActiveEvents, GameOverScreen, LensBar, NewsFeed, Toasts, TopBar } from './hud';
+export { GoalsPanel, VictoryScreen } from './GoalsPanel';
+export { CouncilPanel } from './CouncilPanel';
+export { LeaguePanel, LeagueResultScreen } from './LeaguePanel';
 export { BuildPanel, Inspector, ModalHost } from './panels';
 export { ChainPanel } from './ChainPanel';
 export { CompetitionPanel } from './CompetitionPanel';

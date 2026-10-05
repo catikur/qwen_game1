@@ -286,6 +286,7 @@ export function runCityGrowthTick(state: GameState): void {
           'neutral',
           `${district.name} yükseliyor`,
           `${district.name} bölgesinde ilk ${next.name.toLowerCase()} yükseldi. Arsa değerleri onu izleyecek.`,
+          { tileId: tile.id },
         );
       }
     }

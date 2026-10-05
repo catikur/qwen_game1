@@ -1,4 +1,4 @@
-import type { CategoryId, DistrictArchetypeId } from '@capital/content';
+import type { CategoryId, DifficultyId, DistrictArchetypeId, MotionKind } from '@capital/content';
 import type { RngState } from './rng';
 
 /**
@@ -79,6 +79,8 @@ export interface DistrictState {
   priceIndex: Record<CategoryId, number>;
   /** Bu bölgede kaç rakip outlet var (kategori bazlı). */
   outletCount: Record<CategoryId, number>;
+  /** Meclisin geçirdiği metro hattı sayısı — nüfus tavanını büyütür. */
+  infrastructure?: number;
 }
 
 export interface BuildingLedger {
@@ -124,6 +126,14 @@ export interface BuildingInstance {
    */
   focus: CategoryId | null;
   last: BuildingLedger;
+  /**
+   * Günlük kârın 30 günlük üstel ortalaması.
+   *
+   * Tek günün defteri gürültülü (olay, dönem, rakip açılışı); "bu şube
+   * zarar ediyor mu" sorusunun cevabı eğilimde. Eski kayıtlarda yok —
+   * ilk gün o günün kârıyla başlıyor.
+   */
+  profitTrend?: number;
 }
 
 export interface CompanyLedger {
@@ -133,6 +143,13 @@ export interface CompanyLedger {
   wages: number;
   interest: number;
   profit: number;
+}
+
+/** Rakibin kapattığı şube — aynı yere aynı hatayı tekrar etmesin diye. */
+export interface PrunedBranch {
+  districtId: number;
+  defId: string;
+  day: number;
 }
 
 export interface CompanyState {
@@ -183,6 +200,12 @@ export interface CompanyState {
    * Tüketici ürünlerinde perakende işleme maliyeti de dahildir.
    */
   unitCost: Record<string, number>;
+  /** Rakip: son kapattığı şubeler (hafıza penceresi kadar). */
+  pruned?: PrunedBranch[];
+  /** Devraldığı şirket sayısı (hedef merdiveni okur). */
+  acquisitions?: number;
+  /** Kurucu kilidi: bu güne kadar hisseleri başkası alamaz (yeni gelen). */
+  lockedUntilDay?: number;
 }
 
 /**
@@ -222,6 +245,12 @@ export interface NewsItem {
   body: string;
   /** Haberin yüzü — rakip hamlelerinde o şirketin portresi gösterilir. */
   companyId?: string;
+  /**
+   * Haberin yeri — tıklanınca kamera oraya uçar. Kare bölgeden önce
+   * gelir (daha kesin); ikisi de yoksa haber bir yere bağlı değildir.
+   */
+  tileId?: number;
+  districtId?: number;
 }
 
 /**
@@ -272,6 +301,14 @@ export interface FeatureFlags {
    * kalan her şey açık kalıyor.
    */
   raids?: boolean;
+  /**
+   * Yeni rakip girişi (boşalan koltuğa katalogdan yeni şirket). Aynı
+   * sözleşme: yokluğu AÇIK. Rakip kadrosunu sabit tutması gereken
+   * deneyler kapatabilsin.
+   */
+  rivalEntry?: boolean;
+  /** Belediye meclisi. Aynı sözleşme: yokluğu AÇIK. */
+  council?: boolean;
 }
 
 /**
@@ -335,6 +372,8 @@ export interface GameState {
   activeEvents: ActiveEvent[];
   news: NewsItem[];
   nextId: number;
+  /** Haber kimliği sayacı (bina kimliklerinden ayrı). */
+  newsSeq?: number;
   /**
    * Oyun sonu — düşmanca devralma oyuncuyu yuttuğunda dolar.
    *
@@ -363,7 +402,85 @@ export interface GameState {
   flags: FeatureFlags;
   /** Açık ihale; yoksa null. */
   auction: AuctionState | null;
+  /**
+   * Zorluk kademesi. Yokluğu "Dengeli" demek — eski kayıtlar oyunun
+   * tasarlandığı hâliyle devam eder, şema sürümü sabit.
+   */
+  difficulty?: DifficultyId;
+  /** Hedef merdiveni: hedef kimliği → tamamlandığı gün. */
+  goals?: Record<string, number>;
+  /** Sahneye çıkmış bütün rakip kimlikleri (devralınanlar dahil). */
+  rivalHistory?: string[];
+  /** Kuruluştaki rakip sayısı — yeni girişler bu kadar koltuğu doldurur. */
+  rivalSlots?: number;
+  /** Son yeni rakip girişinin günü. */
+  lastEntryDay?: number;
+  /** Rakip koltuğunun boşaldığı gün (giriş bu günden 45 gün sonra). */
+  rivalVacancyDay?: number;
+  /** Tohum Ligi koşusu; yoksa serbest oyun. */
+  league?: LeagueState;
+  /** Lig koşusunda oyuncunun komut günlüğü: [gün, komut]. */
+  commandLog?: LoggedCommand[];
+  /** Belediye meclisi: oturum takvimi, açık önergeler, geçmiş. */
+  council?: CouncilState;
+  /** Meclisin yürürlükteki kararları (vergi, teşvik, ruhsat). */
+  policies?: PolicyState[];
+  /**
+   * Zafer — `gameOver`un ikizi ama bir SON değil: oyuncu serbest oyuna
+   * devam edebilir. `dismissed` ekranın bir kez görüldüğünü tutar.
+   */
+  victory?: { day: number; kind: VictoryKind; dismissed?: boolean };
 }
+
+/** Meclis önergesi — açıkken lobi toplar, oylanınca sonucu taşır. */
+export interface MotionState {
+  id: string;
+  kind: MotionKind;
+  title: string;
+  summary: string;
+  districtId?: number;
+  category?: CategoryId;
+  /** Meclisin kendi eğilimi 0..1 — lobisiz destek. */
+  baseSupport: number;
+  /** Şirket → imzalı lobi harcaması (+ lehte, − aleyhte). */
+  lobby: Record<string, number>;
+  /** Oylandıysa: sonuç ve destek. */
+  result?: { passed: boolean; support: number; day: number };
+}
+
+export interface CouncilState {
+  nextSessionDay: number;
+  session: { openedDay: number; voteDay: number; motions: MotionState[] } | null;
+  /** Son oylanan önergeler (en yeni başta). */
+  history: MotionState[];
+}
+
+export interface PolicyState {
+  kind: 'category_tax' | 'category_relief' | 'permit_relief';
+  category?: CategoryId;
+  rate: number;
+  untilDay: number;
+  title: string;
+}
+
+/** Tohum Ligi — herkesin aynı şehirde oynadığı haftalık koşu. */
+export interface LeagueState {
+  weekId: string;
+  endDay: number;
+  /** Net değer örnekleri (her `LEAGUE_SAMPLE_DAYS` günde bir) — hayalet eğrisi. */
+  curve: number[];
+  finishedDay?: number;
+  score?: number;
+  outcome?: 'finished' | 'lost';
+  /** Sonuç ekranı görüldü mü. */
+  resultSeen?: boolean;
+}
+
+/** Günlükteki tek kayıt: komutun verildiği gün ve komutun kendisi. */
+export type LoggedCommand = [number, GameCommand];
+
+/** Zafer yolu: değer + birincilik ya da bütün rakipleri devralmak. */
+export type VictoryKind = 'tycoon' | 'monopoly';
 
 /** UI'nin çekirdeğe gönderdiği tek yönlü niyet bildirimleri. */
 export type GameCommand =
@@ -390,7 +507,13 @@ export type GameCommand =
   | { type: 'RENAME_COMPANY'; name: string }
   | { type: 'ACCEPT_CONTRACT' }
   | { type: 'DECLINE_CONTRACT' }
-  | { type: 'SET_FLAG'; flag: keyof FeatureFlags; value: boolean };
+  | { type: 'SET_FLAG'; flag: keyof FeatureFlags; value: boolean }
+  /** Zafer ekranını kapatıp serbest oyuna devam eder. */
+  | { type: 'DISMISS_VICTORY' }
+  /** Lig sonuç ekranını kapatır. */
+  | { type: 'DISMISS_LEAGUE' }
+  /** Açık bir meclis önergesine lobi bağışı. */
+  | { type: 'LOBBY'; motionId: string; side: 'for' | 'against'; amount: number };
 
 /** Komut reddedildiğinde UI'ye dönen açıklama. */
 export interface CommandResult {

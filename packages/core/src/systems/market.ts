@@ -6,6 +6,7 @@ import {
   GOOD_BY_ID,
   getCeoModifiers,
 } from '@capital/content';
+import { categoryRevenueRate, permitMultiplier } from './council';
 import type { CategoryId } from '@capital/content';
 import {
   defaultShelf,
@@ -197,7 +198,7 @@ export function estimateInvestment(
   const wages = def.jobs * WAGE_PER_JOB * (0.6 + district.incomeLevel);
   const fixedCosts = upkeepFor(state, companyId, defId) + wages;
   // Geri ödeme, oyuncunun gerçekten ödeyeceği maliyete göre hesaplanır.
-  const investmentCost = def.cost * getCeoModifiers(company.ceoId).buildCost;
+  const investmentCost = def.cost * getCeoModifiers(company.ceoId).buildCost * permitMultiplier(state);
 
   // ---- Üretim üniteleri: değeri kârda değil, TASARRUFTA ----
   // Bir fabrika kendi başına para basmaz; ürünü pazardan almak yerine
@@ -350,7 +351,9 @@ export function estimateInvestment(
   const goodId = shelf[0];
   const unitCogs = goodId ? unitCogsFor(state, companyId, goodId, 0, 1) : 0;
 
-  const revenue = expectedUnits * salePrice;
+  // Yürürlükteki meclis kararı tahmine de giriyor: vergi gelen kategoride
+  // "60 günde döner" demek, oyuncuya yalan söylemek olurdu.
+  const revenue = expectedUnits * salePrice * (1 + categoryRevenueRate(state, def.category));
   const cogs = expectedUnits * unitCogs;
   const dailyProfit = revenue - cogs - fixedCosts;
 
@@ -725,6 +728,19 @@ export function runMarketTick(state: GameState): void {
     if (!def || !company) continue;
     company.today.upkeep += building.last.upkeep;
     company.today.wages += building.last.wages;
+
+    // Meclis kararı: kategori cirosuna vergi (−) ya da teşvik (+). Satış
+    // ADETİ değişmiyor, yalnızca kasaya giren — müşteri vergiyi görmez,
+    // marjı daralan işletme görür.
+    if (def.role === 'outlet' && state.policies && state.policies.length > 0) {
+      const rate = categoryRevenueRate(state, def.category);
+      if (rate !== 0 && building.last.revenue > 0) {
+        const adjust = building.last.revenue * rate;
+        building.last.revenue += adjust;
+        building.last.profit += adjust;
+        company.today.revenue += adjust;
+      }
+    }
   }
 
   for (const company of Object.values(state.companies)) {

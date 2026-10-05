@@ -222,6 +222,7 @@ function settle(state: GameState): void {
       'neutral',
       'İhale sonuçsuz kaldı',
       `${district?.name ?? 'Şehirde'} bölgesindeki parsele taban fiyattan teklif gelmedi; parsel normal satışa döndü.`,
+      { tileId: auction.tileId },
     );
     state.auction = null;
     return;
@@ -236,6 +237,7 @@ function settle(state: GameState): void {
       'neutral',
       'İhale düştü',
       `${district?.name ?? 'Şehirde'} bölgesindeki parselin kazananı ödeme yapamadı; parsel normal satışa döndü.`,
+      { tileId: auction.tileId },
     );
     state.auction = null;
     return;
@@ -251,6 +253,7 @@ function settle(state: GameState): void {
     isPlayer ? 'İhaleyi kazandın' : `${winner.name} ihaleyi kazandı`,
     `${district?.name ?? 'Şehir'} bölgesindeki parsel ${Math.round(auction.bid).toLocaleString('tr-TR')} ₺'ye ` +
       `${isPlayer ? 'senin oldu' : 'el değiştirdi'} — ${auction.rounds} artırım.`,
+    { tileId: auction.tileId, ...(isPlayer ? {} : { companyId: winner.id }) },
   );
   state.auction = null;
 }
@@ -290,6 +293,7 @@ export function runAuctionTick(state: GameState): void {
     'Belediye parsel ihalesine çıktı',
     `${district?.name ?? 'Şehir'} bölgesinde bir parsel ${AUCTION_DAYS} gün açık artırmada. ` +
       `Taban fiyat ${Math.round(state.auction.reserve).toLocaleString('tr-TR')} ₺.`,
+    { tileId: state.auction.tileId },
   );
 }
 

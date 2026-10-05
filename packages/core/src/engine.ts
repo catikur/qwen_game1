@@ -4,7 +4,11 @@ import { pushNews } from './news';
 import { companyRanking, formatMoney } from './selectors';
 import { TOTAL_SHARES, sharesHeld } from './systems/equity';
 import { runMarketTick } from './systems/market';
-import { resetDailyLedgers, runProductionTick, runSpotPriceTick } from './systems/supply';
+import { runGoalTick } from './systems/goals';
+import { runEntrantTick } from './systems/entrants';
+import { isLoggable, leagueActive, runLeagueTick } from './systems/league';
+import { lobby, runCouncilTick } from './systems/council';
+import { resetDailyLedgers, runProductionTick, runProfitTrendTick, runSpotPriceTick } from './systems/supply';
 import {
   recomputeNetWorth,
   runDistrictUnlockTick,
@@ -62,7 +66,8 @@ export class GameEngine {
 
   constructor(state: GameState) {
     this.state = state;
-    recomputeNetWorth(this.state);
+    // Lig koşusu kayıttan açılınca net değer olduğu gibi kalır (replaceState'teki not).
+    if (!state.league) recomputeNetWorth(this.state);
   }
 
   getState(): GameState {
@@ -85,7 +90,11 @@ export class GameEngine {
   replaceState(state: GameState): void {
     this.state = state;
     this.reachedMilestones.clear();
-    recomputeNetWorth(this.state);
+    // Lig koşusunda net değer kayıttaki gibi kalıyor: yeniden hesap, o
+    // günün rakip kararlarının okuduğu değeri değiştirir ve kayıttan
+    // devam eden koşu tekrarla ayrışırdı. Değer zaten her gün sonunda
+    // hesaplanıyor.
+    if (!state.league) recomputeNetWorth(this.state);
     this.notify();
   }
 
@@ -95,8 +104,20 @@ export class GameEngine {
   }
 
   dispatch(command: GameCommand): CommandResult {
+    const league = leagueActive(this.state);
+    // Lig koşusunda kurallar sabit: herkes aynı şehirde aynı kurallarla.
+    if (league && command.type === 'SET_FLAG') {
+      return { ok: false, reason: 'Lig koşusunda oyun kuralları değiştirilemez.' };
+    }
+    const day = this.state.time.day;
     const result = this.apply(command);
-    if (result.ok) this.notify();
+    if (result.ok) {
+      // Tekrar doğrulaması bu günlükten oynatıyor (league.ts).
+      if (league && isLoggable(command)) {
+        (this.state.commandLog ??= []).push([day, JSON.parse(JSON.stringify(command)) as GameCommand]);
+      }
+      this.notify();
+    }
     return result;
   }
 
@@ -214,6 +235,19 @@ export class GameEngine {
         state.flags[command.flag] = command.value;
         return { ok: true };
 
+      case 'DISMISS_LEAGUE':
+        if (!state.league || state.league.finishedDay === undefined) return { ok: false, reason: 'Lig koşusu sürüyor.' };
+        state.league.resultSeen = true;
+        return { ok: true };
+
+      case 'LOBBY':
+        return lobby(state, playerId, command.motionId, command.side, command.amount);
+
+      case 'DISMISS_VICTORY':
+        if (!state.victory) return { ok: false, reason: 'Henüz bir zafer yok.' };
+        state.victory.dismissed = true;
+        return { ok: true };
+
       default:
         return { ok: false, reason: 'Bilinmeyen komut.' };
     }
@@ -263,6 +297,9 @@ export class GameEngine {
     // İmar takvimi sözleşmeden ÖNCE: açılış günü gelen bir inşaat
     // teklifi yeni bölgeyi hedefleyebilmeli.
     runDistrictUnlockTick(state);
+    // Meclis imar takvimini değiştirebilir; sözleşmeden önce otursun ki
+    // aynı gün üretilen teklif güncel takvimi görsün.
+    runCouncilTick(state);
     runContractTick(state);
     resetDailyLedgers(state);
     // Ar-Ge primi pazardan ÖNCE ilerler: bugünkü kalite bugünkü satışa
@@ -272,6 +309,7 @@ export class GameEngine {
     runProductionTick(state);
     runMarketTick(state);
     runSpotPriceTick(state);
+    runProfitTrendTick(state);
 
     const mods = collectEventModifiers(state);
     runLandValueTick(state, mods.landValueDrift);
@@ -292,11 +330,15 @@ export class GameEngine {
     // Devralma temettüden SONRA: devralınan şirket son gününün payını
     // dağıtmış olsun, hissedar ortada kalmasın.
     runTakeoverTick(state, (title, body) => pushNews(state, 'rival', title, body));
+    // Boşalan koltuk: devralma sonrası kadro eksikse yeni rakip girer.
+    runEntrantTick(state);
     this.settleCredit();
     recomputeNetWorth(state);
     this.checkMilestones();
+    runGoalTick(state);
     this.checkOvertaking();
     this.checkRaid();
+    runLeagueTick(state);
   }
 
   /**

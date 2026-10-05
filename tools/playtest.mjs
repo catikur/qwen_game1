@@ -1,5 +1,9 @@
 // Tarayıcıda uçtan uca oynanabilirlik testi.
-// Çalıştırma: pnpm build && node tools/playtest.mjs
+// Çalıştırma: pnpm build && node tools/playtest.mjs [--smoke]
+//
+// --smoke (ya da PLAYTEST=smoke): yalnızca açılış, şehir, döngü, parsel,
+// inşa, harita, görünüm ve panel bölümleri — birkaç dakikada "oyun açılıyor
+// ve oynanıyor" cevabı. Tam koşu birleştirmeden önce; duman her değişiklikte.
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -9,7 +13,8 @@ import { createRequire } from 'node:module';
 // kuruluysa oradan, değilse global kurulumdan çözülür.
 const require = createRequire(import.meta.url);
 function loadPlaywright() {
-  for (const id of ['playwright', '/opt/node22/lib/node_modules/playwright']) {
+  const candidates = [process.env.PLAYWRIGHT_MODULE, 'playwright', '/opt/node22/lib/node_modules/playwright'];
+  for (const id of candidates.filter(Boolean)) {
     try {
       return require(id);
     } catch {
@@ -42,7 +47,14 @@ function check(name, ok, detail = '') {
     console.log(`  FAIL  ${name}${detail ? ' — ' + detail : ''}`);
   }
 }
-const section = (t) => console.log(`\n=== ${t} ===`);
+const startedAt = Date.now();
+const section = (t) => console.log(`\n=== ${t} === (${Math.round((Date.now() - startedAt) / 1000)} sn)`);
+const SMOKE = process.argv.includes('--smoke') || process.env.PLAYTEST === 'smoke';
+
+// Kapta önceden kurulmuş Chromium varsa o; yoksa (CI) Playwright'ın kendi
+// indirdiği tarayıcı. Yol elle de verilebilir.
+const CHROMIUM = process.env.CHROMIUM_PATH
+  || (fs.existsSync('/opt/pw-browsers/chromium') ? '/opt/pw-browsers/chromium' : undefined);
 
 const server = http.createServer((req, res) => {
   const rel = req.url === '/' ? '/index.html' : req.url.split('?')[0];
@@ -85,10 +97,22 @@ const findTile = (page, kind) =>
     return match ? match.id : null;
   }, kind);
 
+async function finish(browser, consoleErrors) {
+  console.log('\n================================');
+  console.log(`TOPLAM: ${pass} geçti, ${fail} kaldı${SMOKE ? ' (duman koşusu)' : ''}`);
+  if (fail) console.log('Kalanlar:\n - ' + failures.join('\n - '));
+  console.log(`Konsol hataları: ${consoleErrors.length}`);
+  console.log(`Süre: ${Math.round((Date.now() - startedAt) / 1000)} sn`);
+
+  await browser.close();
+  server.close();
+  process.exit(fail ? 1 : 0);
+}
+
 (async () => {
   await new Promise((r) => server.listen(8811, r));
   const browser = await chromium.launch({
-    executablePath: '/opt/pw-browsers/chromium',
+    ...(CHROMIUM ? { executablePath: CHROMIUM } : {}),
     args: ['--use-gl=swiftshader', '--enable-unsafe-swiftshader', '--disable-dev-shm-usage'],
   });
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
@@ -122,6 +146,16 @@ const findTile = (page, kind) =>
     (await page.locator('.ceo-perk').first().textContent())?.trim(),
   );
 
+  check('Zorluk seçenekleri listeleniyor', (await page.locator('.difficulty-option[data-difficulty]').count()) === 3);
+  check('Varsayılan zorluk Dengeli',
+    (await page.locator('.difficulty-option[data-difficulty][aria-checked="true"]').getAttribute('data-difficulty')) === 'normal');
+  check('Varsayılan oyun türü serbest şehir',
+    (await page.locator('.mode-picker [data-mode="free"][aria-checked="true"]').count()) === 1);
+  await page.locator('.difficulty-option[data-difficulty="hard"]').click();
+  const hardDetail = ((await page.locator('.difficulty-detail').textContent()) ?? '').trim();
+  check('Zorluk seçimi farkları açıkça yazıyor', hardDetail.includes('150M'), hardDetail.slice(0, 90));
+  await page.locator('.difficulty-option[data-difficulty="normal"]').click();
+
   await page.screenshot({ path: `${OUT}/newgame.png` });
 
   await page.fill('.newgame-field input[type="text"]', 'Karaca Holding');
@@ -136,6 +170,8 @@ const findTile = (page, kind) =>
     (await page.locator('.brand-ceo svg').count()) === 1,
     (await page.locator('.brand-sub').textContent())?.trim(),
   );
+  check('Dengeli oyun kayda zorluk alanı yazmıyor',
+    await page.evaluate(() => window.__capital.getState().difficulty === undefined));
 
   // ---------- Sahne ----------
   section('Şehir sahnesi');
@@ -506,6 +542,160 @@ const findTile = (page, kind) =>
   // ---------- Zincir kartı ----------
   // Motor katmanı A parçasında doğrulandı; burada bakılan şey oyuncunun
   // gerçekten görüp kullanabildiği mi.
+  // ---------- Gündem ve hedefler ----------
+  section('Gündem ve hedefler');
+  const goalChip = page.locator('.agenda [data-agenda="goal"] button');
+  check('Gündemde sıradaki hedef duruyor', (await goalChip.count()) === 1,
+    ((await goalChip.textContent().catch(() => '')) ?? '').trim());
+  await goalChip.click();
+  await page.waitForTimeout(250);
+  const ladder = await page.evaluate(() => ({
+    rows: document.querySelectorAll('.goal-list .goal').length,
+    done: document.querySelectorAll('.goal-list .goal-done').length,
+    next: document.querySelectorAll('.goal-list .goal-next').length,
+  }));
+  check('Hedef çipi merdiveni açıyor', ladder.rows === 10, `${ladder.rows} basamak`);
+  check('İnşa edilen dükkân merdivende işaretli', ladder.done >= 1 && ladder.next === 1,
+    `${ladder.done} tamam · ${ladder.next} sıradaki`);
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(150);
+
+  // Aciliyet sırası: kontrole yaklaşan baskın şeridin başına geçmeli.
+  await page.evaluate(() => {
+    const s = window.__capital.getState();
+    const rival = Object.values(s.companies).find((c) => !c.isPlayer);
+    rival.shares[s.playerCompanyId] = 4200;
+    window.__capital.raidProbe = rival.id;
+  });
+  await page.waitForFunction(() => document.querySelector('.agenda [data-agenda="raid"]') !== null, null, { timeout: 5000 }).catch(() => null);
+  const firstAgenda = await page.evaluate(() => document.querySelector('.agenda [data-agenda]')?.getAttribute('data-agenda'));
+  check('Acil baskın gündemin başına geçiyor', firstAgenda === 'raid', `ilk kalem: ${firstAgenda}`);
+  await page.evaluate(() => {
+    const s = window.__capital.getState();
+    delete s.companies[window.__capital.raidProbe].shares[s.playerCompanyId];
+  });
+
+  // İmar geri sayımı: tıklanınca kamera bölgeye gider.
+  const unlockProbe = await page.evaluate(() => {
+    const s = window.__capital.getState();
+    const district = s.districts.find((d) => d.opensOnDay !== undefined && d.opensOnDay > s.time.day);
+    if (!district) return null;
+    window.__capital.unlockProbe = { id: district.id, was: district.opensOnDay };
+    district.opensOnDay = s.time.day + 12;
+    return { id: district.id, cx: (district.x0 + district.x1) / 2, cz: (district.y0 + district.y1) / 2 };
+  });
+  if (unlockProbe) {
+    await page.waitForFunction(() => document.querySelector('.agenda [data-agenda="unlock"] button') !== null, null, { timeout: 5000 }).catch(() => null);
+    const unlockButton = page.locator('.agenda [data-agenda="unlock"] button');
+    check('Yaklaşan imar açılışı gündemde geri sayıyor', (await unlockButton.count()) === 1,
+      ((await unlockButton.textContent().catch(() => '')) ?? '').trim());
+    if ((await unlockButton.count()) === 1) await unlockButton.click();
+    await page.waitForTimeout(200);
+    const target = await page.evaluate(() => window.__capital.cameraTarget());
+    const dist = target ? Math.hypot(target.x - unlockProbe.cx, target.z - unlockProbe.cz) : 999;
+    check('İmar çipi kamerayı bölgeye götürüyor', dist < 6, `merkeze ${dist.toFixed(1)} kare`);
+    await page.evaluate(() => {
+      const probe = window.__capital.unlockProbe;
+      window.__capital.getState().districts[probe.id].opensOnDay = probe.was;
+    });
+  }
+
+  // Olay yerine git: yeri olan haber bir dokunuşla oraya götürür.
+  const newsProbe = await page.evaluate(() => {
+    const s = window.__capital.getState();
+    const tile = s.map.tiles.find((t) => t.kind === 'plot' && t.x > 20 && t.y > 20);
+    s.news.unshift({ id: s.nextId++, day: s.time.day, tone: 'rival', title: 'Deneme haberi', body: 'Yeri olan haber.', tileId: tile.id });
+    window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 1 });
+    return { tileId: tile.id, x: tile.x, z: tile.y };
+  });
+  await page.waitForFunction(() => document.querySelector('.news .news-goto') !== null, null, { timeout: 5000 }).catch(() => null);
+  const gotoButtons = await page.locator('.news .news-goto').count();
+  check('Yeri olan haberde "Git" var', gotoButtons >= 1, `${gotoButtons} haber`);
+  if (gotoButtons >= 1) {
+    await page.evaluate(() => {
+      const item = [...document.querySelectorAll('.news .news-item')].find((li) => li.textContent.includes('Deneme haberi'));
+      item?.querySelector('.news-goto')?.click();
+    });
+    await page.waitForTimeout(250);
+    const after = await page.evaluate(() => ({
+      target: window.__capital.cameraTarget(),
+      selected: document.querySelector('.inspector') !== null,
+    }));
+    const gap = after.target ? Math.hypot(after.target.x - newsProbe.x, after.target.z - newsProbe.z) : 999;
+    check('"Git" kamerayı olay yerine götürüyor', gap < 6, `kareye ${gap.toFixed(1)}`);
+    check('"Git" kareyi seçip ayrıntısını açıyor', after.selected);
+  }
+  await page.evaluate(() => window.__capital.selectTile(null));
+
+  // Meclis: oturumu bugüne çek, önergeler gündeme düşsün, lobi işlesin.
+  await page.evaluate(() => {
+    const s = window.__capital.getState();
+    s.council = { nextSessionDay: s.time.day, session: null, history: [] };
+    window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 1 });
+  });
+  const councilChip = page.locator('.agenda [data-agenda="council"] button');
+  await page.waitForFunction(() => document.querySelector('.agenda [data-agenda="council"] button') !== null, null, { timeout: 6000 }).catch(() => null);
+  check('Meclis toplanınca gündemde geri sayıyor', (await councilChip.count()) === 1,
+    ((await councilChip.textContent().catch(() => '')) ?? '').trim());
+  await page.evaluate(() => window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 }));
+  if ((await councilChip.count()) === 1) {
+    await councilChip.click();
+    await page.waitForTimeout(250);
+    const motions = await page.locator('.council-motion').count();
+    check('Meclis paneli önergeleri listeliyor', motions === 2, `${motions} önerge`);
+    const before = await page.evaluate(() => {
+      const s = window.__capital.getState();
+      return { cash: s.companies[s.playerCompanyId].cash, fill: document.querySelector('.council-motion .council-bar-fill')?.style.width };
+    });
+    await page.locator('.council-motion').first().locator('.council-give.for').first().click();
+    await page.waitForTimeout(250);
+    const after = await page.evaluate(() => {
+      const s = window.__capital.getState();
+      const first = document.querySelector('.council-motion');
+      return {
+        cash: s.companies[s.playerCompanyId].cash,
+        fill: first?.querySelector('.council-bar-fill')?.style.width,
+        listed: [...(first?.querySelectorAll('.council-lobby li') ?? [])].some((li) => li.textContent.includes('Karaca')),
+      };
+    });
+    check('Lobi bağışı nakitten düşüyor', Math.round(before.cash - after.cash) === 50_000,
+      `${Math.round(before.cash - after.cash)} ₺`);
+    check('Bağış desteği kaydırıyor ve kamuya açık listede', parseFloat(after.fill) > parseFloat(before.fill) && after.listed,
+      `${before.fill} → ${after.fill}`);
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(150);
+  }
+  check('Rıhtımda meclis sekmesi var', (await page.locator('.topbar-actions [data-panel="council"]').count()) === 1);
+
+  // Ses manzarası: dokunuşlardan sonra bağlam açık, olaylar tetikleniyor,
+  // sessize alma çalışıyor ve hatırlanıyor.
+  await page.evaluate(() => window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 1 }));
+  await page.waitForTimeout(1200);
+  const sound = await page.evaluate(() => window.__capital.audio?.() ?? null);
+  await page.evaluate(() => window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 }));
+  check('Ses manzarası ilk dokunuştan sonra başlıyor', sound !== null && sound.context !== 'none',
+    sound ? `bağlam ${sound.context}` : 'kanca yok');
+  check('Oyun olayları ses tetikliyor (inşaat, iyi haber)',
+    sound !== null && sound.played.build >= 1 && sound.played.cash >= 1,
+    sound ? JSON.stringify(sound.played) : '');
+  check('Ses katmanları şehirden besleniyor', sound !== null && sound.levels.hum > 0.05 && sound.levels.traffic > 0,
+    sound ? `uğultu ${sound.levels.hum.toFixed(3)} · trafik ${sound.levels.traffic.toFixed(3)} · gece ${sound.levels.night.toFixed(2)}` : '');
+  await page.locator('.sound-toggle').click();
+  await page.waitForTimeout(150);
+  const mutedNow = await page.evaluate(() => ({
+    muted: window.__capital.audio().muted,
+    stored: localStorage.getItem('capitalforge.audio.muted'),
+    pressed: document.querySelector('.sound-toggle')?.getAttribute('aria-pressed'),
+  }));
+  check('Sessize alma çalışıyor ve hatırlanıyor', mutedNow.muted && mutedNow.stored === '1' && mutedNow.pressed === 'false',
+    JSON.stringify(mutedNow));
+  await page.locator('.sound-toggle').click();
+
+  if (SMOKE) {
+    await finish(browser, consoleErrors);
+    return;
+  }
+
   section('Zincir kartı');
 
   // Oyuncuya zinciri kurabilecek sermaye ver; test parayı değil arayüzü ölçüyor.
@@ -903,6 +1093,20 @@ const findTile = (page, kind) =>
   // Kollar A parçasında motorda çalışıyordu ama oyuncunun göreceği bir
   // yüzü yoktu. Burada bakılan şey kartın DOĞRU şeyi söyleyip söylemediği
   // ve hamlenin gerçekten çalışması.
+  // Yukarıdaki sondaj oyuncuya 900M ₺ nakit verdi: bu gerçek bir zafer
+  // koşulu. Ekran inmeli ve "devam" ile serbest oyuna dönülebilmeli —
+  // yoksa sonraki her tıklama zafer kartına çarpar.
+  const organicVictory = await page
+    .waitForFunction(() => document.querySelector('.gameover.victory') !== null, null, { timeout: 4000 })
+    .then(() => true)
+    .catch(() => false);
+  check('Hedef değeri aşan bir numara için zafer ilan ediliyor', organicVictory,
+    organicVictory ? 'zafer ekranı indi' : 'ekran yok');
+  if (organicVictory) {
+    await page.locator('.gameover.victory button:has-text("Serbest oyuna devam")').click();
+    await page.waitForTimeout(200);
+  }
+
   section('Rekabet kartı');
 
   await page.evaluate(() => {
@@ -1247,6 +1451,63 @@ const findTile = (page, kind) =>
   const schemaVersion = await page.evaluate(() => window.__capital.schemaVersion);
   check('Kayıt güncel şemayla yazılıyor', savedMeta?.schemaVersion === schemaVersion,
     `v${savedMeta?.schemaVersion} (güncel v${schemaVersion})`);
+
+  // Dışa aktarma her ortamda olanı söylemeli: kendi sunucusunda gerçek bir
+  // indirme, barındırıcıda yetenek yoksa açık bir "engellendi" + elle aktarım.
+  const lastToast = () => page.evaluate(() => {
+    const all = document.querySelectorAll('.toasts .toast');
+    return all.length ? all[all.length - 1].textContent : '';
+  });
+  const exportButton = page.locator('.saverow-actions button:has-text("JSON dışa aktar")');
+  const download = page.waitForEvent('download', { timeout: 5000 }).catch(() => null);
+  await exportButton.click();
+  const downloaded = await download;
+  check('Dışa aktarma tarayıcıda gerçek bir indirme başlatıyor', downloaded !== null,
+    downloaded ? downloaded.suggestedFilename() : 'indirme olayı yok');
+  check('İndirme sonucu dürüstçe bildiriliyor', (await lastToast()).includes('başlatıldı'), await lastToast());
+
+  await page.evaluate(() => {
+    window.claude = { use: async () => null };
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText: () => Promise.reject(new Error('izin yok')) },
+    });
+  });
+  await exportButton.click();
+  await page.waitForTimeout(300);
+  const manualBox = await page.evaluate(() => {
+    const box = document.querySelector('.manual-text');
+    return box ? box.value : null;
+  });
+  check('Engelli ortamda indirildi denmiyor', (await lastToast()).includes('engelli'), await lastToast());
+  check('Engelli ortamda elle aktarım kutusu açılıyor', typeof manualBox === 'string' && manualBox.startsWith('{'),
+    manualBox ? `${Math.round(manualBox.length / 1024)} KB metin` : 'kutu yok');
+
+  await page.evaluate(() => {
+    window.claude = {
+      use: async (name) => (name === 'downloads'
+        ? { save: () => Promise.reject({ code: 'declined', message: 'hayır' }) }
+        : null),
+    };
+  });
+  await exportButton.click();
+  await page.waitForTimeout(300);
+  check('Kaydetmeyi reddetmek "iptal" olarak bildiriliyor', (await lastToast()).includes('iptal'), await lastToast());
+  await page.evaluate(() => { delete window.claude; });
+
+  // Kutu düzenlenebilir: metindeki kaydı duraklatılmış hâle getirip
+  // yüklüyoruz — böylece yükleme sonrası gün tam olarak metindeki gün olmalı.
+  const edited = manualBox ? JSON.parse(manualBox) : null;
+  if (edited) edited.state.time.speed = 0;
+  const textDay = edited?.state.time.day ?? null;
+  if (edited) await page.locator('.manual-text').fill(JSON.stringify(edited));
+  await page.locator('.manual-actions button:has-text("Bu metni yükle")').click();
+  await page.waitForTimeout(300);
+  check('Elle aktarım metni geri yükleniyor', (await lastToast()).includes('metinden yüklendi'), await lastToast());
+  const dayAfterManual = await page.evaluate(() => window.__capital.getState().time.day);
+  check('Metinden yükleme metindeki günü getiriyor', dayAfterManual === textDay,
+    `metin ${textDay}. gün → oyun ${dayAfterManual}. gün`);
+  await page.evaluate(() => window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 1 }));
   await page.keyboard.press('Escape');
 
   // ---------- Yenileme ----------
@@ -1573,6 +1834,151 @@ const findTile = (page, kind) =>
   });
   await page.waitForFunction(() => document.querySelector('.gameover') === null, null, { timeout: 5000 }).catch(() => null);
 
+  // Zafer: ekran insin, "devam" serbest oyuna döndürsün.
+  await page.evaluate(() => {
+    const s = window.__capital.getState();
+    s.victory = { day: s.time.day, kind: 'tycoon' };
+    window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+  });
+  const victoryShown = await page
+    .waitForFunction(() => document.querySelector('.gameover.victory') !== null, null, { timeout: 5000 })
+    .then(() => true)
+    .catch(() => false);
+  check('Zafer ekranı iniyor', victoryShown);
+  if (victoryShown) {
+    await page.locator('.gameover.victory button:has-text("Serbest oyuna devam")').click();
+    await page.waitForTimeout(300);
+    const resumed = await page.evaluate(() => {
+      const s = window.__capital.getState();
+      return { gone: document.querySelector('.gameover.victory') === null, dismissed: s.victory?.dismissed === true, speed: s.time.speed };
+    });
+    check('Zaferden sonra serbest oyun sürüyor', resumed.gone && resumed.dismissed && resumed.speed === 1,
+      `ekran ${resumed.gone ? 'kapandı' : 'açık'} · hız ${resumed.speed}`);
+  }
+  await page.evaluate(() => {
+    // Silmek yerine "görüldü": koşul hâlâ sağlanıyor, silinse ertesi gün
+    // yeniden ilan edilirdi.
+    window.__capital.getState().victory.dismissed = true;
+    window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+  });
+
+  // ---------- Tohum Ligi ----------
+  //
+  // Ayrı bir bağlamda: lig yeni oyun ekranından başlıyor ve ana sayfanın
+  // kayıtlarına dokunmamalı. Koşu GERÇEK — 360 gün motorun kendi gün
+  // adımıyla koşturuluyor (arayüzün hızıyla üç dakika sürerdi), komutlar
+  // arayüzden veriliyor, doğrulama tarayıcıda baştan tekrar oynuyor.
+  section('Tohum Ligi');
+  {
+    const leagueContext = await browser.newContext({ viewport: { width: 1280, height: 860 } });
+    const lp = await leagueContext.newPage();
+    const leagueErrors = [];
+    lp.on('pageerror', (e) => leagueErrors.push(e.message));
+    lp.on('console', (m) => { if (m.type() === 'error') leagueErrors.push(m.text()); });
+    await lp.goto('http://127.0.0.1:8811/');
+    await lp.waitForSelector('.newgame', { timeout: 20000 });
+    await lp.locator('.mode-picker [data-mode="league"]').click();
+    check('Kurulumda Tohum Ligi seçilebiliyor', (await lp.locator('.mode-picker [data-mode="league"][aria-checked="true"]').count()) === 1,
+      ((await lp.locator('.mode-picker [data-mode="league"]').textContent()) ?? '').trim());
+    check('Ligde zorluk seçimi kalkıyor', (await lp.locator('.difficulty-option[data-difficulty]').count()) === 0);
+    await lp.fill('.newgame-field input[type="text"]', 'Lig Holding');
+    await lp.locator('button:has-text("Şirketi kur")').click();
+    await lp.waitForSelector('.topbar', { timeout: 20000 });
+    const leagueBoot = await lp.evaluate(() => {
+      const s = window.__capital.getState();
+      return { week: s.league?.weekId, log: s.commandLog?.length ?? -1 };
+    });
+    check('Lig koşusu haftanın kimliğiyle başlıyor', /^\d{4}-W\d{2}$/.test(leagueBoot.week ?? ''), leagueBoot.week);
+    check('Gündemde lig geri sayıyor', (await lp.locator('.agenda [data-agenda="league"]').count()) === 1);
+    const silent = await lp.evaluate(() => window.__capital.audio?.().context ?? 'kanca yok');
+    check('Oyun açılınca dokunuşa kadar ses yok', silent === 'none', `bağlam: ${silent}`);
+
+    // Arayüzden bir hamle: parsel al + dükkân kur → günlüğe düşmeli.
+    const leagueTile = await lp.evaluate(() => {
+      const s = window.__capital.getState();
+      const t = s.map.tiles.find((x) => {
+        const d = s.districts[x.districtId];
+        return x.kind === 'plot' && !x.ownerId && !x.structureId && (d.opensOnDay === undefined || d.opensOnDay <= s.time.day);
+      });
+      window.__capital.engine.dispatch({ type: 'BUY_TILE', tileId: t.id });
+      window.__capital.engine.dispatch({ type: 'BUILD', tileId: t.id, defId: 'corner_shop' });
+      return t.id;
+    });
+    const logged = await lp.evaluate(() => window.__capital.getState().commandLog.length);
+    check('Lig hamleleri günlüğe yazılıyor', logged === 2, `${logged} kayıt (kare ${leagueTile})`);
+
+    const finished = await lp.evaluate(() => {
+      const cap = window.__capital;
+      cap.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+      let guard = 0;
+      while (cap.getState().league.finishedDay === undefined && guard++ < 400) cap.engine.runDay();
+      cap.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+      const l = cap.getState().league;
+      return { day: l.finishedDay, score: l.score, outcome: l.outcome };
+    });
+    check('360. günde lig koşusu bitiyor', finished.day === 360, `${finished.day}. gün · ${finished.outcome} · ${finished.score}`);
+    const resultShown = await lp
+      .waitForFunction(() => document.querySelector('.league-result') !== null, null, { timeout: 5000 })
+      .then(() => true)
+      .catch(() => false);
+    check('Lig sonucu ekranı iniyor', resultShown);
+    if (resultShown) {
+      await lp.locator('.league-result button:has-text("Tabloya")').click();
+      await lp.waitForTimeout(300);
+      await lp.locator('.league-result button:has-text("Tabloyu aç")').click();
+      await lp.waitForSelector('.league-table li', { timeout: 5000 }).catch(() => null);
+      const rows = await lp.locator('.league-table li').count();
+      check('Skor tabloya yazılıyor', rows === 1, `${rows} satır`);
+      if (rows >= 1) {
+        await lp.locator('.league-table li').first().locator('button:has-text("Doğrula")').click();
+        const verdict = await lp
+          .waitForFunction(
+            () => {
+              const text = document.querySelector('.league-table li .league-verdict')?.textContent ?? '';
+              return text.includes('doğrulandı') || text.includes('tutmadı') ? text : null;
+            },
+            null,
+            { timeout: 90000 },
+          )
+          .then((h) => h.jsonValue())
+          .catch(() => 'zaman aşımı');
+        check('Koşu tarayıcıda yeniden oynanıp doğrulanıyor', verdict === 'doğrulandı', verdict);
+      }
+
+      // Sahte kod: skoru şişirilmiş bir koşu tekrarda tutmamalı.
+      const forgedCode = await lp.evaluate(() => {
+        const entries = JSON.parse(localStorage.getItem('capitalforge.league.local') ?? '[]');
+        const code = entries.at(-1)?.code;
+        if (!code) return null;
+        const bytes = Uint8Array.from(atob(code.slice(4)), (c) => c.charCodeAt(0));
+        const run = JSON.parse(new TextDecoder().decode(bytes));
+        run.score += 5_000_000;
+        const out = new TextEncoder().encode(JSON.stringify(run));
+        let binary = '';
+        for (const b of out) binary += String.fromCharCode(b);
+        return 'CF1.' + btoa(binary);
+      });
+      if (forgedCode) {
+        await lp.locator('.league-paste textarea').fill(forgedCode);
+        await lp.locator('.league-paste button:has-text("Tekrar oynat")').click();
+        const forgedVerdict = await lp
+          .waitForFunction(
+            () => {
+              const text = document.querySelector('.league-paste .manual-actions')?.textContent ?? '';
+              return text.includes('doğrulandı') || text.includes('tutmadı') ? text : null;
+            },
+            null,
+            { timeout: 90000 },
+          )
+          .then((h) => h.jsonValue())
+          .catch(() => 'zaman aşımı');
+        check('Şişirilmiş skorlu kod doğrulamadan geçemiyor', forgedVerdict.includes('tutmadı'), forgedVerdict.slice(0, 90));
+      }
+    }
+    check('Lig akışında konsol temiz', leagueErrors.length === 0, leagueErrors.slice(0, 2).join(' | '));
+    await leagueContext.close();
+  }
+
   // ---------- Mobil ----------
   //
   // Bu bölüm eskiden tek satırdı: "dar ekranda yatay taşma yok". O kontrol
@@ -1767,6 +2173,10 @@ const findTile = (page, kind) =>
     // satırlık bir bloğa dönüşmez. Kontrol de tam bunu sınıyor.
     const rich = await m.evaluate(async () => {
       const s = window.__capital.getState();
+      // Bu sondaj yalnızca rakamların genişliğini ölçüyor; 999 milyar ₺
+      // gerçek bir zafer koşulu ve zafer kartı alttaki her şeyi örterdi.
+      // Zafer "görülmüş" sayılıyor ki ekran inmesin.
+      s.victory = { day: s.time.day, kind: 'tycoon', dismissed: true };
       s.companies.player.cash = 999_000_000_000;
       s.companies.player.netWorth = 999_000_000_000;
       s.companies.player.debt = 123_000_000_000;
@@ -2134,14 +2544,7 @@ const findTile = (page, kind) =>
     await mobileContext.close();
   }
 
-  console.log('\n================================');
-  console.log(`TOPLAM: ${pass} geçti, ${fail} kaldı`);
-  if (fail) console.log('Kalanlar:\n - ' + failures.join('\n - '));
-  console.log(`Konsol hataları: ${consoleErrors.length}`);
-
-  await browser.close();
-  server.close();
-  process.exit(fail ? 1 : 0);
+  await finish(browser, consoleErrors);
 })().catch((e) => {
   console.error('TEST ÇÖKTÜ:', e);
   process.exit(2);

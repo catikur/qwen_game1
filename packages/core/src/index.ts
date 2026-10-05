@@ -10,6 +10,9 @@ export * from './shoppers';
 export * from './headquarters';
 export * from './news';
 export * from './engine';
+export * from './agenda';
+export * from './league';
+export { LEAGUE_DAYS, LEAGUE_SAMPLE_DAYS, leagueActive, leagueSeed, leagueWeekId } from './systems/league';
 export {
   tilePrice,
   isPurchasable,
@@ -42,8 +45,12 @@ export {
   TOTAL_SHARES,
 } from './systems/equity';
 export { districtPressure } from './systems/citygrowth';
+export { goalLadder, nextGoal, victoryNetWorth, victoryReached } from './systems/goals';
+export { categoryRevenueRate, interestOf, motionSupport, permitMultiplier } from './systems/council';
+export type { SupportBreakdown } from './systems/council';
+export type { GoalStatus } from './systems/goals';
 export { collectEventModifiers } from './systems/events';
-export { activeContract, contractProgress } from './systems/contracts';
+export { activeContract, contractProgress, OFFER_LIFETIME_DAYS } from './systems/contracts';
 export type { EventModifiers } from './systems/events';
 export {
   distributionRelief,

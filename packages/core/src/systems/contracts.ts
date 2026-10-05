@@ -33,7 +33,7 @@ import type { ContractState, GameState } from '../types';
 const FIRST_OFFER_DAY = 80;
 
 /** Teklifin masada kaldığı süre. */
-const OFFER_LIFETIME_DAYS = 20;
+export const OFFER_LIFETIME_DAYS = 20;
 
 /** İki teklif arasındaki en az gün (kabul edilsin edilmesin). */
 const OFFER_COOLDOWN_DAYS = 30;
@@ -165,6 +165,8 @@ export function runContractTick(state: GameState): void {
     'neutral',
     'Belediyeden sözleşme teklifi',
     `${generated.title} — ödül ${formatShort(generated.reward)}, süre ${generated.durationDays} gün. Teklif ~${OFFER_LIFETIME_DAYS} gün masada.`,
+    // Pay sözleşmesi şehir geneli; yalnızca inşaat sözleşmesinin bir yeri var.
+    generated.kind === 'build' ? { districtId: generated.districtId } : undefined,
   );
 }
 

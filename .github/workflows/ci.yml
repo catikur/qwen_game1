@@ -1,0 +1,79 @@
+# Her PR'da ve main'e her girişte: tipler, birim testleri, denge, paket ve
+# tarayıcıda oynanabilirlik. PR'da duman koşusu (~2 dk), main'de tam koşu.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Tip · test · denge · paket
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Tip denetimi
+        run: pnpm typecheck
+      - name: Birim testleri
+        run: pnpm test
+      - name: Denge simülasyonu
+        run: pnpm balance
+      - name: Paket
+        run: pnpm build
+      - uses: actions/upload-artifact@v5
+        with:
+          name: web-dist
+          path: apps/web/dist
+          retention-days: 3
+
+  playtest:
+    name: Tarayıcıda oynanış
+    needs: check
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          # v5, package.json'daki packageManager alanını görünce pnpm
+          # önbelleğini kendiliğinden açıyor; bu iş bağımlılık kurmuyor ve
+          # pnpm'i hiç kurmadığı için adım "pnpm bulunamadı" diye düşüyordu.
+          package-manager-cache: false
+      - uses: actions/download-artifact@v5
+        with:
+          name: web-dist
+          path: apps/web/dist
+      - name: Playwright ve Chromium
+        run: |
+          npm install -g playwright@1.56.1
+          npx -y playwright@1.56.1 install --with-deps chromium
+          echo "PLAYWRIGHT_MODULE=$(npm root -g)/playwright" >> "$GITHUB_ENV"
+      - name: Oynanış testi
+        env:
+          SHOTS: ${{ runner.temp }}/shots
+        run: |
+          mkdir -p "$SHOTS"
+          node tools/playtest.mjs ${{ github.event_name == 'pull_request' && '--smoke' || '' }}
+      - if: failure()
+        uses: actions/upload-artifact@v5
+        with:
+          name: playtest-shots
+          path: ${{ runner.temp }}/shots
+          retention-days: 7

@@ -454,6 +454,99 @@ gün 700'de 162 yapı · 0,99 · {ev, tarla, blok, hangar, kule}.
    şehir boş parsel tabanının altına inerken yapı dikiyor mu? 700 günde
    sıfır ihlal.
 
+### Tur 17 — Değerlendirme turu: düzeltmeler, iyileştirmeler, üç yenilik · PR #23
+
+Baştan sona değerlendirmenin aksiyon listesi tek turda. En zayıf not
+"uzun vadeli eğlence" (kaybetme vardı, kazanma yoktu; geç oyun
+tenhalaşıyordu), ikincisi "teknik güvence" (sahte yeşil test, CI yok).
+
+**Düzeltmeler.**
+
+- *D1 · Dışa aktarma dürüst.* "İndirildi" yalnızca gerçekten indiyse;
+  yayınlanmış sayfada barındırıcının `downloads` yeteneği, olmazsa pano,
+  o da olmazsa açık bir "engelli" ve her yerde çalışan metinle aktarım.
+- *D2 · `pnpm test` gerçek.* Eski komut var olmayan dosyaları arıyor ve
+  sıfır testle "geçti" diyordu. Koşucu artık her `*.test.ts`'i esbuild
+  ile paketleyip `node --test`'e veriyor; dosya yoksa kırmızı. 68 test:
+  rng sözleşmesi, imar kapısı, basınç tavanı, kademeler, belirlenimcilik,
+  kayıt göçleri, hedefler, gündem, meclis, girişler, lig tekrarı. PR #21
+  ve #22'de botların yakaladığı iki hata testle korunuyor.
+- *D3 · CI.* Her PR'da tip + test + denge + paket ve tarayıcıda duman
+  oynanışı; main'de tam oynanış.
+- *D4 · Rakip zararlı şubeyi kapatıyor.* Ölçüm: oyuncu baskısında 900.
+  günde 21 zararda rakip mağazası, 14'ü 60 gündür kâr görmemiş. 30 günlük
+  kâr eğilimi + 120 gün yaş + bakımın %5'i taban; 180 gün aynı yere aynı
+  tür yok. Süreğen zararlı 14 → 0.
+- *D5 · Test vekili tek kopya* (`test/proxy.ts`), ölü kod silindi. Denge
+  çıktısı bayt bayt aynı.
+
+**İyileştirmeler.**
+
+- *İ1 · Hedef merdiveni ve zafer.* On basamak (ilk dükkândan devralmaya);
+  zafer = zorluğun hedef değeri ve bir numara, ya da bütün rakipleri
+  devralmak. Zafer oyunu duraklatır ama bitirmez.
+- *İ2 · Zorluk.* Rahat / Dengeli / Acımasız — sermaye, rakip cesareti,
+  baskın ısınması ve tavanı, zafer hedefi. Görünmez bonus yok; farklar
+  kurulum ekranında yazılı.
+- *İ3 · Yeni rakip girişi.* Devralmayla boşalan koltuğa 45 gün sonra
+  (önce haber) katalogdan yeni bir kişilik; bir yıl kurucu kilidi.
+- *İ4 · Olay yerine git.* Haberler yer taşıyor; "Git" kamerayı kaydırıp
+  kareyi seçiyor.
+- *İ5 · Gündem şeridi.* `agenda()` kalemleri aciliyetle sıralıyor (baskın,
+  sözleşme, ihale, imar geri sayımı, meclis, lig, olay, dönem, hedef).
+- *İ6 · Hızlı geri bildirim.* `pnpm playtest:smoke` (~2,5 dk), denge
+  bölüm seçimi (`pnpm balance imar`) ve bölüm süreleri; paket three /
+  react / oyun parçalarına bölündü, tek dosya ayrı paketten.
+
+**Yenilikler.**
+
+- *Y1 · Belediye meclisi.* 120. günden itibaren her 90 günde iki önerge
+  (imarı öne çekme, kategori vergisi/teşviki, metro, ruhsat), 20 gün lobi.
+  Destek = meclisin eğilimi (dışsal zar) + √ azalan lobi kayması (±%30).
+  Rakipler çıkarına göre bağış yapıyor, bağışlar kamuya açık, sonuç
+  haberi kimin kaç puan ittiğini yazıyor.
+- *Y2 · Tohum Ligi.* Haftanın şehri herkes için aynı, 360 gün. Komut
+  günlüğü + belirlenimcilik = **skor tekrarla doğrulanıyor**: koşu kodu
+  herhangi bir tarayıcıda baştan oynanıp aynı skoru bulmalı. Tablo
+  yayınlanmış sayfada paylaşılan (`db` + `user`), en iyi koşu hayalet
+  olarak yarışıyor.
+- *Y3 · Ses manzarası.* Dosyasız, tamamen üretilmiş: nüfusla uğultu,
+  binalarla trafik, gece cırcır böcekleri, baskınla gerilim; kasa,
+  inşaat, kötü haber, tokmak. İlk dokunuşa kadar sessiz.
+
+Kalibrasyon (bilgili vekil 5 günde bir, yavaş vekil 15 günde bir ve
+savunmasız; bilgili tohum 1/7/42, yavaş tohum 1/7/42/101/202):
+
+| | bilgili zafer günü | savunmasız yavaş |
+|---|---|---|
+| Rahat | 443–467 | ayakta |
+| Dengeli | 608–779 | 589–835'te düşüyor (5'te 4) |
+| Acımasız | ~900 | 432–548'de düşüyor (5'te 5) |
+
+Dört ölçüm dersi:
+
+1. **Bir sistem başka bir sistemin gizli hatasını açığa çıkarabilir.**
+   Yeni rakip girişi ilk ölçümde oyunu kaybedilemez yaptı (savunmasız
+   oyuncu 5 tohumun 4'ünde ayakta). Girişi zayıflatmak, kilitlemek,
+   sermayesini değiştirmek hiçbir şey değiştirmedi — sebep giriş değil,
+   baskındaydı: üç baskıncı küçük bir rakibin hisselerinin TAMAMINI
+   bölüşüyor, kimse %50'yi geçemiyor ve "başladığı işi bitirir" kuralıyla
+   400 gün aynı hedefe çakılı kalıyordu. Girişler bu kilidi sıklaştırdı.
+   Düzeltme bir satır: hissesi kalmamış şirket hedef değil.
+2. **Aşırı düzeltme de bir ölçüm sonucu.** "Cesur avcı en büyük avı
+   seçer" denemesi savunmasız oyuncuyu 300. günde düşürdü — eğri
+   bozuldu, geri alındı. Önce mekanizmayı bul, sonra düzelt.
+3. **Eşli deneyler her yapısal ayrışma kaynağını kapatmalı.** Meclis
+   açıkken zincir A/B'si +%29'dan +%1'e indi: kollar arasında farklı
+   vergi kararları geçiyordu. Dönemler ve baskınlarla aynı aile; meclis
+   de A/B'de kapalı.
+4. **Bir kontrolü geçirmek için kuralı değil kontrolü düzeltmek bazen
+   doğru, bazen değil.** Vergi lobisi kontrolü 3/4'te kaldı — rakibin
+   nakdi bağışa yetmiyordu (doğru davranış), kontrol "çıkarı VE imkânı
+   olan" diye daraltıldı. Ama sanayi dokusunu yutan ruhsat kolaylığı
+   kontrolün değil kuralın hatasıydı: her rakip lehte olduğu için her
+   çıktığında geçiyordu; %8 / 90 gün ve meclisin isteksizliğiyle düzeldi.
+
 ---
 
 ## 3. Ölçülen durum
@@ -524,8 +617,10 @@ ufuk dersi).
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~570 gün/sn |
-| Denge testi | **216 kontrol, hepsi geçiyor** |
-| Tarayıcı testi | **196 kontrol**, 0 konsol hatası |
+| Birim testi | **68 test** (`pnpm test`) |
+| Denge testi | **233 kontrol, hepsi geçiyor** (13 bölüm, süreleriyle) |
+| Tarayıcı testi | **240+ kontrol**, 0 konsol hatası; duman koşusu 70 |
+| CI | her PR'da tip + test + denge + paket + duman oynanışı |
 | Kapsam | 26 bina · 22 ürün · 7 kategori · 8 rakip profili · 10 şehir yapısı (6 siluet) |
 
 ### Render (Tur 6 sonrası)
@@ -655,16 +750,38 @@ tempolu tavsiyenin kendi ölçüsü `chain-scale-experiment.ts`.
 
 ---
 
+### 4.9 Özgün plandan kalanlar (Tur 17 değerlendirmesi)
+
+Tur 17 meclisle üç eksik kalemi kapattı: **lobicilik/politika** (meclis),
+**vergi** (kategori vergisi ve teşviki, süreli) ve **altyapı** (metro —
+nüfus tavanı ve arsa değeri). Hâlâ açık olanlar:
+
+- **Sendika / işgücü:** ücretler sabit bir tablo; grev, ücret pazarlığı yok.
+- **Kredi ürünleri:** tek bir kredi hattı var; vade, faiz seçimi, tahvil yok.
+- **Halka arz:** hisse alım-satımı ve devralma var, oyuncunun kendi
+  hisse ihracı (sermaye artırımı) yok — kısmi.
+- **Yerelleştirme:** arayüz metinleri bileşenlerin içinde (en az 133 sabit
+  Türkçe dize); "yerelleştirmeye hazır" hedefi karşılanmadı. İlk adım
+  metinleri bir sözlüğe çekmek olur; içerik paketindeki adlar zaten tek yerde.
+- **Lig tablosunun güvenliği:** skorlar tekrarla doğrulanabiliyor ama
+  doğrulama izleyicinin isteğine bağlı (her satırda "Doğrula"); tablo
+  doğrulanmamış skoru da gösteriyor. Sunucu tarafında doğrulama bu
+  mimaride yok — dürüst cümle "herkes doğrulayabilir", "doğrulanmış" değil.
+
 ## 5. Nasıl koşulur
 
 ```bash
-pnpm typecheck     # altı paketin tamamı
-pnpm balance       # denge testi — 178 kontrol, geçti/kaldı
-pnpm bench         # benchmark — sayıların kendisi
-pnpm constraint    # kısıt deneyi — bağlayıcı kısıt hangisi?
-pnpm land          # abonman oranı — geometri varyantları
-pnpm playtest      # tarayıcı testi (build dahil), 187 kontrol
-pnpm dev           # oyunu aç
+pnpm typecheck       # altı paketin tamamı
+pnpm test            # birim testleri — 68 test, test yoksa kırmızı
+pnpm balance         # denge testi — 233 kontrol, geçti/kaldı
+pnpm balance meclis  # yalnızca adında "meclis" geçen bölümler
+pnpm bench           # benchmark — sayıların kendisi
+pnpm constraint      # kısıt deneyi — bağlayıcı kısıt hangisi?
+pnpm land            # abonman oranı — geometri varyantları
+pnpm playtest        # tarayıcı testi (build dahil), tam koşu ~13 dk
+pnpm playtest:smoke  # duman koşusu ~2,5 dk — PR'da CI bunu koşar
+node tools/build-single-file.mjs   # paylaşılan sayfa için tek HTML
+pnpm dev             # oyunu aç
 ```
 
 `balance` bir **sınav**, `bench` bir **termometre**: ilki bir şey

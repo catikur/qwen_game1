@@ -1448,6 +1448,26 @@ export class CityRenderer {
   }
 
   /** Testlerin gün döngüsünü beklemeden istediği saate atlaması için. */
+  /**
+   * Kamerayı bir dünya noktasına kaydırır (kare koordinatı = dünya
+   * koordinatı). Gündem ve haber "oraya git" dediğinde bu çağrılıyor;
+   * çift dokunuşla aynı yumuşak geçiş.
+   */
+  focusWorld(x: number, z: number): void {
+    this.controller.focusOn(x, z);
+  }
+
+  /** Gün ışığı 0..1 — ses manzarası gece katmanını buna göre açıyor. */
+  daylight(): number {
+    const elevation = Math.sin(this.timeOfDay * Math.PI * 2);
+    return Math.max(0, Math.min(1, elevation * 1.6 + 0.35));
+  }
+
+  /** Testler için: kameranın gitmekte olduğu nokta. */
+  cameraTarget(): { x: number; z: number } {
+    return this.controller.targetPoint;
+  }
+
   setTimeOfDay(value: number): void {
     this.timeOfDay = ((value % 1) + 1) % 1;
   }

@@ -1,7 +1,10 @@
+import { useState } from 'react';
 import type { ReactElement } from 'react';
 import { CEO_BY_ID, ERA_BY_ID, EVENTS, NPC_PROFILES } from '@capital/content';
 import {
   LENSES,
+  OFFER_LIFETIME_DAYS,
+  agenda,
   companyRanking,
   contractProgress,
   formatDate,
@@ -11,12 +14,14 @@ import {
 import type { GameSpeed } from '@capital/core';
 import { CeoPortrait } from './CeoPortrait';
 import { AuctionChip } from './AuctionPanel';
+import { ghostValueAt, useGhost } from './LeaguePanel';
 import { useCollapsible } from './collapse';
 import { useGame, useGameState } from './useGame';
+import type { ViewState } from './useGame';
 
 /** Üst bar: oyuncunun her an görmesi gereken beş sayı ve zaman kontrolü. */
 export function TopBar(): ReactElement {
-  const { run, view, setView } = useGame();
+  const { run, view, setView, audio } = useGame();
   const state = useGameState();
   const player = getPlayer(state);
   const ceo = player.ceoId ? CEO_BY_ID[player.ceoId] : undefined;
@@ -106,6 +111,23 @@ export function TopBar(): ReactElement {
             {speed.label}
           </button>
         ))}
+        {/*
+          Ses düğmesi hız grubunda: ikisi de "oyunun akışını" yönetiyor ve
+          dar ekranda üst barda kalan tek grup bu.
+        */}
+        <button
+          type="button"
+          className={audio.muted ? 'speed sound-toggle muted' : 'speed sound-toggle'}
+          onClick={audio.toggle}
+          aria-pressed={!audio.muted}
+          aria-label={audio.muted ? 'Sesi aç' : 'Sesi kapat'}
+          title={audio.muted ? 'Sesi aç' : 'Sesi kapat'}
+        >
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
+            <path d="M4 10v4h3l5 4V6L7 10z" />
+            {audio.muted ? <path d="M16 9l5 6M21 9l-5 6" /> : <path d="M16 9.5a3.5 3.5 0 0 1 0 5M18.5 7a7 7 0 0 1 0 10" />}
+          </svg>
+        </button>
       </div>
 
       <nav className="topbar-actions" aria-label="Paneller">
@@ -157,10 +179,15 @@ export function TopBar(): ReactElement {
  * Etiket tamamen atılmadı: ikon tek başına ne olduğunu söylemiyor.
  * Rıhtım eşit sütunlu bir ızgara olduğu için 320 px'de bile taşmıyor.
  */
-const PANEL_TABS: Array<{ id: 'chain' | 'rivalry' | 'bourse' | 'company' | 'rivals' | 'saves' | 'help'; label: string; title: string }> = [
+const PANEL_TABS: Array<{
+  id: 'chain' | 'rivalry' | 'bourse' | 'council' | 'company' | 'rivals' | 'saves' | 'help';
+  label: string;
+  title: string;
+}> = [
   { id: 'chain', label: 'Zincir', title: 'Tedarik zinciri' },
   { id: 'rivalry', label: 'Rekabet', title: 'Rekabet kartı' },
   { id: 'bourse', label: 'Borsa', title: 'Borsa' },
+  { id: 'council', label: 'Meclis', title: 'Belediye meclisi' },
   { id: 'company', label: 'Şirket', title: 'Şirket' },
   { id: 'rivals', label: 'Rakip', title: 'Rakipler' },
   { id: 'saves', label: 'Kayıt', title: 'Kayıtlar' },
@@ -188,6 +215,13 @@ function PanelIcon({ name }: { name: string }): ReactElement {
       <>
         <path d="M3 16l5-5 4 3 8-8" />
         <path d="M15 6h5v5" />
+      </>
+    ),
+    council: (
+      <>
+        <path d="M3 9.5L12 4l9 5.5" />
+        <path d="M5 10v8M9.5 10v8M14.5 10v8M19 10v8" />
+        <path d="M3 20h18" />
       </>
     ),
     company: (
@@ -547,6 +581,7 @@ export function GameOverScreen({ onNewGame }: { onNewGame: () => void }): ReactE
 
 export function NewsFeed(): ReactElement {
   const state = useGameState();
+  const { focusOn } = useGame();
   const { open, toggle } = useCollapsible();
   const latest = state.news[0];
 
@@ -582,6 +617,23 @@ export function NewsFeed(): ReactElement {
             <div className="news-head">
               <span className="news-tag">{TONE_LABEL[item.tone] ?? 'Haber'}</span>
               <span className="news-day">{item.day}. gün</span>
+              {/*
+                Yeri olan haber bir kapı: "Liman imara açıldı" okunup
+                geçilmesin, bir dokunuşla oraya gidilsin. Yalnızca yeri
+                bilinen haberlerde var — boş bir "Git" yalan söylerdi.
+              */}
+              {(item.tileId !== undefined || item.districtId !== undefined) && (
+                <button
+                  type="button"
+                  className="news-goto"
+                  onClick={() =>
+                    focusOn(item.tileId !== undefined ? { tileId: item.tileId } : { districtId: item.districtId! })
+                  }
+                  title="Olay yerine git"
+                >
+                  Git
+                </button>
+              )}
             </div>
             {/*
              * Yüzü olan haberler farklı dizilir: portre solda, metin
@@ -634,7 +686,7 @@ function ContractChip(): ReactElement | null {
 
   const offer = state.contractOffer;
   if (offer) {
-    const left = Math.max(0, offer.offeredDay + 20 - state.time.day);
+    const left = Math.max(0, offer.offeredDay + OFFER_LIFETIME_DAYS - state.time.day);
     return (
       <span className="event-chip contract-chip" title={`Ödül ${formatMoney(offer.reward)} · cayma ${formatMoney(offer.penalty)} · süre ${offer.durationDays} gün`}>
         <span className="contract-label">Teklif</span>
@@ -662,44 +714,166 @@ function ContractChip(): ReactElement | null {
   );
 }
 
+/**
+ * Gündem şeridi.
+ *
+ * Çekirdeğin `agenda()` listesini aciliyet sırasıyla çiziyor. İhale ve
+ * sözleşme kendi etkileşimli çiplerini taşıyor (teklif ver, kabul et);
+ * diğerleri tıklanınca ilgili paneli açıyor ya da kamerayı olay yerine
+ * götürüyor.
+ *
+ * Dar ekranda ilk üç kalem görünür, kalanı "+N" ile açılır. Şerit iki
+ * satıra taşsaydı haritanın payını yiyordu; yatay kaydırma da yok —
+ * gizli kaydırma keşfedilmeyen bir arayüz (rıhtımın dersi).
+ */
+const AGENDA_VISIBLE_NARROW = 3;
+
 export function ActiveEvents(): ReactElement | null {
   const state = useGameState();
-  const era = state.era ? ERA_BY_ID[state.era.defId] : undefined;
-  // İhale çipi de buraya düşüyor: ikisi de "şu an olan bir şey" ve
-  // ikisi de akışı kesmiyor.
-  if (
-    state.activeEvents.length === 0 &&
-    !state.auction &&
-    !era &&
-    !state.contract &&
-    !state.contractOffer
-  )
-    return null;
+  const { view, setView, focusOn } = useGame();
+  const [expanded, setExpanded] = useState(false);
+  const ghost = useGhost(state);
+  const items = agenda(state);
+  if (items.length === 0) return null;
 
-  return (
-    <div className="active-events">
-      <AuctionChip />
-      {/*
-       * Dönem çipi en solda ve süre YAZMIYOR. Olay çipi geri sayar,
-       * çünkü olay kısa ve "ne zaman bitecek" sorusu taktik. Dönem bir
-       * mevsim: aylarca ekranda duracak bir sayaç gürültü olurdu —
-       * kapanış zaten 20 gün kala haberle bildiriliyor.
-       */}
-      {era && state.era && (
-        <span className={`event-chip era-chip tone-${era.tone}`} title={era.body}>
-          {era.title}
-        </span>
-      )}
-      <ContractChip />
-      {state.activeEvents.map((active) => {
-        const def = EVENTS.find((event) => event.id === active.defId);
-        if (!def) return null;
-        return (
-          <span key={active.defId} className={`event-chip tone-${def.tone}`} title={def.body}>
-            {def.title} · {active.remainingDays} gün
+  const extra = Math.max(0, items.length - AGENDA_VISIBLE_NARROW);
+  const togglePanel = (panel: ViewState['openPanel']) =>
+    setView({ openPanel: view.openPanel === panel ? 'none' : panel });
+
+  let contractDrawn = false;
+  const chips = items.map((item, index) => {
+    const className = index >= AGENDA_VISIBLE_NARROW && !expanded ? 'agenda-extra' : undefined;
+    const days = item.daysLeft !== null ? <span className="agenda-days">{item.daysLeft}g</span> : null;
+    let chip: ReactElement | null = null;
+
+    switch (item.kind) {
+      case 'auction':
+        chip = <AuctionChip />;
+        break;
+      case 'contract':
+      case 'contractOffer':
+        if (contractDrawn) return null;
+        contractDrawn = true;
+        chip = <ContractChip />;
+        break;
+      case 'era':
+        chip = (
+          <span className={`event-chip era-chip tone-${item.tone}`} title={ERA_BY_ID[state.era?.defId ?? '']?.body}>
+            {item.label}
           </span>
         );
-      })}
+        break;
+      case 'event':
+        chip = (
+          <span
+            className={`event-chip tone-${item.tone}`}
+            title={EVENTS.find((e) => `event:${e.id}` === item.key)?.body}
+          >
+            {item.label} · {item.daysLeft} gün
+          </span>
+        );
+        break;
+      case 'raid':
+        chip = (
+          <button
+            type="button"
+            className={`event-chip raid-chip urgency-${item.urgency}`}
+            onClick={() => togglePanel('bourse')}
+            title="Hisse baskını — borsadan geri alım yapabilirsin"
+          >
+            <span className="agenda-label">Baskın</span>
+            {item.label}
+          </button>
+        );
+        break;
+      case 'unlock':
+        chip = (
+          <button
+            type="button"
+            className="event-chip unlock-chip"
+            onClick={() => item.districtId !== undefined && focusOn({ districtId: item.districtId })}
+            title="Bölgeye git"
+          >
+            {item.label}
+            {days}
+          </button>
+        );
+        break;
+      case 'council':
+        chip = (
+          <button
+            type="button"
+            className="event-chip council-chip"
+            onClick={() => togglePanel('council')}
+            title="Belediye meclisi — önergeler ve lobi"
+          >
+            {item.label}
+            {days}
+          </button>
+        );
+        break;
+      case 'league': {
+        // Hayalet: tablodaki en iyi koşu bu gün neredeydi? Fark yeşil/kırmızı.
+        const ghostNow = ghost ? ghostValueAt(ghost, state.time.day) : null;
+        const gap = ghostNow !== null ? getPlayer(state).netWorth - ghostNow : null;
+        chip = (
+          <button
+            type="button"
+            className="event-chip league-chip"
+            onClick={() => togglePanel('league')}
+            title="Tohum Ligi — tablo ve hayalet"
+          >
+            <span className="agenda-label">Lig</span>
+            {days}
+            {gap !== null && (
+              <span className={gap >= 0 ? 'pos' : 'neg'}>
+                {gap >= 0 ? '+' : '−'}
+                {formatMoney(Math.abs(gap))} hayalete
+              </span>
+            )}
+          </button>
+        );
+        break;
+      }
+      case 'goal':
+        chip = (
+          <button
+            type="button"
+            className="event-chip goal-chip"
+            onClick={() => togglePanel('goals')}
+            title="Hedef merdiveni"
+          >
+            <span className="agenda-label">Hedef</span>
+            {item.label}
+            <span className="goal-chip-bar" aria-hidden="true">
+              <span style={{ width: `${Math.round((item.progress ?? 0) * 100)}%` }} />
+            </span>
+            <span className="agenda-days">%{Math.round((item.progress ?? 0) * 100)}</span>
+          </button>
+        );
+        break;
+    }
+    if (!chip) return null;
+    return (
+      <span key={item.key} className={className} data-agenda={item.kind}>
+        {chip}
+      </span>
+    );
+  });
+
+  return (
+    <div className="active-events agenda" aria-label="Gündem">
+      {chips}
+      {extra > 0 && (
+        <button
+          type="button"
+          className="event-chip agenda-more"
+          onClick={() => setExpanded((open) => !open)}
+          aria-expanded={expanded}
+        >
+          {expanded ? 'Daralt' : `+${extra}`}
+        </button>
+      )}
     </div>
   );
 }

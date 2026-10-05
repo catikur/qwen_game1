@@ -1,5 +1,6 @@
 import {
   BUILDING_BY_ID,
+  COUNCIL,
   DISTRICT_ARCHETYPES,
   STRUCTURE_BY_ID,
   getCeoModifiers,
@@ -43,6 +44,7 @@ export function runDistrictUnlockTick(state: GameState): void {
         `İmar planı açıklandı: ${district.name}`,
         `${district.name} bölgesi ${UNLOCK_NOTICE_DAYS} gün sonra imara açılıyor. ` +
           'Arsa şimdilik ucuz — açılış günü koşu başlar.',
+        { districtId: district.id },
       );
     }
 
@@ -52,6 +54,7 @@ export function runDistrictUnlockTick(state: GameState): void {
         'good',
         `${district.name} imara açıldı`,
         'Yeni parseller satışta. Bölge nüfusu hızla büyüyecek — erken giren, talebi rakipsiz karşılar.',
+        { districtId: district.id },
       );
     }
   }
@@ -102,8 +105,12 @@ export function runLandValueTick(state: GameState, eventDrift: number): void {
     const amenityBonus = neighbors > 0 ? (amenity / neighbors) * 0.25 : 0;
     // Nüfus arttıkça taban değer de yükselir.
     const populationFactor = district.population / Math.max(1, archetype.population);
+    // Meclisin metro hattı hedefi kalıcı olarak yükseltiyor; tek seferlik
+    // artış hedefe yazılmasaydı sürüklenme onu birkaç ayda silerdi.
+    const metro = 1 + COUNCIL.infrastructureLandBoost * (district.infrastructure ?? 0);
     const target =
       archetype.baseLandValue *
+      metro *
       (0.7 + 0.55 * developmentRatio + amenityBonus + 0.35 * (populationFactor - 1));
 
     // Hedefe yavaş yaklaş, üstüne olayların sürüklemesini ekle.
@@ -152,7 +159,8 @@ export function runPopulationTick(state: GameState): void {
 
   for (const district of state.districts) {
     const archetype = DISTRICT_ARCHETYPES[district.archetype];
-    const ceiling = archetype.population * 2.6;
+    // Meclisin geçirdiği her metro hattı tavanı büyütür.
+    const ceiling = archetype.population * 2.6 * (1 + COUNCIL.infrastructurePopulationBoost * (district.infrastructure ?? 0));
     if (district.population >= ceiling) continue;
 
     // Yeni açılan bölgeye göç rampası: köy (%32) şehir tabanına ~95

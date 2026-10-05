@@ -4,36 +4,15 @@
 // `pnpm balance` / `pnpm bench` haline getiriyor. esbuild zaten Vite'ın
 // bağımlılığı olarak kurulu, ayrıca bir paket eklemiyoruz.
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdtempSync, readdirSync } from 'node:fs';
+import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { createRequire } from 'node:module';
+import { findEsbuild } from './esbuild-path.mjs';
 
-const entry = process.argv[2];
+const [entry, ...scriptArgs] = process.argv.slice(2);
 if (!entry) {
-  console.error('Kullanım: node tools/run-node-script.mjs <giriş.ts>');
+  console.error('Kullanım: node tools/run-node-script.mjs <giriş.ts> [argümanlar…]');
   process.exit(2);
-}
-
-// esbuild projenin doğrudan bağımlılığı değil, Vite üzerinden geliyor.
-// pnpm onu kök `node_modules`'a bağlamadığı için önce normal çözümlemeyi
-// deniyor, olmazsa mağazadan buluyoruz.
-const require = createRequire(import.meta.url);
-function findEsbuild() {
-  try {
-    return require.resolve('esbuild/bin/esbuild');
-  } catch {
-    /* pnpm mağazasına bak */
-  }
-  const store = new URL('../node_modules/.pnpm/', import.meta.url).pathname;
-  if (!existsSync(store)) return null;
-  const match = readdirSync(store)
-    .filter((name) => name.startsWith('esbuild@'))
-    .sort()
-    .pop();
-  if (!match) return null;
-  const candidate = join(store, match, 'node_modules', 'esbuild', 'bin', 'esbuild');
-  return existsSync(candidate) ? candidate : null;
 }
 
 const esbuild = findEsbuild();
@@ -48,7 +27,7 @@ execFileSync(esbuild, [entry, '--bundle', '--platform=node', '--format=esm', `--
 });
 
 try {
-  execFileSync(process.execPath, [out], { stdio: 'inherit' });
+  execFileSync(process.execPath, [out, ...scriptArgs], { stdio: 'inherit' });
 } catch (error) {
   process.exit(error.status ?? 1);
 }

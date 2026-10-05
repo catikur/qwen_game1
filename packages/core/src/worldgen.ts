@@ -9,10 +9,12 @@ import {
   NPC_PROFILES,
   STRUCTURE_BY_ID,
   getCeoModifiers,
+  getDifficulty,
   rootStructureOf,
 } from '@capital/content';
-import type { CategoryId, DistrictArchetypeId } from '@capital/content';
+import type { CategoryId, DifficultyId, DistrictArchetypeId } from '@capital/content';
 import { createRng, nextRange, pickWeighted } from './rng';
+import { LEAGUE_DAYS, leagueSeed } from './systems/league';
 import { seedSpotPrices, zeroByGood } from './systems/supply';
 import { estimateBaselineDemand, goodShares, zeroByCategory } from './systems/demand';
 import { SCHEMA_VERSION } from './types';
@@ -101,7 +103,7 @@ function brandRecord(value: number): Record<CategoryId, number> {
   return out;
 }
 
-function makeCompany(
+export function makeCompany(
   id: string,
   name: string,
   isPlayer: boolean,
@@ -204,9 +206,25 @@ export interface NewGameOptions {
    * gürültüsü olurdu.
    */
   districtUnlocks?: boolean;
+  /** Zorluk kademesi; varsayılan Dengeli (alan state'e yazılmaz). */
+  difficulty?: DifficultyId;
+  /**
+   * Tohum Ligi koşusu: tohum haftadan türer, zorluk Dengeli'ye sabitlenir
+   * ve oyuncunun komutları günlüğe yazılır. Verilen `seed`/`difficulty`
+   * yok sayılır — herkes aynı şehirde oynamalı.
+   */
+  league?: { weekId: string };
 }
 
-export function createNewGame(options: NewGameOptions = {}): GameState {
+/** Haritanın taşıyabileceği rakip sayısı (parsel / 126, en az 4, katalog tavanı). */
+export function rivalSlotsFor(plotCapacity: number): number {
+  return Math.min(NPC_PROFILES.length, Math.max(4, Math.round(plotCapacity / 126)));
+}
+
+export function createNewGame(input: NewGameOptions = {}): GameState {
+  const options: NewGameOptions = input.league
+    ? { ...input, seed: leagueSeed(input.league.weekId), difficulty: 'normal' }
+    : input;
   const seed = options.seed ?? Math.floor(Math.random() * 2 ** 31);
   const rng = createRng(seed);
   const ceoId = options.ceoId ?? null;
@@ -365,7 +383,7 @@ export function createNewGame(options: NewGameOptions = {}): GameState {
     options.companyName?.trim() || 'Yeni Girişim',
     true,
     '#4cc9f0',
-    Math.round(STARTING_CASH * ceo.startingCash),
+    Math.round(STARTING_CASH * ceo.startingCash * getDifficulty(options.difficulty).startingCashMultiplier),
     null,
     ceoId,
     ceo.startingBrand,
@@ -387,11 +405,7 @@ export function createNewGame(options: NewGameOptions = {}): GameState {
    * 5×5 (1377 parsel) → 8, listenin tavanı.
    */
   const plotCapacity = tiles.filter((tile) => tile.kind === 'plot').length;
-  const scaledNpcCount = Math.max(4, Math.round(plotCapacity / 126));
-  const npcCount = Math.min(
-    options.npcCount ?? scaledNpcCount,
-    NPC_PROFILES.length,
-  );
+  const npcCount = Math.min(options.npcCount ?? rivalSlotsFor(plotCapacity), NPC_PROFILES.length);
   for (let i = 0; i < npcCount; i++) {
     const profile = NPC_PROFILES[i]!;
     companies[profile.id] = makeCompany(
@@ -434,6 +448,7 @@ export function createNewGame(options: NewGameOptions = {}): GameState {
       },
     ],
     nextId: 2,
+    newsSeq: 1,
     flags: {
       npcCompetition: true,
       randomEvents: true,
@@ -442,5 +457,17 @@ export function createNewGame(options: NewGameOptions = {}): GameState {
       landAuctions: true,
     },
     auction: null,
+    // Sahneye çıkmış her rakip — devralınıp silinse bile adı tekrar
+    // kullanılmasın diye (yeni rakip girişi buradan seçiyor).
+    rivalHistory: Object.keys(companies).filter((id) => id !== PLAYER_COMPANY_ID),
+    rivalSlots: npcCount,
+    ...(options.league
+      ? {
+          league: { weekId: options.league.weekId, endDay: LEAGUE_DAYS, curve: [Math.round(companies[PLAYER_COMPANY_ID]!.cash)] },
+          commandLog: [],
+        }
+      : {}),
+    // Dengeli kayıt alanı taşımaz: yokluğu zaten Dengeli demek.
+    ...(options.difficulty && options.difficulty !== 'normal' ? { difficulty: options.difficulty } : {}),
   };
 }
