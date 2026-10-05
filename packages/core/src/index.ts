@@ -48,6 +48,32 @@ export { districtPressure } from './systems/citygrowth';
 export { goalLadder, nextGoal, victoryNetWorth, victoryReached } from './systems/goals';
 export { categoryRevenueRate, interestOf, motionSupport, permitMultiplier } from './systems/council';
 export type { SupportBreakdown } from './systems/council';
+export {
+  compromiseOdds,
+  laborEnabled,
+  serviceFactor,
+  strikeFactor,
+  strikeOdds,
+  wageFor,
+  workforce,
+  WAGE_PER_JOB,
+} from './systems/labor';
+export {
+  annuityPayment,
+  creditEnabled,
+  dailyInterest,
+  grossAssets,
+  isPledged,
+  loanQuote,
+  loanRate,
+  loansOf,
+  overdraftLimit,
+  overdraftOf,
+  overdraftRate,
+  pledgedTiles,
+  ratingOf,
+} from './systems/credit';
+export type { LoanQuote } from './systems/credit';
 export type { GoalStatus } from './systems/goals';
 export { collectEventModifiers } from './systems/events';
 export { activeContract, contractProgress, OFFER_LIFETIME_DAYS } from './systems/contracts';

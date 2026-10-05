@@ -16,6 +16,7 @@ import { nextFloat } from '../rng';
 import { estimateInvestment } from './market';
 import { isDistrictOpen, tilePrice } from './city';
 import { buyShares, freeFloat, sharePrice, sharesHeld, TOTAL_SHARES } from './equity';
+import { npcBorrow } from './credit';
 import type { BuildingInstance, CompanyState, GameState } from '../types';
 
 /**
@@ -459,6 +460,8 @@ function actFor(state: GameState, profile: NpcProfileDef): void {
   // Önce kanayan yara: kapatma haftanın hamlesini harcamıyor — kapanan
   // şubenin nakdi aynı hafta daha iyi bir yere gidebilir.
   tryPruneMove(state, profile);
+  // Borç doktrini bütçeden ÖNCE: çekilen kredi bu haftanın yatırımına girsin.
+  npcBorrow(state, profile);
 
   // Zorluk rakibin cesaretini ölçekliyor, nakdini değil: tavan nakdin
   // tamamı — rakip olmayan parayı harcamaz.

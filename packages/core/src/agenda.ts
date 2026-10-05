@@ -1,7 +1,10 @@
-import { ERA_BY_ID, EVENTS } from '@capital/content';
+import { CREDIT, ERA_BY_ID, EVENTS } from '@capital/content';
 import { nextGoal } from './systems/goals';
 import { OFFER_LIFETIME_DAYS, contractProgress } from './systems/contracts';
 import { sharesHeld, TOTAL_SHARES } from './systems/equity';
+import { creditEnabled, overdraftLimit, overdraftOf } from './systems/credit';
+import { laborEnabled } from './systems/labor';
+import { formatMoney } from './selectors';
 import type { GameState } from './types';
 
 /**
@@ -18,6 +21,8 @@ import type { GameState } from './types';
  */
 export type AgendaKind =
   | 'raid'
+  | 'bank'
+  | 'union'
   | 'contractOffer'
   | 'contract'
   | 'auction'
@@ -73,6 +78,66 @@ export function agenda(state: GameState): AgendaItem[] {
         urgency: fraction >= 0.4 ? 3 : fraction >= 0.25 ? 2 : 1,
         daysLeft: null,
         label: `${state.companies[raider]!.name} payında %${Math.round(fraction * 100)}`,
+        tone: 'bad',
+      });
+    }
+  }
+
+  // Sendika: masadaki talep, süren grev, dolmak üzere olan baskı.
+  const labor = player?.labor;
+  if (player && labor && laborEnabled(state)) {
+    if (labor.strike) {
+      items.push({
+        kind: 'union',
+        key: 'union:strike',
+        urgency: 2,
+        daysLeft: Math.max(0, labor.strike.endsOnDay - day + 1),
+        label: 'Grev',
+        tone: 'bad',
+      });
+    } else if (labor.demand) {
+      const left = Math.max(0, labor.demand.deadlineDay - day);
+      items.push({
+        kind: 'union',
+        key: 'union:demand',
+        urgency: left <= 3 ? 3 : 2,
+        daysLeft: left,
+        label: `Sendika %${String(Math.round(labor.demand.raise * 1000) / 10).replace('.', ',')} zam istiyor`,
+        tone: 'bad',
+      });
+    } else if (labor.pressure >= 0.75) {
+      items.push({
+        kind: 'union',
+        key: 'union:pressure',
+        urgency: 1,
+        daysLeft: null,
+        label: 'Sendika baskısı',
+        tone: 'neutral',
+        progress: labor.pressure,
+      });
+    }
+  }
+
+  // Banka: ihtar (acil) ya da kullanılan kredili hesap (dikkat).
+  if (player && creditEnabled(state)) {
+    const arrears = player.credit?.arrearsDays ?? 0;
+    const overdraft = overdraftOf(player);
+    if (arrears > 0) {
+      items.push({
+        kind: 'bank',
+        key: 'bank:arrears',
+        urgency: 3,
+        daysLeft: Math.max(0, CREDIT.graceDays - arrears + 1),
+        label: `Banka ihtarı · ${formatMoney(overdraft)} / ${formatMoney(overdraftLimit(player))}`,
+        tone: 'bad',
+      });
+    } else if (overdraft > 0) {
+      items.push({
+        kind: 'bank',
+        key: 'bank:overdraft',
+        urgency: 1,
+        daysLeft: null,
+        label: `Kredili hesap ${formatMoney(overdraft)}`,
         tone: 'bad',
       });
     }

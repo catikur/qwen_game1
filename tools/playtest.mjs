@@ -691,6 +691,96 @@ async function finish(browser, consoleErrors) {
     JSON.stringify(mutedNow));
   await page.locator('.sound-toggle').click();
 
+  // ---------- Banka ve işgücü ----------
+  //
+  // Tur 18: kredi formu, erken kapatma, sendika talebi ve ihtar çipi.
+  // Kurulumlar state'e elle yazılıyor ve bir komutla dinleyici uyarılıyor;
+  // bölüm sonunda her şey temizleniyor ki sonraki ölçümler (müşteri akışı,
+  // kayıt) grevden ya da faizden etkilenmesin.
+  section('Banka ve işgücü');
+  await page.evaluate(() => window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 }));
+  await page.locator('.topbar-actions [data-panel="company"]').click();
+  await page.waitForTimeout(250);
+  check('Şirket panelinde banka ve işgücü bölümleri var',
+    (await page.locator('.company .bank').count()) === 1 && (await page.locator('.company .labor').count()) === 1);
+  const ratingText = ((await page.locator('.bank-rating').textContent().catch(() => '')) ?? '').trim();
+  check('Kredi notu görünüyor', /^[ABCD]$/.test(ratingText), ratingText);
+  const loanBefore = await page.evaluate(() => {
+    const p = window.__capital.getState().companies.player;
+    return { cash: p.cash, debt: p.debt };
+  });
+  await page.locator('.bank-form button.primary').click();
+  await page.waitForTimeout(250);
+  const loanAfter = await page.evaluate(() => {
+    const p = window.__capital.getState().companies.player;
+    return { cash: p.cash, debt: p.debt, loans: p.credit?.loans.length ?? 0, rows: document.querySelectorAll('.bank-loans tbody tr').length };
+  });
+  check('Kredi formu nakdi ve borcu birlikte artırıyor',
+    loanAfter.loans === 1 && Math.round(loanAfter.cash - loanBefore.cash) === Math.round(loanAfter.debt - loanBefore.debt) && loanAfter.debt > loanBefore.debt,
+    `+${Math.round(loanAfter.cash - loanBefore.cash)} ₺ · ${loanAfter.rows} satır`);
+  const reapply = ((await page.locator('.bank-form').textContent().catch(() => '')) ?? '');
+  check('Yeni başvuru soğumada', reapply.includes('bekle'), reapply.slice(-60).trim());
+  await page.locator('.bank-loans tbody tr button').first().click();
+  await page.waitForTimeout(200);
+  check('Kredi erken kapatılıyor',
+    await page.evaluate(() => (window.__capital.getState().companies.player.credit?.loans.length ?? 0) === 0 && document.querySelectorAll('.bank-loans').length === 0));
+
+  await page.locator('.labor-policy button:has-text("Yüksek")').click();
+  await page.waitForTimeout(150);
+  const policy = await page.evaluate(() => ({
+    stored: window.__capital.getState().companies.player.labor?.policy,
+    pressed: document.querySelector('.labor .labor-policy button[aria-pressed="true"]')?.textContent,
+    lockedOthers: [...document.querySelectorAll('.labor .labor-policy button')].filter((b) => b.disabled).length,
+  }));
+  check('Ücret politikası seçiliyor, diğerleri soğumada kilitli', policy.stored === 'high' && policy.pressed === 'Yüksek' && policy.lockedOthers === 2,
+    JSON.stringify(policy));
+  await page.keyboard.press('Escape');
+
+  await page.evaluate(() => {
+    const s = window.__capital.getState();
+    const p = s.companies.player;
+    p.labor = { policy: 'market', pressure: 1, agreement: 1, demand: { raise: 0.08, offeredDay: s.time.day, deadlineDay: s.time.day + 2 } };
+    window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+  });
+  await page.waitForFunction(() => document.querySelector('.agenda [data-agenda="union"] button') !== null, null, { timeout: 5000 }).catch(() => null);
+  const unionFirst = await page.evaluate(() => document.querySelector('.agenda [data-agenda]')?.getAttribute('data-agenda'));
+  check('Süresi dolan sendika talebi gündemin başında', unionFirst === 'union', `ilk kalem: ${unionFirst}`);
+  await page.locator('.agenda [data-agenda="union"] button').click();
+  await page.waitForTimeout(250);
+  check('Sendika çipi talep kartını açıyor', (await page.locator('.labor-demand .labor-choices button').count()) === 3);
+  await page.locator('.labor-demand button:has-text("Uzlaşma")').click();
+  await page.waitForTimeout(200);
+  const unionSettled = await page.evaluate(() => {
+    const l = window.__capital.getState().companies.player.labor;
+    return { demand: !!l.demand, response: l.lastResponse?.kind, card: document.querySelectorAll('.labor-demand').length };
+  });
+  check('Uzlaşma cevabı talebi kapatıyor', !unionSettled.demand && unionSettled.response === 'compromise' && unionSettled.card === 0, JSON.stringify(unionSettled));
+  await page.keyboard.press('Escape');
+
+  await page.evaluate(() => {
+    const s = window.__capital.getState();
+    const p = s.companies.player;
+    p.credit = { loans: [], rating: 'C', overdraftDays: 30, arrearsDays: 4 };
+    p.debt = 5_000_000_000;
+    window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+  });
+  await page.waitForFunction(() => document.querySelector('.agenda [data-agenda="bank"]') !== null, null, { timeout: 5000 }).catch(() => null);
+  const bankChip = await page.evaluate(() => ({
+    first: document.querySelector('.agenda [data-agenda]')?.getAttribute('data-agenda'),
+    text: document.querySelector('.agenda [data-agenda="bank"]')?.textContent ?? '',
+  }));
+  check('Banka ihtarı acil kalem olarak gündemde', bankChip.first === 'bank' || bankChip.first === 'union', `${bankChip.first} · ${bankChip.text.trim()}`);
+
+  // Temizlik: sonraki bölümler kredisiz, sendikasız, piyasa ücretiyle.
+  await page.evaluate(() => {
+    const p = window.__capital.getState().companies.player;
+    delete p.credit;
+    p.debt = 0;
+    p.labor = { policy: 'market', pressure: 0, agreement: 1 };
+    window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+  });
+  check('Banka ve işgücü konsolu kirletmiyor', consoleErrors.length === 0, consoleErrors.slice(0, 2).join(' | '));
+
   if (SMOKE) {
     await finish(browser, consoleErrors);
     return;

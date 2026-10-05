@@ -8,6 +8,7 @@ import { defaultShelf } from './systems/demand';
 import { defaultFocus } from './systems/focus';
 import { LAND_SELL_RATIO, tilePrice } from './systems/city';
 import { permitMultiplier } from './systems/council';
+import { isPledged } from './systems/credit';
 import type { CommandResult, GameState } from './types';
 
 /**
@@ -168,6 +169,7 @@ export function sellTile(state: GameState, companyId: string, tileId: number): C
   if (!tile) return { ok: false, reason: 'Arsa bulunamadı.' };
   if (tile.ownerId !== companyId) return { ok: false, reason: 'Bu arsa sizin değil.' };
   if (tile.buildingId) return { ok: false, reason: 'Önce üzerindeki binayı yıkın.' };
+  if (isPledged(state, tileId)) return { ok: false, reason: 'Bu arsa kredi teminatında; önce krediyi kapat.' };
 
   const company = state.companies[companyId];
   if (!company) return { ok: false, reason: 'Bilinmeyen şirket.' };

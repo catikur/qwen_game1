@@ -3129,6 +3129,29 @@ button.icon {
   color: var(--on-accent);
 }
 
+.union-chip.tone-bad,
+.bank-chip {
+  border-color: var(--bad);
+}
+
+.union-chip.tone-bad .agenda-label,
+.bank-chip .agenda-label {
+  color: var(--bad);
+}
+
+.union-chip.urgency-3,
+.bank-chip.urgency-3 {
+  background: var(--bad);
+  color: var(--on-accent);
+}
+
+.union-chip.urgency-3 .agenda-label,
+.union-chip.urgency-3 .agenda-days,
+.bank-chip.urgency-3 .agenda-label,
+.bank-chip.urgency-3 .agenda-days {
+  color: var(--on-accent);
+}
+
 .unlock-chip {
   border-color: rgba(15, 122, 69, 0.45);
 }
@@ -3504,4 +3527,206 @@ button.icon {
 
 .sound-toggle.muted {
   color: var(--muted);
+}
+
+/* --- şirket paneli: işgücü ve banka --- */
+.labor,
+.bank {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+  margin-top: 6px;
+}
+
+.labor h3,
+.bank h3 {
+  margin: 0;
+  font-size: 12.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.labor p,
+.bank p {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.labor-policy {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.labor-policy button {
+  padding: 5px 10px;
+  font-size: 12px;
+}
+
+.labor-policy button[aria-pressed='true'] {
+  border-color: var(--brass);
+  color: var(--brass);
+  font-weight: 600;
+}
+
+.labor-pressure {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 12px;
+}
+
+.labor-meter {
+  position: relative;
+  height: 8px;
+  background: var(--tint-3);
+}
+
+.labor-meter span {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: var(--brass);
+}
+
+.labor-meter span.hot {
+  background: var(--warn);
+}
+
+.labor-demand {
+  border: 1px solid var(--bad);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.labor-demand header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.labor-demand header .agenda-days {
+  margin-left: auto;
+}
+
+.labor-choices {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+  gap: 6px;
+}
+
+.labor-choices button {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 7px 9px;
+  text-align: left;
+}
+
+.labor-choice-title {
+  font-weight: 600;
+}
+
+.labor-choices .muted {
+  font-size: 11px;
+}
+
+.labor-strike,
+.bank-warning {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.bank-head {
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+}
+
+.bank-head .statgrid {
+  flex: 1;
+}
+
+.bank-rating {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 46px;
+  font-family: var(--font-mono);
+  font-size: 22px;
+  font-weight: 700;
+  border: 2px solid currentColor;
+}
+
+.bank-rating.rating-A {
+  color: var(--good);
+}
+.bank-rating.rating-B {
+  color: var(--brass);
+}
+.bank-rating.rating-C {
+  color: var(--warn);
+}
+.bank-rating.rating-D {
+  color: var(--bad);
+}
+
+.bank-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  background: var(--tint-1);
+}
+
+.bank-form .primary {
+  align-self: flex-start;
+}
+
+.bank-amount {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+.bank-amount input {
+  width: 100%;
+  accent-color: var(--brass);
+}
+
+.bank-terms {
+  font-variant-numeric: tabular-nums;
+}
+
+.table-scroll {
+  overflow-x: auto;
+}
+
+.bank-loans td {
+  white-space: nowrap;
+}
+
+.bank-loans td button {
+  padding: 3px 8px;
+  font-size: 11px;
+}
+
+.stat-value.neg {
+  color: var(--bad);
+}
+
+.stat-value .muted {
+  font-weight: 400;
+  font-size: 11px;
 }

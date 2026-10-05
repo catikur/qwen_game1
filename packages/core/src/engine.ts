@@ -8,6 +8,8 @@ import { runGoalTick } from './systems/goals';
 import { runEntrantTick } from './systems/entrants';
 import { isLoggable, leagueActive, runLeagueTick } from './systems/league';
 import { lobby, runCouncilTick } from './systems/council';
+import { respondUnion, runLaborTick, setWagePolicy } from './systems/labor';
+import { repayLoan, runCreditTick, takeLoan } from './systems/credit';
 import { resetDailyLedgers, runProductionTick, runProfitTrendTick, runSpotPriceTick } from './systems/supply';
 import {
   recomputeNetWorth,
@@ -29,9 +31,6 @@ type Listener = () => void;
 
 /** Bir karede en fazla kaç gün işlenir — sekme arka plandan dönünce donmasın. */
 const MAX_TICKS_PER_FRAME = 4;
-/** Nakit eksiye düşerse otomatik kredi limitine bu orandan faiz işler. */
-const CREDIT_LINE_LIMIT_RATIO = 0.6;
-
 const MILESTONES = [500_000, 1_000_000, 5_000_000, 25_000_000];
 
 /**
@@ -243,6 +242,18 @@ export class GameEngine {
       case 'LOBBY':
         return lobby(state, playerId, command.motionId, command.side, command.amount);
 
+      case 'SET_WAGE_POLICY':
+        return setWagePolicy(state, playerId, command.policy);
+
+      case 'RESPOND_UNION':
+        return respondUnion(state, playerId, command.response);
+
+      case 'TAKE_LOAN':
+        return takeLoan(state, playerId, command.kind, command.amount, command.termDays);
+
+      case 'REPAY_LOAN':
+        return repayLoan(state, playerId, command.loanId);
+
       case 'DISMISS_VICTORY':
         if (!state.victory) return { ok: false, reason: 'Henüz bir zafer yok.' };
         state.victory.dismissed = true;
@@ -301,6 +312,9 @@ export class GameEngine {
     // aynı gün üretilen teklif güncel takvimi görsün.
     runCouncilTick(state);
     runContractTick(state);
+    // İşgücü defterler sıfırlanmadan ÖNCE: talep dünkü kâr marjını okur,
+    // bugünkü ücret ve grev de bugünkü defterin ilk satırına girsin.
+    runLaborTick(state);
     resetDailyLedgers(state);
     // Ar-Ge primi pazardan ÖNCE ilerler: bugünkü kalite bugünkü satışa
     // girsin. Spot fiyatın tersi (o günün sonunda çözülüyor) çünkü orada
@@ -332,7 +346,8 @@ export class GameEngine {
     runTakeoverTick(state, (title, body) => pushNews(state, 'rival', title, body));
     // Boşalan koltuk: devralma sonrası kadro eksikse yeni rakip girer.
     runEntrantTick(state);
-    this.settleCredit();
+    // Banka: taksit, kredili hesap, not, haciz.
+    runCreditTick(state);
     recomputeNetWorth(state);
     this.checkMilestones();
     runGoalTick(state);
@@ -466,30 +481,6 @@ export class GameEngine {
       `${mine.rank}. sıradasın.${next}`,
       passed?.company.id,
     );
-  }
-
-  /** Nakit eksiye düşerse otomatik kredi devreye girer; oyun sert bitmez. */
-  private settleCredit(): void {
-    for (const company of Object.values(this.state.companies)) {
-      if (company.cash >= 0) continue;
-
-      const shortfall = -company.cash;
-      company.debt += shortfall;
-      company.cash = 0;
-
-      if (company.isPlayer) {
-        const assets = company.netWorth + company.debt;
-        const limit = Math.max(200_000, assets * CREDIT_LINE_LIMIT_RATIO);
-        if (company.debt > limit) {
-          pushNews(
-            this.state,
-            'bad',
-            'Kredi limiti aşıldı',
-            'Borcun varlıklarını taşıyamıyor. Zarar eden binaları kapatmayı veya arsa satmayı düşün.',
-          );
-        }
-      }
-    }
   }
 
   private checkMilestones(): void {

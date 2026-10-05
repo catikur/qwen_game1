@@ -36,6 +36,7 @@ import { MarketPanel } from './MarketPanel';
 import { GoalsPanel } from './GoalsPanel';
 import { CouncilPanel } from './CouncilPanel';
 import { LeaguePanel } from './LeaguePanel';
+import { BankSection, WorkforceSection } from './CompanyFinance';
 import { useGame, useGameState } from './useGame';
 
 /* ------------------------------------------------------------------ yapı */
@@ -816,6 +817,9 @@ function CompanyPanel(): ReactElement {
 
       <Sparkline values={history} />
 
+      <BankSection />
+      <WorkforceSection />
+
       <h3>Sektör kırılımı</h3>
       {rows.length === 0 ? (
         <p className="muted">Henüz işletmen yok.</p>
@@ -1067,6 +1071,15 @@ function HelpPanel(): ReactElement {
         <li>
           <strong>Fiyatı oyuna bırak ya da devral.</strong> Varsayılan otomatik fiyat makul oynar;
           fiyat savaşı açmak istersen kontrolü sen alırsın.
+        </li>
+        <li>
+          <strong>Banka bir hızlandırıcı.</strong> Kredi erken büyümeyi öne çeker ama taksit
+          ciroya bakmaz; kasa eksiye düşerse pahalı kredili hesap devreye girer, limit aşılırsa
+          haciz gelir. Şirket panelinden.
+        </li>
+        <li>
+          <strong>Çalışanlarının sesi var.</strong> Kalabalık şirkette sendika baskısı birikir ve
+          zam talebi gelir: kabul et, uzlaş ya da reddet — ret grev getirebilir.
         </li>
       </ol>
       <p className="muted">

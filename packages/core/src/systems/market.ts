@@ -7,6 +7,7 @@ import {
   getCeoModifiers,
 } from '@capital/content';
 import { categoryRevenueRate, permitMultiplier } from './council';
+import { settleInterest } from './credit';
 import type { CategoryId } from '@capital/content';
 import {
   defaultShelf,
@@ -16,7 +17,7 @@ import {
   zeroByCategory,
 } from './demand';
 import { collectEventModifiers } from './events';
-import { wageFor } from './labor';
+import { buildingStrikeFactor, serviceFactor, wageFor } from './labor';
 import { marketingLeverage } from './focus';
 import { SURPLUS_HAIRCUT, distributionRelief, unitCogsFor } from './supply';
 import type { BuildingInstance, GameState } from '../types';
@@ -496,9 +497,11 @@ export function runMarketTick(state: GameState): void {
         total += pull;
       }
 
+      // Grevde mağaza kapasitesinin yalnızca çalışan kısmı satabilir.
+      const capacity = def.capacity * buildingStrikeFactor(state, building.companyId, def);
       const budget = new Map<number, number>();
       for (const [districtId, pull] of pulls) {
-        budget.set(districtId, def.capacity * (pull / total));
+        budget.set(districtId, capacity * (pull / total));
       }
       budgetByOutlet.set(building.id, budget);
     }
@@ -562,7 +565,8 @@ export function runMarketTick(state: GameState): void {
             candidates.push({
               building,
               price,
-              attractiveness: quality * brand * priceFactor * access,
+              // Ücret politikası mağaza hizmetinde görünür (düşük −%4, yüksek +%4).
+              attractiveness: quality * brand * priceFactor * access * serviceFactor(state, building.companyId),
               capacityLeft,
             });
           }
@@ -763,7 +767,7 @@ export function runMarketTick(state: GameState): void {
       company.brand[categoryId] = Math.max(0.05, Math.min(1, company.brand[categoryId]));
     }
 
-    if (company.debt > 0) company.today.interest = (company.debt * 0.08) / 365;
+    if (company.debt > 0 || company.credit?.feeToday) company.today.interest = settleInterest(state, company);
 
     company.today.profit =
       company.today.revenue -

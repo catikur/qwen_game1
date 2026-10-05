@@ -250,6 +250,12 @@ function absorb(state: GameState, acquirerId: string, targetId: string): void {
   }
   acquirer.cash += target.cash;
   acquirer.debt += target.debt;
+  // Krediler de devralana geçer (teminatları zaten onun parseli oldu);
+  // `debt` toplam olduğu için kredili hesap kendiliğinden doğru kalır.
+  if (target.credit && target.credit.loans.length > 0) {
+    const credit = (acquirer.credit ??= { loans: [], rating: 'A', overdraftDays: 0 });
+    credit.loans.push(...target.credit.loans);
+  }
   acquirer.acquisitions = (acquirer.acquisitions ?? 0) + 1;
 
   // Devralınan şirketin kendi portföyü de devralana geçer.

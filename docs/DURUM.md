@@ -4,7 +4,7 @@
 > `pnpm bench` çıktısından; iddialar `pnpm balance` ve `pnpm playtest`
 > tarafından her koşuda doğrulanıyor.
 >
-> Son güncelleme: şema **v6**, 16 tur tamamlandı.
+> Son güncelleme: şema **v6**, 18 tur tamamlandı.
 
 ---
 
@@ -38,6 +38,8 @@ mantığının dışında; üçüncüsü ise oyunun kendi **tavsiyesindeydi**:
 | Arazi oyunu ilk yılda sönüyordu | **14** | Kademeli imar: köşeler köy başlıyor, 130-520. günlerde açılıyor + kademeli bina silueti |
 | Zincir kartı ölçekte kötü tavsiye veriyordu | **15** | Fırsat maliyeti freni: "ertelendi" durumu — tempo, yasak değil |
 | Şehir gün 0'da bitmiş bir dekordu | **16** | Kasabadan metropole: yayılma, yükselme, kademe atlama + bölgeyi silüetten okutan formlar |
+| Kazanmak yoktu, testler sahte yeşildi | **17** | Hedef merdiveni ve zafer, zorluk, CI, belediye meclisi, Tohum Ligi, ses |
+| Ücret sabit bir satırdı, borç hiç ödenmiyordu | **18** | İşgücü piyasası, ücret politikası, sendika ve grev; banka: kredili hesap, vadeli ve teminatlı kredi, not, muacceliyet, haciz |
 
 ---
 
@@ -547,6 +549,136 @@ Dört ölçüm dersi:
    kontrolün değil kuralın hatasıydı: her rakip lehte olduğu için her
    çıktığında geçiyordu; %8 / 90 gün ve meclisin isteksizliğiyle düzeldi.
 
+### Tur 18 — Sendika ve kredi ürünleri
+
+§4.9'un ilk iki kalemi. Önce ölçüldü (6 koşu, 720 gün):
+
+- **Kimse borçlanmıyordu.** Vekil nakdinin en fazla yarısını harcıyor;
+  240. günde ~2 M ₺ nakitle oturuyor. Krediye anlam veren tek yer erken
+  oyun: ilk 250 bin ₺'yi büyütmek bileşik büyümeyi öne çeker.
+- **Borç hiç geri ödenmiyordu** (hata). Kasa eksiye düşünce fark borca
+  yazılıyor, %8 faiz işliyor, ama kasaya para girse de borç kapanmıyordu.
+- **Ücret giderin %12–15'i** (SMM ~%50, bakım ~%8) ve sabit bir satırdı.
+  Sanayi bölgelerinde iş/nüfus oranı 0,5–0,74'e çıkıyor, bunun bir bedeli
+  yoktu. Oyuncu 360. günde ~2.000, 900. günde ~4.400 kişi çalıştırıyor.
+
+Sonuç: zam tek başına hafif bir etki. Oyunu değiştiren grev ve birikerek
+büyüyen toplu sözleşme. Kredi ise riski olmazsa erken oyunu önemsizleştirir.
+
+**İşgücü.** Ücret tek kapıdan hesaplanıyor (`systems/labor.wageFor`):
+defter, yatırım tahmini ve zincir kartı aynı rakamı görüyor. Üç çarpan
+var:
+
+- *Bölge ücret endeksi.* İş/nüfus oranı 0,25'i geçtikçe ×1,35'e kadar
+  çıkıyor ve 30 günlük ortalamayla yürüyor. Sanayi kümesi pahalı.
+- *Ücret politikası* (şirket geneli, 30 gün soğuma). Düşük: ücret ×0,88,
+  mağaza hizmeti −%4, sendika baskısı ×1,4. Yüksek: ücret ×1,10, hizmet
+  +%4, baskı ×0,5. Yüksek ücretin uzlaşma güveni 90 gün tutulunca işliyor.
+- *Toplu sözleşme* birikimi.
+
+**Sendika.** 150 çalışanın altında sendika yok. Baskı her gün görünür
+biçimde doluyor ve %100'e ulaşınca talep masaya geliyor: %5, artı kâr
+marjına göre %4'e kadar, ±%1 zar. Cevap için 10 gün var; süre dolarsa Ret
+sayılıyor.
+
+- *Kabul:* talep olduğu gibi sözleşmeye giriyor.
+- *Uzlaşma:* talebin yarısı teklif ediliyor. Tutma ihtimali %60; düşük
+  ücret −20 puan, yüksek ücret +15 puan, son bir yıldaki Ret −15 puan.
+- *Ret:* politikaya göre %50–90 grev ihtimali.
+
+Grev 12 gün sürüyor. Mağazalar ve fabrikalar %35 kapasitede çalışıyor,
+ücret de %35 ödeniyor. Grev bitince talebin %60'ı sözleşmeye giriyor.
+Zar dışsal (tohum ^ gün ^ şirket).
+
+Rakipler doktrinle cevap veriyor: fiyat kırıcı düşük ücret + Ret,
+premium ve teknoloji yüksek ücret + Kabul, genişlemeci ve ev sahibi
+piyasa ücreti + Uzlaşma. Rakip grevi yeriyle haber oluyor.
+
+**Banka.**
+
+- *Kredili hesap otomatik.* Kasaya giren para önce onu kapatıyor (hata
+  düzeltmesi, banka ürünleri kapalıyken de). Faizi taban %8 + %10 + not
+  farkı.
+- *Vadeli kredi* 180, 360 ya da 720 gün, sabit günlük taksitle (anüite).
+  %1 dosya masrafı, iki başvuru arasında 30 gün.
+- *Arsa teminatlı kredi* arsa değerinin %60'ına kadar, yarım not farkı
+  −%1,5 faizle. Rehinli arsa satılamıyor.
+- *Not A–D* kaldıraçtan ve son ~90 günün kredili hesap günlerinden
+  hesaplanıyor. Yükselmek için eşiğin %90'ı gerekiyor (histerezis). Not
+  limiti belirliyor: A brüt varlığın %30'u, D'de yeni kredi yok; taban
+  limit 150 bin ₺, sert tavan %45 kaldıraç.
+- *Muacceliyet.* Not D'ye düşerse kalan anapara kredili hesaba geçiyor.
+- *İhtar ve haciz.* Kredili hesap 15 gün limit üstünde kalırsa banka
+  satıyor: önce hisseler, sonra boş arsalar, sonra en çok zarar eden
+  binalar, en son teminat. Not 180 gün D kalıyor.
+- *Rakipler doktrinle borçlanıyor:* genişlemeci vadeli, ev sahibi
+  teminatlı, fiyat kırıcı hiç. Yalnızca A/B notunda ve nakit sıkışıkken
+  borçlanıyorlar, çektikleri kredi haber oluyor.
+
+**Arayüz.** Şirket paneline iki bölüm eklendi:
+
+- *Banka:* not rozeti, kaldıraç, kredili hesap ve limiti, krediler
+  tablosu (erken kapatma), kredi formu. Form türü, vadeyi ve tutarı
+  seçtiriyor; günlük taksiti ve toplam faizi gösteriyor.
+- *İşgücü:* çalışan sayısı, ücret, piyasa ve sözleşme çarpanı,
+  politika seçimi, baskı göstergesi, talep kartı. Kartta her düğmenin
+  yanında sonucu yazıyor: tutma ihtimali, grev ihtimali.
+
+Gündem şeridine sendika talebi, grev ve dolmak üzere olan baskı eklendi,
+banka ihtarı ve kredili hesap da. Süresi dolan talep ve ihtar acil kalem.
+Yardım paneline iki madde eklendi.
+
+Kalibrasyon (vekil 5 günde bir):
+
+| | Değer |
+|---|---|
+| İlk sendika talebi (tohum 1/7) | 404–410. gün |
+| 720 günde sözleşme · ödenen ücret / Tur 17 formülü | ×1,09–1,10 · **×1,04–1,08** |
+| Bölge endeksi en çok | ×1,14–1,16 |
+| Ret kolunda grev · grevde mağaza doluluğu | 24 gün · %35 |
+| Ücret politikası, 720. gün (3 tohum ort.) | Piyasa 101,2 · Yüksek 101,0 · Düşük 97,2 M ₺ |
+| Kredi, aceleci vekil: 180. gün → 720. gün farkı | +%19…51 → **+%3…21** |
+| Fiyat savaşı (90. günden ×0,6), 360. gün | borçlu −304/−363 B ₺, 0 arsa · borçsuz +207/+245 B ₺, 1–3 arsa |
+| Zafer günü Rahat / Dengeli / Acımasız (ort.) | 478 / 704 / 1028 (Tur 17: ~455 / ~690 / ~900) |
+
+İşgücü ve banka birlikte vekilin 720. gün değerini ortalama %3 düşürüyor
+(104,8 → 101,2 M ₺; tohuma göre %0–9). Zafer biraz geç geliyor ama
+kademeler sıralı. Savunmasız yavaş oyuncu Dengeli'de ve Acımasız'da hâlâ
+düşüyor.
+
+Dört ölçüm dersi:
+
+1. **Kontrol kolu olmadan kıyas iki değişkenli kalıyor.** İlk ölçümde
+   limitler gevşekti (A %50, tavan %70). Her beş günde limitin boşluğunu
+   çekip üç kat hızlı harcayan "kaldıraç" vekili normal vekilden %36
+   öndeydi ve rakiplerin toplam değeri yarıya inmişti; kredi baskın
+   strateji gibi görünüyordu. Aynı hızda harcayan borçsuz kontrol kolu
+   tek başına 137,6 M ₺'ye çıktı, farkın büyük kısmı harcama hızıydı.
+   Limitler yine de sıkılaştırıldı ve dosya masrafı ile başvuru soğuması
+   eklendi. Son ölçümde borçlu kol 180. günde %19–51 önde, 720. günde
+   %3–21: kredi tempoyu öne çekiyor, tavanı değil.
+2. **Verimsizlik zarar değil.** Kredinin riskini göstermek için kurulan
+   "kötü yatırımcı" (tahmine bakmadan en pahalı mağaza, rastgele bölge)
+   borçlu ve borçsuz kolu ayıramadı (−%12, +%19, −%16). O vekil zarar
+   etmiyor, yalnızca daha az kazanıyor. Risk ancak nakit akışı eksiye
+   dönünce ortaya çıkıyor. Ama maliyetin altında fiyat savaşında da ilk
+   tasarım iki kolu birlikte sıfırlıyordu, çünkü limitler taksiti küçük
+   tutuyor. Krediye özgü riski muacceliyet maddesi kurdu.
+3. **İki yönlü bir seçenek iki yönde de kaybediyorsa seçim değildir.**
+   Ücret politikasının ilk ayarında (yüksek ×1,15 / hizmet +%3) hem
+   düşük hem yüksek ücret piyasanın gerisindeydi. Piyasa ücreti baskındı.
+   Yüksek ×1,10 / +%4 ile yüksek ücret ortalamada başa baş, tohuma göre
+   ±%5 (gerçek bir takas). Düşük ücret mağaza ağırlıklı vekilde hâlâ %4
+   geride; uzlaşma tutmadığı için grevle ödüyor. Üretim ağırlıklı şirketin
+   seçeneği o.
+4. **Yeni sistem eski kontrollerin özdeşliğini kırar.** "Temettü para
+   yaratmıyor" kontrolü şehir geneli nakit değişimini kârla eşliyordu.
+   Taksitin anaparası kâra girmeden kasadan çıkıyor, kontrol artık
+   *nakit − borç*'a bakıyor. Zincir A/B'si de işgücü ve banka açıkken iki
+   tohumu ölçüm dışına düşürdü: grev kesikli bir şok, rakip haczi farklı
+   bir rakip manzarası kuruyor. Dönemler, baskınlar ve meclisle aynı
+   aile; ikisi de A/B'de kapalı.
+
 ---
 
 ## 3. Ölçülen durum
@@ -617,9 +749,9 @@ ufuk dersi).
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~570 gün/sn |
-| Birim testi | **68 test** (`pnpm test`) |
-| Denge testi | **233 kontrol, hepsi geçiyor** (13 bölüm, süreleriyle) |
-| Tarayıcı testi | **240+ kontrol**, 0 konsol hatası; duman koşusu 70 |
+| Birim testi | **93 test** (`pnpm test`) |
+| Denge testi | **244 kontrol, hepsi geçiyor** (15 bölüm, süreleriyle; ~11 dk) |
+| Tarayıcı testi | **252 kontrol**, 0 konsol hatası; duman koşusu 81 |
 | CI | her PR'da tip + test + denge + paket + duman oynanışı |
 | Kapsam | 26 bina · 22 ürün · 7 kategori · 8 rakip profili · 10 şehir yapısı (6 siluet) |
 
@@ -750,14 +882,17 @@ tempolu tavsiyenin kendi ölçüsü `chain-scale-experiment.ts`.
 
 ---
 
-### 4.9 Özgün plandan kalanlar (Tur 17 değerlendirmesi)
+### 4.9 Özgün plandan kalanlar (Tur 17 değerlendirmesi, Tur 18 güncellemesi)
 
 Tur 17 meclisle üç eksik kalemi kapattı: **lobicilik/politika** (meclis),
 **vergi** (kategori vergisi ve teşviki, süreli) ve **altyapı** (metro —
 nüfus tavanı ve arsa değeri). Hâlâ açık olanlar:
 
-- **Sendika / işgücü:** ücretler sabit bir tablo; grev, ücret pazarlığı yok.
-- **Kredi ürünleri:** tek bir kredi hattı var; vade, faiz seçimi, tahvil yok.
+- ~~**Sendika / işgücü**~~ — Tur 18'de kapandı: işgücü piyasası, ücret
+  politikası, sendika talebi, grev.
+- ~~**Kredi ürünleri**~~ — Tur 18'de kapandı: kredili hesap, vadeli ve
+  teminatlı kredi, not, muacceliyet, haciz. Tahvil (şirketin borç
+  senedi ihracı) yok; halka arzla birlikte düşünülmeli.
 - **Halka arz:** hisse alım-satımı ve devralma var, oyuncunun kendi
   hisse ihracı (sermaye artırımı) yok — kısmi.
 - **Yerelleştirme:** arayüz metinleri bileşenlerin içinde (en az 133 sabit
@@ -772,14 +907,14 @@ nüfus tavanı ve arsa değeri). Hâlâ açık olanlar:
 
 ```bash
 pnpm typecheck       # altı paketin tamamı
-pnpm test            # birim testleri — 68 test, test yoksa kırmızı
-pnpm balance         # denge testi — 233 kontrol, geçti/kaldı
+pnpm test            # birim testleri — 93 test, test yoksa kırmızı
+pnpm balance         # denge testi — 244 kontrol, geçti/kaldı (~11 dk)
 pnpm balance meclis  # yalnızca adında "meclis" geçen bölümler
 pnpm bench           # benchmark — sayıların kendisi
 pnpm constraint      # kısıt deneyi — bağlayıcı kısıt hangisi?
 pnpm land            # abonman oranı — geometri varyantları
-pnpm playtest        # tarayıcı testi (build dahil), tam koşu ~13 dk
-pnpm playtest:smoke  # duman koşusu ~2,5 dk — PR'da CI bunu koşar
+pnpm playtest        # tarayıcı testi (build dahil), tam koşu ~16 dk
+pnpm playtest:smoke  # duman koşusu ~3,5 dk — PR'da CI bunu koşar
 node tools/build-single-file.mjs   # paylaşılan sayfa için tek HTML
 pnpm dev             # oyunu aç
 ```
