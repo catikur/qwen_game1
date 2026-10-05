@@ -786,6 +786,26 @@ export function ActiveEvents(): ReactElement | null {
           </button>
         );
         break;
+      case 'union':
+      case 'bank':
+        chip = (
+          <button
+            type="button"
+            className={`event-chip ${item.kind}-chip urgency-${item.urgency} tone-${item.tone}`}
+            onClick={() => togglePanel('company')}
+            title={item.kind === 'union' ? 'İşgücü — şirket panelinde cevap ver' : 'Banka — şirket panelinde'}
+          >
+            <span className="agenda-label">{item.kind === 'union' ? 'Sendika' : 'Banka'}</span>
+            {item.label}
+            {item.progress !== undefined && (
+              <span className="goal-chip-bar" aria-hidden="true">
+                <span style={{ width: `${Math.round(item.progress * 100)}%` }} />
+              </span>
+            )}
+            {days}
+          </button>
+        );
+        break;
       case 'unlock':
         chip = (
           <button

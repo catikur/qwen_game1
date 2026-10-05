@@ -11,6 +11,7 @@ import { buildCost } from './actions';
 import { isDistrictOpen, tilePrice } from './systems/city';
 import { estimateInvestment } from './systems/market';
 import { distributionRelief } from './systems/supply';
+import { wageFor } from './systems/labor';
 import type { BuildingInstance, GameState } from './types';
 
 /**
@@ -24,8 +25,6 @@ import type { BuildingInstance, GameState } from './types';
  * Bu dosya birincisini ikinciye çevirir. Hesabın tamamı türetilmiştir —
  * state'e hiçbir şey yazmaz.
  */
-
-const WAGE_PER_JOB = 42;
 
 /** Spot fiyat tavana bu kadar yaklaşınca "kriz" sayılır. */
 const CRISIS_THRESHOLD = 1.25;
@@ -215,13 +214,14 @@ function unitDefFor(goodId: string): BuildingDef | undefined {
 /** Yeni bir ünitenin üreteceği birim maliyet: girdi + işletme / kapasite. */
 function projectedUnitCost(
   state: GameState,
+  companyId: string,
   def: BuildingDef,
   districtId: number,
   inputCost: number,
 ): number {
   const district = state.districts[districtId];
   if (!district || def.capacity <= 0) return inputCost;
-  const wages = def.jobs * WAGE_PER_JOB * (0.6 + district.incomeLevel);
+  const wages = wageFor(state, companyId, def.id, districtId);
   return inputCost + (def.upkeepPerDay + wages) / def.capacity;
 }
 
@@ -388,7 +388,7 @@ function bestMove(
     // yükselen oran harmanlanmış maliyeti kendi maliyetine doğru çeker.
     const inputCost = link.inputGoodId ? (company.unitCost[link.inputGoodId] ?? 0) : 0;
     const spot = state.market.spot[link.id] ?? link.basePrice;
-    const newOwnCost = projectedUnitCost(state, def, districtId, inputCost);
+    const newOwnCost = projectedUnitCost(state, companyId, def, districtId, inputCost);
     const newRatio = Math.min(1, (flow.produced + def.capacity) / flow.consumed);
     const newLinkCost = newRatio * newOwnCost + (1 - newRatio) * spot;
 

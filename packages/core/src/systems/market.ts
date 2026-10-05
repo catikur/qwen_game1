@@ -7,6 +7,7 @@ import {
   getCeoModifiers,
 } from '@capital/content';
 import { categoryRevenueRate, permitMultiplier } from './council';
+import { settleInterest } from './credit';
 import type { CategoryId } from '@capital/content';
 import {
   defaultShelf,
@@ -16,6 +17,7 @@ import {
   zeroByCategory,
 } from './demand';
 import { collectEventModifiers } from './events';
+import { buildingStrikeFactor, serviceFactor, wageFor } from './labor';
 import { marketingLeverage } from './focus';
 import { SURPLUS_HAIRCUT, distributionRelief, unitCogsFor } from './supply';
 import type { BuildingInstance, GameState } from '../types';
@@ -40,8 +42,6 @@ import type { BuildingInstance, GameState } from '../types';
  * lensinde renk olarak görünür, dükkânın kâr/zarar satırı da nedenini
  * kalem kalem yazar.
  */
-
-const WAGE_PER_JOB = 42;
 
 /** Komşu district'ten gelen müşteri ağırlığı. */
 const NEIGHBOR_ACCESS = 0.3;
@@ -195,7 +195,7 @@ export function estimateInvestment(
   if (!def || !district || !company) return null;
 
   const category = CATEGORIES[def.category];
-  const wages = def.jobs * WAGE_PER_JOB * (0.6 + district.incomeLevel);
+  const wages = wageFor(state, companyId, defId, districtId);
   const fixedCosts = upkeepFor(state, companyId, defId) + wages;
   // Geri ödeme, oyuncunun gerçekten ödeyeceği maliyete göre hesaplanır.
   const investmentCost = def.cost * getCeoModifiers(company.ceoId).buildCost * permitMultiplier(state);
@@ -497,9 +497,11 @@ export function runMarketTick(state: GameState): void {
         total += pull;
       }
 
+      // Grevde mağaza kapasitesinin yalnızca çalışan kısmı satabilir.
+      const capacity = def.capacity * buildingStrikeFactor(state, building.companyId, def);
       const budget = new Map<number, number>();
       for (const [districtId, pull] of pulls) {
-        budget.set(districtId, def.capacity * (pull / total));
+        budget.set(districtId, capacity * (pull / total));
       }
       budgetByOutlet.set(building.id, budget);
     }
@@ -563,7 +565,8 @@ export function runMarketTick(state: GameState): void {
             candidates.push({
               building,
               price,
-              attractiveness: quality * brand * priceFactor * access,
+              // Ücret politikası mağaza hizmetinde görünür (düşük −%4, yüksek +%4).
+              attractiveness: quality * brand * priceFactor * access * serviceFactor(state, building.companyId),
               capacityLeft,
             });
           }
@@ -764,7 +767,7 @@ export function runMarketTick(state: GameState): void {
       company.brand[categoryId] = Math.max(0.05, Math.min(1, company.brand[categoryId]));
     }
 
-    if (company.debt > 0) company.today.interest = (company.debt * 0.08) / 365;
+    if (company.debt > 0 || company.credit?.feeToday) company.today.interest = settleInterest(state, company);
 
     company.today.profit =
       company.today.revenue -

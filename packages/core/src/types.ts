@@ -1,4 +1,13 @@
-import type { CategoryId, DifficultyId, DistrictArchetypeId, MotionKind } from '@capital/content';
+import type {
+  CategoryId,
+  CreditRating,
+  DifficultyId,
+  DistrictArchetypeId,
+  LoanKind,
+  MotionKind,
+  UnionResponse,
+  WagePolicy,
+} from '@capital/content';
 import type { RngState } from './rng';
 
 /**
@@ -81,6 +90,11 @@ export interface DistrictState {
   outletCount: Record<CategoryId, number>;
   /** Meclisin geçirdiği metro hattı sayısı — nüfus tavanını büyütür. */
   infrastructure?: number;
+  /**
+   * İşgücü piyasası: bölgenin ücret endeksi (1 = gevşek piyasa). İş/nüfus
+   * oranından türeyen hedefe 30 günlük ortalamayla yürür. Yokluğu 1.
+   */
+  wageIndex?: number;
 }
 
 export interface BuildingLedger {
@@ -206,6 +220,81 @@ export interface CompanyState {
   acquisitions?: number;
   /** Kurucu kilidi: bu güne kadar hisseleri başkası alamaz (yeni gelen). */
   lockedUntilDay?: number;
+  /** İşgücü: ücret politikası, sendika baskısı, sözleşme, grev. Yokluğu "piyasa ücreti, sendika sessiz". */
+  labor?: LaborState;
+  /**
+   * Banka ilişkisi: krediler, not, ihtar. Yokluğu "kredisi yok, not A".
+   *
+   * `debt` TOPLAM borç olarak kalıyor (net değer, devralma, arayüz onu
+   * okuyor); kredili hesap bakiyesi `debt − Σ kredi bakiyesi` olarak
+   * türetiliyor. Eski kayıtlarda kredi listesi yok, yani bütün borç
+   * kredili hesap sayılır — şema sürümü sabit.
+   */
+  credit?: CreditState;
+}
+
+export interface LoanState {
+  id: string;
+  kind: LoanKind;
+  principal: number;
+  /** Kalan anapara. */
+  balance: number;
+  /** Yıllık faiz. */
+  rate: number;
+  termDays: number;
+  startDay: number;
+  /** Günlük sabit taksit (anapara + faiz). */
+  payment: number;
+  /** Teminatlı kredide rehinli parseller. */
+  collateral?: number[];
+}
+
+export interface CreditState {
+  loans: LoanState[];
+  rating: CreditRating;
+  /** Son ~90 günde kredili hesapta geçen gün (üstel sayaç). */
+  overdraftDays: number;
+  /** Kredili hesap limit üstünde geçen gün — ihtar süresi. */
+  arrearsDays?: number;
+  /** Son haciz günü (not bir süre D kalır). */
+  lastDefaultDay?: number;
+  defaults?: number;
+  loanSeq?: number;
+  /** Son kredi başvurusunun günü (soğuma). */
+  lastLoanDay?: number;
+  /** Bugün kesilen dosya masrafı — pazar adımı faize ekler, sonra sıfırlanır. */
+  feeToday?: number;
+}
+
+/**
+ * Şirketin işgücü durumu.
+ *
+ * `agreement` imzalanmış toplu sözleşmelerin birikmiş zammı: her kabul
+ * edilen talep onu `(1 + oran)` ile çarpar ve geri dönmez. Zam tek
+ * başına hafif; birikerek büyümesi oyunu değiştiren kısım.
+ */
+export interface LaborState {
+  policy: WagePolicy;
+  /** Politikanın son değiştiği gün (soğuma ve güven buradan sayılır); yokluğu "hiç değişmedi". */
+  policyDay?: number;
+  /** Sendika baskısı 0..1; 1'e ulaşınca talep masaya gelir. */
+  pressure: number;
+  /** Birikmiş toplu sözleşme çarpanı (≥ 1). */
+  agreement: number;
+  /** Masadaki talep. */
+  demand?: UnionDemand;
+  /** Süren grev. */
+  strike?: { startedDay: number; endsOnDay: number; raise: number };
+  /** Son cevap ve günü — sertlik hafızası. */
+  lastResponse?: { kind: UnionResponse; day: number };
+  /** Toplam grev günü (istatistik ve test). */
+  strikeDays?: number;
+}
+
+export interface UnionDemand {
+  raise: number;
+  offeredDay: number;
+  deadlineDay: number;
 }
 
 /**
@@ -309,6 +398,17 @@ export interface FeatureFlags {
   rivalEntry?: boolean;
   /** Belediye meclisi. Aynı sözleşme: yokluğu AÇIK. */
   council?: boolean;
+  /**
+   * İşgücü piyasası, ücret politikası ve sendika. Aynı sözleşme: yokluğu
+   * AÇIK. Kapalıyken ücret Tur 17'deki formüle birebir döner.
+   */
+  labor?: boolean;
+  /**
+   * Banka ürünleri (vadeli kredi, teminat, not, haciz). Aynı sözleşme:
+   * yokluğu AÇIK. Kapalıyken yalnızca eski otomatik kredi hattı çalışır
+   * (%8 faiz) — ama borç artık kasaya para girdikçe kapanıyor.
+   */
+  credit?: boolean;
 }
 
 /**
@@ -513,7 +613,15 @@ export type GameCommand =
   /** Lig sonuç ekranını kapatır. */
   | { type: 'DISMISS_LEAGUE' }
   /** Açık bir meclis önergesine lobi bağışı. */
-  | { type: 'LOBBY'; motionId: string; side: 'for' | 'against'; amount: number };
+  | { type: 'LOBBY'; motionId: string; side: 'for' | 'against'; amount: number }
+  /** Şirket geneli ücret politikası. */
+  | { type: 'SET_WAGE_POLICY'; policy: WagePolicy }
+  /** Masadaki sendika talebine cevap. */
+  | { type: 'RESPOND_UNION'; response: UnionResponse }
+  /** Bankadan kredi: vadeli ya da arsa teminatlı. */
+  | { type: 'TAKE_LOAN'; kind: LoanKind; amount: number; termDays: number }
+  /** Bir krediyi kalan anaparasıyla erken kapatır. */
+  | { type: 'REPAY_LOAN'; loanId: string };
 
 /** Komut reddedildiğinde UI'ye dönen açıklama. */
 export interface CommandResult {

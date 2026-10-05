@@ -6,6 +6,7 @@ import {
   getCeoModifiers,
 } from '@capital/content';
 import { collectEventModifiers } from './events';
+import { buildingStrikeFactor, wageFor } from './labor';
 import type { BuildingInstance, GameState } from '../types';
 
 /**
@@ -29,8 +30,6 @@ import type { BuildingInstance, GameState } from '../types';
  * ekonomisi zincir öncesiyle birebir aynı kalır. Zincir o maliyeti aşağı
  * çeker, tedarik krizi yukarı iter.
  */
-
-const WAGE_PER_JOB = 42;
 
 /** Fazla üretim satarken fiyat kırılır — hacim döken taraf sensin. */
 export const SURPLUS_HAIRCUT = 0.85;
@@ -64,8 +63,15 @@ export function seedSpotPrices(): Record<string, number> {
 function wagesFor(state: GameState, building: BuildingInstance): number {
   const def = BUILDING_BY_ID[building.defId];
   if (!def) return 0;
-  const district = state.districts[building.districtId];
-  return def.jobs * WAGE_PER_JOB * (0.6 + (district?.incomeLevel ?? 0.5));
+  // Grevdeki işçi ücret almaz: grev binası çalıştığı oranda öder.
+  return wageFor(state, building.companyId, building.defId, building.districtId) * buildingStrikeFactor(state, building.companyId, def);
+}
+
+/** Üretim ünitesinin bugünkü çıktısı — grevde düşer. */
+function outputOf(state: GameState, building: BuildingInstance): number {
+  const def = BUILDING_BY_ID[building.defId];
+  if (!def) return 0;
+  return def.capacity * buildingStrikeFactor(state, building.companyId, def);
 }
 
 function upkeepFor(state: GameState, building: BuildingInstance): number {
@@ -191,7 +197,7 @@ export function runProductionTick(state: GameState): void {
 
     if (def.role === 'process' && def.outputGoodId) {
       const input = GOOD_BY_ID[def.outputGoodId]?.inputGoodId;
-      if (input) flow.consumed[input] = (flow.consumed[input] ?? 0) + def.capacity;
+      if (input) flow.consumed[input] = (flow.consumed[input] ?? 0) + outputOf(state, building);
     }
 
     if (def.role === 'outlet') {
@@ -221,7 +227,7 @@ export function runProductionTick(state: GameState): void {
         const company = state.companies[building.companyId];
         if (!flow || !company) continue;
 
-        const output = def.capacity;
+        const output = outputOf(state, building);
         if (output <= 0) continue;
 
         // İşleme ünitesinin girdisi: kendi havuzundan karşılanan kısmı
@@ -271,7 +277,7 @@ export function runProductionTick(state: GameState): void {
     const flow = flows[building.companyId];
     if (!good || !company || !flow) continue;
 
-    const output = def.capacity;
+    const output = outputOf(state, building);
     if (output <= 0) continue;
 
     // Girdinin dışarıdan alınan kısmı.

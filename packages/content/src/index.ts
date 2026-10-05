@@ -10,6 +10,8 @@ export * from './structures';
 export * from './difficulty';
 export * from './goals';
 export * from './council';
+export * from './labor';
+export * from './credit';
 
 /** İçerik sürümü — save migration'ında denge değişikliklerini izlemek için. */
 export const CONTENT_VERSION = 5;

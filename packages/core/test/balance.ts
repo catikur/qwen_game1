@@ -23,6 +23,7 @@ import {
 import type { CategoryId } from '@capital/content';
 import {
   GameEngine,
+  buildOptions,
   chainCards,
   companyRanking,
   competitionCards,
@@ -58,6 +59,9 @@ import {
 import { build, buyTile } from '../src/actions';
 import { buyShares } from '../src/systems/equity';
 import { PRUNE_MEMORY_DAYS } from '../src/systems/npc';
+import { WAGE_PER_JOB } from '../src/systems/labor';
+import { loanQuote } from '../src/systems/credit';
+import type { GameEngine as Engine } from '../src/engine';
 import type { GameState } from '../src/types';
 import {
   activeProfiles,
@@ -851,6 +855,15 @@ function outletUnitCost(state: GameState): number {
      * zincir değil kararlar ayrışıyordu.
      */
     engine2.getState().flags.council = false;
+    /*
+     * İşgücü ve banka da kapalı (Tur 18) — aynı aile. Grev 12 günlük
+     * kesikli bir şok ve kolların çalışan sayısı farklı olduğu için
+     * baskı farklı günlerde doluyor; rakip kredisi ve haczi de kollar
+     * arasında farklı rakip manzarası kuruyor. Ölçüldü: açıkken iki
+     * tohum "sanayi geç açıldı" ölçüm dışına düşüyordu.
+     */
+    engine2.getState().flags.labor = false;
+    engine2.getState().flags.credit = false;
     let tail = 0;
     for (let day = 1; day <= CHAIN_AB_DAYS; day++) {
       if (day % 5 === 0) {
@@ -2241,12 +2254,15 @@ section('Borsa', () => {
   state.flags.npcCompetition = false;
   state.flags.landAuctions = false;
 
-  const totalBefore = Object.values(state.companies).reduce((sum, c) => sum + c.cash, 0);
+  // Nakit EKSİ borç: kredi taksitinin anaparası kasadan çıkıp borçtan
+  // düşüyor — kâra girmeyen ama para da yok etmeyen tek hareket (Tur 18).
+  const money = () => Object.values(state.companies).reduce((sum, c) => sum + c.cash - c.debt, 0);
+  const totalBefore = money();
   const playerBefore = player.cash;
   const rival = state.companies[targetId]!;
   const rivalBefore = rival.cash;
   engine.runDay();
-  const totalAfter = Object.values(state.companies).reduce((sum, c) => sum + c.cash, 0);
+  const totalAfter = money();
   const dayProfit = Object.values(state.companies).reduce((sum, c) => sum + c.today.profit, 0);
 
   console.log(
@@ -3230,6 +3246,202 @@ section('Belediye meclisi ve yeni rakipler', () => {
     getPlayer(state).netWorth > 50_000_000,
     `900. günde ${formatMoney(getPlayer(state).netWorth)}`,
   );
+});
+
+section('İşgücü ve sendika', () => {
+  /*
+   * Tur 18. Sınanan iddialar:
+   *   - sendika orta oyunun sistemi: talep erken oyunda gelmiyor, 720
+   *     günde geliyor;
+   *   - ücret çarpanı birikiyor ama ezmiyor — ödenen ücretin Tur 17
+   *     formülüne oranı (aynı koşuda, aynı binalarla: eşli ve mekanik)
+   *     %3 ile %35 arasında;
+   *   - sanayi kümesi ücret endeksini yükseltiyor;
+   *   - rakiplerin de sendikası var;
+   *   - Ret gerçekten grev getirebiliyor ve grev kapasiteyi düşürüyor.
+   */
+  function laborRun(seed: number, response: 'compromise' | 'reject') {
+    const engine = new GameEngine(createNewGame({ seed, companyName: 'Emek AŞ' }));
+    let paid = 0;
+    let base = 0;
+    let firstDemand: number | null = null;
+    let demands = 0;
+    let strikeSeen = false;
+    let strikeShare = 1;
+    for (let day = 1; day <= 720; day++) {
+      if (day % 5 === 0) playerStrategy(engine);
+      const before = engine.getState();
+      const labor = getPlayer(before).labor;
+      if (labor?.demand) {
+        firstDemand ??= labor.demand.offeredDay;
+        demands++;
+        engine.dispatch({ type: 'RESPOND_UNION', response });
+      }
+      engine.runDay();
+      const state = engine.getState();
+      const player = getPlayer(state);
+      paid += player.today.wages;
+      for (const building of Object.values(state.buildings)) {
+        if (building.companyId !== player.id) continue;
+        const def = BUILDING_BY_ID[building.defId]!;
+        base += def.jobs * WAGE_PER_JOB * (0.6 + state.districts[building.districtId]!.incomeLevel);
+      }
+      const strike = player.labor?.strike;
+      if (strike && state.time.day >= strike.startedDay && !strikeSeen) {
+        strikeSeen = true;
+        const outlets = Object.values(state.buildings).filter(
+          (b) => b.companyId === player.id && BUILDING_BY_ID[b.defId]!.role === 'outlet',
+        );
+        const used = outlets.reduce((sum, b) => sum + b.last.unitsSold, 0);
+        const capacity = outlets.reduce((sum, b) => sum + BUILDING_BY_ID[b.defId]!.capacity, 0);
+        strikeShare = capacity > 0 ? used / capacity : 1;
+      }
+    }
+    const state = engine.getState();
+    const rivals = Object.values(state.companies).filter((c) => !c.isPlayer);
+    return {
+      ratio: paid / Math.max(1, base),
+      firstDemand,
+      demands,
+      agreement: getPlayer(state).labor?.agreement ?? 1,
+      strikeDays: getPlayer(state).labor?.strikeDays ?? 0,
+      strikeShare,
+      maxIndex: Math.max(...state.districts.map((d) => d.wageIndex ?? 1)),
+      rivalUnion: rivals.filter((c) => (c.labor?.agreement ?? 1) > 1 || (c.labor?.strikeDays ?? 0) > 0).length,
+    };
+  }
+
+  const runs = [1, 7].map((seed) => ({ seed, run: laborRun(seed, 'compromise') }));
+  for (const { seed, run } of runs) {
+    console.log(
+      `  seed ${String(seed).padStart(2)} | ilk talep ${run.firstDemand ?? '-'}. gün · ${run.demands} talep · ` +
+        `sözleşme ×${run.agreement.toFixed(3)} · ücret/Tur17 ×${run.ratio.toFixed(3)} · ` +
+        `endeks en çok ×${run.maxIndex.toFixed(2)} · sendikalı rakip ${run.rivalUnion}`,
+    );
+  }
+  expect(
+    'sendika orta oyunun sistemi',
+    runs.every(({ run }) => run.firstDemand !== null && run.firstDemand >= 200),
+    runs.map(({ seed, run }) => `seed ${seed}: ${run.firstDemand ?? 'yok'}. gün`).join(' · '),
+  );
+  expect(
+    'ücret çarpanı birikiyor ama ezmiyor',
+    runs.every(({ run }) => run.ratio >= 1.03 && run.ratio <= 1.35),
+    runs.map(({ seed, run }) => `seed ${seed}: ×${run.ratio.toFixed(3)}`).join(' · '),
+  );
+  expect(
+    'sanayi kümesi ücret endeksini yükseltiyor',
+    runs.every(({ run }) => run.maxIndex > 1.05),
+    runs.map(({ run }) => `×${run.maxIndex.toFixed(2)}`).join(' · '),
+  );
+  expect('rakiplerin de sendikası var', runs.some(({ run }) => run.rivalUnion > 0),
+    runs.map(({ run }) => `${run.rivalUnion} rakip`).join(' · '));
+
+  const hard = laborRun(1, 'reject');
+  console.log(`  Ret kolu | ${hard.demands} talep · grev ${hard.strikeDays} gün · ilk grev gününde mağaza doluluğu %${Math.round(hard.strikeShare * 100)}`);
+  expect('Ret grev getirebiliyor', hard.strikeDays > 0, `${hard.strikeDays} gün grev`);
+  expect('grev mağaza kapasitesini düşürüyor', hard.strikeShare <= 0.4, `doluluk %${Math.round(hard.strikeShare * 100)}`);
+});
+
+section('Banka ve kredi', () => {
+  /*
+   * Tur 18. Kredi bir hızlandırıcı, baskın strateji değil, ve bedeli
+   * gerçek. Üç eşli kıyas (aynı tohum, tek değişken: borç):
+   *
+   *   - Becerikli ve aceleci: nakdinin %87,5'ini harcayan vekil, her
+   *     fırsatta azami borçla ve borçsuz. Borç 180. günde öne geçiriyor,
+   *     720. günde fark bunun yarısından az — kredi tempoyu öne çekiyor,
+   *     tavanı değil. Kontrol kolu ŞART: ilk ölçümde "kaldıraç" vekili
+   *     normal vekilden %36 öndeydi ama kıyas iki değişkenliydi (borç VE
+   *     üç kat hızlı harcama); aynı hızda harcayan borçsuz kol farkın
+   *     büyük kısmını tek başına açıklıyor.
+   *   - Kötü gün: 90. günden itibaren maliyetin altında fiyat savaşı.
+   *     İki kol da hacize düşüyor; borçlu olanın kredileri not D'de
+   *     muaccel oluyor ve şirket sıfırlanıyor. İlk tasarım burada fark
+   *     göstermemişti (limitler taksiti küçük tutuyor) — muacceliyet
+   *     maddesi krediye özgü riski kuruyor. "Kötü yatırımcı" (tahmine
+   *     bakmadan pahalı mağaza) denendi ve ayıramadı: o vekil zarar
+   *     etmiyor, yalnızca verimsiz.
+   *   - Rakipler doktrinle borçlanıyor.
+   */
+  function hurried(engine: Engine): void {
+    playerStrategy(engine);
+    playerStrategy(engine);
+    playerStrategy(engine);
+  }
+  function bankRun(seed: number, days: number, borrow: boolean, warFromDay?: number) {
+    // Banka iki kolda da açık (rakipler doktrinle borçlanıyor); tek fark
+    // oyuncunun kredi çekip çekmediği.
+    const engine = new GameEngine(createNewGame({ seed, companyName: 'Kredi AŞ' }));
+    const worth: Record<number, number> = {};
+    let loans = 0;
+    for (let day = 1; day <= days; day++) {
+      if (day % 5 === 0 && borrow) {
+        const termDays = warFromDay ? 360 : 180;
+        const quote = loanQuote(engine.getState(), engine.getState().playerCompanyId, 'term', termDays);
+        if (quote.ok && engine.dispatch({ type: 'TAKE_LOAN', kind: 'term', amount: quote.max, termDays }).ok) loans++;
+      }
+      if (day % 5 === 0 && (warFromDay === undefined || day < warFromDay)) {
+        if (warFromDay === undefined) hurried(engine);
+        else playerStrategy(engine);
+      }
+      if (day === warFromDay) {
+        // Maliyetin altında fiyat savaşı: her mağaza ×0,6.
+        for (const building of Object.values(engine.getState().buildings)) {
+          if (building.companyId !== engine.getState().playerCompanyId) continue;
+          if (BUILDING_BY_ID[building.defId]!.role !== 'outlet') continue;
+          engine.dispatch({ type: 'SET_PRICE_MULTIPLIER', buildingId: building.id, multiplier: 0.6 });
+        }
+      }
+      const labor = getPlayer(engine.getState()).labor;
+      if (labor?.demand) engine.dispatch({ type: 'RESPOND_UNION', response: 'compromise' });
+      engine.runDay();
+      if (day === 180 || day === 360 || day === days) worth[day] = getPlayer(engine.getState()).netWorth;
+    }
+    const state = engine.getState();
+    const rivalLoans = Object.values(state.companies)
+      .filter((c) => !c.isPlayer)
+      .reduce((sum, c) => sum + (c.credit?.loanSeq ?? 0), 0);
+    return {
+      worth,
+      loans,
+      rivalLoans,
+      defaults: getPlayer(state).credit?.defaults ?? 0,
+      land: state.map.tiles.filter((t) => t.ownerId === state.playerCompanyId).length,
+    };
+  }
+
+  const seeds = [1, 7, 42];
+  const pairs = seeds.map((seed) => ({ seed, with: bankRun(seed, 720, true), without: bankRun(seed, 720, false) }));
+  const edge = (a: Record<number, number>, b: Record<number, number>, day: number) => a[day]! / b[day]! - 1;
+  for (const { seed, with: a, without: b } of pairs) {
+    console.log(
+      `  aceleci seed ${String(seed).padStart(2)} | borçlu ${formatMoney(a.worth[180]!)} → ${formatMoney(a.worth[720]!)} (${a.loans} kredi) · ` +
+        `borçsuz ${formatMoney(b.worth[180]!)} → ${formatMoney(b.worth[720]!)} · fark %${Math.round(edge(a.worth, b.worth, 180) * 100)} → %${Math.round(edge(a.worth, b.worth, 720) * 100)}`,
+    );
+  }
+  expect('kredi erken oyunu öne çekiyor', pairs.every(({ with: a, without: b }) => edge(a.worth, b.worth, 180) > 0),
+    pairs.map(({ with: a, without: b }) => `+%${Math.round(edge(a.worth, b.worth, 180) * 100)}`).join(' · '));
+  // Tempo, tavan değil: 720. günde fark 180. günün yarısından az, her tohumda.
+  expect(
+    'kredinin avantajı zamanla eriyor (baskın değil)',
+    pairs.every(({ with: a, without: b }) => edge(a.worth, b.worth, 720) < edge(a.worth, b.worth, 180) / 2),
+    pairs.map(({ with: a, without: b }) => `%${Math.round(edge(a.worth, b.worth, 180) * 100)} → %${Math.round(edge(a.worth, b.worth, 720) * 100)}`).join(' · '),
+  );
+  expect('rakipler doktrinle borçlanıyor', pairs.some(({ with: a }) => a.rivalLoans > 0),
+    pairs.map(({ with: a }) => `${a.rivalLoans} rakip kredisi`).join(' · '));
+
+  const wars = [1, 7].map((seed) => ({ seed, with: bankRun(seed, 360, true, 90), without: bankRun(seed, 360, false, 90) }));
+  for (const { seed, with: a, without: b } of wars) {
+    console.log(
+      `  fiyat savaşı seed ${String(seed).padStart(2)} | borçlu ${formatMoney(a.worth[360]!)} · ${a.defaults} haciz · ${a.land} arsa | ` +
+        `borçsuz ${formatMoney(b.worth[360]!)} · ${b.defaults} haciz · ${b.land} arsa`,
+    );
+  }
+  expect('zarar eden şirkete haciz geliyor', wars.every(({ with: a, without: b }) => a.defaults > 0 && b.defaults > 0),
+    wars.map(({ with: a, without: b }) => `${a.defaults} / ${b.defaults} haciz`).join(' · '));
+  expect('kötü günde borçlu şirket daha derine düşüyor', wars.every(({ with: a, without: b }) => a.worth[360]! < b.worth[360]! && a.land <= b.land),
+    wars.map(({ with: a, without: b }) => `${formatMoney(a.worth[360]!)} < ${formatMoney(b.worth[360]!)}`).join(' · '));
 });
 
 if (timings.length === 0) {
