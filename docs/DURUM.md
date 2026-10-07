@@ -755,7 +755,7 @@ Kalibrasyon (vekil 5 günde bir):
 | Baskın: yavaş, savunmasız vekil (4 tohum) | savunmasız 0/4 · geri alım 4/4 (42–57 M ₺) · **ihraç 4/4 (57–67 M ₺)** |
 | Devralmacı vekil, kilit öncesi → sonrası | ilk devralma 5. gün → 165. gün · tekel zaferi 130–235. gün → yok · değer zaferi 529–582. gün |
 
-Dört ölçüm dersi:
+Beş ölçüm dersi:
 
 1. **Ölçüm mekaniğin ne olduğunu değiştirdi.** Halka arz bir büyüme
    aracı olarak tasarlandı. Ölçüm büyümede her senaryoda kaybettirdiğini
@@ -782,6 +782,13 @@ Dört ölçüm dersi:
 4. **Eşli deneyler aynı aileyi büyütüyor.** Rakip ihracı da kollar
    arasında farklı rakip manzarası kuruyor. Zincir A/B'sinde sermaye
    artırımı da kapalı: dönemler, baskınlar, meclis, işgücü ve banka gibi.
+   Sabit varsayımlar da kırılıyor: iki devralma testi kontrol için sabit
+   5.100 hisse alıyordu; ihraç yapmış rakipte bu %51 değil.
+5. **Yeni sistem eski bir kontrolün körlüğünü açığa çıkardı.** Tarayıcı
+   testi "geçilme" haberlerini akışın uzunluk farkından buluyordu. Akış 60
+   kalemle sınırlı ve yeni sistemlerin haberleriyle o noktada doluyordu:
+   uzunluk değişmiyor, yeni haber "yok" görünüyordu. Kontrol artık haber
+   kimliğine bakıyor.
 
 ---
 
@@ -853,9 +860,9 @@ ufuk dersi).
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~570 gün/sn |
-| Birim testi | **93 test** (`pnpm test`) |
-| Denge testi | **244 kontrol, hepsi geçiyor** (15 bölüm, süreleriyle; ~11 dk) |
-| Tarayıcı testi | **252 kontrol**, 0 konsol hatası; duman koşusu 81 |
+| Birim testi | **105 test** (`pnpm test`) |
+| Denge testi | **249 kontrol, hepsi geçiyor** (16 bölüm, süreleriyle; ~15 dk) |
+| Tarayıcı testi | **255 kontrol**, 0 konsol hatası; duman koşusu 83 |
 | CI | her PR'da tip + test + denge + paket + duman oynanışı |
 | Kapsam | 26 bina · 22 ürün · 7 kategori · 8 rakip profili · 10 şehir yapısı (6 siluet) |
 
@@ -1015,13 +1022,13 @@ nüfus tavanı ve arsa değeri). Hâlâ açık olanlar:
 
 ```bash
 pnpm typecheck       # altı paketin tamamı
-pnpm test            # birim testleri — 93 test, test yoksa kırmızı
-pnpm balance         # denge testi — 244 kontrol, geçti/kaldı (~11 dk)
+pnpm test            # birim testleri — 105 test, test yoksa kırmızı
+pnpm balance         # denge testi — 249 kontrol, geçti/kaldı (~15 dk)
 pnpm balance meclis  # yalnızca adında "meclis" geçen bölümler
 pnpm bench           # benchmark — sayıların kendisi
 pnpm constraint      # kısıt deneyi — bağlayıcı kısıt hangisi?
 pnpm land            # abonman oranı — geometri varyantları
-pnpm playtest        # tarayıcı testi (build dahil), tam koşu ~16 dk
+pnpm playtest        # tarayıcı testi (build dahil), tam koşu ~20 dk
 pnpm playtest:smoke  # duman koşusu ~3,5 dk — PR'da CI bunu koşar
 node tools/build-single-file.mjs   # paylaşılan sayfa için tek HTML
 pnpm dev             # oyunu aç
