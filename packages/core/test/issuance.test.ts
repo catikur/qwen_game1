@@ -48,7 +48,8 @@ describe('sermaye artırımı', () => {
     assert.equal(player.investorShares, 2000);
     assert.ok(Math.abs(player.cash - cash - 2000 * quote.price) < 1e-6);
     assert.ok(Math.abs(ownerFraction(player) - 10_000 / 12_000) < 1e-12);
-    assert.equal(freeFloat(state, 'player'), 12_000);
+    // Kurumsal yatırımcı payı dolaşımda değil: baskıncı yalnızca eski 10.000'i alabilir.
+    assert.equal(freeFloat(state, 'player'), 10_000);
     assert.match(state.news[0]!.title, /Halka arz/);
   });
 
