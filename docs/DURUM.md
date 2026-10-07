@@ -940,8 +940,8 @@ ufuk dersi).
 | Determinizm | birebir |
 | Simülasyon hızı | ~570 gün/sn |
 | Birim testi | **118 test** (`pnpm test`) |
-| Denge testi | **249 kontrol, hepsi geçiyor** (16 bölüm, süreleriyle; ~15 dk) |
-| Tarayıcı testi | **255 kontrol**, 0 konsol hatası; duman koşusu 83 |
+| Denge testi | **255 kontrol, hepsi geçiyor** (17 bölüm, süreleriyle; ~14 dk) |
+| Tarayıcı testi | **262 kontrol**, 0 konsol hatası; duman koşusu 83 |
 | CI | her PR'da tip + test + denge + paket + duman oynanışı |
 | Kapsam | 26 bina · 22 ürün · 7 kategori · 8 rakip profili · 10 şehir yapısı (6 siluet) |
 
