@@ -6,7 +6,7 @@ import {
   getCeoModifiers,
 } from '@capital/content';
 import { pushNews } from '../news';
-import { portfolioValue } from './equity';
+import { ownerFraction, portfolioValue } from './equity';
 import type { GameState } from '../types';
 
 /**
@@ -234,8 +234,12 @@ export function recomputeNetWorth(state: GameState): void {
     // sahipsen onun büyümesi seni de büyütür. Hiç hisse almamış şirkette
     // `portfolioValue` sıfır döner ve formül Tur 3'teki haline birebir
     // indirgenir — denge kimliği bu sayede korunuyor.
+    //
+    // Sermaye artırımı yapmış şirkette değerin yatırımcı payı düşer
+    // (Tur 19): net değer, şirketin KURUCUYA düşen kısmı.
     company.netWorth =
-      company.cash + (assets[company.id] ?? 0) - company.debt + portfolioValue(state, company.id);
+      (company.cash + (assets[company.id] ?? 0) - company.debt + portfolioValue(state, company.id)) *
+      ownerFraction(company);
     company.netWorthHistory.push(Math.round(company.netWorth));
     if (company.netWorthHistory.length > 120) company.netWorthHistory.shift();
   }

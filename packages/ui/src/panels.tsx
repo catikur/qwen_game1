@@ -1081,6 +1081,10 @@ function HelpPanel(): ReactElement {
           <strong>Çalışanlarının sesi var.</strong> Kalabalık şirkette sendika baskısı birikir ve
           zam talebi gelir: kabul et, uzlaş ya da reddet — ret grev getirebilir.
         </li>
+        <li>
+          <strong>Halka arz bir kontrol aracı.</strong> Yeni hisse nakit getirir ve baskıncının payını
+          sulandırır; bedeli, şirketin büyümesinden yatırımcılara giden kalıcı pay. Borsa panelinden.
+        </li>
       </ol>
       <p className="muted">
         Kontroller: sürükle = kaydır · sağ tık sürükle = döndür · tekerlek = yakınlaş · WASD =

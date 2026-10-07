@@ -225,6 +225,17 @@ export interface CompanyState {
    * artırımı büyütüyor. Fiyat, dolaşım, kontrol eşiği ve temettü buna göre.
    */
   shareCount?: number;
+  /**
+   * İhraçla dışarıdaki yatırımcılara geçen hisse. Kurucu payı
+   * `1 − investorShares / shareCount`; net değer şirket değerinin bu payı.
+   * Rakiplerin borsadaki alım-satımı bu sayıyı değiştirmiyor (Tur 4'ten
+   * beri rakibin elindeki pay net değerden düşmüyor); yalnızca ihraç ve
+   * şirketin kendi geri alımı değiştiriyor.
+   */
+  investorShares?: number;
+  /** Son ihracın günü (soğuma) ve ihraç sayısı (ilki halka arz). */
+  lastIssueDay?: number;
+  issues?: number;
   /** İşgücü: ücret politikası, sendika baskısı, sözleşme, grev. Yokluğu "piyasa ücreti, sendika sessiz". */
   labor?: LaborState;
   /**
@@ -414,6 +425,11 @@ export interface FeatureFlags {
    * (%8 faiz) — ama borç artık kasaya para girdikçe kapanıyor.
    */
   credit?: boolean;
+  /**
+   * Sermaye artırımı (halka arz). Aynı sözleşme: yokluğu AÇIK. Eşli
+   * deneylerde rakip ihracı kollar arasında yapısal ayrışma yaratır.
+   */
+  issuance?: boolean;
 }
 
 /**
@@ -626,7 +642,9 @@ export type GameCommand =
   /** Bankadan kredi: vadeli ya da arsa teminatlı. */
   | { type: 'TAKE_LOAN'; kind: LoanKind; amount: number; termDays: number }
   /** Bir krediyi kalan anaparasıyla erken kapatır. */
-  | { type: 'REPAY_LOAN'; loanId: string };
+  | { type: 'REPAY_LOAN'; loanId: string }
+  /** Yeni hisse ihraç eder (ilki halka arz). */
+  | { type: 'ISSUE_SHARES'; count: number };
 
 /** Komut reddedildiğinde UI'ye dönen açıklama. */
 export interface CommandResult {

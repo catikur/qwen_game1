@@ -3,7 +3,7 @@ import type { CreditRating, LoanKind, NpcProfileDef } from '@capital/content';
 import { pushNews } from '../news';
 import { formatMoney } from '../selectors';
 import { LAND_SELL_RATIO } from './city';
-import { sellShares, sharePrice } from './equity';
+import { companyValue, sellShares, sharePrice } from './equity';
 import type { CommandResult, CompanyState, CreditState, GameState, LoanState } from '../types';
 
 /**
@@ -38,9 +38,9 @@ export function overdraftOf(company: CompanyState): number {
   return Math.max(0, company.debt - loans);
 }
 
-/** Brüt varlık: net değer + borç (dünün net değeriyle). */
+/** Brüt varlık: şirketin tamamının değeri + borç (dünün net değeriyle). */
 export function grossAssets(company: CompanyState): number {
-  return Math.max(0, company.netWorth + company.debt);
+  return Math.max(0, companyValue(company) + company.debt);
 }
 
 export function ratingOf(company: CompanyState): CreditRating {
@@ -60,6 +60,10 @@ export function overdraftRate(state: GameState, company: CompanyState): number {
 /** Yeni bir kredinin yıllık faizi — not, tür ve vadeden. */
 export function loanRate(rating: CreditRating, kind: LoanKind, termDays: number): number {
   const spread = CREDIT_RATINGS[rating].spread;
+  if (kind === 'bond') {
+    const premium = CREDIT.bond.terms.find((option) => option.days === termDays)?.premium ?? 0;
+    return CREDIT.baseRate + spread * CREDIT.bond.spreadShare + premium;
+  }
   const term = CREDIT.terms.find((option) => option.days === termDays)?.premium ?? 0;
   const risk = kind === 'secured' ? spread / 2 - CREDIT.securedDiscount : spread;
   return CREDIT.baseRate + risk + term;
@@ -130,8 +134,10 @@ export function loanQuote(state: GameState, companyId: string, kind: LoanKind, t
   const closed = (reason: string): LoanQuote => ({ ok: false, reason, rate, max: 0, rating });
   if (!creditEnabled(state)) return closed('Banka ürünleri kapalı.');
   if (!company) return closed('Şirket bulunamadı.');
-  if (!CREDIT.terms.some((option) => option.days === termDays)) return closed('Geçersiz vade.');
+  const terms = kind === 'bond' ? CREDIT.bond.terms : CREDIT.terms;
+  if (!terms.some((option) => option.days === termDays)) return closed('Geçersiz vade.');
   if (rating === 'D') return closed('Kredi notu D: banka yeni kredi vermiyor.');
+  if (kind === 'bond' && rating !== 'A' && rating !== 'B') return closed('Tahvil için not en az B olmalı.');
   if ((company.credit?.arrearsDays ?? 0) > 0) return closed('İhtar sürerken yeni kredi yok.');
   const lastLoanDay = company.credit?.lastLoanDay;
   if (lastLoanDay !== undefined && state.time.day - lastLoanDay < CREDIT.applyCooldownDays) {
@@ -146,13 +152,23 @@ export function loanQuote(state: GameState, companyId: string, kind: LoanKind, t
   if (kind === 'secured') {
     collateralValue = freeCollateral(state, companyId).reduce((sum, tile) => sum + tile.value, 0);
     max = Math.min(collateralValue * CREDIT.loanToValue, hard);
+  } else if (kind === 'bond') {
+    const bonds = loansOf(company).filter((loan) => loan.kind === 'bond').reduce((sum, loan) => sum + loan.balance, 0);
+    max = Math.min((CREDIT.bond.limitRatio[rating] ?? 0) * gross - bonds, hard);
   } else {
     const limit = Math.max(CREDIT.baseLimit, CREDIT_RATINGS[rating].limitRatio * gross);
     max = Math.min(limit - company.debt, hard);
   }
   max = Math.max(0, Math.floor(max / 1000) * 1000);
-  if (max < CREDIT.minLoan) {
-    return { ok: false, reason: kind === 'secured' ? 'Teminata açık arsan yetmiyor.' : 'Kredi limitin dolu.', rate, max, rating, collateralValue };
+  const floor = kind === 'bond' ? CREDIT.bond.minAmount : CREDIT.minLoan;
+  if (max < floor) {
+    const reason =
+      kind === 'secured'
+        ? 'Teminata açık arsan yetmiyor.'
+        : kind === 'bond'
+          ? `Tahvil en az ${formatMoney(CREDIT.bond.minAmount)}; şirketin bu ihraca yetecek büyüklükte değil.`
+          : 'Kredi limitin dolu.';
+    return { ok: false, reason, rate, max, rating, collateralValue };
   }
   return { ok: true, rate, max, rating, collateralValue };
 }
@@ -161,7 +177,8 @@ export function takeLoan(state: GameState, companyId: string, kind: LoanKind, am
   const quote = loanQuote(state, companyId, kind, termDays);
   if (!quote.ok) return { ok: false, reason: quote.reason };
   const principal = Math.floor(amount);
-  if (!(principal >= CREDIT.minLoan)) return { ok: false, reason: `En az ${formatMoney(CREDIT.minLoan)}.` };
+  const floor = kind === 'bond' ? CREDIT.bond.minAmount : CREDIT.minLoan;
+  if (!(principal >= floor)) return { ok: false, reason: `En az ${formatMoney(floor)}.` };
   if (principal > quote.max) return { ok: false, reason: `Bu krediyle en fazla ${formatMoney(quote.max)} alabilirsin.` };
 
   const company = state.companies[companyId]!;
@@ -185,7 +202,8 @@ export function takeLoan(state: GameState, companyId: string, kind: LoanKind, am
     rate: quote.rate,
     termDays,
     startDay: state.time.day,
-    payment: annuityPayment(principal, quote.rate, termDays),
+    // Tahvil yalnızca kupon öder; anapara vadede (günlük adım `due` ile kapatır).
+    payment: kind === 'bond' ? (principal * quote.rate) / 365 : annuityPayment(principal, quote.rate, termDays),
     ...(collateral ? { collateral } : {}),
   });
   company.cash += principal;
@@ -352,8 +370,32 @@ export function runCreditTick(state: GameState): void {
     if (credit && credit.loans.length > 0) {
       for (const loan of credit.loans) {
         const interest = (loan.balance * loan.rate) / 365;
-        const due = day >= loan.startDay + loan.termDays;
-        const principal = due ? loan.balance : Math.min(loan.balance, Math.max(0, loan.payment - interest));
+        const maturity = loan.startDay + loan.termDays;
+        const due = day >= maturity;
+        const principal = due
+          ? loan.balance
+          : loan.kind === 'bond'
+            ? 0
+            : Math.min(loan.balance, Math.max(0, loan.payment - interest));
+        if (loan.kind === 'bond' && company.isPlayer) {
+          if (due) {
+            pushNews(
+              state,
+              company.cash >= principal ? 'neutral' : 'bad',
+              'Tahvil vadesi geldi',
+              company.cash >= principal
+                ? `${formatMoney(principal)} anapara kasadan ödendi.`
+                : `${formatMoney(principal)} anaparanın kasada olmayan ${formatMoney(principal - Math.max(0, company.cash))} kısmı kredili hesaba geçti.`,
+            );
+          } else if (maturity - day === CREDIT.bond.warnDays) {
+            pushNews(
+              state,
+              'bad',
+              'Tahvil vadesi yaklaşıyor',
+              `${CREDIT.bond.warnDays} gün sonra ${formatMoney(loan.balance)} anapara tek seferde ödenecek. Kasada yoksa fark kredili hesaba geçer.`,
+            );
+          }
+        }
         loan.balance -= principal;
         company.cash -= principal;
         company.debt -= principal;

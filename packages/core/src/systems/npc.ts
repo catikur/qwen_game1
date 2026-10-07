@@ -17,6 +17,7 @@ import { estimateInvestment } from './market';
 import { isDistrictOpen, tilePrice } from './city';
 import { buyShares, freeFloat, sharePrice, sharesHeld, sharesOutstanding, TOTAL_SHARES } from './equity';
 import { npcBorrow } from './credit';
+import { npcDefensiveIssue, npcIssue } from './issuance';
 import type { BuildingInstance, CompanyState, GameState } from '../types';
 
 /**
@@ -460,7 +461,9 @@ function actFor(state: GameState, profile: NpcProfileDef): void {
   // Önce kanayan yara: kapatma haftanın hamlesini harcamıyor — kapanan
   // şubenin nakdi aynı hafta daha iyi bir yere gidebilir.
   tryPruneMove(state, profile);
-  // Borç doktrini bütçeden ÖNCE: çekilen kredi bu haftanın yatırımına girsin.
+  // Finansman bütçeden ÖNCE: ihraç ve kredi bu haftanın yatırımına girsin.
+  // İhraç önce — primli piyasada büyüme şirketi borçtan önce ortak alır.
+  npcIssue(state, profile);
   npcBorrow(state, profile);
 
   // Zorluk rakibin cesaretini ölçekliyor, nakdini değil: tavan nakdin
@@ -698,6 +701,8 @@ export function runNpcTick(state: GameState): void {
      * yavaş kalkarsa kalkan değildir.
      */
     tryRaidMove(state, profile);
+    // Doktrini olan rakip önce ihraçla savunur; ihraç soğumadaysa geri alım.
+    npcDefensiveIssue(state, profile);
     tryBuybackDefense(state, profile);
 
     // Kararları güne yay: hepsi aynı gün hamle yapmasın.

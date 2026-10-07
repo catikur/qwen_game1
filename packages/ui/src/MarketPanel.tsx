@@ -1,12 +1,17 @@
 import { useState } from 'react';
 import type { ReactElement } from 'react';
+import { ISSUANCE } from '@capital/content';
 import {
   CONTROL_THRESHOLD,
   confidence,
   formatMoney,
   freeFloat,
   getPlayer,
+  issuanceEnabled,
+  issueNetWorthEffect,
+  issueQuote,
   marketCap,
+  ownerFraction,
   portfolioValue,
   sharePrice,
   sharesHeld,
@@ -51,6 +56,7 @@ export function MarketPanel(): ReactElement {
       </div>
 
       <Defense state={state} />
+      <Issuance state={state} />
 
       <p className="muted">
         Bir şirketin hisselerinin %{Math.round(CONTROL_THRESHOLD * 100)}'ini
@@ -137,6 +143,86 @@ function Defense({ state }: { state: GameState }): ReactElement {
   );
 }
 
+/**
+ * Sermaye artırımı — ilki halka arz.
+ *
+ * Formun işi bedeli sayıyla göstermek: kasaya girecek nakit, kurucu
+ * payının nereye ineceği ve net değerin ihraç günü ne yapacağı. Piyasa
+ * primliyken (güven yüksek) son satır artı, iskontoluyken eksi — oyuncu
+ * zamanlamayı bu satırdan okur.
+ */
+function Issuance({ state }: { state: GameState }): ReactElement | null {
+  const { run, toast } = useGame();
+  const [wanted, setWanted] = useState<number | null>(null);
+  if (!issuanceEnabled(state)) return null;
+  const player = getPlayer(state);
+  const quote = issueQuote(state, player.id);
+  const outstanding = sharesOutstanding(state, player.id);
+  const investors = player.investorShares ?? 0;
+  const founder = ownerFraction(player);
+  const count = Math.max(ISSUANCE.minShares, Math.min(quote.maxShares, wanted ?? quote.maxShares));
+  const raised = count * quote.price;
+  const effect = issueNetWorthEffect(state, player.id, count);
+  const founderAfter = 1 - (investors + count) / (outstanding + count);
+  const title = quote.ipo ? 'Halka arz' : 'Sermaye artırımı';
+
+  return (
+    <section className="defense issuance" data-issuance={quote.ok ? 'open' : 'closed'}>
+      <div className="defense-head">
+        <h3>{title}</h3>
+        <span className="muted">
+          {outstanding.toLocaleString('tr-TR')} hisse · kurucu payı %{Math.round(founder * 100)}
+        </span>
+      </div>
+      <p className="muted">
+        Yeni hisse sat, nakit al. Taksit yok; bedeli, yatırımcıların şirketin bütün büyümesinden kalıcı pay
+        alması. Piyasa seni primli fiyatlarken satmak ucuz, ihraç baskıncının payını da sulandırır.
+      </p>
+      {quote.ok ? (
+        <>
+          <label className="bank-amount">
+            <span>
+              <strong>{count.toLocaleString('tr-TR')}</strong> yeni hisse{' '}
+              <span className="muted">/ en fazla {quote.maxShares.toLocaleString('tr-TR')}</span>
+            </span>
+            <input
+              type="range"
+              min={ISSUANCE.minShares}
+              max={quote.maxShares}
+              step={50}
+              value={count}
+              onChange={(event) => setWanted(Number(event.target.value))}
+            />
+          </label>
+          <p className="muted bank-terms">
+            {formatMoney(quote.price)}/hisse (piyasanın %{Math.round(ISSUANCE.discount * 100)} altı) · kasaya{' '}
+            {formatMoney(raised)} · kurucu payı %{Math.round(founder * 100)} → %{Math.round(founderAfter * 100)} · net
+            değere bugün{' '}
+            <span className={effect >= 0 ? 'pos' : 'neg'}>
+              {effect >= 0 ? '+' : '−'}
+              {formatMoney(Math.abs(effect))}
+            </span>
+          </p>
+          <button
+            type="button"
+            className="primary issue-go"
+            onClick={() => {
+              if (run({ type: 'ISSUE_SHARES', count })) {
+                toast(`${title}: ${formatMoney(raised)} kasaya girdi.`, 'good');
+                setWanted(null);
+              }
+            }}
+          >
+            {quote.ipo ? 'Halka arz et' : 'Hisse ihraç et'}
+          </button>
+        </>
+      ) : (
+        <p className="muted">{quote.reason}</p>
+      )}
+    </section>
+  );
+}
+
 function Listing({ company, state }: { company: CompanyState; state: GameState }): ReactElement {
   const { run, toast } = useGame();
   const [amount, setAmount] = useState<string>('');
@@ -152,7 +238,13 @@ function Listing({ company, state }: { company: CompanyState; state: GameState }
   /** Kontrole kaç hisse kaldı. */
   const toControl = Math.max(0, Math.floor(outstanding * CONTROL_THRESHOLD) + 1 - held);
   const controlCost = toControl * price;
-  const affordable = Math.min(available, Math.floor(player.cash / Math.max(1, price)));
+  // Kurucu kilidinde hisse piyasada değil (oyun başı rakipler ısınma
+  // süresince, yeni gelenler bir yıl).
+  const lockedDays =
+    company.lockedUntilDay !== undefined ? Math.max(0, company.lockedUntilDay - state.time.day) : 0;
+  const affordable =
+    lockedDays > 0 ? 0 : Math.min(available, Math.floor(player.cash / Math.max(1, price)));
+  const investors = company.investorShares ?? 0;
 
   const trade = (type: 'BUY_SHARES' | 'SELL_SHARES', count: number): void => {
     if (count <= 0) return;
@@ -188,7 +280,13 @@ function Listing({ company, state }: { company: CompanyState; state: GameState }
         <span>değer {formatMoney(marketCap(state, company.id))}</span>
         <span>günlük kâr {formatMoney(company.today.profit)}</span>
         <span>serbest {available.toLocaleString('tr-TR')} hisse</span>
+        {investors > 0 && <span>kurumsal yatırımcı %{Math.round((investors / outstanding) * 100)}</span>}
       </div>
+      {lockedDays > 0 && (
+        <p className="muted bourse-locked" data-locked={lockedDays}>
+          Kurucu kilidi: hisseleri {lockedDays} gün sonra piyasaya çıkıyor.
+        </p>
+      )}
 
       {/* Kontrol göstergesi: payın ve eşik. Çubuk süs değil, "ne kadar
           kaldı" sorusunun cevabı. */}
@@ -230,7 +328,11 @@ function Listing({ company, state }: { company: CompanyState; state: GameState }
             placeholder="adet"
             onChange={(e) => setAmount(e.target.value)}
           />
-          <button type="button" disabled={Number(amount) <= 0} onClick={() => trade('BUY_SHARES', Number(amount))}>
+          <button
+            type="button"
+            disabled={lockedDays > 0 || Number(amount) <= 0}
+            onClick={() => trade('BUY_SHARES', Number(amount))}
+          >
             Al
           </button>
           <button

@@ -771,6 +771,38 @@ async function finish(browser, consoleErrors) {
   }));
   check('Banka ihtarı acil kalem olarak gündemde', bankChip.first === 'bank' || bankChip.first === 'union', `${bankChip.first} · ${bankChip.text.trim()}`);
 
+  // Halka arz (Tur 19): borsa panelindeki form ihraç ediyor, kurucu payı düşüyor.
+  await page.evaluate(() => {
+    const p = window.__capital.getState().companies.player;
+    delete p.credit;
+    p.debt = 0;
+    p.cash = Math.max(p.cash, 5_000_000);
+    window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+  });
+  await page.evaluate(() => { window.__capital.engine.runDay(); window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 }); });
+  await page.locator('.topbar-actions [data-panel="bourse"]').click();
+  await page.waitForTimeout(300);
+  const issueOpen = await page.evaluate(() => document.querySelector('.issuance')?.getAttribute('data-issuance'));
+  check('Borsada halka arz formu açık', issueOpen === 'open', `durum: ${issueOpen}`);
+  if (issueOpen === 'open') {
+    await page.locator('.issuance button.issue-go').click();
+    await page.waitForTimeout(250);
+  }
+  const issued = await page.evaluate(() => {
+    const p = window.__capital.getState().companies.player;
+    return { count: p.shareCount ?? 10000, investors: p.investorShares ?? 0, head: document.querySelector('.issuance .defense-head')?.textContent ?? '' };
+  });
+  check('Halka arz hisse adedini ve yatırımcı payını büyütüyor', issued.count > 10000 && issued.investors === issued.count - 10000,
+    `${issued.count} hisse · ${issued.head.trim()}`);
+  await page.keyboard.press('Escape');
+  await page.evaluate(() => {
+    const p = window.__capital.getState().companies.player;
+    delete p.shareCount;
+    delete p.investorShares;
+    delete p.lastIssueDay;
+    delete p.issues;
+  });
+
   // Temizlik: sonraki bölümler kredisiz, sendikasız, piyasa ücretiyle.
   await page.evaluate(() => {
     const p = window.__capital.getState().companies.player;
@@ -1458,6 +1490,31 @@ async function finish(browser, consoleErrors) {
   const stakeText = await page.locator('.bourse-stake-text').first().textContent();
   check('Kontrole ne kadar kaldığı yazıyor', /kontrol için/.test(stakeText || ''),
     (stakeText || '').trim().slice(0, 60));
+
+  // Kurucu kilidi (Tur 19): oyun başı rakipler baskın ısınması bitene kadar
+  // piyasada değil. Bölüm kilidi gösterip kaldırıyor; sonraki kontroller
+  // açık piyasada alım-satımı ölçüyor.
+  const lockProbe = await page.evaluate(() => {
+    const s = window.__capital.getState();
+    const target = Object.values(s.companies).find((c) => c.id !== s.playerCompanyId);
+    target.lockedUntilDay = s.time.day + 40;
+    window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+    return target.id;
+  });
+  await page.waitForTimeout(250);
+  const lockedRow = await page.evaluate(() => {
+    const note = document.querySelector('.bourse-row .bourse-locked');
+    return { text: note?.textContent ?? '', disabled: note?.closest('.bourse-row')?.querySelector('.bourse-actions button')?.disabled ?? false };
+  });
+  check('Kilitli rakipte kurucu kilidi yazıyor, alım kapalı', /Kurucu kilidi/.test(lockedRow.text) && lockedRow.disabled,
+    lockedRow.text.trim());
+  await page.evaluate(() => {
+    const s = window.__capital.getState();
+    for (const c of Object.values(s.companies)) delete c.lockedUntilDay;
+    window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+  });
+  await page.waitForTimeout(250);
+  void lockProbe;
 
   const before = await page.evaluate(() => {
     const s = window.__capital.getState();

@@ -10,6 +10,7 @@ import { isLoggable, leagueActive, runLeagueTick } from './systems/league';
 import { lobby, runCouncilTick } from './systems/council';
 import { respondUnion, runLaborTick, setWagePolicy } from './systems/labor';
 import { repayLoan, runCreditTick, takeLoan } from './systems/credit';
+import { issueShares } from './systems/issuance';
 import { resetDailyLedgers, runProductionTick, runProfitTrendTick, runSpotPriceTick } from './systems/supply';
 import {
   recomputeNetWorth,
@@ -253,6 +254,9 @@ export class GameEngine {
 
       case 'REPAY_LOAN':
         return repayLoan(state, playerId, command.loanId);
+
+      case 'ISSUE_SHARES':
+        return issueShares(state, playerId, command.count);
 
       case 'DISMISS_VICTORY':
         if (!state.victory) return { ok: false, reason: 'Henüz bir zafer yok.' };

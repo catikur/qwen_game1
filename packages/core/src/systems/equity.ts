@@ -1,6 +1,6 @@
 import { BUILDING_BY_ID } from '@capital/content';
 import { BUILDING_BOOK_RATIO } from './city';
-import type { GameState } from '../types';
+import type { CompanyState, GameState } from '../types';
 
 /**
  * Borsa — şirketlerin sahipliği.
@@ -28,6 +28,22 @@ export const TOTAL_SHARES = 10_000;
 /** Şirketin bugünkü toplam hisse adedi. */
 export function sharesOutstanding(state: GameState, companyId: string): number {
   return state.companies[companyId]?.shareCount ?? TOTAL_SHARES;
+}
+
+/**
+ * Kurucu payı: şirket değerinin oyuncuya (ya da rakibin kendisine) düşen
+ * kısmı. Hiç ihraç yapmamış şirkette tam 1 — net değer formülü eskisiyle
+ * birebir aynı kalıyor.
+ */
+export function ownerFraction(company: CompanyState): number {
+  const investors = company.investorShares ?? 0;
+  if (investors <= 0) return 1;
+  return 1 - investors / (company.shareCount ?? TOTAL_SHARES);
+}
+
+/** Şirketin tamamının değeri (kurucu payından önce). */
+export function companyValue(company: CompanyState): number {
+  return company.netWorth / ownerFraction(company);
 }
 
 /** Güven çarpanının sınırları — büyüyen şirket primli, eriyen iskontolu. */
@@ -121,7 +137,9 @@ export function sharesHeld(state: GameState, holderId: string, issuerId: string)
  * hazinedeki her hisse, bir baskıncının ASLA alamayacağı bir hissedir.
  */
 export function freeFloat(state: GameState, issuerId: string): number {
-  let held = 0;
+  // İhraçla gelen kurumsal yatırımcılar hisseyi elde tutar (Tur 19): o
+  // pay da dolaşımda değil. Hiç ihraç yapmamış şirkette sıfır.
+  let held = state.companies[issuerId]?.investorShares ?? 0;
   for (const company of Object.values(state.companies)) {
     held += company.shares[issuerId] ?? 0;
   }
@@ -187,6 +205,12 @@ export function buyShares(
 
   buyer.cash -= cost;
   buyer.shares[issuerId] = (buyer.shares[issuerId] ?? 0) + wanted;
+  // Geri alım önce ihraçla yatırımcılara geçmiş payı geri alır (Tur 19):
+  // kurucu payı büyür. İhraç yapmamış şirkette hiçbir şey değişmez.
+  if (buyerId === issuerId && (buyer.investorShares ?? 0) > 0) {
+    buyer.investorShares = Math.max(0, buyer.investorShares! - wanted);
+    if (buyer.investorShares === 0) delete buyer.investorShares;
+  }
   return { ok: true };
 }
 
@@ -260,6 +284,9 @@ function absorb(state: GameState, acquirerId: string, targetId: string): void {
   }
   acquirer.cash += target.cash;
   acquirer.debt += target.debt;
+  // İhraçla gelen yatırımcılar da nakde çevrilir — bedelini devralan öder
+  // (Tur 19). Hiç ihraç yapmamış hedefte sıfır.
+  acquirer.cash -= (target.investorShares ?? 0) * price;
   // Krediler de devralana geçer (teminatları zaten onun parseli oldu);
   // `debt` toplam olduğu için kredili hesap kendiliğinden doğru kalır.
   if (target.credit && target.credit.loans.length > 0) {

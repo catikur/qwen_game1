@@ -141,6 +141,20 @@ export function agenda(state: GameState): AgendaItem[] {
         tone: 'bad',
       });
     }
+    // Tahvil vade duvarı: anapara tek seferde. Kasa yetmiyorsa acil.
+    for (const loan of player.credit?.loans ?? []) {
+      if (loan.kind !== 'bond') continue;
+      const left = loan.startDay + loan.termDays - day;
+      if (left > CREDIT.bond.warnDays) continue;
+      items.push({
+        kind: 'bank',
+        key: `bank:bond:${loan.id}`,
+        urgency: player.cash < loan.balance ? 3 : 2,
+        daysLeft: Math.max(0, left),
+        label: `Tahvil vadesi · ${formatMoney(loan.balance)}`,
+        tone: player.cash < loan.balance ? 'bad' : 'neutral',
+      });
+    }
   }
 
   if (state.contractOffer) {
