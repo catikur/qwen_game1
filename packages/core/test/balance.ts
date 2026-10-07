@@ -61,6 +61,8 @@ import { buyShares } from '../src/systems/equity';
 import { PRUNE_MEMORY_DAYS } from '../src/systems/npc';
 import { WAGE_PER_JOB } from '../src/systems/labor';
 import { loanQuote } from '../src/systems/credit';
+import { issueQuote } from '../src/systems/issuance';
+import { ownerFraction, sharesOutstanding } from '../src/systems/equity';
 import type { GameEngine as Engine } from '../src/engine';
 import type { GameState } from '../src/types';
 import {
@@ -864,6 +866,8 @@ function outletUnitCost(state: GameState): number {
      */
     engine2.getState().flags.labor = false;
     engine2.getState().flags.credit = false;
+    // Rakip ihracı da (Tur 19): kolların rakip manzarasını ayırıyor.
+    engine2.getState().flags.issuance = false;
     let tail = 0;
     for (let day = 1; day <= CHAIN_AB_DAYS; day++) {
       if (day % 5 === 0) {
@@ -2303,8 +2307,10 @@ section('Borsa', () => {
   buyShares(state, minorityId, targetId, 500);
   const minorityCashBefore = minority.cash;
 
-  const cost = price * 5_100;
-  const bought = engine.dispatch({ type: 'BUY_SHARES', companyId: targetId, count: 5_100 });
+  // %51 — hedef ihraç yapmış olabilir (Tur 19), adet sabit 10.000 değil.
+  const control = Math.ceil(sharesOutstanding(state, targetId) * 0.51);
+  const cost = price * control;
+  const bought = engine.dispatch({ type: 'BUY_SHARES', companyId: targetId, count: control });
   expect('kontrol payı satın alınabiliyor', bought.ok, bought.reason ?? formatMoney(cost));
   console.log(`  ${targetName} devralma maliyeti: ${formatMoney(cost)} (%51 · ${targetBuildings} bina)`);
 
@@ -3442,6 +3448,114 @@ section('Banka ve kredi', () => {
     wars.map(({ with: a, without: b }) => `${a.defaults} / ${b.defaults} haciz`).join(' · '));
   expect('kötü günde borçlu şirket daha derine düşüyor', wars.every(({ with: a, without: b }) => a.worth[360]! < b.worth[360]! && a.land <= b.land),
     wars.map(({ with: a, without: b }) => `${formatMoney(a.worth[360]!)} < ${formatMoney(b.worth[360]!)}`).join(' · '));
+});
+
+section('Sermaye piyasası: halka arz ve kurucu kilidi', () => {
+  /*
+   * Tur 19. Sınanan iddialar:
+   *   - halka arz bedava para değil: nakdi sıkışmayan şirkette erken ihraç
+   *     720. günde net değeri düşürüyor (kalıcı ortaklık);
+   *   - ama bir kontrol aracı: savunmasız yavaş oyuncu baskınla düşerken
+   *     baskıncı %30'u geçince ihraç eden aynı oyuncu ayakta kalıyor;
+   *   - oyun başı rakipler baskın ısınması bitene kadar kilitli: en ucuz
+   *     rakibi alan vekil eskiden 5. günde devralıp tekel zaferine
+   *     130–235. günde ulaşıyordu.
+   */
+  function ipoRun(seed: number, ipo: boolean) {
+    const engine = new GameEngine(createNewGame({ seed, companyName: 'Arz AŞ' }));
+    let issuedDay: number | null = null;
+    for (let day = 1; day <= 720; day++) {
+      const quote = issueQuote(engine.getState(), engine.getState().playerCompanyId);
+      if (ipo && issuedDay === null && quote.ok && engine.dispatch({ type: 'ISSUE_SHARES', count: quote.maxShares }).ok) {
+        issuedDay = day;
+      }
+      if (day % 5 === 0) playerStrategy(engine);
+      const labor = getPlayer(engine.getState()).labor;
+      if (labor?.demand) engine.dispatch({ type: 'RESPOND_UNION', response: 'compromise' });
+      engine.runDay();
+    }
+    const player = getPlayer(engine.getState());
+    return { worth: player.netWorth, issuedDay, founder: ownerFraction(player) };
+  }
+  const ipos = [1, 7].map((seed) => ({ seed, with: ipoRun(seed, true), without: ipoRun(seed, false) }));
+  for (const { seed, with: a, without: b } of ipos) {
+    console.log(
+      `  erken halka arz seed ${String(seed).padStart(2)} | ${a.issuedDay}. gün · kurucu %${Math.round(a.founder * 100)} · ` +
+        `720. gün ${formatMoney(a.worth)} · ihraçsız ${formatMoney(b.worth)}`,
+    );
+  }
+  expect('halka arz bedava para değil', ipos.every(({ with: a, without: b }) => a.issuedDay !== null && a.worth < b.worth),
+    ipos.map(({ with: a, without: b }) => `%${Math.round((a.worth / b.worth - 1) * 100)}`).join(' · '));
+
+  function defenseRun(seed: number, issue: boolean) {
+    const engine = new GameEngine(createNewGame({ seed, companyName: 'Kalkan AŞ' }));
+    let lost: number | null = null;
+    let issued = 0;
+    for (let day = 1; day <= 900; day++) {
+      const state = engine.getState();
+      if (issue) {
+        let top = 0;
+        for (const company of Object.values(state.companies)) {
+          if (!company.isPlayer) top = Math.max(top, company.shares[state.playerCompanyId] ?? 0);
+        }
+        const quote = issueQuote(state, state.playerCompanyId);
+        if (top / sharesOutstanding(state, state.playerCompanyId) >= 0.3 && quote.ok) {
+          if (engine.dispatch({ type: 'ISSUE_SHARES', count: quote.maxShares }).ok) issued++;
+        }
+      }
+      if (day % 15 === 0) playerStrategy(engine);
+      const labor = getPlayer(engine.getState()).labor;
+      if (labor?.demand) engine.dispatch({ type: 'RESPOND_UNION', response: 'compromise' });
+      engine.runDay();
+      if (engine.getState().gameOver) {
+        lost = day;
+        break;
+      }
+    }
+    return { lost, issued, founder: ownerFraction(getPlayer(engine.getState())) };
+  }
+  const shields = [7, 42].map((seed) => ({ seed, bare: defenseRun(seed, false), issue: defenseRun(seed, true) }));
+  for (const { seed, bare, issue } of shields) {
+    console.log(
+      `  baskın seed ${String(seed).padStart(2)} | savunmasız ${bare.lost ? `${bare.lost}. günde düşüyor` : 'ayakta'} · ` +
+        `ihraçla ${issue.lost ? `${issue.lost}. günde düşüyor` : 'ayakta'} (${issue.issued} ihraç, kurucu %${Math.round(issue.founder * 100)})`,
+    );
+  }
+  expect('ihraç baskına karşı kalkan', shields.every(({ bare, issue }) => bare.lost !== null && issue.lost === null),
+    shields.map(({ seed, bare, issue }) => `seed ${seed}: ${bare.lost ?? 'ayakta'} → ${issue.lost ?? 'ayakta'}`).join(' · '));
+
+  // Kurucu kilidi: oyun başında hiçbir rakip satın alınamıyor.
+  const early = new GameEngine(createNewGame({ seed: 3, companyName: 'Erken AŞ' }));
+  for (let day = 1; day <= 5; day++) early.runDay();
+  const rival = Object.values(early.getState().companies).find((c) => !c.isPlayer)!;
+  const attempt = early.dispatch({ type: 'BUY_SHARES', companyId: rival.id, count: 100 });
+  expect('oyun başı rakipler kurucu kilidinde', !attempt.ok, attempt.reason ?? 'alım geçti');
+
+  // Devralmacı: en ucuz rakibi kontrole yetecek nakdi olunca alan vekil.
+  const raider = new GameEngine(createNewGame({ seed: 1, companyName: 'Avcı AŞ' }));
+  let firstTakeover: number | null = null;
+  for (let day = 1; day <= 420; day++) {
+    if (day % 5 === 0) {
+      playerStrategy(raider);
+      const state = raider.getState();
+      const player = getPlayer(state);
+      let best: { id: string; need: number; cost: number } | null = null;
+      for (const company of Object.values(state.companies)) {
+        if (company.isPlayer) continue;
+        const need = Math.floor(sharesOutstanding(state, company.id) * 0.5) + 1 - (player.shares[company.id] ?? 0);
+        const cost = need * sharePrice(state, company.id);
+        if (need > 0 && need <= freeFloat(state, company.id) && (!best || cost < best.cost)) best = { id: company.id, need, cost };
+      }
+      if (best && best.cost < player.cash * 0.9 && raider.dispatch({ type: 'BUY_SHARES', companyId: best.id, count: best.need }).ok) {
+        firstTakeover ??= day;
+      }
+    }
+    raider.runDay();
+  }
+  const victory = raider.getState().victory;
+  console.log(`  devralmacı vekil | ilk devralma ${firstTakeover ?? '-'}. gün · 420. günde zafer ${victory ? `${victory.kind} ${victory.day}. gün` : 'yok'}`);
+  expect('devralmacı vekil kilit bitmeden devralamıyor', firstTakeover !== null && firstTakeover >= 160, `${firstTakeover ?? '-'}. gün`);
+  expect('tekel zaferi 400. günden önce gelmiyor', !victory || victory.day >= 400, victory ? `${victory.kind} ${victory.day}. gün` : 'zafer yok');
 });
 
 if (timings.length === 0) {

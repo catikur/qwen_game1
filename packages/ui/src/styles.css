@@ -3730,3 +3730,14 @@ button.icon {
   font-weight: 400;
   font-size: 11px;
 }
+
+/* --- borsa: sermaye artırımı --- */
+.issuance .primary {
+  align-self: flex-start;
+}
+
+.issuance p {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+}

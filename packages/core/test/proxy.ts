@@ -25,7 +25,7 @@ import {
   sharePrice,
   sharesHeld,
   tilePrice,
-  TOTAL_SHARES,
+  sharesOutstanding,
 } from '../src/index';
 import type { ChainMove } from '../src/index';
 import type { GameState } from '../src/types';
@@ -227,7 +227,7 @@ export function defendAgainstRaids(engine: GameEngine): void {
     if (other.id === player.id) continue;
     threat = Math.max(threat, sharesHeld(state, other.id, player.id));
   }
-  if (threat / TOTAL_SHARES < 0.2) return;
+  if (threat / sharesOutstanding(state, player.id) < 0.2) return;
   const price = sharePrice(state, player.id);
   if (price <= 0) return;
   const count = Math.min(350, freeFloat(state, player.id), Math.floor((player.cash * 0.4) / price));

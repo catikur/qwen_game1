@@ -1,6 +1,6 @@
 import { BUILDING_BY_ID } from '@capital/content';
 import { BUILDING_BOOK_RATIO } from './city';
-import type { GameState } from '../types';
+import type { CompanyState, GameState } from '../types';
 
 /**
  * Borsa — şirketlerin sahipliği.
@@ -18,8 +18,33 @@ import type { GameState } from '../types';
  * `ownedValue` sıfır döner ve net değer formülü eski haline indirgenir.
  */
 
-/** Her şirket bu kadar hisseye bölünür. */
+/**
+ * Bir şirketin kuruluştaki hisse adedi. Sermaye artırımı (Tur 19)
+ * gelene kadar her şirketin adedi buydu ve değişmiyordu; artık şirket
+ * başına `sharesOutstanding`. Ad geriye dönük uyum için korunuyor.
+ */
 export const TOTAL_SHARES = 10_000;
+
+/** Şirketin bugünkü toplam hisse adedi. */
+export function sharesOutstanding(state: GameState, companyId: string): number {
+  return state.companies[companyId]?.shareCount ?? TOTAL_SHARES;
+}
+
+/**
+ * Kurucu payı: şirket değerinin oyuncuya (ya da rakibin kendisine) düşen
+ * kısmı. Hiç ihraç yapmamış şirkette tam 1 — net değer formülü eskisiyle
+ * birebir aynı kalıyor.
+ */
+export function ownerFraction(company: CompanyState): number {
+  const investors = company.investorShares ?? 0;
+  if (investors <= 0) return 1;
+  return 1 - investors / (company.shareCount ?? TOTAL_SHARES);
+}
+
+/** Şirketin tamamının değeri (kurucu payından önce). */
+export function companyValue(company: CompanyState): number {
+  return company.netWorth / ownerFraction(company);
+}
 
 /** Güven çarpanının sınırları — büyüyen şirket primli, eriyen iskontolu. */
 const CONFIDENCE_FLOOR = 0.6;
@@ -95,7 +120,7 @@ export function marketCap(state: GameState, companyId: string): number {
 
 /** Tek hissenin fiyatı. */
 export function sharePrice(state: GameState, companyId: string): number {
-  return marketCap(state, companyId) / TOTAL_SHARES;
+  return marketCap(state, companyId) / sharesOutstanding(state, companyId);
 }
 
 /** `holderId` şirketinin `issuerId` şirketinde kaç hissesi var. */
@@ -112,11 +137,13 @@ export function sharesHeld(state: GameState, holderId: string, issuerId: string)
  * hazinedeki her hisse, bir baskıncının ASLA alamayacağı bir hissedir.
  */
 export function freeFloat(state: GameState, issuerId: string): number {
-  let held = 0;
+  // İhraçla gelen kurumsal yatırımcılar hisseyi elde tutar (Tur 19): o
+  // pay da dolaşımda değil. Hiç ihraç yapmamış şirkette sıfır.
+  let held = state.companies[issuerId]?.investorShares ?? 0;
   for (const company of Object.values(state.companies)) {
     held += company.shares[issuerId] ?? 0;
   }
-  return Math.max(0, TOTAL_SHARES - held);
+  return Math.max(0, sharesOutstanding(state, issuerId) - held);
 }
 
 /**
@@ -178,6 +205,12 @@ export function buyShares(
 
   buyer.cash -= cost;
   buyer.shares[issuerId] = (buyer.shares[issuerId] ?? 0) + wanted;
+  // Geri alım önce ihraçla yatırımcılara geçmiş payı geri alır (Tur 19):
+  // kurucu payı büyür. İhraç yapmamış şirkette hiçbir şey değişmez.
+  if (buyerId === issuerId && (buyer.investorShares ?? 0) > 0) {
+    buyer.investorShares = Math.max(0, buyer.investorShares! - wanted);
+    if (buyer.investorShares === 0) delete buyer.investorShares;
+  }
   return { ok: true };
 }
 
@@ -211,10 +244,11 @@ export function sellShares(
  * cevaplayabilmeli.
  */
 export function controllerOf(state: GameState, issuerId: string): string | null {
+  const outstanding = sharesOutstanding(state, issuerId);
   for (const company of Object.values(state.companies)) {
     if (company.id === issuerId) continue;
     const count = company.shares[issuerId] ?? 0;
-    if (count / TOTAL_SHARES > CONTROL_THRESHOLD) return company.id;
+    if (count / outstanding > CONTROL_THRESHOLD) return company.id;
   }
   return null;
 }
@@ -250,6 +284,9 @@ function absorb(state: GameState, acquirerId: string, targetId: string): void {
   }
   acquirer.cash += target.cash;
   acquirer.debt += target.debt;
+  // İhraçla gelen yatırımcılar da nakde çevrilir — bedelini devralan öder
+  // (Tur 19). Hiç ihraç yapmamış hedefte sıfır.
+  acquirer.cash -= (target.investorShares ?? 0) * price;
   // Krediler de devralana geçer (teminatları zaten onun parseli oldu);
   // `debt` toplam olduğu için kredili hesap kendiliğinden doğru kalır.
   if (target.credit && target.credit.loans.length > 0) {
@@ -350,13 +387,14 @@ export function runDividendTick(state: GameState): void {
     if (profit <= 0) continue;
 
     const pool = profit * DIVIDEND_RATIO;
+    const outstanding = sharesOutstanding(state, issuer.id);
     let paid = 0;
 
     for (const holder of Object.values(state.companies)) {
       if (holder.id === issuer.id) continue;
       const count = holder.shares[issuer.id] ?? 0;
       if (count <= 0) continue;
-      const share = (pool * count) / TOTAL_SHARES;
+      const share = (pool * count) / outstanding;
       holder.cash += share;
       paid += share;
     }

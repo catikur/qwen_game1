@@ -161,10 +161,16 @@ function LoanForm(): ReactElement {
   const [kind, setKind] = useState<LoanKind>('term');
   const [termDays, setTermDays] = useState(360);
   const [wanted, setWanted] = useState<number | null>(null);
-  const quote = loanQuote(state, player.id, kind, termDays);
-  const amount = Math.max(CREDIT.minLoan, Math.min(quote.max, wanted ?? quote.max));
-  const payment = annuityPayment(amount, quote.rate, termDays);
-  const totalInterest = payment * termDays - amount;
+  const bond = kind === 'bond';
+  const terms = bond ? CREDIT.bond.terms : CREDIT.terms;
+  // Tür değişince vade listesi değişir; listede olmayan vade ilkine düşer.
+  const days = terms.some((option) => option.days === termDays) ? termDays : terms[0]!.days;
+  const quote = loanQuote(state, player.id, kind, days);
+  const floor = bond ? CREDIT.bond.minAmount : CREDIT.minLoan;
+  const amount = Math.max(floor, Math.min(quote.max, wanted ?? quote.max));
+  // Tahvil yalnızca kupon öder: toplam faiz kupon × vade, anapara vadede.
+  const payment = bond ? (amount * quote.rate) / 365 : annuityPayment(amount, quote.rate, days);
+  const totalInterest = bond ? payment * days : payment * days - amount;
 
   return (
     <div className="bank-form">
@@ -175,10 +181,13 @@ function LoanForm(): ReactElement {
         <button type="button" aria-pressed={kind === 'secured'} onClick={() => setKind('secured')}>
           Arsa teminatlı
         </button>
+        <button type="button" aria-pressed={bond} onClick={() => setKind('bond')}>
+          Tahvil
+        </button>
       </div>
       <div className="labor-policy" role="group" aria-label="Vade">
-        {CREDIT.terms.map((option) => (
-          <button key={option.days} type="button" aria-pressed={termDays === option.days} onClick={() => setTermDays(option.days)}>
+        {terms.map((option) => (
+          <button key={option.days} type="button" aria-pressed={days === option.days} onClick={() => setTermDays(option.days)}>
             {option.days} gün
           </button>
         ))}
@@ -191,17 +200,23 @@ function LoanForm(): ReactElement {
             </span>
             <input
               type="range"
-              min={CREDIT.minLoan}
+              min={floor}
               max={quote.max}
-              step={10_000}
+              step={bond ? 50_000 : 10_000}
               value={amount}
               onChange={(event) => setWanted(Number(event.target.value))}
             />
           </label>
           <p className="muted bank-terms">
-            Yıllık {pct(quote.rate, 1)} · taksit {formatMoney(payment)}/gün · toplam faiz {formatMoney(totalInterest)}
+            Yıllık {pct(quote.rate, 1)} · {bond ? 'kupon' : 'taksit'} {formatMoney(payment)}/gün · toplam faiz{' '}
+            {formatMoney(totalInterest)}
             {kind === 'secured' && ` · rehne açık arsa ${formatMoney(quote.collateralValue ?? 0)}`}
           </p>
+          {bond && (
+            <p className="muted bank-terms">
+              Anapara {days}. günde tek seferde: {formatMoney(amount)}. O gün kasada yoksa fark kredili hesaba geçer.
+            </p>
+          )}
           <p className="muted bank-terms">
             Dosya masrafı %{CREDIT.originationFee * 100} · sonraki başvuru {CREDIT.applyCooldownDays} gün sonra · not D'ye
             düşersen krediler muaccel olur.
@@ -210,10 +225,10 @@ function LoanForm(): ReactElement {
             type="button"
             className="primary"
             onClick={() => {
-              if (run({ type: 'TAKE_LOAN', kind, amount, termDays })) setWanted(null);
+              if (run({ type: 'TAKE_LOAN', kind, amount, termDays: days })) setWanted(null);
             }}
           >
-            Krediyi çek
+            {bond ? 'Tahvil ihraç et' : 'Krediyi çek'}
           </button>
         </>
       ) : (
@@ -287,7 +302,13 @@ export function BankSection(): ReactElement | null {
             <tbody>
               {loans.map((loan) => (
                 <tr key={loan.id}>
-                  <td>{loan.kind === 'secured' ? `Teminatlı · ${loan.collateral?.length ?? 0} arsa` : 'Vadeli'}</td>
+                  <td>
+                    {loan.kind === 'secured'
+                      ? `Teminatlı · ${loan.collateral?.length ?? 0} arsa`
+                      : loan.kind === 'bond'
+                        ? 'Tahvil · vadede tek ödeme'
+                        : 'Vadeli'}
+                  </td>
                   <td>{formatMoney(loan.balance)}</td>
                   <td>{pct(loan.rate, 1)}</td>
                   <td>{formatMoney(loan.payment)}</td>

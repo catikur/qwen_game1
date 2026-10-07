@@ -2,7 +2,7 @@ import { BUILDING_BY_ID, GOALS, getDifficulty } from '@capital/content';
 import type { GoalDef } from '@capital/content';
 import { pushNews } from '../news';
 import { formatMoney } from '../selectors';
-import { TOTAL_SHARES } from './equity';
+import { sharesOutstanding } from './equity';
 import type { GameState, VictoryKind } from '../types';
 
 /**
@@ -59,7 +59,7 @@ function bestRivalStake(state: GameState): number {
   for (const [issuerId, count] of Object.entries(player.shares)) {
     if (issuerId === player.id || !count) continue;
     if (!state.companies[issuerId]) continue;
-    best = Math.max(best, count / TOTAL_SHARES);
+    best = Math.max(best, count / sharesOutstanding(state, issuerId));
   }
   return best;
 }

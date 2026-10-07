@@ -4,7 +4,7 @@
 > `pnpm bench` çıktısından; iddialar `pnpm balance` ve `pnpm playtest`
 > tarafından her koşuda doğrulanıyor.
 >
-> Son güncelleme: şema **v6**, 18 tur tamamlandı.
+> Son güncelleme: şema **v6**, 19 tur tamamlandı.
 
 ---
 
@@ -40,6 +40,7 @@ mantığının dışında; üçüncüsü ise oyunun kendi **tavsiyesindeydi**:
 | Şehir gün 0'da bitmiş bir dekordu | **16** | Kasabadan metropole: yayılma, yükselme, kademe atlama + bölgeyi silüetten okutan formlar |
 | Kazanmak yoktu, testler sahte yeşildi | **17** | Hedef merdiveni ve zafer, zorluk, CI, belediye meclisi, Tohum Ligi, ses |
 | Ücret sabit bir satırdı, borç hiç ödenmiyordu | **18** | İşgücü piyasası, ücret politikası, sendika ve grev; banka: kredili hesap, vadeli ve teminatlı kredi, not, muacceliyet, haciz |
+| Şirket kendi hissesini çıkaramıyordu, rakip 5. günde devralınabiliyordu | **19** | Halka arz ve sermaye artırımı (kurucu payı), tahvil, oyun başı rakiplere kurucu kilidi |
 
 ---
 
@@ -679,6 +680,116 @@ Dört ölçüm dersi:
    bir rakip manzarası kuruyor. Dönemler, baskınlar ve meclisle aynı
    aile; ikisi de A/B'de kapalı.
 
+### Tur 19 — Sermaye piyasası: halka arz, tahvil, kurucu kilidi
+
+§4.9'un "halka arz" kalemi ve Tur 18'in bıraktığı tahvil. Önce ölçüldü
+(720 gün, 3 tohum):
+
+- **Prim:** oyuncunun hisse primi ilk 180 gün tavanda (×1,80), 720. günde
+  ×1,1–1,2.
+- **Baskın:** bilgili vekile hiç baskın yok. Yavaş ve savunmasız vekilin
+  payı 450–650. günlerden itibaren %49'a kadar toplanıyor; 4 tohumun
+  4'ünde devralınıyor, geri alımla 4'te 4 ayakta.
+- **Nakit:** vekilin nakdi hiç sıkışmıyor.
+
+**Tasarımın ilk sorusu: bedava para mı?** Net değer "nakit + varlık −
+borç"tu ve kimin hisse tuttuğuna bakmıyordu. Bu formülle yeni hisse
+satmak bedavaya nakit almak olurdu. O yüzden **kurucu payı** geldi:
+ihraç edilen hisseler kurumsal yatırımcıların, net değer şirket
+değerinin kurucuya düşen kısmı. Hiç ihraç yapmamış şirkette pay 1,
+formül eskisiyle birebir aynı.
+
+**Hisse adedi şirket başına.** 10.000 sabiti `sharesOutstanding` oldu.
+Fiyat, dolaşım, kontrol eşiği, temettü, baskın tavanı (artık bir pay,
+%3,5) ve arayüz aynı fonksiyondan okuyor. İki 700 günlük koşunun son
+durumu bayt bayt aynı kaldı.
+
+**Sermaye artırımı, ilki halka arz.**
+
+- *Koşullar:* şirket değeri en az 1 M ₺; bir seferde en fazla mevcut
+  adedin %25'i; fiyat piyasanın %10 altı; iki ihraç arasında 180 gün;
+  kurucu payı %51'in altına inemez.
+- *Yatırımcı payı dolaşımda değil:* kurumsal yatırımcı hisseyi elde
+  tutuyor, baskıncı alamıyor. Kalkan bu kuraldan doğuyor.
+- *Geri alım:* önce yatırımcı payını geri alıyor, kurucu payı büyüyor.
+- *Devralma:* devralan şirket, hedefin yatırımcılarını piyasa fiyatından
+  nakde çeviriyor.
+- *Form:* ihraç günü net değere etkisini gösteriyor. Piyasa primliyken
+  artı, primsizken eksi.
+
+**Tahvil** kredi sistemine üçüncü tür olarak eklendi:
+
+- Yalnızca A/B notunda, en az 1 M ₺.
+- Vade 360, 720 ya da 1080 gün. Kupon: taban faiz + not farkının %60'ı
+  + vade primi; bankadan ucuz.
+- Vade boyunca yalnızca kupon, anapara vadede tek seferde.
+- *Vade duvarı:* 30 gün önce haber ve gündem kalemi; o gün kasada yoksa
+  fark kredili hesaba geçiyor. Muacceliyet ve haciz ortak.
+
+**Rakipler.** Genişlemeci ve teknoloji rakipler nadiren büyüme ihracı
+yapıyor: piyasa onları primli fiyatlarken ve nakitleri sıkışıkken.
+Premium ve teknoloji rakipler, bir baskıncı payı %30'u geçince ihraçla
+savunuyor; diğerleri geri alımla.
+
+**Kurucu kilidi oyun başı rakiplere.** Rakipler, baskın ısınması bitene
+kadar (Dengeli'de 160. gün) kilitli. Sonradan gelen rakiplerde bir yıllık
+kilit zaten vardı.
+
+**Arayüz.**
+
+- *Borsa paneli:* halka arz / sermaye artırımı formu (adet, fiyat,
+  kasaya giren, kurucu payı öncesi ve sonrası, net değere bugünkü etki),
+  rakip satırında kurucu kilidi ve kurumsal yatırımcı payı.
+- *Banka formu:* tahvil seçeneği.
+- *Gündem:* vadesi yaklaşan tahvil; kasa yetmiyorsa acil kalem.
+
+Kalibrasyon (vekil 5 günde bir):
+
+| | Sonuç |
+|---|---|
+| Erken halka arz (73–87. gün, %25), 720. gün | −%25 / −%23 / −%5 (ort. −%19) |
+| İki ihraç | ort. −%31 |
+| Geç ihraç (540. gün, prim ×1,2) | ort. −%5 |
+| Aceleci vekil (nakdin %87,5'i) + halka arz, 900. gün | −%4 / −%14 / −%23 |
+| Devralmacı vekil + halka arz sermayesi | değer zaferi 529–582 → 636–649. gün |
+| Baskın: yavaş, savunmasız vekil (4 tohum) | savunmasız 0/4 · geri alım 4/4 (42–57 M ₺) · **ihraç 4/4 (57–67 M ₺)** |
+| Devralmacı vekil, kilit öncesi → sonrası | ilk devralma 5. gün → 165. gün · tekel zaferi 130–235. gün → yok · değer zaferi 529–582. gün |
+
+Beş ölçüm dersi:
+
+1. **Ölçüm mekaniğin ne olduğunu değiştirdi.** Halka arz bir büyüme
+   aracı olarak tasarlandı. Ölçüm büyümede her senaryoda kaybettirdiğini
+   gösterdi: nakit bu ekonomide nadiren bağlayıcı, kalıcı ortaklık
+   pahalı. İlk sürüm savunma olarak da işe yaramıyordu. Yeni hisseler
+   dolaşıma giriyor, baskıncı onları da topluyordu; geri alımla birlikte
+   kullanınca geri alımın tek başına verdiği sonuçtan kötüydü (4'te 3).
+   Kurumsal yatırımcının payını elde tutması kuralıyla ihraç bir
+   **kontrol aracı** oldu: geri alım nakit yakıyor, ihraç nakit getiriyor,
+   bedeli kalıcı ortaklık. Form artı/eksi etkiyi gösteriyor; oyuncu
+   tuzağa düşmeden karar verebiliyor.
+2. **Yan ölçüm eski bir açığı buldu.** Halka arzın devralma sermayesi
+   olarak işe yarayıp yaramadığını ölçen vekil Kilit Market'i 5. günde
+   devraldı, tekel zaferine 130–235. günde ulaştı. Tur 4'ten beri oyun
+   başı rakiplerde kilit yoktu; rakiplerin baskını ise 160. günden önce
+   başlayamıyordu. "Herkes aynı kuralla" ilkesi oyuncu lehine
+   çiğneniyordu. Kurucu kilidi bunu kapattı. Kalan asimetri §4.6'da:
+   oyuncunun alımında günlük tavan yok.
+3. **"Davranış aynı" iddiası bir özetle kanıtlanmalı.** Yeniden
+   düzenlemeden önce ve sonra iki 700 günlük koşunun durum özeti
+   karşılaştırıldı. İlk karşılaştırma farklı çıktı. Sebep kod değil,
+   kayıttaki oluşturma zaman damgasıydı; onu dışarıda bırakınca bayt bayt
+   aynı.
+4. **Eşli deneyler aynı aileyi büyütüyor.** Rakip ihracı da kollar
+   arasında farklı rakip manzarası kuruyor. Zincir A/B'sinde sermaye
+   artırımı da kapalı: dönemler, baskınlar, meclis, işgücü ve banka gibi.
+   Sabit varsayımlar da kırılıyor: iki devralma testi kontrol için sabit
+   5.100 hisse alıyordu; ihraç yapmış rakipte bu %51 değil.
+5. **Yeni sistem eski bir kontrolün körlüğünü açığa çıkardı.** Tarayıcı
+   testi "geçilme" haberlerini akışın uzunluk farkından buluyordu. Akış 60
+   kalemle sınırlı ve yeni sistemlerin haberleriyle o noktada doluyordu:
+   uzunluk değişmiyor, yeni haber "yok" görünüyordu. Kontrol artık haber
+   kimliğine bakıyor.
+
 ---
 
 ## 3. Ölçülen durum
@@ -749,9 +860,9 @@ ufuk dersi).
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~570 gün/sn |
-| Birim testi | **93 test** (`pnpm test`) |
-| Denge testi | **244 kontrol, hepsi geçiyor** (15 bölüm, süreleriyle; ~11 dk) |
-| Tarayıcı testi | **252 kontrol**, 0 konsol hatası; duman koşusu 81 |
+| Birim testi | **105 test** (`pnpm test`) |
+| Denge testi | **249 kontrol, hepsi geçiyor** (16 bölüm, süreleriyle; ~15 dk) |
+| Tarayıcı testi | **255 kontrol**, 0 konsol hatası; duman koşusu 83 |
 | CI | her PR'da tip + test + denge + paket + duman oynanışı |
 | Kapsam | 26 bina · 22 ürün · 7 kategori · 8 rakip profili · 10 şehir yapısı (6 siluet) |
 
@@ -856,6 +967,11 @@ köşeler; açılış takvimi büyük haritada yeniden ölçülmeli.)
 - Devralınan şirketin yerine yenisi gelmiyor; geç oyunda rakip sayısı
   azalıyor
 - İhale yalnızca boş parsel için; dolu parsel ihalesi yok
+- Oyuncunun rakip hissesi alımında günlük tavan yok (Tur 19): rakip
+  baskını günde %3,5 ile sınırlı, oyuncu %51'i tek seferde alabiliyor.
+  Kurucu kilidi en kaba açığı kapattı (5. günde devralma), ama kilit
+  bittikten sonra hedefin savunmaya fırsatı olmuyor. Adil çözüm, aynı
+  tavanla birkaç güne yayılan bir "devralma emri"; arayüz işi var.
 
 ### 4.7 Şehrin oyuncuyu içine alması — Tur 9'da başladı, bitmedi
 
@@ -882,7 +998,7 @@ tempolu tavsiyenin kendi ölçüsü `chain-scale-experiment.ts`.
 
 ---
 
-### 4.9 Özgün plandan kalanlar (Tur 17 değerlendirmesi, Tur 18 güncellemesi)
+### 4.9 Özgün plandan kalanlar (Tur 17 değerlendirmesi; Tur 18 ve 19 güncellemeleri)
 
 Tur 17 meclisle üç eksik kalemi kapattı: **lobicilik/politika** (meclis),
 **vergi** (kategori vergisi ve teşviki, süreli) ve **altyapı** (metro —
@@ -891,10 +1007,9 @@ nüfus tavanı ve arsa değeri). Hâlâ açık olanlar:
 - ~~**Sendika / işgücü**~~ — Tur 18'de kapandı: işgücü piyasası, ücret
   politikası, sendika talebi, grev.
 - ~~**Kredi ürünleri**~~ — Tur 18'de kapandı: kredili hesap, vadeli ve
-  teminatlı kredi, not, muacceliyet, haciz. Tahvil (şirketin borç
-  senedi ihracı) yok; halka arzla birlikte düşünülmeli.
-- **Halka arz:** hisse alım-satımı ve devralma var, oyuncunun kendi
-  hisse ihracı (sermaye artırımı) yok — kısmi.
+  teminatlı kredi, not, muacceliyet, haciz. Tahvil Tur 19'da geldi.
+- ~~**Halka arz**~~ — Tur 19'da kapandı: halka arz ve sermaye artırımı
+  (kurucu payı, kurumsal yatırımcı), tahvil.
 - **Yerelleştirme:** arayüz metinleri bileşenlerin içinde (en az 133 sabit
   Türkçe dize); "yerelleştirmeye hazır" hedefi karşılanmadı. İlk adım
   metinleri bir sözlüğe çekmek olur; içerik paketindeki adlar zaten tek yerde.
@@ -907,13 +1022,13 @@ nüfus tavanı ve arsa değeri). Hâlâ açık olanlar:
 
 ```bash
 pnpm typecheck       # altı paketin tamamı
-pnpm test            # birim testleri — 93 test, test yoksa kırmızı
-pnpm balance         # denge testi — 244 kontrol, geçti/kaldı (~11 dk)
+pnpm test            # birim testleri — 105 test, test yoksa kırmızı
+pnpm balance         # denge testi — 249 kontrol, geçti/kaldı (~15 dk)
 pnpm balance meclis  # yalnızca adında "meclis" geçen bölümler
 pnpm bench           # benchmark — sayıların kendisi
 pnpm constraint      # kısıt deneyi — bağlayıcı kısıt hangisi?
 pnpm land            # abonman oranı — geometri varyantları
-pnpm playtest        # tarayıcı testi (build dahil), tam koşu ~16 dk
+pnpm playtest        # tarayıcı testi (build dahil), tam koşu ~20 dk
 pnpm playtest:smoke  # duman koşusu ~3,5 dk — PR'da CI bunu koşar
 node tools/build-single-file.mjs   # paylaşılan sayfa için tek HTML
 pnpm dev             # oyunu aç

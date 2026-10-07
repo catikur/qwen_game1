@@ -1,7 +1,7 @@
 import { CREDIT, ERA_BY_ID, EVENTS } from '@capital/content';
 import { nextGoal } from './systems/goals';
 import { OFFER_LIFETIME_DAYS, contractProgress } from './systems/contracts';
-import { sharesHeld, TOTAL_SHARES } from './systems/equity';
+import { sharesHeld, sharesOutstanding } from './systems/equity';
 import { creditEnabled, overdraftLimit, overdraftOf } from './systems/credit';
 import { laborEnabled } from './systems/labor';
 import { formatMoney } from './selectors';
@@ -70,7 +70,7 @@ export function agenda(state: GameState): AgendaItem[] {
         raider = company.id;
       }
     }
-    const fraction = top / TOTAL_SHARES;
+    const fraction = top / sharesOutstanding(state, player.id);
     if (raider && fraction >= 0.1) {
       items.push({
         kind: 'raid',
@@ -139,6 +139,20 @@ export function agenda(state: GameState): AgendaItem[] {
         daysLeft: null,
         label: `Kredili hesap ${formatMoney(overdraft)}`,
         tone: 'bad',
+      });
+    }
+    // Tahvil vade duvarı: anapara tek seferde. Kasa yetmiyorsa acil.
+    for (const loan of player.credit?.loans ?? []) {
+      if (loan.kind !== 'bond') continue;
+      const left = loan.startDay + loan.termDays - day;
+      if (left > CREDIT.bond.warnDays) continue;
+      items.push({
+        kind: 'bank',
+        key: `bank:bond:${loan.id}`,
+        urgency: player.cash < loan.balance ? 3 : 2,
+        daysLeft: Math.max(0, left),
+        label: `Tahvil vadesi · ${formatMoney(loan.balance)}`,
+        tone: player.cash < loan.balance ? 'bad' : 'neutral',
       });
     }
   }

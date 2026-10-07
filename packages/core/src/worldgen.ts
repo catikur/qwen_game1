@@ -418,6 +418,14 @@ export function createNewGame(input: NewGameOptions = {}): GameState {
       null,
       0.12,
     );
+    /*
+     * Kurucu kilidi baskın ısınması kadar (Tur 19): rakipler oyuncunun
+     * hissesini o güne kadar toplayamıyor, oyuncu da onlarınkini. Kilit
+     * yokken hiçbir şirket ilk gün kendini savunamıyordu; en ucuzunu alan
+     * bir vekil Kilit Market'i 5. günde devralıp tekel zaferine 130–235.
+     * günde ulaşıyordu. Sonradan gelen rakiplerin kilidi zaten vardı.
+     */
+    companies[profile.id]!.lockedUntilDay = getDifficulty(options.difficulty).raidWarmupDays;
   }
 
   return {

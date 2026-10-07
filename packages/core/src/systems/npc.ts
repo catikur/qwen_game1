@@ -15,8 +15,9 @@ import { pushNews } from '../news';
 import { nextFloat } from '../rng';
 import { estimateInvestment } from './market';
 import { isDistrictOpen, tilePrice } from './city';
-import { buyShares, freeFloat, sharePrice, sharesHeld, TOTAL_SHARES } from './equity';
+import { buyShares, freeFloat, sharePrice, sharesHeld, sharesOutstanding, TOTAL_SHARES } from './equity';
 import { npcBorrow } from './credit';
+import { npcDefensiveIssue, npcIssue } from './issuance';
 import type { BuildingInstance, CompanyState, GameState } from '../types';
 
 /**
@@ -460,7 +461,9 @@ function actFor(state: GameState, profile: NpcProfileDef): void {
   // Önce kanayan yara: kapatma haftanın hamlesini harcamıyor — kapanan
   // şubenin nakdi aynı hafta daha iyi bir yere gidebilir.
   tryPruneMove(state, profile);
-  // Borç doktrini bütçeden ÖNCE: çekilen kredi bu haftanın yatırımına girsin.
+  // Finansman bütçeden ÖNCE: ihraç ve kredi bu haftanın yatırımına girsin.
+  // İhraç önce — primli piyasada büyüme şirketi borçtan önce ortak alır.
+  npcIssue(state, profile);
   npcBorrow(state, profile);
 
   // Zorluk rakibin cesaretini ölçekliyor, nakdini değil: tavan nakdin
@@ -641,11 +644,9 @@ function tryRaidMove(state: GameState, profile: NpcProfileDef): void {
   const price = sharePrice(state, target.id);
   if (price <= 0) return;
 
-  const wanted = Math.min(
-    difficulty.raidDailyCap,
-    Math.floor(budget / price),
-    freeFloat(state, target.id),
-  );
+  // Günlük tavan bir PAY (%3,5): sermaye artırımı yapmış hedefte adet büyür.
+  const cap = Math.floor((difficulty.raidDailyCap * sharesOutstanding(state, target.id)) / TOTAL_SHARES);
+  const wanted = Math.min(cap, Math.floor(budget / price), freeFloat(state, target.id));
   if (wanted <= 0) return;
 
   buyShares(state, raider.id, target.id, wanted);
@@ -669,17 +670,14 @@ function tryBuybackDefense(state: GameState, profile: NpcProfileDef): void {
     if (other.id === company.id) continue;
     threat = Math.max(threat, sharesHeld(state, other.id, company.id));
   }
-  if (threat / TOTAL_SHARES < 0.3) return;
+  if (threat / sharesOutstanding(state, company.id) < 0.3) return;
 
   const budget = (company.cash - RAID_CASH_RESERVE) * 0.6;
   const price = sharePrice(state, company.id);
   if (budget <= 0 || price <= 0) return;
 
-  const wanted = Math.min(
-    getDifficulty(state.difficulty).raidDailyCap,
-    Math.floor(budget / price),
-    freeFloat(state, company.id),
-  );
+  const cap = Math.floor((getDifficulty(state.difficulty).raidDailyCap * sharesOutstanding(state, company.id)) / TOTAL_SHARES);
+  const wanted = Math.min(cap, Math.floor(budget / price), freeFloat(state, company.id));
   if (wanted <= 0) return;
 
   buyShares(state, company.id, company.id, wanted);
@@ -703,6 +701,8 @@ export function runNpcTick(state: GameState): void {
      * yavaş kalkarsa kalkan değildir.
      */
     tryRaidMove(state, profile);
+    // Doktrini olan rakip önce ihraçla savunur; ihraç soğumadaysa geri alım.
+    npcDefensiveIssue(state, profile);
     tryBuybackDefense(state, profile);
 
     // Kararları güne yay: hepsi aynı gün hamle yapmasın.

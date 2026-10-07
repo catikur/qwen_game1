@@ -12,6 +12,7 @@ export * from './goals';
 export * from './council';
 export * from './labor';
 export * from './credit';
+export * from './capital';
 
 /** İçerik sürümü — save migration'ında denge değişikliklerini izlemek için. */
 export const CONTENT_VERSION = 5;

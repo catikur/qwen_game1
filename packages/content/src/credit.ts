@@ -22,7 +22,7 @@ import type { NpcTrait } from './types';
  *     banka kredileri muaccel kılar: kalan anapara kredili hesaba geçer.
  */
 export type CreditRating = 'A' | 'B' | 'C' | 'D';
-export type LoanKind = 'term' | 'secured';
+export type LoanKind = 'term' | 'secured' | 'bond';
 
 export interface CreditRatingDef {
   id: CreditRating;
@@ -91,6 +91,26 @@ export const CREDIT = {
   seizeHaircut: 0.85,
   /** Hacizden sonra not bu kadar gün D kalır. */
   defaultMemoryDays: 180,
+  /**
+   * Tahvil (Tur 19): şirketin borç senedi. Vade boyunca yalnızca kupon,
+   * anapara vadede tek seferde — taksit yükü yok ama VADE DUVARI var:
+   * o gün kasada yoksa fark kredili hesaba, oradan ihtar ve hacize gider.
+   * Yalnızca yatırım yapılabilir notta (A/B), büyük tutarlarda; not
+   * farkının yalnızca bir kısmı kupona yansır (piyasa bankadan ucuz).
+   */
+  bond: {
+    minAmount: 1_000_000,
+    terms: [
+      { days: 360, premium: 0.005 },
+      { days: 720, premium: 0.01 },
+      { days: 1080, premium: 0.015 },
+    ],
+    spreadShare: 0.6,
+    /** Tahvil stoku limiti: brüt varlığın bu oranı (nota göre). */
+    limitRatio: { A: 0.35, B: 0.2 } as Record<string, number>,
+    /** Vadeye bu kadar gün kala uyarı. */
+    warnDays: 30,
+  },
 } as const;
 
 /**

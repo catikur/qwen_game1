@@ -230,7 +230,13 @@ async function finish(browser, consoleErrors) {
   // ---------- Simülasyon ----------
   section('Simülasyon döngüsü');
   const day0 = await page.evaluate(() => window.__capital.getState().time.day);
-  await page.waitForTimeout(6000);
+  // SABİT UYKU DEĞİL, KOŞUL: CI'da yazılım render'ı (~3 FPS) sahne yeni
+  // yüklenmişken en yavaşında; 6 saniyelik sabit pencerede yeşil koşuda bile
+  // yalnızca bir gün geçiyordu (payı tek gün) ve bir koşuda sıfıra indi.
+  // İddia aynı — zaman ilerliyor — ama 15 saniyeye kadar bekleniyor.
+  await page
+    .waitForFunction((d) => window.__capital.getState().time.day > d, day0, { timeout: 15000, polling: 250 })
+    .catch(() => null);
   const day1 = await page.evaluate(() => window.__capital.getState().time.day);
   check('Zaman ilerliyor', day1 > day0, `${day0}. gün → ${day1}. gün`);
 
@@ -771,6 +777,38 @@ async function finish(browser, consoleErrors) {
   }));
   check('Banka ihtarı acil kalem olarak gündemde', bankChip.first === 'bank' || bankChip.first === 'union', `${bankChip.first} · ${bankChip.text.trim()}`);
 
+  // Halka arz (Tur 19): borsa panelindeki form ihraç ediyor, kurucu payı düşüyor.
+  await page.evaluate(() => {
+    const p = window.__capital.getState().companies.player;
+    delete p.credit;
+    p.debt = 0;
+    p.cash = Math.max(p.cash, 5_000_000);
+    window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+  });
+  await page.evaluate(() => { window.__capital.engine.runDay(); window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 }); });
+  await page.locator('.topbar-actions [data-panel="bourse"]').click();
+  await page.waitForTimeout(300);
+  const issueOpen = await page.evaluate(() => document.querySelector('.issuance')?.getAttribute('data-issuance'));
+  check('Borsada halka arz formu açık', issueOpen === 'open', `durum: ${issueOpen}`);
+  if (issueOpen === 'open') {
+    await page.locator('.issuance button.issue-go').click();
+    await page.waitForTimeout(250);
+  }
+  const issued = await page.evaluate(() => {
+    const p = window.__capital.getState().companies.player;
+    return { count: p.shareCount ?? 10000, investors: p.investorShares ?? 0, head: document.querySelector('.issuance .defense-head')?.textContent ?? '' };
+  });
+  check('Halka arz hisse adedini ve yatırımcı payını büyütüyor', issued.count > 10000 && issued.investors === issued.count - 10000,
+    `${issued.count} hisse · ${issued.head.trim()}`);
+  await page.keyboard.press('Escape');
+  await page.evaluate(() => {
+    const p = window.__capital.getState().companies.player;
+    delete p.shareCount;
+    delete p.investorShares;
+    delete p.lastIssueDay;
+    delete p.issues;
+  });
+
   // Temizlik: sonraki bölümler kredisiz, sendikasız, piyasa ücretiyle.
   await page.evaluate(() => {
     const p = window.__capital.getState().companies.player;
@@ -1076,13 +1114,16 @@ async function finish(browser, consoleErrors) {
     // Önce oyuncuyu tepeye çıkar ve sıranın oturmasını bekle.
     s.companies[s.playerCompanyId].cash = 90_000_000;
     cap.engine.runDay();
-    const before = cap.getState().news.length;
+    // Yeni haberler KİMLİKTEN ayrılıyor, uzunluktan değil: akış 60 kalemle
+    // sınırlı ve doluyken uzunluk değişmiyor (Tur 19'da yeni sistemlerin
+    // haberleriyle akış bu noktada dolmaya başladı ve kontrol kör kaldı).
+    const before = Math.max(0, ...cap.getState().news.map((n) => n.id));
 
     // Sonra rakibi oyuncunun üstüne çıkar.
     cap.getState().companies[rival.id].cash = 400_000_000;
     cap.engine.runDay();
     const after = cap.getState();
-    const fresh = after.news.slice(0, after.news.length - before);
+    const fresh = after.news.filter((n) => n.id > before);
     const hit = fresh.find((n) => n.title.includes('seni geçti'));
 
     return {
@@ -1105,11 +1146,11 @@ async function finish(browser, consoleErrors) {
   // oyuncuyu cezalandırırdı.
   const reclaim = await page.evaluate(async () => {
     const cap = window.__capital;
-    const before = cap.getState().news.length;
+    const before = Math.max(0, ...cap.getState().news.map((n) => n.id));
     cap.getState().companies[cap.getState().playerCompanyId].cash = 900_000_000;
     cap.engine.runDay();
     const after = cap.getState();
-    const fresh = after.news.slice(0, after.news.length - before);
+    const fresh = after.news.filter((n) => n.id > before);
     const hit = fresh.find((n) => n.title.includes('geçtin'));
     return hit ? { tone: hit.tone, title: hit.title } : null;
   });
@@ -1459,6 +1500,31 @@ async function finish(browser, consoleErrors) {
   check('Kontrole ne kadar kaldığı yazıyor', /kontrol için/.test(stakeText || ''),
     (stakeText || '').trim().slice(0, 60));
 
+  // Kurucu kilidi (Tur 19): oyun başı rakipler baskın ısınması bitene kadar
+  // piyasada değil. Bölüm kilidi gösterip kaldırıyor; sonraki kontroller
+  // açık piyasada alım-satımı ölçüyor.
+  const lockProbe = await page.evaluate(() => {
+    const s = window.__capital.getState();
+    const target = Object.values(s.companies).find((c) => c.id !== s.playerCompanyId);
+    target.lockedUntilDay = s.time.day + 40;
+    window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+    return target.id;
+  });
+  await page.waitForTimeout(250);
+  const lockedRow = await page.evaluate(() => {
+    const note = document.querySelector('.bourse-row .bourse-locked');
+    return { text: note?.textContent ?? '', disabled: note?.closest('.bourse-row')?.querySelector('.bourse-actions button')?.disabled ?? false };
+  });
+  check('Kilitli rakipte kurucu kilidi yazıyor, alım kapalı', /Kurucu kilidi/.test(lockedRow.text) && lockedRow.disabled,
+    lockedRow.text.trim());
+  await page.evaluate(() => {
+    const s = window.__capital.getState();
+    for (const c of Object.values(s.companies)) delete c.lockedUntilDay;
+    window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+  });
+  await page.waitForTimeout(250);
+  void lockProbe;
+
   const before = await page.evaluate(() => {
     const s = window.__capital.getState();
     const target = Object.values(s.companies).find((c) => c.id !== s.playerCompanyId);
@@ -1480,7 +1546,8 @@ async function finish(browser, consoleErrors) {
     const target = rows[0];
     const mine = Object.values(s.buildings).filter((b) => b.companyId === s.playerCompanyId).length;
     const theirs = Object.values(s.buildings).filter((b) => b.companyId === target.id).length;
-    engine.dispatch({ type: 'BUY_SHARES', companyId: target.id, count: 5100 });
+    // %51 — hedef ihraç yapmış olabilir (Tur 19).
+    engine.dispatch({ type: 'BUY_SHARES', companyId: target.id, count: Math.ceil((target.shareCount ?? 10000) * 0.51) });
     engine.runDay();
     const next = getState();
     return {

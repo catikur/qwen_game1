@@ -2,7 +2,7 @@ import { BUILDING_BY_ID, CONSUMER_CATEGORIES, GOODS_BY_CATEGORY } from '@capital
 import { build, buyTile, buyoutTile, demolish, sellTile } from './actions';
 import { pushNews } from './news';
 import { companyRanking, formatMoney } from './selectors';
-import { TOTAL_SHARES, sharesHeld } from './systems/equity';
+import { sharesHeld, sharesOutstanding } from './systems/equity';
 import { runMarketTick } from './systems/market';
 import { runGoalTick } from './systems/goals';
 import { runEntrantTick } from './systems/entrants';
@@ -10,6 +10,7 @@ import { isLoggable, leagueActive, runLeagueTick } from './systems/league';
 import { lobby, runCouncilTick } from './systems/council';
 import { respondUnion, runLaborTick, setWagePolicy } from './systems/labor';
 import { repayLoan, runCreditTick, takeLoan } from './systems/credit';
+import { issueShares } from './systems/issuance';
 import { resetDailyLedgers, runProductionTick, runProfitTrendTick, runSpotPriceTick } from './systems/supply';
 import {
   recomputeNetWorth,
@@ -254,6 +255,9 @@ export class GameEngine {
       case 'REPAY_LOAN':
         return repayLoan(state, playerId, command.loanId);
 
+      case 'ISSUE_SHARES':
+        return issueShares(state, playerId, command.count);
+
       case 'DISMISS_VICTORY':
         if (!state.victory) return { ok: false, reason: 'Henüz bir zafer yok.' };
         state.victory.dismissed = true;
@@ -380,7 +384,7 @@ export class GameEngine {
       }
     }
 
-    const fraction = topCount / TOTAL_SHARES;
+    const fraction = topCount / sharesOutstanding(state, player.id);
     const stage = fraction >= 0.4 ? 3 : fraction >= 0.25 ? 2 : fraction >= 0.1 ? 1 : 0;
     if (stage <= this.lastRaidStage) {
       // Eşik aşağı inince seviye sessizce düşer: baskıncı satıp geri

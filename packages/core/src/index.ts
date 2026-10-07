@@ -40,6 +40,9 @@ export {
   portfolioValue,
   sharePrice,
   sharesHeld,
+  sharesOutstanding,
+  ownerFraction,
+  companyValue,
   controllerOf,
   CONTROL_THRESHOLD,
   TOTAL_SHARES,
@@ -74,6 +77,8 @@ export {
   ratingOf,
 } from './systems/credit';
 export type { LoanQuote } from './systems/credit';
+export { issueNetWorthEffect, issueQuote, issuanceEnabled } from './systems/issuance';
+export type { IssueQuote } from './systems/issuance';
 export type { GoalStatus } from './systems/goals';
 export { collectEventModifiers } from './systems/events';
 export { activeContract, contractProgress, OFFER_LIFETIME_DAYS } from './systems/contracts';
