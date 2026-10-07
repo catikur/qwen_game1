@@ -220,6 +220,11 @@ export interface CompanyState {
   acquisitions?: number;
   /** Kurucu kilidi: bu güne kadar hisseleri başkası alamaz (yeni gelen). */
   lockedUntilDay?: number;
+  /**
+   * Toplam hisse adedi. Yokluğu 10.000 (Tur 4'ten beri sabit); sermaye
+   * artırımı büyütüyor. Fiyat, dolaşım, kontrol eşiği ve temettü buna göre.
+   */
+  shareCount?: number;
   /** İşgücü: ücret politikası, sendika baskısı, sözleşme, grev. Yokluğu "piyasa ücreti, sendika sessiz". */
   labor?: LaborState;
   /**

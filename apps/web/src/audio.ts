@@ -1,4 +1,4 @@
-import { TOTAL_SHARES, sharesHeld } from '@capital/core';
+import { sharesHeld, sharesOutstanding } from '@capital/core';
 import type { GameState } from '@capital/core';
 
 /**
@@ -219,7 +219,7 @@ export class Soundscape {
     if (player) {
       for (const company of Object.values(state.companies)) {
         if (company.isPlayer) continue;
-        raid = Math.max(raid, sharesHeld(state, company.id, player.id) / TOTAL_SHARES);
+        raid = Math.max(raid, sharesHeld(state, company.id, player.id) / sharesOutstanding(state, player.id));
       }
     }
     const stage = raid >= 0.4 ? 3 : raid >= 0.25 ? 2 : raid >= 0.1 ? 1 : 0;

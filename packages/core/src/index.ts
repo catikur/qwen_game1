@@ -40,6 +40,7 @@ export {
   portfolioValue,
   sharePrice,
   sharesHeld,
+  sharesOutstanding,
   controllerOf,
   CONTROL_THRESHOLD,
   TOTAL_SHARES,

@@ -1,7 +1,7 @@
 import { CREDIT, ERA_BY_ID, EVENTS } from '@capital/content';
 import { nextGoal } from './systems/goals';
 import { OFFER_LIFETIME_DAYS, contractProgress } from './systems/contracts';
-import { sharesHeld, TOTAL_SHARES } from './systems/equity';
+import { sharesHeld, sharesOutstanding } from './systems/equity';
 import { creditEnabled, overdraftLimit, overdraftOf } from './systems/credit';
 import { laborEnabled } from './systems/labor';
 import { formatMoney } from './selectors';
@@ -70,7 +70,7 @@ export function agenda(state: GameState): AgendaItem[] {
         raider = company.id;
       }
     }
-    const fraction = top / TOTAL_SHARES;
+    const fraction = top / sharesOutstanding(state, player.id);
     if (raider && fraction >= 0.1) {
       items.push({
         kind: 'raid',

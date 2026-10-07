@@ -2,7 +2,7 @@ import { BUILDING_BY_ID, CONSUMER_CATEGORIES, GOODS_BY_CATEGORY } from '@capital
 import { build, buyTile, buyoutTile, demolish, sellTile } from './actions';
 import { pushNews } from './news';
 import { companyRanking, formatMoney } from './selectors';
-import { TOTAL_SHARES, sharesHeld } from './systems/equity';
+import { sharesHeld, sharesOutstanding } from './systems/equity';
 import { runMarketTick } from './systems/market';
 import { runGoalTick } from './systems/goals';
 import { runEntrantTick } from './systems/entrants';
@@ -380,7 +380,7 @@ export class GameEngine {
       }
     }
 
-    const fraction = topCount / TOTAL_SHARES;
+    const fraction = topCount / sharesOutstanding(state, player.id);
     const stage = fraction >= 0.4 ? 3 : fraction >= 0.25 ? 2 : fraction >= 0.1 ? 1 : 0;
     if (stage <= this.lastRaidStage) {
       // Eşik aşağı inince seviye sessizce düşer: baskıncı satıp geri

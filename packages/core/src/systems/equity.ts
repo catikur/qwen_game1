@@ -18,8 +18,17 @@ import type { GameState } from '../types';
  * `ownedValue` sıfır döner ve net değer formülü eski haline indirgenir.
  */
 
-/** Her şirket bu kadar hisseye bölünür. */
+/**
+ * Bir şirketin kuruluştaki hisse adedi. Sermaye artırımı (Tur 19)
+ * gelene kadar her şirketin adedi buydu ve değişmiyordu; artık şirket
+ * başına `sharesOutstanding`. Ad geriye dönük uyum için korunuyor.
+ */
 export const TOTAL_SHARES = 10_000;
+
+/** Şirketin bugünkü toplam hisse adedi. */
+export function sharesOutstanding(state: GameState, companyId: string): number {
+  return state.companies[companyId]?.shareCount ?? TOTAL_SHARES;
+}
 
 /** Güven çarpanının sınırları — büyüyen şirket primli, eriyen iskontolu. */
 const CONFIDENCE_FLOOR = 0.6;
@@ -95,7 +104,7 @@ export function marketCap(state: GameState, companyId: string): number {
 
 /** Tek hissenin fiyatı. */
 export function sharePrice(state: GameState, companyId: string): number {
-  return marketCap(state, companyId) / TOTAL_SHARES;
+  return marketCap(state, companyId) / sharesOutstanding(state, companyId);
 }
 
 /** `holderId` şirketinin `issuerId` şirketinde kaç hissesi var. */
@@ -116,7 +125,7 @@ export function freeFloat(state: GameState, issuerId: string): number {
   for (const company of Object.values(state.companies)) {
     held += company.shares[issuerId] ?? 0;
   }
-  return Math.max(0, TOTAL_SHARES - held);
+  return Math.max(0, sharesOutstanding(state, issuerId) - held);
 }
 
 /**
@@ -211,10 +220,11 @@ export function sellShares(
  * cevaplayabilmeli.
  */
 export function controllerOf(state: GameState, issuerId: string): string | null {
+  const outstanding = sharesOutstanding(state, issuerId);
   for (const company of Object.values(state.companies)) {
     if (company.id === issuerId) continue;
     const count = company.shares[issuerId] ?? 0;
-    if (count / TOTAL_SHARES > CONTROL_THRESHOLD) return company.id;
+    if (count / outstanding > CONTROL_THRESHOLD) return company.id;
   }
   return null;
 }
@@ -350,13 +360,14 @@ export function runDividendTick(state: GameState): void {
     if (profit <= 0) continue;
 
     const pool = profit * DIVIDEND_RATIO;
+    const outstanding = sharesOutstanding(state, issuer.id);
     let paid = 0;
 
     for (const holder of Object.values(state.companies)) {
       if (holder.id === issuer.id) continue;
       const count = holder.shares[issuer.id] ?? 0;
       if (count <= 0) continue;
-      const share = (pool * count) / TOTAL_SHARES;
+      const share = (pool * count) / outstanding;
       holder.cash += share;
       paid += share;
     }

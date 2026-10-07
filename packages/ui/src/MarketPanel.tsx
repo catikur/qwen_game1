@@ -2,7 +2,6 @@ import { useState } from 'react';
 import type { ReactElement } from 'react';
 import {
   CONTROL_THRESHOLD,
-  TOTAL_SHARES,
   confidence,
   formatMoney,
   freeFloat,
@@ -11,6 +10,7 @@ import {
   portfolioValue,
   sharePrice,
   sharesHeld,
+  sharesOutstanding,
 } from '@capital/core';
 import type { CompanyState, GameState } from '@capital/core';
 import { useGame, useGameState } from './useGame';
@@ -99,7 +99,7 @@ function Defense({ state }: { state: GameState }): ReactElement {
       topHolder = company;
     }
   }
-  const percent = (topCount / TOTAL_SHARES) * 100;
+  const percent = (topCount / sharesOutstanding(state, player.id)) * 100;
 
   const buyback = (count: number): void => {
     if (count <= 0) return;
@@ -144,12 +144,13 @@ function Listing({ company, state }: { company: CompanyState; state: GameState }
   const player = getPlayer(state);
   const price = sharePrice(state, company.id);
   const held = sharesHeld(state, player.id, company.id);
-  const stake = held / TOTAL_SHARES;
+  const outstanding = sharesOutstanding(state, company.id);
+  const stake = held / outstanding;
   const available = freeFloat(state, company.id);
   const trust = confidence(state, company.id);
 
   /** Kontrole kaç hisse kaldı. */
-  const toControl = Math.max(0, Math.floor(TOTAL_SHARES * CONTROL_THRESHOLD) + 1 - held);
+  const toControl = Math.max(0, Math.floor(outstanding * CONTROL_THRESHOLD) + 1 - held);
   const controlCost = toControl * price;
   const affordable = Math.min(available, Math.floor(player.cash / Math.max(1, price)));
 
