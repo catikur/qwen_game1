@@ -62,6 +62,7 @@ import { PRUNE_MEMORY_DAYS } from '../src/systems/npc';
 import { WAGE_PER_JOB } from '../src/systems/labor';
 import { loanQuote } from '../src/systems/credit';
 import { issueQuote } from '../src/systems/issuance';
+import { dailyBuyCap, findOrder, orderEstimate } from '../src/systems/orders';
 import { ownerFraction, sharesOutstanding } from '../src/systems/equity';
 import type { GameEngine as Engine } from '../src/engine';
 import type { GameState } from '../src/types';
@@ -2226,12 +2227,18 @@ section('Borsa', () => {
 
   const price = sharePrice(state, targetId);
   const cashBefore = player.cash;
-  const buy = engine.dispatch({ type: 'BUY_SHARES', companyId: targetId, count: 1_000 });
+  const floatStart = freeFloat(state, targetId);
+  // Günlük tavan (Tur 20): oyuncu da rakip gibi günde en fazla %3,5 alır.
+  const cap = dailyBuyCap(state, targetId);
+  const lot = cap - 50;
+  const buy = engine.dispatch({ type: 'BUY_SHARES', companyId: targetId, count: lot });
   expect('hisse alınabiliyor', buy.ok, buy.reason ?? `${Math.round(price)} ₺/hisse`);
-  expect('nakit doğru düşüyor', Math.abs(cashBefore - player.cash - price * 1_000) < 1,
+  expect('nakit doğru düşüyor', Math.abs(cashBefore - player.cash - price * lot) < 1,
     formatMoney(cashBefore - player.cash));
-  expect('serbest dolaşım azalıyor', freeFloat(state, targetId) === TOTAL_SHARES - 1_000,
-    `${freeFloat(state, targetId)} hisse`);
+  expect('serbest dolaşım azalıyor', freeFloat(state, targetId) === floatStart - lot,
+    `${floatStart} → ${freeFloat(state, targetId)} hisse`);
+  const overCap = engine.dispatch({ type: 'BUY_SHARES', companyId: targetId, count: 100 });
+  expect('günlük tavanın üstü alınamıyor', !overCap.ok, overCap.reason ?? `tavan ${cap} aşıldı`);
 
   /*
    * ESKİ KURAL "kendi hisseni alamazsın" idi — tek yönlü borsanın
@@ -2297,34 +2304,53 @@ section('Borsa', () => {
   const targetName = state.companies[targetId]!.name;
   const targetBuildings = Object.values(state.buildings).filter((b) => b.companyId === targetId).length;
   const targetTiles = state.map.tiles.filter((t) => t.ownerId === targetId).length;
-  const price = sharePrice(state, targetId);
-  const ownBefore = Object.values(state.buildings).filter((b) => b.companyId === player.id).length;
-
   // Azınlık hissedar kur: ikinci bir rakip de biraz alsın.
   const minorityId = NPC_PROFILES[1]!.id;
   const minority = state.companies[minorityId]!;
   minority.cash = 50_000_000;
   buyShares(state, minorityId, targetId, 500);
-  const minorityCashBefore = minority.cash;
 
-  // %51 — hedef ihraç yapmış olabilir (Tur 19), adet sabit 10.000 değil.
-  const control = Math.ceil(sharesOutstanding(state, targetId) * 0.51);
-  const cost = price * control;
-  const bought = engine.dispatch({ type: 'BUY_SHARES', companyId: targetId, count: control });
-  expect('kontrol payı satın alınabiliyor', bought.ok, bought.reason ?? formatMoney(cost));
-  console.log(`  ${targetName} devralma maliyeti: ${formatMoney(cost)} (%51 · ${targetBuildings} bina)`);
+  /*
+   * EMİRLE, GÜNLER İÇİNDE (Tur 20). Eskiden %51 tek komutla alınıyordu.
+   * Emir her gün tavan kadar alır; hedef savunabilir. Bu senaryonun hedefi
+   * (Nova, genişlemeci) ihraç doktrini olmayan bir rakip: geri alımla
+   * savunuyor ama 400 M ₺'lik alıcıya karşı dolaşımı kapatamıyor.
+   */
+  const estimate = orderEstimate(state, player.id, targetId);
+  const placed = engine.dispatch({ type: 'PLACE_TAKEOVER_ORDER', companyId: targetId });
+  expect('devralma emri veriliyor', placed.ok, placed.reason ?? `${estimate.need} hisse · ${formatMoney(estimate.cost)}`);
+  // Gün sayısı alım günü sayısı: emrin verildiği gün de alım yapıyor.
+  let days = 1;
+  let theirIds: string[] = [];
+  let theirTiles: number[] = [];
+  let minorityCashBefore = minority.cash;
+  while (state.companies[targetId] && days < 90) {
+    // Son günün fotoğrafı: devir o gün olacak, öncesi iş gürültüsü.
+    theirIds = Object.values(state.buildings).filter((b) => b.companyId === targetId).map((b) => b.id);
+    theirTiles = state.map.tiles.filter((t) => t.ownerId === targetId).map((t) => t.id);
+    minorityCashBefore = minority.cash;
+    engine.runDay();
+    days += 1;
+  }
+  console.log(
+    `  ${targetName} devralması: ${days} gün (tavanla en az ${estimate.days}) · ` +
+      `${estimate.need} hisse, bugünkü fiyattan ${formatMoney(estimate.cost)} · ${targetBuildings} bina`,
+  );
+  expect('devralma günlere yayılıyor', days >= estimate.days, `${days} gün ≥ ${estimate.days}`);
 
-  engine.runDay();
-
-  expect('devralınan şirket oyundan çıkıyor', state.companies[targetId] === undefined, targetName);
-  const ownAfter = Object.values(state.buildings).filter((b) => b.companyId === player.id).length;
-  expect('binalar devralana geçiyor', ownAfter === ownBefore + targetBuildings,
-    `${ownBefore} → ${ownAfter} (+${targetBuildings})`);
+  expect('devralınan şirket oyundan çıkıyor', state.companies[targetId] === undefined, `${targetName} · ${days} gün`);
+  // Son gün hedef bir şube kapatmış olabilir; kalan HER bina devralanın.
+  const survivors = theirIds.filter((id) => state.buildings[id]);
+  const moved = survivors.filter((id) => state.buildings[id]!.companyId === player.id).length;
+  expect('binalar devralana geçiyor', survivors.length > 0 && moved === survivors.length,
+    `${moved}/${survivors.length} bina (${theirIds.length - survivors.length} son gün kapandı)`);
   expect('devralınan şirkete ait bina kalmıyor',
     Object.values(state.buildings).every((b) => b.companyId !== targetId), 'temiz');
   expect('parseller devralana geçiyor',
-    state.map.tiles.filter((t) => t.ownerId === targetId).length === 0,
+    state.map.tiles.filter((t) => t.ownerId === targetId).length === 0 &&
+      theirTiles.every((id) => [player.id, null].includes(state.map.tiles.find((t) => t.id === id)?.ownerId ?? null)),
     `${targetTiles} parsel devredildi`);
+  expect('emir devralmayla kapanıyor', !findOrder(state, player.id, targetId), 'kapandı');
   expect('azınlık hissedar nakde çevrildi', minority.cash > minorityCashBefore,
     formatMoney(minority.cash - minorityCashBefore));
   // Detay statik "temiz" idi ve kontrol kırıldığında bile öyle yazıyordu —
@@ -3531,7 +3557,8 @@ section('Sermaye piyasası: halka arz ve kurucu kilidi', () => {
   const attempt = early.dispatch({ type: 'BUY_SHARES', companyId: rival.id, count: 100 });
   expect('oyun başı rakipler kurucu kilidinde', !attempt.ok, attempt.reason ?? 'alım geçti');
 
-  // Devralmacı: en ucuz rakibi kontrole yetecek nakdi olunca alan vekil.
+  // Devralmacı: en ucuz rakibe, kontrole yetecek nakdi olunca emir veren vekil.
+  // Tur 20'den beri devralma bir emir; ilk devralma emrin BİTTİĞİ gün.
   const raider = new GameEngine(createNewGame({ seed: 1, companyName: 'Avcı AŞ' }));
   let firstTakeover: number | null = null;
   for (let day = 1; day <= 420; day++) {
@@ -3539,23 +3566,109 @@ section('Sermaye piyasası: halka arz ve kurucu kilidi', () => {
       playerStrategy(raider);
       const state = raider.getState();
       const player = getPlayer(state);
-      let best: { id: string; need: number; cost: number } | null = null;
-      for (const company of Object.values(state.companies)) {
-        if (company.isPlayer) continue;
-        const need = Math.floor(sharesOutstanding(state, company.id) * 0.5) + 1 - (player.shares[company.id] ?? 0);
-        const cost = need * sharePrice(state, company.id);
-        if (need > 0 && need <= freeFloat(state, company.id) && (!best || cost < best.cost)) best = { id: company.id, need, cost };
+      let best: { id: string; cost: number } | null = null;
+      if (!player.orders) {
+        for (const company of Object.values(state.companies)) {
+          if (company.isPlayer) continue;
+          if (company.lockedUntilDay !== undefined && state.time.day < company.lockedUntilDay) continue;
+          const estimate = orderEstimate(state, player.id, company.id);
+          if (estimate.need > 0 && !estimate.floatShort && (!best || estimate.cost < best.cost)) best = { id: company.id, cost: estimate.cost };
+        }
       }
-      if (best && best.cost < player.cash * 0.9 && raider.dispatch({ type: 'BUY_SHARES', companyId: best.id, count: best.need }).ok) {
-        firstTakeover ??= day;
-      }
+      if (best && best.cost < player.cash * 0.9) raider.dispatch({ type: 'PLACE_TAKEOVER_ORDER', companyId: best.id });
     }
     raider.runDay();
+    if (firstTakeover === null && (getPlayer(raider.getState()).acquisitions ?? 0) > 0) firstTakeover = day;
   }
   const victory = raider.getState().victory;
   console.log(`  devralmacı vekil | ilk devralma ${firstTakeover ?? '-'}. gün · 420. günde zafer ${victory ? `${victory.kind} ${victory.day}. gün` : 'yok'}`);
   expect('devralmacı vekil kilit bitmeden devralamıyor', firstTakeover !== null && firstTakeover >= 160, `${firstTakeover ?? '-'}. gün`);
   expect('tekel zaferi 400. günden önce gelmiyor', !victory || victory.day >= 400, victory ? `${victory.kind} ${victory.day}. gün` : 'zafer yok');
+});
+
+section('Devralma emri: günlük tavan ve savunma', () => {
+  /*
+   * Tur 20: oyuncunun alımı da rakiplerinki gibi günde %3,5 (Dengeli).
+   * Devralma tek tık değil bir emir; hedef %30'u görünce geri alım (ve
+   * doktrini varsa ihraç) ile savunuyor, dolaşım kontrole yetmez hâle
+   * gelirse emir düşüyor.
+   *
+   * Ölçüm (900 gün, tohum 1/7/42, en ucuz rakibe emir veren vekil):
+   *   savunmasız hedef 14 günde düşüyor (5.001 / 350)
+   *   geri alımla savunan Nova 14–19 gün, bir tohumda savuşturuyor
+   *   ihraçla savunan Meridyen iki tohumda savuşturuyor
+   *   değer zaferi 503/716/634 → 519/793/636. gün
+   * Sınanan iddialar: emir tavanı aşmıyor; savunma gerçek (en az bir emir
+   * düşüyor) ama aşılmaz değil (her tohumda devralma var).
+   */
+  type Outcome = { id: string; placed: number; minDays: number; end: number | null; defended: boolean };
+  function orderRun(seed: number, days: number): Outcome[] {
+    const engine = new GameEngine(createNewGame({ seed, companyName: 'Emir AŞ' }));
+    const outcomes: Outcome[] = [];
+    let open: Outcome | null = null;
+    let seen = 0;
+    for (let day = 1; day <= days; day++) {
+      const state = engine.getState();
+      if (day % 5 === 0) {
+        playerStrategy(engine);
+        const player = getPlayer(state);
+        if (!player.orders) {
+          let best: { id: string; cost: number; days: number } | null = null;
+          for (const company of Object.values(state.companies)) {
+            if (company.isPlayer) continue;
+            if (company.lockedUntilDay !== undefined && state.time.day < company.lockedUntilDay) continue;
+            const e = orderEstimate(state, player.id, company.id);
+            if (e.need > 0 && !e.floatShort && (!best || e.cost < best.cost)) best = { id: company.id, cost: e.cost, days: e.days };
+          }
+          if (best && best.cost < player.cash * 0.9 && engine.dispatch({ type: 'PLACE_TAKEOVER_ORDER', companyId: best.id }).ok) {
+            open = { id: best.id, placed: day, minDays: best.days, end: null, defended: false };
+            outcomes.push(open);
+          }
+        }
+      }
+      engine.runDay();
+      if (state.gameOver) break;
+      if (open && !state.companies[open.id]) {
+        open.end = day;
+        open = null;
+      }
+      for (const n of state.news) {
+        if (n.id <= seen) break;
+        if (open && n.companyId === open.id && n.title.includes('savuşturdu')) {
+          open.defended = true;
+          open.end = day;
+          open = null;
+        }
+      }
+      seen = state.news[0]?.id ?? seen;
+    }
+    return outcomes;
+  }
+
+  const runs = [7, 42].map((seed) => ({ seed, outcomes: orderRun(seed, 520) }));
+  for (const { seed, outcomes } of runs) {
+    console.log(
+      `  emir seed ${String(seed).padStart(2)} | ` +
+        outcomes
+          .map((o) => `${o.id.slice(0, 6)} ${o.placed}→${o.end ?? '…'} ${o.defended ? 'savuşturdu' : o.end ? `${o.end - o.placed + 2} gün` : 'sürüyor'}`)
+          .join(' · '),
+    );
+  }
+  const done = runs.flatMap((r) => r.outcomes.filter((o) => o.end !== null && !o.defended));
+  /*
+   * Alım günü = bitiş − veriliş + 2: emir döngü gününden ÖNCE veriliyor
+   * (takvim bir gün geride) ve o gün de alım yapıyor. Tahmin emir
+   * günündeki payı hesaba katıyor; emir sürerken başka bir devirle pay
+   * gelirse daha kısa sürebilir — bu tohumlarda yok.
+   */
+  const span = (o: Outcome) => o.end! - o.placed + 2;
+  const tooFast = done.filter((o) => span(o) < o.minDays);
+  expect('emir günlük tavanı aşmıyor', done.length > 0 && tooFast.length === 0,
+    tooFast.map((o) => `${o.id} ${span(o)}<${o.minDays}`).join(' ') || `${done.length} devralma, hepsi ≥ tahmin`);
+  expect('hedef savunabiliyor: en az bir emir düşüyor', runs.some((r) => r.outcomes.some((o) => o.defended)),
+    runs.map((r) => `seed ${r.seed}: ${r.outcomes.filter((o) => o.defended).length} düştü`).join(' · '));
+  expect('savunma aşılmaz değil: her tohumda devralma var', runs.every((r) => r.outcomes.some((o) => o.end !== null && !o.defended)),
+    runs.map((r) => `seed ${r.seed}: ${r.outcomes.filter((o) => o.end !== null && !o.defended).length} devralma`).join(' · '));
 });
 
 if (timings.length === 0) {

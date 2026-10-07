@@ -79,6 +79,8 @@ export {
 export type { LoanQuote } from './systems/credit';
 export { issueNetWorthEffect, issueQuote, issuanceEnabled } from './systems/issuance';
 export type { IssueQuote } from './systems/issuance';
+export { capRemaining, dailyBuyCap, findOrder, orderEstimate, sharesToControl } from './systems/orders';
+export type { OrderEstimate } from './systems/orders';
 export type { GoalStatus } from './systems/goals';
 export { collectEventModifiers } from './systems/events';
 export { activeContract, contractProgress, OFFER_LIFETIME_DAYS } from './systems/contracts';

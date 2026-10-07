@@ -2337,7 +2337,11 @@ async function finish(browser, consoleErrors) {
       s.companies.player.cash = 999_000_000_000;
       s.companies.player.netWorth = 999_000_000_000;
       s.companies.player.debt = 123_000_000_000;
-      window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 1 });
+      // DURAKLAT, oynatma değil. Burada hız 1 vardı ve 600 ms'de bir gün
+      // dönerse kredili hesap (Tur 18) borcu kasadan kapatıyordu: "Borç"
+      // metriği kayboluyor, kontrol 5 yerine 4 metrik sayıp kırmızı
+      // yanıyordu (main'de 10da3af). Komut zaten yeniden çizdiriyor.
+      window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
       await new Promise((r) => setTimeout(r, 600));
       const el = document.querySelector('.topbar');
       return {

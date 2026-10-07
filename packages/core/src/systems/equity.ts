@@ -314,6 +314,14 @@ function absorb(state: GameState, acquirerId: string, targetId: string): void {
     acquirer.shares[issuerId] = (acquirer.shares[issuerId] ?? 0) + count;
   }
 
+  // Hedefe verilmiş devralma emirleri (Tur 20) bugün kapanır: ertesi gün
+  // "hedef yok" diye düşmesini beklemek arayüzde bir gün hayalet emir bırakırdı.
+  for (const holder of Object.values(state.companies)) {
+    if (!holder.orders) continue;
+    holder.orders = holder.orders.filter((o) => o.issuerId !== targetId);
+    if (holder.orders.length === 0) delete holder.orders;
+  }
+
   // Açık ihalede teklifi varsa düşer.
   if (state.auction?.bidderId === targetId) {
     state.auction.bidderId = null;
