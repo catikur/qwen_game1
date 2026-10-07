@@ -1108,13 +1108,16 @@ async function finish(browser, consoleErrors) {
     // Önce oyuncuyu tepeye çıkar ve sıranın oturmasını bekle.
     s.companies[s.playerCompanyId].cash = 90_000_000;
     cap.engine.runDay();
-    const before = cap.getState().news.length;
+    // Yeni haberler KİMLİKTEN ayrılıyor, uzunluktan değil: akış 60 kalemle
+    // sınırlı ve doluyken uzunluk değişmiyor (Tur 19'da yeni sistemlerin
+    // haberleriyle akış bu noktada dolmaya başladı ve kontrol kör kaldı).
+    const before = Math.max(0, ...cap.getState().news.map((n) => n.id));
 
     // Sonra rakibi oyuncunun üstüne çıkar.
     cap.getState().companies[rival.id].cash = 400_000_000;
     cap.engine.runDay();
     const after = cap.getState();
-    const fresh = after.news.slice(0, after.news.length - before);
+    const fresh = after.news.filter((n) => n.id > before);
     const hit = fresh.find((n) => n.title.includes('seni geçti'));
 
     return {
@@ -1137,11 +1140,11 @@ async function finish(browser, consoleErrors) {
   // oyuncuyu cezalandırırdı.
   const reclaim = await page.evaluate(async () => {
     const cap = window.__capital;
-    const before = cap.getState().news.length;
+    const before = Math.max(0, ...cap.getState().news.map((n) => n.id));
     cap.getState().companies[cap.getState().playerCompanyId].cash = 900_000_000;
     cap.engine.runDay();
     const after = cap.getState();
-    const fresh = after.news.slice(0, after.news.length - before);
+    const fresh = after.news.filter((n) => n.id > before);
     const hit = fresh.find((n) => n.title.includes('geçtin'));
     return hit ? { tone: hit.tone, title: hit.title } : null;
   });
