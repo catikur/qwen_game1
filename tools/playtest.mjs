@@ -230,7 +230,13 @@ async function finish(browser, consoleErrors) {
   // ---------- Simülasyon ----------
   section('Simülasyon döngüsü');
   const day0 = await page.evaluate(() => window.__capital.getState().time.day);
-  await page.waitForTimeout(6000);
+  // SABİT UYKU DEĞİL, KOŞUL: CI'da yazılım render'ı (~3 FPS) sahne yeni
+  // yüklenmişken en yavaşında; 6 saniyelik sabit pencerede yeşil koşuda bile
+  // yalnızca bir gün geçiyordu (payı tek gün) ve bir koşuda sıfıra indi.
+  // İddia aynı — zaman ilerliyor — ama 15 saniyeye kadar bekleniyor.
+  await page
+    .waitForFunction((d) => window.__capital.getState().time.day > d, day0, { timeout: 15000, polling: 250 })
+    .catch(() => null);
   const day1 = await page.evaluate(() => window.__capital.getState().time.day);
   check('Zaman ilerliyor', day1 > day0, `${day0}. gün → ${day1}. gün`);
 
