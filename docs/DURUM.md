@@ -790,6 +790,85 @@ Beş ölçüm dersi:
    uzunluk değişmiyor, yeni haber "yok" görünüyordu. Kontrol artık haber
    kimliğine bakıyor.
 
+### Tur 20 — Devralma emri: herkes için aynı günlük tavan
+
+§4.6'nın Tur 19'da yazılan kalemi. Rakiplerin baskını günde en fazla
+%3,5 toplayabiliyordu (Dengeli; Rahat %2, Acımasız %4,5). Oyuncu ise bir
+rakibin %51'ini tek tıkla alabiliyordu. Hedefin geri alım ve ihraç
+savunması oyuncuya karşı hiç çalışmıyordu, çünkü tepki verecek bir günü
+yoktu.
+
+**Kural iki taraf için aynı.** Bir şirket başka bir şirketin hissesinden
+günde en fazla zorluğun tavan payı kadar alır. Kendi hissesini geri
+alırken de öyle; rakibin geri alımı zaten tavanlıydı. Tavan hisse adediyle
+ölçekli: ihraç yapmış hedefte adet büyür, pay aynı kalır. Elle alım ve
+emir aynı tavanı paylaşıyor.
+
+**Devralma emri.**
+
+- *Emir her gün alır.* Kontrol için gereken adedi (eşik %50'nin üstü) her
+  gün o günkü hisse adedinden hesaplar. Emrin verildiği gün de alır.
+- *Kasada işletme payı kalır:* beş günlük gider ya da 100 bin ₺, hangisi
+  büyükse. Para yoksa emir bekler; haberi emir başına bir kez.
+- *Hedef savunabilir.* %30'u görünce geri alım yapar, doktrini varsa
+  ihraç eder. Rakibin oyuncuya karşı geri alımı ayda bir haber oluyor.
+- *Dolaşım kontrole yetmezse emir düşer:* "X devralmayı savuşturdu".
+  Rakipler hisse satmıyor, ihraç edilen hisse kurumsal yatırımcıda kalıyor;
+  yani bu kalıcı. Toplanan pay temettü getirmeye devam ediyor.
+- *Baştan reddedilen emir:* kilitli hedef, dolaşımı kontrole yetmeyen
+  hedef, kendi şirketin.
+- Devralma her zamanki gibi `runTakeoverTick`'te. Hedefe verilmiş emirler
+  devir anında kapanıyor.
+
+**Arayüz.**
+
+- *Borsa satırı:* "Devral" düğmesinin yerine "Devralma emri · ~15 gün".
+  Süren emrin satırında durum (kalan hisse, en az kaç gün, nakit bekliyor
+  mu) ve iptal. Her satırda günlük tavan ve bugün kalan; "Al" ve "100 al"
+  tavanla sınırlı.
+- *Kendi hissen:* geri alım düğmesi bugünün tavanını tek tıkla kullanıyor.
+- *Gündem:* süren emir çipi, kontrol eşiğine göre ilerleme ve kalan gün.
+- *Yardım:* yeni madde.
+
+Kalibrasyon (en ucuz rakibe emir veren devralmacı vekil, 900 gün):
+
+| Tohum | Tur 19 (tek tık) | Tur 20 (emir) |
+|---|---|---|
+| 1 | ilk devralma 165 · 6 devralma · değer zaferi 503 | 183 · 6 · 519 |
+| 7 | 165 · 5 · 716 | 200 · 4 · 793 |
+| 42 | 165 · 5 · 634 | 183 · 5 · 636 |
+
+| Hedef (savunması) | Sonuç |
+|---|---|
+| Atlas, Kilit, Anadolu (doktrini yok ya da kasası dar) | her seferinde alındı: nakit yetince 15 gün (5.001 / 350), kilidin açıldığı ilk haftalarda nakit beklemesiyle 20–37 gün |
+| Nova (genişlemeci, geri alım) | 15–20 gün; tohum 7'de savuşturdu |
+| Meridyen (premium, ihraç) | iki denemede savuşturdu; tohum 1'de Nova'dan miras payla 11 günde alındı |
+| Veri (teknoloji, ihraç + geri alım) | üçünde de alındı, 17 gün |
+
+Dört ölçüm dersi:
+
+1. **Fiyat sınırı oyuncuyu korumuyor, emri donduruyordu.** İlk sürüm emri,
+   verildiği günün fiyatının 1,25 katında bekletiyordu. Fiyat günlük kârdan
+   türeyen güvenle oynuyor: Kilit Market'in güveni üç günde 0,60'tan
+   1,24'e çıktı, fiyat iki katına vardı ve emir 75 gün bekledi. Sınır
+   kaldırıldı. Fiyat zaten defterin 0,6–1,8 katı arasında; oyuncu
+   ilerlemeyi görüyor ve emri istediği gün iptal edebiliyor.
+2. **Savunma yavaşlatmıyor, ikili sonuç veriyor.** Geri alım saldırganın
+   günlük alımına dokunmuyor, dolaşımı daraltıyor. Savunma kazanırsa emir
+   düşüyor; kazanamazsa süre tavanın belirlediği en az güne eşit kalıyor.
+   Uzayan emirlerin sebebi nakit beklemesiydi, savunma değil. Baskına
+   uğrayan oyuncu için de aynı: geri alım bir yarış, fren değil.
+3. **Sayaç da bir iddia.** Emrin verildiği gün de alım günü. Denge
+   düzeneği bunu saymıyordu ve doğru çalışan bir emre "tavanı aştı"
+   dedi (14 < 15). Tahmin doğruydu, ölçen sayaç bir gün eksikti.
+4. **Main'deki kırmızı Tur 18'den kalmaydı.** Mobil "en geniş rakamlar"
+   sondajı oyuncuya 123 milyar ₺ borç yazıp oyunu 1x hızda 600 ms
+   bekletiyordu. O arada bir gün dönerse Tur 18'in kredili hesabı borcu
+   kasadan kapatıyor, "Borç" metriği kayboluyor ve kontrol 5 yerine 4
+   metrik sayıyordu (10da3af). Gün dönmesi makinenin o anki temposuna
+   bağlı olduğu için ancak bazı koşularda çıktı. Sondaj artık oyunu
+   duraklatıyor; ölçtüğü şey yalnızca rakamların genişliği.
+
 ---
 
 ## 3. Ölçülen durum
@@ -860,7 +939,7 @@ ufuk dersi).
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~570 gün/sn |
-| Birim testi | **105 test** (`pnpm test`) |
+| Birim testi | **118 test** (`pnpm test`) |
 | Denge testi | **249 kontrol, hepsi geçiyor** (16 bölüm, süreleriyle; ~15 dk) |
 | Tarayıcı testi | **255 kontrol**, 0 konsol hatası; duman koşusu 83 |
 | CI | her PR'da tip + test + denge + paket + duman oynanışı |
@@ -967,11 +1046,8 @@ köşeler; açılış takvimi büyük haritada yeniden ölçülmeli.)
 - Devralınan şirketin yerine yenisi gelmiyor; geç oyunda rakip sayısı
   azalıyor
 - İhale yalnızca boş parsel için; dolu parsel ihalesi yok
-- Oyuncunun rakip hissesi alımında günlük tavan yok (Tur 19): rakip
-  baskını günde %3,5 ile sınırlı, oyuncu %51'i tek seferde alabiliyor.
-  Kurucu kilidi en kaba açığı kapattı (5. günde devralma), ama kilit
-  bittikten sonra hedefin savunmaya fırsatı olmuyor. Adil çözüm, aynı
-  tavanla birkaç güne yayılan bir "devralma emri"; arayüz işi var.
+- ~~Oyuncunun rakip hissesi alımında günlük tavan yok~~ — Tur 20'de
+  kapandı: herkes için aynı günlük tavan ve günlere yayılan devralma emri.
 
 ### 4.7 Şehrin oyuncuyu içine alması — Tur 9'da başladı, bitmedi
 
