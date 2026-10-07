@@ -1537,7 +1537,8 @@ async function finish(browser, consoleErrors) {
     const target = rows[0];
     const mine = Object.values(s.buildings).filter((b) => b.companyId === s.playerCompanyId).length;
     const theirs = Object.values(s.buildings).filter((b) => b.companyId === target.id).length;
-    engine.dispatch({ type: 'BUY_SHARES', companyId: target.id, count: 5100 });
+    // %51 — hedef ihraç yapmış olabilir (Tur 19).
+    engine.dispatch({ type: 'BUY_SHARES', companyId: target.id, count: Math.ceil((target.shareCount ?? 10000) * 0.51) });
     engine.runDay();
     const next = getState();
     return {

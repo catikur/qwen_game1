@@ -2307,8 +2307,10 @@ section('Borsa', () => {
   buyShares(state, minorityId, targetId, 500);
   const minorityCashBefore = minority.cash;
 
-  const cost = price * 5_100;
-  const bought = engine.dispatch({ type: 'BUY_SHARES', companyId: targetId, count: 5_100 });
+  // %51 — hedef ihraç yapmış olabilir (Tur 19), adet sabit 10.000 değil.
+  const control = Math.ceil(sharesOutstanding(state, targetId) * 0.51);
+  const cost = price * control;
+  const bought = engine.dispatch({ type: 'BUY_SHARES', companyId: targetId, count: control });
   expect('kontrol payı satın alınabiliyor', bought.ok, bought.reason ?? formatMoney(cost));
   console.log(`  ${targetName} devralma maliyeti: ${formatMoney(cost)} (%51 · ${targetBuildings} bina)`);
 
