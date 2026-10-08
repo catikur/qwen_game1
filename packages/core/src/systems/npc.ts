@@ -666,21 +666,45 @@ function tryBuybackDefense(state: GameState, profile: NpcProfileDef): void {
   if (!company) return;
 
   let threat = 0;
+  let threatId: string | null = null;
   for (const other of Object.values(state.companies)) {
     if (other.id === company.id) continue;
-    threat = Math.max(threat, sharesHeld(state, other.id, company.id));
+    const held = sharesHeld(state, other.id, company.id);
+    if (held > threat) {
+      threat = held;
+      threatId = other.id;
+    }
   }
-  if (threat / sharesOutstanding(state, company.id) < 0.3) return;
+  const outstanding = sharesOutstanding(state, company.id);
+  if (threat / outstanding < 0.3) return;
 
   const budget = (company.cash - RAID_CASH_RESERVE) * 0.6;
   const price = sharePrice(state, company.id);
   if (budget <= 0 || price <= 0) return;
 
-  const cap = Math.floor((getDifficulty(state.difficulty).raidDailyCap * sharesOutstanding(state, company.id)) / TOTAL_SHARES);
+  const cap = Math.floor((getDifficulty(state.difficulty).raidDailyCap * outstanding) / TOTAL_SHARES);
   const wanted = Math.min(cap, Math.floor(budget / price), freeFloat(state, company.id));
   if (wanted <= 0) return;
 
   buyShares(state, company.id, company.id, wanted);
+
+  /*
+   * Saldıran oyuncuysa savunma GÖRÜNÜR olmalı (Tur 20). Devralma emri
+   * günlerce sürüyor; hedefin hisselerini hazinesine çektiğini haber
+   * akışından okuyamayan oyuncu, emrin neden düştüğünü anlayamaz. Ayda
+   * bir haber yeter: savunma her gün sürüyor ama haberi her gün değil.
+   */
+  if (threatId === state.playerCompanyId && (company.defenseNewsDay === undefined || state.time.day - company.defenseNewsDay >= 30)) {
+    company.defenseNewsDay = state.time.day;
+    pushNews(
+      state,
+      'rival',
+      `${company.name} kendi hissesini topluyor`,
+      `Payın %${Math.round((threat / outstanding) * 100)}'a ulaştı; ${company.name} hisselerini hazinesine çekiyor. ` +
+        'Dolaşımda kontrole yetecek hisse kalmazsa devralma emrin düşer.',
+      company.id,
+    );
+  }
 }
 
 export function runNpcTick(state: GameState): void {

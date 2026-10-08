@@ -1538,27 +1538,77 @@ async function finish(browser, consoleErrors) {
   }, before.id);
   check('Hisse alınabiliyor', after > before.held, `${before.held} → ${after} hisse`);
 
-  // Devralma: haritada gerçekten karşılığı var mı?
-  const takeover = await page.evaluate(() => {
+  // Günlük alım tavanı (Tur 20): oyuncu da rakip gibi günde en fazla %3,5.
+  const capNote = (await page.locator('.bourse-row .bourse-cap').first().textContent()) || '';
+  check('Günlük alım tavanı satırda yazıyor', /Günde en fazla [\d.]+ hisse · bugün [\d.]+ kaldı/.test(capNote), capNote.trim());
+  const overCap = await page.evaluate((id) => {
     const { engine, getState } = window.__capital;
     const s = getState();
-    const rows = Object.values(s.companies).filter((c) => c.id !== s.playerCompanyId);
-    const target = rows[0];
-    const mine = Object.values(s.buildings).filter((b) => b.companyId === s.playerCompanyId).length;
-    const theirs = Object.values(s.buildings).filter((b) => b.companyId === target.id).length;
-    // %51 — hedef ihraç yapmış olabilir (Tur 19).
-    engine.dispatch({ type: 'BUY_SHARES', companyId: target.id, count: Math.ceil((target.shareCount ?? 10000) * 0.51) });
-    engine.runDay();
+    const outstanding = s.companies[id].shareCount ?? 10000;
+    return engine.dispatch({ type: 'BUY_SHARES', companyId: id, count: Math.ceil(outstanding * 0.51) });
+  }, before.id);
+  check('Tek seferde %51 alınamıyor', !overCap.ok, overCap.reason ?? 'alım geçti');
+
+  // Devralma emri: arayüzden verilir, satırda ve gündemde görünür, iptal edilir.
+  const targetRow = page.locator('.bourse-row').first();
+  const targetId = await targetRow.getAttribute('data-company');
+  // Bu bölüm emrin uçtan uca çalıştığını ölçüyor; savunmanın kendisi
+  // denge testinde. Hedefin savunması ve rakip baskınları bu sürede kapalı:
+  // tarayıcıda geçen gün sayısı makineye göre değişiyor, sonuç değişmesin.
+  await page.evaluate(() => {
+    const s = window.__capital.getState();
+    s.flags.raids = false;
+    s.flags.issuance = false;
+    window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+  });
+  await targetRow.locator('.order-go').click();
+  await page.waitForTimeout(300);
+  const orderRow = page.locator(`.bourse-row[data-company="${targetId}"]`);
+  const orderText = (await orderRow.locator('.bourse-order').textContent().catch(() => '')) || '';
+  check('Devralma emri veriliyor ve satırda görünüyor',
+    (await orderRow.getAttribute('data-order')) === 'active' && /Devralma emri/.test(orderText), orderText.trim().slice(0, 80));
+  check('Gündemde süren emir çipi', (await page.locator('.order-chip').count()) === 1,
+    ((await page.locator('.order-chip').first().textContent().catch(() => '')) || '').trim());
+  await orderRow.locator('.order-cancel').click();
+  await page.waitForTimeout(300);
+  const cancelled = await page.evaluate((id) => !window.__capital.getState().companies[window.__capital.getState().playerCompanyId].orders?.some((o) => o.issuerId === id), targetId);
+  check('Emir iptal edilebiliyor', cancelled && (await orderRow.getAttribute('data-order')) === null);
+  await orderRow.locator('.order-go').click();
+  await page.waitForTimeout(300);
+
+  // Devralma: haritada gerçekten karşılığı var mı?
+  const takeover = await page.evaluate((id) => {
+    const { engine, getState } = window.__capital;
+    const s = getState();
+    const target = s.companies[id];
+    let mine = 0;
+    let theirs = 0;
+    let days = 1;
+    while (getState().companies[id] && days < 90) {
+      // Son günün fotoğrafı: devir o gün oluyor.
+      const now = getState();
+      mine = Object.values(now.buildings).filter((b) => b.companyId === now.playerCompanyId).length;
+      theirs = Object.values(now.buildings).filter((b) => b.companyId === id).length;
+      engine.runDay();
+      days += 1;
+    }
     const next = getState();
+    next.flags.raids = true;
+    next.flags.issuance = true;
+    engine.dispatch({ type: 'SET_SPEED', speed: 0 });
     return {
       name: target.name,
-      gone: next.companies[target.id] === undefined,
+      days,
+      gone: next.companies[id] === undefined,
       mine,
       theirs,
       after: Object.values(next.buildings).filter((b) => b.companyId === next.playerCompanyId).length,
-      orphans: Object.values(next.buildings).filter((b) => b.companyId === target.id).length,
+      orphans: Object.values(next.buildings).filter((b) => b.companyId === id).length,
+      orderLeft: (next.companies[next.playerCompanyId].orders ?? []).length,
     };
-  });
+  }, targetId);
+  check('Devralma emri günlere yayılıyor', takeover.gone && takeover.days > 1, `${takeover.days} alım günü`);
+  check('Emir devralmayla kapanıyor', takeover.orderLeft === 0, `${takeover.orderLeft} emir kaldı`);
   check('Devralınan şirket oyundan çıkıyor', takeover.gone, takeover.name);
   // TAM EŞİTLİK DEĞİL, DEVRİN KENDİSİ ÖLÇÜLÜYOR.
   //
@@ -2337,7 +2387,11 @@ async function finish(browser, consoleErrors) {
       s.companies.player.cash = 999_000_000_000;
       s.companies.player.netWorth = 999_000_000_000;
       s.companies.player.debt = 123_000_000_000;
-      window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 1 });
+      // DURAKLAT, oynatma değil. Burada hız 1 vardı ve 600 ms'de bir gün
+      // dönerse kredili hesap (Tur 18) borcu kasadan kapatıyordu: "Borç"
+      // metriği kayboluyor, kontrol 5 yerine 4 metrik sayıp kırmızı
+      // yanıyordu (main'de 10da3af). Komut zaten yeniden çizdiriyor.
+      window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
       await new Promise((r) => setTimeout(r, 600));
       const el = document.querySelector('.topbar');
       return {

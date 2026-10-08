@@ -786,6 +786,25 @@ export function ActiveEvents(): ReactElement | null {
           </button>
         );
         break;
+      case 'order':
+        chip = (
+          <button
+            type="button"
+            className={`event-chip order-chip urgency-${item.urgency} tone-${item.tone}`}
+            onClick={() => togglePanel('bourse')}
+            title="Devralma emri — borsada ilerleme ve iptal"
+          >
+            <span className="agenda-label">Devralma</span>
+            {item.label}
+            {item.progress !== undefined && (
+              <span className="goal-chip-bar" aria-hidden="true">
+                <span style={{ width: `${Math.round(item.progress * 100)}%` }} />
+              </span>
+            )}
+            {days}
+          </button>
+        );
+        break;
       case 'union':
       case 'bank':
         chip = (

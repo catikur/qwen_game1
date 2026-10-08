@@ -16,6 +16,7 @@ import { BUILDING_BY_ID, NPC_PROFILES } from '@capital/content';
 import {
   GameEngine,
   buildOptions,
+  capRemaining,
   chainCards,
   districtOpportunity,
   estimateInvestment,
@@ -230,6 +231,7 @@ export function defendAgainstRaids(engine: GameEngine): void {
   if (threat / sharesOutstanding(state, player.id) < 0.2) return;
   const price = sharePrice(state, player.id);
   if (price <= 0) return;
-  const count = Math.min(350, freeFloat(state, player.id), Math.floor((player.cash * 0.4) / price));
+  // Günlük tavan (Tur 20): rakibin geri alımıyla aynı kural.
+  const count = Math.min(capRemaining(state, player.id, player.id), freeFloat(state, player.id), Math.floor((player.cash * 0.4) / price));
   if (count > 0) engine.dispatch({ type: 'BUY_SHARES', companyId: player.id, count });
 }

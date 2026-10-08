@@ -247,6 +247,29 @@ export interface CompanyState {
    * kredili hesap sayılır — şema sürümü sabit.
    */
   credit?: CreditState;
+  /**
+   * Bugünkü hisse alımları (şirket → adet). Günlük tavan buradan sayılır;
+   * gün değişince sıfırlanır. Tur 20'ye kadar oyuncunun alımına tavan yoktu.
+   */
+  purchases?: { day: number; counts: Record<string, number> };
+  /** Süren devralma emirleri. */
+  orders?: TakeoverOrder[];
+  /** Rakibin oyuncuya karşı geri alıma başladığını en son haber yaptığı gün. */
+  defenseNewsDay?: number;
+}
+
+/**
+ * Devralma emri: her gün günlük tavan kadar hisse alır, kontrol eşiği
+ * geçilince devralma gerçekleşir. Hedef adet saklanmıyor, her gün o
+ * günkü hisse adedinden hesaplanıyor (hedef bu arada ihraç edebilir).
+ */
+export interface TakeoverOrder {
+  issuerId: string;
+  placedDay: number;
+  /** Kasada işletme payından artan nakit yok; alım olunca silinir. */
+  waitingCash?: boolean;
+  /** Nakit beklemesi haber oldu mu (emir başına bir kez). */
+  warned?: boolean;
 }
 
 export interface LoanState {
@@ -644,7 +667,11 @@ export type GameCommand =
   /** Bir krediyi kalan anaparasıyla erken kapatır. */
   | { type: 'REPAY_LOAN'; loanId: string }
   /** Yeni hisse ihraç eder (ilki halka arz). */
-  | { type: 'ISSUE_SHARES'; count: number };
+  | { type: 'ISSUE_SHARES'; count: number }
+  /** Bir rakip için devralma emri verir (her gün tavan kadar alım). */
+  | { type: 'PLACE_TAKEOVER_ORDER'; companyId: string }
+  /** Süren devralma emrini iptal eder. */
+  | { type: 'CANCEL_TAKEOVER_ORDER'; companyId: string };
 
 /** Komut reddedildiğinde UI'ye dönen açıklama. */
 export interface CommandResult {

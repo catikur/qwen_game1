@@ -3,7 +3,10 @@ import type { ReactElement } from 'react';
 import { ISSUANCE } from '@capital/content';
 import {
   CONTROL_THRESHOLD,
+  capRemaining,
   confidence,
+  dailyBuyCap,
+  findOrder,
   formatMoney,
   freeFloat,
   getPlayer,
@@ -11,6 +14,7 @@ import {
   issueNetWorthEffect,
   issueQuote,
   marketCap,
+  orderEstimate,
   ownerFraction,
   portfolioValue,
   sharePrice,
@@ -113,7 +117,9 @@ function Defense({ state }: { state: GameState }): ReactElement {
       toast(`${count} hisse hazineye çekildi — ${formatMoney(count * price)}.`, 'good');
     }
   };
-  const affordable = Math.min(100, Math.floor(player.cash / Math.max(1, price)), float);
+  // Geri alım da günlük tavanlı (Tur 20) — rakibin savunması gibi. Tek
+  // tık bugünün tavanını kullanır; kalan yarına.
+  const affordable = Math.min(capRemaining(state, player.id, player.id), Math.floor(player.cash / Math.max(1, price)), float);
 
   return (
     <div className={topCount > 0 ? 'defense threatened' : 'defense'}>
@@ -130,7 +136,7 @@ function Defense({ state }: { state: GameState }): ReactElement {
             {"'"}ini topladı — eşik %{Math.round(CONTROL_THRESHOLD * 100)}.
           </span>
           <button type="button" disabled={affordable <= 0} onClick={() => buyback(affordable)}>
-            {affordable} hisse geri al
+            {affordable > 0 ? `${affordable} hisse geri al` : 'Bugünkü tavan doldu'}
           </button>
         </div>
       ) : (
@@ -245,6 +251,20 @@ function Listing({ company, state }: { company: CompanyState; state: GameState }
   const affordable =
     lockedDays > 0 ? 0 : Math.min(available, Math.floor(player.cash / Math.max(1, price)));
   const investors = company.investorShares ?? 0;
+  // Günlük tavan (Tur 20): rakiplerin baskını gibi oyuncunun alımı da.
+  const cap = dailyBuyCap(state, company.id);
+  const capLeft = capRemaining(state, player.id, company.id);
+  const buyable = Math.min(affordable, capLeft);
+  const order = findOrder(state, player.id, company.id);
+  const estimate = orderEstimate(state, player.id, company.id);
+  const orderBlock =
+    toControl === 0
+      ? 'Kontrol sende.'
+      : lockedDays > 0
+        ? 'Kurucu kilidinde.'
+        : estimate.floatShort
+          ? `Dolaşımda ${available.toLocaleString('tr-TR')} hisse var, kontrol için ${toControl.toLocaleString('tr-TR')} gerekiyor.`
+          : null;
 
   const trade = (type: 'BUY_SHARES' | 'SELL_SHARES', count: number): void => {
     if (count <= 0) return;
@@ -259,8 +279,24 @@ function Listing({ company, state }: { company: CompanyState; state: GameState }
     }
   };
 
+  const placeOrder = (): void => {
+    if (run({ type: 'PLACE_TAKEOVER_ORDER', companyId: company.id })) {
+      toast(`${company.name} için devralma emri verildi — günde en fazla ${cap.toLocaleString('tr-TR')} hisse.`, 'good');
+    }
+  };
+  const cancelOrder = (): void => {
+    if (run({ type: 'CANCEL_TAKEOVER_ORDER', companyId: company.id })) {
+      toast('Emir iptal edildi; toplanan pay elinde kalıyor.', 'info');
+    }
+  };
+
   return (
-    <section className="bourse-row" aria-label={`${company.name} hissesi`}>
+    <section
+      className="bourse-row"
+      aria-label={`${company.name} hissesi`}
+      data-company={company.id}
+      data-order={order ? 'active' : undefined}
+    >
       <header className="bourse-head">
         <span className="bourse-name">
           <span className="chain-dot" style={{ background: company.color }} />
@@ -303,34 +339,52 @@ function Listing({ company, state }: { company: CompanyState; state: GameState }
         </span>
       </div>
 
+      {/* Süren emir: ilerleme yukarıdaki çubukta, burada durum ve iptal. */}
+      {order && (
+        <div className={order.waitingCash ? 'bourse-order waiting' : 'bourse-order'}>
+          <span>
+            <strong>Devralma emri</strong> · {order.placedDay}. günden beri ·{' '}
+            {toControl.toLocaleString('tr-TR')} hisse kaldı, en az {estimate.days} gün
+            {order.waitingCash ? ' · nakit bekliyor' : ''}
+          </span>
+          <button type="button" className="order-cancel" onClick={cancelOrder}>
+            Emri iptal et
+          </button>
+        </div>
+      )}
+
       <div className="bourse-actions">
         <button
           type="button"
-          disabled={affordable < 100}
-          onClick={() => trade('BUY_SHARES', Math.min(100, affordable))}
+          disabled={buyable < 100}
+          onClick={() => trade('BUY_SHARES', 100)}
         >
           100 al · {formatMoney(100 * price)}
         </button>
-        <button
-          type="button"
-          className={toControl > 0 && affordable >= toControl ? 'primary' : ''}
-          disabled={toControl === 0 || affordable < toControl}
-          onClick={() => trade('BUY_SHARES', toControl)}
-        >
-          {toControl === 0 ? 'Kontrol sende' : `Devral · ${formatMoney(controlCost)}`}
-        </button>
+        {!order && (
+          <button
+            type="button"
+            className={orderBlock === null && controlCost <= player.cash ? 'primary order-go' : 'order-go'}
+            disabled={orderBlock !== null}
+            title={orderBlock ?? `Günde en fazla ${cap.toLocaleString('tr-TR')} hisse; hedef savunabilir.`}
+            onClick={placeOrder}
+          >
+            {toControl === 0 ? 'Kontrol sende' : `Devralma emri · ~${estimate.days} gün`}
+          </button>
+        )}
         <label className="auction-custom">
           <input
             type="number"
             min={1}
-            step={100}
+            max={Math.max(1, buyable)}
+            step={50}
             value={amount}
             placeholder="adet"
             onChange={(e) => setAmount(e.target.value)}
           />
           <button
             type="button"
-            disabled={lockedDays > 0 || Number(amount) <= 0}
+            disabled={lockedDays > 0 || Number(amount) <= 0 || Number(amount) > buyable}
             onClick={() => trade('BUY_SHARES', Number(amount))}
           >
             Al
@@ -344,6 +398,10 @@ function Listing({ company, state }: { company: CompanyState; state: GameState }
           </button>
         </label>
       </div>
+      <p className="muted bourse-cap" data-cap-left={capLeft}>
+        Günde en fazla {cap.toLocaleString('tr-TR')} hisse · bugün {capLeft.toLocaleString('tr-TR')} kaldı
+        {orderBlock && toControl > 0 && lockedDays === 0 ? ` · ${orderBlock}` : ''}
+      </p>
 
       {held > 0 && (
         <p className="muted">

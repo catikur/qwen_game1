@@ -1085,6 +1085,11 @@ function HelpPanel(): ReactElement {
           <strong>Halka arz bir kontrol aracı.</strong> Yeni hisse nakit getirir ve baskıncının payını
           sulandırır; bedeli, şirketin büyümesinden yatırımcılara giden kalıcı pay. Borsa panelinden.
         </li>
+        <li>
+          <strong>Devralma bir emir, tek tık değil.</strong> Rakip hissesinden günde en fazla %3,5
+          alabilirsin, rakipler de seninkinden öyle. Emir her gün alır; hedef %30'u görünce
+          hisselerini toplamaya başlar ve dolaşım yetmezse emir düşer.
+        </li>
       </ol>
       <p className="muted">
         Kontroller: sürükle = kaydır · sağ tık sürükle = döndür · tekerlek = yakınlaş · WASD =

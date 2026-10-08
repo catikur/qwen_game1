@@ -11,6 +11,7 @@ import { lobby, runCouncilTick } from './systems/council';
 import { respondUnion, runLaborTick, setWagePolicy } from './systems/labor';
 import { repayLoan, runCreditTick, takeLoan } from './systems/credit';
 import { issueShares } from './systems/issuance';
+import { cancelTakeoverOrder, placeTakeoverOrder, playerBuy, runOrderTick } from './systems/orders';
 import { resetDailyLedgers, runProductionTick, runProfitTrendTick, runSpotPriceTick } from './systems/supply';
 import {
   recomputeNetWorth,
@@ -22,7 +23,7 @@ import { runCityGrowthTick } from './systems/citygrowth';
 import { collectEventModifiers, runEraTick, runEventTick } from './systems/events';
 import { acceptContract, declineContract, runContractTick } from './systems/contracts';
 import { placeBid, runAuctionTick } from './systems/auction';
-import { buyShares, runDividendTick, runTakeoverTick, sellShares } from './systems/equity';
+import { runDividendTick, runTakeoverTick, sellShares } from './systems/equity';
 import { runResearchTick } from './systems/focus';
 import { runNpcTick } from './systems/npc';
 import { SPEED_MS } from './types';
@@ -219,7 +220,13 @@ export class GameEngine {
         return declineContract(state);
 
       case 'BUY_SHARES':
-        return buyShares(state, playerId, command.companyId, command.count);
+        return playerBuy(state, playerId, command.companyId, command.count);
+
+      case 'PLACE_TAKEOVER_ORDER':
+        return placeTakeoverOrder(state, playerId, command.companyId);
+
+      case 'CANCEL_TAKEOVER_ORDER':
+        return cancelTakeoverOrder(state, playerId, command.companyId);
 
       case 'SELL_SHARES':
         return sellShares(state, playerId, command.companyId, command.count);
@@ -338,6 +345,10 @@ export class GameEngine {
     // olabilir ve bu, kaçırılan parselin bedelini gerçek kılıyor.
     runCityGrowthTick(state);
     runNpcTick(state);
+    // Devralma emirleri rakiplerden SONRA: hedef dünkü alımı gördü ve
+    // bugünkü savunmasını (geri alım, ihraç) yaptı; emir kalan dolaşımdan
+    // alır. Devralma tick'inden ÖNCE: eşiği geçen alım aynı gün sonuçlansın.
+    runOrderTick(state);
     // İhale NPC turundan sonra: rakip aynı gün hem mağaza açıp hem teklif
     // vermesin, nakit iki kez harcanmış gibi görünmesin.
     runAuctionTick(state);

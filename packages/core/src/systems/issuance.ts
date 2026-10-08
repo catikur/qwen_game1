@@ -103,7 +103,10 @@ export function issueShares(state: GameState, companyId: string, count: number):
       state,
       'rival',
       quote.ipo ? `${company.name} halka arz oldu` : `${company.name} sermaye artırdı`,
-      `${shares.toLocaleString('tr-TR')} yeni hisse piyasada, ${formatMoney(raised)} genişlemeye gidiyor. Hisseleri artık daha kolay toplanır — ama kontrol eşiği de büyüdü.`,
+      // Eski metin "hisseleri artık daha kolay toplanır" diyordu; Tur 19'dan
+      // beri yeni hisseler kurumsal yatırımcıda kalıyor, dolaşıma girmiyor.
+      `${shares.toLocaleString('tr-TR')} yeni hisse kurumsal yatırımcılarda, ${formatMoney(raised)} kasaya girdi. ` +
+        `Kontrol eşiği büyüdü: %50 için artık ${(Math.floor(company.shareCount / 2) + 1).toLocaleString('tr-TR')} hisse gerekiyor.`,
       company.id,
     );
   }

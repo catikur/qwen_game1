@@ -3,6 +3,7 @@ import { nextGoal } from './systems/goals';
 import { OFFER_LIFETIME_DAYS, contractProgress } from './systems/contracts';
 import { sharesHeld, sharesOutstanding } from './systems/equity';
 import { creditEnabled, overdraftLimit, overdraftOf } from './systems/credit';
+import { dailyBuyCap, sharesToControl } from './systems/orders';
 import { laborEnabled } from './systems/labor';
 import { formatMoney } from './selectors';
 import type { GameState } from './types';
@@ -21,6 +22,7 @@ import type { GameState } from './types';
  */
 export type AgendaKind =
   | 'raid'
+  | 'order'
   | 'bank'
   | 'union'
   | 'contractOffer'
@@ -81,6 +83,26 @@ export function agenda(state: GameState): AgendaItem[] {
         tone: 'bad',
       });
     }
+  }
+
+  // Süren devralma emirleri (Tur 20): ilerleme çubuğu kontrol eşiğine göre,
+  // geri sayım tavanla kalan en az gün. Nakit bekleyen emir dikkat ister.
+  for (const order of player?.orders ?? []) {
+    const issuer = state.companies[order.issuerId];
+    if (!player || !issuer) continue;
+    const outstanding = sharesOutstanding(state, issuer.id);
+    const held = sharesHeld(state, player.id, issuer.id);
+    const need = sharesToControl(state, player.id, issuer.id);
+    const cap = dailyBuyCap(state, issuer.id);
+    items.push({
+      kind: 'order',
+      key: `order:${issuer.id}`,
+      urgency: order.waitingCash ? 2 : 1,
+      daysLeft: cap > 0 ? Math.ceil(need / cap) : null,
+      label: `${issuer.name} %${Math.round((held / outstanding) * 100)}${order.waitingCash ? ' · nakit bekliyor' : ''}`,
+      tone: order.waitingCash ? 'bad' : 'neutral',
+      progress: Math.min(1, held / (Math.floor(outstanding / 2) + 1)),
+    });
   }
 
   // Sendika: masadaki talep, süren grev, dolmak üzere olan baskı.
