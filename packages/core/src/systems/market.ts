@@ -81,7 +81,7 @@ function upkeepFor(state: GameState, companyId: string, defId: string): number {
  * Öğrenci bölgesine çapraz sayılıyordu. 5×5 yerleşimi denerken bulundu.
  * Artık konum bölgenin kendi koordinatından okunuyor.
  */
-function accessWeight(state: GameState, fromDistrict: number, toDistrict: number): number {
+export function accessWeight(state: GameState, fromDistrict: number, toDistrict: number): number {
   if (fromDistrict === toDistrict) return 1;
 
   const a = state.districts[fromDistrict];

@@ -3671,6 +3671,56 @@ section('Devralma emri: günlük tavan ve savunma', () => {
     runs.map((r) => `seed ${r.seed}: ${r.outcomes.filter((o) => o.end !== null && !o.defended).length} devralma`).join(' · '));
 });
 
+section('Büyük şehir (5×5)', () => {
+  /*
+   * Tur 21. Ölçülen (900 gün, tohum 1/7/42, savunan bilgili vekil):
+   *   standart  360. gün boş talep %4–7 · zafer 619 / 796 / yok
+   *   büyük     ilk sürüm (köşe kilidi, tempo 1): 360. gün %18–24, oyuncu
+   *             720. günde 184–199 M ₺, zafer 498–529 — kolay mod
+   *   büyük     dış halka kilitli + tempo 2 + eşik ×1,5: 360. gün %12–13,
+   *             zafer 682 / 732 / yok
+   * Sınanan iddialar: şehir 360. günde doluyor (boş talep bandı), rakipler
+   * rekabetçi (en iyi rakip oyuncunun en az %60'ı), zafer 600. günden önce
+   * gelmiyor, geç oyunda bir gün 3x hızın (480 ms) altında kalıyor.
+   */
+  for (const seed of [7, 42]) {
+    const engine = new GameEngine(createNewGame({ seed, citySize: 'large', companyName: 'Büyük AŞ' }));
+    const state = engine.getState();
+    let unmet360 = 0;
+    let lateMs = 0;
+    for (let day = 1; day <= 720; day++) {
+      if (day % 5 === 0) playerStrategy(engine);
+      if (day % 3 === 0) defendAgainstRaids(engine);
+      const t0 = performance.now();
+      engine.runDay();
+      if (day > 660) lateMs += performance.now() - t0;
+      if (day === 360) {
+        let weighted = 0;
+        let total = 0;
+        for (const district of state.districts) {
+          if (district.opensOnDay !== undefined && day < district.opensOnDay) continue;
+          const demand = Object.values(district.demand).reduce((a, b) => a + b, 0);
+          weighted += districtOpportunity(district) * demand;
+          total += demand;
+        }
+        unmet360 = total > 0 ? weighted / total : 0;
+      }
+      if (state.gameOver) break;
+    }
+    const player = getPlayer(state);
+    const best = Object.values(state.companies).filter((c) => !c.isPlayer).reduce((a, c) => Math.max(a, c.netWorth), 0);
+    console.log(
+      `  büyük seed ${String(seed).padStart(2)} | 360. gün boş talep %${Math.round(unmet360 * 100)} · 720. gün oyuncu ${formatMoney(player.netWorth)} · ` +
+        `en iyi rakip ${formatMoney(best)} · zafer ${state.victory ? `${state.victory.day}. gün` : 'yok'} · geç oyun ${(lateMs / 60).toFixed(0)} ms/gün`,
+    );
+    expect(`büyük seed ${seed}: şehir doluyor (360. gün boş talep < %25)`, unmet360 < 0.25, `%${Math.round(unmet360 * 100)}`);
+    expect(`büyük seed ${seed}: rakipler rekabetçi`, best >= player.netWorth * 0.6, `${formatMoney(best)} / ${formatMoney(player.netWorth)}`);
+    expect(`büyük seed ${seed}: zafer 600. günden önce gelmiyor`, !state.victory || state.victory.day >= 600,
+      state.victory ? `${state.victory.day}. gün` : 'zafer yok');
+    expect(`büyük seed ${seed}: geç oyun günü 3x hızın altında`, lateMs / 60 < 480, `${(lateMs / 60).toFixed(0)} ms/gün`);
+  }
+});
+
 if (timings.length === 0) {
   console.log(`\nSüzgeçle eşleşen bölüm yok: ${ONLY.join(', ')}`);
   process.exit(1);

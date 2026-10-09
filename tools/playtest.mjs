@@ -2088,6 +2088,7 @@ async function finish(browser, consoleErrors) {
     check('Kurulumda Tohum Ligi seçilebiliyor', (await lp.locator('.mode-picker [data-mode="league"][aria-checked="true"]').count()) === 1,
       ((await lp.locator('.mode-picker [data-mode="league"]').textContent()) ?? '').trim());
     check('Ligde zorluk seçimi kalkıyor', (await lp.locator('.difficulty-option[data-difficulty]').count()) === 0);
+    check('Ligde şehir boyutu seçimi kalkıyor', (await lp.locator('[data-city-size]').count()) === 0);
     await lp.fill('.newgame-field input[type="text"]', 'Lig Holding');
     await lp.locator('button:has-text("Şirketi kur")').click();
     await lp.waitForSelector('.topbar', { timeout: 20000 });
@@ -2195,6 +2196,68 @@ async function finish(browser, consoleErrors) {
   // düğmesine ulaşılamıyordu. Şimdi eleman kutuları görüntü alanına karşı
   // ölçülüyor ve jestler gerçek dokunuş olaylarıyla sürülüyor.
   //
+  // ---------- Büyük şehir (Tur 21) ----------
+  section('Büyük şehir');
+  {
+    const bigContext = await browser.newContext({ viewport: { width: 1280, height: 860 } });
+    const bp = await bigContext.newPage();
+    const bigErrors = [];
+    bp.on('pageerror', (e) => bigErrors.push(e.message));
+    bp.on('console', (m) => { if (m.type() === 'error') bigErrors.push(m.text()); });
+    await bp.goto('http://127.0.0.1:8811/');
+    await bp.waitForSelector('.newgame', { timeout: 20000 });
+    await bp.locator('[data-city-size="large"]').click();
+    check('Kurulumda büyük şehir seçilebiliyor', (await bp.locator('[data-city-size="large"][aria-checked="true"]').count()) === 1);
+    await bp.fill('.newgame-field input[type="text"]', 'Büyük Holding');
+    await bp.locator('button:has-text("Şirketi kur")').click();
+    await bp.waitForSelector('.topbar', { timeout: 20000 });
+    await bp.waitForTimeout(800);
+    const big = await bp.evaluate(() => {
+      const s = window.__capital.getState();
+      const info = window.__capital.renderInfo();
+      return {
+        width: s.map.width,
+        districts: s.districts.length,
+        locked: s.districts.filter((d) => d.opensOnDay !== undefined).length,
+        rivals: Object.values(s.companies).filter((c) => !c.isPlayer).length,
+        plots: s.map.tiles.filter((t) => t.kind === 'plot').length,
+        drawn: info ? info.plotInstances : -1,
+      };
+    });
+    check('Büyük şehir 5×5 kuruluyor', big.width === 50 && big.districts === 25 && big.rivals === 8,
+      `${big.width}×${big.width} · ${big.districts} bölge · ${big.rivals} rakip`);
+    check('Dış halka kilitli başlıyor', big.locked === 16, `${big.locked} kilitli bölge`);
+    check('Sahne büyük haritayı çiziyor', big.drawn >= big.plots, `${big.drawn} parsel örneği / ${big.plots} parsel`);
+    // Bir ay oynat: büyük şehirde günler takılmadan akmalı.
+    const flow = await bp.evaluate(async () => {
+      const { engine, getState } = window.__capital;
+      const day0 = getState().time.day;
+      const t0 = performance.now();
+      for (let i = 0; i < 30; i++) engine.runDay();
+      return { days: getState().time.day - day0, ms: (performance.now() - t0) / 30 };
+    });
+    check('Büyük şehirde gün akıyor', flow.days === 30 && flow.ms < 480, `${flow.days} gün · ${flow.ms.toFixed(0)} ms/gün`);
+    // Farklı boyutta yeni oyun: sahne yeniden kurulmalı (aynı motor, `replaceState`).
+    await bp.locator('.topbar-actions [data-panel="saves"]').click();
+    await bp.waitForTimeout(300);
+    await bp.locator('button:has-text("Yeni oyun")').first().click();
+    await bp.waitForSelector('.newgame', { timeout: 20000 });
+    await bp.locator('[data-city-size="standard"]').click();
+    await bp.locator('button:has-text("Şirketi kur")').click();
+    await bp.waitForSelector('.topbar', { timeout: 20000 });
+    await bp.waitForTimeout(800);
+    const back = await bp.evaluate(() => {
+      const s = window.__capital.getState();
+      const info = window.__capital.renderInfo();
+      return { width: s.map.width, drawn: info ? info.plotInstances : -1, plots: s.map.tiles.filter((t) => t.kind === 'plot').length };
+    });
+    check('Standart şehre dönünce sahne yeniden kuruluyor', back.width === 30 && back.drawn >= back.plots && back.drawn < big.plots,
+      `${back.width}×${back.width} · ${back.drawn} parsel örneği`);
+    await bp.screenshot({ path: `${OUT}/big-city.png` });
+    check('Büyük şehir akışında konsol temiz', bigErrors.length === 0, bigErrors.slice(0, 2).join(' | '));
+    await bigContext.close();
+  }
+
   section('Mobil');
   for (const deviceName of ['iPhone 13', 'Pixel 7']) {
     const mobileContext = await browser.newContext({ ...devices[deviceName] });

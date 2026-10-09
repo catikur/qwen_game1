@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { ReactElement } from 'react';
-import { CEOS, DEFAULT_CEO_ID, DEFAULT_DIFFICULTY, DIFFICULTIES } from '@capital/content';
-import type { DifficultyId } from '@capital/content';
+import { CEOS, CITY_SIZES, DEFAULT_CEO_ID, DEFAULT_CITY_SIZE, DEFAULT_DIFFICULTY, DIFFICULTIES } from '@capital/content';
+import type { CitySizeId, DifficultyId } from '@capital/content';
 import { leagueWeekId } from '@capital/core';
 import { CeoPortrait } from './CeoPortrait';
 
@@ -16,18 +16,22 @@ export function NewGameScreen({
   onStart,
   onCancel,
 }: {
-  onStart: (companyName: string, ceoId: string, difficulty: DifficultyId, league: boolean) => void;
+  onStart: (companyName: string, ceoId: string, difficulty: DifficultyId, league: boolean, citySize: CitySizeId) => void;
   onCancel?: () => void;
 }): ReactElement {
   const [name, setName] = useState('');
   const [ceoId, setCeoId] = useState(DEFAULT_CEO_ID);
   const [difficulty, setDifficulty] = useState<DifficultyId>(DEFAULT_DIFFICULTY);
   const [league, setLeague] = useState(false);
+  const [citySize, setCitySize] = useState<CitySizeId>(DEFAULT_CITY_SIZE);
+  const size = CITY_SIZES.find((c) => c.id === citySize) ?? CITY_SIZES[0]!;
   const weekId = leagueWeekId();
   const selected = CEOS.find((c) => c.id === ceoId) ?? CEOS[0]!;
   const level = DIFFICULTIES.find((d) => d.id === difficulty) ?? DIFFICULTIES[1]!;
 
-  const submit = () => onStart(name.trim() || 'Yeni Girişim', ceoId, league ? 'normal' : difficulty, league);
+  // Lig herkese aynı şehri verir: zorluk Dengeli, şehir standart.
+  const submit = () =>
+    onStart(name.trim() || 'Yeni Girişim', ceoId, league ? 'normal' : difficulty, league, league ? 'standard' : citySize);
 
   return (
     <div className="newgame">
@@ -160,6 +164,35 @@ export function NewGameScreen({
             <p>{level.blurb}</p>
             <ul>
               {level.facts.map((fact) => (
+                <li key={fact}>{fact}</li>
+              ))}
+            </ul>
+          </div>
+        </div>
+        )}
+
+        {!league && (
+        <div className="newgame-field">
+          <span>Şehir ne kadar büyük?</span>
+          <div className="difficulty-picker mode-picker" role="radiogroup" aria-label="Şehir boyutu">
+            {CITY_SIZES.map((option) => (
+              <button
+                key={option.id}
+                type="button"
+                role="radio"
+                aria-checked={option.id === citySize}
+                className={`difficulty-option${option.id === citySize ? ' selected' : ''}`}
+                data-city-size={option.id}
+                onClick={() => setCitySize(option.id)}
+              >
+                {option.name}
+              </button>
+            ))}
+          </div>
+          <div className="difficulty-detail">
+            <p>{size.blurb}</p>
+            <ul>
+              {size.facts.map((fact) => (
                 <li key={fact}>{fact}</li>
               ))}
             </ul>

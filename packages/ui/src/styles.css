@@ -2973,7 +2973,10 @@ button.icon {
   border-right: 0;
 }
 
-.difficulty-option.selected {
+.difficulty-option.selected,
+.difficulty-option.selected:hover {
+  /* Hover genel düğme zeminini (açık) getiriyordu; seçili seçeneğin beyaz
+     yazısı üstünde fare dururken okunmaz oluyordu. */
   background: var(--accent);
   color: var(--on-accent);
 }

@@ -12,7 +12,7 @@ import {
   supplyRoutes,
 } from '@capital/core';
 import type { GameCommand } from '@capital/core';
-import type { DifficultyId } from '@capital/content';
+import type { CitySizeId, DifficultyId } from '@capital/content';
 import { CityRenderer } from '@capital/render-three';
 import {
   AUTOSAVE_SLOT,
@@ -80,10 +80,10 @@ export function App(): ReactElement {
     };
   }, []);
 
-  const start = (companyName: string, ceoId: string, difficulty: DifficultyId, league: boolean) => {
+  const start = (companyName: string, ceoId: string, difficulty: DifficultyId, league: boolean, citySize: CitySizeId) => {
     const next = league
       ? createLeagueGame(leagueWeekId(), companyName, ceoId)
-      : createNewGame({ companyName, ceoId, difficulty });
+      : createNewGame({ companyName, ceoId, difficulty, citySize });
     if (engine) engine.replaceState(next);
     else setEngine(new GameEngine(next));
     setBootMessage(null);
