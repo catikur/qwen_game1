@@ -1195,8 +1195,10 @@ açılıyor, arazi kıtlığı dört kez yenileniyor. Varsayılan harita hâlâ
 
 ### 4.6 Daha küçük kalemler
 
-- `estimateInvestment` depo, Ar-Ge ve pazarlama için `direct: false`
-  dönüyor; bu binaların geri ödemesi yapı menüsünde görünmüyor
+- ~~`estimateInvestment` depo, Ar-Ge ve pazarlama için `direct: false`
+  dönüyor; bu binaların geri ödemesi yapı menüsünde görünmüyor~~ — Tur
+  21'de kapandı: karşı-olgusal hızlı tahmin (sekiz günlük oturtma) ve
+  isteğe bağlı 120 günlük projeksiyon. Sıralama hâlâ doğrudan kârla.
 - ~~Devralınan şirketin yerine yenisi gelmiyor~~ — Tur 17'de kapandı
   (yeni rakip girişi; bu satır Tur 21'e kadar listede eskimiş kaldı).
   Kalan sınır: sekiz kişilik katalog tükenince boşalan koltuk boş kalıyor.
