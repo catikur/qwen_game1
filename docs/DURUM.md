@@ -947,7 +947,7 @@ sonu) metin ve erişilebilirlik dökümü taşımadan önce ve sonra bayt bayt
 aynı. Kapsam dışı ve sıradaki adım: çekirdeğin ürettiği metinler (haberler,
 komut ret sebepleri) ve içerik paketi.
 
-Beş ölçüm dersi:
+Sekiz ölçüm dersi:
 
 1. **Bölgeler arası erişim Tur 8'den beri yanlıştı.** `accessWeight`
    sütun sayısını `harita genişliği / 8` diye hesaplıyordu. Bölge kenarı
@@ -972,14 +972,54 @@ Beş ölçüm dersi:
    mağaza o kadar hızlı döndü ki Tur 15'in fırsat maliyeti freni zincir
    ünitelerini erteledi; zincir A/B'si bir tohumda 4 üniteden 1'e indi ve
    "zincir kurulabilen her tohumda kazandırıyor" önkoşulunu kaybetti.
-   Yarım ağırlıkta zincir 3 ünite ve önde. Benchmark'ın zincir satırı
-   (aynı tohum, tek değişken) ise +%3'ten −%3'e indi; yetkili ölçüm denge
-   düzeneğinin A/B'si.
+   Yarım ağırlıkta zincir 3 ünite ve önde. (Bu ölçüm 6. dersteki
+   düzenek hatasıyla yapılmıştı; aynı sonuç düzeltilmiş düzenekte de
+   geçerli.)
 5. **Şans eseri geçen kontrol.** "Yatırım tahmini gerçekle tutuyor" boş
    talebi en yüksek bölgeyi seçiyordu ve kilitli bölgeleri elemiyordu.
    Kilitli bölgede boş talep ~%100; erişim düzelince sıralama değişti ve
    kontrol kilitli Teknopark'ı seçip çöktü. Önceden açık bölge şans eseri
    seçiliyordu. Aday listesi artık açık bölgeler.
+6. **Zincir A/B'si kendi düzeneğinde takılıyordu, altında da gerçek bir
+   hata vardı.** Donuk genişleme kopyası kilitli bölgeleri elemiyordu
+   (Tur 14'ten beri): alım reddedilince vekil o hafta hiçbir şey
+   kurmuyor, 560 günde 2–6 M ₺'de kalıyordu. Zincirin birkaç ünitesi bu
+   küçük tabana göre büyük görünüyordu (+%12 / +%19 / +%30). Kilit
+   filtresiyle vekil 68–86 M ₺'ye çıktı ve zincirli kol üç tohumda da
+   kaybetti (main'de de). Kök sebep üretim adımındaydı: ara ürün tüketimi
+   mağazanın günlük satışından okunuyordu, ama defter üretimden önce
+   sıfırlandığı için o gün boştu; kod kapasiteyi raftaki ürünlere eşit
+   bölüyordu. Satmayan ürün tüketilmiş, satan ürün eksik sayılıyor, zincir
+   kartı yanlış akışa ünite öneriyordu. Mağaza artık dünkü satışı ürün
+   başına tutuyor (`soldByGood`, isteğe bağlı alan; şema v6). Zincir A/B
+   3/3, ortalama +%2; benchmark zincir satırı (main → dal) normal nakitte
+   +%3 → +%16, bol nakitte −%10 → −%3. Kontrolün eşiği %10'dan %0'a indi: %10 takılan
+   düzeneğin kalibrasyonuydu. İddia "zincir kazandırıyor", her tohumda
+   ayrıca sınanıyor.
+7. **"İhraç baskına karşı kalkan" iki şanslı tohuma yaslanıyordu.**
+   Zincir düzeltmesi rakip ekonomisini kaydırınca seed 42'de ihraç eden
+   oyuncu da düştü (723 → 725. gün). On tohumda ölçünce kuralın kendisi
+   çıktı: baskıncının günlük tavanı bir PAY (%3,5), ihraç onun payını
+   yalnızca 1/1,25'e indiriyor (%31,5 → %25,2) ve fark iki alımda
+   kapanıyor. Yani tek ihraç ~40 gün kazandırıyor, iki ihraç arası 180
+   gün. Savunmasız düşen dokuz oyuncudan main'de altısı, dalda üçü ihraçla
+   ayakta kalıyordu; main'deki seed 42 de iki baskıncı serbest hisseyi
+   bölüşüp tıkandığı için ayaktaydı. **Savunma ihracı:** tek bir
+   hissedarın payı %30'u geçince bekleme aranmıyor ("zehir hapı");
+   kurucu tabanı (%51) ve ihraç başına tavan aynen geçerli. Dokuzun sekizi
+   ayakta, dokuzuncusu 715 yerine 862. günde düşüyor; kalkanın bir sonu
+   var. Rakiplerin savunma ihracı da aynı kuraldan geçiyor. Borsa formu
+   bekleme kalktığında bunu söylüyor. Kontrol artık dört tohumda (7, 42,
+   5, 31); 5 ve 31 eski kuralla düşen tohumlar.
+8. **Siluet kontrolü bir form çakışmasını kaçırıyordu.** "Şehir dönüşüyor"
+   kuruluşta olmayan formları sayıyordu, ama okul da 'block' formunda ve
+   kuruluşta var. Sıra ev → apartman adımı listede görünmüyordu; kontrol
+   fiilen 700 günde hem bostan → depo hem sıra ev → apartman → rezidans
+   istiyordu. Seed 23'te 15 apartman ve 20 fabrika doğdu, rezidans
+   doğmadı ve kontrol düştü. Sekiz tohumda rezidans sayısı main'de 59,
+   dalda 57; gerileme yok, tek tohumun kademe zarı. Kontrol artık
+   kademeyi sayıyor, aynı sertlikte: iki zincir de dönüşmeli ve en az
+   biri iki kademe atlamalı.
 
 ---
 

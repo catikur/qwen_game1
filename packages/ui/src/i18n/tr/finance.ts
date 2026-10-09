@@ -22,6 +22,8 @@ export const finance = {
   'finance.market.issuance.summary': '{outstanding} hisse · kurucu payı %{founder}',
   'finance.market.issuance.blurb':
     'Yeni hisse sat, nakit al. Taksit yok; bedeli, yatırımcıların şirketin bütün büyümesinden kalıcı pay alması. Piyasa seni primli fiyatlarken satmak ucuz, ihraç baskıncının payını da sulandırır.',
+  'finance.market.issuance.defense':
+    "Savunma ihracı: bir hissedarın payı %{threshold}'u geçti, {cooldown} günlük bekleme aranmıyor. Kurucu payı yine %{floor}'in altına inemez.",
   'finance.market.issuance.newShares': 'yeni hisse',
   'finance.market.issuance.max': '/ en fazla {max}',
   'finance.market.issuance.terms':

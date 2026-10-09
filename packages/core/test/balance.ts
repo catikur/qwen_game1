@@ -13,12 +13,14 @@ declare const process: { exit(code: number): never; argv: string[] };
 import {
   BUILDINGS,
   BUILDING_BY_ID,
+  STRUCTURES,
   STRUCTURE_BY_ID,
   CATEGORIES,
   CONSUMER_CATEGORIES,
   DISTRICT_ARCHETYPES,
   GOODS_BY_CATEGORY,
   NPC_PROFILES,
+  rootStructureOf,
 } from '@capital/content';
 import type { CategoryId } from '@capital/content';
 import {
@@ -2910,6 +2912,9 @@ section('Şehir zamanla gelişiyor', () => {
   };
 
   const start = survey();
+  const startTiers = new Set(
+    state.map.tiles.flatMap((tile) => (tile.structureId ? [tile.structureId] : [])),
+  );
   // Oyuncunun parseli: şehir buraya ASLA yapı dikmemeli.
   const ownedTile = state.map.tiles.find(
     (t) => t.kind === 'plot' && !t.structureId && !t.ownerId && isDistrictOpen(state, t.districtId),
@@ -2976,18 +2981,52 @@ section('Şehir zamanla gelişiyor', () => {
     `${start.avgHeight.toFixed(2)} → ${end.avgHeight.toFixed(2)}`,
   );
   /*
-   * Dönüşüm SİLUETTEN okunuyor, sayıdan değil.
+   * Dönüşüm KADEMEDEN okunuyor, sayıdan değil.
    *
-   * Kuruluşta şehir zincirlerin kökünden ibaret (ev + tarla); kademe
-   * atlayan yapı yeni bir forma geçtiği için blok/hangar/kule ancak
-   * dönüşüm gerçekten olduysa listeye girebilir. Yani bu kontrol
+   * Kuruluşta şehir zincirlerin kökünden ibaret (sıra ev, esnaf, bostan);
+   * kademe atlamış bir yapı (apartman, rezidans, depo, fabrika) ancak
+   * dönüşüm gerçekten olduysa haritada bulunabilir. Yani bu kontrol
    * "yükseklik arttı" ile aynı şeyi iki kez ölçmüyor.
+   *
+   * İlk sürüm SİLUETİ (formu) sayıyordu ve bir çakışmayı kaçırıyordu
+   * (Tur 21): okul da 'block' formunda, kuruluşta zaten var. Sıra ev →
+   * apartman adımı listede hiç görünmüyor, kontrol fiilen "700 günde
+   * hem bostan → depo HEM sıra ev → apartman → rezidans" istiyordu. Zincir
+   * düzeltmesinden sonra seed 23'te 15 apartman ve 20 fabrika doğdu ama
+   * rezidans doğmadı ve kontrol düştü. Sekiz tohumda rezidans sayısı main'de 59, dalda
+   * 57 — gerileme yok, tek tohumun kademe zarı. Kademe sayımı iddiayı
+   * aynı sertlikte tutuyor: İKİ zincir de dönüşmeli ve en az biri iki
+   * kademe atlamalı.
    */
-  const grownForms = [...end.forms].filter((form) => !start.forms.has(form));
+  const tiersOf = () => {
+    const tiers = new Map<string, number>();
+    for (const tile of state.map.tiles) {
+      if (tile.structureId) tiers.set(tile.structureId, (tiers.get(tile.structureId) ?? 0) + 1);
+    }
+    return tiers;
+  };
+  const depthOf = (structureId: string) => {
+    let depth = 0;
+    let current = structureId;
+    for (let guard = 0; guard < 8; guard++) {
+      const parent = STRUCTURES.find((def) => def.upgradesTo === current);
+      if (!parent) break;
+      depth++;
+      current = parent.id;
+    }
+    return depth;
+  };
+  const grownTiers = [...tiersOf().entries()].filter(
+    ([id]) => !startTiers.has(id) && depthOf(id) > 0,
+  );
+  const grownChains = new Set(grownTiers.map(([id]) => rootStructureOf(id)));
+  const deepest = Math.max(0, ...grownTiers.map(([id]) => depthOf(id)));
   expect(
-    'şehir dönüşüyor: yeni siluetler doğuyor',
-    grownForms.length >= 2,
-    grownForms.length > 0 ? `yeni siluet: ${grownForms.join(', ')}` : 'kademe atlayan yapı yok',
+    'şehir dönüşüyor: kuruluşta olmayan kademeler doğuyor',
+    grownChains.size >= 2 && deepest >= 2,
+    grownTiers.length > 0
+      ? `${grownTiers.map(([id, n]) => `${STRUCTURE_BY_ID[id]?.name ?? id} ${n}`).join(', ')} · ${grownChains.size} zincir · en derin ${deepest} kademe`
+      : 'kademe atlayan yapı yok',
   );
   expect(
     'kilitli bölge açılana dek gelişmiyor',
@@ -3504,7 +3543,8 @@ section('Sermaye piyasası: halka arz ve kurucu kilidi', () => {
    *   - halka arz bedava para değil: nakdi sıkışmayan şirkette erken ihraç
    *     720. günde net değeri düşürüyor (kalıcı ortaklık);
    *   - ama bir kontrol aracı: savunmasız yavaş oyuncu baskınla düşerken
-   *     baskıncı %30'u geçince ihraç eden aynı oyuncu ayakta kalıyor;
+   *     baskıncı %30'u geçince ihraç eden aynı oyuncu ayakta kalıyor
+   *     (Tur 21'den beri baskın altında soğuma aranmıyor);
    *   - oyun başı rakipler baskın ısınması bitene kadar kilitli: en ucuz
    *     rakibi alan vekil eskiden 5. günde devralıp tekel zaferine
    *     130–235. günde ulaşıyordu.
@@ -3562,7 +3602,16 @@ section('Sermaye piyasası: halka arz ve kurucu kilidi', () => {
     }
     return { lost, issued, founder: ownerFraction(getPlayer(engine.getState())) };
   }
-  const shields = [7, 42].map((seed) => ({ seed, bare: defenseRun(seed, false), issue: defenseRun(seed, true) }));
+  /*
+   * Dört tohum (Tur 21). Kontrol iki tohumla (7, 42) yazılmıştı ve ikisi
+   * de şanslıydı: on tohumluk ölçümde savunmasız düşen dokuz oyuncudan
+   * main'de üçü ihraçla da düşüyordu (5, 3, 19), seed 42 ise iki baskıncı
+   * serbest hisseyi bölüşüp tıkandığı için ayaktaydı. Zincir düzeltmesi
+   * rakip ekonomisini kaydırınca seed 42 de düştü (723 → 725). Savunma
+   * ihracı (soğumasız) ile dokuzun sekizi ayakta; 5 ve 31 eski kuralla
+   * düşen tohumlar, o yüzden burada.
+   */
+  const shields = [7, 42, 5, 31].map((seed) => ({ seed, bare: defenseRun(seed, false), issue: defenseRun(seed, true) }));
   for (const { seed, bare, issue } of shields) {
     console.log(
       `  baskın seed ${String(seed).padStart(2)} | savunmasız ${bare.lost ? `${bare.lost}. günde düşüyor` : 'ayakta'} · ` +

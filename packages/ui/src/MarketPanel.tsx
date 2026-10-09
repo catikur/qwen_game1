@@ -181,6 +181,15 @@ function Issuance({ state }: { state: GameState }): ReactElement | null {
         </span>
       </div>
       <p className="muted">{t('finance.market.issuance.blurb')}</p>
+      {quote.ok && quote.defense && (
+        <p className="issuance-defense" data-issuance-defense="on">
+          {t('finance.market.issuance.defense', {
+            threshold: Math.round(ISSUANCE.defenseAt * 100),
+            cooldown: ISSUANCE.cooldownDays,
+            floor: Math.round(ISSUANCE.minFounderShare * 100),
+          })}
+        </p>
+      )}
       {quote.ok ? (
         <>
           <label className="bank-amount">

@@ -29,6 +29,11 @@ export const ISSUANCE = {
   discount: 0.1,
   /** İki ihraç arasında en az bu kadar gün. */
   cooldownDays: 180,
+  /**
+   * Savunma ihracı (Tur 21): tek bir hissedarın payı bu eşiği geçmişse
+   * bekleme süresi aranmaz. Kurucu tabanı ve ihraç başına tavan geçerli.
+   */
+  defenseAt: 0.3,
   /** Kurucu payı bunun altına inemez — yatırımcılar şirketin çoğunluğu olamaz. */
   minFounderShare: 0.51,
 } as const;

@@ -3785,6 +3785,12 @@ button.icon {
   line-height: 1.5;
 }
 
+/* Savunma ihracı (Tur 21): baskın altında bekleme kalktı — fark edilsin. */
+.issuance .issuance-defense {
+  color: var(--warn);
+  font-weight: 600;
+}
+
 /* --- yapı menüsü: dolaylı binaların projeksiyonu (Tur 21) --- */
 .projection {
   display: flex;
