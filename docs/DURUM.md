@@ -1050,7 +1050,7 @@ köşeler; açılış takvimi büyük haritada yeniden ölçülmeli.)
 - ~~Oyuncunun rakip hissesi alımında günlük tavan yok~~ — Tur 20'de
   kapandı: herkes için aynı günlük tavan ve günlere yayılan devralma emri.
 
-### 4.7 Şehrin oyuncuyu içine alması — Tur 9'da başladı, bitmedi
+### 4.7 ~~Şehrin oyuncuyu içine alması~~ — Tur 9'da başladı, Tur 21'de kapandı
 
 Rapor üç şey istiyordu; Tur 9 birincisini yaptı:
 
@@ -1060,10 +1060,11 @@ Rapor üç şey istiyordu; Tur 9 birincisini yaptı:
 | kurduğun imparatorluk "senin" olsun | 11 | **yapıldı** — genel merkez işareti ve rozeti |
 | rakip seni geçince hırslanasın | 11 | **yapıldı** — geçilme olayı, rakibin yüzü ve aradaki fark |
 
-Üçü de kapandı. Geriye kalan, aynı damardaki daha küçük bir kalem: bölge
-liderliğini kaybetme anı henüz bir olay değil (yalnızca net değer
-sıralaması izleniyor). (Bu paragraf eskiden "devralınan şirketin yerine
-yenisi gelmiyor" da diyordu; yeni rakip girişi Tur 17'de geldi.)
+Üçü de kapandı. Aynı damardaki son kalem, bölge liderliğini kaybetme anı,
+Tur 21'de olay oldu: perakende cirosunun 10 günlük ortalamasında lider
+%5 farkla el değiştirince haber düşüyor, rakibin yüzü ve bölgesiyle.
+(Bu paragraf eskiden "devralınan şirketin yerine yenisi gelmiyor" da
+diyordu; yeni rakip girişi Tur 17'de geldi.)
 
 ### 4.8 ~~Zincir kartı ölçekte fren bilmiyor~~ — Tur 15'te kapandı
 

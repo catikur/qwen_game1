@@ -9,6 +9,7 @@ export * from './routes';
 export * from './shoppers';
 export * from './headquarters';
 export * from './news';
+export * from './leadership';
 export * from './engine';
 export * from './agenda';
 export * from './league';

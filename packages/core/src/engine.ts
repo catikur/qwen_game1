@@ -1,6 +1,8 @@
 import { BUILDING_BY_ID, CONSUMER_CATEGORIES, GOODS_BY_CATEGORY } from '@capital/content';
 import { build, buyTile, buyoutTile, demolish, sellTile } from './actions';
 import { pushNews } from './news';
+import { stepLeadership } from './leadership';
+import type { LeadershipMemory } from './leadership';
 import { companyRanking, formatMoney } from './selectors';
 import { sharesHeld, sharesOutstanding } from './systems/equity';
 import { runMarketTick } from './systems/market';
@@ -64,6 +66,8 @@ export class GameEngine {
    * geçişinde yeniden uyarır.
    */
   private lastRaidStage = 0;
+  /** Bölge liderliği hafızası (`leadership.ts`); kayıt yüklenince sessizce yeniden kurulur. */
+  private leadership: LeadershipMemory | null = null;
 
   constructor(state: GameState) {
     this.state = state;
@@ -91,6 +95,7 @@ export class GameEngine {
   replaceState(state: GameState): void {
     this.state = state;
     this.reachedMilestones.clear();
+    this.leadership = null;
     // Lig koşusunda net değer kayıttaki gibi kalıyor: yeniden hesap, o
     // günün rakip kararlarının okuduğu değeri değiştirir ve kayıttan
     // devam eden koşu tekrarla ayrışırdı. Değer zaten her gün sonunda
@@ -367,6 +372,7 @@ export class GameEngine {
     this.checkMilestones();
     runGoalTick(state);
     this.checkOvertaking();
+    this.checkLeadership();
     this.checkRaid();
     runLeagueTick(state);
   }
@@ -496,6 +502,45 @@ export class GameEngine {
       `${mine.rank}. sıradasın.${next}`,
       passed?.company.id,
     );
+  }
+
+  /**
+   * Bölge liderliğinin el değiştirmesi — yalnızca oyuncuyu ilgilendiren
+   * devirler haber. Rakipler arası devir haber akışını doldururdu ve
+   * oyuncunun yapabileceği bir şey değil.
+   */
+  private checkLeadership(): void {
+    const state = this.state;
+    const { memory, changes } = stepLeadership(state, this.leadership);
+    this.leadership = memory;
+    const playerId = state.playerCompanyId;
+    for (const change of changes) {
+      const district = state.districts[change.districtId];
+      if (!district) continue;
+      const pct = (value: number) => `%${Math.round(value * 100)}`;
+      if (change.from === playerId) {
+        const rival = state.companies[change.to];
+        if (!rival) continue;
+        pushNews(
+          state,
+          'bad',
+          `${rival.name}, ${district.name} bölgesinde öne geçti`,
+          `Bölgedeki perakende cirosunun ${pct(change.toShare)}'i onda, ${pct(change.fromShare)}'i sende. ` +
+            'Liderliği geri almak için o bölgenin talebine bak: fiyat, kalite ya da yeni bir şube.',
+          { companyId: rival.id, districtId: district.id },
+        );
+      } else if (change.to === playerId) {
+        const previous = state.companies[change.from];
+        pushNews(
+          state,
+          'good',
+          `${district.name} bölgesinde lider sensin`,
+          `Bölgedeki perakende cirosunun ${pct(change.toShare)}'i sende` +
+            (previous ? `; ${previous.name} ${pct(change.fromShare)}'te kaldı.` : '.'),
+          { districtId: district.id },
+        );
+      }
+    }
   }
 
   private checkMilestones(): void {
