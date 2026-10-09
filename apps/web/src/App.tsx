@@ -35,6 +35,7 @@ import {
   NewsFeed,
   Toasts,
   TopBar,
+  t,
   useGameVersion,
 } from '@capital/ui';
 import type { ExportOutcome, FocusTarget, GameContextValue, LeagueBoard, ToastMessage, ViewState } from '@capital/ui';
@@ -63,8 +64,8 @@ export function App(): ReactElement {
         setEngine(new GameEngine(outcome.state));
         setBootMessage(
           outcome.migratedFrom
-            ? `Kayıt v${outcome.migratedFrom} sürümünden taşındı.`
-            : 'Kaldığın yerden devam.',
+            ? t('app.boot.migrated', { version: outcome.migratedFrom })
+            : t('app.boot.resumed'),
         );
         setPhase('playing');
       } else {
@@ -90,7 +91,7 @@ export function App(): ReactElement {
     setPhase('playing');
   };
 
-  if (phase === 'loading') return <div className="loading">Şehir hazırlanıyor…</div>;
+  if (phase === 'loading') return <div className="loading">{t('app.boot.loading')}</div>;
 
   if (phase === 'menu' || !engine) {
     return (
@@ -299,9 +300,9 @@ function GameRoot({
     async (slot: number, name?: string) => {
       try {
         await saveGame(engine.getState(), slot, name);
-        toast(`Slot ${slot} kaydedildi.`, 'good');
+        toast(t('app.save.saved', { slot }), 'good');
       } catch (error) {
-        toast(`Kayıt başarısız: ${(error as Error).message}`, 'bad');
+        toast(t('app.save.failed', { message: (error as Error).message }), 'bad');
       }
     },
     [engine, toast],
@@ -317,7 +318,7 @@ function GameRoot({
       engine.replaceState(outcome.state);
       setViewState((current) => ({ ...current, selectedTileId: null, ghostDefId: null, openPanel: 'none' }));
       toast(
-        outcome.migratedFrom ? `Yüklendi (v${outcome.migratedFrom} → güncel şema).` : 'Oyun yüklendi.',
+        outcome.migratedFrom ? t('app.load.migrated', { version: outcome.migratedFrom }) : t('app.load.loaded'),
         'good',
       );
     },
@@ -347,11 +348,11 @@ function GameRoot({
      * açıp elle kopyalamayı öneriyor.
      */
     const messages: Record<ExportOutcome, [string, ToastMessage['tone']]> = {
-      saved: ['Kayıt dosyası kaydedildi.', 'good'],
-      started: ['İndirme başlatıldı.', 'good'],
-      copied: ['Bu görünümde indirme yok — kayıt panoya kopyalandı. Bir metin dosyasına yapıştırıp sakla.', 'info'],
-      declined: ['Kaydetme iptal edildi.', 'info'],
-      blocked: ['İndirme bu görünümde engelli — kaydı aşağıdaki metin kutusundan kopyala.', 'bad'],
+      saved: [t('app.export.saved'), 'good'],
+      started: [t('app.export.started'), 'good'],
+      copied: [t('app.export.copied'), 'info'],
+      declined: [t('app.export.declined'), 'info'],
+      blocked: [t('app.export.blocked'), 'bad'],
     };
     const [text, tone] = messages[outcome];
     toast(text, tone);
@@ -373,12 +374,12 @@ function GameRoot({
   );
 
   const importSave = useCallback(
-    async (file: File) => applyImported(await file.text(), 'Kayıt içe aktarıldı.'),
+    async (file: File) => applyImported(await file.text(), t('app.import.file')),
     [applyImported],
   );
 
   const importSaveText = useCallback(
-    (text: string) => applyImported(text, 'Kayıt metinden yüklendi.'),
+    (text: string) => applyImported(text, t('app.import.text')),
     [applyImported],
   );
 
