@@ -173,6 +173,14 @@ süpermarket, bir bakkaldan daha kaliteli olmasına rağmen aynı fiyattan
 satıyor. Genel model daha doğru olurdu ama Tur 1'in bütün kalibrasyonunu
 yeniden yapmayı gerektirirdi; bu turun kapsamı değil.
 
+> **Tur 21'de kapandı.** Taban kalite prim gücüne katılıyor:
+> `kaliteKatkısı = (def.quality − kategorinin en düşük mağaza kalitesi) × 0,5`.
+> Bakkal, kafe, butik, elektronik mağazası ve spor salonu için katkı sıfır
+> (ekonomileri birebir Tur 1); süpermarket ve restoran +0,115, mağazalar
+> zinciri +0,10. Tam ağırlık zincir A/B'sini bozdu (üst kademe mağaza o
+> kadar hızlı döndü ki fırsat maliyeti freni zinciri erteledi), yarım
+> ağırlıkta zincir önde kaldı. Ölçüm ve gerekçe `DURUM.md` Tur 21.
+
 **Ar-Ge, ölçekle birlikte ucuzlar.** Sabit gideri var, faydası outlet
 sayınla çarpılıyor. Tek mağazalı bir oyuncu için hiç dönmüyor; dört
 mağazalı için 225 gün. Zincir Tur 1'de aynı özelliği taşıyordu ("henüz

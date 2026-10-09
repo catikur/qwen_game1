@@ -21,7 +21,7 @@ export {
   LAND_SELL_RATIO,
   BUILDING_BOOK_RATIO,
 } from './systems/city';
-export { estimateInvestment } from './systems/market';
+export { estimateInvestment, qualityEdge } from './systems/market';
 export type { InvestmentEstimate } from './systems/market';
 export { bestGoodFor, defaultShelf, goodShares, shelfReach } from './systems/demand';
 export {

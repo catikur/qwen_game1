@@ -97,6 +97,40 @@ function premiumEdge(state: GameState, companyId: string, categoryId: CategoryId
 }
 
 /**
+ * Binanın taban kalitesinin prim gücüne katkısı (Tur 21, REKABET §3.4).
+ *
+ * Tur 2'nin "bilinen sadeleştirmesi" buydu: prim gücü yalnızca Ar-Ge ve
+ * pazarlamadan geliyordu, süpermarket bakkaldan kaliteli olmasına rağmen
+ * aynı fiyattan satıyordu. Taban kalite artık aynı kanaldan, aynı
+ * kıtlık çarpanıyla fiyata dönüyor — ama kategorinin EN DÜŞÜK kaliteli
+ * mağazasına göre: bakkal, kafe, butik, elektronik mağazası ve spor
+ * salonu için katkı sıfır, onların ekonomisi birebir Tur 1. Fark yalnızca
+ * üst kademede ve kalite farkının yarısı kadar (süpermarket ve restoran
+ * +0,115, mağazalar zinciri +0,10): boş talebin %50 olduğu bir bölgede
+ * fiyat ~%4 primli, doymuş bölgede sıfır — doymuş pazarda kalite yine
+ * paya döner.
+ *
+ * Ağırlık neden yarım: tam ağırlıkta (fark 0,23) üst kademe mağaza o kadar
+ * hızlı döndü ki Tur 15'in fırsat maliyeti freni zincir ünitelerini
+ * erteledi ve zincir A/B'si bir tohumda 4 üniteden 1'e indi (denge testi
+ * "zincir kurulabilen her tohumda kazandırıyor" önkoşulunu kaybetti).
+ * Yarım ağırlıkta zincir 3 ünite ve %9 önde; kalite fiyatta görünür kaldı.
+ */
+const QUALITY_EDGE_WEIGHT = 0.5;
+const categoryFloorQuality = new Map<string, number>();
+for (const def of Object.values(BUILDING_BY_ID)) {
+  if (def.role !== 'outlet') continue;
+  const floor = categoryFloorQuality.get(def.category);
+  if (floor === undefined || def.quality < floor) categoryFloorQuality.set(def.category, def.quality);
+}
+
+export function qualityEdge(defId: string): number {
+  const def = BUILDING_BY_ID[defId];
+  if (!def || def.role !== 'outlet') return 0;
+  return Math.max(0, def.quality - (categoryFloorQuality.get(def.category) ?? def.quality)) * QUALITY_EDGE_WEIGHT;
+}
+
+/**
  * Otomatik fiyatlama — "casual" varsayılan.
  *
  * Bölgede talep karşılanmıyorsa fiyatı yukarı, arz fazlaysa aşağı iter.
@@ -311,7 +345,7 @@ export function estimateInvestment(
   const priceMultiplier = autoPriceMultiplier(
     district.unmet[def.category] ?? 0,
     district.outletCount[def.category] ?? 0,
-    premiumEdge(state, companyId, def.category),
+    premiumEdge(state, companyId, def.category) + qualityEdge(def.id),
   );
   const salePrice = category.basePrice * priceMultiplier;
 
@@ -398,7 +432,7 @@ function applyAutoPricing(state: GameState): void {
     const target = autoPriceMultiplier(
       district.unmet[def.category] ?? 0,
       district.outletCount[def.category] ?? 0,
-      premiumEdge(state, building.companyId, def.category),
+      premiumEdge(state, building.companyId, def.category) + qualityEdge(def.id),
     );
     // Fiyat bir günde zıplamasın; oyuncu grafikte anlamlı bir eğri görsün.
     building.priceMultiplier += (target - building.priceMultiplier) * 0.25;

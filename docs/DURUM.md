@@ -995,12 +995,14 @@ eşik uyarıları (%10/%25/%40, baskıncının yüzüyle), günlük alım tavan�
 Eşik aşılırsa şirket silinmiyor; takvim duruyor, oyun sonu ekranı
 iniyor, son duruma bakılabiliyor.
 
-### 4.3 Taban bina kalitesi fiyata dönmüyor
+### 4.3 ~~Taban bina kalitesi fiyata dönmüyor~~ — Tur 21'de kapandı
 
-Prim gücü yalnızca Ar-Ge ve pazarlamadan geliyor. Bir süpermarket
-bakkaldan kaliteli olmasına rağmen aynı fiyattan satıyor
-(`REKABET-TASARIMI.md` §3.4). Genel model daha doğru olurdu ama Tur 1'in
-bütün kalibrasyonunu yeniden yapmayı gerektirir.
+Prim gücü yalnızca Ar-Ge ve pazarlamadan geliyordu; süpermarket bakkaldan
+kaliteli olmasına rağmen aynı fiyattan satıyordu (`REKABET-TASARIMI.md`
+§3.4). Taban kalite artık aynı kanaldan fiyata dönüyor, kategorinin en
+düşük kaliteli mağazasına göre ve farkın yarısı kadar. Alt kademe
+mağazaların ekonomisi birebir aynı kaldı; Tur 1'in kalibrasyonu yeniden
+yapılmadı, bantlar ölçüldü (Tur 21 bölümü).
 
 ### 4.4 Kapasitenin mekânsal dağılımı
 
