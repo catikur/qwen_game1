@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { STRUCTURE_BY_ID } from '@capital/content';
 import type { ReactElement } from 'react';
 import { auctionHint, getPlayer, minimumBid } from '@capital/core';
 import { useGame, useGameState } from './useGame';
@@ -62,7 +63,8 @@ export function AuctionPanel(): ReactElement {
     return (
       <p className="muted">
         Şu an açık bir ihale yok. Belediye 30 günde bir, şehrin en değerli boş
-        parselini açık artırmaya çıkarıyor.
+        parselini açık artırmaya çıkarıyor. Merkez dolunca şehrin kendi
+        yapısı olan değerli bir parseli kentsel dönüşüm ihalesine çıkarabilir.
       </p>
     );
   }
@@ -114,6 +116,13 @@ export function AuctionPanel(): ReactElement {
       {/* Oyuncunun ne aldığını bilmesi gerekiyor: aynı tahmin motoru,
           aynı sayı — rakibin teklif verirken kullandığının aynısı. */}
       {hint && <p className="muted">{hint}</p>}
+      {/* Dolu parsel (Tur 21): taban, sahibinden devralma bedeli. */}
+      {tile?.structureId && (
+        <p className="muted auction-occupied" data-occupied={tile.structureId}>
+          Kentsel dönüşüm: parselde {STRUCTURE_BY_ID[tile.structureId]?.name ?? 'bir yapı'} var. Kazanan yapıyı yıktırıp
+          parseli boş alır; taban fiyat sahibinden devralma bedeli.
+        </p>
+      )}
 
       <div className="auction-actions">
         <button

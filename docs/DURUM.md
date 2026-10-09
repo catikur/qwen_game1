@@ -1046,7 +1046,9 @@ köşeler; açılış takvimi büyük haritada yeniden ölçülmeli.)
 - ~~Devralınan şirketin yerine yenisi gelmiyor~~ — Tur 17'de kapandı
   (yeni rakip girişi; bu satır Tur 21'e kadar listede eskimiş kaldı).
   Kalan sınır: sekiz kişilik katalog tükenince boşalan koltuk boş kalıyor.
-- İhale yalnızca boş parsel için; dolu parsel ihalesi yok
+- ~~İhale yalnızca boş parsel için; dolu parsel ihalesi yok~~ — Tur 21'de
+  kapandı: kentsel dönüşüm ihalesi (şehir yapısı olan parsel; kazanan
+  yapıyı yıktırır). Şirket binası olan parsel ihaleye çıkmıyor.
 - ~~Oyuncunun rakip hissesi alımında günlük tavan yok~~ — Tur 20'de
   kapandı: herkes için aynı günlük tavan ve günlere yayılan devralma emri.
 
