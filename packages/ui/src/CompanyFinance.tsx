@@ -21,6 +21,7 @@ import {
   workforce,
 } from '@capital/core';
 import type { LaborState } from '@capital/core';
+import { t } from './i18n';
 import { useGame, useGameState } from './useGame';
 
 /**
@@ -49,28 +50,31 @@ function UnionDemandCard({ labor }: { labor: LaborState }): ReactElement | null 
   return (
     <article className="labor-demand" data-labor="demand">
       <header>
-        <span className="tag bad">Talep</span>
-        <strong>Sendika {pct(demand.raise, 1)} zam istiyor</strong>
-        <span className="agenda-days">{left}g</span>
+        <span className="tag bad">{t('finance.labor.demand.tag')}</span>
+        <strong>{t('finance.labor.demand.title', { raise: pct(demand.raise, 1) })}</strong>
+        <span className="agenda-days">{t('finance.labor.demand.daysLeft', { days: left })}</span>
       </header>
       <p className="muted">
-        Cevapsız kalırsa Ret sayılır. Grev: {LABOR.strikeDays} gün mağazalar ve fabrikalar {pct(LABOR.strikeCapacity)}{' '}
-        kapasite; sonunda {pct(demand.raise * LABOR.strikeSettlement, 1)} zamla sözleşme.
+        {t('finance.labor.demand.terms', {
+          days: LABOR.strikeDays,
+          capacity: pct(LABOR.strikeCapacity),
+          raise: pct(demand.raise * LABOR.strikeSettlement, 1),
+        })}
       </p>
-      <div className="labor-choices" role="group" aria-label="Sendikaya cevap">
+      <div className="labor-choices" role="group" aria-label={t('finance.labor.demand.ariaLabel')}>
         <button type="button" onClick={() => run({ type: 'RESPOND_UNION', response: 'accept' })}>
-          <span className="labor-choice-title">Kabul</span>
-          <span className="muted">ücretler +{pct(demand.raise, 1)}</span>
+          <span className="labor-choice-title">{t('finance.labor.demand.accept')}</span>
+          <span className="muted">{t('finance.labor.demand.acceptEffect', { raise: pct(demand.raise, 1) })}</span>
         </button>
         <button type="button" onClick={() => run({ type: 'RESPOND_UNION', response: 'compromise' })}>
-          <span className="labor-choice-title">Uzlaşma</span>
+          <span className="labor-choice-title">{t('finance.labor.demand.compromise')}</span>
           <span className="muted">
-            {pct(offer, 1)} teklif · tutma {pct(compromiseOdds(state, labor))}
+            {t('finance.labor.demand.compromiseEffect', { offer: pct(offer, 1), odds: pct(compromiseOdds(state, labor)) })}
           </span>
         </button>
         <button type="button" onClick={() => run({ type: 'RESPOND_UNION', response: 'reject' })}>
-          <span className="labor-choice-title">Ret</span>
-          <span className="muted">grev ihtimali {pct(strikeOdds(labor))}</span>
+          <span className="labor-choice-title">{t('finance.labor.demand.reject')}</span>
+          <span className="muted">{t('finance.labor.demand.rejectEffect', { odds: pct(strikeOdds(labor)) })}</span>
         </button>
       </div>
     </article>
@@ -93,25 +97,25 @@ export function WorkforceSection(): ReactElement | null {
 
   return (
     <section className="labor" aria-labelledby="labor-title">
-      <h3 id="labor-title">İşgücü</h3>
+      <h3 id="labor-title">{t('finance.labor.title')}</h3>
       <div className="statgrid small">
         <div className="stat">
-          <span className="stat-label">Çalışan</span>
+          <span className="stat-label">{t('finance.labor.stat.employees')}</span>
           <span className="stat-value">{employees.toLocaleString('tr-TR')}</span>
         </div>
         <div className="stat">
-          <span className="stat-label">Ücret/gün</span>
+          <span className="stat-label">{t('finance.labor.stat.wages')}</span>
           <span className="stat-value">{formatMoney(player.today.wages)}</span>
         </div>
-        <div className="stat" title="Bölgelerin iş piyasası (çalışan ağırlıklı) × toplu sözleşmeler">
-          <span className="stat-label">Piyasa · sözleşme</span>
+        <div className="stat" title={t('finance.labor.stat.indexTitle')}>
+          <span className="stat-label">{t('finance.labor.stat.index')}</span>
           <span className="stat-value">
             ×{index.toFixed(2)} · ×{(labor?.agreement ?? 1).toFixed(2)}
           </span>
         </div>
       </div>
 
-      <div className="labor-policy" role="group" aria-label="Ücret politikası">
+      <div className="labor-policy" role="group" aria-label={t('finance.labor.policy.ariaLabel')}>
         {POLICY_ORDER.map((id) => (
           <button
             key={id}
@@ -126,25 +130,29 @@ export function WorkforceSection(): ReactElement | null {
       </div>
       <p className="muted labor-blurb">
         {WAGE_POLICIES[policy].blurb}
-        {cooldown > 0 && ` Yeniden değiştirmek için ${cooldown} gün.`}
+        {cooldown > 0 && t('finance.labor.policy.cooldown', { days: cooldown })}
       </p>
 
       {strike ? (
         <p className="labor-strike" data-labor="strike">
-          <span className="tag bad">Grev</span> {strikeLeft} gün kaldı · kapasite {pct(LABOR.strikeCapacity)} · sonunda{' '}
-          {pct(strike.raise, 1)} zam
+          <span className="tag bad">{t('finance.labor.strike.tag')}</span>{' '}
+          {t('finance.labor.strike.status', {
+            days: strikeLeft,
+            capacity: pct(LABOR.strikeCapacity),
+            raise: pct(strike.raise, 1),
+          })}
         </p>
       ) : labor?.demand ? (
         <UnionDemandCard labor={labor} />
       ) : (
         <div className="labor-pressure">
-          <div className="labor-meter" role="meter" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(pressure * 100)} aria-label="Sendika baskısı">
+          <div className="labor-meter" role="meter" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(pressure * 100)} aria-label={t('finance.labor.pressure.ariaLabel')}>
             <span style={{ width: `${Math.round(pressure * 100)}%` }} className={pressure >= 0.75 ? 'hot' : undefined} />
           </div>
           <span className="muted">
             {employees < LABOR.minEmployees
-              ? `${LABOR.minEmployees} çalışanın altında sendika yok.`
-              : `Sendika baskısı ${pct(pressure)} — dolunca zam talebi gelir.`}
+              ? t('finance.labor.pressure.noUnion', { min: LABOR.minEmployees })
+              : t('finance.labor.pressure.level', { pressure: pct(pressure) })}
           </span>
         </div>
       )}
@@ -174,21 +182,21 @@ function LoanForm(): ReactElement {
 
   return (
     <div className="bank-form">
-      <div className="labor-policy" role="group" aria-label="Kredi türü">
+      <div className="labor-policy" role="group" aria-label={t('finance.bank.loanForm.kindAriaLabel')}>
         <button type="button" aria-pressed={kind === 'term'} onClick={() => setKind('term')}>
-          Vadeli
+          {t('finance.bank.loanForm.kind.term')}
         </button>
         <button type="button" aria-pressed={kind === 'secured'} onClick={() => setKind('secured')}>
-          Arsa teminatlı
+          {t('finance.bank.loanForm.kind.secured')}
         </button>
         <button type="button" aria-pressed={bond} onClick={() => setKind('bond')}>
-          Tahvil
+          {t('finance.bank.loanForm.kind.bond')}
         </button>
       </div>
-      <div className="labor-policy" role="group" aria-label="Vade">
+      <div className="labor-policy" role="group" aria-label={t('finance.bank.loanForm.termAriaLabel')}>
         {terms.map((option) => (
           <button key={option.days} type="button" aria-pressed={days === option.days} onClick={() => setTermDays(option.days)}>
-            {option.days} gün
+            {t('finance.bank.loanForm.termDays', { days: option.days })}
           </button>
         ))}
       </div>
@@ -196,7 +204,8 @@ function LoanForm(): ReactElement {
         <>
           <label className="bank-amount">
             <span>
-              Tutar <strong>{formatMoney(amount)}</strong> <span className="muted">/ en fazla {formatMoney(quote.max)}</span>
+              {t('finance.bank.loanForm.amount')} <strong>{formatMoney(amount)}</strong>{' '}
+              <span className="muted">{t('finance.bank.loanForm.max', { max: formatMoney(quote.max) })}</span>
             </span>
             <input
               type="range"
@@ -208,18 +217,22 @@ function LoanForm(): ReactElement {
             />
           </label>
           <p className="muted bank-terms">
-            Yıllık {pct(quote.rate, 1)} · {bond ? 'kupon' : 'taksit'} {formatMoney(payment)}/gün · toplam faiz{' '}
-            {formatMoney(totalInterest)}
-            {kind === 'secured' && ` · rehne açık arsa ${formatMoney(quote.collateralValue ?? 0)}`}
+            {t('finance.bank.loanForm.terms', {
+              rate: pct(quote.rate, 1),
+              payKind: bond ? t('finance.bank.loanForm.coupon') : t('finance.bank.loanForm.installment'),
+              payment: formatMoney(payment),
+              total: formatMoney(totalInterest),
+            })}
+            {kind === 'secured' &&
+              t('finance.bank.loanForm.collateral', { value: formatMoney(quote.collateralValue ?? 0) })}
           </p>
           {bond && (
             <p className="muted bank-terms">
-              Anapara {days}. günde tek seferde: {formatMoney(amount)}. O gün kasada yoksa fark kredili hesaba geçer.
+              {t('finance.bank.loanForm.bondPrincipal', { day: days, amount: formatMoney(amount) })}
             </p>
           )}
           <p className="muted bank-terms">
-            Dosya masrafı %{CREDIT.originationFee * 100} · sonraki başvuru {CREDIT.applyCooldownDays} gün sonra · not D'ye
-            düşersen krediler muaccel olur.
+            {t('finance.bank.loanForm.fees', { fee: CREDIT.originationFee * 100, days: CREDIT.applyCooldownDays })}
           </p>
           <button
             type="button"
@@ -228,7 +241,7 @@ function LoanForm(): ReactElement {
               if (run({ type: 'TAKE_LOAN', kind, amount, termDays: days })) setWanted(null);
             }}
           >
-            {bond ? 'Tahvil ihraç et' : 'Krediyi çek'}
+            {bond ? t('finance.bank.loanForm.issueBond') : t('finance.bank.loanForm.takeLoan')}
           </button>
         </>
       ) : (
@@ -253,36 +266,39 @@ export function BankSection(): ReactElement | null {
 
   return (
     <section className="bank" aria-labelledby="bank-title">
-      <h3 id="bank-title">Banka</h3>
+      <h3 id="bank-title">{t('finance.bank.title')}</h3>
       <div className="bank-head">
         <span className={`bank-rating rating-${rating}`} title={CREDIT_RATINGS[rating].blurb}>
           {rating}
         </span>
         <div className="statgrid small">
           <div className="stat">
-            <span className="stat-label">Kaldıraç</span>
+            <span className="stat-label">{t('finance.bank.stat.leverage')}</span>
             <span className="stat-value">{pct(leverage)}</span>
           </div>
           <div className="stat">
-            <span className="stat-label">Kredili hesap</span>
+            <span className="stat-label">{t('finance.bank.stat.overdraft')}</span>
             <span className={overdraft > 0 ? 'stat-value neg' : 'stat-value'}>
               {formatMoney(overdraft)} <span className="muted">/ {formatMoney(limit)}</span>
             </span>
           </div>
           <div className="stat">
-            <span className="stat-label">Faiz/gün</span>
+            <span className="stat-label">{t('finance.bank.stat.interest')}</span>
             <span className="stat-value">{formatMoney(dailyInterest(state, player))}</span>
           </div>
         </div>
       </div>
       <p className="muted">
-        {CREDIT_RATINGS[rating].blurb} Kasa eksiye düşerse kredili hesap devreye girer (yıllık{' '}
-        {pct(overdraftRate(state, player), 0)}); kasaya giren para önce onu kapatır.
+        {CREDIT_RATINGS[rating].blurb}{' '}
+        {t('finance.bank.overdraftInfo', { rate: pct(overdraftRate(state, player), 0) })}
       </p>
       {arrears > 0 && (
         <p className="bank-warning" data-bank="arrears">
-          <span className="tag bad">İhtar</span> {Math.max(0, CREDIT.graceDays - arrears + 1)} gün içinde kredili hesabı{' '}
-          {formatMoney(limit)} altına indir; yoksa haciz başlar.
+          <span className="tag bad">{t('finance.bank.arrears.tag')}</span>{' '}
+          {t('finance.bank.arrears.warning', {
+            days: Math.max(0, CREDIT.graceDays - arrears + 1),
+            limit: formatMoney(limit),
+          })}
         </p>
       )}
 
@@ -291,11 +307,11 @@ export function BankSection(): ReactElement | null {
           <table className="table bank-loans">
             <thead>
               <tr>
-                <th>Kredi</th>
-                <th>Kalan</th>
-                <th>Faiz</th>
-                <th>Taksit/gün</th>
-                <th>Bitiş</th>
+                <th>{t('finance.bank.loans.loan')}</th>
+                <th>{t('finance.bank.loans.balance')}</th>
+                <th>{t('finance.bank.loans.rate')}</th>
+                <th>{t('finance.bank.loans.payment')}</th>
+                <th>{t('finance.bank.loans.ends')}</th>
                 <th />
               </tr>
             </thead>
@@ -304,22 +320,24 @@ export function BankSection(): ReactElement | null {
                 <tr key={loan.id}>
                   <td>
                     {loan.kind === 'secured'
-                      ? `Teminatlı · ${loan.collateral?.length ?? 0} arsa`
+                      ? t('finance.bank.loans.kind.secured', { count: loan.collateral?.length ?? 0 })
                       : loan.kind === 'bond'
-                        ? 'Tahvil · vadede tek ödeme'
-                        : 'Vadeli'}
+                        ? t('finance.bank.loans.kind.bond')
+                        : t('finance.bank.loans.kind.term')}
                   </td>
                   <td>{formatMoney(loan.balance)}</td>
                   <td>{pct(loan.rate, 1)}</td>
                   <td>{formatMoney(loan.payment)}</td>
-                  <td>{Math.max(0, loan.startDay + loan.termDays - state.time.day)}g</td>
+                  <td>
+                    {t('finance.bank.loans.daysLeft', { days: Math.max(0, loan.startDay + loan.termDays - state.time.day) })}
+                  </td>
                   <td>
                     <button
                       type="button"
                       disabled={player.cash < loan.balance}
                       onClick={() => run({ type: 'REPAY_LOAN', loanId: loan.id })}
                     >
-                      Kapat
+                      {t('finance.bank.loans.repay')}
                     </button>
                   </td>
                 </tr>

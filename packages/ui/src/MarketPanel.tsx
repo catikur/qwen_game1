@@ -22,6 +22,7 @@ import {
   sharesOutstanding,
 } from '@capital/core';
 import type { CompanyState, GameState } from '@capital/core';
+import { t } from './i18n';
 import { useGame, useGameState } from './useGame';
 
 /**
@@ -42,10 +43,7 @@ export function MarketPanel(): ReactElement {
   const others = Object.values(state.companies).filter((c) => c.id !== player.id);
   if (others.length === 0) {
     return (
-      <p className="muted">
-        Şehirde başka şirket kalmadı. Borsa boş — rakiplerin hepsini
-        devraldın.
-      </p>
+      <p className="muted">{t('finance.market.empty')}</p>
     );
   }
 
@@ -54,19 +52,16 @@ export function MarketPanel(): ReactElement {
   return (
     <div className="bourse">
       <div className="statgrid small">
-        <Stat label="Nakit" value={formatMoney(player.cash)} />
-        <Stat label="Portföy değeri" value={formatMoney(portfolio)} />
-        <Stat label="Şirket değeri" value={formatMoney(player.netWorth)} />
+        <Stat label={t('finance.market.stat.cash')} value={formatMoney(player.cash)} />
+        <Stat label={t('finance.market.stat.portfolio')} value={formatMoney(portfolio)} />
+        <Stat label={t('finance.market.stat.netWorth')} value={formatMoney(player.netWorth)} />
       </div>
 
       <Defense state={state} />
       <Issuance state={state} />
 
       <p className="muted">
-        Bir şirketin hisselerinin %{Math.round(CONTROL_THRESHOLD * 100)}'ini
-        geçersen onu devralırsın: bütün binaları ve parselleri senin olur.
-        Azınlık hissesi de kendi başına kazandırır — şirket kârının dörtte
-        birini hissedarlarına dağıtır.
+        {t('finance.market.controlRule', { threshold: Math.round(CONTROL_THRESHOLD * 100) })}
       </p>
 
       <div className="bourse-list">
@@ -114,7 +109,7 @@ function Defense({ state }: { state: GameState }): ReactElement {
   const buyback = (count: number): void => {
     if (count <= 0) return;
     if (run({ type: 'BUY_SHARES', companyId: player.id, count })) {
-      toast(`${count} hisse hazineye çekildi — ${formatMoney(count * price)}.`, 'good');
+      toast(t('finance.market.defense.buybackDone', { count, cost: formatMoney(count * price) }), 'good');
     }
   };
   // Geri alım da günlük tavanlı (Tur 20) — rakibin savunması gibi. Tek
@@ -124,26 +119,28 @@ function Defense({ state }: { state: GameState }): ReactElement {
   return (
     <div className={topCount > 0 ? 'defense threatened' : 'defense'}>
       <div className="defense-head">
-        <h3>Kendi Hissen</h3>
+        <h3>{t('finance.market.defense.title')}</h3>
         <span className="muted">
-          dolaşımda {float} · hazinede {treasury} · {formatMoney(price)}/hisse
+          {t('finance.market.defense.summary', { float, treasury, price: formatMoney(price) })}
         </span>
       </div>
       {topHolder ? (
         <div className="defense-threat">
           <span>
-            <strong>{topHolder.name}</strong> payının %{percent.toFixed(1)}
-            {"'"}ini topladı — eşik %{Math.round(CONTROL_THRESHOLD * 100)}.
+            <strong>{topHolder.name}</strong>{' '}
+            {t('finance.market.defense.threat', {
+              percent: percent.toFixed(1),
+              threshold: Math.round(CONTROL_THRESHOLD * 100),
+            })}
           </span>
           <button type="button" disabled={affordable <= 0} onClick={() => buyback(affordable)}>
-            {affordable > 0 ? `${affordable} hisse geri al` : 'Bugünkü tavan doldu'}
+            {affordable > 0
+              ? t('finance.market.defense.buyback', { count: affordable })
+              : t('finance.market.defense.capFull')}
           </button>
         </div>
       ) : (
-        <p className="muted">
-          Hissene talip yok. Rakipler zayıflayan şirketlerin payını toplar —
-          sıralamada düşersen burası ilk bakacağın yer.
-        </p>
+        <p className="muted">{t('finance.market.defense.noThreat')}</p>
       )}
     </div>
   );
@@ -170,26 +167,28 @@ function Issuance({ state }: { state: GameState }): ReactElement | null {
   const raised = count * quote.price;
   const effect = issueNetWorthEffect(state, player.id, count);
   const founderAfter = 1 - (investors + count) / (outstanding + count);
-  const title = quote.ipo ? 'Halka arz' : 'Sermaye artırımı';
+  const title = quote.ipo ? t('finance.market.issuance.title.ipo') : t('finance.market.issuance.title.rights');
 
   return (
     <section className="defense issuance" data-issuance={quote.ok ? 'open' : 'closed'}>
       <div className="defense-head">
         <h3>{title}</h3>
         <span className="muted">
-          {outstanding.toLocaleString('tr-TR')} hisse · kurucu payı %{Math.round(founder * 100)}
+          {t('finance.market.issuance.summary', {
+            outstanding: outstanding.toLocaleString('tr-TR'),
+            founder: Math.round(founder * 100),
+          })}
         </span>
       </div>
-      <p className="muted">
-        Yeni hisse sat, nakit al. Taksit yok; bedeli, yatırımcıların şirketin bütün büyümesinden kalıcı pay
-        alması. Piyasa seni primli fiyatlarken satmak ucuz, ihraç baskıncının payını da sulandırır.
-      </p>
+      <p className="muted">{t('finance.market.issuance.blurb')}</p>
       {quote.ok ? (
         <>
           <label className="bank-amount">
             <span>
-              <strong>{count.toLocaleString('tr-TR')}</strong> yeni hisse{' '}
-              <span className="muted">/ en fazla {quote.maxShares.toLocaleString('tr-TR')}</span>
+              <strong>{count.toLocaleString('tr-TR')}</strong> {t('finance.market.issuance.newShares')}{' '}
+              <span className="muted">
+                {t('finance.market.issuance.max', { max: quote.maxShares.toLocaleString('tr-TR') })}
+              </span>
             </span>
             <input
               type="range"
@@ -201,9 +200,13 @@ function Issuance({ state }: { state: GameState }): ReactElement | null {
             />
           </label>
           <p className="muted bank-terms">
-            {formatMoney(quote.price)}/hisse (piyasanın %{Math.round(ISSUANCE.discount * 100)} altı) · kasaya{' '}
-            {formatMoney(raised)} · kurucu payı %{Math.round(founder * 100)} → %{Math.round(founderAfter * 100)} · net
-            değere bugün{' '}
+            {t('finance.market.issuance.terms', {
+              price: formatMoney(quote.price),
+              discount: Math.round(ISSUANCE.discount * 100),
+              raised: formatMoney(raised),
+              founder: Math.round(founder * 100),
+              founderAfter: Math.round(founderAfter * 100),
+            })}{' '}
             <span className={effect >= 0 ? 'pos' : 'neg'}>
               {effect >= 0 ? '+' : '−'}
               {formatMoney(Math.abs(effect))}
@@ -214,12 +217,12 @@ function Issuance({ state }: { state: GameState }): ReactElement | null {
             className="primary issue-go"
             onClick={() => {
               if (run({ type: 'ISSUE_SHARES', count })) {
-                toast(`${title}: ${formatMoney(raised)} kasaya girdi.`, 'good');
+                toast(t('finance.market.issuance.done', { title, amount: formatMoney(raised) }), 'good');
                 setWanted(null);
               }
             }}
           >
-            {quote.ipo ? 'Halka arz et' : 'Hisse ihraç et'}
+            {quote.ipo ? t('finance.market.issuance.go.ipo') : t('finance.market.issuance.go.rights')}
           </button>
         </>
       ) : (
@@ -259,11 +262,14 @@ function Listing({ company, state }: { company: CompanyState; state: GameState }
   const estimate = orderEstimate(state, player.id, company.id);
   const orderBlock =
     toControl === 0
-      ? 'Kontrol sende.'
+      ? t('finance.market.order.block.controlled')
       : lockedDays > 0
-        ? 'Kurucu kilidinde.'
+        ? t('finance.market.order.block.locked')
         : estimate.floatShort
-          ? `Dolaşımda ${available.toLocaleString('tr-TR')} hisse var, kontrol için ${toControl.toLocaleString('tr-TR')} gerekiyor.`
+          ? t('finance.market.order.block.floatShort', {
+              available: available.toLocaleString('tr-TR'),
+              needed: toControl.toLocaleString('tr-TR'),
+            })
           : null;
 
   const trade = (type: 'BUY_SHARES' | 'SELL_SHARES', count: number): void => {
@@ -271,8 +277,8 @@ function Listing({ company, state }: { company: CompanyState; state: GameState }
     if (run({ type, companyId: company.id, count })) {
       toast(
         type === 'BUY_SHARES'
-          ? `${count} hisse alındı — ${formatMoney(count * price)}.`
-          : `${count} hisse satıldı — ${formatMoney(count * price)}.`,
+          ? t('finance.market.trade.bought', { count, cost: formatMoney(count * price) })
+          : t('finance.market.trade.sold', { count, cost: formatMoney(count * price) }),
         'good',
       );
       setAmount('');
@@ -281,19 +287,19 @@ function Listing({ company, state }: { company: CompanyState; state: GameState }
 
   const placeOrder = (): void => {
     if (run({ type: 'PLACE_TAKEOVER_ORDER', companyId: company.id })) {
-      toast(`${company.name} için devralma emri verildi — günde en fazla ${cap.toLocaleString('tr-TR')} hisse.`, 'good');
+      toast(t('finance.market.order.placed', { name: company.name, cap: cap.toLocaleString('tr-TR') }), 'good');
     }
   };
   const cancelOrder = (): void => {
     if (run({ type: 'CANCEL_TAKEOVER_ORDER', companyId: company.id })) {
-      toast('Emir iptal edildi; toplanan pay elinde kalıyor.', 'info');
+      toast(t('finance.market.order.cancelled'), 'info');
     }
   };
 
   return (
     <section
       className="bourse-row"
-      aria-label={`${company.name} hissesi`}
+      aria-label={t('finance.market.listing.ariaLabel', { name: company.name })}
       data-company={company.id}
       data-order={order ? 'active' : undefined}
     >
@@ -307,20 +313,22 @@ function Listing({ company, state }: { company: CompanyState; state: GameState }
           {/* Güven fiyatın NEDEN o olduğunu söylüyor. Tek başına bir sayı
               olsaydı oyuncu "pahalı mı ucuz mu" sorusuna cevap bulamazdı. */}
           <span className={trust >= 1 ? 'bourse-trust pos' : 'bourse-trust neg'}>
-            {trust >= 1 ? 'primli' : 'iskontolu'} ×{trust.toFixed(2)}
+            {trust >= 1 ? t('finance.market.listing.premium') : t('finance.market.listing.discount')} ×{trust.toFixed(2)}
           </span>
         </span>
       </header>
 
       <div className="bourse-meta">
-        <span>değer {formatMoney(marketCap(state, company.id))}</span>
-        <span>günlük kâr {formatMoney(company.today.profit)}</span>
-        <span>serbest {available.toLocaleString('tr-TR')} hisse</span>
-        {investors > 0 && <span>kurumsal yatırımcı %{Math.round((investors / outstanding) * 100)}</span>}
+        <span>{t('finance.market.listing.value', { value: formatMoney(marketCap(state, company.id)) })}</span>
+        <span>{t('finance.market.listing.profit', { profit: formatMoney(company.today.profit) })}</span>
+        <span>{t('finance.market.listing.float', { count: available.toLocaleString('tr-TR') })}</span>
+        {investors > 0 && (
+          <span>{t('finance.market.listing.investors', { percent: Math.round((investors / outstanding) * 100) })}</span>
+        )}
       </div>
       {lockedDays > 0 && (
         <p className="muted bourse-locked" data-locked={lockedDays}>
-          Kurucu kilidi: hisseleri {lockedDays} gün sonra piyasaya çıkıyor.
+          {t('finance.market.listing.locked', { days: lockedDays })}
         </p>
       )}
 
@@ -332,10 +340,13 @@ function Listing({ company, state }: { company: CompanyState; state: GameState }
           <span className="bourse-bar-mark" style={{ left: `${CONTROL_THRESHOLD * 100}%` }} />
         </span>
         <span className="bourse-stake-text">
-          payın <strong>%{(stake * 100).toFixed(1)}</strong>
+          {t('finance.market.listing.stake')} <strong>%{(stake * 100).toFixed(1)}</strong>
           {stake > CONTROL_THRESHOLD
-            ? ' · kontrol sende'
-            : ` · kontrol için ${toControl.toLocaleString('tr-TR')} hisse daha (${formatMoney(controlCost)})`}
+            ? t('finance.market.listing.stakeControlled')
+            : t('finance.market.listing.stakeToControl', {
+                count: toControl.toLocaleString('tr-TR'),
+                cost: formatMoney(controlCost),
+              })}
         </span>
       </div>
 
@@ -343,12 +354,16 @@ function Listing({ company, state }: { company: CompanyState; state: GameState }
       {order && (
         <div className={order.waitingCash ? 'bourse-order waiting' : 'bourse-order'}>
           <span>
-            <strong>Devralma emri</strong> · {order.placedDay}. günden beri ·{' '}
-            {toControl.toLocaleString('tr-TR')} hisse kaldı, en az {estimate.days} gün
-            {order.waitingCash ? ' · nakit bekliyor' : ''}
+            <strong>{t('finance.market.order.title')}</strong> ·{' '}
+            {t('finance.market.order.progress', {
+              day: order.placedDay,
+              remaining: toControl.toLocaleString('tr-TR'),
+              days: estimate.days,
+            })}
+            {order.waitingCash ? t('finance.market.order.waitingCash') : ''}
           </span>
           <button type="button" className="order-cancel" onClick={cancelOrder}>
-            Emri iptal et
+            {t('finance.market.order.cancel')}
           </button>
         </div>
       )}
@@ -359,17 +374,19 @@ function Listing({ company, state }: { company: CompanyState; state: GameState }
           disabled={buyable < 100}
           onClick={() => trade('BUY_SHARES', 100)}
         >
-          100 al · {formatMoney(100 * price)}
+          {t('finance.market.trade.buyLot', { count: 100, cost: formatMoney(100 * price) })}
         </button>
         {!order && (
           <button
             type="button"
             className={orderBlock === null && controlCost <= player.cash ? 'primary order-go' : 'order-go'}
             disabled={orderBlock !== null}
-            title={orderBlock ?? `Günde en fazla ${cap.toLocaleString('tr-TR')} hisse; hedef savunabilir.`}
+            title={orderBlock ?? t('finance.market.order.hint', { cap: cap.toLocaleString('tr-TR') })}
             onClick={placeOrder}
           >
-            {toControl === 0 ? 'Kontrol sende' : `Devralma emri · ~${estimate.days} gün`}
+            {toControl === 0
+              ? t('finance.market.order.controlled')
+              : t('finance.market.order.go', { days: estimate.days })}
           </button>
         )}
         <label className="auction-custom">
@@ -379,7 +396,7 @@ function Listing({ company, state }: { company: CompanyState; state: GameState }
             max={Math.max(1, buyable)}
             step={50}
             value={amount}
-            placeholder="adet"
+            placeholder={t('finance.market.trade.amountPlaceholder')}
             onChange={(e) => setAmount(e.target.value)}
           />
           <button
@@ -387,26 +404,25 @@ function Listing({ company, state }: { company: CompanyState; state: GameState }
             disabled={lockedDays > 0 || Number(amount) <= 0 || Number(amount) > buyable}
             onClick={() => trade('BUY_SHARES', Number(amount))}
           >
-            Al
+            {t('finance.market.trade.buy')}
           </button>
           <button
             type="button"
             disabled={held <= 0 || Number(amount) <= 0 || Number(amount) > held}
             onClick={() => trade('SELL_SHARES', Number(amount))}
           >
-            Sat
+            {t('finance.market.trade.sell')}
           </button>
         </label>
       </div>
       <p className="muted bourse-cap" data-cap-left={capLeft}>
-        Günde en fazla {cap.toLocaleString('tr-TR')} hisse · bugün {capLeft.toLocaleString('tr-TR')} kaldı
+        {t('finance.market.cap.summary', { cap: cap.toLocaleString('tr-TR'), left: capLeft.toLocaleString('tr-TR') })}
         {orderBlock && toControl > 0 && lockedDays === 0 ? ` · ${orderBlock}` : ''}
       </p>
 
       {held > 0 && (
         <p className="muted">
-          Elinde {held.toLocaleString('tr-TR')} hisse ·{' '}
-          {formatMoney(held * price)} değerinde
+          {t('finance.market.listing.holding', { count: held.toLocaleString('tr-TR'), value: formatMoney(held * price) })}
         </p>
       )}
     </section>

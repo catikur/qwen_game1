@@ -18,6 +18,8 @@ import { ghostValueAt, useGhost } from './LeaguePanel';
 import { useCollapsible } from './collapse';
 import { useGame, useGameState } from './useGame';
 import type { ViewState } from './useGame';
+import { t } from './i18n';
+import type { MessageKey } from './i18n';
 
 /** Üst bar: oyuncunun her an görmesi gereken beş sayı ve zaman kontrolü. */
 export function TopBar(): ReactElement {
@@ -75,18 +77,18 @@ export function TopBar(): ReactElement {
        * ipucu bir şey kaybetmiyor.
        */}
       <div className="metrics">
-        <Metric icon="cash" label="Nakit" value={formatMoney(player.cash)} tone="accent" />
+        <Metric icon="cash" label={t('hud.topbar.cash')} value={formatMoney(player.cash)} tone="accent" />
         <Metric
           icon="profit"
-          label="Günlük kâr"
+          label={t('hud.topbar.dailyProfit')}
           value={formatMoney(profit)}
           tone={profit >= 0 ? 'good' : 'bad'}
         />
-        <Metric icon="worth" label="Şirket değeri" value={formatMoney(player.netWorth)} />
+        <Metric icon="worth" label={t('hud.topbar.netWorth')} value={formatMoney(player.netWorth)} />
         {player.debt > 0 && (
-          <Metric icon="debt" label="Borç" value={formatMoney(player.debt)} tone="bad" />
+          <Metric icon="debt" label={t('hud.topbar.debt')} value={formatMoney(player.debt)} tone="bad" />
         )}
-        <Metric icon="rank" label="Sıralama" value={`${rank}.`} tone={rank === 1 ? 'good' : 'plain'} />
+        <Metric icon="rank" label={t('hud.topbar.rank')} value={t('hud.topbar.rankValue', { rank })} tone={rank === 1 ? 'good' : 'plain'} />
       </div>
 
       {/*
@@ -98,7 +100,7 @@ export function TopBar(): ReactElement {
        * ya da düğmeleri iki kez çizmek zorunda kalırdık; aynı düğmeyi iki
        * yerde çizmek hem erişilebilirlik hem test tarafında karışıklık olurdu.
        */}
-      <div className="speeds" role="group" aria-label="Oyun hızı">
+      <div className="speeds" role="group" aria-label={t('hud.speed.group')}>
         {speeds.map((speed) => (
           <button
             key={speed.value}
@@ -106,7 +108,7 @@ export function TopBar(): ReactElement {
             className={state.time.speed === speed.value ? 'speed active' : 'speed'}
             onClick={() => run({ type: 'SET_SPEED', speed: speed.value })}
             aria-pressed={state.time.speed === speed.value}
-            title={speed.value === 0 ? 'Duraklat (Boşluk)' : `${speed.value}× hız`}
+            title={speed.value === 0 ? t('hud.speed.pause') : t('hud.speed.rate', { speed: speed.value })}
           >
             {speed.label}
           </button>
@@ -120,8 +122,8 @@ export function TopBar(): ReactElement {
           className={audio.muted ? 'speed sound-toggle muted' : 'speed sound-toggle'}
           onClick={audio.toggle}
           aria-pressed={!audio.muted}
-          aria-label={audio.muted ? 'Sesi aç' : 'Sesi kapat'}
-          title={audio.muted ? 'Sesi aç' : 'Sesi kapat'}
+          aria-label={audio.muted ? t('hud.sound.unmute') : t('hud.sound.mute')}
+          title={audio.muted ? t('hud.sound.unmute') : t('hud.sound.mute')}
         >
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
             <path d="M4 10v4h3l5 4V6L7 10z" />
@@ -130,7 +132,7 @@ export function TopBar(): ReactElement {
         </button>
       </div>
 
-      <nav className="topbar-actions" aria-label="Paneller">
+      <nav className="topbar-actions" aria-label={t('hud.dock.label')}>
         {PANEL_TABS.map((tab) => {
           const open = view.openPanel === tab.id;
           return (
@@ -155,10 +157,10 @@ export function TopBar(): ReactElement {
                * söyleyince eşleşme olmazdı (WCAG 2.5.3). Ad görünen
                * etiketten geliyor; `title` yalnızca ek bağlam veriyor.
                */
-              title={tab.title}
+              title={t(tab.title)}
             >
               <PanelIcon name={tab.id} />
-              <span className="dock-label">{tab.label}</span>
+              <span className="dock-label">{t(tab.label)}</span>
             </button>
           );
         })}
@@ -181,17 +183,18 @@ export function TopBar(): ReactElement {
  */
 const PANEL_TABS: Array<{
   id: 'chain' | 'rivalry' | 'bourse' | 'council' | 'company' | 'rivals' | 'saves' | 'help';
-  label: string;
-  title: string;
+  /** Sözlük anahtarları — metin çizim anında `t()` ile çözülür. */
+  label: MessageKey;
+  title: MessageKey;
 }> = [
-  { id: 'chain', label: 'Zincir', title: 'Tedarik zinciri' },
-  { id: 'rivalry', label: 'Rekabet', title: 'Rekabet kartı' },
-  { id: 'bourse', label: 'Borsa', title: 'Borsa' },
-  { id: 'council', label: 'Meclis', title: 'Belediye meclisi' },
-  { id: 'company', label: 'Şirket', title: 'Şirket' },
-  { id: 'rivals', label: 'Rakip', title: 'Rakipler' },
-  { id: 'saves', label: 'Kayıt', title: 'Kayıtlar' },
-  { id: 'help', label: 'Yardım', title: 'Nasıl oynanır' },
+  { id: 'chain', label: 'hud.dock.chain.label', title: 'hud.dock.chain.title' },
+  { id: 'rivalry', label: 'hud.dock.rivalry.label', title: 'hud.dock.rivalry.title' },
+  { id: 'bourse', label: 'hud.dock.bourse.label', title: 'hud.dock.bourse.title' },
+  { id: 'council', label: 'hud.dock.council.label', title: 'hud.dock.council.title' },
+  { id: 'company', label: 'hud.dock.company.label', title: 'hud.dock.company.title' },
+  { id: 'rivals', label: 'hud.dock.rivals.label', title: 'hud.dock.rivals.title' },
+  { id: 'saves', label: 'hud.dock.saves.label', title: 'hud.dock.saves.title' },
+  { id: 'help', label: 'hud.dock.help.label', title: 'hud.dock.help.title' },
 ];
 
 /** Rıhtım ikonları — `currentColor` ile çizilir, iki temada da çalışır. */
@@ -383,7 +386,7 @@ export function LensBar(): ReactElement {
         data-collapse="lens"
       >
         <LensIcon name={active?.id ?? 'none'} />
-        <span className="collapse-title">Harita: {active?.name ?? 'Şehir'}</span>
+        <span className="collapse-title">{t('hud.lens.title', { name: active?.name ?? t('hud.lens.none') })}</span>
         <span className="collapse-chevron" aria-hidden="true" />
       </button>
 
@@ -501,11 +504,11 @@ function NewsIcon(): ReactElement {
   );
 }
 
-const TONE_LABEL: Record<string, string> = {
-  good: 'Fırsat',
-  bad: 'Risk',
-  rival: 'Rakip',
-  neutral: 'Haber',
+const TONE_LABEL: Record<string, MessageKey> = {
+  good: 'hud.news.tone.good',
+  bad: 'hud.news.tone.bad',
+  rival: 'hud.news.tone.rival',
+  neutral: 'hud.news.tone.neutral',
 };
 
 /**
@@ -554,25 +557,25 @@ export function GameOverScreen({ onNewGame }: { onNewGame: () => void }): ReactE
   const player = getPlayer(state);
 
   return (
-    <div className="gameover" role="alertdialog" aria-label="Oyun sonu">
+    <div className="gameover" role="alertdialog" aria-label={t('hud.gameOver.label')}>
       <div className="gameover-card">
         {profile && (
           <span className="gameover-face">
             <CeoPortrait portrait={profile.portrait} size={72} />
           </span>
         )}
-        <h2>İmparatorluk el değiştirdi</h2>
+        <h2>{t('hud.gameOver.title')}</h2>
         <p>
-          {over.day}. gün: {raider?.name ?? 'Bir rakip'}
-          {profile ? ` — başında ${profile.ceoName} —` : ''} {player.name}
-          {"'"}in hisselerinin yarısından fazlasını topladı.
+          {t('hud.gameOver.body', {
+            day: over.day,
+            raider: raider?.name ?? t('hud.gameOver.someRival'),
+            raiderCeo: profile ? t('hud.gameOver.raiderCeo', { ceo: profile.ceoName }) : '',
+            player: player.name,
+          })}
         </p>
-        <p className="muted">
-          Şehir olduğu yerde duruyor; panellerden son durumuna bakabilirsin.
-          Takvim bir daha ilerlemeyecek.
-        </p>
+        <p className="muted">{t('hud.gameOver.note')}</p>
         <button type="button" className="primary" onClick={onNewGame}>
-          Yeni imparatorluk kur
+          {t('hud.gameOver.newEmpire')}
         </button>
       </div>
     </div>
@@ -586,7 +589,7 @@ export function NewsFeed(): ReactElement {
   const latest = state.news[0];
 
   return (
-    <section className={open ? 'news' : 'news closed'} aria-label="Haber akışı">
+    <section className={open ? 'news' : 'news closed'} aria-label={t('hud.news.label')}>
       {/*
        * Haber akışı da dar ekranda katlanıyor. Lens ve yapı menüsü
        * katlandıktan sonra boşalan yeri BU yutuyordu: 102 px'den 153 px'e
@@ -604,19 +607,19 @@ export function NewsFeed(): ReactElement {
       >
         <NewsIcon />
         <span className="collapse-title">
-          {latest ? latest.title : 'Şehir Haberleri'}
-          {latest && <span className="collapse-badge">{latest.day}. gün</span>}
+          {latest ? latest.title : t('hud.news.title')}
+          {latest && <span className="collapse-badge">{t('hud.news.day', { day: latest.day })}</span>}
         </span>
         <span className="collapse-chevron" aria-hidden="true" />
       </button>
 
-      <h2>Şehir Haberleri</h2>
+      <h2>{t('hud.news.title')}</h2>
       <ul>
         {state.news.slice(0, 8).map((item) => (
           <li key={item.id} className={`news-item news-${item.tone}`}>
             <div className="news-head">
-              <span className="news-tag">{TONE_LABEL[item.tone] ?? 'Haber'}</span>
-              <span className="news-day">{item.day}. gün</span>
+              <span className="news-tag">{t(TONE_LABEL[item.tone] ?? 'hud.news.tone.neutral')}</span>
+              <span className="news-day">{t('hud.news.day', { day: item.day })}</span>
               {/*
                 Yeri olan haber bir kapı: "Liman imara açıldı" okunup
                 geçilmesin, bir dokunuşla oraya gidilsin. Yalnızca yeri
@@ -629,9 +632,9 @@ export function NewsFeed(): ReactElement {
                   onClick={() =>
                     focusOn(item.tileId !== undefined ? { tileId: item.tileId } : { districtId: item.districtId! })
                   }
-                  title="Olay yerine git"
+                  title={t('hud.news.gotoTitle')}
                 >
-                  Git
+                  {t('hud.news.goto')}
                 </button>
               )}
             </div>
@@ -688,12 +691,19 @@ function ContractChip(): ReactElement | null {
   if (offer) {
     const left = Math.max(0, offer.offeredDay + OFFER_LIFETIME_DAYS - state.time.day);
     return (
-      <span className="event-chip contract-chip" title={`Ödül ${formatMoney(offer.reward)} · cayma ${formatMoney(offer.penalty)} · süre ${offer.durationDays} gün`}>
-        <span className="contract-label">Teklif</span>
+      <span
+        className="event-chip contract-chip"
+        title={t('hud.contract.offerTitle', {
+          reward: formatMoney(offer.reward),
+          penalty: formatMoney(offer.penalty),
+          days: offer.durationDays,
+        })}
+      >
+        <span className="contract-label">{t('hud.contract.offer')}</span>
         {offer.title}
-        <span className="contract-days">{left}g</span>
-        <button type="button" onClick={() => run({ type: 'ACCEPT_CONTRACT' })}>Kabul</button>
-        <button type="button" onClick={() => run({ type: 'DECLINE_CONTRACT' })}>Geç</button>
+        <span className="contract-days">{t('hud.agenda.daysShort', { days: left })}</span>
+        <button type="button" onClick={() => run({ type: 'ACCEPT_CONTRACT' })}>{t('hud.contract.accept')}</button>
+        <button type="button" onClick={() => run({ type: 'DECLINE_CONTRACT' })}>{t('hud.contract.decline')}</button>
       </span>
     );
   }
@@ -705,11 +715,11 @@ function ContractChip(): ReactElement | null {
   return (
     <span
       className="event-chip contract-chip active"
-      title={`Ödül ${formatMoney(contract.reward)} · cayma ${formatMoney(contract.penalty)}`}
+      title={t('hud.contract.activeTitle', { reward: formatMoney(contract.reward), penalty: formatMoney(contract.penalty) })}
     >
-      <span className="contract-label">Sözleşme</span>
+      <span className="contract-label">{t('hud.contract.active')}</span>
       {contract.title}
-      <span className="contract-days">%{Math.round(progress * 100)} · {left}g</span>
+      <span className="contract-days">%{Math.round(progress * 100)} · {t('hud.agenda.daysShort', { days: left })}</span>
     </span>
   );
 }
@@ -743,7 +753,8 @@ export function ActiveEvents(): ReactElement | null {
   let contractDrawn = false;
   const chips = items.map((item, index) => {
     const className = index >= AGENDA_VISIBLE_NARROW && !expanded ? 'agenda-extra' : undefined;
-    const days = item.daysLeft !== null ? <span className="agenda-days">{item.daysLeft}g</span> : null;
+    const days =
+      item.daysLeft !== null ? <span className="agenda-days">{t('hud.agenda.daysShort', { days: item.daysLeft })}</span> : null;
     let chip: ReactElement | null = null;
 
     switch (item.kind) {
@@ -769,7 +780,7 @@ export function ActiveEvents(): ReactElement | null {
             className={`event-chip tone-${item.tone}`}
             title={EVENTS.find((e) => `event:${e.id}` === item.key)?.body}
           >
-            {item.label} · {item.daysLeft} gün
+            {item.label} · {t('hud.agenda.eventDays', { days: item.daysLeft ?? '' })}
           </span>
         );
         break;
@@ -779,9 +790,9 @@ export function ActiveEvents(): ReactElement | null {
             type="button"
             className={`event-chip raid-chip urgency-${item.urgency}`}
             onClick={() => togglePanel('bourse')}
-            title="Hisse baskını — borsadan geri alım yapabilirsin"
+            title={t('hud.agenda.raidTitle')}
           >
-            <span className="agenda-label">Baskın</span>
+            <span className="agenda-label">{t('hud.agenda.raid')}</span>
             {item.label}
           </button>
         );
@@ -792,9 +803,9 @@ export function ActiveEvents(): ReactElement | null {
             type="button"
             className={`event-chip order-chip urgency-${item.urgency} tone-${item.tone}`}
             onClick={() => togglePanel('bourse')}
-            title="Devralma emri — borsada ilerleme ve iptal"
+            title={t('hud.agenda.orderTitle')}
           >
-            <span className="agenda-label">Devralma</span>
+            <span className="agenda-label">{t('hud.agenda.order')}</span>
             {item.label}
             {item.progress !== undefined && (
               <span className="goal-chip-bar" aria-hidden="true">
@@ -812,9 +823,9 @@ export function ActiveEvents(): ReactElement | null {
             type="button"
             className={`event-chip ${item.kind}-chip urgency-${item.urgency} tone-${item.tone}`}
             onClick={() => togglePanel('company')}
-            title={item.kind === 'union' ? 'İşgücü — şirket panelinde cevap ver' : 'Banka — şirket panelinde'}
+            title={item.kind === 'union' ? t('hud.agenda.unionTitle') : t('hud.agenda.bankTitle')}
           >
-            <span className="agenda-label">{item.kind === 'union' ? 'Sendika' : 'Banka'}</span>
+            <span className="agenda-label">{item.kind === 'union' ? t('hud.agenda.union') : t('hud.agenda.bank')}</span>
             {item.label}
             {item.progress !== undefined && (
               <span className="goal-chip-bar" aria-hidden="true">
@@ -831,7 +842,7 @@ export function ActiveEvents(): ReactElement | null {
             type="button"
             className="event-chip unlock-chip"
             onClick={() => item.districtId !== undefined && focusOn({ districtId: item.districtId })}
-            title="Bölgeye git"
+            title={t('hud.agenda.unlockTitle')}
           >
             {item.label}
             {days}
@@ -844,7 +855,7 @@ export function ActiveEvents(): ReactElement | null {
             type="button"
             className="event-chip council-chip"
             onClick={() => togglePanel('council')}
-            title="Belediye meclisi — önergeler ve lobi"
+            title={t('hud.agenda.councilTitle')}
           >
             {item.label}
             {days}
@@ -860,14 +871,14 @@ export function ActiveEvents(): ReactElement | null {
             type="button"
             className="event-chip league-chip"
             onClick={() => togglePanel('league')}
-            title="Tohum Ligi — tablo ve hayalet"
+            title={t('hud.agenda.leagueTitle')}
           >
-            <span className="agenda-label">Lig</span>
+            <span className="agenda-label">{t('hud.agenda.league')}</span>
             {days}
             {gap !== null && (
               <span className={gap >= 0 ? 'pos' : 'neg'}>
                 {gap >= 0 ? '+' : '−'}
-                {formatMoney(Math.abs(gap))} hayalete
+                {t('hud.agenda.ghostGap', { amount: formatMoney(Math.abs(gap)) })}
               </span>
             )}
           </button>
@@ -880,9 +891,9 @@ export function ActiveEvents(): ReactElement | null {
             type="button"
             className="event-chip goal-chip"
             onClick={() => togglePanel('goals')}
-            title="Hedef merdiveni"
+            title={t('hud.agenda.goalTitle')}
           >
-            <span className="agenda-label">Hedef</span>
+            <span className="agenda-label">{t('hud.agenda.goal')}</span>
             {item.label}
             <span className="goal-chip-bar" aria-hidden="true">
               <span style={{ width: `${Math.round((item.progress ?? 0) * 100)}%` }} />
@@ -901,7 +912,7 @@ export function ActiveEvents(): ReactElement | null {
   });
 
   return (
-    <div className="active-events agenda" aria-label="Gündem">
+    <div className="active-events agenda" aria-label={t('hud.agenda.label')}>
       {chips}
       {extra > 0 && (
         <button
@@ -910,7 +921,7 @@ export function ActiveEvents(): ReactElement | null {
           onClick={() => setExpanded((open) => !open)}
           aria-expanded={expanded}
         >
-          {expanded ? 'Daralt' : `+${extra}`}
+          {expanded ? t('hud.agenda.collapse') : `+${extra}`}
         </button>
       )}
     </div>

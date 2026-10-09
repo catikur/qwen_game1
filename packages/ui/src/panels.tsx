@@ -39,6 +39,8 @@ import { GoalsPanel } from './GoalsPanel';
 import { CouncilPanel } from './CouncilPanel';
 import { LeaguePanel } from './LeaguePanel';
 import { BankSection, WorkforceSection } from './CompanyFinance';
+import { t } from './i18n';
+import type { MessageKey } from './i18n';
 import { useGame, useGameState } from './useGame';
 
 /* ------------------------------------------------------------------ yapı */
@@ -97,7 +99,7 @@ export function BuildPanel(): ReactElement {
   const { open, toggle } = useCollapsible();
 
   return (
-    <section className={open ? 'buildpanel' : 'buildpanel closed'} aria-label="Yapı menüsü">
+    <section className={open ? 'buildpanel' : 'buildpanel closed'} aria-label={t('panels.build.ariaLabel')}>
       {/*
        * Katlama başlığı yalnızca dar ekranda görünüyor (CSS).
        *
@@ -116,10 +118,10 @@ export function BuildPanel(): ReactElement {
       >
         <BuildIcon />
         <span className="collapse-title">
-          {district ? `Yatırımlar · ${district.name}` : 'Yatırımlar'}
+          {district ? t('panels.build.titleWithDistrict', { district: district.name }) : t('panels.build.title')}
           {district && freePlots !== null && (
             <span className={freePlots === 0 ? 'collapse-badge tight' : 'collapse-badge'}>
-              {freePlots === 0 ? 'boş parsel yok' : `${freePlots} boş parsel`}
+              {freePlots === 0 ? t('panels.build.badge.noFreePlots') : t('panels.build.badge.freePlots', { count: freePlots })}
             </span>
           )}
         </span>
@@ -127,17 +129,17 @@ export function BuildPanel(): ReactElement {
       </button>
 
       <header>
-        <h2>Yatırımlar</h2>
+        <h2>{t('panels.build.title')}</h2>
         <p className="muted">
           {district
-            ? `${district.name} · parsel başına getiriye göre sıralı`
-            : 'Bir arsa seç, tahminler o bölgeye göre hesaplansın'}
+            ? t('panels.build.subtitle.district', { district: district.name })
+            : t('panels.build.subtitle.noSelection')}
         </p>
         {district && freePlots !== null && (
           <p className={freePlots <= 4 ? 'buildpanel-scarce tight' : 'buildpanel-scarce'}>
             {freePlots === 0
-              ? 'Bu bölgede boş parsel kalmadı — dolu bir parseli sahibinden devralman gerekiyor.'
-              : `Bu bölgede ${freePlots} boş parsel kaldı.`}
+              ? t('panels.build.scarce.none')
+              : t('panels.build.scarce.count', { count: freePlots })}
           </p>
         )}
       </header>
@@ -154,7 +156,7 @@ export function BuildPanel(): ReactElement {
                 disabled={!unlocked}
                 onClick={() => {
                   if (!affordable) {
-                    toast(`Nakit yetersiz — ${def.name} ${formatMoney(def.cost)}`, 'bad');
+                    toast(t('panels.build.toast.noCash', { name: def.name, cost: formatMoney(def.cost) }), 'bad');
                     return;
                   }
                   setView({ ghostDefId: selected ? null : def.id });
@@ -166,7 +168,7 @@ export function BuildPanel(): ReactElement {
                   <span className="buildcard-top">
                     <span className="buildcard-name">
                       {def.name}
-                      {bestPick && <span className="buildcard-best">bu parsel için en iyi</span>}
+                      {bestPick && <span className="buildcard-best">{t('panels.build.bestPick')}</span>}
                     </span>
                     <span className={affordable ? 'buildcard-cost' : 'buildcard-cost short'}>
                       {formatMoney(def.cost)}
@@ -174,15 +176,15 @@ export function BuildPanel(): ReactElement {
                   </span>
                   <span className="buildcard-meta">
                     {CATEGORIES[def.category].name}
-                    {def.role === 'rental' && ' · kira'}
-                    {def.role === 'logistics' && ' · lojistik'}
-                    {def.role === 'extract' && ' · hammadde'}
-                    {def.role === 'process' && ' · işleme'}
-                    {def.zones && ' · sanayi/liman'}
+                    {def.role === 'rental' && t('panels.build.role.rental')}
+                    {def.role === 'logistics' && t('panels.build.role.logistics')}
+                    {def.role === 'extract' && t('panels.build.role.extract')}
+                    {def.role === 'process' && t('panels.build.role.process')}
+                    {def.zones && t('panels.build.zoned')}
                   </span>
                   {!unlocked ? (
                     <span className="buildcard-lock">
-                      🔒 {formatMoney(def.unlockNetWorth)} şirket değeri gerekir
+                      {t('panels.build.locked', { netWorth: formatMoney(def.unlockNetWorth) })}
                     </span>
                   ) : estimate ? (
                     <EstimateLine estimate={estimate} indirect={indirect} role={def.role} />
@@ -199,11 +201,11 @@ export function BuildPanel(): ReactElement {
       {view.ghostDefId && (
         <div className="placing">
           <span>
-            <strong>{BUILDING_BY_ID[view.ghostDefId]?.name}</strong> yerleştiriliyor — kendi boş
-            arsana tıkla.
+            <strong>{BUILDING_BY_ID[view.ghostDefId]?.name}</strong>
+            {t('panels.build.placing')}
           </span>
           <button type="button" onClick={() => setView({ ghostDefId: null })}>
-            Vazgeç
+            {t('panels.build.cancelPlacing')}
           </button>
         </div>
       )}
@@ -222,7 +224,7 @@ export function BuildPanel(): ReactElement {
             }
           }}
         >
-          Seçili arsaya inşa et
+          {t('panels.build.buildOnSelected')}
         </button>
       )}
     </section>
@@ -231,10 +233,12 @@ export function BuildPanel(): ReactElement {
 
 const INDIRECT_ROLES = new Set(['logistics', 'research', 'marketing']);
 
-const INDIRECT_HINT: Record<string, string> = {
-  logistics: 'Menzilindeki mağazalarının dağıtım maliyetini düşürür.',
-  research: 'Bir kategoride kaliteyi yükseltir; fiyat ya da pay olarak döner.',
-  marketing: 'Bir kategoride markayı büyütür; fiyat ya da pay olarak döner.',
+// Anahtar tutuyor, metin değil: `t` çizim anında çağrılsın, dil değişince
+// modül yüklendiği andaki metinde takılı kalmasın.
+const INDIRECT_HINT: Record<string, MessageKey> = {
+  logistics: 'panels.estimate.indirectHint.logistics',
+  research: 'panels.estimate.indirectHint.research',
+  marketing: 'panels.estimate.indirectHint.marketing',
 };
 
 function EstimateLine({
@@ -247,25 +251,25 @@ function EstimateLine({
   role: string;
 }): ReactElement {
   if (!estimate.direct) {
-    const hint = INDIRECT_HINT[role] ?? 'Dolaylı fayda.';
+    const hint = t(INDIRECT_HINT[role] ?? 'panels.estimate.indirectHint.default');
     if (!indirect) return <span className="buildcard-hint">{hint}</span>;
     if (indirect.none) return <span className="buildcard-hint">{hint} {indirect.none}</span>;
     // Dolaylı katkı: bugünkü şehirde, etkisi oturduğunda (Tur 21).
     const where =
       indirect.covered !== undefined
-        ? `${indirect.covered} mağaza menzilde`
+        ? t('panels.estimate.where.covered', { count: indirect.covered })
         : indirect.focus
-          ? `${CATEGORIES[indirect.focus].name} için`
+          ? t('panels.estimate.where.focus', { category: CATEGORIES[indirect.focus].name })
           : '';
     return (
       <span
         className={`estimate ${indirect.dailyProfit > 0 ? 'ok' : 'weak'}`}
         data-indirect={role}
-        title="Bugünkü şehirde, etkisi oturduğunda. Şehir ve karşılanmayan talep büyüdükçe artar; yerleştirirken 120 günlük projeksiyona bakabilirsin."
+        title={t('panels.estimate.indirectTitle')}
       >
-        ≈ +{formatMoney(indirect.dailyGain)}/gün katkı · {where} ·{' '}
-        {Number.isFinite(indirect.paybackDays) ? `${Math.round(indirect.paybackDays)} günde geri öder` : 'gideri karşılamıyor'}
-        {indirect.rampDays > 0 ? ` · ~${indirect.rampDays} günde oturur` : ''}
+        {t('panels.estimate.indirectGain', { gain: formatMoney(indirect.dailyGain), where })}{' '}
+        {Number.isFinite(indirect.paybackDays) ? t('panels.estimate.payback', { days: Math.round(indirect.paybackDays) }) : t('panels.estimate.indirectNoPayback')}
+        {indirect.rampDays > 0 ? t('panels.estimate.ramp', { days: indirect.rampDays }) : ''}
       </span>
     );
   }
@@ -275,10 +279,10 @@ function EstimateLine({
   const good = estimate.dailyProfit > 0;
   return (
     <span className={`estimate ${good ? 'ok' : 'weak'}`}>
-      ≈ {formatMoney(estimate.dailyProfit)}/gün ·{' '}
+      {t('panels.estimate.directProfit', { profit: formatMoney(estimate.dailyProfit) })}{' '}
       {Number.isFinite(estimate.paybackDays)
-        ? `${Math.round(estimate.paybackDays)} günde geri öder`
-        : 'zarar eder'}
+        ? t('panels.estimate.payback', { days: Math.round(estimate.paybackDays) })
+        : t('panels.estimate.loss')}
     </span>
   );
 }
@@ -296,15 +300,15 @@ function ProjectionBox({ defId, tileId }: { defId: string; tileId: number }): Re
     <div className="projection" data-projection={result ? 'done' : busy ? 'busy' : 'idle'}>
       {result ? (
         <p>
-          {PROJECTION_DAYS}. günde ≈{' '}
+          {t('panels.projection.atDay', { days: PROJECTION_DAYS })}{' '}
           <strong className={result.finalProfit > 0 ? 'pos' : 'neg'}>
             {result.finalProfit >= 0 ? '+' : '−'}
-            {formatMoney(Math.abs(result.finalProfit))}/gün
+            {t('panels.projection.perDay', { amount: formatMoney(Math.abs(result.finalProfit)) })}
           </strong>{' '}
-          kâr (katkı {formatMoney(result.finalGain)}/gün). Rakipler hamle yapmazsa ve sen başka bir şey kurmazsan.
+          {t('panels.projection.profitNote', { gain: formatMoney(result.finalGain) })}
         </p>
       ) : result === null ? (
-        <p className="muted">Bu parsel için projeksiyon yapılamadı.</p>
+        <p className="muted">{t('panels.projection.failed')}</p>
       ) : (
         <button
           type="button"
@@ -319,7 +323,7 @@ function ProjectionBox({ defId, tileId }: { defId: string; tileId: number }): Re
             }, 30);
           }}
         >
-          {busy ? 'Hesaplanıyor…' : `${PROJECTION_DAYS} gün sonra ne katar?`}
+          {busy ? t('panels.projection.busy') : t('panels.projection.run', { days: PROJECTION_DAYS })}
         </button>
       )}
     </div>
@@ -337,10 +341,9 @@ export function Inspector(): ReactElement | null {
   if (view.selectedTileId === null) {
     return (
       <aside className="inspector empty">
-        <h2>Arsa Detayı</h2>
+        <h2>{t('panels.inspector.emptyTitle')}</h2>
         <p className="muted">
-          Haritadan bir arsa seç. Sol üstteki lenslerle nerede karşılanmamış talep olduğunu
-          görebilirsin.
+          {t('panels.inspector.emptyHint')}
         </p>
       </aside>
     );
@@ -364,39 +367,39 @@ export function Inspector(): ReactElement | null {
         <div>
           <h2>{district.name}</h2>
           <p className="muted">
-            Arsa {tile.x + 1}-{tile.y + 1} · {archetype.name}
+            {t('panels.inspector.tileLabel', { x: tile.x + 1, y: tile.y + 1, archetype: archetype.name })}
             {/*
              * Merkez rozeti burada, binanın satırında değil: oyuncu bir
              * kareye "burası neresi" diye bakıyor ve merkez o sorunun
              * cevabının parçası.
              */}
             {building && headquarters(state, player.id)?.id === building.id && (
-              <span className="hq-badge" title="Şirketinin en eski binası — genel merkez">
-                Genel Merkez
+              <span className="hq-badge" title={t('panels.inspector.hqBadgeTitle')}>
+                {t('panels.inspector.hqBadge')}
               </span>
             )}
           </p>
         </div>
-        <button type="button" className="icon" onClick={() => setView({ selectedTileId: null })} aria-label="Kapat">
+        <button type="button" className="icon" onClick={() => setView({ selectedTileId: null })} aria-label={t('panels.common.close')}>
           ×
         </button>
       </header>
 
       <div className="statgrid">
-        <Stat label="Nüfus" value={Math.round(district.population).toLocaleString('tr-TR')} />
-        <Stat label="Gelir seviyesi" value={`%${Math.round(district.incomeLevel * 100)}`} />
-        <Stat label="Arsa değeri" value={formatMoney(tile.landValue)} />
-        <Stat label="Boş talep" value={`%${Math.round(districtOpportunity(district) * 100)}`} />
+        <Stat label={t('panels.inspector.stat.population')} value={Math.round(district.population).toLocaleString('tr-TR')} />
+        <Stat label={t('panels.inspector.stat.incomeLevel')} value={`%${Math.round(district.incomeLevel * 100)}`} />
+        <Stat label={t('panels.inspector.stat.landValue')} value={formatMoney(tile.landValue)} />
+        <Stat label={t('panels.inspector.stat.openDemand')} value={`%${Math.round(districtOpportunity(district) * 100)}`} />
         {/*
           Gelişme basıncı: şehrin BURAYA ne kadar yığıldığı. Yüksekse
           boş parseller yakında yapılaşır ve devralma primi devreye
           girer — yani bu sayı "acele et" demenin sayısal hâli.
         */}
-        <Stat label="Gelişme" value={`%${Math.round(districtPressure(state, district) * 100)}`} />
+        <Stat label={t('panels.inspector.stat.development')} value={`%${Math.round(districtPressure(state, district) * 100)}`} />
       </div>
 
       <div className="demandlist">
-        <h3>Bölge talebi</h3>
+        <h3>{t('panels.inspector.demandTitle')}</h3>
         {Object.entries(district.demand)
           .filter(([, value]) => value > 0)
           .sort((a, b) => b[1] - a[1])
@@ -409,7 +412,7 @@ export function Inspector(): ReactElement | null {
                 <span className="bar">
                   <span className="bar-fill" style={{ width: `${Math.round(unmet * 100)}%` }} />
                 </span>
-                <span className="demandvalue">%{Math.round(unmet * 100)} boş</span>
+                <span className="demandvalue">{t('panels.inspector.demandUnmet', { percent: Math.round(unmet * 100) })}</span>
               </div>
             );
           })}
@@ -420,15 +423,15 @@ export function Inspector(): ReactElement | null {
       ) : owner ? (
         owner.id === player.id ? (
           <div className="actions">
-            <p className="muted">Boş parselin. Soldan bir yatırım seç.</p>
+            <p className="muted">{t('panels.inspector.ownVacant')}</p>
             <button type="button" onClick={() => run({ type: 'SELL_TILE', tileId: tile.id })}>
-              Parseli sat ({formatMoney(tile.landValue * 0.85)})
+              {t('panels.inspector.sellTile', { price: formatMoney(tile.landValue * 0.85) })}
             </button>
           </div>
         ) : (
           <div className="actions">
             <p className="owner" style={{ color: owner.color }}>
-              {owner.name} şirketine ait
+              {t('panels.inspector.ownedBy', { owner: owner.name })}
             </p>
           </div>
         )
@@ -456,7 +459,7 @@ function PlotActions({ tileId, price }: { tileId: number; price: number }): Reac
   if (tile.kind === 'road') {
     return (
       <div className="actions">
-        <p className="plot-note">🚧 Sokak — satılık değil.</p>
+        <p className="plot-note">{t('panels.plot.road')}</p>
       </div>
     );
   }
@@ -465,7 +468,7 @@ function PlotActions({ tileId, price }: { tileId: number; price: number }): Reac
     return (
       <div className="actions">
         <p className="plot-note">
-          🏛️ {structure?.name ?? 'Kamu alanı'} — belediye malı, satılık değil.
+          {t('panels.plot.civic', { name: structure?.name ?? t('panels.plot.civicDefaultName') })}
         </p>
         {structure && <p className="muted">{structure.description}</p>}
       </div>
@@ -479,11 +482,10 @@ function PlotActions({ tileId, price }: { tileId: number; price: number }): Reac
     return (
       <div className="actions">
         <p className="plot-note">
-          🌱 {district.name} imara kapalı — {district.opensOnDay - state.time.day} gün sonra
-          açılıyor.
+          {t('panels.plot.lockedDistrict', { district: district.name, days: district.opensOnDay - state.time.day })}
         </p>
         <p className="muted">
-          Arsa burada şimdilik ucuz. Açılış günü koşu başlar — nakdi hazır tutmakta fayda var.
+          {t('panels.plot.lockedHint')}
         </p>
       </div>
     );
@@ -492,7 +494,7 @@ function PlotActions({ tileId, price }: { tileId: number; price: number }): Reac
   if (structure) {
     return (
       <div className="actions">
-        <p className="plot-note">🏚️ Parselde {structure.name} var.</p>
+        <p className="plot-note">{t('panels.plot.structure', { name: structure.name })}</p>
         <p className="muted">{structure.description}</p>
         <button
           type="button"
@@ -500,11 +502,11 @@ function PlotActions({ tileId, price }: { tileId: number; price: number }): Reac
           disabled={player.cash < price}
           onClick={() => run({ type: 'BUYOUT_TILE', tileId })}
         >
-          Sahibinden devral · {formatMoney(price)}
+          {t('panels.plot.buyout', { price: formatMoney(price) })}
         </button>
         <p className="muted">
-          Devralınca yapı yıkılır ve parsel senin olur. Boş parsele göre{' '}
-          {structure.buyoutMultiplier?.toFixed(1)}× fiyat ödersin.
+          {/* Çarpan yoksa eskisi gibi boş kalır (React `undefined`'ı çizmiyordu). */}
+          {t('panels.plot.buyoutNote', { multiplier: structure.buyoutMultiplier?.toFixed(1) ?? '' })}
         </p>
       </div>
     );
@@ -512,16 +514,16 @@ function PlotActions({ tileId, price }: { tileId: number; price: number }): Reac
 
   return (
     <div className="actions">
-      <p className="plot-note vacant">✅ Boş parsel — doğrudan alınabilir.</p>
+      <p className="plot-note vacant">{t('panels.plot.vacant')}</p>
       <button
         type="button"
         className="primary"
         disabled={player.cash < price}
         onClick={() => run({ type: 'BUY_TILE', tileId })}
       >
-        Parseli satın al · {formatMoney(price)}
+        {t('panels.plot.buy', { price: formatMoney(price) })}
       </button>
-      {player.cash < price && <p className="muted">Nakit yetersiz.</p>}
+      {player.cash < price && <p className="muted">{t('panels.plot.noCash')}</p>}
     </div>
   );
 }
@@ -548,7 +550,7 @@ function BuildingDetail({ buildingId }: { buildingId: string }): ReactElement | 
       </h3>
       {!isPlayer && (
         <p className="owner" style={{ color: owner.color }}>
-          {owner.name} işletiyor
+          {t('panels.building.operatedBy', { owner: owner.name })}
         </p>
       )}
 
@@ -562,38 +564,38 @@ function BuildingDetail({ buildingId }: { buildingId: string }): ReactElement | 
       {support ? (
         <>
           <div className="ledger">
-            <LedgerRow label="İşletme gideri" value={-ledger.upkeep} />
-            <LedgerRow label="Personel" value={-ledger.wages} />
-            <LedgerRow label="Günlük gider" value={-(ledger.upkeep + ledger.wages)} strong />
+            <LedgerRow label={t('panels.building.ledger.upkeep')} value={-ledger.upkeep} />
+            <LedgerRow label={t('panels.building.ledger.wages')} value={-ledger.wages} />
+            <LedgerRow label={t('panels.building.ledger.dailyCost')} value={-(ledger.upkeep + ledger.wages)} strong />
           </div>
           <p className="muted">
             {def.role === 'logistics'
-              ? 'Bu bina satış yapmaz. Karşılığı, menzilindeki mağazalarının satış maliyetinde görünür.'
-              : 'Bu bina satış yapmaz. Karşılığı, atandığı kategorideki mağazalarının kalitesinde ve markasında görünür — Rekabet panelinde ölçebilirsin.'}
+              ? t('panels.building.supportNote.logistics')
+              : t('panels.building.supportNote.focus')}
           </p>
         </>
       ) : (
         <>
           <div className="ledger">
-            <LedgerRow label="Ciro" value={ledger.revenue} />
-            <LedgerRow label="Satılan malın maliyeti" value={-ledger.cogs} />
-            <LedgerRow label="İşletme gideri" value={-ledger.upkeep} />
-            <LedgerRow label="Personel" value={-ledger.wages} />
-            <LedgerRow label="Günlük kâr" value={ledger.profit} strong />
+            <LedgerRow label={t('panels.building.ledger.revenue')} value={ledger.revenue} />
+            <LedgerRow label={t('panels.building.ledger.cogs')} value={-ledger.cogs} />
+            <LedgerRow label={t('panels.building.ledger.upkeep')} value={-ledger.upkeep} />
+            <LedgerRow label={t('panels.building.ledger.wages')} value={-ledger.wages} />
+            <LedgerRow label={t('panels.building.ledger.dailyProfit')} value={ledger.profit} strong />
             {/*
               Tek günün defteri gürültülü; asıl soru "bu şube kazanıyor
               mu". Rakipler kapatma kararını bu eğilime bakarak veriyor —
               oyuncu da aynı sayıyı görmeli.
             */}
             {building.profitTrend !== undefined && (
-              <LedgerRow label="30 günlük ortalama" value={Math.round(building.profitTrend)} />
+              <LedgerRow label={t('panels.building.ledger.profitTrend')} value={Math.round(building.profitTrend)} />
             )}
           </div>
 
           <div className="statgrid small">
-            <Stat label="Doluluk" value={`%${Math.round(ledger.capacityUsed * 100)}`} />
-            <Stat label="Bölge payı" value={`%${Math.round(ledger.share * 100)}`} />
-            <Stat label="Fiyat" value={`×${building.priceMultiplier.toFixed(2)}`} />
+            <Stat label={t('panels.building.stat.utilization')} value={`%${Math.round(ledger.capacityUsed * 100)}`} />
+            <Stat label={t('panels.building.stat.share')} value={`%${Math.round(ledger.share * 100)}`} />
+            <Stat label={t('panels.building.stat.price')} value={`×${building.priceMultiplier.toFixed(2)}`} />
           </div>
         </>
       )}
@@ -612,7 +614,7 @@ function BuildingDetail({ buildingId }: { buildingId: string }): ReactElement | 
               checked={building.autoPrice}
               onChange={(e) => run({ type: 'SET_AUTO_PRICE', buildingId, auto: e.target.checked })}
             />
-            Fiyatı oyun yönetsin
+            {t('panels.building.autoPrice')}
           </label>
           {!building.autoPrice && (
             <input
@@ -624,18 +626,18 @@ function BuildingDetail({ buildingId }: { buildingId: string }): ReactElement | 
               onChange={(e) =>
                 run({ type: 'SET_PRICE_MULTIPLIER', buildingId, multiplier: Number(e.target.value) })
               }
-              aria-label="Fiyat çarpanı"
+              aria-label={t('panels.building.priceMultiplierAria')}
             />
           )}
           <p className="muted">
-            Fiyatı düşürmek pazar payını artırır ama marjı yer. Yükseltmek tersini yapar.
+            {t('panels.building.priceHint')}
           </p>
         </div>
       )}
 
       {isPlayer && (
         <button type="button" onClick={() => run({ type: 'DEMOLISH', tileId: building.tileId })}>
-          Yık (maliyetin %25'i geri döner)
+          {t('panels.building.demolish')}
         </button>
       )}
     </div>
@@ -674,7 +676,7 @@ function ShelfEditor({ buildingId }: { buildingId: string }): ReactElement | nul
     // Raftaki ürüne tıklamak onu çıkarır — son ürün değilse.
     if (building.stocked.includes(goodId)) {
       if (building.stocked.length === 1) {
-        toast('Rafta en az bir ürün kalmalı. Değiştirmek için diğerine tıkla.', 'info');
+        toast(t('panels.shelf.toast.lastItem'), 'info');
         return;
       }
       run({ type: 'SET_STOCK', buildingId, goodIds: building.stocked.filter((id) => id !== goodId) });
@@ -691,7 +693,7 @@ function ShelfEditor({ buildingId }: { buildingId: string }): ReactElement | nul
       )[0]!;
       const next = building.stocked.filter((id) => id !== weakest).concat(goodId);
       if (run({ type: 'SET_STOCK', buildingId, goodIds: next }) && slots > 1) {
-        toast(`${GOOD_BY_ID[weakest]?.name ?? 'Bir ürün'} raftan çıktı.`, 'info');
+        toast(t('panels.shelf.toast.removed', { good: GOOD_BY_ID[weakest]?.name ?? t('panels.shelf.someGood') }), 'info');
       }
       return;
     }
@@ -702,9 +704,9 @@ function ShelfEditor({ buildingId }: { buildingId: string }): ReactElement | nul
   return (
     <div className="shelf">
       <div className="shelf-head">
-        <span>Raf</span>
+        <span>{t('panels.shelf.title')}</span>
         <span className="muted">
-          {building.stocked.length}/{slots} yuva · {district.name} talebi
+          {t('panels.shelf.slots', { used: building.stocked.length, slots, district: district.name })}
         </span>
       </div>
       <ul className="shelf-list">
@@ -728,8 +730,8 @@ function ShelfEditor({ buildingId }: { buildingId: string }): ReactElement | nul
       </ul>
       <p className="muted">
         {slots === 1
-          ? 'Tek yuvan var: diğerine tıklarsan raf değişir, taşımadığın ürünün payı rakibe kalır.'
-          : 'Bu bölgede talebin ne kadarını yakaladığın rafına bağlı. Taşımadığın ürünün payı rakibe kalır.'}
+          ? t('panels.shelf.hint.single')
+          : t('panels.shelf.hint.multi')}
       </p>
     </div>
   );
@@ -765,14 +767,17 @@ function FocusEditor({ buildingId }: { buildingId: string }): ReactElement | nul
     outletCounts.set(otherDef.category, (outletCounts.get(otherDef.category) ?? 0) + 1);
   }
 
-  const arm = def.role === 'research' ? 'kalite' : 'marka';
+  const arm = def.role === 'research' ? t('panels.focus.arm.research') : t('panels.focus.arm.marketing');
 
   return (
     <div className="shelf">
       <div className="shelf-head">
-        <span>Odak</span>
+        <span>{t('panels.focus.title')}</span>
         <span className="muted">
-          {building.focus ? CATEGORIES[building.focus].name : 'atanmamış'} · {arm} kolu
+          {t('panels.focus.summary', {
+            category: building.focus ? CATEGORIES[building.focus].name : t('panels.focus.unassigned'),
+            arm,
+          })}
         </span>
       </div>
       <ul className="shelf-list">
@@ -787,14 +792,14 @@ function FocusEditor({ buildingId }: { buildingId: string }): ReactElement | nul
                 onClick={() => {
                   if (on) return;
                   if (run({ type: 'SET_FOCUS', buildingId, category: categoryId })) {
-                    toast(`${def.name} artık ${CATEGORIES[categoryId].name} kategorisine çalışıyor.`, 'info');
+                    toast(t('panels.focus.toast.changed', { name: def.name, category: CATEGORIES[categoryId].name }), 'info');
                   }
                 }}
                 aria-pressed={on}
               >
                 <span className="shelf-dot" style={{ background: CATEGORIES[categoryId].color }} />
                 <span className="shelf-name">{CATEGORIES[categoryId].name}</span>
-                <span className="shelf-share">{outlets} mağaza</span>
+                <span className="shelf-share">{t('panels.focus.outletCount', { count: outlets })}</span>
               </button>
             </li>
           );
@@ -802,8 +807,8 @@ function FocusEditor({ buildingId }: { buildingId: string }): ReactElement | nul
       </ul>
       <p className="muted">
         {(outletCounts.get(building.focus ?? '') ?? 0) === 0
-          ? 'Bu kategoride hiç mağazan yok — kol boşa çalışıyor. Mağazanın olduğu bir kategoriye ata.'
-          : 'Kolun faydası mağaza sayınla çarpılır. Kategori değiştirirsen eski kategorideki birikim erimeye başlar.'}
+          ? t('panels.focus.hint.noOutlets')
+          : t('panels.focus.hint.default')}
       </p>
     </div>
   );
@@ -834,17 +839,17 @@ export function ModalHost(): ReactElement | null {
   if (view.openPanel === 'none') return null;
 
   const titles: Record<string, string> = {
-    chain: 'Tedarik Zinciri',
-    rivalry: 'Rekabet',
-    auction: 'Parsel İhalesi',
-    bourse: 'Borsa',
-    company: 'Şirket',
-    rivals: 'Rakipler',
-    saves: 'Kayıtlar',
-    help: 'Nasıl oynanır',
-    goals: 'Hedefler',
-    council: 'Belediye Meclisi',
-    league: 'Tohum Ligi',
+    chain: t('panels.modal.title.chain'),
+    rivalry: t('panels.modal.title.rivalry'),
+    auction: t('panels.modal.title.auction'),
+    bourse: t('panels.modal.title.bourse'),
+    company: t('panels.modal.title.company'),
+    rivals: t('panels.modal.title.rivals'),
+    saves: t('panels.modal.title.saves'),
+    help: t('panels.modal.title.help'),
+    goals: t('panels.modal.title.goals'),
+    council: t('panels.modal.title.council'),
+    league: t('panels.modal.title.league'),
   };
 
   return (
@@ -852,7 +857,7 @@ export function ModalHost(): ReactElement | null {
       <div className="modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
         <header className="modal-head">
           <h2>{titles[view.openPanel]}</h2>
-          <button type="button" className="icon" onClick={() => setView({ openPanel: 'none' })} aria-label="Kapat">
+          <button type="button" className="icon" onClick={() => setView({ openPanel: 'none' })} aria-label={t('panels.common.close')}>
             ×
           </button>
         </header>
@@ -884,7 +889,7 @@ function CompanyPanel(): ReactElement {
   return (
     <div className="company">
       <label className="rename">
-        Şirket adı
+        {t('panels.company.nameLabel')}
         <input
           type="text"
           defaultValue={player.name}
@@ -894,10 +899,10 @@ function CompanyPanel(): ReactElement {
       </label>
 
       <div className="statgrid">
-        <Stat label="Nakit" value={formatMoney(player.cash)} />
-        <Stat label="Borç" value={formatMoney(player.debt)} />
-        <Stat label="Şirket değeri" value={formatMoney(player.netWorth)} />
-        <Stat label="Günlük kâr" value={formatMoney(player.today.profit)} />
+        <Stat label={t('panels.company.stat.cash')} value={formatMoney(player.cash)} />
+        <Stat label={t('panels.company.stat.debt')} value={formatMoney(player.debt)} />
+        <Stat label={t('panels.company.stat.netWorth')} value={formatMoney(player.netWorth)} />
+        <Stat label={t('panels.company.stat.dailyProfit')} value={formatMoney(player.today.profit)} />
       </div>
 
       <Sparkline values={history} />
@@ -905,18 +910,18 @@ function CompanyPanel(): ReactElement {
       <BankSection />
       <WorkforceSection />
 
-      <h3>Sektör kırılımı</h3>
+      <h3>{t('panels.company.breakdownTitle')}</h3>
       {rows.length === 0 ? (
-        <p className="muted">Henüz işletmen yok.</p>
+        <p className="muted">{t('panels.company.noBusinesses')}</p>
       ) : (
         <table className="table">
           <thead>
             <tr>
-              <th>Sektör</th>
-              <th>Şube</th>
-              <th>Ciro/gün</th>
-              <th>Kâr/gün</th>
-              <th>Pazar payı</th>
+              <th>{t('panels.company.col.sector')}</th>
+              <th>{t('panels.company.col.outlets')}</th>
+              <th>{t('panels.company.col.revenue')}</th>
+              <th>{t('panels.company.col.profit')}</th>
+              <th>{t('panels.company.col.share')}</th>
             </tr>
           </thead>
           <tbody>
@@ -952,11 +957,11 @@ function Sparkline({ values }: { values: number[] }): ReactElement | null {
 
   return (
     <figure className="sparkline">
-      <svg viewBox="0 0 100 32" preserveAspectRatio="none" role="img" aria-label="Şirket değeri eğrisi">
+      <svg viewBox="0 0 100 32" preserveAspectRatio="none" role="img" aria-label={t('panels.company.sparklineAria')}>
         <polyline points={points} fill="none" stroke="#7fd4ff" strokeWidth="1.2" vectorEffect="non-scaling-stroke" />
       </svg>
       <figcaption className="muted">
-        Son {values.length} gün · {formatMoney(min)} → {formatMoney(max)}
+        {t('panels.company.sparklineCaption', { days: values.length, min: formatMoney(min), max: formatMoney(max) })}
       </figcaption>
     </figure>
   );
@@ -971,11 +976,11 @@ function RivalsPanel(): ReactElement {
       <thead>
         <tr>
           <th>#</th>
-          <th>Şirket</th>
-          <th>Değer</th>
-          <th>Bina</th>
-          <th>Arsa</th>
-          <th>Güçlü olduğu sektör</th>
+          <th>{t('panels.rivals.col.company')}</th>
+          <th>{t('panels.rivals.col.value')}</th>
+          <th>{t('panels.rivals.col.buildings')}</th>
+          <th>{t('panels.rivals.col.tiles')}</th>
+          <th>{t('panels.rivals.col.strongest')}</th>
         </tr>
       </thead>
       <tbody>
@@ -986,7 +991,7 @@ function RivalsPanel(): ReactElement {
               <td>{row.rank}</td>
               <td>
                 <span className="dot" style={{ background: row.company.color }} /> {row.company.name}
-                {row.company.isPlayer && ' (sen)'}
+                {row.company.isPlayer && t('panels.rivals.you')}
               </td>
               <td>{formatMoney(row.company.netWorth)}</td>
               <td>{row.buildings}</td>
@@ -1032,7 +1037,7 @@ function SavePanel(): ReactElement {
   return (
     <div className="saves">
       <div className="saverow-actions">
-        <button type="button" onClick={newGame}>Yeni oyun</button>
+        <button type="button" onClick={newGame}>{t('panels.saves.newGame')}</button>
         <button
           type="button"
           onClick={async () => {
@@ -1040,17 +1045,17 @@ function SavePanel(): ReactElement {
             if (outcome === 'blocked') setManual(exportSaveText());
           }}
         >
-          JSON dışa aktar
+          {t('panels.saves.exportJson')}
         </button>
         <button
           type="button"
           onClick={() => setManual((current) => (current === null ? exportSaveText() : null))}
           aria-expanded={manual !== null}
         >
-          Metinle aktar
+          {t('panels.saves.manualToggle')}
         </button>
         <label className="fileinput">
-          JSON içe aktar
+          {t('panels.saves.importJson')}
           <input
             type="file"
             accept="application/json"
@@ -1066,8 +1071,7 @@ function SavePanel(): ReactElement {
       {manual !== null && (
         <div className="manual-transfer">
           <p className="muted">
-            Kaydını korumak için bu metnin tamamını kopyala. Başka bir oyunu yüklemek için kendi
-            metnini buraya yapıştır ve yükle.
+            {t('panels.saves.manualHint')}
           </p>
           <textarea
             className="manual-text"
@@ -1075,7 +1079,7 @@ function SavePanel(): ReactElement {
             spellCheck={false}
             onChange={(e) => setManual(e.target.value)}
             onFocus={(e) => e.target.select()}
-            aria-label="Kayıt metni"
+            aria-label={t('panels.saves.manualAria')}
           />
           <div className="manual-actions">
             <button
@@ -1084,10 +1088,10 @@ function SavePanel(): ReactElement {
               disabled={manual.trim().length === 0}
               onClick={() => importSaveText(manual)}
             >
-              Bu metni yükle
+              {t('panels.saves.manualLoad')}
             </button>
             <button type="button" onClick={() => setManual('')}>
-              Temizle
+              {t('panels.saves.manualClear')}
             </button>
           </div>
         </div>
@@ -1097,14 +1101,14 @@ function SavePanel(): ReactElement {
         {rows.map(({ slot, meta }) => (
           <li key={slot} className="slot">
             <div className="slot-info">
-              <strong>{slot === AUTOSAVE_SLOT ? 'Otomatik kayıt' : `Slot ${slot}`}</strong>
+              <strong>{slot === AUTOSAVE_SLOT ? t('panels.saves.autosave') : t('panels.saves.slot', { slot })}</strong>
               {meta ? (
                 <span className="muted">
-                  {meta.companyName} · {meta.day}. gün · {formatMoney(meta.netWorth)} ·{' '}
+                  {t('panels.saves.slotMeta', { company: meta.companyName, day: meta.day, netWorth: formatMoney(meta.netWorth) })}{' '}
                   {new Date(meta.updatedAtIso).toLocaleString('tr-TR')}
                 </span>
               ) : (
-                <span className="muted">boş</span>
+                <span className="muted">{t('panels.saves.empty')}</span>
               )}
             </div>
             <div className="slot-actions">
@@ -1119,11 +1123,11 @@ function SavePanel(): ReactElement {
                     setBusy(false);
                   }}
                 >
-                  Kaydet
+                  {t('panels.saves.save')}
                 </button>
               )}
               <button type="button" disabled={!meta || busy} onClick={() => void loadFrom(slot)}>
-                Yükle
+                {t('panels.saves.load')}
               </button>
             </div>
           </li>
@@ -1138,47 +1142,44 @@ function HelpPanel(): ReactElement {
     <div className="help">
       <ol>
         <li>
-          <strong>Fırsat lensini aç.</strong> Kırmızıya çalan bölgelerde karşılanmamış talep var —
-          orası para bırakır.
+          <strong>{t('panels.help.step.opportunity.title')}</strong>
+          {t('panels.help.step.opportunity.body')}
         </li>
         <li>
-          <strong>Bir arsa seç ve satın al.</strong> Merkeze yakın arsalar pahalı ama daha çok
-          müşteri görür ve zamanla değerlenir.
+          <strong>{t('panels.help.step.land.title')}</strong>
+          {t('panels.help.step.land.body')}
         </li>
         <li>
-          <strong>Soldan bir yatırım seç.</strong> Her kartta o bölge için tahmini günlük kâr ve
-          geri ödeme süresi yazar. Rakipler de aynı hesabı yapıyor.
+          <strong>{t('panels.help.step.invest.title')}</strong>
+          {t('panels.help.step.invest.body')}
         </li>
         <li>
-          <strong>Kâr etmeyen şubeye bak.</strong> Arsa panelinde ciro, maliyet, personel ve kâr
-          kalem kalem yazılıdır — neden kaybettiğin hep görünür.
+          <strong>{t('panels.help.step.losses.title')}</strong>
+          {t('panels.help.step.losses.body')}
         </li>
         <li>
-          <strong>Fiyatı oyuna bırak ya da devral.</strong> Varsayılan otomatik fiyat makul oynar;
-          fiyat savaşı açmak istersen kontrolü sen alırsın.
+          <strong>{t('panels.help.step.pricing.title')}</strong>
+          {t('panels.help.step.pricing.body')}
         </li>
         <li>
-          <strong>Banka bir hızlandırıcı.</strong> Kredi erken büyümeyi öne çeker ama taksit
-          ciroya bakmaz; kasa eksiye düşerse pahalı kredili hesap devreye girer, limit aşılırsa
-          haciz gelir. Şirket panelinden.
+          <strong>{t('panels.help.step.bank.title')}</strong>
+          {t('panels.help.step.bank.body')}
         </li>
         <li>
-          <strong>Çalışanlarının sesi var.</strong> Kalabalık şirkette sendika baskısı birikir ve
-          zam talebi gelir: kabul et, uzlaş ya da reddet — ret grev getirebilir.
+          <strong>{t('panels.help.step.workforce.title')}</strong>
+          {t('panels.help.step.workforce.body')}
         </li>
         <li>
-          <strong>Halka arz bir kontrol aracı.</strong> Yeni hisse nakit getirir ve baskıncının payını
-          sulandırır; bedeli, şirketin büyümesinden yatırımcılara giden kalıcı pay. Borsa panelinden.
+          <strong>{t('panels.help.step.ipo.title')}</strong>
+          {t('panels.help.step.ipo.body')}
         </li>
         <li>
-          <strong>Devralma bir emir, tek tık değil.</strong> Rakip hissesinden günde en fazla %3,5
-          alabilirsin, rakipler de seninkinden öyle. Emir her gün alır; hedef %30'u görünce
-          hisselerini toplamaya başlar ve dolaşım yetmezse emir düşer.
+          <strong>{t('panels.help.step.takeover.title')}</strong>
+          {t('panels.help.step.takeover.body')}
         </li>
       </ol>
       <p className="muted">
-        Kontroller: sürükle = kaydır · sağ tık sürükle = döndür · tekerlek = yakınlaş · WASD =
-        kaydır · Boşluk = duraklat
+        {t('panels.help.controls')}
       </p>
     </div>
   );

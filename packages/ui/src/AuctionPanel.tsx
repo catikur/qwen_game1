@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { STRUCTURE_BY_ID } from '@capital/content';
 import type { ReactElement } from 'react';
 import { auctionHint, getPlayer, minimumBid } from '@capital/core';
+import { t } from './i18n';
 import { useGame, useGameState } from './useGame';
 
 /**
@@ -44,11 +45,13 @@ export function AuctionChip(): ReactElement | null {
       type="button"
       className={`event-chip auction-chip${leading ? ' leading' : ''}`}
       onClick={() => setView({ openPanel: view.openPanel === 'auction' ? 'none' : 'auction' })}
-      title="Parsel ihalesi — teklif vermek için tıkla"
+      title={t('finance.auction.chip.title')}
     >
-      İhale · {district?.name ?? 'Şehir'} ·{' '}
-      {auction.bidderId ? exact(auction.bid) : `taban ${exact(auction.reserve)}`} ·{' '}
-      {days} gün
+      {t('finance.auction.chip.label', {
+        place: district?.name ?? t('finance.auction.city'),
+        price: auction.bidderId ? exact(auction.bid) : t('finance.auction.chip.reserve', { reserve: exact(auction.reserve) }),
+        days,
+      })}
     </button>
   );
 }
@@ -61,11 +64,7 @@ export function AuctionPanel(): ReactElement {
 
   if (!auction) {
     return (
-      <p className="muted">
-        Şu an açık bir ihale yok. Belediye 30 günde bir, şehrin en değerli boş
-        parselini açık artırmaya çıkarıyor. Merkez dolunca şehrin kendi
-        yapısı olan değerli bir parseli kentsel dönüşüm ihalesine çıkarabilir.
-      </p>
+      <p className="muted">{t('finance.auction.noAuction')}</p>
     );
   }
 
@@ -81,7 +80,7 @@ export function AuctionPanel(): ReactElement {
   const bid = (value: number): void => {
     const result = run({ type: 'PLACE_BID', amount: Math.round(value) });
     if (result) {
-      toast(`Teklif verildi — ${exact(value)}.`, 'good');
+      toast(t('finance.auction.bidPlaced', { amount: exact(value) }), 'good');
       setAmount('');
     }
   };
@@ -89,28 +88,28 @@ export function AuctionPanel(): ReactElement {
   return (
     <div className="auction">
       <div className="auction-head">
-        <span className="auction-place">{district?.name ?? 'Şehir'}</span>
+        <span className="auction-place">{district?.name ?? t('finance.auction.city')}</span>
         <span className="muted">
-          Parsel {tile ? `${tile.x}-${tile.y}` : '—'} · {days} gün kaldı
+          {t('finance.auction.place', { tile: tile ? `${tile.x}-${tile.y}` : '—', days })}
         </span>
       </div>
 
       <div className="statgrid small">
-        <Cell label="Taban" value={exact(auction.reserve)} />
+        <Cell label={t('finance.auction.stat.reserve')} value={exact(auction.reserve)} />
         <Cell
-          label="En yüksek teklif"
-          value={auction.bidderId ? exact(auction.bid) : 'yok'}
+          label={t('finance.auction.stat.highestBid')}
+          value={auction.bidderId ? exact(auction.bid) : t('finance.auction.stat.noBid')}
           tone={leading ? 'pos' : auction.bidderId ? 'neg' : undefined}
         />
-        <Cell label="Artırım" value={`${auction.rounds}`} />
+        <Cell label={t('finance.auction.stat.rounds')} value={`${auction.rounds}`} />
       </div>
 
       <p className={leading ? 'auction-state pos' : 'auction-state'}>
         {leading
-          ? 'En yüksek teklif senin. Rakipler değerlemelerini aşmadıkça üstüne çıkmaz.'
+          ? t('finance.auction.state.leading')
           : leader
-            ? `${leader.name} önde — bu parsele ${exact(auction.bid)} değer biçti.`
-            : 'Henüz teklif yok. Taban fiyattan alabilirsin.'}
+            ? t('finance.auction.state.rival', { name: leader.name, bid: exact(auction.bid) })
+            : t('finance.auction.state.noBid')}
       </p>
 
       {/* Oyuncunun ne aldığını bilmesi gerekiyor: aynı tahmin motoru,
@@ -119,8 +118,9 @@ export function AuctionPanel(): ReactElement {
       {/* Dolu parsel (Tur 21): taban, sahibinden devralma bedeli. */}
       {tile?.structureId && (
         <p className="muted auction-occupied" data-occupied={tile.structureId}>
-          Kentsel dönüşüm: parselde {STRUCTURE_BY_ID[tile.structureId]?.name ?? 'bir yapı'} var. Kazanan yapıyı yıktırıp
-          parseli boş alır; taban fiyat sahibinden devralma bedeli.
+          {t('finance.auction.occupied', {
+            structure: STRUCTURE_BY_ID[tile.structureId]?.name ?? t('finance.auction.occupied.someStructure'),
+          })}
         </p>
       )}
 
@@ -131,10 +131,10 @@ export function AuctionPanel(): ReactElement {
           disabled={leading || player.cash < minimum}
           onClick={() => bid(minimum)}
         >
-          {leading ? 'Öndesin' : `En az teklifi ver · ${exact(minimum)}`}
+          {leading ? t('finance.auction.leading') : t('finance.auction.bidMinimum', { amount: exact(minimum) })}
         </button>
         <label className="auction-custom">
-          <span className="muted">Kendi teklifin</span>
+          <span className="muted">{t('finance.auction.customBid')}</span>
           <input
             type="number"
             min={Math.ceil(minimum)}
@@ -148,19 +148,16 @@ export function AuctionPanel(): ReactElement {
             disabled={leading || Number(amount) < minimum || Number(amount) > player.cash}
             onClick={() => bid(Number(amount))}
           >
-            Teklif ver
+            {t('finance.auction.placeBid')}
           </button>
         </label>
       </div>
 
       {player.cash < minimum && (
-        <p className="chain-warn">Nakit yetersiz — en az teklif {exact(minimum)}.</p>
+        <p className="chain-warn">{t('finance.auction.noCash', { amount: exact(minimum) })}</p>
       )}
 
-      <p className="muted">
-        İhale oyunu durdurmuyor: ilgilenmezsen kendiliğinden sonuçlanır.
-        Kaçırdığın ihale bir ceza değil, kaçırılmış bir fırsattır.
-      </p>
+      <p className="muted">{t('finance.auction.footer')}</p>
     </div>
   );
 }
