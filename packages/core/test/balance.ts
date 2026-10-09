@@ -231,9 +231,13 @@ for (const seed of [1, 7, 42]) {
   const state = engine.getState();
   for (let i = 0; i < 20; i++) engine.runDay(); // talep rakamları otursun
 
-  const district = [...state.districts].sort(
-    (a, b) => districtOpportunity(b) - districtOpportunity(a),
-  )[0]!;
+  // Yalnızca imara AÇIK bölgeler: kilitli bölgede kimse kuramadığı için boş
+  // talep ~%100 ve sıralamanın tepesine çıkabiliyor. Bölgeler arası erişim
+  // Tur 21'de düzelince sıralama değişti ve kontrol kilitli Teknopark'ı
+  // seçip hiç bina kuramadan çöktü — önceden açık bölge şans eseri seçiliyordu.
+  const district = [...state.districts]
+    .filter((d) => isDistrictOpen(state, d.id))
+    .sort((a, b) => districtOpportunity(b) - districtOpportunity(a))[0]!;
   const tile = state.map.tiles.find(
     (t) => t.districtId === district.id && t.kind === 'plot' && !t.ownerId && !t.structureId,
   )!;
