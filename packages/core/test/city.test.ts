@@ -4,7 +4,9 @@ import { DISTRICT_ARCHETYPES, STRUCTURES, rootStructureOf } from '@capital/conte
 import { DISTRICT_UNLOCK_DAYS, createNewGame } from '../src/worldgen';
 import { isDistrictOpen } from '../src/systems/city';
 import { districtPressure } from '../src/systems/citygrowth';
-import { purchaseBlocker } from '../src/actions';
+import { build, buyTile, purchaseBlocker } from '../src/actions';
+import { GameEngine } from '../src/engine';
+import { resetDailyLedgers } from '../src/systems/supply';
 
 describe('kademeli imar', () => {
   test('varsayılan şehirde dört köşe kilitli, takvim sabit günlerden', () => {
@@ -118,10 +120,7 @@ describe('yapı kademeleri', () => {
 });
 
 describe('üretimin tüketim sayımı (Tur 21)', () => {
-  test('mağazanın ürün başına dünkü satışı defter sıfırlansa da duruyor', async () => {
-    const { GameEngine } = await import('../src/engine');
-    const { build, buyTile } = await import('../src/actions');
-    const { resetDailyLedgers } = await import('../src/systems/supply');
+  test('mağazanın ürün başına dünkü satışı defter sıfırlansa da duruyor', () => {
     const state = createNewGame({ seed: 4 });
     state.flags.npcCompetition = false;
     state.companies.player!.cash = 5_000_000;
@@ -132,7 +131,9 @@ describe('üretimin tüketim sayımı (Tur 21)', () => {
     assert.equal(buyTile(state, 'player', tile.id).ok, true);
     assert.equal(build(state, 'player', tile.id, 'restaurant').ok, true);
     const outlet = state.buildings[state.map.tiles[tile.id]!.buildingId!]!;
-    assert.equal(outlet.soldByGood, undefined, 'ilk günden önce yok: eski kurala düşer');
+    // Ayrı bir değişkenle: assert.equal tipi daraltıp sonraki okumaları bozardı.
+    const initial = outlet.soldByGood;
+    assert.equal(initial, undefined, 'ilk günden önce yok: eski kurala düşer');
     const engine = new GameEngine(state);
     for (let day = 0; day < 5; day++) engine.runDay();
     assert.ok(outlet.soldByGood, 'pazar adımı ürün başına satışı yazıyor');
