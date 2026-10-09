@@ -884,18 +884,18 @@ tek cümle ("mağazalarının maliyetini düşürür") Ar-Ge ve pazarlama için
 yanlıştı, role göre ayrıldı. Sıralama değişmedi (parsel başına doğrudan
 kâr); NPC'ler bu tahmini kullanmıyor.
 
-| Doğrulama (rakipler donuk, 150 gün sonra) | Hızlı tahmin | Gerçek |
+| Doğrulama (rakipler donuk, 150 gün sonra; son kod) | Hızlı tahmin | Gerçek |
 |---|---|---|
-| Depo, tohum 1 / 7 | 5.135 / 4.760 ₺/gün | 5.024 / 6.214 |
-| Ar-Ge, tohum 1 / 7 | 2.391 / 1.203 | 4.464 / 5.049 |
-| Pazarlama, tohum 1 / 7 | 2.724 / 1.186 | 5.585 / 4.745 |
+| Depo, tohum 1 / 7 | 6.562 / 4.887 ₺/gün | 7.827 / 6.618 |
+| Ar-Ge, tohum 1 / 7 | 2.441 / 3.558 | 7.198 / 5.410 |
+| Pazarlama, tohum 1 / 7 | 3.027 / 4.326 | 7.908 / 5.157 |
 
 Hızlı tahmin bugünkü şehri ölçüyor; Ar-Ge ve pazarlamanın katkısı zamanla
 büyüyor. İki kanal: mağazalar kapasitede çalışırken prim fiyattan ödüyor
 ve o prim karşılanmayan taleple büyüyor; mağaza dışındaki her bina da
 temel istihdam yaratıp bölgenin nüfusunu büyütüyor. Bu yüzden yerleştirme
 sırasında isteğe bağlı **120 günlük projeksiyon** var (iki kopya gün gün
-oynuyor, ~1 sn): Ar-Ge 120. günde 4.070 / 4.359 ₺/gün katkı.
+oynuyor, ~0,7 sn): Ar-Ge 120. günde 4.275 / 6.243 ₺/gün katkı.
 
 **Bölge liderliği (§4.7'nin son kalemi).** Lider: bölgedeki perakende
 cirosunun en büyük payı (10 günlük üstel ortalama, devir %5 farkla).
@@ -927,6 +927,12 @@ standart. Büyük şehir üç ayar istedi, her biri ölçümden:
 | İlk sürüm: köşe kilidi, rakip haftada 1 mağaza | %18–24 | 184–199 M ₺ | 498–529 (kolay mod) |
 | Dış halka 4 dalgada + rakip temposu 2 | %12–13 | 142–163 M ₺ | 550 / 567 / yok |
 | + zafer eşiği ×1,5 | %12–13 | 142–163 M ₺ | 682 / 732 / yok |
+| **Son kod** (zincir düzeltmesi, savunma ihracı) | %10–15 | 159–172 M ₺ | 721 / 654 / 666 |
+| Standart, son kod (kıyas) | %4–8 | 99–129 M ₺ | 608 / 724 / 698 |
+
+Son kodda büyük şehrin en iyi rakibi 720. günde oyuncuyla başa baş
+(159–168 M ₺), 900. günde iki tohumda önde; standartta oyuncu 1,4–1,9
+kat önde. Zafer artık her tohumda geliyor ama 650. günden önce değil.
 
 - Dış halkanın 16 bölgesi 130/260/390/520. günlerde dörder açılıyor;
   oyun 3×3'lük bir çekirdekte sekiz rakiple kalabalık başlıyor.
@@ -1031,10 +1037,11 @@ Sekiz ölçüm dersi:
 
 | | Değer |
 |---|---|
-| Oyuncu / rakip oranı | **1,99** — Tur 7 öncesi 0,76 idi |
+| Oyuncu / rakip oranı | **2,00** — Tur 21 öncesi main'de 1,75; Tur 7 öncesi 0,76 idi |
+| Oyuncu net değeri / en iyi rakip | 35,38 M ₺ / 17,71 M ₺ |
 | Oyuncu bina sayısı | 78 |
-| Günlük kâr | 244 B ₺ |
-| Batan şirket | **0/4** |
+| Günlük kâr | 247 B ₺ |
+| Batan şirket | **0** |
 
 Not: vekil Tur 14'te devralmayı öğrendi (boş parsel bitince mevcut
 yapıyı primli alıyor — oyunun kendi öğretisi). Önceki satırlarla kıyasta
@@ -1048,7 +1055,8 @@ bu repertuvar farkının payı var.
 | Tur 7 sonu | %20 | %34 | %33 |
 | Tur 8 | %30 | **%12** | **%13** |
 | Tur 14 | %10 | **%0** | **%0** |
-| **Tur 16** | %11 | **%1** | **%0** |
+| Tur 16 | %11 | **%1** | **%0** |
+| **Tur 21** | %9 | **%0** | **%0** |
 
 Okunması gereken şey sayı değil **yön**. İlk iki satırda boş talep
 zamanla artıyor: şehir büyüdükçe geri kalıyor. Son ikisinde azalıyor —
@@ -1062,28 +1070,29 @@ rekabeti (kalite/marka/fiyat) canlı.
 
 | Strateji | Kâr etkisi | Geri ödeme |
 |---|---|---|
-| Ar-Ge · 4 mağaza | %4 | 970 gün *(erken)* |
-| Ar-Ge · 8 mağaza | **%14** | 141 gün |
-| Pazarlama · 8 mağaza | **%11** | 111 gün |
-| Fiyatı %25 kırmak | **%17 hacim** | — |
-| Zincir · normal nakit | −%9 *(360g penceresi)* | ~190 gün |
-| Zincir · bol nakit (20 M ₺) | −%4 *(360g penceresi)* | — |
+| Ar-Ge · 4 mağaza | %5 | 635 gün *(erken; main'de 970)* |
+| Ar-Ge · 8 mağaza | **%13** | 134 gün |
+| Pazarlama · 8 mağaza | **%12** | 92 gün |
+| Fiyatı %25 kırmak | **%14 hacim** | — |
+| Zincir · normal nakit | **+%16** (%8…%22) | 194 gün |
+| Zincir · bol nakit (20 M ₺) | −%3 (−%7…+%1) | — |
 
-Son iki satır ayrı duruyor çünkü farkları bir bulgu: sınırsız devralma
-çağında parseli outlet'le doldurmak zinciri geçiyor. **Zincir bir nakit
-kısıtı oyunu** — arazi kısıtlı dünyada (dondurulmuş A/B) +%30, 3/3.
-Eksili satırlar 360 günlük pencerenin eseri: Tur 15 freni zinciri geç
-oyun temposuna bağladı; 560g deneyinde frenli kol iki tohumda taban
-çizgisinin +%15/+%19 üstünde, birinde başa baş (Tur 15 bölümündeki
-ufuk dersi).
+Tur 21'e kadar zincir satırları eksiydi ve bu "360 günlük pencere"ye
+bağlanıyordu. Asıl sebep üretimdeki tüketim sayımıydı (Tur 21, 6. ders):
+satmayan ürün tüketilmiş sayılıyor, zincir kartı yanlış akışa ünite
+öneriyordu. Düzeltmeden sonra normal nakitte zincir her tohumda önde.
+Bol nakitte hâlâ hafif eksi: sınırsız parasıyla boş parseli mağazayla
+dolduran oyuncu için ünite bir mağaza parselini kaplıyor (Tur 7: kıt
+kaynak toprak). Arazi kısıtlı dünyada (dondurulmuş A/B) zincir 3/3 önde,
+ortalama +%2.
 
 ### Kalibrasyon bantları
 
 | | Değer |
 |---|---|
-| Outlet geri ödemesi | 17–55 gün |
-| Zincir geri ödemesi | 190 gün |
-| Devralma maliyeti | **0,76× net değer** |
+| Outlet geri ödemesi | 18–55 gün |
+| Zincir geri ödemesi | 194 gün |
+| Devralma maliyeti | **0,75× net değer** |
 
 ### Sağlık
 

@@ -152,7 +152,9 @@ async function finish(browser, consoleErrors) {
   check('Varsayılan oyun türü serbest şehir',
     (await page.locator('.mode-picker [data-mode="free"][aria-checked="true"]').count()) === 1);
   await page.locator('.difficulty-option[data-difficulty="hard"]').click();
-  const hardDetail = ((await page.locator('.difficulty-detail').textContent()) ?? '').trim();
+  // Kurulumda üç açıklama kutusu var (oyun türü, zorluk, şehir boyutu; Tur 21):
+  // zorluğunkini adıyla seç.
+  const hardDetail = ((await page.locator('.difficulty-detail[data-detail="difficulty"]').textContent()) ?? '').trim();
   check('Zorluk seçimi farkları açıkça yazıyor', hardDetail.includes('150M'), hardDetail.slice(0, 90));
   await page.locator('.difficulty-option[data-difficulty="normal"]').click();
 
@@ -2208,6 +2210,8 @@ async function finish(browser, consoleErrors) {
     await bp.waitForSelector('.newgame', { timeout: 20000 });
     await bp.locator('[data-city-size="large"]').click();
     check('Kurulumda büyük şehir seçilebiliyor', (await bp.locator('[data-city-size="large"][aria-checked="true"]').count()) === 1);
+    const sizeDetail = ((await bp.locator('.difficulty-detail[data-detail="city-size"]').textContent()) ?? '').trim();
+    check('Şehir boyutu açıklaması farkları yazıyor', sizeDetail.includes('5×5') && sizeDetail.includes('8 rakip'), sizeDetail.slice(0, 90));
     await bp.fill('.newgame-field input[type="text"]', 'Büyük Holding');
     await bp.locator('button:has-text("Şirketi kur")').click();
     await bp.waitForSelector('.topbar', { timeout: 20000 });

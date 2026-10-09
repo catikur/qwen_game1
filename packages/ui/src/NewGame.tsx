@@ -123,7 +123,7 @@ export function NewGameScreen({
             </button>
           </div>
           {league && (
-            <div className="difficulty-detail">
+            <div className="difficulty-detail" data-detail="league">
               <p>{t('hud.newGame.leagueBlurb')}</p>
               <ul>
                 <li>{t('hud.newGame.leagueFactRules')}</li>
@@ -155,7 +155,7 @@ export function NewGameScreen({
               </button>
             ))}
           </div>
-          <div className="difficulty-detail">
+          <div className="difficulty-detail" data-detail="difficulty">
             <p>{level.blurb}</p>
             <ul>
               {level.facts.map((fact) => (
@@ -184,7 +184,7 @@ export function NewGameScreen({
               </button>
             ))}
           </div>
-          <div className="difficulty-detail">
+          <div className="difficulty-detail" data-detail="city-size">
             <p>{size.blurb}</p>
             <ul>
               {size.facts.map((fact) => (
