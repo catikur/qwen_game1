@@ -20,3 +20,5 @@ export { AuctionChip, AuctionPanel } from './AuctionPanel';
 export { MarketPanel } from './MarketPanel';
 export { CeoPortrait } from './CeoPortrait';
 export { NewGameScreen } from './NewGame';
+export { currentLocale, registerLocale, setLocale, t } from './i18n';
+export type { MessageKey } from './i18n';
