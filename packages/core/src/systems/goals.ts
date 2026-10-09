@@ -1,4 +1,4 @@
-import { BUILDING_BY_ID, GOALS, getDifficulty } from '@capital/content';
+import { BUILDING_BY_ID, GOALS, getCitySize, getDifficulty } from '@capital/content';
 import type { GoalDef } from '@capital/content';
 import { pushNews } from '../news';
 import { formatMoney } from '../selectors';
@@ -65,7 +65,8 @@ function bestRivalStake(state: GameState): number {
 }
 
 export function victoryNetWorth(state: GameState): number {
-  return getDifficulty(state.difficulty).victoryNetWorth;
+  // Büyük şehirde ekonomi de büyük (Tur 21): eşik şehir boyutuyla ölçekli.
+  return getDifficulty(state.difficulty).victoryNetWorth * getCitySize(state.citySize).victoryScale;
 }
 
 /** Zafer koşulu sağlanıyor mu, sağlanıyorsa hangi yoldan. */

@@ -505,6 +505,27 @@ function actFor(state: GameState, profile: NpcProfileDef): void {
   // Kapı bunu doğrudan söylüyor, dolaylı olarak değil.
   if (tryArmMove(state, profile)) return;
 
+  /*
+   * Tempo (Tur 21): büyük şehirde rakip karar başına iki mağaza kurabiliyor.
+   * Standart şehirde 1 — döngü bir kez döner, davranış ve zar tüketimi
+   * birebir eskisi. Her turda fırsatlar ve bütçe yeniden okunuyor: ilk
+   * mağaza nakdi ve bölgenin boş talebini değiştirdi.
+   */
+  const tempo = state.rivalTempo ?? 1;
+  let built = 0;
+  for (let round = 0; round < tempo; round++) {
+    if (!buildOnce(state, profile, round === 0 ? budget : company.cash * Math.min(1, nerve), isLandlord)) break;
+    built++;
+  }
+  // Ölçek kapısını geçemeyen kol, kârlı genişleme de bulunamadıysa yine
+  // de denenir: büyüme tıkandığında verimliliğe dönmek doğru hamle.
+  if (built === 0) tryArmMove(state, profile, true);
+}
+
+/** Bir mağaza kurma denemesi; kurduysa true. */
+function buildOnce(state: GameState, profile: NpcProfileDef, budget: number, isLandlord: boolean): boolean {
+  const company = state.companies[profile.id];
+  if (!company) return false;
   const opportunities = findOpportunities(state, profile);
 
   for (const opportunity of opportunities.slice(0, 6)) {
@@ -544,12 +565,9 @@ function actFor(state: GameState, profile: NpcProfileDef): void {
         : `${district?.name ?? 'Şehirde'} bölgesinde ${def.name} açtı.`,
       { companyId: profile.id, tileId: spot.tileId },
     );
-    return;
+    return true;
   }
-
-  // Ölçek kapısını geçemeyen kol, kârlı genişleme de bulunamadıysa yine
-  // de denenir: büyüme tıkandığında verimliliğe dönmek doğru hamle.
-  tryArmMove(state, profile, true);
+  return false;
 }
 
 

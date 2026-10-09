@@ -21,6 +21,7 @@ import { buildingStrikeFactor, serviceFactor, wageFor } from './labor';
 import { marketingLeverage } from './focus';
 import { SURPLUS_HAIRCUT, distributionRelief, unitCogsFor } from './supply';
 import type { BuildingInstance, GameState } from '../types';
+import { scopedOutlets, withBuildingIndex } from './buildingIndex';
 
 /**
  * Pazar çözümlemesi — oyunun ekonomik kalbi.
@@ -70,17 +71,25 @@ function upkeepFor(state: GameState, companyId: string, defId: string): number {
   return def.upkeepPerDay * getCeoModifiers(state.companies[companyId]?.ceoId ?? null).upkeep;
 }
 
-/** İki district arasındaki erişim ağırlığı (aynı = 1, komşu = kısmi). */
+/**
+ * İki district arasındaki erişim ağırlığı (aynı = 1, komşu = kısmi).
+ *
+ * TUR 8'DEN TUR 21'E KADAR YANLIŞTI. Sütun sayısı `harita genişliği / 8`
+ * diye hesaplanıyordu; bölge kenarı Tur 8'de 8'den 10'a çıktı ve 30
+ * genişlikte `round(3,75) = 4` sütun çıktı. 3×3 haritada komşuluk
+ * karışıktı: Çarşı (sol orta) hesapta Teknopark'ın komşusuydu, altındaki
+ * Öğrenci bölgesine çapraz sayılıyordu. 5×5 yerleşimi denerken bulundu.
+ * Artık konum bölgenin kendi koordinatından okunuyor.
+ */
 function accessWeight(state: GameState, fromDistrict: number, toDistrict: number): number {
   if (fromDistrict === toDistrict) return 1;
 
-  const cols = Math.round(state.map.width / 8);
-  const ax = fromDistrict % cols;
-  const ay = Math.floor(fromDistrict / cols);
-  const bx = toDistrict % cols;
-  const by = Math.floor(toDistrict / cols);
-  const dx = Math.abs(ax - bx);
-  const dy = Math.abs(ay - by);
+  const a = state.districts[fromDistrict];
+  const b = state.districts[toDistrict];
+  if (!a || !b) return 0;
+  const size = a.x1 - a.x0 + 1;
+  const dx = Math.abs(a.x0 - b.x0) / size;
+  const dy = Math.abs(a.y0 - b.y0) / size;
 
   if (dx <= 1 && dy <= 1) return dx === 1 && dy === 1 ? DIAGONAL_ACCESS : NEIGHBOR_ACCESS;
   return 0;
@@ -356,7 +365,8 @@ export function estimateInvestment(
     Math.pow(1 / priceMultiplier, category.elasticity);
 
   let rivalAttractiveness = 0;
-  for (const other of Object.values(state.buildings)) {
+  // Bina indeksi açıksa (zincir/rekabet kartı, pazar adımı) yalnızca bölgenin mağazaları.
+  for (const other of scopedOutlets(state, districtId) ?? Object.values(state.buildings)) {
     if (other.districtId !== districtId) continue;
     const otherDef = BUILDING_BY_ID[other.defId];
     if (!otherDef || otherDef.role !== 'outlet' || otherDef.category !== def.category) continue;
@@ -446,6 +456,11 @@ function applyAutoPricing(state: GameState): void {
  * ile çözülmüş olarak gelir — bu adım yalnızca satışı yapar.
  */
 export function runMarketTick(state: GameState): void {
+  // Pazar adımı bina değiştirmiyor: indeks bütün adım boyunca geçerli.
+  withBuildingIndex(state, () => marketStep(state));
+}
+
+function marketStep(state: GameState): void {
   applyAutoPricing(state);
 
   const mods = collectEventModifiers(state);

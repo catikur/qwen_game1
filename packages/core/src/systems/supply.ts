@@ -7,6 +7,7 @@ import {
 } from '@capital/content';
 import { collectEventModifiers } from './events';
 import { buildingStrikeFactor, wageFor } from './labor';
+import { scopedDepots } from './buildingIndex';
 import type { BuildingInstance, GameState } from '../types';
 
 /**
@@ -91,6 +92,15 @@ function upkeepFor(state: GameState, building: BuildingInstance): number {
 export function distributionRelief(state: GameState, outlet: BuildingInstance): number {
   const outletTile = state.map.tiles[outlet.tileId];
   if (!outletTile) return 0;
+
+  // Bina indeksi açıksa (pazar adımı, zincir kartı) yalnızca şirketin depoları.
+  const depots = scopedDepots(state, outlet.companyId);
+  if (depots) {
+    for (const depot of depots) {
+      if (Math.abs(depot.x - outletTile.x) + Math.abs(depot.y - outletTile.y) <= depot.radius) return DISTRIBUTION_RELIEF;
+    }
+    return 0;
+  }
 
   for (const other of Object.values(state.buildings)) {
     if (other.companyId !== outlet.companyId) continue;

@@ -1,3 +1,4 @@
+import { withBuildingIndex } from './systems/buildingIndex';
 import {
   BUILDING_BY_ID,
   CATEGORIES,
@@ -367,6 +368,10 @@ function reasonFor(
  * Hiçbir şey satmıyorsan kart da yok — zincir panelindeki kuralın aynısı.
  */
 export function competitionCards(state: GameState, companyId: string): CompetitionCard[] {
+  return withBuildingIndex(state, () => competitionCardsFor(state, companyId));
+}
+
+function competitionCardsFor(state: GameState, companyId: string): CompetitionCard[] {
   const company = state.companies[companyId];
   if (!company) return [];
 

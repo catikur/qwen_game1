@@ -122,6 +122,11 @@ function GameRoot({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rendererRef = useRef<CityRenderer | null>(null);
   const version = useGameVersion(engine);
+  // Sahne harita boyutuyla kuruluyor (örnekli ağların kapasitesi, kamera
+  // sınırları). Yeni oyun ya da kayıt farklı boyutta bir şehir getirince
+  // (Tur 21: büyük şehir) sahne yeniden kurulmalı; aynı motor üstünde
+  // `replaceState` bunu kendiliğinden tetiklemiyordu.
+  const mapKey = `${engine.getState().map.width}x${engine.getState().map.height}`;
 
   const [view, setViewState] = useState<ViewState>({
     // Açılışta şehir görünsün; lensler oyuncunun bilinçli seçimi olsun.
@@ -215,7 +220,7 @@ function GameRoot({
       renderer.dispose();
       rendererRef.current = null;
     };
-  }, [engine]);
+  }, [engine, mapKey]);
 
   // ---- State veya görünüm değişince sahneyi tazele ----
   useEffect(() => {

@@ -3,6 +3,7 @@ import { pushNews } from '../news';
 import { estimateInvestment } from './market';
 import { isDistrictOpen, tilePrice } from './city';
 import type { AuctionState, GameState } from '../types';
+import { withBuildingIndex } from './buildingIndex';
 
 /**
  * Parsel ihalesi.
@@ -212,6 +213,11 @@ export function minimumBid(auction: AuctionState): number {
 const MAX_RAISES_PER_ROUND = 80;
 
 function runBidRound(state: GameState): void {
+  // Teklif turu parsel ve bina değiştirmiyor (yalnızca teklif): indeks açık.
+  withBuildingIndex(state, () => bidRound(state));
+}
+
+function bidRound(state: GameState): void {
   const auction = state.auction;
   if (!auction) return;
 

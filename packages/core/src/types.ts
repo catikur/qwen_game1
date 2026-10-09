@@ -1,5 +1,6 @@
 import type {
   CategoryId,
+  CitySizeId,
   CreditRating,
   DifficultyId,
   DistrictArchetypeId,
@@ -557,6 +558,14 @@ export interface GameState {
   rivalHistory?: string[];
   /** Kuruluştaki rakip sayısı — yeni girişler bu kadar koltuğu doldurur. */
   rivalSlots?: number;
+  /**
+   * Rakibin karar gününde kurabileceği en fazla mağaza (Tur 21). Yokluğu 1:
+   * standart şehir. Büyük şehirde 2 — sekiz rakip haftada birer mağazayla
+   * üç kat parseli dolduramıyordu.
+   */
+  rivalTempo?: number;
+  /** Şehir boyutu (Tur 21). Yokluğu standart 3×3. */
+  citySize?: CitySizeId;
   /** Son yeni rakip girişinin günü. */
   lastEntryDay?: number;
   /** Rakip koltuğunun boşaldığı gün (giriş bu günden 45 gün sonra). */

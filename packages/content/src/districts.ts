@@ -100,3 +100,55 @@ export const DISTRICT_LAYOUT: DistrictArchetypeId[][] = [
   ['retail_strip', 'downtown', 'lux_residential'],
   ['student', 'mid_residential', 'tourism'],
 ];
+
+/**
+ * 5×5 yerleşim (Tur 21, "büyük şehir"). Aynı arketip ailesi: çekirdek 3×3
+ * standart şehrin dizilişini koruyor, çeper aynı yönlere genişliyor
+ * (liman ve sanayi kuzeybatıda, konut ve turizm güneydoğuda). Ölçüm
+ * düzeneklerinde (`constraint.ts`, `land-experiment.ts`) kullanılan
+ * yerleşimin aynısı.
+ */
+export const DISTRICT_LAYOUT_LARGE: DistrictArchetypeId[][] = [
+  ['port', 'port', 'industrial', 'industrial', 'tech_park'],
+  ['port', 'retail_strip', 'industrial', 'tech_park', 'tech_park'],
+  ['retail_strip', 'retail_strip', 'downtown', 'lux_residential', 'lux_residential'],
+  ['student', 'student', 'mid_residential', 'lux_residential', 'tourism'],
+  ['student', 'mid_residential', 'mid_residential', 'tourism', 'tourism'],
+];
+
+export type CitySizeId = 'standard' | 'large';
+
+export interface CitySizeDef {
+  id: CitySizeId;
+  name: string;
+  blurb: string;
+  layout: DistrictArchetypeId[][];
+  /** Zafer eşiğine çarpan: büyük şehirde ekonomi de büyük. */
+  victoryScale: number;
+  facts: string[];
+}
+
+export const CITY_SIZES: CitySizeDef[] = [
+  {
+    id: 'standard',
+    name: 'Standart',
+    blurb: 'Dokuz bölge, dört rakip. Oyunun ölçülüp kalibre edildiği şehir.',
+    layout: DISTRICT_LAYOUT,
+    victoryScale: 1,
+    facts: ['3×3 bölge, ~500 parsel', '4 rakip', 'Köşeler sırayla imara açılır'],
+  },
+  {
+    id: 'large',
+    name: 'Büyük',
+    blurb: 'Yirmi beş bölge, sekiz rakip. Çekirdek kalabalık başlar, dış halka dört dalgada imara açılır.',
+    layout: DISTRICT_LAYOUT_LARGE,
+    victoryScale: 1.5,
+    facts: ['5×5 bölge, ~1.500 parsel', '8 rakip, iki kat hızlı inşaat', 'Dış halkanın 16 bölgesi 130–520. günlerde açılır', 'Zafer eşiği 1,5 katı'],
+  },
+];
+
+export const DEFAULT_CITY_SIZE: CitySizeId = 'standard';
+
+export function getCitySize(id: CitySizeId | undefined): CitySizeDef {
+  return CITY_SIZES.find((size) => size.id === (id ?? DEFAULT_CITY_SIZE)) ?? CITY_SIZES[0]!;
+}

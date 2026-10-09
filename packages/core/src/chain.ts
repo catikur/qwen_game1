@@ -11,6 +11,7 @@ import { buildCost } from './actions';
 import { isDistrictOpen, tilePrice } from './systems/city';
 import { estimateInvestment } from './systems/market';
 import { distributionRelief } from './systems/supply';
+import { withBuildingIndex } from './systems/buildingIndex';
 import { wageFor } from './systems/labor';
 import type { BuildingInstance, GameState } from './types';
 
@@ -450,6 +451,11 @@ function bestMove(
  * oyuncu hiç ilgilenmediği bir tabloyla karşılaşmaz.
  */
 export function chainCards(state: GameState, companyId: string): ChainCard[] {
+  // Kart saf bir hesap: bina indeksi kart boyunca açık (Tur 21 hız düzeltmesi).
+  return withBuildingIndex(state, () => chainCardsFor(state, companyId));
+}
+
+function chainCardsFor(state: GameState, companyId: string): ChainCard[] {
   const company = state.companies[companyId];
   if (!company) return [];
 

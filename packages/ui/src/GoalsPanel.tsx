@@ -1,6 +1,6 @@
 import type { ReactElement } from 'react';
 import { getDifficulty } from '@capital/content';
-import { companyRanking, formatMoney, getPlayer, goalLadder, nextGoal } from '@capital/core';
+import { companyRanking, formatMoney, getPlayer, goalLadder, nextGoal, victoryNetWorth } from '@capital/core';
 import { useGame, useGameState } from './useGame';
 
 /**
@@ -21,7 +21,7 @@ export function GoalsPanel(): ReactElement {
   return (
     <div className="goals">
       <p className="muted">
-        {difficulty.name} şehir · {done} / {ladder.length} basamak. Zafer: {formatMoney(difficulty.victoryNetWorth)} şirket
+        {difficulty.name} şehir · {done} / {ladder.length} basamak. Zafer: {formatMoney(victoryNetWorth(state))} şirket
         değeri ve bir numara — ya da bütün rakipleri devralmak.
       </p>
       <ol className="goal-list">
