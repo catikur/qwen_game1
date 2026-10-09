@@ -1043,8 +1043,9 @@ köşeler; açılış takvimi büyük haritada yeniden ölçülmeli.)
 
 - `estimateInvestment` depo, Ar-Ge ve pazarlama için `direct: false`
   dönüyor; bu binaların geri ödemesi yapı menüsünde görünmüyor
-- Devralınan şirketin yerine yenisi gelmiyor; geç oyunda rakip sayısı
-  azalıyor
+- ~~Devralınan şirketin yerine yenisi gelmiyor~~ — Tur 17'de kapandı
+  (yeni rakip girişi; bu satır Tur 21'e kadar listede eskimiş kaldı).
+  Kalan sınır: sekiz kişilik katalog tükenince boşalan koltuk boş kalıyor.
 - İhale yalnızca boş parsel için; dolu parsel ihalesi yok
 - ~~Oyuncunun rakip hissesi alımında günlük tavan yok~~ — Tur 20'de
   kapandı: herkes için aynı günlük tavan ve günlere yayılan devralma emri.
@@ -1059,10 +1060,10 @@ Rapor üç şey istiyordu; Tur 9 birincisini yaptı:
 | kurduğun imparatorluk "senin" olsun | 11 | **yapıldı** — genel merkez işareti ve rozeti |
 | rakip seni geçince hırslanasın | 11 | **yapıldı** — geçilme olayı, rakibin yüzü ve aradaki fark |
 
-Üçü de kapandı. Geriye kalan, aynı damardaki daha küçük kalemler: bölge
+Üçü de kapandı. Geriye kalan, aynı damardaki daha küçük bir kalem: bölge
 liderliğini kaybetme anı henüz bir olay değil (yalnızca net değer
-sıralaması izleniyor), ve devralınan şirketin yerine yenisi gelmediği
-için geç oyunda rakip sayısı azalıyor.
+sıralaması izleniyor). (Bu paragraf eskiden "devralınan şirketin yerine
+yenisi gelmiyor" da diyordu; yeni rakip girişi Tur 17'de geldi.)
 
 ### 4.8 ~~Zincir kartı ölçekte fren bilmiyor~~ — Tur 15'te kapandı
 

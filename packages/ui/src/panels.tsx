@@ -22,10 +22,12 @@ import {
   getPlayer,
   goodShares,
   headquarters,
+  PROJECTION_DAYS,
+  projectBuilding,
   rankedBuildOptions,
   tilePrice,
 } from '@capital/core';
-import type { InvestmentEstimate } from '@capital/core';
+import type { IndirectEstimate, InvestmentEstimate, Projection } from '@capital/core';
 import { AUTOSAVE_SLOT, MAX_SLOTS, listSaves } from '@capital/persistence';
 import type { SaveMeta } from '@capital/persistence';
 import { ChainPanel } from './ChainPanel';
@@ -89,8 +91,8 @@ export function BuildPanel(): ReactElement {
   // neredeyse tamamında "boş parsel yok" çıkıyor. Bir bina bir parsel
   // kapladığına göre oyuncunun sorusu "param ne zaman geri döner" değil,
   // "bu parselden en çok ne çıkar" — cevabı da günlük kâr.
-  const ranked = districtId !== null ? rankedBuildOptions(state, districtId) : null;
-  const options = ranked ?? buildOptions(state).map((o) => ({ ...o, estimate: null, bestPick: false }));
+  const ranked = districtId !== null ? rankedBuildOptions(state, districtId, selectedTile?.id) : null;
+  const options = ranked ?? buildOptions(state).map((o) => ({ ...o, estimate: null, bestPick: false, indirect: null }));
   const freePlots = districtId !== null ? freePlotsIn(state, districtId) : null;
   const { open, toggle } = useCollapsible();
 
@@ -141,7 +143,7 @@ export function BuildPanel(): ReactElement {
       </header>
 
       <ul className="buildlist">
-        {options.map(({ def, unlocked, affordable, estimate, bestPick }) => {
+        {options.map(({ def, unlocked, affordable, estimate, bestPick, indirect }) => {
           const selected = view.ghostDefId === def.id;
 
           return (
@@ -183,7 +185,7 @@ export function BuildPanel(): ReactElement {
                       🔒 {formatMoney(def.unlockNetWorth)} şirket değeri gerekir
                     </span>
                   ) : estimate ? (
-                    <EstimateLine estimate={estimate} />
+                    <EstimateLine estimate={estimate} indirect={indirect} role={def.role} />
                   ) : (
                     <span className="buildcard-hint">{def.description}</span>
                   )}
@@ -206,6 +208,10 @@ export function BuildPanel(): ReactElement {
         </div>
       )}
 
+      {view.ghostDefId && selectedTile && !selectedTile.buildingId && INDIRECT_ROLES.has(BUILDING_BY_ID[view.ghostDefId]?.role ?? '') && (
+        <ProjectionBox key={`${view.ghostDefId}:${selectedTile.id}`} defId={view.ghostDefId} tileId={selectedTile.id} />
+      )}
+
       {view.ghostDefId && selectedTile && selectedTile.ownerId === player.id && !selectedTile.buildingId && (
         <button
           type="button"
@@ -223,9 +229,45 @@ export function BuildPanel(): ReactElement {
   );
 }
 
-function EstimateLine({ estimate }: { estimate: InvestmentEstimate }): ReactElement {
+const INDIRECT_ROLES = new Set(['logistics', 'research', 'marketing']);
+
+const INDIRECT_HINT: Record<string, string> = {
+  logistics: 'Menzilindeki mağazalarının dağıtım maliyetini düşürür.',
+  research: 'Bir kategoride kaliteyi yükseltir; fiyat ya da pay olarak döner.',
+  marketing: 'Bir kategoride markayı büyütür; fiyat ya da pay olarak döner.',
+};
+
+function EstimateLine({
+  estimate,
+  indirect,
+  role,
+}: {
+  estimate: InvestmentEstimate;
+  indirect?: IndirectEstimate | null;
+  role: string;
+}): ReactElement {
   if (!estimate.direct) {
-    return <span className="buildcard-hint">Dolaylı fayda — kendi mağazalarının maliyetini düşürür.</span>;
+    const hint = INDIRECT_HINT[role] ?? 'Dolaylı fayda.';
+    if (!indirect) return <span className="buildcard-hint">{hint}</span>;
+    if (indirect.none) return <span className="buildcard-hint">{hint} {indirect.none}</span>;
+    // Dolaylı katkı: bugünkü şehirde, etkisi oturduğunda (Tur 21).
+    const where =
+      indirect.covered !== undefined
+        ? `${indirect.covered} mağaza menzilde`
+        : indirect.focus
+          ? `${CATEGORIES[indirect.focus].name} için`
+          : '';
+    return (
+      <span
+        className={`estimate ${indirect.dailyProfit > 0 ? 'ok' : 'weak'}`}
+        data-indirect={role}
+        title="Bugünkü şehirde, etkisi oturduğunda. Şehir ve karşılanmayan talep büyüdükçe artar; yerleştirirken 120 günlük projeksiyona bakabilirsin."
+      >
+        ≈ +{formatMoney(indirect.dailyGain)}/gün katkı · {where} ·{' '}
+        {Number.isFinite(indirect.paybackDays) ? `${Math.round(indirect.paybackDays)} günde geri öder` : 'gideri karşılamıyor'}
+        {indirect.rampDays > 0 ? ` · ~${indirect.rampDays} günde oturur` : ''}
+      </span>
+    );
   }
   // "İyi" ölçütü artık geri ödeme değil, kârın kendisi. Geri ödeme
   // ikinci sırada duruyor çünkü paranın ne zaman döneceği hâlâ önemli —
@@ -238,6 +280,49 @@ function EstimateLine({ estimate }: { estimate: InvestmentEstimate }): ReactElem
         ? `${Math.round(estimate.paybackDays)} günde geri öder`
         : 'zarar eder'}
     </span>
+  );
+}
+
+/**
+ * İsteğe bağlı 120 günlük projeksiyon (Tur 21). Hızlı tahmin bugünkü şehri
+ * ölçüyor; Ar-Ge ve pazarlamanın katkısı ise şehir büyüdükçe büyüyor. İki
+ * kopya × 120 gün pahalı, o yüzden yalnızca düğmeye basınca.
+ */
+function ProjectionBox({ defId, tileId }: { defId: string; tileId: number }): ReactElement {
+  const { engine } = useGame();
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState<Projection | null | undefined>(undefined);
+  return (
+    <div className="projection" data-projection={result ? 'done' : busy ? 'busy' : 'idle'}>
+      {result ? (
+        <p>
+          {PROJECTION_DAYS}. günde ≈{' '}
+          <strong className={result.finalProfit > 0 ? 'pos' : 'neg'}>
+            {result.finalProfit >= 0 ? '+' : '−'}
+            {formatMoney(Math.abs(result.finalProfit))}/gün
+          </strong>{' '}
+          kâr (katkı {formatMoney(result.finalGain)}/gün). Rakipler hamle yapmazsa ve sen başka bir şey kurmazsan.
+        </p>
+      ) : result === null ? (
+        <p className="muted">Bu parsel için projeksiyon yapılamadı.</p>
+      ) : (
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => {
+            setBusy(true);
+            // Bir kare bekle: "hesaplanıyor" yazısı çizilsin.
+            setTimeout(() => {
+              const state = engine.getState();
+              setResult(projectBuilding(state, state.playerCompanyId, defId, tileId));
+              setBusy(false);
+            }, 30);
+          }}
+        >
+          {busy ? 'Hesaplanıyor…' : `${PROJECTION_DAYS} gün sonra ne katar?`}
+        </button>
+      )}
+    </div>
   );
 }
 

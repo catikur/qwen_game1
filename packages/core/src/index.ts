@@ -81,6 +81,10 @@ export { issueNetWorthEffect, issueQuote, issuanceEnabled } from './systems/issu
 export type { IssueQuote } from './systems/issuance';
 export { capRemaining, dailyBuyCap, findOrder, orderEstimate, sharesToControl } from './systems/orders';
 export type { OrderEstimate } from './systems/orders';
+export { indirectEstimate } from './systems/indirect';
+export { PROJECTION_DAYS, projectBuilding } from './projection';
+export type { Projection } from './projection';
+export type { IndirectEstimate } from './systems/indirect';
 export type { GoalStatus } from './systems/goals';
 export { collectEventModifiers } from './systems/events';
 export { activeContract, contractProgress, OFFER_LIFETIME_DAYS } from './systems/contracts';
