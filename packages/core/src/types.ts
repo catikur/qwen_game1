@@ -142,6 +142,11 @@ export interface BuildingInstance {
   focus: CategoryId | null;
   last: BuildingLedger;
   /**
+   * Outlet: dünkü satış, ürün başına (Tur 21). Üretim adımı tüketimi bundan
+   * okuyor. Yokluğu (eski kayıt, yeni mağaza): kapasite rafa eşit bölünür.
+   */
+  soldByGood?: Record<string, number>;
+  /**
    * Günlük kârın 30 günlük üstel ortalaması.
    *
    * Tek günün defteri gürültülü (olay, dönem, rakip açılışı); "bu şube

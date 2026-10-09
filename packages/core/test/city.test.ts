@@ -116,3 +116,34 @@ describe('yapı kademeleri', () => {
     }
   });
 });
+
+describe('üretimin tüketim sayımı (Tur 21)', () => {
+  test('mağazanın ürün başına dünkü satışı defter sıfırlansa da duruyor', async () => {
+    const { GameEngine } = await import('../src/engine');
+    const { build, buyTile } = await import('../src/actions');
+    const { resetDailyLedgers } = await import('../src/systems/supply');
+    const state = createNewGame({ seed: 4 });
+    state.flags.npcCompetition = false;
+    state.companies.player!.cash = 5_000_000;
+    state.companies.player!.netWorth = 5_000_000; // restoran kilidi
+    const tile = state.map.tiles.find(
+      (t) => t.kind === 'plot' && !t.ownerId && !t.structureId && !t.buildingId && !purchaseBlocker(state, t.id),
+    )!;
+    assert.equal(buyTile(state, 'player', tile.id).ok, true);
+    assert.equal(build(state, 'player', tile.id, 'restaurant').ok, true);
+    const outlet = state.buildings[state.map.tiles[tile.id]!.buildingId!]!;
+    assert.equal(outlet.soldByGood, undefined, 'ilk günden önce yok: eski kurala düşer');
+    const engine = new GameEngine(state);
+    for (let day = 0; day < 5; day++) engine.runDay();
+    assert.ok(outlet.soldByGood, 'pazar adımı ürün başına satışı yazıyor');
+    const total = Object.values(outlet.soldByGood!).reduce((a, b) => a + b, 0);
+    assert.ok(total > 0, 'satış var');
+    assert.ok(Math.abs(total - outlet.last.unitsSold) < 1e-6, `${total} = ${outlet.last.unitsSold}`);
+    for (const goodId of Object.keys(outlet.soldByGood!)) assert.ok(outlet.stocked.includes(goodId), goodId);
+    // Defter üretimden ÖNCE sıfırlanıyor; dünkü satış ayrı alanda kalmalı.
+    const before = { ...outlet.soldByGood! };
+    resetDailyLedgers(state);
+    assert.equal(outlet.last.unitsSold, 0);
+    assert.deepEqual(outlet.soldByGood, before);
+  });
+});

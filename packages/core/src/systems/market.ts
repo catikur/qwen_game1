@@ -211,7 +211,8 @@ function companyFlow(
       const draw = building.last.unitsSold > 0 ? building.last.unitsSold : def.capacity;
       const shelf = building.stocked;
       for (const stockedId of shelf) {
-        if (GOOD_BY_ID[stockedId]?.inputGoodId === goodId) consumed += draw / shelf.length;
+        if (GOOD_BY_ID[stockedId]?.inputGoodId !== goodId) continue;
+        consumed += building.soldByGood ? (building.soldByGood[stockedId] ?? 0) : draw / shelf.length;
       }
     }
   }
@@ -558,6 +559,8 @@ function marketStep(state: GameState): void {
 
   // Bir outlet'in kendi bölgesindeki kategori payı için birikim.
   const ownDistrictUnits = new Map<string, number>();
+  // Ürün başına satış: yarının üretim adımı tüketimi buradan okuyacak.
+  const soldByGood = new Map<string, Record<string, number>>();
   const servedByDistrictCategory = new Map<string, number>();
 
   // ---- 3. Dağıtım ----
@@ -683,6 +686,9 @@ function marketStep(state: GameState): void {
             );
 
           building.last.unitsSold += units;
+          const goods = soldByGood.get(building.id) ?? {};
+          goods[good.id] = (goods[good.id] ?? 0) + units;
+          soldByGood.set(building.id, goods);
           building.last.revenue += revenue;
           building.last.cogs += cogs;
           building.last.profit += revenue - cogs;
@@ -720,6 +726,7 @@ function marketStep(state: GameState): void {
     if (def?.role !== 'outlet') continue;
     const served = servedByDistrictCategory.get(`${building.districtId}|${def.category}`) ?? 0;
     building.last.share = served > 0 ? (ownDistrictUnits.get(building.id) ?? 0) / served : 0;
+    building.soldByGood = soldByGood.get(building.id) ?? {};
   }
 
   // ---- Kira üreten binalar ----
