@@ -3814,3 +3814,114 @@ button.icon {
 .projection .neg {
   color: var(--bad);
 }
+
+/* --- holding: birden çok şehir (Tur 22) --- */
+.holding {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.holding > p {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.holding-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 6px;
+}
+
+.city-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.city-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 2px 10px;
+  align-items: center;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  font-size: 12.5px;
+}
+
+.city-row.current {
+  border-color: var(--accent);
+}
+
+.city-row.lost {
+  opacity: 0.6;
+}
+
+.city-head {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+}
+
+.city-tag {
+  font-size: 11px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.city-row .muted {
+  grid-column: 1;
+}
+
+.city-switch {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+}
+
+.holding-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.holding-open .primary {
+  align-self: flex-start;
+}
+
+.holding .defense p {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+/* Üst barda şehir adı: holding varken panele açılıyor. */
+.brand-city {
+  /* Metin bağlantısı gibi görünüyor ama dokunma hedefi 24 px (WCAG 2.5.8). */
+  min-height: 24px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.brand-city::after {
+  content: ' · ';
+  text-decoration: none;
+  display: inline-block;
+  white-space: pre;
+}
+
+.goals-holding {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+}

@@ -1,6 +1,6 @@
 import type { ReactElement } from 'react';
 import { getDifficulty } from '@capital/content';
-import { companyRanking, formatMoney, getPlayer, goalLadder, nextGoal, victoryNetWorth } from '@capital/core';
+import { companyRanking, formatMoney, getPlayer, goalLadder, nextGoal, openCityQuote, victoryNetWorth } from '@capital/core';
 import { useGame, useGameState } from './useGame';
 import { t } from './i18n';
 
@@ -14,6 +14,8 @@ import { t } from './i18n';
  */
 export function GoalsPanel(): ReactElement {
   const state = useGameState();
+  const { setView } = useGame();
+  const canExpand = openCityQuote(state).ok;
   const ladder = goalLadder(state);
   const next = nextGoal(state);
   const difficulty = getDifficulty(state.difficulty);
@@ -65,6 +67,14 @@ export function GoalsPanel(): ReactElement {
           );
         })}
       </ol>
+      {canExpand && (
+        <p className="goals-holding">
+          {t('hud.holding.goalsCta')}{' '}
+          <button type="button" className="ghost" data-goals-open-city onClick={() => setView({ openPanel: 'cities' })}>
+            {t('hud.victory.openCity')}
+          </button>
+        </p>
+      )}
     </div>
   );
 }
@@ -77,7 +87,7 @@ export function GoalsPanel(): ReactElement {
  * imparatorluk. Kaybetmek bir SON'du; kazanmak bir dönemeç.
  */
 export function VictoryScreen({ onNewGame }: { onNewGame: () => void }): ReactElement | null {
-  const { run } = useGame();
+  const { run, setView } = useGame();
   const state = useGameState();
   const victory = state.victory;
   if (!victory || victory.dismissed || state.gameOver) return null;
@@ -119,6 +129,23 @@ export function VictoryScreen({ onNewGame }: { onNewGame: () => void }): ReactEl
           >
             {t('hud.victory.continue')}
           </button>
+          {/*
+           * Holding (Tur 22): zafer bir dönemeç — yeni şehre açılmak üçüncü
+           * çıkış. Panel açılıyor, karar (sermaye, boyut) orada veriliyor.
+           */}
+          {openCityQuote(state).ok && (
+            <button
+              type="button"
+              className="ghost-invert"
+              data-victory-open-city
+              onClick={() => {
+                run({ type: 'DISMISS_VICTORY' });
+                setView({ openPanel: 'cities' });
+              }}
+            >
+              {t('hud.victory.openCity')}
+            </button>
+          )}
           <button type="button" className="ghost-invert" onClick={onNewGame}>
             {t('hud.victory.newEmpire')}
           </button>

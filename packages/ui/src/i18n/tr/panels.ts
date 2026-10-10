@@ -137,6 +137,7 @@ export const panels = {
   'panels.modal.title.goals': 'Hedefler',
   'panels.modal.title.council': 'Belediye Meclisi',
   'panels.modal.title.league': 'Tohum Ligi',
+  'panels.modal.title.cities': 'Şehirler',
 
   // şirket paneli (CompanyPanel, Sparkline)
   'panels.company.nameLabel': 'Şirket adı',
@@ -206,6 +207,9 @@ export const panels = {
   'panels.help.step.takeover.title': 'Devralma bir emir, tek tık değil.',
   'panels.help.step.takeover.body':
     " Rakip hissesinden günde en fazla %3,5 alabilirsin, rakipler de seninkinden öyle. Emir her gün alır; hedef %30'u görünce hisselerini toplamaya başlar ve dolaşım yetmezse emir düşer.",
+  'panels.help.step.holding.title': 'Zafer bir dönemeç: holding.',
+  'panels.help.step.holding.body':
+    " Bir şehirde zafere ulaşınca yeni bir şehre açılabilirsin: sermaye ve marka bilinirliğinin yarısı seninle gelir, rakipler farklıdır. Aynı anda bir şehir oynanır; bekleyen şehrin kârının yarısı her gün holding kasasına akar. Zafer her şehirde orada yarattığın değerle ölçülür.",
   'panels.help.controls':
     'Kontroller: sürükle = kaydır · sağ tık sürükle = döndür · tekerlek = yakınlaş · WASD = kaydır · Boşluk = duraklat',
 } as const;

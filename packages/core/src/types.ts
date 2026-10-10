@@ -6,6 +6,7 @@ import type {
   DistrictArchetypeId,
   LoanKind,
   MotionKind,
+  NpcProfileDef,
   UnionResponse,
   WagePolicy,
 } from '@capital/content';
@@ -561,6 +562,11 @@ export interface GameState {
   goals?: Record<string, number>;
   /** Sahneye çıkmış bütün rakip kimlikleri (devralınanlar dahil). */
   rivalHistory?: string[];
+  /**
+   * Katalog bittikten sonra üretilen rakip profilleri, giriş sırasıyla
+   * (Tur 22). Yokluğu "üretilmiş rakip yok" demek; şema sürümü sabit.
+   */
+  extraProfiles?: NpcProfileDef[];
   /** Kuruluştaki rakip sayısı — yeni girişler bu kadar koltuğu doldurur. */
   rivalSlots?: number;
   /**
@@ -588,6 +594,34 @@ export interface GameState {
    * devam edebilir. `dismissed` ekranın bir kez görüldüğünü tutar.
    */
   victory?: { day: number; kind: VictoryKind; dismissed?: boolean };
+  /** Şehrin adı (Tur 22). Yalnızca holding kurulunca veriliyor. */
+  cityName?: string;
+  /**
+   * Holding kasası ile bu şehir arasında net aktarılan sermaye (Tur 22).
+   * Zafer bu şehirde YARATILAN değerle ölçülüyor: net değer eksi bu.
+   * Yokluğu 0 — kurucu şehir.
+   */
+  importedCapital?: number;
+  /** Holding: bekleyen şehirler ve kasa (Tur 22). Yokluğu tek şehirli oyun. */
+  holding?: HoldingState;
+}
+
+/** Oynanmayan, bekleyen bir şehir. */
+export interface DormantCity {
+  /** Şehrin ayrıldığın gündeki tam durumu; kendi `holding` alanı yok. */
+  state: GameState;
+  /** Ayrıldığın gündeki günlük kâr eğilimi (oyuncunun bina kâr ortalamaları). */
+  trend: number;
+}
+
+export interface HoldingState {
+  /** Kurucu şehrin tohumu: yeni şehirlerin tohumu ve adı buradan türüyor. */
+  foundingSeed: number;
+  /** Kurucu dahil açılmış şehir sayısı. */
+  opened: number;
+  /** Holding kasası: bekleyen şehirlerin kâr payı burada birikiyor. */
+  treasury: number;
+  dormant: DormantCity[];
 }
 
 /** Meclis önergesi — açıkken lobi toplar, oylanınca sonucu taşır. */
@@ -685,7 +719,13 @@ export type GameCommand =
   /** Bir rakip için devralma emri verir (her gün tavan kadar alım). */
   | { type: 'PLACE_TAKEOVER_ORDER'; companyId: string }
   /** Süren devralma emrini iptal eder. */
-  | { type: 'CANCEL_TAKEOVER_ORDER'; companyId: string };
+  | { type: 'CANCEL_TAKEOVER_ORDER'; companyId: string }
+  /** Zafer kazanılan şehirden yeni bir şehre açılır (Tur 22). */
+  | { type: 'OPEN_CITY'; citySize: CitySizeId; capital: number }
+  /** Bekleyen bir şehre geçer; bu şehir bekler. */
+  | { type: 'SWITCH_CITY'; index: number }
+  /** Holding kasası ile bu şehir arasında para: artı kasadan şehre, eksi şehirden kasaya. */
+  | { type: 'HOLDING_TRANSFER'; amount: number };
 
 /** Komut reddedildiğinde UI'ye dönen açıklama. */
 export interface CommandResult {

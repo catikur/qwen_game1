@@ -1,7 +1,8 @@
-import { CATEGORIES, COUNCIL, CONSUMER_CATEGORIES, MOTION_BIAS, MOTION_TEXT, NPC_PROFILES } from '@capital/content';
+import { CATEGORIES, COUNCIL, CONSUMER_CATEGORIES, MOTION_BIAS, MOTION_TEXT } from '@capital/content';
 import type { CategoryId, MotionKind, NpcProfileDef } from '@capital/content';
 import { createRng, nextInt, nextRange } from '../rng';
 import { pushNews } from '../news';
+import { rivalProfiles } from '../profiles';
 import { formatMoney } from '../selectors';
 import type { CommandResult, CompanyState, GameState, MotionState, PolicyState } from '../types';
 
@@ -172,7 +173,7 @@ function rivalLobbyBudget(company: CompanyState, profile: NpcProfileDef): number
 }
 
 function rivalsLobby(state: GameState, motions: MotionState[]): void {
-  NPC_PROFILES.forEach((profile) => {
+  rivalProfiles(state).forEach((profile) => {
     const company = state.companies[profile.id];
     if (!company) return;
     for (const motion of motions) {
