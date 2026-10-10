@@ -4,7 +4,7 @@
 > `pnpm bench` çıktısından; iddialar `pnpm balance` ve `pnpm playtest`
 > tarafından her koşuda doğrulanıyor.
 >
-> Son güncelleme: şema **v6**, 19 tur tamamlandı.
+> Son güncelleme: şema **v6**, 22 tur tamamlandı.
 
 ---
 
@@ -1027,6 +1027,108 @@ Sekiz ölçüm dersi:
    kademeyi sayıyor, aynı sertlikte: iki zincir de dönüşmeli ve en az
    biri iki kademe atlamalı.
 
+### Tur 22 — Rakip koltukları dolu kalıyor; holding: birden çok şehir
+
+Kullanıcı Tur 21'den sonra "önerdiğin şekilde ilerle" dedi: önce rakip
+kataloğu, sonra çoklu şehir.
+
+**Katalog bitince yeni rakip üretiliyor (§4.6).** Boşalan koltuğa giriş
+Tur 17'den beri vardı ama yalnızca katalogdaki sekiz kişilikten biri
+girebiliyordu. Pasif vekille sorun görünmüyordu: 1.200 günde en fazla bir
+devralma, katalog hiç bitmiyor. Devralma emri veren bir vekille ölçünce:
+
+| 1.200 gün, avcı vekil | Katalog bittiği gün | 600 / 800 / 1.200. günde rakip (8 koltuk) |
+|---|---|---|
+| Büyük şehir, önce (tohum 1 / 7 / 42) | 180 / 178 / 178 | 4-4-4 · 3-3-3 · 3-3-3 |
+| Büyük şehir, sonra | aynı | 8-8-7 · 7-7-8 · 7-7-7 |
+| Standart (4 koltuk), önce | 958 / 958 / — | 1.200. günde 3 · 3 · 4 |
+| Standart, sonra | aynı | 1.200. günde 4 · 4 · 4 |
+
+- Büyük şehirde sekiz kişiliğin hepsi baştan sahnede; ilk devralmada
+  katalog bitiyordu.
+- Yeni profil giriş günü üretiliyor. Doktrin sahnede en az temsil edilen
+  kişilikten; sayısal ağırlıklar o kişiliğin katalog profillerinden
+  birinin aynısı (denge onlarla ölçüldü). Ad, CEO, renk ve portre tohum +
+  üretim sırasından dışsal bir zarla; oyunun zarı kaymıyor.
+- İlk sürümde iki kusur çıktı. Ad kökü tekrar ediyordu ("Zeytin Girişim"
+  devralındıktan sonra "Zeytin Gayrimenkul" aynı şirketin dönüşü gibi
+  okunuyordu). Devralınan rakibin rengi de hemen yenisine geçiyordu. Kök
+  artık tekrar etmiyor, renk de en uzun süredir görülmeyenden seçiliyor.
+- Giriş beklemesi koltuk başına aynı hız: standartta 120 gün, büyükte
+  60. Sabit 120 günle büyük şehir beş-altı rakipte kalıyordu.
+- Profil state'te isteğe bağlı bir alanda (`extraProfiles`), şema v6.
+  Rakip turu, ihale, lobi, işgücü doktrini ve haber portresi
+  `rivalProfile` üzerinden okuyor.
+- Katalog bitmeyen oyunlarda davranış aynı: üç 400 günlük koşunun özeti
+  (standart 5 ve 7, büyük 5) main ile bayt bayt eşit.
+
+**Holding: birden çok şehir (§4.5'in son kalemi).** Bir şehirde zafere
+ulaşınca yeni bir şehre açılmak.
+
+- *Model:* SimCity'nin bölge oyunu. Aynı anda bir şehir oynanıyor,
+  diğerleri bekliyor: takvimleri, rakipleri ve şehir gelişimi donuk.
+  Eşzamanlı simülasyon her sistemin "hangi şehir" sorusunu bilmesini ve
+  günü şehir sayısı kadar pahalı yapmayı gerektirirdi. Bu modelde her
+  şehir tam bir simülasyon; bekleyenler oynanan şehrin `holding`
+  alanında, kayıtla birlikte gidip geliyor.
+- *Açılış:* zafer kazanılan şehirden, en fazla üç şehir. Sermaye o
+  şehrin kasasından çıkıyor (en az 2 M ₺). Marka bilinirliğinin yarısı ve
+  CEO taşınıyor. Rakip kadrosu katalogda kayıyor: ikinci şehir ikinci
+  dörtlüyle (Veri, Anadolu, Kule, Firuze) başlıyor. Tohum ve ad kurucu
+  tohumdan.
+- *Holding kasası:* bekleyen şehrin ayrıldığın gündeki kâr eğiliminin
+  (bina kâr ortalamaları) yarısı her gün kasaya akıyor. Kasa ile şehir
+  arasında iki yönlü aktarım var.
+- *Zafer şehirde yaratılan değerle:* net değer eksi kasa ile net aktarılan
+  sermaye. Kasa ayrı tutuluyor, çünkü bu para doğrudan şehre aksaydı
+  ikinci şehrin zaferi kendiliğinden gelirdi: ölçümde kasa ikinci zafere
+  kadar 55–105 M ₺ biriktirdi, yani hedefin (100 M ₺) yarısıyla tamamı
+  arası. Kurucu şehirde aktarım yok, davranış aynı (özetler eşit).
+- *Kaybetmek:* holding'de bir şehri baskınla kaybetmek oyunun sonu
+  değil; oyun sonu ekranı bekleyen şehre geçiş sunuyor. Kaybedilen şehir
+  kasaya ödeme yapmıyor.
+- *Arayüz:*
+  - Şehirler paneli: holding değeri, kasa, günlük akış, şehir listesi ve
+    geçiş, aktarım, yeni şehir formu (boyut, sermaye, taşınan marka).
+  - Zafer ekranında "Yeni şehre açıl", hedeflerde çağrı.
+  - Holding kurulunca üst barda tıklanabilir şehir adı.
+  - Yardımda yeni madde.
+  - Dock'a sekme eklenmedi: mobilde sekiz sekme sınırda.
+- *Şehir değişimi:* anlık olaylar (eşik haberleri, sıralama, baskın
+  seviyesi) sessizce yeniden kuruluyor. Sahne şehrin tohumuyla yeniden
+  kuruluyor, seçim temizleniyor.
+
+| Holding (vekil, sermaye nakdin %25'i) | Tohum 1 | Tohum 7 | Tohum 42 |
+|---|---|---|---|
+| 1. şehir zafer | 647. gün | 808. gün | 700. gün |
+| Kâr eğilimi / kasaya akış | 300 / 150 B ₺/gün | 175 / 88 | 217 / 108 |
+| 2. şehre sermaye | 14,1 M ₺ | 11,6 M ₺ | 12,5 M ₺ |
+| 2. şehir zafer | 700. gün | 627. gün | 715. gün |
+| Kasa / holding değeri, 2. zaferde | 105 / 305 M ₺ | 55 / 255 M ₺ | 77 / 278 M ₺ |
+| Kayıt (iki standart şehir) | 1,49 MB | 1,61 MB | 1,56 MB |
+
+Getirilen sermaye ikinci şehri kolaylaştırmıyor; zafer günleri ilk
+şehirle aynı bantta. Kayıt IndexedDB'de; iki büyük şehir ~3,3 MB.
+
+Bilinen sınırlar: her şehrin kendi takvimi var (yeni şehir 1 Ocak'tan
+başlıyor); panel şehirleri gün sayısıyla gösteriyor. İleride bir şema
+yükseltmesi, bekleyen şehirlerin iç içe durumlarını da göç ettirmeli.
+
+Üç ölçüm dersi:
+
+1. **Pasif vekil sorunu göstermiyordu.** Katalog tükenmesi yalnızca
+   devralma yapan bir oyuncuda oluyor; denge düzeneğinin standart vekili
+   1.200 günde bir devralma yapıyor. Yeni denge bölümü avcı vekille
+   koşuyor ve önce kataloğun gerçekten bittiğini doğruluyor (bitmezse
+   kontrol anlamsız).
+2. **Test düzeneği gerçek günü taklit etmiyordu.** Üretilen rakibin bina
+   kurduğunu sınayan ilk test yalnızca rakip turunu çağırıyordu; pazar
+   adımı olmadan hiçbir rakip kurmuyor. Motorla gerçek günlerde koşunca
+   21 günde 4 bina.
+3. **Bir kontrol bir şeyi kanıtlamalı.** Oynanış testinin "şehir değişince
+   seçim temizleniyor" kontrolünün ilk hâli her durumda geçiyordu;
+   önce bir kare seçip sonra şehir değiştiren gerçek bir kontrol oldu.
+
 ---
 
 ## 3. Ölçülen durum
@@ -1200,7 +1302,10 @@ Rakip ölçeklemesi Tur 13'te kapandı: profil kataloğu sekize çıktı,
 bölge açma Tur 14'te geldi: köşeler 130-520. günlerde sırayla imara
 açılıyor, arazi kıtlığı dört kez yenileniyor. Varsayılan harita hâlâ
 3×3. **5×5 Tur 21'de seçenek oldu** (dış halka dört dalgada, rakip temposu
-2, zafer eşiği ×1,5; ölçüm Tur 21 bölümünde). Kalan sıra: **çoklu şehir.**
+2, zafer eşiği ×1,5; ölçüm Tur 21 bölümünde). **Çoklu şehir Tur 22'de geldi**
+(holding: aynı anda bir şehir oynanıyor, bekleyenler kasaya kâr payı
+aktarıyor). Kalan: şehirlerin eşzamanlı yaşaması (bilinçli olarak yapılmadı;
+Tur 22 bölümü).
 
 ### 4.6 Daha küçük kalemler
 
@@ -1210,7 +1315,8 @@ açılıyor, arazi kıtlığı dört kez yenileniyor. Varsayılan harita hâlâ
   isteğe bağlı 120 günlük projeksiyon. Sıralama hâlâ doğrudan kârla.
 - ~~Devralınan şirketin yerine yenisi gelmiyor~~ — Tur 17'de kapandı
   (yeni rakip girişi; bu satır Tur 21'e kadar listede eskimiş kaldı).
-  Kalan sınır: sekiz kişilik katalog tükenince boşalan koltuk boş kalıyor.
+  Sekiz kişilik katalog tükenince boşalan koltuk boş kalıyordu; Tur 22'de
+  kapandı (katalog bitince yeni rakip üretiliyor).
 - ~~İhale yalnızca boş parsel için; dolu parsel ihalesi yok~~ — Tur 21'de
   kapandı: kentsel dönüşüm ihalesi (şehir yapısı olan parsel; kazanan
   yapıyı yıktırır). Şirket binası olan parsel ihaleye çıkmıyor.
