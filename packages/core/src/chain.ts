@@ -11,6 +11,7 @@ import { buildCost } from './actions';
 import { isDistrictOpen, tilePrice } from './systems/city';
 import { estimateInvestment } from './systems/market';
 import { distributionRelief } from './systems/supply';
+import { withBuildingIndex } from './systems/buildingIndex';
 import { wageFor } from './systems/labor';
 import type { BuildingInstance, GameState } from './types';
 
@@ -183,9 +184,11 @@ function flowFor(
       if (GOOD_BY_ID[def.outputGoodId]?.inputGoodId === goodId) consumed += def.capacity;
     }
     if (def.role === 'outlet' && building.stocked.length > 0) {
+      // Ürün başına gerçek satış (Tur 21; motorun üretim adımıyla aynı kural).
       const draw = building.last.unitsSold > 0 ? building.last.unitsSold : def.capacity;
       for (const stockedId of building.stocked) {
-        if (GOOD_BY_ID[stockedId]?.inputGoodId === goodId) consumed += draw / building.stocked.length;
+        if (GOOD_BY_ID[stockedId]?.inputGoodId !== goodId) continue;
+        consumed += building.soldByGood ? (building.soldByGood[stockedId] ?? 0) : draw / building.stocked.length;
       }
     }
   }
@@ -450,6 +453,11 @@ function bestMove(
  * oyuncu hiç ilgilenmediği bir tabloyla karşılaşmaz.
  */
 export function chainCards(state: GameState, companyId: string): ChainCard[] {
+  // Kart saf bir hesap: bina indeksi kart boyunca açık (Tur 21 hız düzeltmesi).
+  return withBuildingIndex(state, () => chainCardsFor(state, companyId));
+}
+
+function chainCardsFor(state: GameState, companyId: string): ChainCard[] {
   const company = state.companies[companyId];
   if (!company) return [];
 

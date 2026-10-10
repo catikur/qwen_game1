@@ -1,6 +1,7 @@
 import { BUILDING_BY_ID, CONSUMER_CATEGORIES } from '@capital/content';
 import type { CategoryId } from '@capital/content';
 import type { GameState } from '../types';
+import { scopedPotency, withBuildingIndex } from './buildingIndex';
 
 /**
  * Rekabet kolları — Ar-Ge ve pazarlama.
@@ -60,6 +61,8 @@ function focusPotency(
   role: 'research' | 'marketing',
   cap: number,
 ): number {
+  const scoped = scopedPotency(state, companyId, role, categoryId);
+  if (scoped !== null) return Math.min(cap, scoped);
   let total = 0;
   for (const building of Object.values(state.buildings)) {
     if (building.companyId !== companyId) continue;
@@ -105,6 +108,10 @@ export function marketingLeverage(
  * maliyete dönerdi.
  */
 export function runResearchTick(state: GameState): void {
+  withBuildingIndex(state, () => researchStep(state));
+}
+
+function researchStep(state: GameState): void {
   for (const company of Object.values(state.companies)) {
     for (const categoryId of CONSUMER_CATEGORIES) {
       const ceiling = researchCeiling(state, company.id, categoryId);

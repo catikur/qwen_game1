@@ -1,5 +1,6 @@
 import { BUILDING_BY_ID } from '@capital/content';
 import { BUILDING_BOOK_RATIO } from './city';
+import { scopedAssets } from './buildingIndex';
 import type { CompanyState, GameState } from '../types';
 
 /**
@@ -82,6 +83,10 @@ export const CONTROL_THRESHOLD = 0.5;
 export function bookValue(state: GameState, companyId: string): number {
   const company = state.companies[companyId];
   if (!company) return 0;
+
+  // Bina indeksi açıksa (net değer adımı, ihale turu) tek tarama paylaşılır.
+  const scoped = scopedAssets(state, companyId, BUILDING_BOOK_RATIO);
+  if (scoped !== null) return company.cash + scoped - company.debt;
 
   let assets = 0;
   for (const tile of state.map.tiles) {

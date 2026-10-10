@@ -1,8 +1,9 @@
-import { BUILDINGS, NPC_PROFILES } from '@capital/content';
+import { BUILDINGS, NPC_PROFILES, STRUCTURE_BY_ID } from '@capital/content';
 import { pushNews } from '../news';
 import { estimateInvestment } from './market';
 import { isDistrictOpen, tilePrice } from './city';
 import type { AuctionState, GameState } from '../types';
+import { withBuildingIndex } from './buildingIndex';
 
 /**
  * Parsel ihalesi.
@@ -61,18 +62,48 @@ function shouldOpen(state: GameState): boolean {
 }
 
 /**
+ * Dolu parsel (kentsel dönüşüm) ihalesinin açılması için en iyi dolu
+ * parselin, en iyi boş parselden bu kat daha değerli olması gerekiyor.
+ */
+const OCCUPIED_PREMIUM = 2;
+
+/** Bir şehir yapısının ihaleye çıkabilir olması: devredilebilir yapı. */
+function auctionableStructure(structureId: string | null): boolean {
+  if (!structureId) return false;
+  const structure = STRUCTURE_BY_ID[structureId];
+  return Boolean(structure && structure.buyoutMultiplier !== null);
+}
+
+/**
  * İhaleye çıkarılacak parsel.
  *
- * Rastgele değil: **en gelişmiş bölgedeki en değerli boş parsel.** İhale
+ * Rastgele değil: **en gelişmiş bölgedeki en değerli parsel.** İhale
  * her zaman gerçekten istenen bir yer için olmalı; kimsenin bakmadığı bir
  * sanayi köşesi için açık artırma yapmak mekaniği anlamsız kılardı.
+ *
+ * DOLU PARSEL (Tur 21). Şehir kendi kendine yapılaşıyor (Tur 16) ve
+ * merkez önce doluyor: geç oyunda boş parsel yalnızca kenarlarda kalıyor,
+ * 1.200. günde hiç kalmıyor. İhale eskiden yalnızca boş parsele bakıyordu;
+ * yani şehir doldukça ya kenardaki ucuz bir köşeyi açık artırmaya
+ * çıkarıyor ya da hiç açılmıyordu. Artık belediye, şehrin kendi yapısı
+ * (bostan, apartman, ofis…) olan bir parseli de "kentsel dönüşüm"
+ * ihalesine çıkarabiliyor: kazanan parseli alıyor, yapı yıkılıyor. Taban
+ * fiyat sahibinden devralma bedeli (`tilePrice` yapının primini zaten
+ * katıyor). Şirket binası olan parsel ihaleye çıkmaz.
+ *
+ * Eşik: dolu parsel ancak en iyi boş parselin iki katı değerliyse ya da hiç
+ * boş parsel yoksa seçiliyor. Erken oyunda boş parsel bol ve merkezde,
+ * ihale eskisi gibi davranıyor.
  */
 function pickTile(state: GameState): number | null {
-  let bestId: number | null = null;
-  let bestValue = 0;
+  let bestFree: number | null = null;
+  let bestFreeValue = 0;
+  let bestOccupied: number | null = null;
+  let bestOccupiedValue = 0;
 
   for (const tile of state.map.tiles) {
-    if (tile.kind !== 'plot' || tile.ownerId || tile.buildingId || tile.structureId) continue;
+    if (tile.kind !== 'plot' || tile.ownerId || tile.buildingId) continue;
+    if (tile.structureId && !auctionableStructure(tile.structureId)) continue;
     const district = state.districts[tile.districtId];
     if (!district) continue;
     // Kilitli bölgede ihale açılmaz: satılamayan parsele teklif toplamak
@@ -82,13 +113,21 @@ function pickTile(state: GameState): number | null {
     // Değer = arsa değeri × bölgenin nüfusu. İkisi birlikte "burası
     // gerçekten istenen bir yer mi" sorusunu cevaplıyor.
     const value = tile.landValue * Math.max(1, district.population);
-    if (value > bestValue) {
-      bestValue = value;
-      bestId = tile.id;
+    if (tile.structureId) {
+      if (value > bestOccupiedValue) {
+        bestOccupiedValue = value;
+        bestOccupied = tile.id;
+      }
+    } else if (value > bestFreeValue) {
+      bestFreeValue = value;
+      bestFree = tile.id;
     }
   }
 
-  return bestId;
+  if (bestOccupied !== null && (bestFree === null || bestOccupiedValue >= bestFreeValue * OCCUPIED_PREMIUM)) {
+    return bestOccupied;
+  }
+  return bestFree;
 }
 
 /**
@@ -174,6 +213,11 @@ export function minimumBid(auction: AuctionState): number {
 const MAX_RAISES_PER_ROUND = 80;
 
 function runBidRound(state: GameState): void {
+  // Teklif turu parsel ve bina değiştirmiyor (yalnızca teklif): indeks açık.
+  withBuildingIndex(state, () => bidRound(state));
+}
+
+function bidRound(state: GameState): void {
   const auction = state.auction;
   if (!auction) return;
 
@@ -221,7 +265,9 @@ function settle(state: GameState): void {
       state,
       'neutral',
       'İhale sonuçsuz kaldı',
-      `${district?.name ?? 'Şehirde'} bölgesindeki parsele taban fiyattan teklif gelmedi; parsel normal satışa döndü.`,
+      tile?.structureId
+        ? `${district?.name ?? 'Şehirde'} bölgesindeki kentsel dönüşüm parseline taban fiyattan teklif gelmedi; yapı yerinde kaldı.`
+        : `${district?.name ?? 'Şehirde'} bölgesindeki parsele taban fiyattan teklif gelmedi; parsel normal satışa döndü.`,
       { tileId: auction.tileId },
     );
     state.auction = null;
@@ -245,6 +291,10 @@ function settle(state: GameState): void {
 
   winner.cash -= auction.bid;
   tile.ownerId = winner.id;
+  // Kentsel dönüşüm: yapı yıkılır, parsel boş olarak el değiştirir.
+  const razed = tile.structureId ? STRUCTURE_BY_ID[tile.structureId]?.name ?? 'yapı' : null;
+  tile.structureId = null;
+  tile.structureHeight = 0;
 
   const isPlayer = winner.id === state.playerCompanyId;
   pushNews(
@@ -252,7 +302,8 @@ function settle(state: GameState): void {
     isPlayer ? 'good' : 'rival',
     isPlayer ? 'İhaleyi kazandın' : `${winner.name} ihaleyi kazandı`,
     `${district?.name ?? 'Şehir'} bölgesindeki parsel ${Math.round(auction.bid).toLocaleString('tr-TR')} ₺'ye ` +
-      `${isPlayer ? 'senin oldu' : 'el değiştirdi'} — ${auction.rounds} artırım.`,
+      `${isPlayer ? 'senin oldu' : 'el değiştirdi'} — ${auction.rounds} artırım.` +
+      (razed ? ` Parseldeki ${razed} yıkılıyor.` : ''),
     { tileId: auction.tileId, ...(isPlayer ? {} : { companyId: winner.id }) },
   );
   state.auction = null;
@@ -287,11 +338,15 @@ export function runAuctionTick(state: GameState): void {
     rounds: 0,
   };
 
+  const structureId = state.map.tiles[tileId]!.structureId;
+  const occupied = structureId ? STRUCTURE_BY_ID[structureId]?.name ?? 'bir yapı' : null;
   pushNews(
     state,
     'neutral',
-    'Belediye parsel ihalesine çıktı',
-    `${district?.name ?? 'Şehir'} bölgesinde bir parsel ${AUCTION_DAYS} gün açık artırmada. ` +
+    occupied ? 'Belediye kentsel dönüşüm ihalesine çıktı' : 'Belediye parsel ihalesine çıktı',
+    (occupied
+      ? `${district?.name ?? 'Şehir'} bölgesinde ${occupied} olan bir parsel ${AUCTION_DAYS} gün açık artırmada; kazanan yapıyı yıktırıp parseli alır. `
+      : `${district?.name ?? 'Şehir'} bölgesinde bir parsel ${AUCTION_DAYS} gün açık artırmada. `) +
       `Taban fiyat ${Math.round(state.auction.reserve).toLocaleString('tr-TR')} ₺.`,
     { tileId: state.auction.tileId },
   );

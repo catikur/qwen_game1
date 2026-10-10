@@ -1,7 +1,8 @@
 import type { ReactElement } from 'react';
 import { getDifficulty } from '@capital/content';
-import { companyRanking, formatMoney, getPlayer, goalLadder, nextGoal } from '@capital/core';
+import { companyRanking, formatMoney, getPlayer, goalLadder, nextGoal, victoryNetWorth } from '@capital/core';
 import { useGame, useGameState } from './useGame';
+import { t } from './i18n';
 
 /**
  * Hedef merdiveni paneli.
@@ -21,8 +22,12 @@ export function GoalsPanel(): ReactElement {
   return (
     <div className="goals">
       <p className="muted">
-        {difficulty.name} şehir · {done} / {ladder.length} basamak. Zafer: {formatMoney(difficulty.victoryNetWorth)} şirket
-        değeri ve bir numara — ya da bütün rakipleri devralmak.
+        {t('hud.goals.summary', {
+          difficulty: difficulty.name,
+          done,
+          total: ladder.length,
+          target: formatMoney(victoryNetWorth(state)),
+        })}
       </p>
       <ol className="goal-list">
         {ladder.map((goal) => {
@@ -33,7 +38,9 @@ export function GoalsPanel(): ReactElement {
               <div className="goal-head">
                 <span className="goal-title">{goal.def.title}</span>
                 <span className="goal-state">
-                  {goal.completedDay !== null ? `${goal.completedDay}. gün` : `%${Math.round(goal.progress * 100)}`}
+                  {goal.completedDay !== null
+                    ? t('hud.goals.completedDay', { day: goal.completedDay })
+                    : `%${Math.round(goal.progress * 100)}`}
                 </span>
               </div>
               {goal.completedDay === null && (
@@ -82,20 +89,25 @@ export function VictoryScreen({ onNewGame }: { onNewGame: () => void }): ReactEl
   const buildings = Object.values(state.buildings).filter((b) => b.companyId === player.id).length;
 
   return (
-    <div className="gameover victory" role="alertdialog" aria-label="Zafer">
+    <div className="gameover victory" role="alertdialog" aria-label={t('hud.victory.label')}>
       <div className="gameover-card">
-        <h2>{victory.kind === 'monopoly' ? 'Tekel kuruldu' : 'Şehrin sahibi'}</h2>
+        <h2>{victory.kind === 'monopoly' ? t('hud.victory.titleMonopoly') : t('hud.victory.titleNetWorth')}</h2>
         <p>
-          {victory.day}. gün, {difficulty.name} şehir: {player.name} {formatMoney(player.netWorth)} değerinde,
-          {' '}
-          {buildings} binayla
-          {runnerUp
-            ? ` en yakın rakibi ${runnerUp.company.name}'in (${formatMoney(runnerUp.company.netWorth)}) önünde.`
-            : ' şehirde tek başına.'}
+          {t('hud.victory.summary', {
+            day: victory.day,
+            difficulty: difficulty.name,
+            player: player.name,
+            worth: formatMoney(player.netWorth),
+            buildings,
+            outcome: runnerUp
+              ? t('hud.victory.runnerUp', {
+                  rival: runnerUp.company.name,
+                  rivalWorth: formatMoney(runnerUp.company.netWorth),
+                })
+              : t('hud.victory.alone'),
+          })}
         </p>
-        <p className="muted">
-          Devam edersen takvim yürür ve şehir büyümeye devam eder; zafer kaydında kalır.
-        </p>
+        <p className="muted">{t('hud.victory.note')}</p>
         <div className="gameover-actions">
           <button
             type="button"
@@ -105,10 +117,10 @@ export function VictoryScreen({ onNewGame }: { onNewGame: () => void }): ReactEl
               run({ type: 'SET_SPEED', speed: 1 });
             }}
           >
-            Serbest oyuna devam
+            {t('hud.victory.continue')}
           </button>
           <button type="button" className="ghost-invert" onClick={onNewGame}>
-            Yeni imparatorluk kur
+            {t('hud.victory.newEmpire')}
           </button>
         </div>
       </div>

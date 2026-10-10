@@ -154,10 +154,19 @@ export function expandOutlets(engine: GameEngine): void {
 /**
  * Zincir A/B'sinin TARİHSEL genişleme kolu — bilerek dondurulmuş kopya.
  *
- * `expandOutlets` devralmayı ve kilit filtresini öğrendi; bu kopya
- * öğrenmedi ve öğrenmeyecek. Regresyon deneyi +%12/+%19/+%30 serisiyle
- * bu düzenekte kalibre edildi; düzeneği vekille birlikte evriltmek her
- * turda "yeni bir deney" yaratır ve seri kıyaslanamaz hale gelirdi.
+ * `expandOutlets` devralmayı öğrendi; bu kopya öğrenmedi ve öğrenmeyecek.
+ * Regresyon deneyi +%12/+%19/+%30 serisiyle bu düzenekte kalibre edildi;
+ * düzeneği vekille birlikte evriltmek her turda "yeni bir deney" yaratır
+ * ve seri kıyaslanamaz hale gelirdi.
+ *
+ * KİLİT FİLTRESİ İSTİSNA (Tur 21). Kopya karşılanmayan talebi en yüksek
+ * dört bölgeye bakıyordu ve imara kapalı bölgeleri elemiyordu. Kilitli
+ * bölgede kimse kuramadığı için boş talep ~%100: dört slotu onlar
+ * doldurunca alım reddediliyor ve kol o hafta HİÇBİR ŞEY kurmuyordu. Hata
+ * Tur 14'ten (kademeli imar) beri vardı; bölgeler arası erişim Tur 21'de
+ * düzelince sıralama değişti ve vekil 560 günde 2–4 M ₺'de kaldı, yedi
+ * tohumun altısında zincir 1 üniteye indi. Filtre kuralı değiştirmiyor
+ * (yine yalnızca boş parsel, devralma yok), yalnızca yasak hamleyi eliyor.
  */
 export function expandOutletsVacantOnly(engine: GameEngine): void {
   const state = engine.getState();
@@ -166,9 +175,9 @@ export function expandOutletsVacantOnly(engine: GameEngine): void {
   const budget = player.cash * 0.5;
   if (budget < 30_000) return;
 
-  const districts = [...state.districts].sort(
-    (a, b) => districtOpportunity(b) - districtOpportunity(a),
-  );
+  const districts = [...state.districts]
+    .filter((district) => isDistrictOpen(state, district.id))
+    .sort((a, b) => districtOpportunity(b) - districtOpportunity(a));
 
   let best: { tileId: number; defId: string; profit: number } | null = null;
 

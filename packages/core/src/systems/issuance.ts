@@ -34,6 +34,18 @@ export interface IssueQuote {
   maxShares: number;
   /** İlk ihraç mı (halka arz)? */
   ipo: boolean;
+  /** Baskın altında: bekleme süresi aranmıyor (savunma ihracı). */
+  defense?: boolean;
+}
+
+/** Şirketin hisselerinde en büyük dış payın oranı (0..1). */
+export function largestOutsideStake(state: GameState, companyId: string): number {
+  const outstanding = sharesOutstanding(state, companyId);
+  let top = 0;
+  for (const other of Object.values(state.companies)) {
+    if (other.id !== companyId) top = Math.max(top, sharesHeld(state, other.id, companyId));
+  }
+  return outstanding > 0 ? top / outstanding : 0;
 }
 
 /** Bir ihracın koşulları. Arayüz ve rakipler aynı fonksiyonu okuyor. */
@@ -47,7 +59,31 @@ export function issueQuote(state: GameState, companyId: string): IssueQuote {
   if (bookValue(state, companyId) < ISSUANCE.minBook) {
     return closed(`Halka arz için şirket değeri en az ${formatMoney(ISSUANCE.minBook)} olmalı.`);
   }
-  if (company.lastIssueDay !== undefined && state.time.day - company.lastIssueDay < ISSUANCE.cooldownDays) {
+  /*
+   * SAVUNMA İHRACI BEKLEMEZ (Tur 21).
+   *
+   * Kalkanın gücü yatırımcı payından geliyor: yeni hisse kurumsal
+   * yatırımcıda kalıyor, baskıncı onu alamıyor. Ama baskıncının günlük
+   * tavanı da bir PAY (%3,5), adet değil; ihraç baskıncının payını
+   * yalnızca 1/1,25'e indiriyor (%31,5 → %25,2) ve bu fark iki alımda
+   * kapanıyor. Ölçüm: tek ihraç ~40 gün kazandırıyor, iki ihraç arası
+   * 180 gün. On tohumda savunmasız düşen dokuz oyuncudan main'de altısı,
+   * zincir düzeltmesinden sonra yalnızca üçü ihraçla ayakta kalıyordu —
+   * Tur 19'un iki tohumluk "kalkan" kontrolü şanslı tohumlara
+   * yaslanıyordu (seed 42'de iki baskıncı serbest hisseyi bölüşüp
+   * tıkanmıştı).
+   *
+   * Gerçek dünyadaki karşılığı "zehir hapı": bir alıcı eşiği geçince
+   * şirket bekleme olmadan yeni hisse çıkarabiliyor. Kurucu tabanı
+   * (%51) ve ihraç başına tavan aynen geçerli; yani kalkanın bir sonu
+   * var ve bedeli kalıcı ortaklık.
+   */
+  const defense = largestOutsideStake(state, companyId) >= ISSUANCE.defenseAt;
+  if (
+    !defense &&
+    company.lastIssueDay !== undefined &&
+    state.time.day - company.lastIssueDay < ISSUANCE.cooldownDays
+  ) {
     return closed(`Yeni ihraç için ${ISSUANCE.cooldownDays - (state.time.day - company.lastIssueDay)} gün bekle.`);
   }
   const outstanding = sharesOutstanding(state, companyId);
@@ -58,7 +94,7 @@ export function issueQuote(state: GameState, companyId: string): IssueQuote {
   const maxShares = Math.max(0, Math.min(Math.floor(outstanding * ISSUANCE.maxPerIssue), byFounder));
   if (maxShares < ISSUANCE.minShares) return closed(`Kurucu payı %${Math.round(floor * 100)}'in altına inemez.`);
   if (price <= 0) return closed('Hisse fiyatı yok.');
-  return { ok: true, price, maxShares, ipo };
+  return { ok: true, price, maxShares, ipo, ...(defense ? { defense: true } : {}) };
 }
 
 /** İhraç günü net değere etkisi (oyuncuya gösterilen tahmin). */

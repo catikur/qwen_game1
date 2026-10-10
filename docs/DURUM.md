@@ -869,6 +869,164 @@ Dört ölçüm dersi:
    bağlı olduğu için ancak bazı koşularda çıktı. Sondaj artık oyunu
    duraklatıyor; ölçtüğü şey yalnızca rakamların genişliği.
 
+### Tur 21 — Açık kalemlerin hepsi: dolaylı tahmin, liderlik, dolu parsel, kalite, büyük şehir, yerelleştirme
+
+Kullanıcı "hepsini yap" dedi; §4'ün açık kalemleri tek turda, her biri
+ayrı commit. Yanında üç bulgu çıktı: Tur 8'den beri yanlış olan bölgeler
+arası erişim, şehir büyüdükçe karesiyle büyüyen iki tarama, ve sahnenin
+harita boyutu değişince yeniden kurulmaması.
+
+**Dolaylı binaların tahmini (§4.6).** Depo, Ar-Ge ve pazarlama yapı
+menüsünde artık bir sayı gösteriyor. Yöntem karşı-olgusal gün: durumun
+iki kopyası, birinde bina var, ikisinde de aynı üretim ve pazar adımı.
+Fiyat ve marka sekiz günde oturtuluyor; fark binanın katkısı. Menüdeki
+tek cümle ("mağazalarının maliyetini düşürür") Ar-Ge ve pazarlama için
+yanlıştı, role göre ayrıldı. Sıralama değişmedi (parsel başına doğrudan
+kâr); NPC'ler bu tahmini kullanmıyor.
+
+| Doğrulama (rakipler donuk, 150 gün sonra; son kod) | Hızlı tahmin | Gerçek |
+|---|---|---|
+| Depo, tohum 1 / 7 | 6.562 / 4.887 ₺/gün | 7.827 / 6.618 |
+| Ar-Ge, tohum 1 / 7 | 2.441 / 3.558 | 7.198 / 5.410 |
+| Pazarlama, tohum 1 / 7 | 3.027 / 4.326 | 7.908 / 5.157 |
+
+Hızlı tahmin bugünkü şehri ölçüyor; Ar-Ge ve pazarlamanın katkısı zamanla
+büyüyor. İki kanal: mağazalar kapasitede çalışırken prim fiyattan ödüyor
+ve o prim karşılanmayan taleple büyüyor; mağaza dışındaki her bina da
+temel istihdam yaratıp bölgenin nüfusunu büyütüyor. Bu yüzden yerleştirme
+sırasında isteğe bağlı **120 günlük projeksiyon** var (iki kopya gün gün
+oynuyor, ~0,7 sn): Ar-Ge 120. günde 4.275 / 6.243 ₺/gün katkı.
+
+**Bölge liderliği (§4.7'nin son kalemi).** Lider: bölgedeki perakende
+cirosunun en büyük payı (10 günlük üstel ortalama, devir %5 farkla).
+Oyuncuyu ilgilendiren devir haber oluyor, rakibin yüzü ve bölgesiyle;
+720 günde ~20 haber, akışın %4'ü. §4.7 kapandı.
+
+**Dolu parsel ihalesi (§4.6).** Merkez dolunca ihale ya kenardaki ucuz bir
+köşeye çıkıyor ya da hiç açılmıyordu (900. günde boş parsel kalmıyor).
+Belediye artık şehrin kendi yapısı olan bir parseli de "kentsel dönüşüm"
+ihalesine çıkarabiliyor: en iyi dolu parsel en iyi boş parselin iki katı
+değerliyse ya da boş parsel yoksa. Taban sahibinden devralma bedeli;
+kazanan yapıyı yıktırıp parseli boş alıyor. 1.200 günde ihalelerin üçte
+biri dolu parsel, 360–600. günde başlıyor.
+
+**Taban kalite fiyata (§4.3).** Kalite, Ar-Ge ve pazarlamayla aynı
+kanaldan, aynı kıtlık çarpanıyla fiyata dönüyor: kategorinin en düşük
+kaliteli mağazasına göre farkın yarısı. Bakkal, kafe, butik, elektronik
+mağazası ve spor salonu birebir Tur 1; süpermarket ve restoran +0,115,
+mağazalar zinciri +0,10. Boş talebi %84 olan bölgede süpermarket bakkaldan
+%5 pahalı satıyor (×1,434 / ×1,362).
+
+**Büyük şehir (5×5, §4.5).** Kurulumda Standart / Büyük. Standart 3×3
+bayt bayt aynı (iki 400 günlük koşunun özeti eşit); lig her zaman
+standart. Büyük şehir üç ayar istedi, her biri ölçümden:
+
+| Büyük şehir (900 gün, tohum 1/7/42) | 360. gün boş talep | 720. gün oyuncu | Zafer |
+|---|---|---|---|
+| Standart (kıyas) | %4–7 | 75–126 M ₺ | 619 / 796 / yok |
+| İlk sürüm: köşe kilidi, rakip haftada 1 mağaza | %18–24 | 184–199 M ₺ | 498–529 (kolay mod) |
+| Dış halka 4 dalgada + rakip temposu 2 | %12–13 | 142–163 M ₺ | 550 / 567 / yok |
+| + zafer eşiği ×1,5 | %12–13 | 142–163 M ₺ | 682 / 732 / yok |
+| **Son kod** (zincir düzeltmesi, savunma ihracı) | %10–15 | 159–172 M ₺ | 721 / 654 / 666 |
+| Standart, son kod (kıyas) | %4–8 | 99–129 M ₺ | 608 / 724 / 698 |
+
+Son kodda büyük şehrin en iyi rakibi 720. günde oyuncuyla başa baş
+(159–168 M ₺), 900. günde iki tohumda önde; standartta oyuncu 1,4–1,9
+kat önde. Zafer artık her tohumda geliyor ama 650. günden önce değil.
+
+- Dış halkanın 16 bölgesi 130/260/390/520. günlerde dörder açılıyor;
+  oyun 3×3'lük bir çekirdekte sekiz rakiple kalabalık başlıyor.
+- Rakip karar başına iki mağaza kurabiliyor (`rivalTempo`); standartta 1,
+  döngü bir kez dönüyor, zar tüketimi aynı.
+- Zafer eşiği şehir boyutuyla ölçekli (Dengeli büyükte 150 M ₺).
+- Sahne harita boyutuyla kuruluyordu; aynı motorda farklı boyutta yeni oyun
+  ya da kayıt yüklenince yeniden kurulmuyordu. Artık harita boyutu değişince
+  yeniden kuruluyor.
+- Yazılımsal GPU'da büyük şehir standarttan %10–27 pahalı kare veriyor
+  (parsel 2,8 kat).
+
+**Yerelleştirme (§4.9).** Arayüz metinleri bileşenlerden sözlüğe çekildi:
+`t(anahtar, parametreler)`, `packages/ui/src/i18n/tr/` altında dosya
+grubu başına bir modül, `registerLocale` / `setLocale`. Kanıt: sabit bir
+durumda 54 ekranın (kurulum, paneller, seçili kareler, lensler, oyun
+sonu) metin ve erişilebilirlik dökümü taşımadan önce ve sonra bayt bayt
+aynı. Kapsam dışı ve sıradaki adım: çekirdeğin ürettiği metinler (haberler,
+komut ret sebepleri) ve içerik paketi.
+
+Sekiz ölçüm dersi:
+
+1. **Bölgeler arası erişim Tur 8'den beri yanlıştı.** `accessWeight`
+   sütun sayısını `harita genişliği / 8` diye hesaplıyordu. Bölge kenarı
+   Tur 8'de 10'a çıkınca 30 genişlikte 4 sütun çıktı: Çarşı hesapta
+   Teknopark'ın komşusuydu, gerçek komşusu Liman'a erişemiyordu. 5×5'i
+   denerken bulundu. Düzeltme standart şehirde oyuncuyu %4 öne,
+   rakipleri %10 geriye aldı (360. gün); bantlar yerinde (outlet geri
+   ödemesi 18–55 gün, zincir 194 gün).
+2. **Şehir büyüdükçe karesiyle büyüyen iki tarama.** Büyük şehirde geç
+   oyunda gün 310 ms'ydi (3x hızda gün 480 ms), standartta bile 51 ms.
+   Profil: depo arama (%43) ve Ar-Ge/pazarlama gücü (%22) her mağazada
+   bütün binaları tarıyordu. Bina indeksi yalnızca bina değiştirmeyen saf
+   hesaplamalarda (pazar, Ar-Ge, kartlar, net değer, teklif turu) açık;
+   indeksli ve indekssiz 400 günlük özetler aynı. Gün: büyükte 310 → 67
+   ms, standartta 51 → 23 ms.
+3. **Tek günlük deney gerçeğin beşte birini buldu.** Dolaylı tahminin ilk
+   sürümü tek pazar günü koşuyordu: otomatik fiyat farkın yalnızca %25'ini
+   bir günde kapatıyor ve marka ile pay birbirini besliyor. Sekiz günlük
+   oturtma ikisini yakaladı; kalan fark (şehir büyümesi) hızlı tahminin
+   değil projeksiyonun işi.
+4. **Kalitenin tam ağırlığı zinciri bozdu.** Fark 0,23 iken üst kademe
+   mağaza o kadar hızlı döndü ki Tur 15'in fırsat maliyeti freni zincir
+   ünitelerini erteledi; zincir A/B'si bir tohumda 4 üniteden 1'e indi ve
+   "zincir kurulabilen her tohumda kazandırıyor" önkoşulunu kaybetti.
+   Yarım ağırlıkta zincir 3 ünite ve önde. (Bu ölçüm 6. dersteki
+   düzenek hatasıyla yapılmıştı; aynı sonuç düzeltilmiş düzenekte de
+   geçerli.)
+5. **Şans eseri geçen kontrol.** "Yatırım tahmini gerçekle tutuyor" boş
+   talebi en yüksek bölgeyi seçiyordu ve kilitli bölgeleri elemiyordu.
+   Kilitli bölgede boş talep ~%100; erişim düzelince sıralama değişti ve
+   kontrol kilitli Teknopark'ı seçip çöktü. Önceden açık bölge şans eseri
+   seçiliyordu. Aday listesi artık açık bölgeler.
+6. **Zincir A/B'si kendi düzeneğinde takılıyordu, altında da gerçek bir
+   hata vardı.** Donuk genişleme kopyası kilitli bölgeleri elemiyordu
+   (Tur 14'ten beri): alım reddedilince vekil o hafta hiçbir şey
+   kurmuyor, 560 günde 2–6 M ₺'de kalıyordu. Zincirin birkaç ünitesi bu
+   küçük tabana göre büyük görünüyordu (+%12 / +%19 / +%30). Kilit
+   filtresiyle vekil 68–86 M ₺'ye çıktı ve zincirli kol üç tohumda da
+   kaybetti (main'de de). Kök sebep üretim adımındaydı: ara ürün tüketimi
+   mağazanın günlük satışından okunuyordu, ama defter üretimden önce
+   sıfırlandığı için o gün boştu; kod kapasiteyi raftaki ürünlere eşit
+   bölüyordu. Satmayan ürün tüketilmiş, satan ürün eksik sayılıyor, zincir
+   kartı yanlış akışa ünite öneriyordu. Mağaza artık dünkü satışı ürün
+   başına tutuyor (`soldByGood`, isteğe bağlı alan; şema v6). Zincir A/B
+   3/3, ortalama +%2; benchmark zincir satırı (main → dal) normal nakitte
+   +%3 → +%16, bol nakitte −%10 → −%3. Kontrolün eşiği %10'dan %0'a indi: %10 takılan
+   düzeneğin kalibrasyonuydu. İddia "zincir kazandırıyor", her tohumda
+   ayrıca sınanıyor.
+7. **"İhraç baskına karşı kalkan" iki şanslı tohuma yaslanıyordu.**
+   Zincir düzeltmesi rakip ekonomisini kaydırınca seed 42'de ihraç eden
+   oyuncu da düştü (723 → 725. gün). On tohumda ölçünce kuralın kendisi
+   çıktı: baskıncının günlük tavanı bir PAY (%3,5), ihraç onun payını
+   yalnızca 1/1,25'e indiriyor (%31,5 → %25,2) ve fark iki alımda
+   kapanıyor. Yani tek ihraç ~40 gün kazandırıyor, iki ihraç arası 180
+   gün. Savunmasız düşen dokuz oyuncudan main'de altısı, dalda üçü ihraçla
+   ayakta kalıyordu; main'deki seed 42 de iki baskıncı serbest hisseyi
+   bölüşüp tıkandığı için ayaktaydı. **Savunma ihracı:** tek bir
+   hissedarın payı %30'u geçince bekleme aranmıyor ("zehir hapı");
+   kurucu tabanı (%51) ve ihraç başına tavan aynen geçerli. Dokuzun sekizi
+   ayakta, dokuzuncusu 715 yerine 862. günde düşüyor; kalkanın bir sonu
+   var. Rakiplerin savunma ihracı da aynı kuraldan geçiyor. Borsa formu
+   bekleme kalktığında bunu söylüyor. Kontrol artık dört tohumda (7, 42,
+   5, 31); 5 ve 31 eski kuralla düşen tohumlar.
+8. **Siluet kontrolü bir form çakışmasını kaçırıyordu.** "Şehir dönüşüyor"
+   kuruluşta olmayan formları sayıyordu, ama okul da 'block' formunda ve
+   kuruluşta var. Sıra ev → apartman adımı listede görünmüyordu; kontrol
+   fiilen 700 günde hem bostan → depo hem sıra ev → apartman → rezidans
+   istiyordu. Seed 23'te 15 apartman ve 20 fabrika doğdu, rezidans
+   doğmadı ve kontrol düştü. Sekiz tohumda rezidans sayısı main'de 59,
+   dalda 57; gerileme yok, tek tohumun kademe zarı. Kontrol artık
+   kademeyi sayıyor, aynı sertlikte: iki zincir de dönüşmeli ve en az
+   biri iki kademe atlamalı.
+
 ---
 
 ## 3. Ölçülen durum
@@ -879,10 +1037,11 @@ Dört ölçüm dersi:
 
 | | Değer |
 |---|---|
-| Oyuncu / rakip oranı | **1,99** — Tur 7 öncesi 0,76 idi |
+| Oyuncu / rakip oranı | **2,00** — Tur 21 öncesi main'de 1,75; Tur 7 öncesi 0,76 idi |
+| Oyuncu net değeri / en iyi rakip | 35,38 M ₺ / 17,71 M ₺ |
 | Oyuncu bina sayısı | 78 |
-| Günlük kâr | 244 B ₺ |
-| Batan şirket | **0/4** |
+| Günlük kâr | 247 B ₺ |
+| Batan şirket | **0** |
 
 Not: vekil Tur 14'te devralmayı öğrendi (boş parsel bitince mevcut
 yapıyı primli alıyor — oyunun kendi öğretisi). Önceki satırlarla kıyasta
@@ -896,7 +1055,8 @@ bu repertuvar farkının payı var.
 | Tur 7 sonu | %20 | %34 | %33 |
 | Tur 8 | %30 | **%12** | **%13** |
 | Tur 14 | %10 | **%0** | **%0** |
-| **Tur 16** | %11 | **%1** | **%0** |
+| Tur 16 | %11 | **%1** | **%0** |
+| **Tur 21** | %9 | **%0** | **%0** |
 
 Okunması gereken şey sayı değil **yön**. İlk iki satırda boş talep
 zamanla artıyor: şehir büyüdükçe geri kalıyor. Son ikisinde azalıyor —
@@ -910,38 +1070,39 @@ rekabeti (kalite/marka/fiyat) canlı.
 
 | Strateji | Kâr etkisi | Geri ödeme |
 |---|---|---|
-| Ar-Ge · 4 mağaza | %4 | 970 gün *(erken)* |
-| Ar-Ge · 8 mağaza | **%14** | 141 gün |
-| Pazarlama · 8 mağaza | **%11** | 111 gün |
-| Fiyatı %25 kırmak | **%17 hacim** | — |
-| Zincir · normal nakit | −%9 *(360g penceresi)* | ~190 gün |
-| Zincir · bol nakit (20 M ₺) | −%4 *(360g penceresi)* | — |
+| Ar-Ge · 4 mağaza | %5 | 635 gün *(erken; main'de 970)* |
+| Ar-Ge · 8 mağaza | **%13** | 134 gün |
+| Pazarlama · 8 mağaza | **%12** | 92 gün |
+| Fiyatı %25 kırmak | **%14 hacim** | — |
+| Zincir · normal nakit | **+%16** (%8…%22) | 194 gün |
+| Zincir · bol nakit (20 M ₺) | −%3 (−%7…+%1) | — |
 
-Son iki satır ayrı duruyor çünkü farkları bir bulgu: sınırsız devralma
-çağında parseli outlet'le doldurmak zinciri geçiyor. **Zincir bir nakit
-kısıtı oyunu** — arazi kısıtlı dünyada (dondurulmuş A/B) +%30, 3/3.
-Eksili satırlar 360 günlük pencerenin eseri: Tur 15 freni zinciri geç
-oyun temposuna bağladı; 560g deneyinde frenli kol iki tohumda taban
-çizgisinin +%15/+%19 üstünde, birinde başa baş (Tur 15 bölümündeki
-ufuk dersi).
+Tur 21'e kadar zincir satırları eksiydi ve bu "360 günlük pencere"ye
+bağlanıyordu. Asıl sebep üretimdeki tüketim sayımıydı (Tur 21, 6. ders):
+satmayan ürün tüketilmiş sayılıyor, zincir kartı yanlış akışa ünite
+öneriyordu. Düzeltmeden sonra normal nakitte zincir her tohumda önde.
+Bol nakitte hâlâ hafif eksi: sınırsız parasıyla boş parseli mağazayla
+dolduran oyuncu için ünite bir mağaza parselini kaplıyor (Tur 7: kıt
+kaynak toprak). Arazi kısıtlı dünyada (dondurulmuş A/B) zincir 3/3 önde,
+ortalama +%2.
 
 ### Kalibrasyon bantları
 
 | | Değer |
 |---|---|
-| Outlet geri ödemesi | 17–55 gün |
-| Zincir geri ödemesi | 190 gün |
-| Devralma maliyeti | **0,76× net değer** |
+| Outlet geri ödemesi | 18–55 gün |
+| Zincir geri ödemesi | 194 gün |
+| Devralma maliyeti | **0,75× net değer** |
 
 ### Sağlık
 
 | | Değer |
 |---|---|
 | Determinizm | birebir |
-| Simülasyon hızı | ~570 gün/sn |
-| Birim testi | **118 test** (`pnpm test`) |
-| Denge testi | **255 kontrol, hepsi geçiyor** (17 bölüm, süreleriyle; ~14 dk) |
-| Tarayıcı testi | **262 kontrol**, 0 konsol hatası; duman koşusu 83 |
+| Simülasyon hızı | ~1.500–2.000 gün/sn (aynı oturumda main ~1.000; bina indeksi) |
+| Birim testi | **144 test** (`pnpm test`) |
+| Denge testi | **263 kontrol, hepsi geçiyor** (18 bölüm, süreleriyle; ~6 dk) |
+| Tarayıcı testi | **271 kontrol**, 0 konsol hatası (~18 dk); duman koşusu 83 (~3,5 dk) |
 | CI | her PR'da tip + test + denge + paket + duman oynanışı |
 | Kapsam | 26 bina · 22 ürün · 7 kategori · 8 rakip profili · 10 şehir yapısı (6 siluet) |
 
@@ -995,12 +1156,14 @@ eşik uyarıları (%10/%25/%40, baskıncının yüzüyle), günlük alım tavan�
 Eşik aşılırsa şirket silinmiyor; takvim duruyor, oyun sonu ekranı
 iniyor, son duruma bakılabiliyor.
 
-### 4.3 Taban bina kalitesi fiyata dönmüyor
+### 4.3 ~~Taban bina kalitesi fiyata dönmüyor~~ — Tur 21'de kapandı
 
-Prim gücü yalnızca Ar-Ge ve pazarlamadan geliyor. Bir süpermarket
-bakkaldan kaliteli olmasına rağmen aynı fiyattan satıyor
-(`REKABET-TASARIMI.md` §3.4). Genel model daha doğru olurdu ama Tur 1'in
-bütün kalibrasyonunu yeniden yapmayı gerektirir.
+Prim gücü yalnızca Ar-Ge ve pazarlamadan geliyordu; süpermarket bakkaldan
+kaliteli olmasına rağmen aynı fiyattan satıyordu (`REKABET-TASARIMI.md`
+§3.4). Taban kalite artık aynı kanaldan fiyata dönüyor, kategorinin en
+düşük kaliteli mağazasına göre ve farkın yarısı kadar. Alt kademe
+mağazaların ekonomisi birebir aynı kaldı; Tur 1'in kalibrasyonu yeniden
+yapılmadı, bantlar ölçüldü (Tur 21 bölümü).
 
 ### 4.4 Kapasitenin mekânsal dağılımı
 
@@ -1036,20 +1199,25 @@ Rakip ölçeklemesi Tur 13'te kapandı: profil kataloğu sekize çıktı,
 `npcCount` parselden türüyor, 5×5'te erken açık %56 → %38. Kademeli
 bölge açma Tur 14'te geldi: köşeler 130-520. günlerde sırayla imara
 açılıyor, arazi kıtlığı dört kez yenileniyor. Varsayılan harita hâlâ
-3×3 — kalan sıra: **5×5 → çoklu şehir.** (5×5'te kilit deseni aynı:
-köşeler; açılış takvimi büyük haritada yeniden ölçülmeli.)
+3×3. **5×5 Tur 21'de seçenek oldu** (dış halka dört dalgada, rakip temposu
+2, zafer eşiği ×1,5; ölçüm Tur 21 bölümünde). Kalan sıra: **çoklu şehir.**
 
 ### 4.6 Daha küçük kalemler
 
-- `estimateInvestment` depo, Ar-Ge ve pazarlama için `direct: false`
-  dönüyor; bu binaların geri ödemesi yapı menüsünde görünmüyor
-- Devralınan şirketin yerine yenisi gelmiyor; geç oyunda rakip sayısı
-  azalıyor
-- İhale yalnızca boş parsel için; dolu parsel ihalesi yok
+- ~~`estimateInvestment` depo, Ar-Ge ve pazarlama için `direct: false`
+  dönüyor; bu binaların geri ödemesi yapı menüsünde görünmüyor~~ — Tur
+  21'de kapandı: karşı-olgusal hızlı tahmin (sekiz günlük oturtma) ve
+  isteğe bağlı 120 günlük projeksiyon. Sıralama hâlâ doğrudan kârla.
+- ~~Devralınan şirketin yerine yenisi gelmiyor~~ — Tur 17'de kapandı
+  (yeni rakip girişi; bu satır Tur 21'e kadar listede eskimiş kaldı).
+  Kalan sınır: sekiz kişilik katalog tükenince boşalan koltuk boş kalıyor.
+- ~~İhale yalnızca boş parsel için; dolu parsel ihalesi yok~~ — Tur 21'de
+  kapandı: kentsel dönüşüm ihalesi (şehir yapısı olan parsel; kazanan
+  yapıyı yıktırır). Şirket binası olan parsel ihaleye çıkmıyor.
 - ~~Oyuncunun rakip hissesi alımında günlük tavan yok~~ — Tur 20'de
   kapandı: herkes için aynı günlük tavan ve günlere yayılan devralma emri.
 
-### 4.7 Şehrin oyuncuyu içine alması — Tur 9'da başladı, bitmedi
+### 4.7 ~~Şehrin oyuncuyu içine alması~~ — Tur 9'da başladı, Tur 21'de kapandı
 
 Rapor üç şey istiyordu; Tur 9 birincisini yaptı:
 
@@ -1059,10 +1227,11 @@ Rapor üç şey istiyordu; Tur 9 birincisini yaptı:
 | kurduğun imparatorluk "senin" olsun | 11 | **yapıldı** — genel merkez işareti ve rozeti |
 | rakip seni geçince hırslanasın | 11 | **yapıldı** — geçilme olayı, rakibin yüzü ve aradaki fark |
 
-Üçü de kapandı. Geriye kalan, aynı damardaki daha küçük kalemler: bölge
-liderliğini kaybetme anı henüz bir olay değil (yalnızca net değer
-sıralaması izleniyor), ve devralınan şirketin yerine yenisi gelmediği
-için geç oyunda rakip sayısı azalıyor.
+Üçü de kapandı. Aynı damardaki son kalem, bölge liderliğini kaybetme anı,
+Tur 21'de olay oldu: perakende cirosunun 10 günlük ortalamasında lider
+%5 farkla el değiştirince haber düşüyor, rakibin yüzü ve bölgesiyle.
+(Bu paragraf eskiden "devralınan şirketin yerine yenisi gelmiyor" da
+diyordu; yeni rakip girişi Tur 17'de geldi.)
 
 ### 4.8 ~~Zincir kartı ölçekte fren bilmiyor~~ — Tur 15'te kapandı
 
@@ -1086,9 +1255,11 @@ nüfus tavanı ve arsa değeri). Hâlâ açık olanlar:
   teminatlı kredi, not, muacceliyet, haciz. Tahvil Tur 19'da geldi.
 - ~~**Halka arz**~~ — Tur 19'da kapandı: halka arz ve sermaye artırımı
   (kurucu payı, kurumsal yatırımcı), tahvil.
-- **Yerelleştirme:** arayüz metinleri bileşenlerin içinde (en az 133 sabit
-  Türkçe dize); "yerelleştirmeye hazır" hedefi karşılanmadı. İlk adım
-  metinleri bir sözlüğe çekmek olur; içerik paketindeki adlar zaten tek yerde.
+- **Yerelleştirme:** ilk adım Tur 21'de: arayüz metinleri sözlükte
+  (`packages/ui/src/i18n`), `setLocale` ile dil değişebiliyor. Kalan:
+  çekirdeğin ürettiği metinler (haberler, komut ret sebepleri, gündem
+  etiketleri) ve içerik paketi (bina, ürün, rakip adları) hâlâ Türkçe
+  sabit; ikinci bir dil için ikisinin de anahtarlaşması gerekiyor.
 - **Lig tablosunun güvenliği:** skorlar tekrarla doğrulanabiliyor ama
   doğrulama izleyicinin isteğine bağlı (her satırda "Doğrula"); tablo
   doğrulanmamış skoru da gösteriyor. Sunucu tarafında doğrulama bu

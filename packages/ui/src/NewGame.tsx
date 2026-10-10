@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import type { ReactElement } from 'react';
-import { CEOS, DEFAULT_CEO_ID, DEFAULT_DIFFICULTY, DIFFICULTIES } from '@capital/content';
-import type { DifficultyId } from '@capital/content';
+import { CEOS, CITY_SIZES, DEFAULT_CEO_ID, DEFAULT_CITY_SIZE, DEFAULT_DIFFICULTY, DIFFICULTIES } from '@capital/content';
+import type { CitySizeId, DifficultyId } from '@capital/content';
 import { leagueWeekId } from '@capital/core';
 import { CeoPortrait } from './CeoPortrait';
+import { t } from './i18n';
 
 /**
  * Açılış ekranı.
@@ -16,39 +17,40 @@ export function NewGameScreen({
   onStart,
   onCancel,
 }: {
-  onStart: (companyName: string, ceoId: string, difficulty: DifficultyId, league: boolean) => void;
+  onStart: (companyName: string, ceoId: string, difficulty: DifficultyId, league: boolean, citySize: CitySizeId) => void;
   onCancel?: () => void;
 }): ReactElement {
   const [name, setName] = useState('');
   const [ceoId, setCeoId] = useState(DEFAULT_CEO_ID);
   const [difficulty, setDifficulty] = useState<DifficultyId>(DEFAULT_DIFFICULTY);
   const [league, setLeague] = useState(false);
+  const [citySize, setCitySize] = useState<CitySizeId>(DEFAULT_CITY_SIZE);
+  const size = CITY_SIZES.find((c) => c.id === citySize) ?? CITY_SIZES[0]!;
   const weekId = leagueWeekId();
   const selected = CEOS.find((c) => c.id === ceoId) ?? CEOS[0]!;
   const level = DIFFICULTIES.find((d) => d.id === difficulty) ?? DIFFICULTIES[1]!;
 
-  const submit = () => onStart(name.trim() || 'Yeni Girişim', ceoId, league ? 'normal' : difficulty, league);
+  // Lig herkese aynı şehri verir: zorluk Dengeli, şehir standart.
+  const submit = () =>
+    onStart(name.trim() || t('hud.newGame.defaultName'), ceoId, league ? 'normal' : difficulty, league, league ? 'standard' : citySize);
 
   return (
     <div className="newgame">
       <div className="newgame-inner">
         <header className="newgame-head">
-          <p className="newgame-eyebrow">Yeni şehir, yeni şirket</p>
-          <h1>CapitalForge</h1>
-          <p className="newgame-lead">
-            Şehrin çoğu zaten kurulmuş durumda. Sen boş parselleri bulup büyüyeceksin — ya da
-            birinin işini satın alacaksın.
-          </p>
+          <p className="newgame-eyebrow">{t('hud.newGame.eyebrow')}</p>
+          <h1>{t('hud.newGame.title')}</h1>
+          <p className="newgame-lead">{t('hud.newGame.lead')}</p>
         </header>
 
         <label className="newgame-field">
-          <span>Şirketin adı</span>
+          <span>{t('hud.newGame.nameLabel')}</span>
           <input
             type="text"
             value={name}
             maxLength={32}
             autoFocus
-            placeholder="ör. Karaca Holding"
+            placeholder={t('hud.newGame.namePlaceholder')}
             onChange={(e) => setName(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === 'Enter') submit();
@@ -57,7 +59,7 @@ export function NewGameScreen({
         </label>
 
         <div className="newgame-field">
-          <span>Şirketi kim yönetiyor?</span>
+          <span>{t('hud.newGame.ceoQuestion')}</span>
           <ul className="ceo-grid">
             {CEOS.map((ceo) => (
               <li key={ceo.id}>
@@ -84,10 +86,10 @@ export function NewGameScreen({
             </h2>
             <p className="ceo-bio">{selected.bio}</p>
             <p className="ceo-perk">
-              <span className="tag good">Güçlü yanı</span> {selected.perk}
+              <span className="tag good">{t('hud.ceo.strength')}</span> {selected.perk}
             </p>
             <p className="ceo-perk">
-              <span className="tag bad">Zayıf yanı</span> {selected.drawback}
+              <span className="tag bad">{t('hud.ceo.weakness')}</span> {selected.drawback}
             </p>
           </div>
         </div>
@@ -97,8 +99,8 @@ export function NewGameScreen({
           kurallar herkes için aynı; zorluk seçimi bu yüzden kalkıyor.
         */}
         <div className="newgame-field">
-          <span>Nasıl oynayacaksın?</span>
-          <div className="difficulty-picker mode-picker" role="radiogroup" aria-label="Oyun türü">
+          <span>{t('hud.newGame.modeQuestion')}</span>
+          <div className="difficulty-picker mode-picker" role="radiogroup" aria-label={t('hud.newGame.modeGroup')}>
             <button
               type="button"
               role="radio"
@@ -107,7 +109,7 @@ export function NewGameScreen({
               data-mode="free"
               onClick={() => setLeague(false)}
             >
-              Serbest şehir
+              {t('hud.newGame.modeFree')}
             </button>
             <button
               type="button"
@@ -117,18 +119,15 @@ export function NewGameScreen({
               data-mode="league"
               onClick={() => setLeague(true)}
             >
-              Tohum Ligi · {weekId}
+              {t('hud.newGame.modeLeague', { week: weekId })}
             </button>
           </div>
           {league && (
-            <div className="difficulty-detail">
-              <p>
-                Bu haftanın şehri herkes için aynı. 360 gün oynarsın; skor 360. gündeki şirket değerin. Her hamlen
-                kaydedilir — skorun, herkesin kendi tarayıcısında koşunu baştan oynatmasıyla doğrulanır.
-              </p>
+            <div className="difficulty-detail" data-detail="league">
+              <p>{t('hud.newGame.leagueBlurb')}</p>
               <ul>
-                <li>Zorluk Dengeli, kurallar sabit</li>
-                <li>En iyi koşu "hayalet" olarak yanında yarışır</li>
+                <li>{t('hud.newGame.leagueFactRules')}</li>
+                <li>{t('hud.newGame.leagueFactGhost')}</li>
               </ul>
             </div>
           )}
@@ -140,8 +139,8 @@ export function NewGameScreen({
         */}
         {!league && (
         <div className="newgame-field">
-          <span>Şehir ne kadar acımasız?</span>
-          <div className="difficulty-picker" role="radiogroup" aria-label="Zorluk">
+          <span>{t('hud.newGame.difficultyQuestion')}</span>
+          <div className="difficulty-picker" role="radiogroup" aria-label={t('hud.newGame.difficultyGroup')}>
             {DIFFICULTIES.map((option) => (
               <button
                 key={option.id}
@@ -156,7 +155,7 @@ export function NewGameScreen({
               </button>
             ))}
           </div>
-          <div className="difficulty-detail">
+          <div className="difficulty-detail" data-detail="difficulty">
             <p>{level.blurb}</p>
             <ul>
               {level.facts.map((fact) => (
@@ -167,14 +166,43 @@ export function NewGameScreen({
         </div>
         )}
 
+        {!league && (
+        <div className="newgame-field">
+          <span>{t('hud.newGame.sizeQuestion')}</span>
+          <div className="difficulty-picker mode-picker" role="radiogroup" aria-label={t('hud.newGame.sizeGroup')}>
+            {CITY_SIZES.map((option) => (
+              <button
+                key={option.id}
+                type="button"
+                role="radio"
+                aria-checked={option.id === citySize}
+                className={`difficulty-option${option.id === citySize ? ' selected' : ''}`}
+                data-city-size={option.id}
+                onClick={() => setCitySize(option.id)}
+              >
+                {option.name}
+              </button>
+            ))}
+          </div>
+          <div className="difficulty-detail" data-detail="city-size">
+            <p>{size.blurb}</p>
+            <ul>
+              {size.facts.map((fact) => (
+                <li key={fact}>{fact}</li>
+              ))}
+            </ul>
+          </div>
+        </div>
+        )}
+
         <div className="newgame-actions">
           {onCancel && (
             <button type="button" onClick={onCancel}>
-              Vazgeç
+              {t('hud.newGame.cancel')}
             </button>
           )}
           <button type="button" className="primary" onClick={submit}>
-            Şirketi kur
+            {t('hud.newGame.start')}
           </button>
         </div>
       </div>

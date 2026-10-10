@@ -5,6 +5,7 @@ import { LEAGUE_SAMPLE_DAYS, decodeRun, encodeRun, formatMoney, getPlayer, repla
 import type { GameState } from '@capital/core';
 import { useGame, useGameState } from './useGame';
 import type { LeagueBoard, LeagueEntry } from './useGame';
+import { t } from './i18n';
 
 /**
  * Tohum Ligi arayüzü: tablo, hayalet karşılaştırması, tekrar doğrulaması
@@ -112,7 +113,7 @@ function Sparks({ mine, ghost, slots }: { mine: number[]; ghost: number[] | null
       })
       .join(' ');
   return (
-    <svg className="league-sparks" viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Net değer eğrisi: sen ve hayalet">
+    <svg className="league-sparks" viewBox={`0 0 ${width} ${height}`} role="img" aria-label={t('app.league.sparksLabel')}>
       <line x1="4" x2={width - 4} y1={height - 6} y2={height - 6} className="league-axis" />
       {ghost && ghost.length > 1 && <polyline points={points(ghost)} className="league-ghost-line" />}
       {mine.length > 1 && <polyline points={points(mine)} className="league-mine-line" />}
@@ -132,13 +133,13 @@ function useVerifier() {
   const verify = async (key: string, code: string, expected?: { score: number; weekId: string }) => {
     const run = decodeRun(code);
     if (!run) {
-      setVerdicts((v) => ({ ...v, [key]: { status: 'bad', reason: 'Kod okunamadı.' } }));
+      setVerdicts((v) => ({ ...v, [key]: { status: 'bad', reason: t('app.league.verify.unreadable') } }));
       return;
     }
     if (expected && (run.score !== expected.score || run.weekId !== expected.weekId)) {
       setVerdicts((v) => ({
         ...v,
-        [key]: { status: 'bad', reason: 'Tablodaki skor ya da hafta koşu koduyla aynı değil.' },
+        [key]: { status: 'bad', reason: t('app.league.verify.mismatch') },
       }));
       return;
     }
@@ -149,7 +150,7 @@ function useVerifier() {
     });
     setVerdicts((v) => ({
       ...v,
-      [key]: result.ok ? { status: 'ok' } : { status: 'bad', reason: result.reason ?? 'Tekrar tutmadı.' },
+      [key]: result.ok ? { status: 'ok' } : { status: 'bad', reason: result.reason ?? t('app.league.verify.failed') },
     }));
   };
   return { verdicts, verify };
@@ -157,9 +158,9 @@ function useVerifier() {
 
 function VerdictText({ verdict }: { verdict: Verdict | undefined }): ReactElement | null {
   if (!verdict) return null;
-  if (verdict.status === 'running') return <span className="muted">tekrar oynanıyor · {verdict.day}. gün</span>;
-  if (verdict.status === 'ok') return <span className="pos">doğrulandı</span>;
-  return <span className="neg">tutmadı — {verdict.reason}</span>;
+  if (verdict.status === 'running') return <span className="muted">{t('app.league.verdict.running', { day: verdict.day })}</span>;
+  if (verdict.status === 'ok') return <span className="pos">{t('app.league.verdict.ok')}</span>;
+  return <span className="neg">{t('app.league.verdict.bad', { reason: verdict.reason })}</span>;
 }
 
 export function LeaguePanel(): ReactElement {
@@ -174,10 +175,7 @@ export function LeaguePanel(): ReactElement {
   if (!state.league) {
     return (
       <div className="league">
-        <p className="muted">
-          Bu bir serbest oyun. Tohum Ligi'ne yeni oyun ekranından katılırsın: o haftanın şehri herkes için aynı,
-          360 gün, skor şirket değeri.
-        </p>
+        <p className="muted">{t('app.league.freePlay')}</p>
       </div>
     );
   }
@@ -190,31 +188,31 @@ export function LeaguePanel(): ReactElement {
   return (
     <div className="league">
       <p className="muted">
-        {weekId} · herkes aynı şehirde, {state.league.endDay} gün.{' '}
+        {t('app.league.intro', { weekId: weekId ?? '', endDay: state.league.endDay })}{' '}
         {board.kind === 'shared'
-          ? 'Tablo bu sayfayı açan herkesle paylaşılıyor.'
-          : 'Tablo yalnızca bu tarayıcıdaki koşuları gösteriyor.'}
+          ? t('app.league.board.shared')
+          : t('app.league.board.local')}
       </p>
 
       <section className="league-compare">
         <Sparks mine={mine} ghost={ghost?.curve ?? null} slots={state.league.endDay / LEAGUE_SAMPLE_DAYS} />
         <div className="league-legend">
           <span>
-            <span className="league-key mine" aria-hidden="true" /> Sen · {formatMoney(now)}
+            <span className="league-key mine" aria-hidden="true" /> {t('app.league.legend.you', { money: formatMoney(now) })}
           </span>
           {ghost && (
             <span>
               <span className="league-key ghost" aria-hidden="true" /> {ghost.companyName}
-              {ghostNow !== null ? ` · bu gün ${formatMoney(ghostNow)}` : ''}
+              {ghostNow !== null ? t('app.league.legend.ghostToday', { money: formatMoney(ghostNow) }) : ''}
             </span>
           )}
         </div>
       </section>
 
       <section>
-        <h3>Bu haftanın tablosu</h3>
+        <h3>{t('app.league.tableTitle')}</h3>
         {entries.length === 0 ? (
-          <p className="muted">Henüz gönderilmiş koşu yok. İlk skoru sen bırak.</p>
+          <p className="muted">{t('app.league.empty')}</p>
         ) : (
           <ol className="league-table">
             {entries.map((entry, index) => (
@@ -233,7 +231,7 @@ export function LeaguePanel(): ReactElement {
                     type="button"
                     onClick={() => void verify(entry.id, entry.code, { score: entry.score, weekId: entry.weekId })}
                   >
-                    Doğrula
+                    {t('app.league.verify')}
                   </button>
                   <button
                     type="button"
@@ -243,7 +241,7 @@ export function LeaguePanel(): ReactElement {
                       writeGhostId(entry.id);
                     }}
                   >
-                    Hayalet
+                    {t('app.league.ghost')}
                   </button>
                 </span>
                 <span className="league-verdict">
@@ -256,18 +254,18 @@ export function LeaguePanel(): ReactElement {
       </section>
 
       <section className="league-paste">
-        <h3>Bir koşu kodunu doğrula</h3>
+        <h3>{t('app.league.paste.title')}</h3>
         <textarea
           className="manual-text"
           value={pasted}
           spellCheck={false}
           placeholder="CF1.…"
           onChange={(e) => setPasted(e.target.value)}
-          aria-label="Koşu kodu"
+          aria-label={t('app.league.codeLabel')}
         />
         <div className="manual-actions">
           <button type="button" disabled={pasted.trim().length === 0} onClick={() => void verify('pasted', pasted)}>
-            Tekrar oynat ve doğrula
+            {t('app.league.paste.verify')}
           </button>
           <VerdictText verdict={verdicts['pasted']} />
         </div>
@@ -302,9 +300,9 @@ export function LeagueResultScreen({ onNewGame }: { onNewGame: () => void }): Re
       submittedAt: new Date().toISOString(),
     });
     const text: Record<typeof outcome, string> = {
-      saved: board.kind === 'shared' ? 'Skor tabloya yazıldı.' : 'Skor bu tarayıcının tablosuna yazıldı.',
-      'kept-better': 'Bu haftaki daha iyi skorun tabloda kaldı.',
-      error: 'Skor gönderilemedi — kodu kopyalayıp sonra deneyebilirsin.',
+      saved: board.kind === 'shared' ? t('app.league.submit.savedShared') : t('app.league.submit.savedLocal'),
+      'kept-better': t('app.league.submit.keptBetter'),
+      error: t('app.league.submit.error'),
     };
     setSent(text[outcome]);
     toast(text[outcome], outcome === 'error' ? 'bad' : 'good');
@@ -315,31 +313,34 @@ export function LeagueResultScreen({ onNewGame }: { onNewGame: () => void }): Re
     const encoded = encodeRun(leagueRun);
     try {
       await navigator.clipboard.writeText(encoded);
-      toast('Koşu kodu panoya kopyalandı.', 'good');
+      toast(t('app.league.copied'), 'good');
     } catch {
       setCode(encoded);
     }
   };
 
   return (
-    <div className="gameover league-result" role="alertdialog" aria-label="Lig sonucu">
+    <div className="gameover league-result" role="alertdialog" aria-label={t('app.league.result.label')}>
       <div className="gameover-card">
-        <h2>{lost ? 'Lig koşusu: devralındın' : 'Lig koşusu bitti'}</h2>
-        <p className="league-final">{lost ? 'Skor 0' : formatMoney(league.score ?? 0)}</p>
+        <h2>{lost ? t('app.league.result.titleLost') : t('app.league.result.titleDone')}</h2>
+        <p className="league-final">{lost ? t('app.league.result.scoreZero') : formatMoney(league.score ?? 0)}</p>
         <p className="muted">
-          {league.weekId} · {league.finishedDay}. gün · {state.commandLog?.length ?? 0} hamle. Kod, skoru herkesin kendi
-          tarayıcısında yeniden oynatarak doğrulamasını sağlıyor.
+          {t('app.league.result.summary', {
+            weekId: league.weekId,
+            day: league.finishedDay,
+            moves: state.commandLog?.length ?? 0,
+          })}
         </p>
         {sent && <p>{sent}</p>}
-        {code && <textarea className="manual-text" readOnly value={code} onFocus={(e) => e.target.select()} aria-label="Koşu kodu" />}
+        {code && <textarea className="manual-text" readOnly value={code} onFocus={(e) => e.target.select()} aria-label={t('app.league.codeLabel')} />}
         <div className="gameover-actions">
           {!lost && (
             <button type="button" className="primary" onClick={() => void submit()} disabled={sent !== null}>
-              {board.kind === 'shared' ? 'Tabloya gönder' : 'Tabloya yaz'}
+              {board.kind === 'shared' ? t('app.league.result.submitShared') : t('app.league.result.submitLocal')}
             </button>
           )}
           <button type="button" className="ghost-invert" onClick={() => void copy()}>
-            Kodu kopyala
+            {t('app.league.result.copy')}
           </button>
           <button
             type="button"
@@ -349,10 +350,10 @@ export function LeagueResultScreen({ onNewGame }: { onNewGame: () => void }): Re
               setView({ openPanel: 'league' });
             }}
           >
-            Tabloyu aç
+            {t('app.league.result.openTable')}
           </button>
           <button type="button" className="ghost-invert" onClick={onNewGame}>
-            Yeni koşu
+            {t('app.league.result.newRun')}
           </button>
         </div>
       </div>

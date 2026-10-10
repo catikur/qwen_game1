@@ -9,10 +9,11 @@ import {
   NPC_PROFILES,
   STRUCTURE_BY_ID,
   getCeoModifiers,
+  getCitySize,
   getDifficulty,
   rootStructureOf,
 } from '@capital/content';
-import type { CategoryId, DifficultyId, DistrictArchetypeId } from '@capital/content';
+import type { CategoryId, CitySizeId, DifficultyId, DistrictArchetypeId } from '@capital/content';
 import { createRng, nextRange, pickWeighted } from './rng';
 import { LEAGUE_DAYS, leagueSeed } from './systems/league';
 import { seedSpotPrices, zeroByGood } from './systems/supply';
@@ -196,6 +197,11 @@ export interface NewGameOptions {
    */
   layout?: DistrictArchetypeId[][];
   /**
+   * Şehir boyutu (Tur 21). `layout` verilmişse o kazanır (ölçüm
+   * düzenekleri). Varsayılan standart 3×3; lig koşusu her zaman standart.
+   */
+  citySize?: CitySizeId;
+  /**
    * Kademeli imar takvimi. Varsayılan AÇIK (oyunun kendisi).
    *
    * `false` yalnızca laboratuvar senaryoları için: kilit, doku
@@ -230,7 +236,7 @@ export function createNewGame(input: NewGameOptions = {}): GameState {
   const ceoId = options.ceoId ?? null;
   const ceo = getCeoModifiers(ceoId);
 
-  const layout = options.layout ?? DISTRICT_LAYOUT;
+  const layout = options.layout ?? (input.league ? DISTRICT_LAYOUT : getCitySize(options.citySize).layout);
   const cols = layout[0]!.length;
   const rows = layout.length;
   const mapWidth = cols * DISTRICT_SIZE;
@@ -269,7 +275,33 @@ export function createNewGame(input: NewGameOptions = {}): GameState {
   // haritanın yeni bir ucunu oyuna katıyor. 3×3'ten küçük yerleşimlerde
   // kilit yok — çekirdek zaten oyun alanının tamamı.
   const lockedDistricts = new Set<number>();
-  if ((options.districtUnlocks ?? true) && rows >= 3 && cols >= 3) {
+  if ((options.districtUnlocks ?? true) && rows >= 5 && cols >= 5) {
+    /*
+     * BÜYÜK ŞEHİR: dış halkanın tamamı kilitli, dört dalgada açılır (Tur 21).
+     *
+     * Köşeleri kilitlemek 5×5'te yetmiyordu: 21 bölge açık başlıyor ve
+     * erken oyunda talebin %38'i karşılanmıyordu (Tur 13) — sekiz rakip
+     * bile o kadar araziyi dolduramıyor. Halka kilitliyken oyun 3×3'lük bir
+     * çekirdekte sekiz rakiple kalabalık başlıyor ve her dalga haritanın
+     * dört yeni bölgesini açıyor; arazi kıtlığı dört kez yenileniyor.
+     * Sıra tohumdan: her şehirde farklı bölgeler önce açılır.
+     */
+    const ring: number[] = [];
+    for (let dy = 0; dy < rows; dy++) {
+      for (let dx = 0; dx < cols; dx++) {
+        if (dy === 0 || dy === rows - 1 || dx === 0 || dx === cols - 1) ring.push(dy * cols + dx);
+      }
+    }
+    for (let i = ring.length - 1; i > 0; i--) {
+      const j = Math.floor(nextRange(rng, 0, i + 1));
+      [ring[i], ring[j]] = [ring[j]!, ring[i]!];
+    }
+    const perWave = Math.ceil(ring.length / DISTRICT_UNLOCK_DAYS.length);
+    ring.forEach((districtId, index) => {
+      districts[districtId]!.opensOnDay = DISTRICT_UNLOCK_DAYS[Math.floor(index / perWave)]!;
+      lockedDistricts.add(districtId);
+    });
+  } else if ((options.districtUnlocks ?? true) && rows >= 3 && cols >= 3) {
     const corners = [0, cols - 1, (rows - 1) * cols, rows * cols - 1];
     // Açılış sırası tohumdan: her şehirde farklı bir köşe önce açılır.
     for (let i = corners.length - 1; i > 0; i--) {
@@ -469,6 +501,8 @@ export function createNewGame(input: NewGameOptions = {}): GameState {
     // kullanılmasın diye (yeni rakip girişi buradan seçiyor).
     rivalHistory: Object.keys(companies).filter((id) => id !== PLAYER_COMPANY_ID),
     rivalSlots: npcCount,
+    ...(rows >= 5 && cols >= 5 ? { rivalTempo: 2 } : {}),
+    ...(!options.layout && !input.league && options.citySize && options.citySize !== 'standard' ? { citySize: options.citySize } : {}),
     ...(options.league
       ? {
           league: { weekId: options.league.weekId, endDay: LEAGUE_DAYS, curve: [Math.round(companies[PLAYER_COMPANY_ID]!.cash)] },

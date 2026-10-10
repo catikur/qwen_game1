@@ -2,6 +2,7 @@ import type { ReactElement } from 'react';
 import { chainCards, formatMoney, getPlayer, tilePrice } from '@capital/core';
 import type { ChainCard, ChainMove, ChainSlot } from '@capital/core';
 import { useGame, useGameState } from './useGame';
+import { t } from './i18n';
 
 /**
  * Birim ekonomisi kuruşla okunur.
@@ -31,11 +32,7 @@ export function ChainPanel(): ReactElement {
 
   if (cards.length === 0) {
     return (
-      <p className="muted">
-        Henüz bir ürün satmıyorsun. Bir mağaza açtığında zinciri burada görürsün:
-        hangi halka sende, hangisini pazardan alıyorsun ve marjını en çok ne
-        yükseltir.
-      </p>
+      <p className="muted">{t('app.chain.empty')}</p>
     );
   }
 
@@ -50,18 +47,18 @@ export function ChainPanel(): ReactElement {
 
 function ChainCardView({ card }: { card: ChainCard }): ReactElement {
   return (
-    <section className="chain" aria-label={`${card.goodName} zinciri`}>
+    <section className="chain" aria-label={t('app.chain.cardLabel', { good: card.goodName })}>
       <header className="chain-head">
         <span className="chain-title">
           <span className="chain-dot" style={{ background: card.color }} />
           {card.goodName}
         </span>
         <span className="chain-meta">
-          birim {unit(card.unitCost)} · satış {unit(card.salePrice)} · marj{' '}
+          {t('app.chain.meta', { unit: unit(card.unitCost), sale: unit(card.salePrice) })}{' '}
           <strong className={card.margin >= 0.3 ? 'pos' : card.margin >= 0 ? '' : 'neg'}>
             %{Math.round(card.margin * 100)}
           </strong>{' '}
-          · pay %{Math.round(card.marketShare * 100)}
+          {t('app.chain.share', { share: Math.round(card.marketShare * 100) })}
         </span>
       </header>
 
@@ -117,7 +114,7 @@ function MoveView({ card, move }: { card: ChainCard; move: ChainMove }): ReactEl
       : run({ type: 'BUY_TILE', tileId: move.tileId });
     if (!acquired) return;
     if (!run({ type: 'BUILD', tileId: move.tileId, defId: move.defId })) return;
-    toast(`${move.name} kuruldu — ${move.districtName}.`, 'good');
+    toast(t('app.chain.built', { name: move.name, district: move.districtName }), 'good');
     setView({ selectedTileId: move.tileId });
   };
 
@@ -135,24 +132,22 @@ function MoveView({ card, move }: { card: ChainCard; move: ChainMove }): ReactEl
           onClick={build}
           disabled={!canPay}
         >
-          {move.name} kur · {formatMoney(total)}
+          {t('app.chain.buildButton', { name: move.name, cost: formatMoney(total) })}
         </button>
         <span className="chain-gain">
           {move.districtName}
-          {move.needsBuyout && ' · parsel devralınacak'} · {Math.round(move.paybackDays)} günde geri
-          öder · marj %
-          {Math.round(card.margin * 100)} → <strong className="pos">%{Math.round(move.projectedMargin * 100)}</strong>
+          {move.needsBuyout && t('app.chain.buyout')}
+          {t('app.chain.gain', { days: Math.round(move.paybackDays), margin: Math.round(card.margin * 100) })}{' '}
+          <strong className="pos">%{Math.round(move.projectedMargin * 100)}</strong>
         </span>
       </div>
       {move.premature && (
-        <p className="chain-early">
-          Henüz erken — bu halkayı kurmak, ölçeğin büyüdüğünde asıl karşılığını verir.
-        </p>
+        <p className="chain-early">{t('app.chain.premature')}</p>
       )}
       {!move.premature && move.deferred && (
-        <p className="chain-early">Hamle doğru, sırası değil — önce hızlı dönen mağazalar.</p>
+        <p className="chain-early">{t('app.chain.deferred')}</p>
       )}
-      {!canPay && <p className="chain-warn">Nakit yetersiz — {formatMoney(total)} gerekiyor.</p>}
+      {!canPay && <p className="chain-warn">{t('app.chain.noCash', { cost: formatMoney(total) })}</p>}
     </div>
   );
 }
@@ -170,8 +165,8 @@ function SettledView({ card }: { card: ChainCard }): ReactElement {
   return (
     <p className="chain-settled">
       {complete
-        ? 'Zincirin tamamı sende. Marjını buradan daha fazla açmanın yolu ölçek: daha çok mağaza.'
-        : 'Şu an kapatılacak bir halka yok — kapasiten ihtiyacını karşılıyor.'}
+        ? t('app.chain.settled.complete')
+        : t('app.chain.settled.idle')}
     </p>
   );
 }

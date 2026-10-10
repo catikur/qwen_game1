@@ -7,6 +7,7 @@ import {
 } from '@capital/content';
 import { collectEventModifiers } from './events';
 import { buildingStrikeFactor, wageFor } from './labor';
+import { scopedDepots } from './buildingIndex';
 import type { BuildingInstance, GameState } from '../types';
 
 /**
@@ -91,6 +92,15 @@ function upkeepFor(state: GameState, building: BuildingInstance): number {
 export function distributionRelief(state: GameState, outlet: BuildingInstance): number {
   const outletTile = state.map.tiles[outlet.tileId];
   if (!outletTile) return 0;
+
+  // Bina indeksi açıksa (pazar adımı, zincir kartı) yalnızca şirketin depoları.
+  const depots = scopedDepots(state, outlet.companyId);
+  if (depots) {
+    for (const depot of depots) {
+      if (Math.abs(depot.x - outletTile.x) + Math.abs(depot.y - outletTile.y) <= depot.radius) return DISTRIBUTION_RELIEF;
+    }
+    return 0;
+  }
 
   for (const other of Object.values(state.buildings)) {
     if (other.companyId !== outlet.companyId) continue;
@@ -201,12 +211,27 @@ export function runProductionTick(state: GameState): void {
     }
 
     if (def.role === 'outlet') {
+      /*
+       * DÜNKÜ SATIŞ, ÜRÜN BAŞINA (Tur 21).
+       *
+       * Eskiden `expectedDraw` dünkü satışı okumak istiyordu ama defter bu
+       * adımdan ÖNCE sıfırlanıyor (`resetDailyLedgers`): okunan her zaman
+       * 0'dı ve tüketim KAPASİTEDEN sayılıyordu, üstelik raftaki ürünlere
+       * EŞİT bölünerek. "Yemek + kahve" satan restoran kahveyi çok, yemeği
+       * az satarken iki ürün de yarım kapasite tüketiyor sayılıyordu: iç
+       * arz oranı şişiyor, fazla üretim "tüketildi" diye pazara satılmıyor,
+       * tesis girdisini alıp ürününü boşa harcıyordu. Zincir A/B'si bunu
+       * gösterdi (Hazır Gıda Tesisi kartta +1.643 ₺/gün, gerçekte −5.371).
+       * Pazar adımı artık ürün başına satışı `soldByGood`'a yazıyor;
+       * alanı olmayan (eski kayıt, yeni mağaza) eski kurala düşer.
+       */
       const draw = expectedDraw(building);
       const shelf = building.stocked.length > 0 ? building.stocked : [];
       for (const goodId of shelf) {
         const input = GOOD_BY_ID[goodId]?.inputGoodId;
         if (!input) continue;
-        flow.consumed[input] = (flow.consumed[input] ?? 0) + draw / shelf.length;
+        const units = building.soldByGood ? (building.soldByGood[goodId] ?? 0) : draw / shelf.length;
+        flow.consumed[input] = (flow.consumed[input] ?? 0) + units;
       }
     }
   }

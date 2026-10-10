@@ -2,6 +2,7 @@ import type { ReactElement } from 'react';
 import { competitionCards, formatMoney, getPlayer, moveTotalCost } from '@capital/core';
 import type { CompetitionArm, CompetitionCard, CompetitionMove } from '@capital/core';
 import { useGame, useGameState } from './useGame';
+import { t } from './i18n';
 
 /**
  * Rekabet paneli.
@@ -22,10 +23,7 @@ export function CompetitionPanel(): ReactElement {
 
   if (cards.length === 0) {
     return (
-      <p className="muted">
-        Henüz bir mağazan yok. Bir kategoride satış yapmaya başladığında rakibine
-        karşı nerede olduğunu — kalite, marka ve fiyat olarak — burada görürsün.
-      </p>
+      <p className="muted">{t('app.rivalry.empty')}</p>
     );
   }
 
@@ -47,14 +45,14 @@ function CompetitionCardView({ card }: { card: CompetitionCard }): ReactElement 
   const ahead = leader ? card.share >= leader.share : true;
 
   return (
-    <section className="rival-card" aria-label={`${card.categoryName} rekabeti`}>
+    <section className="rival-card" aria-label={t('app.rivalry.cardLabel', { category: card.categoryName })}>
       <header className="rival-head">
         <span className="rival-title">
           <span className="chain-dot" style={{ background: card.color }} />
           {card.categoryName}
         </span>
         <span className="rival-meta">
-          {card.outlets} mağaza · pay{' '}
+          {t('app.rivalry.meta', { outlets: card.outlets })}{' '}
           <strong className={ahead ? 'pos' : 'neg'}>{pct(card.share)}</strong>
         </span>
       </header>
@@ -67,20 +65,20 @@ function CompetitionCardView({ card }: { card: CompetitionCard }): ReactElement 
         <thead>
           <tr>
             <th scope="col">&nbsp;</th>
-            <th scope="col">Sen</th>
-            <th scope="col">{leader ? leader.name : 'Rakip yok'}</th>
+            <th scope="col">{t('app.rivalry.you')}</th>
+            <th scope="col">{leader ? leader.name : t('app.rivalry.noRival')}</th>
           </tr>
         </thead>
         <tbody>
-          <Row label="Pay" mine={pct(card.share)} theirs={leader ? pct(leader.share) : '—'} good={ahead} />
+          <Row label={t('app.rivalry.row.share')} mine={pct(card.share)} theirs={leader ? pct(leader.share) : '—'} good={ahead} />
           <Row
-            label="Kalite"
+            label={t('app.rivalry.row.quality')}
             mine={card.quality.toFixed(2)}
             theirs={leader ? leader.quality.toFixed(2) : '—'}
             good={!leader || card.quality >= leader.quality}
           />
           <Row
-            label="Marka"
+            label={t('app.rivalry.row.brand')}
             mine={card.brand.toFixed(2)}
             theirs={leader ? leader.brand.toFixed(2) : '—'}
             good={!leader || card.brand >= leader.brand}
@@ -89,7 +87,7 @@ function CompetitionCardView({ card }: { card: CompetitionCard }): ReactElement 
               ikisi de strateji. Yeşile boyamak oyuncuya yanlış bir
               "öndesin" sinyali veriyordu. */}
           <Row
-            label="Fiyat"
+            label={t('app.rivalry.row.price')}
             mine={`×${card.price.toFixed(2)}`}
             theirs={leader ? `×${leader.price.toFixed(2)}` : '—'}
           />
@@ -110,7 +108,7 @@ function CompetitionCardView({ card }: { card: CompetitionCard }): ReactElement 
         <MoveView card={card} move={card.move} />
       ) : (
         <p className="chain-settled">
-          {card.blocked ?? 'Şu an atılacak bir kol hamlesi yok.'}
+          {card.blocked ?? t('app.rivalry.settled')}
         </p>
       )}
     </section>
@@ -180,7 +178,7 @@ function MoveView({ card, move }: { card: CompetitionCard; move: CompetitionMove
     if (tile?.buildingId) {
       run({ type: 'SET_FOCUS', buildingId: tile.buildingId, category: card.category });
     }
-    toast(`${move.name} kuruldu — ${card.categoryName}.`, 'good');
+    toast(t('app.rivalry.built', { name: move.name, category: card.categoryName }), 'good');
     setView({ selectedTileId: move.tileId });
   };
 
@@ -194,19 +192,18 @@ function MoveView({ card, move }: { card: CompetitionCard; move: CompetitionMove
           onClick={build}
           disabled={!canPay}
         >
-          {move.name} kur · {formatMoney(total)}
+          {t('app.rivalry.buildButton', { name: move.name, cost: formatMoney(total) })}
         </button>
         <span className="chain-gain">
           {move.districtName}
-          {move.needsBuyout && ' · parsel devralınacak'} · {card.categoryName} kategorisine atanacak
+          {move.needsBuyout && t('app.rivalry.buyout')}
+          {t('app.rivalry.assign', { category: card.categoryName })}
         </span>
       </div>
       {move.premature && (
-        <p className="chain-early">
-          Henüz erken — bu kol, mağaza sayın büyüdüğünde asıl karşılığını verir.
-        </p>
+        <p className="chain-early">{t('app.rivalry.premature')}</p>
       )}
-      {!canPay && <p className="chain-warn">Nakit yetersiz — {formatMoney(total)} gerekiyor.</p>}
+      {!canPay && <p className="chain-warn">{t('app.rivalry.noCash', { cost: formatMoney(total) })}</p>}
     </div>
   );
 }

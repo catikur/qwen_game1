@@ -1,3 +1,4 @@
+import { withBuildingIndex } from './buildingIndex';
 import {
   BUILDING_BY_ID,
   COUNCIL,
@@ -212,6 +213,12 @@ export function isPurchasable(tile: { kind: string; ownerId: string | null }): b
 }
 
 export function recomputeNetWorth(state: GameState): void {
+  // Net değer adımı arsa ve bina değiştirmiyor: portföydeki her hisse
+  // fiyatı aynı defter taramasını paylaşsın (Tur 21 hız düzeltmesi).
+  withBuildingIndex(state, () => netWorthStep(state));
+}
+
+function netWorthStep(state: GameState): void {
   const assets: Record<string, number> = {};
   for (const id of Object.keys(state.companies)) assets[id] = 0;
 

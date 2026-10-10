@@ -21,6 +21,7 @@ import { buildingStrikeFactor, serviceFactor, wageFor } from './labor';
 import { marketingLeverage } from './focus';
 import { SURPLUS_HAIRCUT, distributionRelief, unitCogsFor } from './supply';
 import type { BuildingInstance, GameState } from '../types';
+import { scopedOutlets, withBuildingIndex } from './buildingIndex';
 
 /**
  * Pazar çözümlemesi — oyunun ekonomik kalbi.
@@ -70,17 +71,25 @@ function upkeepFor(state: GameState, companyId: string, defId: string): number {
   return def.upkeepPerDay * getCeoModifiers(state.companies[companyId]?.ceoId ?? null).upkeep;
 }
 
-/** İki district arasındaki erişim ağırlığı (aynı = 1, komşu = kısmi). */
-function accessWeight(state: GameState, fromDistrict: number, toDistrict: number): number {
+/**
+ * İki district arasındaki erişim ağırlığı (aynı = 1, komşu = kısmi).
+ *
+ * TUR 8'DEN TUR 21'E KADAR YANLIŞTI. Sütun sayısı `harita genişliği / 8`
+ * diye hesaplanıyordu; bölge kenarı Tur 8'de 8'den 10'a çıktı ve 30
+ * genişlikte `round(3,75) = 4` sütun çıktı. 3×3 haritada komşuluk
+ * karışıktı: Çarşı (sol orta) hesapta Teknopark'ın komşusuydu, altındaki
+ * Öğrenci bölgesine çapraz sayılıyordu. 5×5 yerleşimi denerken bulundu.
+ * Artık konum bölgenin kendi koordinatından okunuyor.
+ */
+export function accessWeight(state: GameState, fromDistrict: number, toDistrict: number): number {
   if (fromDistrict === toDistrict) return 1;
 
-  const cols = Math.round(state.map.width / 8);
-  const ax = fromDistrict % cols;
-  const ay = Math.floor(fromDistrict / cols);
-  const bx = toDistrict % cols;
-  const by = Math.floor(toDistrict / cols);
-  const dx = Math.abs(ax - bx);
-  const dy = Math.abs(ay - by);
+  const a = state.districts[fromDistrict];
+  const b = state.districts[toDistrict];
+  if (!a || !b) return 0;
+  const size = a.x1 - a.x0 + 1;
+  const dx = Math.abs(a.x0 - b.x0) / size;
+  const dy = Math.abs(a.y0 - b.y0) / size;
 
   if (dx <= 1 && dy <= 1) return dx === 1 && dy === 1 ? DIAGONAL_ACCESS : NEIGHBOR_ACCESS;
   return 0;
@@ -94,6 +103,40 @@ function premiumEdge(state: GameState, companyId: string, categoryId: CategoryId
   const company = state.companies[companyId];
   if (!company) return 0;
   return (company.research[categoryId] ?? 0) + marketingLeverage(state, companyId, categoryId);
+}
+
+/**
+ * Binanın taban kalitesinin prim gücüne katkısı (Tur 21, REKABET §3.4).
+ *
+ * Tur 2'nin "bilinen sadeleştirmesi" buydu: prim gücü yalnızca Ar-Ge ve
+ * pazarlamadan geliyordu, süpermarket bakkaldan kaliteli olmasına rağmen
+ * aynı fiyattan satıyordu. Taban kalite artık aynı kanaldan, aynı
+ * kıtlık çarpanıyla fiyata dönüyor — ama kategorinin EN DÜŞÜK kaliteli
+ * mağazasına göre: bakkal, kafe, butik, elektronik mağazası ve spor
+ * salonu için katkı sıfır, onların ekonomisi birebir Tur 1. Fark yalnızca
+ * üst kademede ve kalite farkının yarısı kadar (süpermarket ve restoran
+ * +0,115, mağazalar zinciri +0,10): boş talebin %50 olduğu bir bölgede
+ * fiyat ~%4 primli, doymuş bölgede sıfır — doymuş pazarda kalite yine
+ * paya döner.
+ *
+ * Ağırlık neden yarım: tam ağırlıkta (fark 0,23) üst kademe mağaza o kadar
+ * hızlı döndü ki Tur 15'in fırsat maliyeti freni zincir ünitelerini
+ * erteledi ve zincir A/B'si bir tohumda 4 üniteden 1'e indi (denge testi
+ * "zincir kurulabilen her tohumda kazandırıyor" önkoşulunu kaybetti).
+ * Yarım ağırlıkta zincir 3 ünite ve %9 önde; kalite fiyatta görünür kaldı.
+ */
+const QUALITY_EDGE_WEIGHT = 0.5;
+const categoryFloorQuality = new Map<string, number>();
+for (const def of Object.values(BUILDING_BY_ID)) {
+  if (def.role !== 'outlet') continue;
+  const floor = categoryFloorQuality.get(def.category);
+  if (floor === undefined || def.quality < floor) categoryFloorQuality.set(def.category, def.quality);
+}
+
+export function qualityEdge(defId: string): number {
+  const def = BUILDING_BY_ID[defId];
+  if (!def || def.role !== 'outlet') return 0;
+  return Math.max(0, def.quality - (categoryFloorQuality.get(def.category) ?? def.quality)) * QUALITY_EDGE_WEIGHT;
 }
 
 /**
@@ -168,7 +211,8 @@ function companyFlow(
       const draw = building.last.unitsSold > 0 ? building.last.unitsSold : def.capacity;
       const shelf = building.stocked;
       for (const stockedId of shelf) {
-        if (GOOD_BY_ID[stockedId]?.inputGoodId === goodId) consumed += draw / shelf.length;
+        if (GOOD_BY_ID[stockedId]?.inputGoodId !== goodId) continue;
+        consumed += building.soldByGood ? (building.soldByGood[stockedId] ?? 0) : draw / shelf.length;
       }
     }
   }
@@ -311,7 +355,7 @@ export function estimateInvestment(
   const priceMultiplier = autoPriceMultiplier(
     district.unmet[def.category] ?? 0,
     district.outletCount[def.category] ?? 0,
-    premiumEdge(state, companyId, def.category),
+    premiumEdge(state, companyId, def.category) + qualityEdge(def.id),
   );
   const salePrice = category.basePrice * priceMultiplier;
 
@@ -322,7 +366,8 @@ export function estimateInvestment(
     Math.pow(1 / priceMultiplier, category.elasticity);
 
   let rivalAttractiveness = 0;
-  for (const other of Object.values(state.buildings)) {
+  // Bina indeksi açıksa (zincir/rekabet kartı, pazar adımı) yalnızca bölgenin mağazaları.
+  for (const other of scopedOutlets(state, districtId) ?? Object.values(state.buildings)) {
     if (other.districtId !== districtId) continue;
     const otherDef = BUILDING_BY_ID[other.defId];
     if (!otherDef || otherDef.role !== 'outlet' || otherDef.category !== def.category) continue;
@@ -398,7 +443,7 @@ function applyAutoPricing(state: GameState): void {
     const target = autoPriceMultiplier(
       district.unmet[def.category] ?? 0,
       district.outletCount[def.category] ?? 0,
-      premiumEdge(state, building.companyId, def.category),
+      premiumEdge(state, building.companyId, def.category) + qualityEdge(def.id),
     );
     // Fiyat bir günde zıplamasın; oyuncu grafikte anlamlı bir eğri görsün.
     building.priceMultiplier += (target - building.priceMultiplier) * 0.25;
@@ -412,6 +457,11 @@ function applyAutoPricing(state: GameState): void {
  * ile çözülmüş olarak gelir — bu adım yalnızca satışı yapar.
  */
 export function runMarketTick(state: GameState): void {
+  // Pazar adımı bina değiştirmiyor: indeks bütün adım boyunca geçerli.
+  withBuildingIndex(state, () => marketStep(state));
+}
+
+function marketStep(state: GameState): void {
   applyAutoPricing(state);
 
   const mods = collectEventModifiers(state);
@@ -509,6 +559,8 @@ export function runMarketTick(state: GameState): void {
 
   // Bir outlet'in kendi bölgesindeki kategori payı için birikim.
   const ownDistrictUnits = new Map<string, number>();
+  // Ürün başına satış: yarının üretim adımı tüketimi buradan okuyacak.
+  const soldByGood = new Map<string, Record<string, number>>();
   const servedByDistrictCategory = new Map<string, number>();
 
   // ---- 3. Dağıtım ----
@@ -634,6 +686,9 @@ export function runMarketTick(state: GameState): void {
             );
 
           building.last.unitsSold += units;
+          const goods = soldByGood.get(building.id) ?? {};
+          goods[good.id] = (goods[good.id] ?? 0) + units;
+          soldByGood.set(building.id, goods);
           building.last.revenue += revenue;
           building.last.cogs += cogs;
           building.last.profit += revenue - cogs;
@@ -671,6 +726,7 @@ export function runMarketTick(state: GameState): void {
     if (def?.role !== 'outlet') continue;
     const served = servedByDistrictCategory.get(`${building.districtId}|${def.category}`) ?? 0;
     building.last.share = served > 0 ? (ownDistrictUnits.get(building.id) ?? 0) / served : 0;
+    building.soldByGood = soldByGood.get(building.id) ?? {};
   }
 
   // ---- Kira üreten binalar ----

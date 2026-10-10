@@ -2,6 +2,8 @@ import { BUILDING_BY_ID, BUILDINGS, CONSUMER_CATEGORIES } from '@capital/content
 import type { BuildingDef, CategoryId } from '@capital/content';
 import { estimateInvestment } from './systems/market';
 import type { InvestmentEstimate } from './systems/market';
+import { indirectEstimate } from './systems/indirect';
+import type { IndirectEstimate } from './systems/indirect';
 import type { BuildingInstance, CompanyState, DistrictState, GameState, Tile } from './types';
 
 /**
@@ -159,6 +161,11 @@ export function buildOptions(state: GameState): BuildOption[] {
 
 export interface RankedBuildOption extends BuildOption {
   estimate: InvestmentEstimate | null;
+  /**
+   * Depo, Ar-Ge, pazarlama (Tur 21): karşı-olgusal günle ölçülen dolaylı
+   * katkı. Sıralamaya girmiyor — sıralama parsel başına DOĞRUDAN kâr.
+   */
+  indirect?: IndirectEstimate | null;
   /** Bu bölgede parsel başına en çok kazandıran, inşa edilebilir seçenek. */
   bestPick: boolean;
 }
@@ -190,13 +197,15 @@ export interface RankedBuildOption extends BuildOption {
  * Bir bina bir parsel kapladığı için "parsel başına getiri" tam olarak
  * `dailyProfit`. Formül değil, doğru sütuna bakmak.
  */
-export function rankedBuildOptions(state: GameState, districtId: number): RankedBuildOption[] {
+export function rankedBuildOptions(state: GameState, districtId: number, tileId?: number): RankedBuildOption[] {
   const player = getPlayer(state);
-  const rows: RankedBuildOption[] = buildOptions(state).map((option) => ({
-    ...option,
-    estimate: estimateInvestment(state, districtId, option.def.id, player.id),
-    bestPick: false,
-  }));
+  const rows: RankedBuildOption[] = buildOptions(state).map((option) => {
+    const estimate = estimateInvestment(state, districtId, option.def.id, player.id);
+    const row: RankedBuildOption = { ...option, estimate, bestPick: false };
+    // Kilitli binada pahalı deneyi koşmaya gerek yok.
+    if (estimate && !estimate.direct && option.unlocked) row.indirect = indirectEstimate(state, player.id, option.def.id, districtId, tileId);
+    return row;
+  });
 
   const score = (row: RankedBuildOption): number =>
     row.estimate?.direct ? row.estimate.dailyProfit : Number.NEGATIVE_INFINITY;

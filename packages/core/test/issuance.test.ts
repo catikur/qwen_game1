@@ -81,6 +81,30 @@ describe('sermaye artırımı', () => {
     assert.ok(quote.maxShares > 0 && after >= ISSUANCE.minFounderShare - 1e-9, `kurucu ${after}`);
   });
 
+  test('savunma ihracı: baskıncı eşiği geçince soğuma aranmıyor, kurucu tabanı aranıyor', () => {
+    const state = listed();
+    const player = state.companies.player!;
+    const rival = Object.values(state.companies).find((c) => !c.isPlayer)!;
+    issueShares(state, 'player', 2500);
+    // %29: henüz baskın sayılmıyor, soğuma geçerli.
+    rival.shares.player = Math.floor(sharesOutstanding(state, 'player') * (ISSUANCE.defenseAt - 0.01));
+    assert.equal(issueQuote(state, 'player').ok, false);
+    // Eşik: aynı gün yeni ihraç açık ve form bunu söylüyor.
+    rival.shares.player = Math.ceil(sharesOutstanding(state, 'player') * ISSUANCE.defenseAt);
+    const quote = issueQuote(state, 'player');
+    assert.equal(quote.ok, true, quote.reason);
+    assert.equal(quote.defense, true);
+    // Art arda ihraç kurucu tabanında duruyor: kalkanın bir sonu var.
+    for (let i = 0; i < 6; i++) {
+      const next = issueQuote(state, 'player');
+      if (!next.ok) break;
+      issueShares(state, 'player', next.maxShares);
+      rival.shares.player = Math.ceil(sharesOutstanding(state, 'player') * ISSUANCE.defenseAt);
+    }
+    assert.ok(ownerFraction(player) >= ISSUANCE.minFounderShare - 1e-9, `kurucu ${ownerFraction(player)}`);
+    assert.match(issueQuote(state, 'player').reason ?? '', /Kurucu payı/);
+  });
+
   test('ihraç baskıncının payını sulandırıyor ve kontrol eşiğini büyütüyor', () => {
     const state = listed();
     const rival = Object.values(state.companies).find((c) => !c.isPlayer)!;

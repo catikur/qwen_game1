@@ -2973,7 +2973,10 @@ button.icon {
   border-right: 0;
 }
 
-.difficulty-option.selected {
+.difficulty-option.selected,
+.difficulty-option.selected:hover {
+  /* Hover genel düğme zeminini (açık) getiriyordu; seçili seçeneğin beyaz
+     yazısı üstünde fare dururken okunmaz oluyordu. */
   background: var(--accent);
   color: var(--on-accent);
 }
@@ -3780,4 +3783,34 @@ button.icon {
   margin: 0;
   font-size: 12.5px;
   line-height: 1.5;
+}
+
+/* Savunma ihracı (Tur 21): baskın altında bekleme kalktı — fark edilsin. */
+.issuance .issuance-defense {
+  color: var(--warn);
+  font-weight: 600;
+}
+
+/* --- yapı menüsü: dolaylı binaların projeksiyonu (Tur 21) --- */
+.projection {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 10px;
+  border: 1px dashed var(--line);
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+.projection p {
+  margin: 0;
+  line-height: 1.5;
+}
+
+.projection .pos {
+  color: var(--good);
+}
+
+.projection .neg {
+  color: var(--bad);
 }
