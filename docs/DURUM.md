@@ -1201,10 +1201,10 @@ ortalama +%2.
 | | Değer |
 |---|---|
 | Determinizm | birebir |
-| Simülasyon hızı | ~1.500–2.000 gün/sn (aynı oturumda main ~1.000; bina indeksi) |
-| Birim testi | **144 test** (`pnpm test`) |
-| Denge testi | **263 kontrol, hepsi geçiyor** (18 bölüm, süreleriyle; ~6 dk) |
-| Tarayıcı testi | **271 kontrol**, 0 konsol hatası (~18 dk); duman koşusu 83 (~3,5 dk) |
+| Simülasyon hızı | ~1.100–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi) |
+| Birim testi | **160 test** (`pnpm test`) |
+| Denge testi | **273 kontrol, hepsi geçiyor** (20 bölüm, süreleriyle; ~9 dk) |
+| Tarayıcı testi | **282 kontrol**, 0 konsol hatası (~18–26 dk); duman koşusu 83 (~3,5 dk) |
 | CI | her PR'da tip + test + denge + paket + duman oynanışı |
 | Kapsam | 26 bina · 22 ürün · 7 kategori · 8 rakip profili · 10 şehir yapısı (6 siluet) |
 
