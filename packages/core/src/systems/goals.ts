@@ -69,12 +69,23 @@ export function victoryNetWorth(state: GameState): number {
   return getDifficulty(state.difficulty).victoryNetWorth * getCitySize(state.citySize).victoryScale;
 }
 
+/**
+ * Şehirde YARATILAN değer: net değer eksi holding kasasıyla net aktarılan
+ * sermaye (Tur 22). Kurucu şehirde aktarım yok, yani net değerin kendisi.
+ * Yeni şehre 10 M ₺ getiren oyuncu zafere o 10 M ₺'yle değil, şehirde
+ * kurduğuyla ulaşmalı; bekleyen şehirlerin kasaya akan kârı da şehre
+ * aktarılınca bu yüzden zafere sayılmıyor.
+ */
+function createdValue(state: GameState): number {
+  return playerOf(state).netWorth - (state.importedCapital ?? 0);
+}
+
 /** Zafer koşulu sağlanıyor mu, sağlanıyorsa hangi yoldan. */
 export function victoryReached(state: GameState): VictoryKind | null {
   if (state.gameOver) return null;
   if (rivalCount(state) === 0) return 'monopoly';
   const player = playerOf(state);
-  if (player.netWorth >= victoryNetWorth(state) && player.netWorth > leaderRivalWorth(state)) return 'tycoon';
+  if (createdValue(state) >= victoryNetWorth(state) && player.netWorth > leaderRivalWorth(state)) return 'tycoon';
   return null;
 }
 
@@ -91,11 +102,13 @@ function measure(state: GameState, def: GoalDef): { progress: number; detail: st
       const count = countRoles(state, ['extract', 'process']);
       return { progress: clamp(count / def.target), detail: `${Math.min(count, def.target)} / ${def.target} üretim ünitesi` };
     }
-    case 'netWorth':
+    case 'netWorth': {
+      const value = createdValue(state);
       return {
-        progress: clamp(player.netWorth / def.target),
-        detail: `${formatMoney(Math.max(0, player.netWorth))} / ${formatMoney(def.target)}`,
+        progress: clamp(value / def.target),
+        detail: `${formatMoney(Math.max(0, value))} / ${formatMoney(def.target)}`,
       };
+    }
     case 'rank': {
       const leader = leaderRivalWorth(state);
       const ahead = player.netWorth > leader;
@@ -115,13 +128,14 @@ function measure(state: GameState, def: GoalDef): { progress: number; detail: st
     case 'victory': {
       const target = victoryNetWorth(state);
       if (victoryReached(state)) return { progress: 1, detail: 'zafer' };
-      const worth = clamp(player.netWorth / target);
+      const value = createdValue(state);
+      const worth = clamp(value / target);
       const leader = leaderRivalWorth(state);
       const rank = player.netWorth > leader ? 1 : clamp(player.netWorth / Math.max(1, leader));
       // İki koşulun zayıf olanı — ikisi de gerekli.
       return {
         progress: Math.min(worth, rank),
-        detail: `${formatMoney(Math.max(0, player.netWorth))} / ${formatMoney(target)}${rank < 1 ? ' · henüz bir numara değilsin' : ''}`,
+        detail: `${formatMoney(Math.max(0, value))} / ${formatMoney(target)}${rank < 1 ? ' · henüz bir numara değilsin' : ''}`,
       };
     }
   }

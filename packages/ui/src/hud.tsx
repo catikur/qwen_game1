@@ -14,6 +14,7 @@ import {
 } from '@capital/core';
 import type { GameSpeed } from '@capital/core';
 import { CeoPortrait } from './CeoPortrait';
+import { CityChip, aliveDormant } from './HoldingPanel';
 import { AuctionChip } from './AuctionPanel';
 import { ghostValueAt, useGhost } from './LeaguePanel';
 import { useCollapsible } from './collapse';
@@ -60,6 +61,7 @@ export function TopBar(): ReactElement {
         <div className="brand-text">
           <div className="brand-name">{player.name}</div>
           <div className="brand-sub">
+            <CityChip />
             {ceo && <span className="brand-ceo-name">{ceo.name} · </span>}
             <span className="brand-date">{formatDate(state.time.day)}</span>
           </div>
@@ -547,8 +549,11 @@ function RivalFace({ companyId }: { companyId: string }): ReactElement | null {
  */
 export function GameOverScreen({ onNewGame }: { onNewGame: () => void }): ReactElement | null {
   const state = useGameState();
+  const { run } = useGame();
   const over = state.gameOver;
   if (!over) return null;
+  // Holding'de bir şehri kaybetmek oyunun sonu değil (Tur 22).
+  const alive = aliveDormant(state);
 
   const raider = state.companies[over.byCompanyId];
   const profile = rivalProfile(state, raider?.profileId);
@@ -571,10 +576,23 @@ export function GameOverScreen({ onNewGame }: { onNewGame: () => void }): ReactE
             player: player.name,
           })}
         </p>
-        <p className="muted">{t('hud.gameOver.note')}</p>
-        <button type="button" className="primary" onClick={onNewGame}>
-          {t('hud.gameOver.newEmpire')}
-        </button>
+        <p className="muted">{alive.length > 0 ? t('hud.gameOver.holdingNote') : t('hud.gameOver.note')}</p>
+        <div className="gameover-actions">
+          {alive.map((city) => (
+            <button
+              key={city.index}
+              type="button"
+              className="primary"
+              data-switch-city={city.name}
+              onClick={() => run({ type: 'SWITCH_CITY', index: city.index })}
+            >
+              {t('hud.gameOver.otherCity', { city: city.name })}
+            </button>
+          ))}
+          <button type="button" className={alive.length > 0 ? 'ghost-invert' : 'primary'} onClick={onNewGame}>
+            {t('hud.gameOver.newEmpire')}
+          </button>
+        </div>
       </div>
     </div>
   );

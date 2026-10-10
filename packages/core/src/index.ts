@@ -11,6 +11,7 @@ export * from './headquarters';
 export * from './news';
 export * from './leadership';
 export * from './profiles';
+export * from './holding';
 export { generateProfile } from './systems/entrants';
 export * from './engine';
 export * from './agenda';

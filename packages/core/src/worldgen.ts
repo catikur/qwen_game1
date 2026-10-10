@@ -220,6 +220,14 @@ export interface NewGameOptions {
    * yok sayılır — herkes aynı şehirde oynamalı.
    */
   league?: { weekId: string };
+  /**
+   * Holding'in yeni şehri (Tur 22): oyuncunun başlangıç nakdi (aktarılan
+   * sermaye), taşınan marka bilinirliği ve rakip kadrosunun katalogdaki
+   * kayması — ikinci şehir aynı dört rakiple başlamasın.
+   */
+  startingCash?: number;
+  startingBrand?: number;
+  rivalOffset?: number;
 }
 
 /** Haritanın taşıyabileceği rakip sayısı (parsel / 126, en az 4, katalog tavanı). */
@@ -415,10 +423,10 @@ export function createNewGame(input: NewGameOptions = {}): GameState {
     options.companyName?.trim() || 'Yeni Girişim',
     true,
     '#4cc9f0',
-    Math.round(STARTING_CASH * ceo.startingCash * getDifficulty(options.difficulty).startingCashMultiplier),
+    options.startingCash ?? Math.round(STARTING_CASH * ceo.startingCash * getDifficulty(options.difficulty).startingCashMultiplier),
     null,
     ceoId,
-    ceo.startingBrand,
+    Math.max(ceo.startingBrand, options.startingBrand ?? 0),
   );
 
   /*
@@ -438,8 +446,9 @@ export function createNewGame(input: NewGameOptions = {}): GameState {
    */
   const plotCapacity = tiles.filter((tile) => tile.kind === 'plot').length;
   const npcCount = Math.min(options.npcCount ?? rivalSlotsFor(plotCapacity), NPC_PROFILES.length);
+  const offset = options.rivalOffset ?? 0;
   for (let i = 0; i < npcCount; i++) {
-    const profile = NPC_PROFILES[i]!;
+    const profile = NPC_PROFILES[(i + offset) % NPC_PROFILES.length]!;
     companies[profile.id] = makeCompany(
       profile.id,
       profile.name,

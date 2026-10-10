@@ -2262,6 +2262,100 @@ async function finish(browser, consoleErrors) {
     await bigContext.close();
   }
 
+  //
+  // ---------- Holding: birden çok şehir (Tur 22) ----------
+  section('Holding');
+  {
+    const hContext = await browser.newContext({ viewport: { width: 1280, height: 860 } });
+    const hp = await hContext.newPage();
+    const hErrors = [];
+    hp.on('pageerror', (e) => hErrors.push(e.message));
+    hp.on('console', (m) => { if (m.type() === 'error') hErrors.push(m.text()); });
+    await hp.goto('http://127.0.0.1:8811/');
+    await hp.waitForSelector('.newgame', { timeout: 20000 });
+    await hp.fill('.newgame-field input[type="text"]', 'Holding AŞ');
+    await hp.locator('button:has-text("Şirketi kur")').click();
+    await hp.waitForSelector('.topbar', { timeout: 20000 });
+    check('Holding yokken üst barda şehir çipi yok', (await hp.locator('[data-city-chip]').count()) === 0);
+    // Bir mağaza kurup bir ay oynat, sonra zaferi ve kasayı elle ver: zafere
+    // gerçekten oynayarak varmak bu testin konusu değil (denge testi ölçüyor).
+    await hp.evaluate(() => {
+      const c = window.__capital;
+      c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+      const s = c.getState();
+      const tile = s.map.tiles.find((t) => t.kind === 'plot' && !t.structureId && !t.ownerId && !t.buildingId && s.districts[t.districtId].opensOnDay === undefined);
+      c.engine.dispatch({ type: 'BUY_TILE', tileId: tile.id });
+      c.engine.dispatch({ type: 'BUILD', tileId: tile.id, defId: 'grocery' });
+      for (let i = 0; i < 30; i++) c.engine.runDay();
+      const live = c.getState();
+      live.companies.player.cash = 30_000_000;
+      live.victory = { day: live.time.day, kind: 'tycoon' };
+      c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+    });
+    await hp.waitForTimeout(500);
+    check('Zafer ekranında "Yeni şehre açıl"', (await hp.locator('[data-victory-open-city]').count()) === 1);
+    await hp.evaluate(() => document.querySelector('[data-victory-open-city]').click());
+    await hp.waitForTimeout(300);
+    const openText = ((await hp.locator('.holding-open').textContent()) ?? '').trim();
+    check('Şehirler paneli açılıyor, yeni şehir formu hazır', (await hp.locator('[data-open-city="open"]').count()) === 1 && openText.includes('Sermaye'),
+      openText.slice(0, 80));
+    const founding = await hp.evaluate(() => ({ seed: window.__capital.getState().meta.seed, day: window.__capital.getState().time.day }));
+    await hp.locator('[data-holding-size="standard"]').click();
+    await hp.locator('[data-open-city-go]').click();
+    await hp.waitForTimeout(900);
+    const opened = await hp.evaluate(() => {
+      const s = window.__capital.getState();
+      const info = window.__capital.renderInfo();
+      return {
+        city: s.cityName,
+        day: s.time.day,
+        seed: s.meta.seed,
+        cash: s.companies.player.cash,
+        imported: s.importedCapital,
+        dormant: s.holding?.dormant.map((d) => d.state.cityName) ?? [],
+        rivals: Object.values(s.companies).filter((c) => !c.isPlayer).map((c) => c.profileId),
+        plots: s.map.tiles.filter((t) => t.kind === 'plot').length,
+        drawn: info ? info.plotInstances : -1,
+      };
+    });
+    check('Yeni şehir açılıyor: sermaye taşınıyor, kurucu şehir bekliyor',
+      opened.day === 0 && opened.seed !== founding.seed && opened.dormant.length === 1 && opened.cash === opened.imported && opened.cash >= 2_000_000,
+      `${opened.city} · ${opened.cash.toLocaleString('tr-TR')} ₺ · bekleyen ${opened.dormant.join(', ')}`);
+    check('Yeni şehirde rakip kadrosu farklı', !opened.rivals.includes('nova_holding'), opened.rivals.join(', '));
+    check('Yeni şehrin sahnesi kuruluyor', opened.drawn >= opened.plots, `${opened.drawn} parsel örneği / ${opened.plots}`);
+    const chip = ((await hp.locator('[data-city-chip]').textContent()) ?? '').trim();
+    check('Üst barda şehir adı', chip === opened.city, chip);
+    await hp.evaluate(() => { const c = window.__capital; for (let i = 0; i < 20; i++) c.engine.runDay(); c.engine.dispatch({ type: 'SET_SPEED', speed: 0 }); });
+    await hp.locator('[data-city-chip]').click();
+    await hp.waitForTimeout(300);
+    const rows = await hp.locator('.city-row').count();
+    check('Panelde iki şehir: oynanan ve bekleyen', rows === 2, `${rows} satır`);
+    await hp.screenshot({ path: `${OUT}/holding-panel.png` });
+    // Yeni şehirde bir kare seç: şehir değişince bu seçim eski şehrin
+    // karesine işaret etmemeli.
+    await hp.locator('.modal-head button.icon').click();
+    await hp.waitForTimeout(200);
+    const emptyInspector = ((await hp.locator('.inspector').textContent()) ?? '').trim();
+    await hp.evaluate(() => window.__capital.selectTile(40));
+    await hp.waitForTimeout(200);
+    const selectedInspector = ((await hp.locator('.inspector').textContent()) ?? '').trim();
+    await hp.locator('[data-city-chip]').click();
+    await hp.waitForTimeout(300);
+    await hp.locator('.city-switch').first().click();
+    await hp.waitForTimeout(900);
+    const back = await hp.evaluate(() => {
+      const s = window.__capital.getState();
+      return { seed: s.meta.seed, day: s.time.day, dormantDay: s.holding?.dormant[0]?.state.time.day };
+    });
+    check('Kurucu şehre dönülüyor, takvim kaldığı yerden', back.seed === founding.seed && back.day === founding.day && back.dormantDay === 20,
+      `gün ${back.day} · bekleyen ${back.dormantDay}. günde`);
+    const afterSwitch = ((await hp.locator('.inspector').textContent()) ?? '').trim();
+    check('Şehir değişince seçim temizleniyor', selectedInspector !== emptyInspector && afterSwitch === emptyInspector,
+      afterSwitch.slice(0, 60));
+    check('Holding akışında konsol temiz', hErrors.length === 0, hErrors.slice(0, 2).join(' | '));
+    await hContext.close();
+  }
+
   section('Mobil');
   for (const deviceName of ['iPhone 13', 'Pixel 7']) {
     const mobileContext = await browser.newContext({ ...devices[deviceName] });

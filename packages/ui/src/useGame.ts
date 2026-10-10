@@ -32,7 +32,8 @@ export interface ViewState {
     | 'help'
     | 'goals'
     | 'council'
-    | 'league';
+    | 'league'
+    | 'cities';
 }
 
 export interface ToastMessage {

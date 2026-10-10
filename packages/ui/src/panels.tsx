@@ -36,6 +36,7 @@ import { CompetitionPanel } from './CompetitionPanel';
 import { AuctionPanel } from './AuctionPanel';
 import { MarketPanel } from './MarketPanel';
 import { GoalsPanel } from './GoalsPanel';
+import { HoldingPanel } from './HoldingPanel';
 import { CouncilPanel } from './CouncilPanel';
 import { LeaguePanel } from './LeaguePanel';
 import { BankSection, WorkforceSection } from './CompanyFinance';
@@ -850,6 +851,7 @@ export function ModalHost(): ReactElement | null {
     goals: t('panels.modal.title.goals'),
     council: t('panels.modal.title.council'),
     league: t('panels.modal.title.league'),
+    cities: t('panels.modal.title.cities'),
   };
 
   return (
@@ -873,6 +875,7 @@ export function ModalHost(): ReactElement | null {
           {view.openPanel === 'goals' && <GoalsPanel />}
           {view.openPanel === 'council' && <CouncilPanel />}
           {view.openPanel === 'league' && <LeaguePanel />}
+          {view.openPanel === 'cities' && <HoldingPanel />}
         </div>
       </div>
     </div>
@@ -1176,6 +1179,10 @@ function HelpPanel(): ReactElement {
         <li>
           <strong>{t('panels.help.step.takeover.title')}</strong>
           {t('panels.help.step.takeover.body')}
+        </li>
+        <li>
+          <strong>{t('panels.help.step.holding.title')}</strong>
+          {t('panels.help.step.holding.body')}
         </li>
       </ol>
       <p className="muted">
