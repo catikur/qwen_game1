@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { ReactElement } from 'react';
-import { CEO_BY_ID, ERA_BY_ID, EVENTS, NPC_PROFILES } from '@capital/content';
+import { CEO_BY_ID, ERA_BY_ID, EVENTS } from '@capital/content';
 import {
   LENSES,
   OFFER_LIFETIME_DAYS,
@@ -10,6 +10,7 @@ import {
   formatDate,
   formatMoney,
   getPlayer,
+  rivalProfile,
 } from '@capital/core';
 import type { GameSpeed } from '@capital/core';
 import { CeoPortrait } from './CeoPortrait';
@@ -514,16 +515,15 @@ const TONE_LABEL: Record<string, MessageKey> = {
 /**
  * Bir haberin taşıdığı yüz.
  *
- * Portre rakibin kendi profilinden geliyor (`NPC_PROFILES`), oyuncunun
+ * Portre rakibin kendi profilinden geliyor (`rivalProfile`: katalog ya da
+ * katalog bitince üretilen profil, Tur 22), oyuncunun
  * CEO kataloğundan değil: rakiplere `ceoId` vermek onlara CEO
  * perk'lerini de vermek olurdu. Yüz var, görünmez avantaj yok.
  */
 function RivalFace({ companyId }: { companyId: string }): ReactElement | null {
   const state = useGameState();
   const company = state.companies[companyId];
-  const profile = company?.profileId
-    ? NPC_PROFILES.find((p) => p.id === company.profileId)
-    : undefined;
+  const profile = rivalProfile(state, company?.profileId);
   if (!profile) return null;
   return (
     <span className="news-portrait" title={`${profile.ceoName} · ${profile.name}`}>
@@ -551,9 +551,7 @@ export function GameOverScreen({ onNewGame }: { onNewGame: () => void }): ReactE
   if (!over) return null;
 
   const raider = state.companies[over.byCompanyId];
-  const profile = raider?.profileId
-    ? NPC_PROFILES.find((p) => p.id === raider.profileId)
-    : undefined;
+  const profile = rivalProfile(state, raider?.profileId);
   const player = getPlayer(state);
 
   return (

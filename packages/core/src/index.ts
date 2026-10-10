@@ -10,6 +10,8 @@ export * from './shoppers';
 export * from './headquarters';
 export * from './news';
 export * from './leadership';
+export * from './profiles';
+export { generateProfile } from './systems/entrants';
 export * from './engine';
 export * from './agenda';
 export * from './league';

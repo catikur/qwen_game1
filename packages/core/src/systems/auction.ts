@@ -1,5 +1,6 @@
-import { BUILDINGS, NPC_PROFILES, STRUCTURE_BY_ID } from '@capital/content';
+import { BUILDINGS, STRUCTURE_BY_ID } from '@capital/content';
 import { pushNews } from '../news';
+import { rivalProfiles } from '../profiles';
 import { estimateInvestment } from './market';
 import { isDistrictOpen, tilePrice } from './city';
 import type { AuctionState, GameState } from '../types';
@@ -227,7 +228,7 @@ function bidRound(state: GameState): void {
   while (active && raises < MAX_RAISES_PER_ROUND) {
     active = false;
 
-    for (const profile of NPC_PROFILES) {
+    for (const profile of rivalProfiles(state)) {
       const company = state.companies[profile.id];
       if (!company) continue;
       if (auction.bidderId === profile.id) continue;

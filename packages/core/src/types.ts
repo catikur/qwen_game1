@@ -6,6 +6,7 @@ import type {
   DistrictArchetypeId,
   LoanKind,
   MotionKind,
+  NpcProfileDef,
   UnionResponse,
   WagePolicy,
 } from '@capital/content';
@@ -561,6 +562,11 @@ export interface GameState {
   goals?: Record<string, number>;
   /** Sahneye çıkmış bütün rakip kimlikleri (devralınanlar dahil). */
   rivalHistory?: string[];
+  /**
+   * Katalog bittikten sonra üretilen rakip profilleri, giriş sırasıyla
+   * (Tur 22). Yokluğu "üretilmiş rakip yok" demek; şema sürümü sabit.
+   */
+  extraProfiles?: NpcProfileDef[];
   /** Kuruluştaki rakip sayısı — yeni girişler bu kadar koltuğu doldurur. */
   rivalSlots?: number;
   /**

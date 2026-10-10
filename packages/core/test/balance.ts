@@ -3792,6 +3792,62 @@ section('Büyük şehir (5×5)', () => {
   }
 });
 
+section('Rakip koltukları dolu kalıyor', () => {
+  /*
+   * Tur 22. Devralma yapan vekil büyük şehirde (sekiz koltuk, kataloğun
+   * sekizi de baştan sahnede) ilk devralmada kataloğu bitiriyordu; 178.
+   * günden 1.200. güne sekiz koltuk üç-dört rakibe iniyordu ve yerine
+   * kimse gelmiyordu. Katalog bitince yeni rakip üretiliyor ve giriş
+   * beklemesi koltuk sayısıyla ölçekli (büyükte 60 gün).
+   *
+   * Ölçülen (1.200 gün, tohum 1/7/42): önce 4 / 3 / 3 rakip, sonra 7 / 8 / 7.
+   * Sınanan iddialar: katalog gerçekten bitiyor (kontrol anlamlı), en az üç
+   * rakip üretiliyor, geç oyunda koltukların en az altısı dolu, sahnedeki
+   * adlar ve renkler tekrar etmiyor.
+   */
+  const engine = new GameEngine(createNewGame({ seed: 7, citySize: 'large', companyName: 'Avcı AŞ' }));
+  const state = engine.getState();
+  let exhaustedDay: number | null = null;
+  for (let day = 1; day <= 800; day++) {
+    if (day % 5 === 0) {
+      playerStrategy(engine);
+      const player = getPlayer(state);
+      if (!player.orders) {
+        let best: { id: string; cost: number } | null = null;
+        for (const company of Object.values(state.companies)) {
+          if (company.isPlayer) continue;
+          if (company.lockedUntilDay !== undefined && day < company.lockedUntilDay) continue;
+          const estimate = orderEstimate(state, player.id, company.id);
+          if (estimate.need > 0 && !estimate.floatShort && (!best || estimate.cost < best.cost)) best = { id: company.id, cost: estimate.cost };
+        }
+        if (best && best.cost < player.cash * 0.9) engine.dispatch({ type: 'PLACE_TAKEOVER_ORDER', companyId: best.id });
+      }
+    }
+    if (day % 3 === 0) defendAgainstRaids(engine);
+    engine.runDay();
+    if (state.gameOver) break;
+    if (exhaustedDay === null) {
+      const history = new Set(state.rivalHistory ?? []);
+      const rivals = Object.values(state.companies).filter((c) => !c.isPlayer).length;
+      if (rivals < (state.rivalSlots ?? 0) && NPC_PROFILES.every((p) => history.has(p.id))) exhaustedDay = day;
+    }
+  }
+  const onStage = Object.values(state.companies).filter((c) => !c.isPlayer);
+  const generated = state.extraProfiles ?? [];
+  console.log(
+    `  büyük seed  7 · avcı vekil | katalog ${exhaustedDay ?? '-'}. günde bitti · ${generated.length} rakip üretildi · ` +
+      `800. günde ${onStage.length}/${state.rivalSlots} koltuk · sahnede: ${onStage.map((c) => c.name).join(', ')}`,
+  );
+  expect('katalog bitiyor (kontrol anlamlı)', exhaustedDay !== null, `${exhaustedDay ?? '-'}. gün`);
+  expect('katalog bitince yeni rakip geliyor', generated.length >= 3, `${generated.length} üretilen`);
+  expect('geç oyunda koltuklar dolu', onStage.length >= 6, `${onStage.length}/${state.rivalSlots}`);
+  expect(
+    'sahnedeki adlar ve renkler tekrar etmiyor',
+    new Set(onStage.map((c) => c.name)).size === onStage.length && new Set(onStage.map((c) => c.color)).size === onStage.length,
+    onStage.map((c) => `${c.name} ${c.color}`).join(' · '),
+  );
+});
+
 if (timings.length === 0) {
   console.log(`\nSüzgeçle eşleşen bölüm yok: ${ONLY.join(', ')}`);
   process.exit(1);
