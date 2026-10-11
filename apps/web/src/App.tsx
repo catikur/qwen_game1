@@ -127,7 +127,12 @@ function GameRoot({
   // sınırları). Yeni oyun ya da kayıt farklı boyutta bir şehir getirince
   // (Tur 21: büyük şehir) sahne yeniden kurulmalı; aynı motor üstünde
   // `replaceState` bunu kendiliğinden tetiklemiyordu.
-  const mapKey = `${engine.getState().map.width}x${engine.getState().map.height}`;
+  //
+  // Holding (Tur 22): şehir değişince harita aynı boyutta ama başka bir
+  // şehir olabilir; anahtar şehrin tohumunu da taşıyor. Seçim ve
+  // yerleştirme hayaleti eski şehrin karelerine işaret etmesin diye
+  // anahtar değişince temizleniyor.
+  const mapKey = `${engine.getState().map.width}x${engine.getState().map.height}:${engine.getState().meta.seed}`;
 
   const [view, setViewState] = useState<ViewState>({
     // Açılışta şehir görünsün; lensler oyuncunun bilinçli seçimi olsun.
@@ -146,6 +151,13 @@ function GameRoot({
   const setView = useCallback((partial: Partial<ViewState>) => {
     setViewState((current) => ({ ...current, ...partial }));
   }, []);
+
+  const lastMapKey = useRef(mapKey);
+  useEffect(() => {
+    if (lastMapKey.current === mapKey) return;
+    lastMapKey.current = mapKey;
+    setViewState((current) => ({ ...current, selectedTileId: null, ghostDefId: null }));
+  }, [mapKey]);
 
   const toast = useCallback((text: string, tone: ToastMessage['tone'] = 'info') => {
     const id = toastId.current++;

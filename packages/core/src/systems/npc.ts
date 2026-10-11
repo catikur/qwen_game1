@@ -3,7 +3,6 @@ import {
   BUILDING_BY_ID,
   CATEGORIES,
   CONSUMER_CATEGORIES,
-  NPC_PROFILES,
   getDifficulty,
 } from '@capital/content';
 import type { BuildingDef, CategoryId, NpcProfileDef } from '@capital/content';
@@ -12,6 +11,7 @@ import { chainCards } from '../chain';
 import { competitionCards } from '../competition';
 import { formatMoney } from '../selectors';
 import { pushNews } from '../news';
+import { rivalProfiles } from '../profiles';
 import { nextFloat } from '../rng';
 import { estimateInvestment } from './market';
 import { isDistrictOpen, tilePrice } from './city';
@@ -728,7 +728,8 @@ function tryBuybackDefense(state: GameState, profile: NpcProfileDef): void {
 export function runNpcTick(state: GameState): void {
   if (!state.flags.npcCompetition) return;
 
-  NPC_PROFILES.forEach((profile, index) => {
+  // Katalog + üretilmiş rakipler (Tur 22); üretilmiş yokken katalogun kendisi.
+  rivalProfiles(state).forEach((profile, index) => {
     if (!state.companies[profile.id]) return;
 
     /*

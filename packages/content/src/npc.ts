@@ -1,4 +1,5 @@
-import type { NpcProfileDef } from './types';
+import type { CeoPortrait } from './ceos';
+import type { NpcProfileDef, NpcTrait } from './types';
 
 /**
  * Rakip şirketler.
@@ -208,3 +209,61 @@ export const NPC_PROFILES: NpcProfileDef[] = [
     },
   },
 ];
+
+/**
+ * Katalog dışı rakiplerin malzemesi (Tur 22).
+ *
+ * Boşalan koltuğa giriş Tur 17'de geldi, ama yalnızca katalogdaki sekiz
+ * kişilikten biri girebiliyordu. Ölçüm: devralma yapan bir oyuncuyla
+ * büyük şehirde (sekiz koltuk, sekiz kişiliğin hepsi baştan sahnede) ilk
+ * devralmada katalog bitiyor, 178. günden 1.200. güne sekiz koltuk üç-dört
+ * rakibe iniyordu. Standart şehirde katalog 958. günde bitiyordu.
+ *
+ * Katalog bitince yeni rakip ÜRETİLİYOR: doktrini (kişilik ve sayısal
+ * ağırlıklar) kataloğun kalibre edilmiş profillerinden birinden, adı,
+ * yüzü ve rengi bu tablolardan. Yeni ağırlık uydurulmuyor: denge
+ * kataloğun sayılarıyla ölçüldü.
+ */
+export const RIVAL_NAME_STEMS: readonly string[] = [
+  'Poyraz', 'Lodos', 'Sedir', 'Pusula', 'Mercan', 'Kervan', 'Ilgaz', 'Defne',
+  'Ekin', 'Toros', 'Safir', 'Ayaz', 'Bozkır', 'Fener', 'Yelken', 'Martı',
+  'Kestane', 'Sarnıç', 'Kumru', 'Çağla', 'Gümüşsu', 'Akasya', 'Kırlangıç', 'Zeytin',
+];
+
+/** Doktrine göre ad eki: oyuncu yeni gelenin ne olduğunu adından sezebilsin. */
+export const RIVAL_NAME_SUFFIXES: Record<NpcTrait, readonly string[]> = {
+  expansionist: ['Holding', 'Girişim'],
+  price_cutter: ['Market', 'Pazar'],
+  premium: ['Grup', 'Koleksiyon'],
+  landlord: ['Yapı', 'Gayrimenkul'],
+  tech: ['Teknoloji', 'Bilişim'],
+};
+
+export const RIVAL_CEO_FIRST_NAMES: readonly string[] = [
+  'Ece', 'Kaan', 'Nil', 'Bora', 'Lale', 'Umut', 'Derin', 'Tolga', 'İpek', 'Ozan',
+  'Gizem', 'Barış', 'Melis', 'Cem', 'Su', 'Emre', 'Aslı', 'Onur',
+];
+
+export const RIVAL_CEO_LAST_NAMES: readonly string[] = [
+  'Karaca', 'Erdem', 'Sezer', 'Tunalı', 'Akgül', 'Öztürk', 'Yalın', 'Demirci',
+  'Kocabaş', 'Uysal', 'Saraç', 'Bayram', 'Ekinci', 'Gürsoy',
+];
+
+/**
+ * Yeni rakip renkleri. Önce bu liste, sonra kataloğun renkleri (sahnede
+ * olmayanlar) deneniyor: devralınan bir rakibin rengi hemen başkasına
+ * geçerse oyuncu haritada eski rakibi görüyor sanır.
+ */
+export const RIVAL_EXTRA_COLORS: readonly string[] = [
+  '#8fbf3a', '#a1683a', '#f08a5d', '#3f8f4e', '#7d8ea3', '#b8b23a', '#4a5fa8', '#d46a6a',
+];
+
+export const RIVAL_PORTRAIT_PARTS: {
+  skins: readonly string[];
+  hairs: readonly string[];
+  styles: readonly CeoPortrait['hairStyle'][];
+} = {
+  skins: ['#f1c8a5', '#e0b088', '#c9865c', '#a8714a', '#8a5a3b', '#d9a47e'],
+  hairs: ['#1d1614', '#3b2a1e', '#5a3a1e', '#8a6a3a', '#b9b2a8', '#2a2a2e'],
+  styles: ['short', 'bun', 'curly', 'bald', 'wave', 'crop'],
+};

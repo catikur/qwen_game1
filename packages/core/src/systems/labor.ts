@@ -1,6 +1,7 @@
-import { BUILDING_BY_ID, LABOR, NPC_LABOR, NPC_PROFILES, WAGE_POLICIES } from '@capital/content';
+import { BUILDING_BY_ID, LABOR, NPC_LABOR, WAGE_POLICIES } from '@capital/content';
 import type { BuildingDef, UnionResponse, WagePolicy } from '@capital/content';
 import { pushNews } from '../news';
+import { rivalProfile } from '../profiles';
 import { createRng, nextFloat, nextRange } from '../rng';
 import type { CommandResult, CompanyState, GameState, LaborState } from '../types';
 
@@ -86,13 +87,13 @@ export function wageIndexTarget(jobs: number, population: number): number {
   return Math.min(LABOR.indexCap, 1 + LABOR.densitySlope * Math.max(0, density - LABOR.densityFree));
 }
 
-function profileOf(company: CompanyState) {
-  return company.isPlayer ? undefined : NPC_PROFILES.find((profile) => profile.id === company.profileId);
+function profileOf(state: GameState, company: CompanyState) {
+  return company.isPlayer ? undefined : rivalProfile(state, company.profileId);
 }
 
-function ensureLabor(company: CompanyState): LaborState {
+function ensureLabor(state: GameState, company: CompanyState): LaborState {
   if (company.labor) return company.labor;
-  const doctrine = profileOf(company);
+  const doctrine = profileOf(state, company);
   company.labor = {
     policy: doctrine ? NPC_LABOR[doctrine.trait].policy : 'market',
     pressure: 0,
@@ -223,7 +224,7 @@ function openDemand(state: GameState, company: CompanyState, labor: LaborState):
   const raise = Math.round(Math.max(0.03, raw) * 200) / 200;
   labor.demand = { raise, offeredDay: day, deadlineDay: day + LABOR.deadlineDays };
 
-  const profile = profileOf(company);
+  const profile = profileOf(state, company);
   if (profile) {
     resolveDemand(state, company, NPC_LABOR[profile.trait].response, day);
     return;
@@ -264,7 +265,7 @@ export function runLaborTick(state: GameState): void {
 
   // ---- Şirketler ----
   for (const company of Object.values(state.companies)) {
-    const labor = ensureLabor(company);
+    const labor = ensureLabor(state, company);
 
     if (labor.strike && day > labor.strike.endsOnDay) {
       const { raise, endsOnDay, startedDay } = labor.strike;
@@ -305,7 +306,7 @@ export function setWagePolicy(state: GameState, companyId: string, policy: WageP
   const company = state.companies[companyId];
   if (!company) return { ok: false, reason: 'Şirket bulunamadı.' };
   if (!WAGE_POLICIES[policy]) return { ok: false, reason: 'Bilinmeyen politika.' };
-  const labor = ensureLabor(company);
+  const labor = ensureLabor(state, company);
   if (labor.policy === policy) return { ok: false, reason: 'Politika zaten bu.' };
   if (labor.policyDay !== undefined && state.time.day - labor.policyDay < LABOR.policyCooldownDays) {
     const left = LABOR.policyCooldownDays - (state.time.day - labor.policyDay);

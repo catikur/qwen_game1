@@ -28,6 +28,7 @@ import { placeBid, runAuctionTick } from './systems/auction';
 import { runDividendTick, runTakeoverTick, sellShares } from './systems/equity';
 import { runResearchTick } from './systems/focus';
 import { runNpcTick } from './systems/npc';
+import { holdingTransfer, openCity, runHoldingTick, switchCity } from './holding';
 import { SPEED_MS } from './types';
 import type { CommandResult, GameCommand, GameState } from './types';
 
@@ -102,6 +103,24 @@ export class GameEngine {
     // hesaplanıyor.
     if (!state.league) recomputeNetWorth(this.state);
     this.notify();
+  }
+
+  /**
+   * Holding: oynanan şehir değişiyor (Tur 22). Kayıt yüklemeye benziyor ama
+   * anlık olaylar sessizce yeniden kuruluyor: geçilen eşikler, sıralama,
+   * baskın seviyesi. Yoksa her şehir değişiminde "Şirket değeri 5M ₺" ve
+   * "geçildin" haberleri yeniden düşerdi.
+   */
+  private swapCity(next: GameState): void {
+    this.state = next;
+    this.leadership = null;
+    this.lastRank = null;
+    this.lastRaidStage = 0;
+    this.reachedMilestones.clear();
+    const player = next.companies[next.playerCompanyId];
+    for (const milestone of MILESTONES) {
+      if (player && player.netWorth >= milestone) this.reachedMilestones.add(milestone);
+    }
   }
 
   private notify(): void {
@@ -275,6 +294,20 @@ export class GameEngine {
         state.victory.dismissed = true;
         return { ok: true };
 
+      case 'OPEN_CITY':
+      case 'SWITCH_CITY': {
+        const result =
+          command.type === 'OPEN_CITY'
+            ? openCity(state, command.citySize, command.capital)
+            : switchCity(state, command.index);
+        if (!result.ok || !result.next) return { ok: false, reason: result.reason ?? 'Şehir değişmedi.' };
+        this.swapCity(result.next);
+        return { ok: true };
+      }
+
+      case 'HOLDING_TRANSFER':
+        return holdingTransfer(state, command.amount);
+
       default:
         return { ok: false, reason: 'Bilinmeyen komut.' };
     }
@@ -368,6 +401,8 @@ export class GameEngine {
     runEntrantTick(state);
     // Banka: taksit, kredili hesap, not, haciz.
     runCreditTick(state);
+    // Holding: bekleyen şehirlerin kâr payı kasaya (Tur 22).
+    runHoldingTick(state);
     recomputeNetWorth(state);
     this.checkMilestones();
     runGoalTick(state);

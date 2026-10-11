@@ -65,6 +65,7 @@ import { WAGE_PER_JOB } from '../src/systems/labor';
 import { loanQuote } from '../src/systems/credit';
 import { issueQuote } from '../src/systems/issuance';
 import { dailyBuyCap, findOrder, orderEstimate } from '../src/systems/orders';
+import { cityTrend, holdingNetWorth } from '../src/holding';
 import { ownerFraction, sharesOutstanding } from '../src/systems/equity';
 import type { GameEngine as Engine } from '../src/engine';
 import type { GameState } from '../src/types';
@@ -3790,6 +3791,120 @@ section('Büyük şehir (5×5)', () => {
       state.victory ? `${state.victory.day}. gün` : 'zafer yok');
     expect(`büyük seed ${seed}: geç oyun günü 3x hızın altında`, lateMs / 60 < 480, `${(lateMs / 60).toFixed(0)} ms/gün`);
   }
+});
+
+section('Holding: ikinci şehir', () => {
+  /*
+   * Tur 22. Zafer kazanılan şehirden yeni şehre açılınca:
+   *   - sermaye taşınıyor, kurucu şehir donuyor (takvimi ilerlemiyor),
+   *   - kurucu şehrin kâr eğiliminin yarısı her gün holding kasasına,
+   *   - ikinci şehrin zaferi getirilen sermayeyle değil şehirde yaratılan
+   *     değerle: dışarıdan gelen 10 M ₺'lik kasa zaferi bedavaya getirmemeli.
+   * Ölçülen (tohum 1/7/42, sermaye nakdin %25'i): 1. şehir 647/808/700. gün,
+   * 2. şehir 700/627/715. gün; kasa 55–105 M ₺.
+   */
+  const engine = new GameEngine(createNewGame({ seed: 1, companyName: 'Holding AŞ' }));
+  const state = () => engine.getState();
+  const play = (limit: number) => {
+    for (let day = 0; day < limit; day++) {
+      const s = state();
+      if (s.time.day % 5 === 0) playerStrategy(engine);
+      if (s.time.day % 3 === 0) defendAgainstRaids(engine);
+      engine.runDay();
+      if (s.gameOver || s.victory) return;
+    }
+  };
+  play(1200);
+  const founding = state();
+  const firstVictory = founding.victory?.day ?? null;
+  const foundingDay = founding.time.day;
+  const capital = Math.max(2_000_000, Math.round(getPlayer(founding).cash * 0.25));
+  const trend = cityTrend(founding);
+  if (founding.victory) engine.dispatch({ type: 'DISMISS_VICTORY' });
+  const opened = engine.dispatch({ type: 'OPEN_CITY', citySize: 'standard', capital });
+  expect('zafer kazanılan şehirden yeni şehir açılıyor', opened.ok && firstVictory !== null,
+    opened.reason ?? `${firstVictory}. gün zafer · ${formatMoney(capital)} sermaye · ${state().cityName}`);
+  if (!opened.ok) return;
+
+  const city = state();
+  play(1200);
+  const secondVictory = city.victory?.day ?? null;
+  const days = city.time.day;
+  const treasury = city.holding?.treasury ?? 0;
+  const dormantDay = city.holding?.dormant[0]?.state.time.day;
+  console.log(
+    `  1. şehir ${firstVictory}. gün zafer (eğilim ${formatMoney(trend)}/gün) · 2. şehir ${secondVictory ?? '-'}. gün · ` +
+      `kasa ${formatMoney(treasury)} · holding ${formatMoney(holdingNetWorth(city))}`,
+  );
+  expect('bekleyen şehrin takvimi duruyor', dormantDay === foundingDay, `${dormantDay}. günde · ayrılış ${foundingDay}`);
+  expect(
+    'kasaya her gün eğilimin yarısı akıyor',
+    Math.abs(treasury - Math.max(0, trend) * 0.5 * days) < 1,
+    `${formatMoney(treasury)} ≈ ${days} gün × ${formatMoney(Math.max(0, trend) * 0.5)}`,
+  );
+  expect('ikinci şehirde de zafer var', secondVictory !== null, `${secondVictory ?? '-'}. gün`);
+  expect(
+    'getirilen sermaye zaferi bedavaya getirmiyor (400. günden önce değil)',
+    secondVictory !== null && secondVictory >= 400,
+    `${secondVictory ?? '-'}. gün · getirilen ${formatMoney(capital)}`,
+  );
+  expect('holding tek şehirden büyük', holdingNetWorth(city) > getPlayer(city).netWorth, formatMoney(holdingNetWorth(city)));
+});
+
+section('Rakip koltukları dolu kalıyor', () => {
+  /*
+   * Tur 22. Devralma yapan vekil büyük şehirde (sekiz koltuk, kataloğun
+   * sekizi de baştan sahnede) ilk devralmada kataloğu bitiriyordu; 178.
+   * günden 1.200. güne sekiz koltuk üç-dört rakibe iniyordu ve yerine
+   * kimse gelmiyordu. Katalog bitince yeni rakip üretiliyor ve giriş
+   * beklemesi koltuk sayısıyla ölçekli (büyükte 60 gün).
+   *
+   * Ölçülen (1.200 gün, tohum 1/7/42): önce 4 / 3 / 3 rakip, sonra 7 / 8 / 7.
+   * Sınanan iddialar: katalog gerçekten bitiyor (kontrol anlamlı), en az üç
+   * rakip üretiliyor, geç oyunda koltukların en az altısı dolu, sahnedeki
+   * adlar ve renkler tekrar etmiyor.
+   */
+  const engine = new GameEngine(createNewGame({ seed: 7, citySize: 'large', companyName: 'Avcı AŞ' }));
+  const state = engine.getState();
+  let exhaustedDay: number | null = null;
+  for (let day = 1; day <= 800; day++) {
+    if (day % 5 === 0) {
+      playerStrategy(engine);
+      const player = getPlayer(state);
+      if (!player.orders) {
+        let best: { id: string; cost: number } | null = null;
+        for (const company of Object.values(state.companies)) {
+          if (company.isPlayer) continue;
+          if (company.lockedUntilDay !== undefined && day < company.lockedUntilDay) continue;
+          const estimate = orderEstimate(state, player.id, company.id);
+          if (estimate.need > 0 && !estimate.floatShort && (!best || estimate.cost < best.cost)) best = { id: company.id, cost: estimate.cost };
+        }
+        if (best && best.cost < player.cash * 0.9) engine.dispatch({ type: 'PLACE_TAKEOVER_ORDER', companyId: best.id });
+      }
+    }
+    if (day % 3 === 0) defendAgainstRaids(engine);
+    engine.runDay();
+    if (state.gameOver) break;
+    if (exhaustedDay === null) {
+      const history = new Set(state.rivalHistory ?? []);
+      const rivals = Object.values(state.companies).filter((c) => !c.isPlayer).length;
+      if (rivals < (state.rivalSlots ?? 0) && NPC_PROFILES.every((p) => history.has(p.id))) exhaustedDay = day;
+    }
+  }
+  const onStage = Object.values(state.companies).filter((c) => !c.isPlayer);
+  const generated = state.extraProfiles ?? [];
+  console.log(
+    `  büyük seed  7 · avcı vekil | katalog ${exhaustedDay ?? '-'}. günde bitti · ${generated.length} rakip üretildi · ` +
+      `800. günde ${onStage.length}/${state.rivalSlots} koltuk · sahnede: ${onStage.map((c) => c.name).join(', ')}`,
+  );
+  expect('katalog bitiyor (kontrol anlamlı)', exhaustedDay !== null, `${exhaustedDay ?? '-'}. gün`);
+  expect('katalog bitince yeni rakip geliyor', generated.length >= 3, `${generated.length} üretilen`);
+  expect('geç oyunda koltuklar dolu', onStage.length >= 6, `${onStage.length}/${state.rivalSlots}`);
+  expect(
+    'sahnedeki adlar ve renkler tekrar etmiyor',
+    new Set(onStage.map((c) => c.name)).size === onStage.length && new Set(onStage.map((c) => c.color)).size === onStage.length,
+    onStage.map((c) => `${c.name} ${c.color}`).join(' · '),
+  );
 });
 
 if (timings.length === 0) {
