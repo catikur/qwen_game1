@@ -1,3 +1,4 @@
+import { localizeRecord } from './localize';
 /**
  * Belediye meclisi.
  *
@@ -97,3 +98,6 @@ export const MOTION_TEXT: Record<MotionKind, MotionText> = {
     summary: 'Kabul edilirse 90 gün boyunca bütün yeni binalar %8 ucuza kurulur.',
   },
 };
+
+// Metin alanları etkin dile bağlı (Tur 23); Türkçe yedek nesnenin kendi metni.
+localizeRecord(MOTION_TEXT, 'motion', ['title', 'summary']);

@@ -1,4 +1,5 @@
 import type { NpcTrait } from './types';
+import { localizeRecord } from './localize';
 
 /**
  * İşgücü: bölgenin iş piyasası, şirketin ücret politikası, sendika.
@@ -125,3 +126,6 @@ export const NPC_LABOR: Record<NpcTrait, { policy: WagePolicy; response: UnionRe
   expansionist: { policy: 'market', response: 'compromise' },
   landlord: { policy: 'market', response: 'compromise' },
 };
+
+// Metin alanları etkin dile bağlı (Tur 23); Türkçe yedek nesnenin kendi metni.
+localizeRecord(WAGE_POLICIES, 'wage', ['name', 'blurb']);

@@ -21,4 +21,6 @@ export { MarketPanel } from './MarketPanel';
 export { CeoPortrait } from './CeoPortrait';
 export { NewGameScreen } from './NewGame';
 export { currentLocale, registerLocale, setLocale, t } from './i18n';
+export { LOCALE_NAMES, chooseLocale, initLocale, useLocale } from './i18n/locale';
+export { LocalePicker } from './LocalePicker';
 export type { MessageKey } from './i18n';

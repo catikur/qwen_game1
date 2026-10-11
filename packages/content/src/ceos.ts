@@ -1,4 +1,5 @@
 import type { CategoryId } from './types';
+import { localizeList } from './localize';
 
 /**
  * CEO profilleri.
@@ -213,3 +214,6 @@ export const DEFAULT_CEO_ID = CEOS[0]!.id;
 export function getCeoModifiers(ceoId: string | null): CeoModifiers {
   return (ceoId && CEO_BY_ID[ceoId]?.modifiers) || BASE;
 }
+
+// Metin alanları etkin dile bağlı (Tur 23); Türkçe yedek nesnenin kendi metni.
+localizeList(CEOS, 'ceo', ['title', 'perk', 'drawback', 'bio']);

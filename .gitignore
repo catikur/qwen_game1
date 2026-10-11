@@ -62,3 +62,6 @@ apps/*/dist-single/
 
 # TypeScript artıkları — `tsc -b` her pakete bunlardan bırakıyor
 *.tsbuildinfo
+
+# Claude Code ajan çalışma ağaçları (geçici)
+.claude/worktrees/

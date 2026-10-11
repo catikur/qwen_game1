@@ -1,4 +1,5 @@
 import type { NpcTrait } from './types';
+import { localizeRecord } from './localize';
 
 /**
  * Banka: kredili hesap, ticari kredi, arsa teminatlı kredi.
@@ -125,3 +126,6 @@ export const NPC_CREDIT: Record<NpcTrait, { maxLeverage: number; kind: LoanKind;
   premium: { maxLeverage: 0.15, kind: 'term', termDays: 180, cashTight: 0.15 },
   price_cutter: { maxLeverage: 0, kind: 'term', termDays: 180, cashTight: 0 },
 };
+
+// Metin alanları etkin dile bağlı (Tur 23); Türkçe yedek nesnenin kendi metni.
+localizeRecord(CREDIT_RATINGS, 'rating', ['blurb']);

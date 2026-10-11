@@ -1,3 +1,4 @@
+import { localizeList } from './localize';
 /**
  * Şehir dokusu.
  *
@@ -290,3 +291,6 @@ export const DISTRICT_FABRIC: Record<string, FabricWeights> = {
     { structureId: 'park', weight: 10 },
   ],
 };
+
+// Metin alanları etkin dile bağlı (Tur 23); Türkçe yedek nesnenin kendi metni.
+localizeList(STRUCTURES, 'structure', ['name', 'description']);

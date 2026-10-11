@@ -1,4 +1,5 @@
 import type { BuildingDef } from './types';
+import { localizeList } from './localize';
 
 /**
  * Bina kataloğu.
@@ -527,3 +528,6 @@ export const BUILDINGS: BuildingDef[] = [
 export const BUILDING_BY_ID: Record<string, BuildingDef> = Object.fromEntries(
   BUILDINGS.map((b) => [b.id, b]),
 );
+
+// Metin alanları etkin dile bağlı (Tur 23); Türkçe yedek nesnenin kendi metni.
+localizeList(BUILDINGS, 'building', ['name', 'description']);

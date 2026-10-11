@@ -1,4 +1,5 @@
 import type { CategoryId, DistrictArchetypeId } from './types';
+import { localizeList } from './localize';
 
 /**
  * Ekonomik olaylar.
@@ -219,3 +220,7 @@ export const ERAS: EventDef[] = [
 ];
 
 export const ERA_BY_ID: Record<string, EventDef> = Object.fromEntries(ERAS.map((e) => [e.id, e]));
+
+// Metin alanları etkin dile bağlı (Tur 23); Türkçe yedek nesnenin kendi metni.
+localizeList(EVENTS, 'event', ['title', 'body']);
+localizeList(ERAS, 'era', ['title', 'body']);
