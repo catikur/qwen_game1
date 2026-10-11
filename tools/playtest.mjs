@@ -57,14 +57,16 @@ const CHROMIUM = process.env.CHROMIUM_PATH
   || (fs.existsSync('/opt/pw-browsers/chromium') ? '/opt/pw-browsers/chromium' : undefined);
 
 const server = http.createServer((req, res) => {
-  const rel = req.url === '/' ? '/index.html' : req.url.split('?')[0];
+  // Sorgu önce ayrılıyor: '/?lang=en' de kök sayfa.
+  const bare = req.url.split('?')[0];
+  const rel = bare === '/' ? '/index.html' : bare;
   if (rel === '/favicon.ico') {
     res.writeHead(204);
     res.end();
     return;
   }
   const file = path.join(ROOT, rel);
-  if (!file.startsWith(ROOT) || !fs.existsSync(file)) {
+  if (!file.startsWith(ROOT) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) {
     res.writeHead(404);
     res.end('nf');
     return;
