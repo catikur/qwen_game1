@@ -1,5 +1,6 @@
 import { CATEGORIES } from './categories';
 import type { CategoryId, GoodDef } from './types';
+import { localizeList } from './localize';
 
 /**
  * Ürün kataloğu — tedarik zincirinin içeriği.
@@ -386,3 +387,6 @@ export function chainOf(goodId: string): GoodDef[] {
   }
   return chain;
 }
+
+// Metin alanları etkin dile bağlı (Tur 23); Türkçe yedek nesnenin kendi metni.
+localizeList(GOODS, 'good', ['name']);

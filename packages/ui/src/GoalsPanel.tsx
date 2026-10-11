@@ -1,5 +1,5 @@
 import type { ReactElement } from 'react';
-import { getDifficulty } from '@capital/content';
+import { getDifficulty, formatPercent } from '@capital/content';
 import { companyRanking, formatMoney, getPlayer, goalLadder, nextGoal, openCityQuote, victoryNetWorth } from '@capital/core';
 import { useGame, useGameState } from './useGame';
 import { t } from './i18n';
@@ -42,7 +42,7 @@ export function GoalsPanel(): ReactElement {
                 <span className="goal-state">
                   {goal.completedDay !== null
                     ? t('hud.goals.completedDay', { day: goal.completedDay })
-                    : `%${Math.round(goal.progress * 100)}`}
+                    : formatPercent(Math.round(goal.progress * 100))}
                 </span>
               </div>
               {goal.completedDay === null && (

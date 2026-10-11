@@ -1,4 +1,5 @@
 import { DISTRICT_ARCHETYPES, DISTRICT_FABRIC, STRUCTURE_BY_ID, rootStructureOf } from '@capital/content';
+import { tc } from '../i18n';
 import { createRng, nextFloat } from '../rng';
 import { pushNews } from '../news';
 import { isDistrictOpen } from './city';
@@ -284,8 +285,8 @@ export function runCityGrowthTick(state: GameState): void {
         pushNews(
           state,
           'neutral',
-          `${district.name} yükseliyor`,
-          `${district.name} bölgesinde ilk ${next.name.toLowerCase()} yükseldi. Arsa değerleri onu izleyecek.`,
+          tc('core.citygrowth.risingTitle', { district: district.name }),
+          tc('core.citygrowth.risingBody', { district: district.name, structure: next.name.toLowerCase() }),
           { tileId: tile.id },
         );
       }

@@ -4,6 +4,7 @@ import { createRng, nextInt, nextRange } from '../rng';
 import { pushNews } from '../news';
 import { rivalProfiles } from '../profiles';
 import { formatMoney } from '../selectors';
+import { tc } from '../i18n';
 import type { CommandResult, CompanyState, GameState, MotionState, PolicyState } from '../types';
 
 /**
@@ -79,7 +80,9 @@ export function motionSupport(motion: MotionState): SupportBreakdown {
 // ------------------------------------------------------------ önergeler
 
 function fill(template: string, district?: string, category?: string): string {
-  return template.replace(/\{district\}/g, district ?? 'Şehir').replace(/\{category\}/g, category ?? 'Perakende');
+  return template
+    .replace(/\{district\}/g, district ?? tc('core.council.defaultDistrict'))
+    .replace(/\{category\}/g, category ?? tc('core.council.defaultCategory'));
 }
 
 function generateMotions(state: GameState): MotionState[] {
@@ -203,7 +206,7 @@ function applyMotion(state: GameState, motion: MotionState): string {
         title: motion.title,
       };
       (state.policies ??= []).push(policy);
-      return `${COUNCIL.policyDays} gün yürürlükte.`;
+      return tc('core.council.policyDays', { days: COUNCIL.policyDays });
     }
     case 'permit_relief':
       (state.policies ??= []).push({
@@ -212,35 +215,44 @@ function applyMotion(state: GameState, motion: MotionState): string {
         untilDay: day + COUNCIL.permitDays,
         title: motion.title,
       });
-      return `${COUNCIL.permitDays} gün boyunca inşaat %${Math.round(COUNCIL.permitDiscount * 100)} ucuz.`;
+      return tc('core.council.permitEffect', {
+        days: COUNCIL.permitDays,
+        discount: Math.round(COUNCIL.permitDiscount * 100),
+      });
     case 'infrastructure': {
       const district = state.districts[motion.districtId!]!;
       district.infrastructure = (district.infrastructure ?? 0) + 1;
       for (const tile of state.map.tiles) {
         if (tile.districtId === district.id) tile.landValue *= 1 + COUNCIL.infrastructureLandBoost;
       }
-      return `${district.name} arsaları %${Math.round(COUNCIL.infrastructureLandBoost * 100)} değer kazandı.`;
+      return tc('core.council.infrastructureEffect', {
+        district: district.name,
+        boost: Math.round(COUNCIL.infrastructureLandBoost * 100),
+      });
     }
     case 'zoning_rush': {
       const district = state.districts[motion.districtId!]!;
-      if (district.opensOnDay === undefined) return 'Bölge zaten açık.';
+      if (district.opensOnDay === undefined) return tc('core.council.alreadyOpen');
       district.opensOnDay = Math.max(day + COUNCIL.zoningMinLeadDays, district.opensOnDay - COUNCIL.zoningAdvanceDays);
       // Bu haber imar duyurusunun yerine de geçiyor: 30 gün kala düşen
       // duyuru günü öne çekmeyle geride kalmış olabilir.
-      return `İmar planı açıklandı: ${district.name} ${district.opensOnDay - day} gün sonra imara açılıyor — arsa koşusu o gün başlar.`;
+      return tc('core.council.zoningEffect', { district: district.name, days: district.opensOnDay - day });
     }
   }
 }
 
 function explain(state: GameState, motion: MotionState, breakdown: SupportBreakdown): string {
-  const percent = (value: number) => `%${Math.round(value * 100)}`;
+  const percent = (value: number) => Math.round(value * 100);
   const parts = breakdown.contributions.slice(0, 3).map((entry) => {
-    const name = state.companies[entry.companyId]?.name ?? 'Bir şirket';
-    const sign = entry.delta >= 0 ? '+' : '−';
-    return `${name} ${sign}${Math.abs(Math.round(entry.delta * 100))} puan (${formatMoney(entry.spent)})`;
+    const name = state.companies[entry.companyId]?.name ?? tc('core.council.someCompany');
+    const params = { name, points: Math.abs(Math.round(entry.delta * 100)), spent: formatMoney(entry.spent) };
+    return entry.delta >= 0 ? tc('core.council.lobbyFor', params) : tc('core.council.lobbyAgainst', params);
   });
-  const lobby = parts.length > 0 ? `; ${parts.join(', ')}` : '; kimse lobi yapmadı';
-  return `${percent(breakdown.support)} destek — meclisin eğilimi ${percent(breakdown.base)}${lobby}.`;
+  const support = percent(breakdown.support);
+  const base = percent(breakdown.base);
+  return parts.length > 0
+    ? tc('core.council.explain', { support, base, lobby: parts.join(', ') })
+    : tc('core.council.explainNoLobby', { support, base });
 }
 
 // ---------------------------------------------------------------- tick
@@ -251,7 +263,7 @@ function expirePolicies(state: GameState): void {
   const before = state.policies.length;
   state.policies = state.policies.filter((policy) => policy.untilDay > state.time.day);
   if (state.policies.length < before) {
-    pushNews(state, 'neutral', 'Meclis kararının süresi doldu', 'Geçici vergi/teşvik/ruhsat kararı sona erdi.');
+    pushNews(state, 'neutral', tc('core.council.expiredTitle'), tc('core.council.expiredBody'));
   }
 }
 
@@ -292,7 +304,9 @@ export function runCouncilTick(state: GameState): void {
         pushNews(
           state,
           passed ? 'good' : 'neutral',
-          `${passed ? 'Meclis kabul etti' : 'Meclis reddetti'}: ${motion.title}`,
+          passed
+            ? tc('core.council.passedTitle', { title: motion.title })
+            : tc('core.council.rejectedTitle', { title: motion.title }),
           `${explain(state, motion, breakdown)}${effect}`,
           motion.districtId !== undefined ? { districtId: motion.districtId } : undefined,
         );
@@ -311,8 +325,8 @@ export function runCouncilTick(state: GameState): void {
   pushNews(
     state,
     'neutral',
-    'Belediye meclisi toplanıyor',
-    `${COUNCIL.lobbyWindowDays} gün sonra oylanacak: ${motions.map((m) => m.title).join(' · ')}. Lobi bağışları kamuya açık.`,
+    tc('core.council.sessionTitle'),
+    tc('core.council.sessionBody', { days: COUNCIL.lobbyWindowDays, motions: motions.map((m) => m.title).join(' · ') }),
   );
 }
 
@@ -326,20 +340,20 @@ export function lobby(
   amount: number,
 ): CommandResult {
   const session = state.council?.session;
-  if (state.flags.council === false || !session) return { ok: false, reason: 'Meclis şu an toplantıda değil.' };
+  if (state.flags.council === false || !session) return { ok: false, reason: tc('core.council.notInSession') };
   const motion = session.motions.find((m) => m.id === motionId);
-  if (!motion) return { ok: false, reason: 'Bu önerge gündemde değil.' };
+  if (!motion) return { ok: false, reason: tc('core.council.motionNotFound') };
   // Bir önergede tek taraf: iki tarafa birden bağış kamuya açık kayıtta
   // birbirini silerdi, harcanan para ise gerçek olurdu.
   const previous = motion.lobby[companyId] ?? 0;
   if ((previous > 0 && side === 'against') || (previous < 0 && side === 'for')) {
-    return { ok: false, reason: 'Bu önergede zaten öteki tarafa bağış yaptın — taraf değiştirilemez.' };
+    return { ok: false, reason: tc('core.council.sideLocked') };
   }
   const company = state.companies[companyId];
-  if (!company) return { ok: false, reason: 'Bilinmeyen şirket.' };
+  if (!company) return { ok: false, reason: tc('core.council.unknownCompany') };
   const spend = Math.round(amount);
-  if (!(spend > 0)) return { ok: false, reason: 'Bağış tutarı sıfırdan büyük olmalı.' };
-  if (spend > company.cash) return { ok: false, reason: 'Nakdin bu bağışa yetmiyor.' };
+  if (!(spend > 0)) return { ok: false, reason: tc('core.council.amountPositive') };
+  if (spend > company.cash) return { ok: false, reason: tc('core.council.noCash') };
 
   company.cash -= spend;
   motion.lobby[companyId] = (motion.lobby[companyId] ?? 0) + (side === 'for' ? spend : -spend);

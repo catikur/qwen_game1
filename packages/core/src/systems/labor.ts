@@ -1,6 +1,7 @@
-import { BUILDING_BY_ID, LABOR, NPC_LABOR, WAGE_POLICIES } from '@capital/content';
+import { BUILDING_BY_ID, LABOR, NPC_LABOR, WAGE_POLICIES, formatPercent, localizeDecimal } from '@capital/content';
 import type { BuildingDef, UnionResponse, WagePolicy } from '@capital/content';
 import { pushNews } from '../news';
+import { tc } from '../i18n';
 import { rivalProfile } from '../profiles';
 import { createRng, nextFloat, nextRange } from '../rng';
 import type { CommandResult, CompanyState, GameState, LaborState } from '../types';
@@ -125,7 +126,7 @@ function laborSite(state: GameState, companyId: string): number | undefined {
 
 export function percent(rate: number): string {
   const value = Math.round(rate * 1000) / 10;
-  return `%${String(value).replace('.', ',')}`;
+  return formatPercent(localizeDecimal(String(value)));
 }
 
 /** Uzlaşma teklifinin tutma ihtimali (arayüz de bunu gösteriyor). */
@@ -155,16 +156,20 @@ function startStrike(state: GameState, company: CompanyState, labor: LaborState,
     pushNews(
       state,
       'bad',
-      'Grev başladı',
-      `${LABOR.strikeDays} gün boyunca mağazaların ve fabrikaların ${percent(LABOR.strikeCapacity)} kapasiteyle çalışacak. Grev bitince ${percent(raise)} zamla sözleşme imzalanacak.`,
+      tc('core.labor.strikeTitle'),
+      tc('core.labor.strikeBody', {
+        days: LABOR.strikeDays,
+        capacity: percent(LABOR.strikeCapacity),
+        raise: percent(raise),
+      }),
       where,
     );
   } else {
     pushNews(
       state,
       'rival',
-      `${company.name}'de grev`,
-      `Sendika iş bıraktı: ${LABOR.strikeDays} gün mağazaları ve fabrikaları ${percent(LABOR.strikeCapacity)} kapasitede. Raflarında boşluk olacak.`,
+      tc('core.labor.rivalStrikeTitle', { name: company.name }),
+      tc('core.labor.rivalStrikeBody', { days: LABOR.strikeDays, capacity: percent(LABOR.strikeCapacity) }),
       where,
     );
   }
@@ -188,16 +193,32 @@ function resolveDemand(state: GameState, company: CompanyState, response: UnionR
   if (response === 'accept') {
     labor.agreement *= 1 + raise;
     labor.pressure = 0;
-    if (player) pushNews(state, 'neutral', 'Toplu sözleşme imzalandı', `Ücretler ${percent(raise)} arttı. Sendika baskısı sıfırlandı.`);
+    if (player) {
+      pushNews(state, 'neutral', tc('core.labor.acceptedTitle'), tc('core.labor.acceptedBody', { raise: percent(raise) }));
+    }
   } else if (response === 'compromise') {
     const odds = compromiseOdds(state, labor);
     const offered = raise * LABOR.compromiseShare;
     if (roll < odds) {
       labor.agreement *= 1 + offered;
       labor.pressure = LABOR.compromisePressureKeep;
-      if (player) pushNews(state, 'good', 'Uzlaşma tuttu', `Sendika ${percent(offered)} zamma razı oldu (istenen ${percent(raise)}).`);
+      if (player) {
+        pushNews(
+          state,
+          'good',
+          tc('core.labor.compromiseTitle'),
+          tc('core.labor.compromiseBody', { offered: percent(offered), raise: percent(raise) }),
+        );
+      }
     } else {
-      if (player) pushNews(state, 'bad', 'Sendika uzlaşmayı reddetti', `${percent(offered)} teklifi masada kalmadı.`);
+      if (player) {
+        pushNews(
+          state,
+          'bad',
+          tc('core.labor.compromiseRejectedTitle'),
+          tc('core.labor.compromiseRejectedBody', { offered: percent(offered) }),
+        );
+      }
       startStrike(state, company, labor, raise * LABOR.strikeSettlement, startDay);
     }
   } else {
@@ -205,7 +226,7 @@ function resolveDemand(state: GameState, company: CompanyState, response: UnionR
       startStrike(state, company, labor, raise * LABOR.strikeSettlement, startDay);
     } else {
       labor.pressure = LABOR.rejectPressureKeep;
-      if (player) pushNews(state, 'neutral', 'Sendika geri adım attı', 'Grev çıkmadı ama baskı yarıdan başlıyor — talep yine gelecek.');
+      if (player) pushNews(state, 'neutral', tc('core.labor.backedDownTitle'), tc('core.labor.backedDownBody'));
     }
   }
   labor.lastResponse = { kind: response, day };
@@ -233,8 +254,14 @@ function openDemand(state: GameState, company: CompanyState, labor: LaborState):
   pushNews(
     state,
     'bad',
-    `Sendika ${percent(raise)} zam istiyor`,
-    `${LABOR.deadlineDays} gün içinde cevap ver. Kabul: ücretler ${percent(raise)} artar. Uzlaşma: ${percent(raise * LABOR.compromiseShare)} teklif, tutma ihtimali ${percent(compromiseOdds(state, labor))}. Ret: grev ihtimali ${percent(strikeOdds(labor))}. Cevapsız kalırsa Ret sayılır.`,
+    tc('core.labor.demandTitle', { raise: percent(raise) }),
+    tc('core.labor.demandBody', {
+      days: LABOR.deadlineDays,
+      raise: percent(raise),
+      offer: percent(raise * LABOR.compromiseShare),
+      odds: percent(compromiseOdds(state, labor)),
+      strike: percent(strikeOdds(labor)),
+    }),
     tileId !== undefined ? { tileId } : undefined,
   );
 }
@@ -273,7 +300,7 @@ export function runLaborTick(state: GameState): void {
       labor.strikeDays = (labor.strikeDays ?? 0) + (endsOnDay - startedDay + 1);
       delete labor.strike;
       if (company.isPlayer) {
-        pushNews(state, 'neutral', 'Grev bitti', `Sözleşme ${percent(raise)} zamla imzalandı; kapasite tam.`);
+        pushNews(state, 'neutral', tc('core.labor.strikeEndedTitle'), tc('core.labor.strikeEndedBody', { raise: percent(raise) }));
       }
     }
     if (labor.strike) continue;
@@ -295,22 +322,27 @@ export function runLaborTick(state: GameState): void {
           (1 + LABOR.tightnessPressure * Math.max(0, index - 1)),
     );
     if (company.isPlayer && before < 0.75 && labor.pressure >= 0.75) {
-      pushNews(state, 'neutral', 'Sendika örgütleniyor', `Baskı ${percent(labor.pressure)}. Dolduğunda zam talebi masaya gelecek.`);
+      pushNews(
+        state,
+        'neutral',
+        tc('core.labor.organizingTitle'),
+        tc('core.labor.organizingBody', { pressure: percent(labor.pressure) }),
+      );
     }
     if (labor.pressure >= 1) openDemand(state, company, labor);
   }
 }
 
 export function setWagePolicy(state: GameState, companyId: string, policy: WagePolicy): CommandResult {
-  if (!laborEnabled(state)) return { ok: false, reason: 'İşgücü sistemi kapalı.' };
+  if (!laborEnabled(state)) return { ok: false, reason: tc('core.labor.disabled') };
   const company = state.companies[companyId];
-  if (!company) return { ok: false, reason: 'Şirket bulunamadı.' };
-  if (!WAGE_POLICIES[policy]) return { ok: false, reason: 'Bilinmeyen politika.' };
+  if (!company) return { ok: false, reason: tc('core.labor.companyNotFound') };
+  if (!WAGE_POLICIES[policy]) return { ok: false, reason: tc('core.labor.unknownPolicy') };
   const labor = ensureLabor(state, company);
-  if (labor.policy === policy) return { ok: false, reason: 'Politika zaten bu.' };
+  if (labor.policy === policy) return { ok: false, reason: tc('core.labor.samePolicy') };
   if (labor.policyDay !== undefined && state.time.day - labor.policyDay < LABOR.policyCooldownDays) {
     const left = LABOR.policyCooldownDays - (state.time.day - labor.policyDay);
-    return { ok: false, reason: `Ücret politikası ${left} gün sonra yeniden değiştirilebilir.` };
+    return { ok: false, reason: tc('core.labor.policyCooldown', { days: left }) };
   }
   labor.policy = policy;
   labor.policyDay = state.time.day;
@@ -318,11 +350,11 @@ export function setWagePolicy(state: GameState, companyId: string, policy: WageP
 }
 
 export function respondUnion(state: GameState, companyId: string, response: UnionResponse): CommandResult {
-  if (!laborEnabled(state)) return { ok: false, reason: 'İşgücü sistemi kapalı.' };
+  if (!laborEnabled(state)) return { ok: false, reason: tc('core.labor.disabled') };
   const company = state.companies[companyId];
-  if (!company?.labor?.demand) return { ok: false, reason: 'Masada sendika talebi yok.' };
+  if (!company?.labor?.demand) return { ok: false, reason: tc('core.labor.noDemand') };
   if (response !== 'accept' && response !== 'compromise' && response !== 'reject') {
-    return { ok: false, reason: 'Bilinmeyen cevap.' };
+    return { ok: false, reason: tc('core.labor.unknownResponse') };
   }
   // Gün içinde verilen cevabın grevi ertesi gün başlar: bugünün defteri kapanmış.
   resolveDemand(state, company, response, state.time.day + 1);

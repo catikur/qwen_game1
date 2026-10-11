@@ -1,4 +1,5 @@
 import type { ReactElement } from 'react';
+import { formatPercent } from '@capital/content';
 import { chainCards, formatMoney, getPlayer, tilePrice } from '@capital/core';
 import type { ChainCard, ChainMove, ChainSlot } from '@capital/core';
 import { useGame, useGameState } from './useGame';
@@ -56,7 +57,7 @@ function ChainCardView({ card }: { card: ChainCard }): ReactElement {
         <span className="chain-meta">
           {t('app.chain.meta', { unit: unit(card.unitCost), sale: unit(card.salePrice) })}{' '}
           <strong className={card.margin >= 0.3 ? 'pos' : card.margin >= 0 ? '' : 'neg'}>
-            %{Math.round(card.margin * 100)}
+            {formatPercent(Math.round(card.margin * 100))}
           </strong>{' '}
           {t('app.chain.share', { share: Math.round(card.marketShare * 100) })}
         </span>
@@ -138,7 +139,7 @@ function MoveView({ card, move }: { card: ChainCard; move: ChainMove }): ReactEl
           {move.districtName}
           {move.needsBuyout && t('app.chain.buyout')}
           {t('app.chain.gain', { days: Math.round(move.paybackDays), margin: Math.round(card.margin * 100) })}{' '}
-          <strong className="pos">%{Math.round(move.projectedMargin * 100)}</strong>
+          <strong className="pos">{formatPercent(Math.round(move.projectedMargin * 100))}</strong>
         </span>
       </div>
       {move.premature && (

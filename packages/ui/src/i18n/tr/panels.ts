@@ -212,4 +212,5 @@ export const panels = {
     " Bir şehirde zafere ulaşınca yeni bir şehre açılabilirsin: sermaye ve marka bilinirliğinin yarısı seninle gelir, rakipler farklıdır. Aynı anda bir şehir oynanır; bekleyen şehrin kârının yarısı her gün holding kasasına akar. Zafer her şehirde orada yarattığın değerle ölçülür.",
   'panels.help.controls':
     'Kontroller: sürükle = kaydır · sağ tık sürükle = döndür · tekerlek = yakınlaş · WASD = kaydır · Boşluk = duraklat',
+  'panels.help.language': 'Dil',
 } as const;

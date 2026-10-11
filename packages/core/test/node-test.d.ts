@@ -10,6 +10,7 @@ declare module 'node:test' {
   type TestFn = () => void | Promise<void>;
   export function test(name: string, fn: TestFn): void;
   export function describe(name: string, fn: () => void): void;
+  export function afterEach(fn: TestFn): void;
   export default test;
 }
 

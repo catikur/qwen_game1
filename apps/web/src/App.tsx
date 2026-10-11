@@ -37,6 +37,7 @@ import {
   TopBar,
   t,
   useGameVersion,
+  useLocale,
 } from '@capital/ui';
 import type { ExportOutcome, FocusTarget, GameContextValue, LeagueBoard, ToastMessage, ViewState } from '@capital/ui';
 import { deliverTextFile } from './host';
@@ -52,6 +53,9 @@ const AUTOSAVE_INTERVAL_MS = 30_000;
  * haritanın ortasına bırakmak yerine önce şirketini kurdururuz.
  */
 export function App(): ReactElement {
+  // Dil değişince bütün ağaç yeniden çiziliyor (bileşenler memo'lu değil);
+  // oyun durumu ve sahne olduğu gibi kalıyor.
+  useLocale();
   const [phase, setPhase] = useState<'loading' | 'menu' | 'playing'>('loading');
   const [engine, setEngine] = useState<GameEngine | null>(null);
   const [bootMessage, setBootMessage] = useState<string | null>(null);

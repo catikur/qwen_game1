@@ -1,3 +1,4 @@
+import { localizeList } from './localize';
 /**
  * Zorluk kademeleri.
  *
@@ -72,3 +73,6 @@ export const DEFAULT_DIFFICULTY: DifficultyId = 'normal';
 export function getDifficulty(id: DifficultyId | undefined): DifficultyDef {
   return DIFFICULTIES.find((d) => d.id === (id ?? DEFAULT_DIFFICULTY)) ?? DIFFICULTIES[1]!;
 }
+
+// Metin alanları etkin dile bağlı (Tur 23); Türkçe yedek nesnenin kendi metni.
+localizeList(DIFFICULTIES, 'difficulty', ['name', 'blurb', 'facts']);

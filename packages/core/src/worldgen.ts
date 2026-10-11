@@ -14,6 +14,7 @@ import {
   rootStructureOf,
 } from '@capital/content';
 import type { CategoryId, CitySizeId, DifficultyId, DistrictArchetypeId } from '@capital/content';
+import { tc } from './i18n';
 import { createRng, nextRange, pickWeighted } from './rng';
 import { LEAGUE_DAYS, leagueSeed } from './systems/league';
 import { seedSpotPrices, zeroByGood } from './systems/supply';
@@ -420,7 +421,7 @@ export function createNewGame(input: NewGameOptions = {}): GameState {
   const companies: Record<string, CompanyState> = {};
   companies[PLAYER_COMPANY_ID] = makeCompany(
     PLAYER_COMPANY_ID,
-    options.companyName?.trim() || 'Yeni Girişim',
+    options.companyName?.trim() || tc('core.worldgen.defaultCompanyName'),
     true,
     '#4cc9f0',
     options.startingCash ?? Math.round(STARTING_CASH * ceo.startingCash * getDifficulty(options.difficulty).startingCashMultiplier),
@@ -492,8 +493,8 @@ export function createNewGame(input: NewGameOptions = {}): GameState {
         id: 1,
         day: 0,
         tone: 'neutral',
-        title: 'Şirket kuruldu',
-        body: 'Sermayen hazır. Boş bir parsel bul, ya da dolu bir parseli sahibinden devral.',
+        title: tc('core.worldgen.foundedTitle'),
+        body: tc('core.worldgen.foundedBody'),
       },
     ],
     nextId: 2,

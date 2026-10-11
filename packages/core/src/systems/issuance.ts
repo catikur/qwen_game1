@@ -1,5 +1,6 @@
-import { ISSUANCE, NPC_ISSUANCE } from '@capital/content';
+import { ISSUANCE, NPC_ISSUANCE, numberLocale } from '@capital/content';
 import type { NpcProfileDef } from '@capital/content';
+import { tc } from '../i18n';
 import { pushNews } from '../news';
 import { formatMoney } from '../selectors';
 import { bookValue, confidence, ownerFraction, sharePrice, sharesHeld, sharesOutstanding } from './equity';
@@ -54,10 +55,10 @@ export function issueQuote(state: GameState, companyId: string): IssueQuote {
   const price = company ? sharePrice(state, companyId) * (1 - ISSUANCE.discount) : 0;
   const ipo = (company?.issues ?? 0) === 0;
   const closed = (reason: string): IssueQuote => ({ ok: false, reason, price, maxShares: 0, ipo });
-  if (!issuanceEnabled(state)) return closed('Sermaye artırımı kapalı.');
-  if (!company) return closed('Şirket bulunamadı.');
+  if (!issuanceEnabled(state)) return closed(tc('core.issuance.disabled'));
+  if (!company) return closed(tc('core.issuance.noCompany'));
   if (bookValue(state, companyId) < ISSUANCE.minBook) {
-    return closed(`Halka arz için şirket değeri en az ${formatMoney(ISSUANCE.minBook)} olmalı.`);
+    return closed(tc('core.issuance.minBook', { amount: formatMoney(ISSUANCE.minBook) }));
   }
   /*
    * SAVUNMA İHRACI BEKLEMEZ (Tur 21).
@@ -84,7 +85,7 @@ export function issueQuote(state: GameState, companyId: string): IssueQuote {
     company.lastIssueDay !== undefined &&
     state.time.day - company.lastIssueDay < ISSUANCE.cooldownDays
   ) {
-    return closed(`Yeni ihraç için ${ISSUANCE.cooldownDays - (state.time.day - company.lastIssueDay)} gün bekle.`);
+    return closed(tc('core.issuance.cooldown', { days: ISSUANCE.cooldownDays - (state.time.day - company.lastIssueDay) }));
   }
   const outstanding = sharesOutstanding(state, companyId);
   const investors = company.investorShares ?? 0;
@@ -92,8 +93,8 @@ export function issueQuote(state: GameState, companyId: string): IssueQuote {
   const floor = ISSUANCE.minFounderShare;
   const byFounder = Math.floor(((1 - floor) * outstanding - investors) / floor);
   const maxShares = Math.max(0, Math.min(Math.floor(outstanding * ISSUANCE.maxPerIssue), byFounder));
-  if (maxShares < ISSUANCE.minShares) return closed(`Kurucu payı %${Math.round(floor * 100)}'in altına inemez.`);
-  if (price <= 0) return closed('Hisse fiyatı yok.');
+  if (maxShares < ISSUANCE.minShares) return closed(tc('core.issuance.founderFloor', { percent: Math.round(floor * 100) }));
+  if (price <= 0) return closed(tc('core.issuance.noPrice'));
   return { ok: true, price, maxShares, ipo, ...(defense ? { defense: true } : {}) };
 }
 
@@ -114,8 +115,8 @@ export function issueShares(state: GameState, companyId: string, count: number):
   const quote = issueQuote(state, companyId);
   if (!quote.ok) return { ok: false, reason: quote.reason };
   const shares = Math.floor(count);
-  if (!(shares >= ISSUANCE.minShares)) return { ok: false, reason: `En az ${ISSUANCE.minShares} hisse.` };
-  if (shares > quote.maxShares) return { ok: false, reason: `Bu ihraçta en fazla ${quote.maxShares} hisse.` };
+  if (!(shares >= ISSUANCE.minShares)) return { ok: false, reason: tc('core.issuance.minShares', { count: ISSUANCE.minShares }) };
+  if (shares > quote.maxShares) return { ok: false, reason: tc('core.issuance.maxShares', { count: quote.maxShares }) };
 
   const company = state.companies[companyId]!;
   const outstanding = sharesOutstanding(state, companyId);
@@ -131,18 +132,25 @@ export function issueShares(state: GameState, companyId: string, count: number):
     pushNews(
       state,
       'good',
-      quote.ipo ? 'Halka arz tamamlandı' : 'Sermaye artırımı tamamlandı',
-      `${shares.toLocaleString('tr-TR')} yeni hisse, ${formatMoney(raised)} kasaya girdi. Yatırımcıların payı %${investorShare}; şirketin büyümesinin bu kadarı artık onların.`,
+      quote.ipo ? tc('core.issuance.ipoDone') : tc('core.issuance.raiseDone'),
+      tc('core.issuance.playerBody', {
+        shares: shares.toLocaleString(numberLocale()),
+        raised: formatMoney(raised),
+        share: investorShare,
+      }),
     );
   } else {
     pushNews(
       state,
       'rival',
-      quote.ipo ? `${company.name} halka arz oldu` : `${company.name} sermaye artırdı`,
+      quote.ipo ? tc('core.issuance.rivalIpo', { name: company.name }) : tc('core.issuance.rivalRaise', { name: company.name }),
       // Eski metin "hisseleri artık daha kolay toplanır" diyordu; Tur 19'dan
       // beri yeni hisseler kurumsal yatırımcıda kalıyor, dolaşıma girmiyor.
-      `${shares.toLocaleString('tr-TR')} yeni hisse kurumsal yatırımcılarda, ${formatMoney(raised)} kasaya girdi. ` +
-        `Kontrol eşiği büyüdü: %50 için artık ${(Math.floor(company.shareCount / 2) + 1).toLocaleString('tr-TR')} hisse gerekiyor.`,
+      tc('core.issuance.rivalBody', {
+        shares: shares.toLocaleString(numberLocale()),
+        raised: formatMoney(raised),
+        control: (Math.floor(company.shareCount / 2) + 1).toLocaleString(numberLocale()),
+      }),
       company.id,
     );
   }

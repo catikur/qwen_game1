@@ -1,4 +1,5 @@
 import type { CategoryDef, CategoryId } from './types';
+import { localizeRecord } from './localize';
 
 /**
  * Sektörler. Rakamlar "gerçekçi ama okunabilir" olacak şekilde seçildi:
@@ -89,3 +90,6 @@ export const CONSUMER_CATEGORIES: CategoryId[] = [
   'electronics',
   'services',
 ];
+
+// Metin alanları etkin dile bağlı (Tur 23); Türkçe yedek nesnenin kendi metni.
+localizeRecord(CATEGORIES, 'category', ['name']);

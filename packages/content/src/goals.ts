@@ -1,3 +1,4 @@
+import { localizeList } from './localize';
 /**
  * Hedef merdiveni.
  *
@@ -102,3 +103,6 @@ export const GOALS: GoalDef[] = [
 ];
 
 export const GOAL_BY_ID: Record<string, GoalDef> = Object.fromEntries(GOALS.map((g) => [g.id, g]));
+
+// Metin alanları etkin dile bağlı (Tur 23); Türkçe yedek nesnenin kendi metni.
+localizeList(GOALS, 'goal', ['title', 'hint']);

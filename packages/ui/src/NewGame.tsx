@@ -4,6 +4,7 @@ import { CEOS, CITY_SIZES, DEFAULT_CEO_ID, DEFAULT_CITY_SIZE, DEFAULT_DIFFICULTY
 import type { CitySizeId, DifficultyId } from '@capital/content';
 import { leagueWeekId } from '@capital/core';
 import { CeoPortrait } from './CeoPortrait';
+import { LocalePicker } from './LocalePicker';
 import { t } from './i18n';
 
 /**
@@ -37,6 +38,9 @@ export function NewGameScreen({
   return (
     <div className="newgame">
       <div className="newgame-inner">
+        <div className="newgame-locale">
+          <LocalePicker />
+        </div>
         <header className="newgame-head">
           <p className="newgame-eyebrow">{t('hud.newGame.eyebrow')}</p>
           <h1>{t('hud.newGame.title')}</h1>

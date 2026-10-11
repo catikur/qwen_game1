@@ -3925,3 +3925,46 @@ button.icon {
   font-size: 12.5px;
   line-height: 1.5;
 }
+
+/* --- dil seçici (Tur 23) --- */
+.locale-picker {
+  display: inline-flex;
+  border: 1px solid var(--line-strong);
+}
+
+.locale-option {
+  min-height: 32px;
+  border: 0;
+  border-right: 1px solid var(--line);
+  background: transparent;
+  padding: 4px 12px;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.locale-option:last-child {
+  border-right: 0;
+}
+
+.locale-option.selected,
+.locale-option.selected:hover {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.locale-option:focus-visible {
+  outline: 2px solid var(--brass);
+  outline-offset: -2px;
+}
+
+.newgame-locale {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.help-locale {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+}

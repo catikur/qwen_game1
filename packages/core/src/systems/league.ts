@@ -1,3 +1,4 @@
+import { tc } from '../i18n';
 import { pushNews } from '../news';
 import { formatMoney } from '../selectors';
 import type { GameCommand, GameState } from '../types';
@@ -78,9 +79,9 @@ export function runLeagueTick(state: GameState): void {
   pushNews(
     state,
     lost ? 'bad' : 'good',
-    lost ? 'Lig koşusu bitti: devralındın' : `Lig koşusu bitti: ${formatMoney(league.score)}`,
+    lost ? tc('core.league.lostTitle') : tc('core.league.finishedTitle', { score: formatMoney(league.score) }),
     lost
-      ? 'Bu haftanın skoru sıfır. Yeni bir koşu aynı şehirde baştan başlar.'
-      : `${league.endDay} gün doldu. Skorun ${formatMoney(league.score)} — koşu kodunu paylaş ya da tabloya gönder.`,
+      ? tc('core.league.lostBody')
+      : tc('core.league.finishedBody', { days: league.endDay, score: formatMoney(league.score) }),
   );
 }

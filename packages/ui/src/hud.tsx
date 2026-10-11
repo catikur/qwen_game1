@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { ReactElement } from 'react';
-import { CEO_BY_ID, ERA_BY_ID, EVENTS } from '@capital/content';
+import { CEO_BY_ID, ERA_BY_ID, EVENTS, formatPercent } from '@capital/content';
 import {
   LENSES,
   OFFER_LIFETIME_DAYS,
@@ -735,7 +735,7 @@ function ContractChip(): ReactElement | null {
     >
       <span className="contract-label">{t('hud.contract.active')}</span>
       {contract.title}
-      <span className="contract-days">%{Math.round(progress * 100)} · {t('hud.agenda.daysShort', { days: left })}</span>
+      <span className="contract-days">{formatPercent(Math.round(progress * 100))} · {t('hud.agenda.daysShort', { days: left })}</span>
     </span>
   );
 }
@@ -914,7 +914,7 @@ export function ActiveEvents(): ReactElement | null {
             <span className="goal-chip-bar" aria-hidden="true">
               <span style={{ width: `${Math.round((item.progress ?? 0) * 100)}%` }} />
             </span>
-            <span className="agenda-days">%{Math.round((item.progress ?? 0) * 100)}</span>
+            <span className="agenda-days">{formatPercent(Math.round((item.progress ?? 0) * 100))}</span>
           </button>
         );
         break;

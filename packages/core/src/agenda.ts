@@ -1,4 +1,4 @@
-import { CREDIT, ERA_BY_ID, EVENTS } from '@capital/content';
+import { CREDIT, ERA_BY_ID, EVENTS, localizeDecimal } from '@capital/content';
 import { nextGoal } from './systems/goals';
 import { OFFER_LIFETIME_DAYS, contractProgress } from './systems/contracts';
 import { sharesHeld, sharesOutstanding } from './systems/equity';
@@ -6,6 +6,7 @@ import { creditEnabled, overdraftLimit, overdraftOf } from './systems/credit';
 import { dailyBuyCap, sharesToControl } from './systems/orders';
 import { laborEnabled } from './systems/labor';
 import { formatMoney } from './selectors';
+import { tc } from './i18n';
 import type { GameState } from './types';
 
 /**
@@ -79,7 +80,7 @@ export function agenda(state: GameState): AgendaItem[] {
         key: `raid:${raider}`,
         urgency: fraction >= 0.4 ? 3 : fraction >= 0.25 ? 2 : 1,
         daysLeft: null,
-        label: `${state.companies[raider]!.name} payında %${Math.round(fraction * 100)}`,
+        label: tc('core.agenda.raid', { name: state.companies[raider]!.name, percent: Math.round(fraction * 100) }),
         tone: 'bad',
       });
     }
@@ -99,7 +100,10 @@ export function agenda(state: GameState): AgendaItem[] {
       key: `order:${issuer.id}`,
       urgency: order.waitingCash ? 2 : 1,
       daysLeft: cap > 0 ? Math.ceil(need / cap) : null,
-      label: `${issuer.name} %${Math.round((held / outstanding) * 100)}${order.waitingCash ? ' · nakit bekliyor' : ''}`,
+      label: tc(order.waitingCash ? 'core.agenda.orderWaitingCash' : 'core.agenda.order', {
+        name: issuer.name,
+        percent: Math.round((held / outstanding) * 100),
+      }),
       tone: order.waitingCash ? 'bad' : 'neutral',
       progress: Math.min(1, held / (Math.floor(outstanding / 2) + 1)),
     });
@@ -114,7 +118,7 @@ export function agenda(state: GameState): AgendaItem[] {
         key: 'union:strike',
         urgency: 2,
         daysLeft: Math.max(0, labor.strike.endsOnDay - day + 1),
-        label: 'Grev',
+        label: tc('core.agenda.strike'),
         tone: 'bad',
       });
     } else if (labor.demand) {
@@ -124,7 +128,9 @@ export function agenda(state: GameState): AgendaItem[] {
         key: 'union:demand',
         urgency: left <= 3 ? 3 : 2,
         daysLeft: left,
-        label: `Sendika %${String(Math.round(labor.demand.raise * 1000) / 10).replace('.', ',')} zam istiyor`,
+        label: tc('core.agenda.unionDemand', {
+          raise: localizeDecimal(String(Math.round(labor.demand.raise * 1000) / 10)),
+        }),
         tone: 'bad',
       });
     } else if (labor.pressure >= 0.75) {
@@ -133,7 +139,7 @@ export function agenda(state: GameState): AgendaItem[] {
         key: 'union:pressure',
         urgency: 1,
         daysLeft: null,
-        label: 'Sendika baskısı',
+        label: tc('core.agenda.unionPressure'),
         tone: 'neutral',
         progress: labor.pressure,
       });
@@ -150,7 +156,10 @@ export function agenda(state: GameState): AgendaItem[] {
         key: 'bank:arrears',
         urgency: 3,
         daysLeft: Math.max(0, CREDIT.graceDays - arrears + 1),
-        label: `Banka ihtarı · ${formatMoney(overdraft)} / ${formatMoney(overdraftLimit(player))}`,
+        label: tc('core.agenda.bankArrears', {
+          overdraft: formatMoney(overdraft),
+          limit: formatMoney(overdraftLimit(player)),
+        }),
         tone: 'bad',
       });
     } else if (overdraft > 0) {
@@ -159,7 +168,7 @@ export function agenda(state: GameState): AgendaItem[] {
         key: 'bank:overdraft',
         urgency: 1,
         daysLeft: null,
-        label: `Kredili hesap ${formatMoney(overdraft)}`,
+        label: tc('core.agenda.overdraft', { amount: formatMoney(overdraft) }),
         tone: 'bad',
       });
     }
@@ -173,7 +182,7 @@ export function agenda(state: GameState): AgendaItem[] {
         key: `bank:bond:${loan.id}`,
         urgency: player.cash < loan.balance ? 3 : 2,
         daysLeft: Math.max(0, left),
-        label: `Tahvil vadesi · ${formatMoney(loan.balance)}`,
+        label: tc('core.agenda.bondDue', { amount: formatMoney(loan.balance) }),
         tone: player.cash < loan.balance ? 'bad' : 'neutral',
       });
     }
@@ -215,7 +224,7 @@ export function agenda(state: GameState): AgendaItem[] {
       key: 'auction',
       urgency: left <= 3 ? 2 : 1,
       daysLeft: left,
-      label: 'İhale',
+      label: tc('core.agenda.auction'),
       tone: 'neutral',
       tileId: state.auction.tileId,
     });
@@ -230,7 +239,7 @@ export function agenda(state: GameState): AgendaItem[] {
       key: `unlock:${district.id}`,
       urgency: left <= 7 ? 2 : 1,
       daysLeft: left,
-      label: `${district.name} imara açılıyor`,
+      label: tc('core.agenda.unlock', { district: district.name }),
       tone: 'good',
       districtId: district.id,
     });
@@ -244,7 +253,7 @@ export function agenda(state: GameState): AgendaItem[] {
       key: `league:${league.weekId}`,
       urgency: left <= 10 ? 2 : 0,
       daysLeft: left,
-      label: `Lig ${league.weekId}`,
+      label: tc('core.agenda.league', { week: league.weekId }),
       tone: 'neutral',
       progress: day / league.endDay,
     });
@@ -258,7 +267,7 @@ export function agenda(state: GameState): AgendaItem[] {
       key: `council:${session.openedDay}`,
       urgency: left <= 3 ? 2 : 1,
       daysLeft: left,
-      label: `Meclis · ${session.motions.length} önerge`,
+      label: tc('core.agenda.council', { count: session.motions.length }),
       tone: 'neutral',
     });
   }

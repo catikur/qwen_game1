@@ -1,4 +1,5 @@
 import type { DistrictArchetypeDef, DistrictArchetypeId } from './types';
+import { localizeList, localizeRecord } from './localize';
 
 /**
  * District arketipleri.
@@ -152,3 +153,7 @@ export const DEFAULT_CITY_SIZE: CitySizeId = 'standard';
 export function getCitySize(id: CitySizeId | undefined): CitySizeDef {
   return CITY_SIZES.find((size) => size.id === (id ?? DEFAULT_CITY_SIZE)) ?? CITY_SIZES[0]!;
 }
+
+// Metin alanları etkin dile bağlı (Tur 23); Türkçe yedek nesnenin kendi metni.
+localizeRecord(DISTRICT_ARCHETYPES, 'district', ['name']);
+localizeList(CITY_SIZES, 'citySize', ['name', 'blurb', 'facts']);

@@ -1,7 +1,8 @@
-import { BUILDING_BY_ID, CREDIT, CREDIT_RATINGS, NPC_CREDIT } from '@capital/content';
+import { BUILDING_BY_ID, CREDIT, CREDIT_RATINGS, NPC_CREDIT, formatDecimal } from '@capital/content';
 import type { CreditRating, LoanKind, NpcProfileDef } from '@capital/content';
 import { pushNews } from '../news';
 import { formatMoney } from '../selectors';
+import { tc } from '../i18n';
 import { LAND_SELL_RATIO } from './city';
 import { companyValue, sellShares, sharePrice } from './equity';
 import type { CommandResult, CompanyState, CreditState, GameState, LoanState } from '../types';
@@ -132,16 +133,16 @@ export function loanQuote(state: GameState, companyId: string, kind: LoanKind, t
   const rating = company ? ratingOf(company) : 'D';
   const rate = loanRate(rating, kind, termDays);
   const closed = (reason: string): LoanQuote => ({ ok: false, reason, rate, max: 0, rating });
-  if (!creditEnabled(state)) return closed('Banka ürünleri kapalı.');
-  if (!company) return closed('Şirket bulunamadı.');
+  if (!creditEnabled(state)) return closed(tc('core.credit.bankClosed'));
+  if (!company) return closed(tc('core.credit.companyNotFound'));
   const terms = kind === 'bond' ? CREDIT.bond.terms : CREDIT.terms;
-  if (!terms.some((option) => option.days === termDays)) return closed('Geçersiz vade.');
-  if (rating === 'D') return closed('Kredi notu D: banka yeni kredi vermiyor.');
-  if (kind === 'bond' && rating !== 'A' && rating !== 'B') return closed('Tahvil için not en az B olmalı.');
-  if ((company.credit?.arrearsDays ?? 0) > 0) return closed('İhtar sürerken yeni kredi yok.');
+  if (!terms.some((option) => option.days === termDays)) return closed(tc('core.credit.invalidTerm'));
+  if (rating === 'D') return closed(tc('core.credit.ratingD'));
+  if (kind === 'bond' && rating !== 'A' && rating !== 'B') return closed(tc('core.credit.bondRating'));
+  if ((company.credit?.arrearsDays ?? 0) > 0) return closed(tc('core.credit.inArrears'));
   const lastLoanDay = company.credit?.lastLoanDay;
   if (lastLoanDay !== undefined && state.time.day - lastLoanDay < CREDIT.applyCooldownDays) {
-    return closed(`Yeni başvuru için ${CREDIT.applyCooldownDays - (state.time.day - lastLoanDay)} gün bekle.`);
+    return closed(tc('core.credit.cooldown', { days: CREDIT.applyCooldownDays - (state.time.day - lastLoanDay) }));
   }
 
   const gross = grossAssets(company);
@@ -164,10 +165,10 @@ export function loanQuote(state: GameState, companyId: string, kind: LoanKind, t
   if (max < floor) {
     const reason =
       kind === 'secured'
-        ? 'Teminata açık arsan yetmiyor.'
+        ? tc('core.credit.noCollateral')
         : kind === 'bond'
-          ? `Tahvil en az ${formatMoney(CREDIT.bond.minAmount)}; şirketin bu ihraca yetecek büyüklükte değil.`
-          : 'Kredi limitin dolu.';
+          ? tc('core.credit.bondTooSmall', { min: formatMoney(CREDIT.bond.minAmount) })
+          : tc('core.credit.limitFull');
     return { ok: false, reason, rate, max, rating, collateralValue };
   }
   return { ok: true, rate, max, rating, collateralValue };
@@ -178,8 +179,8 @@ export function takeLoan(state: GameState, companyId: string, kind: LoanKind, am
   if (!quote.ok) return { ok: false, reason: quote.reason };
   const principal = Math.floor(amount);
   const floor = kind === 'bond' ? CREDIT.bond.minAmount : CREDIT.minLoan;
-  if (!(principal >= floor)) return { ok: false, reason: `En az ${formatMoney(floor)}.` };
-  if (principal > quote.max) return { ok: false, reason: `Bu krediyle en fazla ${formatMoney(quote.max)} alabilirsin.` };
+  if (!(principal >= floor)) return { ok: false, reason: tc('core.credit.minAmount', { amount: formatMoney(floor) }) };
+  if (principal > quote.max) return { ok: false, reason: tc('core.credit.maxAmount', { amount: formatMoney(quote.max) }) };
 
   const company = state.companies[companyId]!;
   const credit = ensureCredit(company);
@@ -219,9 +220,9 @@ export function repayLoan(state: GameState, companyId: string, loanId: string): 
   const company = state.companies[companyId];
   const loans = company?.credit?.loans;
   const index = loans?.findIndex((loan) => loan.id === loanId) ?? -1;
-  if (!company || !loans || index < 0) return { ok: false, reason: 'Kredi bulunamadı.' };
+  if (!company || !loans || index < 0) return { ok: false, reason: tc('core.credit.loanNotFound') };
   const loan = loans[index]!;
-  if (company.cash < loan.balance) return { ok: false, reason: `Kapatmak için ${formatMoney(loan.balance)} nakit gerekiyor.` };
+  if (company.cash < loan.balance) return { ok: false, reason: tc('core.credit.repayCash', { amount: formatMoney(loan.balance) }) };
   company.cash -= loan.balance;
   company.debt = Math.max(0, company.debt - loan.balance);
   loans.splice(index, 1);
@@ -382,17 +383,20 @@ export function runCreditTick(state: GameState): void {
             pushNews(
               state,
               company.cash >= principal ? 'neutral' : 'bad',
-              'Tahvil vadesi geldi',
+              tc('core.credit.bondDueTitle'),
               company.cash >= principal
-                ? `${formatMoney(principal)} anapara kasadan ödendi.`
-                : `${formatMoney(principal)} anaparanın kasada olmayan ${formatMoney(principal - Math.max(0, company.cash))} kısmı kredili hesaba geçti.`,
+                ? tc('core.credit.bondDuePaid', { amount: formatMoney(principal) })
+                : tc('core.credit.bondDueShort', {
+                    amount: formatMoney(principal),
+                    short: formatMoney(principal - Math.max(0, company.cash)),
+                  }),
             );
           } else if (maturity - day === CREDIT.bond.warnDays) {
             pushNews(
               state,
               'bad',
-              'Tahvil vadesi yaklaşıyor',
-              `${CREDIT.bond.warnDays} gün sonra ${formatMoney(loan.balance)} anapara tek seferde ödenecek. Kasada yoksa fark kredili hesaba geçer.`,
+              tc('core.credit.bondWarnTitle'),
+              tc('core.credit.bondWarnBody', { days: CREDIT.bond.warnDays, amount: formatMoney(loan.balance) }),
             );
           }
         }
@@ -421,7 +425,7 @@ export function runCreditTick(state: GameState): void {
       if (company.isPlayer && overdraft > 0) {
         const limit = Math.max(200_000, grossAssets(company) * LEGACY_LIMIT_RATIO);
         if (company.debt > limit) {
-          pushNews(state, 'bad', 'Kredi limiti aşıldı', 'Borcun varlıklarını taşıyamıyor. Zarar eden binaları kapatmayı veya arsa satmayı düşün.');
+          pushNews(state, 'bad', tc('core.credit.legacyLimitTitle'), tc('core.credit.legacyLimitBody'));
         }
       }
       continue;
@@ -438,8 +442,11 @@ export function runCreditTick(state: GameState): void {
       pushNews(
         state,
         worse ? 'bad' : 'good',
-        `Kredi notun ${bank.rating}'ye ${worse ? 'düştü' : 'yükseldi'}`,
-        `${CREDIT_RATINGS[bank.rating].blurb} Yeni kredilerde faiz farkı %${Math.round(CREDIT_RATINGS[bank.rating].spread * 100)}.`,
+        worse ? tc('core.credit.ratingDown', { rating: bank.rating }) : tc('core.credit.ratingUp', { rating: bank.rating }),
+        tc('core.credit.ratingBody', {
+          blurb: CREDIT_RATINGS[bank.rating].blurb,
+          spread: Math.round(CREDIT_RATINGS[bank.rating].spread * 100),
+        }),
       );
     }
 
@@ -456,8 +463,11 @@ export function runCreditTick(state: GameState): void {
       pushNews(
         state,
         company.isPlayer ? 'bad' : 'rival',
-        company.isPlayer ? 'Banka kredileri muaccel kıldı' : `${company.name}'in kredileri muaccel`,
-        `Kredi notu D: ${formatMoney(called)} kalan anapara kredili hesaba geçti (yıllık %${Math.round(overdraftRate(state, company) * 100)}).`,
+        company.isPlayer ? tc('core.credit.calledTitle') : tc('core.credit.calledRivalTitle', { name: company.name }),
+        tc('core.credit.calledBody', {
+          amount: formatMoney(called),
+          rate: Math.round(overdraftRate(state, company) * 100),
+        }),
         company.id,
       );
     }
@@ -474,8 +484,8 @@ export function runCreditTick(state: GameState): void {
       pushNews(
         state,
         'bad',
-        'Banka ihtar çekti',
-        `Kredili hesap ${formatMoney(exposed)}, limit ${formatMoney(limit)}. ${CREDIT.graceDays} gün içinde limitin altına inmezse haciz başlar: önce boş arsalar, sonra zarar eden binalar satılır.`,
+        tc('core.credit.arrearsTitle'),
+        tc('core.credit.arrearsBody', { exposed: formatMoney(exposed), limit: formatMoney(limit), days: CREDIT.graceDays }),
       );
     }
     if (bank.arrearsDays <= CREDIT.graceDays) continue;
@@ -491,8 +501,12 @@ export function runCreditTick(state: GameState): void {
     pushNews(
       state,
       company.isPlayer ? 'bad' : 'rival',
-      company.isPlayer ? 'Haciz' : `${company.name}'e haciz`,
-      `Banka ${result.sold} varlığı sattı, ${formatMoney(result.proceeds)} borca sayıldı. Not ${CREDIT.defaultMemoryDays} gün D.`,
+      company.isPlayer ? tc('core.credit.seizeTitle') : tc('core.credit.seizeRivalTitle', { name: company.name }),
+      tc('core.credit.seizeBody', {
+        sold: result.sold,
+        proceeds: formatMoney(result.proceeds),
+        days: CREDIT.defaultMemoryDays,
+      }),
       where,
     );
   }
@@ -529,8 +543,11 @@ export function npcBorrow(state: GameState, profile: NpcProfileDef): void {
   pushNews(
     state,
     'rival',
-    `${company.name} bankadan ${formatMoney(amount)} çekti`,
-    `${doctrine.termDays} gün vadeli, yıllık %${(quote.rate * 100).toFixed(1).replace('.', ',')}${doctrine.kind === 'secured' ? ', arsaları teminatta' : ''}. Genişleme bütçesi büyüdü.`,
+    tc('core.credit.rivalLoanTitle', { name: company.name, amount: formatMoney(amount) }),
+    tc(doctrine.kind === 'secured' ? 'core.credit.rivalLoanSecuredBody' : 'core.credit.rivalLoanBody', {
+      days: doctrine.termDays,
+      rate: formatDecimal(quote.rate * 100, 1),
+    }),
     company.id,
   );
 }

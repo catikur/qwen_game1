@@ -1,6 +1,7 @@
 import { BUILDING_BY_ID } from '@capital/content';
 import { BUILDING_BOOK_RATIO } from './city';
 import { scopedAssets } from './buildingIndex';
+import { tc } from '../i18n';
 import type { CompanyState, GameState } from '../types';
 
 /**
@@ -186,27 +187,27 @@ export function buyShares(
 ): { ok: boolean; reason?: string } {
   const buyer = state.companies[buyerId];
   const issuer = state.companies[issuerId];
-  if (!buyer || !issuer) return { ok: false, reason: 'Bilinmeyen şirket.' };
+  if (!buyer || !issuer) return { ok: false, reason: tc('core.equity.unknownCompany') };
 
   const wanted = Math.floor(count);
-  if (wanted <= 0) return { ok: false, reason: 'Geçersiz adet.' };
+  if (wanted <= 0) return { ok: false, reason: tc('core.equity.invalidCount') };
 
   // Kurucu kilidi: yeni gelen şirketin hisseleri bir süre piyasada yok.
   // Şirketin kendi geri alımı serbest.
   if (buyerId !== issuerId && issuer.lockedUntilDay !== undefined && state.time.day < issuer.lockedUntilDay) {
     return {
       ok: false,
-      reason: `${issuer.name} kurucu kilidinde — hisseleri ${issuer.lockedUntilDay - state.time.day} gün sonra piyasaya çıkıyor.`,
+      reason: tc('core.equity.founderLock', { name: issuer.name, days: issuer.lockedUntilDay - state.time.day }),
     };
   }
 
   const available = freeFloat(state, issuerId);
   if (wanted > available) {
-    return { ok: false, reason: `Piyasada yalnızca ${available} hisse var.` };
+    return { ok: false, reason: tc('core.equity.floatShort', { available }) };
   }
 
   const cost = wanted * sharePrice(state, issuerId);
-  if (cost > buyer.cash) return { ok: false, reason: 'Nakit yetersiz.' };
+  if (cost > buyer.cash) return { ok: false, reason: tc('core.equity.noCash') };
 
   buyer.cash -= cost;
   buyer.shares[issuerId] = (buyer.shares[issuerId] ?? 0) + wanted;
@@ -227,12 +228,12 @@ export function sellShares(
   count: number,
 ): { ok: boolean; reason?: string } {
   const seller = state.companies[sellerId];
-  if (!seller) return { ok: false, reason: 'Bilinmeyen şirket.' };
+  if (!seller) return { ok: false, reason: tc('core.equity.unknownCompany') };
 
   const held = seller.shares[issuerId] ?? 0;
   const wanted = Math.floor(count);
-  if (wanted <= 0) return { ok: false, reason: 'Geçersiz adet.' };
-  if (wanted > held) return { ok: false, reason: `Elinde ${held} hisse var.` };
+  if (wanted <= 0) return { ok: false, reason: tc('core.equity.invalidCount') };
+  if (wanted > held) return { ok: false, reason: tc('core.equity.notEnoughHeld', { held }) };
 
   seller.cash += wanted * sharePrice(state, issuerId);
   seller.shares[issuerId] = held - wanted;
@@ -365,8 +366,8 @@ export function runTakeoverTick(state: GameState, announce: (title: string, body
       if (!state.gameOver) {
         state.gameOver = { day: state.time.day, byCompanyId: controllerId };
         announce(
-          `${acquirer.name} şirketini devraldı`,
-          'Hisselerinin yarısından fazlası el değiştirdi. İmparatorluk artık onun.',
+          tc('core.equity.playerTakenTitle', { name: acquirer.name }),
+          tc('core.equity.playerTakenBody'),
         );
       }
       continue;
@@ -375,10 +376,8 @@ export function runTakeoverTick(state: GameState, announce: (title: string, body
     const buildings = Object.values(state.buildings).filter((b) => b.companyId === issuerId).length;
     absorb(state, controllerId, issuerId);
     announce(
-      `${acquirer.name}, ${target.name} şirketini devraldı`,
-      `${target.name} hisselerinin yarısından fazlası el değiştirdi. ` +
-        `${buildings} bina ve tüm parseller ${acquirer.name} bünyesine geçti; ` +
-        'azınlık hissedarlar payları nakde çevrildi.',
+      tc('core.equity.takeoverTitle', { acquirer: acquirer.name, target: target.name }),
+      tc('core.equity.takeoverBody', { target: target.name, buildings, acquirer: acquirer.name }),
     );
   }
 }

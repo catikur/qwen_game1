@@ -1,5 +1,6 @@
 import type { CeoPortrait } from './ceos';
 import type { NpcProfileDef, NpcTrait } from './types';
+import { localizeList } from './localize';
 
 /**
  * Rakip şirketler.
@@ -267,3 +268,6 @@ export const RIVAL_PORTRAIT_PARTS: {
   hairs: ['#1d1614', '#3b2a1e', '#5a3a1e', '#8a6a3a', '#b9b2a8', '#2a2a2e'],
   styles: ['short', 'bun', 'curly', 'bald', 'wave', 'crop'],
 };
+
+// Metin alanları etkin dile bağlı (Tur 23); Türkçe yedek nesnenin kendi metni.
+localizeList(NPC_PROFILES, 'rival', ['description']);

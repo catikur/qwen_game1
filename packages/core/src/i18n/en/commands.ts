@@ -1,0 +1,192 @@
+import type { commands as trCommands } from '../tr/commands';
+
+/** English — core 'commands' group (Tur 23). */
+export const commands: Record<keyof typeof trCommands, string> = {
+  // engine.ts — command refusal reasons
+  'core.engine.leagueRulesLocked': "Game rules can't be changed during a league run.",
+  'core.engine.buildingNotFound': 'Building not found.',
+  'core.engine.buildingNotYours': "This building isn't yours.",
+  'core.engine.noShelf': "This building doesn't have a shelf.",
+  'core.engine.pickOneGood': 'Pick at least one product.',
+  'core.engine.tooManyGoods': 'Too many products — {name} only has room for {slots}.',
+  'core.engine.notFocusable': "This building can't be assigned to a category.",
+  'core.engine.badCategory': "It can't be assigned to this category.",
+  'core.engine.emptyCompanyName': "Company name can't be empty.",
+  'core.engine.leagueRunning': 'The league run is still in progress.',
+  'core.engine.noVictory': 'No victory yet.',
+  'core.engine.cityUnchanged': "The city didn't change.",
+  'core.engine.unknownCommand': 'Unknown command.',
+  // engine.ts — news: raids, ranking, district leadership, value milestones
+  'core.engine.raid1Title': '{name} has its eye on your shares',
+  'core.engine.raid1Body': "It holds {percent}% of your shares. Not a threat yet — but it'll grow if the buying continues.",
+  'core.engine.raid2Title': '{name} raised its stake to {percent}%',
+  'core.engine.raid2Body':
+    "The takeover threshold is 50%. Consider a buyback: every share you pull into your treasury is a share it can't buy.",
+  'core.engine.raid3Title': '{name} is closing in on control: {percent}%',
+  'core.engine.raid3Body':
+    "It's very close to the threshold. If you have cash, a buyback is your last chance; otherwise the empire will change hands.",
+  'core.engine.overtakenTitle': '{name} overtook you',
+  'core.engine.overtakenBody': "You're now #{rank}. The gap is {gap}.",
+  'core.engine.overtakenBodyLead': "You're now #{rank}. The gap is {gap}. It leads you in building count by {lead}.",
+  'core.engine.overtakenBodyMoreBuildings':
+    "You're now #{rank}. The gap is {gap}. You have more buildings — the difference is in land and brand.",
+  'core.engine.passedTitle': 'You overtook {name}',
+  'core.engine.climbedTitle': 'You climbed to #{rank}',
+  'core.engine.climbedBodyAhead': "You're #{rank}. {name} is ahead of you — the gap is {gap}.",
+  'core.engine.climbedBodyTop': "You're #{rank}. You're the most valuable company in the city.",
+  'core.engine.leadLostTitle': '{rival} takes the lead in {district}',
+  'core.engine.leadLostBody':
+    "It has {toShare} of the district's retail revenue; you have {fromShare}. To win the lead back, look at that district's demand: price, quality or a new branch.",
+  'core.engine.leadWonTitle': "You're the leader in {district}",
+  'core.engine.leadWonBody': "You have {toShare} of the district's retail revenue.",
+  'core.engine.leadWonBodyPrevious': "You have {toShare} of the district's retail revenue; {name} was left with {fromShare}.",
+  'core.engine.milestoneTitle': 'Company value: ₺{value}M',
+  'core.engine.milestoneUnlocked': 'New investment options unlocked: {names}.',
+  'core.engine.milestoneScale': 'Your scale is growing.',
+
+  // actions.ts — plot, construction and demolition refusal reasons
+  'core.actions.unknownBuilding': 'Unknown building.',
+  'core.actions.unknownCompany': 'Unknown company.',
+  'core.actions.needsNetWorth': '{name} requires a company value of {amount}.',
+  'core.actions.buildNoCash': 'Not enough cash — you need {amount}.',
+  'core.actions.districtNotFound': 'District not found.',
+  'core.actions.zoneOr': ' or ',
+  'core.actions.zoningOnly': '{name} can only be built in {zones} districts.',
+  'core.actions.tileNotFound': 'Plot not found.',
+  'core.actions.roadNotForSale': 'This is a street — not for sale.',
+  'core.actions.civicNotForSale': '{name} — city property, not for sale.',
+  'core.actions.publicArea': 'Public land',
+  'core.actions.districtLocked': '{district} is not zoned yet. Days until it opens: {days}.',
+  'core.actions.tileOwned': 'This plot belongs to {owner}.',
+  'core.actions.aRival': 'a rival',
+  'core.actions.tileInAuction': 'This plot is up for auction — place a bid instead of buying it.',
+  'core.actions.tileHasStructure': 'On this plot: {structure} — you need to buy it out from its owner.',
+  'core.actions.existingStructure': 'an existing structure',
+  'core.actions.tileNoCash': 'Not enough cash — the plot costs {price}.',
+  'core.actions.tileAlreadyEmpty': 'The plot is already vacant — you can buy it directly.',
+  'core.actions.structureNotForSale': "This structure isn't for sale at any price.",
+  'core.actions.buyoutNoCash': 'Buying out {name} costs {price} — not enough cash.',
+  'core.actions.landNotFound': 'Lot not found.',
+  'core.actions.landNotYours': "This lot isn't yours.",
+  'core.actions.demolishFirst': 'Demolish the building on it first.',
+  'core.actions.landPledged': 'This lot is pledged as loan collateral; pay off the loan first.',
+  'core.actions.buyTileFirst': 'Buy this plot first.',
+  'core.actions.tileOccupied': 'There is already a building on this plot.',
+  'core.actions.nothingToDemolish': 'There is no building to demolish.',
+  'core.actions.buildingNotFound': 'Building not found.',
+  'core.actions.buildingNotYours': "This building isn't yours.",
+
+  // holding.ts — new city, city switch, treasury transfer
+  'core.holding.leagueNoNewCity': "You can't open a new city during a league run.",
+  'core.holding.lostCityNoOpen': "You can't open a new city from a lost city.",
+  'core.holding.needVictory': 'Reach victory in this city to open a new one.',
+  'core.holding.maxCities': 'A holding can have at most {max} cities.',
+  'core.holding.minCapitalQuote': 'A new city needs at least {min} in capital; you have {cash} in cash.',
+  'core.holding.minCapital': 'At least {min}.',
+  'core.holding.notEnoughCash': "You don't have that much cash.",
+  'core.holding.openedTitle': '{city}: your holding expands to a new city',
+  'core.holding.openedBody':
+    'You arrived with {capital} in capital and {brand}% brand awareness. Rivals: {rivals}. {previous} is waiting; half of its profit will flow into the holding treasury every day.',
+  'core.holding.leagueNoSwitch': "You can't switch cities during a league run.",
+  'core.holding.noSuchCity': "That city doesn't exist.",
+  'core.holding.noHolding': 'No holding yet: reach victory in a city first, then open a new one.',
+  'core.holding.lostCityNoTransfer': "Money can't be transferred to a lost city.",
+  'core.holding.zeroAmount': 'The amount is zero.',
+  'core.holding.treasuryShort': "The holding treasury doesn't have that much money.",
+  'core.holding.cityCashShort': "This city doesn't have that much cash.",
+
+  // selectors.ts — map lenses
+  'core.selectors.lensNoneName': 'City',
+  'core.selectors.lensNoneHint': 'Show buildings and district colors as they are.',
+  'core.selectors.lensOpportunityName': 'Opportunity',
+  'core.selectors.lensOpportunityHint': 'Unmet demand. Hot districts leave money on the table.',
+  'core.selectors.lensLandValueName': 'Land Value',
+  'core.selectors.lensLandValueHint': 'Land prices. Buy cheap and let it appreciate.',
+  'core.selectors.lensCompetitionName': 'Competition',
+  'core.selectors.lensCompetitionHint': 'Density of rival stores in each district.',
+  'core.selectors.lensIncomeName': 'Income',
+  'core.selectors.lensIncomeHint': 'District income level. Where do luxury goods sell?',
+  'core.selectors.lensOwnershipName': 'Ownership',
+  'core.selectors.lensOwnershipHint': 'Who holds the land?',
+
+  // agenda.ts — agenda labels
+  'core.agenda.raid': '{name} holds {percent}% of your shares',
+  'core.agenda.order': '{name} {percent}%',
+  'core.agenda.orderWaitingCash': '{name} {percent}% · waiting for cash',
+  'core.agenda.strike': 'Strike',
+  'core.agenda.unionDemand': 'Union wants a {raise}% raise',
+  'core.agenda.unionPressure': 'Union pressure',
+  'core.agenda.bankArrears': 'Bank warning · {overdraft} / {limit}',
+  'core.agenda.overdraft': 'Overdraft {amount}',
+  'core.agenda.bondDue': 'Bond due · {amount}',
+  'core.agenda.auction': 'Auction',
+  'core.agenda.unlock': '{district} opens for zoning',
+  'core.agenda.league': 'League {week}',
+  'core.agenda.council': 'Council · motions: {count}',
+
+  // chain.ts — chain card
+  'core.chain.stateOwn': 'Yours',
+  'core.chain.stateBottleneck': 'Bottleneck',
+  'core.chain.stateMarket': 'From market',
+  'core.chain.stateCrisis': 'Crisis',
+  'core.chain.stateNone': 'None',
+  'core.chain.blockedUnlock': '{name} requires a company value of ₺{amount}K.',
+  'core.chain.blockedNoPlot': 'No plot left to build {name} — the industrial zone and harbor are full.',
+  'core.chain.shortfallPartial':
+    'Your {good} production covers {covered} of your needs; you buy the rest from the market at {spot}.',
+  'core.chain.shortfallMarket': 'All your {good} comes from the market: {spot} per unit.',
+  'core.chain.reasonPremature':
+    '{shortfall} But one {name} produces {capacity} units a day and you use {consumed} — only {utilisation} of its capacity would be filled.',
+  'core.chain.reasonDeferred':
+    "{shortfall} But there's no rush: the same cash pays back in a store in ~{payback} days. Days since your last unit: {since}. Days until the chain's turn: ~{wait}.",
+  'core.chain.countLabel': '{count} {name}',
+  'core.chain.detailOwn': '{cost} · {ratio} self-supplied',
+  'core.chain.detailMarket': '{cost} · market price',
+  'core.chain.distribution': 'Distribution',
+  'core.chain.depotFull': 'Warehoused',
+  'core.chain.depotPartial': 'Partial',
+  'core.chain.depotNone': 'No warehouse',
+  'core.chain.depotCoverage': '{cost} · {covered}/{total} stores in warehouse range',
+  'core.chain.noDepot': '{cost} · no warehouse',
+  'core.chain.outletFallback': 'Store',
+  'core.chain.retailDetail': 'sale price {price} · {units} units/day',
+
+  // competition.ts — competition card
+  'core.competition.armResearch': 'R&D',
+  'core.competition.armMarketing': 'Marketing',
+  'core.competition.researchNone': "No centers — quality comes from the building's base value.",
+  'core.competition.researchGrowing': 'centers: {count} · quality +{value}, cap +{ceiling} (rising)',
+  'core.competition.researchCapped': 'centers: {count} · quality +{value} (at cap)',
+  'core.competition.marketingNone': 'No offices — brand only follows your share.',
+  'core.competition.marketingActive': 'offices: {count} · brand target +{value}',
+  'core.competition.cityFallback': 'City',
+  'core.competition.bothCapped':
+    'Both levers are at their cap. From here, the way to pull further ahead is scale: more stores in this category.',
+  'core.competition.needsNetWorth': '{name} requires a company value of {amount}.',
+  'core.competition.noPlot': 'There are no vacant plots left to buy in the city.',
+  'core.competition.reasonPremature':
+    '{arm} adds a fixed cost, while its benefit is multiplied by your store count. Your stores in this category: {outlets}; it starts paying off after {min} stores.',
+  'core.competition.reasonMarketingPrice':
+    'Brand also feeds into the price premium: while your capacity is full, the lever pays off in margin. Marketing is cheaper than R&D and works from the day you build it — this is the fastest premium.',
+  'core.competition.reasonMarketingShare':
+    'Your share is {share}% — your brand can be pushed above what your share alone earns it. Marketing pays off proportionally more when brand is low: it is the entry weapon.',
+  'core.competition.reasonResearchPrice':
+    "Your stores are running at capacity: more appeal can't bring you a single extra unit. Here, quality pays off as a price premium.",
+  'core.competition.reasonResearchShare':
+    "Your stores have spare capacity: quality turns directly into share — you take your rival's customers.",
+  'core.competition.channelPrice':
+    'Your stores are running at capacity ({utilisation}% full) — the lever pays off in PRICE, not volume: you sell the same goods for more.',
+  'core.competition.channelShare':
+    "Your stores have spare capacity ({utilisation}% full) — the lever pays off in SHARE: you take your rival's customers.",
+  'core.competition.notePrice':
+    "Your share trails {leader}, but not because of quality or brand: your stores are running {utilisation}% full. Being more appealing can't bring you a single extra unit — the way to gain SHARE is more stores. Here the lever pays off not in share, but in selling the same volume for more.",
+  'core.competition.noteShare':
+    "You have spare capacity and your share trails {leader}: the customers you lose here are lost on appeal alone. That's exactly what a lever move is for.",
+  'core.competition.buildingNotFound': 'Building not found.',
+  'core.competition.notFocusable': "This building can't be assigned to a category.",
+
+  // worldgen.ts — default name and first news of a new game
+  'core.worldgen.defaultCompanyName': 'New Venture',
+  'core.worldgen.foundedTitle': 'Company founded',
+  'core.worldgen.foundedBody': 'Your capital is ready. Find a vacant plot, or buy out an occupied one from its owner.',
+};

@@ -1,9 +1,10 @@
-import { BUILDING_BY_ID, BUILDINGS, CONSUMER_CATEGORIES } from '@capital/content';
+import { BUILDING_BY_ID, BUILDINGS, CONSUMER_CATEGORIES, formatNumber, moneyUnits, numberLocale, withCurrency } from '@capital/content';
 import type { BuildingDef, CategoryId } from '@capital/content';
 import { estimateInvestment } from './systems/market';
 import type { InvestmentEstimate } from './systems/market';
 import { indirectEstimate } from './systems/indirect';
 import type { IndirectEstimate } from './systems/indirect';
+import { tc } from './i18n';
 import type { BuildingInstance, CompanyState, DistrictState, GameState, Tile } from './types';
 
 /**
@@ -35,18 +36,22 @@ export function getBuildingDef(building: BuildingInstance): BuildingDef | undefi
   return BUILDING_BY_ID[building.defId];
 }
 
+/** Para: Türkçede "1.20 M ₺", "45 B ₺", "1.234 ₺"; İngilizcede "₺1.20M", "₺45K", "₺1,234". */
 export function formatMoney(value: number): string {
   const sign = value < 0 ? '-' : '';
   const abs = Math.abs(value);
-  if (abs >= 1_000_000_000) return `${sign}${(abs / 1_000_000_000).toFixed(2)} Mr ₺`;
-  if (abs >= 1_000_000) return `${sign}${(abs / 1_000_000).toFixed(2)} M ₺`;
-  if (abs >= 10_000) return `${sign}${Math.round(abs / 1_000)} B ₺`;
-  return `${sign}${Math.round(abs).toLocaleString('tr-TR')} ₺`;
+  const units = moneyUnits();
+  let amount: string;
+  if (abs >= 1_000_000_000) amount = `${(abs / 1_000_000_000).toFixed(2)}${units.billion}`;
+  else if (abs >= 1_000_000) amount = `${(abs / 1_000_000).toFixed(2)}${units.million}`;
+  else if (abs >= 10_000) amount = `${Math.round(abs / 1_000)}${units.thousand}`;
+  else amount = formatNumber(Math.round(abs));
+  return `${sign}${withCurrency(amount)}`;
 }
 
 export function formatDate(day: number): string {
   const date = new Date(EPOCH + day * 86_400_000);
-  return date.toLocaleDateString('tr-TR', { day: '2-digit', month: 'short', year: 'numeric' });
+  return date.toLocaleDateString(numberLocale(), { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
 /** Haritada gösterilebilecek veri lensleri. */
@@ -58,17 +63,62 @@ export interface LensDef {
   hint: string;
 }
 
+/** Ad ve ipucu okundukları anda etkin dilde (alıcılar) — içe aktarımda donmuyor. */
 export const LENSES: LensDef[] = [
-  { id: 'none', name: 'Şehir', hint: 'Binaları ve bölge renklerini olduğu gibi göster.' },
+  {
+    id: 'none',
+    get name() {
+      return tc('core.selectors.lensNoneName');
+    },
+    get hint() {
+      return tc('core.selectors.lensNoneHint');
+    },
+  },
   {
     id: 'opportunity',
-    name: 'Fırsat',
-    hint: 'Karşılanmayan talep. Sıcak bölgeler para bırakır.',
+    get name() {
+      return tc('core.selectors.lensOpportunityName');
+    },
+    get hint() {
+      return tc('core.selectors.lensOpportunityHint');
+    },
   },
-  { id: 'landValue', name: 'Arsa Değeri', hint: 'Arsa fiyatları. Ucuza al, değerlensin.' },
-  { id: 'competition', name: 'Rekabet', hint: 'Bölgedeki rakip mağaza yoğunluğu.' },
-  { id: 'income', name: 'Gelir', hint: 'Bölge gelir seviyesi. Lüks ürün nereye satılır?' },
-  { id: 'ownership', name: 'Mülkiyet', hint: 'Arsalar kimin elinde?' },
+  {
+    id: 'landValue',
+    get name() {
+      return tc('core.selectors.lensLandValueName');
+    },
+    get hint() {
+      return tc('core.selectors.lensLandValueHint');
+    },
+  },
+  {
+    id: 'competition',
+    get name() {
+      return tc('core.selectors.lensCompetitionName');
+    },
+    get hint() {
+      return tc('core.selectors.lensCompetitionHint');
+    },
+  },
+  {
+    id: 'income',
+    get name() {
+      return tc('core.selectors.lensIncomeName');
+    },
+    get hint() {
+      return tc('core.selectors.lensIncomeHint');
+    },
+  },
+  {
+    id: 'ownership',
+    get name() {
+      return tc('core.selectors.lensOwnershipName');
+    },
+    get hint() {
+      return tc('core.selectors.lensOwnershipHint');
+    },
+  },
 ];
 
 /** Bir bölgenin karşılanmamış talep ORANI (0..1) — panelde "%X boş". */

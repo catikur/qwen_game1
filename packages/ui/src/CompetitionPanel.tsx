@@ -1,4 +1,5 @@
 import type { ReactElement } from 'react';
+import { formatPercent } from '@capital/content';
 import { competitionCards, formatMoney, getPlayer, moveTotalCost } from '@capital/core';
 import type { CompetitionArm, CompetitionCard, CompetitionMove } from '@capital/core';
 import { useGame, useGameState } from './useGame';
@@ -37,7 +38,7 @@ export function CompetitionPanel(): ReactElement {
 }
 
 function pct(value: number): string {
-  return `%${Math.round(value * 100)}`;
+  return formatPercent(Math.round(value * 100));
 }
 
 function CompetitionCardView({ card }: { card: CompetitionCard }): ReactElement {

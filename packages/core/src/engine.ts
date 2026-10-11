@@ -1,4 +1,4 @@
-import { BUILDING_BY_ID, CONSUMER_CATEGORIES, GOODS_BY_CATEGORY } from '@capital/content';
+import { BUILDING_BY_ID, CONSUMER_CATEGORIES, GOODS_BY_CATEGORY, formatPercent } from '@capital/content';
 import { build, buyTile, buyoutTile, demolish, sellTile } from './actions';
 import { pushNews } from './news';
 import { stepLeadership } from './leadership';
@@ -29,6 +29,7 @@ import { runDividendTick, runTakeoverTick, sellShares } from './systems/equity';
 import { runResearchTick } from './systems/focus';
 import { runNpcTick } from './systems/npc';
 import { holdingTransfer, openCity, runHoldingTick, switchCity } from './holding';
+import { tc } from './i18n';
 import { SPEED_MS } from './types';
 import type { CommandResult, GameCommand, GameState } from './types';
 
@@ -132,7 +133,7 @@ export class GameEngine {
     const league = leagueActive(this.state);
     // Lig koşusunda kurallar sabit: herkes aynı şehirde aynı kurallarla.
     if (league && command.type === 'SET_FLAG') {
-      return { ok: false, reason: 'Lig koşusunda oyun kuralları değiştirilemez.' };
+      return { ok: false, reason: tc('core.engine.leagueRulesLocked') };
     }
     const day = this.state.time.day;
     const result = this.apply(command);
@@ -176,8 +177,8 @@ export class GameEngine {
 
       case 'SET_PRICE_MULTIPLIER': {
         const building = state.buildings[command.buildingId];
-        if (!building) return { ok: false, reason: 'Bina bulunamadı.' };
-        if (building.companyId !== playerId) return { ok: false, reason: 'Bu bina sizin değil.' };
+        if (!building) return { ok: false, reason: tc('core.engine.buildingNotFound') };
+        if (building.companyId !== playerId) return { ok: false, reason: tc('core.engine.buildingNotYours') };
         building.priceMultiplier = Math.max(0.6, Math.min(1.8, command.multiplier));
         building.autoPrice = false;
         return { ok: true };
@@ -185,28 +186,28 @@ export class GameEngine {
 
       case 'SET_AUTO_PRICE': {
         const building = state.buildings[command.buildingId];
-        if (!building) return { ok: false, reason: 'Bina bulunamadı.' };
-        if (building.companyId !== playerId) return { ok: false, reason: 'Bu bina sizin değil.' };
+        if (!building) return { ok: false, reason: tc('core.engine.buildingNotFound') };
+        if (building.companyId !== playerId) return { ok: false, reason: tc('core.engine.buildingNotYours') };
         building.autoPrice = command.auto;
         return { ok: true };
       }
 
       case 'SET_STOCK': {
         const building = state.buildings[command.buildingId];
-        if (!building) return { ok: false, reason: 'Bina bulunamadı.' };
-        if (building.companyId !== playerId) return { ok: false, reason: 'Bu bina sizin değil.' };
+        if (!building) return { ok: false, reason: tc('core.engine.buildingNotFound') };
+        if (building.companyId !== playerId) return { ok: false, reason: tc('core.engine.buildingNotYours') };
 
         const def = BUILDING_BY_ID[building.defId];
-        if (def?.role !== 'outlet') return { ok: false, reason: 'Bu binanın rafı yok.' };
+        if (def?.role !== 'outlet') return { ok: false, reason: tc('core.engine.noShelf') };
 
         // Yalnızca kendi kategorisinin ürünleri, yuva sayısı kadar.
         const allowed = new Set((GOODS_BY_CATEGORY[def.category] ?? []).map((good) => good.id));
         const picked = [...new Set(command.goodIds)].filter((id) => allowed.has(id));
-        if (picked.length === 0) return { ok: false, reason: 'En az bir ürün seçilmeli.' };
+        if (picked.length === 0) return { ok: false, reason: tc('core.engine.pickOneGood') };
 
         const slots = def.slots ?? 1;
         if (picked.length > slots) {
-          return { ok: false, reason: `${def.name} en fazla ${slots} ürün taşıyabilir.` };
+          return { ok: false, reason: tc('core.engine.tooManyGoods', { name: def.name, slots }) };
         }
 
         building.stocked = picked;
@@ -215,15 +216,15 @@ export class GameEngine {
 
       case 'SET_FOCUS': {
         const building = state.buildings[command.buildingId];
-        if (!building) return { ok: false, reason: 'Bina bulunamadı.' };
-        if (building.companyId !== playerId) return { ok: false, reason: 'Bu bina sizin değil.' };
+        if (!building) return { ok: false, reason: tc('core.engine.buildingNotFound') };
+        if (building.companyId !== playerId) return { ok: false, reason: tc('core.engine.buildingNotYours') };
 
         const def = BUILDING_BY_ID[building.defId];
         if (def?.role !== 'research' && def?.role !== 'marketing') {
-          return { ok: false, reason: 'Bu bina bir kategoriye atanmaz.' };
+          return { ok: false, reason: tc('core.engine.notFocusable') };
         }
         if (!CONSUMER_CATEGORIES.includes(command.category)) {
-          return { ok: false, reason: 'Bu kategoriye atanamaz.' };
+          return { ok: false, reason: tc('core.engine.badCategory') };
         }
 
         // Atama serbestçe değişebilir ama BEDAVA DEĞİL: Ar-Ge primi
@@ -257,7 +258,7 @@ export class GameEngine {
 
       case 'RENAME_COMPANY': {
         const name = command.name.trim();
-        if (!name) return { ok: false, reason: 'Şirket adı boş olamaz.' };
+        if (!name) return { ok: false, reason: tc('core.engine.emptyCompanyName') };
         state.companies[playerId]!.name = name.slice(0, 32);
         return { ok: true };
       }
@@ -267,7 +268,7 @@ export class GameEngine {
         return { ok: true };
 
       case 'DISMISS_LEAGUE':
-        if (!state.league || state.league.finishedDay === undefined) return { ok: false, reason: 'Lig koşusu sürüyor.' };
+        if (!state.league || state.league.finishedDay === undefined) return { ok: false, reason: tc('core.engine.leagueRunning') };
         state.league.resultSeen = true;
         return { ok: true };
 
@@ -290,7 +291,7 @@ export class GameEngine {
         return issueShares(state, playerId, command.count);
 
       case 'DISMISS_VICTORY':
-        if (!state.victory) return { ok: false, reason: 'Henüz bir zafer yok.' };
+        if (!state.victory) return { ok: false, reason: tc('core.engine.noVictory') };
         state.victory.dismissed = true;
         return { ok: true };
 
@@ -300,7 +301,7 @@ export class GameEngine {
           command.type === 'OPEN_CITY'
             ? openCity(state, command.citySize, command.capital)
             : switchCity(state, command.index);
-        if (!result.ok || !result.next) return { ok: false, reason: result.reason ?? 'Şehir değişmedi.' };
+        if (!result.ok || !result.next) return { ok: false, reason: result.reason ?? tc('core.engine.cityUnchanged') };
         this.swapCity(result.next);
         return { ok: true };
       }
@@ -309,7 +310,7 @@ export class GameEngine {
         return holdingTransfer(state, command.amount);
 
       default:
-        return { ok: false, reason: 'Bilinmeyen komut.' };
+        return { ok: false, reason: tc('core.engine.unknownCommand') };
     }
   }
 
@@ -452,16 +453,16 @@ export class GameEngine {
     const percent = Math.round(fraction * 100);
     const messages: Record<number, [string, string]> = {
       1: [
-        `${raider.name} hissene göz dikti`,
-        `Payının %${percent}'i onda. Henüz tehdit değil — ama alımlar sürerse büyür.`,
+        tc('core.engine.raid1Title', { name: raider.name }),
+        tc('core.engine.raid1Body', { percent }),
       ],
       2: [
-        `${raider.name} payını %${percent}'e çıkardı`,
-        'Devralma eşiği %50. Geri alım yapmayı düşün: hazineye çektiğin her hisse onun alamayacağı bir hisse.',
+        tc('core.engine.raid2Title', { name: raider.name, percent }),
+        tc('core.engine.raid2Body'),
       ],
       3: [
-        `${raider.name} kontrolüne yaklaşıyor: %${percent}`,
-        'Eşiğe çok az kaldı. Nakdin varsa geri alım son şansın; yoksa imparatorluk el değiştirecek.',
+        tc('core.engine.raid3Title', { name: raider.name, percent }),
+        tc('core.engine.raid3Body'),
       ],
     };
     const [title, body] = messages[stage]!;
@@ -507,17 +508,18 @@ export class GameEngine {
        * para bir sonuç, bina bir hamle.
        */
       const lead = passer.buildings - mine.buildings;
-      const detail =
+      const params = { rank: mine.rank, gap: formatMoney(gap), lead };
+      const body =
         lead > 0
-          ? ` Elinde senden ${lead} fazla bina var.`
+          ? tc('core.engine.overtakenBodyLead', params)
           : mine.buildings > passer.buildings
-            ? ' Senin binan daha çok — fark arsada ve markada.'
-            : '';
+            ? tc('core.engine.overtakenBodyMoreBuildings', params)
+            : tc('core.engine.overtakenBody', params);
       pushNews(
         state,
         'bad',
-        `${passer.company.name} seni geçti`,
-        `Artık ${mine.rank}. sıradasın. Aradaki fark ${formatMoney(gap)}.${detail}`,
+        tc('core.engine.overtakenTitle', { name: passer.company.name }),
+        body,
         passer.company.id,
       );
       return;
@@ -527,14 +529,20 @@ export class GameEngine {
     const passed = ranking.find((row) => row.rank === mine.rank + 1);
     const ahead = ranking.find((row) => row.rank === mine.rank - 1);
     // Bir üstteki de yazılıyor: "geçtim" duygusunun devamı "sıradaki kim".
-    const next = ahead
-      ? ` Önünde ${ahead.company.name} var — fark ${formatMoney(ahead.company.netWorth - mine.company.netWorth)}.`
-      : ' Şehrin en değerli şirketi sensin.';
+    const body = ahead
+      ? tc('core.engine.climbedBodyAhead', {
+          rank: mine.rank,
+          name: ahead.company.name,
+          gap: formatMoney(ahead.company.netWorth - mine.company.netWorth),
+        })
+      : tc('core.engine.climbedBodyTop', { rank: mine.rank });
     pushNews(
       state,
       'good',
-      passed ? `${passed.company.name}'i geçtin` : `${mine.rank}. sıraya yükseldin`,
-      `${mine.rank}. sıradasın.${next}`,
+      passed
+        ? tc('core.engine.passedTitle', { name: passed.company.name })
+        : tc('core.engine.climbedTitle', { rank: mine.rank }),
+      body,
       passed?.company.id,
     );
   }
@@ -552,16 +560,15 @@ export class GameEngine {
     for (const change of changes) {
       const district = state.districts[change.districtId];
       if (!district) continue;
-      const pct = (value: number) => `%${Math.round(value * 100)}`;
+      const pct = (value: number) => formatPercent(Math.round(value * 100));
       if (change.from === playerId) {
         const rival = state.companies[change.to];
         if (!rival) continue;
         pushNews(
           state,
           'bad',
-          `${rival.name}, ${district.name} bölgesinde öne geçti`,
-          `Bölgedeki perakende cirosunun ${pct(change.toShare)}'i onda, ${pct(change.fromShare)}'i sende. ` +
-            'Liderliği geri almak için o bölgenin talebine bak: fiyat, kalite ya da yeni bir şube.',
+          tc('core.engine.leadLostTitle', { rival: rival.name, district: district.name }),
+          tc('core.engine.leadLostBody', { toShare: pct(change.toShare), fromShare: pct(change.fromShare) }),
           { companyId: rival.id, districtId: district.id },
         );
       } else if (change.to === playerId) {
@@ -569,9 +576,14 @@ export class GameEngine {
         pushNews(
           state,
           'good',
-          `${district.name} bölgesinde lider sensin`,
-          `Bölgedeki perakende cirosunun ${pct(change.toShare)}'i sende` +
-            (previous ? `; ${previous.name} ${pct(change.fromShare)}'te kaldı.` : '.'),
+          tc('core.engine.leadWonTitle', { district: district.name }),
+          previous
+            ? tc('core.engine.leadWonBodyPrevious', {
+                toShare: pct(change.toShare),
+                name: previous.name,
+                fromShare: pct(change.fromShare),
+              })
+            : tc('core.engine.leadWonBody', { toShare: pct(change.toShare) }),
           { districtId: district.id },
         );
       }
@@ -593,10 +605,10 @@ export class GameEngine {
       pushNews(
         this.state,
         'good',
-        `Şirket değeri ${(milestone / 1_000_000).toFixed(milestone >= 1_000_000 ? 1 : 2)}M ₺`,
+        tc('core.engine.milestoneTitle', { value: (milestone / 1_000_000).toFixed(milestone >= 1_000_000 ? 1 : 2) }),
         unlocked.length > 0
-          ? `Yeni yatırım seçenekleri açık: ${unlocked.join(', ')}.`
-          : 'Ölçek büyüyor.',
+          ? tc('core.engine.milestoneUnlocked', { names: unlocked.join(', ') })
+          : tc('core.engine.milestoneScale'),
       );
     }
   }
