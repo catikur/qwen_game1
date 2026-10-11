@@ -1,5 +1,6 @@
 import { BUILDING_BY_ID, CONSUMER_CATEGORIES, getCeoModifiers } from '@capital/content';
 import type { CategoryId } from '@capital/content';
+import { tc } from '../i18n';
 import { MARKETING_CAP, RESEARCH_CAP, defaultFocus, marketingLeverage, researchCeiling } from './focus';
 import { estimateInvestment, runMarketTick } from './market';
 import { distributionRelief, resetDailyLedgers, runProductionTick } from './supply';
@@ -185,7 +186,10 @@ function compute(
       return Math.abs(other.x - tile.x) + Math.abs(other.y - tile.y) <= def.radius;
     }).length;
     if (covered === 0) {
-      return result(0, 0, { covered, none: hasOutlets ? 'Menzilde deposuz mağazan yok.' : 'Henüz mağazan yok.' });
+      return result(0, 0, {
+        covered,
+        none: hasOutlets ? tc('core.indirect.noUncovered') : tc('core.indirect.noOutlets'),
+      });
     }
     const base = settledGross(structuredClone(state), companyId);
     const treated = structuredClone(state);
@@ -195,13 +199,13 @@ function compute(
   }
 
   const focus = defaultFocus(state, companyId, defId);
-  if (!focus) return result(0, 0, { none: 'Çalışacağı kategori yok.' });
-  if (!hasOutlets) return result(0, 0, { focus, none: 'Henüz mağazan yok — çalışacağı satış yok.' });
+  if (!focus) return result(0, 0, { none: tc('core.indirect.noFocus') });
+  if (!hasOutlets) return result(0, 0, { focus, none: tc('core.indirect.noSales') });
 
   if (def.role === 'research') {
     const ceiling = researchCeiling(state, companyId, focus);
     const next = Math.min(RESEARCH_CAP, ceiling + (def.focusPotency ?? 0));
-    if (next <= ceiling) return result(0, 0, { focus, none: 'Bu kategoride Ar-Ge tavanı dolu.' });
+    if (next <= ceiling) return result(0, 0, { focus, none: tc('core.indirect.researchFull') });
     const base = structuredClone(state);
     base.companies[companyId]!.research[focus] = ceiling;
     const treated = structuredClone(state);
@@ -213,7 +217,7 @@ function compute(
   // Pazarlama: kaldıraç fiyata hemen, markaya hedef üzerinden yansıyor.
   const leverage = marketingLeverage(state, companyId, focus);
   const nextLeverage = Math.min(MARKETING_CAP, leverage + (def.focusPotency ?? 0));
-  if (nextLeverage <= leverage) return result(0, 0, { focus, none: 'Bu kategoride pazarlama tavanı dolu.' });
+  if (nextLeverage <= leverage) return result(0, 0, { focus, none: tc('core.indirect.marketingFull') });
   const base = structuredClone(state);
   const treated = structuredClone(state);
   const probe = phantom(treated, companyId, defId, firstOwnTile(state, companyId) ?? 0, focus);

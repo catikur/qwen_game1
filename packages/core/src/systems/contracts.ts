@@ -1,5 +1,6 @@
 import { BUILDING_BY_ID, CATEGORIES, CONSUMER_CATEGORIES } from '@capital/content';
 import type { CategoryId } from '@capital/content';
+import { tc } from '../i18n';
 import { nextFloat, nextInt, pick } from '../rng';
 import { pushNews } from '../news';
 import { isDistrictOpen } from './city';
@@ -88,8 +89,8 @@ function countQualifyingBuildings(state: GameState, contract: ContractState): nu
 
 export function acceptContract(state: GameState): { ok: boolean; reason?: string } {
   const offer = state.contractOffer;
-  if (!offer) return { ok: false, reason: 'Masada teklif yok.' };
-  if (state.contract) return { ok: false, reason: 'Zaten aktif bir sözleşmen var.' };
+  if (!offer) return { ok: false, reason: tc('core.contracts.noOffer') };
+  if (state.contract) return { ok: false, reason: tc('core.contracts.alreadyActive') };
 
   // Süre kabulle başlar: teklif masada beklerken zaman kaybettirmez.
   state.contract = {
@@ -102,7 +103,7 @@ export function acceptContract(state: GameState): { ok: boolean; reason?: string
 }
 
 export function declineContract(state: GameState): { ok: boolean; reason?: string } {
-  if (!state.contractOffer) return { ok: false, reason: 'Masada teklif yok.' };
+  if (!state.contractOffer) return { ok: false, reason: tc('core.contracts.noOffer') };
   delete state.contractOffer;
   state.lastContractDay = state.time.day;
   return { ok: true };
@@ -120,8 +121,8 @@ export function runContractTick(state: GameState): void {
       pushNews(
         state,
         'good',
-        'Sözleşme teslim edildi',
-        `${contract.title} — belediye ${formatShort(contract.reward)} ödedi.`,
+        tc('core.contracts.deliveredTitle'),
+        tc('core.contracts.deliveredBody', { title: contract.title, reward: formatShort(contract.reward) }),
       );
       delete state.contract;
       state.lastContractDay = state.time.day;
@@ -133,8 +134,8 @@ export function runContractTick(state: GameState): void {
       pushNews(
         state,
         'bad',
-        'Sözleşme süresi doldu',
-        `${contract.title} teslim edilemedi. Cayma bedeli: ${formatShort(contract.penalty)}.`,
+        tc('core.contracts.expiredTitle'),
+        tc('core.contracts.expiredBody', { title: contract.title, penalty: formatShort(contract.penalty) }),
       );
       delete state.contract;
       state.lastContractDay = state.time.day;
@@ -163,8 +164,13 @@ export function runContractTick(state: GameState): void {
   pushNews(
     state,
     'neutral',
-    'Belediyeden sözleşme teklifi',
-    `${generated.title} — ödül ${formatShort(generated.reward)}, süre ${generated.durationDays} gün. Teklif ~${OFFER_LIFETIME_DAYS} gün masada.`,
+    tc('core.contracts.offerTitle'),
+    tc('core.contracts.offerBody', {
+      title: generated.title,
+      reward: formatShort(generated.reward),
+      days: generated.durationDays,
+      lifetime: OFFER_LIFETIME_DAYS,
+    }),
     // Pay sözleşmesi şehir geneli; yalnızca inşaat sözleşmesinin bir yeri var.
     generated.kind === 'build' ? { districtId: generated.districtId } : undefined,
   );
@@ -203,7 +209,11 @@ function generateOffer(state: GameState): ContractState {
 
     return {
       kind: 'build',
-      title: `${district.name} bölgesine ${targetCount} ${CATEGORIES[category].name} işletmesi`,
+      title: tc('core.contracts.buildTitle', {
+        district: district.name,
+        count: targetCount,
+        category: CATEGORIES[category].name,
+      }),
       districtId: district.id,
       category,
       targetCount,
@@ -228,7 +238,7 @@ function generateOffer(state: GameState): ContractState {
 
   return {
     kind: 'share',
-    title: `${CATEGORIES[category].name} pazarında %${Math.round(targetShare * 100)} pay`,
+    title: tc('core.contracts.shareTitle', { category: CATEGORIES[category].name, percent: Math.round(targetShare * 100) }),
     districtId: -1,
     category,
     targetCount: 0,
@@ -244,6 +254,6 @@ function generateOffer(state: GameState): ContractState {
 
 /** Haber gövdesi için kısa para biçimi — selectors'a bağımlılık kurmadan. */
 function formatShort(value: number): string {
-  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(2)} M ₺`;
-  return `${Math.round(value / 1_000)} B ₺`;
+  if (value >= 1_000_000) return tc('core.contracts.millions', { value: (value / 1_000_000).toFixed(2) });
+  return tc('core.contracts.thousands', { value: Math.round(value / 1_000) });
 }

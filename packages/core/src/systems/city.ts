@@ -6,6 +6,7 @@ import {
   STRUCTURE_BY_ID,
   getCeoModifiers,
 } from '@capital/content';
+import { tc } from '../i18n';
 import { pushNews } from '../news';
 import { ownerFraction, portfolioValue } from './equity';
 import type { GameState } from '../types';
@@ -42,9 +43,8 @@ export function runDistrictUnlockTick(state: GameState): void {
       pushNews(
         state,
         'neutral',
-        `İmar planı açıklandı: ${district.name}`,
-        `${district.name} bölgesi ${UNLOCK_NOTICE_DAYS} gün sonra imara açılıyor. ` +
-          'Arsa şimdilik ucuz — açılış günü koşu başlar.',
+        tc('core.city.planTitle', { district: district.name }),
+        tc('core.city.planBody', { district: district.name, days: UNLOCK_NOTICE_DAYS }),
         { districtId: district.id },
       );
     }
@@ -53,8 +53,8 @@ export function runDistrictUnlockTick(state: GameState): void {
       pushNews(
         state,
         'good',
-        `${district.name} imara açıldı`,
-        'Yeni parseller satışta. Bölge nüfusu hızla büyüyecek — erken giren, talebi rakipsiz karşılar.',
+        tc('core.city.openedTitle', { district: district.name }),
+        tc('core.city.openedBody'),
         { districtId: district.id },
       );
     }

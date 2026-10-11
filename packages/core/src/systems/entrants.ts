@@ -8,6 +8,7 @@ import {
   RIVAL_PORTRAIT_PARTS,
 } from '@capital/content';
 import type { NpcProfileDef, NpcTrait } from '@capital/content';
+import { tc } from '../i18n';
 import { pushNews } from '../news';
 import { rivalProfile, rivalProfiles } from '../profiles';
 import { createRng, nextFloat, pick } from '../rng';
@@ -191,8 +192,8 @@ export function runEntrantTick(state: GameState): void {
     pushNews(
       state,
       'neutral',
-      'Şehre yeni bir şirket geliyor',
-      `Boşalan pazarı gözüne kestiren bir grup ${ENTRY_DELAY_DAYS} gün içinde şehre girecek. Boşluğu önce sen doldurabilirsin.`,
+      tc('core.entrants.vacancyTitle'),
+      tc('core.entrants.vacancyBody', { days: ENTRY_DELAY_DAYS }),
     );
     return;
   }
@@ -228,9 +229,13 @@ export function runEntrantTick(state: GameState): void {
   pushNews(
     state,
     'rival',
-    `Şehre yeni rakip: ${profile.name}`,
-    `${profile.ceoName} yönetiminde, ${formatMoney(capital)} sermayeyle geldi. ${profile.description} ` +
-      `Hisseleri ${FOUNDER_LOCK_DAYS} gün kurucu kilidinde.`,
+    tc('core.entrants.entryTitle', { name: profile.name }),
+    tc('core.entrants.entryBody', {
+      ceo: profile.ceoName,
+      capital: formatMoney(capital),
+      description: profile.description,
+      lockDays: FOUNDER_LOCK_DAYS,
+    }),
     profile.id,
   );
 }

@@ -9,6 +9,7 @@ import type { BuildingDef, CategoryId, NpcProfileDef } from '@capital/content';
 import { build, buyTile, buyoutTile, demolish, sellTile } from '../actions';
 import { chainCards } from '../chain';
 import { competitionCards } from '../competition';
+import { tc } from '../i18n';
 import { formatMoney } from '../selectors';
 import { pushNews } from '../news';
 import { rivalProfiles } from '../profiles';
@@ -149,8 +150,8 @@ function tryChainMove(state: GameState, profile: NpcProfileDef): boolean {
     pushNews(
       state,
       'rival',
-      `${profile.name} dikey entegrasyona gidiyor`,
-      `${move.districtName} bölgesinde ${move.name} kurdu — ${card.goodName} maliyetini kendi eline alıyor.`,
+      tc('core.npc.chainTitle', { name: profile.name }),
+      tc('core.npc.chainBody', { district: move.districtName, building: move.name, good: card.goodName }),
       { companyId: profile.id, tileId: move.tileId },
     );
     return true;
@@ -247,9 +248,9 @@ function tryArmMove(state: GameState, profile: NpcProfileDef, stalled = false): 
       state,
       'rival',
       move.kind === 'research'
-        ? `${profile.name} kaliteye yatırıyor`
-        : `${profile.name} markasını büyütüyor`,
-      `${move.districtName} bölgesinde ${move.name} açtı — hedefi ${card.categoryName} kategorisi.`,
+        ? tc('core.npc.researchTitle', { name: profile.name })
+        : tc('core.npc.marketingTitle', { name: profile.name }),
+      tc('core.npc.armBody', { district: move.districtName, building: move.name, category: card.categoryName }),
       { companyId: profile.id, tileId: move.tileId },
     );
     return true;
@@ -446,9 +447,12 @@ function tryPruneMove(state: GameState, profile: NpcProfileDef): boolean {
   pushNews(
     state,
     'rival',
-    `${profile.name} şube kapattı`,
-    `${district?.name ?? 'Şehirdeki'} ${def.name} ayda ~${formatMoney(Math.round(-trend * 30))} zarar ediyordu. ` +
-      (keepsLand ? 'Bina yıkıldı, arsa elinde kalıyor.' : 'Parsel yeniden satışta.'),
+    tc('core.npc.pruneTitle', { name: profile.name }),
+    tc(keepsLand ? 'core.npc.pruneBodyKeep' : 'core.npc.pruneBodySell', {
+      district: district?.name ?? tc('core.npc.pruneCity'),
+      building: def.name,
+      loss: formatMoney(Math.round(-trend * 30)),
+    }),
     { companyId: profile.id, tileId },
   );
   return true;
@@ -559,10 +563,11 @@ function buildOnce(state: GameState, profile: NpcProfileDef, budget: number, isL
     pushNews(
       state,
       'rival',
-      `${profile.name} genişliyor`,
-      spot.needsBuyout
-        ? `${district?.name ?? 'Şehirde'} bölgesinde bir parseli devralıp ${def.name} açtı.`
-        : `${district?.name ?? 'Şehirde'} bölgesinde ${def.name} açtı.`,
+      tc('core.npc.expandTitle', { name: profile.name }),
+      tc(spot.needsBuyout ? 'core.npc.expandBuyoutBody' : 'core.npc.expandBody', {
+        district: district?.name ?? tc('core.npc.expandCity'),
+        building: def.name,
+      }),
       { companyId: profile.id, tileId: spot.tileId },
     );
     return true;
@@ -717,9 +722,8 @@ function tryBuybackDefense(state: GameState, profile: NpcProfileDef): void {
     pushNews(
       state,
       'rival',
-      `${company.name} kendi hissesini topluyor`,
-      `Payın %${Math.round((threat / outstanding) * 100)}'a ulaştı; ${company.name} hisselerini hazinesine çekiyor. ` +
-        'Dolaşımda kontrole yetecek hisse kalmazsa devralma emrin düşer.',
+      tc('core.npc.buybackTitle', { name: company.name }),
+      tc('core.npc.buybackBody', { percent: Math.round((threat / outstanding) * 100), name: company.name }),
       company.id,
     );
   }

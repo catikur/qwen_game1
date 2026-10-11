@@ -1,5 +1,6 @@
 import { ERAS, ERA_BY_ID, EVENTS } from '@capital/content';
 import type { CategoryId } from '@capital/content';
+import { tc } from '../i18n';
 import { createRng, nextFloat, pickWeighted } from '../rng';
 import { pushNews } from '../news';
 import type { GameState } from '../types';
@@ -86,7 +87,7 @@ export function runEventTick(state: GameState): void {
 
     const def = EVENTS.find((e) => e.id === active.defId);
     state.activeEvents.splice(i, 1);
-    if (def) pushNews(state, 'neutral', `${def.title} sona erdi`, 'Piyasa normale dönüyor.');
+    if (def) pushNews(state, 'neutral', tc('core.events.endedTitle', { title: def.title }), tc('core.events.endedBody'));
   }
 
   if (!state.flags.randomEvents) return;
@@ -182,8 +183,8 @@ export function runEraTick(state: GameState): void {
       pushNews(
         state,
         'neutral',
-        `${def.title} kapanıyor`,
-        `Yaklaşık ${ERA_CLOSING_NOTICE_DAYS} gün içinde yeni bir dönem başlayacak. Planını ona göre kur.`,
+        tc('core.events.eraClosingTitle', { title: def.title }),
+        tc('core.events.eraClosingBody', { days: ERA_CLOSING_NOTICE_DAYS }),
       );
     }
     return;

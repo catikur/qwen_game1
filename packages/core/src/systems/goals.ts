@@ -1,5 +1,6 @@
 import { BUILDING_BY_ID, GOALS, getCitySize, getDifficulty } from '@capital/content';
 import type { GoalDef } from '@capital/content';
+import { tc } from '../i18n';
 import { pushNews } from '../news';
 import { formatMoney } from '../selectors';
 import { sharesOutstanding } from './equity';
@@ -96,17 +97,23 @@ function measure(state: GameState, def: GoalDef): { progress: number; detail: st
   switch (def.kind) {
     case 'outlets': {
       const count = countRoles(state, ['outlet']);
-      return { progress: clamp(count / def.target), detail: `${Math.min(count, def.target)} / ${def.target} mağaza` };
+      return {
+        progress: clamp(count / def.target),
+        detail: tc('core.goals.outletsDetail', { count: Math.min(count, def.target), target: def.target }),
+      };
     }
     case 'units': {
       const count = countRoles(state, ['extract', 'process']);
-      return { progress: clamp(count / def.target), detail: `${Math.min(count, def.target)} / ${def.target} üretim ünitesi` };
+      return {
+        progress: clamp(count / def.target),
+        detail: tc('core.goals.unitsDetail', { count: Math.min(count, def.target), target: def.target }),
+      };
     }
     case 'netWorth': {
       const value = createdValue(state);
       return {
         progress: clamp(value / def.target),
-        detail: `${formatMoney(Math.max(0, value))} / ${formatMoney(def.target)}`,
+        detail: tc('core.goals.moneyDetail', { value: formatMoney(Math.max(0, value)), target: formatMoney(def.target) }),
       };
     }
     case 'rank': {
@@ -114,20 +121,22 @@ function measure(state: GameState, def: GoalDef): { progress: number; detail: st
       const ahead = player.netWorth > leader;
       return {
         progress: ahead ? 1 : clamp(leader > 0 ? player.netWorth / leader : 1),
-        detail: ahead ? 'bir numarasın' : `liderin %${Math.round(clamp(player.netWorth / Math.max(1, leader)) * 100)}'i`,
+        detail: ahead
+          ? tc('core.goals.rankAhead')
+          : tc('core.goals.rankBehind', { percent: Math.round(clamp(player.netWorth / Math.max(1, leader)) * 100) }),
       };
     }
     case 'rivalStake': {
       const stake = bestRivalStake(state);
-      return { progress: clamp(stake / def.target), detail: `en büyük payın %${Math.round(stake * 100)}` };
+      return { progress: clamp(stake / def.target), detail: tc('core.goals.stakeDetail', { percent: Math.round(stake * 100) }) };
     }
     case 'acquisitions': {
       const count = player.acquisitions ?? 0;
-      return { progress: clamp(count / def.target), detail: `${count} / ${def.target} devralma` };
+      return { progress: clamp(count / def.target), detail: tc('core.goals.acquisitionsDetail', { count, target: def.target }) };
     }
     case 'victory': {
       const target = victoryNetWorth(state);
-      if (victoryReached(state)) return { progress: 1, detail: 'zafer' };
+      if (victoryReached(state)) return { progress: 1, detail: tc('core.goals.victory') };
       const value = createdValue(state);
       const worth = clamp(value / target);
       const leader = leaderRivalWorth(state);
@@ -135,7 +144,10 @@ function measure(state: GameState, def: GoalDef): { progress: number; detail: st
       // İki koşulun zayıf olanı — ikisi de gerekli.
       return {
         progress: Math.min(worth, rank),
-        detail: `${formatMoney(Math.max(0, value))} / ${formatMoney(target)}${rank < 1 ? ' · henüz bir numara değilsin' : ''}`,
+        detail: tc(rank < 1 ? 'core.goals.victoryNotFirst' : 'core.goals.moneyDetail', {
+          value: formatMoney(Math.max(0, value)),
+          target: formatMoney(target),
+        }),
       };
     }
   }
@@ -145,7 +157,7 @@ function measure(state: GameState, def: GoalDef): { progress: number; detail: st
 export function goalLadder(state: GameState): GoalStatus[] {
   return GOALS.map((def) => {
     const completedDay = state.goals?.[def.id] ?? null;
-    if (completedDay !== null) return { def, progress: 1, completedDay, detail: 'tamamlandı' };
+    if (completedDay !== null) return { def, progress: 1, completedDay, detail: tc('core.goals.completed') };
     const { progress, detail } = measure(state, def);
     return { def, progress, completedDay: null, detail };
   });
@@ -176,8 +188,8 @@ export function runGoalTick(state: GameState): void {
     pushNews(
       state,
       'good',
-      `Hedef tamam: ${def.title}`,
-      next ? `Sıradaki basamak: ${next.title} — ${next.hint}` : 'Merdivenin sonu göründü.',
+      tc('core.goals.doneTitle', { title: def.title }),
+      next ? tc('core.goals.doneNext', { title: next.title, hint: next.hint }) : tc('core.goals.doneLast'),
     );
   }
 
@@ -189,10 +201,10 @@ export function runGoalTick(state: GameState): void {
       pushNews(
         state,
         'good',
-        kind === 'monopoly' ? 'Tekel: şehirde rakip kalmadı' : 'Şehrin sahibi sensin',
+        kind === 'monopoly' ? tc('core.goals.monopolyTitle') : tc('core.goals.tycoonTitle'),
         kind === 'monopoly'
-          ? 'Son rakip de senin oldu. Şehrin bütün ticareti tek elde.'
-          : `${formatMoney(victoryNetWorth(state))} hedefini aştın ve bütün rakiplerin önündesin.`,
+          ? tc('core.goals.monopolyBody')
+          : tc('core.goals.tycoonBody', { target: formatMoney(victoryNetWorth(state)) }),
       );
     }
   }
