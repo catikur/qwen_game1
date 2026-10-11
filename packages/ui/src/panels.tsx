@@ -1,6 +1,6 @@
 import {useEffect, useState} from 'react';
 import type { ReactElement } from 'react';
-import { BUILDING_BY_ID, CATEGORIES, DISTRICT_ARCHETYPES, CONSUMER_CATEGORIES, GOODS_BY_CATEGORY, GOOD_BY_ID, STRUCTURE_BY_ID, formatPercent } from '@capital/content';
+import { BUILDING_BY_ID, CATEGORIES, DISTRICT_ARCHETYPES, CONSUMER_CATEGORIES, GOODS_BY_CATEGORY, GOOD_BY_ID, STRUCTURE_BY_ID, formatPercent, numberLocale } from '@capital/content';
 import {
   buildOptions,
   categoryBreakdown,
@@ -31,6 +31,7 @@ import { GoalsPanel } from './GoalsPanel';
 import { HoldingPanel } from './HoldingPanel';
 import { CouncilPanel } from './CouncilPanel';
 import { LeaguePanel } from './LeaguePanel';
+import { LocalePicker } from './LocalePicker';
 import { BankSection, WorkforceSection } from './CompanyFinance';
 import { t } from './i18n';
 import type { MessageKey } from './i18n';
@@ -379,7 +380,7 @@ export function Inspector(): ReactElement | null {
       </header>
 
       <div className="statgrid">
-        <Stat label={t('panels.inspector.stat.population')} value={Math.round(district.population).toLocaleString('tr-TR')} />
+        <Stat label={t('panels.inspector.stat.population')} value={Math.round(district.population).toLocaleString(numberLocale())} />
         <Stat label={t('panels.inspector.stat.incomeLevel')} value={formatPercent(Math.round(district.incomeLevel * 100))} />
         <Stat label={t('panels.inspector.stat.landValue')} value={formatMoney(tile.landValue)} />
         <Stat label={t('panels.inspector.stat.openDemand')} value={formatPercent(Math.round(districtOpportunity(district) * 100))} />
@@ -1100,7 +1101,7 @@ function SavePanel(): ReactElement {
               {meta ? (
                 <span className="muted">
                   {t('panels.saves.slotMeta', { company: meta.companyName, day: meta.day, netWorth: formatMoney(meta.netWorth) })}{' '}
-                  {new Date(meta.updatedAtIso).toLocaleString('tr-TR')}
+                  {new Date(meta.updatedAtIso).toLocaleString(numberLocale())}
                 </span>
               ) : (
                 <span className="muted">{t('panels.saves.empty')}</span>
@@ -1180,6 +1181,10 @@ function HelpPanel(): ReactElement {
       <p className="muted">
         {t('panels.help.controls')}
       </p>
+      <div className="help-locale">
+        <span className="muted">{t('panels.help.language')}</span>
+        <LocalePicker />
+      </div>
     </div>
   );
 }

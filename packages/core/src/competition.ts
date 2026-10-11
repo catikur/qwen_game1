@@ -3,6 +3,8 @@ import {
   BUILDING_BY_ID,
   CATEGORIES,
   CONSUMER_CATEGORIES,
+  baseText,
+  formatShortMoney,
   getCeoModifiers,
 } from '@capital/content';
 import type { CategoryId } from '@capital/content';
@@ -332,7 +334,7 @@ function bestMove(
   if (def && company && company.netWorth < def.unlockNetWorth) {
     return {
       move: null,
-      blocked: tc('core.competition.needsNetWorth', { name: def.name, amount: formatShort(def.unlockNetWorth) }),
+      blocked: tc('core.competition.needsNetWorth', { name: def.name, amount: formatShortMoney(def.unlockNetWorth) }),
     };
   }
   return { move: null, blocked: tc('core.competition.noPlot') };
@@ -425,7 +427,9 @@ function competitionCardsFor(state: GameState, companyId: string): CompetitionCa
     });
   }
 
-  cards.sort((a, b) => b.outlets - a.outlets || a.categoryName.localeCompare(b.categoryName, 'tr'));
+  // Eşitlikte Türkçe ada göre: rakipler kartları bu sırayla tarıyor, sıra
+  // dile göre değişseydi aynı tohum İngilizcede başka bir oyun oynardı.
+  cards.sort((a, b) => b.outlets - a.outlets || categoryOrder(a.category) - categoryOrder(b.category));
   return cards;
 }
 
@@ -466,10 +470,18 @@ export function focusBlocker(state: GameState, buildingId: string): string | nul
   return null;
 }
 
-function formatShort(value: number): string {
-  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M ₺`;
-  if (value >= 1_000) return `${Math.round(value / 1_000)}B ₺`;
-  return `${Math.round(value)} ₺`;
+
+let categoryRank: Map<CategoryId, number> | null = null;
+
+/** Kategorilerin Türkçe adlarına göre sırası — etkin dilden bağımsız. */
+function categoryOrder(category: CategoryId): number {
+  if (!categoryRank) {
+    const ids = Object.keys(CATEGORIES) as CategoryId[];
+    const name = (id: CategoryId) => baseText(CATEGORIES[id], 'name') ?? CATEGORIES[id].name;
+    ids.sort((a, b) => name(a).localeCompare(name(b), 'tr'));
+    categoryRank = new Map(ids.map((id, index) => [id, index]));
+  }
+  return categoryRank.get(category) ?? 0;
 }
 
 /** Kartın hamlesi için parsel dahil toplam maliyet. */

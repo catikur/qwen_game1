@@ -83,8 +83,41 @@ export function formatPercent(value: number | string): string {
   return active === 'en' ? `${value}%` : `%${value}`;
 }
 
+/** Ondalık ayırıcı: Türkçede virgül, İngilizcede nokta. `text` noktalı sayı metni. */
+export function localizeDecimal(text: string): string {
+  return active === 'en' ? text : text.replace('.', ',');
+}
+
 /** Ondalık sayı: Türkçede virgül ("5,0"), İngilizcede nokta ("5.0"). */
 export function formatDecimal(value: number, digits: number): string {
-  const text = value.toFixed(digits);
-  return active === 'en' ? text : text.replace('.', ',');
+  return localizeDecimal(value.toFixed(digits));
+}
+
+/** Binlik ayırıcılı tam sayı: Türkçede "1.234", İngilizcede "1,234". */
+export function formatNumber(value: number, options?: Intl.NumberFormatOptions): string {
+  return value.toLocaleString(numberLocale(), options);
+}
+
+/** Para işareti: Türkçede tutarın arkasında ("45 B ₺"), İngilizcede önünde ("₺45K"). */
+export function withCurrency(amount: string): string {
+  return active === 'en' ? `₺${amount}` : `${amount} ₺`;
+}
+
+/**
+ * Para birimi kısaltmaları. Türkçe: B (bin), M (milyon), Mr (milyar) ve
+ * sayıyla arasında boşluk; İngilizce: K, M, B bitişik.
+ */
+export function moneyUnits(): { thousand: string; million: string; billion: string } {
+  return active === 'en' ? { thousand: 'K', million: 'M', billion: 'B' } : { thousand: ' B', million: ' M', billion: ' Mr' };
+}
+
+/**
+ * Kısa para biçimi (kart ve ipucu metinleri): "1.2M ₺", "45B ₺", "500 ₺";
+ * İngilizcede "₺1.2M", "₺45K", "₺500". Türkçe biçim Tur 23 öncesiyle aynı.
+ */
+export function formatShortMoney(value: number): string {
+  const thousand = active === 'en' ? 'K' : 'B';
+  if (value >= 1_000_000) return withCurrency(`${(value / 1_000_000).toFixed(1)}M`);
+  if (value >= 1_000) return withCurrency(`${Math.round(value / 1_000)}${thousand}`);
+  return withCurrency(`${Math.round(value)}`);
 }

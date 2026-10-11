@@ -1,4 +1,4 @@
-import { BUILDING_BY_ID, CREDIT, CREDIT_RATINGS, NPC_CREDIT } from '@capital/content';
+import { BUILDING_BY_ID, CREDIT, CREDIT_RATINGS, NPC_CREDIT, formatDecimal } from '@capital/content';
 import type { CreditRating, LoanKind, NpcProfileDef } from '@capital/content';
 import { pushNews } from '../news';
 import { formatMoney } from '../selectors';
@@ -546,7 +546,7 @@ export function npcBorrow(state: GameState, profile: NpcProfileDef): void {
     tc('core.credit.rivalLoanTitle', { name: company.name, amount: formatMoney(amount) }),
     tc(doctrine.kind === 'secured' ? 'core.credit.rivalLoanSecuredBody' : 'core.credit.rivalLoanBody', {
       days: doctrine.termDays,
-      rate: (quote.rate * 100).toFixed(1).replace('.', ','),
+      rate: formatDecimal(quote.rate * 100, 1),
     }),
     company.id,
   );

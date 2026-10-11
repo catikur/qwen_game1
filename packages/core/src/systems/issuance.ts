@@ -1,4 +1,4 @@
-import { ISSUANCE, NPC_ISSUANCE } from '@capital/content';
+import { ISSUANCE, NPC_ISSUANCE, numberLocale } from '@capital/content';
 import type { NpcProfileDef } from '@capital/content';
 import { tc } from '../i18n';
 import { pushNews } from '../news';
@@ -134,7 +134,7 @@ export function issueShares(state: GameState, companyId: string, count: number):
       'good',
       quote.ipo ? tc('core.issuance.ipoDone') : tc('core.issuance.raiseDone'),
       tc('core.issuance.playerBody', {
-        shares: shares.toLocaleString('tr-TR'),
+        shares: shares.toLocaleString(numberLocale()),
         raised: formatMoney(raised),
         share: investorShare,
       }),
@@ -147,9 +147,9 @@ export function issueShares(state: GameState, companyId: string, count: number):
       // Eski metin "hisseleri artık daha kolay toplanır" diyordu; Tur 19'dan
       // beri yeni hisseler kurumsal yatırımcıda kalıyor, dolaşıma girmiyor.
       tc('core.issuance.rivalBody', {
-        shares: shares.toLocaleString('tr-TR'),
+        shares: shares.toLocaleString(numberLocale()),
         raised: formatMoney(raised),
-        control: (Math.floor(company.shareCount / 2) + 1).toLocaleString('tr-TR'),
+        control: (Math.floor(company.shareCount / 2) + 1).toLocaleString(numberLocale()),
       }),
       company.id,
     );

@@ -216,4 +216,5 @@ export const panels: Record<keyof typeof trPanels, string> = {
     " Once you reach victory in a city, you can expand to a new one: your capital and half of your brand awareness come with you, and the rivals are different. One city is played at a time; half of the waiting city's profit flows into the holding treasury every day. Victory in each city is measured by the value you created there.",
   'panels.help.controls':
     'Controls: drag = pan · right-click drag = rotate · wheel = zoom · WASD = pan · Space = pause',
+  'panels.help.language': 'Language',
 };

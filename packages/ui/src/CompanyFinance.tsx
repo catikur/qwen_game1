@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { ReactElement } from 'react';
-import { CREDIT, CREDIT_RATINGS, LABOR, WAGE_POLICIES, formatPercent, formatDecimal } from '@capital/content';
+import { CREDIT, CREDIT_RATINGS, LABOR, WAGE_POLICIES, formatPercent, formatDecimal, numberLocale } from '@capital/content';
 import type { LoanKind, WagePolicy } from '@capital/content';
 import {
   annuityPayment,
@@ -100,7 +100,7 @@ export function WorkforceSection(): ReactElement | null {
       <div className="statgrid small">
         <div className="stat">
           <span className="stat-label">{t('finance.labor.stat.employees')}</span>
-          <span className="stat-value">{employees.toLocaleString('tr-TR')}</span>
+          <span className="stat-value">{employees.toLocaleString(numberLocale())}</span>
         </div>
         <div className="stat">
           <span className="stat-label">{t('finance.labor.stat.wages')}</span>

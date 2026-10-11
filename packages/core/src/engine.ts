@@ -1,4 +1,4 @@
-import { BUILDING_BY_ID, CONSUMER_CATEGORIES, GOODS_BY_CATEGORY } from '@capital/content';
+import { BUILDING_BY_ID, CONSUMER_CATEGORIES, GOODS_BY_CATEGORY, formatPercent } from '@capital/content';
 import { build, buyTile, buyoutTile, demolish, sellTile } from './actions';
 import { pushNews } from './news';
 import { stepLeadership } from './leadership';
@@ -560,7 +560,7 @@ export class GameEngine {
     for (const change of changes) {
       const district = state.districts[change.districtId];
       if (!district) continue;
-      const pct = (value: number) => `%${Math.round(value * 100)}`;
+      const pct = (value: number) => formatPercent(Math.round(value * 100));
       if (change.from === playerId) {
         const rival = state.companies[change.to];
         if (!rival) continue;

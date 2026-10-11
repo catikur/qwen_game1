@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { STRUCTURE_BY_ID } from '@capital/content';
+import { STRUCTURE_BY_ID, formatNumber, withCurrency } from '@capital/content';
 import type { ReactElement } from 'react';
 import { auctionHint, getPlayer, minimumBid } from '@capital/core';
 import { t } from './i18n';
@@ -14,7 +14,7 @@ import { useGame, useGameState } from './useGame';
  * birim maliyet için aynı kararı vermiştik.
  */
 function exact(value: number): string {
-  return `${Math.round(value).toLocaleString('tr-TR')} ₺`;
+  return withCurrency(formatNumber(Math.round(value)));
 }
 
 /**

@@ -2,6 +2,7 @@ import {
   BUILDING_BY_ID,
   DISTRICT_ARCHETYPES,
   STRUCTURE_BY_ID,
+  formatShortMoney,
   getCeoModifiers,
 } from '@capital/content';
 import { defaultShelf } from './systems/demand';
@@ -33,12 +34,12 @@ export function canBuild(state: GameState, companyId: string, defId: string): Co
   if (company.netWorth < def.unlockNetWorth) {
     return {
       ok: false,
-      reason: tc('core.actions.needsNetWorth', { name: def.name, amount: formatShort(def.unlockNetWorth) }),
+      reason: tc('core.actions.needsNetWorth', { name: def.name, amount: formatShortMoney(def.unlockNetWorth) }),
     };
   }
   const cost = buildCost(state, companyId, defId);
   if (company.cash < cost) {
-    return { ok: false, reason: tc('core.actions.buildNoCash', { amount: formatShort(cost) }) };
+    return { ok: false, reason: tc('core.actions.buildNoCash', { amount: formatShortMoney(cost) }) };
   }
   return { ok: true };
 }
@@ -119,7 +120,7 @@ export function buyTile(state: GameState, companyId: string, tileId: number): Co
 
   const price = tilePrice(state, tileId, companyId);
   if (company.cash < price) {
-    return { ok: false, reason: tc('core.actions.tileNoCash', { price: formatShort(price) }) };
+    return { ok: false, reason: tc('core.actions.tileNoCash', { price: formatShortMoney(price) }) };
   }
 
   company.cash -= price;
@@ -154,7 +155,7 @@ export function buyoutTile(state: GameState, companyId: string, tileId: number):
   if (company.cash < price) {
     return {
       ok: false,
-      reason: tc('core.actions.buyoutNoCash', { name: structure.name, price: formatShort(price) }),
+      reason: tc('core.actions.buyoutNoCash', { name: structure.name, price: formatShortMoney(price) }),
     };
   }
 
@@ -264,8 +265,3 @@ export function demolish(state: GameState, companyId: string, tileId: number): C
   return { ok: true };
 }
 
-function formatShort(value: number): string {
-  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M ₺`;
-  if (value >= 1_000) return `${Math.round(value / 1_000)}B ₺`;
-  return `${Math.round(value)} ₺`;
-}

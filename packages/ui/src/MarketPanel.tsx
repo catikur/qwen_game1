@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { ReactElement } from 'react';
-import { ISSUANCE, formatPercent, formatDecimal } from '@capital/content';
+import { ISSUANCE, formatPercent, formatDecimal, numberLocale, withCurrency } from '@capital/content';
 import {
   CONTROL_THRESHOLD,
   capRemaining,
@@ -175,7 +175,7 @@ function Issuance({ state }: { state: GameState }): ReactElement | null {
         <h3>{title}</h3>
         <span className="muted">
           {t('finance.market.issuance.summary', {
-            outstanding: outstanding.toLocaleString('tr-TR'),
+            outstanding: outstanding.toLocaleString(numberLocale()),
             founder: Math.round(founder * 100),
           })}
         </span>
@@ -194,9 +194,9 @@ function Issuance({ state }: { state: GameState }): ReactElement | null {
         <>
           <label className="bank-amount">
             <span>
-              <strong>{count.toLocaleString('tr-TR')}</strong> {t('finance.market.issuance.newShares')}{' '}
+              <strong>{count.toLocaleString(numberLocale())}</strong> {t('finance.market.issuance.newShares')}{' '}
               <span className="muted">
-                {t('finance.market.issuance.max', { max: quote.maxShares.toLocaleString('tr-TR') })}
+                {t('finance.market.issuance.max', { max: quote.maxShares.toLocaleString(numberLocale()) })}
               </span>
             </span>
             <input
@@ -276,8 +276,8 @@ function Listing({ company, state }: { company: CompanyState; state: GameState }
         ? t('finance.market.order.block.locked')
         : estimate.floatShort
           ? t('finance.market.order.block.floatShort', {
-              available: available.toLocaleString('tr-TR'),
-              needed: toControl.toLocaleString('tr-TR'),
+              available: available.toLocaleString(numberLocale()),
+              needed: toControl.toLocaleString(numberLocale()),
             })
           : null;
 
@@ -296,7 +296,7 @@ function Listing({ company, state }: { company: CompanyState; state: GameState }
 
   const placeOrder = (): void => {
     if (run({ type: 'PLACE_TAKEOVER_ORDER', companyId: company.id })) {
-      toast(t('finance.market.order.placed', { name: company.name, cap: cap.toLocaleString('tr-TR') }), 'good');
+      toast(t('finance.market.order.placed', { name: company.name, cap: cap.toLocaleString(numberLocale()) }), 'good');
     }
   };
   const cancelOrder = (): void => {
@@ -318,7 +318,7 @@ function Listing({ company, state }: { company: CompanyState; state: GameState }
           {company.name}
         </span>
         <span className="bourse-price">
-          {price.toLocaleString('tr-TR', { maximumFractionDigits: 0 })} ₺
+          {withCurrency(price.toLocaleString(numberLocale(), { maximumFractionDigits: 0 }))}
           {/* Güven fiyatın NEDEN o olduğunu söylüyor. Tek başına bir sayı
               olsaydı oyuncu "pahalı mı ucuz mu" sorusuna cevap bulamazdı. */}
           <span className={trust >= 1 ? 'bourse-trust pos' : 'bourse-trust neg'}>
@@ -330,7 +330,7 @@ function Listing({ company, state }: { company: CompanyState; state: GameState }
       <div className="bourse-meta">
         <span>{t('finance.market.listing.value', { value: formatMoney(marketCap(state, company.id)) })}</span>
         <span>{t('finance.market.listing.profit', { profit: formatMoney(company.today.profit) })}</span>
-        <span>{t('finance.market.listing.float', { count: available.toLocaleString('tr-TR') })}</span>
+        <span>{t('finance.market.listing.float', { count: available.toLocaleString(numberLocale()) })}</span>
         {investors > 0 && (
           <span>{t('finance.market.listing.investors', { percent: Math.round((investors / outstanding) * 100) })}</span>
         )}
@@ -353,7 +353,7 @@ function Listing({ company, state }: { company: CompanyState; state: GameState }
           {stake > CONTROL_THRESHOLD
             ? t('finance.market.listing.stakeControlled')
             : t('finance.market.listing.stakeToControl', {
-                count: toControl.toLocaleString('tr-TR'),
+                count: toControl.toLocaleString(numberLocale()),
                 cost: formatMoney(controlCost),
               })}
         </span>
@@ -366,7 +366,7 @@ function Listing({ company, state }: { company: CompanyState; state: GameState }
             <strong>{t('finance.market.order.title')}</strong> ·{' '}
             {t('finance.market.order.progress', {
               day: order.placedDay,
-              remaining: toControl.toLocaleString('tr-TR'),
+              remaining: toControl.toLocaleString(numberLocale()),
               days: estimate.days,
             })}
             {order.waitingCash ? t('finance.market.order.waitingCash') : ''}
@@ -390,7 +390,7 @@ function Listing({ company, state }: { company: CompanyState; state: GameState }
             type="button"
             className={orderBlock === null && controlCost <= player.cash ? 'primary order-go' : 'order-go'}
             disabled={orderBlock !== null}
-            title={orderBlock ?? t('finance.market.order.hint', { cap: cap.toLocaleString('tr-TR') })}
+            title={orderBlock ?? t('finance.market.order.hint', { cap: cap.toLocaleString(numberLocale()) })}
             onClick={placeOrder}
           >
             {toControl === 0
@@ -425,13 +425,13 @@ function Listing({ company, state }: { company: CompanyState; state: GameState }
         </label>
       </div>
       <p className="muted bourse-cap" data-cap-left={capLeft}>
-        {t('finance.market.cap.summary', { cap: cap.toLocaleString('tr-TR'), left: capLeft.toLocaleString('tr-TR') })}
+        {t('finance.market.cap.summary', { cap: cap.toLocaleString(numberLocale()), left: capLeft.toLocaleString(numberLocale()) })}
         {orderBlock && toControl > 0 && lockedDays === 0 ? ` · ${orderBlock}` : ''}
       </p>
 
       {held > 0 && (
         <p className="muted">
-          {t('finance.market.listing.holding', { count: held.toLocaleString('tr-TR'), value: formatMoney(held * price) })}
+          {t('finance.market.listing.holding', { count: held.toLocaleString(numberLocale()), value: formatMoney(held * price) })}
         </p>
       )}
     </section>

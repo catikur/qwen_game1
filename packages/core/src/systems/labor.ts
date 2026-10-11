@@ -1,4 +1,4 @@
-import { BUILDING_BY_ID, LABOR, NPC_LABOR, WAGE_POLICIES } from '@capital/content';
+import { BUILDING_BY_ID, LABOR, NPC_LABOR, WAGE_POLICIES, formatPercent, localizeDecimal } from '@capital/content';
 import type { BuildingDef, UnionResponse, WagePolicy } from '@capital/content';
 import { pushNews } from '../news';
 import { tc } from '../i18n';
@@ -126,7 +126,7 @@ function laborSite(state: GameState, companyId: string): number | undefined {
 
 export function percent(rate: number): string {
   const value = Math.round(rate * 1000) / 10;
-  return `%${String(value).replace('.', ',')}`;
+  return formatPercent(localizeDecimal(String(value)));
 }
 
 /** Uzlaşma teklifinin tutma ihtimali (arayüz de bunu gösteriyor). */

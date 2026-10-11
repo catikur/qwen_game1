@@ -1,4 +1,4 @@
-import { getDifficulty } from '@capital/content';
+import { getDifficulty, numberLocale } from '@capital/content';
 import { pushNews } from '../news';
 import { formatMoney } from '../selectors';
 import { tc } from '../i18n';
@@ -85,10 +85,10 @@ export function playerBuy(state: GameState, buyerId: string, issuerId: string, c
       ok: false,
       reason:
         remaining === 0
-          ? tc('core.orders.capReached', { cap: cap.toLocaleString('tr-TR') })
+          ? tc('core.orders.capReached', { cap: cap.toLocaleString(numberLocale()) })
           : tc('core.orders.capRemaining', {
-              remaining: remaining.toLocaleString('tr-TR'),
-              cap: cap.toLocaleString('tr-TR'),
+              remaining: remaining.toLocaleString(numberLocale()),
+              cap: cap.toLocaleString(numberLocale()),
             }),
     };
   }
@@ -164,8 +164,8 @@ export function placeTakeoverOrder(state: GameState, buyerId: string, issuerId: 
     return {
       ok: false,
       reason: tc('core.orders.floatShort', {
-        float: freeFloat(state, issuerId).toLocaleString('tr-TR'),
-        need: estimate.need.toLocaleString('tr-TR'),
+        float: freeFloat(state, issuerId).toLocaleString(numberLocale()),
+        need: estimate.need.toLocaleString(numberLocale()),
       }),
     };
   }
@@ -227,8 +227,8 @@ function executeOrder(state: GameState, buyer: CompanyState, order: TakeoverOrde
         'bad',
         tc('core.orders.defendedTitle', { name: issuer.name }),
         tc('core.orders.defendedBody', {
-          float: float.toLocaleString('tr-TR'),
-          need: need.toLocaleString('tr-TR'),
+          float: float.toLocaleString(numberLocale()),
+          need: need.toLocaleString(numberLocale()),
           pct,
         }),
         issuer.id,

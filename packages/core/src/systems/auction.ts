@@ -1,4 +1,4 @@
-import { BUILDINGS, STRUCTURE_BY_ID } from '@capital/content';
+import { BUILDINGS, STRUCTURE_BY_ID, numberLocale } from '@capital/content';
 import { pushNews } from '../news';
 import { tc } from '../i18n';
 import { rivalProfiles } from '../profiles';
@@ -305,7 +305,7 @@ function settle(state: GameState): void {
     isPlayer ? tc('core.auction.wonTitle') : tc('core.auction.wonRivalTitle', { name: winner.name }),
     tc(isPlayer ? 'core.auction.wonBody' : 'core.auction.wonRivalBody', {
       district: district?.name ?? tc('core.auction.city'),
-      price: Math.round(auction.bid).toLocaleString('tr-TR'),
+      price: Math.round(auction.bid).toLocaleString(numberLocale()),
       rounds: auction.rounds,
     }) + (razed ? ` ${tc('core.auction.razed', { structure: razed })}` : ''),
     { tileId: auction.tileId, ...(isPlayer ? {} : { companyId: winner.id }) },
@@ -353,12 +353,12 @@ export function runAuctionTick(state: GameState): void {
           district: district?.name ?? tc('core.auction.city'),
           structure: occupied,
           days: AUCTION_DAYS,
-          price: Math.round(state.auction.reserve).toLocaleString('tr-TR'),
+          price: Math.round(state.auction.reserve).toLocaleString(numberLocale()),
         })
       : tc('core.auction.openedBody', {
           district: district?.name ?? tc('core.auction.city'),
           days: AUCTION_DAYS,
-          price: Math.round(state.auction.reserve).toLocaleString('tr-TR'),
+          price: Math.round(state.auction.reserve).toLocaleString(numberLocale()),
         }),
     { tileId: state.auction.tileId },
   );
@@ -387,5 +387,5 @@ export function auctionHint(state: GameState, companyId: string): string | null 
   }
 
   if (!bestName) return null;
-  return tc('core.auction.hint', { building: bestName, profit: Math.round(bestProfit).toLocaleString('tr-TR') });
+  return tc('core.auction.hint', { building: bestName, profit: Math.round(bestProfit).toLocaleString(numberLocale()) });
 }

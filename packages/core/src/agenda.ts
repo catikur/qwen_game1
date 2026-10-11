@@ -1,4 +1,4 @@
-import { CREDIT, ERA_BY_ID, EVENTS } from '@capital/content';
+import { CREDIT, ERA_BY_ID, EVENTS, localizeDecimal } from '@capital/content';
 import { nextGoal } from './systems/goals';
 import { OFFER_LIFETIME_DAYS, contractProgress } from './systems/contracts';
 import { sharesHeld, sharesOutstanding } from './systems/equity';
@@ -129,7 +129,7 @@ export function agenda(state: GameState): AgendaItem[] {
         urgency: left <= 3 ? 3 : 2,
         daysLeft: left,
         label: tc('core.agenda.unionDemand', {
-          raise: String(Math.round(labor.demand.raise * 1000) / 10).replace('.', ','),
+          raise: localizeDecimal(String(Math.round(labor.demand.raise * 1000) / 10)),
         }),
         tone: 'bad',
       });

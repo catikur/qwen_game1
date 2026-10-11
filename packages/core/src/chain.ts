@@ -4,6 +4,8 @@ import {
   CATEGORIES,
   GOOD_BY_ID,
   chainOf,
+  formatPercent,
+  numberLocale,
 } from '@capital/content';
 import type { BuildingDef, CategoryId, GoodDef } from '@capital/content';
 import { STRUCTURE_BY_ID } from '@capital/content';
@@ -169,7 +171,7 @@ function money(value: number): string {
 }
 
 function percent(value: number): string {
-  return `%${Math.round(value * 100)}`;
+  return formatPercent(Math.round(value * 100));
 }
 
 /** Bir şirketin bir üründeki günlük üretim ve tüketim hacmi. */
@@ -431,8 +433,8 @@ function bestMove(
       ? tc('core.chain.reasonPremature', {
           shortfall,
           name: def.name,
-          capacity: Math.round(def.capacity).toLocaleString('tr-TR'),
-          consumed: Math.round(flow.consumed).toLocaleString('tr-TR'),
+          capacity: Math.round(def.capacity).toLocaleString(numberLocale()),
+          consumed: Math.round(flow.consumed).toLocaleString(numberLocale()),
           utilisation: percent(utilisation),
         })
       : deferred

@@ -13,11 +13,25 @@ import { translate } from './messages';
  * Dizi alanları (kurulum ekranındaki "facts") öğe öğe çevriliyor:
  * `content.<tür>.<kimlik>.<alan>.<sıra>`.
  */
+const baseTexts = new WeakMap<object, Record<string, string>>();
+
+/**
+ * Bir içerik nesnesinin temel dildeki (Türkçe) metni. Simülasyonun metne
+ * göre sıraladığı yerler bunu kullanıyor: sıralama dile göre değişirse
+ * aynı tohum İngilizcede başka bir oyun oynardı.
+ */
+export function baseText(entry: object, field: string): string | undefined {
+  return baseTexts.get(entry)?.[field];
+}
+
 function localizeFields<T extends object>(entry: T, prefix: string, fields: readonly string[]): void {
   const record = entry as Record<string, unknown>;
   for (const field of fields) {
     const original = record[field];
     if (typeof original === 'string') {
+      const bases = baseTexts.get(entry) ?? {};
+      bases[field] = original;
+      baseTexts.set(entry, bases);
       Object.defineProperty(entry, field, {
         get: () => translate(`${prefix}.${field}`, undefined, original),
         enumerable: true,

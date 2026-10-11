@@ -1,5 +1,6 @@
 export * from './types';
 export * from './messages';
+export { baseText } from './localize';
 import './locales';
 export * from './categories';
 export * from './goods';
