@@ -1,6 +1,7 @@
 import { getDifficulty } from '@capital/content';
 import { pushNews } from '../news';
 import { formatMoney } from '../selectors';
+import { tc } from '../i18n';
 import {
   CONTROL_THRESHOLD,
   TOTAL_SHARES,
@@ -84,8 +85,11 @@ export function playerBuy(state: GameState, buyerId: string, issuerId: string, c
       ok: false,
       reason:
         remaining === 0
-          ? `Bugünkü alım tavanı doldu (günde ${cap.toLocaleString('tr-TR')} hisse). Yarın devam edebilirsin.`
-          : `Bugün en fazla ${remaining.toLocaleString('tr-TR')} hisse daha alabilirsin (günde ${cap.toLocaleString('tr-TR')}).`,
+          ? tc('core.orders.capReached', { cap: cap.toLocaleString('tr-TR') })
+          : tc('core.orders.capRemaining', {
+              remaining: remaining.toLocaleString('tr-TR'),
+              cap: cap.toLocaleString('tr-TR'),
+            }),
     };
   }
   const result = buyShares(state, buyerId, issuerId, wanted);
@@ -143,23 +147,26 @@ function removeOrder(buyer: CompanyState, issuerId: string): void {
 export function placeTakeoverOrder(state: GameState, buyerId: string, issuerId: string): CommandResult {
   const buyer = state.companies[buyerId];
   const issuer = state.companies[issuerId];
-  if (!buyer || !issuer) return { ok: false, reason: 'Bilinmeyen şirket.' };
-  if (buyerId === issuerId) return { ok: false, reason: 'Kendi şirketine devralma emri verilmez; geri alımı kullan.' };
-  if (findOrder(state, buyerId, issuerId)) return { ok: false, reason: `${issuer.name} için zaten bir emrin var.` };
+  if (!buyer || !issuer) return { ok: false, reason: tc('core.orders.unknownCompany') };
+  if (buyerId === issuerId) return { ok: false, reason: tc('core.orders.selfOrder') };
+  if (findOrder(state, buyerId, issuerId)) return { ok: false, reason: tc('core.orders.duplicate', { name: issuer.name }) };
   if (issuer.lockedUntilDay !== undefined && state.time.day < issuer.lockedUntilDay) {
     return {
       ok: false,
-      reason: `${issuer.name} kurucu kilidinde — hisseleri ${issuer.lockedUntilDay - state.time.day} gün sonra piyasaya çıkıyor.`,
+      reason: tc('core.orders.founderLock', { name: issuer.name, days: issuer.lockedUntilDay - state.time.day }),
     };
   }
   const price = sharePrice(state, issuerId);
-  if (price <= 0) return { ok: false, reason: 'Hisse fiyatı yok.' };
+  if (price <= 0) return { ok: false, reason: tc('core.orders.noPrice') };
   const estimate = orderEstimate(state, buyerId, issuerId);
-  if (estimate.need <= 0) return { ok: false, reason: `${issuer.name} zaten senin kontrolünde.` };
+  if (estimate.need <= 0) return { ok: false, reason: tc('core.orders.alreadyControlled', { name: issuer.name }) };
   if (estimate.floatShort) {
     return {
       ok: false,
-      reason: `Dolaşımda ${freeFloat(state, issuerId).toLocaleString('tr-TR')} hisse var; kontrol için ${estimate.need.toLocaleString('tr-TR')} gerekiyor.`,
+      reason: tc('core.orders.floatShort', {
+        float: freeFloat(state, issuerId).toLocaleString('tr-TR'),
+        need: estimate.need.toLocaleString('tr-TR'),
+      }),
     };
   }
 
@@ -172,7 +179,7 @@ export function placeTakeoverOrder(state: GameState, buyerId: string, issuerId: 
 
 export function cancelTakeoverOrder(state: GameState, buyerId: string, issuerId: string): CommandResult {
   const buyer = state.companies[buyerId];
-  if (!buyer || !findOrder(state, buyerId, issuerId)) return { ok: false, reason: 'Süren bir emir yok.' };
+  if (!buyer || !findOrder(state, buyerId, issuerId)) return { ok: false, reason: tc('core.orders.noOrder') };
   removeOrder(buyer, issuerId);
   return { ok: true };
 }
@@ -185,8 +192,8 @@ function waitForCash(state: GameState, buyer: CompanyState, order: TakeoverOrder
   pushNews(
     state,
     'bad',
-    `${name} emri nakit bekliyor`,
-    'Kasada işletmenin birkaç günlük giderinden artan para yok. Para girdikçe emir kendiliğinden devam eder.',
+    tc('core.orders.waitingTitle', { name }),
+    tc('core.orders.waitingBody'),
     order.issuerId,
   );
 }
@@ -218,9 +225,12 @@ function executeOrder(state: GameState, buyer: CompanyState, order: TakeoverOrde
       pushNews(
         state,
         'bad',
-        `${issuer.name} devralmayı savuşturdu`,
-        `Dolaşımda ${float.toLocaleString('tr-TR')} hisse kaldı, kontrol için ${need.toLocaleString('tr-TR')} gerekiyordu. ` +
-          `Emir kapandı; elindeki %${pct} pay temettü getirmeye devam ediyor, istersen satabilirsin.`,
+        tc('core.orders.defendedTitle', { name: issuer.name }),
+        tc('core.orders.defendedBody', {
+          float: float.toLocaleString('tr-TR'),
+          need: need.toLocaleString('tr-TR'),
+          pct,
+        }),
         issuer.id,
       );
     }

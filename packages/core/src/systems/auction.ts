@@ -1,5 +1,6 @@
 import { BUILDINGS, STRUCTURE_BY_ID } from '@capital/content';
 import { pushNews } from '../news';
+import { tc } from '../i18n';
 import { rivalProfiles } from '../profiles';
 import { estimateInvestment } from './market';
 import { isDistrictOpen, tilePrice } from './city';
@@ -171,19 +172,19 @@ export function placeBid(
   amount: number,
 ): { ok: boolean; reason?: string } {
   const auction = state.auction;
-  if (!auction) return { ok: false, reason: 'Açık bir ihale yok.' };
+  if (!auction) return { ok: false, reason: tc('core.auction.noAuction') };
 
   const company = state.companies[companyId];
-  if (!company) return { ok: false, reason: 'Bilinmeyen şirket.' };
+  if (!company) return { ok: false, reason: tc('core.auction.unknownCompany') };
   if (auction.bidderId === companyId) {
-    return { ok: false, reason: 'En yüksek teklif zaten senin.' };
+    return { ok: false, reason: tc('core.auction.alreadyLeading') };
   }
 
   const minimum = minimumBid(auction);
   if (amount < minimum) {
-    return { ok: false, reason: `En az ${Math.round(minimum)} ₺ teklif vermelisin.` };
+    return { ok: false, reason: tc('core.auction.minBid', { amount: Math.round(minimum) }) };
   }
-  if (amount > company.cash) return { ok: false, reason: 'Nakit yetersiz.' };
+  if (amount > company.cash) return { ok: false, reason: tc('core.auction.noCash') };
 
   auction.bid = amount;
   auction.bidderId = companyId;
@@ -265,10 +266,10 @@ function settle(state: GameState): void {
     pushNews(
       state,
       'neutral',
-      'İhale sonuçsuz kaldı',
+      tc('core.auction.noBidTitle'),
       tile?.structureId
-        ? `${district?.name ?? 'Şehirde'} bölgesindeki kentsel dönüşüm parseline taban fiyattan teklif gelmedi; yapı yerinde kaldı.`
-        : `${district?.name ?? 'Şehirde'} bölgesindeki parsele taban fiyattan teklif gelmedi; parsel normal satışa döndü.`,
+        ? tc('core.auction.noBidRenewalBody', { district: district?.name ?? tc('core.auction.inCity') })
+        : tc('core.auction.noBidBody', { district: district?.name ?? tc('core.auction.inCity') }),
       { tileId: auction.tileId },
     );
     state.auction = null;
@@ -282,8 +283,8 @@ function settle(state: GameState): void {
     pushNews(
       state,
       'neutral',
-      'İhale düştü',
-      `${district?.name ?? 'Şehirde'} bölgesindeki parselin kazananı ödeme yapamadı; parsel normal satışa döndü.`,
+      tc('core.auction.failedTitle'),
+      tc('core.auction.failedBody', { district: district?.name ?? tc('core.auction.inCity') }),
       { tileId: auction.tileId },
     );
     state.auction = null;
@@ -293,7 +294,7 @@ function settle(state: GameState): void {
   winner.cash -= auction.bid;
   tile.ownerId = winner.id;
   // Kentsel dönüşüm: yapı yıkılır, parsel boş olarak el değiştirir.
-  const razed = tile.structureId ? STRUCTURE_BY_ID[tile.structureId]?.name ?? 'yapı' : null;
+  const razed = tile.structureId ? STRUCTURE_BY_ID[tile.structureId]?.name ?? tc('core.auction.structure') : null;
   tile.structureId = null;
   tile.structureHeight = 0;
 
@@ -301,10 +302,12 @@ function settle(state: GameState): void {
   pushNews(
     state,
     isPlayer ? 'good' : 'rival',
-    isPlayer ? 'İhaleyi kazandın' : `${winner.name} ihaleyi kazandı`,
-    `${district?.name ?? 'Şehir'} bölgesindeki parsel ${Math.round(auction.bid).toLocaleString('tr-TR')} ₺'ye ` +
-      `${isPlayer ? 'senin oldu' : 'el değiştirdi'} — ${auction.rounds} artırım.` +
-      (razed ? ` Parseldeki ${razed} yıkılıyor.` : ''),
+    isPlayer ? tc('core.auction.wonTitle') : tc('core.auction.wonRivalTitle', { name: winner.name }),
+    tc(isPlayer ? 'core.auction.wonBody' : 'core.auction.wonRivalBody', {
+      district: district?.name ?? tc('core.auction.city'),
+      price: Math.round(auction.bid).toLocaleString('tr-TR'),
+      rounds: auction.rounds,
+    }) + (razed ? ` ${tc('core.auction.razed', { structure: razed })}` : ''),
     { tileId: auction.tileId, ...(isPlayer ? {} : { companyId: winner.id }) },
   );
   state.auction = null;
@@ -340,15 +343,23 @@ export function runAuctionTick(state: GameState): void {
   };
 
   const structureId = state.map.tiles[tileId]!.structureId;
-  const occupied = structureId ? STRUCTURE_BY_ID[structureId]?.name ?? 'bir yapı' : null;
+  const occupied = structureId ? STRUCTURE_BY_ID[structureId]?.name ?? tc('core.auction.aStructure') : null;
   pushNews(
     state,
     'neutral',
-    occupied ? 'Belediye kentsel dönüşüm ihalesine çıktı' : 'Belediye parsel ihalesine çıktı',
-    (occupied
-      ? `${district?.name ?? 'Şehir'} bölgesinde ${occupied} olan bir parsel ${AUCTION_DAYS} gün açık artırmada; kazanan yapıyı yıktırıp parseli alır. `
-      : `${district?.name ?? 'Şehir'} bölgesinde bir parsel ${AUCTION_DAYS} gün açık artırmada. `) +
-      `Taban fiyat ${Math.round(state.auction.reserve).toLocaleString('tr-TR')} ₺.`,
+    occupied ? tc('core.auction.openedRenewalTitle') : tc('core.auction.openedTitle'),
+    occupied
+      ? tc('core.auction.openedRenewalBody', {
+          district: district?.name ?? tc('core.auction.city'),
+          structure: occupied,
+          days: AUCTION_DAYS,
+          price: Math.round(state.auction.reserve).toLocaleString('tr-TR'),
+        })
+      : tc('core.auction.openedBody', {
+          district: district?.name ?? tc('core.auction.city'),
+          days: AUCTION_DAYS,
+          price: Math.round(state.auction.reserve).toLocaleString('tr-TR'),
+        }),
     { tileId: state.auction.tileId },
   );
 }
@@ -376,5 +387,5 @@ export function auctionHint(state: GameState, companyId: string): string | null 
   }
 
   if (!bestName) return null;
-  return `Burada en iyi hamlen ${bestName} — günde ${Math.round(bestProfit).toLocaleString('tr-TR')} ₺ getirir.`;
+  return tc('core.auction.hint', { building: bestName, profit: Math.round(bestProfit).toLocaleString('tr-TR') });
 }
