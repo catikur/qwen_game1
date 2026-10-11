@@ -1,5 +1,6 @@
 export * from './types';
 export * from './messages';
+import './locales';
 export * from './categories';
 export * from './goods';
 export * from './buildings';
