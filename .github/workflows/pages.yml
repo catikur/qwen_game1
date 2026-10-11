@@ -1,0 +1,61 @@
+# Oyunu GitHub Pages'te yayınlar: https://<kullanıcı>.github.io/<depo>/
+#
+# main'e her girişte derleyip yayınlıyor; PR'da yalnızca alt yolla
+# derlemeyi ve yayın paketini deniyor (yayın adımı main'e kadar beklemez,
+# ama paket bozuksa PR'da görünür). Elle de tetiklenebilir.
+#
+# Tek seferlik ayar: depo Settings → Pages → Source: "GitHub Actions".
+# Ayar açılmadan main'e giren ilk koşunun yayın adımı düşer; ayarı açıp
+# Actions → Pages → "Run workflow" ile yeniden koşmak yeter.
+name: Pages
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# Aynı anda tek yayın; süren yayın yarıda kesilmesin.
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Pages paketi
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # Pages oyunu depo adının altında sunuyor (/qwen_game1/); varlık
+      # yolları o önekle yazılmalı. Yerel derleme ve CI kökte kalıyor.
+      - name: Alt yolla derleme
+        run: pnpm --filter @capital/web exec vite build --base=/${{ github.event.repository.name }}/
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: apps/web/dist
+
+  deploy:
+    name: Yayın
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
