@@ -1,4 +1,4 @@
-import { BUILDING_BY_ID, CONSUMER_CATEGORIES, getCeoModifiers } from '@capital/content';
+import { BUILDING_BY_ID, CONSUMER_CATEGORIES, currentLocale, getCeoModifiers } from '@capital/content';
 import type { CategoryId } from '@capital/content';
 import { tc } from '../i18n';
 import { MARKETING_CAP, RESEARCH_CAP, defaultFocus, marketingLeverage, researchCeiling } from './focus';
@@ -139,7 +139,8 @@ export function indirectEstimate(
     cacheState = state;
   }
   const buildings = Object.keys(state.buildings).length;
-  const key = `${companyId}|${defId}|${districtId}|${tileId ?? ''}`;
+  // Sonuç bir metin de taşıyor (`none`): dil değişince önbellek eski dilde kalmasın.
+  const key = `${companyId}|${defId}|${districtId}|${tileId ?? ''}|${currentLocale()}`;
   const hit = cache.get(key);
   const week = Math.floor(state.time.day / 7);
   if (hit && hit.day === week && hit.version === buildings) return hit.value;
