@@ -13,6 +13,7 @@ import { estimateInvestment } from './systems/market';
 import { distributionRelief } from './systems/supply';
 import { withBuildingIndex } from './systems/buildingIndex';
 import { wageFor } from './systems/labor';
+import { tc } from './i18n';
 import type { BuildingInstance, GameState } from './types';
 
 /**
@@ -144,12 +145,23 @@ export interface ChainCard {
   blocked: string | null;
 }
 
+/** Alıcılar: etiket okunduğu anda etkin dilde — içe aktarımda donmuyor. */
 const STATE_LABEL: Record<ChainSlotState, string> = {
-  own: 'Sende',
-  bottleneck: 'Darboğaz',
-  market: 'Pazardan',
-  crisis: 'Kriz',
-  none: 'Yok',
+  get own() {
+    return tc('core.chain.stateOwn');
+  },
+  get bottleneck() {
+    return tc('core.chain.stateBottleneck');
+  },
+  get market() {
+    return tc('core.chain.stateMarket');
+  },
+  get crisis() {
+    return tc('core.chain.stateCrisis');
+  },
+  get none() {
+    return tc('core.chain.stateNone');
+  },
 };
 
 function money(value: number): string {
@@ -373,13 +385,13 @@ function bestMove(
     if (!def) continue;
 
     if (company.netWorth < def.unlockNetWorth) {
-      blocked ??= `${def.name} için ${Math.round(def.unlockNetWorth / 1000)} B ₺ şirket değeri gerekiyor.`;
+      blocked ??= tc('core.chain.blockedUnlock', { name: def.name, amount: Math.round(def.unlockNetWorth / 1000) });
       continue;
     }
 
     const plot = bestPlotFor(state, def);
     if (!plot) {
-      blocked ??= `${def.name} kurulacak parsel kalmadı — sanayi ve liman dolu.`;
+      blocked ??= tc('core.chain.blockedNoPlot', { name: def.name });
       continue;
     }
     const districtId = plot.districtId;
@@ -412,13 +424,24 @@ function bestMove(
       daysSinceLastUnit < CHAIN_PACE_DAYS;
 
     const shortfall = flow.produced > 0
-      ? `${link.name} üretimin ihtiyacının ${percent(covered)} kadarını karşılıyor; farkı ${money(spot)} üzerinden pazardan alıyorsun.`
-      : `${link.name} tamamen pazardan geliyor: birim ${money(spot)}.`;
+      ? tc('core.chain.shortfallPartial', { good: link.name, covered: percent(covered), spot: money(spot) })
+      : tc('core.chain.shortfallMarket', { good: link.name, spot: money(spot) });
 
     const reason = premature
-      ? `${shortfall} Ama ${def.name} günde ${Math.round(def.capacity).toLocaleString('tr-TR')} birim üretir; sen ${Math.round(flow.consumed).toLocaleString('tr-TR')} birim tüketiyorsun — kapasitenin ancak ${percent(utilisation)} kadarı dolar.`
+      ? tc('core.chain.reasonPremature', {
+          shortfall,
+          name: def.name,
+          capacity: Math.round(def.capacity).toLocaleString('tr-TR'),
+          consumed: Math.round(flow.consumed).toLocaleString('tr-TR'),
+          utilisation: percent(utilisation),
+        })
       : deferred
-        ? `${shortfall} Ama acelesi yok: aynı nakit bir mağazada ~${Math.round(outletPayback)} günde dönüyor ve son ünitenin üstünden ${Math.max(0, Math.round(daysSinceLastUnit))} gün geçti. Zincir sırası ~${Math.max(1, Math.round(CHAIN_PACE_DAYS - daysSinceLastUnit))} gün sonra.`
+        ? tc('core.chain.reasonDeferred', {
+            shortfall,
+            payback: Math.round(outletPayback),
+            since: Math.max(0, Math.round(daysSinceLastUnit)),
+            wait: Math.max(1, Math.round(CHAIN_PACE_DAYS - daysSinceLastUnit)),
+          })
         : shortfall;
 
     return {
@@ -515,7 +538,9 @@ function chainCardsFor(state: GameState, companyId: string): ChainCard[] {
         kind: link.tier === 'raw' ? 'raw' : 'process',
         label:
           flow.units.length > 0
-            ? `${flow.units.length > 1 ? `${flow.units.length} ` : ''}${def?.name ?? link.name}`
+            ? flow.units.length > 1
+              ? tc('core.chain.countLabel', { count: flow.units.length, name: def?.name ?? link.name })
+              : (def?.name ?? link.name)
             : (def?.name ?? link.name),
         state: state_,
         stateLabel: STATE_LABEL[state_],
@@ -524,8 +549,8 @@ function chainCardsFor(state: GameState, companyId: string): ChainCard[] {
         ratio,
         detail:
           flow.produced > 0
-            ? `${money(Math.max(0, blended - inputCost))} · ${percent(ratio)} arz`
-            : `${money(Math.max(0, spot - inputCost))} · pazar fiyatı`,
+            ? tc('core.chain.detailOwn', { cost: money(Math.max(0, blended - inputCost)), ratio: percent(ratio) })
+            : tc('core.chain.detailMarket', { cost: money(Math.max(0, spot - inputCost)) }),
       });
     }
 
@@ -546,15 +571,20 @@ function chainCardsFor(state: GameState, companyId: string): ChainCard[] {
 
     slots.push({
       kind: 'distribution',
-      label: 'Dağıtım',
+      label: tc('core.chain.distribution'),
       state: coverage > 0 ? (coverage >= 0.999 ? 'own' : 'bottleneck') : 'market',
-      stateLabel: coverage > 0 ? (coverage >= 0.999 ? 'Depolu' : 'Kısmen') : 'Deposuz',
+      stateLabel:
+        coverage > 0
+          ? coverage >= 0.999
+            ? tc('core.chain.depotFull')
+            : tc('core.chain.depotPartial')
+          : tc('core.chain.depotNone'),
       unitCost: retailPaid,
       ratio: coverage,
       detail:
         coverage > 0
-          ? `${money(retailPaid)} · ${covered}/${outlets.length} mağaza depo menzilinde`
-          : `${money(retailPaid)} · depo yok`,
+          ? tc('core.chain.depotCoverage', { cost: money(retailPaid), covered, total: outlets.length })
+          : tc('core.chain.noDepot', { cost: money(retailPaid) }),
     });
 
     // ---- 4. Satış ----
@@ -565,16 +595,16 @@ function chainCardsFor(state: GameState, companyId: string): ChainCard[] {
       revenue += outlet.last.revenue;
     }
     const salePrice = units > 0 ? revenue / units : category.basePrice;
-    const outletName = BUILDING_BY_ID[outlets[0]!.defId]?.name ?? 'Mağaza';
+    const outletName = BUILDING_BY_ID[outlets[0]!.defId]?.name ?? tc('core.chain.outletFallback');
 
     slots.push({
       kind: 'retail',
-      label: `${outlets.length} ${outletName}`,
+      label: tc('core.chain.countLabel', { count: outlets.length, name: outletName }),
       state: 'own',
-      stateLabel: 'Sende',
+      stateLabel: tc('core.chain.stateOwn'),
       unitCost: 0,
       ratio: 1,
-      detail: `satış ${money(salePrice)} · ${Math.round(units)} birim/gün`,
+      detail: tc('core.chain.retailDetail', { price: money(salePrice), units: Math.round(units) }),
     });
 
     const unitCost = (company.unitCost[goodId] ?? 0) - good.retailCost + retailPaid;

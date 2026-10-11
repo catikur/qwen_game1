@@ -1,5 +1,6 @@
 import { CITY_NAMES, CONSUMER_CATEGORIES, HOLDING } from '@capital/content';
 import type { CitySizeId } from '@capital/content';
+import { tc } from './i18n';
 import { pushNews } from './news';
 import { formatMoney } from './selectors';
 import { recomputeNetWorth } from './systems/city';
@@ -85,12 +86,14 @@ export function openCityQuote(state: GameState): { ok: boolean; reason?: string;
   const opened = state.holding?.opened ?? 1;
   const name = cityNameAt(foundingSeed(state), opened);
   const closed = (reason: string) => ({ ok: false, reason, maxCapital: 0, name });
-  if (state.league) return closed('Lig koşusunda yeni şehir açılmıyor.');
-  if (state.gameOver) return closed('Kaybedilen şehirden yeni şehir açılamaz.');
-  if (!state.victory) return closed('Yeni şehir için bu şehirde zafere ulaşmalısın.');
-  if (cityCount(state) >= HOLDING.maxCities) return closed(`Holding en fazla ${HOLDING.maxCities} şehir.`);
+  if (state.league) return closed(tc('core.holding.leagueNoNewCity'));
+  if (state.gameOver) return closed(tc('core.holding.lostCityNoOpen'));
+  if (!state.victory) return closed(tc('core.holding.needVictory'));
+  if (cityCount(state) >= HOLDING.maxCities) return closed(tc('core.holding.maxCities', { max: HOLDING.maxCities }));
   if (player.cash < HOLDING.minCapital) {
-    return closed(`Yeni şehre en az ${formatMoney(HOLDING.minCapital)} sermaye gerekiyor; kasada ${formatMoney(player.cash)} var.`);
+    return closed(
+      tc('core.holding.minCapitalQuote', { min: formatMoney(HOLDING.minCapital), cash: formatMoney(player.cash) }),
+    );
   }
   return { ok: true, maxCapital: Math.floor(player.cash), name };
 }
@@ -119,8 +122,8 @@ export function openCity(
   const quote = openCityQuote(state);
   if (!quote.ok) return { ok: false, reason: quote.reason };
   const amount = Math.floor(capital);
-  if (!(amount >= HOLDING.minCapital)) return { ok: false, reason: `En az ${formatMoney(HOLDING.minCapital)}.` };
-  if (amount > quote.maxCapital) return { ok: false, reason: 'Kasada o kadar nakit yok.' };
+  if (!(amount >= HOLDING.minCapital)) return { ok: false, reason: tc('core.holding.minCapital', { min: formatMoney(HOLDING.minCapital) }) };
+  if (amount > quote.maxCapital) return { ok: false, reason: tc('core.holding.notEnoughCash') };
 
   const player = state.companies[state.playerCompanyId]!;
   const seed = foundingSeed(state);
@@ -163,18 +166,22 @@ export function openCity(
   pushNews(
     next,
     'good',
-    `${quote.name}: holding yeni şehirde`,
-    `${formatMoney(amount)} sermaye ve %${Math.round(brand * 100)} marka bilinirliğiyle geldin. Rakipler: ${rivals}. ` +
-      `${state.cityName} bekliyor; kârının yarısı her gün holding kasasına akacak.`,
+    tc('core.holding.openedTitle', { city: quote.name }),
+    tc('core.holding.openedBody', {
+      capital: formatMoney(amount),
+      brand: Math.round(brand * 100),
+      rivals,
+      previous: state.cityName,
+    }),
   );
   return { ok: true, next };
 }
 
 export function switchCity(state: GameState, index: number): CommandResult & { next?: GameState } {
-  if (state.league) return { ok: false, reason: 'Lig koşusunda şehir değiştirilmiyor.' };
+  if (state.league) return { ok: false, reason: tc('core.holding.leagueNoSwitch') };
   const holding = state.holding;
   const target = holding?.dormant[index];
-  if (!holding || !target) return { ok: false, reason: 'Böyle bir şehir yok.' };
+  if (!holding || !target) return { ok: false, reason: tc('core.holding.noSuchCity') };
 
   const next = target.state;
   next.holding = {
@@ -188,13 +195,13 @@ export function switchCity(state: GameState, index: number): CommandResult & { n
 /** Holding kasası ile oynanan şehir arasında para; artı kasadan şehre. */
 export function holdingTransfer(state: GameState, amount: number): CommandResult {
   const holding = state.holding;
-  if (!holding) return { ok: false, reason: 'Holding yok: önce bir şehirde zafere ulaşıp yeni şehir aç.' };
-  if (state.gameOver) return { ok: false, reason: 'Kaybedilen şehre para aktarılamaz.' };
+  if (!holding) return { ok: false, reason: tc('core.holding.noHolding') };
+  if (state.gameOver) return { ok: false, reason: tc('core.holding.lostCityNoTransfer') };
   const value = Math.round(amount);
-  if (value === 0) return { ok: false, reason: 'Tutar sıfır.' };
+  if (value === 0) return { ok: false, reason: tc('core.holding.zeroAmount') };
   const player = state.companies[state.playerCompanyId]!;
-  if (value > 0 && value > holding.treasury) return { ok: false, reason: 'Holding kasasında o kadar para yok.' };
-  if (value < 0 && -value > player.cash) return { ok: false, reason: 'Şehrin kasasında o kadar nakit yok.' };
+  if (value > 0 && value > holding.treasury) return { ok: false, reason: tc('core.holding.treasuryShort') };
+  if (value < 0 && -value > player.cash) return { ok: false, reason: tc('core.holding.cityCashShort') };
   holding.treasury -= value;
   player.cash += value;
   state.importedCapital = (state.importedCapital ?? 0) + value;

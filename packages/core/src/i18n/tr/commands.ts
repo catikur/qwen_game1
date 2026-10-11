@@ -1,2 +1,190 @@
 /** Türkçe çekirdek metinleri — 'commands' grubu (Tur 23). Anahtar biçimi: 'core.<dosya>.<ad>'. */
-export const commands = {} as const;
+export const commands = {
+  // engine.ts — komut ret sebepleri
+  'core.engine.leagueRulesLocked': 'Lig koşusunda oyun kuralları değiştirilemez.',
+  'core.engine.buildingNotFound': 'Bina bulunamadı.',
+  'core.engine.buildingNotYours': 'Bu bina sizin değil.',
+  'core.engine.noShelf': 'Bu binanın rafı yok.',
+  'core.engine.pickOneGood': 'En az bir ürün seçilmeli.',
+  'core.engine.tooManyGoods': '{name} en fazla {slots} ürün taşıyabilir.',
+  'core.engine.notFocusable': 'Bu bina bir kategoriye atanmaz.',
+  'core.engine.badCategory': 'Bu kategoriye atanamaz.',
+  'core.engine.emptyCompanyName': 'Şirket adı boş olamaz.',
+  'core.engine.leagueRunning': 'Lig koşusu sürüyor.',
+  'core.engine.noVictory': 'Henüz bir zafer yok.',
+  'core.engine.cityUnchanged': 'Şehir değişmedi.',
+  'core.engine.unknownCommand': 'Bilinmeyen komut.',
+  // engine.ts — haberler: baskın, sıralama, bölge liderliği, değer eşikleri
+  'core.engine.raid1Title': '{name} hissene göz dikti',
+  'core.engine.raid1Body': "Payının %{percent}'i onda. Henüz tehdit değil — ama alımlar sürerse büyür.",
+  'core.engine.raid2Title': "{name} payını %{percent}'e çıkardı",
+  'core.engine.raid2Body':
+    'Devralma eşiği %50. Geri alım yapmayı düşün: hazineye çektiğin her hisse onun alamayacağı bir hisse.',
+  'core.engine.raid3Title': '{name} kontrolüne yaklaşıyor: %{percent}',
+  'core.engine.raid3Body':
+    'Eşiğe çok az kaldı. Nakdin varsa geri alım son şansın; yoksa imparatorluk el değiştirecek.',
+  'core.engine.overtakenTitle': '{name} seni geçti',
+  'core.engine.overtakenBody': 'Artık {rank}. sıradasın. Aradaki fark {gap}.',
+  'core.engine.overtakenBodyLead': 'Artık {rank}. sıradasın. Aradaki fark {gap}. Elinde senden {lead} fazla bina var.',
+  'core.engine.overtakenBodyMoreBuildings':
+    'Artık {rank}. sıradasın. Aradaki fark {gap}. Senin binan daha çok — fark arsada ve markada.',
+  'core.engine.passedTitle': "{name}'i geçtin",
+  'core.engine.climbedTitle': '{rank}. sıraya yükseldin',
+  'core.engine.climbedBodyAhead': '{rank}. sıradasın. Önünde {name} var — fark {gap}.',
+  'core.engine.climbedBodyTop': '{rank}. sıradasın. Şehrin en değerli şirketi sensin.',
+  'core.engine.leadLostTitle': '{rival}, {district} bölgesinde öne geçti',
+  'core.engine.leadLostBody':
+    "Bölgedeki perakende cirosunun {toShare}'i onda, {fromShare}'i sende. Liderliği geri almak için o bölgenin talebine bak: fiyat, kalite ya da yeni bir şube.",
+  'core.engine.leadWonTitle': '{district} bölgesinde lider sensin',
+  'core.engine.leadWonBody': "Bölgedeki perakende cirosunun {toShare}'i sende.",
+  'core.engine.leadWonBodyPrevious': "Bölgedeki perakende cirosunun {toShare}'i sende; {name} {fromShare}'te kaldı.",
+  'core.engine.milestoneTitle': 'Şirket değeri {value}M ₺',
+  'core.engine.milestoneUnlocked': 'Yeni yatırım seçenekleri açık: {names}.',
+  'core.engine.milestoneScale': 'Ölçek büyüyor.',
+
+  // actions.ts — arsa, inşaat ve yıkım ret sebepleri
+  'core.actions.unknownBuilding': 'Bilinmeyen bina.',
+  'core.actions.unknownCompany': 'Bilinmeyen şirket.',
+  'core.actions.needsNetWorth': '{name} için {amount} şirket değeri gerekiyor.',
+  'core.actions.buildNoCash': 'Nakit yetersiz — {amount} gerekiyor.',
+  'core.actions.districtNotFound': 'Bölge bulunamadı.',
+  'core.actions.zoneOr': ' veya ',
+  'core.actions.zoningOnly': '{name} yalnızca {zones} bölgesine kurulabilir.',
+  'core.actions.tileNotFound': 'Parsel bulunamadı.',
+  'core.actions.roadNotForSale': 'Burası sokak — satılık değil.',
+  'core.actions.civicNotForSale': '{name} — belediye malı, satılık değil.',
+  'core.actions.publicArea': 'Kamu alanı',
+  'core.actions.districtLocked': '{district} imara kapalı — {days} gün sonra açılıyor.',
+  'core.actions.tileOwned': 'Bu parsel {owner} ait.',
+  'core.actions.aRival': 'bir rakibe',
+  'core.actions.tileInAuction': 'Bu parsel ihalede — satın almak yerine teklif vermelisin.',
+  'core.actions.tileHasStructure': 'Parselde {structure} var — sahibinden devralman gerekiyor.',
+  'core.actions.existingStructure': 'mevcut bir yapı',
+  'core.actions.tileNoCash': 'Nakit yetersiz — parsel {price}.',
+  'core.actions.tileAlreadyEmpty': 'Parsel zaten boş — doğrudan satın alabilirsin.',
+  'core.actions.structureNotForSale': 'Bu yapı hiçbir fiyata devredilmiyor.',
+  'core.actions.buyoutNoCash': '{name} devralmak {price} tutuyor — nakit yetersiz.',
+  'core.actions.landNotFound': 'Arsa bulunamadı.',
+  'core.actions.landNotYours': 'Bu arsa sizin değil.',
+  'core.actions.demolishFirst': 'Önce üzerindeki binayı yıkın.',
+  'core.actions.landPledged': 'Bu arsa kredi teminatında; önce krediyi kapat.',
+  'core.actions.buyTileFirst': 'Önce bu parseli satın alın.',
+  'core.actions.tileOccupied': 'Parselde zaten bir bina var.',
+  'core.actions.nothingToDemolish': 'Yıkılacak bina yok.',
+  'core.actions.buildingNotFound': 'Bina bulunamadı.',
+  'core.actions.buildingNotYours': 'Bu bina sizin değil.',
+
+  // holding.ts — yeni şehir, şehir değişimi, kasa aktarımı
+  'core.holding.leagueNoNewCity': 'Lig koşusunda yeni şehir açılmıyor.',
+  'core.holding.lostCityNoOpen': 'Kaybedilen şehirden yeni şehir açılamaz.',
+  'core.holding.needVictory': 'Yeni şehir için bu şehirde zafere ulaşmalısın.',
+  'core.holding.maxCities': 'Holding en fazla {max} şehir.',
+  'core.holding.minCapitalQuote': 'Yeni şehre en az {min} sermaye gerekiyor; kasada {cash} var.',
+  'core.holding.minCapital': 'En az {min}.',
+  'core.holding.notEnoughCash': 'Kasada o kadar nakit yok.',
+  'core.holding.openedTitle': '{city}: holding yeni şehirde',
+  'core.holding.openedBody':
+    '{capital} sermaye ve %{brand} marka bilinirliğiyle geldin. Rakipler: {rivals}. {previous} bekliyor; kârının yarısı her gün holding kasasına akacak.',
+  'core.holding.leagueNoSwitch': 'Lig koşusunda şehir değiştirilmiyor.',
+  'core.holding.noSuchCity': 'Böyle bir şehir yok.',
+  'core.holding.noHolding': 'Holding yok: önce bir şehirde zafere ulaşıp yeni şehir aç.',
+  'core.holding.lostCityNoTransfer': 'Kaybedilen şehre para aktarılamaz.',
+  'core.holding.zeroAmount': 'Tutar sıfır.',
+  'core.holding.treasuryShort': 'Holding kasasında o kadar para yok.',
+  'core.holding.cityCashShort': 'Şehrin kasasında o kadar nakit yok.',
+
+  // selectors.ts — harita lensleri
+  'core.selectors.lensNoneName': 'Şehir',
+  'core.selectors.lensNoneHint': 'Binaları ve bölge renklerini olduğu gibi göster.',
+  'core.selectors.lensOpportunityName': 'Fırsat',
+  'core.selectors.lensOpportunityHint': 'Karşılanmayan talep. Sıcak bölgeler para bırakır.',
+  'core.selectors.lensLandValueName': 'Arsa Değeri',
+  'core.selectors.lensLandValueHint': 'Arsa fiyatları. Ucuza al, değerlensin.',
+  'core.selectors.lensCompetitionName': 'Rekabet',
+  'core.selectors.lensCompetitionHint': 'Bölgedeki rakip mağaza yoğunluğu.',
+  'core.selectors.lensIncomeName': 'Gelir',
+  'core.selectors.lensIncomeHint': 'Bölge gelir seviyesi. Lüks ürün nereye satılır?',
+  'core.selectors.lensOwnershipName': 'Mülkiyet',
+  'core.selectors.lensOwnershipHint': 'Arsalar kimin elinde?',
+
+  // agenda.ts — gündem etiketleri
+  'core.agenda.raid': '{name} payında %{percent}',
+  'core.agenda.order': '{name} %{percent}',
+  'core.agenda.orderWaitingCash': '{name} %{percent} · nakit bekliyor',
+  'core.agenda.strike': 'Grev',
+  'core.agenda.unionDemand': 'Sendika %{raise} zam istiyor',
+  'core.agenda.unionPressure': 'Sendika baskısı',
+  'core.agenda.bankArrears': 'Banka ihtarı · {overdraft} / {limit}',
+  'core.agenda.overdraft': 'Kredili hesap {amount}',
+  'core.agenda.bondDue': 'Tahvil vadesi · {amount}',
+  'core.agenda.auction': 'İhale',
+  'core.agenda.unlock': '{district} imara açılıyor',
+  'core.agenda.league': 'Lig {week}',
+  'core.agenda.council': 'Meclis · {count} önerge',
+
+  // chain.ts — zincir kartı
+  'core.chain.stateOwn': 'Sende',
+  'core.chain.stateBottleneck': 'Darboğaz',
+  'core.chain.stateMarket': 'Pazardan',
+  'core.chain.stateCrisis': 'Kriz',
+  'core.chain.stateNone': 'Yok',
+  'core.chain.blockedUnlock': '{name} için {amount} B ₺ şirket değeri gerekiyor.',
+  'core.chain.blockedNoPlot': '{name} kurulacak parsel kalmadı — sanayi ve liman dolu.',
+  'core.chain.shortfallPartial':
+    '{good} üretimin ihtiyacının {covered} kadarını karşılıyor; farkı {spot} üzerinden pazardan alıyorsun.',
+  'core.chain.shortfallMarket': '{good} tamamen pazardan geliyor: birim {spot}.',
+  'core.chain.reasonPremature':
+    '{shortfall} Ama {name} günde {capacity} birim üretir; sen {consumed} birim tüketiyorsun — kapasitenin ancak {utilisation} kadarı dolar.',
+  'core.chain.reasonDeferred':
+    '{shortfall} Ama acelesi yok: aynı nakit bir mağazada ~{payback} günde dönüyor ve son ünitenin üstünden {since} gün geçti. Zincir sırası ~{wait} gün sonra.',
+  'core.chain.countLabel': '{count} {name}',
+  'core.chain.detailOwn': '{cost} · {ratio} arz',
+  'core.chain.detailMarket': '{cost} · pazar fiyatı',
+  'core.chain.distribution': 'Dağıtım',
+  'core.chain.depotFull': 'Depolu',
+  'core.chain.depotPartial': 'Kısmen',
+  'core.chain.depotNone': 'Deposuz',
+  'core.chain.depotCoverage': '{cost} · {covered}/{total} mağaza depo menzilinde',
+  'core.chain.noDepot': '{cost} · depo yok',
+  'core.chain.outletFallback': 'Mağaza',
+  'core.chain.retailDetail': 'satış {price} · {units} birim/gün',
+
+  // competition.ts — rekabet kartı
+  'core.competition.armResearch': 'Ar-Ge',
+  'core.competition.armMarketing': 'Pazarlama',
+  'core.competition.researchNone': 'Merkez yok — kalite bina tanımından geliyor.',
+  'core.competition.researchGrowing': '{count} merkez · kalite +{value}, tavan +{ceiling} (ilerliyor)',
+  'core.competition.researchCapped': '{count} merkez · kalite +{value} (tavanda)',
+  'core.competition.marketingNone': 'Ofis yok — marka yalnızca payını takip ediyor.',
+  'core.competition.marketingActive': '{count} ofis · marka hedefi +{value}',
+  'core.competition.cityFallback': 'Şehir',
+  'core.competition.bothCapped':
+    'Her iki kol da tavanda. Buradan daha fazla açmanın yolu ölçek: bu kategoride daha çok mağaza.',
+  'core.competition.needsNetWorth': '{name} için {amount} şirket değeri gerekiyor.',
+  'core.competition.noPlot': 'Şehirde alınabilecek boş parsel kalmamış.',
+  'core.competition.reasonPremature':
+    '{arm} sabit gider getirir, faydası ise mağaza sayınla çarpılır. Bu kategoride {outlets} mağazan var; karşılığını {min} mağazadan sonra vermeye başlıyor.',
+  'core.competition.reasonMarketingPrice':
+    "Marka, fiyat primine de giriyor: kapasiten doluyken kolun karşılığı marjda çıkar. Pazarlama Ar-Ge'den ucuz ve etkisi kurduğun gün başlıyor — en hızlı prim burada.",
+  'core.competition.reasonMarketingShare':
+    'Payın %{share} — markan payının hak ettiğinden yukarı çekilebilir. Pazarlama düşük markada oransal olarak daha çok kazandırır: giriş silahı.',
+  'core.competition.reasonResearchPrice':
+    'Mağazaların kapasitesinde çalışıyor: çekicilik sana bir birim daha getiremez. Kalitenin karşılığı burada fiyat primi olarak çıkar.',
+  'core.competition.reasonResearchShare':
+    'Mağazalarında boş kapasite var: kalite doğrudan paya dönüyor, rakibin müşterisini alırsın.',
+  'core.competition.channelPrice':
+    'Mağazaların kapasitesinde çalışıyor (%{utilisation} dolu) — kolun karşılığı hacim değil FİYAT: aynı malı daha pahalıya satarsın.',
+  'core.competition.channelShare':
+    'Mağazalarında boş kapasite var (%{utilisation} dolu) — kolun karşılığı PAY: rakibin müşterisini alırsın.',
+  'core.competition.notePrice':
+    'Payın {leader} şirketinin altında ama sebebi kalite ya da marka değil: mağazaların %{utilisation} dolu çalışıyor. Daha çekici olmak sana bir birim daha getiremez — PAY almanın yolu daha çok mağaza. Kolun buradaki karşılığı pay değil, aynı hacmi daha pahalıya satmak.',
+  'core.competition.noteShare':
+    'Boş kapasiten var ve payın {leader} şirketinin altında: burada kaybettiğin müşteri doğrudan çekicilikten kaybediliyor. Kol hamlesi tam da bunun için.',
+  'core.competition.buildingNotFound': 'Bina bulunamadı.',
+  'core.competition.notFocusable': 'Bu bina bir kategoriye atanmaz.',
+
+  // worldgen.ts — yeni oyunun varsayılan adı ve ilk haberi
+  'core.worldgen.defaultCompanyName': 'Yeni Girişim',
+  'core.worldgen.foundedTitle': 'Şirket kuruldu',
+  'core.worldgen.foundedBody': 'Sermayen hazır. Boş bir parsel bul, ya da dolu bir parseli sahibinden devral.',
+} as const;

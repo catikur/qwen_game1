@@ -9,6 +9,7 @@ import { defaultFocus } from './systems/focus';
 import { LAND_SELL_RATIO, tilePrice } from './systems/city';
 import { permitMultiplier } from './systems/council';
 import { isPledged } from './systems/credit';
+import { tc } from './i18n';
 import type { CommandResult, GameState } from './types';
 
 /**
@@ -24,20 +25,20 @@ const DEMOLISH_REFUND = 0.25;
 
 export function canBuild(state: GameState, companyId: string, defId: string): CommandResult {
   const def = BUILDING_BY_ID[defId];
-  if (!def) return { ok: false, reason: 'Bilinmeyen bina.' };
+  if (!def) return { ok: false, reason: tc('core.actions.unknownBuilding') };
 
   const company = state.companies[companyId];
-  if (!company) return { ok: false, reason: 'Bilinmeyen şirket.' };
+  if (!company) return { ok: false, reason: tc('core.actions.unknownCompany') };
 
   if (company.netWorth < def.unlockNetWorth) {
     return {
       ok: false,
-      reason: `${def.name} için ${formatShort(def.unlockNetWorth)} şirket değeri gerekiyor.`,
+      reason: tc('core.actions.needsNetWorth', { name: def.name, amount: formatShort(def.unlockNetWorth) }),
     };
   }
   const cost = buildCost(state, companyId, defId);
   if (company.cash < cost) {
-    return { ok: false, reason: `Nakit yetersiz — ${formatShort(cost)} gerekiyor.` };
+    return { ok: false, reason: tc('core.actions.buildNoCash', { amount: formatShort(cost) }) };
   }
   return { ok: true };
 }
@@ -57,11 +58,11 @@ export function zoningBlocker(state: GameState, districtId: number, defId: strin
   if (!def?.zones || def.zones.length === 0) return null;
 
   const district = state.districts[districtId];
-  if (!district) return 'Bölge bulunamadı.';
+  if (!district) return tc('core.actions.districtNotFound');
   if (def.zones.includes(district.archetype)) return null;
 
-  const names = def.zones.map((zone) => DISTRICT_ARCHETYPES[zone].name).join(' veya ');
-  return `${def.name} yalnızca ${names} bölgesine kurulabilir.`;
+  const names = def.zones.map((zone) => DISTRICT_ARCHETYPES[zone].name).join(tc('core.actions.zoneOr'));
+  return tc('core.actions.zoningOnly', { name: def.name, zones: names });
 }
 
 /** CEO pazarlığı uygulanmış inşaat maliyeti. */
@@ -76,26 +77,26 @@ export function buildCost(state: GameState, companyId: string, defId: string): n
 /** Parselin neden alınamadığını açıklar; alınabiliyorsa null döner. */
 export function purchaseBlocker(state: GameState, tileId: number): string | null {
   const tile = state.map.tiles[tileId];
-  if (!tile) return 'Parsel bulunamadı.';
-  if (tile.kind === 'road') return 'Burası sokak — satılık değil.';
+  if (!tile) return tc('core.actions.tileNotFound');
+  if (tile.kind === 'road') return tc('core.actions.roadNotForSale');
   if (tile.kind === 'civic') {
     const structure = tile.structureId ? STRUCTURE_BY_ID[tile.structureId] : null;
-    return `${structure?.name ?? 'Kamu alanı'} — belediye malı, satılık değil.`;
+    return tc('core.actions.civicNotForSale', { name: structure?.name ?? tc('core.actions.publicArea') });
   }
   // Kilitli bölge: oyuncu da NPC de bu kapıdan geçer, kural tek yerde.
   const district = state.districts[tile.districtId];
   if (district?.opensOnDay !== undefined && state.time.day < district.opensOnDay) {
-    return `${district.name} imara kapalı — ${district.opensOnDay - state.time.day} gün sonra açılıyor.`;
+    return tc('core.actions.districtLocked', { district: district.name, days: district.opensOnDay - state.time.day });
   }
   if (tile.ownerId) {
     const owner = state.companies[tile.ownerId];
-    return `Bu parsel ${owner?.name ?? 'bir rakibe'} ait.`;
+    return tc('core.actions.tileOwned', { owner: owner?.name ?? tc('core.actions.aRival') });
   }
   // İhaledeki parsel normal yoldan alınamaz. Alınabilseydi ihale bir
   // mekanik değil, sadece bir bildirim olurdu: oyuncu teklif vermek
   // yerine doğrudan satın alıp geçerdi.
   if (state.auction?.tileId === tileId) {
-    return 'Bu parsel ihalede — satın almak yerine teklif vermelisin.';
+    return tc('core.actions.tileInAuction');
   }
   return null;
 }
@@ -109,16 +110,16 @@ export function buyTile(state: GameState, companyId: string, tileId: number): Co
     const structure = STRUCTURE_BY_ID[tile.structureId];
     return {
       ok: false,
-      reason: `Parselde ${structure?.name ?? 'mevcut bir yapı'} var — sahibinden devralman gerekiyor.`,
+      reason: tc('core.actions.tileHasStructure', { structure: structure?.name ?? tc('core.actions.existingStructure') }),
     };
   }
 
   const company = state.companies[companyId];
-  if (!company) return { ok: false, reason: 'Bilinmeyen şirket.' };
+  if (!company) return { ok: false, reason: tc('core.actions.unknownCompany') };
 
   const price = tilePrice(state, tileId, companyId);
   if (company.cash < price) {
-    return { ok: false, reason: `Nakit yetersiz — parsel ${formatShort(price)}.` };
+    return { ok: false, reason: tc('core.actions.tileNoCash', { price: formatShort(price) }) };
   }
 
   company.cash -= price;
@@ -138,22 +139,22 @@ export function buyoutTile(state: GameState, companyId: string, tileId: number):
 
   const tile = state.map.tiles[tileId]!;
   if (!tile.structureId) {
-    return { ok: false, reason: 'Parsel zaten boş — doğrudan satın alabilirsin.' };
+    return { ok: false, reason: tc('core.actions.tileAlreadyEmpty') };
   }
 
   const structure = STRUCTURE_BY_ID[tile.structureId];
   if (!structure || structure.buyoutMultiplier === null) {
-    return { ok: false, reason: 'Bu yapı hiçbir fiyata devredilmiyor.' };
+    return { ok: false, reason: tc('core.actions.structureNotForSale') };
   }
 
   const company = state.companies[companyId];
-  if (!company) return { ok: false, reason: 'Bilinmeyen şirket.' };
+  if (!company) return { ok: false, reason: tc('core.actions.unknownCompany') };
 
   const price = tilePrice(state, tileId, companyId);
   if (company.cash < price) {
     return {
       ok: false,
-      reason: `${structure.name} devralmak ${formatShort(price)} tutuyor — nakit yetersiz.`,
+      reason: tc('core.actions.buyoutNoCash', { name: structure.name, price: formatShort(price) }),
     };
   }
 
@@ -166,13 +167,13 @@ export function buyoutTile(state: GameState, companyId: string, tileId: number):
 
 export function sellTile(state: GameState, companyId: string, tileId: number): CommandResult {
   const tile = state.map.tiles[tileId];
-  if (!tile) return { ok: false, reason: 'Arsa bulunamadı.' };
-  if (tile.ownerId !== companyId) return { ok: false, reason: 'Bu arsa sizin değil.' };
-  if (tile.buildingId) return { ok: false, reason: 'Önce üzerindeki binayı yıkın.' };
-  if (isPledged(state, tileId)) return { ok: false, reason: 'Bu arsa kredi teminatında; önce krediyi kapat.' };
+  if (!tile) return { ok: false, reason: tc('core.actions.landNotFound') };
+  if (tile.ownerId !== companyId) return { ok: false, reason: tc('core.actions.landNotYours') };
+  if (tile.buildingId) return { ok: false, reason: tc('core.actions.demolishFirst') };
+  if (isPledged(state, tileId)) return { ok: false, reason: tc('core.actions.landPledged') };
 
   const company = state.companies[companyId];
-  if (!company) return { ok: false, reason: 'Bilinmeyen şirket.' };
+  if (!company) return { ok: false, reason: tc('core.actions.unknownCompany') };
 
   company.cash += Math.round(tile.landValue * LAND_SELL_RATIO);
   tile.ownerId = null;
@@ -186,9 +187,9 @@ export function build(
   defId: string,
 ): CommandResult {
   const tile = state.map.tiles[tileId];
-  if (!tile) return { ok: false, reason: 'Parsel bulunamadı.' };
-  if (tile.ownerId !== companyId) return { ok: false, reason: 'Önce bu parseli satın alın.' };
-  if (tile.buildingId) return { ok: false, reason: 'Parselde zaten bir bina var.' };
+  if (!tile) return { ok: false, reason: tc('core.actions.tileNotFound') };
+  if (tile.ownerId !== companyId) return { ok: false, reason: tc('core.actions.buyTileFirst') };
+  if (tile.buildingId) return { ok: false, reason: tc('core.actions.tileOccupied') };
 
   const zoning = zoningBlocker(state, tile.districtId, defId);
   if (zoning) return { ok: false, reason: zoning };
@@ -248,11 +249,11 @@ export function build(
 
 export function demolish(state: GameState, companyId: string, tileId: number): CommandResult {
   const tile = state.map.tiles[tileId];
-  if (!tile?.buildingId) return { ok: false, reason: 'Yıkılacak bina yok.' };
+  if (!tile?.buildingId) return { ok: false, reason: tc('core.actions.nothingToDemolish') };
 
   const building = state.buildings[tile.buildingId];
-  if (!building) return { ok: false, reason: 'Bina bulunamadı.' };
-  if (building.companyId !== companyId) return { ok: false, reason: 'Bu bina sizin değil.' };
+  if (!building) return { ok: false, reason: tc('core.actions.buildingNotFound') };
+  if (building.companyId !== companyId) return { ok: false, reason: tc('core.actions.buildingNotYours') };
 
   const def = BUILDING_BY_ID[building.defId];
   const company = state.companies[companyId];

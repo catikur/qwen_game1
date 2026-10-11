@@ -4,6 +4,7 @@ import { estimateInvestment } from './systems/market';
 import type { InvestmentEstimate } from './systems/market';
 import { indirectEstimate } from './systems/indirect';
 import type { IndirectEstimate } from './systems/indirect';
+import { tc } from './i18n';
 import type { BuildingInstance, CompanyState, DistrictState, GameState, Tile } from './types';
 
 /**
@@ -58,17 +59,62 @@ export interface LensDef {
   hint: string;
 }
 
+/** Ad ve ipucu okundukları anda etkin dilde (alıcılar) — içe aktarımda donmuyor. */
 export const LENSES: LensDef[] = [
-  { id: 'none', name: 'Şehir', hint: 'Binaları ve bölge renklerini olduğu gibi göster.' },
+  {
+    id: 'none',
+    get name() {
+      return tc('core.selectors.lensNoneName');
+    },
+    get hint() {
+      return tc('core.selectors.lensNoneHint');
+    },
+  },
   {
     id: 'opportunity',
-    name: 'Fırsat',
-    hint: 'Karşılanmayan talep. Sıcak bölgeler para bırakır.',
+    get name() {
+      return tc('core.selectors.lensOpportunityName');
+    },
+    get hint() {
+      return tc('core.selectors.lensOpportunityHint');
+    },
   },
-  { id: 'landValue', name: 'Arsa Değeri', hint: 'Arsa fiyatları. Ucuza al, değerlensin.' },
-  { id: 'competition', name: 'Rekabet', hint: 'Bölgedeki rakip mağaza yoğunluğu.' },
-  { id: 'income', name: 'Gelir', hint: 'Bölge gelir seviyesi. Lüks ürün nereye satılır?' },
-  { id: 'ownership', name: 'Mülkiyet', hint: 'Arsalar kimin elinde?' },
+  {
+    id: 'landValue',
+    get name() {
+      return tc('core.selectors.lensLandValueName');
+    },
+    get hint() {
+      return tc('core.selectors.lensLandValueHint');
+    },
+  },
+  {
+    id: 'competition',
+    get name() {
+      return tc('core.selectors.lensCompetitionName');
+    },
+    get hint() {
+      return tc('core.selectors.lensCompetitionHint');
+    },
+  },
+  {
+    id: 'income',
+    get name() {
+      return tc('core.selectors.lensIncomeName');
+    },
+    get hint() {
+      return tc('core.selectors.lensIncomeHint');
+    },
+  },
+  {
+    id: 'ownership',
+    get name() {
+      return tc('core.selectors.lensOwnershipName');
+    },
+    get hint() {
+      return tc('core.selectors.lensOwnershipHint');
+    },
+  },
 ];
 
 /** Bir bölgenin karşılanmamış talep ORANI (0..1) — panelde "%X boş". */

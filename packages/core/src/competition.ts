@@ -10,6 +10,7 @@ import { buildCost } from './actions';
 import { bestPlotFor } from './chain';
 import { MARKETING_CAP, RESEARCH_CAP, marketingLeverage, researchCeiling } from './systems/focus';
 import { tilePrice } from './systems/city';
+import { tc } from './i18n';
 import type { GameState } from './types';
 
 /**
@@ -203,21 +204,25 @@ function armsFor(state: GameState, companyId: string, categoryId: CategoryId): C
   return [
     {
       kind: 'research',
-      label: 'Ar-Ge',
+      label: tc('core.competition.armResearch'),
       count: counts.research,
       value: research,
       ceiling: researchTarget,
       cap: RESEARCH_CAP,
       detail:
         counts.research === 0
-          ? 'Merkez yok — kalite bina tanımından geliyor.'
+          ? tc('core.competition.researchNone')
           : research < researchTarget * 0.95
-            ? `${counts.research} merkez · kalite +${research.toFixed(2)}, tavan +${researchTarget.toFixed(2)} (ilerliyor)`
-            : `${counts.research} merkez · kalite +${research.toFixed(2)} (tavanda)`,
+            ? tc('core.competition.researchGrowing', {
+                count: counts.research,
+                value: research.toFixed(2),
+                ceiling: researchTarget.toFixed(2),
+              })
+            : tc('core.competition.researchCapped', { count: counts.research, value: research.toFixed(2) }),
     },
     {
       kind: 'marketing',
-      label: 'Pazarlama',
+      label: tc('core.competition.armMarketing'),
       count: counts.marketing,
       value: leverage,
       // Pazarlama birikimli değil: kurduğun gün tavanındadır.
@@ -225,8 +230,8 @@ function armsFor(state: GameState, companyId: string, categoryId: CategoryId): C
       cap: MARKETING_CAP,
       detail:
         counts.marketing === 0
-          ? 'Ofis yok — marka yalnızca payını takip ediyor.'
-          : `${counts.marketing} ofis · marka hedefi +${leverage.toFixed(2)}`,
+          ? tc('core.competition.marketingNone')
+          : tc('core.competition.marketingActive', { count: counts.marketing, value: leverage.toFixed(2) }),
     },
   ];
 }
@@ -305,7 +310,7 @@ function bestMove(
         defId,
         name: def.name,
         tileId: plot.tileId,
-        districtName: district?.name ?? 'Şehir',
+        districtName: district?.name ?? tc('core.competition.cityFallback'),
         cost: buildCost(state, companyId, defId),
         needsBuyout: plot.needsBuyout,
         premature,
@@ -318,17 +323,19 @@ function bestMove(
   if (research.ceiling >= research.cap && marketing.ceiling >= marketing.cap) {
     return {
       move: null,
-      blocked:
-        'Her iki kol da tavanda. Buradan daha fazla açmanın yolu ölçek: bu kategoride daha çok mağaza.',
+      blocked: tc('core.competition.bothCapped'),
     };
   }
 
   const def = BUILDING_BY_ID[research.ceiling < research.cap ? 'research_center' : 'marketing_office'];
   const company = state.companies[companyId];
   if (def && company && company.netWorth < def.unlockNetWorth) {
-    return { move: null, blocked: `${def.name} için ${formatShort(def.unlockNetWorth)} şirket değeri gerekiyor.` };
+    return {
+      move: null,
+      blocked: tc('core.competition.needsNetWorth', { name: def.name, amount: formatShort(def.unlockNetWorth) }),
+    };
   }
-  return { move: null, blocked: 'Şehirde alınabilecek boş parsel kalmamış.' };
+  return { move: null, blocked: tc('core.competition.noPlot') };
 }
 
 function reasonFor(
@@ -339,10 +346,7 @@ function reasonFor(
   minOutlets: number,
 ): string {
   if (premature) {
-    return (
-      `${arm.label} sabit gider getirir, faydası ise mağaza sayınla çarpılır. ` +
-      `Bu kategoride ${card.outlets} mağazan var; karşılığını ${minOutlets} mağazadan sonra vermeye başlıyor.`
-    );
+    return tc('core.competition.reasonPremature', { arm: arm.label, outlets: card.outlets, min: minOutlets });
   }
 
   if (kind === 'marketing') {
@@ -351,15 +355,13 @@ function reasonFor(
     // çekicilikle sınırlı olmadığı yazıyor. Marka orada fiyat primine
     // giriyor, paya değil.
     return card.channel === 'price'
-      ? 'Marka, fiyat primine de giriyor: kapasiten doluyken kolun karşılığı marjda çıkar. ' +
-        'Pazarlama Ar-Ge\'den ucuz ve etkisi kurduğun gün başlıyor — en hızlı prim burada.'
-      : `Payın %${Math.round(card.share * 100)} — markan payının hak ettiğinden yukarı çekilebilir. ` +
-        'Pazarlama düşük markada oransal olarak daha çok kazandırır: giriş silahı.';
+      ? tc('core.competition.reasonMarketingPrice')
+      : tc('core.competition.reasonMarketingShare', { share: Math.round(card.share * 100) });
   }
 
   return card.channel === 'price'
-    ? 'Mağazaların kapasitesinde çalışıyor: çekicilik sana bir birim daha getiremez. Kalitenin karşılığı burada fiyat primi olarak çıkar.'
-    : 'Mağazalarında boş kapasite var: kalite doğrudan paya dönüyor, rakibin müşterisini alırsın.';
+    ? tc('core.competition.reasonResearchPrice')
+    : tc('core.competition.reasonResearchShare');
 }
 
 /**
@@ -416,8 +418,8 @@ function competitionCardsFor(state: GameState, companyId: string): CompetitionCa
       channel,
       channelLabel:
         channel === 'price'
-          ? `Mağazaların kapasitesinde çalışıyor (%${Math.round(profile.utilisation * 100)} dolu) — kolun karşılığı hacim değil FİYAT: aynı malı daha pahalıya satarsın.`
-          : `Mağazalarında boş kapasite var (%${Math.round(profile.utilisation * 100)} dolu) — kolun karşılığı PAY: rakibin müşterisini alırsın.`,
+          ? tc('core.competition.channelPrice', { utilisation: Math.round(profile.utilisation * 100) })
+          : tc('core.competition.channelShare', { utilisation: Math.round(profile.utilisation * 100) }),
       move,
       blocked,
     });
@@ -442,19 +444,14 @@ function noteFor(
   if (!leader) return null;
 
   if (channel === 'price' && share < leader.share) {
-    return (
-      `Payın ${leader.name} şirketinin altında ama sebebi kalite ya da marka değil: ` +
-      `mağazaların %${Math.round(profile.utilisation * 100)} dolu çalışıyor. ` +
-      'Daha çekici olmak sana bir birim daha getiremez — PAY almanın yolu daha çok mağaza. ' +
-      'Kolun buradaki karşılığı pay değil, aynı hacmi daha pahalıya satmak.'
-    );
+    return tc('core.competition.notePrice', {
+      leader: leader.name,
+      utilisation: Math.round(profile.utilisation * 100),
+    });
   }
 
   if (channel === 'share' && share < leader.share) {
-    return (
-      `Boş kapasiten var ve payın ${leader.name} şirketinin altında: ` +
-      'burada kaybettiğin müşteri doğrudan çekicilikten kaybediliyor. Kol hamlesi tam da bunun için.'
-    );
+    return tc('core.competition.noteShare', { leader: leader.name });
   }
 
   return null;
@@ -463,9 +460,9 @@ function noteFor(
 /** Bir binanın odağını değiştirmenin neden mümkün olmadığını açıklar. */
 export function focusBlocker(state: GameState, buildingId: string): string | null {
   const building = state.buildings[buildingId];
-  if (!building) return 'Bina bulunamadı.';
+  if (!building) return tc('core.competition.buildingNotFound');
   const role = BUILDING_BY_ID[building.defId]?.role;
-  if (role !== 'research' && role !== 'marketing') return 'Bu bina bir kategoriye atanmaz.';
+  if (role !== 'research' && role !== 'marketing') return tc('core.competition.notFocusable');
   return null;
 }
 
