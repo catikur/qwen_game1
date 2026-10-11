@@ -1,3 +1,4 @@
+import { BASE_LOCALE, registerMessages, translate } from '@capital/content';
 import { tr } from './tr';
 
 /**
@@ -10,37 +11,27 @@ import { tr } from './tr';
  * Türkçeye düşer, o da yoksa anahtarın kendisi görünür (sessiz boşluk
  * yerine fark edilir bir hata).
  *
- * Kapsam dışı: içerik paketi (bina, ürün, rakip, zorluk adları zaten tek
- * yerde) ve çekirdeğin ürettiği metinler (haberler, komut ret sebepleri).
- * O ikisi bir sonraki adım; `DURUM.md` §4.9.
+ * Tur 23: içerik adları ve çekirdeğin ürettiği metinler de aynı motordan
+ * geçiyor; `DURUM.md` Tur 23.
  */
 export type MessageKey = keyof typeof tr;
 export type Messages = Record<MessageKey, string>;
 
-const LOCALES: Record<string, Partial<Messages>> = { tr };
-let active: Partial<Messages> = tr;
-let activeLocale = 'tr';
+/*
+ * Motor Tur 23'ten beri içerik paketinde (`messages.ts`): çekirdek ve
+ * içerik de aynı etkin dili okuyor. Arayüzün sözlüğü motora burada
+ * kaydediliyor; `t` anahtar türünü koruyan ince bir sarmalayıcı.
+ */
+registerMessages(BASE_LOCALE, tr);
 
 /** Yeni bir dil sözlüğü kaydeder (eksik anahtarlar Türkçeye düşer). */
 export function registerLocale(locale: string, messages: Partial<Messages>): void {
-  LOCALES[locale] = messages;
+  registerMessages(locale, messages as Record<string, string>);
 }
 
-export function setLocale(locale: string): void {
-  const messages = LOCALES[locale];
-  if (!messages) return;
-  active = messages;
-  activeLocale = locale;
-}
-
-export function currentLocale(): string {
-  return activeLocale;
-}
+export { setLocale, currentLocale } from '@capital/content';
 
 /** `{ad}` biçimindeki yer tutucuları doldurur. */
 export function t(key: MessageKey, params?: Record<string, string | number>): string {
-  const lookup = (messages: Partial<Messages>): string | undefined => (messages as Record<string, string | undefined>)[key];
-  const template: string = lookup(active) ?? lookup(tr) ?? String(key);
-  if (!params) return template;
-  return template.replace(/\{(\w+)\}/g, (match: string, name: string) => (name in params ? String(params[name]) : match));
+  return translate(key, params);
 }
