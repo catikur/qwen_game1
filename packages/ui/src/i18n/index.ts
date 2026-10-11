@@ -1,5 +1,6 @@
 import { BASE_LOCALE, registerMessages, translate } from '@capital/content';
 import { tr } from './tr';
+import { en } from './en';
 
 /**
  * Arayüz metinleri (Tur 21, §4.9 "yerelleştirme").
@@ -23,6 +24,7 @@ export type Messages = Record<MessageKey, string>;
  * kaydediliyor; `t` anahtar türünü koruyan ince bir sarmalayıcı.
  */
 registerMessages(BASE_LOCALE, tr);
+registerMessages('en', en);
 
 /** Yeni bir dil sözlüğü kaydeder (eksik anahtarlar Türkçeye düşer). */
 export function registerLocale(locale: string, messages: Partial<Messages>): void {

@@ -74,3 +74,17 @@ export function hasMessage(key: string, locale: string = active): boolean {
 export function numberLocale(): string {
   return active === 'en' ? 'en-US' : 'tr-TR';
 }
+
+/**
+ * Yüzde: Türkçede işaret önde ("%45"), İngilizcede arkada ("45%").
+ * `value` hazır sayı ya da metin (yuvarlama çağıranda).
+ */
+export function formatPercent(value: number | string): string {
+  return active === 'en' ? `${value}%` : `%${value}`;
+}
+
+/** Ondalık sayı: Türkçede virgül ("5,0"), İngilizcede nokta ("5.0"). */
+export function formatDecimal(value: number, digits: number): string {
+  const text = value.toFixed(digits);
+  return active === 'en' ? text : text.replace('.', ',');
+}

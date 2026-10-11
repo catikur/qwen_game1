@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { ReactElement } from 'react';
-import { CREDIT, CREDIT_RATINGS, LABOR, WAGE_POLICIES } from '@capital/content';
+import { CREDIT, CREDIT_RATINGS, LABOR, WAGE_POLICIES, formatPercent, formatDecimal } from '@capital/content';
 import type { LoanKind, WagePolicy } from '@capital/content';
 import {
   annuityPayment,
@@ -34,8 +34,7 @@ import { useGame, useGameState } from './useGame';
  */
 
 function pct(rate: number, digits = 0): string {
-  const value = (rate * 100).toFixed(digits);
-  return `%${value.replace('.', ',')}`;
+  return formatPercent(formatDecimal(rate * 100, digits));
 }
 
 const POLICY_ORDER: WagePolicy[] = ['low', 'market', 'high'];

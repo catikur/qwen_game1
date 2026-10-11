@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { ReactElement } from 'react';
-import { ISSUANCE } from '@capital/content';
+import { ISSUANCE, formatPercent, formatDecimal } from '@capital/content';
 import {
   CONTROL_THRESHOLD,
   capRemaining,
@@ -349,7 +349,7 @@ function Listing({ company, state }: { company: CompanyState; state: GameState }
           <span className="bourse-bar-mark" style={{ left: `${CONTROL_THRESHOLD * 100}%` }} />
         </span>
         <span className="bourse-stake-text">
-          {t('finance.market.listing.stake')} <strong>%{(stake * 100).toFixed(1)}</strong>
+          {t('finance.market.listing.stake')} <strong>{formatPercent(formatDecimal(stake * 100, 1))}</strong>
           {stake > CONTROL_THRESHOLD
             ? t('finance.market.listing.stakeControlled')
             : t('finance.market.listing.stakeToControl', {

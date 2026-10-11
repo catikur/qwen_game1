@@ -1,14 +1,6 @@
 import {useEffect, useState} from 'react';
 import type { ReactElement } from 'react';
-import {
-  BUILDING_BY_ID,
-  CATEGORIES,
-  DISTRICT_ARCHETYPES,
-  CONSUMER_CATEGORIES,
-  GOODS_BY_CATEGORY,
-  GOOD_BY_ID,
-  STRUCTURE_BY_ID,
-} from '@capital/content';
+import { BUILDING_BY_ID, CATEGORIES, DISTRICT_ARCHETYPES, CONSUMER_CATEGORIES, GOODS_BY_CATEGORY, GOOD_BY_ID, STRUCTURE_BY_ID, formatPercent } from '@capital/content';
 import {
   buildOptions,
   categoryBreakdown,
@@ -388,15 +380,15 @@ export function Inspector(): ReactElement | null {
 
       <div className="statgrid">
         <Stat label={t('panels.inspector.stat.population')} value={Math.round(district.population).toLocaleString('tr-TR')} />
-        <Stat label={t('panels.inspector.stat.incomeLevel')} value={`%${Math.round(district.incomeLevel * 100)}`} />
+        <Stat label={t('panels.inspector.stat.incomeLevel')} value={formatPercent(Math.round(district.incomeLevel * 100))} />
         <Stat label={t('panels.inspector.stat.landValue')} value={formatMoney(tile.landValue)} />
-        <Stat label={t('panels.inspector.stat.openDemand')} value={`%${Math.round(districtOpportunity(district) * 100)}`} />
+        <Stat label={t('panels.inspector.stat.openDemand')} value={formatPercent(Math.round(districtOpportunity(district) * 100))} />
         {/*
           Gelişme basıncı: şehrin BURAYA ne kadar yığıldığı. Yüksekse
           boş parseller yakında yapılaşır ve devralma primi devreye
           girer — yani bu sayı "acele et" demenin sayısal hâli.
         */}
-        <Stat label={t('panels.inspector.stat.development')} value={`%${Math.round(districtPressure(state, district) * 100)}`} />
+        <Stat label={t('panels.inspector.stat.development')} value={formatPercent(Math.round(districtPressure(state, district) * 100))} />
       </div>
 
       <div className="demandlist">
@@ -594,8 +586,8 @@ function BuildingDetail({ buildingId }: { buildingId: string }): ReactElement | 
           </div>
 
           <div className="statgrid small">
-            <Stat label={t('panels.building.stat.utilization')} value={`%${Math.round(ledger.capacityUsed * 100)}`} />
-            <Stat label={t('panels.building.stat.share')} value={`%${Math.round(ledger.share * 100)}`} />
+            <Stat label={t('panels.building.stat.utilization')} value={formatPercent(Math.round(ledger.capacityUsed * 100))} />
+            <Stat label={t('panels.building.stat.share')} value={formatPercent(Math.round(ledger.share * 100))} />
             <Stat label={t('panels.building.stat.price')} value={`×${building.priceMultiplier.toFixed(2)}`} />
           </div>
         </>
@@ -723,7 +715,7 @@ function ShelfEditor({ buildingId }: { buildingId: string }): ReactElement | nul
               >
                 <span className="shelf-dot" style={{ background: good.color }} />
                 <span className="shelf-name">{good.name}</span>
-                <span className="shelf-share">%{Math.round((shares.get(good.id) ?? 0) * 100)}</span>
+                <span className="shelf-share">{formatPercent(Math.round((shares.get(good.id) ?? 0) * 100))}</span>
               </button>
             </li>
           );
@@ -934,7 +926,7 @@ function CompanyPanel(): ReactElement {
                 <td>{row.outlets}</td>
                 <td>{formatMoney(row.revenue)}</td>
                 <td className={row.profit >= 0 ? 'pos' : 'neg'}>{formatMoney(row.profit)}</td>
-                <td>%{Math.round(row.share * 100)}</td>
+                <td>{formatPercent(Math.round(row.share * 100))}</td>
               </tr>
             ))}
           </tbody>
@@ -1001,7 +993,7 @@ function RivalsPanel(): ReactElement {
               <td>{row.tiles}</td>
               <td>
                 {best && best[1] > 0.01
-                  ? `${CATEGORIES[best[0] as keyof typeof CATEGORIES].name} %${Math.round(best[1] * 100)}`
+                  ? `${CATEGORIES[best[0] as keyof typeof CATEGORIES].name} ${formatPercent(Math.round(best[1] * 100))}`
                   : '—'}
               </td>
             </tr>
