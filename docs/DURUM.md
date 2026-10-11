@@ -1231,6 +1231,15 @@ Dört ölçüm dersi:
    binden fazla Türkçe satır çıktı. Hepsi kayıtta o günün diliyle yazılmış
    haberlerdi. Sınamak için kaydı İngilizce üretmek gerekti.
 
+**Zamana duyarlı bir oynanış kontrolü.** "En çok satanın kapısı en
+kalabalık (±1 araç)" bu turun iki tam koşusunda da kaldı (16'ya 19
+araç). Kontrol oyunu gerçek zamanda 1,4 sn akıtıp tek bir ana bakıyor.
+Aynı kontrolü 15 farklı anda ölçünce main 12/15, bu dal 14/15 geçti;
+kalan anlarda fark iki ilâ üç araç. Kalma sebebi yerelleştirme değil:
+kontrol, kapı başına araç tavanının yarattığı kuantalamada sınırda.
+Kontrol değiştirilmedi. Düzeltmesi (birkaç anın çoğunluğu ya da pay
+oranıyla karşılaştırma) ayrı bir iş.
+
 ---
 
 ## 3. Ölçülen durum
@@ -1304,9 +1313,9 @@ ortalama +%2.
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.100–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi) |
-| Birim testi | **160 test** (`pnpm test`) |
+| Birim testi | **170 test** (`pnpm test`) |
 | Denge testi | **273 kontrol, hepsi geçiyor** (20 bölüm, süreleriyle; ~9 dk) |
-| Tarayıcı testi | **282 kontrol**, 0 konsol hatası (~18–26 dk); duman koşusu 83 (~3,5 dk) |
+| Tarayıcı testi | **296 kontrol**, 0 konsol hatası (~17–26 dk); duman koşusu 83 (~3,5 dk). Bir kontrol zamana duyarlı, aşağıya bkz. |
 | CI | her PR'da tip + test + denge + paket + duman oynanışı |
 | Kapsam | 26 bina · 22 ürün · 7 kategori · 8 rakip profili · 10 şehir yapısı (6 siluet) |
 
