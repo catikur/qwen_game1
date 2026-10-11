@@ -8,6 +8,19 @@ esnekliği, marka gücü, pazar payı ve arsa değeri dinamikleri işler; üstte
 oyuncu bir ısı haritasına bakıp bir kareye tıklar. Hesabı oyun yapar, kararı
 oyuncu verir.
 
+## Oyna
+
+**https://catikur.github.io/qwen_game1/** — kurulum yok, tarayıcıda açılır
+(telefonda da). main'e her girişte `.github/workflows/pages.yml` derleyip
+yeniden yayınlıyor.
+
+Kayıtlar tarayıcıda, açtığın adrese bağlı tutuluyor. Başka bir adrese ya da
+cihaza taşımak için Kayıtlar panelinde "JSON dışa aktar", yeni yerde "JSON
+içe aktar".
+
+Tek seferlik ayar (depo sahibi): Settings → Pages → Source: **GitHub
+Actions**.
+
 ## Çalıştırma
 
 ```bash

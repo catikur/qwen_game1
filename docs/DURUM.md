@@ -1387,6 +1387,11 @@ node tools/build-single-file.mjs   # paylaşılan sayfa için tek HTML
 pnpm dev             # oyunu aç
 ```
 
+Yayın: main'e her girişte `.github/workflows/pages.yml` oyunu alt yolla
+(`--base=/qwen_game1/`) derleyip GitHub Pages'e koyuyor:
+https://catikur.github.io/qwen_game1/. PR'da yalnızca paket deneniyor.
+Tek seferlik ayar: Settings → Pages → Source: GitHub Actions.
+
 `balance` bir **sınav**, `bench` bir **termometre**: ilki bir şey
 bozulduğunda bağırır, ikincisi neyin ne kadar değiştiğini gösterir. İki
 sürüm karşılaştırırken `bench` çıktılarını yan yana koymak yeterli.
