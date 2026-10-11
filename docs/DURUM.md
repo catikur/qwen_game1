@@ -4,7 +4,7 @@
 > `pnpm bench` çıktısından; iddialar `pnpm balance` ve `pnpm playtest`
 > tarafından her koşuda doğrulanıyor.
 >
-> Son güncelleme: şema **v6**, 22 tur tamamlandı.
+> Son güncelleme: şema **v6**, 23 tur tamamlandı.
 
 ---
 
@@ -1129,6 +1129,108 @@ yükseltmesi, bekleyen şehirlerin iç içe durumlarını da göç ettirmeli.
    seçim temizleniyor" kontrolünün ilk hâli her durumda geçiyordu;
    önce bir kare seçip sonra şehir değiştiren gerçek bir kontrol oldu.
 
+### Tur 23 — İkinci dil: İngilizce
+
+Kullanıcı "diğer yapılacaklara geçelim" dedi; listede kalan büyük kalem
+yerelleştirmenin ikinci adımıydı (§4.9). Tur 21 yalnızca düğme
+yazılarını sözlüğe çekmişti. Haberler, komut ret sebepleri ve içerik
+adları (bina, ürün, olay, CEO) Türkçe sabitti; ikinci bir dil bunlar
+olmadan yarım kalırdı.
+
+**Tek motor, üç katman.** Sözlük motoru arayüz paketinden en alttaki
+içerik paketine taşındı: `translate(anahtar, parametreler, yedek)`,
+`registerMessages`, `setLocale`. Arama sırası etkin dil, Türkçe, yedek,
+anahtar.
+
+| Katman | Nasıl | Anahtar |
+|---|---|---|
+| Arayüz | `t('hud.topbar.cash')` (tipli) | 534 |
+| Çekirdek | `tc('core.npc.expandTitle', {name})`; üç grup: world, commands, markets | 367 |
+| İçerik | metin alanı bir getter: `content.building.grocery.name`, yoksa nesnenin kendi Türkçesi | 241 (İngilizce) |
+
+- Üretilen metin (haber, önerge, sözleşme başlığı) state'e o günün
+  diliyle yazılıyor. Dil oyun ortasında değişirse eski haberler
+  yazıldıkları dilde kalıyor. Şema v6, kayıt biçimi aynı.
+- Biçimler dile göre değişiyor:
+
+  | | Türkçe | İngilizce |
+  |---|---|---|
+  | Para | 1.20 M ₺ · 45 B ₺ · 1.234 ₺ | ₺1.20M · ₺45K · ₺1,234 |
+  | Yüzde | %45 | 45% |
+  | Ondalık | 5,5 | 5.5 |
+  | Tarih | 27 Kas 2026 | Nov 27, 2026 |
+  | Sayı | 1.234 | 1,234 |
+
+  Türkçe çıktı Tur 22 ile aynı. Tek istisna borsa satırındaki pay
+  oranı: "%0.0" yerine "%0,0" (Türkçe ondalık virgülü; geri kalan her
+  yerde zaten öyleydi).
+- Dil seçici yeni oyun ekranında ve Yardım panelinin altında. Dil adları
+  kendi dillerinde yazılıyor ("Türkçe", "English"). Seçim tarayıcıda
+  hatırlanıyor. `?lang=en` bir bağlantıyı İngilizce açıyor ama hatırlanan
+  seçimi değiştirmiyor. Varsayılan Türkçe.
+- Çeviriler ortak bir sözlükle yapıldı (Şirket değeri: Company value,
+  Devralma: Takeover, Muacceliyet: Acceleration …). Kişi ve şirket adları
+  özel ad, çevrilmiyor.
+
+**Kanıt.**
+
+- Türkçe davranış aynı: üç 400 günlük koşunun (standart 5 ve 7,
+  büyük 5) state özeti her adımda Tur 22 ile bayt bayt eşit. Haber,
+  önerge ve sözleşme metinleri bu özetin içinde.
+- Türkçe arayüz aynı: 54 ekranın metin ve erişilebilirlik dökümü,
+  yukarıdaki pay oranı satırı dışında birebir.
+- Çekirdek metinleri taşınırken eski ve yeni kod yan yana koşturuldu:
+  ret sebepleri ve ipuçları 400 günlük özete girmiyor. commands grubunda
+  1.741 karşılaştırma, markets grubunda 53.031 karşılaştırma, hepsinde
+  0 fark.
+- İngilizce taraf:
+  - 54 ekranın İngilizce dökümünde ham anahtar, doldurulmamış yer
+    tutucu ve Türkçe biçimli para, yüzde ya da ondalık yok.
+  - Kalan Türkçe harfler yalnızca kişi ve şirket adlarında ("Deniz
+    Arkın", "Atlas Yapı").
+
+**Bir bulgu: rakip yapay zekâsı dili okuyordu.** Rekabet kartları eşitlikte
+kategori adına göre sıralanıyor ve rakipler kartları bu sırayla tarıyor.
+Ad İngilizcede değişince sıra da değişecekti; aynı tohum İngilizcede
+başka bir oyun oynayacaktı. Eşitlik artık kategorinin Türkçe adından
+(`baseText`) bozuluyor, Türkçe sıra aynı. Bunu yakalayan test şu: aynı
+tohum iki dilde 150 gün oynanıyor, görünen metin alanları (title, body,
+summary, name) dışında state'ler eşit olmalı. Ayrı bir koşuda üç 400
+günlük oyun da aynı sonucu verdi: metin dışı fark 0.
+
+**Testler.** Yeni birim testleri:
+
+- motorun yedek zinciri;
+- üç sözlüğün eksiksizliği ve yer tutucuları;
+- İngilizce içerik çevirilerinin gerçek alanlarla birebir eşleşmesi (fazla
+  ya da eksik anahtar yok);
+- iki dilde aynı simülasyon;
+- İngilizce haberlerde ham anahtar yok.
+
+Oynanış testinde yeni "Dil" bölümü:
+
+- İngilizceye geç, şirket kur, 90 gün oynat;
+- üst bar, haberler ve altı panelde Türkçe kalıntı arama;
+- Yardım'dan Türkçeye dönüş (oyun yerinde kalıyor);
+- `?lang=en` bağlantısı ve hatırlanan seçim.
+
+Dört ölçüm dersi:
+
+1. **Dil simülasyona sızabilir, ve sızdığı yer metin değil sıralamaydı.**
+   Ekranlara bakmak bunu göstermezdi; iki dilde aynı tohumu koşup
+   state'leri karşılaştırmak gösterdi.
+2. **Getter içe aktarımda donmuyor, sabit donuyor.** Lens adları ve
+   zincir durum etiketleri modül yüklenirken `tc()` ile hesaplanan
+   sabitlerdi; dil değişse de Türkçe kalırlardı. Getter'a çevrildiler.
+   Aynı sebeple dolaylı tahmin önbelleğinin anahtarına etkin dil eklendi.
+3. **Çevirmen biçimi bilmeli.** "{toShare}" ham sayı mı yoksa hazır
+   "%37" mi? Yanlış tahmin "%37%" yazardı. Her yer tutucu için kod okundu.
+   Hazır biçimli olanlara işaret eklenmedi; hazırlayan yardımcılar
+   (`percent()`, `pct()`) dile duyarlı hâle getirildi.
+4. **Döküm Türkçe kayıtla İngilizceyi sınayamaz.** İlk İngilizce dökümde
+   binden fazla Türkçe satır çıktı. Hepsi kayıtta o günün diliyle yazılmış
+   haberlerdi. Sınamak için kaydı İngilizce üretmek gerekti.
+
 ---
 
 ## 3. Ölçülen durum
@@ -1361,11 +1463,11 @@ nüfus tavanı ve arsa değeri). Hâlâ açık olanlar:
   teminatlı kredi, not, muacceliyet, haciz. Tahvil Tur 19'da geldi.
 - ~~**Halka arz**~~ — Tur 19'da kapandı: halka arz ve sermaye artırımı
   (kurucu payı, kurumsal yatırımcı), tahvil.
-- **Yerelleştirme:** ilk adım Tur 21'de: arayüz metinleri sözlükte
-  (`packages/ui/src/i18n`), `setLocale` ile dil değişebiliyor. Kalan:
-  çekirdeğin ürettiği metinler (haberler, komut ret sebepleri, gündem
-  etiketleri) ve içerik paketi (bina, ürün, rakip adları) hâlâ Türkçe
-  sabit; ikinci bir dil için ikisinin de anahtarlaşması gerekiyor.
+- ~~**Yerelleştirme**~~ — Tur 21'de başladı (arayüz metinleri sözlükte),
+  Tur 23'te kapandı: çekirdek ve içerik metinleri de sözlükte, İngilizce
+  tam, dil seçici kurulumda ve Yardım'da. Üçüncü bir dil için üç sözlük
+  dosyası, dil adı (`LOCALE_NAMES`) ve `messages.ts`'teki biçim kuralları
+  (para, yüzde, ondalık) gerekiyor.
 - **Lig tablosunun güvenliği:** skorlar tekrarla doğrulanabiliyor ama
   doğrulama izleyicinin isteğine bağlı (her satırda "Doğrula"); tablo
   doğrulanmamış skoru da gösteriyor. Sunucu tarafında doğrulama bu

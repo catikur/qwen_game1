@@ -2356,6 +2356,81 @@ async function finish(browser, consoleErrors) {
     await hContext.close();
   }
 
+  // ---------- Dil (Tur 23) ----------
+  // Kendi bağlamında: seçim tarayıcıda hatırlanıyor, diğer bölümler Türkçe kalmalı.
+  section('Dil');
+  {
+    const lContext = await browser.newContext({ viewport: { width: 1280, height: 860 } });
+    const lp = await lContext.newPage();
+    const lErrors = [];
+    lp.on('pageerror', (e) => lErrors.push(e.message));
+    lp.on('console', (m) => { if (m.type() === 'error') lErrors.push(m.text()); });
+    // Ham anahtar, doldurulmamış yer tutucu ve sık Türkçe arayüz sözcükleri.
+    const RAW_KEY = /\b(core|content|panels|hud|finance|app)\.[a-z]+\.[a-zA-Z]/;
+    const PLACEHOLDER = /\{[a-zA-Z]+\}/;
+    const TURKISH_WORDS = /\b(Şirket|Nakit|Borç|Kapat|bölge|Mağaza|Rakip|Hisse|Kredi|günlük|Kâr|İşgücü|Meclis)/;
+    const leftovers = (text) => [RAW_KEY, PLACEHOLDER, TURKISH_WORDS].map((re) => text.match(re)?.[0]).filter(Boolean);
+    await lp.goto('http://127.0.0.1:8811/');
+    await lp.waitForSelector('.newgame', { timeout: 20000 });
+    check('Kurulumda dil seçici var, Türkçe seçili',
+      (await lp.locator('.newgame .locale-option').count()) === 2 &&
+        (await lp.locator('.newgame [data-locale="tr"][aria-pressed="true"]').count()) === 1);
+    await lp.locator('.newgame [data-locale="en"]').click();
+    await lp.waitForTimeout(200);
+    const setupText = ((await lp.locator('.newgame').textContent()) ?? '').trim();
+    const setupLang = await lp.evaluate(() => document.documentElement.lang);
+    check('İngilizceye geçince kurulum ekranı İngilizce',
+      setupLang === 'en' && setupText.includes('Found the company') && leftovers(setupText.replace('Türkçe', '')).length === 0,
+      `lang=${setupLang} · ${leftovers(setupText.replace('Türkçe', '')).join(', ') || setupText.slice(0, 60)}`);
+    await lp.fill('.newgame-field input[type="text"]', 'Lingo Ltd');
+    await lp.locator('button:has-text("Found the company")').click();
+    await lp.waitForSelector('.topbar', { timeout: 20000 });
+    await lp.evaluate(() => {
+      const c = window.__capital;
+      for (let i = 0; i < 90; i++) c.engine.runDay();
+      c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+    });
+    await lp.waitForTimeout(400);
+    const topbar = ((await lp.locator('.topbar').textContent()) ?? '').trim();
+    check('Üst bar İngilizce, para ₺ önde', topbar.includes('Cash') && /₺\d/.test(topbar) && leftovers(topbar).length === 0,
+      leftovers(topbar).join(', ') || topbar.slice(0, 80));
+    const news = await lp.evaluate(() => window.__capital.getState().news.slice(0, 40).map((n) => `${n.title} ${n.body}`).join(' \n '));
+    check('Haberler İngilizce üretiliyor', news.length > 0 && leftovers(news).length === 0, leftovers(news).join(', ') || news.slice(0, 80));
+    for (const panel of ['chain', 'rivalry', 'bourse', 'council', 'company', 'rivals']) {
+      await lp.locator(`.topbar-actions [data-panel="${panel}"]`).click();
+      await lp.waitForTimeout(300);
+      const body = ((await lp.locator('.modal').textContent()) ?? '').trim();
+      const found = leftovers(body);
+      check(`İngilizce "${panel}" panelinde Türkçe kalıntı yok`, body.length > 20 && found.length === 0, found.join(', ') || body.slice(0, 60));
+      await lp.keyboard.press('Escape');
+      await lp.waitForTimeout(150);
+    }
+    await lp.screenshot({ path: `${OUT}/locale-en.png` });
+    // Yardım panelinden Türkçeye dönüş: oyun sürüyor, metinler anında değişiyor.
+    const dayBefore = await lp.evaluate(() => window.__capital.getState().time.day);
+    await lp.locator('.topbar-actions [data-panel="help"]').click();
+    await lp.waitForTimeout(300);
+    check('Yardım panelinde dil seçici', (await lp.locator('.help .locale-option').count()) === 2);
+    await lp.locator('.help [data-locale="tr"]').click();
+    await lp.waitForTimeout(300);
+    await lp.keyboard.press('Escape');
+    const topbarTr = ((await lp.locator('.topbar').textContent()) ?? '').trim();
+    const dayAfter = await lp.evaluate(() => window.__capital.getState().time.day);
+    check('Türkçeye dönünce üst bar Türkçe, oyun yerinde', topbarTr.includes('Nakit') && dayAfter === dayBefore,
+      `${topbarTr.slice(0, 60)} · gün ${dayBefore}→${dayAfter}`);
+    // Bağlantıyla İngilizce: ?lang=en seçimi bir kez geçersiz kılıyor, hatırlanan Türkçe kalıyor.
+    await lp.goto('http://127.0.0.1:8811/?lang=en');
+    await lp.waitForSelector('.topbar', { timeout: 20000 });
+    const viaLink = ((await lp.locator('.topbar').textContent()) ?? '').trim();
+    await lp.goto('http://127.0.0.1:8811/');
+    await lp.waitForSelector('.topbar', { timeout: 20000 });
+    const remembered = ((await lp.locator('.topbar').textContent()) ?? '').trim();
+    check('?lang=en bağlantısı İngilizce açıyor, seçim Türkçe hatırlanıyor',
+      viaLink.includes('Cash') && remembered.includes('Nakit'), `${viaLink.slice(0, 30)} | ${remembered.slice(0, 30)}`);
+    check('Dil akışında konsol temiz', lErrors.length === 0, lErrors.slice(0, 2).join(' | '));
+    await lContext.close();
+  }
+
   section('Mobil');
   for (const deviceName of ['iPhone 13', 'Pixel 7']) {
     const mobileContext = await browser.newContext({ ...devices[deviceName] });
