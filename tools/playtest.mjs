@@ -2100,6 +2100,20 @@ async function finish(browser, consoleErrors) {
   // kayıtlarına dokunmamalı. Koşu GERÇEK — 360 gün motorun kendi gün
   // adımıyla koşturuluyor (arayüzün hızıyla üç dakika sürerdi), komutlar
   // arayüzden veriliyor, doğrulama tarayıcıda baştan tekrar oynuyor.
+  // Buradan sonraki bölümler kendi bağlamlarında yeni sayfa açıyor; ana
+  // sayfa artık kullanılmıyor ama çizim döngüsü tam hızda dönmeye devam
+  // ediyordu. GPU'suz ortamda iki WebGL sayfası aynı işlemciyi paylaşınca
+  // yeni sayfanın açılışı iki katına uzuyor ve zaman aşımına düşüyordu
+  // (Tur 24: sahne biraz ağırlaştı, Dil bölümündeki yenileme 20 sn'yi
+  // aştı). Ana sayfa donduruluyor: uygulamanın davranışı değişmiyor,
+  // yalnızca test düzeneğinin kendi kendine yarattığı yük kalkıyor.
+  try {
+    const cdp = await page.context().newCDPSession(page);
+    await cdp.send('Page.setWebLifecycleState', { state: 'frozen' });
+  } catch {
+    /* CDP yoksa (Chromium dışı) olduğu gibi devam */
+  }
+
   section('Tohum Ligi');
   {
     const leagueContext = await browser.newContext({ viewport: { width: 1280, height: 860 } });

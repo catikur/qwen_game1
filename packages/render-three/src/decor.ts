@@ -104,9 +104,9 @@ const CASTS_SHADOW: Record<DecorPart, boolean> = {
 };
 
 /**
- * Kırma çatı: 1×1 taban, 1 yükseklik, mahya x ekseninde. Düz gölgeli
- * (flat shading) — eğik yüzler güneşle ayrı ayrı aydınlanıyor ve çatının
- * biçimi uzaktan okunuyor.
+ * Kırma çatı: 1×1 taban, 1 yükseklik, mahya x ekseninde. Dizinsiz
+ * geometri: her üçgenin kendi normali var, eğik yüzler güneşle ayrı ayrı
+ * aydınlanıyor ve çatının biçimi uzaktan okunuyor.
  */
 function hipRoofGeometry(): THREE.BufferGeometry {
   const r = 0.22;
@@ -207,7 +207,10 @@ export class DecorKit {
       emissiveIntensity: 0,
     });
     this.material = {
-      roof: new THREE.MeshStandardMaterial({ roughness: 0.78, metalness: 0.02, flatShading: true }),
+      // Geometri dizinsiz: köşe normalleri zaten yüz normali, yani düz
+      // gölgeleme `flatShading` olmadan geliyor (o seçenek her pikselde
+      // türev hesaplatır — yazılımsal GPU'da karenin hissedilir bir payı).
+      roof: new THREE.MeshStandardMaterial({ roughness: 0.78, metalness: 0.02 }),
       box: new THREE.MeshStandardMaterial({ roughness: 0.66, metalness: 0.12 }),
       cylinder: new THREE.MeshStandardMaterial({ roughness: 0.45, metalness: 0.35 }),
       glass: this.glassMaterial,
@@ -215,7 +218,7 @@ export class DecorKit {
       // Tabela ışıktan bağımsız: gündüz düz renk, gece ışıklı pano. Ton
       // eşlemeden geçiyor ki gündüz neon gibi bağırmasın.
       sign: new THREE.MeshBasicMaterial(),
-      tree: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9, metalness: 0, flatShading: true }),
+      tree: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9, metalness: 0 }),
       lamp: this.lampMaterial,
     };
   }

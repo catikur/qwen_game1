@@ -116,13 +116,17 @@ export function buildingSurface(material: THREE.Material, options: SurfaceOption
          varying vec3 vCfScale;
 
          // Atlas çeyrekleri: sol alt konut, sağ alt ofis, sol üst vitrin, sağ üst sanayi.
+         // Dallanmasız: tür numarasından çeyrek koordinatı aritmetikle.
+         //   0 konut (0,0) · 1 ofis (.5,0) · 2 dükkân: bantta vitrin, üstü konut
+         //   3 sanayi (.5,.5) · 4 dükkân-ofis: bantta vitrin, üstü ofis
          vec2 cfQuadrant(float style, float v) {
-           bool band = v < ${STOREFRONT_BAND.toFixed(2)};
-           if (style < 0.5) return vec2(0.0, 0.0);
-           if (style < 1.5) return vec2(0.5, 0.0);
-           if (style < 2.5) return band ? vec2(0.0, 0.5) : vec2(0.0, 0.0);
-           if (style < 3.5) return vec2(0.5, 0.5);
-           return band ? vec2(0.0, 0.5) : vec2(0.5, 0.0);
+           float s = floor(style + 0.5);
+           float band = step(v, ${STOREFRONT_BAND.toFixed(2)});
+           float shop = step(1.5, s) * (1.0 - step(2.5, s)) + step(3.5, s);
+           float officeUpper = step(0.5, s) * (1.0 - step(1.5, s)) + step(3.5, s);
+           float industrial = step(2.5, s) * (1.0 - step(3.5, s));
+           vec2 upper = vec2(0.5 * max(officeUpper, industrial), 0.5 * industrial);
+           return mix(upper, vec2(0.0, 0.5), shop * band);
          }
 
          // Çeyrek kenarından bir buçuk texel içeride: komşu çeyreğin rengi
