@@ -142,6 +142,18 @@ export class RtsCameraController {
     this.clampTarget();
   }
 
+  /**
+   * Kamerayı bir bakışa sabitler — görsel karşılaştırma ve testler için:
+   * fareyle sürüklemek her koşuda aynı kareyi vermiyor. Verilmeyen açı
+   * olduğu gibi kalır.
+   */
+  setView(view: { x: number; z: number; distance?: number; azimuth?: number; polar?: number }): void {
+    this.focusOn(view.x, view.z);
+    if (view.distance !== undefined) this.desiredDistance = clamp(view.distance, MIN_DISTANCE, MAX_DISTANCE);
+    if (view.azimuth !== undefined) this.desiredAzimuth = view.azimuth;
+    if (view.polar !== undefined) this.desiredPolar = clamp(view.polar, MIN_POLAR, MAX_POLAR);
+  }
+
   onKey(code: string, down: boolean): void {
     if (down) this.keys.add(code);
     else this.keys.delete(code);

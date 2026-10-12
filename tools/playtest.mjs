@@ -1881,6 +1881,25 @@ async function finish(browser, consoleErrors) {
     `${tileCount} kare · ${visual.drawCalls} çizim çağrısı`,
   );
 
+  // Detay katmanı (Tur 24): her bina türü ne olduğunu söylüyor — kırma
+  // çatı, tente, tabela, silo; sokaklarda ağaç ve lamba; binaların altında
+  // temas gölgesi. Lenste bilgi kalabalığı yapmasınlar diye gizleniyorlar.
+  const decorInfo = visual.decor;
+  check(
+    'Detay katmanı dolu: çatı, ağaç, lamba, tabela',
+    decorInfo.roof > 0 && decorInfo.tree > 0 && decorInfo.lamp > 0 && decorInfo.sign > 0 && visual.decorVisible,
+    `çatı ${decorInfo.roof} · ağaç ${decorInfo.tree} · lamba ${decorInfo.lamp} · tabela ${decorInfo.sign} · tente ${decorInfo.awning} · silo/tank ${decorInfo.cylinder}`,
+  );
+  check('Binalar zemine temas gölgesiyle oturuyor', visual.contactShadows > 0, `${visual.contactShadows} leke`);
+  await page.evaluate(() => window.__capital.setLens('opportunity'));
+  await page.waitForTimeout(300);
+  const lensDecor = await page.evaluate(() => window.__capital.renderInfo());
+  await page.evaluate(() => window.__capital.setLens('none'));
+  await page.waitForTimeout(300);
+  const backDecor = await page.evaluate(() => window.__capital.renderInfo());
+  check('Veri lensinde detaylar gizleniyor, dönünce geri geliyor', !lensDecor.decorVisible && backDecor.decorVisible,
+    `lens ${lensDecor.decorVisible ? 'görünür' : 'gizli'} · şehir ${backDecor.decorVisible ? 'görünür' : 'gizli'}`);
+
   // Pencere ışıkları: gündüz sönük, gece yanıyor. Emisyon artık düz bir
   // yüzey parlaklığı değil bir DOKUDAN geldiği için değer serbestçe
   // yükselebiliyor — eskiden 0,03 gibi bir "ima" seviyesindeydi.
@@ -1891,6 +1910,8 @@ async function finish(browser, consoleErrors) {
   await page.waitForTimeout(400);
   const midnight = await page.evaluate(() => window.__capital.renderInfo());
   check('Gündüz pencere ışığı sönük', noon.fabricEmissive === 0, `${noon.fabricEmissive.toFixed(2)}`);
+  check('Sokak lambaları gece yanıyor, gündüz sönük', noon.lampGlow === 0 && midnight.lampGlow > 1,
+    `gündüz ${noon.lampGlow.toFixed(2)} · gece ${midnight.lampGlow.toFixed(2)}`);
   check('Gece pencereler yanıyor', midnight.fabricEmissive > 0.5,
     `${midnight.fabricEmissive.toFixed(2)} (eski düz emisyon 0,03 idi)`);
 
