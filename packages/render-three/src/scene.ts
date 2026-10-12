@@ -111,6 +111,18 @@ const BLOOM_THRESHOLD = 0.82;
 /** Ölçüm penceresi: bu kadar saniye ve bu kadar kare toplanmadan karar yok. */
 const QUALITY_WINDOW_SECONDS = 2.5;
 const QUALITY_WINDOW_FRAMES = 12;
+/**
+ * Çok yavaş cihazın hızlı çıkışı (Tur 24).
+ *
+ * Pencere 12 kare istiyor; karesi 1,5 saniye süren bir cihazda bu 18
+ * saniye en pahalı kademede donmak demekti — açılışın ilk izlenimi ve
+ * oynanış testinin yazılımsal GPU'daki zaman aşımı. Ölçülen hız tabanın
+ * dörtte birinin altındaysa üç kare yetiyor ve kademe iki basamak iniyor.
+ * Kademe değişince ilk iki kare sayılmıyor: gölgelendirici derlemesi
+ * güçlü bir GPU'da da ilk kareyi uzatır, onu yavaşlık sanmamak gerekiyor.
+ */
+const QUALITY_FAST_FRAMES = 3;
+const QUALITY_WARMUP_FRAMES = 2;
 /** Altına düşülürse kademe iner. */
 const QUALITY_FLOOR_FPS = 24;
 /** Üstüne çıkılırsa kademe yükselir — ama yalnızca hiç düşülmemiş kademeye. */
@@ -231,6 +243,8 @@ export class CityRenderer {
   private qualityCeilingTier = 0;
   /** Elle sabitlendiyse uyarlama susar. */
   private qualityLocked = false;
+  /** Kademe değişiminden sonra sayılmayacak kare sayısı (derleme takılması). */
+  private qualityWarmup = QUALITY_WARMUP_FRAMES;
   /** Son iki dokunuş arasındaki süre — çift dokunuş testinin okuduğu sayı. */
   private lastTapGapMs = Number.POSITIVE_INFINITY;
 
@@ -1304,6 +1318,7 @@ export class CityRenderer {
   private applyQuality(tier: number): void {
     const level = QUALITY_LEVELS[Math.max(0, Math.min(QUALITY_LEVELS.length - 1, tier))]!;
     this.qualityTier = tier;
+    this.qualityWarmup = QUALITY_WARMUP_FRAMES;
 
     this.renderer.setPixelRatio(Math.min(devicePixelRatio, level.maxPixelRatio));
     this.resize();
@@ -1349,10 +1364,16 @@ export class CityRenderer {
    */
   private adaptQuality(dt: number): void {
     if (this.qualityLocked) return;
+    if (this.qualityWarmup > 0) {
+      this.qualityWarmup--;
+      return;
+    }
     this.frameSamples++;
     this.frameTimeSum += dt;
 
-    if (this.frameTimeSum < QUALITY_WINDOW_SECONDS || this.frameSamples < QUALITY_WINDOW_FRAMES) {
+    const crawling =
+      this.frameSamples >= QUALITY_FAST_FRAMES && this.frameSamples / this.frameTimeSum < QUALITY_FLOOR_FPS / 4;
+    if (!crawling && (this.frameTimeSum < QUALITY_WINDOW_SECONDS || this.frameSamples < QUALITY_WINDOW_FRAMES)) {
       return;
     }
 
@@ -1361,7 +1382,7 @@ export class CityRenderer {
     this.frameTimeSum = 0;
 
     if (averageFps < QUALITY_FLOOR_FPS && this.qualityTier < QUALITY_LEVELS.length - 1) {
-      const next = this.qualityTier + 1;
+      const next = Math.min(QUALITY_LEVELS.length - 1, this.qualityTier + (crawling ? 2 : 1));
       this.qualityCeilingTier = next;
       this.applyQuality(next);
       console.info(

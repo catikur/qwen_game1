@@ -4,7 +4,7 @@
 > `pnpm bench` çıktısından; iddialar `pnpm balance` ve `pnpm playtest`
 > tarafından her koşuda doğrulanıyor.
 >
-> Son güncelleme: şema **v6**, 23 tur tamamlandı.
+> Son güncelleme: şema **v6**, 24 tur tamamlandı.
 
 ---
 
@@ -1314,6 +1314,33 @@ biri kendi örnek ağında:
   - lambalar gece yanıyor, gündüz sönük.
 - Kamerayı sabit bir bakışa götüren test kancası (`setView`): görsel
   karşılaştırma her koşuda aynı kareyi veriyor.
+
+**Maliyet.**
+
+| | Tur 23 | Tur 24 |
+|---|---|---|
+| Çizim çağrısı / kare (900 kare, en düşük kademe) | 13 | 29 |
+| Detay örneği (oynanış testi anı) | — | 102 çatı · 419 ağaç · 72 lamba · 36 tabela · 29 tente · 23 silo/tank |
+| Yazılımsal GPU'da kare hızı (GPU yok) | 5 FPS | 4 FPS |
+
+Çizim çağrısı bütçesi 60. Mobil hedef bandı (50–150) hâlâ uzakta: her
+parça türü tek bir örnek ağı, bina sayısı arttıkça çağrı artmıyor.
+
+**Bir bulgu: çok yavaş cihazda açılış donuyordu.** İlk tam oynanış testi
+Dil bölümünde, sayfa yenilendikten sonra 20 saniyelik bir zaman aşımıyla
+çöktü. Sebep detay katmanı değil, kalite ayarlayıcıydı. Oyun her
+açılışta en yüksek kademede başlıyor ve kademe indirme kararı için 2,5
+saniye ile 12 kare bekliyordu. Karesi 1,5 saniye süren bir cihazda bu 18
+saniyeden fazla en pahalı kademede kalmak demek. Detaylar kareyi biraz
+ağırlaştırınca test sınırı aşıldı; ama aynı donma gerçekten yavaş bir
+telefonda da yaşanırdı.
+
+- Artık ölçülen hız tabanın dörtte birinin altındaysa (6 FPS) üç kare
+  yetiyor ve kademe iki basamak iniyor.
+- Kademe değişince ilk iki kare sayılmıyor. Gölgelendirici derlemesi
+  güçlü bir GPU'da da ilk kareyi uzatır; onu yavaşlık sanmamak gerekiyor.
+- Kayıtlı oyunla yenilemede üst bar 8–9 saniyede yanıt veriyor; kademe
+  yüksek → düşük → asgari iniyor.
 
 ---
 
