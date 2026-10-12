@@ -1342,7 +1342,7 @@ telefonda da yaşanırdı.
 - Kayıtlı oyunla yenilemede üst bar 8–9 saniyede yanıt veriyor; kademe
   yüksek → düşük → asgari iniyor.
 
-**Oynanış testi düzeneğinde iki düzeltme.**
+**Oynanış testi düzeneğinde üç düzeltme.**
 
 1. *Ana sayfa artık kullanılmayınca kapatılıyor.* Ayarlayıcı
    düzeldikten sonra da Dil bölümündeki yenileme 20 saniyeyi aştı; aynı
@@ -1357,6 +1357,10 @@ telefonda da yaşanırdı.
    kalıyor). Aynı özellik artık beş ayrı anda ölçülüyor ve en az üçünde
    tutmalı. Akış satışı izlemeseydi beş anın hiçbiri geçmezdi; yani gerçek
    bir hata hâlâ kırmızı yakıyor.
+3. *Satın alma bölümünde oyun duruyor.* Bir koşuda boş parsel seçildikten
+   sonra bir rakip onu satın aldı ve "Parseli satın al" düğmesi hiç gelmedi.
+   Bölüm arayüzü sınıyor, rakiple yarışı değil; sonunda hız eski hâline
+   dönüyor.
 
 ---
 

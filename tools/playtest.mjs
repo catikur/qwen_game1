@@ -297,6 +297,14 @@ async function finish(browser, consoleErrors) {
 
   // ---------- Satın alma ve inşa ----------
   section('Satın alma, devralma, inşa');
+  // Bölüm boyunca oyun duruyor: boş parseli seçmekle "satın al"a basmak
+  // arasında bir rakip o parseli alabiliyordu ve düğme hiç gelmiyordu
+  // (Tur 24'te bir koşuda oldu). Bölüm arayüzü sınıyor, rakiple yarışı değil.
+  const speedBeforeBuy = await page.evaluate(() => {
+    const speed = window.__capital.getState().time.speed;
+    window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+    return speed;
+  });
   const vacantId = await findTile(page, 'vacant');
   await page.evaluate((id) => window.__capital.selectTile(id), vacantId);
   await page.waitForTimeout(200);
@@ -340,6 +348,7 @@ async function finish(browser, consoleErrors) {
   }, buyoutTarget);
   check('Devralma parseli boşaltıp sahibi yapıyor',
     afterBuyout.owner === 'player' && afterBuyout.structure === null);
+  await page.evaluate((speed) => window.__capital.engine.dispatch({ type: 'SET_SPEED', speed }), speedBeforeBuy);
 
   // ---------- Haritada tıklama ----------
   section('Harita etkileşimi');
