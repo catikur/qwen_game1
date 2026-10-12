@@ -142,6 +142,20 @@ export function decorateBuilding(
     case 'boutique':
       storefront(layer, x, z, footprint, side, awning, ownerSign);
       return;
+    case 'barber_shop':
+      storefront(layer, x, z, footprint, side, awning, ownerSign);
+      // Berber direği: kapının yanında kırmızı-beyaz silindir.
+      {
+        const off = w / 2 + 0.03;
+        const along = side.nz !== 0 ? w * 0.42 : 0;
+        const across = side.nx !== 0 ? w * 0.42 : 0;
+        layer.add('cylinder', x + side.nx * off + along, footprint.bodyBottom + 0.04, z + side.nz * off + across, 0.035, 0.16, 0.035, c('#d8d8d8'));
+        layer.add('cylinder', x + side.nx * off + along, footprint.bodyBottom + 0.1, z + side.nz * off + across, 0.038, 0.05, 0.038, c('#c8382c'));
+      }
+      return;
+    case 'phone_shop':
+      storefront(layer, x, z, footprint, side, awning, ownerSign);
+      return;
     case 'cafe':
       storefront(layer, x, z, footprint, side, awning, ownerSign);
       // Kaldırımda iki masa: kafeyi bakkaldan ayıran şey.
@@ -164,6 +178,7 @@ export function decorateBuilding(
       return;
     case 'department_store':
     case 'electronics_store':
+    case 'tech_store':
       storefront(layer, x, z, footprint, side, awning, ownerSign, true);
       // Çatı panosu: uzaktan görünen büyük tabela.
       layer.add('sign', x, footprint.roofY, z - w * 0.1, w * 0.62, 0.14, 0.02, ownerSign, side.yaw);
@@ -173,6 +188,43 @@ export function decorateBuilding(
       // Cam cephe şeridi ve tabela; tente yok.
       onFace(layer, 'glass', x, z, side, w / 2, footprint.bodyBottom + 0.02, w * 0.85, Math.min(0.42, footprint.bodyTop - footprint.bodyBottom - 0.04), 0.015, c('#ffffff'));
       onFace(layer, 'sign', x, z, side, w / 2 + 0.015, footprint.bodyTop - 0.09, w * 0.55, 0.06, 0.012, ownerSign);
+      return;
+    case 'cinema': {
+      // Işıklı afiş panosu (marquee) girişin üstünde, yanında dikey pano.
+      const half = w / 2;
+      const bandTop = footprint.bodyBottom + Math.min(0.3, (footprint.bodyTop - footprint.bodyBottom) * 0.5);
+      onFace(layer, 'box', x, z, side, half, bandTop - 0.02, w * 0.9, 0.035, 0.16, c('#2b2b30'));
+      onFace(layer, 'sign', x, z, side, half + 0.16, bandTop - 0.02, w * 0.86, 0.09, 0.012, c('#ffe08a'));
+      onFace(layer, 'sign', x, z, side, half + 0.01, bandTop + 0.06, 0.07, footprint.bodyTop - bandTop - 0.08, 0.04, ownerSign);
+      // Çatıda gösterim odası.
+      layer.add('box', x, footprint.roofY, z - w * 0.18, w * 0.4, 0.09, w * 0.25, c(DARK_METAL));
+      return;
+    }
+    case 'clinic': {
+      // Kırmızı haçlı tabela: beyaz pano üstünde iki kol.
+      const y = footprint.bodyTop - 0.16;
+      onFace(layer, 'sign', x, z, side, w / 2, y, 0.16, 0.16, 0.012, c('#f4f4f4'));
+      onFace(layer, 'sign', x, z, side, w / 2 + 0.012, y + 0.055, 0.12, 0.05, 0.01, c('#d0342c'));
+      onFace(layer, 'sign', x, z, side, w / 2 + 0.012, y + 0.02, 0.05, 0.12, 0.01, c('#d0342c'));
+      // Giriş saçağı ve çatıda yeşil bahçe.
+      onFace(layer, 'box', x, z, side, w / 2, footprint.bodyBottom + 0.2, w * 0.5, 0.025, 0.14, c(METAL));
+      layer.add('box', x, footprint.roofY, z, footprint.roofWidth * 0.6, 0.02, footprint.roofWidth * 0.6, c(GREEN_ROOF));
+      return;
+    }
+    case 'residence':
+      roofGear(layer, x, z, footprint, 'residential');
+      // Çatı havuzu ve sokak yüzünde balkon bantları.
+      layer.add('glass', x - footprint.roofWidth * 0.12, footprint.roofY, z + footprint.roofWidth * 0.1, footprint.roofWidth * 0.42, 0.02, footprint.roofWidth * 0.3, c('#6fb7e0'));
+      for (const f of [0.3, 0.5, 0.7]) {
+        const y = footprint.bodyBottom + (footprint.bodyTop - footprint.bodyBottom) * f;
+        onFace(layer, 'box', x, z, side, w / 2, y, w * 0.8, 0.02, 0.07, c('#e6e2da'));
+      }
+      return;
+    case 'business_center':
+      roofGear(layer, x, z, footprint, 'office');
+      // Giriş saçağı ve cam lobi.
+      onFace(layer, 'box', x, z, side, w / 2, footprint.bodyBottom + 0.22, w * 0.7, 0.025, 0.14, c(METAL));
+      onFace(layer, 'glass', x, z, side, w / 2, footprint.bodyBottom + 0.02, w * 0.5, 0.18, 0.012, c('#ffffff'));
       return;
     case 'apartment':
       roofGear(layer, x, z, footprint, 'residential');

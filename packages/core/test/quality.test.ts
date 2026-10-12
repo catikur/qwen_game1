@@ -12,6 +12,11 @@ describe('taban kalite fiyata dönüyor', () => {
     assert.equal(qualityEdge('boutique'), 0);
     assert.equal(qualityEdge('gym'), 0);
     assert.equal(qualityEdge('electronics_store'), 0);
+    // Tur 25: yeni küçük basamaklar (kuaför, telefoncu) kategorinin tabanıyla
+    // aynı kalitede. Daha düşük olsalardı taban aşağı kayar ve spor salonu
+    // ile elektronik mağazasına kendiliğinden fiyat primi gelirdi.
+    assert.equal(qualityEdge('barber_shop'), 0);
+    assert.equal(qualityEdge('phone_shop'), 0);
     // Kira ve üretim binalarında yok.
     assert.equal(qualityEdge('apartment'), 0);
     assert.equal(qualityEdge('flour_mill'), 0);
@@ -21,6 +26,10 @@ describe('taban kalite fiyata dönüyor', () => {
     assert.ok(Math.abs(qualityEdge('supermarket') - 0.115) < 1e-9);
     assert.ok(Math.abs(qualityEdge('restaurant') - 0.115) < 1e-9);
     assert.ok(Math.abs(qualityEdge('department_store') - 0.1) < 1e-9);
+    // Tur 25'in üst basamakları.
+    assert.ok(Math.abs(qualityEdge('clinic') - 0.1) < 1e-9);
+    assert.ok(Math.abs(qualityEdge('cinema') - 0.04) < 1e-9);
+    assert.ok(Math.abs(qualityEdge('tech_store') - 0.035) < 1e-9);
   });
 
   test('aynı bölgede süpermarket bakkaldan pahalı satıyor', () => {

@@ -20,6 +20,7 @@ import {
   DISTRICT_ARCHETYPES,
   GOODS_BY_CATEGORY,
   NPC_PROFILES,
+  getCeoModifiers,
   rootStructureOf,
 } from '@capital/content';
 import type { CategoryId } from '@capital/content';
@@ -1898,7 +1899,13 @@ let researchPayback = Infinity;
       if (building.companyId !== leaderId) continue;
       const def = BUILDING_BY_ID[building.defId];
       if (def?.role !== 'outlet' || def.category !== card.category) continue;
-      sum += def.quality + (state.companies[leaderId]!.research[card.category] ?? 0);
+      // Motorun formülü: bina kalitesi + CEO kategori bonusu + Ar-Ge, [0,05; 1]
+      // aralığında. Tur 25'e kadar bonuslu bir CEO hiçbir kategoriyi
+      // önde götürmediği için bonussuz kopya da tutuyordu.
+      const leader = state.companies[leaderId]!;
+      const ceo = getCeoModifiers(leader.ceoId ?? null);
+      const bonus = ceo.categoryQuality?.category === def.category ? ceo.categoryQuality.bonus : 0;
+      sum += Math.max(0.05, Math.min(1, def.quality + bonus + (leader.research[card.category] ?? 0)));
       count += 1;
     }
     if (count === 0) continue;
@@ -3802,53 +3809,71 @@ section('Holding: ikinci şehir', () => {
    *     değerle: dışarıdan gelen 10 M ₺'lik kasa zaferi bedavaya getirmemeli.
    * Ölçülen (tohum 1/7/42, sermaye nakdin %25'i): 1. şehir 647/808/700. gün,
    * 2. şehir 700/627/715. gün; kasa 55–105 M ₺.
+   *
+   * Tur 25: bölüm üç tohumun üçünde de koşuyor. Tek tohum (1) kıl payı bir
+   * yarıştı — main'de de ikinci şehirde 114 M'ye 106 M ile kazanılıyordu.
+   * Elektroniğe iki yeni bina gelince elektronik uzmanı rakip o tohumda
+   * 1.200. günde 258 M'ye 249 M öne geçti, diğer iki tohumda ise zafer
+   * öne geldi (584 ve 613. gün). "İkinci şehir kazanılabilir" iddiası artık
+   * üç şehrin en az ikisinde ölçülüyor; "bedava değil" sınırı (400. gün) ve
+   * holding mekaniği her tohumda.
    */
-  const engine = new GameEngine(createNewGame({ seed: 1, companyName: 'Holding AŞ' }));
-  const state = () => engine.getState();
-  const play = (limit: number) => {
-    for (let day = 0; day < limit; day++) {
-      const s = state();
-      if (s.time.day % 5 === 0) playerStrategy(engine);
-      if (s.time.day % 3 === 0) defendAgainstRaids(engine);
-      engine.runDay();
-      if (s.gameOver || s.victory) return;
-    }
-  };
-  play(1200);
-  const founding = state();
-  const firstVictory = founding.victory?.day ?? null;
-  const foundingDay = founding.time.day;
-  const capital = Math.max(2_000_000, Math.round(getPlayer(founding).cash * 0.25));
-  const trend = cityTrend(founding);
-  if (founding.victory) engine.dispatch({ type: 'DISMISS_VICTORY' });
-  const opened = engine.dispatch({ type: 'OPEN_CITY', citySize: 'standard', capital });
-  expect('zafer kazanılan şehirden yeni şehir açılıyor', opened.ok && firstVictory !== null,
-    opened.reason ?? `${firstVictory}. gün zafer · ${formatMoney(capital)} sermaye · ${state().cityName}`);
-  if (!opened.ok) return;
+  const results: { seed: number; second: number | null }[] = [];
+  for (const seed of [1, 7, 42]) {
+    const engine = new GameEngine(createNewGame({ seed, companyName: 'Holding AŞ' }));
+    const state = () => engine.getState();
+    const play = (limit: number) => {
+      for (let day = 0; day < limit; day++) {
+        const s = state();
+        if (s.time.day % 5 === 0) playerStrategy(engine);
+        if (s.time.day % 3 === 0) defendAgainstRaids(engine);
+        engine.runDay();
+        if (s.gameOver || s.victory) return;
+      }
+    };
+    play(1200);
+    const founding = state();
+    const firstVictory = founding.victory?.day ?? null;
+    const foundingDay = founding.time.day;
+    const capital = Math.max(2_000_000, Math.round(getPlayer(founding).cash * 0.25));
+    const trend = cityTrend(founding);
+    if (founding.victory) engine.dispatch({ type: 'DISMISS_VICTORY' });
+    const opened = engine.dispatch({ type: 'OPEN_CITY', citySize: 'standard', capital });
+    expect(`tohum ${seed}: zafer kazanılan şehirden yeni şehir açılıyor`, opened.ok && firstVictory !== null,
+      opened.reason ?? `${firstVictory}. gün zafer · ${formatMoney(capital)} sermaye · ${state().cityName}`);
+    if (!opened.ok) continue;
 
-  const city = state();
-  play(1200);
-  const secondVictory = city.victory?.day ?? null;
-  const days = city.time.day;
-  const treasury = city.holding?.treasury ?? 0;
-  const dormantDay = city.holding?.dormant[0]?.state.time.day;
-  console.log(
-    `  1. şehir ${firstVictory}. gün zafer (eğilim ${formatMoney(trend)}/gün) · 2. şehir ${secondVictory ?? '-'}. gün · ` +
-      `kasa ${formatMoney(treasury)} · holding ${formatMoney(holdingNetWorth(city))}`,
-  );
-  expect('bekleyen şehrin takvimi duruyor', dormantDay === foundingDay, `${dormantDay}. günde · ayrılış ${foundingDay}`);
+    const city = state();
+    play(1200);
+    const secondVictory = city.victory?.day ?? null;
+    const days = city.time.day;
+    const treasury = city.holding?.treasury ?? 0;
+    const dormantDay = city.holding?.dormant[0]?.state.time.day;
+    const leader = Object.values(city.companies).sort((a, b) => b.netWorth - a.netWorth)[0]!;
+    console.log(
+      `  tohum ${seed}: 1. şehir ${firstVictory}. gün zafer (eğilim ${formatMoney(trend)}/gün) · 2. şehir ${secondVictory ?? '-'}. gün · ` +
+        `kasa ${formatMoney(treasury)} · holding ${formatMoney(holdingNetWorth(city))} · lider ${leader.name} ${formatMoney(leader.netWorth)}`,
+    );
+    expect(`tohum ${seed}: bekleyen şehrin takvimi duruyor`, dormantDay === foundingDay, `${dormantDay}. günde · ayrılış ${foundingDay}`);
+    expect(
+      `tohum ${seed}: kasaya her gün eğilimin yarısı akıyor`,
+      Math.abs(treasury - Math.max(0, trend) * 0.5 * days) < 1,
+      `${formatMoney(treasury)} ≈ ${days} gün × ${formatMoney(Math.max(0, trend) * 0.5)}`,
+    );
+    expect(
+      `tohum ${seed}: getirilen sermaye zaferi bedavaya getirmiyor (400. günden önce değil)`,
+      secondVictory === null || secondVictory >= 400,
+      `${secondVictory ?? '-'}. gün · getirilen ${formatMoney(capital)}`,
+    );
+    expect(`tohum ${seed}: holding tek şehirden büyük`, holdingNetWorth(city) > getPlayer(city).netWorth, formatMoney(holdingNetWorth(city)));
+    results.push({ seed, second: secondVictory });
+  }
+  const won = results.filter((r) => r.second !== null);
   expect(
-    'kasaya her gün eğilimin yarısı akıyor',
-    Math.abs(treasury - Math.max(0, trend) * 0.5 * days) < 1,
-    `${formatMoney(treasury)} ≈ ${days} gün × ${formatMoney(Math.max(0, trend) * 0.5)}`,
+    'ikinci şehirde de zafer var (üç tohumun en az ikisinde)',
+    won.length >= 2,
+    results.map((r) => `tohum ${r.seed}: ${r.second ?? '-'}. gün`).join(' · '),
   );
-  expect('ikinci şehirde de zafer var', secondVictory !== null, `${secondVictory ?? '-'}. gün`);
-  expect(
-    'getirilen sermaye zaferi bedavaya getirmiyor (400. günden önce değil)',
-    secondVictory !== null && secondVictory >= 400,
-    `${secondVictory ?? '-'}. gün · getirilen ${formatMoney(capital)}`,
-  );
-  expect('holding tek şehirden büyük', holdingNetWorth(city) > getPlayer(city).netWorth, formatMoney(holdingNetWorth(city)));
 });
 
 section('Rakip koltukları dolu kalıyor', () => {

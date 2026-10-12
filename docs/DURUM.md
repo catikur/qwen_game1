@@ -4,7 +4,7 @@
 > `pnpm bench` çıktısından; iddialar `pnpm balance` ve `pnpm playtest`
 > tarafından her koşuda doğrulanıyor.
 >
-> Son güncelleme: şema **v6**, 24 tur tamamlandı.
+> Son güncelleme: şema **v6**, 25 tur tamamlandı.
 
 ---
 
@@ -1362,6 +1362,75 @@ telefonda da yaşanırdı.
    Bölüm arayüzü sınıyor, rakiple yarışı değil; sonunda hız eski hâline
    dönüyor.
 
+
+### Tur 25 — Az seçenekli kategoriler çoğaldı: hizmet, elektronik, konut, ofis
+
+Kullanıcı hizmette yalnızca spor salonu olduğunu söyledi: "sinema dahil
+hepsini istiyorum, başka böyle az seçenek olanları çoğaltalım". Katalogda
+tek seçenekli dört kategori vardı: hizmet ve elektronikte birer mağaza,
+konutta ve ofiste birer kira binası. Market, yeme-içme ve perakendede
+zaten ikişer mağaza vardı.
+
+| Kategori | Önce | Eklenen |
+|---|---|---|
+| Hizmet | Spor Salonu | **Kuaför** (küçük, baştan açık) · **Sinema** (geniş kapasite) · **Sağlık Kliniği** (en kaliteli) |
+| Elektronik | Elektronik Mağazası | **Telefoncu** (küçük) · **Teknoloji Mağazası** (kalite basamağı) |
+| Konut (kira) | Apartman | **Rezidans** (büyük basamak) |
+| Ofis (kira) | Plaza | **İş Merkezi** (plazadan önceki orta basamak) |
+
+- Maliyetler kalibrasyon kuralıyla (`calibrate.ts`): makul dolulukta
+  küçük basamak 80, büyük basamak 120 günde geri ödüyor. Kira binaları
+  mevcut kira binalarının birim başına maliyetinden ölçeklendi.
+- Her yeni binanın görünümü Tur 24'ün diliyle:
+  - Kuaför: tente ve berber direği.
+  - Sinema: ışıklı afiş panosu ve dikey tabela.
+  - Klinik: kırmızı haçlı tabela ve yeşil çatı.
+  - Teknoloji Mağazası: geniş vitrin ve çatı panosu.
+  - Rezidans: çatı havuzu ve balkonlar.
+  - İş Merkezi: cam lobi ve saçak.
+  - Detay reçetesi bekçi testi her yeni türü yakaladı.
+- İngilizce adlar ve açıklamalar eklendi; içerik kapsam testi eksik çeviri
+  bırakmıyor.
+
+**Ölçümün düzelttiği üç şey.**
+
+1. *Abonman.* İlk sürümde Sinema 420, Teknoloji Mağazası 120 kapasiteliydi.
+   Denge testi şehri her kategorinin en büyük mağazasıyla doyurmayı
+   varsayıyor. Gereken parsel 293'ten 181'e indi (abonman %53 → %33, bant
+   %35–75) ve toprak bollaştı. Sinema 280, Teknoloji Mağazası 40 kapasiteyle
+   abonman %38.
+2. *Taban kalite kayması.* Fiyat primi kategorinin en düşük kaliteli
+   binasına göre hesaplanıyor (Tur 21). Telefoncu ve Kuaför daha düşük
+   kaliteyle girince taban aşağı kaydı. Var olan Elektronik Mağazası ve
+   Spor Salonu, hiçbir şey değişmeden +0,05 fiyat primi kazandı. Küçük
+   basamaklar artık kategorinin tabanıyla aynı kalitede (0,60 ve 0,65); eski
+   binaların ekonomisi aynı.
+3. *Elektronik uzmanı rakip.* Rakipler kategoride en yüksek kapasiteli
+   binayı seçiyor. Elektronik talebi tam karşılanmadığı için her yeni
+   elektronik basamağı Firuze'yi büyüttü. Deneyle ayrıldı:
+   - yeni elektronik binaları kapalı: ikinci şehirde zafer 665. gün;
+   - yalnız Telefoncu açık: zafer yok;
+   - yalnız Teknoloji Mağazası açık: zafer 669. gün.
+
+   Sonuç:
+   - Telefoncu'nun kilidi Elektronik Mağazası'yla aynı (300 bin), yani
+     erken bir elektronik girişi yok.
+   - Teknoloji Mağazası parsel başına kârı Elektronik Mağazası'na yakın
+     bir kalite basamağı (40 kapasite, 0,74 kalite, 2,4 M kilit).
+
+**Holding bölümü üç tohumda.** Ayarlardan sonra ikinci şehirde zafer
+tohum 7'de 584., tohum 42'de 613. günde geliyor; main'de 627 ve 715. gündü.
+Tohum 1'de 1.200. günde Firuze 258 M'ye 249 M ile önde. Bu tohum main'de
+de kıl payıydı (114 M'ye 106 M). Bölüm yalnızca tohum 1'e bakıyordu.
+Artık Tur 22'deki ölçümün üç tohumunda koşuyor:
+
+- zafer en az ikisinde gelmeli;
+- "bedava değil" sınırı (400. gün) her tohumda;
+- holding mekaniği (donuk takvim, kasaya akış) her tohumda.
+
+Tek tohuma göre içerik ayarlamak aşırı uydurma olurdu. Tohum 1'deki yarış
+gerçek: pasif vekil devralma yapmıyor, elektronik uzmanını durdurmuyor.
+
 ---
 
 ## 3. Ölçülen durum
@@ -1439,7 +1508,7 @@ ortalama +%2.
 | Denge testi | **273 kontrol, hepsi geçiyor** (20 bölüm, süreleriyle; ~9 dk) |
 | Tarayıcı testi | **300 kontrol, hepsi geçiyor**, 0 konsol hatası (~12 dk); duman koşusu 83 (~3,5 dk) |
 | CI | her PR'da tip + test + denge + paket + duman oynanışı |
-| Kapsam | 26 bina · 22 ürün · 7 kategori · 8 rakip profili · 10 şehir yapısı (6 siluet) |
+| Kapsam | 33 bina · 22 ürün · 7 kategori · 8 rakip profili · 10 şehir yapısı (6 siluet) |
 
 ### Render (Tur 6 sonrası)
 
