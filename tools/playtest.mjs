@@ -1012,12 +1012,8 @@ async function finish(browser, consoleErrors) {
   // izlemesi — yoksa dekordan farkı kalmaz.
   section('Müşteri akışı');
 
-  await page.evaluate(() => window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 2 }));
-  await page.waitForTimeout(1400);
-  await page.evaluate(() => window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 }));
-  await page.waitForTimeout(400);
-
-  const flow = await page.evaluate(() => {
+  // Akışın o anki fotoğrafı: hangi şirket kaç birim satıyor, sokakta kaç aracı var.
+  const sampleFlow = () => page.evaluate(() => {
     const state = window.__capital.getState();
     const info = window.__capital.renderInfo();
     const flows = window.__capital.customerFlows();
@@ -1054,6 +1050,15 @@ async function finish(browser, consoleErrors) {
       companies: Object.keys(carsBy).length,
     };
   });
+  const runBriefly = async (ms) => {
+    await page.evaluate(() => window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 2 }));
+    await page.waitForTimeout(ms);
+    await page.evaluate(() => window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 }));
+    await page.waitForTimeout(400);
+  };
+
+  await runBriefly(1400);
+  const flow = await sampleFlow();
 
   check('Satan mağaza için müşteri yola çıkıyor', flow.shoppers > 0,
     `${flow.shoppers} araç / ${flow.stores} mağaza`);
@@ -1070,10 +1075,24 @@ async function finish(browser, consoleErrors) {
   // yoğunlaşan lider o tavana çarpınca şirket toplamında 1 araçla
   // geçilebiliyor — akış yalan söylemiyor, kuantalanıyor. Gerçek bir
   // yalan çok araçlık farkla görünür ve hâlâ kırmızı yakar.
+  //
+  // Beş ayrı anın çoğunluğu (Tur 24). Tek an kırılgandı: oyun gerçek
+  // zamanda aktığı için her koşu başka bir güne denk geliyor ve iki şirket
+  // birimde başa baş giderken o an 2–3 araçlık bir kuanta farkı çıkabiliyor.
+  // 15 anlık ölçümde main 12/15 geçti, kalanlarda fark 2–3 araç. Akış
+  // satışı izlemeseydi beş anın hiçbiri geçmezdi; çoğunluk o yalanı hâlâ
+  // yakalıyor ama tek bir talihsiz anı yalan saymıyor.
+  const flowSamples = [flow];
+  for (let i = 0; i < 4; i++) {
+    await runBriefly(700);
+    flowSamples.push(await sampleFlow());
+  }
+  const honest = flowSamples.filter((f) => f.unitLeader === f.carLeader || f.unitLeaderCars >= f.carLeaderCars - 1);
+  const worst = flowSamples.find((f) => !honest.includes(f)) ?? flow;
   check(
-    'En çok satanın kapısı en kalabalık (±1 araç)',
-    flow.unitLeader === flow.carLeader || flow.unitLeaderCars >= flow.carLeaderCars - 1,
-    `birimde ${flow.unitLeader} (${flow.unitLeaderCars} araç), araçta ${flow.carLeader} (${flow.carLeaderCars} araç)`,
+    'En çok satanın kapısı en kalabalık (±1 araç, 5 anın çoğunluğu)',
+    honest.length >= 3,
+    `${honest.length}/5 an · en kötüsü: birimde ${worst.unitLeader} (${worst.unitLeaderCars} araç), araçta ${worst.carLeader} (${worst.carLeaderCars} araç)`,
   );
   check('Akış birden fazla şirketi gösteriyor', flow.companies >= 2,
     `${flow.companies} şirket sokakta`);
@@ -2101,18 +2120,13 @@ async function finish(browser, consoleErrors) {
   // adımıyla koşturuluyor (arayüzün hızıyla üç dakika sürerdi), komutlar
   // arayüzden veriliyor, doğrulama tarayıcıda baştan tekrar oynuyor.
   // Buradan sonraki bölümler kendi bağlamlarında yeni sayfa açıyor; ana
-  // sayfa artık kullanılmıyor ama çizim döngüsü tam hızda dönmeye devam
-  // ediyordu. GPU'suz ortamda iki WebGL sayfası aynı işlemciyi paylaşınca
-  // yeni sayfanın açılışı iki katına uzuyor ve zaman aşımına düşüyordu
-  // (Tur 24: sahne biraz ağırlaştı, Dil bölümündeki yenileme 20 sn'yi
-  // aştı). Ana sayfa donduruluyor: uygulamanın davranışı değişmiyor,
-  // yalnızca test düzeneğinin kendi kendine yarattığı yük kalkıyor.
-  try {
-    const cdp = await page.context().newCDPSession(page);
-    await cdp.send('Page.setWebLifecycleState', { state: 'frozen' });
-  } catch {
-    /* CDP yoksa (Chromium dışı) olduğu gibi devam */
-  }
+  // sayfa bir daha kullanılmıyor ama çizim döngüsü, WebGL bağlamı ve
+  // büyük çizim hedefleri (gölge haritası, bloom zinciri) duruyordu. GPU'suz
+  // ortamda bunlar aynı yazılımsal GPU sürecini paylaşıyor; Tur 24'te sahne
+  // biraz ağırlaşınca Dil bölümündeki yenileme 20 sn'yi aştı (tek başına
+  // koşunca 8,5 sn). Ana sayfa kapatılıyor: konsol hataları zaten toplandı,
+  // uygulamanın davranışı değişmiyor, yalnızca düzeneğin kendi yükü kalkıyor.
+  await page.close();
 
   section('Tohum Ligi');
   {
@@ -2456,14 +2470,19 @@ async function finish(browser, consoleErrors) {
     check('Türkçeye dönünce üst bar Türkçe, oyun yerinde', topbarTr.includes('Nakit') && dayAfter === dayBefore,
       `${topbarTr.slice(0, 60)} · gün ${dayBefore}→${dayAfter}`);
     // Bağlantıyla İngilizce: ?lang=en seçimi bir kez geçersiz kılıyor, hatırlanan Türkçe kalıyor.
+    const reloadStart = Date.now();
     await lp.goto('http://127.0.0.1:8811/?lang=en');
     await lp.waitForSelector('.topbar', { timeout: 20000 });
     const viaLink = ((await lp.locator('.topbar').textContent()) ?? '').trim();
+    const linkSeconds = (Date.now() - reloadStart) / 1000;
+    const rememberStart = Date.now();
     await lp.goto('http://127.0.0.1:8811/');
     await lp.waitForSelector('.topbar', { timeout: 20000 });
     const remembered = ((await lp.locator('.topbar').textContent()) ?? '').trim();
+    const rememberSeconds = (Date.now() - rememberStart) / 1000;
     check('?lang=en bağlantısı İngilizce açıyor, seçim Türkçe hatırlanıyor',
-      viaLink.includes('Cash') && remembered.includes('Nakit'), `${viaLink.slice(0, 30)} | ${remembered.slice(0, 30)}`);
+      viaLink.includes('Cash') && remembered.includes('Nakit'),
+      `${viaLink.slice(0, 24)} | ${remembered.slice(0, 24)} · yenileme ${linkSeconds.toFixed(1)} / ${rememberSeconds.toFixed(1)} sn`);
     check('Dil akışında konsol temiz', lErrors.length === 0, lErrors.slice(0, 2).join(' | '));
     await lContext.close();
   }

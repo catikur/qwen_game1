@@ -1237,8 +1237,8 @@ araç). Kontrol oyunu gerçek zamanda 1,4 sn akıtıp tek bir ana bakıyor.
 Aynı kontrolü 15 farklı anda ölçünce main 12/15, bu dal 14/15 geçti;
 kalan anlarda fark iki ilâ üç araç. Kalma sebebi yerelleştirme değil:
 kontrol, kapı başına araç tavanının yarattığı kuantalamada sınırda.
-Kontrol değiştirilmedi. Düzeltmesi (birkaç anın çoğunluğu ya da pay
-oranıyla karşılaştırma) ayrı bir iş.
+Kontrol bu turda değiştirilmedi; Tur 24'te beş anın çoğunluğuna
+çevrildi (aşağıda).
 
 ### Tur 24 — Bina grafikleri: binalar ne olduklarını söylüyor
 
@@ -1341,6 +1341,22 @@ telefonda da yaşanırdı.
   güçlü bir GPU'da da ilk kareyi uzatır; onu yavaşlık sanmamak gerekiyor.
 - Kayıtlı oyunla yenilemede üst bar 8–9 saniyede yanıt veriyor; kademe
   yüksek → düşük → asgari iniyor.
+
+**Oynanış testi düzeneğinde iki düzeltme.**
+
+1. *Ana sayfa artık kullanılmayınca kapatılıyor.* Ayarlayıcı
+   düzeldikten sonra da Dil bölümündeki yenileme 20 saniyeyi aştı; aynı
+   akış tek başına 8,5 saniye sürüyordu. Tohum Ligi'nden sonraki bölümler
+   kendi sayfalarını açıyor ama ana sayfanın WebGL bağlamı, gölge
+   haritası ve bloom zinciri yazılımsal GPU sürecinde duruyordu. Önce
+   dondurmak denendi, yetmedi; sayfa kapatılınca yük kalktı. Uygulamanın
+   davranışı değişmedi.
+2. *Müşteri akışı kontrolü beş anın çoğunluğuna bakıyor.* Tur 23'te
+   kırılgan bulunan "en çok satanın kapısı en kalabalık" kontrolü, bu
+   turun üç tam koşusunun ikisinde de kaldı (main'de de 15 anın 3'ünde
+   kalıyor). Aynı özellik artık beş ayrı anda ölçülüyor ve en az üçünde
+   tutmalı. Akış satışı izlemeseydi beş anın hiçbiri geçmezdi; yani gerçek
+   bir hata hâlâ kırmızı yakıyor.
 
 ---
 
