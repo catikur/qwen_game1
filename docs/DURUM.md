@@ -4,7 +4,7 @@
 > `pnpm bench` çıktısından; iddialar `pnpm balance` ve `pnpm playtest`
 > tarafından her koşuda doğrulanıyor.
 >
-> Son güncelleme: şema **v6**, 23 tur tamamlandı.
+> Son güncelleme: şema **v6**, 24 tur tamamlandı.
 
 ---
 
@@ -1237,8 +1237,130 @@ araç). Kontrol oyunu gerçek zamanda 1,4 sn akıtıp tek bir ana bakıyor.
 Aynı kontrolü 15 farklı anda ölçünce main 12/15, bu dal 14/15 geçti;
 kalan anlarda fark iki ilâ üç araç. Kalma sebebi yerelleştirme değil:
 kontrol, kapı başına araç tavanının yarattığı kuantalamada sınırda.
-Kontrol değiştirilmedi. Düzeltmesi (birkaç anın çoğunluğu ya da pay
-oranıyla karşılaştırma) ayrı bir iş.
+Kontrol bu turda değiştirilmedi; Tur 24'te beş anın çoğunluğuna
+çevrildi (aşağıda).
+
+### Tur 24 — Bina grafikleri: binalar ne olduklarını söylüyor
+
+Kullanıcı "bina grafikleri içime sinmiyor" dedi ve sunulan seçeneklerden
+ikisini seçti: türe özel detay ve ışık/malzeme. Hazır model kiti (Kenney
+gibi) yetmezse sonraki seçenek olarak duruyor.
+
+**Teşhis.** Şirket binaları altı formdan biriydi (ev, blok, kule, hangar,
+tarla, düzlük). Üstüne bina rengi ve tek bir pencere dokusu geliyordu.
+Bakkal, kafe ve spor salonu aynı "ev" kutusuydu. Asıl ders ölçümden değil
+kameradan geldi: oyunun bakış açısında en çok görünen yüzey çatı, cephe
+değil. İlk adım (cephe türleri, zemine yakın karartma) doğruydu ama fark
+inceydi. Şehri değiştiren şey çatılar, ağaçlar ve dükkân önleri oldu.
+
+**Işık ve malzeme (bütün kademelerde).**
+
+- Yüzey gölgelendiricisi (`surface.ts`): tek atlas doku dört cephe türü
+  taşıyor. Hangi türün kullanılacağı örnek başına bir öznitelikten
+  okunuyor; yani dört malzeme ve dört kat çizim çağrısı yerine yine tek
+  çağrı. Türler:
+  - konut: delikli pencere, denizlik;
+  - ofis camı: koyu cam, ince dikme;
+  - zemin kat vitrin: üstü konut ya da ofis (altı dükkân üstü ev binası);
+  - sanayi paneli: oluklu, şerit pencere.
+- Gece dokusu aynı yerleşimde: ofisler soğuk beyaz yanıyor, vitrinler
+  hep yanık.
+- Zemine yakın karartma ve kenar vurgusu aynı gölgelendiricide. Gerçek
+  ortam kapatmasının en görünür etkisini ek geçiş olmadan veriyor.
+- Temas gölgesi: her binanın altında yumuşak bir leke (tek çizim
+  çağrısı). Gölge haritası olmayan telefon kademesinde derinliği taşıyan
+  şey bu.
+- Ekran uzayı ortam kapatması (GTAO) eklenmedi. Bütün sahneyi ikinci kez
+  çizen bir geçiş ve saydam lekelerle çakışıyor. Görünen etkisi zemine
+  yakın karartma ve temas gölgesiyle bütün kademelerde zaten var.
+  Gökyüzü kubbesi de eklenmedi: oyunun bakış açısında ufuk kadrajın
+  dışında.
+
+**Türe özel detay (`decor.ts`, `recipes.ts`).** Sekiz parça türü, her
+biri kendi örnek ağında:
+
+| Parça | Nerede |
+|---|---|
+| Kırma çatı | Evler kiremit (beş ton, biraz arduvaz); şirket evleri şirket renginde |
+| Tente + tabela | Bakkal, kafe, butik, restoran, süpermarket, mağaza; şehrin esnaf dükkânları |
+| Çatı ekipmanı | Su deposu, güneş paneli, klima, yeşil çatı; ofiste anten ve tepe feneri |
+| Cam | Spor salonu cephesi, Ar-Ge atriumu, sera, süpermarket ışıklığı, çip fabrikası |
+| Silindir | Değirmen siloları, nişasta ve hazır gıda tankları, kavurma bacası, Ar-Ge çanağı |
+| Kutu | Depo rampaları, apartman balkonları, ocak vinci, okul bayrak direği |
+| Ağaç | Sokak kaldırımları, parklar, ev bahçeleri; kahve bahçesinde fidan sıraları |
+| Lamba | Sokak lambaları, gece yanıyor |
+
+- Testere dişi çatı (dokuma ve döşeme fabrikaları) ve çatı ilan panosu
+  (pazarlama ofisi) uzaktan okunan iki siluet.
+- Rakip binaları şirket renginde kaldı: çatı, tente ve tabela şirketin
+  rengini taşıyor, yani kimin nerede olduğu yukarıdan hâlâ okunuyor.
+- Veri lenslerinde detaylar ve temas gölgeleri gizleniyor: lens bir
+  harita, dekor kalabalığı istemiyor.
+- Simülasyon dokunulmadı: detayların zarı konumdan, 400 günlük özetler
+  aynı.
+
+**Testler.**
+
+- Yeni birim testi (`packages/render-three/test/recipes.test.ts`):
+  - her bina türü en az bir detay taşıyor (Tur 25'te eklenecek binalar
+    için bekçi);
+  - detaylar kendi parselinde kalıyor;
+  - sokak tarafı en yakın yola bakıyor;
+  - sokak ağaçları kavşağa ve parsele düşmüyor.
+- Oynanış testinde dört yeni kontrol:
+  - detay katmanı dolu;
+  - temas gölgeleri var;
+  - lenste detaylar gizleniyor ve dönünce geri geliyor;
+  - lambalar gece yanıyor, gündüz sönük.
+- Kamerayı sabit bir bakışa götüren test kancası (`setView`): görsel
+  karşılaştırma her koşuda aynı kareyi veriyor.
+
+**Maliyet.**
+
+| | Tur 23 | Tur 24 |
+|---|---|---|
+| Çizim çağrısı / kare (900 kare, en düşük kademe) | 13 | 29 |
+| Detay örneği (oynanış testi anı) | — | 102 çatı · 419 ağaç · 72 lamba · 36 tabela · 29 tente · 23 silo/tank |
+| Yazılımsal GPU'da kare hızı (GPU yok) | 5 FPS | 4 FPS |
+
+Çizim çağrısı bütçesi 60. Mobil hedef bandı (50–150) hâlâ uzakta: her
+parça türü tek bir örnek ağı, bina sayısı arttıkça çağrı artmıyor.
+
+**Bir bulgu: çok yavaş cihazda açılış donuyordu.** İlk tam oynanış testi
+Dil bölümünde, sayfa yenilendikten sonra 20 saniyelik bir zaman aşımıyla
+çöktü. Sebep detay katmanı değil, kalite ayarlayıcıydı. Oyun her
+açılışta en yüksek kademede başlıyor ve kademe indirme kararı için 2,5
+saniye ile 12 kare bekliyordu. Karesi 1,5 saniye süren bir cihazda bu 18
+saniyeden fazla en pahalı kademede kalmak demek. Detaylar kareyi biraz
+ağırlaştırınca test sınırı aşıldı; ama aynı donma gerçekten yavaş bir
+telefonda da yaşanırdı.
+
+- Artık ölçülen hız tabanın dörtte birinin altındaysa (6 FPS) üç kare
+  yetiyor ve kademe iki basamak iniyor.
+- Kademe değişince ilk iki kare sayılmıyor. Gölgelendirici derlemesi
+  güçlü bir GPU'da da ilk kareyi uzatır; onu yavaşlık sanmamak gerekiyor.
+- Kayıtlı oyunla yenilemede üst bar 8–9 saniyede yanıt veriyor; kademe
+  yüksek → düşük → asgari iniyor.
+
+**Oynanış testi düzeneğinde üç düzeltme.**
+
+1. *Ana sayfa artık kullanılmayınca kapatılıyor.* Ayarlayıcı
+   düzeldikten sonra da Dil bölümündeki yenileme 20 saniyeyi aştı; aynı
+   akış tek başına 8,5 saniye sürüyordu. Tohum Ligi'nden sonraki bölümler
+   kendi sayfalarını açıyor ama ana sayfanın WebGL bağlamı, gölge
+   haritası ve bloom zinciri yazılımsal GPU sürecinde duruyordu. Önce
+   dondurmak denendi, yetmedi; sayfa kapatılınca yük kalktı. Uygulamanın
+   davranışı değişmedi.
+2. *Müşteri akışı kontrolü beş anın çoğunluğuna bakıyor.* Tur 23'te
+   kırılgan bulunan "en çok satanın kapısı en kalabalık" kontrolü, bu
+   turun üç tam koşusunun ikisinde de kaldı (main'de de 15 anın 3'ünde
+   kalıyor). Aynı özellik artık beş ayrı anda ölçülüyor ve en az üçünde
+   tutmalı. Akış satışı izlemeseydi beş anın hiçbiri geçmezdi; yani gerçek
+   bir hata hâlâ kırmızı yakıyor.
+3. *Satın alma bölümünde oyun duruyor.* Bir koşuda boş parsel seçildikten
+   sonra bir rakip onu satın aldı ve "Parseli satın al" düğmesi hiç gelmedi.
+   Bölüm arayüzü sınıyor, rakiple yarışı değil; sonunda hız eski hâline
+   dönüyor.
 
 ---
 
@@ -1313,9 +1435,9 @@ ortalama +%2.
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.100–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi) |
-| Birim testi | **170 test** (`pnpm test`) |
+| Birim testi | **174 test** (`pnpm test`; Tur 24'te render paketi de) |
 | Denge testi | **273 kontrol, hepsi geçiyor** (20 bölüm, süreleriyle; ~9 dk) |
-| Tarayıcı testi | **296 kontrol**, 0 konsol hatası (~17–26 dk); duman koşusu 83 (~3,5 dk). Bir kontrol zamana duyarlı, aşağıya bkz. |
+| Tarayıcı testi | **300 kontrol, hepsi geçiyor**, 0 konsol hatası (~12 dk); duman koşusu 83 (~3,5 dk) |
 | CI | her PR'da tip + test + denge + paket + duman oynanışı |
 | Kapsam | 26 bina · 22 ürün · 7 kategori · 8 rakip profili · 10 şehir yapısı (6 siluet) |
 

@@ -297,6 +297,14 @@ async function finish(browser, consoleErrors) {
 
   // ---------- Satın alma ve inşa ----------
   section('Satın alma, devralma, inşa');
+  // Bölüm boyunca oyun duruyor: boş parseli seçmekle "satın al"a basmak
+  // arasında bir rakip o parseli alabiliyordu ve düğme hiç gelmiyordu
+  // (Tur 24'te bir koşuda oldu). Bölüm arayüzü sınıyor, rakiple yarışı değil.
+  const speedBeforeBuy = await page.evaluate(() => {
+    const speed = window.__capital.getState().time.speed;
+    window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+    return speed;
+  });
   const vacantId = await findTile(page, 'vacant');
   await page.evaluate((id) => window.__capital.selectTile(id), vacantId);
   await page.waitForTimeout(200);
@@ -340,6 +348,7 @@ async function finish(browser, consoleErrors) {
   }, buyoutTarget);
   check('Devralma parseli boşaltıp sahibi yapıyor',
     afterBuyout.owner === 'player' && afterBuyout.structure === null);
+  await page.evaluate((speed) => window.__capital.engine.dispatch({ type: 'SET_SPEED', speed }), speedBeforeBuy);
 
   // ---------- Haritada tıklama ----------
   section('Harita etkileşimi');
@@ -1012,12 +1021,8 @@ async function finish(browser, consoleErrors) {
   // izlemesi — yoksa dekordan farkı kalmaz.
   section('Müşteri akışı');
 
-  await page.evaluate(() => window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 2 }));
-  await page.waitForTimeout(1400);
-  await page.evaluate(() => window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 }));
-  await page.waitForTimeout(400);
-
-  const flow = await page.evaluate(() => {
+  // Akışın o anki fotoğrafı: hangi şirket kaç birim satıyor, sokakta kaç aracı var.
+  const sampleFlow = () => page.evaluate(() => {
     const state = window.__capital.getState();
     const info = window.__capital.renderInfo();
     const flows = window.__capital.customerFlows();
@@ -1054,6 +1059,15 @@ async function finish(browser, consoleErrors) {
       companies: Object.keys(carsBy).length,
     };
   });
+  const runBriefly = async (ms) => {
+    await page.evaluate(() => window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 2 }));
+    await page.waitForTimeout(ms);
+    await page.evaluate(() => window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 }));
+    await page.waitForTimeout(400);
+  };
+
+  await runBriefly(1400);
+  const flow = await sampleFlow();
 
   check('Satan mağaza için müşteri yola çıkıyor', flow.shoppers > 0,
     `${flow.shoppers} araç / ${flow.stores} mağaza`);
@@ -1070,10 +1084,24 @@ async function finish(browser, consoleErrors) {
   // yoğunlaşan lider o tavana çarpınca şirket toplamında 1 araçla
   // geçilebiliyor — akış yalan söylemiyor, kuantalanıyor. Gerçek bir
   // yalan çok araçlık farkla görünür ve hâlâ kırmızı yakar.
+  //
+  // Beş ayrı anın çoğunluğu (Tur 24). Tek an kırılgandı: oyun gerçek
+  // zamanda aktığı için her koşu başka bir güne denk geliyor ve iki şirket
+  // birimde başa baş giderken o an 2–3 araçlık bir kuanta farkı çıkabiliyor.
+  // 15 anlık ölçümde main 12/15 geçti, kalanlarda fark 2–3 araç. Akış
+  // satışı izlemeseydi beş anın hiçbiri geçmezdi; çoğunluk o yalanı hâlâ
+  // yakalıyor ama tek bir talihsiz anı yalan saymıyor.
+  const flowSamples = [flow];
+  for (let i = 0; i < 4; i++) {
+    await runBriefly(700);
+    flowSamples.push(await sampleFlow());
+  }
+  const honest = flowSamples.filter((f) => f.unitLeader === f.carLeader || f.unitLeaderCars >= f.carLeaderCars - 1);
+  const worst = flowSamples.find((f) => !honest.includes(f)) ?? flow;
   check(
-    'En çok satanın kapısı en kalabalık (±1 araç)',
-    flow.unitLeader === flow.carLeader || flow.unitLeaderCars >= flow.carLeaderCars - 1,
-    `birimde ${flow.unitLeader} (${flow.unitLeaderCars} araç), araçta ${flow.carLeader} (${flow.carLeaderCars} araç)`,
+    'En çok satanın kapısı en kalabalık (±1 araç, 5 anın çoğunluğu)',
+    honest.length >= 3,
+    `${honest.length}/5 an · en kötüsü: birimde ${worst.unitLeader} (${worst.unitLeaderCars} araç), araçta ${worst.carLeader} (${worst.carLeaderCars} araç)`,
   );
   check('Akış birden fazla şirketi gösteriyor', flow.companies >= 2,
     `${flow.companies} şirket sokakta`);
@@ -1881,6 +1909,25 @@ async function finish(browser, consoleErrors) {
     `${tileCount} kare · ${visual.drawCalls} çizim çağrısı`,
   );
 
+  // Detay katmanı (Tur 24): her bina türü ne olduğunu söylüyor — kırma
+  // çatı, tente, tabela, silo; sokaklarda ağaç ve lamba; binaların altında
+  // temas gölgesi. Lenste bilgi kalabalığı yapmasınlar diye gizleniyorlar.
+  const decorInfo = visual.decor;
+  check(
+    'Detay katmanı dolu: çatı, ağaç, lamba, tabela',
+    decorInfo.roof > 0 && decorInfo.tree > 0 && decorInfo.lamp > 0 && decorInfo.sign > 0 && visual.decorVisible,
+    `çatı ${decorInfo.roof} · ağaç ${decorInfo.tree} · lamba ${decorInfo.lamp} · tabela ${decorInfo.sign} · tente ${decorInfo.awning} · silo/tank ${decorInfo.cylinder}`,
+  );
+  check('Binalar zemine temas gölgesiyle oturuyor', visual.contactShadows > 0, `${visual.contactShadows} leke`);
+  await page.evaluate(() => window.__capital.setLens('opportunity'));
+  await page.waitForTimeout(300);
+  const lensDecor = await page.evaluate(() => window.__capital.renderInfo());
+  await page.evaluate(() => window.__capital.setLens('none'));
+  await page.waitForTimeout(300);
+  const backDecor = await page.evaluate(() => window.__capital.renderInfo());
+  check('Veri lensinde detaylar gizleniyor, dönünce geri geliyor', !lensDecor.decorVisible && backDecor.decorVisible,
+    `lens ${lensDecor.decorVisible ? 'görünür' : 'gizli'} · şehir ${backDecor.decorVisible ? 'görünür' : 'gizli'}`);
+
   // Pencere ışıkları: gündüz sönük, gece yanıyor. Emisyon artık düz bir
   // yüzey parlaklığı değil bir DOKUDAN geldiği için değer serbestçe
   // yükselebiliyor — eskiden 0,03 gibi bir "ima" seviyesindeydi.
@@ -1891,6 +1938,8 @@ async function finish(browser, consoleErrors) {
   await page.waitForTimeout(400);
   const midnight = await page.evaluate(() => window.__capital.renderInfo());
   check('Gündüz pencere ışığı sönük', noon.fabricEmissive === 0, `${noon.fabricEmissive.toFixed(2)}`);
+  check('Sokak lambaları gece yanıyor, gündüz sönük', noon.lampGlow === 0 && midnight.lampGlow > 1,
+    `gündüz ${noon.lampGlow.toFixed(2)} · gece ${midnight.lampGlow.toFixed(2)}`);
   check('Gece pencereler yanıyor', midnight.fabricEmissive > 0.5,
     `${midnight.fabricEmissive.toFixed(2)} (eski düz emisyon 0,03 idi)`);
 
@@ -2079,6 +2128,15 @@ async function finish(browser, consoleErrors) {
   // kayıtlarına dokunmamalı. Koşu GERÇEK — 360 gün motorun kendi gün
   // adımıyla koşturuluyor (arayüzün hızıyla üç dakika sürerdi), komutlar
   // arayüzden veriliyor, doğrulama tarayıcıda baştan tekrar oynuyor.
+  // Buradan sonraki bölümler kendi bağlamlarında yeni sayfa açıyor; ana
+  // sayfa bir daha kullanılmıyor ama çizim döngüsü, WebGL bağlamı ve
+  // büyük çizim hedefleri (gölge haritası, bloom zinciri) duruyordu. GPU'suz
+  // ortamda bunlar aynı yazılımsal GPU sürecini paylaşıyor; Tur 24'te sahne
+  // biraz ağırlaşınca Dil bölümündeki yenileme 20 sn'yi aştı (tek başına
+  // koşunca 8,5 sn). Ana sayfa kapatılıyor: konsol hataları zaten toplandı,
+  // uygulamanın davranışı değişmiyor, yalnızca düzeneğin kendi yükü kalkıyor.
+  await page.close();
+
   section('Tohum Ligi');
   {
     const leagueContext = await browser.newContext({ viewport: { width: 1280, height: 860 } });
@@ -2421,14 +2479,19 @@ async function finish(browser, consoleErrors) {
     check('Türkçeye dönünce üst bar Türkçe, oyun yerinde', topbarTr.includes('Nakit') && dayAfter === dayBefore,
       `${topbarTr.slice(0, 60)} · gün ${dayBefore}→${dayAfter}`);
     // Bağlantıyla İngilizce: ?lang=en seçimi bir kez geçersiz kılıyor, hatırlanan Türkçe kalıyor.
+    const reloadStart = Date.now();
     await lp.goto('http://127.0.0.1:8811/?lang=en');
     await lp.waitForSelector('.topbar', { timeout: 20000 });
     const viaLink = ((await lp.locator('.topbar').textContent()) ?? '').trim();
+    const linkSeconds = (Date.now() - reloadStart) / 1000;
+    const rememberStart = Date.now();
     await lp.goto('http://127.0.0.1:8811/');
     await lp.waitForSelector('.topbar', { timeout: 20000 });
     const remembered = ((await lp.locator('.topbar').textContent()) ?? '').trim();
+    const rememberSeconds = (Date.now() - rememberStart) / 1000;
     check('?lang=en bağlantısı İngilizce açıyor, seçim Türkçe hatırlanıyor',
-      viaLink.includes('Cash') && remembered.includes('Nakit'), `${viaLink.slice(0, 30)} | ${remembered.slice(0, 30)}`);
+      viaLink.includes('Cash') && remembered.includes('Nakit'),
+      `${viaLink.slice(0, 24)} | ${remembered.slice(0, 24)} · yenileme ${linkSeconds.toFixed(1)} / ${rememberSeconds.toFixed(1)} sn`);
     check('Dil akışında konsol temiz', lErrors.length === 0, lErrors.slice(0, 2).join(' | '));
     await lContext.close();
   }

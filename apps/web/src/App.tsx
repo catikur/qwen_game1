@@ -305,6 +305,8 @@ function GameRoot({
       routeSignature: () => routeSignature(supplyRoutes(engine.getState())),
       customerFlows: () => customerFlows(engine.getState()),
       cameraTarget: () => rendererRef.current?.cameraTarget() ?? null,
+      setView: (view: { x: number; z: number; distance?: number; azimuth?: number; polar?: number }) =>
+        rendererRef.current?.setView(view),
     };
     return () => {
       delete globals['__capital'];

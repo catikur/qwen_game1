@@ -1,5 +1,7 @@
 import * as THREE from 'three';
 import type { MassForm } from '@capital/content';
+import { FACADE } from './surface';
+import type { FacadeStyle } from './surface';
 
 /**
  * Bina kütlesi.
@@ -60,6 +62,56 @@ export interface MassPlacement {
    * form bilmeyen çağıranlar Tur 14 davranışını birebir korur.
    */
   form?: MassForm;
+  /**
+   * Cephe türü (Tur 24). Verilmezse formdan: kule ofis camı, hangar
+   * sanayi paneli, geri kalanı konut.
+   */
+  facade?: FacadeStyle;
+  /**
+   * Ev formunda çatıyı kütle çizmesin; detay katmanı gerçek bir kırma çatı
+   * koyuyor (Tur 24). Ölçüler `MassFootprint` ile dönüyor.
+   */
+  pitchedRoof?: boolean;
+}
+
+/**
+ * Yerleştirilen kütlenin ölçüleri — detay katmanı (çatı, tente, tabela,
+ * silo) bunlara hizalanıyor. Kütlenin kendi zarlı varyasyonu (ev
+ * genişliği, kademe oranı) yalnızca burada bilindiği için tek doğru
+ * kaynak bu.
+ */
+export interface MassFootprint {
+  form: MassForm;
+  /** Gövdenin (alt blok) genişliği. */
+  bodyWidth: number;
+  /** Gövdenin alt ve üst kotu. */
+  bodyBottom: number;
+  bodyTop: number;
+  /** Çatı yüzeyinin kotu ve genişliği (ekipman buraya oturur). */
+  roofY: number;
+  roofWidth: number;
+  /** Ev formunda kırma çatı için ayrılan yükseklik. */
+  roofHeight: number;
+}
+
+/** Formun varsayılan cephesi. */
+function defaultFacade(form: MassForm): FacadeStyle {
+  switch (form) {
+    case 'tower':
+      return FACADE.office;
+    case 'shed':
+    case 'field':
+      return FACADE.industrial;
+    default:
+      return FACADE.residential;
+  }
+}
+
+/** Kademeli binanın üst bloğu vitrin taşımaz: dükkân türü üstte konut ya da ofis olur. */
+function upperFacade(style: FacadeStyle): FacadeStyle {
+  if (style === FACADE.shop) return FACADE.residential;
+  if (style === FACADE.shopOffice) return FACADE.office;
+  return style;
 }
 
 export class BuildingMass {
@@ -68,9 +120,14 @@ export class BuildingMass {
   readonly cap: THREE.InstancedMesh;
 
   private bodyCount = 0;
+  /** Gövde örneği başına cephe türü — `surface.ts` bu özniteliği okuyor. */
+  private facadeAttribute: THREE.InstancedBufferAttribute;
+  /** Şu an yerleştirilen binanın cephesi. */
+  private facade: FacadeStyle = FACADE.residential;
   private baseCount = 0;
   private capCount = 0;
   private dummy = new THREE.Object3D();
+  private footprint!: MassFootprint;
   private baseColor = new THREE.Color();
   private trimColor = new THREE.Color();
   private accentColor = new THREE.Color();
@@ -87,6 +144,9 @@ export class BuildingMass {
     // çıkabiliyor. Örnek sayısı artıyor, ÇİZİM ÇAĞRISI artmıyor — üç
     // mesh üç çağrı; zenginleşme bütçeye örnek matrisi olarak giriyor.
     this.body = new THREE.InstancedMesh(unit, bodyMaterial, capacity * 3);
+    this.facadeAttribute = new THREE.InstancedBufferAttribute(new Float32Array(capacity * 3), 1);
+    this.facadeAttribute.setUsage(THREE.DynamicDrawUsage);
+    this.body.geometry.setAttribute('aFacade', this.facadeAttribute);
     // Taban ve çatı aynı malzemeyi paylaşıyor ama AYRI mesh olmak
     // zorundalar: örnek matrisi tek bir mesh içinde parça başına
     // değişemez.
@@ -129,6 +189,7 @@ export class BuildingMass {
     this.dummy.updateMatrix();
     mesh.setMatrixAt(index, this.dummy.matrix);
     mesh.setColorAt(index, color);
+    if (mesh === this.body) this.facadeAttribute.setX(index, this.facade);
   }
 
   /**
@@ -143,7 +204,7 @@ export class BuildingMass {
    * Hepsi AYNI ÜÇ mesh'i paylaşıyor — form zenginliği bütçeye çizim
    * çağrısı olarak değil, örnek matrisi olarak giriyor.
    */
-  place(placement: MassPlacement): void {
+  place(placement: MassPlacement): MassFootprint {
     const growth = placement.growth ?? 1;
     const total = Math.max(0.04, placement.height * growth);
 
@@ -169,23 +230,34 @@ export class BuildingMass {
     // Form verilmemişse yükseklikten seçilir — form bilmeyen çağıranlar
     // için Tur 14 davranışı birebir korunuyor.
     const form: MassForm = placement.form ?? (total > 2.2 ? 'tower' : 'block');
+    this.facade = placement.facade ?? defaultFacade(form);
 
+    this.footprint = {
+      form,
+      bodyWidth: placement.width,
+      bodyBottom: placement.groundY,
+      bodyTop: placement.groundY + total,
+      roofY: placement.groundY + total,
+      roofWidth: placement.width,
+      roofHeight: 0,
+    };
     switch (form) {
       case 'field':
         this.placeField(placement, total);
-        return;
+        break;
       case 'flat':
         this.placeFlat(placement, total);
-        return;
+        break;
       case 'house':
         this.placeHouse(placement, total, pick);
-        return;
+        break;
       case 'shed':
         this.placeShed(placement, total, pick);
-        return;
+        break;
       default:
         this.placeVertical(placement, total, pick, form === 'tower');
     }
+    return { ...this.footprint };
   }
 
   /** Kule ve blok: podyum + (kademeli) gövde + çatı + ekipman. */
@@ -228,6 +300,8 @@ export class BuildingMass {
     // ölçeğine döşendiği için o yüze de pencere düşerdi; Tur 6'daki çatı
     // kapağı dersinin aynısı).
     let topWidth = width;
+    this.footprint.bodyBottom = y;
+    this.footprint.bodyWidth = width;
     if (allowSetback && bodyHeight > SETBACK_MIN_BODY) {
       const lowerHeight = bodyHeight * (0.5 + pick(0) * 0.2);
       const upperHeight = bodyHeight - lowerHeight;
@@ -240,7 +314,10 @@ export class BuildingMass {
       this.put(this.cap, this.capCount++, x, y + terraceHeight / 2, z, width * 1.03, terraceHeight, width * 1.03, this.trimColor);
       y += terraceHeight;
 
+      const lowerFacade = this.facade;
+      this.facade = upperFacade(lowerFacade);
       this.put(this.body, this.bodyCount++, x, y + upperHeight / 2, z, upperWidth, upperHeight, upperWidth, placement.color);
+      this.facade = lowerFacade;
       y += upperHeight;
       topWidth = upperWidth;
     } else {
@@ -256,10 +333,14 @@ export class BuildingMass {
       }
     }
 
+    this.footprint.bodyTop = y;
+
     // --- çatı ---
     const capWidth = topWidth * CAP_SPREAD;
     this.put(this.cap, this.capCount++, x, y + capHeight / 2, z, capWidth, capHeight, capWidth, this.trimColor);
     y += capHeight;
+    this.footprint.roofY = y;
+    this.footprint.roofWidth = capWidth;
 
     // --- çatı ekipmanı: klima/asansör dairesi kutuları ---
     if (total > ROOF_GEAR_MIN_TOTAL) {
@@ -294,8 +375,15 @@ export class BuildingMass {
     this.put(this.base, this.baseCount++, x, y + baseHeight / 2, z, width * 1.12, baseHeight, width * 1.12, this.baseColor);
     y += baseHeight;
 
+    this.footprint.bodyBottom = y;
+    this.footprint.bodyWidth = width;
     this.put(this.body, this.bodyCount++, x, y + bodyHeight / 2, z, width, bodyHeight, width, placement.color);
     y += bodyHeight;
+    this.footprint.bodyTop = y;
+    this.footprint.roofY = y;
+    this.footprint.roofWidth = width * 1.1;
+    this.footprint.roofHeight = roofHeight;
+    if (placement.pitchedRoof) return;
 
     const lower = roofHeight * 0.55;
     this.put(this.cap, this.capCount++, x, y + lower / 2, z, width * 1.1, lower, width * 1.1, this.trimColor);
@@ -323,11 +411,16 @@ export class BuildingMass {
     this.put(this.base, this.baseCount++, x, y + baseHeight / 2, z, width * 1.06, baseHeight, width * 1.06, this.baseColor);
     y += baseHeight;
 
+    this.footprint.bodyBottom = y;
+    this.footprint.bodyWidth = width;
     this.put(this.body, this.bodyCount++, x, y + bodyHeight / 2, z, width, bodyHeight, width * 0.92, placement.color);
     y += bodyHeight;
+    this.footprint.bodyTop = y;
 
     this.put(this.cap, this.capCount++, x, y + roofHeight / 2, z, width * 1.04, roofHeight, width * 0.96, this.trimColor);
     y += roofHeight;
+    this.footprint.roofY = y;
+    this.footprint.roofWidth = width * 0.96;
 
     // Baca: köşeye yakın, gövdenin yarısı kadar yükselen ince kütle.
     const stackHeight = Math.max(0.12, total * 0.55);
@@ -413,6 +506,7 @@ export class BuildingMass {
       mesh.instanceMatrix.needsUpdate = true;
       if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
     }
+    this.facadeAttribute.needsUpdate = true;
   }
 
   /** Veri lensinde siluete inerken üç parça birlikte davranır. */
@@ -429,48 +523,4 @@ export class BuildingMass {
       (mesh.material as THREE.Material).dispose();
     }
   }
-}
-
-/**
- * Pencere/cephe dokusunu örnek ÖLÇEĞİNE göre döşer.
- *
- * Sorun şu: InstancedMesh'te bütün örnekler aynı UV'yi paylaşır, ama
- * binalar farklı boyutlarda ölçekleniyor. Dokuyu olduğu gibi bıraksak
- * 4 katlı bir binada da 20 katlı bir binada da tam 4 sıra pencere olurdu
- * — yani kat yüksekliği binaya göre değişir ve ölçek duygusu kaybolurdu.
- *
- * Vertex shader'da örnek matrisinin ölçeğini okuyup UV'yi onunla
- * çarpıyoruz: bir doku tekrarı artık sabit bir DÜNYA ölçüsüne karşılık
- * geliyor, yani her binada kat yüksekliği aynı ve yükseklik farkı kat
- * sayısı olarak okunuyor.
- */
-export function tileByInstanceScale(material: THREE.Material, tilesPerUnit: number): void {
-  material.onBeforeCompile = (shader) => {
-    shader.uniforms.uTilesPerUnit = { value: tilesPerUnit };
-
-    shader.vertexShader = shader.vertexShader
-      .replace(
-        '#include <common>',
-        `#include <common>
-         uniform float uTilesPerUnit;`,
-      )
-      .replace(
-        '#include <uv_vertex>',
-        `#include <uv_vertex>
-         #ifdef USE_INSTANCING
-           vec2 instanceTiling = vec2(
-             length(instanceMatrix[0].xyz),
-             length(instanceMatrix[1].xyz)
-           ) * uTilesPerUnit;
-           #ifdef USE_MAP
-             vMapUv = vMapUv * instanceTiling;
-           #endif
-           #ifdef USE_EMISSIVEMAP
-             vEmissiveMapUv = vEmissiveMapUv * instanceTiling;
-           #endif
-         #endif`,
-      );
-  };
-  // Aynı shader'ı paylaşan malzemeler yeniden derlensin.
-  material.customProgramCacheKey = () => `tiled-${tilesPerUnit}`;
 }

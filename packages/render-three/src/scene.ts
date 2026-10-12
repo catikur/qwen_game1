@@ -4,18 +4,23 @@ import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { BUILDING_BY_ID, DISTRICT_ARCHETYPES, STRUCTURE_BY_ID } from '@capital/content';
-import type { BuildingDef, MassForm } from '@capital/content';
+import type { BuildingDef, MassForm, StructureDef } from '@capital/content';
 import { BLOCK_SIZE, customerFlows, headquarters, lensValue, supplyRoutes } from '@capital/core';
 import type { GameState, LensId } from '@capital/core';
 import { RtsCameraController } from './camera';
 import { TrafficSystem } from './traffic';
 import { World } from './world';
-import { BuildingMass, tileByInstanceScale } from './mass';
+import { BuildingMass } from './mass';
+import { ContactShadows, DecorKit, DecorLayer } from './decor';
+import type { DecorPart } from './decor';
+import { decorateBuilding, decorateStructure, placeStreetTrees, streetSide } from './recipes';
+import { FACADE, buildingSurface } from './surface';
+import type { FacadeStyle } from './surface';
 import {
-  makeFacadeTexture,
+  makeFacadeAtlas,
   makeRoadTexture,
   makeSkyEnvironment,
-  makeWindowTexture,
+  makeWindowAtlas,
 } from './textures';
 
 /**
@@ -106,6 +111,18 @@ const BLOOM_THRESHOLD = 0.82;
 /** Ölçüm penceresi: bu kadar saniye ve bu kadar kare toplanmadan karar yok. */
 const QUALITY_WINDOW_SECONDS = 2.5;
 const QUALITY_WINDOW_FRAMES = 12;
+/**
+ * Çok yavaş cihazın hızlı çıkışı (Tur 24).
+ *
+ * Pencere 12 kare istiyor; karesi 1,5 saniye süren bir cihazda bu 18
+ * saniye en pahalı kademede donmak demekti — açılışın ilk izlenimi ve
+ * oynanış testinin yazılımsal GPU'daki zaman aşımı. Ölçülen hız tabanın
+ * dörtte birinin altındaysa üç kare yetiyor ve kademe iki basamak iniyor.
+ * Kademe değişince ilk iki kare sayılmıyor: gölgelendirici derlemesi
+ * güçlü bir GPU'da da ilk kareyi uzatır, onu yavaşlık sanmamak gerekiyor.
+ */
+const QUALITY_FAST_FRAMES = 3;
+const QUALITY_WARMUP_FRAMES = 2;
 /** Altına düşülürse kademe iner. */
 const QUALITY_FLOOR_FPS = 24;
 /** Üstüne çıkılırsa kademe yükselir — ama yalnızca hiç düşülmemiş kademeye. */
@@ -157,6 +174,14 @@ export class CityRenderer {
   /** Şehrin mevcut dokusu — oyuncuya ait olmayan yapılar. */
   private fabric: BuildingMass;
   private bodyMaterials: THREE.MeshStandardMaterial[] = [];
+  /** Binaların ve şehir dokusunun altındaki temas gölgeleri (Tur 24). */
+  private buildingShadows: ContactShadows;
+  private fabricShadows: ContactShadows;
+  /** Detay katmanı (Tur 24): binalar, şehir dokusu ve sokak ağaçları. */
+  private decorKit: DecorKit;
+  private buildingDecor: DecorLayer;
+  private fabricDecor: DecorLayer;
+  private streetDecor: DecorLayer;
   private traffic: TrafficSystem;
   private world!: World;
   private sun!: THREE.DirectionalLight;
@@ -207,6 +232,7 @@ export class CityRenderer {
   private groundPoint = new THREE.Vector3();
   private dummy = new THREE.Object3D();
   private color = new THREE.Color();
+  private ownerColor = new THREE.Color();
   private disposed = false;
   private cleanups: Array<() => void> = [];
   private frameSamples = 0;
@@ -217,6 +243,8 @@ export class CityRenderer {
   private qualityCeilingTier = 0;
   /** Elle sabitlendiyse uyarlama susar. */
   private qualityLocked = false;
+  /** Kademe değişiminden sonra sayılmayacak kare sayısı (derleme takılması). */
+  private qualityWarmup = QUALITY_WARMUP_FRAMES;
   /** Son iki dokunuş arasındaki süre — çift dokunuş testinin okuduğu sayı. */
   private lastTapGapMs = Number.POSITIVE_INFINITY;
 
@@ -301,8 +329,13 @@ export class CityRenderer {
     // düz kalıyor. Bu bir tercih değil zorunluluk: doku örnek ölçeğine
     // göre döşendiği için gövdenin üst yüzüne de pencere düşerdi, çatı
     // kapağı o yüzü örtüyor.
-    const windowTexture = makeWindowTexture();
-    const facadeTexture = makeFacadeTexture();
+    //
+    // Tur 24: dokular dört cephe türünü taşıyan atlaslar; hangi binanın
+    // hangi türü giydiği örnek başına (bkz. surface.ts). Taban ve çatı
+    // da aynı yüzey gölgelendiricisinden geçiyor (zemine yakın karartma,
+    // kenar vurgusu), yalnızca dokusuz.
+    const windowTexture = makeWindowAtlas();
+    const facadeTexture = makeFacadeAtlas();
 
     const makeBody = (roughness: number, metalness: number): THREE.MeshStandardMaterial => {
       const material = new THREE.MeshStandardMaterial({
@@ -316,21 +349,38 @@ export class CityRenderer {
       // Birim başına doku tekrarı = kat yoğunluğu. 1,35'te pencereler ince
       // bir tanecik gibi okunuyordu; 1,05 kat çizgilerini ayırt edilebilir
       // tutuyor.
-      tileByInstanceScale(material, 1.05);
+      buildingSurface(material, { tilesPerUnit: 1.05, atlas: true, groundY: 0.07 });
       this.bodyMaterials.push(material);
       return material;
     };
+    const makeTrim = (roughness: number, metalness: number): THREE.MeshStandardMaterial => {
+      const material = new THREE.MeshStandardMaterial({ roughness, metalness });
+      buildingSurface(material, { tilesPerUnit: 1.05, atlas: false, groundY: 0.07 });
+      return material;
+    };
 
-    this.buildings = new BuildingMass(
-      tileCount,
-      makeBody(0.62, 0.1),
-      new THREE.MeshStandardMaterial({ roughness: 0.7, metalness: 0.06 }),
-    );
-    this.fabric = new BuildingMass(
-      tileCount,
-      makeBody(0.82, 0.04),
-      new THREE.MeshStandardMaterial({ roughness: 0.88, metalness: 0.02 }),
-    );
+    this.buildings = new BuildingMass(tileCount, makeBody(0.62, 0.1), makeTrim(0.7, 0.06));
+    this.fabric = new BuildingMass(tileCount, makeBody(0.82, 0.04), makeTrim(0.88, 0.02));
+    this.buildingShadows = new ContactShadows(tileCount);
+    this.fabricShadows = new ContactShadows(tileCount);
+    this.scene.add(this.buildingShadows.mesh, this.fabricShadows.mesh);
+
+    // Detay katmanı: parça başına kapasite bina başına en kalabalık reçeteye göre.
+    this.decorKit = new DecorKit();
+    const perTile = (roof: number, box: number, cylinder: number, glass: number, awning: number, sign: number, tree: number, lamp: number): Record<DecorPart, number> => ({
+      roof: tileCount * roof,
+      box: tileCount * box,
+      cylinder: tileCount * cylinder,
+      glass: tileCount * glass,
+      awning: tileCount * awning,
+      sign: tileCount * sign,
+      tree: tileCount * tree,
+      lamp: tileCount * lamp,
+    });
+    this.buildingDecor = new DecorLayer(this.decorKit, perTile(3, 3, 3, 2, 1, 2, 9, 0));
+    this.fabricDecor = new DecorLayer(this.decorKit, perTile(3, 2, 2, 0, 1, 2, 7, 0));
+    this.streetDecor = new DecorLayer(this.decorKit, perTile(0, 0.5, 0, 0, 0, 0, 1, 0.5));
+    this.scene.add(this.buildingDecor.group, this.fabricDecor.group, this.streetDecor.group);
     this.scene.add(...this.buildings.meshes, ...this.fabric.meshes);
 
     // Ortam haritası: camlar ve metal yüzeyler artık gökyüzünü yansıtıyor.
@@ -708,6 +758,14 @@ export class CityRenderer {
 
     this.traffic.setDataLens(dataLens);
     this.world.setDataLens(dataLens);
+    // Veri lensi zemini düz renkli bir haritaya çeviriyor; leke o rengi kirletirdi.
+    this.buildingShadows.setVisible(!dataLens);
+    this.fabricShadows.setVisible(!dataLens);
+    // Detaylar bilgi taşımıyor: lens açıkken siluet kalabalığı yapmasınlar.
+    for (const layer of [this.buildingDecor, this.fabricDecor, this.streetDecor]) {
+      layer.setVisible(!dataLens);
+      layer.setShadows(!dataLens && shadows, !dataLens);
+    }
     this.renderer.shadowMap.enabled = !dataLens && shadows;
 
     // Pencere parıltısını burada da sıfırla. Bir sonraki gün-döngüsü
@@ -758,6 +816,7 @@ export class CityRenderer {
 
       this.ground.count = plotIndex;
       this.roads.count = roadIndex;
+      placeStreetTrees(this.streetDecor, tiles, BLOCK_SIZE);
       this.ground.instanceMatrix.needsUpdate = true;
       this.roads.instanceMatrix.needsUpdate = true;
       this.groundPlaced = true;
@@ -774,6 +833,8 @@ export class CityRenderer {
 
     // Şehrin mevcut dokusu: oyuncuya ait olmayan yapılar.
     this.fabric.begin();
+    this.fabricShadows.begin();
+    this.fabricDecor.begin();
     for (const tile of tiles) {
       if (!tile.structureId) continue;
       const structure = STRUCTURE_BY_ID[tile.structureId];
@@ -784,7 +845,7 @@ export class CityRenderer {
       const jitter = ((tile.id * 37) % 17) / 17 - 0.5;
       this.color.set(structure.color).offsetHSL(jitter * 0.02, 0, jitter * 0.07);
 
-      this.fabric.place({
+      const footprint = this.fabric.place({
         x: tile.x,
         z: tile.y,
         height: Math.max(0.03, tile.structureHeight) * 1.5,
@@ -792,9 +853,17 @@ export class CityRenderer {
         groundY: 0.07,
         color: this.color,
         form: structure.form,
+        facade: structureFacade(structure, tile.id),
+        pitchedRoof: structure.form === 'house',
       });
+      decorateStructure(this.fabricDecor, structure, footprint, tile.x, tile.y, streetSide(tile.x, tile.y, BLOCK_SIZE));
+      if (structure.form !== 'flat' && structure.form !== 'field') {
+        this.fabricShadows.place(tile.x, 0.07, tile.y, 0.8, Math.min(1, tile.structureHeight));
+      }
     }
     this.fabric.end();
+    this.fabricShadows.end();
+    this.fabricDecor.end();
 
     this.syncBuildings(state);
 
@@ -824,6 +893,8 @@ export class CityRenderer {
     let growing = false;
 
     this.buildings.begin();
+    this.buildingShadows.begin();
+    this.buildingDecor.begin();
     for (const building of Object.values(state.buildings)) {
       const def = BUILDING_BY_ID[building.defId];
       const tile = tiles[building.tileId];
@@ -839,7 +910,8 @@ export class CityRenderer {
       const growth = this.growthOf(building.id);
       if (growth < 1) growing = true;
 
-      this.buildings.place({
+      const form = massFormOf(def);
+      const footprint = this.buildings.place({
         x: tile.x,
         z: tile.y,
         height: Math.max(0.3, def.height) * 1.5,
@@ -847,10 +919,20 @@ export class CityRenderer {
         groundY: 0.07,
         color: this.color,
         growth,
-        form: massFormOf(def),
+        form,
+        facade: buildingFacade(def),
+        pitchedRoof: form === 'house' && growth >= 1,
       });
+      // Detaylar bina tamamlanınca: yükselen kütleye tente asmak tuhaf durur.
+      if (growth >= 1) {
+        const owner = company && !company.isPlayer ? this.ownerColor.set(company.color) : this.ownerColor.copy(OWN_COLOR);
+        decorateBuilding(this.buildingDecor, def, footprint, tile.x, tile.y, streetSide(tile.x, tile.y, BLOCK_SIZE), this.color, owner);
+      }
+      if (def.role !== 'extract') this.buildingShadows.place(tile.x, 0.07, tile.y, 0.68 * Math.max(0.3, growth), Math.min(1, def.height));
     }
     this.buildings.end();
+    this.buildingShadows.end();
+    this.buildingDecor.end();
 
     this.buildingsGrowing = growing;
     this.sawBuildings = true;
@@ -1112,6 +1194,7 @@ export class CityRenderer {
     // ve gece şehrin en iyi göründüğü an oluyor.
     const glow = this.dataLensActive ? 0 : Math.max(0, 1.15 - daylight * 1.5);
     for (const material of this.bodyMaterials) material.emissiveIntensity = glow;
+    this.decorKit.setNightGlow(glow);
   }
 
   /**
@@ -1235,6 +1318,7 @@ export class CityRenderer {
   private applyQuality(tier: number): void {
     const level = QUALITY_LEVELS[Math.max(0, Math.min(QUALITY_LEVELS.length - 1, tier))]!;
     this.qualityTier = tier;
+    this.qualityWarmup = QUALITY_WARMUP_FRAMES;
 
     this.renderer.setPixelRatio(Math.min(devicePixelRatio, level.maxPixelRatio));
     this.resize();
@@ -1253,6 +1337,7 @@ export class CityRenderer {
     this.sun.castShadow = level.shadows;
     this.buildings.setShadows(shadows, shadows);
     this.fabric.setShadows(shadows, shadows);
+    for (const layer of [this.buildingDecor, this.fabricDecor, this.streetDecor]) layer.setShadows(shadows, shadows);
     this.ground.receiveShadow = shadows;
     this.roads.receiveShadow = shadows;
 
@@ -1279,10 +1364,16 @@ export class CityRenderer {
    */
   private adaptQuality(dt: number): void {
     if (this.qualityLocked) return;
+    if (this.qualityWarmup > 0) {
+      this.qualityWarmup--;
+      return;
+    }
     this.frameSamples++;
     this.frameTimeSum += dt;
 
-    if (this.frameTimeSum < QUALITY_WINDOW_SECONDS || this.frameSamples < QUALITY_WINDOW_FRAMES) {
+    const crawling =
+      this.frameSamples >= QUALITY_FAST_FRAMES && this.frameSamples / this.frameTimeSum < QUALITY_FLOOR_FPS / 4;
+    if (!crawling && (this.frameTimeSum < QUALITY_WINDOW_SECONDS || this.frameSamples < QUALITY_WINDOW_FRAMES)) {
       return;
     }
 
@@ -1291,7 +1382,7 @@ export class CityRenderer {
     this.frameTimeSum = 0;
 
     if (averageFps < QUALITY_FLOOR_FPS && this.qualityTier < QUALITY_LEVELS.length - 1) {
-      const next = this.qualityTier + 1;
+      const next = Math.min(QUALITY_LEVELS.length - 1, this.qualityTier + (crawling ? 2 : 1));
       this.qualityCeilingTier = next;
       this.applyQuality(next);
       console.info(
@@ -1324,6 +1415,11 @@ export class CityRenderer {
     sunHeight: number;
     buildingOpacity: number;
     fabricEmissive: number;
+    /** Detay katmanı (Tur 24): parça başına örnek, görünürlük, lamba parıltısı. */
+    decor: Record<DecorPart, number>;
+    decorVisible: boolean;
+    contactShadows: number;
+    lampGlow: number;
     groundColorSum: number;
     timeOfDay: number;
     /** Yolda olan zincir kamyonu sayısı. */
@@ -1402,6 +1498,10 @@ export class CityRenderer {
       sunHeight: this.sun.position.y,
       buildingOpacity: (this.buildings.body.material as THREE.MeshStandardMaterial).opacity,
       fabricEmissive: (this.fabric.body.material as THREE.MeshStandardMaterial).emissiveIntensity,
+      decor: this.decorTotals(),
+      decorVisible: this.buildingDecor.group.visible && this.fabricDecor.group.visible && this.streetDecor.group.visible,
+      contactShadows: this.buildingShadows.mesh.count + this.fabricShadows.mesh.count,
+      lampGlow: this.decorKit.lampMaterial.emissiveIntensity,
       groundColorSum,
       timeOfDay: this.timeOfDay,
       truckCount: this.traffic.truckCount,
@@ -1434,6 +1534,16 @@ export class CityRenderer {
     };
   }
 
+  /** Üç detay katmanının parça başına örnek toplamı. */
+  private decorTotals(): Record<DecorPart, number> {
+    const total = this.buildingDecor.stats();
+    for (const layer of [this.fabricDecor, this.streetDecor]) {
+      const stats = layer.stats();
+      for (const part of Object.keys(total) as DecorPart[]) total[part] += stats[part];
+    }
+    return total;
+  }
+
   /**
    * Bir ekran noktasının altındaki zemin koordinatı.
    *
@@ -1455,6 +1565,11 @@ export class CityRenderer {
    */
   focusWorld(x: number, z: number): void {
     this.controller.focusOn(x, z);
+  }
+
+  /** Testler ve görsel karşılaştırma: sabit bir kamera bakışı. */
+  setView(view: { x: number; z: number; distance?: number; azimuth?: number; polar?: number }): void {
+    this.controller.setView(view);
   }
 
   /** Gün ışığı 0..1 — ses manzarası gece katmanını buna göre açıyor. */
@@ -1501,6 +1616,9 @@ export class CityRenderer {
     }
     this.buildings.dispose();
     this.fabric.dispose();
+    this.buildingShadows.dispose();
+    this.fabricShadows.dispose();
+    this.decorKit.dispose();
     // `scene.environment` düşük kademede null oluyor; dokunun kendisini
     // saklayan alandan atmak gerekiyor, yoksa sızar.
     this.envTexture?.dispose();
@@ -1586,4 +1704,41 @@ function massFormOf(def: BuildingDef): MassForm {
       // Perakende: küçük dükkân ev formunda, büyük mağaza blok.
       return def.height < 0.8 ? 'house' : 'block';
   }
+}
+
+/**
+ * Oyuncu ve rakip binasının cephesi (Tur 24) — formla aynı gerekçe: rol ve
+ * kategori zaten söylüyor. Mağazaların zemin katı vitrin; büyük mağaza ve
+ * elektronik vitrinin üstünde ofis camı taşıyor, spor salonu baştan cama.
+ */
+function buildingFacade(def: BuildingDef): FacadeStyle {
+  switch (def.role) {
+    case 'outlet':
+      if (def.category === 'services') return FACADE.office;
+      return def.height >= 0.9 && def.category !== 'grocery' && def.category !== 'dining' ? FACADE.shopOffice : FACADE.shop;
+    case 'rental':
+      return def.category === 'office' ? FACADE.office : FACADE.residential;
+    case 'research':
+    case 'marketing':
+      return FACADE.office;
+    case 'process':
+    case 'logistics':
+    case 'extract':
+      return FACADE.industrial;
+    default:
+      return FACADE.residential;
+  }
+}
+
+/**
+ * Şehir dokusunun cephesi. Apartman bloklarının bir kısmının zemin katı
+ * dükkân — mahalle böyle görünür; hangisi olduğu kareden (her açılışta
+ * aynı).
+ */
+function structureFacade(structure: StructureDef, tileId: number): FacadeStyle {
+  if (structure.id === 'old_shopfront') return FACADE.shop;
+  if (structure.id === 'apartment_block') return (tileId * 2654435761) % 7 < 3 ? FACADE.shop : FACADE.residential;
+  if (structure.form === 'tower') return FACADE.office;
+  if (structure.form === 'shed' || structure.form === 'field') return FACADE.industrial;
+  return FACADE.residential;
 }
