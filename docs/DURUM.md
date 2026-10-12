@@ -1240,6 +1240,81 @@ kontrol, kapı başına araç tavanının yarattığı kuantalamada sınırda.
 Kontrol değiştirilmedi. Düzeltmesi (birkaç anın çoğunluğu ya da pay
 oranıyla karşılaştırma) ayrı bir iş.
 
+### Tur 24 — Bina grafikleri: binalar ne olduklarını söylüyor
+
+Kullanıcı "bina grafikleri içime sinmiyor" dedi ve sunulan seçeneklerden
+ikisini seçti: türe özel detay ve ışık/malzeme. Hazır model kiti (Kenney
+gibi) yetmezse sonraki seçenek olarak duruyor.
+
+**Teşhis.** Şirket binaları altı formdan biriydi (ev, blok, kule, hangar,
+tarla, düzlük). Üstüne bina rengi ve tek bir pencere dokusu geliyordu.
+Bakkal, kafe ve spor salonu aynı "ev" kutusuydu. Asıl ders ölçümden değil
+kameradan geldi: oyunun bakış açısında en çok görünen yüzey çatı, cephe
+değil. İlk adım (cephe türleri, zemine yakın karartma) doğruydu ama fark
+inceydi. Şehri değiştiren şey çatılar, ağaçlar ve dükkân önleri oldu.
+
+**Işık ve malzeme (bütün kademelerde).**
+
+- Yüzey gölgelendiricisi (`surface.ts`): tek atlas doku dört cephe türü
+  taşıyor. Hangi türün kullanılacağı örnek başına bir öznitelikten
+  okunuyor; yani dört malzeme ve dört kat çizim çağrısı yerine yine tek
+  çağrı. Türler:
+  - konut: delikli pencere, denizlik;
+  - ofis camı: koyu cam, ince dikme;
+  - zemin kat vitrin: üstü konut ya da ofis (altı dükkân üstü ev binası);
+  - sanayi paneli: oluklu, şerit pencere.
+- Gece dokusu aynı yerleşimde: ofisler soğuk beyaz yanıyor, vitrinler
+  hep yanık.
+- Zemine yakın karartma ve kenar vurgusu aynı gölgelendiricide. Gerçek
+  ortam kapatmasının en görünür etkisini ek geçiş olmadan veriyor.
+- Temas gölgesi: her binanın altında yumuşak bir leke (tek çizim
+  çağrısı). Gölge haritası olmayan telefon kademesinde derinliği taşıyan
+  şey bu.
+- Ekran uzayı ortam kapatması (GTAO) eklenmedi. Bütün sahneyi ikinci kez
+  çizen bir geçiş ve saydam lekelerle çakışıyor. Görünen etkisi zemine
+  yakın karartma ve temas gölgesiyle bütün kademelerde zaten var.
+  Gökyüzü kubbesi de eklenmedi: oyunun bakış açısında ufuk kadrajın
+  dışında.
+
+**Türe özel detay (`decor.ts`, `recipes.ts`).** Sekiz parça türü, her
+biri kendi örnek ağında:
+
+| Parça | Nerede |
+|---|---|
+| Kırma çatı | Evler kiremit (beş ton, biraz arduvaz); şirket evleri şirket renginde |
+| Tente + tabela | Bakkal, kafe, butik, restoran, süpermarket, mağaza; şehrin esnaf dükkânları |
+| Çatı ekipmanı | Su deposu, güneş paneli, klima, yeşil çatı; ofiste anten ve tepe feneri |
+| Cam | Spor salonu cephesi, Ar-Ge atriumu, sera, süpermarket ışıklığı, çip fabrikası |
+| Silindir | Değirmen siloları, nişasta ve hazır gıda tankları, kavurma bacası, Ar-Ge çanağı |
+| Kutu | Depo rampaları, apartman balkonları, ocak vinci, okul bayrak direği |
+| Ağaç | Sokak kaldırımları, parklar, ev bahçeleri; kahve bahçesinde fidan sıraları |
+| Lamba | Sokak lambaları, gece yanıyor |
+
+- Testere dişi çatı (dokuma ve döşeme fabrikaları) ve çatı ilan panosu
+  (pazarlama ofisi) uzaktan okunan iki siluet.
+- Rakip binaları şirket renginde kaldı: çatı, tente ve tabela şirketin
+  rengini taşıyor, yani kimin nerede olduğu yukarıdan hâlâ okunuyor.
+- Veri lenslerinde detaylar ve temas gölgeleri gizleniyor: lens bir
+  harita, dekor kalabalığı istemiyor.
+- Simülasyon dokunulmadı: detayların zarı konumdan, 400 günlük özetler
+  aynı.
+
+**Testler.**
+
+- Yeni birim testi (`packages/render-three/test/recipes.test.ts`):
+  - her bina türü en az bir detay taşıyor (Tur 25'te eklenecek binalar
+    için bekçi);
+  - detaylar kendi parselinde kalıyor;
+  - sokak tarafı en yakın yola bakıyor;
+  - sokak ağaçları kavşağa ve parsele düşmüyor.
+- Oynanış testinde dört yeni kontrol:
+  - detay katmanı dolu;
+  - temas gölgeleri var;
+  - lenste detaylar gizleniyor ve dönünce geri geliyor;
+  - lambalar gece yanıyor, gündüz sönük.
+- Kamerayı sabit bir bakışa götüren test kancası (`setView`): görsel
+  karşılaştırma her koşuda aynı kareyi veriyor.
+
 ---
 
 ## 3. Ölçülen durum
