@@ -239,6 +239,28 @@ async function finish(browser, consoleErrors) {
     ...(CHROMIUM ? { executablePath: CHROMIUM } : {}),
     args: ['--use-gl=swiftshader', '--enable-unsafe-swiftshader', '--disable-dev-shm-usage'],
   });
+  /*
+   * REHBER EN BAŞTA, ana sayfa açılmadan (Tur 26). İkinci bir bağlamda
+   * yeni oyun kurmak, ana sayfanın WebGL bağlamı canlıyken yazılımsal
+   * GPU'da 30 saniyeyi aşabiliyordu (CI'da "Şirketi kur" tıklaması
+   * zaman aşımına düştü; yerelde geçiyordu). Tek bağlamla koşunca
+   * ölçülen şey rehber oluyor, GPU kuyruğu değil.
+   */
+  section('Rehber');
+  {
+    const tutorialContext = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+    const { p: tp } = await tutorialWalk(tutorialContext, 'Masaüstü');
+    // Bir kez bitirilen rehber yeni oyunda kendiliğinden açılmıyor; Yardım'dan yeniden başlıyor.
+    await tp.locator('[data-panel="help"]').click();
+    await tp.locator('[data-coach-restart]').click();
+    await tp.waitForSelector('.coach[data-coach-step="welcome"]', { timeout: 5000 });
+    check('Yardım panelinden rehber yeniden başlıyor', (await tp.locator('.coach').count()) === 1);
+    await tp.locator('[data-coach="close"]').click();
+    await tp.waitForTimeout(300);
+    check('"Rehberi kapat" kartı kaldırıyor', (await tp.locator('.coach').count()) === 0);
+    await tutorialContext.close();
+  }
+
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
   await page.addInitScript(veteran, TUTORIAL_KEY);
 
@@ -956,21 +978,6 @@ async function finish(browser, consoleErrors) {
     window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
   });
   check('Banka ve işgücü konsolu kirletmiyor', consoleErrors.length === 0, consoleErrors.slice(0, 2).join(' | '));
-
-  section('Rehber');
-  {
-    const tutorialContext = await browser.newContext({ viewport: { width: 1440, height: 900 } });
-    const { p: tp } = await tutorialWalk(tutorialContext, 'Masaüstü');
-    // Bir kez bitirilen rehber yeni oyunda kendiliğinden açılmıyor; Yardım'dan yeniden başlıyor.
-    await tp.locator('[data-panel="help"]').click();
-    await tp.locator('[data-coach-restart]').click();
-    await tp.waitForSelector('.coach[data-coach-step="welcome"]', { timeout: 5000 });
-    check('Yardım panelinden rehber yeniden başlıyor', (await tp.locator('.coach').count()) === 1);
-    await tp.locator('[data-coach="close"]').click();
-    await tp.waitForTimeout(300);
-    check('"Rehberi kapat" kartı kaldırıyor', (await tp.locator('.coach').count()) === 0);
-    await tutorialContext.close();
-  }
 
   if (SMOKE) {
     await finish(browser, consoleErrors);
