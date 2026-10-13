@@ -142,6 +142,107 @@ export const EVENTS: EventDef[] = [
     tone: 'bad',
     effects: { goodPriceMultiplier: { silicon: 1.35, chip: 1.6 } },
   },
+  {
+    id: 'drought',
+    title: 'Kuraklık',
+    body: 'Yağmur yağmadı; buğday ve sebze fiyatı tırmanıyor. Kendi tarlası olan fırıncı rahat.',
+    durationDays: 28,
+    weight: 7,
+    tone: 'bad',
+    effects: { goodPriceMultiplier: { wheat: 1.4, flour: 1.15, vegetable: 1.35, prepared_food: 1.12 } },
+  },
+  {
+    id: 'silicon_glut',
+    title: 'Silikonda Bolluk',
+    body: 'Yeni maden devreye girdi; silikon ve çip ucuzladı.',
+    durationDays: 24,
+    weight: 6,
+    tone: 'good',
+    effects: { goodPriceMultiplier: { silicon: 0.75, chip: 0.88 } },
+  },
+
+  // ---- Kategori ve bölge olayları (Tur 27) ----
+  // Hizmet ve market şimdiye kadar yalnızca genel dalgalardan
+  // etkileniyordu; bölge olayları da yalnızca öğrenci ve turizmdeydi.
+  //
+  // İYİ VE KÖTÜ YARI YARIYA. İlk sürümde yeni olayların sekizi iyiydi ve
+  // denge testi altı yerden kırıldı: şehrin iklimi iyimserleşti, eski
+  // krizler seyreldi (olay sıklığı aynı, karışım değişti), 15 günde bir
+  // oynayan savunmasız oyuncu Dengeli'de artık düşmüyordu, fiyat
+  // savaşında haciz gelmiyordu. Genel maliyet indirimi ve sanayi
+  // patlaması çıktı, sahil fırtınası ve yol çalışması girdi.
+  {
+    id: 'health_campaign',
+    title: 'Sağlık Kampanyası',
+    body: 'Belediyenin "hareket et" kampanyası tuttu; spor salonu ve klinik randevuları doldu.',
+    durationDays: 21,
+    weight: 8,
+    tone: 'good',
+    effects: { demandMultiplier: { services: 1.35 } },
+  },
+  {
+    id: 'box_office_hit',
+    title: 'Gişe Rekoru',
+    body: 'Merkezde vizyona giren film kuyruk yaptırdı; sinema ve çevresindeki kafeler doldu.',
+    durationDays: 14,
+    weight: 7,
+    tone: 'good',
+    effects: { demandMultiplier: { services: 1.5, dining: 1.2 }, districtArchetype: 'downtown' },
+  },
+  {
+    id: 'night_market',
+    title: 'Mahalle Pazarı Haftası',
+    body: 'Orta gelirli mahallelerde akşam pazarları kuruldu; market ve yeme-içme canlandı.',
+    durationDays: 12,
+    weight: 8,
+    tone: 'good',
+    effects: { demandMultiplier: { grocery: 1.35, dining: 1.25 }, districtArchetype: 'mid_residential' },
+  },
+  {
+    id: 'fashion_week',
+    title: 'Moda Haftası',
+    body: 'Lüks konut bölgesinde defileler var; vitrinlerin önü kalabalık.',
+    durationDays: 14,
+    weight: 7,
+    tone: 'good',
+    effects: { demandMultiplier: { retail: 1.45, services: 1.15 }, districtArchetype: 'lux_residential' },
+  },
+  {
+    id: 'food_scare',
+    title: 'Gıda Denetimi',
+    body: 'Bir zehirlenme haberi yayıldı; insanlar bir süre dışarıda yemekten çekiniyor.',
+    durationDays: 14,
+    weight: 6,
+    tone: 'bad',
+    effects: { demandMultiplier: { dining: 0.72, grocery: 1.08 } },
+  },
+  {
+    id: 'gadget_recall',
+    title: 'Cihaz Geri Çağırma',
+    body: 'Büyük bir marka telefonlarını geri çağırdı; elektronikte güven sarsıldı.',
+    durationDays: 18,
+    weight: 6,
+    tone: 'bad',
+    effects: { demandMultiplier: { electronics: 0.75 } },
+  },
+  {
+    id: 'coastal_storm',
+    title: 'Sahilde Fırtına',
+    body: 'Fırtına uyarısı turizm bölgesini boşalttı; kafeler ve dükkânlar kepenk indirdi.',
+    durationDays: 10,
+    weight: 6,
+    tone: 'bad',
+    effects: { demandMultiplier: { dining: 0.6, retail: 0.7, services: 0.8 }, districtArchetype: 'tourism' },
+  },
+  {
+    id: 'road_works',
+    title: 'Yol Çalışması',
+    body: 'Çarşı caddesi kazıldı; yaya trafiği azaldı, vitrinlerin önü boş.',
+    durationDays: 16,
+    weight: 6,
+    tone: 'bad',
+    effects: { demandMultiplier: { retail: 0.75, grocery: 0.9, dining: 0.85 }, districtArchetype: 'retail_strip' },
+  },
 ];
 
 /**

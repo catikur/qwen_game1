@@ -280,8 +280,8 @@ async function finish(browser, consoleErrors) {
   section('Şirket kurulumu');
   await page.waitForSelector('.newgame', { timeout: 20000 });
   check('Yeni oyunda önce kurulum ekranı çıkıyor', true);
-  check('CEO seçenekleri listeleniyor', (await page.locator('.ceo-card').count()) === 6);
-  check('CEO portreleri çiziliyor', (await page.locator('.ceo-card svg').count()) === 6);
+  check('CEO seçenekleri listeleniyor', (await page.locator('.ceo-card').count()) === 10);
+  check('CEO portreleri çiziliyor', (await page.locator('.ceo-card svg').count()) === 10);
 
   const firstCeo = (await page.locator('.ceo-detail h2').textContent())?.trim();
   await page.locator('.ceo-card').nth(3).click();
