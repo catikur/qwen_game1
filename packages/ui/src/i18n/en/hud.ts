@@ -132,21 +132,22 @@ export const hud: Record<keyof typeof trHud, string> = {
   'hud.victory.newEmpire': 'Start a new empire',
   'hud.victory.openCity': 'Expand to a new city',
   'hud.gameOver.otherCity': 'Switch to {city}',
-  'hud.gameOver.holdingNote': 'The holding stands: your other cities are waiting.',
+  'hud.gameOver.holdingNote': 'The holding stands: your other cities keep living.',
 
   // Holding — multiple cities (Tur 22)
   'hud.holding.chipTitle': 'Holding: cities, treasury and new city',
   'hud.holding.blurb':
-    "One city is played at a time; the others wait: their calendars, rivals and growth freeze. {share}% of a waiting city's daily profit trend flows into the holding treasury every day.",
+    "One city is played at a time; the others keep living: their calendars, rivals and growth go on, and your stores keep selling. {share}% of a remote city's daily profit flows into the holding treasury, the rest stays in the city. There a local manager answers the union; investment and defense against raids are up to you — you hear about a raid once it passes 25%.",
   'hud.holding.stat.total': 'Holding value',
   'hud.holding.stat.treasury': 'Holding treasury',
   'hud.holding.stat.remote': 'Daily flow to treasury',
   'hud.holding.current': 'Current city',
-  'hud.holding.waiting': 'Waiting',
+  'hud.holding.waiting': 'Managed remotely',
   'hud.holding.lost': 'Lost',
   'hud.holding.cityLine': 'Day {day} · company value {worth}',
   'hud.holding.createdLine': 'value created in the city {value}',
-  'hud.holding.flowLine': '{flow} a day to treasury',
+  'hud.holding.flowLine': '{flow} to treasury yesterday',
+  'hud.holding.raidLine': 'Raid: {name} holds {percent}% of your shares',
   'hud.holding.switch': 'Switch to this city',
   'hud.holding.transfer.title': 'Between treasury and city',
   'hud.holding.transfer.blurb':
@@ -156,7 +157,7 @@ export const hud: Record<keyof typeof trHud, string> = {
   'hud.holding.transfer.toHolding': 'Transfer to treasury',
   'hud.holding.open.title': 'New city: {name}',
   'hud.holding.open.blurb':
-    "The capital comes out of this city's cash and is added to the new city's victory target. Half your brand awareness and your CEO come with you; the rival lineup is different. This city waits.",
+    "The capital comes out of this city's cash and is added to the new city's victory target. Half your brand awareness and your CEO come with you; the rival lineup is different. This city keeps living; half of its profit flows into the treasury.",
   'hud.holding.open.size': 'City size',
   'hud.holding.open.capital': 'Capital',
   'hud.holding.open.terms': 'Brand awareness carried over {brand}% · cash left in this city {left}',

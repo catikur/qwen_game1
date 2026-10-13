@@ -84,7 +84,14 @@ export const commands = {
   'core.holding.notEnoughCash': 'Kasada o kadar nakit yok.',
   'core.holding.openedTitle': '{city}: holding yeni şehirde',
   'core.holding.openedBody':
-    '{capital} sermaye ve %{brand} marka bilinirliğiyle geldin. Rakipler: {rivals}. {previous} bekliyor; kârının yarısı her gün holding kasasına akacak.',
+    '{capital} sermaye ve %{brand} marka bilinirliğiyle geldin. Rakipler: {rivals}. {previous} yaşamaya devam ediyor; kârının yarısı her gün holding kasasına akacak.',
+  'core.holding.remoteRaidTitle': "{city}: {name} payının %{percent}'ini topladı",
+  'core.holding.remoteRaidBody':
+    "Uzaktaki şehrinde baskın ilerliyor; yerel müdür yalnızca sendikaya cevap veriyor, savunmayı sen yapmalısın. Şehirler panelinden {city}'e geç.",
+  'core.holding.remoteLostTitle': '{city} elden çıktı: {name} kontrolü aldı',
+  'core.holding.remoteLostBody': '{city} artık holding kasasına ödeme yapmıyor. Holding ve öbür şehirlerin ayakta.',
+  'core.holding.remoteVictoryTitle': '{city} zafere ulaştı',
+  'core.holding.remoteVictoryBody': 'Uzaktan yönetilen {city}, şehirde yaratılan değerle hedefine vardı.',
   'core.holding.leagueNoSwitch': 'Lig koşusunda şehir değiştirilmiyor.',
   'core.holding.noSuchCity': 'Böyle bir şehir yok.',
   'core.holding.noHolding': 'Holding yok: önce bir şehirde zafere ulaşıp yeni şehir aç.',

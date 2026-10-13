@@ -4,7 +4,7 @@
 > `pnpm bench` çıktısından; iddialar `pnpm balance` ve `pnpm playtest`
 > tarafından her koşuda doğrulanıyor.
 >
-> Son güncelleme: şema **v6**, 29 tur tamamlandı.
+> Son güncelleme: şema **v6**, 30 tur tamamlandı.
 
 ---
 
@@ -1916,6 +1916,77 @@ için bu iş göçte değil motorda. İçerik sürümü 5 → 6.
 - Kayıt testi: deri ürünlerinin pazar girdileri silinmiş bir kayıt
   yükleniyor; ilk gün referans ve spot fiyat (25 ve 12) yerinde.
 
+### Tur 30 — Holding şehirleri eşzamanlı yaşıyor
+
+Tur 22'de bilinçli olarak yapılmayan iş: bekleyen şehir donuktu. Takvimi,
+rakipleri ve gelişimi duruyordu. Kasaya ayrıldığın gündeki kâr eğiliminin
+yarısı akıyordu — hiç değişmeyen, hiç risk taşımayan bir gelir. Tur 22'nin
+gerekçesi iki maliyetti: her sistemin "hangi şehir" sorusunu bilmesi ve
+günün şehir sayısı kadar pahalılaşması.
+
+**Mimari: günün kendisi ayrıldı.** `GameEngine.runDay`'in şehir sistemleri
+(takvim, olaylar, pazar, rakipler, banka) `simulateCityDay` olarak ayrı bir
+modülde (`day.ts`). Bekleyen şehir de aynı fonksiyonu kendi durumuyla
+çağırıyor; hiçbir sistem "hangi şehir"i bilmiyor, birinci maliyet hiç
+doğmadı. Haber eşikleri, sıralama ve liderlik oyuncunun gözünün önündeki
+şehrin işi, motorda kaldı. Sıra birebir aynı: holding'siz oyunun davranış
+özeti main'le eşit.
+
+**Uzaktan yönetim.**
+
+- *Kâr payı:* bekleyen şehrin o günkü kârının yarısı holding kasasına,
+  yarısı şehirde. Kasaya çıkan para şehirden çıkmış sermaye sayılıyor;
+  zafer ölçüsü buna göre düzeliyor.
+- *Yerel müdür:* yalnızca sendikaya uzlaşmayla cevap veriyor (oyuncu
+  uzaktayken grev çıkmasın). Yatırım ve baskına karşı savunma oyuncunun
+  işi.
+- *Haber oynanan şehre:* uzaktaki şehirde baskın %25'i ve %40'ı geçince
+  (her eşik bir kez), şehir kaybedilince, zafere ulaşınca. Uzaktaki şehrin
+  kendi haber akışını kimse okumuyor.
+- *Kaybedilen şehir* yaşamıyor ve ödemiyor.
+- *Şehir değişimi:* bilinen baskın yeniden haber olmuyor (baskın eşiği
+  motorla holding'in ortak ölçüsü, `raidStatus`).
+- *Şehirler paneli:* uzaktaki şehir "Uzaktan yönetiliyor"; satırda dünkü
+  gerçek kâr payı ve %10'u geçen baskın (%25'ten itibaren kötü haber
+  rengi). Panel, yeni şehir formu, oyun sonu notu ve Yardım yeni modeli
+  anlatıyor (tr/en).
+
+**Ölçüm (denge testi, holding bölümü; vekil ikinci şehre geçiyor ve geri
+dönmüyor).**
+
+| Tohum 1 / 7 / 42 | main (donuk) | dal (yaşayan) |
+|---|---|---|
+| 2. şehir zafer günü | 473 / 461 / 470 | aynı |
+| Kasa, 2. zaferde | 79,2 / 71,6 / 77,8 M ₺ | 75,5 / 70,0 / 74,6 M ₺ |
+| Holding değeri | 279 / 272 / 278 M ₺ | 351 / 335 / 350 M ₺ |
+| Kurucu şehir uzakta | donuk, 80 M ₺ | 80 → 156 / 145 / 156 M ₺ |
+| En büyük dış pay (kurucu şehirde) | — | %7 / %42 / %0 |
+
+Kasa donuk modeldekine yakın (−%2..−%5); fark kurucu şehrin kendisinde.
+Uzakta da büyüyor: yerleşik mağazaları satıyor, arazisi değerleniyor.
+Holding değeri dörtte bir büyük. Risk de gerçek: tohum 7'de bir rakip
+kurucu şehirde %42'ye geldi (vekil geri dönüp savunmuyor; oyuncuya
+%25'te ve %40'ta haber düşüyor).
+
+Tur 22'nin iki kontrolü bilerek değişti. "Bekleyen şehrin takvimi duruyor"
+yerine: kurucu şehir de yaşıyor, takvimler birlikte. "Kasaya her gün
+eğilimin yarısı akıyor" yerine: kasaya akan her lira kurucu şehirden çıktı
+(kasa, şehirden çıkan sermayenin defterine birebir eşit). Para yoktan
+doğmuyor; donuk modelde doğuyordu.
+
+**Hız.** Üç şehirli holdingde günün maliyeti ×2,84 (bu makinede 10 → 29
+ms/gün, büyümüş şehirler). En hızlı oyun hızı günde 480 ms; üç şehir
+bunun ~%6'sı.
+
+**Testler.**
+
+- *Holding birim testleri:* bekleyen şehir yaşıyor ve kârının yarısını
+  ödüyor; kaybedilen şehir yaşamıyor; takvimler birlikte; uzaktaki rakipler
+  kurmaya devam ediyor; uzak şehirde %25 baskın oynanan şehre bir kez haber;
+  yerel müdür sendikaya uzlaşmayla cevap veriyor.
+- *Oynanış testi:* kurucu şehre dönünce o da 20 gün yaşamış; uzaktaki
+  şehrin satırı durumu, günü ve kâr payını gösteriyor.
+
 ---
 
 ## 3. Ölçülen durum
@@ -1997,9 +2068,9 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi) |
-| Birim testi | **188 test** (`pnpm test`; Tur 24'te render paketi de) |
+| Birim testi | **191 test** (`pnpm test`; Tur 24'te render paketi de) |
 | Denge testi | **284 kontrol, hepsi geçiyor** (20 bölüm, süreleriyle; ~10 dk) |
-| Tarayıcı testi | **323 kontrol, hepsi geçiyor**, 0 konsol hatası (~15–20 dk); duman koşusu 97 (~5 dk, rehber dahil) |
+| Tarayıcı testi | **324 kontrol, hepsi geçiyor**, 0 konsol hatası (~15–20 dk); duman koşusu 97 (~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + duman oynanışı |
 | Kapsam | 35 bina · 25 ürün · 7 kategori · 8 rakip profili · 10 CEO · 22 olay (11 şehir + 11 sektör) · 10 şehir yapısı (6 siluet) |
 
@@ -2099,8 +2170,8 @@ açılıyor, arazi kıtlığı dört kez yenileniyor. Varsayılan harita hâlâ
 3×3. **5×5 Tur 21'de seçenek oldu** (dış halka dört dalgada, rakip temposu
 2, zafer eşiği ×1,5; ölçüm Tur 21 bölümünde). **Çoklu şehir Tur 22'de geldi**
 (holding: aynı anda bir şehir oynanıyor, bekleyenler kasaya kâr payı
-aktarıyor). Kalan: şehirlerin eşzamanlı yaşaması (bilinçli olarak yapılmadı;
-Tur 22 bölümü).
+aktarıyor). **Şehirlerin eşzamanlı yaşaması Tur 30'da geldi:** bekleyen
+şehirler de her gün yaşıyor, kârlarının yarısı kasaya akıyor.
 
 ### 4.6 Daha küçük kalemler
 

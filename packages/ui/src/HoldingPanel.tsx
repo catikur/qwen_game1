@@ -4,6 +4,7 @@ import { CITY_SIZES, HOLDING } from '@capital/content';
 import type { CitySizeId } from '@capital/content';
 import {
   carriedBrand,
+  cityDividend,
   cityNameAt,
   cityTrend,
   cityValue,
@@ -11,6 +12,7 @@ import {
   getPlayer,
   holdingNetWorth,
   openCityQuote,
+  raidStatus,
   remoteIncome,
 } from '@capital/core';
 import type { GameState } from '@capital/core';
@@ -20,10 +22,11 @@ import { t } from './i18n';
 /**
  * Holding paneli (Tur 22): şehirler, kasa ve yeni şehir.
  *
- * Panel üç soruyu cevaplıyor: holding'in toplamda ne değerde, bekleyen
- * şehirler kasaya günde ne getiriyor, ve yeni bir şehre açılırsam yanımda
- * ne gider. Sonuncusu kararın kendisi: sermaye bu şehrin kasasından çıkıyor
- * ve bu şehir bekliyor.
+ * Panel üç soruyu cevaplıyor: holding'in toplamda ne değerde, uzaktaki
+ * şehirler kasaya günde ne getiriyor (ve orada bir baskın var mı), ve yeni
+ * bir şehre açılırsam yanımda ne gider. Sonuncusu kararın kendisi: sermaye
+ * bu şehrin kasasından çıkıyor. Tur 30'dan beri uzaktaki şehirler yaşıyor;
+ * satır dünkü gerçek kâr payını ve %10'u geçen baskını gösteriyor.
  */
 export function HoldingPanel(): ReactElement {
   const state = useGameState();
@@ -77,6 +80,8 @@ function CityList({ state }: { state: GameState }): ReactElement {
         const lost = Boolean(other.gameOver);
         const otherPlayer = other.companies[other.playerCompanyId]!;
         const name = other.cityName ?? '';
+        const raid = lost ? null : raidStatus(other);
+        const raider = raid?.holderId ? other.companies[raid.holderId] : undefined;
         return (
           <li key={name || index} className={lost ? 'city-row lost' : 'city-row'} data-city={name}>
             <div className="city-head">
@@ -88,10 +93,15 @@ function CityList({ state }: { state: GameState }): ReactElement {
               {!lost && (
                 <>
                   {' · '}
-                  {t('hud.holding.flowLine', { flow: formatMoney(Math.max(0, city.trend) * HOLDING.remoteShare) })}
+                  {t('hud.holding.flowLine', { flow: formatMoney(cityDividend(city)) })}
                 </>
               )}
             </span>
+            {raid && raid.stage >= 1 && raider && (
+              <span className="city-raid" data-city-raid={raid.stage}>
+                {t('hud.holding.raidLine', { name: raider.name, percent: Math.round(raid.fraction * 100) })}
+              </span>
+            )}
             <button
               type="button"
               className="ghost city-switch"

@@ -130,21 +130,22 @@ export const hud = {
   'hud.victory.newEmpire': 'Yeni imparatorluk kur',
   'hud.victory.openCity': 'Yeni şehre açıl',
   'hud.gameOver.otherCity': "{city}'e geç",
-  'hud.gameOver.holdingNote': 'Holding ayakta: diğer şehirlerin bekliyor.',
+  'hud.gameOver.holdingNote': 'Holding ayakta: diğer şehirlerin yaşamaya devam ediyor.',
 
   // Holding — birden çok şehir (Tur 22)
   'hud.holding.chipTitle': 'Holding: şehirler, kasa ve yeni şehir',
   'hud.holding.blurb':
-    "Aynı anda bir şehir oynanır; diğerleri bekler: takvimleri, rakipleri ve gelişimleri donar. Bekleyen şehrin günlük kâr eğiliminin %{share}'i her gün holding kasasına akar.",
+    "Aynı anda bir şehir oynanır; diğerleri de yaşar: takvimleri, rakipleri ve gelişimleri sürer, mağazaların satmaya devam eder. Uzaktaki şehrin günlük kârının %{share}'i holding kasasına akar, kalanı şehirde kalır. Orada sendikaya yerel müdür cevap verir; yatırım ve baskına karşı savunma senin işin — baskın %25'i geçince haberin olur.",
   'hud.holding.stat.total': 'Holding değeri',
   'hud.holding.stat.treasury': 'Holding kasası',
   'hud.holding.stat.remote': 'Kasaya günlük akış',
   'hud.holding.current': 'Oynanan şehir',
-  'hud.holding.waiting': 'Bekliyor',
+  'hud.holding.waiting': 'Uzaktan yönetiliyor',
   'hud.holding.lost': 'Kaybedildi',
   'hud.holding.cityLine': '{day}. gün · şirket değeri {worth}',
   'hud.holding.createdLine': 'şehirde yaratılan değer {value}',
-  'hud.holding.flowLine': 'kasaya günde {flow}',
+  'hud.holding.flowLine': 'dün kasaya {flow}',
+  'hud.holding.raidLine': "Baskın: {name} payının %{percent}'inde",
   'hud.holding.switch': 'Bu şehre geç',
   'hud.holding.transfer.title': 'Kasa ile şehir arasında',
   'hud.holding.transfer.blurb':
@@ -154,7 +155,7 @@ export const hud = {
   'hud.holding.transfer.toHolding': 'Şehirden kasaya aktar',
   'hud.holding.open.title': 'Yeni şehir: {name}',
   'hud.holding.open.blurb':
-    "Sermaye bu şehrin kasasından çıkar ve yeni şehrin zafer hedefine eklenir. Marka bilinirliğinin yarısı ve CEO'n seninle gelir; rakip kadrosu farklıdır. Bu şehir bekler.",
+    "Sermaye bu şehrin kasasından çıkar ve yeni şehrin zafer hedefine eklenir. Marka bilinirliğinin yarısı ve CEO'n seninle gelir; rakip kadrosu farklıdır. Bu şehir yaşamaya devam eder; kârının yarısı kasaya akar.",
   'hud.holding.open.size': 'Şehir boyutu',
   'hud.holding.open.capital': 'Sermaye',
   'hud.holding.open.terms': 'Taşınan marka bilinirliği %{brand} · bu şehirde kalan nakit {left}',
