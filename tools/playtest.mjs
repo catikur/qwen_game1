@@ -964,14 +964,57 @@ async function finish(browser, consoleErrors) {
   });
   check('Halka arz hisse adedini ve yatırımcı payını büyütüyor', issued.count > 10000 && issued.investors === issued.count - 10000,
     `${issued.count} hisse · ${issued.head.trim()}`);
-  await page.keyboard.press('Escape');
-  await page.evaluate(() => {
+
+  /*
+   * Kalıcı kalkan (Tur 28): kurucu tabanında (yatırımcı %48,8) tek rakip
+   * %45'te. Blok kilide kalan hisseyi söylüyor; "geri al" serbest hisseden
+   * hazineye çekiyor ve blok "kontrol kilitli"ye dönüyor, düğme kalkıyor.
+   */
+  const lockSetup = await page.evaluate(() => {
+    const s = window.__capital.getState();
+    const p = s.companies.player;
+    const rival = Object.values(s.companies).find((c) => !c.isPlayer);
+    p.shareCount = 19_531;
+    p.investorShares = 9_531;
+    p.cash = Math.max(p.cash, 50_000_000);
+    rival.shares.player = Math.floor(19_531 * 0.45);
+    window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+    return rival.id;
+  });
+  await page.waitForTimeout(250);
+  const lockBefore = await page.evaluate(() => ({
+    state: document.querySelector('[data-defense-lock]')?.getAttribute('data-defense-lock') ?? null,
+    text: document.querySelector('[data-defense-lock]')?.textContent ?? '',
+    button: document.querySelector('.defense-threat button')?.textContent ?? null,
+  }));
+  check('Kendi hissen bloğu kilide kalan hisseyi söylüyor', lockBefore.state === 'open' && /\d/.test(lockBefore.text),
+    `${lockBefore.state} · ${lockBefore.text.trim()} · ${lockBefore.button}`);
+  if (lockBefore.button) await page.locator('.defense-threat button').click();
+  await page.waitForTimeout(250);
+  const lockAfter = await page.evaluate(() => {
     const p = window.__capital.getState().companies.player;
+    return {
+      state: document.querySelector('[data-defense-lock]')?.getAttribute('data-defense-lock') ?? null,
+      button: document.querySelectorAll('.defense-threat button').length,
+      treasury: p.shares.player ?? 0,
+      investors: p.investorShares ?? 0,
+    };
+  });
+  check('Geri alım serbest hisseden hazineye, kontrol kilitleniyor', lockAfter.state === 'locked' && lockAfter.button === 0 &&
+    lockAfter.treasury > 0 && lockAfter.investors === 9_531,
+    `${lockAfter.state} · hazine ${lockAfter.treasury} · yatırımcı ${lockAfter.investors} · düğme ${lockAfter.button}`);
+
+  await page.keyboard.press('Escape');
+  await page.evaluate((rivalId) => {
+    const s = window.__capital.getState();
+    const p = s.companies.player;
     delete p.shareCount;
     delete p.investorShares;
     delete p.lastIssueDay;
     delete p.issues;
-  });
+    delete p.shares.player;
+    delete s.companies[rivalId]?.shares.player;
+  }, lockSetup);
 
   // Temizlik: sonraki bölümler kredisiz, sendikasız, piyasa ücretiyle.
   await page.evaluate(() => {

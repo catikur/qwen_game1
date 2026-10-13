@@ -3,6 +3,7 @@ import type { ReactElement } from 'react';
 import { ISSUANCE, formatPercent, formatDecimal, numberLocale, withCurrency } from '@capital/content';
 import {
   CONTROL_THRESHOLD,
+  buybackToLock,
   capRemaining,
   confidence,
   dailyBuyCap,
@@ -83,6 +84,10 @@ export function MarketPanel(): ReactElement {
  * kadar" sorusunun tek adresi. Geri alım düğmesi `BUY_SHARES`in kendisi:
  * savunma için ayrı bir mekanik yok, aynı piyasa iki yönde de çalışıyor.
  *
+ * Kilit satırı (Tur 28): geri alım serbest hisseden yapıldığı için kalkan
+ * kalıcı olabiliyor. Blok, kilide kaç hisse kaldığını söylüyor; kilitliyse
+ * düğme kalkıyor — fazlası boşa nakit.
+ *
  * Tehdit yokken tek satırlık bir özet. Blok yalnızca biri gerçekten pay
  * topladığında büyür — panel her gün "saldırı yok" diye bağırmamalı.
  */
@@ -113,8 +118,16 @@ function Defense({ state }: { state: GameState }): ReactElement {
     }
   };
   // Geri alım da günlük tavanlı (Tur 20) — rakibin savunması gibi. Tek
-  // tık bugünün tavanını kullanır; kalan yarına.
-  const affordable = Math.min(capRemaining(state, player.id, player.id), Math.floor(player.cash / Math.max(1, price)), float);
+  // tık bugünün tavanını kullanır; kalan yarına. Kilide yetenden fazlası yok.
+  const toLock = buybackToLock(state, player.id);
+  const locked = toLock === 0;
+  const affordable = Math.min(
+    capRemaining(state, player.id, player.id),
+    Math.floor(player.cash / Math.max(1, price)),
+    float,
+    toLock,
+  );
+  const threshold = Math.round(CONTROL_THRESHOLD * 100);
 
   return (
     <div className={topCount > 0 ? 'defense threatened' : 'defense'}>
@@ -125,20 +138,32 @@ function Defense({ state }: { state: GameState }): ReactElement {
         </span>
       </div>
       {topHolder ? (
-        <div className="defense-threat">
-          <span>
-            <strong>{topHolder.name}</strong>{' '}
-            {t('finance.market.defense.threat', {
-              percent: percent.toFixed(1),
-              threshold: Math.round(CONTROL_THRESHOLD * 100),
-            })}
-          </span>
-          <button type="button" disabled={affordable <= 0} onClick={() => buyback(affordable)}>
-            {affordable > 0
-              ? t('finance.market.defense.buyback', { count: affordable })
-              : t('finance.market.defense.capFull')}
-          </button>
-        </div>
+        <>
+          <div className="defense-threat">
+            <span>
+              <strong>{topHolder.name}</strong>{' '}
+              {t('finance.market.defense.threat', { percent: percent.toFixed(1), threshold })}
+            </span>
+            {!locked && (
+              <button type="button" disabled={affordable <= 0} onClick={() => buyback(affordable)}>
+                {affordable > 0
+                  ? t('finance.market.defense.buyback', { count: affordable })
+                  : t('finance.market.defense.capFull')}
+              </button>
+            )}
+          </div>
+          {locked ? (
+            <p className="defense-lock" data-defense-lock="locked">
+              {t('finance.market.defense.locked', { name: topHolder.name, threshold })}
+            </p>
+          ) : (
+            Number.isFinite(toLock) && (
+              <p className="defense-lock muted" data-defense-lock="open">
+                {t('finance.market.defense.lockNeed', { count: toLock.toLocaleString(numberLocale()), threshold })}
+              </p>
+            )
+          )}
+        </>
       ) : (
         <p className="muted">{t('finance.market.defense.noThreat')}</p>
       )}

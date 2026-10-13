@@ -14,6 +14,9 @@ export const finance = {
   'finance.market.defense.buyback': '{count} hisse geri al',
   'finance.market.defense.capFull': 'Bugünkü tavan doldu',
   'finance.market.defense.buybackDone': '{count} hisse hazineye çekildi — {cost}.',
+  'finance.market.defense.lockNeed':
+    "Kalıcı kalkan: hazineye {count} hisse daha çekersen hiçbir hissedar kalan hisselerin hepsiyle de %{threshold}'yi geçemez.",
+  'finance.market.defense.locked': "Kontrol kilitli: {name} kalan bütün hisseyi alsa da %{threshold}'yi geçemez.",
   'finance.market.defense.noThreat':
     'Hissene talip yok. Rakipler zayıflayan şirketlerin payını toplar — sıralamada düşersen burası ilk bakacağın yer.',
 

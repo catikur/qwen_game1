@@ -16,7 +16,17 @@ import { rivalProfiles } from '../profiles';
 import { nextFloat } from '../rng';
 import { estimateInvestment } from './market';
 import { isDistrictOpen, tilePrice } from './city';
-import { blockTrade, buyShares, freeFloat, sharePrice, sharesHeld, sharesOutstanding, TOTAL_SHARES } from './equity';
+import {
+  blockTrade,
+  buybackToLock,
+  buyShares,
+  controlReachable,
+  freeFloat,
+  sharePrice,
+  sharesHeld,
+  sharesOutstanding,
+  TOTAL_SHARES,
+} from './equity';
 import { npcBorrow } from './credit';
 import { npcDefensiveIssue, npcIssue } from './issuance';
 import type { BuildingInstance, CompanyState, GameState } from '../types';
@@ -692,7 +702,14 @@ function tryRaidMove(state: GameState, profile: NpcProfileDef): void {
        * hedefe çakılı kalıyordu. Baskın fiilen duruyor, oyuncu hiç
        * hedef olmuyordu. Alınacak hisse yoksa avcı sıradakine geçer.
        */
-      freeFloat(state, c.id) > 0,
+      freeFloat(state, c.id) > 0 &&
+      /*
+       * Kontrolü artık alınamayacak hedef de değil (Tur 28): yatırımcı ve
+       * hazine payı yarıyı bulduysa serbest hissenin hepsi bile yetmiyor.
+       * Geri alım piyasadan yapılınca bu kalıcı bir durum; avcı o hedefe
+       * nakit gömmek yerine sıradakine geçer.
+       */
+      controlReachable(state, raider.id, c.id),
   );
   if (candidates.length === 0) return;
 
@@ -786,13 +803,16 @@ function tryBuybackDefense(state: GameState, profile: NpcProfileDef): void {
   }
   const outstanding = sharesOutstanding(state, company.id);
   if (threat / outstanding < 0.3) return;
+  // Kilitli şirket (Tur 28): kimse %50'yi geçemiyorsa geri alım boşa nakit.
+  const toLock = buybackToLock(state, company.id);
+  if (toLock === 0) return;
 
   const budget = (company.cash - RAID_CASH_RESERVE) * 0.6;
   const price = sharePrice(state, company.id);
   if (budget <= 0 || price <= 0) return;
 
   const cap = Math.floor((getDifficulty(state.difficulty).raidDailyCap * outstanding) / TOTAL_SHARES);
-  const wanted = Math.min(cap, Math.floor(budget / price), freeFloat(state, company.id));
+  const wanted = Math.min(cap, Math.floor(budget / price), freeFloat(state, company.id), toLock);
   if (wanted <= 0) return;
 
   buyShares(state, company.id, company.id, wanted);

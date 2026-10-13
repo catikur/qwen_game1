@@ -48,6 +48,9 @@ export {
   ownerFraction,
   companyValue,
   controllerOf,
+  controlReach,
+  controlReachable,
+  buybackToLock,
   CONTROL_THRESHOLD,
   TOTAL_SHARES,
 } from './systems/equity';

@@ -2916,6 +2916,17 @@ button.icon {
   font-size: 13px;
 }
 
+/* Kilit satırı (Tur 28): kilitliyken iyi haber rengi, değilken sönük ipucu. */
+.defense-lock {
+  margin: 0;
+  font-size: 12.5px;
+}
+
+.defense-lock[data-defense-lock='locked'] {
+  color: var(--good);
+  font-weight: 600;
+}
+
 /* Dönem çipi: olay çipinden bir tık daha ağır — mevsim, haber değil. */
 .era-chip {
   font-weight: 600;

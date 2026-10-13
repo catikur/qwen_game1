@@ -178,6 +178,15 @@ export function portfolioValue(state: GameState, companyId: string): number {
  * hazineye çekilen her hisse dolaşımdan düşer ve %50 eşiği o kadar
  * uzaklaşır. Eski kural ("kendi hisseni alamazsın") tek yönlü borsanın
  * kalıntısıydı; kimse sana saldıramıyorken savunmaya da gerek yoktu.
+ *
+ * GERİ ALIM PİYASADAN (Tur 28). Tur 19'dan beri ihraç yapmış şirketin
+ * geri alımı önce yatırımcı payını geri alıyordu: kurucu payı büyüyor,
+ * serbest hisse yerinde kalıyordu. Yani baskın altında görünen "geri al"
+ * düğmesi, ihraçtan sonra savunma olmaktan çıkıyordu. Kalkanın sonu da
+ * buradaydı: kurucu tabanında yatırımcı %48,8'de duruyor, kalan serbest
+ * hissenin tamamını tek başına toplayan baskıncı eşiği geçiyordu. Artık
+ * geri alım her zaman serbest hisseden hazineye; ihracın seyreltmesi
+ * kalıcı (ihraç formu bunu zaten "kalıcı pay" diye anlatıyordu).
  */
 export function buyShares(
   state: GameState,
@@ -211,12 +220,6 @@ export function buyShares(
 
   buyer.cash -= cost;
   buyer.shares[issuerId] = (buyer.shares[issuerId] ?? 0) + wanted;
-  // Geri alım önce ihraçla yatırımcılara geçmiş payı geri alır (Tur 19):
-  // kurucu payı büyür. İhraç yapmamış şirkette hiçbir şey değişmez.
-  if (buyerId === issuerId && (buyer.investorShares ?? 0) > 0) {
-    buyer.investorShares = Math.max(0, buyer.investorShares! - wanted);
-    if (buyer.investorShares === 0) delete buyer.investorShares;
-  }
   return { ok: true };
 }
 
@@ -285,6 +288,44 @@ export function controllerOf(state: GameState, issuerId: string): string | null 
     if (count / outstanding > CONTROL_THRESHOLD) return company.id;
   }
   return null;
+}
+
+/**
+ * `holderId` en fazla kaç hisseye ulaşabilir (Tur 28)?
+ *
+ * Kurumsal yatırımcı satmıyor, hazine satılmıyor. Geri kalan iki yol:
+ * serbest hisse ve — ihraç yapmamış hedefte — kilitlenen yarışta öbür
+ * rakiplerden blok alım (`resolveStalemate`, Tur 25). Blok alım ihraç
+ * yapmış hedefte yok; orada ulaşılabilecek olan elindeki pay artı
+ * serbest hisse.
+ */
+export function controlReach(state: GameState, holderId: string, issuerId: string): number {
+  const issuer = state.companies[issuerId];
+  if (!issuer) return 0;
+  const outstanding = sharesOutstanding(state, issuerId);
+  if ((issuer.investorShares ?? 0) > 0) return sharesHeld(state, holderId, issuerId) + freeFloat(state, issuerId);
+  return outstanding - sharesHeld(state, issuerId, issuerId);
+}
+
+/** `holderId` bu şirketin kontrolünü hâlâ alabilir mi? */
+export function controlReachable(state: GameState, holderId: string, issuerId: string): boolean {
+  return controlReach(state, holderId, issuerId) > sharesOutstanding(state, issuerId) * CONTROL_THRESHOLD;
+}
+
+/**
+ * Kontrolü kilitlemek için hazineye daha kaç hisse çekilmeli: dışarıdaki
+ * hiçbir hissedar, kalan her şeyi alsa da %50'yi geçemesin. Sıfır =
+ * kilitli. Serbest hisse yetmiyorsa (ihraçsız şirkette yarıdan fazlası
+ * dolaşımda) geri alımla kilitlenemiyor demek; `Infinity`.
+ */
+export function buybackToLock(state: GameState, issuerId: string): number {
+  const outstanding = sharesOutstanding(state, issuerId);
+  let reach = 0;
+  for (const other of Object.values(state.companies)) {
+    if (other.id !== issuerId) reach = Math.max(reach, controlReach(state, other.id, issuerId));
+  }
+  const need = Math.max(0, Math.ceil(reach - outstanding * CONTROL_THRESHOLD));
+  return need > freeFloat(state, issuerId) ? Infinity : need;
 }
 
 /**

@@ -16,6 +16,9 @@ export const finance: Record<keyof typeof trFinance, string> = {
   'finance.market.defense.buyback': 'Buy back {count} shares',
   'finance.market.defense.capFull': "Today's cap is used up",
   'finance.market.defense.buybackDone': '{count} shares moved to treasury — {cost}.',
+  'finance.market.defense.lockNeed':
+    'Permanent shield: move {count} more shares into treasury and no holder can pass {threshold}% even with every remaining share.',
+  'finance.market.defense.locked': 'Control locked: {name} cannot pass {threshold}% even with every remaining share.',
   'finance.market.defense.noThreat':
     "No one is after your shares. Rivals collect stakes in weakening companies — if you slip in the rankings, this is the first place to look.",
 

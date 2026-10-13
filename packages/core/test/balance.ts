@@ -66,9 +66,9 @@ import { PRUNE_MEMORY_DAYS, isPrunable } from '../src/systems/npc';
 import { WAGE_PER_JOB } from '../src/systems/labor';
 import { loanQuote } from '../src/systems/credit';
 import { issueQuote } from '../src/systems/issuance';
-import { dailyBuyCap, findOrder, orderEstimate } from '../src/systems/orders';
+import { capRemaining, dailyBuyCap, findOrder, orderEstimate } from '../src/systems/orders';
 import { cityTrend, holdingNetWorth } from '../src/holding';
-import { ownerFraction, sharesOutstanding } from '../src/systems/equity';
+import { buybackToLock, ownerFraction, sharesOutstanding } from '../src/systems/equity';
 import type { GameEngine as Engine } from '../src/engine';
 import type { GameState } from '../src/types';
 import {
@@ -3643,20 +3643,37 @@ section('Sermaye piyasası: halka arz ve kurucu kilidi', () => {
   expect('halka arz bedava para değil', ipos.every(({ with: a, without: b }) => a.issuedDay !== null && a.worth < b.worth),
     ipos.map(({ with: a, without: b }) => `%${Math.round((a.worth / b.worth - 1) * 100)}`).join(' · '));
 
-  function defenseRun(seed: number, issue: boolean) {
+  /**
+   * `bare`: savunmasız. `issue`: baskıncı %30'u geçince ihraç. `lock`
+   * (Tur 28): aynı ihraç, ihraç kapanınca (kurucu tabanı) kilide yetecek
+   * kadar piyasadan geri alım — günlük tavanla, nakdin yettiği kadar.
+   */
+  function defenseRun(seed: number, mode: 'bare' | 'issue' | 'lock') {
     const engine = new GameEngine(createNewGame({ seed, companyName: 'Kalkan AŞ' }));
     let lost: number | null = null;
     let issued = 0;
+    let boughtBack = 0;
+    let buybackCost = 0;
     for (let day = 1; day <= 900; day++) {
       const state = engine.getState();
-      if (issue) {
+      if (mode !== 'bare') {
+        const id = state.playerCompanyId;
         let top = 0;
         for (const company of Object.values(state.companies)) {
-          if (!company.isPlayer) top = Math.max(top, company.shares[state.playerCompanyId] ?? 0);
+          if (!company.isPlayer) top = Math.max(top, company.shares[id] ?? 0);
         }
-        const quote = issueQuote(state, state.playerCompanyId);
-        if (top / sharesOutstanding(state, state.playerCompanyId) >= 0.3 && quote.ok) {
+        const threatened = top / sharesOutstanding(state, id) >= 0.3;
+        const quote = issueQuote(state, id);
+        if (threatened && quote.ok) {
           if (engine.dispatch({ type: 'ISSUE_SHARES', count: quote.maxShares }).ok) issued++;
+        } else if (mode === 'lock' && threatened && issued > 0) {
+          const toLock = buybackToLock(state, id);
+          const price = sharePrice(state, id);
+          const count = Math.min(toLock, capRemaining(state, id, id), freeFloat(state, id), Math.floor(getPlayer(state).cash / Math.max(1, price)));
+          if (Number.isFinite(count) && count > 0 && engine.dispatch({ type: 'BUY_SHARES', companyId: id, count }).ok) {
+            boughtBack += count;
+            buybackCost += count * price;
+          }
         }
       }
       if (day % 15 === 0) playerStrategy(engine);
@@ -3675,7 +3692,16 @@ section('Sermaye piyasası: halka arz ve kurucu kilidi', () => {
     const stakes = Object.values(state.companies)
       .filter((c) => !c.isPlayer && c.id !== state.gameOver?.byCompanyId)
       .map((c) => (c.shares[player.id] ?? 0) / sharesOutstanding(state, player.id));
-    return { lost, issued, founder: ownerFraction(player), runnerUp: Math.max(0, ...stakes) };
+    return {
+      lost,
+      issued,
+      founder: ownerFraction(player),
+      runnerUp: Math.max(0, ...stakes),
+      boughtBack,
+      buybackCost,
+      locked: buybackToLock(state, player.id) === 0,
+      worth: player.netWorth,
+    };
   }
   /*
    * Dört tohum (Tur 21). Kontrol iki tohumla (7, 42) yazılmıştı ve ikisi
@@ -3686,7 +3712,7 @@ section('Sermaye piyasası: halka arz ve kurucu kilidi', () => {
    * ihracı (soğumasız) ile dokuzun sekizi ayakta; 5 ve 31 eski kuralla
    * düşen tohumlar, o yüzden burada.
    */
-  const shields = [7, 42, 5, 31].map((seed) => ({ seed, bare: defenseRun(seed, false), issue: defenseRun(seed, true) }));
+  const shields = [7, 42, 5, 31].map((seed) => ({ seed, bare: defenseRun(seed, 'bare'), issue: defenseRun(seed, 'issue') }));
   for (const { seed, bare, issue } of shields) {
     console.log(
       `  baskın seed ${String(seed).padStart(2)} | savunmasız ${bare.lost ? `${bare.lost}. günde düşüyor` : 'ayakta'} · ` +
@@ -3749,6 +3775,40 @@ section('Sermaye piyasası: halka arz ve kurucu kilidi', () => {
       )
       .join(' · ') +
       (calm.length > 0 ? ` · ölçüm dışı: ${calm.map(({ seed }) => `seed ${seed} (savunmasız da ayakta)`).join(', ')}` : ''),
+  );
+
+  /*
+   * KALKANIN SONU KAPANIYOR (Tur 28): geri alım piyasadan.
+   *
+   * Tur 27'de kalkanın sonu tek baskıncının serbest hissenin tamamını
+   * toplamasıydı ve oyuncunun elinde savunma kalmıyordu: ihraçtan sonra
+   * geri alım yatırımcı payını geri alıyor, serbest hisseyi azaltmıyordu.
+   * Geri alım artık serbest hisseden hazineye. Kurucu tabanında yatırımcı
+   * %48,8'de; hazineye ~%1,2 çekilince tek baskıncı kalan her şeyi alsa da
+   * %50'yi geçemiyor.
+   *
+   * Sınanan: aynı tehditli tohumlarda, ihraç kapanınca kilide yetecek
+   * kadar geri alan oyuncu 900. güne ayakta; ihraçla düşen tohumda geri
+   * alım gerçekten iş görmüş (hisse hazineye çekilmiş).
+   */
+  const locks = threatened.map((s) => ({ ...s, lock: defenseRun(s.seed, 'lock') }));
+  for (const { seed, lock } of locks) {
+    console.log(
+      `  kilit seed ${String(seed).padStart(2)} | ${lock.lost ? `${lock.lost}. günde düşüyor` : 'ayakta'} · ` +
+        `${lock.issued} ihraç · ${lock.boughtBack} hisse geri alım (${formatMoney(lock.buybackCost)}) · ` +
+        `${lock.locked ? 'kilitli' : 'kilitsiz'} · 900. gün ${formatMoney(lock.worth)}`,
+    );
+  }
+  expect(
+    'ihraç + piyasadan geri alım kalkanı kalıcı yapıyor',
+    locks.length >= 2 &&
+      locks.every(({ lock }) => lock.lost === null) &&
+      locks.every(({ issue, lock }) => issue.lost === null || lock.boughtBack > 0),
+    locks
+      .map(({ seed, issue, lock }) =>
+        `seed ${seed}: ihraçla ${issue.lost ?? 'ayakta'} → kilitle ${lock.lost ?? 'ayakta'} (${lock.boughtBack} hisse)`,
+      )
+      .join(' · '),
   );
 
   // Kurucu kilidi: oyun başında hiçbir rakip satın alınamıyor.

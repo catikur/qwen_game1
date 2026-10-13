@@ -4,7 +4,7 @@
 > `pnpm bench` çıktısından; iddialar `pnpm balance` ve `pnpm playtest`
 > tarafından her koşuda doğrulanıyor.
 >
-> Son güncelleme: şema **v6**, 27 tur tamamlandı.
+> Son güncelleme: şema **v6**, 28 tur tamamlandı.
 
 ---
 
@@ -712,6 +712,8 @@ durumu bayt bayt aynı kaldı.
 - *Yatırımcı payı dolaşımda değil:* kurumsal yatırımcı hisseyi elde
   tutuyor, baskıncı alamıyor. Kalkan bu kuraldan doğuyor.
 - *Geri alım:* önce yatırımcı payını geri alıyor, kurucu payı büyüyor.
+  (Tur 28'de değişti: geri alım artık serbest hisseden hazineye; bu kural
+  baskın altındaki geri alımı ihraçtan sonra etkisiz bırakıyordu.)
 - *Devralma:* devralan şirket, hedefin yatırımcılarını piyasa fiyatından
   nakde çeviriyor.
 - *Form:* ihraç günü net değere etkisini gösteriyor. Piyasa primliyken
@@ -1760,6 +1762,86 @@ Sözlük testi iki listeyi de tarıyor (`ALL_EVENTS`); bütün yeni olay ve
 CEO metinlerinin İngilizcesi var. Oynanış testi kurulum ekranında on CEO
 kartı ve on portre bekliyor.
 
+### Tur 28 — Geri alım serbest piyasadan: kalkan kalıcı olabiliyor
+
+Tur 27'nin açık kalemi (§4.6): kurucu tabanına inmiş oyuncuyu, serbest
+hissenin tamamını tek başına toplayan baskıncı yine düşürüyordu. Kullanıcı
+üç seçenekten (b)'yi seçti: geri alım serbest piyasadan.
+
+**Kusur.** Tur 19'dan beri ihraç yapmış şirketin geri alımı önce yatırımcı
+payını geri alıyordu. Kurucu payı büyüyor, serbest hisse yerinde kalıyordu.
+Baskın altındaki "Kendi Hissen" bloğunun "geri al" düğmesi ihraçtan sonra
+savunma olmaktan çıkıyordu. Üstelik düğme bunu söylemiyordu; hisse
+"hazineye çekildi" diyordu ama dolaşım değişmiyordu.
+
+**Kural.** Geri alım artık her zaman serbest hisseden hazineye. Yatırımcı
+payı kalıcı; ihraç formu bunu zaten "kalıcı pay" diye anlatıyordu.
+Kalkanın kalıcı olmasının hesabı:
+
+- kurucu tabanında yatırımcı %48,8'de;
+- hazineye ~%1,2 çekilince yatırımcı ve hazine yarıyı buluyor;
+- tek baskıncı kalan her şeyi alsa da en fazla %50'ye çıkıyor, eşik %50'nin
+  üstü.
+
+Bedeli nakitte küçük (seed 7'de 235 hisse, 1,88 M ₺). Asıl bedel ihraçta:
+şirketin sonraki bütün büyümesinin %49'u yatırımcının. Kalkan kalıcı,
+ama yarım bir şirketin kalkanı.
+
+**Ulaşılabilir pay.** Kilidi hesaplamak için ortak bir ölçü
+(`controlReach`): bir hissedar en fazla kaç hisseye ulaşabilir?
+
+- *İhraç yapmış hedef:* elindeki pay artı serbest hisse. Yatırımcı satmıyor,
+  hazine satılmıyor, blok alım bu hedefte yok (Tur 25).
+- *İhraçsız hedef:* hazine dışındaki her şey. Kilitlenen yarışta rakipler
+  birbirinden blok alabiliyor. Bu yüzden ihraçsız şirketi geri alımla
+  kilitlemek hisselerin yarısını hazineye çekmek demek; pratikte kilit
+  ihraçtan sonra geliyor.
+
+`buybackToLock` kilide kalan hisseyi veriyor. Sıfır kilitli demek; serbest
+hisse yetmiyorsa geri alımla kilitlenemiyor demek.
+
+**Rakipler de aynı ölçüyü okuyor.**
+
+- Baskıncı, kontrolünü artık alamayacağı hedefe nakit gömmüyor, sıradakine
+  geçiyor. Eskiden yalnızca serbest hissesi sıfır olan hedefi atlıyordu.
+- Kilitli şirket boşa geri alım yapmıyor; geri alım kilide yeteni geçmiyor.
+
+**Arayüz.** Baskın altındayken "Kendi Hissen" bloğu iki şeyden birini
+söylüyor. Ya "Kalıcı kalkan: hazineye N hisse daha çekersen hiçbir
+hissedar %50'yi geçemez" ve düğme kilide yetecek kadarını alıyor. Ya da
+"Kontrol kilitli" ve düğme kalkıyor, çünkü fazlası boşa nakit.
+
+**Ölçüm.** Denge testinde kalkan bölümüne üçüncü bir kol eklendi. Oyuncu
+baskıncı %30'u geçince ihraç ediyor; ihraç kapanınca (kurucu tabanı) kilide
+yetecek kadar geri alıyor.
+
+| Tohum | Savunmasız | Yalnız ihraç | İhraç + geri alım |
+|---|---|---|---|
+| 7 | 825. gün | 885. gün (kalkanın sonu) | ayakta, 235 hisse (1,88 M ₺) |
+| 42 | 858. gün | ayakta | ayakta, 235 hisse (2,85 M ₺) |
+| 5 | 662. gün | ayakta | ayakta, geri alım gerekmedi (iki rakip bölüşmüş, ikisi de yarıya ulaşamıyor) |
+
+"Yalnız ihraç" kontrolü olduğu gibi duruyor: kalkanın sonu hâlâ ihracın
+kendi sonu. Yeni kontrol, geri alımla o sonun kapandığını ve ihraçla düşen
+tohumda geri alımın gerçekten iş gördüğünü istiyor.
+
+**Testler.**
+
+- *Birim (4 test, biri eskisinin yerine):*
+  - geri alım hazineye gidiyor, yatırımcı payı yerinde kalıyor;
+  - kurucu tabanında kilit: tek baskıncı serbest hissenin hepsiyle de
+    geçemiyor;
+  - ihraçsız şirkette kilit yarıyı istiyor;
+  - rakip kilitli hedefe baskın yapmıyor, kilitsiz hedefe yapıyor. Baskın
+    filtresini kaldıran mutasyon bu testi kırıyor.
+- *Oynanış (2 yeni, duman koşusunda da):* blok kilide kalan hisseyi
+  söylüyor; düğme serbest hisseden hazineye çekiyor ve blok "kontrol
+  kilitli"ye dönüyor.
+
+**Yol boyunca.** Oturumun konteyneri iş ortasında yeniden kuruldu ve commit
+edilmemiş değişiklikler gitti. Hepsi bağlamdan yeniden uygulandı; bu
+turdan itibaren ara commit'ler daha sık.
+
 ---
 
 ## 3. Ölçülen durum
@@ -1841,9 +1923,9 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi) |
-| Birim testi | **181 test** (`pnpm test`; Tur 24'te render paketi de) |
-| Denge testi | **283 kontrol, hepsi geçiyor** (20 bölüm, süreleriyle; ~10 dk) |
-| Tarayıcı testi | **321 kontrol, hepsi geçiyor**, 0 konsol hatası (~20 dk); duman koşusu 95 (~5 dk, rehber dahil) |
+| Birim testi | **184 test** (`pnpm test`; Tur 24'te render paketi de) |
+| Denge testi | **284 kontrol, hepsi geçiyor** (20 bölüm, süreleriyle; ~10 dk) |
+| Tarayıcı testi | **323 kontrol, hepsi geçiyor**, 0 konsol hatası (~15–20 dk); duman koşusu 97 (~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + duman oynanışı |
 | Kapsam | 33 bina · 22 ürün · 7 kategori · 8 rakip profili · 10 CEO · 22 olay (11 şehir + 11 sektör) · 10 şehir yapısı (6 siluet) |
 
@@ -1961,7 +2043,10 @@ Tur 22 bölümü).
   yapıyı yıktırır). Şirket binası olan parsel ihaleye çıkmıyor.
 - ~~Oyuncunun rakip hissesi alımında günlük tavan yok~~ — Tur 20'de
   kapandı: herkes için aynı günlük tavan ve günlere yayılan devralma emri.
-- **İhraç kalkanının sonu (Tur 27).** Kurucu tabanına inmiş oyuncuyu,
+- ~~**İhraç kalkanının sonu (Tur 27).**~~ — Tur 28'de kapandı: kullanıcı
+  (b)'yi seçti, geri alım serbest hisseden. Kurucu tabanındaki oyuncu
+  hazineye ~%1,2 çekince tek baskıncı %50'yi geçemiyor. Eski kalem:
+  Kurucu tabanına inmiş oyuncuyu,
   serbest hissenin tamamını tek başına toplayan nakitli bir baskıncı yine
   düşürüyor (seed 7, 885. gün; 18 tohumda ihraç eden on oyuncudan biri).
   Belgeli bir son, ama oyuncunun o noktada savunma hamlesi kalmıyor: ihraçtan
