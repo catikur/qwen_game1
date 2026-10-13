@@ -4,7 +4,7 @@
 > `pnpm bench` çıktısından; iddialar `pnpm balance` ve `pnpm playtest`
 > tarafından her koşuda doğrulanıyor.
 >
-> Son güncelleme: şema **v6**, 25 tur tamamlandı.
+> Son güncelleme: şema **v6**, 26 tur tamamlandı.
 
 ---
 
@@ -1538,6 +1538,100 @@ Zincir kontrolündeki ilkeyle ("kurulamamış zincir ölçülemez"):
 
 Ayrıca Tur 25'in ilk commit'inde kalan bir test hatası düzeldi. Teknoloji
 Mağazası'nın kalite primi 0,045, test 0,035 bekliyordu.
+
+
+### Tur 26 — Yeni oyuncu rehberi
+
+Kullanıcı sıradaki tur için rehberi seçti. Oyun 25 turda derinleşti ama
+ilk kez açan oyuncuyu yalnızca hedef merdiveninin ilk basamağı
+karşılıyordu: "Boş bir parsel seç, satın al ve bir mağaza kur". Nerede,
+hangi düğmeyle, tahmin ne diyor? Bu soruların cevabı yoktu.
+
+**Ne yapıyor.** Atlanabilen, iki dilli, 11 adımlık bir koç kartı. Hedef
+öğeyi çevreleyen bir halkası var.
+
+| Adım | Oyuncu ne yapıyor | Ne zaman geçiyor |
+|---|---|---|
+| Hoş geldin | okur (zaman duruyor) | "Başlayalım" |
+| Fırsatı gör | Fırsat merceğini açar | mercek açık |
+| Bir parsel seç | parlayan bölgede boş parsele dokunur | alınabilir parsel seçili |
+| Parseli al | satın alma düğmesine basar | parsel onun |
+| Ne kuracağını seç | tahmini okur, "en iyi"yi seçer | yerleştirme modunda bir mağaza |
+| Kur | parsele dokunur ya da "kur"a basar | mağaza var |
+| Zamanı başlat | ▶ | üç gün geçti |
+| Sıradaki hedef | hedef çipine dokunur | panel okunup kapandı |
+| Tedarik zinciri | Zincir sekmesini açar | panel okunup kapandı |
+| Rakipler ve borsa | Borsa sekmesini açar | panel okunup kapandı |
+| Hazırsın | — | "Bitir" |
+
+**Üç ilke.**
+
+1. *Oyun durumuna bakar, düğmeye değil.* Adımların çoğu "İleri" ile değil,
+   oyuncu o şeyi yapınca geçiyor. Önden giden oyuncu için tamamlanmış
+   adımlar kendiliğinden atlanıyor; arsayı zaten almış olan mercek
+   adımında beklemiyor. Panel adımlarında kart panel açıkken panelin
+   anlatımına geçiyor, panel kapanınca adım bitiyor.
+2. *Her an kapatılabilir.* Kart haritanın üstünde, önünde değil. Arkası
+   tıklanabilir, halka dokunuşu geçiriyor. Her eylem adımında "Bu adımı
+   geç" var; nakdi yetmeyen oyuncu takılı kalmıyor. Küçültülebiliyor.
+   Kapatılan rehber Yardım panelinden baştan başlıyor.
+3. *Kayıt şemasına dokunmaz.* İlerleme arayüzün işi, simülasyonun değil.
+   Oyun durumuna yazılsaydı determinizm ölçümleri, kayıt göçü ve lig
+   doğrulaması bir arayüz kaygısını taşımak zorunda kalırdı. İlerleme
+   yerel depoda, oyunun kimliğiyle (tohum + kuruluş anı) tutuluyor. Depo
+   kapalıysa oturum boyunca bellekte. Sayfa yenilenince kaldığı adımdan
+   sürüyor.
+
+Kurulum ekranında "Rehberle başla" seçeneği var. Bu tarayıcıda rehber hiç
+bitirilmemiş ya da kapatılmamışsa açık geliyor.
+
+**Yer ölçülerek seçiliyor.** Kart önce üstte deneniyor (üst bar ve
+masaüstünde gündem şeridinin altı); hedefi örtüyorsa sıradaki yere
+geçiyor. Masaüstünde alt orta haber akışının yeri, o yüzden kart üst
+ortada; haritanın gökyüzünü örtüyor. Telefonda sıra üst, parsel
+detayının üstü, rıhtımın üstü. Halka yalnızca gerçekten görünen öğeyi
+gösteriyor: kutusu ekranda ama başka bir panelin altında kalan öğe
+atlanıyor (`elementsFromPoint`, rehberin kendi kartı sayılmadan;
+sayılsaydı kart hedefi örtünce hedef değişir, kart kayar, hedef geri
+gelirdi).
+
+**Rehberin bulduğu mobil boşluk.** İlk telefon yürüyüşünde rehber
+"ne kuracağını seç" adımında takıldı. Sebep rehber değil, arayüzün
+kendisiydi: telefonda kendi boş arsan seçiliyken yapı listesi parsel
+detayının (alt sayfa) arkasında kalıyordu. İçerik ekrana sığdığı için
+sütun kaymıyor, liste öne gelemiyordu. Oyuncu arsayı alıyor, sonra ne
+kuracağını göremiyordu.
+
+- *"Buraya ne kurulur?"* (yalnızca dar ekranda): yapı listesini açıyor ve
+  parsel detayını derli toplu hâle getiriyor. İstatistikler, yan metin ve
+  "Parseli sat" gizleniyor; detay küçülünce en iyi seçim kartı görünür
+  alana çıkıyor. Kare değişince detay eski hâline dönüyor.
+- *"… kur"* (her genişlikte): bina seçiliyken parsel detayında doğrudan
+  inşa düğmesi. Telefonda yapı panelinin altındaki "Seçili arsaya inşa
+  et"e ulaşmak gerekmiyor.
+
+**Testler.** Oynanış testinde yeni "Rehber" bölümü var. Rehber gerçek
+düğmelerle baştan sona oynanıyor, masaüstünde (duman koşusunda da, CI
+her PR'da) ve iPhone 13'te. Ölçülenler:
+
+- rehber karşılamada zamanı durduruyor;
+- on adımın hepsi oyunun kendi akışıyla geçiyor;
+- panel adımında kart anlatımını değiştiriyor;
+- kart hiçbir adımda kendi hedefini örtmüyor;
+- sonunda gerçek bir mağaza var;
+- bitince tarayıcı rehberi hatırlıyor;
+- Yardım'dan yeniden başlıyor, "Rehberi kapat" kaldırıyor;
+- sayfa yenilenince kaldığı adımdan sürüyor;
+- konsol temiz.
+
+Diğer bölümler rehberi görmüş oyuncuyu oynuyor. Her bağlama bir
+başlangıç betiği bu işareti koyuyor; kurulumda seçeneğin kapalı geldiği
+ayrıca sınanıyor. Yoksa her bağlamda kart açılır, oyun durur ve
+bölümlerin ölçtüğü şey değişirdi.
+
+Yenileme kontrolü bilerek geç bölümde, ana sayfa kapandıktan sonra.
+Yazılımsal GPU'da iki canlı WebGL bağlamıyla sayfa yenilemek açılışı 20
+saniyenin ötesine itiyordu (Tur 24'ün "Dil" dersinin aynısı).
 
 ---
 
