@@ -2391,38 +2391,42 @@ async function finish(browser, consoleErrors) {
       await lp.locator('.league-result button:has-text("Tabloya")').click();
       await lp.waitForTimeout(300);
       await lp.locator('.league-result button:has-text("Tabloyu aç")').click();
-      await lp.waitForSelector('.league-table li', { timeout: 5000 }).catch(() => null);
-      const rows = await lp.locator('.league-table li').count();
+      await lp.waitForSelector('[data-league-row]', { timeout: 5000 }).catch(() => null);
+      const rows = await lp.locator('[data-league-row]').count();
       check('Skor tabloya yazılıyor', rows === 1, `${rows} satır`);
-      if (rows >= 1) {
-        await lp.locator('.league-table li').first().locator('button:has-text("Doğrula")').click();
-        const verdict = await lp
-          .waitForFunction(
-            () => {
-              const text = document.querySelector('.league-table li .league-verdict')?.textContent ?? '';
-              return text.includes('doğrulandı') || text.includes('tutmadı') ? text : null;
-            },
-            null,
-            { timeout: 90000 },
-          )
-          .then((h) => h.jsonValue())
-          .catch(() => 'zaman aşımı');
-        check('Koşu tarayıcıda yeniden oynanıp doğrulanıyor', verdict === 'doğrulandı', verdict);
-      }
+      // Tur 31: düğme yok — panel açılınca satır bu tarayıcıda kendiliğinden
+      // yeniden oynanıyor ve doğrulanınca sıralamaya giriyor.
+      const autoVerified = await lp
+        .waitForFunction(
+          () => (document.querySelector('[data-league-row="ranked"] .league-verdict')?.textContent ?? '').includes('doğrulandı') || null,
+          null,
+          { timeout: 90000 },
+        )
+        .then(() => true)
+        .catch(() => false);
+      check('Koşu kendiliğinden yeniden oynanıp doğrulanıyor, sıralamaya giriyor', autoVerified,
+        ((await lp.locator('[data-league-row]').first().textContent()) ?? '').trim().slice(0, 90));
 
-      // Sahte kod: skoru şişirilmiş bir koşu tekrarda tutmamalı.
-      const forgedCode = await lp.evaluate(() => {
+      // Koşu kodunu çöz/kodla: sahte ve kopya satırlar bunlardan yapılıyor.
+      const codes = await lp.evaluate(() => {
         const entries = JSON.parse(localStorage.getItem('capitalforge.league.local') ?? '[]');
         const code = entries.at(-1)?.code;
         if (!code) return null;
-        const bytes = Uint8Array.from(atob(code.slice(4)), (c) => c.charCodeAt(0));
-        const run = JSON.parse(new TextDecoder().decode(bytes));
-        run.score += 5_000_000;
-        const out = new TextEncoder().encode(JSON.stringify(run));
-        let binary = '';
-        for (const b of out) binary += String.fromCharCode(b);
-        return 'CF1.' + btoa(binary);
+        const decode = (c) => JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(c.slice(4)), (ch) => ch.charCodeAt(0))));
+        const encode = (run) => {
+          let binary = '';
+          for (const b of new TextEncoder().encode(JSON.stringify(run))) binary += String.fromCharCode(b);
+          return 'CF1.' + btoa(binary);
+        };
+        const forged = decode(code);
+        forged.score += 5_000_000;
+        const copy = decode(code);
+        copy.companyName = 'Kopya AŞ';
+        return { forged: encode(forged), copy: encode(copy) };
       });
+      const forgedCode = codes?.forged ?? null;
+
+      // Sahte kod: skoru şişirilmiş bir koşu tekrarda tutmamalı.
       if (forgedCode) {
         await lp.locator('.league-paste textarea').fill(forgedCode);
         await lp.locator('.league-paste button:has-text("Tekrar oynat")').click();
@@ -2438,6 +2442,60 @@ async function finish(browser, consoleErrors) {
           .then((h) => h.jsonValue())
           .catch(() => 'zaman aşımı');
         check('Şişirilmiş skorlu kod doğrulamadan geçemiyor', forgedVerdict.includes('tutmadı'), forgedVerdict.slice(0, 90));
+      }
+
+      /*
+       * Tur 31: tabloda sahte ve kopya satır. Sahte satır (kodla birlikte
+       * şişirilmiş skor) sıralamaya girmiyor, nedeniyle ayrı listede. Kopya
+       * (aynı koşu, başka ad — ad simülasyonu değiştirmiyor) doğrulanıyor
+       * ama bir kez sayılıyor.
+       */
+      if (codes) {
+        await lp.evaluate(({ forged, copy }) => {
+          const entries = JSON.parse(localStorage.getItem('capitalforge.league.local') ?? '[]');
+          const honest = entries.at(-1);
+          const later = new Date(Date.parse(honest.submittedAt) + 60_000).toISOString();
+          entries.push({ ...honest, id: 'local-sahte', score: honest.score + 5_000_000, code: forged, submittedAt: later });
+          entries.push({ ...honest, id: 'local-kopya', companyName: 'Kopya AŞ', code: copy, submittedAt: later });
+          localStorage.setItem('capitalforge.league.local', JSON.stringify(entries));
+          // Başka sekmeden gelmiş gibi: `storage` olayı yalnızca öteki sekmelerde kendiliğinden çıkıyor.
+          window.dispatchEvent(new StorageEvent('storage', { key: 'capitalforge.league.local' }));
+        }, codes);
+        // Paneli kapatıp biten koşunun gündem çipinden yeniden aç.
+        await lp.keyboard.press('Escape');
+        await lp.waitForTimeout(200);
+        const doneChip = await lp.locator('.agenda [data-agenda="league"]').count();
+        check('Biten lig koşusunda tabloya gündemden dönülüyor', doneChip === 1, `${doneChip} çip`);
+        if (doneChip === 1) await lp.locator('.agenda [data-agenda="league"] button').first().click();
+        const settled = await lp
+          .waitForFunction(
+            () => document.querySelectorAll('[data-league-row="pending"]').length === 0 &&
+              document.querySelectorAll('[data-league-row="copy"]').length + document.querySelectorAll('[data-league-table="rejected"]').length >= 2 || null,
+            null,
+            { timeout: 200000 },
+          )
+          .then(() => true)
+          .catch(() => false);
+        const table = await lp.evaluate(() => ({
+          ranked: document.querySelectorAll('[data-league-row="ranked"]').length,
+          copies: document.querySelectorAll('[data-league-row="copy"]').length,
+          rejectedToggle: document.querySelector('[data-league-table="rejected"] button')?.textContent ?? '',
+          topScore: document.querySelector('[data-league-row="ranked"] .league-score')?.textContent ?? '',
+        }));
+        check('Sahte satır sıralamaya girmiyor, nedeniyle ayrı listede', settled && table.ranked === 1 && table.rejectedToggle.includes('1'),
+          `${table.ranked} sıralı · ${table.rejectedToggle} · tepe ${table.topScore}`);
+        if (table.rejectedToggle) {
+          await lp.locator('[data-league-table="rejected"] button').first().click();
+          await lp.waitForTimeout(150);
+        }
+        const rejected = await lp.evaluate(() => ({
+          kind: document.querySelector('[data-league-row="rejected"]')?.getAttribute('data-reject') ?? null,
+          text: document.querySelector('[data-league-row="rejected"] .league-verdict')?.textContent ?? '',
+        }));
+        check('Sahte satırın nedeni: tekrar tutmadı, tekrarın skoru yazıyor', rejected.kind === 'replay' && rejected.text.includes('beyan'),
+          `${rejected.kind} · ${rejected.text.slice(0, 90)}`);
+        check('Kopya satır doğrulanıyor ama bir kez sayılıyor', table.copies === 1 && table.ranked === 1,
+          `${table.copies} kopya · ${table.ranked} sıralı`);
       }
     }
     check('Lig akışında konsol temiz', leagueErrors.length === 0, leagueErrors.slice(0, 2).join(' | '));

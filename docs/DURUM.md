@@ -4,7 +4,7 @@
 > `pnpm bench` çıktısından; iddialar `pnpm balance` ve `pnpm playtest`
 > tarafından her koşuda doğrulanıyor.
 >
-> Son güncelleme: şema **v6**, 30 tur tamamlandı.
+> Son güncelleme: şema **v6**, 31 tur tamamlandı.
 
 ---
 
@@ -1987,6 +1987,78 @@ bunun ~%6'sı.
 - *Oynanış testi:* kurucu şehre dönünce o da 20 gün yaşamış; uzaktaki
   şehrin satırı durumu, günü ve kâr payını gösteriyor.
 
+### Tur 31 — Lig güvenliği: kanıta güven, satıra değil
+
+§4.9'un son açık kalemi. Tablo sunucusuz: claude.ai'nin paylaşılan
+deposunda her kişi yalnızca kendi satırına yazabiliyor (`league/{self}`).
+Ama satırın içeriği tamamen onun tarayıcısından geliyor ve tablo bu
+beyana güveniyordu:
+
+| Tehdit | Önce | Şimdi |
+|---|---|---|
+| Şişirilmiş skor | biri "Doğrula"ya basana kadar tablonun tepesinde | her tarayıcı her satırı kendiliğinden yeniden oynatıyor; sıralama yalnızca doğrulanmış koşulardan, tekrarın skoruyla |
+| Sahte eğri, ad, CEO | satırın kendi alanlarından gösteriliyordu | doğrulanmış koşunun kendisinden; eğri tekrarla birebir tutmalı (hayalet de yalan söyleyemiyor) |
+| Satırın beyanı ile kod farklı | yalnızca skor ve hafta karşılaştırılıyordu | skor, hafta, ad ve CEO; uymayan satır tekrar başlamadan reddediliyor |
+| Dev ya da bozuk kod | herkesin tarayıcısını kilitleyebilirdi | 1,2 M karakter ve 12 bin komut sınırı; tanınmayan komut, sınır dışı gün, bilinmeyen CEO, uzun ad, sonsuz sayı reddediliyor; tekrar hatası yakalanıyor |
+| Güncellemeyle tutmayan dürüst koşu | "tutmadı" | koşu kodu v2 simülasyon parmak izi taşıyor: başka sürümde oynanmış koşu "farklı sürüm (sahte değil)"; izsiz eski kod ayrı etiketli |
+| Başkasının koşusunu kopyalamak | yakalanmıyordu | aynı eğri ve skor "aynı koşu" — bir kez sayılıyor |
+
+**Parmak izi.** Sabit bir dünyada 60 günün sayısal izdüşümünün özeti:
+şirket nakdi ve değeri, binalar, spot fiyatlar, zar durumu. Metinler (haber,
+ad) iz dışında; dil değişince iz değişmiyor (sınandı). Sürüm sayacı elle
+artırılsaydı unutulurdu: Tur 28, 29 ve 30'un üçü de simülasyonu değiştirdi.
+İz kendiliğinden değişiyor. Tarayıcıda parça parça hesaplanıyor (10 günde
+bir nefes); tablo ilk çizimde beklemiyor.
+
+**Doğrulama kuyruğu.** Bir tekrar 360 gün (~1–3 sn). Kuyruk:
+
+- tek tek, beyan edilen skora göre işliyor; tablonun tepesi önce oturuyor;
+- sonucu yerel depoda tutuyor (anahtar kod + beyan; her sonuç doğrulandığı
+  izi taşıyor, güncellemeden sonra eski sonuç okunmuyor);
+- yalnızca lig paneli açıkken işliyor: oyun sürerken arka planda tekrar
+  koşup kare düşürmesin. Gündem çipindeki hayalet önbelleği okuyor;
+  doğrulanmamış hayalet "henüz doğrulanmadı" diye işaretli.
+
+**Tablo.**
+
+- Doğrulanmış sıralama: tekrarın skoru, adı ve CEO'su.
+- Altında, ayrı ayrı:
+  - sırada bekleyenler (beyan ve ilerleme);
+  - aynı koşular ("X'in koşusunun aynısı — bir kez sayıldı");
+  - doğrulanamayanlar (açılır; neden ve tekrarın bulduğu skor).
+- Elle "Doğrula" düğmesi kalktı; kod yapıştırarak doğrulama duruyor.
+- Biten koşuda gündemde "Lig … · tablo" çipi var: sonuç ekranı kapanınca
+  tabloya dönüş yolu yoktu, doğrulama da panel açıkken koşuyor.
+- Yerel tablo (paylaşılan depo yokken) aynı tarayıcının başka sekmesinden
+  gelen koşuyu da görüyor. Önceden depoyu yalnızca abonelikte ve gönderimde
+  okuyordu; gündem çipinin hayaleti aboneliği açık tuttuğu için sonradan
+  gelen satır hiç görünmüyordu. Tam oynanış testi yakaladı.
+
+**Bilinen sınır: kopya önlenemiyor, görünür kılınıyor.** Koşu kodu tabloda
+açık. Şirket adı simülasyonu değiştirmediği için biri başkasının koşusunu
+kendi adıyla yazabilir ve kopya doğrulanır (birim testi bunu açıkça
+sınıyor). Tablo aynı eğri ve skoru bir kez sayıyor; hangisinin önce
+gönderildiğini ise satırın kendi beyan ettiği zaman söylüyor —
+sunucusuz bir tabloda başka saat yok. Hiç oynanmamış koşular (boş günlük)
+kopya sayılmıyor, ikisi de aynı taban eğriyi çizer.
+
+**Testler.**
+
+- *Birim (9 yeni):*
+  - v2 ve iz (kararlı, dilden bağımsız);
+  - dürüst koşu (her şey tekrardan);
+  - beyan uyuşmazlığı (dört alan);
+  - kodla birlikte şişirilen skor ("replay", tekrar gerçek skoru buluyor);
+  - sahte eğri ("curve");
+  - sürüm farkı ve izsiz eski kod;
+  - bozuk, dev ve tanınmayan komutlu kod;
+  - sıralama (sahte, bekleyen, kopya, boş koşu);
+  - adı değiştirilmiş kopya.
+- *Oynanış:* koşu kendiliğinden doğrulanıp sıralamaya giriyor; tabloya
+  sahte ve kopya satır enjekte ediliyor. Sahte sıralamaya girmiyor (nedeni
+  "tekrar tutmadı", tekrarın skoru yazıyor); kopya doğrulanıyor ama bir kez
+  sayılıyor. Biten koşuda tabloya gündemden dönülüyor.
+
 ---
 
 ## 3. Ölçülen durum
@@ -2068,9 +2140,9 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi) |
-| Birim testi | **191 test** (`pnpm test`; Tur 24'te render paketi de) |
+| Birim testi | **200 test** (`pnpm test`; Tur 24'te render paketi de) |
 | Denge testi | **284 kontrol, hepsi geçiyor** (20 bölüm, süreleriyle; ~10 dk) |
-| Tarayıcı testi | **324 kontrol, hepsi geçiyor**, 0 konsol hatası (~15–20 dk); duman koşusu 97 (~5 dk, rehber dahil) |
+| Tarayıcı testi | **328 kontrol, hepsi geçiyor**, 0 konsol hatası (~15–20 dk); duman koşusu 97 (~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + duman oynanışı |
 | Kapsam | 35 bina · 25 ürün · 7 kategori · 8 rakip profili · 10 CEO · 22 olay (11 şehir + 11 sektör) · 10 şehir yapısı (6 siluet) |
 
@@ -2246,10 +2318,12 @@ nüfus tavanı ve arsa değeri). Hâlâ açık olanlar:
   tam, dil seçici kurulumda ve Yardım'da. Üçüncü bir dil için üç sözlük
   dosyası, dil adı (`LOCALE_NAMES`) ve `messages.ts`'teki biçim kuralları
   (para, yüzde, ondalık) gerekiyor.
-- **Lig tablosunun güvenliği:** skorlar tekrarla doğrulanabiliyor ama
-  doğrulama izleyicinin isteğine bağlı (her satırda "Doğrula"); tablo
-  doğrulanmamış skoru da gösteriyor. Sunucu tarafında doğrulama bu
-  mimaride yok — dürüst cümle "herkes doğrulayabilir", "doğrulanmış" değil.
+- ~~**Lig tablosunun güvenliği**~~ — Tur 31'de kapandı: her tarayıcı her
+  satırı kendiliğinden yeniden oynatıyor, sıralama yalnızca doğrulanmış
+  koşulardan ve tekrarın skoruyla; kod sınırları, simülasyon parmak izi,
+  kopya tespiti. Sunucu tarafında doğrulama bu mimaride hâlâ yok: dürüst
+  cümle "her tarayıcı kendisi doğruluyor". Kalan tek boşluk kopya — önlenemiyor,
+  görünür kılınıyor (Tur 31 bölümü).
 
 ## 5. Nasıl koşulur
 

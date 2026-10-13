@@ -257,6 +257,17 @@ export function agenda(state: GameState): AgendaItem[] {
       tone: 'neutral',
       progress: day / league.endDay,
     });
+  } else if (league) {
+    // Biten koşuda da tabloya bir kapı (Tur 31): doğrulama panel açıkken
+    // koşuyor; sonuç ekranı kapanınca tabloya dönüş yolu kalmıyordu.
+    items.push({
+      kind: 'league',
+      key: `league:${league.weekId}:done`,
+      urgency: 0,
+      daysLeft: null,
+      label: tc('core.agenda.leagueDone', { week: league.weekId }),
+      tone: 'neutral',
+    });
   }
 
   const session = state.council?.session;

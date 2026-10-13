@@ -1,7 +1,21 @@
 import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { GameEngine } from '../src/engine';
-import { createLeagueGame, decodeRun, encodeRun, replayRun, runFromState } from '../src/league';
+import {
+  RUN_LIMITS,
+  computeSimFingerprint,
+  createLeagueGame,
+  decodeRun,
+  decodeRunChecked,
+  encodeRun,
+  rankLeague,
+  replayRun,
+  runFromState,
+  simFingerprint,
+  verifyRun,
+} from '../src/league';
+import type { LeagueRun, RunVerdict } from '../src/league';
+import { setLocale } from '@capital/content';
 import { LEAGUE_DAYS, leagueSeed, leagueWeekId } from '../src/systems/league';
 import { createNewGame } from '../src/worldgen';
 import type { GameState } from '../src/types';
@@ -81,5 +95,154 @@ describe('koşu doğrulaması', () => {
   test('bozuk kod reddediliyor', () => {
     assert.equal(decodeRun('selam'), null);
     assert.equal(decodeRun('CF1.@@@'), null);
+  });
+});
+
+/*
+ * Lig güvenliği (Tur 31). Tablo sunucusuz: her tarayıcı her koşuyu kendisi
+ * yeniden oynatıyor, sıralama yalnızca doğrulanmış koşulardan ve tekrarın
+ * skoruyla. Satırın beyanı (skor, ad, CEO, eğri) sıralamaya girmiyor.
+ */
+describe('lig güvenliği', () => {
+  // Bir dürüst koşu yeter; her test kendi kopyasını bozuyor.
+  const honest = (() => {
+    let cached: LeagueRun | null = null;
+    return (): LeagueRun => (cached ??= runFromState(playLeague())!);
+  })();
+  const edited = (change: (run: LeagueRun) => void): string => {
+    const run = JSON.parse(JSON.stringify(honest())) as LeagueRun;
+    change(run);
+    return encodeRun(run);
+  };
+
+  test('koşu kodu v2: simülasyon parmak izini taşıyor; iz kararlı ve dilden bağımsız', () => {
+    const run = honest();
+    assert.equal(run.version, 2);
+    assert.equal(run.sim, simFingerprint());
+    assert.match(run.sim!, /^[0-9a-f]{16}$/);
+    const tr = computeSimFingerprint();
+    setLocale('en');
+    try {
+      assert.equal(computeSimFingerprint(), tr, 'dil izi değiştirmiyor');
+    } finally {
+      setLocale('tr');
+    }
+  });
+
+  test('dürüst koşu doğrulanıyor; skor, eğri, ad ve CEO tekrarın kendisinden', async () => {
+    const run = honest();
+    const verdict = await verifyRun(encodeRun(run), { weekId: run.weekId, score: run.score, companyName: run.companyName, ceoId: run.ceoId });
+    assert.equal(verdict.status, 'ok');
+    if (verdict.status !== 'ok') return;
+    assert.equal(verdict.score, run.score);
+    assert.deepEqual(verdict.curve, run.curve);
+    assert.equal(verdict.companyName, 'Lig AŞ');
+    assert.equal(verdict.idle, false);
+  });
+
+  test('satırın beyanı koda uymazsa tekrar başlamadan reddediliyor', async () => {
+    const run = honest();
+    const code = encodeRun(run);
+    for (const claim of [
+      { weekId: run.weekId, score: run.score + 1 },
+      { weekId: '2026-W41', score: run.score },
+      { weekId: run.weekId, score: run.score, companyName: 'Başka AŞ' },
+      { weekId: run.weekId, score: run.score, ceoId: 'muteahhit' },
+    ]) {
+      const verdict = await verifyRun(code, claim);
+      assert.deepEqual(verdict, { status: 'bad', kind: 'mismatch' }, JSON.stringify(claim));
+    }
+  });
+
+  test('kodla birlikte şişirilen skor tekrarda tutmuyor', async () => {
+    const verdict = await verifyRun(edited((run) => (run.score += 5_000_000)));
+    assert.equal(verdict.status, 'bad');
+    if (verdict.status === 'bad') {
+      assert.equal(verdict.kind, 'replay');
+      assert.equal(verdict.score, honest().score, 'tekrar gerçek skoru buluyor');
+    }
+  });
+
+  test('skor doğru, eğri sahte: hayalet de yalan söyleyemiyor', async () => {
+    const verdict = await verifyRun(edited((run) => (run.curve = run.curve.map((v) => v * 2))));
+    assert.equal(verdict.status, 'bad');
+    if (verdict.status === 'bad') assert.equal(verdict.kind, 'curve');
+  });
+
+  test('başka sürümde oynanmış koşu "sahte" değil "farklı sürüm"; izsiz eski kod ayrı', async () => {
+    const other = await verifyRun(edited((run) => {
+      run.sim = '0123456789abcdef';
+      run.score += 1;
+    }));
+    assert.deepEqual(other.status === 'bad' && other.kind, 'version');
+    const legacy = await verifyRun(edited((run) => {
+      run.version = 1;
+      delete run.sim;
+      run.score += 1;
+    }));
+    assert.deepEqual(legacy.status === 'bad' && legacy.kind, 'unknownVersion');
+  });
+
+  test('bozuk, dev ve tanınmayan komutlu kod tekrar başlamadan reddediliyor', () => {
+    const kind = (code: string) => {
+      const out = decodeRunChecked(code);
+      return 'error' in out ? out.error : 'ok';
+    };
+    assert.equal(kind(encodeRun(honest())), 'ok');
+    assert.equal(kind('CF1.' + 'A'.repeat(RUN_LIMITS.codeLength)), 'tooLarge');
+    assert.equal(kind('selam'), 'unreadable');
+    assert.equal(kind(edited((run) => run.log.push([12, { type: 'EVAL', code: 'alert(1)' } as never]))), 'malformed');
+    assert.equal(kind(edited((run) => run.log.push([LEAGUE_DAYS + 1, { type: 'BUY_TILE', tileId: 1 }]))), 'malformed');
+    assert.equal(kind(edited((run) => (run.score = Number.NaN))), 'malformed');
+    assert.equal(kind(edited((run) => (run.ceoId = 'yok_boyle_ceo'))), 'malformed');
+    assert.equal(kind(edited((run) => (run.companyName = 'x'.repeat(RUN_LIMITS.nameLength + 1)))), 'malformed');
+    assert.equal(kind(edited((run) => (run.curve = new Array(400).fill(1)))), 'malformed');
+    const flood = edited((run) => {
+      run.log = new Array(RUN_LIMITS.logEntries + 1).fill([5, { type: 'SET_AUTO_PRICE', buildingId: 'b1', enabled: true }]);
+    });
+    assert.ok(['malformed', 'tooLarge'].includes(kind(flood)));
+  });
+
+  test('bilinen sınır: adı değiştirilmiş kopya da doğrulanıyor, sıralama onu "aynı koşu" diye ayırıyor', async () => {
+    // Şirket adı simülasyonu değiştirmiyor: kopyacı başkasının kodunu kendi
+    // adıyla yazabilir. Sunucusuz tabloda önlenemiyor; görünür kılınıyor.
+    const run = honest();
+    const copy = edited((r) => (r.companyName = 'Kopya AŞ'));
+    const verdict = await verifyRun(copy, { weekId: run.weekId, score: run.score, companyName: 'Kopya AŞ', ceoId: run.ceoId });
+    assert.equal(verdict.status, 'ok');
+    const original = await verifyRun(encodeRun(run));
+    const rows = [
+      { id: 'asıl', submittedAt: '2026-10-05T10:00:00Z', v: original },
+      { id: 'kopya', submittedAt: '2026-10-05T11:00:00Z', v: verdict },
+    ];
+    const standing = rankLeague(rows, (row) => row.v);
+    assert.deepEqual(standing.ranked.map((r) => r.entry.id), ['asıl']);
+    assert.deepEqual(standing.copies.map((c) => c.entry.id), ['kopya']);
+  });
+
+  test('sıralama yalnızca doğrulanmış koşular ve tekrarın skoruyla; kopya bir kez sayılıyor', () => {
+    const ok = (score: number, curve: number[], idle = false): RunVerdict => ({ status: 'ok', score, curve, companyName: 'A', ceoId: null, idle });
+    const rows = [
+      { id: 'sahte', submittedAt: '2026-10-05T10:00:00Z' },
+      { id: 'dürüst', submittedAt: '2026-10-05T11:00:00Z' },
+      { id: 'kopya', submittedAt: '2026-10-05T12:00:00Z' },
+      { id: 'ikinci', submittedAt: '2026-10-05T09:00:00Z' },
+      { id: 'bekleyen', submittedAt: '2026-10-05T08:00:00Z' },
+      { id: 'boş1', submittedAt: '2026-10-05T07:00:00Z' },
+      { id: 'boş2', submittedAt: '2026-10-05T07:30:00Z' },
+    ];
+    const verdicts: Record<string, RunVerdict | undefined> = {
+      sahte: { status: 'bad', kind: 'replay', score: 1_000 },
+      dürüst: ok(9_000_000, [1, 2, 3]),
+      kopya: ok(9_000_000, [1, 2, 3]),
+      ikinci: ok(8_000_000, [1, 2, 4]),
+      boş1: ok(500_000, [1, 1, 1], true),
+      boş2: ok(500_000, [1, 1, 1], true),
+    };
+    const standing = rankLeague(rows, (row) => verdicts[row.id]);
+    assert.deepEqual(standing.ranked.map((r) => r.entry.id), ['dürüst', 'ikinci', 'boş1', 'boş2']);
+    assert.deepEqual(standing.copies.map((c) => [c.entry.id, c.of.id]), [['kopya', 'dürüst']]);
+    assert.deepEqual(standing.rejected.map((r) => r.entry.id), ['sahte']);
+    assert.deepEqual(standing.pending.map((r) => r.id), ['bekleyen']);
   });
 });
