@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties, ReactElement } from 'react';
 import { useGame, useGameState } from './useGame';
 import { TUTORIAL_STEPS, advance, setTutorial, tutorialKey, useTutorial } from './tutorial';
-import type { TutorialStepId } from './tutorial';
+import type { TutorialProgress, TutorialStepId } from './tutorial';
 import { t } from './i18n';
 import type { MessageKey } from './i18n';
 
@@ -111,13 +111,19 @@ export function Coach(): ReactElement | null {
 
   const step = progress ? TUTORIAL_STEPS[progress.step] : undefined;
 
-  // Karşılama adımı zamanı durduruyor: oyuncu okurken rakipler koşmasın.
-  const paused = useRef<string | null>(null);
+  /*
+   * Karşılama adımı zamanı durduruyor: oyuncu okurken rakipler koşmasın.
+   * Her BAŞLATIŞTA bir kez — işaret ilerleme nesnesinin kendisi. Oyun
+   * başına tutulduğunda Yardım'dan yeniden başlatılan rehber zamanı
+   * durdurmuyordu (oynanış testi yakaladı); karşılamada ▶'ye basan
+   * oyuncuyu ise yeniden durdurmuyor, çünkü nesne aynı kalıyor.
+   */
+  const paused = useRef<TutorialProgress | null>(null);
   useEffect(() => {
-    if (step?.id !== 'welcome' || paused.current === key) return;
-    paused.current = key;
+    if (step?.id !== 'welcome' || !progress || paused.current === progress) return;
+    paused.current = progress;
     if (state.time.speed !== 0) run({ type: 'SET_SPEED', speed: 0 });
-  }, [step?.id, key, state.time.speed, run]);
+  }, [step?.id, progress, state.time.speed, run]);
 
   // Panel adımı: panel açıldıysa "okundu" işaretlenir; kapanınca biter.
   useEffect(() => {

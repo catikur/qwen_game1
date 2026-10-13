@@ -255,6 +255,10 @@ async function finish(browser, consoleErrors) {
     await tp.locator('[data-coach-restart]').click();
     await tp.waitForSelector('.coach[data-coach-step="welcome"]', { timeout: 5000 });
     check('Yardım panelinden rehber yeniden başlıyor', (await tp.locator('.coach').count()) === 1);
+    await tp.waitForTimeout(300);
+    // Rehberin yürüyüşü zamanı ▶▶▶'de bıraktı: yeniden başlayan rehber de durdurmalı.
+    check('Yeniden başlayan rehber de zamanı durduruyor',
+      await tp.evaluate(() => window.__capital.getState().time.speed === 0));
     await tp.locator('[data-coach="close"]').click();
     await tp.waitForTimeout(300);
     check('"Rehberi kapat" kartı kaldırıyor', (await tp.locator('.coach').count()) === 0);
