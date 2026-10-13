@@ -1715,6 +1715,8 @@ Hekim 152,0. Moda Tasarımcısı ilk ayarda (inşaat +%12) 131,5 M ile en
 zayıftı; ceza %8'e inince 139,3 M. Vekil markaya yatırım yapmadığı için
 marka CEO'ları bu ölçümde hep biraz geride; Pazarlamacı da öyle. Kurulum
 ekranı on kartı aynı ızgarada gösteriyor, portreler parametrelerden.
+Masaüstünde serbest dizilim 6 + 4 bırakıyordu; geniş ekranda artık beş
+sütun (5 + 5). Telefonda iki sütun, taşma ve yatay kaydırma yok.
 
 **İhraç kalkanının sonu artık açıkça sınanıyor.** Son ayardan sonra tek bir
 kontrol kırmızıydı: seed 7'de ihraç eden oyuncu da düşüyordu (825 → 885).
@@ -1841,7 +1843,7 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi) |
 | Birim testi | **181 test** (`pnpm test`; Tur 24'te render paketi de) |
 | Denge testi | **283 kontrol, hepsi geçiyor** (20 bölüm, süreleriyle; ~10 dk) |
-| Tarayıcı testi | **321 kontrol, hepsi geçiyor**, 0 konsol hatası (~20 dk); duman koşusu 94 (~4 dk, rehber dahil) |
+| Tarayıcı testi | **321 kontrol, hepsi geçiyor**, 0 konsol hatası (~20 dk); duman koşusu 95 (~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + duman oynanışı |
 | Kapsam | 33 bina · 22 ürün · 7 kategori · 8 rakip profili · 10 CEO · 22 olay (11 şehir + 11 sektör) · 10 şehir yapısı (6 siluet) |
 
