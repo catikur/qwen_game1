@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { ReactElement } from 'react';
-import { CEO_BY_ID, ERA_BY_ID, EVENTS, formatPercent } from '@capital/content';
+import { CEO_BY_ID, ERA_BY_ID, EVENT_BY_ID, formatPercent } from '@capital/content';
 import {
   LENSES,
   OFFER_LIFETIME_DAYS,
@@ -795,7 +795,7 @@ export function ActiveEvents(): ReactElement | null {
         chip = (
           <span
             className={`event-chip tone-${item.tone}`}
-            title={EVENTS.find((e) => `event:${e.id}` === item.key)?.body}
+            title={EVENT_BY_ID[item.key.replace(/^event:/, '')]?.body}
           >
             {item.label} · {t('hud.agenda.eventDays', { days: item.daysLeft ?? '' })}
           </span>

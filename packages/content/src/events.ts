@@ -142,6 +142,27 @@ export const EVENTS: EventDef[] = [
     tone: 'bad',
     effects: { goodPriceMultiplier: { silicon: 1.35, chip: 1.6 } },
   },
+];
+
+/**
+ * Sektör ve mahalle olayları — İKİNCİ TAKVİM (Tur 27).
+ *
+ * Hizmet ve market şimdiye kadar yalnızca genel dalgalardan
+ * etkileniyordu; bölge olayları da yalnızca öğrenci ve turizmdeydi. Bu
+ * liste o boşluğu dolduruyor: kategoriye ya da tek bir bölge türüne
+ * dokunan, daha kısa ve daha yerel haberler.
+ *
+ * AYRI TAKVİMDEN GELİYORLAR, şehir olaylarının payından değil. İlk sürüm
+ * bunları `EVENTS`e eklemişti: olay sıklığı aynı kaldığı için yeni
+ * olaylar eski krizleri SEYRELTTİ (durgunluk, tedarik krizi, enerji
+ * sıkışması daha az geldi) ve zorluk eğrisi kaydı — 15 günde bir oynayan
+ * savunmasız oyuncu sekiz tohumun beşinde değil üçünde düşüyordu, fiyat
+ * savaşında haciz gelmiyordu. Şehir takvimi şimdi aynı günlerde aynı
+ * krizleri veriyor; bu liste kendi zarıyla onların üstüne ekleniyor.
+ *
+ * İyi ve kötü yarı yarıya (ağırlık 36'ya 31).
+ */
+export const SECTOR_EVENTS: EventDef[] = [
   {
     id: 'drought',
     title: 'Kuraklık',
@@ -160,17 +181,6 @@ export const EVENTS: EventDef[] = [
     tone: 'good',
     effects: { goodPriceMultiplier: { silicon: 0.75, chip: 0.88 } },
   },
-
-  // ---- Kategori ve bölge olayları (Tur 27) ----
-  // Hizmet ve market şimdiye kadar yalnızca genel dalgalardan
-  // etkileniyordu; bölge olayları da yalnızca öğrenci ve turizmdeydi.
-  //
-  // İYİ VE KÖTÜ YARI YARIYA. İlk sürümde yeni olayların sekizi iyiydi ve
-  // denge testi altı yerden kırıldı: şehrin iklimi iyimserleşti, eski
-  // krizler seyreldi (olay sıklığı aynı, karışım değişti), 15 günde bir
-  // oynayan savunmasız oyuncu Dengeli'de artık düşmüyordu, fiyat
-  // savaşında haciz gelmiyordu. Genel maliyet indirimi ve sanayi
-  // patlaması çıktı, sahil fırtınası ve yol çalışması girdi.
   {
     id: 'health_campaign',
     title: 'Sağlık Kampanyası',
@@ -244,6 +254,11 @@ export const EVENTS: EventDef[] = [
     effects: { demandMultiplier: { retail: 0.75, grocery: 0.9, dining: 0.85 }, districtArchetype: 'retail_strip' },
   },
 ];
+
+/** Bütün olaylar (şehir + sektör) — arama ve metin için. */
+export const ALL_EVENTS: EventDef[] = [...EVENTS, ...SECTOR_EVENTS];
+
+export const EVENT_BY_ID: Record<string, EventDef> = Object.fromEntries(ALL_EVENTS.map((e) => [e.id, e]));
 
 /**
  * Dönemler — şehrin makro iklimi.
@@ -324,4 +339,5 @@ export const ERA_BY_ID: Record<string, EventDef> = Object.fromEntries(ERAS.map((
 
 // Metin alanları etkin dile bağlı (Tur 23); Türkçe yedek nesnenin kendi metni.
 localizeList(EVENTS, 'event', ['title', 'body']);
+localizeList(SECTOR_EVENTS, 'event', ['title', 'body']);
 localizeList(ERAS, 'era', ['title', 'body']);
