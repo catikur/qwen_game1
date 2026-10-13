@@ -160,7 +160,12 @@ export const EVENTS: EventDef[] = [
  * savaşında haciz gelmiyordu. Şehir takvimi şimdi aynı günlerde aynı
  * krizleri veriyor; bu liste kendi zarıyla onların üstüne ekleniyor.
  *
- * İyi ve kötü yarı yarıya (ağırlık 36'ya 31).
+ * İyi ve kötü yarı yarıya (ağırlık 36'ya 37) ve kategori talebinde
+ * kabaca nötr: ilk ayarda Sağlık Kampanyası şehir çapında hizmeti ×1,35
+ * ile 21 gün taşıyordu ve takvimin net etkisi olumluydu — kredinin erken
+ * avantajı üç tohumda da erimez oldu, ihraç kalkanının sınanabildiği
+ * tohum üçten bire indi. Kampanya ×1,2'ye indi, karşısına Grip Mevsimi
+ * kondu.
  */
 export const SECTOR_EVENTS: EventDef[] = [
   {
@@ -185,10 +190,10 @@ export const SECTOR_EVENTS: EventDef[] = [
     id: 'health_campaign',
     title: 'Sağlık Kampanyası',
     body: 'Belediyenin "hareket et" kampanyası tuttu; spor salonu ve klinik randevuları doldu.',
-    durationDays: 21,
+    durationDays: 16,
     weight: 8,
     tone: 'good',
-    effects: { demandMultiplier: { services: 1.35 } },
+    effects: { demandMultiplier: { services: 1.2 } },
   },
   {
     id: 'box_office_hit',
@@ -252,6 +257,15 @@ export const SECTOR_EVENTS: EventDef[] = [
     weight: 6,
     tone: 'bad',
     effects: { demandMultiplier: { retail: 0.75, grocery: 0.9, dining: 0.85 }, districtArchetype: 'retail_strip' },
+  },
+  {
+    id: 'flu_season',
+    title: 'Grip Mevsimi',
+    body: 'Grip salgını yayıldı; insanlar evde kalıyor, spor salonları ve sinemalar boş.',
+    durationDays: 14,
+    weight: 6,
+    tone: 'bad',
+    effects: { demandMultiplier: { services: 0.82, dining: 0.9 } },
   },
 ];
 

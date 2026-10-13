@@ -178,6 +178,8 @@ export const contentEn: Record<string, string> = {
   'content.event.coastal_storm.body': 'A storm warning emptied the tourist district; cafés and shops pulled down their shutters.',
   'content.event.road_works.title': 'Road Works',
   'content.event.road_works.body': 'The shopping street is dug up; foot traffic is down and the shop windows are empty.',
+  'content.event.flu_season.title': 'Flu Season',
+  'content.event.flu_season.body': 'A flu outbreak is spreading; people are staying home, gyms and cinemas are empty.',
 
   // ---- Eras (events.ts) ----
   'content.era.era_genisleme.title': 'Expansion Era',

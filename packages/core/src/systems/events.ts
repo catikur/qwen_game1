@@ -141,8 +141,8 @@ function scheduleCityEvent(state: GameState): void {
 
 /** Sektör takviminde aynı anda en fazla bu kadar olay. */
 const SECTOR_MAX_CONCURRENT = 1;
-/** Sektör olayının günlük olasılığı (ortalama ~17 gün sürüyor). */
-const SECTOR_DAILY_CHANCE = 0.03;
+/** Sektör olayının günlük olasılığı (ortalama ~15 gün sürüyor; 900 günde ~14 olay). */
+const SECTOR_DAILY_CHANCE = 0.025;
 
 /**
  * Sektör takvimi (Tur 27): kategoriye ya da bölge türüne dokunan kısa
