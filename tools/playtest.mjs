@@ -2575,7 +2575,7 @@ async function finish(browser, consoleErrors) {
         drawn: info ? info.plotInstances : -1,
       };
     });
-    check('Yeni şehir açılıyor: sermaye taşınıyor, kurucu şehir bekliyor',
+    check('Yeni şehir açılıyor: sermaye taşınıyor, kurucu şehir uzaktan yönetiliyor',
       opened.day === 0 && opened.seed !== founding.seed && opened.dormant.length === 1 && opened.cash === opened.imported && opened.cash >= 2_000_000,
       `${opened.city} · ${opened.cash.toLocaleString('tr-TR')} ₺ · bekleyen ${opened.dormant.join(', ')}`);
     check('Yeni şehirde rakip kadrosu farklı', !opened.rivals.includes('nova_holding'), opened.rivals.join(', '));
@@ -2587,6 +2587,10 @@ async function finish(browser, consoleErrors) {
     await hp.waitForTimeout(300);
     const rows = await hp.locator('.city-row').count();
     check('Panelde iki şehir: oynanan ve bekleyen', rows === 2, `${rows} satır`);
+    // Tur 30: uzaktaki şehir yaşıyor — satır durumu ve dünkü gerçek kâr payı.
+    const remoteRow = ((await hp.locator('.city-row:not(.current)').first().textContent()) ?? '').trim();
+    check('Uzaktaki şehir satırı: uzaktan yönetiliyor, 20 gün yaşamış, dünkü kâr payı', remoteRow.includes('Uzaktan yönetiliyor') &&
+      remoteRow.includes(`${founding.day + 20}. gün`) && remoteRow.includes('dün kasaya'), remoteRow.slice(0, 120));
     await hp.screenshot({ path: `${OUT}/holding-panel.png` });
     // Yeni şehirde bir kare seç: şehir değişince bu seçim eski şehrin
     // karesine işaret etmemeli.
@@ -2604,8 +2608,9 @@ async function finish(browser, consoleErrors) {
       const s = window.__capital.getState();
       return { seed: s.meta.seed, day: s.time.day, dormantDay: s.holding?.dormant[0]?.state.time.day };
     });
-    check('Kurucu şehre dönülüyor, takvim kaldığı yerden', back.seed === founding.seed && back.day === founding.day && back.dormantDay === 20,
-      `gün ${back.day} · bekleyen ${back.dormantDay}. günde`);
+    // Tur 30: şehirler eşzamanlı — kurucu şehir de 20 gün yaşadı.
+    check('Kurucu şehre dönülüyor; o da yaşamış (takvimler birlikte)', back.seed === founding.seed && back.day === founding.day + 20 && back.dormantDay === 20,
+      `gün ${back.day} (ayrılış ${founding.day}) · öbür şehir ${back.dormantDay}. günde`);
     const afterSwitch = ((await hp.locator('.inspector').textContent()) ?? '').trim();
     check('Şehir değişince seçim temizleniyor', selectedInspector !== emptyInspector && afterSwitch === emptyInspector,
       afterSwitch.slice(0, 60));

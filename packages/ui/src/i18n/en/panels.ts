@@ -216,7 +216,7 @@ export const panels: Record<keyof typeof trPanels, string> = {
     " You can buy at most 3.5% of a rival's shares per day, and rivals can buy yours at the same pace. The order buys every day; once the target sees 30%, it starts gathering up its shares, and if there aren't enough shares in circulation, the order drops.",
   'panels.help.step.holding.title': 'Victory is a turning point: the holding.',
   'panels.help.step.holding.body':
-    " Once you reach victory in a city, you can expand to a new one: your capital and half of your brand awareness come with you, and the rivals are different. One city is played at a time; half of the waiting city's profit flows into the holding treasury every day. Victory in each city is measured by the value you created there.",
+    " Once you reach victory in a city, you can expand to a new one: your capital and half of your brand awareness come with you, and the rivals are different. One city is played at a time; the others keep living and half of their profit flows into the holding treasury every day. If a raid advances in a remote city you hear about it; switch there to defend. Victory in each city is measured by the value you created there.",
   'panels.help.controls':
     'Controls: drag = pan · right-click drag = rotate · wheel = zoom · WASD = pan · Space = pause',
   'panels.help.language': 'Language',
