@@ -19,6 +19,7 @@ import {
   CONSUMER_CATEGORIES,
   DISTRICT_ARCHETYPES,
   GOODS_BY_CATEGORY,
+  ISSUANCE,
   NPC_PROFILES,
   getCeoModifiers,
   rootStructureOf,
@@ -3609,8 +3610,9 @@ section('Sermaye piyasası: halka arz ve kurucu kilidi', () => {
    *   - halka arz bedava para değil: nakdi sıkışmayan şirkette erken ihraç
    *     720. günde net değeri düşürüyor (kalıcı ortaklık);
    *   - ama bir kontrol aracı: savunmasız yavaş oyuncu baskınla düşerken
-   *     baskıncı %30'u geçince ihraç eden aynı oyuncu ayakta kalıyor
-   *     (Tur 21'den beri baskın altında soğuma aranmıyor);
+   *     baskıncı %30'u geçince ihraç eden aynı oyuncu çoğu tohumda ayakta
+   *     kalıyor (Tur 21'den beri baskın altında soğuma aranmıyor); düştüğü
+   *     yer yalnızca kalkanın belgelenen sonu (Tur 27, aşağıda);
    *   - oyun başı rakipler baskın ısınması bitene kadar kilitli: en ucuz
    *     rakibi alan vekil eskiden 5. günde devralıp tekel zaferine
    *     130–235. günde ulaşıyordu.
@@ -3666,7 +3668,14 @@ section('Sermaye piyasası: halka arz ve kurucu kilidi', () => {
         break;
       }
     }
-    return { lost, issued, founder: ownerFraction(getPlayer(engine.getState())) };
+    const state = engine.getState();
+    const player = getPlayer(state);
+    // Düşüşte kontrolü alanın dışındaki en büyük rakip pay: ~0 ise baskıncı
+    // serbest hissenin tamamını tek başına toplamış demek.
+    const stakes = Object.values(state.companies)
+      .filter((c) => !c.isPlayer && c.id !== state.gameOver?.byCompanyId)
+      .map((c) => (c.shares[player.id] ?? 0) / sharesOutstanding(state, player.id));
+    return { lost, issued, founder: ownerFraction(player), runnerUp: Math.max(0, ...stakes) };
   }
   /*
    * Dört tohum (Tur 21). Kontrol iki tohumla (7, 42) yazılmıştı ve ikisi
@@ -3696,12 +3705,49 @@ section('Sermaye piyasası: halka arz ve kurucu kilidi', () => {
    * şart (yoksa kontrol hiçbir şey ölçmüyor demektir) ve atlanan tohum
    * detayda adıyla yazılıyor.
    */
+  /*
+   * KALKANIN SONU AÇIKÇA SINANIYOR (Tur 27).
+   *
+   * Tur 21'den beri belgede "kalkanın bir sonu var" yazıyordu, kontrol
+   * ise her tehditli tohumda 900. güne kadar ayakta kalmayı istiyordu.
+   * Aradaki fark hesapta: kurucu tabanı (%51) yatırımcıyı en çok %48,8'de
+   * bırakıyor, kalan %51,2 serbest. Serbest hissenin TAMAMINI tek başına
+   * toplayan baskıncı eşiği geçer. Main'de seed 7 bu yüzden değil, iki
+   * baskıncı hisseyi bölüştüğü için ayaktaydı (%27 + %24, serbest sıfır).
+   * Yeni olaylar rakip ekonomisini kaydırınca Meridyen tek kaldı: üç
+   * ihraç 671–791. günde, 885. günde %50,7.
+   *
+   * 18 tohumda ölçüldü (savunmasız düşenler, ihraçla): main 8/8 ayakta,
+   * dal 9/10. Düşen tek tohum seed 7. Seed 2, 6 ve 42'de tek baskıncı
+   * 900. günde %49, %40 ve %47'de; oradaki "ayakta" ufkun sonu. İddia
+   * artık iki parça:
+   *   - kalkan tehditli tohumların çoğunu ayakta tutuyor (en az iki);
+   *   - kalkanla düşüş YALNIZCA belgelenen sondan geçebilir: kurucu
+   *     tabanına inilmiş, baskıncı serbest hissenin tamamını tek başına
+   *     toplamış (kontrol dışındaki en büyük pay %2'nin altında) ve
+   *     düşüş savunmasızdan sonra.
+   * Bölüşülmüş paydan, blok satıştan ya da tabana inmeden gelen bir
+   * düşüş bir hata demek ve kontrolü kırar.
+   */
   const threatened = shields.filter(({ bare }) => bare.lost !== null);
   const calm = shields.filter(({ bare }) => bare.lost === null);
+  const held = threatened.filter(({ issue }) => issue.lost === null);
+  const atTheEnd = ({ bare, issue }: (typeof shields)[number]): boolean =>
+    issue.founder <= ISSUANCE.minFounderShare + 0.01 && issue.runnerUp < 0.02 && issue.lost! > bare.lost!;
   expect(
     'ihraç baskına karşı kalkan',
-    threatened.length >= 2 && threatened.every(({ issue }) => issue.lost === null),
-    threatened.map(({ seed, bare, issue }) => `seed ${seed}: ${bare.lost} → ${issue.lost ?? 'ayakta'}`).join(' · ') +
+    threatened.length >= 2 &&
+      held.length >= 2 &&
+      held.length > threatened.length - held.length &&
+      threatened.every((s) => s.issue.lost === null || atTheEnd(s)),
+    threatened
+      .map((s) =>
+        s.issue.lost === null
+          ? `seed ${s.seed}: ${s.bare.lost} → ayakta`
+          : `seed ${s.seed}: ${s.bare.lost} → ${s.issue.lost} (${atTheEnd(s) ? 'kalkanın sonu: tek baskıncı, taban' : 'BEKLENMEYEN düşüş'}` +
+            `, kurucu %${Math.round(s.issue.founder * 100)}, ikinci pay %${(s.issue.runnerUp * 100).toFixed(1)})`,
+      )
+      .join(' · ') +
       (calm.length > 0 ? ` · ölçüm dışı: ${calm.map(({ seed }) => `seed ${seed} (savunmasız da ayakta)`).join(', ')}` : ''),
   );
 
