@@ -7,16 +7,6 @@ import { localizeList, localizeRecord } from './localize';
  * Talep ağırlıkları haritayı bir "oyun alanı" yapan asıl şey: öğrenci
  * bölgesinde yeme-içme patlar ama elektronik satmaz; lüks konutta tam tersi.
  * Oyuncunun okuması gereken sinyal budur.
- *
- * PERAKENDE AĞIRLIKLARI AYAKKABIYLA BÜYÜDÜ (Tur 29). Kategori talebi
- * ürünler arasında normalize ediliyor (`goodShares`); üçüncü ürün payını
- * öbür ikisinden kesseydi tek raflı butik bir gecede zayıflardı. Her
- * arketipin perakende ağırlığı R = (giyim + ev tekstili + ayakkabı) /
- * (giyim + ev tekstili) ile çarpıldı (ürün ağırlıkları × o arketipteki
- * çarpanları): giyim ve ev tekstilinin mutlak talebi her bölgede birebir
- * aynı, ayakkabı yeni harcama. Eski değerler: merkez 1,3 · çarşı 1,6 ·
- * sanayi 0,4 · liman 0,5 · teknopark 0,9 · lüks 1,7 · orta gelir 0,9 ·
- * öğrenci 0,7 · turizm 1,5 (ölçüsü `goods.test.ts`).
  */
 export const DISTRICT_ARCHETYPES: Record<DistrictArchetypeId, DistrictArchetypeDef> = {
   downtown: {
@@ -25,7 +15,7 @@ export const DISTRICT_ARCHETYPES: Record<DistrictArchetypeId, DistrictArchetypeD
     population: 4_200,
     incomeLevel: 0.82,
     baseLandValue: 5_400,
-    demandWeights: { dining: 1.5, retail: 1.938, electronics: 1.4, services: 1.2, grocery: 0.8 },
+    demandWeights: { dining: 1.5, retail: 1.3, electronics: 1.4, services: 1.2, grocery: 0.8 },
     color: '#aab6cc',
   },
   retail_strip: {
@@ -34,7 +24,7 @@ export const DISTRICT_ARCHETYPES: Record<DistrictArchetypeId, DistrictArchetypeD
     population: 3_100,
     incomeLevel: 0.55,
     baseLandValue: 3_200,
-    demandWeights: { retail: 2.549, grocery: 1.3, dining: 1.2, services: 1.0 },
+    demandWeights: { retail: 1.6, grocery: 1.3, dining: 1.2, services: 1.0 },
     color: '#c0aecb',
   },
   industrial: {
@@ -43,7 +33,7 @@ export const DISTRICT_ARCHETYPES: Record<DistrictArchetypeId, DistrictArchetypeD
     population: 1_400,
     incomeLevel: 0.38,
     baseLandValue: 1_100,
-    demandWeights: { grocery: 1.2, dining: 0.9, retail: 0.592, electronics: 0.3, services: 0.5 },
+    demandWeights: { grocery: 1.2, dining: 0.9, retail: 0.4, electronics: 0.3, services: 0.5 },
     color: '#c8bfa1',
   },
   port: {
@@ -52,7 +42,7 @@ export const DISTRICT_ARCHETYPES: Record<DistrictArchetypeId, DistrictArchetypeD
     population: 1_100,
     incomeLevel: 0.42,
     baseLandValue: 1_500,
-    demandWeights: { grocery: 1.1, dining: 1.0, retail: 0.671, services: 0.6 },
+    demandWeights: { grocery: 1.1, dining: 1.0, retail: 0.5, services: 0.6 },
     color: '#a3c0c9',
   },
   tech_park: {
@@ -61,7 +51,7 @@ export const DISTRICT_ARCHETYPES: Record<DistrictArchetypeId, DistrictArchetypeD
     population: 2_300,
     incomeLevel: 0.9,
     baseLandValue: 4_100,
-    demandWeights: { electronics: 1.8, dining: 1.3, services: 1.3, grocery: 0.8, retail: 1.324 },
+    demandWeights: { electronics: 1.8, dining: 1.3, services: 1.3, grocery: 0.8, retail: 0.9 },
     color: '#9dc4c6',
   },
   lux_residential: {
@@ -70,7 +60,7 @@ export const DISTRICT_ARCHETYPES: Record<DistrictArchetypeId, DistrictArchetypeD
     population: 2_600,
     incomeLevel: 0.95,
     baseLandValue: 6_200,
-    demandWeights: { retail: 2.365, dining: 1.4, services: 1.5, electronics: 1.2, grocery: 1.0 },
+    demandWeights: { retail: 1.7, dining: 1.4, services: 1.5, electronics: 1.2, grocery: 1.0 },
     color: '#adc4b8',
   },
   mid_residential: {
@@ -79,7 +69,7 @@ export const DISTRICT_ARCHETYPES: Record<DistrictArchetypeId, DistrictArchetypeD
     population: 5_800,
     incomeLevel: 0.5,
     baseLandValue: 2_400,
-    demandWeights: { grocery: 1.5, dining: 1.0, services: 1.1, retail: 1.204, electronics: 0.7 },
+    demandWeights: { grocery: 1.5, dining: 1.0, services: 1.1, retail: 0.9, electronics: 0.7 },
     color: '#a8c2ac',
   },
   student: {
@@ -88,7 +78,7 @@ export const DISTRICT_ARCHETYPES: Record<DistrictArchetypeId, DistrictArchetypeD
     population: 4_600,
     incomeLevel: 0.28,
     baseLandValue: 1_900,
-    demandWeights: { dining: 1.9, grocery: 1.3, services: 0.9, retail: 1.13, electronics: 0.6 },
+    demandWeights: { dining: 1.9, grocery: 1.3, services: 0.9, retail: 0.7, electronics: 0.6 },
     color: '#b3b0d0',
   },
   tourism: {
@@ -97,7 +87,7 @@ export const DISTRICT_ARCHETYPES: Record<DistrictArchetypeId, DistrictArchetypeD
     population: 1_900,
     incomeLevel: 0.72,
     baseLandValue: 4_600,
-    demandWeights: { dining: 1.8, retail: 2.325, services: 1.0, grocery: 0.7 },
+    demandWeights: { dining: 1.8, retail: 1.5, services: 1.0, grocery: 0.7 },
     color: '#ccadb2',
   },
 };

@@ -258,13 +258,15 @@ export const GOODS: GoodDef[] = [
    * Perakendenin üçüncü ürünü. Mağazalar Zinciri'nin dört rafından ikisi
    * boş duruyordu; ayakkabı onlardan birini dolduruyor.
    *
-   * TALEP EKLENİYOR, BÖLÜNMÜYOR. Kategorinin talebi ürünler arasında
-   * normalize ediliyor (`goodShares`); üçüncü ürün kendi payını öbür
-   * ikisinden kesseydi tek raflı butik bir gecede üçte bir zayıflardı.
-   * Bunun yerine her arketipin perakende ağırlığı ayakkabının payı kadar
-   * büyüdü (`districts.ts`): giyim ve ev tekstilinin mutlak talebi her
-   * bölgede birebir aynı, ayakkabı yeni harcama olarak geliyor. Gerçekte
-   * de öyle — ayakkabı gömleğin yerine alınmıyor.
+   * TALEP BÖLÜNÜYOR, EKLENMİYOR — ölçüldü. İlk sürüm ayakkabıyı ek
+   * harcama yaptı (her arketipin perakende ağırlığı ayakkabının payı kadar
+   * büyüdü, giyim ve ev tekstilinin talebi birebir korundu). Toplam
+   * tüketici harcaması ~%9 büyüdü ve oyun kolaylaştı: Dengeli'de yavaş
+   * oyuncu düşmez oldu, büyük şehirde zafer 569. güne geldi, kalkan
+   * testlerinin tehdidi kayboldu (altı kontrol). Kategori talebi
+   * Tur 1'den beri ürünler arasında bölünüyor; ayakkabı da öyle. Tek
+   * raflı butik bölgenin en iyi ürününü taşıyıp uzmanlaşıyor, dört raflı
+   * Mağazalar Zinciri üçünü birden topluyor — rafların tasarlandığı ayrım.
    *
    * Her ürün en az bir bölgede rafın en iyisi olmalı (yoksa tek raflı
    * dükkânın seçimi sahte): ayakkabı öğrenci ve çarşı bölgelerinde önde.
