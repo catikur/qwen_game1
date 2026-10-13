@@ -89,4 +89,56 @@ export const app = {
   'app.rivalry.assign': ' · {category} kategorisine atanacak',
   'app.rivalry.premature': 'Henüz erken — bu kol, mağaza sayın büyüdüğünde asıl karşılığını verir.',
   'app.rivalry.noCash': 'Nakit yetersiz — {cost} gerekiyor.',
+  // Yeni oyuncu rehberi (Tur 26, Coach.tsx).
+  'app.coach.label': 'Rehber',
+  'app.coach.count': '{step}/{total}',
+  'app.coach.pill': 'Rehber {step}/{total}',
+  'app.coach.expand': 'Rehberi aç',
+  'app.coach.minimize': 'Küçült',
+  'app.coach.close': 'Rehberi kapat',
+  'app.coach.closedToast': 'Rehber kapandı. Yardım panelinden yeniden başlatabilirsin.',
+  'app.coach.next': 'İleri',
+  'app.coach.skipStep': 'Bu adımı geç',
+  'app.coach.start': 'Başlayalım',
+  'app.coach.finish': 'Bitir',
+  'app.coach.welcome.title': 'Hoş geldin',
+  'app.coach.welcome.body':
+    'Bu şehrin pazarında bir şirket büyütüyorsun: arsa al, mağaza aç, rakiplerini geç. Zamanı durdurduk; ilk mağazanı birlikte açalım.',
+  'app.coach.lens.title': 'Fırsatı gör',
+  'app.coach.lens.body':
+    'Merceklerden Fırsat\'ı seç. Harita, karşılanmayan talebin yüksek olduğu bölgeleri parlatır: müşteri var, mağaza yok.',
+  'app.coach.pick.title': 'Bir parsel seç',
+  'app.coach.pick.body':
+    'Parlayan bir bölgede boş bir parsele dokun. Arsa detayı bölgenin nüfusunu, gelirini ve hangi kategoride talebin boşta kaldığını gösterir.',
+  'app.coach.buy.title': 'Parseli al',
+  'app.coach.buy.body':
+    'Arsa detayındaki satın alma düğmesine bas. Toprak oyunun kıt kaynağı: şehir büyüdükçe boş parsel azalır, fiyatı artar.',
+  'app.coach.choose.title': 'Ne kuracağını seç',
+  'app.coach.choose.body':
+    'Yapı listesinde her binanın bu bölgedeki tahmini günlük kârı ve geri ödeme süresi yazıyor. "bu parsel için en iyi" etiketli bina buradan en çok kâr çıkaranı. Birini seç.',
+  'app.coach.build.title': 'Kur',
+  'app.coach.build.body': 'Satın aldığın parsele dokun ya da "Seçili arsaya inşa et" düğmesine bas.',
+  'app.coach.play.title': 'Zamanı başlat',
+  'app.coach.play.body':
+    'Üst bardaki ▶ ile zamanı başlat. Günlük kâr üst barda: ilk günler müşteri tabanının oturmasıyla geçer.',
+  'app.coach.goals.title': 'Sıradaki hedef',
+  'app.coach.goals.body':
+    'Gündem şeridindeki hedef çipi bir sonraki adımı söyler: beş şube, milyoner, kendi tedarikin. Çipe dokun.',
+  'app.coach.goals.open':
+    'Hedef merdiveni zafere kadar gidiyor. Basamaklar sırayla gösterilir ama istediğin sırayla tamamlayabilirsin. Paneli kapatınca devam edelim.',
+  'app.coach.chain.title': 'Tedarik zinciri',
+  'app.coach.chain.body': 'Zincir sekmesi sattığın ürünlerin nereden geldiğini gösterir. Sekmeyi aç.',
+  'app.coach.chain.open':
+    'Ham maddeyi ve ara malı şimdilik pazardan alıyorsun. Mağazan çoğalınca kendi üretimini kurmak maliyeti düşürür; kart ne zaman mantıklı olduğunu söyler, erkense "erken" der.',
+  'app.coach.rivals.title': 'Rakipler ve borsa',
+  'app.coach.rivals.body':
+    'Rakipler de büyüyor ve geride kalan şirketin hisselerini topluyor. Borsa sekmesini aç.',
+  'app.coach.rivals.open':
+    'Bir rakip hisselerinin yarısını geçerse şirketin onun olur. Gündemde kırmızı "Baskın" çipi görürsen buradan kendi hisseni geri al. Sen de rakiplerin hissesini toplayıp onları devralabilirsin.',
+  'app.coach.done.title': 'Hazırsın',
+  'app.coach.done.body':
+    'Döngü bu: fırsatı bul, arsayı al, doğru binayı kur; büyüdükçe zinciri ve borsayı kullan. Rehberi Yardım panelinden yeniden açabilirsin.',
+  'app.coach.restart': 'Rehberi baştan başlat',
+  'app.coach.newGameOption': 'Rehberle başla',
+  'app.coach.newGameHint': 'İlk oyunun için önerilir; istediğin an kapatabilirsin.',
 } as const;

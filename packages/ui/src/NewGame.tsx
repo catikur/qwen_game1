@@ -6,6 +6,7 @@ import { leagueWeekId } from '@capital/core';
 import { CeoPortrait } from './CeoPortrait';
 import { LocalePicker } from './LocalePicker';
 import { t } from './i18n';
+import { tutorialSeen } from './tutorial';
 
 /**
  * Açılış ekranı.
@@ -18,7 +19,14 @@ export function NewGameScreen({
   onStart,
   onCancel,
 }: {
-  onStart: (companyName: string, ceoId: string, difficulty: DifficultyId, league: boolean, citySize: CitySizeId) => void;
+  onStart: (
+    companyName: string,
+    ceoId: string,
+    difficulty: DifficultyId,
+    league: boolean,
+    citySize: CitySizeId,
+    tutorial: boolean,
+  ) => void;
   onCancel?: () => void;
 }): ReactElement {
   const [name, setName] = useState('');
@@ -26,6 +34,9 @@ export function NewGameScreen({
   const [difficulty, setDifficulty] = useState<DifficultyId>(DEFAULT_DIFFICULTY);
   const [league, setLeague] = useState(false);
   const [citySize, setCitySize] = useState<CitySizeId>(DEFAULT_CITY_SIZE);
+  // Rehber ilk oyunda açık gelir; bu tarayıcıda bir kez bitirilen ya da
+  // kapatılan rehber bir daha kendiliğinden açılmaz (Tur 26).
+  const [tutorial, setTutorialOption] = useState(() => !tutorialSeen());
   const size = CITY_SIZES.find((c) => c.id === citySize) ?? CITY_SIZES[0]!;
   const weekId = leagueWeekId();
   const selected = CEOS.find((c) => c.id === ceoId) ?? CEOS[0]!;
@@ -33,7 +44,14 @@ export function NewGameScreen({
 
   // Lig herkese aynı şehri verir: zorluk Dengeli, şehir standart.
   const submit = () =>
-    onStart(name.trim() || t('hud.newGame.defaultName'), ceoId, league ? 'normal' : difficulty, league, league ? 'standard' : citySize);
+    onStart(
+      name.trim() || t('hud.newGame.defaultName'),
+      ceoId,
+      league ? 'normal' : difficulty,
+      league,
+      league ? 'standard' : citySize,
+      tutorial,
+    );
 
   return (
     <div className="newgame">
@@ -198,6 +216,14 @@ export function NewGameScreen({
           </div>
         </div>
         )}
+
+        <label className="newgame-tutorial" data-newgame-tutorial>
+          <input type="checkbox" checked={tutorial} onChange={(e) => setTutorialOption(e.target.checked)} />
+          <span>
+            <strong>{t('app.coach.newGameOption')}</strong>
+            <span className="muted">{t('app.coach.newGameHint')}</span>
+          </span>
+        </label>
 
         <div className="newgame-actions">
           {onCancel && (

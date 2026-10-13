@@ -65,6 +65,8 @@ export const panels = {
   'panels.inspector.demandTitle': 'Bölge talebi',
   'panels.inspector.demandUnmet': '%{percent} boş',
   'panels.inspector.ownVacant': 'Boş parselin. Soldan bir yatırım seç.',
+  'panels.inspector.chooseBuilding': 'Buraya ne kurulur?',
+  'panels.inspector.buildHere': '{name} kur',
   'panels.inspector.sellTile': 'Parseli sat ({price})',
   'panels.inspector.ownedBy': '{owner} şirketine ait',
 

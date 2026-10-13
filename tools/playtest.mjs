@@ -99,6 +99,128 @@ const findTile = (page, kind) =>
     return match ? match.id : null;
   }, kind);
 
+/*
+ * REHBER (Tur 26) temiz bir tarayıcıda kendiliğinden açılıyor ve zamanı
+ * durduruyor. Diğer bölümler "rehberi daha önce görmüş" oyuncuyu oynuyor —
+ * yoksa her bağlamda kart ekrana gelir, oyun durur ve bölümlerin ölçtüğü
+ * şey değişirdi. Yalnızca "Rehber" bölümü temiz tarayıcıyla açılıyor.
+ */
+const TUTORIAL_KEY = 'capitalforge.tutorial.v1';
+function veteran(key) {
+  try {
+    if (!localStorage.getItem(key)) localStorage.setItem(key, JSON.stringify({ seen: true, games: {} }));
+  } catch {
+    /* depo kapalı: rehber zaten hatırlanmaz */
+  }
+}
+
+/** Rehberi baştan sona oynar; her adımda halkanın hedefi kartın altında mı, ona bakar. */
+async function tutorialWalk(context, label) {
+  const p = await context.newPage();
+  const errors = [];
+  p.on('console', (m) => {
+    if (m.type() === 'error') errors.push(m.text());
+  });
+  p.on('pageerror', (e) => errors.push('pageerror: ' + e.message));
+  const stepOf = () => p.evaluate(() => window.__capital?.tutorialStep?.() ?? null);
+  const waitStep = async (id, ms = 10000) => {
+    const started = Date.now();
+    while (Date.now() - started < ms) {
+      if ((await stepOf()) === id) return true;
+      await p.waitForTimeout(120);
+    }
+    return false;
+  };
+  // Halkanın ortasındaki en üst öğe kartın kendisi olmamalı: rehber kendi hedefini örtmesin.
+  const ringFree = () =>
+    p.evaluate(() => {
+      const r = document.querySelector('.coach-ring')?.getBoundingClientRect();
+      if (!r) return null;
+      const top = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+      return !top?.closest('.coach');
+    });
+  const covered = [];
+  const noteRing = async (step) => {
+    await p.waitForTimeout(450);
+    if ((await ringFree()) === false) covered.push(step);
+  };
+
+  await p.goto('http://127.0.0.1:8811/');
+  await p.waitForSelector('.newgame', { timeout: 20000 });
+  check(`${label}: ilk oyunda rehber seçeneği açık geliyor`, await p.locator('[data-newgame-tutorial] input').isChecked());
+  await p.fill('.newgame-field input[type="text"]', 'Rehber AŞ');
+  await p.locator('button:has-text("Şirketi kur")').click();
+  const gameStarted = Date.now();
+  await p.waitForSelector('.coach[data-coach-step="welcome"]', { timeout: 20000 });
+  await p.waitForTimeout(500);
+  check(`${label}: rehber karşılamada zamanı durduruyor`, await p.evaluate(() => window.__capital.getState().time.speed === 0));
+  await p.locator('[data-coach="next"]').click();
+
+  const reached = {};
+  reached.lens = await waitStep('lens');
+  await noteRing('lens');
+  if (!(await p.locator('[data-lens="opportunity"]').isVisible())) await p.locator('[data-collapse="lens"]').click();
+  await p.locator('[data-lens="opportunity"]').click();
+  reached.pick = await waitStep('pick');
+  const tileId = await findTile(p, 'vacant');
+  await p.evaluate((id) => window.__capital.selectTile(id), tileId);
+  reached.buy = await waitStep('buy');
+  await noteRing('buy');
+  await p.locator('[data-action="buy-tile"]').click();
+  reached.choose = await waitStep('choose');
+  await noteRing('choose');
+  if (await p.locator('[data-action="show-build"]').isVisible()) {
+    await p.locator('[data-action="show-build"]').click();
+    await p.waitForTimeout(700);
+  }
+  await noteRing('choose-list');
+  await p.locator('.buildcard:has(.buildcard-best)').first().click();
+  reached.build = await waitStep('build');
+  await noteRing('build');
+  if (await p.locator('[data-action="build-here"]').isVisible()) await p.locator('[data-action="build-here"]').click();
+  else await p.locator('[data-action="build-selected"]').click();
+  reached.play = await waitStep('play');
+  await noteRing('play');
+  await p.locator('.speeds button').nth(3).click();
+  reached.goals = await waitStep('goals', 25000);
+  await p.waitForTimeout(400);
+  const before = ((await p.locator('.coach-body').textContent()) ?? '').trim();
+  const chip = p.locator('[data-agenda="goal"] button');
+  if (await chip.isVisible()) await chip.click();
+  else await p.locator('[data-coach="next"]').click();
+  await p.waitForTimeout(400);
+  const during = ((await p.locator('.coach-body').textContent()) ?? '').trim();
+  await p.keyboard.press('Escape');
+  reached.chain = await waitStep('chain');
+  await p.locator('[data-panel="chain"]').click();
+  await p.waitForTimeout(300);
+  await p.keyboard.press('Escape');
+  reached.rivals = await waitStep('rivals');
+  await p.locator('[data-panel="bourse"]').click();
+  await p.waitForTimeout(300);
+  await p.keyboard.press('Escape');
+  reached.done = await waitStep('done');
+
+  const missed = Object.entries(reached).filter(([, ok]) => !ok).map(([id]) => id);
+  check(`${label}: rehber oyunun kendi akışıyla ilerliyor (mercek → arsa → mağaza → zaman → hedef → zincir → borsa)`,
+    missed.length === 0, missed.length ? `takıldı: ${missed.join(', ')}` : '10 adım');
+  check(`${label}: panel adımında kart panelin anlatımına geçiyor`, before !== during && during.length > 40, during.slice(0, 50));
+  check(`${label}: kart hiçbir adımda kendi hedefini örtmüyor`, covered.length === 0, covered.join(', ') || 'halka her adımda açık');
+  const owned = await p.evaluate(() => {
+    const s = window.__capital.getState();
+    return Object.values(s.buildings).filter((b) => b.companyId === s.playerCompanyId).length;
+  });
+  check(`${label}: rehberin sonunda gerçek bir mağaza var`, owned >= 1, `${owned} bina`);
+
+  await p.locator('[data-coach="next"]').click();
+  await p.waitForTimeout(300);
+  const stored = await p.evaluate((key) => JSON.parse(localStorage.getItem(key) || '{}'), TUTORIAL_KEY);
+  check(`${label}: bitince kart kalkıyor ve tarayıcı rehberi hatırlıyor`,
+    (await p.locator('.coach').count()) === 0 && stored.seen === true);
+  check(`${label}: rehber konsolu kirletmiyor`, errors.length === 0, errors.slice(0, 2).join(' | '));
+  return { p, gameStarted };
+}
+
 async function finish(browser, consoleErrors) {
   console.log('\n================================');
   console.log(`TOPLAM: ${pass} geçti, ${fail} kaldı${SMOKE ? ' (duman koşusu)' : ''}`);
@@ -118,6 +240,7 @@ async function finish(browser, consoleErrors) {
     args: ['--use-gl=swiftshader', '--enable-unsafe-swiftshader', '--disable-dev-shm-usage'],
   });
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  await page.addInitScript(veteran, TUTORIAL_KEY);
 
   const consoleErrors = [];
   page.on('console', (m) => {
@@ -161,6 +284,8 @@ async function finish(browser, consoleErrors) {
   await page.locator('.difficulty-option[data-difficulty="normal"]').click();
 
   await page.screenshot({ path: `${OUT}/newgame.png` });
+  check('Rehberi görmüş oyuncuda "Rehberle başla" kapalı geliyor',
+    !(await page.locator('[data-newgame-tutorial] input').isChecked()));
 
   await page.fill('.newgame-field input[type="text"]', 'Karaca Holding');
   await page.locator('button:has-text("Şirketi kur")').click();
@@ -831,6 +956,21 @@ async function finish(browser, consoleErrors) {
     window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
   });
   check('Banka ve işgücü konsolu kirletmiyor', consoleErrors.length === 0, consoleErrors.slice(0, 2).join(' | '));
+
+  section('Rehber');
+  {
+    const tutorialContext = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+    const { p: tp } = await tutorialWalk(tutorialContext, 'Masaüstü');
+    // Bir kez bitirilen rehber yeni oyunda kendiliğinden açılmıyor; Yardım'dan yeniden başlıyor.
+    await tp.locator('[data-panel="help"]').click();
+    await tp.locator('[data-coach-restart]').click();
+    await tp.waitForSelector('.coach[data-coach-step="welcome"]', { timeout: 5000 });
+    check('Yardım panelinden rehber yeniden başlıyor', (await tp.locator('.coach').count()) === 1);
+    await tp.locator('[data-coach="close"]').click();
+    await tp.waitForTimeout(300);
+    check('"Rehberi kapat" kartı kaldırıyor', (await tp.locator('.coach').count()) === 0);
+    await tutorialContext.close();
+  }
 
   if (SMOKE) {
     await finish(browser, consoleErrors);
@@ -2140,6 +2280,7 @@ async function finish(browser, consoleErrors) {
   section('Tohum Ligi');
   {
     const leagueContext = await browser.newContext({ viewport: { width: 1280, height: 860 } });
+    await leagueContext.addInitScript(veteran, TUTORIAL_KEY);
     const lp = await leagueContext.newPage();
     const leagueErrors = [];
     lp.on('pageerror', (e) => leagueErrors.push(e.message));
@@ -2262,6 +2403,7 @@ async function finish(browser, consoleErrors) {
   section('Büyük şehir');
   {
     const bigContext = await browser.newContext({ viewport: { width: 1280, height: 860 } });
+    await bigContext.addInitScript(veteran, TUTORIAL_KEY);
     const bp = await bigContext.newPage();
     const bigErrors = [];
     bp.on('pageerror', (e) => bigErrors.push(e.message));
@@ -2327,6 +2469,7 @@ async function finish(browser, consoleErrors) {
   section('Holding');
   {
     const hContext = await browser.newContext({ viewport: { width: 1280, height: 860 } });
+    await hContext.addInitScript(veteran, TUTORIAL_KEY);
     const hp = await hContext.newPage();
     const hErrors = [];
     hp.on('pageerror', (e) => hErrors.push(e.message));
@@ -2421,6 +2564,7 @@ async function finish(browser, consoleErrors) {
   section('Dil');
   {
     const lContext = await browser.newContext({ viewport: { width: 1280, height: 860 } });
+    await lContext.addInitScript(veteran, TUTORIAL_KEY);
     const lp = await lContext.newPage();
     const lErrors = [];
     lp.on('pageerror', (e) => lErrors.push(e.message));
@@ -2499,6 +2643,7 @@ async function finish(browser, consoleErrors) {
   section('Mobil');
   for (const deviceName of ['iPhone 13', 'Pixel 7']) {
     const mobileContext = await browser.newContext({ ...devices[deviceName] });
+    await mobileContext.addInitScript(veteran, TUTORIAL_KEY);
     const m = await mobileContext.newPage();
     const mobileErrors = [];
     m.on('console', (msg) => {
@@ -3054,6 +3199,32 @@ async function finish(browser, consoleErrors) {
     check(`${deviceName}: konsol temiz`, mobileErrors.length === 0, mobileErrors.slice(0, 2).join(' | '));
     await m.screenshot({ path: `${OUT}/mobile-${deviceName.replace(/\W+/g, '')}.png` });
     await mobileContext.close();
+  }
+
+  // Rehber telefonda: kart üst barın altında; parsel detayı açıkken yapı
+  // listesi "Buraya ne kurulur?" ile öne geliyor (Tur 26'nın bulduğu boşluk).
+  {
+    const phone = await browser.newContext({ ...devices['iPhone 13'] });
+    const { p: tp, gameStarted } = await tutorialWalk(phone, 'iPhone 13');
+    /*
+     * Yenileme burada, ana sayfa kapandıktan SONRA: yazılımsal GPU'da iki
+     * canlı WebGL bağlamıyla yenilemek açılışı 20 saniyenin ötesine
+     * itiyordu (Tur 24'ün "Dil" dersi).
+     */
+    await tp.locator('[data-panel="help"]').click();
+    await tp.locator('[data-coach-restart]').click();
+    await tp.waitForSelector('.coach[data-coach-step="welcome"]', { timeout: 5000 });
+    await tp.locator('[data-coach="next"]').click();
+    // Açılış otomatik kayıttan dönüyor (30 sn aralık): kayıt düşmeden yenilersek kurulum ekranı gelir.
+    const untilAutosave = 32_000 - (Date.now() - gameStarted);
+    if (untilAutosave > 0) await tp.waitForTimeout(untilAutosave);
+    await tp.reload();
+    await tp.waitForSelector('.topbar', { timeout: 30000 });
+    await tp.waitForTimeout(800);
+    check('Sayfa yenilenince rehber kaldığı adımdan sürüyor',
+      (await tp.evaluate(() => window.__capital.tutorialStep())) === 'lens');
+    await tp.close();
+    await phone.close();
   }
 
   await finish(browser, consoleErrors);
