@@ -1933,6 +1933,13 @@ button.icon {
   gap: 10px;
 }
 
+/* On CEO (Tur 27): geniş ekranda serbest dizilim 6 + 4 bırakıyordu. */
+@media (min-width: 861px) {
+  .ceo-grid {
+    grid-template-columns: repeat(5, 1fr);
+  }
+}
+
 .ceo-card {
   width: 100%;
   display: flex;

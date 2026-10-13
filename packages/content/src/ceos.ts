@@ -205,6 +205,109 @@ export const CEOS: CeoDef[] = [
       background: '#3d2028',
     },
   },
+
+  // ---- Sektör uzmanları (Tur 27) ----
+  // Şimdiye kadar yalnızca market (Bakkal Çırağı) ve konutun (Müteahhit)
+  // uzmanı vardı. Her uzman aynı kalıpta: kendi kategorisinde kalite
+  // primi, bir küçük avantaj, bir dezavantaj. Kalite primi kategorinin
+  // fiyat primine de dönüyor (Tur 21), o yüzden ölçüler Bakkal Çırağı'nın
+  // (+0,10) bandında.
+  {
+    id: 'sef',
+    name: 'Mert Sarıgül',
+    title: 'Şef',
+    bio: 'Otel mutfağından geldi. Bir menünün neden tuttuğunu tabaktan okur.',
+    perk: 'Yeme-içme işletmeleri daha kaliteli, işletme giderleri %5 düşük',
+    drawback: 'Arsalar %10 pahalı',
+    modifiers: {
+      ...BASE,
+      upkeep: 0.95,
+      landCost: 1.1,
+      categoryQuality: { category: 'dining', bonus: 0.1 },
+    },
+    portrait: {
+      skin: '#d9a07a',
+      hair: '#2b211b',
+      hairStyle: 'crop',
+      clothes: '#f2efe8',
+      accent: '#c8553d',
+      glasses: false,
+      facialHair: true,
+      background: '#3b2a22',
+    },
+  },
+  {
+    id: 'modaci',
+    name: 'Defne Arıcı',
+    title: 'Moda Tasarımcısı',
+    bio: 'Atölyeden vitrine kendi koleksiyonunu taşıdı. Bir rafın nasıl görünmesi gerektiğini bilir.',
+    perk: 'Perakende mağazaları daha kaliteli, marka %30 hızlı büyür',
+    drawback: 'İnşaat maliyetleri %8 yüksek',
+    modifiers: {
+      ...BASE,
+      brandGrowth: 1.3,
+      buildCost: 1.08,
+      categoryQuality: { category: 'retail', bonus: 0.1 },
+    },
+    portrait: {
+      skin: '#f0c8a8',
+      hair: '#7a2f3a',
+      hairStyle: 'wave',
+      clothes: '#1f1f2b',
+      accent: '#d4a843',
+      glasses: false,
+      facialHair: false,
+      background: '#2a1f33',
+    },
+  },
+  {
+    id: 'girisimci',
+    name: 'Can Oral',
+    title: 'Teknoloji Girişimcisi',
+    bio: 'İlk şirketini satıp şehre döndü. Hangi cihazın tutacağını herkesten önce görür.',
+    perk: 'Elektronik mağazaları daha kaliteli, işe biraz bilinirlikle başlar',
+    drawback: 'Başlangıç sermayesi %15 az',
+    modifiers: {
+      ...BASE,
+      startingCash: 0.85,
+      startingBrand: 0.18,
+      categoryQuality: { category: 'electronics', bonus: 0.1 },
+    },
+    portrait: {
+      skin: '#c68a62',
+      hair: '#1a1a1a',
+      hairStyle: 'short',
+      clothes: '#2f5d8a',
+      accent: '#6fd0e8',
+      glasses: true,
+      facialHair: false,
+      background: '#16263a',
+    },
+  },
+  {
+    id: 'hekim',
+    name: 'Nilay Er',
+    title: 'Hekim',
+    bio: 'Klinik kurmadan önce on yıl acilde çalıştı. İnsanların neye para verdiğini değil, neye güvendiğini bilir.',
+    perk: 'Hizmet işletmeleri daha kaliteli, işletme giderleri %6 düşük',
+    drawback: 'Marka bilinirliği yavaş oturur',
+    modifiers: {
+      ...BASE,
+      upkeep: 0.94,
+      brandGrowth: 0.8,
+      categoryQuality: { category: 'services', bonus: 0.1 },
+    },
+    portrait: {
+      skin: '#e8b896',
+      hair: '#4a3324',
+      hairStyle: 'bun',
+      clothes: '#e9f1ee',
+      accent: '#3f8f6e',
+      glasses: true,
+      facialHair: false,
+      background: '#1e3530',
+    },
+  },
 ];
 
 export const CEO_BY_ID: Record<string, CeoDef> = Object.fromEntries(CEOS.map((c) => [c.id, c]));

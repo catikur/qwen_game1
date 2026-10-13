@@ -1,4 +1,4 @@
-import { ERAS, ERA_BY_ID, EVENTS } from '@capital/content';
+import { ERAS, ERA_BY_ID, EVENTS, EVENT_BY_ID, SECTOR_EVENTS } from '@capital/content';
 import type { CategoryId } from '@capital/content';
 import { tc } from '../i18n';
 import { createRng, nextFloat, pickWeighted } from '../rng';
@@ -42,7 +42,7 @@ export function collectEventModifiers(state: GameState): EventModifiers {
   if (state.era) sources.push({ defId: state.era.defId });
 
   for (const active of sources) {
-    const def = EVENTS.find((e) => e.id === active.defId) ?? ERA_BY_ID[active.defId];
+    const def = EVENT_BY_ID[active.defId] ?? ERA_BY_ID[active.defId];
     if (!def) continue;
 
     if (def.effects.costMultiplier) mods.costMultiplier *= def.effects.costMultiplier;
@@ -85,14 +85,31 @@ export function runEventTick(state: GameState): void {
     active.remainingDays -= 1;
     if (active.remainingDays > 0) continue;
 
-    const def = EVENTS.find((e) => e.id === active.defId);
+    const def = EVENT_BY_ID[active.defId];
     state.activeEvents.splice(i, 1);
     if (def) pushNews(state, 'neutral', tc('core.events.endedTitle', { title: def.title }), tc('core.events.endedBody'));
   }
 
   if (!state.flags.randomEvents) return;
   if (state.time.day < GRACE_DAYS) return;
-  if (state.activeEvents.length >= MAX_CONCURRENT) return;
+  scheduleCityEvent(state);
+  scheduleSectorEvent(state);
+}
+
+const CITY_IDS = new Set(EVENTS.map((e) => e.id));
+const SECTOR_IDS = new Set(SECTOR_EVENTS.map((e) => e.id));
+
+function activeIn(state: GameState, ids: Set<string>): number {
+  let count = 0;
+  for (const active of state.activeEvents) if (ids.has(active.defId)) count++;
+  return count;
+}
+
+/** Şehir takvimi: büyük ekonomik olaylar. Tur 27'den önceki takvimin birebir aynısı. */
+function scheduleCityEvent(state: GameState): void {
+  // Sınır yalnızca şehir olaylarını sayıyor: sektör olayı açıkken şehrin
+  // krizi ertelenseydi kriz takvimi yine kayardı (Tur 27).
+  if (activeIn(state, CITY_IDS) >= MAX_CONCURRENT) return;
 
   /*
    * OLAY TAKVİMİ DE DIŞSAL — dönemlerle aynı ilke, sonuna kadar.
@@ -111,6 +128,34 @@ export function runEventTick(state: GameState): void {
   if (nextFloat(dice) > DAILY_CHANCE) return;
 
   const available = EVENTS.filter((e) => !state.activeEvents.some((a) => a.defId === e.id));
+  if (available.length === 0) return;
+
+  const def = pickWeighted(dice, available, (e) => e.weight);
+  state.activeEvents.push({
+    defId: def.id,
+    startedDay: state.time.day,
+    remainingDays: def.durationDays,
+  });
+  pushNews(state, def.tone, def.title, def.body);
+}
+
+/** Sektör takviminde aynı anda en fazla bu kadar olay. */
+const SECTOR_MAX_CONCURRENT = 1;
+/** Sektör olayının günlük olasılığı (ortalama ~15 gün sürüyor; 900 günde ~16 olay, günlerin ~%29unda biri açık). */
+const SECTOR_DAILY_CHANCE = 0.025;
+
+/**
+ * Sektör takvimi (Tur 27): kategoriye ya da bölge türüne dokunan kısa
+ * haberler. Kendi zarı var — şehir takviminin zarını paylaşsaydı her
+ * sektör olayı bir şehir olayının yerini alırdı. Aynı ilke: zar tohumdan
+ * ve günden, kimin ne kurduğundan bağımsız.
+ */
+function scheduleSectorEvent(state: GameState): void {
+  if (activeIn(state, SECTOR_IDS) >= SECTOR_MAX_CONCURRENT) return;
+  const dice = createRng(((state.meta.seed ^ 0x5bd1e995) ^ Math.imul(state.time.day, 2654435761)) >>> 0);
+  if (nextFloat(dice) > SECTOR_DAILY_CHANCE) return;
+
+  const available = SECTOR_EVENTS.filter((e) => !state.activeEvents.some((a) => a.defId === e.id));
   if (available.length === 0) return;
 
   const def = pickWeighted(dice, available, (e) => e.weight);

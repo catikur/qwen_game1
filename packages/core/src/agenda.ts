@@ -1,4 +1,4 @@
-import { CREDIT, ERA_BY_ID, EVENTS, localizeDecimal } from '@capital/content';
+import { CREDIT, ERA_BY_ID, EVENT_BY_ID, localizeDecimal } from '@capital/content';
 import { nextGoal } from './systems/goals';
 import { OFFER_LIFETIME_DAYS, contractProgress } from './systems/contracts';
 import { sharesHeld, sharesOutstanding } from './systems/equity';
@@ -273,7 +273,7 @@ export function agenda(state: GameState): AgendaItem[] {
   }
 
   for (const active of state.activeEvents) {
-    const def = EVENTS.find((event) => event.id === active.defId);
+    const def = EVENT_BY_ID[active.defId];
     if (!def) continue;
     items.push({
       kind: 'event',

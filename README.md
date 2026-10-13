@@ -40,7 +40,7 @@ pnpm preview
 
 ## Nasıl oynanır
 
-Oyun şirketini kurmakla başlar: bir isim ve altı CEO'dan biri. CEO seçimi
+Oyun şirketini kurmakla başlar: bir isim ve on CEO'dan biri. CEO seçimi
 kozmetik değil — sermayeni, arsa pazarlığını, işletme giderini ve marka
 büyüme hızını değiştirir.
 

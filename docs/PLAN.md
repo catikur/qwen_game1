@@ -82,7 +82,7 @@ Oynanış geri bildirimi sonrası eklenenler:
 
 - **Şirket kurulumu ekranı.** Oyun artık haritanın ortasında başlamıyor;
   önce şirket adı ve CEO seçiliyor.
-- **CEO'lar.** Altı karakter, her biri parametrelerden çizilen SVG portre.
+- **CEO'lar.** Altı karakter (Tur 27'de on), her biri parametrelerden çizilen SVG portre.
   Seçim kozmetik değil: başlangıç sermayesi, arsa pazarlığı, inşaat
   maliyeti, işletme gideri, marka büyüme hızı ve sektör kalitesi CEO'ya
   göre değişiyor.
