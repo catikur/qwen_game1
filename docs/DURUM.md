@@ -1392,20 +1392,24 @@ zaten ikişer mağaza vardı.
 - İngilizce adlar ve açıklamalar eklendi; içerik kapsam testi eksik çeviri
   bırakmıyor.
 
-**Ölçümün düzelttiği üç şey.**
+**Ölçümün düzelttiği dört şey.**
 
 1. *Abonman.* İlk sürümde Sinema 420, Teknoloji Mağazası 120 kapasiteliydi.
    Denge testi şehri her kategorinin en büyük mağazasıyla doyurmayı
    varsayıyor. Gereken parsel 293'ten 181'e indi (abonman %53 → %33, bant
-   %35–75) ve toprak bollaştı. Sinema 280, Teknoloji Mağazası 40 kapasiteyle
-   abonman %38.
-2. *Taban kalite kayması.* Fiyat primi kategorinin en düşük kaliteli
+   %35–75) ve toprak bollaştı. Son hâli Sinema 200, Klinik 160, Teknoloji
+   Mağazası 40 kapasite: abonman %46.
+2. *Kredinin kalıcı avantajı.* Büyük kapasiteli hizmet binaları kredinin
+   erken avantajını eritmiyordu: borçla erken büyüyen oyuncu 720. günde de
+   önde kalıyordu (tohum 1'de %23 → %17; kontrol yarısının altını istiyor).
+   Kapasiteler 200/160'a inince erime geri geldi.
+3. *Taban kalite kayması.* Fiyat primi kategorinin en düşük kaliteli
    binasına göre hesaplanıyor (Tur 21). Telefoncu ve Kuaför daha düşük
    kaliteyle girince taban aşağı kaydı. Var olan Elektronik Mağazası ve
    Spor Salonu, hiçbir şey değişmeden +0,05 fiyat primi kazandı. Küçük
    basamaklar artık kategorinin tabanıyla aynı kalitede (0,60 ve 0,65); eski
    binaların ekonomisi aynı.
-3. *Elektronik uzmanı rakip.* Rakipler kategoride en yüksek kapasiteli
+4. *Elektronik uzmanı rakip.* Rakipler kategoride en yüksek kapasiteli
    binayı seçiyor. Elektronik talebi tam karşılanmadığı için her yeni
    elektronik basamağı Firuze'yi büyüttü. Deneyle ayrıldı:
    - yeni elektronik binaları kapalı: ikinci şehirde zafer 665. gün;
@@ -1430,6 +1434,110 @@ Artık Tur 22'deki ölçümün üç tohumunda koşuyor:
 
 Tek tohuma göre içerik ayarlamak aşırı uydurma olurdu. Tohum 1'deki yarış
 gerçek: pasif vekil devralma yapmıyor, elektronik uzmanını durdurmuyor.
+(Aşağıdaki tahmin düzeltmesinden sonra üç tohumda da ikinci şehir
+kazanılıyor: 478, 453 ve 467. gün.)
+
+**Zincir neden kaybediyordu: yapı menüsü yanlış tahmin ediyordu.**
+
+Yeni binalarla zincir kontrolü kırıldı: zincir kartını izleyen kol 3
+tohumun yalnızca 1'inde öndeydi. Tohum sayısı 6'ya, sonra 12'ye çıkınca
+sorunun main'de de olduğu görüldü: main'de 6 tohumun 4'ünde öndeydi,
+ortalama −%2. Üç tohumluk kontrol kıl payıyla geçiyordu (tohum 1'de
++%0,4). Tur 25'in başında 12 tohumun 3'ünde önde, ortalama −%2,6.
+
+Kök sebep zincirde değil, `estimateInvestment`teydi. Yapı menüsü, rakip
+yapay zekâ ve vekil hep aynı fonksiyonu kullanıyor ve fonksiyon iki şeyi
+görmüyordu:
+
+1. *Komşu rakipler.* Komşu bölgelerin talebi tahmine ekleniyordu ama o
+   talebin peşindeki komşu mağazalar rakip sayılmıyordu. Pay yalnızca
+   kendi bölgendeki mağazalara karşı hesaplanıp şehrin yarısının talebine
+   uygulanıyordu. Pazar adımı ise her bölgenin talebini o bölgeye erişen
+   bütün mağazalar arasında erişim ağırlığıyla bölüyor.
+2. *Kendi şubelerin.* Yeni şubenin payının bir kısmı senin eski
+   şubelerinden geliyor. Tahmin bunu kâr sayıyordu.
+
+Zincir girdiyi ucuzlatınca bu hata büyüyordu. Vekil aynı kategoriye mağaza
+üstüne mağaza açıyordu, mağazalar birbirini yiyordu:
+
+- tohum 99'da 23 Teknoloji Mağazası açıldı, tanesi günde 377 ₺ kazanıyordu;
+- tohum 99'da 21 mağazalar zinciri, tanesi 3,3 bin ₺ (düz kolda 16 tanesi
+  4,1 bin ₺).
+
+Düzeltme:
+
+- **Tahmin pazar adımı gibi hesaplıyor.** Her hedef bölge için ayrı pay,
+  komşu mağazalar erişim ağırlığıyla rakip. Doymuş bölgede yeni şubenin
+  kendi şubelerinden alacağı kâr düşülüyor. Yapı menüsü bunu ayrıca
+  yazıyor: "kendi şubelerinden 1.200 ₺/gün alıyor (düşüldü)".
+- **Rakip küçüğünü de deniyor.** Rakip kategoride en büyük binayı seçiyordu.
+  Kapıdan dönerse kategoriyi bütünüyle atlıyordu. Artık sırayla bir
+  küçüğünü deniyor. Yoksa üçüncü süpermarketi kendi iki süpermarketini
+  yediği için reddediyor, aynı bölgede kâr eden bakkalı hiç sormuyordu.
+- **Zincir A/B'si zinciri ve mağazayı aynı tikte oynuyor.** Eskiden zincir
+  hamlesi olan hafta mağaza açılmıyordu. Yani deney "kartı izlemek
+  kazandırıyor mu" diye değil "bir ünite bir mağazadan iyi mi" diye
+  soruyordu. `playerStrategy` bu dersi Tur 14'te almıştı, A/B almamıştı.
+
+Ölçüm (zincir A/B, 560 gün, 12 tohum: 1, 7, 42, 3, 11, 99, 2, 5, 13, 21,
+50, 77):
+
+| | Önde | Ortalama |
+|---|---|---|
+| Tur 25 başı (eski tahmin, ya zincir ya mağaza) | 3/12 | −%2,6 |
+| Yeni tahmin, ya zincir ya mağaza | 10/12 | +%14 |
+| **Yeni tahmin, aynı tik (denge testi)** | **12/12** | **+%20** (+%4…+%45) |
+
+Düz kol da güçlendi. Doğru tahminle vekilin 560. gün net değeri 70–97 M
+₺'den 74–110 M ₺'ye çıktı. Vekil artık kârsız yamyam mağaza yerine
+parseli boş bırakıyor: düz kolun bina sayısı 108–112'den 89–102'ye indi.
+
+**Zincirin yan etkisi: zorluk eğrisi kaydı.**
+
+Yapı menüsünü izleyen oyuncu artık belirgin daha iyi oynuyor. 15 günde bir
+oynayan savunmasız vekil Dengeli'de düşmüyordu: tohum 7, 42, 5 ve 31'in
+dördünde de ayakta kaldı, 112–133 M ₺ ile. Eskiden 572–858. günlerde
+düşüyordu. Rakip ise yamyam mağazayı reddetti ama haftada tek karar
+temposu yerinde kaldı. Reddedilen yatırımın parası boşta birikti: bir
+tohumda 800. günde net değerin %47'si nakitti.
+
+- **Boşta nakit ikinci mağaza deniyor.** Nakdi net değerinin %35'ini aşan
+  rakip karar gününde ikinci bir mağaza deniyor. Eşik taraması kodda
+  kayıtlı. Sistem kaotik ve eşik tek tek tohumları oynatıyor. %35'te
+  Dengeli 832, Acımasız 447. günde düşürüyor. Bilgili oyuncunun zaferi 574
+  ve 577. günde. Kademeler 421 / 576 / 726.
+- **Kilitlenen baskın yarışı çözülüyor.** Rakipler güçlenince bir
+  boşluk açığa çıktı. Tohum 41'de Meridyen %48, Nova %39, Veri %14 tutuyordu
+  ve serbest hisse sıfırdı. 450. günden 900. güne hiçbir şey değişmedi:
+  oyun kaybedilmiş ama bitmemişti. Artık en büyük paylı baskıncı, yarışı
+  kaybeden en küçük paylı rakipten blok satışla alıyor. Satış piyasa
+  fiyatından, aynı günlük tavanla. Oyuncu zorla satıcı yapılmıyor.
+  - *Savunma ihracı yapmış hedefte bu kural yok.* Kural her hedefe
+    uygulanınca ihraç kalkanı çöktü: birbirinden blok alan iki baskıncı
+    seyreltmeye rağmen %50'yi geçiyordu. Üç tohumda da ihraçla düşüyordu,
+    eskiden üçü de ayaktaydı.
+
+**Üç kontrol ölçtüğü şeyi açık önkoşulla ölçüyor.**
+
+Zincir kontrolündeki ilkeyle ("kurulamamış zincir ölçülemez"):
+
+- *İhraç kalkanı.* Kalkan ancak baskının oyuncuyu düşürdüğü tohumda
+  sınanabilir. Güçlenen vekil tohum 42'de savunmasızken de ayakta. Kontrol
+  tehdidin gerçekleştiği tohumlara bakıyor ve en az ikisini şart koşuyor;
+  atlanan tohum adıyla yazılıyor. Şu an 7, 5 ve 31: üçü de ihraçla ayakta.
+- *Şube kapatma.* "900 günde en az bir kapanış" idi. Doğru tahminle rakip
+  bu tohumda zararlı şube hiç açmıyor ve sıfır kapanış iki anlama
+  gelebiliyordu. Mekanizma artık birim testinde, zarar elle kurularak
+  sınanıyor (`prune.test.ts`). Oyundaki kontrol bekleme süresine bakıyor:
+  kurala uyan şube iki haftadan uzun açık kalmamalı.
+- *Şehir yayılması.* Kontrol 700. gündeki net yapı sayısına bakıyordu. O
+  sayı şehrin diktikleri eksi rakiplerin devralıp yıktıkları. Rakip
+  boşta nakdiyle daha çok devralınca net %59'dan %20'ye indi, ama şehir
+  yavaşlamamıştı. Kontrol artık şehrin kendi diktiği yapıyı sayıyor: 105
+  yeni yapı, başlangıç 101, eşik yarısı.
+
+Ayrıca Tur 25'in ilk commit'inde kalan bir test hatası düzeldi. Teknoloji
+Mağazası'nın kalite primi 0,045, test 0,035 bekliyordu.
 
 ---
 
@@ -1441,15 +1549,16 @@ gerçek: pasif vekil devralma yapmıyor, elektronik uzmanını durdurmuyor.
 
 | | Değer |
 |---|---|
-| Oyuncu / rakip oranı | **2,00** — Tur 21 öncesi main'de 1,75; Tur 7 öncesi 0,76 idi |
-| Oyuncu net değeri / en iyi rakip | 35,38 M ₺ / 17,71 M ₺ |
-| Oyuncu bina sayısı | 78 |
-| Günlük kâr | 247 B ₺ |
+| Oyuncu / rakip oranı | **2,28** — Tur 25 öncesi 2,00; Tur 21 öncesi 1,75; Tur 7 öncesi 0,76 idi |
+| Oyuncu net değeri / en iyi rakip | 42,67 M ₺ / 18,74 M ₺ |
+| Oyuncu bina sayısı | 84 |
+| Günlük kâr | 275 B ₺ |
 | Batan şirket | **0** |
 
 Not: vekil Tur 14'te devralmayı öğrendi (boş parsel bitince mevcut
 yapıyı primli alıyor — oyunun kendi öğretisi). Önceki satırlarla kıyasta
-bu repertuvar farkının payı var.
+bu repertuvar farkının payı var. Tur 25'teki artış yapı menüsünün doğru
+tahmininden: vekil artık kendi şubesini yiyen mağazayı açmıyor.
 
 ### Doygunluk (Tur 8 sonrası)
 
@@ -1460,7 +1569,8 @@ bu repertuvar farkının payı var.
 | Tur 8 | %30 | **%12** | **%13** |
 | Tur 14 | %10 | **%0** | **%0** |
 | Tur 16 | %11 | **%1** | **%0** |
-| **Tur 21** | %9 | **%0** | **%0** |
+| Tur 21 | %9 | **%0** | **%0** |
+| **Tur 25** | %12 | **%10** | **%17** |
 
 Okunması gereken şey sayı değil **yön**. İlk iki satırda boş talep
 zamanla artıyor: şehir büyüdükçe geri kalıyor. Son ikisinde azalıyor —
@@ -1470,6 +1580,11 @@ düşüşün iki kaynağı var: kademeli imar erken şehri küçük tuttuğu iç
 geç oyunda talebi süpürüyor. Doluluk %66'ya indiği için çekicilik
 rekabeti (kalite/marka/fiyat) canlı.
 
+Tur 25 satırı yönü düzleştirdi ve bu bilinçli. Tur 14–21'deki %0'ı vekil,
+kendi şubelerini yiyen mağazalarla talebi süpürerek alıyordu. Tahmin artık
+yamyamlığı düştüğü için kalan talebin bir kısmı "açılırsa kendi şubemden
+alır" denen yerlerde. Doluluk %91–97: çekicilik rekabeti yine canlı.
+
 ### Stratejilerin karşılığı (aynı tohum, tek değişken)
 
 | Strateji | Kâr etkisi | Geri ödeme |
@@ -1478,35 +1593,36 @@ rekabeti (kalite/marka/fiyat) canlı.
 | Ar-Ge · 8 mağaza | **%13** | 134 gün |
 | Pazarlama · 8 mağaza | **%12** | 92 gün |
 | Fiyatı %25 kırmak | **%14 hacim** | — |
-| Zincir · normal nakit | **+%16** (%8…%22) | 194 gün |
-| Zincir · bol nakit (20 M ₺) | −%3 (−%7…+%1) | — |
+| Zincir · normal nakit | **+%39** (%22…%49) | 194 gün |
+| Zincir · bol nakit (20 M ₺) | **+%25** (%5…%42) | — |
 
 Tur 21'e kadar zincir satırları eksiydi ve bu "360 günlük pencere"ye
 bağlanıyordu. Asıl sebep üretimdeki tüketim sayımıydı (Tur 21, 6. ders):
 satmayan ürün tüketilmiş sayılıyor, zincir kartı yanlış akışa ünite
 öneriyordu. Düzeltmeden sonra normal nakitte zincir her tohumda önde.
-Bol nakitte hâlâ hafif eksi: sınırsız parasıyla boş parseli mağazayla
-dolduran oyuncu için ünite bir mağaza parselini kaplıyor (Tur 7: kıt
-kaynak toprak). Arazi kısıtlı dünyada (dondurulmuş A/B) zincir 3/3 önde,
-ortalama +%2.
+Tur 25'e kadar bol nakitte hâlâ hafif eksiydi. Bunu "ünite bir mağaza
+parselini kaplıyor" diye okuyorduk. Asıl sebep yapı menüsünün tahminiydi:
+bol nakitli vekil zincirle ucuzlayan kategoriye kendi şubelerini yiyen
+mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
+(Tur 25).
 
 ### Kalibrasyon bantları
 
 | | Değer |
 |---|---|
-| Outlet geri ödemesi | 18–55 gün |
+| Outlet geri ödemesi | 18–63 gün |
 | Zincir geri ödemesi | 194 gün |
-| Devralma maliyeti | **0,75× net değer** |
+| Devralma maliyeti | **0,79× net değer** |
 
 ### Sağlık
 
 | | Değer |
 |---|---|
 | Determinizm | birebir |
-| Simülasyon hızı | ~1.100–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi) |
-| Birim testi | **174 test** (`pnpm test`; Tur 24'te render paketi de) |
-| Denge testi | **273 kontrol, hepsi geçiyor** (20 bölüm, süreleriyle; ~9 dk) |
-| Tarayıcı testi | **300 kontrol, hepsi geçiyor**, 0 konsol hatası (~12 dk); duman koşusu 83 (~3,5 dk) |
+| Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi) |
+| Birim testi | **177 test** (`pnpm test`; Tur 24'te render paketi de) |
+| Denge testi | **283 kontrol, hepsi geçiyor** (20 bölüm, süreleriyle; ~10 dk) |
+| Tarayıcı testi | **300 kontrol, hepsi geçiyor**, 0 konsol hatası (~15 dk); duman koşusu 83 (~3,5 dk) |
 | CI | her PR'da tip + test + denge + paket + duman oynanışı |
 | Kapsam | 33 bina · 22 ürün · 7 kategori · 8 rakip profili · 10 şehir yapısı (6 siluet) |
 
