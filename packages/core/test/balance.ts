@@ -67,7 +67,7 @@ import { WAGE_PER_JOB } from '../src/systems/labor';
 import { loanQuote } from '../src/systems/credit';
 import { issueQuote } from '../src/systems/issuance';
 import { capRemaining, dailyBuyCap, findOrder, orderEstimate } from '../src/systems/orders';
-import { cityTrend, holdingNetWorth } from '../src/holding';
+import { cityTrend, holdingNetWorth, raidStatus } from '../src/holding';
 import { buybackToLock, ownerFraction, sharesOutstanding } from '../src/systems/equity';
 import type { GameEngine as Engine } from '../src/engine';
 import type { GameState } from '../src/types';
@@ -3985,8 +3985,10 @@ section('Büyük şehir (5×5)', () => {
 section('Holding: ikinci şehir', () => {
   /*
    * Tur 22. Zafer kazanılan şehirden yeni şehre açılınca:
-   *   - sermaye taşınıyor, kurucu şehir donuyor (takvimi ilerlemiyor),
-   *   - kurucu şehrin kâr eğiliminin yarısı her gün holding kasasına,
+   *   - sermaye taşınıyor, kurucu şehir donuyor (takvimi ilerlemiyor) —
+   *     Tur 30'dan beri yaşıyor, aşağıda;
+   *   - kurucu şehrin kâr eğiliminin yarısı her gün holding kasasına —
+   *     Tur 30'dan beri o günkü gerçek kârının yarısı;
    *   - ikinci şehrin zaferi getirilen sermayeyle değil şehirde yaratılan
    *     değerle: dışarıdan gelen 10 M ₺'lik kasa zaferi bedavaya getirmemeli.
    * Ölçülen (tohum 1/7/42, sermaye nakdin %25'i): 1. şehir 647/808/700. gün,
@@ -4026,21 +4028,45 @@ section('Holding: ikinci şehir', () => {
     if (!opened.ok) continue;
 
     const city = state();
+    const away = city.holding!.dormant[0]!.state;
+    const awayWorth = getPlayer(away).netWorth;
+    const awayImported = away.importedCapital ?? 0;
     play(1200);
     const secondVictory = city.victory?.day ?? null;
     const days = city.time.day;
     const treasury = city.holding?.treasury ?? 0;
-    const dormantDay = city.holding?.dormant[0]?.state.time.day;
+    const dormantDay = away.time.day;
     const leader = Object.values(city.companies).sort((a, b) => b.netWorth - a.netWorth)[0]!;
+    const awayStage = raidStatus(away);
     console.log(
       `  tohum ${seed}: 1. şehir ${firstVictory}. gün zafer (eğilim ${formatMoney(trend)}/gün) · 2. şehir ${secondVictory ?? '-'}. gün · ` +
-        `kasa ${formatMoney(treasury)} · holding ${formatMoney(holdingNetWorth(city))} · lider ${leader.name} ${formatMoney(leader.netWorth)}`,
+        `kasa ${formatMoney(treasury)} (donuk modelde ${formatMoney(Math.max(0, trend) * 0.5 * days)}) · holding ${formatMoney(holdingNetWorth(city))} · ` +
+        `lider ${leader.name} ${formatMoney(leader.netWorth)}`,
     );
-    expect(`tohum ${seed}: bekleyen şehrin takvimi duruyor`, dormantDay === foundingDay, `${dormantDay}. günde · ayrılış ${foundingDay}`);
+    console.log(
+      `    kurucu şehir uzakta: ${away.gameOver ? `${away.gameOver.day}. günde kaybedildi` : 'ayakta'} · değer ${formatMoney(awayWorth)} → ` +
+        `${formatMoney(getPlayer(away).netWorth)} · en büyük dış pay %${Math.round(awayStage.fraction * 100)}`,
+    );
+    /*
+     * Tur 30: şehirler eşzamanlı yaşıyor. Tur 22'nin iki iddiası ("bekleyen
+     * şehrin takvimi duruyor", "kasaya her gün eğilimin yarısı akıyor")
+     * bilerek değişti. Yerlerine:
+     *   - kurucu şehir de yaşıyor: takvimi ikinci şehirle birlikte ilerliyor
+     *     (kaybedilirse o gün duruyor);
+     *   - kasaya akan her lira kurucu şehirden çıktı: kasa, kurucu şehrin
+     *     "şehirden çıkan sermaye" defterinin (importedCapital) düşüşüne
+     *     eşit. Para yoktan doğmuyor; donuk modelde doğuyordu.
+     */
+    const lostDay = away.gameOver?.day;
     expect(
-      `tohum ${seed}: kasaya her gün eğilimin yarısı akıyor`,
-      Math.abs(treasury - Math.max(0, trend) * 0.5 * days) < 1,
-      `${formatMoney(treasury)} ≈ ${days} gün × ${formatMoney(Math.max(0, trend) * 0.5)}`,
+      `tohum ${seed}: kurucu şehir de yaşıyor (takvimler birlikte)`,
+      lostDay !== undefined ? dormantDay === lostDay : dormantDay === foundingDay + days,
+      `${dormantDay}. günde · ayrılış ${foundingDay} + ${days} gün${lostDay !== undefined ? ` · ${lostDay}. günde kaybedildi` : ''}`,
+    );
+    expect(
+      `tohum ${seed}: kasaya akan her lira kurucu şehirden çıktı`,
+      treasury > 0 && Math.abs(treasury - (awayImported - (away.importedCapital ?? 0))) < 1,
+      `kasa ${formatMoney(treasury)} · kurucu şehirden çıkan ${formatMoney(awayImported - (away.importedCapital ?? 0))}`,
     );
     expect(
       `tohum ${seed}: getirilen sermaye zaferi bedavaya getirmiyor (400. günden önce değil)`,
