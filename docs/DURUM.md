@@ -4,7 +4,7 @@
 > `pnpm bench` çıktısından; iddialar `pnpm balance` ve `pnpm playtest`
 > tarafından her koşuda doğrulanıyor.
 >
-> Son güncelleme: şema **v6**, 28 tur tamamlandı.
+> Son güncelleme: şema **v6**, 29 tur tamamlandı.
 
 ---
 
@@ -1842,6 +1842,80 @@ tohumda geri alımın gerçekten iş gördüğünü istiyor.
 edilmemiş değişiklikler gitti. Hepsi bağlamdan yeniden uygulandı; bu
 turdan itibaren ara commit'ler daha sık.
 
+### Tur 29 — Yeni ürün zinciri: deri ve ayakkabı
+
+Tur 27'de ertelenen iş. Kullanıcı "önce yeni ürün zinciri, sonra eşzamanlı
+şehirler" dedi.
+
+**Neden perakende.** Yeni ürün, rafı boş duran bir mağazaya gitmeliydi:
+
+- Mağazalar Zinciri'nin dört rafından ikisi, süpermarketin üç rafından biri
+  boştu.
+- Market erken oyunun nakit omurgası; oraya üçüncü ürün, bakkalın tek
+  rafını en çok sarsacak yer.
+- Elektronik ve yeme-içmede iki raftan büyük mağaza yok; üçüncü ürün orada
+  hiçbir rafa sığmazdı.
+
+**Zincir.** Ham deri (12 ₺) → deri (25 ₺) → ayakkabı. Raf maliyeti 7,5:
+25 + 7,5 = 32,5, perakendenin kimliği (65 × 0,50). Her şeyi pazardan alan
+oyuncunun ayakkabı maliyeti giyimle aynı; zincir onu aşağı çekiyor.
+
+| Bina | Rol | Maliyet | Gider/gün | Kapasite | Açılış |
+|---|---|---|---|---|---|
+| Besi Çiftliği | hammadde | 560 B ₺ | 1.760 | 700 ham deri | 2,4 M ₺ |
+| Tabakhane | işleme | 404 B ₺ | 1.264 | 460 deri | 2,0 M ₺ |
+
+Oranlar pamuk tarlasının ve döşeme fabrikasının aynısı (kapasite × fiyat /
+gider, maliyet / gider). İkisi de yalnızca sanayi ve limanda. Sahnede kendi
+detayları var: ahır çatısı ve ağıl çiti; sepi tankları ve ince baca.
+
+**Talep bölünüyor, eklenmiyor — ölçüldü.** İlk sürüm ayakkabıyı ek harcama
+yaptı. Her arketipin perakende ağırlığı ayakkabının payı kadar büyüdü,
+giyim ve ev tekstilinin mutlak talebi her bölgede birebir korundu. Ama
+toplam tüketici harcaması ~%9 büyüdü ve oyun kolaylaştı; altı kontrol
+düştü:
+
+- Dengeli'de yavaş oyuncu düşmez oldu (Acımasız 454. gün);
+- büyük şehirde zafer 569. güne geldi (eşik 600);
+- kalkan testlerinin sınayacağı tehdit kalmadı;
+- şehir dönüşümü (rezidans) yavaşladı.
+
+Kategori talebi Tur 1'den beri ürünler arasında bölünüyor; ayakkabı da
+öyle. Ağırlıklar ve kişi başı talep main'le aynı. Tek raflı butik bölgenin
+en iyi ürününü taşıyıp uzmanlaşıyor; dört raflı Mağazalar Zinciri üçünü
+birden topluyor — rafların tasarlandığı ayrım.
+
+**Her ürün bir yerde kazanmalı.** İlk ayarda ayakkabı hiçbir arketipte
+rafın en iyisi değildi; tek raflı dükkânın seçimi sahteydi ("her ürün en
+az bir bölgede kazanıyor" kontrolü yakaladı). Ayakkabının payı 0,45; öğrenci
+(×1,5) ve çarşı (×1,45) bölgelerinde önde.
+
+**Ölçüm.** Vekil 5 günde bir oynuyor, 720 gün:
+
+| | main | dal |
+|---|---|---|
+| Oyuncu net değeri (1 / 7 / 42) | 157,0 / 137,6 / 152,3 M ₺ | 154,6 / 143,7 / 150,3 M ₺ |
+| Butik başına günlük ciro | 4.921–5.064 | 4.669–4.782 (−%5) |
+| Mağazalar Zinciri başına ciro | 38–42 B | 39–40 B |
+| Ayakkabı rafı / deri tesisi | — | 14–15 raf · 0–3 tesis |
+
+Butik biraz geriledi (kapasitesi günde 70, çoğu bölgede zaten dolu);
+oyuncunun net değeri ±%4 içinde.
+
+**Eski kayıtlar.** Kayıt şeması ürün listesini taşımıyor. Deri zinciri
+gelmeden kaydedilmiş şehirde ham deri ve derinin pazar referansı yoktu;
+spot fiyat `reference ?? 1` ile ilk fazla üretimde tabana çökerdi. Spot
+fiyat adımı eksik girdileri bugünkü bölgelerden türetiyor; yeni oyunda hiçbir
+şey eksik değil. Bekleyen holding şehirleri de kayıttan geçmeden döndüğü
+için bu iş göçte değil motorda. İçerik sürümü 5 → 6.
+
+**Testler.**
+
+- `goods.test.ts` (3 test): perakende talebi korunuyor, butik bir ürün ve
+  Mağazalar Zinciri üç ürün taşıyor, ayakkabı öğrenci ve çarşıda önde.
+- Kayıt testi: deri ürünlerinin pazar girdileri silinmiş bir kayıt
+  yükleniyor; ilk gün referans ve spot fiyat (25 ve 12) yerinde.
+
 ---
 
 ## 3. Ölçülen durum
@@ -1923,11 +1997,11 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi) |
-| Birim testi | **184 test** (`pnpm test`; Tur 24'te render paketi de) |
+| Birim testi | **188 test** (`pnpm test`; Tur 24'te render paketi de) |
 | Denge testi | **284 kontrol, hepsi geçiyor** (20 bölüm, süreleriyle; ~10 dk) |
 | Tarayıcı testi | **323 kontrol, hepsi geçiyor**, 0 konsol hatası (~15–20 dk); duman koşusu 97 (~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + duman oynanışı |
-| Kapsam | 33 bina · 22 ürün · 7 kategori · 8 rakip profili · 10 CEO · 22 olay (11 şehir + 11 sektör) · 10 şehir yapısı (6 siluet) |
+| Kapsam | 35 bina · 25 ürün · 7 kategori · 8 rakip profili · 10 CEO · 22 olay (11 şehir + 11 sektör) · 10 şehir yapısı (6 siluet) |
 
 ### Render (Tur 6 sonrası)
 

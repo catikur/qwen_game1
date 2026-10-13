@@ -8,7 +8,8 @@ import {
 import { collectEventModifiers } from './events';
 import { buildingStrikeFactor, wageFor } from './labor';
 import { scopedDepots } from './buildingIndex';
-import type { BuildingInstance, GameState } from '../types';
+import { estimateBaselineDemand, goodShares } from './demand';
+import type { BuildingInstance, DistrictState, GameState } from '../types';
 
 /**
  * Tedarik zinciri.
@@ -55,6 +56,39 @@ export function zeroByGood(): Record<string, number> {
 }
 
 /** Spot fiyatları referans değerleriyle tohumlar (yeni oyun ve migration). */
+/**
+ * Spot pazarın referans hacmi — fazla üretimin fiyatı ne kadar kırdığını
+ * ölçekler.
+ *
+ * Haritadan türetiliyor, sabit değil: şehir büyürse referans da büyür,
+ * yani bir fabrikanın fiyat üzerindeki etkisi harita boyutuna göre
+ * kendiliğinden dengelenir.
+ */
+export function referenceVolumes(districts: DistrictState[]): Record<string, number> {
+  const reference = zeroByGood();
+
+  for (const good of GOODS) {
+    if (good.tier !== 'consumer' || !good.category) continue;
+
+    let cityDemand = 0;
+    for (const district of districts) {
+      const share =
+        goodShares(district.archetype, good.category).find((entry) => entry.good.id === good.id)
+          ?.share ?? good.demandShare;
+      cityDemand += estimateBaselineDemand(district, good.category) * share;
+    }
+
+    // Tüketici ürününün talebi zincirin her kademesine 1:1 iner.
+    let current = GOOD_BY_ID[good.inputGoodId ?? ''];
+    while (current) {
+      reference[current.id] = (reference[current.id] ?? 0) + cityDemand;
+      current = GOOD_BY_ID[current.inputGoodId ?? ''];
+    }
+  }
+
+  return reference;
+}
+
 export function seedSpotPrices(): Record<string, number> {
   const out: Record<string, number> = {};
   for (const good of GOODS) out[good.id] = good.basePrice;
@@ -413,6 +447,33 @@ export function outletUnitCogs(
 }
 
 /**
+ * Sonradan eklenen ürünün pazar girdileri (Tur 29).
+ *
+ * Kayıt şeması ürün listesini taşımıyor; deri zinciri gelmeden kaydedilmiş
+ * bir şehirde ham deri ve derinin referans hacmi yok. Spot fiyat
+ * `reference ?? 1` ile hesaplansaydı ilk fazla üretim fiyatı tabana
+ * çökertirdi. Eksik girdi bugünkü bölgelerden türetiliyor — yeni şehirde
+ * kurulumdaki nihai ölçekten, burada şimdiki nüfustan; referans yalnızca
+ * fazlanın fiyatı ne kadar kırdığını ölçeklediği için yaklaşık yeter.
+ * Yeni oyunda hiçbir şey eksik değil, bu adım hiçbir şey yapmıyor.
+ */
+function backfillMarket(state: GameState): void {
+  let missing = false;
+  for (const good of TRADED_GOODS) {
+    if (state.market.reference[good.id] === undefined) {
+      missing = true;
+      break;
+    }
+  }
+  if (!missing) return;
+  const fresh = referenceVolumes(state.districts);
+  for (const good of TRADED_GOODS) {
+    if (state.market.reference[good.id] === undefined) state.market.reference[good.id] = fresh[good.id] ?? 0;
+    if (state.market.spot[good.id] === undefined) state.market.spot[good.id] = good.basePrice;
+  }
+}
+
+/**
  * Yarının spot fiyatları — günün sonunda koşar.
  *
  * Fiyat yalnızca ARZ FAZLASIYLA düşer, talep artışıyla yükselmez. Sebebi
@@ -423,6 +484,7 @@ export function outletUnitCogs(
  */
 export function runSpotPriceTick(state: GameState): void {
   const mods = collectEventModifiers(state);
+  backfillMarket(state);
 
   for (const good of TRADED_GOODS) {
     const reference = Math.max(1, state.market.reference[good.id] ?? 1);

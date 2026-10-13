@@ -253,6 +253,68 @@ export const GOODS: GoodDef[] = [
     color: '#9b6fae',
   },
 
+  // ---- Ayakkabı zinciri (Perakende · 32,50; Tur 29) ----
+  /**
+   * Perakendenin üçüncü ürünü. Mağazalar Zinciri'nin dört rafından ikisi
+   * boş duruyordu; ayakkabı onlardan birini dolduruyor.
+   *
+   * TALEP BÖLÜNÜYOR, EKLENMİYOR — ölçüldü. İlk sürüm ayakkabıyı ek
+   * harcama yaptı (her arketipin perakende ağırlığı ayakkabının payı kadar
+   * büyüdü, giyim ve ev tekstilinin talebi birebir korundu). Toplam
+   * tüketici harcaması ~%9 büyüdü ve oyun kolaylaştı: Dengeli'de yavaş
+   * oyuncu düşmez oldu, büyük şehirde zafer 569. güne geldi, kalkan
+   * testlerinin tehdidi kayboldu (altı kontrol). Kategori talebi
+   * Tur 1'den beri ürünler arasında bölünüyor; ayakkabı da öyle. Tek
+   * raflı butik bölgenin en iyi ürününü taşıyıp uzmanlaşıyor, dört raflı
+   * Mağazalar Zinciri üçünü birden topluyor — rafların tasarlandığı ayrım.
+   *
+   * Her ürün en az bir bölgede rafın en iyisi olmalı (yoksa tek raflı
+   * dükkânın seçimi sahte): ayakkabı öğrenci ve çarşı bölgelerinde önde.
+   */
+  {
+    id: 'hide',
+    name: 'Ham Deri',
+    tier: 'raw',
+    category: null,
+    inputGoodId: null,
+    basePrice: 12,
+    retailCost: 0,
+    demandShare: 0,
+    color: '#a07850',
+  },
+  {
+    id: 'leather',
+    name: 'Deri',
+    tier: 'intermediate',
+    category: null,
+    inputGoodId: 'hide',
+    basePrice: 25,
+    retailCost: 0,
+    demandShare: 0,
+    color: '#7b5132',
+  },
+  {
+    id: 'footwear',
+    name: 'Ayakkabı',
+    tier: 'consumer',
+    category: 'retail',
+    inputGoodId: 'leather',
+    basePrice: 0,
+    retailCost: 7.5,
+    demandShare: 0.45,
+    archetypeWeights: {
+      student: 1.5,
+      retail_strip: 1.45,
+      downtown: 1.2,
+      tourism: 1.1,
+      tech_park: 1.1,
+      mid_residential: 0.9,
+      industrial: 0.8,
+      port: 0.8,
+    },
+    color: '#b37acb',
+  },
+
   // ---- Telefon zinciri (Elektronik · 260 ₺ × 0,62 = 161,20) ----
   {
     id: 'silicon',

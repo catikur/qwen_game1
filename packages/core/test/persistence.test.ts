@@ -54,6 +54,33 @@ describe('kayıt', () => {
     }
   });
 
+  test('deri zinciri gelmeden kaydedilmiş şehirde yeni ürünlerin pazarı kuruluyor (Tur 29)', () => {
+    /*
+     * Kayıt şeması ürün listesini taşımıyor. Ham deri ve derinin pazar
+     * girdileri olmayan bir kayıt yükleniyor; ilk gün referans ve spot
+     * fiyat yerine gelmeli. Referans `?? 1` ile kalsaydı ilk fazla üretim
+     * fiyatı tabana çökertirdi.
+     */
+    const state = playedState(10);
+    for (const id of ['hide', 'leather']) {
+      delete state.market.reference[id];
+      delete state.market.spot[id];
+    }
+    const outcome = importFromJson(exportToJson(state));
+    assert.ok(outcome.ok);
+    if (!outcome.ok) return;
+    const engine = new GameEngine(outcome.state);
+    engine.runDay();
+    const market = engine.getState().market;
+    for (const id of ['hide', 'leather']) {
+      assert.ok((market.reference[id] ?? 0) > 100, `${id} referansı ${market.reference[id]}`);
+      assert.ok(market.spot[id]! > 0, `${id} spot ${market.spot[id]}`);
+    }
+    // Üretim yokken fiyat referansta: deri 25, ham deri 12.
+    assert.equal(Math.round(market.spot.leather!), 25);
+    assert.equal(Math.round(market.spot.hide!), 12);
+  });
+
   test('gelecek sürümün kaydı açıkça reddedilir', () => {
     const raw = JSON.parse(exportToJson(playedState(1)));
     raw.state.meta.schemaVersion = SCHEMA_VERSION + 1;
