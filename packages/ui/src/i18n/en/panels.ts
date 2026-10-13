@@ -68,6 +68,8 @@ export const panels: Record<keyof typeof trPanels, string> = {
   'panels.inspector.demandTitle': 'District demand',
   'panels.inspector.demandUnmet': '{percent}% unmet',
   'panels.inspector.ownVacant': 'Your vacant plot. Pick an investment on the left.',
+  'panels.inspector.chooseBuilding': 'What can I build here?',
+  'panels.inspector.buildHere': 'Build {name}',
   'panels.inspector.sellTile': 'Sell plot ({price})',
   'panels.inspector.ownedBy': 'Owned by {owner}',
 

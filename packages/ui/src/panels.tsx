@@ -36,6 +36,7 @@ import { BankSection, WorkforceSection } from './CompanyFinance';
 import { t } from './i18n';
 import type { MessageKey } from './i18n';
 import { useGame, useGameState } from './useGame';
+import { startTutorial } from './tutorial';
 
 /* ------------------------------------------------------------------ yapı */
 
@@ -212,6 +213,7 @@ export function BuildPanel(): ReactElement {
         <button
           type="button"
           className="primary"
+          data-action="build-selected"
           onClick={() => {
             if (run({ type: 'BUILD', tileId: selectedTile.id, defId: view.ghostDefId! })) {
               setView({ ghostDefId: null });
@@ -339,6 +341,10 @@ export function Inspector(): ReactElement | null {
   const { view, setView, run } = useGame();
   const state = useGameState();
   const player = getPlayer(state);
+  // Derli toplu hâl: istatistikler gizli, yalnızca başlık ve düğmeler. Dar
+  // ekranda detay alt sayfa olduğu için yapı listesine yer açıyor (Tur 26).
+  // Kare değişince kendiliğinden kalkıyor.
+  const [compactTile, setCompactTile] = useState<number | null>(null);
 
   if (view.selectedTileId === null) {
     return (
@@ -364,7 +370,7 @@ export function Inspector(): ReactElement | null {
     // `has-selection`: dar ekranda bu panel haritanın HEMEN ALTINA
     // taşınıyor. Bir kareye dokunmak doğrudan bir eylem; detayının ve
     // satın alma butonunun kaydırma gerektirmeden görünmesi gerekiyor.
-    <aside className="inspector has-selection">
+    <aside className={compactTile === tile.id ? 'inspector has-selection compact' : 'inspector has-selection'}>
       <header className="inspector-head">
         <div>
           <h2>{district.name}</h2>
@@ -426,7 +432,39 @@ export function Inspector(): ReactElement | null {
         owner.id === player.id ? (
           <div className="actions">
             <p className="muted">{t('panels.inspector.ownVacant')}</p>
-            <button type="button" onClick={() => run({ type: 'SELL_TILE', tileId: tile.id })}>
+            {/*
+             * Telefonda yapı listesi bu detayın ARKASINDA kalıyor (detay alt
+             * sayfa, liste sütunda). Rehber bunu ilk mobil yürüyüşte buldu
+             * (Tur 26): oyuncu arsayı alıyor, sonra ne kuracağını göremiyordu.
+             * İki düğme o boşluğu kapatıyor: bina seçiliyse doğrudan kur,
+             * değilse listeyi aç ve öne getir (ikincisi yalnızca dar ekranda;
+             * geniş ekranda liste zaten solda açık).
+             */}
+            {view.ghostDefId && BUILDING_BY_ID[view.ghostDefId] ? (
+              <button
+                type="button"
+                className="primary"
+                data-action="build-here"
+                onClick={() => {
+                  if (run({ type: 'BUILD', tileId: tile.id, defId: view.ghostDefId! })) setView({ ghostDefId: null });
+                }}
+              >
+                {t('panels.inspector.buildHere', { name: BUILDING_BY_ID[view.ghostDefId]!.name })}
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="primary narrow-only"
+                data-action="show-build"
+                onClick={() => {
+                  setCompactTile(tile.id);
+                  revealBuildPanel();
+                }}
+              >
+                {t('panels.inspector.chooseBuilding')}
+              </button>
+            )}
+            <button type="button" data-secondary onClick={() => run({ type: 'SELL_TILE', tileId: tile.id })}>
               {t('panels.inspector.sellTile', { price: formatMoney(tile.landValue * 0.85) })}
             </button>
           </div>
@@ -442,6 +480,15 @@ export function Inspector(): ReactElement | null {
       )}
     </aside>
   );
+}
+
+/** Yapı listesini açar ve görünür alana getirir (dar ekranda katlı ve detayın arkasında). */
+function revealBuildPanel(): void {
+  const head = document.querySelector<HTMLButtonElement>('[data-collapse="build"]');
+  if (head?.getAttribute('aria-expanded') === 'false') head.click();
+  requestAnimationFrame(() => {
+    document.querySelector('.buildpanel')?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+  });
 }
 
 /**
@@ -520,6 +567,7 @@ function PlotActions({ tileId, price }: { tileId: number; price: number }): Reac
       <button
         type="button"
         className="primary"
+        data-action="buy-tile"
         disabled={player.cash < price}
         onClick={() => run({ type: 'BUY_TILE', tileId })}
       >
@@ -1142,6 +1190,7 @@ function SavePanel(): ReactElement {
 }
 
 function HelpPanel(): ReactElement {
+  const { engine, setView } = useGame();
   return (
     <div className="help">
       <ol>
@@ -1193,6 +1242,16 @@ function HelpPanel(): ReactElement {
         <span className="muted">{t('panels.help.language')}</span>
         <LocalePicker />
       </div>
+      <button
+        type="button"
+        data-coach-restart
+        onClick={() => {
+          startTutorial(engine.getState());
+          setView({ openPanel: 'none' });
+        }}
+      >
+        {t('app.coach.restart')}
+      </button>
     </div>
   );
 }

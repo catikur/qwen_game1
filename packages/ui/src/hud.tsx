@@ -400,6 +400,7 @@ export function LensBar(): ReactElement {
               key={lens.id}
               type="button"
               className={view.lens === lens.id ? 'lens active' : 'lens'}
+              data-lens={lens.id}
               onClick={() => {
                 setView({ lens: lens.id });
                 // Seçim yapıldı — katman kendini kapatsın ki harita

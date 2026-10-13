@@ -24,6 +24,7 @@ import {
 import {
   ActiveEvents,
   BuildPanel,
+  Coach,
   GameContext,
   GameOverScreen,
   Inspector,
@@ -35,7 +36,9 @@ import {
   NewsFeed,
   Toasts,
   TopBar,
+  startTutorial,
   t,
+  tutorialStepOf,
   useGameVersion,
   useLocale,
 } from '@capital/ui';
@@ -85,10 +88,18 @@ export function App(): ReactElement {
     };
   }, []);
 
-  const start = (companyName: string, ceoId: string, difficulty: DifficultyId, league: boolean, citySize: CitySizeId) => {
+  const start = (
+    companyName: string,
+    ceoId: string,
+    difficulty: DifficultyId,
+    league: boolean,
+    citySize: CitySizeId,
+    tutorial: boolean,
+  ) => {
     const next = league
       ? createLeagueGame(leagueWeekId(), companyName, ceoId)
       : createNewGame({ companyName, ceoId, difficulty, citySize });
+    if (tutorial) startTutorial(next);
     if (engine) engine.replaceState(next);
     else setEngine(new GameEngine(next));
     setBootMessage(null);
@@ -307,6 +318,7 @@ function GameRoot({
       cameraTarget: () => rendererRef.current?.cameraTarget() ?? null,
       setView: (view: { x: number; z: number; distance?: number; azimuth?: number; polar?: number }) =>
         rendererRef.current?.setView(view),
+      tutorialStep: () => tutorialStepOf(engine.getState()),
     };
     return () => {
       delete globals['__capital'];
@@ -513,6 +525,7 @@ function GameRoot({
           <Inspector />
         </div>
         <ModalHost />
+        <Coach />
         <Toasts />
         <GameOverScreen onNewGame={newGame} />
         <VictoryScreen onNewGame={newGame} />

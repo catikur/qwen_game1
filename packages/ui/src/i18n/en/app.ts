@@ -91,4 +91,56 @@ export const app: Record<keyof typeof trApp, string> = {
   'app.rivalry.assign': ' · will be assigned to {category}',
   'app.rivalry.premature': 'Too early — this lever really pays off once your store count grows.',
   'app.rivalry.noCash': 'Not enough cash — you need {cost}.',
+  // New player guide (Tur 26, Coach.tsx).
+  'app.coach.label': 'Guide',
+  'app.coach.count': '{step}/{total}',
+  'app.coach.pill': 'Guide {step}/{total}',
+  'app.coach.expand': 'Open the guide',
+  'app.coach.minimize': 'Minimize',
+  'app.coach.close': 'Close guide',
+  'app.coach.closedToast': 'Guide closed. You can restart it from the Help panel.',
+  'app.coach.next': 'Next',
+  'app.coach.skipStep': 'Skip this step',
+  'app.coach.start': "Let's go",
+  'app.coach.finish': 'Finish',
+  'app.coach.welcome.title': 'Welcome',
+  'app.coach.welcome.body':
+    "You're growing a company in this city's market: buy land, open stores, overtake your rivals. We paused time; let's open your first store together.",
+  'app.coach.lens.title': 'See the opportunity',
+  'app.coach.lens.body':
+    'Pick Opportunity from the lenses. The map lights up districts with high unmet demand: customers, but no stores.',
+  'app.coach.pick.title': 'Pick a lot',
+  'app.coach.pick.body':
+    "Tap an empty lot in a glowing district. Plot details show the district's population, income and which categories have demand left unserved.",
+  'app.coach.buy.title': 'Buy the lot',
+  'app.coach.buy.body':
+    'Press the buy button in plot details. Land is the scarce resource: as the city grows, empty lots get fewer and pricier.',
+  'app.coach.choose.title': 'Choose what to build',
+  'app.coach.choose.body':
+    'The build list shows each building\'s estimated daily profit and payback time in this district. The one tagged "best for this plot" earns the most from this lot. Pick one.',
+  'app.coach.build.title': 'Build',
+  'app.coach.build.body': 'Tap the lot you bought, or press "Build on selected lot".',
+  'app.coach.play.title': 'Start the clock',
+  'app.coach.play.body':
+    'Press ▶ on the top bar to start time. Daily profit is on the top bar: the first days go to building a customer base.',
+  'app.coach.goals.title': 'Your next goal',
+  'app.coach.goals.body':
+    'The goal chip on the agenda strip tells you the next step: five branches, millionaire, your own supply. Tap the chip.',
+  'app.coach.goals.open':
+    'The goal ladder runs all the way to victory. Steps are shown in order, but you can complete them in any order. Close the panel to continue.',
+  'app.coach.chain.title': 'Supply chain',
+  'app.coach.chain.body': 'The Chain tab shows where the goods you sell come from. Open the tab.',
+  'app.coach.chain.open':
+    'For now you buy raw materials and intermediate goods on the market. Once you have more stores, your own production lowers costs; the card tells you when it makes sense and says "early" when it doesn\'t yet.',
+  'app.coach.rivals.title': 'Rivals and the market',
+  'app.coach.rivals.body':
+    'Rivals grow too, and they buy up the shares of companies that fall behind. Open the Market tab.',
+  'app.coach.rivals.open':
+    'If a rival holds more than half of your shares, your company is theirs. If a red "Raid" chip appears on the agenda, buy back your own shares here. You can also buy up rivals\' shares and take them over.',
+  'app.coach.done.title': "You're ready",
+  'app.coach.done.body':
+    'That\'s the loop: find the opportunity, buy the land, build the right building; as you grow, use the chain and the market. You can reopen the guide from the Help panel.',
+  'app.coach.restart': 'Restart the guide',
+  'app.coach.newGameOption': 'Start with the guide',
+  'app.coach.newGameHint': 'Recommended for your first game; close it any time.',
 };
