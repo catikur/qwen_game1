@@ -2029,6 +2029,10 @@ bir nefes); tablo ilk çizimde beklemiyor.
 - Elle "Doğrula" düğmesi kalktı; kod yapıştırarak doğrulama duruyor.
 - Biten koşuda gündemde "Lig … · tablo" çipi var: sonuç ekranı kapanınca
   tabloya dönüş yolu yoktu, doğrulama da panel açıkken koşuyor.
+- Yerel tablo (paylaşılan depo yokken) aynı tarayıcının başka sekmesinden
+  gelen koşuyu da görüyor. Önceden depoyu yalnızca abonelikte ve gönderimde
+  okuyordu; gündem çipinin hayaleti aboneliği açık tuttuğu için sonradan
+  gelen satır hiç görünmüyordu. Tam oynanış testi yakaladı.
 
 **Bilinen sınır: kopya önlenemiyor, görünür kılınıyor.** Koşu kodu tabloda
 açık. Şirket adı simülasyonu değiştirmediği için biri başkasının koşusunu
