@@ -3205,7 +3205,7 @@ async function finish(browser, consoleErrors) {
   // listesi "Buraya ne kurulur?" ile öne geliyor (Tur 26'nın bulduğu boşluk).
   {
     const phone = await browser.newContext({ ...devices['iPhone 13'] });
-    const { p: tp, gameStarted } = await tutorialWalk(phone, 'iPhone 13');
+    const { p: tp } = await tutorialWalk(phone, 'iPhone 13');
     /*
      * Yenileme burada, ana sayfa kapandıktan SONRA: yazılımsal GPU'da iki
      * canlı WebGL bağlamıyla yenilemek açılışı 20 saniyenin ötesine
@@ -3215,14 +3215,22 @@ async function finish(browser, consoleErrors) {
     await tp.locator('[data-coach-restart]').click();
     await tp.waitForSelector('.coach[data-coach-step="welcome"]', { timeout: 5000 });
     await tp.locator('[data-coach="next"]').click();
-    // Açılış otomatik kayıttan dönüyor (30 sn aralık): kayıt düşmeden yenilersek kurulum ekranı gelir.
-    const untilAutosave = 32_000 - (Date.now() - gameStarted);
-    if (untilAutosave > 0) await tp.waitForTimeout(untilAutosave);
+    /*
+     * Oyuncu zaten mağaza kurmuş: yeniden başlayan rehber tamamlanmış
+     * adımları atlıyor ve "zamanı başlat"ta duruyor (karşılama zamanı
+     * durdurdu). Beklenen adım sabit bir ad değil, yenilemeden ÖNCEKİ adım.
+     * Açılış otomatik kayıttan dönüyor (30 sn aralık); yeniden başlatmadan
+     * sonra bir kayıt düşsün ki yenilenen oyun da durmuş olsun.
+     */
+    await tp.waitForTimeout(500);
+    const beforeReload = await tp.evaluate(() => window.__capital.tutorialStep());
+    await tp.waitForTimeout(31_000);
     await tp.reload();
     await tp.waitForSelector('.topbar', { timeout: 30000 });
     await tp.waitForTimeout(800);
+    const afterReload = await tp.evaluate(() => window.__capital.tutorialStep());
     check('Sayfa yenilenince rehber kaldığı adımdan sürüyor',
-      (await tp.evaluate(() => window.__capital.tutorialStep())) === 'lens');
+      beforeReload !== null && afterReload === beforeReload, `${beforeReload} → ${afterReload}`);
     await tp.close();
     await phone.close();
   }
