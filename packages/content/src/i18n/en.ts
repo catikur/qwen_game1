@@ -49,6 +49,8 @@ export const contentEn: Record<string, string> = {
   'content.building.wheat_farm.description': 'A volume game: 2,700 wheat a day. Pointless on its own without a mill.',
   'content.building.cotton_farm.name': 'Cotton Field',
   'content.building.cotton_farm.description': 'Input for the textile mill. Cotton is expensive on the market; grow your own.',
+  'content.building.cattle_ranch.name': 'Cattle Ranch',
+  'content.building.cattle_ranch.description': 'Input for the tannery: 700 raw hides a day. The footwear line starts here.',
   'content.building.silicon_mine.name': 'Silicon Mine',
   'content.building.silicon_mine.description': 'Raw material for the chip fab. High unit value, low volume.',
   'content.building.coffee_roastery.name': 'Coffee Roastery',
@@ -71,6 +73,9 @@ export const contentEn: Record<string, string> = {
   'content.building.upholstery_mill.name': 'Upholstery Mill',
   'content.building.upholstery_mill.description':
     'Turns cotton into home textiles. Your cotton field feeds both apparel and this mill.',
+  'content.building.tannery.name': 'Tannery',
+  'content.building.tannery.description':
+    'Turns raw hide into leather — the link to footwear. Heavy chemistry, built in industrial zones.',
   'content.building.sensor_fab.name': 'Sensor Fab',
   'content.building.sensor_fab.description':
     'Turns silicon into sensors — the link for home electronics. One mine feeds both fabs.',
@@ -92,6 +97,9 @@ export const contentEn: Record<string, string> = {
   'content.good.apparel.name': 'Apparel',
   'content.good.upholstery.name': 'Upholstery',
   'content.good.home_textile.name': 'Home Textiles',
+  'content.good.hide.name': 'Raw Hide',
+  'content.good.leather.name': 'Leather',
+  'content.good.footwear.name': 'Footwear',
   'content.good.silicon.name': 'Silicon',
   'content.good.chip.name': 'Chips',
   'content.good.phone.name': 'Phones',

@@ -270,6 +270,11 @@ export function decorateBuilding(
       // Alçak geniş tanklar.
       for (const k of [-1, 1]) layer.add('cylinder', x + k * w * 0.26, footprint.roofY, z + w * 0.12, w * 0.3, 0.16, w * 0.3, c(METAL));
       return;
+    case 'tannery':
+      // Sepi tankları sıra hâlinde ve tek ince baca.
+      for (const k of [-1, 0, 1]) layer.add('cylinder', x + k * w * 0.27, footprint.roofY, z - w * 0.18, w * 0.2, 0.12, w * 0.2, c('#6e5440'));
+      layer.add('cylinder', x + w * 0.36, footprint.roofY, z + w * 0.3, 0.06, 0.38, 0.06, c('#4a3d34'));
+      return;
     case 'coffee_roastery':
       // Yuvarlak kavurma bacası ve küçük çekirdek silosu.
       layer.add('cylinder', x - w * 0.3, footprint.roofY, z + w * 0.25, 0.09, 0.42, 0.09, c('#5a4434'));
@@ -307,6 +312,14 @@ export function decorateBuilding(
       return;
     case 'cotton_farm':
       layer.add('box', x + w * 0.4, footprint.bodyBottom, z + w * 0.4, 0.2, 0.14, 0.16, c('#b9a98c'));
+      return;
+    case 'cattle_ranch':
+      // Kırmızı ahır çatısı ve ağıl çiti: tarladan ayıran şey hayvan.
+      layer.add('roof', x - w * 0.22, footprint.bodyBottom, z - w * 0.22, w * 0.42, 0.24, w * 0.3, c('#9c3b2e'));
+      for (const k of [-1, 1]) {
+        layer.add('box', x + w * 0.2, footprint.bodyBottom, z + k * w * 0.3, w * 0.5, 0.05, 0.015, c('#e6dcc8'));
+        layer.add('box', x + w * 0.2 + k * w * 0.25, footprint.bodyBottom, z, 0.015, 0.05, w * 0.6, c('#e6dcc8'));
+      }
       return;
     case 'silicon_mine':
       // Ocak: koyu çukur, malzeme yığını ve vinç kulesi.

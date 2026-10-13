@@ -253,6 +253,64 @@ export const GOODS: GoodDef[] = [
     color: '#9b6fae',
   },
 
+  // ---- Ayakkabı zinciri (Perakende · 32,50; Tur 29) ----
+  /**
+   * Perakendenin üçüncü ürünü. Mağazalar Zinciri'nin dört rafından ikisi
+   * boş duruyordu; ayakkabı onlardan birini dolduruyor.
+   *
+   * TALEP EKLENİYOR, BÖLÜNMÜYOR. Kategorinin talebi ürünler arasında
+   * normalize ediliyor (`goodShares`); üçüncü ürün kendi payını öbür
+   * ikisinden kesseydi tek raflı butik bir gecede üçte bir zayıflardı.
+   * Bunun yerine perakendenin kişi başı talebi ×1,4 büyüdü (ayakkabının
+   * ağırlığı 0,4, öbür ikisinin toplamı 1,0): giyim ve ev tekstilinin
+   * mutlak talebi bölgeye göre ±%5 içinde aynı kalıyor, ayakkabı yeni
+   * harcama olarak geliyor. Gerçekte de öyle — ayakkabı gömleğin yerine
+   * alınmıyor.
+   */
+  {
+    id: 'hide',
+    name: 'Ham Deri',
+    tier: 'raw',
+    category: null,
+    inputGoodId: null,
+    basePrice: 12,
+    retailCost: 0,
+    demandShare: 0,
+    color: '#a07850',
+  },
+  {
+    id: 'leather',
+    name: 'Deri',
+    tier: 'intermediate',
+    category: null,
+    inputGoodId: 'hide',
+    basePrice: 25,
+    retailCost: 0,
+    demandShare: 0,
+    color: '#7b5132',
+  },
+  {
+    id: 'footwear',
+    name: 'Ayakkabı',
+    tier: 'consumer',
+    category: 'retail',
+    inputGoodId: 'leather',
+    basePrice: 0,
+    retailCost: 7.5,
+    demandShare: 0.4,
+    archetypeWeights: {
+      student: 1.3,
+      retail_strip: 1.3,
+      downtown: 1.2,
+      tourism: 1.1,
+      tech_park: 1.1,
+      mid_residential: 0.9,
+      industrial: 0.8,
+      port: 0.8,
+    },
+    color: '#b37acb',
+  },
+
   // ---- Telefon zinciri (Elektronik · 260 ₺ × 0,62 = 161,20) ----
   {
     id: 'silicon',
