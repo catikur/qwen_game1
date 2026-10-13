@@ -261,11 +261,13 @@ export const GOODS: GoodDef[] = [
    * TALEP EKLENİYOR, BÖLÜNMÜYOR. Kategorinin talebi ürünler arasında
    * normalize ediliyor (`goodShares`); üçüncü ürün kendi payını öbür
    * ikisinden kesseydi tek raflı butik bir gecede üçte bir zayıflardı.
-   * Bunun yerine perakendenin kişi başı talebi ×1,4 büyüdü (ayakkabının
-   * ağırlığı 0,4, öbür ikisinin toplamı 1,0): giyim ve ev tekstilinin
-   * mutlak talebi bölgeye göre ±%5 içinde aynı kalıyor, ayakkabı yeni
-   * harcama olarak geliyor. Gerçekte de öyle — ayakkabı gömleğin yerine
-   * alınmıyor.
+   * Bunun yerine her arketipin perakende ağırlığı ayakkabının payı kadar
+   * büyüdü (`districts.ts`): giyim ve ev tekstilinin mutlak talebi her
+   * bölgede birebir aynı, ayakkabı yeni harcama olarak geliyor. Gerçekte
+   * de öyle — ayakkabı gömleğin yerine alınmıyor.
+   *
+   * Her ürün en az bir bölgede rafın en iyisi olmalı (yoksa tek raflı
+   * dükkânın seçimi sahte): ayakkabı öğrenci ve çarşı bölgelerinde önde.
    */
   {
     id: 'hide',
@@ -297,10 +299,10 @@ export const GOODS: GoodDef[] = [
     inputGoodId: 'leather',
     basePrice: 0,
     retailCost: 7.5,
-    demandShare: 0.4,
+    demandShare: 0.45,
     archetypeWeights: {
-      student: 1.3,
-      retail_strip: 1.3,
+      student: 1.5,
+      retail_strip: 1.45,
       downtown: 1.2,
       tourism: 1.1,
       tech_park: 1.1,

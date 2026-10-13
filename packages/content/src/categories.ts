@@ -33,8 +33,7 @@ export const CATEGORIES: Record<CategoryId, CategoryDef> = {
     basePrice: 65,
     costRatio: 0.5,
     elasticity: 1.0,
-    // 0,12 × 1,4 (Tur 29): ayakkabı yeni harcama, giyimden pay kesmiyor (goods.ts).
-    demandPerCapita: 0.168,
+    demandPerCapita: 0.12,
     incomeSensitivity: 0.9,
     color: '#c98bdb',
   },
