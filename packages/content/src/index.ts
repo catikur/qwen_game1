@@ -19,4 +19,4 @@ export * from './capital';
 export * from './holding';
 
 /** İçerik sürümü — save migration'ında denge değişikliklerini izlemek için. */
-export const CONTENT_VERSION = 5;
+export const CONTENT_VERSION = 6;

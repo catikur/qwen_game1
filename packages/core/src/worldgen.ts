@@ -17,8 +17,8 @@ import type { CategoryId, CitySizeId, DifficultyId, DistrictArchetypeId } from '
 import { tc } from './i18n';
 import { createRng, nextRange, pickWeighted } from './rng';
 import { LEAGUE_DAYS, leagueSeed } from './systems/league';
-import { seedSpotPrices, zeroByGood } from './systems/supply';
-import { estimateBaselineDemand, goodShares, zeroByCategory } from './systems/demand';
+import { referenceVolumes, seedSpotPrices, zeroByGood } from './systems/supply';
+import { zeroByCategory } from './systems/demand';
 import { SCHEMA_VERSION } from './types';
 import type { CompanyState, DistrictState, GameState, MarketState, Tile, TileKind } from './types';
 
@@ -134,39 +134,6 @@ export function makeCompany(
     supplyRatio: zeroByGood(),
     unitCost: seedSpotPrices(),
   };
-}
-
-/**
- * Spot pazarın referans hacmi — fazla üretimin fiyatı ne kadar kırdığını
- * ölçekler.
- *
- * Haritadan türetiliyor, sabit değil: şehir büyürse referans da büyür,
- * yani bir fabrikanın fiyat üzerindeki etkisi harita boyutuna göre
- * kendiliğinden dengelenir.
- */
-function referenceVolumes(districts: DistrictState[]): Record<string, number> {
-  const reference = zeroByGood();
-
-  for (const good of GOODS) {
-    if (good.tier !== 'consumer' || !good.category) continue;
-
-    let cityDemand = 0;
-    for (const district of districts) {
-      const share =
-        goodShares(district.archetype, good.category).find((entry) => entry.good.id === good.id)
-          ?.share ?? good.demandShare;
-      cityDemand += estimateBaselineDemand(district, good.category) * share;
-    }
-
-    // Tüketici ürününün talebi zincirin her kademesine 1:1 iner.
-    let current = GOOD_BY_ID[good.inputGoodId ?? ''];
-    while (current) {
-      reference[current.id] = (reference[current.id] ?? 0) + cityDemand;
-      current = GOOD_BY_ID[current.inputGoodId ?? ''];
-    }
-  }
-
-  return reference;
 }
 
 function makeMarket(districts: DistrictState[]): MarketState {
