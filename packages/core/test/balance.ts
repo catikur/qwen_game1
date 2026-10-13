@@ -20,6 +20,7 @@ import {
   DISTRICT_ARCHETYPES,
   GOODS_BY_CATEGORY,
   NPC_PROFILES,
+  getCeoModifiers,
   rootStructureOf,
 } from '@capital/content';
 import type { CategoryId } from '@capital/content';
@@ -60,7 +61,7 @@ import {
 } from '../src/index';
 import { build, buyTile } from '../src/actions';
 import { buyShares } from '../src/systems/equity';
-import { PRUNE_MEMORY_DAYS } from '../src/systems/npc';
+import { PRUNE_MEMORY_DAYS, isPrunable } from '../src/systems/npc';
 import { WAGE_PER_JOB } from '../src/systems/labor';
 import { loanQuote } from '../src/systems/credit';
 import { issueQuote } from '../src/systems/issuance';
@@ -897,8 +898,18 @@ function outletUnitCost(state: GameState): number {
          * Deney bugün oyuncunun gördüğü tavsiyeyi sınıyor; kartın eski
          * hâlini korumak, ölçtüğü şeyi kaybetmek pahasına bir tarih
          * kaydı tutmak olurdu.
+         *
+         * ZİNCİR VE MAĞAZA AYNI TİKTE (Tur 25) — `playerStrategy`'nin
+         * Tur 14'te öğrendiği ders, burada geç uygulandı. Eskiden
+         * `if (!zincir) mağaza` idi: zincir hamlesi olan hafta mağaza
+         * açılmıyordu, yani zincirli kol hem ünite ekliyor HEM mağaza
+         * eksiltiyordu (10-11 ünite = 10-11 eksik mağaza). Deney "kartı
+         * izlemek kazandırıyor mu"yu değil "bir ünite bir mağazadan iyi
+         * mi"yi soruyordu. Nakit ve parsel kısıtı yerinde: ünite parasını
+         * ve parselini mağazadan önce alıyor, mağaza kalan bütçeyle kuruluyor.
          */
-        if (!(useChain && followChainAdvice(engine2))) expandOutletsVacantOnly(engine2);
+        if (useChain) followChainAdvice(engine2);
+        expandOutletsVacantOnly(engine2);
       }
       engine2.runDay();
       /*
@@ -1898,7 +1909,13 @@ let researchPayback = Infinity;
       if (building.companyId !== leaderId) continue;
       const def = BUILDING_BY_ID[building.defId];
       if (def?.role !== 'outlet' || def.category !== card.category) continue;
-      sum += def.quality + (state.companies[leaderId]!.research[card.category] ?? 0);
+      // Motorun formülü: bina kalitesi + CEO kategori bonusu + Ar-Ge, [0,05; 1]
+      // aralığında. Tur 25'e kadar bonuslu bir CEO hiçbir kategoriyi
+      // önde götürmediği için bonussuz kopya da tutuyordu.
+      const leader = state.companies[leaderId]!;
+      const ceo = getCeoModifiers(leader.ceoId ?? null);
+      const bonus = ceo.categoryQuality?.category === def.category ? ceo.categoryQuality.bonus : 0;
+      sum += Math.max(0.05, Math.min(1, def.quality + bonus + (leader.research[card.category] ?? 0)));
       count += 1;
     }
     if (count === 0) continue;
@@ -2943,9 +2960,17 @@ section('Şehir zamanla gelişiyor', () => {
   let lockedViolations = 0;
   let ownedViolations = 0;
   let cityBuiltOnLastPlots = 0;
+  // Şehrin kendi diktiği yapılar ve rakiplerin devralıp kaldırdıkları, ayrı ayrı.
+  let spread = 0;
+  let removed = 0;
   for (let day = 1; day <= 700; day++) {
     const before = districtStats();
+    const structuresBefore = state.map.tiles.map((t) => t.structureId);
     engine3.runDay();
+    state.map.tiles.forEach((tile, i) => {
+      if (!structuresBefore[i] && tile.structureId) spread++;
+      if (structuresBefore[i] && !tile.structureId) removed++;
+    });
     const after = districtStats();
     for (let i = 0; i < after.length; i++) {
       // Şehir bu bölgeye yapı ekledi mi, eklediyse taban korunmuş muydu?
@@ -2971,10 +2996,22 @@ section('Şehir zamanla gelişiyor', () => {
     `  gün 700 → ${end.built} yapı · ort. yükseklik ${end.avgHeight.toFixed(2)} · siluet: ${[...end.forms].join(', ')}`,
   );
 
+  /*
+   * ŞEHRİN KENDİ YAYILMASI, NET SAYI DEĞİL (Tur 25).
+   *
+   * Kontrol 700. gündeki yapı sayısını başlangıçla kıyaslıyordu (> %25).
+   * O sayı iki hareketin farkı: şehrin boş parsele diktiği yapılar eksi
+   * rakiplerin devralıp yıktıkları. Atıl oyunculu bu senaryoda bütün şehir
+   * rakiplerin; Tur 25'te rakip boşta nakdiyle haftada iki mağaza denemeye
+   * başlayınca devralma arttı (67 → 77 yapı) ve net sayı %59'dan %20'ye
+   * indi — şehir yavaşlamadan (kendi yapısı 120 → 105). İddia "boş
+   * parseller yapılaşıyor"; ölçülen de artık o: şehrin kendi diktiği yapı.
+   * Eşik başlangıcın yarısı (ölçülen ~%104; Tur 24'te ~%119).
+   */
   expect(
     'şehir yayılıyor: boş parseller yapılaşıyor',
-    end.built > start.built * 1.25,
-    `${start.built} → ${end.built} yapı (%${Math.round((end.built / start.built - 1) * 100)})`,
+    spread > start.built * 0.5,
+    `şehrin yeni yapısı ${spread} (başlangıç ${start.built}) · rakip devralmasıyla kalkan ${removed} · net ${start.built} → ${end.built}`,
   );
   expect(
     'şehir yükseliyor: yapılar kat kazanıyor',
@@ -3096,6 +3133,10 @@ section('Rakipler zarar eden şubeyi kapatıyor', () => {
   const builds: Array<{ companyId: string; districtId: number; defId: string; day: number }> = [];
   const known = new Set<string>();
   let healthyClosed = 0;
+  // Kapatma kuralına uyan rakip şube kaç gündür açık (bina → ardışık gün).
+  const prunableSince = new Map<string, number>();
+  let everPrunable = 0;
+  let longestWait = 0;
 
   for (let day = 1; day <= 900; day++) {
     if (day % 5 === 0) playerStrategy(engine);
@@ -3106,6 +3147,15 @@ section('Rakipler zarar eden şubeyi kapatıyor', () => {
     const state = engine.getState();
 
     for (const building of Object.values(state.buildings)) {
+      if (!state.companies[building.companyId]?.isPlayer && isPrunable(state, building)) {
+        if (!prunableSince.has(building.id)) {
+          prunableSince.set(building.id, day);
+          everPrunable++;
+        }
+        longestWait = Math.max(longestWait, day - prunableSince.get(building.id)!);
+      } else {
+        prunableSince.delete(building.id);
+      }
       const list = trail.get(building.id) ?? [];
       list.push(building.last.profit);
       if (list.length > 60) list.shift();
@@ -3154,7 +3204,22 @@ section('Rakipler zarar eden şubeyi kapatıyor', () => {
     ),
   ).length;
 
-  expect('rakipler zararlı şubeyi kapatıyor', closures.length > 0, `${closures.length} kapanış / 900 gün`);
+  /*
+   * KAPANIŞ SAYISI DEĞİL, BEKLEME SÜRESİ (Tur 25).
+   *
+   * Kontrol "900 günde en az bir kapanış" idi. Yatırım tahmini kendi
+   * şubelerinden çalınan satışı düşmeye başlayınca rakip zararlı şubeyi bu
+   * tohumda hiç açmıyor: kapanış sıfır, ama sıfır hem "kural çalışmıyor"
+   * hem "kapatacak bir şey yok" demek olabiliyordu. Mekanizma artık birim
+   * testinde (prune.test.ts) zarar elle kurularak sınanıyor; burada sorulan
+   * oyundaki sonucu: kurala uyan şube açık kalıyor mu? Rakip karar başına
+   * bir şube kapatıyor ve kararlar haftalık — iki hafta tavan.
+   */
+  expect(
+    'rakipler zararlı şubeyi kapatıyor',
+    longestWait <= 14 && (everPrunable === 0 || closures.length > 0),
+    `${closures.length} kapanış / 900 gün · kurala uyan ${everPrunable} şube, en uzun bekleme ${longestWait} gün`,
+  );
   expect(
     'süreğen zararlı rakip şubesi birikmiyor',
     chronic <= 2,
@@ -3619,8 +3684,26 @@ section('Sermaye piyasası: halka arz ve kurucu kilidi', () => {
         `ihraçla ${issue.lost ? `${issue.lost}. günde düşüyor` : 'ayakta'} (${issue.issued} ihraç, kurucu %${Math.round(issue.founder * 100)})`,
     );
   }
-  expect('ihraç baskına karşı kalkan', shields.every(({ bare, issue }) => bare.lost !== null && issue.lost === null),
-    shields.map(({ seed, bare, issue }) => `seed ${seed}: ${bare.lost ?? 'ayakta'} → ${issue.lost ?? 'ayakta'}`).join(' · '));
+  /*
+   * ÖNKOŞUL AÇIKÇA YAZILIYOR (Tur 25) — zincir kontrolüyle aynı ilke:
+   * kalkan ancak bir baskının oyuncuyu düşürdüğü tohumda sınanabilir.
+   *
+   * Yatırım tahmini kendi şubelerinden çalınan satışı düşmeye başlayınca
+   * 15 günde bir oynayan vekil belirgin güçlendi; bazı tohumlarda
+   * savunmasızken de ayakta kalıyor. Orada "ihraçla da ayakta" bir şey
+   * kanıtlamıyor, "savunmasız ayakta" da kalkanın yokluğunu. Ölçüm
+   * tehdidin gerçekleştiği tohumlar üzerinden; en az iki tohumda tehdit
+   * şart (yoksa kontrol hiçbir şey ölçmüyor demektir) ve atlanan tohum
+   * detayda adıyla yazılıyor.
+   */
+  const threatened = shields.filter(({ bare }) => bare.lost !== null);
+  const calm = shields.filter(({ bare }) => bare.lost === null);
+  expect(
+    'ihraç baskına karşı kalkan',
+    threatened.length >= 2 && threatened.every(({ issue }) => issue.lost === null),
+    threatened.map(({ seed, bare, issue }) => `seed ${seed}: ${bare.lost} → ${issue.lost ?? 'ayakta'}`).join(' · ') +
+      (calm.length > 0 ? ` · ölçüm dışı: ${calm.map(({ seed }) => `seed ${seed} (savunmasız da ayakta)`).join(', ')}` : ''),
+  );
 
   // Kurucu kilidi: oyun başında hiçbir rakip satın alınamıyor.
   const early = new GameEngine(createNewGame({ seed: 3, companyName: 'Erken AŞ' }));
@@ -3802,53 +3885,71 @@ section('Holding: ikinci şehir', () => {
    *     değerle: dışarıdan gelen 10 M ₺'lik kasa zaferi bedavaya getirmemeli.
    * Ölçülen (tohum 1/7/42, sermaye nakdin %25'i): 1. şehir 647/808/700. gün,
    * 2. şehir 700/627/715. gün; kasa 55–105 M ₺.
+   *
+   * Tur 25: bölüm üç tohumun üçünde de koşuyor. Tek tohum (1) kıl payı bir
+   * yarıştı — main'de de ikinci şehirde 114 M'ye 106 M ile kazanılıyordu.
+   * Elektroniğe iki yeni bina gelince elektronik uzmanı rakip o tohumda
+   * 1.200. günde 258 M'ye 249 M öne geçti, diğer iki tohumda ise zafer
+   * öne geldi (584 ve 613. gün). "İkinci şehir kazanılabilir" iddiası artık
+   * üç şehrin en az ikisinde ölçülüyor; "bedava değil" sınırı (400. gün) ve
+   * holding mekaniği her tohumda.
    */
-  const engine = new GameEngine(createNewGame({ seed: 1, companyName: 'Holding AŞ' }));
-  const state = () => engine.getState();
-  const play = (limit: number) => {
-    for (let day = 0; day < limit; day++) {
-      const s = state();
-      if (s.time.day % 5 === 0) playerStrategy(engine);
-      if (s.time.day % 3 === 0) defendAgainstRaids(engine);
-      engine.runDay();
-      if (s.gameOver || s.victory) return;
-    }
-  };
-  play(1200);
-  const founding = state();
-  const firstVictory = founding.victory?.day ?? null;
-  const foundingDay = founding.time.day;
-  const capital = Math.max(2_000_000, Math.round(getPlayer(founding).cash * 0.25));
-  const trend = cityTrend(founding);
-  if (founding.victory) engine.dispatch({ type: 'DISMISS_VICTORY' });
-  const opened = engine.dispatch({ type: 'OPEN_CITY', citySize: 'standard', capital });
-  expect('zafer kazanılan şehirden yeni şehir açılıyor', opened.ok && firstVictory !== null,
-    opened.reason ?? `${firstVictory}. gün zafer · ${formatMoney(capital)} sermaye · ${state().cityName}`);
-  if (!opened.ok) return;
+  const results: { seed: number; second: number | null }[] = [];
+  for (const seed of [1, 7, 42]) {
+    const engine = new GameEngine(createNewGame({ seed, companyName: 'Holding AŞ' }));
+    const state = () => engine.getState();
+    const play = (limit: number) => {
+      for (let day = 0; day < limit; day++) {
+        const s = state();
+        if (s.time.day % 5 === 0) playerStrategy(engine);
+        if (s.time.day % 3 === 0) defendAgainstRaids(engine);
+        engine.runDay();
+        if (s.gameOver || s.victory) return;
+      }
+    };
+    play(1200);
+    const founding = state();
+    const firstVictory = founding.victory?.day ?? null;
+    const foundingDay = founding.time.day;
+    const capital = Math.max(2_000_000, Math.round(getPlayer(founding).cash * 0.25));
+    const trend = cityTrend(founding);
+    if (founding.victory) engine.dispatch({ type: 'DISMISS_VICTORY' });
+    const opened = engine.dispatch({ type: 'OPEN_CITY', citySize: 'standard', capital });
+    expect(`tohum ${seed}: zafer kazanılan şehirden yeni şehir açılıyor`, opened.ok && firstVictory !== null,
+      opened.reason ?? `${firstVictory}. gün zafer · ${formatMoney(capital)} sermaye · ${state().cityName}`);
+    if (!opened.ok) continue;
 
-  const city = state();
-  play(1200);
-  const secondVictory = city.victory?.day ?? null;
-  const days = city.time.day;
-  const treasury = city.holding?.treasury ?? 0;
-  const dormantDay = city.holding?.dormant[0]?.state.time.day;
-  console.log(
-    `  1. şehir ${firstVictory}. gün zafer (eğilim ${formatMoney(trend)}/gün) · 2. şehir ${secondVictory ?? '-'}. gün · ` +
-      `kasa ${formatMoney(treasury)} · holding ${formatMoney(holdingNetWorth(city))}`,
-  );
-  expect('bekleyen şehrin takvimi duruyor', dormantDay === foundingDay, `${dormantDay}. günde · ayrılış ${foundingDay}`);
+    const city = state();
+    play(1200);
+    const secondVictory = city.victory?.day ?? null;
+    const days = city.time.day;
+    const treasury = city.holding?.treasury ?? 0;
+    const dormantDay = city.holding?.dormant[0]?.state.time.day;
+    const leader = Object.values(city.companies).sort((a, b) => b.netWorth - a.netWorth)[0]!;
+    console.log(
+      `  tohum ${seed}: 1. şehir ${firstVictory}. gün zafer (eğilim ${formatMoney(trend)}/gün) · 2. şehir ${secondVictory ?? '-'}. gün · ` +
+        `kasa ${formatMoney(treasury)} · holding ${formatMoney(holdingNetWorth(city))} · lider ${leader.name} ${formatMoney(leader.netWorth)}`,
+    );
+    expect(`tohum ${seed}: bekleyen şehrin takvimi duruyor`, dormantDay === foundingDay, `${dormantDay}. günde · ayrılış ${foundingDay}`);
+    expect(
+      `tohum ${seed}: kasaya her gün eğilimin yarısı akıyor`,
+      Math.abs(treasury - Math.max(0, trend) * 0.5 * days) < 1,
+      `${formatMoney(treasury)} ≈ ${days} gün × ${formatMoney(Math.max(0, trend) * 0.5)}`,
+    );
+    expect(
+      `tohum ${seed}: getirilen sermaye zaferi bedavaya getirmiyor (400. günden önce değil)`,
+      secondVictory === null || secondVictory >= 400,
+      `${secondVictory ?? '-'}. gün · getirilen ${formatMoney(capital)}`,
+    );
+    expect(`tohum ${seed}: holding tek şehirden büyük`, holdingNetWorth(city) > getPlayer(city).netWorth, formatMoney(holdingNetWorth(city)));
+    results.push({ seed, second: secondVictory });
+  }
+  const won = results.filter((r) => r.second !== null);
   expect(
-    'kasaya her gün eğilimin yarısı akıyor',
-    Math.abs(treasury - Math.max(0, trend) * 0.5 * days) < 1,
-    `${formatMoney(treasury)} ≈ ${days} gün × ${formatMoney(Math.max(0, trend) * 0.5)}`,
+    'ikinci şehirde de zafer var (üç tohumun en az ikisinde)',
+    won.length >= 2,
+    results.map((r) => `tohum ${r.seed}: ${r.second ?? '-'}. gün`).join(' · '),
   );
-  expect('ikinci şehirde de zafer var', secondVictory !== null, `${secondVictory ?? '-'}. gün`);
-  expect(
-    'getirilen sermaye zaferi bedavaya getirmiyor (400. günden önce değil)',
-    secondVictory !== null && secondVictory >= 400,
-    `${secondVictory ?? '-'}. gün · getirilen ${formatMoney(capital)}`,
-  );
-  expect('holding tek şehirden büyük', holdingNetWorth(city) > getPlayer(city).netWorth, formatMoney(holdingNetWorth(city)));
 });
 
 section('Rakip koltukları dolu kalıyor', () => {

@@ -40,6 +40,7 @@ export const panels = {
   'panels.estimate.ramp': ' · ~{days} günde oturur',
   'panels.estimate.directProfit': '≈ {profit}/gün ·',
   'panels.estimate.loss': 'zarar eder',
+  'panels.estimate.cannibalized': ' · kendi şubelerinden {amount}/gün alıyor (düşüldü)',
 
   // 120 günlük projeksiyon (ProjectionBox)
   'panels.projection.atDay': '{days}. günde ≈',

@@ -672,6 +672,10 @@ button.icon {
   color: var(--warn);
 }
 
+.estimate .cannibal {
+  color: var(--muted);
+}
+
 .placing {
   display: flex;
   align-items: center;

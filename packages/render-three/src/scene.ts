@@ -1714,6 +1714,10 @@ function massFormOf(def: BuildingDef): MassForm {
 function buildingFacade(def: BuildingDef): FacadeStyle {
   switch (def.role) {
     case 'outlet':
+      // Hizmette kuaför mahalle dükkânı, sinema vitrin üstü ofis camı;
+      // spor salonu ve klinik baştan cama.
+      if (def.id === 'barber_shop') return FACADE.shop;
+      if (def.id === 'cinema') return FACADE.shopOffice;
       if (def.category === 'services') return FACADE.office;
       return def.height >= 0.9 && def.category !== 'grocery' && def.category !== 'dining' ? FACADE.shopOffice : FACADE.shop;
     case 'rental':

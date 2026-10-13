@@ -21,7 +21,7 @@ import { buildingStrikeFactor, serviceFactor, wageFor } from './labor';
 import { marketingLeverage } from './focus';
 import { SURPLUS_HAIRCUT, distributionRelief, unitCogsFor } from './supply';
 import type { BuildingInstance, GameState } from '../types';
-import { scopedOutlets, withBuildingIndex } from './buildingIndex';
+import { scopedMemo, scopedOutlets, withBuildingIndex } from './buildingIndex';
 
 /**
  * Pazar çözümlemesi — oyunun ekonomik kalbi.
@@ -184,6 +184,11 @@ export interface InvestmentEstimate {
   cogs: number;
   fixedCosts: number;
   dailyProfit: number;
+  /**
+   * Yeni mağazanın şirketin KENDİ şubelerinden alacağı günlük kâr (₺).
+   * `dailyProfit`ten zaten düşülmüş; ekranda ayrıca söyleniyor (Tur 25).
+   */
+  cannibalized: number;
   /** Gün cinsinden geri ödeme; kâr negatifse Infinity. */
   paybackDays: number;
 }
@@ -259,6 +264,7 @@ export function estimateInvestment(
         cogs: 0,
         fixedCosts,
         dailyProfit: -fixedCosts,
+        cannibalized: 0,
         paybackDays: Infinity,
       };
     }
@@ -296,6 +302,7 @@ export function estimateInvestment(
       cogs,
       fixedCosts,
       dailyProfit,
+      cannibalized: 0,
       paybackDays: dailyProfit > 0 ? investmentCost / dailyProfit : Infinity,
     };
   }
@@ -315,6 +322,7 @@ export function estimateInvestment(
       cogs: 0,
       fixedCosts,
       dailyProfit: -fixedCosts,
+      cannibalized: 0,
       paybackDays: Infinity,
     };
   }
@@ -345,6 +353,7 @@ export function estimateInvestment(
       cogs,
       fixedCosts,
       dailyProfit,
+      cannibalized: 0,
       paybackDays: dailyProfit > 0 ? investmentCost / dailyProfit : Infinity,
     };
   }
@@ -360,36 +369,70 @@ export function estimateInvestment(
   const salePrice = category.basePrice * priceMultiplier;
 
   const brand = 0.45 + 0.55 * (company.brand[def.category] ?? 0);
-  const selfAttractiveness =
+
+  /*
+   * PAY HEDEF BÖLGE BAŞINA, YAMYAMLIK DÜŞÜLEREK (Tur 25).
+   *
+   * Eski tahmin iki şeyi görmüyordu ve ikisi de zincir A/B'sini ters
+   * çeviriyordu:
+   *
+   *   1. KOMŞU RAKİPLER. Komşu bölgenin talebi tahmine ekleniyordu ama o
+   *      talebin peşindeki komşu mağazalar rakip sayılmıyordu: pay yalnızca
+   *      kendi bölgendeki mağazalara karşı hesaplanıp şehrin yarısının
+   *      talebine uygulanıyordu. Pazar adımı ise her bölgenin talebini o
+   *      bölgeye erişen BÜTÜN mağazalar arasında erişim ağırlığıyla bölüyor.
+   *      Tahmin artık aynısını yapıyor: her hedef bölge için ayrı pay.
+   *   2. KENDİ MAĞAZALARIN. Yeni mağazanın payı kısmen senin eski
+   *      mağazalarından geliyor; eski tahmin bunu kâr sayıyordu. Doymuş
+   *      bölgede (boş talep yok) yeni şubenin satışının kendi şubelerinden
+   *      çaldığı kısmı artık kârdan düşülüyor.
+   *
+   * Ölçüm (zincir A/B, 12 tohum): zincirle ucuzlayan girdi, eski tahminde
+   * aynı kategoriye mağaza üstüne mağaza açtırıyordu — bir tohumda 23
+   * teknoloji mağazası, tanesi günde 377 ₺. Zincirli kol 12 tohumun
+   * 3'ünde öndeydi; ayrıntı DURUM.md Tur 25'te.
+   */
+  const shelf = defaultShelf(district.archetype, def.category, def.slots ?? 1);
+  const self =
     Math.pow(qualityFor(state, companyId, defId), 1.15) *
     brand *
     Math.pow(1 / priceMultiplier, category.elasticity);
+  const sources = categoryAttractiveness(state, def.category, companyId);
 
-  let rivalAttractiveness = 0;
-  // Bina indeksi açıksa (zincir/rekabet kartı, pazar adımı) yalnızca bölgenin mağazaları.
-  for (const other of scopedOutlets(state, districtId) ?? Object.values(state.buildings)) {
-    if (other.districtId !== districtId) continue;
-    const otherDef = BUILDING_BY_ID[other.defId];
-    if (!otherDef || otherDef.role !== 'outlet' || otherDef.category !== def.category) continue;
+  let reachable = 0;
+  let ownLossUnits = 0;
+  for (const target of state.districts) {
+    const access = accessWeight(state, target.id, districtId);
+    if (access <= 0) continue;
+    const demand =
+      (target.demand[def.category] || estimateBaselineDemand(target, def.category)) *
+      // Outlet yalnızca RAFINDAKİ ürünlerin talebine erişir: tek yuvalı bir
+      // bakkal kategorinin tamamını değil, taşıdığı ürünün payını yakalar.
+      shelfReach(target.archetype, def.category, shelf);
+    if (demand <= 0) continue;
 
-    const otherCompany = state.companies[other.companyId];
-    const otherBrand = 0.45 + 0.55 * (otherCompany?.brand[def.category] ?? 0);
-    const priceFactor = Math.pow(1 / other.priceMultiplier, category.elasticity);
-    rivalAttractiveness +=
-      Math.pow(qualityFor(state, other.companyId, other.defId), 1.15) * otherBrand * priceFactor;
+    let total = 0;
+    let own = 0;
+    for (const [sourceId, source] of sources) {
+      const weight = accessWeight(state, target.id, sourceId);
+      if (weight <= 0) continue;
+      total += source.total * weight;
+      own += source.own * weight;
+    }
+
+    const mine = self * access;
+    const share = mine / (mine + total);
+    reachable += demand * share;
+    // Eski şubelerin bu bölgedeki satışı payları oranında küçülür; boş
+    // talep varsa kapasitesi dolu şube kaybını oradan telafi eder.
+    if (own > 0) {
+      const served = demand * (1 - Math.min(1, Math.max(0, target.unmet[def.category] ?? 0)));
+      ownLossUnits += served * (own / total) * share;
+    }
   }
-
-  const share = selfAttractiveness / (selfAttractiveness + rivalAttractiveness);
-  // Komşu bölgelerden de müşteri gelir; bunu görmezden gelmek tahmini düşürür.
-  const ownDemand = district.demand[def.category] || estimateBaselineDemand(district, def.category);
-  const spillover = neighbourDemand(state, districtId, def.category);
-
-  // Outlet yalnızca RAFINDAKİ ürünlerin talebine erişir. Tek yuvalı bir
-  // bakkal kategorinin tamamını değil, taşıdığı ürünün payını yakalar;
-  // bunu saymamak küçük dükkânların gelirini sistematik olarak şişirirdi.
-  const shelf = defaultShelf(district.archetype, def.category, def.slots ?? 1);
-  const reach = shelfReach(district.archetype, def.category, shelf);
-  const expectedUnits = Math.min(def.capacity, (ownDemand + spillover) * reach * share);
+  const expectedUnits = Math.min(def.capacity, reachable);
+  // Kapasite yetmiyorsa yeni şube her bölgeden orantılı olarak az alır.
+  const capacityScale = reachable > 0 ? expectedUnits / reachable : 0;
 
   // Birim maliyet zincirden geliyor. Yeni bina için depo indirimi
   // varsayılmaz — tahmin temkinli olsun.
@@ -398,9 +441,11 @@ export function estimateInvestment(
 
   // Yürürlükteki meclis kararı tahmine de giriyor: vergi gelen kategoride
   // "60 günde döner" demek, oyuncuya yalan söylemek olurdu.
-  const revenue = expectedUnits * salePrice * (1 + categoryRevenueRate(state, def.category));
+  const unitRevenue = salePrice * (1 + categoryRevenueRate(state, def.category));
+  const revenue = expectedUnits * unitRevenue;
   const cogs = expectedUnits * unitCogs;
-  const dailyProfit = revenue - cogs - fixedCosts;
+  const cannibalized = ownLossUnits * capacityScale * Math.max(0, unitRevenue - unitCogs);
+  const dailyProfit = revenue - cogs - fixedCosts - cannibalized;
 
   return {
     direct: true,
@@ -410,21 +455,50 @@ export function estimateInvestment(
     cogs,
     fixedCosts,
     dailyProfit,
+    cannibalized,
     paybackDays: dailyProfit > 0 ? investmentCost / dailyProfit : Infinity,
   };
 }
 
-/** Komşu district'lerden erişim ağırlığıyla gelen ek talep. */
-function neighbourDemand(state: GameState, districtId: number, categoryId: CategoryId): number {
-  let total = 0;
-  for (const other of state.districts) {
-    if (other.id === districtId) continue;
-    const access = accessWeight(state, other.id, districtId);
-    if (access <= 0) continue;
-    const demand = other.demand[categoryId] || estimateBaselineDemand(other, categoryId);
-    total += demand * access;
-  }
-  return total;
+interface SourceAttractiveness {
+  /** Bölgedeki bütün mağazaların çekicilik toplamı (erişim ağırlığı uygulanmadan). */
+  total: number;
+  /** Aynısı yalnızca sorulan şirketin mağazaları için. */
+  own: number;
+}
+
+/**
+ * Bir kategoride bölge başına mağaza çekiciliği — pazar adımının paylaştırdığı
+ * ağırlıkların aynısı (kalite, marka, fiyat). Bina indeksi açıksa bir kez
+ * hesaplanır: kart ve rekabet taraması aynı kategoriyi onlarca kez soruyor.
+ */
+function categoryAttractiveness(
+  state: GameState,
+  categoryId: CategoryId,
+  companyId: string,
+): Map<number, SourceAttractiveness> {
+  return scopedMemo(state, `attractiveness|${categoryId}|${companyId}`, () => {
+    const category = CATEGORIES[categoryId];
+    const byDistrict = new Map<number, SourceAttractiveness>();
+    const add = (building: BuildingInstance): void => {
+      const def = BUILDING_BY_ID[building.defId];
+      if (!def || def.role !== 'outlet' || def.category !== categoryId) return;
+      const company = state.companies[building.companyId];
+      const brand = 0.45 + 0.55 * (company?.brand[categoryId] ?? 0);
+      const priceFactor = Math.pow(1 / building.priceMultiplier, category.elasticity);
+      const value = Math.pow(qualityFor(state, building.companyId, building.defId), 1.15) * brand * priceFactor;
+      const entry = byDistrict.get(building.districtId) ?? { total: 0, own: 0 };
+      entry.total += value;
+      if (building.companyId === companyId) entry.own += value;
+      byDistrict.set(building.districtId, entry);
+    };
+    if (scopedOutlets(state, 0) !== null) {
+      for (const district of state.districts) for (const building of scopedOutlets(state, district.id)!) add(building);
+    } else {
+      for (const building of Object.values(state.buildings)) add(building);
+    }
+    return byDistrict;
+  });
 }
 
 /**
