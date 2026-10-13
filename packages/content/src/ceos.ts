@@ -242,11 +242,11 @@ export const CEOS: CeoDef[] = [
     title: 'Moda Tasarımcısı',
     bio: 'Atölyeden vitrine kendi koleksiyonunu taşıdı. Bir rafın nasıl görünmesi gerektiğini bilir.',
     perk: 'Perakende mağazaları daha kaliteli, marka %30 hızlı büyür',
-    drawback: 'İnşaat maliyetleri %12 yüksek',
+    drawback: 'İnşaat maliyetleri %8 yüksek',
     modifiers: {
       ...BASE,
       brandGrowth: 1.3,
-      buildCost: 1.12,
+      buildCost: 1.08,
       categoryQuality: { category: 'retail', bonus: 0.1 },
     },
     portrait: {

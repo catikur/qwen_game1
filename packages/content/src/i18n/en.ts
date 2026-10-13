@@ -321,7 +321,7 @@ export const contentEn: Record<string, string> = {
   'content.ceo.modaci.title': 'Fashion Designer',
   'content.ceo.modaci.bio': 'Took their own collection from the workshop to the shop window. Knows how a shelf should look.',
   'content.ceo.modaci.perk': 'Higher-quality retail stores; brand grows 30% faster',
-  'content.ceo.modaci.drawback': 'Construction costs 12% higher',
+  'content.ceo.modaci.drawback': 'Construction costs 8% higher',
   'content.ceo.girisimci.title': 'Tech Entrepreneur',
   'content.ceo.girisimci.bio': 'Sold their first company and came back to the city. Spots which device will catch on before anyone else.',
   'content.ceo.girisimci.perk': 'Higher-quality electronics stores; starts with some brand awareness',
