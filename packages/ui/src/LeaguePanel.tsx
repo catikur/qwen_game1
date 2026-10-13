@@ -1,19 +1,24 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { ReactElement } from 'react';
 import { CEO_BY_ID } from '@capital/content';
-import { LEAGUE_SAMPLE_DAYS, decodeRun, encodeRun, formatMoney, getPlayer, replayRun, runFromState } from '@capital/core';
-import type { GameState } from '@capital/core';
+import { LEAGUE_SAMPLE_DAYS, encodeRun, formatMoney, getPlayer, runFromState, verifyRun } from '@capital/core';
+import type { GameState, RunRejection, RunVerdict } from '@capital/core';
 import { useGame, useGameState } from './useGame';
 import type { LeagueBoard, LeagueEntry } from './useGame';
+import { progressFor, useLeagueStanding, verdictFor } from './leagueVerify';
 import { t } from './i18n';
+import type { MessageKey } from './i18n';
 
 /**
  * Tohum Ligi arayüzü: tablo, hayalet karşılaştırması, tekrar doğrulaması
  * ve sonuç ekranı.
  *
- * Tablodaki her satır bir KANIT taşıyor (koşu kodu): "Doğrula" o koşuyu
- * bu tarayıcıda baştan oynatıp aynı skoru bulup bulmadığını gösteriyor.
- * Güven bir sunucuya değil herkesin kendi tekrarına dayanıyor.
+ * Tablodaki her satır bir KANIT taşıyor (koşu kodu). Tur 31'den beri bu
+ * tarayıcı her satırı kendiliğinden yeniden oynatıyor ve sıralama yalnızca
+ * doğrulanmış koşulardan, tekrarın bulduğu skorla (`leagueVerify`).
+ * Satırın beyan ettiği skor, ad, CEO ve eğri sıralamaya girmiyor; tutmayan
+ * satır nedeniyle ayrı listede. Güven bir sunucuya değil herkesin kendi
+ * tekrarına dayanıyor.
  */
 
 const GHOST_KEY = 'capitalforge.league.ghost';
@@ -83,18 +88,49 @@ export function useLeagueEntries(weekId: string | null): LeagueEntry[] {
   return entries;
 }
 
-/** Seçili hayalet; seçim yoksa oyuncunun kendisi olmayan en iyi koşu. */
-export function useGhost(state: GameState): LeagueEntry | null {
+/**
+ * Hayalet: doğrulanmışsa eğrisi tekrarın kendisinden. Doğrulanmamış bir
+ * satırın eğrisi beyandır; gösterilebilir (oyuncunun kendi kıyası) ama
+ * `verified: false` taşır.
+ */
+export interface Ghost {
+  entry: LeagueEntry;
+  name: string;
+  curve: number[];
+  verified: boolean;
+}
+
+function ghostOf(entry: LeagueEntry): Ghost {
+  const verdict = verdictFor(entry);
+  return verdict?.status === 'ok'
+    ? { entry, name: verdict.companyName, curve: verdict.curve, verified: true }
+    : { entry, name: entry.companyName, curve: entry.curve, verified: false };
+}
+
+/** Seçili hayalet; seçim yoksa oyuncunun olmayan en iyi DOĞRULANMIŞ koşu, o da yoksa en iyi beyan. */
+function pickGhost(entries: readonly LeagueEntry[], ghostId: string | null): Ghost | null {
+  const chosen = ghostId ? entries.find((entry) => entry.id === ghostId) : undefined;
+  if (chosen) return ghostOf(chosen);
+  const others = entries.filter((entry) => !entry.mine);
+  const verified = others
+    .map((entry) => ({ entry, verdict: verdictFor(entry) }))
+    .filter((row): row is { entry: LeagueEntry; verdict: Extract<RunVerdict, { status: 'ok' }> } => row.verdict?.status === 'ok')
+    .sort((a, b) => b.verdict.score - a.verdict.score)[0];
+  if (verified) return ghostOf(verified.entry);
+  const unverified = others.find((entry) => verdictFor(entry) === undefined);
+  return unverified ? ghostOf(unverified) : null;
+}
+
+export function useGhost(state: GameState): Ghost | null {
   const entries = useLeagueEntries(state.league?.weekId ?? null);
+  // Gündem çipi doğrulama koşturmuyor; önbellekteki sonuçları okuyor.
+  useLeagueStanding(entries, false);
   const [ghostId] = useState(readGhostId);
-  return useMemo(() => {
-    const chosen = ghostId ? entries.find((entry) => entry.id === ghostId) : undefined;
-    return chosen ?? entries.find((entry) => !entry.mine) ?? null;
-  }, [entries, ghostId]);
+  return pickGhost(entries, ghostId);
 }
 
 /** Hayaletin bu gündeki değeri — eğri 10 günde bir örneklendi. */
-export function ghostValueAt(ghost: LeagueEntry, day: number): number | null {
+export function ghostValueAt(ghost: Ghost, day: number): number | null {
   const index = Math.floor(day / LEAGUE_SAMPLE_DAYS);
   return ghost.curve[Math.min(index, ghost.curve.length - 1)] ?? null;
 }
@@ -121,46 +157,48 @@ function Sparks({ mine, ghost, slots }: { mine: number[]; ghost: number[] | null
   );
 }
 
-type Verdict = { status: 'running'; day: number } | { status: 'ok' } | { status: 'bad'; reason: string };
+const REJECTION: Record<RunRejection, MessageKey> = {
+  unreadable: 'app.league.reject.unreadable',
+  tooLarge: 'app.league.reject.tooLarge',
+  malformed: 'app.league.reject.malformed',
+  mismatch: 'app.league.reject.mismatch',
+  replay: 'app.league.reject.replay',
+  curve: 'app.league.reject.curve',
+  version: 'app.league.reject.version',
+  unknownVersion: 'app.league.reject.unknownVersion',
+  error: 'app.league.reject.error',
+};
 
-function useVerifier() {
-  const [verdicts, setVerdicts] = useState<Record<string, Verdict>>({});
-  /**
-   * Tablo satırı doğrulanırken koşu kodu yetmez: satırın GÖSTERDİĞİ skor
-   * ve hafta da kodla aynı olmalı. Yoksa biri dürüst bir koşunun kodunu
-   * şişirilmiş bir skorun yanına koyar ve tekrar "doğrulandı" derdi.
-   */
-  const verify = async (key: string, code: string, expected?: { score: number; weekId: string }) => {
-    const run = decodeRun(code);
-    if (!run) {
-      setVerdicts((v) => ({ ...v, [key]: { status: 'bad', reason: t('app.league.verify.unreadable') } }));
-      return;
-    }
-    if (expected && (run.score !== expected.score || run.weekId !== expected.weekId)) {
-      setVerdicts((v) => ({
-        ...v,
-        [key]: { status: 'bad', reason: t('app.league.verify.mismatch') },
-      }));
-      return;
-    }
-    setVerdicts((v) => ({ ...v, [key]: { status: 'running', day: 0 } }));
-    const result = await replayRun(run, {
-      yieldEvery: 20,
-      onProgress: (day) => setVerdicts((v) => ({ ...v, [key]: { status: 'running', day } })),
-    });
-    setVerdicts((v) => ({
-      ...v,
-      [key]: result.ok ? { status: 'ok' } : { status: 'bad', reason: result.reason ?? t('app.league.verify.failed') },
-    }));
-  };
-  return { verdicts, verify };
+function rejectionText(verdict: Extract<RunVerdict, { status: 'bad' }>, claimed?: number): string {
+  const reason = t(REJECTION[verdict.kind]);
+  if (verdict.score === undefined || claimed === undefined || verdict.score === claimed) return reason;
+  return `${reason} ${t('app.league.reject.found', { found: formatMoney(verdict.score), claimed: formatMoney(claimed) })}`;
 }
 
-function VerdictText({ verdict }: { verdict: Verdict | undefined }): ReactElement | null {
-  if (!verdict) return null;
-  if (verdict.status === 'running') return <span className="muted">{t('app.league.verdict.running', { day: verdict.day })}</span>;
-  if (verdict.status === 'ok') return <span className="pos">{t('app.league.verdict.ok')}</span>;
-  return <span className="neg">{t('app.league.verdict.bad', { reason: verdict.reason })}</span>;
+/** Yapıştırılan kodun tek seferlik doğrulaması (tablodan bağımsız). */
+function usePasteVerifier() {
+  const [state, setState] = useState<{ status: 'idle' } | { status: 'running'; day: number } | { status: 'done'; verdict: RunVerdict }>({ status: 'idle' });
+  const verify = async (code: string) => {
+    setState({ status: 'running', day: 0 });
+    const verdict = await verifyRun(code, undefined, {
+      yieldEvery: 20,
+      onProgress: (day) => setState({ status: 'running', day }),
+    });
+    setState({ status: 'done', verdict });
+  };
+  return { state, verify };
+}
+
+function EntryWho({ entry, name, ceoId }: { entry: LeagueEntry; name: string; ceoId: string | null }): ReactElement {
+  return (
+    <span className="league-who">
+      {name}
+      <span className="muted">
+        {entry.who ? ` · ${entry.who}` : ''}
+        {ceoId ? ` · ${CEO_BY_ID[ceoId]?.name ?? ''}` : ''}
+      </span>
+    </span>
+  );
 }
 
 export function LeaguePanel(): ReactElement {
@@ -168,9 +206,12 @@ export function LeaguePanel(): ReactElement {
   const { league: board } = useGame();
   const weekId = state.league?.weekId ?? null;
   const entries = useLeagueEntries(weekId);
+  // Panel açıkken bu tarayıcı her satırı yeniden oynatıyor.
+  const standing = useLeagueStanding(entries, state.league !== undefined);
   const [ghostId, setGhostId] = useState(readGhostId);
-  const { verdicts, verify } = useVerifier();
+  const paste = usePasteVerifier();
   const [pasted, setPasted] = useState('');
+  const [showRejected, setShowRejected] = useState(false);
 
   if (!state.league) {
     return (
@@ -180,10 +221,22 @@ export function LeaguePanel(): ReactElement {
     );
   }
 
-  const ghost = (ghostId ? entries.find((e) => e.id === ghostId) : undefined) ?? entries.find((e) => !e.mine) ?? null;
+  const ghost = pickGhost(entries, ghostId);
   const mine = state.league.curve;
   const now = getPlayer(state).netWorth;
   const ghostNow = ghost ? ghostValueAt(ghost, state.time.day) : null;
+  const ghostButton = (entry: LeagueEntry) => (
+    <button
+      type="button"
+      aria-pressed={ghost?.entry.id === entry.id}
+      onClick={() => {
+        setGhostId(entry.id);
+        writeGhostId(entry.id);
+      }}
+    >
+      {t('app.league.ghost')}
+    </button>
+  );
 
   return (
     <div className="league">
@@ -191,7 +244,8 @@ export function LeaguePanel(): ReactElement {
         {t('app.league.intro', { weekId: weekId ?? '', endDay: state.league.endDay })}{' '}
         {board.kind === 'shared'
           ? t('app.league.board.shared')
-          : t('app.league.board.local')}
+          : t('app.league.board.local')}{' '}
+        {t('app.league.trust')}
       </p>
 
       <section className="league-compare">
@@ -202,8 +256,9 @@ export function LeaguePanel(): ReactElement {
           </span>
           {ghost && (
             <span>
-              <span className="league-key ghost" aria-hidden="true" /> {ghost.companyName}
+              <span className="league-key ghost" aria-hidden="true" /> {ghost.name}
               {ghostNow !== null ? t('app.league.legend.ghostToday', { money: formatMoney(ghostNow) }) : ''}
+              {!ghost.verified && <span className="muted"> · {t('app.league.legend.unverified')}</span>}
             </span>
           )}
         </div>
@@ -214,42 +269,75 @@ export function LeaguePanel(): ReactElement {
         {entries.length === 0 ? (
           <p className="muted">{t('app.league.empty')}</p>
         ) : (
-          <ol className="league-table">
-            {entries.map((entry, index) => (
-              <li key={entry.id} className={entry.mine ? 'mine' : undefined}>
-                <span className="league-rank">{index + 1}</span>
-                <span className="league-who">
-                  {entry.companyName}
-                  <span className="muted">
-                    {entry.who ? ` · ${entry.who}` : ''}
-                    {entry.ceoId ? ` · ${CEO_BY_ID[entry.ceoId]?.name ?? ''}` : ''}
+          <>
+            {standing.ranked.length === 0 && <p className="muted">{t('app.league.noneVerified')}</p>}
+            <ol className="league-table" data-league-table="ranked">
+              {standing.ranked.map(({ entry, verdict }, index) => (
+                <li key={entry.id} className={entry.mine ? 'mine' : undefined} data-league-row="ranked">
+                  <span className="league-rank">{index + 1}</span>
+                  <EntryWho entry={entry} name={verdict.companyName} ceoId={verdict.ceoId} />
+                  <span className="league-score">{formatMoney(verdict.score)}</span>
+                  <span className="league-actions">{ghostButton(entry)}</span>
+                  <span className="league-verdict">
+                    <span className="pos">{t('app.league.verdict.ok')}</span>
                   </span>
-                </span>
-                <span className="league-score">{formatMoney(entry.score)}</span>
-                <span className="league-actions">
-                  <button
-                    type="button"
-                    onClick={() => void verify(entry.id, entry.code, { score: entry.score, weekId: entry.weekId })}
-                  >
-                    {t('app.league.verify')}
-                  </button>
-                  <button
-                    type="button"
-                    aria-pressed={ghost?.id === entry.id}
-                    onClick={() => {
-                      setGhostId(entry.id);
-                      writeGhostId(entry.id);
-                    }}
-                  >
-                    {t('app.league.ghost')}
-                  </button>
-                </span>
-                <span className="league-verdict">
-                  <VerdictText verdict={verdicts[entry.id]} />
-                </span>
-              </li>
-            ))}
-          </ol>
+                </li>
+              ))}
+            </ol>
+            {standing.pending.length > 0 && (
+              <ul className="league-table league-pending" data-league-table="pending">
+                {standing.pending.map((entry) => {
+                  const day = progressFor(entry);
+                  return (
+                    <li key={entry.id} className={entry.mine ? 'mine' : undefined} data-league-row="pending">
+                      <span className="league-rank">·</span>
+                      <EntryWho entry={entry} name={entry.companyName} ceoId={entry.ceoId} />
+                      <span className="league-score muted">{t('app.league.claimed', { money: formatMoney(entry.score) })}</span>
+                      <span className="league-actions" />
+                      <span className="league-verdict muted">
+                        {day !== null && day > 0 ? t('app.league.verdict.running', { day }) : t('app.league.verdict.queued')}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+            {standing.copies.length > 0 && (
+              <ul className="league-table league-copies" data-league-table="copies">
+                {standing.copies.map(({ entry, verdict, of }) => (
+                  <li key={entry.id} className={entry.mine ? 'mine' : undefined} data-league-row="copy">
+                    <span className="league-rank">=</span>
+                    <EntryWho entry={entry} name={verdict.companyName} ceoId={verdict.ceoId} />
+                    <span className="league-score muted">{formatMoney(verdict.score)}</span>
+                    <span className="league-actions" />
+                    <span className="league-verdict muted">
+                      {t('app.league.copyOf', { name: verdictFor(of)?.status === 'ok' ? (verdictFor(of) as { companyName: string }).companyName : of.companyName })}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {standing.rejected.length > 0 && (
+              <div className="league-rejected" data-league-table="rejected">
+                <button type="button" className="ghost" aria-expanded={showRejected} onClick={() => setShowRejected((v) => !v)}>
+                  {t('app.league.rejectedToggle', { count: standing.rejected.length })}
+                </button>
+                {showRejected && (
+                  <ul className="league-table">
+                    {standing.rejected.map(({ entry, verdict }) => (
+                      <li key={entry.id} className={entry.mine ? 'mine' : undefined} data-league-row="rejected" data-reject={verdict.kind}>
+                        <span className="league-rank">×</span>
+                        <EntryWho entry={entry} name={entry.companyName} ceoId={entry.ceoId} />
+                        <span className="league-score muted">{t('app.league.claimed', { money: formatMoney(entry.score) })}</span>
+                        <span className="league-actions" />
+                        <span className="league-verdict neg">{rejectionText(verdict, entry.score)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
+          </>
         )}
       </section>
 
@@ -264,10 +352,16 @@ export function LeaguePanel(): ReactElement {
           aria-label={t('app.league.codeLabel')}
         />
         <div className="manual-actions">
-          <button type="button" disabled={pasted.trim().length === 0} onClick={() => void verify('pasted', pasted)}>
+          <button type="button" disabled={pasted.trim().length === 0 || paste.state.status === 'running'} onClick={() => void paste.verify(pasted)}>
             {t('app.league.paste.verify')}
           </button>
-          <VerdictText verdict={verdicts['pasted']} />
+          {paste.state.status === 'running' && <span className="muted">{t('app.league.verdict.running', { day: paste.state.day })}</span>}
+          {paste.state.status === 'done' &&
+            (paste.state.verdict.status === 'ok' ? (
+              <span className="pos">{t('app.league.verdict.okScore', { money: formatMoney(paste.state.verdict.score) })}</span>
+            ) : (
+              <span className="neg">{t('app.league.verdict.bad', { reason: rejectionText(paste.state.verdict) })}</span>
+            ))}
         </div>
       </section>
     </div>

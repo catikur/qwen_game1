@@ -3538,6 +3538,31 @@ button.icon {
   background: var(--tint-1);
 }
 
+/* Tur 31: sıralamanın altındaki doğrulanmamış satırlar — sönük, ayrı. */
+.league-pending,
+.league-copies {
+  margin-top: 6px;
+  opacity: 0.8;
+}
+
+.league-rejected {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.league-rejected > button {
+  align-self: flex-start;
+  padding: 3px 8px;
+  font-size: 11.5px;
+}
+
+.league-rejected .league-verdict {
+  white-space: normal;
+  text-align: left;
+}
+
 .league-rank {
   grid-area: rank;
   font-family: var(--font-mono);
