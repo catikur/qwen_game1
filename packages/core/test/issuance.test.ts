@@ -7,12 +7,16 @@ import { recomputeNetWorth } from '../src/systems/city';
 import {
   TOTAL_SHARES,
   buyShares,
+  buybackToLock,
+  controlReachable,
   controllerOf,
   freeFloat,
   ownerFraction,
   sharePrice,
+  sharesHeld,
   sharesOutstanding,
 } from '../src/systems/equity';
+import { runNpcTick } from '../src/systems/npc';
 import { issueNetWorthEffect, issueQuote, issueShares } from '../src/systems/issuance';
 import { loanQuote, runCreditTick, takeLoan } from '../src/systems/credit';
 import type { GameState } from '../src/types';
@@ -118,16 +122,111 @@ describe('sermaye artırımı', () => {
     assert.equal(controllerOf(state, 'player'), rival.id);
   });
 
-  test('geri alım önce yatırımcı payını geri alıyor', () => {
+  /*
+   * Tur 28: geri alım piyasadan. Tur 19'dan beri ihraç yapmış şirkette
+   * geri alım önce yatırımcı payını geri alıyordu — serbest hisse yerinde
+   * kaldığı için baskın altındaki "geri al" düğmesi savunma değildi.
+   */
+  test('geri alım serbest hisseden hazineye, yatırımcı payı yerinde', () => {
     const state = listed();
     const player = state.companies.player!;
     issueShares(state, 'player', 1000);
     player.cash = 100_000_000;
+    const float = freeFloat(state, 'player');
+    const founder = ownerFraction(player);
     assert.equal(buyShares(state, 'player', 'player', 400).ok, true);
-    assert.equal(player.investorShares, 600);
-    assert.equal(buyShares(state, 'player', 'player', 800).ok, true);
-    assert.equal(player.investorShares, undefined);
-    assert.equal(ownerFraction(player), 1);
+    assert.equal(player.investorShares, 1000);
+    assert.equal(sharesHeld(state, 'player', 'player'), 400);
+    assert.equal(freeFloat(state, 'player'), float - 400);
+    assert.equal(ownerFraction(player), founder, 'seyreltme kalıcı');
+  });
+
+  test('kurucu tabanındaki şirket geri alımla kilitleniyor: tek baskıncı serbest hissenin hepsiyle de geçemiyor', () => {
+    const state = listed();
+    const player = state.companies.player!;
+    const rival = Object.values(state.companies).find((c) => !c.isPlayer)!;
+    // Tur 27'nin seed 7'si: savunma ihracıyla tabana kadar, yatırımcı %48,8.
+    for (let i = 0; i < 6; i++) {
+      rival.shares.player = Math.ceil(sharesOutstanding(state, 'player') * ISSUANCE.defenseAt);
+      const quote = issueQuote(state, 'player');
+      if (!quote.ok) break;
+      issueShares(state, 'player', quote.maxShares);
+    }
+    assert.ok(ownerFraction(player) < ISSUANCE.minFounderShare + 0.01, `kurucu ${ownerFraction(player)}`);
+    const outstanding = sharesOutstanding(state, 'player');
+    rival.shares.player = Math.floor(outstanding * 0.45);
+    assert.equal(controlReachable(state, rival.id, 'player'), true, 'kilitsiz: kalan serbest hisseyle eşiği geçer');
+    const toLock = buybackToLock(state, 'player');
+    assert.ok(toLock > 0 && toLock < outstanding * 0.02, `kilide ${toLock} hisse`);
+
+    player.cash = 100_000_000;
+    assert.equal(buyShares(state, 'player', 'player', toLock).ok, true);
+    assert.equal(buybackToLock(state, 'player'), 0);
+    assert.equal(controlReachable(state, rival.id, 'player'), false);
+    // Serbest hissenin kalanını da toplasa kontrol yok.
+    rival.shares.player! += freeFloat(state, 'player');
+    assert.equal(freeFloat(state, 'player'), 0);
+    assert.equal(controllerOf(state, 'player'), null);
+  });
+
+  test('ihraçsız şirkette kilit hazinede yarı ister (blok alım yolu açık)', () => {
+    const state = listed();
+    const rival = Object.values(state.companies).find((c) => !c.isPlayer)!;
+    rival.shares.player = 3_000;
+    // İhraç yokken kilitlenen yarışta rakipler birbirinden blok alabiliyor:
+    // hazine dışındaki her hisse ulaşılabilir.
+    assert.equal(buybackToLock(state, 'player'), TOTAL_SHARES / 2);
+    state.companies.player!.cash = 1e12;
+    assert.equal(buyShares(state, 'player', 'player', TOTAL_SHARES / 2).ok, true);
+    assert.equal(controlReachable(state, rival.id, 'player'), false);
+  });
+
+  test('rakip kilitli hedefe baskın yapmıyor; kilitsiz hedefe yapıyor', () => {
+    /*
+     * Aynı kurulum iki kez: oyuncu savunma ihracıyla kurucu tabanında,
+     * rakip zengin ve %30'da. Kilitli kolda oyuncu kilide yetecek kadar
+     * geri almış. Rakip zarı her gün atıyor; kilitsiz kolda pay artmalı,
+     * kilitli kolda hiç artmamalı.
+     */
+    function arm(locked: boolean): number {
+      const state = listed(7);
+      const player = state.companies.player!;
+      const raider = Object.values(state.companies).find((c) => !c.isPlayer)!;
+      for (let i = 0; i < 6; i++) {
+        raider.shares.player = Math.ceil(sharesOutstanding(state, 'player') * ISSUANCE.defenseAt);
+        const quote = issueQuote(state, 'player');
+        if (!quote.ok) break;
+        issueShares(state, 'player', quote.maxShares);
+      }
+      for (const c of Object.values(state.companies)) if (!c.isPlayer) delete c.lockedUntilDay;
+      raider.shares.player = Math.floor(sharesOutstanding(state, 'player') * 0.3);
+      if (locked) {
+        player.cash = 1e10;
+        buyShares(state, 'player', 'player', buybackToLock(state, 'player'));
+      }
+      // Baskın ısınması geçmiş, oyuncu rakipten küçük, rakibin nakdi bol.
+      state.time.day = 700;
+      for (const c of Object.values(state.companies)) {
+        if (!c.isPlayer) {
+          c.cash = 1e9;
+          c.netWorth = 1e9;
+        }
+      }
+      player.netWorth = 1_000_000;
+      const before = sharesHeld(state, raider.id, 'player');
+      for (let i = 0; i < 90; i++) {
+        state.time.day += 1;
+        player.netWorth = 1_000_000;
+        runNpcTick(state);
+      }
+      let gained = sharesHeld(state, raider.id, 'player') - before;
+      for (const c of Object.values(state.companies)) {
+        if (!c.isPlayer && c.id !== raider.id) gained += sharesHeld(state, c.id, 'player');
+      }
+      return gained;
+    }
+    assert.ok(arm(false) > 0, 'kurulum baskını tetikliyor');
+    assert.equal(arm(true), 0);
   });
 
   test('ihraç yapmamış şirketin net değeri eski formülle birebir', () => {

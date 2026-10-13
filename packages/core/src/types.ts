@@ -236,8 +236,9 @@ export interface CompanyState {
    * İhraçla dışarıdaki yatırımcılara geçen hisse. Kurucu payı
    * `1 − investorShares / shareCount`; net değer şirket değerinin bu payı.
    * Rakiplerin borsadaki alım-satımı bu sayıyı değiştirmiyor (Tur 4'ten
-   * beri rakibin elindeki pay net değerden düşmüyor); yalnızca ihraç ve
-   * şirketin kendi geri alımı değiştiriyor.
+   * beri rakibin elindeki pay net değerden düşmüyor). Yalnızca ihraç
+   * büyütüyor; Tur 28'den beri geri alım da serbest hisseden yapılıyor,
+   * yatırımcı payı kalıcı. Devralmada yatırımcı nakde çevriliyor.
    */
   investorShares?: number;
   /** Son ihracın günü (soğuma) ve ihraç sayısı (ilki halka arz). */
