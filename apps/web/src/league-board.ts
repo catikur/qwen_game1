@@ -63,13 +63,21 @@ function writeLocal(entries: LeagueEntry[]): boolean {
 
 function localBoard(): LeagueBoard {
   const listeners = new Set<() => void>();
+  // Aynı tarayıcının başka sekmesi koşu gönderince tablo burada da tazeleniyor.
+  const onStorage = (event: StorageEvent) => {
+    if (event.key === LOCAL_KEY || event.key === null) listeners.forEach((emit) => emit());
+  };
   return {
     kind: 'local',
     subscribe(weekId, onChange) {
       const emit = () => onChange(readLocal().filter((entry) => entry.weekId === weekId).map((e) => ({ ...e, mine: true })));
+      if (listeners.size === 0) window.addEventListener('storage', onStorage);
       listeners.add(emit);
       emit();
-      return () => listeners.delete(emit);
+      return () => {
+        listeners.delete(emit);
+        if (listeners.size === 0) window.removeEventListener('storage', onStorage);
+      };
     },
     async submit(entry): Promise<LeagueSubmitOutcome> {
       const all = readLocal();

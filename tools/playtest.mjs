@@ -2458,8 +2458,10 @@ async function finish(browser, consoleErrors) {
           entries.push({ ...honest, id: 'local-sahte', score: honest.score + 5_000_000, code: forged, submittedAt: later });
           entries.push({ ...honest, id: 'local-kopya', companyName: 'Kopya AŞ', code: copy, submittedAt: later });
           localStorage.setItem('capitalforge.league.local', JSON.stringify(entries));
+          // Başka sekmeden gelmiş gibi: `storage` olayı yalnızca öteki sekmelerde kendiliğinden çıkıyor.
+          window.dispatchEvent(new StorageEvent('storage', { key: 'capitalforge.league.local' }));
         }, codes);
-        // Paneli kapatıp biten koşunun gündem çipinden yeniden aç: tablo depodan yeniden okunuyor.
+        // Paneli kapatıp biten koşunun gündem çipinden yeniden aç.
         await lp.keyboard.press('Escape');
         await lp.waitForTimeout(200);
         const doneChip = await lp.locator('.agenda [data-agenda="league"]').count();
