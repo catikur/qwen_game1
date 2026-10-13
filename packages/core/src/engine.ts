@@ -5,30 +5,19 @@ import { stepLeadership } from './leadership';
 import type { LeadershipMemory } from './leadership';
 import { companyRanking, formatMoney } from './selectors';
 import { sharesHeld, sharesOutstanding } from './systems/equity';
-import { runMarketTick } from './systems/market';
 import { runGoalTick } from './systems/goals';
-import { runEntrantTick } from './systems/entrants';
 import { isLoggable, leagueActive, runLeagueTick } from './systems/league';
-import { lobby, runCouncilTick } from './systems/council';
-import { respondUnion, runLaborTick, setWagePolicy } from './systems/labor';
-import { repayLoan, runCreditTick, takeLoan } from './systems/credit';
+import { lobby } from './systems/council';
+import { respondUnion, setWagePolicy } from './systems/labor';
+import { repayLoan, takeLoan } from './systems/credit';
 import { issueShares } from './systems/issuance';
-import { cancelTakeoverOrder, placeTakeoverOrder, playerBuy, runOrderTick } from './systems/orders';
-import { resetDailyLedgers, runProductionTick, runProfitTrendTick, runSpotPriceTick } from './systems/supply';
-import {
-  recomputeNetWorth,
-  runDistrictUnlockTick,
-  runLandValueTick,
-  runPopulationTick,
-} from './systems/city';
-import { runCityGrowthTick } from './systems/citygrowth';
-import { collectEventModifiers, runEraTick, runEventTick } from './systems/events';
-import { acceptContract, declineContract, runContractTick } from './systems/contracts';
-import { placeBid, runAuctionTick } from './systems/auction';
-import { runDividendTick, runTakeoverTick, sellShares } from './systems/equity';
-import { runResearchTick } from './systems/focus';
-import { runNpcTick } from './systems/npc';
+import { cancelTakeoverOrder, placeTakeoverOrder, playerBuy } from './systems/orders';
+import { recomputeNetWorth } from './systems/city';
+import { acceptContract, declineContract } from './systems/contracts';
+import { placeBid } from './systems/auction';
+import { sellShares } from './systems/equity';
 import { holdingTransfer, openCity, runHoldingTick, switchCity } from './holding';
+import { simulateCityDay } from './day';
 import { tc } from './i18n';
 import { SPEED_MS } from './types';
 import type { CommandResult, GameCommand, GameState } from './types';
@@ -351,58 +340,10 @@ export class GameEngine {
     // Oyun bittiyse takvim durur. Şirket silinmediği için paneller hâlâ
     // okunabilir — oyuncu son durumuna bakabilmeli.
     if (state.gameOver) return;
-    state.time.day += 1;
-
-    runEventTick(state);
-    runEraTick(state);
-    // İmar takvimi sözleşmeden ÖNCE: açılış günü gelen bir inşaat
-    // teklifi yeni bölgeyi hedefleyebilmeli.
-    runDistrictUnlockTick(state);
-    // Meclis imar takvimini değiştirebilir; sözleşmeden önce otursun ki
-    // aynı gün üretilen teklif güncel takvimi görsün.
-    runCouncilTick(state);
-    runContractTick(state);
-    // İşgücü defterler sıfırlanmadan ÖNCE: talep dünkü kâr marjını okur,
-    // bugünkü ücret ve grev de bugünkü defterin ilk satırına girsin.
-    runLaborTick(state);
-    resetDailyLedgers(state);
-    // Ar-Ge primi pazardan ÖNCE ilerler: bugünkü kalite bugünkü satışa
-    // girsin. Spot fiyatın tersi (o günün sonunda çözülüyor) çünkü orada
-    // yarının fiyatı bugünkü arz fazlasından doğuyor.
-    runResearchTick(state);
-    runProductionTick(state);
-    runMarketTick(state);
-    runSpotPriceTick(state);
-    runProfitTrendTick(state);
-
-    const mods = collectEventModifiers(state);
-    runLandValueTick(state, mods.landValueDrift);
-    runPopulationTick(state);
-    // Şehrin kendi gelişimi nüfustan SONRA: bugünkü nüfus bugünkü
-    // yapılaşma basıncını belirlesin. Rakiplerden ÖNCE, çünkü şehir de
-    // araziye talip — rakip bugün baktığı parseli dün şehir kapmış
-    // olabilir ve bu, kaçırılan parselin bedelini gerçek kılıyor.
-    runCityGrowthTick(state);
-    runNpcTick(state);
-    // Devralma emirleri rakiplerden SONRA: hedef dünkü alımı gördü ve
-    // bugünkü savunmasını (geri alım, ihraç) yaptı; emir kalan dolaşımdan
-    // alır. Devralma tick'inden ÖNCE: eşiği geçen alım aynı gün sonuçlansın.
-    runOrderTick(state);
-    // İhale NPC turundan sonra: rakip aynı gün hem mağaza açıp hem teklif
-    // vermesin, nakit iki kez harcanmış gibi görünmesin.
-    runAuctionTick(state);
-
-    // Temettü kredi kapatmadan ÖNCE: hissedarın parası, borcunu
-    // kapatmak için o gün elinde olsun.
-    runDividendTick(state);
-    // Devralma temettüden SONRA: devralınan şirket son gününün payını
-    // dağıtmış olsun, hissedar ortada kalmasın.
-    runTakeoverTick(state, (title, body) => pushNews(state, 'rival', title, body));
-    // Boşalan koltuk: devralma sonrası kadro eksikse yeni rakip girer.
-    runEntrantTick(state);
-    // Banka: taksit, kredili hesap, not, haciz.
-    runCreditTick(state);
-    // Holding: bekleyen şehirlerin kâr payı kasaya (Tur 22).
+    // Şehrin kendi günü: takvim, olaylar, pazar, rakipler, banka (Tur 30'dan
+    // beri `day.ts`'te — bekleyen şehirler de aynı adımlarla yaşıyor).
+    simulateCityDay(state);
+    // Holding: bekleyen şehirler de bir gün yaşıyor, kârlarının payı kasaya (Tur 30).
     runHoldingTick(state);
     recomputeNetWorth(state);
     this.checkMilestones();
