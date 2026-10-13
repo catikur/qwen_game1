@@ -4,7 +4,6 @@ import { pushNews } from './news';
 import { stepLeadership } from './leadership';
 import type { LeadershipMemory } from './leadership';
 import { companyRanking, formatMoney } from './selectors';
-import { sharesHeld, sharesOutstanding } from './systems/equity';
 import { runGoalTick } from './systems/goals';
 import { isLoggable, leagueActive, runLeagueTick } from './systems/league';
 import { lobby } from './systems/council';
@@ -16,7 +15,7 @@ import { recomputeNetWorth } from './systems/city';
 import { acceptContract, declineContract } from './systems/contracts';
 import { placeBid } from './systems/auction';
 import { sellShares } from './systems/equity';
-import { holdingTransfer, openCity, runHoldingTick, switchCity } from './holding';
+import { holdingTransfer, openCity, raidStatus, runHoldingTick, switchCity } from './holding';
 import { simulateCityDay } from './day';
 import { tc } from './i18n';
 import { SPEED_MS } from './types';
@@ -105,7 +104,8 @@ export class GameEngine {
     this.state = next;
     this.leadership = null;
     this.lastRank = null;
-    this.lastRaidStage = 0;
+    // Bilinen baskın şehir değişince yeniden haber olmasın (Tur 30).
+    this.lastRaidStage = raidStatus(next).stage;
     this.reachedMilestones.clear();
     const player = next.companies[next.playerCompanyId];
     for (const milestone of MILESTONES) {
@@ -364,22 +364,9 @@ export class GameEngine {
    */
   private checkRaid(): void {
     const state = this.state;
-    const player = state.companies[state.playerCompanyId];
-    if (!player) return;
-
-    let topHolder: string | null = null;
-    let topCount = 0;
-    for (const company of Object.values(state.companies)) {
-      if (company.isPlayer) continue;
-      const count = sharesHeld(state, company.id, player.id);
-      if (count > topCount) {
-        topCount = count;
-        topHolder = company.id;
-      }
-    }
-
-    const fraction = topCount / sharesOutstanding(state, player.id);
-    const stage = fraction >= 0.4 ? 3 : fraction >= 0.25 ? 2 : fraction >= 0.1 ? 1 : 0;
+    if (!state.companies[state.playerCompanyId]) return;
+    // Eşikler holding'deki uzak şehir uyarılarıyla ortak (Tur 30).
+    const { stage, fraction, holderId: topHolder } = raidStatus(state);
     if (stage <= this.lastRaidStage) {
       // Eşik aşağı inince seviye sessizce düşer: baskıncı satıp geri
       // dönerse aynı uyarı yeniden atılabilmeli.

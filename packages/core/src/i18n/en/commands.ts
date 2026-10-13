@@ -86,7 +86,14 @@ export const commands: Record<keyof typeof trCommands, string> = {
   'core.holding.notEnoughCash': "You don't have that much cash.",
   'core.holding.openedTitle': '{city}: your holding expands to a new city',
   'core.holding.openedBody':
-    'You arrived with {capital} in capital and {brand}% brand awareness. Rivals: {rivals}. {previous} is waiting; half of its profit will flow into the holding treasury every day.',
+    'You arrived with {capital} in capital and {brand}% brand awareness. Rivals: {rivals}. {previous} keeps living; half of its profit will flow into the holding treasury every day.',
+  'core.holding.remoteRaidTitle': '{city}: {name} has collected {percent}% of your shares',
+  'core.holding.remoteRaidBody':
+    'A raid is advancing in your remote city; the local manager only answers the union, the defense is up to you. Switch to {city} from the Cities panel.',
+  'core.holding.remoteLostTitle': '{city} is lost: {name} took control',
+  'core.holding.remoteLostBody': '{city} no longer pays into the holding treasury. The holding and your other cities stand.',
+  'core.holding.remoteVictoryTitle': '{city} reached victory',
+  'core.holding.remoteVictoryBody': 'Managed remotely, {city} reached its target with the value created there.',
   'core.holding.leagueNoSwitch': "You can't switch cities during a league run.",
   'core.holding.noSuchCity': "That city doesn't exist.",
   'core.holding.noHolding': 'No holding yet: reach victory in a city first, then open a new one.',

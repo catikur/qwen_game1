@@ -4,7 +4,7 @@ import { HOLDING, NPC_PROFILES } from '@capital/content';
 import { exportToJson, importFromJson } from '../../persistence/src/index';
 import { GameEngine } from '../src/engine';
 import { createNewGame } from '../src/worldgen';
-import { cityTrend, holdingNetWorth, openCityQuote, remoteIncome, runHoldingTick } from '../src/holding';
+import { cityTrend, holdingNetWorth, openCityQuote, remoteIncome } from '../src/holding';
 import { victoryNetWorth, victoryReached } from '../src/systems/goals';
 import { recomputeNetWorth } from '../src/systems/city';
 import { playerStrategy } from './proxy';
@@ -74,35 +74,90 @@ describe('holding (çoklu şehir)', () => {
     assert.equal(victoryReached(city), 'tycoon');
   });
 
-  test('bekleyen şehrin kâr eğiliminin yarısı kasaya; kaybedilen şehir ödemiyor', () => {
+  /*
+   * Tur 30: şehirler eşzamanlı yaşıyor. Tur 22'de bekleyen şehir donuktu ve
+   * kasaya ayrıldığın gündeki kâr eğiliminin yarısı akıyordu; şimdi
+   * bekleyen şehir her gün yaşıyor ve o günkü kârının yarısını ödüyor.
+   */
+  test('bekleyen şehir yaşıyor: kârının yarısı kasaya, yarısı şehirde; kaybedilen şehir yaşamıyor', () => {
     const engine = conquered();
-    const trend = cityTrend(engine.getState());
-    assert.ok(trend > 0, `eğilim ${trend}`);
+    assert.ok(cityTrend(engine.getState()) > 0);
     engine.dispatch({ type: 'OPEN_CITY', citySize: 'standard', capital: 8_000_000 });
     const city = engine.getState();
-    assert.equal(city.holding!.dormant[0]!.trend, trend);
-    assert.equal(remoteIncome(city), trend * HOLDING.remoteShare);
-    const before = city.holding!.treasury;
-    runHoldingTick(city);
-    assert.equal(city.holding!.treasury, before + trend * HOLDING.remoteShare);
-    city.holding!.dormant[0]!.state.gameOver = { day: 1, byCompanyId: 'nova_holding' };
+    const away = city.holding!.dormant[0]!;
+    const day = away.state.time.day;
+    const treasury = city.holding!.treasury;
+    const imported = away.state.importedCapital ?? 0;
+    engine.runDay();
+    assert.equal(away.state.time.day, day + 1, 'bekleyen şehrin takvimi de ilerledi');
+    const profit = player(away.state).today.profit;
+    assert.ok(profit > 0, `kâr ${profit}`);
+    assert.equal(away.lastDividend, profit * HOLDING.remoteShare);
+    assert.equal(city.holding!.treasury, treasury + profit * HOLDING.remoteShare);
+    assert.equal(remoteIncome(city), away.lastDividend);
+    assert.equal(away.state.importedCapital, imported - away.lastDividend!, 'kasaya çıkan şehirden çıkmış sayılıyor');
+
+    away.state.gameOver = { day: away.state.time.day, byCompanyId: 'nova_holding' };
+    const lostDay = away.state.time.day;
+    engine.runDay();
+    assert.equal(away.state.time.day, lostDay, 'kaybedilen şehir yaşamıyor');
+    assert.equal(away.lastDividend, 0);
     assert.equal(remoteIncome(city), 0);
   });
 
-  test('şehir değişince bekleyenin takvimi duruyor, geri dönünce kaldığı yerden', () => {
+  test('şehirler aynı takvimle ilerliyor; geri dönünce öbürü de o kadar yaşamış', () => {
     const engine = conquered();
     const foundingDay = engine.getState().time.day;
     engine.dispatch({ type: 'OPEN_CITY', citySize: 'standard', capital: 8_000_000 });
     for (let day = 0; day < 15; day++) engine.runDay();
-    assert.equal(engine.getState().holding!.dormant[0]!.state.time.day, foundingDay);
+    assert.equal(engine.getState().holding!.dormant[0]!.state.time.day, foundingDay + 15);
     assert.ok(engine.getState().holding!.treasury > 0);
     const switched = engine.dispatch({ type: 'SWITCH_CITY', index: 0 });
     assert.ok(switched.ok, switched.reason);
     const back = engine.getState();
-    assert.equal(back.time.day, foundingDay);
+    assert.equal(back.time.day, foundingDay + 15);
     assert.equal(back.holding!.dormant.length, 1);
     assert.equal(back.holding!.dormant[0]!.state.time.day, 15);
     assert.ok(back.holding!.treasury > 0, 'kasa şehirle birlikte dolaşıyor');
+  });
+
+  test('uzaktaki şehrin rakipleri kurmaya devam ediyor', () => {
+    const engine = conquered();
+    engine.dispatch({ type: 'OPEN_CITY', citySize: 'standard', capital: 8_000_000 });
+    const away = engine.getState().holding!.dormant[0]!.state;
+    const rivalBuildings = () => Object.values(away.buildings).filter((b) => b.companyId !== away.playerCompanyId).length;
+    const before = rivalBuildings();
+    for (let day = 0; day < 60; day++) engine.runDay();
+    assert.ok(rivalBuildings() > before, `${before} → ${rivalBuildings()}`);
+  });
+
+  test("uzak şehirde baskın %25'i geçince oynanan şehre bir kez haber düşüyor", () => {
+    const engine = conquered();
+    engine.dispatch({ type: 'OPEN_CITY', citySize: 'standard', capital: 8_000_000 });
+    const city = engine.getState();
+    const away = city.holding!.dormant[0]!.state;
+    const raider = Object.values(away.companies).find((c) => !c.isPlayer)!;
+    raider.shares[away.playerCompanyId] = 2_700;
+    const count = () => city.news.filter((n) => n.title.includes(raider.name) && n.title.includes('%27')).length;
+    engine.runDay();
+    assert.equal(count(), 1, city.news.slice(0, 3).map((n) => n.title).join(' | '));
+    engine.runDay();
+    assert.equal(count(), 1, 'aynı eşik ikinci kez haber değil');
+  });
+
+  test('uzak şehirde sendika talebine yerel müdür uzlaşmayla cevap veriyor', () => {
+    const engine = conquered();
+    engine.dispatch({ type: 'OPEN_CITY', citySize: 'standard', capital: 8_000_000 });
+    const away = engine.getState().holding!.dormant[0]!.state;
+    const day = away.time.day;
+    const labor = player(away).labor ?? { policy: 'market' as const, pressure: 0, agreement: 1 };
+    // Masada süresi dolmamış bir talep: oyuncu uzakta, cevabı müdür veriyor.
+    player(away).labor = { ...labor, pressure: 1, demand: { raise: 0.06, offeredDay: day, deadlineDay: day + 10 } };
+    engine.runDay();
+    const now = player(away).labor!;
+    assert.equal(now.demand, undefined, JSON.stringify(now));
+    assert.equal(now.lastResponse?.kind, 'compromise');
+    assert.equal(now.strike, undefined);
   });
 
   test('kasa ile şehir arasında aktarım zafer ölçüsünü düzeltiyor', () => {

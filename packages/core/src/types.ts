@@ -609,10 +609,17 @@ export interface GameState {
 
 /** Oynanmayan, bekleyen bir şehir. */
 export interface DormantCity {
-  /** Şehrin ayrıldığın gündeki tam durumu; kendi `holding` alanı yok. */
+  /**
+   * Şehrin tam durumu; kendi `holding` alanı yok. Tur 30'dan beri yaşıyor:
+   * oynanan şehirle aynı gün ilerliyor.
+   */
   state: GameState;
-  /** Ayrıldığın gündeki günlük kâr eğilimi (oyuncunun bina kâr ortalamaları). */
+  /** Günlük kâr eğilimi (oyuncunun bina kâr ortalamaları); her gün güncel. */
   trend: number;
+  /** Dünkü kâr payı: şehrin kasasından holding kasasına (Tur 30). */
+  lastDividend?: number;
+  /** Baskın uyarısının son eşiği (0..3); oynanan şehre haber bir kez düşsün. */
+  raidStage?: number;
 }
 
 export interface HoldingState {

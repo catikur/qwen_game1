@@ -1,26 +1,39 @@
 import { CITY_NAMES, CONSUMER_CATEGORIES, HOLDING } from '@capital/content';
 import type { CitySizeId } from '@capital/content';
+import { simulateCityDay } from './day';
 import { tc } from './i18n';
 import { pushNews } from './news';
 import { formatMoney } from './selectors';
 import { recomputeNetWorth } from './systems/city';
+import { sharesHeld, sharesOutstanding } from './systems/equity';
+import { runGoalTick } from './systems/goals';
+import { respondUnion } from './systems/labor';
 import { createNewGame } from './worldgen';
 import type { CommandResult, DormantCity, GameState, HoldingState } from './types';
 
 /**
  * Holding: birden çok şehir (Tur 22).
  *
- * MODEL: SimCity'nin bölge oyunu. Aynı anda bir şehir oynanıyor; diğerleri
- * BEKLİYOR — takvimleri, rakipleri ve şehir gelişimi donuk. Böylece her
- * şehir tam bir simülasyon olarak kalıyor ve hiçbir sistem "hangi şehir"
- * sorusunu bilmek zorunda değil: oynanan şehrin durumu motorun tek
- * durumu, bekleyenler onun `holding` alanında.
+ * MODEL: Aynı anda bir şehir OYNANIYOR; oynanan şehrin durumu motorun tek
+ * durumu, öbürleri onun `holding` alanında. Hiçbir sistem "hangi şehir"
+ * sorusunu bilmek zorunda değil: her şehir tam bir simülasyon.
  *
- * Bekleyen şehrin kârı durmuyor: ayrıldığın gündeki kâr eğiliminin yarısı
- * her gün holding KASASINA akıyor. Kasa ayrı, çünkü bu para doğrudan
+ * ŞEHİRLER EŞZAMANLI YAŞIYOR (Tur 30). Tur 22'de bekleyen şehir donuktu
+ * (takvimi, rakipleri ve gelişimi dururdu) ve kasaya ayrıldığın gündeki kâr
+ * eğiliminin yarısı akıyordu — hiç değişmeyen, hiç risk taşımayan bir
+ * gelir. Artık her gün oynanan şehirle birlikte bekleyenler de bir gün
+ * yaşıyor (`simulateCityDay`): mağazaları satıyor, rakipleri kuruyor ve
+ * baskın yapıyor, şehir büyüyor. Oyuncunun yerine yerel müdür yalnızca
+ * sendikaya uzlaşmayla cevap veriyor; yeni yatırım ve savunma oyuncunun
+ * işi. Baskın %25 ve %40'ı geçince, şehir kaybedilince ya da zafere
+ * ulaşınca haber oynanan şehre düşüyor.
+ *
+ * Kâr payı: bekleyen şehrin o günkü kârının yarısı holding KASASINA
+ * aktarılıyor, yarısı şehirde kalıyor. Kasa ayrı, çünkü bu para doğrudan
  * oynanan şehrin kasasına aksaydı şehrin zaferi hiçbir şey yapmadan
  * gelirdi. Kasadan şehre aktarılan sermaye o şehrin zafer hedefine
- * ekleniyor (`importedCapital`): zafer şehirde yaratılan değerle ölçülüyor.
+ * ekleniyor (`importedCapital`), şehirden kasaya çıkan düşülüyor: zafer
+ * şehirde yaratılan değerle ölçülüyor.
  *
  * Yeni şehir zafer kazanılan şehirden açılıyor; sermaye o şehrin
  * kasasından taşınıyor, marka bilinirliğinin yarısı da. Rakip kadrosu
@@ -44,14 +57,36 @@ export function cityTrend(state: GameState): number {
   return total;
 }
 
-/** Bekleyen şehirlerden holding kasasına bugün akan para. */
+/** Bir şehrin bugünkü kâr payı; Tur 30 öncesi kayıtta henüz yaşamamış şehir için eğilimden. */
+export function cityDividend(city: DormantCity): number {
+  if (city.state.gameOver) return 0;
+  return city.lastDividend ?? Math.max(0, city.trend) * HOLDING.remoteShare;
+}
+
+/** Bekleyen şehirlerden holding kasasına dün akan para. */
 export function remoteIncome(state: GameState): number {
   let total = 0;
-  for (const city of state.holding?.dormant ?? []) {
-    if (city.state.gameOver) continue;
-    total += Math.max(0, city.trend) * HOLDING.remoteShare;
-  }
+  for (const city of state.holding?.dormant ?? []) total += cityDividend(city);
   return total;
+}
+
+/** Oyuncunun hissesinde en büyük dış pay ve baskın eşiği (0: yok, 1: %10, 2: %25, 3: %40). */
+export function raidStatus(state: GameState): { stage: number; fraction: number; holderId: string | null } {
+  const player = state.companies[state.playerCompanyId];
+  if (!player) return { stage: 0, fraction: 0, holderId: null };
+  let holderId: string | null = null;
+  let top = 0;
+  for (const company of Object.values(state.companies)) {
+    if (company.isPlayer) continue;
+    const count = sharesHeld(state, company.id, player.id);
+    if (count > top) {
+      top = count;
+      holderId = company.id;
+    }
+  }
+  const fraction = top / sharesOutstanding(state, player.id);
+  const stage = fraction >= 0.4 ? 3 : fraction >= 0.25 ? 2 : fraction >= 0.1 ? 1 : 0;
+  return { stage, fraction, holderId };
 }
 
 /** Holding'in toplam değeri: oynanan şehir + bekleyenler + kasa. */
@@ -106,12 +141,17 @@ export function carriedBrand(state: GameState): number {
   return average * HOLDING.brandCarry;
 }
 
-/** Bu şehri bekleyen hâle getirir: hızı durur, `holding` alanı onu taşıyan şehre geçer. */
+/**
+ * Bu şehri uzaktan yönetilen hâle getirir: hızı durur (günü artık holding
+ * işletiyor), `holding` alanı onu taşıyan şehre geçer. Baskın eşiği
+ * sessizce kaydediliyor: ayrılır ayrılmaz bilinen bir baskın yeniden
+ * haber olmasın.
+ */
 function toDormant(state: GameState): DormantCity {
   const trend = cityTrend(state);
-  const frozen: GameState = { ...state, time: { ...state.time, speed: 0 } };
-  delete frozen.holding;
-  return { state: frozen, trend };
+  const away: GameState = { ...state, time: { ...state.time, speed: 0 } };
+  delete away.holding;
+  return { state: away, trend, raidStage: raidStatus(away).stage };
 }
 
 export function openCity(
@@ -209,8 +249,67 @@ export function holdingTransfer(state: GameState, amount: number): CommandResult
   return { ok: true };
 }
 
-/** Günlük: bekleyen şehirlerin kâr payı holding kasasına. */
+/**
+ * Günlük: bekleyen şehirler de bir gün yaşıyor (Tur 30).
+ *
+ * Sıra her şehir için aynı: şehrin günü, yerel müdürün sendika cevabı,
+ * kâr payı, net değer, hedefler. Kaybedilen şehir yaşamıyor ve ödemiyor.
+ */
 export function runHoldingTick(state: GameState): void {
-  if (!state.holding) return;
-  state.holding.treasury += remoteIncome(state);
+  const holding = state.holding;
+  if (!holding) return;
+  for (const city of holding.dormant) liveAway(state, holding, city);
+}
+
+function liveAway(active: GameState, holding: HoldingState, city: DormantCity): void {
+  const s = city.state;
+  if (s.gameOver) {
+    city.lastDividend = 0;
+    return;
+  }
+  const name = s.cityName ?? '';
+  const wonBefore = Boolean(s.victory);
+
+  simulateCityDay(s);
+
+  const player = s.companies[s.playerCompanyId];
+  // Yerel müdür: sendika talebine uzlaşma (oyuncu uzaktayken grev çıkmasın).
+  if (player?.labor?.demand && !s.gameOver) respondUnion(s, s.playerCompanyId, 'compromise');
+
+  // Kâr payı: bugünkü kârın yarısı kasaya, şehirden çıkan sermaye sayılıyor.
+  let dividend = 0;
+  if (player && !s.gameOver && player.today.profit > 0) {
+    dividend = Math.min(Math.max(0, player.cash), player.today.profit * HOLDING.remoteShare);
+    player.cash -= dividend;
+    s.importedCapital = (s.importedCapital ?? 0) - dividend;
+    holding.treasury += dividend;
+  }
+  city.lastDividend = dividend;
+
+  recomputeNetWorth(s);
+  runGoalTick(s);
+  city.trend = cityTrend(s);
+
+  // Haberler oynanan şehre: uzaktaki şehrin haber akışını kimse okumuyor.
+  // (`gameOver` gün içinde dolabiliyor; derleyicinin yukarıdaki daraltması geçersiz.)
+  const lost = s.gameOver as GameState['gameOver'];
+  if (lost) {
+    const by = s.companies[lost.byCompanyId]?.name ?? '';
+    pushNews(active, 'bad', tc('core.holding.remoteLostTitle', { city: name, name: by }), tc('core.holding.remoteLostBody', { city: name }));
+    return;
+  }
+  const raid = raidStatus(s);
+  const raider = raid.holderId ? s.companies[raid.holderId] : undefined;
+  if (raid.stage > (city.raidStage ?? 0) && raid.stage >= 2 && raider) {
+    pushNews(
+      active,
+      'bad',
+      tc('core.holding.remoteRaidTitle', { city: name, name: raider.name, percent: Math.round(raid.fraction * 100) }),
+      tc('core.holding.remoteRaidBody', { city: name }),
+    );
+  }
+  city.raidStage = raid.stage;
+  if (!wonBefore && s.victory) {
+    pushNews(active, 'good', tc('core.holding.remoteVictoryTitle', { city: name }), tc('core.holding.remoteVictoryBody', { city: name }));
+  }
 }
