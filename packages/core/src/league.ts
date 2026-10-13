@@ -190,11 +190,13 @@ export function simFingerprint(): string {
   return fingerprint;
 }
 
-/** Önbelleksiz hesap (test: dil değişince iz aynı kalmalı). */
-export function computeSimFingerprint(): string {
-  const engine = new GameEngine(createNewGame({ seed: 20_261_013, companyName: 'Parmak İzi', league: { weekId: '2000-W01' } }));
-  for (let day = 0; day < 60; day++) engine.runDay();
-  const state = engine.getState();
+const FINGERPRINT_DAYS = 60;
+
+function fingerprintWorld(): GameEngine {
+  return new GameEngine(createNewGame({ seed: 20_261_013, companyName: 'Parmak İzi', league: { weekId: '2000-W01' } }));
+}
+
+function fingerprintOf(state: GameState): string {
   const parts: string[] = [String(state.time.day), String(state.rng.s)];
   for (const id of Object.keys(state.companies).sort()) {
     const c = state.companies[id]!;
@@ -206,6 +208,28 @@ export function computeSimFingerprint(): string {
   }
   for (const id of Object.keys(state.market.spot).sort()) parts.push(`${id}=${state.market.spot[id]!.toFixed(6)}`);
   return fnv(parts.join('|'));
+}
+
+/** Önbelleksiz hesap (test: dil değişince iz aynı kalmalı). */
+export function computeSimFingerprint(): string {
+  const engine = fingerprintWorld();
+  for (let day = 0; day < FINGERPRINT_DAYS; day++) engine.runDay();
+  return fingerprintOf(engine.getState());
+}
+
+/**
+ * Aynı iz, tarayıcıda parça parça: 10 günde bir kontrolü bırakıyor, tablo
+ * açılırken arayüz donmuyor. Sonuç `simFingerprint` ile paylaşılıyor.
+ */
+export async function simFingerprintAsync(yieldEvery = 10): Promise<string> {
+  if (fingerprint) return fingerprint;
+  const engine = fingerprintWorld();
+  for (let day = 1; day <= FINGERPRINT_DAYS; day++) {
+    engine.runDay();
+    if (day % yieldEvery === 0) await new Promise((resolve) => setTimeout(resolve, 0));
+  }
+  fingerprint ??= fingerprintOf(engine.getState());
+  return fingerprint;
 }
 
 /** 64 bitlik FNV-1a benzeri özet (iki 32 bitlik koldan), onaltılık. */

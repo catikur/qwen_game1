@@ -203,6 +203,23 @@ describe('lig güvenliği', () => {
     assert.ok(['malformed', 'tooLarge'].includes(kind(flood)));
   });
 
+  test('bilinen sınır: adı değiştirilmiş kopya da doğrulanıyor, sıralama onu "aynı koşu" diye ayırıyor', async () => {
+    // Şirket adı simülasyonu değiştirmiyor: kopyacı başkasının kodunu kendi
+    // adıyla yazabilir. Sunucusuz tabloda önlenemiyor; görünür kılınıyor.
+    const run = honest();
+    const copy = edited((r) => (r.companyName = 'Kopya AŞ'));
+    const verdict = await verifyRun(copy, { weekId: run.weekId, score: run.score, companyName: 'Kopya AŞ', ceoId: run.ceoId });
+    assert.equal(verdict.status, 'ok');
+    const original = await verifyRun(encodeRun(run));
+    const rows = [
+      { id: 'asıl', submittedAt: '2026-10-05T10:00:00Z', v: original },
+      { id: 'kopya', submittedAt: '2026-10-05T11:00:00Z', v: verdict },
+    ];
+    const standing = rankLeague(rows, (row) => row.v);
+    assert.deepEqual(standing.ranked.map((r) => r.entry.id), ['asıl']);
+    assert.deepEqual(standing.copies.map((c) => c.entry.id), ['kopya']);
+  });
+
   test('sıralama yalnızca doğrulanmış koşular ve tekrarın skoruyla; kopya bir kez sayılıyor', () => {
     const ok = (score: number, curve: number[], idle = false): RunVerdict => ({ status: 'ok', score, curve, companyName: 'A', ceoId: null, idle });
     const rows = [

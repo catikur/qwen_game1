@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useSyncExternalStore } from 'react';
-import { fnv, rankLeague, simFingerprint, verifyRun } from '@capital/core';
+import { fnv, rankLeague, simFingerprintAsync, verifyRun } from '@capital/core';
 import type { LeagueStanding, RunVerdict } from '@capital/core';
 import type { LeagueEntry } from './useGame';
 
@@ -11,8 +11,10 @@ import type { LeagueEntry } from './useGame';
  * bu yüzden:
  *   - tek tek, beyan edilen skora göre: tablonun tepesi önce oturuyor;
  *   - sonuç önbellekte (yerel depo): bir kod bu tarayıcıda bir kez
- *     doğrulanıyor. Anahtar kod + satırın beyanı + simülasyon izi; oyun
- *     güncellenince eski sonuçlar kendiliğinden geçersiz;
+ *     doğrulanıyor. Anahtar kod + satırın beyanı; her sonuç doğrulandığı
+ *     simülasyonun izini taşıyor ve iz uymayan sonuç okunmuyor — oyun
+ *     güncellenince eski sonuçlar kendiliğinden geçersiz. İz arka planda,
+ *     parça parça hesaplanıyor (ilk çizimi bekletmesin);
  *   - kuyruk yalnızca lig paneli açıkken işliyor: oyun sürerken arka
  *     planda tekrar koşup kare düşürmesin. Gündem çipindeki hayalet
  *     önbellekteki sonuçları okuyor.
@@ -21,7 +23,24 @@ import type { LeagueEntry } from './useGame';
 const STORE_KEY = 'capitalforge.league.verdicts.v1';
 const STORE_MAX = 300;
 
-const verdicts = new Map<string, RunVerdict>();
+interface Cached {
+  sim: string;
+  verdict: RunVerdict;
+}
+
+const verdicts = new Map<string, Cached>();
+let sim: string | null = null;
+let simReady: Promise<string> | null = null;
+
+/** Simülasyon izi: ilk ihtiyaçta arka planda hesaplanıyor, hazır olunca tablo yeniden çiziliyor. */
+function ensureSim(): Promise<string> {
+  simReady ??= simFingerprintAsync().then((value) => {
+    sim = value;
+    notify();
+    return value;
+  });
+  return simReady;
+}
 let loaded = false;
 const listeners = new Set<() => void>();
 let version = 0;
@@ -35,8 +54,8 @@ function load(): void {
   loaded = true;
   try {
     const raw = localStorage.getItem(STORE_KEY);
-    const rows = raw ? (JSON.parse(raw) as Array<[string, RunVerdict]>) : [];
-    for (const [key, verdict] of rows) verdicts.set(key, verdict);
+    const rows = raw ? (JSON.parse(raw) as Array<[string, Cached]>) : [];
+    for (const [key, cached] of rows) if (cached && typeof cached.sim === 'string' && cached.verdict) verdicts.set(key, cached);
   } catch {
     // Depo kapalı ya da bozuk: bu oturumda bellekte.
   }
@@ -56,15 +75,19 @@ function notify(): void {
   listeners.forEach((listener) => listener());
 }
 
-/** Satırın önbellek anahtarı: kod, beyan ve simülasyon izi. */
+/** Satırın önbellek anahtarı: kod ve beyan. */
 function keyOf(entry: LeagueEntry): string {
   const claim = JSON.stringify([entry.weekId, entry.score, entry.companyName, entry.ceoId]);
-  return `${fnv(entry.code)}:${fnv(claim)}:${simFingerprint()}`;
+  return `${fnv(entry.code)}:${fnv(claim)}`;
 }
 
+/** Bu sürümde geçerli sonuç; iz henüz hesaplanmadıysa ya da sonuç eski sürümdense yok. */
 export function verdictFor(entry: LeagueEntry): RunVerdict | undefined {
   load();
-  return verdicts.get(keyOf(entry));
+  void ensureSim();
+  if (!sim) return undefined;
+  const cached = verdicts.get(keyOf(entry));
+  return cached && cached.sim === sim ? cached.verdict : undefined;
 }
 
 /** Doğrulanıyorsa günü, sıradaysa 0, değilse null. */
@@ -79,7 +102,8 @@ function enqueue(entries: readonly LeagueEntry[]): void {
   let added = false;
   for (const entry of entries) {
     const key = keyOf(entry);
-    if (verdicts.has(key) || running?.key === key || queue.some((item) => item.key === key)) continue;
+    const cached = verdicts.get(key);
+    if ((cached && sim && cached.sim === sim) || running?.key === key || queue.some((item) => item.key === key)) continue;
     queue.push({ key, entry });
     added = true;
   }
@@ -94,8 +118,14 @@ async function pump(): Promise<void> {
   if (pumping) return;
   pumping = true;
   try {
+    const current = await ensureSim();
     while (activeViews > 0 && queue.length > 0) {
       const { key, entry } = queue.shift()!;
+      // İz hesaplanmadan sıraya girmiş olabilir: önbellekte bu sürümün sonucu varsa tekrar yok.
+      if (verdicts.get(key)?.sim === current) {
+        notify();
+        continue;
+      }
       running = { key, day: 0 };
       notify();
       const verdict = await verifyRun(
@@ -109,7 +139,7 @@ async function pump(): Promise<void> {
           },
         },
       );
-      verdicts.set(key, verdict);
+      verdicts.set(key, { sim: current, verdict });
       save();
       running = null;
       notify();
