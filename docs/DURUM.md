@@ -4,7 +4,7 @@
 > `pnpm bench` çıktısından; iddialar `pnpm balance` ve `pnpm playtest`
 > tarafından her koşuda doğrulanıyor.
 >
-> Son güncelleme: şema **v6**, 26 tur tamamlandı.
+> Son güncelleme: şema **v6**, 27 tur tamamlandı.
 
 ---
 
@@ -1640,6 +1640,124 @@ kapandıktan sonra.
 Yazılımsal GPU'da iki canlı WebGL bağlamıyla sayfa yenilemek açılışı 20
 saniyenin ötesine itiyordu (Tur 24'ün "Dil" dersinin aynısı).
 
+### Tur 27 — İçerik: sektör olayları ve dört yeni CEO
+
+Kullanıcı sıradaki tur için "içerik ve derinlik"i seçti. Kapsam iki parça:
+yeni olaylar ve dört sektör CEO'su. Yeni bir ürün zinciri bilerek sonraki
+tura kaldı. Raf paylarını ve kalibrasyon bantlarını yeniden oynatırdı; bir
+içerik turunun taşıyacağı yük değil.
+
+**On bir sektör olayı.** Şehrin on bir olayı büyük ekonomik dalgalar:
+resesyon, tüketim patlaması, enerji krizi. Yenileri daha dar: bir
+kategoriye ya da bir bölge türüne dokunan, iki-dört haftalık haberler.
+
+| Olay | Etki | Süre | Ton |
+|---|---|---|---|
+| Kuraklık | buğday ×1,4, sebze ×1,35, un ×1,15, hazır yemek ×1,12 (spot fiyat) | 28 gün | kötü |
+| Silikonda Bolluk | silikon ×0,75, çip ×0,88 (spot fiyat) | 24 gün | iyi |
+| Sağlık Kampanyası | hizmet talebi ×1,2 | 16 gün | iyi |
+| Gişe Rekoru | merkezde hizmet ×1,5, yeme-içme ×1,2 | 14 gün | iyi |
+| Mahalle Pazarı Haftası | orta gelirli konutta market ×1,35, yeme-içme ×1,25 | 12 gün | iyi |
+| Moda Haftası | lüks konutta perakende ×1,45, hizmet ×1,15 | 14 gün | iyi |
+| Gıda Denetimi | yeme-içme ×0,72, market ×1,08 | 14 gün | kötü |
+| Cihaz Geri Çağırma | elektronik ×0,75 | 18 gün | kötü |
+| Sahilde Fırtına | turizm bölgesinde yeme-içme ×0,6, perakende ×0,7, hizmet ×0,8 | 10 gün | kötü |
+| Yol Çalışması | çarşı şeridinde perakende ×0,75, yeme-içme ×0,85, market ×0,9 | 16 gün | kötü |
+| Grip Mevsimi | hizmet ×0,82, yeme-içme ×0,9 | 14 gün | kötü |
+
+Zinciri olan oyuncu spot fiyat olaylarından (kuraklık, silikon) kendi
+maliyetiyle üretip korunuyor; bu, zincirin zaten var olan kuralı.
+
+**İkinci takvim — çünkü birincisi ölçülüyor.** İlk sürüm on olayı şehrin
+listesine ekledi ve altı denge kontrolü düştü: rakiplerin zinciri, haciz,
+kötü günde borçlu şirket, azınlık hissedar ve Dengeli zorlukta baskın
+(iki kontrol). Sebep tek: aynı zar,
+aynı günlük olasılık (%3,5), aynı iki olaylık sınır. Liste ikiye katlanınca
+resesyon ve enerji krizi yarı yarıya seyreldi. Kredi ve baskın kontrollerinin
+ölçtüğü kötü günler kaydı. Tonu yarı yarıya dengelemek (iyi/kötü) sonrasında
+da altı kontrol kırmızıydı; sorun ton değil, krizin sıklığıydı.
+
+Sektör olayları artık kendi takviminde:
+
+- *kendi zarı* (tohum ve günden, şehrinkinden ayrı bir karışımla) — şehrin
+  zarını paylaşsaydı her sektör olayı bir şehir olayının yerini alırdı;
+- *kendi sınırı*: aynı anda en fazla bir sektör olayı, günlük olasılık %2,5;
+- *şehrin sınırı yalnızca şehir olaylarını sayıyor* — sektör olayı açıkken
+  şehrin krizi ertelenseydi kriz takvimi yine kayardı.
+
+Sektör takvimi kapatıldığında dal main'in davranış özetlerini birebir
+veriyor (`standard/5`, `standard/7`, `large/5`). Şehrin kriz takvimi Tur
+27'den önceki takvimin aynısı. 900 günde ortalama 27,5 şehir ve 15,8 sektör
+olayı çıkıyor; günlerin ~%29'unda bir sektör olayı açık.
+
+**Sektör takvimi talepte nötre yakın.** Ayrı takvimle dört kontrol kaldı.
+İlk ayarda takvimin net etkisi olumluydu: Sağlık Kampanyası şehir çapında
+hizmeti ×1,35 ile 21 gün taşıyordu. Kredinin erken avantajı üç tohumda da
+erimez oldu; ihraç kalkanının sınanabildiği tohum üçten bire indi. Kampanya
+×1,2 ve 16 güne indi. Karşısına Grip Mevsimi kondu, günlük olasılık %3'ten
+%2,5'e indi. Ağırlıkta iyi ve kötü yarı yarıya (36'ya 37).
+
+**Dört sektör CEO'su.** Eski altı CEO'dan yalnızca biri (Bakkal Çırağı) bir
+kategoriye bağlıydı. Yeniler Tur 25'te çoğalan kategorilere birer yüz
+veriyor; her birinin bir sektör kalite artısı (+0,10) ve bir bedeli var:
+
+| CEO | Artı | Bedel |
+|---|---|---|
+| Şef | yeme-içme kalitesi, işletme gideri −%5 | arsa +%10 |
+| Moda Tasarımcısı | perakende kalitesi, marka ×1,3 hızlı | inşaat +%8 |
+| Teknoloji Girişimcisi | elektronik kalitesi, başlangıç markası 0,18 | sermaye −%15 |
+| Hekim | hizmet kalitesi, işletme gideri −%6 | marka ×0,8 yavaş |
+
+Vekille ölçüldü (5 günde bir oynayan, seed 1, 7, 42, 720. gün ortalama net
+değer). CEO'suz oyun 148,9 M; eski altının ortalaması 148,3 M (Pazarlamacı
+133,0 – Finansçı 158,0). Yeniler: Şef 155,7 · Teknoloji Girişimcisi 150,0 ·
+Hekim 152,0. Moda Tasarımcısı ilk ayarda (inşaat +%12) 131,5 M ile en
+zayıftı; ceza %8'e inince 139,3 M. Vekil markaya yatırım yapmadığı için
+marka CEO'ları bu ölçümde hep biraz geride; Pazarlamacı da öyle. Kurulum
+ekranı on kartı aynı ızgarada gösteriyor, portreler parametrelerden.
+
+**İhraç kalkanının sonu artık açıkça sınanıyor.** Son ayardan sonra tek bir
+kontrol kırmızıydı: seed 7'de ihraç eden oyuncu da düşüyordu (825 → 885).
+Teşhis:
+
+- Meridyen tek baskıncı. Üç ihraç 671, 727 ve 791. günde yapılıyor;
+  kurucu tabanı (%51) yatırımcıyı %48,8'de bırakıyor.
+- Kalan %51,2 serbest hisseyi tek başına topluyor; 885. günde payı %50,7.
+- Main'de seed 7 bu yüzden değil, iki baskıncı hisseyi bölüştüğü için
+  ayaktaydı (Nova %27 + Meridyen %24, serbest sıfır). Yeni olaylar rakip
+  ekonomisini kaydırınca Meridyen tek kaldı.
+
+Bu, Tur 21'den beri belgede yazan "kalkanın bir sonu var" cümlesinin
+kendisi. Kontrol ise her tehditli tohumda 900. güne kadar ayakta kalmayı
+istiyordu.
+
+18 tohumda ölçüldü (savunmasız düşen oyuncu, ihraçla). Main'de 8/8 ayakta,
+dalda 9/10; düşen yalnızca seed 7. Seed 2, 6 ve 42'de tek baskıncı 900.
+günde %49, %40 ve %47'de. Oradaki "ayakta" ufkun sonu.
+
+Kontrol artık iki şey istiyor:
+
+1. kalkan tehditli tohumların çoğunu ayakta tutuyor (en az iki);
+2. kalkanla düşüş yalnızca belgelenen sondan geçebilir: kurucu tabanına
+   inilmiş, baskıncı serbest hissenin tamamını tek başına toplamış (kontrol
+   dışındaki en büyük pay %2'nin altında) ve düşüş savunmasızdan sonra.
+
+Bölüşülmüş paydan, blok satıştan ya da tabana inmeden gelen bir düşüş
+kontrolü kırıyor. Kalkanın sonunu oyuncu açısından ele almak bir tasarım
+sorusu; §4.6'da açık kalem.
+
+**Testler.** Yeni `events.test.ts` (4 test):
+
+- şehirde aynı anda en fazla iki olay, sektörde en fazla bir;
+- sektör olayları her gün silindiğinde şehir takvimi birebir aynı —
+  sınırı bütün olaylara saydıran mutasyon bu testi kırıyor;
+- her sektör olayı sekiz tohumda en az bir kez çıkıyor;
+- aynı olay üst üste binmiyor.
+
+Sözlük testi iki listeyi de tarıyor (`ALL_EVENTS`); bütün yeni olay ve
+CEO metinlerinin İngilizcesi var. Oynanış testi kurulum ekranında on CEO
+kartı ve on portre bekliyor.
+
 ---
 
 ## 3. Ölçülen durum
@@ -1721,11 +1839,11 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi) |
-| Birim testi | **177 test** (`pnpm test`; Tur 24'te render paketi de) |
+| Birim testi | **181 test** (`pnpm test`; Tur 24'te render paketi de) |
 | Denge testi | **283 kontrol, hepsi geçiyor** (20 bölüm, süreleriyle; ~10 dk) |
 | Tarayıcı testi | **321 kontrol, hepsi geçiyor**, 0 konsol hatası (~20 dk); duman koşusu 94 (~4 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + duman oynanışı |
-| Kapsam | 33 bina · 22 ürün · 7 kategori · 8 rakip profili · 10 şehir yapısı (6 siluet) |
+| Kapsam | 33 bina · 22 ürün · 7 kategori · 8 rakip profili · 10 CEO · 22 olay (11 şehir + 11 sektör) · 10 şehir yapısı (6 siluet) |
 
 ### Render (Tur 6 sonrası)
 
@@ -1841,6 +1959,17 @@ Tur 22 bölümü).
   yapıyı yıktırır). Şirket binası olan parsel ihaleye çıkmıyor.
 - ~~Oyuncunun rakip hissesi alımında günlük tavan yok~~ — Tur 20'de
   kapandı: herkes için aynı günlük tavan ve günlere yayılan devralma emri.
+- **İhraç kalkanının sonu (Tur 27).** Kurucu tabanına inmiş oyuncuyu,
+  serbest hissenin tamamını tek başına toplayan nakitli bir baskıncı yine
+  düşürüyor (seed 7, 885. gün; 18 tohumda ihraç eden on oyuncudan biri).
+  Belgeli bir son, ama oyuncunun o noktada savunma hamlesi kalmıyor: ihraçtan
+  sonra geri alım önce yatırımcı payını geri alıyor, serbest hisseyi
+  azaltmıyor. Elde yalnızca karşı baskın (baskıncının hissesini toplamak)
+  var. Seçenekler:
+  (a) serbest hisse azaldıkça alım fiyatına kıtlık primi;
+  (b) geri alımın serbest hisseden yapılması (kalkanı fiilen kalıcı yapar);
+  (c) kuralı bırakıp borsa panelinde "kalkanın sonu"nu açıkça söylemek.
+  Üçü de rakipler arası devralmaları değiştiriyor; bu bir tasarım kararı.
 
 ### 4.7 ~~Şehrin oyuncuyu içine alması~~ — Tur 9'da başladı, Tur 21'de kapandı
 

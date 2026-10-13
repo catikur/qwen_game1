@@ -141,7 +141,7 @@ function scheduleCityEvent(state: GameState): void {
 
 /** Sektör takviminde aynı anda en fazla bu kadar olay. */
 const SECTOR_MAX_CONCURRENT = 1;
-/** Sektör olayının günlük olasılığı (ortalama ~15 gün sürüyor; 900 günde ~14 olay). */
+/** Sektör olayının günlük olasılığı (ortalama ~15 gün sürüyor; 900 günde ~16 olay, günlerin ~%29unda biri açık). */
 const SECTOR_DAILY_CHANCE = 0.025;
 
 /**
