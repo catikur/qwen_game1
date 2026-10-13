@@ -1629,7 +1629,14 @@ başlangıç betiği bu işareti koyuyor; kurulumda seçeneğin kapalı geldiği
 ayrıca sınanıyor. Yoksa her bağlamda kart açılır, oyun durur ve
 bölümlerin ölçtüğü şey değişirdi.
 
-Yenileme kontrolü bilerek geç bölümde, ana sayfa kapandıktan sonra.
+Tam koşu yeni bir ürün hatası da yakaladı: Yardım'dan yeniden başlatılan
+rehber karşılamada zamanı durdurmuyordu. "Bir kez durdur" işareti oyun
+başına tutuluyordu; artık rehberin her başlatılışına bağlı.
+
+Masaüstü yürüyüşü en başta, ana sayfa açılmadan koşuyor. CI'da ikinci
+bağlamda "Şirketi kur" tıklaması zaman aşımına düşmüştü; yerelde
+geçiyordu. Yenileme kontrolü de bilerek geç bölümde, ana sayfa
+kapandıktan sonra.
 Yazılımsal GPU'da iki canlı WebGL bağlamıyla sayfa yenilemek açılışı 20
 saniyenin ötesine itiyordu (Tur 24'ün "Dil" dersinin aynısı).
 
@@ -1716,7 +1723,7 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi) |
 | Birim testi | **177 test** (`pnpm test`; Tur 24'te render paketi de) |
 | Denge testi | **283 kontrol, hepsi geçiyor** (20 bölüm, süreleriyle; ~10 dk) |
-| Tarayıcı testi | **300 kontrol, hepsi geçiyor**, 0 konsol hatası (~15 dk); duman koşusu 83 (~3,5 dk) |
+| Tarayıcı testi | **321 kontrol, hepsi geçiyor**, 0 konsol hatası (~20 dk); duman koşusu 94 (~4 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + duman oynanışı |
 | Kapsam | 33 bina · 22 ürün · 7 kategori · 8 rakip profili · 10 şehir yapısı (6 siluet) |
 
