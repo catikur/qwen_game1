@@ -271,12 +271,20 @@ function EstimateLine({
   // ikinci sırada duruyor çünkü paranın ne zaman döneceği hâlâ önemli —
   // ama parsel kıtken belirleyici olan soru bu değil.
   const good = estimate.dailyProfit > 0;
+  // Kendi şubelerinden alınan kâr tahminden düşülüyor (Tur 25); oyuncu
+  // "neden bu kadar az?" diye sormasın, söyleyelim. Küçük tutarlar gürültü.
+  const cannibalized = Math.round(estimate.cannibalized);
   return (
     <span className={`estimate ${good ? 'ok' : 'weak'}`}>
       {t('panels.estimate.directProfit', { profit: formatMoney(estimate.dailyProfit) })}{' '}
       {Number.isFinite(estimate.paybackDays)
         ? t('panels.estimate.payback', { days: Math.round(estimate.paybackDays) })
         : t('panels.estimate.loss')}
+      {cannibalized >= 50 ? (
+        <span className="cannibal" data-cannibalized={cannibalized}>
+          {t('panels.estimate.cannibalized', { amount: formatMoney(cannibalized) })}
+        </span>
+      ) : null}
     </span>
   );
 }

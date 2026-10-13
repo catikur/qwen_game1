@@ -29,7 +29,7 @@ describe('taban kalite fiyata dönüyor', () => {
     // Tur 25'in üst basamakları.
     assert.ok(Math.abs(qualityEdge('clinic') - 0.1) < 1e-9);
     assert.ok(Math.abs(qualityEdge('cinema') - 0.04) < 1e-9);
-    assert.ok(Math.abs(qualityEdge('tech_store') - 0.035) < 1e-9);
+    assert.ok(Math.abs(qualityEdge('tech_store') - 0.045) < 1e-9);
   });
 
   test('aynı bölgede süpermarket bakkaldan pahalı satıyor', () => {

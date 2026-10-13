@@ -242,6 +242,34 @@ export function sellShares(
 }
 
 /**
+ * Blok satış: bir hissedar payının bir kısmını doğrudan başka birine satar.
+ *
+ * Serbest dolaşım değişmez (hisse bir cüzdandan ötekine geçiyor); fiyat
+ * piyasa fiyatı. Kilitlenen baskın yarışını çözmek için var (npc.ts).
+ */
+export function blockTrade(
+  state: GameState,
+  buyerId: string,
+  sellerId: string,
+  issuerId: string,
+  count: number,
+): boolean {
+  const buyer = state.companies[buyerId];
+  const seller = state.companies[sellerId];
+  const wanted = Math.floor(count);
+  if (!buyer || !seller || wanted <= 0 || wanted > (seller.shares[issuerId] ?? 0)) return false;
+  const cost = wanted * sharePrice(state, issuerId);
+  if (cost > buyer.cash) return false;
+
+  buyer.cash -= cost;
+  seller.cash += cost;
+  buyer.shares[issuerId] = (buyer.shares[issuerId] ?? 0) + wanted;
+  seller.shares[issuerId] = seller.shares[issuerId]! - wanted;
+  if (seller.shares[issuerId] === 0) delete seller.shares[issuerId];
+  return true;
+}
+
+/**
  * Bir şirketin kontrolü kimde? Eşiği geçen yoksa null.
  *
  * Tek eşik, tek sonuç. Kademeli kontrol (%25 blokaj, %50 kontrol, %75

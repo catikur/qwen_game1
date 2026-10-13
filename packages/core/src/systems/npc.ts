@@ -16,7 +16,7 @@ import { rivalProfiles } from '../profiles';
 import { nextFloat } from '../rng';
 import { estimateInvestment } from './market';
 import { isDistrictOpen, tilePrice } from './city';
-import { buyShares, freeFloat, sharePrice, sharesHeld, sharesOutstanding, TOTAL_SHARES } from './equity';
+import { blockTrade, buyShares, freeFloat, sharePrice, sharesHeld, sharesOutstanding, TOTAL_SHARES } from './equity';
 import { npcBorrow } from './credit';
 import { npcDefensiveIssue, npcIssue } from './issuance';
 import type { BuildingInstance, CompanyState, GameState } from '../types';
@@ -310,17 +310,27 @@ function findOpportunities(state: GameState, profile: NpcProfileDef): Opportunit
   return opportunities;
 }
 
-/** Bütçeye ve kilide uyan, kapasitesi en yüksek binayı seçer. */
+/**
+ * Bütçeye ve kilide uyan, kârlılık kapısından geçen en büyük bina.
+ *
+ * GERİ DÖNÜŞLÜ (Tur 25). Eskiden yalnızca kapasitesi en yüksek aday
+ * soruluyordu; kapıdan dönerse kategori bütünüyle atlanıyordu. Tahmin
+ * kendi şubelerinden çalınan satışı düşmeye başlayınca bu bir kör nokta
+ * oldu: rakibin üçüncü süpermarketi kendi iki süpermarketini yediği için
+ * kapıdan dönüyor, ama aynı bölgeye bir bakkal hâlâ kâr ediyordu — rakip
+ * onu hiç sormuyor ve nakdi boşta biriktiriyordu (bir tohumda 900. günde
+ * net değerin %60'ı nakit). Sıra aynı (büyükten küçüğe), yalnızca ilk
+ * geçen seçiliyor; erken oyunda en büyük zaten geçtiği için davranış
+ * birebir eskisi.
+ */
 function chooseBuilding(
   state: GameState,
-  companyId: string,
+  company: CompanyState,
+  districtId: number,
   category: CategoryId,
   budget: number,
   wantRental: boolean,
 ): BuildingDef | null {
-  const company = state.companies[companyId];
-  if (!company) return null;
-
   const candidates = BUILDINGS.filter((def) => {
     if (wantRental ? def.role !== 'rental' : def.role !== 'outlet') return false;
     if (!wantRental && def.category !== category) return false;
@@ -328,10 +338,15 @@ function chooseBuilding(
     if (company.netWorth < def.unlockNetWorth) return false;
     return true;
   });
-
-  if (candidates.length === 0) return null;
   candidates.sort((a, b) => b.capacity - a.capacity);
-  return candidates[0]!;
+
+  for (const def of candidates) {
+    if (recentlyPruned(state, company, districtId, def.id)) continue;
+    // Kârlılık kapısı: oyuncuya gösterilen tahminin aynısı.
+    const estimate = estimateInvestment(state, districtId, def.id, company.id);
+    if (estimate && estimate.paybackDays <= MAX_PAYBACK_DAYS) return def;
+  }
+  return null;
 }
 
 /**
@@ -397,7 +412,7 @@ const PRUNE_MIN_AGE_DAYS = 120;
 const PRUNE_LOSS_FLOOR = 0.05;
 export const PRUNE_MEMORY_DAYS = 180;
 
-function isPrunable(state: GameState, building: BuildingInstance): boolean {
+export function isPrunable(state: GameState, building: BuildingInstance): boolean {
   const def = BUILDING_BY_ID[building.defId];
   if (!def || (def.role !== 'outlet' && def.role !== 'rental')) return false;
   if (state.time.day - building.builtDay < PRUNE_MIN_AGE_DAYS) return false;
@@ -517,13 +532,41 @@ function actFor(state: GameState, profile: NpcProfileDef): void {
    */
   const tempo = state.rivalTempo ?? 1;
   let built = 0;
-  for (let round = 0; round < tempo; round++) {
+  for (let round = 0; round < Math.max(tempo, idleCash(company) ? 2 : 1); round++) {
     if (!buildOnce(state, profile, round === 0 ? budget : company.cash * Math.min(1, nerve), isLandlord)) break;
     built++;
   }
   // Ölçek kapısını geçemeyen kol, kârlı genişleme de bulunamadıysa yine
   // de denenir: büyüme tıkandığında verimliliğe dönmek doğru hamle.
   if (built === 0) tryArmMove(state, profile, true);
+}
+
+/**
+ * Boşta nakit eşiği: nakdi net değerinin bu payını aşan rakip karar
+ * gününde ikinci bir mağaza dener (Tur 25).
+ *
+ * Yatırım tahmini kendi şubelerinden çalınan satışı düşmeye başlayınca
+ * rakip yamyam mağazayı reddetti ama haftada tek karar temposu yerinde
+ * kaldı: reddedilen yatırımın parası boşta birikti (bir tohumda 800.
+ * günde net değerin %47'si nakit). Aynı tahminle oyuncu ise %50 hızlı
+ * büyüdü ve zorluk eğrisi kaydı — 15 günde bir oynayan savunmasız oyuncu
+ * Dengeli'de artık düşmüyordu (tohum 7/42/5/31'in dördünde de ayakta,
+ * 112-133 M ₺).
+ *
+ * Eşik taraması (denge bölümleri; sistem kaotik, eşik tek tek tohumları
+ * oynatıyor — o yüzden kayıt tam):
+ *   %30  yavaş oyuncu düşüyor · zincir 2/3 tohumda önde
+ *   %35  yavaş oyuncu Dengeli 761 / Acımasız 447 · zincir 3/3 · kredi eriyor
+ *   %40  zincir 3/3 · kredinin avantajı bir tohumda erimiyor (%26 → %15)
+ *   %45  savunmasız yavaş oyuncu dört tohumda da ayakta (kalkan ölçülemez)
+ *   %50  kredi bir tohumda erimiyor (%29 → %21)
+ * Erken oyunda rakip nakit sıkıntısında olduğundan kural uyumuyor;
+ * davranış oradan değişmiyor.
+ */
+const IDLE_CASH_SHARE = 0.35;
+
+function idleCash(company: CompanyState): boolean {
+  return company.netWorth > 0 && company.cash > IDLE_CASH_SHARE * company.netWorth;
 }
 
 /** Bir mağaza kurma denemesi; kurduysa true. */
@@ -533,13 +576,8 @@ function buildOnce(state: GameState, profile: NpcProfileDef, budget: number, isL
   const opportunities = findOpportunities(state, profile);
 
   for (const opportunity of opportunities.slice(0, 6)) {
-    const def = chooseBuilding(state, profile.id, opportunity.category, budget, isLandlord);
+    const def = chooseBuilding(state, company, opportunity.districtId, opportunity.category, budget, isLandlord);
     if (!def) continue;
-    if (recentlyPruned(state, company, opportunity.districtId, def.id)) continue;
-
-    // Kârlılık kapısı: oyuncuya gösterilen tahminin aynısı.
-    const estimate = estimateInvestment(state, opportunity.districtId, def.id, profile.id);
-    if (!estimate || estimate.paybackDays > MAX_PAYBACK_DAYS) continue;
 
     const spot = findTile(state, opportunity.districtId, budget - def.cost, isLandlord);
     if (!spot) continue;
@@ -637,6 +675,8 @@ function tryRaidMove(state: GameState, profile: NpcProfileDef): void {
    */
   if (nextFloat(state.rng) > profile.aggression * 0.12) return;
 
+  if (resolveStalemate(state, raider, budget, difficulty.raidDailyCap)) return;
+
   // Hedef: kendinden küçükler. Elinde payı olduğu varsa önce o.
   const candidates = Object.values(state.companies).filter(
     (c) =>
@@ -673,6 +713,52 @@ function tryRaidMove(state: GameState, profile: NpcProfileDef): void {
   if (wanted <= 0) return;
 
   buyShares(state, raider.id, target.id, wanted);
+}
+
+/**
+ * KİLİTLENEN YARIŞ ÇÖZÜLÜYOR (Tur 25).
+ *
+ * Birden çok baskıncı aynı hedefin serbest hissesini bitirip hiçbiri %50'yi
+ * geçemezse yarış sonsuza dek kilitleniyordu: tohum 41'de Meridyen %48,
+ * Nova %39, Veri %14 — serbest hisse sıfır, 450. günden 900. güne hiçbir şey
+ * değişmedi. Oyuncu hedefse bu bir "zombi oyun": kaybetmiş ama bitmemiş.
+ * Kural 'kuyunun dibindekine vurulur' ilkesinin karşılığı: en büyük paya
+ * sahip baskıncı, yarışı kaybeden EN KÜÇÜK paylı rakipten blok satışla
+ * alır (piyasa fiyatı, aynı günlük tavan). Oyuncu hissedar olarak zorla
+ * satıcı yapılmaz; kendi payını satıp satmamak onun kararı.
+ *
+ * SAVUNMA İHRACI YAPMIŞ HEDEFTE YOK. Ölçüm: kural her hedefe uygulanınca
+ * ihraç kalkanı çöktü — ihraç baskıncıları seyreltiyor, ama birbirinden
+ * blok alan iki baskıncı yine %50'yi geçiyordu (üç tohumda da ihraçla
+ * düşüyordu, eskiden üçü de ayaktaydı). İhraçla gelen yatırımcı payı
+ * kalkanın kendisi: o hedefte kilit bir kaza değil, savunmanın sonucu.
+ */
+function resolveStalemate(state: GameState, raider: CompanyState, budget: number, dailyCap: number): boolean {
+  for (const target of Object.values(state.companies)) {
+    if (target.id === raider.id || (target.investorShares ?? 0) > 0) continue;
+    const mine = sharesHeld(state, raider.id, target.id);
+    if (mine <= 0 || freeFloat(state, target.id) > 0) continue;
+
+    let leader = true;
+    let seller: CompanyState | null = null;
+    for (const other of Object.values(state.companies)) {
+      if (other.id === raider.id || other.id === target.id) continue;
+      const held = sharesHeld(state, other.id, target.id);
+      if (held >= mine) {
+        leader = false;
+        break;
+      }
+      if (held > 0 && !other.isPlayer && (!seller || held < sharesHeld(state, seller.id, target.id))) seller = other;
+    }
+    if (!leader || !seller) continue;
+
+    const price = sharePrice(state, target.id);
+    if (price <= 0) continue;
+    const cap = Math.floor((dailyCap * sharesOutstanding(state, target.id)) / TOTAL_SHARES);
+    const count = Math.min(cap, sharesHeld(state, seller.id, target.id), Math.floor(budget / price));
+    if (count > 0 && blockTrade(state, raider.id, seller.id, target.id, count)) return true;
+  }
+  return false;
 }
 
 /**

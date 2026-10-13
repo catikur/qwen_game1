@@ -33,6 +33,8 @@ interface BuildingIndex {
   outlets: Map<number, BuildingInstance[]>;
   /** Şirket → arsa + bina defter değeri; ilk istendiğinde kurulur. */
   assets?: Map<string, number>;
+  /** Kapsam boyunca bir kez hesaplanan saf ara sonuçlar. */
+  memo: Map<string, unknown>;
 }
 
 let scope: BuildingIndex | null = null;
@@ -60,7 +62,7 @@ function buildIndex(state: GameState): BuildingIndex {
       potency.set(key, (potency.get(key) ?? 0) + (def.focusPotency ?? 0));
     }
   }
-  return { state, depots, potency, outlets };
+  return { state, depots, potency, outlets, memo: new Map() };
 }
 
 /** `fn`'i bina indeksi açıkken çalıştırır. `fn` bina değiştirmemeli. */
@@ -91,6 +93,19 @@ export function scopedPotency(state: GameState, companyId: string, role: string,
 export function scopedOutlets(state: GameState, districtId: number): BuildingInstance[] | null {
   if (!scope || scope.state !== state) return null;
   return scope.outlets.get(districtId) ?? [];
+}
+
+/**
+ * Kapsam içindeyse `compute`'un sonucu bir kez hesaplanıp saklanır; kapsam
+ * dışında her çağrıda yeniden hesaplanır. `compute` saf olmalı ve yalnızca
+ * kapsam boyunca değişmeyen şeyleri (binalar, şirket durumu) okumalı.
+ */
+export function scopedMemo<T>(state: GameState, key: string, compute: () => T): T {
+  if (!scope || scope.state !== state) return compute();
+  if (scope.memo.has(key)) return scope.memo.get(key) as T;
+  const value = compute();
+  scope.memo.set(key, value);
+  return value;
 }
 
 /**

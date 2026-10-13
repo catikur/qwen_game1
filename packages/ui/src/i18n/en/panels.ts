@@ -43,6 +43,7 @@ export const panels: Record<keyof typeof trPanels, string> = {
   'panels.estimate.ramp': ' · settles in ~{days} days',
   'panels.estimate.directProfit': '≈ {profit}/day ·',
   'panels.estimate.loss': 'loses money',
+  'panels.estimate.cannibalized': ' · takes {amount}/day from your own branches (deducted)',
 
   // 120-day projection (ProjectionBox)
   'panels.projection.atDay': 'On day {days} ≈',
