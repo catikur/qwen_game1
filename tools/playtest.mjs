@@ -2168,18 +2168,74 @@ async function finish(browser, consoleErrors) {
   check('Kaldırımda yayalar yürüyor, gece sokak boşalıyor', noon.street.walkers > 20 && midnight.street.walkers < noon.street.walkers,
     `gündüz ${noon.street.walkers} · gece ${midnight.street.walkers} yaya`);
   check('Veri lensinde yaya ve duman susuyor, dönünce geri geliyor', !lensDecor.street.visible && backDecor.street.visible);
+  // Duman BİLGİ: yalnızca dün üretim yapmış tesisin bacası tütüyor,
+  // girdisi kesilen tesis susuyor. Bu noktada şehirde üretim yapan tesis
+  // olup olmadığı koşuya bağlı (ilk sürüm 0 = 0 ile boşuna geçiyordu), o
+  // yüzden kural iki yönde de sınanıyor: önce bütün tesislerin üretimi
+  // sıfırlanıyor (hiçbiri tütmemeli), sonra tek bir tesis üretmiş sayılıyor
+  // (yalnızca o tütmeli). Sahne lens gidip gelince yeniden senkronlanıyor.
   await page.evaluate(() => window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 }));
-  await page.waitForTimeout(400);
-  const smoke = await page.evaluate(() => {
+  const plantSetup = await page.evaluate(() => {
     const c = window.__capital;
-    const buildings = Object.values(c.getState().buildings);
-    const producing = buildings.filter((b) => c.buildingRole(b.defId) === 'process' && b.last.producedUnits > 0).length;
-    return { producing, info: c.renderInfo().street };
+    const s = c.getState();
+    const isPlant = (b) => c.buildingRole(b.defId) === 'process';
+    let built = false;
+    if (!Object.values(s.buildings).some(isPlant)) {
+      // Tesis yoksa bir değirmen kuruluyor: imarın izin verdiği ilk boş parsel.
+      const p = s.companies[s.playerCompanyId];
+      p.cash = Math.max(p.cash, 50_000_000);
+      for (const tile of s.map.tiles) {
+        if (tile.kind !== 'plot' || tile.structureId || tile.ownerId) continue;
+        // Yalnızca sanayi ve liman: başka yerde alınan parsel boşa kalırdı.
+        const archetype = s.districts[tile.districtId]?.archetype;
+        if (archetype !== 'industrial' && archetype !== 'port') continue;
+        if (!c.engine.dispatch({ type: 'BUY_TILE', tileId: tile.id }).ok) continue;
+        if (c.engine.dispatch({ type: 'BUILD', tileId: tile.id, defId: 'flour_mill' }).ok) {
+          built = true;
+          break;
+        }
+      }
+    }
+    const plants = Object.values(s.buildings).filter(isPlant);
+    return { plants: plants.length, built };
   });
-  // Duman BİLGİ: yalnızca dün üretim yapmış tesisin bacası tütüyor.
-  // Girdisi kesilen tesis susuyor — sayı birebir tutmalı.
-  check('Duman yalnızca üretim yapan tesisten çıkıyor', smoke.info.producing === smoke.producing,
-    `tüten tesis ${smoke.info.producing} · üretim yapan ${smoke.producing} · şehirdeki fabrika bacası ${smoke.info.stacks - smoke.info.producing} · puf ${smoke.info.puffs}`);
+  // Yeni kurulduysa inşaat animasyonu bitsin: yükselen binadan duman çıkmıyor.
+  if (plantSetup.built) await page.waitForTimeout(1600);
+  const resync = async () => {
+    await page.evaluate(() => window.__capital.setLens('opportunity'));
+    await page.waitForTimeout(150);
+    await page.evaluate(() => window.__capital.setLens('none'));
+    await page.waitForTimeout(400);
+  };
+  const saved = await page.evaluate(() => {
+    const c = window.__capital;
+    const out = {};
+    for (const b of Object.values(c.getState().buildings)) {
+      if (c.buildingRole(b.defId) !== 'process') continue;
+      out[b.id] = b.last.producedUnits;
+      b.last.producedUnits = 0;
+    }
+    return out;
+  });
+  await resync();
+  const silent = await page.evaluate(() => window.__capital.renderInfo().street);
+  const oneOn = await page.evaluate((ids) => {
+    const b = window.__capital.getState().buildings[ids[0]];
+    if (b) b.last.producedUnits = 7;
+    return Boolean(b);
+  }, Object.keys(saved));
+  await resync();
+  const smoking = await page.evaluate(() => window.__capital.renderInfo().street);
+  await page.evaluate((saved) => {
+    const buildings = window.__capital.getState().buildings;
+    for (const [id, units] of Object.entries(saved)) if (buildings[id]) buildings[id].last.producedUnits = units;
+  }, saved);
+  await resync();
+  check(
+    'Duman yalnızca üretim yapan tesisten çıkıyor',
+    plantSetup.plants > 0 && oneOn && silent.producing === 0 && smoking.producing === 1 && smoking.puffs > 0,
+    `${plantSetup.plants} tesis${plantSetup.built ? ' (test kurdu)' : ''} · üretim yok: ${silent.producing} baca · bir tesis üretti: ${smoking.producing} baca, ${smoking.puffs} puf`,
+  );
 
   // İnşaat animasyonu: bina yerden yükseliyor mu.
   //
