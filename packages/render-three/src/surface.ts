@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { FACADE_ATLAS_SIZE } from './textures';
 
 /**
  * Bina yüzeyi (Tur 24).
@@ -132,7 +133,7 @@ export function buildingSurface(material: THREE.Material, options: SurfaceOption
          // Çeyrek kenarından bir buçuk texel içeride: komşu çeyreğin rengi
          // süzgeçle sızmasın.
          vec4 cfAtlas(sampler2D tex, vec2 tiled) {
-           const float pad = 1.5 / 256.0;
+           const float pad = 1.5 / ${FACADE_ATLAS_SIZE.toFixed(1)};
            vec2 cell = fract(tiled);
            vec2 atlasUv = cfQuadrant(vCfFacade, tiled.y) + pad + cell * (0.5 - 2.0 * pad);
            return textureGrad(tex, atlasUv, dFdx(tiled) * 0.5, dFdy(tiled) * 0.5);

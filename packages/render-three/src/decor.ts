@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import { makeAwningTexture, makeContactShadowTexture } from './textures';
+import { makeAwningTexture, makeContactShadowTexture, makeRoofTileTexture } from './textures';
 
 /**
  * Temas gölgeleri (Tur 24).
@@ -146,6 +146,15 @@ function hipRoofGeometry(): THREE.BufferGeometry {
     }
   }
   geometry.computeVertexNormals();
+  // Kiremit dokusu için UV (Tur 34): v yükseklik (saçaktan mahyaya beş
+  // sıra), u yamaç boyunca. Ön/arka yamaçta x, kalkanlarda z değişiyor;
+  // toplamları ikisinde de yamaç boyunca ilerliyor.
+  const uv = new Float32Array(p.count * 2);
+  for (let i = 0; i < p.count; i++) {
+    uv[i * 2] = (p.getX(i) + p.getZ(i)) * 3;
+    uv[i * 2 + 1] = p.getY(i) * 2.5;
+  }
+  geometry.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
   return geometry;
 }
 
@@ -210,7 +219,7 @@ export class DecorKit {
       // Geometri dizinsiz: köşe normalleri zaten yüz normali, yani düz
       // gölgeleme `flatShading` olmadan geliyor (o seçenek her pikselde
       // türev hesaplatır — yazılımsal GPU'da karenin hissedilir bir payı).
-      roof: new THREE.MeshStandardMaterial({ roughness: 0.78, metalness: 0.02 }),
+      roof: new THREE.MeshStandardMaterial({ map: makeRoofTileTexture(), roughness: 0.78, metalness: 0.02 }),
       box: new THREE.MeshStandardMaterial({ roughness: 0.66, metalness: 0.12 }),
       cylinder: new THREE.MeshStandardMaterial({ roughness: 0.45, metalness: 0.35 }),
       glass: this.glassMaterial,
