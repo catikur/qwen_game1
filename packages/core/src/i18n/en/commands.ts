@@ -89,9 +89,9 @@ export const commands: Record<keyof typeof trCommands, string> = {
     'You arrived with {capital} in capital and {brand}% brand awareness. Rivals: {rivals}. {previous} keeps living; half of its profit will flow into the holding treasury every day.',
   'core.holding.remoteRaidTitle': '{city}: {name} has collected {percent}% of your shares',
   'core.holding.remoteRaidBody':
-    'A raid is advancing in your remote city and its defense order is off. From the Cities panel you can order the local manager to defend, send money from the treasury to {city}, or switch to the city.',
+    'A raid is advancing in your remote city and its defense order is off. From the Cities panel you can order the local manager to defend, send money from the treasury to the city, or switch to it.',
   'core.holding.remoteRaidDefendedBody':
-    "The local manager is buying back shares from the free float, paid from {city}'s own cash. If that isn't enough, send money from the treasury or switch to the city.",
+    "The local manager is buying back shares from the free float, paid from the city's own cash. If that isn't enough, send money from the treasury or switch to the city.",
   'core.holding.remoteLostTitle': '{city} is lost: {name} took control',
   'core.holding.remoteLostBody': '{city} no longer pays into the holding treasury. The holding and your other cities stand.',
   'core.holding.remoteVictoryTitle': '{city} reached victory',
