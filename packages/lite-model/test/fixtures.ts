@@ -2,7 +2,7 @@
  * Swift eşitlik fikstürleri.
  *
  * TS modeli (denge burada ayarlanıyor) belirli senaryoları oynatıyor ve her
- * adımın sonucunu kaydediyor. Swift testleri (`ios-lite/Tests/.../FixtureTests`)
+ * adımın sonucunu kaydediyor. Swift testleri (`ios-lite/Kit/Tests/.../FixtureTests`)
  * aynı adımları kendi modeliyle oynatıp aynı sayıları üretmek zorunda.
  *
  * Adımlar KAYITLI: Swift botun kararını yeniden vermiyor, kaydı oynatıyor.

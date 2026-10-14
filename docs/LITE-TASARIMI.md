@@ -124,11 +124,11 @@ görsel dosya kullanılmıyor.
 
 ```
 ios-lite/
-  Package.swift              CapitalForgeLiteKit: saf Swift oyun modeli (Foundation)
-  Sources/CapitalForgeLiteKit/
-  Tests/CapitalForgeLiteKitTests/   XCTest + ortak fikstürler
-  App/                        SwiftUI uygulaması
-  project.yml                 XcodeGen (Mac'te: brew install xcodegen && xcodegen)
+  Kit/Package.swift           CapitalForgeLiteKit: saf Swift oyun modeli (Foundation)
+  Kit/Sources/CapitalForgeLiteKit/
+  Kit/Tests/CapitalForgeLiteKitTests/   XCTest + TS'ten gelen fikstürler
+  App/project.yml             XcodeGen (Mac'te: brew install xcodegen && xcodegen)
+  App/Sources/                SwiftUI uygulaması (L2)
 packages/lite-model/          Aynı modelin TypeScript karşılığı: denge burada ayarlanıyor
 packages/lite-model/test/balance.ts         Denge raporu (pnpm lite:balance)
 packages/lite-model/test/write-fixtures.ts  Swift testlerine altın değerler (pnpm lite:fixtures)

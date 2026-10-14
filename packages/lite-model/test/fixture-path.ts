@@ -18,4 +18,4 @@ function repoRoot(): string {
   return dir;
 }
 
-export const FIXTURE_PATH = join(repoRoot(), 'ios-lite/Tests/CapitalForgeLiteKitTests/Fixtures/scenarios.json');
+export const FIXTURE_PATH = join(repoRoot(), 'ios-lite/Kit/Tests/CapitalForgeLiteKitTests/Fixtures/scenarios.json');

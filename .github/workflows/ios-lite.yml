@@ -2,7 +2,7 @@
 #
 # Denge TypeScript modelinde (packages/lite-model) ayarlanıyor; Swift modeli
 # aynı formüllerin çevirisi. Eşitlik testleri TS'in ürettiği altın değerleri
-# (ios-lite/Tests/.../Fixtures/scenarios.json) Swift'te yeniden üretiyor.
+# (ios-lite/Kit/Tests/.../Fixtures/scenarios.json) Swift'te yeniden üretiyor.
 # Depo herkese açık olduğu için macOS koşucusu ücretsiz.
 name: iOS Lite
 
@@ -37,5 +37,5 @@ jobs:
       - name: Araç sürümleri
         run: swift --version && xcodebuild -version
       - name: Swift testleri
-        working-directory: ios-lite
+        working-directory: ios-lite/Kit
         run: swift test

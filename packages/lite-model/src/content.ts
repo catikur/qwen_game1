@@ -1,7 +1,7 @@
 /**
  * CapitalForge Lite — içerik (zincirler, mahalleler, sabitler).
  *
- * Bu dosyanın Swift karşılığı `ios-lite/Sources/CapitalForgeLiteKit/Content.swift`.
+ * Bu dosyanın Swift karşılığı `ios-lite/Kit/Sources/CapitalForgeLiteKit/Content.swift`.
  * İkisi aynı sayıları taşımak ZORUNDA: eşitlik testi (fikstürler) ayrışmayı
  * yakalıyor ama sebebi en çok burada olur.
  */
