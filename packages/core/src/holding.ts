@@ -429,9 +429,9 @@ function liveAway(active: GameState, holding: HoldingState, city: DormantCity): 
 /**
  * Yerel müdürün savunması: en büyük dış pay `defendAt`ı geçtiyse serbest
  * hisseden geri alım. Oyuncunun kendi geri alımıyla aynı yol (günlük
- * tavan dahil) ve günde nakdin en fazla `defenseCashShare`'i. Kontrol
- * kilitlenince (`buybackToLock` sıfır) duruyor: kilitli şehirde para
- * harcamıyor.
+ * tavan dahil); günde nakdin yedeğin üstündeki kısmının en fazla
+ * `defenseCashShare`'i. Kontrol kilitlenince (`buybackToLock` sıfır)
+ * duruyor: kilitli şehirde para harcamıyor.
  */
 function localDefense(s: GameState): { shares: number; cost: number } | undefined {
   const player = s.companies[s.playerCompanyId]!;
@@ -439,13 +439,9 @@ function localDefense(s: GameState): { shares: number; cost: number } | undefine
   const need = buybackToLock(s, player.id);
   if (need === 0) return undefined;
   const price = sharePrice(s, player.id);
-  if (!(price > 0) || player.cash <= 0) return undefined;
-  const count = Math.min(
-    need,
-    capRemaining(s, player.id, player.id),
-    freeFloat(s, player.id),
-    Math.floor((player.cash * HOLDING.defenseCashShare) / price),
-  );
+  const budget = (player.cash - HOLDING.defenseReserve) * HOLDING.defenseCashShare;
+  if (!(price > 0) || budget <= 0) return undefined;
+  const count = Math.min(need, capRemaining(s, player.id, player.id), freeFloat(s, player.id), Math.floor(budget / price));
   if (!(count > 0)) return undefined;
   const before = player.cash;
   if (!playerBuy(s, player.id, player.id, count).ok) return undefined;

@@ -4,7 +4,8 @@ import { HOLDING, NPC_PROFILES } from '@capital/content';
 import { exportToJson, importFromJson } from '../../persistence/src/index';
 import { GameEngine } from '../src/engine';
 import { createNewGame } from '../src/worldgen';
-import { cityTrend, holdingNetWorth, openCityQuote, remoteIncome } from '../src/holding';
+import { cityDirective, cityTrend, holdingLadder, holdingNetWorth, holdingWins, openCityQuote, remoteIncome } from '../src/holding';
+import { buybackToLock, sharesOutstanding } from '../src/systems/equity';
 import { victoryNetWorth, victoryReached } from '../src/systems/goals';
 import { recomputeNetWorth } from '../src/systems/city';
 import { playerStrategy } from './proxy';
@@ -231,5 +232,137 @@ describe('holding (çoklu şehir)', () => {
     const count = back.news.filter((n) => n.title.startsWith('Şirket değeri')).length;
     engine.runDay();
     assert.equal(back.news.filter((n) => n.title.startsWith('Şirket değeri')).length, count);
+  });
+});
+
+describe('holding: uzaktan yönetim (Tur 32)', () => {
+  test('kâr payı talimatı: hiç, yarısı, hepsi; talimat şehirle birlikte gidip geliyor', () => {
+    const engine = conquered();
+    engine.dispatch({ type: 'OPEN_CITY', citySize: 'standard', capital: 8_000_000 });
+    const city = engine.getState();
+    const away = city.holding!.dormant[0]!;
+    assert.deepEqual(cityDirective(away.state), { payout: 'half', defend: false }, 'varsayılan: yarısı, savunma kapalı');
+
+    assert.ok(engine.dispatch({ type: 'SET_CITY_DIRECTIVE', index: 0, payout: 'keep' }).ok);
+    let treasury = city.holding!.treasury;
+    let cash = player(away.state).cash;
+    engine.runDay();
+    assert.ok(player(away.state).today.profit > 0);
+    assert.equal(away.lastDividend, 0);
+    assert.equal(city.holding!.treasury, treasury, 'kasaya bir şey akmadı');
+    assert.ok(player(away.state).cash > cash, 'kâr şehirde kaldı');
+
+    assert.ok(engine.dispatch({ type: 'SET_CITY_DIRECTIVE', index: 0, payout: 'all' }).ok);
+    treasury = city.holding!.treasury;
+    cash = player(away.state).cash;
+    engine.runDay();
+    const profit = player(away.state).today.profit;
+    assert.ok(profit > 0);
+    assert.ok(cash > profit);
+    assert.equal(away.lastDividend, profit, "kârın hepsi kasaya");
+    assert.equal(city.holding!.treasury, treasury + away.lastDividend!);
+    assert.equal(away.state.remote?.defend, false, 'verilmeyen alan aynı kaldı');
+
+    // Kurucu şehre geç ve geri dön: talimat şehrin kendi durumunda.
+    assert.ok(engine.dispatch({ type: 'SWITCH_CITY', index: 0 }).ok);
+    assert.ok(engine.dispatch({ type: 'SWITCH_CITY', index: 0 }).ok);
+    assert.equal(cityDirective(engine.getState().holding!.dormant[0]!.state).payout, 'all');
+
+    assert.equal(engine.dispatch({ type: 'SET_CITY_DIRECTIVE', index: 4, payout: 'all' }).ok, false);
+    assert.equal(engine.dispatch({ type: 'SET_CITY_DIRECTIVE', index: 0, payout: 'bogus' as never }).ok, false);
+  });
+
+  test('savunma talimatı: yerel müdür serbest hisseden geri alıyor, kendi kasasından; kapalıyken almıyor', () => {
+    const engine = conquered();
+    engine.dispatch({ type: 'OPEN_CITY', citySize: 'standard', capital: 8_000_000 });
+    const city = engine.getState();
+    const away = city.holding!.dormant[0]!;
+    const s = away.state;
+    const me = player(s);
+    const raider = Object.values(s.companies).find((c) => !c.isPlayer)!;
+    raider.shares[me.id] = Math.round(sharesOutstanding(s, me.id) * 0.24);
+    const treasuryShares = () => me.shares[me.id] ?? 0;
+
+    engine.runDay();
+    assert.equal(treasuryShares(), 0, 'savunma kapalıyken geri alım yok');
+    assert.equal(away.lastDefense, undefined);
+
+    assert.ok(engine.dispatch({ type: 'SET_CITY_DIRECTIVE', index: 0, defend: true }).ok);
+    const holdingTreasury = city.holding!.treasury;
+    engine.runDay();
+    assert.ok(treasuryShares() > 0, `hazine ${treasuryShares()}`);
+    assert.equal(away.lastDefense?.shares, treasuryShares());
+    assert.ok((away.lastDefense?.cost ?? 0) > 0);
+    assert.ok(city.holding!.treasury >= holdingTreasury, 'savunmanın parası holding kasasından değil');
+    assert.ok(me.cash > HOLDING.defenseReserve, 'yedek korunuyor');
+
+    // Kontrol kilitlenince harcama duruyor.
+    me.shares[me.id] = Math.ceil(sharesOutstanding(s, me.id) * 0.5);
+    assert.equal(buybackToLock(s, me.id), 0);
+    const locked = treasuryShares();
+    engine.runDay();
+    assert.equal(treasuryShares(), locked, 'kilitli şehirde geri alım yok');
+    assert.equal(away.lastDefense, undefined);
+  });
+
+  test('kasadan uzaktaki şehre para: zafer ölçüsü o şehirde düzeliyor; kaybedilen şehre yok', () => {
+    const engine = conquered();
+    engine.dispatch({ type: 'OPEN_CITY', citySize: 'standard', capital: 8_000_000 });
+    const city = engine.getState();
+    const away = city.holding!.dormant[0]!.state;
+    city.holding!.treasury = 5_000_000;
+    const cash = player(away).cash;
+    const imported = away.importedCapital ?? 0;
+    assert.ok(engine.dispatch({ type: 'HOLDING_TRANSFER', amount: 3_000_000, index: 0 }).ok);
+    assert.equal(city.holding!.treasury, 2_000_000);
+    assert.equal(player(away).cash, cash + 3_000_000);
+    assert.equal(away.importedCapital, imported + 3_000_000);
+    assert.equal(city.importedCapital, 8_000_000, 'oynanan şehrin defteri değişmedi');
+    assert.ok(engine.dispatch({ type: 'HOLDING_TRANSFER', amount: -1_000_000, index: 0 }).ok, 'uzaktaki şehirden kasaya');
+    assert.equal(city.holding!.treasury, 3_000_000);
+    assert.equal(engine.dispatch({ type: 'HOLDING_TRANSFER', amount: 1_000, index: 3 }).ok, false);
+
+    away.gameOver = { day: away.time.day, byCompanyId: 'nova_holding' };
+    assert.equal(engine.dispatch({ type: 'HOLDING_TRANSFER', amount: 1_000, index: 0 }).ok, false);
+    assert.equal(engine.dispatch({ type: 'SET_CITY_DIRECTIVE', index: 0, defend: true }).ok, false);
+  });
+
+  test('holding hedefleri: dört basamak, son basamak bir kez haber; kaybedilen şehir kapatılınca yeri boşalıyor', () => {
+    const engine = conquered();
+    const before = engine.getState();
+    assert.equal(holdingWins(before), 1);
+    assert.deepEqual(holdingLadder(before).map((step) => step.done), [false, false, false, false]);
+
+    engine.dispatch({ type: 'OPEN_CITY', citySize: 'standard', capital: 8_000_000 });
+    const second = engine.getState();
+    assert.deepEqual(holdingLadder(second).map((step) => step.done), [true, false, false, false]);
+    second.victory = { day: second.time.day, kind: 'tycoon', dismissed: true };
+    player(second).cash = 30_000_000;
+    assert.deepEqual(holdingLadder(second).map((step) => step.done), [true, true, false, false]);
+
+    engine.dispatch({ type: 'OPEN_CITY', citySize: 'standard', capital: 2_000_000 });
+    const third = engine.getState();
+    assert.deepEqual(holdingLadder(third).map((step) => step.done), [true, true, true, false]);
+    assert.equal(holdingLadder(third)[3]!.count, 2);
+
+    // Zaferi olan kurucu şehir kaybedilip kapatılıyor: zaferi sayılmaya devam ediyor, yer boşalıyor.
+    const founding = third.holding!.dormant[0]!.state;
+    founding.gameOver = { day: founding.time.day, byCompanyId: 'nova_holding' };
+    assert.equal(engine.dispatch({ type: 'CLOSE_CITY', index: 1 }).ok, false, 'ayakta olan şehir kapatılamıyor');
+    assert.ok(engine.dispatch({ type: 'CLOSE_CITY', index: 0 }).ok);
+    assert.equal(third.holding!.dormant.length, 1);
+    assert.equal(third.holding!.closedWins, 1);
+    assert.equal(holdingWins(third), 2);
+    third.victory = { day: third.time.day, kind: 'tycoon', dismissed: true };
+    player(third).cash = 30_000_000;
+    assert.ok(openCityQuote(third).ok, 'kapatılan şehrin yeri boşaldı');
+
+    const done = () => third.news.filter((n) => n.title.startsWith('Holding tamamlandı')).length;
+    engine.runDay();
+    assert.equal(done(), 1, third.news.slice(0, 3).map((n) => n.title).join(' | '));
+    assert.equal(third.holding!.completedDay, third.time.day);
+    assert.ok(holdingLadder(third).every((step) => step.done));
+    engine.runDay();
+    assert.equal(done(), 1, 'bir kez');
   });
 });

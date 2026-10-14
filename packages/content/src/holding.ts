@@ -29,12 +29,15 @@ export const HOLDING = {
   payoutShare: { keep: 0, half: 0.5, all: 1 },
   /**
    * Savunma talimatı: en büyük dış pay bunu geçince yerel müdür serbest
-   * hisseden geri alıyor. Oyuncuyla aynı kurallar: günlük tavan ve günde
-   * şehir nakdinin en fazla `defenseCashShare`'i. Para şehrin kendi
-   * kasasından — hepsini kasaya çeken bir şehrin savunması zayıf.
+   * hisseden geri alıyor, kontrol kilitlenene kadar (Tur 28'in kilidi).
+   * Oyuncuyla aynı yol ve günlük tavan; günde şehir nakdinin yedeğin
+   * üstündeki kısmının en fazla `defenseCashShare`'i. Yedek rakiplerin
+   * savunma yedeğiyle aynı (320 B ₺). Para şehrin kendi kasasından —
+   * hepsini kasaya çeken bir şehrin savunması zayıf.
    */
   defendAt: 0.2,
   defenseCashShare: 0.4,
+  defenseReserve: 320_000,
 } as const;
 
 /** Şehir adları; holding kurucu tohumdan kaydırarak sırayla dağıtıyor. */
