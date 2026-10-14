@@ -87,9 +87,9 @@ export const commands = {
     '{capital} sermaye ve %{brand} marka bilinirliğiyle geldin. Rakipler: {rivals}. {previous} yaşamaya devam ediyor; kârının yarısı her gün holding kasasına akacak.',
   'core.holding.remoteRaidTitle': "{city}: {name} payının %{percent}'ini topladı",
   'core.holding.remoteRaidBody':
-    "Uzaktaki şehrinde baskın ilerliyor ve savunma talimatı kapalı. Şehirler panelinden yerel müdüre savunma talimatı verebilir, kasadan {city}'e para gönderebilir ya da şehre geçebilirsin.",
+    'Uzaktaki şehrinde baskın ilerliyor ve savunma talimatı kapalı. Şehirler panelinden yerel müdüre savunma talimatı verebilir, kasadan şehre para gönderebilir ya da şehre geçebilirsin.',
   'core.holding.remoteRaidDefendedBody':
-    "Yerel müdür serbest hisseden geri alıyor; savunmanın parası {city}'in kendi kasasından. Yetmezse kasadan para gönder ya da şehre geç.",
+    'Yerel müdür serbest hisseden geri alıyor; savunmanın parası şehrin kendi kasasından. Yetmezse kasadan para gönder ya da şehre geç.',
   'core.holding.remoteLostTitle': '{city} elden çıktı: {name} kontrolü aldı',
   'core.holding.remoteLostBody': '{city} artık holding kasasına ödeme yapmıyor. Holding ve öbür şehirlerin ayakta.',
   'core.holding.remoteVictoryTitle': '{city} zafere ulaştı',

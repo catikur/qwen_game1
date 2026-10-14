@@ -3,19 +3,23 @@ import type { ReactElement } from 'react';
 import { CITY_SIZES, HOLDING } from '@capital/content';
 import type { CitySizeId } from '@capital/content';
 import {
+  buybackToLock,
   carriedBrand,
+  cityDirective,
   cityDividend,
   cityNameAt,
   cityTrend,
   cityValue,
   formatMoney,
   getPlayer,
+  holdingLadder,
   holdingNetWorth,
   openCityQuote,
   raidStatus,
   remoteIncome,
+  sharePrice,
 } from '@capital/core';
-import type { GameState } from '@capital/core';
+import type { DormantCity, GameState, RemotePayout } from '@capital/core';
 import { useGame, useGameState } from './useGame';
 import { t } from './i18n';
 
@@ -27,6 +31,10 @@ import { t } from './i18n';
  * bir şehre açılırsam yanımda ne gider. Sonuncusu kararın kendisi: sermaye
  * bu şehrin kasasından çıkıyor. Tur 30'dan beri uzaktaki şehirler yaşıyor;
  * satır dünkü gerçek kâr payını ve %10'u geçen baskını gösteriyor.
+ *
+ * Tur 32: uzaktaki her şehrin satırında yerel müdürün talimatı (kâr payı,
+ * savunma) — geçiş yapmadan. Kasa uzaktaki şehre de aktarılıyor. Üstte
+ * holding'in hedef merdiveni; kaybedilen şehir kapatılabiliyor.
  */
 export function HoldingPanel(): ReactElement {
   const state = useGameState();
@@ -34,7 +42,7 @@ export function HoldingPanel(): ReactElement {
 
   return (
     <div className="holding">
-      <p className="muted">{t('hud.holding.blurb', { share: Math.round(HOLDING.remoteShare * 100) })}</p>
+      <p className="muted">{t('hud.holding.blurb')}</p>
       {holding && (
         <div className="holding-stats">
           <HoldingStat label={t('hud.holding.stat.total')} value={formatMoney(holdingNetWorth(state))} />
@@ -42,6 +50,7 @@ export function HoldingPanel(): ReactElement {
           <HoldingStat label={t('hud.holding.stat.remote')} value={formatMoney(remoteIncome(state))} />
         </div>
       )}
+      <HoldingLadder state={state} />
       <CityList state={state} />
       {holding && <TransferForm state={state} />}
       <OpenCityForm state={state} />
@@ -55,6 +64,38 @@ function HoldingStat({ label, value }: { label: string; value: string }): ReactE
       <span className="stat-label">{label}</span>
       <span className="stat-value">{value}</span>
     </div>
+  );
+}
+
+/** Holding hedefleri: dört basamak, sırayla (Tur 32). */
+function HoldingLadder({ state }: { state: GameState }): ReactElement {
+  const steps = holdingLadder(state);
+  const done = steps.filter((step) => step.done).length;
+  const completed = state.holding?.completedDay;
+  return (
+    <section className="defense holding-ladder" data-holding-ladder={done}>
+      <div className="defense-head">
+        <h3>{t('hud.holding.ladder.title')}</h3>
+        <span className="muted">
+          {completed !== undefined
+            ? t('hud.holding.ladder.complete', { day: completed })
+            : t('hud.holding.ladder.progress', { done, total: steps.length })}
+        </span>
+      </div>
+      <ol className="ladder-steps">
+        {steps.map((step, index) => (
+          <li key={step.id} className={step.done ? 'done' : undefined} data-step={step.id} data-done={step.done ? 'yes' : 'no'}>
+            <span className="ladder-mark" aria-hidden="true">
+              {step.done ? '✓' : index + 1}
+            </span>
+            <span>{t(`hud.holding.ladder.${step.id}`)}</span>
+            <span className="muted ladder-count">
+              {step.count} / {step.target}
+            </span>
+          </li>
+        ))}
+      </ol>
+    </section>
   );
 }
 
@@ -102,15 +143,32 @@ function CityList({ state }: { state: GameState }): ReactElement {
                 {t('hud.holding.raidLine', { name: raider.name, percent: Math.round(raid.fraction * 100) })}
               </span>
             )}
-            <button
-              type="button"
-              className="ghost city-switch"
-              onClick={() => {
-                if (run({ type: 'SWITCH_CITY', index })) toast(t('hud.holding.switched', { name }), 'good');
-              }}
-            >
-              {t('hud.holding.switch')}
-            </button>
+            {lost ? (
+              <>
+                <span className="muted city-note">{t('hud.holding.closeHint')}</span>
+                <button
+                  type="button"
+                  className="ghost city-switch"
+                  data-close-city={index}
+                  onClick={() => {
+                    if (run({ type: 'CLOSE_CITY', index })) toast(t('hud.holding.closed', { name }), 'good');
+                  }}
+                >
+                  {t('hud.holding.close')}
+                </button>
+              </>
+            ) : (
+              <button
+                type="button"
+                className="ghost city-switch"
+                onClick={() => {
+                  if (run({ type: 'SWITCH_CITY', index })) toast(t('hud.holding.switched', { name }), 'good');
+                }}
+              >
+                {t('hud.holding.switch')}
+              </button>
+            )}
+            {!lost && <CityDirectiveControls city={city} index={index} />}
           </li>
         );
       })}
@@ -118,18 +176,95 @@ function CityList({ state }: { state: GameState }): ReactElement {
   );
 }
 
+const PAYOUTS: readonly RemotePayout[] = ['keep', 'half', 'all'];
+
+/** Uzaktaki şehrin talimatı: kâr payı ve savunma (Tur 32). */
+function CityDirectiveControls({ city, index }: { city: DormantCity; index: number }): ReactElement {
+  const { run } = useGame();
+  const directive = cityDirective(city.state);
+  const name = city.state.cityName ?? '';
+  return (
+    <div className="city-directive" data-city-directive={index}>
+      <span className="muted">{t('hud.holding.payout.title')}</span>
+      <div className="difficulty-picker mode-picker" role="radiogroup" aria-label={t('hud.holding.payout.aria', { name })}>
+        {PAYOUTS.map((payout) => (
+          <button
+            key={payout}
+            type="button"
+            role="radio"
+            aria-checked={payout === directive.payout}
+            className={`difficulty-option${payout === directive.payout ? ' selected' : ''}`}
+            data-payout={payout}
+            onClick={() => run({ type: 'SET_CITY_DIRECTIVE', index, payout })}
+          >
+            {t(`hud.holding.payout.${payout}`)}
+          </button>
+        ))}
+      </div>
+      <p className="muted">{t(`hud.holding.payout.${directive.payout}Hint`)}</p>
+      <label className="city-defend">
+        <input
+          type="checkbox"
+          checked={directive.defend}
+          data-defend={index}
+          onChange={(e) => run({ type: 'SET_CITY_DIRECTIVE', index, defend: e.target.checked })}
+        />
+        <span>{t('hud.holding.defense.toggle')}</span>
+      </label>
+      <p className="muted" data-defense-line>
+        {defenseLine(city)}
+      </p>
+    </div>
+  );
+}
+
+/** Savunmanın durumu tek cümleyle: ne yaptı, ne bekliyor, kilide ne kaldı. */
+function defenseLine(city: DormantCity): string {
+  const s = city.state;
+  const me = s.companies[s.playerCompanyId]!;
+  const directive = cityDirective(s);
+  const raid = raidStatus(s);
+  const toLock = buybackToLock(s, me.id);
+  const lockCost = Number.isFinite(toLock) ? toLock * sharePrice(s, me.id) : null;
+  const remaining =
+    toLock > 0 && lockCost !== null ? ' ' + t('hud.holding.defense.toLock', { shares: toLock, cost: formatMoney(lockCost) }) : '';
+  if (city.lastDefense) {
+    return t('hud.holding.defense.yesterday', { shares: city.lastDefense.shares, cost: formatMoney(city.lastDefense.cost) }) + remaining;
+  }
+  if (toLock === 0) return t('hud.holding.defense.locked');
+  if (!directive.defend) {
+    return raid.fraction >= HOLDING.defendAt ? t('hud.holding.defense.offUnderRaid') + remaining : t('hud.holding.defense.offHint');
+  }
+  if (raid.fraction < HOLDING.defendAt) {
+    return t('hud.holding.defense.waiting', { percent: Math.round(HOLDING.defendAt * 100) });
+  }
+  return t('hud.holding.defense.noCash', { reserve: formatMoney(HOLDING.defenseReserve) }) + remaining;
+}
+
 function TransferForm({ state }: { state: GameState }): ReactElement | null {
   const { run } = useGame();
   const [amount, setAmount] = useState(0);
+  const [target, setTarget] = useState<number | null>(null);
   const holding = state.holding;
-  if (!holding || state.gameOver) return null;
-  const player = getPlayer(state);
+  if (!holding) return null;
+  // Hedefler: oynanan şehir (kaybedilmediyse) ve ayakta olan uzak şehirler.
+  const targets: Array<{ index: number | null; name: string; city: GameState }> = [];
+  if (!state.gameOver) targets.push({ index: null, name: state.cityName ?? '', city: state });
+  holding.dormant.forEach((dormant, index) => {
+    if (!dormant.state.gameOver) targets.push({ index, name: dormant.state.cityName ?? '', city: dormant.state });
+  });
+  const chosen = targets.find((option) => option.index === target) ?? targets[0];
+  if (!chosen) return null;
+  const player = chosen.city.companies[chosen.city.playerCompanyId]!;
   const toCityMax = Math.floor(holding.treasury);
   const toHoldingMax = Math.floor(Math.max(0, player.cash));
   const max = Math.max(toCityMax, toHoldingMax);
-  if (max <= 0) return null;
   const step = Math.max(10_000, Math.round(max / 200 / 10_000) * 10_000);
   const value = Math.min(amount, max);
+  const command = (signed: number) =>
+    chosen.index === null
+      ? ({ type: 'HOLDING_TRANSFER', amount: signed } as const)
+      : ({ type: 'HOLDING_TRANSFER', amount: signed, index: chosen.index } as const);
 
   return (
     <section className="defense holding-transfer">
@@ -137,36 +272,62 @@ function TransferForm({ state }: { state: GameState }): ReactElement | null {
         <h3>{t('hud.holding.transfer.title')}</h3>
       </div>
       <p className="muted">{t('hud.holding.transfer.blurb')}</p>
-      <label className="bank-amount">
-        <span>
-          {t('hud.holding.transfer.amount')} <strong>{formatMoney(value)}</strong>
-        </span>
-        <input type="range" min={0} max={max} step={step} value={value} onChange={(e) => setAmount(Number(e.target.value))} />
-      </label>
-      <div className="holding-actions">
-        <button
-          type="button"
-          className="ghost"
-          disabled={value <= 0 || value > toCityMax}
-          data-transfer="to-city"
-          onClick={() => {
-            if (run({ type: 'HOLDING_TRANSFER', amount: value })) setAmount(0);
-          }}
-        >
-          {t('hud.holding.transfer.toCity')}
-        </button>
-        <button
-          type="button"
-          className="ghost"
-          disabled={value <= 0 || value > toHoldingMax}
-          data-transfer="to-holding"
-          onClick={() => {
-            if (run({ type: 'HOLDING_TRANSFER', amount: -value })) setAmount(0);
-          }}
-        >
-          {t('hud.holding.transfer.toHolding')}
-        </button>
-      </div>
+      {targets.length > 1 && (
+        <div className="difficulty-picker mode-picker" role="radiogroup" aria-label={t('hud.holding.transfer.target')}>
+          {targets.map((option) => (
+            <button
+              key={option.index ?? 'current'}
+              type="button"
+              role="radio"
+              aria-checked={option === chosen}
+              className={`difficulty-option${option === chosen ? ' selected' : ''}`}
+              data-transfer-target={option.index ?? 'current'}
+              onClick={() => {
+                setTarget(option.index);
+                setAmount(0);
+              }}
+            >
+              {option.name}
+            </button>
+          ))}
+        </div>
+      )}
+      {max <= 0 ? (
+        <p className="muted">{t('hud.holding.transfer.empty')}</p>
+      ) : (
+        <>
+          <label className="bank-amount">
+            <span>
+              {t('hud.holding.transfer.amount')} <strong>{formatMoney(value)}</strong>
+            </span>
+            <input type="range" min={0} max={max} step={step} value={value} onChange={(e) => setAmount(Number(e.target.value))} />
+          </label>
+          <div className="holding-actions">
+            <button
+              type="button"
+              className="ghost"
+              disabled={value <= 0 || value > toCityMax}
+              data-transfer="to-city"
+              onClick={() => {
+                if (run(command(value))) setAmount(0);
+              }}
+            >
+              {t('hud.holding.transfer.toCity', { name: chosen.name })}
+            </button>
+            <button
+              type="button"
+              className="ghost"
+              disabled={value <= 0 || value > toHoldingMax}
+              data-transfer="to-holding"
+              onClick={() => {
+                if (run(command(-value))) setAmount(0);
+              }}
+            >
+              {t('hud.holding.transfer.toHolding', { name: chosen.name })}
+            </button>
+          </div>
+        </>
+      )}
     </section>
   );
 }
