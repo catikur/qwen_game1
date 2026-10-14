@@ -145,6 +145,38 @@ function broadleafGeometry(): THREE.BufferGeometry {
   return merged;
 }
 
+/**
+ * Uzak yerleşim evi (Tur 34): beyaz gövde + kiremit kırma çatı, taban y=0,
+ * gövde 1 birim. Örnek rengi duvarı boyuyor (krem, beyaz, açık hardal…);
+ * çatı köşe renginde kiremit kalıyor.
+ */
+function villageHouseGeometry(): THREE.BufferGeometry {
+  const body = new THREE.BoxGeometry(1, 1, 1);
+  body.translate(0, 0.5, 0);
+  const roof = new THREE.ConeGeometry(0.78, 0.6, 4);
+  roof.rotateY(Math.PI / 4);
+  roof.translate(0, 1.3, 0);
+  const merged = mergeGeometries([painted(body, '#ffffff'), painted(roof, '#b25a3e')]);
+  merged.computeVertexNormals();
+  return merged;
+}
+
+/** Uzak yerleşim apartmanı: gövde + koyu korniş + çatı kulübesi. */
+function villageBlockGeometry(): THREE.BufferGeometry {
+  const body = new THREE.BoxGeometry(1, 1, 1);
+  body.translate(0, 0.5, 0);
+  const cornice = new THREE.BoxGeometry(1.06, 0.05, 1.06);
+  cornice.translate(0, 1.0, 0);
+  const hut = new THREE.BoxGeometry(0.32, 0.08, 0.32);
+  hut.translate(0.18, 1.06, -0.12);
+  const merged = mergeGeometries([painted(body, '#ffffff'), painted(cornice, '#8e8a84'), painted(hut, '#a9a49c')]);
+  merged.computeVertexNormals();
+  return merged;
+}
+
+/** Yerleşim duvarlarının tonları: soluk, çünkü ufukta silüet olarak okunuyorlar. */
+const VILLAGE_WALLS = ['#e9e1cf', '#f1ede4', '#d9c9a6', '#e3cfc4', '#cfd0cc', '#e6dcc0'];
+
 /** İğne yapraklı: gövde + iki üst üste koni, taban y=0. */
 function coniferGeometry(): THREE.BufferGeometry {
   const trunk = new THREE.CylinderGeometry(0.05, 0.08, 0.34, 5);
@@ -163,7 +195,9 @@ export class World {
 
   private terrain: THREE.Mesh;
   private terrainMaterial: THREE.MeshStandardMaterial;
+  /** Uzak yerleşimler: kiremit çatılı evler ve az sayıda apartman (Tur 34). */
   private settlements: THREE.InstancedMesh;
+  private settlementBlocks: THREE.InstancedMesh;
   private settlementMaterial: THREE.MeshStandardMaterial;
   private broadleaf: THREE.InstancedMesh;
   private conifers: THREE.InstancedMesh;
@@ -229,23 +263,30 @@ export class World {
      * Işıktan bağımsız değiller: gece onların da kararması gerekiyor,
      * yoksa karanlık bir dünyanın üstünde parlayan lekeler olurlardı.
      */
+    /*
+     * Tur 34: eskiden tek renk (zeytin grisi) kutulardı; şehrin hemen
+     * yanında "moloz" gibi duruyorlardı. Artık her küme kiremit çatılı
+     * evlerden ve birkaç apartmandan oluşan bir kasaba. Renkler soluk,
+     * boylar alçak: hâlâ silüet, oynanabilir bir yer değil.
+     */
     this.settlementMaterial = new THREE.MeshStandardMaterial({
       roughness: 0.9,
       metalness: 0.02,
-      color: '#9aa08c',
+      vertexColors: true,
     });
-    this.settlements = new THREE.InstancedMesh(
-      new THREE.BoxGeometry(1, 1, 1),
-      this.settlementMaterial,
-      SETTLEMENTS * BUILDINGS_PER_SETTLEMENT,
-    );
-    this.settlements.frustumCulled = false;
-    this.settlements.castShadow = false;
-    this.settlements.receiveShadow = false;
+    const capacity = SETTLEMENTS * BUILDINGS_PER_SETTLEMENT;
+    this.settlements = new THREE.InstancedMesh(villageHouseGeometry(), this.settlementMaterial, capacity);
+    this.settlementBlocks = new THREE.InstancedMesh(villageBlockGeometry(), this.settlementMaterial, capacity);
+    for (const mesh of [this.settlements, this.settlementBlocks]) {
+      mesh.frustumCulled = false;
+      mesh.castShadow = false;
+      mesh.receiveShadow = false;
+    }
 
     const dummy = new THREE.Object3D();
     const tint = new THREE.Color();
     let slot = 0;
+    let blockSlot = 0;
     for (let s = 0; s < SETTLEMENTS; s++) {
       // Kümeler bir halka üzerine dağılıyor: şehre çok yakın olsalar
       // haritanın devamı sanılır, çok uzak olsalar sisin içinde kaybolur.
@@ -266,25 +307,29 @@ export class World {
         const spread = 1.6 + hash(n * 1.9) * 3.4;
         const bx = sx + (hash(n * 5.3) - 0.5) * spread * 2;
         const bz = sz + (hash(n * 9.7) - 0.5) * spread * 2;
-        const height = 0.5 + hash(n * 13.1) * 2.4;
-        const width = 0.7 + hash(n * 15.9) * 0.9;
+        // Kasabanın çoğu ev; merkeze yakın birkaç apartman silüete boy veriyor.
+        const isBlock = hash(n * 31.7) > 0.74 && spread < 3.4;
+        const height = isBlock ? 1.1 + hash(n * 13.1) * 1.5 : 0.42 + hash(n * 13.1) * 0.4;
+        const width = isBlock ? 0.8 + hash(n * 15.9) * 0.6 : 0.62 + hash(n * 15.9) * 0.42;
 
-        dummy.position.set(bx, -drop + height / 2, bz);
-        dummy.scale.set(width, height, width);
+        dummy.position.set(bx, -drop, bz);
+        dummy.scale.set(width, height, width * (isBlock ? 1 : 0.86));
         dummy.rotation.y = hash(n * 21.3) * Math.PI;
         dummy.updateMatrix();
-        this.settlements.setMatrixAt(slot, dummy.matrix);
-
-        const shade = 0.72 + hash(n * 27.7) * 0.28;
-        tint.setRGB(shade * 0.62, shade * 0.6, shade * 0.55);
-        this.settlements.setColorAt(slot, tint);
-        slot++;
+        const mesh = isBlock ? this.settlementBlocks : this.settlements;
+        const index = isBlock ? blockSlot++ : slot++;
+        mesh.setMatrixAt(index, dummy.matrix);
+        tint.set(VILLAGE_WALLS[Math.floor(hash(n * 27.7) * VILLAGE_WALLS.length)]!);
+        mesh.setColorAt(index, tint);
       }
     }
     this.settlements.count = slot;
-    this.settlements.instanceMatrix.needsUpdate = true;
-    if (this.settlements.instanceColor) this.settlements.instanceColor.needsUpdate = true;
-    this.group.add(this.settlements);
+    this.settlementBlocks.count = blockSlot;
+    for (const mesh of [this.settlements, this.settlementBlocks]) {
+      mesh.instanceMatrix.needsUpdate = true;
+      if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+      this.group.add(mesh);
+    }
 
     /*
      * KIRSAL AĞAÇLARI (Tur 34).
@@ -409,11 +454,9 @@ export class World {
   setDaylight(daylight: number): void {
     const level = 0.34 + daylight * 0.66;
     this.terrainMaterial.color.setRGB(level, level, level);
-    this.settlementMaterial.color.setRGB(
-      level * 0.62,
-      level * 0.63,
-      level * 0.56,
-    );
+    // Duvar ve çatı rengi köşe/örnek renginde; malzeme yalnızca günle kararıyor.
+    // Kırsaldan biraz koyu: sisin içinde şehirden parlak durmasınlar.
+    this.settlementMaterial.color.setScalar(level * 0.86);
     this.treeMaterial.color.setRGB(level, level, level);
   }
 
@@ -429,7 +472,7 @@ export class World {
 
   /** Testler için: ufuktaki yerleşim binası sayısı. */
   get settlementCount(): number {
-    return this.settlements.count;
+    return this.settlements.count + this.settlementBlocks.count;
   }
 
   /** Testler için: kırsalda çizilen ağaç sayısı (kademe bütçesiyle). */
@@ -442,6 +485,7 @@ export class World {
     this.terrainMaterial.map?.dispose();
     this.terrainMaterial.dispose();
     this.settlements.geometry.dispose();
+    this.settlementBlocks.geometry.dispose();
     this.settlementMaterial.dispose();
     this.broadleaf.geometry.dispose();
     this.conifers.geometry.dispose();

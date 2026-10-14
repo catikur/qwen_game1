@@ -83,13 +83,19 @@ export interface SmokeEmitter {
 }
 
 /** Bir bacadan aynı anda yükselen puf. */
-const PUFFS_PER_STACK = 5;
+const PUFFS_PER_STACK = 6;
 /** Aynı anda tütebilecek en fazla baca. */
 const MAX_STACKS = 48;
 /** Bir pufun doğup dağılması (sn). */
 const PUFF_LIFE = 3.4;
 /** Pufun dağılana kadar yükseldiği yükseklik. */
-const PUFF_RISE = 0.95;
+const PUFF_RISE = 1.1;
+/**
+ * Yaya ölçeği. İlk denemede gerçek orana göre (araba boyunun biraz
+ * üstü) kurulmuştu ve sokak görünümünde bile bir iki piksellik noktaya
+ * iniyordu; biraz abartılı boy, yürüyenin insan olduğunu okutuyor.
+ */
+const WALKER_SCALE = 1.3;
 /** Rüzgâr: duman hep aynı yana yatıyor, şehir tek bir hava altında. */
 const WIND = new THREE.Vector2(0.34, -0.14);
 
@@ -228,7 +234,7 @@ export class StreetLife {
         this.dummy.position.set(walker.line, y, walker.position);
         this.dummy.rotation.set(0, walker.direction === 1 ? -Math.PI / 2 : Math.PI / 2, 0);
       }
-      this.dummy.scale.set(1, 1, 1);
+      this.dummy.scale.setScalar(WALKER_SCALE);
       this.dummy.updateMatrix();
       this.bodies.setMatrixAt(i, this.dummy.matrix);
       this.heads.setMatrixAt(i, this.dummy.matrix);
@@ -248,9 +254,12 @@ export class StreetLife {
       const offset = ((stack.x * 0.37 + stack.z * 0.61) % 1 + 1) % 1;
       for (let p = 0; p < PUFFS_PER_STACK; p++) {
         const age = ((this.clock / PUFF_LIFE + offset + p / PUFFS_PER_STACK) % 1 + 1) % 1;
-        const grow = Math.min(1, age / 0.1);
-        const fade = age > 0.78 ? Math.max(0, (1 - age) / 0.22) : 1;
-        const scale = (0.035 + age * 0.11) * size * grow * fade;
+        // Puf bacadan küçük çıkıyor, yükseldikçe şişip dağılıyor. İlk
+        // denemede en büyüğü 0,15 idi ve duman yerine havada asılı beyaz
+        // çakıl gibi okunuyordu; şimdi komşu puflar birbirine değiyor.
+        const grow = Math.min(1, age / 0.12);
+        const fade = age > 0.72 ? Math.max(0, (1 - age) / 0.28) : 1;
+        const scale = (0.06 + age * 0.2) * size * grow * fade;
         const sway = Math.sin(age * 7 + offset * 6.28) * 0.025;
         this.dummy.position.set(
           stack.x + WIND.x * age + sway,
