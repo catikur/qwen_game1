@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 
 /**
  * Şehrin dışındaki dünya.
@@ -51,6 +52,18 @@ const TERRAIN_SEGMENTS = 96;
 const SETTLEMENTS = 7;
 const BUILDINGS_PER_SETTLEMENT = 26;
 
+/**
+ * Kırsal ağaçları (Tur 34): orman kümeleri ve tek tük ağaçlar. Sayı en üst
+ * kademe için; düşük kademede bütçe kadarı çiziliyor (sıra karıştırılmış,
+ * yani baştaki her kesit kırsala eşit dağılıyor).
+ */
+const FOREST_CLUSTERS = 46;
+const SCATTERED_TREES = 260;
+
+/** Yaprak dökenler ve iğne yapraklılar — eski dokunun yeşilleriyle aynı aile. */
+const BROADLEAF_GREENS = ['#5e9a4a', '#4f8a3f', '#6aa556', '#5a8f47', '#78a85a'];
+const CONIFER_GREENS = ['#3f6e3c', '#476f3e', '#365f35', '#4c7a44'];
+
 /** Deterministik gürültü: dünya her açılışta aynı olsun. */
 function hash(n: number): number {
   const x = Math.sin(n * 127.1) * 43758.5453;
@@ -90,15 +103,9 @@ function makeTerrainTexture(): THREE.CanvasTexture {
     ctx.fillRect(hash(i * 11.3) * size, hash(i * 13.7) * size, w, h);
   }
 
-  // Ağaç kümeleri: koyu, yumuşak lekeler.
-  for (let i = 0; i < 260; i++) {
-    const radius = 3 + hash(i * 2.9) * 9;
-    const shade = 74 + Math.round(hash(i * 6.1) * 24);
-    ctx.fillStyle = `rgba(${shade - 12}, ${shade + 22}, ${shade - 26}, 0.72)`;
-    ctx.beginPath();
-    ctx.arc(hash(i * 17.1) * size, hash(i * 19.3) * size, radius, 0, Math.PI * 2);
-    ctx.fill();
-  }
+  // Ağaç kümeleri artık dokuda değil (Tur 34): boyalı koyu lekeler yukarıdan
+  // "ağaç" değil "leke" okunuyordu. Kırsalın ağaçları gerçek, örneklenmiş
+  // 3B ağaçlar (`CountrysideTrees`).
 
   // Tanecik: düz alanlarda bantlaşmayı kırıyor.
   for (let i = 0; i < 5200; i++) {
@@ -114,6 +121,43 @@ function makeTerrainTexture(): THREE.CanvasTexture {
   return texture;
 }
 
+/** Bir parçayı tek renge boyar (köşe rengi); dizinsiz, UV'siz. */
+function painted(geometry: THREE.BufferGeometry, hex: string): THREE.BufferGeometry {
+  const g = geometry.index ? geometry.toNonIndexed() : geometry;
+  const color = new THREE.Color(hex);
+  const count = g.attributes['position']!.count;
+  const colors = new Float32Array(count * 3);
+  for (let i = 0; i < count; i++) colors.set([color.r, color.g, color.b], i * 3);
+  g.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  g.deleteAttribute('uv');
+  return g;
+}
+
+/** Yaprak döken: gövde + yirmiyüzlü taç (şehrin sokak ağaçlarıyla aynı aile), taban y=0. */
+function broadleafGeometry(): THREE.BufferGeometry {
+  const trunk = new THREE.CylinderGeometry(0.06, 0.09, 0.42, 5);
+  trunk.translate(0, 0.21, 0);
+  const crown = new THREE.IcosahedronGeometry(0.38, 0);
+  crown.scale(1, 1.12, 1);
+  crown.translate(0, 0.78, 0);
+  const merged = mergeGeometries([painted(trunk, '#6b4f36'), painted(crown, '#ffffff')]);
+  merged.computeVertexNormals();
+  return merged;
+}
+
+/** İğne yapraklı: gövde + iki üst üste koni, taban y=0. */
+function coniferGeometry(): THREE.BufferGeometry {
+  const trunk = new THREE.CylinderGeometry(0.05, 0.08, 0.34, 5);
+  trunk.translate(0, 0.17, 0);
+  const lower = new THREE.ConeGeometry(0.36, 0.7, 7);
+  lower.translate(0, 0.6, 0);
+  const upper = new THREE.ConeGeometry(0.26, 0.56, 7);
+  upper.translate(0, 0.98, 0);
+  const merged = mergeGeometries([painted(trunk, '#5e4430'), painted(lower, '#f0f0f0'), painted(upper, '#ffffff')]);
+  merged.computeVertexNormals();
+  return merged;
+}
+
 export class World {
   readonly group = new THREE.Group();
 
@@ -121,6 +165,11 @@ export class World {
   private terrainMaterial: THREE.MeshStandardMaterial;
   private settlements: THREE.InstancedMesh;
   private settlementMaterial: THREE.MeshStandardMaterial;
+  private broadleaf: THREE.InstancedMesh;
+  private conifers: THREE.InstancedMesh;
+  private treeMaterial: THREE.MeshStandardMaterial;
+  private broadleafTotal = 0;
+  private coniferTotal = 0;
 
   constructor(mapWidth: number, mapHeight: number) {
     const cx = (mapWidth - 1) / 2;
@@ -236,6 +285,117 @@ export class World {
     this.settlements.instanceMatrix.needsUpdate = true;
     if (this.settlements.instanceColor) this.settlements.instanceColor.needsUpdate = true;
     this.group.add(this.settlements);
+
+    /*
+     * KIRSAL AĞAÇLARI (Tur 34).
+     *
+     * Eski kırsalda ağaçlar dokuya boyanmış koyu lekelerdi ve oyuncu
+     * haklı olarak "ağaç değil leke" dedi. Artık gerçek ağaçlar: orman
+     * kümeleri (biri iğne yapraklı ağırlıklı, biri karışık) ve tarlaların
+     * arasında tek tük ağaçlar. Hepsi iki örnek ağında, iki çizim çağrısı.
+     *
+     * Yerleşim kuralları:
+     *   - şehrin karesinin DIŞINDA (bir kare pay ile) — harita ağaçla
+     *     karışmasın;
+     *   - uzak yerleşimlerin içinde değil;
+     *   - zeminin eğriliğini izliyor (`heightAt`), havada kalmıyor;
+     *   - sisin tam içine kadar değil: oradaki ağaç zaten görünmüyor.
+     *
+     * Gölge düşürmüyorlar: güneşin gölge kamerası şehri kapsıyor, kırsal
+     * ağaçları onun dışında ve her kare yeniden çizilmeleri boşa bütçe.
+     */
+    const settlementCenters: { x: number; z: number }[] = [];
+    for (let s = 0; s < SETTLEMENTS; s++) {
+      const angle = (s / SETTLEMENTS) * Math.PI * 2 + hash(s * 3.7) * 0.9;
+      const distance = flatRadius * (1.55 + hash(s * 7.1) * 1.15);
+      settlementCenters.push({ x: cx + Math.cos(angle) * distance, z: cz + Math.sin(angle) * distance });
+    }
+    const heightAt = (x: number, z: number): number => {
+      const r = Math.hypot(x - cx, z - cz);
+      if (r <= flatRadius) return 0;
+      const t = Math.min(1, (r - flatRadius) / Math.max(1, falloff));
+      const eased = t * t * (3 - 2 * t);
+      return -((r * r) / (2 * PLANET_RADIUS)) * eased;
+    };
+    const halfW = mapWidth / 2 + 1;
+    const halfH = mapHeight / 2 + 1;
+    const maxR = span * 0.4;
+    const allowed = (x: number, z: number): boolean => {
+      if (Math.abs(x - cx) < halfW && Math.abs(z - cz) < halfH) return false;
+      if (Math.hypot(x - cx, z - cz) > maxR) return false;
+      for (const c of settlementCenters) if (Math.hypot(x - c.x, z - c.z) < 7) return false;
+      return true;
+    };
+
+    interface TreeSpot { x: number; z: number; scale: number; yaw: number; conifer: boolean; tone: number }
+    const spots: TreeSpot[] = [];
+    for (let k = 0; k < FOREST_CLUSTERS; k++) {
+      const angle = hash(k * 4.3 + 0.7) * Math.PI * 2;
+      const radius = Math.max(halfW, halfH) * 1.1 + hash(k * 6.1 + 1.3) * (maxR - Math.max(halfW, halfH) * 1.1);
+      const fx = cx + Math.cos(angle) * radius;
+      const fz = cz + Math.sin(angle) * radius;
+      const pine = hash(k * 8.9 + 2.1);
+      const size = 10 + Math.floor(hash(k * 2.3 + 0.4) * 24);
+      const extent = 1.6 + hash(k * 5.7) * 2.6;
+      for (let t = 0; t < size; t++) {
+        const n = k * 97 + t;
+        // Kümenin ortası sık, kenarı seyrek: kare kök dağılım.
+        const r = Math.sqrt(hash(n * 1.31)) * extent;
+        const a = hash(n * 2.17) * Math.PI * 2;
+        const x = fx + Math.cos(a) * r;
+        const z = fz + Math.sin(a) * r;
+        if (!allowed(x, z)) continue;
+        spots.push({ x, z, scale: 0.85 + hash(n * 3.7) * 0.6, yaw: hash(n * 4.9) * Math.PI * 2, conifer: hash(n * 6.3) < pine, tone: hash(n * 7.7) });
+      }
+    }
+    for (let t = 0; t < SCATTERED_TREES; t++) {
+      const angle = hash(t * 9.13 + 3.1) * Math.PI * 2;
+      const radius = Math.max(halfW, halfH) + hash(t * 11.7 + 0.9) * (maxR - Math.max(halfW, halfH));
+      const x = cx + Math.cos(angle) * radius;
+      const z = cz + Math.sin(angle) * radius;
+      if (!allowed(x, z)) continue;
+      spots.push({ x, z, scale: 0.8 + hash(t * 13.1) * 0.5, yaw: hash(t * 15.3) * Math.PI * 2, conifer: hash(t * 17.9) < 0.25, tone: hash(t * 19.7) });
+    }
+    // Sıra karıştırılıyor: düşük kademe baştan bir kesit çizince kırsala eşit dağılsın.
+    for (let i = spots.length - 1; i > 0; i--) {
+      const j = Math.floor(hash(i * 1.618 + 0.33) * (i + 1));
+      [spots[i], spots[j]] = [spots[j]!, spots[i]!];
+    }
+
+    this.treeMaterial = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9, metalness: 0 });
+    const broadSpots = spots.filter((spot) => !spot.conifer);
+    const pineSpots = spots.filter((spot) => spot.conifer);
+    const place = (geometry: THREE.BufferGeometry, list: TreeSpot[], greens: string[]): THREE.InstancedMesh => {
+      const mesh = new THREE.InstancedMesh(geometry, this.treeMaterial, Math.max(1, list.length));
+      mesh.frustumCulled = false;
+      mesh.castShadow = false;
+      mesh.receiveShadow = false;
+      list.forEach((spot, i) => {
+        dummy.position.set(spot.x, heightAt(spot.x, spot.z) - 0.04, spot.z);
+        dummy.scale.setScalar(spot.scale);
+        dummy.rotation.set(0, spot.yaw, 0);
+        dummy.updateMatrix();
+        mesh.setMatrixAt(i, dummy.matrix);
+        tint.set(greens[Math.floor(spot.tone * greens.length)]!);
+        mesh.setColorAt(i, tint);
+      });
+      mesh.count = list.length;
+      mesh.instanceMatrix.needsUpdate = true;
+      if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+      this.group.add(mesh);
+      return mesh;
+    };
+    this.broadleaf = place(broadleafGeometry(), broadSpots, BROADLEAF_GREENS);
+    this.conifers = place(coniferGeometry(), pineSpots, CONIFER_GREENS);
+    this.broadleafTotal = broadSpots.length;
+    this.coniferTotal = pineSpots.length;
+  }
+
+  /** Kalite kademesi: kırsal ağaçlarının ne kadarı çizilsin (0..1). */
+  setTreeBudget(fraction: number): void {
+    const f = Math.max(0, Math.min(1, fraction));
+    this.broadleaf.count = Math.round(this.broadleafTotal * f);
+    this.conifers.count = Math.round(this.coniferTotal * f);
   }
 
   /**
@@ -254,6 +414,7 @@ export class World {
       level * 0.63,
       level * 0.56,
     );
+    this.treeMaterial.color.setRGB(level, level, level);
   }
 
   /** Veri lensinde kırsal susuyor: lens bir harita, manzara gürültü. */
@@ -271,11 +432,19 @@ export class World {
     return this.settlements.count;
   }
 
+  /** Testler için: kırsalda çizilen ağaç sayısı (kademe bütçesiyle). */
+  get treeCount(): number {
+    return this.broadleaf.count + this.conifers.count;
+  }
+
   dispose(): void {
     this.terrain.geometry.dispose();
     this.terrainMaterial.map?.dispose();
     this.terrainMaterial.dispose();
     this.settlements.geometry.dispose();
     this.settlementMaterial.dispose();
+    this.broadleaf.geometry.dispose();
+    this.conifers.geometry.dispose();
+    this.treeMaterial.dispose();
   }
 }

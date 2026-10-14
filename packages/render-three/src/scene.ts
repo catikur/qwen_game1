@@ -1342,6 +1342,8 @@ export class CityRenderer {
     this.roads.receiveShadow = shadows;
 
     this.traffic.setCarBudget(level.carBudget);
+    // Kırsal ağaçları da kademeyle seyreliyor (Tur 34): aynı bütçe.
+    this.world.setTreeBudget(level.carBudget);
     this.setPostProcessing(level.postProcessing);
     this.scene.environment = level.environment ? this.envTexture : null;
 
@@ -1419,6 +1421,8 @@ export class CityRenderer {
     decor: Record<DecorPart, number>;
     decorVisible: boolean;
     contactShadows: number;
+    /** Kırsalda çizilen gerçek ağaç sayısı (Tur 34). */
+    countrysideTrees: number;
     lampGlow: number;
     groundColorSum: number;
     timeOfDay: number;
@@ -1501,6 +1505,7 @@ export class CityRenderer {
       decor: this.decorTotals(),
       decorVisible: this.buildingDecor.group.visible && this.fabricDecor.group.visible && this.streetDecor.group.visible,
       contactShadows: this.buildingShadows.mesh.count + this.fabricShadows.mesh.count,
+      countrysideTrees: this.world.treeCount,
       lampGlow: this.decorKit.lampMaterial.emissiveIntensity,
       groundColorSum,
       timeOfDay: this.timeOfDay,
