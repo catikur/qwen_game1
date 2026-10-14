@@ -2222,6 +2222,17 @@ masaüstü (yüksek kademe) ve bir telefon (düşük kademe) karesi çekiliyor.
   - zemine yakın karartma 0,6 → 0,76.
   Gece testlerinin eşikleri değişmedi.
 
+**Ölçüm.**
+
+- *Çizim çağrısı:* 29, önceyle aynı (900 kare). Araba ve ağaç yeni
+  geometride ama yine tek örnek ağında.
+- *Önce/sonra kareleri:* masaüstü yüksek kademede beş kare, telefon düşük
+  kademede bir kare; hata yok. Kare hızı yazılımsal GPU'da önceyle aynı
+  bantta: masaüstü 0,7–1,0 FPS, telefon 4,2–4,6 FPS (SwiftShader).
+- *Tam oynanış:* 333/333, 0 konsol hatası. Görsel katman kontrolleri
+  aynen geçiyor: üç parçalı kütle, detay katmanı, temas gölgesi, gece
+  pencere ışığı, lens geçişinde renk kararlılığı.
+
 ---
 
 ## 3. Ölçülen durum
@@ -2303,7 +2314,7 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi) |
-| Birim testi | **204 test** (`pnpm test`; Tur 24'te render paketi de) |
+| Birim testi | **205 test** (`pnpm test`; Tur 24'te render paketi de) |
 | Denge testi | **288 kontrol, hepsi geçiyor** (20 bölüm, süreleriyle; ~11 dk) |
 | Tarayıcı testi | **333 kontrol, hepsi geçiyor**, 0 konsol hatası (~15–20 dk); duman koşusu 97 (~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + duman oynanışı |
