@@ -4,7 +4,7 @@
 > `pnpm bench` çıktısından; iddialar `pnpm balance` ve `pnpm playtest`
 > tarafından her koşuda doğrulanıyor.
 >
-> Son güncelleme: şema **v6**, 33 tur (Tur 33 denendi ve geri alındı).
+> Son güncelleme: şema **v6**, 34 tur (Tur 33 denendi ve geri alındı; Tur 34 eski görünüme canlılık ekledi).
 
 ---
 
@@ -2206,6 +2206,60 @@ Ders: testler ve ölçüm "kötüleşmedi"yi kanıtlayabiliyor, "güzelleşti"yi
 kanıtlayamıyor. Görsel işte karar kullanıcının gözü. Bundan sonra görsel
 değişiklik canlıya alınmadan önce önce/sonra kareleri gösterilip onay
 alınacak.
+
+### Tur 34 — Eski görünüm + canlılık
+
+Kullanıcının yönü: "eski stil + canlılık". Işık, ton eşleme, duvar ve
+zemin renkleri Tur 33 öncesiyle aynı; yalnızca parça eklendi. Dört
+öncelik, dördü de yapıldı:
+
+**Kırsal.**
+- Boyalı lekeler kaldırıldı. Yerlerine 46 orman kümesi ve 260 tek ağaç
+  geldi: yaprak döken ve iğne yapraklı, iki örnek ağı.
+- Ağaçlar şehrin karesinin ve yerleşimlerin dışında; kalite kademesiyle
+  seyreliyor, gece kararıyor.
+- Uzak yerleşimler tek renk gri kutulardı ("moloz"). Artık soluk duvarlı,
+  kiremit çatılı evler ve birkaç apartman.
+
+**Araçlar.**
+- Fon araçları üç türde: araba, minibüs, otobüs. Renkleri doğal; sayı
+  48'den 60'a çıktı. Gece farlar ve stoplar yanıyor.
+- Sarı taksi ve turuncu otobüs denendi, sonra çıkarıldı. Rakiplerin altın
+  sarısı ve turuncusuyla karışıyorlardı. Bilgi taşıyan renk, süs taşıyan
+  renkle yarışmamalı.
+- Kamyon ve müşteri aracı ışıksız düz kutulardı. Köşeden bakınca düz
+  altıgen çıkartma gibi duruyorlardı; kullanıcının "araçlar çok kötü"
+  dediği şeyin büyük kısmı buydu.
+  - Artık kamyon kasa + kabin + tekerden oluşuyor, müşteri aracı araba
+    silüetinde.
+  - Hâlâ ışıksız (gece de okunuyorlar); hacmi fırınlanmış köşe gölgesi
+    veriyor.
+  - Tekerler yolda, 5 cm havada süzülmüyorlar.
+
+**Sokak hayatı.**
+- Kaldırımda yayalar yürüyor. Gece üçte biri kalıyor; lenste susuyorlar.
+- Duman bilgi taşıyor: yalnızca dün üretim yapmış tesisin bacasından ve
+  şehrin çalışan "Fabrika" yapılarından çıkıyor. Girdisi kesilen tesis
+  susuyor, zincirin nerede durduğu sokaktan okunuyor.
+
+**Binalar.** Şehir dokusuna şunlar eklendi:
+- sokak kapısı;
+- apartman ve kulelerde giriş saçağı;
+- kiremit çatılarda tuğla baca;
+- apartmanlarda balkon bantları;
+- bazı kulelerde anten.
+
+**Doğrulama.**
+- Önce/sonra kareleri aynı kayıttan, aynı kameralardan çekildi: geniş,
+  doğu, sokak, köşe, merkez, gece, sokak-gece, telefon.
+- Kareler canlıya almadan önce kullanıcıya gösterildi.
+- Oynanış testine yeni kontroller eklendi:
+  - kırsalda 3B ağaçlar;
+  - üç tür fon aracı;
+  - farlar gece açık, gündüz kapalı;
+  - gece yaya azalıyor;
+  - lenste yaya ve duman susuyor;
+  - **dumanlı tesis sayısı = üretim yapan tesis sayısı** (birebir).
 
 ---
 
