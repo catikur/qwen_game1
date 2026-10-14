@@ -149,19 +149,13 @@ function hipRoofGeometry(): THREE.BufferGeometry {
   return geometry;
 }
 
-/**
- * Ağaç: gövde + iki parçalı düşük çokgenli taç, köşe renkleri birleşik tek
- * geometride. Tur 33 (Kenney tarzı): tek yirmiyüzlü yerine biri büyük biri
- * küçük iki top — siluet yuvarlak ve "oyuncak", üst top bir ton açık.
- */
+/** Ağaç: gövde + düşük çokgenli taç, köşe renkleri birleşik tek geometride. */
 function treeGeometry(): THREE.BufferGeometry {
-  const trunk = new THREE.CylinderGeometry(0.045, 0.065, 0.3, 6).toNonIndexed();
-  trunk.translate(0, 0.15, 0);
-  const crown = new THREE.IcosahedronGeometry(0.29, 0);
-  crown.scale(1, 0.95, 1);
-  crown.translate(0, 0.5, 0);
-  const top = new THREE.IcosahedronGeometry(0.19, 0);
-  top.translate(0.04, 0.74, -0.03);
+  const trunk = new THREE.CylinderGeometry(0.05, 0.07, 0.34, 5).toNonIndexed();
+  trunk.translate(0, 0.17, 0);
+  const crown = new THREE.IcosahedronGeometry(0.3, 0);
+  crown.scale(1, 1.15, 1);
+  crown.translate(0, 0.58, 0);
   const paint = (geometry: THREE.BufferGeometry, color: THREE.Color) => {
     const count = geometry.attributes['position']!.count;
     const colors = new Float32Array(count * 3);
@@ -171,9 +165,8 @@ function treeGeometry(): THREE.BufferGeometry {
     return geometry;
   };
   const merged = mergeGeometries([
-    paint(trunk, new THREE.Color('#7a5638')),
-    paint(crown, new THREE.Color('#e6e6e6')),
-    paint(top, new THREE.Color('#ffffff')),
+    paint(trunk, new THREE.Color('#6b4f36')),
+    paint(crown, new THREE.Color('#ffffff')),
   ]);
   merged.computeVertexNormals();
   return merged;

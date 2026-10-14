@@ -72,128 +72,84 @@ function paintAtlas(painters: {
 /** Vitrin bandının çeyrek içindeki yüksekliği (piksel) — surface.ts'teki 0,42 ile aynı. */
 const STOREFRONT_PX = Math.round(QUAD * 0.42);
 
-/*
- * KENNEY TARZI CEPHE (Tur 33).
- *
- * Dil üç renkten oluşuyor: duvar (nötr, neredeyse beyaz — bina rengi örnek
- * renginden geliyor), çerçeve (saf beyaz, duvardan bir ton açık) ve CAM.
- * Cam mavi ağırlıklı çiziliyor ve gölgelendirici (`surface.ts`) mavi
- * ağırlıklı pikseli bina rengiyle çarpmıyor: pencere mor binada da, sarı
- * binada da aynı açık mavi cam. Eski atlasta pencere duvar renginin koyu
- * bir tonuydu ve şehir yakından "kirli" okunuyordu.
- *
- * Gece dokusu aynı dikdörtgenleri kullanıyor: yanan pencere, gündüzün camı.
- */
-const WALL = '#f4f4f4';
-const FRAME = '#ffffff';
-const GLASS = '#7fb6df';
-const GLASS_LIGHT = '#b4dcf4';
-const GLASS_DARK = '#4e86bd';
-
-/** Konut penceresi: kat başına üç, `r` satır `c` sütun. */
-function residentialWindow(x0: number, y0: number, r: number, c: number): { x: number; y: number; w: number; h: number } {
-  const rowH = QUAD / 4;
-  const colW = QUAD / 3;
-  return { x: x0 + c * colW + colW * 0.24, y: y0 + r * rowH + rowH * 0.2, w: colW * 0.52, h: rowH * 0.52 };
-}
-
-/** Ofis camı: kat başına dört bölme; altta bir döşeme bandı (duvar rengi). */
-function officePane(x0: number, y0: number, r: number, c: number): { x: number; y: number; w: number; h: number } {
-  const rowH = QUAD / 4;
-  const colW = QUAD / 4;
-  return { x: x0 + c * colW + 4, y: y0 + r * rowH + 5, w: colW - 8, h: rowH * 0.52 };
-}
-
-/** Vitrin camı ve kapısı (çeyreğin alt bandında). */
-function storefrontGlass(x0: number, y0: number): { x: number; y: number; w: number; h: number } {
-  const top = y0 + QUAD - STOREFRONT_PX;
-  return { x: x0 + 5, y: top + 15, w: QUAD - 10, h: STOREFRONT_PX - 24 };
-}
-
-/** Sanayi şerit penceresi. */
-function industrialStrip(x0: number, y0: number): { x: number; y: number; w: number; h: number } {
-  return { x: x0, y: y0 + QUAD * 0.14, w: QUAD, h: QUAD * 0.13 };
-}
-
-/** Çerçeveli cam: beyaz kasa, mavi cam, sol üstte ışık payı. */
-function paintPane(ctx: CanvasRenderingContext2D, rect: { x: number; y: number; w: number; h: number }, frame: number): void {
-  ctx.fillStyle = FRAME;
-  ctx.fillRect(rect.x - frame, rect.y - frame, rect.w + frame * 2, rect.h + frame * 2);
-  ctx.fillStyle = GLASS;
-  ctx.fillRect(rect.x, rect.y, rect.w, rect.h);
-  ctx.fillStyle = GLASS_LIGHT;
-  ctx.fillRect(rect.x, rect.y, rect.w * 0.45, rect.h * 0.32);
-}
-
 export function makeFacadeAtlas(): THREE.CanvasTexture {
   return paintAtlas(
     {
-      // Konut: kat başına üç çerçeveli pencere, ortada kayıt, altta denizlik.
+      // Konut: kat başına üç delikli pencere, denizlik ve kat bandı.
       residential: (ctx, x0, y0) => {
-        ctx.fillStyle = WALL;
+        ctx.fillStyle = '#eeeeee';
         ctx.fillRect(x0, y0, QUAD, QUAD);
-        for (let r = 0; r < 4; r++) {
-          for (let c = 0; c < 3; c++) {
-            const w = residentialWindow(x0, y0, r, c);
-            paintPane(ctx, w, 3);
-            // Kayıt: camı ikiye bölen beyaz çıta.
-            ctx.fillStyle = FRAME;
-            ctx.fillRect(w.x + w.w / 2 - 1.5, w.y, 3, w.h);
-            // Denizlik.
-            ctx.fillRect(w.x - 5, w.y + w.h + 2, w.w + 10, 4);
+        const rows = 4;
+        const cols = 3;
+        const rowH = QUAD / rows;
+        const colW = QUAD / cols;
+        for (let r = 0; r < rows; r++) {
+          ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+          ctx.fillRect(x0, y0 + r * rowH + rowH - 3, QUAD, 3);
+          for (let c = 0; c < cols; c++) {
+            const wx = x0 + c * colW + colW * 0.24;
+            const wy = y0 + r * rowH + rowH * 0.2;
+            const ww = colW * 0.52;
+            const wh = rowH * 0.5;
+            ctx.fillStyle = '#a7b0ba';
+            ctx.fillRect(wx, wy, ww, wh);
+            ctx.fillStyle = '#c3cad1';
+            ctx.fillRect(wx, wy, ww, wh * 0.22);
+            ctx.fillStyle = '#f7f7f7';
+            ctx.fillRect(wx - 2, wy + wh, ww + 4, 3);
           }
         }
       },
-      // Ofis: kat başına bir cam şerit (dört bölme) ve altında duvar renginde döşeme bandı.
+      // Ofis: cam giydirme — koyu cam, ince dikmeler, kat başına döşeme bandı.
       office: (ctx, x0, y0) => {
-        ctx.fillStyle = WALL;
+        const gradient = ctx.createLinearGradient(x0, y0, x0 + QUAD, y0 + QUAD);
+        gradient.addColorStop(0, '#a4b2c0');
+        gradient.addColorStop(1, '#8796a6');
+        ctx.fillStyle = gradient;
         ctx.fillRect(x0, y0, QUAD, QUAD);
-        for (let r = 0; r < 4; r++) {
-          for (let c = 0; c < 4; c++) {
-            const pane = officePane(x0, y0, r, c);
-            ctx.fillStyle = GLASS;
-            ctx.fillRect(pane.x, pane.y, pane.w, pane.h);
-            ctx.fillStyle = GLASS_LIGHT;
-            ctx.fillRect(pane.x, pane.y, pane.w * 0.4, pane.h * 0.3);
-          }
-          // Döşeme bandının üst kenarında ince beyaz denizlik.
-          ctx.fillStyle = FRAME;
-          ctx.fillRect(x0, y0 + r * (QUAD / 4) + 5 + (QUAD / 4) * 0.52, QUAD, 3);
-        }
+        const rows = 4;
+        const cols = 4;
+        ctx.fillStyle = '#dfe3e7';
+        for (let r = 0; r < rows; r++) ctx.fillRect(x0, y0 + (r + 1) * (QUAD / rows) - 5, QUAD, 5);
+        ctx.fillStyle = '#e9ecef';
+        for (let c = 0; c < cols; c++) ctx.fillRect(x0 + c * (QUAD / cols), y0, 2, QUAD);
       },
-      // Vitrin: alt bantta tabela alnı, büyük cam, koyu cam kapı, beyaz doğrama.
+      // Vitrin: yalnızca alt bant kullanılıyor — süpürgelik, büyük cam, tabela alnı.
       storefront: (ctx, x0, y0) => {
-        ctx.fillStyle = WALL;
+        ctx.fillStyle = '#eeeeee';
         ctx.fillRect(x0, y0, QUAD, QUAD);
         const bottom = y0 + QUAD;
         const top = bottom - STOREFRONT_PX;
-        const glass = storefrontGlass(x0, y0);
-        ctx.fillStyle = FRAME;
-        ctx.fillRect(x0, top, QUAD, 11);
-        paintPane(ctx, glass, 3);
-        ctx.fillStyle = GLASS_DARK;
-        ctx.fillRect(x0 + QUAD * 0.62, glass.y, QUAD * 0.16, glass.h);
-        ctx.fillStyle = FRAME;
-        for (const f of [0.31, 0.62, 0.78]) ctx.fillRect(x0 + QUAD * f - 1.5, glass.y, 3, glass.h);
-        ctx.fillStyle = '#d6d6d6';
-        ctx.fillRect(x0, bottom - 7, QUAD, 7);
+        // Tabela alnı (açık) — vitrinin üstünde.
+        ctx.fillStyle = '#f6f6f6';
+        ctx.fillRect(x0, top, QUAD, 10);
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.18)';
+        ctx.fillRect(x0, top + 10, QUAD, 2);
+        // Büyük vitrin camı ve kapı.
+        ctx.fillStyle = '#7d8a96';
+        ctx.fillRect(x0 + 4, top + 14, QUAD - 8, STOREFRONT_PX - 22);
+        ctx.fillStyle = '#5f6b76';
+        ctx.fillRect(x0 + QUAD * 0.62, top + 14, QUAD * 0.16, STOREFRONT_PX - 22);
+        // Doğrama.
+        ctx.fillStyle = '#f2f2f2';
+        for (const f of [0.31, 0.62, 0.78]) ctx.fillRect(x0 + QUAD * f - 1, top + 14, 3, STOREFRONT_PX - 22);
+        // Süpürgelik.
+        ctx.fillStyle = '#d4d4d4';
+        ctx.fillRect(x0, bottom - 8, QUAD, 8);
       },
-      // Sanayi: geniş oluklu panel, üstte beyaz kayıtlı şerit pencere.
+      // Sanayi: oluklu panel ve üstte şerit pencere.
       industrial: (ctx, x0, y0) => {
-        for (let x = 0; x < QUAD; x += 10) {
-          ctx.fillStyle = (x / 10) % 2 === 0 ? WALL : '#e2e2e2';
-          ctx.fillRect(x0 + x, y0, 10, QUAD);
+        for (let x = 0; x < QUAD; x += 8) {
+          ctx.fillStyle = (x / 8) % 2 === 0 ? '#e9e9e9' : '#d9d9d9';
+          ctx.fillRect(x0 + x, y0, 8, QUAD);
         }
-        const strip = industrialStrip(x0, y0);
-        ctx.fillStyle = FRAME;
-        ctx.fillRect(strip.x, strip.y - 3, strip.w, strip.h + 6);
-        ctx.fillStyle = GLASS;
-        ctx.fillRect(strip.x, strip.y, strip.w, strip.h);
-        ctx.fillStyle = FRAME;
-        for (let x = 0; x < QUAD; x += 16) ctx.fillRect(x0 + x, strip.y, 3, strip.h);
+        ctx.fillStyle = '#a3acb5';
+        ctx.fillRect(x0, y0 + QUAD * 0.16, QUAD, QUAD * 0.1);
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.12)';
+        ctx.fillRect(x0, y0 + QUAD * 0.5, QUAD, 3);
       },
     },
-    WALL,
+    '#eeeeee',
   );
 }
 
@@ -202,42 +158,46 @@ export function makeWindowAtlas(): THREE.CanvasTexture {
   return paintAtlas(
     {
       residential: (ctx, x0, y0) => {
-        for (let r = 0; r < 4; r++) {
-          for (let c = 0; c < 3; c++) {
+        const rows = 4;
+        const cols = 3;
+        const rowH = QUAD / rows;
+        const colW = QUAD / cols;
+        for (let r = 0; r < rows; r++) {
+          for (let c = 0; c < cols; c++) {
             if (!lit(r * 11 + c * 5 + 1, 0.42)) continue;
             const value = 0.55 + hash(r * 3 + c * 17) * 0.45;
             const shade = Math.round(value * 255);
-            const w = residentialWindow(x0, y0, r, c);
             ctx.fillStyle = `rgb(${shade}, ${Math.round(shade * 0.84)}, ${Math.round(shade * 0.58)})`;
-            ctx.fillRect(w.x, w.y, w.w, w.h);
+            ctx.fillRect(x0 + c * colW + colW * 0.24, y0 + r * rowH + rowH * 0.2, colW * 0.52, rowH * 0.5);
           }
         }
       },
       // Ofis gecesi: katların çoğu yanık, ışık daha soğuk ve düz.
       office: (ctx, x0, y0) => {
-        for (let r = 0; r < 4; r++) {
-          for (let c = 0; c < 4; c++) {
+        const rows = 4;
+        const cols = 4;
+        for (let r = 0; r < rows; r++) {
+          for (let c = 0; c < cols; c++) {
             if (!lit(r * 7 + c * 13 + 3, 0.3)) continue;
             const value = 0.6 + hash(r * 19 + c * 7) * 0.3;
             const shade = Math.round(value * 255);
-            const pane = officePane(x0, y0, r, c);
             ctx.fillStyle = `rgb(${Math.round(shade * 0.86)}, ${Math.round(shade * 0.9)}, ${shade})`;
-            ctx.fillRect(pane.x, pane.y, pane.w, pane.h);
+            ctx.fillRect(x0 + c * (QUAD / cols) + 3, y0 + r * (QUAD / rows) + 2, QUAD / cols - 5, QUAD / rows - 9);
           }
         }
       },
       // Vitrin gece hep yanık: dükkân sokağı aydınlatıyor.
       storefront: (ctx, x0, y0) => {
-        const glass = storefrontGlass(x0, y0);
+        const bottom = y0 + QUAD;
+        const top = bottom - STOREFRONT_PX;
         ctx.fillStyle = 'rgb(255, 226, 170)';
-        ctx.fillRect(glass.x, glass.y, glass.w, glass.h);
+        ctx.fillRect(x0 + 4, top + 14, QUAD - 8, STOREFRONT_PX - 22);
         ctx.fillStyle = 'rgb(150, 128, 92)';
-        ctx.fillRect(x0, y0 + QUAD - STOREFRONT_PX, QUAD, 11);
+        ctx.fillRect(x0, top, QUAD, 10);
       },
       industrial: (ctx, x0, y0) => {
-        const strip = industrialStrip(x0, y0);
         ctx.fillStyle = 'rgb(120, 112, 96)';
-        ctx.fillRect(strip.x, strip.y, strip.w, strip.h);
+        ctx.fillRect(x0, y0 + QUAD * 0.16, QUAD, QUAD * 0.1);
       },
     },
     '#000000',
@@ -305,33 +265,29 @@ export function makeRoadTexture(): THREE.CanvasTexture {
   const size = 128;
   const { ctx, el } = canvas(size);
 
-  // Tur 33: Kenney tarzı — orta gri asfalt, açık gri kaldırım, beyaz kesikli çizgi.
-  ctx.fillStyle = '#4a4f58';
+  ctx.fillStyle = '#16181d';
   ctx.fillRect(0, 0, size, size);
 
-  // Asfalt taneciği: çok hafif, desen değil doku.
-  for (let i = 0; i < 500; i++) {
+  // Asfalt taneciği.
+  for (let i = 0; i < 900; i++) {
     const value = hash(i);
-    const grey = 70 + Math.round(value * 14);
-    ctx.fillStyle = `rgb(${grey}, ${grey + 3}, ${grey + 8})`;
+    const grey = 22 + Math.round(value * 26);
+    ctx.fillStyle = `rgb(${grey}, ${grey + 1}, ${grey + 3})`;
     ctx.fillRect(hash(i * 3.1) * size, hash(i * 7.7) * size, 1.4, 1.4);
   }
 
-  // Kaldırım: karenin iki kenarında açık gri bant, yola bakan kenarında bordür.
-  const curb = size * 0.13;
-  ctx.fillStyle = '#c9cdd3';
+  // Kaldırım bandı: karenin iki kenarında açık gri şerit.
+  const curb = size * 0.11;
+  ctx.fillStyle = '#2f353e';
   ctx.fillRect(0, 0, size, curb);
   ctx.fillRect(0, size - curb, size, curb);
-  ctx.fillStyle = '#9ea4ad';
-  ctx.fillRect(0, curb - 3, size, 3);
-  ctx.fillRect(0, size - curb, size, 3);
 
   // Kesikli orta çizgi.
-  ctx.fillStyle = '#f4f4ef';
+  ctx.fillStyle = '#c9b46a';
   const dash = size * 0.2;
   const gap = size * 0.14;
   for (let x = gap / 2; x < size; x += dash + gap) {
-    ctx.fillRect(x, size / 2 - 2, dash, 4);
+    ctx.fillRect(x, size / 2 - 1.6, dash, 3.2);
   }
 
   const texture = new THREE.CanvasTexture(el);

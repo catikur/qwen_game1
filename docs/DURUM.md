@@ -4,7 +4,7 @@
 > `pnpm bench` çıktısından; iddialar `pnpm balance` ve `pnpm playtest`
 > tarafından her koşuda doğrulanıyor.
 >
-> Son güncelleme: şema **v6**, 33 tur tamamlandı.
+> Son güncelleme: şema **v6**, 32 tur tamamlandı.
 
 ---
 
@@ -2153,86 +2153,6 @@ tutucuyu (`{city}`) yakaladı. Türkçede şehir adından sonra ek getirmek
 almayacak şekilde yeniden yazıldı, düğmeler ok kullanıyor
 ("Kasa → Yeşilova").
 
-### Ara düzeltme — zincir kartı krizde sessiz kalıyordu
-
-Tur 31'in birleşmesinden sonra main'deki tam oynanış koşusu dört kontrolde
-düştü. Kart hamle önermedi; zincir kurulamayınca üç kamyon kontrolü de
-düştü. Yerelde ve PR'larda (duman koşusu) görünmüyordu.
-
-- *Sebep:* o koşuda kartın ilk yuvası "Kriz"deydi (Tur 27'nin sektör
-  olayları). Hammadde pahalanınca ara mal ünitesinin geri ödemesi sonsuza
-  gidiyor ve kart onu sessizce atlıyordu. Hamle de sebep de yoktu. Hangi
-  gün hangi olayın düştüğü kare zamanlamasına bağlı: main'de beş
-  birleşmenin birinde.
-- *Ürün:* kart artık sebebini yazıyor ("{girdi} krizde ({fiyat}): bu
-  fiyatla {ünite} kâr etmiyor. Kriz geçince hamle geri gelir.").
-- *Test:* yeni `chain.test.ts`. Düzeltme olmadan düşüyor. Oynanış testi
-  zincir bölümünden önce aktif olayları temizleyip spot fiyatları tabana
-  çekiyor: test o günün pazarını değil kartın arayüzünü ölçüyor.
-
-Ders: PR'lar duman koşusunu, main tam koşuyu çalıştırıyor. Bir PR'ın yeşili
-main'in yeşili değil; birleşmeden sonra main'in koşusuna da bakılmalı.
-
-### Tur 33 — Kenney tarzı: kendi prosedürel kitimiz
-
-Kullanıcı grafik için üç seçenekten B'yi seçti: hazır model kiti değil,
-aynı prosedürel geometri ama Kenney'nin görsel diliyle. Ek boyut sıfır,
-35 bina türü, şirket renkleri, örnekleme ve telefon performansı aynı.
-
-**Teşhis (önce/sonra aynı şehir, aynı kameralar).** Sabit bir şehir
-(tohum 5, vekille 420 gün) tarayıcıda `replaceState` ile yükleniyor, beş
-masaüstü (yüksek kademe) ve bir telefon (düşük kademe) karesi çekiliyor.
-Önceki görüntünün üç sorunu vardı:
-
-- *Yollar neredeyse siyahtı* (#16181d, sarı çizgi); şehrin en geniş yüzeyi
-  en koyu yüzeydi.
-- *Pencere duvarın koyu tonuydu.* Atlas bina rengiyle çarpılıyordu. Yakından
-  bakınca şehir "kirli" okunuyordu.
-- *Rakip binaları gövdeden boyalıydı* (şirket rengi %55). Mor bir rakip
-  şehrin yarısını mora boyuyordu.
-
-**Değişenler.**
-
-- *Cam (`surface.ts`):* atlasın mavi ağırlıklı pikseli bina rengiyle
-  çarpılmıyor. Mor binada da sarı binada da aynı açık mavi cam; duvar ve
-  çerçeve nötr, örnek rengini alıyor. Ek çizim çağrısı yok, tek bir `mix`.
-- *Cephe atlası (`textures.ts`):* beyaz kasalı, kayıtlı pencere ve
-  denizlik; ofiste cam şerit + duvar renginde döşeme bandı (cam payı
-  %66 → %52 — kuleler "mavi ızgara"ya dönüşüyordu); vitrinde beyaz doğrama;
-  sanayide kayıtlı şerit pencere. Gece dokusu aynı dikdörtgenleri
-  kullanıyor: yanan pencere, gündüzün camı.
-- *Sahiplik çatıda:* şirket binalarının gövdesi pastel (türün rengi
-  kremaya %52, şirket rengi %10 ipucu), çatı ve korniş şirket renginde.
-  Kamera en çok çatıyı gördüğü için kimin nerede olduğu yukarıdan hâlâ tek
-  bakışta okunuyor.
-- *Yollar:* orta gri asfalt, açık gri kaldırım ve bordür, beyaz kesikli
-  çizgi.
-- *Kırsal ve kilitli bölgeler:* Kenney yeşili, arada buğday sarısı tarla.
-- *Ağaçlar:* tek yirmiyüzlü yerine iki top (büyük + küçük, üstteki bir ton
-  açık); yeşiller daha canlı.
-- *Arabalar:* tek gri kutu yerine tıknaz oyuncak araba. Gövde, koyu cam
-  bandı, çatı ve dört siyah teker tek geometride, köşe renkleriyle. Çizim
-  çağrısı yine bir; palet canlı (kırmızı, mavi, sarı, beyaz, yeşil…).
-- *Çatılar:* kiremit tonları daha doygun, arada mavi çatı.
-- *Işık:*
-  - ACES yerine nötr ton eşleme (ACES doygun pastelleri griye çekiyordu);
-  - gökyüzü daha açık ve mavi;
-  - gök dolgusu öne, güneş geri (gölgedeki yüz de aydınlık);
-  - yer yansıması koyu laciverten zeytin yeşiline;
-  - zemine yakın karartma 0,6 → 0,76.
-  Gece testlerinin eşikleri değişmedi.
-
-**Ölçüm.**
-
-- *Çizim çağrısı:* 29, önceyle aynı (900 kare). Araba ve ağaç yeni
-  geometride ama yine tek örnek ağında.
-- *Önce/sonra kareleri:* masaüstü yüksek kademede beş kare, telefon düşük
-  kademede bir kare; hata yok. Kare hızı yazılımsal GPU'da önceyle aynı
-  bantta: masaüstü 0,7–1,0 FPS, telefon 4,2–4,6 FPS (SwiftShader).
-- *Tam oynanış:* 333/333, 0 konsol hatası. Görsel katman kontrolleri
-  aynen geçiyor: üç parçalı kütle, detay katmanı, temas gölgesi, gece
-  pencere ışığı, lens geçişinde renk kararlılığı.
-
 ---
 
 ## 3. Ölçülen durum
@@ -2314,7 +2234,7 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi) |
-| Birim testi | **205 test** (`pnpm test`; Tur 24'te render paketi de) |
+| Birim testi | **204 test** (`pnpm test`; Tur 24'te render paketi de) |
 | Denge testi | **288 kontrol, hepsi geçiyor** (20 bölüm, süreleriyle; ~11 dk) |
 | Tarayıcı testi | **333 kontrol, hepsi geçiyor**, 0 konsol hatası (~15–20 dk); duman koşusu 97 (~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + duman oynanışı |

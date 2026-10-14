@@ -1,5 +1,4 @@
 import * as THREE from 'three';
-import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import type { CustomerFlow, SupplyLeg } from '@capital/core';
 
 /**
@@ -30,46 +29,8 @@ import type { CustomerFlow, SupplyLeg } from '@capital/core';
  * kayması ani olmasın diye yumuşatılır.
  */
 
-// Tur 33: Kenney tarzı oyuncak arabalar — canlı gövde renkleri (eski palet gri tonlardı).
-const CAR_COLORS = ['#e2574c', '#3f88c5', '#f2c14e', '#f4f1ea', '#5bb36c', '#8d99ae', '#ee8a3c', '#6c5fc7'];
+const CAR_COLORS = ['#aeb6c2', '#8b939f', '#c0c7d1', '#77808d', '#9aa3b0', '#b4bcc7'];
 const CAR_HEIGHT = 0.16;
-
-/**
- * Tıknaz araba (Tur 33): gövde, koyu cam bandı, çatı ve dört siyah teker
- * TEK geometride, köşe renkleriyle. Gövde ve çatı beyaz — örnek rengi
- * onları boyuyor; cam ve teker koyu kalıyor. Çizim çağrısı eskisi gibi bir.
- * Kutu merkezde, toplam yükseklik `CAR_HEIGHT` (yerleşim kodu değişmedi).
- */
-function carGeometry(): THREE.BufferGeometry {
-  const half = CAR_HEIGHT / 2;
-  const part = (w: number, h: number, d: number, x: number, y: number, z: number, hex: string) => {
-    const g = new THREE.BoxGeometry(w, h, d).toNonIndexed();
-    g.translate(x, y, z);
-    const color = new THREE.Color(hex);
-    const count = g.attributes['position']!.count;
-    const colors = new Float32Array(count * 3);
-    for (let i = 0; i < count; i++) colors.set([color.r, color.g, color.b], i * 3);
-    g.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-    g.deleteAttribute('uv');
-    return g;
-  };
-  const wheel = '#1f2328';
-  const parts = [
-    // Gövde: alt blok.
-    part(0.34, 0.075, 0.19, 0, -half + 0.065, 0, '#ffffff'),
-    // Cam bandı ve üstünde çatı.
-    part(0.18, 0.058, 0.17, -0.02, -half + 0.131, 0, '#33465a'),
-    part(0.19, 0.014, 0.176, -0.02, -half + 0.167, 0, '#ffffff'),
-    // Tekerler.
-    part(0.075, 0.055, 0.03, 0.105, -half + 0.0275, 0.088, wheel),
-    part(0.075, 0.055, 0.03, -0.105, -half + 0.0275, 0.088, wheel),
-    part(0.075, 0.055, 0.03, 0.105, -half + 0.0275, -0.088, wheel),
-    part(0.075, 0.055, 0.03, -0.105, -half + 0.0275, -0.088, wheel),
-  ];
-  const merged = mergeGeometries(parts);
-  merged.computeVertexNormals();
-  return merged;
-}
 
 // Kamyonlar fon araçlarından belirgin biçimde iri. İlk denemede 0,46 ×
 // 0,26 idi ve şehir görünümünde kayboluyorlardı: gökdelenler sokakları
@@ -264,8 +225,8 @@ export class TrafficSystem {
     carCount: number,
   ) {
     this.carMesh = new THREE.InstancedMesh(
-      carGeometry(),
-      new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.5, metalness: 0.08 }),
+      new THREE.BoxGeometry(0.34, CAR_HEIGHT, 0.2),
+      new THREE.MeshStandardMaterial({ roughness: 0.45, metalness: 0.25 }),
       carCount,
     );
     this.carMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);

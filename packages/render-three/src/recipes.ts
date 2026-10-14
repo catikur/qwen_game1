@@ -21,14 +21,13 @@ function dice(x: number, z: number, slot: number): number {
 const tmp = new THREE.Color();
 const c = (hex: string) => tmp.set(hex);
 
-// Kiremit tonları ve bir mavi (Kenney mahallelerindeki gibi, Tur 33).
-const ROOF_TILES = ['#d0613f', '#c4553a', '#e0784a', '#b9583f', '#5f86b8'];
+const TERRACOTTA = ['#b5583c', '#a64c35', '#c46a43', '#93503d', '#ad6148'];
 const SLATE = '#6d7480';
 const METAL = '#c9ccd1';
 const DARK_METAL = '#7f858d';
 const SOLAR = '#2c3e5c';
 const GREEN_ROOF = '#6f9a58';
-const TREE_GREENS = ['#6bbf4e', '#58ad44', '#7fca5a', '#4f9e3e', '#8fd063'];
+const TREE_GREENS = ['#5e9a4a', '#4f8a3f', '#6aa556', '#5a8f47', '#78a85a'];
 
 /**
  * Sokak tarafı: karenin en yakın yola bakan yüzü. Bloklar 5 karelik
@@ -131,8 +130,7 @@ export function decorateBuilding(
   tint: THREE.Color,
   owner: THREE.Color,
 ): void {
-  // Çatı şirketin renginde (Tur 33): kimin nerede olduğu yukarıdan okunuyor.
-  const roofColor = owner.clone().multiplyScalar(0.92);
+  const roofColor = tint.clone().multiplyScalar(0.72);
   const ownerSign = owner.clone().lerp(new THREE.Color('#ffffff'), 0.12);
   const awning = owner.clone();
   const w = footprint.bodyWidth;
@@ -347,7 +345,7 @@ export function decorateStructure(
   const w = footprint.bodyWidth;
   switch (structure.form) {
     case 'house': {
-      const roof = c(ROOF_TILES[Math.floor(dice(x, z, 5) * ROOF_TILES.length)]!).clone();
+      const roof = c(TERRACOTTA[Math.floor(dice(x, z, 5) * TERRACOTTA.length)]!).clone();
       if (dice(x, z, 6) > 0.85) roof.set(SLATE);
       hipRoof(layer, x, z, footprint, roof, side.yaw);
       if (structure.id === 'old_shopfront') {
