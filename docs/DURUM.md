@@ -2242,24 +2242,41 @@ zemin renkleri Tur 33 öncesiyle aynı; yalnızca parça eklendi. Dört
   şehrin çalışan "Fabrika" yapılarından çıkıyor. Girdisi kesilen tesis
   susuyor, zincirin nerede durduğu sokaktan okunuyor.
 
-**Binalar.** Şehir dokusuna şunlar eklendi:
-- sokak kapısı;
-- apartman ve kulelerde giriş saçağı;
-- kiremit çatılarda tuğla baca;
-- apartmanlarda balkon bantları;
-- bazı kulelerde anten.
+**Binalar.** İlk turda şehir dokusuna küçük parçalar eklendi: sokak kapısı,
+apartman ve kulelerde giriş saçağı, kiremit çatılarda tuğla baca, apartmanlarda
+balkon bantları, bazı kulelerde anten.
+
+Kullanıcı ilk kareler için "binalarda pek bir şey değişmemiş" dedi ve haklıydı:
+bu parçalar kamera uzaklığında kayboluyordu. İkinci turda en çok yer kaplayan
+iki yüzey ele alındı:
+- **Kırma çatıya kiremit dokusu:** şaşırtmalı derzli sıralar. Doku renk
+  taşımıyor, çatının tonu aynı kaldı.
+- **Cephe atlası 256'dan 512 piksele çıktı:**
+  - konutta sıva, kat silmesi, söveli ve kayıtlı pencere, denizlik, cam
+    yansıması;
+  - ofiste panel başına gökyüzü yansıması ve döşeme paneli;
+  - vitrinde raflar ve kapı;
+  - sanayide kabartmalı oluklu sac.
+- Gece dokusu aynı pencere yerlerini kullanıyor.
 
 **Doğrulama.**
 - Önce/sonra kareleri aynı kayıttan, aynı kameralardan çekildi: geniş,
   doğu, sokak, köşe, merkez, gece, sokak-gece, telefon.
-- Kareler canlıya almadan önce kullanıcıya gösterildi.
+- Kareler canlıya almadan önce kullanıcıya gösterildi; kullanıcı bina turundan
+  sonra onayladı.
 - Oynanış testine yeni kontroller eklendi:
   - kırsalda 3B ağaçlar;
   - üç tür fon aracı;
   - farlar gece açık, gündüz kapalı;
   - gece yaya azalıyor;
   - lenste yaya ve duman susuyor;
-  - **dumanlı tesis sayısı = üretim yapan tesis sayısı** (birebir).
+  - duman yalnızca üretim yapan tesisten çıkıyor.
+- Duman kontrolünün ilk sürümü o an şehirde tesis olmadığı için 0 = 0 ile
+  boşuna geçiyordu. Şimdi iki yönde sınanıyor:
+  - bütün üretim sıfırlanınca hiçbir baca tütmemeli;
+  - tek tesis üretince yalnızca o tütmeli;
+  - tesis yoksa test sanayi parseline bir değirmen kuruyor.
+- Yerel tam koşu: **339/339**, 0 konsol hatası. Çizim çağrısı 900 karede 36.
 
 ---
 
@@ -2344,7 +2361,7 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi) |
 | Birim testi | **205 test** (`pnpm test`; Tur 24'te render paketi de) |
 | Denge testi | **288 kontrol, hepsi geçiyor** (20 bölüm, süreleriyle; ~11 dk) |
-| Tarayıcı testi | **333 kontrol, hepsi geçiyor**, 0 konsol hatası (~15–20 dk); duman koşusu 97 (~5 dk, rehber dahil) |
+| Tarayıcı testi | **339 kontrol, hepsi geçiyor**, 0 konsol hatası (~15–20 dk); duman koşusu 97 (~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + duman oynanışı |
 | Kapsam | 35 bina · 25 ürün · 7 kategori · 8 rakip profili · 10 CEO · 22 olay (11 şehir + 11 sektör) · 10 şehir yapısı (6 siluet) |
 
