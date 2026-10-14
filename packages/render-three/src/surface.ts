@@ -149,8 +149,9 @@ export function buildingSurface(material: THREE.Material, options: SurfaceOption
                #endif`
             : '#include <map_fragment>'
         }
-         // Zemine yakın karartma: yerden ilk ~0,55 birimde koyulaşma.
-         float cfShade = mix(0.6, 1.0, smoothstep(uGroundY, uGroundY + 0.55, vCfWorldY));
+         // Zemine yakın karartma: yerden ilk ~0,55 birimde koyulaşma (Tur 33'te
+         // yumuşadı: Kenney tarzı aydınlık cephede 0,6 kirli bir etek bırakıyordu).
+         float cfShade = mix(0.76, 1.0, smoothstep(uGroundY, uGroundY + 0.55, vCfWorldY));
          // Kenar vurgusu: düşey yüzde köşeler ve üst kenar, yatay yüzde dört kenar.
          vec2 cfEdgeUv = min(vCfUv, 1.0 - vCfUv);
          float cfEdgeDist = vCfVertical > 0.5

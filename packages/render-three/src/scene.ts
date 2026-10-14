@@ -456,7 +456,7 @@ export class CityRenderer {
   }
 
   private setupLights(width: number, height: number): void {
-    this.hemisphere = new THREE.HemisphereLight('#a9cdeb', '#4a5342', 1.15);
+    this.hemisphere = new THREE.HemisphereLight('#a9cdeb', '#8a9476', 1.15);
     this.scene.add(this.hemisphere);
 
     const sun = new THREE.DirectionalLight('#ffe9c7', 2.1);
@@ -846,7 +846,7 @@ export class CityRenderer {
       // Aynı yapı tipinden sıkıcı bir tekrar çıkmasın diye kareye göre
       // deterministik küçük bir renk sapması veriyoruz.
       const jitter = ((tile.id * 37) % 17) / 17 - 0.5;
-      this.color.set(structure.color).offsetHSL(jitter * 0.02, 0.1, 0.03 + jitter * 0.07);
+      this.color.set(structure.color).offsetHSL(jitter * 0.02, 0.1, 0.03 + jitter * 0.07).lerp(CREAM, 0.22);
 
       const footprint = this.fabric.place({
         x: tile.x,

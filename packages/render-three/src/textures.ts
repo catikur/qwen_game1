@@ -86,8 +86,8 @@ const STOREFRONT_PX = Math.round(QUAD * 0.42);
  */
 const WALL = '#f4f4f4';
 const FRAME = '#ffffff';
-const GLASS = '#6fa9d8';
-const GLASS_LIGHT = '#a9d3f1';
+const GLASS = '#7fb6df';
+const GLASS_LIGHT = '#b4dcf4';
 const GLASS_DARK = '#4e86bd';
 
 /** Konut penceresi: kat başına üç, `r` satır `c` sütun. */
@@ -101,7 +101,7 @@ function residentialWindow(x0: number, y0: number, r: number, c: number): { x: n
 function officePane(x0: number, y0: number, r: number, c: number): { x: number; y: number; w: number; h: number } {
   const rowH = QUAD / 4;
   const colW = QUAD / 4;
-  return { x: x0 + c * colW + 2, y: y0 + r * rowH + 3, w: colW - 4, h: rowH * 0.66 };
+  return { x: x0 + c * colW + 4, y: y0 + r * rowH + 5, w: colW - 8, h: rowH * 0.52 };
 }
 
 /** Vitrin camı ve kapısı (çeyreğin alt bandında). */
@@ -158,7 +158,7 @@ export function makeFacadeAtlas(): THREE.CanvasTexture {
           }
           // Döşeme bandının üst kenarında ince beyaz denizlik.
           ctx.fillStyle = FRAME;
-          ctx.fillRect(x0, y0 + r * (QUAD / 4) + 3 + (QUAD / 4) * 0.66, QUAD, 3);
+          ctx.fillRect(x0, y0 + r * (QUAD / 4) + 5 + (QUAD / 4) * 0.52, QUAD, 3);
         }
       },
       // Vitrin: alt bantta tabela alnı, büyük cam, koyu cam kapı, beyaz doğrama.
