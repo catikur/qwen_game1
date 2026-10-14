@@ -186,7 +186,7 @@ function CityDirectiveControls({ city, index }: { city: DormantCity; index: numb
   return (
     <div className="city-directive" data-city-directive={index}>
       <span className="muted">{t('hud.holding.payout.title')}</span>
-      <div className="difficulty-picker mode-picker" role="radiogroup" aria-label={t('hud.holding.payout.aria', { name })}>
+      <div className="difficulty-picker" role="radiogroup" aria-label={t('hud.holding.payout.aria', { name })}>
         {PAYOUTS.map((payout) => (
           <button
             key={payout}
@@ -273,7 +273,7 @@ function TransferForm({ state }: { state: GameState }): ReactElement | null {
       </div>
       <p className="muted">{t('hud.holding.transfer.blurb')}</p>
       {targets.length > 1 && (
-        <div className="difficulty-picker mode-picker" role="radiogroup" aria-label={t('hud.holding.transfer.target')}>
+        <div className="difficulty-picker target-picker" role="radiogroup" aria-label={t('hud.holding.transfer.target')}>
           {targets.map((option) => (
             <button
               key={option.index ?? 'current'}
