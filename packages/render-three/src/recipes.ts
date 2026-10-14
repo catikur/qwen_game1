@@ -29,7 +29,7 @@ const SOLAR = '#2c3e5c';
 const GREEN_ROOF = '#6f9a58';
 const TREE_GREENS = ['#5e9a4a', '#4f8a3f', '#6aa556', '#5a8f47', '#78a85a'];
 const DOOR = '#4b3b30';
-const BRICK = '#8a4c3c';
+const BRICK = '#a05a45';
 const BALCONY = '#e6e2da';
 
 /**
@@ -148,7 +148,8 @@ function houseChimney(layer: DecorLayer, x: number, z: number, footprint: MassFo
   const wx = x + lx * Math.cos(yaw) + across * Math.sin(yaw);
   const wz = z - lx * Math.sin(yaw) + across * Math.cos(yaw);
   const slope = footprint.roofHeight * (1 - Math.abs(across) / (w / 2));
-  layer.add('box', wx, footprint.roofY, wz, 0.055, slope + 0.07, 0.055, c(BRICK), yaw);
+  // Yamaçtan 0,13 çıkıyor: daha kısası yukarıdan bakınca çatıda delik gibi okunuyordu.
+  layer.add('box', wx, footprint.roofY, wz, 0.06, slope + 0.13, 0.06, c(BRICK), yaw);
 }
 
 /** Kırma çatı: ev formunda, gövdenin üstüne. */

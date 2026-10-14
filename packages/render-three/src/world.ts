@@ -283,6 +283,15 @@ export class World {
       mesh.receiveShadow = false;
     }
 
+    /** Zeminin o noktadaki kotu: arazi geometrisindeki eğriliğin aynısı. */
+    const heightAt = (x: number, z: number): number => {
+      const r = Math.hypot(x - cx, z - cz);
+      if (r <= flatRadius) return 0;
+      const t = Math.min(1, (r - flatRadius) / Math.max(1, falloff));
+      const eased = t * t * (3 - 2 * t);
+      return -((r * r) / (2 * PLANET_RADIUS)) * eased;
+    };
+
     const dummy = new THREE.Object3D();
     const tint = new THREE.Color();
     let slot = 0;
@@ -294,7 +303,6 @@ export class World {
       const distance = flatRadius * (1.55 + hash(s * 7.1) * 1.15);
       const sx = cx + Math.cos(angle) * distance;
       const sz = cz + Math.sin(angle) * distance;
-      const drop = (distance * distance) / (2 * PLANET_RADIUS);
 
       for (let b = 0; b < BUILDINGS_PER_SETTLEMENT; b++) {
         const n = s * 100 + b;
@@ -312,7 +320,10 @@ export class World {
         const height = isBlock ? 1.1 + hash(n * 13.1) * 1.5 : 0.42 + hash(n * 13.1) * 0.4;
         const width = isBlock ? 0.8 + hash(n * 15.9) * 0.6 : 0.62 + hash(n * 15.9) * 0.42;
 
-        dummy.position.set(bx, -drop, bz);
+        // Kot ev başına: eski kutular kümenin merkezindeki tam düşüşe
+        // oturuyordu (yumuşatma payı yok) ve boyları yüzünden gömülmeleri
+        // fark edilmiyordu; alçak evlerde yalnızca çatı dışarıda kalıyordu.
+        dummy.position.set(bx, heightAt(bx, bz) - 0.05, bz);
         dummy.scale.set(width, height, width * (isBlock ? 1 : 0.86));
         dummy.rotation.y = hash(n * 21.3) * Math.PI;
         dummy.updateMatrix();
@@ -355,13 +366,6 @@ export class World {
       const distance = flatRadius * (1.55 + hash(s * 7.1) * 1.15);
       settlementCenters.push({ x: cx + Math.cos(angle) * distance, z: cz + Math.sin(angle) * distance });
     }
-    const heightAt = (x: number, z: number): number => {
-      const r = Math.hypot(x - cx, z - cz);
-      if (r <= flatRadius) return 0;
-      const t = Math.min(1, (r - flatRadius) / Math.max(1, falloff));
-      const eased = t * t * (3 - 2 * t);
-      return -((r * r) / (2 * PLANET_RADIUS)) * eased;
-    };
     const halfW = mapWidth / 2 + 1;
     const halfH = mapHeight / 2 + 1;
     const maxR = span * 0.4;
