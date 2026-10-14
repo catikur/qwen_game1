@@ -87,7 +87,9 @@ export const commands = {
     '{capital} sermaye ve %{brand} marka bilinirliğiyle geldin. Rakipler: {rivals}. {previous} yaşamaya devam ediyor; kârının yarısı her gün holding kasasına akacak.',
   'core.holding.remoteRaidTitle': "{city}: {name} payının %{percent}'ini topladı",
   'core.holding.remoteRaidBody':
-    "Uzaktaki şehrinde baskın ilerliyor; yerel müdür yalnızca sendikaya cevap veriyor, savunmayı sen yapmalısın. Şehirler panelinden {city}'e geç.",
+    'Uzaktaki şehrinde baskın ilerliyor ve savunma talimatı kapalı. Şehirler panelinden yerel müdüre savunma talimatı verebilir, kasadan şehre para gönderebilir ya da şehre geçebilirsin.',
+  'core.holding.remoteRaidDefendedBody':
+    'Yerel müdür serbest hisseden geri alıyor; savunmanın parası şehrin kendi kasasından. Yetmezse kasadan para gönder ya da şehre geç.',
   'core.holding.remoteLostTitle': '{city} elden çıktı: {name} kontrolü aldı',
   'core.holding.remoteLostBody': '{city} artık holding kasasına ödeme yapmıyor. Holding ve öbür şehirlerin ayakta.',
   'core.holding.remoteVictoryTitle': '{city} zafere ulaştı',
@@ -99,6 +101,11 @@ export const commands = {
   'core.holding.zeroAmount': 'Tutar sıfır.',
   'core.holding.treasuryShort': 'Holding kasasında o kadar para yok.',
   'core.holding.cityCashShort': 'Şehrin kasasında o kadar nakit yok.',
+  'core.holding.lostCityNoDirective': 'Kaybedilen şehre talimat verilemez.',
+  'core.holding.badDirective': 'Böyle bir talimat yok.',
+  'core.holding.closeOnlyLost': 'Yalnızca kaybedilmiş şehir kapatılabilir.',
+  'core.holding.completeTitle': 'Holding tamamlandı: {count} şehirde zafer',
+  'core.holding.completeBody': 'Holding değeri {worth}. Şehirler yaşamaya devam ediyor; oyun serbest sürüyor.',
 
   // selectors.ts — harita lensleri
   'core.selectors.lensNoneName': 'Şehir',

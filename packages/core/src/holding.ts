@@ -5,11 +5,12 @@ import { tc } from './i18n';
 import { pushNews } from './news';
 import { formatMoney } from './selectors';
 import { recomputeNetWorth } from './systems/city';
-import { sharesHeld, sharesOutstanding } from './systems/equity';
+import { buybackToLock, freeFloat, sharePrice, sharesHeld, sharesOutstanding } from './systems/equity';
 import { runGoalTick } from './systems/goals';
 import { respondUnion } from './systems/labor';
+import { capRemaining, playerBuy } from './systems/orders';
 import { createNewGame } from './worldgen';
-import type { CommandResult, DormantCity, GameState, HoldingState } from './types';
+import type { CityDirective, CommandResult, DormantCity, GameState, HoldingState, RemotePayout } from './types';
 
 /**
  * Holding: birden çok şehir (Tur 22).
@@ -38,7 +39,27 @@ import type { CommandResult, DormantCity, GameState, HoldingState } from './type
  * Yeni şehir zafer kazanılan şehirden açılıyor; sermaye o şehrin
  * kasasından taşınıyor, marka bilinirliğinin yarısı da. Rakip kadrosu
  * katalogda kayıyor: ikinci şehir aynı dört rakiple başlamıyor.
+ *
+ * UZAKTAN YÖNETİM (Tur 32). Her uzak şehrin bir talimatı var, geçiş
+ * yapmadan veriliyor: kârın ne kadarı kasaya aksın (hiç / yarısı /
+ * hepsi) ve yerel müdür baskına karşı geri alım yapsın mı. Savunmanın
+ * parası şehrin kendi kasasından; kârın hepsini çeken şehir savunmasız
+ * kalıyor. Kasadan uzaktaki şehre de para gönderilebiliyor. Holding'in
+ * bir hedef merdiveni var (ikinci şehir, orada zafer, üçüncü şehir, üç
+ * şehirde zafer); kaybedilen şehir kapatılınca yeri boşalıyor.
  */
+
+const DEFAULT_DIRECTIVE: CityDirective = { payout: 'half', defend: false };
+
+/** Şehrin uzaktaki talimatı; yoksa varsayılan. */
+export function cityDirective(state: GameState): CityDirective {
+  return state.remote ?? DEFAULT_DIRECTIVE;
+}
+
+/** Bu şehrin günlük kârından kasaya akan pay. */
+export function payoutShare(state: GameState): number {
+  return HOLDING.payoutShare[cityDirective(state).payout];
+}
 
 /** Oynanan şehrin oyuncu için ŞEHİRDE yarattığı değer: net değer eksi aktarılan sermaye. */
 export function cityValue(state: GameState): number {
@@ -60,7 +81,7 @@ export function cityTrend(state: GameState): number {
 /** Bir şehrin bugünkü kâr payı; Tur 30 öncesi kayıtta henüz yaşamamış şehir için eğilimden. */
 export function cityDividend(city: DormantCity): number {
   if (city.state.gameOver) return 0;
-  return city.lastDividend ?? Math.max(0, city.trend) * HOLDING.remoteShare;
+  return city.lastDividend ?? Math.max(0, city.trend) * payoutShare(city.state);
 }
 
 /** Bekleyen şehirlerden holding kasasına dün akan para. */
@@ -232,21 +253,108 @@ export function switchCity(state: GameState, index: number): CommandResult & { n
   return { ok: true, next };
 }
 
-/** Holding kasası ile oynanan şehir arasında para; artı kasadan şehre. */
-export function holdingTransfer(state: GameState, amount: number): CommandResult {
+/**
+ * Holding kasası ile bir şehir arasında para; artı kasadan şehre.
+ * `index` verilirse uzaktaki şehir (Tur 32): savunmanın bütçesi ya da
+ * orada biriken nakdin çekilmesi geçiş yapmadan.
+ */
+export function holdingTransfer(state: GameState, amount: number, index?: number): CommandResult {
   const holding = state.holding;
   if (!holding) return { ok: false, reason: tc('core.holding.noHolding') };
-  if (state.gameOver) return { ok: false, reason: tc('core.holding.lostCityNoTransfer') };
+  const city = index === undefined ? state : holding.dormant[index]?.state;
+  if (!city) return { ok: false, reason: tc('core.holding.noSuchCity') };
+  if (city.gameOver) return { ok: false, reason: tc('core.holding.lostCityNoTransfer') };
   const value = Math.round(amount);
   if (value === 0) return { ok: false, reason: tc('core.holding.zeroAmount') };
-  const player = state.companies[state.playerCompanyId]!;
+  const player = city.companies[city.playerCompanyId]!;
   if (value > 0 && value > holding.treasury) return { ok: false, reason: tc('core.holding.treasuryShort') };
   if (value < 0 && -value > player.cash) return { ok: false, reason: tc('core.holding.cityCashShort') };
   holding.treasury -= value;
   player.cash += value;
-  state.importedCapital = (state.importedCapital ?? 0) + value;
-  recomputeNetWorth(state);
+  city.importedCapital = (city.importedCapital ?? 0) + value;
+  recomputeNetWorth(city);
   return { ok: true };
+}
+
+const PAYOUTS: readonly RemotePayout[] = ['keep', 'half', 'all'];
+
+/** Uzaktaki şehrin talimatını değiştirir; verilmeyen alan aynı kalıyor. */
+export function setCityDirective(
+  state: GameState,
+  index: number,
+  change: { payout?: RemotePayout; defend?: boolean },
+): CommandResult {
+  const city = state.holding?.dormant[index];
+  if (!city) return { ok: false, reason: tc('core.holding.noSuchCity') };
+  if (city.state.gameOver) return { ok: false, reason: tc('core.holding.lostCityNoDirective') };
+  if (change.payout !== undefined && !PAYOUTS.includes(change.payout)) return { ok: false, reason: tc('core.holding.badDirective') };
+  const current = cityDirective(city.state);
+  city.state.remote = {
+    payout: change.payout ?? current.payout,
+    defend: typeof change.defend === 'boolean' ? change.defend : current.defend,
+  };
+  return { ok: true };
+}
+
+/**
+ * Kaybedilmiş şehri holding'den çıkarır; yeri boşalıyor, yeni şehir
+ * açılabiliyor. Orada önceden kazanılmış zafer holding hedeflerinde
+ * sayılmaya devam ediyor.
+ */
+export function closeCity(state: GameState, index: number): CommandResult {
+  const holding = state.holding;
+  const city = holding?.dormant[index];
+  if (!holding || !city) return { ok: false, reason: tc('core.holding.noSuchCity') };
+  if (!city.state.gameOver) return { ok: false, reason: tc('core.holding.closeOnlyLost') };
+  if (city.state.victory) holding.closedWins = (holding.closedWins ?? 0) + 1;
+  holding.dormant = holding.dormant.filter((_, i) => i !== index);
+  return { ok: true };
+}
+
+/** Holding hedef merdiveninin bir basamağı. */
+export interface HoldingStep {
+  id: 'second' | 'secondWin' | 'third' | 'thirdWin';
+  done: boolean;
+  /** Basamağın sayacı: şehir ya da zafer. */
+  count: number;
+  target: number;
+}
+
+/** Holding'in şehirlerinde (kapatılanlar dahil) kazanılmış zafer sayısı. */
+export function holdingWins(state: GameState): number {
+  let wins = (state.victory ? 1 : 0) + (state.holding?.closedWins ?? 0);
+  for (const city of state.holding?.dormant ?? []) if (city.state.victory) wins++;
+  return wins;
+}
+
+/**
+ * Holding hedefleri: ikinci şehir, orada zafer, üçüncü şehir, üç şehirde
+ * zafer. Açılan şehir sayısı `opened`dan (kapatılan şehir de açılmıştı).
+ */
+export function holdingLadder(state: GameState): HoldingStep[] {
+  const opened = state.holding?.opened ?? 1;
+  const wins = holdingWins(state);
+  const step = (id: HoldingStep['id'], count: number, target: number): HoldingStep => ({
+    id,
+    done: count >= target,
+    count: Math.min(count, target),
+    target,
+  });
+  return [step('second', opened, 2), step('secondWin', wins, 2), step('third', opened, 3), step('thirdWin', wins, 3)];
+}
+
+/** Son basamak ilk kez tamamlandığında haber; günü holding'de kalıyor. */
+export function checkHoldingComplete(state: GameState): void {
+  const holding = state.holding;
+  if (!holding || holding.completedDay !== undefined) return;
+  if (holdingWins(state) < HOLDING.maxCities) return;
+  holding.completedDay = state.time.day;
+  pushNews(
+    state,
+    'good',
+    tc('core.holding.completeTitle', { count: HOLDING.maxCities }),
+    tc('core.holding.completeBody', { worth: formatMoney(holdingNetWorth(state)) }),
+  );
 }
 
 /**
@@ -276,10 +384,14 @@ function liveAway(active: GameState, holding: HoldingState, city: DormantCity): 
   // Yerel müdür: sendika talebine uzlaşma (oyuncu uzaktayken grev çıkmasın).
   if (player?.labor?.demand && !s.gameOver) respondUnion(s, s.playerCompanyId, 'compromise');
 
-  // Kâr payı: bugünkü kârın yarısı kasaya, şehirden çıkan sermaye sayılıyor.
+  // Savunma talimatı (Tur 32): kâr payından önce — şehrin korunması önce geliyor.
+  city.lastDefense = player && !s.gameOver && cityDirective(s).defend ? localDefense(s) : undefined;
+
+  // Kâr payı: talimattaki payı kasaya, şehirden çıkan sermaye sayılıyor.
   let dividend = 0;
-  if (player && !s.gameOver && player.today.profit > 0) {
-    dividend = Math.min(Math.max(0, player.cash), player.today.profit * HOLDING.remoteShare);
+  const share = payoutShare(s);
+  if (player && !s.gameOver && player.today.profit > 0 && share > 0) {
+    dividend = Math.min(Math.max(0, player.cash), player.today.profit * share);
     player.cash -= dividend;
     s.importedCapital = (s.importedCapital ?? 0) - dividend;
     holding.treasury += dividend;
@@ -305,11 +417,33 @@ function liveAway(active: GameState, holding: HoldingState, city: DormantCity): 
       active,
       'bad',
       tc('core.holding.remoteRaidTitle', { city: name, name: raider.name, percent: Math.round(raid.fraction * 100) }),
-      tc('core.holding.remoteRaidBody', { city: name }),
+      tc(cityDirective(s).defend ? 'core.holding.remoteRaidDefendedBody' : 'core.holding.remoteRaidBody', { city: name }),
     );
   }
   city.raidStage = raid.stage;
   if (!wonBefore && s.victory) {
     pushNews(active, 'good', tc('core.holding.remoteVictoryTitle', { city: name }), tc('core.holding.remoteVictoryBody', { city: name }));
   }
+}
+
+/**
+ * Yerel müdürün savunması: en büyük dış pay `defendAt`ı geçtiyse serbest
+ * hisseden geri alım. Oyuncunun kendi geri alımıyla aynı yol (günlük
+ * tavan dahil); günde nakdin yedeğin üstündeki kısmının en fazla
+ * `defenseCashShare`'i. Kontrol kilitlenince (`buybackToLock` sıfır)
+ * duruyor: kilitli şehirde para harcamıyor.
+ */
+function localDefense(s: GameState): { shares: number; cost: number } | undefined {
+  const player = s.companies[s.playerCompanyId]!;
+  if (raidStatus(s).fraction < HOLDING.defendAt) return undefined;
+  const need = buybackToLock(s, player.id);
+  if (need === 0) return undefined;
+  const price = sharePrice(s, player.id);
+  const budget = (player.cash - HOLDING.defenseReserve) * HOLDING.defenseCashShare;
+  if (!(price > 0) || budget <= 0) return undefined;
+  const count = Math.min(need, capRemaining(s, player.id, player.id), freeFloat(s, player.id), Math.floor(budget / price));
+  if (!(count > 0)) return undefined;
+  const before = player.cash;
+  if (!playerBuy(s, player.id, player.id, count).ok) return undefined;
+  return { shares: count, cost: before - player.cash };
 }

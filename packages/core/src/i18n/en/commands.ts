@@ -89,7 +89,9 @@ export const commands: Record<keyof typeof trCommands, string> = {
     'You arrived with {capital} in capital and {brand}% brand awareness. Rivals: {rivals}. {previous} keeps living; half of its profit will flow into the holding treasury every day.',
   'core.holding.remoteRaidTitle': '{city}: {name} has collected {percent}% of your shares',
   'core.holding.remoteRaidBody':
-    'A raid is advancing in your remote city; the local manager only answers the union, the defense is up to you. Switch to {city} from the Cities panel.',
+    'A raid is advancing in your remote city and its defense order is off. From the Cities panel you can order the local manager to defend, send money from the treasury to the city, or switch to it.',
+  'core.holding.remoteRaidDefendedBody':
+    "The local manager is buying back shares from the free float, paid from the city's own cash. If that isn't enough, send money from the treasury or switch to the city.",
   'core.holding.remoteLostTitle': '{city} is lost: {name} took control',
   'core.holding.remoteLostBody': '{city} no longer pays into the holding treasury. The holding and your other cities stand.',
   'core.holding.remoteVictoryTitle': '{city} reached victory',
@@ -101,6 +103,11 @@ export const commands: Record<keyof typeof trCommands, string> = {
   'core.holding.zeroAmount': 'The amount is zero.',
   'core.holding.treasuryShort': "The holding treasury doesn't have that much money.",
   'core.holding.cityCashShort': "This city doesn't have that much cash.",
+  'core.holding.lostCityNoDirective': "A lost city can't be given orders.",
+  'core.holding.badDirective': "That order doesn't exist.",
+  'core.holding.closeOnlyLost': 'Only a lost city can be closed.',
+  'core.holding.completeTitle': 'Holding complete: victory in {count} cities',
+  'core.holding.completeBody': 'Holding value {worth}. The cities keep living; free play continues.',
 
   // selectors.ts — map lenses
   'core.selectors.lensNoneName': 'City',

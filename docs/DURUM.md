@@ -4,7 +4,7 @@
 > `pnpm bench` çıktısından; iddialar `pnpm balance` ve `pnpm playtest`
 > tarafından her koşuda doğrulanıyor.
 >
-> Son güncelleme: şema **v6**, 31 tur tamamlandı.
+> Son güncelleme: şema **v6**, 32 tur tamamlandı.
 
 ---
 
@@ -2059,6 +2059,100 @@ kopya sayılmıyor, ikisi de aynı taban eğriyi çizer.
   "tekrar tutmadı", tekrarın skoru yazıyor); kopya doğrulanıyor ama bir kez
   sayılıyor. Biten koşuda tabloya gündemden dönülüyor.
 
+### Tur 32 — Holding derinleşiyor: uzaktan yönetim
+
+Kullanıcı "şehir/holding katmanını derinleştir" dedi. Tur 30'dan beri
+uzaktaki şehirler yaşıyordu ama oyuncunun onlar üzerinde kararı yoktu:
+
+- kârın sabit yarısı kasaya akıyordu;
+- baskına karşı savunmak için şehre geçmek gerekiyordu;
+- kasanın tek kullanımı oynanan şehre aktarımdı;
+- holding'in bir hedefi yoktu: üç şehir açılınca katman bitiyordu.
+
+**Şehir talimatları.** Uzaktaki her şehrin satırında, geçiş yapmadan:
+
+- *Kâr payı:* şehirde tut (%0) · yarısı (%50, varsayılan) · hepsi (%100).
+- *Savunma:* açıkken en büyük dış pay %20'yi geçince yerel müdür serbest
+  hisseden geri alıyor, kontrol kilitlenene kadar (Tur 28'in kilidi).
+  - Oyuncunun kendi geri alımıyla aynı yol ve günlük tavan.
+  - Günde nakdin yedeğin (320 B ₺, rakiplerin savunma yedeği) üstündeki
+    kısmının en fazla %40'ı.
+  - Para şehrin kendi kasasından; kâr payından önce koşuyor.
+  - Kilitliyken para harcamıyor.
+- Talimat şehrin kendi durumunda (`remote`). Geçişlerde şehirle birlikte
+  gidip geliyor; şehir oynanırken okunmuyor. Varsayılan (yarısı, savunma
+  kapalı) Tur 30 davranışının aynısı.
+- Satır savunmanın durumunu tek cümleyle söylüyor: dün kaç hisse aldı ve ne
+  ödedi, kilide kaç hisse ve ne kadar kaldı, kilitliyse harcamadığını.
+- Uzak baskın haberi talimata göre değişiyor: savunma kapalıysa "talimat
+  ver, para gönder ya da geç", açıksa "yerel müdür geri alıyor".
+
+**Kasa her şehre.** Aktarım uzaktaki şehre de çalışıyor: savunma bütçesi
+göndermek ya da orada biriken nakdi çekmek için geçiş gerekmiyor. Para o
+şehrin "aktarılan sermaye" defterine yazılıyor; zafer ölçüsü o şehirde
+düzeliyor. Panelde aktarımın şehri seçiliyor.
+
+**Holding hedefleri.** Dört basamak, sırayla:
+
+1. İkinci şehre açıl
+2. İki şehirde zafer
+3. Üçüncü şehre açıl
+4. Üç şehirde zafer — "Holding tamamlandı" haberi bir kez; oyun serbest
+   sürüyor.
+
+Açılan şehir `opened` sayacından, zafer sayısı şehirlerin kendi
+kayıtlarından okunuyor. En fazla üç şehir olduğu için kaybedilen bir şehir
+son basamağı kalıcı olarak imkânsız kılıyordu. Artık kaybedilen şehir
+kapatılabiliyor: yeri boşalıyor, yeni şehir açılabiliyor ve orada
+önceden kazanılmış zafer sayılmaya devam ediyor (`closedWins`).
+
+**Ölçüm (denge testi, holding bölümü).** Kurucu şehir uzaktayken 470 gün,
+aynı açılış anından ayrı motorlarda:
+
+| Tohum 1 / 7 / 42 | Tepe dış pay | Kurucu şehir | Holding değeri |
+|---|---|---|---|
+| Yarısı (varsayılan) | %7 / %42 / %0 | ayakta | 351 / 335 / 350 M ₺ |
+| Hepsi | %14 / %53 / %53 | tohum 7 ve 42'de kaybedildi (1004. ve 1012. gün) | 351 / 238 / 262 M ₺ |
+| Hepsi + savunma | %14 / %21 / %25 | ayakta; savunmanın bedeli 0 / 39 / 41 M ₺ | 351 / 296 / 305 M ₺ |
+| Şehirde tut | %0 / %0 / %0 | ayakta | 351 / 341 / 350 M ₺ |
+
+Kararlar gerçek bir takas oldu ve bu takas kurala yazılmadı, pazardan
+doğdu:
+
+- *Hepsini çekmek şehri ucuzlatıyor.* Nakit şirket değerinin parçası;
+  nakitsiz şehrin hissesi ucuz ve baskıncı gelip alıyor.
+- *Savunma tutuyor ama pahalı.* İhraçsız şirkette kilit, şirketin yarısını
+  hazineye çekmek demek. Hazinedeki hisse net değere girmiyor, yani bedel
+  gerçek.
+- *Şehirde tutulan kâr baskını caydırıyor.* Holding değeri yarısıyla aynı,
+  çünkü para kasada değil şehirde duruyor. Kasanın avantajı likidite:
+  oradaki para her şehre gidebiliyor.
+
+Holding'siz oyunların davranış özeti (üç 240 günlük koşu) main ile bayt
+bayt eşit.
+
+**Testler.**
+
+- *Birim (4 yeni):*
+  - kâr payı hiç / yarısı / hepsi ve talimatın geçişlerde korunması;
+  - savunma: kapalıyken almıyor; açıkken kendi kasasından alıyor ve yedeği
+    koruyor; kilitliyken duruyor;
+  - uzak şehre aktarım (kaybedilen şehre yok);
+  - hedef merdiveni, tamamlanma haberinin bir kez düşmesi, kaybedilen
+    şehrin kapatılması.
+- *Denge (4 yeni kontrol):* yukarıdaki tablonun dört iddiası. Holding
+  bölümü 35 → ~100 sn.
+- *Oynanış (5 yeni):* hedefler, panelden kâr payı, %24'lük baskında
+  savunma, kasadan uzak şehre aktarım, kaybedilen şehrin kapatılması.
+  Telefon genişliğinde (390 px) panel taşmıyor; ayrı denendi, seçiciler
+  tek satırda.
+
+Bir ölçüm dersi: i18n testi Türkçeden çıkarılıp İngilizcede kalan bir yer
+tutucuyu (`{city}`) yakaladı. Türkçede şehir adından sonra ek getirmek
+("Yeşilova'ya", "Kuzeykent'e") sabit bir ekle yapılamıyor; metin adı ek
+almayacak şekilde yeniden yazıldı, düğmeler ok kullanıyor
+("Kasa → Yeşilova").
+
 ---
 
 ## 3. Ölçülen durum
@@ -2140,9 +2234,9 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi) |
-| Birim testi | **200 test** (`pnpm test`; Tur 24'te render paketi de) |
-| Denge testi | **284 kontrol, hepsi geçiyor** (20 bölüm, süreleriyle; ~10 dk) |
-| Tarayıcı testi | **328 kontrol, hepsi geçiyor**, 0 konsol hatası (~15–20 dk); duman koşusu 97 (~5 dk, rehber dahil) |
+| Birim testi | **204 test** (`pnpm test`; Tur 24'te render paketi de) |
+| Denge testi | **288 kontrol, hepsi geçiyor** (20 bölüm, süreleriyle; ~11 dk) |
+| Tarayıcı testi | **333 kontrol, hepsi geçiyor**, 0 konsol hatası (~15–20 dk); duman koşusu 97 (~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + duman oynanışı |
 | Kapsam | 35 bina · 25 ürün · 7 kategori · 8 rakip profili · 10 CEO · 22 olay (11 şehir + 11 sektör) · 10 şehir yapısı (6 siluet) |
 
@@ -2243,7 +2337,10 @@ açılıyor, arazi kıtlığı dört kez yenileniyor. Varsayılan harita hâlâ
 2, zafer eşiği ×1,5; ölçüm Tur 21 bölümünde). **Çoklu şehir Tur 22'de geldi**
 (holding: aynı anda bir şehir oynanıyor, bekleyenler kasaya kâr payı
 aktarıyor). **Şehirlerin eşzamanlı yaşaması Tur 30'da geldi:** bekleyen
-şehirler de her gün yaşıyor, kârlarının yarısı kasaya akıyor.
+şehirler de her gün yaşıyor, kârlarının yarısı kasaya akıyor. **Uzaktan
+yönetim Tur 32'de geldi:** her uzak şehrin talimatı (kâr payı, savunma),
+kasadan her şehre aktarım, holding hedef merdiveni ve kaybedilen şehrin
+kapatılması.
 
 ### 4.6 Daha küçük kalemler
 

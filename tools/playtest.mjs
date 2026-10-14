@@ -2649,7 +2649,73 @@ async function finish(browser, consoleErrors) {
     const remoteRow = ((await hp.locator('.city-row:not(.current)').first().textContent()) ?? '').trim();
     check('Uzaktaki şehir satırı: uzaktan yönetiliyor, 20 gün yaşamış, dünkü kâr payı', remoteRow.includes('Uzaktan yönetiliyor') &&
       remoteRow.includes(`${founding.day + 20}. gün`) && remoteRow.includes('dün kasaya'), remoteRow.slice(0, 120));
+
+    // Tur 32: holding hedefleri ve uzaktaki şehrin talimatı — geçiş yapmadan.
+    const ladder = await hp.evaluate(() => ({
+      done: document.querySelector('[data-holding-ladder]')?.getAttribute('data-holding-ladder'),
+      second: document.querySelector('[data-step="second"]')?.getAttribute('data-done'),
+      next: document.querySelector('[data-step="secondWin"]')?.textContent ?? '',
+    }));
+    check('Holding hedefleri: ikinci şehir basamağı tamam, sıradaki iki şehirde zafer', ladder.done === '1' && ladder.second === 'yes' && ladder.next.includes('1 / 2'),
+      `${ladder.done} · ${ladder.second} · ${ladder.next}`);
+    await hp.locator('[data-city-directive="0"] [data-payout="all"]').click();
+    await hp.waitForTimeout(150);
+    const payout = await hp.evaluate(() => ({
+      state: window.__capital.getState().holding.dormant[0].state.remote?.payout,
+      checked: document.querySelector('[data-city-directive="0"] [data-payout="all"]')?.getAttribute('aria-checked'),
+      hint: document.querySelector('[data-city-directive="0"] p')?.textContent ?? '',
+    }));
+    check('Uzak şehrin kâr payı talimatı panelden: hepsi kasaya, uyarısıyla', payout.state === 'all' && payout.checked === 'true' && payout.hint.includes('baskın kolaylaşır'),
+      `${payout.state} · ${payout.hint.slice(0, 70)}`);
+    await hp.locator('[data-defend="0"]').check();
+    await hp.waitForTimeout(150);
+    // Uzaktaki şehirde %24'lük bir baskın: savunma açık, ertesi gün yerel müdür geri alıyor.
+    await hp.evaluate(() => {
+      const c = window.__capital;
+      const away = c.getState().holding.dormant[0].state;
+      const raider = Object.values(away.companies).find((x) => !x.isPlayer);
+      raider.shares[away.playerCompanyId] = 2_400;
+      c.engine.runDay();
+      c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+    });
+    await hp.waitForTimeout(300);
+    const defense = await hp.evaluate(() => {
+      const away = window.__capital.getState().holding.dormant[0];
+      const me = away.state.companies[away.state.playerCompanyId];
+      return {
+        defend: away.state.remote?.defend,
+        treasuryShares: me.shares[me.id] ?? 0,
+        line: document.querySelector('[data-city-directive="0"] [data-defense-line]')?.textContent ?? '',
+      };
+    });
+    check('Savunma talimatı: yerel müdür baskında geri alıyor, satır ne yaptığını yazıyor', defense.defend === true && defense.treasuryShares > 0 &&
+      defense.line.includes('geri alındı') && defense.line.includes('Kilide kalan'), `${defense.treasuryShares} hisse · ${defense.line.slice(0, 90)}`);
     await hp.screenshot({ path: `${OUT}/holding-panel.png` });
+
+    // Kasadan uzaktaki şehre para: hedef seçiliyor, tutar o şehrin kasasına.
+    await hp.evaluate(() => {
+      window.__capital.getState().holding.treasury = 5_000_000;
+      window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+    });
+    await hp.waitForTimeout(150);
+    await hp.locator('[data-transfer-target="0"]').click();
+    await hp.waitForTimeout(150);
+    const remoteCash = await hp.evaluate(() => window.__capital.getState().holding.dormant[0].state.companies.player.cash);
+    await hp.evaluate(() => {
+      const input = document.querySelector('.holding-transfer input[type="range"]');
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(input, '1000000');
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    await hp.waitForTimeout(100);
+    const toCityLabel = ((await hp.locator('[data-transfer="to-city"]').textContent()) ?? '').trim();
+    await hp.locator('[data-transfer="to-city"]').click();
+    await hp.waitForTimeout(200);
+    const sent = await hp.evaluate((before) => {
+      const s = window.__capital.getState();
+      return { treasury: s.holding.treasury, gained: s.holding.dormant[0].state.companies.player.cash - before };
+    }, remoteCash);
+    check('Kasadan uzaktaki şehre aktarım: para o şehrin kasasına', sent.gained > 0 && Math.abs(5_000_000 - sent.treasury - sent.gained) < 1 &&
+      toCityLabel.includes(opened.dormant[0]), `${toCityLabel} · ${sent.gained.toLocaleString('tr-TR')} ₺`);
     // Yeni şehirde bir kare seç: şehir değişince bu seçim eski şehrin
     // karesine işaret etmemeli.
     await hp.locator('.modal-head button.icon').click();
@@ -2666,12 +2732,33 @@ async function finish(browser, consoleErrors) {
       const s = window.__capital.getState();
       return { seed: s.meta.seed, day: s.time.day, dormantDay: s.holding?.dormant[0]?.state.time.day };
     });
-    // Tur 30: şehirler eşzamanlı — kurucu şehir de 20 gün yaşadı.
-    check('Kurucu şehre dönülüyor; o da yaşamış (takvimler birlikte)', back.seed === founding.seed && back.day === founding.day + 20 && back.dormantDay === 20,
+    // Tur 30: şehirler eşzamanlı — kurucu şehir de 21 gün yaşadı (20 + savunma
+    // denemesinin günü, Tur 32).
+    check('Kurucu şehre dönülüyor; o da yaşamış (takvimler birlikte)', back.seed === founding.seed && back.day === founding.day + 21 && back.dormantDay === 21,
       `gün ${back.day} (ayrılış ${founding.day}) · öbür şehir ${back.dormantDay}. günde`);
     const afterSwitch = ((await hp.locator('.inspector').textContent()) ?? '').trim();
     check('Şehir değişince seçim temizleniyor', selectedInspector !== emptyInspector && afterSwitch === emptyInspector,
       afterSwitch.slice(0, 60));
+    // Kaybedilen şehir kapatılınca yeri boşalıyor (Tur 32).
+    await hp.evaluate(() => {
+      const c = window.__capital;
+      const away = c.getState().holding.dormant[0].state;
+      const rival = Object.values(away.companies).find((x) => !x.isPlayer);
+      away.gameOver = { day: away.time.day, byCompanyId: rival.id };
+      c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+    });
+    // Panel şehir değişiminden beri açık olabilir.
+    if ((await hp.locator('.holding').count()) === 0) await hp.locator('[data-city-chip]').click();
+    await hp.waitForTimeout(300);
+    const lostRow = ((await hp.locator('.city-row.lost').textContent()) ?? '').trim();
+    await hp.locator('[data-close-city="0"]').click();
+    await hp.waitForTimeout(200);
+    const closed = await hp.evaluate(() => ({
+      dormant: window.__capital.getState().holding.dormant.length,
+      rows: document.querySelectorAll('.city-row').length,
+    }));
+    check('Kaybedilen şehir kapatılıyor, yeri boşalıyor', lostRow.includes('Kaybedildi') && lostRow.includes('yeri boşalır') && closed.dormant === 0 && closed.rows === 1,
+      `${closed.dormant} bekleyen · ${closed.rows} satır · ${lostRow.slice(0, 60)}`);
     check('Holding akışında konsol temiz', hErrors.length === 0, hErrors.slice(0, 2).join(' | '));
     await hContext.close();
   }

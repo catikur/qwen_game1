@@ -70,7 +70,7 @@ import { capRemaining, dailyBuyCap, findOrder, orderEstimate } from '../src/syst
 import { cityTrend, holdingNetWorth, raidStatus } from '../src/holding';
 import { buybackToLock, ownerFraction, sharesOutstanding } from '../src/systems/equity';
 import type { GameEngine as Engine } from '../src/engine';
-import type { GameState } from '../src/types';
+import type { GameState, RemotePayout } from '../src/types';
 import {
   activeProfiles,
   defendAgainstRaids,
@@ -3982,6 +3982,45 @@ section('Büyük şehir (5×5)', () => {
   }
 });
 
+interface DirectiveRun {
+  peak: number;
+  lostDay: number | null;
+  defense: number;
+  worth: number;
+  treasury: number;
+  /** Kurucu şehirden kasaya çıkan sermaye (importedCapital düşüşü). */
+  exported: number;
+  holding: number;
+}
+
+/** Açılış anından, kurucu şehre bir talimatla `days` gün (Tur 32). */
+function directiveRun(snapshot: GameState, days: number, payout: RemotePayout, defend: boolean): DirectiveRun {
+  const engine = new GameEngine(structuredClone(snapshot));
+  engine.dispatch({ type: 'SET_CITY_DIRECTIVE', index: 0, payout, defend });
+  const city = engine.getState();
+  const away = city.holding!.dormant[0]!;
+  const imported = away.state.importedCapital ?? 0;
+  let peak = 0;
+  let defense = 0;
+  for (let day = 0; day < days; day++) {
+    if (city.time.day % 5 === 0) playerStrategy(engine);
+    if (city.time.day % 3 === 0) defendAgainstRaids(engine);
+    engine.runDay();
+    peak = Math.max(peak, raidStatus(away.state).fraction);
+    defense += away.lastDefense?.cost ?? 0;
+    if (city.gameOver) break;
+  }
+  return {
+    peak,
+    lostDay: away.state.gameOver?.day ?? null,
+    defense,
+    worth: getPlayer(away.state).netWorth,
+    treasury: city.holding!.treasury,
+    exported: imported - (away.state.importedCapital ?? 0),
+    holding: holdingNetWorth(city),
+  };
+}
+
 section('Holding: ikinci şehir', () => {
   /*
    * Tur 22. Zafer kazanılan şehirden yeni şehre açılınca:
@@ -4003,15 +4042,19 @@ section('Holding: ikinci şehir', () => {
    * holding mekaniği her tohumda.
    */
   const results: { seed: number; second: number | null }[] = [];
+  const directives: { seed: number; half: number; all: DirectiveRun; allDefended: DirectiveRun; keep: DirectiveRun }[] = [];
   for (const seed of [1, 7, 42]) {
     const engine = new GameEngine(createNewGame({ seed, companyName: 'Holding AŞ' }));
     const state = () => engine.getState();
+    let awayPeak = 0;
     const play = (limit: number) => {
       for (let day = 0; day < limit; day++) {
         const s = state();
         if (s.time.day % 5 === 0) playerStrategy(engine);
         if (s.time.day % 3 === 0) defendAgainstRaids(engine);
         engine.runDay();
+        const away = s.holding?.dormant[0]?.state;
+        if (away) awayPeak = Math.max(awayPeak, raidStatus(away).fraction);
         if (s.gameOver || s.victory) return;
       }
     };
@@ -4028,6 +4071,8 @@ section('Holding: ikinci şehir', () => {
     if (!opened.ok) continue;
 
     const city = state();
+    // Talimat ölçümü (Tur 32) aynı açılış anından, ayrı motorlarda.
+    const snapshot = structuredClone(city);
     const away = city.holding!.dormant[0]!.state;
     const awayWorth = getPlayer(away).netWorth;
     const awayImported = away.importedCapital ?? 0;
@@ -4075,7 +4120,48 @@ section('Holding: ikinci şehir', () => {
     );
     expect(`tohum ${seed}: holding tek şehirden büyük`, holdingNetWorth(city) > getPlayer(city).netWorth, formatMoney(holdingNetWorth(city)));
     results.push({ seed, second: secondVictory });
+
+    const all = directiveRun(snapshot, days, 'all', false);
+    const allDefended = directiveRun(snapshot, days, 'all', true);
+    const keep = directiveRun(snapshot, days, 'keep', false);
+    directives.push({ seed, half: awayPeak, all, allDefended, keep });
+    const line = (label: string, run: DirectiveRun) =>
+      `${label}: ${run.lostDay !== null ? `${run.lostDay}. günde kaybedildi` : 'ayakta'} · tepe dış pay %${Math.round(run.peak * 100)} · ` +
+      `savunma ${formatMoney(run.defense)} · kurucu ${formatMoney(run.worth)} · kasa ${formatMoney(run.treasury)} · holding ${formatMoney(run.holding)}`;
+    console.log(`    talimat (yarısı: tepe dış pay %${Math.round(awayPeak * 100)}) · ${line('hepsi', all)}`);
+    console.log(`      ${line('hepsi + savunma', allDefended)} · ${line('şehirde tut', keep)}`);
   }
+  /*
+   * Tur 32: uzaktaki şehrin talimatı. Ölçülen (tohum 1/7/42, 470 gün):
+   *   - kârın HEPSİNİ çeken şehir nakitsiz kalıyor, hissesi ucuzluyor:
+   *     tepe dış pay %7/42/0 → %14/53/53, iki tohumda kurucu şehir
+   *     kaybedildi;
+   *   - hepsi + savunma: %14/21/25, şehir ayakta; bedeli ~40 M ₺ (kilit
+   *     şirketin yarısını hazineye çekmek demek);
+   *   - şehirde tutulan kâr baskını caydırıyor (%0), holding değeri
+   *     yarısıyla aynı: para kasada değil şehirde duruyor.
+   */
+  expect(
+    'kârın hepsini çeken uzak şehre baskın derinleşiyor (üç tohumda)',
+    directives.every((d) => d.all.peak > d.half),
+    directives.map((d) => `tohum ${d.seed}: %${Math.round(d.half * 100)} → %${Math.round(d.all.peak * 100)}`).join(' · '),
+  );
+  expect(
+    'savunma talimatı uzak şehri tutuyor: kâr hepsi kasaya giderken de ayakta, dış pay %30\'un altında',
+    directives.every((d) => d.allDefended.lostDay === null && d.allDefended.peak < 0.3),
+    directives.map((d) => `tohum ${d.seed}: %${Math.round(d.allDefended.peak * 100)}${d.allDefended.lostDay !== null ? ' kayıp' : ''}`).join(' · '),
+  );
+  expect(
+    'savunmanın parası şehrin kendi kasasından: kasaya akan her lira yine şehirden çıktı',
+    directives.every((d) => d.allDefended.defense > 0 || d.allDefended.peak < 0.2) &&
+      directives.every((d) => Math.abs(d.allDefended.treasury - d.allDefended.exported) < 1),
+    directives.map((d) => `tohum ${d.seed}: savunma ${formatMoney(d.allDefended.defense)} · kasa ${formatMoney(d.allDefended.treasury)}`).join(' · '),
+  );
+  expect(
+    'şehirde tutulan kâr baskını caydırıyor (dış pay yarısındakinden büyük değil)',
+    directives.every((d) => d.keep.peak <= d.half && d.keep.lostDay === null),
+    directives.map((d) => `tohum ${d.seed}: %${Math.round(d.keep.peak * 100)}`).join(' · '),
+  );
   const won = results.filter((r) => r.second !== null);
   expect(
     'ikinci şehirde de zafer var (üç tohumun en az ikisinde)',
