@@ -399,7 +399,18 @@ function bestMove(
     const districtId = plot.districtId;
 
     const estimate = estimateInvestment(state, districtId, def.id, companyId);
-    if (!estimate || !Number.isFinite(estimate.paybackDays)) continue;
+    if (!estimate || !Number.isFinite(estimate.paybackDays)) {
+      // Kâr etmeyen ünite önerilmiyor, ama sebebi söyleniyor (Tur 32). En
+      // sık hâli girdinin krizi: hammadde pahalanınca ara mal ünitesi zarar
+      // eder ve kart eskiden hiçbir şey söylemeden "hamle yok"a düşüyordu.
+      const input = link.inputGoodId ? GOOD_BY_ID[link.inputGoodId] : undefined;
+      const inputSpot = input ? (state.market.spot[input.id] ?? input.basePrice) : 0;
+      blocked ??=
+        input && inputSpot >= input.basePrice * CRISIS_THRESHOLD
+          ? tc('core.chain.blockedInputCrisis', { name: def.name, input: input.name, spot: money(inputSpot) })
+          : tc('core.chain.blockedUnprofitable', { name: def.name });
+      continue;
+    }
 
     // Hamleden sonraki birim maliyet: yeni kapasite arz oranını yükseltir,
     // yükselen oran harmanlanmış maliyeti kendi maliyetine doğru çeker.

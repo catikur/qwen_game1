@@ -145,6 +145,8 @@ export const commands = {
   'core.chain.stateNone': 'Yok',
   'core.chain.blockedUnlock': '{name} için {amount} B ₺ şirket değeri gerekiyor.',
   'core.chain.blockedNoPlot': '{name} kurulacak parsel kalmadı — sanayi ve liman dolu.',
+  'core.chain.blockedInputCrisis': '{input} krizde ({spot}): bu fiyatla {name} kâr etmiyor. Kriz geçince hamle geri gelir.',
+  'core.chain.blockedUnprofitable': '{name} bugünkü fiyatlarla kâr etmiyor; fiyatlar dönünce hamle geri gelir.',
   'core.chain.shortfallPartial':
     '{good} üretimin ihtiyacının {covered} kadarını karşılıyor; farkı {spot} üzerinden pazardan alıyorsun.',
   'core.chain.shortfallMarket': '{good} tamamen pazardan geliyor: birim {spot}.',

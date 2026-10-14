@@ -1034,12 +1034,25 @@ async function finish(browser, consoleErrors) {
   section('Zincir kartı');
 
   // Oyuncuya zinciri kurabilecek sermaye ver; test parayı değil arayüzü ölçüyor.
+  //
+  // Pazarın krizi de nötrleniyor (Tur 32): sektör olayı (Tur 27) hammaddeyi
+  // pahalandırınca ara mal ünitesi zarar ediyor ve kart hamle yerine sebebini
+  // yazıyor — doğru davranış (birim testi `chain.test.ts`), ama hangi gün hangi
+  // olayın düştüğü kare zamanlamasına bağlı. main'deki tam koşuda bir kez
+  // böyle düştü; yerelde hiç. Test o günün pazarını değil kartın arayüzünü
+  // ölçüyor.
   await page.evaluate(() => {
-    const s = window.__capital.getState();
+    const c = window.__capital;
+    const s = c.getState();
     const p = s.companies[s.playerCompanyId];
     p.cash = 50_000_000;
     p.netWorth = 50_000_000;
-    window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+    s.activeEvents = [];
+    for (const goodId of Object.keys(s.market.spot)) {
+      const base = c.basePrice(goodId);
+      if (base !== null && s.market.spot[goodId] > base) s.market.spot[goodId] = base;
+    }
+    c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
   });
 
   await page.locator('.topbar-actions [data-panel="chain"]').click();
