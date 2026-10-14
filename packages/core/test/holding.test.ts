@@ -282,17 +282,19 @@ describe('holding: uzaktan yönetim (Tur 32)', () => {
     const raider = Object.values(s.companies).find((c) => !c.isPlayer)!;
     raider.shares[me.id] = Math.round(sharesOutstanding(s, me.id) * 0.24);
     const treasuryShares = () => me.shares[me.id] ?? 0;
+    // Getter: `assert.equal(..., undefined)` derleyicide alanı daraltmasın.
+    const defense = () => away.lastDefense;
 
     engine.runDay();
     assert.equal(treasuryShares(), 0, 'savunma kapalıyken geri alım yok');
-    assert.equal(away.lastDefense, undefined);
+    assert.equal(defense(), undefined);
 
     assert.ok(engine.dispatch({ type: 'SET_CITY_DIRECTIVE', index: 0, defend: true }).ok);
     const holdingTreasury = city.holding!.treasury;
     engine.runDay();
     assert.ok(treasuryShares() > 0, `hazine ${treasuryShares()}`);
-    assert.equal(away.lastDefense?.shares, treasuryShares());
-    assert.ok((away.lastDefense?.cost ?? 0) > 0);
+    assert.equal(defense()?.shares, treasuryShares());
+    assert.ok((defense()?.cost ?? 0) > 0);
     assert.ok(city.holding!.treasury >= holdingTreasury, 'savunmanın parası holding kasasından değil');
     assert.ok(me.cash > HOLDING.defenseReserve, 'yedek korunuyor');
 
@@ -302,7 +304,7 @@ describe('holding: uzaktan yönetim (Tur 32)', () => {
     const locked = treasuryShares();
     engine.runDay();
     assert.equal(treasuryShares(), locked, 'kilitli şehirde geri alım yok');
-    assert.equal(away.lastDefense, undefined);
+    assert.equal(defense(), undefined);
   });
 
   test('kasadan uzaktaki şehre para: zafer ölçüsü o şehirde düzeliyor; kaybedilen şehre yok', () => {
