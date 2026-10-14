@@ -72,12 +72,6 @@ export interface MassPlacement {
    * koyuyor (Tur 24). Ölçüler `MassFootprint` ile dönüyor.
    */
   pitchedRoof?: boolean;
-  /**
-   * Çatı ve korniş rengi (Tur 33). Verilmezse gövde renginin koyu tonu.
-   * Şirket binalarında şirket rengi: kamera en çok çatıyı görüyor, kimin
-   * nerede olduğu oradan okunuyor; duvar pastel kalıyor.
-   */
-  roofColor?: THREE.Color;
 }
 
 /**
@@ -230,9 +224,8 @@ export class BuildingMass {
     // canlı olmalı. (Tek renk paylaşılırken sıra bağımlılığı vardı;
     // ayrı alanlar o tuzağı tamamen kaldırıyor.)
     this.baseColor.copy(placement.color).multiplyScalar(BASE_SHADE);
-    if (placement.roofColor) this.trimColor.copy(placement.roofColor);
-    else this.trimColor.copy(placement.color).multiplyScalar(CAP_SHADE);
-    this.accentColor.copy(this.trimColor).multiplyScalar(0.82);
+    this.trimColor.copy(placement.color).multiplyScalar(CAP_SHADE);
+    this.accentColor.copy(placement.color).multiplyScalar(CAP_SHADE * 0.82);
 
     // Form verilmemişse yükseklikten seçilir — form bilmeyen çağıranlar
     // için Tur 14 davranışı birebir korunuyor.

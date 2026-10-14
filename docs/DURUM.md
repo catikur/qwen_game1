@@ -4,7 +4,7 @@
 > `pnpm bench` çıktısından; iddialar `pnpm balance` ve `pnpm playtest`
 > tarafından her koşuda doğrulanıyor.
 >
-> Son güncelleme: şema **v6**, 33 tur tamamlandı.
+> Son güncelleme: şema **v6**, 33 tur (Tur 33 denendi ve geri alındı).
 
 ---
 
@@ -2169,69 +2169,43 @@ düştü. Yerelde ve PR'larda (duman koşusu) görünmüyordu.
 - *Test:* yeni `chain.test.ts`. Düzeltme olmadan düşüyor. Oynanış testi
   zincir bölümünden önce aktif olayları temizleyip spot fiyatları tabana
   çekiyor: test o günün pazarını değil kartın arayüzünü ölçüyor.
+- *Sonra:* düzeltmeden sonraki main tam koşusu zincir kontrollerini
+  geçti; bu kez dışa aktarmanın indirme olayı 5 sn'lik süreyi aştı. O koşu
+  yavaştı (1438 sn, 2 FPS); uygulama indirmeyi başlatmıştı. Süre 20 sn
+  oldu.
 
 Ders: PR'lar duman koşusunu, main tam koşuyu çalıştırıyor. Bir PR'ın yeşili
 main'in yeşili değil; birleşmeden sonra main'in koşusuna da bakılmalı.
 
-### Tur 33 — Kenney tarzı: kendi prosedürel kitimiz
+### Tur 33 — Kenney tarzı grafik denendi, geri alındı
 
-Kullanıcı grafik için üç seçenekten B'yi seçti: hazır model kiti değil,
-aynı prosedürel geometri ama Kenney'nin görsel diliyle. Ek boyut sıfır,
-35 bina türü, şirket renkleri, örnekleme ve telefon performansı aynı.
+Kullanıcı grafik için B'yi seçti: hazır model kiti değil, aynı prosedürel
+geometri ama Kenney'nin görsel diliyle. Yapılan:
 
-**Teşhis (önce/sonra aynı şehir, aynı kameralar).** Sabit bir şehir
-(tohum 5, vekille 420 gün) tarayıcıda `replaceState` ile yükleniyor, beş
-masaüstü (yüksek kademe) ve bir telefon (düşük kademe) karesi çekiliyor.
-Önceki görüntünün üç sorunu vardı:
+- pastel duvarlar, şirket rengi çatıda;
+- bina renginden bağımsız mavi cam;
+- gri yollar ve beyaz çizgiler;
+- canlı yeşil kırsal;
+- iki toplu ağaçlar ve tıknaz oyuncak arabalar;
+- ACES yerine nötr ton eşleme.
 
-- *Yollar neredeyse siyahtı* (#16181d, sarı çizgi); şehrin en geniş yüzeyi
-  en koyu yüzeydi.
-- *Pencere duvarın koyu tonuydu.* Atlas bina rengiyle çarpılıyordu. Yakından
-  bakınca şehir "kirli" okunuyordu.
-- *Rakip binaları gövdeden boyalıydı* (şirket rengi %55). Mor bir rakip
-  şehrin yarısını mora boyuyordu.
+Testlerin hepsi geçti (çizim çağrısı aynı, oynanış 333/333). Canlıya alındı.
 
-**Değişenler.**
+**Kullanıcı beğenmedi:** "grafikte bir tık geri gittik". Üç somut şikâyet:
 
-- *Cam (`surface.ts`):* atlasın mavi ağırlıklı pikseli bina rengiyle
-  çarpılmıyor. Mor binada da sarı binada da aynı açık mavi cam; duvar ve
-  çerçeve nötr, örnek rengini alıyor. Ek çizim çağrısı yok, tek bir `mix`.
-- *Cephe atlası (`textures.ts`):* beyaz kasalı, kayıtlı pencere ve
-  denizlik; ofiste cam şerit + duvar renginde döşeme bandı (cam payı
-  %66 → %52 — kuleler "mavi ızgara"ya dönüşüyordu); vitrinde beyaz doğrama;
-  sanayide kayıtlı şerit pencere. Gece dokusu aynı dikdörtgenleri
-  kullanıyor: yanan pencere, gündüzün camı.
-- *Sahiplik çatıda:* şirket binalarının gövdesi pastel (türün rengi
-  kremaya %52, şirket rengi %10 ipucu), çatı ve korniş şirket renginde.
-  Kamera en çok çatıyı gördüğü için kimin nerede olduğu yukarıdan hâlâ tek
-  bakışta okunuyor.
-- *Yollar:* orta gri asfalt, açık gri kaldırım ve bordür, beyaz kesikli
-  çizgi.
-- *Kırsal ve kilitli bölgeler:* Kenney yeşili, arada buğday sarısı tarla.
-- *Ağaçlar:* tek yirmiyüzlü yerine iki top (büyük + küçük, üstteki bir ton
-  açık); yeşiller daha canlı.
-- *Arabalar:* tek gri kutu yerine tıknaz oyuncak araba. Gövde, koyu cam
-  bandı, çatı ve dört siyah teker tek geometride, köşe renkleriyle. Çizim
-  çağrısı yine bir; palet canlı (kırmızı, mavi, sarı, beyaz, yeşil…).
-- *Çatılar:* kiremit tonları daha doygun, arada mavi çatı.
-- *Işık:*
-  - ACES yerine nötr ton eşleme (ACES doygun pastelleri griye çekiyordu);
-  - gökyüzü daha açık ve mavi;
-  - gök dolgusu öne, güneş geri (gölgedeki yüz de aydınlık);
-  - yer yansıması koyu laciverten zeytin yeşiline;
-  - zemine yakın karartma 0,6 → 0,76.
-  Gece testlerinin eşikleri değişmedi.
+- *Şehrin dışındaki ağaçlar leke gibi.* Kırsalın ağaçları dokuya boyanmış
+  koyu lekeler; Tur 33'ün canlı yeşili onları daha da belirgin yaptı.
+- *Araçlar çok kötü, hayat yok.* Tıknaz araba kamera uzaklığında renkli
+  bir blok; sokakta canlılık hissi vermiyor.
+- *Binalar öncekinden kötü.* Nötr ton eşleme ve pastel duvar derinliği
+  düzleştirdi; şehir plastik ve oyuncak gibi okundu.
 
-**Ölçüm.**
+Tur 33'ün tamamı geri alındı (yerine eski görünüm).
 
-- *Çizim çağrısı:* 29, önceyle aynı (900 kare). Araba ve ağaç yeni
-  geometride ama yine tek örnek ağında.
-- *Önce/sonra kareleri:* masaüstü yüksek kademede beş kare, telefon düşük
-  kademede bir kare; hata yok. Kare hızı yazılımsal GPU'da önceyle aynı
-  bantta: masaüstü 0,7–1,0 FPS, telefon 4,2–4,6 FPS (SwiftShader).
-- *Tam oynanış:* 333/333, 0 konsol hatası. Görsel katman kontrolleri
-  aynen geçiyor: üç parçalı kütle, detay katmanı, temas gölgesi, gece
-  pencere ışığı, lens geçişinde renk kararlılığı.
+Ders: testler ve ölçüm "kötüleşmedi"yi kanıtlayabiliyor, "güzelleşti"yi
+kanıtlayamıyor. Görsel işte karar kullanıcının gözü. Bundan sonra görsel
+değişiklik canlıya alınmadan önce önce/sonra kareleri gösterilip onay
+alınacak.
 
 ---
 
