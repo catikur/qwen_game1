@@ -60,6 +60,8 @@ importers:
         specifier: workspace:*
         version: link:../content
 
+  packages/lite-model: {}
+
   packages/persistence:
     dependencies:
       '@capital/content':

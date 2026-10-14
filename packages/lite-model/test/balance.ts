@@ -1,0 +1,143 @@
+/**
+ * Lite denge raporu: iki bot, aynı model.
+ *
+ *   Aktif oyuncu — her saniye önerilen hamleyi (kasası yettikçe) alıyor,
+ *   kampanyayı hazır oldukça açıyor. "Ne kadar hızlı ilerleyebilir" sorusu.
+ *   Gündelik oyuncu — 3 saatte bir 4 dakika oynuyor, arada çevrimdışı.
+ *   "Telefonu cebinde unutan biri bir haftada nereye varır" sorusu.
+ *
+ * Çalıştırma: node tools/run-node-script.mjs packages/lite-model/test/balance.ts
+ */
+import {
+  CHAIN_IDS,
+  DISTRICTS,
+  STAGES,
+  bestMove,
+  buy,
+  buyManager,
+  chainReport,
+  chainUnlocked,
+  incomePerSecond,
+  managerCost,
+  applyOffline,
+  advance,
+  prestigePreview,
+  startCampaign,
+  newGame,
+  type LiteState,
+} from '../src/index';
+
+const fmt = (n: number): string => {
+  const units: Array<[number, string]> = [
+    [1e15, 'Ka'],
+    [1e12, 'Tn'],
+    [1e9, 'Mr'],
+    [1e6, 'M'],
+    [1e3, 'B'],
+  ];
+  for (const [v, u] of units) if (Math.abs(n) >= v) return `${(n / v).toFixed(2)} ${u}`;
+  return n.toFixed(1);
+};
+const clock = (s: number): string => {
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = Math.floor(s % 60);
+  return h > 0 ? `${h}sa ${String(m).padStart(2, '0')}dk` : `${m}dk ${String(sec).padStart(2, '0')}sn`;
+};
+
+const picks = { raw: 0, process: 0, retail: 0 };
+
+/** Aktif oyuncunun bir saniyesi: kasa yettikçe önerilen hamleyi al. */
+function play(state: LiteState, campaign: boolean): LiteState {
+  let s = state;
+  if (campaign) {
+    const c = startCampaign(s);
+    if (c.ok) s = c.state;
+  }
+  for (let guard = 0; guard < 200; guard++) {
+    const move = bestMove(s);
+    // Genel Müdür: gelirin 2 dakikasından ucuzsa al (gündelik oyuncu için tavan).
+    if (managerCost(s.manager) < incomePerSecond(s) * 120) {
+      const m = buyManager(s);
+      if (m.ok) {
+        s = m.state;
+        continue;
+      }
+    }
+    if (!move || move.cost > s.cash) break;
+    const r = buy(s, move.chain, move.stage, 1);
+    if (!r.ok) break;
+    s = r.state;
+    picks[(['raw', 'process', 'retail'] as const)[move.stage]]++;
+  }
+  return s;
+}
+
+function activeRun(hours: number): void {
+  console.log(`\n== Aktif oyuncu (${hours} saat, kampanya açık) ==`);
+  let s = newGame();
+  const seen = new Set<string>();
+  const checkpoints = [60, 300, 600, 1800, 3600, 7200, 14400, 28800];
+  for (let t = 0; t < hours * 3600; t++) {
+    s = play(s, true);
+    s = advance(s, 1);
+    for (const d of DISTRICTS) {
+      if (!seen.has(d.id) && s.earned >= d.unlockAt) {
+        seen.add(d.id);
+        if (d.unlockAt > 0) console.log(`  ${clock(s.clock).padStart(10)}  mahalle açıldı: ${d.id}`);
+      }
+    }
+    for (const id of CHAIN_IDS) {
+      const key = `chain:${id}`;
+      if (!seen.has(key) && chainUnlocked(s, id)) {
+        seen.add(key);
+        if (id !== 'bakery') console.log(`  ${clock(s.clock).padStart(10)}  zincir açıldı: ${id}`);
+      }
+    }
+    if (checkpoints.includes(s.clock)) {
+      const parts = CHAIN_IDS.filter((id) => s.chains[id].levels[2] > 0).map((id) => {
+        const r = chainReport(s, id);
+        const l = s.chains[id].levels;
+        return `${id} ${l.join('/')} marj %${(r.margin * 100).toFixed(0)} pay %${(r.share * 100).toFixed(0)}`;
+      });
+      console.log(
+        `  ${clock(s.clock).padStart(10)}  gelir ${fmt(incomePerSecond(s))}/sn · kazanç ${fmt(s.earned)} · yıldız önizleme ${prestigePreview(s)} · müdür ${s.manager}`,
+      );
+      for (const p of parts) console.log(`              ${p}`);
+    }
+  }
+  const total = picks.raw + picks.process + picks.retail;
+  console.log(
+    `  hamle dağılımı: satış %${((picks.retail / total) * 100).toFixed(0)} · işleme %${((picks.process / total) * 100).toFixed(0)} · ham %${((picks.raw / total) * 100).toFixed(0)}`,
+  );
+}
+
+function casualRun(days: number): void {
+  console.log(`\n== Gündelik oyuncu (${days} gün: 3 saatte bir 4 dakika) ==`);
+  let s = newGame();
+  let realTime = 0;
+  for (let day = 1; day <= days; day++) {
+    let offlineTotal = 0;
+    for (let session = 0; session < 8; session++) {
+      for (let t = 0; t < 240; t++) {
+        s = play(s, true);
+        s = advance(s, 1);
+      }
+      realTime += 240;
+      const away = 3 * 3600 - 240;
+      const off = applyOffline(s, away);
+      s = off.state;
+      offlineTotal += off.earned;
+      realTime += away;
+    }
+    const unlocked = CHAIN_IDS.filter((id) => chainUnlocked(s, id)).length;
+    console.log(
+      `  gün ${day}: gelir ${fmt(incomePerSecond(s))}/sn · kazanç ${fmt(s.earned)} · çevrimdışı ${fmt(offlineTotal)} · zincir ${unlocked}/5 · yıldız önizleme ${prestigePreview(s)} · müdür ${s.manager}`,
+    );
+  }
+  void realTime;
+  void STAGES;
+}
+
+activeRun(Number(process.argv[2] ?? 4));
+casualRun(Number(process.argv[3] ?? 5));

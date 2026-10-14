@@ -1,0 +1,41 @@
+# CapitalForge Lite (iOS): Swift modeli macOS'ta derleniyor ve test ediliyor.
+#
+# Denge TypeScript modelinde (packages/lite-model) ayarlanıyor; Swift modeli
+# aynı formüllerin çevirisi. Eşitlik testleri TS'in ürettiği altın değerleri
+# (ios-lite/Tests/.../Fixtures/scenarios.json) Swift'te yeniden üretiyor.
+# Depo herkese açık olduğu için macOS koşucusu ücretsiz.
+name: iOS Lite
+
+on:
+  pull_request:
+    paths:
+      - 'ios-lite/**'
+      - 'packages/lite-model/**'
+      - '.github/workflows/ios-lite.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ios-lite/**'
+      - 'packages/lite-model/**'
+      - '.github/workflows/ios-lite.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: ios-lite-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  kit:
+    name: Swift modeli · eşitlik testleri
+    runs-on: macos-15
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - name: Araç sürümleri
+        run: swift --version && xcodebuild -version
+      - name: Swift testleri
+        working-directory: ios-lite
+        run: swift test
