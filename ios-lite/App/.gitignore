@@ -1,0 +1,4 @@
+# XcodeGen çıktısı: proje dosyası project.yml'den üretiliyor.
+*.xcodeproj
+Generated/
+build/

@@ -1,0 +1,48 @@
+# CapitalForge Lite — iOS uygulaması (XcodeGen).
+# Mac'te: brew install xcodegen && xcodegen && open CapitalForgeLite.xcodeproj
+name: CapitalForgeLite
+options:
+  bundleIdPrefix: com.catikur
+  deploymentTarget:
+    iOS: "17.0"
+  createIntermediateGroups: true
+packages:
+  CapitalForgeLiteKit:
+    path: ../Kit
+targets:
+  CapitalForgeLite:
+    type: application
+    platform: iOS
+    sources:
+      - path: Sources
+    dependencies:
+      - package: CapitalForgeLiteKit
+        product: CapitalForgeLiteKit
+    info:
+      path: Generated/Info.plist
+      properties:
+        CFBundleDisplayName: CapitalForge Lite
+        CFBundleShortVersionString: "0.1.0"
+        CFBundleVersion: "1"
+        UILaunchScreen: {}
+        UIRequiresFullScreen: true
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        CFBundleLocalizations:
+          - tr
+          - en
+        CFBundleDevelopmentRegion: tr
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.catikur.capitalforgelite
+        TARGETED_DEVICE_FAMILY: "1"
+        SWIFT_VERSION: "5.0"
+        CODE_SIGN_STYLE: Automatic
+        ENABLE_PREVIEWS: YES
+schemes:
+  CapitalForgeLite:
+    build:
+      targets:
+        CapitalForgeLite: all
+    run:
+      config: Debug
