@@ -1905,7 +1905,12 @@ async function finish(browser, consoleErrors) {
     return all.length ? all[all.length - 1].textContent : '';
   });
   const exportButton = page.locator('.saverow-actions button:has-text("JSON dışa aktar")');
-  const download = page.waitForEvent('download', { timeout: 5000 }).catch(() => null);
+  // 20 sn: indirme olayı tıklamanın kendisini de içeriyor. Yavaş CI
+  // koşucusunda (2 FPS, kare başına ~500 ms) Playwright'ın "öğe sabit mi"
+  // beklemesi ve 400 KB'lık kaydın serileşmesi ana iş parçacığında sıraya
+  // giriyor; 5 sn main'de bir kez yetmedi — uygulama indirmeyi başlatmıştı
+  // ("İndirme başlatıldı" kontrolü geçti), olay süreden sonra geldi.
+  const download = page.waitForEvent('download', { timeout: 20000 }).catch(() => null);
   await exportButton.click();
   const downloaded = await download;
   check('Dışa aktarma tarayıcıda gerçek bir indirme başlatıyor', downloaded !== null,
