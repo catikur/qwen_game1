@@ -82,7 +82,7 @@ public enum Lite {
         LiteState(
             city: city,
             stars: stars,
-            cash: Content.startingCash,
+            cash: LiteContent.startingCash,
             earned: 0,
             totalEarned: totalEarned,
             clock: 0,
@@ -96,27 +96,27 @@ public enum Lite {
     // MARK: - Kademeler
 
     public static func milestonesReached(_ level: Int) -> Int {
-        Content.milestones.reduce(0) { $0 + (level >= $1 ? 1 : 0) }
+        LiteContent.milestones.reduce(0) { $0 + (level >= $1 ? 1 : 0) }
     }
 
     public static func nextMilestone(_ level: Int) -> Int? {
-        Content.milestones.first { level < $0 }
+        LiteContent.milestones.first { level < $0 }
     }
 
     public static func stageRate(_ stage: Stage, _ level: Int) -> Double {
         if level <= 0 { return 0 }
-        return Content.baseRate[stage.rawValue] * Double(level) * pow(2.0, Double(milestonesReached(level)))
+        return LiteContent.baseRate[stage.rawValue] * Double(level) * pow(2.0, Double(milestonesReached(level)))
     }
 
     public static func upgradeCost(_ chain: ChainId, _ stage: Stage, _ level: Int, _ count: Int = 1) -> Double {
-        let base = Content.chain(chain).baseCost[stage.rawValue]
-        let growth = Content.costGrowth[stage.rawValue]
+        let base = LiteContent.chain(chain).baseCost[stage.rawValue]
+        let growth = LiteContent.costGrowth[stage.rawValue]
         return (base * pow(growth, Double(level)) * (pow(growth, Double(count)) - 1)) / (growth - 1)
     }
 
     public static func maxAffordable(_ cash: Double, _ chain: ChainId, _ stage: Stage, _ level: Int) -> Int {
-        let base = Content.chain(chain).baseCost[stage.rawValue]
-        let growth = Content.costGrowth[stage.rawValue]
+        let base = LiteContent.chain(chain).baseCost[stage.rawValue]
+        let growth = LiteContent.costGrowth[stage.rawValue]
         let first = base * pow(growth, Double(level))
         if cash < first { return 0 }
         var count = Int(floor(log((cash * (growth - 1)) / first + 1) / log(growth)))
@@ -128,11 +128,11 @@ public enum Lite {
     // MARK: - Açılış
 
     public static func districtUnlocked(_ state: LiteState, _ id: DistrictId) -> Bool {
-        state.earned >= Content.district(id).unlockAt
+        state.earned >= LiteContent.district(id).unlockAt
     }
 
     public static func chainUnlocked(_ state: LiteState, _ id: ChainId) -> Bool {
-        let chain = Content.chain(id)
+        let chain = LiteContent.chain(id)
         return districtUnlocked(state, chain.district) && state.earned >= chain.unlockAt
     }
 
@@ -143,25 +143,25 @@ public enum Lite {
     }
 
     public static func incomeMultiplier(_ state: LiteState) -> Double {
-        var multiplier = 1 + Content.starBonus * Double(state.stars)
-        for district in Content.districts where state.earned >= district.unlockAt {
+        var multiplier = 1 + LiteContent.starBonus * Double(state.stars)
+        for district in LiteContent.districts where state.earned >= district.unlockAt {
             multiplier *= district.incomeMultiplier
         }
-        if campaignActive(state) { multiplier *= Content.campaignMultiplier }
+        if campaignActive(state) { multiplier *= LiteContent.campaignMultiplier }
         return multiplier
     }
 
     static func shareOf(_ sold: Double, _ rival: Double) -> Double {
         if sold <= 0 { return 0 }
-        return max(Content.shareFloor, sold / (sold + rival))
+        return max(LiteContent.shareFloor, sold / (sold + rival))
     }
 
     static func marginUnits(_ rates: [Double]) -> (sold: Double, processed: Double, integrated: Double, units: Double) {
         let sold = rates[2]
         let processed = min(sold, rates[1])
         let integrated = min(processed, rates[0])
-        let units = integrated * Content.marginIntegrated + (processed - integrated) * Content.marginProcessed
-            + (sold - processed) * Content.marginBought
+        let units = integrated * LiteContent.marginIntegrated + (processed - integrated) * LiteContent.marginProcessed
+            + (sold - processed) * LiteContent.marginBought
         return (sold, processed, integrated, units)
     }
 
@@ -172,14 +172,14 @@ public enum Lite {
     static func chainIncome(_ state: LiteState, _ chain: ChainId, _ levels: [Int], _ multiplier: Double) -> Double {
         let m = marginUnits(rates(levels))
         let share = shareOf(m.sold, state[chain: chain].rival)
-        return Content.chain(chain).price * m.units * share * multiplier
+        return LiteContent.chain(chain).price * m.units * share * multiplier
     }
 
     public static func chainReport(_ state: LiteState, _ chain: ChainId) -> ChainReport {
         let r = rates(state[chain: chain].levels)
         let m = marginUnits(r)
         let share = shareOf(m.sold, state[chain: chain].rival)
-        let income = Content.chain(chain).price * m.units * share * incomeMultiplier(state)
+        let income = LiteContent.chain(chain).price * m.units * share * incomeMultiplier(state)
         return ChainReport(
             rates: r,
             sold: m.sold,
@@ -256,11 +256,11 @@ public enum Lite {
     }
 
     public static func managerCost(_ level: Int) -> Double {
-        Content.managerBaseCost * pow(Content.managerCostGrowth, Double(level))
+        LiteContent.managerBaseCost * pow(LiteContent.managerCostGrowth, Double(level))
     }
 
     public static func buyManager(_ state: LiteState) -> Result<LiteState, ActionError> {
-        if state.manager >= Content.managerMax { return .failure(.max) }
+        if state.manager >= LiteContent.managerMax { return .failure(.max) }
         let cost = managerCost(state.manager)
         if cost > state.cash { return .failure(.cash) }
         var next = state
@@ -272,27 +272,27 @@ public enum Lite {
     public static func startCampaign(_ state: LiteState) -> Result<LiteState, ActionError> {
         if state.clock < state.campaignReadyAt { return .failure(.cooldown) }
         var next = state
-        next.campaignUntil = state.clock + Content.campaignDuration
-        next.campaignReadyAt = state.clock + Content.campaignDuration + Content.campaignCooldown
+        next.campaignUntil = state.clock + LiteContent.campaignDuration
+        next.campaignReadyAt = state.clock + LiteContent.campaignDuration + LiteContent.campaignCooldown
         return .success(next)
     }
 
     // MARK: - Zaman
 
     public static func rivalAggression(_ city: Int) -> Double {
-        Content.rivalAggressionBase + Content.rivalAggressionPerCity * Double(city)
+        LiteContent.rivalAggressionBase + LiteContent.rivalAggressionPerCity * Double(city)
     }
 
     public static func advance(_ state: LiteState, _ seconds: Double, offline: Bool = false) -> LiteState {
         var next = state
         let step = offline ? offlineStep : onlineStep
-        let lag = offline ? Content.rivalLag * 2 : Content.rivalLag
+        let lag = offline ? LiteContent.rivalLag * 2 : LiteContent.rivalLag
         let aggression = rivalAggression(next.city)
         var remaining = seconds
         while remaining > 1e-9 {
             var h = min(step, remaining)
             if next.campaignUntil > next.clock { h = min(h, next.campaignUntil - next.clock) }
-            let income = incomePerSecond(next) * (offline ? Content.offlineEfficiency : 1)
+            let income = incomePerSecond(next) * (offline ? LiteContent.offlineEfficiency : 1)
             next.cash += income * h
             next.earned += income * h
             next.totalEarned += income * h
@@ -308,7 +308,7 @@ public enum Lite {
     }
 
     public static func offlineCap(_ state: LiteState) -> Double {
-        Content.offlineCapBase + Content.offlineCapPerManager * Double(state.manager)
+        LiteContent.offlineCapBase + LiteContent.offlineCapPerManager * Double(state.manager)
     }
 
     public static func applyOffline(_ state: LiteState, _ elapsed: Double) -> OfflineResult {
@@ -322,7 +322,7 @@ public enum Lite {
     // MARK: - Holding
 
     public static func starsFor(_ earned: Double) -> Int {
-        Int(floor(Content.starScale * sqrt(max(0, earned) / Content.starUnit)))
+        Int(floor(LiteContent.starScale * sqrt(max(0, earned) / LiteContent.starUnit)))
     }
 
     public static func prestigePreview(_ state: LiteState) -> Int {

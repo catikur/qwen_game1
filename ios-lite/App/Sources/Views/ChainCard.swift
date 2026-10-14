@@ -25,7 +25,7 @@ struct ChainCard: View {
                 Text(L10n.chainName(chain))
                     .font(Theme.sans(16, .bold))
                     .foregroundStyle(Theme.ink)
-                Text(L10n.districtName(Content.chain(chain).district).uppercased())
+                Text(L10n.districtName(LiteContent.chain(chain).district).uppercased())
                     .font(Theme.mono(9, .medium))
                     .foregroundStyle(Theme.muted)
                     .tracking(0.8)
@@ -59,13 +59,13 @@ struct ChainCard: View {
     }
 
     private func locked(_ state: LiteState) -> some View {
-        let target = max(Content.chain(chain).unlockAt, Content.district(Content.chain(chain).district).unlockAt)
+        let target = max(LiteContent.chain(chain).unlockAt, LiteContent.district(LiteContent.chain(chain).district).unlockAt)
         let progress = min(1, state.earned / max(1, target))
         return VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 8) {
                 Image(systemName: "lock.fill").font(.system(size: 11)).foregroundStyle(Theme.muted)
                 Text(L10n.chainName(chain)).font(Theme.sans(16, .semibold)).foregroundStyle(Theme.muted)
-                Text(L10n.districtName(Content.chain(chain).district).uppercased())
+                Text(L10n.districtName(LiteContent.chain(chain).district).uppercased())
                     .font(Theme.mono(9, .medium))
                     .foregroundStyle(Theme.muted)
                     .tracking(0.8)

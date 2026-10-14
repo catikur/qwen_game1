@@ -39,7 +39,7 @@ public struct DistrictDef: Sendable {
     public let incomeMultiplier: Double
 }
 
-public enum Content {
+public enum LiteContent {
     public static let chains: [ChainDef] = [
         ChainDef(id: .bakery, district: .bazaar, price: 1, baseCost: [6, 8, 4], unlockAt: 0),
         ChainDef(id: .coffee, district: .bazaar, price: 14, baseCost: [84, 112, 56], unlockAt: 3_000),

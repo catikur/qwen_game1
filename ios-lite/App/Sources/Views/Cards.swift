@@ -7,7 +7,7 @@ struct ManagerCard: View {
 
     var body: some View {
         let state = store.state
-        let maxed = state.manager >= Content.managerMax
+        let maxed = state.manager >= LiteContent.managerMax
         let cost = Lite.managerCost(state.manager)
         HStack(spacing: 12) {
             Image(systemName: "person.crop.square")

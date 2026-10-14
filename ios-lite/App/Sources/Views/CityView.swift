@@ -75,7 +75,7 @@ struct IsoPainter {
             for (stage, tile) in zip(Stage.allCases, CityLayout.tiles(chain)) {
                 let level = levels[stage.rawValue]
                 let (c, r) = (Double(tile.0), Double(tile.1))
-                items.append((c + r, { (ctx: inout GraphicsContext) in
+                items.append((depth: c + r, draw: { (ctx: inout GraphicsContext) in
                     self.drawBuilding(&ctx, chain: chain, stage: stage, level: level, unlocked: unlocked, c: c, r: r, time: time)
                 }))
             }
@@ -83,11 +83,11 @@ struct IsoPainter {
         if Lite.districtUnlocked(state, .port) {
             for (index, tile) in CityLayout.port.enumerated() {
                 let (c, r) = (Double(tile.0), Double(tile.1))
-                items.append((c + r, { (ctx: inout GraphicsContext) in self.drawCrane(&ctx, c: c, r: r, phase: Double(index)) }))
+                items.append((depth: c + r, draw: { (ctx: inout GraphicsContext) in self.drawCrane(&ctx, c: c, r: r, phase: Double(index)) }))
             }
         }
         for car in cars(state: state, time: time) {
-            items.append((car.c + car.r + 0.5, { (ctx: inout GraphicsContext) in self.drawCar(&ctx, car) }))
+            items.append((depth: car.c + car.r + 0.5, draw: { (ctx: inout GraphicsContext) in self.drawCar(&ctx, car) }))
         }
         for item in items.sorted(by: { $0.depth < $1.depth }) { item.draw(&context) }
     }

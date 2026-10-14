@@ -20,7 +20,7 @@ final class ModelTests: XCTestCase {
 
     func testNewGameSuggestsBakeryRetail() {
         let state = Lite.newGame()
-        XCTAssertEqual(state.cash, Content.startingCash)
+        XCTAssertEqual(state.cash, LiteContent.startingCash)
         XCTAssertEqual(Lite.incomePerSecond(state), 0)
         let move = Lite.bestMove(state)
         XCTAssertEqual(move?.chain, .bakery)
@@ -41,8 +41,8 @@ final class ModelTests: XCTestCase {
         var state = Lite.advance(must(Lite.buy(rich(), .bakery, .retail, 10)), 5)
         let base = Lite.incomePerSecond(state)
         state = must(Lite.startCampaign(state))
-        XCTAssertEqual(Lite.incomePerSecond(state) / base, Content.campaignMultiplier, accuracy: 1e-12)
-        state = Lite.advance(state, Content.campaignDuration - 1e-6)
+        XCTAssertEqual(Lite.incomePerSecond(state) / base, LiteContent.campaignMultiplier, accuracy: 1e-12)
+        state = Lite.advance(state, LiteContent.campaignDuration - 1e-6)
         XCTAssertGreaterThan(Lite.incomePerSecond(state), base * 1.5)
         state = Lite.advance(state, 1e-3)
         XCTAssertLessThan(Lite.incomePerSecond(state), base * 1.5)
@@ -52,7 +52,7 @@ final class ModelTests: XCTestCase {
     func testOfflineIsCappedAndHalfRate() {
         let state = Lite.advance(must(Lite.buy(rich(), .bakery, .retail, 10)), 3600)
         let result = Lite.applyOffline(state, 10 * 3600)
-        XCTAssertEqual(result.seconds, Content.offlineCapBase)
+        XCTAssertEqual(result.seconds, LiteContent.offlineCapBase)
         let ratio = (result.earned / result.seconds) / Lite.incomePerSecond(state)
         XCTAssertGreaterThan(ratio, 0.4)
         XCTAssertLessThan(ratio, 0.6)
