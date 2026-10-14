@@ -43,7 +43,7 @@ final class GameStore {
     /// Arka plana geçiş anı. Çevrimdışı süre buradan sayılıyor; açılıştaki
     /// süre ise kayıttaki `lastSeen`'den (ikisi aynı ayrılışı iki kez saymasın).
     @ObservationIgnored private var backgroundAt: Date?
-    @ObservationIgnored private let saveURL: URL
+    private let saveURL: URL
 
     init() {
         let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]

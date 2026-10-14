@@ -39,3 +39,51 @@ jobs:
       - name: Swift testleri
         working-directory: ios-lite/Kit
         run: swift test
+
+  app:
+    name: Uygulama · simülatör kareleri
+    needs: kit
+    runs-on: macos-15
+    timeout-minutes: 45
+    # Kareler ayrı bir dala (ios-lite-shots) yazılıyor: inceleme için.
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+      - name: XcodeGen
+        run: brew install xcodegen
+      - name: Proje
+        working-directory: ios-lite/App
+        run: xcodegen generate
+      # Release: senaryo botu açılışta saatlerce oyunu oynuyor; iyileştirilmiş kodla saniyeler.
+      - name: Derleme (simülatör)
+        working-directory: ios-lite/App
+        run: |
+          set -o pipefail
+          xcodebuild -project CapitalForgeLite.xcodeproj -scheme CapitalForgeLite \
+            -sdk iphonesimulator -configuration Release \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath build CODE_SIGNING_ALLOWED=NO build 2>&1 | tee build.log | grep -E "error:|warning: .*(deprecated|unused)|BUILD (SUCCEEDED|FAILED)" || true
+          grep -q "BUILD SUCCEEDED" build.log
+      - name: Simülatör kareleri
+        run: ios-lite/App/ci/screenshots.sh ios-lite/App/build/Build/Products/Release-iphonesimulator/CapitalForgeLite.app shots
+      - uses: actions/upload-artifact@v5
+        with:
+          name: ios-lite-shots
+          path: shots
+          retention-days: 7
+      - name: Kareleri ios-lite-shots dalına yaz
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          TOKEN: ${{ github.token }}
+          SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          cd shots
+          git init -q -b ios-lite-shots
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          printf 'CapitalForge Lite simülatör kareleri — %s\n' "$SHA" > README.md
+          git add -A
+          git commit -q -m "Simülatör kareleri: $SHA"
+          git push -q -f "https://x-access-token:${TOKEN}@github.com/${{ github.repository }}" ios-lite-shots
+
