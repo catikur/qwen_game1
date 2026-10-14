@@ -2180,24 +2180,34 @@ async function finish(browser, consoleErrors) {
     const s = c.getState();
     const isPlant = (b) => c.buildingRole(b.defId) === 'process';
     let built = false;
+    let reason = '';
     if (!Object.values(s.buildings).some(isPlant)) {
-      // Tesis yoksa bir değirmen kuruluyor: imarın izin verdiği ilk boş parsel.
+      // Tesis yoksa bir değirmen kuruluyor: imarın izin verdiği ilk boş
+      // parsel. Değirmen net değer eşiğiyle açılıyor; zincir bölümündeki
+      // gibi kasa ve net değer birlikte yükseltiliyor.
       const p = s.companies[s.playerCompanyId];
       p.cash = Math.max(p.cash, 50_000_000);
+      p.netWorth = Math.max(p.netWorth, 50_000_000);
       for (const tile of s.map.tiles) {
         if (tile.kind !== 'plot' || tile.structureId || tile.ownerId) continue;
         // Yalnızca sanayi ve liman: başka yerde alınan parsel boşa kalırdı.
         const archetype = s.districts[tile.districtId]?.archetype;
         if (archetype !== 'industrial' && archetype !== 'port') continue;
-        if (!c.engine.dispatch({ type: 'BUY_TILE', tileId: tile.id }).ok) continue;
-        if (c.engine.dispatch({ type: 'BUILD', tileId: tile.id, defId: 'flour_mill' }).ok) {
+        const bought = c.engine.dispatch({ type: 'BUY_TILE', tileId: tile.id });
+        if (!bought.ok) {
+          reason = `parsel: ${bought.reason}`;
+          continue;
+        }
+        const result = c.engine.dispatch({ type: 'BUILD', tileId: tile.id, defId: 'flour_mill' });
+        if (result.ok) {
           built = true;
           break;
         }
+        reason = `kurulum: ${result.reason}`;
       }
     }
     const plants = Object.values(s.buildings).filter(isPlant);
-    return { plants: plants.length, built };
+    return { plants: plants.length, built, reason, day: s.time.day };
   });
   // Yeni kurulduysa inşaat animasyonu bitsin: yükselen binadan duman çıkmıyor.
   if (plantSetup.built) await page.waitForTimeout(1600);
@@ -2234,7 +2244,7 @@ async function finish(browser, consoleErrors) {
   check(
     'Duman yalnızca üretim yapan tesisten çıkıyor',
     plantSetup.plants > 0 && oneOn && silent.producing === 0 && smoking.producing === 1 && smoking.puffs > 0,
-    `${plantSetup.plants} tesis${plantSetup.built ? ' (test kurdu)' : ''} · üretim yok: ${silent.producing} baca · bir tesis üretti: ${smoking.producing} baca, ${smoking.puffs} puf`,
+    `${plantSetup.plants} tesis${plantSetup.built ? ' (test kurdu)' : ''}${plantSetup.reason && !plantSetup.built ? ` (kurulamadı, gün ${plantSetup.day}: ${plantSetup.reason})` : ''} · üretim yok: ${silent.producing} baca · bir tesis üretti: ${smoking.producing} baca, ${smoking.puffs} puf`,
   );
 
   // İnşaat animasyonu: bina yerden yükseliyor mu.
