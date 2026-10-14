@@ -2211,11 +2211,20 @@ async function finish(browser, consoleErrors) {
   });
   // Yeni kurulduysa inşaat animasyonu bitsin: yükselen binadan duman çıkmıyor.
   if (plantSetup.built) await page.waitForTimeout(1600);
+  // Sahne lensle yeniden senkronlanıyor; puflar ise çizim döngüsünde
+  // hesaplanıyor. Sabit bekleme (400 ms) main'deki yavaş koşucuda (2 FPS)
+  // tek kare bile çizdirmedi ve puf 0 kaldı: yeni kareleri bekliyoruz.
   const resync = async () => {
     await page.evaluate(() => window.__capital.setLens('opportunity'));
     await page.waitForTimeout(150);
     await page.evaluate(() => window.__capital.setLens('none'));
-    await page.waitForTimeout(400);
+    await page.evaluate(async () => {
+      const start = window.__capital.renderInfo().frameCount;
+      const t0 = performance.now();
+      while (window.__capital.renderInfo().frameCount < start + 3 && performance.now() - t0 < 20000) {
+        await new Promise((r) => setTimeout(r, 50));
+      }
+    });
   };
   const saved = await page.evaluate(() => {
     const c = window.__capital;
