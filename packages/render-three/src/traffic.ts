@@ -34,15 +34,19 @@ import type { CustomerFlow, SupplyLeg } from '@capital/core';
  * Fon araçları (Tur 34): üç tür, gerçek oranlarla ve gerçek araba
  * renkleriyle. Eski araç tek gri kutuydu: önü arkası belli değildi, hepsi
  * aynı renkti ve sokak "boş" okunuyordu. Renkler doğal (beyaz, gümüş, gri,
- * siyah, lacivert, bordo…) ve bilerek doygun DEĞİL: şirket renginde akan
- * kamyonlar ve müşteriler bilgi taşıyor, fon araçları onları bastırmamalı.
+ * siyah, koyu lacivert, koyu bordo…) ve bilerek doygun DEĞİL: şirket
+ * renginde akan kamyonlar ve müşteriler bilgi taşıyor, fon araçları onları
+ * bastırmamalı.
+ *
+ * Sarı taksi ve turuncu otobüs denendi, çıkarıldı: rakiplerden biri altın
+ * sarısı (#c9971f), biri turuncu (#e8913c). Sokakta sarı bir araç gören
+ * oyuncu "o rakibin müşterisi" diye okurdu. Otobüs bu yüzden krem/gümüş.
  */
 type VehicleKind = 'car' | 'van' | 'bus';
 const VEHICLE_KINDS: VehicleKind[] = ['car', 'van', 'bus'];
-const CAR_COLORS = ['#e8e8e4', '#bfc3c8', '#7c828a', '#2e3136', '#e8e8e4', '#30496a', '#9c3b33', '#bfc3c8', '#46685a', '#c6b697'];
-const TAXI_COLOR = '#e5b42a';
-const VAN_COLORS = ['#ececea', '#c4c8cc', '#2f4a6b', '#ececea'];
-const BUS_COLORS = ['#d8822c', '#2f6ea6'];
+const CAR_COLORS = ['#e8e8e4', '#bfc3c8', '#7c828a', '#2e3136', '#e8e8e4', '#2a3a52', '#6e2f2b', '#bfc3c8', '#3c5048', '#c6b697'];
+const VAN_COLORS = ['#ececea', '#c4c8cc', '#2a3a52', '#ececea'];
+const BUS_COLORS = ['#e6e2d6', '#cdd2d6'];
 /** Türün boyu ve eni: gece ışıkları bu ölçüyle araç uçlarına yerleşiyor. */
 const VEHICLE_SIZE: Record<VehicleKind, { length: number; width: number }> = {
   car: { length: 0.36, width: 0.18 },
@@ -133,9 +137,55 @@ function lightsGeometry(): THREE.BufferGeometry {
 // 0,26 idi ve şehir görünümünde kayboluyorlardı: gökdelenler sokakları
 // örtüyor, kalan boşlukta araç bir noktaya iniyordu. Yarım kareye yakın
 // bir gövde, bir mağazanın yanından geçerken hâlâ görülebiliyor.
-const TRUCK_HEIGHT = 0.3;
-const TRUCK_LENGTH = 0.6;
-const TRUCK_WIDTH = 0.3;
+//
+// Tur 34: tek kutu yerine kasa + kabin + teker. Boy aynı (0,6), en yolda
+// kalsın diye 0,28. Tavan 0,32 — otobüsten (0,23) hâlâ belirgin yüksek.
+
+/**
+ * Işıksız çizilen araçlar için fırınlanmış gölge.
+ *
+ * Kamyon ve müşteri aracı bilerek `MeshBasicMaterial`: gece ve gölgede de
+ * gündüzkü kadar okunmalılar. Bedeli şuydu: her yüz aynı renk, yani kutu
+ * köşeden bakınca düz bir altıgen çıkartma gibi duruyordu. Yüzün yönüne
+ * göre köşe rengini koyultmak ışık hesabı yapmadan hacmi geri getiriyor;
+ * şirket rengi tavanda olduğu gibi kalıyor.
+ */
+function bakeShade(geometry: THREE.BufferGeometry): THREE.BufferGeometry {
+  const normals = geometry.attributes['normal']!;
+  const colors = geometry.attributes['color']!;
+  for (let i = 0; i < normals.count; i++) {
+    const nx = Math.abs(normals.getX(i));
+    const ny = normals.getY(i);
+    const nz = Math.abs(normals.getZ(i));
+    const shade = ny > 0.5 ? 1 : ny < -0.5 ? 0.45 : nz >= nx ? 0.84 : 0.7;
+    colors.setXYZ(i, colors.getX(i) * shade, colors.getY(i) * shade, colors.getZ(i) * shade);
+  }
+  return geometry;
+}
+
+/** Kamyon: önü +x, tabanı y=0. Kasa beyaz (şirket rengini olduğu gibi alır), kabin bir ton koyu. */
+function truckGeometry(): THREE.BufferGeometry {
+  const glass = '#1d242c';
+  const parts = [
+    paintedBox(0.58, 0.035, 0.22, 0, 0.06, 0, '#2a2d31'),
+    paintedBox(0.41, 0.24, 0.28, -0.09, 0.2, 0, '#ffffff'),
+    paintedBox(0.16, 0.19, 0.26, 0.205, 0.165, 0, '#d4d4d4'),
+    paintedBox(0.012, 0.07, 0.22, 0.286, 0.205, 0, glass),
+    paintedBox(0.09, 0.06, 0.265, 0.215, 0.205, 0, glass),
+    ...wheels(0.2, 0.115, 0.042),
+    ...wheels(-0.19, 0.115, 0.042),
+  ];
+  const merged = mergeGeometries(parts);
+  merged.computeVertexNormals();
+  return bakeShade(merged);
+}
+
+/** Müşteri aracı: fon arabasının biraz küçüğü, gövdesi şirket renginde. */
+function shopperGeometry(): THREE.BufferGeometry {
+  const geometry = vehicleGeometry('car');
+  geometry.scale(SHOPPER_LENGTH / VEHICLE_SIZE.car.length, 1, SHOPPER_WIDTH / VEHICLE_SIZE.car.width);
+  return bakeShade(geometry);
+}
 
 /** Aynı anda yolda olabilecek en fazla kamyon. */
 const TRUCK_CAP = 44;
@@ -158,7 +208,6 @@ const TRUCKS_PER_LEG_CAP = 3;
  * görüyordun ama hangisinin mal hangisinin müşteri taşıdığını
  * bilmiyordun. Boy farkı iki katına çıkarıldı.
  */
-const SHOPPER_HEIGHT = 0.15;
 const SHOPPER_LENGTH = 0.3;
 const SHOPPER_WIDTH = 0.17;
 
@@ -346,12 +395,12 @@ export class TrafficSystem {
     this.lightMesh.visible = false;
 
     this.truckMesh = new THREE.InstancedMesh(
-      new THREE.BoxGeometry(TRUCK_LENGTH, TRUCK_HEIGHT, TRUCK_WIDTH),
+      truckGeometry(),
       // IŞIKTAN BAĞIMSIZ. Kamyon bilgi taşıyor, manzara değil: gece
       // yarısında ve gökdelen gölgesinde de gündüzkü kadar okunmalı.
       // Zemin veri lensinde tam olarak bu sebeple `MeshBasicMaterial`
-      // kullanıyor — aynı gerekçe, aynı çözüm.
-      new THREE.MeshBasicMaterial(),
+      // kullanıyor — aynı gerekçe, aynı çözüm. Hacmi köşe renkleri veriyor.
+      new THREE.MeshBasicMaterial({ vertexColors: true }),
       TRUCK_CAP,
     );
     this.truckMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
@@ -361,10 +410,10 @@ export class TrafficSystem {
     this.truckMesh.setColorAt(0, this.scratch.set('#ffffff'));
 
     this.shopperMesh = new THREE.InstancedMesh(
-      new THREE.BoxGeometry(SHOPPER_LENGTH, SHOPPER_HEIGHT, SHOPPER_WIDTH),
+      shopperGeometry(),
       // Kamyonlarla aynı gerekçe: müşteri akışı bilgi taşıyor, manzara
       // değil. Gece yarısında da gündüzkü kadar okunmalı.
-      new THREE.MeshBasicMaterial(),
+      new THREE.MeshBasicMaterial({ vertexColors: true }),
       SHOPPER_CAP,
     );
     this.shopperMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
@@ -404,9 +453,7 @@ export class TrafficSystem {
           ? BUS_COLORS[slot % BUS_COLORS.length]!
           : kind === 'van'
             ? VAN_COLORS[slot % VAN_COLORS.length]!
-            : slot % 9 === 4
-              ? TAXI_COLOR
-              : CAR_COLORS[slot % CAR_COLORS.length]!;
+            : CAR_COLORS[slot % CAR_COLORS.length]!;
       this.vehicleMeshes[kind].setColorAt(slot, this.scratch.set(color));
     }
     for (const kind of VEHICLE_KINDS) {
@@ -817,9 +864,10 @@ export class TrafficSystem {
       truck.offsetX += (targetX - truck.offsetX) * settle;
       truck.offsetZ += (targetZ - truck.offsetZ) * settle;
 
-      // Parsel blokları y=0,07'de bitiyor; kamyon onların üstünde kalsın ki
-      // bir parselin kenarından geçerken gövdesi yarıya gömülmesin.
-      this.dummy.position.set(x + truck.offsetX, TRUCK_HEIGHT / 2 + 0.07, z + truck.offsetZ);
+      // Tekerler yolda: kamyon artık bütün rotasını sokakta yürüyor (L
+      // rota), eskiden kutu parsel bloklarına gömülmesin diye 5 cm havada
+      // süzülüyordu.
+      this.dummy.position.set(x + truck.offsetX, ROAD_Y, z + truck.offsetZ);
       this.dummy.rotation.y = Math.atan2(-dz, dx);
       this.dummy.updateMatrix();
       this.truckMesh.setMatrixAt(i, this.dummy.matrix);
@@ -886,7 +934,7 @@ export class TrafficSystem {
       shopper.offsetX += (targetX - shopper.offsetX) * settle;
       shopper.offsetZ += (targetZ - shopper.offsetZ) * settle;
 
-      this.dummy.position.set(x + shopper.offsetX, SHOPPER_HEIGHT / 2 + 0.07, z + shopper.offsetZ);
+      this.dummy.position.set(x + shopper.offsetX, ROAD_Y, z + shopper.offsetZ);
       this.dummy.rotation.y = Math.atan2(-dz, dx);
       this.dummy.updateMatrix();
       this.shopperMesh.setMatrixAt(i, this.dummy.matrix);
