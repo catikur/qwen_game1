@@ -911,9 +911,9 @@ export class CityRenderer {
       // tentede ve tabelada; kamera en çok çatıyı gördüğü için sahiplik
       // yukarıdan hâlâ tek bakışta okunuyor.
       const company = state.companies[building.companyId];
-      this.color.set(def.color).lerp(CREAM, 0.38);
+      this.color.set(def.color).lerp(CREAM, 0.52);
       const owner = company && !company.isPlayer ? this.ownerColor.set(company.color) : this.ownerColor.copy(OWN_COLOR);
-      this.color.lerp(owner, 0.14);
+      this.color.lerp(owner, 0.1);
 
       const growth = this.growthOf(building.id);
       if (growth < 1) growing = true;
@@ -1165,11 +1165,12 @@ export class CityRenderer {
     // değerlerde döngünün gece yarısında sahne fiilen görünmez oluyordu ve
     // sadece binaların amber emissive'i kalıyordu — oyun oynanamaz hale
     // geliyordu. Artık en karanlık anda bile şehir okunuyor.
-    this.sun.intensity = 1.1 + daylight * 1.35;
+    // Tur 33: güneş biraz geri, gök dolgusu öne — Kenney tarzı yumuşak, iki yanı da aydınlık ışık.
+    this.sun.intensity = 1.1 + daylight * 1.05;
     // Renk iki sabit ton arasında geçer: gece soğuk ay ışığı, gündüz ılık
     // güneş. Ton (hue) üzerinden geçmek yeşilden geçirirdi.
     this.sun.color.copy(MOONLIGHT).lerp(SUNLIGHT, daylight);
-    this.hemisphere.intensity = 1.0 + daylight * 0.4;
+    this.hemisphere.intensity = 1.0 + daylight * 0.75;
     this.hemisphere.color.copy(NIGHT_SKY_LIGHT).lerp(DAY_SKY_LIGHT, daylight);
 
     /*
