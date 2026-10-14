@@ -270,19 +270,18 @@ export class StreetLife {
     if (this.smoke.instanceColor) this.smoke.instanceColor.needsUpdate = true;
   }
 
-  /** Testler için: çizilen yaya, tüten baca ve puf sayısı. */
-  get stats(): { walkers: number; stacks: number; puffs: number; visible: boolean } {
+  /**
+   * Testler için: çizilen yaya, tüten baca (toplam ve yalnızca üretim
+   * yapan şirket tesisleri) ve puf sayısı.
+   */
+  get stats(): { walkers: number; stacks: number; producing: number; puffs: number; visible: boolean } {
     return {
       walkers: this.bodies.count,
       stacks: this.emitters.buildings.length + this.emitters.fabric.length,
+      producing: this.emitters.buildings.length,
       puffs: this.smoke.count,
       visible: this.group.visible,
     };
-  }
-
-  /** Testler için: üretim yapan şirket tesislerinin bacaları. */
-  get producingStacks(): number {
-    return this.emitters.buildings.length;
   }
 
   dispose(): void {

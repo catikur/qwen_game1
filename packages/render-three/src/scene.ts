@@ -1458,7 +1458,7 @@ export class CityRenderer {
     /** Fon araçları türlere göre ve gece ışıkları (Tur 34). */
     vehicles: { car: number; van: number; bus: number; lights: boolean };
     /** Yayalar ve tüten bacalar (Tur 34). */
-    street: { walkers: number; stacks: number; puffs: number; visible: boolean };
+    street: { walkers: number; stacks: number; producing: number; puffs: number; visible: boolean };
     /** Mağazalara akan müşteri aracı sayısı. */
     shopperCount: number;
     /** Müşteri konumlarının toplamı; hareket ettiklerini ölçmek için. */

@@ -2155,6 +2155,32 @@ async function finish(browser, consoleErrors) {
   check('Gece pencereler yanıyor', midnight.fabricEmissive > 0.5,
     `${midnight.fabricEmissive.toFixed(2)} (eski düz emisyon 0,03 idi)`);
 
+  // Canlılık (Tur 34): kırsalda gerçek ağaçlar, üç tür fon aracı ve gece
+  // farları, kaldırımda yayalar, üretim yapan tesisin bacasında duman.
+  check('Kırsalda 3B ağaçlar var', visual.countrysideTrees > 100, `${visual.countrysideTrees} ağaç`);
+  check(
+    'Fon araçları üç türde: araba, minibüs, otobüs',
+    visual.vehicles.car > 0 && visual.vehicles.van > 0 && visual.vehicles.bus > 0,
+    `araba ${visual.vehicles.car} · minibüs ${visual.vehicles.van} · otobüs ${visual.vehicles.bus}`,
+  );
+  check('Araç farları gece yanıyor, gündüz sönük', noon.vehicles.lights === false && midnight.vehicles.lights === true,
+    `gündüz ${noon.vehicles.lights ? 'açık' : 'kapalı'} · gece ${midnight.vehicles.lights ? 'açık' : 'kapalı'}`);
+  check('Kaldırımda yayalar yürüyor, gece sokak boşalıyor', noon.street.walkers > 20 && midnight.street.walkers < noon.street.walkers,
+    `gündüz ${noon.street.walkers} · gece ${midnight.street.walkers} yaya`);
+  check('Veri lensinde yaya ve duman susuyor, dönünce geri geliyor', !lensDecor.street.visible && backDecor.street.visible);
+  await page.evaluate(() => window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 }));
+  await page.waitForTimeout(400);
+  const smoke = await page.evaluate(() => {
+    const c = window.__capital;
+    const buildings = Object.values(c.getState().buildings);
+    const producing = buildings.filter((b) => c.buildingRole(b.defId) === 'process' && b.last.producedUnits > 0).length;
+    return { producing, info: c.renderInfo().street };
+  });
+  // Duman BİLGİ: yalnızca dün üretim yapmış tesisin bacası tütüyor.
+  // Girdisi kesilen tesis susuyor — sayı birebir tutmalı.
+  check('Duman yalnızca üretim yapan tesisten çıkıyor', smoke.info.producing === smoke.producing,
+    `tüten tesis ${smoke.info.producing} · üretim yapan ${smoke.producing} · şehirdeki fabrika bacası ${smoke.info.stacks - smoke.info.producing} · puf ${smoke.info.puffs}`);
+
   // İnşaat animasyonu: bina yerden yükseliyor mu.
   //
   // Oyun ÖNCE durduruluyor. Rakipler sürekli dükkân açıyor ve her yeni

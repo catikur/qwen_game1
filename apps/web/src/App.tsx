@@ -12,7 +12,7 @@ import {
   supplyRoutes,
 } from '@capital/core';
 import type { GameCommand } from '@capital/core';
-import { GOOD_BY_ID } from '@capital/content';
+import { BUILDING_BY_ID, GOOD_BY_ID } from '@capital/content';
 import type { CitySizeId, DifficultyId } from '@capital/content';
 import { CityRenderer } from '@capital/render-three';
 import {
@@ -322,6 +322,8 @@ function GameRoot({
       tutorialStep: () => tutorialStepOf(engine.getState()),
       // Ürünün taban fiyatı: test, pazarın o anki krizini nötrleyebilsin diye (Tur 32).
       basePrice: (goodId: string) => GOOD_BY_ID[goodId]?.basePrice ?? null,
+      // Bina tanımının rolü: test, dumanın yalnızca üretim yapan tesisten çıktığını sayabilsin diye (Tur 34).
+      buildingRole: (defId: string) => BUILDING_BY_ID[defId]?.role ?? null,
     };
     return () => {
       delete globals['__capital'];
