@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import type { CustomerFlow, SupplyLeg } from '@capital/core';
 
 /**
@@ -29,8 +30,104 @@ import type { CustomerFlow, SupplyLeg } from '@capital/core';
  * kayması ani olmasın diye yumuşatılır.
  */
 
-const CAR_COLORS = ['#aeb6c2', '#8b939f', '#c0c7d1', '#77808d', '#9aa3b0', '#b4bcc7'];
-const CAR_HEIGHT = 0.16;
+/**
+ * Fon araçları (Tur 34): üç tür, gerçek oranlarla ve gerçek araba
+ * renkleriyle. Eski araç tek gri kutuydu: önü arkası belli değildi, hepsi
+ * aynı renkti ve sokak "boş" okunuyordu. Renkler doğal (beyaz, gümüş, gri,
+ * siyah, lacivert, bordo…) ve bilerek doygun DEĞİL: şirket renginde akan
+ * kamyonlar ve müşteriler bilgi taşıyor, fon araçları onları bastırmamalı.
+ */
+type VehicleKind = 'car' | 'van' | 'bus';
+const VEHICLE_KINDS: VehicleKind[] = ['car', 'van', 'bus'];
+const CAR_COLORS = ['#e8e8e4', '#bfc3c8', '#7c828a', '#2e3136', '#e8e8e4', '#30496a', '#9c3b33', '#bfc3c8', '#46685a', '#c6b697'];
+const TAXI_COLOR = '#e5b42a';
+const VAN_COLORS = ['#ececea', '#c4c8cc', '#2f4a6b', '#ececea'];
+const BUS_COLORS = ['#d8822c', '#2f6ea6'];
+/** Türün boyu ve eni: gece ışıkları bu ölçüyle araç uçlarına yerleşiyor. */
+const VEHICLE_SIZE: Record<VehicleKind, { length: number; width: number }> = {
+  car: { length: 0.36, width: 0.18 },
+  van: { length: 0.44, width: 0.2 },
+  bus: { length: 0.86, width: 0.22 },
+};
+/** Araçların oturduğu yol yüzeyi. */
+const ROAD_Y = 0.02;
+
+/** Bir kutuyu tek renge boyar (köşe rengi); dizinsiz, UV'siz. */
+function paintedBox(w: number, h: number, d: number, x: number, y: number, z: number, hex: string): THREE.BufferGeometry {
+  return paint(new THREE.BoxGeometry(w, h, d), x, y, z, hex);
+}
+
+function paint(geometry: THREE.BufferGeometry, x: number, y: number, z: number, hex: string): THREE.BufferGeometry {
+  const g = geometry.index ? geometry.toNonIndexed() : geometry;
+  g.translate(x, y, z);
+  const color = new THREE.Color(hex);
+  const count = g.attributes['position']!.count;
+  const colors = new Float32Array(count * 3);
+  for (let i = 0; i < count; i++) colors.set([color.r, color.g, color.b], i * 3);
+  g.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  g.deleteAttribute('uv');
+  return g;
+}
+
+/** Dört teker: ön/arka aks `axle` kadar merkezden, yan yan `track`. */
+function wheels(axle: number, track: number, radius: number): THREE.BufferGeometry[] {
+  const out: THREE.BufferGeometry[] = [];
+  for (const x of [axle, -axle]) {
+    for (const z of [track, -track]) {
+      const wheel = new THREE.CylinderGeometry(radius, radius, 0.026, 8);
+      wheel.rotateX(Math.PI / 2);
+      out.push(paint(wheel, x, radius, z, '#17191c'));
+    }
+  }
+  return out;
+}
+
+/**
+ * Araç geometrisi: önü +x, tabanı y=0. Gövde ve tavan beyaz (örnek rengi
+ * onları boyuyor), cam koyu, tekerler siyah.
+ */
+function vehicleGeometry(kind: VehicleKind): THREE.BufferGeometry {
+  const glass = '#25303b';
+  let parts: THREE.BufferGeometry[];
+  if (kind === 'car') {
+    parts = [
+      paintedBox(0.36, 0.07, 0.18, 0, 0.062, 0, '#ffffff'),
+      paintedBox(0.19, 0.055, 0.16, -0.02, 0.124, 0, glass),
+      paintedBox(0.17, 0.014, 0.15, -0.025, 0.158, 0, '#ffffff'),
+      ...wheels(0.11, 0.085, 0.032),
+    ];
+  } else if (kind === 'van') {
+    parts = [
+      paintedBox(0.44, 0.15, 0.2, 0, 0.105, 0, '#ffffff'),
+      paintedBox(0.445, 0.046, 0.205, 0, 0.142, 0, glass),
+      ...wheels(0.14, 0.095, 0.034),
+    ];
+  } else {
+    parts = [
+      paintedBox(0.86, 0.2, 0.22, 0, 0.13, 0, '#ffffff'),
+      paintedBox(0.8, 0.06, 0.225, -0.01, 0.17, 0, glass),
+      paintedBox(0.012, 0.09, 0.2, 0.43, 0.155, 0, glass),
+      ...wheels(0.3, 0.105, 0.036),
+    ];
+  }
+  const merged = mergeGeometries(parts);
+  merged.computeVertexNormals();
+  return merged;
+}
+
+/**
+ * Gece ışıkları: önde iki sarımsı far, arkada iki kırmızı stop. Boy ve en
+ * 1'e göre: örnek matrisi aracın ölçüsüyle ölçekleniyor, yani tek ağ üç
+ * türün de ışığını taşıyor.
+ */
+function lightsGeometry(): THREE.BufferGeometry {
+  const parts: THREE.BufferGeometry[] = [];
+  for (const z of [0.3, -0.3]) {
+    parts.push(paintedBox(0.03, 0.026, 0.12, 0.505, 0.075, z, '#fff1c4'));
+    parts.push(paintedBox(0.03, 0.026, 0.12, -0.505, 0.075, z, '#ff3a2e'));
+  }
+  return mergeGeometries(parts);
+}
 
 // Kamyonlar fon araçlarından belirgin biçimde iri. İlk denemede 0,46 ×
 // 0,26 idi ve şehir görünümünde kayboluyorlardı: gökdelenler sokakları
@@ -139,6 +236,9 @@ export interface PlacedFlow {
 export type FlowResolver = (flow: CustomerFlow) => PlacedFlow | null;
 
 interface Car {
+  kind: VehicleKind;
+  /** Türünün örnek ağındaki sırası (bütçe kesiti her türde baştan). */
+  slot: number;
   axis: 0 | 1;
   /** Sokağın sabit koordinatı. */
   lane: number;
@@ -198,7 +298,10 @@ export class TrafficSystem {
   /** Sahneye eklenecek tek nesne; üç instanced mesh içerir. */
   readonly group = new THREE.Group();
 
-  private carMesh: THREE.InstancedMesh;
+  private vehicleMeshes: Record<VehicleKind, THREE.InstancedMesh>;
+  /** Gece farları ve stoplar: bütün araçların matrisini ölçüyle paylaşıyor. */
+  private lightMesh: THREE.InstancedMesh;
+  private lightMaterial: THREE.MeshBasicMaterial;
   private truckMesh: THREE.InstancedMesh;
   private shopperMesh: THREE.InstancedMesh;
   private cars: Car[] = [];
@@ -217,6 +320,8 @@ export class TrafficSystem {
    * bütçesini sessizce geri almış olurdu.
    */
   private budget = 1;
+  private drawnCars = 0;
+  private nightGlow = 0;
 
   constructor(
     private width: number,
@@ -224,13 +329,21 @@ export class TrafficSystem {
     private blockSize: number,
     carCount: number,
   ) {
-    this.carMesh = new THREE.InstancedMesh(
-      new THREE.BoxGeometry(0.34, CAR_HEIGHT, 0.2),
-      new THREE.MeshStandardMaterial({ roughness: 0.45, metalness: 0.25 }),
-      carCount,
-    );
-    this.carMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-    this.carMesh.frustumCulled = false;
+    const vehicleMaterial = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.42, metalness: 0.22 });
+    this.vehicleMeshes = {} as Record<VehicleKind, THREE.InstancedMesh>;
+    for (const kind of VEHICLE_KINDS) {
+      const mesh = new THREE.InstancedMesh(vehicleGeometry(kind), vehicleMaterial, carCount);
+      mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+      mesh.frustumCulled = false;
+      mesh.count = 0;
+      this.vehicleMeshes[kind] = mesh;
+    }
+    // Işıktan bağımsız ve ton eşlemesiz: gece bloom'a girecek kadar parlak.
+    this.lightMaterial = new THREE.MeshBasicMaterial({ vertexColors: true, toneMapped: false });
+    this.lightMesh = new THREE.InstancedMesh(lightsGeometry(), this.lightMaterial, carCount);
+    this.lightMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    this.lightMesh.frustumCulled = false;
+    this.lightMesh.visible = false;
 
     this.truckMesh = new THREE.InstancedMesh(
       new THREE.BoxGeometry(TRUCK_LENGTH, TRUCK_HEIGHT, TRUCK_WIDTH),
@@ -259,31 +372,65 @@ export class TrafficSystem {
     this.shopperMesh.count = 0;
     this.shopperMesh.setColorAt(0, this.scratch.set('#ffffff'));
 
-    this.group.add(this.carMesh, this.truckMesh, this.shopperMesh);
+    this.group.add(...VEHICLE_KINDS.map((kind) => this.vehicleMeshes[kind]), this.lightMesh, this.truckMesh, this.shopperMesh);
 
     const horizontalLanes: number[] = [];
     for (let y = 0; y < height; y += blockSize) horizontalLanes.push(y);
     const verticalLanes: number[] = [];
     for (let x = 0; x < width; x += blockSize) verticalLanes.push(x);
 
+    const slots: Record<VehicleKind, number> = { car: 0, van: 0, bus: 0 };
     for (let i = 0; i < carCount; i++) {
       const axis: 0 | 1 = i % 2 === 0 ? 0 : 1;
       const lanes = axis === 0 ? horizontalLanes : verticalLanes;
       const lane = lanes[Math.floor((i / 2) % lanes.length)] ?? 0;
       const direction: 1 | -1 = i % 4 < 2 ? 1 : -1;
+      // Karışım: her on iki araçtan biri otobüs, her altıdan biri minibüs.
+      const kind: VehicleKind = i % 12 === 5 ? 'bus' : i % 6 === 2 ? 'van' : 'car';
+      const slot = slots[kind]++;
 
       this.cars.push({
+        kind,
+        slot,
         axis,
         lane,
         position: ((i * 7.3) % (axis === 0 ? width : height)) - 0.5,
         direction,
-        speed: 1.6 + ((i * 13) % 9) * 0.16,
+        speed: kind === 'bus' ? 1.15 + ((i * 7) % 5) * 0.08 : 1.6 + ((i * 13) % 9) * 0.16,
       });
 
-      this.scratch.set(CAR_COLORS[i % CAR_COLORS.length]!);
-      this.carMesh.setColorAt(i, this.scratch);
+      const color =
+        kind === 'bus'
+          ? BUS_COLORS[slot % BUS_COLORS.length]!
+          : kind === 'van'
+            ? VAN_COLORS[slot % VAN_COLORS.length]!
+            : slot % 9 === 4
+              ? TAXI_COLOR
+              : CAR_COLORS[slot % CAR_COLORS.length]!;
+      this.vehicleMeshes[kind].setColorAt(slot, this.scratch.set(color));
     }
-    if (this.carMesh.instanceColor) this.carMesh.instanceColor.needsUpdate = true;
+    for (const kind of VEHICLE_KINDS) {
+      const mesh = this.vehicleMeshes[kind];
+      if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+    }
+    this.applyCarBudget();
+  }
+
+  /** Bütçe kesiti: ilk N araç; her türün örnek sayısı o kesitteki kendi sayısı. */
+  private applyCarBudget(): void {
+    const drawn = Math.round(this.cars.length * this.budget);
+    const counts: Record<VehicleKind, number> = { car: 0, van: 0, bus: 0 };
+    for (let i = 0; i < drawn; i++) counts[this.cars[i]!.kind]++;
+    for (const kind of VEHICLE_KINDS) this.vehicleMeshes[kind].count = counts[kind];
+    this.lightMesh.count = drawn;
+    this.drawnCars = drawn;
+  }
+
+  /** Gece farları: `glow` 0 gündüz, 1 gece. Gündüzü hiç çizilmiyor. */
+  setNightGlow(glow: number): void {
+    this.lightMesh.visible = glow > 0.12 && this.vehicleMeshes.car.visible;
+    this.nightGlow = glow;
+    this.lightMaterial.color.setScalar(0.6 + glow * 1.4);
   }
 
   // ------------------------------------------------------------- rotalar
@@ -583,7 +730,8 @@ export class TrafficSystem {
   private updateCars(dt: number): void {
     // Yalnızca çizilenleri güncelle: bütçe kısıldığında CPU tarafı da
     // kısılsın, sadece görüntü değil.
-    const drawn = Math.min(this.cars.length, this.carMesh.count);
+    const drawn = Math.min(this.cars.length, this.drawnCars);
+    const lights = this.lightMesh.visible;
     for (let i = 0; i < drawn; i++) {
       const car = this.cars[i]!;
       const span = car.axis === 0 ? this.width : this.height;
@@ -592,19 +740,29 @@ export class TrafficSystem {
       if (car.position > span) car.position = -1;
       else if (car.position < -1) car.position = span;
 
+      // Önü gittiği yöne bakıyor (geometride önü +x): farlar önde, stoplar arkada.
       const offset = car.direction === 1 ? LANE_OFFSET : -LANE_OFFSET;
       if (car.axis === 0) {
-        this.dummy.position.set(car.position, CAR_HEIGHT / 2 + 0.02, car.lane + offset);
-        this.dummy.rotation.y = 0;
+        this.dummy.position.set(car.position, ROAD_Y, car.lane + offset);
+        this.dummy.rotation.set(0, car.direction === 1 ? 0 : Math.PI, 0);
       } else {
-        this.dummy.position.set(car.lane + offset, CAR_HEIGHT / 2 + 0.02, car.position);
-        this.dummy.rotation.y = Math.PI / 2;
+        this.dummy.position.set(car.lane + offset, ROAD_Y, car.position);
+        this.dummy.rotation.set(0, car.direction === 1 ? -Math.PI / 2 : Math.PI / 2, 0);
       }
-
+      this.dummy.scale.set(1, 1, 1);
       this.dummy.updateMatrix();
-      this.carMesh.setMatrixAt(i, this.dummy.matrix);
+      this.vehicleMeshes[car.kind].setMatrixAt(car.slot, this.dummy.matrix);
+
+      if (lights) {
+        const size = VEHICLE_SIZE[car.kind];
+        this.dummy.scale.set(size.length, 1, size.width);
+        this.dummy.updateMatrix();
+        this.lightMesh.setMatrixAt(i, this.dummy.matrix);
+      }
     }
-    this.carMesh.instanceMatrix.needsUpdate = true;
+    this.dummy.scale.set(1, 1, 1);
+    for (const kind of VEHICLE_KINDS) this.vehicleMeshes[kind].instanceMatrix.needsUpdate = true;
+    if (lights) this.lightMesh.instanceMatrix.needsUpdate = true;
   }
 
   private updateTrucks(dt: number): void {
@@ -747,7 +905,8 @@ export class TrafficSystem {
    * burada yüksek, ama müşteri rakibin kapısına gidiyor").
    */
   setDataLens(active: boolean): void {
-    this.carMesh.visible = !active;
+    for (const kind of VEHICLE_KINDS) this.vehicleMeshes[kind].visible = !active;
+    this.setNightGlow(this.nightGlow);
   }
 
   /**
@@ -758,7 +917,7 @@ export class TrafficSystem {
    */
   setCarBudget(ratio: number): void {
     this.budget = Math.max(0, Math.min(1, ratio));
-    this.carMesh.count = Math.round(this.cars.length * this.budget);
+    this.applyCarBudget();
     this.applyShopperBudget();
   }
 
@@ -813,11 +972,21 @@ export class TrafficSystem {
 
   /** Testler için: fon araçları görünür mü. */
   get carsVisible(): boolean {
-    return this.carMesh.visible;
+    return this.vehicleMeshes.car.visible;
+  }
+
+  /** Testler için: türlere göre çizilen fon aracı sayısı ve gece ışıkları. */
+  get vehicleStats(): { car: number; van: number; bus: number; lights: boolean } {
+    return {
+      car: this.vehicleMeshes.car.count,
+      van: this.vehicleMeshes.van.count,
+      bus: this.vehicleMeshes.bus.count,
+      lights: this.lightMesh.visible,
+    };
   }
 
   dispose(): void {
-    for (const mesh of [this.carMesh, this.truckMesh, this.shopperMesh]) {
+    for (const mesh of [...VEHICLE_KINDS.map((kind) => this.vehicleMeshes[kind]), this.lightMesh, this.truckMesh, this.shopperMesh]) {
       mesh.geometry.dispose();
       (mesh.material as THREE.Material).dispose();
     }

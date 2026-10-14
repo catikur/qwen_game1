@@ -392,7 +392,9 @@ export class CityRenderer {
     // Fon aracı sayısı 72'den 48'e indi: kamyonlar geldiğinde sokaklar
     // eskisinden daha kalabalıktı ve zincir akışı gürültünün içinde
     // kayboluyordu. Fon araçları ortamı kurar, kamyonlar bilgi taşır.
-    this.traffic = new TrafficSystem(mapWidth, mapHeight, BLOCK_SIZE, 48);
+    // Tur 34: 48 → 60; araçlar artık üç tür ve doğal renkli, kamyon ve
+    // müşterilerin şirket rengini bastırmıyor.
+    this.traffic = new TrafficSystem(mapWidth, mapHeight, BLOCK_SIZE, 60);
     this.scene.add(this.traffic.group);
 
     // Şehrin dışındaki dünya. Trafik'ten SONRA ekleniyor ki sahnedeki
@@ -1195,6 +1197,7 @@ export class CityRenderer {
     const glow = this.dataLensActive ? 0 : Math.max(0, 1.15 - daylight * 1.5);
     for (const material of this.bodyMaterials) material.emissiveIntensity = glow;
     this.decorKit.setNightGlow(glow);
+    this.traffic.setNightGlow(this.dataLensActive ? 0 : glow);
   }
 
   /**
@@ -1432,6 +1435,8 @@ export class CityRenderer {
     truckPositionSum: number;
     /** Fon araçları görünür mü (veri lensinde susarlar). */
     carsVisible: boolean;
+    /** Fon araçları türlere göre ve gece ışıkları (Tur 34). */
+    vehicles: { car: number; van: number; bus: number; lights: boolean };
     /** Mağazalara akan müşteri aracı sayısı. */
     shopperCount: number;
     /** Müşteri konumlarının toplamı; hareket ettiklerini ölçmek için. */
@@ -1512,6 +1517,7 @@ export class CityRenderer {
       truckCount: this.traffic.truckCount,
       truckPositionSum: this.traffic.truckPositionSum,
       carsVisible: this.traffic.carsVisible,
+      vehicles: this.traffic.vehicleStats,
       shopperCount: this.traffic.shopperCount,
       shopperPositionSum: this.traffic.shopperPositionSum,
       shopperColors: this.traffic.shopperColors,
