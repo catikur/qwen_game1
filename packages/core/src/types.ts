@@ -605,6 +605,21 @@ export interface GameState {
   importedCapital?: number;
   /** Holding: bekleyen şehirler ve kasa (Tur 22). Yokluğu tek şehirli oyun. */
   holding?: HoldingState;
+  /**
+   * Şehir uzaktayken yerel müdürün talimatı (Tur 32). Şehrin kendi
+   * durumunda: geçişlerde şehirle birlikte gidip geliyor, şehir oynanırken
+   * okunmuyor. Yokluğu varsayılan: kârın yarısı kasaya, savunma kapalı.
+   */
+  remote?: CityDirective;
+}
+
+/** Uzaktaki şehrin kârından holding kasasına akan pay (Tur 32). */
+export type RemotePayout = 'keep' | 'half' | 'all';
+
+export interface CityDirective {
+  payout: RemotePayout;
+  /** Açıkken yerel müdür baskına karşı serbest hisseden geri alım yapıyor. */
+  defend: boolean;
 }
 
 /** Oynanmayan, bekleyen bir şehir. */
@@ -620,6 +635,8 @@ export interface DormantCity {
   lastDividend?: number;
   /** Baskın uyarısının son eşiği (0..3); oynanan şehre haber bir kez düşsün. */
   raidStage?: number;
+  /** Dün yerel müdürün savunmada geri aldığı hisse ve ödediği (Tur 32). */
+  lastDefense?: { shares: number; cost: number };
 }
 
 export interface HoldingState {
@@ -630,6 +647,10 @@ export interface HoldingState {
   /** Holding kasası: bekleyen şehirlerin kâr payı burada birikiyor. */
   treasury: number;
   dormant: DormantCity[];
+  /** Kapatılan (kaybedilmiş) şehirlerde daha önce kazanılmış zafer sayısı (Tur 32). */
+  closedWins?: number;
+  /** Holding hedeflerinin son basamağı — üç şehirde zafer — tamamlandığı gün (Tur 32). */
+  completedDay?: number;
 }
 
 /** Meclis önergesi — açıkken lobi toplar, oylanınca sonucu taşır. */
@@ -732,8 +753,15 @@ export type GameCommand =
   | { type: 'OPEN_CITY'; citySize: CitySizeId; capital: number }
   /** Bekleyen bir şehre geçer; bu şehir bekler. */
   | { type: 'SWITCH_CITY'; index: number }
-  /** Holding kasası ile bu şehir arasında para: artı kasadan şehre, eksi şehirden kasaya. */
-  | { type: 'HOLDING_TRANSFER'; amount: number };
+  /**
+   * Holding kasası ile bir şehir arasında para: artı kasadan şehre, eksi
+   * şehirden kasaya. `index` verilirse uzaktaki şehir (Tur 32), yoksa oynanan.
+   */
+  | { type: 'HOLDING_TRANSFER'; amount: number; index?: number }
+  /** Uzaktaki şehrin talimatı: kâr payı ve savunma (Tur 32). */
+  | { type: 'SET_CITY_DIRECTIVE'; index: number; payout?: RemotePayout; defend?: boolean }
+  /** Kaybedilmiş bir şehri holding'den çıkarır; yeri boşalıyor (Tur 32). */
+  | { type: 'CLOSE_CITY'; index: number };
 
 /** Komut reddedildiğinde UI'ye dönen açıklama. */
 export interface CommandResult {

@@ -20,6 +20,21 @@ export const HOLDING = {
   minCapital: 2_000_000,
   /** Yeni şehirde marka bilinirliği: ayrılan şehirdeki ortalamanın bu payı. */
   brandCarry: 0.5,
+  /**
+   * Uzaktaki şehrin talimatına göre kârdan kasaya akan pay (Tur 32).
+   * Varsayılan `half` (= `remoteShare`). `keep`: para şehirde kalıyor —
+   * savunmanın ve kötü günlerin yastığı; `all`: hepsi kasaya, şehirde
+   * yastık yok.
+   */
+  payoutShare: { keep: 0, half: 0.5, all: 1 },
+  /**
+   * Savunma talimatı: en büyük dış pay bunu geçince yerel müdür serbest
+   * hisseden geri alıyor. Oyuncuyla aynı kurallar: günlük tavan ve günde
+   * şehir nakdinin en fazla `defenseCashShare`'i. Para şehrin kendi
+   * kasasından — hepsini kasaya çeken bir şehrin savunması zayıf.
+   */
+  defendAt: 0.2,
+  defenseCashShare: 0.4,
 } as const;
 
 /** Şehir adları; holding kurucu tohumdan kaydırarak sırayla dağıtıyor. */

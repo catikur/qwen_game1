@@ -15,7 +15,16 @@ import { recomputeNetWorth } from './systems/city';
 import { acceptContract, declineContract } from './systems/contracts';
 import { placeBid } from './systems/auction';
 import { sellShares } from './systems/equity';
-import { holdingTransfer, openCity, raidStatus, runHoldingTick, switchCity } from './holding';
+import {
+  checkHoldingComplete,
+  closeCity,
+  holdingTransfer,
+  openCity,
+  raidStatus,
+  runHoldingTick,
+  setCityDirective,
+  switchCity,
+} from './holding';
 import { simulateCityDay } from './day';
 import { tc } from './i18n';
 import { SPEED_MS } from './types';
@@ -296,7 +305,17 @@ export class GameEngine {
       }
 
       case 'HOLDING_TRANSFER':
-        return holdingTransfer(state, command.amount);
+        return holdingTransfer(state, command.amount, command.index);
+
+      case 'SET_CITY_DIRECTIVE': {
+        const change: { payout?: typeof command.payout; defend?: boolean } = {};
+        if (command.payout !== undefined) change.payout = command.payout;
+        if (command.defend !== undefined) change.defend = command.defend;
+        return setCityDirective(state, command.index, change);
+      }
+
+      case 'CLOSE_CITY':
+        return closeCity(state, command.index);
 
       default:
         return { ok: false, reason: tc('core.engine.unknownCommand') };
@@ -348,6 +367,8 @@ export class GameEngine {
     recomputeNetWorth(state);
     this.checkMilestones();
     runGoalTick(state);
+    // Holding hedeflerinin son basamağı: üç şehirde zafer (Tur 32).
+    checkHoldingComplete(state);
     this.checkOvertaking();
     this.checkLeadership();
     this.checkRaid();
