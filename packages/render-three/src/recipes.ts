@@ -28,6 +28,9 @@ const DARK_METAL = '#7f858d';
 const SOLAR = '#2c3e5c';
 const GREEN_ROOF = '#6f9a58';
 const TREE_GREENS = ['#5e9a4a', '#4f8a3f', '#6aa556', '#5a8f47', '#78a85a'];
+const DOOR = '#4b3b30';
+const BRICK = '#a05a45';
+const BALCONY = '#e6e2da';
 
 /**
  * Sokak tarafı: karenin en yakın yola bakan yüzü. Bloklar 5 karelik
@@ -111,6 +114,42 @@ function roofGear(layer: DecorLayer, x: number, z: number, footprint: MassFootpr
   } else if (roll < 0.5) {
     layer.add('box', x, y, z, w * 0.24, 0.05, w * 0.24, c(METAL));
   }
+}
+
+/**
+ * Sokak kapısı ve isteğe bağlı saçak (Tur 34).
+ *
+ * Şehir dokusunun evleri ve apartmanları sokağa sağır bakıyordu: cephe
+ * dokusunda pencere vardı, giriş yoktu. Kapı binayı ölçeğe oturtuyor —
+ * yanından geçen yaya ve araba ancak bir kapı varken "ev boyu" okunuyor.
+ */
+function entrance(
+  layer: DecorLayer,
+  x: number,
+  z: number,
+  footprint: MassFootprint,
+  side: { yaw: number; nx: number; nz: number },
+  wide: boolean,
+): void {
+  const half = footprint.bodyWidth / 2;
+  const doorHeight = Math.min(0.17, (footprint.bodyTop - footprint.bodyBottom) * 0.6);
+  onFace(layer, 'box', x, z, side, half, footprint.bodyBottom, wide ? 0.15 : 0.09, doorHeight, 0.012, c(DOOR));
+  if (wide) onFace(layer, 'box', x, z, side, half, footprint.bodyBottom + doorHeight + 0.015, 0.28, 0.02, 0.1, c(METAL));
+}
+
+/**
+ * Kiremit çatıda tuğla baca (Tur 34). Arka yamaçta, mahyaya yakın; kutu
+ * yamacın içinden çıkıyor, yani yalnızca tepe kısmı görünüyor.
+ */
+function houseChimney(layer: DecorLayer, x: number, z: number, footprint: MassFootprint, yaw: number, along: number): void {
+  const w = footprint.roofWidth;
+  const across = -0.17 * w;
+  const lx = along * w;
+  const wx = x + lx * Math.cos(yaw) + across * Math.sin(yaw);
+  const wz = z - lx * Math.sin(yaw) + across * Math.cos(yaw);
+  const slope = footprint.roofHeight * (1 - Math.abs(across) / (w / 2));
+  // Yamaçtan 0,13 çıkıyor: daha kısası yukarıdan bakınca çatıda delik gibi okunuyordu.
+  layer.add('box', wx, footprint.roofY, wz, 0.06, slope + 0.13, 0.06, c(BRICK), yaw);
 }
 
 /** Kırma çatı: ev formunda, gövdenin üstüne. */
@@ -348,6 +387,8 @@ export function decorateStructure(
       const roof = c(TERRACOTTA[Math.floor(dice(x, z, 5) * TERRACOTTA.length)]!).clone();
       if (dice(x, z, 6) > 0.85) roof.set(SLATE);
       hipRoof(layer, x, z, footprint, roof, side.yaw);
+      if (dice(x, z, 14) > 0.4) houseChimney(layer, x, z, footprint, side.yaw, dice(x, z, 15) > 0.5 ? 0.2 : -0.2);
+      if (structure.id !== 'old_shopfront') entrance(layer, x, z, footprint, side, false);
       if (structure.id === 'old_shopfront') {
         const shades = ['#b9583d', '#3f7f6a', '#3c5f8f', '#a1873a'];
         const awning = c(shades[Math.floor(dice(x, z, 7) * shades.length)]!).clone();
@@ -365,10 +406,23 @@ export function decorateStructure(
         layer.add('box', x + w * 0.5, 0.07, z - w * 0.5, 0.02, 0.5, 0.02, c(METAL));
         layer.add('sign', x + w * 0.5 + 0.06, 0.48, z - w * 0.5, 0.12, 0.07, 0.01, c('#d33a2c'));
       }
+      entrance(layer, x, z, footprint, side, true);
+      if (structure.kind === 'residential') {
+        // Balkon bantları: oyuncu apartmanıyla aynı dil, sokak yüzünde.
+        for (const f of [0.42, 0.7]) {
+          const y = footprint.bodyBottom + (footprint.bodyTop - footprint.bodyBottom) * f;
+          onFace(layer, 'box', x, z, side, w / 2, y, w * 0.74, 0.018, 0.06, c(BALCONY));
+        }
+      }
       roofGear(layer, x, z, footprint, 'residential');
       return;
     case 'tower':
+      entrance(layer, x, z, footprint, side, true);
       roofGear(layer, x, z, footprint, 'office');
+      // Kulelerin bir kısmında çatı anteni: silüete dikey bir çizgi.
+      if (dice(x, z, 16) > 0.6) {
+        layer.add('box', x - footprint.roofWidth * 0.2, footprint.roofY, z + footprint.roofWidth * 0.15, 0.02, 0.32, 0.02, c(DARK_METAL));
+      }
       return;
     case 'shed':
       if (dice(x, z, 10) > 0.5) {

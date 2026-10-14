@@ -92,6 +92,8 @@ export interface MassFootprint {
   roofWidth: number;
   /** Ev formunda kırma çatı için ayrılan yükseklik. */
   roofHeight: number;
+  /** Hangar bacasının tepesi ve eni (Tur 34: duman buradan çıkıyor). */
+  stack?: { x: number; y: number; z: number; width: number };
 }
 
 /** Formun varsayılan cephesi. */
@@ -428,6 +430,7 @@ export class BuildingMass {
     const sx = x + (pick(1) - 0.5) * width * 0.5;
     const sz = z + (pick(2) - 0.5) * width * 0.45;
     this.put(this.cap, this.capCount++, sx, y + stackHeight / 2, sz, stackWidth, stackHeight, stackWidth, this.accentColor);
+    this.footprint.stack = { x: sx, y: y + stackHeight, z: sz, width: stackWidth };
 
     // Büyük tesislerde ikinci bir havalandırma kütlesi.
     if (total > 0.9) {

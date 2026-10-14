@@ -9,6 +9,7 @@ import { BLOCK_SIZE, customerFlows, headquarters, lensValue, supplyRoutes } from
 import type { GameState, LensId } from '@capital/core';
 import { RtsCameraController } from './camera';
 import { TrafficSystem } from './traffic';
+import { StreetLife, type SmokeEmitter } from './street';
 import { World } from './world';
 import { BuildingMass } from './mass';
 import { ContactShadows, DecorKit, DecorLayer } from './decor';
@@ -183,6 +184,8 @@ export class CityRenderer {
   private fabricDecor: DecorLayer;
   private streetDecor: DecorLayer;
   private traffic: TrafficSystem;
+  /** Yayalar ve tüten bacalar (Tur 34). */
+  private street: StreetLife;
   private world!: World;
   private sun!: THREE.DirectionalLight;
   private hemisphere!: THREE.HemisphereLight;
@@ -392,8 +395,12 @@ export class CityRenderer {
     // Fon aracı sayısı 72'den 48'e indi: kamyonlar geldiğinde sokaklar
     // eskisinden daha kalabalıktı ve zincir akışı gürültünün içinde
     // kayboluyordu. Fon araçları ortamı kurar, kamyonlar bilgi taşır.
-    this.traffic = new TrafficSystem(mapWidth, mapHeight, BLOCK_SIZE, 48);
+    // Tur 34: 48 → 60; araçlar artık üç tür ve doğal renkli, kamyon ve
+    // müşterilerin şirket rengini bastırmıyor.
+    this.traffic = new TrafficSystem(mapWidth, mapHeight, BLOCK_SIZE, 60);
     this.scene.add(this.traffic.group);
+    this.street = new StreetLife(mapWidth, mapHeight, BLOCK_SIZE, 90);
+    this.scene.add(this.street.group);
 
     // Şehrin dışındaki dünya. Trafik'ten SONRA ekleniyor ki sahnedeki
     // sıra "önce şehir, sonra çevresi" okunsun; çizim sırası açısından
@@ -757,6 +764,7 @@ export class CityRenderer {
     }
 
     this.traffic.setDataLens(dataLens);
+    this.street.setDataLens(dataLens);
     this.world.setDataLens(dataLens);
     // Veri lensi zemini düz renkli bir haritaya çeviriyor; leke o rengi kirletirdi.
     this.buildingShadows.setVisible(!dataLens);
@@ -835,6 +843,7 @@ export class CityRenderer {
     this.fabric.begin();
     this.fabricShadows.begin();
     this.fabricDecor.begin();
+    const fabricSmoke: SmokeEmitter[] = [];
     for (const tile of tiles) {
       if (!tile.structureId) continue;
       const structure = STRUCTURE_BY_ID[tile.structureId];
@@ -857,6 +866,8 @@ export class CityRenderer {
         pitchedRoof: structure.form === 'house',
       });
       decorateStructure(this.fabricDecor, structure, footprint, tile.x, tile.y, streetSide(tile.x, tile.y, BLOCK_SIZE));
+      // Çalışan fabrika tütüyor; eski depo atıl, tütmüyor.
+      if (structure.id === 'factory_shed' && footprint.stack) fabricSmoke.push(smokeFrom(footprint.stack));
       if (structure.form !== 'flat' && structure.form !== 'field') {
         this.fabricShadows.place(tile.x, 0.07, tile.y, 0.8, Math.min(1, tile.structureHeight));
       }
@@ -864,6 +875,7 @@ export class CityRenderer {
     this.fabric.end();
     this.fabricShadows.end();
     this.fabricDecor.end();
+    this.street.setEmitters('fabric', fabricSmoke);
 
     this.syncBuildings(state);
 
@@ -895,6 +907,7 @@ export class CityRenderer {
     this.buildings.begin();
     this.buildingShadows.begin();
     this.buildingDecor.begin();
+    const producing: SmokeEmitter[] = [];
     for (const building of Object.values(state.buildings)) {
       const def = BUILDING_BY_ID[building.defId];
       const tile = tiles[building.tileId];
@@ -929,7 +942,13 @@ export class CityRenderer {
         decorateBuilding(this.buildingDecor, def, footprint, tile.x, tile.y, streetSide(tile.x, tile.y, BLOCK_SIZE), this.color, owner);
       }
       if (def.role !== 'extract') this.buildingShadows.place(tile.x, 0.07, tile.y, 0.68 * Math.max(0.3, growth), Math.min(1, def.height));
+      // Duman bilgi: yalnızca dün gerçekten üretim yapmış tesis tütüyor.
+      // Girdisi kesilen tesisin bacası susuyor.
+      if (def.role === 'process' && growth >= 1 && building.last.producedUnits > 0 && footprint.stack) {
+        producing.push(smokeFrom(footprint.stack));
+      }
     }
+    this.street.setEmitters('buildings', producing);
     this.buildings.end();
     this.buildingShadows.end();
     this.buildingDecor.end();
@@ -1195,6 +1214,8 @@ export class CityRenderer {
     const glow = this.dataLensActive ? 0 : Math.max(0, 1.15 - daylight * 1.5);
     for (const material of this.bodyMaterials) material.emissiveIntensity = glow;
     this.decorKit.setNightGlow(glow);
+    this.traffic.setNightGlow(this.dataLensActive ? 0 : glow);
+    this.street.setDaylight(daylight);
   }
 
   /**
@@ -1253,6 +1274,7 @@ export class CityRenderer {
     this.updateDaylight(dt);
     this.updateShadowVolume();
     this.traffic.update(dt);
+    this.street.update(dt);
 
     // İnşaat animasyonu sürerken binalar her karede yeniden yerleşiyor;
     // şehrin geri kalanı yalnızca state değişince.
@@ -1342,6 +1364,9 @@ export class CityRenderer {
     this.roads.receiveShadow = shadows;
 
     this.traffic.setCarBudget(level.carBudget);
+    // Kırsal ağaçları da kademeyle seyreliyor (Tur 34): aynı bütçe.
+    this.world.setTreeBudget(level.carBudget);
+    this.street.setBudget(level.carBudget);
     this.setPostProcessing(level.postProcessing);
     this.scene.environment = level.environment ? this.envTexture : null;
 
@@ -1419,6 +1444,8 @@ export class CityRenderer {
     decor: Record<DecorPart, number>;
     decorVisible: boolean;
     contactShadows: number;
+    /** Kırsalda çizilen gerçek ağaç sayısı (Tur 34). */
+    countrysideTrees: number;
     lampGlow: number;
     groundColorSum: number;
     timeOfDay: number;
@@ -1428,6 +1455,10 @@ export class CityRenderer {
     truckPositionSum: number;
     /** Fon araçları görünür mü (veri lensinde susarlar). */
     carsVisible: boolean;
+    /** Fon araçları türlere göre ve gece ışıkları (Tur 34). */
+    vehicles: { car: number; van: number; bus: number; lights: boolean };
+    /** Yayalar ve tüten bacalar (Tur 34). */
+    street: { walkers: number; stacks: number; producing: number; puffs: number; visible: boolean };
     /** Mağazalara akan müşteri aracı sayısı. */
     shopperCount: number;
     /** Müşteri konumlarının toplamı; hareket ettiklerini ölçmek için. */
@@ -1501,12 +1532,15 @@ export class CityRenderer {
       decor: this.decorTotals(),
       decorVisible: this.buildingDecor.group.visible && this.fabricDecor.group.visible && this.streetDecor.group.visible,
       contactShadows: this.buildingShadows.mesh.count + this.fabricShadows.mesh.count,
+      countrysideTrees: this.world.treeCount,
       lampGlow: this.decorKit.lampMaterial.emissiveIntensity,
       groundColorSum,
       timeOfDay: this.timeOfDay,
       truckCount: this.traffic.truckCount,
       truckPositionSum: this.traffic.truckPositionSum,
       carsVisible: this.traffic.carsVisible,
+      vehicles: this.traffic.vehicleStats,
+      street: this.street.stats,
       shopperCount: this.traffic.shopperCount,
       shopperPositionSum: this.traffic.shopperPositionSum,
       shopperColors: this.traffic.shopperColors,
@@ -1628,6 +1662,7 @@ export class CityRenderer {
     for (const cleanup of this.cleanups) cleanup();
     this.cleanups = [];
     this.traffic.dispose();
+    this.street.dispose();
     this.world.dispose();
     this.scene.traverse((object) => {
       const mesh = object as THREE.Mesh;
@@ -1686,6 +1721,11 @@ function isTypingTarget(target: EventTarget | null): boolean {
  * yirmi altı tanımı elle işaretlemek aynı gerçeği ikinci kez yazmak
  * olurdu. Kural burada, tek yerde.
  */
+/** Bacanın tepesinden duman kaynağı. */
+function smokeFrom(stack: { x: number; y: number; z: number; width: number }): SmokeEmitter {
+  return { x: stack.x, y: stack.y, z: stack.z, size: stack.width };
+}
+
 function massFormOf(def: BuildingDef): MassForm {
   switch (def.role) {
     // Tarla ve maden: yatay, karıklı, binaya benzemeyen kütle.
