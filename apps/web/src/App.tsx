@@ -12,6 +12,7 @@ import {
   supplyRoutes,
 } from '@capital/core';
 import type { GameCommand } from '@capital/core';
+import { GOOD_BY_ID } from '@capital/content';
 import type { CitySizeId, DifficultyId } from '@capital/content';
 import { CityRenderer } from '@capital/render-three';
 import {
@@ -319,6 +320,8 @@ function GameRoot({
       setView: (view: { x: number; z: number; distance?: number; azimuth?: number; polar?: number }) =>
         rendererRef.current?.setView(view),
       tutorialStep: () => tutorialStepOf(engine.getState()),
+      // Ürünün taban fiyatı: test, pazarın o anki krizini nötrleyebilsin diye (Tur 32).
+      basePrice: (goodId: string) => GOOD_BY_ID[goodId]?.basePrice ?? null,
     };
     return () => {
       delete globals['__capital'];

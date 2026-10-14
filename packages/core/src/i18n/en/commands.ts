@@ -147,6 +147,8 @@ export const commands: Record<keyof typeof trCommands, string> = {
   'core.chain.stateNone': 'None',
   'core.chain.blockedUnlock': '{name} requires a company value of ₺{amount}K.',
   'core.chain.blockedNoPlot': 'No plot left to build {name} — the industrial zone and harbor are full.',
+  'core.chain.blockedInputCrisis': "{input} is in crisis ({spot}): at that price {name} wouldn't turn a profit. The move comes back when the crisis passes.",
+  'core.chain.blockedUnprofitable': "{name} wouldn't turn a profit at today's prices; the move comes back when prices recover.",
   'core.chain.shortfallPartial':
     'Your {good} production covers {covered} of your needs; you buy the rest from the market at {spot}.',
   'core.chain.shortfallMarket': 'All your {good} comes from the market: {spot} per unit.',
