@@ -4,7 +4,7 @@
 > `pnpm bench` çıktısından; iddialar `pnpm balance` ve `pnpm playtest`
 > tarafından her koşuda doğrulanıyor.
 >
-> Son güncelleme: şema **v6**, 32 tur tamamlandı.
+> Son güncelleme: şema **v6**, 33 tur (Tur 33 denendi ve geri alındı).
 
 ---
 
@@ -2153,6 +2153,60 @@ tutucuyu (`{city}`) yakaladı. Türkçede şehir adından sonra ek getirmek
 almayacak şekilde yeniden yazıldı, düğmeler ok kullanıyor
 ("Kasa → Yeşilova").
 
+### Ara düzeltme — zincir kartı krizde sessiz kalıyordu
+
+Tur 31'in birleşmesinden sonra main'deki tam oynanış koşusu dört kontrolde
+düştü. Kart hamle önermedi; zincir kurulamayınca üç kamyon kontrolü de
+düştü. Yerelde ve PR'larda (duman koşusu) görünmüyordu.
+
+- *Sebep:* o koşuda kartın ilk yuvası "Kriz"deydi (Tur 27'nin sektör
+  olayları). Hammadde pahalanınca ara mal ünitesinin geri ödemesi sonsuza
+  gidiyor ve kart onu sessizce atlıyordu. Hamle de sebep de yoktu. Hangi
+  gün hangi olayın düştüğü kare zamanlamasına bağlı: main'de beş
+  birleşmenin birinde.
+- *Ürün:* kart artık sebebini yazıyor ("{girdi} krizde ({fiyat}): bu
+  fiyatla {ünite} kâr etmiyor. Kriz geçince hamle geri gelir.").
+- *Test:* yeni `chain.test.ts`. Düzeltme olmadan düşüyor. Oynanış testi
+  zincir bölümünden önce aktif olayları temizleyip spot fiyatları tabana
+  çekiyor: test o günün pazarını değil kartın arayüzünü ölçüyor.
+- *Sonra:* düzeltmeden sonraki main tam koşusu zincir kontrollerini
+  geçti; bu kez dışa aktarmanın indirme olayı 5 sn'lik süreyi aştı. O koşu
+  yavaştı (1438 sn, 2 FPS); uygulama indirmeyi başlatmıştı. Süre 20 sn
+  oldu.
+
+Ders: PR'lar duman koşusunu, main tam koşuyu çalıştırıyor. Bir PR'ın yeşili
+main'in yeşili değil; birleşmeden sonra main'in koşusuna da bakılmalı.
+
+### Tur 33 — Kenney tarzı grafik denendi, geri alındı
+
+Kullanıcı grafik için B'yi seçti: hazır model kiti değil, aynı prosedürel
+geometri ama Kenney'nin görsel diliyle. Yapılan:
+
+- pastel duvarlar, şirket rengi çatıda;
+- bina renginden bağımsız mavi cam;
+- gri yollar ve beyaz çizgiler;
+- canlı yeşil kırsal;
+- iki toplu ağaçlar ve tıknaz oyuncak arabalar;
+- ACES yerine nötr ton eşleme.
+
+Testlerin hepsi geçti (çizim çağrısı aynı, oynanış 333/333). Canlıya alındı.
+
+**Kullanıcı beğenmedi:** "grafikte bir tık geri gittik". Üç somut şikâyet:
+
+- *Şehrin dışındaki ağaçlar leke gibi.* Kırsalın ağaçları dokuya boyanmış
+  koyu lekeler; Tur 33'ün canlı yeşili onları daha da belirgin yaptı.
+- *Araçlar çok kötü, hayat yok.* Tıknaz araba kamera uzaklığında renkli
+  bir blok; sokakta canlılık hissi vermiyor.
+- *Binalar öncekinden kötü.* Nötr ton eşleme ve pastel duvar derinliği
+  düzleştirdi; şehir plastik ve oyuncak gibi okundu.
+
+Tur 33'ün tamamı geri alındı (yerine eski görünüm).
+
+Ders: testler ve ölçüm "kötüleşmedi"yi kanıtlayabiliyor, "güzelleşti"yi
+kanıtlayamıyor. Görsel işte karar kullanıcının gözü. Bundan sonra görsel
+değişiklik canlıya alınmadan önce önce/sonra kareleri gösterilip onay
+alınacak.
+
 ---
 
 ## 3. Ölçülen durum
@@ -2234,7 +2288,7 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi) |
-| Birim testi | **204 test** (`pnpm test`; Tur 24'te render paketi de) |
+| Birim testi | **205 test** (`pnpm test`; Tur 24'te render paketi de) |
 | Denge testi | **288 kontrol, hepsi geçiyor** (20 bölüm, süreleriyle; ~11 dk) |
 | Tarayıcı testi | **333 kontrol, hepsi geçiyor**, 0 konsol hatası (~15–20 dk); duman koşusu 97 (~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + duman oynanışı |
