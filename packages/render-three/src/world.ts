@@ -73,7 +73,7 @@ function makeTerrainTexture(): THREE.CanvasTexture {
   const ctx = el.getContext('2d');
   if (!ctx) throw new Error('2D bağlamı alınamadı — kırsal dokusu üretilemez.');
 
-  ctx.fillStyle = '#8ea375';
+  ctx.fillStyle = '#8fc164';
   ctx.fillRect(0, 0, size, size);
 
   // Tarlalar: eksene hizalı, farklı tonlarda dikdörtgenler. Hizalı
@@ -83,9 +83,11 @@ function makeTerrainTexture(): THREE.CanvasTexture {
     const w = 18 + hash(i * 1.7) * 70;
     const h = 14 + hash(i * 3.3) * 52;
     const tone = hash(i * 5.9);
-    const r = 128 + Math.round(tone * 34);
-    const g = 148 + Math.round(tone * 26);
-    const b = 102 + Math.round(tone * 30);
+    // Tur 33: Kenney yeşili; arada bir buğday sarısı tarla.
+    const wheat = hash(i * 23.1) > 0.82;
+    const r = wheat ? 214 + Math.round(tone * 20) : 122 + Math.round(tone * 30);
+    const g = wheat ? 196 + Math.round(tone * 16) : 178 + Math.round(tone * 24);
+    const b = wheat ? 112 + Math.round(tone * 18) : 88 + Math.round(tone * 22);
     ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
     ctx.fillRect(hash(i * 11.3) * size, hash(i * 13.7) * size, w, h);
   }

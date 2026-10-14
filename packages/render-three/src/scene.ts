@@ -149,7 +149,9 @@ function initialQualityTier(): number {
 const MOONLIGHT = new THREE.Color('#9db9e8');
 const SUNLIGHT = new THREE.Color('#ffe6bd');
 const NIGHT_SKY_LIGHT = new THREE.Color('#5f7796');
-const DAY_SKY_LIGHT = new THREE.Color('#8fb6d9');
+const DAY_SKY_LIGHT = new THREE.Color('#a9cdeb');
+/** Kenney tarzı duvar (Tur 33): şirket binasının gövdesi bu kremaya doğru yumuşuyor. */
+const CREAM = new THREE.Color('#f3ead8');
 
 const LENS_COLD = new THREE.Color('#1d3b57');
 const LENS_HOT = new THREE.Color('#f0654a');
@@ -256,8 +258,9 @@ export class CityRenderer {
   ) {
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
-    this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.05;
+    // Tur 33: nötr ton eşleme — ACES doygun pastelleri griye çekiyordu.
+    this.renderer.toneMapping = THREE.NeutralToneMapping;
+    this.renderer.toneMappingExposure = 1.0;
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
@@ -266,7 +269,7 @@ export class CityRenderer {
      * yüklenirken bir an karanlık bir kare görünüyordu; tema aydınlığa
      * dönünce bu bir "yanıp sönme" hâline gelirdi.
      */
-    this.scene.background = new THREE.Color('#bcd0dc');
+    this.scene.background = new THREE.Color('#c8e1f2');
     /*
      * Sis artık ŞEHRİN KENARINI GİZLEMİYOR, ufku yumuşatıyor.
      *
@@ -275,7 +278,7 @@ export class CityRenderer {
      * sisin işi değişti ve aralık dışarı taşındı: şehir tamamen berrak,
      * uzak kırsal gökyüzüne karışıyor.
      */
-    this.scene.fog = new THREE.Fog('#bcd0dc', 78, 195);
+    this.scene.fog = new THREE.Fog('#c8e1f2', 78, 195);
 
     this.controller = new RtsCameraController(canvas.clientWidth / canvas.clientHeight, {
       width: mapWidth,
@@ -453,7 +456,7 @@ export class CityRenderer {
   }
 
   private setupLights(width: number, height: number): void {
-    this.hemisphere = new THREE.HemisphereLight('#8fb6d9', '#12161d', 1.15);
+    this.hemisphere = new THREE.HemisphereLight('#a9cdeb', '#8a9476', 1.15);
     this.scene.add(this.hemisphere);
 
     const sun = new THREE.DirectionalLight('#ffe9c7', 2.1);
@@ -843,7 +846,7 @@ export class CityRenderer {
       // Aynı yapı tipinden sıkıcı bir tekrar çıkmasın diye kareye göre
       // deterministik küçük bir renk sapması veriyoruz.
       const jitter = ((tile.id * 37) % 17) / 17 - 0.5;
-      this.color.set(structure.color).offsetHSL(jitter * 0.02, 0, jitter * 0.07);
+      this.color.set(structure.color).offsetHSL(jitter * 0.02, 0.1, 0.03 + jitter * 0.07).lerp(CREAM, 0.22);
 
       const footprint = this.fabric.place({
         x: tile.x,
@@ -902,10 +905,15 @@ export class CityRenderer {
 
       // Rakip binaları sahibinin rengiyle hafifçe boyanır: kimin nerede
       // olduğu haritaya bakınca anlaşılmalı.
+      //
+      // Tur 33 (Kenney tarzı): gövde pastel — türün rengi kremaya doğru,
+      // şirket rengi yalnızca bir ipucu kadar. Şirketin rengi çatıda,
+      // tentede ve tabelada; kamera en çok çatıyı gördüğü için sahiplik
+      // yukarıdan hâlâ tek bakışta okunuyor.
       const company = state.companies[building.companyId];
-      this.color.set(def.color);
-      if (company && !company.isPlayer) this.color.lerp(new THREE.Color(company.color), 0.55);
-      else this.color.lerp(new THREE.Color('#8ef0c0'), 0.12);
+      this.color.set(def.color).lerp(CREAM, 0.52);
+      const owner = company && !company.isPlayer ? this.ownerColor.set(company.color) : this.ownerColor.copy(OWN_COLOR);
+      this.color.lerp(owner, 0.1);
 
       const growth = this.growthOf(building.id);
       if (growth < 1) growing = true;
@@ -922,10 +930,10 @@ export class CityRenderer {
         form,
         facade: buildingFacade(def),
         pitchedRoof: form === 'house' && growth >= 1,
+        roofColor: owner,
       });
       // Detaylar bina tamamlanınca: yükselen kütleye tente asmak tuhaf durur.
       if (growth >= 1) {
-        const owner = company && !company.isPlayer ? this.ownerColor.set(company.color) : this.ownerColor.copy(OWN_COLOR);
         decorateBuilding(this.buildingDecor, def, footprint, tile.x, tile.y, streetSide(tile.x, tile.y, BLOCK_SIZE), this.color, owner);
       }
       if (def.role !== 'extract') this.buildingShadows.place(tile.x, 0.07, tile.y, 0.68 * Math.max(0.3, growth), Math.min(1, def.height));
@@ -1082,7 +1090,7 @@ export class CityRenderer {
     // hafif kırpma — düz tek renk halı gibi durmasın.
     if (district?.opensOnDay !== undefined && state.time.day < district.opensOnDay) {
       const jitter = ((tile.x * 73 + tile.y * 151) % 7) - 3;
-      return this.color.set('#7f9468').offsetHSL(jitter * 0.004, 0, jitter * 0.012);
+      return this.color.set('#86b45f').offsetHSL(jitter * 0.004, 0, jitter * 0.012);
     }
 
     if (view.lens === 'ownership') {
@@ -1157,11 +1165,12 @@ export class CityRenderer {
     // değerlerde döngünün gece yarısında sahne fiilen görünmez oluyordu ve
     // sadece binaların amber emissive'i kalıyordu — oyun oynanamaz hale
     // geliyordu. Artık en karanlık anda bile şehir okunuyor.
-    this.sun.intensity = 1.1 + daylight * 1.35;
+    // Tur 33: güneş biraz geri, gök dolgusu öne — Kenney tarzı yumuşak, iki yanı da aydınlık ışık.
+    this.sun.intensity = 1.1 + daylight * 1.05;
     // Renk iki sabit ton arasında geçer: gece soğuk ay ışığı, gündüz ılık
     // güneş. Ton (hue) üzerinden geçmek yeşilden geçirirdi.
     this.sun.color.copy(MOONLIGHT).lerp(SUNLIGHT, daylight);
-    this.hemisphere.intensity = 1.0 + daylight * 0.4;
+    this.hemisphere.intensity = 1.0 + daylight * 0.75;
     this.hemisphere.color.copy(NIGHT_SKY_LIGHT).lerp(DAY_SKY_LIGHT, daylight);
 
     /*
@@ -1173,7 +1182,7 @@ export class CityRenderer {
      * pencere ışıkları oyunun en iyi göründüğü an ve o korundu — ama
      * gündüz artık gerçekten gündüz.
      */
-    this.skyColor.setHSL(0.57, 0.4 - daylight * 0.17, 0.2 + daylight * 0.38);
+    this.skyColor.setHSL(0.56, 0.38 + daylight * 0.12, 0.2 + daylight * 0.56);
     (this.scene.background as THREE.Color).copy(this.skyColor);
     this.scene.fog?.color.copy(this.skyColor);
 

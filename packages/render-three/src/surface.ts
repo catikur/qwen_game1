@@ -140,22 +140,35 @@ export function buildingSurface(material: THREE.Material, options: SurfaceOption
       )
       .replace(
         '#include <map_fragment>',
-        `${
+        `vec4 cfTexel = vec4(1.0);
+         ${
           atlas
             ? `#ifdef USE_MAP
-                 diffuseColor *= cfAtlas(map, vMapUv);
+                 cfTexel = cfAtlas(map, vMapUv);
+                 diffuseColor *= cfTexel;
                #endif`
             : '#include <map_fragment>'
         }
-         // Zemine yakın karartma: yerden ilk ~0,55 birimde koyulaşma.
-         float cfShade = mix(0.6, 1.0, smoothstep(uGroundY, uGroundY + 0.55, vCfWorldY));
+         // Zemine yakın karartma: yerden ilk ~0,55 birimde koyulaşma (Tur 33'te
+         // yumuşadı: Kenney tarzı aydınlık cephede 0,6 kirli bir etek bırakıyordu).
+         float cfShade = mix(0.76, 1.0, smoothstep(uGroundY, uGroundY + 0.55, vCfWorldY));
          // Kenar vurgusu: düşey yüzde köşeler ve üst kenar, yatay yüzde dört kenar.
          vec2 cfEdgeUv = min(vCfUv, 1.0 - vCfUv);
          float cfEdgeDist = vCfVertical > 0.5
            ? min(cfEdgeUv.x * vCfScale.x, (1.0 - vCfUv.y) * vCfScale.y)
            : min(cfEdgeUv.x * vCfScale.x, cfEdgeUv.y * vCfScale.z);
          float cfEdge = 1.0 - smoothstep(0.004, 0.03, cfEdgeDist);
-         diffuseColor.rgb *= cfShade * (1.0 + cfEdge * 0.2);`,
+         float cfLight = cfShade * (1.0 + cfEdge * 0.2);
+         diffuseColor.rgb *= cfLight;`,
+      )
+      .replace(
+        '#include <color_fragment>',
+        `#include <color_fragment>
+         // Cam bina rengiyle çarpılmıyor (Tur 33): atlasın mavi ağırlıklı
+         // pikseli kendi rengini koruyor — mor binada da sarı binada da aynı
+         // açık mavi cam. Duvar ve çerçeve nötr; onlar örnek rengini alıyor.
+         float cfGlass = clamp((cfTexel.b - cfTexel.r) * 5.0 - 0.4, 0.0, 1.0);
+         diffuseColor.rgb = mix(diffuseColor.rgb, cfTexel.rgb * diffuse * cfLight, cfGlass);`,
       )
       .replace(
         '#include <emissivemap_fragment>',
@@ -166,5 +179,5 @@ export function buildingSurface(material: THREE.Material, options: SurfaceOption
           : '#include <emissivemap_fragment>',
       );
   };
-  material.customProgramCacheKey = () => `surface-${tilesPerUnit}-${atlas ? 'atlas' : 'flat'}-${groundY}`;
+  material.customProgramCacheKey = () => `surface-${tilesPerUnit}-${atlas ? 'atlas' : 'flat'}-${groundY}-glass`;
 }
