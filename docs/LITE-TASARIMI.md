@@ -541,6 +541,8 @@ iCloud gibi Apple servisleri ücretli üyelik istiyor; B ücretsiz imzayla da
 - **Kurallar** (`packages/lite-model/src/league.ts`, Swift `League.swift`):
   - Hafta ISO 8601, UTC; pazartesi 00:00'da başlıyor.
   - Puan bu hafta kazanılan, yıldızsız: toplam kazançtaki artış ÷ (1 + 0,02 × yıldız).
+    Hafta uygulama kapalıyken döndüyse aradaki kazancın süreyle orantılı payı
+    yeni haftaya yazılıyor (Swift `LeagueTracker`).
   - Bölümler: Bronz, Gümüş, Altın, Elmas. Grup 30 kişi.
   - İlk 5 çıkıyor (puanı sıfır olan çıkmıyor), son 5 iniyor. 10 kişiden küçük
     grupta kimse inmiyor.
@@ -548,7 +550,10 @@ iCloud gibi Apple servisleri ücretli üyelik istiyor; B ücretsiz imzayla da
   (ad + token, yalnızca özeti saklanıyor), gönderim, haftalık grup, özel ligler,
   hesap silme (oyuncunun her izi; boşalan özel lig de).
   - **Hafta dönümü:** pazartesi cron'unda; kaçarsa ilk istekte yapılıyor, tek
-    sefer.
+    sefer. İşaret ve bütün bölüm değişiklikleri tek D1 işleminde, iki ifadede
+    (grup sıralaması SQL pencere işlevleriyle): yarıda kalırsa hiçbiri
+    yazılmıyor, sonraki istek baştan yapıyor. Oyuncu sayısı ne olursa olsun
+    birkaç sorgu (ücretsiz katman istek başına en çok 50).
   - **Özel lig:** 6 harfli davet kodu; en çok 50 üye, oyuncu başına en çok 10 lig.
   - **Testler:** gerçek SQLite (`node:sqlite`) üstünde koşuyor.
 - **Akla yatkınlık:** süre sunucunun saatinden.
@@ -556,9 +561,14 @@ iCloud gibi Apple servisleri ücretli üyelik istiyor; B ücretsiz imzayla da
   - Puan artışı ≤ o seviyelerle en yüksek gelir × geçen süre × 1,2. En
     yüksek gelirde pay 1; anlık çarpanların üst sınırı ×7,5 (kampanya fonu ×3,
     moda haftası ×2,5).
-  - Puan hafta içinde, şehir ve yıldız hiç geri gitmiyor.
+  - Puan hafta içinde geri gitmiyor. Şehir ve yıldız geri gidebiliyor (oyunu
+    sıfırlamak); hız sınırını büyütmüyorlar.
   - Gönderim en sık 30 saniyede bir; uygulama 5 dakikada bir ve arka plana
     geçerken gönderiyor.
+  - **Sınır:** durum uygulamanın bildirdiği. Kendi isteklerini yazan biri ilk
+    gönderimde seviyeleri ve kazancı uydurabiliyor; sonrası o uydurmaya göre
+    sınırlı. Tam çözüm isteğin gerçek uygulamadan geldiğini kanıtlamak (Apple
+    App Attest); açık iş.
 - **Uygulama:**
   - Kartlarda haftalık lig kartı: bölüm, sıra, bitişe kalan süre.
   - Lig penceresi:

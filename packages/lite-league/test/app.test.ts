@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { CHAIN_IDS, advance, buy, newGame, weekId, weekStart, type LeagueReport, type LiteState } from '../../lite-model/src/index';
+import { CHAIN_IDS, LEAGUE, advance, buy, divisionMoves, newGame, weekId, weekStart, type LeagueReport, type LiteState } from '../../lite-model/src/index';
 import { cleanName, handle, rollover } from '../src/app';
 import type { Db } from '../src/db';
 import { memoryDb } from './sqlite';
@@ -146,6 +146,95 @@ test('hafta dönümü: ilk beş çıkıyor, son beş iniyor, bir kez', async () 
   for (let i = 0; i < 5; i++) assert.equal(byName[`Oyuncu ${i}`], 2, `Oyuncu ${i} çıkmalıydı`);
   for (let i = 5; i < 7; i++) assert.equal(byName[`Oyuncu ${i}`], 1);
   for (let i = 7; i < 12; i++) assert.equal(byName[`Oyuncu ${i}`], 0, `Oyuncu ${i} inmeliydi`);
+});
+
+test('hafta dönümü yarıda kalırsa hiçbir şey yazılmıyor; sonraki istek baştan yapıyor', async () => {
+  const db = memoryDb();
+  const state = played();
+  const accounts: Account[] = [];
+  for (let i = 0; i < 12; i++) {
+    const who = await signUp(db, THURSDAY, `Oyuncu ${i}`);
+    accounts.push(who);
+    await db.run('UPDATE players SET division = 1 WHERE id = ?', who.id);
+    await call(db, THURSDAY + i, 'POST', '/v1/reports', report(state, THURSDAY, (12 - i) * 100), who);
+  }
+  const nextMonday = weekStart('2026-W43') + 3_600_000;
+  // Son bölüm değişikliği düşüyor (ör. D1 bağlantısı koptu).
+  const flaky: Db = {
+    ...db,
+    batch: (statements) => db.batch([...statements.slice(0, -1), ['UPDATE yok SET x = 1']]),
+  };
+  await assert.rejects(rollover(flaky, nextMonday));
+  assert.equal((await db.all("SELECT * FROM rollovers WHERE week = '2026-W42'")).length, 0, 'işaret de geri alınmalı');
+  const untouched = await db.all<{ division: number }>('SELECT division FROM players');
+  assert.ok(untouched.every((p) => p.division === 1), 'hiçbir bölüm değişmemeli');
+  // Sonraki istek dönümü baştan ve bir kez yapıyor.
+  assert.equal(await rollover(db, nextMonday), true);
+  assert.equal(await rollover(db, nextMonday), false);
+  const moved = await db.all<{ division: number }>('SELECT division FROM players');
+  assert.equal(moved.filter((p) => p.division === 2).length, 5);
+  assert.equal(moved.filter((p) => p.division === 0).length, 5);
+});
+
+test('hafta dönümü büyük ligde de birkaç sorgu; sonuç divisionMoves ile aynı', async () => {
+  const db = memoryDb();
+  // Tohumlu rastgele: eşit puanlar ve sıfırlar da çıksın.
+  let seed = 42;
+  const random = () => ((seed = (seed * 1_103_515_245 + 12_345) % 2 ** 31) / 2 ** 31);
+  // Bölüm başına grup boyları: orta bölümde beş dolu grup (tek tek güncellemede 50 sorguyu aşıyordu).
+  const layout: number[][] = [[30, 7], [30, 30, 30, 30, 30], [12], [10]];
+  const expected = new Map<string, number>();
+  let serial = 0;
+  for (const [division, sizes] of layout.entries()) {
+    for (const [groupNo, size] of sizes.entries()) {
+      const rows: Array<{ id: string; score: number; created: number }> = [];
+      for (let i = 0; i < size; i++) {
+        const id = `p${String(serial++).padStart(4, '0')}`;
+        const created = THURSDAY - Math.floor(random() * 5) * 1000;
+        const roll = random();
+        const score = roll < 0.15 ? 0 : Math.floor(roll * 20) * 100;
+        await db.run('INSERT INTO players (id, name, token_hash, division, created_at) VALUES (?, ?, ?, ?, ?)', id, id, '-', division, created);
+        await db.run('INSERT INTO groups (week, player_id, division, group_no) VALUES (?, ?, ?, ?)', '2026-W42', id, division, groupNo);
+        // Bazıları hiç göndermedi (puan 0).
+        if (score > 0 || random() < 0.5) {
+          await db.run(
+            'INSERT INTO reports (player_id, week, score, city, stars, city_earned, levels, at) VALUES (?, ?, ?, 0, 0, 0, ?, ?)',
+            id, '2026-W42', score, '[]', THURSDAY,
+          );
+        }
+        rows.push({ id, score, created });
+      }
+      // groupRows sırası: puan, sonra kayıt anı, sonra kimlik.
+      rows.sort((a, b) => b.score - a.score || a.created - b.created || (a.id < b.id ? -1 : 1));
+      const moves = divisionMoves(rows.map((r) => r.score), division);
+      rows.forEach((r, i) => expected.set(r.id, Math.max(0, Math.min(LEAGUE.divisions - 1, division + (moves[i] ?? 0)))));
+    }
+  }
+  let queries = 0;
+  const counted: Db = {
+    run: (...a) => (queries++, db.run(...a)),
+    first: (...a) => (queries++, db.first(...a)),
+    all: (...a) => (queries++, db.all(...a)),
+    batch: (statements) => ((queries += statements.length), db.batch(statements)),
+  };
+  assert.equal(await rollover(counted, weekStart('2026-W43') + 60_000), true);
+  assert.ok(queries <= 4, `${queries} sorgu`);
+  const actual = await db.all<{ id: string; division: number }>('SELECT id, division FROM players');
+  assert.equal(actual.length, expected.size);
+  for (const row of actual) assert.equal(row.division, expected.get(row.id), row.id);
+  // Gerçekten hareket oldu: dokuz grubun çoğunda beş çıkan, beş inen.
+  const moved = (await db.all<{ n: number }>("SELECT COUNT(*) AS n FROM players p JOIN groups g ON g.player_id = p.id WHERE p.division <> g.division"))[0]!.n;
+  assert.ok(moved > 50, `${moved} oyuncu bölüm değiştirdi`);
+});
+
+test('oyunu sıfırlamak: şehir ve yıldız geri gidiyor, gönderim kabul', async () => {
+  const db = memoryDb();
+  const me = await signUp(db, THURSDAY, 'Atilla');
+  const veteran = { ...report(played(), THURSDAY, 500), city: 3, stars: 9 };
+  assert.equal((await call(db, THURSDAY, 'POST', '/v1/reports', veteran, me)).status, 200);
+  const fresh = report(newGame(), THURSDAY + 60_000, 500);
+  const after = await call(db, THURSDAY + 60_000, 'POST', '/v1/reports', fresh, me);
+  assert.equal(after.status, 200, JSON.stringify(after.body));
 });
 
 test('özel lig: kur, koda katıl, sırala, ayrıl', async () => {

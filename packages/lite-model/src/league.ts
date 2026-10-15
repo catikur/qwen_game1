@@ -138,7 +138,9 @@ function wellFormed(report: LeagueReport): boolean {
  * gönderimden (yoksa haftanın ya da hesabın başından) bu yana geçen saniye.
  * Telefonun saatini ileri almak işe yaramıyor: süre sunucunun.
  *
- * - Puan hafta içinde azalmıyor; şehir ve yıldız geri gitmiyor.
+ * - Puan hafta içinde azalmıyor. Şehir ve yıldız geri gidebiliyor (oyunu
+ *   sıfırlamak); ikisi de hız sınırını büyütmüyor, şehir değişince iki
+ *   durumdan hızlısı geçerli.
  * - Seviyelerin maliyeti şehirde kazanılanla uyumlu (sahte seviye sahte kazanç ister).
  * - Puan artışı, o seviyelerle en iyi koşullarda kazanılabilecek olanı geçmiyor.
  *   Arada şehir satıldıysa eski şehrin hızı da sayılıyor.
@@ -147,7 +149,6 @@ export function checkReport(prev: LeagueReport | null, next: LeagueReport, elaps
   if (!wellFormed(next)) return { ok: false, reason: 'shape' };
   if (Number.isNaN(weekStart(next.week))) return { ok: false, reason: 'week' };
   const sameWeek = prev !== null && prev.week === next.week;
-  if (prev !== null && (next.city < prev.city || next.stars < prev.stars)) return { ok: false, reason: 'decrease' };
   if (sameWeek && next.score < prev!.score) return { ok: false, reason: 'decrease' };
   if (levelSpend(next.levels) > LEAGUE.spendSlack * next.cityEarned + LEAGUE.spendFloor) return { ok: false, reason: 'spend' };
   const gained = next.score - (sameWeek ? prev!.score : 0);
