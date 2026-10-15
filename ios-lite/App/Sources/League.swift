@@ -99,15 +99,16 @@ final class LeagueService {
         if scenario {
             // CI kareleri: ağ yok, örnek grup ve özel lig.
             baseURL = nil
-            tracker = LeagueTracker(week: week, score: 0, lastTotal: 0)
             if ProcessInfo.processInfo.arguments.contains("-liteLeague") {
                 let mock = LeagueService.mock(week: week)
-                tracker.score = mock.standings.group.first(where: \.me)?.score ?? 0
+                // Önce bütün saklı alanlar: gözlenen alan init bitmeden değiştirilemez.
+                tracker = LeagueTracker(week: week, score: mock.standings.group.first(where: \.me)?.score ?? 0, lastTotal: 0)
+                status = .ready
                 account = LeagueAccount(id: "mock", token: "", name: "Atilla Holding")
                 standings = mock.standings
                 leagues = mock.leagues
-                status = .ready
             } else {
+                tracker = LeagueTracker(week: week, score: 0, lastTotal: 0)
                 status = .unconfigured
             }
             return
@@ -118,10 +119,10 @@ final class LeagueService {
         let decoder = JSONDecoder()
         let saved = store.data(forKey: LeagueService.accountKey).flatMap { try? decoder.decode(LeagueAccount.self, from: $0) }
         baseURL = url
-        account = saved
         tracker = store.data(forKey: LeagueService.trackerKey).flatMap { try? decoder.decode(LeagueTracker.self, from: $0) }
             ?? LeagueTracker(week: week, score: 0, lastTotal: -1)
         status = url == nil ? .unconfigured : (saved == nil ? .signedOut : .ready)
+        account = saved
     }
 
     // MARK: - Haftalık puan
