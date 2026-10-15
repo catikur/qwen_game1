@@ -222,7 +222,7 @@ Kod değiştikçe 1 ve 3 tekrarlanıyor.
    - puan biçimi: Integer;
    - sıralama: High to Low.
 5. Uygulamada Game Center yetkisi (entitlement) ve `LiteGameCenter: true`
-   açılıyor. O sürümden sonra şehir satıldıkça yıldız genel tabloya yazılıyor;
+   açık (`App/project.yml`). Bu sürümden sonra şehir satıldıkça yıldız genel tabloya yazılıyor;
    lig penceresinde "Game Center genel tablosu" düğmesi çıkıyor.
 
 ### Hile payı
