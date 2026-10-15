@@ -27,6 +27,8 @@ targets:
         CFBundleShortVersionString: "0.6.0"
         CFBundleVersion: "6"
         UILaunchScreen: {}
+        # Yalnızca HTTPS (muaf şifreleme): App Store her yüklemede sormasın.
+        ITSAppUsesNonExemptEncryption: false
         # L8: lig sunucusunun adresi (Cloudflare Worker). Boşken lig "yakında"
         # kalıyor; ilk dağıtımdan sonra buraya yazılıyor (ios-lite/README.md).
         LiteLeagueURL: "https://capitalforge-lite-league.catikur.workers.dev"

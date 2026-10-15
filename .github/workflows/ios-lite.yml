@@ -93,3 +93,45 @@ jobs:
           done
           exit 1
 
+  device:
+    # App Store arşiviyle aynı derleme (iPhone/iPad, Release), imzasız:
+    # Mac'te "Archive" yalnızca imza adımında takılsın, derlemede değil.
+    name: Uygulama · cihaz derlemesi (App Store)
+    needs: kit
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      # Mac'teki gibi: koşucudaki en yeni kararlı Xcode (App Store yeni SDK istiyor).
+      - name: En yeni Xcode
+        run: |
+          XCODE=$(ls -d /Applications/Xcode_*.app | grep -vi beta | sort -V | tail -1)
+          sudo xcode-select -s "$XCODE"
+          xcodebuild -version
+      - name: XcodeGen
+        run: brew install xcodegen
+      - name: Proje
+        working-directory: ios-lite/App
+        run: xcodegen generate
+      - name: Derleme (cihaz, Release, imzasız)
+        working-directory: ios-lite/App
+        run: |
+          set -o pipefail
+          xcodebuild -project CapitalForgeLite.xcodeproj -scheme CapitalForgeLite \
+            -sdk iphoneos -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath build CODE_SIGNING_ALLOWED=NO build 2>&1 | tee build.log | grep -E "error:|BUILD (SUCCEEDED|FAILED)" || true
+          grep -q "BUILD SUCCEEDED" build.log
+      - name: Paket denetimi
+        working-directory: ios-lite/App
+        run: |
+          set -euo pipefail
+          APP=build/Build/Products/Release-iphoneos/CapitalForgeLite.app
+          plist() { /usr/libexec/PlistBuddy -c "Print :$1" "$APP/Info.plist"; }
+          plutil -lint "$APP/PrivacyInfo.xcprivacy"
+          test "$(plist ITSAppUsesNonExemptEncryption)" = false
+          test "$(plist UIDeviceFamily:1)" = 2
+          echo "Sürüm $(plist CFBundleShortVersionString) ($(plist CFBundleVersion)), $(plist CFBundleIdentifier)"
+          echo "Lig: $(plist LiteLeagueURL)"
+          lipo -archs "$APP/CapitalForgeLite"
+          test -f "$APP/Assets.car"

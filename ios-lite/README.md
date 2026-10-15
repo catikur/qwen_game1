@@ -48,6 +48,69 @@ açılmaz; Xcode'dan yeniden ▶︎ demek yeter, kayıt telefonda kalır.
 **Ayarlar → Bildirimler**. Kasa dolunca, meclis toplanınca ve rakip seni geçince
 haber veriyor. Hepsi yerel bildirim; sunucu ya da hesap yok.
 
+## App Store'a yükleme (TestFlight)
+
+Ücretli Apple Developer Program üyeliği gerekiyor. Xcode, App Store'daki en
+son sürüm olmalı: App Store Connect eski SDK ile derlenen yüklemeyi kabul
+etmiyor. CI'daki "cihaz derlemesi (App Store)" işi aynı derlemeyi imzasız
+yapıyor; orası yeşilse Mac'te yalnızca imza kalıyor.
+
+**Bir kez:**
+
+1. **Xcode'a giriş:** **Xcode → Settings → Accounts → +** → Apple ID. Listede
+   ekibin (Team) "Personal Team" değil, şirket ya da kendi adınla görünmeli.
+2. **Team ID:** [developer.apple.com/account](https://developer.apple.com/account)
+   → **Membership details** → 10 karakterlik **Team ID**. `project.yml`'de
+   `DEVELOPMENT_TEAM` olarak yazılınca proje her üretildiğinde ekip hazır
+   geliyor; yazılana kadar her `xcode.sh`'tan sonra adım 2'yi elle yap.
+3. **Paket kimliğini kaydet:** projeyi aç (`./ios-lite/xcode.sh`), ekibi seç
+   (aşağıda adım 2), bir kez iPhone'a ya da "Any iOS Device"a derle. Xcode
+   `com.catikur.capitalforgelite` kimliğini hesabına kaydediyor.
+4. **App Store Connect kaydı:** [appstoreconnect.apple.com](https://appstoreconnect.apple.com)
+   → **Apps → + → New App**:
+   - Platform **iOS**;
+   - Name **CapitalForge Lite** (alınmışsa başka bir ad; sonra değişebilir);
+   - Primary Language **Turkish**;
+   - Bundle ID `com.catikur.capitalforgelite`;
+   - SKU `capitalforge-lite`;
+   - User Access **Full Access**.
+
+**Her yüklemede:**
+
+1. `git pull`, sonra `./ios-lite/xcode.sh`.
+2. **CapitalForgeLite** hedefi → **Signing & Capabilities**:
+   - **Automatically manage signing** açık;
+   - **Team**: ücretli ekip (Personal Team değil).
+3. Üst çubukta hedef: **Any iOS Device (arm64)** (simülatör seçiliyken
+   arşiv menüsü gri).
+4. **Product → Archive.** Bitince **Organizer** açılıyor.
+5. **Distribute App → App Store Connect → Distribute**. Xcode imzayı,
+   sertifikayı ve profili kendisi hazırlıyor.
+6. App Store Connect → uygulama → **TestFlight**: yükleme 10–30 dakikada
+   işleniyor. Şifreleme sorusu çıkmıyor (Info.plist'te yanıtlı).
+7. **Internal Testing → +** grup kur, kendini ekle. iPhone'a **TestFlight**
+   uygulamasını kur; davetten yükle.
+
+Aynı yapı numarasıyla (`CFBundleVersion`, `project.yml`) ikinci kez yükleme
+reddediliyor; her sürümde artıyor.
+
+**Mağazaya göndermeden önce** (TestFlight için gerekmiyor):
+- **App Privacy** soruları (`Resources/PrivacyInfo.xcprivacy` ile aynı):
+  - toplanan veri: **User ID** (lig adı) ve **Gameplay Content** (haftalık puan);
+  - ikisi de **App Functionality**, **Linked to user: Yes**, **Tracking: No**;
+  - başka veri yok, reklam yok.
+- **Privacy Policy URL** (zorunlu).
+- Ekran görüntüleri: 6,9" iPhone ve 13" iPad.
+- Kategori (Games → Simulation), yaş derecelendirmesi, açıklama.
+
+**Sık takılanlar:**
+- *"No profiles for 'com.catikur.capitalforgelite'"*: Team boş ya da Personal
+  Team seçili. Ücretli ekibi seç, **Try Again**.
+- *"Bundle identifier is not available"*: kimlik başka bir hesapta kayıtlı;
+  `project.yml`'de `PRODUCT_BUNDLE_IDENTIFIER`'ı değiştir.
+- *Organizer'da arşiv yok*: hedef simülatördü; **Any iOS Device** seç, yeniden
+  **Archive**.
+
 ## Geliştirme
 
 | Ne | Komut | Nerede |
