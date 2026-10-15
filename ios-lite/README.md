@@ -29,8 +29,9 @@ klasöründe (SwiftUI, iOS 17+). Tasarım ve denge: [`docs/LITE-TASARIMI.md`](..
    Homebrew yoksa önce <https://brew.sh> adresindeki tek satırı çalıştır.
 4. **İmza.**
    - Xcode'da sol üstte **CapitalForgeLite** projesini seç.
-   - **Signing & Capabilities** sekmesinde **Team** olarak kendi Apple kimliğini
-     seç: "Personal Team" yeterli, ücretli hesap gerekmiyor.
+   - **Signing & Capabilities** sekmesinde **Team** ücretli ekip olarak hazır
+     geliyor (`DEVELOPMENT_TEAM`). Ücretsiz Apple kimliğiyle denemek için
+     "Personal Team" seç.
    - Paket kimliği başka biriyle çakışırsa **Bundle Identifier**'ın sonuna bir ek
      yaz, örneğin `com.catikur.capitalforgelite.atilla`.
 5. **iPhone'u bağla.**
@@ -59,12 +60,12 @@ yapıyor; orası yeşilse Mac'te yalnızca imza kalıyor.
 
 1. **Xcode'a giriş:** **Xcode → Settings → Accounts → +** → Apple ID. Listede
    ekibin (Team) "Personal Team" değil, şirket ya da kendi adınla görünmeli.
-2. **Team ID:** [developer.apple.com/account](https://developer.apple.com/account)
-   → **Membership details** → 10 karakterlik **Team ID**. `project.yml`'de
-   `DEVELOPMENT_TEAM` olarak yazılınca proje her üretildiğinde ekip hazır
-   geliyor; yazılana kadar her `xcode.sh`'tan sonra adım 2'yi elle yap.
-3. **Paket kimliğini kaydet:** projeyi aç (`./ios-lite/xcode.sh`), ekibi seç
-   (aşağıda adım 2), bir kez iPhone'a ya da "Any iOS Device"a derle. Xcode
+2. **Team ID:** `project.yml`'de `DEVELOPMENT_TEAM` (`77J92PA5Q9`); proje
+   her üretildiğinde ekip hazır geliyor. Ekip değişirse
+   [developer.apple.com/account](https://developer.apple.com/account) →
+   **Membership details** → **Team ID**.
+3. **Paket kimliğini kaydet:** projeyi aç (`./ios-lite/xcode.sh`), bir kez
+   iPhone'a ya da "Any iOS Device"a derle. Xcode
    `com.catikur.capitalforgelite` kimliğini hesabına kaydediyor.
 4. **App Store Connect kaydı:** [appstoreconnect.apple.com](https://appstoreconnect.apple.com)
    → **Apps → + → New App**:
@@ -78,9 +79,9 @@ yapıyor; orası yeşilse Mac'te yalnızca imza kalıyor.
 **Her yüklemede:**
 
 1. `git pull`, sonra `./ios-lite/xcode.sh`.
-2. **CapitalForgeLite** hedefi → **Signing & Capabilities**:
-   - **Automatically manage signing** açık;
-   - **Team**: ücretli ekip (Personal Team değil).
+2. **CapitalForgeLite** hedefi → **Signing & Capabilities**'ta ekip zaten
+   seçili (Automatically manage signing açık). Kırmızı uyarı varsa **Try
+   Again**.
 3. Üst çubukta hedef: **Any iOS Device (arm64)** (simülatör seçiliyken
    arşiv menüsü gri).
 4. **Product → Archive.** Bitince **Organizer** açılıyor.
@@ -104,8 +105,8 @@ reddediliyor; her sürümde artıyor.
 - Kategori (Games → Simulation), yaş derecelendirmesi, açıklama.
 
 **Sık takılanlar:**
-- *"No profiles for 'com.catikur.capitalforgelite'"*: Team boş ya da Personal
-  Team seçili. Ücretli ekibi seç, **Try Again**.
+- *"No profiles for 'com.catikur.capitalforgelite'"*: Xcode'da ücretli ekibin
+  hesabı açık değil (Settings → Accounts). Giriş yap, **Try Again**.
 - *"Bundle identifier is not available"*: kimlik başka bir hesapta kayıtlı;
   `project.yml`'de `PRODUCT_BUNDLE_IDENTIFIER`'ı değiştir.
 - *Organizer'da arşiv yok*: hedef simülatördü; **Any iOS Device** seç, yeniden

@@ -65,6 +65,8 @@ targets:
         TARGETED_DEVICE_FAMILY: "1,2"
         SWIFT_VERSION: "5.0"
         CODE_SIGN_STYLE: Automatic
+        # Apple Developer ekibi (gizli değil; her imzalı uygulamada görünüyor).
+        DEVELOPMENT_TEAM: 77J92PA5Q9
         ENABLE_PREVIEWS: YES
 schemes:
   CapitalForgeLite:
