@@ -13,6 +13,7 @@
     "balance": "node tools/run-node-script.mjs packages/core/test/balance.ts",
     "lite:balance": "node tools/run-node-script.mjs packages/lite-model/test/balance.ts",
     "lite:fixtures": "node tools/run-node-script.mjs packages/lite-model/test/write-fixtures.ts",
+    "lite:league-bundle": "node tools/bundle-lite-league.mjs",
     "bench": "node tools/run-node-script.mjs packages/core/test/benchmark.ts",
     "constraint": "node tools/run-node-script.mjs packages/core/test/constraint.ts",
     "land": "node tools/run-node-script.mjs packages/core/test/land-experiment.ts",

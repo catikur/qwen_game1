@@ -8,7 +8,7 @@ compatibility_date = "2025-09-01"
 [[d1_databases]]
 binding = "DB"
 database_name = "capitalforge-lite-league"
-database_id = "00000000-0000-0000-0000-000000000000"
+database_id = "a4ad67c2-a232-4ba2-9f7c-08d5ab3185ad"
 
 # Pazartesi 00:05 UTC: geçen haftanın bölüm değişimi.
 [triggers]

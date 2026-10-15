@@ -103,27 +103,39 @@ telefon düzenine dönüyor. Klavyede 1/2/3 toplu alım, K kampanya.
 
 ### Lig sunucusu (Cloudflare, ücretsiz katman)
 
-1. [dash.cloudflare.com](https://dash.cloudflare.com) adresinde ücretsiz hesap aç.
-2. **Workers & Pages**'i bir kez aç ve bir `workers.dev` alt alanı seç
-   (ör. `atilla`). Sunucunun adresi bununla oluşuyor.
-3. **Hesap kimliği:** Workers & Pages sayfasının sağındaki **Account ID**'yi
-   kopyala.
-4. **API anahtarı:**
-   - **My Profile → API Tokens → Create Token** aç.
-   - **Edit Cloudflare Workers** şablonunu seç.
-   - **Permissions**'a bir satır ekle: **Account → D1 → Edit**.
-   - Oluştur ve anahtarı kopyala (bir kez gösteriliyor).
-5. GitHub'da depo: **Settings → Secrets and variables → Actions → New
-   repository secret**. İki sır ekle:
-   - `CLOUDFLARE_API_TOKEN`: 4. adımdaki anahtar;
-   - `CLOUDFLARE_ACCOUNT_ID`: 3. adımdaki kimlik.
-6. **Actions → Lite lig sunucusu → Run workflow**.
-   - İş veritabanını kuruyor, şemayı uyguluyor, sunucuyu dağıtıyor.
-   - Sonunda adresi yazıyor: `https://capitalforge-lite-league.<alt-alan>.workers.dev`.
-7. Bu adres `ios-lite/App/project.yml`'de `LiteLeagueURL`'ye yazılıyor; uygulama
-   o sürümden sonra lige bağlanıyor.
+**Veritabanı hazır:** `capitalforge-lite-league` (D1, Doğu Avrupa, şema
+uygulandı; kimlik `wrangler.toml`'de). Geriye Worker'ın kendisi kalıyor.
 
-Sonraki her `main` değişikliğinde sunucu kendiliğinden güncelleniyor.
+**A · Panelden yapıştır (API anahtarı gerekmez):**
+
+1. `pnpm lite:league-bundle` →
+   `packages/lite-league/dist/capitalforge-lite-league.js` (tek dosya).
+2. [dash.cloudflare.com](https://dash.cloudflare.com) → **Workers & Pages →
+   Create → Start with Hello World!**:
+   - ad: `capitalforge-lite-league`;
+   - **Deploy**.
+3. **Edit code**: içindekini sil, dosyanın tamamını yapıştır, **Deploy**.
+4. Worker'ın **Settings → Bindings → Add → D1 database**:
+   - değişken adı `DB`;
+   - veritabanı `capitalforge-lite-league`;
+   - **Add binding**.
+5. İsteğe bağlı: **Settings → Trigger events → Add → Cron**, `5 0 * * 1`
+   (pazartesi bölüm değişimi; yapılmazsa ilk istekte yapılıyor).
+6. Worker'ın adresi (`https://capitalforge-lite-league.<alt-alan>.workers.dev`)
+   `ios-lite/App/project.yml`'de `LiteLeagueURL`'ye yazılıyor.
+
+Kod değiştikçe 1 ve 3 tekrarlanıyor.
+
+**B · Otomatik dağıtım (her `main` değişikliğinde):**
+
+1. **My Profile → API Tokens → Create Token** aç:
+   - **Edit Cloudflare Workers** şablonunu seç;
+   - **Account → D1 → Edit** iznini ekle.
+2. Depoya iki sır ekle (**Settings → Secrets and variables → Actions**):
+   - `CLOUDFLARE_API_TOKEN`: 1. adımdaki anahtar;
+   - `CLOUDFLARE_ACCOUNT_ID`: Workers & Pages sayfasının sağındaki **Account ID**.
+3. **Actions → Lite lig sunucusu → Run workflow**. İş, var olan veritabanını adından
+   buluyor.
 
 ### Game Center (ücretli Apple Developer üyeliği)
 
