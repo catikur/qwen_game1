@@ -391,7 +391,10 @@ leaderboard online olsun, ligler kurulabilsin."
 - **CI:** iPhone karelerinden sonra bir iPad simülatörü açılıyor. Kareler:
   `ipad-mid` (dikey), `ipad-land` (yatay, borsa), `ipad-settings`,
   `ipad-night-land` (yatay, gece). Yatay kareler `-liteLandscape` argümanıyla
-  çekiliyor.
+  çekiliyor. Uygulama önce sistemden yatay yön istiyor; başsız CI
+  simülatörü dönmezse aynı yatay düzeni 90° çevrilmiş bir kapta çiziyor
+  (düzen yalnızca pencere boyuna bağlı, sonuç aynı). Hangisinin olduğunu
+  `Documents/orientation.txt`'ye yazıyor; betik kareyi ona göre çeviriyor.
 
 ## 12. Ada dolunca: oyunun devamı (L7, öneri)
 

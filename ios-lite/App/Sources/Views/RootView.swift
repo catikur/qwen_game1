@@ -14,6 +14,8 @@ struct RootView: View {
     @Environment(\.horizontalSizeClass) private var sizeClass
     @State private var confirmSell = false
     @State private var showSettings = ProcessInfo.processInfo.arguments.contains("-liteSettings")
+    /// CI yedeği: simülatör yatay dönmezse yatay düzen 90° çevrilmiş kapta çiziliyor.
+    @State private var rotatedPreview = false
 
     enum Layout {
         case phone, tabletPortrait, tabletLandscape
@@ -31,41 +33,20 @@ struct RootView: View {
         @Bindable var store = store
         let haptics = store.settings.haptics
         GeometryReader { proxy in
-            let size = proxy.size
-            switch Self.layout(for: size, sizeClass: sizeClass) {
-            case .phone:
-                VStack(spacing: 0) {
-                    HeaderView(showSettings: $showSettings)
-                    EventBanner()
-                    CityView().frame(height: 214)
-                    cards(columns: 1)
-                }
-            case .tabletPortrait:
-                VStack(spacing: 0) {
-                    HeaderView(showSettings: $showSettings)
-                        .frame(maxWidth: 900)
-                    EventBanner()
-                        .frame(maxWidth: 900)
-                    CityView().frame(height: min(460, size.height * 0.36))
-                    cards(columns: size.width - 28 >= Self.twoColumnWidth ? 2 : 1)
-                }
-                .frame(maxWidth: .infinity)
-            case .tabletLandscape:
-                let left = min(620, size.width * 0.46)
-                HStack(spacing: 0) {
-                    VStack(spacing: 0) {
-                        HeaderView(showSettings: $showSettings)
-                        EventBanner()
-                        CityView().frame(maxHeight: .infinity)
-                    }
-                    .frame(width: left)
-                    cards(columns: size.width - left - 28 >= Self.twoColumnWidth ? 2 : 1)
-                        .padding(.top, 8)
-                }
+            if rotatedPreview {
+                let turned = CGSize(width: proxy.size.height, height: proxy.size.width)
+                screen(turned, .regular)
+                    .frame(width: turned.width, height: turned.height)
+                    .rotationEffect(.degrees(90))
+                    .frame(width: proxy.size.width, height: proxy.size.height)
+            } else {
+                screen(proxy.size, sizeClass)
             }
         }
+        .ignoresSafeArea(.container, edges: rotatedPreview ? .all : [])
+        .statusBarHidden(rotatedPreview)
         .background { KeyboardShortcuts(store: store) }
-        .task { applyScenarioOrientation() }
+        .task { await applyScenarioOrientation() }
         // Dil değişince bütün metinler yeniden kurulsun.
         .id(store.settings.language)
         .background(Theme.sky(scheme).ignoresSafeArea())
@@ -96,6 +77,42 @@ struct RootView: View {
 }
 
 extension RootView {
+    /// Pencere boyuna göre üç düzenden biri.
+    @ViewBuilder
+    func screen(_ size: CGSize, _ sizeClass: UserInterfaceSizeClass?) -> some View {
+        switch Self.layout(for: size, sizeClass: sizeClass) {
+        case .phone:
+            VStack(spacing: 0) {
+                HeaderView(showSettings: $showSettings)
+                EventBanner()
+                CityView().frame(height: 214)
+                cards(columns: 1)
+            }
+        case .tabletPortrait:
+            VStack(spacing: 0) {
+                HeaderView(showSettings: $showSettings)
+                    .frame(maxWidth: 900)
+                EventBanner()
+                    .frame(maxWidth: 900)
+                CityView().frame(height: min(460, size.height * 0.36))
+                cards(columns: size.width - 28 >= Self.twoColumnWidth ? 2 : 1)
+            }
+            .frame(maxWidth: .infinity)
+        case .tabletLandscape:
+            let left = min(620, size.width * 0.46)
+            HStack(spacing: 0) {
+                VStack(spacing: 0) {
+                    HeaderView(showSettings: $showSettings)
+                    EventBanner()
+                    CityView().frame(maxHeight: .infinity)
+                }
+                .frame(width: left)
+                cards(columns: size.width - left - 28 >= Self.twoColumnWidth ? 2 : 1)
+                    .padding(.top, 8)
+            }
+        }
+    }
+
     /// Kartlar: telefonda tek sütun; iPad'de zincirler ve alt kartlar iki sütunlu ızgarada.
     @ViewBuilder
     func cards(columns: Int) -> some View {
@@ -144,10 +161,40 @@ extension RootView {
     }
 
     /// CI kareleri: `-liteLandscape` iPad'i yatay çeviriyor (senaryo modunda).
-    func applyScenarioOrientation() {
-        guard ProcessInfo.processInfo.arguments.contains("-liteLandscape"),
-              let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene else { return }
-        scene.requestGeometryUpdate(.iOS(interfaceOrientations: .landscapeRight)) { _ in }
+    ///
+    /// İstek sahne etkinleşmeden gelirse sessizce düşüyordu: biraz bekleyip
+    /// birkaç kez deniyor. Sonucu `Documents/orientation.txt`'ye yazıyor;
+    /// CI betiği kareyi buna göre döndürüyor (yatay değilse döndürmüyor).
+    func applyScenarioOrientation() async {
+        guard ProcessInfo.processInfo.arguments.contains("-liteLandscape") else { return }
+        var note = "portrait"
+        for _ in 0..<4 {
+            try? await Task.sleep(nanoseconds: 700_000_000)
+            guard let scene = UIApplication.shared.connectedScenes.compactMap({ $0 as? UIWindowScene }).first else { continue }
+            if scene.effectiveGeometry.interfaceOrientation.isLandscape {
+                note = "landscape"
+                break
+            }
+            scene.keyWindow?.rootViewController?.setNeedsUpdateOfSupportedInterfaceOrientations()
+            scene.requestGeometryUpdate(.iOS(interfaceOrientations: .landscapeRight)) { error in
+                Self.writeOrientation("error: \(error.localizedDescription)")
+            }
+        }
+        if let scene = UIApplication.shared.connectedScenes.compactMap({ $0 as? UIWindowScene }).first,
+           scene.effectiveGeometry.interfaceOrientation.isLandscape {
+            note = scene.effectiveGeometry.interfaceOrientation == .landscapeRight ? "landscapeRight" : "landscapeLeft"
+        } else if let scene = UIApplication.shared.connectedScenes.compactMap({ $0 as? UIWindowScene }).first,
+                  scene.traitCollection.userInterfaceIdiom == .pad {
+            // Sistem döndürmedi (CI'da başsız simülatör): aynı yatay düzeni çevrilmiş kapta çiz.
+            rotatedPreview = true
+            note = "rotated"
+        }
+        Self.writeOrientation(note)
+    }
+
+    static func writeOrientation(_ note: String) {
+        guard let folder = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else { return }
+        try? note.write(to: folder.appendingPathComponent("orientation.txt"), atomically: true, encoding: .utf8)
     }
 }
 

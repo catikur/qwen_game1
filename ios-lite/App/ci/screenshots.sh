@@ -56,6 +56,30 @@ shot night-settings -AppleLanguages "(tr)" -liteScenario mid -liteSettings
 xcrun simctl ui "$UDID" appearance light
 xcrun simctl shutdown "$UDID" || true
 
+# Yatay kare: uygulama yatay döndüyse ya da yatay düzeni 90° çevrilmiş kapta
+# çizdiyse (Documents/orientation.txt) ve görüntü cihazın doğal (dikey)
+# yönünde geldiyse çevir. Hiçbiri değilse olduğu gibi bırak: dikey düzeni yan
+# yatırıp "yatay" diye göstermek yanıltıcı.
+land() {
+  local name="$1"; shift
+  local data note f w h
+  data=$(xcrun simctl get_app_container "$UDID" "$BUNDLE" data 2>/dev/null || true)
+  rm -f "$data/Documents/orientation.txt"
+  shot "$name" "$@"
+  note=$(cat "$data/Documents/orientation.txt" 2>/dev/null || echo "?")
+  echo "yön ($name): $note"
+  f="$OUT/$name.png"
+  w=$(sips -g pixelWidth "$f" | awk '/pixelWidth/ {print $2}')
+  h=$(sips -g pixelHeight "$f" | awk '/pixelHeight/ {print $2}')
+  if [ "$w" -lt "$h" ]; then
+    case "$note" in
+      landscapeRight|rotated) sips -r 270 "$f" >/dev/null; echo "döndürüldü (270): $f" ;;
+      landscapeLeft) sips -r 90 "$f" >/dev/null; echo "döndürüldü (90): $f" ;;
+      *) echo "UYARI: $name yatay değil ($note); döndürülmedi" ;;
+    esac
+  fi
+}
+
 # L6: iPad. Tercih "iPad Air", yoksa herhangi bir iPad (Pro ya da mini değil).
 IPAD=$(xcrun simctl list devices available -j | python3 -c '
 import json, sys
@@ -74,17 +98,11 @@ if [ -n "$IPAD" ]; then
   xcrun simctl ui "$UDID" appearance light || true
   xcrun simctl install "$UDID" "$APP"
   shot ipad-mid -AppleLanguages "(tr)" -liteScenario mid
-  shot ipad-land -AppleLanguages "(tr)" -liteScenario listed -liteLandscape
+  land ipad-land -AppleLanguages "(tr)" -liteScenario listed -liteLandscape
   shot ipad-settings -AppleLanguages "(tr)" -liteScenario mid -liteSettings
   xcrun simctl ui "$UDID" appearance dark
-  shot ipad-night-land -AppleLanguages "(tr)" -liteScenario late -liteLandscape
+  land ipad-night-land -AppleLanguages "(tr)" -liteScenario late -liteLandscape
   xcrun simctl ui "$UDID" appearance light
-  # Yatay kareler: ekran görüntüsü cihazın doğal (dikey) yönünde gelirse çevir.
-  for f in "$OUT"/ipad-*land*.png; do
-    w=$(sips -g pixelWidth "$f" | awk '/pixelWidth/ {print $2}')
-    h=$(sips -g pixelHeight "$f" | awk '/pixelHeight/ {print $2}')
-    if [ "$w" -lt "$h" ]; then sips -r 270 "$f" >/dev/null; echo "döndürüldü: $f"; fi
-  done
 else
   echo "iPad simülatörü yok; iPad kareleri atlandı"
 fi
