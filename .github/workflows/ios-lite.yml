@@ -44,7 +44,8 @@ jobs:
     name: Uygulama · simülatör kareleri
     needs: kit
     runs-on: macos-15
-    timeout-minutes: 45
+    # ~70 sn/kare: L8 ile kare adımı ~40 dk; payla birlikte 75.
+    timeout-minutes: 75
     # Kareler ayrı bir dala (ios-lite-shots) yazılıyor: inceleme için.
     permissions:
       contents: write
