@@ -1,0 +1,197 @@
+# CapitalForge Lite — iOS idle tasarımı
+
+> Ana oyunun felsefesi (tedarik zinciri, rekabet, sermaye, holding) aynı.
+> Oynanış idle mobil oyunlara göre baştan kuruldu: oturum 30 saniye ile
+> 3 dakika arası, tek el, dikey ekran. Oyun kapalıyken de para kazanılıyor.
+> Uygulama iOS'ta yerel (SwiftUI); ağ, reklam ve uygulama içi satın alma yok.
+
+---
+
+## 1. Ana oyundan ne kalıyor, ne gidiyor
+
+| Ana oyun | Lite karşılığı |
+|---|---|
+| 900 parsellik şehir, parsel alımı, imar | Şehir 5 mahalleden oluşuyor; mahalleler net değerle açılıyor |
+| 35 bina, 25 ürün, 7 kategori | 5 zincir, her zincirde 3 kademe (ham → işleme → satış) |
+| Zincir kartının "tek hamle" önerisi | **Darboğaz**: zincirde en yavaş kademe parlıyor, tek dokunuşla büyütülüyor |
+| Rakiplerle pazar payı | Her zincirde rakiple bir pay çubuğu; rakip zamanla büyüyor |
+| Borsa, halka arz, devralma | **Halka arz** bir dönüm noktası; **holding** prestij döngüsü |
+| Holding: birden çok şehir | Şirketi sat → Holding Yıldızı kazan → yeni şehir, kalıcı çarpan |
+| Sektör ve şehir olayları | 2–3 dakikalık zamanlı olaylar (turizm, kriz, grev…) |
+| Belediye meclisi | Saatte bir iki seçenekli karar kartı |
+| Hedef merdiveni | Şehir başına 10 görev, her biri ödüllü |
+| Sendika, kredi, tahvil, lig | Yok (Lite'ta yük olur) |
+
+## 2. Çekirdek döngü: zincir ve darboğaz
+
+Her zincirin üç kademesi var (sayılar `packages/lite-model/src/content.ts`):
+
+| Zincir | Ham | İşleme | Satış | Mahalle | Açılış (ömür boyu kazanç) | Birim fiyatı |
+|---|---|---|---|---|---|---|
+| Fırın | Buğday Tarlası | Değirmen | Fırın | Çarşı | baştan | 1 ₺ |
+| Kahve | Kahve Bahçesi | Kavurma | Kafe | Çarşı | 3 B ₺ | 14 ₺ |
+| Moda | Pamuk Tarlası | Tekstil | Butik | Merkez | 400 B ₺ | 200 ₺ |
+| Deri | Besi Çiftliği | Tabakhane | Ayakkabıcı | Sanayi | 60 M ₺ | 3 B ₺ |
+| Teknoloji | Silisyum Ocağı | Çip Fabrikası | Elektronik | Teknopark | 9 Mr ₺ | 45 B ₺ |
+
+Liman 1,5 Mr ₺'de açılıyor ve bütün satışlara ×1,5 veriyor. Her zincir bir
+öncekinin yaklaşık 14 katı fiyatla geliyor ama ilk seviyelerinin geri ödemesi
+(~20 sn) aynı. Yeni zincir bu yüzden "taze bir başlangıç" gibi hissettiriyor
+ve gelire bir basamak ekliyor.
+
+**Para yalnızca satış kademesinden geliyor.** Satış saniyede `r_satış` birim
+satıyor; satılanın ne kadarını kendi zincirinden karşıladığına göre marj değişiyor:
+
+- kendi işlemenden karşılanan kısım (`min(r_satış, r_işleme)`) **%55** marjla;
+- onun da kendi hammaddenden karşılanan kısmı (`min(…, r_ham)`) **%85** marjla;
+- kalanı pazardan alınan malla **%20** marjla.
+
+**Yukarı kademeyi almak hiçbir zaman zarar ettirmiyor** ("kolay"): en kötü
+ihtimalle karşıladığı kısım kadar kazandırıyor. En çok kazandıran hamle ise
+darboğazı açan hamle ("aynı felsefe"). Darboğaz, +1 seviyenin harcanan lira
+başına en çok gelir getirdiği kademe. Arayüz onu vurguluyor ve tek bir hamle
+öneriyor ("Değirmeni büyüt"); bu, ana oyundaki zincir kartının karşılığı.
+
+Ölçüm: aktif bot önerilen hamleyle oynayınca hamlelerin %40'ı satış, %33'ü
+işleme, %27'si ham. Yani entegrasyon gerçekten oynanıyor.
+
+**Kademe seviyesi.**
+- Hız: `taban × seviye × 2^(geçilen kilometre taşı)`.
+- Maliyet: `taban maliyet × büyüme^seviye`. Büyüme ham kademede 1,13, işlemede
+  1,15, satışta 1,14.
+- Kilometre taşları 25, 50, 75, 100, 150, 200, 250, 300, 400… seviyelerde; her
+  biri o kademenin hızını ×2 yapıyor. Oyuncu "bir sonraki taşa 3 seviye" gibi
+  kısa hedefler görüyor.
+
+## 3. Rakip ve pazar payı
+
+Her şehirde bir rakip CEO var; yüzü ana oyundaki avatar sisteminden geliyor.
+- Her zincirde rakibin bir akışı var ve **seni kovalıyor**: hedefi senin satış
+  hızının 0,6 katı (her yeni şehirde +0,15). Hedefe 10 dakikalık zaman sabitiyle
+  yaklaşıyor.
+- Senin payın = `satış_sen / (satış_sen + rakip)`; gelirin bu payla çarpılıyor.
+  Pay %15'in altına inmiyor, yani hiç kazanamamak yok.
+- Büyüttüğün an pay yükseliyor, rakip yetiştikçe ~%63'e geri iniyor. Büyütmeyi
+  bırakan zincir payını kaptırıyor. "Nova Holding Kahve'de öne geçti" uyarısı
+  ana oyundaki geçilme olayının karşılığı.
+- Kapalıyken rakip yarı hızda kovalıyor: geri dönen oyuncu cezalandırılmasın.
+
+## 4. Mahalleler, halka arz, holding (prestij)
+
+- **Mahalleler** ömür boyu kazançla açılıyor: Çarşı → Merkez → Sanayi → Liman →
+  Teknopark. Liman zincir açmıyor, bütün satışlara ihracat çarpanı (×1,5) veriyor.
+- **Halka arz:** net değer 1 Mr ₺'yi geçince açılıyor. Hissenin bir kısmı satılıyor:
+  - tek seferlik büyük nakit geliyor;
+  - "temettü" adıyla kalıcı küçük bir gelir akışı başlıyor;
+  - borsa ekranı açılıyor ve şirket değeri grafikle gösteriliyor.
+- **Holding (prestij):** şehrin şirketini satıp yeni şehre geçiyorsun. Sıfırdan
+  başlıyorsun ama Holding Yıldızı kazanıyorsun:
+  - yıldız = `⌊√(şehirdeki ömür boyu kazanç / 1 Mr ₺)⌋`;
+  - her yıldız bütün gelire kalıcı +%2;
+  - yeni şehirlerin farklı bir zincir bonusu ve daha sert bir rakibi var.
+
+## 5. Kısa oturum öğeleri
+
+| Öğe | Kural |
+|---|---|
+| Çevrimdışı kazanç | Dönüşte "Yokken kazandın: 1,2 M ₺". Gelirin **yarısı** işliyor (tam hızda gündelik oyuncu bir günde her şeyi açıyordu). İlk tavan 2 saat; her Genel Müdür seviyesi +1 saat (en çok 10) |
+| Kampanya | Şehre dokununca 30 saniye ×2 gelir, 3 dakika bekleme. Ana oyundaki pazarlama kolunun karşılığı |
+| Olaylar | 4–6 dakikada bir olay. Örnekler: *Turizm sezonu* (kafe ve fırın ×2); *Hammadde krizi* (pazardan alınan girdi pahalı, entegre zincirler etkilenmez — felsefe burada öğretiliyor); *Grev* (bir kademe 2 dakika yavaş) |
+| Meclis kartı | Saatte bir iki seçenek. Örnek: "Sanayi bölgesine vergi indirimi (ham ×1,3) / Çarşı'ya yaya yolu (satış ×1,2)" |
+| Görevler | Şehir başına 10 görev ("Kahve zincirini tamamla", "Rakibi Moda'da geç"…), ödülü nakit ve süreli çarpan |
+| Bildirim (izinle) | "Kasa doldu" ve "Rakip seni geçti" yerel bildirimleri. Sunucu yok |
+
+## 6. Ekranlar (dikey, tek el)
+
+1. **Şehir:**
+   - üst yarıda izometrik şehir: mahalleler, seviyeyle büyüyen binalar, sokakta
+     akan araçlar ve tüten bacalar (ana oyunun dili);
+   - alt yarıda zincir kartları.
+2. **Zincir kartı:**
+   - üç kademe yan yana; her birinde seviye, hız ve "Büyüt" düğmesi;
+   - darboğaz vurgulu;
+   - rakiple pay çubuğu;
+   - toplu alım seçenekleri: ×1, ×10, ×max.
+3. **Holding:** yıldızlar, şehirler, satış önizlemesi ("şimdi satarsan +7 yıldız").
+4. **Borsa** (halka arzdan sonra): şirket değeri grafiği, temettü.
+5. **Ayarlar:** dil (TR/EN), ses, titreşim, bildirim, kaydı sıfırla.
+
+Görsel kimlik ana oyunun Kadastro teması (aydınlık zemin, mürekkep vurgu,
+tabular rakamlar). Şehir çizimi SwiftUI `Canvas` ile prosedürel; hiçbir dış
+görsel dosya kullanılmıyor.
+
+## 7. Mühendislik
+
+```
+ios-lite/
+  Kit/Package.swift           CapitalForgeLiteKit: saf Swift oyun modeli (Foundation)
+  Kit/Sources/CapitalForgeLiteKit/
+  Kit/Tests/CapitalForgeLiteKitTests/   XCTest + TS'ten gelen fikstürler
+  App/project.yml             XcodeGen (Mac'te: brew install xcodegen && xcodegen)
+  App/Sources/                SwiftUI uygulaması (L2)
+packages/lite-model/          Aynı modelin TypeScript karşılığı: denge burada ayarlanıyor
+packages/lite-model/test/balance.ts         Denge raporu (pnpm lite:balance)
+packages/lite-model/test/write-fixtures.ts  Swift testlerine altın değerler (pnpm lite:fixtures)
+.github/workflows/ios-lite.yml   macOS: swift test + xcodebuild + simülatör ekran görüntüleri
+```
+
+- **Denge TypeScript'te ayarlanıyor, Swift'te koşuyor.**
+  - Idle oyunun ruhu sayılarda, ve sayıları ayarlamak çok tekrar istiyor.
+    Bu makinede Swift derleyicisi yok; TS modeli yerelde saniyeler içinde
+    binlerce oturumu taklit ediyor.
+  - Swift modeli aynı formüllerin çevirisi.
+  - **Eşitlik testi:** TS modeli belirli durumlar için sonuçları JSON fikstüre
+    yazıyor; Swift testleri aynı sonuçları %0,0001 tolerans içinde üretmek
+    zorunda. İki model ayrışırsa CI kırmızı.
+- **Zaman:** model `advance(state, saniye)` ile ilerliyor. Çevrimdışı kazanç aynı
+  fonksiyonla hesaplanıyor; olaylar ve rakip için kapalı formdaki karşılığı kullanılıyor.
+- **Kayıt:** Codable JSON, Application Support altında. Sürüm alanı ve göç fonksiyonu var.
+- **CI** (macOS koşucusu; depo herkese açık olduğu için ücretsiz):
+  - `swift test`;
+  - `xcodegen` ve `xcodebuild` ile simülatörde derleme ve arayüz testi;
+  - arayüz testinin çektiği ekran görüntüleri onaya sunulmak üzere ayrı bir dala yazılıyor.
+
+## 8. Cihaza kurulum (kullanıcı tarafı)
+
+- **Mac + Xcode + ücretsiz Apple kimliği:** kendi iPhone'una kurulum mümkün;
+  imza 7 günde bir yenileniyor.
+- **Apple Developer Program (yıllık 99 $):** TestFlight ile kalıcı kurulum ve
+  başkalarına dağıtım.
+- Mac yoksa uygulama yalnızca CI'daki simülatörde koşuyor; ekran görüntüleri oradan geliyor.
+
+## 9. Denge ölçümü (L1)
+
+`pnpm lite:balance` iki botla ölçüyor. **Aktif bot** her saniye önerilen hamleyi
+alıyor ve kampanyayı hazır oldukça açıyor:
+
+| An | Aktif oyuncu |
+|---|---|
+| 3 dk 31 sn | Kahve açıldı |
+| 12 dk | Merkez, Moda |
+| 54 dk | Sanayi, Deri |
+| 1 sa 48 dk | Liman (×1,5) |
+| 3 sa 40 dk | Teknopark, Teknoloji |
+| 4 sa | gelir 11 M ₺/sn, yıldız önizlemesi 4 |
+
+**Gündelik bot** 3 saatte bir 4 dakika oynuyor, arada çevrimdışı:
+
+| Gün | Kazanç | Yıldız önizlemesi |
+|---|---|---|
+| 1 | 246 Mr ₺ | 15 |
+| 2 | 1,7 Tn ₺ | 41 |
+| 3 | 3,6 Tn ₺ | 59 (gelir ×2,2) |
+| 6 | 11 Tn ₺ | 104 |
+
+Gelir 3. günden sonra yavaşlıyor; holding'e geçmenin anlamlı olduğu yer orası.
+
+Açık konu: gündelik bot (günde 8 oturum) beş zinciri ilk gün açıyor. L3'te
+olaylar ve görevler gelince gündelik tempo yeniden ölçülecek.
+
+## 10. Turlar
+
+| Tur | Kapsam |
+|---|---|
+| L1 | TS modeli + denge raporu; Swift kit + eşitlik testleri; macOS CI |
+| L2 | SwiftUI MVP: şehir, zincir kartları, büyütme, çevrimdışı kazanç, kayıt; simülatör kareleri |
+| L3 | Rakip ve pay, olaylar, meclis kartları, görevler |
+| L4 | Halka arz, holding prestiji, bildirimler, TR/EN, simge, ses ve titreşim cilası |

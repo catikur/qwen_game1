@@ -746,12 +746,24 @@ async function finish(browser, consoleErrors) {
   });
 
   // İmar geri sayımı: tıklanınca kamera bölgeye gider.
+  //
+  // Oyun bu kontrol boyunca DURUYOR. Akarken gündem her gün yeniden
+  // diziliyor (olay, ihale, sayaçlar) ve çip tıklama anında kayıyordu:
+  // PR #44'ün duman koşusunda tıklamayı önce "Moda Haftası", sonra ihale
+  // çipi aldı, sonunda çip DOM'dan söküldü. Ölçülen şey çipin kamerayı
+  // götürmesi; hareketli bir hedefe isabet değil. Haber kontrolü hızı
+  // yeniden 1'e alıyor.
+  await page.evaluate(() => window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 }));
+  await page.waitForTimeout(300);
   const unlockProbe = await page.evaluate(() => {
     const s = window.__capital.getState();
     const district = s.districts.find((d) => d.opensOnDay !== undefined && d.opensOnDay > s.time.day);
     if (!district) return null;
     window.__capital.unlockProbe = { id: district.id, was: district.opensOnDay };
     district.opensOnDay = s.time.day + 12;
+    // Oyun durduğu için gün akmıyor ve arayüz kendiliğinden tazelenmiyor;
+    // başarılı her komut durumu yayınlıyor.
+    window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
     return { id: district.id, cx: (district.x0 + district.x1) / 2, cz: (district.y0 + district.y1) / 2 };
   });
   if (unlockProbe) {
@@ -2211,11 +2223,20 @@ async function finish(browser, consoleErrors) {
   });
   // Yeni kurulduysa inşaat animasyonu bitsin: yükselen binadan duman çıkmıyor.
   if (plantSetup.built) await page.waitForTimeout(1600);
+  // Sahne lensle yeniden senkronlanıyor; puflar ise çizim döngüsünde
+  // hesaplanıyor. Sabit bekleme (400 ms) main'deki yavaş koşucuda (2 FPS)
+  // tek kare bile çizdirmedi ve puf 0 kaldı: yeni kareleri bekliyoruz.
   const resync = async () => {
     await page.evaluate(() => window.__capital.setLens('opportunity'));
     await page.waitForTimeout(150);
     await page.evaluate(() => window.__capital.setLens('none'));
-    await page.waitForTimeout(400);
+    await page.evaluate(async () => {
+      const start = window.__capital.renderInfo().frameCount;
+      const t0 = performance.now();
+      while (window.__capital.renderInfo().frameCount < start + 3 && performance.now() - t0 < 20000) {
+        await new Promise((r) => setTimeout(r, 50));
+      }
+    });
   };
   const saved = await page.evaluate(() => {
     const c = window.__capital;
