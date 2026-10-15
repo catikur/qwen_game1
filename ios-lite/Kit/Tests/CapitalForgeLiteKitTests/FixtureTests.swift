@@ -57,6 +57,18 @@ final class FixtureTests: XCTestCase {
         }
     }
 
+    /// L7: bina kademesi, ticaret yolu, tema.
+    func testTiersRoutesThemes() throws {
+        let tiers = try XCTUnwrap(fixtures["tiers"] as? [[Any]])
+        XCTAssertFalse(tiers.isEmpty)
+        for row in tiers { XCTAssertEqual(Lite.buildingTier(int(row[0])), int(row[1]), "kademe \(row)") }
+        let routes = try XCTUnwrap(fixtures["routes"] as? [[Any]])
+        XCTAssertFalse(routes.isEmpty)
+        for row in routes { XCTAssertEqual(Lite.tradeRoutes(int(row[0]), chain(row[1])), int(row[2]), "ticaret yolu \(row)") }
+        let themes = try XCTUnwrap(fixtures["themes"] as? [[Any]])
+        for row in themes { XCTAssertEqual(Lite.cityTheme(int(row[0])).rawValue, row[1] as? String, "tema \(row)") }
+    }
+
     /// Rakip öngörüsü: aynı kurulum, aynı saniye (ya da ikisinde de "geçemiyor").
     func testOvertakes() throws {
         let cases = try XCTUnwrap(fixtures["overtakes"] as? [[String: Any]])
@@ -79,7 +91,7 @@ final class FixtureTests: XCTestCase {
 
     func testScenarios() throws {
         let scenarios = try XCTUnwrap(fixtures["scenarios"] as? [[String: Any]])
-        XCTAssertEqual(scenarios.count, 3)
+        XCTAssertEqual(scenarios.count, 4)
         for scenario in scenarios {
             try replay(scenario)
         }
@@ -89,7 +101,13 @@ final class FixtureTests: XCTestCase {
         let name = scenario["name"] as? String ?? "?"
         let ops = try XCTUnwrap(scenario["ops"] as? [[String: Any]])
         let snapshots = try XCTUnwrap(scenario["snapshots"] as? [[String: Any]])
-        var state = Lite.newGame()
+        let start = try XCTUnwrap(scenario["start"] as? [String: Any])
+        var state = Lite.newGame(
+            city: int(start["city"]),
+            stars: int(start["stars"]),
+            totalEarned: num(start["totalEarned"]),
+            history: records(start["history"])
+        )
         var played = 0
         for snapshot in snapshots {
             let target = int(snapshot["after"])
@@ -124,6 +142,12 @@ final class FixtureTests: XCTestCase {
         default:
             XCTFail("bilinmeyen adım \(op)")
             return (state, false)
+        }
+    }
+
+    private func records(_ value: Any?) -> [CityRecord] {
+        ((value as? [[String: Any]]) ?? []).map {
+            CityRecord(stars: int($0["stars"]), listed: $0["listed"] as? Bool ?? false, earned: num($0["earned"]))
         }
     }
 
@@ -171,6 +195,14 @@ final class FixtureTests: XCTestCase {
             XCTAssertNil(overtake, "\(label) rakip öngörüsü olmamalı")
         } else {
             close(overtake ?? .nan, num(snapshot["overtake"]), "\(label) rakip öngörüsü")
+        }
+        // L7
+        let history = records(snapshot["history"])
+        XCTAssertEqual(state.history.count, history.count, "\(label) harita")
+        for (mine, theirs) in zip(state.history, history) {
+            XCTAssertEqual(mine.stars, theirs.stars, "\(label) harita yıldız")
+            XCTAssertEqual(mine.listed, theirs.listed, "\(label) harita halka açık")
+            close(mine.earned, theirs.earned, "\(label) harita kazanç")
         }
         let move = Lite.bestMove(state)
         if let best = snapshot["best"] as? [String: Any] {

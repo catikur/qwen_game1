@@ -38,6 +38,13 @@ test('fikstür senaryoları oyunun bütün evrelerini kapsıyor', () => {
   // Rakip öngörüsü: hem "geçemiyor" hem "şu saniyede geçiyor" vakası var.
   assert.ok(fixtures.overtakes.some((c) => c.result === null), 'rakibin geçemediği vaka yok');
   assert.ok(fixtures.overtakes.some((c) => c.result !== null), 'rakibin geçtiği vaka yok');
+  // L7: takımada senaryosunda üç ada da açılmış, şebeke kurulmuş, şehir haritaya geçmiş.
+  const islands = byName['takimada']!.snapshots;
+  const beforeSale = [...islands].reverse().find((snap) => snap.city === 5)!;
+  assert.ok(beforeSale.levels[7]![2]! > 0, 'takımadada havacılık satışı yok');
+  assert.ok(beforeSale.levels[5]![1]! > 0, 'takımadada enerji şebekesi kurulmamış');
+  assert.equal(last('takimada').city, 6, 'takımada şehri satılmamış');
+  assert.equal(last('takimada').history.length, 6, 'satılan şehir haritaya geçmemiş');
   const ops = fixtures.scenarios.flatMap((s) => s.ops.map((o) => o.op));
   for (const kind of ['buy', 'advance', 'offline', 'campaign', 'manager', 'prestige', 'council', 'claim', 'ipo']) {
     assert.ok(ops.includes(kind as never), `${kind} adımı hiç yok`);

@@ -63,6 +63,10 @@ enum Theme {
         case .fashion: (Color(light: 0xDA8BF0, dark: 0xC77EE3), Color(light: 0xB85DD6, dark: 0x9D52C2))
         case .leather: (Color(light: 0xFF7A7A, dark: 0xF06A6A), Color(light: 0xE04848, dark: 0xC43E44))
         case .tech: (Color(light: 0x5CC8FF, dark: 0x4DB6F0), Color(light: 0x2E9CE8, dark: 0x2A88D4))
+        // L7: adalar.
+        case .energy: (Color(light: 0x8EE06A, dark: 0x7FD25E), Color(light: 0x46BF55, dark: 0x3DA84B))
+        case .auto: (Color(light: 0x5ED6C8, dark: 0x4FC6B8), Color(light: 0x22AFA2, dark: 0x1F9A8F))
+        case .aviation: (Color(light: 0xFF8FB8, dark: 0xF07FAA), Color(light: 0xF25D92, dark: 0xD95283))
         }
     }
 
@@ -75,6 +79,9 @@ enum Theme {
         case .fashion: "tshirt.fill"
         case .leather: "handbag.fill"
         case .tech: "cpu.fill"
+        case .energy: "bolt.fill"
+        case .auto: "car.fill"
+        case .aviation: "airplane"
         }
     }
 

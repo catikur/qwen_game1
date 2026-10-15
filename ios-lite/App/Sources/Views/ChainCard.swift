@@ -58,6 +58,13 @@ struct ChainCard: View {
                     .font(Theme.text(12))
                     .foregroundStyle(Theme.warn)
             }
+            if chain == .energy {
+                // L7: şebeke diğer zincirlerin işlemesini hızlandırıyor.
+                let powered = Lite.gridPowered(state)
+                Label(L10n.t(powered ? "energy.gridOn" : "energy.grid"), systemImage: powered ? "bolt.circle.fill" : "bolt.circle")
+                    .font(Theme.text(11.5, .heavy))
+                    .foregroundStyle(powered ? Theme.money : Theme.muted)
+            }
         }
         .glassCard()
         .accessibilityIdentifier("chain-\(chain.rawValue)")

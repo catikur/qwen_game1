@@ -6,8 +6,16 @@
  * yakalıyor ama sebebi en çok burada olur.
  */
 
-export type ChainId = 'bakery' | 'coffee' | 'fashion' | 'leather' | 'tech';
-export type DistrictId = 'bazaar' | 'center' | 'industry' | 'port' | 'technopark';
+export type ChainId = 'bakery' | 'coffee' | 'fashion' | 'leather' | 'tech' | 'energy' | 'auto' | 'aviation';
+export type DistrictId =
+  | 'bazaar'
+  | 'center'
+  | 'industry'
+  | 'port'
+  | 'technopark'
+  | 'energyIsland'
+  | 'autoIsland'
+  | 'airIsland';
 
 /** Kademe sırası: 0 ham, 1 işleme, 2 satış. */
 export type Stage = 0 | 1 | 2;
@@ -24,12 +32,32 @@ export interface ChainDef {
   unlockAt: number;
 }
 
+// ------------------------------------------------------------ L7: takımada
+
+/**
+ * Ada açılışları (ömür boyu kazanç). Teknopark'tan sonra şehir görsel olarak
+ * da büyümeye devam etsin: her ada köprüyle bağlanıyor, tek zincir getiriyor.
+ */
+export const ENERGY_UNLOCK = 80_000_000_000;
+export const AUTO_UNLOCK = 1_500_000_000_000;
+export const AIR_UNLOCK = 30_000_000_000_000;
+
 export const CHAINS: readonly ChainDef[] = [
   { id: 'bakery', district: 'bazaar', price: 1, baseCost: [6, 8, 4], unlockAt: 0 },
   { id: 'coffee', district: 'bazaar', price: 14, baseCost: [84, 112, 56], unlockAt: 3_000 },
   { id: 'fashion', district: 'center', price: 200, baseCost: [1_200, 1_600, 800], unlockAt: 400_000 },
   { id: 'leather', district: 'industry', price: 3_000, baseCost: [18_000, 24_000, 12_000], unlockAt: 60_000_000 },
   { id: 'tech', district: 'technopark', price: 45_000, baseCost: [270_000, 360_000, 180_000], unlockAt: 9_000_000_000 },
+  // L7: takımada. Her ada köprüyle bağlı, tek zincirli.
+  { id: 'energy', district: 'energyIsland', price: 700_000, baseCost: [4_200_000, 5_600_000, 2_800_000], unlockAt: ENERGY_UNLOCK },
+  { id: 'auto', district: 'autoIsland', price: 10_000_000, baseCost: [60_000_000, 80_000_000, 40_000_000], unlockAt: AUTO_UNLOCK },
+  {
+    id: 'aviation',
+    district: 'airIsland',
+    price: 150_000_000,
+    baseCost: [900_000_000, 1_200_000_000, 600_000_000],
+    unlockAt: AIR_UNLOCK,
+  },
 ];
 
 export const CHAIN_IDS: readonly ChainId[] = CHAINS.map((chain) => chain.id);
@@ -45,15 +73,23 @@ export interface DistrictDef {
   unlockAt: number;
   /** Bütün satışlara çarpan (yalnızca Liman'da 1'den büyük). */
   incomeMultiplier: number;
+  /** Hangi adada (L7): 0 ana ada, sonra köprüyle bağlı adalar. */
+  island: number;
 }
 
 export const DISTRICTS: readonly DistrictDef[] = [
-  { id: 'bazaar', unlockAt: 0, incomeMultiplier: 1 },
-  { id: 'center', unlockAt: 400_000, incomeMultiplier: 1 },
-  { id: 'industry', unlockAt: 60_000_000, incomeMultiplier: 1 },
-  { id: 'port', unlockAt: 1_500_000_000, incomeMultiplier: 1.5 },
-  { id: 'technopark', unlockAt: 9_000_000_000, incomeMultiplier: 1 },
+  { id: 'bazaar', unlockAt: 0, incomeMultiplier: 1, island: 0 },
+  { id: 'center', unlockAt: 400_000, incomeMultiplier: 1, island: 0 },
+  { id: 'industry', unlockAt: 60_000_000, incomeMultiplier: 1, island: 0 },
+  { id: 'port', unlockAt: 1_500_000_000, incomeMultiplier: 1.5, island: 0 },
+  { id: 'technopark', unlockAt: 9_000_000_000, incomeMultiplier: 1, island: 0 },
+  { id: 'energyIsland', unlockAt: ENERGY_UNLOCK, incomeMultiplier: 1, island: 1 },
+  { id: 'autoIsland', unlockAt: AUTO_UNLOCK, incomeMultiplier: 1, island: 2 },
+  { id: 'airIsland', unlockAt: AIR_UNLOCK, incomeMultiplier: 1, island: 3 },
 ];
+
+/** Ada sayısı (ana ada dahil). */
+export const ISLAND_COUNT = 4;
 
 /** İlk seviyenin hızı (birim/sn): [ham, işleme, satış]. */
 export const BASE_RATE: readonly [number, number, number] = [1.5, 1.2, 1];
@@ -100,6 +136,13 @@ export const STAR_BONUS = 0.02;
 /** Yıldız = floor(STAR_SCALE × √(şehirdeki ömür boyu kazanç / STAR_UNIT)). */
 export const STAR_SCALE = 1;
 export const STAR_UNIT = 1e9;
+/**
+ * L7: adalar kazancı binlerce kat büyütüyor; karekök orada yıldızı da yüzlerce
+ * yapıp ikinci şehri dakikalara indiriyordu. Bu kazançtan sonra yıldız dördüncü
+ * kökle büyüyor (eğri kesintisiz: eşikte ikisi de √(STAR_SOFT_FROM / STAR_UNIT)).
+ * Dördüncü kök √√ ile alınıyor: `pow` iki dilde son bitte ayrışabilir, √ ayrışmaz.
+ */
+export const STAR_SOFT_FROM = 1e11;
 
 /** Başlangıç kasası. */
 export const STARTING_CASH = 10;
@@ -191,7 +234,10 @@ export type GoalKind =
   | 'ipo'
   | 'port'
   | 'technopark'
-  | 'firstStar';
+  | 'firstStar'
+  | 'energyIsland'
+  | 'autoIsland'
+  | 'airIsland';
 
 export interface GoalDef {
   kind: GoalKind;
@@ -215,6 +261,10 @@ export const GOALS: readonly GoalDef[] = [
   { kind: 'port', rewardSeconds: 240, minReward: 1_000_000 },
   { kind: 'technopark', rewardSeconds: 300, minReward: 5_000_000 },
   { kind: 'firstStar', rewardSeconds: 300, minReward: 10_000_000 },
+  // L7: sona eklendi; eski kayıtların görev sırası kaymıyor.
+  { kind: 'energyIsland', rewardSeconds: 300, minReward: 100_000_000 },
+  { kind: 'autoIsland', rewardSeconds: 360, minReward: 1_000_000_000 },
+  { kind: 'airIsland', rewardSeconds: 420, minReward: 10_000_000_000 },
 ];
 
 /** L4'te eklenen "halka arz" görevinin sırası: L3 kayıtları bu sıradan sonrasını bir kaydırıyor. */
@@ -256,3 +306,21 @@ export const CITY_BONUS = 2;
 
 /** "Rakip seni geçti" eşiği: pay bunun altına inince. */
 export const OVERTAKE_SHARE = 0.5;
+
+// ------------------------------------------------------------ L7: enerji, ticaret yolu, görünüm
+
+/** Enerji adasının şebekesi kurulunca (işleme seviyesi ≥ 1) diğer zincirlerde işleme hızı. */
+export const ENERGY_PROCESSING = 1.3;
+
+/**
+ * Holding haritası: satılan her şehir yeni şehirlere bir ticaret yolu
+ * bırakıyor — kendi öne çıkan zincirine (ilk şehirde fırın) kalıcı +%10.
+ */
+export const TRADE_ROUTE_BONUS = 0.1;
+
+/** Bina kademeleri: bu seviyelerde bina biçim değiştiriyor (dükkân → orta kat → kule → simge yapı). */
+export const BUILDING_TIERS: readonly number[] = [25, 50, 100];
+
+/** Şehir temaları: her holding turu başka bir coğrafyada. */
+export type CityTheme = 'coast' | 'mountain' | 'desert' | 'snow';
+export const CITY_THEMES: readonly CityTheme[] = ['coast', 'mountain', 'desert', 'snow'];

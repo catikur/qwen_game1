@@ -53,7 +53,18 @@ shot night-mid -AppleLanguages "(tr)" -liteScenario mid
 shot night-council -AppleLanguages "(tr)" -liteScenario council
 shot night-listed -AppleLanguages "(tr)" -liteScenario listed -liteScroll market
 shot night-settings -AppleLanguages "(tr)" -liteScenario mid -liteSettings
+WAIT=24 shot night-islands -AppleLanguages "(tr)" -liteScenario islands
+WAIT=24 shot night-island3 -AppleLanguages "(tr)" -liteScenario islands -liteIsland 3
 xcrun simctl ui "$UDID" appearance light
+# L7: takımada, bina kademeleri, temalar, holding haritası.
+WAIT=24 shot tr-islands -AppleLanguages "(tr)" -liteScenario islands
+WAIT=24 shot tr-island1 -AppleLanguages "(tr)" -liteScenario islands -liteIsland 1
+WAIT=24 shot tr-island2 -AppleLanguages "(tr)" -liteScenario islands -liteIsland 2
+WAIT=24 shot tr-island3 -AppleLanguages "(tr)" -liteScenario islands -liteIsland 3
+WAIT=24 shot tr-skyline -AppleLanguages "(tr)" -liteScenario skyline
+shot tr-desert -AppleLanguages "(tr)" -liteScenario desert
+shot tr-snow -AppleLanguages "(tr)" -liteScenario snow
+shot tr-map -AppleLanguages "(tr)" -liteScenario snow -liteMap
 xcrun simctl shutdown "$UDID" || true
 
 # Yatay kare: uygulama yatay döndüyse ya da yatay düzeni 90° çevrilmiş kapta

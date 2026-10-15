@@ -28,9 +28,40 @@ enum Scenario {
             let first = play(seconds: 4 * 3600)
             guard case .success(let next) = Lite.prestige(first.state) else { return first }
             return play(seconds: 20 * 60, from: next)
+        // L7: ikinci şehir (dağ teması), 69 yıldızla üç buçuk saat: üç ada da açık.
+        case "islands": return play(seconds: 3 * 3600 + 30 * 60, from: islandStart)
+        // L7: aynı şehir, birkaç satış kademesi simge yapıda (100+ seviye).
+        case "skyline":
+            var built = play(seconds: 3 * 3600 + 30 * 60, from: islandStart)
+            let cash = built.state.cash
+            built.state.cash = .greatestFiniteMagnitude
+            for chain in [ChainId.bakery, .fashion, .tech, .energy] {
+                let level = built.state[chain: chain].levels[2]
+                if level < 110, case .success(let next) = Lite.buy(built.state, chain, .retail, 110 - level) { built.state = next }
+            }
+            built.state.cash = cash
+            return built
+        // L7: temalar. Üçüncü şehir çöl, dördüncü kar; haritada geçmiş şehirler.
+        case "desert": return play(seconds: 40 * 60, from: Lite.newGame(city: 2, stars: 23, history: Array(sampleHistory.prefix(2))))
+        case "snow": return play(seconds: 40 * 60, from: Lite.newGame(city: 3, stars: 44, history: sampleHistory))
         default: return Built(state: Lite.newGame())
         }
     }
+
+    /// L7 senaryolarının başlangıcı: ilk şehir sekiz saatte satılmış gibi.
+    private static let islandStart = Lite.newGame(
+        city: 1,
+        stars: 69,
+        totalEarned: 1.15e14,
+        history: [CityRecord(stars: 69, listed: true, earned: 1.15e14)]
+    )
+
+    /// Harita için örnek geçmiş: üç satılmış şehir.
+    private static let sampleHistory = [
+        CityRecord(stars: 9, listed: true, earned: 6.3e10),
+        CityRecord(stars: 14, listed: true, earned: 1.6e11),
+        CityRecord(stars: 21, listed: true, earned: 6.1e11),
+    ]
 
     private static func play(
         seconds: Int,

@@ -1,16 +1,19 @@
 import {
   BASE_RATE,
+  BUILDING_TIERS,
   CAMPAIGN,
   CHAIN_BY_ID,
   CHAIN_IDS,
   CITY_BONUS,
   CITY_FEATURED,
+  CITY_THEMES,
   COST_GROWTH,
   COUNCIL_FIRST,
   COUNCIL_GAP,
   COUNCIL_PAIRS,
   CRISIS_MARGIN,
   DISTRICTS,
+  ENERGY_PROCESSING,
   EVENT_DURATION,
   EVENT_FIRST,
   EVENT_GAP,
@@ -43,10 +46,13 @@ import {
   STARTING_CASH,
   STAR_BONUS,
   STAR_SCALE,
+  STAR_SOFT_FROM,
   STAR_UNIT,
   STRIKE_MULTIPLIER,
   TOURISM_MULTIPLIER,
+  TRADE_ROUTE_BONUS,
   type ChainId,
+  type CityTheme,
   type DistrictId,
   type EventKind,
   type GoalDef,
@@ -80,6 +86,16 @@ export interface ActiveEvent {
 export interface ActivePolicy {
   kind: PolicyKind;
   until: number;
+}
+
+/** Holding haritası: satılmış bir şehrin kaydı (L7). */
+export interface CityRecord {
+  /** Satışta kazanılan yıldız. */
+  stars: number;
+  /** Satarken halka açık mıydı. */
+  listed: boolean;
+  /** Şehirdeki ömür boyu kazanç. */
+  earned: number;
 }
 
 export interface LiteState {
@@ -122,9 +138,12 @@ export interface LiteState {
   // ---- L4
   /** Şirket bu şehirde halka arz edildi mi. */
   listed: boolean;
+  // ---- L7
+  /** Satılmış şehirler, sırayla (holding haritası). */
+  history: CityRecord[];
 }
 
-export function newGame(city = 0, stars = 0, totalEarned = 0): LiteState {
+export function newGame(city = 0, stars = 0, totalEarned = 0, history: readonly CityRecord[] = []): LiteState {
   const chains = {} as Record<ChainId, ChainState>;
   for (const id of CHAIN_IDS) chains[id] = { levels: [0, 0, 0], rival: 0 };
   return {
@@ -150,6 +169,7 @@ export function newGame(city = 0, stars = 0, totalEarned = 0): LiteState {
     campaigns: 0,
     goal: 0,
     listed: false,
+    history: history.map((record) => ({ ...record })),
   };
 }
 
@@ -164,6 +184,7 @@ export function cloneState(state: LiteState): LiteState {
     chains,
     event: state.event ? { ...state.event } : null,
     policy: state.policy ? { ...state.policy } : null,
+    history: state.history.map((record) => ({ ...record })),
   };
 }
 
@@ -256,9 +277,23 @@ export function featuredChain(state: LiteState): ChainId | null {
   return CITY_FEATURED[(state.city - 1) % CITY_FEATURED.length]!;
 }
 
-/** Bir zincirin gelirine özel çarpan (şehir bonusu, turizm, moda haftası, tanıtım). */
+/** Satılmış `city` numaralı şehrin bıraktığı ticaret yolu: öne çıkan zinciri, ilk şehirde fırın. */
+export function tradeRouteChain(city: number): ChainId {
+  return city < 1 ? 'bakery' : CITY_FEATURED[(city - 1) % CITY_FEATURED.length]!;
+}
+
+/** `city` numaralı şehre kadar satılmış şehirlerin bu zincire bıraktığı ticaret yolu sayısı. */
+export function tradeRoutes(city: number, chainId: ChainId): number {
+  let count = 0;
+  for (let past = 0; past < city; past++) if (tradeRouteChain(past) === chainId) count++;
+  return count;
+}
+
+/** Bir zincirin gelirine özel çarpan (şehir bonusu, ticaret yolu, turizm, moda haftası, tanıtım). */
 export function chainMultiplier(state: LiteState, chainId: ChainId): number {
   let multiplier = featuredChain(state) === chainId ? CITY_BONUS : 1;
+  const routes = tradeRoutes(state.city, chainId);
+  if (routes > 0) multiplier *= 1 + TRADE_ROUTE_BONUS * routes;
   const tourist = chainId === 'bakery' || chainId === 'coffee';
   if (eventIs(state, 'tourism') && tourist) multiplier *= TOURISM_MULTIPLIER;
   if (eventIs(state, 'fashionWeek') && chainId === 'fashion') multiplier *= FASHION_WEEK_MULTIPLIER;
@@ -266,9 +301,15 @@ export function chainMultiplier(state: LiteState, chainId: ChainId): number {
   return multiplier;
 }
 
-/** Bir kademenin hızına özel çarpan (grev, teşvikler). */
+/** Enerji şebekesi kurulu mu: diğer zincirlerde işleme hızlanıyor. */
+export function gridPowered(state: LiteState): boolean {
+  return state.chains.energy.levels[1] > 0;
+}
+
+/** Bir kademenin hızına özel çarpan (grev, teşvikler, enerji şebekesi). */
 export function stageMultiplier(state: LiteState, chainId: ChainId, stage: Stage): number {
   let multiplier = 1;
+  if (stage === 1 && chainId !== 'energy' && gridPowered(state)) multiplier *= ENERGY_PROCESSING;
   if (stage === 2 && state.event !== null && state.event.kind === 'strike' && state.event.chain === chainId) {
     multiplier *= STRIKE_MULTIPLIER;
   }
@@ -384,14 +425,28 @@ export function steadyIncome(state: LiteState): number {
   return incomePerSecond(calm);
 }
 
-/** Bir kademe +1 seviye olunca gelirin artışı (₺/sn). */
+/**
+ * Bir kademe +1 seviye olunca gelirin artışı (₺/sn). Enerji şebekesinin ilk
+ * seviyesi diğer zincirlerin işlemesini de hızlandırıyor: o artış da sayılıyor
+ * (zincir zincir fark; toplamdan fark almak küçük zincirleri yuvarlamada yutardı).
+ */
 export function upgradeGain(state: LiteState, chainId: ChainId, stage: Stage): number {
   const multiplier = incomeMultiplier(state);
   const levels = state.chains[chainId].levels;
   const before = chainIncomeFor(state, chainId, levels, multiplier);
   const next: [number, number, number] = [levels[0], levels[1], levels[2]];
   next[stage] += 1;
-  return chainIncomeFor(state, chainId, next, multiplier) - before;
+  let gain = chainIncomeFor(state, chainId, next, multiplier) - before;
+  if (chainId === 'energy' && stage === 1 && levels[1] === 0) {
+    const powered = cloneState(state);
+    powered.chains.energy.levels[1] = 1;
+    for (const id of CHAIN_IDS) {
+      if (id === 'energy') continue;
+      const own = state.chains[id].levels;
+      gain += chainIncomeFor(powered, id, own, multiplier) - chainIncomeFor(state, id, own, multiplier);
+    }
+  }
+  return gain;
 }
 
 /**
@@ -483,6 +538,12 @@ export function goalMet(state: LiteState, goal: GoalDef): boolean {
       return districtUnlocked(state, 'technopark');
     case 'firstStar':
       return prestigePreview(state) >= 1;
+    case 'energyIsland':
+      return districtUnlocked(state, 'energyIsland');
+    case 'autoIsland':
+      return districtUnlocked(state, 'autoIsland');
+    case 'airIsland':
+      return districtUnlocked(state, 'airIsland');
   }
 }
 
@@ -693,7 +754,12 @@ export function applyOffline(state: LiteState, elapsed: number): OfflineResult {
 /** Yıldız: halka açık şirket daha yüksek değerlemeyle satılıyor. */
 export function starsFor(earned: number, listed = false): number {
   const premium = listed ? LISTED_STAR_MULTIPLIER : 1;
-  return Math.floor(STAR_SCALE * Math.sqrt(Math.max(0, earned) / STAR_UNIT) * premium);
+  const value = Math.max(0, earned);
+  const raw =
+    value <= STAR_SOFT_FROM
+      ? Math.sqrt(value / STAR_UNIT)
+      : Math.sqrt(STAR_SOFT_FROM / STAR_UNIT) * Math.sqrt(Math.sqrt(value / STAR_SOFT_FROM));
+  return Math.floor(STAR_SCALE * raw * premium);
 }
 
 /** Şehri satınca kazanılacak yıldız. */
@@ -701,11 +767,12 @@ export function prestigePreview(state: LiteState): number {
   return starsFor(state.earned, state.listed);
 }
 
-/** Şehri sat, holding yeni şehre geçsin: sıfırdan başla, yıldızları koru. */
+/** Şehri sat, holding yeni şehre geçsin: sıfırdan başla, yıldızları koru, şehir haritaya geçsin. */
 export function prestige(state: LiteState): ActionResult {
   const gained = prestigePreview(state);
   if (gained < 1) return { ok: false, reason: 'locked' };
-  return { ok: true, state: newGame(state.city + 1, state.stars + gained, state.totalEarned) };
+  const record: CityRecord = { stars: gained, listed: state.listed, earned: state.earned };
+  return { ok: true, state: newGame(state.city + 1, state.stars + gained, state.totalEarned, [...state.history, record]) };
 }
 
 // ------------------------------------------------------------ bildirim
@@ -733,4 +800,24 @@ export function firstOvertake(state: LiteState, horizon: number): number | null 
     for (const id of leading) if (chainReport(current, id).share < OVERTAKE_SHARE) return elapsed;
   }
   return null;
+}
+
+// ------------------------------------------------------------ L7: görünüm
+
+/** Adanın açık olup olmadığı (0 ana ada, hep açık). */
+export function islandUnlocked(state: LiteState, island: number): boolean {
+  return DISTRICTS.some((district) => district.island === island && state.earned >= district.unlockAt);
+}
+
+/** Bina kademesi: 0 boş parsel, 1 dükkân, 2 orta kat, 3 kule, 4 simge yapı. */
+export function buildingTier(level: number): number {
+  if (level <= 0) return 0;
+  let tier = 1;
+  for (const threshold of BUILDING_TIERS) if (level >= threshold) tier++;
+  return tier;
+}
+
+/** Şehrin teması: holding turları sırayla sahil, dağ, çöl, kar. */
+export function cityTheme(city: number): CityTheme {
+  return CITY_THEMES[city % CITY_THEMES.length]!;
 }

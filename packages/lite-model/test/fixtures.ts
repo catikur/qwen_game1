@@ -16,9 +16,11 @@ import {
   advance,
   applyOffline,
   bestMove,
+  buildingTier,
   buy,
   buyManager,
   chooseCouncil,
+  cityTheme,
   claimGoal,
   currentGoal,
   firstOvertake,
@@ -33,8 +35,10 @@ import {
   stageRate,
   startCampaign,
   starsFor,
+  tradeRoutes,
   upgradeCost,
   type ChainId,
+  type CityRecord,
   type LiteState,
   type Stage,
 } from '../src/index';
@@ -79,7 +83,18 @@ export interface Snapshot {
   listed: boolean;
   /** `firstOvertake(state, OVERTAKE_HORIZON)`. */
   overtake: number | null;
+  // L7
+  history: CityRecord[];
 }
+
+/** Takımada senaryosunun başlangıcı: daha önce satılmış beş şehir. */
+const ISLAND_HISTORY: CityRecord[] = [
+  { stars: 9, listed: true, earned: 6.2e10 },
+  { stars: 12, listed: true, earned: 3.1e11 },
+  { stars: 11, listed: false, earned: 5.5e11 },
+  { stars: 14, listed: true, earned: 1.3e12 },
+  { stars: 14, listed: true, earned: 1.9e12 },
+];
 
 /** Fikstürde rakip öngörüsünün ufku (sn). */
 export const OVERTAKE_HORIZON = 4 * 3600;
@@ -96,6 +111,8 @@ export interface OvertakeCase {
 
 export interface Scenario {
   name: string;
+  /** Başlangıç: `newGame(city, stars, totalEarned, history)`. */
+  start: { city: number; stars: number; totalEarned: number; history: CityRecord[] };
   ops: Array<Op & { ok: boolean }>;
   snapshots: Snapshot[];
 }
@@ -110,6 +127,12 @@ export interface Fixtures {
   stars: Array<[number, number, number]>;
   managerCosts: Array<[number, number]>;
   overtakes: OvertakeCase[];
+  /** L7: [seviye, bina kademesi] */
+  tiers: Array<[number, number]>;
+  /** L7: [şehir, zincir, ticaret yolu sayısı] */
+  routes: Array<[number, ChainId, number]>;
+  /** L7: [şehir, tema] */
+  themes: Array<[number, string]>;
   scenarios: Scenario[];
 }
 
@@ -140,6 +163,7 @@ function snapshot(state: LiteState, after: number): Snapshot {
     goal: state.goal,
     listed: state.listed,
     overtake: firstOvertake(state, OVERTAKE_HORIZON),
+    history: state.history.map((record) => ({ ...record })),
   };
 }
 
@@ -186,8 +210,15 @@ function apply(state: LiteState, op: Op): { state: LiteState; ok: boolean } {
  * holding adımları serpiştiriliyor. Kararlar TS'te veriliyor, adımlar
  * kaydediliyor.
  */
-function record(name: string, rounds: number, dt: number, extras: (round: number) => Op[], every: number): Scenario {
-  let state = newGame();
+function record(
+  name: string,
+  rounds: number,
+  dt: number,
+  extras: (round: number) => Op[],
+  every: number,
+  start: LiteState = newGame(),
+): Scenario {
+  let state = start;
   const ops: Scenario['ops'] = [];
   const snapshots: Snapshot[] = [snapshot(state, 0)];
   const run = (op: Op) => {
@@ -214,7 +245,8 @@ function record(name: string, rounds: number, dt: number, extras: (round: number
     if ((round + 1) % every === 0) snapshots.push(snapshot(state, ops.length));
   }
   snapshots.push(snapshot(state, ops.length));
-  return { name, ops, snapshots };
+  const begin = { city: start.city, stars: start.stars, totalEarned: start.totalEarned, history: start.history.map((r) => ({ ...r })) };
+  return { name, start: begin, ops, snapshots };
 }
 
 export function buildFixtures(): Fixtures {
@@ -238,7 +270,7 @@ export function buildFixtures(): Fixtures {
     }
   }
 
-  const stars: Fixtures['stars'] = [0, 1, 999_999_999, 1e9, 3.99e9, 4e9, 4e12, 7.3e15].map((e) => [
+  const stars: Fixtures['stars'] = [0, 1, 999_999_999, 1e9, 3.99e9, 4e9, 9.99e10, 1e11, 1.07e11, 4e12, 7.3e15, 2.5e18].map((e) => [
     e,
     starsFor(e),
     starsFor(e, true),
@@ -296,7 +328,29 @@ export function buildFixtures(): Fixtures {
       },
       20,
     ),
+    // L7: takımada. Beşinci şehir (beş ticaret yolu, öne çıkan fırın), 60
+    // yıldızla: adalar açılıyor, enerji şebekesi kuruluyor, şehir satılıyor.
+    record(
+      'takimada',
+      150,
+      120,
+      (round) => {
+        const ops: Op[] = [];
+        if (round % 25 === 24) ops.push({ op: 'offline', seconds: 9_000 });
+        if (round % 15 === 14) ops.push({ op: 'manager' });
+        if (round % 9 === 0) ops.push({ op: 'campaign' });
+        if (round === 140) ops.push({ op: 'prestige' });
+        return ops;
+      },
+      15,
+      newGame(5, 60, 4e14, ISLAND_HISTORY),
+    ),
   ];
+
+  const tiers: Fixtures['tiers'] = [0, 1, 24, 25, 49, 50, 99, 100, 777].map((level) => [level, buildingTier(level)]);
+  const routes: Fixtures['routes'] = [];
+  for (const city of [0, 1, 2, 5, 6, 13]) for (const id of CHAIN_IDS) routes.push([city, id, tradeRoutes(city, id)]);
+  const themes: Fixtures['themes'] = [0, 1, 2, 3, 4, 9].map((city) => [city, cityTheme(city)]);
 
   return {
     generatedBy: 'packages/lite-model/test/write-fixtures.ts — elle düzenlenmez',
@@ -306,6 +360,9 @@ export function buildFixtures(): Fixtures {
     stars,
     managerCosts,
     overtakes,
+    tiers,
+    routes,
+    themes,
     scenarios,
   };
 }

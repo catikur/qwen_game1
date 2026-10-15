@@ -119,6 +119,7 @@ final class ModelTests: XCTestCase {
         var state = Lite.advance(must(Lite.buy(rich(), .bakery, .retail, 7)), 42)
         state.listed = true
         state.goal = 13
+        state.history = [CityRecord(stars: 9, listed: true, earned: 6.2e10)]
         let data = try JSONEncoder().encode(state)
         XCTAssertEqual(try JSONDecoder().decode(LiteState.self, from: data), state)
     }
@@ -170,13 +171,14 @@ final class ModelTests: XCTestCase {
 
     func testListedCompanySellsForMoreStars() {
         var state = ipoReady()
-        state.earned = 4e12
-        XCTAssertEqual(Lite.prestigePreview(state), 63)
+        state.earned = 1e11
+        XCTAssertEqual(Lite.prestigePreview(state), 10)
         let listed = must(Lite.goPublic(state))
-        XCTAssertEqual(Lite.prestigePreview(listed), 75)
+        XCTAssertEqual(Lite.prestigePreview(listed), 12)
         let next = must(Lite.prestige(listed))
-        XCTAssertEqual(next.stars, 75)
+        XCTAssertEqual(next.stars, 12)
         XCTAssertFalse(next.listed)
+        XCTAssertEqual(next.history, [CityRecord(stars: 12, listed: true, earned: 1e11)])
     }
 
     func testFeaturedChainRotates() {
@@ -209,6 +211,76 @@ final class ModelTests: XCTestCase {
             XCTAssertGreaterThanOrEqual(Lite.chainReport(Lite.applyOffline(hard, at - 30).state, .bakery).share, 0.5)
         }
         XCTAssertNil(Lite.firstOvertake(setup(6, 9_000), 2 * 3600))
+    }
+
+    // MARK: - L7
+
+    func testStarCurveSoftensAfterThreshold() {
+        XCTAssertEqual(Lite.starsFor(1e11), 10)
+        XCTAssertEqual(Lite.starsFor(1.6e12), 20)
+        XCTAssertEqual(Lite.starsFor(1e15), 100)
+        XCTAssertEqual(Lite.starsFor(1e15, listed: true), 120)
+        XCTAssertEqual(Lite.starsFor(LiteContent.starSoftFrom * 0.999999), 9)
+        XCTAssertEqual(Lite.starsFor(LiteContent.starSoftFrom * 1.000001), 10)
+    }
+
+    func testIslandsUnlockInOrder() {
+        var state = Lite.newGame()
+        state.earned = LiteContent.energyUnlock - 1
+        XCTAssertTrue(Lite.islandUnlocked(state, 0))
+        XCTAssertFalse(Lite.islandUnlocked(state, 1))
+        XCTAssertFalse(Lite.chainUnlocked(state, .energy))
+        state.earned = LiteContent.energyUnlock
+        XCTAssertTrue(Lite.chainUnlocked(state, .energy))
+        XCTAssertFalse(Lite.chainUnlocked(state, .auto))
+        state.earned = LiteContent.airUnlock
+        XCTAssertTrue(Lite.chainUnlocked(state, .aviation))
+        XCTAssertTrue(Lite.islandUnlocked(state, 3))
+        XCTAssertEqual(ChainId.allCases.count, 8)
+    }
+
+    func testEnergyGridSpeedsUpOtherProcessing() {
+        var state = Lite.newGame()
+        state.earned = LiteContent.energyUnlock
+        state.cash = 1e9
+        state = must(Lite.buy(state, .bakery, .process, 10))
+        state = must(Lite.buy(state, .energy, .retail, 1))
+        state.cash = 1e9
+        let before = Lite.chainReport(state, .bakery).rates[1]
+        XCTAssertFalse(Lite.gridPowered(state))
+        let gain = Lite.upgradeGain(state, .energy, .process)
+        let powered = must(Lite.buy(state, .energy, .process, 1))
+        XCTAssertTrue(Lite.gridPowered(powered))
+        XCTAssertEqual(Lite.chainReport(powered, .bakery).rates[1], before * LiteContent.energyProcessing, accuracy: 1e-9)
+        XCTAssertEqual(Lite.chainReport(powered, .energy).rates[1], Lite.stageRate(.process, 1))
+        let actual = Lite.incomePerSecond(powered) - Lite.incomePerSecond(state)
+        XCTAssertEqual(gain, actual, accuracy: 1e-9 * max(1, abs(actual)))
+    }
+
+    func testTradeRoutesTiersThemes() {
+        XCTAssertEqual(Lite.tradeRoutes(0, .bakery), 0)
+        XCTAssertEqual(Lite.tradeRoutes(1, .bakery), 1)
+        XCTAssertEqual(Lite.tradeRoutes(6, .bakery), 2)
+        XCTAssertEqual(Lite.tradeRoutes(6, .coffee), 1)
+        XCTAssertEqual(Lite.tradeRoutes(13, .energy), 0)
+        XCTAssertEqual([0, 1, 24, 25, 49, 50, 99, 100, 777].map(Lite.buildingTier), [0, 1, 1, 2, 2, 3, 3, 4, 4])
+        XCTAssertEqual((0...4).map(Lite.cityTheme), [.coast, .mountain, .desert, .snow, .coast])
+    }
+
+    func testIslandGoalsAppendedAtEnd() {
+        XCTAssertEqual(LiteContent.goalIpoIndex, 11)
+        XCTAssertEqual(LiteContent.goals.suffix(4).map(\.kind), [.firstStar, .energyIsland, .autoIsland, .airIsland])
+    }
+
+    /// L6 kaydı: beş zincir, harita yok. Ada zincirleri boş tamamlanıyor.
+    func testL6SaveGainsIslandChains() throws {
+        let old = #"{"version":1,"city":2,"stars":5,"cash":1,"earned":1,"totalEarned":1,"clock":1,"manager":0,"campaignUntil":0,"campaignReadyAt":0,"chains":[{"levels":[3,2,1],"rival":0.5},{"levels":[0,0,0],"rival":0},{"levels":[0,0,0],"rival":0},{"levels":[0,0,0],"rival":0},{"levels":[0,0,0],"rival":0}],"nextEventAt":240,"events":0,"nextCouncilAt":600,"sessions":0,"policies":0,"campaigns":0,"goal":4,"listed":false}"#
+        let state = try JSONDecoder().decode(LiteState.self, from: Data(old.utf8))
+        XCTAssertEqual(state.chains.count, ChainId.allCases.count)
+        XCTAssertEqual(state[chain: .bakery].levels, [3, 2, 1])
+        XCTAssertEqual(state[chain: .aviation], ChainState())
+        XCTAssertEqual(state.history, [])
+        XCTAssertEqual(state.goal, 4)
     }
 }
 

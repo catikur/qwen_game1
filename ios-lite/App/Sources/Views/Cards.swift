@@ -38,10 +38,12 @@ struct ManagerCard: View {
     }
 }
 
-/// Holding: şehri sat, yıldız kazan, yeni şehre geç.
+/// Holding: şehri sat, yıldız kazan, yeni şehre geç. L7: satılan şehir
+/// haritaya geçiyor ve öne çıkan zincirine ticaret yolu bırakıyor.
 struct HoldingCard: View {
     @Environment(GameStore.self) private var store
     @Binding var confirm: Bool
+    @Binding var showMap: Bool
 
     var body: some View {
         let state = store.state
@@ -51,6 +53,16 @@ struct HoldingCard: View {
                 IconTile(symbol: "building.2.fill", colors: (Color(hex: 0xFFE08A), Color(hex: 0xFFB938)), size: 34)
                 Text(L10n.t("holding.title")).font(Theme.display(18)).foregroundStyle(Theme.ink)
                 Spacer()
+                Button {
+                    showMap = true
+                } label: {
+                    Label(L10n.t("map.open"), systemImage: "map.fill")
+                        .font(Theme.display(12.5))
+                        .padding(.horizontal, 10)
+                        .frame(minHeight: 30)
+                }
+                .buttonStyle(.glossy(Theme.blue, radius: 11, edge: 3))
+                .accessibilityIdentifier("holding-map")
                 HStack(spacing: 3) {
                     Image(systemName: "star.fill").font(.system(size: 11, weight: .bold)).foregroundStyle(Color(hex: 0xFFB938))
                     Text(L10n.t("holding.stars", state.stars, state.stars * 2))
@@ -62,10 +74,13 @@ struct HoldingCard: View {
                 .font(Theme.text(12))
                 .foregroundStyle(Theme.muted)
             if let next = Lite.featuredChain(Lite.newGame(city: state.city + 1)) {
-                Text(L10n.t("holding.next", L10n.chainName(next)))
+                Text(L10n.t("holding.theme", L10n.t("theme.\(Lite.cityTheme(state.city + 1).rawValue)")) + " · " + L10n.t("holding.next", L10n.chainName(next)))
                     .font(Theme.text(11.5, .heavy))
                     .foregroundStyle(Theme.ink)
             }
+            Text(L10n.t("holding.route", L10n.chainName(Lite.tradeRouteChain(state.city))))
+                .font(Theme.text(11.5))
+                .foregroundStyle(Theme.muted)
             Button {
                 confirm = true
             } label: {
