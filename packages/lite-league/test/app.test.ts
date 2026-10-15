@@ -115,7 +115,7 @@ test('gönderim: gerçek oyun kabul, sık gönderim, yanlış hafta ve hile redd
   const first = await call(db, THURSDAY, 'POST', '/v1/reports', report(state, THURSDAY, state.earned), me);
   assert.equal(first.status, 200, JSON.stringify(first.body));
   assert.equal(first.body.group.length, 1);
-  assert.deepEqual(first.body.group[0], { rank: 1, name: 'Atilla', score: state.earned, me: true, move: 1 });
+  assert.deepEqual(first.body.group[0], { rank: 1, name: 'Atilla', score: state.earned, me: true, move: 1, platform: 'ios' });
 
   assert.equal((await call(db, THURSDAY + 10_000, 'POST', '/v1/reports', report(state, THURSDAY, state.earned), me)).status, 429);
 

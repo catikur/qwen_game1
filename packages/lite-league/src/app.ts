@@ -6,7 +6,9 @@
  *
  * Uç noktalar (JSON):
  * - `GET  /v1/health`                → hafta
- * - `POST /v1/players {name}`        → anonim hesap: {id, token}
+ * - `POST /v1/players {name, platform?, turnstile?}` → anonim hesap: {id, token}.
+ *   Web ve Android'de ad isteğe bağlı (lige katılınca veriliyor) ve hesabın
+ *   oyunu sunucuda (`/v1/sync`).
  * - `PATCH /v1/players/me {name}`    → ad değiştir
  * - `DELETE /v1/players/me`        → hesabı ve tüm izlerini sil
  * - `POST /v1/attest/challenge`      → App Attest için tek seferlik challenge
@@ -18,8 +20,14 @@
  * - `POST /v1/leagues {name}`        → davet kodlu lig kur
  * - `POST /v1/leagues/join {code}`   → koda katıl
  * - `DELETE /v1/leagues/:code`       → ligden ayrıl
+ * - `GET  /v1/save`                  → sunucudaki oyun (web, Android, taşınan hesap)
+ * - `POST /v1/sync {base, batch, ops, rest}` → günlüğü oynat (`saves.ts`)
+ * - `POST /v1/link`                  → başka cihaza taşıma kodu (10 dakika)
+ * - `POST /v1/link/claim {code, platform}` → kodla hesabı bu cihaza al
+ * - `GET  /v1/stars`                 → bütün platformların yıldız tablosu
  *
- * Kimlik: `Authorization: Bearer <id>.<token>`. Token yalnızca özetiyle saklanıyor.
+ * Kimlik: `Authorization: Bearer <id>.<token>`. Token yalnızca özetiyle
+ * saklanıyor; bir hesabın birden çok cihazı olabiliyor (`tokens`).
  */
 import {
   CHAIN_IDS,
@@ -33,10 +41,17 @@ import {
 } from '../../lite-model/src/index';
 import { APPLE_ATTEST, AttestError, fromBase64, toBase64, verifyAssertion, verifyAttestation, type AttestConfig } from './attest';
 import type { Db } from './db';
+import { HttpError, base64, json, preflight, randomToken, readBody, readJson, sha256, shortCode, withCors } from './http';
+import { MAX_SYNC_BODY, PLATFORMS, createSave, loadSave, sync, touchProfile, type Platform } from './saves';
 
 export interface Options {
   /** App Attest: uygulama kimliği ve güvenilen kök (testler kendi kökünü veriyor). */
   attest: AttestConfig;
+  /**
+   * Cloudflare Turnstile (bot karşı): web ve Android hesabı açarken. Yoksa
+   * (sır tanımlı değil) denetim yok.
+   */
+  turnstile?: (token: string, ip: string | null) => Promise<boolean>;
 }
 
 const DEFAULTS: Options = { attest: APPLE_ATTEST };
@@ -47,11 +62,12 @@ const DEFAULTS: Options = { attest: APPLE_ATTEST };
 const CHALLENGE_TTL = 30 * 60_000;
 
 const WEEK_MS = 7 * 86_400_000;
-const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-const MAX_BODY = 8_192;
+/** Cihaz taşıma kodunun geçerliliği (ms). */
+const LINK_TTL = 10 * 60_000;
 
 interface Player {
   id: string;
+  /** Boş: web ve Android'de lige henüz katılmamış (tablolarda görünmüyor). */
   name: string;
   token_hash: string;
   division: number;
@@ -66,63 +82,6 @@ interface ReportRow {
   city_earned: number;
   levels: string;
   at: number;
-}
-
-class HttpError extends Error {
-  constructor(
-    readonly status: number,
-    readonly code: string,
-    readonly extra: Record<string, unknown> = {},
-  ) {
-    super(code);
-  }
-}
-
-function json(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json; charset=utf-8' } });
-}
-
-/** Gövde: ham baytlar (App Attest onayı bunların üstüne) ve JSON nesnesi. */
-async function readBody(request: Request): Promise<{ bytes: Uint8Array<ArrayBuffer>; value: Record<string, unknown> }> {
-  const bytes = new Uint8Array(await request.arrayBuffer());
-  if (bytes.length > MAX_BODY) throw new HttpError(413, 'body');
-  try {
-    const value = JSON.parse(new TextDecoder().decode(bytes)) as unknown;
-    if (value && typeof value === 'object' && !Array.isArray(value)) return { bytes, value: value as Record<string, unknown> };
-  } catch {
-    // aşağıda
-  }
-  throw new HttpError(400, 'body');
-}
-
-async function readJson(request: Request): Promise<Record<string, unknown>> {
-  return (await readBody(request)).value;
-}
-
-function base64(text: unknown): Uint8Array<ArrayBuffer> | null {
-  if (typeof text !== 'string' || text.length === 0 || text.length > MAX_BODY) return null;
-  try {
-    return fromBase64(text);
-  } catch {
-    return null;
-  }
-}
-
-function hex(bytes: Uint8Array): string {
-  return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
-}
-
-async function sha256(text: string): Promise<string> {
-  return hex(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text))));
-}
-
-function randomToken(): string {
-  return hex(crypto.getRandomValues(new Uint8Array(32)));
-}
-
-function inviteCode(): string {
-  const bytes = crypto.getRandomValues(new Uint8Array(6));
-  return Array.from(bytes, (b) => CODE_ALPHABET[b % CODE_ALPHABET.length]).join('');
 }
 
 /** Ad: harf, rakam, boşluk, alt çizgi, tire; baştaki/sondaki boşluk kırpılıyor. */
@@ -174,12 +133,24 @@ function acceptName(raw: unknown, max?: number): string {
   return name;
 }
 
-async function authenticate(request: Request, db: Db): Promise<Player | null> {
+interface Session {
+  player: Player;
+  /** Bu cihazın platformu (ilk cihaz iOS uygulaması: `players.token_hash`). */
+  platform: Platform;
+}
+
+async function authenticate(request: Request, db: Db): Promise<Session | null> {
   const match = /^Bearer ([0-9a-f-]{36})\.([0-9a-f]{64})$/.exec(request.headers.get('authorization') ?? '');
   if (!match) return null;
   const player = await db.first<Player>('SELECT * FROM players WHERE id = ?', match[1]!);
   if (!player) return null;
-  return player.token_hash === (await sha256(match[2]!)) ? player : null;
+  const hash = await sha256(match[2]!);
+  if (player.token_hash === hash) {
+    const first = await db.first<{ platform: Platform }>('SELECT platform FROM tokens WHERE token_hash = ?', hash);
+    return { player, platform: first?.platform ?? 'ios' };
+  }
+  const device = await db.first<{ platform: Platform }>('SELECT platform FROM tokens WHERE token_hash = ? AND player_id = ?', hash, player.id);
+  return device ? { player, platform: device.platform } : null;
 }
 
 function toReport(row: ReportRow): LeagueReport {
@@ -187,16 +158,23 @@ function toReport(row: ReportRow): LeagueReport {
 }
 
 export async function handle(request: Request, db: Db, now: number, options: Options = DEFAULTS): Promise<Response> {
+  const origin = request.headers.get('origin');
+  if (request.method === 'OPTIONS') return preflight(origin);
+  return withCors(await route(request, db, now, options), origin);
+}
+
+async function route(request: Request, db: Db, now: number, options: Options): Promise<Response> {
   const path = new URL(request.url).pathname.replace(/\/+$/, '');
   const route = `${request.method} ${path}`;
   try {
     if (route === 'GET /v1/health') return json({ ok: true, week: weekId(now) });
-    if (route === 'POST /v1/players') return await register(request, db, now);
-    const player = await authenticate(request, db);
-    if (!player) throw new HttpError(401, 'auth');
+    if (route === 'POST /v1/players') return await register(request, db, now, options);
+    if (route === 'POST /v1/link/claim') return await claimLink(request, db, now);
+    const session = await authenticate(request, db);
+    if (!session) throw new HttpError(401, 'auth');
     // Geçen haftanın bölüm değişimi henüz yapılmadıysa şimdi (cron kaçarsa da doğru kalsın).
     await rollover(db, now);
-    const me = (await db.first<Player>('SELECT * FROM players WHERE id = ?', player.id))!;
+    const me = (await db.first<Player>('SELECT * FROM players WHERE id = ?', session.player.id))!;
     switch (route) {
       case 'PATCH /v1/players/me':
         return await rename(request, db, me);
@@ -216,6 +194,17 @@ export async function handle(request: Request, db: Db, now: number, options: Opt
         return await createLeague(request, db, me, now);
       case 'POST /v1/leagues/join':
         return await joinLeague(request, db, me, now);
+      case 'GET /v1/save': {
+        const save = await loadSave(db, me.id);
+        if (!save) throw new HttpError(404, 'save');
+        return json(save);
+      }
+      case 'POST /v1/sync':
+        return await syncSave(request, db, me, session.platform, now);
+      case 'POST /v1/link':
+        return await createLink(db, me, now);
+      case 'GET /v1/stars':
+        return json(await starsBoard(db, me));
     }
     const leave = /^DELETE \/v1\/leagues\/([A-Z0-9]{6})$/.exec(route);
     if (leave) return await leaveLeague(db, me, leave[1]!);
@@ -228,19 +217,120 @@ export async function handle(request: Request, db: Db, now: number, options: Opt
 
 // ------------------------------------------------------------ hesap
 
-async function register(request: Request, db: Db, now: number): Promise<Response> {
+function platformOf(raw: unknown): Platform {
+  if (raw === undefined) return 'ios';
+  if (typeof raw === 'string' && (PLATFORMS as readonly string[]).includes(raw)) return raw as Platform;
+  throw new HttpError(400, 'platform');
+}
+
+/**
+ * Hesap aç. iOS (eski uygulama da): ad zorunlu, oyun cihazda. Web ve
+ * Android: ad isteğe bağlı, oyun sunucuda sıfırdan başlıyor; Turnstile açıksa
+ * bot denetimi.
+ */
+async function register(request: Request, db: Db, now: number, options: Options): Promise<Response> {
   const body = await readJson(request);
-  const name = acceptName(body.name);
+  const platform = platformOf(body.platform);
+  const name = platform === 'ios' || (body.name !== undefined && body.name !== '') ? acceptName(body.name) : '';
+  if (platform !== 'ios' && options.turnstile) {
+    const token = typeof body.turnstile === 'string' ? body.turnstile : '';
+    if (!token || !(await options.turnstile(token, request.headers.get('cf-connecting-ip')))) throw new HttpError(403, 'turnstile');
+  }
   const id = crypto.randomUUID();
   const token = randomToken();
-  await db.run('INSERT INTO players (id, name, token_hash, division, created_at) VALUES (?, ?, ?, 0, ?)', id, name, await sha256(token), now);
-  return json({ id, token, name, division: 0 }, 201);
+  const hash = await sha256(token);
+  await db.batch([
+    ['INSERT INTO players (id, name, token_hash, division, created_at) VALUES (?, ?, ?, 0, ?)', id, name, hash, now],
+    ['INSERT INTO tokens (token_hash, player_id, platform, created_at) VALUES (?, ?, ?, ?)', hash, id, platform, now],
+  ]);
+  await touchProfile(db, id, platform, 0, 0, now);
+  const save = platform === 'ios' ? null : await createSave(db, id, now);
+  return json({ id, token, name, division: 0, ...(save ? { save } : {}) }, 201);
 }
 
 async function rename(request: Request, db: Db, me: Player): Promise<Response> {
   const name = acceptName((await readJson(request)).name);
   await db.run('UPDATE players SET name = ? WHERE id = ?', name, me.id);
   return json({ name, division: me.division });
+}
+
+// ------------------------------------------------------------ sunucu yetkili kayıt (L10)
+
+async function syncSave(request: Request, db: Db, me: Player, platform: Platform, now: number): Promise<Response> {
+  const body = await readJson(request, MAX_SYNC_BODY);
+  const result = await sync(db, me.id, now, body);
+  await touchProfile(db, me.id, platform, result.state.stars, result.state.city, now);
+  // Lige katılmış (adı olan) oyuncu bu haftanın grubunda.
+  if (me.name !== '') await joinGroup(db, me, weekId(now));
+  return json(result);
+}
+
+/** Başka cihaza taşıma: tek seferlik 6 harfli kod; öncekini geçersiz kılıyor. */
+async function createLink(db: Db, me: Player, now: number): Promise<Response> {
+  await db.run('DELETE FROM links WHERE player_id = ? OR expires_at < ?', me.id, now);
+  for (let attempt = 0; attempt < 6; attempt++) {
+    const code = shortCode();
+    if ((await db.run('INSERT OR IGNORE INTO links (code, player_id, expires_at) VALUES (?, ?, ?)', code, me.id, now + LINK_TTL)) === 0) continue;
+    return json({ code, expiresAt: now + LINK_TTL }, 201);
+  }
+  throw new HttpError(503, 'code');
+}
+
+/** Kodu giren cihaz hesaba yeni bir token alıyor; öbür cihazlar da çalışmayı sürdürüyor. */
+async function claimLink(request: Request, db: Db, now: number): Promise<Response> {
+  const body = await readJson(request);
+  const platform = platformOf(body.platform);
+  const code = typeof body.code === 'string' ? body.code.trim().toUpperCase() : '';
+  const link = /^[A-Z0-9]{6}$/.test(code) ? await db.first<{ player_id: string; expires_at: number }>('SELECT player_id, expires_at FROM links WHERE code = ?', code) : null;
+  // Tek seferlik: tutsa da tutmasa da siliniyor.
+  if (link) await db.run('DELETE FROM links WHERE code = ?', code);
+  if (!link || link.expires_at < now) throw new HttpError(404, 'code');
+  const player = await db.first<Player>('SELECT * FROM players WHERE id = ?', link.player_id);
+  if (!player) throw new HttpError(404, 'code');
+  const token = randomToken();
+  await db.run('INSERT INTO tokens (token_hash, player_id, platform, created_at) VALUES (?, ?, ?, ?)', await sha256(token), player.id, platform, now);
+  const save = await loadSave(db, player.id);
+  return json({ id: player.id, token, name: player.name, division: player.division, ...(save ? { save } : {}) }, 201);
+}
+
+/** Holding yıldızı tablosu: bütün platformlar, dünya ilk 50 ve özel lig arkadaşları. */
+async function starsBoard(db: Db, me: Player) {
+  const top = await db.all<{ id: string; name: string; stars: number; platform: string }>(
+    `SELECT p.id AS id, p.name AS name, f.stars AS stars, f.platform AS platform
+       FROM profiles f JOIN players p ON p.id = f.player_id
+      WHERE p.name <> ''
+      ORDER BY f.stars DESC, p.created_at ASC, p.id ASC
+      LIMIT 50`,
+  );
+  const mine = await db.first<{ stars: number; platform: string }>('SELECT stars, platform FROM profiles WHERE player_id = ?', me.id);
+  const stars = mine?.stars ?? 0;
+  const above = await db.first<{ n: number }>(
+    `SELECT COUNT(*) AS n FROM profiles f JOIN players p ON p.id = f.player_id WHERE p.name <> '' AND f.stars > ?`,
+    stars,
+  );
+  const friends = await db.all<{ id: string; name: string; stars: number | null; platform: string | null }>(
+    `SELECT DISTINCT p.id AS id, p.name AS name, f.stars AS stars, f.platform AS platform
+       FROM league_members a
+       JOIN league_members b ON b.code = a.code
+       JOIN players p ON p.id = b.player_id
+       LEFT JOIN profiles f ON f.player_id = p.id
+      WHERE a.player_id = ? AND p.name <> ''
+      ORDER BY COALESCE(f.stars, 0) DESC, p.created_at ASC
+      LIMIT 100`,
+    me.id,
+  );
+  const row = (r: { id: string; name: string; stars: number | null; platform: string | null }, index: number) => ({
+    rank: index + 1,
+    name: r.name,
+    stars: r.stars ?? 0,
+    platform: r.platform ?? 'ios',
+    me: r.id === me.id,
+  });
+  return {
+    top: top.map(row),
+    me: { rank: me.name === '' ? null : (above?.n ?? 0) + 1, stars, platform: mine?.platform ?? 'ios' },
+    friends: friends.map(row),
+  };
 }
 
 // ------------------------------------------------------------ haftalık lig
@@ -274,12 +364,14 @@ async function submit(request: Request, db: Db, me: Player, now: number, config:
     JSON.stringify(body.levels.slice(0, CHAIN_IDS.length)),
     now,
   );
+  await touchProfile(db, me.id, 'ios', body.stars, body.city, now);
   await joinGroup(db, me, week);
   return json(await standings(db, me, now));
 }
 
 /** Bu haftanın grubuna yerleş: bölümündeki ilk dolmamış grup, yoksa yenisi. */
 async function joinGroup(db: Db, me: Player, week: string): Promise<void> {
+  if (me.name === '') return;
   if (await db.first('SELECT 1 AS x FROM groups WHERE week = ? AND player_id = ?', week, me.id)) return;
   const open = await db.first<{ group_no: number }>(
     'SELECT group_no FROM groups WHERE week = ? AND division = ? GROUP BY group_no HAVING COUNT(*) < ? ORDER BY group_no LIMIT 1',
@@ -302,11 +394,12 @@ interface Row {
   me: boolean;
 }
 
-async function groupRows(db: Db, week: string, division: number, groupNo: number): Promise<Array<{ id: string; name: string; score: number }>> {
+async function groupRows(db: Db, week: string, division: number, groupNo: number): Promise<Array<{ id: string; name: string; score: number; platform: string | null }>> {
   return db.all(
-    `SELECT p.id AS id, p.name AS name, COALESCE(r.score, 0) AS score
+    `SELECT p.id AS id, p.name AS name, COALESCE(r.score, 0) AS score, f.platform AS platform
        FROM groups g JOIN players p ON p.id = g.player_id
        LEFT JOIN reports r ON r.player_id = g.player_id AND r.week = g.week
+       LEFT JOIN profiles f ON f.player_id = g.player_id
       WHERE g.week = ? AND g.division = ? AND g.group_no = ?
       ORDER BY score DESC, p.created_at ASC, p.id ASC`,
     week,
@@ -355,7 +448,7 @@ export async function standings(db: Db, me: Player, now: number) {
   const mine = await db.first<{ division: number; group_no: number }>('SELECT division, group_no FROM groups WHERE week = ? AND player_id = ?', week, me.id);
   const division = mine?.division ?? me.division;
   const base = { week, endsAt, division, divisionKey: DIVISION_KEYS[division], promote: LEAGUE.promote, demote: LEAGUE.demote, name: me.name };
-  if (!mine) return { ...base, group: [] as Array<Row & { move: number }> };
+  if (!mine) return { ...base, group: [] as Array<Row & { move: number; platform: string }> };
   const rows = await groupRows(db, week, mine.division, mine.group_no);
   const moves = divisionMoves(
     rows.map((row) => row.score),
@@ -363,7 +456,14 @@ export async function standings(db: Db, me: Player, now: number) {
   );
   return {
     ...base,
-    group: rows.map((row, index) => ({ rank: index + 1, name: row.name, score: row.score, me: row.id === me.id, move: moves[index] ?? 0 })),
+    group: rows.map((row, index) => ({
+      rank: index + 1,
+      name: row.name,
+      score: row.score,
+      me: row.id === me.id,
+      move: moves[index] ?? 0,
+      platform: row.platform ?? 'ios',
+    })),
   };
 }
 
@@ -472,11 +572,17 @@ async function leagueCount(db: Db, me: Player): Promise<number> {
   return (await db.first<{ n: number }>('SELECT COUNT(*) AS n FROM league_members WHERE player_id = ?', me.id))?.n ?? 0;
 }
 
+/** Özel ligde herkes adıyla görünüyor: lige katılmamış (adsız) hesap kuramıyor ve katılamıyor. */
+function requireName(me: Player): void {
+  if (me.name === '') throw new HttpError(409, 'unnamed');
+}
+
 async function createLeague(request: Request, db: Db, me: Player, now: number): Promise<Response> {
+  requireName(me);
   const name = acceptName((await readJson(request)).name, 24);
   if ((await leagueCount(db, me)) >= LEAGUE.privatePerPlayer) throw new HttpError(409, 'limit');
   for (let attempt = 0; attempt < 6; attempt++) {
-    const code = inviteCode();
+    const code = shortCode();
     if ((await db.run('INSERT OR IGNORE INTO leagues (code, name, owner, created_at) VALUES (?, ?, ?, ?)', code, name, me.id, now)) === 0) continue;
     await db.run('INSERT INTO league_members (code, player_id, joined_at) VALUES (?, ?, ?)', code, me.id, now);
     return json({ code, name }, 201);
@@ -485,6 +591,7 @@ async function createLeague(request: Request, db: Db, me: Player, now: number): 
 }
 
 async function joinLeague(request: Request, db: Db, me: Player, now: number): Promise<Response> {
+  requireName(me);
   const raw = (await readJson(request)).code;
   const code = typeof raw === 'string' ? raw.trim().toUpperCase() : '';
   const league = await db.first<{ code: string; name: string }>('SELECT code, name FROM leagues WHERE code = ?', code);
@@ -501,7 +608,7 @@ async function joinLeague(request: Request, db: Db, me: Player, now: number): Pr
 async function deleteAccount(db: Db, me: Player): Promise<Response> {
   const codes = await db.all<{ code: string }>('SELECT code FROM league_members WHERE player_id = ?', me.id);
   for (const { code } of codes) await leaveLeague(db, me, code);
-  for (const table of ['groups', 'reports', 'rejects', 'attest_keys', 'attest_challenges']) {
+  for (const table of ['groups', 'reports', 'rejects', 'attest_keys', 'attest_challenges', 'tokens', 'saves', 'profiles', 'links']) {
     await db.run(`DELETE FROM ${table} WHERE player_id = ?`, me.id);
   }
   await db.run('DELETE FROM players WHERE id = ?', me.id);
@@ -521,18 +628,22 @@ async function myLeagues(db: Db, me: Player, now: number) {
     'SELECT l.code AS code, l.name AS name FROM league_members m JOIN leagues l ON l.code = m.code WHERE m.player_id = ? ORDER BY m.joined_at',
     me.id,
   );
-  const result: Array<{ code: string; name: string; members: Row[] }> = [];
+  const result: Array<{ code: string; name: string; members: Array<Row & { platform: string }> }> = [];
   for (const league of leagues) {
-    const rows = await db.all<{ id: string; name: string; score: number }>(
-      `SELECT p.id AS id, p.name AS name, COALESCE(r.score, 0) AS score
+    const rows = await db.all<{ id: string; name: string; score: number; platform: string | null }>(
+      `SELECT p.id AS id, p.name AS name, COALESCE(r.score, 0) AS score, f.platform AS platform
          FROM league_members m JOIN players p ON p.id = m.player_id
          LEFT JOIN reports r ON r.player_id = m.player_id AND r.week = ?
+         LEFT JOIN profiles f ON f.player_id = m.player_id
         WHERE m.code = ?
         ORDER BY score DESC, m.joined_at ASC`,
       week,
       league.code,
     );
-    result.push({ ...league, members: rows.map((row, index) => ({ rank: index + 1, name: row.name, score: row.score, me: row.id === me.id })) });
+    result.push({
+      ...league,
+      members: rows.map((row, index) => ({ rank: index + 1, name: row.name, score: row.score, me: row.id === me.id, platform: row.platform ?? 'ios' })),
+    });
   }
   return { week, leagues: result };
 }
