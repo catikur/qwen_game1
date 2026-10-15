@@ -51,7 +51,8 @@ final class ModelTests: XCTestCase {
     }
 
     func testOfflineIsCappedAndHalfRate() {
-        let state = Lite.advance(must(Lite.buy(rich(), .bakery, .retail, 10)), 3600)
+        // Olay ve meclis takvimi uzağa: kural tek başına ölçülsün (3600. saniyede bir olay sürüyor).
+        let state = quiet(Lite.advance(must(Lite.buy(rich(), .bakery, .retail, 10)), 3600))
         let result = Lite.applyOffline(state, 10 * 3600)
         XCTAssertEqual(result.seconds, LiteContent.offlineCapBase)
         let ratio = (result.earned / result.seconds) / Lite.incomePerSecond(state)
