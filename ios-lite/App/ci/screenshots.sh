@@ -75,6 +75,10 @@ shot tr-league-card -AppleLanguages "(tr)" -liteScenario mid -liteLeague -liteSc
 shot tr-deal -AppleLanguages "(tr)" -liteScenario mid -liteDeal order
 shot tr-deal-vip -AppleLanguages "(tr)" -liteScenario late -liteDeal vip
 shot tr-deal-caught -AppleLanguages "(tr)" -liteScenario mid -liteDeal investor -liteDealCaught
+# L9: mağaza görselleri için İngilizce eşleri.
+shot en-deal -AppleLanguages "(en)" -liteScenario mid -liteDeal order
+WAIT=24 shot en-islands -AppleLanguages "(en)" -liteScenario islands
+shot en-map -AppleLanguages "(en)" -liteScenario snow -liteMap
 shot tr-league-soon -AppleLanguages "(tr)" -liteScenario mid -liteLeagueSheet
 shot en-league -AppleLanguages "(en)" -liteScenario mid -liteLeague -liteLeagueSheet
 xcrun simctl shutdown "$UDID" || true
@@ -128,5 +132,32 @@ if [ -n "$IPAD" ]; then
   xcrun simctl ui "$UDID" appearance light
 else
   echo "iPad simülatörü yok; iPad kareleri atlandı"
+fi
+
+# L9: App Store için 13" iPad (dikey). Tercih iPad Pro 13", yoksa iPad Air 13".
+STORE_IPAD=$(xcrun simctl list devices available -j | python3 -c '
+import json, sys
+devices = [d for runtime, ds in json.load(sys.stdin)["devices"].items() if "iOS" in runtime for d in ds]
+big = [d for d in devices if d["name"].startswith("iPad") and "13" in d["name"]]
+pro = [d for d in big if "Pro" in d["name"]]
+print(((pro or big) or [{"udid": ""}])[-1]["udid"])
+')
+if [ -n "$STORE_IPAD" ]; then
+  echo "Mağaza iPad simülatörü: $STORE_IPAD"
+  xcrun simctl shutdown "$UDID" || true
+  UDID="$STORE_IPAD"
+  xcrun simctl boot "$UDID" || true
+  xcrun simctl bootstatus "$UDID" -b
+  xcrun simctl status_bar "$UDID" override --time "9:41" --batteryState charged --batteryLevel 100 --wifiBars 3 || true
+  xcrun simctl ui "$UDID" appearance light || true
+  xcrun simctl install "$UDID" "$APP"
+  for lang in tr en; do
+    shot "store-ipad-$lang-mid" -AppleLanguages "($lang)" -liteScenario mid
+    shot "store-ipad-$lang-deal" -AppleLanguages "($lang)" -liteScenario late -liteDeal vip
+    WAIT=24 shot "store-ipad-$lang-islands" -AppleLanguages "($lang)" -liteScenario islands
+    shot "store-ipad-$lang-league" -AppleLanguages "($lang)" -liteScenario mid -liteLeague -liteLeagueSheet
+  done
+else
+  echo "13 inç iPad simülatörü yok; mağaza iPad kareleri atlandı"
 fi
 ls -la "$OUT"
