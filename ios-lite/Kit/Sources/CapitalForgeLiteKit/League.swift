@@ -66,6 +66,51 @@ public enum LiteLeague {
     }
 }
 
+/// Bu haftanın puanı (uygulamada tutuluyor): toplam kazançtaki artış,
+/// yıldızsız. Hafta değişince yeni haftaya yalnızca ona düşen pay geçiyor.
+public struct LeagueTracker: Codable, Equatable, Sendable {
+    public var week: String
+    public var score: Double
+    /// Son görülen toplam kazanç; -1: henüz yok (ilk açılışta geçmiş kazanç sayılmıyor).
+    public var lastTotal: Double
+    /// Son görülme (epoch saniye). Eski kayıtlarda yok.
+    public var lastAt: Double?
+
+    public init(week: String, score: Double, lastTotal: Double, lastAt: Double? = nil) {
+        self.week = week
+        self.score = score
+        self.lastTotal = lastTotal
+        self.lastAt = lastAt
+    }
+
+    /// Durum değişti (`now`: epoch saniye). Hafta döndüyse true.
+    ///
+    /// Arada hafta döndüyse (ör. pazar gecesi kapatıp pazartesi açmak) aradaki
+    /// kazancın süreyle orantılı payı yeni haftaya yazılıyor: yokken kazanç
+    /// ayrılık boyunca birikiyor, yeni haftada geçen kısım yeni haftanın.
+    /// Sunucunun hız sınırı da bunu kabul ediyor (pay ≤ hız × haftanın başından beri).
+    @discardableResult
+    public mutating func track(totalEarned: Double, stars: Int, now: Double) -> Bool {
+        let current = LiteLeague.weekId(epochMs: now * 1000)
+        // Sıfırlanan kayıtta toplam düşüyor: eksi kazanç yok.
+        let delta = lastTotal >= 0 ? max(0, totalEarned - lastTotal) : 0
+        let gain = delta > 0 ? LiteLeague.starFree(delta, stars: stars) : 0
+        let rolled = current != week
+        if rolled {
+            let start = (LiteLeague.weekStart(current) ?? now * 1000) / 1000
+            var share = 0.0
+            if let lastAt, now > lastAt { share = min(1, max(0, (now - start) / (now - lastAt))) }
+            week = current
+            score = gain * share
+        } else {
+            score += gain
+        }
+        lastTotal = totalEarned
+        lastAt = now
+        return rolled
+    }
+}
+
 /// Uygulamanın lig sunucusuna gönderdiği durum (TS `LeagueReport`).
 public struct LeagueReport: Codable, Equatable, Sendable {
     public var week: String

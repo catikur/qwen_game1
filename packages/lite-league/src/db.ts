@@ -4,12 +4,16 @@
  * sorgular gerçek SQLite'ta koşuyor.
  */
 export type Value = string | number | null;
+/** Toplu yazım için tek ifade: SQL ve bağlanan değerler. */
+export type Statement = [sql: string, ...args: Value[]];
 
 export interface Db {
   /** Değişen satır sayısı. */
   run(sql: string, ...args: Value[]): Promise<number>;
   first<T>(sql: string, ...args: Value[]): Promise<T | null>;
   all<T>(sql: string, ...args: Value[]): Promise<T[]>;
+  /** Tek işlem (transaction): biri hata verirse hepsi geri alınıyor. */
+  batch(statements: Statement[]): Promise<void>;
 }
 
 /** D1'in bize gereken yüzü (tip paketine bağımlı kalmamak için). */
@@ -21,6 +25,7 @@ export interface D1Like {
       all<T>(): Promise<{ results: T[] }>;
     };
   };
+  batch(statements: unknown[]): Promise<unknown>;
 }
 
 export function d1(database: D1Like): Db {
@@ -34,6 +39,10 @@ export function d1(database: D1Like): Db {
     },
     async all<T>(sql: string, ...args: Value[]) {
       return (await database.prepare(sql).bind(...args).all<T>()).results;
+    },
+    // D1'de toplu ifadeler tek SQL işlemi: biri düşerse hepsi geri alınıyor.
+    async batch(statements) {
+      await database.batch(statements.map(([sql, ...args]) => database.prepare(sql).bind(...args)));
     },
   };
 }

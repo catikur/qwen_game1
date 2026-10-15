@@ -5,7 +5,7 @@
 import { DatabaseSync } from 'node:sqlite';
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import type { Db, Value } from '../src/db';
+import type { Db, Statement, Value } from '../src/db';
 
 /** Testler geçici dizine paketlenip koşuyor: şemayı depo kökünden bul. */
 function schemaPath(): string {
@@ -32,6 +32,17 @@ export function memoryDb(): Db {
     },
     async all<T>(sql: string, ...args: Value[]) {
       return database.prepare(sql).all(...args).map((row) => ({ ...row }) as T);
+    },
+    // D1'in toplu yazımı gibi: tek işlem, hata olursa geri al.
+    async batch(statements: Statement[]) {
+      database.exec('BEGIN');
+      try {
+        for (const [sql, ...args] of statements) database.prepare(sql).run(...args);
+        database.exec('COMMIT');
+      } catch (error) {
+        database.exec('ROLLBACK');
+        throw error;
+      }
     },
   };
 }

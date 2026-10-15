@@ -28,7 +28,7 @@ import {
   weekStart,
   type LeagueReport,
 } from '../../lite-model/src/index';
-import type { Db } from './db';
+import type { Db, Statement } from './db';
 
 const WEEK_MS = 7 * 86_400_000;
 const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -262,7 +262,11 @@ export async function standings(db: Db, me: Player, now: number) {
 export async function rollover(db: Db, now: number): Promise<boolean> {
   const previous = weekId(weekStart(weekId(now)) - 1);
   if (await db.first('SELECT 1 AS x FROM rollovers WHERE week = ?', previous)) return false;
-  if ((await db.run('INSERT OR IGNORE INTO rollovers (week, at) VALUES (?, ?)', previous, now)) === 0) return false;
+  // Geçen haftanın grupları artık değişmiyor (gönderim yalnızca bu haftaya): önce oku, sonra
+  // işareti ve bütün bölüm değişikliklerini tek işlemde yaz. Yarıda kalırsa hiçbiri yazılmıyor
+  // ve sonraki istek baştan deniyor; aynı anda iki istek gelirse işareti ikinci kez yazamayan
+  // (birincil anahtar) bütün işlemiyle geri alınıyor.
+  const writes: Statement[] = [['INSERT INTO rollovers (week, at) VALUES (?, ?)', previous, now]];
   const groups = await db.all<{ division: number; group_no: number }>(
     'SELECT DISTINCT division, group_no FROM groups WHERE week = ? ORDER BY division, group_no',
     previous,
@@ -277,8 +281,14 @@ export async function rollover(db: Db, now: number): Promise<boolean> {
       const move = moves[index] ?? 0;
       if (move === 0) continue;
       const next = Math.max(0, Math.min(LEAGUE.divisions - 1, group.division + move));
-      await db.run('UPDATE players SET division = ? WHERE id = ?', next, row.id);
+      writes.push(['UPDATE players SET division = ? WHERE id = ?', next, row.id]);
     }
+  }
+  try {
+    await db.batch(writes);
+  } catch (error) {
+    if (await db.first('SELECT 1 AS x FROM rollovers WHERE week = ?', previous)) return false;
+    throw error;
   }
   return true;
 }

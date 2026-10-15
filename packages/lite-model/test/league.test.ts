@@ -87,6 +87,10 @@ test('hile: hızlı saat, sahte seviye, azalan puan, bozuk biçim reddediliyor',
   assert.deepEqual(checkReport(null, fake, 3600), { ok: false, reason: 'spend' });
   // Puan geri gitmiyor.
   assert.deepEqual(checkReport(base, { ...base, score: base.score - 1 }, 60), { ok: false, reason: 'decrease' });
+  // Oyunu sıfırlamak: şehir ve yıldız geri gidiyor, haftanın puanı yerinde; kabul.
+  const veteran = { ...base, city: 4, stars: 12 };
+  const fresh = report(newGame(), week, base.score);
+  assert.deepEqual(checkReport(veteran, fresh, 60), { ok: true });
   // Biçim.
   assert.deepEqual(checkReport(null, { ...base, levels: [[1, 2, 3]] }, 60), { ok: false, reason: 'shape' });
   assert.deepEqual(checkReport(null, { ...base, score: Number.NaN }, 60), { ok: false, reason: 'shape' });

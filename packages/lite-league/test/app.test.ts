@@ -148,6 +148,44 @@ test('hafta dönümü: ilk beş çıkıyor, son beş iniyor, bir kez', async () 
   for (let i = 7; i < 12; i++) assert.equal(byName[`Oyuncu ${i}`], 0, `Oyuncu ${i} inmeliydi`);
 });
 
+test('hafta dönümü yarıda kalırsa hiçbir şey yazılmıyor; sonraki istek baştan yapıyor', async () => {
+  const db = memoryDb();
+  const state = played();
+  const accounts: Account[] = [];
+  for (let i = 0; i < 12; i++) {
+    const who = await signUp(db, THURSDAY, `Oyuncu ${i}`);
+    accounts.push(who);
+    await db.run('UPDATE players SET division = 1 WHERE id = ?', who.id);
+    await call(db, THURSDAY + i, 'POST', '/v1/reports', report(state, THURSDAY, (12 - i) * 100), who);
+  }
+  const nextMonday = weekStart('2026-W43') + 3_600_000;
+  // Son bölüm değişikliği düşüyor (ör. D1 bağlantısı koptu).
+  const flaky: Db = {
+    ...db,
+    batch: (statements) => db.batch([...statements.slice(0, -1), ['UPDATE yok SET x = 1']]),
+  };
+  await assert.rejects(rollover(flaky, nextMonday));
+  assert.equal((await db.all("SELECT * FROM rollovers WHERE week = '2026-W42'")).length, 0, 'işaret de geri alınmalı');
+  const untouched = await db.all<{ division: number }>('SELECT division FROM players');
+  assert.ok(untouched.every((p) => p.division === 1), 'hiçbir bölüm değişmemeli');
+  // Sonraki istek dönümü baştan ve bir kez yapıyor.
+  assert.equal(await rollover(db, nextMonday), true);
+  assert.equal(await rollover(db, nextMonday), false);
+  const moved = await db.all<{ division: number }>('SELECT division FROM players');
+  assert.equal(moved.filter((p) => p.division === 2).length, 5);
+  assert.equal(moved.filter((p) => p.division === 0).length, 5);
+});
+
+test('oyunu sıfırlamak: şehir ve yıldız geri gidiyor, gönderim kabul', async () => {
+  const db = memoryDb();
+  const me = await signUp(db, THURSDAY, 'Atilla');
+  const veteran = { ...report(played(), THURSDAY, 500), city: 3, stars: 9 };
+  assert.equal((await call(db, THURSDAY, 'POST', '/v1/reports', veteran, me)).status, 200);
+  const fresh = report(newGame(), THURSDAY + 60_000, 500);
+  const after = await call(db, THURSDAY + 60_000, 'POST', '/v1/reports', fresh, me);
+  assert.equal(after.status, 200, JSON.stringify(after.body));
+});
+
 test('özel lig: kur, koda katıl, sırala, ayrıl', async () => {
   const db = memoryDb();
   const state = played();

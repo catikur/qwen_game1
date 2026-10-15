@@ -52,13 +52,6 @@ struct LeagueAccount: Codable, Equatable {
     var name: String
 }
 
-/// Bu haftanın puanı: hafta değişince sıfırlanıyor.
-struct LeagueTracker: Codable, Equatable {
-    var week: String
-    var score: Double
-    var lastTotal: Double
-}
-
 enum LeagueError: Error, Equatable {
     case http(Int, String)
     case transport
@@ -127,19 +120,14 @@ final class LeagueService {
 
     // MARK: - Haftalık puan
 
-    /// Durum her değiştiğinde: toplam kazançtaki artış yıldızsız olarak bu haftaya.
+    /// Durum her değiştiğinde: toplam kazançtaki artış yıldızsız olarak bu haftaya
+    /// (hafta dönümünde yalnızca yeni haftaya düşen pay; `LeagueTracker`).
     func track(_ state: LiteState, now: Date = Date()) {
         // CI kareleri: puan örnek verideki gibi kalsın.
         guard !ephemeral else { return }
-        let week = LiteLeague.weekId(epochMs: now.timeIntervalSince1970 * 1000)
-        if tracker.week != week {
-            tracker = LeagueTracker(week: week, score: 0, lastTotal: state.totalEarned)
+        if tracker.track(totalEarned: state.totalEarned, stars: state.stars, now: now.timeIntervalSince1970) {
             standings = nil
         }
-        // İlk açılış (lastTotal -1) ya da kayıt sıfırlandı: geçmiş kazanç bu haftaya yazılmıyor.
-        let delta = state.totalEarned - tracker.lastTotal
-        if tracker.lastTotal >= 0 && delta > 0 { tracker.score += LiteLeague.starFree(delta, stars: state.stars) }
-        tracker.lastTotal = state.totalEarned
     }
 
     func persist() {
