@@ -1,42 +1,55 @@
 import SwiftUI
 import CapitalForgeLiteKit
 
-/// Olay şeridi: süren olay (ve yürürlükteki politika) geri sayımıyla.
-/// Şehrin üstünde, başparmağın değil gözün olduğu yerde.
+/// Olay şeridi: başlıkla şehir arasında sabit yükseklikte bir satır. Olay
+/// varsa olay ve geri sayımı, yoksa sıradaki olaya kalan süre; yürürlükteki
+/// politika sağ altta. Yüksekliği sabit: olay gelince ekran zıplamıyor ve
+/// şehrin üstü örtülmüyor (ilk sürüm şehrin üstüne biniyordu).
 struct EventBanner: View {
     @Environment(GameStore.self) private var store
 
     var body: some View {
         let state = store.state
-        if state.event != nil || state.policy != nil {
-            VStack(alignment: .leading, spacing: 4) {
-                if let event = state.event {
-                    HStack(spacing: 8) {
-                        Image(systemName: icon(event.kind))
-                            .font(.system(size: 13, weight: .bold))
-                        VStack(alignment: .leading, spacing: 1) {
-                            Text(L10n.eventTitle(event)).font(Theme.sans(13, .bold))
-                            Text(L10n.eventBody(event)).font(Theme.sans(11)).lineLimit(1).minimumScaleFactor(0.8)
-                        }
-                        Spacer(minLength: 4)
-                        Text(Format.duration(event.until - state.clock)).font(Theme.mono(12, .bold))
-                    }
+        HStack(spacing: 8) {
+            if let event = state.event {
+                Image(systemName: icon(event.kind))
+                    .font(.system(size: 14, weight: .bold))
                     .foregroundStyle(tone(event.kind))
-                    .accessibilityIdentifier("event-\(event.kind.rawValue)")
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(L10n.eventTitle(event)).font(Theme.sans(13, .bold)).foregroundStyle(tone(event.kind))
+                    Text(L10n.eventBody(event)).font(Theme.sans(11)).foregroundStyle(tone(event.kind))
+                        .lineLimit(1).minimumScaleFactor(0.75)
+                }
+                .accessibilityIdentifier("event-\(event.kind.rawValue)")
+            } else {
+                Image(systemName: "clock")
+                    .font(.system(size: 13))
+                    .foregroundStyle(Theme.muted)
+                Text(L10n.t("event.next", Format.duration(state.nextEventAt - state.clock)))
+                    .font(Theme.mono(11))
+                    .foregroundStyle(Theme.muted)
+            }
+            Spacer(minLength: 6)
+            VStack(alignment: .trailing, spacing: 1) {
+                if let event = state.event {
+                    Text(Format.duration(event.until - state.clock))
+                        .font(Theme.mono(12, .bold))
+                        .foregroundStyle(tone(event.kind))
                 }
                 if let policy = state.policy {
-                    Text(L10n.t("council.active", L10n.policyTitle(policy.kind), Format.duration(policy.until - state.clock)))
-                        .font(Theme.mono(10, .medium))
+                    Text(L10n.policyTitle(policy.kind) + " · " + Format.duration(policy.until - state.clock))
+                        .font(Theme.mono(9, .medium))
                         .foregroundStyle(Theme.muted)
+                        .lineLimit(1)
                         .accessibilityIdentifier("policy")
                 }
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 7)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Theme.panel.opacity(0.94))
-            .overlay(alignment: .bottom) { Rectangle().fill(Theme.line).frame(height: 1) }
         }
+        .padding(.horizontal, 14)
+        .frame(height: 46)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(state.event == nil ? Theme.paper : tone(state.event!.kind).opacity(0.07))
+        .overlay(alignment: .bottom) { Rectangle().fill(Theme.line).frame(height: 1) }
     }
 
     private func icon(_ kind: EventKind) -> String {

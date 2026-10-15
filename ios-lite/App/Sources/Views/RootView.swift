@@ -11,9 +11,9 @@ struct RootView: View {
         @Bindable var store = store
         VStack(spacing: 0) {
             HeaderView()
+            EventBanner()
             CityView()
-                .frame(height: 210)
-                .overlay(alignment: .top) { EventBanner() }
+                .frame(height: 196)
                 .overlay(alignment: .bottom) { Rectangle().fill(Theme.line).frame(height: 1) }
             ScrollView {
                 VStack(spacing: 10) {
