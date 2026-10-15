@@ -746,12 +746,24 @@ async function finish(browser, consoleErrors) {
   });
 
   // İmar geri sayımı: tıklanınca kamera bölgeye gider.
+  //
+  // Oyun bu kontrol boyunca DURUYOR. Akarken gündem her gün yeniden
+  // diziliyor (olay, ihale, sayaçlar) ve çip tıklama anında kayıyordu:
+  // PR #44'ün duman koşusunda tıklamayı önce "Moda Haftası", sonra ihale
+  // çipi aldı, sonunda çip DOM'dan söküldü. Ölçülen şey çipin kamerayı
+  // götürmesi; hareketli bir hedefe isabet değil. Haber kontrolü hızı
+  // yeniden 1'e alıyor.
+  await page.evaluate(() => window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 }));
+  await page.waitForTimeout(300);
   const unlockProbe = await page.evaluate(() => {
     const s = window.__capital.getState();
     const district = s.districts.find((d) => d.opensOnDay !== undefined && d.opensOnDay > s.time.day);
     if (!district) return null;
     window.__capital.unlockProbe = { id: district.id, was: district.opensOnDay };
     district.opensOnDay = s.time.day + 12;
+    // Oyun durduğu için gün akmıyor ve arayüz kendiliğinden tazelenmiyor;
+    // başarılı her komut durumu yayınlıyor.
+    window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
     return { id: district.id, cx: (district.x0 + district.x1) / 2, cz: (district.y0 + district.y1) / 2 };
   });
   if (unlockProbe) {
