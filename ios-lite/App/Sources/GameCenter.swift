@@ -2,8 +2,8 @@ import GameKit
 import UIKit
 
 /// Game Center: genel tablo (L8). Ücretli Apple Developer üyeliği ve
-/// App Store Connect'te tanımlı lider tablosu gerektiriyor; o gelene kadar
-/// Info.plist'te `LiteGameCenter` kapalı ve hiçbir çağrı yapılmıyor.
+/// App Store Connect'te tanımlı lider tablosu gerektiriyor. Info.plist'te
+/// `LiteGameCenter` kapalıysa hiçbir çağrı yapılmıyor.
 ///
 /// Tablolar (App Store Connect → Game Center → Leaderboards):
 /// - `cf.lite.stars`: holding yıldızı (klasik, en yüksek, tamsayı).

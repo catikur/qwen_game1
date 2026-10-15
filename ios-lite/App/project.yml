@@ -32,9 +32,9 @@ targets:
         # L8: lig sunucusunun adresi (Cloudflare Worker). Boşken lig "yakında"
         # kalıyor; ilk dağıtımdan sonra buraya yazılıyor (ios-lite/README.md).
         LiteLeagueURL: "https://capitalforge-lite-league.catikur.workers.dev"
-        # L8: Game Center genel tablosu. Ücretli Apple Developer üyeliği ve
-        # Game Center yetkisi (entitlement) gelince true.
-        LiteGameCenter: false
+        # L8: Game Center genel tablosu (cf.lite.stars, App Store Connect).
+        # Yetki aşağıda, entitlements altında.
+        LiteGameCenter: true
         # L6: iPad'de Split View ve Stage Manager için tam ekran zorunlu değil.
         UIRequiresFullScreen: false
         # iPhone dikey; iPad dört yön.
@@ -57,6 +57,11 @@ targets:
           - Nunito-SemiBold.ttf
           - Nunito-Bold.ttf
           - Nunito-ExtraBold.ttf
+    # L8: Game Center yetkisi (genel tablo).
+    entitlements:
+      path: Generated/CapitalForgeLite.entitlements
+      properties:
+        com.apple.developer.game-center: true
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.catikur.capitalforgelite
