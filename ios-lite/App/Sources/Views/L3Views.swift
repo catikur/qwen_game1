@@ -25,7 +25,10 @@ struct EventBanner: View {
                 Image(systemName: "clock")
                     .font(.system(size: 13))
                     .foregroundStyle(Theme.muted)
-                Text(L10n.t("event.next", Format.duration(state.nextEventAt - state.clock)))
+                // Kapalıyken kaçan olay dönüşte ilk tıkta başlıyor: "0 sn" yerine "başlıyor".
+                Text(state.nextEventAt - state.clock < 1
+                     ? L10n.t("event.soon")
+                     : L10n.t("event.next", Format.duration(state.nextEventAt - state.clock)))
                     .font(Theme.mono(11))
                     .foregroundStyle(Theme.muted)
             }

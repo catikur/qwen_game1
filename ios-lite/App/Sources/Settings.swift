@@ -16,7 +16,7 @@ enum LanguageChoice: String, CaseIterable, Identifiable {
 }
 
 /// Oyuncu tercihleri. UserDefaults'ta tutuluyor; senaryo modunda (CI kareleri)
-/// hiçbir şey okunmuyor ve yazılmıyor, ses kapalı.
+/// hiçbir şey okunmuyor ve yazılmıyor.
 @MainActor
 @Observable
 final class AppSettings {
@@ -40,7 +40,8 @@ final class AppSettings {
         defaults = ephemeral ? nil : UserDefaults.standard
         let stored = defaults
         language = LanguageChoice(rawValue: stored?.string(forKey: "language") ?? "") ?? .system
-        sound = ephemeral ? false : (stored?.object(forKey: "sound") as? Bool ?? true)
+        // Senaryo modunda da varsayılan görünsün; çalmayı GameStore senaryoda zaten kesiyor.
+        sound = stored?.object(forKey: "sound") as? Bool ?? true
         haptics = stored?.object(forKey: "haptics") as? Bool ?? true
         notifications = stored?.object(forKey: "notifications") as? Bool ?? false
         notificationsOffered = stored?.object(forKey: "notificationsOffered") as? Bool ?? false

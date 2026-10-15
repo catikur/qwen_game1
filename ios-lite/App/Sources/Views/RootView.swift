@@ -53,7 +53,7 @@ struct RootView: View {
         .task { await store.refreshNotificationStatus() }
         .sheet(isPresented: $showSettings) {
             SettingsSheet()
-                .presentationDetents([.large])
+                .presentationDetents([.medium, .large])
         }
         .sheet(item: $store.offlineReport) { report in
             OfflineSheet(report: report)
