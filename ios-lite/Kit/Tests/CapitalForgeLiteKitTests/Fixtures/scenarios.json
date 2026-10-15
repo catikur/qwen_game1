@@ -1509,35 +1509,43 @@
  "stars": [
   [
    0,
+   0,
    0
   ],
   [
    1,
+   0,
    0
   ],
   [
    999999999,
-   0
+   0,
+   1
   ],
   [
    1000000000,
+   1,
    1
   ],
   [
    3990000000,
-   1
+   1,
+   2
   ],
   [
    4000000000,
+   2,
    2
   ],
   [
    4000000000000,
-   63
+   63,
+   75
   ],
   [
    7300000000000000,
-   2701
+   2701,
+   3242
   ]
  ],
  "managerCosts": [
@@ -1557,6 +1565,104 @@
    9,
    103305233920000
   ]
+ ],
+ "overtakes": [
+  {
+   "city": 0,
+   "cash": 10000000,
+   "buys": [
+    [
+     "bakery",
+     0,
+     30
+    ],
+    [
+     "bakery",
+     1,
+     30
+    ],
+    [
+     "bakery",
+     2,
+     30
+    ]
+   ],
+   "online": 300,
+   "horizon": 14400,
+   "result": null
+  },
+  {
+   "city": 3,
+   "cash": 10000000,
+   "buys": [
+    [
+     "bakery",
+     0,
+     30
+    ],
+    [
+     "bakery",
+     1,
+     30
+    ],
+    [
+     "bakery",
+     2,
+     30
+    ]
+   ],
+   "online": 300,
+   "horizon": 14400,
+   "result": 3060
+  },
+  {
+   "city": 6,
+   "cash": 10000000,
+   "buys": [
+    [
+     "bakery",
+     0,
+     30
+    ],
+    [
+     "bakery",
+     1,
+     30
+    ],
+    [
+     "bakery",
+     2,
+     30
+    ]
+   ],
+   "online": 120,
+   "horizon": 7200,
+   "result": 1080
+  },
+  {
+   "city": 6,
+   "cash": 10000000,
+   "buys": [
+    [
+     "bakery",
+     0,
+     30
+    ],
+    [
+     "bakery",
+     1,
+     30
+    ],
+    [
+     "bakery",
+     2,
+     30
+    ]
+   ],
+   "online": 9000,
+   "horizon": 7200,
+   "result": null
+  }
  ],
  "scenarios": [
   {
@@ -5353,7 +5459,9 @@
      "policy": null,
      "policies": 0,
      "campaigns": 0,
-     "goal": 0
+     "goal": 0,
+     "listed": false,
+     "overtake": null
     },
     {
      "after": 126,
@@ -5412,7 +5520,9 @@
      "policy": null,
      "policies": 0,
      "campaigns": 1,
-     "goal": 6
+     "goal": 6,
+     "listed": false,
+     "overtake": null
     },
     {
      "after": 176,
@@ -5471,7 +5581,9 @@
      "policy": null,
      "policies": 0,
      "campaigns": 1,
-     "goal": 6
+     "goal": 6,
+     "listed": false,
+     "overtake": null
     },
     {
      "after": 243,
@@ -5534,7 +5646,9 @@
      "policy": null,
      "policies": 0,
      "campaigns": 2,
-     "goal": 6
+     "goal": 6,
+     "listed": false,
+     "overtake": null
     },
     {
      "after": 286,
@@ -5593,7 +5707,9 @@
      "policy": null,
      "policies": 0,
      "campaigns": 2,
-     "goal": 6
+     "goal": 6,
+     "listed": false,
+     "overtake": null
     },
     {
      "after": 385,
@@ -5652,7 +5768,9 @@
      "policy": null,
      "policies": 0,
      "campaigns": 3,
-     "goal": 7
+     "goal": 7,
+     "listed": false,
+     "overtake": null
     },
     {
      "after": 422,
@@ -5715,7 +5833,9 @@
      "policy": null,
      "policies": 0,
      "campaigns": 3,
-     "goal": 7
+     "goal": 7,
+     "listed": false,
+     "overtake": null
     },
     {
      "after": 451,
@@ -5777,7 +5897,9 @@
      },
      "policies": 1,
      "campaigns": 4,
-     "goal": 7
+     "goal": 7,
+     "listed": false,
+     "overtake": null
     },
     {
      "after": 485,
@@ -5839,7 +5961,9 @@
      },
      "policies": 1,
      "campaigns": 4,
-     "goal": 7
+     "goal": 7,
+     "listed": false,
+     "overtake": null
     },
     {
      "after": 524,
@@ -5905,7 +6029,9 @@
      },
      "policies": 1,
      "campaigns": 5,
-     "goal": 7
+     "goal": 7,
+     "listed": false,
+     "overtake": null
     },
     {
      "after": 560,
@@ -5971,7 +6097,9 @@
      },
      "policies": 1,
      "campaigns": 5,
-     "goal": 7
+     "goal": 7,
+     "listed": false,
+     "overtake": null
     },
     {
      "after": 590,
@@ -6033,7 +6161,9 @@
      },
      "policies": 1,
      "campaigns": 6,
-     "goal": 7
+     "goal": 7,
+     "listed": false,
+     "overtake": null
     },
     {
      "after": 620,
@@ -6095,7 +6225,9 @@
      },
      "policies": 1,
      "campaigns": 6,
-     "goal": 7
+     "goal": 7,
+     "listed": false,
+     "overtake": null
     },
     {
      "after": 620,
@@ -6157,7 +6289,9 @@
      },
      "policies": 1,
      "campaigns": 6,
-     "goal": 7
+     "goal": 7,
+     "listed": false,
+     "overtake": null
     }
    ]
   },
@@ -9807,6 +9941,10 @@
      "ok": true
     },
     {
+     "op": "ipo",
+     "ok": true
+    },
+    {
      "op": "buy",
      "chain": "leather",
      "stage": 2,
@@ -10092,6 +10230,10 @@
      "ok": true
     },
     {
+     "op": "claim",
+     "ok": true
+    },
+    {
      "op": "buy",
      "chain": "coffee",
      "stage": 1,
@@ -10262,6 +10404,128 @@
     {
      "op": "buy",
      "chain": "bakery",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 20,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 1,
+     "count": 2,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 2,
+     "count": 5,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
+     "count": 2,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 20,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
      "stage": 2,
      "count": 1,
      "ok": true
@@ -10283,23 +10547,6 @@
     {
      "op": "advance",
      "seconds": 20,
-     "ok": true
-    },
-    {
-     "op": "advance",
-     "seconds": 20,
-     "ok": true
-    },
-    {
-     "op": "advance",
-     "seconds": 20,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 2,
-     "count": 1,
      "ok": true
     },
     {
@@ -10337,21 +10584,9 @@
      "ok": true
     },
     {
-     "op": "advance",
-     "seconds": 20,
-     "ok": true
-    },
-    {
      "op": "buy",
      "chain": "leather",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "fashion",
-     "stage": 1,
+     "stage": 2,
      "count": 1,
      "ok": true
     },
@@ -10361,10 +10596,13 @@
      "ok": true
     },
     {
-     "op": "buy",
-     "chain": "fashion",
-     "stage": 2,
-     "count": 1,
+     "op": "advance",
+     "seconds": 20,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 20,
      "ok": true
     },
     {
@@ -10400,13 +10638,8 @@
     {
      "op": "buy",
      "chain": "leather",
-     "stage": 2,
+     "stage": 1,
      "count": 1,
-     "ok": true
-    },
-    {
-     "op": "advance",
-     "seconds": 20,
      "ok": true
     },
     {
@@ -10425,6 +10658,13 @@
     {
      "op": "advance",
      "seconds": 20,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 2,
+     "count": 1,
      "ok": true
     },
     {
@@ -10449,7 +10689,7 @@
     {
      "op": "buy",
      "chain": "leather",
-     "stage": 1,
+     "stage": 2,
      "count": 1,
      "ok": true
     },
@@ -10475,6 +10715,30 @@
      "ok": true
     },
     {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 20,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 20,
+     "ok": true
+    },
+    {
      "op": "advance",
      "seconds": 20,
      "ok": true
@@ -10492,32 +10756,8 @@
     {
      "op": "buy",
      "chain": "leather",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "advance",
-     "seconds": 20,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "fashion",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "fashion",
      "stage": 2,
      "count": 1,
-     "ok": true
-    },
-    {
-     "op": "advance",
-     "seconds": 20,
      "ok": true
     },
     {
@@ -10552,34 +10792,6 @@
      "ok": true
     },
     {
-     "op": "buy",
-     "chain": "fashion",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "fashion",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "coffee",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "bakery",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
      "op": "advance",
      "seconds": 20,
      "ok": true
@@ -10604,18 +10816,18 @@
      "chain": "leather",
      "stage": 1,
      "count": 1,
-     "ok": true
-    },
-    {
-     "op": "advance",
-     "seconds": 20,
      "ok": true
     },
     {
      "op": "buy",
      "chain": "leather",
      "stage": 0,
-     "count": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 20,
      "ok": true
     },
     {
@@ -10647,13 +10859,6 @@
     },
     {
      "op": "buy",
-     "chain": "leather",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
      "chain": "fashion",
      "stage": 2,
      "count": 1,
@@ -10682,62 +10887,6 @@
     },
     {
      "op": "buy",
-     "chain": "fashion",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "coffee",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "bakery",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "fashion",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "coffee",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "bakery",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
      "chain": "leather",
      "stage": 2,
      "count": 1,
@@ -10753,34 +10902,6 @@
     {
      "op": "buy",
      "chain": "fashion",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "coffee",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "coffee",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "bakery",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "bakery",
      "stage": 2,
      "count": 1,
      "ok": true
@@ -10789,6 +10910,13 @@
      "op": "buy",
      "chain": "leather",
      "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 0,
      "count": 1,
      "ok": true
     },
@@ -10822,7 +10950,7 @@
     },
     {
      "op": "buy",
-     "chain": "bakery",
+     "chain": "leather",
      "stage": 2,
      "count": 1,
      "ok": true
@@ -10830,13 +10958,6 @@
     {
      "op": "buy",
      "chain": "coffee",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
      "stage": 2,
      "count": 1,
      "ok": true
@@ -10850,20 +10971,6 @@
     },
     {
      "op": "buy",
-     "chain": "bakery",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "coffee",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
      "chain": "leather",
      "stage": 2,
      "count": 1,
@@ -10871,7 +10978,7 @@
     },
     {
      "op": "buy",
-     "chain": "fashion",
+     "chain": "coffee",
      "stage": 2,
      "count": 1,
      "ok": true
@@ -10885,7 +10992,7 @@
     },
     {
      "op": "buy",
-     "chain": "coffee",
+     "chain": "fashion",
      "stage": 2,
      "count": 1,
      "ok": true
@@ -10915,68 +11022,96 @@
      "op": "buy",
      "chain": "fashion",
      "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 2,
      "count": 1,
      "ok": true
     },
     {
      "op": "advance",
      "seconds": 20,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "fashion",
-     "stage": 0,
-     "count": 5,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "fashion",
-     "stage": 1,
-     "count": 5,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "fashion",
-     "stage": 1,
-     "count": 5,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "fashion",
-     "stage": 0,
-     "count": 5,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "fashion",
-     "stage": 0,
-     "count": 5,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "fashion",
-     "stage": 0,
-     "count": 5,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "fashion",
-     "stage": 2,
-     "count": 5,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "fashion",
-     "stage": 2,
-     "count": 5,
      "ok": true
     },
     {
@@ -10989,17 +11124,224 @@
      "ok": true
     },
     {
+     "op": "advance",
+     "seconds": 20,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 20,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 20,
+     "ok": true
+    },
+    {
+     "op": "manager",
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 20,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 20,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 20,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 20,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 20,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 20,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 20,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 20,
+     "ok": true
+    },
+    {
+     "op": "campaign",
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 20,
+     "ok": true
+    },
+    {
      "op": "buy",
      "chain": "leather",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 20,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 20,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 20,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 20,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 20,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
      "stage": 1,
      "count": 1,
      "ok": true
     },
     {
      "op": "buy",
-     "chain": "leather",
+     "chain": "fashion",
      "stage": 0,
+     "count": 5,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 20,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 1,
      "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 20,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 20,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 20,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 20,
+     "ok": true
+    },
+    {
+     "op": "campaign",
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 20,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 20,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 20,
      "ok": true
     },
     {
@@ -11042,201 +11384,12 @@
      "ok": true
     },
     {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "advance",
-     "seconds": 20,
-     "ok": true
-    },
-    {
-     "op": "advance",
-     "seconds": 20,
-     "ok": true
-    },
-    {
-     "op": "advance",
-     "seconds": 20,
-     "ok": true
-    },
-    {
      "op": "advance",
      "seconds": 20,
      "ok": true
     },
     {
      "op": "campaign",
-     "ok": true
-    },
-    {
-     "op": "advance",
-     "seconds": 20,
-     "ok": true
-    },
-    {
-     "op": "advance",
-     "seconds": 20,
-     "ok": true
-    },
-    {
-     "op": "advance",
-     "seconds": 20,
-     "ok": true
-    },
-    {
-     "op": "advance",
-     "seconds": 20,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "fashion",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "fashion",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "fashion",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "advance",
-     "seconds": 20,
-     "ok": true
-    },
-    {
-     "op": "advance",
-     "seconds": 20,
-     "ok": true
-    },
-    {
-     "op": "advance",
-     "seconds": 20,
-     "ok": true
-    },
-    {
-     "op": "advance",
-     "seconds": 20,
-     "ok": true
-    },
-    {
-     "op": "advance",
-     "seconds": 20,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "fashion",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "advance",
-     "seconds": 20,
-     "ok": true
-    },
-    {
-     "op": "advance",
-     "seconds": 20,
-     "ok": true
-    },
-    {
-     "op": "campaign",
-     "ok": true
-    },
-    {
-     "op": "advance",
-     "seconds": 20,
-     "ok": true
-    },
-    {
-     "op": "advance",
-     "seconds": 20,
-     "ok": true
-    },
-    {
-     "op": "advance",
-     "seconds": 20,
-     "ok": true
-    },
-    {
-     "op": "advance",
-     "seconds": 20,
-     "ok": true
-    },
-    {
-     "op": "advance",
-     "seconds": 20,
-     "ok": true
-    },
-    {
-     "op": "advance",
-     "seconds": 20,
-     "ok": true
-    },
-    {
-     "op": "manager",
-     "ok": true
-    },
-    {
-     "op": "advance",
-     "seconds": 20,
-     "ok": true
-    },
-    {
-     "op": "advance",
-     "seconds": 20,
-     "ok": true
-    },
-    {
-     "op": "advance",
-     "seconds": 20,
-     "ok": true
-    },
-    {
-     "op": "advance",
-     "seconds": 20,
-     "ok": true
-    },
-    {
-     "op": "advance",
-     "seconds": 20,
-     "ok": true
-    },
-    {
-     "op": "campaign",
-     "ok": true
-    },
-    {
-     "op": "advance",
-     "seconds": 20,
-     "ok": true
-    },
-    {
-     "op": "advance",
-     "seconds": 20,
      "ok": true
     },
     {
@@ -11250,14 +11403,150 @@
      "op": "buy",
      "chain": "bakery",
      "stage": 2,
-     "count": 5,
+     "count": 1,
      "ok": true
     },
     {
      "op": "buy",
      "chain": "coffee",
      "stage": 2,
-     "count": 5,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 20,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 20,
      "ok": true
     },
     {
@@ -11577,7 +11866,9 @@
      "policy": null,
      "policies": 0,
      "campaigns": 0,
-     "goal": 0
+     "goal": 0,
+     "listed": false,
+     "overtake": null
     },
     {
      "after": 70,
@@ -11636,7 +11927,9 @@
      "policy": null,
      "policies": 0,
      "campaigns": 1,
-     "goal": 4
+     "goal": 4,
+     "listed": false,
+     "overtake": null
     },
     {
      "after": 211,
@@ -11695,7 +11988,9 @@
      "policy": null,
      "policies": 0,
      "campaigns": 2,
-     "goal": 6
+     "goal": 6,
+     "listed": false,
+     "overtake": null
     },
     {
      "after": 323,
@@ -11758,7 +12053,9 @@
      "policy": null,
      "policies": 0,
      "campaigns": 3,
-     "goal": 8
+     "goal": 8,
+     "listed": false,
+     "overtake": null
     },
     {
      "after": 398,
@@ -11824,7 +12121,9 @@
      },
      "policies": 2,
      "campaigns": 4,
-     "goal": 10
+     "goal": 10,
+     "listed": false,
+     "overtake": null
     },
     {
      "after": 419,
@@ -11886,7 +12185,9 @@
      },
      "policies": 2,
      "campaigns": 5,
-     "goal": 10
+     "goal": 10,
+     "listed": false,
+     "overtake": null
     },
     {
      "after": 503,
@@ -11952,7 +12253,9 @@
      },
      "policies": 2,
      "campaigns": 6,
-     "goal": 11
+     "goal": 11,
+     "listed": false,
+     "overtake": null
     },
     {
      "after": 532,
@@ -12014,11 +12317,13 @@
      },
      "policies": 3,
      "campaigns": 7,
-     "goal": 11
+     "goal": 11,
+     "listed": false,
+     "overtake": null
     },
     {
-     "after": 595,
-     "cash": 303598596.1546914,
+     "after": 596,
+     "cash": 516353234.0239393,
      "earned": 1215728071.1227667,
      "totalEarned": 1215728071.1227667,
      "clock": 15966,
@@ -12080,13 +12385,15 @@
      },
      "policies": 4,
      "campaigns": 8,
-     "goal": 11
+     "goal": 11,
+     "listed": true,
+     "overtake": null
     },
     {
-     "after": 634,
-     "cash": 100759336.72813183,
-     "earned": 1344210899.2860925,
-     "totalEarned": 1344210899.2860925,
+     "after": 652,
+     "cash": 37455533.45837096,
+     "earned": 1349219305.6358395,
+     "totalEarned": 1349219305.6358395,
      "clock": 16166,
      "city": 0,
      "stars": 0,
@@ -12094,23 +12401,23 @@
      "levels": [
       [
        52,
-       64,
-       71
+       65,
+       77
       ],
       [
        52,
-       64,
-       71
+       65,
+       76
       ],
       [
        54,
-       59,
-       66
+       62,
+       68
       ],
       [
        50,
-       59,
-       66
+       61,
+       68
       ],
       [
        0,
@@ -12119,13 +12426,13 @@
       ]
      ],
      "rivals": [
-      179.1232457128075,
-      173.916976106943,
-      166.38984267443718,
-      141.01961874266198,
+      241.1480045421594,
+      228.80811105112815,
+      167.8803588854944,
+      142.1474579754187,
       0
      ],
-     "income": 548772.0987083978,
+     "income": 572319.2734940161,
      "best": {
       "chain": "leather",
       "stage": 1
@@ -12142,13 +12449,15 @@
      },
      "policies": 4,
      "campaigns": 9,
-     "goal": 11
+     "goal": 12,
+     "listed": true,
+     "overtake": null
     },
     {
-     "after": 650,
-     "cash": 35055625.82839804,
-     "earned": 1462752833.654204,
-     "totalEarned": 1462752833.654204,
+     "after": 665,
+     "cash": 24627103.48514456,
+     "earned": 1471109241.0427577,
+     "totalEarned": 1471109241.0427577,
      "clock": 16366,
      "city": 0,
      "stars": 0,
@@ -12156,23 +12465,23 @@
      "levels": [
       [
        52,
-       64,
-       71
+       65,
+       77
       ],
       [
        52,
-       64,
-       71
+       65,
+       76
       ],
       [
        54,
-       60,
-       67
+       62,
+       68
       ],
       [
        50,
-       60,
-       67
+       62,
+       68
       ],
       [
        0,
@@ -12181,16 +12490,16 @@
       ]
      ],
      "rivals": [
-      186.31109161870032,
-      182.58063643480983,
-      160.41280961374164,
-      155.20076895648592,
+      298.5141288711596,
+      288.0394291645953,
+      162.1665667605923,
+      157.36761249508828,
       0
      ],
-     "income": 1050493.3477149878,
+     "income": 1082688.8097712274,
      "best": {
-      "chain": "leather",
-      "stage": 1
+      "chain": "fashion",
+      "stage": 2
      },
      "event": {
       "kind": "strike",
@@ -12208,13 +12517,15 @@
      },
      "policies": 4,
      "campaigns": 10,
-     "goal": 11
+     "goal": 12,
+     "listed": true,
+     "overtake": null
     },
     {
-     "after": 668,
-     "cash": 52813014.88191354,
-     "earned": 1615968809.1749384,
-     "totalEarned": 1615968809.1749384,
+     "after": 684,
+     "cash": 41485148.27940365,
+     "earned": 1632914698.750003,
+     "totalEarned": 1632914698.750003,
      "clock": 16566,
      "city": 0,
      "stars": 0,
@@ -12222,23 +12533,23 @@
      "levels": [
       [
        52,
-       64,
-       71
+       65,
+       77
       ],
       [
        52,
-       64,
-       71
+       65,
+       76
       ],
       [
        54,
-       62,
-       69
+       64,
+       71
       ],
       [
        50,
        62,
-       68
+       71
       ],
       [
        0,
@@ -12247,16 +12558,16 @@
       ]
      ],
      "rivals": [
-      191.46140826585216,
-      188.78842032390241,
-      166.96792617146008,
-      166.50368674308226,
+      339.61875311915793,
+      330.480523159451,
+      170.07681398617257,
+      169.657785741212,
       0
      ],
-     "income": 826627.9782947004,
+     "income": 844943.5191655346,
      "best": {
       "chain": "leather",
-      "stage": 2
+      "stage": 1
      },
      "event": null,
      "nextEventAt": 16606,
@@ -12270,13 +12581,15 @@
      },
      "policies": 4,
      "campaigns": 10,
-     "goal": 12
+     "goal": 13,
+     "listed": true,
+     "overtake": null
     },
     {
-     "after": 728,
-     "cash": 1210536060.547899,
-     "earned": 5212654463.9199095,
-     "totalEarned": 5212654463.9199095,
+     "after": 737,
+     "cash": 141366252.51406324,
+     "earned": 5351105805.83407,
+     "totalEarned": 5351105805.83407,
      "clock": 26169,
      "city": 0,
      "stars": 0,
@@ -12293,13 +12606,13 @@
        78
       ],
       [
-       55,
-       69,
-       78
+       56,
+       70,
+       79
       ],
       [
-       52,
-       65,
+       56,
+       70,
        78
       ],
       [
@@ -12309,16 +12622,16 @@
       ]
      ],
      "rivals": [
-      171.08145670887274,
-      177.2178455642133,
-      172.56687387864315,
-      170.2443469089228,
+      363.88224704514715,
+      365.372013650939,
+      177.3699081452488,
+      177.21242673615126,
       0
      ],
-     "income": 1243660.7558914286,
+     "income": 1288103.291902296,
      "best": {
-      "chain": "fashion",
-      "stage": 0
+      "chain": "leather",
+      "stage": 2
      },
      "event": {
       "kind": "strike",
@@ -12336,17 +12649,19 @@
      },
      "policies": 5,
      "campaigns": 11,
-     "goal": 12
+     "goal": 13,
+     "listed": true,
+     "overtake": null
     },
     {
-     "after": 752,
-     "cash": 59412323.77219013,
-     "earned": 5544954290.916768,
-     "totalEarned": 5544954290.916768,
+     "after": 749,
+     "cash": 274175243.0282131,
+     "earned": 5675994796.348221,
+     "totalEarned": 5675994796.348221,
      "clock": 26369,
      "city": 0,
      "stars": 0,
-     "manager": 4,
+     "manager": 5,
      "levels": [
       [
        52,
@@ -12359,13 +12674,13 @@
        78
       ],
       [
-       75,
-       79,
-       88
+       56,
+       70,
+       79
       ],
       [
-       54,
-       67,
+       56,
+       70,
        78
       ],
       [
@@ -12375,16 +12690,16 @@
       ]
      ],
      "rivals": [
-      204.38918015154462,
-      233.11281246036154,
-      243.38674271551633,
-      228.11608232960165,
+      342.5369831308586,
+      367.93116510946464,
+      234.58241977008592,
+      233.10892970038833,
       0
      ],
-     "income": 1238890.9292745083,
+     "income": 1204451.7091387578,
      "best": {
       "chain": "leather",
-      "stage": 1
+      "stage": 2
      },
      "event": null,
      "nextEventAt": 26479,
@@ -12398,37 +12713,39 @@
      },
      "policies": 5,
      "campaigns": 12,
-     "goal": 12
+     "goal": 13,
+     "listed": true,
+     "overtake": null
     },
     {
-     "after": 766,
-     "cash": 112558101.97286302,
-     "earned": 5878143148.70984,
-     "totalEarned": 5878143148.70984,
+     "after": 771,
+     "cash": 27629363.177989475,
+     "earned": 5994325393.161,
+     "totalEarned": 5994325393.161,
      "clock": 26569,
      "city": 0,
      "stars": 0,
-     "manager": 4,
+     "manager": 5,
      "levels": [
       [
        52,
        65,
-       78
+       79
       ],
       [
        52,
        65,
-       78
+       79
       ],
       [
-       75,
-       79,
-       91
+       61,
+       72,
+       84
       ],
       [
-       54,
-       67,
-       78
+       56,
+       70,
+       79
       ],
       [
        0,
@@ -12437,16 +12754,16 @@
       ]
      ],
      "rivals": [
-      252.581924442261,
-      273.16330634493744,
-      295.92890035364684,
-      269.5829927557606,
+      352.5680808455024,
+      370.76380733958274,
+      278.83019038664094,
+      274.15945430742875,
       0
      ],
-     "income": 1384164.3587062499,
+     "income": 1277149.7888026962,
      "best": {
       "chain": "fashion",
-      "stage": 2
+      "stage": 1
      },
      "event": {
       "kind": "fashionWeek",
@@ -12464,13 +12781,15 @@
      },
      "policies": 5,
      "campaigns": 13,
-     "goal": 12
+     "goal": 13,
+     "listed": true,
+     "overtake": null
     },
     {
-     "after": 779,
-     "cash": 109532045.44190337,
-     "earned": 6187820462.4288,
-     "totalEarned": 6187820462.4288,
+     "after": 784,
+     "cash": 291171943.27791095,
+     "earned": 6295396756.86308,
+     "totalEarned": 6295396756.86308,
      "clock": 26769,
      "city": 0,
      "stars": 0,
@@ -12479,22 +12798,22 @@
       [
        52,
        65,
-       78
+       79
       ],
       [
        52,
        65,
-       78
+       79
       ],
       [
-       75,
-       79,
-       92
+       61,
+       73,
+       84
       ],
       [
-       54,
-       67,
-       78
+       56,
+       70,
+       79
       ],
       [
        0,
@@ -12503,13 +12822,13 @@
       ]
      ],
      "rivals": [
-      287.1135346690356,
-      301.86073921718025,
-      337.1055188891549,
-      299.2953324288622,
+      360.11739606513237,
+      373.1552038167783,
+      314.0851373219269,
+      303.93516013151583,
       0
      ],
-     "income": 1148996.4024800444,
+     "income": 1126437.1503862804,
      "best": {
       "chain": "leather",
       "stage": 2
@@ -12526,37 +12845,39 @@
      },
      "policies": 5,
      "campaigns": 14,
-     "goal": 12
+     "goal": 13,
+     "listed": true,
+     "overtake": null
     },
     {
-     "after": 828,
-     "cash": 486892296.2373891,
-     "earned": 12685201640.721691,
-     "totalEarned": 12685201640.721691,
+     "after": 851,
+     "cash": 509974833.8722248,
+     "earned": 12684241492.160263,
+     "totalEarned": 12684241492.160263,
      "clock": 37852,
      "city": 0,
      "stars": 0,
      "manager": 5,
      "levels": [
       [
-       52,
-       65,
-       83
+       56,
+       70,
+       80
       ],
       [
-       52,
-       65,
-       83
+       56,
+       70,
+       80
       ],
       [
-       75,
-       79,
-       92
+       61,
+       73,
+       84
       ],
       [
-       54,
-       67,
-       79
+       56,
+       70,
+       80
       ],
       [
        50,
@@ -12565,13 +12886,13 @@
       ]
      ],
      "rivals": [
-      406.2270417878317,
-      406.228258690485,
-      450.27779939151185,
-      386.65231158972915,
+      391.5513832220568,
+      391.55245906953627,
+      411.1237274344918,
+      391.54674720363386,
       7.301630100647505
      ],
-     "income": 13992783.024945477,
+     "income": 13962278.70516374,
      "best": {
       "chain": "tech",
       "stage": 2
@@ -12592,37 +12913,39 @@
      },
      "policies": 6,
      "campaigns": 15,
-     "goal": 13
+     "goal": 14,
+     "listed": true,
+     "overtake": null
     },
     {
-     "after": 828,
-     "cash": 486892296.2373891,
-     "earned": 12685201640.721691,
-     "totalEarned": 12685201640.721691,
+     "after": 851,
+     "cash": 509974833.8722248,
+     "earned": 12684241492.160263,
+     "totalEarned": 12684241492.160263,
      "clock": 37852,
      "city": 0,
      "stars": 0,
      "manager": 5,
      "levels": [
       [
-       52,
-       65,
-       83
+       56,
+       70,
+       80
       ],
       [
-       52,
-       65,
-       83
+       56,
+       70,
+       80
       ],
       [
-       75,
-       79,
-       92
+       61,
+       73,
+       84
       ],
       [
-       54,
-       67,
-       79
+       56,
+       70,
+       80
       ],
       [
        50,
@@ -12631,13 +12954,13 @@
       ]
      ],
      "rivals": [
-      406.2270417878317,
-      406.228258690485,
-      450.27779939151185,
-      386.65231158972915,
+      391.5513832220568,
+      391.55245906953627,
+      411.1237274344918,
+      391.54674720363386,
       7.301630100647505
      ],
-     "income": 13992783.024945477,
+     "income": 13962278.70516374,
      "best": {
       "chain": "tech",
       "stage": 2
@@ -12658,7 +12981,9 @@
      },
      "policies": 6,
      "campaigns": 15,
-     "goal": 13
+     "goal": 14,
+     "listed": true,
+     "overtake": null
     }
    ]
   },
@@ -15726,6 +16051,10 @@
      "ok": true
     },
     {
+     "op": "ipo",
+     "ok": true
+    },
+    {
      "op": "buy",
      "chain": "leather",
      "stage": 2,
@@ -16088,104 +16417,76 @@
      "ok": true
     },
     {
-     "op": "advance",
-     "seconds": 60,
-     "ok": true
-    },
-    {
      "op": "buy",
      "chain": "fashion",
      "stage": 2,
-     "count": 1,
+     "count": 5,
      "ok": true
     },
     {
      "op": "buy",
      "chain": "fashion",
      "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "fashion",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "fashion",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "fashion",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "fashion",
-     "stage": 1,
-     "count": 1,
+     "count": 5,
      "ok": true
     },
     {
      "op": "buy",
      "chain": "fashion",
      "stage": 0,
-     "count": 1,
+     "count": 5,
      "ok": true
     },
     {
      "op": "buy",
      "chain": "fashion",
      "stage": 1,
-     "count": 1,
+     "count": 5,
      "ok": true
     },
     {
      "op": "buy",
      "chain": "fashion",
      "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "advance",
-     "seconds": 60,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "fashion",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "fashion",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "fashion",
-     "stage": 2,
-     "count": 1,
+     "count": 5,
      "ok": true
     },
     {
      "op": "buy",
      "chain": "bakery",
      "stage": 2,
+     "count": 5,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 2,
+     "count": 5,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 60,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 2,
      "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 60,
      "ok": true
     },
     {
@@ -16212,20 +16513,6 @@
     },
     {
      "op": "buy",
-     "chain": "bakery",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "coffee",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
      "chain": "coffee",
      "stage": 1,
      "count": 1,
@@ -16297,6 +16584,13 @@
     {
      "op": "buy",
      "chain": "bakery",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
      "stage": 2,
      "count": 1,
      "ok": true
@@ -16305,13 +16599,6 @@
      "op": "buy",
      "chain": "bakery",
      "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "bakery",
-     "stage": 2,
      "count": 1,
      "ok": true
     },
@@ -16340,13 +16627,6 @@
      "op": "buy",
      "chain": "coffee",
      "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "bakery",
-     "stage": 1,
      "count": 1,
      "ok": true
     },
@@ -16377,15 +16657,57 @@
      "ok": true
     },
     {
-     "op": "advance",
-     "seconds": 60,
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 1,
+     "count": 5,
      "ok": true
     },
     {
      "op": "buy",
-     "chain": "fashion",
+     "chain": "bakery",
+     "stage": 0,
+     "count": 5,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 0,
+     "count": 5,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 0,
+     "count": 5,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 0,
+     "count": 5,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
      "stage": 2,
-     "count": 1,
+     "count": 5,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 2,
+     "count": 5,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 60,
      "ok": true
     },
     {
@@ -16426,18 +16748,6 @@
      "ok": true
     },
     {
-     "op": "buy",
-     "chain": "fashion",
-     "stage": 2,
-     "count": 2,
-     "ok": true
-    },
-    {
-     "op": "advance",
-     "seconds": 60,
-     "ok": true
-    },
-    {
      "op": "advance",
      "seconds": 60,
      "ok": true
@@ -16465,8 +16775,13 @@
     {
      "op": "buy",
      "chain": "leather",
-     "stage": 2,
+     "stage": 1,
      "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 60,
      "ok": true
     },
     {
@@ -16505,8 +16820,15 @@
     {
      "op": "buy",
      "chain": "fashion",
-     "stage": 2,
-     "count": 4,
+     "stage": 0,
+     "count": 5,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 0,
+     "count": 5,
      "ok": true
     },
     {
@@ -16517,15 +16839,20 @@
     {
      "op": "buy",
      "chain": "fashion",
-     "stage": 1,
+     "stage": 2,
      "count": 1,
      "ok": true
     },
     {
      "op": "buy",
      "chain": "fashion",
-     "stage": 2,
+     "stage": 1,
      "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 60,
      "ok": true
     },
     {
@@ -16556,13 +16883,8 @@
     {
      "op": "buy",
      "chain": "leather",
-     "stage": 1,
+     "stage": 2,
      "count": 1,
-     "ok": true
-    },
-    {
-     "op": "advance",
-     "seconds": 60,
      "ok": true
     },
     {
@@ -17048,11 +17370,6 @@
      "ok": true
     },
     {
-     "op": "advance",
-     "seconds": 60,
-     "ok": true
-    },
-    {
      "op": "buy",
      "chain": "tech",
      "stage": 1,
@@ -17084,6 +17401,11 @@
      "ok": true
     },
     {
+     "op": "advance",
+     "seconds": 60,
+     "ok": true
+    },
+    {
      "op": "buy",
      "chain": "tech",
      "stage": 1,
@@ -17117,6 +17439,13 @@
     {
      "op": "advance",
      "seconds": 60,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "tech",
+     "stage": 2,
+     "count": 1,
      "ok": true
     },
     {
@@ -17132,20 +17461,13 @@
     {
      "op": "buy",
      "chain": "tech",
-     "stage": 2,
+     "stage": 1,
      "count": 1,
      "ok": true
     },
     {
      "op": "advance",
      "seconds": 60,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "tech",
-     "stage": 1,
-     "count": 1,
      "ok": true
     },
     {
@@ -17158,11 +17480,6 @@
      "ok": true
     },
     {
-     "op": "advance",
-     "seconds": 60,
-     "ok": true
-    },
-    {
      "op": "buy",
      "chain": "tech",
      "stage": 2,
@@ -17199,6 +17516,18 @@
      "ok": true
     },
     {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 2,
+     "count": 2,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 60,
+     "ok": true
+    },
+    {
      "op": "advance",
      "seconds": 60,
      "ok": true
@@ -17213,11 +17542,6 @@
      "chain": "tech",
      "stage": 2,
      "count": 1,
-     "ok": true
-    },
-    {
-     "op": "advance",
-     "seconds": 60,
      "ok": true
     },
     {
@@ -17268,6 +17592,32 @@
      "op": "buy",
      "chain": "tech",
      "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 2,
+     "count": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 60,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 2,
      "count": 1,
      "ok": true
     },
@@ -17483,13 +17833,6 @@
     },
     {
      "op": "buy",
-     "chain": "leather",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
      "chain": "tech",
      "stage": 2,
      "count": 1,
@@ -17547,20 +17890,6 @@
     {
      "op": "buy",
      "chain": "leather",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "bakery",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "coffee",
      "stage": 2,
      "count": 1,
      "ok": true
@@ -17645,287 +17974,16 @@
      "ok": true
     },
     {
-     "op": "advance",
-     "seconds": 60,
-     "ok": true
-    },
-    {
      "op": "buy",
-     "chain": "bakery",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "coffee",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "bakery",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "bakery",
+     "chain": "fashion",
      "stage": 1,
      "count": 1,
      "ok": true
     },
     {
      "op": "buy",
-     "chain": "bakery",
+     "chain": "fashion",
      "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "bakery",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "bakery",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "bakery",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "bakery",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "bakery",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "bakery",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "bakery",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "bakery",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "bakery",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "bakery",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "bakery",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "bakery",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "bakery",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "bakery",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "bakery",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "bakery",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "bakery",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "bakery",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "bakery",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "bakery",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "bakery",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "bakery",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "coffee",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "bakery",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "coffee",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "coffee",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "coffee",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "coffee",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "coffee",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "coffee",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "coffee",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "coffee",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "coffee",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "coffee",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "coffee",
-     "stage": 0,
      "count": 1,
      "ok": true
     },
@@ -17937,55 +17995,291 @@
     {
      "op": "buy",
      "chain": "coffee",
-     "stage": 0,
-     "count": 5,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "coffee",
-     "stage": 0,
-     "count": 5,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "coffee",
-     "stage": 0,
-     "count": 5,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "coffee",
-     "stage": 1,
-     "count": 5,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "coffee",
      "stage": 2,
-     "count": 5,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "bakery",
-     "stage": 2,
-     "count": 5,
+     "count": 1,
      "ok": true
     },
     {
      "op": "buy",
      "chain": "bakery",
      "stage": 1,
-     "count": 5,
+     "count": 1,
      "ok": true
     },
     {
      "op": "buy",
      "chain": "coffee",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 60,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
      "stage": 1,
      "count": 5,
      "ok": true
@@ -17994,6 +18288,13 @@
      "op": "buy",
      "chain": "coffee",
      "stage": 2,
+     "count": 5,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 1,
      "count": 5,
      "ok": true
     },
@@ -18160,6 +18461,13 @@
     {
      "op": "buy",
      "chain": "leather",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
      "stage": 1,
      "count": 1,
      "ok": true
@@ -18226,93 +18534,65 @@
      "ok": true
     },
     {
-     "op": "advance",
-     "seconds": 60,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "fashion",
-     "stage": 2,
-     "count": 5,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "fashion",
-     "stage": 1,
-     "count": 5,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "fashion",
-     "stage": 0,
-     "count": 5,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "fashion",
-     "stage": 0,
-     "count": 5,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "fashion",
-     "stage": 0,
-     "count": 5,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "fashion",
-     "stage": 0,
-     "count": 5,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "fashion",
-     "stage": 1,
-     "count": 5,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "fashion",
-     "stage": 1,
-     "count": 5,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "fashion",
-     "stage": 2,
-     "count": 5,
-     "ok": true
-    },
-    {
-     "op": "advance",
-     "seconds": 60,
-     "ok": true
-    },
-    {
-     "op": "advance",
-     "seconds": 60,
-     "ok": true
-    },
-    {
-     "op": "advance",
-     "seconds": 60,
-     "ok": true
-    },
-    {
      "op": "buy",
      "chain": "tech",
      "stage": 2,
      "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 60,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 1,
+     "count": 5,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 2,
+     "count": 3,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 60,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 60,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 60,
      "ok": true
     },
     {
@@ -18555,13 +18835,6 @@
     },
     {
      "op": "buy",
-     "chain": "bakery",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
      "chain": "leather",
      "stage": 2,
      "count": 1,
@@ -18577,6 +18850,13 @@
     {
      "op": "buy",
      "chain": "fashion",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
      "stage": 2,
      "count": 1,
      "ok": true
@@ -18681,27 +18961,6 @@
     },
     {
      "op": "buy",
-     "chain": "coffee",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "bakery",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "coffee",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
      "chain": "bakery",
      "stage": 1,
      "count": 1,
@@ -18767,18 +19026,6 @@
      "ok": false
     },
     {
-     "op": "advance",
-     "seconds": 60,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "fashion",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
      "op": "buy",
      "chain": "tech",
      "stage": 2,
@@ -18826,15 +19073,20 @@
      "ok": true
     },
     {
+     "op": "buy",
+     "chain": "tech",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
      "op": "advance",
      "seconds": 60,
      "ok": true
     },
     {
-     "op": "buy",
-     "chain": "tech",
-     "stage": 1,
-     "count": 1,
+     "op": "advance",
+     "seconds": 60,
      "ok": true
     },
     {
@@ -19020,11 +19272,6 @@
      "ok": true
     },
     {
-     "op": "advance",
-     "seconds": 60,
-     "ok": true
-    },
-    {
      "op": "buy",
      "chain": "tech",
      "stage": 1,
@@ -19046,6 +19293,11 @@
      "chain": "leather",
      "stage": 1,
      "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 60,
      "ok": true
     },
     {
@@ -19264,6 +19516,13 @@
      "ok": true
     },
     {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
      "op": "advance",
      "seconds": 60,
      "ok": true
@@ -19275,13 +19534,6 @@
     {
      "op": "buy",
      "chain": "bakery",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "bakery",
      "stage": 2,
      "count": 1,
      "ok": true
@@ -19507,6 +19759,20 @@
      "op": "buy",
      "chain": "bakery",
      "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 1,
      "count": 1,
      "ok": true
     },
@@ -19532,15 +19798,8 @@
     {
      "op": "buy",
      "chain": "bakery",
-     "stage": 0,
-     "count": 5,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "bakery",
      "stage": 1,
-     "count": 1,
+     "count": 2,
      "ok": true
     },
     {
@@ -19613,13 +19872,6 @@
     },
     {
      "op": "buy",
-     "chain": "bakery",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
      "chain": "coffee",
      "stage": 2,
      "count": 1,
@@ -19678,6 +19930,41 @@
      "op": "buy",
      "chain": "coffee",
      "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 1,
      "count": 1,
      "ok": true
     },
@@ -19731,6 +20018,97 @@
     {
      "op": "buy",
      "chain": "coffee",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
      "stage": 2,
      "count": 1,
      "ok": true
@@ -19779,21 +20157,7 @@
     },
     {
      "op": "buy",
-     "chain": "coffee",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "coffee",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "coffee",
+     "chain": "bakery",
      "stage": 0,
      "count": 1,
      "ok": true
@@ -19843,21 +20207,14 @@
     {
      "op": "buy",
      "chain": "bakery",
-     "stage": 2,
+     "stage": 0,
      "count": 1,
      "ok": true
     },
     {
      "op": "buy",
-     "chain": "coffee",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "coffee",
-     "stage": 1,
+     "chain": "bakery",
+     "stage": 0,
      "count": 1,
      "ok": true
     },
@@ -19871,27 +20228,6 @@
     {
      "op": "buy",
      "chain": "bakery",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "coffee",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "coffee",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "coffee",
      "stage": 0,
      "count": 1,
      "ok": true
@@ -19899,6 +20235,20 @@
     {
      "op": "buy",
      "chain": "coffee",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
      "stage": 2,
      "count": 1,
      "ok": true
@@ -19925,7 +20275,7 @@
     {
      "op": "buy",
      "chain": "coffee",
-     "stage": 2,
+     "stage": 1,
      "count": 5,
      "ok": true
     },
@@ -19940,6 +20290,13 @@
      "op": "buy",
      "chain": "coffee",
      "stage": 0,
+     "count": 5,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
      "count": 5,
      "ok": true
     },
@@ -19951,42 +20308,7 @@
     {
      "op": "buy",
      "chain": "coffee",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "bakery",
      "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "bakery",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "bakery",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "bakery",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "coffee",
-     "stage": 1,
      "count": 1,
      "ok": true
     },
@@ -20000,13 +20322,6 @@
     {
      "op": "buy",
      "chain": "coffee",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "coffee",
      "stage": 0,
      "count": 1,
      "ok": true
@@ -20014,14 +20329,7 @@
     {
      "op": "buy",
      "chain": "coffee",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "coffee",
-     "stage": 1,
+     "stage": 0,
      "count": 1,
      "ok": true
     },
@@ -20042,35 +20350,7 @@
     {
      "op": "buy",
      "chain": "coffee",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "coffee",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "coffee",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "coffee",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "coffee",
-     "stage": 0,
+     "stage": 2,
      "count": 1,
      "ok": true
     },
@@ -20084,7 +20364,35 @@
     {
      "op": "buy",
      "chain": "bakery",
-     "stage": 1,
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 0,
      "count": 1,
      "ok": true
     },
@@ -20127,6 +20435,146 @@
      "op": "buy",
      "chain": "coffee",
      "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 0,
      "count": 1,
      "ok": true
     },
@@ -20479,34 +20927,6 @@
     },
     {
      "op": "buy",
-     "chain": "coffee",
-     "stage": 2,
-     "count": 5,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "coffee",
-     "stage": 1,
-     "count": 5,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "bakery",
-     "stage": 2,
-     "count": 5,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "bakery",
-     "stage": 1,
-     "count": 5,
-     "ok": true
-    },
-    {
-     "op": "buy",
      "chain": "fashion",
      "stage": 1,
      "count": 5,
@@ -20556,29 +20976,36 @@
     },
     {
      "op": "buy",
-     "chain": "bakery",
-     "stage": 0,
-     "count": 5,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "bakery",
-     "stage": 2,
-     "count": 5,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "bakery",
+     "chain": "coffee",
      "stage": 1,
      "count": 5,
      "ok": true
     },
     {
      "op": "buy",
-     "chain": "bakery",
+     "chain": "coffee",
+     "stage": 0,
+     "count": 5,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
      "stage": 2,
+     "count": 5,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 1,
+     "count": 5,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 0,
      "count": 5,
      "ok": true
     },
@@ -20591,6 +21018,76 @@
     },
     {
      "op": "buy",
+     "chain": "bakery",
+     "stage": 2,
+     "count": 5,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 1,
+     "count": 5,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 0,
+     "count": 5,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 1,
+     "count": 5,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 2,
+     "count": 5,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 2,
+     "count": 5,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 1,
+     "count": 5,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 0,
+     "count": 5,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 2,
+     "count": 5,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 1,
+     "count": 5,
+     "ok": true
+    },
+    {
+     "op": "buy",
      "chain": "coffee",
      "stage": 1,
      "count": 5,
@@ -20608,6 +21105,74 @@
      "chain": "coffee",
      "stage": 2,
      "count": 5,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 0,
+     "count": 5,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
+     "count": 5,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 0,
+     "count": 5,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 1,
+     "count": 5,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 0,
+     "count": 5,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 60,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
+     "count": 1,
      "ok": true
     },
     {
@@ -20619,8 +21184,50 @@
     },
     {
      "op": "buy",
-     "chain": "coffee",
+     "chain": "fashion",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
      "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 2,
      "count": 1,
      "ok": true
     },
@@ -20634,371 +21241,6 @@
      "chain": "fashion",
      "stage": 2,
      "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "fashion",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "coffee",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "coffee",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "coffee",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "bakery",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "bakery",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "bakery",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "fashion",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "fashion",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "fashion",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "fashion",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "fashion",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "advance",
-     "seconds": 60,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "fashion",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "fashion",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "coffee",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "bakery",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "bakery",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "coffee",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "coffee",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "fashion",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "fashion",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "fashion",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "bakery",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "bakery",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "bakery",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "bakery",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "bakery",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "bakery",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "bakery",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "bakery",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "bakery",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "bakery",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "bakery",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "bakery",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "bakery",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "coffee",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "coffee",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "coffee",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "coffee",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "coffee",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "coffee",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "coffee",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "coffee",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "coffee",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "coffee",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "coffee",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "coffee",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "coffee",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "advance",
-     "seconds": 60,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "fashion",
-     "stage": 2,
-     "count": 3,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "fashion",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "advance",
-     "seconds": 60,
      "ok": true
     },
     {
@@ -21058,48 +21300,219 @@
     {
      "op": "buy",
      "chain": "fashion",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "fashion",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "fashion",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "advance",
-     "seconds": 60,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "fashion",
      "stage": 0,
      "count": 5,
      "ok": true
     },
     {
      "op": "buy",
+     "chain": "fashion",
+     "stage": 1,
+     "count": 2,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 60,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 60,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
      "chain": "bakery",
      "stage": 2,
-     "count": 5,
+     "count": 1,
      "ok": true
     },
     {
      "op": "buy",
-     "chain": "coffee",
+     "chain": "bakery",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
      "stage": 2,
-     "count": 5,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 60,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 2,
+     "count": 2,
      "ok": true
     },
     {
@@ -21122,13 +21535,6 @@
      "ok": true
     },
     {
-     "op": "buy",
-     "chain": "fashion",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
      "op": "advance",
      "seconds": 60,
      "ok": true
@@ -21136,14 +21542,49 @@
     {
      "op": "buy",
      "chain": "fashion",
-     "stage": 2,
+     "stage": 1,
      "count": 1,
      "ok": true
     },
     {
      "op": "buy",
      "chain": "fashion",
-     "stage": 1,
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 0,
      "count": 1,
      "ok": true
     },
@@ -21159,6 +21600,105 @@
     {
      "op": "buy",
      "chain": "fashion",
+     "stage": 0,
+     "count": 5,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 60,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 60,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 60,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
      "stage": 2,
      "count": 2,
      "ok": true
@@ -21177,8 +21717,36 @@
     },
     {
      "op": "buy",
-     "chain": "fashion",
+     "chain": "coffee",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
      "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
      "count": 1,
      "ok": true
     },
@@ -21190,49 +21758,7 @@
     {
      "op": "buy",
      "chain": "fashion",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "fashion",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "fashion",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "fashion",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "fashion",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "fashion",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "fashion",
-     "stage": 0,
+     "stage": 1,
      "count": 1,
      "ok": true
     },
@@ -21249,357 +21775,286 @@
      "ok": true
     },
     {
-     "op": "buy",
-     "chain": "fashion",
-     "stage": 0,
-     "count": 2,
-     "ok": true
-    },
-    {
      "op": "advance",
      "seconds": 60,
      "ok": true
     },
     {
      "op": "buy",
-     "chain": "fashion",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "fashion",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "advance",
-     "seconds": 60,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "fashion",
+     "chain": "leather",
      "stage": 2,
      "count": 1,
      "ok": true
     },
     {
      "op": "buy",
-     "chain": "coffee",
+     "chain": "leather",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
      "stage": 2,
      "count": 1,
      "ok": true
     },
     {
      "op": "buy",
-     "chain": "bakery",
+     "chain": "leather",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
      "stage": 2,
      "count": 1,
      "ok": true
     },
     {
      "op": "buy",
-     "chain": "fashion",
-     "stage": 2,
+     "chain": "leather",
+     "stage": 0,
      "count": 1,
      "ok": true
     },
     {
-     "op": "advance",
-     "seconds": 60,
-     "ok": true
-    },
-    {
      "op": "buy",
-     "chain": "fashion",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "advance",
-     "seconds": 60,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "coffee",
+     "chain": "leather",
      "stage": 1,
      "count": 1,
      "ok": true
     },
     {
      "op": "buy",
-     "chain": "coffee",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "coffee",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "coffee",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "coffee",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "coffee",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "coffee",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "coffee",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "coffee",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "coffee",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "coffee",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "coffee",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "coffee",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "coffee",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "coffee",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "coffee",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "coffee",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "coffee",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "coffee",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "coffee",
+     "chain": "leather",
      "stage": 2,
      "count": 1,
      "ok": true
     },
     {
      "op": "buy",
-     "chain": "coffee",
+     "chain": "leather",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
      "stage": 2,
      "count": 1,
      "ok": true
     },
     {
      "op": "buy",
-     "chain": "bakery",
+     "chain": "leather",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
      "stage": 1,
      "count": 1,
      "ok": true
     },
     {
      "op": "buy",
-     "chain": "bakery",
-     "stage": 0,
+     "chain": "leather",
+     "stage": 2,
      "count": 1,
      "ok": true
     },
     {
      "op": "buy",
-     "chain": "bakery",
+     "chain": "leather",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
      "stage": 1,
      "count": 1,
      "ok": true
     },
     {
      "op": "buy",
-     "chain": "bakery",
+     "chain": "leather",
      "stage": 0,
      "count": 1,
      "ok": true
     },
     {
      "op": "buy",
-     "chain": "bakery",
+     "chain": "leather",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
      "stage": 1,
      "count": 1,
      "ok": true
     },
     {
      "op": "buy",
-     "chain": "bakery",
+     "chain": "leather",
      "stage": 0,
      "count": 1,
      "ok": true
     },
     {
      "op": "buy",
-     "chain": "bakery",
+     "chain": "leather",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
      "stage": 1,
      "count": 1,
      "ok": true
     },
     {
      "op": "buy",
-     "chain": "bakery",
+     "chain": "leather",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
      "stage": 1,
      "count": 1,
      "ok": true
     },
     {
      "op": "buy",
-     "chain": "bakery",
+     "chain": "leather",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
      "stage": 0,
      "count": 1,
      "ok": true
     },
     {
      "op": "buy",
-     "chain": "bakery",
+     "chain": "leather",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
      "stage": 0,
      "count": 1,
      "ok": true
     },
     {
      "op": "buy",
-     "chain": "bakery",
+     "chain": "leather",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
      "stage": 0,
      "count": 1,
      "ok": true
     },
     {
      "op": "buy",
-     "chain": "bakery",
-     "stage": 0,
+     "chain": "leather",
+     "stage": 2,
      "count": 1,
      "ok": true
     },
     {
      "op": "buy",
-     "chain": "bakery",
-     "stage": 0,
+     "chain": "leather",
+     "stage": 1,
      "count": 1,
      "ok": true
     },
     {
      "op": "buy",
-     "chain": "bakery",
-     "stage": 0,
+     "chain": "leather",
+     "stage": 2,
      "count": 1,
      "ok": true
     },
     {
      "op": "buy",
-     "chain": "bakery",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "bakery",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "bakery",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "bakery",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "bakery",
+     "chain": "leather",
      "stage": 0,
      "count": 1,
      "ok": true
@@ -21611,35 +22066,273 @@
     },
     {
      "op": "buy",
-     "chain": "bakery",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "bakery",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "fashion",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "fashion",
+     "chain": "leather",
      "stage": 1,
      "count": 1,
      "ok": true
     },
     {
      "op": "buy",
-     "chain": "fashion",
+     "chain": "leather",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
      "stage": 2,
      "count": 1,
      "ok": true
@@ -21651,68 +22344,216 @@
     },
     {
      "op": "buy",
-     "chain": "bakery",
+     "chain": "leather",
      "stage": 2,
      "count": 5,
      "ok": true
     },
     {
      "op": "buy",
-     "chain": "bakery",
+     "chain": "leather",
      "stage": 1,
      "count": 5,
      "ok": true
     },
     {
      "op": "buy",
-     "chain": "bakery",
+     "chain": "leather",
      "stage": 2,
      "count": 5,
      "ok": true
     },
     {
      "op": "buy",
-     "chain": "coffee",
-     "stage": 2,
-     "count": 5,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "coffee",
+     "chain": "leather",
      "stage": 1,
-     "count": 5,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 60,
      "ok": true
     },
     {
      "op": "buy",
-     "chain": "coffee",
+     "chain": "leather",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 60,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 60,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
      "stage": 2,
      "count": 4,
      "ok": true
     },
     {
-     "op": "buy",
-     "chain": "bakery",
-     "stage": 1,
-     "count": 5,
-     "ok": true
-    },
-    {
      "op": "advance",
      "seconds": 60,
      "ok": true
     },
     {
      "op": "buy",
-     "chain": "coffee",
+     "chain": "leather",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
      "stage": 1,
      "count": 1,
      "ok": true
     },
     {
      "op": "buy",
-     "chain": "coffee",
+     "chain": "leather",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
      "stage": 1,
      "count": 1,
      "ok": true
@@ -21725,33 +22566,16 @@
      "ok": true
     },
     {
-     "op": "advance",
-     "seconds": 60,
-     "ok": true
-    },
-    {
      "op": "buy",
-     "chain": "fashion",
-     "stage": 2,
+     "chain": "leather",
+     "stage": 1,
      "count": 1,
      "ok": true
     },
     {
      "op": "buy",
-     "chain": "bakery",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "advance",
-     "seconds": 60,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "fashion",
-     "stage": 2,
+     "chain": "leather",
+     "stage": 0,
      "count": 1,
      "ok": true
     },
@@ -21763,20 +22587,6 @@
     {
      "op": "buy",
      "chain": "leather",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
      "stage": 1,
      "count": 1,
      "ok": true
@@ -21798,13 +22608,6 @@
     {
      "op": "buy",
      "chain": "leather",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
      "stage": 0,
      "count": 1,
      "ok": true
@@ -21813,223 +22616,6 @@
      "op": "buy",
      "chain": "leather",
      "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 2,
      "count": 1,
      "ok": true
     },
@@ -22049,323 +22635,10 @@
      "op": "buy",
      "chain": "leather",
      "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "advance",
-     "seconds": 60,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 2,
-     "count": 5,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 1,
-     "count": 5,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 2,
-     "count": 5,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 1,
      "count": 3,
      "ok": true
     },
     {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 0,
-     "count": 4,
-     "ok": true
-    },
-    {
      "op": "advance",
      "seconds": 60,
      "ok": true
@@ -22373,13 +22646,6 @@
     {
      "op": "buy",
      "chain": "leather",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
      "stage": 1,
      "count": 1,
      "ok": true
@@ -22388,27 +22654,6 @@
      "op": "buy",
      "chain": "leather",
      "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 1,
      "count": 1,
      "ok": true
     },
@@ -22427,42 +22672,7 @@
     {
      "op": "buy",
      "chain": "leather",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
      "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 0,
      "count": 1,
      "ok": true
     },
@@ -22473,35 +22683,77 @@
     },
     {
      "op": "buy",
+     "chain": "bakery",
+     "stage": 2,
+     "count": 5,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 1,
+     "count": 5,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 1,
+     "count": 5,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
+     "count": 5,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
+     "count": 5,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 1,
+     "count": 5,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 0,
+     "count": 5,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 2,
+     "count": 5,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 1,
+     "count": 5,
+     "ok": true
+    },
+    {
+     "op": "buy",
      "chain": "leather",
      "stage": 2,
-     "count": 4,
+     "count": 1,
      "ok": true
     },
     {
      "op": "advance",
      "seconds": 60,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 1,
-     "count": 1,
      "ok": true
     },
     {
@@ -22552,17 +22804,7 @@
      "ok": true
     },
     {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 2,
-     "count": 1,
+     "op": "ipo",
      "ok": true
     },
     {
@@ -22589,6 +22831,20 @@
     {
      "op": "buy",
      "chain": "leather",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
      "stage": 1,
      "count": 1,
      "ok": true
@@ -22603,6 +22859,104 @@
     {
      "op": "buy",
      "chain": "leather",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
      "stage": 1,
      "count": 1,
      "ok": true
@@ -22624,7 +22978,7 @@
     {
      "op": "buy",
      "chain": "leather",
-     "stage": 2,
+     "stage": 1,
      "count": 1,
      "ok": true
     },
@@ -22638,6 +22992,27 @@
     {
      "op": "buy",
      "chain": "leather",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
      "stage": 2,
      "count": 1,
      "ok": true
@@ -22666,139 +23041,6 @@
     {
      "op": "buy",
      "chain": "leather",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
      "stage": 2,
      "count": 1,
      "ok": true
@@ -22819,15 +23061,29 @@
     },
     {
      "op": "buy",
-     "chain": "leather",
+     "chain": "fashion",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
      "stage": 1,
      "count": 1,
      "ok": true
     },
     {
      "op": "buy",
-     "chain": "leather",
+     "chain": "fashion",
      "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 1,
      "count": 1,
      "ok": true
     },
@@ -22838,28 +23094,14 @@
     },
     {
      "op": "buy",
-     "chain": "leather",
-     "stage": 1,
-     "count": 5,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
+     "chain": "fashion",
      "stage": 2,
      "count": 5,
      "ok": true
     },
     {
      "op": "buy",
-     "chain": "leather",
-     "stage": 2,
-     "count": 5,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
+     "chain": "fashion",
      "stage": 1,
      "count": 5,
      "ok": true
@@ -22881,6 +23123,34 @@
     {
      "op": "buy",
      "chain": "fashion",
+     "stage": 0,
+     "count": 5,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 2,
+     "count": 5,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 1,
+     "count": 5,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 2,
+     "count": 5,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
      "stage": 2,
      "count": 4,
      "ok": true
@@ -22892,7 +23162,134 @@
     },
     {
      "op": "buy",
-     "chain": "fashion",
+     "chain": "leather",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 60,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 60,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 60,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
      "stage": 2,
      "count": 1,
      "ok": true
@@ -22906,8 +23303,58 @@
     },
     {
      "op": "buy",
+     "chain": "coffee",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
      "chain": "fashion",
      "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 60,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 60,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 60,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 2,
      "count": 1,
      "ok": true
     },
@@ -22920,369 +23367,391 @@
     },
     {
      "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 60,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 60,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 60,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 60,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 60,
+     "ok": true
+    },
+    {
+     "op": "buy",
      "chain": "fashion",
      "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "advance",
-     "seconds": 60,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "advance",
-     "seconds": 60,
-     "ok": true
-    },
-    {
-     "op": "advance",
-     "seconds": 60,
-     "ok": true
-    },
-    {
-     "op": "advance",
-     "seconds": 60,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "advance",
-     "seconds": 60,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "coffee",
-     "stage": 2,
-     "count": 5,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "coffee",
-     "stage": 2,
-     "count": 5,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "coffee",
-     "stage": 1,
-     "count": 5,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "coffee",
-     "stage": 1,
-     "count": 5,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "coffee",
-     "stage": 0,
-     "count": 5,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 0,
      "count": 3,
      "ok": true
     },
     {
-     "op": "advance",
-     "seconds": 60,
-     "ok": true
-    },
-    {
-     "op": "advance",
-     "seconds": 60,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "advance",
-     "seconds": 60,
-     "ok": true
-    },
-    {
-     "op": "advance",
-     "seconds": 60,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "bakery",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "bakery",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "bakery",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "bakery",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "bakery",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "bakery",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "bakery",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "bakery",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "bakery",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "bakery",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "bakery",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "bakery",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "coffee",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "bakery",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "bakery",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "bakery",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "bakery",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "bakery",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "bakery",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "bakery",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "bakery",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "bakery",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "bakery",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "bakery",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "coffee",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "coffee",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "coffee",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "leather",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "coffee",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "bakery",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "fashion",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
      "op": "buy",
      "chain": "fashion",
      "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "fashion",
-     "stage": 1,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "fashion",
-     "stage": 0,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "fashion",
-     "stage": 1,
-     "count": 1,
+     "count": 5,
      "ok": true
     },
     {
@@ -23303,26 +23772,9 @@
      "ok": true
     },
     {
-     "op": "advance",
-     "seconds": 60,
-     "ok": true
-    },
-    {
-     "op": "advance",
-     "seconds": 60,
-     "ok": true
-    },
-    {
      "op": "buy",
      "chain": "leather",
-     "stage": 2,
-     "count": 1,
-     "ok": true
-    },
-    {
-     "op": "buy",
-     "chain": "fashion",
-     "stage": 2,
+     "stage": 0,
      "count": 1,
      "ok": true
     },
@@ -23372,7 +23824,7 @@
     {
      "op": "buy",
      "chain": "leather",
-     "stage": 2,
+     "stage": 1,
      "count": 1,
      "ok": true
     },
@@ -23440,7 +23892,9 @@
      "policy": null,
      "policies": 0,
      "campaigns": 0,
-     "goal": 0
+     "goal": 0,
+     "listed": false,
+     "overtake": null
     },
     {
      "after": 226,
@@ -23502,7 +23956,9 @@
      },
      "policies": 1,
      "campaigns": 0,
-     "goal": 3
+     "goal": 3,
+     "listed": false,
+     "overtake": null
     },
     {
      "after": 390,
@@ -23568,11 +24024,13 @@
      },
      "policies": 2,
      "campaigns": 0,
-     "goal": 3
+     "goal": 3,
+     "listed": false,
+     "overtake": null
     },
     {
-     "after": 499,
-     "cash": 3014092767.822383,
+     "after": 500,
+     "cash": 3586651708.8295193,
      "earned": 4890776189.428559,
      "totalEarned": 4890776189.428559,
      "clock": 28800,
@@ -23634,36 +24092,38 @@
      },
      "policies": 3,
      "campaigns": 0,
-     "goal": 3
+     "goal": 3,
+     "listed": true,
+     "overtake": null
     },
     {
-     "after": 573,
-     "cash": 186761249.8307515,
-     "earned": 6279823767.556563,
-     "totalEarned": 6279823767.556563,
+     "after": 572,
+     "cash": 228288174.27213228,
+     "earned": 6293887794.029269,
+     "totalEarned": 6293887794.029269,
      "clock": 30000,
      "city": 0,
      "stars": 0,
      "manager": 4,
      "levels": [
       [
-       59,
-       73,
-       83
+       79,
+       78,
+       94
       ],
       [
        56,
        70,
-       83
-      ],
-      [
-       52,
-       65,
-       80
+       84
       ],
       [
        60,
-       69,
+       70,
+       82
+      ],
+      [
+       60,
+       70,
        80
       ],
       [
@@ -23673,16 +24133,16 @@
       ]
      ],
      "rivals": [
-      419.59480285487933,
-      420.19889156914024,
-      364.82240410449015,
-      399.6842143284291,
+      468.1967638970333,
+      424.8877979333466,
+      382.19073162462445,
+      403.3290098303647,
       0
      ],
-     "income": 1169836.7118218092,
+     "income": 1179366.2195946323,
      "best": {
       "chain": "leather",
-      "stage": 1
+      "stage": 2
      },
      "event": null,
      "nextEventAt": 30060,
@@ -23696,55 +24156,57 @@
      },
      "policies": 4,
      "campaigns": 0,
-     "goal": 3
+     "goal": 3,
+     "listed": true,
+     "overtake": null
     },
     {
-     "after": 677,
-     "cash": 2044611110.315117,
-     "earned": 26507551482.47399,
-     "totalEarned": 26507551482.47399,
+     "after": 678,
+     "cash": 1207426395.5651152,
+     "earned": 27076873330.45764,
+     "totalEarned": 27076873330.45764,
      "clock": 51200,
      "city": 0,
      "stars": 0,
      "manager": 5,
      "levels": [
       [
-       59,
-       73,
-       83
+       79,
+       78,
+       94
       ],
       [
        56,
        70,
-       83
+       84
       ],
       [
-       57,
-       71,
-       85
+       75,
+       76,
+       83
       ],
       [
        60,
        70,
-       80
+       81
       ],
       [
        51,
        57,
-       68
+       69
       ]
      ],
      "rivals": [
-      416.01691906374606,
-      416.01691906846975,
-      426.04142260131005,
-      400.98016291590943,
-      105.43183085094716
+      471.1516914149947,
+      421.02917110251633,
+      416.0169187612995,
+      405.99241488659476,
+      106.04545421253327
      ],
-     "income": 12154751.025531111,
+     "income": 12315412.898544842,
      "best": {
       "chain": "tech",
-      "stage": 2
+      "stage": 1
      },
      "event": {
       "kind": "crisis",
@@ -23762,22 +24224,24 @@
      },
      "policies": 6,
      "campaigns": 0,
-     "goal": 3
+     "goal": 3,
+     "listed": true,
+     "overtake": null
     },
     {
-     "after": 748,
-     "cash": 8649202301.662846,
-     "earned": 157400994954.8085,
-     "totalEarned": 157400994954.8085,
+     "after": 749,
+     "cash": 9678365350.21005,
+     "earned": 158632009942.47467,
+     "totalEarned": 158632009942.47467,
      "clock": 72400,
      "city": 0,
      "stars": 0,
      "manager": 6,
      "levels": [
       [
-       59,
-       73,
-       84
+       79,
+       78,
+       94
       ],
       [
        56,
@@ -23785,9 +24249,9 @@
        84
       ],
       [
-       57,
-       71,
-       85
+       75,
+       76,
+       91
       ],
       [
        60,
@@ -23801,13 +24265,13 @@
       ]
      ],
      "rivals": [
-      421.87851176219135,
-      421.87851235991997,
-      431.29580020586843,
-      408.84885353522344,
-      219.18795122519225
+      476.96241366836773,
+      426.2217319681524,
+      461.74020882695703,
+      413.19207314345556,
+      219.1879512372553
      ],
-     "income": 19381456.36925691,
+     "income": 19425597.16103777,
      "best": {
       "chain": "tech",
       "stage": 1
@@ -23828,32 +24292,34 @@
      },
      "policies": 7,
      "campaigns": 0,
-     "goal": 3
+     "goal": 3,
+     "listed": true,
+     "overtake": null
     },
     {
-     "after": 842,
-     "cash": 10082342768.86052,
-     "earned": 180112455663.45993,
-     "totalEarned": 180112455663.45993,
+     "after": 840,
+     "cash": 10931498229.083204,
+     "earned": 181405613020.901,
+     "totalEarned": 181405613020.901,
      "clock": 73600,
      "city": 0,
      "stars": 0,
      "manager": 6,
      "levels": [
       [
+       79,
+       86,
+       94
+      ],
+      [
        75,
-       85,
-       93
+       87,
+       95
       ],
       [
-       77,
-       85,
-       96
-      ],
-      [
-       57,
-       71,
-       85
+       75,
+       79,
+       91
       ],
       [
        75,
@@ -23867,13 +24333,13 @@
       ]
      ],
      "rivals": [
-      475.31566605161646,
-      525.8758106233707,
-      479.76230850009915,
-      487.62620845722455,
-      445.98975867038746
+      492.3424156989208,
+      522.6646751509079,
+      513.6278831087798,
+      488.21399931306337,
+      445.9897586720201
      ],
-     "income": 18893436.624592397,
+     "income": 18946189.669131942,
      "best": {
       "chain": "tech",
       "stage": 2
@@ -23890,30 +24356,32 @@
      },
      "policies": 8,
      "campaigns": 0,
-     "goal": 3
+     "goal": 3,
+     "listed": true,
+     "overtake": null
     },
     {
-     "after": 927,
-     "cash": 28412404261.177704,
-     "earned": 382666908554.9294,
-     "totalEarned": 382666908554.9294,
+     "after": 919,
+     "cash": 3193736507.0286083,
+     "earned": 383990047166.72205,
+     "totalEarned": 383990047166.72205,
      "clock": 94800,
      "city": 0,
      "stars": 0,
      "manager": 6,
      "levels": [
       [
+       79,
+       90,
+       102
+      ],
+      [
        75,
        90,
        102
       ],
       [
-       77,
-       90,
-       102
-      ],
-      [
-       77,
+       75,
        86,
        102
       ],
@@ -23925,19 +24393,19 @@
       [
        75,
        76,
-       91
+       92
       ]
      ],
      "rivals": [
-      816.3772155739166,
-      821.1705597581423,
-      819.572778087239,
-      466.5772524552205,
-      446.5282442666551
+      817.9749969700138,
+      819.5727784700737,
+      819.5727783752302,
+      466.5772524598166,
+      446.98502468223353
      ],
-     "income": 27886749.80803974,
+     "income": 28054700.442525703,
      "best": {
-      "chain": "fashion",
+      "chain": "tech",
       "stage": 1
      },
      "event": {
@@ -23956,31 +24424,33 @@
      },
      "policies": 10,
      "campaigns": 0,
-     "goal": 3
+     "goal": 3,
+     "listed": true,
+     "overtake": null
     },
     {
-     "after": 967,
-     "cash": 37454349258.14406,
-     "earned": 702582735879.8009,
-     "totalEarned": 702582735879.8009,
+     "after": 957,
+     "cash": 39910682282.713295,
+     "earned": 703906515885.6978,
+     "totalEarned": 703906515885.6978,
      "clock": 116000,
      "city": 0,
      "stars": 0,
      "manager": 7,
      "levels": [
       [
+       79,
+       90,
+       102
+      ],
+      [
        75,
        90,
        102
       ],
       [
-       77,
-       90,
-       102
-      ],
-      [
-       77,
-       92,
+       75,
+       91,
        102
       ],
       [
@@ -23995,13 +24465,13 @@
       ]
      ],
      "rivals": [
-      1064.9285414961703,
-      1064.928543002767,
+      1064.9285415086636,
+      1064.9285429902736,
       1064.9285429902736,
       495.9226064682605,
-      481.1389108936102
+      481.1389108971817
      ],
-     "income": 33083997.533338282,
+     "income": 33082784.92114945,
      "best": {
       "chain": "tech",
       "stage": 1
@@ -24022,31 +24492,33 @@
      },
      "policies": 11,
      "campaigns": 0,
-     "goal": 3
+     "goal": 3,
+     "listed": true,
+     "overtake": null
     },
     {
-     "after": 990,
-     "cash": 27923319835.64609,
-     "earned": 741240917279.4845,
-     "totalEarned": 741240917279.4845,
+     "after": 980,
+     "cash": 30395226950.744812,
+     "earned": 742580271375.9116,
+     "totalEarned": 742580271375.9116,
      "clock": 117200,
      "city": 0,
      "stars": 0,
      "manager": 7,
      "levels": [
       [
+       79,
+       90,
+       102
+      ],
+      [
        75,
        90,
        102
       ],
       [
-       77,
-       90,
-       102
-      ],
-      [
-       77,
-       92,
+       75,
+       91,
        102
       ],
       [
@@ -24061,13 +24533,13 @@
       ]
      ],
      "rivals": [
-      1087.231133616711,
-      1170.1728782498922,
+      1087.2311336184025,
+      1170.1728782482005,
       1170.1728782482005,
       544.9334482936774,
-      532.8733743103483
+      532.8733743108312
      ],
-     "income": 32170811.522599317,
+     "income": 32169639.70241982,
      "best": {
       "chain": "tech",
       "stage": 2
@@ -24084,32 +24556,34 @@
      },
      "policies": 11,
      "campaigns": 0,
-     "goal": 3
+     "goal": 3,
+     "listed": true,
+     "overtake": null
     },
     {
-     "after": 1291,
-     "cash": 2827909.137740344,
-     "earned": 22791805.27920704,
-     "totalEarned": 741263709084.7623,
+     "after": 1309,
+     "cash": 4235346.493813948,
+     "earned": 37472212.797814794,
+     "totalEarned": 742617743588.71,
      "clock": 8400,
      "city": 1,
-     "stars": 27,
+     "stars": 32,
      "manager": 1,
      "levels": [
       [
-       36,
-       45,
-       57
+       50,
+       50,
+       60
       ],
       [
-       36,
-       45,
-       57
+       53,
+       54,
+       65
       ],
       [
-       40,
-       48,
-       56
+       51,
+       50,
+       59
       ],
       [
        0,
@@ -24123,16 +24597,16 @@
       ]
      ],
      "rivals": [
-      114.90178089394337,
-      114.2190143704799,
-      79.16350606516559,
+      130.31124039095727,
+      145.49929139185093,
+      88.15534965591014,
       0,
       0
      ],
-     "income": 36272.43306383101,
+     "income": 68264.45488037255,
      "best": {
       "chain": "fashion",
-      "stage": 1
+      "stage": 2
      },
      "event": {
       "kind": "rivalPush",
@@ -24150,37 +24624,39 @@
      },
      "policies": 2,
      "campaigns": 0,
-     "goal": 3
+     "goal": 3,
+     "listed": false,
+     "overtake": null
     },
     {
-     "after": 1536,
-     "cash": 1687058374.2549753,
-     "earned": 2367413904.5680556,
-     "totalEarned": 743608331184.0519,
+     "after": 1527,
+     "cash": 2332006433.1983867,
+     "earned": 3160021758.1809945,
+     "totalEarned": 745740293134.0925,
      "clock": 20400,
      "city": 1,
-     "stars": 27,
+     "stars": 32,
      "manager": 2,
      "levels": [
       [
        50,
-       60,
-       71
+       62,
+       73
+      ],
+      [
+       58,
+       67,
+       79
+      ],
+      [
+       51,
+       57,
+       68
       ],
       [
        50,
        57,
        69
-      ],
-      [
-       50,
-       54,
-       65
-      ],
-      [
-       50,
-       52,
-       63
       ],
       [
        0,
@@ -24189,16 +24665,16 @@
       ]
      ],
      "rivals": [
-      212.99791460292852,
-      206.99817011398468,
-      194.99806096766395,
-      153.69953434509458,
+      218.9966964017702,
+      473.9749492735791,
+      195.85498914235654,
+      174.41736387656235,
       0
      ],
-     "income": 1687317.213008188,
+     "income": 1955354.4030449793,
      "best": {
-      "chain": "leather",
-      "stage": 1
+      "chain": "fashion",
+      "stage": 2
      },
      "event": {
       "kind": "exportBoom",
@@ -24216,37 +24692,39 @@
      },
      "policies": 3,
      "campaigns": 0,
-     "goal": 3
+     "goal": 3,
+     "listed": true,
+     "overtake": null
     },
     {
-     "after": 1620,
-     "cash": 115020162.18997693,
-     "earned": 4397548920.617252,
-     "totalEarned": 745638466200.1005,
+     "after": 1639,
+     "cash": 122558099.79243751,
+     "earned": 5518376594.401302,
+     "totalEarned": 748098647970.3153,
      "clock": 21600,
      "city": 1,
-     "stars": 27,
+     "stars": 32,
      "manager": 3,
      "levels": [
       [
        56,
        70,
-       80
+       85
       ],
       [
-       56,
-       70,
-       80
+       75,
+       78,
+       94
       ],
       [
-       52,
-       65,
-       76
+       61,
+       72,
+       80
       ],
       [
        54,
-       67,
-       77
+       68,
+       80
       ],
       [
        0,
@@ -24255,16 +24733,16 @@
       ]
      ],
      "rivals": [
-      388.5210398170279,
-      419.8129844873837,
-      427.6390873749646,
-      404.2703098341857,
+      474.15336825629055,
+      549.9530772314087,
+      453.68721437934227,
+      449.38873620905076,
       0
      ],
-     "income": 1708169.1248929598,
+     "income": 1838941.0533481233,
      "best": {
-      "chain": "fashion",
-      "stage": 2
+      "chain": "leather",
+      "stage": 0
      },
      "event": null,
      "nextEventAt": 21660,
@@ -24278,37 +24756,39 @@
      },
      "policies": 3,
      "campaigns": 0,
-     "goal": 3
+     "goal": 3,
+     "listed": true,
+     "overtake": null
     },
     {
-     "after": 1620,
-     "cash": 115020162.18997693,
-     "earned": 4397548920.617252,
-     "totalEarned": 745638466200.1005,
+     "after": 1639,
+     "cash": 122558099.79243751,
+     "earned": 5518376594.401302,
+     "totalEarned": 748098647970.3153,
      "clock": 21600,
      "city": 1,
-     "stars": 27,
+     "stars": 32,
      "manager": 3,
      "levels": [
       [
        56,
        70,
-       80
+       85
       ],
       [
-       56,
-       70,
-       80
+       75,
+       78,
+       94
       ],
       [
-       52,
-       65,
-       76
+       61,
+       72,
+       80
       ],
       [
        54,
-       67,
-       77
+       68,
+       80
       ],
       [
        0,
@@ -24317,16 +24797,16 @@
       ]
      ],
      "rivals": [
-      388.5210398170279,
-      419.8129844873837,
-      427.6390873749646,
-      404.2703098341857,
+      474.15336825629055,
+      549.9530772314087,
+      453.68721437934227,
+      449.38873620905076,
       0
      ],
-     "income": 1708169.1248929598,
+     "income": 1838941.0533481233,
      "best": {
-      "chain": "fashion",
-      "stage": 2
+      "chain": "leather",
+      "stage": 0
      },
      "event": null,
      "nextEventAt": 21660,
@@ -24340,7 +24820,9 @@
      },
      "policies": 3,
      "campaigns": 0,
-     "goal": 3
+     "goal": 3,
+     "listed": true,
+     "overtake": null
     }
    ]
   }

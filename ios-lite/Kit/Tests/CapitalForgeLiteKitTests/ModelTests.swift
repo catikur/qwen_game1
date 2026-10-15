@@ -116,8 +116,105 @@ final class ModelTests: XCTestCase {
     }
 
     func testSaveRoundTrip() throws {
-        let state = Lite.advance(must(Lite.buy(rich(), .bakery, .retail, 7)), 42)
+        var state = Lite.advance(must(Lite.buy(rich(), .bakery, .retail, 7)), 42)
+        state.listed = true
+        state.goal = 13
         let data = try JSONEncoder().encode(state)
         XCTAssertEqual(try JSONDecoder().decode(LiteState.self, from: data), state)
+    }
+
+    // MARK: - L4
+
+    /// L3 kaydı: `listed` yok. Halka arz görevi araya girdiği için limandan
+    /// sonraki görev sırası bir kayıyor; ondan öncekiler olduğu gibi.
+    func testL3SaveShiftsGoalsAfterIpo() throws {
+        func l3Save(goal: Int) -> String {
+            #"{"version":1,"city":0,"stars":0,"cash":1,"earned":1,"totalEarned":1,"clock":1,"manager":0,"campaignUntil":0,"campaignReadyAt":0,"chains":[{"levels":[0,0,1],"rival":0},{"levels":[0,0,0],"rival":0},{"levels":[0,0,0],"rival":0},{"levels":[0,0,0],"rival":0},{"levels":[0,0,0],"rival":0}],"nextEventAt":240,"events":0,"nextCouncilAt":600,"sessions":0,"policies":0,"campaigns":0,"goal":\#(goal)}"#
+        }
+        XCTAssertEqual(LiteContent.goals[LiteContent.goalIpoIndex].kind, .ipo)
+        let before = try JSONDecoder().decode(LiteState.self, from: Data(l3Save(goal: 10).utf8))
+        XCTAssertEqual(before.goal, 10)
+        XCTAssertFalse(before.listed)
+        // L3'te 11. görev limandı; L4'te liman 12. sırada.
+        let port = try JSONDecoder().decode(LiteState.self, from: Data(l3Save(goal: 11).utf8))
+        XCTAssertEqual(LiteContent.goals[port.goal].kind, .port)
+    }
+
+    private func ipoReady() -> LiteState {
+        var state = rich()
+        state.cash = 1e9
+        state.earned = LiteContent.ipoUnlock
+        for id in [ChainId.bakery, .coffee] {
+            for stage in Stage.allCases { state = must(Lite.buy(state, id, stage, 40)) }
+        }
+        return state
+    }
+
+    func testIpoOnceForSteadyValue() {
+        var early = ipoReady()
+        early.earned = LiteContent.ipoUnlock - 1
+        XCTAssertEqual(Lite.goPublic(early).failureValue, .locked)
+
+        let state = ipoReady()
+        let expected = Lite.steadyIncome(state) * LiteContent.ipoValuationSeconds * LiteContent.ipoShare
+        let listed = must(Lite.goPublic(state))
+        XCTAssertEqual(listed.cash - state.cash, expected, accuracy: 1e-6 * expected)
+        XCTAssertTrue(listed.listed)
+        XCTAssertEqual(Lite.goPublic(listed).failureValue, .max)
+
+        var boosted = must(Lite.startCampaign(state))
+        boosted.policy = ActivePolicy(kind: .taxCut, until: boosted.clock + 60)
+        XCTAssertGreaterThan(Lite.incomePerSecond(boosted), Lite.incomePerSecond(state) * 2)
+        XCTAssertEqual(Lite.companyValue(boosted), Lite.companyValue(state))
+    }
+
+    func testListedCompanySellsForMoreStars() {
+        var state = ipoReady()
+        state.earned = 4e12
+        XCTAssertEqual(Lite.prestigePreview(state), 63)
+        let listed = must(Lite.goPublic(state))
+        XCTAssertEqual(Lite.prestigePreview(listed), 75)
+        let next = must(Lite.prestige(listed))
+        XCTAssertEqual(next.stars, 75)
+        XCTAssertFalse(next.listed)
+    }
+
+    func testFeaturedChainRotates() {
+        XCTAssertNil(Lite.featuredChain(Lite.newGame(city: 0)))
+        XCTAssertEqual(Lite.featuredChain(Lite.newGame(city: 1)), .coffee)
+        XCTAssertEqual(Lite.featuredChain(Lite.newGame(city: 5)), .bakery)
+        XCTAssertEqual(Lite.featuredChain(Lite.newGame(city: 6)), .coffee)
+        func build(_ city: Int) -> LiteState {
+            var state = Lite.newGame(city: city)
+            state.cash = 1e6
+            state.earned = 1e5
+            return must(Lite.buy(state, .coffee, .retail, 10))
+        }
+        XCTAssertEqual(Lite.chainReport(build(1), .coffee).income, Lite.chainReport(build(0), .coffee).income * 2)
+    }
+
+    func testOvertakeForecast() {
+        func setup(_ city: Int, _ online: Double) -> LiteState {
+            var state = Lite.newGame(city: city)
+            state.cash = 1e7
+            for stage in Stage.allCases { state = must(Lite.buy(state, .bakery, stage, 30)) }
+            return Lite.advance(state, online)
+        }
+        XCTAssertNil(Lite.firstOvertake(setup(0, 300), 4 * 3600))
+        let hard = setup(6, 120)
+        let at = Lite.firstOvertake(hard, 2 * 3600)
+        XCTAssertNotNil(at)
+        if let at {
+            XCTAssertLessThan(Lite.chainReport(Lite.applyOffline(hard, at).state, .bakery).share, 0.5)
+            XCTAssertGreaterThanOrEqual(Lite.chainReport(Lite.applyOffline(hard, at - 30).state, .bakery).share, 0.5)
+        }
+        XCTAssertNil(Lite.firstOvertake(setup(6, 9_000), 2 * 3600))
+    }
+}
+
+private extension Result {
+    var failureValue: Failure? {
+        if case .failure(let error) = self { return error }
+        return nil
     }
 }

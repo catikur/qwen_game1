@@ -21,8 +21,11 @@ import {
   chooseCouncil,
   claimGoal,
   currentGoal,
+  firstOvertake,
+  goPublic,
   goalMet,
   incomePerSecond,
+  ipoUnlocked,
   maxAffordable,
   managerCost,
   newGame,
@@ -44,7 +47,8 @@ export type Op =
   | { op: 'manager' }
   | { op: 'prestige' }
   | { op: 'council'; choice: 0 | 1 }
-  | { op: 'claim' };
+  | { op: 'claim' }
+  | { op: 'ipo' };
 
 export interface Snapshot {
   /** Bu kadar adım oynatıldıktan sonra. */
@@ -71,6 +75,23 @@ export interface Snapshot {
   policies: number;
   campaigns: number;
   goal: number;
+  // L4
+  listed: boolean;
+  /** `firstOvertake(state, OVERTAKE_HORIZON)`. */
+  overtake: number | null;
+}
+
+/** Fikstürde rakip öngörüsünün ufku (sn). */
+export const OVERTAKE_HORIZON = 4 * 3600;
+
+/** Rakip öngörüsü vakası: `newGame(city)`, kasa, alımlar, çevrimiçi süre. */
+export interface OvertakeCase {
+  city: number;
+  cash: number;
+  buys: Array<[ChainId, Stage, number]>;
+  online: number;
+  horizon: number;
+  result: number | null;
 }
 
 export interface Scenario {
@@ -85,8 +106,10 @@ export interface Fixtures {
   rates: Array<[Stage, number, number]>;
   costs: Array<[ChainId, Stage, number, number, number]>;
   affordable: Array<[number, ChainId, Stage, number, number]>;
-  stars: Array<[number, number]>;
+  /** [kazanç, yıldız, halka açıkken yıldız] */
+  stars: Array<[number, number, number]>;
   managerCosts: Array<[number, number]>;
+  overtakes: OvertakeCase[];
   scenarios: Scenario[];
 }
 
@@ -115,6 +138,8 @@ function snapshot(state: LiteState, after: number): Snapshot {
     policies: state.policies,
     campaigns: state.campaigns,
     goal: state.goal,
+    listed: state.listed,
+    overtake: firstOvertake(state, OVERTAKE_HORIZON),
   };
 }
 
@@ -148,6 +173,10 @@ function apply(state: LiteState, op: Op): { state: LiteState; ok: boolean } {
       const r = claimGoal(state);
       return r.ok ? { state: r.state, ok: true } : { state, ok: false };
     }
+    case 'ipo': {
+      const r = goPublic(state);
+      return r.ok ? { state: r.state, ok: true } : { state, ok: false };
+    }
   }
 }
 
@@ -172,6 +201,8 @@ function record(name: string, rounds: number, dt: number, extras: (round: number
     const goal = currentGoal(state);
     if (goal && goalMet(state, goal)) run({ op: 'claim' });
     if (state.council !== null) run({ op: 'council', choice: (state.sessions % 2) as 0 | 1 });
+    // L4: halka arz açılır açılmaz.
+    if (!state.listed && ipoUnlocked(state)) run({ op: 'ipo' });
     for (let guard = 0; guard < 40; guard++) {
       const move = bestMove(state);
       if (!move || move.cost > state.cash) break;
@@ -207,8 +238,32 @@ export function buildFixtures(): Fixtures {
     }
   }
 
-  const stars: Fixtures['stars'] = [0, 1, 999_999_999, 1e9, 3.99e9, 4e9, 4e12, 7.3e15].map((e) => [e, starsFor(e)]);
+  const stars: Fixtures['stars'] = [0, 1, 999_999_999, 1e9, 3.99e9, 4e9, 4e12, 7.3e15].map((e) => [
+    e,
+    starsFor(e),
+    starsFor(e, true),
+  ]);
   const managerCosts: Fixtures['managerCosts'] = [0, 1, 5, 9].map((l) => [l, managerCost(l)]);
+
+  // Rakip öngörüsü: ilk şehirde rakip geçemiyor (hedefi akışın 0,6'sı),
+  // dördüncü şehirden sonra geçiyor. Biri zaten geride (sonuç null olmalı).
+  const overtakeCase = (city: number, buys: OvertakeCase['buys'], online: number, horizon: number): OvertakeCase => {
+    let state = newGame(city);
+    state.cash = 1e7;
+    for (const [chain, stage, count] of buys) {
+      const r = buy(state, chain, stage, count);
+      if (r.ok) state = r.state;
+    }
+    state = advance(state, online);
+    return { city, cash: 1e7, buys, online, horizon, result: firstOvertake(state, horizon) };
+  };
+  const bakery: OvertakeCase['buys'] = [['bakery', 0, 30], ['bakery', 1, 30], ['bakery', 2, 30]];
+  const overtakes: OvertakeCase[] = [
+    overtakeCase(0, bakery, 300, 4 * 3600),
+    overtakeCase(3, bakery, 300, 4 * 3600),
+    overtakeCase(6, bakery, 120, 2 * 3600),
+    overtakeCase(6, bakery, 9_000, 2 * 3600),
+  ];
 
   const scenarios = [
     // Açılış: ilk 20 dakika, kampanya her fırsatta.
@@ -250,6 +305,7 @@ export function buildFixtures(): Fixtures {
     affordable,
     stars,
     managerCosts,
+    overtakes,
     scenarios,
   };
 }

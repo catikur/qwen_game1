@@ -188,6 +188,7 @@ export type GoalKind =
   | 'council'
   | 'share75'
   | 'industry'
+  | 'ipo'
   | 'port'
   | 'technopark'
   | 'firstStar';
@@ -210,7 +211,48 @@ export const GOALS: readonly GoalDef[] = [
   { kind: 'council', rewardSeconds: 120, minReward: 2_000 },
   { kind: 'share75', rewardSeconds: 150, minReward: 5_000 },
   { kind: 'industry', rewardSeconds: 180, minReward: 50_000 },
+  { kind: 'ipo', rewardSeconds: 180, minReward: 500_000 },
   { kind: 'port', rewardSeconds: 240, minReward: 1_000_000 },
   { kind: 'technopark', rewardSeconds: 300, minReward: 5_000_000 },
   { kind: 'firstStar', rewardSeconds: 300, minReward: 10_000_000 },
 ];
+
+/** L4'te eklenen "halka arz" görevinin sırası: L3 kayıtları bu sıradan sonrasını bir kaydırıyor. */
+export const GOAL_IPO_INDEX = GOALS.findIndex((goal) => goal.kind === 'ipo');
+
+// ------------------------------------------------------------ L4: halka arz
+
+/**
+ * Halka arz: şehirde bir kez. Hissenin bir kısmı satılıyor, karşılığı kasaya
+ * giriyor. Değerleme SÜREKLİ gelirden (kampanya, olay ve politika hariç):
+ * yoksa halka arz her seferinde kampanya ve ihracat atağının üstüne denk
+ * getirilirdi ve tek doğru hamle o olurdu.
+ *
+ * Kalıcı etkisi şehri satarken görünüyor: halka açık şirket daha yüksek
+ * değerlemeyle satılıyor, yıldız ×1,2. (İlk taslaktaki "temettü" düştü:
+ * oyuncu şirketin kendisi; kendine temettü ödemesi bir şey anlatmıyordu.)
+ */
+export const IPO_UNLOCK = 1_000_000_000;
+/** Satılan hisse payı. */
+export const IPO_SHARE = 0.25;
+/** Şirket değeri: sürekli gelirin bu kadar saniyesi. */
+export const IPO_VALUATION_SECONDS = 3600;
+/** Borsadaki hisse adedi (fiyat = değer / adet). */
+export const IPO_SHARES = 1_000_000;
+/** Halka açık şirket satılırken kazanılan yıldıza çarpan. */
+export const LISTED_STAR_MULTIPLIER = 1.2;
+
+// ------------------------------------------------------------ L4: şehir bonusu
+
+/**
+ * Her yeni şehrin bir öne çıkan zinciri var: geliri ×2. İlk şehirde yok;
+ * ikinciden başlayarak bu sırayla dönüyor. Holding'in her turu aynı yolu
+ * yürümesin, açılış sırası her şehirde başka bir zincire ağırlık versin.
+ */
+export const CITY_FEATURED: readonly ChainId[] = ['coffee', 'fashion', 'leather', 'tech', 'bakery'];
+export const CITY_BONUS = 2;
+
+// ------------------------------------------------------------ L4: bildirim
+
+/** "Rakip seni geçti" eşiği: pay bunun altına inince. */
+export const OVERTAKE_SHARE = 0.5;
