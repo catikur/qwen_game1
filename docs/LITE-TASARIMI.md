@@ -550,8 +550,10 @@ iCloud gibi Apple servisleri ücretli üyelik istiyor; B ücretsiz imzayla da
   (ad + token, yalnızca özeti saklanıyor), gönderim, haftalık grup, özel ligler,
   hesap silme (oyuncunun her izi; boşalan özel lig de).
   - **Hafta dönümü:** pazartesi cron'unda; kaçarsa ilk istekte yapılıyor, tek
-    sefer. İşaret ve bütün bölüm değişiklikleri tek D1 işleminde: yarıda
-    kalırsa hiçbiri yazılmıyor, sonraki istek baştan yapıyor.
+    sefer. İşaret ve bütün bölüm değişiklikleri tek D1 işleminde, iki ifadede
+    (grup sıralaması SQL pencere işlevleriyle): yarıda kalırsa hiçbiri
+    yazılmıyor, sonraki istek baştan yapıyor. Oyuncu sayısı ne olursa olsun
+    birkaç sorgu (ücretsiz katman istek başına en çok 50).
   - **Özel lig:** 6 harfli davet kodu; en çok 50 üye, oyuncu başına en çok 10 lig.
   - **Testler:** gerçek SQLite (`node:sqlite`) üstünde koşuyor.
 - **Akla yatkınlık:** süre sunucunun saatinden.

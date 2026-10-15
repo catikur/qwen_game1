@@ -28,7 +28,7 @@ import {
   weekStart,
   type LeagueReport,
 } from '../../lite-model/src/index';
-import type { Db, Statement } from './db';
+import type { Db } from './db';
 
 const WEEK_MS = 7 * 86_400_000;
 const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -233,12 +233,46 @@ async function groupRows(db: Db, week: string, division: number, groupNo: number
        FROM groups g JOIN players p ON p.id = g.player_id
        LEFT JOIN reports r ON r.player_id = g.player_id AND r.week = g.week
       WHERE g.week = ? AND g.division = ? AND g.group_no = ?
-      ORDER BY score DESC, p.created_at ASC`,
+      ORDER BY score DESC, p.created_at ASC, p.id ASC`,
     week,
     division,
     groupNo,
   );
 }
+
+/**
+ * Hafta dönümünün bütün bölüm değişiklikleri tek ifadede: her grup kendi
+ * içinde sıralanıyor (`groupRows` ile aynı sıra), kurallar `divisionMoves`
+ * ile aynı. Oyuncu sayısı ne olursa olsun tek sorgu (D1 ücretsiz katmanında
+ * istek başına en çok 50 sorgu; toplu yazımdaki her ifade de sayılıyor).
+ * Değerler: hafta, çıkan, en üst bölüm, inme için en küçük grup, inen.
+ */
+const ROLLOVER_MOVES = `
+  WITH ranked AS (
+    SELECT g.player_id AS player_id, g.division AS division, COALESCE(r.score, 0) AS score,
+           ROW_NUMBER() OVER (
+             PARTITION BY g.division, g.group_no
+             ORDER BY COALESCE(r.score, 0) DESC, p.created_at ASC, p.id ASC
+           ) - 1 AS rank,
+           COUNT(*) OVER (PARTITION BY g.division, g.group_no) AS size
+      FROM groups g
+      JOIN players p ON p.id = g.player_id
+      LEFT JOIN reports r ON r.player_id = g.player_id AND r.week = g.week
+     WHERE g.week = ?
+  ),
+  moves AS (
+    SELECT player_id,
+           CASE
+             WHEN rank < ? AND score > 0 AND division < ? THEN division + 1
+             WHEN size >= ? AND rank >= size - ? AND division > 0 THEN division - 1
+             ELSE division
+           END AS target,
+           division
+      FROM ranked
+  )
+  UPDATE players
+     SET division = (SELECT target FROM moves WHERE moves.player_id = players.id)
+   WHERE id IN (SELECT player_id FROM moves WHERE target <> division)`;
 
 export async function standings(db: Db, me: Player, now: number) {
   const week = weekId(now);
@@ -262,30 +296,15 @@ export async function standings(db: Db, me: Player, now: number) {
 export async function rollover(db: Db, now: number): Promise<boolean> {
   const previous = weekId(weekStart(weekId(now)) - 1);
   if (await db.first('SELECT 1 AS x FROM rollovers WHERE week = ?', previous)) return false;
-  // Geçen haftanın grupları artık değişmiyor (gönderim yalnızca bu haftaya): önce oku, sonra
-  // işareti ve bütün bölüm değişikliklerini tek işlemde yaz. Yarıda kalırsa hiçbiri yazılmıyor
-  // ve sonraki istek baştan deniyor; aynı anda iki istek gelirse işareti ikinci kez yazamayan
-  // (birincil anahtar) bütün işlemiyle geri alınıyor.
-  const writes: Statement[] = [['INSERT INTO rollovers (week, at) VALUES (?, ?)', previous, now]];
-  const groups = await db.all<{ division: number; group_no: number }>(
-    'SELECT DISTINCT division, group_no FROM groups WHERE week = ? ORDER BY division, group_no',
-    previous,
-  );
-  for (const group of groups) {
-    const rows = await groupRows(db, previous, group.division, group.group_no);
-    const moves = divisionMoves(
-      rows.map((row) => row.score),
-      group.division,
-    );
-    for (const [index, row] of rows.entries()) {
-      const move = moves[index] ?? 0;
-      if (move === 0) continue;
-      const next = Math.max(0, Math.min(LEAGUE.divisions - 1, group.division + move));
-      writes.push(['UPDATE players SET division = ? WHERE id = ?', next, row.id]);
-    }
-  }
+  // İşaret ve bütün bölüm değişiklikleri tek işlemde, iki ifadede. Yarıda kalırsa hiçbiri
+  // yazılmıyor ve sonraki istek baştan deniyor; aynı anda iki istek gelirse işareti ikinci
+  // kez yazamayan (birincil anahtar) bütün işlemiyle geri alınıyor. Geçen haftanın grupları
+  // artık değişmiyor (gönderim yalnızca bu haftaya).
   try {
-    await db.batch(writes);
+    await db.batch([
+      ['INSERT INTO rollovers (week, at) VALUES (?, ?)', previous, now],
+      [ROLLOVER_MOVES, previous, LEAGUE.promote, LEAGUE.divisions - 1, LEAGUE.minGroupForDemotion, LEAGUE.demote],
+    ]);
   } catch (error) {
     if (await db.first('SELECT 1 AS x FROM rollovers WHERE week = ?', previous)) return false;
     throw error;
