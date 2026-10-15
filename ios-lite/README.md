@@ -53,7 +53,7 @@ haber veriyor. Hepsi yerel bildirim; sunucu ya da hesap yok.
 | Ne | Komut | Nerede |
 |---|---|---|
 | Oyun modeli testleri (Swift) | `cd ios-lite/Kit && swift test` | Mac |
-| Uygulamayı simülatörde açmak | `./ios-lite/xcode.sh`, sonra bir iPhone simülatörü seç ve ▶︎ | Mac |
+| Uygulamayı simülatörde açmak | `./ios-lite/xcode.sh`, sonra bir iPhone ya da iPad simülatörü seç ve ▶︎ | Mac |
 | Denge raporu (TypeScript modeli) | `pnpm lite:balance` | her yerde |
 | Swift'e altın değerleri yeniden yazmak | `pnpm lite:fixtures` | her yerde |
 | Uygulama simgesini yeniden üretmek | `node ios-lite/App/tools/make-icon.mjs` (Playwright gerekir) | her yerde |
@@ -80,4 +80,9 @@ Xcode'da: **Product → Scheme → Edit Scheme → Run → Arguments**.
 - Ek argümanlar:
   - `-liteOffline <sn>`: "yokken kazandın" penceresi;
   - `-liteSettings`: Ayarlar açık;
-  - `-liteScroll market`: liste borsa kartına kaymış.
+  - `-liteScroll market`: liste borsa kartına kaymış;
+  - `-liteLandscape`: iPad yatay açılıyor.
+
+Uygulama iPad'de de çalışıyor (L6): yatayda solda şehir, sağda kartlar;
+dikeyde üstte şehir, altta iki sütun kart. Split View'in dar penceresinde
+telefon düzenine dönüyor. Klavyede 1/2/3 toplu alım, K kampanya.

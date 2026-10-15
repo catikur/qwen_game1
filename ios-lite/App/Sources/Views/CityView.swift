@@ -132,7 +132,9 @@ struct IsoPainter {
         self.palette = palette
         // 7 kare enine sığsın; altta adanın yanlarına, üstte binalara yer kalsın.
         tileWidth = min(size.width / 7.4, size.height / 3.95)
-        origin = CGPoint(x: size.width / 2, y: size.height * 0.21)
+        // Yüksek kutuda (iPad yatay) ada dikeyde ortalanıyor; telefonda ve iPad
+        // dikeyde ilk değer büyük kalıyor, görünüm değişmiyor.
+        origin = CGPoint(x: size.width / 2, y: max(size.height * 0.21, (size.height - tileWidth * 3.8) / 2 + tileWidth * 0.55))
     }
 
     var tileHeight: CGFloat { tileWidth / 2 }

@@ -168,6 +168,9 @@ struct GlossyButtonStyle: ButtonStyle {
             }
             .offset(y: pressed ? edge - 1 : 0)
             .padding(.bottom, edge)
+            // iPad imleci: düğme hafifçe kalkıyor.
+            .contentShape(.hoverEffect, shape)
+            .hoverEffect(.lift)
             .animation(.spring(response: 0.18, dampingFraction: 0.7), value: pressed)
     }
 }
