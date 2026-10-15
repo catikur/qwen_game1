@@ -114,8 +114,8 @@ struct OfflineSheet: View {
             .buttonStyle(.glossy(Theme.green, radius: 17, edge: 5))
             .accessibilityIdentifier("offline-collect")
         }
-        .padding(20)
-        .frame(maxWidth: .infinity)
-        .background(Theme.sky(scheme).ignoresSafeArea())
+        .padding(.horizontal, 20)
+        .padding(.top, 26)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     }
 }

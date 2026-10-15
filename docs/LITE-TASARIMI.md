@@ -418,8 +418,9 @@ yalnızca şehri satmak. "Alan bir noktada sonlanıyor."
    - Şehir temaları dönüyor (sahil, dağ, çöl, kar): her holding turu başka
      görünüyor.
 
-**Önerilen sıra:** L7'de 1 ve 2, sonra 3. Kullanıcı yönü seçecek: üçü, yalnızca
-biri ya da başka bir fikir.
+**Karar (kullanıcı): üçü birden.** L7 bina kademeleri, takımada ve holding
+haritasını birlikte getiriyor. Model tarafı (yeni zincirler, ada açılışları,
+ticaret yolu bonusu) önce TS'te dengelenip fikstürlerle Swift'e taşınacak.
 
 ## 13. Online: lider tablosu ve ligler (L8, öneri)
 
@@ -451,3 +452,12 @@ biri ya da başka bir fikir.
 Bugün uygulama ücretsiz "Personal Team" imzasıyla kuruluyor. Game Center ve
 iCloud gibi Apple servisleri ücretli üyelik istiyor; B ücretsiz imzayla da
 çalışıyor.
+
+**Karar (kullanıcı): C, ikisi birden.**
+- **Game Center:** genel tablo.
+- **Kendi sunucumuz:** haftalık bölüm ligleri ve davet kodlu ligler.
+- **Kullanıcıdan gerekenler** (L8 başlarken adım adım yazılacak):
+  - ücretli Apple Developer üyeliği ve App Store Connect'te lider tabloları;
+  - Cloudflare hesabı ve API anahtarı (depo sırrı).
+- **Bağımlılık:** sunucu tarafı ve oyun içi lig ekranları bunlar gelmeden de
+  yazılabilir. Gerçek bağlantı ancak hesaplar hazır olunca açılır.

@@ -57,11 +57,14 @@ struct RootView: View {
             SettingsSheet()
                 .presentationDetents([.fraction(0.82), .large])
                 .presentationCornerRadius(28)
+                .presentationBackground { Theme.sky(scheme) }
         }
         .sheet(item: $store.offlineReport) { report in
             OfflineSheet(report: report)
-                .presentationDetents([.height(340)])
+                .presentationDetents([.height(360)])
                 .presentationCornerRadius(28)
+                // Pencerenin tamamı gökyüzü: üstte ve altta beyaz bant kalmasın.
+                .presentationBackground { Theme.sky(scheme) }
         }
         .confirmationDialog(L10n.t("holding.confirm"), isPresented: $confirmSell, titleVisibility: .visible) {
             Button(L10n.t("holding.sell"), role: .destructive) { store.sellCity() }
