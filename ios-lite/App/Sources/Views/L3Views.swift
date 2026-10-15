@@ -1,58 +1,61 @@
 import SwiftUI
 import CapitalForgeLiteKit
 
-/// Olay şeridi: başlıkla şehir arasında sabit yükseklikte bir satır. Olay
+/// Olay şeridi: başlıkla şehir arasında sabit yükseklikte bir cam şerit. Olay
 /// varsa olay ve geri sayımı, yoksa sıradaki olaya kalan süre; yürürlükteki
-/// politika sağ altta. Yüksekliği sabit: olay gelince ekran zıplamıyor ve
-/// şehrin üstü örtülmüyor (ilk sürüm şehrin üstüne biniyordu).
+/// politika sağda. Yüksekliği sabit: olay gelince ekran zıplamıyor.
 struct EventBanner: View {
     @Environment(GameStore.self) private var store
 
     var body: some View {
         let state = store.state
-        HStack(spacing: 8) {
+        HStack(spacing: 10) {
             if let event = state.event {
-                Image(systemName: icon(event.kind))
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundStyle(tone(event.kind))
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(L10n.eventTitle(event)).font(Theme.sans(13, .bold)).foregroundStyle(tone(event.kind))
-                    Text(L10n.eventBody(event)).font(Theme.sans(11)).foregroundStyle(tone(event.kind))
+                IconTile(symbol: icon(event.kind), colors: tone(event.kind), size: 30)
+                VStack(alignment: .leading, spacing: 0) {
+                    Text(L10n.eventTitle(event)).font(Theme.display(15)).foregroundStyle(good(event.kind) ? Theme.eventTitle : Theme.bad)
+                    Text(L10n.eventBody(event)).font(Theme.text(11.5)).foregroundStyle(Theme.eventText)
                         .lineLimit(1).minimumScaleFactor(0.75)
                 }
                 .accessibilityIdentifier("event-\(event.kind.rawValue)")
             } else {
-                Image(systemName: "clock")
-                    .font(.system(size: 13))
-                    .foregroundStyle(Theme.muted)
+                Image(systemName: "clock.fill")
+                    .font(.system(size: 15, weight: .bold))
+                    .foregroundStyle(Theme.soft)
+                    .frame(width: 30, height: 30)
                 // Kapalıyken kaçan olay dönüşte ilk tıkta başlıyor: "0 sn" yerine "başlıyor".
                 Text(state.nextEventAt - state.clock < 1
                      ? L10n.t("event.soon")
                      : L10n.t("event.next", Format.duration(state.nextEventAt - state.clock)))
-                    .font(Theme.mono(11))
+                    .font(Theme.text(12.5))
                     .foregroundStyle(Theme.muted)
             }
             Spacer(minLength: 6)
-            VStack(alignment: .trailing, spacing: 1) {
+            VStack(alignment: .trailing, spacing: 2) {
                 if let event = state.event {
                     Text(Format.duration(event.until - state.clock))
-                        .font(Theme.mono(12, .bold))
-                        .foregroundStyle(tone(event.kind))
+                        .font(Theme.display(13.5))
+                        .foregroundStyle(good(event.kind) ? Theme.eventTitle : Theme.bad)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 2)
+                        .background(Theme.tile, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
                 }
                 if let policy = state.policy {
                     Text(L10n.policyTitle(policy.kind) + " · " + Format.duration(policy.until - state.clock))
-                        .font(Theme.mono(9, .medium))
+                        .font(Theme.text(10, .heavy))
                         .foregroundStyle(Theme.muted)
                         .lineLimit(1)
                         .accessibilityIdentifier("policy")
                 }
             }
         }
-        .padding(.horizontal, 14)
-        .frame(height: 46)
+        .padding(.horizontal, 12)
+        .frame(height: 50)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(state.event == nil ? Theme.paper : tone(state.event!.kind).opacity(0.07))
-        .overlay(alignment: .bottom) { Rectangle().fill(Theme.line).frame(height: 1) }
+        .background(state.event.map { good($0.kind) ? Theme.eventFill : Theme.badFill } ?? Theme.card, in: RoundedRectangle(cornerRadius: 17, style: .continuous))
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 17, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 17, style: .continuous).strokeBorder(state.event == nil ? Theme.cardBorder : Theme.eventEdge, lineWidth: 1))
+        .padding(.horizontal, 14)
     }
 
     private func icon(_ kind: EventKind) -> String {
@@ -66,10 +69,19 @@ struct EventBanner: View {
         }
     }
 
-    private func tone(_ kind: EventKind) -> Color {
+    private func good(_ kind: EventKind) -> Bool {
         switch kind {
-        case .tourism, .fashionWeek, .exportBoom: Theme.good
-        case .crisis, .strike, .rivalPush: Theme.bad
+        case .tourism, .fashionWeek, .exportBoom: true
+        case .crisis, .strike, .rivalPush: false
+        }
+    }
+
+    private func tone(_ kind: EventKind) -> (Color, Color) {
+        switch kind {
+        case .tourism: (Color(hex: 0xFFD45E), Color(hex: 0xFFB020))
+        case .fashionWeek: (Color(hex: 0xE59BF5), Color(hex: 0xC062DE))
+        case .exportBoom: (Color(hex: 0x6FD4FF), Color(hex: 0x2E9CE8))
+        case .crisis, .strike, .rivalPush: (Color(hex: 0xFF8A8A), Color(hex: 0xE04848))
         }
     }
 }
@@ -80,36 +92,37 @@ struct CouncilCard: View {
 
     var body: some View {
         if let pair = store.state.council {
-            VStack(alignment: .leading, spacing: 8) {
-                HStack {
-                    Image(systemName: "building.columns.fill")
-                    Text(L10n.t("council.title")).font(Theme.sans(15, .bold))
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(spacing: 10) {
+                    IconTile(symbol: "building.columns.fill", colors: (Color(hex: 0x7DB4FF), Color(hex: 0x4683E8)), size: 34)
+                    VStack(alignment: .leading, spacing: 0) {
+                        Text(L10n.t("council.title")).font(Theme.display(17)).foregroundStyle(Theme.ink)
+                        Text(L10n.t("council.body")).font(Theme.text(11.5)).foregroundStyle(Theme.muted)
+                    }
                     Spacer()
                 }
-                Text(L10n.t("council.body")).font(Theme.sans(12)).foregroundStyle(Theme.muted)
                 HStack(spacing: 8) {
                     ForEach(0..<2, id: \.self) { choice in
                         let kind = LiteContent.councilPairs[pair][choice]
                         Button {
                             store.chooseCouncil(choice)
                         } label: {
-                            VStack(alignment: .leading, spacing: 3) {
-                                Text(L10n.policyTitle(kind)).font(Theme.sans(13, .bold)).foregroundStyle(Theme.paper)
-                                Text(L10n.policyBody(kind)).font(Theme.mono(10)).foregroundStyle(Theme.paper.opacity(0.8))
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(L10n.policyTitle(kind)).font(Theme.display(14))
+                                Text(L10n.policyBody(kind)).font(Theme.text(11)).opacity(0.9)
                                     .lineLimit(2)
                                     .minimumScaleFactor(0.8)
                             }
-                            .padding(10)
-                            .frame(maxWidth: .infinity, minHeight: 62, alignment: .leading)
-                            .background(Theme.ink)
+                            .padding(.horizontal, 11)
+                            .padding(.vertical, 9)
+                            .frame(maxWidth: .infinity, minHeight: 58, alignment: .leading)
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.glossy(choice == 0 ? Theme.blue : Theme.orange, radius: 15))
                         .accessibilityIdentifier("council-\(choice)")
                     }
                 }
             }
-            .padding(12)
-            .ruled(strong: true)
+            .glassCard()
         }
     }
 }
@@ -123,45 +136,71 @@ struct GoalCard: View {
         let total = LiteContent.goals.count
         if let goal = Lite.currentGoal(state) {
             let met = Lite.goalMet(state, goal)
-            HStack(spacing: 10) {
-                Image(systemName: met ? "checkmark.seal.fill" : "flag.checkered")
-                    .font(.system(size: 20))
-                    .foregroundStyle(met ? Theme.good : Theme.ink)
+            HStack(spacing: 11) {
+                IconTile(symbol: met ? "checkmark.seal.fill" : "flag.fill",
+                         colors: met ? (Color(hex: 0x4FD88C), Color(hex: 0x22B262)) : (Color(hex: 0x7DB4FF), Color(hex: 0x4683E8)),
+                         size: 38)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(L10n.t("goal.title", state.goal + 1, total).uppercased())
-                        .font(Theme.mono(9, .medium))
-                        .tracking(0.8)
-                        .foregroundStyle(Theme.muted)
+                    HStack(spacing: 6) {
+                        Text(L10n.t("goal.title", state.goal + 1, total).uppercased(with: L10n.locale))
+                            .font(Theme.caps(10))
+                            .tracking(0.6)
+                            .foregroundStyle(Theme.soft)
+                        GoalPips(done: state.goal, total: total)
+                    }
                     Text(L10n.goalTitle(goal.kind))
-                        .font(Theme.sans(14, .bold))
+                        .font(Theme.display(16.5))
                         .foregroundStyle(Theme.ink)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
                 }
                 Spacer(minLength: 6)
                 Button {
                     store.claimGoal()
                 } label: {
-                    Text(met ? L10n.t("goal.claim", Format.money(Lite.goalReward(state, goal))) : L10n.t("goal.pending", Format.duration(goal.rewardSeconds)))
-                        .font(Theme.mono(11, .bold))
-                        .padding(.horizontal, 10)
-                        .frame(minHeight: 34)
-                        .foregroundStyle(met ? Theme.paper : Theme.muted)
-                        .background(met ? Theme.good : Theme.accentSoft)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.7)
+                    HStack(spacing: 4) {
+                        Image(systemName: met ? "gift.fill" : "hourglass")
+                            .font(.system(size: 13, weight: .bold))
+                        Text(met ? "+" + Format.money(Lite.goalReward(state, goal)) : L10n.t("goal.pendingShort", Format.duration(goal.rewardSeconds)))
+                            .font(Theme.display(14))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
+                    }
+                    .padding(.horizontal, 12)
+                    .frame(height: 40)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.glossy(met ? Theme.green : nil, radius: 15))
                 .disabled(!met)
+                .accessibilityLabel(met ? L10n.t("goal.claim", Format.money(Lite.goalReward(state, goal))) : L10n.t("goal.pending", Format.duration(goal.rewardSeconds)))
                 .accessibilityIdentifier("goal-claim")
             }
-            .padding(12)
-            .ruled()
+            .glassCard()
         } else {
-            Text(L10n.t("goal.done"))
-                .font(Theme.sans(12))
-                .foregroundStyle(Theme.muted)
-                .padding(12)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .ruled()
+            HStack(spacing: 10) {
+                IconTile(symbol: "trophy.fill", colors: (Color(hex: 0xFFE08A), Color(hex: 0xFFB938)), size: 34)
+                Text(L10n.t("goal.done"))
+                    .font(Theme.text(12.5))
+                    .foregroundStyle(Theme.muted)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .glassCard()
         }
+    }
+}
+
+/// Görev merdiveninin son dört basamağı: dolanlar yeşil.
+struct GoalPips: View {
+    let done: Int
+    let total: Int
+
+    var body: some View {
+        // Dörderli gruplar: hangi dörtlüdeysen o grubun ilerlemesi.
+        let inGroup = done % 4
+        HStack(spacing: 2) {
+            ForEach(0..<4, id: \.self) { index in
+                Circle().fill(index < inGroup ? Theme.money : Theme.track).frame(width: 5, height: 5)
+            }
+        }
+        .accessibilityHidden(true)
     }
 }

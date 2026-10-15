@@ -9,34 +9,32 @@ struct ManagerCard: View {
         let state = store.state
         let maxed = state.manager >= LiteContent.managerMax
         let cost = Lite.managerCost(state.manager)
-        HStack(spacing: 12) {
-            Image(systemName: "person.crop.square")
-                .font(.system(size: 26))
-                .foregroundStyle(Theme.ink)
-            VStack(alignment: .leading, spacing: 2) {
+        HStack(spacing: 11) {
+            IconTile(symbol: "person.crop.circle.fill.badge.checkmark", colors: (Color(hex: 0x9FA8FF), Color(hex: 0x6C78F0)), size: 38)
+            VStack(alignment: .leading, spacing: 1) {
                 Text(L10n.t("manager.title") + " · " + L10n.t("stage.level", state.manager))
-                    .font(Theme.sans(14, .bold))
+                    .font(Theme.display(16))
+                    .foregroundStyle(Theme.ink)
                 Text(L10n.t("manager.body", Format.duration(Lite.offlineCap(state))))
-                    .font(Theme.mono(11))
+                    .font(Theme.text(11.5))
                     .foregroundStyle(Theme.muted)
             }
-            Spacer()
+            Spacer(minLength: 6)
             Button {
                 store.buyManager()
             } label: {
                 Text(maxed ? L10n.t("manager.max") : Format.money(cost))
-                    .font(Theme.mono(11, .bold))
-                    .padding(.horizontal, 10)
-                    .frame(minHeight: 32)
-                    .foregroundStyle(!maxed && cost <= state.cash ? Theme.paper : Theme.muted)
-                    .background(!maxed && cost <= state.cash ? Theme.ink : Theme.accentSoft)
+                    .font(Theme.display(13.5))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                    .padding(.horizontal, 12)
+                    .frame(minHeight: 38)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.glossy(!maxed && cost <= state.cash ? Theme.orange : nil, radius: 14))
             .disabled(maxed)
             .accessibilityIdentifier("manager")
         }
-        .padding(12)
-        .ruled()
+        .glassCard()
     }
 }
 
@@ -48,76 +46,76 @@ struct HoldingCard: View {
     var body: some View {
         let state = store.state
         let preview = Lite.prestigePreview(state)
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Image(systemName: "building.columns")
-                Text(L10n.t("holding.title")).font(Theme.sans(14, .bold))
+        VStack(alignment: .leading, spacing: 9) {
+            HStack(spacing: 10) {
+                IconTile(symbol: "building.2.fill", colors: (Color(hex: 0xFFE08A), Color(hex: 0xFFB938)), size: 34)
+                Text(L10n.t("holding.title")).font(Theme.display(18)).foregroundStyle(Theme.ink)
                 Spacer()
-                Text(L10n.t("holding.stars", state.stars, state.stars * 2))
-                    .font(Theme.mono(11, .semibold))
-                    .foregroundStyle(Theme.money)
+                HStack(spacing: 3) {
+                    Image(systemName: "star.fill").font(.system(size: 11, weight: .bold)).foregroundStyle(Color(hex: 0xFFB938))
+                    Text(L10n.t("holding.stars", state.stars, state.stars * 2))
+                        .font(Theme.text(11.5, .heavy))
+                        .foregroundStyle(Theme.money)
+                }
             }
             Text(L10n.t("holding.body"))
-                .font(Theme.sans(12))
+                .font(Theme.text(12))
                 .foregroundStyle(Theme.muted)
             if let next = Lite.featuredChain(Lite.newGame(city: state.city + 1)) {
                 Text(L10n.t("holding.next", L10n.chainName(next)))
-                    .font(Theme.mono(11))
+                    .font(Theme.text(11.5, .heavy))
                     .foregroundStyle(Theme.ink)
             }
             Button {
                 confirm = true
             } label: {
                 Text(preview > 0 ? L10n.t("holding.sell") + " · " + L10n.t("holding.preview", preview) : L10n.t("holding.notYet"))
-                    .font(Theme.mono(12, .bold))
-                    .frame(maxWidth: .infinity, minHeight: 36)
-                    .foregroundStyle(preview > 0 ? Theme.paper : Theme.muted)
-                    .background(preview > 0 ? Theme.ink : Theme.accentSoft)
+                    .font(Theme.display(14.5))
+                    .frame(maxWidth: .infinity, minHeight: 42)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.glossy(preview > 0 ? Theme.gold : nil, radius: 15, foreground: Color(hex: 0x5A3A00)))
             .disabled(preview < 1)
             .accessibilityIdentifier("holding")
         }
-        .padding(12)
-        .ruled()
+        .glassCard()
     }
 }
 
 /// "Yokken kazandın" penceresi.
 struct OfflineSheet: View {
-    @Environment(GameStore.self) private var store
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) private var scheme
     let report: OfflineReport
 
     var body: some View {
-        VStack(spacing: 14) {
-            Text(L10n.t("offline.title").uppercased())
-                .font(Theme.mono(12, .semibold))
+        VStack(spacing: 12) {
+            Coin(size: 46)
+            Text(L10n.t("offline.title").uppercased(with: L10n.locale))
+                .font(Theme.caps(12))
                 .tracking(1)
                 .foregroundStyle(Theme.muted)
             Text("+" + Format.money(report.earned))
-                .font(Theme.mono(34, .bold))
+                .font(Theme.display(36))
                 .foregroundStyle(Theme.money)
             Text(L10n.t("offline.body", Format.duration(report.seconds)))
-                .font(Theme.sans(14))
+                .font(Theme.text(14, .semibold))
                 .foregroundStyle(Theme.ink)
                 .multilineTextAlignment(.center)
             Text(L10n.t("offline.cap", Format.duration(report.cap)))
-                .font(Theme.mono(11))
+                .font(Theme.text(11.5))
                 .foregroundStyle(Theme.muted)
             Button {
                 dismiss()
             } label: {
                 Text(L10n.t("offline.collect"))
-                    .font(Theme.mono(14, .bold))
-                    .frame(maxWidth: .infinity, minHeight: 46)
-                    .foregroundStyle(Theme.paper)
-                    .background(Theme.ink)
+                    .font(Theme.display(17))
+                    .frame(maxWidth: .infinity, minHeight: 50)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.glossy(Theme.green, radius: 17, edge: 5))
             .accessibilityIdentifier("offline-collect")
         }
         .padding(20)
-        .background(Theme.paper)
+        .frame(maxWidth: .infinity)
+        .background(Theme.sky(scheme).ignoresSafeArea())
     }
 }

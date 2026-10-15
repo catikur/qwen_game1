@@ -14,6 +14,9 @@ enum Lang: String {
 enum L10n {
     static var lang: Lang = .current
 
+    /// Büyük harfe çevirmek için: Türkçede "i" → "İ".
+    static var locale: Locale { Locale(identifier: lang == .tr ? "tr_TR" : "en_US") }
+
     static func t(_ key: String, _ args: CVarArg...) -> String {
         let table = lang == .tr ? tr : en
         let format = table[key] ?? tr[key] ?? key
@@ -51,6 +54,7 @@ enum L10n {
         "campaign.start": "Kampanya ×%@",
         "campaign.active": "Kampanya %@",
         "campaign.wait": "Hazır: %@",
+        "campaign.running": "Sürüyor",
         "buy.one": "×1",
         "buy.ten": "×10",
         "buy.max": "En çok",
@@ -144,6 +148,7 @@ enum L10n {
         "goal.title": "Görev %ld/%ld",
         "goal.claim": "Ödülü al · +%@",
         "goal.pending": "Ödül: %@ gelir",
+        "goal.pendingShort": "%@ gelir",
         "event.next": "Sıradaki olay · %@",
         "event.soon": "Sıradaki olay başlıyor…",
         "goal.done": "Bu şehrin görevleri tamam — holding seni bekliyor.",
@@ -176,6 +181,10 @@ enum L10n {
         "settings.title": "Ayarlar",
         "settings.done": "Tamam",
         "settings.language": "Dil",
+        "settings.appearance": "Görünüm",
+        "settings.appearance.system": "Cihaz",
+        "settings.appearance.day": "Gündüz",
+        "settings.appearance.night": "Gece",
         "settings.lang.system": "Cihaz",
         "settings.lang.tr": "Türkçe",
         "settings.lang.en": "English",
@@ -208,6 +217,7 @@ enum L10n {
         "campaign.start": "Campaign ×%@",
         "campaign.active": "Campaign %@",
         "campaign.wait": "Ready in %@",
+        "campaign.running": "Running",
         "buy.one": "×1",
         "buy.ten": "×10",
         "buy.max": "Max",
@@ -301,6 +311,7 @@ enum L10n {
         "goal.title": "Goal %ld/%ld",
         "goal.claim": "Claim · +%@",
         "goal.pending": "Reward: %@ of income",
+        "goal.pendingShort": "%@ income",
         "event.next": "Next event · %@",
         "event.soon": "Next event starting…",
         "goal.done": "All goals done in this city — the holding awaits.",
@@ -333,6 +344,10 @@ enum L10n {
         "settings.title": "Settings",
         "settings.done": "Done",
         "settings.language": "Language",
+        "settings.appearance": "Appearance",
+        "settings.appearance.system": "Device",
+        "settings.appearance.day": "Day",
+        "settings.appearance.night": "Night",
         "settings.lang.system": "Device",
         "settings.lang.tr": "Türkçe",
         "settings.lang.en": "English",

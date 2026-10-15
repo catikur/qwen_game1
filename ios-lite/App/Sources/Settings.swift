@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import SwiftUI
 
 /// Dil seçimi: cihaz dili ya da elle.
 enum LanguageChoice: String, CaseIterable, Identifiable {
@@ -15,6 +16,21 @@ enum LanguageChoice: String, CaseIterable, Identifiable {
     }
 }
 
+/// Görünüm: cihazın açık/koyu moduna uy ya da gündüz/gece zorla.
+enum AppearanceChoice: String, CaseIterable, Identifiable {
+    case system, day, night
+    var id: String { rawValue }
+
+    /// `nil`: cihaz neyse o.
+    var scheme: ColorScheme? {
+        switch self {
+        case .system: nil
+        case .day: .light
+        case .night: .dark
+        }
+    }
+}
+
 /// Oyuncu tercihleri. UserDefaults'ta tutuluyor; senaryo modunda (CI kareleri)
 /// hiçbir şey okunmuyor ve yazılmıyor.
 @MainActor
@@ -26,6 +42,7 @@ final class AppSettings {
             write(language.rawValue, "language")
         }
     }
+    var appearance: AppearanceChoice { didSet { write(appearance.rawValue, "appearance") } }
     var sound: Bool { didSet { write(sound, "sound") } }
     var haptics: Bool { didSet { write(haptics, "haptics") } }
     var notifications: Bool { didSet { write(notifications, "notifications") } }
@@ -40,6 +57,7 @@ final class AppSettings {
         defaults = ephemeral ? nil : UserDefaults.standard
         let stored = defaults
         language = LanguageChoice(rawValue: stored?.string(forKey: "language") ?? "") ?? .system
+        appearance = AppearanceChoice(rawValue: stored?.string(forKey: "appearance") ?? "") ?? .system
         // Senaryo modunda da varsayılan görünsün; çalmayı GameStore senaryoda zaten kesiyor.
         sound = stored?.object(forKey: "sound") as? Bool ?? true
         haptics = stored?.object(forKey: "haptics") as? Bool ?? true

@@ -1,7 +1,7 @@
 import SwiftUI
 import CapitalForgeLiteKit
 
-/// Zincir kartı: üç kademe yan yana, darboğaz vurgulu, altında marj ve
+/// Zincir kartı: üç kademe yan yana, darboğaz halkalı, altında marj ve
 /// rakiple pay. Kilitliyse açılış eşiğine ilerleme.
 struct ChainCard: View {
     @Environment(GameStore.self) private var store
@@ -19,20 +19,26 @@ struct ChainCard: View {
     private func unlocked(_ state: LiteState) -> some View {
         let report = Lite.chainReport(state, chain)
         let hasRetail = state[chain: chain].levels[2] > 0
-        return VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 8) {
-                Rectangle().fill(Theme.chain(chain)).frame(width: 10, height: 10)
+        let colors = Theme.chainColors(chain)
+        return VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 9) {
+                IconTile(symbol: Theme.chainIcon(chain), colors: colors, size: 34)
                 Text(L10n.chainName(chain))
-                    .font(Theme.sans(16, .bold))
+                    .font(Theme.display(20))
                     .foregroundStyle(Theme.ink)
-                Text(L10n.districtName(LiteContent.chain(chain).district).uppercased())
-                    .font(Theme.mono(9, .medium))
-                    .foregroundStyle(Theme.muted)
-                    .tracking(0.8)
-                Spacer()
+                Text(L10n.districtName(LiteContent.chain(chain).district).uppercased(with: L10n.locale))
+                    .font(Theme.caps(9.5))
+                    .tracking(0.6)
+                    .foregroundStyle(Theme.soft)
+                if Lite.featuredChain(state) == chain {
+                    Pill(text: "×2", symbol: "star.fill")
+                }
+                Spacer(minLength: 4)
                 Text(L10n.t("header.income", Format.money(report.income)))
-                    .font(Theme.mono(13, .semibold))
+                    .font(Theme.display(16))
                     .foregroundStyle(Theme.money)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
             }
             HStack(spacing: 6) {
                 ForEach(Stage.allCases, id: \.self) { stage in
@@ -42,47 +48,49 @@ struct ChainCard: View {
             if hasRetail {
                 HStack(spacing: 10) {
                     Text(L10n.t("chain.margin", Format.percent(report.margin)))
-                    ShareBar(share: report.share, color: Theme.chain(chain))
+                    ShareBar(share: report.share, colors: colors)
                     Text(L10n.t("chain.share", Format.percent(report.share)))
                 }
-                .font(Theme.mono(11))
+                .font(Theme.text(12))
                 .foregroundStyle(Theme.muted)
             } else {
                 Text(L10n.t("chain.noRetail", L10n.stageName(chain, .retail)))
-                    .font(Theme.sans(12))
+                    .font(Theme.text(12))
                     .foregroundStyle(Theme.warn)
             }
         }
-        .padding(12)
-        .ruled()
+        .glassCard()
         .accessibilityIdentifier("chain-\(chain.rawValue)")
     }
 
     private func locked(_ state: LiteState) -> some View {
         let target = max(LiteContent.chain(chain).unlockAt, LiteContent.district(LiteContent.chain(chain).district).unlockAt)
         let progress = min(1, state.earned / max(1, target))
-        return VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 8) {
-                Image(systemName: "lock.fill").font(.system(size: 11)).foregroundStyle(Theme.muted)
-                Text(L10n.chainName(chain)).font(Theme.sans(16, .semibold)).foregroundStyle(Theme.muted)
-                Text(L10n.districtName(LiteContent.chain(chain).district).uppercased())
-                    .font(Theme.mono(9, .medium))
-                    .foregroundStyle(Theme.muted)
-                    .tracking(0.8)
+        return VStack(alignment: .leading, spacing: 9) {
+            HStack(spacing: 9) {
+                Image(systemName: "lock.fill")
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(Theme.soft)
+                    .frame(width: 34, height: 34)
+                    .background(Theme.track, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                Text(L10n.chainName(chain)).font(Theme.display(18)).foregroundStyle(Theme.muted)
+                Text(L10n.districtName(LiteContent.chain(chain).district).uppercased(with: L10n.locale))
+                    .font(Theme.caps(9.5))
+                    .tracking(0.6)
+                    .foregroundStyle(Theme.soft)
                 Spacer()
             }
-            ProgressView(value: progress).tint(Theme.ink)
+            ProgressBar(value: progress, colors: Theme.chainColors(chain))
             Text(L10n.t("chain.locked", Format.money(target)))
-                .font(Theme.mono(11))
+                .font(Theme.text(11.5))
                 .foregroundStyle(Theme.muted)
         }
-        .padding(12)
-        .background(Theme.accentSoft)
-        .overlay(Rectangle().stroke(Theme.line, style: StrokeStyle(lineWidth: 1, dash: [4, 3])))
+        .glassCard()
+        .opacity(0.85)
     }
 }
 
-/// Bir kademe: ad, seviye, hız, kilometre taşına kalan ve alım düğmesi.
+/// Bir kademe: rol, ad, seviye ve hız, kilometre taşına ilerleme, alım düğmesi.
 struct StageButton: View {
     @Environment(GameStore.self) private var store
     let chain: ChainId
@@ -93,55 +101,51 @@ struct StageButton: View {
         let state = store.state
         let level = state[chain: chain].levels[stage.rawValue]
         let affordable = store.canBuy(chain, stage)
-        Button {
-            store.buy(chain, stage)
-        } label: {
-            VStack(alignment: .leading, spacing: 3) {
-                HStack {
-                    Text(L10n.stageRole(stage).uppercased())
-                        .font(Theme.mono(9, .medium))
-                        .tracking(0.6)
-                    Spacer(minLength: 0)
-                    if bottleneck {
-                        Text(L10n.t("chain.bottleneck").uppercased())
-                            .font(Theme.mono(8, .bold))
-                            .padding(.horizontal, 3)
-                            .padding(.vertical, 1)
-                            .background(Theme.warn)
-                            .foregroundStyle(Theme.panel)
-                    }
+        let shape = RoundedRectangle(cornerRadius: 16, style: .continuous)
+        VStack(alignment: .leading, spacing: 3) {
+            HStack(spacing: 2) {
+                Text(L10n.stageRole(stage).uppercased(with: L10n.locale))
+                    .font(Theme.caps(9))
+                    .tracking(0.5)
+                    .foregroundStyle(Theme.soft)
+                    .lineLimit(1)
+                Spacer(minLength: 0)
+                if bottleneck {
+                    Pill(text: L10n.t("chain.bottleneck").uppercased(with: L10n.locale), symbol: "bolt.fill", font: Theme.text(7.5, .heavy))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
                 }
+            }
+            .frame(minHeight: 15)
+            Text(L10n.stageName(chain, stage))
+                .font(Theme.display(13))
+                .foregroundStyle(Theme.ink)
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
+            Text(L10n.t("stage.level", level) + (level > 0 ? " · " + L10n.t("stage.rate", Format.number(Lite.stageRate(stage, level))) : ""))
+                .font(Theme.text(10.5))
                 .foregroundStyle(Theme.muted)
-                Text(L10n.stageName(chain, stage))
-                    .font(Theme.sans(12, .semibold))
-                    .foregroundStyle(Theme.ink)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.75)
-                Text(L10n.t("stage.level", level) + (level > 0 ? " · " + L10n.t("stage.rate", Format.number(Lite.stageRate(stage, level))) : ""))
-                    .font(Theme.mono(10))
-                    .foregroundStyle(Theme.muted)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.7)
-                if let next = Lite.nextMilestone(level), level > 0 {
-                    Text(L10n.t("stage.next", next - level))
-                        .font(Theme.mono(9))
-                        .foregroundStyle(Theme.muted.opacity(0.8))
-                }
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+            MilestoneBar(level: level)
+            Button {
+                store.buy(chain, stage)
+            } label: {
                 Text(Format.money(store.cost(for: chain, stage)) + countSuffix)
-                    .font(Theme.mono(11, .bold))
-                    .frame(maxWidth: .infinity, minHeight: 26)
-                    .foregroundStyle(affordable ? Theme.paper : Theme.muted)
-                    .background(affordable ? Theme.ink : Theme.accentSoft)
+                    .font(Theme.display(14))
                     .lineLimit(1)
                     .minimumScaleFactor(0.6)
+                    .padding(.horizontal, 4)
+                    .frame(maxWidth: .infinity, minHeight: 34)
             }
-            .padding(7)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(bottleneck ? Theme.warn.opacity(0.08) : Theme.panel)
-            .overlay(Rectangle().stroke(bottleneck ? Theme.warn : Theme.line, lineWidth: bottleneck ? 1.5 : 1))
+            .buttonStyle(.glossy(affordable ? Theme.orange : nil, radius: 13))
+            .padding(.top, 3)
+            .accessibilityIdentifier("stage-\(chain.rawValue)-\(stage.rawValue)")
         }
-        .buttonStyle(.plain)
-        .accessibilityIdentifier("stage-\(chain.rawValue)-\(stage.rawValue)")
+        .padding(8)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(bottleneck ? Theme.neck : Theme.tile, in: shape)
+        .overlay(shape.strokeBorder(bottleneck ? Theme.neckRing : .clear, lineWidth: 2))
     }
 
     private var countSuffix: String {
@@ -150,18 +154,45 @@ struct StageButton: View {
     }
 }
 
-/// Pay çubuğu: dolu kısım senin, boş kısım rakibin.
-struct ShareBar: View {
-    let share: Double
-    let color: Color
+/// Kilometre taşına (hız ×2) ilerleme: bir önceki taştan bir sonrakine.
+struct MilestoneBar: View {
+    let level: Int
+
+    var body: some View {
+        let previous = LiteContent.milestones.last { $0 <= level } ?? 0
+        let next = Lite.nextMilestone(level)
+        let progress = next.map { Double(level - previous) / Double(max(1, $0 - previous)) } ?? 1
+        ProgressBar(value: level > 0 ? progress : 0, colors: (Color(hex: 0x8ED36C), Color(hex: 0x4FBF4A)), height: 6)
+            .accessibilityLabel(next.map { L10n.t("stage.next", $0 - level) } ?? "")
+    }
+}
+
+/// Yuvarlak dolum çubuğu.
+struct ProgressBar: View {
+    let value: Double
+    let colors: (Color, Color)
+    var height: CGFloat = 8
+    var track: Color = Theme.track
 
     var body: some View {
         GeometryReader { proxy in
             ZStack(alignment: .leading) {
-                Rectangle().fill(Theme.bad.opacity(0.25))
-                Rectangle().fill(color).frame(width: proxy.size.width * share)
+                Capsule().fill(track)
+                Capsule()
+                    .fill(LinearGradient(colors: [colors.0, colors.1], startPoint: .leading, endPoint: .trailing))
+                    .frame(width: max(value > 0 ? height : 0, proxy.size.width * min(1, max(0, value))))
             }
         }
-        .frame(height: 6)
+        .frame(height: height)
+    }
+}
+
+/// Pay çubuğu: dolu kısım senin, boş kısım rakibin.
+struct ShareBar: View {
+    let share: Double
+    let colors: (Color, Color)
+
+    var body: some View {
+        ProgressBar(value: share, colors: colors, height: 10, track: Theme.rivalTrack)
     }
 }

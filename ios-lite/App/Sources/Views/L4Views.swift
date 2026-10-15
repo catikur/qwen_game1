@@ -30,47 +30,49 @@ struct IpoCard: View {
 
     private func offer(_ state: LiteState) -> some View {
         let proceeds = Lite.ipoProceeds(state)
-        return VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 8) {
-                Image(systemName: "bell.fill")
-                Text(L10n.t("ipo.title")).font(Theme.sans(15, .bold))
-                Spacer()
+        return VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 10) {
+                IconTile(symbol: "bell.fill", colors: (Color(hex: 0xFFE08A), Color(hex: 0xFFB938)), size: 36)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(L10n.t("ipo.title")).font(Theme.display(18)).foregroundStyle(Theme.ink)
+                    Text(L10n.t("ipo.body"))
+                        .font(Theme.text(11.5))
+                        .foregroundStyle(Theme.muted)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
-            Text(L10n.t("ipo.body"))
-                .font(Theme.sans(12))
-                .foregroundStyle(Theme.muted)
-                .fixedSize(horizontal: false, vertical: true)
             Button {
                 store.goPublic()
             } label: {
                 Text(L10n.t("ipo.action", Format.money(proceeds)))
-                    .font(Theme.mono(13, .bold))
-                    .frame(maxWidth: .infinity, minHeight: 44)
-                    .foregroundStyle(Theme.paper)
-                    .background(Theme.money)
+                    .font(Theme.display(16))
+                    .frame(maxWidth: .infinity, minHeight: 46)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.glossy(Theme.green, radius: 16, edge: 5))
             .accessibilityIdentifier("ipo")
         }
-        .padding(12)
-        .ruled(strong: true)
+        .glassCard()
+        .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).strokeBorder(Theme.neckRing, lineWidth: 2))
     }
 
     private func locked(_ state: LiteState) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 8) {
-                Image(systemName: "lock.fill").font(.system(size: 11)).foregroundStyle(Theme.muted)
-                Text(L10n.t("ipo.title")).font(Theme.sans(15, .semibold)).foregroundStyle(Theme.muted)
+        VStack(alignment: .leading, spacing: 9) {
+            HStack(spacing: 9) {
+                Image(systemName: "lock.fill")
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(Theme.soft)
+                    .frame(width: 34, height: 34)
+                    .background(Theme.track, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                Text(L10n.t("ipo.title")).font(Theme.display(18)).foregroundStyle(Theme.muted)
                 Spacer()
             }
-            ProgressView(value: min(1, state.earned / LiteContent.ipoUnlock)).tint(Theme.ink)
+            ProgressBar(value: min(1, state.earned / LiteContent.ipoUnlock), colors: (Color(hex: 0xFFE08A), Color(hex: 0xFFB938)))
             Text(L10n.t("ipo.locked", Format.money(LiteContent.ipoUnlock)))
-                .font(Theme.mono(11))
+                .font(Theme.text(11.5))
                 .foregroundStyle(Theme.muted)
         }
-        .padding(12)
-        .background(Theme.accentSoft)
-        .overlay(Rectangle().stroke(Theme.line, style: StrokeStyle(lineWidth: 1, dash: [4, 3])))
+        .glassCard()
+        .opacity(0.85)
     }
 }
 
@@ -86,43 +88,43 @@ struct StockCard: View {
         let change = first > 0 ? price / first - 1 : 0
         let stake = Lite.companyValue(state) * (1 - LiteContent.ipoShare)
         VStack(alignment: .leading, spacing: 8) {
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
-                Image(systemName: "chart.line.uptrend.xyaxis")
-                Text(L10n.t("stock.title")).font(Theme.sans(15, .bold))
+            HStack(alignment: .center, spacing: 10) {
+                IconTile(symbol: "chart.line.uptrend.xyaxis", colors: (Color(hex: 0x4FD88C), Color(hex: 0x22B262)), size: 34)
+                VStack(alignment: .leading, spacing: 0) {
+                    Text(L10n.t("stock.title")).font(Theme.display(18)).foregroundStyle(Theme.ink)
+                    Text(L10n.t("stock.price").uppercased(with: L10n.locale))
+                        .font(Theme.caps(9.5))
+                        .tracking(0.6)
+                        .foregroundStyle(Theme.soft)
+                }
                 Spacer()
-                Text(Format.money(price))
-                    .font(Theme.mono(15, .bold))
-                    .foregroundStyle(Theme.ink)
-                    .accessibilityIdentifier("share-price")
-            }
-            HStack {
-                Text(L10n.t("stock.price").uppercased())
-                    .font(Theme.mono(9, .medium))
-                    .tracking(0.8)
-                    .foregroundStyle(Theme.muted)
-                Spacer()
-                Text(L10n.t("stock.since", change >= 0 ? "+" : "−", Format.percent(abs(change))))
-                    .font(Theme.mono(11, .semibold))
-                    .foregroundStyle(change >= 0 ? Theme.good : Theme.bad)
+                VStack(alignment: .trailing, spacing: 1) {
+                    Text(Format.money(price))
+                        .font(Theme.display(18))
+                        .foregroundStyle(Theme.ink)
+                        .accessibilityIdentifier("share-price")
+                    Text(L10n.t("stock.since", change >= 0 ? "+" : "−", Format.percent(abs(change))))
+                        .font(Theme.text(11, .heavy))
+                        .foregroundStyle(change >= 0 ? Theme.good : Theme.bad)
+                }
             }
             PriceChart(values: history + [price])
-                .frame(height: 74)
+                .frame(height: 78)
+                .padding(.vertical, 2)
             HStack {
                 Text(L10n.t("stock.stake", Format.money(stake)))
                 Spacer()
                 Text(L10n.t("stock.premium"))
             }
-            .font(Theme.mono(10))
+            .font(Theme.text(10.5))
             .foregroundStyle(Theme.muted)
         }
-        .padding(12)
-        .ruled()
+        .glassCard()
         .accessibilityIdentifier("stock")
     }
 }
 
-/// İnce çizgi, hafif alan dolgusu, uç noktada nokta. Eksen yok: tek seri,
-/// başlık ve değişim yüzdesi kartın üstünde yazıyor.
+/// Yuvarlak uçlu kalın çizgi, yeşil alan dolgusu, uç noktada parlayan nokta.
 struct PriceChart: View {
     let values: [Double]
 
@@ -132,13 +134,13 @@ struct PriceChart: View {
                 var flat = Path()
                 flat.move(to: CGPoint(x: 0, y: size.height / 2))
                 flat.addLine(to: CGPoint(x: size.width, y: size.height / 2))
-                context.stroke(flat, with: .color(Theme.ink), lineWidth: 2)
+                context.stroke(flat, with: .color(Theme.money), style: StrokeStyle(lineWidth: 3, lineCap: .round))
                 return
             }
             let span = max(high - low, high * 0.02)
-            let inset: CGFloat = 4
+            let inset: CGFloat = 6
             func point(_ index: Int) -> CGPoint {
-                let x = size.width * CGFloat(index) / CGFloat(values.count - 1)
+                let x = inset + (size.width - 2 * inset) * CGFloat(index) / CGFloat(values.count - 1)
                 let y = inset + (size.height - 2 * inset) * CGFloat(1 - (values[index] - low) / span)
                 return CGPoint(x: x, y: y)
             }
@@ -147,20 +149,18 @@ struct PriceChart: View {
             for index in 1..<values.count { line.addLine(to: point(index)) }
 
             var area = line
-            area.addLine(to: CGPoint(x: size.width, y: size.height))
-            area.addLine(to: CGPoint(x: 0, y: size.height))
+            area.addLine(to: CGPoint(x: size.width - inset, y: size.height))
+            area.addLine(to: CGPoint(x: inset, y: size.height))
             area.closeSubpath()
-            context.fill(area, with: .color(Theme.money.opacity(0.10)))
+            context.fill(area, with: .linearGradient(Gradient(colors: [Theme.money.opacity(0.28), Theme.money.opacity(0.02)]), startPoint: .zero, endPoint: CGPoint(x: 0, y: size.height)))
 
-            var base = Path()
-            base.move(to: CGPoint(x: 0, y: size.height - 0.5))
-            base.addLine(to: CGPoint(x: size.width, y: size.height - 0.5))
-            context.stroke(base, with: .color(Theme.line), lineWidth: 1)
-
-            context.stroke(line, with: .color(Theme.money), style: StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
+            context.stroke(line, with: .color(Theme.money), style: StrokeStyle(lineWidth: 3, lineCap: .round, lineJoin: .round))
             let end = point(values.count - 1)
-            context.fill(Path(ellipseIn: CGRect(x: end.x - 4, y: end.y - 4, width: 8, height: 8)), with: .color(Theme.money))
-            context.stroke(Path(ellipseIn: CGRect(x: end.x - 4, y: end.y - 4, width: 8, height: 8)), with: .color(Theme.panel), lineWidth: 2)
+            let glow = CGRect(x: end.x - 9, y: end.y - 9, width: 18, height: 18)
+            context.fill(Path(ellipseIn: glow), with: .color(Theme.money.opacity(0.25)))
+            let dot = CGRect(x: end.x - 4.5, y: end.y - 4.5, width: 9, height: 9)
+            context.fill(Path(ellipseIn: dot), with: .color(Theme.money))
+            context.stroke(Path(ellipseIn: dot), with: .color(.white), lineWidth: 2)
         }
         .accessibilityHidden(true)
     }
@@ -173,109 +173,109 @@ struct NotifyPromptCard: View {
     var body: some View {
         let settings = store.settings
         if !settings.notificationsOffered && !settings.notifications && store.state.goal >= 4 && !store.isScenario {
-            VStack(alignment: .leading, spacing: 8) {
-                HStack(spacing: 8) {
-                    Image(systemName: "bell.badge")
-                    Text(L10n.t("notify.prompt.title")).font(Theme.sans(14, .bold))
-                    Spacer()
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(spacing: 10) {
+                    IconTile(symbol: "bell.badge.fill", colors: (Color(hex: 0x7DB4FF), Color(hex: 0x4683E8)), size: 34)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(L10n.t("notify.prompt.title")).font(Theme.display(16)).foregroundStyle(Theme.ink)
+                        Text(L10n.t("notify.prompt.body")).font(Theme.text(11.5)).foregroundStyle(Theme.muted)
+                    }
                 }
-                Text(L10n.t("notify.prompt.body"))
-                    .font(Theme.sans(12))
-                    .foregroundStyle(Theme.muted)
                 HStack(spacing: 8) {
                     Button {
                         Task { await store.setNotifications(true) }
                     } label: {
                         Text(L10n.t("notify.prompt.yes"))
-                            .font(Theme.mono(12, .bold))
-                            .frame(maxWidth: .infinity, minHeight: 36)
-                            .foregroundStyle(Theme.paper)
-                            .background(Theme.ink)
+                            .font(Theme.display(14))
+                            .frame(maxWidth: .infinity, minHeight: 38)
                     }
+                    .buttonStyle(.glossy(Theme.blue, radius: 14))
                     Button {
                         settings.notificationsOffered = true
                     } label: {
                         Text(L10n.t("notify.prompt.no"))
-                            .font(Theme.mono(12))
-                            .frame(maxWidth: .infinity, minHeight: 36)
-                            .foregroundStyle(Theme.ink)
-                            .background(Theme.accentSoft)
+                            .font(Theme.display(14))
+                            .frame(maxWidth: .infinity, minHeight: 38)
                     }
+                    .buttonStyle(.glossy(nil, radius: 14))
                 }
-                .buttonStyle(.plain)
             }
-            .padding(12)
-            .ruled()
+            .glassCard()
         }
     }
 }
 
-/// Ayarlar: dil, ses, titreşim, bildirim, kaydı sıfırla.
+/// Ayarlar: görünüm, dil, ses, titreşim, bildirim, kaydı sıfırla.
 struct SettingsSheet: View {
     @Environment(GameStore.self) private var store
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) private var scheme
     @State private var confirmReset = false
 
     var body: some View {
         @Bindable var settings = store.settings
         VStack(spacing: 0) {
             HStack {
-                Text(L10n.t("settings.title")).font(Theme.sans(18, .bold))
+                Text(L10n.t("settings.title")).font(Theme.display(22)).foregroundStyle(Theme.ink)
                 Spacer()
-                Button(L10n.t("settings.done")) { dismiss() }
-                    .font(Theme.mono(13, .bold))
-                    .foregroundStyle(Theme.ink)
-                    .accessibilityIdentifier("settings-done")
+                Button {
+                    dismiss()
+                } label: {
+                    Text(L10n.t("settings.done"))
+                        .font(Theme.display(14))
+                        .padding(.horizontal, 14)
+                        .frame(minHeight: 34)
+                }
+                .buttonStyle(.glossy(Theme.blue, radius: 12, edge: 3))
+                .accessibilityIdentifier("settings-done")
             }
             .padding(.horizontal, 16)
-            .padding(.vertical, 14)
-            .overlay(alignment: .bottom) { Rectangle().fill(Theme.ink).frame(height: 1.5) }
+            .padding(.top, 18)
+            .padding(.bottom, 10)
 
             ScrollView {
-                VStack(alignment: .leading, spacing: 10) {
+                VStack(alignment: .leading, spacing: 12) {
+                    section(L10n.t("settings.appearance")) {
+                        PillPicker(selection: $settings.appearance, options: AppearanceChoice.allCases) { L10n.t("settings.appearance.\($0.rawValue)") }
+                    }
                     section(L10n.t("settings.language")) {
-                        Picker(L10n.t("settings.language"), selection: $settings.language) {
-                            ForEach(LanguageChoice.allCases) { choice in
-                                Text(L10n.t("settings.lang.\(choice.rawValue)")).tag(choice)
-                            }
-                        }
-                        .pickerStyle(.segmented)
+                        PillPicker(selection: $settings.language, options: LanguageChoice.allCases) { L10n.t("settings.lang.\($0.rawValue)") }
                     }
                     section(nil) {
-                        toggle(L10n.t("settings.sound"), "speaker.wave.2", $settings.sound)
+                        toggle(L10n.t("settings.sound"), "speaker.wave.2.fill", (Color(hex: 0xFFA65C), Color(hex: 0xFF7A2A)), $settings.sound)
                         Divider().overlay(Theme.line)
-                        toggle(L10n.t("settings.haptics"), "iphone.radiowaves.left.and.right", $settings.haptics)
+                        toggle(L10n.t("settings.haptics"), "iphone.radiowaves.left.and.right", (Color(hex: 0xDA8BF0), Color(hex: 0xB85DD6)), $settings.haptics)
                         Divider().overlay(Theme.line)
                         toggle(
                             L10n.t("settings.notifications"),
-                            "bell",
+                            "bell.fill",
+                            (Color(hex: 0x7DB4FF), Color(hex: 0x4683E8)),
                             Binding(get: { settings.notifications }, set: { on in Task { await store.setNotifications(on) } })
                         )
                         Text(settings.notificationsDenied ? L10n.t("settings.notifications.denied") : L10n.t("settings.notifications.body"))
-                            .font(Theme.sans(11))
+                            .font(Theme.text(11.5, .semibold))
                             .foregroundStyle(settings.notificationsDenied ? Theme.bad : Theme.muted)
                     }
                     Button {
                         confirmReset = true
                     } label: {
-                        Text(L10n.t("settings.reset"))
-                            .font(Theme.mono(13, .bold))
+                        Label(L10n.t("settings.reset"), systemImage: "arrow.counterclockwise")
+                            .font(Theme.display(15))
                             .frame(maxWidth: .infinity, minHeight: 44)
-                            .foregroundStyle(Theme.bad)
-                            .overlay(Rectangle().stroke(Theme.bad, lineWidth: 1))
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.glossy(Theme.red, radius: 15))
                     .accessibilityIdentifier("reset")
                     Text(footer)
-                        .font(Theme.mono(10))
-                        .foregroundStyle(Theme.muted)
+                        .font(Theme.text(10.5, .semibold))
+                        .foregroundStyle(Theme.soft)
                         .frame(maxWidth: .infinity)
-                        .padding(.top, 6)
+                        .padding(.top, 4)
                 }
-                .padding(14)
+                .padding(.horizontal, 14)
+                .padding(.bottom, 20)
             }
         }
-        .background(Theme.paper.ignoresSafeArea())
+        .background(Theme.sky(scheme).ignoresSafeArea())
         .confirmationDialog(L10n.t("settings.reset.confirm"), isPresented: $confirmReset, titleVisibility: .visible) {
             Button(L10n.t("settings.reset.action"), role: .destructive) {
                 store.resetGame()
@@ -295,25 +295,58 @@ struct SettingsSheet: View {
     private func section<Inner: View>(_ title: String?, @ViewBuilder _ content: () -> Inner) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             if let title {
-                Text(title.uppercased())
-                    .font(Theme.mono(10, .medium))
+                Text(title.uppercased(with: L10n.locale))
+                    .font(Theme.caps(10))
                     .tracking(0.8)
-                    .foregroundStyle(Theme.muted)
+                    .foregroundStyle(Theme.soft)
             }
             content()
         }
-        .padding(12)
-        .ruled()
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .glassCard()
     }
 
-    private func toggle(_ title: String, _ icon: String, _ value: Binding<Bool>) -> some View {
+    private func toggle(_ title: String, _ icon: String, _ colors: (Color, Color), _ value: Binding<Bool>) -> some View {
         Toggle(isOn: value) {
-            Label {
-                Text(title).font(Theme.sans(14)).foregroundStyle(Theme.ink)
-            } icon: {
-                Image(systemName: icon).foregroundStyle(Theme.ink)
+            HStack(spacing: 10) {
+                IconTile(symbol: icon, colors: colors, size: 30)
+                Text(title).font(Theme.display(15)).foregroundStyle(Theme.ink)
             }
         }
         .tint(Theme.money)
+    }
+}
+
+/// Hap seçici: Ayarlar'da görünüm ve dil (oyunun toplu alım seçicisiyle aynı dil).
+struct PillPicker<Option: Hashable>: View {
+    @Binding var selection: Option
+    let options: [Option]
+    let label: (Option) -> String
+
+    var body: some View {
+        HStack(spacing: 0) {
+            ForEach(options, id: \.self) { option in
+                let on = option == selection
+                Button {
+                    selection = option
+                } label: {
+                    Text(label(option))
+                        .font(Theme.display(14))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                        .frame(maxWidth: .infinity, minHeight: 32)
+                        .foregroundStyle(on ? Theme.ink : Theme.muted)
+                        .background {
+                            if on {
+                                RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Theme.trackOn)
+                                    .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Theme.trackEdge).offset(y: 2))
+                            }
+                        }
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(4)
+        .background(Theme.track, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 }
