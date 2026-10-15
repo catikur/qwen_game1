@@ -24,9 +24,15 @@ targets:
       path: Generated/Info.plist
       properties:
         CFBundleDisplayName: CapitalForge Lite
-        CFBundleShortVersionString: "0.5.0"
-        CFBundleVersion: "5"
+        CFBundleShortVersionString: "0.6.0"
+        CFBundleVersion: "6"
         UILaunchScreen: {}
+        # L8: lig sunucusunun adresi (Cloudflare Worker). Boşken lig "yakında"
+        # kalıyor; ilk dağıtımdan sonra buraya yazılıyor (ios-lite/README.md).
+        LiteLeagueURL: ""
+        # L8: Game Center genel tablosu. Ücretli Apple Developer üyeliği ve
+        # Game Center yetkisi (entitlement) gelince true.
+        LiteGameCenter: false
         # L6: iPad'de Split View ve Stage Manager için tam ekran zorunlu değil.
         UIRequiresFullScreen: false
         # iPhone dikey; iPad dört yön.

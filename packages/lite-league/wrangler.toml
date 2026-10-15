@@ -1,0 +1,15 @@
+# CapitalForge Lite lig sunucusu (Cloudflare Workers + D1).
+# Kurulum ve dağıtım: .github/workflows/lite-league.yml (database_id orada
+# hesaptaki veritabanının kimliğiyle değiştiriliyor).
+name = "capitalforge-lite-league"
+main = "src/worker.ts"
+compatibility_date = "2025-09-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "capitalforge-lite-league"
+database_id = "00000000-0000-0000-0000-000000000000"
+
+# Pazartesi 00:05 UTC: geçen haftanın bölüm değişimi.
+[triggers]
+crons = ["5 0 * * 1"]

@@ -83,8 +83,72 @@ Xcode'da: **Product → Scheme → Edit Scheme → Run → Arguments**.
   - `-liteScroll market`: liste borsa kartına kaymış;
   - `-liteLandscape`: iPad yatay açılıyor;
   - `-liteIsland <1-3>`: şehir o adanın sayfasında (L7);
-  - `-liteMap`: holding haritası açık.
+  - `-liteMap`: holding haritası açık;
+  - `-liteLeague`: lig örnek veriyle (ağ yok), `-liteLeagueSheet` lig penceresi
+    açık, `-liteLeaguePrivate` özel ligler sekmesi.
 
 Uygulama iPad'de de çalışıyor (L6): yatayda solda şehir, sağda kartlar;
 dikeyde üstte şehir, altta iki sütun kart. Split View'in dar penceresinde
 telefon düzenine dönüyor. Klavyede 1/2/3 toplu alım, K kampanya.
+
+## Online lig (L8)
+
+İki parça:
+- **Haftalık lig ve özel ligler:** kendi sunucumuz (`packages/lite-league`,
+  Cloudflare Workers + D1).
+- **Genel tablo:** Game Center.
+
+İkisi de hesaplar hazır olana kadar kapalı; oyun etkilenmiyor. Haftalık puan
+şimdiden sayılıyor.
+
+### Lig sunucusu (Cloudflare, ücretsiz katman)
+
+1. [dash.cloudflare.com](https://dash.cloudflare.com) adresinde ücretsiz hesap aç.
+2. **Workers & Pages**'i bir kez aç ve bir `workers.dev` alt alanı seç
+   (ör. `atilla`). Sunucunun adresi bununla oluşuyor.
+3. **Hesap kimliği:** Workers & Pages sayfasının sağındaki **Account ID**'yi
+   kopyala.
+4. **API anahtarı:**
+   - **My Profile → API Tokens → Create Token** aç.
+   - **Edit Cloudflare Workers** şablonunu seç.
+   - **Permissions**'a bir satır ekle: **Account → D1 → Edit**.
+   - Oluştur ve anahtarı kopyala (bir kez gösteriliyor).
+5. GitHub'da depo: **Settings → Secrets and variables → Actions → New
+   repository secret**. İki sır ekle:
+   - `CLOUDFLARE_API_TOKEN`: 4. adımdaki anahtar;
+   - `CLOUDFLARE_ACCOUNT_ID`: 3. adımdaki kimlik.
+6. **Actions → Lite lig sunucusu → Run workflow**.
+   - İş veritabanını kuruyor, şemayı uyguluyor, sunucuyu dağıtıyor.
+   - Sonunda adresi yazıyor: `https://capitalforge-lite-league.<alt-alan>.workers.dev`.
+7. Bu adres `ios-lite/App/project.yml`'de `LiteLeagueURL`'ye yazılıyor; uygulama
+   o sürümden sonra lige bağlanıyor.
+
+Sonraki her `main` değişikliğinde sunucu kendiliğinden güncelleniyor.
+
+### Game Center (ücretli Apple Developer üyeliği)
+
+1. [developer.apple.com/programs](https://developer.apple.com/programs/enroll/)
+   adresinden Apple Developer Program'a katıl (yılda 99 $).
+2. Xcode'da **Signing & Capabilities → Team** olarak ücretli takımı seç.
+3. [App Store Connect](https://appstoreconnect.apple.com)'te uygulamayı oluştur:
+   **Apps → + → New App**, Bundle ID `com.catikur.capitalforgelite`.
+4. Uygulamanın sayfasında **Services → Game Center → Leaderboards → +** ile bir
+   tablo ekle:
+   - tür: **Classic**;
+   - **Leaderboard ID**: `cf.lite.stars`;
+   - ad: "Holding Yıldızı";
+   - puan biçimi: Integer;
+   - sıralama: High to Low.
+5. Uygulamada Game Center yetkisi (entitlement) ve `LiteGameCenter: true`
+   açılıyor. O sürümden sonra şehir satıldıkça yıldız genel tabloya yazılıyor;
+   lig penceresinde "Game Center genel tablosu" düğmesi çıkıyor.
+
+### Hile payı
+
+- Sunucu her gönderimi kendi saatiyle kaydediyor; telefonun saatini ileri
+  almak işe yaramıyor.
+- Aynı TS modeliyle (`packages/lite-model/src/league.ts`) iki şeyi denetliyor:
+  - bildirilen seviyelerin maliyeti şehirde kazanılanla uyumlu mu;
+  - puan artışı o seviyelerle en iyi koşullarda kazanılabilecek olanı aşıyor
+    mu.
+- Reddedilen gönderimler `rejects` tablosunda duruyor.

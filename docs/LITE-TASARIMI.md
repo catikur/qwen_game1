@@ -360,7 +360,7 @@ satıp ikinci şehirde 2 saat oynuyor):
 | L5 | **Stil yenilemesi: "Cam & Bulut", gündüz ve gece** (§6.1). Yazı tipi, renk, şehir çizimi, kart ve düğme yapısı, simge baştan. Görünüm cihaza uyuyor; Ayarlar'dan zorlanabiliyor. Oyun mantığına dokunulmuyor |
 | L6 | **iPadOS** (ayrı koşu): aynı oyun, büyük ekrana göre düzen. Ayrıntı §11 |
 | L7 | **Ada dolunca: oyunun devamı.** Bina kademeleri, takımada (üç ada, üç zincir), holding haritası, şehir temaları. Ayrıntı §12 |
-| L8 | **Online: lider tablosu ve ligler.** Öneri §13; altyapı kararı kullanıcının |
+| L8 | **Online: lider tablosu ve ligler.** Haftalık bölüm ligi ve davet kodlu ligler kendi sunucumuzda, genel tablo Game Center'da. Ayrıntı §13 |
 | Son | **Uygulama simgesi yeniden.** L4'teki geçici simge beğenilmedi; en sona bırakıldı |
 
 L5 kullanıcının isteği: "En son tüm stili değiştireceğiz. Fonttan grafiklere,
@@ -496,7 +496,7 @@ haritasını birlikte getiriyor.
 Gündelik oyuncu (3 saatte bir 4 dakika) ikinci gün sekiz zincirin hepsini
 açıyor; ikinci günün sonunda satış önizlemesi 146 yıldız.
 
-## 13. Online: lider tablosu ve ligler (L8, öneri)
+## 13. Online: lider tablosu ve ligler (L8)
 
 **Oyun tarafı.**
 - **Haftalık lig:** Duolingo usulü bölümler (Bronz → Gümüş → Altın → Elmas).
@@ -535,3 +535,39 @@ iCloud gibi Apple servisleri ücretli üyelik istiyor; B ücretsiz imzayla da
   - Cloudflare hesabı ve API anahtarı (depo sırrı).
 - **Bağımlılık:** sunucu tarafı ve oyun içi lig ekranları bunlar gelmeden de
   yazılabilir. Gerçek bağlantı ancak hesaplar hazır olunca açılır.
+
+### 13.1 Uygulanan (L8)
+
+- **Kurallar** (`packages/lite-model/src/league.ts`, Swift `League.swift`):
+  - Hafta ISO 8601, UTC; pazartesi 00:00'da başlıyor.
+  - Puan bu hafta kazanılan, yıldızsız: toplam kazançtaki artış ÷ (1 + 0,02 × yıldız).
+  - Bölümler: Bronz, Gümüş, Altın, Elmas. Grup 30 kişi.
+  - İlk 5 çıkıyor (puanı sıfır olan çıkmıyor), son 5 iniyor. 10 kişiden küçük
+    grupta kimse inmiyor.
+- **Sunucu** (`packages/lite-league`, Cloudflare Workers + D1): anonim hesap
+  (ad + token, yalnızca özeti saklanıyor), gönderim, haftalık grup, özel ligler.
+  - **Hafta dönümü:** pazartesi cron'unda; kaçarsa ilk istekte yapılıyor, tek
+    sefer.
+  - **Özel lig:** 6 harfli davet kodu; en çok 50 üye, oyuncu başına en çok 10 lig.
+  - **Testler:** gerçek SQLite (`node:sqlite`) üstünde koşuyor.
+- **Akla yatkınlık:** süre sunucunun saatinden.
+  - Seviyelerin maliyeti ≤ 3 × şehirde kazanılan + 10 M.
+  - Puan artışı ≤ o seviyelerle en yüksek gelir × geçen süre × 1,2. En
+    yüksek gelirde pay 1; anlık çarpanların üst sınırı ×7,5 (kampanya fonu ×3,
+    moda haftası ×2,5).
+  - Puan hafta içinde, şehir ve yıldız hiç geri gitmiyor.
+  - Gönderim en sık 30 saniyede bir; uygulama 5 dakikada bir ve arka plana
+    geçerken gönderiyor.
+- **Uygulama:**
+  - Kartlarda haftalık lig kartı: bölüm, sıra, bitişe kalan süre.
+  - Lig penceresi:
+    - bölüm özeti;
+    - 30 kişilik grup (çıkış/iniş okları, sen vurgulu);
+    - özel ligler: kur, koda katıl, kodu kopyala, ayrıl;
+    - adla katılma.
+  - Sunucu adresi yokken "yakında"; haftalık puan yine sayılıyor.
+- **Game Center:** `cf.lite.stars` tablosuna şehir satılınca yıldız. Info.plist
+  `LiteGameCenter` ücretli üyelik gelene kadar kapalı.
+- **Kurulum:** kullanıcı adımları `ios-lite/README.md` → "Online lig (L8)".
+  Dağıtım iş akışı `.github/workflows/lite-league.yml`; sırlar yokken atlanıyor.
+

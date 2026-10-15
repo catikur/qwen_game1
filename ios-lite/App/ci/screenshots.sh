@@ -55,6 +55,7 @@ shot night-listed -AppleLanguages "(tr)" -liteScenario listed -liteScroll market
 shot night-settings -AppleLanguages "(tr)" -liteScenario mid -liteSettings
 WAIT=24 shot night-islands -AppleLanguages "(tr)" -liteScenario islands
 WAIT=24 shot night-island3 -AppleLanguages "(tr)" -liteScenario islands -liteIsland 3
+shot night-league -AppleLanguages "(tr)" -liteScenario mid -liteLeague -liteLeagueSheet
 xcrun simctl ui "$UDID" appearance light
 # L7: takımada, bina kademeleri, temalar, holding haritası.
 WAIT=24 shot tr-islands -AppleLanguages "(tr)" -liteScenario islands
@@ -65,6 +66,12 @@ WAIT=24 shot tr-skyline -AppleLanguages "(tr)" -liteScenario skyline
 shot tr-desert -AppleLanguages "(tr)" -liteScenario desert
 shot tr-snow -AppleLanguages "(tr)" -liteScenario snow
 shot tr-map -AppleLanguages "(tr)" -liteScenario snow -liteMap
+# L8: haftalık lig (örnek veriyle; sunucu yok), özel ligler, kart, "yakında".
+shot tr-league -AppleLanguages "(tr)" -liteScenario mid -liteLeague -liteLeagueSheet
+shot tr-league-private -AppleLanguages "(tr)" -liteScenario mid -liteLeague -liteLeagueSheet -liteLeaguePrivate
+shot tr-league-card -AppleLanguages "(tr)" -liteScenario mid -liteLeague -liteScroll league
+shot tr-league-soon -AppleLanguages "(tr)" -liteScenario mid -liteLeagueSheet
+shot en-league -AppleLanguages "(en)" -liteScenario mid -liteLeague -liteLeagueSheet
 xcrun simctl shutdown "$UDID" || true
 
 # Yatay kare: uygulama yatay döndüyse ya da yatay düzeni 90° çevrilmiş kapta
