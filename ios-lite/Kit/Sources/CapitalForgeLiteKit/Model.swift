@@ -27,6 +27,20 @@ public struct ActiveEvent: Codable, Equatable, Sendable {
     public var until: Double
 }
 
+/// Şehirde duran fırsat (L9).
+public struct ActiveDeal: Codable, Equatable, Sendable {
+    public var kind: DealKind
+    /// Fırsatın çıktığı zincir (binasının üstünde beliriyor); yatırımcıda nil.
+    public var chain: ChainId?
+    public var until: Double
+
+    public init(kind: DealKind, chain: ChainId?, until: Double) {
+        self.kind = kind
+        self.chain = chain
+        self.until = until
+    }
+}
+
 public struct ActivePolicy: Codable, Equatable, Sendable {
     public var kind: PolicyKind
     public var until: Double
@@ -86,6 +100,12 @@ public struct LiteState: Codable, Equatable, Sendable {
     // L7
     /// Satılmış şehirler, sırayla (holding haritası).
     public var history: [CityRecord] = []
+    // L9
+    /// Şehirde duran fırsat.
+    public var deal: ActiveDeal?
+    public var nextDealAt: Double = LiteContent.dealFirst
+    /// Bu şehirde beliren fırsat sayısı (sıradakinin türü ve zinciri buna bağlı).
+    public var deals: Int = 0
 
     public subscript(chain id: ChainId) -> ChainState {
         get { chains[id.index] }
@@ -99,6 +119,7 @@ extension LiteState {
         case event, nextEventAt, events, council, nextCouncilAt, sessions, policy, policies, campaigns, goal
         case listed
         case history
+        case deal, nextDealAt, deals
     }
 
     /// Eski kayıtlarda yeni alanlar yok: varsayılanla açılıyor. L2'de L3
@@ -137,6 +158,10 @@ extension LiteState {
             if goal >= LiteContent.goalIpoIndex { goal += 1 }
         }
         history = try c.decodeIfPresent([CityRecord].self, forKey: .history) ?? []
+        // L8 ve öncesinde fırsat yok: ilk fırsat açılışın hemen ardından.
+        deal = try c.decodeIfPresent(ActiveDeal.self, forKey: .deal)
+        nextDealAt = try c.decodeIfPresent(Double.self, forKey: .nextDealAt) ?? clock
+        deals = try c.decodeIfPresent(Int.self, forKey: .deals) ?? 0
     }
 }
 
@@ -528,6 +553,23 @@ public enum Lite {
         return .success(next)
     }
 
+    // MARK: - Fırsatlar (L9)
+
+    /// Duran fırsatın ödülü: şirketin o anki gelirinin birkaç saniyesi.
+    public static func dealReward(_ state: LiteState) -> Double {
+        guard let deal = state.deal else { return 0 }
+        return max(LiteContent.dealMinReward, incomePerSecond(state) * LiteContent.dealRewardSeconds(deal.kind))
+    }
+
+    /// Fırsatı yakala: ödül kasaya (kazanca sayılmıyor), fırsat kalkıyor.
+    public static func catchDeal(_ state: LiteState) -> Result<LiteState, ActionError> {
+        guard let deal = state.deal, state.clock < deal.until - eps else { return .failure(.none) }
+        var next = state
+        next.cash += dealReward(state)
+        next.deal = nil
+        return .success(next)
+    }
+
     // MARK: - Halka arz
 
     public static func ipoUnlocked(_ state: LiteState) -> Bool {
@@ -585,11 +627,25 @@ public enum Lite {
         state.nextCouncilAt = state.clock + LiteContent.councilGap
     }
 
+    /// Sıradaki fırsat (L9): tür sabit sırayla, zincir satış yapan zincirlerden sayaçla.
+    static func startDeal(_ state: inout LiteState) {
+        state.nextDealAt = state.clock + LiteContent.dealGap
+        let selling = ChainId.allCases.filter { state[chain: $0].levels[2] > 0 }
+        if selling.isEmpty { return }
+        let kind = LiteContent.dealPattern[state.deals % LiteContent.dealPattern.count]
+        let chain: ChainId? = kind == .investor ? nil : selling[(state.deals * 3 + state.city) % selling.count]
+        state.deal = ActiveDeal(kind: kind, chain: chain, until: state.clock + LiteContent.dealLifetime)
+        state.deals += 1
+    }
+
     static func applyBoundaries(_ state: inout LiteState, offline: Bool) {
         if let event = state.event, state.clock >= event.until - eps { state.event = nil }
         if let policy = state.policy, state.clock >= policy.until - eps { state.policy = nil }
+        if let deal = state.deal, state.clock >= deal.until - eps { state.deal = nil }
         // Olay yalnızca oyuncu oradayken başlıyor; kapalıyken kaçan olay dönüşte başlıyor.
         if !offline && state.event == nil && state.clock >= state.nextEventAt - eps { startEvent(&state) }
+        // Fırsat da öyle; kapalıyken çıkmıyor, duran fırsat kapalıyken kaçıyor.
+        if !offline && state.deal == nil && state.clock >= state.nextDealAt - eps { startDeal(&state) }
         if state.clock >= state.nextCouncilAt - eps { openCouncil(&state) }
     }
 
@@ -604,6 +660,7 @@ public enum Lite {
             var bounds = [next.campaignUntil, next.nextCouncilAt]
             if let event = next.event { bounds.append(event.until) } else if !offline { bounds.append(next.nextEventAt) }
             if let policy = next.policy { bounds.append(policy.until) }
+            if let deal = next.deal { bounds.append(deal.until) } else if !offline { bounds.append(next.nextDealAt) }
             for bound in bounds where bound - next.clock > eps { h = min(h, bound - next.clock) }
             let income = incomePerSecond(next) * (offline ? LiteContent.offlineEfficiency : 1)
             next.cash += income * h

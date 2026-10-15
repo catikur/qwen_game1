@@ -7,6 +7,12 @@ import {
   CHAIN_IDS,
   CITY_THEMES,
   COUNCIL_FIRST,
+  DEAL_FIRST,
+  DEAL_GAP,
+  DEAL_LIFETIME,
+  DEAL_MIN_REWARD,
+  DEAL_PATTERN,
+  DEAL_REWARD_SECONDS,
   COUNCIL_PAIRS,
   ENERGY_PROCESSING,
   ENERGY_UNLOCK,
@@ -28,11 +34,13 @@ import {
   bestMove,
   buildingTier,
   buy,
+  catchDeal,
   chainReport,
   chainUnlocked,
   chooseCouncil,
   cityTheme,
   claimGoal,
+  dealReward,
   companyValue,
   featuredChain,
   firstOvertake,
@@ -453,4 +461,84 @@ test('ada görevleri sona eklendi: eski kayıtların görev sırası kaymıyor',
   assert.equal(goalMet(s, GOALS[GOALS.length - 3]!), true);
   assert.equal(goalMet(s, GOALS[GOALS.length - 2]!), true);
   assert.equal(goalMet(s, GOALS[GOALS.length - 1]!), false);
+});
+
+// ------------------------------------------------------------ L9: fırsatlar
+
+/** Fırın ve kahve satan, biraz oynanmış şehir. */
+function sellingCity() {
+  let s = newGame();
+  s.cash = 1e7;
+  s.earned = 1e4; // kahve açık
+  for (const chain of ['bakery', 'coffee'] as const) {
+    for (const stage of [0, 1, 2] as const) {
+      const r = buy(s, chain, stage, 30);
+      assert.ok(r.ok, `${chain} ${stage}`);
+      s = r.state;
+    }
+  }
+  return s;
+}
+
+test('fırsat: ilki DEAL_FIRST saniyede, sonrakiler DEAL_GAP arayla; sıra ve zincir sabit', () => {
+  let s = advance(sellingCity(), DEAL_FIRST - 1);
+  assert.equal(s.deal, null);
+  s = advance(s, 1);
+  // Satış yapan zincirler [fırın, kahve]: ilk fırsat (0·3 + şehir 0) mod 2 → fırın.
+  assert.deepEqual(s.deal, { kind: DEAL_PATTERN[0], chain: 'bakery', until: DEAL_FIRST + DEAL_LIFETIME });
+  assert.equal(s.deals, 1);
+  // Yakalanmazsa süresi dolunca kayboluyor.
+  s = advance(s, DEAL_LIFETIME);
+  assert.equal(s.deal, null);
+  const kinds: string[] = [DEAL_PATTERN[0]!];
+  // Başlangıçtan başlangıca DEAL_GAP: i. fırsat DEAL_FIRST + i·DEAL_GAP'te.
+  for (let i = 1; i < DEAL_PATTERN.length; i++) {
+    const start = DEAL_FIRST + i * DEAL_GAP;
+    s = advance(s, start - 1 - s.clock);
+    assert.equal(s.deal, null, `fırsat ${i} erken`);
+    s = advance(s, 1);
+    assert.ok(s.deal, `fırsat ${i}`);
+    kinds.push(s.deal.kind);
+    assert.equal(s.deal.chain === null, s.deal.kind === 'investor');
+  }
+  assert.deepEqual(kinds, [...DEAL_PATTERN]);
+});
+
+test('fırsat: yakalayınca ödül kasaya, kazanca sayılmıyor; ikinci dokunuş geçmiyor', () => {
+  const s = advance(sellingCity(), DEAL_FIRST + 2);
+  assert.ok(s.deal && s.deal.chain);
+  const expected = incomePerSecond(s) * DEAL_REWARD_SECONDS[s.deal.kind];
+  assert.ok(Math.abs(dealReward(s) - expected) < 1e-6 * expected);
+  const r = catchDeal(s);
+  assert.ok(r.ok);
+  assert.ok(Math.abs(r.state.cash - s.cash - expected) < 1e-6 * expected);
+  assert.equal(r.state.earned, s.earned);
+  assert.equal(r.state.totalEarned, s.totalEarned);
+  assert.equal(r.state.deal, null);
+  assert.deepEqual(catchDeal(r.state), { ok: false, reason: 'none' });
+  // Süresi dolmuş fırsat yakalanmıyor.
+  const late = advance(s, DEAL_LIFETIME);
+  assert.deepEqual(catchDeal(late), { ok: false, reason: 'none' });
+});
+
+test('fırsat: yatırımcı en büyük ödül; ödülün alt sınırı', () => {
+  let s = advance(sellingCity(), DEAL_FIRST);
+  while (s.deal?.kind !== 'investor') s = advance(s, s.deal ? DEAL_LIFETIME : 1);
+  assert.ok(Math.abs(dealReward(s) - incomePerSecond(s) * DEAL_REWARD_SECONDS.investor) < 1e-6 * dealReward(s));
+  const tiny = advance(newGame(), 1);
+  assert.equal(dealReward({ ...tiny, deal: { kind: 'order', chain: 'bakery', until: 99 } }), DEAL_MIN_REWARD);
+});
+
+test('fırsat: satış yokken çıkmıyor; kapalıyken çıkmıyor, duran fırsat kaçıyor', () => {
+  const empty = advance(newGame(), DEAL_FIRST + 30);
+  assert.equal(empty.deal, null);
+  assert.equal(empty.deals, 0);
+  assert.equal(empty.nextDealAt, DEAL_FIRST + DEAL_GAP);
+  const s = advance(sellingCity(), DEAL_FIRST);
+  assert.ok(s.deal);
+  const away = applyOffline(s, 3 * 3600).state;
+  assert.equal(away.deal, null, 'duran fırsat kapalıyken kaçmalı');
+  assert.equal(away.deals, s.deals, 'kapalıyken yeni fırsat çıkmamalı');
+  // Dönüşte kaçan sıra hemen başlıyor.
+  assert.ok(advance(away, 1).deal);
 });

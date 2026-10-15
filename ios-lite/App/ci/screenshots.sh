@@ -56,6 +56,7 @@ shot night-settings -AppleLanguages "(tr)" -liteScenario mid -liteSettings
 WAIT=24 shot night-islands -AppleLanguages "(tr)" -liteScenario islands
 WAIT=24 shot night-island3 -AppleLanguages "(tr)" -liteScenario islands -liteIsland 3
 shot night-league -AppleLanguages "(tr)" -liteScenario mid -liteLeague -liteLeagueSheet
+WAIT=24 shot night-deal -AppleLanguages "(tr)" -liteScenario islands -liteDeal investor
 xcrun simctl ui "$UDID" appearance light
 # L7: takımada, bina kademeleri, temalar, holding haritası.
 WAIT=24 shot tr-islands -AppleLanguages "(tr)" -liteScenario islands
@@ -70,6 +71,10 @@ shot tr-map -AppleLanguages "(tr)" -liteScenario snow -liteMap
 shot tr-league -AppleLanguages "(tr)" -liteScenario mid -liteLeague -liteLeagueSheet
 shot tr-league-private -AppleLanguages "(tr)" -liteScenario mid -liteLeague -liteLeagueSheet -liteLeaguePrivate
 shot tr-league-card -AppleLanguages "(tr)" -liteScenario mid -liteLeague -liteScroll league
+# L9: şehir fırsatları (balon; yakalanınca uçuş).
+shot tr-deal -AppleLanguages "(tr)" -liteScenario mid -liteDeal order
+shot tr-deal-vip -AppleLanguages "(tr)" -liteScenario late -liteDeal vip
+shot tr-deal-caught -AppleLanguages "(tr)" -liteScenario mid -liteDeal investor -liteDealCaught
 shot tr-league-soon -AppleLanguages "(tr)" -liteScenario mid -liteLeagueSheet
 shot en-league -AppleLanguages "(en)" -liteScenario mid -liteLeague -liteLeagueSheet
 xcrun simctl shutdown "$UDID" || true

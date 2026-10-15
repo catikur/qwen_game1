@@ -151,6 +151,7 @@ final class FixtureTests: XCTestCase {
         case "council": return unwrap(Lite.chooseCouncil(state, int(op["choice"])))
         case "claim": return unwrap(Lite.claimGoal(state))
         case "ipo": return unwrap(Lite.goPublic(state))
+        case "deal": return unwrap(Lite.catchDeal(state))
         default:
             XCTFail("bilinmeyen adım \(op)")
             return (state, false)
@@ -216,6 +217,17 @@ final class FixtureTests: XCTestCase {
             XCTAssertEqual(mine.listed, theirs.listed, "\(label) harita halka açık")
             close(mine.earned, theirs.earned, "\(label) harita kazanç")
         }
+        // L9
+        if let deal = snapshot["deal"] as? [String: Any] {
+            XCTAssertEqual(state.deal?.kind.rawValue, deal["kind"] as? String, "\(label) fırsat")
+            XCTAssertEqual(state.deal?.chain?.rawValue, deal["chain"] as? String, "\(label) fırsat zinciri")
+            close(state.deal?.until ?? .nan, num(deal["until"]), "\(label) fırsat bitişi")
+        } else {
+            XCTAssertNil(state.deal, "\(label) fırsat olmamalı")
+        }
+        close(state.nextDealAt, num(snapshot["nextDealAt"]), "\(label) sıradaki fırsat")
+        XCTAssertEqual(state.deals, int(snapshot["deals"]), "\(label) fırsat sayısı")
+        close(Lite.dealReward(state), num(snapshot["dealReward"]), "\(label) fırsat ödülü")
         let move = Lite.bestMove(state)
         if let best = snapshot["best"] as? [String: Any] {
             XCTAssertEqual(move?.chain, chain(best["chain"]), "\(label) önerilen zincir")

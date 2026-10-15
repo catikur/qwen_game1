@@ -324,3 +324,28 @@ export const BUILDING_TIERS: readonly number[] = [25, 50, 100];
 /** Şehir temaları: her holding turu başka bir coğrafyada. */
 export type CityTheme = 'coast' | 'mountain' | 'desert' | 'snow';
 export const CITY_THEMES: readonly CityTheme[] = ['coast', 'mountain', 'desert', 'snow'];
+
+// ------------------------------------------------------------ L9: şehir fırsatları
+
+/**
+ * Şehirde ara sıra bir binanın üstünde beliren fırsat: dokununca ödül kasaya.
+ * - Sipariş: bir zincire toplu sipariş.
+ * - Ünlü müşteri: zincire gelen ünlü; daha büyük sipariş.
+ * - Yatırımcı: bütün şirkete; daha seyrek.
+ */
+export type DealKind = 'order' | 'vip' | 'investor';
+/** İlk fırsat bu saniyede; sonrakiler başlangıçtan başlangıca DEAL_GAP arayla, yalnızca oyuncu oradayken. */
+export const DEAL_FIRST = 150;
+export const DEAL_GAP = 100;
+/** Fırsat bu kadar saniye duruyor; yakalanmazsa kayboluyor. */
+export const DEAL_LIFETIME = 12;
+/** Sıra: dört sipariş arasında bir ünlü müşteri, altıncıda yatırımcı. */
+export const DEAL_PATTERN: readonly DealKind[] = ['order', 'order', 'vip', 'order', 'order', 'investor'];
+/**
+ * Ödül: şirketin o anki gelirinin bu kadar saniyesi, kasaya (zincir yalnızca
+ * fırsatın nereden çıktığı; geç oyunda tek zincir küçük bir pay, ödül
+ * sönmesin). Kazanca (mahalleler, yıldız, lig puanı) sayılmıyor: görev ödülü
+ * gibi. Hepsini yakalayan aktif oyuncu ~%20 fazla nakit görüyor.
+ */
+export const DEAL_REWARD_SECONDS: Readonly<Record<DealKind, number>> = { order: 12, vip: 30, investor: 60 };
+export const DEAL_MIN_REWARD = 10;

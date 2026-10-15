@@ -6615,7 +6615,11 @@
      "goal": 0,
      "listed": false,
      "overtake": null,
-     "history": []
+     "history": [],
+     "deal": null,
+     "nextDealAt": 150,
+     "deals": 0,
+     "dealReward": 0
     },
     {
      "after": 126,
@@ -6695,7 +6699,11 @@
      "goal": 6,
      "listed": false,
      "overtake": null,
-     "history": []
+     "history": [],
+     "deal": null,
+     "nextDealAt": 150,
+     "deals": 0,
+     "dealReward": 0
     },
     {
      "after": 176,
@@ -6775,7 +6783,11 @@
      "goal": 6,
      "listed": false,
      "overtake": null,
-     "history": []
+     "history": [],
+     "deal": null,
+     "nextDealAt": 250,
+     "deals": 1,
+     "dealReward": 0
     },
     {
      "after": 243,
@@ -6859,7 +6871,11 @@
      "goal": 6,
      "listed": false,
      "overtake": null,
-     "history": []
+     "history": [],
+     "deal": null,
+     "nextDealAt": 350,
+     "deals": 2,
+     "dealReward": 0
     },
     {
      "after": 286,
@@ -6939,7 +6955,11 @@
      "goal": 6,
      "listed": false,
      "overtake": null,
-     "history": []
+     "history": [],
+     "deal": null,
+     "nextDealAt": 450,
+     "deals": 3,
+     "dealReward": 0
     },
     {
      "after": 385,
@@ -7019,7 +7039,11 @@
      "goal": 7,
      "listed": false,
      "overtake": null,
-     "history": []
+     "history": [],
+     "deal": null,
+     "nextDealAt": 550,
+     "deals": 4,
+     "dealReward": 0
     },
     {
      "after": 422,
@@ -7103,7 +7127,11 @@
      "goal": 7,
      "listed": false,
      "overtake": null,
-     "history": []
+     "history": [],
+     "deal": null,
+     "nextDealAt": 650,
+     "deals": 5,
+     "dealReward": 0
     },
     {
      "after": 451,
@@ -7186,7 +7214,11 @@
      "goal": 7,
      "listed": false,
      "overtake": null,
-     "history": []
+     "history": [],
+     "deal": null,
+     "nextDealAt": 750,
+     "deals": 6,
+     "dealReward": 0
     },
     {
      "after": 485,
@@ -7269,7 +7301,11 @@
      "goal": 7,
      "listed": false,
      "overtake": null,
-     "history": []
+     "history": [],
+     "deal": null,
+     "nextDealAt": 850,
+     "deals": 7,
+     "dealReward": 0
     },
     {
      "after": 524,
@@ -7356,7 +7392,11 @@
      "goal": 7,
      "listed": false,
      "overtake": null,
-     "history": []
+     "history": [],
+     "deal": null,
+     "nextDealAt": 950,
+     "deals": 8,
+     "dealReward": 0
     },
     {
      "after": 560,
@@ -7443,7 +7483,11 @@
      "goal": 7,
      "listed": false,
      "overtake": null,
-     "history": []
+     "history": [],
+     "deal": null,
+     "nextDealAt": 1050,
+     "deals": 9,
+     "dealReward": 0
     },
     {
      "after": 590,
@@ -7526,7 +7570,11 @@
      "goal": 7,
      "listed": false,
      "overtake": null,
-     "history": []
+     "history": [],
+     "deal": null,
+     "nextDealAt": 1150,
+     "deals": 10,
+     "dealReward": 0
     },
     {
      "after": 620,
@@ -7609,7 +7657,11 @@
      "goal": 7,
      "listed": false,
      "overtake": null,
-     "history": []
+     "history": [],
+     "deal": null,
+     "nextDealAt": 1250,
+     "deals": 11,
+     "dealReward": 0
     },
     {
      "after": 620,
@@ -7692,7 +7744,11 @@
      "goal": 7,
      "listed": false,
      "overtake": null,
-     "history": []
+     "history": [],
+     "deal": null,
+     "nextDealAt": 1250,
+     "deals": 11,
+     "dealReward": 0
     }
    ]
   },
@@ -13294,7 +13350,11 @@
      "goal": 0,
      "listed": false,
      "overtake": null,
-     "history": []
+     "history": [],
+     "deal": null,
+     "nextDealAt": 150,
+     "deals": 0,
+     "dealReward": 0
     },
     {
      "after": 70,
@@ -13374,7 +13434,11 @@
      "goal": 4,
      "listed": false,
      "overtake": null,
-     "history": []
+     "history": [],
+     "deal": null,
+     "nextDealAt": 250,
+     "deals": 1,
+     "dealReward": 0
     },
     {
      "after": 211,
@@ -13454,7 +13518,11 @@
      "goal": 6,
      "listed": false,
      "overtake": null,
-     "history": []
+     "history": [],
+     "deal": null,
+     "nextDealAt": 450,
+     "deals": 3,
+     "dealReward": 0
     },
     {
      "after": 323,
@@ -13538,7 +13606,11 @@
      "goal": 8,
      "listed": false,
      "overtake": null,
-     "history": []
+     "history": [],
+     "deal": null,
+     "nextDealAt": 650,
+     "deals": 5,
+     "dealReward": 0
     },
     {
      "after": 398,
@@ -13625,7 +13697,11 @@
      "goal": 10,
      "listed": false,
      "overtake": null,
-     "history": []
+     "history": [],
+     "deal": null,
+     "nextDealAt": 7323,
+     "deals": 8,
+     "dealReward": 0
     },
     {
      "after": 419,
@@ -13708,7 +13784,11 @@
      "goal": 10,
      "listed": false,
      "overtake": null,
-     "history": []
+     "history": [],
+     "deal": null,
+     "nextDealAt": 7523,
+     "deals": 10,
+     "dealReward": 0
     },
     {
      "after": 503,
@@ -13795,7 +13875,11 @@
      "goal": 11,
      "listed": false,
      "overtake": null,
-     "history": []
+     "history": [],
+     "deal": null,
+     "nextDealAt": 7723,
+     "deals": 12,
+     "dealReward": 0
     },
     {
      "after": 532,
@@ -13878,13 +13962,17 @@
      "goal": 11,
      "listed": false,
      "overtake": null,
-     "history": []
+     "history": [],
+     "deal": null,
+     "nextDealAt": 7923,
+     "deals": 14,
+     "dealReward": 0
     },
     {
      "after": 596,
-     "cash": 516353234.0239393,
-     "earned": 1215728071.1227667,
-     "totalEarned": 1215728071.1227667,
+     "cash": 516349417.8936567,
+     "earned": 1215724254.9924834,
+     "totalEarned": 1215724254.9924834,
      "clock": 15966,
      "city": 0,
      "stars": 0,
@@ -13934,7 +14022,7 @@
      "rivals": [
       169.09179865693937,
       161.82586410664706,
-      157.01772208420059,
+      157.01772208420056,
       121.9136145818568,
       0,
       0,
@@ -13965,13 +14053,17 @@
      "goal": 11,
      "listed": true,
      "overtake": null,
-     "history": []
+     "history": [],
+     "deal": null,
+     "nextDealAt": 16046,
+     "deals": 17,
+     "dealReward": 0
     },
     {
      "after": 652,
-     "cash": 37455533.45837096,
-     "earned": 1349219305.6358395,
-     "totalEarned": 1349219305.6358395,
+     "cash": 37451717.32808832,
+     "earned": 1349215489.505556,
+     "totalEarned": 1349215489.505556,
      "clock": 16166,
      "city": 0,
      "stars": 0,
@@ -14021,7 +14113,7 @@
      "rivals": [
       241.1480045421594,
       228.80811105112815,
-      167.8803588854944,
+      167.88035888549436,
       142.1474579754187,
       0,
       0,
@@ -14048,13 +14140,17 @@
      "goal": 12,
      "listed": true,
      "overtake": null,
-     "history": []
+     "history": [],
+     "deal": null,
+     "nextDealAt": 16246,
+     "deals": 19,
+     "dealReward": 0
     },
     {
      "after": 665,
-     "cash": 24627103.48514456,
-     "earned": 1471109241.0427577,
-     "totalEarned": 1471109241.0427577,
+     "cash": 24623287.35486192,
+     "earned": 1471105424.9124744,
+     "totalEarned": 1471105424.9124744,
      "clock": 16366,
      "city": 0,
      "stars": 0,
@@ -14104,7 +14200,7 @@
      "rivals": [
       298.5141288711596,
       288.0394291645953,
-      162.1665667605923,
+      162.16656676059227,
       157.36761249508828,
       0,
       0,
@@ -14135,13 +14231,17 @@
      "goal": 12,
      "listed": true,
      "overtake": null,
-     "history": []
+     "history": [],
+     "deal": null,
+     "nextDealAt": 16446,
+     "deals": 21,
+     "dealReward": 0
     },
     {
      "after": 684,
-     "cash": 41485148.27940365,
-     "earned": 1632914698.750003,
-     "totalEarned": 1632914698.750003,
+     "cash": 41481332.14912101,
+     "earned": 1632910882.6197197,
+     "totalEarned": 1632910882.6197197,
      "clock": 16566,
      "city": 0,
      "stars": 0,
@@ -14191,7 +14291,7 @@
      "rivals": [
       339.61875311915793,
       330.480523159451,
-      170.07681398617257,
+      170.07681398617254,
       169.657785741212,
       0,
       0,
@@ -14218,13 +14318,17 @@
      "goal": 13,
      "listed": true,
      "overtake": null,
-     "history": []
+     "history": [],
+     "deal": null,
+     "nextDealAt": 16646,
+     "deals": 23,
+     "dealReward": 0
     },
     {
      "after": 737,
-     "cash": 141366252.51406324,
-     "earned": 5351105805.83407,
-     "totalEarned": 5351105805.83407,
+     "cash": 141360429.95200002,
+     "earned": 5351099983.272003,
+     "totalEarned": 5351099983.272003,
      "clock": 26169,
      "city": 0,
      "stars": 0,
@@ -14305,13 +14409,17 @@
      "goal": 13,
      "listed": true,
      "overtake": null,
-     "history": []
+     "history": [],
+     "deal": null,
+     "nextDealAt": 26249,
+     "deals": 26,
+     "dealReward": 0
     },
     {
      "after": 749,
-     "cash": 274175243.0282131,
-     "earned": 5675994796.348221,
-     "totalEarned": 5675994796.348221,
+     "cash": 274169420.46614987,
+     "earned": 5675988973.786154,
+     "totalEarned": 5675988973.786154,
      "clock": 26369,
      "city": 0,
      "stars": 0,
@@ -14388,13 +14496,17 @@
      "goal": 13,
      "listed": true,
      "overtake": null,
-     "history": []
+     "history": [],
+     "deal": null,
+     "nextDealAt": 26449,
+     "deals": 28,
+     "dealReward": 0
     },
     {
      "after": 771,
-     "cash": 27629363.177989475,
-     "earned": 5994325393.161,
-     "totalEarned": 5994325393.161,
+     "cash": 27623540.61592626,
+     "earned": 5994319570.598933,
+     "totalEarned": 5994319570.598933,
      "clock": 26569,
      "city": 0,
      "stars": 0,
@@ -14475,13 +14587,17 @@
      "goal": 13,
      "listed": true,
      "overtake": null,
-     "history": []
+     "history": [],
+     "deal": null,
+     "nextDealAt": 26649,
+     "deals": 30,
+     "dealReward": 0
     },
     {
      "after": 784,
-     "cash": 291171943.27791095,
-     "earned": 6295396756.86308,
-     "totalEarned": 6295396756.86308,
+     "cash": 291166120.71584773,
+     "earned": 6295390934.301013,
+     "totalEarned": 6295390934.301013,
      "clock": 26769,
      "city": 0,
      "stars": 0,
@@ -14558,13 +14674,17 @@
      "goal": 13,
      "listed": true,
      "overtake": null,
-     "history": []
+     "history": [],
+     "deal": null,
+     "nextDealAt": 26849,
+     "deals": 32,
+     "dealReward": 0
     },
     {
      "after": 851,
-     "cash": 509974833.8722248,
-     "earned": 12684241492.160263,
-     "totalEarned": 12684241492.160263,
+     "cash": 509965906.84361744,
+     "earned": 12684232565.131653,
+     "totalEarned": 12684232565.131653,
      "clock": 37852,
      "city": 0,
      "stars": 0,
@@ -14645,13 +14765,17 @@
      "goal": 14,
      "listed": true,
      "overtake": null,
-     "history": []
+     "history": [],
+     "deal": null,
+     "nextDealAt": 37932,
+     "deals": 35,
+     "dealReward": 0
     },
     {
      "after": 851,
-     "cash": 509974833.8722248,
-     "earned": 12684241492.160263,
-     "totalEarned": 12684241492.160263,
+     "cash": 509965906.84361744,
+     "earned": 12684232565.131653,
+     "totalEarned": 12684232565.131653,
      "clock": 37852,
      "city": 0,
      "stars": 0,
@@ -14732,7 +14856,11 @@
      "goal": 14,
      "listed": true,
      "overtake": null,
-     "history": []
+     "history": [],
+     "deal": null,
+     "nextDealAt": 37932,
+     "deals": 35,
+     "dealReward": 0
     }
    ]
   },
@@ -27348,7 +27476,11 @@
      "goal": 0,
      "listed": false,
      "overtake": null,
-     "history": []
+     "history": [],
+     "deal": null,
+     "nextDealAt": 150,
+     "deals": 0,
+     "dealReward": 0
     },
     {
      "after": 226,
@@ -27431,7 +27563,11 @@
      "goal": 3,
      "listed": false,
      "overtake": null,
-     "history": []
+     "history": [],
+     "deal": null,
+     "nextDealAt": 1250,
+     "deals": 11,
+     "dealReward": 0
     },
     {
      "after": 390,
@@ -27518,13 +27654,17 @@
      "goal": 3,
      "listed": false,
      "overtake": null,
-     "history": []
+     "history": [],
+     "deal": null,
+     "nextDealAt": 13240,
+     "deals": 23,
+     "dealReward": 0
     },
     {
      "after": 500,
-     "cash": 3586651708.8295193,
-     "earned": 4890776189.428559,
-     "totalEarned": 4890776189.428559,
+     "cash": 3586650675.3389482,
+     "earned": 4890775155.937989,
+     "totalEarned": 4890775155.937989,
      "clock": 28800,
      "city": 0,
      "stars": 0,
@@ -27605,13 +27745,17 @@
      "goal": 3,
      "listed": true,
      "overtake": null,
-     "history": []
+     "history": [],
+     "deal": null,
+     "nextDealAt": 28840,
+     "deals": 36,
+     "dealReward": 0
     },
     {
      "after": 572,
-     "cash": 228288174.27213228,
-     "earned": 6293887794.029269,
-     "totalEarned": 6293887794.029269,
+     "cash": 228287140.78156126,
+     "earned": 6293886760.538699,
+     "totalEarned": 6293886760.538699,
      "clock": 30000,
      "city": 0,
      "stars": 0,
@@ -27688,13 +27832,17 @@
      "goal": 3,
      "listed": true,
      "overtake": null,
-     "history": []
+     "history": [],
+     "deal": null,
+     "nextDealAt": 30040,
+     "deals": 48,
+     "dealReward": 0
     },
     {
      "after": 678,
-     "cash": 1207426395.5651152,
-     "earned": 27076873330.45764,
-     "totalEarned": 27076873330.45764,
+     "cash": 1207423875.6465056,
+     "earned": 27076870810.539032,
+     "totalEarned": 27076870810.539032,
      "clock": 51200,
      "city": 0,
      "stars": 0,
@@ -27775,13 +27923,17 @@
      "goal": 3,
      "listed": true,
      "overtake": null,
-     "history": []
+     "history": [],
+     "deal": null,
+     "nextDealAt": 51240,
+     "deals": 61,
+     "dealReward": 0
     },
     {
      "after": 753,
-     "cash": 116731329014.24718,
-     "earned": 158935693890.17252,
-     "totalEarned": 158935693890.17252,
+     "cash": 116731314574.91441,
+     "earned": 158935679450.83975,
+     "totalEarned": 158935679450.83975,
      "clock": 72400,
      "city": 0,
      "stars": 0,
@@ -27862,13 +28014,17 @@
      "goal": 3,
      "listed": true,
      "overtake": null,
-     "history": []
+     "history": [],
+     "deal": null,
+     "nextDealAt": 72440,
+     "deals": 74,
+     "dealReward": 0
     },
     {
      "after": 844,
-     "cash": 12403136893.851316,
-     "earned": 397988687302.5266,
-     "totalEarned": 397988687302.5266,
+     "cash": 12403122454.518553,
+     "earned": 397988672863.19385,
+     "totalEarned": 397988672863.19385,
      "clock": 73600,
      "city": 0,
      "stars": 0,
@@ -27945,13 +28101,17 @@
      "goal": 3,
      "listed": true,
      "overtake": null,
-     "history": []
+     "history": [],
+     "deal": null,
+     "nextDealAt": 73640,
+     "deals": 86,
+     "dealReward": 0
     },
     {
      "after": 946,
-     "cash": 190421966624.67712,
-     "earned": 4015247064694.0015,
-     "totalEarned": 4015247064694.0015,
+     "cash": 190421604658.71472,
+     "earned": 4015246702728.0376,
+     "totalEarned": 4015246702728.0376,
      "clock": 94800,
      "city": 0,
      "stars": 0,
@@ -28032,13 +28192,17 @@
      "goal": 3,
      "listed": true,
      "overtake": null,
-     "history": []
+     "history": [],
+     "deal": null,
+     "nextDealAt": 94840,
+     "deals": 99,
+     "dealReward": 0
     },
     {
      "after": 1034,
-     "cash": 26444053581897.523,
-     "earned": 33422394774481.96,
-     "totalEarned": 33422394774481.96,
+     "cash": 26444047006719.39,
+     "earned": 33422388199303.824,
+     "totalEarned": 33422388199303.824,
      "clock": 116000,
      "city": 0,
      "stars": 0,
@@ -28119,13 +28283,17 @@
      "goal": 3,
      "listed": true,
      "overtake": null,
-     "history": []
+     "history": [],
+     "deal": null,
+     "nextDealAt": 116040,
+     "deals": 112,
+     "dealReward": 0
     },
     {
      "after": 1122,
-     "cash": 5121504922219.037,
-     "earned": 92937437985130.94,
-     "totalEarned": 92937437985130.94,
+     "cash": 5121498347040.904,
+     "earned": 92937431409952.81,
+     "totalEarned": 92937431409952.81,
      "clock": 117200,
      "city": 0,
      "stars": 0,
@@ -28202,13 +28370,17 @@
      "goal": 3,
      "listed": true,
      "overtake": null,
-     "history": []
+     "history": [],
+     "deal": null,
+     "nextDealAt": 117240,
+     "deals": 124,
+     "dealReward": 0
     },
     {
      "after": 1557,
      "cash": 80047959.47773845,
      "earned": 500707161.2041944,
-     "totalEarned": 92937938692292.38,
+     "totalEarned": 92937932117114.25,
      "clock": 8400,
      "city": 1,
      "stars": 66,
@@ -28293,15 +28465,19 @@
       {
        "stars": 66,
        "listed": true,
-       "earned": 92937437985130.94
+       "earned": 92937431409952.81
       }
-     ]
+     ],
+     "deal": null,
+     "nextDealAt": 8440,
+     "deals": 11,
+     "dealReward": 0
     },
     {
      "after": 1756,
-     "cash": 9925404102.573982,
-     "earned": 11871237599.104492,
-     "totalEarned": 92949309222730.34,
+     "cash": 9925397961.842136,
+     "earned": 11871231458.372643,
+     "totalEarned": 92949302641411.42,
      "clock": 20400,
      "city": 1,
      "stars": 66,
@@ -28386,15 +28562,19 @@
       {
        "stars": 66,
        "listed": true,
-       "earned": 92937437985130.94
+       "earned": 92937431409952.81
       }
-     ]
+     ],
+     "deal": null,
+     "nextDealAt": 20440,
+     "deals": 24,
+     "dealReward": 0
     },
     {
      "after": 1879,
-     "cash": 5051340972.442296,
-     "earned": 55849947065.363594,
-     "totalEarned": 92993287932196.89,
+     "cash": 5051334831.71045,
+     "earned": 55849940924.631744,
+     "totalEarned": 92993281350877.97,
      "clock": 21600,
      "city": 1,
      "stars": 66,
@@ -28475,15 +28655,19 @@
       {
        "stars": 66,
        "listed": true,
-       "earned": 92937437985130.94
+       "earned": 92937431409952.81
       }
-     ]
+     ],
+     "deal": null,
+     "nextDealAt": 21640,
+     "deals": 36,
+     "dealReward": 0
     },
     {
      "after": 1879,
-     "cash": 5051340972.442296,
-     "earned": 55849947065.363594,
-     "totalEarned": 92993287932196.89,
+     "cash": 5051334831.71045,
+     "earned": 55849940924.631744,
+     "totalEarned": 92993281350877.97,
      "clock": 21600,
      "city": 1,
      "stars": 66,
@@ -28564,9 +28748,13 @@
       {
        "stars": 66,
        "listed": true,
-       "earned": 92937437985130.94
+       "earned": 92937431409952.81
       }
-     ]
+     ],
+     "deal": null,
+     "nextDealAt": 21640,
+     "deals": 36,
+     "dealReward": 0
     }
    ]
   },
@@ -39743,7 +39931,11 @@
        "listed": true,
        "earned": 1900000000000
       }
-     ]
+     ],
+     "deal": null,
+     "nextDealAt": 150,
+     "deals": 0,
+     "dealReward": 0
     },
     {
      "after": 385,
@@ -39852,7 +40044,11 @@
        "listed": true,
        "earned": 1900000000000
       }
-     ]
+     ],
+     "deal": null,
+     "nextDealAt": 1850,
+     "deals": 17,
+     "dealReward": 0
     },
     {
      "after": 558,
@@ -39965,7 +40161,11 @@
        "listed": true,
        "earned": 1900000000000
       }
-     ]
+     ],
+     "deal": null,
+     "nextDealAt": 12680,
+     "deals": 36,
+     "dealReward": 0
     },
     {
      "after": 713,
@@ -40074,13 +40274,17 @@
        "listed": true,
        "earned": 1900000000000
       }
-     ]
+     ],
+     "deal": null,
+     "nextDealAt": 14480,
+     "deals": 54,
+     "dealReward": 0
     },
     {
      "after": 908,
-     "cash": 41169008651.36921,
-     "earned": 507322901882.10944,
-     "totalEarned": 400507322901877.9,
+     "cash": 41168826791.576546,
+     "earned": 507322720022.3167,
+     "totalEarned": 400507322720018.1,
      "clock": 25200,
      "city": 5,
      "stars": 60,
@@ -40187,13 +40391,17 @@
        "listed": true,
        "earned": 1900000000000
       }
-     ]
+     ],
+     "deal": null,
+     "nextDealAt": 25280,
+     "deals": 73,
+     "dealReward": 0
     },
     {
      "after": 991,
-     "cash": 1925353715914.35,
-     "earned": 2900863578192.4453,
-     "totalEarned": 402900863578186.5,
+     "cash": 1925352851236.6995,
+     "earned": 2900862713514.7944,
+     "totalEarned": 402900862713508.9,
      "clock": 36000,
      "city": 5,
      "stars": 60,
@@ -40296,13 +40504,17 @@
        "listed": true,
        "earned": 1900000000000
       }
-     ]
+     ],
+     "deal": null,
+     "nextDealAt": 36080,
+     "deals": 92,
+     "dealReward": 0
     },
     {
      "after": 1071,
-     "cash": 1048117964225.8201,
-     "earned": 14878578582655.234,
-     "totalEarned": 414878578582648.9,
+     "cash": 1048117099548.1692,
+     "earned": 14878577717977.586,
+     "totalEarned": 414878577717971.25,
      "clock": 37800,
      "city": 5,
      "stars": 60,
@@ -40405,13 +40617,17 @@
        "listed": true,
        "earned": 1900000000000
       }
-     ]
+     ],
+     "deal": null,
+     "nextDealAt": 37880,
+     "deals": 110,
+     "dealReward": 0
     },
     {
      "after": 1157,
-     "cash": 16592166368017.707,
-     "earned": 129297123877190.55,
-     "totalEarned": 529297123877185.4,
+     "cash": 16591988248260.543,
+     "earned": 129296945757433.39,
+     "totalEarned": 529296945757428.25,
      "clock": 48600,
      "city": 5,
      "stars": 60,
@@ -40518,13 +40734,17 @@
        "listed": true,
        "earned": 1900000000000
       }
-     ]
+     ],
+     "deal": null,
+     "nextDealAt": 48680,
+     "deals": 129,
+     "dealReward": 0
     },
     {
      "after": 1218,
-     "cash": 22944045503293.543,
-     "earned": 340727126133301.5,
-     "totalEarned": 740727126133295.5,
+     "cash": 22943867383536.38,
+     "earned": 340726948013544.3,
+     "totalEarned": 740726948013538.4,
      "clock": 50400,
      "city": 5,
      "stars": 60,
@@ -40627,13 +40847,17 @@
        "listed": true,
        "earned": 1900000000000
       }
-     ]
+     ],
+     "deal": null,
+     "nextDealAt": 50480,
+     "deals": 147,
+     "dealReward": 0
     },
     {
      "after": 1318,
-     "cash": 72103397888029.3,
-     "earned": 1033181345871421.2,
-     "totalEarned": 1433181345871417,
+     "cash": 72103107673566.8,
+     "earned": 1033181055656958.8,
+     "totalEarned": 1433181055656954.5,
      "clock": 61200,
      "city": 5,
      "stars": 60,
@@ -40740,13 +40964,17 @@
        "listed": true,
        "earned": 1900000000000
       }
-     ]
+     ],
+     "deal": null,
+     "nextDealAt": 61280,
+     "deals": 166,
+     "dealReward": 0
     },
     {
      "after": 1647,
      "cash": 462764366.76018524,
      "earned": 488950159.7181046,
-     "totalEarned": 1535983153346053.8,
+     "totalEarned": 1535982863131591.2,
      "clock": 8400,
      "city": 6,
      "stars": 183,
@@ -40852,15 +41080,19 @@
       {
        "stars": 123,
        "listed": true,
-       "earned": 1135982664395900.5
+       "earned": 1135982374181438
       }
-     ]
+     ],
+     "deal": null,
+     "nextDealAt": 8480,
+     "deals": 12,
+     "dealReward": 0
     },
     {
      "after": 1647,
      "cash": 462764366.76018524,
      "earned": 488950159.7181046,
-     "totalEarned": 1535983153346053.8,
+     "totalEarned": 1535982863131591.2,
      "clock": 8400,
      "city": 6,
      "stars": 183,
@@ -40966,9 +41198,9448 @@
       {
        "stars": 123,
        "listed": true,
-       "earned": 1135982664395900.5
+       "earned": 1135982374181438
       }
-     ]
+     ],
+     "deal": null,
+     "nextDealAt": 8480,
+     "deals": 12,
+     "dealReward": 0
+    }
+   ]
+  },
+  {
+   "name": "firsatlar",
+   "start": {
+    "city": 0,
+    "stars": 0,
+    "totalEarned": 0,
+    "history": []
+   },
+   "ops": [
+    {
+     "op": "campaign",
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 2,
+     "count": 2,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "claim",
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "claim",
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "claim",
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 1,
+     "count": 5,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 2,
+     "count": 5,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 0,
+     "count": 5,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 2,
+     "count": 5,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 1,
+     "count": 5,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 0,
+     "count": 5,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "claim",
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "deal",
+     "ok": false
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 0,
+     "count": 2,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "campaign",
+     "ok": false
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "claim",
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "claim",
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 1,
+     "count": 5,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 0,
+     "count": 5,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
+     "count": 5,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
+     "count": 5,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 1,
+     "count": 5,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 0,
+     "count": 5,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "campaign",
+     "ok": false
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 0,
+     "count": 2,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "deal",
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "campaign",
+     "ok": false
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 2,
+     "count": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "campaign",
+     "ok": false
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "deal",
+     "ok": false
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "deal",
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 0,
+     "count": 5,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "campaign",
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 2,
+     "count": 5,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 1,
+     "count": 3,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "campaign",
+     "ok": false
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "deal",
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 1,
+     "count": 2,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 0,
+     "count": 5,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "campaign",
+     "ok": false
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "claim",
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 2,
+     "count": 5,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 1,
+     "count": 5,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 0,
+     "count": 5,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 2,
+     "count": 5,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 1,
+     "count": 5,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 0,
+     "count": 5,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 2,
+     "count": 5,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 1,
+     "count": 5,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 2,
+     "count": 2,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "campaign",
+     "ok": false
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "deal",
+     "ok": false
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "deal",
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "campaign",
+     "ok": false
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 0,
+     "count": 2,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "campaign",
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "deal",
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 2,
+     "count": 2,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "campaign",
+     "ok": false
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "offline",
+     "seconds": 3000,
+     "ok": true
+    },
+    {
+     "op": "council",
+     "choice": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "deal",
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 0,
+     "count": 5,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 1,
+     "count": 5,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 2,
+     "count": 5,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
+     "count": 5,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 2,
+     "count": 5,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 1,
+     "count": 5,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 0,
+     "count": 5,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 0,
+     "count": 5,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 1,
+     "count": 5,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 2,
+     "count": 5,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 1,
+     "count": 5,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 0,
+     "count": 5,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 0,
+     "count": 5,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 0,
+     "count": 5,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 1,
+     "count": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
+     "count": 2,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "campaign",
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "deal",
+     "ok": false
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "campaign",
+     "ok": false
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "deal",
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "campaign",
+     "ok": false
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "campaign",
+     "ok": false
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "deal",
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "deal",
+     "ok": false
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "campaign",
+     "ok": false
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "campaign",
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "deal",
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "campaign",
+     "ok": false
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "campaign",
+     "ok": false
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "deal",
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "deal",
+     "ok": false
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "campaign",
+     "ok": false
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "campaign",
+     "ok": false
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "deal",
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "campaign",
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "campaign",
+     "ok": false
+    },
+    {
+     "op": "offline",
+     "seconds": 3000,
+     "ok": true
+    },
+    {
+     "op": "council",
+     "choice": 0,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "deal",
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 2,
+     "count": 5,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 1,
+     "count": 5,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 0,
+     "count": 5,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 2,
+     "count": 5,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 1,
+     "count": 5,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 0,
+     "count": 5,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 1,
+     "count": 5,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 2,
+     "count": 5,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 0,
+     "count": 5,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 2,
+     "count": 5,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 1,
+     "count": 5,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 2,
+     "count": 5,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 0,
+     "count": 5,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 1,
+     "count": 3,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "deal",
+     "ok": false
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "campaign",
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "deal",
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 2,
+     "count": 2,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "campaign",
+     "ok": false
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "campaign",
+     "ok": false
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "deal",
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "campaign",
+     "ok": false
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "deal",
+     "ok": false
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "campaign",
+     "ok": false
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "deal",
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "campaign",
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
+     "count": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 2,
+     "count": 5,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "campaign",
+     "ok": false
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "deal",
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "campaign",
+     "ok": false
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "deal",
+     "ok": false
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 1,
+     "count": 3,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 1,
+     "count": 5,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "campaign",
+     "ok": false
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "deal",
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "campaign",
+     "ok": false
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "campaign",
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "offline",
+     "seconds": 3000,
+     "ok": true
+    },
+    {
+     "op": "council",
+     "choice": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "deal",
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "campaign",
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "deal",
+     "ok": false
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "campaign",
+     "ok": false
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "deal",
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "campaign",
+     "ok": false
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "campaign",
+     "ok": false
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "deal",
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "campaign",
+     "ok": false
+    },
+    {
+     "op": "deal",
+     "ok": false
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "campaign",
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "deal",
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "campaign",
+     "ok": false
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "campaign",
+     "ok": false
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "deal",
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "ipo",
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "deal",
+     "ok": false
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "campaign",
+     "ok": false
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 2,
+     "count": 5,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 1,
+     "count": 5,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 0,
+     "count": 5,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 1,
+     "count": 5,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "bakery",
+     "stage": 0,
+     "count": 5,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "campaign",
+     "ok": false
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "deal",
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "campaign",
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "campaign",
+     "ok": false
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    },
+    {
+     "op": "offline",
+     "seconds": 3000,
+     "ok": true
+    },
+    {
+     "op": "council",
+     "choice": 0,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "coffee",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 0,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "fashion",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 1,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "buy",
+     "chain": "leather",
+     "stage": 2,
+     "count": 1,
+     "ok": true
+    },
+    {
+     "op": "advance",
+     "seconds": 4,
+     "ok": true
+    }
+   ],
+   "snapshots": [
+    {
+     "after": 0,
+     "cash": 10,
+     "earned": 0,
+     "totalEarned": 0,
+     "clock": 0,
+     "city": 0,
+     "stars": 0,
+     "manager": 0,
+     "levels": [
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ]
+     ],
+     "rivals": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "income": 0,
+     "best": {
+      "chain": "bakery",
+      "stage": 2
+     },
+     "event": null,
+     "nextEventAt": 240,
+     "events": 0,
+     "council": null,
+     "nextCouncilAt": 600,
+     "sessions": 0,
+     "policy": null,
+     "policies": 0,
+     "campaigns": 0,
+     "goal": 0,
+     "listed": false,
+     "overtake": null,
+     "history": [],
+     "deal": null,
+     "nextDealAt": 150,
+     "deals": 0,
+     "dealReward": 0
+    },
+    {
+     "after": 130,
+     "cash": 2279.5215951573787,
+     "earned": 9540.126342712232,
+     "totalEarned": 9540.126342712232,
+     "clock": 100,
+     "city": 0,
+     "stars": 0,
+     "manager": 0,
+     "levels": [
+      [
+       25,
+       27,
+       33
+      ],
+      [
+       17,
+       19,
+       25
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ]
+     ],
+     "rivals": [
+      4.8751891343625084,
+      0.525123375359389,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "income": 395.38331508130494,
+     "best": {
+      "chain": "coffee",
+      "stage": 1
+     },
+     "event": null,
+     "nextEventAt": 240,
+     "events": 0,
+     "council": null,
+     "nextCouncilAt": 600,
+     "sessions": 0,
+     "policy": null,
+     "policies": 0,
+     "campaigns": 1,
+     "goal": 6,
+     "listed": false,
+     "overtake": null,
+     "history": [],
+     "deal": null,
+     "nextDealAt": 150,
+     "deals": 0,
+     "dealReward": 0
+    },
+    {
+     "after": 188,
+     "cash": 4766.764870973296,
+     "earned": 70281.13526087227,
+     "totalEarned": 70281.13526087227,
+     "clock": 200,
+     "city": 0,
+     "stars": 0,
+     "manager": 0,
+     "levels": [
+      [
+       25,
+       29,
+       35
+      ],
+      [
+       25,
+       28,
+       35
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ]
+     ],
+     "rivals": [
+      10.253605386018522,
+      5.9166793278001535,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "income": 796.2559264527519,
+     "best": {
+      "chain": "coffee",
+      "stage": 1
+     },
+     "event": null,
+     "nextEventAt": 240,
+     "events": 0,
+     "council": null,
+     "nextCouncilAt": 600,
+     "sessions": 0,
+     "policy": null,
+     "policies": 0,
+     "campaigns": 1,
+     "goal": 6,
+     "listed": false,
+     "overtake": null,
+     "history": [],
+     "deal": null,
+     "nextDealAt": 250,
+     "deals": 1,
+     "dealReward": 0
+    },
+    {
+     "after": 256,
+     "cash": 9339.814547529155,
+     "earned": 269628.94215844944,
+     "totalEarned": 269628.94215844944,
+     "clock": 300,
+     "city": 0,
+     "stars": 0,
+     "manager": 0,
+     "levels": [
+      [
+       32,
+       39,
+       47
+      ],
+      [
+       30,
+       37,
+       44
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ]
+     ],
+     "rivals": [
+      16.28933681587904,
+      12.197245180305329,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "income": 1975.1987049150155,
+     "best": {
+      "chain": "coffee",
+      "stage": 2
+     },
+     "event": {
+      "kind": "tourism",
+      "chain": null,
+      "until": 360
+     },
+     "nextEventAt": 570,
+     "events": 1,
+     "council": null,
+     "nextCouncilAt": 600,
+     "sessions": 0,
+     "policy": null,
+     "policies": 0,
+     "campaigns": 2,
+     "goal": 6,
+     "listed": false,
+     "overtake": null,
+     "history": [],
+     "deal": null,
+     "nextDealAt": 350,
+     "deals": 2,
+     "dealReward": 0
+    },
+    {
+     "after": 327,
+     "cash": 20121.841454120877,
+     "earned": 518717.65354072116,
+     "totalEarned": 518717.65354072116,
+     "clock": 400,
+     "city": 0,
+     "stars": 0,
+     "manager": 0,
+     "levels": [
+      [
+       40,
+       46,
+       51
+      ],
+      [
+       32,
+       40,
+       48
+      ],
+      [
+       14,
+       17,
+       21
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ]
+     ],
+     "rivals": [
+      27.461503558824447,
+      18.94324855205911,
+      0.5126374921483847,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "income": 4462.118989167186,
+     "best": {
+      "chain": "fashion",
+      "stage": 1
+     },
+     "event": null,
+     "nextEventAt": 570,
+     "events": 1,
+     "council": null,
+     "nextCouncilAt": 600,
+     "sessions": 0,
+     "policy": null,
+     "policies": 0,
+     "campaigns": 2,
+     "goal": 7,
+     "listed": false,
+     "overtake": null,
+     "history": [],
+     "deal": null,
+     "nextDealAt": 450,
+     "deals": 3,
+     "dealReward": 0
+    },
+    {
+     "after": 387,
+     "cash": 75593.5387118921,
+     "earned": 1281129.99883807,
+     "totalEarned": 1281129.99883807,
+     "clock": 500,
+     "city": 0,
+     "stars": 0,
+     "manager": 0,
+     "levels": [
+      [
+       40,
+       46,
+       51
+      ],
+      [
+       32,
+       40,
+       48
+      ],
+      [
+       25,
+       27,
+       32
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ]
+     ],
+     "rivals": [
+      42.036297773952036,
+      24.877766355679135,
+      5.126968902381292,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "income": 11073.670619626062,
+     "best": {
+      "chain": "fashion",
+      "stage": 2
+     },
+     "event": null,
+     "nextEventAt": 570,
+     "events": 1,
+     "council": null,
+     "nextCouncilAt": 600,
+     "sessions": 0,
+     "policy": null,
+     "policies": 0,
+     "campaigns": 2,
+     "goal": 7,
+     "listed": false,
+     "overtake": null,
+     "history": [],
+     "deal": null,
+     "nextDealAt": 550,
+     "deals": 4,
+     "dealReward": 0
+    },
+    {
+     "after": 473,
+     "cash": 6307712.583432966,
+     "earned": 18242008.044961557,
+     "totalEarned": 18242008.044961557,
+     "clock": 3600,
+     "city": 0,
+     "stars": 0,
+     "manager": 0,
+     "levels": [
+      [
+       40,
+       46,
+       52
+      ],
+      [
+       33,
+       42,
+       52
+      ],
+      [
+       36,
+       45,
+       52
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ]
+     ],
+     "rivals": [
+      117.59489359510253,
+      56.53575044815734,
+      47.10841948334032,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "income": 21603.950445775932,
+     "best": {
+      "chain": "coffee",
+      "stage": 0
+     },
+     "event": {
+      "kind": "rivalPush",
+      "chain": null,
+      "until": 3716
+     },
+     "nextEventAt": 3926,
+     "events": 3,
+     "council": null,
+     "nextCouncilAt": 4200,
+     "sessions": 1,
+     "policy": {
+      "kind": "pedestrian",
+      "until": 7196
+     },
+     "policies": 1,
+     "campaigns": 3,
+     "goal": 7,
+     "listed": false,
+     "overtake": null,
+     "history": [],
+     "deal": {
+      "kind": "investor",
+      "chain": null,
+      "until": 3608
+     },
+     "nextDealAt": 3696,
+     "deals": 6,
+     "dealReward": 1296237.026746556
+    },
+    {
+     "after": 524,
+     "cash": 168994.53154665895,
+     "earned": 21274272.003970563,
+     "totalEarned": 21274272.003970563,
+     "clock": 3700,
+     "city": 0,
+     "stars": 0,
+     "manager": 0,
+     "levels": [
+      [
+       50,
+       56,
+       62
+      ],
+      [
+       53,
+       56,
+       59
+      ],
+      [
+       38,
+       48,
+       57
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ]
+     ],
+     "rivals": [
+      143.40148549436128,
+      89.59380004787985,
+      80.19891224825882,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "income": 22607.462647048924,
+     "best": {
+      "chain": "fashion",
+      "stage": 0
+     },
+     "event": {
+      "kind": "rivalPush",
+      "chain": null,
+      "until": 3716
+     },
+     "nextEventAt": 3926,
+     "events": 3,
+     "council": null,
+     "nextCouncilAt": 4200,
+     "sessions": 1,
+     "policy": {
+      "kind": "pedestrian",
+      "until": 7196
+     },
+     "policies": 1,
+     "campaigns": 4,
+     "goal": 7,
+     "listed": false,
+     "overtake": null,
+     "history": [],
+     "deal": null,
+     "nextDealAt": 3796,
+     "deals": 7,
+     "dealReward": 0
+    },
+    {
+     "after": 555,
+     "cash": 1000103.0688805996,
+     "earned": 23495274.139101222,
+     "totalEarned": 23495274.139101222,
+     "clock": 3800,
+     "city": 0,
+     "stars": 0,
+     "manager": 0,
+     "levels": [
+      [
+       50,
+       56,
+       62
+      ],
+      [
+       53,
+       56,
+       60
+      ],
+      [
+       39,
+       48,
+       58
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ]
+     ],
+     "rivals": [
+      151.2498578264807,
+      104.40722156709089,
+      95.50943653850591,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "income": 21984.494706697755,
+     "best": {
+      "chain": "fashion",
+      "stage": 1
+     },
+     "event": null,
+     "nextEventAt": 3926,
+     "events": 3,
+     "council": null,
+     "nextCouncilAt": 4200,
+     "sessions": 1,
+     "policy": {
+      "kind": "pedestrian",
+      "until": 7196
+     },
+     "policies": 1,
+     "campaigns": 4,
+     "goal": 7,
+     "listed": false,
+     "overtake": null,
+     "history": [],
+     "deal": null,
+     "nextDealAt": 3896,
+     "deals": 8,
+     "dealReward": 0
+    },
+    {
+     "after": 595,
+     "cash": 431564.6334359729,
+     "earned": 26236027.654152453,
+     "totalEarned": 26236027.654152453,
+     "clock": 3900,
+     "city": 0,
+     "stars": 0,
+     "manager": 0,
+     "levels": [
+      [
+       50,
+       56,
+       62
+      ],
+      [
+       53,
+       56,
+       60
+      ],
+      [
+       48,
+       50,
+       58
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ]
+     ],
+     "rivals": [
+      155.44246374595141,
+      114.90676294204927,
+      106.49068525871671,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "income": 57869.99236627297,
+     "best": {
+      "chain": "fashion",
+      "stage": 0
+     },
+     "event": null,
+     "nextEventAt": 3926,
+     "events": 3,
+     "council": null,
+     "nextCouncilAt": 4200,
+     "sessions": 1,
+     "policy": {
+      "kind": "pedestrian",
+      "until": 7196
+     },
+     "policies": 1,
+     "campaigns": 5,
+     "goal": 7,
+     "listed": false,
+     "overtake": null,
+     "history": [],
+     "deal": null,
+     "nextDealAt": 3996,
+     "deals": 9,
+     "dealReward": 0
+    },
+    {
+     "after": 626,
+     "cash": 1775244.4507054081,
+     "earned": 29831168.90480795,
+     "totalEarned": 29831168.90480795,
+     "clock": 4000,
+     "city": 0,
+     "stars": 0,
+     "manager": 0,
+     "levels": [
+      [
+       50,
+       56,
+       62
+      ],
+      [
+       53,
+       56,
+       60
+      ],
+      [
+       50,
+       51,
+       58
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ]
+     ],
+     "rivals": [
+      158.9914280364515,
+      123.7944328356845,
+      115.7861116168537,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "income": 32025.617787736846,
+     "best": {
+      "chain": "fashion",
+      "stage": 1
+     },
+     "event": {
+      "kind": "crisis",
+      "chain": null,
+      "until": 4046
+     },
+     "nextEventAt": 4256,
+     "events": 4,
+     "council": null,
+     "nextCouncilAt": 4200,
+     "sessions": 1,
+     "policy": {
+      "kind": "pedestrian",
+      "until": 7196
+     },
+     "policies": 1,
+     "campaigns": 5,
+     "goal": 7,
+     "listed": false,
+     "overtake": null,
+     "history": [],
+     "deal": null,
+     "nextDealAt": 4096,
+     "deals": 10,
+     "dealReward": 0
+    },
+    {
+     "after": 657,
+     "cash": 1147440.3650956545,
+     "earned": 33094064.746302754,
+     "totalEarned": 33094064.746302754,
+     "clock": 4100,
+     "city": 0,
+     "stars": 0,
+     "manager": 0,
+     "levels": [
+      [
+       50,
+       56,
+       62
+      ],
+      [
+       53,
+       56,
+       60
+      ],
+      [
+       50,
+       53,
+       58
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ]
+     ],
+     "rivals": [
+      161.99556145064938,
+      131.31768297750725,
+      123.65452015408316,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "income": 32997.115513695615,
+     "best": {
+      "chain": "fashion",
+      "stage": 2
+     },
+     "event": null,
+     "nextEventAt": 4256,
+     "events": 4,
+     "council": null,
+     "nextCouncilAt": 4200,
+     "sessions": 1,
+     "policy": {
+      "kind": "pedestrian",
+      "until": 7196
+     },
+     "policies": 1,
+     "campaigns": 5,
+     "goal": 7,
+     "listed": false,
+     "overtake": null,
+     "history": [],
+     "deal": null,
+     "nextDealAt": 4196,
+     "deals": 11,
+     "dealReward": 0
+    },
+    {
+     "after": 728,
+     "cash": 46719887.86855483,
+     "earned": 84730332.3027431,
+     "totalEarned": 84730332.3027431,
+     "clock": 7200,
+     "city": 0,
+     "stars": 0,
+     "manager": 0,
+     "levels": [
+      [
+       50,
+       56,
+       62
+      ],
+      [
+       53,
+       56,
+       60
+      ],
+      [
+       50,
+       54,
+       59
+      ],
+      [
+       11,
+       13,
+       16
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ]
+     ],
+     "rivals": [
+      177.21130550817296,
+      169.7263040287038,
+      166.51173460816852,
+      0.06378713995166836,
+      0,
+      0,
+      0,
+      0
+     ],
+     "income": 115534.38310914187,
+     "best": {
+      "chain": "leather",
+      "stage": 2
+     },
+     "event": {
+      "kind": "fashionWeek",
+      "chain": null,
+      "until": 7316
+     },
+     "nextEventAt": 7526,
+     "events": 5,
+     "council": null,
+     "nextCouncilAt": 7800,
+     "sessions": 2,
+     "policy": {
+      "kind": "taxCut",
+      "until": 10796
+     },
+     "policies": 2,
+     "campaigns": 6,
+     "goal": 7,
+     "listed": false,
+     "overtake": null,
+     "history": [],
+     "deal": {
+      "kind": "order",
+      "chain": "bakery",
+      "until": 7208
+     },
+     "nextDealAt": 7296,
+     "deals": 13,
+     "dealReward": 1386412.5973097025
+    },
+    {
+     "after": 784,
+     "cash": 2237035.6118176063,
+     "earned": 126355921.54157662,
+     "totalEarned": 126355921.54157662,
+     "clock": 7300,
+     "city": 0,
+     "stars": 0,
+     "manager": 0,
+     "levels": [
+      [
+       50,
+       56,
+       62
+      ],
+      [
+       53,
+       56,
+       60
+      ],
+      [
+       50,
+       54,
+       66
+      ],
+      [
+       31,
+       38,
+       46
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ]
+     ],
+     "rivals": [
+      172.84965089295247,
+      165.77684620927758,
+      163.6478991941657,
+      8.18054998337658,
+      0,
+      0,
+      0,
+      0
+     ],
+     "income": 326744.0403931404,
+     "best": {
+      "chain": "fashion",
+      "stage": 1
+     },
+     "event": {
+      "kind": "fashionWeek",
+      "chain": null,
+      "until": 7316
+     },
+     "nextEventAt": 7526,
+     "events": 5,
+     "council": null,
+     "nextCouncilAt": 7800,
+     "sessions": 2,
+     "policy": {
+      "kind": "taxCut",
+      "until": 10796
+     },
+     "policies": 2,
+     "campaigns": 7,
+     "goal": 7,
+     "listed": false,
+     "overtake": null,
+     "history": [],
+     "deal": null,
+     "nextDealAt": 7396,
+     "deals": 14,
+     "dealReward": 0
+    },
+    {
+     "after": 820,
+     "cash": 7519171.568779104,
+     "earned": 154871607.80847725,
+     "totalEarned": 154871607.80847725,
+     "clock": 7400,
+     "city": 0,
+     "stars": 0,
+     "manager": 0,
+     "levels": [
+      [
+       50,
+       56,
+       62
+      ],
+      [
+       53,
+       56,
+       61
+      ],
+      [
+       50,
+       55,
+       66
+      ],
+      [
+       32,
+       40,
+       49
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ]
+     ],
+     "rivals": [
+      169.1575899708835,
+      162.66209253862056,
+      162.8422507619295,
+      15.634051874124948,
+      0,
+      0,
+      0,
+      0
+     ],
+     "income": 278047.33686201734,
+     "best": {
+      "chain": "leather",
+      "stage": 2
+     },
+     "event": null,
+     "nextEventAt": 7526,
+     "events": 5,
+     "council": null,
+     "nextCouncilAt": 7800,
+     "sessions": 2,
+     "policy": {
+      "kind": "taxCut",
+      "until": 10796
+     },
+     "policies": 2,
+     "campaigns": 7,
+     "goal": 7,
+     "listed": false,
+     "overtake": null,
+     "history": [],
+     "deal": null,
+     "nextDealAt": 7496,
+     "deals": 15,
+     "dealReward": 0
+    },
+    {
+     "after": 858,
+     "cash": 3742176.0228582644,
+     "earned": 190680031.55779487,
+     "totalEarned": 190680031.55779487,
+     "clock": 7500,
+     "city": 0,
+     "stars": 0,
+     "manager": 0,
+     "levels": [
+      [
+       50,
+       56,
+       62
+      ],
+      [
+       53,
+       56,
+       61
+      ],
+      [
+       50,
+       55,
+       66
+      ],
+      [
+       36,
+       44,
+       50
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ]
+     ],
+     "rivals": [
+      166.03232787316938,
+      160.1655641424225,
+      162.16028408735477,
+      31.656132210564646,
+      0,
+      0,
+      0,
+      0
+     ],
+     "income": 357723.9263535219,
+     "best": {
+      "chain": "leather",
+      "stage": 1
+     },
+     "event": null,
+     "nextEventAt": 7526,
+     "events": 5,
+     "council": null,
+     "nextCouncilAt": 7800,
+     "sessions": 2,
+     "policy": {
+      "kind": "taxCut",
+      "until": 10796
+     },
+     "policies": 2,
+     "campaigns": 7,
+     "goal": 7,
+     "listed": false,
+     "overtake": null,
+     "history": [],
+     "deal": null,
+     "nextDealAt": 7596,
+     "deals": 16,
+     "dealReward": 0
+    },
+    {
+     "after": 899,
+     "cash": 12174949.169149626,
+     "earned": 237344214.87591958,
+     "totalEarned": 237344214.87591958,
+     "clock": 7600,
+     "city": 0,
+     "stars": 0,
+     "manager": 0,
+     "levels": [
+      [
+       50,
+       56,
+       70
+      ],
+      [
+       53,
+       56,
+       69
+      ],
+      [
+       50,
+       55,
+       66
+      ],
+      [
+       36,
+       45,
+       53
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ]
+     ],
+     "rivals": [
+      165.19723101043115,
+      159.93482831315256,
+      161.5830117603428,
+      45.782467153422665,
+      0,
+      0,
+      0,
+      0
+     ],
+     "income": 356514.53456766496,
+     "best": {
+      "chain": "leather",
+      "stage": 2
+     },
+     "event": {
+      "kind": "tourism",
+      "chain": null,
+      "until": 7646
+     },
+     "nextEventAt": 7856,
+     "events": 6,
+     "council": null,
+     "nextCouncilAt": 7800,
+     "sessions": 2,
+     "policy": {
+      "kind": "taxCut",
+      "until": 10796
+     },
+     "policies": 2,
+     "campaigns": 8,
+     "goal": 7,
+     "listed": false,
+     "overtake": null,
+     "history": [],
+     "deal": null,
+     "nextDealAt": 7696,
+     "deals": 17,
+     "dealReward": 0
+    },
+    {
+     "after": 934,
+     "cash": 6043350.159854963,
+     "earned": 272626221.3886883,
+     "totalEarned": 272626221.3886883,
+     "clock": 7700,
+     "city": 0,
+     "stars": 0,
+     "manager": 0,
+     "levels": [
+      [
+       50,
+       61,
+       70
+      ],
+      [
+       53,
+       59,
+       69
+      ],
+      [
+       50,
+       55,
+       66
+      ],
+      [
+       36,
+       45,
+       57
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ]
+     ],
+     "rivals": [
+      165.62750727123986,
+      160.80453569871597,
+      161.09436128524212,
+      58.89800009543301,
+      0,
+      0,
+      0,
+      0
+     ],
+     "income": 352105.1995563236,
+     "best": {
+      "chain": "leather",
+      "stage": 1
+     },
+     "event": null,
+     "nextEventAt": 7856,
+     "events": 6,
+     "council": null,
+     "nextCouncilAt": 7800,
+     "sessions": 2,
+     "policy": {
+      "kind": "taxCut",
+      "until": 10796
+     },
+     "policies": 2,
+     "campaigns": 8,
+     "goal": 7,
+     "listed": false,
+     "overtake": null,
+     "history": [],
+     "deal": null,
+     "nextDealAt": 7796,
+     "deals": 18,
+     "dealReward": 0
+    },
+    {
+     "after": 998,
+     "cash": 8955174.453519484,
+     "earned": 783542602.8283328,
+     "totalEarned": 783542602.8283328,
+     "clock": 10800,
+     "city": 0,
+     "stars": 0,
+     "manager": 0,
+     "levels": [
+      [
+       50,
+       61,
+       73
+      ],
+      [
+       53,
+       59,
+       71
+      ],
+      [
+       50,
+       55,
+       66
+      ],
+      [
+       50,
+       53,
+       65
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ]
+     ],
+     "rivals": [
+      167.88299137216853,
+      165.298688160107,
+      158.06096961633847,
+      131.51467446937568,
+      0,
+      0,
+      0,
+      0
+     ],
+     "income": 448664.6070071431,
+     "best": {
+      "chain": "leather",
+      "stage": 1
+     },
+     "event": {
+      "kind": "strike",
+      "chain": "fashion",
+      "until": 10916
+     },
+     "nextEventAt": 11126,
+     "events": 7,
+     "council": null,
+     "nextCouncilAt": 11400,
+     "sessions": 3,
+     "policy": {
+      "kind": "tourismPromo",
+      "until": 14396
+     },
+     "policies": 3,
+     "campaigns": 9,
+     "goal": 7,
+     "listed": false,
+     "overtake": null,
+     "history": [],
+     "deal": {
+      "kind": "order",
+      "chain": "coffee",
+      "until": 10808
+     },
+     "nextDealAt": 10896,
+     "deals": 20,
+     "dealReward": 5383975.284085717
+    },
+    {
+     "after": 1030,
+     "cash": 42332516.04734328,
+     "earned": 842098252.545151,
+     "totalEarned": 842098252.545151,
+     "clock": 10900,
+     "city": 0,
+     "stars": 0,
+     "manager": 0,
+     "levels": [
+      [
+       50,
+       61,
+       73
+      ],
+      [
+       53,
+       59,
+       71
+      ],
+      [
+       50,
+       55,
+       67
+      ],
+      [
+       50,
+       54,
+       65
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ]
+     ],
+     "rivals": [
+      169.00628591567371,
+      166.08183275456227,
+      146.06130180368996,
+      135.27361941032888,
+      0,
+      0,
+      0,
+      0
+     ],
+     "income": 451557.5989878123,
+     "best": {
+      "chain": "leather",
+      "stage": 2
+     },
+     "event": {
+      "kind": "strike",
+      "chain": "fashion",
+      "until": 10916
+     },
+     "nextEventAt": 11126,
+     "events": 7,
+     "council": null,
+     "nextCouncilAt": 11400,
+     "sessions": 3,
+     "policy": {
+      "kind": "tourismPromo",
+      "until": 14396
+     },
+     "policies": 3,
+     "campaigns": 10,
+     "goal": 7,
+     "listed": false,
+     "overtake": null,
+     "history": [],
+     "deal": null,
+     "nextDealAt": 10996,
+     "deals": 21,
+     "dealReward": 0
+    },
+    {
+     "after": 1063,
+     "cash": 16565532.227898527,
+     "earned": 889211777.8775402,
+     "totalEarned": 889211777.8775402,
+     "clock": 11000,
+     "city": 0,
+     "stars": 0,
+     "manager": 0,
+     "levels": [
+      [
+       50,
+       61,
+       73
+      ],
+      [
+       53,
+       59,
+       71
+      ],
+      [
+       50,
+       57,
+       69
+      ],
+      [
+       50,
+       54,
+       66
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ]
+     ],
+     "rivals": [
+      169.9571342184202,
+      166.7447503417156,
+      147.11177035337226,
+      138.53417896655898,
+      0,
+      0,
+      0,
+      0
+     ],
+     "income": 476231.76992030046,
+     "best": {
+      "chain": "leather",
+      "stage": 1
+     },
+     "event": null,
+     "nextEventAt": 11126,
+     "events": 7,
+     "council": null,
+     "nextCouncilAt": 11400,
+     "sessions": 3,
+     "policy": {
+      "kind": "tourismPromo",
+      "until": 14396
+     },
+     "policies": 3,
+     "campaigns": 10,
+     "goal": 7,
+     "listed": false,
+     "overtake": null,
+     "history": [],
+     "deal": null,
+     "nextDealAt": 11096,
+     "deals": 22,
+     "dealReward": 0
+    },
+    {
+     "after": 1093,
+     "cash": 39817452.63216508,
+     "earned": 946457274.5255942,
+     "totalEarned": 946457274.5255942,
+     "clock": 11100,
+     "city": 0,
+     "stars": 0,
+     "manager": 0,
+     "levels": [
+      [
+       50,
+       61,
+       73
+      ],
+      [
+       53,
+       59,
+       71
+      ],
+      [
+       50,
+       57,
+       69
+      ],
+      [
+       50,
+       55,
+       66
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ]
+     ],
+     "rivals": [
+      170.76200992983837,
+      167.3058979643496,
+      149.95005147854872,
+      141.58394554524452,
+      0,
+      0,
+      0,
+      0
+     ],
+     "income": 957587.3093667855,
+     "best": {
+      "chain": "leather",
+      "stage": 2
+     },
+     "event": null,
+     "nextEventAt": 11126,
+     "events": 7,
+     "council": null,
+     "nextCouncilAt": 11400,
+     "sessions": 3,
+     "policy": {
+      "kind": "tourismPromo",
+      "until": 14396
+     },
+     "policies": 3,
+     "campaigns": 11,
+     "goal": 7,
+     "listed": false,
+     "overtake": null,
+     "history": [],
+     "deal": null,
+     "nextDealAt": 11196,
+     "deals": 23,
+     "dealReward": 0
+    },
+    {
+     "after": 1122,
+     "cash": 51719724.7880116,
+     "earned": 998677873.9565681,
+     "totalEarned": 998677873.9565681,
+     "clock": 11200,
+     "city": 0,
+     "stars": 0,
+     "manager": 0,
+     "levels": [
+      [
+       50,
+       61,
+       73
+      ],
+      [
+       53,
+       59,
+       71
+      ],
+      [
+       50,
+       57,
+       69
+      ],
+      [
+       50,
+       55,
+       67
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ]
+     ],
+     "rivals": [
+      183.64050573717842,
+      179.64391299521708,
+      163.88144900098007,
+      155.48834076381524,
+      0,
+      0,
+      0,
+      0
+     ],
+     "income": 466873.44773888134,
+     "best": {
+      "chain": "leather",
+      "stage": 1
+     },
+     "event": {
+      "kind": "rivalPush",
+      "chain": null,
+      "until": 11246
+     },
+     "nextEventAt": 11456,
+     "events": 8,
+     "council": null,
+     "nextCouncilAt": 11400,
+     "sessions": 3,
+     "policy": {
+      "kind": "tourismPromo",
+      "until": 14396
+     },
+     "policies": 3,
+     "campaigns": 11,
+     "goal": 7,
+     "listed": false,
+     "overtake": null,
+     "history": [],
+     "deal": null,
+     "nextDealAt": 11296,
+     "deals": 24,
+     "dealReward": 0
+    },
+    {
+     "after": 1171,
+     "cash": 27747693.03014254,
+     "earned": 1047673779.7469624,
+     "totalEarned": 1047673779.7469624,
+     "clock": 11300,
+     "city": 0,
+     "stars": 0,
+     "manager": 0,
+     "levels": [
+      [
+       60,
+       71,
+       78
+      ],
+      [
+       53,
+       60,
+       72
+      ],
+      [
+       50,
+       60,
+       72
+      ],
+      [
+       50,
+       58,
+       70
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ]
+     ],
+     "rivals": [
+      203.52025099810194,
+      185.45375232325003,
+      171.90903595861354,
+      164.14278773672567,
+      0,
+      0,
+      0,
+      0
+     ],
+     "income": 489415.050307406,
+     "best": {
+      "chain": "leather",
+      "stage": 2
+     },
+     "event": null,
+     "nextEventAt": 11456,
+     "events": 8,
+     "council": null,
+     "nextCouncilAt": 11400,
+     "sessions": 3,
+     "policy": {
+      "kind": "tourismPromo",
+      "until": 14396
+     },
+     "policies": 3,
+     "campaigns": 11,
+     "goal": 7,
+     "listed": true,
+     "overtake": null,
+     "history": [],
+     "deal": null,
+     "nextDealAt": 11396,
+     "deals": 25,
+     "dealReward": 0
+    },
+    {
+     "after": 1228,
+     "cash": 38871350.83462746,
+     "earned": 2008805299.5277486,
+     "totalEarned": 2008805299.5277486,
+     "clock": 14400,
+     "city": 0,
+     "stars": 0,
+     "manager": 0,
+     "levels": [
+      [
+       60,
+       71,
+       78
+      ],
+      [
+       53,
+       66,
+       76
+      ],
+      [
+       52,
+       65,
+       76
+      ],
+      [
+       50,
+       61,
+       74
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ]
+     ],
+     "rivals": [
+      361.28283606620454,
+      174.95496918137138,
+      174.01383554252243,
+      167.79577471980048,
+      0,
+      0,
+      0,
+      0
+     ],
+     "income": 797799.5883790463,
+     "best": {
+      "chain": "leather",
+      "stage": 2
+     },
+     "event": {
+      "kind": "strike",
+      "chain": "bakery",
+      "until": 14516
+     },
+     "nextEventAt": 14726,
+     "events": 9,
+     "council": null,
+     "nextCouncilAt": 15000,
+     "sessions": 4,
+     "policy": {
+      "kind": "campaignFund",
+      "until": 17996
+     },
+     "policies": 4,
+     "campaigns": 12,
+     "goal": 7,
+     "listed": true,
+     "overtake": null,
+     "history": [],
+     "deal": {
+      "kind": "vip",
+      "chain": "fashion",
+      "until": 14408
+     },
+     "nextDealAt": 14496,
+     "deals": 27,
+     "dealReward": 23933987.65137139
+    },
+    {
+     "after": 1228,
+     "cash": 38871350.83462746,
+     "earned": 2008805299.5277486,
+     "totalEarned": 2008805299.5277486,
+     "clock": 14400,
+     "city": 0,
+     "stars": 0,
+     "manager": 0,
+     "levels": [
+      [
+       60,
+       71,
+       78
+      ],
+      [
+       53,
+       66,
+       76
+      ],
+      [
+       52,
+       65,
+       76
+      ],
+      [
+       50,
+       61,
+       74
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ]
+     ],
+     "rivals": [
+      361.28283606620454,
+      174.95496918137138,
+      174.01383554252243,
+      167.79577471980048,
+      0,
+      0,
+      0,
+      0
+     ],
+     "income": 797799.5883790463,
+     "best": {
+      "chain": "leather",
+      "stage": 2
+     },
+     "event": {
+      "kind": "strike",
+      "chain": "bakery",
+      "until": 14516
+     },
+     "nextEventAt": 14726,
+     "events": 9,
+     "council": null,
+     "nextCouncilAt": 15000,
+     "sessions": 4,
+     "policy": {
+      "kind": "campaignFund",
+      "until": 17996
+     },
+     "policies": 4,
+     "campaigns": 12,
+     "goal": 7,
+     "listed": true,
+     "overtake": null,
+     "history": [],
+     "deal": {
+      "kind": "vip",
+      "chain": "fashion",
+      "until": 14408
+     },
+     "nextDealAt": 14496,
+     "deals": 27,
+     "dealReward": 23933987.65137139
     }
    ]
   }

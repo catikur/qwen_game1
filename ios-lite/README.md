@@ -149,7 +149,9 @@ Xcode'da: **Product → Scheme → Edit Scheme → Run → Arguments**.
   - `-liteIsland <1-3>`: şehir o adanın sayfasında (L7);
   - `-liteMap`: holding haritası açık;
   - `-liteLeague`: lig örnek veriyle (ağ yok), `-liteLeagueSheet` lig penceresi
-    açık, `-liteLeaguePrivate` özel ligler sekmesi.
+    açık, `-liteLeaguePrivate` özel ligler sekmesi;
+  - `-liteDeal order|vip|investor`: şehirde fırsat balonu; `-liteDealCaught`
+    yakalanmış hali (uçuş donuk).
 
 Uygulama iPad'de de çalışıyor (L6): yatayda solda şehir, sağda kartlar;
 dikeyde üstte şehir, altta iki sütun kart. Split View'in dar penceresinde

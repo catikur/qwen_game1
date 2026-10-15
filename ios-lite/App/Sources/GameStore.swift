@@ -46,6 +46,9 @@ final class GameStore {
     private(set) var refusals = 0
     /// Büyük an sayacı (kilometre taşı, görev, halka arz, şehir satışı): başarı titreşimi.
     private(set) var triumphs = 0
+    /// L9: yakalanan fırsat sayısı ve sonuncusu (şehirde uçuş için).
+    private(set) var catches = 0
+    private(set) var lastCatch: DealCatch? = nil
     /// Halka arzdan beri hisse fiyatı (dakikada bir örnek).
     private(set) var priceHistory: [Double] = []
     let settings: AppSettings
@@ -79,6 +82,22 @@ final class GameStore {
             if let offline = arguments.firstIndex(of: "-liteOffline"), offline + 1 < arguments.count,
                let seconds = Double(arguments[offline + 1]) {
                 applyOffline(seconds)
+            }
+            // L9: `-liteDeal order|vip|investor` fırsatla açılıyor; `-liteDealCaught` yakalanmış (uçuş donuk).
+            state.deal = nil
+            if let index = arguments.firstIndex(of: "-liteDeal"), index + 1 < arguments.count,
+               let kind = DealKind(rawValue: arguments[index + 1]) {
+                let selling = ChainId.allCases.filter { state[chain: $0].levels[2] > 0 }
+                let chain: ChainId? = kind == .investor ? nil : (selling.contains(.coffee) ? .coffee : selling.first)
+                state.deal = ActiveDeal(kind: kind, chain: chain, until: state.clock + LiteContent.dealLifetime * 0.7)
+                state.deals = 9
+                if arguments.contains("-liteDealCaught"), let deal = state.deal {
+                    let reward = Lite.dealReward(state)
+                    if case .success(let next) = Lite.catchDeal(state) {
+                        state = next
+                        lastCatch = DealCatch(id: 1, deal: deal, reward: reward, date: Date(), frozen: true)
+                    }
+                }
             }
         } else if let data = try? Data(contentsOf: saveURL),
                   let save = try? JSONDecoder().decode(SaveFile.self, from: data) {
@@ -245,6 +264,18 @@ final class GameStore {
             triumphs += 1
             cue(.reward)
         }
+    }
+
+    /// L9: şehirdeki fırsatı yakala.
+    func catchDeal() {
+        guard let deal = state.deal else { return }
+        let reward = Lite.dealReward(state)
+        guard case .success(let next) = Lite.catchDeal(state) else { return }
+        state = next
+        catches += 1
+        lastCatch = DealCatch(id: catches, deal: deal, reward: reward, date: Date())
+        triumphs += 1
+        cue(deal.kind == .investor ? .fanfare : .reward)
     }
 
     func claimGoal() {

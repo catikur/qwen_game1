@@ -361,7 +361,8 @@ satıp ikinci şehirde 2 saat oynuyor):
 | L6 | **iPadOS** (ayrı koşu): aynı oyun, büyük ekrana göre düzen. Ayrıntı §11 |
 | L7 | **Ada dolunca: oyunun devamı.** Bina kademeleri, takımada (üç ada, üç zincir), holding haritası, şehir temaları. Ayrıntı §12 |
 | L8 | **Online: lider tablosu ve ligler.** Haftalık bölüm ligi ve davet kodlu ligler kendi sunucumuzda, genel tablo Game Center'da. Ayrıntı §13 |
-| Son | **Uygulama simgesi yeniden.** L4'teki geçici simge beğenilmedi; en sona bırakıldı |
+| L9 | **Mağazaya hazırlık.** App Attest hile koruması (§13.1), şehir fırsatları (§14), yeni simge, App Store gönderim paketi |
+| Son | **Uygulama simgesi yeniden.** L4'teki geçici simge beğenilmedi; en sona bırakıldı (L9'da) |
 
 L5 kullanıcının isteği: "En son tüm stili değiştireceğiz. Fonttan grafiklere,
 renkten buton yapısına kadar her şeyi yenilemek istiyorum." L6–L8 de onun
@@ -585,3 +586,34 @@ iCloud gibi Apple servisleri ücretli üyelik istiyor; B ücretsiz imzayla da
 - **Kurulum:** kullanıcı adımları `ios-lite/README.md` → "Online lig (L8)".
   Dağıtım iş akışı `.github/workflows/lite-league.yml`; sırlar yokken atlanıyor.
 
+
+## 14. Şehir fırsatları (L9)
+
+Oynarken şehrin kendisi de bir şey istesin: ara sıra bir binanın üstünde bir
+fırsat balonu beliriyor; dokunan yakalıyor, kaçıran kaçırıyor.
+
+- **Türler** (sabit sırayla: sipariş, sipariş, ünlü müşteri, sipariş, sipariş,
+  yatırımcı):
+  - **Toplu sipariş:** satış yapan bir zincirin binasından; gelirin 12 saniyesi.
+  - **Ünlü müşteri:** taçlı mor balon; gelirin 30 saniyesi.
+  - **Yatırımcı:** adanın ortasında altın balon; gelirin 60 saniyesi.
+- **Zaman:** ilki 150. saniyede, sonrakiler 100 saniyede bir (başlangıçtan
+  başlangıca); her balon 12 saniye duruyor. Yalnızca oyuncu oradayken: kapalıyken
+  çıkmıyor, duran balon kapalıyken kaçıyor. Zincir satış yapan zincirlerden
+  sayaçla seçiliyor; satış yoksa balon çıkmıyor.
+- **Ödül kasaya:** kazanca (mahalleler, yıldız, lig puanı) sayılmıyor, görev
+  ödülü gibi. Lig hız sınırı bu yüzden değişmiyor. Ödül şirketin o anki
+  gelirinden (zincirinkinden değil): geç oyunda tek zincir küçük bir pay, balon
+  sönmesin.
+- **Denge** (`pnpm lite:balance`, bot her balonu yakalıyor; `DEALS=0` ile kapalı):
+  sekiz saatte kazancın ~%22'si kadar nakit, satışta 69 yerine 83 yıldız; adalar
+  %5 kadar erken. Gerçek oyuncu birkaçını kaçırıyor: aktif oyuna görünür ama
+  dengeyi bozmayan bir ödül.
+- **Görünüş:** cam balon zincirin rengi ve simgesiyle (ünlü müşteri taç, yatırımcı
+  çanta), hafifçe süzülüyor; kalan süre halkada, ödül altında. Son 3 saniyede
+  titriyor. Dokununca altın taneler dağılıyor, tutar yukarı uçuyor; ses ve
+  titreşim. İlk birkaç balonda "Dokun!" ipucu. Zincirin adası başka sayfadaysa
+  balon sayfanın köşesinde: kaçmıyor. Hareket azaltılınca süzülme yok.
+- **Model:** `ActiveDeal`, `nextDealAt`, `deals`; `catchDeal`, `dealReward`
+  (TS ve Swift, eşitlik fikstüründe `firsatlar` senaryosu). Eski kayıtta ilk
+  balon açılışın hemen ardından.

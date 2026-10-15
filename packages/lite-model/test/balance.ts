@@ -18,7 +18,9 @@ import {
   buyManager,
   chainReport,
   chooseCouncil,
+  catchDeal,
   claimGoal,
+  dealReward,
   chainUnlocked,
   featuredChain,
   goPublic,
@@ -58,9 +60,22 @@ const goalsClaimed: number[] = [];
 /** L4: halka arz anı ve kasaya giren para (aktif koşu raporu için). */
 let ipoAt: { clock: number; proceeds: number; income: number } | null = null;
 
+/** L9: aktif oyuncu fırsatları yakalıyor (DEALS=0 ile kapalı: kıyas için). */
+const CATCH_DEALS = process.env.DEALS !== '0';
+const dealStats = { caught: 0, cash: 0 };
+
 /** Aktif oyuncunun bir saniyesi: kasa yettikçe önerilen hamleyi al. */
 function play(state: LiteState, campaign: boolean): LiteState {
   let s = state;
+  if (CATCH_DEALS && s.deal !== null) {
+    const reward = dealReward(s);
+    const r = catchDeal(s);
+    if (r.ok) {
+      s = r.state;
+      dealStats.caught += 1;
+      dealStats.cash += reward;
+    }
+  }
   if (campaign) {
     const c = startCampaign(s);
     if (c.ok) s = c.state;
@@ -149,6 +164,11 @@ function activeRun(hours: number, start: LiteState = newGame(), label = ''): Lit
   }
   console.log(`  görevler: ${goalsClaimed.length}/${GOALS.length} · ${goalsClaimed.map((t) => clock(t).trim()).join(', ')}`);
   console.log(`  olay: ${s.events} · meclis kararı: ${s.policies}`);
+  console.log(
+    `  fırsat: ${s.deals} çıktı, ${dealStats.caught} yakalandı${CATCH_DEALS ? '' : ' (DEALS=0: kapalı)'} · kasaya ${fmt(dealStats.cash)} (kazancın %${((dealStats.cash / Math.max(1, s.earned)) * 100).toFixed(1)}'i)`,
+  );
+  dealStats.caught = 0;
+  dealStats.cash = 0;
   goalsClaimed.length = 0;
   const total = picks.raw + picks.process + picks.retail;
   console.log(

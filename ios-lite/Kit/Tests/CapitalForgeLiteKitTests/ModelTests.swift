@@ -115,11 +115,47 @@ final class ModelTests: XCTestCase {
         XCTAssertEqual(state.nextEventAt, 100 + LiteContent.eventFirst)
     }
 
+    // MARK: - L9 fırsatlar
+
+    func testDealsAppearOnScheduleAndPayIntoCash() throws {
+        var state = must(Lite.buy(rich(), .bakery, .retail, 10))
+        state = Lite.advance(state, LiteContent.dealFirst - 1)
+        XCTAssertNil(state.deal)
+        state = Lite.advance(state, 1)
+        let deal = try XCTUnwrap(state.deal)
+        XCTAssertEqual(deal.kind, LiteContent.dealPattern[0])
+        XCTAssertEqual(deal.chain, .bakery)
+        XCTAssertEqual(deal.until, LiteContent.dealFirst + LiteContent.dealLifetime, accuracy: 1e-9)
+        let reward = Lite.dealReward(state)
+        XCTAssertEqual(reward, max(LiteContent.dealMinReward, Lite.incomePerSecond(state) * LiteContent.dealRewardSeconds(.order)), accuracy: 1e-9)
+        let caught = must(Lite.catchDeal(state))
+        XCTAssertEqual(caught.cash, state.cash + reward, accuracy: 1e-9)
+        XCTAssertEqual(caught.earned, state.earned, "fırsat ödülü kazanca sayılmıyor")
+        XCTAssertNil(caught.deal)
+        XCTAssertEqual(Lite.catchDeal(caught).failureValue, ActionError.none)
+        // Yakalanmazsa süresi dolunca kayboluyor; kapalıyken yenisi çıkmıyor.
+        XCTAssertNil(Lite.advance(state, LiteContent.dealLifetime).deal)
+        let away = Lite.applyOffline(state, 3 * 3600).state
+        XCTAssertNil(away.deal)
+        XCTAssertEqual(away.deals, state.deals)
+    }
+
+    func testOldSaveGetsDealsSoon() throws {
+        let l8 = #"{"version":1,"city":0,"stars":0,"cash":5,"earned":5,"totalEarned":5,"clock":900,"manager":0,"campaignUntil":0,"campaignReadyAt":0,"chains":[{"levels":[1,1,1],"rival":0},{"levels":[0,0,0],"rival":0},{"levels":[0,0,0],"rival":0},{"levels":[0,0,0],"rival":0},{"levels":[0,0,0],"rival":0}],"nextEventAt":1000,"events":2,"nextCouncilAt":1200,"sessions":1,"policies":0,"campaigns":0,"goal":3,"listed":false,"history":[]}"#
+        let state = try JSONDecoder().decode(LiteState.self, from: Data(l8.utf8))
+        XCTAssertNil(state.deal)
+        XCTAssertEqual(state.deals, 0)
+        XCTAssertEqual(state.nextDealAt, 900)
+        XCTAssertNotNil(Lite.advance(state, 1).deal, "eski kayıtta ilk fırsat hemen")
+    }
+
     func testSaveRoundTrip() throws {
         var state = Lite.advance(must(Lite.buy(rich(), .bakery, .retail, 7)), 42)
         state.listed = true
         state.goal = 13
         state.history = [CityRecord(stars: 9, listed: true, earned: 6.2e10)]
+        state.deal = ActiveDeal(kind: .vip, chain: .bakery, until: 50)
+        state.deals = 3
         let data = try JSONEncoder().encode(state)
         XCTAssertEqual(try JSONDecoder().decode(LiteState.self, from: data), state)
     }

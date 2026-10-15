@@ -12,6 +12,12 @@ import {
   COUNCIL_GAP,
   COUNCIL_PAIRS,
   CRISIS_MARGIN,
+  DEAL_FIRST,
+  DEAL_GAP,
+  DEAL_LIFETIME,
+  DEAL_MIN_REWARD,
+  DEAL_PATTERN,
+  DEAL_REWARD_SECONDS,
   DISTRICTS,
   ENERGY_PROCESSING,
   EVENT_DURATION,
@@ -53,6 +59,7 @@ import {
   TRADE_ROUTE_BONUS,
   type ChainId,
   type CityTheme,
+  type DealKind,
   type DistrictId,
   type EventKind,
   type GoalDef,
@@ -74,6 +81,14 @@ export interface ChainState {
   levels: [number, number, number];
   /** Rakibin bu zincirdeki akışı (birim/sn). */
   rival: number;
+}
+
+/** L9: şehirde beliren fırsat. */
+export interface ActiveDeal {
+  kind: DealKind;
+  /** Fırsatın geldiği zincir (binasının üstünde beliriyor); yatırımcıda null. */
+  chain: ChainId | null;
+  until: number;
 }
 
 export interface ActiveEvent {
@@ -141,6 +156,12 @@ export interface LiteState {
   // ---- L7
   /** Satılmış şehirler, sırayla (holding haritası). */
   history: CityRecord[];
+  // ---- L9
+  /** Şehirde duran fırsat. */
+  deal: ActiveDeal | null;
+  nextDealAt: number;
+  /** Bu şehirde beliren fırsat sayısı (sıradakinin türü ve zinciri buna bağlı). */
+  deals: number;
 }
 
 export function newGame(city = 0, stars = 0, totalEarned = 0, history: readonly CityRecord[] = []): LiteState {
@@ -170,6 +191,9 @@ export function newGame(city = 0, stars = 0, totalEarned = 0, history: readonly 
     goal: 0,
     listed: false,
     history: history.map((record) => ({ ...record })),
+    deal: null,
+    nextDealAt: DEAL_FIRST,
+    deals: 0,
   };
 }
 
@@ -185,6 +209,7 @@ export function cloneState(state: LiteState): LiteState {
     event: state.event ? { ...state.event } : null,
     policy: state.policy ? { ...state.policy } : null,
     history: state.history.map((record) => ({ ...record })),
+    deal: state.deal ? { ...state.deal } : null,
   };
 }
 
@@ -615,6 +640,24 @@ export function claimGoal(state: LiteState): ActionResult {
   return { ok: true, state: next };
 }
 
+// ------------------------------------------------------------ fırsatlar (L9)
+
+/** Duran fırsatın ödülü: şirketin o anki gelirinin birkaç saniyesi. */
+export function dealReward(state: LiteState): number {
+  const deal = state.deal;
+  if (!deal) return 0;
+  return Math.max(DEAL_MIN_REWARD, incomePerSecond(state) * DEAL_REWARD_SECONDS[deal.kind]);
+}
+
+/** Fırsatı yakala: ödül kasaya (kazanca sayılmıyor), fırsat kalkıyor. */
+export function catchDeal(state: LiteState): ActionResult {
+  if (!state.deal || state.clock >= state.deal.until - EPS) return { ok: false, reason: 'none' };
+  const next = cloneState(state);
+  next.cash += dealReward(state);
+  next.deal = null;
+  return { ok: true, state: next };
+}
+
 // ------------------------------------------------------------ halka arz
 
 export function ipoUnlocked(state: LiteState): boolean {
@@ -682,12 +725,29 @@ function openCouncil(state: LiteState): void {
   state.nextCouncilAt = state.clock + COUNCIL_GAP;
 }
 
+/**
+ * Sıradaki fırsat (L9). Tür sabit sırayla, zincir satış yapan zincirlerden
+ * sayaçla. Satış yapan zincir yoksa fırsat çıkmıyor, sıra kaymıyor.
+ */
+function startDeal(state: LiteState): void {
+  state.nextDealAt = state.clock + DEAL_GAP;
+  const selling = CHAIN_IDS.filter((id) => state.chains[id].levels[2] > 0);
+  if (selling.length === 0) return;
+  const kind = DEAL_PATTERN[state.deals % DEAL_PATTERN.length]!;
+  const chain = kind === 'investor' ? null : selling[(state.deals * 3 + state.city) % selling.length]!;
+  state.deal = { kind, chain, until: state.clock + DEAL_LIFETIME };
+  state.deals += 1;
+}
+
 /** Saat sınırlarında başlayan ve biten şeyler. */
 function applyBoundaries(state: LiteState, offline: boolean): void {
   if (state.event !== null && state.clock >= state.event.until - EPS) state.event = null;
   if (state.policy !== null && state.clock >= state.policy.until - EPS) state.policy = null;
+  if (state.deal !== null && state.clock >= state.deal.until - EPS) state.deal = null;
   // Olay yalnızca oyuncu oradayken başlıyor; kapalıyken kaçan olay dönüşte başlıyor.
   if (!offline && state.event === null && state.clock >= state.nextEventAt - EPS) startEvent(state);
+  // Fırsat da öyle; kapalıyken çıkmıyor, duran fırsat kapalıyken kaçıyor.
+  if (!offline && state.deal === null && state.clock >= state.nextDealAt - EPS) startDeal(state);
   if (state.clock >= state.nextCouncilAt - EPS) openCouncil(state);
 }
 
@@ -708,6 +768,8 @@ export function advance(state: LiteState, seconds: number, offline = false): Lit
     if (next.event !== null) bounds.push(next.event.until);
     else if (!offline) bounds.push(next.nextEventAt);
     if (next.policy !== null) bounds.push(next.policy.until);
+    if (next.deal !== null) bounds.push(next.deal.until);
+    else if (!offline) bounds.push(next.nextDealAt);
     for (const bound of bounds) if (bound - next.clock > EPS) h = Math.min(h, bound - next.clock);
     const income = incomePerSecond(next) * (offline ? OFFLINE_EFFICIENCY : 1);
     next.cash += income * h;
