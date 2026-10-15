@@ -19,4 +19,5 @@ fi
 
 xcodegen generate
 open CapitalForgeLite.xcodeproj
-echo "Xcode açıldı. Signing & Capabilities → Team: kendi Apple kimliğinizi seçin, iPhone'unuzu seçip ▶︎ ile çalıştırın."
+echo "Xcode açıldı. İmza ekibi hazır (DEVELOPMENT_TEAM); iPhone'unuzu seçip ▶︎ ile çalıştırın."
+echo "App Store'a yüklemek için: hedef 'Any iOS Device' → Product → Archive (ios-lite/README.md)."

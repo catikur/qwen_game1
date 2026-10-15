@@ -1,0 +1,63 @@
+-- CapitalForge Lite lig sunucusu (Cloudflare D1, SQLite).
+-- Kurulum: .github/workflows/lite-league.yml bunu uzak veritabanına uyguluyor.
+
+CREATE TABLE IF NOT EXISTS players (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  token_hash TEXT NOT NULL,
+  -- 0 Bronz, 1 Gümüş, 2 Altın, 3 Elmas.
+  division INTEGER NOT NULL DEFAULT 0,
+  created_at INTEGER NOT NULL
+);
+
+-- Oyuncunun o haftaki son kabul edilen gönderimi.
+CREATE TABLE IF NOT EXISTS reports (
+  player_id TEXT NOT NULL,
+  week TEXT NOT NULL,
+  score REAL NOT NULL,
+  city INTEGER NOT NULL,
+  stars INTEGER NOT NULL,
+  city_earned REAL NOT NULL,
+  levels TEXT NOT NULL,
+  at INTEGER NOT NULL,
+  PRIMARY KEY (player_id, week)
+);
+
+-- Haftalık gruplar: bölüm başına 30 kişilik.
+CREATE TABLE IF NOT EXISTS groups (
+  week TEXT NOT NULL,
+  player_id TEXT NOT NULL,
+  division INTEGER NOT NULL,
+  group_no INTEGER NOT NULL,
+  PRIMARY KEY (week, player_id)
+);
+CREATE INDEX IF NOT EXISTS groups_by_group ON groups (week, division, group_no);
+
+-- Davet kodlu özel ligler.
+CREATE TABLE IF NOT EXISTS leagues (
+  code TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  owner TEXT NOT NULL,
+  created_at INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS league_members (
+  code TEXT NOT NULL,
+  player_id TEXT NOT NULL,
+  joined_at INTEGER NOT NULL,
+  PRIMARY KEY (code, player_id)
+);
+CREATE INDEX IF NOT EXISTS members_by_player ON league_members (player_id);
+
+-- Hafta sonu bölüm değişimi bir kez yapılıyor.
+CREATE TABLE IF NOT EXISTS rollovers (
+  week TEXT PRIMARY KEY,
+  at INTEGER NOT NULL
+);
+
+-- Reddedilen gönderimler (inceleme için).
+CREATE TABLE IF NOT EXISTS rejects (
+  player_id TEXT NOT NULL,
+  week TEXT NOT NULL,
+  reason TEXT NOT NULL,
+  at INTEGER NOT NULL
+);

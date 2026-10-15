@@ -24,9 +24,17 @@ targets:
       path: Generated/Info.plist
       properties:
         CFBundleDisplayName: CapitalForge Lite
-        CFBundleShortVersionString: "0.5.0"
-        CFBundleVersion: "5"
+        CFBundleShortVersionString: "0.6.0"
+        CFBundleVersion: "6"
         UILaunchScreen: {}
+        # Yalnızca HTTPS (muaf şifreleme): App Store her yüklemede sormasın.
+        ITSAppUsesNonExemptEncryption: false
+        # L8: lig sunucusunun adresi (Cloudflare Worker). Boşken lig "yakında"
+        # kalıyor; ilk dağıtımdan sonra buraya yazılıyor (ios-lite/README.md).
+        LiteLeagueURL: "https://capitalforge-lite-league.catikur.workers.dev"
+        # L8: Game Center genel tablosu. Ücretli Apple Developer üyeliği ve
+        # Game Center yetkisi (entitlement) gelince true.
+        LiteGameCenter: false
         # L6: iPad'de Split View ve Stage Manager için tam ekran zorunlu değil.
         UIRequiresFullScreen: false
         # iPhone dikey; iPad dört yön.
@@ -57,6 +65,8 @@ targets:
         TARGETED_DEVICE_FAMILY: "1,2"
         SWIFT_VERSION: "5.0"
         CODE_SIGN_STYLE: Automatic
+        # Apple Developer ekibi (gizli değil; her imzalı uygulamada görünüyor).
+        DEVELOPMENT_TEAM: 77J92PA5Q9
         ENABLE_PREVIEWS: YES
 schemes:
   CapitalForgeLite:

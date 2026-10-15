@@ -69,6 +69,18 @@ final class FixtureTests: XCTestCase {
         for row in themes { XCTAssertEqual(Lite.cityTheme(int(row[0])).rawValue, row[1] as? String, "tema \(row)") }
     }
 
+    /// L8: ISO hafta kimliği ve haftanın başı (lig sunucusuyla aynı hafta).
+    func testWeeks() throws {
+        let rows = try XCTUnwrap(fixtures["weeks"] as? [[Any]])
+        XCTAssertFalse(rows.isEmpty)
+        for row in rows {
+            XCTAssertEqual(LiteLeague.weekId(epochMs: num(row[0])), row[1] as? String, "hafta \(row)")
+            XCTAssertEqual(LiteLeague.weekStart(row[1] as? String ?? ""), num(row[2]), "haftanın başı \(row)")
+        }
+        XCTAssertNil(LiteLeague.weekStart("2026-42"))
+        XCTAssertEqual(LiteLeague.starFree(200, stars: 50), 100)
+    }
+
     /// Rakip öngörüsü: aynı kurulum, aynı saniye (ya da ikisinde de "geçemiyor").
     func testOvertakes() throws {
         let cases = try XCTUnwrap(fixtures["overtakes"] as? [[String: Any]])

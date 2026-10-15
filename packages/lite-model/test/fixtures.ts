@@ -37,6 +37,8 @@ import {
   starsFor,
   tradeRoutes,
   upgradeCost,
+  weekId,
+  weekStart,
   type ChainId,
   type CityRecord,
   type LiteState,
@@ -133,6 +135,8 @@ export interface Fixtures {
   routes: Array<[number, ChainId, number]>;
   /** L7: [şehir, tema] */
   themes: Array<[number, string]>;
+  /** L8: [epoch ms, ISO hafta, haftanın başı ms] */
+  weeks: Array<[number, string, number]>;
   scenarios: Scenario[];
 }
 
@@ -351,6 +355,17 @@ export function buildFixtures(): Fixtures {
   const routes: Fixtures['routes'] = [];
   for (const city of [0, 1, 2, 5, 6, 13]) for (const id of CHAIN_IDS) routes.push([city, id, tradeRoutes(city, id)]);
   const themes: Fixtures['themes'] = [0, 1, 2, 3, 4, 9].map((city) => [city, cityTheme(city)]);
+  const weeks: Fixtures['weeks'] = [
+    Date.UTC(2026, 9, 15, 12),
+    Date.UTC(2026, 9, 12),
+    Date.UTC(2026, 9, 11, 23, 59, 59, 999),
+    Date.UTC(2027, 0, 1),
+    Date.UTC(2027, 0, 4),
+    Date.UTC(2024, 11, 30),
+    Date.UTC(2020, 11, 31),
+    Date.UTC(1999, 0, 1),
+    Date.UTC(2100, 2, 1, 6),
+  ].map((ms) => [ms, weekId(ms), weekStart(weekId(ms))]);
 
   return {
     generatedBy: 'packages/lite-model/test/write-fixtures.ts — elle düzenlenmez',
@@ -363,6 +378,7 @@ export function buildFixtures(): Fixtures {
     tiers,
     routes,
     themes,
+    weeks,
     scenarios,
   };
 }

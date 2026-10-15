@@ -15,6 +15,7 @@ struct RootView: View {
     @State private var confirmSell = false
     @State private var showSettings = ProcessInfo.processInfo.arguments.contains("-liteSettings")
     @State private var showMap = ProcessInfo.processInfo.arguments.contains("-liteMap")
+    @State private var showLeague = ProcessInfo.processInfo.arguments.contains("-liteLeagueSheet")
     /// CI yedeği: simülatör yatay dönmezse yatay düzen 90° çevrilmiş kapta çiziliyor.
     @State private var rotatedPreview = false
 
@@ -55,9 +56,16 @@ struct RootView: View {
         .sensoryFeedback(trigger: store.refusals) { _, _ in haptics ? .warning : nil }
         .sensoryFeedback(trigger: store.triumphs) { _, _ in haptics ? .success : nil }
         .task { await store.refreshNotificationStatus() }
+        .task { GameCenter.authenticate() }
         .sheet(isPresented: $showSettings) {
             SettingsSheet()
                 .presentationDetents([.fraction(0.82), .large])
+                .presentationCornerRadius(28)
+                .presentationBackground { Theme.sky(scheme) }
+        }
+        .sheet(isPresented: $showLeague) {
+            LeagueSheet()
+                .presentationDetents([.large])
                 .presentationCornerRadius(28)
                 .presentationBackground { Theme.sky(scheme) }
         }
@@ -140,6 +148,7 @@ extension RootView {
                             IpoCard(placement: .market).id("market")
                             ManagerCard()
                             HoldingCard(confirm: $confirmSell, showMap: $showMap).id("holding")
+                            LeagueCard(show: $showLeague).id("league")
                         }
                     } else {
                         ForEach(Self.visibleChains(store.state), id: \.self) { chain in
@@ -148,6 +157,7 @@ extension RootView {
                         IpoCard(placement: .market).id("market")
                         ManagerCard()
                         HoldingCard(confirm: $confirmSell, showMap: $showMap).id("holding")
+                        LeagueCard(show: $showLeague).id("league")
                     }
                 }
                 .padding(.horizontal, 14)

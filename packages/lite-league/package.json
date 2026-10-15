@@ -1,0 +1,7 @@
+{
+  "name": "@capital/lite-league",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/worker.ts"
+}

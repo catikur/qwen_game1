@@ -49,6 +49,8 @@ final class GameStore {
     /// Halka arzdan beri hisse fiyatı (dakikada bir örnek).
     private(set) var priceHistory: [Double] = []
     let settings: AppSettings
+    /// L8: haftalık lig ve özel ligler.
+    let league: LeagueService
     private let sound = SoundPlayer()
     @ObservationIgnored private var lastSampleClock: Double = -.infinity
 
@@ -68,6 +70,7 @@ final class GameStore {
         let arguments = ProcessInfo.processInfo.arguments
         let scenario = arguments.contains("-liteScenario")
         settings = AppSettings(ephemeral: scenario)
+        league = LeagueService(scenario: scenario)
         if let index = arguments.firstIndex(of: "-liteScenario"), index + 1 < arguments.count {
             // Ekran görüntüsü senaryosu: kayıt okunmuyor ve yazılmıyor.
             let built = Scenario.build(arguments[index + 1])
@@ -86,6 +89,7 @@ final class GameStore {
             state = Lite.newGame()
         }
         lastSampleClock = state.clock
+        league.track(state)
         start()
     }
 
@@ -115,6 +119,8 @@ final class GameStore {
         guard dt > 0, !isScenario else { return }
         let hadEvent = state.event != nil
         state = Lite.advance(state, dt)
+        league.track(state)
+        league.submitIfDue(state)
         if !hadEvent && state.event != nil { cue(.event) }
         samplePrice()
         sinceSave += dt
@@ -142,6 +148,8 @@ final class GameStore {
             if backgroundAt == nil { backgroundAt = Date() }
             stop()
             save()
+            let snapshot = state
+            Task { await self.league.submit(snapshot) }
             if settings.notifications && !isScenario { LiteNotifications.schedule(for: state) }
         case .inactive:
             save()
@@ -155,6 +163,7 @@ final class GameStore {
         guard elapsed > 60 else { return }
         let result = Lite.applyOffline(state, elapsed)
         state = result.state
+        league.track(state)
         if state.listed { priceHistory.append(Lite.sharePrice(state)) }
         lastSampleClock = state.clock
         if result.earned > 0 {
@@ -165,6 +174,7 @@ final class GameStore {
     func save() {
         sinceSave = 0
         guard !isScenario else { return }
+        league.persist()
         let file = SaveFile(state: state, lastSeen: Date(), priceHistory: priceHistory)
         if let data = try? JSONEncoder().encode(file) {
             try? data.write(to: saveURL, options: .atomic)
@@ -262,6 +272,7 @@ final class GameStore {
     func sellCity() {
         if case .success(let next) = Lite.prestige(state) {
             state = next
+            GameCenter.submit(stars: state.stars)
             priceHistory = []
             lastSampleClock = state.clock
             triumphs += 1
@@ -273,6 +284,7 @@ final class GameStore {
     /// Bütün ilerlemeyi sil: yeni oyun, boş borsa.
     func resetGame() {
         state = Lite.newGame()
+        league.track(state)
         priceHistory = []
         lastSampleClock = state.clock
         offlineReport = nil

@@ -60,6 +60,8 @@ importers:
         specifier: workspace:*
         version: link:../content
 
+  packages/lite-league: {}
+
   packages/lite-model: {}
 
   packages/persistence:
