@@ -174,3 +174,23 @@ test('özel lig: kur, koda katıl, sırala, ayrıl', async () => {
   await call(db, THURSDAY + 3, 'DELETE', `/v1/leagues/${created.body.code}`, undefined, friend);
   assert.equal((await db.all('SELECT * FROM leagues')).length, 0, 'son üye ayrılınca lig silinmeli');
 });
+
+test('hesabı sil: oyuncunun her izi gidiyor, token artık geçmiyor', async () => {
+  const db = memoryDb();
+  const state = played();
+  const me = await signUp(db, THURSDAY, 'Atilla');
+  const friend = await signUp(db, THURSDAY, 'Deniz');
+  const mine = await call(db, THURSDAY, 'POST', '/v1/leagues', { name: 'Yalnız' }, me);
+  const shared = await call(db, THURSDAY, 'POST', '/v1/leagues', { name: 'Ofis' }, friend);
+  await call(db, THURSDAY, 'POST', '/v1/leagues/join', { code: shared.body.code }, me);
+  assert.equal((await call(db, THURSDAY, 'POST', '/v1/reports', report(state, THURSDAY, 500), me)).status, 200);
+  assert.deepEqual((await call(db, THURSDAY + 1, 'DELETE', '/v1/players/me', undefined, me)).body, { ok: true });
+  assert.equal((await call(db, THURSDAY + 2, 'GET', '/v1/league', undefined, me)).status, 401);
+  for (const table of ['players', 'reports', 'groups', 'rejects', 'league_members']) {
+    const column = table === 'players' ? 'id' : 'player_id';
+    assert.equal((await db.all(`SELECT * FROM ${table} WHERE ${column} = ?`, me.id)).length, 0, table);
+  }
+  const codes = (await db.all<{ code: string }>('SELECT code FROM leagues')).map((l) => l.code);
+  assert.deepEqual(codes, [shared.body.code], `boşalan lig (${mine.body.code}) silinmeli, arkadaşınki kalmalı`);
+  assert.equal((await call(db, THURSDAY + 2, 'GET', '/v1/league', undefined, friend)).status, 200);
+});

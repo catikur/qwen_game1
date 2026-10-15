@@ -225,6 +225,15 @@ final class LeagueService {
         }
     }
 
+    /// Hesabı sunucudan sil (App Store 5.1.1(v)); oyun ve kayıt yerinde kalıyor.
+    func deleteAccount() async {
+        await run {
+            struct Deleted: Decodable { let ok: Bool }
+            let _: Deleted = try await self.send("DELETE", "v1/players/me")
+            self.signOut()
+        }
+    }
+
     private func signOut() {
         account = nil
         standings = nil

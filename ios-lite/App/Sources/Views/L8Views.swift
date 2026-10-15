@@ -82,6 +82,9 @@ struct LeagueSheet: View {
     @State private var name = ""
     @State private var newLeague = ""
     @State private var code = ""
+    @State private var renaming = false
+    @State private var newName = ""
+    @State private var confirmDelete = false
 
     var body: some View {
         let league = store.league
@@ -131,6 +134,7 @@ struct LeagueSheet: View {
                         } else {
                             privateLeagues(league)
                         }
+                        account(league)
                     }
                     if GameCenter.available {
                         Button {
@@ -149,6 +153,24 @@ struct LeagueSheet: View {
             .scrollIndicators(.hidden)
         }
         .task { await league.refresh() }
+        .alert(L10n.t("league.renameTitle"), isPresented: $renaming) {
+            TextField(L10n.t("league.namePlaceholder"), text: $newName)
+                .autocorrectionDisabled()
+            Button(L10n.t("league.save")) {
+                Task { await league.rename(newName) }
+            }
+            Button(L10n.t("common.cancel"), role: .cancel) {}
+        } message: {
+            Text(L10n.t("league.nameHint"))
+        }
+        .confirmationDialog(L10n.t("league.deleteTitle"), isPresented: $confirmDelete, titleVisibility: .visible) {
+            Button(L10n.t("league.deleteConfirm"), role: .destructive) {
+                Task { await league.deleteAccount() }
+            }
+            Button(L10n.t("common.cancel"), role: .cancel) {}
+        } message: {
+            Text(L10n.t("league.deleteBody"))
+        }
     }
 
     // MARK: - Bölümler
@@ -281,6 +303,35 @@ struct LeagueSheet: View {
             }
             .glassCard(padding: 10)
         }
+    }
+
+    /// Hesap satırı: ad, adı değiştir, hesabı sil.
+    private func account(_ league: LeagueService) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: "person.crop.circle.fill")
+                .font(.system(size: 20))
+                .foregroundStyle(Theme.muted)
+            Text(league.account?.name ?? "")
+                .font(Theme.text(14, .heavy))
+                .foregroundStyle(Theme.ink)
+                .lineLimit(1)
+            Spacer(minLength: 4)
+            Button(L10n.t("league.rename")) {
+                newName = league.account?.name ?? ""
+                renaming = true
+            }
+            .font(Theme.text(12, .heavy))
+            .foregroundStyle(Theme.ink)
+            .disabled(league.busy)
+            Button(L10n.t("league.delete")) {
+                confirmDelete = true
+            }
+            .font(Theme.text(12, .heavy))
+            .foregroundStyle(Theme.bad)
+            .disabled(league.busy)
+            .accessibilityIdentifier("league-delete")
+        }
+        .glassCard(padding: 10)
     }
 
     private func field(_ placeholder: String, text: Binding<String>) -> some View {

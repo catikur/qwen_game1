@@ -98,8 +98,8 @@ telefon düzenine dönüyor. Klavyede 1/2/3 toplu alım, K kampanya.
   Cloudflare Workers + D1).
 - **Genel tablo:** Game Center.
 
-İkisi de hesaplar hazır olana kadar kapalı; oyun etkilenmiyor. Haftalık puan
-şimdiden sayılıyor.
+Lig sunucusu kurulu ve uygulama ona bağlı. Game Center ücretli Apple
+Developer üyeliği gelene kadar kapalı; oyun etkilenmiyor.
 
 ### Lig sunucusu (Cloudflare, ücretsiz katman)
 
@@ -107,7 +107,8 @@ telefon düzenine dönüyor. Klavyede 1/2/3 toplu alım, K kampanya.
 (D1 bağlaması `DB`, pazartesi cron'u açık), veritabanı `capitalforge-lite-league`
 (D1, Doğu Avrupa; kimlik `wrangler.toml`'de). Uygulama bu adrese bağlı
 (`project.yml` → `LiteLeagueURL`). Her PR'da ve `main`'de "Canlı sunucu
-denetimi" işi hesap açıp ligi okuyor.
+denetimi" işi hesap açıyor, ligi okuyor ve hesabı siliyor. Sunucu eski
+sürümdeyse uyarı veriyor: o zaman aşağıdaki A'nın 1. ve 3. adımı.
 
 Kod değişince sunucuyu güncellemek için aşağıdaki A ya da B.
 

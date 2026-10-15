@@ -545,7 +545,8 @@ iCloud gibi Apple servisleri ücretli üyelik istiyor; B ücretsiz imzayla da
   - İlk 5 çıkıyor (puanı sıfır olan çıkmıyor), son 5 iniyor. 10 kişiden küçük
     grupta kimse inmiyor.
 - **Sunucu** (`packages/lite-league`, Cloudflare Workers + D1): anonim hesap
-  (ad + token, yalnızca özeti saklanıyor), gönderim, haftalık grup, özel ligler.
+  (ad + token, yalnızca özeti saklanıyor), gönderim, haftalık grup, özel ligler,
+  hesap silme (oyuncunun her izi; boşalan özel lig de).
   - **Hafta dönümü:** pazartesi cron'unda; kaçarsa ilk istekte yapılıyor, tek
     sefer.
   - **Özel lig:** 6 harfli davet kodu; en çok 50 üye, oyuncu başına en çok 10 lig.
@@ -564,7 +565,8 @@ iCloud gibi Apple servisleri ücretli üyelik istiyor; B ücretsiz imzayla da
     - bölüm özeti;
     - 30 kişilik grup (çıkış/iniş okları, sen vurgulu);
     - özel ligler: kur, koda katıl, kodu kopyala, ayrıl;
-    - adla katılma.
+    - adla katılma;
+    - hesap satırı: adı değiştir, hesabı sil (onaylı; App Store 5.1.1(v)).
   - Sunucu adresi yokken "yakında"; haftalık puan yine sayılıyor.
 - **Game Center:** `cf.lite.stars` tablosuna şehir satılınca yıldız. Info.plist
   `LiteGameCenter` ücretli üyelik gelene kadar kapalı.

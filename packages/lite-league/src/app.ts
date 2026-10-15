@@ -8,6 +8,7 @@
  * - `GET  /v1/health`                → hafta
  * - `POST /v1/players {name}`        → anonim hesap: {id, token}
  * - `PATCH /v1/players/me {name}`    → ad değiştir
+ * - `DELETE /v1/players/me`        → hesabı ve tüm izlerini sil
  * - `POST /v1/reports <LeagueReport>`→ haftalık puan; akla yatkınlık denetimi
  * - `GET  /v1/league`                → bu haftaki 30 kişilik grup
  * - `GET  /v1/leagues`               → özel liglerim ve sıralamaları
@@ -128,6 +129,8 @@ export async function handle(request: Request, db: Db, now: number): Promise<Res
     switch (route) {
       case 'PATCH /v1/players/me':
         return await rename(request, db, me);
+      case 'DELETE /v1/players/me':
+        return await deleteAccount(db, me);
       case 'POST /v1/reports':
         return await submit(request, db, me, now);
       case 'GET /v1/league':
@@ -310,6 +313,15 @@ async function joinLeague(request: Request, db: Db, me: Player, now: number): Pr
   if ((await leagueCount(db, me)) >= LEAGUE.privatePerPlayer) throw new HttpError(409, 'limit');
   await db.run('INSERT OR IGNORE INTO league_members (code, player_id, joined_at) VALUES (?, ?, ?)', code, me.id, now);
   return json(league);
+}
+
+/** Hesabı sil (App Store 5.1.1(v)): oyuncunun her izi gidiyor; boşalan özel ligler de. */
+async function deleteAccount(db: Db, me: Player): Promise<Response> {
+  const codes = await db.all<{ code: string }>('SELECT code FROM league_members WHERE player_id = ?', me.id);
+  for (const { code } of codes) await leaveLeague(db, me, code);
+  for (const table of ['groups', 'reports', 'rejects']) await db.run(`DELETE FROM ${table} WHERE player_id = ?`, me.id);
+  await db.run('DELETE FROM players WHERE id = ?', me.id);
+  return json({ ok: true });
 }
 
 async function leaveLeague(db: Db, me: Player, code: string): Promise<Response> {
