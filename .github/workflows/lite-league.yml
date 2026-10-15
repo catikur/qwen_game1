@@ -11,6 +11,13 @@ on:
     paths:
       - 'packages/lite-league/**'
       - 'packages/lite-model/src/**'
+      - 'ios-lite/App/project.yml'
+      - '.github/workflows/lite-league.yml'
+  pull_request:
+    paths:
+      - 'packages/lite-league/**'
+      - 'packages/lite-model/src/**'
+      - 'ios-lite/App/project.yml'
       - '.github/workflows/lite-league.yml'
 
 permissions:
@@ -21,8 +28,31 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # Uygulamanın bağlandığı canlı sunucu (project.yml → LiteLeagueURL) ayakta mı,
+  # veritabanı bağlı mı: hesap aç, ligi oku. Sır gerekmiyor.
+  smoke:
+    name: Canlı sunucu denetimi
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+      - name: Sağlık, kayıt, lig
+        run: |
+          set -euo pipefail
+          URL=$(sed -n 's/^ *LiteLeagueURL: *"\(.*\)"/\1/p' ios-lite/App/project.yml)
+          if [ -z "$URL" ]; then echo "::notice::LiteLeagueURL boş; denetim atlandı."; exit 0; fi
+          echo "Sunucu: $URL"
+          curl -fsS "$URL/v1/health"; echo
+          ACCOUNT=$(curl -fsS -X POST -H 'content-type: application/json' -d '{"name":"CI Denetim"}' "$URL/v1/players")
+          AUTH=$(echo "$ACCOUNT" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const a=JSON.parse(s);console.log(`Bearer ${a.id}.${a.token}`)})')
+          LEAGUE=$(curl -fsS -H "authorization: $AUTH" "$URL/v1/league")
+          echo "$LEAGUE" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const l=JSON.parse(s);if(!l.week||l.divisionKey!=="bronze")process.exit(1);console.log("lig:",l.week,l.divisionKey)})'
+          test "$(curl -s -o /dev/null -w '%{http_code}' "$URL/v1/league")" = 401
+          echo "Canlı sunucu ve veritabanı çalışıyor."
+
   deploy:
     name: Cloudflare'a dağıt
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:

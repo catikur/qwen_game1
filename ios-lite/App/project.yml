@@ -29,7 +29,7 @@ targets:
         UILaunchScreen: {}
         # L8: lig sunucusunun adresi (Cloudflare Worker). Boşken lig "yakında"
         # kalıyor; ilk dağıtımdan sonra buraya yazılıyor (ios-lite/README.md).
-        LiteLeagueURL: ""
+        LiteLeagueURL: "https://capitalforge-lite-league.catikur.workers.dev"
         # L8: Game Center genel tablosu. Ücretli Apple Developer üyeliği ve
         # Game Center yetkisi (entitlement) gelince true.
         LiteGameCenter: false

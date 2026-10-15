@@ -103,8 +103,13 @@ telefon düzenine dönüyor. Klavyede 1/2/3 toplu alım, K kampanya.
 
 ### Lig sunucusu (Cloudflare, ücretsiz katman)
 
-**Veritabanı hazır:** `capitalforge-lite-league` (D1, Doğu Avrupa, şema
-uygulandı; kimlik `wrangler.toml`'de). Geriye Worker'ın kendisi kalıyor.
+**Kurulu:** Worker `https://capitalforge-lite-league.catikur.workers.dev`
+(D1 bağlaması `DB`, pazartesi cron'u açık), veritabanı `capitalforge-lite-league`
+(D1, Doğu Avrupa; kimlik `wrangler.toml`'de). Uygulama bu adrese bağlı
+(`project.yml` → `LiteLeagueURL`). Her PR'da ve `main`'de "Canlı sunucu
+denetimi" işi hesap açıp ligi okuyor.
+
+Kod değişince sunucuyu güncellemek için aşağıdaki A ya da B.
 
 **A · Panelden yapıştır (API anahtarı gerekmez):**
 
