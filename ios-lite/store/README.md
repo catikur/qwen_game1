@@ -16,8 +16,10 @@ içinde.
 | İkincil kategori | Games → Strategy |
 | Gizlilik politikası | https://catikur.github.io/qwen_game1/lite/privacy.html |
 | Destek adresi | https://catikur.github.io/qwen_game1/lite/support.html |
+| Destek e-postası | info@conforcus.com (destek ve gizlilik sayfalarında da bu) |
 | Pazarlama adresi (isteğe bağlı) | https://catikur.github.io/qwen_game1/lite/support.html |
-| Telif | © 2026 Atilla (ya da şirket adı) |
+| Telif | © 2026 Conforcus |
+| Satıcı adı | Geliştirici hesabından geliyor: şirket adının mağazada görünmesi için hesabın Organization türünde olması gerekiyor (D-U-N-S numarası). Bireysel hesapta satıcı adı kişi adı kalıyor |
 | Fiyat | Ücretsiz; uygulama içi satın alma yok |
 
 ## Türkçe
@@ -160,7 +162,7 @@ Game Center is used for a global stars leaderboard (cf.lite.stars).
 
 The only user-generated content visible to others is company and league names; they pass a profanity filter. There is no chat.
 
-All notifications are local.
+All notifications are local. The privacy policy and support pages are linked in Settings ("Ayarlar" → "Gizlilik politikası" / "Destek").
 ```
 
 İletişim bilgisi: ad, soyad, telefon ve e-posta inceleme ekibi için (herkese görünmüyor).

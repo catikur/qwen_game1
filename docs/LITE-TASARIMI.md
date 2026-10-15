@@ -234,8 +234,11 @@ gece sürümüyle birlikte seçti.
   - darboğaz için altın halka ve şimşekli hap;
   - kilometre taşına (hız ×2) ilerleme çubuğu;
   - görev merdiveninde dörtlü nokta göstergesi.
-- **Simge:** gökyüzünde süzülen çimenli ada ve üstünde yükselen üç renkli bina.
-  `ios-lite/App/tools/make-icon.mjs` SVG'den üretiyor, alfa kanalını atıyor.
+- **Simge (L9):** koyu maviden açığa ışınlar önünde altın sikke; yüzünde üç
+  binalı şehir silueti, kenarında ince tırtıl, köşede parıltı. Küçük boyda da
+  okunuyor (sikke + siluet). `ios-lite/App/tools/make-icon.mjs` SVG'den
+  üretiyor, alfa kanalını atıyor; aynı SVG'den web sayfaları için 192 px
+  `apps/web/public/lite/icon.png`.
 
 Şehir çizimi SwiftUI `Canvas` ile prosedürel; hiçbir dış görsel dosya
 kullanılmıyor.
@@ -362,13 +365,19 @@ satıp ikinci şehirde 2 saat oynuyor):
 | L7 | **Ada dolunca: oyunun devamı.** Bina kademeleri, takımada (üç ada, üç zincir), holding haritası, şehir temaları. Ayrıntı §12 |
 | L8 | **Online: lider tablosu ve ligler.** Haftalık bölüm ligi ve davet kodlu ligler kendi sunucumuzda, genel tablo Game Center'da. Ayrıntı §13 |
 | L9 | **Mağazaya hazırlık.** App Attest hile koruması (§13.1), şehir fırsatları (§14), yeni simge, App Store gönderim paketi |
-| Son | **Uygulama simgesi yeniden.** L4'teki geçici simge beğenilmedi; en sona bırakıldı (L9'da) |
+| Son | **Uygulama simgesi yeniden.** L4'teki geçici simge beğenilmedi; L9'da üç taslaktan "Altın sikke" seçildi |
+| L10 | **Web sürümü.** Aynı oyun tarayıcıda (telefon ve masaüstü), aynı lig. Sunucu yetkili kayıt: cihazlar arası devam ve web için hile koruması. Ortak genel yıldız tablosu. Ayrıntı §15 |
+| L11 | **Android sürümü.** Aynı lig, Play Store paketi. Ayrıntı §15 |
+| Sonra | **Ana oyuna dönüş.** L10–L11'den sonra Lite'a yeni özellik eklenmiyor (yalnızca hata düzeltmesi); geliştirme CapitalForge web oyununun aslında sürüyor |
 
 L5 kullanıcının isteği: "En son tüm stili değiştireceğiz. Fonttan grafiklere,
 renkten buton yapısına kadar her şeyi yenilemek istiyorum." L6–L8 de onun
 isteği: "ipad OS için de çalışacak durumda olan ayrı bir koşu olsun; bu
 ekrandaki alan bir noktada sonlanacak, devamı nasıl olacak onu da düşünelim;
-leaderboard online olsun, ligler kurulabilsin."
+leaderboard online olsun, ligler kurulabilsin." L10–L11 de: "lite versiyonun
+entegre web versiyonu ve android versiyonu da olsun; hepsi aynı leaderboard
+ile çalışsın, bütünleşik. Bunlar tamamlandıktan sonra daha fazla
+geliştirmeden oyunun aslına dönüp onda değişikliklerimize devam ederiz."
 
 ## 11. iPadOS (L6)
 
@@ -617,3 +626,48 @@ fırsat balonu beliriyor; dokunan yakalıyor, kaçıran kaçırıyor.
 - **Model:** `ActiveDeal`, `nextDealAt`, `deals`; `catchDeal`, `dealReward`
   (TS ve Swift, eşitlik fikstüründe `firsatlar` senaryosu). Eski kayıtta ilk
   balon açılışın hemen ardından.
+
+
+## 15. Çok platform: web ve Android (L10–L11)
+
+Hedef: Lite iPhone, iPad, tarayıcı ve Android'de aynı oyun; tek lig sunucusu,
+tek tablo. Bir cihazda başlayan oyun öbüründe sürüyor.
+
+- **Model:** `packages/lite-model` zaten oyunun kaynağı (Swift kit onun
+  eşleniği, fikstürlerle). Web onu doğrudan kullanıyor; port yok, eşitlik
+  sorunu yok.
+- **Web (L10):** `apps/lite-web` (React + Vite, ana oyunla aynı yığın).
+  GitHub Pages'te `/qwen_game1/lite/`; gizlilik ve destek sayfaları da oraya
+  taşınıyor. Dokunmatik öncelikli, dikey telefon ve geniş ekran; "Cam & Bulut"
+  görünüşü (§6.1), gündüz ve gece. Şehir `<canvas>`'ta aynı izometrik çizimle.
+  Çevrimdışı çalışıyor (PWA, ana ekrana eklenebiliyor); kayıt tarayıcıda.
+- **Lig ve hile payı:**
+  - iOS: App Attest (L9) aynen.
+  - Web ve Android'de cihaz kanıtı yok (tarayıcının App Attest karşılığı yok).
+    Onun yerine **sunucu yetkili kayıt:** istemci son eşitlemeden beri yaptığı
+    hamleleri (seviye al, kampanya, balon yakala, şehir sat…) oyun saatiyle
+    gönderiyor; sunucu aynı TS modelini kendi kayıtlı durumundan oynatıyor.
+    Geçen süre sunucunun saatinden: saat oynamak, kasayı elle değiştirmek
+    işe yaramıyor. Sunucunun durumu esas; istemci farklıysa ona dönüyor.
+    Gönderim başına yalnızca son birkaç dakikanın hamleleri, ücretsiz
+    katmanın işlemci sınırına sığıyor.
+  - Hesap açmada Cloudflare Turnstile (bot karşı).
+  - Tablolarda platform işareti (telefon, tablet, tarayıcı); herkes aynı
+    grupta.
+- **Cihazlar arası devam:** hesap ekranında "başka cihaza taşı" kodu (6 harf,
+  10 dakika). Diğer cihaz kodu girince lig hesabı ve kayıt oraya geçiyor. iOS
+  kaydı sunucuya App Attest imzalı yüklüyor; web ve Android zaten sunucuda.
+- **Genel tablo:** Game Center yalnızca Apple'da. Sunucuya bütün platformların
+  ortak "yıldız" tablosu ekleniyor (dünya ve özel lig arkadaşları); iOS
+  Game Center'a yazmayı sürdürüyor.
+- **Android (L11), önerilen yol:** web sürümü Capacitor ile yerel uygulama
+  kabuğunda; arayüz web ile tek kod. Yerel eklentiler: bildirim, titreşim,
+  arka plana geçerken gönderim. Lig doğrulaması web'deki gibi sunucu yetkili
+  kayıt; Play Integrity gerekmiyor (istenirse sonra eklenebilir). Diğer yol
+  (Kotlin + Compose, modelin üçüncü portu) daha yerel ama üçüncü bir arayüz
+  ve eşitlik fikstürü demek.
+- **Kullanıcıdan gerekenler:**
+  - Web: yok (Pages zaten açık). Turnstile için Cloudflare panelinden bir site
+    anahtarı (ücretsiz).
+  - Android: Google Play Console geliştirici hesabı (tek sefer 25 $), uygulama
+    imzalama anahtarı (Play App Signing).
