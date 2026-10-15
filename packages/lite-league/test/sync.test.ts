@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { SyncedGame, starFree, weekId, weekStart, type LiteState } from '../../lite-model/src/index';
+import { CHAIN_IDS, SyncedGame, newGame, starFree, step, weekId, weekStart, type LiteState } from '../../lite-model/src/index';
 import { handle, type Options } from '../src/app';
 import type { Db } from '../src/db';
 import { weekShare } from '../src/saves';
@@ -261,4 +261,67 @@ test('hesabı sil: kayıt, cihazlar, tablo satırı ve taşıma kodu da gidiyor'
     assert.equal(left?.n, 0, table);
   }
   assert.equal((await call(db, THURSDAY + 13_000, 'GET', '/v1/save', undefined, web.account)).status, 401);
+});
+
+/** Swift'in kodladığı biçim: zincirler dizi, boş isteğe bağlı alanlar yok. */
+function swiftShape(state: LiteState): Record<string, unknown> {
+  const raw: Record<string, unknown> = { ...state, chains: CHAIN_IDS.map((id) => state.chains[id]) };
+  for (const key of ['event', 'policy', 'deal', 'council']) if (raw[key] === null) delete raw[key];
+  return raw;
+}
+
+test('iOS: cihazdaki oyunu App Attest onayıyla yüklüyor, kodla web\'e taşıyor; web ilerleyince iOS 409 alıp dönüyor', async () => {
+  const db = memoryDb();
+  const ios = await call(db, THURSDAY, 'POST', '/v1/players', { name: 'Elma Holding' });
+  const account: Account = { id: ios.body.id, token: ios.body.token };
+  const device = PKI.device();
+  const challenge = await call(db, THURSDAY, 'POST', '/v1/attest/challenge', {}, account);
+  const attested = await call(db, THURSDAY, 'POST', '/v1/attest', { keyId: device.keyId, attestation: device.attest(challenge.body.challenge), challenge: challenge.body.challenge }, account);
+  assert.equal(attested.status, 200);
+  // Kayıt yokken taşıma kodu yok.
+  assert.equal((await call(db, THURSDAY, 'POST', '/v1/link', {}, account)).body.error, 'save');
+  const upload = async (at: number, base: number | null, state: LiteState, signed = true) => {
+    const text = JSON.stringify({ base, state: swiftShape(state) });
+    const headers: Record<string, string> = signed ? { 'x-attest-key': device.keyId, 'x-attest-assertion': device.assert(text) } : {};
+    const response = await handle(
+      new Request('https://lig.test/v1/save', { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${account.id}.${account.token}`, ...headers }, body: text }),
+      db,
+      at,
+      OPTIONS,
+    );
+    return { status: response.status, body: (await response.json()) as Record<string, any> };
+  };
+  const phoneState = step(newGame(), 120);
+  assert.equal((await upload(THURSDAY + 1_000, null, phoneState, false)).status, 403, 'onaysız yükleme yok');
+  const first = await upload(THURSDAY + 2_000, null, phoneState);
+  assert.equal(first.status, 200, JSON.stringify(first.body));
+  assert.equal(first.body.version, 1);
+  const saved = await call(db, THURSDAY + 3_000, 'GET', '/v1/save', undefined, account);
+  assert.deepEqual(saved.body.state, phoneState);
+  assert.equal(saved.body.week, weekId(THURSDAY));
+
+  // Web'e taşı: kod, al, oyna, eşitle.
+  const link = await call(db, THURSDAY + 4_000, 'POST', '/v1/link', {}, account);
+  const claim = await call(db, THURSDAY + 5_000, 'POST', '/v1/link/claim', { code: link.body.code, platform: 'web' });
+  assert.equal(claim.status, 201);
+  assert.deepEqual(claim.body.save.state, phoneState);
+  const web: Account = { id: claim.body.id, token: claim.body.token };
+  const webGame = new SyncedGame(claim.body.save.state);
+  webGame.tick(60);
+  const synced = await call(db, THURSDAY + 66_000, 'POST', '/v1/sync', { base: 1, batch: 'web-after-link-01', ops: webGame.journal.take(), rest: 0 }, web);
+  assert.equal(synced.status, 200, JSON.stringify(synced.body));
+  assert.deepEqual(synced.body.state, webGame.state);
+  // Web'in token'ı iOS kaydı yükleyemiyor.
+  assert.equal((await call(db, THURSDAY + 67_000, 'POST', '/v1/save', { base: 2, state: webGame.state }, web)).body.error, 'platform');
+
+  // iPhone eski sürümün üstüne yüklüyor: 409 ve web'in durumu; ona dönüp yeniden yüklüyor.
+  const stale = await upload(THURSDAY + 70_000, 1, step(phoneState, 30));
+  assert.equal(stale.status, 409);
+  assert.deepEqual(stale.body.state, webGame.state);
+  const back = await upload(THURSDAY + 71_000, stale.body.version, step(stale.body.state, 5));
+  assert.equal(back.status, 200);
+  assert.equal(back.body.version, 3);
+  // Bozuk kayıt reddediliyor.
+  const broken = { ...phoneState, cash: -5 };
+  assert.equal((await upload(THURSDAY + 72_000, 3, broken)).body.error, 'body');
 });

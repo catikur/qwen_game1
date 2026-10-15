@@ -13,8 +13,10 @@ import {
   CHAIN_IDS,
   SYNC,
   newGame,
+  normalizeState,
   replay,
   validOp,
+  validState,
   weekId,
   weekStart,
   type LiteState,
@@ -70,6 +72,43 @@ export async function createSave(db: Db, playerId: string, now: number): Promise
 export async function loadSave(db: Db, playerId: string): Promise<SaveView | null> {
   const row = await db.first<SaveRow>('SELECT * FROM saves WHERE player_id = ?', playerId);
   return row ? view(row) : null;
+}
+
+/**
+ * Cihazın kendi kaydını yüklemesi (iOS: oyun cihazda, App Attest onaylı).
+ * Başka cihazın eşitlemesinden sonra eski sürümün üstüne yükleme 409 `stale`.
+ * Süre sayacı (`cursor`) şimdiye: buradan sonra web ya da Android eşitlerse
+ * süre bu andan sayılıyor.
+ */
+export async function uploadSave(db: Db, playerId: string, now: number, body: Record<string, unknown>): Promise<SaveView> {
+  const state = normalizeState(body.state);
+  if (!validState(state) || !(body.base === null || Number.isInteger(body.base))) throw new HttpError(400, 'body');
+  const row = await db.first<SaveRow>('SELECT * FROM saves WHERE player_id = ?', playerId);
+  if (!row) {
+    if (body.base !== null) throw new HttpError(409, 'stale', { version: null });
+    await db.run('INSERT INTO saves (player_id, version, state, cursor, batch, at) VALUES (?, 1, ?, ?, NULL, ?)', playerId, JSON.stringify(state), now, now);
+    return { version: 1, state, cursor: now };
+  }
+  if (body.base !== row.version) throw new HttpError(409, 'stale', { ...view(row) });
+  const changed = await db.run(
+    'UPDATE saves SET version = ?, state = ?, cursor = ?, batch = NULL, at = ? WHERE player_id = ? AND version = ?',
+    row.version + 1,
+    JSON.stringify(state),
+    Math.max(row.cursor, now),
+    now,
+    playerId,
+    row.version,
+  );
+  if (changed === 0) throw new HttpError(409, 'stale', { ...((await loadSave(db, playerId)) ?? view(row)) });
+  return { version: row.version + 1, state, cursor: Math.max(row.cursor, now) };
+}
+
+/** Kayıt ve bu haftanın puanı (cihaz değişince haftalık sayaç buradan sürüyor). */
+export async function saveWithScore(db: Db, playerId: string, now: number): Promise<(SaveView & { week: string; score: number }) | null> {
+  const save = await loadSave(db, playerId);
+  if (!save) return null;
+  const week = weekId(now);
+  return { ...save, week, score: await weekScore(db, playerId, week) };
 }
 
 /**

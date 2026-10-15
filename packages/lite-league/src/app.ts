@@ -20,7 +20,8 @@
  * - `POST /v1/leagues {name}`        → davet kodlu lig kur
  * - `POST /v1/leagues/join {code}`   → koda katıl
  * - `DELETE /v1/leagues/:code`       → ligden ayrıl
- * - `GET  /v1/save`                  → sunucudaki oyun (web, Android, taşınan hesap)
+ * - `GET  /v1/save`                  → sunucudaki oyun ve bu haftanın puanı
+ * - `POST /v1/save {base, state}`    → iOS: cihazdaki oyunu yükle (App Attest onaylı)
  * - `POST /v1/sync {base, batch, ops, rest}` → günlüğü oynat (`saves.ts`)
  * - `POST /v1/link`                  → başka cihaza taşıma kodu (10 dakika)
  * - `POST /v1/link/claim {code, platform}` → kodla hesabı bu cihaza al
@@ -42,7 +43,7 @@ import {
 import { APPLE_ATTEST, AttestError, fromBase64, toBase64, verifyAssertion, verifyAttestation, type AttestConfig } from './attest';
 import type { Db } from './db';
 import { HttpError, base64, json, preflight, randomToken, readBody, readJson, sha256, shortCode, withCors } from './http';
-import { MAX_SYNC_BODY, PLATFORMS, createSave, loadSave, sync, touchProfile, type Platform } from './saves';
+import { MAX_SYNC_BODY, PLATFORMS, createSave, loadSave, saveWithScore, sync, touchProfile, uploadSave, type Platform } from './saves';
 
 export interface Options {
   /** App Attest: uygulama kimliği ve güvenilen kök (testler kendi kökünü veriyor). */
@@ -195,10 +196,12 @@ async function route(request: Request, db: Db, now: number, options: Options): P
       case 'POST /v1/leagues/join':
         return await joinLeague(request, db, me, now);
       case 'GET /v1/save': {
-        const save = await loadSave(db, me.id);
+        const save = await saveWithScore(db, me.id, now);
         if (!save) throw new HttpError(404, 'save');
         return json(save);
       }
+      case 'POST /v1/save':
+        return await uploadDeviceSave(request, db, me, session.platform, now, options.attest);
       case 'POST /v1/sync':
         return await syncSave(request, db, me, session.platform, now);
       case 'POST /v1/link':
@@ -265,8 +268,22 @@ async function syncSave(request: Request, db: Db, me: Player, platform: Platform
   return json(result);
 }
 
-/** Başka cihaza taşıma: tek seferlik 6 harfli kod; öncekini geçersiz kılıyor. */
+/**
+ * iOS: cihazdaki oyunu sunucuya yükle (App Attest onaylı, gövdenin tam baytları
+ * üstüne). Başka cihaza taşımadan önce ve her gönderimde.
+ */
+async function uploadDeviceSave(request: Request, db: Db, me: Player, platform: Platform, now: number, config: AttestConfig): Promise<Response> {
+  if (platform !== 'ios') throw new HttpError(403, 'platform');
+  const { bytes, value } = await readBody(request, MAX_SYNC_BODY);
+  await checkAssertion(request, db, me, bytes, now, config);
+  const save = await uploadSave(db, me.id, now, value);
+  await touchProfile(db, me.id, 'ios', save.state.stars, save.state.city, now);
+  return json({ version: save.version, cursor: save.cursor });
+}
+
+/** Başka cihaza taşıma: tek seferlik 6 harfli kod; öncekini geçersiz kılıyor. Kayıt sunucuda olmalı (iOS önce yüklüyor). */
 async function createLink(db: Db, me: Player, now: number): Promise<Response> {
+  if (!(await loadSave(db, me.id))) throw new HttpError(409, 'save');
   await db.run('DELETE FROM links WHERE player_id = ? OR expires_at < ?', me.id, now);
   for (let attempt = 0; attempt < 6; attempt++) {
     const code = shortCode();

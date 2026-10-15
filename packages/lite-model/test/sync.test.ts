@@ -79,7 +79,7 @@ test('eşitleme: bozuk kayıtlar reddediliyor', () => {
   for (const op of [['t', 0], ['t', 1.5], ['t', SYNC.maxSteps + 1], ['o', -1], ['o', Infinity], ['b', 'gold', 0, 1], ['b', 'bakery', 3, 1], ['b', 'bakery', 0, 0], ['p', 2], ['m', 1], ['x'], 't', null, []]) {
     assert.equal(validOp(op), false, JSON.stringify(op));
   }
-  for (const op of [['t', 1], ['o', 0], ['b', CHAIN_IDS[0], 2, 10], ['p', 0], ['m'], ['c'], ['g'], ['d'], ['i'], ['s']]) {
+  for (const op of [['t', 1], ['o', 0], ['b', CHAIN_IDS[0], 2, 10], ['p', 0], ['m'], ['c'], ['g'], ['d'], ['i'], ['s'], ['r']]) {
     assert.equal(validOp(op), true, JSON.stringify(op));
   }
 });
@@ -121,4 +121,13 @@ test('istemci: sunucu aldıktan sonra arada yapılanlar yeniden uygulanıyor; ba
   game.replaced(other);
   assert.deepEqual(game.state, other);
   assert.equal(game.journal.pending, 0);
+});
+
+test('eşitleme: sıfırlama yeni oyun; sonrası yeniden sayılıyor', () => {
+  const game = new SyncedGame(newGame());
+  session(game);
+  game.act(['r']);
+  game.tick(3);
+  assert.deepEqual(game.state, step(newGame(), 3));
+  assert.deepEqual(replay(newGame(), game.journal.ops).state, game.state);
 });

@@ -16,7 +16,7 @@
  * süre, hesap açıldığından beri gerçekten geçen süreyi aşamıyor. Fazlası
  * kırpılıyor; tutmayan eylemler (yetmeyen para, olmayan fırsat) atlanıyor.
  */
-import { CHAIN_IDS, STAGES, type ChainId, type Stage } from './content';
+import { CHAIN_IDS, COUNCIL_PAIRS, EVENT_KINDS, STAGES, type ChainId, type DealKind, type Stage } from './content';
 import {
   advance,
   applyOffline,
@@ -26,6 +26,7 @@ import {
   chooseCouncil,
   claimGoal,
   goPublic,
+  newGame,
   prestige,
   startCampaign,
   type ActionResult,
@@ -54,7 +55,9 @@ export type SyncOp =
   /** Halka arz. */
   | ['i']
   /** Şehri sat (holding yeni şehre). */
-  | ['s'];
+  | ['s']
+  /** Kaydı sıfırla: baştan yeni oyun (Ayarlar). */
+  | ['r'];
 
 export const SYNC = {
   /** Çevrimiçi adım (sn). */
@@ -111,10 +114,69 @@ export function validOp(op: unknown): op is SyncOp {
     case 'd':
     case 'i':
     case 's':
+    case 'r':
       return op.length === 1;
     default:
       return false;
   }
+}
+
+const DEAL_KINDS: readonly DealKind[] = ['order', 'vip', 'investor'];
+const POLICY_KINDS = new Set(COUNCIL_PAIRS.flat());
+
+function finite(value: unknown, max = 1e300): value is number {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= max;
+}
+
+/**
+ * Cihazın yüklediği kayıt (iOS, App Attest onaylı) biçimce doğru mu: bütün
+ * alanlar var, sayılar sonlu ve eksi değil, türler bilinen değerlerden. Değer
+ * olarak akla yatkınlığı App Attest ve haftalık gönderimin denetimi sağlıyor.
+ */
+export function validState(value: unknown): value is LiteState {
+  if (!value || typeof value !== 'object') return false;
+  const s = value as Record<string, unknown>;
+  if (s.version !== 1 || !isInt(s.city, 0, 10_000) || !isInt(s.stars, 0, 1e9) || !isInt(s.manager, 0, 1_000)) return false;
+  for (const key of ['cash', 'earned', 'totalEarned', 'clock', 'campaignUntil', 'campaignReadyAt', 'nextEventAt', 'nextCouncilAt', 'nextDealAt']) {
+    if (!finite(s[key])) return false;
+  }
+  for (const key of ['events', 'sessions', 'policies', 'campaigns', 'goal', 'deals']) if (!isInt(s[key], 0, 1e9)) return false;
+  if (typeof s.listed !== 'boolean') return false;
+  const chains = s.chains as Record<string, unknown> | null;
+  if (!chains || typeof chains !== 'object' || Object.keys(chains).length !== CHAIN_IDS.length) return false;
+  for (const id of CHAIN_IDS) {
+    const chain = chains[id] as { levels?: unknown; rival?: unknown } | undefined;
+    if (!chain || !Array.isArray(chain.levels) || chain.levels.length !== 3 || !chain.levels.every((l) => isInt(l, 0, 10_000)) || !finite(chain.rival)) return false;
+  }
+  const event = s.event as { kind?: unknown; chain?: unknown; until?: unknown } | null;
+  if (event !== null && (typeof event !== 'object' || !EVENT_KINDS.includes(event.kind as never) || !(event.chain === null || CHAIN_IDS.includes(event.chain as ChainId)) || !finite(event.until))) return false;
+  const policy = s.policy as { kind?: unknown; until?: unknown } | null;
+  if (policy !== null && (typeof policy !== 'object' || !POLICY_KINDS.has(policy.kind as never) || !finite(policy.until))) return false;
+  const deal = s.deal as { kind?: unknown; chain?: unknown; until?: unknown } | null;
+  if (deal !== null && (typeof deal !== 'object' || !DEAL_KINDS.includes(deal.kind as DealKind) || !(deal.chain === null || CHAIN_IDS.includes(deal.chain as ChainId)) || !finite(deal.until))) return false;
+  if (!(s.council === null || isInt(s.council, 0, COUNCIL_PAIRS.length - 1))) return false;
+  if (!Array.isArray(s.history) || s.history.length > 10_000) return false;
+  return s.history.every((r: unknown) => {
+    const record = r as { stars?: unknown; listed?: unknown; earned?: unknown } | null;
+    return !!record && isInt(record.stars, 0, 1e9) && typeof record.listed === 'boolean' && finite(record.earned);
+  });
+}
+
+/**
+ * Swift'in kodladığı kayıt TS biçimine: zincirler dizi (CHAIN_IDS sırasıyla)
+ * yerine nesne, boş isteğe bağlı alanlar (Swift yazmıyor) null.
+ */
+export function normalizeState(raw: unknown): unknown {
+  if (!raw || typeof raw !== 'object') return raw;
+  const s = { ...(raw as Record<string, unknown>) };
+  if (Array.isArray(s.chains) && s.chains.length === CHAIN_IDS.length) {
+    const chains: Record<string, unknown> = {};
+    CHAIN_IDS.forEach((id, index) => (chains[id] = (s.chains as unknown[])[index]));
+    s.chains = chains;
+  }
+  for (const key of ['event', 'policy', 'deal', 'council']) if (s[key] === undefined) s[key] = null;
+  if (s.history === undefined) s.history = [];
+  return s;
 }
 
 /** Zaman dışı tek eylem. */
@@ -136,6 +198,8 @@ export function applyAction(state: LiteState, op: SyncOp): ActionResult {
       return goPublic(state);
     case 's':
       return prestige(state);
+    case 'r':
+      return { ok: true, state: newGame() };
     default:
       return { ok: false, reason: 'none' };
   }
