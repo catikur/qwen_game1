@@ -13,9 +13,12 @@ struct RootView: View {
             HeaderView()
             CityView()
                 .frame(height: 210)
+                .overlay(alignment: .top) { EventBanner() }
                 .overlay(alignment: .bottom) { Rectangle().fill(Theme.line).frame(height: 1) }
             ScrollView {
                 VStack(spacing: 10) {
+                    CouncilCard()
+                    GoalCard()
                     BuyAmountPicker(selection: $store.buyAmount)
                     ForEach(ChainId.allCases, id: \.self) { chain in
                         ChainCard(chain: chain)

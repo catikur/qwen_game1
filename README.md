@@ -14,6 +14,10 @@ oyuncu verir.
 (telefonda da). main'e her girişte `.github/workflows/pages.yml` derleyip
 yeniden yayınlıyor.
 
+**iOS: CapitalForge Lite.** Aynı felsefenin idle mobil sürümü (SwiftUI). Mac'te
+`./ios-lite/xcode.sh` ile Xcode projesini oluştur, iPhone'da çalıştır:
+[`ios-lite/README.md`](ios-lite/README.md).
+
 Türkçe ve İngilizce: dil seçici yeni oyun ekranında ve Yardım panelinde;
 bir bağlantıyı İngilizce paylaşmak için adresin sonuna `?lang=en`.
 

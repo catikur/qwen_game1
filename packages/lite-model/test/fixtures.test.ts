@@ -25,11 +25,15 @@ test('fikstür senaryoları oyunun bütün evrelerini kapsıyor', () => {
   assert.ok(last('acilis').levels[1]![2]! > 0, 'açılışta kahve satışı yok');
   // Çevrimdışı senaryoda müdür alınmış ve çevrimdışı adımlar başarılı.
   assert.ok(last('cevrimdisi').manager > 0, 'müdür alınmamış');
+  // L3: olay, meclis ve görev senaryolarda gerçekten yaşanıyor.
+  assert.ok(last('acilis').events >= 3, 'açılışta olay yaşanmamış');
+  assert.ok(last('cevrimdisi').policies >= 1, 'meclis kararı alınmamış');
+  assert.ok(last('acilis').goal >= 5, 'görev merdiveni ilerlememiş');
   // Holding: şehir satılmış, yıldız var.
   assert.equal(last('holding').city, 1, 'holding senaryosu şehri satmamış');
   assert.ok(last('holding').stars > 0);
   const ops = fixtures.scenarios.flatMap((s) => s.ops.map((o) => o.op));
-  for (const kind of ['buy', 'advance', 'offline', 'campaign', 'manager', 'prestige']) {
+  for (const kind of ['buy', 'advance', 'offline', 'campaign', 'manager', 'prestige', 'council', 'claim']) {
     assert.ok(ops.includes(kind as never), `${kind} adımı hiç yok`);
   }
 });

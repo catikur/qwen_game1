@@ -30,6 +30,20 @@ enum L10n {
 
     static func districtName(_ id: DistrictId) -> String { t("district.\(id.rawValue)") }
 
+    static func eventTitle(_ event: ActiveEvent) -> String {
+        if event.kind == .strike, let chain = event.chain { return t("event.strike", chainName(chain)) }
+        return t("event.\(event.kind.rawValue)")
+    }
+
+    static func eventBody(_ event: ActiveEvent) -> String {
+        if event.kind == .strike, let chain = event.chain { return t("event.strike.body", stageName(chain, .retail)) }
+        return t("event.\(event.kind.rawValue).body")
+    }
+
+    static func policyTitle(_ kind: PolicyKind) -> String { t("policy.\(kind.rawValue)") }
+    static func policyBody(_ kind: PolicyKind) -> String { t("policy.\(kind.rawValue).body") }
+    static func goalTitle(_ kind: GoalKind) -> String { t("goal.\(kind.rawValue)") }
+
     private static let tr: [String: String] = [
         "app.title": "CapitalForge Lite",
         "header.cash": "Kasa",
@@ -96,6 +110,55 @@ enum L10n {
         "city.label": "Şehir %ld",
         "district.lockedAt": "%@ kazançta",
         "port.bonus": "İhracat ×1,5",
+        "event.tourism": "Turizm sezonu",
+        "event.tourism.body": "Fırın ve kahve ×2",
+        "event.crisis": "Hammadde krizi",
+        "event.crisis.body": "Pazardan alınan girdi pahalı — kendi zincirin korunuyor",
+        "event.strike": "Grev: %@",
+        "event.strike.body": "%@ satışı yarıya indi",
+        "event.fashionWeek": "Moda haftası",
+        "event.fashionWeek.body": "Moda ×2,5",
+        "event.exportBoom": "İhracat atağı",
+        "event.exportBoom.body": "Bütün gelir ×1,5",
+        "event.rivalPush": "Rakip atağı",
+        "event.rivalPush.body": "Rakip payını zorluyor — büyütmeye devam",
+        "policy.industryGrant": "Sanayi teşviki",
+        "policy.industryGrant.body": "Ham kademeler ×1,3",
+        "policy.pedestrian": "Çarşıya yaya yolu",
+        "policy.pedestrian.body": "Satış kademeleri ×1,2",
+        "policy.taxCut": "Vergi indirimi",
+        "policy.taxCut.body": "Bütün gelir ×1,15",
+        "policy.competitionBoard": "Rekabet kurulu",
+        "policy.competitionBoard.body": "Rakip daha az bastırıyor",
+        "policy.techGrant": "Teknoloji hibesi",
+        "policy.techGrant.body": "İşleme kademeleri ×1,3",
+        "policy.tourismPromo": "Turizm tanıtımı",
+        "policy.tourismPromo.body": "Fırın, kahve, moda ×1,25",
+        "policy.campaignFund": "Kampanya fonu",
+        "policy.campaignFund.body": "Kampanya ×3",
+        "policy.exportFair": "İhracat fuarı",
+        "policy.exportFair.body": "Bütün gelir ×1,1",
+        "council.title": "Meclis toplandı",
+        "council.body": "Bir politika seç — bir saat yürürlükte kalır.",
+        "council.active": "Politika: %@ · %@",
+        "goal.title": "Görev %ld/%ld",
+        "goal.claim": "Ödülü al · +%@",
+        "goal.pending": "Ödül: gelirin %@ kadarı",
+        "goal.done": "Bu şehrin görevleri tamam — holding seni bekliyor.",
+        "goal.bakeryRetail": "İlk fırını aç",
+        "goal.bakeryProcess": "Değirmeni kur",
+        "goal.bakeryChain": "Fırın zincirini tamamla",
+        "goal.firstCampaign": "İlk kampanyayı başlat",
+        "goal.coffeeRetail": "Kafeyi aç",
+        "goal.level25": "Bir kademeyi 25. seviyeye çıkar",
+        "goal.center": "Merkez'i aç",
+        "goal.manager": "Genel Müdür ata",
+        "goal.council": "Mecliste bir karar ver",
+        "goal.share75": "Bir zincirde %75 pay",
+        "goal.industry": "Sanayi'yi aç",
+        "goal.port": "Liman'ı aç",
+        "goal.technopark": "Teknopark'ı aç",
+        "goal.firstStar": "İlk holding yıldızını hak et",
     ]
 
     private static let en: [String: String] = [
@@ -164,5 +227,54 @@ enum L10n {
         "city.label": "City %ld",
         "district.lockedAt": "at %@ earned",
         "port.bonus": "Exports ×1.5",
+        "event.tourism": "Tourist season",
+        "event.tourism.body": "Bakery and coffee ×2",
+        "event.crisis": "Supply crisis",
+        "event.crisis.body": "Bought inputs are expensive — your own chain is safe",
+        "event.strike": "Strike: %@",
+        "event.strike.body": "%@ sales halved",
+        "event.fashionWeek": "Fashion week",
+        "event.fashionWeek.body": "Fashion ×2.5",
+        "event.exportBoom": "Export boom",
+        "event.exportBoom.body": "All income ×1.5",
+        "event.rivalPush": "Rival push",
+        "event.rivalPush.body": "Your rival is pressing — keep growing",
+        "policy.industryGrant": "Industry grant",
+        "policy.industryGrant.body": "Raw stages ×1.3",
+        "policy.pedestrian": "Pedestrian bazaar",
+        "policy.pedestrian.body": "Retail stages ×1.2",
+        "policy.taxCut": "Tax cut",
+        "policy.taxCut.body": "All income ×1.15",
+        "policy.competitionBoard": "Competition board",
+        "policy.competitionBoard.body": "Your rival presses less",
+        "policy.techGrant": "Tech grant",
+        "policy.techGrant.body": "Process stages ×1.3",
+        "policy.tourismPromo": "Tourism promo",
+        "policy.tourismPromo.body": "Bakery, coffee, fashion ×1.25",
+        "policy.campaignFund": "Campaign fund",
+        "policy.campaignFund.body": "Campaign ×3",
+        "policy.exportFair": "Export fair",
+        "policy.exportFair.body": "All income ×1.1",
+        "council.title": "The council is in session",
+        "council.body": "Pick a policy — it lasts one hour.",
+        "council.active": "Policy: %@ · %@",
+        "goal.title": "Goal %ld/%ld",
+        "goal.claim": "Claim · +%@",
+        "goal.pending": "Reward: %@ of income",
+        "goal.done": "All goals done in this city — the holding awaits.",
+        "goal.bakeryRetail": "Open your first bakery",
+        "goal.bakeryProcess": "Build the flour mill",
+        "goal.bakeryChain": "Complete the bakery chain",
+        "goal.firstCampaign": "Run your first campaign",
+        "goal.coffeeRetail": "Open the café",
+        "goal.level25": "Take a stage to level 25",
+        "goal.center": "Unlock the Center",
+        "goal.manager": "Hire a General Manager",
+        "goal.council": "Make a council decision",
+        "goal.share75": "Reach 75% share in a chain",
+        "goal.industry": "Unlock Industry",
+        "goal.port": "Unlock the Port",
+        "goal.technopark": "Unlock the Technopark",
+        "goal.firstStar": "Earn your first holding star",
     ]
 }

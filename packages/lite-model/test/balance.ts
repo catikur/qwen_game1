@@ -16,6 +16,8 @@ import {
   buy,
   buyManager,
   chainReport,
+  chooseCouncil,
+  claimGoal,
   chainUnlocked,
   incomePerSecond,
   managerCost,
@@ -46,6 +48,7 @@ const clock = (s: number): string => {
 };
 
 const picks = { raw: 0, process: 0, retail: 0 };
+const goalsClaimed: number[] = [];
 
 /** Aktif oyuncunun bir saniyesi: kasa yettikçe önerilen hamleyi al. */
 function play(state: LiteState, campaign: boolean): LiteState {
@@ -53,6 +56,18 @@ function play(state: LiteState, campaign: boolean): LiteState {
   if (campaign) {
     const c = startCampaign(s);
     if (c.ok) s = c.state;
+  }
+  // L3: tutan görevi al; mecliste o an daha çok kazandıran seçeneği seç.
+  for (let g = 0; g < 3; g++) {
+    const r = claimGoal(s);
+    if (!r.ok) break;
+    s = r.state;
+    goalsClaimed.push(s.clock);
+  }
+  if (s.council !== null) {
+    const a = chooseCouncil(s, 0);
+    const b = chooseCouncil(s, 1);
+    if (a.ok && b.ok) s = incomePerSecond(a.state) >= incomePerSecond(b.state) ? a.state : b.state;
   }
   for (let guard = 0; guard < 200; guard++) {
     const move = bestMove(s);
@@ -106,6 +121,9 @@ function activeRun(hours: number): void {
       for (const p of parts) console.log(`              ${p}`);
     }
   }
+  console.log(`  görevler: ${goalsClaimed.length}/14 · ${goalsClaimed.map((t) => clock(t).trim()).join(', ')}`);
+  console.log(`  olay: ${s.events} · meclis kararı: ${s.policies}`);
+  goalsClaimed.length = 0;
   const total = picks.raw + picks.process + picks.retail;
   console.log(
     `  hamle dağılımı: satış %${((picks.retail / total) * 100).toFixed(0)} · işleme %${((picks.process / total) * 100).toFixed(0)} · ham %${((picks.raw / total) * 100).toFixed(0)}`,

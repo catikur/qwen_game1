@@ -96,10 +96,62 @@ Her şehirde bir rakip CEO var; yüzü ana oyundaki avatar sisteminden geliyor.
 |---|---|
 | Çevrimdışı kazanç | Dönüşte "Yokken kazandın: 1,2 M ₺". Gelirin **yarısı** işliyor (tam hızda gündelik oyuncu bir günde her şeyi açıyordu). İlk tavan 2 saat; her Genel Müdür seviyesi +1 saat (en çok 10) |
 | Kampanya | Şehre dokununca 30 saniye ×2 gelir, 3 dakika bekleme. Ana oyundaki pazarlama kolunun karşılığı |
-| Olaylar | 4–6 dakikada bir olay. Örnekler: *Turizm sezonu* (kafe ve fırın ×2); *Hammadde krizi* (pazardan alınan girdi pahalı, entegre zincirler etkilenmez — felsefe burada öğretiliyor); *Grev* (bir kademe 2 dakika yavaş) |
-| Meclis kartı | Saatte bir iki seçenek. Örnek: "Sanayi bölgesine vergi indirimi (ham ×1,3) / Çarşı'ya yaya yolu (satış ×1,2)" |
-| Görevler | Şehir başına 10 görev ("Kahve zincirini tamamla", "Rakibi Moda'da geç"…), ödülü nakit ve süreli çarpan |
+| Olaylar (L3) | İlk olay 4. dakikada; sonrakiler başlangıçtan başlangıca 5,5 dakikada bir, her biri 2 dakika. Ayrıntı aşağıda |
+| Meclis kartı (L3) | İlk oturum 10. dakikada, sonra saatte bir; iki seçenekli karar, bir saat yürürlükte. Ayrıntı aşağıda |
+| Görevler (L3) | Şehir başına 14 basamaklı merdiven; ödül, alındığı andaki gelirin 30 saniye ile 5 dakikası arası. Ayrıntı aşağıda |
 | Bildirim (izinle) | "Kasa doldu" ve "Rakip seni geçti" yerel bildirimleri. Sunucu yok |
+
+### 5.1 Olaylar (L3)
+
+Olay yalnızca oyuncu oradayken başlıyor; kapalıyken kaçan olay dönüşte
+başlıyor. Seçim olay sayacından tamsayıyla yapılıyor: TS ile Swift aynı olayı
+seçiyor.
+
+| Olay | Etki | Ne zaman gelebilir |
+|---|---|---|
+| Turizm sezonu | Fırın ve kahve ×2 | her zaman |
+| Hammadde krizi | Pazardan alınan mal %20 → %5, pazardan hammadde %55 → %40 marj; **tam entegre zincir %85'te kalıyor** | her zaman |
+| Grev | Satışı olan zincirlerden birinin satışı ×0,5 | bir satış varsa |
+| Moda haftası | Moda ×2,5 | Moda satıyorsa |
+| İhracat atağı | Bütün gelir ×1,5 | Liman açıksa |
+| Rakip atağı | Rakibin kovalama hedefi ×1,6 | her zaman |
+
+Hammadde krizi felsefenin dersi: oyuncu bir kriz yaşayınca zincirini neden
+tamamlaması gerektiğini sayılarda görüyor.
+
+### 5.2 Meclis (L3)
+
+| Oturum | Seçenek A | Seçenek B |
+|---|---|---|
+| 1 | Sanayi teşviki: ham ×1,3 | Çarşıya yaya yolu: satış ×1,2 |
+| 2 | Vergi indirimi: gelir ×1,15 | Rekabet kurulu: rakip ×0,6 |
+| 3 | Teknoloji hibesi: işleme ×1,3 | Turizm tanıtımı: fırın, kahve ve moda ×1,25 |
+| 4 | Kampanya fonu: kampanya ×3 | İhracat fuarı: gelir ×1,1 |
+
+Seçilmeyen oturum bir sonrakine kadar açık kalıyor. Seçimin doğru cevabı
+zincirin durumuna bağlı: hammaddesi darboğaz olan için teşvik, payı düşen için
+rekabet kurulu.
+
+### 5.3 Görevler (L3)
+
+1. İlk fırını aç
+2. Değirmeni kur
+3. Fırın zincirini tamamla
+4. İlk kampanya
+5. Kafeyi aç
+6. Bir kademede 25. seviye
+7. Merkez
+8. Genel Müdür
+9. Meclis kararı
+10. Bir zincirde %75 pay
+11. Sanayi
+12. Liman
+13. Teknopark
+14. İlk holding yıldızı
+
+İlk görevler oyunun kendisini öğretiyor: satış, işleme, entegrasyon, kampanya.
+Sonrakiler uzun hedef. Ödül gelirle ölçeklendiği için hiçbir zaman önemsiz
+kalmıyor.
 
 ## 6. Ekranlar (dikey, tek el)
 
@@ -153,6 +205,11 @@ packages/lite-model/test/write-fixtures.ts  Swift testlerine altın değerler (p
 
 ## 8. Cihaza kurulum (kullanıcı tarafı)
 
+Adım adım: [`ios-lite/README.md`](../ios-lite/README.md). Kısaca Mac'te
+`./ios-lite/xcode.sh` çalıştır, ardından Xcode'da kendi Apple kimliğini Team
+olarak seç ve ▶︎ ile iPhone'da çalıştır.
+
+
 - **Mac + Xcode + ücretsiz Apple kimliği:** kendi iPhone'una kurulum mümkün;
   imza 7 günde bir yenileniyor.
 - **Apple Developer Program (yıllık 99 $):** TestFlight ile kalıcı kurulum ve
@@ -183,6 +240,24 @@ alıyor ve kampanyayı hazır oldukça açıyor:
 | 6 | 11 Tn ₺ | 104 |
 
 Gelir 3. günden sonra yavaşlıyor; holding'e geçmenin anlamlı olduğu yer orası.
+
+**L3 sonrası** (görevler, olaylar, meclis; aktif bot görevleri alıp o an daha
+çok kazandıran meclis seçeneğini seçiyor):
+
+| Açılış | L1 | L3 |
+|---|---|---|
+| Kahve | 3 dk 31 sn | 1 dk 56 sn |
+| Merkez, Moda | 12 dk | 8 dk 10 sn |
+| Sanayi, Deri | 54 dk | 43 dk 40 sn |
+| Liman | 1 sa 48 dk | 1 sa 34 dk |
+| Teknopark | 3 sa 40 dk | 3 sa 6 dk |
+
+Açılış hızlandı: ilk görevlerin ödülü başlangıç kasasını katlıyor. Bu, idle
+türünün "ilk dakikada her şey oluyor" beklentisine uyuyor. Orta oyun aşağı
+yukarı aynı kaldı.
+
+Aktif bot 4 saatte 14 görevin hepsini aldı, 65 olay yaşadı ve 6 meclis kararı
+verdi. Gündelik oyuncunun temposu değişmedi; kapalıyken olay başlamıyor.
 
 Açık konu: gündelik bot (günde 8 oturum) beş zinciri ilk gün açıyor. L3'te
 olaylar ve görevler gelince gündelik tempo yeniden ölçülecek.

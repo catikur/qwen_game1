@@ -34,6 +34,7 @@ shot() {
 
 shot tr-start -AppleLanguages "(tr)" -liteScenario start
 shot tr-early -AppleLanguages "(tr)" -liteScenario early
+shot tr-council -AppleLanguages "(tr)" -liteScenario council
 shot tr-mid -AppleLanguages "(tr)" -liteScenario mid
 shot tr-late -AppleLanguages "(tr)" -liteScenario late
 shot tr-offline -AppleLanguages "(tr)" -liteScenario mid -liteOffline 9000

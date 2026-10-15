@@ -103,3 +103,114 @@ export const STAR_UNIT = 1e9;
 
 /** Başlangıç kasası. */
 export const STARTING_CASH = 10;
+
+// ------------------------------------------------------------ L3: olaylar
+
+/**
+ * Şehir olayları: belirli aralıklarla iki dakikalık bir olay. Ana oyundaki
+ * şehir ve sektör olaylarının idle karşılığı. Hammadde krizi felsefenin
+ * dersi: pazardan alınan girdi pahalanıyor, kendi zincirini kuran etkilenmiyor.
+ */
+export type EventKind = 'tourism' | 'crisis' | 'strike' | 'fashionWeek' | 'exportBoom' | 'rivalPush';
+/** Sıra sabit: seçim bu sırayla süzülen listeden yapılıyor (Swift aynı sırayı kullanıyor). */
+export const EVENT_KINDS: readonly EventKind[] = ['tourism', 'crisis', 'strike', 'fashionWeek', 'exportBoom', 'rivalPush'];
+/** İlk olay bu saniyede; sonrakiler başlangıçtan başlangıca EVENT_GAP arayla. */
+export const EVENT_FIRST = 240;
+export const EVENT_GAP = 330;
+export const EVENT_DURATION = 120;
+export const TOURISM_MULTIPLIER = 2;
+export const FASHION_WEEK_MULTIPLIER = 2.5;
+export const EXPORT_BOOM_MULTIPLIER = 1.5;
+export const STRIKE_MULTIPLIER = 0.5;
+export const RIVAL_PUSH_MULTIPLIER = 1.6;
+/** Krizde pazardan alınan malın ve hammaddenin marjı. Tam entegrasyon değişmiyor. */
+export const CRISIS_MARGIN = { bought: 0.05, processed: 0.4 } as const;
+
+// ------------------------------------------------------------ L3: meclis
+
+/**
+ * Belediye meclisi: belirli aralıklarla iki seçenekli bir karar. Seçilen
+ * politika bir saat geçerli. Seçilmezse bir sonraki oturuma kadar açık kalıyor.
+ */
+export type PolicyKind =
+  | 'industryGrant'
+  | 'pedestrian'
+  | 'taxCut'
+  | 'competitionBoard'
+  | 'techGrant'
+  | 'tourismPromo'
+  | 'campaignFund'
+  | 'exportFair';
+export const COUNCIL_PAIRS: ReadonlyArray<readonly [PolicyKind, PolicyKind]> = [
+  ['industryGrant', 'pedestrian'],
+  ['taxCut', 'competitionBoard'],
+  ['techGrant', 'tourismPromo'],
+  ['campaignFund', 'exportFair'],
+];
+export const COUNCIL_FIRST = 600;
+export const COUNCIL_GAP = 3600;
+export const POLICY_DURATION = 3600;
+export const POLICY = {
+  /** Ham kademe hızı. */
+  industryGrant: 1.3,
+  /** Satış kademesi hızı. */
+  pedestrian: 1.2,
+  /** Bütün gelir. */
+  taxCut: 1.15,
+  /** Rakibin kovalama hedefi. */
+  competitionBoard: 0.6,
+  /** İşleme kademesi hızı. */
+  techGrant: 1.3,
+  /** Fırın, kahve ve moda geliri. */
+  tourismPromo: 1.25,
+  /** Kampanya çarpanı (×2 yerine). */
+  campaignFund: 3,
+  /** Bütün gelir. */
+  exportFair: 1.1,
+} as const;
+
+// ------------------------------------------------------------ L3: görevler
+
+/**
+ * Görev merdiveni: şehir başına sırayla. Ödül, alındığı andaki gelirin
+ * `rewardSeconds` saniyesi (en az `minReward`): erken görev küçük, geç görev
+ * büyük ama hep "anlamlı" bir dilim.
+ */
+export type GoalKind =
+  | 'bakeryRetail'
+  | 'bakeryProcess'
+  | 'bakeryChain'
+  | 'firstCampaign'
+  | 'coffeeRetail'
+  | 'level25'
+  | 'center'
+  | 'manager'
+  | 'council'
+  | 'share75'
+  | 'industry'
+  | 'port'
+  | 'technopark'
+  | 'firstStar';
+
+export interface GoalDef {
+  kind: GoalKind;
+  rewardSeconds: number;
+  minReward: number;
+}
+
+export const GOALS: readonly GoalDef[] = [
+  { kind: 'bakeryRetail', rewardSeconds: 30, minReward: 10 },
+  { kind: 'bakeryProcess', rewardSeconds: 30, minReward: 20 },
+  { kind: 'bakeryChain', rewardSeconds: 60, minReward: 40 },
+  { kind: 'firstCampaign', rewardSeconds: 45, minReward: 50 },
+  { kind: 'coffeeRetail', rewardSeconds: 60, minReward: 100 },
+  { kind: 'level25', rewardSeconds: 90, minReward: 200 },
+  { kind: 'center', rewardSeconds: 120, minReward: 1_000 },
+  { kind: 'manager', rewardSeconds: 120, minReward: 2_000 },
+  { kind: 'council', rewardSeconds: 120, minReward: 2_000 },
+  { kind: 'share75', rewardSeconds: 150, minReward: 5_000 },
+  { kind: 'industry', rewardSeconds: 180, minReward: 50_000 },
+  { kind: 'port', rewardSeconds: 240, minReward: 1_000_000 },
+  { kind: 'technopark', rewardSeconds: 300, minReward: 5_000_000 },
+  { kind: 'firstStar', rewardSeconds: 300, minReward: 10_000_000 },
+];
