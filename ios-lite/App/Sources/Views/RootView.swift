@@ -1,10 +1,11 @@
 import SwiftUI
 import CapitalForgeLiteKit
 
-/// Tek ekran, dikey, tek el: üstte kasa ve kampanya, ortada şehir, altta
-/// zincir kartları. Her şey başparmak menzilinde.
+/// Tek ekran, dikey, tek el: üstte kasa ve kampanya, ortada gökyüzünde süzülen
+/// şehir, altta zincir kartları. Her şey başparmak menzilinde.
 struct RootView: View {
     @Environment(GameStore.self) private var store
+    @Environment(\.colorScheme) private var scheme
     @State private var confirmSell = false
     @State private var showSettings = ProcessInfo.processInfo.arguments.contains("-liteSettings")
 
@@ -15,11 +16,10 @@ struct RootView: View {
             HeaderView(showSettings: $showSettings)
             EventBanner()
             CityView()
-                .frame(height: 196)
-                .overlay(alignment: .bottom) { Rectangle().fill(Theme.line).frame(height: 1) }
+                .frame(height: 214)
             ScrollViewReader { proxy in
                 ScrollView {
-                    VStack(spacing: 10) {
+                    VStack(spacing: 11) {
                         NotifyPromptCard()
                         CouncilCard()
                         GoalCard()
@@ -33,8 +33,10 @@ struct RootView: View {
                         HoldingCard(confirm: $confirmSell).id("holding")
                     }
                     .padding(.horizontal, 14)
-                    .padding(.vertical, 12)
+                    .padding(.top, 4)
+                    .padding(.bottom, 16)
                 }
+                .scrollIndicators(.hidden)
                 .onAppear {
                     // CI kareleri: `-liteScroll market` listeyi o karta kaydırıyor.
                     let arguments = ProcessInfo.processInfo.arguments
@@ -46,18 +48,23 @@ struct RootView: View {
         }
         // Dil değişince bütün metinler yeniden kurulsun.
         .id(store.settings.language)
-        .background(Theme.paper.ignoresSafeArea())
+        .background(Theme.sky(scheme).ignoresSafeArea())
         .sensoryFeedback(trigger: store.purchases) { _, _ in haptics ? .selection : nil }
         .sensoryFeedback(trigger: store.refusals) { _, _ in haptics ? .warning : nil }
         .sensoryFeedback(trigger: store.triumphs) { _, _ in haptics ? .success : nil }
         .task { await store.refreshNotificationStatus() }
         .sheet(isPresented: $showSettings) {
             SettingsSheet()
-                .presentationDetents([.medium, .large])
+                .presentationDetents([.fraction(0.82), .large])
+                .presentationCornerRadius(28)
+                .presentationBackground { Theme.sky(scheme) }
         }
         .sheet(item: $store.offlineReport) { report in
             OfflineSheet(report: report)
-                .presentationDetents([.height(280)])
+                .presentationDetents([.height(360)])
+                .presentationCornerRadius(28)
+                // Pencerenin tamamı gökyüzü: üstte ve altta beyaz bant kalmasın.
+                .presentationBackground { Theme.sky(scheme) }
         }
         .confirmationDialog(L10n.t("holding.confirm"), isPresented: $confirmSell, titleVisibility: .visible) {
             Button(L10n.t("holding.sell"), role: .destructive) { store.sellCity() }
@@ -72,29 +79,12 @@ struct BuyAmountPicker: View {
     @Binding var selection: BuyAmount
 
     var body: some View {
-        HStack(spacing: 0) {
-            ForEach(BuyAmount.allCases) { amount in
-                Button {
-                    selection = amount
-                } label: {
-                    Text(label(amount))
-                        .font(Theme.mono(13))
-                        .frame(maxWidth: .infinity, minHeight: 34)
-                        .foregroundStyle(selection == amount ? Theme.paper : Theme.ink)
-                        .background(selection == amount ? Theme.ink : Theme.panel)
-                }
-                .buttonStyle(.plain)
-                .accessibilityIdentifier("buy-\(amount.rawValue)")
+        PillPicker(selection: $selection, options: BuyAmount.allCases) { amount in
+            switch amount {
+            case .one: L10n.t("buy.one")
+            case .ten: L10n.t("buy.ten")
+            case .max: L10n.t("buy.max")
             }
-        }
-        .overlay(Rectangle().stroke(Theme.ink, lineWidth: 1))
-    }
-
-    private func label(_ amount: BuyAmount) -> String {
-        switch amount {
-        case .one: L10n.t("buy.one")
-        case .ten: L10n.t("buy.ten")
-        case .max: L10n.t("buy.max")
         }
     }
 }

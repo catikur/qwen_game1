@@ -20,6 +20,7 @@ echo "Simülatör: $UDID"
 xcrun simctl boot "$UDID" || true
 xcrun simctl bootstatus "$UDID" -b
 xcrun simctl status_bar "$UDID" override --time "9:41" --batteryState charged --batteryLevel 100 --cellularBars 4 --wifiBars 3 || true
+xcrun simctl ui "$UDID" appearance light || true
 xcrun simctl install "$UDID" "$APP"
 
 shot() {
@@ -46,4 +47,11 @@ shot tr-listed -AppleLanguages "(tr)" -liteScenario listed -liteScroll market
 WAIT=20 shot tr-city2 -AppleLanguages "(tr)" -liteScenario city2
 shot tr-settings -AppleLanguages "(tr)" -liteScenario mid -liteSettings
 shot en-listed -AppleLanguages "(en)" -liteScenario listed -liteScroll market
+# L5: gece (cihaz koyu modda; uygulama "Cihaz" görünümünde ona uyuyor).
+xcrun simctl ui "$UDID" appearance dark
+shot night-mid -AppleLanguages "(tr)" -liteScenario mid
+shot night-council -AppleLanguages "(tr)" -liteScenario council
+shot night-listed -AppleLanguages "(tr)" -liteScenario listed -liteScroll market
+shot night-settings -AppleLanguages "(tr)" -liteScenario mid -liteSettings
+xcrun simctl ui "$UDID" appearance light
 ls -la "$OUT"

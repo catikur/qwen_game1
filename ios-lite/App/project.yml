@@ -15,7 +15,7 @@ targets:
     platform: iOS
     sources:
       - path: Sources
-      # Simge: tools/make-icon.mjs üretiyor (geçici, L5'te yeniden çiziliyor).
+      # Simge (tools/make-icon.mjs) ve yazı tipleri (Fonts/, OFL).
       - path: Resources
     dependencies:
       - package: CapitalForgeLiteKit
@@ -24,8 +24,8 @@ targets:
       path: Generated/Info.plist
       properties:
         CFBundleDisplayName: CapitalForge Lite
-        CFBundleShortVersionString: "0.2.0"
-        CFBundleVersion: "2"
+        CFBundleShortVersionString: "0.3.0"
+        CFBundleVersion: "3"
         UILaunchScreen: {}
         UIRequiresFullScreen: true
         UISupportedInterfaceOrientations:
@@ -34,6 +34,14 @@ targets:
           - tr
           - en
         CFBundleDevelopmentRegion: tr
+        # L5: Fredoka (başlık, sayı) ve Nunito (metin), OFL; Resources/Fonts.
+        UIAppFonts:
+          - Fredoka-Medium.ttf
+          - Fredoka-SemiBold.ttf
+          - Fredoka-Bold.ttf
+          - Nunito-SemiBold.ttf
+          - Nunito-Bold.ttf
+          - Nunito-ExtraBold.ttf
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.catikur.capitalforgelite

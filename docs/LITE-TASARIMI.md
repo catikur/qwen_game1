@@ -197,16 +197,45 @@ verelim mi?"). Reddedilirse bir daha sorulmuyor; Ayarlar'dan açılıyor.
 4. **Borsa** (halka arzdan sonra, zincirlerin altında): hisse fiyatı, halka
    arzdan beri değişim, grafik. Halka arz açılınca teklif kartı görev kartının
    hemen altına çıkıyor.
-5. **Ayarlar** (başlıktaki dişli): dil (cihaz, Türkçe, English), ses, titreşim,
-   bildirim, kaydı sıfırla (onaylı).
+5. **Ayarlar** (başlıktaki dişli): görünüm (cihaz, gündüz, gece), dil (cihaz,
+   Türkçe, English), ses, titreşim, bildirim, kaydı sıfırla (onaylı).
 
-Görsel kimlik ana oyunun Kadastro teması (aydınlık zemin, mürekkep vurgu,
-tabular rakamlar). Şehir çizimi SwiftUI `Canvas` ile prosedürel; hiçbir dış
-görsel dosya kullanılmıyor. L5'te bunların hepsi baştan ele alınıyor (§10).
+### 6.1 Görsel kimlik (L5): "Cam & Bulut"
 
-Simge (L4, geçici): koyu zeminde yükselen üç izometrik kule (ham → işleme →
-satış). `ios-lite/App/tools/make-icon.mjs` SVG'den üretiyor, alfa kanalını
-atıyor.
+Kullanıcı üç yön (Oyuncak Şehir, Holding Gecesi, Renk Blokları) arasından
+Oyuncak Şehir'i seçti. Ardından onun üç premium alt yönünden Cam & Bulut'u,
+gece sürümüyle birlikte seçti.
+
+| Öğe | Gündüz | Gece |
+|---|---|---|
+| Gökyüzü | #7CCBFF → #E8F6FF, bulutlar | #0A1433 → #20356F, yıldızlar, hilal |
+| Kartlar | buzlu cam (%72 beyaz), açık kenar | buzlu cam (%52 lacivert), ince açık kenar |
+| Metin | #1D3557 lacivert | #EEF3FF |
+| Para | #0E9F5A | #5BE39A |
+| Şehir | çimenli ada, beyaz duvar, renkli çatı | yanan pencereler, sokak lambaları, farlar, suda ay ışığı |
+
+- **Görünüm:** cihazın açık/koyu modunu izliyor; Ayarlar'dan gündüz ya da gece
+  zorlanabiliyor. Renkler `Theme.swift`'te iki değerli jetonlar; görünümler
+  "gece miyiz" diye sormuyor. Tek istisna şehir çizimi, orada ışık da
+  değişiyor (`CityPalette`).
+- **Yazı:** Fredoka (başlık ve sayılar) ve Nunito (metin). İkisi de OFL;
+  uygulamayla birlikte geliyor (`Resources/Fonts`, lisans `OFL.txt`).
+- **Düğmeler:** oyuncak düğme.
+  - Parlak yüz: üst yarı açık, alt yarı koyu degrade.
+  - Altta 4–5 pt kenar; basınca düğme kenar kadar iniyor.
+  - Renkler: turuncu alım, yeşil ödül ve halka arz, mavi ikincil, altın
+    holding, kırmızı sıfırla.
+- **Parçalar:**
+  - zincir başına SF Symbol'lü renkli ikon karosu;
+  - kasa yanında altın para;
+  - darboğaz için altın halka ve şimşekli hap;
+  - kilometre taşına (hız ×2) ilerleme çubuğu;
+  - görev merdiveninde dörtlü nokta göstergesi.
+- **Simge:** gökyüzünde süzülen çimenli ada ve üstünde yükselen üç renkli bina.
+  `ios-lite/App/tools/make-icon.mjs` SVG'den üretiyor, alfa kanalını atıyor.
+
+Şehir çizimi SwiftUI `Canvas` ile prosedürel; hiçbir dış görsel dosya
+kullanılmıyor.
 
 ## 7. Mühendislik
 
@@ -325,8 +354,110 @@ satıp ikinci şehirde 2 saat oynuyor):
 | L2 | SwiftUI MVP: şehir, zincir kartları, büyütme, çevrimdışı kazanç, kayıt; simülatör kareleri |
 | L3 | Rakip ve pay, olaylar, meclis kartları, görevler |
 | L4 | Halka arz ve borsa, şehir bonusu, bildirimler, ayarlar (dil, ses, titreşim, bildirim, sıfırla), prosedürel ses ve titreşim, geçici simge |
-| L5 | **Stil yenilemesi: her şey baştan.** Yazı tipi, renk paleti, şehir grafikleri, kart ve düğme yapısı, simge. Önce 2–3 farklı yön kareleriyle önerilip kullanıcı seçiyor; sonra tema dosyası, şehir çizimi, bütün kartlar ve simge o yöne göre yeniden yapılıyor. Oyun mantığına dokunulmuyor |
+| L5 | **Stil yenilemesi: "Cam & Bulut", gündüz ve gece** (§6.1). Yazı tipi, renk, şehir çizimi, kart ve düğme yapısı, simge baştan. Görünüm cihaza uyuyor; Ayarlar'dan zorlanabiliyor. Oyun mantığına dokunulmuyor |
+| L6 | **iPadOS** (ayrı koşu): aynı oyun, büyük ekrana göre düzen. Ayrıntı §11 |
+| L7 | **Ada dolunca: oyunun devamı.** Öneri §12; kullanıcı yönü seçecek |
+| L8 | **Online: lider tablosu ve ligler.** Öneri §13; altyapı kararı kullanıcının |
 
 L5 kullanıcının isteği: "En son tüm stili değiştireceğiz. Fonttan grafiklere,
-renkten buton yapısına kadar her şeyi yenilemek istiyorum." Bu yüzden L4'teki
-simge ve yeni kartlar bugünkü temayı izliyor ama geçici sayılıyor.
+renkten buton yapısına kadar her şeyi yenilemek istiyorum." L6–L8 de onun
+isteği: "ipad OS için de çalışacak durumda olan ayrı bir koşu olsun; bu
+ekrandaki alan bir noktada sonlanacak, devamı nasıl olacak onu da düşünelim;
+leaderboard online olsun, ligler kurulabilsin."
+
+## 11. iPadOS (L6)
+
+- **Hedef:** iPhone ve iPad (`TARGETED_DEVICE_FAMILY 1,2`); iPad'de dört yön,
+  Stage Manager ve Split View pencere boyları.
+- **Düzen:** genişlik sınıfı `regular` olunca iki sütun.
+  - Solda büyük şehir, üstünde kasa ve olay şeridi.
+  - Sağda kartlar; zincir kartları iki sütunlu ızgarada.
+  - Dar pencerede (Split View'in üçte biri) iPhone düzenine dönüyor.
+- **Şehir:** aynı `Canvas`; daha büyük karo ve sakin bir yakınlaştırma. iPad'de
+  ada ekranın yarısını kaplıyor.
+- **Girdi:** imleçle üzerine gelince düğme vurgusu, klavye kısayolları
+  (1/2/3 toplu alım, K kampanya), dokunma hedefleri aynı kalıyor.
+- **CI:** iPad simülatöründe dikey ve yatay kareler.
+
+## 12. Ada dolunca: oyunun devamı (L7, öneri)
+
+**Sorun.** Ada 7×7: beş zincirin 15 parseli, liman ve yollar. Aktif oyuncu
+Teknopark'ı yaklaşık 3 saatte, gündelik oyuncu ilk gün açıyor. Ondan sonra
+şehir görsel olarak değişmiyor. Büyüme yalnızca seviye sayısında, yeni hedef
+yalnızca şehri satmak. "Alan bir noktada sonlanıyor."
+
+Üç katman önerisi; birbirinin yerine değil, üst üste:
+
+1. **Bina kademeleri (aynı ada, derinlik).** Her parseldeki bina kilometre
+   taşlarıyla biçim değiştiriyor:
+
+   | Seviye | Biçim |
+   |---|---|
+   | 1–24 | dükkân, atölye |
+   | 25–99 | orta kat |
+   | 100–299 | kule |
+   | 300+ | simge yapı (altın çatı, anten, ışıklı tabela) |
+
+   Ada dolduktan sonra da her alım şehirde bir şeyi değiştiriyor. Model
+   değişmiyor, yalnızca çizim.
+2. **Takımada (yeni adalar, yeni zincirler).** Teknopark'tan sonra köprüyle
+   bağlı yeni adalar açılıyor. Şehir görünümü yatay kaydırmalı oluyor;
+   üstte küçük bir ada haritası.
+   - **Ada 2 · Enerji:** rüzgâr ve güneş → şebeke → enerji satışı. Bütün
+     zincirlerin işleme kademesine bonus.
+   - **Ada 3 · Otomotiv:** maden → parça fabrikası → bayi.
+   - **Ada 4 · Havacılık:** ileri malzeme → montaj → havayolu.
+
+   Bir şehrin aktif ömrü yaklaşık 3 saatten 8 saate, gündelik ömrü bir günden
+   üç güne çıkıyor. Denge TS modelinde ölçülecek; yeni zincirler yeni fikstür
+   demek.
+3. **Holding haritası (meta).** Satılan şehirler bir dünya haritasında ada
+   olarak kalıyor.
+   - Her eski şehir yeni şehirlere bir ticaret yolu bırakıyor: kendi öne
+     çıkan zincirine kalıcı küçük bir bonus.
+   - Şehir temaları dönüyor (sahil, dağ, çöl, kar): her holding turu başka
+     görünüyor.
+
+**Karar (kullanıcı): üçü birden.** L7 bina kademeleri, takımada ve holding
+haritasını birlikte getiriyor. Model tarafı (yeni zincirler, ada açılışları,
+ticaret yolu bonusu) önce TS'te dengelenip fikstürlerle Swift'e taşınacak.
+
+## 13. Online: lider tablosu ve ligler (L8, öneri)
+
+**Oyun tarafı.**
+- **Haftalık lig:** Duolingo usulü bölümler (Bronz → Gümüş → Altın → Elmas).
+  - Oyuncu her hafta 30 kişilik bir gruba düşüyor.
+  - Puan haftalık holding kazancı; yıldız çarpanı hariç, yoksa eski oyuncu
+    hep kazanır.
+  - İlk 5 üst bölüme çıkıyor, son 5 iniyor.
+- **Özel ligler:** 6 harfli davet koduyla arkadaş ligi kuruluyor. Aynı
+  haftalık puan, kendi tablosu.
+- **Genel tablo:** toplam holding değeri ve yıldız; dünya ve arkadaşlar.
+- **Hile payı:**
+  - İdle oyunda saat oynamak en kolay hile. Sunucu her gönderimi zamanla
+    kaydediyor.
+  - "Bu sürede en fazla bu kadar kazanılabilir" sınırını aynı TS modeliyle
+    (`packages/lite-model`) hesaplıyor.
+  - Web oyununun Tohum Ligi'ndeki "her koşu doğrulanır" fikrinin idle
+    karşılığı.
+
+**Altyapı, kullanıcının kararı:**
+
+| Seçenek | Ne verir | Ne ister |
+|---|---|---|
+| A · Game Center | Hazır lider tabloları (haftalık yinelenen dahil), arkadaşlar, sunucu yok | Ücretli Apple Developer Program (yılda 99 $) ve App Store Connect ayarı. Davet kodlu özel lig yok |
+| B · Kendi sunucumuz (Cloudflare Workers + D1, ücretsiz katman) | Haftalık lig, davet kodu, TS modeliyle doğrulama; ücretsiz imzayla çalışıyor | Bir Cloudflare hesabı ve API anahtarı (depo sırrı olarak) |
+| C · İkisi | Genel tablo Game Center'da, ligler kendi sunucumuzda | A ve B'nin gerekleri |
+
+Bugün uygulama ücretsiz "Personal Team" imzasıyla kuruluyor. Game Center ve
+iCloud gibi Apple servisleri ücretli üyelik istiyor; B ücretsiz imzayla da
+çalışıyor.
+
+**Karar (kullanıcı): C, ikisi birden.**
+- **Game Center:** genel tablo.
+- **Kendi sunucumuz:** haftalık bölüm ligleri ve davet kodlu ligler.
+- **Kullanıcıdan gerekenler** (L8 başlarken adım adım yazılacak):
+  - ücretli Apple Developer üyeliği ve App Store Connect'te lider tabloları;
+  - Cloudflare hesabı ve API anahtarı (depo sırrı).
+- **Bağımlılık:** sunucu tarafı ve oyun içi lig ekranları bunlar gelmeden de
+  yazılabilir. Gerçek bağlantı ancak hesaplar hazır olunca açılır.

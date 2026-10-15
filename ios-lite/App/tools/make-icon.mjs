@@ -1,4 +1,4 @@
-// CapitalForge Lite — uygulama simgesi (geçici; L5'teki stil yenilemesinde baştan çiziliyor).
+// CapitalForge Lite — uygulama simgesi (L5, "Cam & Bulut": gökyüzünde süzülen ada).
 //
 // SVG burada kuruluyor, Chromium'da (Playwright) 1024×1024 çiziliyor ve
 // alfa kanalı atılarak PNG'ye yazılıyor: iOS simgesinde saydamlık olmamalı.
@@ -13,7 +13,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 const out = join(here, '..', 'Resources', 'Assets.xcassets', 'AppIcon.appiconset');
 const SIZE = 1024;
 
-// İzometrik kule: taban merkezi (x, y), yarım genişlik a, yarım yükseklik b, yükseklik h.
+// İzometrik kutu: taban merkezi (x, y), yarım genişlik a, yarım yükseklik b, yükseklik h.
 function prism(x, y, a, b, h, top, left, right) {
   const pts = (list) => list.map(([px, py]) => `${px.toFixed(1)},${py.toFixed(1)}`).join(' ');
   return [
@@ -23,34 +23,75 @@ function prism(x, y, a, b, h, top, left, right) {
   ].join('');
 }
 
+// Bina: açık duvarlar, zincir renginde çatı plakası, pencere sıraları.
+function building(x, y, a, b, h, roofTop, roofSide, rows) {
+  let out = prism(x, y, a, b, h, '#FFFFFF', '#EEF3F9', '#D5DFEB');
+  out += prism(x, y - 0, a * 1.06, b * 1.06, h + 34, roofTop, roofTop, roofSide).replace(/<polygon points="[^"]*" fill="[^"]*"\/><polygon points="[^"]*" fill="[^"]*"\/>/, '');
+  // çatı plakasının yanları: yalnızca üst 34 birim
+  const slab = (side) => side;
+  out += `<polygon points="${[[x - a * 1.06, y - h - 34], [x, y - h - 34 + b * 1.06], [x, y - h + b * 1.06], [x - a * 1.06, y - h]].map((p) => p.map((v) => v.toFixed(1)).join(',')).join(' ')}" fill="${roofTop}"/>`;
+  out += `<polygon points="${[[x, y - h - 34 + b * 1.06], [x + a * 1.06, y - h - 34], [x + a * 1.06, y - h], [x, y - h + b * 1.06]].map((p) => p.map((v) => v.toFixed(1)).join(',')).join(' ')}" fill="${roofSide}"/>`;
+  out += `<polygon points="${[[x, y - h - 34 - b * 1.06], [x + a * 1.06, y - h - 34], [x, y - h - 34 + b * 1.06], [x - a * 1.06, y - h - 34]].map((p) => p.map((v) => v.toFixed(1)).join(',')).join(' ')}" fill="${roofTop}" style="filter:brightness(1.08)"/>`;
+  void slab;
+  // pencereler: sol yüzde
+  for (let row = 0; row < rows; row++) {
+    for (let k = 0; k < 3; k++) {
+      const t = (k + 0.62) / 3.35;
+      const px = x - a + a * t;
+      const py = y - b * 0 + b * t - (h * (row + 0.55)) / (rows + 0.3);
+      out += `<rect x="${(px - 9).toFixed(1)}" y="${(py - 13).toFixed(1)}" width="18" height="20" rx="5" fill="#7FD0FF"/>`;
+      out += `<rect x="${(px - 6).toFixed(1)}" y="${(py - 10).toFixed(1)}" width="5" height="6" fill="#FFFFFF"/>`;
+    }
+  }
+  // sağ yüzde tek sütun
+  for (let row = 0; row < rows; row++) {
+    const px = x + a * 0.5;
+    // Sağ yüzün ortası: alt kenar (x, y + b) → (x + a, y) üzerinde, yükseklik kadar yukarıda.
+    const py = y + b * 0.5 - (h * (row + 0.55)) / (rows + 0.3);
+    out += `<rect x="${(px - 9).toFixed(1)}" y="${(py - 13).toFixed(1)}" width="18" height="20" rx="5" fill="#5FB4E6"/>`;
+  }
+  return out;
+}
+
 function svg() {
-  const a = 130;
+  const a = 132;
   const b = a * Math.tan(Math.PI / 6);
-  const step = 1.2;
-  const x0 = 356;
-  const y0 = 547;
-  // Ham → işleme → satış: zincir büyüdükçe yükselen üç kule (oyunun çekirdeği).
+  // Ada: büyük izometrik karo, toprak yanları, altında yumuşak gölge.
+  const cx = 512, cy = 604;
+  const A = 380, B = A * Math.tan(Math.PI / 6), D = 58;
+  const pts = (list) => list.map(([px, py]) => `${px.toFixed(1)},${py.toFixed(1)}`).join(' ');
+  const island = [
+    `<ellipse cx="${cx}" cy="${cy + B + 150}" rx="${A * 0.72}" ry="${B * 0.3}" fill="#285078" fill-opacity="0.14"/>`,
+    `<polygon points="${pts([[cx - A, cy], [cx, cy + B], [cx, cy + B + D], [cx - A, cy + D]])}" fill="#B9875A"/>`,
+    `<polygon points="${pts([[cx, cy + B], [cx + A, cy], [cx + A, cy + D], [cx, cy + B + D]])}" fill="#9B6C43"/>`,
+    `<polygon points="${pts([[cx, cy - B], [cx + A, cy], [cx, cy + B], [cx - A, cy]])}" fill="#A6E58E"/>`,
+    `<polyline points="${pts([[cx - A, cy + 5], [cx, cy + B + 5], [cx + A, cy + 5]])}" fill="none" stroke="#86CF6C" stroke-width="12" stroke-linejoin="round"/>`,
+  ].join('');
+  // Üç bina: ham → işleme → satış gibi yükselen; renkler oyundaki zincirlerden.
+  const step = 1.18;
+  const x0 = cx - step * a * 1.0, y0 = cy - step * b * 1.0 + 30;
   const towers = [
-    { h: 170, top: '#D9B44A' },
-    { h: 290, top: '#B07A52' },
-    { h: 430, top: '#3FB58A' },
+    { h: 170, top: '#FFD25E', side: '#FFB020', rows: 2 },
+    { h: 270, top: '#DA8BF0', side: '#B85DD6', rows: 3 },
+    { h: 380, top: '#FF7A7A', side: '#E04848', rows: 4 },
   ];
-  // Zemin: kulelerin oturduğu izometrik parsel. U = (a, b), V = (a, -b) eksenleri;
-  // kule tabanı u, v ∈ [-0.5, 0.5], kuleler U boyunca 1.2 arayla.
-  const at = (u, v) => [x0 + (u + v) * a, y0 + (u - v) * b];
-  const ground = [at(-0.95, -0.95), at(-0.95, 0.95), at(2 * step + 0.95, 0.95), at(2 * step + 0.95, -0.95)];
-  const body = towers
-    .map((t, k) => prism(x0 + k * step * a, y0 + k * step * b, a, b, t.h, t.top, '#EEF0EC', '#B3BAB5'))
-    .join('');
+  const body = towers.map((t, k) => building(x0 + k * step * a, y0 + k * step * b, a * 0.8, b * 0.8, t.h, t.top, t.side, t.rows)).join('');
+  // Ağaçlar ve bulut.
+  const tree = (x, y, r) => `<rect x="${x - 6}" y="${y - 26}" width="12" height="28" fill="#8A5A3B"/><circle cx="${x}" cy="${y - 44}" r="${r}" fill="#43B05A"/><circle cx="${x - 10}" cy="${y - 54}" r="${r * 0.45}" fill="#6ED36E"/>`;
+  const trees = tree(250, 664, 34) + tree(312, 724, 28);
+  const cloud = (x, y, s) => `<g fill="#FFFFFF" fill-opacity="0.92"><circle cx="${x}" cy="${y}" r="${46 * s}"/><circle cx="${x + 54 * s}" cy="${y - 24 * s}" r="${58 * s}"/><circle cx="${x + 118 * s}" cy="${y}" r="${42 * s}"/><rect x="${x}" y="${y}" width="${118 * s}" height="${42 * s}"/></g>`;
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${SIZE}" height="${SIZE}" viewBox="0 0 ${SIZE} ${SIZE}">
   <defs>
-    <radialGradient id="g" cx="50%" cy="42%" r="70%">
-      <stop offset="0" stop-color="#1B2621"/>
-      <stop offset="1" stop-color="#0B100E"/>
-    </radialGradient>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#6CC3FF"/>
+      <stop offset="0.6" stop-color="#A9DEFF"/>
+      <stop offset="1" stop-color="#DDF2FF"/>
+    </linearGradient>
   </defs>
-  <rect width="${SIZE}" height="${SIZE}" fill="url(#g)"/>
-  <polygon points="${ground.map(([px, py]) => `${px.toFixed(1)},${py.toFixed(1)}`).join(' ')}" fill="#FFFFFF" fill-opacity="0.06"/>
+  <rect width="${SIZE}" height="${SIZE}" fill="url(#sky)"/>
+  ${cloud(110, 210, 1)}${cloud(720, 150, 0.75)}
+  ${island}
+  ${trees}
   ${body}
 </svg>`;
 }

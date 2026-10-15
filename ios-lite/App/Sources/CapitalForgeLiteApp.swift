@@ -10,7 +10,8 @@ struct CapitalForgeLiteApp: App {
         WindowGroup {
             RootView()
                 .environment(store)
-                .preferredColorScheme(.light)
+                // Görünüm Ayarlar'dan: cihaz, gündüz ya da gece.
+                .preferredColorScheme(store.settings.appearance.scheme)
                 .onChange(of: scenePhase) { _, phase in
                     store.scenePhaseChanged(phase)
                 }
