@@ -243,6 +243,10 @@ Kod değiştikçe 1 ve 3 tekrarlanıyor.
     değiştirmek ya da eski bir isteği yeniden göndermek işe yaramıyor.
   - Bir anahtar tek hesaba bağlı; yeni kurulumda yeni anahtar eskisinin yerini
     alıyor.
+  - Anahtar üretilir üretilmez saklanıyor (Apple'ın kuralı). Apple'a ya da
+    sunucuya ulaşılamazsa sonraki turda aynı anahtar ve aynı challenge ile
+    yeniden deneniyor (challenge 30 dakika geçerli); sunucu kanıtı reddederse
+    anahtar atılıyor.
   - Simülatörde App Attest yok: orada puan gönderilmiyor (lig penceresinde not).
   - Geliştirme (Xcode) ve dağıtım (TestFlight, App Store) anahtarlarının ikisi
     de kabul; uygulama kategorisi (TestFlight, App Store, geliştirme) dışındaki

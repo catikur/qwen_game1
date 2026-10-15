@@ -76,7 +76,7 @@ CREATE TABLE IF NOT EXISTS attest_keys (
 );
 CREATE INDEX IF NOT EXISTS attest_keys_by_player ON attest_keys (player_id);
 
--- Kanıt için tek seferlik challenge (5 dakika).
+-- Kanıt için tek seferlik challenge (30 dakika; Apple'a ulaşılamazsa uygulama aynısıyla yeniden deniyor).
 CREATE TABLE IF NOT EXISTS attest_challenges (
   player_id TEXT PRIMARY KEY,
   challenge TEXT NOT NULL,

@@ -10,9 +10,18 @@ import Foundation
 /// - Her gönderimde: isteğin tam gövdesi için onay (imza ve artan sayaç).
 ///
 /// Simülatörde App Attest yok: orada lig puanı gönderilmiyor.
+///
+/// Apple'ın kuralları: üretilen anahtarın kimliği sonradan geri alınamıyor,
+/// üretilir üretilmez saklanıyor; Apple'a ulaşılamazsa (`serverUnavailable`)
+/// kanıt aynı anahtar ve aynı challenge ile yeniden deneniyor; sunucu kanıtı
+/// reddederse anahtar atılıyor.
 @MainActor
 final class AppAttestor {
     static let keyIdKey = "lite.attest.keyId"
+    /// Üretilmiş, sunucunun henüz kabul etmediği anahtar ve bekleyen kanıtı.
+    static let pendingKeyIdKey = "lite.attest.pendingKeyId"
+    static let pendingChallengeKey = "lite.attest.pendingChallenge"
+    static let pendingAttestationKey = "lite.attest.pendingAttestation"
     private let defaults = UserDefaults.standard
 
     var supported: Bool { DCAppAttestService.shared.isSupported }
@@ -24,19 +33,46 @@ final class AppAttestor {
         keyId = defaults.string(forKey: AppAttestor.keyIdKey)
     }
 
-    /// Yeni anahtar üret ve challenge ile kanıtla. Sunucu kabul edince `confirm`.
+    /// Önceki denemeden kalan challenge (Apple'a ulaşılamadıysa ya da sunucuya gönderilemediyse).
+    var pendingChallenge: String? { defaults.string(forKey: AppAttestor.pendingChallengeKey) }
+
+    /// Kanıtlanacak challenge'ı sakla: yeniden deneme aynı challenge ile.
+    func begin(challenge: String) {
+        defaults.set(challenge, forKey: AppAttestor.pendingChallengeKey)
+    }
+
+    /// Bekleyen anahtarı (yoksa yenisini üretip hemen saklayarak) challenge ile kanıtla.
+    /// Kanıt bu challenge için zaten alındıysa yeniden istenmiyor. Sunucu kabul edince `confirm`.
     /// Challenge base64; kanıta baytlarının SHA-256'sı giriyor.
     func attest(challenge: String) async throws -> (keyId: String, attestation: Data) {
         guard let raw = Data(base64Encoded: challenge) else { throw AttestFailure.challenge }
         let service = DCAppAttestService.shared
-        let keyId = try await service.generateKey()
+        let keyId: String
+        if let pending = defaults.string(forKey: AppAttestor.pendingKeyIdKey) {
+            keyId = pending
+        } else {
+            keyId = try await service.generateKey()
+            defaults.set(keyId, forKey: AppAttestor.pendingKeyIdKey)
+        }
+        if let saved = defaults.data(forKey: AppAttestor.pendingAttestationKey), pendingChallenge == challenge {
+            return (keyId, saved)
+        }
         let attestation = try await service.attestKey(keyId, clientDataHash: Data(SHA256.hash(data: raw)))
+        defaults.set(attestation, forKey: AppAttestor.pendingAttestationKey)
         return (keyId, attestation)
+    }
+
+    /// Challenge'ın süresi geçti: anahtar kalıyor, sonraki deneme yeni challenge ile.
+    func dropChallenge() {
+        defaults.removeObject(forKey: AppAttestor.pendingChallengeKey)
+        defaults.removeObject(forKey: AppAttestor.pendingAttestationKey)
     }
 
     func confirm(_ keyId: String) {
         self.keyId = keyId
         defaults.set(keyId, forKey: AppAttestor.keyIdKey)
+        defaults.removeObject(forKey: AppAttestor.pendingKeyIdKey)
+        dropChallenge()
     }
 
     /// İsteğin tam gövdesi için onay.
@@ -45,10 +81,13 @@ final class AppAttestor {
         return try await DCAppAttestService.shared.generateAssertion(keyId, clientDataHash: Data(SHA256.hash(data: body)))
     }
 
-    /// Anahtar geçersiz (sunucu tanımıyor, hesap silindi): sonraki gönderimde yeniden kanıtlanıyor.
+    /// Anahtar geçersiz (sunucu tanımıyor ya da reddetti, hesap silindi): atılıyor,
+    /// sonraki gönderimde yenisi üretilip kanıtlanıyor.
     func reset() {
         keyId = nil
         defaults.removeObject(forKey: AppAttestor.keyIdKey)
+        defaults.removeObject(forKey: AppAttestor.pendingKeyIdKey)
+        dropChallenge()
     }
 }
 

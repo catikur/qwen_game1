@@ -77,10 +77,10 @@ test('ad kuralları', () => {
 });
 
 test('küfür süzgeci: tek sözcük ve kök, rakamlı yazım; masum adlar geçiyor', async () => {
-  for (const bad of ['Orospu Holding', 'Kral_0r0spu', 'Sik AŞ', 'AMK', 'F-U-C-K', 'Bitch Co', 'Siktir Git', 'Hitler Ltd']) {
+  for (const bad of ['Orospu Holding', 'Kral_0r0spu', 'Sik AŞ', 'AMK', 'F-U-C-K', 'Bitch Co', 'Siktir Git', 'Hitler Ltd', 'S-İ-K', 'si k Holding', 'A M K', 'p_i_ç Ltd']) {
     assert.equal(offensiveName(bad), true, bad);
   }
-  for (const fine of ['Sikke Holding', 'Atilla Holding', 'Amazon Kahve', 'Ambar', 'Gotham', 'Picasso Moda', 'Malatya Gıda', 'Mal Holding', 'Ocak Fırın']) {
+  for (const fine of ['Sikke Holding', 'Atilla Holding', 'Amazon Kahve', 'Ambar', 'Gotham', 'Picasso Moda', 'Malatya Gıda', 'Mal Holding', 'Ocak Fırın', 'S İ Kahve', 'A Market']) {
     assert.equal(offensiveName(fine), false, fine);
   }
   const db = memoryDb();
@@ -283,7 +283,7 @@ test('App Attest: onaysız, yeniden oynatılan, değiştirilmiş gönderim ve sa
   const reused = await call(db, THURSDAY, 'POST', '/v1/attest', { keyId: device.keyId, attestation: device.attest(first.body.challenge), challenge: first.body.challenge }, bare);
   assert.equal(reused.body.error, 'challenge', 'yanlış denemeden sonra challenge yanmış olmalı');
   const late = await call(db, THURSDAY, 'POST', '/v1/attest/challenge', {}, bare);
-  const expired = await call(db, THURSDAY + 6 * 60_000, 'POST', '/v1/attest', { keyId: device.keyId, attestation: device.attest(late.body.challenge), challenge: late.body.challenge }, bare);
+  const expired = await call(db, THURSDAY + 31 * 60_000, 'POST', '/v1/attest', { keyId: device.keyId, attestation: device.attest(late.body.challenge), challenge: late.body.challenge }, bare);
   assert.equal(expired.body.error, 'challenge');
   // Başka uygulamanın (başka takımın) kanıtı.
   const stranger = PKI.device({ appId: 'OTHERTEAM1.com.other.app' });

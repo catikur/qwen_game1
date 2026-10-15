@@ -176,8 +176,13 @@ final class LeagueService {
             case 409 where code == "attest-key":
                 attestor.reset()
             case 422 where code.hasPrefix("attest"):
+                // Sunucu kanıtı reddetti: anahtar atılıyor (Apple), bu oturumda yeniden denenmiyor.
+                attestor.reset()
                 attestBlocked = true
                 problem = "league.attestFailed"
+            case 400 where code == "challenge":
+                // Bekleyen challenge'ın süresi geçmiş: sonraki turda yenisiyle.
+                attestor.dropChallenge()
             case 422:
                 problem = "league.rejected"
             default:
@@ -192,12 +197,20 @@ final class LeagueService {
     }
 
     /// Cihaz başına bir kez: challenge → App Attest kanıtı → sunucu anahtarı kaydediyor.
+    /// Yarıda kalan deneme (Apple'a ya da sunucuya ulaşılamadı) aynı anahtar ve challenge ile sürüyor.
     private func attestDevice() async throws {
         struct Challenge: Decodable { let challenge: String }
         struct Attested: Decodable { let ok: Bool }
-        let challenge: Challenge = try await send("POST", "v1/attest/challenge", body: Data("{}".utf8))
-        let (keyId, attestation) = try await attestor.attest(challenge: challenge.challenge)
-        let body = try JSONEncoder().encode(["keyId": keyId, "attestation": attestation.base64EncodedString(), "challenge": challenge.challenge])
+        let challenge: String
+        if let pending = attestor.pendingChallenge {
+            challenge = pending
+        } else {
+            let fresh: Challenge = try await send("POST", "v1/attest/challenge", body: Data("{}".utf8))
+            challenge = fresh.challenge
+            attestor.begin(challenge: challenge)
+        }
+        let (keyId, attestation) = try await attestor.attest(challenge: challenge)
+        let body = try JSONEncoder().encode(["keyId": keyId, "attestation": attestation.base64EncodedString(), "challenge": challenge])
         let _: Attested = try await send("POST", "v1/attest", body: body)
         attestor.confirm(keyId)
     }

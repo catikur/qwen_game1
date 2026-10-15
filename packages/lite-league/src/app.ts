@@ -40,8 +40,11 @@ export interface Options {
 }
 
 const DEFAULTS: Options = { attest: APPLE_ATTEST };
-/** Challenge geçerliliği (ms). */
-const CHALLENGE_TTL = 5 * 60_000;
+/**
+ * Challenge geçerliliği (ms). Apple'a ulaşılamazsa uygulama kanıtı aynı
+ * challenge ile sonraki turda (5 dakika sonra) yeniden deniyor; ona yetsin.
+ */
+const CHALLENGE_TTL = 30 * 60_000;
 
 const WEEK_MS = 7 * 86_400_000;
 const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -150,7 +153,15 @@ const LEET: Record<string, string> = { '0': 'o', '1': 'i', '3': 'e', '4': 'a', '
 export function offensiveName(name: string): boolean {
   const lower = name.toLocaleLowerCase('tr').replace(/[013457@$]/g, (ch) => LEET[ch] ?? ch);
   const words = lower.split(/[\s_-]+/).filter(Boolean);
-  if (words.some((word) => BLOCKED_WORDS.has(word))) return true;
+  // Kısa sözcükler tek başınayken; araya işaret konmuşsa ("S-İ-K", "si k")
+  // yan yana sözcüklerin birleşimi de. Alt dizgi değil: "Sikke" geçiyor.
+  for (let start = 0; start < words.length; start++) {
+    let joined = '';
+    for (let end = start; end < Math.min(words.length, start + 6); end++) {
+      joined += words[end];
+      if (BLOCKED_WORDS.has(joined)) return true;
+    }
+  }
   const compact = words.join('');
   return BLOCKED_ROOTS.some((root) => compact.includes(root));
 }
