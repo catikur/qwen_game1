@@ -24,12 +24,19 @@ targets:
       path: Generated/Info.plist
       properties:
         CFBundleDisplayName: CapitalForge Lite
-        CFBundleShortVersionString: "0.3.0"
-        CFBundleVersion: "3"
+        CFBundleShortVersionString: "0.4.0"
+        CFBundleVersion: "4"
         UILaunchScreen: {}
-        UIRequiresFullScreen: true
+        # L6: iPad'de Split View ve Stage Manager için tam ekran zorunlu değil.
+        UIRequiresFullScreen: false
+        # iPhone dikey; iPad dört yön.
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
         CFBundleLocalizations:
           - tr
           - en
@@ -46,7 +53,8 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.catikur.capitalforgelite
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
-        TARGETED_DEVICE_FAMILY: "1"
+        # iPhone ve iPad (L6).
+        TARGETED_DEVICE_FAMILY: "1,2"
         SWIFT_VERSION: "5.0"
         CODE_SIGN_STYLE: Automatic
         ENABLE_PREVIEWS: YES

@@ -344,6 +344,7 @@ struct PillPicker<Option: Hashable>: View {
                         }
                 }
                 .buttonStyle(.plain)
+                .hoverEffect(.highlight)
             }
         }
         .padding(4)

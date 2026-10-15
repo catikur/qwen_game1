@@ -358,6 +358,7 @@ satıp ikinci şehirde 2 saat oynuyor):
 | L6 | **iPadOS** (ayrı koşu): aynı oyun, büyük ekrana göre düzen. Ayrıntı §11 |
 | L7 | **Ada dolunca: oyunun devamı.** Öneri §12; kullanıcı yönü seçecek |
 | L8 | **Online: lider tablosu ve ligler.** Öneri §13; altyapı kararı kullanıcının |
+| Son | **Uygulama simgesi yeniden.** L4'teki geçici simge beğenilmedi; en sona bırakıldı |
 
 L5 kullanıcının isteği: "En son tüm stili değiştireceğiz. Fonttan grafiklere,
 renkten buton yapısına kadar her şeyi yenilemek istiyorum." L6–L8 de onun
@@ -368,16 +369,29 @@ leaderboard online olsun, ligler kurulabilsin."
 ## 11. iPadOS (L6)
 
 - **Hedef:** iPhone ve iPad (`TARGETED_DEVICE_FAMILY 1,2`); iPad'de dört yön,
-  Stage Manager ve Split View pencere boyları.
-- **Düzen:** genişlik sınıfı `regular` olunca iki sütun.
-  - Solda büyük şehir, üstünde kasa ve olay şeridi.
-  - Sağda kartlar; zincir kartları iki sütunlu ızgarada.
-  - Dar pencerede (Split View'in üçte biri) iPhone düzenine dönüyor.
-- **Şehir:** aynı `Canvas`; daha büyük karo ve sakin bir yakınlaştırma. iPad'de
-  ada ekranın yarısını kaplıyor.
-- **Girdi:** imleçle üzerine gelince düğme vurgusu, klavye kısayolları
-  (1/2/3 toplu alım, K kampanya), dokunma hedefleri aynı kalıyor.
-- **CI:** iPad simülatöründe dikey ve yatay kareler.
+  Stage Manager ve Split View pencere boyları (`UIRequiresFullScreen` kapalı).
+- **Düzen:** `RootView` pencere boyuna ve genişlik sınıfına bakıp üç düzenden
+  birini seçiyor.
+  - **Telefon:** genişlik sınıfı `compact` ya da pencere 700 pt'den dar. Split
+    View'in üçte biri ve iPhone bu düzende.
+  - **iPad dikey:** üstte kasa ve olay şeridi (en çok 900 pt), altında geniş
+    şehir (ekranın %36'sı, en çok 460 pt), altta kartlar.
+  - **iPad yatay:** solda kasa, olay şeridi ve boyu dolduran şehir (ekranın
+    %46'sı, en çok 620 pt); sağda kartlar.
+  - Kart alanı 760 pt'yi geçince zincirler, borsa, Genel Müdür ve holding iki
+    sütunlu ızgaraya geçiyor; görev, meclis ve halka arz teklifi tam genişlikte
+    kalıyor.
+- **Şehir:** aynı `Canvas`; çizim kutuya göre ölçeklendiği için iPad'de ada
+  büyüyor, ayrıntı aynı kalıyor.
+- **Girdi:**
+  - İmleçle üzerine gelince parlak düğmeler hafifçe kalkıyor, seçim hapları
+    vurgulanıyor.
+  - Klavye kısayolları: 1/2/3 toplu alım (×1, ×10, en çok), K kampanya.
+  - Dokunma hedefleri aynı kalıyor.
+- **CI:** iPhone karelerinden sonra bir iPad simülatörü açılıyor. Kareler:
+  `ipad-mid` (dikey), `ipad-land` (yatay, borsa), `ipad-settings`,
+  `ipad-night-land` (yatay, gece). Yatay kareler `-liteLandscape` argümanıyla
+  çekiliyor.
 
 ## 12. Ada dolunca: oyunun devamı (L7, öneri)
 

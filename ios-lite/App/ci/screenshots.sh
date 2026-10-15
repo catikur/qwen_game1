@@ -54,4 +54,38 @@ shot night-council -AppleLanguages "(tr)" -liteScenario council
 shot night-listed -AppleLanguages "(tr)" -liteScenario listed -liteScroll market
 shot night-settings -AppleLanguages "(tr)" -liteScenario mid -liteSettings
 xcrun simctl ui "$UDID" appearance light
+xcrun simctl shutdown "$UDID" || true
+
+# L6: iPad. Tercih "iPad Air", yoksa herhangi bir iPad (Pro ya da mini değil).
+IPAD=$(xcrun simctl list devices available -j | python3 -c '
+import json, sys
+devices = [d for runtime, ds in json.load(sys.stdin)["devices"].items() if "iOS" in runtime for d in ds]
+pads = [d for d in devices if d["name"].startswith("iPad")]
+air = [d for d in pads if "Air" in d["name"] and "13" not in d["name"]]
+plain = [d for d in pads if "mini" not in d["name"]]
+print(((air or plain or pads) or [{"udid": ""}])[-1]["udid"])
+')
+if [ -n "$IPAD" ]; then
+  echo "iPad simülatörü: $IPAD"
+  UDID="$IPAD"
+  xcrun simctl boot "$UDID" || true
+  xcrun simctl bootstatus "$UDID" -b
+  xcrun simctl status_bar "$UDID" override --time "9:41" --batteryState charged --batteryLevel 100 --wifiBars 3 || true
+  xcrun simctl ui "$UDID" appearance light || true
+  xcrun simctl install "$UDID" "$APP"
+  shot ipad-mid -AppleLanguages "(tr)" -liteScenario mid
+  shot ipad-land -AppleLanguages "(tr)" -liteScenario listed -liteLandscape
+  shot ipad-settings -AppleLanguages "(tr)" -liteScenario mid -liteSettings
+  xcrun simctl ui "$UDID" appearance dark
+  shot ipad-night-land -AppleLanguages "(tr)" -liteScenario late -liteLandscape
+  xcrun simctl ui "$UDID" appearance light
+  # Yatay kareler: ekran görüntüsü cihazın doğal (dikey) yönünde gelirse çevir.
+  for f in "$OUT"/ipad-*land*.png; do
+    w=$(sips -g pixelWidth "$f" | awk '/pixelWidth/ {print $2}')
+    h=$(sips -g pixelHeight "$f" | awk '/pixelHeight/ {print $2}')
+    if [ "$w" -lt "$h" ]; then sips -r 270 "$f" >/dev/null; echo "döndürüldü: $f"; fi
+  done
+else
+  echo "iPad simülatörü yok; iPad kareleri atlandı"
+fi
 ls -la "$OUT"
