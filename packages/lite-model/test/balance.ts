@@ -178,15 +178,15 @@ function casualRun(days: number): void {
     }
     const unlocked = CHAIN_IDS.filter((id) => chainUnlocked(s, id)).length;
     console.log(
-      `  gün ${day}: gelir ${fmt(incomePerSecond(s))}/sn · kazanç ${fmt(s.earned)} · çevrimdışı ${fmt(offlineTotal)} · zincir ${unlocked}/5 · yıldız önizleme ${prestigePreview(s)} · müdür ${s.manager}`,
+      `  gün ${day}: gelir ${fmt(incomePerSecond(s))}/sn · kazanç ${fmt(s.earned)} · çevrimdışı ${fmt(offlineTotal)} · zincir ${unlocked}/${CHAIN_IDS.length} · yıldız önizleme ${prestigePreview(s)} · müdür ${s.manager}`,
     );
   }
   void realTime;
   void STAGES;
 }
 
-const first = activeRun(Number(process.argv[2] ?? 4));
+const first = activeRun(Number(process.argv[2] ?? 8));
 // L4: şehri sat, ikinci şehirde aynı bot — yıldız ve öne çıkan zincirle ne kadar hızlı?
 const sold = prestige(first);
-if (sold.ok) activeRun(Number(process.argv[4] ?? 2), sold.state, ' · ikinci şehir');
+if (sold.ok) activeRun(Number(process.argv[4] ?? 3), sold.state, ' · ikinci şehir');
 casualRun(Number(process.argv[3] ?? 5));

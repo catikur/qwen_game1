@@ -24,8 +24,8 @@ targets:
       path: Generated/Info.plist
       properties:
         CFBundleDisplayName: CapitalForge Lite
-        CFBundleShortVersionString: "0.4.0"
-        CFBundleVersion: "4"
+        CFBundleShortVersionString: "0.5.0"
+        CFBundleVersion: "5"
         UILaunchScreen: {}
         # L6: iPad'de Split View ve Stage Manager için tam ekran zorunlu değil.
         UIRequiresFullScreen: false

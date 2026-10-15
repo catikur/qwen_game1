@@ -85,5 +85,11 @@ jobs:
           printf 'CapitalForge Lite simülatör kareleri — %s\n' "$SHA" > README.md
           git add -A
           git commit -q -m "Simülatör kareleri: $SHA"
-          git push -q -f "https://x-access-token:${TOKEN}@github.com/${{ github.repository }}" ios-lite-shots
+          # main ve PR koşuları aynı anda yazabiliyor ("cannot lock ref"): birkaç kez dene.
+          for attempt in 1 2 3 4 5; do
+            git push -q -f "https://x-access-token:${TOKEN}@github.com/${{ github.repository }}" ios-lite-shots && exit 0
+            echo "itme reddedildi (deneme $attempt), yeniden denenecek"
+            sleep $((attempt * 15))
+          done
+          exit 1
 

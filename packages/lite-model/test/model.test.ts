@@ -1,10 +1,15 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  AIR_UNLOCK,
+  AUTO_UNLOCK,
   CAMPAIGN,
   CHAIN_IDS,
+  CITY_THEMES,
   COUNCIL_FIRST,
   COUNCIL_PAIRS,
+  ENERGY_PROCESSING,
+  ENERGY_UNLOCK,
   EVENT_DURATION,
   EVENT_FIRST,
   EVENT_GAP,
@@ -16,12 +21,17 @@ import {
   POLICY,
   OFFLINE_CAP_BASE,
   STARTING_CASH,
+  STAR_SOFT_FROM,
+  TRADE_ROUTE_BONUS,
   advance,
   applyOffline,
   bestMove,
+  buildingTier,
   buy,
   chainReport,
+  chainUnlocked,
   chooseCouncil,
+  cityTheme,
   claimGoal,
   companyValue,
   featuredChain,
@@ -29,7 +39,9 @@ import {
   goPublic,
   goalMet,
   goalReward,
+  gridPowered,
   incomePerSecond,
+  islandUnlocked,
   ipoProceeds,
   maxAffordable,
   newGame,
@@ -37,14 +49,21 @@ import {
   prestigePreview,
   stageRate,
   startCampaign,
+  starsFor,
   steadyIncome,
+  tradeRoutes,
   upgradeCost,
+  upgradeGain,
   type LiteState,
 } from '../src/index';
 
 function must(result: ReturnType<typeof buy>): LiteState {
   assert.ok(result.ok, 'eylem başarısız');
   return result.ok ? result.state : (null as never);
+}
+
+function close(actual: number, expected: number, message?: string): void {
+  assert.ok(Math.abs(actual - expected) <= 1e-12 * Math.max(1, Math.abs(expected)), message ?? `${actual} ≉ ${expected}`);
 }
 
 function rich(): LiteState {
@@ -141,12 +160,14 @@ test('çevrimdışı: tavanla kırpılıyor, yarı verim', () => {
 
 test('holding: yıldız korunuyor, şehir sıfırlanıyor, rakip sertleşiyor', () => {
   const s = rich();
-  s.earned = 4e12;
+  s.earned = 1e11;
   const r = prestige(s);
   assert.ok(r.ok);
   if (!r.ok) return;
   assert.equal(r.state.city, 1);
-  assert.equal(r.state.stars, 63);
+  assert.equal(r.state.stars, 10);
+  // L7: satılan şehir holding haritasına geçiyor.
+  assert.deepEqual(r.state.history, [{ stars: 10, listed: false, earned: 1e11 }]);
   assert.equal(r.state.cash, STARTING_CASH);
   for (const id of CHAIN_IDS) assert.deepEqual(r.state.chains[id].levels, [0, 0, 0]);
   assert.equal(prestige(newGame()).ok, false, 'kazançsız şehir satılamaz');
@@ -285,13 +306,14 @@ test('halka arz değerlemesi kampanya, olay ve politikadan etkilenmiyor', () => 
 
 test('halka açık şirket satılırken yıldız ×1,2; yeni şehir halka açık değil', () => {
   const s = ipoReady();
-  s.earned = 4e12;
-  assert.equal(prestigePreview(s), 63);
+  s.earned = 1e11;
+  assert.equal(prestigePreview(s), 10);
   const listed = must(goPublic(s));
-  assert.equal(prestigePreview(listed), 75);
+  assert.equal(prestigePreview(listed), 12);
   const next = must(prestige(listed));
-  assert.equal(next.stars, 75);
+  assert.equal(next.stars, 12);
   assert.equal(next.listed, false);
+  assert.equal(next.history[0]!.listed, true);
 });
 
 test('halka arz görevi: sanayiden sonra, limandan önce; halka arz edince tutuyor', () => {
@@ -322,7 +344,8 @@ test('şehir bonusu: ilk şehirde yok, sonra sırayla bir zincirin geliri ×2', 
   const second = build(1);
   // Rakip sıfırken pay 1: fark yalnızca bonus (yıldız yok, rakip henüz kovalamadı).
   assert.equal(chainReport(second, 'coffee').income, chainReport(first, 'coffee').income * 2);
-  assert.equal(chainReport(second, 'bakery').income, chainReport(first, 'bakery').income);
+  // L7: ilk şehir satılınca fırına ticaret yolu kaldı.
+  close(chainReport(second, 'bakery').income, chainReport(first, 'bakery').income * (1 + TRADE_ROUTE_BONUS));
 });
 
 test('rakip öngörüsü: ilk şehirde geçemiyor, sert şehirde geçiyor, zaten gerideysen sessiz', () => {
@@ -343,4 +366,91 @@ test('rakip öngörüsü: ilk şehirde geçemiyor, sert şehirde geçiyor, zaten
 
   // Uzun süre büyütmeden kalınca rakip zaten geçmiş: "seni geçti" denmiyor.
   assert.equal(firstOvertake(setup(6, 9_000), 2 * 3600), null);
+});
+
+// ------------------------------------------------------------ L7
+
+test('yıldız eğrisi: STAR_SOFT_FROM\'a kadar karekök, sonra dördüncü kök; eşikte kesintisiz', () => {
+  assert.equal(STAR_SOFT_FROM, 1e11);
+  assert.equal(starsFor(1e11), 10);
+  assert.equal(starsFor(1.6e12), 20);
+  assert.equal(starsFor(1e15), 100);
+  assert.equal(starsFor(1e15, true), 120);
+  // Eşiğin hemen iki yanı aynı yıldız.
+  assert.equal(starsFor(STAR_SOFT_FROM * 0.999999), 9);
+  assert.equal(starsFor(STAR_SOFT_FROM * 1.000001), 10);
+});
+
+test('takımada: adalar sırayla açılıyor, her ada tek zincir', () => {
+  const s = newGame();
+  s.earned = ENERGY_UNLOCK - 1;
+  assert.equal(islandUnlocked(s, 0), true);
+  assert.equal(islandUnlocked(s, 1), false);
+  assert.equal(chainUnlocked(s, 'energy'), false);
+  s.earned = ENERGY_UNLOCK;
+  assert.equal(islandUnlocked(s, 1), true);
+  assert.equal(chainUnlocked(s, 'energy'), true);
+  assert.equal(chainUnlocked(s, 'auto'), false);
+  s.earned = AUTO_UNLOCK;
+  assert.equal(chainUnlocked(s, 'auto'), true);
+  assert.equal(islandUnlocked(s, 3), false);
+  s.earned = AIR_UNLOCK;
+  assert.equal(chainUnlocked(s, 'aviation'), true);
+  assert.equal(islandUnlocked(s, 3), true);
+  assert.equal(CHAIN_IDS.length, 8);
+});
+
+test('enerji şebekesi: diğer zincirlerde işleme ×1,3; enerjinin kendisinde değil; öneri bunu sayıyor', () => {
+  let s = newGame();
+  s.earned = ENERGY_UNLOCK;
+  s.cash = 1e9;
+  s = must(buy(s, 'bakery', 1, 10));
+  s = must(buy(s, 'energy', 2, 1));
+  s.cash = 1e9;
+  const before = chainReport(s, 'bakery').rates[1];
+  const energyBefore = chainReport(s, 'energy').rates[1];
+  assert.equal(gridPowered(s), false);
+  const gain = upgradeGain(s, 'energy', 1);
+  const powered = must(buy(s, 'energy', 1, 1));
+  assert.equal(gridPowered(powered), true);
+  close(chainReport(powered, 'bakery').rates[1], before * ENERGY_PROCESSING);
+  assert.equal(energyBefore, 0);
+  assert.equal(chainReport(powered, 'energy').rates[1], stageRate(1, 1));
+  // Kazanç tahmini gerçek gelir farkıyla aynı (fırının hızlanması dahil).
+  close(gain, incomePerSecond(powered) - incomePerSecond(s));
+  assert.ok(gain > 0);
+});
+
+test('ticaret yolu: satılan her şehir öne çıkan zincirine (ilk şehirde fırına) kalıcı +%10', () => {
+  assert.equal(tradeRoutes(0, 'bakery'), 0);
+  assert.equal(tradeRoutes(1, 'bakery'), 1);
+  assert.equal(tradeRoutes(2, 'coffee'), 1);
+  assert.equal(tradeRoutes(6, 'bakery'), 2);
+  assert.equal(tradeRoutes(6, 'coffee'), 1);
+  assert.equal(tradeRoutes(6, 'tech'), 1);
+  assert.equal(tradeRoutes(13, 'energy'), 0);
+  const total = CHAIN_IDS.reduce((n, id) => n + tradeRoutes(9, id), 0);
+  assert.equal(total, 9);
+});
+
+test('bina kademeleri ve şehir temaları', () => {
+  assert.deepEqual(
+    [0, 1, 24, 25, 49, 50, 99, 100, 777].map(buildingTier),
+    [0, 1, 1, 2, 2, 3, 3, 4, 4],
+  );
+  assert.deepEqual([0, 1, 2, 3, 4].map(cityTheme), ['coast', 'mountain', 'desert', 'snow', 'coast']);
+  assert.equal(CITY_THEMES.length, 4);
+});
+
+test('ada görevleri sona eklendi: eski kayıtların görev sırası kaymıyor', () => {
+  assert.equal(GOAL_IPO_INDEX, 11);
+  assert.deepEqual(
+    GOALS.slice(-4).map((goal) => goal.kind),
+    ['firstStar', 'energyIsland', 'autoIsland', 'airIsland'],
+  );
+  const s = newGame();
+  s.earned = AUTO_UNLOCK;
+  assert.equal(goalMet(s, GOALS[GOALS.length - 3]!), true);
+  assert.equal(goalMet(s, GOALS[GOALS.length - 2]!), true);
+  assert.equal(goalMet(s, GOALS[GOALS.length - 1]!), false);
 });

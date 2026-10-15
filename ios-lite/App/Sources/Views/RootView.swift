@@ -14,6 +14,7 @@ struct RootView: View {
     @Environment(\.horizontalSizeClass) private var sizeClass
     @State private var confirmSell = false
     @State private var showSettings = ProcessInfo.processInfo.arguments.contains("-liteSettings")
+    @State private var showMap = ProcessInfo.processInfo.arguments.contains("-liteMap")
     /// CI yedeği: simülatör yatay dönmezse yatay düzen 90° çevrilmiş kapta çiziliyor.
     @State private var rotatedPreview = false
 
@@ -56,6 +57,12 @@ struct RootView: View {
         .task { await store.refreshNotificationStatus() }
         .sheet(isPresented: $showSettings) {
             SettingsSheet()
+                .presentationDetents([.fraction(0.82), .large])
+                .presentationCornerRadius(28)
+                .presentationBackground { Theme.sky(scheme) }
+        }
+        .sheet(isPresented: $showMap) {
+            HoldingMapSheet()
                 .presentationDetents([.fraction(0.82), .large])
                 .presentationCornerRadius(28)
                 .presentationBackground { Theme.sky(scheme) }
@@ -127,20 +134,20 @@ extension RootView {
                     BuyAmountPicker(selection: $store.buyAmount)
                     if columns > 1 {
                         LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12, alignment: .top), count: columns), spacing: 12) {
-                            ForEach(ChainId.allCases, id: \.self) { chain in
+                            ForEach(Self.visibleChains(store.state), id: \.self) { chain in
                                 ChainCard(chain: chain)
                             }
                             IpoCard(placement: .market).id("market")
                             ManagerCard()
-                            HoldingCard(confirm: $confirmSell).id("holding")
+                            HoldingCard(confirm: $confirmSell, showMap: $showMap).id("holding")
                         }
                     } else {
-                        ForEach(ChainId.allCases, id: \.self) { chain in
+                        ForEach(Self.visibleChains(store.state), id: \.self) { chain in
                             ChainCard(chain: chain)
                         }
                         IpoCard(placement: .market).id("market")
                         ManagerCard()
-                        HoldingCard(confirm: $confirmSell).id("holding")
+                        HoldingCard(confirm: $confirmSell, showMap: $showMap).id("holding")
                     }
                 }
                 .padding(.horizontal, 14)
@@ -158,6 +165,13 @@ extension RootView {
                 }
             }
         }
+    }
+
+    /// Açık zincirler ve sıradaki kilitli zincir (L7: sekiz zincirin hepsi baştan görünmesin).
+    static func visibleChains(_ state: LiteState) -> [ChainId] {
+        var chains = ChainId.allCases.filter { Lite.chainUnlocked(state, $0) }
+        if let next = ChainId.allCases.first(where: { !Lite.chainUnlocked(state, $0) }) { chains.append(next) }
+        return chains
     }
 
     /// CI kareleri: `-liteLandscape` iPad'i yatay çeviriyor (senaryo modunda).

@@ -94,6 +94,9 @@ Her şehirde bir rakip CEO var; yüzü ana oyundaki avatar sisteminden geliyor.
 - **Holding (prestij):** şehrin şirketini satıp yeni şehre geçiyorsun. Sıfırdan
   başlıyorsun ama Holding Yıldızı kazanıyorsun:
   - yıldız = `⌊√(şehirdeki ömür boyu kazanç / 1 Mr ₺) × (halka açıksa 1,2)⌋`;
+  - L7: 100 Mr ₺ kazançtan sonra karekök yerine dördüncü kök (eşikte 10 yıldız,
+    eğri kesintisiz). Adalar kazancı binlerce kat büyütüyor; karekökle yıldız
+    yüzlere çıkıp ikinci şehri dakikalara indiriyordu;
   - her yıldız bütün gelire kalıcı +%2;
   - her şehrin rakibi bir öncekinden sert (kovalama hedefi +0,15);
   - ikinci şehirden başlayarak her şehrin bir öne çıkan zinciri var, geliri ×2.
@@ -356,7 +359,7 @@ satıp ikinci şehirde 2 saat oynuyor):
 | L4 | Halka arz ve borsa, şehir bonusu, bildirimler, ayarlar (dil, ses, titreşim, bildirim, sıfırla), prosedürel ses ve titreşim, geçici simge |
 | L5 | **Stil yenilemesi: "Cam & Bulut", gündüz ve gece** (§6.1). Yazı tipi, renk, şehir çizimi, kart ve düğme yapısı, simge baştan. Görünüm cihaza uyuyor; Ayarlar'dan zorlanabiliyor. Oyun mantığına dokunulmuyor |
 | L6 | **iPadOS** (ayrı koşu): aynı oyun, büyük ekrana göre düzen. Ayrıntı §11 |
-| L7 | **Ada dolunca: oyunun devamı.** Öneri §12; kullanıcı yönü seçecek |
+| L7 | **Ada dolunca: oyunun devamı.** Bina kademeleri, takımada (üç ada, üç zincir), holding haritası, şehir temaları. Ayrıntı §12 |
 | L8 | **Online: lider tablosu ve ligler.** Öneri §13; altyapı kararı kullanıcının |
 | Son | **Uygulama simgesi yeniden.** L4'teki geçici simge beğenilmedi; en sona bırakıldı |
 
@@ -396,7 +399,7 @@ leaderboard online olsun, ligler kurulabilsin."
   (düzen yalnızca pencere boyuna bağlı, sonuç aynı). Hangisinin olduğunu
   `Documents/orientation.txt`'ye yazıyor; betik kareyi ona göre çeviriyor.
 
-## 12. Ada dolunca: oyunun devamı (L7, öneri)
+## 12. Ada dolunca: oyunun devamı (L7)
 
 **Sorun.** Ada 7×7: beş zincirin 15 parseli, liman ve yollar. Aktif oyuncu
 Teknopark'ı yaklaşık 3 saatte, gündelik oyuncu ilk gün açıyor. Ondan sonra
@@ -436,8 +439,62 @@ yalnızca şehri satmak. "Alan bir noktada sonlanıyor."
      görünüyor.
 
 **Karar (kullanıcı): üçü birden.** L7 bina kademeleri, takımada ve holding
-haritasını birlikte getiriyor. Model tarafı (yeni zincirler, ada açılışları,
-ticaret yolu bonusu) önce TS'te dengelenip fikstürlerle Swift'e taşınacak.
+haritasını birlikte getiriyor.
+
+### 12.1 Uygulanan (L7)
+
+- **Bina kademeleri** (`buildingTier`, eşikler 25 / 50 / 100):
+
+  | Seviye | Satış | İşleme | Ham |
+  |---|---|---|---|
+  | 1–24 | dükkân, tente | atölye, tek baca | tarla |
+  | 25–49 | orta kat, çatıda makine dairesi | geniş fabrika, uzun baca | tarla + silo |
+  | 50–99 | kule, geri çekilmiş tepe | iki baca | daha yüksek silo |
+  | 100+ | simge yapı: ışıklı bant, altın tepe, yanıp sönen anten | altın baca uçları | altın kubbeli silo |
+
+  Kademeler kilometre taşlarıyla çakışıyor: hız ikiye katlanırken bina da
+  büyüyor. Binalar uzadıkça kamera geri çekiliyor (kule ×0,9, simge yapı
+  ×0,8), kadraja sığıyor. Ölçüm: aktif oyuncunun seviyeleri 5. dakikada 25,
+  ilk saatte 50, dördüncü saatte 75–95.
+- **Takımada:** Teknopark'tan sonra köprüyle bağlı üç ada. Her ada tek zincir:
+
+  | Ada | Açılış | Zincir (ham → işleme → satış) | Fiyat |
+  |---|---|---|---|
+  | Enerji | 80 Mr ₺ | Rüzgâr ve Güneş → Şebeke → Enerji Satışı | 700 B ₺ |
+  | Otomotiv | 1,5 Tn ₺ | Maden → Parça Fabrikası → Bayi | 10 M ₺ |
+  | Havacılık | 30 Tn ₺ | İleri Malzeme → Montaj Hattı → Havayolu | 150 M ₺ |
+
+  - Enerji şebekesi (işleme ≥ 1) diğer bütün zincirlerin işleme hızını ×1,3
+    yapıyor. Önerilen hamle bunu sayıyor: şebekenin ilk seviyesinin getirisi
+    diğer zincirlerin hızlanmasını da içeriyor.
+  - Şehir görünümü yatay sayfalı: ana ada, sonra açık adalar. Sol üstte küçük
+    ada haritası; sıradaki kilitli adanın köprü eşiği yazıyor. Köprüler sayfa
+    kenarında bulutlara karışıyor.
+  - Kartlarda açık zincirler ve yalnızca sıradaki kilitli zincir görünüyor.
+  - Üç yeni görev sona eklendi (köprüler); eski kayıtların görev sırası
+    kaymıyor.
+- **Holding haritası:** satılan şehirler denizde ada (`history`). Her biri
+  öne çıkan zincirine (ilk şehirde fırına) kalıcı +%10 ticaret yolu
+  bırakıyor; aynı zincire düşen yollar toplanıyor. Holding kartında "Harita".
+- **Şehir temaları:** holding turları sırayla sahil, dağ, çöl, kar.
+  - Dağ: gri kaya yanlar, çam, arkada karlı tepeler.
+  - Çöl: kum zemin, kiremit yanlar, kaktüs, arkada düz tepeli kayalar.
+  - Kar: beyaz zemin, karlı çamlar, yağan kar.
+- **Kayıt:** L6 kayıtlarında beş zincir var; ada zincirleri boş tamamlanıyor,
+  harita boş başlıyor.
+
+**Denge (aktif bot, kampanya açık):**
+
+| | 1. şehir | 2. şehir (69 yıldız, kahve ×2) |
+|---|---|---|
+| Teknopark | 3 sa 02 dk | 1 sa 10 dk |
+| Enerji Adası | 4 sa 15 dk | 1 sa 38 dk |
+| Otomotiv Adası | 5 sa 48 dk | 2 sa 13 dk |
+| Havacılık Adası | 7 sa 31 dk | 2 sa 55 dk |
+| 8. saatte satış önizlemesi | 69 yıldız | — |
+
+Gündelik oyuncu (3 saatte bir 4 dakika) ikinci gün sekiz zincirin hepsini
+açıyor; ikinci günün sonunda satış önizlemesi 146 yıldız.
 
 ## 13. Online: lider tablosu ve ligler (L8, öneri)
 

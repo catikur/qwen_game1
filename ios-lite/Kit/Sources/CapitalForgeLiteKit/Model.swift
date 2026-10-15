@@ -32,6 +32,22 @@ public struct ActivePolicy: Codable, Equatable, Sendable {
     public var until: Double
 }
 
+/// Holding haritası: satılmış bir şehrin kaydı (L7).
+public struct CityRecord: Codable, Equatable, Sendable {
+    /// Satışta kazanılan yıldız.
+    public var stars: Int
+    /// Satarken halka açık mıydı.
+    public var listed: Bool
+    /// Şehirdeki ömür boyu kazanç.
+    public var earned: Double
+
+    public init(stars: Int, listed: Bool, earned: Double) {
+        self.stars = stars
+        self.listed = listed
+        self.earned = earned
+    }
+}
+
 public struct LiteState: Codable, Equatable, Sendable {
     public var version: Int = 1
     /// Kaçıncı şehir (0'dan).
@@ -67,6 +83,9 @@ public struct LiteState: Codable, Equatable, Sendable {
     // L4
     /// Şirket bu şehirde halka arz edildi mi.
     public var listed: Bool = false
+    // L7
+    /// Satılmış şehirler, sırayla (holding haritası).
+    public var history: [CityRecord] = []
 
     public subscript(chain id: ChainId) -> ChainState {
         get { chains[id.index] }
@@ -79,11 +98,14 @@ extension LiteState {
         case version, city, stars, cash, earned, totalEarned, clock, manager, campaignUntil, campaignReadyAt, chains
         case event, nextEventAt, events, council, nextCouncilAt, sessions, policy, policies, campaigns, goal
         case listed
+        case history
     }
 
     /// Eski kayıtlarda yeni alanlar yok: varsayılanla açılıyor. L2'de L3
     /// alanları, L3'te `listed` yok. L3 kaydında görev sırası halka arz
     /// görevinden sonrasını bir kaydırıyor (o görev L4'te araya girdi).
+    /// L6 ve öncesinde ada zincirleri ve holding haritası yok: zincirler boş
+    /// tamamlanıyor, harita boş başlıyor.
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         version = try c.decodeIfPresent(Int.self, forKey: .version) ?? 1
@@ -97,6 +119,7 @@ extension LiteState {
         campaignUntil = try c.decode(Double.self, forKey: .campaignUntil)
         campaignReadyAt = try c.decode(Double.self, forKey: .campaignReadyAt)
         chains = try c.decode([ChainState].self, forKey: .chains)
+        while chains.count < ChainId.allCases.count { chains.append(ChainState()) }
         event = try c.decodeIfPresent(ActiveEvent.self, forKey: .event)
         nextEventAt = try c.decodeIfPresent(Double.self, forKey: .nextEventAt) ?? clock + LiteContent.eventFirst
         events = try c.decodeIfPresent(Int.self, forKey: .events) ?? 0
@@ -113,6 +136,7 @@ extension LiteState {
             listed = false
             if goal >= LiteContent.goalIpoIndex { goal += 1 }
         }
+        history = try c.decodeIfPresent([CityRecord].self, forKey: .history) ?? []
     }
 }
 
@@ -150,8 +174,8 @@ public enum Lite {
     /// Sınır toleransı: kayan nokta toplamı sınırın bir tık altında kalmasın.
     static let eps = 1e-9
 
-    public static func newGame(city: Int = 0, stars: Int = 0, totalEarned: Double = 0) -> LiteState {
-        LiteState(
+    public static func newGame(city: Int = 0, stars: Int = 0, totalEarned: Double = 0, history: [CityRecord] = []) -> LiteState {
+        var state = LiteState(
             city: city,
             stars: stars,
             cash: LiteContent.startingCash,
@@ -163,6 +187,8 @@ public enum Lite {
             campaignReadyAt: 0,
             chains: ChainId.allCases.map { _ in ChainState() }
         )
+        state.history = history
+        return state
     }
 
     // MARK: - Kademeler
@@ -240,8 +266,22 @@ public enum Lite {
         return LiteContent.cityFeatured[(state.city - 1) % LiteContent.cityFeatured.count]
     }
 
+    /// Satılmış `city` numaralı şehrin bıraktığı ticaret yolu: öne çıkan zinciri, ilk şehirde fırın.
+    public static func tradeRouteChain(_ city: Int) -> ChainId {
+        city < 1 ? .bakery : LiteContent.cityFeatured[(city - 1) % LiteContent.cityFeatured.count]
+    }
+
+    /// `city` numaralı şehre kadar satılmış şehirlerin bu zincire bıraktığı ticaret yolu sayısı.
+    public static func tradeRoutes(_ city: Int, _ chain: ChainId) -> Int {
+        var count = 0
+        for past in 0..<max(0, city) where tradeRouteChain(past) == chain { count += 1 }
+        return count
+    }
+
     public static func chainMultiplier(_ state: LiteState, _ chain: ChainId) -> Double {
         var multiplier = featuredChain(state) == chain ? LiteContent.cityBonus : 1.0
+        let routes = tradeRoutes(state.city, chain)
+        if routes > 0 { multiplier *= 1 + LiteContent.tradeRouteBonus * Double(routes) }
         let tourist = chain == .bakery || chain == .coffee
         if eventIs(state, .tourism) && tourist { multiplier *= LiteContent.tourismMultiplier }
         if eventIs(state, .fashionWeek) && chain == .fashion { multiplier *= LiteContent.fashionWeekMultiplier }
@@ -249,8 +289,14 @@ public enum Lite {
         return multiplier
     }
 
+    /// Enerji şebekesi kurulu mu: diğer zincirlerde işleme hızlanıyor.
+    public static func gridPowered(_ state: LiteState) -> Bool {
+        state[chain: .energy].levels[1] > 0
+    }
+
     public static func stageMultiplier(_ state: LiteState, _ chain: ChainId, _ stage: Stage) -> Double {
         var multiplier = 1.0
+        if stage == .process && chain != .energy && gridPowered(state) { multiplier *= LiteContent.energyProcessing }
         if stage == .retail, let event = state.event, event.kind == .strike, event.chain == chain {
             multiplier *= LiteContent.strikeMultiplier
         }
@@ -337,13 +383,24 @@ public enum Lite {
         return incomePerSecond(calm)
     }
 
+    /// Bir kademe +1 seviye olunca gelirin artışı. Enerji şebekesinin ilk
+    /// seviyesi diğer zincirlerin işlemesini de hızlandırıyor: o artış da sayılıyor.
     public static func upgradeGain(_ state: LiteState, _ chain: ChainId, _ stage: Stage) -> Double {
         let multiplier = incomeMultiplier(state)
         let levels = state[chain: chain].levels
         let before = chainIncome(state, chain, levels, multiplier)
         var next = levels
         next[stage.rawValue] += 1
-        return chainIncome(state, chain, next, multiplier) - before
+        var gain = chainIncome(state, chain, next, multiplier) - before
+        if chain == .energy && stage == .process && levels[1] == 0 {
+            var powered = state
+            powered[chain: .energy].levels[1] = 1
+            for id in ChainId.allCases where id != .energy {
+                let own = state[chain: id].levels
+                gain += chainIncome(powered, id, own, multiplier) - chainIncome(state, id, own, multiplier)
+            }
+        }
+        return gain
     }
 
     public static func bottleneck(_ state: LiteState, _ chain: ChainId) -> Stage {
@@ -404,6 +461,9 @@ public enum Lite {
         case .port: return districtUnlocked(state, .port)
         case .technopark: return districtUnlocked(state, .technopark)
         case .firstStar: return prestigePreview(state) >= 1
+        case .energyIsland: return districtUnlocked(state, .energyIsland)
+        case .autoIsland: return districtUnlocked(state, .autoIsland)
+        case .airIsland: return districtUnlocked(state, .airIsland)
         }
     }
 
@@ -579,7 +639,11 @@ public enum Lite {
     /// Yıldız: halka açık şirket daha yüksek değerlemeyle satılıyor.
     public static func starsFor(_ earned: Double, listed: Bool = false) -> Int {
         let premium = listed ? LiteContent.listedStarMultiplier : 1.0
-        return Int(floor(LiteContent.starScale * sqrt(max(0, earned) / LiteContent.starUnit) * premium))
+        let value = max(0, earned)
+        let raw = value <= LiteContent.starSoftFrom
+            ? sqrt(value / LiteContent.starUnit)
+            : sqrt(LiteContent.starSoftFrom / LiteContent.starUnit) * sqrt(sqrt(value / LiteContent.starSoftFrom))
+        return Int(floor(LiteContent.starScale * raw * premium))
     }
 
     public static func prestigePreview(_ state: LiteState) -> Int {
@@ -589,7 +653,8 @@ public enum Lite {
     public static func prestige(_ state: LiteState) -> Result<LiteState, ActionError> {
         let gained = prestigePreview(state)
         if gained < 1 { return .failure(.locked) }
-        return .success(newGame(city: state.city + 1, stars: state.stars + gained, totalEarned: state.totalEarned))
+        let record = CityRecord(stars: gained, listed: state.listed, earned: state.earned)
+        return .success(newGame(city: state.city + 1, stars: state.stars + gained, totalEarned: state.totalEarned, history: state.history + [record]))
     }
 
     // MARK: - Bildirim
@@ -613,5 +678,23 @@ public enum Lite {
             for id in leading where chainReport(current, id).share < LiteContent.overtakeShare { return elapsed }
         }
         return nil
+    }
+
+    // MARK: - L7: görünüm
+
+    /// Adanın açık olup olmadığı (0 ana ada, hep açık).
+    public static func islandUnlocked(_ state: LiteState, _ island: Int) -> Bool {
+        LiteContent.districts.contains { $0.island == island && state.earned >= $0.unlockAt }
+    }
+
+    /// Bina kademesi: 0 boş parsel, 1 dükkân, 2 orta kat, 3 kule, 4 simge yapı.
+    public static func buildingTier(_ level: Int) -> Int {
+        if level <= 0 { return 0 }
+        return 1 + LiteContent.buildingTiers.reduce(0) { $0 + (level >= $1 ? 1 : 0) }
+    }
+
+    /// Şehrin teması: holding turları sırayla sahil, dağ, çöl, kar.
+    public static func cityTheme(_ city: Int) -> CityTheme {
+        LiteContent.cityThemes[city % LiteContent.cityThemes.count]
     }
 }

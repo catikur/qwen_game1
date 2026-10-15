@@ -73,7 +73,7 @@ CI (`.github/workflows/ios-lite.yml`) her değişiklikte macOS'ta şunları yap�
 - senaryo ekran görüntülerini `ios-lite-shots` dalına yazıyor.
 
 Simülatörde senaryo açmak için uygulamayı
-`-liteScenario start|early|mid|late|council|ipo|listed|city2` argümanıyla başlat.
+`-liteScenario start|early|mid|late|council|ipo|listed|city2|islands|skyline|desert|snow` argümanıyla başlat.
 Xcode'da: **Product → Scheme → Edit Scheme → Run → Arguments**.
 
 - Senaryo modunda kayıt okunmuyor ve yazılmıyor, ses kapalı, oyun saati donuk.
@@ -81,7 +81,9 @@ Xcode'da: **Product → Scheme → Edit Scheme → Run → Arguments**.
   - `-liteOffline <sn>`: "yokken kazandın" penceresi;
   - `-liteSettings`: Ayarlar açık;
   - `-liteScroll market`: liste borsa kartına kaymış;
-  - `-liteLandscape`: iPad yatay açılıyor.
+  - `-liteLandscape`: iPad yatay açılıyor;
+  - `-liteIsland <1-3>`: şehir o adanın sayfasında (L7);
+  - `-liteMap`: holding haritası açık.
 
 Uygulama iPad'de de çalışıyor (L6): yatayda solda şehir, sağda kartlar;
 dikeyde üstte şehir, altta iki sütun kart. Split View'in dar penceresinde

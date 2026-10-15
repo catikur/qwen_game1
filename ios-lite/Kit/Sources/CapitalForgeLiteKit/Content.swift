@@ -8,6 +8,8 @@ import Foundation
 
 public enum ChainId: String, CaseIterable, Codable, Sendable {
     case bakery, coffee, fashion, leather, tech
+    // L7: takımada.
+    case energy, auto, aviation
 
     /// `LiteState.chains` dizisindeki yeri (sıra TS'teki CHAIN_IDS ile aynı).
     public var index: Int { ChainId.allCases.firstIndex(of: self)! }
@@ -15,6 +17,8 @@ public enum ChainId: String, CaseIterable, Codable, Sendable {
 
 public enum DistrictId: String, CaseIterable, Codable, Sendable {
     case bazaar, center, industry, port, technopark
+    // L7: köprüyle bağlı adalar.
+    case energyIsland, autoIsland, airIsland
 }
 
 /// Kademe: 0 ham, 1 işleme, 2 satış.
@@ -37,6 +41,13 @@ public struct DistrictDef: Sendable {
     public let id: DistrictId
     public let unlockAt: Double
     public let incomeMultiplier: Double
+    /// Hangi adada (L7): 0 ana ada, sonra köprüyle bağlı adalar.
+    public let island: Int
+}
+
+/// Şehir teması (L7): her holding turu başka bir coğrafyada.
+public enum CityTheme: String, CaseIterable, Codable, Sendable {
+    case coast, mountain, desert, snow
 }
 
 public enum LiteContent {
@@ -46,15 +57,31 @@ public enum LiteContent {
         ChainDef(id: .fashion, district: .center, price: 200, baseCost: [1_200, 1_600, 800], unlockAt: 400_000),
         ChainDef(id: .leather, district: .industry, price: 3_000, baseCost: [18_000, 24_000, 12_000], unlockAt: 60_000_000),
         ChainDef(id: .tech, district: .technopark, price: 45_000, baseCost: [270_000, 360_000, 180_000], unlockAt: 9_000_000_000),
+        // L7: takımada. Her ada köprüyle bağlı, tek zincirli.
+        ChainDef(id: .energy, district: .energyIsland, price: 700_000, baseCost: [4_200_000, 5_600_000, 2_800_000], unlockAt: energyUnlock),
+        ChainDef(id: .auto, district: .autoIsland, price: 10_000_000, baseCost: [60_000_000, 80_000_000, 40_000_000], unlockAt: autoUnlock),
+        ChainDef(id: .aviation, district: .airIsland, price: 150_000_000, baseCost: [900_000_000, 1_200_000_000, 600_000_000], unlockAt: airUnlock),
     ]
 
     public static let districts: [DistrictDef] = [
-        DistrictDef(id: .bazaar, unlockAt: 0, incomeMultiplier: 1),
-        DistrictDef(id: .center, unlockAt: 400_000, incomeMultiplier: 1),
-        DistrictDef(id: .industry, unlockAt: 60_000_000, incomeMultiplier: 1),
-        DistrictDef(id: .port, unlockAt: 1_500_000_000, incomeMultiplier: 1.5),
-        DistrictDef(id: .technopark, unlockAt: 9_000_000_000, incomeMultiplier: 1),
+        DistrictDef(id: .bazaar, unlockAt: 0, incomeMultiplier: 1, island: 0),
+        DistrictDef(id: .center, unlockAt: 400_000, incomeMultiplier: 1, island: 0),
+        DistrictDef(id: .industry, unlockAt: 60_000_000, incomeMultiplier: 1, island: 0),
+        DistrictDef(id: .port, unlockAt: 1_500_000_000, incomeMultiplier: 1.5, island: 0),
+        DistrictDef(id: .technopark, unlockAt: 9_000_000_000, incomeMultiplier: 1, island: 0),
+        DistrictDef(id: .energyIsland, unlockAt: energyUnlock, incomeMultiplier: 1, island: 1),
+        DistrictDef(id: .autoIsland, unlockAt: autoUnlock, incomeMultiplier: 1, island: 2),
+        DistrictDef(id: .airIsland, unlockAt: airUnlock, incomeMultiplier: 1, island: 3),
     ]
+
+    // MARK: - L7: takımada
+
+    /// Ada açılışları (ömür boyu kazanç).
+    public static let energyUnlock = 80_000_000_000.0
+    public static let autoUnlock = 1_500_000_000_000.0
+    public static let airUnlock = 30_000_000_000_000.0
+    /// Ada sayısı (ana ada dahil).
+    public static let islandCount = 4
 
     public static func chain(_ id: ChainId) -> ChainDef { chains[id.index] }
 
@@ -93,6 +120,8 @@ public enum LiteContent {
     public static let starBonus = 0.02
     public static let starScale = 1.0
     public static let starUnit = 1e9
+    /// L7: bu kazançtan sonra yıldız dördüncü kökle (√√) büyüyor; eğri kesintisiz.
+    public static let starSoftFrom = 1e11
 
     public static let startingCash = 10.0
 
@@ -152,6 +181,10 @@ public enum LiteContent {
         GoalDef(kind: .port, rewardSeconds: 240, minReward: 1_000_000),
         GoalDef(kind: .technopark, rewardSeconds: 300, minReward: 5_000_000),
         GoalDef(kind: .firstStar, rewardSeconds: 300, minReward: 10_000_000),
+        // L7: sona eklendi; eski kayıtların görev sırası kaymıyor.
+        GoalDef(kind: .energyIsland, rewardSeconds: 300, minReward: 100_000_000),
+        GoalDef(kind: .autoIsland, rewardSeconds: 360, minReward: 1_000_000_000),
+        GoalDef(kind: .airIsland, rewardSeconds: 420, minReward: 10_000_000_000),
     ]
 
     /// L4'te eklenen "halka arz" görevinin sırası: L3 kayıtları bu sıradan sonrasını bir kaydırıyor.
@@ -180,6 +213,17 @@ public enum LiteContent {
 
     /// "Rakip seni geçti" eşiği: pay bunun altına inince.
     public static let overtakeShare = 0.5
+
+    // MARK: - L7: enerji, ticaret yolu, görünüm
+
+    /// Enerji şebekesi kurulunca (işleme seviyesi ≥ 1) diğer zincirlerde işleme hızı.
+    public static let energyProcessing = 1.3
+    /// Satılan her şehir öne çıkan zincirine (ilk şehirde fırın) kalıcı +%10 bırakıyor.
+    public static let tradeRouteBonus = 0.1
+    /// Bina kademeleri: dükkân → orta kat → kule → simge yapı.
+    public static let buildingTiers: [Int] = [25, 50, 100]
+    /// Şehir temaları sırası.
+    public static let cityThemes: [CityTheme] = [.coast, .mountain, .desert, .snow]
 }
 
 // MARK: - L3 türleri
@@ -196,7 +240,9 @@ public enum PolicyKind: String, CaseIterable, Codable, Sendable {
 
 public enum GoalKind: String, CaseIterable, Codable, Sendable {
     case bakeryRetail, bakeryProcess, bakeryChain, firstCampaign, coffeeRetail, level25, center, manager, council,
-         share75, industry, ipo, port, technopark, firstStar
+         share75, industry, ipo, port, technopark, firstStar,
+         // L7
+         energyIsland, autoIsland, airIsland
 }
 
 public struct GoalDef: Sendable {
