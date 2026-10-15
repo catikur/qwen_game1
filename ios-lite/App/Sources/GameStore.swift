@@ -180,6 +180,22 @@ final class GameStore {
         }
     }
 
+    func chooseCouncil(_ choice: Int) {
+        if case .success(let next) = Lite.chooseCouncil(state, choice) {
+            state = next
+            purchases += 1
+        }
+    }
+
+    func claimGoal() {
+        if case .success(let next) = Lite.claimGoal(state) {
+            state = next
+            purchases += 1
+        } else {
+            refusals += 1
+        }
+    }
+
     func sellCity() {
         if case .success(let next) = Lite.prestige(state) {
             state = next

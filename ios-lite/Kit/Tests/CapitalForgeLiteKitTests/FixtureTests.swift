@@ -97,6 +97,8 @@ final class FixtureTests: XCTestCase {
         case "campaign": return unwrap(Lite.startCampaign(state))
         case "manager": return unwrap(Lite.buyManager(state))
         case "prestige": return unwrap(Lite.prestige(state))
+        case "council": return unwrap(Lite.chooseCouncil(state, int(op["choice"])))
+        case "claim": return unwrap(Lite.claimGoal(state))
         default:
             XCTFail("bilinmeyen adım \(op)")
             return (state, false)
@@ -118,6 +120,28 @@ final class FixtureTests: XCTestCase {
             close(state.chains[index].rival, rival, "\(label) rakip \(index)")
         }
         close(Lite.incomePerSecond(state), num(snapshot["income"]), "\(label) gelir")
+        // L3
+        if let event = snapshot["event"] as? [String: Any] {
+            XCTAssertEqual(state.event?.kind.rawValue, event["kind"] as? String, "\(label) olay")
+            XCTAssertEqual(state.event?.chain?.rawValue, event["chain"] as? String, "\(label) olay zinciri")
+            close(state.event?.until ?? .nan, num(event["until"]), "\(label) olay bitişi")
+        } else {
+            XCTAssertNil(state.event, "\(label) olay olmamalı")
+        }
+        close(state.nextEventAt, num(snapshot["nextEventAt"]), "\(label) sıradaki olay")
+        XCTAssertEqual(state.events, int(snapshot["events"]), "\(label) olay sayısı")
+        XCTAssertEqual(state.council, snapshot["council"] is NSNull ? nil : int(snapshot["council"]), "\(label) meclis")
+        close(state.nextCouncilAt, num(snapshot["nextCouncilAt"]), "\(label) sıradaki oturum")
+        XCTAssertEqual(state.sessions, int(snapshot["sessions"]), "\(label) oturum sayısı")
+        if let policy = snapshot["policy"] as? [String: Any] {
+            XCTAssertEqual(state.policy?.kind.rawValue, policy["kind"] as? String, "\(label) politika")
+            close(state.policy?.until ?? .nan, num(policy["until"]), "\(label) politika bitişi")
+        } else {
+            XCTAssertNil(state.policy, "\(label) politika olmamalı")
+        }
+        XCTAssertEqual(state.policies, int(snapshot["policies"]), "\(label) karar sayısı")
+        XCTAssertEqual(state.campaigns, int(snapshot["campaigns"]), "\(label) kampanya sayısı")
+        XCTAssertEqual(state.goal, int(snapshot["goal"]), "\(label) görev")
         let move = Lite.bestMove(state)
         if let best = snapshot["best"] as? [String: Any] {
             XCTAssertEqual(move?.chain, chain(best["chain"]), "\(label) önerilen zincir")

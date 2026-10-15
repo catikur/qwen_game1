@@ -1298,18 +1298,16 @@ async function finish(browser, consoleErrors) {
   // Asıl kontrol bu: en çok satan şirketin kapısı en kalabalık olmalı.
   // Bu tutmazsa akış "canlı görünen ama yalan söyleyen" bir süse dönüşür.
   //
-  // ±1 araç toleransı bilinçli: dağıtım MAĞAZA başına dürüst ve görsel
-  // tavanlı (bir kapıya en fazla N araç). Satışı az sayıda büyük mağazada
-  // yoğunlaşan lider o tavana çarpınca şirket toplamında 1 araçla
-  // geçilebiliyor — akış yalan söylemiyor, kuantalanıyor. Gerçek bir
-  // yalan çok araçlık farkla görünür ve hâlâ kırmızı yakar.
+  // ±1 araç toleransı bilinçli: araçlar önce şirketlere en büyük kalan
+  // yöntemiyle paylaştırılıyor, yani şirket toplamı satışa ±1 araç sadık.
   //
-  // Beş ayrı anın çoğunluğu (Tur 24). Tek an kırılgandı: oyun gerçek
-  // zamanda aktığı için her koşu başka bir güne denk geliyor ve iki şirket
-  // birimde başa baş giderken o an 2–3 araçlık bir kuanta farkı çıkabiliyor.
-  // 15 anlık ölçümde main 12/15 geçti, kalanlarda fark 2–3 araç. Akış
-  // satışı izlemeseydi beş anın hiçbiri geçmezdi; çoğunluk o yalanı hâlâ
-  // yakalıyor ama tek bir talihsiz anı yalan saymıyor.
+  // Beş anın HEPSİ (Tur 34 sonrası). Önceden "beş anın çoğunluğu"ydu, çünkü
+  // dağıtım doğrudan mağazalara yapılıyordu ve şirket toplamı kayabiliyordu.
+  // Main'de 1/5 an geçti: birimde lider 17 araç, rakip 19. Ölçünce görüldü
+  // ki bu bir kuanta talihsizliği değil, yöntemin kendisiydi: 8 tohum ×
+  // 210 günde anların %16,8'i yalandı, en kötüsü 14 araç fark. Şimdiki
+  // dağıtımda (render-three/src/shopper-allocation.ts) aynı ölçümde %0.
+  // Artık her an tutmalı; bir an bile tutmazsa gerçek bir hata.
   const flowSamples = [flow];
   for (let i = 0; i < 4; i++) {
     await runBriefly(700);
@@ -1318,8 +1316,8 @@ async function finish(browser, consoleErrors) {
   const honest = flowSamples.filter((f) => f.unitLeader === f.carLeader || f.unitLeaderCars >= f.carLeaderCars - 1);
   const worst = flowSamples.find((f) => !honest.includes(f)) ?? flow;
   check(
-    'En çok satanın kapısı en kalabalık (±1 araç, 5 anın çoğunluğu)',
-    honest.length >= 3,
+    'En çok satanın kapısı en kalabalık (±1 araç, 5 anın hepsi)',
+    honest.length === flowSamples.length,
     `${honest.length}/5 an · en kötüsü: birimde ${worst.unitLeader} (${worst.unitLeaderCars} araç), araçta ${worst.carLeader} (${worst.carLeaderCars} araç)`,
   );
   check('Akış birden fazla şirketi gösteriyor', flow.companies >= 2,

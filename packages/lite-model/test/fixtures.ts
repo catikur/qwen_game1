@@ -18,6 +18,10 @@ import {
   bestMove,
   buy,
   buyManager,
+  chooseCouncil,
+  claimGoal,
+  currentGoal,
+  goalMet,
   incomePerSecond,
   maxAffordable,
   managerCost,
@@ -38,7 +42,9 @@ export type Op =
   | { op: 'offline'; seconds: number }
   | { op: 'campaign' }
   | { op: 'manager' }
-  | { op: 'prestige' };
+  | { op: 'prestige' }
+  | { op: 'council'; choice: 0 | 1 }
+  | { op: 'claim' };
 
 export interface Snapshot {
   /** Bu kadar adım oynatıldıktan sonra. */
@@ -54,6 +60,17 @@ export interface Snapshot {
   rivals: number[];
   income: number;
   best: { chain: ChainId; stage: Stage } | null;
+  // L3
+  event: { kind: string; chain: ChainId | null; until: number } | null;
+  nextEventAt: number;
+  events: number;
+  council: number | null;
+  nextCouncilAt: number;
+  sessions: number;
+  policy: { kind: string; until: number } | null;
+  policies: number;
+  campaigns: number;
+  goal: number;
 }
 
 export interface Scenario {
@@ -88,6 +105,16 @@ function snapshot(state: LiteState, after: number): Snapshot {
     rivals: CHAIN_IDS.map((id) => state.chains[id].rival),
     income: incomePerSecond(state),
     best: move ? { chain: move.chain, stage: move.stage } : null,
+    event: state.event ? { ...state.event } : null,
+    nextEventAt: state.nextEventAt,
+    events: state.events,
+    council: state.council,
+    nextCouncilAt: state.nextCouncilAt,
+    sessions: state.sessions,
+    policy: state.policy ? { ...state.policy } : null,
+    policies: state.policies,
+    campaigns: state.campaigns,
+    goal: state.goal,
   };
 }
 
@@ -113,6 +140,14 @@ function apply(state: LiteState, op: Op): { state: LiteState; ok: boolean } {
       const r = prestige(state);
       return r.ok ? { state: r.state, ok: true } : { state, ok: false };
     }
+    case 'council': {
+      const r = chooseCouncil(state, op.choice);
+      return r.ok ? { state: r.state, ok: true } : { state, ok: false };
+    }
+    case 'claim': {
+      const r = claimGoal(state);
+      return r.ok ? { state: r.state, ok: true } : { state, ok: false };
+    }
   }
 }
 
@@ -133,6 +168,10 @@ function record(name: string, rounds: number, dt: number, extras: (round: number
   };
   for (let round = 0; round < rounds; round++) {
     for (const op of extras(round)) run(op);
+    // L3: tutan görevin ödülünü al; açık oturumda sırayla seçenek seç.
+    const goal = currentGoal(state);
+    if (goal && goalMet(state, goal)) run({ op: 'claim' });
+    if (state.council !== null) run({ op: 'council', choice: (state.sessions % 2) as 0 | 1 });
     for (let guard = 0; guard < 40; guard++) {
       const move = bestMove(state);
       if (!move || move.cost > state.cash) break;

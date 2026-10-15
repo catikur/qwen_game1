@@ -11,11 +11,14 @@ struct RootView: View {
         @Bindable var store = store
         VStack(spacing: 0) {
             HeaderView()
+            EventBanner()
             CityView()
-                .frame(height: 210)
+                .frame(height: 196)
                 .overlay(alignment: .bottom) { Rectangle().fill(Theme.line).frame(height: 1) }
             ScrollView {
                 VStack(spacing: 10) {
+                    CouncilCard()
+                    GoalCard()
                     BuyAmountPicker(selection: $store.buyAmount)
                     ForEach(ChainId.allCases, id: \.self) { chain in
                         ChainCard(chain: chain)

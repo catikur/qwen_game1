@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import type { CustomerFlow, SupplyLeg } from '@capital/core';
+import { allocateShoppers } from './shopper-allocation';
 
 /**
  * Trafik: fon araçları + zincir kamyonları + müşteri araçları.
@@ -565,8 +566,9 @@ export class TrafficSystem {
    *
    * Şimdi araçlar satış oranına göre, EN BÜYÜK KALAN yöntemiyle
    * paylaştırılıyor: tam sayı kısımlar dağıtılıyor, artan araçlar en büyük
-   * kesirli paya sahip mağazalara gidiyor. Böylece iki katı satan mağazanın
-   * kapısında iki katı araç oluyor.
+   * kesirli paya gidiyor. Böylece iki katı satan mağazanın kapısında iki
+   * katı araç oluyor. Paylaştırma önce şirket düzeyinde yapılıyor, sonra
+   * şirket içinde mağazalara (Tur 34 sonrası; gerekçe `shopper-allocation.ts`).
    *
    * Sıfır araç alan mağaza olabilir ve bu KASITLI. Çok az satan bir dükkân
    * sessiz görünmeli; "her mağazaya en az bir araç" kuralı, işlemeyen bir
@@ -682,7 +684,8 @@ export class TrafficSystem {
   }
 
   /**
-   * Araç bütçesini mağazalara satış oranında böler — en büyük kalan yöntemi.
+   * Araç bütçesini satış oranında böler: önce şirketlere, sonra şirket
+   * içinde mağazalara (`allocateShoppers`; neden iki kademe, orada).
    *
    * Basit yuvarlama neden yetmiyor: 54 aracı 42 mağazaya oranla dağıtırken
    * paylar çoğunlukla 0,5'in altında kalır, `Math.round` hepsini sıfırlar
@@ -692,37 +695,15 @@ export class TrafficSystem {
   private allocate(
     placed: Array<{ flow: CustomerFlow; spot: PlacedFlow }>,
   ): Array<{ storeId: string; spot: PlacedFlow; count: number }> {
-    let total = 0;
-    for (const entry of placed) total += entry.flow.units;
-    if (total <= 0) return [];
-
-    const quotas = placed.map((entry, index) => {
-      const exact = (entry.flow.units / total) * SHOPPER_CAP;
-      const whole = Math.min(SHOPPERS_PER_STORE_CAP, Math.floor(exact));
-      return {
-        index,
-        storeId: entry.flow.buildingId,
-        spot: entry.spot,
-        count: whole,
-        remainder: exact - Math.floor(exact),
-      };
-    });
-
-    let used = quotas.reduce((sum, q) => sum + q.count, 0);
-    // Artan araçlar en büyük kesirden başlayarak dağıtılıyor. Eşitlik
-    // hâlinde liste sırası (yani satış sırası) belirliyor — sabit bir
-    // ölçüt olmasa filo her senkronda başka bir mağazaya kayardı.
-    const byRemainder = [...quotas].sort((a, b) => b.remainder - a.remainder || a.index - b.index);
-    for (const quota of byRemainder) {
-      if (used >= SHOPPER_CAP) break;
-      if (quota.count >= SHOPPERS_PER_STORE_CAP) continue;
-      quota.count++;
-      used++;
-    }
-
-    return quotas
-      .filter((q) => q.count > 0)
-      .map((q) => ({ storeId: q.storeId, spot: q.spot, count: q.count }));
+    const shares = placed.map((entry) => ({
+      buildingId: entry.flow.buildingId,
+      companyId: entry.flow.companyId,
+      units: entry.flow.units,
+      spot: entry.spot,
+    }));
+    return allocateShoppers(shares, SHOPPER_CAP, SHOPPERS_PER_STORE_CAP)
+      .filter((quota) => quota.count > 0)
+      .map((quota) => ({ storeId: quota.flow.buildingId, spot: quota.flow.spot, count: quota.count }));
   }
 
   /**

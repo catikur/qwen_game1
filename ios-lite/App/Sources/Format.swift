@@ -30,13 +30,14 @@ enum Format {
         let h = s / 3600
         let m = (s % 3600) / 60
         let sec = s % 60
+        // Sıfır alt birim yazılmıyor: "2 dk 0 sn" değil "2 dk".
         if L10n.lang == .tr {
-            if h > 0 { return "\(h) sa \(m) dk" }
-            if m > 0 { return "\(m) dk \(sec) sn" }
+            if h > 0 { return m > 0 ? "\(h) sa \(m) dk" : "\(h) sa" }
+            if m > 0 { return sec > 0 ? "\(m) dk \(sec) sn" : "\(m) dk" }
             return "\(sec) sn"
         }
-        if h > 0 { return "\(h)h \(m)m" }
-        if m > 0 { return "\(m)m \(sec)s" }
+        if h > 0 { return m > 0 ? "\(h)h \(m)m" : "\(h)h" }
+        if m > 0 { return sec > 0 ? "\(m)m \(sec)s" : "\(m)m" }
         return "\(sec)s"
     }
 

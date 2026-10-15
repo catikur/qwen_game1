@@ -4,7 +4,18 @@ import {
   CHAIN_BY_ID,
   CHAIN_IDS,
   COST_GROWTH,
+  COUNCIL_FIRST,
+  COUNCIL_GAP,
+  COUNCIL_PAIRS,
+  CRISIS_MARGIN,
   DISTRICTS,
+  EVENT_DURATION,
+  EVENT_FIRST,
+  EVENT_GAP,
+  EVENT_KINDS,
+  EXPORT_BOOM_MULTIPLIER,
+  FASHION_WEEK_MULTIPLIER,
+  GOALS,
   MANAGER_BASE_COST,
   MANAGER_COST_GROWTH,
   MANAGER_MAX,
@@ -13,17 +24,25 @@ import {
   OFFLINE_CAP_BASE,
   OFFLINE_CAP_PER_MANAGER,
   OFFLINE_EFFICIENCY,
+  POLICY,
+  POLICY_DURATION,
   RIVAL_AGGRESSION_BASE,
   RIVAL_AGGRESSION_PER_CITY,
   RIVAL_LAG,
+  RIVAL_PUSH_MULTIPLIER,
   SHARE_FLOOR,
   STAGES,
   STARTING_CASH,
   STAR_BONUS,
   STAR_SCALE,
   STAR_UNIT,
+  STRIKE_MULTIPLIER,
+  TOURISM_MULTIPLIER,
   type ChainId,
   type DistrictId,
+  type EventKind,
+  type GoalDef,
+  type PolicyKind,
   type Stage,
 } from './content';
 
@@ -33,7 +52,7 @@ import {
  * Saf fonksiyonlar, saf veri. Swift karşılığı `Model.swift` aynı sırayla aynı
  * işlemleri yapıyor; sonuçların eşitliğini fikstür testleri koruyor. Bu yüzden
  * burada "akıllı" kısayol yok: her döngü sabit sırada (CHAIN_IDS, STAGES), her
- * adım sabit uzunlukta.
+ * adım sabit uzunlukta, her seçim tamsayı aritmetiğiyle.
  */
 
 export interface ChainState {
@@ -41,6 +60,18 @@ export interface ChainState {
   levels: [number, number, number];
   /** Rakibin bu zincirdeki akışı (birim/sn). */
   rival: number;
+}
+
+export interface ActiveEvent {
+  kind: EventKind;
+  /** Grevin vurduğu zincir; diğer olaylarda null. */
+  chain: ChainId | null;
+  until: number;
+}
+
+export interface ActivePolicy {
+  kind: PolicyKind;
+  until: number;
 }
 
 export interface LiteState {
@@ -61,6 +92,25 @@ export interface LiteState {
   campaignUntil: number;
   campaignReadyAt: number;
   chains: Record<ChainId, ChainState>;
+  // ---- L3
+  /** Süren şehir olayı. */
+  event: ActiveEvent | null;
+  nextEventAt: number;
+  /** Bu şehirde başlayan olay sayısı (sıradaki olayın seçimi buna bağlı). */
+  events: number;
+  /** Açık meclis oturumu: hangi seçenek çifti. */
+  council: number | null;
+  nextCouncilAt: number;
+  /** Bu şehirde açılan oturum sayısı. */
+  sessions: number;
+  /** Yürürlükteki politika. */
+  policy: ActivePolicy | null;
+  /** Seçilen politika sayısı (görev için). */
+  policies: number;
+  /** Açılan kampanya sayısı (görev için). */
+  campaigns: number;
+  /** Görev merdiveninde sıradaki görev. */
+  goal: number;
 }
 
 export function newGame(city = 0, stars = 0, totalEarned = 0): LiteState {
@@ -78,6 +128,16 @@ export function newGame(city = 0, stars = 0, totalEarned = 0): LiteState {
     campaignUntil: 0,
     campaignReadyAt: 0,
     chains,
+    event: null,
+    nextEventAt: EVENT_FIRST,
+    events: 0,
+    council: null,
+    nextCouncilAt: COUNCIL_FIRST,
+    sessions: 0,
+    policy: null,
+    policies: 0,
+    campaigns: 0,
+    goal: 0,
   };
 }
 
@@ -87,7 +147,12 @@ export function cloneState(state: LiteState): LiteState {
     const chain = state.chains[id];
     chains[id] = { levels: [chain.levels[0], chain.levels[1], chain.levels[2]], rival: chain.rival };
   }
-  return { ...state, chains };
+  return {
+    ...state,
+    chains,
+    event: state.event ? { ...state.event } : null,
+    policy: state.policy ? { ...state.policy } : null,
+  };
 }
 
 // ------------------------------------------------------------ kademeler
@@ -105,7 +170,7 @@ export function nextMilestone(level: number): number | null {
   return null;
 }
 
-/** Kademenin hızı (birim/sn). */
+/** Kademenin taban hızı (birim/sn): olay ve politika hariç. */
 export function stageRate(stage: Stage, level: number): number {
   if (level <= 0) return 0;
   return BASE_RATE[stage] * level * Math.pow(2, milestonesReached(level));
@@ -143,22 +208,87 @@ export function chainUnlocked(state: LiteState, id: ChainId): boolean {
   return districtUnlocked(state, chain.district) && state.earned >= chain.unlockAt;
 }
 
-// ------------------------------------------------------------ gelir
+// ------------------------------------------------------------ olay ve politika etkileri
+
+function eventIs(state: LiteState, kind: EventKind): boolean {
+  return state.event !== null && state.event.kind === kind;
+}
+
+function policyIs(state: LiteState, kind: PolicyKind): boolean {
+  return state.policy !== null && state.policy.kind === kind;
+}
 
 export function campaignActive(state: LiteState): boolean {
   return state.clock < state.campaignUntil;
 }
 
-/** Bütün gelire uygulanan çarpan: yıldızlar, mahalleler, kampanya. */
+/** Kampanyanın çarpanı: meclisin kampanya fonu ×2'yi ×3 yapıyor. */
+export function campaignMultiplier(state: LiteState): number {
+  return policyIs(state, 'campaignFund') ? POLICY.campaignFund : CAMPAIGN.multiplier;
+}
+
+/** Bütün gelire uygulanan çarpan: yıldızlar, mahalleler, kampanya, olay, politika. */
 export function incomeMultiplier(state: LiteState): number {
   let multiplier = 1 + STAR_BONUS * state.stars;
   for (const district of DISTRICTS) if (state.earned >= district.unlockAt) multiplier *= district.incomeMultiplier;
-  if (campaignActive(state)) multiplier *= CAMPAIGN.multiplier;
+  if (campaignActive(state)) multiplier *= campaignMultiplier(state);
+  if (eventIs(state, 'exportBoom')) multiplier *= EXPORT_BOOM_MULTIPLIER;
+  if (policyIs(state, 'taxCut')) multiplier *= POLICY.taxCut;
+  if (policyIs(state, 'exportFair')) multiplier *= POLICY.exportFair;
   return multiplier;
 }
 
+/** Bir zincirin gelirine özel çarpan (turizm, moda haftası, tanıtım). */
+export function chainMultiplier(state: LiteState, chainId: ChainId): number {
+  let multiplier = 1;
+  const tourist = chainId === 'bakery' || chainId === 'coffee';
+  if (eventIs(state, 'tourism') && tourist) multiplier *= TOURISM_MULTIPLIER;
+  if (eventIs(state, 'fashionWeek') && chainId === 'fashion') multiplier *= FASHION_WEEK_MULTIPLIER;
+  if (policyIs(state, 'tourismPromo') && (tourist || chainId === 'fashion')) multiplier *= POLICY.tourismPromo;
+  return multiplier;
+}
+
+/** Bir kademenin hızına özel çarpan (grev, teşvikler). */
+export function stageMultiplier(state: LiteState, chainId: ChainId, stage: Stage): number {
+  let multiplier = 1;
+  if (stage === 2 && state.event !== null && state.event.kind === 'strike' && state.event.chain === chainId) {
+    multiplier *= STRIKE_MULTIPLIER;
+  }
+  if (stage === 0 && policyIs(state, 'industryGrant')) multiplier *= POLICY.industryGrant;
+  if (stage === 1 && policyIs(state, 'techGrant')) multiplier *= POLICY.techGrant;
+  if (stage === 2 && policyIs(state, 'pedestrian')) multiplier *= POLICY.pedestrian;
+  return multiplier;
+}
+
+/** Kademelerin etkin hızı: taban × olay/politika. */
+export function effectiveRates(state: LiteState, chainId: ChainId, levels: readonly [number, number, number]): [number, number, number] {
+  return [
+    stageRate(0, levels[0]) * stageMultiplier(state, chainId, 0),
+    stageRate(1, levels[1]) * stageMultiplier(state, chainId, 1),
+    stageRate(2, levels[2]) * stageMultiplier(state, chainId, 2),
+  ];
+}
+
+/** Marjlar: hammadde krizinde pazardan alınan mal ve hammadde pahalı, entegrasyon korunuyor. */
+export function margins(state: LiteState): { bought: number; processed: number; integrated: number } {
+  if (eventIs(state, 'crisis')) {
+    return { bought: CRISIS_MARGIN.bought, processed: CRISIS_MARGIN.processed, integrated: MARGIN.integrated };
+  }
+  return { bought: MARGIN.bought, processed: MARGIN.processed, integrated: MARGIN.integrated };
+}
+
+/** Rakibin kovalama hedefi (satış hızının katı). */
+export function rivalAggression(state: LiteState): number {
+  let aggression = RIVAL_AGGRESSION_BASE + RIVAL_AGGRESSION_PER_CITY * state.city;
+  if (eventIs(state, 'rivalPush')) aggression *= RIVAL_PUSH_MULTIPLIER;
+  if (policyIs(state, 'competitionBoard')) aggression *= POLICY.competitionBoard;
+  return aggression;
+}
+
+// ------------------------------------------------------------ gelir
+
 export interface ChainReport {
-  /** Kademe hızları: [ham, işleme, satış]. */
+  /** Kademe hızları (etkin): [ham, işleme, satış]. */
   rates: [number, number, number];
   /** Satılan birim/sn (satış kademesinin hızı). */
   sold: number;
@@ -181,28 +311,29 @@ function shareOf(sold: number, rival: number): number {
   return Math.max(SHARE_FLOOR, sold / (sold + rival));
 }
 
-function marginUnits(rates: readonly [number, number, number]): { sold: number; processed: number; integrated: number; units: number } {
+function marginUnits(
+  rates: readonly [number, number, number],
+  m: { bought: number; processed: number; integrated: number },
+): { sold: number; processed: number; integrated: number; units: number } {
   const sold = rates[2];
   const processed = Math.min(sold, rates[1]);
   const integrated = Math.min(processed, rates[0]);
-  const units = integrated * MARGIN.integrated + (processed - integrated) * MARGIN.processed + (sold - processed) * MARGIN.bought;
+  const units = integrated * m.integrated + (processed - integrated) * m.processed + (sold - processed) * m.bought;
   return { sold, processed, integrated, units };
 }
 
 function chainIncomeFor(state: LiteState, chainId: ChainId, levels: readonly [number, number, number], multiplier: number): number {
-  const rates: [number, number, number] = [stageRate(0, levels[0]), stageRate(1, levels[1]), stageRate(2, levels[2])];
-  const m = marginUnits(rates);
+  const m = marginUnits(effectiveRates(state, chainId, levels), margins(state));
   const share = shareOf(m.sold, state.chains[chainId].rival);
-  return CHAIN_BY_ID[chainId].price * m.units * share * multiplier;
+  return CHAIN_BY_ID[chainId].price * m.units * share * multiplier * chainMultiplier(state, chainId);
 }
 
 export function chainReport(state: LiteState, chainId: ChainId): ChainReport {
   const chain = state.chains[chainId];
-  const rates: [number, number, number] = [stageRate(0, chain.levels[0]), stageRate(1, chain.levels[1]), stageRate(2, chain.levels[2])];
-  const m = marginUnits(rates);
+  const rates = effectiveRates(state, chainId, chain.levels);
+  const m = marginUnits(rates, margins(state));
   const share = shareOf(m.sold, chain.rival);
-  const multiplier = incomeMultiplier(state);
-  const income = CHAIN_BY_ID[chainId].price * m.units * share * multiplier;
+  const income = CHAIN_BY_ID[chainId].price * m.units * share * incomeMultiplier(state) * chainMultiplier(state, chainId);
   return {
     rates,
     sold: m.sold,
@@ -272,7 +403,6 @@ export function bestMove(state: LiteState): Move | null {
     for (const stage of STAGES) {
       const cost = upgradeCost(id, stage, levels[stage]);
       const gain = upgradeGain(state, id, stage);
-      // Henüz satışı olmayan zincirde ilk satış seviyesi her zaman aday.
       const ratio = gain / cost;
       if (gain > 0 && ratio > bestRatio) {
         bestRatio = ratio;
@@ -283,9 +413,56 @@ export function bestMove(state: LiteState): Move | null {
   return best;
 }
 
+// ------------------------------------------------------------ görevler
+
+export function currentGoal(state: LiteState): GoalDef | null {
+  return GOALS[state.goal] ?? null;
+}
+
+export function goalMet(state: LiteState, goal: GoalDef): boolean {
+  const bakery = state.chains.bakery.levels;
+  switch (goal.kind) {
+    case 'bakeryRetail':
+      return bakery[2] >= 1;
+    case 'bakeryProcess':
+      return bakery[1] >= 1;
+    case 'bakeryChain':
+      return bakery[0] >= 1 && bakery[1] >= 1 && bakery[2] >= 1;
+    case 'firstCampaign':
+      return state.campaigns >= 1;
+    case 'coffeeRetail':
+      return state.chains.coffee.levels[2] >= 1;
+    case 'level25':
+      return CHAIN_IDS.some((id) => state.chains[id].levels.some((level) => level >= 25));
+    case 'center':
+      return districtUnlocked(state, 'center');
+    case 'manager':
+      return state.manager >= 1;
+    case 'council':
+      return state.policies >= 1;
+    case 'share75':
+      return CHAIN_IDS.some((id) => state.chains[id].levels[2] > 0 && chainReport(state, id).share >= 0.75);
+    case 'industry':
+      return districtUnlocked(state, 'industry');
+    case 'port':
+      return districtUnlocked(state, 'port');
+    case 'technopark':
+      return districtUnlocked(state, 'technopark');
+    case 'firstStar':
+      return prestigePreview(state) >= 1;
+  }
+}
+
+/** Görevin ödülü: şimdiki gelirin `rewardSeconds` saniyesi, en az `minReward`. */
+export function goalReward(state: LiteState, goal: GoalDef): number {
+  return Math.max(goal.minReward, incomePerSecond(state) * goal.rewardSeconds);
+}
+
 // ------------------------------------------------------------ eylemler
 
-export type ActionResult = { ok: true; state: LiteState } | { ok: false; reason: 'locked' | 'cash' | 'max' | 'cooldown' };
+export type ActionResult =
+  | { ok: true; state: LiteState }
+  | { ok: false; reason: 'locked' | 'cash' | 'max' | 'cooldown' | 'none' | 'unmet' };
 
 export function buy(state: LiteState, chainId: ChainId, stage: Stage, count = 1): ActionResult {
   if (!chainUnlocked(state, chainId)) return { ok: false, reason: 'locked' };
@@ -318,47 +495,109 @@ export function startCampaign(state: LiteState): ActionResult {
   const next = cloneState(state);
   next.campaignUntil = state.clock + CAMPAIGN.duration;
   next.campaignReadyAt = state.clock + CAMPAIGN.duration + CAMPAIGN.cooldown;
+  next.campaigns += 1;
+  return { ok: true, state: next };
+}
+
+/** Meclis kararı: açık oturumun iki seçeneğinden biri (0 ya da 1). */
+export function chooseCouncil(state: LiteState, choice: 0 | 1): ActionResult {
+  if (state.council === null) return { ok: false, reason: 'none' };
+  const next = cloneState(state);
+  next.policy = { kind: COUNCIL_PAIRS[state.council]![choice], until: state.clock + POLICY_DURATION };
+  next.council = null;
+  next.policies += 1;
+  return { ok: true, state: next };
+}
+
+/** Sıradaki görevin ödülünü al. */
+export function claimGoal(state: LiteState): ActionResult {
+  const goal = currentGoal(state);
+  if (!goal) return { ok: false, reason: 'none' };
+  if (!goalMet(state, goal)) return { ok: false, reason: 'unmet' };
+  const reward = goalReward(state, goal);
+  const next = cloneState(state);
+  next.cash += reward;
+  next.goal += 1;
   return { ok: true, state: next };
 }
 
 // ------------------------------------------------------------ zaman
 
-export function rivalAggression(city: number): number {
-  return RIVAL_AGGRESSION_BASE + RIVAL_AGGRESSION_PER_CITY * city;
-}
-
-/** Çevrimiçi adım (sn): kısa, kampanya sınırında bölünüyor. */
+/** Çevrimiçi adım (sn): kısa, kampanya/olay/politika sınırlarında bölünüyor. */
 export const ONLINE_STEP = 1;
-/** Çevrimdışı adım (sn): kampanya yok, rakip yarı hızda. */
+/** Çevrimdışı adım (sn): kampanya ve olay yok, rakip yarı hızda. */
 export const OFFLINE_STEP = 30;
+/** Sınır toleransı: kayan nokta toplamı sınırın bir tık altında kalmasın. */
+const EPS = 1e-9;
 
 /**
- * Zamanı ilerletir. Her adımda: geliri adımın başındaki durumdan hesapla,
- * kasaya ekle, rakipleri hedefe doğru yaklaştır. Kampanya bitişi adım
- * sınırı olarak kullanılıyor ki ×2 tam süresi kadar sürsün.
+ * Sıradaki olayı başlatır. Aday listesi sabit sırada süzülüyor; seçim olay
+ * sayacından tamsayıyla. Grev satışı olan zincirlerden birini vuruyor; moda
+ * haftası moda, ihracat atağı Liman açılmadan gelmiyor.
+ */
+function startEvent(state: LiteState): void {
+  const selling = CHAIN_IDS.filter((id) => state.chains[id].levels[2] > 0);
+  const candidates = EVENT_KINDS.filter((kind) => {
+    if (kind === 'strike') return selling.length > 0;
+    if (kind === 'fashionWeek') return state.chains.fashion.levels[2] > 0;
+    if (kind === 'exportBoom') return districtUnlocked(state, 'port');
+    return true;
+  });
+  const kind = candidates[(state.events * 7 + state.city * 3) % candidates.length]!;
+  const chain = kind === 'strike' ? selling[(state.events * 5 + state.city) % selling.length]! : null;
+  state.event = { kind, chain, until: state.clock + EVENT_DURATION };
+  state.events += 1;
+  state.nextEventAt = state.clock + EVENT_GAP;
+}
+
+function openCouncil(state: LiteState): void {
+  state.council = state.sessions % COUNCIL_PAIRS.length;
+  state.sessions += 1;
+  state.nextCouncilAt = state.clock + COUNCIL_GAP;
+}
+
+/** Saat sınırlarında başlayan ve biten şeyler. */
+function applyBoundaries(state: LiteState, offline: boolean): void {
+  if (state.event !== null && state.clock >= state.event.until - EPS) state.event = null;
+  if (state.policy !== null && state.clock >= state.policy.until - EPS) state.policy = null;
+  // Olay yalnızca oyuncu oradayken başlıyor; kapalıyken kaçan olay dönüşte başlıyor.
+  if (!offline && state.event === null && state.clock >= state.nextEventAt - EPS) startEvent(state);
+  if (state.clock >= state.nextCouncilAt - EPS) openCouncil(state);
+}
+
+/**
+ * Zamanı ilerletir. Her adımda: sınırları uygula, geliri adımın başındaki
+ * durumdan hesapla, kasaya ekle, rakipleri hedefe doğru yaklaştır. Kampanya,
+ * olay ve politika sınırları adım sınırı: çarpanlar tam süreleri kadar sürsün.
  */
 export function advance(state: LiteState, seconds: number, offline = false): LiteState {
   const next = cloneState(state);
   const step = offline ? OFFLINE_STEP : ONLINE_STEP;
   const lag = offline ? RIVAL_LAG * 2 : RIVAL_LAG;
-  const aggression = rivalAggression(next.city);
   let remaining = seconds;
-  while (remaining > 1e-9) {
+  while (remaining > EPS) {
+    applyBoundaries(next, offline);
     let h = Math.min(step, remaining);
-    if (next.campaignUntil > next.clock) h = Math.min(h, next.campaignUntil - next.clock);
+    const bounds = [next.campaignUntil, next.nextCouncilAt];
+    if (next.event !== null) bounds.push(next.event.until);
+    else if (!offline) bounds.push(next.nextEventAt);
+    if (next.policy !== null) bounds.push(next.policy.until);
+    for (const bound of bounds) if (bound - next.clock > EPS) h = Math.min(h, bound - next.clock);
     const income = incomePerSecond(next) * (offline ? OFFLINE_EFFICIENCY : 1);
     next.cash += income * h;
     next.earned += income * h;
     next.totalEarned += income * h;
     const pull = 1 - Math.exp(-h / lag);
+    const aggression = rivalAggression(next);
     for (const id of CHAIN_IDS) {
       const chain = next.chains[id];
-      const sold = stageRate(2, chain.levels[2]);
+      const sold = effectiveRates(next, id, chain.levels)[2];
       chain.rival += (aggression * sold - chain.rival) * pull;
     }
     next.clock += h;
     remaining -= h;
   }
+  applyBoundaries(next, offline);
   return next;
 }
 

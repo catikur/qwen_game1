@@ -95,4 +95,84 @@ public enum LiteContent {
     public static let starUnit = 1e9
 
     public static let startingCash = 10.0
+
+    // MARK: - L3: olaylar
+
+    public static let eventFirst = 240.0
+    public static let eventGap = 330.0
+    public static let eventDuration = 120.0
+    public static let tourismMultiplier = 2.0
+    public static let fashionWeekMultiplier = 2.5
+    public static let exportBoomMultiplier = 1.5
+    public static let strikeMultiplier = 0.5
+    public static let rivalPushMultiplier = 1.6
+    public static let crisisBought = 0.05
+    public static let crisisProcessed = 0.4
+
+    // MARK: - L3: meclis
+
+    public static let councilPairs: [[PolicyKind]] = [
+        [.industryGrant, .pedestrian],
+        [.taxCut, .competitionBoard],
+        [.techGrant, .tourismPromo],
+        [.campaignFund, .exportFair],
+    ]
+    public static let councilFirst = 600.0
+    public static let councilGap = 3600.0
+    public static let policyDuration = 3600.0
+
+    public static func policyValue(_ kind: PolicyKind) -> Double {
+        switch kind {
+        case .industryGrant: 1.3
+        case .pedestrian: 1.2
+        case .taxCut: 1.15
+        case .competitionBoard: 0.6
+        case .techGrant: 1.3
+        case .tourismPromo: 1.25
+        case .campaignFund: 3
+        case .exportFair: 1.1
+        }
+    }
+
+    // MARK: - L3: görevler
+
+    public static let goals: [GoalDef] = [
+        GoalDef(kind: .bakeryRetail, rewardSeconds: 30, minReward: 10),
+        GoalDef(kind: .bakeryProcess, rewardSeconds: 30, minReward: 20),
+        GoalDef(kind: .bakeryChain, rewardSeconds: 60, minReward: 40),
+        GoalDef(kind: .firstCampaign, rewardSeconds: 45, minReward: 50),
+        GoalDef(kind: .coffeeRetail, rewardSeconds: 60, minReward: 100),
+        GoalDef(kind: .level25, rewardSeconds: 90, minReward: 200),
+        GoalDef(kind: .center, rewardSeconds: 120, minReward: 1_000),
+        GoalDef(kind: .manager, rewardSeconds: 120, minReward: 2_000),
+        GoalDef(kind: .council, rewardSeconds: 120, minReward: 2_000),
+        GoalDef(kind: .share75, rewardSeconds: 150, minReward: 5_000),
+        GoalDef(kind: .industry, rewardSeconds: 180, minReward: 50_000),
+        GoalDef(kind: .port, rewardSeconds: 240, minReward: 1_000_000),
+        GoalDef(kind: .technopark, rewardSeconds: 300, minReward: 5_000_000),
+        GoalDef(kind: .firstStar, rewardSeconds: 300, minReward: 10_000_000),
+    ]
+}
+
+// MARK: - L3 türleri
+
+/// Şehir olayı. Sıra TS'teki EVENT_KINDS ile aynı: seçim bu sırayla süzülüyor.
+public enum EventKind: String, CaseIterable, Codable, Sendable {
+    case tourism, crisis, strike, fashionWeek, exportBoom, rivalPush
+}
+
+/// Meclis politikası.
+public enum PolicyKind: String, CaseIterable, Codable, Sendable {
+    case industryGrant, pedestrian, taxCut, competitionBoard, techGrant, tourismPromo, campaignFund, exportFair
+}
+
+public enum GoalKind: String, CaseIterable, Codable, Sendable {
+    case bakeryRetail, bakeryProcess, bakeryChain, firstCampaign, coffeeRetail, level25, center, manager, council,
+         share75, industry, port, technopark, firstStar
+}
+
+public struct GoalDef: Sendable {
+    public let kind: GoalKind
+    public let rewardSeconds: Double
+    public let minReward: Double
 }

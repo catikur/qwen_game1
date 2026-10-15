@@ -4,9 +4,9 @@ import Foundation
 //
 // `packages/lite-model/src/model.ts`'in birebir çevirisi. Aynı işlemler aynı
 // sırada (kayan nokta sonucu sıraya bağlı); döngüler sabit sırada
-// (ChainId.allCases, Stage.allCases), adımlar sabit uzunlukta. Eşitliği
-// `FixtureTests` koruyor: TS modelinin ürettiği altın değerleri burada
-// yeniden üretmek zorunda.
+// (ChainId.allCases, Stage.allCases, EventKind.allCases), adımlar sabit
+// uzunlukta, seçimler tamsayı aritmetiğiyle. Eşitliği `FixtureTests`
+// koruyor: TS modelinin ürettiği altın değerleri burada yeniden üretmek zorunda.
 
 public struct ChainState: Codable, Equatable, Sendable {
     /// Kademe seviyeleri: [ham, işleme, satış]; 0 = sahip değil.
@@ -18,6 +18,18 @@ public struct ChainState: Codable, Equatable, Sendable {
         self.levels = levels
         self.rival = rival
     }
+}
+
+public struct ActiveEvent: Codable, Equatable, Sendable {
+    public var kind: EventKind
+    /// Grevin vurduğu zincir; diğer olaylarda nil.
+    public var chain: ChainId?
+    public var until: Double
+}
+
+public struct ActivePolicy: Codable, Equatable, Sendable {
+    public var kind: PolicyKind
+    public var until: Double
 }
 
 public struct LiteState: Codable, Equatable, Sendable {
@@ -39,10 +51,56 @@ public struct LiteState: Codable, Equatable, Sendable {
     public var campaignReadyAt: Double
     /// Zincirler, `ChainId.allCases` sırasıyla.
     public var chains: [ChainState]
+    // L3
+    public var event: ActiveEvent?
+    public var nextEventAt: Double = LiteContent.eventFirst
+    public var events: Int = 0
+    /// Açık meclis oturumu: hangi seçenek çifti.
+    public var council: Int?
+    public var nextCouncilAt: Double = LiteContent.councilFirst
+    public var sessions: Int = 0
+    public var policy: ActivePolicy?
+    public var policies: Int = 0
+    public var campaigns: Int = 0
+    /// Görev merdiveninde sıradaki görev.
+    public var goal: Int = 0
 
     public subscript(chain id: ChainId) -> ChainState {
         get { chains[id.index] }
         set { chains[id.index] = newValue }
+    }
+}
+
+extension LiteState {
+    private enum CodingKeys: String, CodingKey {
+        case version, city, stars, cash, earned, totalEarned, clock, manager, campaignUntil, campaignReadyAt, chains
+        case event, nextEventAt, events, council, nextCouncilAt, sessions, policy, policies, campaigns, goal
+    }
+
+    /// L2 kayıtlarında L3 alanları yok: varsayılanla açılıyor.
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        version = try c.decodeIfPresent(Int.self, forKey: .version) ?? 1
+        city = try c.decode(Int.self, forKey: .city)
+        stars = try c.decode(Int.self, forKey: .stars)
+        cash = try c.decode(Double.self, forKey: .cash)
+        earned = try c.decode(Double.self, forKey: .earned)
+        totalEarned = try c.decode(Double.self, forKey: .totalEarned)
+        clock = try c.decode(Double.self, forKey: .clock)
+        manager = try c.decode(Int.self, forKey: .manager)
+        campaignUntil = try c.decode(Double.self, forKey: .campaignUntil)
+        campaignReadyAt = try c.decode(Double.self, forKey: .campaignReadyAt)
+        chains = try c.decode([ChainState].self, forKey: .chains)
+        event = try c.decodeIfPresent(ActiveEvent.self, forKey: .event)
+        nextEventAt = try c.decodeIfPresent(Double.self, forKey: .nextEventAt) ?? clock + LiteContent.eventFirst
+        events = try c.decodeIfPresent(Int.self, forKey: .events) ?? 0
+        council = try c.decodeIfPresent(Int.self, forKey: .council)
+        nextCouncilAt = try c.decodeIfPresent(Double.self, forKey: .nextCouncilAt) ?? clock + LiteContent.councilFirst
+        sessions = try c.decodeIfPresent(Int.self, forKey: .sessions) ?? 0
+        policy = try c.decodeIfPresent(ActivePolicy.self, forKey: .policy)
+        policies = try c.decodeIfPresent(Int.self, forKey: .policies) ?? 0
+        campaigns = try c.decodeIfPresent(Int.self, forKey: .campaigns) ?? 0
+        goal = try c.decodeIfPresent(Int.self, forKey: .goal) ?? 0
     }
 }
 
@@ -65,7 +123,7 @@ public struct Move: Equatable, Sendable {
 }
 
 public enum ActionError: Error, Equatable, Sendable {
-    case locked, cash, max, cooldown
+    case locked, cash, max, cooldown, none, unmet
 }
 
 public struct OfflineResult: Sendable {
@@ -77,6 +135,8 @@ public struct OfflineResult: Sendable {
 public enum Lite {
     public static let onlineStep = 1.0
     public static let offlineStep = 30.0
+    /// Sınır toleransı: kayan nokta toplamı sınırın bir tık altında kalmasın.
+    static let eps = 1e-9
 
     public static func newGame(city: Int = 0, stars: Int = 0, totalEarned: Double = 0) -> LiteState {
         LiteState(
@@ -103,6 +163,7 @@ public enum Lite {
         LiteContent.milestones.first { level < $0 }
     }
 
+    /// Kademenin taban hızı (birim/sn): olay ve politika hariç.
     public static func stageRate(_ stage: Stage, _ level: Int) -> Double {
         if level <= 0 { return 0 }
         return LiteContent.baseRate[stage.rawValue] * Double(level) * pow(2.0, Double(milestonesReached(level)))
@@ -136,10 +197,17 @@ public enum Lite {
         return districtUnlocked(state, chain.district) && state.earned >= chain.unlockAt
     }
 
-    // MARK: - Gelir
+    // MARK: - Olay ve politika etkileri
+
+    static func eventIs(_ state: LiteState, _ kind: EventKind) -> Bool { state.event?.kind == kind }
+    static func policyIs(_ state: LiteState, _ kind: PolicyKind) -> Bool { state.policy?.kind == kind }
 
     public static func campaignActive(_ state: LiteState) -> Bool {
         state.clock < state.campaignUntil
+    }
+
+    public static func campaignMultiplier(_ state: LiteState) -> Double {
+        policyIs(state, .campaignFund) ? LiteContent.policyValue(.campaignFund) : LiteContent.campaignMultiplier
     }
 
     public static func incomeMultiplier(_ state: LiteState) -> Double {
@@ -147,39 +215,82 @@ public enum Lite {
         for district in LiteContent.districts where state.earned >= district.unlockAt {
             multiplier *= district.incomeMultiplier
         }
-        if campaignActive(state) { multiplier *= LiteContent.campaignMultiplier }
+        if campaignActive(state) { multiplier *= campaignMultiplier(state) }
+        if eventIs(state, .exportBoom) { multiplier *= LiteContent.exportBoomMultiplier }
+        if policyIs(state, .taxCut) { multiplier *= LiteContent.policyValue(.taxCut) }
+        if policyIs(state, .exportFair) { multiplier *= LiteContent.policyValue(.exportFair) }
         return multiplier
     }
+
+    public static func chainMultiplier(_ state: LiteState, _ chain: ChainId) -> Double {
+        var multiplier = 1.0
+        let tourist = chain == .bakery || chain == .coffee
+        if eventIs(state, .tourism) && tourist { multiplier *= LiteContent.tourismMultiplier }
+        if eventIs(state, .fashionWeek) && chain == .fashion { multiplier *= LiteContent.fashionWeekMultiplier }
+        if policyIs(state, .tourismPromo) && (tourist || chain == .fashion) { multiplier *= LiteContent.policyValue(.tourismPromo) }
+        return multiplier
+    }
+
+    public static func stageMultiplier(_ state: LiteState, _ chain: ChainId, _ stage: Stage) -> Double {
+        var multiplier = 1.0
+        if stage == .retail, let event = state.event, event.kind == .strike, event.chain == chain {
+            multiplier *= LiteContent.strikeMultiplier
+        }
+        if stage == .raw && policyIs(state, .industryGrant) { multiplier *= LiteContent.policyValue(.industryGrant) }
+        if stage == .process && policyIs(state, .techGrant) { multiplier *= LiteContent.policyValue(.techGrant) }
+        if stage == .retail && policyIs(state, .pedestrian) { multiplier *= LiteContent.policyValue(.pedestrian) }
+        return multiplier
+    }
+
+    public static func effectiveRates(_ state: LiteState, _ chain: ChainId, _ levels: [Int]) -> [Double] {
+        [
+            stageRate(.raw, levels[0]) * stageMultiplier(state, chain, .raw),
+            stageRate(.process, levels[1]) * stageMultiplier(state, chain, .process),
+            stageRate(.retail, levels[2]) * stageMultiplier(state, chain, .retail),
+        ]
+    }
+
+    static func margins(_ state: LiteState) -> (bought: Double, processed: Double, integrated: Double) {
+        if eventIs(state, .crisis) {
+            return (LiteContent.crisisBought, LiteContent.crisisProcessed, LiteContent.marginIntegrated)
+        }
+        return (LiteContent.marginBought, LiteContent.marginProcessed, LiteContent.marginIntegrated)
+    }
+
+    public static func rivalAggression(_ state: LiteState) -> Double {
+        var aggression = LiteContent.rivalAggressionBase + LiteContent.rivalAggressionPerCity * Double(state.city)
+        if eventIs(state, .rivalPush) { aggression *= LiteContent.rivalPushMultiplier }
+        if policyIs(state, .competitionBoard) { aggression *= LiteContent.policyValue(.competitionBoard) }
+        return aggression
+    }
+
+    // MARK: - Gelir
 
     static func shareOf(_ sold: Double, _ rival: Double) -> Double {
         if sold <= 0 { return 0 }
         return max(LiteContent.shareFloor, sold / (sold + rival))
     }
 
-    static func marginUnits(_ rates: [Double]) -> (sold: Double, processed: Double, integrated: Double, units: Double) {
+    static func marginUnits(_ rates: [Double], _ m: (bought: Double, processed: Double, integrated: Double))
+        -> (sold: Double, processed: Double, integrated: Double, units: Double) {
         let sold = rates[2]
         let processed = min(sold, rates[1])
         let integrated = min(processed, rates[0])
-        let units = integrated * LiteContent.marginIntegrated + (processed - integrated) * LiteContent.marginProcessed
-            + (sold - processed) * LiteContent.marginBought
+        let units = integrated * m.integrated + (processed - integrated) * m.processed + (sold - processed) * m.bought
         return (sold, processed, integrated, units)
     }
 
-    static func rates(_ levels: [Int]) -> [Double] {
-        [stageRate(.raw, levels[0]), stageRate(.process, levels[1]), stageRate(.retail, levels[2])]
-    }
-
     static func chainIncome(_ state: LiteState, _ chain: ChainId, _ levels: [Int], _ multiplier: Double) -> Double {
-        let m = marginUnits(rates(levels))
+        let m = marginUnits(effectiveRates(state, chain, levels), margins(state))
         let share = shareOf(m.sold, state[chain: chain].rival)
-        return LiteContent.chain(chain).price * m.units * share * multiplier
+        return LiteContent.chain(chain).price * m.units * share * multiplier * chainMultiplier(state, chain)
     }
 
     public static func chainReport(_ state: LiteState, _ chain: ChainId) -> ChainReport {
-        let r = rates(state[chain: chain].levels)
-        let m = marginUnits(r)
+        let r = effectiveRates(state, chain, state[chain: chain].levels)
+        let m = marginUnits(r, margins(state))
         let share = shareOf(m.sold, state[chain: chain].rival)
-        let income = LiteContent.chain(chain).price * m.units * share * incomeMultiplier(state)
+        let income = LiteContent.chain(chain).price * m.units * share * incomeMultiplier(state) * chainMultiplier(state, chain)
         return ChainReport(
             rates: r,
             sold: m.sold,
@@ -241,6 +352,37 @@ public enum Lite {
         return best
     }
 
+    // MARK: - Görevler
+
+    public static func currentGoal(_ state: LiteState) -> GoalDef? {
+        state.goal < LiteContent.goals.count ? LiteContent.goals[state.goal] : nil
+    }
+
+    public static func goalMet(_ state: LiteState, _ goal: GoalDef) -> Bool {
+        let bakery = state[chain: .bakery].levels
+        switch goal.kind {
+        case .bakeryRetail: return bakery[2] >= 1
+        case .bakeryProcess: return bakery[1] >= 1
+        case .bakeryChain: return bakery[0] >= 1 && bakery[1] >= 1 && bakery[2] >= 1
+        case .firstCampaign: return state.campaigns >= 1
+        case .coffeeRetail: return state[chain: .coffee].levels[2] >= 1
+        case .level25: return state.chains.contains { chain in chain.levels.contains { level in level >= 25 } }
+        case .center: return districtUnlocked(state, .center)
+        case .manager: return state.manager >= 1
+        case .council: return state.policies >= 1
+        case .share75:
+            return ChainId.allCases.contains { state[chain: $0].levels[2] > 0 && chainReport(state, $0).share >= 0.75 }
+        case .industry: return districtUnlocked(state, .industry)
+        case .port: return districtUnlocked(state, .port)
+        case .technopark: return districtUnlocked(state, .technopark)
+        case .firstStar: return prestigePreview(state) >= 1
+        }
+    }
+
+    public static func goalReward(_ state: LiteState, _ goal: GoalDef) -> Double {
+        max(goal.minReward, incomePerSecond(state) * goal.rewardSeconds)
+    }
+
     // MARK: - Eylemler
 
     public static func buy(_ state: LiteState, _ chain: ChainId, _ stage: Stage, _ count: Int = 1) -> Result<LiteState, ActionError> {
@@ -274,36 +416,89 @@ public enum Lite {
         var next = state
         next.campaignUntil = state.clock + LiteContent.campaignDuration
         next.campaignReadyAt = state.clock + LiteContent.campaignDuration + LiteContent.campaignCooldown
+        next.campaigns += 1
+        return .success(next)
+    }
+
+    /// Meclis kararı: açık oturumun iki seçeneğinden biri (0 ya da 1).
+    public static func chooseCouncil(_ state: LiteState, _ choice: Int) -> Result<LiteState, ActionError> {
+        guard let pair = state.council else { return .failure(.none) }
+        var next = state
+        next.policy = ActivePolicy(kind: LiteContent.councilPairs[pair][choice], until: state.clock + LiteContent.policyDuration)
+        next.council = nil
+        next.policies += 1
+        return .success(next)
+    }
+
+    public static func claimGoal(_ state: LiteState) -> Result<LiteState, ActionError> {
+        guard let goal = currentGoal(state) else { return .failure(.none) }
+        if !goalMet(state, goal) { return .failure(.unmet) }
+        let reward = goalReward(state, goal)
+        var next = state
+        next.cash += reward
+        next.goal += 1
         return .success(next)
     }
 
     // MARK: - Zaman
 
-    public static func rivalAggression(_ city: Int) -> Double {
-        LiteContent.rivalAggressionBase + LiteContent.rivalAggressionPerCity * Double(city)
+    static func startEvent(_ state: inout LiteState) {
+        let selling = ChainId.allCases.filter { state[chain: $0].levels[2] > 0 }
+        let candidates = EventKind.allCases.filter { kind in
+            switch kind {
+            case .strike: return !selling.isEmpty
+            case .fashionWeek: return state[chain: .fashion].levels[2] > 0
+            case .exportBoom: return districtUnlocked(state, .port)
+            default: return true
+            }
+        }
+        let kind = candidates[(state.events * 7 + state.city * 3) % candidates.count]
+        let chain: ChainId? = kind == .strike ? selling[(state.events * 5 + state.city) % selling.count] : nil
+        state.event = ActiveEvent(kind: kind, chain: chain, until: state.clock + LiteContent.eventDuration)
+        state.events += 1
+        state.nextEventAt = state.clock + LiteContent.eventGap
+    }
+
+    static func openCouncil(_ state: inout LiteState) {
+        state.council = state.sessions % LiteContent.councilPairs.count
+        state.sessions += 1
+        state.nextCouncilAt = state.clock + LiteContent.councilGap
+    }
+
+    static func applyBoundaries(_ state: inout LiteState, offline: Bool) {
+        if let event = state.event, state.clock >= event.until - eps { state.event = nil }
+        if let policy = state.policy, state.clock >= policy.until - eps { state.policy = nil }
+        // Olay yalnızca oyuncu oradayken başlıyor; kapalıyken kaçan olay dönüşte başlıyor.
+        if !offline && state.event == nil && state.clock >= state.nextEventAt - eps { startEvent(&state) }
+        if state.clock >= state.nextCouncilAt - eps { openCouncil(&state) }
     }
 
     public static func advance(_ state: LiteState, _ seconds: Double, offline: Bool = false) -> LiteState {
         var next = state
         let step = offline ? offlineStep : onlineStep
         let lag = offline ? LiteContent.rivalLag * 2 : LiteContent.rivalLag
-        let aggression = rivalAggression(next.city)
         var remaining = seconds
-        while remaining > 1e-9 {
+        while remaining > eps {
+            applyBoundaries(&next, offline: offline)
             var h = min(step, remaining)
-            if next.campaignUntil > next.clock { h = min(h, next.campaignUntil - next.clock) }
+            var bounds = [next.campaignUntil, next.nextCouncilAt]
+            if let event = next.event { bounds.append(event.until) } else if !offline { bounds.append(next.nextEventAt) }
+            if let policy = next.policy { bounds.append(policy.until) }
+            for bound in bounds where bound - next.clock > eps { h = min(h, bound - next.clock) }
             let income = incomePerSecond(next) * (offline ? LiteContent.offlineEfficiency : 1)
             next.cash += income * h
             next.earned += income * h
             next.totalEarned += income * h
             let pull = 1 - exp(-h / lag)
-            for index in next.chains.indices {
-                let sold = stageRate(.retail, next.chains[index].levels[2])
-                next.chains[index].rival += (aggression * sold - next.chains[index].rival) * pull
+            let aggression = rivalAggression(next)
+            for id in ChainId.allCases {
+                let sold = effectiveRates(next, id, next[chain: id].levels)[2]
+                next[chain: id].rival += (aggression * sold - next[chain: id].rival) * pull
             }
             next.clock += h
             remaining -= h
         }
+        applyBoundaries(&next, offline: offline)
         return next
     }
 
