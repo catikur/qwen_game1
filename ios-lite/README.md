@@ -249,3 +249,6 @@ Kod değiştikçe 1 ve 3 tekrarlanıyor.
     imzalar (ad hoc, kurumsal) reddediliyor.
 - Reddedilen gönderimler ve doğrulama hataları `rejects` tablosunda duruyor
   (`attest:…`, `assertion:…`).
+- **Adlar** herkese görünüyor: şirket ve lig adlarında küfür süzgeci var
+  (Türkçe ve İngilizce, rakamlı yazım dahil; `offensiveName`). Reddedilen ad
+  için uygulama "Bu ad kullanılamıyor" diyor.

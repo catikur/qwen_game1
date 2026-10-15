@@ -130,6 +130,39 @@ export function cleanName(raw: unknown, max: number = LEAGUE.nameMax): string | 
   return /^[\p{L}\p{N} _-]+$/u.test(name) ? name : null;
 }
 
+/**
+ * Herkesin gördüğü adlarda küfür ve hakaret yok (App Store 1.2). Kısa ve
+ * belirsiz kökler yalnızca tek başına sözcükken ("sik" değil ama "Sikke"
+ * geçiyor), uzun ve tek anlamlılar ad içinde de yakalanıyor. Rakamla yazılmış
+ * harfler (0→o, 1→i, 3→e, 4→a, 5→s, 7→t) ve araya konan boşluk, _ ve -
+ * çözülüyor.
+ */
+const BLOCKED_WORDS = new Set([
+  'am', 'amk', 'aq', 'göt', 'got', 'piç', 'pic', 'sik', 'sikik', 'ibne', 'kahpe', 'şerefsiz', 'serefsiz', 'yavşak', 'yavsak',
+  'oç', 'oc', 'gerizekalı', 'salak', 'fuck', 'shit', 'dick', 'cock', 'slut', 'sex', 'seks', 'porn', 'porno', 'rape', 'nazi',
+]);
+const BLOCKED_ROOTS = [
+  'orospu', 'yarrak', 'yarak', 'amcık', 'amcik', 'sikiş', 'sikis', 'siktir', 'sikerim', 'pezevenk', 'gavat', 'ananı', 'anani',
+  'fuck', 'bitch', 'cunt', 'nigger', 'nigga', 'faggot', 'whore', 'asshole', 'pussy', 'hitler', 'porn',
+];
+const LEET: Record<string, string> = { '0': 'o', '1': 'i', '3': 'e', '4': 'a', '5': 's', '7': 't', '@': 'a', $: 's' };
+
+export function offensiveName(name: string): boolean {
+  const lower = name.toLocaleLowerCase('tr').replace(/[013457@$]/g, (ch) => LEET[ch] ?? ch);
+  const words = lower.split(/[\s_-]+/).filter(Boolean);
+  if (words.some((word) => BLOCKED_WORDS.has(word))) return true;
+  const compact = words.join('');
+  return BLOCKED_ROOTS.some((root) => compact.includes(root));
+}
+
+/** Ad kuralları ve küfür süzgeci: 400 `name` ya da 400 `name-blocked`. */
+function acceptName(raw: unknown, max?: number): string {
+  const name = cleanName(raw, max);
+  if (!name) throw new HttpError(400, 'name');
+  if (offensiveName(name)) throw new HttpError(400, 'name-blocked');
+  return name;
+}
+
 async function authenticate(request: Request, db: Db): Promise<Player | null> {
   const match = /^Bearer ([0-9a-f-]{36})\.([0-9a-f]{64})$/.exec(request.headers.get('authorization') ?? '');
   if (!match) return null;
@@ -186,8 +219,7 @@ export async function handle(request: Request, db: Db, now: number, options: Opt
 
 async function register(request: Request, db: Db, now: number): Promise<Response> {
   const body = await readJson(request);
-  const name = cleanName(body.name);
-  if (!name) throw new HttpError(400, 'name');
+  const name = acceptName(body.name);
   const id = crypto.randomUUID();
   const token = randomToken();
   await db.run('INSERT INTO players (id, name, token_hash, division, created_at) VALUES (?, ?, ?, 0, ?)', id, name, await sha256(token), now);
@@ -195,8 +227,7 @@ async function register(request: Request, db: Db, now: number): Promise<Response
 }
 
 async function rename(request: Request, db: Db, me: Player): Promise<Response> {
-  const name = cleanName((await readJson(request)).name);
-  if (!name) throw new HttpError(400, 'name');
+  const name = acceptName((await readJson(request)).name);
   await db.run('UPDATE players SET name = ? WHERE id = ?', name, me.id);
   return json({ name, division: me.division });
 }
@@ -431,8 +462,7 @@ async function leagueCount(db: Db, me: Player): Promise<number> {
 }
 
 async function createLeague(request: Request, db: Db, me: Player, now: number): Promise<Response> {
-  const name = cleanName((await readJson(request)).name, 24);
-  if (!name) throw new HttpError(400, 'name');
+  const name = acceptName((await readJson(request)).name, 24);
   if ((await leagueCount(db, me)) >= LEAGUE.privatePerPlayer) throw new HttpError(409, 'limit');
   for (let attempt = 0; attempt < 6; attempt++) {
     const code = inviteCode();

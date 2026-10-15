@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { CHAIN_IDS, LEAGUE, advance, buy, divisionMoves, newGame, weekId, weekStart, type LeagueReport, type LiteState } from '../../lite-model/src/index';
-import { cleanName, handle, rollover } from '../src/app';
+import { cleanName, handle, offensiveName, rollover } from '../src/app';
 import type { Db } from '../src/db';
 import { fakePki, type FakeDevice } from './fake-attest';
 import { memoryDb } from './sqlite';
@@ -74,6 +74,20 @@ test('ad kuralları', () => {
   assert.equal(cleanName('x'.repeat(17)), null);
   assert.equal(cleanName('<script>'), null);
   assert.equal(cleanName(42), null);
+});
+
+test('küfür süzgeci: tek sözcük ve kök, rakamlı yazım; masum adlar geçiyor', async () => {
+  for (const bad of ['Orospu Holding', 'Kral_0r0spu', 'Sik AŞ', 'AMK', 'F-U-C-K', 'Bitch Co', 'Siktir Git', 'Hitler Ltd']) {
+    assert.equal(offensiveName(bad), true, bad);
+  }
+  for (const fine of ['Sikke Holding', 'Atilla Holding', 'Amazon Kahve', 'Ambar', 'Gotham', 'Picasso Moda', 'Malatya Gıda', 'Mal Holding', 'Ocak Fırın']) {
+    assert.equal(offensiveName(fine), false, fine);
+  }
+  const db = memoryDb();
+  assert.deepEqual((await call(db, THURSDAY, 'POST', '/v1/players', { name: 'Orospu AŞ' })).body, { error: 'name-blocked' });
+  const me = await signUp(db, THURSDAY, 'Atilla');
+  assert.equal((await call(db, THURSDAY, 'PATCH', '/v1/players/me', { name: 'yarrak' }, me)).body.error, 'name-blocked');
+  assert.equal((await call(db, THURSDAY, 'POST', '/v1/leagues', { name: 'Fuck Ligi' }, me)).body.error, 'name-blocked');
 });
 
 test('kayıt ve kimlik: token olmadan, yanlış tokenla girilmiyor', async () => {

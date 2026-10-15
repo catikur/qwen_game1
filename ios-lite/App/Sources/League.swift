@@ -294,6 +294,7 @@ final class LeagueService {
             if status == 401 { signOut() }
             problem = switch code {
             case "name": "league.error.name"
+            case "name-blocked": "league.error.blocked"
             case "code": "league.error.code"
             case "full": "league.error.full"
             case "limit": "league.error.limit"
