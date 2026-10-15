@@ -353,7 +353,8 @@ struct IsoPainter {
             tileWidth = min(size.width / 4.8, size.height / 2.75) * zoom
             let above = 0.35 + (1 - zoom) * 5
             let centered = (size.height - tileWidth * (1.85 + above)) / 2 + tileWidth * above
-            origin = CGPoint(x: size.width / 2, y: max(size.height * (0.24 + (1 - zoom) * 0.6), centered))
+            // Sol üstteki ada haritası arka binanın çatısını örtmesin: ada biraz aşağıda.
+            origin = CGPoint(x: size.width / 2, y: max(size.height * (0.3 + (1 - zoom) * 0.6), centered))
         }
     }
 
