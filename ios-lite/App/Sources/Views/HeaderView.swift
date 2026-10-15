@@ -4,15 +4,19 @@ import CapitalForgeLiteKit
 /// Kasa, saniyelik gelir ve kampanya düğmesi.
 struct HeaderView: View {
     @Environment(GameStore.self) private var store
+    @Binding var showSettings: Bool
 
     var body: some View {
         let state = store.state
-        HStack(alignment: .center, spacing: 12) {
+        HStack(alignment: .center, spacing: 10) {
             VStack(alignment: .leading, spacing: 2) {
-                Text(L10n.t("header.cash").uppercased() + " · " + L10n.t("city.label", state.city + 1))
+                Text(label(state))
                     .font(Theme.mono(10, .medium))
                     .foregroundStyle(Theme.muted)
                     .tracking(0.8)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                    .accessibilityIdentifier("city-label")
                 Text(Format.money(state.cash))
                     .font(Theme.mono(26, .bold))
                     .foregroundStyle(Theme.ink)
@@ -22,7 +26,18 @@ struct HeaderView: View {
                     .font(Theme.mono(13))
                     .foregroundStyle(Theme.money)
             }
-            Spacer(minLength: 8)
+            Spacer(minLength: 6)
+            Button {
+                showSettings = true
+            } label: {
+                Image(systemName: "gearshape")
+                    .font(.system(size: 18, weight: .medium))
+                    .frame(width: 40, height: 56)
+                    .foregroundStyle(Theme.ink)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(L10n.t("settings.title"))
+            .accessibilityIdentifier("settings")
             CampaignButton()
         }
         .padding(.horizontal, 14)
@@ -30,6 +45,13 @@ struct HeaderView: View {
         .padding(.bottom, 10)
         .background(Theme.panel)
         .overlay(alignment: .bottom) { Rectangle().fill(Theme.ink).frame(height: 1.5) }
+    }
+
+    /// "KASA · Şehir 2 · Kahve ×2": öne çıkan zincir ikinci şehirden itibaren.
+    private func label(_ state: LiteState) -> String {
+        var parts = [L10n.t("header.cash").uppercased(), L10n.t("city.label", state.city + 1)]
+        if let featured = Lite.featuredChain(state) { parts.append(L10n.t("city.featured", L10n.chainName(featured))) }
+        return parts.joined(separator: " · ")
     }
 }
 
@@ -61,7 +83,7 @@ struct CampaignButton: View {
 
     private func label(active: Bool, ready: Bool, state: LiteState) -> String {
         if active { return L10n.t("campaign.active", Format.duration(state.campaignUntil - state.clock)) }
-        if ready { return L10n.t("campaign.start") }
+        if ready { return L10n.t("campaign.start", String(Int(Lite.campaignMultiplier(state)))) }
         return L10n.t("campaign.wait", Format.duration(state.campaignReadyAt - state.clock))
     }
 }

@@ -22,6 +22,14 @@ struct SaveFile: Codable {
     var version = 1
     var state: LiteState
     var lastSeen: Date
+    /// L4: borsa grafiği (hisse fiyatı örnekleri). Eski kayıtlarda yok.
+    var priceHistory: [Double]?
+}
+
+/// Borsa grafiği: oyun saatinde dakikada bir örnek, son iki saat.
+enum PriceHistory {
+    static let interval = 60.0
+    static let limit = 120
 }
 
 /// Oyunun tek kaynağı. Model saf (CapitalForgeLiteKit); burada yalnızca zaman,
@@ -36,6 +44,13 @@ final class GameStore {
     private(set) var purchases = 0
     /// Başarısız alım sayacı.
     private(set) var refusals = 0
+    /// Büyük an sayacı (kilometre taşı, görev, halka arz, şehir satışı): başarı titreşimi.
+    private(set) var triumphs = 0
+    /// Halka arzdan beri hisse fiyatı (dakikada bir örnek).
+    private(set) var priceHistory: [Double] = []
+    let settings: AppSettings
+    private let sound = SoundPlayer()
+    @ObservationIgnored private var lastSampleClock: Double = -.infinity
 
     @ObservationIgnored private var lastTick = Date()
     @ObservationIgnored private var timer: Timer?
@@ -51,9 +66,13 @@ final class GameStore {
         saveURL = support.appendingPathComponent("capitalforge-lite.json")
 
         let arguments = ProcessInfo.processInfo.arguments
+        let scenario = arguments.contains("-liteScenario")
+        settings = AppSettings(ephemeral: scenario)
         if let index = arguments.firstIndex(of: "-liteScenario"), index + 1 < arguments.count {
             // Ekran görüntüsü senaryosu: kayıt okunmuyor ve yazılmıyor.
-            state = Scenario.build(arguments[index + 1])
+            let built = Scenario.build(arguments[index + 1])
+            state = built.state
+            priceHistory = built.prices
             if let offline = arguments.firstIndex(of: "-liteOffline"), offline + 1 < arguments.count,
                let seconds = Double(arguments[offline + 1]) {
                 applyOffline(seconds)
@@ -61,10 +80,12 @@ final class GameStore {
         } else if let data = try? Data(contentsOf: saveURL),
                   let save = try? JSONDecoder().decode(SaveFile.self, from: data) {
             state = save.state
+            priceHistory = save.priceHistory ?? []
             applyOffline(Date().timeIntervalSince(save.lastSeen))
         } else {
             state = Lite.newGame()
         }
+        lastSampleClock = state.clock
         start()
     }
 
@@ -90,15 +111,28 @@ final class GameStore {
         // Uyku ya da duraklama sonrası büyük sıçrama çevrimdışı kazanç sayılıyor, burada değil.
         let dt = min(now.timeIntervalSince(lastTick), 2)
         lastTick = now
-        guard dt > 0 else { return }
+        // Senaryo (CI kareleri) donuk: kare tam olarak kurulan anı göstersin.
+        guard dt > 0, !isScenario else { return }
+        let hadEvent = state.event != nil
         state = Lite.advance(state, dt)
+        if !hadEvent && state.event != nil { cue(.event) }
+        samplePrice()
         sinceSave += dt
         if sinceSave >= 5 { save() }
+    }
+
+    /// Halka açıksa dakikada bir hisse fiyatı örneği.
+    private func samplePrice() {
+        guard state.listed, state.clock - lastSampleClock >= PriceHistory.interval else { return }
+        lastSampleClock = state.clock
+        priceHistory.append(Lite.sharePrice(state))
+        if priceHistory.count > PriceHistory.limit { priceHistory.removeFirst(priceHistory.count - PriceHistory.limit) }
     }
 
     func scenePhaseChanged(_ phase: ScenePhase) {
         switch phase {
         case .active:
+            LiteNotifications.cancelAll()
             if let away = backgroundAt {
                 backgroundAt = nil
                 applyOffline(Date().timeIntervalSince(away))
@@ -108,6 +142,7 @@ final class GameStore {
             if backgroundAt == nil { backgroundAt = Date() }
             stop()
             save()
+            if settings.notifications && !isScenario { LiteNotifications.schedule(for: state) }
         case .inactive:
             save()
         @unknown default:
@@ -120,6 +155,8 @@ final class GameStore {
         guard elapsed > 60 else { return }
         let result = Lite.applyOffline(state, elapsed)
         state = result.state
+        if state.listed { priceHistory.append(Lite.sharePrice(state)) }
+        lastSampleClock = state.clock
         if result.earned > 0 {
             offlineReport = OfflineReport(earned: result.earned, seconds: result.seconds, cap: Lite.offlineCap(state))
         }
@@ -128,7 +165,7 @@ final class GameStore {
     func save() {
         sinceSave = 0
         guard !isScenario else { return }
-        let file = SaveFile(state: state, lastSeen: Date())
+        let file = SaveFile(state: state, lastSeen: Date(), priceHistory: priceHistory)
         if let data = try? JSONEncoder().encode(file) {
             try? data.write(to: saveURL, options: .atomic)
         }
@@ -155,12 +192,21 @@ final class GameStore {
     }
 
     func buy(_ chain: ChainId, _ stage: Stage) {
+        let before = state[chain: chain].levels[stage.rawValue]
         switch Lite.buy(state, chain, stage, count(for: chain, stage)) {
         case .success(let next):
             state = next
-            purchases += 1
+            let after = state[chain: chain].levels[stage.rawValue]
+            if Lite.milestonesReached(after) > Lite.milestonesReached(before) {
+                triumphs += 1
+                cue(.milestone)
+            } else {
+                purchases += 1
+                cue(.buy)
+            }
         case .failure:
             refusals += 1
+            cue(.refuse)
         }
     }
 
@@ -168,8 +214,10 @@ final class GameStore {
         if case .success(let next) = Lite.buyManager(state) {
             state = next
             purchases += 1
+            cue(.buy)
         } else {
             refusals += 1
+            cue(.refuse)
         }
     }
 
@@ -177,30 +225,95 @@ final class GameStore {
         if case .success(let next) = Lite.startCampaign(state) {
             state = next
             purchases += 1
+            cue(.milestone)
         }
     }
 
     func chooseCouncil(_ choice: Int) {
         if case .success(let next) = Lite.chooseCouncil(state, choice) {
             state = next
-            purchases += 1
+            triumphs += 1
+            cue(.reward)
         }
     }
 
     func claimGoal() {
         if case .success(let next) = Lite.claimGoal(state) {
             state = next
-            purchases += 1
+            triumphs += 1
+            cue(.reward)
         } else {
             refusals += 1
+            cue(.refuse)
+        }
+    }
+
+    func goPublic() {
+        if case .success(let next) = Lite.goPublic(state) {
+            state = next
+            priceHistory = [Lite.sharePrice(state)]
+            lastSampleClock = state.clock
+            triumphs += 1
+            cue(.fanfare)
+            save()
         }
     }
 
     func sellCity() {
         if case .success(let next) = Lite.prestige(state) {
             state = next
-            purchases += 1
+            priceHistory = []
+            lastSampleClock = state.clock
+            triumphs += 1
+            cue(.fanfare)
             save()
         }
+    }
+
+    /// Bütün ilerlemeyi sil: yeni oyun, boş borsa.
+    func resetGame() {
+        state = Lite.newGame()
+        priceHistory = []
+        lastSampleClock = state.clock
+        offlineReport = nil
+        backgroundAt = nil
+        save()
+    }
+
+    // MARK: - Ses ve bildirim
+
+    private func cue(_ sound: SoundPlayer.Cue) {
+        if settings.sound && !isScenario { self.sound.play(sound) }
+    }
+
+    /// Bildirim anahtarı: açarken izin iste; reddedildiyse kapalı kal.
+    func setNotifications(_ on: Bool) async {
+        settings.notificationsOffered = true
+        guard on else {
+            settings.notifications = false
+            LiteNotifications.cancelAll()
+            return
+        }
+        let status = await LiteNotifications.authorization()
+        switch status {
+        case .denied:
+            settings.notificationsDenied = true
+            settings.notifications = false
+        case .notDetermined:
+            let granted = await LiteNotifications.requestAuthorization()
+            settings.notificationsDenied = !granted
+            settings.notifications = granted
+        default:
+            settings.notificationsDenied = false
+            settings.notifications = true
+        }
+    }
+
+    /// Açılışta iznin hâlâ geçerli olduğunu doğrula (kullanıcı iPhone Ayarlar'ından kapatmış olabilir).
+    func refreshNotificationStatus() async {
+        guard !isScenario else { return }
+        let status = await LiteNotifications.authorization()
+        settings.notificationsDenied = status == .denied
+        if status == .denied { settings.notifications = false }
     }
 }

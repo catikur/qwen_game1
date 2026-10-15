@@ -80,15 +80,25 @@ Her şehirde bir rakip CEO var; yüzü ana oyundaki avatar sisteminden geliyor.
 
 - **Mahalleler** ömür boyu kazançla açılıyor: Çarşı → Merkez → Sanayi → Liman →
   Teknopark. Liman zincir açmıyor, bütün satışlara ihracat çarpanı (×1,5) veriyor.
-- **Halka arz:** net değer 1 Mr ₺'yi geçince açılıyor. Hissenin bir kısmı satılıyor:
-  - tek seferlik büyük nakit geliyor;
-  - "temettü" adıyla kalıcı küçük bir gelir akışı başlıyor;
-  - borsa ekranı açılıyor ve şirket değeri grafikle gösteriliyor.
+- **Halka arz (L4):** şehirdeki ömür boyu kazanç 1 Mr ₺'yi geçince açılıyor,
+  şehirde bir kez yapılıyor.
+  - Hissenin %25'i satılıyor; karşılığı kasaya giriyor.
+  - Şirket değeri = sürekli gelirin 1 saati. Sürekli gelirde kampanya, olay ve
+    politika yok; yoksa tek doğru hamle halka arzı çarpanların üstüne denk
+    getirmek olurdu.
+  - Kalıcı etkisi satışta: halka açık şirket yıldızı ×1,2 getiriyor.
+  - Borsa kartı açılıyor: hisse fiyatı (değer / 1 milyon hisse), halka arzdan
+    beri değişim, dakikada bir örneklenen grafik, payının (%75) değeri.
+  - İlk taslaktaki "temettü" düştü. Oyuncu şirketin kendisi; kendine temettü
+    ödemesi bir şey anlatmıyordu.
 - **Holding (prestij):** şehrin şirketini satıp yeni şehre geçiyorsun. Sıfırdan
   başlıyorsun ama Holding Yıldızı kazanıyorsun:
-  - yıldız = `⌊√(şehirdeki ömür boyu kazanç / 1 Mr ₺)⌋`;
+  - yıldız = `⌊√(şehirdeki ömür boyu kazanç / 1 Mr ₺) × (halka açıksa 1,2)⌋`;
   - her yıldız bütün gelire kalıcı +%2;
-  - yeni şehirlerin farklı bir zincir bonusu ve daha sert bir rakibi var.
+  - her şehrin rakibi bir öncekinden sert (kovalama hedefi +0,15);
+  - ikinci şehirden başlayarak her şehrin bir öne çıkan zinciri var, geliri ×2.
+    Sıra: kahve, moda, deri, teknoloji, fırın, sonra baştan. Her holding turu
+    aynı yolu yürümesin diye.
 
 ## 5. Kısa oturum öğeleri
 
@@ -98,8 +108,9 @@ Her şehirde bir rakip CEO var; yüzü ana oyundaki avatar sisteminden geliyor.
 | Kampanya | Şehre dokununca 30 saniye ×2 gelir, 3 dakika bekleme. Ana oyundaki pazarlama kolunun karşılığı |
 | Olaylar (L3) | İlk olay 4. dakikada; sonrakiler başlangıçtan başlangıca 5,5 dakikada bir, her biri 2 dakika. Ayrıntı aşağıda |
 | Meclis kartı (L3) | İlk oturum 10. dakikada, sonra saatte bir; iki seçenekli karar, bir saat yürürlükte. Ayrıntı aşağıda |
-| Görevler (L3) | Şehir başına 14 basamaklı merdiven; ödül, alındığı andaki gelirin 30 saniye ile 5 dakikası arası. Ayrıntı aşağıda |
-| Bildirim (izinle) | "Kasa doldu" ve "Rakip seni geçti" yerel bildirimleri. Sunucu yok |
+| Görevler (L3) | Şehir başına 15 basamaklı merdiven (L4'te halka arz eklendi); ödül, alındığı andaki gelirin 30 saniye ile 5 dakikası arası. Ayrıntı aşağıda |
+| Bildirim (L4, izinle) | Yerel, sunucu yok. Uygulama arka plana geçerken modelden hesaplanıp zamanlanıyor, dönünce siliniyor. Ayrıntı aşağıda |
+| Ses ve titreşim (L4) | Ses dosyası yok: kısa sinüs notaları (alım, kilometre taşı, ödül, ret, olay, halka arz). Oturum "ambient": sessiz anahtara uyuyor, çalan müziği kesmiyor. Titreşim: alım seçim, ret uyarı, büyük anlar başarı |
 
 ### 5.1 Olaylar (L3)
 
@@ -153,6 +164,24 @@ rekabet kurulu.
 Sonrakiler uzun hedef. Ödül gelirle ölçeklendiği için hiçbir zaman önemsiz
 kalmıyor.
 
+L4'te Sanayi ile Liman arasına "Şirketi halka arz et" girdi. L3 kayıtlarında
+görev sırası o noktadan sonra bir kaydırılıyor (Swift kodlayıcısı `listed`
+alanı olmayan kaydı L3 kaydı sayıyor).
+
+### 5.4 Bildirimler (L4)
+
+Üçü de çevrimdışı tavanının içinde; tavandan sonra şirket durduğu için bir şey
+olmuyor. Bir dakikadan yakın bildirim kurulmuyor.
+
+| Bildirim | Ne zaman |
+|---|---|
+| Kasa doldu | Tavan anında; metinde o ana kadar birikecek para |
+| Meclis toplandı | Sıradaki oturum anında (açık oturum yoksa) |
+| Rakip seni geçti | `firstOvertake`: şu an önde olduğun bir zincirde payın %50'nin altına ineceği an. Zaten geride olduğun zincir sayılmıyor |
+
+İzin bir kez soruluyor: ilk kampanya görevinden sonra küçük bir kart ("Haber
+verelim mi?"). Reddedilirse bir daha sorulmuyor; Ayarlar'dan açılıyor.
+
 ## 6. Ekranlar (dikey, tek el)
 
 1. **Şehir:**
@@ -165,12 +194,19 @@ kalmıyor.
    - rakiple pay çubuğu;
    - toplu alım seçenekleri: ×1, ×10, ×max.
 3. **Holding:** yıldızlar, şehirler, satış önizlemesi ("şimdi satarsan +7 yıldız").
-4. **Borsa** (halka arzdan sonra): şirket değeri grafiği, temettü.
-5. **Ayarlar:** dil (TR/EN), ses, titreşim, bildirim, kaydı sıfırla.
+4. **Borsa** (halka arzdan sonra, zincirlerin altında): hisse fiyatı, halka
+   arzdan beri değişim, grafik. Halka arz açılınca teklif kartı görev kartının
+   hemen altına çıkıyor.
+5. **Ayarlar** (başlıktaki dişli): dil (cihaz, Türkçe, English), ses, titreşim,
+   bildirim, kaydı sıfırla (onaylı).
 
 Görsel kimlik ana oyunun Kadastro teması (aydınlık zemin, mürekkep vurgu,
 tabular rakamlar). Şehir çizimi SwiftUI `Canvas` ile prosedürel; hiçbir dış
-görsel dosya kullanılmıyor.
+görsel dosya kullanılmıyor. L5'te bunların hepsi baştan ele alınıyor (§10).
+
+Simge (L4, geçici): koyu zeminde yükselen üç izometrik kule (ham → işleme →
+satış). `ios-lite/App/tools/make-icon.mjs` SVG'den üretiyor, alfa kanalını
+atıyor.
 
 ## 7. Mühendislik
 
@@ -262,6 +298,25 @@ verdi. Gündelik oyuncunun temposu değişmedi; kapalıyken olay başlamıyor.
 Açık konu: gündelik bot (günde 8 oturum) beş zinciri ilk gün açıyor. L3'te
 olaylar ve görevler gelince gündelik tempo yeniden ölçülecek.
 
+**L4 sonrası** (aktif bot halka arzı açılır açılmaz yapıyor, 4 saatte şehri
+satıp ikinci şehirde 2 saat oynuyor):
+
+| Açılış | 1. şehir | 2. şehir (9 yıldız, kahve ×2) |
+|---|---|---|
+| Kahve | 1 dk 56 sn | 1 dk 26 sn |
+| Merkez, Moda | 8 dk 10 sn | 4 dk 53 sn |
+| Sanayi, Deri | 43 dk 40 sn | 32 dk 9 sn |
+| Halka arz | 1 sa 20 dk | 1 sa 4 dk |
+| Liman | 1 sa 33 dk | 1 sa 17 dk |
+
+- Halka arzda kasaya o anki sürekli gelirin 15 dakikası giriyor. Anlık gelir
+  kampanyayla iki katına yakın olduğu için bu, oyuncunun gördüğü gelirin
+  yaklaşık 6,5 dakikası.
+- Dört saatte satış önizlemesi 9 yıldız (halka açık, ×1,2).
+- İkinci şehrin açılışı belirgin hızlı, iki saatte geliri ilk şehirle başa baş.
+- Gündelik oyuncu 2. günün sonunda 50 yıldızı (+%100) görüyor: ilk satışın
+  anlamlı olduğu yer orası.
+
 ## 10. Turlar
 
 | Tur | Kapsam |
@@ -269,4 +324,9 @@ olaylar ve görevler gelince gündelik tempo yeniden ölçülecek.
 | L1 | TS modeli + denge raporu; Swift kit + eşitlik testleri; macOS CI |
 | L2 | SwiftUI MVP: şehir, zincir kartları, büyütme, çevrimdışı kazanç, kayıt; simülatör kareleri |
 | L3 | Rakip ve pay, olaylar, meclis kartları, görevler |
-| L4 | Halka arz, holding prestiji, bildirimler, TR/EN, simge, ses ve titreşim cilası |
+| L4 | Halka arz ve borsa, şehir bonusu, bildirimler, ayarlar (dil, ses, titreşim, bildirim, sıfırla), prosedürel ses ve titreşim, geçici simge |
+| L5 | **Stil yenilemesi: her şey baştan.** Yazı tipi, renk paleti, şehir grafikleri, kart ve düğme yapısı, simge. Önce 2–3 farklı yön kareleriyle önerilip kullanıcı seçiyor; sonra tema dosyası, şehir çizimi, bütün kartlar ve simge o yöne göre yeniden yapılıyor. Oyun mantığına dokunulmuyor |
+
+L5 kullanıcının isteği: "En son tüm stili değiştireceğiz. Fonttan grafiklere,
+renkten buton yapısına kadar her şeyi yenilemek istiyorum." Bu yüzden L4'teki
+simge ve yeni kartlar bugünkü temayı izliyor ama geçici sayılıyor.
