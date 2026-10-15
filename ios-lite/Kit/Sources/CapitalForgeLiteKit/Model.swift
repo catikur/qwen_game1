@@ -64,6 +64,9 @@ public struct LiteState: Codable, Equatable, Sendable {
     public var campaigns: Int = 0
     /// Görev merdiveninde sıradaki görev.
     public var goal: Int = 0
+    // L4
+    /// Şirket bu şehirde halka arz edildi mi.
+    public var listed: Bool = false
 
     public subscript(chain id: ChainId) -> ChainState {
         get { chains[id.index] }
@@ -75,9 +78,12 @@ extension LiteState {
     private enum CodingKeys: String, CodingKey {
         case version, city, stars, cash, earned, totalEarned, clock, manager, campaignUntil, campaignReadyAt, chains
         case event, nextEventAt, events, council, nextCouncilAt, sessions, policy, policies, campaigns, goal
+        case listed
     }
 
-    /// L2 kayıtlarında L3 alanları yok: varsayılanla açılıyor.
+    /// Eski kayıtlarda yeni alanlar yok: varsayılanla açılıyor. L2'de L3
+    /// alanları, L3'te `listed` yok. L3 kaydında görev sırası halka arz
+    /// görevinden sonrasını bir kaydırıyor (o görev L4'te araya girdi).
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         version = try c.decodeIfPresent(Int.self, forKey: .version) ?? 1
@@ -101,6 +107,12 @@ extension LiteState {
         policies = try c.decodeIfPresent(Int.self, forKey: .policies) ?? 0
         campaigns = try c.decodeIfPresent(Int.self, forKey: .campaigns) ?? 0
         goal = try c.decodeIfPresent(Int.self, forKey: .goal) ?? 0
+        if let value = try c.decodeIfPresent(Bool.self, forKey: .listed) {
+            listed = value
+        } else {
+            listed = false
+            if goal >= LiteContent.goalIpoIndex { goal += 1 }
+        }
     }
 }
 
@@ -222,8 +234,14 @@ public enum Lite {
         return multiplier
     }
 
+    /// Şehrin öne çıkan zinciri: ilk şehirde yok, sonra `cityFeatured` sırasıyla.
+    public static func featuredChain(_ state: LiteState) -> ChainId? {
+        if state.city < 1 { return nil }
+        return LiteContent.cityFeatured[(state.city - 1) % LiteContent.cityFeatured.count]
+    }
+
     public static func chainMultiplier(_ state: LiteState, _ chain: ChainId) -> Double {
-        var multiplier = 1.0
+        var multiplier = featuredChain(state) == chain ? LiteContent.cityBonus : 1.0
         let tourist = chain == .bakery || chain == .coffee
         if eventIs(state, .tourism) && tourist { multiplier *= LiteContent.tourismMultiplier }
         if eventIs(state, .fashionWeek) && chain == .fashion { multiplier *= LiteContent.fashionWeekMultiplier }
@@ -310,6 +328,15 @@ public enum Lite {
         return total
     }
 
+    /// Sürekli gelir: kampanya, olay ve politika olmadan. Halka arz değerlemesi buna bakıyor.
+    public static func steadyIncome(_ state: LiteState) -> Double {
+        var calm = state
+        calm.event = nil
+        calm.policy = nil
+        calm.campaignUntil = calm.clock
+        return incomePerSecond(calm)
+    }
+
     public static func upgradeGain(_ state: LiteState, _ chain: ChainId, _ stage: Stage) -> Double {
         let multiplier = incomeMultiplier(state)
         let levels = state[chain: chain].levels
@@ -373,6 +400,7 @@ public enum Lite {
         case .share75:
             return ChainId.allCases.contains { state[chain: $0].levels[2] > 0 && chainReport(state, $0).share >= 0.75 }
         case .industry: return districtUnlocked(state, .industry)
+        case .ipo: return state.listed
         case .port: return districtUnlocked(state, .port)
         case .technopark: return districtUnlocked(state, .technopark)
         case .firstStar: return prestigePreview(state) >= 1
@@ -437,6 +465,38 @@ public enum Lite {
         var next = state
         next.cash += reward
         next.goal += 1
+        return .success(next)
+    }
+
+    // MARK: - Halka arz
+
+    public static func ipoUnlocked(_ state: LiteState) -> Bool {
+        state.earned >= LiteContent.ipoUnlock
+    }
+
+    /// Şirket değeri: sürekli gelirin `ipoValuationSeconds` saniyesi.
+    public static func companyValue(_ state: LiteState) -> Double {
+        steadyIncome(state) * LiteContent.ipoValuationSeconds
+    }
+
+    /// Borsadaki hisse fiyatı.
+    public static func sharePrice(_ state: LiteState) -> Double {
+        companyValue(state) / LiteContent.ipoShares
+    }
+
+    /// Halka arzda kasaya girecek para.
+    public static func ipoProceeds(_ state: LiteState) -> Double {
+        companyValue(state) * LiteContent.ipoShare
+    }
+
+    /// Halka arz: hissenin `ipoShare`'i satılıyor, karşılığı kasaya. Şehirde bir kez.
+    public static func goPublic(_ state: LiteState) -> Result<LiteState, ActionError> {
+        if state.listed { return .failure(.max) }
+        if !ipoUnlocked(state) { return .failure(.locked) }
+        let proceeds = ipoProceeds(state)
+        var next = state
+        next.cash += proceeds
+        next.listed = true
         return .success(next)
     }
 
@@ -516,17 +576,42 @@ public enum Lite {
 
     // MARK: - Holding
 
-    public static func starsFor(_ earned: Double) -> Int {
-        Int(floor(LiteContent.starScale * sqrt(max(0, earned) / LiteContent.starUnit)))
+    /// Yıldız: halka açık şirket daha yüksek değerlemeyle satılıyor.
+    public static func starsFor(_ earned: Double, listed: Bool = false) -> Int {
+        let premium = listed ? LiteContent.listedStarMultiplier : 1.0
+        return Int(floor(LiteContent.starScale * sqrt(max(0, earned) / LiteContent.starUnit) * premium))
     }
 
     public static func prestigePreview(_ state: LiteState) -> Int {
-        starsFor(state.earned)
+        starsFor(state.earned, listed: state.listed)
     }
 
     public static func prestige(_ state: LiteState) -> Result<LiteState, ActionError> {
         let gained = prestigePreview(state)
         if gained < 1 { return .failure(.locked) }
         return .success(newGame(city: state.city + 1, stars: state.stars + gained, totalEarned: state.totalEarned))
+    }
+
+    // MARK: - Bildirim
+
+    /// Uygulama kapalı kalırsa rakip kaçıncı saniyede bir zincirde payını
+    /// `overtakeShare`'in altına düşürüyor (yoksa nil). Yalnızca şu an önde
+    /// olunan zincirler; `applyOffline` ile aynı koşullar, adımlar `offlineStep`.
+    public static func firstOvertake(_ state: LiteState, _ horizon: Double) -> Double? {
+        var current = state
+        if current.campaignUntil > current.clock { current.campaignUntil = current.clock }
+        let start = current
+        let leading = ChainId.allCases.filter {
+            start[chain: $0].levels[2] > 0 && chainReport(start, $0).share >= LiteContent.overtakeShare
+        }
+        if leading.isEmpty { return nil }
+        var elapsed = 0.0
+        while horizon - elapsed > eps {
+            let h = min(offlineStep, horizon - elapsed)
+            current = advance(current, h, offline: true)
+            elapsed += h
+            for id in leading where chainReport(current, id).share < LiteContent.overtakeShare { return elapsed }
+        }
+        return nil
     }
 }

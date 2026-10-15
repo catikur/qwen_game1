@@ -44,6 +44,10 @@ klasöründe (SwiftUI, iOS 17+). Tasarım ve denge: [`docs/LITE-TASARIMI.md`](..
 Ücretsiz Apple kimliğiyle yapılan imza 7 gün geçerli. Süre dolunca uygulama
 açılmaz; Xcode'dan yeniden ▶︎ demek yeter, kayıt telefonda kalır.
 
+**Bildirimler** (isteğe bağlı): oyun bir kez soruyor, ya da başlıktaki dişliden
+**Ayarlar → Bildirimler**. Kasa dolunca, meclis toplanınca ve rakip seni geçince
+haber veriyor. Hepsi yerel bildirim; sunucu ya da hesap yok.
+
 ## Geliştirme
 
 | Ne | Komut | Nerede |
@@ -52,6 +56,7 @@ açılmaz; Xcode'dan yeniden ▶︎ demek yeter, kayıt telefonda kalır.
 | Uygulamayı simülatörde açmak | `./ios-lite/xcode.sh`, sonra bir iPhone simülatörü seç ve ▶︎ | Mac |
 | Denge raporu (TypeScript modeli) | `pnpm lite:balance` | her yerde |
 | Swift'e altın değerleri yeniden yazmak | `pnpm lite:fixtures` | her yerde |
+| Uygulama simgesini yeniden üretmek | `node ios-lite/App/tools/make-icon.mjs` (Playwright gerekir) | her yerde |
 
 Denge `packages/lite-model` içinde TypeScript'te ayarlanıyor; Swift modeli
 (`Kit/Sources/CapitalForgeLiteKit/Model.swift`) aynı formüllerin çevirisi.
@@ -67,6 +72,12 @@ CI (`.github/workflows/ios-lite.yml`) her değişiklikte macOS'ta şunları yap�
 - uygulamayı simülatör için derliyor;
 - senaryo ekran görüntülerini `ios-lite-shots` dalına yazıyor.
 
-Simülatörde senaryo açmak için uygulamayı `-liteScenario start|early|mid|late|council`
-argümanıyla başlat. Xcode'da: **Product → Scheme → Edit Scheme → Run → Arguments**.
-Senaryo modunda kayıt okunmuyor ve yazılmıyor.
+Simülatörde senaryo açmak için uygulamayı
+`-liteScenario start|early|mid|late|council|ipo|listed|city2` argümanıyla başlat.
+Xcode'da: **Product → Scheme → Edit Scheme → Run → Arguments**.
+
+- Senaryo modunda kayıt okunmuyor ve yazılmıyor, ses kapalı, oyun saati donuk.
+- Ek argümanlar:
+  - `-liteOffline <sn>`: "yokken kazandın" penceresi;
+  - `-liteSettings`: Ayarlar açık;
+  - `-liteScroll market`: liste borsa kartına kaymış.

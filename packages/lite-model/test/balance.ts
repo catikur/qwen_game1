@@ -11,6 +11,7 @@
 import {
   CHAIN_IDS,
   DISTRICTS,
+  GOALS,
   STAGES,
   bestMove,
   buy,
@@ -19,10 +20,15 @@ import {
   chooseCouncil,
   claimGoal,
   chainUnlocked,
+  featuredChain,
+  goPublic,
   incomePerSecond,
+  ipoProceeds,
+  ipoUnlocked,
   managerCost,
   applyOffline,
   advance,
+  prestige,
   prestigePreview,
   startCampaign,
   newGame,
@@ -49,6 +55,8 @@ const clock = (s: number): string => {
 
 const picks = { raw: 0, process: 0, retail: 0 };
 const goalsClaimed: number[] = [];
+/** L4: halka arz anı ve kasaya giren para (aktif koşu raporu için). */
+let ipoAt: { clock: number; proceeds: number; income: number } | null = null;
 
 /** Aktif oyuncunun bir saniyesi: kasa yettikçe önerilen hamleyi al. */
 function play(state: LiteState, campaign: boolean): LiteState {
@@ -69,6 +77,15 @@ function play(state: LiteState, campaign: boolean): LiteState {
     const b = chooseCouncil(s, 1);
     if (a.ok && b.ok) s = incomePerSecond(a.state) >= incomePerSecond(b.state) ? a.state : b.state;
   }
+  // L4: halka arz açılır açılmaz.
+  if (!s.listed && ipoUnlocked(s)) {
+    const proceeds = ipoProceeds(s);
+    const r = goPublic(s);
+    if (r.ok) {
+      ipoAt = { clock: s.clock, proceeds, income: incomePerSecond(s) };
+      s = r.state;
+    }
+  }
   for (let guard = 0; guard < 200; guard++) {
     const move = bestMove(s);
     // Genel Müdür: gelirin 2 dakikasından ucuzsa al (gündelik oyuncu için tavan).
@@ -88,9 +105,13 @@ function play(state: LiteState, campaign: boolean): LiteState {
   return s;
 }
 
-function activeRun(hours: number): void {
-  console.log(`\n== Aktif oyuncu (${hours} saat, kampanya açık) ==`);
-  let s = newGame();
+function activeRun(hours: number, start: LiteState = newGame(), label = ''): LiteState {
+  const featured = featuredChain(start);
+  console.log(
+    `\n== Aktif oyuncu${label} (${hours} saat, kampanya açık${start.stars > 0 ? `, ${start.stars} yıldız` : ''}${featured ? `, öne çıkan ${featured} ×2` : ''}) ==`,
+  );
+  let s = start;
+  ipoAt = null;
   const seen = new Set<string>();
   const checkpoints = [60, 300, 600, 1800, 3600, 7200, 14400, 28800];
   for (let t = 0; t < hours * 3600; t++) {
@@ -121,13 +142,20 @@ function activeRun(hours: number): void {
       for (const p of parts) console.log(`              ${p}`);
     }
   }
-  console.log(`  görevler: ${goalsClaimed.length}/14 · ${goalsClaimed.map((t) => clock(t).trim()).join(', ')}`);
+  if (ipoAt) {
+    console.log(
+      `  halka arz: ${clock(ipoAt.clock).trim()} · kasaya ${fmt(ipoAt.proceeds)} (o anki gelirin ${(ipoAt.proceeds / ipoAt.income / 60).toFixed(1)} dakikası)`,
+    );
+  }
+  console.log(`  görevler: ${goalsClaimed.length}/${GOALS.length} · ${goalsClaimed.map((t) => clock(t).trim()).join(', ')}`);
   console.log(`  olay: ${s.events} · meclis kararı: ${s.policies}`);
   goalsClaimed.length = 0;
   const total = picks.raw + picks.process + picks.retail;
   console.log(
     `  hamle dağılımı: satış %${((picks.retail / total) * 100).toFixed(0)} · işleme %${((picks.process / total) * 100).toFixed(0)} · ham %${((picks.raw / total) * 100).toFixed(0)}`,
   );
+  console.log(`  satış önizlemesi: ${prestigePreview(s)} yıldız${s.listed ? ' (halka açık, ×1,2)' : ''}`);
+  return s;
 }
 
 function casualRun(days: number): void {
@@ -157,5 +185,8 @@ function casualRun(days: number): void {
   void STAGES;
 }
 
-activeRun(Number(process.argv[2] ?? 4));
+const first = activeRun(Number(process.argv[2] ?? 4));
+// L4: şehri sat, ikinci şehirde aynı bot — yıldız ve öne çıkan zincirle ne kadar hızlı?
+const sold = prestige(first);
+if (sold.ok) activeRun(Number(process.argv[4] ?? 2), sold.state, ' · ikinci şehir');
 casualRun(Number(process.argv[3] ?? 5));

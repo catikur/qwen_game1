@@ -27,7 +27,8 @@ shot() {
   xcrun simctl terminate "$UDID" "$BUNDLE" 2>/dev/null || true
   xcrun simctl launch "$UDID" "$BUNDLE" "$@"
   # Geç senaryoda bot dört saatlik oyunu açılışta oynuyor; bekleme payı geniş.
-  sleep 14
+  # Senaryo modunda saat donuk: bekleme süresi kareyi değiştirmiyor.
+  sleep "${WAIT:-14}"
   xcrun simctl io "$UDID" screenshot "$OUT/$name.png"
   echo "kare: $name"
 }
@@ -39,4 +40,10 @@ shot tr-mid -AppleLanguages "(tr)" -liteScenario mid
 shot tr-late -AppleLanguages "(tr)" -liteScenario late
 shot tr-offline -AppleLanguages "(tr)" -liteScenario mid -liteOffline 9000
 shot en-mid -AppleLanguages "(en)" -liteScenario mid
+# L4: halka arz, borsa, ikinci şehir, ayarlar.
+shot tr-ipo -AppleLanguages "(tr)" -liteScenario ipo
+shot tr-listed -AppleLanguages "(tr)" -liteScenario listed -liteScroll market
+WAIT=20 shot tr-city2 -AppleLanguages "(tr)" -liteScenario city2
+shot tr-settings -AppleLanguages "(tr)" -liteScenario mid -liteSettings
+shot en-listed -AppleLanguages "(en)" -liteScenario listed -liteScroll market
 ls -la "$OUT"

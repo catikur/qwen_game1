@@ -9,6 +9,10 @@ import {
   EVENT_FIRST,
   EVENT_GAP,
   GOALS,
+  GOAL_IPO_INDEX,
+  IPO_SHARE,
+  IPO_UNLOCK,
+  IPO_VALUATION_SECONDS,
   POLICY,
   OFFLINE_CAP_BASE,
   STARTING_CASH,
@@ -19,13 +23,21 @@ import {
   chainReport,
   chooseCouncil,
   claimGoal,
+  companyValue,
+  featuredChain,
+  firstOvertake,
+  goPublic,
+  goalMet,
   goalReward,
   incomePerSecond,
+  ipoProceeds,
   maxAffordable,
   newGame,
   prestige,
+  prestigePreview,
   stageRate,
   startCampaign,
+  steadyIncome,
   upgradeCost,
   type LiteState,
 } from '../src/index';
@@ -233,4 +245,102 @@ test('holding yeni şehirde olay, meclis ve görevleri sıfırlıyor', () => {
   assert.equal(r.state.goal, 0);
   assert.equal(r.state.events, 0);
   assert.equal(r.state.nextEventAt, EVENT_FIRST);
+});
+
+// ------------------------------------------------------------ L4
+
+/** Halka arza hazır bir şirket: kazanç eşikte, birkaç zincir satıyor. */
+function ipoReady(): LiteState {
+  let s = rich();
+  s.cash = 1e9;
+  // Kazanç önce: kahve ancak açıldıktan sonra alınabiliyor.
+  s.earned = IPO_UNLOCK;
+  for (const id of ['bakery', 'coffee'] as const) for (const stage of [0, 1, 2] as const) s = must(buy(s, id, stage, 40));
+  return s;
+}
+
+test('halka arz: eşikten önce kapalı, bir kez yapılıyor, kasaya hissenin değeri giriyor', () => {
+  const early = ipoReady();
+  early.earned = IPO_UNLOCK - 1;
+  assert.deepEqual(goPublic(early), { ok: false, reason: 'locked' });
+
+  const s = ipoReady();
+  const expected = steadyIncome(s) * IPO_VALUATION_SECONDS * IPO_SHARE;
+  assert.equal(ipoProceeds(s), expected);
+  const listed = must(goPublic(s));
+  assert.equal(listed.cash - s.cash, expected);
+  assert.equal(listed.listed, true);
+  assert.deepEqual(goPublic(listed), { ok: false, reason: 'max' });
+});
+
+test('halka arz değerlemesi kampanya, olay ve politikadan etkilenmiyor', () => {
+  const s = ipoReady();
+  const calm = companyValue(s);
+  const boosted = must(startCampaign(s));
+  boosted.event = { kind: 'exportBoom', chain: null, until: boosted.clock + 60 };
+  boosted.policy = { kind: 'taxCut', until: boosted.clock + 60 };
+  assert.ok(incomePerSecond(boosted) > incomePerSecond(s) * 2, 'çarpanlar anlık geliri artırmalı');
+  assert.equal(companyValue(boosted), calm);
+});
+
+test('halka açık şirket satılırken yıldız ×1,2; yeni şehir halka açık değil', () => {
+  const s = ipoReady();
+  s.earned = 4e12;
+  assert.equal(prestigePreview(s), 63);
+  const listed = must(goPublic(s));
+  assert.equal(prestigePreview(listed), 75);
+  const next = must(prestige(listed));
+  assert.equal(next.stars, 75);
+  assert.equal(next.listed, false);
+});
+
+test('halka arz görevi: sanayiden sonra, limandan önce; halka arz edince tutuyor', () => {
+  assert.equal(GOALS[GOAL_IPO_INDEX]!.kind, 'ipo');
+  assert.equal(GOALS[GOAL_IPO_INDEX - 1]!.kind, 'industry');
+  assert.equal(GOALS[GOAL_IPO_INDEX + 1]!.kind, 'port');
+  const s = ipoReady();
+  assert.equal(goalMet(s, GOALS[GOAL_IPO_INDEX]!), false);
+  assert.equal(goalMet(must(goPublic(s)), GOALS[GOAL_IPO_INDEX]!), true);
+});
+
+test('şehir bonusu: ilk şehirde yok, sonra sırayla bir zincirin geliri ×2', () => {
+  assert.equal(featuredChain(newGame(0)), null);
+  assert.equal(featuredChain(newGame(1)), 'coffee');
+  assert.equal(featuredChain(newGame(2)), 'fashion');
+  assert.equal(featuredChain(newGame(5)), 'bakery');
+  assert.equal(featuredChain(newGame(6)), 'coffee');
+
+  const build = (city: number) => {
+    let s = newGame(city);
+    s.cash = 1e6;
+    s.earned = 1e5;
+    s = must(buy(s, 'coffee', 2, 10));
+    s = must(buy(s, 'bakery', 2, 10));
+    return s;
+  };
+  const first = build(0);
+  const second = build(1);
+  // Rakip sıfırken pay 1: fark yalnızca bonus (yıldız yok, rakip henüz kovalamadı).
+  assert.equal(chainReport(second, 'coffee').income, chainReport(first, 'coffee').income * 2);
+  assert.equal(chainReport(second, 'bakery').income, chainReport(first, 'bakery').income);
+});
+
+test('rakip öngörüsü: ilk şehirde geçemiyor, sert şehirde geçiyor, zaten gerideysen sessiz', () => {
+  const setup = (city: number, online: number) => {
+    let s = newGame(city);
+    s.cash = 1e7;
+    for (const stage of [0, 1, 2] as const) s = must(buy(s, 'bakery', stage, 30));
+    return advance(s, online);
+  };
+  assert.equal(firstOvertake(setup(0, 300), 4 * 3600), null);
+
+  const hard = setup(6, 120);
+  const at = firstOvertake(hard, 2 * 3600);
+  assert.ok(at !== null && at > 0, `sert şehirde rakip geçmeli: ${at}`);
+  // Öngörü çevrimdışı ilerlemeyle tutarlı: o anda pay eşiğin altında, bir adım öncesinde değil.
+  assert.ok(chainReport(applyOffline(hard, at!).state, 'bakery').share < 0.5);
+  assert.ok(chainReport(applyOffline(hard, at! - 30).state, 'bakery').share >= 0.5);
+
+  // Uzun süre büyütmeden kalınca rakip zaten geçmiş: "seni geçti" denmiyor.
+  assert.equal(firstOvertake(setup(6, 9_000), 2 * 3600), null);
 });

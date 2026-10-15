@@ -60,6 +60,11 @@ struct HoldingCard: View {
             Text(L10n.t("holding.body"))
                 .font(Theme.sans(12))
                 .foregroundStyle(Theme.muted)
+            if let next = Lite.featuredChain(Lite.newGame(city: state.city + 1)) {
+                Text(L10n.t("holding.next", L10n.chainName(next)))
+                    .font(Theme.mono(11))
+                    .foregroundStyle(Theme.ink)
+            }
             Button {
                 confirm = true
             } label: {

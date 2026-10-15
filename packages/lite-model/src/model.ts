@@ -3,6 +3,8 @@ import {
   CAMPAIGN,
   CHAIN_BY_ID,
   CHAIN_IDS,
+  CITY_BONUS,
+  CITY_FEATURED,
   COST_GROWTH,
   COUNCIL_FIRST,
   COUNCIL_GAP,
@@ -16,6 +18,11 @@ import {
   EXPORT_BOOM_MULTIPLIER,
   FASHION_WEEK_MULTIPLIER,
   GOALS,
+  IPO_SHARE,
+  IPO_SHARES,
+  IPO_UNLOCK,
+  IPO_VALUATION_SECONDS,
+  LISTED_STAR_MULTIPLIER,
   MANAGER_BASE_COST,
   MANAGER_COST_GROWTH,
   MANAGER_MAX,
@@ -24,6 +31,7 @@ import {
   OFFLINE_CAP_BASE,
   OFFLINE_CAP_PER_MANAGER,
   OFFLINE_EFFICIENCY,
+  OVERTAKE_SHARE,
   POLICY,
   POLICY_DURATION,
   RIVAL_AGGRESSION_BASE,
@@ -111,6 +119,9 @@ export interface LiteState {
   campaigns: number;
   /** Görev merdiveninde sıradaki görev. */
   goal: number;
+  // ---- L4
+  /** Şirket bu şehirde halka arz edildi mi. */
+  listed: boolean;
 }
 
 export function newGame(city = 0, stars = 0, totalEarned = 0): LiteState {
@@ -138,6 +149,7 @@ export function newGame(city = 0, stars = 0, totalEarned = 0): LiteState {
     policies: 0,
     campaigns: 0,
     goal: 0,
+    listed: false,
   };
 }
 
@@ -238,9 +250,15 @@ export function incomeMultiplier(state: LiteState): number {
   return multiplier;
 }
 
-/** Bir zincirin gelirine özel çarpan (turizm, moda haftası, tanıtım). */
+/** Şehrin öne çıkan zinciri: ilk şehirde yok, sonra CITY_FEATURED sırasıyla. */
+export function featuredChain(state: LiteState): ChainId | null {
+  if (state.city < 1) return null;
+  return CITY_FEATURED[(state.city - 1) % CITY_FEATURED.length]!;
+}
+
+/** Bir zincirin gelirine özel çarpan (şehir bonusu, turizm, moda haftası, tanıtım). */
 export function chainMultiplier(state: LiteState, chainId: ChainId): number {
-  let multiplier = 1;
+  let multiplier = featuredChain(state) === chainId ? CITY_BONUS : 1;
   const tourist = chainId === 'bakery' || chainId === 'coffee';
   if (eventIs(state, 'tourism') && tourist) multiplier *= TOURISM_MULTIPLIER;
   if (eventIs(state, 'fashionWeek') && chainId === 'fashion') multiplier *= FASHION_WEEK_MULTIPLIER;
@@ -353,6 +371,19 @@ export function incomePerSecond(state: LiteState): number {
   return total;
 }
 
+/**
+ * Sürekli gelir: kampanya, olay ve politika olmadan (₺/sn). Halka arz
+ * değerlemesi buna bakıyor; anlık çarpanların üstüne denk getirmek bir şey
+ * kazandırmasın.
+ */
+export function steadyIncome(state: LiteState): number {
+  const calm = cloneState(state);
+  calm.event = null;
+  calm.policy = null;
+  calm.campaignUntil = calm.clock;
+  return incomePerSecond(calm);
+}
+
 /** Bir kademe +1 seviye olunca gelirin artışı (₺/sn). */
 export function upgradeGain(state: LiteState, chainId: ChainId, stage: Stage): number {
   const multiplier = incomeMultiplier(state);
@@ -444,6 +475,8 @@ export function goalMet(state: LiteState, goal: GoalDef): boolean {
       return CHAIN_IDS.some((id) => state.chains[id].levels[2] > 0 && chainReport(state, id).share >= 0.75);
     case 'industry':
       return districtUnlocked(state, 'industry');
+    case 'ipo':
+      return state.listed;
     case 'port':
       return districtUnlocked(state, 'port');
     case 'technopark':
@@ -518,6 +551,38 @@ export function claimGoal(state: LiteState): ActionResult {
   const next = cloneState(state);
   next.cash += reward;
   next.goal += 1;
+  return { ok: true, state: next };
+}
+
+// ------------------------------------------------------------ halka arz
+
+export function ipoUnlocked(state: LiteState): boolean {
+  return state.earned >= IPO_UNLOCK;
+}
+
+/** Şirket değeri: sürekli gelirin IPO_VALUATION_SECONDS saniyesi. */
+export function companyValue(state: LiteState): number {
+  return steadyIncome(state) * IPO_VALUATION_SECONDS;
+}
+
+/** Borsadaki hisse fiyatı. */
+export function sharePrice(state: LiteState): number {
+  return companyValue(state) / IPO_SHARES;
+}
+
+/** Halka arzda kasaya girecek para. */
+export function ipoProceeds(state: LiteState): number {
+  return companyValue(state) * IPO_SHARE;
+}
+
+/** Halka arz: hissenin IPO_SHARE'i satılıyor, karşılığı kasaya. Şehirde bir kez. */
+export function goPublic(state: LiteState): ActionResult {
+  if (state.listed) return { ok: false, reason: 'max' };
+  if (!ipoUnlocked(state)) return { ok: false, reason: 'locked' };
+  const proceeds = ipoProceeds(state);
+  const next = cloneState(state);
+  next.cash += proceeds;
+  next.listed = true;
   return { ok: true, state: next };
 }
 
@@ -625,13 +690,15 @@ export function applyOffline(state: LiteState, elapsed: number): OfflineResult {
 
 // ------------------------------------------------------------ holding
 
-export function starsFor(earned: number): number {
-  return Math.floor(STAR_SCALE * Math.sqrt(Math.max(0, earned) / STAR_UNIT));
+/** Yıldız: halka açık şirket daha yüksek değerlemeyle satılıyor. */
+export function starsFor(earned: number, listed = false): number {
+  const premium = listed ? LISTED_STAR_MULTIPLIER : 1;
+  return Math.floor(STAR_SCALE * Math.sqrt(Math.max(0, earned) / STAR_UNIT) * premium);
 }
 
 /** Şehri satınca kazanılacak yıldız. */
 export function prestigePreview(state: LiteState): number {
-  return starsFor(state.earned);
+  return starsFor(state.earned, state.listed);
 }
 
 /** Şehri sat, holding yeni şehre geçsin: sıfırdan başla, yıldızları koru. */
@@ -639,4 +706,31 @@ export function prestige(state: LiteState): ActionResult {
   const gained = prestigePreview(state);
   if (gained < 1) return { ok: false, reason: 'locked' };
   return { ok: true, state: newGame(state.city + 1, state.stars + gained, state.totalEarned) };
+}
+
+// ------------------------------------------------------------ bildirim
+
+/**
+ * Uygulama kapalı kalırsa rakip kaçıncı saniyede bir zincirde payını
+ * OVERTAKE_SHARE'in altına düşürüyor (yoksa null). Yalnızca şu an önde olunan
+ * zincirlere bakılıyor: zaten geride olduğun yerde "seni geçti" demek yalan.
+ *
+ * `applyOffline` ile aynı koşullar: kampanya kesiliyor, olay başlamıyor,
+ * rakip yarı hızda. Adımlar OFFLINE_STEP.
+ */
+export function firstOvertake(state: LiteState, horizon: number): number | null {
+  let current = cloneState(state);
+  if (current.campaignUntil > current.clock) current.campaignUntil = current.clock;
+  const leading = CHAIN_IDS.filter(
+    (id) => current.chains[id].levels[2] > 0 && chainReport(current, id).share >= OVERTAKE_SHARE,
+  );
+  if (leading.length === 0) return null;
+  let elapsed = 0;
+  while (horizon - elapsed > EPS) {
+    const h = Math.min(OFFLINE_STEP, horizon - elapsed);
+    current = advance(current, h, true);
+    elapsed += h;
+    for (const id of leading) if (chainReport(current, id).share < OVERTAKE_SHARE) return elapsed;
+  }
+  return null;
 }

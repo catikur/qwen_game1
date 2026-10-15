@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <radialGradient id="g" cx="50%" cy="42%" r="70%">
+      <stop offset="0" stop-color="#1B2621"/>
+      <stop offset="1" stop-color="#0B100E"/>
+    </radialGradient>
+  </defs>
+  <rect width="1024" height="1024" fill="url(#g)"/>
+  <polygon points="109.0,547.0 356.0,404.4 915.0,727.1 668.0,869.7" fill="#FFFFFF" fill-opacity="0.06"/>
+  <polygon points="226.0,377.0 356.0,452.1 356.0,622.1 226.0,547.0" fill="#EEF0EC"/><polygon points="356.0,452.1 486.0,377.0 486.0,547.0 356.0,622.1" fill="#B3BAB5"/><polygon points="356.0,301.9 486.0,377.0 356.0,452.1 226.0,377.0" fill="#D9B44A"/><polygon points="382.0,347.1 512.0,422.1 512.0,712.1 382.0,637.1" fill="#EEF0EC"/><polygon points="512.0,422.1 642.0,347.1 642.0,637.1 512.0,712.1" fill="#B3BAB5"/><polygon points="512.0,272.0 642.0,347.1 512.0,422.1 382.0,347.1" fill="#B07A52"/><polygon points="538.0,297.1 668.0,372.2 668.0,802.2 538.0,727.1" fill="#EEF0EC"/><polygon points="668.0,372.2 798.0,297.1 798.0,727.1 668.0,802.2" fill="#B3BAB5"/><polygon points="668.0,222.1 798.0,297.1 668.0,372.2 538.0,297.1" fill="#3FB58A"/>
+</svg>

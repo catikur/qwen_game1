@@ -50,9 +50,30 @@ final class FixtureTests: XCTestCase {
     func testStarsAndManagerCosts() throws {
         for row in try XCTUnwrap(fixtures["stars"] as? [[Any]]) {
             XCTAssertEqual(Lite.starsFor(num(row[0])), int(row[1]), "yıldız \(row)")
+            XCTAssertEqual(Lite.starsFor(num(row[0]), listed: true), int(row[2]), "halka açık yıldız \(row)")
         }
         for row in try XCTUnwrap(fixtures["managerCosts"] as? [[Any]]) {
             close(Lite.managerCost(int(row[0])), num(row[1]), "müdür \(row)")
+        }
+    }
+
+    /// Rakip öngörüsü: aynı kurulum, aynı saniye (ya da ikisinde de "geçemiyor").
+    func testOvertakes() throws {
+        let cases = try XCTUnwrap(fixtures["overtakes"] as? [[String: Any]])
+        XCTAssertFalse(cases.isEmpty)
+        for item in cases {
+            var state = Lite.newGame(city: int(item["city"]))
+            state.cash = num(item["cash"])
+            for buy in try XCTUnwrap(item["buys"] as? [[Any]]) {
+                if case .success(let next) = Lite.buy(state, chain(buy[0]), stage(buy[1]), int(buy[2])) { state = next }
+            }
+            state = Lite.advance(state, num(item["online"]))
+            let result = Lite.firstOvertake(state, num(item["horizon"]))
+            if item["result"] is NSNull {
+                XCTAssertNil(result, "öngörü \(item)")
+            } else {
+                close(result ?? .nan, num(item["result"]), "öngörü \(item)")
+            }
         }
     }
 
@@ -99,6 +120,7 @@ final class FixtureTests: XCTestCase {
         case "prestige": return unwrap(Lite.prestige(state))
         case "council": return unwrap(Lite.chooseCouncil(state, int(op["choice"])))
         case "claim": return unwrap(Lite.claimGoal(state))
+        case "ipo": return unwrap(Lite.goPublic(state))
         default:
             XCTFail("bilinmeyen adım \(op)")
             return (state, false)
@@ -142,6 +164,14 @@ final class FixtureTests: XCTestCase {
         XCTAssertEqual(state.policies, int(snapshot["policies"]), "\(label) karar sayısı")
         XCTAssertEqual(state.campaigns, int(snapshot["campaigns"]), "\(label) kampanya sayısı")
         XCTAssertEqual(state.goal, int(snapshot["goal"]), "\(label) görev")
+        // L4
+        XCTAssertEqual(state.listed, snapshot["listed"] as? Bool, "\(label) halka açık")
+        let overtake = Lite.firstOvertake(state, 4 * 3600)
+        if snapshot["overtake"] is NSNull {
+            XCTAssertNil(overtake, "\(label) rakip öngörüsü olmamalı")
+        } else {
+            close(overtake ?? .nan, num(snapshot["overtake"]), "\(label) rakip öngörüsü")
+        }
         let move = Lite.bestMove(state)
         if let best = snapshot["best"] as? [String: Any] {
             XCTAssertEqual(move?.chain, chain(best["chain"]), "\(label) önerilen zincir")

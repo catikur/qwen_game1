@@ -32,8 +32,14 @@ test('fikstür senaryoları oyunun bütün evrelerini kapsıyor', () => {
   // Holding: şehir satılmış, yıldız var.
   assert.equal(last('holding').city, 1, 'holding senaryosu şehri satmamış');
   assert.ok(last('holding').stars > 0);
+  // L4: halka arz şehri satmadan önce yapılmış ve başarılı; ikinci şehirde öne çıkan zincir var.
+  const ipo = byName['holding']!.ops.filter((o) => o.op === 'ipo');
+  assert.ok(ipo.length >= 1 && ipo.every((o) => o.ok), 'holding senaryosunda başarılı halka arz yok');
+  // Rakip öngörüsü: hem "geçemiyor" hem "şu saniyede geçiyor" vakası var.
+  assert.ok(fixtures.overtakes.some((c) => c.result === null), 'rakibin geçemediği vaka yok');
+  assert.ok(fixtures.overtakes.some((c) => c.result !== null), 'rakibin geçtiği vaka yok');
   const ops = fixtures.scenarios.flatMap((s) => s.ops.map((o) => o.op));
-  for (const kind of ['buy', 'advance', 'offline', 'campaign', 'manager', 'prestige', 'council', 'claim']) {
+  for (const kind of ['buy', 'advance', 'offline', 'campaign', 'manager', 'prestige', 'council', 'claim', 'ipo']) {
     assert.ok(ops.includes(kind as never), `${kind} adımı hiç yok`);
   }
 });

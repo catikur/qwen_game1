@@ -148,10 +148,38 @@ public enum LiteContent {
         GoalDef(kind: .council, rewardSeconds: 120, minReward: 2_000),
         GoalDef(kind: .share75, rewardSeconds: 150, minReward: 5_000),
         GoalDef(kind: .industry, rewardSeconds: 180, minReward: 50_000),
+        GoalDef(kind: .ipo, rewardSeconds: 180, minReward: 500_000),
         GoalDef(kind: .port, rewardSeconds: 240, minReward: 1_000_000),
         GoalDef(kind: .technopark, rewardSeconds: 300, minReward: 5_000_000),
         GoalDef(kind: .firstStar, rewardSeconds: 300, minReward: 10_000_000),
     ]
+
+    /// L4'te eklenen "halka arz" görevinin sırası: L3 kayıtları bu sıradan sonrasını bir kaydırıyor.
+    public static let goalIpoIndex = goals.firstIndex(where: { $0.kind == .ipo })!
+
+    // MARK: - L4: halka arz
+
+    /// Halka arz şu ömür boyu kazançta açılıyor.
+    public static let ipoUnlock = 1_000_000_000.0
+    /// Satılan hisse payı.
+    public static let ipoShare = 0.25
+    /// Şirket değeri: sürekli gelirin bu kadar saniyesi.
+    public static let ipoValuationSeconds = 3600.0
+    /// Borsadaki hisse adedi (fiyat = değer / adet).
+    public static let ipoShares = 1_000_000.0
+    /// Halka açık şirket satılırken kazanılan yıldıza çarpan.
+    public static let listedStarMultiplier = 1.2
+
+    // MARK: - L4: şehir bonusu
+
+    /// İkinci şehirden başlayarak bu sırayla bir zincirin geliri ×2.
+    public static let cityFeatured: [ChainId] = [.coffee, .fashion, .leather, .tech, .bakery]
+    public static let cityBonus = 2.0
+
+    // MARK: - L4: bildirim
+
+    /// "Rakip seni geçti" eşiği: pay bunun altına inince.
+    public static let overtakeShare = 0.5
 }
 
 // MARK: - L3 türleri
@@ -168,7 +196,7 @@ public enum PolicyKind: String, CaseIterable, Codable, Sendable {
 
 public enum GoalKind: String, CaseIterable, Codable, Sendable {
     case bakeryRetail, bakeryProcess, bakeryChain, firstCampaign, coffeeRetail, level25, center, manager, council,
-         share75, industry, port, technopark, firstStar
+         share75, industry, ipo, port, technopark, firstStar
 }
 
 public struct GoalDef: Sendable {
