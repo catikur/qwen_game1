@@ -41,6 +41,11 @@ private struct PrivateLeagues: Codable {
     let leagues: [PrivateLeague]
 }
 
+/// Sunucunun hata gövdesi: `{"error": "..."}`.
+private struct LeagueFailure: Decodable {
+    let error: String
+}
+
 struct LeagueAccount: Codable, Equatable {
     let id: String
     let token: String
@@ -267,8 +272,7 @@ final class LeagueService {
         let (data, response) = try await URLSession.shared.data(for: request)
         let code = (response as? HTTPURLResponse)?.statusCode ?? 0
         guard (200..<300).contains(code) else {
-            struct Failure: Decodable { let error: String }
-            throw LeagueError.http(code, (try? JSONDecoder().decode(Failure.self, from: data))?.error ?? "")
+            throw LeagueError.http(code, (try? JSONDecoder().decode(LeagueFailure.self, from: data))?.error ?? "")
         }
         return try JSONDecoder().decode(T.self, from: data)
     }
