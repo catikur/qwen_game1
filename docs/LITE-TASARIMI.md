@@ -565,10 +565,12 @@ iCloud gibi Apple servisleri ücretli üyelik istiyor; B ücretsiz imzayla da
     sıfırlamak); hız sınırını büyütmüyorlar.
   - Gönderim en sık 30 saniyede bir; uygulama 5 dakikada bir ve arka plana
     geçerken gönderiyor.
-  - **Sınır:** durum uygulamanın bildirdiği. Kendi isteklerini yazan biri ilk
-    gönderimde seviyeleri ve kazancı uydurabiliyor; sonrası o uydurmaya göre
-    sınırlı. Tam çözüm isteğin gerçek uygulamadan geldiğini kanıtlamak (Apple
-    App Attest); açık iş.
+  - **App Attest (L9):** durum hâlâ uygulamanın bildirdiği; ama artık yalnızca
+    gerçek uygulamadan, gerçek bir Apple cihazından kabul ediliyor. Cihaz başına
+    bir kez kanıt (zincir Apple köküne, uygulama kimliği, anahtar), her
+    gönderimde gövde üstüne imza ve artan sayaç. Kendi isteklerini yazan biri
+    artık puan gönderemiyor. Kalan risk: değiştirilmiş (jailbreak) cihaz;
+    Apple'ın sahtecilik ölçüsü (receipt) ileride eklenebilir.
 - **Uygulama:**
   - Kartlarda haftalık lig kartı: bölüm, sıra, bitişe kalan süre.
   - Lig penceresi:

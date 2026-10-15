@@ -9,7 +9,10 @@
  * - `POST /v1/players {name}`        → anonim hesap: {id, token}
  * - `PATCH /v1/players/me {name}`    → ad değiştir
  * - `DELETE /v1/players/me`        → hesabı ve tüm izlerini sil
- * - `POST /v1/reports <LeagueReport>`→ haftalık puan; akla yatkınlık denetimi
+ * - `POST /v1/attest/challenge`      → App Attest için tek seferlik challenge
+ * - `POST /v1/attest {keyId, attestation, challenge}` → cihaz anahtarını kanıtla
+ * - `POST /v1/reports <LeagueReport>`→ haftalık puan; App Attest onayı
+ *   (`X-Attest-Key`, `X-Attest-Assertion`) ve akla yatkınlık denetimi
  * - `GET  /v1/league`                → bu haftaki 30 kişilik grup
  * - `GET  /v1/leagues`               → özel liglerim ve sıralamaları
  * - `POST /v1/leagues {name}`        → davet kodlu lig kur
@@ -28,7 +31,17 @@ import {
   weekStart,
   type LeagueReport,
 } from '../../lite-model/src/index';
+import { APPLE_ATTEST, AttestError, fromBase64, toBase64, verifyAssertion, verifyAttestation, type AttestConfig } from './attest';
 import type { Db } from './db';
+
+export interface Options {
+  /** App Attest: uygulama kimliği ve güvenilen kök (testler kendi kökünü veriyor). */
+  attest: AttestConfig;
+}
+
+const DEFAULTS: Options = { attest: APPLE_ATTEST };
+/** Challenge geçerliliği (ms). */
+const CHALLENGE_TTL = 5 * 60_000;
 
 const WEEK_MS = 7 * 86_400_000;
 const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -66,16 +79,30 @@ function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json; charset=utf-8' } });
 }
 
-async function readJson(request: Request): Promise<Record<string, unknown>> {
-  const text = await request.text();
-  if (text.length > MAX_BODY) throw new HttpError(413, 'body');
+/** Gövde: ham baytlar (App Attest onayı bunların üstüne) ve JSON nesnesi. */
+async function readBody(request: Request): Promise<{ bytes: Uint8Array<ArrayBuffer>; value: Record<string, unknown> }> {
+  const bytes = new Uint8Array(await request.arrayBuffer());
+  if (bytes.length > MAX_BODY) throw new HttpError(413, 'body');
   try {
-    const value = JSON.parse(text) as unknown;
-    if (value && typeof value === 'object' && !Array.isArray(value)) return value as Record<string, unknown>;
+    const value = JSON.parse(new TextDecoder().decode(bytes)) as unknown;
+    if (value && typeof value === 'object' && !Array.isArray(value)) return { bytes, value: value as Record<string, unknown> };
   } catch {
     // aşağıda
   }
   throw new HttpError(400, 'body');
+}
+
+async function readJson(request: Request): Promise<Record<string, unknown>> {
+  return (await readBody(request)).value;
+}
+
+function base64(text: unknown): Uint8Array<ArrayBuffer> | null {
+  if (typeof text !== 'string' || text.length === 0 || text.length > MAX_BODY) return null;
+  try {
+    return fromBase64(text);
+  } catch {
+    return null;
+  }
 }
 
 function hex(bytes: Uint8Array): string {
@@ -115,7 +142,7 @@ function toReport(row: ReportRow): LeagueReport {
   return { week: row.week, score: row.score, city: row.city, stars: row.stars, cityEarned: row.city_earned, levels: JSON.parse(row.levels) as number[][] };
 }
 
-export async function handle(request: Request, db: Db, now: number): Promise<Response> {
+export async function handle(request: Request, db: Db, now: number, options: Options = DEFAULTS): Promise<Response> {
   const path = new URL(request.url).pathname.replace(/\/+$/, '');
   const route = `${request.method} ${path}`;
   try {
@@ -131,8 +158,12 @@ export async function handle(request: Request, db: Db, now: number): Promise<Res
         return await rename(request, db, me);
       case 'DELETE /v1/players/me':
         return await deleteAccount(db, me);
+      case 'POST /v1/attest/challenge':
+        return await attestChallenge(db, me, now);
+      case 'POST /v1/attest':
+        return await attestKey(request, db, me, now, options.attest);
       case 'POST /v1/reports':
-        return await submit(request, db, me, now);
+        return await submit(request, db, me, now, options.attest);
       case 'GET /v1/league':
         return json(await standings(db, me, now));
       case 'GET /v1/leagues':
@@ -172,8 +203,10 @@ async function rename(request: Request, db: Db, me: Player): Promise<Response> {
 
 // ------------------------------------------------------------ haftalık lig
 
-async function submit(request: Request, db: Db, me: Player, now: number): Promise<Response> {
-  const body = (await readJson(request)) as unknown as LeagueReport;
+async function submit(request: Request, db: Db, me: Player, now: number, config: AttestConfig): Promise<Response> {
+  const { bytes, value } = await readBody(request);
+  await checkAssertion(request, db, me, bytes, now, config);
+  const body = value as unknown as LeagueReport;
   const week = weekId(now);
   if (body.week !== week) throw new HttpError(409, 'week', { week });
   const last = await db.first<ReportRow>('SELECT * FROM reports WHERE player_id = ? ORDER BY at DESC LIMIT 1', me.id);
@@ -312,6 +345,85 @@ export async function rollover(db: Db, now: number): Promise<boolean> {
   return true;
 }
 
+// ------------------------------------------------------------ App Attest
+
+async function attestChallenge(db: Db, me: Player, now: number): Promise<Response> {
+  const challenge = toBase64(crypto.getRandomValues(new Uint8Array(32)));
+  await db.run(
+    `INSERT INTO attest_challenges (player_id, challenge, expires_at) VALUES (?, ?, ?)
+     ON CONFLICT (player_id) DO UPDATE SET challenge = excluded.challenge, expires_at = excluded.expires_at`,
+    me.id,
+    challenge,
+    now + CHALLENGE_TTL,
+  );
+  return json({ challenge });
+}
+
+/** Cihaz anahtarını kanıtla; oyuncunun önceki anahtarı (eski kurulum) siliniyor. */
+async function attestKey(request: Request, db: Db, me: Player, now: number, config: AttestConfig): Promise<Response> {
+  const body = await readJson(request);
+  const attestation = base64(body.attestation);
+  const keyId = typeof body.keyId === 'string' && base64(body.keyId)?.length === 32 ? body.keyId : null;
+  if (!attestation || !keyId || typeof body.challenge !== 'string') throw new HttpError(400, 'body');
+  const stored = await db.first<{ challenge: string; expires_at: number }>('SELECT challenge, expires_at FROM attest_challenges WHERE player_id = ?', me.id);
+  // Tek seferlik: tutsa da tutmasa da siliniyor.
+  await db.run('DELETE FROM attest_challenges WHERE player_id = ?', me.id);
+  if (!stored || stored.challenge !== body.challenge || stored.expires_at < now) throw new HttpError(400, 'challenge');
+  let attested;
+  try {
+    attested = await verifyAttestation({ attestation, keyId, challenge: fromBase64(stored.challenge), now, config });
+  } catch (error) {
+    if (!(error instanceof AttestError)) throw error;
+    await reject(db, me, now, `attest:${error.reason}`);
+    throw new HttpError(422, 'attest', { reason: error.reason });
+  }
+  // Apple: aynı anahtar başka bir kullanıcıya bağlı olmamalı.
+  const owner = await db.first<{ player_id: string }>('SELECT player_id FROM attest_keys WHERE key_id = ?', keyId);
+  if (owner && owner.player_id !== me.id) throw new HttpError(409, 'attest-key');
+  await db.batch([
+    ['DELETE FROM attest_keys WHERE player_id = ?', me.id],
+    [
+      'INSERT INTO attest_keys (key_id, player_id, public_key, environment, counter, at) VALUES (?, ?, ?, ?, 0, ?)',
+      keyId,
+      me.id,
+      attested.publicKey,
+      attested.environment,
+      now,
+    ],
+  ]);
+  return json({ ok: true, environment: attested.environment });
+}
+
+/**
+ * Gönderimin onayı: gövdenin tam baytları üstüne imza ve artan sayaç.
+ * Anahtar yoksa `attest` (uygulama yeniden kanıtlıyor), onay tutmazsa `assertion`.
+ */
+async function checkAssertion(request: Request, db: Db, me: Player, body: Uint8Array<ArrayBuffer>, now: number, config: AttestConfig): Promise<void> {
+  const keyId = request.headers.get('x-attest-key');
+  const assertion = base64(request.headers.get('x-attest-assertion'));
+  const key = keyId
+    ? await db.first<{ public_key: string; counter: number }>('SELECT public_key, counter FROM attest_keys WHERE key_id = ? AND player_id = ?', keyId, me.id)
+    : null;
+  if (!key) throw new HttpError(403, 'attest');
+  if (!assertion) throw new HttpError(403, 'assertion', { reason: 'format' });
+  let counter: number;
+  try {
+    ({ counter } = await verifyAssertion({ assertion, clientData: body, publicKey: key.public_key, counter: key.counter, config }));
+  } catch (error) {
+    if (!(error instanceof AttestError)) throw error;
+    await reject(db, me, now, `assertion:${error.reason}`);
+    throw new HttpError(403, 'assertion', { reason: error.reason });
+  }
+  // Aynı anda gelen iki istekten yalnızca biri sayacı ilerletebiliyor.
+  if ((await db.run('UPDATE attest_keys SET counter = ? WHERE key_id = ? AND counter < ?', counter, keyId, counter)) === 0) {
+    throw new HttpError(403, 'assertion', { reason: 'counter' });
+  }
+}
+
+async function reject(db: Db, me: Player, now: number, reason: string): Promise<void> {
+  await db.run('INSERT INTO rejects (player_id, week, reason, at) VALUES (?, ?, ?, ?)', me.id, weekId(now), reason, now);
+}
+
 // ------------------------------------------------------------ özel ligler
 
 async function leagueCount(db: Db, me: Player): Promise<number> {
@@ -348,7 +460,9 @@ async function joinLeague(request: Request, db: Db, me: Player, now: number): Pr
 async function deleteAccount(db: Db, me: Player): Promise<Response> {
   const codes = await db.all<{ code: string }>('SELECT code FROM league_members WHERE player_id = ?', me.id);
   for (const { code } of codes) await leaveLeague(db, me, code);
-  for (const table of ['groups', 'reports', 'rejects']) await db.run(`DELETE FROM ${table} WHERE player_id = ?`, me.id);
+  for (const table of ['groups', 'reports', 'rejects', 'attest_keys', 'attest_challenges']) {
+    await db.run(`DELETE FROM ${table} WHERE player_id = ?`, me.id);
+  }
   await db.run('DELETE FROM players WHERE id = ?', me.id);
   return json({ ok: true });
 }

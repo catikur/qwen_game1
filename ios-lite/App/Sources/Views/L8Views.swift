@@ -115,6 +115,11 @@ struct LeagueSheet: View {
                             .font(Theme.text(12, .heavy))
                             .foregroundStyle(Theme.warn)
                             .padding(.horizontal, 4)
+                    } else if league.attestUnsupported && league.status == .ready {
+                        Label(L10n.t("league.attestUnsupported"), systemImage: "lock.shield")
+                            .font(Theme.text(12, .heavy))
+                            .foregroundStyle(Theme.muted)
+                            .padding(.horizontal, 4)
                     }
                     switch league.status {
                     case .unconfigured:

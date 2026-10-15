@@ -48,6 +48,14 @@ jobs:
           LEAGUE=$(curl -fsS -H "authorization: $AUTH" "$URL/v1/league")
           echo "$LEAGUE" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const l=JSON.parse(s);if(!l.week||l.divisionKey!=="bronze")process.exit(1);console.log("lig:",l.week,l.divisionKey)})'
           test "$(curl -s -o /dev/null -w '%{http_code}' "$URL/v1/league")" = 401
+          # App Attest: challenge veriliyor, onaysız puan gönderimi reddediliyor.
+          CODE=$(curl -s -o /dev/null -w '%{http_code}' -X POST -H "authorization: $AUTH" -H 'content-type: application/json' -d '{}' "$URL/v1/attest/challenge")
+          if [ "$CODE" = 404 ]; then
+            echo "::warning::Canlı sunucu eski sürüm (App Attest yok); yeni paketi yapıştır: pnpm lite:league-bundle (ios-lite/README.md)."
+          else
+            test "$CODE" = 200
+            test "$(curl -s -o /dev/null -w '%{http_code}' -X POST -H "authorization: $AUTH" -H 'content-type: application/json' -d '{"week":"x"}' "$URL/v1/reports")" = 403
+          fi
           # Denetim hesabı kendini siliyor (uygulamadaki "Hesabı sil" ile aynı uç).
           CODE=$(curl -s -o /dev/null -w '%{http_code}' -X DELETE -H "authorization: $AUTH" "$URL/v1/players/me")
           if [ "$CODE" = 404 ]; then

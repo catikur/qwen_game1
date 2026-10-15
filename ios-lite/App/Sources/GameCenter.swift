@@ -18,12 +18,16 @@ enum GameCenter {
     static var available: Bool { enabled && GKLocalPlayer.local.isAuthenticated }
 
     /// Açılışta bir kez: oturum açık değilse Game Center kendi penceresini gösteriyor.
-    static func authenticate() {
+    /// Oturum açılınca `onReady`: kayıtlı yıldızı tabloya yazmak için (şehir satılmadan da).
+    static func authenticate(onReady: @escaping @MainActor () -> Void = {}) {
         guard enabled else { return }
         GKLocalPlayer.local.authenticateHandler = { controller, _ in
-            guard let controller else { return }
-            let scene = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first
-            scene?.keyWindow?.rootViewController?.present(controller, animated: true)
+            if let controller {
+                let scene = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first
+                scene?.keyWindow?.rootViewController?.present(controller, animated: true)
+            } else if GKLocalPlayer.local.isAuthenticated {
+                onReady()
+            }
         }
     }
 

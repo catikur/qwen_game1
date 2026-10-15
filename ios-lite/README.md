@@ -233,4 +233,19 @@ Kod değiştikçe 1 ve 3 tekrarlanıyor.
   - bildirilen seviyelerin maliyeti şehirde kazanılanla uyumlu mu;
   - puan artışı o seviyelerle en iyi koşullarda kazanılabilecek olanı aşıyor
     mu.
-- Reddedilen gönderimler `rejects` tablosunda duruyor.
+- **App Attest** (Apple): puan yalnızca gerçek uygulamadan, gerçek bir Apple
+  cihazından kabul ediliyor.
+  - Cihaz başına bir kez: uygulama anahtar üretiyor, sunucunun tek seferlik
+    challenge'ıyla Apple'a kanıtlatıyor; sunucu sertifika zincirini Apple'ın
+    App Attest köküne, uygulama kimliğini (`77J92PA5Q9.com.catikur.capitalforgelite`)
+    ve anahtarı doğruluyor (`packages/lite-league/src/attest.ts`).
+  - Her gönderimde: isteğin tam gövdesi üstüne imza ve artan sayaç. Gövdeyi
+    değiştirmek ya da eski bir isteği yeniden göndermek işe yaramıyor.
+  - Bir anahtar tek hesaba bağlı; yeni kurulumda yeni anahtar eskisinin yerini
+    alıyor.
+  - Simülatörde App Attest yok: orada puan gönderilmiyor (lig penceresinde not).
+  - Geliştirme (Xcode) ve dağıtım (TestFlight, App Store) anahtarlarının ikisi
+    de kabul; uygulama kategorisi (TestFlight, App Store, geliştirme) dışındaki
+    imzalar (ad hoc, kurumsal) reddediliyor.
+- Reddedilen gönderimler ve doğrulama hataları `rejects` tablosunda duruyor
+  (`attest:…`, `assertion:…`).

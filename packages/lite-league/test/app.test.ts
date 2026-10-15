@@ -3,31 +3,46 @@ import assert from 'node:assert/strict';
 import { CHAIN_IDS, LEAGUE, advance, buy, divisionMoves, newGame, weekId, weekStart, type LeagueReport, type LiteState } from '../../lite-model/src/index';
 import { cleanName, handle, rollover } from '../src/app';
 import type { Db } from '../src/db';
+import { fakePki, type FakeDevice } from './fake-attest';
 import { memoryDb } from './sqlite';
 
 /** 2026-W42'nin perşembesi, öğlen. */
 const THURSDAY = Date.UTC(2026, 9, 15, 12);
+const PKI = fakePki('TEAM123456.com.test.lite', THURSDAY);
 
 interface Account {
   id: string;
   token: string;
+  /** Kanıtlanmış cihaz: gönderimler bununla onaylanıyor. */
+  device?: FakeDevice;
 }
 
-async function call(db: Db, now: number, method: string, path: string, body?: unknown, who?: Account) {
-  const headers: Record<string, string> = { 'content-type': 'application/json' };
+async function call(db: Db, now: number, method: string, path: string, body?: unknown, who?: Account, extra: Record<string, string> = {}) {
+  const headers: Record<string, string> = { 'content-type': 'application/json', ...extra };
   if (who) headers.authorization = `Bearer ${who.id}.${who.token}`;
-  const response = await handle(
-    new Request(`https://lig.test${path}`, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) }),
-    db,
-    now,
-  );
+  const text = body === undefined ? undefined : JSON.stringify(body);
+  // Uygulama gibi: her gönderim gövdenin tam baytları üstüne onaylı.
+  if (who?.device && method === 'POST' && path === '/v1/reports' && text !== undefined && !('x-attest-key' in extra)) {
+    headers['x-attest-key'] = who.device.keyId;
+    headers['x-attest-assertion'] = who.device.assert(text);
+  }
+  const response = await handle(new Request(`https://lig.test${path}`, { method, headers, body: text }), db, now, { attest: PKI.config });
   return { status: response.status, body: (await response.json()) as Record<string, any> };
+}
+
+/** Kanıtla: challenge → kanıt → kayıtlı anahtar. */
+async function attest(db: Db, now: number, who: Account, device: FakeDevice = PKI.device()): Promise<Account> {
+  const challenge = await call(db, now, 'POST', '/v1/attest/challenge', {}, who);
+  assert.equal(challenge.status, 200, JSON.stringify(challenge.body));
+  const attested = await call(db, now, 'POST', '/v1/attest', { keyId: device.keyId, attestation: device.attest(challenge.body.challenge), challenge: challenge.body.challenge }, who);
+  assert.equal(attested.status, 200, JSON.stringify(attested.body));
+  return { ...who, device };
 }
 
 async function signUp(db: Db, now: number, name: string): Promise<Account> {
   const r = await call(db, now, 'POST', '/v1/players', { name });
   assert.equal(r.status, 201, JSON.stringify(r.body));
-  return { id: r.body.id, token: r.body.token };
+  return attest(db, now, { id: r.body.id, token: r.body.token });
 }
 
 function played(seconds = 600): LiteState {
@@ -237,6 +252,65 @@ test('oyunu sıfırlamak: şehir ve yıldız geri gidiyor, gönderim kabul', asy
   assert.equal(after.status, 200, JSON.stringify(after.body));
 });
 
+test('App Attest: onaysız, yeniden oynatılan, değiştirilmiş gönderim ve sahte kanıt reddediliyor', async () => {
+  const db = memoryDb();
+  const state = played();
+  const reg = await call(db, THURSDAY, 'POST', '/v1/players', { name: 'Atilla' });
+  const bare: Account = { id: reg.body.id, token: reg.body.token };
+  const body = report(state, THURSDAY, 500);
+  // Kanıtsız hesap: puan gönderemiyor (uygulama önce kanıtlıyor).
+  assert.deepEqual((await call(db, THURSDAY, 'POST', '/v1/reports', body, bare)).body, { error: 'attest' });
+
+  // Challenge tek seferlik ve süreli; başkasının challenge'ı geçmiyor.
+  const device = PKI.device();
+  const first = await call(db, THURSDAY, 'POST', '/v1/attest/challenge', {}, bare);
+  const wrong = await call(db, THURSDAY, 'POST', '/v1/attest', { keyId: device.keyId, attestation: device.attest(first.body.challenge), challenge: 'AAAA' }, bare);
+  assert.equal(wrong.body.error, 'challenge');
+  const reused = await call(db, THURSDAY, 'POST', '/v1/attest', { keyId: device.keyId, attestation: device.attest(first.body.challenge), challenge: first.body.challenge }, bare);
+  assert.equal(reused.body.error, 'challenge', 'yanlış denemeden sonra challenge yanmış olmalı');
+  const late = await call(db, THURSDAY, 'POST', '/v1/attest/challenge', {}, bare);
+  const expired = await call(db, THURSDAY + 6 * 60_000, 'POST', '/v1/attest', { keyId: device.keyId, attestation: device.attest(late.body.challenge), challenge: late.body.challenge }, bare);
+  assert.equal(expired.body.error, 'challenge');
+  // Başka uygulamanın (başka takımın) kanıtı.
+  const stranger = PKI.device({ appId: 'OTHERTEAM1.com.other.app' });
+  const c = await call(db, THURSDAY, 'POST', '/v1/attest/challenge', {}, bare);
+  const foreign = await call(db, THURSDAY, 'POST', '/v1/attest', { keyId: stranger.keyId, attestation: stranger.attest(c.body.challenge), challenge: c.body.challenge }, bare);
+  assert.deepEqual(foreign.body, { error: 'attest', reason: 'app' });
+
+  const me = await attest(db, THURSDAY, bare, device);
+  assert.equal((await call(db, THURSDAY, 'POST', '/v1/reports', body, me)).status, 200);
+  // Aynı istek yeniden: sayaç ilerlemiyor.
+  const text = JSON.stringify(report(state, THURSDAY, 600));
+  const headers = { 'x-attest-key': device.keyId, 'x-attest-assertion': device.assert(text) };
+  assert.equal((await call(db, THURSDAY + 60_000, 'POST', '/v1/reports', JSON.parse(text), me, headers)).status, 200);
+  const replay = await call(db, THURSDAY + 120_000, 'POST', '/v1/reports', JSON.parse(text), me, headers);
+  assert.deepEqual(replay.body, { error: 'assertion', reason: 'counter' });
+  // Onay başka gövde için: puan şişirilemiyor.
+  const tampered = await call(db, THURSDAY + 180_000, 'POST', '/v1/reports', report(state, THURSDAY, 9e9), me, {
+    'x-attest-key': device.keyId,
+    'x-attest-assertion': device.assert(JSON.stringify(report(state, THURSDAY, 700))),
+  });
+  assert.deepEqual(tampered.body, { error: 'assertion', reason: 'signature' });
+  const reasons = (await db.all<{ reason: string }>('SELECT reason FROM rejects WHERE player_id = ? ORDER BY at', me.id)).map((r) => r.reason);
+  assert.deepEqual(reasons, ['attest:app', 'assertion:counter', 'assertion:signature']);
+
+  // Aynı anahtar başka hesaba bağlanamıyor.
+  const other = await call(db, THURSDAY, 'POST', '/v1/players', { name: 'Deniz' });
+  const otherAccount: Account = { id: other.body.id, token: other.body.token };
+  const oc = await call(db, THURSDAY, 'POST', '/v1/attest/challenge', {}, otherAccount);
+  const stolen = await call(db, THURSDAY, 'POST', '/v1/attest', { keyId: device.keyId, attestation: device.attest(oc.body.challenge), challenge: oc.body.challenge }, otherAccount);
+  assert.equal(stolen.body.error, 'attest-key');
+
+  // Yeni kurulum: yeni anahtar eskisinin yerini alıyor; eski anahtarla gönderim geçmiyor.
+  const fresh = await attest(db, THURSDAY, me);
+  const old = await call(db, THURSDAY + 240_000, 'POST', '/v1/reports', report(state, THURSDAY, 800), me, {
+    'x-attest-key': device.keyId,
+    'x-attest-assertion': device.assert(JSON.stringify(report(state, THURSDAY, 800))),
+  });
+  assert.deepEqual(old.body, { error: 'attest' });
+  assert.equal((await call(db, THURSDAY + 300_000, 'POST', '/v1/reports', report(state, THURSDAY, 800), fresh)).status, 200);
+});
+
 test('özel lig: kur, koda katıl, sırala, ayrıl', async () => {
   const db = memoryDb();
   const state = played();
@@ -275,7 +349,7 @@ test('hesabı sil: oyuncunun her izi gidiyor, token artık geçmiyor', async () 
   assert.equal((await call(db, THURSDAY, 'POST', '/v1/reports', report(state, THURSDAY, 500), me)).status, 200);
   assert.deepEqual((await call(db, THURSDAY + 1, 'DELETE', '/v1/players/me', undefined, me)).body, { ok: true });
   assert.equal((await call(db, THURSDAY + 2, 'GET', '/v1/league', undefined, me)).status, 401);
-  for (const table of ['players', 'reports', 'groups', 'rejects', 'league_members']) {
+  for (const table of ['players', 'reports', 'groups', 'rejects', 'league_members', 'attest_keys', 'attest_challenges']) {
     const column = table === 'players' ? 'id' : 'player_id';
     assert.equal((await db.all(`SELECT * FROM ${table} WHERE ${column} = ?`, me.id)).length, 0, table);
   }

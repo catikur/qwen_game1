@@ -56,7 +56,7 @@ struct RootView: View {
         .sensoryFeedback(trigger: store.refusals) { _, _ in haptics ? .warning : nil }
         .sensoryFeedback(trigger: store.triumphs) { _, _ in haptics ? .success : nil }
         .task { await store.refreshNotificationStatus() }
-        .task { GameCenter.authenticate() }
+        .task { GameCenter.authenticate { GameCenter.submit(stars: store.state.stars) } }
         .sheet(isPresented: $showSettings) {
             SettingsSheet()
                 .presentationDetents([.fraction(0.82), .large])
