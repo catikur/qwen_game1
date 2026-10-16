@@ -2835,9 +2835,9 @@ section('Kademeli imar: arazi kıtlığı yenileniyor', () => {
   const vacantPlotIn = (districtId: number) =>
     state.map.tiles.find(
       (t) => t.districtId === districtId && t.kind === 'plot' && !t.ownerId && !t.structureId,
-    )!;
+    );
 
-  const early = engine3.dispatch({ type: 'BUY_TILE', tileId: vacantPlotIn(firstDistrict.id).id });
+  const early = engine3.dispatch({ type: 'BUY_TILE', tileId: vacantPlotIn(firstDistrict.id)!.id });
   expect(
     'kilitli parsel satın alınamıyor',
     !early.ok && (early.reason ?? '').includes('imara kapalı'),
@@ -2850,8 +2850,19 @@ section('Kademeli imar: arazi kıtlığı yenileniyor', () => {
   let openings = 0;
   let violations = 0;
   let seenNewsId = -1;
+  let lateBuy: ReturnType<typeof engine3.dispatch> | null = null;
   for (let day = 1; day <= 560; day++) {
     engine3.runDay();
+    // Son bölge açıldığı gün alınabiliyor mu? Açılıştan 160 gün sonra
+    // değil: geç oyunda rakipler yeni bölgeyi de dolduruyor (Tur 37a'da
+    // yönetim yükü bu tohumda son bölgenin 64 parselini 560. güne kadar
+    // bitirdi) — sınanan imar kapısı, arazinin bolluğu değil.
+    if (lateBuy === null && state.time.day >= lastDistrict.opensOnDay!) {
+      const plot = vacantPlotIn(lastDistrict.id);
+      lateBuy = plot
+        ? engine3.dispatch({ type: 'BUY_TILE', tileId: plot.id })
+        : { ok: false, reason: 'açılış gününde boş parsel yok' };
+    }
     for (const item of state.news) {
       if (item.id <= seenNewsId) break;
       if (item.title.includes('İmar planı açıklandı')) notices++;
@@ -2881,11 +2892,10 @@ section('Kademeli imar: arazi kıtlığı yenileniyor', () => {
     `${firstDistrict.name} nüfusu ${Math.round(firstDistrict.population)} / taban ${firstArchetype.population}`,
   );
 
-  const lateBuy = engine3.dispatch({ type: 'BUY_TILE', tileId: vacantPlotIn(lastDistrict.id).id });
   expect(
     'açılan bölgeden parsel alınabiliyor',
-    lateBuy.ok,
-    lateBuy.reason ?? `${lastDistrict.name} — alındı`,
+    lateBuy?.ok === true,
+    lateBuy?.reason ?? `${lastDistrict.name} — açılış günü alındı`,
   );
 
   // Laboratuvar kapısı: takvim kapalıyken eski dünya birebir geri gelmeli.

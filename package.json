@@ -17,6 +17,7 @@
     "bench": "node tools/run-node-script.mjs packages/core/test/benchmark.ts",
     "constraint": "node tools/run-node-script.mjs packages/core/test/constraint.ts",
     "land": "node tools/run-node-script.mjs packages/core/test/land-experiment.ts",
+    "longrun": "node tools/run-node-script.mjs packages/core/test/longrun.ts",
     "playtest": "pnpm build && node tools/playtest.mjs",
     "playtest:smoke": "pnpm build && node tools/playtest.mjs --smoke",
     "lite:web": "pnpm --filter @capital/lite-web dev",

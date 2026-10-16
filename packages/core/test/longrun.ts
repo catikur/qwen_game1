@@ -1,7 +1,7 @@
 declare const process: { env: Record<string, string | undefined> };
 /**
  * Uzun oyun termometresi (Tur 37): kartopu ne kadar hızlı?
- * Çalıştırma: node tools/run-node-script.mjs packages/core/test/longrun.ts
+ * Çalıştırma: pnpm longrun (SEEDS=1,7 tohum seçer; OFF=1 Tur 37a frenlerini kapatır)
  */
 import { NPC_PROFILES } from '@capital/content';
 import { GameEngine, createNewGame, formatMoney, getPlayer } from '../src/index';

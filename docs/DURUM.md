@@ -4,7 +4,7 @@
 > `pnpm bench` çıktısından; iddialar `pnpm balance` ve `pnpm playtest`
 > tarafından her koşuda doğrulanıyor.
 >
-> Son güncelleme: şema **v6**, 36 tur (Tur 33 denendi ve geri alındı; Tur 34 eski görünüme canlılık ekledi; Tur 35 arayüzü Lite'ın "Cam & Bulut" diline taşıdı; Tur 36 şehre ayrıntı kattı).
+> Son güncelleme: şema **v6**, 36 tur (Tur 33 denendi ve geri alındı; Tur 34 eski görünüme canlılık ekledi; Tur 35 arayüzü Lite'ın "Cam & Bulut" diline taşıdı; Tur 36 şehre ayrıntı kattı; Tur 37a geç oyuna yönetim yükü, servet vergisi ve kriz dönemleri getirdi).
 
 ---
 
@@ -2407,6 +2407,109 @@ rengi kamyon ve müşteri araçlarıyla aynı nane yeşili.
   - gece lambaların altına ışık düşüyor, gündüz düşmüyor;
   - gece yarısına doğru pencereler sönmeye başlıyor.
 
+### Tur 37a — Geç oyun giderleri ve kriz dönemleri
+
+Tur 37 dört aşamalı bir oynanış turu. Kullanıcı sekiz başlığın hepsini
+seçti; aşamalar şöyle:
+- **37a:** geç oyun giderleri ve krizler (bu tur);
+- **37b:** seçimli olay kartları ve rakip hikayeleri;
+- **37c:** fırsat balonları ve haftalık görevler;
+- **37d:** mega projeler ve canlı pazar.
+
+**Ölçüm önce.** Yeni termometre `pnpm longrun`: vekil oyuncu, üç tohum,
+1440 gün. Tur 37a öncesinde gördükleri:
+- Büyüme doğrusal: arsa ~720. günde bitiyor, bina sayısı 140–160'ta
+  duruyor.
+- 1440. günde servetin %94'ü nakit.
+- Bakım ve ücret toplamı cironun yalnızca %19'u.
+- Zafer 572–586. günlerde geliyor.
+
+Kartopunun sorunu hız değil boşluk: büyüdükçe hiçbir şey zorlaşmıyor.
+
+**Yönetim yükü.** Kuralı:
+- 30 binadan sonra her bina, şirketin bütün bakım ve ücretlerine %0,4
+  ekliyor; tavan +%60.
+- Sayım gün başına bir kez yapılıyor. Her soruda saysaydık günlük adım
+  bina sayısının karesine çıkardı.
+- Aynı çarpan üç yerde kullanılıyor: gerçek defter, yatırım tahmini ve
+  zincir kartının birim maliyeti. Böylece kart, yükü olan şirkete yanlış
+  bir geri ödeme göstermiyor.
+
+**Servet vergisi.** Kademeli ve şirket özkaynağı üzerinden alınıyor:
+- 25 M ₺ üstüne %1;
+- 100 M ₺ üstüne %2;
+- 300 M ₺ üstüne %3.
+
+Vergi dünkü net değerden hesaplanıyor ve defterde `tax` satırı olarak
+görünüyor. Emlak vergisi denendi ve bırakıldı: geç oyunda mülk servetin
+~%6'sı, vergisi gürültü düzeyinde kalıyordu.
+
+**Kriz dönemleri.** İki kriz var:
+- **Durgunluk:** talep %16 düşüyor, arsa geriliyor, inşaat %15
+  ucuzluyor.
+- **Faiz şoku:** kredili hesap ve yeni krediler +6 puan, talep %5 düşüyor.
+  Bağlanmış kredi sabit faizde kalıyor; hazırlanan korunuyor.
+
+Takvim:
+- İlk uyarı 320–440. günler arasında geliyor.
+- Kriz uyarıdan 30 gün sonra başlıyor ve 100–160 gün sürüyor.
+- Bitişten 300–480 gün sonra yeni bir uyarı geliyor.
+
+Zar dışsal: tohumdan ve günden geliyor, `state.rng`'den değil. Eşli
+deneylerde iki kol aynı krizleri aynı günlerde yaşıyor. Birim testi, aynı
+tohumda oyuncunun kararlarının kriz günlerini değiştirmediğini sınıyor.
+
+Arayüz:
+- Gündemde kriz çipi: uyarıda kesikli kenarlı, krizde dolu; ipucunda ne
+  olacağı yazıyor.
+- Şirket panelinde yönetim yükü yüzdesi ve günlük vergi.
+- Yardım panelinde bir adım daha.
+
+**Etkisi** (`pnpm longrun`, tohum 1/7/42; önce → sonra):
+
+| | Önce | Sonra |
+|---|---|---|
+| Net değer, 360. gün | 37,6 / 41,0 / 45,6 M ₺ | 36,8 / 39,4 / 44,0 M ₺ (%2–4) |
+| Net değer, 720. gün | 151 / 142 / 143 M ₺ | 126 / 115 / 118 M ₺ (%17–19) |
+| Net değer, 1440. gün | 435 / 383 / 392 M ₺ | 294 / 293 / 273 M ₺ (%23–32) |
+| Zafer günü | 572 / 586 / 586 | 623 / 645 / 638 |
+| Bakım + ücret / ciro, 1440. gün | %19 | %30–35 |
+| Oyuncu / en iyi rakip, 1440. gün | 1,24 / 1,02 / 1,19 | 1,35 / 1,18 / 1,29 |
+
+Okuma:
+- Erken oyun neredeyse aynı. Fren, şirket büyüdükçe sıkıyor.
+- Asıl fren yönetim yükü. Servet vergisi 1440. günde günde ~13 B ₺,
+  kârın %4–7'si.
+- Rakipler de aynı kurallarla yavaşlıyor; oran biraz oyuncudan yana
+  açıldı.
+- Kasa hâlâ servetin ~%91'i. Biriken paraya harcanacak yer yok; bunu
+  37d'nin mega projeleri karşılayacak.
+
+**Yan etki ve denge sınavı.** Atıl oyuncuyla dört tohumda ölçüldü:
+yönetim yükü rakiplerin bina sayısını %1–3 artırıyor, 720. günde boş
+parsel 5–13 daha az. Fark küçük ama sistematik. İmar bölümündeki
+"açılan bölgeden parsel alınabiliyor" kontrolü bu yüzden düştü: kontrol
+560. günde yapılıyordu ve tohum 19'da son bölgenin 64 parseli o güne
+kadar bitmişti. Kontrol artık bölgenin açıldığı gün yapılıyor. Sınanan
+şey imar kapısı, arazinin bolluğu değil. Denge sınavı ve benchmark
+`flags.lateCosts = false` ile eski zeminde ölçmeye devam ediyor. Krizler
+laboratuvarda olaylarla birlikte zaten kapalı (`randomEvents`).
+
+**Doğrulama.**
+- Yeni birim testleri (`economy.test.ts`, 7 test):
+  - yük eşiği ve tavanı;
+  - vergi dilimleri;
+  - verginin kâra girmesi;
+  - kriz takvimi;
+  - takvimin dışsal olması;
+  - uyarıda etkisiz, krizde etkili olması;
+  - bayraklar.
+- Oynanış testine eklenen bölüm ("Kriz ve geç oyun giderleri"):
+  - uyarı çipi 30 günle ve ipucuyla görünüyor;
+  - etkin kriz çipi görünüyor;
+  - şirket panelinde iki geç oyun satırı var;
+  - konsol temiz.
+
 ---
 
 ## 3. Ölçülen durum
@@ -2686,6 +2789,7 @@ pnpm balance meclis  # yalnızca adında "meclis" geçen bölümler
 pnpm bench           # benchmark — sayıların kendisi
 pnpm constraint      # kısıt deneyi — bağlayıcı kısıt hangisi?
 pnpm land            # abonman oranı — geometri varyantları
+pnpm longrun         # uzun oyun — 1440 gün, kartopu ve geç oyun frenleri
 pnpm playtest        # tarayıcı testi (build dahil), tam koşu ~20 dk
 pnpm playtest:smoke  # duman koşusu ~3,5 dk — PR'da CI bunu koşar
 node tools/build-single-file.mjs   # paylaşılan sayfa için tek HTML
@@ -2711,6 +2815,7 @@ güvenebildi. Artık ikisi de koşulabilir:
 |---|---|
 | `pnpm constraint` | Oyunu ne sınırlıyor — para mı, toprak mı, tempo mu? |
 | `pnpm land` | Bir geometri değişikliği abonman oranını ne yapar? |
+| `pnpm longrun` | Geç oyunda kartopu ne kadar hızlı? (`OFF=1` frenleri kapatır) |
 
 ---
 
