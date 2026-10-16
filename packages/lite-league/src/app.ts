@@ -403,18 +403,21 @@ async function submit(request: Request, db: Db, me: Player, now: number, config:
 async function joinGroup(db: Db, me: Player, week: string): Promise<void> {
   if (me.name === '') return;
   if (await db.first('SELECT 1 AS x FROM groups WHERE week = ? AND player_id = ?', week, me.id)) return;
-  const open = await db.first<{ group_no: number }>(
-    'SELECT group_no FROM groups WHERE week = ? AND division = ? GROUP BY group_no HAVING COUNT(*) < ? ORDER BY group_no LIMIT 1',
+  // Grup seçimi ve yerleşme tek ifadede: aynı anda katılanlar aynı boş yeri görüp grubu taşırmasın.
+  await db.run(
+    `INSERT OR IGNORE INTO groups (week, player_id, division, group_no)
+     SELECT ?, ?, ?, COALESCE(
+       (SELECT group_no FROM groups WHERE week = ? AND division = ? GROUP BY group_no HAVING COUNT(*) < ? ORDER BY group_no LIMIT 1),
+       (SELECT COALESCE(MAX(group_no), -1) + 1 FROM groups WHERE week = ? AND division = ?))`,
+    week,
+    me.id,
+    me.division,
     week,
     me.division,
     LEAGUE.groupSize,
+    week,
+    me.division,
   );
-  let groupNo = open?.group_no;
-  if (groupNo === undefined) {
-    const last = await db.first<{ n: number | null }>('SELECT MAX(group_no) AS n FROM groups WHERE week = ? AND division = ?', week, me.division);
-    groupNo = (last?.n ?? -1) + 1;
-  }
-  await db.run('INSERT OR IGNORE INTO groups (week, player_id, division, group_no) VALUES (?, ?, ?, ?)', week, me.id, me.division, groupNo);
 }
 
 interface Row {
@@ -627,10 +630,25 @@ async function joinLeague(request: Request, db: Db, me: Player, now: number): Pr
   const league = await db.first<{ code: string; name: string }>('SELECT code, name FROM leagues WHERE code = ?', code);
   if (!league) throw new HttpError(404, 'code');
   if (await db.first('SELECT 1 AS x FROM league_members WHERE code = ? AND player_id = ?', code, me.id)) return json(league);
-  const members = (await db.first<{ n: number }>('SELECT COUNT(*) AS n FROM league_members WHERE code = ?', code))?.n ?? 0;
-  if (members >= LEAGUE.privateMembers) throw new HttpError(409, 'full');
-  if ((await leagueCount(db, me)) >= LEAGUE.privatePerPlayer) throw new HttpError(409, 'limit');
-  await db.run('INSERT OR IGNORE INTO league_members (code, player_id, joined_at) VALUES (?, ?, ?)', code, me.id, now);
+  // Sınırlar ve yerleşme tek ifadede: son boş yere ya da oyuncunun son hakkına aynı anda iki katılım sığmasın.
+  const joined = await db.run(
+    `INSERT OR IGNORE INTO league_members (code, player_id, joined_at)
+     SELECT ?, ?, ?
+      WHERE (SELECT COUNT(*) FROM league_members WHERE code = ?) < ?
+        AND (SELECT COUNT(*) FROM league_members WHERE player_id = ?) < ?`,
+    code,
+    me.id,
+    now,
+    code,
+    LEAGUE.privateMembers,
+    me.id,
+    LEAGUE.privatePerPlayer,
+  );
+  if (joined === 0) {
+    if (await db.first('SELECT 1 AS x FROM league_members WHERE code = ? AND player_id = ?', code, me.id)) return json(league);
+    const members = (await db.first<{ n: number }>('SELECT COUNT(*) AS n FROM league_members WHERE code = ?', code))?.n ?? 0;
+    throw new HttpError(409, members >= LEAGUE.privateMembers ? 'full' : 'limit');
+  }
   return json(league);
 }
 

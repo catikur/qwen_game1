@@ -696,6 +696,11 @@ tek tablo. Bir cihazda başlayan oyun öbüründe sürüyor.
     Taşıma kodu ya da silme sırasında yolda kalan eski hesap yanıtı (web ve iOS)
     yok sayılıyor; kod, yolda olan sessiz hesap açılışını bekliyor ve sunucuda
     tek adımda tüketiliyor (aynı anda iki istekten yalnızca biri alıyor).
+  - Bilinen sınır: aynı hesap iPhone'da ve web ya da Android'de aynı anda
+    oynanırsa, iPhone'un kayıt yüklemesi ile puan gönderimi arasına giren bir
+    eşitleme o turun (en çok 5 dakika) haftalık puanını düşürebilir; oyun
+    ilerlemesi kaybolmuyor. Çözüm (sonra): iOS kayıt ve puanı App Attest imzalı
+    tek istekte gönderir, sunucu iOS puanını da web'deki gibi kayıttan hesaplar.
   - Gönderim başına en çok 600 adım, 1000 kayıt: ücretsiz katmanın işlemci
     sınırına sığıyor (600 adım ≈ 2–3 ms).
   - İyimser sürüm kilidi; başka cihaz (ya da kapanan eski sekme) ilerlediyse

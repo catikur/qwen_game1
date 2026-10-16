@@ -237,8 +237,19 @@ test('iki cihaz: eski sürümün üstüne gönderim 409 ve güncel durum; kaybol
   assert.deepEqual(both.map((r) => r.status).sort(), [201, 404]);
 });
 
+/** Her sorgudan önce zamanlayıcı turu: aynı anda gelen istekler gerçekten iç içe geçsin (D1'de ağ gecikmesi gibi). */
+function laggy(db: Db): Db {
+  const lag = () => new Promise((resolve) => setTimeout(resolve, 1));
+  return {
+    run: async (sql, ...args) => (await lag(), db.run(sql, ...args)),
+    first: async (sql, ...args) => (await lag(), db.first(sql, ...args)),
+    all: async (sql, ...args) => (await lag(), db.all(sql, ...args)),
+    batch: async (statements) => (await lag(), db.batch(statements)),
+  };
+}
+
 test('kaybolan yanıt: arada başka cihaz eşitlese de tekrar tanınıyor; aynı anda iki kopya puanı bir kez ekliyor', async () => {
-  const db = memoryDb();
+  const db = laggy(memoryDb());
   const web = await webPlayer(db, THURSDAY, 'Kayıp Yanıt');
   play(web.game, 30);
   assert.equal((await web.push(THURSDAY + 31_000, 0)).status, 200);
@@ -281,6 +292,29 @@ test('kaybolan yanıt: arada başka cihaz eşitlese de tekrar tanınıyor; aynı
   const single = Math.max(both[0].body.score, both[1].body.score);
   assert.equal(after.score, single);
   assert.ok(after.score > before, `puan eklendi (${before} → ${after.score})`);
+});
+
+test('aynı anda katılım: haftalık grup 30\'u aşmıyor, özel ligin son yerine tek kişi giriyor', async () => {
+  const db = laggy(memoryDb());
+  const players = [];
+  for (let k = 0; k < 35; k++) players.push(await webPlayer(db, THURSDAY));
+  const renamed = await Promise.all(players.map((p, k) => call(db, THURSDAY + 1_000, 'PATCH', '/v1/players/me', { name: `Oyuncu ${k}` }, p.account)));
+  assert.ok(renamed.every((r) => r.status === 200));
+  const groups = await db.all<{ group_no: number; n: number }>('SELECT group_no, COUNT(*) AS n FROM groups GROUP BY group_no ORDER BY group_no');
+  assert.deepEqual(groups.map((g) => g.n), [30, 5]);
+
+  // Özel lig: kurucu + 48 kişi, son yer için iki kişi aynı anda.
+  const owner = players[0]!;
+  const league = await call(db, THURSDAY + 2_000, 'POST', '/v1/leagues', { name: 'Kalabalık' }, owner.account);
+  const extra = [];
+  for (let k = 0; k < 20; k++) extra.push(await webPlayer(db, THURSDAY, `Ek ${k}`));
+  const members = [...players.slice(1), ...extra];
+  for (const p of members.slice(0, 48)) assert.equal((await call(db, THURSDAY + 3_000, 'POST', '/v1/leagues/join', { code: league.body.code }, p.account)).status, 200);
+  const last = await Promise.all(members.slice(48, 50).map((p) => call(db, THURSDAY + 4_000, 'POST', '/v1/leagues/join', { code: league.body.code }, p.account)));
+  assert.deepEqual(last.map((r) => r.status).sort(), [200, 409]);
+  assert.equal(last.find((r) => r.status === 409)!.body.error, 'full');
+  const count = await db.first<{ n: number }>('SELECT COUNT(*) AS n FROM league_members WHERE code = ?', league.body.code);
+  assert.equal(count!.n, 50);
 });
 
 test('yıldız tablosu: bütün platformlar, adsızlar yok, sıram ve arkadaşlar', async () => {
