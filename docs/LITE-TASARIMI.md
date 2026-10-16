@@ -559,6 +559,10 @@ iCloud gibi Apple servisleri ücretli üyelik istiyor; B ücretsiz imzayla da
 - **Sunucu** (`packages/lite-league`, Cloudflare Workers + D1): anonim hesap
   (ad + token, yalnızca özeti saklanıyor), gönderim, haftalık grup, özel ligler,
   hesap silme (oyuncunun her izi; boşalan özel lig de).
+  - **Hesap silme:** önce oyuncu satırı siliniyor, sonra öbür tablolar. Bağlı
+    başka cihazdan aynı anda gelen istek lig ya da grup yeri alamıyor (o yazımlar
+    oyuncunun varlığını koşul yapıyor). Arada yazılıp kalan bir iz de hafta
+    dönümünden sonraki temizlikte gidiyor (`weekly`).
   - **Hafta dönümü:** pazartesi cron'unda; kaçarsa ilk istekte yapılıyor, tek
     sefer. İşaret ve bütün bölüm değişiklikleri tek D1 işleminde, iki ifadede
     (grup sıralaması SQL pencere işlevleriyle): yarıda kalırsa hiçbiri

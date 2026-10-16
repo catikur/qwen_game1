@@ -3,7 +3,7 @@
  * değişimine. Bağlama: `DB` (D1), `wrangler.toml`. İsteğe bağlı sır:
  * `TURNSTILE_SECRET` (web ve Android hesabı açarken bot denetimi).
  */
-import { handle, rollover, type Options } from './app';
+import { handle, weekly, type Options } from './app';
 import { APPLE_ATTEST } from './attest';
 import { d1, type D1Like } from './db';
 
@@ -31,6 +31,6 @@ export default {
     return handle(request, d1(env.DB), Date.now(), options);
   },
   async scheduled(_event: unknown, env: Env): Promise<void> {
-    await rollover(d1(env.DB), Date.now());
+    await weekly(d1(env.DB), Date.now());
   },
 };

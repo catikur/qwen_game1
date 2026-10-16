@@ -458,6 +458,59 @@ test('hesabı sil: kayıt, cihazlar, tablo satırı ve taşıma kodu da gidiyor'
   assert.equal((await call(db, THURSDAY + 13_000, 'GET', '/v1/save', undefined, web.account)).status, 401);
 });
 
+test('hesap silinirken bağlı cihazdan gelen katılım ve eşitleme lig ya da grup yeri tutmuyor; kalan artık haftalık temizlikte gidiyor', async () => {
+  const db = laggy(memoryDb());
+  const owner = await webPlayer(db, THURSDAY, 'Kurucu');
+  const league = await call(db, THURSDAY, 'POST', '/v1/leagues', { name: 'Aile' }, owner.account);
+  for (let round = 0; round < 8; round++) {
+    const web = await webPlayer(db, THURSDAY, `Giden ${round}`);
+    play(web.game, 5);
+    assert.equal((await web.push(THURSDAY + 6_000)).status, 200);
+    const link = await call(db, THURSDAY + 7_000, 'POST', '/v1/link', {}, web.account);
+    const claim = await call(db, THURSDAY + 8_000, 'POST', '/v1/link/claim', { code: link.body.code, platform: 'android' });
+    const phone: Account = { id: claim.body.id, token: claim.body.token };
+    const phoneGame = new SyncedGame(claim.body.save.state as LiteState);
+    phoneGame.tick(3);
+    // Silme, katılım ve eşitleme aynı anda; katılım ve eşitleme her turda biraz daha geç başlıyor.
+    const later = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+    const results = await Promise.all([
+      call(db, THURSDAY + 12_000, 'DELETE', '/v1/players/me', undefined, web.account),
+      later(round).then(() => call(db, THURSDAY + 12_000, 'POST', '/v1/leagues/join', { code: league.body.code }, phone)),
+      later(round).then(() =>
+        call(db, THURSDAY + 12_000, 'POST', '/v1/sync', { base: claim.body.save.version, batch: `phone-del-${round}`, ops: phoneGame.journal.take(), rest: 0 }, phone),
+      ),
+    ]);
+    assert.equal(results[0].status, 200);
+    // Silmeden önce yetişen 200, sonra gelen 401 (eşitleme kaydı silinmiş bulursa 404).
+    for (const r of results.slice(1)) assert.ok([200, 401, 404].includes(r.status), `${round}: ${r.status} ${JSON.stringify(r.body)}`);
+    for (const table of ['league_members', 'groups']) {
+      const left = await db.first<{ n: number }>(`SELECT COUNT(*) AS n FROM ${table} WHERE player_id = ?`, web.account.id);
+      assert.equal(left?.n, 0, `${round}: ${table}`);
+    }
+  }
+  const members = await db.first<{ n: number }>('SELECT COUNT(*) AS n FROM league_members WHERE code = ?', league.body.code);
+  assert.equal(members!.n, 1);
+
+  // Silmeyle aynı anda yazılıp kalmış artıklar (örneğin yanıtı yolda olan bir eşitlemenin profili):
+  // bir sonraki haftanın ilk isteğinde temizleniyor; boşalan lig de gidiyor, dolu lig kalıyor.
+  const ghost = '00000000-0000-4000-8000-000000000000';
+  await db.run("INSERT INTO reports (player_id, week, score, city, stars, city_earned, levels, at) VALUES (?, ?, 1, 0, 0, 1, '[]', 0)", ghost, weekId(THURSDAY));
+  await db.run("INSERT INTO saves (player_id, version, state, cursor, batch, at) VALUES (?, 1, '{}', 0, NULL, 0)", ghost);
+  await db.run('INSERT INTO groups (week, player_id, division, group_no) VALUES (?, ?, 0, 0)', weekId(THURSDAY), ghost);
+  await db.run('INSERT INTO league_members (code, player_id, joined_at) VALUES (?, ?, 0)', league.body.code, ghost);
+  await db.run("INSERT INTO leagues (code, name, owner, created_at) VALUES ('HAYALT', 'Hayalet', ?, 0)", ghost);
+  await db.run("INSERT INTO league_members (code, player_id, joined_at) VALUES ('HAYALT', ?, 0)", ghost);
+  const nextWeek = THURSDAY + 7 * 86_400_000;
+  assert.equal((await call(db, nextWeek, 'GET', '/v1/league', undefined, owner.account)).status, 200);
+  for (const table of ['reports', 'saves', 'groups', 'league_members']) {
+    const left = await db.first<{ n: number }>(`SELECT COUNT(*) AS n FROM ${table} WHERE player_id = ?`, ghost);
+    assert.equal(left?.n, 0, table);
+  }
+  assert.equal(await db.first("SELECT 1 AS x FROM leagues WHERE code = 'HAYALT'"), null);
+  assert.ok(await db.first('SELECT 1 AS x FROM leagues WHERE code = ?', league.body.code));
+  assert.ok(await db.first('SELECT 1 AS x FROM saves WHERE player_id = ?', owner.account.id));
+});
+
 /** Swift'in kodladığı biçim: zincirler dizi, boş isteğe bağlı alanlar yok. */
 function swiftShape(state: LiteState): Record<string, unknown> {
   const raw: Record<string, unknown> = { ...state, chains: CHAIN_IDS.map((id) => state.chains[id]) };

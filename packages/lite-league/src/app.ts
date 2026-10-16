@@ -41,7 +41,7 @@ import {
   type LeagueReport,
 } from '../../lite-model/src/index';
 import { APPLE_ATTEST, AttestError, fromBase64, toBase64, verifyAssertion, verifyAttestation, type AttestConfig } from './attest';
-import type { Db } from './db';
+import type { Db, Statement } from './db';
 import { HttpError, base64, json, preflight, randomToken, readBody, readJson, sha256, shortCode, withCors } from './http';
 import { MAX_SYNC_BODY, PLATFORMS, createSave, loadSave, saveWithScore, sync, touchProfile, uploadSave, type Platform } from './saves';
 
@@ -174,8 +174,10 @@ async function route(request: Request, db: Db, now: number, options: Options): P
     const session = await authenticate(request, db);
     if (!session) throw new HttpError(401, 'auth');
     // Geçen haftanın bölüm değişimi henüz yapılmadıysa şimdi (cron kaçarsa da doğru kalsın).
-    await rollover(db, now);
-    const me = (await db.first<Player>('SELECT * FROM players WHERE id = ?', session.player.id))!;
+    await weekly(db, now);
+    const me = await db.first<Player>('SELECT * FROM players WHERE id = ?', session.player.id);
+    // Bu arada hesap silindi (bağlı başka cihazdan).
+    if (!me) throw new HttpError(401, 'auth');
     switch (route) {
       case 'PATCH /v1/players/me':
         return await rename(request, db, me, now);
@@ -404,11 +406,13 @@ async function joinGroup(db: Db, me: Player, week: string): Promise<void> {
   if (me.name === '') return;
   if (await db.first('SELECT 1 AS x FROM groups WHERE week = ? AND player_id = ?', week, me.id)) return;
   // Grup seçimi ve yerleşme tek ifadede: aynı anda katılanlar aynı boş yeri görüp grubu taşırmasın.
+  // Hesap bu arada silindiyse yer tutmuyor (`deleteAccount`).
   await db.run(
     `INSERT OR IGNORE INTO groups (week, player_id, division, group_no)
      SELECT ?, ?, ?, COALESCE(
        (SELECT group_no FROM groups WHERE week = ? AND division = ? GROUP BY group_no HAVING COUNT(*) < ? ORDER BY group_no LIMIT 1),
-       (SELECT COALESCE(MAX(group_no), -1) + 1 FROM groups WHERE week = ? AND division = ?))`,
+       (SELECT COALESCE(MAX(group_no), -1) + 1 FROM groups WHERE week = ? AND division = ?))
+      WHERE EXISTS (SELECT 1 FROM players WHERE id = ?)`,
     week,
     me.id,
     me.division,
@@ -417,6 +421,7 @@ async function joinGroup(db: Db, me: Player, week: string): Promise<void> {
     LEAGUE.groupSize,
     week,
     me.division,
+    me.id,
   );
 }
 
@@ -520,6 +525,11 @@ export async function rollover(db: Db, now: number): Promise<boolean> {
   return true;
 }
 
+/** Haftalık işler: bölüm değişimi, ardından temizlik (hafta başına bir kez). */
+export async function weekly(db: Db, now: number): Promise<void> {
+  if (await rollover(db, now)) await purgeOrphans(db, now);
+}
+
 // ------------------------------------------------------------ App Attest
 
 async function attestChallenge(db: Db, me: Player, now: number): Promise<Response> {
@@ -620,15 +630,18 @@ async function createLeague(request: Request, db: Db, me: Player, now: number): 
     // Oyuncu başına sınır yerleşmeyle tek ifadede (bağlı iki cihazdan aynı anda kurulsa da aşılmasın).
     const joined = await db.run(
       `INSERT INTO league_members (code, player_id, joined_at)
-       SELECT ?, ?, ? WHERE (SELECT COUNT(*) FROM league_members WHERE player_id = ?) < ?`,
+       SELECT ?, ?, ? WHERE (SELECT COUNT(*) FROM league_members WHERE player_id = ?) < ?
+                        AND EXISTS (SELECT 1 FROM players WHERE id = ?)`,
       code,
       me.id,
       now,
       me.id,
       LEAGUE.privatePerPlayer,
+      me.id,
     );
     if (joined === 0) {
       await db.run('DELETE FROM leagues WHERE code = ?', code);
+      await requireAccount(db, me);
       throw new HttpError(409, 'limit');
     }
     return json({ code, name }, 201);
@@ -644,12 +657,14 @@ async function joinLeague(request: Request, db: Db, me: Player, now: number): Pr
   if (!league) throw new HttpError(404, 'code');
   if (await db.first('SELECT 1 AS x FROM league_members WHERE code = ? AND player_id = ?', code, me.id)) return json(league);
   // Sınırlar ve yerleşme tek ifadede: son boş yere ya da oyuncunun son hakkına aynı anda iki katılım sığmasın.
+  // Hesap bu arada silindiyse yer tutmuyor (`deleteAccount`).
   const joined = await db.run(
     `INSERT OR IGNORE INTO league_members (code, player_id, joined_at)
      SELECT ?, ?, ?
       WHERE EXISTS (SELECT 1 FROM leagues WHERE code = ?)
         AND (SELECT COUNT(*) FROM league_members WHERE code = ?) < ?
-        AND (SELECT COUNT(*) FROM league_members WHERE player_id = ?) < ?`,
+        AND (SELECT COUNT(*) FROM league_members WHERE player_id = ?) < ?
+        AND EXISTS (SELECT 1 FROM players WHERE id = ?)`,
     code,
     me.id,
     now,
@@ -658,8 +673,10 @@ async function joinLeague(request: Request, db: Db, me: Player, now: number): Pr
     LEAGUE.privateMembers,
     me.id,
     LEAGUE.privatePerPlayer,
+    me.id,
   );
   if (joined === 0) {
+    await requireAccount(db, me);
     if (await db.first('SELECT 1 AS x FROM league_members WHERE code = ? AND player_id = ?', code, me.id)) return json(league);
     // Bu arada son üye ayrılıp lig silindi.
     if (!(await db.first('SELECT 1 AS x FROM leagues WHERE code = ?', code))) throw new HttpError(404, 'code');
@@ -669,22 +686,50 @@ async function joinLeague(request: Request, db: Db, me: Player, now: number): Pr
   return json(league);
 }
 
-/** Hesabı sil (App Store 5.1.1(v)): oyuncunun her izi gidiyor; boşalan özel ligler de. */
+/** Oyuncuya bağlı tablolar (`league_members` dışında); hesap silinince hepsinden siliniyor. */
+const PLAYER_TABLES = ['groups', 'reports', 'rejects', 'attest_keys', 'attest_challenges', 'tokens', 'saves', 'profiles', 'links'];
+
+/**
+ * Hesabı sil (App Store 5.1.1(v)): oyuncunun her izi gidiyor; boşalan özel ligler de.
+ * Önce oyuncu satırı siliniyor: bundan sonra gelen istek kimlik doğrulamadan geçemiyor.
+ * Kimliği daha önce doğrulanmış bir istek (bağlı başka cihazdan aynı anda) de lig ya da
+ * grup yeri alamıyor, çünkü o yazımlar oyuncunun varlığını koşul yapıyor. Silmeden önce
+ * yazılmış her şey aşağıda oyuncuya göre siliniyor. Arada yazılıp kalan başka bir iz
+ * de haftalık temizlikte gidiyor (`purgeOrphans`).
+ */
 async function deleteAccount(db: Db, me: Player): Promise<Response> {
-  const codes = await db.all<{ code: string }>('SELECT code FROM league_members WHERE player_id = ?', me.id);
-  for (const { code } of codes) await leaveLeague(db, me, code);
-  for (const table of ['groups', 'reports', 'rejects', 'attest_keys', 'attest_challenges', 'tokens', 'saves', 'profiles', 'links']) {
-    await db.run(`DELETE FROM ${table} WHERE player_id = ?`, me.id);
-  }
   await db.run('DELETE FROM players WHERE id = ?', me.id);
+  const left = await db.all<{ code: string }>('DELETE FROM league_members WHERE player_id = ? RETURNING code', me.id);
+  for (const { code } of left) await dropIfEmpty(db, code);
+  for (const table of PLAYER_TABLES) await db.run(`DELETE FROM ${table} WHERE player_id = ?`, me.id);
   return json({ ok: true });
+}
+
+/**
+ * Hesabı silinmiş oyuncunun artıkları ve boş ligler, tek işlemde (`weekly`). Yeni kurulan lig,
+ * kurucusu yerleşene kadar bir an boş kalıyor: bir dakikadan yeni liglere dokunulmuyor.
+ */
+async function purgeOrphans(db: Db, now: number): Promise<void> {
+  await db.batch([
+    ...['league_members', ...PLAYER_TABLES].map((table): Statement => [`DELETE FROM ${table} WHERE player_id NOT IN (SELECT id FROM players)`]),
+    ['DELETE FROM leagues WHERE created_at < ? AND NOT EXISTS (SELECT 1 FROM league_members m WHERE m.code = leagues.code)', now - 60_000],
+  ]);
+}
+
+/** Bu istek sürerken hesap silindiyse 401 (yazım koşulu tutmadığında nedenini ayırmak için). */
+async function requireAccount(db: Db, me: Player): Promise<void> {
+  if (!(await db.first('SELECT 1 AS x FROM players WHERE id = ?', me.id))) throw new HttpError(401, 'auth');
 }
 
 async function leaveLeague(db: Db, me: Player, code: string): Promise<Response> {
   await db.run('DELETE FROM league_members WHERE code = ? AND player_id = ?', code, me.id);
-  // Boşalan lig siliniyor; sayım ve silme tek ifadede (bu arada katılan olduysa lig kalıyor).
-  await db.run('DELETE FROM leagues WHERE code = ? AND NOT EXISTS (SELECT 1 FROM league_members WHERE code = ?)', code, code);
+  await dropIfEmpty(db, code);
   return json({ ok: true });
+}
+
+/** Boşalan lig siliniyor; sayım ve silme tek ifadede (bu arada katılan olduysa lig kalıyor). */
+async function dropIfEmpty(db: Db, code: string): Promise<void> {
+  await db.run('DELETE FROM leagues WHERE code = ? AND NOT EXISTS (SELECT 1 FROM league_members WHERE code = ?)', code, code);
 }
 
 async function myLeagues(db: Db, me: Player, now: number) {
