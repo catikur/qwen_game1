@@ -723,12 +723,16 @@ async function deleteAccount(db: Db, me: Player): Promise<Response> {
   return json({ ok: true });
 }
 
-/** Oyuncunun oyuncu satırı dışındaki bütün satırları; boşalan özel ligler de. */
+/** Oyuncunun oyuncu satırı dışındaki bütün satırları; boşalan özel ligler de, kurduğu dolu liglerin kuruculuğu en eski üyeye. */
 async function removeRows(db: Db, id: string): Promise<void> {
   const left = await db.all<{ code: string }>('DELETE FROM league_members WHERE player_id = ? RETURNING code', id);
   for (const { code } of left) await dropIfEmpty(db, code);
+  await db.run(`UPDATE leagues SET owner = ${OLDEST_MEMBER} WHERE owner = ?`, id);
   for (const table of PLAYER_TABLES) await db.run(`DELETE FROM ${table} WHERE player_id = ?`, id);
 }
+
+/** Ligin en eski üyesi (kuruculuk ona geçiyor); üye yoksa boş. */
+const OLDEST_MEMBER = "COALESCE((SELECT m.player_id FROM league_members m WHERE m.code = leagues.code ORDER BY m.joined_at, m.player_id LIMIT 1), '')";
 
 /**
  * Hesaplı her isteğin sonunda: hesap bu arada silindiyse isteğin yazdıklarını da sil.
@@ -748,6 +752,7 @@ async function purgeOrphans(db: Db, now: number): Promise<void> {
   await db.batch([
     ...['league_members', ...PLAYER_TABLES].map((table): Statement => [`DELETE FROM ${table} WHERE player_id NOT IN (SELECT id FROM players)`]),
     ['DELETE FROM leagues WHERE created_at < ? AND NOT EXISTS (SELECT 1 FROM league_members m WHERE m.code = leagues.code)', now - 60_000],
+    [`UPDATE leagues SET owner = ${OLDEST_MEMBER} WHERE owner <> '' AND owner NOT IN (SELECT id FROM players)`],
   ]);
 }
 

@@ -559,7 +559,8 @@ iCloud gibi Apple servisleri ücretli üyelik istiyor; B ücretsiz imzayla da
 - **Sunucu** (`packages/lite-league`, Cloudflare Workers + D1): anonim hesap
   (ad + token, yalnızca özeti saklanıyor), gönderim, haftalık grup, özel ligler,
   hesap silme (oyuncunun her izi; boşalan özel lig de).
-  - **Hesap silme:** önce oyuncu satırı siliniyor, sonra öbür tablolar. Bağlı
+  - **Hesap silme:** önce oyuncu satırı siliniyor, sonra öbür tablolar; kurduğu
+    dolu özel ligin kuruculuğu en eski üyeye geçiyor. Bağlı
     başka cihazdan aynı anda gelen istek lig ya da grup yeri alamıyor, taşıma
     kodu da token yazamıyor (o yazımlar oyuncunun varlığını koşul yapıyor).
     Hesaplı her istek bitince hesabın hâlâ var olduğuna bakıyor; silindiyse

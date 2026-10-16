@@ -458,6 +458,23 @@ test('hesabı sil: kayıt, cihazlar, tablo satırı ve taşıma kodu da gidiyor'
   assert.equal((await call(db, THURSDAY + 13_000, 'GET', '/v1/save', undefined, web.account)).status, 401);
 });
 
+test('hesabı sil: kurduğu dolu ligin kuruculuğu en eski üyeye geçiyor, kimliği hiçbir satırda kalmıyor', async () => {
+  const db = memoryDb();
+  const founder = await webPlayer(db, THURSDAY, 'Kurucu');
+  const league = await call(db, THURSDAY, 'POST', '/v1/leagues', { name: 'Aile' }, founder.account);
+  const first = await webPlayer(db, THURSDAY, 'İlk Üye');
+  const second = await webPlayer(db, THURSDAY, 'İkinci Üye');
+  assert.equal((await call(db, THURSDAY + 1_000, 'POST', '/v1/leagues/join', { code: league.body.code }, first.account)).status, 200);
+  assert.equal((await call(db, THURSDAY + 2_000, 'POST', '/v1/leagues/join', { code: league.body.code }, second.account)).status, 200);
+  assert.equal((await call(db, THURSDAY + 3_000, 'DELETE', '/v1/players/me', undefined, founder.account)).status, 200);
+  const row = await db.first<{ owner: string }>('SELECT owner FROM leagues WHERE code = ?', league.body.code);
+  assert.equal(row?.owner, first.account.id);
+  // Haftalık temizlik de (silmeyle aynı anda kalmış kuruculuk için yedek).
+  await db.run('UPDATE leagues SET owner = ? WHERE code = ?', founder.account.id, league.body.code);
+  assert.equal((await call(db, THURSDAY + 7 * 86_400_000, 'GET', '/v1/league', undefined, second.account)).status, 200);
+  assert.equal((await db.first<{ owner: string }>('SELECT owner FROM leagues WHERE code = ?', league.body.code))?.owner, first.account.id);
+});
+
 test('hesap silinirken bağlı cihazdan gelen katılım ve eşitleme lig ya da grup yeri tutmuyor; kalan artık haftalık temizlikte gidiyor', async () => {
   const db = laggy(memoryDb());
   const owner = await webPlayer(db, THURSDAY, 'Kurucu');
