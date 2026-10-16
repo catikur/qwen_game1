@@ -26,7 +26,15 @@ xcrun simctl install "$UDID" "$APP"
 shot() {
   local name="$1"; shift
   xcrun simctl terminate "$UDID" "$BUNDLE" 2>/dev/null || true
-  xcrun simctl launch "$UDID" "$BUNDLE" "$@"
+  # Açılıştan hemen sonra SpringBoard kurulan uygulamayı bazen henüz tanımıyor
+  # ("unknown to FrontBoard"): yeniden kurup iki kez daha dene.
+  local attempt
+  for attempt in 1 2 3; do
+    xcrun simctl launch "$UDID" "$BUNDLE" "$@" && break
+    [ "$attempt" = 3 ] && return 1
+    sleep 10
+    xcrun simctl install "$UDID" "$APP"
+  done
   # Geç senaryoda bot dört saatlik oyunu açılışta oynuyor; bekleme payı geniş.
   # Senaryo modunda saat donuk: bekleme süresi kareyi değiştirmiyor.
   sleep "${WAIT:-14}"
