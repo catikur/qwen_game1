@@ -26,4 +26,14 @@ export type { TutorialStepId } from './tutorial';
 export { currentLocale, registerLocale, setLocale, t } from './i18n';
 export { LOCALE_NAMES, chooseLocale, initLocale, useLocale } from './i18n/locale';
 export { LocalePicker } from './LocalePicker';
+export { AppearancePicker } from './AppearancePicker';
+export {
+  APPEARANCE_CHOICES,
+  chooseAppearance,
+  currentAppearance,
+  initAppearance,
+  setCityDaylight,
+  useAppearanceChoice,
+} from './appearance';
+export type { Appearance, AppearanceChoice } from './appearance';
 export type { MessageKey } from './i18n';

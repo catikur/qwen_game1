@@ -216,4 +216,9 @@ export const panels = {
   'panels.help.controls':
     'Kontroller: sürükle = kaydır · sağ tık sürükle = döndür · tekerlek = yakınlaş · WASD = kaydır · Boşluk = duraklat',
   'panels.help.language': 'Dil',
+  'panels.help.appearance': 'Görünüm',
+  'panels.help.appearance.auto': 'Otomatik',
+  'panels.help.appearance.day': 'Gündüz',
+  'panels.help.appearance.night': 'Gece',
+  'panels.help.appearance.hint': 'Cihaz koyu moddaysa ya da şehirde gece olunca gece camı.',
 } as const;

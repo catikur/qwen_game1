@@ -2973,6 +2973,72 @@ async function finish(browser, consoleErrors) {
     await lContext.close();
   }
 
+  // ---------- Görünüm (Tur 35) ----------
+  // Kendi bağlamında: seçim tarayıcıda hatırlanıyor, diğer bölümler Otomatik kalmalı.
+  section('Görünüm');
+  {
+    const aContext = await browser.newContext({ viewport: { width: 1280, height: 860 }, colorScheme: 'light' });
+    await aContext.addInitScript(veteran, TUTORIAL_KEY);
+    const ap = await aContext.newPage();
+    const aErrors = [];
+    ap.on('pageerror', (e) => aErrors.push(e.message));
+    ap.on('console', (m) => { if (m.type() === 'error') aErrors.push(m.text()); });
+    const look = () => ap.evaluate(() => document.documentElement.dataset.appearance ?? '');
+    // Görünüm 500 ms'lik döngüyle izleniyor; sabit bekleme yerine değişimi bekle.
+    const lookBecomes = (want, ms = 4000) =>
+      ap.waitForFunction((w) => document.documentElement.dataset.appearance === w, want, { timeout: ms })
+        .then(() => true, () => false);
+    const panelColor = () => ap.evaluate(() => getComputedStyle(document.querySelector('.topbar')).backgroundColor);
+    await ap.goto('http://127.0.0.1:8811/');
+    await ap.waitForSelector('.newgame', { timeout: 20000 });
+    check('Açık modlu cihazda kurulum gündüz camı', (await look()) === 'day', await look());
+    await ap.fill('.newgame-field input[type="text"]', 'Cam Holding');
+    await ap.locator('button:has-text("Şirketi kur")').click();
+    await ap.waitForSelector('.topbar', { timeout: 20000 });
+    await ap.evaluate(() => window.__capital.setTimeOfDay(0.28));
+    check('Gündüz şehirde arayüz gündüz', await lookBecomes('day'), await look());
+    const dayColor = await panelColor();
+    await ap.evaluate(() => window.__capital.setTimeOfDay(0.75));
+    const wentNight = await lookBecomes('night');
+    const nightColor = await panelColor();
+    check('Otomatik: şehirde gece olunca arayüz gece camına dönüyor', wentNight && nightColor !== dayColor,
+      `${await look()} · üst bar ${dayColor} → ${nightColor}`);
+    await ap.evaluate(() => window.__capital.setTimeOfDay(0.28));
+    check('Sabah olunca arayüz gündüze dönüyor', await lookBecomes('day'), await look());
+
+    await ap.locator('.topbar-actions [data-panel="help"]').click();
+    await ap.waitForTimeout(300);
+    check('Yardım panelinde görünüm seçici, Otomatik seçili',
+      (await ap.locator('.help .appearance-option').count()) === 3 &&
+        (await ap.locator('.help [data-appearance-choice="auto"][aria-pressed="true"]').count()) === 1);
+    await ap.locator('.help [data-appearance-choice="day"]').click();
+    await ap.keyboard.press('Escape');
+    await ap.evaluate(() => window.__capital.setTimeOfDay(0.75));
+    // Otomatik olsaydı bu sürede geceye dönerdi (yukarıdaki kontrol).
+    check('Gündüz sabitlenince şehir gecesi arayüzü değiştirmiyor', !(await lookBecomes('night', 2000)), await look());
+    await ap.locator('.topbar-actions [data-panel="help"]').click();
+    await ap.locator('.help [data-appearance-choice="night"]').click();
+    check('Gece seçilince arayüz hemen gece', (await look()) === 'night', await look());
+    await ap.keyboard.press('Escape');
+    await ap.reload();
+    await ap.waitForSelector('.topbar', { timeout: 20000 });
+    await ap.evaluate(() => window.__capital.setTimeOfDay(0.28));
+    check('Gece seçimi yenilemeden sonra hatırlanıyor', !(await lookBecomes('day', 1500)) && (await look()) === 'night', await look());
+    await ap.screenshot({ path: `${OUT}/appearance-night.png` });
+    check('Görünüm akışında konsol temiz', aErrors.length === 0, aErrors.slice(0, 2).join(' | '));
+    await aContext.close();
+
+    // Koyu modlu cihaz: Otomatik, kurulum ekranından başlayarak gece.
+    const dContext = await browser.newContext({ viewport: { width: 1280, height: 860 }, colorScheme: 'dark' });
+    await dContext.addInitScript(veteran, TUTORIAL_KEY);
+    const dp = await dContext.newPage();
+    await dp.goto('http://127.0.0.1:8811/');
+    await dp.waitForSelector('.newgame', { timeout: 20000 });
+    const darkLook = await dp.evaluate(() => document.documentElement.dataset.appearance ?? '');
+    check('Koyu modlu cihazda Otomatik gece camı', darkLook === 'night', darkLook);
+    await dContext.close();
+  }
+
   section('Mobil');
   for (const deviceName of ['iPhone 13', 'Pixel 7']) {
     const mobileContext = await browser.newContext({ ...devices[deviceName] });
@@ -3038,7 +3104,7 @@ async function finish(browser, consoleErrors) {
           right: Math.round(r.right),
         };
       });
-      return { vw, overflow: nav.scrollWidth - nav.clientWidth, buttons };
+      return { vw, vh, bottom: Math.round(nav.getBoundingClientRect().bottom), overflow: nav.scrollWidth - nav.clientWidth, buttons };
     });
     // KATLANABİLİR PANELLER — dar ekranın dikey bütçesi.
     //
@@ -3246,6 +3312,14 @@ async function finish(browser, consoleErrors) {
       outside.length
         ? outside.map((b) => `${b.panel} sağ kenarı ${b.right} > ${dock.vw}`).join(', ')
         : `${dock.buttons.length} düğme, taşma ${dock.overflow}px`,
+    );
+    // Cam panellerin `backdrop-filter`'ı sabit konumlu rıhtıma kapsayıcı
+    // blok olursa rıhtım üst bara yapışıyor — düğmeler yine "ekranda"
+    // sayılırdı (Tur 35 önizlemesinde tam olarak bu oldu).
+    check(
+      `${deviceName}: rıhtım ekranın altında`,
+      Math.abs(dock.bottom - dock.vh) <= 2,
+      `alt kenar ${dock.bottom} / ekran ${dock.vh}`,
     );
     const smallest = Math.min(...dock.buttons.map((b) => b.height));
     check(
