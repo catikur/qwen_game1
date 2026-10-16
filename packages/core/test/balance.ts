@@ -3626,9 +3626,10 @@ section('Sermaye piyasası: halka arz ve kurucu kilidi', () => {
    *   - halka arz bedava para değil: nakdi sıkışmayan şirkette erken ihraç
    *     720. günde net değeri düşürüyor (kalıcı ortaklık);
    *   - ama bir kontrol aracı: savunmasız yavaş oyuncu baskınla düşerken
-   *     baskıncı %30'u geçince ihraç eden aynı oyuncu çoğu tohumda ayakta
-   *     kalıyor (Tur 21'den beri baskın altında soğuma aranmıyor); düştüğü
-   *     yer yalnızca kalkanın belgelenen sonu (Tur 27, aşağıda);
+   *     baskıncı %30'u geçince ihraç eden aynı oyuncu daha geç düşüyor ya
+   *     da ayakta kalıyor (Tur 21'den beri baskın altında soğuma
+   *     aranmıyor); düştüğü yer yalnızca kalkanın belgelenen sonu (Tur 27,
+   *     aşağıda; Tur 37a'dan beri tehditli tohumların çoğunda);
    *   - oyun başı rakipler baskın ısınması bitene kadar kilitli: en ucuz
    *     rakibi alan vekil eskiden 5. günde devralıp tekel zaferine
    *     130–235. günde ulaşıyordu.
@@ -3727,8 +3728,14 @@ section('Sermaye piyasası: halka arz ve kurucu kilidi', () => {
    * rakip ekonomisini kaydırınca seed 42 de düştü (723 → 725). Savunma
    * ihracı (soğumasız) ile dokuzun sekizi ayakta; 5 ve 31 eski kuralla
    * düşen tohumlar, o yüzden burada.
+   *
+   * Tur 37a: yönetim yükü büyük rakipleri yavaş oyuncudan çok frenliyor,
+   * sıralama sıkışıyor. 20 tohumda savunmasız yavaş oyuncu 9 yerine 5
+   * tohumda düşüyor (1, 2, 7, 9, 12); 42, 5 ve 31'de artık savunmasız da
+   * ayakta, yani kalkanı ölçemiyorlardı. Tohumlar tehdidin gerçekleştiği
+   * yerden yeniden seçildi.
    */
-  const shields = [7, 42, 5, 31].map((seed) => ({ seed, bare: defenseRun(seed, 'bare'), issue: defenseRun(seed, 'issue') }));
+  const shields = [7, 1, 2, 9].map((seed) => ({ seed, bare: defenseRun(seed, 'bare'), issue: defenseRun(seed, 'issue') }));
   for (const { seed, bare, issue } of shields) {
     console.log(
       `  baskın seed ${String(seed).padStart(2)} | savunmasız ${bare.lost ? `${bare.lost}. günde düşüyor` : 'ayakta'} · ` +
@@ -3770,18 +3777,23 @@ section('Sermaye piyasası: halka arz ve kurucu kilidi', () => {
    *     düşüş savunmasızdan sonra.
    * Bölüşülmüş paydan, blok satıştan ya da tabana inmeden gelen bir
    * düşüş bir hata demek ve kontrolü kırar.
+   *
+   * Tur 37a: "çoğunu ayakta tutuyor" parçası düştü. Yönetim yükü ikinci
+   * sıradaki rakipleri de frenleyince gelen baskın hep tek baskıncılı:
+   * yeni dört tohumda ihraç yalnızca birinde (2) ayakta tutuyor, üçünde
+   * düşüş belgelenen sondan ve 33–71 gün geç (main'de iki tehditli
+   * tohumun ikisi de ayaktaydı). Kalıcı kalkan Tur 28'den beri ihraç +
+   * piyasadan geri alım; aşağıdaki kontrol onu dört tohumun dördünde
+   * sınıyor. Buradaki iddia artık: ihraç düşüşü erteliyor ve kalkanla
+   * düşüş YALNIZCA belgelenen sondan geçebilir.
    */
   const threatened = shields.filter(({ bare }) => bare.lost !== null);
   const calm = shields.filter(({ bare }) => bare.lost === null);
-  const held = threatened.filter(({ issue }) => issue.lost === null);
   const atTheEnd = ({ bare, issue }: (typeof shields)[number]): boolean =>
     issue.founder <= ISSUANCE.minFounderShare + 0.01 && issue.runnerUp < 0.02 && issue.lost! > bare.lost!;
   expect(
     'ihraç baskına karşı kalkan',
-    threatened.length >= 2 &&
-      held.length >= 2 &&
-      held.length > threatened.length - held.length &&
-      threatened.every((s) => s.issue.lost === null || atTheEnd(s)),
+    threatened.length >= 2 && threatened.every((s) => s.issue.lost === null || atTheEnd(s)),
     threatened
       .map((s) =>
         s.issue.lost === null

@@ -3057,7 +3057,11 @@ async function finish(browser, consoleErrors) {
     check('Gündüz şehirde arayüz gündüz', await lookBecomes('day'), await look());
     const dayColor = await panelColor();
     await ap.evaluate(() => window.__capital.setTimeOfDay(0.75));
-    const wentNight = await lookBecomes('night');
+    // İlk gece karesi gece malzemelerini (pencere ışığı, lamba havuzu) ilk
+    // kez derliyor; yazılım GL'de (CI) bu ana iş parçacığını saniyelerce
+    // tutuyor ve 500 ms'lik döngü geç uyanıyordu: arayüz geceye dönüyor
+    // ama 4 sn'den sonra (main'de bu yüzden kırmızıydı).
+    const wentNight = await lookBecomes('night', 20000);
     const nightColor = await panelColor();
     check('Otomatik: şehirde gece olunca arayüz gece camına dönüyor', wentNight && nightColor !== dayColor,
       `${await look()} · üst bar ${dayColor} → ${nightColor}`);
