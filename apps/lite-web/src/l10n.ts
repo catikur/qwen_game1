@@ -16,6 +16,7 @@ const trWeb: Record<string, string> = {
   'sync.signedOut': 'Hesap silinmiş; yeni bir oyun başladı.',
   'sync.connecting': 'Sunucuya bağlanıyor…',
   'league.joinBody': 'Oyunun sunucuda kayıtlı. Bir şirket adı seçince haftalık ligde ve yıldız tablosunda görünürsün.',
+  'league.deleteBody': 'Adın, puanların, özel lig üyeliklerin ve oyun kaydın sunucudan kalıcı olarak silinir; bu cihazda oyun baştan başlar.',
 };
 const enWeb: Record<string, string> = {
   'settings.notifications.denied': 'Notifications are off. Turn them on in your browser’s site settings.',
@@ -24,6 +25,7 @@ const enWeb: Record<string, string> = {
   'sync.signedOut': 'The account was deleted; a new game has started.',
   'sync.connecting': 'Connecting to the server…',
   'league.joinBody': 'Your game is saved on the server. Pick a company name to appear in the weekly league and the stars leaderboard.',
+  'league.deleteBody': 'Your name, scores, private league memberships and game save are permanently removed from the server; the game starts over on this device.',
 };
 
 /** Android kabuğu (L11): telefona özgü cümleler. */

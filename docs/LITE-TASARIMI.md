@@ -651,7 +651,8 @@ tek tablo. Bir cihazda başlayan oyun öbüründe sürüyor.
     işe yaramıyor. Sunucunun durumu esas; istemci farklıysa ona dönüyor.
     Gönderim başına yalnızca son birkaç dakikanın hamleleri, ücretsiz
     katmanın işlemci sınırına sığıyor.
-  - Hesap açmada Cloudflare Turnstile (bot karşı).
+  - Hesap açmada Cloudflare Turnstile (bot karşı): sunucu tarafı hazır;
+    istemcideki doğrulama kutusu gerekirse sonra.
   - Tablolarda platform işareti (telefon, tablet, tarayıcı); herkes aynı
     grupta.
 - **Cihazlar arası devam:** hesap ekranında "başka cihaza taşı" kodu (6 harf,
@@ -667,8 +668,8 @@ tek tablo. Bir cihazda başlayan oyun öbüründe sürüyor.
   (Kotlin + Compose, modelin üçüncü portu) daha yerel ama üçüncü bir arayüz
   ve eşitlik fikstürü demek.
 - **Kullanıcıdan gerekenler:**
-  - Web: yok (Pages zaten açık). Turnstile için Cloudflare panelinden bir site
-    anahtarı (ücretsiz).
+  - Web: yok (Pages zaten açık). Turnstile istemcisi eklenirse Cloudflare
+    panelinden bir site anahtarı (ücretsiz).
   - Android: Google Play Console geliştirici hesabı (tek sefer 25 $), uygulama
     imzalama anahtarı (Play App Signing).
 
@@ -689,7 +690,8 @@ tek tablo. Bir cihazda başlayan oyun öbüründe sürüyor.
     istemci ona dönüyor. Yanıtı kaybolan gönderimin tekrarı zararsız.
   - Haftalık puanı sunucu hesaplıyor: her zaman dilimi gerçek zamana
     yerleşiyor, pazartesiyi aşan dilim süresiyle bölünüyor.
-- **Hesap:** web ve Android ilk açılışta sessiz (adsız) hesap; ad verince lige
+- **Hesap:** web ve Android bir dakika oynanınca ya da lig ekranı açılınca
+  sessiz (adsız) hesap (bir bakıp çıkana hesap açılmıyor); ad verince lige
   katılıyor (hemen bu haftanın grubunda). Bir hesabın birden çok cihazı
   (`tokens`). Taşıma kodu 6 harf, 10 dakika, tek seferlik; kayıt sunucuda
   olmalı (iOS önce yüklüyor).

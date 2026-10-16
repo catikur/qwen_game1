@@ -289,6 +289,8 @@ parametreler `lang=tr|en`, `theme=day|night`, `sheet=settings|league|map`,
 
 **Sunucuyu güncellerken (L10):** yeni tablolar (`tokens`, `saves`, `profiles`,
 `links`) `schema.sql`'de; uzak veritabanına bir kez uygulanmalı (CI'nin
-dağıtım işi ya da D1 konsolunda `schema.sql`'in L10 bölümü). İsteğe bağlı:
-Worker'a `TURNSTILE_SECRET` sırrı (web ve Android hesabı açarken bot denetimi).
+dağıtım işi ya da D1 konsolunda `schema.sql`'in L10 bölümü). `TURNSTILE_SECRET`
+sırrını şimdilik **tanımlama**: sunucu tarafı hazır ama web ve Android
+istemcisinde doğrulama kutusu henüz yok; sır tanımlanırsa yeni web ve Android
+hesapları açılamaz (bot sorunu çıkarsa istemci tarafı eklenecek).
 

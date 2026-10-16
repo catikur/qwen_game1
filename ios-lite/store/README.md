@@ -148,7 +148,7 @@ Beklenen derece: 4+ (kullanıcı içeriği sorusu derecelendirmeyi 9+ ya da 13+ 
 
 - **Veri toplanıyor mu?** Evet.
 - **User ID** (lig şirket adı ve rastgele hesap kimliği): App Functionality; kullanıcıya bağlı: Evet; izleme: Hayır.
-- **Gameplay Content** (haftalık puan, ilerleme özeti): App Functionality; kullanıcıya bağlı: Evet; izleme: Hayır.
+- **Gameplay Content** (haftalık puan, ilerleme özeti; lig hesabında oyun kaydının kopyası, başka cihazda devam için): App Functionality; kullanıcıya bağlı: Evet; izleme: Hayır.
 - Başka veri yok; reklam ve analitik yok.
 
 ## İnceleme notları (App Review Information)
@@ -156,7 +156,7 @@ Beklenen derece: 4+ (kullanıcı içeriği sorusu derecelendirmeyi 9+ ya da 13+ 
 ```
 CapitalForge Lite is an idle business game. No login is required to play.
 
-The weekly league is optional: tap the league card ("Haftalık lig"), choose a company name and join. Accounts are anonymous (no email or password). Scores are only accepted from genuine devices via Apple App Attest, so the league cannot submit scores from the Simulator. Users can delete their league account in the app: League → Delete account ("Hesabı sil").
+The weekly league is optional: tap the league card ("Haftalık lig"), choose a company name and join. Accounts are anonymous (no email or password). Scores are only accepted from genuine devices via Apple App Attest, so the league cannot submit scores from the Simulator. Users can delete their league account in the app: League → Delete account ("Hesabı sil"). League → "Play on another device" creates a single-use 6-character code that moves the account and save to another device (iPhone, iPad, Android or the web version).
 
 Game Center is used for a global stars leaderboard (cf.lite.stars).
 

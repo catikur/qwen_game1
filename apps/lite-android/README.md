@@ -59,7 +59,7 @@ alt başlık, tam açıklama, anahtar kelimeler). Play'e özgü:
 |---|---|
 | Uygulama simgesi | `store/icon-512.png` (512 × 512) |
 | Öne çıkan görsel | `store/feature-graphic.png` (1024 × 500) |
-| Ekran görüntüleri | web sürümünün kareleri (CI "Lite web · uçtan uca ve kareler", 430 × 932 telefon; 1024 × 1366 tablet) |
+| Ekran görüntüleri | `android-<n>.png` (1080 × 1920, başlıklı): CI "Lite web · uçtan uca ve kareler" çıktısındaki `play-*` kareleri, `node ios-lite/App/tools/store-shots.mjs <kareler> <çıktı>`; tablet için `tablet-mid.png` (1024 × 1366) |
 | Kategori | Oyun → Simülasyon |
 | Gizlilik politikası | https://catikur.github.io/qwen_game1/lite/privacy.html |
 | İletişim | info@conforcus.com |
@@ -68,13 +68,17 @@ alt başlık, tam açıklama, anahtar kelimeler). Play'e özgü:
 **Veri güvenliği (Data safety)** soruları:
 
 - Veri toplanıyor mu? **Evet.** Paylaşılıyor mu? **Hayır.**
-- **Uygulama etkinliği → Diğer kullanıcı içeriği / Oyun içi ilerleme**
-  (haftalık puan, oyun kaydı): uygulama işlevi; zorunlu değil (lig ve
-  cihazlar arası oyun için).
-- **Kişisel bilgiler → Kullanıcı kimlikleri** (seçilen şirket adı, rastgele
-  hesap kimliği): uygulama işlevi.
+- **Uygulama etkinliği → Uygulama etkileşimleri** (oyun hamleleri, oyun
+  kaydı, haftalık puan): uygulama işlevi ve sahtekârlığı önleme; **zorunlu**
+  (kayıt sunucuda tutuluyor ve sunucu oyunu oynatıp doğruluyor).
+- **Uygulama etkinliği → Diğer kullanıcı içeriği** (seçilen şirket ve özel
+  lig adları): uygulama işlevi; **isteğe bağlı** (yalnızca ligde görünmek
+  için).
+- **Kişisel bilgiler → Kullanıcı kimlikleri** (rastgele hesap kimliği):
+  uygulama işlevi; zorunlu.
+- Konum, cihaz kimliği, reklam kimliği, IP: **toplanmıyor.**
 - Aktarımda şifreli: **Evet** (HTTPS). Silme isteği: **Evet**, uygulamada
-  Lig → Hesabı sil.
+  Lig → Hesabı sil (sunucudaki kayıt dahil her şey hemen siliniyor).
 
 **İçerik derecelendirmesi (IARC):** şiddet, korku, kumar, cinsellik yok;
 kullanıcılar arası etkileşim yalnızca şirket ve lig adları (küfür
