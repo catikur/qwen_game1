@@ -388,6 +388,11 @@ test('iOS: cihazdaki oyunu App Attest onayıyla yüklüyor, kodla web\'e taşıy
   const stale = await upload(THURSDAY + 70_000, 1, step(phoneState, 30));
   assert.equal(stale.status, 409);
   assert.deepEqual(stale.body.state, webGame.state);
+  // Haftalık sayaç sunucunun puanından sürsün: yanıtta hafta ve puan.
+  const current = await call(db, THURSDAY + 70_500, 'GET', '/v1/save', undefined, web);
+  assert.equal(stale.body.week, weekId(THURSDAY + 70_000));
+  assert.equal(typeof stale.body.score, 'number');
+  assert.equal(stale.body.score, current.body.score);
   const back = await upload(THURSDAY + 71_000, stale.body.version, step(stale.body.state, 5));
   assert.equal(back.status, 200);
   assert.equal(back.body.version, 3);

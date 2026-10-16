@@ -89,7 +89,7 @@ export async function uploadSave(db: Db, playerId: string, now: number, body: Re
     await db.run('INSERT INTO saves (player_id, version, state, cursor, batch, at) VALUES (?, 1, ?, ?, NULL, ?)', playerId, JSON.stringify(state), now, now);
     return { version: 1, state, cursor: now };
   }
-  if (body.base !== row.version) throw new HttpError(409, 'stale', { ...view(row) });
+  if (body.base !== row.version) throw await staleSave(db, playerId, now, row);
   const changed = await db.run(
     'UPDATE saves SET version = ?, state = ?, cursor = ?, batch = NULL, at = ? WHERE player_id = ? AND version = ?',
     row.version + 1,
@@ -99,8 +99,18 @@ export async function uploadSave(db: Db, playerId: string, now: number, body: Re
     playerId,
     row.version,
   );
-  if (changed === 0) throw new HttpError(409, 'stale', { ...((await loadSave(db, playerId)) ?? view(row)) });
+  if (changed === 0) throw await staleSave(db, playerId, now, row);
   return { version: row.version + 1, state, cursor: Math.max(row.cursor, now) };
+}
+
+/**
+ * iOS'un eski sürümün üstüne yüklemesi: güncel kayıt ve bu haftanın puanı
+ * (cihaz haftalık sayacını sunucunun puanından sürdürsün; yoksa sonraki
+ * gönderimleri sunucudakinden düşük kalıp "azalma" diye reddedilirdi).
+ */
+async function staleSave(db: Db, playerId: string, now: number, row: SaveRow): Promise<HttpError> {
+  const current = (await saveWithScore(db, playerId, now)) ?? { ...view(row), week: weekId(now), score: await weekScore(db, playerId, weekId(now)) };
+  return new HttpError(409, 'stale', { ...current });
 }
 
 /** Kayıt ve bu haftanın puanı (cihaz değişince haftalık sayaç buradan sürüyor). */

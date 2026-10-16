@@ -259,6 +259,8 @@ export class GameStore {
   private standDown(): void {
     if (this.superseded) return;
     this.superseded = true;
+    // Yolda kalan yanıtlar (eşitleme, yenileme, hesap açma) artık bu örneğin değil.
+    this.epoch += 1;
     this.stop();
     this.changed();
   }
@@ -386,9 +388,15 @@ export class GameStore {
       }
       if (this.registering || (!force && this.state.clock < REGISTER_AFTER)) return;
       this.registering = true;
+      const epoch = this.epoch;
       const registration = this.league.register();
       this.registration = registration.catch(() => undefined);
-      const save = await registration;
+      const created = await registration;
+      // Bu arada örnek durdu (başka sekme) ya da hesap değişti: açılan hesap kullanılmıyor
+      // (sunucuda adsız ve görünmez kalıyor), ortak depodaki hesabın üstüne yazılmıyor.
+      if (epoch !== this.epoch) return;
+      this.league.use(created.account);
+      const save = created.save;
       // Yeni hesabın oyunu sıfırdan; buradaki günlük de sıfırdan oynandı.
       this.base = save.version;
       this.save();

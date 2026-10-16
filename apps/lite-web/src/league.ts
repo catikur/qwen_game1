@@ -145,12 +145,19 @@ export class LeagueClient {
     return parsed as T;
   }
 
-  /** Sessiz hesap (adsız): oyun sunucuda sıfırdan. */
-  async register(turnstile?: string): Promise<ServerSave> {
+  /**
+   * Sessiz hesap (adsız): oyun sunucuda sıfırdan. Hesap burada kullanılmaya
+   * başlamıyor: çağıran (bu arada başka sekmeye geçilmediyse) `use` ile alıyor.
+   */
+  async register(turnstile?: string): Promise<{ account: Account; save: ServerSave }> {
     const created = await this.send<Account & { save: ServerSave }>('POST', 'v1/players', { platform: this.platform, ...(turnstile ? { turnstile } : {}) }, { auth: false });
-    this.account = { id: created.id, token: created.token, name: created.name };
+    return { account: { id: created.id, token: created.token, name: created.name }, save: created.save };
+  }
+
+  /** Açılan hesabı bu cihazın hesabı yap (kaydedilir). */
+  use(account: Account): void {
+    this.account = account;
     this.saveAccount();
-    return created.save;
   }
 
   async loadSave(): Promise<ServerSave> {
