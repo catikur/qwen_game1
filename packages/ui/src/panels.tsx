@@ -31,6 +31,7 @@ import { GoalsPanel } from './GoalsPanel';
 import { HoldingPanel } from './HoldingPanel';
 import { CouncilPanel } from './CouncilPanel';
 import { LeaguePanel } from './LeaguePanel';
+import { AppearancePicker } from './AppearancePicker';
 import { LocalePicker } from './LocalePicker';
 import { BankSection, WorkforceSection } from './CompanyFinance';
 import { t } from './i18n';
@@ -1010,7 +1011,7 @@ function Sparkline({ values }: { values: number[] }): ReactElement | null {
   return (
     <figure className="sparkline">
       <svg viewBox="0 0 100 32" preserveAspectRatio="none" role="img" aria-label={t('panels.company.sparklineAria')}>
-        <polyline points={points} fill="none" stroke="#7fd4ff" strokeWidth="1.2" vectorEffect="non-scaling-stroke" />
+        <polyline className="sparkline-line" points={points} vectorEffect="non-scaling-stroke" />
       </svg>
       <figcaption className="muted">
         {t('panels.company.sparklineCaption', { days: values.length, min: formatMoney(min), max: formatMoney(max) })}
@@ -1241,6 +1242,10 @@ function HelpPanel(): ReactElement {
       <div className="help-locale">
         <span className="muted">{t('panels.help.language')}</span>
         <LocalePicker />
+      </div>
+      <div className="help-locale">
+        <span className="muted">{t('panels.help.appearance')}</span>
+        <AppearancePicker />
       </div>
       <button
         type="button"

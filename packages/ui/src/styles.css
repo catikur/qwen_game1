@@ -1,93 +1,171 @@
-@import './fonts.css';
+@import './fonts-cam.css';
 
 /*
- * Oyun arayüzü — "Kambiyo".
+ * Oyun arayüzü — "Cam & Bulut" (Tur 35).
  *
- * TASARIM DİLİ. Oyun bir sermaye oyunu: pay, fiyat, sıralama, devralma.
- * Arayüz de bir borsa terminali gibi davranıyor — yoğun, kesin, süssüz.
+ * TASARIM DİLİ. Lite ile aynı aile: şehrin üstünde yüzen cam kartlar,
+ * yuvarlak köşeler, alt kenarına oturan parlak düğmeler; başlıklar
+ * Fredoka, gövde Nunito. İki oyun aynı yayıncının iki oyunu gibi
+ * görünsün diye tek bir dil.
  *
- * Bir önceki dil ("Kadastro") doğru konsepti taşıyordu ama uygulaması
- * genel geçerdi: yuvarlak köşeli kartlar, yumuşak gölgeler, nötr kâğıt,
- * tek vurgu rengi. Bu kombinasyon her yerde var ve hiçbir şey söylemiyor.
+ * Bir önceki dil ("Kambiyo") borsa terminaliydi: sıfır yuvarlaklık,
+ * sıfır gölge, mürekkep vurgu. Kesindi ama soğuktu; bir şehir oyununun
+ * sıcaklığını taşımıyordu. YOĞUNLUK KORUNUYOR — aynı ızgara, aynı
+ * ölçüler, aynı bilgi — değişen yüzey:
  *
- * Üç kural bu dili kuruyor ve üçü de bir ŞEYİ YAPMAMAKTAN ibaret:
+ *   1. CAM. Paneller yarı saydam ve arkalarını bulanıklaştırıyor; şehir
+ *      arayüzün altında hep sezilir ama rakamın okunmasını bozmaz.
+ *   2. YUVARLAK. Kartlar `--radius`, düğmeler `--radius-sm`, rozetler hap.
+ *   3. PARLAK SEÇİM. Seçili sekme, hız ve mercek mavi parlak bir düğme;
+ *      basılınca kenarına iner. Renk yine ANLAM taşıyor: mavi seçim ve
+ *      eylem, yeşil yükseliş, kırmızı düşüş. Haritanın kimlik renkleri
+ *      (senin yeşilin, rakibin kırmızısı) arayüzde tekrar edilmiyor.
  *
- *   1. YUVARLAKLIK YOK. Bütün köşeler keskin. Yuvarlaklık yumuşaklık
- *      söyler; bir terminalin söyleyecek şeyi hassasiyettir.
- *   2. GÖLGE YOK. Katmanlar gölgeyle değil KILCAL ÇİZGİYLE ayrılıyor.
- *      Gölge bir yüzeyi "yüzdürür"; çizgi onu yerine oturtur.
- *   3. RENKLİ VURGU YOK. Vurgu MÜREKKEBİN KENDİSİ: seçili olan şey
- *      dolu siyah bir düzlem, üstündeki yazı kâğıt rengi. Renk yalnızca
- *      ANLAM taşıdığı yerde var — yükseliş, düşüş, uyarı.
- *
- * Üçüncüsü aynı zamanda bir ayrım: 3B sahnede renk kimliği anlatıyor
- * (senin yeşilin, rakibin kırmızısı). Arayüz de renkli olsaydı iki ayrı
- * renk dili çakışırdı. Arayüz siyah-beyaz kalıyor, renk haritanın.
+ * GECE. Aynı kurallar, koyu lacivert cam: yalnızca belirteçler değişiyor
+ * (`:root[data-appearance='night']`). Ne zaman gece olduğuna
+ * appearance.ts karar veriyor — cihaz koyu moddaysa ya da şehirde gece.
  */
 
 :root {
   color-scheme: light;
 
   /* --- yüzeyler --- */
-  /* Zemin, panelden bir tık koyu: panel "üstte" görünsün diye gölge
-     değil DEĞER farkı kullanılıyor. */
-  --bg: #e6e7e4;
-  --paper: #f1f2f0;
-  /*
-   * Panel neredeyse opak. Yarı saydamlık koyu temanın alışkanlığıydı;
-   * aydınlık bir terminalde arkadan sızan şehir, rakamların okunmasını
-   * zorlaştırmaktan başka bir şey yapmıyor.
-   */
-  --panel: rgba(255, 255, 255, 0.97);
+  --bg: #d3eeff;
+  /* Kurulum ekranının göğü (Lite'ın gündüz göğü). */
+  --sky: linear-gradient(180deg, #7ccbff 0%, #a9deff 36%, #d3eeff 66%, #e8f6ff 100%);
+  --panel: rgba(255, 255, 255, 0.74);
+  /* Cam olmayan yüzeyler: açılır listeler, ipuçları, dar ekranın üst barı. */
   --panel-solid: #ffffff;
-
-  /* --- mürekkep --- */
-  --text: #0d1210;
-  --muted: #5f6764;
-  /* Kılcal çizgi: bu dilin taşıyıcı öğesi, o yüzden gölgeden koyu. */
-  --line: rgba(13, 18, 16, 0.18);
-  --line-strong: rgba(13, 18, 16, 0.34);
-
-  /* --- vurgu: mürekkebin kendisi --- */
-  --accent: #0d1210;
-  --accent-soft: rgba(13, 18, 16, 0.07);
-  --on-accent: #f6f7f5;
-  /* Sahibinin nişanı — haritadaki oyuncu yeşiliyle akraba, tek yerde. */
-  --brass: #0b6a4f;
-
-  /* --- anlam renkleri: yalnızca yön ve durum --- */
-  --good: #0f7a45;
-  --bad: #b02a1e;
-  --warn: #9a6a10;
-
-  /* Yüzey tonları — kabartma mürekkeple yapılıyor, beyazla değil. */
-  --tint-1: rgba(13, 18, 16, 0.03);
-  --tint-2: rgba(13, 18, 16, 0.055);
-  --tint-3: rgba(13, 18, 16, 0.09);
-  --tint-4: rgba(13, 18, 16, 0.14);
-
-  /* --- biçim --- */
-  /* Sıfır. Tek istisna yok; bir yerde yuvarlaklık kalırsa dil kırılır. */
-  --radius: 0px;
-  --radius-sm: 0px;
-  /* Gölge yerine çizgi. Token korunuyor çünkü çok yerde çağrılıyor. */
-  --shadow: none;
+  /* Camın kenarı: ışığı yakalayan ince parlak çizgi. */
+  --panel-edge: rgba(255, 255, 255, 0.95);
+  --glass: blur(18px) saturate(1.2);
+  /* Kalın cam: modal ve bildirim — arkası karartılmış, metin yoğun. */
+  --panel-thick: rgba(255, 255, 255, 0.9);
+  /* Modalın arkasındaki perde: siyah değil, gecenin mavisi. */
+  --scrim: rgba(29, 53, 87, 0.38);
 
   /* --- yazı --- */
-  --font-sans: 'Archivo', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --text: #1d3557;
+  --muted: #4f6c8e;
+  --line: rgba(29, 53, 87, 0.12);
+  --line-strong: rgba(29, 53, 87, 0.24);
+
+  /* --- vurgu: seçim ve eylem mavisi --- */
+  --accent: #2e62bc;
+  --accent-soft: rgba(70, 131, 232, 0.12);
+  --on-accent: #ffffff;
+  /* Sahibinin nişanı — haritadaki oyuncu yeşiliyle akraba. */
+  --brass: #12925a;
+  /* Rakip kartının iki kolu (Ar-Ge, pazarlama): kimlik, anlam değil. */
+  --arm-research: #2f7fb0;
+  --arm-marketing: #8a63b8;
+
+  /* --- anlam renkleri: yalnızca yön ve durum --- */
+  --good: #0e9f5a;
+  --bad: #e04848;
+  --warn: #c27c00;
+
+  /* Yüzey tonları: kartın içindeki hücreler, çubuk izleri. */
+  --tint-1: rgba(29, 53, 87, 0.03);
+  --tint-2: rgba(29, 53, 87, 0.055);
+  --tint-3: rgba(29, 53, 87, 0.09);
+  --tint-4: rgba(29, 53, 87, 0.14);
+
+  /* --- düğmeler --- */
+  --tile: rgba(255, 255, 255, 0.7);
+  --tile-hover: rgba(255, 255, 255, 0.95);
+  --tile-edge: rgba(255, 255, 255, 0.95);
+  /* Alt kenar: düğme masaya oturuyor, basınca iniyor. */
+  --button-shadow: 0 3px 0 rgba(29, 53, 87, 0.12);
+  --gloss-blue: linear-gradient(180deg, #7db4ff 0%, #5c98f5 50%, #4683e8 50%, #4f8cee 100%);
+  --gloss-green: linear-gradient(180deg, #4fd88c 0%, #2dc26f 50%, #22b262 50%, #2dbf6c 100%);
+  --gloss-red: linear-gradient(180deg, #ff8a8a 0%, #f06464 50%, #e04848 50%, #e85656 100%);
+  --edge-blue: #2e62bc;
+  --edge-green: #189150;
+  --edge-red: #b52f2f;
+  --selected: var(--gloss-blue);
+  --on-selected: #ffffff;
+  --selected-shadow: 0 3px 0 var(--edge-blue), inset 0 1.5px 0 rgba(255, 255, 255, 0.5);
+  --select-ring: #5c98f5;
+
+  /* --- biçim --- */
+  --radius: 22px;
+  --radius-sm: 14px;
+  --radius-xs: 8px;
+  --shadow: 0 10px 30px rgba(29, 53, 87, 0.16);
+
+  /* --- yazı tipleri --- */
+  --font-sans: 'Nunito', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  /* Başlıklar, isimler ve üst barın büyük rakamları. */
+  --font-display: 'Fredoka', 'Nunito', ui-sans-serif, system-ui, sans-serif;
   /*
-   * Mono YALNIZCA sütuna giren rakamlarda. Monospace rakamlar belirgin
-   * biçimde geniş ve üst bar beş metriği 344 px'e sığdırmak zorunda
-   * (§2.4f); terminal hissi yoğunluğun olduğu yerde, panellerde kuruluyor.
+   * Sütuna giren rakamlar: Nunito'nun eş genişlikli rakamları
+   * (`tabular-nums`) hizayı tek başına kuruyor; ayrı bir mono aile
+   * gerekmiyor.
    */
-  --font-mono: 'Martian Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
-  /*
-   * Başlıklar ayrı bir aile DEĞİL: aynı grotesk, seyreltilmiş ve
-   * büyütülmüş hâli. İki aile kullanmak bir tercihti; burada hiyerarşi
-   * harf aralığı ve ağırlıkla kuruluyor, çünkü bu dilde fark bağırarak
-   * değil ayarla anlatılır.
-   */
-  --font-display: 'Archivo', ui-sans-serif, system-ui, sans-serif;
+  --font-num: 'Nunito', ui-sans-serif, system-ui, sans-serif;
+}
+
+/* Gece camı: Lite'ın gece belirteçleri. */
+:root[data-appearance='night'] {
+  color-scheme: dark;
+  --bg: #142659;
+  --sky: linear-gradient(180deg, #0a1433 0%, #142659 36%, #1b2f66 66%, #20356f 100%);
+  --panel: rgba(22, 36, 82, 0.74);
+  --panel-solid: #1a2b62;
+  --panel-edge: rgba(170, 195, 255, 0.22);
+  --panel-thick: rgba(22, 36, 82, 0.92);
+  --scrim: rgba(4, 8, 24, 0.55);
+  --text: #eef3ff;
+  --muted: #a9badd;
+  --line: rgba(170, 195, 255, 0.16);
+  --line-strong: rgba(170, 195, 255, 0.3);
+  --accent: #7db4ff;
+  --accent-soft: rgba(125, 180, 255, 0.14);
+  --on-accent: #0a1433;
+  --brass: #5be39a;
+  --arm-research: #6cc0f0;
+  --arm-marketing: #c09cf0;
+  --good: #5be39a;
+  --bad: #ff7a7a;
+  --warn: #ffc65c;
+  --tint-1: rgba(170, 195, 255, 0.04);
+  --tint-2: rgba(170, 195, 255, 0.07);
+  --tint-3: rgba(170, 195, 255, 0.11);
+  --tint-4: rgba(170, 195, 255, 0.16);
+  --tile: rgba(10, 20, 52, 0.42);
+  --tile-hover: rgba(40, 62, 120, 0.6);
+  --tile-edge: rgba(170, 195, 255, 0.16);
+  --button-shadow: 0 3px 0 rgba(0, 0, 0, 0.3);
+  --edge-blue: #1f4890;
+  --selected-shadow: 0 3px 0 var(--edge-blue), inset 0 1.5px 0 rgba(255, 255, 255, 0.45);
+  --select-ring: #7db4ff;
+  --radius: 22px;
+  --radius-sm: 14px;
+  --shadow: 0 12px 34px rgba(0, 0, 12, 0.4);
+}
+
+/*
+ * Gündüzden geceye geçiş bir an sürüyor, bir anda olmuyor. Yalnızca geçiş
+ * sırasında açık (appearance.ts `data-appearance-shift` koyup kaldırıyor):
+ * kalıcı bir `transition` her üzerine gelmeyi de yavaşlatırdı.
+ */
+:root[data-appearance-shift] *,
+:root[data-appearance-shift] *::before,
+:root[data-appearance-shift] *::after {
+  transition:
+    background-color 0.9s ease,
+    border-color 0.9s ease,
+    color 0.9s ease,
+    box-shadow 0.9s ease !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root[data-appearance-shift] *,
+  :root[data-appearance-shift] *::before,
+  :root[data-appearance-shift] *::after {
+    transition: none !important;
+  }
 }
 
 * {
@@ -106,17 +184,18 @@ body {
   color: var(--text);
   font-family: var(--font-sans);
   font-size: 14px;
+  /* Nunito'nun en ince gömülü ağırlığı 600: gövde de ondan başlıyor. */
+  font-weight: 600;
   overflow: hidden;
   -webkit-font-smoothing: antialiased;
 }
 
 /*
- * BAŞLIKLAR AYRI BİR AİLE DEĞİL, AYRI BİR AYAR.
+ * BAŞLIKLAR FREDOKA, OLAĞAN HARFLE.
  *
- * Bir öncekinde başlıklar tırnaklıydı; iki aile bir tercihti. Bu dilde
- * hiyerarşi harf aralığıyla kuruluyor: başlıklar küçük, kalın ve
- * SEYRELTİLMİŞ büyük harf. Terminal etiketlerinin dili bu — bağırmıyor,
- * ayarla anlatıyor.
+ * Kambiyo'da başlıklar küçük, seyreltilmiş büyük harfti — terminal
+ * etiketinin dili. Burada başlık bir isim gibi okunuyor: yuvarlak,
+ * kalın, olağan harf. Hiyerarşiyi aile farkı kuruyor.
  */
 .modal-head h2,
 .news h2,
@@ -125,36 +204,21 @@ body {
 .lens-body h3,
 .demandlist h3 {
   font-family: var(--font-display);
-  font-size: 12px;
+  font-size: 17px;
   font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+  letter-spacing: 0;
+  text-transform: none;
   color: var(--text);
 }
 
-/* Şirket adı bir etiket değil bir isim: seyreltilmiyor. */
-.brand-name {
-  font-weight: 600;
-  letter-spacing: -0.01em;
-}
-
 /*
- * RAKAMLAR SÜTUNA GİRDİĞİ YERDE MONO.
+ * RAKAMLAR SÜTUNA GİRDİĞİ YERDE EŞ GENİŞLİKLİ.
  *
  * Bir pazar oyununda sayıların alt alta hizalanması süs değil okuma
  * aracı: iki mağazanın cirosunu karşılaştırmak, hizalı olmadıklarında
- * okumak değil hesaplamak olur.
- */
-/*
- * Liste DAR tutuldu ve ölçüm bunu zorunlu kıldı.
- *
- * İlk denemede üst bar metrikleri ve yapı kartının kategori yazısı da
- * monoydu. İkisi de yanlıştı: Martian Mono belirgin biçimde geniş,
- * "1.23 M ₺" satırı yarıyor; kategori adı ise zaten SAYI DEĞİL —
- * monospace'in orada anlatacağı bir hizalama yok.
- *
- * Kural: mono yalnızca ALT ALTA GELEN ve karşılaştırılan sayılarda.
- * Tek başına duran bir sayı hizalanacak bir şey bulamaz.
+ * okumak değil hesaplamak olur. Kural Kambiyo'dan kalıyor: yalnızca ALT
+ * ALTA GELEN ve karşılaştırılan sayılar. Tek başına duran bir sayı
+ * hizalanacak bir şey bulamaz.
  */
 .stat-value,
 .demandvalue,
@@ -163,11 +227,9 @@ body {
 .table td.pos,
 .table td.neg,
 .table .num {
-  font-family: var(--font-mono);
+  font-family: var(--font-num);
   font-variant-numeric: tabular-nums;
-  /* Mono, aynı punto sansa göre iri görünüyor: optik olarak eşitleniyor. */
-  font-size: 0.9em;
-  letter-spacing: -0.05em;
+  font-weight: 800;
 }
 
 button,
@@ -178,58 +240,51 @@ select {
 }
 
 /*
- * DÜĞME BİR DÜZLEM, BİR HAP DEĞİL.
+ * DÜĞME BİR KAROLAR TAKIMI.
  *
- * Köşeler keskin, zemin kâğıt, kenar kılcal çizgi. Dolgu yerine ÇİZGİ
- * kullanmak bu dilin merkezinde: dolgulu düğmeler sayfayı lekeler,
- * çizgili düğmeler ızgarayı korur.
- *
- * Üstüne gelince zemin değil KENAR koyulaşıyor — hareket eden şey
- * yüzey değil sınır.
+ * Yarı saydam beyaz karo, yuvarlak köşe ve alt kenarda ince bir gölge:
+ * düğme masaya oturuyor. Basınca kenarına iniyor (`translateY`, yerleşimi
+ * oynatmıyor — komşular yerinde kalıyor). Ana eylem ve seçili hâl mavi
+ * parlak düğme.
  */
 button {
-  background: var(--panel-solid);
-  border: 1px solid var(--line);
+  background: var(--tile);
+  border: 1px solid var(--tile-edge);
   border-radius: var(--radius-sm);
   padding: 7px 12px;
-  font-weight: 500;
-  letter-spacing: 0.01em;
+  font-weight: 700;
   cursor: pointer;
-  transition: border-color 0.12s, background 0.12s, color 0.12s;
+  box-shadow: var(--button-shadow);
+  transition: background 0.12s, border-color 0.12s, color 0.12s, transform 0.08s;
 }
 
 button:hover:not(:disabled) {
-  background: var(--panel-solid);
-  border-color: var(--line-strong);
+  background: var(--tile-hover);
 }
 
-/*
- * Basılı hâlde düğme YERİNDEN OYNAMIYOR.
- *
- * Eski dil 1 px aşağı itiyordu; keskin köşeli, ızgaraya oturmuş bir
- * arayüzde o hareket bütün satırı titretiyor. Geri bildirim bunun
- * yerine tam kontrastla veriliyor: bir an için dolu mürekkep.
- */
 button:active:not(:disabled) {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: var(--on-accent);
+  transform: translateY(2px);
+  box-shadow: none;
 }
 
 button:disabled {
-  opacity: 0.4;
+  opacity: 0.45;
   cursor: not-allowed;
+  box-shadow: none;
 }
 
 button.primary {
-  background: var(--accent);
+  background: var(--gloss-blue);
   border-color: transparent;
-  color: var(--on-accent);
-  font-weight: 600;
+  color: #ffffff;
+  font-family: var(--font-display);
+  font-weight: 700;
+  box-shadow: 0 3px 0 var(--edge-blue), inset 0 1.5px 0 rgba(255, 255, 255, 0.5);
 }
 
 button.primary:hover:not(:disabled) {
-  background: #12805f;
+  background: var(--gloss-blue);
+  filter: brightness(1.06);
 }
 
 button.icon {
@@ -239,7 +294,7 @@ button.icon {
 }
 
 :focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--select-ring);
   outline-offset: 2px;
 }
 
@@ -341,8 +396,9 @@ button.icon {
   flex-wrap: wrap;
   gap: 12px 20px;
   background: var(--panel);
-  backdrop-filter: blur(14px);
-  border: 1px solid var(--line);
+  backdrop-filter: var(--glass);
+  -webkit-backdrop-filter: var(--glass);
+  border: 1px solid var(--panel-edge);
   border-radius: var(--radius);
   padding: 10px 16px;
   box-shadow: var(--shadow);
@@ -359,13 +415,14 @@ button.icon {
 .brand-mark {
   width: 10px;
   height: 26px;
-  border-radius: 0;
+  border-radius: 999px;
   background: linear-gradient(180deg, var(--accent), var(--brass));
 }
 
+/* Şirket adı bir isim: Fredoka. */
 .brand-name {
-  font-weight: 650;
-  letter-spacing: 0.2px;
+  font-family: var(--font-display);
+  font-weight: 700;
 }
 
 .brand-sub {
@@ -392,16 +449,26 @@ button.icon {
   display: none;
 }
 
+/* Küçük etiketler büyük harf kalıyor: başlık değil, rakamın adı. */
 .metric-label {
   font-size: 11px;
+  font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.04em;
   color: var(--muted);
 }
 
+/*
+ * Satır yüksekliği SABİT. Fredoka'da ₺ yok; işaret yedek aileden
+ * (Nunito) geliyor ve Nunito'nun satır ölçüsü daha büyük — `normal`
+ * bırakılınca metrik satırı 18 yerine 20 px çıkıyor, telefonda iki
+ * satırlık bar 4 px uzuyordu.
+ */
 .metric-value {
-  font-size: 16px;
-  font-weight: 650;
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.2;
   font-variant-numeric: tabular-nums;
 }
 
@@ -416,29 +483,30 @@ button.icon {
 }
 
 /*
- * Panel sekmeleri de aynı blok dilinde: aralarında 1 px, kenarda tek
- * çizgi. Sekmeler bir "düğme grubu" değil, tek bir denetim şeridi.
+ * Panel sekmeleri ayrı ayrı karolar: aralarında boşluk, açık olan mavi
+ * parlak. Seçili hâl her denetimde aynı (sekme, hız, mercek, seçenek).
  */
 .topbar-actions {
   display: flex;
   align-items: stretch;
   flex-wrap: wrap;
-  gap: 1px;
+  gap: 6px;
   min-width: 0;
-  background: var(--line);
-  border: 1px solid var(--line);
 }
 
 .dock-tab {
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  border: 0;
 }
 
-.dock-tab.active {
-  border-color: var(--accent);
-  color: var(--accent);
+.dock-tab.active,
+.speed.active,
+.lens.active {
+  background: var(--selected);
+  color: var(--on-selected);
+  border-color: transparent;
+  box-shadow: var(--selected-shadow);
 }
 
 .dock-icon {
@@ -452,23 +520,14 @@ button.icon {
 
 .speeds {
   display: flex;
-  gap: 1px;
+  gap: 6px;
   flex: 0 0 auto;
-  background: var(--line);
-  border: 1px solid var(--line);
 }
 
 .speed {
   min-width: 42px;
   padding: 6px 8px;
   font-size: 12px;
-  border: 0;
-}
-
-.speed.active {
-  background: var(--accent);
-  color: var(--on-accent);
-  border-color: transparent;
 }
 
 /* ------------------------------------------------------------ sol sütun */
@@ -488,11 +547,13 @@ button.icon {
 .lensbar {
   background: var(--panel);
   /*
-   * BULANIKLIK KALDIRILDI. Arkadan sızan şehir bir gölge etkisiydi ve
-   * bu dil gölgeyi bırakıyor; ayrıca mobilde en pahalı efektlerden biri
-   * ve orada zaten kaldırılmıştı — iki kod yolu tutmanın anlamı yok.
+   * CAM. Kambiyo bulanıklığı kaldırmıştı (gölgesiz dil); bu dilde şehrin
+   * arkadan sezilmesi istenen şey. Dar ekranda kalkıyor (pahalı ve orada
+   * paneller şehrin üstünü kaplıyor) — mobil bloğuna bakın.
    */
-  border: 1px solid var(--line);
+  backdrop-filter: var(--glass);
+  -webkit-backdrop-filter: var(--glass);
+  border: 1px solid var(--panel-edge);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
 }
@@ -502,40 +563,32 @@ button.icon {
 }
 
 /*
- * BÖLMELİ IZGARA — bu dilin denetim bloğu.
+ * EŞİT SÜTUNLU IZGARA.
  *
  * Eskiden sarmalı bir flex satırıydı ve altı düğme üç düzensiz sıraya
  * bölünüyordu; her sıranın sağında farklı bir boşluk kalıyor, blok
  * kırık görünüyordu. Eşit sütunlu ızgarada böyle bir artık yok.
- *
- * Ayraçlar ayrı bir kenarlık DEĞİL: hücreler arasındaki 1 px boşluktan
- * arkadaki çizgi rengi görünüyor. Böylece komşu iki hücrenin kenarlığı
- * üst üste binip 2 px'e çıkmıyor — ızgara her yerde tek kılcal çizgi.
  */
 .lens-buttons {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 1px;
-  background: var(--line);
-  border: 1px solid var(--line);
+  gap: 6px;
 }
 
 /*
  * Hücreler eşit boyda: biri satır kırarsa ızgaranın o satırı büyüyor ve
- * blok basamaklı görünüyor. Yazı sarmıyor, sığmazsa punto küçülüyor.
+ * blok basamaklı görünüyor. Yazı sarmıyor; Nunito Kalın geniş olduğu için
+ * punto ve iç boşluk "Arsa Değeri" sığacak kadar.
  */
 .lens {
   display: inline-flex;
   align-items: center;
   justify-content: flex-start;
-  gap: 5px;
-  border: 0;
-  background: var(--panel-solid);
-  font-size: 11px;
+  gap: 4px;
   white-space: nowrap;
   min-height: 32px;
-  padding: 0 7px;
-  font-size: 12px;
+  padding: 0 6px;
+  font-size: 11.5px;
 }
 
 .lens-icon {
@@ -553,13 +606,6 @@ button.icon {
  */
 .collapse-head {
   display: none;
-}
-
-.lens.active {
-  background: var(--accent);
-  color: var(--on-accent);
-  border-color: transparent;
-  font-weight: 600;
 }
 
 .lens-hint {
@@ -582,8 +628,9 @@ button.icon {
 .inspector h2,
 .news h2 {
   margin: 0 0 2px;
-  font-size: 14px;
-  letter-spacing: 0.02em;
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 700;
 }
 
 .buildlist {
@@ -607,20 +654,23 @@ button.icon {
 }
 
 .buildcard.selected {
-  border-color: var(--accent);
-  background: var(--accent-soft);
+  border-color: var(--select-ring);
+  background: var(--tile-hover);
+  box-shadow: 0 0 0 2px var(--select-ring), var(--button-shadow);
 }
 
 .buildcard.locked {
   opacity: 0.5;
 }
 
+/* Kategori rengi küçük bir karo: Lite'ın zincir kartlarındaki simge yeri. */
 .buildcard-swatch {
-  width: 9px;
-  height: 34px;
-  border-radius: 0;
+  width: 30px;
+  height: 30px;
+  border-radius: 10px;
   flex-shrink: 0;
-  margin-top: 2px;
+  margin-top: 1px;
+  box-shadow: inset 0 1.5px 0 rgba(255, 255, 255, 0.45), 0 2px 0 rgba(0, 0, 0, 0.12);
 }
 
 .buildcard-body {
@@ -638,13 +688,21 @@ button.icon {
 }
 
 .buildcard-name {
+  min-width: 0;
+  font-family: var(--font-display);
   font-weight: 600;
 }
 
+/*
+ * Fiyat bölünmüyor ve daralmıyor ("182 / B ₺" ya da kırpılmış ₺);
+ * sığmazsa ad sarıyor.
+ */
 .buildcard-cost {
+  flex-shrink: 0;
   font-variant-numeric: tabular-nums;
   color: var(--muted);
   font-size: 12.5px;
+  white-space: nowrap;
 }
 
 .buildcard-cost.short {
@@ -683,7 +741,7 @@ button.icon {
   gap: 8px;
   font-size: 12px;
   padding: 8px 10px;
-  border-radius: 0;
+  border-radius: var(--radius-sm);
   background: var(--accent-soft);
   border: 1px solid var(--line-strong);
 }
@@ -733,7 +791,7 @@ button.icon {
 
 .stat {
   background: var(--tint-2);
-  border-radius: 0;
+  border-radius: var(--radius-xs);
   padding: 7px 9px;
   display: flex;
   flex-direction: column;
@@ -746,17 +804,13 @@ button.icon {
 }
 
 .stat-value {
-  font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
 
 .demandlist h3,
 .building h3 {
   margin: 0 0 6px;
-  font-size: 12.5px;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--muted);
+  font-size: 15px;
   display: flex;
   align-items: center;
   gap: 7px;
@@ -774,7 +828,7 @@ button.icon {
 .bar {
   height: 6px;
   background: var(--tint-3);
-  border-radius: 0;
+  border-radius: 999px;
   overflow: hidden;
 }
 
@@ -881,33 +935,40 @@ button.icon {
   gap: 7px;
 }
 
+/*
+ * Haber bir karo; tonu kenar çubuğu değil BAŞLIK ETİKETİ taşıyor
+ * (yuvarlak bir kartın kenarına çubuk koymak köşeyi kırıyor).
+ */
 .news-item {
-  border-left: 3px solid var(--line);
-  padding-left: 9px;
-}
-
-.news-good {
-  border-left-color: var(--good);
-}
-.news-bad {
-  border-left-color: var(--bad);
-}
-.news-rival {
-  border-left-color: var(--warn);
+  background: var(--tint-1);
+  border-radius: var(--radius-xs);
+  padding: 6px 9px;
 }
 
 .news-head {
   display: flex;
   gap: 8px;
   font-size: 10.5px;
+  font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.04em;
   color: var(--muted);
 }
 
+.news-good .news-head {
+  color: var(--good);
+}
+.news-bad .news-head {
+  color: var(--bad);
+}
+.news-rival .news-head {
+  color: var(--warn);
+}
+
 .news-title {
+  font-family: var(--font-display);
   font-weight: 600;
-  font-size: 13px;
+  font-size: 13.5px;
 }
 
 .news-body {
@@ -927,20 +988,23 @@ button.icon {
   flex-wrap: wrap;
 }
 
+/* Gündem rozetleri: şehrin üstünde yüzen cam hap. */
 .event-chip {
   background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 0;
+  border: 1px solid var(--panel-edge);
+  border-radius: 999px;
   padding: 5px 12px;
   font-size: 12px;
-  backdrop-filter: blur(10px);
+  box-shadow: var(--shadow);
+  backdrop-filter: var(--glass);
+  -webkit-backdrop-filter: var(--glass);
 }
 
 .event-chip.tone-good {
-  border-color: rgba(89, 217, 142, 0.45);
+  border-color: color-mix(in srgb, var(--good) 55%, transparent);
 }
 .event-chip.tone-bad {
-  border-color: rgba(226, 87, 76, 0.45);
+  border-color: color-mix(in srgb, var(--bad) 55%, transparent);
 }
 
 /* --------------------------------------------------------------- modal */
@@ -948,7 +1012,7 @@ button.icon {
 .modal-backdrop {
   position: absolute;
   inset: 0;
-  background: rgba(4, 8, 12, 0.6);
+  background: var(--scrim);
   display: grid;
   place-items: center;
   z-index: 40;
@@ -956,11 +1020,14 @@ button.icon {
   backdrop-filter: blur(3px);
 }
 
+/* Modal kalın cam: arkasında karartılmış şehir var, tablolar okunmalı. */
 .modal {
   width: min(720px, 92vw);
   max-height: 82vh;
-  background: var(--panel-solid);
-  border: 1px solid var(--line);
+  background: var(--panel-thick);
+  backdrop-filter: var(--glass);
+  -webkit-backdrop-filter: var(--glass);
+  border: 1px solid var(--panel-edge);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
   display: flex;
@@ -977,7 +1044,7 @@ button.icon {
 
 .modal-head h2 {
   margin: 0;
-  font-size: 15px;
+  font-size: 19px;
 }
 
 .modal-body {
@@ -996,15 +1063,15 @@ button.icon {
 }
 
 /*
- * Sütun başlıkları seyreltilmiş küçük kapital. Terminal etiketinin dili
- * bu: küçük, geniş aralıklı, sessiz — okunacak şey başlık değil sayı.
+ * Sütun başlıkları küçük büyük harf: sessiz bir etiket, okunacak şey
+ * başlık değil sayı.
  */
 .table th {
   text-align: left;
-  font-size: 10px;
+  font-size: 10.5px;
   text-transform: uppercase;
-  letter-spacing: 0.12em;
-  font-weight: 600;
+  letter-spacing: 0.04em;
+  font-weight: 800;
   color: var(--muted);
   padding: 7px 8px;
   border-bottom: 1px solid var(--line-strong);
@@ -1016,19 +1083,20 @@ button.icon {
 }
 
 /*
- * SENİN SATIRIN RENKLE DEĞİL ÇİZGİYLE İŞARETLİ.
- *
- * Zemin boyamak bu dilde bir leke; ayrıca renk 3B sahnede kimlik
- * anlatıyor ve tabloda ikinci bir renk dili açmak istemiyoruz. Sol
- * kenardaki kalın mürekkep çubuk aynı işi süssüz yapıyor.
+ * SENİN SATIRIN seçim mavisinin açık tonunda, uçları yuvarlak bir şerit.
+ * Haritanın kimlik yeşili tabloda tekrar edilmiyor; mavi "sen/seçili".
  */
 .table tr.me td {
-  background: var(--tint-1);
-  font-weight: 600;
+  background: var(--accent-soft);
+  font-weight: 800;
 }
 
 .table tr.me td:first-child {
-  box-shadow: inset 3px 0 0 var(--accent);
+  border-radius: var(--radius-xs) 0 0 var(--radius-xs);
+}
+
+.table tr.me td:last-child {
+  border-radius: 0 var(--radius-xs) var(--radius-xs) 0;
 }
 
 .dot {
@@ -1049,9 +1117,10 @@ button.icon {
 
 .rename input,
 .fileinput {
-  background: var(--tint-2);
-  border: 1px solid var(--line);
-  border-radius: 0;
+  background: var(--tile);
+  border: 1px solid var(--tile-edge);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--button-shadow);
   padding: 8px 10px;
   color: var(--text);
 }
@@ -1069,11 +1138,20 @@ button.icon {
   width: 100%;
   height: 60px;
   background: var(--tint-1);
-  border-radius: 0;
+  border-radius: var(--radius-xs);
 }
 
 .sparkline {
   margin: 0;
+}
+
+/* Çizgi seçim mavisinde; gece belirteciyle açık maviye dönüyor. */
+.sparkline-line {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2px;
+  stroke-linejoin: round;
+  stroke-linecap: round;
 }
 
 .saverow-actions {
@@ -1097,7 +1175,7 @@ button.icon {
   align-items: center;
   gap: 12px;
   background: var(--tint-2);
-  border-radius: 0;
+  border-radius: var(--radius-sm);
   padding: 9px 11px;
 }
 
@@ -1135,26 +1213,39 @@ button.icon {
   pointer-events: none;
 }
 
+/* Bildirim kalın cam bir hap; tonu baştaki nokta taşıyor. */
 .toast {
-  background: var(--panel-solid);
-  border: 1px solid var(--line);
-  border-left-width: 3px;
-  border-radius: 0;
-  padding: 9px 13px;
+  background: var(--panel-thick);
+  backdrop-filter: var(--glass);
+  -webkit-backdrop-filter: var(--glass);
+  border: 1px solid var(--panel-edge);
+  border-radius: var(--radius-sm);
+  padding: 9px 14px;
   font-size: 13px;
   box-shadow: var(--shadow);
   animation: toast-in 0.18s ease-out;
   max-width: 320px;
 }
 
+.toast::before {
+  content: '';
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 8px;
+  border-radius: 50%;
+  vertical-align: 1px;
+  background: var(--tone, var(--accent));
+}
+
 .toast-good {
-  border-left-color: var(--good);
+  --tone: var(--good);
 }
 .toast-bad {
-  border-left-color: var(--bad);
+  --tone: var(--bad);
 }
 .toast-info {
-  border-left-color: var(--accent);
+  --tone: var(--accent);
 }
 
 @keyframes toast-in {
@@ -1301,7 +1392,28 @@ button.icon {
      * mobilde en pahalı efektlerden biri; yerine daha opak bir zemin.
      */
     backdrop-filter: none;
+    -webkit-backdrop-filter: none;
     background: var(--panel-solid);
+  }
+
+  /*
+   * Dar ekranda cam bulanıklığı yok, yalnızca kalın cam rengi.
+   * Bulanıklık mobil GPU'da 3B sahnenin üstünde her karede yeniden
+   * hesaplanıyor; paneller burada şehrin büyük bölümünü zaten kaplıyor.
+   * Ayrıca açılan paneller `position: fixed` — bulanık bir atanın içinde
+   * olsalardı yerleri kayardı (üst barın notu).
+   */
+  .panelbox,
+  .buildpanel,
+  .inspector,
+  .news,
+  .lensbar,
+  .event-chip,
+  .modal,
+  .toast {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    background: var(--panel-thick);
   }
 
   /*
@@ -1360,12 +1472,20 @@ button.icon {
    * yazı için 24 px yer istiyor. Satır yüksekliğini sabitleyince yükseklik
    * yeniden padding'in kontrolüne giriyor. 34 px, WCAG 2.5.8'in istediği
    * 24 px'lik dokunma hedefinin üstünde kalıyor.
+   *
+   * Tur 35'te boy da sabitlendi: Nunito ile yedek fontun taban çizgileri
+   * farklı yerde, iki satır kutusunun birleşimi `line-height: 1`'e rağmen
+   * düğmeyi 38 px'e itiyordu. Sabit boy + flex ortalama fonttan bağımsız.
    */
   .speed {
     min-width: 40px;
+    height: 34px;
     min-height: 34px;
-    padding: 10px 6px;
+    padding: 0 6px;
     line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
   }
 
   .metric {
@@ -1458,6 +1578,7 @@ button.icon {
     padding: 8px 10px;
     background: transparent;
     border: none;
+    box-shadow: none;
     text-align: left;
     font-size: 13px;
     color: var(--text);
@@ -1743,11 +1864,14 @@ button.icon {
     grid-auto-flow: column;
     grid-auto-columns: minmax(0, 1fr);
     gap: 2px;
-    padding: 4px 4px calc(4px + env(safe-area-inset-bottom, 0px));
-    background: var(--panel-solid);
-    border-top: 1px solid var(--line);
+    padding: 5px 6px calc(5px + env(safe-area-inset-bottom, 0px));
+    background: var(--panel-thick);
+    border-top: 1px solid var(--panel-edge);
+    border-radius: var(--radius) var(--radius) 0 0;
+    box-shadow: 0 -6px 22px rgba(10, 20, 52, 0.14);
   }
 
+  /* Rıhtımda sekmeler düz; yalnızca açık olan parlak düğme. */
   .topbar-actions .dock-tab {
     display: flex;
     flex-direction: column;
@@ -1759,18 +1883,18 @@ button.icon {
     padding: 4px 2px;
     border-color: transparent;
     background: transparent;
+    box-shadow: none;
   }
 
   .topbar-actions .dock-tab.active {
-    background: var(--accent-soft, var(--accent-soft));
-    border-color: var(--accent);
-    color: var(--accent);
+    background: var(--selected);
+    color: var(--on-selected);
+    box-shadow: var(--selected-shadow);
   }
 
   .dock-label {
-    font-size: 9px;
+    font-size: 9.5px;
     line-height: 1.1;
-    letter-spacing: 0.02em;
     max-width: 100%;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -1859,10 +1983,8 @@ button.icon {
   position: absolute;
   inset: 0;
   overflow-y: auto;
-  background:
-    radial-gradient(1100px 600px at 20% -10%, var(--accent-soft), transparent 65%),
-    radial-gradient(900px 500px at 90% 110%, rgba(226, 87, 76, 0.12), transparent 60%),
-    var(--bg);
+  /* Lite'ın göğü: gündüz açık mavi, gece lacivert. */
+  background: var(--sky);
   display: grid;
   place-items: center;
   padding: 32px 20px;
@@ -1878,15 +2000,17 @@ button.icon {
 .newgame-eyebrow {
   margin: 0;
   font-size: 11.5px;
+  font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.06em;
   color: var(--accent);
 }
 
 .newgame-head h1 {
   margin: 6px 0 8px;
-  font-size: clamp(30px, 5vw, 46px);
-  letter-spacing: -0.02em;
+  font-family: var(--font-display);
+  font-size: clamp(32px, 5vw, 50px);
+  font-weight: 700;
   text-wrap: balance;
 }
 
@@ -1905,22 +2029,25 @@ button.icon {
 
 .newgame-field > span {
   font-size: 11.5px;
+  font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.09em;
+  letter-spacing: 0.06em;
   color: var(--muted);
 }
 
 .newgame-field input[type='text'] {
-  background: var(--tint-2);
-  border: 1px solid var(--line);
-  border-radius: 0;
+  background: var(--tile);
+  border: 1px solid var(--tile-edge);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--button-shadow);
   padding: 13px 15px;
   font-size: 17px;
+  font-weight: 700;
   color: var(--text);
 }
 
 .newgame-field input[type='text']:focus {
-  border-color: var(--accent);
+  border-color: var(--select-ring);
   outline: none;
 }
 
@@ -1947,45 +2074,48 @@ button.icon {
   align-items: center;
   gap: 4px;
   padding: 12px 8px 10px;
-  border-radius: 0;
-  background: var(--tint-2);
 }
 
 .ceo-card.selected {
-  border-color: var(--accent);
-  background: var(--accent-soft);
+  border-color: var(--select-ring);
+  background: var(--tile-hover);
+  box-shadow: 0 0 0 2px var(--select-ring), var(--button-shadow);
 }
 
 .ceo-portrait {
-  border-radius: 0;
+  border-radius: 14px;
+  overflow: hidden;
   display: block;
 }
 
 .ceo-name {
-  font-weight: 620;
-  font-size: 13px;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 13.5px;
   margin-top: 4px;
 }
 
 .ceo-title {
   font-size: 11.5px;
   color: var(--muted);
-  font-weight: 400;
 }
 
 .ceo-detail {
   display: flex;
   gap: 16px;
   align-items: flex-start;
-  background: var(--panel-solid);
-  border: 1px solid var(--line);
+  background: var(--panel);
+  backdrop-filter: var(--glass);
+  -webkit-backdrop-filter: var(--glass);
+  border: 1px solid var(--panel-edge);
   border-radius: var(--radius);
+  box-shadow: var(--shadow);
   padding: 16px;
 }
 
 .ceo-detail h2 {
   margin: 0 0 6px;
-  font-size: 17px;
+  font-size: 19px;
 }
 
 .ceo-bio {
@@ -2003,14 +2133,16 @@ button.icon {
   align-items: baseline;
 }
 
+/* Etiket bir hap: tonu hem yazıda hem açık zeminde. */
 .tag {
   flex-shrink: 0;
   font-size: 10.5px;
+  font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.07em;
-  padding: 2px 7px;
-  border-radius: 0;
-  border: 1px solid currentColor;
+  letter-spacing: 0.04em;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: color-mix(in srgb, currentColor 14%, transparent);
 }
 
 .tag.good {
@@ -2034,7 +2166,7 @@ button.icon {
 .brand-ceo {
   display: block;
   line-height: 0;
-  border-radius: 0;
+  border-radius: 12px;
   overflow: hidden;
   flex-shrink: 0;
 }
@@ -2044,15 +2176,15 @@ button.icon {
 .plot-note {
   margin: 0;
   font-size: 13px;
-  font-weight: 560;
+  font-weight: 700;
   padding: 8px 10px;
-  border-radius: 0;
+  border-radius: var(--radius-xs);
   background: var(--tint-2);
 }
 
 .plot-note.vacant {
   color: var(--good);
-  background: rgba(89, 217, 142, 0.12);
+  background: color-mix(in srgb, var(--good) 12%, transparent);
 }
 
 @media (max-width: 700px) {
@@ -2094,14 +2226,15 @@ button.icon {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-weight: 650;
-  font-size: 15px;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 16px;
 }
 
 .chain-dot {
   width: 10px;
   height: 10px;
-  border-radius: 0;
+  border-radius: 50%;
   flex: none;
 }
 
@@ -2142,7 +2275,7 @@ button.icon {
 .chain-slot {
   height: 100%;
   border: 1px solid var(--line);
-  border-radius: 0;
+  border-radius: var(--radius-sm);
   padding: 9px 10px;
   display: flex;
   flex-direction: column;
@@ -2152,8 +2285,8 @@ button.icon {
 
 .chain-state {
   font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.09em;
+  font-weight: 800;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
   display: flex;
   align-items: center;
@@ -2171,27 +2304,28 @@ button.icon {
 }
 
 .chain-slot.state-own {
-  border-color: rgba(89, 217, 142, 0.45);
-  background: rgba(89, 217, 142, 0.07);
+  border-color: color-mix(in srgb, var(--good) 45%, transparent);
+  background: color-mix(in srgb, var(--good) 8%, transparent);
 }
 .chain-slot.state-own .chain-state {
   color: var(--good);
 }
 .chain-slot.state-bottleneck {
-  border-color: rgba(255, 209, 102, 0.5);
+  border-color: color-mix(in srgb, var(--warn) 50%, transparent);
 }
 .chain-slot.state-bottleneck .chain-state {
   color: var(--warn);
 }
 .chain-slot.state-crisis {
-  border-color: rgba(226, 87, 76, 0.55);
-  background: rgba(226, 87, 76, 0.07);
+  border-color: color-mix(in srgb, var(--bad) 55%, transparent);
+  background: color-mix(in srgb, var(--bad) 8%, transparent);
 }
 .chain-slot.state-crisis .chain-state {
   color: var(--bad);
 }
 
 .chain-name {
+  font-family: var(--font-display);
   font-size: 13.5px;
   font-weight: 600;
 }
@@ -2205,8 +2339,8 @@ button.icon {
 /* Darboğazda arz oranını gösteren ince çubuk. */
 .chain-bar {
   margin-top: 3px;
-  height: 3px;
-  border-radius: 0;
+  height: 4px;
+  border-radius: 999px;
   background: var(--tint-3);
   overflow: hidden;
 }
@@ -2302,16 +2436,15 @@ button.icon {
   display: flex;
   align-items: center;
   gap: 7px;
-  padding: 6px 10px;
+  padding: 6px 12px;
   font-size: 12.5px;
-  border: 1px solid var(--line);
-  border-radius: 0;
-  background: transparent;
+  border-radius: 999px;
 }
 
 .shelf-chip.on {
-  border-color: var(--line-strong);
-  background: var(--accent-soft);
+  border-color: var(--select-ring);
+  background: var(--tile-hover);
+  box-shadow: 0 0 0 1px var(--select-ring), var(--button-shadow);
 }
 
 .shelf-dot {
@@ -2330,7 +2463,8 @@ button.icon {
 }
 
 .shelf-share {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-family: var(--font-num);
+  font-weight: 800;
   font-size: 11.5px;
   color: var(--muted);
   font-variant-numeric: tabular-nums;
@@ -2372,8 +2506,9 @@ button.icon {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-weight: 650;
-  font-size: 15px;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 16px;
 }
 
 .rival-meta {
@@ -2390,15 +2525,15 @@ button.icon {
 .rival-channel {
   margin: 0 0 12px;
   padding: 7px 10px;
-  border-radius: 0;
+  border-radius: var(--radius-xs);
   font-size: 12.5px;
   line-height: 1.45;
   border: 1px solid var(--line);
 }
 
 .rival-channel.channel-price {
-  background: rgba(224, 180, 92, 0.09);
-  border-color: rgba(224, 180, 92, 0.32);
+  background: color-mix(in srgb, var(--warn) 9%, transparent);
+  border-color: color-mix(in srgb, var(--warn) 32%, transparent);
 }
 
 .rival-channel.channel-share {
@@ -2423,14 +2558,14 @@ button.icon {
 
 .rival-table thead th {
   color: var(--muted);
-  font-weight: 500;
+  font-weight: 700;
   font-size: 11.5px;
 }
 
 .rival-table tbody th {
   text-align: left;
   color: var(--muted);
-  font-weight: 500;
+  font-weight: 700;
 }
 
 .rival-table tbody tr:last-child th,
@@ -2458,7 +2593,7 @@ button.icon {
   gap: 5px;
   padding: 9px 10px;
   border: 1px solid var(--line);
-  border-radius: 0;
+  border-radius: var(--radius-sm);
   background: var(--tint-1);
 }
 
@@ -2483,8 +2618,8 @@ button.icon {
 .rival-bar {
   position: relative;
   display: block;
-  height: 5px;
-  border-radius: 0;
+  height: 6px;
+  border-radius: 999px;
   background: var(--tint-3);
   overflow: hidden;
 }
@@ -2493,7 +2628,7 @@ button.icon {
 .rival-bar-value {
   position: absolute;
   inset: 0 auto 0 0;
-  border-radius: 0;
+  border-radius: 999px;
 }
 
 .rival-bar-ceiling {
@@ -2501,11 +2636,11 @@ button.icon {
 }
 
 .arm-research .rival-bar-value {
-  background: #2f6f8f;
+  background: var(--arm-research);
 }
 
 .arm-marketing .rival-bar-value {
-  background: #7a5a9c;
+  background: var(--arm-marketing);
 }
 
 .rival-arm-detail {
@@ -2522,7 +2657,8 @@ button.icon {
 .rival-note {
   margin: 0 0 12px;
   padding: 8px 10px;
-  border-left: 2px solid var(--line);
+  border-radius: var(--radius-xs);
+  background: var(--tint-1);
   font-size: 12.5px;
   line-height: 1.5;
   color: var(--muted);
@@ -2532,20 +2668,20 @@ button.icon {
 
 .auction-chip {
   cursor: pointer;
-  border: 1px solid rgba(224, 180, 92, 0.4);
-  background: rgba(224, 180, 92, 0.12);
+  border: 1px solid color-mix(in srgb, var(--warn) 45%, transparent);
+  background: color-mix(in srgb, var(--warn) 14%, var(--panel));
   color: inherit;
   font: inherit;
 }
 
 .auction-chip:hover {
-  border-color: rgba(224, 180, 92, 0.7);
+  border-color: color-mix(in srgb, var(--warn) 75%, transparent);
 }
 
 /* Öndeyken çip yeşile döner — panele girmeden durum okunabilsin. */
 .auction-chip.leading {
-  border-color: rgba(59, 165, 93, 0.5);
-  background: rgba(59, 165, 93, 0.14);
+  border-color: color-mix(in srgb, var(--good) 50%, transparent);
+  background: color-mix(in srgb, var(--good) 14%, var(--panel));
 }
 
 .auction {
@@ -2563,22 +2699,23 @@ button.icon {
 }
 
 .auction-place {
-  font-weight: 650;
-  font-size: 15px;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 16px;
 }
 
 .auction-state {
   margin: 0;
   padding: 8px 10px;
-  border-radius: 0;
+  border-radius: var(--radius-xs);
   border: 1px solid var(--line);
   font-size: 12.5px;
   line-height: 1.45;
 }
 
 .auction-state.pos {
-  border-color: rgba(59, 165, 93, 0.4);
-  background: rgba(59, 165, 93, 0.08);
+  border-color: color-mix(in srgb, var(--good) 40%, transparent);
+  background: color-mix(in srgb, var(--good) 8%, transparent);
 }
 
 .auction-actions {
@@ -2636,8 +2773,9 @@ button.icon {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-weight: 650;
-  font-size: 14.5px;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 15px;
 }
 
 .bourse-price {
@@ -2645,16 +2783,16 @@ button.icon {
   align-items: baseline;
   gap: 8px;
   font-variant-numeric: tabular-nums;
-  font-weight: 650;
+  font-weight: 800;
 }
 
 /* Güven, fiyatın NEDEN o olduğunu söyleyen etiket. */
 .bourse-trust {
   font-size: 11.5px;
-  font-weight: 500;
-  padding: 1px 6px;
-  border-radius: 0;
-  border: 1px solid var(--line);
+  font-weight: 700;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--tint-2);
 }
 
 .bourse-meta {
@@ -2680,7 +2818,7 @@ button.icon {
   position: relative;
   display: block;
   height: 6px;
-  border-radius: 0;
+  border-radius: 999px;
   background: var(--tint-3);
   overflow: hidden;
 }
@@ -2689,7 +2827,7 @@ button.icon {
   position: absolute;
   inset: 0 auto 0 0;
   background: var(--good);
-  border-radius: 0;
+  border-radius: 999px;
 }
 
 .bourse-bar-mark {
@@ -2697,7 +2835,7 @@ button.icon {
   top: 0;
   bottom: 0;
   width: 2px;
-  background: rgba(255, 209, 102, 0.9);
+  background: var(--warn);
 }
 
 .bourse-stake-text {
@@ -2733,6 +2871,7 @@ button.icon {
   flex-wrap: wrap;
   padding: 6px 10px;
   border: 1px solid var(--good);
+  border-radius: var(--radius-xs);
   font-size: 12.5px;
   font-variant-numeric: tabular-nums;
 }
@@ -2775,17 +2914,19 @@ button.icon {
   color: var(--warn);
 }
 
+/* Adın altında kendi satırında: adın yanında fiyatı karttan taşırıyordu. */
 .buildcard-best {
-  margin-left: 7px;
+  display: block;
+  width: fit-content;
+  margin: 3px 0 1px;
   font-size: 10px;
-  font-weight: 600;
+  font-weight: 800;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--good);
-  background: rgba(89, 217, 142, 0.13);
-  border: 1px solid rgba(89, 217, 142, 0.35);
-  border-radius: 0;
-  padding: 1px 7px;
+  background: color-mix(in srgb, var(--good) 14%, transparent);
+  border-radius: 999px;
+  padding: 1px 8px;
   white-space: nowrap;
 }
 
@@ -2804,20 +2945,20 @@ button.icon {
 .news-portrait {
   flex: 0 0 auto;
   line-height: 0;
-  border-radius: 0;
+  border-radius: 10px;
   overflow: hidden;
-  border: 1px solid var(--line);
 }
 
-/* Genel merkez rozeti — mührün pirinç tonunda, küçük ve iddiasız. */
+/* Genel merkez rozeti — sahibinin yeşilinde, küçük ve iddiasız. */
 .hq-badge {
   display: inline-block;
   margin-left: 8px;
-  padding: 1px 6px;
-  border: 1px solid var(--brass);
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--brass) 14%, transparent);
   color: var(--brass);
   font-size: 10.5px;
-  font-weight: 600;
+  font-weight: 800;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   vertical-align: 1px;
@@ -2827,9 +2968,8 @@ button.icon {
  * Oyun sonu.
  *
  * Perde YARI saydam: şehir kaybedilirken bile görünür kalıyor — oyuncu
- * neyi kaybettiğine bakabilmeli. Kart ise bu dilin en sert hâli: dolu
- * mürekkep zemin, kâğıt yazı. Vurgunun tersine çevrilmesi, olayın
- * tersliğini söylüyor.
+ * neyi kaybettiğine bakabilmeli. Kart kalın cam; zafer ise yeşil parlak
+ * bir kart (aşağıda) — iki sonuç uzaktan da ayırt ediliyor.
  */
 .gameover {
   position: fixed;
@@ -2837,15 +2977,17 @@ button.icon {
   z-index: 60;
   display: grid;
   place-items: center;
-  background: rgba(230, 231, 228, 0.55);
+  background: var(--scrim);
   pointer-events: auto;
 }
 
 .gameover-card {
   width: min(430px, calc(100vw - 32px));
-  background: var(--accent);
-  color: var(--on-accent);
-  border: 1px solid var(--accent);
+  background: var(--panel-thick);
+  color: var(--text);
+  border: 1px solid var(--panel-edge);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
   padding: 28px 26px;
   display: flex;
   flex-direction: column;
@@ -2855,10 +2997,9 @@ button.icon {
 }
 
 .gameover-card h2 {
-  font-size: 15px;
+  font-family: var(--font-display);
+  font-size: 24px;
   font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
 }
 
 .gameover-card p {
@@ -2866,37 +3007,30 @@ button.icon {
   line-height: 1.55;
 }
 
-.gameover-card .muted {
-  color: rgba(246, 247, 245, 0.62);
-}
-
 .gameover-face {
   line-height: 0;
-  border: 1px solid rgba(246, 247, 245, 0.35);
+  border-radius: 16px;
+  overflow: hidden;
 }
 
-/* Kartın içindeki düğme ters şemada: kâğıt zemin, mürekkep yazı. */
 .gameover-card button.primary {
-  background: var(--on-accent);
-  color: var(--accent);
-  border-color: var(--on-accent);
-  font-weight: 600;
   padding: 10px 18px;
 }
 
 /* --- borsa savunma bloğu --- */
 .defense {
   border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
   padding: 10px 12px;
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
-/* Tehdit varken sol kenarda kalın uyarı çubuğu — tablodaki "sen"
-   işaretiyle aynı dil, ters anlamda. */
+/* Tehdit varken kenar kırmızı, zemin kırmızının açık tonu. */
 .defense.threatened {
-  box-shadow: inset 3px 0 0 var(--bad);
+  border-color: color-mix(in srgb, var(--bad) 55%, transparent);
+  background: color-mix(in srgb, var(--bad) 7%, transparent);
 }
 
 .defense-head {
@@ -2924,12 +3058,12 @@ button.icon {
 
 .defense-lock[data-defense-lock='locked'] {
   color: var(--good);
-  font-weight: 600;
+  font-weight: 800;
 }
 
 /* Dönem çipi: olay çipinden bir tık daha ağır — mevsim, haber değil. */
 .era-chip {
-  font-weight: 600;
+  font-weight: 800;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   font-size: 10.5px;
@@ -2942,19 +3076,19 @@ button.icon {
   gap: 8px;
 }
 
-/* "Teklif" / "Sözleşme" ön eki: seyreltilmiş etiket dili. */
+/* "Teklif" / "Sözleşme" ön eki: küçük büyük harf etiket. */
 .contract-label {
   font-size: 9.5px;
-  font-weight: 700;
-  letter-spacing: 0.12em;
+  font-weight: 800;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--muted);
 }
 
 .contract-days {
-  font-family: var(--font-mono);
-  font-size: 0.85em;
-  letter-spacing: -0.04em;
+  font-family: var(--font-num);
+  font-size: 0.9em;
+  font-variant-numeric: tabular-nums;
   color: var(--muted);
 }
 
@@ -2963,9 +3097,10 @@ button.icon {
   font-size: 11px;
 }
 
-/* Aktif sözleşme "senin" işaret diliyle: sol kenarda mürekkep çubuk. */
+/* Aktif sözleşme "senin" işaret diliyle: seçim mavisi halka. */
 .contract-chip.active {
-  box-shadow: inset 3px 0 0 var(--accent);
+  border-color: var(--select-ring);
+  box-shadow: 0 0 0 1px var(--select-ring), var(--shadow);
 }
 
 /* ---- Elle kayıt aktarımı (D1) ---- */
@@ -2980,13 +3115,13 @@ button.icon {
   min-height: 96px;
   max-height: 180px;
   resize: vertical;
-  font-family: var(--font-mono);
+  font-family: var(--font-num);
   font-size: 11px;
   line-height: 1.35;
-  color: var(--ink);
-  background: var(--surface-2, var(--surface));
+  color: var(--text);
+  background: var(--tile);
   border: 1px solid var(--line-strong);
-  border-radius: var(--radius);
+  border-radius: var(--radius-sm);
   padding: 8px;
 }
 .manual-actions {
@@ -2998,39 +3133,26 @@ button.icon {
 .difficulty-picker {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  border: 1px solid var(--line-strong);
+  gap: 6px;
 }
 
 .difficulty-option {
-  border: 0;
-  border-right: 1px solid var(--line);
-  background: transparent;
   padding: 10px 8px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-}
-
-.difficulty-option:last-child {
-  border-right: 0;
 }
 
 .difficulty-option.selected,
-.difficulty-option.selected:hover {
+.difficulty-option.selected:hover,
+.difficulty-option[aria-checked='true'] {
   /* Hover genel düğme zeminini (açık) getiriyordu; seçili seçeneğin beyaz
      yazısı üstünde fare dururken okunmaz oluyordu. */
-  background: var(--accent);
-  color: var(--on-accent);
-}
-
-.difficulty-option:focus-visible {
-  outline: 2px solid var(--brass);
-  outline-offset: -2px;
+  background: var(--selected);
+  color: var(--on-selected);
+  border-color: transparent;
+  box-shadow: var(--selected-shadow);
 }
 
 .difficulty-detail {
-  border: 1px solid var(--line);
-  border-top: 0;
-  padding: 10px 12px;
+  padding: 10px 2px 0;
   font-size: 13px;
   line-height: 1.5;
 }
@@ -3062,7 +3184,7 @@ button.icon {
 }
 
 .goal {
-  padding: 10px 2px;
+  padding: 10px 8px;
   border-bottom: 1px solid var(--line);
   display: flex;
   flex-direction: column;
@@ -3077,11 +3199,12 @@ button.icon {
 }
 
 .goal-title {
+  font-family: var(--font-display);
   font-weight: 600;
 }
 
 .goal-state {
-  font-family: var(--font-mono);
+  font-family: var(--font-num);
   font-size: 11.5px;
   font-variant-numeric: tabular-nums;
   color: var(--muted);
@@ -3098,9 +3221,8 @@ button.icon {
 }
 
 .goal-next {
-  background: var(--tint-1);
-  padding-left: 8px;
-  padding-right: 8px;
+  background: var(--accent-soft);
+  border-radius: var(--radius-xs);
 }
 
 .goal-later .goal-title {
@@ -3108,13 +3230,16 @@ button.icon {
 }
 
 .goal-bar {
-  height: 4px;
+  height: 5px;
+  border-radius: 999px;
+  overflow: hidden;
   background: var(--tint-3);
 }
 
 .goal-bar > span {
   display: block;
   height: 100%;
+  border-radius: 999px;
   background: var(--brass);
 }
 
@@ -3129,10 +3254,16 @@ button.icon {
   color: var(--muted);
 }
 
-/* --- zafer ekranı --- */
+/* --- zafer ekranı: yeşil parlak kart, beyaz yazı --- */
 .gameover.victory .gameover-card {
-  background: var(--brass);
-  border-color: var(--brass);
+  background: var(--gloss-green);
+  border-color: transparent;
+  color: #ffffff;
+  box-shadow: 0 5px 0 var(--edge-green), var(--shadow);
+}
+
+.gameover.victory .gameover-card .muted {
+  color: rgba(255, 255, 255, 0.82);
 }
 
 .gameover-actions {
@@ -3144,13 +3275,16 @@ button.icon {
 
 .gameover-card button.ghost-invert {
   background: transparent;
-  color: var(--on-accent);
-  border-color: rgba(246, 247, 245, 0.55);
+  color: inherit;
+  border-color: currentColor;
+  box-shadow: none;
   padding: 10px 18px;
 }
 
 .gameover.victory .gameover-card button.primary {
-  color: var(--brass);
+  background: #ffffff;
+  color: var(--edge-green);
+  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.18);
 }
 
 /* --- gündem şeridi --- */
@@ -3177,20 +3311,20 @@ button.icon {
 }
 
 .agenda button.event-chip:focus-visible {
-  outline: 2px solid var(--brass);
+  outline: 2px solid var(--select-ring);
   outline-offset: 1px;
 }
 
 .agenda-label {
   font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.1em;
+  font-weight: 800;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
   color: var(--muted);
 }
 
 .agenda-days {
-  font-family: var(--font-mono);
+  font-family: var(--font-num);
   font-size: 11px;
   font-variant-numeric: tabular-nums;
   color: var(--muted);
@@ -3204,13 +3338,15 @@ button.icon {
   color: var(--bad);
 }
 
+/* En acil hâl kırmızı parlak hap, beyaz yazı (gece de). */
 .raid-chip.urgency-3 {
-  background: var(--bad);
-  color: var(--on-accent);
+  background: var(--gloss-red);
+  color: #ffffff;
+  border-color: transparent;
 }
 
 .raid-chip.urgency-3 .agenda-label {
-  color: var(--on-accent);
+  color: #ffffff;
 }
 
 .union-chip.tone-bad,
@@ -3225,25 +3361,28 @@ button.icon {
 
 .union-chip.urgency-3,
 .bank-chip.urgency-3 {
-  background: var(--bad);
-  color: var(--on-accent);
+  background: var(--gloss-red);
+  color: #ffffff;
+  border-color: transparent;
 }
 
 .union-chip.urgency-3 .agenda-label,
 .union-chip.urgency-3 .agenda-days,
 .bank-chip.urgency-3 .agenda-label,
 .bank-chip.urgency-3 .agenda-days {
-  color: var(--on-accent);
+  color: #ffffff;
 }
 
 .unlock-chip {
-  border-color: rgba(15, 122, 69, 0.45);
+  border-color: color-mix(in srgb, var(--good) 45%, transparent);
 }
 
 .goal-chip-bar {
   display: inline-block;
   width: 42px;
-  height: 4px;
+  height: 5px;
+  border-radius: 999px;
+  overflow: hidden;
   background: var(--tint-3);
 }
 
@@ -3254,7 +3393,7 @@ button.icon {
 }
 
 .agenda-more {
-  font-weight: 600;
+  font-weight: 800;
 }
 
 /* Masaüstünde her şey görünür; "+N" yalnızca dar ekranda anlamlı. */
@@ -3281,24 +3420,18 @@ button.icon {
 /* --- haberden olay yerine --- */
 .news-goto {
   margin-left: auto;
-  padding: 1px 8px;
+  padding: 1px 9px;
   font-size: 10.5px;
-  font-weight: 600;
-  letter-spacing: 0.06em;
+  font-weight: 800;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
-  border-color: var(--line-strong);
-  background: transparent;
+  border-radius: 999px;
 }
 
 .news-goto:hover:not(:disabled) {
-  background: var(--accent);
-  color: var(--on-accent);
-  border-color: var(--accent);
-}
-
-.news-goto:focus-visible {
-  outline: 2px solid var(--brass);
-  outline-offset: 1px;
+  background: var(--selected);
+  color: var(--on-selected);
+  border-color: transparent;
 }
 
 /* --- belediye meclisi --- */
@@ -3310,13 +3443,15 @@ button.icon {
 
 .council h3 {
   margin: 0;
-  font-size: 13px;
+  font-family: var(--font-display);
+  font-size: 15px;
   font-weight: 700;
-  letter-spacing: 0.04em;
 }
 
 .council-motion {
   border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--tint-1);
   padding: 12px;
   display: flex;
   flex-direction: column;
@@ -3333,12 +3468,14 @@ button.icon {
 .council-bar {
   position: relative;
   height: 10px;
+  border-radius: 999px;
   background: var(--tint-3);
 }
 
 .council-bar-fill {
   position: absolute;
   inset: 0 auto 0 0;
+  border-radius: 999px;
   background: var(--brass);
 }
 
@@ -3381,9 +3518,10 @@ button.icon {
 }
 
 .council-give {
-  font-family: var(--font-mono);
+  font-family: var(--font-num);
   font-size: 11px;
-  padding: 5px 8px;
+  font-weight: 800;
+  padding: 5px 9px;
 }
 
 .council-give.for:hover:not(:disabled) {
@@ -3392,11 +3530,6 @@ button.icon {
 
 .council-give.against:hover:not(:disabled) {
   border-color: var(--bad);
-}
-
-.council-give:focus-visible {
-  outline: 2px solid var(--brass);
-  outline-offset: 1px;
 }
 
 .council-lobby,
@@ -3427,6 +3560,7 @@ button.icon {
 .council-who .swatch {
   width: 8px;
   height: 8px;
+  border-radius: 50%;
   display: inline-block;
 }
 
@@ -3452,13 +3586,15 @@ button.icon {
 
 .league h3 {
   margin: 0 0 6px;
-  font-size: 13px;
+  font-family: var(--font-display);
+  font-size: 15px;
   font-weight: 700;
-  letter-spacing: 0.04em;
 }
 
 .league-compare {
   border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--tint-1);
   padding: 10px 12px;
   display: flex;
   flex-direction: column;
@@ -3535,7 +3671,8 @@ button.icon {
 }
 
 .league-table li.mine {
-  background: var(--tint-1);
+  background: var(--accent-soft);
+  border-radius: var(--radius-xs);
 }
 
 /* Tur 31: sıralamanın altındaki doğrulanmamış satırlar — sönük, ayrı. */
@@ -3565,7 +3702,7 @@ button.icon {
 
 .league-rank {
   grid-area: rank;
-  font-family: var(--font-mono);
+  font-family: var(--font-num);
   font-size: 11px;
   color: var(--muted);
 }
@@ -3579,7 +3716,8 @@ button.icon {
 
 .league-score {
   grid-area: score;
-  font-family: var(--font-mono);
+  font-family: var(--font-num);
+  font-weight: 800;
   font-variant-numeric: tabular-nums;
 }
 
@@ -3595,8 +3733,10 @@ button.icon {
 }
 
 .league-actions button[aria-pressed='true'] {
-  border-color: var(--brass);
-  color: var(--brass);
+  background: var(--selected);
+  color: var(--on-selected);
+  border-color: transparent;
+  box-shadow: var(--selected-shadow);
 }
 
 .league-verdict {
@@ -3610,10 +3750,10 @@ button.icon {
 }
 
 .league-final {
-  font-family: var(--font-mono);
-  font-size: 26px;
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
-  letter-spacing: 0.02em;
 }
 
 .league-result .manual-text {
@@ -3623,7 +3763,7 @@ button.icon {
 
 .league-chip .pos,
 .league-chip .neg {
-  font-family: var(--font-mono);
+  font-family: var(--font-num);
   font-size: 11px;
 }
 
@@ -3652,10 +3792,9 @@ button.icon {
 .labor h3,
 .bank h3 {
   margin: 0;
-  font-size: 12.5px;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--muted);
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 700;
 }
 
 .labor p,
@@ -3677,9 +3816,10 @@ button.icon {
 }
 
 .labor-policy button[aria-pressed='true'] {
-  border-color: var(--brass);
-  color: var(--brass);
-  font-weight: 600;
+  background: var(--selected);
+  color: var(--on-selected);
+  border-color: transparent;
+  box-shadow: var(--selected-shadow);
 }
 
 .labor-pressure {
@@ -3692,12 +3832,15 @@ button.icon {
 .labor-meter {
   position: relative;
   height: 8px;
+  border-radius: 999px;
+  overflow: hidden;
   background: var(--tint-3);
 }
 
 .labor-meter span {
   position: absolute;
   inset: 0 auto 0 0;
+  border-radius: 999px;
   background: var(--brass);
 }
 
@@ -3706,7 +3849,9 @@ button.icon {
 }
 
 .labor-demand {
-  border: 1px solid var(--bad);
+  border: 1px solid color-mix(in srgb, var(--bad) 55%, transparent);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--bad) 6%, transparent);
   padding: 10px 12px;
   display: flex;
   flex-direction: column;
@@ -3740,7 +3885,7 @@ button.icon {
 }
 
 .labor-choice-title {
-  font-weight: 600;
+  font-weight: 800;
 }
 
 .labor-choices .muted {
@@ -3765,15 +3910,18 @@ button.icon {
   flex: 1;
 }
 
+/* Kredi notu bir rozet: tonunun açık zemini, Fredoka harf. */
 .bank-rating {
   display: flex;
   align-items: center;
   justify-content: center;
   min-width: 46px;
-  font-family: var(--font-mono);
-  font-size: 22px;
+  font-family: var(--font-display);
+  font-size: 24px;
   font-weight: 700;
+  border-radius: var(--radius-sm);
   border: 2px solid currentColor;
+  background: color-mix(in srgb, currentColor 12%, transparent);
 }
 
 .bank-rating.rating-A {
@@ -3794,6 +3942,7 @@ button.icon {
   flex-direction: column;
   gap: 8px;
   padding: 10px 12px;
+  border-radius: var(--radius-sm);
   background: var(--tint-1);
 }
 
@@ -3811,7 +3960,7 @@ button.icon {
 
 .bank-amount input {
   width: 100%;
-  accent-color: var(--brass);
+  accent-color: var(--accent);
 }
 
 .bank-terms {
@@ -3836,7 +3985,7 @@ button.icon {
 }
 
 .stat-value .muted {
-  font-weight: 400;
+  font-weight: 600;
   font-size: 11px;
 }
 
@@ -3854,7 +4003,7 @@ button.icon {
 /* Savunma ihracı (Tur 21): baskın altında bekleme kalktı — fark edilsin. */
 .issuance .issuance-defense {
   color: var(--warn);
-  font-weight: 600;
+  font-weight: 800;
 }
 
 /* --- yapı menüsü: dolaylı binaların projeksiyonu (Tur 21) --- */
@@ -3863,7 +4012,8 @@ button.icon {
   flex-direction: column;
   gap: 6px;
   padding: 8px 10px;
-  border: 1px dashed var(--line);
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius-xs);
   font-size: 12.5px;
   font-variant-numeric: tabular-nums;
 }
@@ -3916,11 +4066,14 @@ button.icon {
   align-items: center;
   padding: 8px 10px;
   border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--tint-1);
   font-size: 12.5px;
 }
 
 .city-row.current {
-  border-color: var(--accent);
+  border-color: var(--select-ring);
+  box-shadow: 0 0 0 1px var(--select-ring);
 }
 
 .city-row.lost {
@@ -3935,9 +4088,10 @@ button.icon {
 
 .city-tag {
   font-size: 11px;
+  font-weight: 800;
   color: var(--muted);
   text-transform: uppercase;
-  letter-spacing: 0.4px;
+  letter-spacing: 0.04em;
 }
 
 .city-row .muted {
@@ -3959,7 +4113,7 @@ button.icon {
 .city-raid[data-city-raid='2'],
 .city-raid[data-city-raid='3'] {
   color: var(--bad);
-  font-weight: 600;
+  font-weight: 800;
 }
 
 .holding-actions {
@@ -4001,8 +4155,8 @@ button.icon {
 .ladder-steps li.done .ladder-mark {
   border-color: var(--good);
   background: var(--good);
-  color: var(--bg);
-  font-weight: 700;
+  color: var(--panel-solid);
+  font-weight: 800;
 }
 
 .ladder-count {
@@ -4064,11 +4218,16 @@ button.icon {
   padding: 0;
   border: 0;
   background: none;
+  box-shadow: none;
   color: inherit;
   font: inherit;
   text-decoration: underline;
   text-underline-offset: 2px;
   cursor: pointer;
+}
+
+.brand-city:hover:not(:disabled) {
+  background: none;
 }
 
 .brand-city::after {
@@ -4084,35 +4243,29 @@ button.icon {
   line-height: 1.5;
 }
 
-/* --- dil seçici (Tur 23) --- */
-.locale-picker {
+/* --- dil ve görünüm seçicileri (Tur 23, Tur 35) --- */
+.locale-picker,
+.appearance-picker {
   display: inline-flex;
-  border: 1px solid var(--line-strong);
+  flex-wrap: wrap;
+  gap: 4px;
 }
 
-.locale-option {
+.locale-option,
+.appearance-option {
   min-height: 32px;
-  border: 0;
-  border-right: 1px solid var(--line);
-  background: transparent;
   padding: 4px 12px;
   font-size: 12.5px;
-  font-weight: 600;
-}
-
-.locale-option:last-child {
-  border-right: 0;
 }
 
 .locale-option.selected,
-.locale-option.selected:hover {
-  background: var(--accent);
-  color: var(--on-accent);
-}
-
-.locale-option:focus-visible {
-  outline: 2px solid var(--brass);
-  outline-offset: -2px;
+.locale-option.selected:hover,
+.appearance-option.selected,
+.appearance-option.selected:hover {
+  background: var(--selected);
+  color: var(--on-selected);
+  border-color: transparent;
+  box-shadow: var(--selected-shadow);
 }
 
 .newgame-locale {
@@ -4123,6 +4276,7 @@ button.icon {
 .help-locale {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 10px;
   margin-top: 12px;
 }
@@ -4134,9 +4288,8 @@ button.icon {
  *
  * Kartın arkasındaki her şey tıklanabilir kalıyor; halka dokunuşu
  * geçiriyor. Yer JavaScript'te ölçülüp `top` olarak veriliyor (Coach.tsx):
- * önce üst, hedefi örtüyorsa alt. Dilin üç kuralı burada da geçerli —
- * yuvarlaklık yok, gölge yok, vurgu mürekkebin kendisi: kartın üst
- * kenarındaki kalın siyah çizgi onu bir bildirimden ayırıyor.
+ * önce üst, hedefi örtüyorsa alt. Kart kalın cam; onu bir bildirimden
+ * ayıran şey seçim mavisi kalın kenarı ve ilerleme çubuğu.
  */
 .coach {
   position: fixed;
@@ -4144,9 +4297,10 @@ button.icon {
   transform: translateX(-50%);
   width: min(400px, calc(100vw - 20px));
   z-index: 45;
-  background: var(--panel-solid);
-  border: 1px solid var(--line-strong);
-  border-top: 3px solid var(--accent);
+  background: var(--panel-thick);
+  border: 2px solid var(--select-ring);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
   padding: 12px 14px 12px;
   display: flex;
   flex-direction: column;
@@ -4169,21 +4323,19 @@ button.icon {
 }
 
 .coach-count {
-  font-family: var(--font-mono);
+  font-family: var(--font-num);
   font-size: 11px;
+  font-weight: 800;
   font-variant-numeric: tabular-nums;
   color: var(--muted);
-  letter-spacing: -0.03em;
 }
 
 .coach-title {
   flex: 1;
   margin: 0;
   font-family: var(--font-display);
-  font-size: 13px;
+  font-size: 17px;
   font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
   text-wrap: balance;
 }
 
@@ -4201,14 +4353,17 @@ button.icon {
 }
 
 .coach-progress {
-  height: 2px;
-  background: var(--line);
+  height: 5px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--tint-3);
 }
 
 .coach-progress > span {
   display: block;
   height: 100%;
-  background: var(--accent);
+  border-radius: 999px;
+  background: var(--gloss-blue);
   transition: width 0.25s ease-out;
 }
 
@@ -4229,25 +4384,26 @@ button.icon {
   transform: translateX(-50%);
   z-index: 45;
   pointer-events: auto;
-  font-family: var(--font-mono);
   font-size: 12px;
-  border: 1px solid var(--line-strong);
-  border-top: 3px solid var(--accent);
-  background: var(--panel-solid);
+  border: 2px solid var(--select-ring);
+  border-radius: 999px;
+  background: var(--panel-thick);
+  box-shadow: var(--shadow);
   padding: 6px 14px;
 }
 
 /*
- * HEDEF HALKASI. Renk yalnızca anlam taşıdığı yerde var; burada anlam
- * "buraya bak" — mürekkep, nabız gibi atan ikinci bir çizgiyle. Hareket
- * azaltılmış tercihte genel kural nabzı durduruyor, halka kalıyor.
+ * HEDEF HALKASI. Anlamı "buraya bak": seçim mavisi, nabız gibi atan
+ * ikinci bir çizgiyle. Hareket azaltılmış tercihte genel kural nabzı
+ * durduruyor, halka kalıyor.
  */
 .coach-ring {
   position: fixed;
   z-index: 46;
   pointer-events: none;
-  border: 2px solid var(--accent);
-  outline: 2px solid var(--accent);
+  border: 2px solid var(--select-ring);
+  border-radius: var(--radius-sm);
+  outline: 2px solid var(--select-ring);
   outline-offset: 2px;
   animation: coach-pulse 1.4s ease-in-out infinite;
 }
@@ -4265,7 +4421,10 @@ button.icon {
   align-items: flex-start;
   gap: 10px;
   padding: 10px 12px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--tile-edge);
+  border-radius: var(--radius-sm);
+  background: var(--tile);
+  box-shadow: var(--button-shadow);
   cursor: pointer;
 }
 

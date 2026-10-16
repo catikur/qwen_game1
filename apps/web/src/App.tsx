@@ -37,6 +37,7 @@ import {
   NewsFeed,
   Toasts,
   TopBar,
+  setCityDaylight,
   startTutorial,
   t,
   tutorialStepOf,
@@ -433,6 +434,14 @@ function GameRoot({
     }, 500);
     return () => clearInterval(timer);
   }, [engine, soundscape]);
+  // Görünüm (Tur 35): Otomatik seçimde arayüz şehrin gecesine uyuyor.
+  useEffect(() => {
+    const timer = setInterval(() => setCityDaylight(rendererRef.current?.daylight() ?? null), 500);
+    return () => {
+      clearInterval(timer);
+      setCityDaylight(null);
+    };
+  }, []);
   const audio = useMemo(
     () => ({ muted, toggle: () => soundscape.setMuted(!soundscape.isMuted()) }),
     [muted, soundscape],

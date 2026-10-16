@@ -220,4 +220,9 @@ export const panels: Record<keyof typeof trPanels, string> = {
   'panels.help.controls':
     'Controls: drag = pan · right-click drag = rotate · wheel = zoom · WASD = pan · Space = pause',
   'panels.help.language': 'Language',
+  'panels.help.appearance': 'Appearance',
+  'panels.help.appearance.auto': 'Auto',
+  'panels.help.appearance.day': 'Day',
+  'panels.help.appearance.night': 'Night',
+  'panels.help.appearance.hint': 'Night glass when your device is in dark mode or when it is night in the city.',
 };

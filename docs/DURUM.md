@@ -4,7 +4,7 @@
 > `pnpm bench` çıktısından; iddialar `pnpm balance` ve `pnpm playtest`
 > tarafından her koşuda doğrulanıyor.
 >
-> Son güncelleme: şema **v6**, 34 tur (Tur 33 denendi ve geri alındı; Tur 34 eski görünüme canlılık ekledi).
+> Son güncelleme: şema **v6**, 35 tur (Tur 33 denendi ve geri alındı; Tur 34 eski görünüme canlılık ekledi; Tur 35 arayüzü Lite'ın "Cam & Bulut" diline taşıdı).
 
 ---
 
@@ -277,6 +277,8 @@ renkli vurgu yok (vurgu mürekkebin kendisi; renk yalnızca anlamda —
 yükseliş, düşüş, uyarı — ve 3B sahnenin kimlik renkleriyle çakışmıyor).
 Denetimler bölmeli ızgara; tipografi Archivo + Martian Mono (mono
 yalnızca alt alta gelen rakamlarda), bütçe 112 → 107 KB.
+
+> Tur 35'te yerini Lite'ın "Cam & Bulut" dili aldı; aşağıya bakın.
 
 ### Tur 13 — Derinlik: kaybedilebilir ve mevsimli oyun
 
@@ -2277,6 +2279,74 @@ iki yüzey ele alındı:
   - tek tesis üretince yalnızca o tütmeli;
   - tesis yoksa test sanayi parseline bir değirmen kuruyor.
 - Yerel tam koşu: **339/339**, 0 konsol hatası. Çizim çağrısı 900 karede 36.
+
+### Tur 35 — Arayüz: "Cam & Bulut"
+
+Kullanıcının sırası: önce arayüz, sonra şehir grafiği, en son oynanış.
+Arayüz Lite ile aynı aileye geçti; iki oyun aynı yayıncının iki oyunu
+gibi görünsün diye.
+
+**Seçim.**
+- Gerçek oyunun üstünde üç seçenek denendi (`?ui=` önizlemesi, sonra
+  kaldırıldı):
+  1. Cam & Bulut — Lite'ın birebir aynısı;
+  2. sade — küçük köşe, beyaz hap seçim;
+  3. Gece camı.
+- Kareler: kurulum, oyun içi, gece, açık panel, telefon.
+- Kullanıcı "gündüz 1 veya 2, gece 3" dedi. Gündüz 1 alındı: 1 ile 3 aynı
+  yapıda, geceye geçerken yalnızca renkler değişiyor. 2'nin parçalı
+  şeritleri gece geçişinde yapıyı da değiştirirdi.
+
+**Dil.** Yoğunluk korundu: aynı ızgara, aynı ölçüler, aynı bilgi. Değişen
+yüzey:
+- **Cam.** Paneller yarı saydam ve arkalarını bulanıklaştırıyor. Modal,
+  bildirim ve rehber kartı "kalın cam".
+- **Yuvarlak.** Kart 22 px, düğme 14 px, hücre 8 px; rozet, etiket ve
+  çubuklar hap.
+- **Parlak seçim.** Seçili sekme, hız, mercek ve seçenek mavi parlak
+  düğme; ana eylem de öyle. Düğmeler alt kenarına oturuyor, basınca iniyor.
+- Renk yine anlam taşıyor: mavi seçim, yeşil yükseliş, kırmızı düşüş.
+  "Senin satırın" seçim mavisinin açık tonu.
+- Kenar çubukları kalktı (haber, bildirim, savunma, sözleşme): yuvarlak
+  kartın kenarına çubuk köşeyi kırıyor. Ton yerine başlık etiketinde,
+  noktada ya da kenarlıkta.
+- **Yazı tipleri.**
+  - Fredoka başlıklar, isimler ve üst barın rakamları için.
+  - Nunito gövde için; alt alta gelen rakamlar Nunito'nun eş genişlikli
+    rakamlarıyla hizalanıyor.
+  - İkisi de Lite'ın dosyalarından, Latin + Türkçe alt küme, CSS'e gömülü
+    (`tools/make-cam-fonts.py`): 71 KB woff2.
+  - Archivo + Martian Mono kalktı; CSS paketi 297 → 150 KB.
+- Tanımsız belirteç kullanan elle aktarım kutusu (`--ink`, `--surface`)
+  düzeltildi.
+
+**Gece.**
+- Aynı kurallar, Lite'ın gece belirteçleri (`:root[data-appearance='night']`).
+- `appearance.ts` karar veriyor. **Otomatik** (varsayılan) iki şeye bakıyor:
+  - cihaz koyu moddaysa hep gece;
+  - değilse şehrin gün döngüsü.
+- Şehir gecesinin iki eşiği var: gün ışığı 0,15'in altına inince gece,
+  0,35'in üstüne çıkınca gündüz. Alacakaranlıkta yanıp sönmüyor.
+- Geçiş 0,9 sn sürüyor ve yalnızca geçiş anında açık; hareket azaltılmışsa
+  yok.
+- Yardım panelinde Otomatik / Gündüz / Gece seçici var; seçim dil gibi
+  tarayıcıda hatırlanıyor. `?appearance=night` bir kez geçersiz kılıyor.
+
+**Dar ekran.**
+- Bulanıklık kalkıyor, yalnızca kalın cam rengi kalıyor. İki sebebi var:
+  - mobil GPU'da 3B sahnenin üstünde her kare yeniden hesaplanıyor;
+  - `backdrop-filter`, sabit konumlu alt rıhtıma kapsayıcı blok oluyor.
+- Önizlemede rıhtım bu yüzden üst bara yapıştı; mevcut test bunu
+  yakalamıyordu, çünkü düğmeler yine "ekranda"ydı. Yeni kontrol rıhtımın
+  alt kenarını ölçüyor.
+
+**Doğrulama.**
+- Oynanış testine "Görünüm" bölümü eklendi:
+  - açık modlu cihazda gündüz, koyu modlu cihazda gece;
+  - şehirde gece olunca arayüz geceye, sabah gündüze dönüyor;
+  - Gündüz sabitlenince şehir gecesi arayüzü değiştirmiyor;
+  - Gece seçimi yenilemeden sonra hatırlanıyor.
+- Telefonlarda "rıhtım ekranın altında" kontrolü eklendi.
 
 ---
 
