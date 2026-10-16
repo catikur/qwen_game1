@@ -125,7 +125,6 @@ export class GameStore {
   /** Uygulama arka planda (sekme gizli ya da Android'de arka plan); iki olay aynı ayrılışı iki kez saymasın. */
   private paused = false;
   private lastSample = -Infinity;
-  private sinceSave = 0;
   private syncing = false;
   private registering = false;
   private lastSync = 0;
@@ -171,6 +170,9 @@ export class GameStore {
       this.lastSample = this.game.state.clock;
       return;
     }
+    // Önce kilit, sonra kayıt: eski örnek bundan sonra kayda yazamıyor, daha önce yazdığı
+    // her şey (her hamle ve her saniye yazılıyor) burada okunuyor.
+    this.claim();
     const saved = GameStore.load();
     if (saved) {
       this.game = new SyncedGame(saved.state);
@@ -223,12 +225,7 @@ export class GameStore {
   // ------------------------------------------------------------ zaman
 
   start(): void {
-    if (this.isScenario || this.timer || this.superseded) return;
-    try {
-      localStorage.setItem(OWNER_KEY, this.owner);
-    } catch {
-      // Depo yok (özel pencere): kilit de yok, tek örnek varsayılıyor.
-    }
+    if (this.isScenario || this.timer || !this.owns()) return;
     this.lastTick = performance.now();
     this.timer = setInterval(() => this.tick(), 100);
     document.addEventListener('visibilitychange', this.visibility);
@@ -247,6 +244,15 @@ export class GameStore {
     document.removeEventListener('visibilitychange', this.visibility);
     removeEventListener('pagehide', this.leave);
     removeEventListener('storage', this.storageChanged);
+  }
+
+  /** Kaydı bu örneğe al (açılışta, kayıt okunmadan önce). */
+  private claim(): void {
+    try {
+      localStorage.setItem(OWNER_KEY, this.owner);
+    } catch {
+      // Depo yok (özel pencere): kilit de yok, tek örnek varsayılıyor.
+    }
   }
 
   private storageChanged = (event: StorageEvent): void => {
@@ -296,8 +302,8 @@ export class GameStore {
       this.game.tick(steps);
       if (!hadEvent && this.state.event !== null) this.cue('event');
       this.samplePrice();
-      this.sinceSave += steps;
-      if (this.sinceSave >= 5) this.save();
+      // Her saniye kaydediliyor: başka sekme devralınca eski sekmenin oynadığı kaybolmasın.
+      this.save();
       if (Date.now() - this.lastSync >= SYNC_EVERY) void this.sync();
     }
     this.changed();
@@ -376,7 +382,6 @@ export class GameStore {
   }
 
   save(): void {
-    this.sinceSave = 0;
     if (this.isScenario || !this.owns()) return;
     // Belirsiz gönderim yalnızca kayıtları hâlâ donuksa (oyun bu arada değişmediyse) saklanıyor.
     const inflight = this.inflight && this.game.journal.frozen === this.inflight.count ? this.inflight : null;
@@ -584,9 +589,16 @@ export class GameStore {
     this.changed();
   }
 
+  /** Hamle: günlüğe yaz ve hemen kaydet (başka sekme devralırsa hamle kayıtta olsun). */
+  private act(op: SyncOp): ReturnType<SyncedGame['act']> {
+    const result = this.game.act(op);
+    if (result.ok) this.save();
+    return result;
+  }
+
   buy(chain: ChainId, stage: Stage): void {
     const before = this.state.chains[chain].levels[stage];
-    if (this.game.act(['b', chain, stage, this.count(chain, stage)]).ok) {
+    if (this.act(['b', chain, stage, this.count(chain, stage)]).ok) {
       const after = this.state.chains[chain].levels[stage];
       if (milestonesReached(after) > milestonesReached(before)) this.triumph('milestone');
       else this.purchase('buy');
@@ -597,18 +609,18 @@ export class GameStore {
   }
 
   buyManager(): void {
-    if (this.game.act(['m']).ok) this.purchase('buy');
+    if (this.act(['m']).ok) this.purchase('buy');
     else this.refuse();
     this.changed();
   }
 
   campaign(): void {
-    if (this.game.act(['c']).ok) this.purchase('milestone');
+    if (this.act(['c']).ok) this.purchase('milestone');
     this.changed();
   }
 
   chooseCouncil(choice: 0 | 1): void {
-    if (this.game.act(['p', choice]).ok) this.triumph('reward');
+    if (this.act(['p', choice]).ok) this.triumph('reward');
     this.changed();
   }
 
@@ -616,7 +628,7 @@ export class GameStore {
     const deal = this.state.deal;
     if (!deal) return;
     const reward = dealReward(this.state);
-    if (!this.game.act(['d']).ok) return;
+    if (!this.act(['d']).ok) return;
     this.catches += 1;
     this.lastCatch = { id: this.catches, deal, reward, at: performance.now() };
     this.triumph(deal.kind === 'investor' ? 'fanfare' : 'reward');
@@ -624,13 +636,13 @@ export class GameStore {
   }
 
   claimGoal(): void {
-    if (this.game.act(['g']).ok) this.triumph('reward');
+    if (this.act(['g']).ok) this.triumph('reward');
     else this.refuse();
     this.changed();
   }
 
   goPublic(): void {
-    if (!this.game.act(['i']).ok) return;
+    if (!this.act(['i']).ok) return;
     this.priceHistory = [sharePrice(this.state)];
     this.lastSample = this.state.clock;
     this.triumph('fanfare');
@@ -639,7 +651,7 @@ export class GameStore {
   }
 
   sellCity(): void {
-    if (!this.game.act(['s']).ok) return;
+    if (!this.act(['s']).ok) return;
     this.priceHistory = [];
     this.lastSample = this.state.clock;
     this.triumph('fanfare');
@@ -649,7 +661,7 @@ export class GameStore {
   }
 
   resetGame(): void {
-    this.game.act(['r']);
+    this.act(['r']);
     this.priceHistory = [];
     this.lastSample = this.state.clock;
     this.offlineReport = null;

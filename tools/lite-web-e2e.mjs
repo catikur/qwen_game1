@@ -188,6 +188,9 @@ async function e2e(browser) {
   check(secondSave.state.chains.bakery.levels.join() === moved.state.chains.bakery.levels.join(), 'ikinci tarayıcıda aynı oyun');
 
   // Hile: kasayı elle şişir, pahalı alım yap, eşitle → sunucunun kasasına dönüyor.
+  // Önce sekme arka planda ve eşitlemiş (oyun her saniye kaydediyor; değiştirilen kaydın üstüne yazmasın).
+  await hide(second);
+  await wait(async () => (await local(second))?.ops.length === 0, 'ikinci tarayıcı eşitledi');
   await second.evaluate(() => {
     const file = JSON.parse(localStorage.getItem('lite.save'));
     file.state.cash = 1e30;
@@ -202,6 +205,12 @@ async function e2e(browser) {
   const after = await server('v1/save', account);
   check(after.state.chains.bakery.levels[2] < 60, 'sunucu sahte alımı uygulamadı');
   // Aynı tarayıcıda ikinci sekme: eskisi duruyor, kayda yazmıyor; "burada devam et" geri alıyor.
+  // Oynayan sekme her saniye kaydediyor: devralan sekme en çok bir saniyelik eski kayıt okuyor.
+  const savedAt = (await local(page)).lastSeen;
+  await wait(async () => (await local(page)).lastSeen > savedAt, 'oynayan sekme kaydediyor');
+  await page.waitForTimeout(3_500);
+  const age = await page.evaluate(() => Date.now() - JSON.parse(localStorage.getItem('lite.save')).lastSeen);
+  check(age < 2_000, `devralınacak kayıt taze (${age} ms)`);
   const tab = await context.newPage();
   tab.on('pageerror', (error) => errors.push(String(error)));
   await tab.goto(WEB);

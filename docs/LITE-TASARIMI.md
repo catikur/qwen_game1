@@ -734,6 +734,9 @@ tek tablo. Bir cihazda başlayan oyun öbüründe sürüyor.
   (`lite.owner`); eskisi duruyor, kayda ve sunucuya yazmıyor ("Burada devam
   et" sayfayı yeniden açıp geri alıyor). Android'de etkinlik ilk çizimden önce
   yeniden kurulunca arkada kalan WebView de böyle duruyor (emülatörde görüldü).
+  Oynayan örnek her hamlede ve her saniye kaydediyor. Yeni örnek önce kilidi
+  alıp sonra kaydı okuyor, böylece devralırken en çok bir saniyelik zaman
+  kayboluyor; hamle kaybolmuyor.
 - **Testler:** `packages/lite-model/test/sync.test.ts`,
   `packages/lite-league/test/sync.test.ts`, tarayıcıda uçtan uca
   `tools/lite-web-e2e.mjs` (CI'de "Lite web · uçtan uca ve kareler").
