@@ -72,6 +72,8 @@ const SAVE_KEY = 'lite.save';
  * duruyor; aynı kayıt iki yerde birden oynanıp birbirinin üstüne yazılmıyor.
  */
 const OWNER_KEY = 'lite.owner';
+/** Devralan örnek eski örneğin geç kalan son yazımını en geç bu kadar sonra alıyor (ms). */
+const LATE_WRITE = 10_000;
 /** İki eşitleme arası (ms). */
 const SYNC_EVERY = 30_000;
 /** Bir dakikadan kısa ayrılışlar "yokken" sayılmıyor. */
@@ -142,6 +144,9 @@ export class GameStore {
    * uygulanıp örneğin bir alım iki kez yapılabilirdi).
    */
   private inflight: { batch: string; count: number } | null = null;
+  private readonly startedAt = Date.now();
+  /** Açılıştan bu yana hamle yapıldı ya da sunucuya yazıldı: eski örneğin geç yazımı artık alınmıyor. */
+  private diverged = false;
 
   // Android CI karesi: kabukta adres çubuğu yok; senaryo derleme anında verilebiliyor (VITE_SCENARIO_QUERY).
   constructor(search: string = typeof location !== 'undefined' ? location.search || (import.meta.env.VITE_SCENARIO_QUERY ?? '') : '') {
@@ -175,15 +180,7 @@ export class GameStore {
     this.claim();
     const saved = GameStore.load();
     if (saved) {
-      this.game = new SyncedGame(saved.state);
-      for (const op of saved.ops) this.game.journal.push(op);
-      if (saved.inflight && saved.inflight.count > 0 && saved.inflight.count <= saved.ops.length) {
-        this.game.journal.freeze(saved.inflight.count);
-        this.inflight = saved.inflight;
-      }
-      this.base = saved.base;
-      this.priceHistory = saved.prices;
-      this.lastSample = this.game.state.clock;
+      this.game = this.restore(saved);
       this.away((Date.now() - saved.lastSeen) / 1000);
     } else {
       this.game = new SyncedGame(buildScenario('start').state);
@@ -257,7 +254,25 @@ export class GameStore {
 
   private storageChanged = (event: StorageEvent): void => {
     if (event.key === OWNER_KEY && event.newValue !== null && event.newValue !== this.owner) this.standDown();
+    else if (event.key === SAVE_KEY && event.newValue !== null) this.lateWrite(event.newValue);
   };
+
+  /**
+   * Eski örnek kilide bakıp yazana kadar devralındıysa onun son yazımı buradaki
+   * okumadan sonra geliyor. Bu örnek henüz hamle yapmadıysa ve sunucuya bir şey
+   * göndermediyse oyun o kayıttan sürüyor (aradaki birkaç adım yalnızca zaman).
+   * Eski örnek bundan sonra yazmıyor: her yazımdan önce kilide bakıyor.
+   */
+  private lateWrite(raw: string): void {
+    if (this.superseded || this.diverged || this.isScenario || Date.now() - this.startedAt > LATE_WRITE) return;
+    const saved = GameStore.parse(raw);
+    if (!saved) return;
+    // Yolda olan yenileme eski kaydın: yanıtı bu oyunun üstüne yazılmasın.
+    this.epoch += 1;
+    this.game = this.restore(saved);
+    this.save();
+    this.changed();
+  }
 
   /** Kayıt hâlâ bu örnekte mi (olay kaçarsa yazmadan önce de bakılıyor); değilse dur. */
   private owns(): boolean {
@@ -372,13 +387,35 @@ export class GameStore {
 
   private static load(): SaveFile | null {
     try {
-      const raw = localStorage.getItem(SAVE_KEY);
-      if (!raw) return null;
+      return GameStore.parse(localStorage.getItem(SAVE_KEY));
+    } catch {
+      return null;
+    }
+  }
+
+  private static parse(raw: string | null): SaveFile | null {
+    if (!raw) return null;
+    try {
       const file = JSON.parse(raw) as SaveFile;
       return file.version === 1 && file.state ? { ...file, ops: file.ops ?? [], prices: file.prices ?? [] } : null;
     } catch {
       return null;
     }
+  }
+
+  /** Kayıttaki oyun: bekleyen kayıtlar, yanıtı belirsiz gönderim, sunucu sürümü ve fiyatlar. */
+  private restore(saved: SaveFile): SyncedGame {
+    const game = new SyncedGame(saved.state);
+    for (const op of saved.ops) game.journal.push(op);
+    this.inflight = null;
+    if (saved.inflight && saved.inflight.count > 0 && saved.inflight.count <= saved.ops.length) {
+      game.journal.freeze(saved.inflight.count);
+      this.inflight = saved.inflight;
+    }
+    this.base = saved.base;
+    this.priceHistory = saved.prices;
+    this.lastSample = game.state.clock;
+    return game;
   }
 
   save(): void {
@@ -408,6 +445,7 @@ export class GameStore {
       }
       if (this.registering || (!force && this.state.clock < REGISTER_AFTER)) return;
       this.registering = true;
+      this.diverged = true;
       const epoch = this.epoch;
       const registration = this.league.register();
       this.registration = registration.catch(() => undefined);
@@ -463,6 +501,7 @@ export class GameStore {
     if (this.syncing || this.isScenario || !this.league.account || this.base === null) return;
     if (this.game.journal.pending === 0 || !this.owns()) return;
     this.syncing = true;
+    this.diverged = true;
     this.lastSync = Date.now();
     const retry = this.inflight !== null && this.game.journal.frozen === this.inflight.count ? this.inflight : null;
     const ops = retry ? this.game.journal.resend() : this.game.journal.take();
@@ -592,7 +631,10 @@ export class GameStore {
   /** Hamle: günlüğe yaz ve hemen kaydet (başka sekme devralırsa hamle kayıtta olsun). */
   private act(op: SyncOp): ReturnType<SyncedGame['act']> {
     const result = this.game.act(op);
-    if (result.ok) this.save();
+    if (result.ok) {
+      this.diverged = true;
+      this.save();
+    }
     return result;
   }
 

@@ -311,10 +311,20 @@ async function claimLink(request: Request, db: Db, now: number): Promise<Respons
   const player = await db.first<Player>('SELECT * FROM players WHERE id = ?', link.player_id);
   if (!player) throw new HttpError(404, 'code');
   const token = randomToken();
-  await db.run('INSERT INTO tokens (token_hash, player_id, platform, created_at) VALUES (?, ?, ?, ?)', await sha256(token), player.id, platform, now);
+  // Hesap bu arada silindiyse token yazılmıyor (`deleteAccount` önce oyuncu satırını siliyor).
+  const added = await db.run(
+    'INSERT INTO tokens (token_hash, player_id, platform, created_at) SELECT ?, ?, ?, ? WHERE EXISTS (SELECT 1 FROM players WHERE id = ?)',
+    await sha256(token),
+    player.id,
+    platform,
+    now,
+    player.id,
+  );
   // Hafta ve puan da: iOS haftalık sayacını alınan hesabın puanından sürdürsün (yoksa sonraki gönderim "azalma").
-  const save = await saveWithScore(db, player.id, now);
-  return json({ id: player.id, token, name: player.name, division: player.division, ...(save ? { save } : {}) }, 201);
+  const save = added === 0 ? null : await saveWithScore(db, player.id, now);
+  // Taşınabilen hesabın kaydı hep sunucuda (`createLink`); yoksa hesap silinmekte.
+  if (!save) throw new HttpError(404, 'code');
+  return json({ id: player.id, token, name: player.name, division: player.division, save }, 201);
 }
 
 /** Holding yıldızı tablosu: bütün platformlar, dünya ilk 50 ve özel lig arkadaşları. */

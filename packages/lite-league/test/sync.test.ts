@@ -491,6 +491,7 @@ test('hesap silinirken bağlı cihazdan gelen katılım ve eşitleme lig ya da g
   const members = await db.first<{ n: number }>('SELECT COUNT(*) AS n FROM league_members WHERE code = ?', league.body.code);
   assert.equal(members!.n, 1);
 
+
   // Silmeyle aynı anda yazılıp kalmış artıklar (örneğin yanıtı yolda olan bir eşitlemenin profili):
   // bir sonraki haftanın ilk isteğinde temizleniyor; boşalan lig de gidiyor, dolu lig kalıyor.
   const ghost = '00000000-0000-4000-8000-000000000000';
@@ -509,6 +510,31 @@ test('hesap silinirken bağlı cihazdan gelen katılım ve eşitleme lig ya da g
   assert.equal(await db.first("SELECT 1 AS x FROM leagues WHERE code = 'HAYALT'"), null);
   assert.ok(await db.first('SELECT 1 AS x FROM leagues WHERE code = ?', league.body.code));
   assert.ok(await db.first('SELECT 1 AS x FROM saves WHERE player_id = ?', owner.account.id));
+});
+
+test('taşıma kodu silmeyle aynı anda: ya hesap kaydıyla geliyor ya kod geçersiz; silinen hesaba token kalmıyor', async () => {
+  // Token yazımı yavaş: oyuncu okunduktan sonra silme araya girebilsin.
+  const base = laggy(memoryDb());
+  const db: Db = {
+    ...base,
+    run: async (sql, ...args) => (/^INSERT INTO tokens/.test(sql) && (await new Promise((resolve) => setTimeout(resolve, 40))), base.run(sql, ...args)),
+  };
+  for (let round = 0; round < 8; round++) {
+    const web = await webPlayer(db, THURSDAY, `Taşınan ${round}`);
+    play(web.game, 3);
+    assert.equal((await web.push(THURSDAY + 4_000)).status, 200);
+    const link = await call(db, THURSDAY + 5_000, 'POST', '/v1/link', {}, web.account);
+    const later = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+    const [gone, claim] = await Promise.all([
+      call(db, THURSDAY + 6_000, 'DELETE', '/v1/players/me', undefined, web.account),
+      later(round).then(() => call(db, THURSDAY + 6_000, 'POST', '/v1/link/claim', { code: link.body.code, platform: 'android' })),
+    ]);
+    assert.equal(gone.status, 200);
+    assert.ok([201, 404].includes(claim.status), `${round}: ${claim.status}`);
+    if (claim.status === 201) assert.ok(claim.body.save, `${round}: kayıtsız hesap`);
+    const tokens = await db.first<{ n: number }>('SELECT COUNT(*) AS n FROM tokens WHERE player_id = ?', web.account.id);
+    assert.equal(tokens?.n, 0, `${round}: silinen hesaba token kaldı`);
+  }
 });
 
 /** Swift'in kodladığı biçim: zincirler dizi, boş isteğe bağlı alanlar yok. */

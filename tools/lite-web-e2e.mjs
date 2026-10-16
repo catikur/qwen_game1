@@ -214,7 +214,18 @@ async function e2e(browser) {
   const tab = await context.newPage();
   tab.on('pageerror', (error) => errors.push(String(error)));
   await tab.goto(WEB);
+  // Eski sekmenin geç kalan son yazımı (kilide bakmasıyla yazması arasında devralındı):
+  // yeni sekme henüz hamle yapmadıysa ve göndermediyse o kayıttan sürüyor.
+  const lateSeen = await page.evaluate(() => {
+    const file = JSON.parse(localStorage.getItem('lite.save'));
+    file.prices = [...file.prices, 4242];
+    file.lastSeen = Date.now();
+    localStorage.setItem('lite.save', JSON.stringify(file));
+    return file.lastSeen;
+  });
   await page.locator('[data-testid="superseded"]').waitFor({ timeout: 10_000 });
+  await wait(async () => (await local(tab)).lastSeen > lateSeen, 'yeni sekme kaydediyor');
+  check((await local(tab)).prices.includes(4242), 'yeni sekme eski sekmenin geç yazımından sürüyor');
   const before = (await local(page)).lastSeen;
   await page.waitForTimeout(6_000);
   check((await local(page)).lastSeen > before, 'yeni sekme oynuyor ve kaydediyor');
