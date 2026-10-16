@@ -1,5 +1,6 @@
 import { pushNews } from './news';
 import { runMarketTick } from './systems/market';
+import { runCrisisTick } from './systems/economy';
 import { runEntrantTick } from './systems/entrants';
 import { runCouncilTick } from './systems/council';
 import { runLaborTick } from './systems/labor';
@@ -35,6 +36,8 @@ export function simulateCityDay(state: GameState): void {
 
   runEventTick(state);
   runEraTick(state);
+  // Kriz takvimi (Tur 37a): dönemin üstüne binen sert ve uzun şok.
+  runCrisisTick(state);
   // İmar takvimi sözleşmeden ÖNCE: açılış günü gelen bir inşaat
   // teklifi yeni bölgeyi hedefleyebilmeli.
   runDistrictUnlockTick(state);

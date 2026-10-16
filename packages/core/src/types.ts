@@ -160,9 +160,13 @@ export interface BuildingInstance {
 export interface CompanyLedger {
   revenue: number;
   cogs: number;
+  /** Bakım — yönetim yükü dahil (Tur 37a). */
   upkeep: number;
+  /** Ücret — yönetim yükü dahil (Tur 37a). */
   wages: number;
   interest: number;
+  /** Servet vergisi (Tur 37a). Eski kayıtta alan yok: sıfır demek. */
+  tax?: number;
   profit: number;
 }
 
@@ -461,6 +465,28 @@ export interface FeatureFlags {
    * deneylerde rakip ihracı kollar arasında yapısal ayrışma yaratır.
    */
   issuance?: boolean;
+  /**
+   * Geç oyun giderleri: yönetim yükü ve servet vergisi (Tur 37a). Aynı
+   * sözleşme: yokluğu AÇIK. Laboratuvar koşuları (500 M ₺ kasa, tek
+   * değişken) kapatıyor: vergi kasanın büyüklüğünü ölçerdi, stratejiyi değil.
+   */
+  lateCosts?: boolean;
+  /**
+   * Krizler: durgunluk ve faiz şoku (Tur 37a). Aynı sözleşme: yokluğu AÇIK;
+   * `randomEvents` kapalıyken de çalışmıyor (laboratuvar ikisini birlikte
+   * kapatıyor).
+   */
+  crises?: boolean;
+}
+
+/** Kriz (Tur 37a): önce uyarı, sonra kriz. */
+export interface CrisisState {
+  defId: string;
+  phase: 'warning' | 'active';
+  /** Krizin başladığı (başlayacağı) gün. */
+  activeDay: number;
+  /** Krizin bittiği gün. */
+  endDay: number;
 }
 
 /**
@@ -543,6 +569,10 @@ export interface GameState {
    * ilk tick doğal olarak başlatır. Şema sürümü değişmiyor.
    */
   era?: { defId: string; startedDay: number; remainingDays: number };
+  /** Süren ya da duyurulmuş kriz (Tur 37a). */
+  crisis?: CrisisState;
+  /** Bir sonraki kriz uyarısının günü; yoksa ilk krizin takvimi kurulur. */
+  nextCrisisDay?: number;
   /**
    * Masadaki sözleşme teklifi ve aktif sözleşme. Üçü de seçime bağlı:
    * eski kayıtlarda yoklukları "teklif yok" demek, şema sürümü sabit.

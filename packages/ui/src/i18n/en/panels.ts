@@ -152,6 +152,10 @@ export const panels: Record<keyof typeof trPanels, string> = {
   'panels.company.stat.debt': 'Debt',
   'panels.company.stat.netWorth': 'Company value',
   'panels.company.stat.dailyProfit': 'Daily profit',
+  'panels.company.stat.overhead': 'Overhead',
+  'panels.company.stat.overheadTitle': 'Past 30 buildings, each building adds 0.4% to upkeep and wages (up to 60%). A big company is expensive to run.',
+  'panels.company.stat.wealthTax': 'Wealth tax/day',
+  'panels.company.stat.wealthTaxTitle': 'Progressive, yearly: 1% above ₺25M, 2% above ₺100M, 3% above ₺300M. Idle cash melts away.',
   'panels.company.breakdownTitle': 'Sector breakdown',
   'panels.company.noBusinesses': 'You have no businesses yet.',
   'panels.company.col.sector': 'Sector',
@@ -217,6 +221,9 @@ export const panels: Record<keyof typeof trPanels, string> = {
   'panels.help.step.holding.title': 'Victory is a turning point: the holding.',
   'panels.help.step.holding.body':
     " Once you reach victory in a city, you can expand to a new one: your capital and half of your brand awareness come with you, and the rivals are different. One city is played at a time; the others keep living. From the Cities panel you give each remote city's local manager orders: how much of the profit flows into the holding treasury (take it all and the city runs out of cash and gets cheap), and whether to buy back shares against raids. You can send money from the treasury to any city. The goal is victory in three cities; victory in each city is measured by the value you created there.",
+  'panels.help.step.late.title': 'Growing gets expensive, and crises come.',
+  'panels.help.step.late.body':
+    ' Past 30 buildings, each building adds a little to upkeep and wages (overhead); wealth above ₺25M is taxed progressively, so idle cash melts away. Now and then a crisis hits, announced a month ahead: in a recession demand drops but land and construction get cheaper; in a rate shock the overdraft and new loans get expensive, while term loans keep their fixed rate.',
   'panels.help.controls':
     'Controls: drag = pan · right-click drag = rotate · wheel = zoom · WASD = pan · Space = pause',
   'panels.help.language': 'Language',

@@ -1,27 +1,28 @@
 import { afterEach, describe, test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  ALL_EVENTS,
+  baseText,
   BUILDINGS,
   CATEGORIES,
   CEOS,
   CITY_SIZES,
   CREDIT_RATINGS,
+  CRISES,
   DIFFICULTIES,
   DISTRICT_ARCHETYPES,
   ERAS,
-  ALL_EVENTS,
+  formatPercent,
   GOALS,
   GOODS,
+  hasMessage,
   MOTION_TEXT,
   NPC_PROFILES,
-  STRUCTURES,
-  WAGE_POLICIES,
-  baseText,
-  formatPercent,
-  hasMessage,
   registerMessages,
   setLocale,
+  STRUCTURES,
   translate,
+  WAGE_POLICIES,
 } from '@capital/content';
 import { contentEn } from '../../content/src/i18n/en';
 import { tr as uiTr } from '../../ui/src/i18n/tr';
@@ -155,6 +156,7 @@ describe('İngilizce sözlükler', () => {
       ['rating', CREDIT_RATINGS, ['blurb']],
       ['ceo', byId(CEOS), ['title', 'perk', 'drawback', 'bio']],
       ['rival', byId(NPC_PROFILES), ['description']],
+      ['crisis', byId(CRISES), ['title', 'warningTitle', 'warningBody', 'body', 'endTitle', 'endBody']],
     ];
     const expected = new Set<string>();
     for (const [kind, record, fields] of lists) {

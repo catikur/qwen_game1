@@ -5,6 +5,7 @@ import { formatMoney } from '../selectors';
 import { tc } from '../i18n';
 import { LAND_SELL_RATIO } from './city';
 import { companyValue, sellShares, sharePrice } from './equity';
+import { macroRateDelta } from './economy';
 import type { CommandResult, CompanyState, CreditState, GameState, LoanState } from '../types';
 
 /**
@@ -54,8 +55,9 @@ function ensureCredit(company: CompanyState): CreditState {
 
 /** Kredili hesabın yıllık faizi. */
 export function overdraftRate(state: GameState, company: CompanyState): number {
-  if (!creditEnabled(state)) return CREDIT.baseRate;
-  return CREDIT.baseRate + CREDIT.overdraftPremium + CREDIT_RATINGS[ratingOf(company)].spread;
+  if (!creditEnabled(state)) return CREDIT.baseRate + macroRateDelta(state);
+  // Kredili hesap DEĞİŞKEN faizli: kriz taban faizi oynatınca hemen yansıyor (Tur 37a).
+  return CREDIT.baseRate + macroRateDelta(state) + CREDIT.overdraftPremium + CREDIT_RATINGS[ratingOf(company)].spread;
 }
 
 /** Yeni bir kredinin yıllık faizi — not, tür ve vadeden. */
@@ -131,7 +133,8 @@ export interface LoanQuote {
 export function loanQuote(state: GameState, companyId: string, kind: LoanKind, termDays: number): LoanQuote {
   const company = state.companies[companyId];
   const rating = company ? ratingOf(company) : 'D';
-  const rate = loanRate(rating, kind, termDays);
+  // Yeni kredi o günün taban faiziyle; vadeli kredi faizi sabit kalıyor (Tur 37a).
+  const rate = loanRate(rating, kind, termDays) + macroRateDelta(state);
   const closed = (reason: string): LoanQuote => ({ ok: false, reason, rate, max: 0, rating });
   if (!creditEnabled(state)) return closed(tc('core.credit.bankClosed'));
   if (!company) return closed(tc('core.credit.companyNotFound'));

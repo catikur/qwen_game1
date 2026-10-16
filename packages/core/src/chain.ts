@@ -15,6 +15,7 @@ import { estimateInvestment } from './systems/market';
 import { distributionRelief } from './systems/supply';
 import { withBuildingIndex } from './systems/buildingIndex';
 import { wageFor } from './systems/labor';
+import { overheadMultiplier } from './systems/economy';
 import { tc } from './i18n';
 import type { BuildingInstance, GameState } from './types';
 
@@ -239,7 +240,7 @@ function projectedUnitCost(
   const district = state.districts[districtId];
   if (!district || def.capacity <= 0) return inputCost;
   const wages = wageFor(state, companyId, def.id, districtId);
-  return inputCost + (def.upkeepPerDay + wages) / def.capacity;
+  return inputCost + ((def.upkeepPerDay + wages) * overheadMultiplier(state, companyId)) / def.capacity;
 }
 
 /**

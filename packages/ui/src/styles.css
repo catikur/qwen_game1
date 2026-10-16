@@ -3069,6 +3069,16 @@ button.icon {
   font-size: 10.5px;
 }
 
+/* Kriz çipi (Tur 37a): uyarı kesik kenarlı (henüz gelmedi), süren kriz dolu kırmızı kenar. */
+.crisis-chip {
+  font-weight: 800;
+  border-color: color-mix(in srgb, var(--bad) 65%, transparent);
+}
+
+.crisis-chip.warning {
+  border-style: dashed;
+}
+
 /* --- sözleşme çipi --- */
 .contract-chip {
   display: inline-flex;

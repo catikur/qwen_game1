@@ -1038,6 +1038,45 @@ async function finish(browser, consoleErrors) {
   });
   check('Banka ve işgücü konsolu kirletmiyor', consoleErrors.length === 0, consoleErrors.slice(0, 2).join(' | '));
 
+  // ---------- Geç oyun giderleri ve kriz (Tur 37a) ----------
+  section('Kriz ve geç oyun giderleri');
+  await page.evaluate(() => {
+    const s = window.__capital.getState();
+    s.crisis = { defId: 'rate_shock', phase: 'warning', activeDay: s.time.day + 30, endDay: s.time.day + 150 };
+    window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+  });
+  await page.waitForTimeout(300);
+  const warningChip = await page.evaluate(() => {
+    const chip = document.querySelector('.crisis-chip');
+    return chip ? { phase: chip.getAttribute('data-crisis'), text: chip.textContent?.trim() ?? '', title: chip.getAttribute('title') ?? '' } : null;
+  });
+  check('Kriz bir ay önceden gündemde uyarı olarak görünüyor',
+    warningChip?.phase === 'warning' && warningChip.text.includes('30') && warningChip.title.length > 20,
+    warningChip ? `${warningChip.text} · ${warningChip.title.slice(0, 50)}` : 'çip yok');
+  await page.evaluate(() => {
+    const s = window.__capital.getState();
+    s.crisis = { defId: 'deep_recession', phase: 'active', activeDay: s.time.day, endDay: s.time.day + 120 };
+    window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+  });
+  await page.waitForTimeout(300);
+  const activeChip = await page.evaluate(() => document.querySelector('.crisis-chip')?.getAttribute('data-crisis') ?? null);
+  check('Süren kriz gündemde kriz olarak görünüyor', activeChip === 'active', String(activeChip));
+  await page.evaluate(() => {
+    const s = window.__capital.getState();
+    delete s.crisis;
+    window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+  });
+  await page.locator('.topbar-actions [data-panel="company"]').click();
+  await page.waitForTimeout(300);
+  const lateCosts = await page.evaluate(() => {
+    const block = document.querySelector('.modal [data-late-costs]');
+    return block ? [...block.querySelectorAll('.stat-label')].map((el) => el.textContent?.trim() ?? '') : null;
+  });
+  check('Şirket panelinde yönetim yükü ve servet vergisi görünüyor', lateCosts?.length === 2, lateCosts?.join(' · ') ?? 'blok yok');
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(200);
+  check('Kriz ve gider akışı konsolu kirletmiyor', consoleErrors.length === 0, consoleErrors.slice(0, 2).join(' | '));
+
   if (SMOKE) {
     await finish(browser, consoleErrors);
     return;
