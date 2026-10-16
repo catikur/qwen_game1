@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { CHAIN_IDS, SyncedGame, newGame, starFree, step, weekId, weekStart, type LiteState } from '../../lite-model/src/index';
+import { CHAIN_IDS, SYNC, SyncedGame, applyOffline, newGame, starFree, step, weekId, weekStart, type LiteState } from '../../lite-model/src/index';
 import { handle, type Options } from '../src/app';
 import type { Db } from '../src/db';
 import { weekShare } from '../src/saves';
@@ -139,6 +139,41 @@ test('web: günlük tamken kullanılmayan süre birikmiyor; biriktirip "çevrimi
   const second = await web.push(THURSDAY + 3_640_000, 0);
   // Bütçe yalnızca aradaki 9 sn ve iki kez saat payı (önceki gönderimin imleci şimdi − 10 sn).
   assert.ok(second.body.clipped >= 600 - 9 - 2 * 10 - 1, `kırpılan ${second.body.clipped}`);
+});
+
+test('web: "bekleyen var" (rest > 0) diyerek günler biriktirip çevrimiçi diye harcamak en çok bir saat getiriyor', async () => {
+  const db = memoryDb();
+  const web = await webPlayer(db, THURSDAY);
+  play(web.game, 30);
+  assert.equal((await web.push(THURSDAY + 31_000, 1)).status, 200);
+  // Üç gün hiç göndermiyor, sonra o üç günü 600'lük çevrimiçi adımlarla (hep rest > 0) doldurmaya çalışıyor.
+  let at = THURSDAY + 31_000 + 3 * 86_400_000;
+  let counted = 0;
+  const batches = 12;
+  for (let k = 0; k < batches; k++) {
+    web.game.tick(SYNC.maxSteps);
+    const before = web.game.state.clock;
+    const sent = await web.push(at, 1);
+    assert.equal(sent.status, 200, JSON.stringify(sent.body));
+    counted += SYNC.maxSteps - sent.body.clipped;
+    assert.ok(web.game.state.clock <= before);
+    at += 2_100;
+  }
+  // 12 × 600 sn gönderildi; sayılan en çok bir saat ve aradaki gerçek süre.
+  const real = (batches * 2_100) / 1000;
+  assert.ok(counted <= SYNC.maxBank + real + 2 * SYNC.slack, `sayılan ${counted}`);
+  assert.ok(counted >= SYNC.maxBank - 1, `ağsız dürüst oyun için bir saat kalıyor: ${counted}`);
+
+  // Dürüst istemci aynı üç günü "yoktum" diye yazar: çevrimdışı kazanç tavanıyla tam alınıyor.
+  const honest = await webPlayer(db, THURSDAY);
+  play(honest.game, 30);
+  assert.equal((await honest.push(THURSDAY + 31_000, 0)).status, 200);
+  const before = honest.game.state;
+  honest.game.away(3 * 86_400);
+  const back = await honest.push(THURSDAY + 31_000 + 3 * 86_400_000, 0);
+  assert.equal(back.status, 200);
+  assert.ok(back.body.clipped <= SYNC.slack, `kırpılan ${back.body.clipped}`);
+  assert.equal(JSON.stringify(honest.game.state), JSON.stringify(applyOffline(before, 3 * 86_400).state));
 });
 
 test('iki cihaz: eski sürümün üstüne gönderim 409 ve güncel durum; kaybolan yanıtın tekrarı zararsız', async () => {

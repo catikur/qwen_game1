@@ -684,6 +684,13 @@ tek tablo. Bir cihazda başlayan oyun öbüründe sürüyor.
     aynı (testte ve tarayıcıda doğrulanıyor). Süre bütçesi hesap açıldığından
     beri gerçekten geçen süre (+10 sn pay; yeni hesaba açılış öncesi için en çok
     1 saat). Günlük tamken (`rest: 0`) kullanılmayan süre birikmiyor.
+    Çevrimiçi adımlar bütçenin yalnızca son saatine yerleşiyor (`SYNC.maxBank`):
+    eşitlenmemiş çevrimiçi oyun en çok 1 saat sayılıyor; uzun bir boşluk sonradan
+    "çevrimiçiydim" diye doldurulamıyor (`rest` ne derse desin). Ayrılış (`o`)
+    bütün süreyi kullanıyor (yarım verim ve tavan). Ağsız 1 saatten uzun oynanan kırpılıyor.
+  - 30 günden uzun ayrılış günlüğe 30 gün yazılıyor (kazanç tavanı zaten kısa);
+    sunucu günlüğü yine de reddederse (400) istemci sunucunun durumuna dönüyor.
+    Taşıma kodu ya da silme sırasında yolda kalan eski hesap yanıtı yok sayılıyor.
   - Gönderim başına en çok 600 adım, 1000 kayıt: ücretsiz katmanın işlemci
     sınırına sığıyor (600 adım ≈ 2–3 ms).
   - İyimser sürüm kilidi; başka cihaz ilerlediyse 409 ve güncel durum,

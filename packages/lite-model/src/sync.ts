@@ -72,6 +72,13 @@ export const SYNC = {
   headStart: 3_600,
   /** Bir çevrimdışı kaydın en çok süresi (sn); tavanı zaten model uyguluyor. */
   maxAway: 30 * 86_400,
+  /**
+   * Sunucunun görmediği çevrimiçi oyun en çok (sn): çevrimiçi adımlar yalnızca
+   * bütçenin son bu kadarına yerleşebiliyor. Uzun bir boşluk sonradan
+   * "çevrimiçiydim" diye doldurulamıyor (çevrimdışı tavanı ve yarım verim
+   * aşılmasın); ayrılış `o` ile yazılıyor. Ağsız oynanan bundan uzun süre kırpılıyor.
+   */
+  maxBank: 3_600,
 } as const;
 
 /** Oynatmanın sonucu. */
@@ -219,8 +226,9 @@ export function step(state: LiteState, steps: number): LiteState {
 
 /**
  * Günlüğü oynat. `budget`: kullanılabilecek gerçek süre (sn; sunucunun saatine
- * göre). Çevrimiçi adımlar ayrıca `SYNC.maxSteps` ile sınırlı. Bütçeyi aşan
- * süre kırpılıyor.
+ * göre). Çevrimiçi adımlar ayrıca `SYNC.maxSteps` ile sınırlı ve yalnızca
+ * bütçenin son `SYNC.maxBank` saniyesine yerleşiyor (öncesi kazançsız boşluk).
+ * Bütçeyi aşan süre kırpılıyor.
  */
 export function replay(start: LiteState, ops: readonly SyncOp[], budget: number = Infinity): Replay {
   let state = start;
@@ -230,8 +238,14 @@ export function replay(start: LiteState, ops: readonly SyncOp[], budget: number 
   let clipped = 0;
   let steps = 0;
   const spans: Replay['spans'] = [];
+  const onlineFrom = Number.isFinite(budget) ? Math.max(0, budget - SYNC.maxBank) : 0;
   for (const op of ops) {
     if (op[0] === 't' || op[0] === 'o') {
+      if (op[0] === 't' && seconds < onlineFrom) {
+        // Boşluk: zaman geçiyor, oyun ilerlemiyor (haftalık pay da yok).
+        spans.push({ seconds: onlineFrom - seconds, score: 0 });
+        seconds = onlineFrom;
+      }
       const left = Math.max(0, budget - seconds);
       const before = state;
       let used: number;
@@ -352,11 +366,12 @@ export class SyncedGame {
     return result;
   }
 
-  /** Uygulama kapalıyken geçen süre. */
+  /** Uygulama kapalıyken geçen süre (sunucunun kabul ettiği en uzun kayda kırpılıyor; kazanç tavanı zaten daha kısa). */
   away(seconds: number): ReturnType<typeof applyOffline> {
-    const result = applyOffline(this.state, seconds);
+    const kept = Number.isFinite(seconds) ? Math.min(Math.max(0, seconds), SYNC.maxAway) : 0;
+    const result = applyOffline(this.state, kept);
     this.state = result.state;
-    this.journal.push(['o', seconds]);
+    this.journal.push(['o', kept]);
     return result;
   }
 

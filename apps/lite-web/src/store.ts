@@ -130,6 +130,8 @@ export class GameStore {
   private timer: ReturnType<typeof setInterval> | null = null;
   private noticeTimer: ReturnType<typeof setTimeout> | null = null;
   private readonly owner = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+  /** Hesap ya da oyun değişince artıyor: eski hesabın yolda kalan yanıtı yeni oyunun üstüne yazılmasın. */
+  private epoch = 0;
 
   // Android CI karesi: kabukta adres çubuğu yok; senaryo derleme anında verilebiliyor (VITE_SCENARIO_QUERY).
   constructor(search: string = typeof location !== 'undefined' ? location.search || (import.meta.env.VITE_SCENARIO_QUERY ?? '') : '') {
@@ -398,8 +400,10 @@ export class GameStore {
   /** Başka cihaz ilerlediyse onun durumuna geç (günlükte bekleyen yoksa sessizce). */
   async refresh(): Promise<void> {
     if (!this.league.account || this.isScenario || this.superseded) return;
+    const epoch = this.epoch;
     try {
       const save = await this.league.loadSave();
+      if (epoch !== this.epoch) return;
       // Hesap açıldı ama sürüm kaydedilmeden sayfa kapandı: sunucu hâlâ sıfırda, buradaki günlük onun üstünde.
       if (this.base === null && save.version === 0) {
         this.base = 0;
@@ -414,7 +418,7 @@ export class GameStore {
         }
       }
     } catch (error) {
-      this.handleSyncError(error);
+      if (epoch === this.epoch) this.handleSyncError(error);
     }
   }
 
@@ -430,8 +434,15 @@ export class GameStore {
     const ops = this.game.journal.take();
     const rest = this.game.journal.pending - ops.length;
     const batch = `${this.league.account.id.slice(0, 8)}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+    const epoch = this.epoch;
     try {
       const result = await this.league.sync(this.base, batch, ops, rest, keepalive);
+      // Bu arada hesap ya da oyun değişti (taşıma kodu, silme): yanıt eski hesabın.
+      // Gönderilenler (oyun değişmediyse) yeni hesaba sürümüyle gidip uzlaşıyor.
+      if (epoch !== this.epoch) {
+        this.game.journal.release();
+        return;
+      }
       this.base = result.version;
       const before = JSON.stringify(this.state);
       this.game.accepted(result.state);
@@ -442,7 +453,7 @@ export class GameStore {
       if (this.game.journal.pending > 0 && rest > 0) setTimeout(() => void this.sync(), 2_100);
     } catch (error) {
       this.game.journal.release();
-      this.handleSyncError(error);
+      if (epoch === this.epoch) this.handleSyncError(error);
     } finally {
       this.syncing = false;
     }
@@ -453,8 +464,12 @@ export class GameStore {
     if (error.status === 409 && error.code === 'stale') {
       const body = error.body as { version: number; state: LiteState };
       this.adopt(body.state, body.version, true);
+    } else if (error.status === 400 && error.code === 'body') {
+      // Sunucu günlüğü geçersiz buldu: aynısını sonsuza dek denemek yerine sunucunun durumuna dön.
+      void this.recover();
     } else if (error.status === 401) {
       // Hesap silinmiş (başka cihazdan): yeni sessiz hesap, oyun sıfırdan.
+      this.epoch += 1;
       this.league.forget();
       this.base = null;
       this.game.replaced(buildScenario('start').state);
@@ -464,6 +479,17 @@ export class GameStore {
       this.base = null;
     }
     this.changed();
+  }
+
+  /** Günlüğü sunucu kabul etmedi (400): bekleyenler gidiyor, sunucunun durumu geçerli. */
+  private async recover(): Promise<void> {
+    const epoch = this.epoch;
+    try {
+      const save = await this.league.loadSave();
+      if (epoch === this.epoch) this.adopt(save.state, save.version, true);
+    } catch {
+      // Ağ yok: sonraki eşitlemede yeniden.
+    }
   }
 
   /** Sunucunun durumuna geç: bekleyen günlük gidiyor. */
@@ -722,6 +748,7 @@ export class GameStore {
   async deleteAccount(): Promise<void> {
     const ok = await this.run(() => this.league.deleteAccount());
     if (ok === null) return;
+    this.epoch += 1;
     this.standings = null;
     this.privateLeagues = [];
     this.stars = null;
@@ -741,7 +768,10 @@ export class GameStore {
 
   /** Kodla başka cihazdaki hesabı buraya al: buradaki oyun yerine o geliyor. */
   async claimLink(code: string): Promise<boolean> {
+    const before = this.league.account?.id;
     const save = await this.run(() => this.league.claimLink(code.trim().toUpperCase()));
+    // Hesap değiştiyse eski hesabın yolda kalan eşitlemesi yok sayılıyor.
+    if (this.league.account?.id !== before) this.epoch += 1;
     if (this.problem === 'league.error.code') this.problem = 'link.error.code';
     if (save === null) return false;
     this.adopt(save.state, save.version, false);

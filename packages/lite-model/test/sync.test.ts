@@ -131,3 +131,31 @@ test('eşitleme: sıfırlama yeni oyun; sonrası yeniden sayılıyor', () => {
   assert.deepEqual(game.state, step(newGame(), 3));
   assert.deepEqual(replay(newGame(), game.journal.ops).state, game.state);
 });
+
+test('eşitleme: çevrimiçi adımlar bütçenin yalnızca son saatine yerleşiyor; ayrılış bütün süreyi kullanabiliyor', () => {
+  const start = newGame();
+  start.cash = 1e9;
+  const day = 86_400;
+  // Bir gün sonra "hep çevrimiçiydim": en çok son bir saat sayılıyor, öncesi kazançsız boşluk.
+  const online = replay(start, [['t', SYNC.maxSteps], ['t', SYNC.maxSteps], ['t', SYNC.maxSteps], ['t', SYNC.maxSteps], ['t', SYNC.maxSteps], ['t', SYNC.maxSteps]], day);
+  assert.equal(online.state.clock, Math.min(SYNC.maxSteps, SYNC.maxBank) * SYNC.step, 'tek gönderimde en çok maxSteps');
+  assert.equal(online.seconds, day - SYNC.maxBank + SYNC.maxSteps, 'boşluk zamanı geçiriyor');
+  assert.equal(online.spans[0]!.score, 0, 'boşluğun haftalık payı yok');
+  // Aynı gün dürüstçe "yoktum" (o) sonra kısa oyun: ayrılış bütün süreyi alıyor, adımlar sona sığıyor.
+  const honest = replay(start, [['o', day - 600], ['t', 600]], day);
+  assert.equal(honest.clipped, 0);
+  assert.equal(honest.seconds, day);
+  assert.equal(honest.state.clock, applyOffline(start, day - 600).state.clock + 600);
+  // Bütçesiz oynatma (istemci) etkilenmiyor.
+  assert.equal(replay(start, [['t', 600]]).state.clock, 600);
+});
+
+test('istemci: otuz günden uzun ayrılış sunucunun kabul ettiği kayda kırpılıyor', () => {
+  const game = new SyncedGame(newGame());
+  game.away(45 * 86_400);
+  game.away(Number.NaN);
+  const ops = game.journal.ops;
+  assert.deepEqual(ops, [['o', SYNC.maxAway], ['o', 0]]);
+  assert.ok(ops.every(validOp), 'gönderim reddedilmiyor');
+  assert.equal(JSON.stringify(replay(newGame(), ops).state), JSON.stringify(game.state), 'sunucu aynısını oynatıyor');
+});
