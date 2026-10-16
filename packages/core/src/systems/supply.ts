@@ -7,6 +7,7 @@ import {
 } from '@capital/content';
 import { collectEventModifiers } from './events';
 import { buildingStrikeFactor, wageFor } from './labor';
+import { overheadMultiplier } from './economy';
 import { scopedDepots } from './buildingIndex';
 import { estimateBaselineDemand, goodShares } from './demand';
 import type { BuildingInstance, DistrictState, GameState } from '../types';
@@ -99,7 +100,12 @@ function wagesFor(state: GameState, building: BuildingInstance): number {
   const def = BUILDING_BY_ID[building.defId];
   if (!def) return 0;
   // Grevdeki işçi ücret almaz: grev binası çalıştığı oranda öder.
-  return wageFor(state, building.companyId, building.defId, building.districtId) * buildingStrikeFactor(state, building.companyId, def);
+  // Yönetim yükü (Tur 37a): büyük şirketin her işi biraz daha pahalı.
+  return (
+    wageFor(state, building.companyId, building.defId, building.districtId) *
+    buildingStrikeFactor(state, building.companyId, def) *
+    overheadMultiplier(state, building.companyId)
+  );
 }
 
 /** Üretim ünitesinin bugünkü çıktısı — grevde düşer. */
@@ -113,7 +119,7 @@ function upkeepFor(state: GameState, building: BuildingInstance): number {
   const def = BUILDING_BY_ID[building.defId];
   if (!def) return 0;
   const ceo = getCeoModifiers(state.companies[building.companyId]?.ceoId ?? null);
-  return def.upkeepPerDay * ceo.upkeep;
+  return def.upkeepPerDay * ceo.upkeep * overheadMultiplier(state, building.companyId);
 }
 
 /**
@@ -166,7 +172,7 @@ function expectedDraw(outlet: BuildingInstance): number {
 /** Günlük defterleri sıfırlar. Üretim ve pazar adımlarından ÖNCE koşar. */
 export function resetDailyLedgers(state: GameState): void {
   for (const company of Object.values(state.companies)) {
-    company.today = { revenue: 0, cogs: 0, upkeep: 0, wages: 0, interest: 0, profit: 0 };
+    company.today = { revenue: 0, cogs: 0, upkeep: 0, wages: 0, interest: 0, tax: 0, profit: 0 };
   }
 
   for (const building of Object.values(state.buildings)) {

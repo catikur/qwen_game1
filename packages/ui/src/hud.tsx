@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { ReactElement } from 'react';
-import { CEO_BY_ID, ERA_BY_ID, EVENT_BY_ID, formatPercent } from '@capital/content';
+import { CEO_BY_ID, CRISIS_BY_ID, ERA_BY_ID, EVENT_BY_ID, formatPercent } from '@capital/content';
 import {
   LENSES,
   OFFER_LIFETIME_DAYS,
@@ -784,6 +784,20 @@ export function ActiveEvents(): ReactElement | null {
         contractDrawn = true;
         chip = <ContractChip />;
         break;
+      case 'crisis': {
+        // Kriz (Tur 37a): uyarıda ne yapılacağını, krizde etkisini söylüyor.
+        const def = CRISIS_BY_ID[state.crisis?.defId ?? ''];
+        chip = (
+          <span
+            className={`event-chip crisis-chip tone-bad${state.crisis?.phase === 'warning' ? ' warning' : ''}`}
+            data-crisis={state.crisis?.phase}
+            title={state.crisis?.phase === 'warning' ? def?.warningBody : def?.body}
+          >
+            {item.label} · {t('hud.agenda.eventDays', { days: item.daysLeft ?? '' })}
+          </span>
+        );
+        break;
+      }
       case 'era':
         chip = (
           <span className={`event-chip era-chip tone-${item.tone}`} title={ERA_BY_ID[state.era?.defId ?? '']?.body}>

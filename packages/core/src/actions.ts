@@ -9,6 +9,7 @@ import { defaultShelf } from './systems/demand';
 import { defaultFocus } from './systems/focus';
 import { LAND_SELL_RATIO, tilePrice } from './systems/city';
 import { permitMultiplier } from './systems/council';
+import { crisisBuildMultiplier } from './systems/economy';
 import { isPledged } from './systems/credit';
 import { tc } from './i18n';
 import type { CommandResult, GameState } from './types';
@@ -67,12 +68,21 @@ export function zoningBlocker(state: GameState, districtId: number, defId: strin
 }
 
 /** CEO pazarlığı uygulanmış inşaat maliyeti. */
+/**
+ * İnşaat maliyeti çarpanı: meclisin ruhsat indirimi × kriz (Tur 37a —
+ * durgunlukta inşaat ucuzluyor). Gerçek maliyet ve yatırım tahmini aynı
+ * çarpanı okuyor.
+ */
+export function constructionMultiplier(state: GameState): number {
+  return permitMultiplier(state) * crisisBuildMultiplier(state);
+}
+
 export function buildCost(state: GameState, companyId: string, defId: string): number {
   const def = BUILDING_BY_ID[defId];
   if (!def) return 0;
   const company = state.companies[companyId];
   // Meclisin ruhsat kolaylığı herkese aynı: oyuncu da rakip de ucuz kurar.
-  return Math.round(def.cost * getCeoModifiers(company?.ceoId ?? null).buildCost * permitMultiplier(state));
+  return Math.round(def.cost * getCeoModifiers(company?.ceoId ?? null).buildCost * constructionMultiplier(state));
 }
 
 /** Parselin neden alınamadığını açıklar; alınabiliyorsa null döner. */

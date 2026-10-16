@@ -64,6 +64,7 @@ import { build, buyTile } from '../src/actions';
 import { buyShares } from '../src/systems/equity';
 import { PRUNE_MEMORY_DAYS, isPrunable } from '../src/systems/npc';
 import { WAGE_PER_JOB } from '../src/systems/labor';
+import { overheadMultiplier } from '../src/systems/economy';
 import { loanQuote } from '../src/systems/credit';
 import { issueQuote } from '../src/systems/issuance';
 import { capRemaining, dailyBuyCap, findOrder, orderEstimate } from '../src/systems/orders';
@@ -172,6 +173,8 @@ function labEngine(seed: number): GameEngine {
   const state = engine.getState();
   state.flags.npcCompetition = false;
   state.flags.randomEvents = false;
+  // Tur 37a: 500 M ₺ kasada servet vergisi stratejiyi değil kasanın büyüklüğünü ölçerdi.
+  state.flags.lateCosts = false;
   const lab = getPlayer(state);
   lab.cash = 500_000_000;
   lab.netWorth = 500_000_000;
@@ -2833,9 +2836,9 @@ section('Kademeli imar: arazi kıtlığı yenileniyor', () => {
   const vacantPlotIn = (districtId: number) =>
     state.map.tiles.find(
       (t) => t.districtId === districtId && t.kind === 'plot' && !t.ownerId && !t.structureId,
-    )!;
+    );
 
-  const early = engine3.dispatch({ type: 'BUY_TILE', tileId: vacantPlotIn(firstDistrict.id).id });
+  const early = engine3.dispatch({ type: 'BUY_TILE', tileId: vacantPlotIn(firstDistrict.id)!.id });
   expect(
     'kilitli parsel satın alınamıyor',
     !early.ok && (early.reason ?? '').includes('imara kapalı'),
@@ -2848,8 +2851,19 @@ section('Kademeli imar: arazi kıtlığı yenileniyor', () => {
   let openings = 0;
   let violations = 0;
   let seenNewsId = -1;
+  let lateBuy: ReturnType<typeof engine3.dispatch> | null = null;
   for (let day = 1; day <= 560; day++) {
     engine3.runDay();
+    // Son bölge açıldığı gün alınabiliyor mu? Açılıştan 160 gün sonra
+    // değil: geç oyunda rakipler yeni bölgeyi de dolduruyor (Tur 37a'da
+    // yönetim yükü bu tohumda son bölgenin 64 parselini 560. güne kadar
+    // bitirdi) — sınanan imar kapısı, arazinin bolluğu değil.
+    if (lateBuy === null && state.time.day >= lastDistrict.opensOnDay!) {
+      const plot = vacantPlotIn(lastDistrict.id);
+      lateBuy = plot
+        ? engine3.dispatch({ type: 'BUY_TILE', tileId: plot.id })
+        : { ok: false, reason: 'açılış gününde boş parsel yok' };
+    }
     for (const item of state.news) {
       if (item.id <= seenNewsId) break;
       if (item.title.includes('İmar planı açıklandı')) notices++;
@@ -2879,11 +2893,10 @@ section('Kademeli imar: arazi kıtlığı yenileniyor', () => {
     `${firstDistrict.name} nüfusu ${Math.round(firstDistrict.population)} / taban ${firstArchetype.population}`,
   );
 
-  const lateBuy = engine3.dispatch({ type: 'BUY_TILE', tileId: vacantPlotIn(lastDistrict.id).id });
   expect(
     'açılan bölgeden parsel alınabiliyor',
-    lateBuy.ok,
-    lateBuy.reason ?? `${lastDistrict.name} — alındı`,
+    lateBuy?.ok === true,
+    lateBuy?.reason ?? `${lastDistrict.name} — açılış günü alındı`,
   );
 
   // Laboratuvar kapısı: takvim kapalıyken eski dünya birebir geri gelmeli.
@@ -3441,10 +3454,13 @@ section('İşgücü ve sendika', () => {
       const state = engine.getState();
       const player = getPlayer(state);
       paid += player.today.wages;
+      // Yönetim yükü (Tur 37a) ücretin üstüne ayrı bir kalem; sınanan
+      // sendikanın çarpanı, o yüzden yük tabana da giriyor.
+      const overhead = overheadMultiplier(state, player.id);
       for (const building of Object.values(state.buildings)) {
         if (building.companyId !== player.id) continue;
         const def = BUILDING_BY_ID[building.defId]!;
-        base += def.jobs * WAGE_PER_JOB * (0.6 + state.districts[building.districtId]!.incomeLevel);
+        base += def.jobs * WAGE_PER_JOB * (0.6 + state.districts[building.districtId]!.incomeLevel) * overhead;
       }
       const strike = player.labor?.strike;
       if (strike && state.time.day >= strike.startedDay && !strikeSeen) {
@@ -3610,9 +3626,10 @@ section('Sermaye piyasası: halka arz ve kurucu kilidi', () => {
    *   - halka arz bedava para değil: nakdi sıkışmayan şirkette erken ihraç
    *     720. günde net değeri düşürüyor (kalıcı ortaklık);
    *   - ama bir kontrol aracı: savunmasız yavaş oyuncu baskınla düşerken
-   *     baskıncı %30'u geçince ihraç eden aynı oyuncu çoğu tohumda ayakta
-   *     kalıyor (Tur 21'den beri baskın altında soğuma aranmıyor); düştüğü
-   *     yer yalnızca kalkanın belgelenen sonu (Tur 27, aşağıda);
+   *     baskıncı %30'u geçince ihraç eden aynı oyuncu daha geç düşüyor ya
+   *     da ayakta kalıyor (Tur 21'den beri baskın altında soğuma
+   *     aranmıyor); düştüğü yer yalnızca kalkanın belgelenen sonu (Tur 27,
+   *     aşağıda; Tur 37a'dan beri tehditli tohumların çoğunda);
    *   - oyun başı rakipler baskın ısınması bitene kadar kilitli: en ucuz
    *     rakibi alan vekil eskiden 5. günde devralıp tekel zaferine
    *     130–235. günde ulaşıyordu.
@@ -3711,8 +3728,14 @@ section('Sermaye piyasası: halka arz ve kurucu kilidi', () => {
    * rakip ekonomisini kaydırınca seed 42 de düştü (723 → 725). Savunma
    * ihracı (soğumasız) ile dokuzun sekizi ayakta; 5 ve 31 eski kuralla
    * düşen tohumlar, o yüzden burada.
+   *
+   * Tur 37a: yönetim yükü büyük rakipleri yavaş oyuncudan çok frenliyor,
+   * sıralama sıkışıyor. 20 tohumda savunmasız yavaş oyuncu 9 yerine 5
+   * tohumda düşüyor (1, 2, 7, 9, 12); 42, 5 ve 31'de artık savunmasız da
+   * ayakta, yani kalkanı ölçemiyorlardı. Tohumlar tehdidin gerçekleştiği
+   * yerden yeniden seçildi.
    */
-  const shields = [7, 42, 5, 31].map((seed) => ({ seed, bare: defenseRun(seed, 'bare'), issue: defenseRun(seed, 'issue') }));
+  const shields = [7, 1, 2, 9].map((seed) => ({ seed, bare: defenseRun(seed, 'bare'), issue: defenseRun(seed, 'issue') }));
   for (const { seed, bare, issue } of shields) {
     console.log(
       `  baskın seed ${String(seed).padStart(2)} | savunmasız ${bare.lost ? `${bare.lost}. günde düşüyor` : 'ayakta'} · ` +
@@ -3754,18 +3777,23 @@ section('Sermaye piyasası: halka arz ve kurucu kilidi', () => {
    *     düşüş savunmasızdan sonra.
    * Bölüşülmüş paydan, blok satıştan ya da tabana inmeden gelen bir
    * düşüş bir hata demek ve kontrolü kırar.
+   *
+   * Tur 37a: "çoğunu ayakta tutuyor" parçası düştü. Yönetim yükü ikinci
+   * sıradaki rakipleri de frenleyince gelen baskın hep tek baskıncılı:
+   * yeni dört tohumda ihraç yalnızca birinde (2) ayakta tutuyor, üçünde
+   * düşüş belgelenen sondan ve 33–71 gün geç (main'de iki tehditli
+   * tohumun ikisi de ayaktaydı). Kalıcı kalkan Tur 28'den beri ihraç +
+   * piyasadan geri alım; aşağıdaki kontrol onu dört tohumun dördünde
+   * sınıyor. Buradaki iddia artık: ihraç düşüşü erteliyor ve kalkanla
+   * düşüş YALNIZCA belgelenen sondan geçebilir.
    */
   const threatened = shields.filter(({ bare }) => bare.lost !== null);
   const calm = shields.filter(({ bare }) => bare.lost === null);
-  const held = threatened.filter(({ issue }) => issue.lost === null);
   const atTheEnd = ({ bare, issue }: (typeof shields)[number]): boolean =>
     issue.founder <= ISSUANCE.minFounderShare + 0.01 && issue.runnerUp < 0.02 && issue.lost! > bare.lost!;
   expect(
     'ihraç baskına karşı kalkan',
-    threatened.length >= 2 &&
-      held.length >= 2 &&
-      held.length > threatened.length - held.length &&
-      threatened.every((s) => s.issue.lost === null || atTheEnd(s)),
+    threatened.length >= 2 && threatened.every((s) => s.issue.lost === null || atTheEnd(s)),
     threatened
       .map((s) =>
         s.issue.lost === null
@@ -4140,6 +4168,14 @@ section('Holding: ikinci şehir', () => {
    *     şirketin yarısını hazineye çekmek demek);
    *   - şehirde tutulan kâr baskını caydırıyor (%0), holding değeri
    *     yarısıyla aynı: para kasada değil şehirde duruyor.
+   *
+   * Tur 37a: yönetim yükü büyük şehrin kârını kısınca kârın hepsini
+   * çeken şehrin savunma bütçesi de küçüldü. Tohum 1'de baskın eskiden
+   * %14'te kalıyordu, savunma tetiklenmiyordu (%20 eşiği); artık geliyor,
+   * savunma 37 M ₺ harcıyor ve şehri %32'de tutuyor (main %14/21/25 →
+   * %32/21/21). İddianın özü — şehir ayakta, baskıncı kontrolden uzak —
+   * yerinde; geç oyunda büyük şehrin daha kırılgan olması 37a'nın
+   * amacı. Eşik %30'dan %35'e.
    */
   expect(
     'kârın hepsini çeken uzak şehre baskın derinleşiyor (üç tohumda)',
@@ -4147,8 +4183,8 @@ section('Holding: ikinci şehir', () => {
     directives.map((d) => `tohum ${d.seed}: %${Math.round(d.half * 100)} → %${Math.round(d.all.peak * 100)}`).join(' · '),
   );
   expect(
-    'savunma talimatı uzak şehri tutuyor: kâr hepsi kasaya giderken de ayakta, dış pay %30\'un altında',
-    directives.every((d) => d.allDefended.lostDay === null && d.allDefended.peak < 0.3),
+    'savunma talimatı uzak şehri tutuyor: kâr hepsi kasaya giderken de ayakta, dış pay %35\'in altında',
+    directives.every((d) => d.allDefended.lostDay === null && d.allDefended.peak < 0.35),
     directives.map((d) => `tohum ${d.seed}: %${Math.round(d.allDefended.peak * 100)}${d.allDefended.lostDay !== null ? ' kayıp' : ''}`).join(' · '),
   );
   expect(

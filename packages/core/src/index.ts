@@ -94,6 +94,16 @@ export type { Projection } from './projection';
 export type { IndirectEstimate } from './systems/indirect';
 export type { GoalStatus } from './systems/goals';
 export { collectEventModifiers } from './systems/events';
+export {
+  activeCrisis,
+  annualWealthTax,
+  crisesEnabled,
+  dailyWealthTax,
+  lateCostsEnabled,
+  macroRateDelta,
+  overheadMultiplier,
+  overheadRate,
+} from './systems/economy';
 export { activeContract, contractProgress, OFFER_LIFETIME_DAYS } from './systems/contracts';
 export type { EventModifiers } from './systems/events';
 export {

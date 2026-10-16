@@ -50,6 +50,8 @@ function labEngine(seed: number): GameEngine {
   state.flags.npcCompetition = false;
   state.flags.randomEvents = false;
   state.flags.landAuctions = false;
+  // Tur 37a: 500 M ₺ kasada servet vergisi stratejiyi değil kasanın büyüklüğünü ölçerdi.
+  state.flags.lateCosts = false;
   const player = getPlayer(state);
   player.cash = 500_000_000;
   player.netWorth = 500_000_000;

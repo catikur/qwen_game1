@@ -1,4 +1,4 @@
-import { CREDIT, ERA_BY_ID, EVENT_BY_ID, localizeDecimal } from '@capital/content';
+import { CREDIT, CRISIS_BY_ID, ERA_BY_ID, EVENT_BY_ID, localizeDecimal } from '@capital/content';
 import { nextGoal } from './systems/goals';
 import { OFFER_LIFETIME_DAYS, contractProgress } from './systems/contracts';
 import { sharesHeld, sharesOutstanding } from './systems/equity';
@@ -34,6 +34,7 @@ export type AgendaKind =
   | 'league'
   | 'event'
   | 'era'
+  | 'crisis'
   | 'goal';
 
 export interface AgendaItem {
@@ -293,6 +294,20 @@ export function agenda(state: GameState): AgendaItem[] {
       daysLeft: active.remainingDays,
       label: def.title,
       tone: def.tone,
+    });
+  }
+
+  // Kriz (Tur 37a): uyarı evresinde geri sayım krize, kriz evresinde bitişe.
+  const crisis = state.crisis ? CRISIS_BY_ID[state.crisis.defId] : undefined;
+  if (state.crisis && crisis) {
+    const warning = state.crisis.phase === 'warning';
+    items.push({
+      kind: 'crisis',
+      key: `crisis:${crisis.id}:${state.crisis.phase}`,
+      urgency: 1,
+      daysLeft: Math.max(0, (warning ? state.crisis.activeDay : state.crisis.endDay) - day),
+      label: warning ? tc('core.agenda.crisisWarning', { title: crisis.title }) : crisis.title,
+      tone: 'bad',
     });
   }
 

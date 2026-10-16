@@ -14,8 +14,10 @@ import {
   getPlayer,
   goodShares,
   headquarters,
-  PROJECTION_DAYS,
+  lateCostsEnabled,
+  overheadRate,
   projectBuilding,
+  PROJECTION_DAYS,
   rankedBuildOptions,
   tilePrice,
 } from '@capital/core';
@@ -957,6 +959,19 @@ function CompanyPanel(): ReactElement {
         <Stat label={t('panels.company.stat.netWorth')} value={formatMoney(player.netWorth)} />
         <Stat label={t('panels.company.stat.dailyProfit')} value={formatMoney(player.today.profit)} />
       </div>
+      {lateCostsEnabled(state) && (
+        // Geç oyun giderleri (Tur 37a): büyüdükçe neden pahalılaştığını söyleyen iki satır.
+        <div className="statgrid small" data-late-costs>
+          <div className="stat" title={t('panels.company.stat.overheadTitle')}>
+            <span className="stat-label">{t('panels.company.stat.overhead')}</span>
+            <span className="stat-value">+{Math.round(overheadRate(state, player.id) * 100)}%</span>
+          </div>
+          <div className="stat" title={t('panels.company.stat.wealthTaxTitle')}>
+            <span className="stat-label">{t('panels.company.stat.wealthTax')}</span>
+            <span className="stat-value">{formatMoney(player.today.tax ?? 0)}</span>
+          </div>
+        </div>
+      )}
 
       <Sparkline values={history} />
 
@@ -1234,6 +1249,10 @@ function HelpPanel(): ReactElement {
         <li>
           <strong>{t('panels.help.step.holding.title')}</strong>
           {t('panels.help.step.holding.body')}
+        </li>
+        <li>
+          <strong>{t('panels.help.step.late.title')}</strong>
+          {t('panels.help.step.late.body')}
         </li>
       </ol>
       <p className="muted">

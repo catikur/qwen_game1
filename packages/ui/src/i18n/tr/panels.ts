@@ -148,6 +148,10 @@ export const panels = {
   'panels.company.stat.debt': 'Borç',
   'panels.company.stat.netWorth': 'Şirket değeri',
   'panels.company.stat.dailyProfit': 'Günlük kâr',
+  'panels.company.stat.overhead': 'Yönetim yükü',
+  'panels.company.stat.overheadTitle': '30 binadan sonra her bina bakım ve ücreti %0,4 artırıyor (en çok %60). Büyük şirket pahalı yönetilir.',
+  'panels.company.stat.wealthTax': 'Servet vergisi/gün',
+  'panels.company.stat.wealthTaxTitle': 'Kademeli, yıllık: 25 M ₺ üstü %1, 100 M ₺ üstü %2, 300 M ₺ üstü %3. Kasada yatan para erir.',
   'panels.company.breakdownTitle': 'Sektör kırılımı',
   'panels.company.noBusinesses': 'Henüz işletmen yok.',
   'panels.company.col.sector': 'Sektör',
@@ -213,6 +217,9 @@ export const panels = {
   'panels.help.step.holding.title': 'Zafer bir dönemeç: holding.',
   'panels.help.step.holding.body':
     " Bir şehirde zafere ulaşınca yeni bir şehre açılabilirsin: sermaye ve marka bilinirliğinin yarısı seninle gelir, rakipler farklıdır. Aynı anda bir şehir oynanır; öbürleri de yaşamaya devam eder. Şehirler panelinden uzaktaki her şehrin yerel müdürüne talimat verirsin: kârın ne kadarı holding kasasına aksın (hepsini çekersen şehir nakitsiz kalır ve ucuzlar) ve baskına karşı geri alım yapsın mı. Kasadan her şehre para gönderebilirsin. Hedef üç şehirde zafer; zafer her şehirde orada yarattığın değerle ölçülür.",
+  'panels.help.step.late.title': 'Büyümek pahalılaşır, krizler gelir.',
+  'panels.help.step.late.body':
+    ' 30 binadan sonra her bina bakım ve ücreti biraz daha artırır (yönetim yükü); 25 M ₺ üstü servete kademeli vergi var, kasada yatan para erir. Ara sıra kriz gelir ve bir ay önceden haber verir: durgunlukta talep düşer ama arsa ve inşaat ucuzlar; faiz şokunda kredili hesap ve yeni krediler pahalanır, vadeli kredinin faizi sabit kalır.',
   'panels.help.controls':
     'Kontroller: sürükle = kaydır · sağ tık sürükle = döndür · tekerlek = yakınlaş · WASD = kaydır · Boşluk = duraklat',
   'panels.help.language': 'Dil',

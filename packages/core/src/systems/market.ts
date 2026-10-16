@@ -6,7 +6,9 @@ import {
   GOOD_BY_ID,
   getCeoModifiers,
 } from '@capital/content';
-import { categoryRevenueRate, permitMultiplier } from './council';
+import { categoryRevenueRate } from './council';
+import { constructionMultiplier } from '../actions';
+import { dailyWealthTax, overheadMultiplier } from './economy';
 import { settleInterest } from './credit';
 import type { CategoryId } from '@capital/content';
 import {
@@ -68,7 +70,7 @@ function qualityFor(state: GameState, companyId: string, defId: string): number 
 function upkeepFor(state: GameState, companyId: string, defId: string): number {
   const def = BUILDING_BY_ID[defId];
   if (!def) return 0;
-  return def.upkeepPerDay * getCeoModifiers(state.companies[companyId]?.ceoId ?? null).upkeep;
+  return def.upkeepPerDay * getCeoModifiers(state.companies[companyId]?.ceoId ?? null).upkeep * overheadMultiplier(state, companyId);
 }
 
 /**
@@ -244,10 +246,10 @@ export function estimateInvestment(
   if (!def || !district || !company) return null;
 
   const category = CATEGORIES[def.category];
-  const wages = wageFor(state, companyId, defId, districtId);
+  const wages = wageFor(state, companyId, defId, districtId) * overheadMultiplier(state, companyId);
   const fixedCosts = upkeepFor(state, companyId, defId) + wages;
   // Geri ödeme, oyuncunun gerçekten ödeyeceği maliyete göre hesaplanır.
-  const investmentCost = def.cost * getCeoModifiers(company.ceoId).buildCost * permitMultiplier(state);
+  const investmentCost = def.cost * getCeoModifiers(company.ceoId).buildCost * constructionMultiplier(state);
 
   // ---- Üretim üniteleri: değeri kârda değil, TASARRUFTA ----
   // Bir fabrika kendi başına para basmaz; ürünü pazardan almak yerine
@@ -898,13 +900,16 @@ function marketStep(state: GameState): void {
     }
 
     if (company.debt > 0 || company.credit?.feeToday) company.today.interest = settleInterest(state, company);
+    // Servet vergisi (Tur 37a): kademeli, dünkü özkaynaktan.
+    company.today.tax = dailyWealthTax(state, company);
 
     company.today.profit =
       company.today.revenue -
       company.today.cogs -
       company.today.upkeep -
       company.today.wages -
-      company.today.interest;
+      company.today.interest -
+      company.today.tax;
 
     company.cash += company.today.profit;
   }

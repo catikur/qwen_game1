@@ -136,6 +136,7 @@ export const commands = {
   'core.agenda.league': 'Lig {week}',
   'core.agenda.leagueDone': 'Lig {week} · tablo',
   'core.agenda.council': 'Meclis · {count} önerge',
+  'core.agenda.crisisWarning': 'Kriz yaklaşıyor: {title}',
 
   // chain.ts — zincir kartı
   'core.chain.stateOwn': 'Sende',

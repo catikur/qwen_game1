@@ -1,9 +1,10 @@
-import { ERAS, ERA_BY_ID, EVENTS, EVENT_BY_ID, SECTOR_EVENTS } from '@capital/content';
+import { CONSUMER_CATEGORIES, ERAS, ERA_BY_ID, EVENTS, EVENT_BY_ID, SECTOR_EVENTS } from '@capital/content';
 import type { CategoryId } from '@capital/content';
 import { tc } from '../i18n';
 import { createRng, nextFloat, pickWeighted } from '../rng';
 import { pushNews } from '../news';
 import type { GameState } from '../types';
+import { activeCrisis } from './economy';
 
 export interface EventModifiers {
   demand: Record<CategoryId, number>;
@@ -67,6 +68,15 @@ export function collectEventModifiers(state: GameState): EventModifiers {
         }
       }
     }
+  }
+
+  // Kriz (Tur 37a) aynı boru hattından: bütün kategorilere talep çarpanı ve arsa kayması.
+  const crisis = activeCrisis(state);
+  if (crisis) {
+    if (crisis.effects.demand !== undefined) {
+      for (const category of CONSUMER_CATEGORIES) mods.demand[category] = (mods.demand[category] ?? 1) * crisis.effects.demand;
+    }
+    if (crisis.effects.landValueDrift) mods.landValueDrift += crisis.effects.landValueDrift;
   }
 
   return mods;
