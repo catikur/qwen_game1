@@ -69,17 +69,22 @@ export const SYNC = {
   maxOps: 1_000,
   /** Saat payı (sn): istemci ile sunucunun saati arasındaki küçük fark. */
   slack: 10,
-  /** Yeni hesaba, açılmadan önce oynanmış süre için en çok (sn). */
-  headStart: 3_600,
+  /**
+   * Yeni hesaba, açılmadan önce oynanmış süre için en çok (sn): ilk açılışta
+   * internetsiz oynanan oyun da `maxBank` kadar sayılıyor (bir dakika pay:
+   * hesap açılışıyla ilk gönderim arasındaki süre pencereden düşmesin).
+   */
+  headStart: 86_400 - 60,
   /** Bir çevrimdışı kaydın en çok süresi (sn); tavanı zaten model uyguluyor. */
   maxAway: 30 * 86_400,
   /**
    * Sunucunun görmediği çevrimiçi oyun en çok (sn): çevrimiçi adımlar yalnızca
-   * bütçenin son bu kadarına yerleşebiliyor. Uzun bir boşluk sonradan
+   * bütçenin son bu kadarına yerleşebiliyor. İnternetsiz açık oynanan bir gün
+   * (uçak, yolculuk) bağlanınca tam sayılıyor; günlerce boşluk sonradan
    * "çevrimiçiydim" diye doldurulamıyor (çevrimdışı tavanı ve yarım verim
-   * aşılmasın); ayrılış `o` ile yazılıyor. Ağsız oynanan bundan uzun süre kırpılıyor.
+   * aşılmasın). Bundan eski adımlar çevrimdışı kazanç sayılıyor (ayrılış gibi).
    */
-  maxBank: 3_600,
+  maxBank: 86_400,
 } as const;
 
 /** Oynatmanın sonucu. */
@@ -238,9 +243,9 @@ export function step(state: LiteState, steps: number): LiteState {
  * geçmiş süre; değilse (sırada başka kayıt var) imleçten başlıyor.
  *
  * Çevrimiçi adımlar ayrıca `SYNC.maxSteps` ile sınırlı ve yalnızca bütçenin
- * son `SYNC.maxBank` saniyesinde sayılıyor: daha eskiye düşen adımın zamanı
- * geçiyor ama oyun ilerlemiyor (sonraki kayıtlar, ör. ayrılış, yerinde kalıyor).
- * Bütçeyi aşan süre kırpılıyor.
+ * son `SYNC.maxBank` saniyesinde çevrimiçi sayılıyor: daha eskiye düşen adım
+ * çevrimdışı kazanç getiriyor (ayrılış gibi: yarım verim, yanındaki ayrılışlarla
+ * ortak tavan); sonraki kayıtlar yerinde kalıyor. Bütçeyi aşan süre kırpılıyor.
  */
 export function replay(start: LiteState, ops: readonly SyncOp[], budget: number = Infinity, complete = false, awayFrom: number | null = null): Replay {
   let state = start;
@@ -265,21 +270,30 @@ export function replay(start: LiteState, ops: readonly SyncOp[], budget: number 
   }
   for (const op of ops) {
     if (op[0] === 't' || op[0] === 'o') {
-      const before = state;
+      let before = state;
       let used: number;
       if (op[0] === 't') {
         const dead = Math.min(op[1], Math.ceil(Math.max(0, onlineFrom - seconds) / SYNC.step), Math.floor(Math.max(0, budget - seconds) / SYNC.step));
         if (dead > 0) {
-          // Son saatten önceye düşen adımlar: zaman geçiyor, oyun ilerlemiyor (haftalık pay da yok).
-          seconds += dead * SYNC.step;
-          clipped += dead * SYNC.step;
-          spans.push({ seconds: dead * SYNC.step, score: 0 });
+          // Pencereden önceye düşen adımlar çevrimiçi sayılmıyor: o süre ayrılış gibi
+          // çevrimdışı kazanç getiriyor (tavan yanındaki ayrılışlarla ortak).
+          const span = dead * SYNC.step;
+          if (awayLeft === null) awayLeft = offlineCap(state);
+          const earning = Math.min(span, awayLeft);
+          awayLeft -= earning;
+          state = applyOffline(state, earning).state;
+          seconds += span;
+          clipped += span;
+          spans.push({ seconds: span, score: starFree(state.totalEarned - before.totalEarned, before.stars) });
+          before = state;
         }
         const want = op[1] - dead;
         const n = Math.min(want, Math.floor(Math.max(0, budget - seconds) / SYNC.step), SYNC.maxSteps - steps);
         clipped += (want - n) * SYNC.step;
         if (n <= 0) {
-          skipped += 1;
+          // Hepsi pencereden eskiyse kayıt çevrimdışı kazanç olarak uygulandı; hiçbiri sığmadıysa atlandı.
+          if (dead > 0) applied += 1;
+          else skipped += 1;
           continue;
         }
         state = step(state, n);

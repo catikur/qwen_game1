@@ -193,6 +193,58 @@ async function e2e(browser) {
   await page.unroute('**/v1/sync');
   check(JSON.stringify((await server('v1/save', account)).state) === JSON.stringify((await local(page)).state), '"bilinmiyor" sonrası da bit bit aynı');
 
+  // Çevrimdışı oyun: gösterge çıkıyor, oyun cihazda sürüp kaydediliyor; internet gelince hemen
+  // eşitleniyor, çevrimdışı oynanan süre sunucuda da sayılıyor.
+  await show(page);
+  await context.setOffline(true);
+  await page.locator('[data-testid="offline"]').waitFor({ timeout: 10_000 });
+  await page.waitForTimeout(6_000);
+  const offlineSave = await local(page);
+  check(offlineSave.ops.length > 0, 'çevrimdışı oyun cihaza kaydediliyor');
+  await page.screenshot({ path: join(SHOTS, 'web-offline.png') });
+  await context.setOffline(false);
+  await page.locator('[data-testid="offline"]').waitFor({ state: 'detached', timeout: 15_000 });
+  check((await page.getByText(/İnternet geldi|Back online/).count()) > 0, 'internet gelince "eşitlendi" bildirimi');
+  await hide(page);
+  await wait(async () => (await local(page))?.ops.length === 0, 'çevrimdışı oyun eşitlendi');
+  const synced = await server('v1/save', account);
+  check(synced.state.clock >= offlineSave.state.clock, `çevrimdışı oynanan süre sunucuda sayıldı (${synced.state.clock} ≥ ${offlineSave.state.clock})`);
+  check(JSON.stringify(synced.state) === JSON.stringify((await local(page)).state), 'çevrimdışı oyundan sonra da bit bit aynı');
+
+  // İnternet, yolda kalmış bir eşitleme sürerken geri gelirse: o isteğin sonradan düşmesi göstergeyi
+  // geri açmıyor ve gönderim beklemeden yineleniyor (30 sn'lik olağan aralığı beklemiyor).
+  await show(page);
+  await page.waitForTimeout(2_500);
+  let releaseHeld;
+  const held = new Promise((resolve) => (releaseHeld = resolve));
+  let attempts = 0;
+  await page.route('**/v1/sync', async (route) => {
+    attempts += 1;
+    if (attempts === 1) {
+      await held;
+      await route.abort('failed');
+    } else {
+      await route.continue();
+    }
+  });
+  await hide(page);
+  await wait(() => attempts >= 1, 'yolda kalan eşitleme');
+  await context.setOffline(true);
+  await page.locator('[data-testid="offline"]').waitFor({ timeout: 10_000 });
+  await context.setOffline(false);
+  await page.waitForTimeout(300);
+  releaseHeld();
+  await wait(() => attempts >= 2, 'internet gelince yineleme', 8_000);
+  await page.locator('[data-testid="offline"]').waitFor({ state: 'detached', timeout: 8_000 });
+  await wait(async () => (await local(page))?.ops.length === 0, 'yineleme eşitlendi', 8_000);
+  await page.unroute('**/v1/sync');
+  // İnternet gelince gönderilecek bir şey yoksa da sunucuya bakılıyor: şerit kapanıyor (sekme arka planda, günlük boş).
+  await context.setOffline(true);
+  await page.locator('[data-testid="offline"]').waitFor({ timeout: 10_000 });
+  await context.setOffline(false);
+  await page.locator('[data-testid="offline"]').waitFor({ state: 'detached', timeout: 8_000 });
+  check((await local(page)).ops.length === 0, 'gönderilecek bir şey yokken de şerit kapandı');
+
   // Lige katıl.
   await show(page);
   await page.click('[data-testid="league"]');
@@ -245,6 +297,14 @@ async function e2e(browser) {
   check(age < 2_000, `devralınacak kayıt taze (${age} ms)`);
   const tab = await context.newPage();
   tab.on('pageerror', (error) => errors.push(String(error)));
+  // Yeni sekmenin sunucu istekleri geç yazım gelene kadar bekliyor: gerçekte geç yazım anında geliyor,
+  // burada iki sekme arası iki gidiş dönüş; açılıştaki yenileme ondan önce dönüp eşitleme başlatmasın.
+  let openGate;
+  const gate = new Promise((resolve) => (openGate = resolve));
+  await tab.route('**/v1/**', async (route) => {
+    await gate;
+    await route.continue();
+  });
   // Eski sekmenin geç kalan son yazımı (kilide bakmasıyla yazması arasında devralındı): yeni sekme
   // kilidi alıp kaydı okuduktan hemen sonra geliyor. Yeni sekme henüz hamle yapmadıysa ve
   // göndermediyse o kayıttan sürüyor (ilk eşitlemesi bir saniye sonra; yazım ondan önce).
@@ -264,6 +324,7 @@ async function e2e(browser) {
   const lateSeen = await page.evaluate(() => window.lateSeen);
   await wait(async () => (await local(tab)).lastSeen > lateSeen, 'yeni sekme kaydediyor');
   check((await local(tab)).prices.includes(4242), 'yeni sekme eski sekmenin geç yazımından sürüyor');
+  openGate();
   const before = (await local(page)).lastSeen;
   await page.waitForTimeout(6_000);
   check((await local(page)).lastSeen > before, 'yeni sekme oynuyor ve kaydediyor');
