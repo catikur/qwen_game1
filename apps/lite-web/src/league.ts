@@ -164,6 +164,11 @@ export class LeagueClient {
     return this.send('GET', 'v1/save');
   }
 
+  /** Sunucuya ulaşılıyor mu (hesapsız). */
+  async health(): Promise<void> {
+    await this.send('GET', 'v1/health', undefined, { auth: false });
+  }
+
   sync(base: number, batch: string, ops: SyncOp[], rest: number, keepalive = false): Promise<SyncResponse> {
     return this.send('POST', 'v1/sync', { base, batch, ops, rest }, { keepalive });
   }

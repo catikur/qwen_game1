@@ -238,6 +238,12 @@ async function e2e(browser) {
   await page.locator('[data-testid="offline"]').waitFor({ state: 'detached', timeout: 8_000 });
   await wait(async () => (await local(page))?.ops.length === 0, 'yineleme eşitlendi', 8_000);
   await page.unroute('**/v1/sync');
+  // İnternet gelince gönderilecek bir şey yoksa da sunucuya bakılıyor: şerit kapanıyor (sekme arka planda, günlük boş).
+  await context.setOffline(true);
+  await page.locator('[data-testid="offline"]').waitFor({ timeout: 10_000 });
+  await context.setOffline(false);
+  await page.locator('[data-testid="offline"]').waitFor({ state: 'detached', timeout: 8_000 });
+  check((await local(page)).ops.length === 0, 'gönderilecek bir şey yokken de şerit kapandı');
 
   // Lige katıl.
   await show(page);

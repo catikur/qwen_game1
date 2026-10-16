@@ -747,7 +747,8 @@ tek tablo. Bir cihazda başlayan oyun öbüründe sürüyor.
   onu kapatmıyor). İnternet gelince (`online` olayı) bekleyenler hemen gidiyor,
   sonra iki saniye arayla gönderim gönderim; ilk yanıtla şerit kapanıp "eşitlendi"
   bildirimi çıkıyor. İnternet, yolda kalmış bir istek sürerken gelirse o istek
-  bitince hemen yeniden gönderiliyor; düşmesi şeridi geri açmıyor. iOS zaten cihaz öncelikli: oyun cihazda, bağlanınca kayıt ve
+  bitince hemen yeniden gönderiliyor; düşmesi şeridi geri açmıyor. Gönderilecek
+  bir şey yoksa sunucuya bakılıyor (hesap varsa kayıt, yoksa sağlık), şerit kapanıyor. iOS zaten cihaz öncelikli: oyun cihazda, bağlanınca kayıt ve
   puan gidiyor (puan denetimi gerçek geçen süreye bakıyor).
 - **Tek örnek:** kaydı en son açılan sekme ya da pencere oynatıyor
   (`lite.owner`); eskisi duruyor, kayda ve sunucuya yazmıyor ("Burada devam

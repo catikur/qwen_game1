@@ -482,12 +482,29 @@ export class GameStore {
     }
   }
 
-  /** İnternet geldi: bekleyen ilerleme hemen gidiyor (göstergeyi ilk yanıt kapatıyor). */
+  /**
+   * İnternet geldi: bekleyen ilerleme hemen gidiyor; gönderilecek bir şey yoksa sunucuya
+   * bakılıyor (göstergeyi ilk yanıt kapatıyor).
+   */
   private wentOnline = (): void => {
     this.onlineAt = Date.now();
     if (this.syncing) this.again = true;
-    else void this.sync();
+    else if (this.league.account && this.base !== null && this.game.journal.pending > 0) void this.sync();
+    else if (this.league.account) void this.refresh();
+    else void this.probe();
   };
+
+  /** Hesapsız: sunucuya ulaşılıyor mu (gösterge), sonra gerekiyorsa sessiz hesap. */
+  private async probe(): Promise<void> {
+    const startedAt = Date.now();
+    try {
+      await this.league.health();
+      this.reached(true);
+    } catch (error) {
+      this.failed(error, startedAt);
+    }
+    void this.connect();
+  }
 
   private wentOffline = (): void => {
     this.reached(false);
