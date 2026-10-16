@@ -561,8 +561,10 @@ iCloud gibi Apple servisleri ücretli üyelik istiyor; B ücretsiz imzayla da
   hesap silme (oyuncunun her izi; boşalan özel lig de).
   - **Hesap silme:** önce oyuncu satırı siliniyor, sonra öbür tablolar. Bağlı
     başka cihazdan aynı anda gelen istek lig ya da grup yeri alamıyor, taşıma
-    kodu da token yazamıyor (o yazımlar oyuncunun varlığını koşul yapıyor). Arada yazılıp kalan bir iz de hafta
-    dönümünden sonraki temizlikte gidiyor (`weekly`).
+    kodu da token yazamıyor (o yazımlar oyuncunun varlığını koşul yapıyor).
+    Hesaplı her istek bitince hesabın hâlâ var olduğuna bakıyor; silindiyse
+    kendi yazdıklarını da siliyor (`fence`). Hafta dönümünden sonraki temizlik
+    yedek (`weekly`).
   - **Hafta dönümü:** pazartesi cron'unda; kaçarsa ilk istekte yapılıyor, tek
     sefer. İşaret ve bütün bölüm değişiklikleri tek D1 işleminde, iki ifadede
     (grup sıralaması SQL pencere işlevleriyle): yarıda kalırsa hiçbiri
@@ -738,7 +740,8 @@ tek tablo. Bir cihazda başlayan oyun öbüründe sürüyor.
   alıp sonra kaydı okuyor, böylece devralırken en çok bir saniyelik zaman
   kayboluyor; hamle kaybolmuyor. Eski örnek kilide bakıp yazana kadar
   devralındıysa son yazımı okumadan sonra geliyor: yeni örnek henüz hamle
-  yapmadıysa ve sunucuya göndermediyse oyunu o kayıttan sürdürüyor.
+  yapmadıysa ve günlük göndermediyse oyunu o kayıttan sürdürüyor (yolda olan
+  sessiz hesap açılışı bırakılıyor).
 - **Testler:** `packages/lite-model/test/sync.test.ts`,
   `packages/lite-league/test/sync.test.ts`, tarayıcıda uçtan uca
   `tools/lite-web-e2e.mjs` (CI'de "Lite web · uçtan uca ve kareler").

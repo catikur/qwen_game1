@@ -145,7 +145,7 @@ export class GameStore {
    */
   private inflight: { batch: string; count: number } | null = null;
   private readonly startedAt = Date.now();
-  /** Açılıştan bu yana hamle yapıldı ya da sunucuya yazıldı: eski örneğin geç yazımı artık alınmıyor. */
+  /** Açılıştan bu yana hamle yapıldı ya da günlük gönderildi: eski örneğin geç yazımı artık alınmıyor. */
   private diverged = false;
 
   // Android CI karesi: kabukta adres çubuğu yok; senaryo derleme anında verilebiliyor (VITE_SCENARIO_QUERY).
@@ -259,7 +259,7 @@ export class GameStore {
 
   /**
    * Eski örnek kilide bakıp yazana kadar devralındıysa onun son yazımı buradaki
-   * okumadan sonra geliyor. Bu örnek henüz hamle yapmadıysa ve sunucuya bir şey
+   * okumadan sonra geliyor. Bu örnek henüz hamle yapmadıysa ve günlük
    * göndermediyse oyun o kayıttan sürüyor (aradaki birkaç adım yalnızca zaman).
    * Eski örnek bundan sonra yazmıyor: her yazımdan önce kilide bakıyor.
    */
@@ -267,7 +267,7 @@ export class GameStore {
     if (this.superseded || this.diverged || this.isScenario || Date.now() - this.startedAt > LATE_WRITE) return;
     const saved = GameStore.parse(raw);
     if (!saved) return;
-    // Yolda olan yenileme eski kaydın: yanıtı bu oyunun üstüne yazılmasın.
+    // Yolda olan yenileme ve hesap açılışı eski kaydın: yanıtları bu oyunun üstüne yazılmasın.
     this.epoch += 1;
     this.game = this.restore(saved);
     this.save();
@@ -444,8 +444,8 @@ export class GameStore {
         return;
       }
       if (this.registering || (!force && this.state.clock < REGISTER_AFTER)) return;
+      // Hesap açmak günlük göndermiyor: bu arada eski örneğin geç yazımı alınırsa (`epoch`) açılan hesap kullanılmıyor.
       this.registering = true;
-      this.diverged = true;
       const epoch = this.epoch;
       const registration = this.league.register();
       this.registration = registration.catch(() => undefined);

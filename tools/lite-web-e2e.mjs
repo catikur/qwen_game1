@@ -239,6 +239,37 @@ async function e2e(browser) {
   await tab.locator('[data-testid="superseded"]').waitFor({ timeout: 10_000 });
   check((await page.locator('[data-testid="superseded"]').count()) === 0, 'eski sekme "burada devam et" ile oyunu geri aldı');
   await tab.close();
+
+  // Hesapsız oyunda devir: yeni sekme hemen sessiz hesap açmayı deniyor (günlük göndermiyor),
+  // yine de eski sekmenin geç yazımını alıyor. Hesap açılışı ağda düşüyor; ikisi de hesapsız kalıyor.
+  const quiet = await browser.newContext({ viewport: { width: 430, height: 932 }, locale: 'tr-TR', serviceWorkers: 'block' });
+  let registrations = 0;
+  await quiet.route('**/v1/players', (route) => (registrations++, route.abort('failed')));
+  // Bir dakikadan uzun oynanmış hesapsız oyun: açılınca hemen hesap açılmaya çalışılıyor.
+  const seeded = await local(page);
+  const seed = { ...seeded, state: { ...seeded.state, clock: Math.max(seeded.state.clock, 120) }, base: null, ops: [], inflight: null, lastSeen: Date.now() };
+  const early = await quiet.newPage();
+  early.on('pageerror', (error) => errors.push(String(error)));
+  await early.addInitScript((file) => {
+    if (!localStorage.getItem('lite.save')) localStorage.setItem('lite.save', JSON.stringify(file));
+  }, seed);
+  await early.goto(WEB);
+  await wait(() => registrations >= 1, 'eski sekme hesap açmayı denedi');
+  const fresh = await quiet.newPage();
+  fresh.on('pageerror', (error) => errors.push(String(error)));
+  await fresh.goto(WEB);
+  const lateQuiet = await early.evaluate(() => {
+    const file = JSON.parse(localStorage.getItem('lite.save'));
+    file.prices = [...file.prices, 4343];
+    file.lastSeen = Date.now();
+    localStorage.setItem('lite.save', JSON.stringify(file));
+    return file.lastSeen;
+  });
+  await early.locator('[data-testid="superseded"]').waitFor({ timeout: 10_000 });
+  await wait(async () => (await local(fresh)).lastSeen > lateQuiet, 'yeni sekme kaydediyor (hesapsız)');
+  check(registrations >= 2, `yeni sekme de hesap açmayı denedi (${registrations})`);
+  check((await local(fresh)).prices.includes(4343), 'hesap açmayı denese de eski sekmenin geç yazımından sürüyor');
+  await quiet.close();
   check(errors.length === 0, `sayfada hata yok${errors.length ? ': ' + errors.join(' | ') : ''}`);
   await other.close();
   await context.close();

@@ -512,6 +512,37 @@ test('hesap silinirken bağlı cihazdan gelen katılım ve eşitleme lig ya da g
   assert.ok(await db.first('SELECT 1 AS x FROM saves WHERE player_id = ?', owner.account.id));
 });
 
+test('hesap silinirken süren istek bitince kendi yazdıklarını da siliyor', async () => {
+  // Profil yazımı yavaş: eşitleme kimlik denetiminden geçtikten sonra silme araya girip bitebilsin.
+  const base = laggy(memoryDb());
+  const db: Db = {
+    ...base,
+    run: async (sql, ...args) => (/^INSERT INTO profiles/.test(sql) && (await new Promise((resolve) => setTimeout(resolve, 40))), base.run(sql, ...args)),
+  };
+  const tables = ['league_members', 'groups', 'reports', 'rejects', 'attest_keys', 'attest_challenges', 'tokens', 'saves', 'profiles', 'links'];
+  for (let round = 0; round < 6; round++) {
+    const web = await webPlayer(db, THURSDAY, `Süren ${round}`);
+    play(web.game, 3);
+    assert.equal((await web.push(THURSDAY + 4_000)).status, 200);
+    const link = await call(db, THURSDAY + 5_000, 'POST', '/v1/link', {}, web.account);
+    const claim = await call(db, THURSDAY + 6_000, 'POST', '/v1/link/claim', { code: link.body.code, platform: 'android' });
+    const phone: Account = { id: claim.body.id, token: claim.body.token };
+    const phoneGame = new SyncedGame(claim.body.save.state as LiteState);
+    phoneGame.tick(3);
+    const later = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+    const [synced, gone] = await Promise.all([
+      call(db, THURSDAY + 12_000, 'POST', '/v1/sync', { base: claim.body.save.version, batch: `fence-${round}-sync`, ops: phoneGame.journal.take(), rest: 0 }, phone),
+      later(round * 2).then(() => call(db, THURSDAY + 12_000, 'DELETE', '/v1/players/me', undefined, web.account)),
+    ]);
+    assert.equal(gone.status, 200);
+    assert.ok([200, 401, 404].includes(synced.status), `${round}: ${synced.status}`);
+    for (const table of tables) {
+      const left = await db.first<{ n: number }>(`SELECT COUNT(*) AS n FROM ${table} WHERE player_id = ?`, web.account.id);
+      assert.equal(left?.n, 0, `${round}: ${table}`);
+    }
+  }
+});
+
 test('taşıma kodu silmeyle aynı anda: ya hesap kaydıyla geliyor ya kod geçersiz; silinen hesaba token kalmıyor', async () => {
   // Token yazımı yavaş: oyuncu okunduktan sonra silme araya girebilsin.
   const base = laggy(memoryDb());

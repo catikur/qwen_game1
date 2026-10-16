@@ -178,46 +178,56 @@ async function route(request: Request, db: Db, now: number, options: Options): P
     const me = await db.first<Player>('SELECT * FROM players WHERE id = ?', session.player.id);
     // Bu arada hesap silindi (bağlı başka cihazdan).
     if (!me) throw new HttpError(401, 'auth');
-    switch (route) {
-      case 'PATCH /v1/players/me':
-        return await rename(request, db, me, now);
-      case 'DELETE /v1/players/me':
-        return await deleteAccount(db, me);
-      case 'POST /v1/attest/challenge':
-        return await attestChallenge(db, me, now);
-      case 'POST /v1/attest':
-        return await attestKey(request, db, me, now, options.attest);
-      case 'POST /v1/reports':
-        return await submit(request, db, me, now, options.attest);
-      case 'GET /v1/league':
-        return json(await standings(db, me, now));
-      case 'GET /v1/leagues':
-        return json(await myLeagues(db, me, now));
-      case 'POST /v1/leagues':
-        return await createLeague(request, db, me, now);
-      case 'POST /v1/leagues/join':
-        return await joinLeague(request, db, me, now);
-      case 'GET /v1/save': {
-        const save = await saveWithScore(db, me.id, now);
-        if (!save) throw new HttpError(404, 'save');
-        return json(save);
-      }
-      case 'POST /v1/save':
-        return await uploadDeviceSave(request, db, me, session.platform, now, options.attest);
-      case 'POST /v1/sync':
-        return await syncSave(request, db, me, session.platform, now);
-      case 'POST /v1/link':
-        return await createLink(db, me, now);
-      case 'GET /v1/stars':
-        return json(await starsBoard(db, me));
+    try {
+      return await signedIn(route, request, db, me, session.platform, now, options);
+    } finally {
+      // Hesap bu istek sürerken silindiyse (bağlı başka cihazdan) bu isteğin yazdıkları da gidiyor.
+      if (route !== 'DELETE /v1/players/me') await fence(db, me.id);
     }
-    const leave = /^DELETE \/v1\/leagues\/([A-Z0-9]{6})$/.exec(route);
-    if (leave) return await leaveLeague(db, me, leave[1]!);
-    throw new HttpError(404, 'route');
   } catch (error) {
     if (error instanceof HttpError) return json({ error: error.code, ...error.extra }, error.status);
     throw error;
   }
+}
+
+/** Hesaplı istekler. */
+async function signedIn(route: string, request: Request, db: Db, me: Player, platform: Platform, now: number, options: Options): Promise<Response> {
+  switch (route) {
+    case 'PATCH /v1/players/me':
+      return await rename(request, db, me, now);
+    case 'DELETE /v1/players/me':
+      return await deleteAccount(db, me);
+    case 'POST /v1/attest/challenge':
+      return await attestChallenge(db, me, now);
+    case 'POST /v1/attest':
+      return await attestKey(request, db, me, now, options.attest);
+    case 'POST /v1/reports':
+      return await submit(request, db, me, now, options.attest);
+    case 'GET /v1/league':
+      return json(await standings(db, me, now));
+    case 'GET /v1/leagues':
+      return json(await myLeagues(db, me, now));
+    case 'POST /v1/leagues':
+      return await createLeague(request, db, me, now);
+    case 'POST /v1/leagues/join':
+      return await joinLeague(request, db, me, now);
+    case 'GET /v1/save': {
+      const save = await saveWithScore(db, me.id, now);
+      if (!save) throw new HttpError(404, 'save');
+      return json(save);
+    }
+    case 'POST /v1/save':
+      return await uploadDeviceSave(request, db, me, platform, now, options.attest);
+    case 'POST /v1/sync':
+      return await syncSave(request, db, me, platform, now);
+    case 'POST /v1/link':
+      return await createLink(db, me, now);
+    case 'GET /v1/stars':
+      return json(await starsBoard(db, me));
+  }
+  const leave = /^DELETE \/v1\/leagues\/([A-Z0-9]{6})$/.exec(route);
+  if (leave) return await leaveLeague(db, me, leave[1]!);
+  throw new HttpError(404, 'route');
 }
 
 // ------------------------------------------------------------ hesap
@@ -704,15 +714,30 @@ const PLAYER_TABLES = ['groups', 'reports', 'rejects', 'attest_keys', 'attest_ch
  * Önce oyuncu satırı siliniyor: bundan sonra gelen istek kimlik doğrulamadan geçemiyor.
  * Kimliği daha önce doğrulanmış bir istek (bağlı başka cihazdan aynı anda) de lig ya da
  * grup yeri alamıyor, çünkü o yazımlar oyuncunun varlığını koşul yapıyor. Silmeden önce
- * yazılmış her şey aşağıda oyuncuya göre siliniyor. Arada yazılıp kalan başka bir iz
- * de haftalık temizlikte gidiyor (`purgeOrphans`).
+ * yazılmış her şey aşağıda oyuncuya göre siliniyor; aynı anda süren istek de bitince
+ * kendi yazdıklarını siliyor (`fence`). Haftalık temizlik yedek (`purgeOrphans`).
  */
 async function deleteAccount(db: Db, me: Player): Promise<Response> {
   await db.run('DELETE FROM players WHERE id = ?', me.id);
-  const left = await db.all<{ code: string }>('DELETE FROM league_members WHERE player_id = ? RETURNING code', me.id);
-  for (const { code } of left) await dropIfEmpty(db, code);
-  for (const table of PLAYER_TABLES) await db.run(`DELETE FROM ${table} WHERE player_id = ?`, me.id);
+  await removeRows(db, me.id);
   return json({ ok: true });
+}
+
+/** Oyuncunun oyuncu satırı dışındaki bütün satırları; boşalan özel ligler de. */
+async function removeRows(db: Db, id: string): Promise<void> {
+  const left = await db.all<{ code: string }>('DELETE FROM league_members WHERE player_id = ? RETURNING code', id);
+  for (const { code } of left) await dropIfEmpty(db, code);
+  for (const table of PLAYER_TABLES) await db.run(`DELETE FROM ${table} WHERE player_id = ?`, id);
+}
+
+/**
+ * Hesaplı her isteğin sonunda: hesap bu arada silindiyse isteğin yazdıklarını da sil.
+ * Silme önce oyuncu satırını siliyor: isteğin yazımı silmenin o tabloya gelmesinden
+ * önceyse silme, sonraysa (oyuncu satırı artık yok) burası siliyor.
+ */
+async function fence(db: Db, id: string): Promise<void> {
+  if (await db.first('SELECT 1 AS x FROM players WHERE id = ?', id)) return;
+  await removeRows(db, id);
 }
 
 /**
