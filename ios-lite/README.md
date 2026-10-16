@@ -149,7 +149,7 @@ Xcode'da: **Product → Scheme → Edit Scheme → Run → Arguments**.
   - `-liteIsland <1-3>`: şehir o adanın sayfasında (L7);
   - `-liteMap`: holding haritası açık;
   - `-liteLeague`: lig örnek veriyle (ağ yok), `-liteLeagueSheet` lig penceresi
-    açık, `-liteLeaguePrivate` özel ligler sekmesi;
+    açık, `-liteLeaguePrivate` özel ligler, `-liteLeagueStars` yıldız tablosu sekmesi;
   - `-liteDeal order|vip|investor`: şehirde fırsat balonu; `-liteDealCaught`
     yakalanmış hali (uçuş donuk).
 
@@ -258,3 +258,39 @@ Kod değiştikçe 1 ve 3 tekrarlanıyor.
 - **Adlar** herkese görünüyor: şirket ve lig adlarında küfür süzgeci var
   (Türkçe ve İngilizce, rakamlı yazım dahil; `offensiveName`). Reddedilen ad
   için uygulama "Bu ad kullanılamıyor" diyor.
+
+## Web ve cihazlar arası (L10)
+
+Aynı oyunun web sürümü `apps/lite-web` (tasarım: `docs/LITE-TASARIMI.md` §15).
+GitHub Pages'te <https://catikur.github.io/qwen_game1/lite/>; aynı lig sunucusu,
+aynı haftalık lig ve özel ligler.
+
+- **Hile payı (web, Android):** cihaz kanıtı yok. Oyun sunucuda: istemci
+  hamlelerini günlük olarak gönderiyor, sunucu aynı modeli oynatıyor; süre
+  sunucunun saatinden. İleri alınan saat ve elle şişirilen kasa geri alınıyor.
+- **iPhone ve iPad:** her gönderimde kaydını da App Attest onayıyla yüklüyor
+  (`POST /v1/save`). Öne gelince başka cihaz ilerlemişse o duruma geçiyor.
+- **Başka cihazda oyna:** Lig → "Başka cihazda oyna" → **Kod al**. Öbür cihazda
+  aynı kart → kodu gir → **Buraya al**. Kod 10 dakika geçerli, bir kez
+  kullanılıyor; iki cihaz da aynı hesapla oynamayı sürdürüyor.
+- **Yıldız tablosu:** Lig → **Yıldız**: bütün platformların holding yıldızı
+  (dünya ilk 50 ve özel lig arkadaşları). Game Center yalnızca Apple'da.
+
+| Ne | Komut |
+|---|---|
+| Web sürümünü yerelde açmak | `pnpm lite:league-local` (yerel lig, 8788) ve `VITE_LEAGUE_URL=http://127.0.0.1:8788 pnpm lite:web` |
+| Web paketi | `pnpm lite:web-build` → `apps/lite-web/dist` |
+| Uçtan uca test ve kareler | `pnpm lite:web-e2e` (Playwright; kareler `apps/lite-web/shots`) |
+
+Senaryo kareleri: adrese `?scenario=<ad>` (iOS ile aynı adlar); ek
+parametreler `lang=tr|en`, `theme=day|night`, `sheet=settings|league|map`,
+`league` (örnek lig), `private`, `stars`, `deal=order|vip|investor`, `caught`,
+`offline=<sn>`, `island=<n>`, `scroll=market|holding|league`.
+
+**Sunucuyu güncellerken (L10):** yeni tablolar (`tokens`, `saves`, `profiles`,
+`links`) `schema.sql`'de; uzak veritabanına bir kez uygulanmalı (CI'nin
+dağıtım işi ya da D1 konsolunda `schema.sql`'in L10 bölümü). `TURNSTILE_SECRET`
+sırrını şimdilik **tanımlama**: sunucu tarafı hazır ama web ve Android
+istemcisinde doğrulama kutusu henüz yok; sır tanımlanırsa yeni web ve Android
+hesapları açılamaz (bot sorunu çıkarsa istemci tarafı eklenecek).
+

@@ -40,6 +40,13 @@ jobs:
       # yolları o önekle yazılmalı. Yerel derleme ve CI kökte kalıyor.
       - name: Alt yolla derleme
         run: pnpm --filter @capital/web exec vite build --base=/${{ github.event.repository.name }}/
+      # CapitalForge Lite web sürümü /lite/ altında (göreli yollarla derleniyor);
+      # gizlilik ve destek sayfaları da onun paketinde.
+      - name: Lite web sürümü
+        run: |
+          pnpm --filter @capital/lite-web build
+          rm -rf apps/web/dist/lite
+          cp -r apps/lite-web/dist apps/web/dist/lite
       - uses: actions/upload-pages-artifact@v4
         with:
           path: apps/web/dist

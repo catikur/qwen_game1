@@ -82,3 +82,46 @@ CREATE TABLE IF NOT EXISTS attest_challenges (
   challenge TEXT NOT NULL,
   expires_at INTEGER NOT NULL
 );
+
+-- L10: bir hesabın cihazları (web, Android, taşınan iOS). İlk cihazın token'ı
+-- players.token_hash'te de duruyor (eski iOS hesaplarının burada satırı yok).
+CREATE TABLE IF NOT EXISTS tokens (
+  token_hash TEXT PRIMARY KEY,
+  player_id TEXT NOT NULL,
+  -- ios | web | android
+  platform TEXT NOT NULL,
+  created_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS tokens_by_player ON tokens (player_id);
+
+-- L10: sunucu yetkili kayıt (src/saves.ts).
+CREATE TABLE IF NOT EXISTS saves (
+  player_id TEXT PRIMARY KEY,
+  -- İyimser kilit: her eşitlemede bir artıyor.
+  version INTEGER NOT NULL,
+  -- LiteState (JSON).
+  state TEXT NOT NULL,
+  -- Günlüğün kullandığı gerçek zaman (ms): sunucunun saatini geçemiyor.
+  cursor INTEGER NOT NULL,
+  -- Son uygulanan gönderimin kimliği (yanıtı kaybolan tekrar edilirse).
+  batch TEXT,
+  at INTEGER NOT NULL
+);
+
+-- L10: genel yıldız tablosu (bütün platformlar) ve tablolardaki platform işareti.
+CREATE TABLE IF NOT EXISTS profiles (
+  player_id TEXT PRIMARY KEY,
+  platform TEXT NOT NULL,
+  stars INTEGER NOT NULL,
+  city INTEGER NOT NULL,
+  at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS profiles_by_stars ON profiles (stars);
+
+-- L10: başka cihaza taşıma kodu (tek seferlik, 10 dakika).
+CREATE TABLE IF NOT EXISTS links (
+  code TEXT PRIMARY KEY,
+  player_id TEXT NOT NULL,
+  expires_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS links_by_player ON links (player_id);

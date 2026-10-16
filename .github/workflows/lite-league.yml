@@ -64,6 +64,18 @@ jobs:
             test "$CODE" = 200
             test "$(curl -s -o /dev/null -w '%{http_code}' -H "authorization: $AUTH" "$URL/v1/league")" = 401
           fi
+          # L10: web hesabı (adsız, oyun sunucuda), bir gönderim, silme.
+          WEB=$(curl -s -X POST -H 'content-type: application/json' -H 'origin: https://catikur.github.io' -d '{"platform":"web"}' -D web.headers "$URL/v1/players")
+          if echo "$WEB" | grep -q '"save"'; then
+            grep -qi '^access-control-allow-origin: https://catikur.github.io' web.headers
+            WAUTH=$(echo "$WEB" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const a=JSON.parse(s);console.log(`Bearer ${a.id}.${a.token}`)})')
+            sleep 3
+            SYNC=$(curl -fsS -X POST -H "authorization: $WAUTH" -H 'content-type: application/json' -d '{"base":0,"batch":"ci-smoke-0001","ops":[["t",2]],"rest":0}' "$URL/v1/sync")
+            echo "$SYNC" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const r=JSON.parse(s);if(r.version!==1||r.state.clock!==2)process.exit(1);console.log("eşitleme: sürüm",r.version,"saat",r.state.clock)})'
+            test "$(curl -s -o /dev/null -w '%{http_code}' -X DELETE -H "authorization: $WAUTH" "$URL/v1/players/me")" = 200
+          else
+            echo "::warning::Canlı sunucu eski sürüm (web hesabı yok); yeni paketi yapıştır ve şemayı uygula (ios-lite/README.md)."
+          fi
           echo "Canlı sunucu ve veritabanı çalışıyor."
 
   deploy:

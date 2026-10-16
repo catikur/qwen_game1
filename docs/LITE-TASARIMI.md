@@ -238,7 +238,7 @@ gece sürümüyle birlikte seçti.
   binalı şehir silueti, kenarında ince tırtıl, köşede parıltı. Küçük boyda da
   okunuyor (sikke + siluet). `ios-lite/App/tools/make-icon.mjs` SVG'den
   üretiyor, alfa kanalını atıyor; aynı SVG'den web sayfaları için 192 px
-  `apps/web/public/lite/icon.png`.
+  `apps/lite-web/public/icon.png`.
 
 Şehir çizimi SwiftUI `Canvas` ile prosedürel; hiçbir dış görsel dosya
 kullanılmıyor.
@@ -559,6 +559,13 @@ iCloud gibi Apple servisleri ücretli üyelik istiyor; B ücretsiz imzayla da
 - **Sunucu** (`packages/lite-league`, Cloudflare Workers + D1): anonim hesap
   (ad + token, yalnızca özeti saklanıyor), gönderim, haftalık grup, özel ligler,
   hesap silme (oyuncunun her izi; boşalan özel lig de).
+  - **Hesap silme:** önce oyuncu satırı siliniyor, sonra öbür tablolar; kurduğu
+    dolu özel ligin kuruculuğu en eski üyeye geçiyor. Bağlı
+    başka cihazdan aynı anda gelen istek lig ya da grup yeri alamıyor, taşıma
+    kodu da token yazamıyor (o yazımlar oyuncunun varlığını koşul yapıyor).
+    Hesaplı her istek bitince hesabın hâlâ var olduğuna bakıyor; silindiyse
+    kendi yazdıklarını da siliyor (`fence`). Hafta dönümünden sonraki temizlik
+    yedek (`weekly`).
   - **Hafta dönümü:** pazartesi cron'unda; kaçarsa ilk istekte yapılıyor, tek
     sefer. İşaret ve bütün bölüm değişiklikleri tek D1 işleminde, iki ifadede
     (grup sıralaması SQL pencere işlevleriyle): yarıda kalırsa hiçbiri
@@ -651,7 +658,8 @@ tek tablo. Bir cihazda başlayan oyun öbüründe sürüyor.
     işe yaramıyor. Sunucunun durumu esas; istemci farklıysa ona dönüyor.
     Gönderim başına yalnızca son birkaç dakikanın hamleleri, ücretsiz
     katmanın işlemci sınırına sığıyor.
-  - Hesap açmada Cloudflare Turnstile (bot karşı).
+  - Hesap açmada Cloudflare Turnstile (bot karşı): sunucu tarafı hazır;
+    istemcideki doğrulama kutusu gerekirse sonra.
   - Tablolarda platform işareti (telefon, tablet, tarayıcı); herkes aynı
     grupta.
 - **Cihazlar arası devam:** hesap ekranında "başka cihaza taşı" kodu (6 harf,
@@ -667,7 +675,96 @@ tek tablo. Bir cihazda başlayan oyun öbüründe sürüyor.
   (Kotlin + Compose, modelin üçüncü portu) daha yerel ama üçüncü bir arayüz
   ve eşitlik fikstürü demek.
 - **Kullanıcıdan gerekenler:**
-  - Web: yok (Pages zaten açık). Turnstile için Cloudflare panelinden bir site
-    anahtarı (ücretsiz).
+  - Web: yok (Pages zaten açık). Turnstile istemcisi eklenirse Cloudflare
+    panelinden bir site anahtarı (ücretsiz).
   - Android: Google Play Console geliştirici hesabı (tek sefer 25 $), uygulama
     imzalama anahtarı (Play App Signing).
+
+### 15.1 Uygulanan (L10)
+
+- **Eşitleme** (`packages/lite-model/src/sync.ts`, sunucu `src/saves.ts`):
+  - Zaman sabit 1 sn adımlarla; istemci yalnızca `advance(state, 1)` çağırıyor,
+    kesir ekranda süsleniyor. Günlük: `['t', n]` adım, `['o', sn]` yokken,
+    eylemler (`b` seviye, `m` müdür, `c` kampanya, `p` meclis, `g` görev,
+    `d` fırsat, `i` halka arz, `s` şehri sat, `r` sıfırla).
+  - Sunucu aynı kodu aynı sırayla oynatıyor: dürüst istemcide sonuç bit bit
+    aynı (testte ve tarayıcıda doğrulanıyor). Süre bütçesi hesap açıldığından
+    beri gerçekten geçen süre (+10 sn pay; yeni hesaba açılış öncesi için en çok
+    1 saat). Günlük tamken (`rest: 0`) kullanılmayan süre birikmiyor.
+    Kayıtlar gerçek zamana art arda yerleşiyor: günlük tamsa (`rest: 0`) şimdide
+    bitiyor (baştaki boşluk oynanmamış geçmiş), değilse imleçten başlıyor.
+    Çevrimiçi adımlar yalnızca son saatte sayılıyor (`SYNC.maxBank`); daha eskiye
+    düşen adımın zamanı geçiyor ama oyun ilerlemiyor. Böylece eşitlenmemiş
+    çevrimiçi oyun en çok 1 saat; uzun bir boşluk sonradan "çevrimiçiydim" diye
+    doldurulamıyor (`rest` ne derse desin). Ayrılış (`o`) yerinde kalıp bütün
+    süresini alıyor (yarım verim ve tavan). Ağsız 1 saatten eski oyun sayılmıyor.
+    Arada (sayılan) çevrimiçi adım olmayan ayrılışlar tek ayrılış: kazanç tavanını
+    paylaşıyor; açık kalan ayrılışın kalan tavanı kayıtta, sonraki gönderimde
+    sürüyor (uzun ayrılışı kayıtlara ya da gönderimlere bölmek tavanı yenilemiyor).
+  - 30 günden uzun ayrılış günlüğe 30 gün yazılıyor (kazanç tavanı zaten kısa);
+    sunucu günlüğü yine de reddederse (400) istemci sunucunun durumuna dönüyor.
+    Taşıma kodu ya da silme sırasında yolda kalan eski hesap yanıtı (web ve iOS)
+    yok sayılıyor; kod, yolda olan sessiz hesap açılışını bekliyor ve sunucuda
+    tek adımda tüketiliyor (aynı anda iki istekten yalnızca biri alıyor).
+  - Bilinen sınır: aynı hesap iPhone'da ve web ya da Android'de aynı anda
+    oynanırsa, iPhone'un kayıt yüklemesi ile puan gönderimi arasına giren bir
+    eşitleme o turun (en çok 5 dakika) haftalık puanını düşürebilir; oyun
+    ilerlemesi kaybolmuyor. Çözüm (sonra): iOS kayıt ve puanı App Attest imzalı
+    tek istekte gönderir, sunucu iOS puanını da web'deki gibi kayıttan hesaplar.
+  - Gönderim başına en çok 600 adım, 1000 kayıt: ücretsiz katmanın işlemci
+    sınırına sığıyor (600 adım ≈ 2–3 ms).
+  - İyimser sürüm kilidi; başka cihaz (ya da kapanan eski sekme) ilerlediyse
+    409 ve güncel durum: istemci bekleyenleri onun üstüne yeniden uygulayıp
+    gönderiyor (sunucu yine doğruluyor, süre iki kez sayılmıyor). Yanıtı
+    kaybolan gönderimin tekrarı zararsız: sunucu son 16 gönderimin kimliğini
+    tutuyor. Arada daha çok gönderim geçtiyse 409'a "bilinmiyor" işareti
+    koyuyor; istemci o kayıtları yeniden uygulamıyor (hiçbir şey iki kez
+    uygulanmıyor, uygulanmadıysa kayboluyor).
+  - Haftalık puanı sunucu hesaplıyor: her zaman dilimi gerçek zamana
+    yerleşiyor, pazartesiyi aşan dilim süresiyle bölünüyor.
+- **Hesap:** web ve Android bir dakika oynanınca ya da lig ekranı açılınca
+  sessiz (adsız) hesap (bir bakıp çıkana hesap açılmıyor); ad verince lige
+  katılıyor (hemen bu haftanın grubunda). Bir hesabın birden çok cihazı
+  (`tokens`). Taşıma kodu 6 harf, 10 dakika, tek seferlik; kayıt sunucuda
+  olmalı (iOS önce yüklüyor).
+- **iOS:** her 5 dakikada ve arka plana geçerken önce kaydı yüklüyor
+  (App Attest onaylı, Swift biçimi sunucuda TS'ye çevriliyor), sonra puanı.
+  Öne gelince sunucu ilerlemişse onun durumuna ve haftalık puanına geçiyor.
+- **Genel tablo:** `GET /v1/stars` (dünya ilk 50, sıram, özel lig
+  arkadaşları); tablolarda platform işareti (iPhone/iPad, tarayıcı, Android).
+- **Web arayüzü** (`apps/lite-web`): React + Vite; şehir çizimi iOS'un
+  `IsoPainter`'ının Canvas karşılığı (aynı geometri, renkler, belirlenimci
+  rastgele diziler). PWA (çevrimdışı, ana ekrana ekleme). Telefon, tablet ve
+  masaüstü düzeni. Metinler `L10n.swift`'ten derleme anında.
+- **Tek örnek:** kaydı en son açılan sekme ya da pencere oynatıyor
+  (`lite.owner`); eskisi duruyor, kayda ve sunucuya yazmıyor ("Burada devam
+  et" sayfayı yeniden açıp geri alıyor). Android'de etkinlik ilk çizimden önce
+  yeniden kurulunca arkada kalan WebView de böyle duruyor (emülatörde görüldü).
+  Oynayan örnek her hamlede ve her saniye kaydediyor. Yeni örnek önce kilidi
+  alıp sonra kaydı okuyor, böylece devralırken en çok bir saniyelik zaman
+  kayboluyor; hamle kaybolmuyor. Eski örnek kilide bakıp yazana kadar
+  devralındıysa son yazımı okumadan sonra geliyor: yeni örnek henüz hamle
+  yapmadıysa, günlük göndermediyse ve hesap ya da oyun değişmediyse (taşıma
+  kodu, sunucunun durumuna geçiş) oyunu o kayıttan sürdürüyor (yolda olan
+  sessiz hesap açılışı bırakılıyor).
+- **Testler:** `packages/lite-model/test/sync.test.ts`,
+  `packages/lite-league/test/sync.test.ts`, tarayıcıda uçtan uca
+  `tools/lite-web-e2e.mjs` (CI'de "Lite web · uçtan uca ve kareler").
+
+### 15.2 Uygulanan (L11): Android
+
+- `apps/lite-android`: Capacitor 8 kabuğu, `apps/lite-web` paketi içinde
+  (`webDir`). Uygulama kimliği iOS ile aynı: `com.catikur.capitalforgelite`.
+- Yerel parçalar (`apps/lite-web/src/native.ts`, tarayıcıda boş): titreşim
+  (Haptics), uygulama durumu (arka plana geçerken kaydet, eşitle, bildirim
+  zamanla; dönünce sil), geri tuşu (açık pencereyi kapatır, yoksa uygulamayı
+  arka plana alır), yerel bildirimler (iOS ile aynı plan: kasa doldu, meclis,
+  rakip). Kesin alarm izni istenmiyor (Play kuralı); bildirimler birkaç dakika
+  oynayabilir.
+- Lig: web ile aynı (sunucu yetkili kayıt, platform `android`).
+- Simgeler ve açılış ekranı iOS simgesinin SVG'sinden
+  (`apps/lite-android/tools/make-icons.mjs`); Play görselleri `store/`.
+- CI (`.github/workflows/lite-android.yml`): emülatörde aç ve kare al,
+  APK ve AAB; yükleme anahtarı sırlardaysa AAB imzalı. Play adımları
+  `apps/lite-android/README.md`.
+

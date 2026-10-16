@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">CapitalForge Lite</string>
+    <string name="title_activity_main">CapitalForge Lite</string>
+    <string name="package_name">com.catikur.capitalforgelite</string>
+    <string name="custom_url_scheme">com.catikur.capitalforgelite</string>
+</resources>

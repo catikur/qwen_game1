@@ -26,7 +26,15 @@ xcrun simctl install "$UDID" "$APP"
 shot() {
   local name="$1"; shift
   xcrun simctl terminate "$UDID" "$BUNDLE" 2>/dev/null || true
-  xcrun simctl launch "$UDID" "$BUNDLE" "$@"
+  # Açılıştan hemen sonra SpringBoard kurulan uygulamayı bazen henüz tanımıyor
+  # ("unknown to FrontBoard"): yeniden kurup iki kez daha dene.
+  local attempt
+  for attempt in 1 2 3; do
+    xcrun simctl launch "$UDID" "$BUNDLE" "$@" && break
+    [ "$attempt" = 3 ] && return 1
+    sleep 10
+    xcrun simctl install "$UDID" "$APP"
+  done
   # Geç senaryoda bot dört saatlik oyunu açılışta oynuyor; bekleme payı geniş.
   # Senaryo modunda saat donuk: bekleme süresi kareyi değiştirmiyor.
   sleep "${WAIT:-14}"
@@ -70,6 +78,7 @@ shot tr-map -AppleLanguages "(tr)" -liteScenario snow -liteMap
 # L8: haftalık lig (örnek veriyle; sunucu yok), özel ligler, kart, "yakında".
 shot tr-league -AppleLanguages "(tr)" -liteScenario mid -liteLeague -liteLeagueSheet
 shot tr-league-private -AppleLanguages "(tr)" -liteScenario mid -liteLeague -liteLeagueSheet -liteLeaguePrivate
+shot tr-league-stars -AppleLanguages "(tr)" -liteScenario mid -liteLeague -liteLeagueSheet -liteLeagueStars
 shot tr-league-card -AppleLanguages "(tr)" -liteScenario mid -liteLeague -liteScroll league
 # L9: şehir fırsatları (balon; yakalanınca uçuş).
 shot tr-deal -AppleLanguages "(tr)" -liteScenario mid -liteDeal order

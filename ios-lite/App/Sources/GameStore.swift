@@ -109,7 +109,10 @@ final class GameStore {
         }
         lastSampleClock = state.clock
         league.track(state)
+        // L10: başka cihaz (web, Android) ilerlettiyse onun durumuna geç.
+        league.onRemoteState = { [weak self] remote in self?.adoptRemote(remote) }
         start()
+        if !scenario { Task { await self.league.refreshSave() } }
     }
 
     var isScenario: Bool { ProcessInfo.processInfo.arguments.contains("-liteScenario") }
@@ -163,6 +166,7 @@ final class GameStore {
                 applyOffline(Date().timeIntervalSince(away))
             }
             start()
+            Task { await self.league.refreshSave() }
         case .background:
             if backgroundAt == nil { backgroundAt = Date() }
             stop()
@@ -314,6 +318,16 @@ final class GameStore {
             cue(.fanfare)
             save()
         }
+    }
+
+    /// L10: oyun başka cihazda ilerlemiş; sunucunun durumuna geç.
+    private func adoptRemote(_ remote: LiteState) {
+        state = remote
+        league.track(state)
+        priceHistory = state.listed ? [Lite.sharePrice(state)] : []
+        lastSampleClock = state.clock
+        offlineReport = nil
+        save()
     }
 
     /// Bütün ilerlemeyi sil: yeni oyun, boş borsa.
