@@ -141,28 +141,25 @@ test('web: günlük tamken kullanılmayan süre birikmiyor; biriktirip "çevrimi
   assert.ok(second.body.clipped >= 600 - 9 - 2 * 10 - 1, `kırpılan ${second.body.clipped}`);
 });
 
-test('web: "bekleyen var" (rest > 0) diyerek günler biriktirip çevrimiçi diye harcamak en çok bir saat getiriyor', async () => {
+test('web: "bekleyen var" (rest > 0) diyerek günler biriktirip çevrimiçi diye harcamak işe yaramıyor; ağsız son saat sayılıyor', async () => {
   const db = memoryDb();
   const web = await webPlayer(db, THURSDAY);
   play(web.game, 30);
   assert.equal((await web.push(THURSDAY + 31_000, 1)).status, 200);
-  // Üç gün hiç göndermiyor, sonra o üç günü 600'lük çevrimiçi adımlarla (hep rest > 0) doldurmaya çalışıyor.
+  // Üç gün hiç göndermiyor, sonra o üç günü 600'lük çevrimiçi adımlarla doldurmaya çalışıyor.
   let at = THURSDAY + 31_000 + 3 * 86_400_000;
   let counted = 0;
   const batches = 12;
   for (let k = 0; k < batches; k++) {
     web.game.tick(SYNC.maxSteps);
-    const before = web.game.state.clock;
-    const sent = await web.push(at, 1);
+    // Son gönderimde "tam" diyor: kayıtları şimdiye yerleşiyor.
+    const sent = await web.push(at, k === batches - 1 ? 0 : 1);
     assert.equal(sent.status, 200, JSON.stringify(sent.body));
     counted += SYNC.maxSteps - sent.body.clipped;
-    assert.ok(web.game.state.clock <= before);
     at += 2_100;
   }
-  // 12 × 600 sn gönderildi; sayılan en çok bir saat ve aradaki gerçek süre.
-  const real = (batches * 2_100) / 1000;
-  assert.ok(counted <= SYNC.maxBank + real + 2 * SYNC.slack, `sayılan ${counted}`);
-  assert.ok(counted >= SYNC.maxBank - 1, `ağsız dürüst oyun için bir saat kalıyor: ${counted}`);
+  // 12 × 600 sn gönderildi; yalnızca "şimdide biten" son gönderim sayılıyor.
+  assert.ok(counted <= SYNC.maxSteps + 1, `sayılan ${counted}`);
 
   // Dürüst istemci aynı üç günü "yoktum" diye yazar: çevrimdışı kazanç tavanıyla tam alınıyor.
   const honest = await webPlayer(db, THURSDAY);
@@ -174,6 +171,20 @@ test('web: "bekleyen var" (rest > 0) diyerek günler biriktirip çevrimiçi diye
   assert.equal(back.status, 200);
   assert.ok(back.body.clipped <= SYNC.slack, `kırpılan ${back.body.clipped}`);
   assert.equal(JSON.stringify(honest.game.state), JSON.stringify(applyOffline(before, 3 * 86_400).state));
+
+  // Ağsız yarım saat oynayan dürüst istemci bağlanınca üç gönderimde hepsi sayılıyor.
+  const offline = await webPlayer(db, THURSDAY);
+  play(offline.game, 30);
+  assert.equal((await offline.push(THURSDAY + 31_000, 0)).status, 200);
+  offline.game.tick(1_800);
+  let clipped = 0;
+  for (const [k, rest] of [2, 1, 0].entries()) {
+    const sent = await offline.push(THURSDAY + 31_000 + 1_800_000 + k * 2_100, rest);
+    assert.equal(sent.status, 200, JSON.stringify(sent.body));
+    clipped += sent.body.clipped;
+  }
+  assert.equal(clipped, 0);
+  assert.equal(offline.game.journal.pending, 0);
 });
 
 test('iki cihaz: eski sürümün üstüne gönderim 409 ve güncel durum; kaybolan yanıtın tekrarı zararsız', async () => {
@@ -215,6 +226,12 @@ test('iki cihaz: eski sürümün üstüne gönderim 409 ve güncel durum; kaybol
   // Süresi geçen kod.
   const old = await call(db, THURSDAY, 'POST', '/v1/link', {}, web.account);
   assert.equal((await call(db, THURSDAY + 11 * 60_000, 'POST', '/v1/link/claim', { code: old.body.code, platform: 'web' })).status, 404);
+  // Aynı kodla aynı anda iki istek: yalnızca biri hesabı alıyor.
+  const twice = await call(db, THURSDAY + 62_000, 'POST', '/v1/link', {}, web.account);
+  const both = await Promise.all(
+    ['web', 'android'].map((platform) => call(db, THURSDAY + 63_000, 'POST', '/v1/link/claim', { code: twice.body.code, platform })),
+  );
+  assert.deepEqual(both.map((r) => r.status).sort(), [201, 404]);
 });
 
 test('yıldız tablosu: bütün platformlar, adsızlar yok, sıram ve arkadaşlar', async () => {

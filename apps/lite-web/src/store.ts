@@ -132,6 +132,8 @@ export class GameStore {
   private readonly owner = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
   /** Hesap ya da oyun değişince artıyor: eski hesabın yolda kalan yanıtı yeni oyunun üstüne yazılmasın. */
   private epoch = 0;
+  /** Yolda olan sessiz hesap açılışı: taşıma kodu bunu bekliyor (sonradan gelen yeni hesap alınanın üstüne yazmasın). */
+  private registration: Promise<unknown> | null = null;
 
   // Android CI karesi: kabukta adres çubuğu yok; senaryo derleme anında verilebiliyor (VITE_SCENARIO_QUERY).
   constructor(search: string = typeof location !== 'undefined' ? location.search || (import.meta.env.VITE_SCENARIO_QUERY ?? '') : '') {
@@ -384,7 +386,9 @@ export class GameStore {
       }
       if (this.registering || (!force && this.state.clock < REGISTER_AFTER)) return;
       this.registering = true;
-      const save = await this.league.register();
+      const registration = this.league.register();
+      this.registration = registration.catch(() => undefined);
+      const save = await registration;
       // Yeni hesabın oyunu sıfırdan; buradaki günlük de sıfırdan oynandı.
       this.base = save.version;
       this.save();
@@ -394,6 +398,7 @@ export class GameStore {
       // Ağ yok: sonraki eşitlemede yeniden.
     } finally {
       this.registering = false;
+      this.registration = null;
     }
   }
 
@@ -768,6 +773,7 @@ export class GameStore {
 
   /** Kodla başka cihazdaki hesabı buraya al: buradaki oyun yerine o geliyor. */
   async claimLink(code: string): Promise<boolean> {
+    await this.registration;
     const before = this.league.account?.id;
     const save = await this.run(() => this.league.claimLink(code.trim().toUpperCase()));
     // Hesap değiştiyse eski hesabın yolda kalan eşitlemesi yok sayılıyor.

@@ -132,22 +132,40 @@ test('eşitleme: sıfırlama yeni oyun; sonrası yeniden sayılıyor', () => {
   assert.deepEqual(replay(newGame(), game.journal.ops).state, game.state);
 });
 
-test('eşitleme: çevrimiçi adımlar bütçenin yalnızca son saatine yerleşiyor; ayrılış bütün süreyi kullanabiliyor', () => {
+test('eşitleme: çevrimiçi adımlar yalnızca bütçenin son saatinde sayılıyor; ayrılış yerinde kalıyor', () => {
   const start = newGame();
   start.cash = 1e9;
   const day = 86_400;
-  // Bir gün sonra "hep çevrimiçiydim": en çok son bir saat sayılıyor, öncesi kazançsız boşluk.
-  const online = replay(start, [['t', SYNC.maxSteps], ['t', SYNC.maxSteps], ['t', SYNC.maxSteps], ['t', SYNC.maxSteps], ['t', SYNC.maxSteps], ['t', SYNC.maxSteps]], day);
-  assert.equal(online.state.clock, Math.min(SYNC.maxSteps, SYNC.maxBank) * SYNC.step, 'tek gönderimde en çok maxSteps');
-  assert.equal(online.seconds, day - SYNC.maxBank + SYNC.maxSteps, 'boşluk zamanı geçiriyor');
-  assert.equal(online.spans[0]!.score, 0, 'boşluğun haftalık payı yok');
-  // Aynı gün dürüstçe "yoktum" (o) sonra kısa oyun: ayrılış bütün süreyi alıyor, adımlar sona sığıyor.
+  const online: SyncOp[] = [['t', 600], ['t', 600], ['t', 600], ['t', 600], ['t', 600], ['t', 600]];
+  // "Sırada başka kayıt var" (rest > 0) deyip bir gün önceden başlayan adımlar: zamanı geçiyor, sayılmıyor.
+  const old = replay(start, online, day);
+  assert.equal(old.state.clock, 0);
+  assert.equal(old.seconds, 3_600);
+  assert.equal(old.clipped, 3_600);
+  assert.ok(old.spans.every((span) => span.score === 0), 'haftalık pay yok');
+  // Günlük tamsa (rest = 0) kayıtlar şimdide bitiyor: son on dakika sayılıyor, öncesi boşluk.
+  const recent = replay(start, [['t', 600]], day, true);
+  assert.equal(recent.state.clock, 600);
+  assert.equal(recent.clipped, 0);
+  assert.equal(recent.seconds, day - SYNC.slack);
+  // Ağsız on dakika, sonra bir günlük ayrılış: eski adımlar sayılmıyor ama ayrılış bütün gününü alıyor.
+  const away = replay(start, [['t', 600], ['o', day]], day + 600, true);
+  assert.equal(away.clipped, 600);
+  assert.deepEqual(away.state, applyOffline(start, day).state);
+  // Dürüst "yoktum" (o) sonra kısa oyun: hepsi sayılıyor.
   const honest = replay(start, [['o', day - 600], ['t', 600]], day);
   assert.equal(honest.clipped, 0);
   assert.equal(honest.seconds, day);
   assert.equal(honest.state.clock, applyOffline(start, day - 600).state.clock + 600);
   // Bütçesiz oynatma (istemci) etkilenmiyor.
   assert.equal(replay(start, [['t', 600]]).state.clock, 600);
+});
+
+test('günlük: büyük adım sayısı sunucunun kabul ettiği kayıtlara bölünüyor', () => {
+  const game = new SyncedGame(newGame());
+  game.tick(SYNC.maxSteps * 2 + 5);
+  assert.deepEqual(game.journal.ops, [['t', SYNC.maxSteps], ['t', SYNC.maxSteps], ['t', 5]]);
+  assert.ok(game.journal.ops.every(validOp));
 });
 
 test('istemci: otuz günden uzun ayrılış sunucunun kabul ettiği kayda kırpılıyor', () => {

@@ -226,11 +226,16 @@ export function step(state: LiteState, steps: number): LiteState {
 
 /**
  * Günlüğü oynat. `budget`: kullanılabilecek gerçek süre (sn; sunucunun saatine
- * göre). Çevrimiçi adımlar ayrıca `SYNC.maxSteps` ile sınırlı ve yalnızca
- * bütçenin son `SYNC.maxBank` saniyesine yerleşiyor (öncesi kazançsız boşluk).
+ * göre, saat payıyla). Kayıtlar gerçek zamana art arda yerleşiyor: `complete`
+ * (günlük şimdiye kadar tam) ise şimdide bitiyor, baştaki boşluk oynanmamış
+ * geçmiş süre; değilse (sırada başka kayıt var) imleçten başlıyor.
+ *
+ * Çevrimiçi adımlar ayrıca `SYNC.maxSteps` ile sınırlı ve yalnızca bütçenin
+ * son `SYNC.maxBank` saniyesinde sayılıyor: daha eskiye düşen adımın zamanı
+ * geçiyor ama oyun ilerlemiyor (sonraki kayıtlar, ör. ayrılış, yerinde kalıyor).
  * Bütçeyi aşan süre kırpılıyor.
  */
-export function replay(start: LiteState, ops: readonly SyncOp[], budget: number = Infinity): Replay {
+export function replay(start: LiteState, ops: readonly SyncOp[], budget: number = Infinity, complete = false): Replay {
   let state = start;
   let applied = 0;
   let skipped = 0;
@@ -238,20 +243,31 @@ export function replay(start: LiteState, ops: readonly SyncOp[], budget: number 
   let clipped = 0;
   let steps = 0;
   const spans: Replay['spans'] = [];
-  const onlineFrom = Number.isFinite(budget) ? Math.max(0, budget - SYNC.maxBank) : 0;
+  const bounded = Number.isFinite(budget);
+  const onlineFrom = bounded ? Math.max(0, budget - SYNC.maxBank) : 0;
+  if (bounded && complete) {
+    const total = ops.reduce((sum, op) => sum + (op[0] === 't' ? op[1] * SYNC.step : op[0] === 'o' ? op[1] : 0), 0);
+    const lead = Math.max(0, budget - SYNC.slack - total);
+    if (lead > 0) {
+      seconds = lead;
+      spans.push({ seconds: lead, score: 0 });
+    }
+  }
   for (const op of ops) {
     if (op[0] === 't' || op[0] === 'o') {
-      if (op[0] === 't' && seconds < onlineFrom) {
-        // Boşluk: zaman geçiyor, oyun ilerlemiyor (haftalık pay da yok).
-        spans.push({ seconds: onlineFrom - seconds, score: 0 });
-        seconds = onlineFrom;
-      }
-      const left = Math.max(0, budget - seconds);
       const before = state;
       let used: number;
       if (op[0] === 't') {
-        const n = Math.min(op[1], Math.floor(left / SYNC.step), SYNC.maxSteps - steps);
-        clipped += (op[1] - n) * SYNC.step;
+        const dead = Math.min(op[1], Math.ceil(Math.max(0, onlineFrom - seconds) / SYNC.step), Math.floor(Math.max(0, budget - seconds) / SYNC.step));
+        if (dead > 0) {
+          // Son saatten önceye düşen adımlar: zaman geçiyor, oyun ilerlemiyor (haftalık pay da yok).
+          seconds += dead * SYNC.step;
+          clipped += dead * SYNC.step;
+          spans.push({ seconds: dead * SYNC.step, score: 0 });
+        }
+        const want = op[1] - dead;
+        const n = Math.min(want, Math.floor(Math.max(0, budget - seconds) / SYNC.step), SYNC.maxSteps - steps);
+        clipped += (want - n) * SYNC.step;
         if (n <= 0) {
           skipped += 1;
           continue;
@@ -260,7 +276,7 @@ export function replay(start: LiteState, ops: readonly SyncOp[], budget: number 
         steps += n;
         used = n * SYNC.step;
       } else {
-        used = Math.min(op[1], left);
+        used = Math.min(op[1], Math.max(0, budget - seconds));
         clipped += op[1] - used;
         state = applyOffline(state, used).state;
       }
@@ -290,8 +306,9 @@ export class SyncJournal {
   /** Baştan kaç kayıt gönderimde (donuk). */
   private sent = 0;
 
-  /** n çevrimiçi adım. */
+  /** n çevrimiçi adım (tek kayıt en çok `SYNC.maxSteps`: sunucu daha büyüğünü kabul etmiyor). */
   steps(n: number): void {
+    for (; n > SYNC.maxSteps; n -= SYNC.maxSteps) this.steps(SYNC.maxSteps);
     if (n <= 0) return;
     const last = this.ops.length > this.sent ? this.ops[this.ops.length - 1] : undefined;
     if (last && last[0] === 't' && last[1] + n <= SYNC.maxSteps) last[1] += n;

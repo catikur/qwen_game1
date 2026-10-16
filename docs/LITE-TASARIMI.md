@@ -684,13 +684,18 @@ tek tablo. Bir cihazda başlayan oyun öbüründe sürüyor.
     aynı (testte ve tarayıcıda doğrulanıyor). Süre bütçesi hesap açıldığından
     beri gerçekten geçen süre (+10 sn pay; yeni hesaba açılış öncesi için en çok
     1 saat). Günlük tamken (`rest: 0`) kullanılmayan süre birikmiyor.
-    Çevrimiçi adımlar bütçenin yalnızca son saatine yerleşiyor (`SYNC.maxBank`):
-    eşitlenmemiş çevrimiçi oyun en çok 1 saat sayılıyor; uzun bir boşluk sonradan
-    "çevrimiçiydim" diye doldurulamıyor (`rest` ne derse desin). Ayrılış (`o`)
-    bütün süreyi kullanıyor (yarım verim ve tavan). Ağsız 1 saatten uzun oynanan kırpılıyor.
+    Kayıtlar gerçek zamana art arda yerleşiyor: günlük tamsa (`rest: 0`) şimdide
+    bitiyor (baştaki boşluk oynanmamış geçmiş), değilse imleçten başlıyor.
+    Çevrimiçi adımlar yalnızca son saatte sayılıyor (`SYNC.maxBank`); daha eskiye
+    düşen adımın zamanı geçiyor ama oyun ilerlemiyor. Böylece eşitlenmemiş
+    çevrimiçi oyun en çok 1 saat; uzun bir boşluk sonradan "çevrimiçiydim" diye
+    doldurulamıyor (`rest` ne derse desin). Ayrılış (`o`) yerinde kalıp bütün
+    süresini alıyor (yarım verim ve tavan). Ağsız 1 saatten eski oyun sayılmıyor.
   - 30 günden uzun ayrılış günlüğe 30 gün yazılıyor (kazanç tavanı zaten kısa);
     sunucu günlüğü yine de reddederse (400) istemci sunucunun durumuna dönüyor.
-    Taşıma kodu ya da silme sırasında yolda kalan eski hesap yanıtı yok sayılıyor.
+    Taşıma kodu ya da silme sırasında yolda kalan eski hesap yanıtı (web ve iOS)
+    yok sayılıyor; kod, yolda olan sessiz hesap açılışını bekliyor ve sunucuda
+    tek adımda tüketiliyor (aynı anda iki istekten yalnızca biri alıyor).
   - Gönderim başına en çok 600 adım, 1000 kayıt: ücretsiz katmanın işlemci
     sınırına sığıyor (600 adım ≈ 2–3 ms).
   - İyimser sürüm kilidi; başka cihaz ilerlediyse 409 ve güncel durum,

@@ -263,14 +263,18 @@ final class LeagueService {
     /// onun durumuna geçip false.
     private func uploadSave(_ state: LiteState) async throws -> Bool {
         struct Uploaded: Decodable { let version: Int }
+        // Yanıt gelene kadar başka hesaba geçildiyse (taşıma kodu) sonuç eski hesabın: yok sayılıyor.
+        let owner = account?.id
         let body = try JSONEncoder().encode(Upload(base: saveVersion, state: state))
         let assertion = try await attestor.assertion(for: body)
         let headers = ["X-Attest-Key": attestor.keyId ?? "", "X-Attest-Assertion": assertion.base64EncodedString()]
         do {
             let uploaded: Uploaded = try await send("POST", "v1/save", body: body, headers: headers)
+            guard account?.id == owner else { return false }
             setSaveVersion(uploaded.version)
             return true
         } catch LeagueError.stale(let data) {
+            guard account?.id == owner else { return false }
             if let save = try? LeagueService.serverSave(data) {
                 adopt(save)
             } else {
@@ -284,10 +288,12 @@ final class LeagueService {
     /// Açılışta ve öne gelince: başka cihaz ilerlediyse onun durumuna geç.
     func refreshSave() async {
         guard status == .ready, !ephemeral else { return }
+        let owner = account?.id
         // Bu cihaz hiç yüklemediyse kendi oyunu esas (ilk yüklemede sunucuya geçiyor).
+        // Yanıt gelene kadar başka hesaba geçildiyse (taşıma kodu) eski hesabın kaydı alınmıyor.
         guard let known = saveVersion,
               let data = try? await sendData("GET", "v1/save"), let save = try? LeagueService.serverSave(data),
-              save.version > known else { return }
+              account?.id == owner, save.version > known else { return }
         adopt(save)
     }
 

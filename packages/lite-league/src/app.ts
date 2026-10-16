@@ -300,9 +300,11 @@ async function claimLink(request: Request, db: Db, now: number): Promise<Respons
   const body = await readJson(request);
   const platform = platformOf(body.platform);
   const code = typeof body.code === 'string' ? body.code.trim().toUpperCase() : '';
-  const link = /^[A-Z0-9]{6}$/.test(code) ? await db.first<{ player_id: string; expires_at: number }>('SELECT player_id, expires_at FROM links WHERE code = ?', code) : null;
-  // Tek seferlik: tutsa da tutmasa da siliniyor.
-  if (link) await db.run('DELETE FROM links WHERE code = ?', code);
+  // Tek seferlik ve tek adımda: süresi geçmiş olsa da siliniyor; aynı kodla aynı anda
+  // gelen iki istekten yalnızca biri satırı alıyor.
+  const link = /^[A-Z0-9]{6}$/.test(code)
+    ? await db.first<{ player_id: string; expires_at: number }>('DELETE FROM links WHERE code = ? RETURNING player_id, expires_at', code)
+    : null;
   if (!link || link.expires_at < now) throw new HttpError(404, 'code');
   const player = await db.first<Player>('SELECT * FROM players WHERE id = ?', link.player_id);
   if (!player) throw new HttpError(404, 'code');

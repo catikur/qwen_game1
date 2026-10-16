@@ -166,7 +166,7 @@ export async function sync(db: Db, playerId: string, now: number, body: Record<s
   if (now - row.at < MIN_SYNC_GAP && ops.length > 0) throw new HttpError(429, 'slow');
 
   const budget = Math.max(0, (now - row.cursor) / 1000 + SYNC.slack);
-  const result = replay(current.state, ops as SyncOp[], budget);
+  const result = replay(current.state, ops as SyncOp[], budget, body.rest === 0);
   let cursor = row.cursor + result.seconds * 1000;
   // Günlük şimdiye kadar tamsa kullanılmayan süre birikmiyor (sonra "çevrimiçi
   // oynadım" diye harcanamasın).
