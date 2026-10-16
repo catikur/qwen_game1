@@ -1,0 +1,1 @@
+CapitalForge Lite simülatör kareleri — 58979092df21f49892e73a10907b330c33cc8a17
