@@ -67,6 +67,12 @@ const SAVE_KEY = 'lite.save';
 const SYNC_EVERY = 30_000;
 /** Bir dakikadan kısa ayrılışlar "yokken" sayılmıyor. */
 const AWAY_MIN = 60;
+/**
+ * Sessiz hesap ancak bu kadar oynanınca (sn) ya da lig penceresi açılınca:
+ * her ziyaret (özel pencere, bir bakıp çıkan) sunucuda boş hesap bırakmasın.
+ * Önceki oyun sunucuda yeniden oynanıyor (yeni hesaba en çok 1 saatlik pay).
+ */
+const REGISTER_AFTER = 60;
 
 export type LeagueStatus = 'unconfigured' | 'connecting' | 'unnamed' | 'ready';
 
@@ -106,6 +112,7 @@ export class GameStore {
   private lastSample = -Infinity;
   private sinceSave = 0;
   private syncing = false;
+  private registering = false;
   private lastSync = 0;
   private timer: ReturnType<typeof setInterval> | null = null;
   private noticeTimer: ReturnType<typeof setTimeout> | null = null;
@@ -244,7 +251,14 @@ export class GameStore {
 
   /** Uygulama kapalıyken geçen süre (bir dakikadan kısası sayılmıyor). */
   private away(seconds: number): void {
-    if (!(seconds > AWAY_MIN)) return;
+    if (!(seconds > AWAY_MIN)) {
+      // Kısa ayrılış "yokken" sayılmıyor; ama duran fırsat kapalıyken kaçıyor (günlükte, sunucu da aynısını oynatsın).
+      if (seconds > 0 && this.state.deal) {
+        this.game.away(0);
+        this.changed();
+      }
+      return;
+    }
     const result = this.game.away(seconds);
     if (this.state.listed) this.pushPrice();
     this.lastSample = this.state.clock;
@@ -289,21 +303,29 @@ export class GameStore {
 
   // ------------------------------------------------------------ eşitleme
 
-  /** Açılışta: hesap yoksa sessizce aç; varsa sunucunun durumuna bak. */
-  private async connect(): Promise<void> {
-    if (!this.league.configured) return;
+  /**
+   * Hesap varsa sunucunun durumuna bak; yoksa (bir dakika oynandıysa ya da
+   * `force`) sessizce aç.
+   */
+  private async connect(force = false): Promise<void> {
+    if (!this.league.configured || this.isScenario) return;
     try {
-      if (!this.league.account) {
-        const save = await this.league.register();
-        // Yeni hesabın oyunu sıfırdan; buradaki günlük de sıfırdan oynandı.
-        this.base = save.version;
-        this.changed();
-        await this.sync();
-      } else {
+      if (this.league.account) {
         await this.refresh();
+        return;
       }
+      if (this.registering || (!force && this.state.clock < REGISTER_AFTER)) return;
+      this.registering = true;
+      const save = await this.league.register();
+      // Yeni hesabın oyunu sıfırdan; buradaki günlük de sıfırdan oynandı.
+      this.base = save.version;
+      this.save();
+      this.changed();
+      await this.sync();
     } catch {
       // Ağ yok: sonraki eşitlemede yeniden.
+    } finally {
+      this.registering = false;
     }
   }
 
@@ -312,6 +334,12 @@ export class GameStore {
     if (!this.league.account || this.isScenario) return;
     try {
       const save = await this.league.loadSave();
+      // Hesap açıldı ama sürüm kaydedilmeden sayfa kapandı: sunucu hâlâ sıfırda, buradaki günlük onun üstünde.
+      if (this.base === null && save.version === 0) {
+        this.base = 0;
+        await this.sync();
+        return;
+      }
       if (this.base === null || save.version > this.base) {
         if (this.game.journal.pending === 0 || this.base === null) {
           this.adopt(save.state, save.version, this.base !== null && save.version > this.base);
@@ -325,6 +353,10 @@ export class GameStore {
   }
 
   async sync(keepalive = false): Promise<void> {
+    if (!this.league.account && !keepalive) {
+      void this.connect();
+      return;
+    }
     if (this.syncing || this.isScenario || !this.league.account || this.base === null) return;
     if (this.game.journal.pending === 0) return;
     this.syncing = true;
@@ -548,7 +580,9 @@ export class GameStore {
 
   /** Lig penceresi açılınca: grup, özel ligler, yıldız tablosu. */
   async refreshLeague(): Promise<void> {
-    if (this.isScenario || !this.league.account) return;
+    if (this.isScenario) return;
+    if (!this.league.account) await this.connect(true);
+    if (!this.league.account) return;
     await this.sync();
     try {
       const [standings, leagues, stars] = await Promise.all([this.league.standings(), this.league.leagues(), this.league.stars()]);

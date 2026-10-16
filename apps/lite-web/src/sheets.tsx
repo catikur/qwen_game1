@@ -80,6 +80,8 @@ export function SettingsSheet({ onClose }: { onClose: () => void }) {
   const settings = store.settings;
   const [confirm, setConfirm] = useState(false);
   const anchor = lang() === 'tr' ? '' : '#en';
+  // Android kabuğunda sayfalar sistem tarayıcısında (yayındaki adres).
+  const site = (globalThis as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor?.isNativePlatform?.() ? 'https://catikur.github.io/qwen_game1/lite/' : '';
   const canVibrate = typeof navigator !== 'undefined' && 'vibrate' in navigator;
   return (
     <Sheet title={t('settings.title')} onClose={onClose} done={done()} testId="settings-sheet">
@@ -99,9 +101,9 @@ export function SettingsSheet({ onClose }: { onClose: () => void }) {
         )}
       </Section>
       <Section>
-        <LinkRow title={t('settings.privacy')} icon={Shield} colors={[0x7be08f, 0x3ba85e]} href={`privacy.html${anchor}`} />
+        <LinkRow title={t('settings.privacy')} icon={Shield} colors={[0x7be08f, 0x3ba85e]} href={`${site}privacy.html${anchor}`} />
         <hr style={{ border: 0, borderTop: '1px solid var(--line)', margin: 0 }} />
-        <LinkRow title={t('settings.support')} icon={HandHelping} colors={[0x7dd3f0, 0x3b9fd6]} href={`support.html${anchor}`} />
+        <LinkRow title={t('settings.support')} icon={HandHelping} colors={[0x7dd3f0, 0x3b9fd6]} href={`${site}support.html${anchor}`} />
       </Section>
       {confirm ? (
         <Glass className="col" style={{ gap: 10 }}>

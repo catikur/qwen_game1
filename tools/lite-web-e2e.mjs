@@ -90,8 +90,13 @@ async function e2e(browser) {
   const errors = [];
   page.on('pageerror', (error) => errors.push(String(error)));
   await page.goto(WEB);
+  await page.waitForTimeout(2_500);
+  check((await accountOf(page)) === null, 'bir bakıp çıkana hesap açılmıyor');
+  // Lig penceresi açılınca (ya da bir dakika oynanınca) sessiz, adsız hesap.
+  await page.click('[data-testid="league"]');
   const account = await wait(() => accountOf(page), 'sessiz hesap');
-  check(account.name === '', 'ilk açılışta adsız hesap açıldı');
+  check(account.name === '', 'lig açılınca adsız hesap açıldı');
+  await page.keyboard.press('Escape');
   // Fırının üç kademesine sırayla alım (parası yettikçe).
   for (let round = 0; round < 40; round++) {
     for (const stage of [2, 0, 1]) await page.click(`[data-testid="stage-bakery-${stage}"]`).catch(() => undefined);
@@ -127,8 +132,8 @@ async function e2e(browser) {
   const other = await browser.newContext({ viewport: { width: 430, height: 932 }, locale: 'tr-TR' });
   const second = await other.newPage();
   await second.goto(WEB);
-  await wait(() => accountOf(second), 'ikinci tarayıcıda sessiz hesap');
   await second.click('[data-testid="league"]');
+  await wait(() => accountOf(second), 'ikinci tarayıcıda sessiz hesap');
   await second.fill('[data-testid="link-claim-code"]', code);
   await second.click('[data-testid="link-claim"]');
   await wait(async () => (await accountOf(second))?.id === account.id, 'kodla hesap alındı');
