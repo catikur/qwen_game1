@@ -177,6 +177,27 @@ test('istemci: sunucu başka yerden ilerlediyse bekleyenler onun üstüne yenide
   assert.equal(game.state.chains.bakery.levels[0], 4);
 });
 
+test('günlük: yanıtı belirsiz gönderim aynı kayıtlarla yineleniyor; kayıttan yüklenince de donuk', () => {
+  const journal = new SyncJournal();
+  journal.steps(5);
+  journal.push(['b', 'bakery', 0, 1]);
+  const sent = journal.take();
+  journal.steps(3);
+  journal.push(['c']);
+  assert.equal(journal.frozen, 2);
+  assert.deepEqual(journal.resend(), sent, 'aynısı');
+  assert.deepEqual(journal.ops.slice(2), [['t', 3], ['c']], 'yeni kayıtlar donuklara eklenmiyor');
+  // Kayıttan yükleme: aynı kayıtlar, baştaki ikisi donuk.
+  const loaded = new SyncJournal();
+  for (const op of journal.ops) loaded.push([...op] as SyncOp);
+  loaded.freeze(2);
+  assert.deepEqual(loaded.resend(), sent);
+  loaded.drop();
+  assert.deepEqual(loaded.ops, [['t', 3], ['c']]);
+  loaded.freeze(10);
+  assert.equal(loaded.frozen, 2, 'olandan fazlası donmuyor');
+});
+
 test('günlük: büyük adım sayısı sunucunun kabul ettiği kayıtlara bölünüyor', () => {
   const game = new SyncedGame(newGame());
   game.tick(SYNC.maxSteps * 2 + 5);

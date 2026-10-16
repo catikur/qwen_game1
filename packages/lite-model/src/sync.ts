@@ -323,6 +323,21 @@ export class SyncJournal {
     return this.ops.length;
   }
 
+  /** Gönderimde (donuk) kaç kayıt. */
+  get frozen(): number {
+    return this.sent;
+  }
+
+  /** Yanıtı belirsiz kalan gönderimin aynısı: aynı kayıtlar (aynı kimlikle yinelensin, sunucu ikinci kez uygulamasın). */
+  resend(): SyncOp[] {
+    return this.ops.slice(0, this.sent).map((op) => [...op] as SyncOp);
+  }
+
+  /** Kayıttan yüklenince: baştaki n kayıt yanıtı belirsiz bir gönderimde (donuk). */
+  freeze(n: number): void {
+    this.sent = Math.max(0, Math.min(n, this.ops.length));
+  }
+
   /** Bir gönderime sığan baştaki kayıtlar (en çok `SYNC.maxSteps` adım, `SYNC.maxOps` kayıt). */
   take(): SyncOp[] {
     const batch: SyncOp[] = [];

@@ -310,7 +310,8 @@ async function claimLink(request: Request, db: Db, now: number): Promise<Respons
   if (!player) throw new HttpError(404, 'code');
   const token = randomToken();
   await db.run('INSERT INTO tokens (token_hash, player_id, platform, created_at) VALUES (?, ?, ?, ?)', await sha256(token), player.id, platform, now);
-  const save = await loadSave(db, player.id);
+  // Hafta ve puan da: iOS haftalık sayacını alınan hesabın puanından sürdürsün (yoksa sonraki gönderim "azalma").
+  const save = await saveWithScore(db, player.id, now);
   return json({ id: player.id, token, name: player.name, division: player.division, ...(save ? { save } : {}) }, 201);
 }
 

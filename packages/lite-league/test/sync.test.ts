@@ -198,6 +198,9 @@ test('iki cihaz: eski sürümün üstüne gönderim 409 ve güncel durum; kaybol
   assert.equal(claim.body.id, web.account.id);
   assert.equal(claim.body.name, 'Çift Cihaz');
   assert.equal(claim.body.save.version, 0);
+  // Hafta ve puan da (iOS haftalık sayacını bundan sürdürüyor).
+  assert.equal(claim.body.save.week, weekId(THURSDAY + 1_000));
+  assert.equal(typeof claim.body.save.score, 'number');
   // Kod tek seferlik.
   assert.equal((await call(db, THURSDAY + 2_000, 'POST', '/v1/link/claim', { code: link.body.code, platform: 'web' })).status, 404);
   const phone: Account = { id: claim.body.id, token: claim.body.token };

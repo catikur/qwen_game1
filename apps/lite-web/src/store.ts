@@ -61,6 +61,8 @@ interface SaveFile {
   base: number | null;
   lastSeen: number;
   prices: number[];
+  /** Yanıtı belirsiz kalan gönderim (ör. sayfa kapanırken): baştaki `count` kayıt bu kimlikle yinelenecek. */
+  inflight?: { batch: string; count: number } | null;
 }
 
 const SAVE_KEY = 'lite.save';
@@ -134,6 +136,13 @@ export class GameStore {
   private epoch = 0;
   /** Yolda olan sessiz hesap açılışı: taşıma kodu bunu bekliyor (sonradan gelen yeni hesap alınanın üstüne yazmasın). */
   private registration: Promise<unknown> | null = null;
+  /**
+   * Yanıtı belirsiz kalan gönderim (ağ koptu, sayfa kapandı): kayıtlar donuk
+   * kalıyor ve aynı kimlikle yineleniyor. Sunucu işlediyse kimlikten tanıyıp
+   * ikinci kez uygulamıyor (yeni kimlikle gönderilseydi 409 sonrası yeniden
+   * uygulanıp örneğin bir alım iki kez yapılabilirdi).
+   */
+  private inflight: { batch: string; count: number } | null = null;
 
   // Android CI karesi: kabukta adres çubuğu yok; senaryo derleme anında verilebiliyor (VITE_SCENARIO_QUERY).
   constructor(search: string = typeof location !== 'undefined' ? location.search || (import.meta.env.VITE_SCENARIO_QUERY ?? '') : '') {
@@ -166,6 +175,10 @@ export class GameStore {
     if (saved) {
       this.game = new SyncedGame(saved.state);
       for (const op of saved.ops) this.game.journal.push(op);
+      if (saved.inflight && saved.inflight.count > 0 && saved.inflight.count <= saved.ops.length) {
+        this.game.journal.freeze(saved.inflight.count);
+        this.inflight = saved.inflight;
+      }
       this.base = saved.base;
       this.priceHistory = saved.prices;
       this.lastSample = this.game.state.clock;
@@ -365,7 +378,9 @@ export class GameStore {
   save(): void {
     this.sinceSave = 0;
     if (this.isScenario || !this.owns()) return;
-    const file: SaveFile = { version: 1, state: this.state, ops: this.game.journal.ops, base: this.base, lastSeen: Date.now(), prices: this.priceHistory };
+    // Belirsiz gönderim yalnızca kayıtları hâlâ donuksa (oyun bu arada değişmediyse) saklanıyor.
+    const inflight = this.inflight && this.game.journal.frozen === this.inflight.count ? this.inflight : null;
+    const file: SaveFile = { version: 1, state: this.state, ops: this.game.journal.ops, base: this.base, lastSeen: Date.now(), prices: this.priceHistory, inflight };
     try {
       localStorage.setItem(SAVE_KEY, JSON.stringify(file));
     } catch {
@@ -444,12 +459,17 @@ export class GameStore {
     if (this.game.journal.pending === 0 || !this.owns()) return;
     this.syncing = true;
     this.lastSync = Date.now();
-    const ops = this.game.journal.take();
+    const retry = this.inflight !== null && this.game.journal.frozen === this.inflight.count ? this.inflight : null;
+    const ops = retry ? this.game.journal.resend() : this.game.journal.take();
     const rest = this.game.journal.pending - ops.length;
-    const batch = `${this.league.account.id.slice(0, 8)}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+    const batch = retry?.batch ?? `${this.league.account.id.slice(0, 8)}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+    // Sayfa yanıttan önce kapanırsa da kimlik kayıtta kalsın.
+    this.inflight = { batch, count: ops.length };
+    this.save();
     const epoch = this.epoch;
     try {
       const result = await this.league.sync(this.base, batch, ops, rest, keepalive);
+      this.inflight = null;
       // Bu arada hesap ya da oyun değişti (taşıma kodu, silme): yanıt eski hesabın.
       // Gönderilenler (oyun değişmediyse) yeni hesaba sürümüyle gidip uzlaşıyor.
       if (epoch !== this.epoch) {
@@ -465,7 +485,13 @@ export class GameStore {
       // Günlükte gönderilecek başka kayıt varsa hemen.
       if (this.game.journal.pending > 0 && rest > 0) setTimeout(() => void this.sync(), 2_100);
     } catch (error) {
-      this.game.journal.release();
+      // Sunucu kesin yanıt verdiyse (4xx) gönderim düştü; ağ ya da sunucu hatasında
+      // belirsiz: kayıtlar donuk ve kimlik saklı kalıyor, sonraki gönderim aynısı.
+      const certain = error instanceof LeagueError && error.status >= 400 && error.status < 500;
+      if (certain || epoch !== this.epoch) {
+        this.inflight = null;
+        this.game.journal.release();
+      }
       if (epoch === this.epoch) this.handleSyncError(error);
     } finally {
       this.syncing = false;
@@ -514,6 +540,7 @@ export class GameStore {
   /** Sunucunun durumuna geç: bekleyen günlük gidiyor. */
   private adopt(state: LiteState, version: number, tell: boolean): void {
     this.game.replaced(state);
+    this.inflight = null;
     this.base = version;
     this.lastSample = state.clock;
     if (tell) this.toast(t('sync.replaced'));

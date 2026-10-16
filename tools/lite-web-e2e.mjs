@@ -7,7 +7,8 @@
 // - lige adla katılınca haftalık grupta görünüyor;
 // - taşıma koduyla ikinci tarayıcı aynı oyunu alıyor;
 // - kasayı elle şişiren istemci sunucunun durumuna dönüyor;
-// - aynı tarayıcıda ikinci sekme açılınca eskisi duruyor (tek örnek).
+// - aynı tarayıcıda ikinci sekme açılınca eskisi duruyor (tek örnek);
+// - yanıtı kaybolan eşitleme aynı kimlikle yineleniyor (ikinci kez uygulanmıyor).
 // Ardından senaryo kareleri (SHOTS dizinine).
 //
 // Çalıştırma: node tools/lite-web-e2e.mjs [--shots-only] [--only=<kare adı öneki>]
@@ -90,11 +91,20 @@ async function hide(page) {
   });
 }
 
+/** Sekmeyi yeniden göster. */
+async function show(page) {
+  await page.evaluate(() => {
+    Object.defineProperty(document, 'hidden', { value: false, configurable: true });
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+}
+
 const local = (page) => page.evaluate(() => JSON.parse(localStorage.getItem('lite.save') ?? 'null'));
 const accountOf = (page) => page.evaluate(() => JSON.parse(localStorage.getItem('lite.league.account') ?? 'null'));
 
 async function e2e(browser) {
-  const context = await browser.newContext({ viewport: { width: 430, height: 932 }, deviceScaleFactor: 1, locale: 'tr-TR' });
+  // Hizmet çalışanı kapalı: Playwright onun üstünden giden istekleri yakalayamıyor (kaybolan yanıt denemesi).
+  const context = await browser.newContext({ viewport: { width: 430, height: 932 }, deviceScaleFactor: 1, locale: 'tr-TR', serviceWorkers: 'block' });
   const page = await context.newPage();
   const errors = [];
   page.on('pageerror', (error) => errors.push(String(error)));
@@ -121,11 +131,38 @@ async function e2e(browser) {
   check(levels[2] > 0 && levels[0] > 0, `fırın alındı (seviyeler ${levels.join('/')})`);
   check(mine.ops.length === 0, 'günlükte bekleyen kayıt yok');
 
-  // Lige katıl.
-  await page.evaluate(() => {
-    Object.defineProperty(document, 'hidden', { value: false, configurable: true });
-    document.dispatchEvent(new Event('visibilitychange'));
+  // Yanıtı kaybolan eşitleme: sunucu işliyor, tarayıcı duymuyor. Yineleme aynı kimlikle;
+  // sunucu tanıyıp ikinci kez uygulamıyor (yeni kimlikle gitse 409 sonrası yeniden uygulanırdı).
+  await show(page);
+  await page.waitForTimeout(1_500);
+  const batches = [];
+  let lose = true;
+  await page.route('**/v1/sync', async (route) => {
+    batches.push(JSON.parse(route.request().postData() ?? '{}').batch);
+    if (lose) {
+      lose = false;
+      await route.fetch();
+      await route.abort('failed');
+    } else {
+      await route.continue();
+    }
   });
+  const committed = (await server('v1/save', account)).version + 1;
+  await hide(page);
+  await wait(() => batches.length >= 1, 'kaybolan eşitleme');
+  await page.waitForTimeout(500);
+  check((await server('v1/save', account)).version === committed, 'sunucu kaybolan gönderimi işledi');
+  await show(page);
+  await wait(async () => batches.length >= 2 && (await local(page))?.base === committed, 'yineleme');
+  check(batches[1] === batches[0], 'yineleme aynı kimlikle');
+  check((await server('v1/save', account)).version === committed, 'sunucu ikinci kez uygulamadı');
+  await page.unroute('**/v1/sync');
+  await hide(page);
+  await wait(async () => (await local(page))?.ops.length === 0, 'son eşitleme');
+  check(JSON.stringify((await server('v1/save', account)).state) === JSON.stringify((await local(page)).state), 'sonra yine bit bit aynı');
+
+  // Lige katıl.
+  await show(page);
   await page.click('[data-testid="league"]');
   await page.fill('[data-testid="league-name"]', 'Uçtan Uca');
   await page.click('[data-testid="league-join"]');
