@@ -237,6 +237,52 @@ test('iki cihaz: eski sürümün üstüne gönderim 409 ve güncel durum; kaybol
   assert.deepEqual(both.map((r) => r.status).sort(), [201, 404]);
 });
 
+test('kaybolan yanıt: arada başka cihaz eşitlese de tekrar tanınıyor; aynı anda iki kopya puanı bir kez ekliyor', async () => {
+  const db = memoryDb();
+  const web = await webPlayer(db, THURSDAY, 'Kayıp Yanıt');
+  play(web.game, 30);
+  assert.equal((await web.push(THURSDAY + 31_000, 0)).status, 200);
+  const base = web.version;
+  // Telefon aynı hesabı alıyor.
+  const link = await call(db, THURSDAY + 32_000, 'POST', '/v1/link', {}, web.account);
+  const claim = await call(db, THURSDAY + 33_000, 'POST', '/v1/link/claim', { code: link.body.code, platform: 'android' });
+  const phone: Account = { id: claim.body.id, token: claim.body.token };
+  // Web bir alım gönderiyor; sunucu işliyor ama yanıt kayboluyor.
+  web.game.tick(20);
+  web.game.act(['b', 'bakery', 0, 1]);
+  const ops = web.game.journal.take();
+  const lost = await call(db, THURSDAY + 55_000, 'POST', '/v1/sync', { base, batch: 'web-lost-batch-01', ops, rest: 0 }, web.account);
+  assert.equal(lost.status, 200);
+  const levels = lost.body.state.chains.bakery.levels[0];
+  // Arada telefon eşitliyor (sürüm bir daha artıyor).
+  const phoneGame = new SyncedGame(lost.body.state);
+  phoneGame.tick(5);
+  const fromPhone = await call(db, THURSDAY + 60_000, 'POST', '/v1/sync', { base: lost.body.version, batch: 'phone-after-lost', ops: phoneGame.journal.take(), rest: 0 }, phone);
+  assert.equal(fromPhone.status, 200);
+  // Web aynı gönderimi aynı kimlikle yineliyor: 409 değil, uygulanmış sayılıyor; alım iki kez yok.
+  const retry = await call(db, THURSDAY + 65_000, 'POST', '/v1/sync', { base, batch: 'web-lost-batch-01', ops, rest: 0 }, web.account);
+  assert.equal(retry.status, 200, JSON.stringify(retry.body));
+  assert.equal(retry.body.applied, 0);
+  assert.equal(retry.body.version, fromPhone.body.version);
+  assert.equal(retry.body.state.chains.bakery.levels[0], levels);
+
+  // Aynı gönderimin iki kopyası aynı anda: biri uygulanıyor, öbürü tanınıyor; puan bir kez.
+  const twin = new SyncedGame(retry.body.state);
+  twin.tick(30);
+  const twinOps = twin.journal.take();
+  const before = (await call(db, THURSDAY + 99_000, 'GET', '/v1/save', undefined, web.account)).body.score;
+  const both = await Promise.all(
+    [0, 1].map(() => call(db, THURSDAY + 100_000, 'POST', '/v1/sync', { base: retry.body.version, batch: 'web-twin-batch-1', ops: twinOps, rest: 0 }, web.account)),
+  );
+  assert.deepEqual(both.map((r) => r.status), [200, 200], JSON.stringify(both.map((r) => r.body)));
+  assert.deepEqual(both.map((r) => r.body.applied).sort(), [0, both[0].body.applied || both[1].body.applied].sort());
+  const after = (await call(db, THURSDAY + 101_000, 'GET', '/v1/save', undefined, web.account)).body;
+  assert.equal(after.version, retry.body.version + 1, 'tek sürüm');
+  const single = Math.max(both[0].body.score, both[1].body.score);
+  assert.equal(after.score, single);
+  assert.ok(after.score > before, `puan eklendi (${before} → ${after.score})`);
+});
+
 test('yıldız tablosu: bütün platformlar, adsızlar yok, sıram ve arkadaşlar', async () => {
   const db = memoryDb();
   const ios = await call(db, THURSDAY, 'POST', '/v1/players', { name: 'Elma Holding' });

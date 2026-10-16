@@ -30,6 +30,23 @@ const WEEK_MS = 7 * 86_400_000;
 export const MAX_SYNC_BODY = 65_536;
 /** İki eşitleme arası en az (ms). */
 const MIN_SYNC_GAP = 2_000;
+/** Son uygulanan gönderimlerin kimlikleri: yanıtı kaybolanın tekrarı (arada başka cihaz eşitlese de) tanınıyor. */
+const RECENT_BATCHES = 16;
+
+/**
+ * `saves.batch`: `{ids, nonce}` (JSON). `ids` son gönderim kimlikleri (yeniden
+ * eskiye); `nonce` kaydı yazan isteğe özgü: puan yalnızca kayıt o isteğin
+ * yazdığı haldeyse ekleniyor.
+ */
+function recentBatches(raw: string | null): string[] {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw) as { ids?: unknown };
+    return Array.isArray(parsed?.ids) ? parsed.ids.filter((id): id is string => typeof id === 'string') : [raw];
+  } catch {
+    return [raw];
+  }
+}
 
 export type Platform = 'ios' | 'web' | 'android';
 export const PLATFORMS: readonly Platform[] = ['ios', 'web', 'android'];
@@ -91,7 +108,8 @@ export async function uploadSave(db: Db, playerId: string, now: number, body: Re
   }
   if (body.base !== row.version) throw await staleSave(db, playerId, now, row);
   const changed = await db.run(
-    'UPDATE saves SET version = ?, state = ?, cursor = ?, batch = NULL, at = ? WHERE player_id = ? AND version = ?',
+    // Gönderim kimlikleri korunuyor: web ya da Android'in yanıtı kaybolan gönderimi iOS yüklemesinden sonra da tanınsın.
+    'UPDATE saves SET version = ?, state = ?, cursor = ?, at = ? WHERE player_id = ? AND version = ?',
     row.version + 1,
     JSON.stringify(state),
     Math.max(row.cursor, now),
@@ -166,9 +184,10 @@ export async function sync(db: Db, playerId: string, now: number, body: Record<s
   }
   const current = view(row);
   const week = weekId(now);
+  const recent = recentBatches(row.batch);
   if (body.base !== row.version) {
-    // Yanıtı kaybolan gönderimin tekrarı: aynısı zaten uygulandı.
-    if (body.base === row.version - 1 && batch === row.batch) {
+    // Yanıtı kaybolan gönderimin tekrarı (arada başka cihaz eşitlemiş olabilir): zaten uygulandı.
+    if ((body.base as number) < row.version && recent.includes(batch)) {
       return { ...current, applied: 0, skipped: 0, clipped: 0, score: await weekScore(db, playerId, week) };
     }
     throw new HttpError(409, 'stale', { ...current });
@@ -182,23 +201,52 @@ export async function sync(db: Db, playerId: string, now: number, body: Record<s
   // oynadım" diye harcanamasın).
   if (body.rest === 0) cursor = Math.max(cursor, now - SYNC.slack * 1000);
   const gained = weekShare(result.spans, row.cursor, week);
-  const state = JSON.stringify(result.state);
-  const changed = await db.run(
-    'UPDATE saves SET version = ?, state = ?, cursor = ?, batch = ?, at = ? WHERE player_id = ? AND version = ?',
-    row.version + 1,
-    state,
-    cursor,
-    batch,
-    now,
-    playerId,
-    row.version,
-  );
-  // Aynı anda gelen iki gönderimden biri: öbürü kazandı.
-  if (changed === 0) {
+  const next = row.version + 1;
+  const marker = JSON.stringify({ ids: [batch, ...recent.filter((id) => id !== batch)].slice(0, RECENT_BATCHES), nonce: crypto.randomUUID() });
+  const done = result.state;
+  // Kayıt ve haftalık puan tek işlemde: biri yazılıp öbürü düşerse tekrar "zaten uygulandı"
+  // diye dönüp puanı kaybederdi. Puan yalnızca kayıt bu isteğin yazdığı haldeyse (işareti)
+  // ekleniyor: yarışı kaybeden istek ya da aynı anda gelen kopya puan eklemiyor.
+  await db.batch([
+    [
+      'UPDATE saves SET version = ?, state = ?, cursor = ?, batch = ?, at = ? WHERE player_id = ? AND version = ?',
+      next,
+      JSON.stringify(done),
+      cursor,
+      marker,
+      now,
+      playerId,
+      row.version,
+    ],
+    [
+      `INSERT INTO reports (player_id, week, score, city, stars, city_earned, levels, at)
+       SELECT ?, ?, ?, ?, ?, ?, ?, ?
+        WHERE EXISTS (SELECT 1 FROM saves WHERE player_id = ? AND version = ? AND batch = ?)
+       ON CONFLICT (player_id, week) DO UPDATE SET score = reports.score + excluded.score, city = excluded.city,
+         stars = excluded.stars, city_earned = excluded.city_earned, levels = excluded.levels, at = excluded.at`,
+      playerId,
+      week,
+      gained,
+      done.city,
+      done.stars,
+      done.earned,
+      JSON.stringify(CHAIN_IDS.map((id) => [...done.chains[id].levels])),
+      now,
+      playerId,
+      next,
+      marker,
+    ],
+  ]);
+  const after = await db.first<{ batch: string | null }>('SELECT batch FROM saves WHERE player_id = ?', playerId);
+  if (after?.batch !== marker) {
+    // Aynı anda gelen başka bir gönderim kazandı; aynı kimlikli kopyaysa o zaten uygulandı.
     const fresh = await loadSave(db, playerId);
+    if (fresh && recentBatches(after?.batch ?? null).includes(batch)) {
+      return { ...fresh, applied: 0, skipped: 0, clipped: 0, score: await weekScore(db, playerId, week) };
+    }
     throw new HttpError(409, 'stale', { ...(fresh ?? current) });
   }
-  const score = await addWeekScore(db, playerId, week, gained, result.state, now);
+  const score = await weekScore(db, playerId, week);
   if (result.skipped > 0 || result.clipped > SYNC.slack) {
     await db.run(
       'INSERT INTO rejects (player_id, week, reason, at) VALUES (?, ?, ?, ?)',
@@ -221,25 +269,6 @@ export async function sync(db: Db, playerId: string, now: number, body: Record<s
 
 async function weekScore(db: Db, playerId: string, week: string): Promise<number> {
   return (await db.first<{ score: number }>('SELECT score FROM reports WHERE player_id = ? AND week = ?', playerId, week))?.score ?? 0;
-}
-
-/** Haftalık satırı (iOS gönderimiyle aynı tablo) sunucunun hesapladığı puanla güncelle. */
-async function addWeekScore(db: Db, playerId: string, week: string, gained: number, state: LiteState, now: number): Promise<number> {
-  const score = (await weekScore(db, playerId, week)) + gained;
-  await db.run(
-    `INSERT INTO reports (player_id, week, score, city, stars, city_earned, levels, at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-     ON CONFLICT (player_id, week) DO UPDATE SET score = excluded.score, city = excluded.city, stars = excluded.stars,
-       city_earned = excluded.city_earned, levels = excluded.levels, at = excluded.at`,
-    playerId,
-    week,
-    score,
-    state.city,
-    state.stars,
-    state.earned,
-    JSON.stringify(CHAIN_IDS.map((id) => [...state.chains[id].levels])),
-    now,
-  );
-  return score;
 }
 
 /** Genel tablo için oyuncunun son yıldızı ve platformu. */

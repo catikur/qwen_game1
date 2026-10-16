@@ -752,12 +752,16 @@ export class GameStore {
     if (!this.league.account) await this.connect(true);
     if (!this.league.account) return;
     await this.sync();
+    const epoch = this.epoch;
     try {
       const [standings, leagues, stars] = await Promise.all([this.league.standings(), this.league.leagues(), this.league.stars()]);
+      // Bu arada başka hesaba geçildi (taşıma kodu): tablolar eski hesabın.
+      if (epoch !== this.epoch) return;
       this.standings = standings;
       this.privateLeagues = leagues;
       this.stars = stars;
     } catch (error) {
+      if (epoch !== this.epoch) return;
       this.problem = GameStore.problemOf(error);
     }
     this.changed();
