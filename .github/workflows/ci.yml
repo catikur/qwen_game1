@@ -77,3 +77,34 @@ jobs:
           name: playtest-shots
           path: ${{ runner.temp }}/shots
           retention-days: 7
+
+  lite-web:
+    name: Lite web · uçtan uca ve kareler
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Playwright ve Chromium
+        run: |
+          npm install -g playwright@1.56.1
+          npx -y playwright@1.56.1 install --with-deps chromium
+          echo "PLAYWRIGHT_MODULE=$(npm root -g)/playwright" >> "$GITHUB_ENV"
+      # Yerel lig sunucusu (bellekte SQLite) + web sürümü: hesap, eşitleme,
+      # lig, cihaz taşıma, hile; ardından senaryo kareleri.
+      - name: Uçtan uca test
+        env:
+          SHOTS: ${{ runner.temp }}/lite-web-shots
+        run: node tools/lite-web-e2e.mjs
+      - if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: lite-web-shots
+          path: ${{ runner.temp }}/lite-web-shots
+          retention-days: 14
+

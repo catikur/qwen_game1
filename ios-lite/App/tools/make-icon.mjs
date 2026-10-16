@@ -3,7 +3,7 @@
 //
 // SVG burada kuruluyor, Chromium'da (Playwright) 1024×1024 çiziliyor ve
 // alfa kanalı atılarak PNG'ye yazılıyor: iOS simgesinde saydamlık olmamalı.
-// Aynı SVG'den web sayfaları (gizlilik, destek) için küçük bir icon.png.
+// Aynı SVG'den web sürümü için 192 ve 512 px (sayfa simgesi, ana ekran).
 // Çalıştırma: node ios-lite/App/tools/make-icon.mjs
 import { writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
@@ -13,9 +13,10 @@ import { fileURLToPath } from 'node:url';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const out = join(here, '..', 'Resources', 'Assets.xcassets', 'AppIcon.appiconset');
-const web = join(here, '..', '..', '..', 'apps', 'web', 'public', 'lite', 'icon.png');
+const web = join(here, '..', '..', '..', 'apps', 'lite-web', 'public');
 const SIZE = 1024;
-const WEB_SIZE = 192;
+/** Web sürümü (L10): sayfa simgesi ve ana ekrana ekleme (PWA). */
+const WEB_SIZES = [192, 512];
 
 /** Dört köşeli parıltı. */
 const sparkle = (x, y, r, opacity = 1) =>
@@ -188,13 +189,13 @@ async function render(size) {
 }
 
 const png = await render(SIZE);
-const small = await render(WEB_SIZE);
+const small = await Promise.all(WEB_SIZES.map((size) => render(size)));
 await browser.close();
 writeFileSync(join(out, 'icon-1024.png'), png);
-writeFileSync(web, small);
+WEB_SIZES.forEach((size, index) => writeFileSync(join(web, size === 192 ? 'icon.png' : `icon-${size}.png`), small[index]));
 writeFileSync(
   join(out, 'Contents.json'),
   `${JSON.stringify({ images: [{ filename: 'icon-1024.png', idiom: 'universal', platform: 'ios', size: '1024x1024' }], info: { author: 'xcode', version: 1 } }, null, 2)}\n`,
 );
 writeFileSync(join(out, '..', 'Contents.json'), `${JSON.stringify({ info: { author: 'xcode', version: 1 } }, null, 2)}\n`);
-console.log(`simge yazıldı: ${join(out, 'icon-1024.png')} (${png.length} bayt), web: ${web} (${small.length} bayt)`);
+console.log(`simge yazıldı: ${join(out, 'icon-1024.png')} (${png.length} bayt), web: ${web} (${WEB_SIZES.join(', ')} px)`);

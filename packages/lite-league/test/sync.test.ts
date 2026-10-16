@@ -89,8 +89,11 @@ test('web: adsız hesap, oyun sunucuda; dürüst gönderim sunucuyla bit bit ayn
   const saved = await call(db, THURSDAY + 302_000, 'GET', '/v1/save', undefined, web.account);
   assert.deepEqual(saved.body.state, local);
   assert.equal(saved.body.version, 1);
-  // Adını verince (lige katılınca) haftalık grupta, platform işaretiyle.
+  // Adını verince (lige katılınca) hemen haftalık grupta, bu haftaki puanı ve platform işaretiyle.
   await call(db, THURSDAY + 302_000, 'PATCH', '/v1/players/me', { name: 'Ağ Fırını' }, web.account);
+  const named = await call(db, THURSDAY + 303_000, 'GET', '/v1/league', undefined, web.account);
+  assert.equal(named.body.group.length, 1);
+  assert.ok(Math.abs(named.body.group[0].score - sent.body.score) < 1e-9);
   play(web.game, 60);
   assert.equal((await web.push(THURSDAY + 363_000)).status, 200);
   const joined = await call(db, THURSDAY + 364_000, 'GET', '/v1/league', undefined, web.account);

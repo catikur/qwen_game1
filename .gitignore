@@ -65,3 +65,6 @@ apps/*/dist-single/
 
 # Claude Code ajan çalışma ağaçları (geçici)
 .claude/worktrees/
+
+# Lite web: uçtan uca test kareleri (tools/lite-web-e2e.mjs)
+apps/lite-web/shots/

@@ -238,7 +238,7 @@ gece sürümüyle birlikte seçti.
   binalı şehir silueti, kenarında ince tırtıl, köşede parıltı. Küçük boyda da
   okunuyor (sikke + siluet). `ios-lite/App/tools/make-icon.mjs` SVG'den
   üretiyor, alfa kanalını atıyor; aynı SVG'den web sayfaları için 192 px
-  `apps/web/public/lite/icon.png`.
+  `apps/lite-web/public/icon.png`.
 
 Şehir çizimi SwiftUI `Canvas` ile prosedürel; hiçbir dış görsel dosya
 kullanılmıyor.

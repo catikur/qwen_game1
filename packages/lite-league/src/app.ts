@@ -178,7 +178,7 @@ async function route(request: Request, db: Db, now: number, options: Options): P
     const me = (await db.first<Player>('SELECT * FROM players WHERE id = ?', session.player.id))!;
     switch (route) {
       case 'PATCH /v1/players/me':
-        return await rename(request, db, me);
+        return await rename(request, db, me, now);
       case 'DELETE /v1/players/me':
         return await deleteAccount(db, me);
       case 'POST /v1/attest/challenge':
@@ -251,9 +251,11 @@ async function register(request: Request, db: Db, now: number, options: Options)
   return json({ id, token, name, division: 0, ...(save ? { save } : {}) }, 201);
 }
 
-async function rename(request: Request, db: Db, me: Player): Promise<Response> {
+async function rename(request: Request, db: Db, me: Player, now: number): Promise<Response> {
   const name = acceptName((await readJson(request)).name);
   await db.run('UPDATE players SET name = ? WHERE id = ?', name, me.id);
+  // Web ve Android: ad verince (lige katılınca) hemen bu haftanın grubunda; puanı zaten sunucuda.
+  if (me.name === '' && (await loadSave(db, me.id))) await joinGroup(db, { ...me, name }, weekId(now));
   return json({ name, division: me.division });
 }
 
