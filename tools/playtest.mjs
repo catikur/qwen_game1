@@ -3026,9 +3026,11 @@ async function finish(browser, consoleErrors) {
     await ap.locator('.help [data-appearance-choice="night"]').click();
     check('Gece seçilince arayüz hemen gece', (await look()) === 'night', await look());
     await ap.keyboard.press('Escape');
+    // Yenileme oyuna ya da kuruluma açılabilir: otomatik kayıt 30 sn'de bir
+    // yazılıyor, daha önce yenilenirse kurulum geliyor (ilk sürüm `.topbar`
+    // bekleyip zaman aşımına düştü). Seçim iki ekranda da geçerli.
     await ap.reload();
-    await ap.waitForSelector('.topbar', { timeout: 20000 });
-    await ap.evaluate(() => window.__capital.setTimeOfDay(0.28));
+    await ap.waitForSelector('.topbar, .newgame', { timeout: 20000 });
     check('Gece seçimi yenilemeden sonra hatırlanıyor', !(await lookBecomes('day', 1500)) && (await look()) === 'night', await look());
     await ap.screenshot({ path: `${OUT}/appearance-night.png` });
     check('Görünüm akışında konsol temiz', aErrors.length === 0, aErrors.slice(0, 2).join(' | '));
