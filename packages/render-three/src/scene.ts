@@ -15,11 +15,15 @@ import { BuildingMass } from './mass';
 import { ContactShadows, DecorKit, DecorLayer } from './decor';
 import type { DecorPart } from './decor';
 import { decorateBuilding, decorateStructure, placeStreetTrees, streetSide } from './recipes';
-import { FACADE, buildingSurface } from './surface';
+import { LampLight } from './lamplight';
+import { FACADE, buildingSurface, setWindowLateNight, windowLateNight } from './surface';
 import type { FacadeStyle } from './surface';
 import {
   makeFacadeAtlas,
   makeRoadTexture,
+  makePlotTexture,
+  roadAtlasSurface,
+  ROAD_CELL,
   makeSkyEnvironment,
   makeWindowAtlas,
 } from './textures';
@@ -169,6 +173,7 @@ export class CityRenderer {
   private groundFlat!: THREE.MeshBasicMaterial;
   /** Sokaklar ayrı bir mesh: asfalt dokusunu ve yön döndürmesini taşıyor. */
   private roads: THREE.InstancedMesh;
+  private roadCells: THREE.InstancedBufferAttribute;
   private roadMaterial!: THREE.MeshStandardMaterial;
   private roadFlat!: THREE.MeshBasicMaterial;
   private buildings: BuildingMass;
@@ -183,6 +188,7 @@ export class CityRenderer {
   private buildingDecor: DecorLayer;
   private fabricDecor: DecorLayer;
   private streetDecor: DecorLayer;
+  private lampLight: LampLight;
   private traffic: TrafficSystem;
   /** Yayalar ve tüten bacalar (Tur 34). */
   private street: StreetLife;
@@ -236,6 +242,7 @@ export class CityRenderer {
   private dummy = new THREE.Object3D();
   private color = new THREE.Color();
   private ownerColor = new THREE.Color();
+  private categoryColor = new THREE.Color();
   private disposed = false;
   private cleanups: Array<() => void> = [];
   private frameSamples = 0;
@@ -292,7 +299,9 @@ export class CityRenderer {
     // Zemin için iki malzeme: şehir görünümünde ışık alan, veri lensinde
     // ışıktan bağımsız. Bir ısı haritası akşam olunca okunaksızlaşmamalı —
     // lens bilgi taşır, manzara değil.
-    this.groundLit = new THREE.MeshStandardMaterial({ roughness: 0.92, metalness: 0.02 });
+    // Tur 36: şehir görünümünde kaldırım bandı ve döşeme dokusu (renk
+    // taşımıyor, bölge tonu örnek renginden). Lens malzemesi dokusuz kalıyor.
+    this.groundLit = new THREE.MeshStandardMaterial({ map: makePlotTexture(), roughness: 0.92, metalness: 0.02 });
     this.groundFlat = new THREE.MeshBasicMaterial();
 
     this.ground = new THREE.InstancedMesh(
@@ -318,11 +327,13 @@ export class CityRenderer {
     // Zeminle aynı gerekçe: veri lensinde sahne bir haritaya dönüşüyor ve
     // ışıktan bağımsız çizilmesi gerekiyor, yoksa akşam olunca okunmuyor.
     this.roadFlat = new THREE.MeshBasicMaterial({ map: roadTexture, color: '#6b7788' });
-    this.roads = new THREE.InstancedMesh(
-      new THREE.BoxGeometry(1.0, 0.08, 1.0),
-      this.roadMaterial,
-      tileCount,
-    );
+    // Tur 36: doku üç hücre (düz, yaya geçidi, kavşak); hücre örnek başına.
+    roadAtlasSurface(this.roadMaterial);
+    roadAtlasSurface(this.roadFlat);
+    const roadGeometry = new THREE.BoxGeometry(1.0, 0.08, 1.0);
+    this.roadCells = new THREE.InstancedBufferAttribute(new Float32Array(tileCount), 1);
+    roadGeometry.setAttribute('aRoadCell', this.roadCells);
+    this.roads = new THREE.InstancedMesh(roadGeometry, this.roadMaterial, tileCount);
     this.roads.receiveShadow = true;
     this.roads.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
     this.roads.count = 0;
@@ -381,9 +392,13 @@ export class CityRenderer {
       lamp: tileCount * lamp,
     });
     this.buildingDecor = new DecorLayer(this.decorKit, perTile(3, 3, 3, 2, 1, 2, 9, 0));
-    this.fabricDecor = new DecorLayer(this.decorKit, perTile(3, 2, 2, 0, 1, 2, 7, 0));
+    // Kutu: kapı, baca, balkon + Tur 36 bahçesi (çim, iki çit, yürüyüş yolu).
+    this.fabricDecor = new DecorLayer(this.decorKit, perTile(3, 7, 2, 0, 1, 2, 7, 0));
     this.streetDecor = new DecorLayer(this.decorKit, perTile(0, 0.5, 0, 0, 0, 0, 1, 0.5));
     this.scene.add(this.buildingDecor.group, this.fabricDecor.group, this.streetDecor.group);
+    // Gece lambaların altına düşen ışık (Tur 36); yer yollar yerleşince geliyor.
+    this.lampLight = new LampLight(Math.ceil(tileCount * 0.5));
+    this.scene.add(this.lampLight.mesh);
     this.scene.add(...this.buildings.meshes, ...this.fabric.meshes);
 
     // Ortam haritası: camlar ve metal yüzeyler artık gökyüzünü yansıtıyor.
@@ -797,18 +812,26 @@ export class CityRenderer {
       let roadIndex = 0;
       this.groundSlotOfTile = new Int32Array(tiles.length).fill(-1);
 
+      const isRoad = (x: number, y: number) =>
+        x >= 0 && y >= 0 && x < width && y < state.map.height && tiles[y * width + x]?.kind === 'road';
       for (let i = 0; i < tiles.length; i++) {
         const tile = tiles[i]!;
         if (tile.kind === 'road') {
           // Yolun yönü örnek döndürmesinden geliyor: doku kesikli çizgiyi
           // +X ekseninde taşıyor, yani yatay sokak (y sabit) dönmeden
           // doğru duruyor; düşey sokak çeyrek tur dönüyor.
-          const horizontal = tile.y % BLOCK_SIZE === 0;
+          //
+          // Tur 36: kavşak (iki eksende de yol komşusu) ve kavşağa giren
+          // karo (yaya geçidi) ayrı hücre. Geçit dokuda -X ucunda; döndürme
+          // onu kavşağa çeviriyor. Y ekseni etrafında +90° yerel -X'i +Z'ye
+          // götürüyor.
+          const { cell, yaw } = roadCellOf(tile.x, tile.y, isRoad);
           this.dummy.position.set(tile.x, -0.02, tile.y);
           this.dummy.scale.set(1, 1, 1);
-          this.dummy.rotation.set(0, horizontal ? 0 : Math.PI / 2, 0);
+          this.dummy.rotation.set(0, yaw, 0);
           this.dummy.updateMatrix();
           this.roads.setMatrixAt(roadIndex, this.dummy.matrix);
+          this.roadCells.setX(roadIndex, cell);
           roadIndex++;
           continue;
         }
@@ -824,9 +847,10 @@ export class CityRenderer {
 
       this.ground.count = plotIndex;
       this.roads.count = roadIndex;
-      placeStreetTrees(this.streetDecor, tiles, BLOCK_SIZE);
+      this.lampLight.place(placeStreetTrees(this.streetDecor, tiles, BLOCK_SIZE));
       this.ground.instanceMatrix.needsUpdate = true;
       this.roads.instanceMatrix.needsUpdate = true;
+      this.roadCells.needsUpdate = true;
       this.groundPlaced = true;
     }
 
@@ -854,11 +878,15 @@ export class CityRenderer {
       const jitter = ((tile.id * 37) % 17) / 17 - 0.5;
       this.color.set(structure.color).offsetHSL(jitter * 0.02, 0, jitter * 0.07);
 
+      // Müstakil ev parselin ortasında, bahçesiyle (Tur 36): 0,8 genişlikte
+      // parseli kaplıyor, çim ve çit evin altında kalıyordu.
+      const yard = structure.form === 'house' && structure.id !== 'old_shopfront';
+      const width = yard ? 0.62 : 0.8;
       const footprint = this.fabric.place({
         x: tile.x,
         z: tile.y,
         height: Math.max(0.03, tile.structureHeight) * 1.5,
-        width: 0.8,
+        width,
         groundY: 0.07,
         color: this.color,
         form: structure.form,
@@ -869,7 +897,7 @@ export class CityRenderer {
       // Çalışan fabrika tütüyor; eski depo atıl, tütmüyor.
       if (structure.id === 'factory_shed' && footprint.stack) fabricSmoke.push(smokeFrom(footprint.stack));
       if (structure.form !== 'flat' && structure.form !== 'field') {
-        this.fabricShadows.place(tile.x, 0.07, tile.y, 0.8, Math.min(1, tile.structureHeight));
+        this.fabricShadows.place(tile.x, 0.07, tile.y, width, Math.min(1, tile.structureHeight));
       }
     }
     this.fabric.end();
@@ -913,12 +941,20 @@ export class CityRenderer {
       const tile = tiles[building.tileId];
       if (!def || !tile) continue;
 
-      // Rakip binaları sahibinin rengiyle hafifçe boyanır: kimin nerede
-      // olduğu haritaya bakınca anlaşılmalı.
+      /*
+       * SAHİBİN RENGİ ÇATIDA (Tur 36).
+       *
+       * Eskiden gövdenin tamamı sahibin rengine çekiliyordu (%55): rakibin
+       * moru ya da pembesi şehrin yarısını boyuyor, şehir oyuncak gibi
+       * duruyordu. Artık gövde doğal malzemede (sıva/tuğla, cam/çelik,
+       * sanayi paneli; kategori renginden yalnızca bir ima). Kimin nerede
+       * olduğu çatı kapağından, kornişten, kırma çatıdan, tenteden ve
+       * tabeladan okunuyor; kamera yukarıdan baktığı için en çok görünen
+       * yüzey zaten çatı. Kullanıcı A/B karelerinden B'yi seçti.
+       */
       const company = state.companies[building.companyId];
-      this.color.set(def.color);
-      if (company && !company.isPlayer) this.color.lerp(new THREE.Color(company.color), 0.55);
-      else this.color.lerp(new THREE.Color('#8ef0c0'), 0.12);
+      naturalColor(this.color, buildingFacade(def), tile.x, tile.y).lerp(this.categoryColor.set(def.color), 0.18);
+      this.ownerColor.set(company && !company.isPlayer ? company.color : PLAYER_ACCENT);
 
       const growth = this.growthOf(building.id);
       if (growth < 1) growing = true;
@@ -935,11 +971,12 @@ export class CityRenderer {
         form,
         facade: buildingFacade(def),
         pitchedRoof: form === 'house' && growth >= 1,
+        accent: this.ownerColor,
       });
       // Detaylar bina tamamlanınca: yükselen kütleye tente asmak tuhaf durur.
+      // Kırma çatı da sahibin renginde (çatı rengi = `tint`).
       if (growth >= 1) {
-        const owner = company && !company.isPlayer ? this.ownerColor.set(company.color) : this.ownerColor.copy(OWN_COLOR);
-        decorateBuilding(this.buildingDecor, def, footprint, tile.x, tile.y, streetSide(tile.x, tile.y, BLOCK_SIZE), this.color, owner);
+        decorateBuilding(this.buildingDecor, def, footprint, tile.x, tile.y, streetSide(tile.x, tile.y, BLOCK_SIZE), this.ownerColor, this.ownerColor);
       }
       if (def.role !== 'extract') this.buildingShadows.place(tile.x, 0.07, tile.y, 0.68 * Math.max(0.3, growth), Math.min(1, def.height));
       // Duman bilgi: yalnızca dün gerçekten üretim yapmış tesis tütüyor.
@@ -1087,6 +1124,17 @@ export class CityRenderer {
     this.ghost.visible = true;
   }
 
+  private roadCellCounts(): { straight: number; crosswalk: number; intersection: number } {
+    const counts = { straight: 0, crosswalk: 0, intersection: 0 };
+    for (let i = 0; i < this.roads.count; i++) {
+      const cell = this.roadCells.getX(i);
+      if (cell === ROAD_CELL.intersection) counts.intersection++;
+      else if (cell === ROAD_CELL.crosswalk) counts.crosswalk++;
+      else counts.straight++;
+    }
+    return counts;
+  }
+
   private tileColor(state: GameState, tileId: number, view: ViewOptions): THREE.Color {
     const tile = state.map.tiles[tileId]!;
     const district = state.districts[tile.districtId];
@@ -1213,7 +1261,10 @@ export class CityRenderer {
     // ve gece şehrin en iyi göründüğü an oluyor.
     const glow = this.dataLensActive ? 0 : Math.max(0, 1.15 - daylight * 1.5);
     for (const material of this.bodyMaterials) material.emissiveIntensity = glow;
+    // Gece yarısına doğru pencereler tek tek sönüyor (Tur 36, surface.ts).
+    setWindowLateNight(-elevation);
     this.decorKit.setNightGlow(glow);
+    this.lampLight.setGlow(glow);
     this.traffic.setNightGlow(this.dataLensActive ? 0 : glow);
     this.street.setDaylight(daylight);
   }
@@ -1447,6 +1498,10 @@ export class CityRenderer {
     /** Kırsalda çizilen gerçek ağaç sayısı (Tur 34). */
     countrysideTrees: number;
     lampGlow: number;
+    /** Tur 36: yol karolarının hücreleri, lamba ışık havuzları, gecenin derinliği. */
+    roadCells: { straight: number; crosswalk: number; intersection: number };
+    lampPools: { count: number; opacity: number; visible: boolean };
+    windowLateNight: number;
     groundColorSum: number;
     timeOfDay: number;
     /** Yolda olan zincir kamyonu sayısı. */
@@ -1534,6 +1589,9 @@ export class CityRenderer {
       contactShadows: this.buildingShadows.mesh.count + this.fabricShadows.mesh.count,
       countrysideTrees: this.world.treeCount,
       lampGlow: this.decorKit.lampMaterial.emissiveIntensity,
+      roadCells: this.roadCellCounts(),
+      lampPools: this.lampLight.info(),
+      windowLateNight: windowLateNight(),
       groundColorSum,
       timeOfDay: this.timeOfDay,
       truckCount: this.traffic.truckCount,
@@ -1639,6 +1697,7 @@ export class CityRenderer {
 
   dispose(): void {
     this.disposed = true;
+    this.groundLit.map?.dispose();
     this.groundLit.dispose();
     this.groundFlat.dispose();
     this.roadMaterial.dispose();
@@ -1663,6 +1722,7 @@ export class CityRenderer {
     this.cleanups = [];
     this.traffic.dispose();
     this.street.dispose();
+    this.lampLight.dispose();
     this.world.dispose();
     this.scene.traverse((object) => {
       const mesh = object as THREE.Mesh;
@@ -1673,6 +1733,48 @@ export class CityRenderer {
     });
     this.renderer.dispose();
   }
+}
+
+/**
+ * Yol karosunun dokusu ve yönü (Tur 36).
+ *
+ * Kavşak iki eksende de yol komşusu olan karo (haritanın kenarındaki T
+ * kavşaklar da). Kavşağa giren karo yaya geçidi; geçit dokuda yerel -X
+ * ucunda, döndürme onu kavşağa çeviriyor: π yerel -X'i +X'e, +π/2 +Z'ye,
+ * −π/2 −Z'ye götürüyor.
+ */
+/**
+ * Oyuncunun çatı rengi: kamyon ve müşteri araçlarındaki nane yeşiliyle aynı
+ * (`syncRoutes`). Sokakta tek bir "benim" rengi var.
+ */
+const PLAYER_ACCENT = '#3fd39a';
+
+/** Cephe türüne göre doğal malzeme: sıva ve tuğla, cam ve çelik, sanayi paneli. */
+const NATURAL_WALLS: Record<'plaster' | 'glass' | 'panel', readonly string[]> = {
+  plaster: ['#e9dcc3', '#e2cfb0', '#d9b99a', '#efe7da', '#cdb89c', '#c78e6e', '#d8c7ae'],
+  glass: ['#cbd5de', '#b4c2cf', '#dfe3e6', '#a9b6c2', '#c2c9cf'],
+  panel: ['#b7b1a5', '#a9a59b', '#c5bdac', '#9fa3a7'],
+};
+function naturalColor(target: THREE.Color, facade: FacadeStyle, x: number, y: number): THREE.Color {
+  const family = facade === FACADE.office || facade === FACADE.shopOffice ? 'glass' : facade === FACADE.industrial ? 'panel' : 'plaster';
+  const list = NATURAL_WALLS[family];
+  const roll = Math.abs(Math.sin(x * 127.1 + y * 311.7) * 43758.5453) % 1;
+  return target.set(list[Math.floor(roll * list.length)]!);
+}
+
+function roadCellOf(x: number, y: number, isRoad: (x: number, y: number) => boolean): { cell: number; yaw: number } {
+  const junction = (jx: number, jy: number) =>
+    isRoad(jx, jy) && (isRoad(jx + 1, jy) || isRoad(jx - 1, jy)) && (isRoad(jx, jy + 1) || isRoad(jx, jy - 1));
+  if (junction(x, y)) return { cell: ROAD_CELL.intersection, yaw: 0 };
+  const horizontal = isRoad(x + 1, y) || isRoad(x - 1, y) || !(isRoad(x, y + 1) || isRoad(x, y - 1));
+  if (horizontal) {
+    if (junction(x - 1, y)) return { cell: ROAD_CELL.crosswalk, yaw: 0 };
+    if (junction(x + 1, y)) return { cell: ROAD_CELL.crosswalk, yaw: Math.PI };
+    return { cell: ROAD_CELL.straight, yaw: 0 };
+  }
+  if (junction(x, y + 1)) return { cell: ROAD_CELL.crosswalk, yaw: Math.PI / 2 };
+  if (junction(x, y - 1)) return { cell: ROAD_CELL.crosswalk, yaw: -Math.PI / 2 };
+  return { cell: ROAD_CELL.straight, yaw: Math.PI / 2 };
 }
 
 function makeMarker(color: string, opacity: number): THREE.Mesh {
