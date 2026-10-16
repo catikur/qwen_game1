@@ -213,17 +213,23 @@ async function e2e(browser) {
   check(age < 2_000, `devralınacak kayıt taze (${age} ms)`);
   const tab = await context.newPage();
   tab.on('pageerror', (error) => errors.push(String(error)));
-  await tab.goto(WEB);
-  // Eski sekmenin geç kalan son yazımı (kilide bakmasıyla yazması arasında devralındı):
-  // yeni sekme henüz hamle yapmadıysa ve göndermediyse o kayıttan sürüyor.
-  const lateSeen = await page.evaluate(() => {
-    const file = JSON.parse(localStorage.getItem('lite.save'));
-    file.prices = [...file.prices, 4242];
-    file.lastSeen = Date.now();
-    localStorage.setItem('lite.save', JSON.stringify(file));
-    return file.lastSeen;
+  // Eski sekmenin geç kalan son yazımı (kilide bakmasıyla yazması arasında devralındı): yeni sekme
+  // kilidi alıp kaydı okuduktan hemen sonra geliyor. Yeni sekme henüz hamle yapmadıysa ve
+  // göndermediyse o kayıttan sürüyor (ilk eşitlemesi bir saniye sonra; yazım ondan önce).
+  await page.evaluate(() => {
+    addEventListener('storage', function late(event) {
+      if (event.key !== 'lite.owner') return;
+      removeEventListener('storage', late);
+      const file = JSON.parse(localStorage.getItem('lite.save'));
+      file.prices = [...file.prices, 4242];
+      file.lastSeen = Date.now();
+      localStorage.setItem('lite.save', JSON.stringify(file));
+      window.lateSeen = file.lastSeen;
+    });
   });
+  await tab.goto(WEB);
   await page.locator('[data-testid="superseded"]').waitFor({ timeout: 10_000 });
+  const lateSeen = await page.evaluate(() => window.lateSeen);
   await wait(async () => (await local(tab)).lastSeen > lateSeen, 'yeni sekme kaydediyor');
   check((await local(tab)).prices.includes(4242), 'yeni sekme eski sekmenin geç yazımından sürüyor');
   const before = (await local(page)).lastSeen;
@@ -291,6 +297,17 @@ async function e2e(browser) {
   await wait(async () => (await local(fresh)).lastSeen > afterClaim, 'yeni sekme kaydediyor (hesap alındı)');
   const claimed = await local(fresh);
   check(!claimed.prices.includes(4444) && claimed.base !== null, 'hesap alındıktan sonra eski sekmenin geç yazımı alınmıyor');
+  // Hesap başka cihazdan siliniyor; bu sekme arka plana geçerken eşitlemesi 401 alıyor: sıfırlanan oyun
+  // hemen kayda yazılıyor (arka planda tik yok; uygulama kapanırsa silinen hesabın oyunu geri gelmesin).
+  await wait(async () => (await local(fresh)).ops.length > 0, 'eşitlenecek kayıt');
+  const removed = await fetch(`${LEAGUE}/v1/players/me`, { method: 'DELETE', headers: { authorization: `Bearer ${account.id}.${account.token}` } });
+  check(removed.status === 200, 'hesap başka cihazdan silindi');
+  await hide(fresh);
+  await wait(async () => {
+    const file = await local(fresh);
+    return file.base === null && file.ops.length === 0 && file.state.clock < 5;
+  }, 'silinen hesabın oyunu kayıtta sıfırlandı');
+  check((await accountOf(fresh)) === null, 'silinen hesap bu cihazdan da unutuldu');
   await quiet.close();
   check(errors.length === 0, `sayfada hata yok${errors.length ? ': ' + errors.join(' | ') : ''}`);
   await other.close();

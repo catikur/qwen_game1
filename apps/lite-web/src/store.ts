@@ -562,12 +562,9 @@ export class GameStore {
       void this.recover();
     } else if (error.status === 401) {
       // Hesap silinmiş (başka cihazdan): yeni sessiz hesap, oyun sıfırdan.
-      this.epoch += 1;
       this.league.forget();
-      this.base = null;
-      this.game.replaced(buildScenario('start').state);
+      this.startOver();
       this.toast(t('sync.signedOut'));
-      void this.connect();
     } else if (error.status === 404 && error.code === 'save') {
       this.base = null;
     }
@@ -858,13 +855,25 @@ export class GameStore {
   async deleteAccount(): Promise<void> {
     const ok = await this.run(() => this.league.deleteAccount());
     if (ok === null) return;
+    this.startOver();
+  }
+
+  /**
+   * Hesap bu cihazda bitti (silindi ya da sunucu artık tanımıyor): oyun sıfırdan,
+   * kayda da hemen (arka plana geçerken gelen 401'den sonra tik kaydetmiyor;
+   * uygulama kapanırsa eski hesabın oyunu geri gelmesin).
+   */
+  private startOver(): void {
     this.epoch += 1;
     this.standings = null;
     this.privateLeagues = [];
     this.stars = null;
     this.base = null;
+    this.inflight = null;
     this.game.replaced(buildScenario('start').state);
     this.priceHistory = [];
+    this.lastSample = this.state.clock;
+    this.offlineReport = null;
     this.save();
     this.changed();
     void this.connect();
