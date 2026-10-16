@@ -141,7 +141,17 @@ export function Switch({ checked, onChange, label }: { checked: boolean; onChang
   );
 }
 
-/** Alt pencere: gökyüzü zeminli, başlık ve "Tamam"; Escape ve arka plana dokunma kapatıyor. */
+/** Açık pencereler (en üstteki son): Android'in geri tuşu en üsttekini kapatıyor. */
+const openSheets: Array<() => void> = [];
+
+export function closeTopSheet(): boolean {
+  const close = openSheets[openSheets.length - 1];
+  if (!close) return false;
+  close();
+  return true;
+}
+
+/** Alt pencere: gökyüzü zeminli, başlık ve "Tamam"; Escape, geri tuşu ve arka plana dokunma kapatıyor. */
 export function Sheet({ title, onClose, children, center, done, testId }: { title?: string; onClose: () => void; children: ReactNode; center?: boolean; done: string; testId?: string }) {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -149,8 +159,12 @@ export function Sheet({ title, onClose, children, center, done, testId }: { titl
       if (event.key === 'Escape') onClose();
     };
     addEventListener('keydown', key);
+    openSheets.push(onClose);
     ref.current?.focus();
-    return () => removeEventListener('keydown', key);
+    return () => {
+      removeEventListener('keydown', key);
+      openSheets.splice(openSheets.lastIndexOf(onClose), 1);
+    };
   }, [onClose]);
   return (
     <div className="sheet-backdrop" onClick={(event) => event.target === event.currentTarget && onClose()}>

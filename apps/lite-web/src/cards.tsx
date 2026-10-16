@@ -7,6 +7,7 @@ import {
   ArrowUp,
   BadgeCheck,
   Bell,
+  BellRing,
   Building2,
   ChartLine,
   Clock,
@@ -71,6 +72,7 @@ import {
   type Stage,
 } from '@capital/lite-model';
 import { duration, money, number, percent } from './format';
+import { isNative } from './native';
 import { useNight, useStore } from './hooks';
 import { chainName, districtName, eventBody, eventTitle, goalTitle, policyBody, policyTitle, stageName, stageRole, t, upper } from './l10n';
 import { chainColors, css, type Rgb } from './theme';
@@ -88,7 +90,7 @@ export function Header({ onSettings }: { onSettings: () => void }) {
   // Kasa adımlar arasında gelirle süsleniyor (modele girmiyor).
   const shown = state.cash + (store.isScenario ? 0 : incomePerSecond(state) * store.fraction);
   return (
-    <div className="row" style={{ padding: '4px 16px 10px', gap: 10, paddingTop: 'max(4px, env(safe-area-inset-top))' }}>
+    <div className="row" style={{ padding: '4px 16px 10px', gap: 10, paddingTop: 'max(4px, var(--inset-top))' }}>
       <div className="col grow" style={{ gap: 3 }}>
         <div className="row" style={{ gap: 6 }}>
           <span className="caps muted nowrap" style={{ fontSize: 11, letterSpacing: '0.05em' }} data-testid="city-label">
@@ -570,6 +572,38 @@ function PriceChart({ values }: { values: number[] }) {
     ctx.stroke();
   });
   return <canvas ref={ref} style={{ width: '100%', height: 78, display: 'block', margin: '2px 0' }} aria-hidden />;
+}
+
+// ------------------------------------------------------------ bildirim önerisi (Android)
+
+/** Bir kez soruluyor: oyuncu oyunu tanıyınca (dördüncü görevden sonra). */
+export function NotifyPromptCard() {
+  const store = useStore();
+  const settings = store.settings;
+  if (!isNative || store.isScenario || settings.notificationsOffered || settings.notifications || store.state.goal < 4) return null;
+  return (
+    <Glass className="col" style={{ gap: 10 }}>
+      <div className="row" style={{ gap: 10 }}>
+        <IconTile icon={BellRing} colors={[0x7db4ff, 0x4683e8]} />
+        <div className="col grow" style={{ gap: 1 }}>
+          <span className="display" style={{ fontSize: 16 }}>
+            {t('notify.prompt.title')}
+          </span>
+          <span className="muted" style={{ fontSize: 11.5 }}>
+            {t('notify.prompt.body')}
+          </span>
+        </div>
+      </div>
+      <div className="row" style={{ gap: 8 }}>
+        <Gloss gloss="blue" onClick={() => void store.setNotifications(true)} style={{ flex: 1, minHeight: 38, fontSize: 14 }}>
+          {t('notify.prompt.yes')}
+        </Gloss>
+        <Gloss gloss={null} onClick={() => store.updateSettings({ notificationsOffered: true })} style={{ flex: 1, minHeight: 38, fontSize: 14 }}>
+          {t('notify.prompt.no')}
+        </Gloss>
+      </div>
+    </Glass>
+  );
 }
 
 // ------------------------------------------------------------ meclis ve görevler

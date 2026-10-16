@@ -3,8 +3,9 @@
 // CI kareleri (ios-lite-shots dalı ya da Actions çıktısı) bir dizine
 // indirildikten sonra:
 //   node ios-lite/App/tools/store-shots.mjs <kareler dizini> <çıktı dizini>
-// Çıktı: <çıktı>/<dil>/iphone-<n>.png (1290×2796, 6,9") ve ipad-<n>.png
-// (13" kare boyunda). Alfa yok (App Store saydamlık istemiyor).
+// Çıktı: <çıktı>/<dil>/iphone-<n>.png (1290×2796, 6,9"), ipad-<n>.png
+// (13" kare boyunda) ve android-<n>.png (Play, 1080×1920; web sürümünün
+// play-* kareleri). Alfa yok (App Store saydamlık istemiyor).
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
@@ -26,6 +27,13 @@ const PHONE = [
   { shot: 'league', tr: 'Haftalık ligde yarış', en: 'Race in the weekly league' },
   { shot: 'map', tr: 'Şehri sat, holdingini büyüt', en: 'Sell the city, grow your holding' },
 ];
+/** Play Store (L11): telefon 1080 × 1920; kareler web sürümünden (`play-<dil>-<ad>.png`). */
+const PLAY = [
+  { shot: 'mid', tr: 'Zincirini kur, darboğazı büyüt', en: 'Build your chain, grow the bottleneck' },
+  { shot: 'deal', tr: 'Şehirde fırsatları yakala', en: 'Catch deals in the city' },
+  { shot: 'islands', tr: 'Adalara yayıl, kuleler yükselt', en: 'Expand to islands, raise towers' },
+  { shot: 'league', tr: 'iPhone, Android, tarayıcı: aynı lig', en: 'iPhone, Android, browser: one league' },
+];
 const IPAD = [
   { shot: 'mid', tr: 'Zincirini kur, darboğazı büyüt', en: 'Build your chain, grow the bottleneck' },
   { shot: 'deal', tr: 'Şehirde fırsatları yakala', en: 'Catch deals in the city' },
@@ -44,8 +52,10 @@ function sizeOf(file) {
 /** Sayfa: gökyüzü, bulutlar, başlık, altta taşan ekran. */
 function page({ width, height, caption, src, shotSize }) {
   const isPad = width > 1600;
-  const captionSize = isPad ? 118 : 104;
-  const top = isPad ? 430 : 520;
+  // Play telefonu (1080 × 1920) iPhone'dan kısa: başlık ve ekran biraz yukarıda.
+  const isPlay = !isPad && height < 2000;
+  const captionSize = isPad ? 118 : isPlay ? 84 : 104;
+  const top = isPad ? 430 : isPlay ? 380 : 520;
   const shotWidth = Math.round(width * (isPad ? 0.84 : 0.84));
   const shotHeight = Math.round((shotWidth * shotSize.height) / shotSize.width);
   const radius = isPad ? 54 : 74;
@@ -57,7 +67,7 @@ function page({ width, height, caption, src, shotSize }) {
     .cloud::before, .cloud::after { content: ''; position: absolute; background: #fff; border-radius: 50%; }
     .cloud::before { width: 55%; height: 170%; left: 14%; top: -80%; }
     .cloud::after { width: 42%; height: 130%; left: 48%; top: -55%; }
-    h1 { position: absolute; left: 0; right: 0; top: ${isPad ? 120 : 150}px; margin: 0 auto; width: ${Math.round(width * 0.86)}px;
+    h1 { position: absolute; left: 0; right: 0; top: ${isPad ? 120 : isPlay ? 100 : 150}px; margin: 0 auto; width: ${Math.round(width * 0.86)}px;
          text-align: center; color: #fff; font-size: ${captionSize}px; line-height: 1.08; letter-spacing: -0.5px;
          text-shadow: 0 6px 24px rgba(16, 52, 112, 0.35); text-wrap: balance; }
     .shot { position: absolute; left: ${Math.round((width - shotWidth) / 2)}px; top: ${top}px; width: ${shotWidth}px; height: ${shotHeight}px;
@@ -90,6 +100,7 @@ for (const lang of ['tr', 'en']) {
   const jobs = [
     ...PHONE.map((spec, index) => ({ spec, index, file: join(input, `${lang}-${spec.shot}.png`), name: `iphone-${index + 1}`, width: 1290, height: 2796 })),
     ...IPAD.map((spec, index) => ({ spec, index, file: join(input, `store-ipad-${lang}-${spec.shot}.png`), name: `ipad-${index + 1}`, width: 2064, height: 2752 })),
+    ...PLAY.map((spec, index) => ({ spec, index, file: join(input, `play-${lang}-${spec.shot}.png`), name: `android-${index + 1}`, width: 1080, height: 1920 })),
   ];
   for (const job of jobs) {
     if (!existsSync(job.file)) {

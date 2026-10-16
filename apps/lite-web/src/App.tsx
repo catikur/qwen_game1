@@ -19,6 +19,7 @@ import {
   LeagueCard,
   ManagerCard,
   MarketCard,
+  NotifyPromptCard,
   visibleChains,
 } from './cards';
 import { CityView } from './city/CityView';
@@ -158,6 +159,7 @@ function Cards({ columns, onSell, onMap, onLeague }: { columns: number; onSell: 
   return (
     <div className="cards" ref={ref}>
       <div className={`cards-inner ${columns > 1 ? 'two' : ''}`}>
+        <NotifyPromptCard />
         <CouncilCard />
         <GoalCard />
         <IpoOffer />

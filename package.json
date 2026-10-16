@@ -22,7 +22,9 @@
     "lite:web": "pnpm --filter @capital/lite-web dev",
     "lite:web-build": "pnpm --filter @capital/lite-web build",
     "lite:web-e2e": "node tools/lite-web-e2e.mjs",
-    "lite:league-local": "node tools/run-node-script.mjs packages/lite-league/test/local-server.ts"
+    "lite:league-local": "node tools/run-node-script.mjs packages/lite-league/test/local-server.ts",
+    "lite:android-sync": "pnpm --filter @capital/lite-android sync",
+    "lite:android-icons": "node apps/lite-android/tools/make-icons.mjs"
   },
   "devDependencies": {
     "typescript": "^5.9.0"

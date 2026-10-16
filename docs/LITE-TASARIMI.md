@@ -706,3 +706,20 @@ tek tablo. Bir cihazda başlayan oyun öbüründe sürüyor.
   `packages/lite-league/test/sync.test.ts`, tarayıcıda uçtan uca
   `tools/lite-web-e2e.mjs` (CI'de "Lite web · uçtan uca ve kareler").
 
+### 15.2 Uygulanan (L11): Android
+
+- `apps/lite-android`: Capacitor 8 kabuğu, `apps/lite-web` paketi içinde
+  (`webDir`). Uygulama kimliği iOS ile aynı: `com.catikur.capitalforgelite`.
+- Yerel parçalar (`apps/lite-web/src/native.ts`, tarayıcıda boş): titreşim
+  (Haptics), uygulama durumu (arka plana geçerken kaydet, eşitle, bildirim
+  zamanla; dönünce sil), geri tuşu (açık pencereyi kapatır, yoksa uygulamayı
+  arka plana alır), yerel bildirimler (iOS ile aynı plan: kasa doldu, meclis,
+  rakip). Kesin alarm izni istenmiyor (Play kuralı); bildirimler birkaç dakika
+  oynayabilir.
+- Lig: web ile aynı (sunucu yetkili kayıt, platform `android`).
+- Simgeler ve açılış ekranı iOS simgesinin SVG'sinden
+  (`apps/lite-android/tools/make-icons.mjs`); Play görselleri `store/`.
+- CI (`.github/workflows/lite-android.yml`): emülatörde aç ve kare al,
+  APK ve AAB; yükleme anahtarı sırlardaysa AAB imzalı. Play adımları
+  `apps/lite-android/README.md`.
+

@@ -9,10 +9,14 @@ export interface Settings {
   appearance: AppearanceChoice;
   sound: boolean;
   haptics: boolean;
+  /** Android: yerel bildirimler (kasa doldu, meclis, rakip). */
+  notifications: boolean;
+  /** Bildirim izni oyunda bir kez önerildi mi. */
+  notificationsOffered: boolean;
 }
 
 const KEY = 'lite.settings';
-export const DEFAULT_SETTINGS: Settings = { language: 'system', appearance: 'system', sound: true, haptics: true };
+export const DEFAULT_SETTINGS: Settings = { language: 'system', appearance: 'system', sound: true, haptics: true, notifications: false, notificationsOffered: false };
 
 export function loadSettings(ephemeral: boolean): Settings {
   if (ephemeral) return { ...DEFAULT_SETTINGS };

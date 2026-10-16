@@ -9,7 +9,7 @@
 // - kasayı elle şişiren istemci sunucunun durumuna dönüyor.
 // Ardından senaryo kareleri (SHOTS dizinine).
 //
-// Çalıştırma: node tools/lite-web-e2e.mjs [--shots-only]
+// Çalıştırma: node tools/lite-web-e2e.mjs [--shots-only] [--only=<kare adı öneki>]
 import { execFileSync, spawn } from 'node:child_process';
 import { mkdirSync } from 'node:fs';
 import { createRequire } from 'node:module';
@@ -35,6 +35,7 @@ const WEB_PORT = 4174;
 const LEAGUE = `http://127.0.0.1:${LEAGUE_PORT}`;
 const WEB = `http://127.0.0.1:${WEB_PORT}/`;
 const shotsOnly = process.argv.includes('--shots-only');
+const only = process.argv.find((arg) => arg.startsWith('--only='))?.slice('--only='.length) ?? '';
 const children = [];
 
 function start(command, args, env = {}) {
@@ -198,13 +199,24 @@ const SCENES = [
   ['desktop-mid', '?scenario=mid&lang=tr', [1440, 900]],
   ['desktop-islands', '?scenario=islands&lang=tr&theme=night', [1440, 900]],
   ['tablet-mid', '?scenario=mid&lang=tr', [1024, 1366]],
+  // Play Store telefon kareleri: 1080 × 1920 (Play en çok 2:1 istiyor).
+  ...[['tr', 'mid'], ['tr', 'deal'], ['tr', 'islands'], ['tr', 'league'], ['en', 'mid'], ['en', 'deal'], ['en', 'islands'], ['en', 'league']].map(([lang, shot]) => [
+    `play-${lang}-${shot}`,
+    shot === 'deal'
+      ? `?scenario=mid&lang=${lang}&deal=order`
+      : shot === 'league'
+        ? `?scenario=mid&lang=${lang}&league&sheet=league`
+        : `?scenario=${shot}&lang=${lang}`,
+    [432, 768],
+    2.5,
+  ]),
 ];
 
 async function shots(browser) {
   mkdirSync(SHOTS, { recursive: true });
-  for (const [name, query, size] of SCENES) {
+  for (const [name, query, size, scale] of SCENES.filter(([name]) => name.startsWith(only))) {
     const [width, height] = size ?? [430, 932];
-    const page = await browser.newPage({ viewport: { width, height }, deviceScaleFactor: 2 });
+    const page = await browser.newPage({ viewport: { width, height }, deviceScaleFactor: scale ?? 2 });
     const errors = [];
     page.on('pageerror', (error) => errors.push(String(error)));
     await page.goto(WEB + query);

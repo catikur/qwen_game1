@@ -1,0 +1,114 @@
+name: Lite Android
+
+# CapitalForge Lite'ın Android sürümü (apps/lite-android, Capacitor): web
+# sürümü yerel kabukta. Her değişiklikte:
+# - emülatörde aç ve kare al (senaryo derlemesi, ağ yok);
+# - APK (deneme) ve AAB (Play) paketlerini üret, çıktı olarak yükle.
+# Play'e yükleme anahtarı depo sırlarındaysa (ANDROID_KEYSTORE_BASE64,
+# ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD) AAB
+# imzalı; yoksa imzasız (apps/lite-android/README.md).
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/lite-web/**'
+      - 'apps/lite-android/**'
+      - 'packages/lite-model/src/**'
+      - 'ios-lite/App/Sources/L10n.swift'
+      - '.github/workflows/lite-android.yml'
+  pull_request:
+    paths:
+      - 'apps/lite-web/**'
+      - 'apps/lite-android/**'
+      - 'packages/lite-model/src/**'
+      - 'ios-lite/App/Sources/L10n.swift'
+      - '.github/workflows/lite-android.yml'
+
+concurrency:
+  group: lite-android-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  android:
+    name: Android · emülatör karesi, APK ve AAB
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: pnpm
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+      - run: pnpm install --frozen-lockfile
+      # Emülatör karesi için senaryo derlemesi: lig sunucusu yok (canlı sunucuda deneme hesabı açılmasın).
+      - name: Senaryo paketi
+        env:
+          VITE_LEAGUE_URL: ''
+          VITE_SCENARIO_QUERY: '?scenario=mid&lang=tr'
+        run: pnpm --filter @capital/lite-android sync
+      - name: Deneme derlemesi (senaryo)
+        working-directory: apps/lite-android/android
+        run: ./gradlew --no-daemon assembleDebug
+      - name: KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Emülatörde aç
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          profile: pixel_7
+          disable-animations: true
+          script: |
+            adb install -r apps/lite-android/android/app/build/outputs/apk/debug/app-debug.apk
+            adb shell am start -W -n com.catikur.capitalforgelite/.MainActivity
+            sleep 30
+            mkdir -p android-shots
+            adb exec-out screencap -p > android-shots/android-mid.png
+            adb shell pidof com.catikur.capitalforgelite
+            adb logcat -d | grep -iE "Capacitor|chromium|FATAL" | tail -60 || true
+      - uses: actions/upload-artifact@v5
+        if: always()
+        with:
+          name: lite-android-shots
+          path: android-shots
+          retention-days: 14
+      # Dağıtım paketi: canlı lig sunucusuna bağlı.
+      - name: Dağıtım paketi
+        run: pnpm --filter @capital/lite-android sync
+      - name: Play yükleme anahtarı
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/upload.jks"
+            echo "CF_KEYSTORE=$RUNNER_TEMP/upload.jks" >> "$GITHUB_ENV"
+          else
+            echo "::notice::Play yükleme anahtarı yok; AAB imzasız (apps/lite-android/README.md)."
+          fi
+      - name: APK ve AAB
+        working-directory: apps/lite-android/android
+        env:
+          CF_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          CF_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          CF_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: ./gradlew --no-daemon assembleDebug bundleRelease
+      - uses: actions/upload-artifact@v5
+        with:
+          name: lite-android-packages
+          path: |
+            apps/lite-android/android/app/build/outputs/apk/debug/app-debug.apk
+            apps/lite-android/android/app/build/outputs/bundle/release/app-release.aab
+          retention-days: 30

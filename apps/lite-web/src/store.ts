@@ -30,6 +30,7 @@ import { LeagueClient, LeagueError, type PrivateLeague, type Standings, type Sta
 import { mockLeague } from './mock';
 import { PRICE_INTERVAL, PRICE_LIMIT, buildScenario } from './scenario';
 import { applySettings, loadSettings, saveSettings, type Settings } from './settings';
+import { cancelNotifications, isNative, nativeHaptic, notificationPermission, onAppState, requestNotifications, scheduleNotifications } from './native';
 import { haptic, play, type Cue } from './sound';
 import { t } from './l10n';
 
@@ -104,11 +105,15 @@ export class GameStore {
   /** Lig penceresinde gösterilecek hata (L10n anahtarı). */
   problem: string | null = null;
   busy = false;
+  /** Android: bildirim izni reddedildi (anahtar açılamıyor). */
+  notificationsDenied = false;
 
   private listeners = new Set<() => void>();
   private revisionValue = 0;
   private lastTick = performance.now();
   private hiddenAt: number | null = null;
+  /** Uygulama arka planda (sekme gizli ya da Android'de arka plan); iki olay aynı ayrılışı iki kez saymasın. */
+  private paused = false;
   private lastSample = -Infinity;
   private sinceSave = 0;
   private syncing = false;
@@ -117,7 +122,8 @@ export class GameStore {
   private timer: ReturnType<typeof setInterval> | null = null;
   private noticeTimer: ReturnType<typeof setTimeout> | null = null;
 
-  constructor(search: string = typeof location !== 'undefined' ? location.search : '') {
+  // Android CI karesi: kabukta adres çubuğu yok; senaryo derleme anında verilebiliyor (VITE_SCENARIO_QUERY).
+  constructor(search: string = typeof location !== 'undefined' ? location.search || (import.meta.env.VITE_SCENARIO_QUERY ?? '') : '') {
     this.params = new URLSearchParams(search);
     this.scenario = this.params.get('scenario');
     const ephemeral = this.scenario !== null;
@@ -196,6 +202,10 @@ export class GameStore {
     this.timer = setInterval(() => this.tick(), 100);
     document.addEventListener('visibilitychange', this.visibility);
     addEventListener('pagehide', this.leave);
+    if (isNative) {
+      void onAppState((active) => (active ? this.resume() : this.pause()));
+      void this.refreshNotifications();
+    }
     void this.connect();
   }
 
@@ -207,7 +217,7 @@ export class GameStore {
   }
 
   private tick(): void {
-    if (document.hidden) return;
+    if (document.hidden || this.paused) return;
     const now = performance.now();
     let dt = (now - this.lastTick) / 1000;
     this.lastTick = now;
@@ -232,17 +242,30 @@ export class GameStore {
   }
 
   private visibility = (): void => {
-    if (document.hidden) {
-      this.hiddenAt = Date.now();
-      this.save();
-      void this.sync(true);
-    } else {
-      if (this.hiddenAt !== null) this.away((Date.now() - this.hiddenAt) / 1000);
-      this.hiddenAt = null;
-      this.lastTick = performance.now();
-      void this.refresh();
-    }
+    if (document.hidden) this.pause();
+    else this.resume();
   };
+
+  /** Arka plana geçiş: kaydet, eşitle; Android'de bildirimleri zamanla. */
+  private pause(): void {
+    if (this.paused) return;
+    this.paused = true;
+    this.hiddenAt = Date.now();
+    this.save();
+    void this.sync(true);
+    if (isNative && this.settings.notifications && !this.isScenario) void scheduleNotifications(this.state).catch(() => undefined);
+  }
+
+  /** Öne dönüş: yokken geçen süre, bildirimler silinir, başka cihaz ilerlediyse onun durumu. */
+  private resume(): void {
+    if (!this.paused) return;
+    this.paused = false;
+    if (isNative) void cancelNotifications().catch(() => undefined);
+    if (this.hiddenAt !== null) this.away((Date.now() - this.hiddenAt) / 1000);
+    this.hiddenAt = null;
+    this.lastTick = performance.now();
+    void this.refresh();
+  }
 
   private leave = (): void => {
     this.save();
@@ -532,19 +555,49 @@ export class GameStore {
   private purchase(cue: Cue): void {
     this.purchases += 1;
     this.cue(cue);
-    if (this.settings.haptics) haptic('selection');
+    this.vibrate('selection');
   }
 
   private refuse(): void {
     this.refusals += 1;
     this.cue('refuse');
-    if (this.settings.haptics) haptic('warning');
+    this.vibrate('warning');
   }
 
   private triumph(cue: Cue): void {
     this.triumphs += 1;
     this.cue(cue);
-    if (this.settings.haptics) haptic('success');
+    this.vibrate('success');
+  }
+
+  private vibrate(kind: 'selection' | 'warning' | 'success'): void {
+    if (!this.settings.haptics || this.isScenario) return;
+    if (isNative) void nativeHaptic(kind).catch(() => undefined);
+    else haptic(kind);
+  }
+
+  // ------------------------------------------------------------ bildirimler (Android)
+
+  /** Bildirim anahtarı: açarken izin iste; reddedildiyse kapalı kal. */
+  async setNotifications(on: boolean): Promise<void> {
+    this.updateSettings({ notificationsOffered: true });
+    if (!on) {
+      this.updateSettings({ notifications: false });
+      void cancelNotifications().catch(() => undefined);
+      return;
+    }
+    const permission = await notificationPermission().catch(() => 'denied' as const);
+    const granted = permission === 'granted' || (permission === 'prompt' && (await requestNotifications().catch(() => false)));
+    this.notificationsDenied = !granted;
+    this.updateSettings({ notifications: granted });
+  }
+
+  /** Açılışta iznin hâlâ geçerli olduğunu doğrula (telefonun ayarlarından kapatılmış olabilir). */
+  private async refreshNotifications(): Promise<void> {
+    const permission = await notificationPermission().catch(() => 'prompt' as const);
+    this.notificationsDenied = permission === 'denied';
+    if (permission === 'denied' && this.settings.notifications) this.updateSettings({ notifications: false });
+    this.changed();
   }
 
   private cue(cue: Cue): void {

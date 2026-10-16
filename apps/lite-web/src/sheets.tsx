@@ -5,6 +5,7 @@
  */
 import {
   ArrowUpRight,
+  Bell,
   CircleArrowDown,
   CircleArrowUp,
   Clock,
@@ -31,6 +32,7 @@ import { duration, money } from './format';
 import { useStore } from './hooks';
 import { chainName, lang, t, upper } from './l10n';
 import type { LeagueRow, StarRow } from './league';
+import { isNative } from './native';
 import type { AppearanceChoice, LanguageChoice } from './settings';
 import { ChainTile, Gloss, Glass, IconTile, Pill, PillPicker, Sheet, Switch } from './ui';
 
@@ -97,6 +99,15 @@ export function SettingsSheet({ onClose }: { onClose: () => void }) {
           <>
             <hr style={{ border: 0, borderTop: '1px solid var(--line)', margin: 0 }} />
             <ToggleRow title={t('settings.haptics')} icon={Vibrate} colors={[0xda8bf0, 0xb85dd6]} checked={settings.haptics} onChange={(haptics) => store.updateSettings({ haptics })} />
+          </>
+        )}
+        {isNative && (
+          <>
+            <hr style={{ border: 0, borderTop: '1px solid var(--line)', margin: 0 }} />
+            <ToggleRow title={t('settings.notifications')} icon={Bell} colors={[0x7db4ff, 0x4683e8]} checked={settings.notifications} onChange={(on) => void store.setNotifications(on)} />
+            <span style={{ fontSize: 11.5, fontWeight: 600, color: store.notificationsDenied ? 'var(--bad)' : 'var(--muted)' }}>
+              {store.notificationsDenied ? t('settings.notifications.denied') : t('settings.notifications.body')}
+            </span>
           </>
         )}
       </Section>

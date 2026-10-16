@@ -26,9 +26,18 @@ const enWeb: Record<string, string> = {
   'league.joinBody': 'Your game is saved on the server. Pick a company name to appear in the weekly league and the stars leaderboard.',
 };
 
+/** Android kabuğu (L11): telefona özgü cümleler. */
+const trAndroid: Record<string, string> = {
+  'settings.notifications.denied': 'Bildirim izni kapalı. Telefonun Ayarlar → Uygulamalar → CapitalForge Lite → Bildirimler bölümünden açabilirsin.',
+};
+const enAndroid: Record<string, string> = {
+  'settings.notifications.denied': 'Notifications are off. Turn them on in your phone’s Settings → Apps → CapitalForge Lite → Notifications.',
+};
+const android = (globalThis as { Capacitor?: { getPlatform?: () => string } }).Capacitor?.getPlatform?.() === 'android';
+
 const tables: Record<Lang, Record<string, string>> = {
-  tr: { ...trBase, ...trWeb },
-  en: { ...enBase, ...enWeb },
+  tr: { ...trBase, ...trWeb, ...(android ? trAndroid : {}) },
+  en: { ...enBase, ...enWeb, ...(android ? enAndroid : {}) },
 };
 
 export function deviceLang(): Lang {
