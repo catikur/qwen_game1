@@ -269,6 +269,28 @@ async function e2e(browser) {
   await wait(async () => (await local(fresh)).lastSeen > lateQuiet, 'yeni sekme kaydediyor (hesapsız)');
   check(registrations >= 2, `yeni sekme de hesap açmayı denedi (${registrations})`);
   check((await local(fresh)).prices.includes(4343), 'hesap açmayı denese de eski sekmenin geç yazımından sürüyor');
+  // Yeni sekme hemen taşıma koduyla başka hesabı alıyor: eski sekmenin bundan sonra gelen yazımı
+  // (eski oyun) alınan hesabın üstüne kurulmuyor.
+  const linked = await fetch(`${LEAGUE}/v1/link`, {
+    method: 'POST',
+    headers: { authorization: `Bearer ${account.id}.${account.token}`, 'content-type': 'application/json' },
+    body: '{}',
+  }).then((r) => r.json());
+  await fresh.click('[data-testid="league"]');
+  await fresh.fill('[data-testid="link-claim-code"]', linked.code);
+  await fresh.click('[data-testid="link-claim"]');
+  await wait(async () => (await accountOf(fresh))?.id === account.id, 'yeni sekme hesabı aldı');
+  const afterClaim = await early.evaluate(() => {
+    const file = JSON.parse(localStorage.getItem('lite.save'));
+    file.prices = [...file.prices, 4444];
+    file.base = null;
+    file.lastSeen = Date.now();
+    localStorage.setItem('lite.save', JSON.stringify(file));
+    return file.lastSeen;
+  });
+  await wait(async () => (await local(fresh)).lastSeen > afterClaim, 'yeni sekme kaydediyor (hesap alındı)');
+  const claimed = await local(fresh);
+  check(!claimed.prices.includes(4444) && claimed.base !== null, 'hesap alındıktan sonra eski sekmenin geç yazımı alınmıyor');
   await quiet.close();
   check(errors.length === 0, `sayfada hata yok${errors.length ? ': ' + errors.join(' | ') : ''}`);
   await other.close();

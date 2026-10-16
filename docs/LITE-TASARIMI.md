@@ -741,7 +741,8 @@ tek tablo. Bir cihazda başlayan oyun öbüründe sürüyor.
   alıp sonra kaydı okuyor, böylece devralırken en çok bir saniyelik zaman
   kayboluyor; hamle kaybolmuyor. Eski örnek kilide bakıp yazana kadar
   devralındıysa son yazımı okumadan sonra geliyor: yeni örnek henüz hamle
-  yapmadıysa ve günlük göndermediyse oyunu o kayıttan sürdürüyor (yolda olan
+  yapmadıysa, günlük göndermediyse ve hesap ya da oyun değişmediyse (taşıma
+  kodu, sunucunun durumuna geçiş) oyunu o kayıttan sürdürüyor (yolda olan
   sessiz hesap açılışı bırakılıyor).
 - **Testler:** `packages/lite-model/test/sync.test.ts`,
   `packages/lite-league/test/sync.test.ts`, tarayıcıda uçtan uca

@@ -145,7 +145,7 @@ export class GameStore {
    */
   private inflight: { batch: string; count: number } | null = null;
   private readonly startedAt = Date.now();
-  /** Açılıştan bu yana hamle yapıldı ya da günlük gönderildi: eski örneğin geç yazımı artık alınmıyor. */
+  /** Açılıştan bu yana hamle yapıldı, günlük gönderildi ya da sunucunun durumuna geçildi: eski örneğin geç yazımı artık alınmıyor. */
   private diverged = false;
 
   // Android CI karesi: kabukta adres çubuğu yok; senaryo derleme anında verilebiliyor (VITE_SCENARIO_QUERY).
@@ -264,7 +264,8 @@ export class GameStore {
    * Eski örnek bundan sonra yazmıyor: her yazımdan önce kilide bakıyor.
    */
   private lateWrite(raw: string): void {
-    if (this.superseded || this.diverged || this.isScenario || Date.now() - this.startedAt > LATE_WRITE) return;
+    // Hesap ya da oyun bu arada değiştiyse (`epoch`: taşıma kodu, silme, oturum düşmesi) eski kayıt artık bu hesabın değil.
+    if (this.superseded || this.diverged || this.epoch !== 0 || this.isScenario || Date.now() - this.startedAt > LATE_WRITE) return;
     const saved = GameStore.parse(raw);
     if (!saved) return;
     // Yolda olan yenileme ve hesap açılışı eski kaydın: yanıtları bu oyunun üstüne yazılmasın.
@@ -586,6 +587,8 @@ export class GameStore {
 
   /** Sunucunun durumuna geç: bekleyen günlük gidiyor. */
   private adopt(state: LiteState, version: number, tell: boolean): void {
+    // Sunucunun durumu geçti (taşıma kodu dahil): eski örneğin geç yazımı artık alınmıyor.
+    this.diverged = true;
     this.game.replaced(state);
     this.inflight = null;
     this.base = version;
