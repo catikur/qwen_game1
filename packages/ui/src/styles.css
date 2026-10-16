@@ -688,12 +688,17 @@ button.icon {
 }
 
 .buildcard-name {
+  min-width: 0;
   font-family: var(--font-display);
   font-weight: 600;
 }
 
-/* Fiyat bölünmüyor ("182 / B ₺"); sığmazsa ad sarıyor. */
+/*
+ * Fiyat bölünmüyor ve daralmıyor ("182 / B ₺" ya da kırpılmış ₺);
+ * sığmazsa ad sarıyor.
+ */
 .buildcard-cost {
+  flex-shrink: 0;
   font-variant-numeric: tabular-nums;
   color: var(--muted);
   font-size: 12.5px;
@@ -2909,8 +2914,11 @@ button.icon {
   color: var(--warn);
 }
 
+/* Adın altında kendi satırında: adın yanında fiyatı karttan taşırıyordu. */
 .buildcard-best {
-  margin-left: 7px;
+  display: block;
+  width: fit-content;
+  margin: 3px 0 1px;
   font-size: 10px;
   font-weight: 800;
   letter-spacing: 0.04em;
