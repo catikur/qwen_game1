@@ -444,6 +444,50 @@ test('Turnstile: açıksa web ve Android hesabı jetonsuz açılmıyor; iOS etki
   assert.equal((await call(db, THURSDAY, 'POST', '/v1/players', { platform: 'tv' })).body.error, 'platform');
 });
 
+test('kaybolan yanıtın tekrarı: kimlik listede durdukça tanınıyor; düştüyse 409 "bilinmiyor"; hiç uygulanmamışsa düz 409', async () => {
+  const db = memoryDb();
+  const web = await webPlayer(db, THURSDAY, 'Uzun Kayıp');
+  play(web.game, 5);
+  assert.equal((await web.push(THURSDAY + 6_000)).status, 200);
+  const base = web.version;
+  const link = await call(db, THURSDAY + 7_000, 'POST', '/v1/link', {}, web.account);
+  const claim = await call(db, THURSDAY + 8_000, 'POST', '/v1/link/claim', { code: link.body.code, platform: 'android' });
+  const phone: Account = { id: claim.body.id, token: claim.body.token };
+  // Web'in gönderimi işleniyor, yanıtı kayboluyor.
+  web.game.tick(3);
+  const ops = web.game.journal.take();
+  const retry = (at: number) => call(db, at, 'POST', '/v1/sync', { base, batch: 'long-lost-batch', ops, rest: 0 }, web.account);
+  const lost = await retry(THURSDAY + 10_000);
+  assert.equal(lost.status, 200);
+  // Telefon art arda eşitliyor.
+  let phoneBase = lost.body.version as number;
+  let phoneState = lost.body.state as LiteState;
+  let at = THURSDAY + 13_000;
+  const phoneSync = async () => {
+    const game = new SyncedGame(phoneState);
+    game.tick(1);
+    const sent = await call(db, at, 'POST', '/v1/sync', { base: phoneBase, batch: `phone-${at}`, ops: game.journal.take(), rest: 0 }, phone);
+    assert.equal(sent.status, 200, JSON.stringify(sent.body));
+    phoneBase = sent.body.version;
+    phoneState = sent.body.state;
+    at += 3_000;
+  };
+  for (let k = 0; k < 15; k++) await phoneSync();
+  // Arada 15 gönderim: kimlik hâlâ listede, uygulanmış sayılıyor.
+  const known = await retry(at);
+  assert.equal(known.status, 200);
+  assert.equal(known.body.applied, 0);
+  // Bir gönderim daha: kimlik listeden düştü; sunucu bilemiyor, istemci kayıtları yeniden uygulamasın.
+  await phoneSync();
+  const unknown = await retry(at);
+  assert.equal(unknown.status, 409);
+  assert.equal(unknown.body.uncertain, true);
+  // Hiç uygulanmamış gönderim, arada birkaç sürüm: kesin uygulanmadı, düz 409 (istemci yeniden uygular).
+  const never = await call(db, at, 'POST', '/v1/sync', { base: phoneBase - 3, batch: 'never-applied-1', ops: [['t', 1]], rest: 0 }, web.account);
+  assert.equal(never.status, 409);
+  assert.equal(never.body.uncertain, undefined);
+});
+
 test('hesabı sil: kayıt, cihazlar, tablo satırı ve taşıma kodu da gidiyor', async () => {
   const db = memoryDb();
   const web = await webPlayer(db, THURSDAY, 'Silinecek');

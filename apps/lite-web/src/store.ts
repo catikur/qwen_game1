@@ -533,9 +533,14 @@ export class GameStore {
       // Sunucu kesin yanıt verdiyse (4xx) gönderim düştü; ağ ya da sunucu hatasında
       // belirsiz: kayıtlar donuk ve kimlik saklı kalıyor, sonraki gönderim aynısı.
       const certain = error instanceof LeagueError && error.status >= 400 && error.status < 500;
+      // Yanıtı belirsiz gönderimin tekrarına sunucu "bilinmiyor" dedi (arada başka cihazdan çok
+      // gönderim geçti, kimlik artık listede yok): o kayıtlar uygulanmış olabilir, yeniden
+      // uygulanmıyor (bir alım iki kez yapılmasın); uygulanmadıysa kayboluyor.
+      const unknown = retry !== null && error instanceof LeagueError && error.status === 409 && (error.body as { uncertain?: boolean }).uncertain === true;
       if (certain || epoch !== this.epoch) {
         this.inflight = null;
-        this.game.journal.release();
+        if (unknown && epoch === this.epoch) this.game.journal.drop();
+        else this.game.journal.release();
       }
       if (epoch === this.epoch) this.handleSyncError(error);
     } finally {

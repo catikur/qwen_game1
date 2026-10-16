@@ -716,7 +716,10 @@ tek tablo. Bir cihazda başlayan oyun öbüründe sürüyor.
   - İyimser sürüm kilidi; başka cihaz (ya da kapanan eski sekme) ilerlediyse
     409 ve güncel durum: istemci bekleyenleri onun üstüne yeniden uygulayıp
     gönderiyor (sunucu yine doğruluyor, süre iki kez sayılmıyor). Yanıtı
-    kaybolan gönderimin tekrarı zararsız.
+    kaybolan gönderimin tekrarı zararsız: sunucu son 16 gönderimin kimliğini
+    tutuyor. Arada daha çok gönderim geçtiyse 409'a "bilinmiyor" işareti
+    koyuyor; istemci o kayıtları yeniden uygulamıyor (hiçbir şey iki kez
+    uygulanmıyor, uygulanmadıysa kayboluyor).
   - Haftalık puanı sunucu hesaplıyor: her zaman dilimi gerçek zamana
     yerleşiyor, pazartesiyi aşan dilim süresiyle bölünüyor.
 - **Hesap:** web ve Android bir dakika oynanınca ya da lig ekranı açılınca

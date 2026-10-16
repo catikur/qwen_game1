@@ -198,7 +198,11 @@ export async function sync(db: Db, playerId: string, now: number, body: Record<s
     if ((body.base as number) < row.version && recent.includes(batch)) {
       return { ...current, applied: 0, skipped: 0, clipped: 0, score: await weekScore(db, playerId, week) };
     }
-    throw new HttpError(409, 'stale', { ...current });
+    // Uygulanmış olsaydı `base + 1` sürümünde yazılmıştı; arada en çok RECENT_BATCHES sürüm
+    // geçtiyse kimlik listede olurdu, yani uygulanmadı. Daha çok geçtiyse bilinmiyor: istemci
+    // bunu yanıtı belirsiz gönderiminin tekrarıysa o kayıtları yeniden uygulamıyor (`uncertain`).
+    const uncertain = (body.base as number) < row.version - RECENT_BATCHES;
+    throw new HttpError(409, 'stale', { ...current, ...(uncertain ? { uncertain: true } : {}) });
   }
   if (now - row.at < MIN_SYNC_GAP && ops.length > 0) throw new HttpError(429, 'slow');
 

@@ -161,6 +161,38 @@ async function e2e(browser) {
   await wait(async () => (await local(page))?.ops.length === 0, 'son eşitleme');
   check(JSON.stringify((await server('v1/save', account)).state) === JSON.stringify((await local(page)).state), 'sonra yine bit bit aynı');
 
+  // Yanıtı kaybolan gönderimin tekrarına sunucu "bilinmiyor" derse (arada başka cihazdan çok gönderim
+  // geçmiş, kimlik listeden düşmüş): istemci o kayıtları yeniden uygulamıyor, sonraki gönderimde yok.
+  await show(page);
+  await page.waitForTimeout(8_000);
+  const sent = [];
+  await page.route('**/v1/sync', async (route) => {
+    sent.push(JSON.parse(route.request().postData() ?? '{}'));
+    if (sent.length === 1) {
+      await route.fetch();
+      await route.abort('failed');
+    } else if (sent.length === 2) {
+      const now = await server('v1/save', account);
+      await route.fulfill({ status: 409, contentType: 'application/json', body: JSON.stringify({ error: 'stale', ...now, uncertain: true }) });
+    } else {
+      await route.continue();
+    }
+  });
+  await hide(page);
+  await wait(() => sent.length >= 1, 'kaybolan eşitleme (bilinmiyor)');
+  await page.waitForTimeout(500);
+  await show(page);
+  await wait(() => sent.length >= 2, 'yineleme (bilinmiyor)');
+  await page.waitForTimeout(2_500);
+  await hide(page);
+  await wait(() => sent.length >= 3, 'bilinmiyor sonrası gönderim');
+  const steps = (ops) => ops.reduce((n, op) => n + (op[0] === 't' ? op[1] : 0), 0);
+  check(sent[1].batch === sent[0].batch, 'yineleme aynı kimlikle (bilinmiyor)');
+  check(steps(sent[2].ops) < steps(sent[0].ops), `"bilinmiyor" sonrası kaybolan gönderimin kayıtları yeniden gönderilmedi (${steps(sent[2].ops)} < ${steps(sent[0].ops)} adım)`);
+  await wait(async () => (await local(page))?.ops.length === 0, 'son eşitleme (bilinmiyor)');
+  await page.unroute('**/v1/sync');
+  check(JSON.stringify((await server('v1/save', account)).state) === JSON.stringify((await local(page)).state), '"bilinmiyor" sonrası da bit bit aynı');
+
   // Lige katıl.
   await show(page);
   await page.click('[data-testid="league"]');
