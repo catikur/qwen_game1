@@ -804,9 +804,10 @@ export interface OfflineResult {
 /** Uygulama kapalıyken geçen süre: tavanla kırpılıyor, kampanya yok, rakip yarı hızda. */
 export function applyOffline(state: LiteState, elapsed: number): OfflineResult {
   const seconds = Math.max(0, Math.min(elapsed, offlineCap(state)));
-  // Kampanya çevrimdışına taşmasın.
+  // Kampanya çevrimdışına taşmasın; duran fırsat kapalıyken kaçıyor (kısa ayrılışta da).
   const base = cloneState(state);
   if (base.campaignUntil > base.clock) base.campaignUntil = base.clock;
+  base.deal = null;
   const next = advance(base, seconds, true);
   return { state: next, earned: next.cash - base.cash, seconds };
 }

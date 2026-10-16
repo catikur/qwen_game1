@@ -179,7 +179,11 @@ final class GameStore {
 
     private func applyOffline(_ elapsed: Double) {
         // Bir dakikadan kısa ayrılışlar sayılmıyor: uygulama değiştirip dönmek "yokken" değil.
-        guard elapsed > 60 else { return }
+        // Ama duran fırsat kapalıyken kaçıyor (saat dururken süresi dolmuş balon yakalanmasın).
+        guard elapsed > 60 else {
+            if elapsed > 0 && state.deal != nil { state = Lite.applyOffline(state, 0).state }
+            return
+        }
         let result = Lite.applyOffline(state, elapsed)
         state = result.state
         league.track(state)

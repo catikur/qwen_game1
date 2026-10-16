@@ -686,7 +686,9 @@ public enum Lite {
     public static func applyOffline(_ state: LiteState, _ elapsed: Double) -> OfflineResult {
         let seconds = max(0, min(elapsed, offlineCap(state)))
         var base = state
+        // Kampanya çevrimdışına taşmasın; duran fırsat kapalıyken kaçıyor (kısa ayrılışta da).
         if base.campaignUntil > base.clock { base.campaignUntil = base.clock }
+        base.deal = nil
         let next = advance(base, seconds, offline: true)
         return OfflineResult(state: next, earned: next.cash - base.cash, seconds: seconds)
     }

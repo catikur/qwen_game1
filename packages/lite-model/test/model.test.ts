@@ -541,4 +541,8 @@ test('fırsat: satış yokken çıkmıyor; kapalıyken çıkmıyor, duran fırsa
   assert.equal(away.deals, s.deals, 'kapalıyken yeni fırsat çıkmamalı');
   // Dönüşte kaçan sıra hemen başlıyor.
   assert.ok(advance(away, 1).deal);
+  // Kısa ayrılışta da (saat ilerlemese bile) duran fırsat kaçıyor; kazanç yok.
+  const blink = applyOffline(s, 0);
+  assert.equal(blink.state.deal, null);
+  assert.equal(blink.earned, 0);
 });
