@@ -147,6 +147,12 @@ struct IslandCanvas: View {
                 painter.draw(in: &context, state: state, time: timeline.date.timeIntervalSinceReferenceDate)
             }
         }
+        // L9: fırsat balonu binanın üstünde.
+        .overlay {
+            GeometryReader { proxy in
+                DealLayer(island: island, size: proxy.size, palette: palette)
+            }
+        }
     }
 }
 

@@ -205,8 +205,11 @@ struct NotifyPromptCard: View {
     }
 }
 
-/// Ayarlar: görünüm, dil, ses, titreşim, bildirim, kaydı sıfırla.
+/// Ayarlar: görünüm, dil, ses, titreşim, bildirim, gizlilik ve destek, kaydı sıfırla.
 struct SettingsSheet: View {
+    /// Gizlilik ve destek sayfaları (apps/web/public/lite, GitHub Pages).
+    static let site = "https://catikur.github.io/qwen_game1/lite/"
+
     @Environment(GameStore.self) private var store
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var scheme
@@ -256,6 +259,11 @@ struct SettingsSheet: View {
                             .font(Theme.text(11.5, .semibold))
                             .foregroundStyle(settings.notificationsDenied ? Theme.bad : Theme.muted)
                     }
+                    section(nil) {
+                        link(L10n.t("settings.privacy"), "hand.raised.fill", (Color(hex: 0x7BE08F), Color(hex: 0x3BA85E)), page("privacy.html"))
+                        Divider().overlay(Theme.line)
+                        link(L10n.t("settings.support"), "questionmark.bubble.fill", (Color(hex: 0x7DD3F0), Color(hex: 0x3B9FD6)), page("support.html"))
+                    }
                     Button {
                         confirmReset = true
                     } label: {
@@ -304,6 +312,26 @@ struct SettingsSheet: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .glassCard()
+    }
+
+    /// Sayfa adresi; İngilizcede sayfanın İngilizce bölümüne.
+    private func page(_ name: String) -> URL {
+        URL(string: SettingsSheet.site + name + (L10n.lang == .tr ? "" : "#en"))!
+    }
+
+    private func link(_ title: String, _ icon: String, _ colors: (Color, Color), _ url: URL) -> some View {
+        Link(destination: url) {
+            HStack(spacing: 10) {
+                IconTile(symbol: icon, colors: colors, size: 30)
+                Text(title).font(Theme.display(15)).foregroundStyle(Theme.ink)
+                Spacer()
+                Image(systemName: "arrow.up.right")
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(Theme.soft)
+            }
+            .frame(minHeight: 34)
+            .contentShape(Rectangle())
+        }
     }
 
     private func toggle(_ title: String, _ icon: String, _ colors: (Color, Color), _ value: Binding<Bool>) -> some View {

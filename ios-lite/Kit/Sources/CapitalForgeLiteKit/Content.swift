@@ -224,6 +224,34 @@ public enum LiteContent {
     public static let buildingTiers: [Int] = [25, 50, 100]
     /// Şehir temaları sırası.
     public static let cityThemes: [CityTheme] = [.coast, .mountain, .desert, .snow]
+
+    // L9: şehir fırsatları
+    /// İlk fırsat bu saniyede; sonrakiler başlangıçtan başlangıca `dealGap` arayla, yalnızca oyuncu oradayken.
+    public static let dealFirst = 150.0
+    public static let dealGap = 100.0
+    /// Fırsat bu kadar saniye duruyor; yakalanmazsa kayboluyor.
+    public static let dealLifetime = 12.0
+    /// Sıra: dört sipariş arasında bir ünlü müşteri, altıncıda yatırımcı.
+    public static let dealPattern: [DealKind] = [.order, .order, .vip, .order, .order, .investor]
+    /// Ödül: şirketin o anki gelirinin bu kadar saniyesi, kasaya (kazanca sayılmıyor).
+    public static func dealRewardSeconds(_ kind: DealKind) -> Double {
+        switch kind {
+        case .order: 12
+        case .vip: 30
+        case .investor: 60
+        }
+    }
+    public static let dealMinReward = 10.0
+}
+
+/// Şehir fırsatı (L9): bir binanın üstünde beliriyor, dokununca ödül kasaya.
+public enum DealKind: String, CaseIterable, Codable, Sendable {
+    /// Bir zincire toplu sipariş.
+    case order
+    /// Zincire gelen ünlü müşteri.
+    case vip
+    /// Bütün şirkete yatırımcı; seyrek.
+    case investor
 }
 
 // MARK: - L3 türleri

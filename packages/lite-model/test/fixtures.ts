@@ -21,7 +21,9 @@ import {
   buyManager,
   chooseCouncil,
   cityTheme,
+  catchDeal,
   claimGoal,
+  dealReward,
   currentGoal,
   firstOvertake,
   goPublic,
@@ -54,7 +56,8 @@ export type Op =
   | { op: 'prestige' }
   | { op: 'council'; choice: 0 | 1 }
   | { op: 'claim' }
-  | { op: 'ipo' };
+  | { op: 'ipo' }
+  | { op: 'deal' };
 
 export interface Snapshot {
   /** Bu kadar adım oynatıldıktan sonra. */
@@ -87,6 +90,12 @@ export interface Snapshot {
   overtake: number | null;
   // L7
   history: CityRecord[];
+  // L9
+  deal: { kind: string; chain: ChainId | null; until: number } | null;
+  nextDealAt: number;
+  deals: number;
+  /** Duran fırsatın ödülü (`dealReward`). */
+  dealReward: number;
 }
 
 /** Takımada senaryosunun başlangıcı: daha önce satılmış beş şehir. */
@@ -168,6 +177,10 @@ function snapshot(state: LiteState, after: number): Snapshot {
     listed: state.listed,
     overtake: firstOvertake(state, OVERTAKE_HORIZON),
     history: state.history.map((record) => ({ ...record })),
+    deal: state.deal ? { ...state.deal } : null,
+    nextDealAt: state.nextDealAt,
+    deals: state.deals,
+    dealReward: dealReward(state),
   };
 }
 
@@ -205,6 +218,10 @@ function apply(state: LiteState, op: Op): { state: LiteState; ok: boolean } {
       const r = goPublic(state);
       return r.ok ? { state: r.state, ok: true } : { state, ok: false };
     }
+    case 'deal': {
+      const r = catchDeal(state);
+      return r.ok ? { state: r.state, ok: true } : { state, ok: false };
+    }
   }
 }
 
@@ -221,6 +238,8 @@ function record(
   extras: (round: number) => Op[],
   every: number,
   start: LiteState = newGame(),
+  /** L9: bot fırsatları yakalıyor mu (eski senaryolar yakalamıyor: fırsat süresi dolup kayboluyor). */
+  catchDeals = false,
 ): Scenario {
   let state = start;
   const ops: Scenario['ops'] = [];
@@ -238,6 +257,8 @@ function record(
     if (state.council !== null) run({ op: 'council', choice: (state.sessions % 2) as 0 | 1 });
     // L4: halka arz açılır açılmaz.
     if (!state.listed && ipoUnlocked(state)) run({ op: 'ipo' });
+    // L9: duran fırsatı yakala.
+    if (catchDeals && state.deal !== null) run({ op: 'deal' });
     for (let guard = 0; guard < 40; guard++) {
       const move = bestMove(state);
       if (!move || move.cost > state.cash) break;
@@ -348,6 +369,24 @@ export function buildFixtures(): Fixtures {
       },
       15,
       newGame(5, 60, 4e14, ISLAND_HISTORY),
+    ),
+    // L9: fırsatlar. 4 sn'lik turlar (12 sn'lik fırsat kaçmıyor), kampanyalı;
+    // bazı fırsatlar ara sıra kasıtlı kaçırılıyor (çevrimdışı dönüşte duran fırsat kayboluyor).
+    record(
+      'firsatlar',
+      600,
+      4,
+      (round) => {
+        const ops: Op[] = [];
+        if (round % 13 === 0) ops.push({ op: 'campaign' });
+        if (round % 150 === 149) ops.push({ op: 'offline', seconds: 3_000 });
+        // Yakalanmamış fırsata yine dokunmak: reddediliyor, kasa değişmiyor.
+        if (round % 50 === 7) ops.push({ op: 'deal' });
+        return ops;
+      },
+      25,
+      newGame(),
+      true,
     ),
   ];
 
