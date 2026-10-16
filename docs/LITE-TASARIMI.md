@@ -671,3 +671,38 @@ tek tablo. Bir cihazda başlayan oyun öbüründe sürüyor.
     anahtarı (ücretsiz).
   - Android: Google Play Console geliştirici hesabı (tek sefer 25 $), uygulama
     imzalama anahtarı (Play App Signing).
+
+### 15.1 Uygulanan (L10)
+
+- **Eşitleme** (`packages/lite-model/src/sync.ts`, sunucu `src/saves.ts`):
+  - Zaman sabit 1 sn adımlarla; istemci yalnızca `advance(state, 1)` çağırıyor,
+    kesir ekranda süsleniyor. Günlük: `['t', n]` adım, `['o', sn]` yokken,
+    eylemler (`b` seviye, `m` müdür, `c` kampanya, `p` meclis, `g` görev,
+    `d` fırsat, `i` halka arz, `s` şehri sat, `r` sıfırla).
+  - Sunucu aynı kodu aynı sırayla oynatıyor: dürüst istemcide sonuç bit bit
+    aynı (testte ve tarayıcıda doğrulanıyor). Süre bütçesi hesap açıldığından
+    beri gerçekten geçen süre (+10 sn pay; yeni hesaba açılış öncesi için en çok
+    1 saat). Günlük tamken (`rest: 0`) kullanılmayan süre birikmiyor.
+  - Gönderim başına en çok 600 adım, 1000 kayıt: ücretsiz katmanın işlemci
+    sınırına sığıyor (600 adım ≈ 2–3 ms).
+  - İyimser sürüm kilidi; başka cihaz ilerlediyse 409 ve güncel durum,
+    istemci ona dönüyor. Yanıtı kaybolan gönderimin tekrarı zararsız.
+  - Haftalık puanı sunucu hesaplıyor: her zaman dilimi gerçek zamana
+    yerleşiyor, pazartesiyi aşan dilim süresiyle bölünüyor.
+- **Hesap:** web ve Android ilk açılışta sessiz (adsız) hesap; ad verince lige
+  katılıyor (hemen bu haftanın grubunda). Bir hesabın birden çok cihazı
+  (`tokens`). Taşıma kodu 6 harf, 10 dakika, tek seferlik; kayıt sunucuda
+  olmalı (iOS önce yüklüyor).
+- **iOS:** her 5 dakikada ve arka plana geçerken önce kaydı yüklüyor
+  (App Attest onaylı, Swift biçimi sunucuda TS'ye çevriliyor), sonra puanı.
+  Öne gelince sunucu ilerlemişse onun durumuna ve haftalık puanına geçiyor.
+- **Genel tablo:** `GET /v1/stars` (dünya ilk 50, sıram, özel lig
+  arkadaşları); tablolarda platform işareti (iPhone/iPad, tarayıcı, Android).
+- **Web arayüzü** (`apps/lite-web`): React + Vite; şehir çizimi iOS'un
+  `IsoPainter`'ının Canvas karşılığı (aynı geometri, renkler, belirlenimci
+  rastgele diziler). PWA (çevrimdışı, ana ekrana ekleme). Telefon, tablet ve
+  masaüstü düzeni. Metinler `L10n.swift`'ten derleme anında.
+- **Testler:** `packages/lite-model/test/sync.test.ts`,
+  `packages/lite-league/test/sync.test.ts`, tarayıcıda uçtan uca
+  `tools/lite-web-e2e.mjs` (CI'de "Lite web · uçtan uca ve kareler").
+

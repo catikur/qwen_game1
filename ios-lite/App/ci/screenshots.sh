@@ -70,6 +70,7 @@ shot tr-map -AppleLanguages "(tr)" -liteScenario snow -liteMap
 # L8: haftalık lig (örnek veriyle; sunucu yok), özel ligler, kart, "yakında".
 shot tr-league -AppleLanguages "(tr)" -liteScenario mid -liteLeague -liteLeagueSheet
 shot tr-league-private -AppleLanguages "(tr)" -liteScenario mid -liteLeague -liteLeagueSheet -liteLeaguePrivate
+shot tr-league-stars -AppleLanguages "(tr)" -liteScenario mid -liteLeague -liteLeagueSheet -liteLeagueStars
 shot tr-league-card -AppleLanguages "(tr)" -liteScenario mid -liteLeague -liteScroll league
 # L9: şehir fırsatları (balon; yakalanınca uçuş).
 shot tr-deal -AppleLanguages "(tr)" -liteScenario mid -liteDeal order

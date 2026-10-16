@@ -270,6 +270,13 @@ test('hesabı sil: kayıt, cihazlar, tablo satırı ve taşıma kodu da gidiyor'
 function swiftShape(state: LiteState): Record<string, unknown> {
   const raw: Record<string, unknown> = { ...state, chains: CHAIN_IDS.map((id) => state.chains[id]) };
   for (const key of ['event', 'policy', 'deal', 'council']) if (raw[key] === null) delete raw[key];
+  for (const key of ['event', 'deal']) {
+    const value = raw[key] as Record<string, unknown> | undefined;
+    if (value && value.chain === null) {
+      const { chain: _, ...rest } = value;
+      raw[key] = rest;
+    }
+  }
   return raw;
 }
 
@@ -294,7 +301,8 @@ test('iOS: cihazdaki oyunu App Attest onayıyla yüklüyor, kodla web\'e taşıy
     );
     return { status: response.status, body: (await response.json()) as Record<string, any> };
   };
-  const phoneState = step(newGame(), 120);
+  // Swift'in zinciri yazmadığı alanlar: yatırımcı fırsatı ve turizm olayı.
+  const phoneState = { ...step(newGame(), 120), deal: { kind: 'investor' as const, chain: null, until: 128 }, event: { kind: 'tourism' as const, chain: null, until: 300 } };
   assert.equal((await upload(THURSDAY + 1_000, null, phoneState, false)).status, 403, 'onaysız yükleme yok');
   const first = await upload(THURSDAY + 2_000, null, phoneState);
   assert.equal(first.status, 200, JSON.stringify(first.body));

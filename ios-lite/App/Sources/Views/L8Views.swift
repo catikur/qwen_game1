@@ -50,7 +50,7 @@ struct LeagueCard: View {
             Button {
                 show = true
             } label: {
-                Text(league.status == .signedOut ? L10n.t("league.join") : L10n.t("league.open"))
+                Text(league.status == .signedOut || league.needsName ? L10n.t("league.join") : L10n.t("league.open"))
                     .font(Theme.display(13.5))
                     .padding(.horizontal, 12)
                     .frame(minHeight: 38)
@@ -71,14 +71,17 @@ struct LeagueCard: View {
 }
 
 enum LeagueTab: Hashable {
-    case group, privateLeagues
+    case group, privateLeagues, stars
 }
 
 /// Haftalık lig penceresi: bölüm, 30 kişilik grup, özel ligler, ad.
 struct LeagueSheet: View {
     @Environment(GameStore.self) private var store
     @Environment(\.dismiss) private var dismiss
-    @State private var tab: LeagueTab = ProcessInfo.processInfo.arguments.contains("-liteLeaguePrivate") ? .privateLeagues : .group
+    @State private var tab: LeagueTab = ProcessInfo.processInfo.arguments.contains("-liteLeaguePrivate")
+        ? .privateLeagues
+        : (ProcessInfo.processInfo.arguments.contains("-liteLeagueStars") ? .stars : .group)
+    @State private var claimCode = ""
     @State private var name = ""
     @State private var newLeague = ""
     @State private var code = ""
@@ -131,15 +134,23 @@ struct LeagueSheet: View {
                     case .signedOut:
                         joinCard(league)
                     case .ready:
-                        PillPicker(selection: $tab, options: [LeagueTab.group, LeagueTab.privateLeagues]) { option in
-                            option == .group ? L10n.t("league.tabGroup") : L10n.t("league.tabPrivate")
+                        if league.needsName { joinCard(league) }
+                        PillPicker(selection: $tab, options: [LeagueTab.group, LeagueTab.privateLeagues, LeagueTab.stars]) { option in
+                            switch option {
+                            case .group: L10n.t("league.tabGroup")
+                            case .privateLeagues: L10n.t("league.tabPrivate")
+                            case .stars: L10n.t("league.tabStars")
+                            }
                         }
-                        if tab == .group {
-                            group(league)
-                        } else {
-                            privateLeagues(league)
+                        switch tab {
+                        case .group: group(league)
+                        case .privateLeagues: privateLeagues(league)
+                        case .stars: starsBoard(league)
                         }
-                        account(league)
+                        if !league.needsName { account(league) }
+                    }
+                    if league.status != .unconfigured {
+                        linkCard(league)
                     }
                     if GameCenter.available {
                         Button {
@@ -310,6 +321,81 @@ struct LeagueSheet: View {
         }
     }
 
+    /// L10: bütün platformların yıldız tablosu (dünya ve özel lig arkadaşları).
+    private func starsBoard(_ league: LeagueService) -> some View {
+        VStack(alignment: .leading, spacing: 5) {
+            HStack(spacing: 8) {
+                Image(systemName: "star.fill").font(.system(size: 14, weight: .bold)).foregroundStyle(Color(hex: 0xFFB938))
+                Text(L10n.t("stars.title")).font(Theme.display(15)).foregroundStyle(Theme.ink)
+                Spacer()
+                Text(league.stars?.me.rank.map { L10n.t("stars.me", $0) } ?? L10n.t("stars.unranked"))
+                    .font(Theme.text(12, .heavy))
+                    .foregroundStyle(Theme.muted)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            }
+            .padding(.horizontal, 4)
+            .padding(.bottom, 4)
+            Text(L10n.t("stars.world").uppercased(with: L10n.locale)).font(Theme.caps(9.5)).tracking(0.6).foregroundStyle(Theme.soft).padding(.horizontal, 4)
+            ForEach(league.stars?.top ?? []) { row in
+                StarRowView(row: row)
+            }
+            Text(L10n.t("stars.friends").uppercased(with: L10n.locale)).font(Theme.caps(9.5)).tracking(0.6).foregroundStyle(Theme.soft)
+                .padding(.horizontal, 4).padding(.top, 8)
+            if let friends = league.stars?.friends, !friends.isEmpty {
+                ForEach(friends) { row in StarRowView(row: row) }
+            } else {
+                Text(L10n.t("stars.empty")).font(Theme.text(12)).foregroundStyle(Theme.muted).padding(4)
+            }
+        }
+        .glassCard(padding: 8)
+    }
+
+    /// L10: başka cihazda oyna (kod al) ve başka cihazdaki oyunu buraya al.
+    private func linkCard(_ league: LeagueService) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(L10n.t("link.title").uppercased(with: L10n.locale)).font(Theme.caps(10)).tracking(0.8).foregroundStyle(Theme.soft)
+            Text(L10n.t("link.body")).font(Theme.text(12)).foregroundStyle(Theme.muted)
+            if let link = league.link {
+                HStack(spacing: 10) {
+                    Text(link.code).font(Theme.display(26)).tracking(3).foregroundStyle(Theme.ink).textSelection(.enabled)
+                    Text(L10n.t("link.expires", Format.duration(max(0, link.expiresAt / 1000 - Date().timeIntervalSince1970))))
+                        .font(Theme.text(11.5)).foregroundStyle(Theme.muted)
+                    Spacer()
+                }
+            } else if league.status == .ready {
+                Button {
+                    Task { await league.createLink(store.state) }
+                } label: {
+                    Text(L10n.t("link.create")).font(Theme.display(14)).frame(maxWidth: .infinity, minHeight: 40)
+                }
+                .buttonStyle(.glossy(league.busy ? nil : Theme.blue, radius: 14))
+                .disabled(league.busy)
+                .accessibilityIdentifier("link-create")
+            }
+            Divider().overlay(Theme.line)
+            Text(L10n.t("link.claimTitle")).font(Theme.display(14)).foregroundStyle(Theme.ink)
+            Text(L10n.t("link.claimBody")).font(Theme.text(11.5)).foregroundStyle(Theme.muted)
+            HStack(spacing: 8) {
+                field(L10n.t("link.claimPlaceholder"), text: $claimCode)
+                    .textInputAutocapitalization(.characters)
+                Button {
+                    Task {
+                        await league.claimLink(claimCode)
+                        if league.problem == nil { claimCode = "" }
+                    }
+                } label: {
+                    Text(L10n.t("link.claim")).font(Theme.display(13.5)).padding(.horizontal, 12).frame(minHeight: 40)
+                }
+                .buttonStyle(.glossy(claimCode.count == 6 ? Theme.orange : nil, radius: 13))
+                .disabled(claimCode.count != 6 || league.busy)
+                .accessibilityIdentifier("link-claim")
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .glassCard()
+    }
+
     /// Hesap satırı: ad, adı değiştir, hesabı sil.
     private func account(_ league: LeagueService) -> some View {
         HStack(spacing: 8) {
@@ -367,6 +453,7 @@ struct LeagueRowView: View {
                 .foregroundStyle(Theme.ink)
                 .lineLimit(1)
             Spacer(minLength: 6)
+            PlatformMark(platform: row.platform)
             if let move = row.move, move != 0 {
                 Image(systemName: move > 0 ? "arrow.up.circle.fill" : "arrow.down.circle.fill")
                     .font(.system(size: 13, weight: .bold))
@@ -378,6 +465,50 @@ struct LeagueRowView: View {
                 .foregroundStyle(Theme.money)
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 5)
+        .background(row.me ? Theme.neck : Color.clear, in: shape)
+        .overlay(shape.strokeBorder(row.me ? Theme.neckRing : .clear, lineWidth: 1.5))
+    }
+}
+
+/// L10: satırda oyuncunun son gönderdiği cihaz (iPhone/iPad, tarayıcı, Android).
+struct PlatformMark: View {
+    let platform: String?
+
+    var body: some View {
+        if let platform {
+            Image(systemName: platform == "web" ? "globe" : (platform == "android" ? "candybarphone" : "iphone"))
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(Theme.soft)
+                .accessibilityLabel(L10n.t("platform.\(platform)"))
+        }
+    }
+}
+
+/// L10: yıldız tablosu satırı.
+struct StarRowView: View {
+    let row: StarRow
+
+    var body: some View {
+        let shape = RoundedRectangle(cornerRadius: 12, style: .continuous)
+        HStack(spacing: 10) {
+            Text("\(row.rank)")
+                .font(Theme.display(13))
+                .foregroundStyle(row.rank <= 3 ? Color(hex: 0x5A3A00) : Theme.muted)
+                .frame(width: 26, height: 26)
+                .background(row.rank <= 3 ? AnyShapeStyle(Color(hex: 0xFFD25E)) : AnyShapeStyle(Theme.track), in: Circle())
+            Text(row.me ? row.name + " · " + L10n.t("league.you") : row.name)
+                .font(row.me ? Theme.display(14) : Theme.text(13.5, .heavy))
+                .foregroundStyle(Theme.ink)
+                .lineLimit(1)
+            Spacer(minLength: 6)
+            PlatformMark(platform: row.platform)
+            Text("\(row.stars) ★")
+                .font(Theme.display(13.5))
+                .foregroundStyle(Theme.money)
+                .frame(minWidth: 60, alignment: .trailing)
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 5)

@@ -175,6 +175,11 @@ export function normalizeState(raw: unknown): unknown {
     s.chains = chains;
   }
   for (const key of ['event', 'policy', 'deal', 'council']) if (s[key] === undefined) s[key] = null;
+  // Olay ve fırsatta zinciri olmayan (yatırımcı, turizm…) Swift'te alanı hiç yazmıyor.
+  for (const key of ['event', 'deal']) {
+    const value = s[key] as Record<string, unknown> | null;
+    if (value && typeof value === 'object' && value.chain === undefined) s[key] = { ...value, chain: null };
+  }
   if (s.history === undefined) s.history = [];
   return s;
 }
