@@ -103,7 +103,7 @@ final class FixtureTests: XCTestCase {
 
     func testScenarios() throws {
         let scenarios = try XCTUnwrap(fixtures["scenarios"] as? [[String: Any]])
-        XCTAssertEqual(scenarios.count, 4)
+        XCTAssertEqual(scenarios.count, 5)
         for scenario in scenarios {
             try replay(scenario)
         }
