@@ -17,6 +17,9 @@ const trWeb: Record<string, string> = {
   'sync.connecting': 'Sunucuya bağlanıyor…',
   'league.joinBody': 'Oyunun sunucuda kayıtlı. Bir şirket adı seçince haftalık ligde ve yıldız tablosunda görünürsün.',
   'league.deleteBody': 'Adın, puanların, özel lig üyeliklerin ve oyun kaydın sunucudan kalıcı olarak silinir; bu cihazda oyun baştan başlar.',
+  'instance.title': 'Oyun başka bir pencerede açık',
+  'instance.body': 'Aynı oyun iki yerde birden oynanmasın diye burada durdu. İlerlemen kayıtlı.',
+  'instance.resume': 'Burada devam et',
 };
 const enWeb: Record<string, string> = {
   'settings.notifications.denied': 'Notifications are off. Turn them on in your browser’s site settings.',
@@ -26,6 +29,9 @@ const enWeb: Record<string, string> = {
   'sync.connecting': 'Connecting to the server…',
   'league.joinBody': 'Your game is saved on the server. Pick a company name to appear in the weekly league and the stars leaderboard.',
   'league.deleteBody': 'Your name, scores, private league memberships and game save are permanently removed from the server; the game starts over on this device.',
+  'instance.title': 'The game is open in another window',
+  'instance.body': 'It paused here so the same game isn’t played in two places at once. Your progress is saved.',
+  'instance.resume': 'Continue here',
 };
 
 /** Android kabuğu (L11): telefona özgü cümleler. */

@@ -31,6 +31,9 @@ import { Gloss, Glass, Sheet } from './ui';
 
 type Layout = 'phone' | 'tabletPortrait' | 'tabletLandscape';
 
+/** Kapatılamayan pencere için (Escape, geri tuşu ve arka plana dokunma bir şey yapmıyor). */
+const stay = () => undefined;
+
 /** İki sütun kart için gereken genişlik: zincir kartı telefondaki kadar ferah kalsın. */
 const TWO_COLUMN_WIDTH = 760;
 
@@ -132,6 +135,22 @@ export function App() {
         <div className="toast" role="status">
           {store.notice}
         </div>
+      )}
+      {store.superseded && (
+        // Oyun başka sekmede ya da pencerede açıldı: bu örnek durdu (kapatılamaz; buradan devam etmek sayfayı yeniden açar).
+        <Sheet onClose={stay} done="" center testId="superseded">
+          <Glass className="col" style={{ gap: 10, marginTop: 20 }}>
+            <span className="display" style={{ fontSize: 18 }}>
+              {t('instance.title')}
+            </span>
+            <span className="muted" style={{ fontSize: 12.5 }}>
+              {t('instance.body')}
+            </span>
+            <Gloss gloss="blue" radius={14} onClick={() => location.reload()} style={{ minHeight: 42, fontSize: 14.5 }} testId="superseded-resume">
+              {t('instance.resume')}
+            </Gloss>
+          </Glass>
+        </Sheet>
       )}
     </>
   );

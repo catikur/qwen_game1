@@ -64,6 +64,12 @@ interface SaveFile {
 }
 
 const SAVE_KEY = 'lite.save';
+/**
+ * Kaydı şu an oynatan örnek: en son açılan sekme ya da pencere (Android'de
+ * etkinlik yeniden kurulunca arkada kalan eski WebView de bir örnek). Eskisi
+ * duruyor; aynı kayıt iki yerde birden oynanıp birbirinin üstüne yazılmıyor.
+ */
+const OWNER_KEY = 'lite.owner';
 /** İki eşitleme arası (ms). */
 const SYNC_EVERY = 30_000;
 /** Bir dakikadan kısa ayrılışlar "yokken" sayılmıyor. */
@@ -107,6 +113,8 @@ export class GameStore {
   busy = false;
   /** Android: bildirim izni reddedildi (anahtar açılamıyor). */
   notificationsDenied = false;
+  /** Kayıt başka bir örnekte açıldı: bu örnek durdu, kayda ve sunucuya bir daha yazmıyor. */
+  superseded = false;
 
   private listeners = new Set<() => void>();
   private revisionValue = 0;
@@ -121,6 +129,7 @@ export class GameStore {
   private lastSync = 0;
   private timer: ReturnType<typeof setInterval> | null = null;
   private noticeTimer: ReturnType<typeof setTimeout> | null = null;
+  private readonly owner = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
 
   // Android CI karesi: kabukta adres çubuğu yok; senaryo derleme anında verilebiliyor (VITE_SCENARIO_QUERY).
   constructor(search: string = typeof location !== 'undefined' ? location.search || (import.meta.env.VITE_SCENARIO_QUERY ?? '') : '') {
@@ -197,11 +206,17 @@ export class GameStore {
   // ------------------------------------------------------------ zaman
 
   start(): void {
-    if (this.isScenario || this.timer) return;
+    if (this.isScenario || this.timer || this.superseded) return;
+    try {
+      localStorage.setItem(OWNER_KEY, this.owner);
+    } catch {
+      // Depo yok (özel pencere): kilit de yok, tek örnek varsayılıyor.
+    }
     this.lastTick = performance.now();
     this.timer = setInterval(() => this.tick(), 100);
     document.addEventListener('visibilitychange', this.visibility);
     addEventListener('pagehide', this.leave);
+    addEventListener('storage', this.storageChanged);
     if (isNative) {
       void onAppState((active) => (active ? this.resume() : this.pause()));
       void this.refreshNotifications();
@@ -214,6 +229,34 @@ export class GameStore {
     this.timer = null;
     document.removeEventListener('visibilitychange', this.visibility);
     removeEventListener('pagehide', this.leave);
+    removeEventListener('storage', this.storageChanged);
+  }
+
+  private storageChanged = (event: StorageEvent): void => {
+    if (event.key === OWNER_KEY && event.newValue !== null && event.newValue !== this.owner) this.standDown();
+  };
+
+  /** Kayıt hâlâ bu örnekte mi (olay kaçarsa yazmadan önce de bakılıyor); değilse dur. */
+  private owns(): boolean {
+    if (this.superseded) return false;
+    let current: string | null = null;
+    try {
+      current = localStorage.getItem(OWNER_KEY);
+    } catch {
+      return true;
+    }
+    if (current !== null && current !== this.owner) {
+      this.standDown();
+      return false;
+    }
+    return true;
+  }
+
+  private standDown(): void {
+    if (this.superseded) return;
+    this.superseded = true;
+    this.stop();
+    this.changed();
   }
 
   private tick(): void {
@@ -248,7 +291,7 @@ export class GameStore {
 
   /** Arka plana geçiş: kaydet, eşitle; Android'de bildirimleri zamanla. */
   private pause(): void {
-    if (this.paused) return;
+    if (this.paused || this.superseded) return;
     this.paused = true;
     this.hiddenAt = Date.now();
     this.save();
@@ -258,7 +301,7 @@ export class GameStore {
 
   /** Öne dönüş: yokken geçen süre, bildirimler silinir, başka cihaz ilerlediyse onun durumu. */
   private resume(): void {
-    if (!this.paused) return;
+    if (!this.paused || this.superseded) return;
     this.paused = false;
     if (isNative) void cancelNotifications().catch(() => undefined);
     if (this.hiddenAt !== null) this.away((Date.now() - this.hiddenAt) / 1000);
@@ -315,7 +358,7 @@ export class GameStore {
 
   save(): void {
     this.sinceSave = 0;
-    if (this.isScenario) return;
+    if (this.isScenario || !this.owns()) return;
     const file: SaveFile = { version: 1, state: this.state, ops: this.game.journal.ops, base: this.base, lastSeen: Date.now(), prices: this.priceHistory };
     try {
       localStorage.setItem(SAVE_KEY, JSON.stringify(file));
@@ -331,7 +374,7 @@ export class GameStore {
    * `force`) sessizce aç.
    */
   private async connect(force = false): Promise<void> {
-    if (!this.league.configured || this.isScenario) return;
+    if (!this.league.configured || this.isScenario || this.superseded) return;
     try {
       if (this.league.account) {
         await this.refresh();
@@ -354,7 +397,7 @@ export class GameStore {
 
   /** Başka cihaz ilerlediyse onun durumuna geç (günlükte bekleyen yoksa sessizce). */
   async refresh(): Promise<void> {
-    if (!this.league.account || this.isScenario) return;
+    if (!this.league.account || this.isScenario || this.superseded) return;
     try {
       const save = await this.league.loadSave();
       // Hesap açıldı ama sürüm kaydedilmeden sayfa kapandı: sunucu hâlâ sıfırda, buradaki günlük onun üstünde.
@@ -381,7 +424,7 @@ export class GameStore {
       return;
     }
     if (this.syncing || this.isScenario || !this.league.account || this.base === null) return;
-    if (this.game.journal.pending === 0) return;
+    if (this.game.journal.pending === 0 || !this.owns()) return;
     this.syncing = true;
     this.lastSync = Date.now();
     const ops = this.game.journal.take();

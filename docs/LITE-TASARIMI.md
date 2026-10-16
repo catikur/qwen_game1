@@ -704,6 +704,10 @@ tek tablo. Bir cihazda başlayan oyun öbüründe sürüyor.
   `IsoPainter`'ının Canvas karşılığı (aynı geometri, renkler, belirlenimci
   rastgele diziler). PWA (çevrimdışı, ana ekrana ekleme). Telefon, tablet ve
   masaüstü düzeni. Metinler `L10n.swift`'ten derleme anında.
+- **Tek örnek:** kaydı en son açılan sekme ya da pencere oynatıyor
+  (`lite.owner`); eskisi duruyor, kayda ve sunucuya yazmıyor ("Burada devam
+  et" sayfayı yeniden açıp geri alıyor). Android'de etkinlik ilk çizimden önce
+  yeniden kurulunca arkada kalan WebView de böyle duruyor (emülatörde görüldü).
 - **Testler:** `packages/lite-model/test/sync.test.ts`,
   `packages/lite-league/test/sync.test.ts`, tarayıcıda uçtan uca
   `tools/lite-web-e2e.mjs` (CI'de "Lite web · uçtan uca ve kareler").

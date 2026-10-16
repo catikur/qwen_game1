@@ -6,7 +6,8 @@
 //   tarayıcıdaki durum sunucunun oynattığıyla bit bit aynı;
 // - lige adla katılınca haftalık grupta görünüyor;
 // - taşıma koduyla ikinci tarayıcı aynı oyunu alıyor;
-// - kasayı elle şişiren istemci sunucunun durumuna dönüyor.
+// - kasayı elle şişiren istemci sunucunun durumuna dönüyor;
+// - aynı tarayıcıda ikinci sekme açılınca eskisi duruyor (tek örnek).
 // Ardından senaryo kareleri (SHOTS dizinine).
 //
 // Çalıştırma: node tools/lite-web-e2e.mjs [--shots-only] [--only=<kare adı öneki>]
@@ -163,6 +164,24 @@ async function e2e(browser) {
   await wait(async () => (await local(second))?.state.cash < 1e20, 'şişirilmiş kasa geri alındı');
   const after = await server('v1/save', account);
   check(after.state.chains.bakery.levels[2] < 60, 'sunucu sahte alımı uygulamadı');
+  // Aynı tarayıcıda ikinci sekme: eskisi duruyor, kayda yazmıyor; "burada devam et" geri alıyor.
+  const tab = await context.newPage();
+  tab.on('pageerror', (error) => errors.push(String(error)));
+  await tab.goto(WEB);
+  await page.locator('[data-testid="superseded"]').waitFor({ timeout: 10_000 });
+  const before = (await local(page)).lastSeen;
+  await page.waitForTimeout(6_000);
+  check((await local(page)).lastSeen > before, 'yeni sekme oynuyor ve kaydediyor');
+  // Yeni sekme arka planda (kaydetmiyor): eski sekme de yazmıyorsa kayıt yerinde duruyor.
+  await hide(tab);
+  await page.waitForTimeout(500);
+  const still = (await local(page)).lastSeen;
+  await page.waitForTimeout(6_000);
+  check((await local(page)).lastSeen === still, 'eski sekme durdu, kayda yazmıyor');
+  await page.click('[data-testid="superseded-resume"]');
+  await tab.locator('[data-testid="superseded"]').waitFor({ timeout: 10_000 });
+  check((await page.locator('[data-testid="superseded"]').count()) === 0, 'eski sekme "burada devam et" ile oyunu geri aldı');
+  await tab.close();
   check(errors.length === 0, `sayfada hata yok${errors.length ? ': ' + errors.join(' | ') : ''}`);
   await other.close();
   await context.close();
