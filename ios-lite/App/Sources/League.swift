@@ -550,13 +550,17 @@ final class LeagueService {
             "Kule Yapı", "Defne", "Ada Liman", "Su Holding", "Bulut", "Zeytin", "Dağ Madencilik", "Kum Saati",
         ]
         let start = LiteLeague.weekStart(week) ?? 0
+        // Platform işareti: iPhone, tarayıcı, Android (web sürümünün örneğiyle aynı sıra).
+        let platforms = ["ios", "web", "android"]
         let group = names.enumerated().map { index, name in
             LeagueRow(rank: index + 1, name: name, score: 9.6e12 / pow(1.22, Double(index)), me: name == "Atilla Holding",
-                      move: index < 5 ? 1 : (index >= names.count - 5 ? -1 : 0))
+                      move: index < 5 ? 1 : (index >= names.count - 5 ? -1 : 0),
+                      platform: name == "Atilla Holding" ? "ios" : platforms[index % 3])
         }
         let standings = LeagueStandings(week: week, endsAt: start + 7 * 86_400_000, division: 2, promote: 5, demote: 5, group: group)
         let office = ["Deniz", "Atilla Holding", "Selin", "Mert", "Ece", "Kaan"].enumerated().map { index, name in
-            LeagueRow(rank: index + 1, name: name, score: 4.1e12 / pow(1.6, Double(index)), me: name == "Atilla Holding", move: nil)
+            LeagueRow(rank: index + 1, name: name, score: 4.1e12 / pow(1.6, Double(index)), me: name == "Atilla Holding", move: nil,
+                      platform: name == "Atilla Holding" ? "ios" : platforms[(index + 1) % 3])
         }
         return (standings, [PrivateLeague(code: "K7P2QX", name: "Ofis Ligi", members: office)])
     }
