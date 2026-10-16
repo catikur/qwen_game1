@@ -1,3 +1,4 @@
+import DeviceCheck
 import Foundation
 import Observation
 import CapitalForgeLiteKit
@@ -41,9 +42,10 @@ private struct PrivateLeagues: Codable {
     let leagues: [PrivateLeague]
 }
 
-/// Sunucunun hata gövdesi: `{"error": "..."}`.
+/// Sunucunun hata gövdesi: `{"error": "...", "reason": "..."}`.
 private struct LeagueFailure: Decodable {
     let error: String
+    let reason: String?
 }
 
 struct LeagueAccount: Codable, Equatable {
@@ -81,6 +83,10 @@ final class LeagueService {
     private let ephemeral: Bool
     private let defaults = UserDefaults.standard
     @ObservationIgnored private var lastSubmit = Date.distantPast
+    @ObservationIgnored private var submitting = false
+    /// Apple bu cihazı doğrulamadı: bu oturumda yeniden denenmiyor (Apple'ı yormamak için).
+    @ObservationIgnored private var attestBlocked = false
+    private let attestor = AppAttestor()
     static let accountKey = "lite.league.account"
     static let trackerKey = "lite.league.tracker"
     /// İki otomatik gönderim arası (sn).
@@ -137,26 +143,76 @@ final class LeagueService {
 
     // MARK: - Gönderim
 
+    /// Bu cihazdan puan gönderilemiyor (App Attest yok, ör. simülatör).
+    var attestUnsupported: Bool { !ephemeral && baseURL != nil && !attestor.supported }
+
     func submitIfDue(_ state: LiteState) {
         guard status == .ready, !ephemeral, !busy, Date().timeIntervalSince(lastSubmit) >= LeagueService.submitEvery else { return }
         Task { await self.submit(state) }
     }
 
+    /// Puanı gönder: cihaz kanıtlı değilse önce kanıtla, gövdeyi App Attest ile onayla.
     func submit(_ state: LiteState) async {
-        guard status == .ready, !ephemeral else { return }
+        guard status == .ready, !ephemeral, attestor.supported, !attestBlocked, !submitting else { return }
+        submitting = true
+        defer { submitting = false }
         lastSubmit = Date()
         let report = Lite.leagueReport(state, week: tracker.week, score: tracker.score)
         do {
-            let updated: LeagueStandings = try await send("POST", "v1/reports", body: try JSONEncoder().encode(report))
+            if attestor.keyId == nil { try await attestDevice() }
+            let body = try JSONEncoder().encode(report)
+            let assertion = try await attestor.assertion(for: body)
+            let headers = ["X-Attest-Key": attestor.keyId ?? "", "X-Attest-Assertion": assertion.base64EncodedString()]
+            let updated: LeagueStandings = try await send("POST", "v1/reports", body: body, headers: headers)
             standings = updated
             problem = nil
-        } catch LeagueError.http(422, _) {
-            problem = "league.rejected"
-        } catch LeagueError.http(401, _) {
-            signOut()
+        } catch LeagueError.http(let status, let code) {
+            switch status {
+            case 401:
+                signOut()
+            case 403 where code == "attest" || code == "assertion:signature" || code == "assertion:app":
+                // Sunucu anahtarı tanımıyor ya da imza tutmadı: sonraki turda yeniden kanıtla.
+                attestor.reset()
+            case 409 where code == "attest-key":
+                attestor.reset()
+            case 422 where code.hasPrefix("attest"):
+                // Sunucu kanıtı reddetti: anahtar atılıyor (Apple), bu oturumda yeniden denenmiyor.
+                attestor.reset()
+                attestBlocked = true
+                problem = "league.attestFailed"
+            case 400 where code == "challenge":
+                // Bekleyen challenge'ın süresi geçmiş: sonraki turda yenisiyle.
+                attestor.dropChallenge()
+            case 422:
+                problem = "league.rejected"
+            default:
+                // Sık gönderim, hafta sınırı, süresi geçen challenge: sonraki turda yeniden.
+                break
+            }
+        } catch let error as DCError where error.code == .invalidKey || error.code == .invalidInput {
+            attestor.reset()
         } catch {
-            // Sık gönderim, hafta sınırı, ağ: bir sonraki turda yeniden.
+            // Ağ ya da Apple'ın App Attest sunucusu: sonraki turda yeniden.
         }
+    }
+
+    /// Cihaz başına bir kez: challenge → App Attest kanıtı → sunucu anahtarı kaydediyor.
+    /// Yarıda kalan deneme (Apple'a ya da sunucuya ulaşılamadı) aynı anahtar ve challenge ile sürüyor.
+    private func attestDevice() async throws {
+        struct Challenge: Decodable { let challenge: String }
+        struct Attested: Decodable { let ok: Bool }
+        let challenge: String
+        if let pending = attestor.pendingChallenge {
+            challenge = pending
+        } else {
+            let fresh: Challenge = try await send("POST", "v1/attest/challenge", body: Data("{}".utf8))
+            challenge = fresh.challenge
+            attestor.begin(challenge: challenge)
+        }
+        let (keyId, attestation) = try await attestor.attest(challenge: challenge)
+        let body = try JSONEncoder().encode(["keyId": keyId, "attestation": attestation.base64EncodedString(), "challenge": challenge])
+        let _: Attested = try await send("POST", "v1/attest", body: body)
+        attestor.confirm(keyId)
     }
 
     // MARK: - Hesap ve ligler
@@ -223,6 +279,8 @@ final class LeagueService {
     }
 
     private func signOut() {
+        // Sunucu hesabı (ve anahtarı) unuttu: yeni hesap yeni anahtarla kanıtlanacak.
+        attestor.reset()
         account = nil
         standings = nil
         leagues = []
@@ -249,6 +307,7 @@ final class LeagueService {
             if status == 401 { signOut() }
             problem = switch code {
             case "name": "league.error.name"
+            case "name-blocked": "league.error.blocked"
             case "code": "league.error.code"
             case "full": "league.error.full"
             case "limit": "league.error.limit"
@@ -259,18 +318,23 @@ final class LeagueService {
         }
     }
 
-    private func send<T: Decodable>(_ method: String, _ path: String, body: Data? = nil, auth: Bool = true) async throws -> T {
+    private func send<T: Decodable>(
+        _ method: String, _ path: String, body: Data? = nil, auth: Bool = true, headers: [String: String] = [:]
+    ) async throws -> T {
         guard let baseURL else { throw LeagueError.transport }
         var request = URLRequest(url: baseURL.appendingPathComponent(path))
         request.httpMethod = method
         request.timeoutInterval = 15
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         if auth, let account { request.setValue("Bearer \(account.id).\(account.token)", forHTTPHeaderField: "Authorization") }
+        for (name, value) in headers { request.setValue(value, forHTTPHeaderField: name) }
         request.httpBody = body
         let (data, response) = try await URLSession.shared.data(for: request)
         let code = (response as? HTTPURLResponse)?.statusCode ?? 0
         guard (200..<300).contains(code) else {
-            throw LeagueError.http(code, (try? JSONDecoder().decode(LeagueFailure.self, from: data))?.error ?? "")
+            // "hata" ya da "hata:neden" (ör. "assertion:counter").
+            let failure = try? JSONDecoder().decode(LeagueFailure.self, from: data)
+            throw LeagueError.http(code, failure.map { f in f.reason.map { "\(f.error):\($0)" } ?? f.error } ?? "")
         }
         return try JSONDecoder().decode(T.self, from: data)
     }

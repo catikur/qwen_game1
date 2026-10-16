@@ -61,3 +61,24 @@ CREATE TABLE IF NOT EXISTS rejects (
   reason TEXT NOT NULL,
   at INTEGER NOT NULL
 );
+
+-- App Attest: oyuncunun kanıtlanmış cihaz anahtarı (onaylar bununla doğrulanıyor).
+CREATE TABLE IF NOT EXISTS attest_keys (
+  key_id TEXT PRIMARY KEY,
+  player_id TEXT NOT NULL,
+  -- SubjectPublicKeyInfo (base64).
+  public_key TEXT NOT NULL,
+  -- production | development
+  environment TEXT NOT NULL,
+  -- Son onayın sayacı: sonraki daha büyük olmalı.
+  counter INTEGER NOT NULL,
+  at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS attest_keys_by_player ON attest_keys (player_id);
+
+-- Kanıt için tek seferlik challenge (30 dakika; Apple'a ulaşılamazsa uygulama aynısıyla yeniden deniyor).
+CREATE TABLE IF NOT EXISTS attest_challenges (
+  player_id TEXT PRIMARY KEY,
+  challenge TEXT NOT NULL,
+  expires_at INTEGER NOT NULL
+);
