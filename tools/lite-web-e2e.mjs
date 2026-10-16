@@ -38,7 +38,8 @@ const shotsOnly = process.argv.includes('--shots-only');
 const children = [];
 
 function start(command, args, env = {}) {
-  const child = spawn(command, args, { cwd: ROOT, env: { ...process.env, ...env }, stdio: ['ignore', 'pipe', 'inherit'] });
+  // Ayrı süreç grubu: pnpm'in altındaki vite de birlikte kapansın.
+  const child = spawn(command, args, { cwd: ROOT, env: { ...process.env, ...env }, stdio: ['ignore', 'pipe', 'inherit'], detached: true });
   children.push(child);
   return new Promise((resolve, reject) => {
     child.stdout.on('data', (data) => {
@@ -49,7 +50,13 @@ function start(command, args, env = {}) {
 }
 
 function stopAll() {
-  for (const child of children) child.kill();
+  for (const child of children) {
+    try {
+      process.kill(-child.pid, 'SIGTERM');
+    } catch {
+      /* zaten kapanmış */
+    }
+  }
 }
 process.on('exit', stopAll);
 
@@ -225,4 +232,6 @@ try {
 } finally {
   await browser?.close();
   stopAll();
+  // Açık kalan bir boru ya da zamanlayıcı CI işini bekletmesin.
+  process.exit(process.exitCode ?? 0);
 }
