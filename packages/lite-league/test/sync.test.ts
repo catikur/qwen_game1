@@ -187,6 +187,40 @@ test('web: "bekleyen var" (rest > 0) diyerek günler biriktirip çevrimiçi diye
   assert.equal(offline.game.journal.pending, 0);
 });
 
+test('web: uzun ayrılışı kayıtlara ya da gönderimlere bölmek tek ayrılıştan fazla kazandırmıyor', async () => {
+  const db = memoryDb();
+  const back = THURSDAY + 31_000 + 3 * 86_400_000;
+  const fresh = async () => {
+    const p = await webPlayer(db, THURSDAY);
+    play(p.game, 30);
+    assert.equal((await p.push(THURSDAY + 31_000, 0)).status, 200);
+    return p;
+  };
+  // Dürüst: üç gün tek ayrılış.
+  const honest = await fresh();
+  honest.game.away(3 * 86_400);
+  assert.equal((await honest.push(back, 0)).status, 200);
+  // Hileci: aynı üç gün 36 ayrı iki saatlik kayıtta.
+  const split = await fresh();
+  for (let k = 0; k < 36; k++) split.game.journal.push(['o', 7_200]);
+  const sent = await split.push(back, 0);
+  assert.equal(sent.status, 200, JSON.stringify(sent.body));
+  assert.equal(sent.body.state.cash, honest.game.state.cash);
+  assert.equal(sent.body.state.totalEarned, honest.game.state.totalEarned);
+  // Hileci: her gönderimde bir kayıt ("sırada başka var" deyip); tavan gönderimler arasında da sürüyor.
+  const batches = await fresh();
+  let at = back - 3 * 86_400_000 + 7_200_000;
+  for (let k = 0; k < 6; k++) {
+    batches.game.journal.push(['o', 7_200]);
+    assert.equal((await batches.push(at, 1)).status, 200);
+    at += 2_100;
+  }
+  const once = await fresh();
+  once.game.away(6 * 7_200);
+  assert.equal((await once.push(at, 1)).status, 200);
+  assert.equal(batches.game.state.cash, once.game.state.cash);
+});
+
 test('iki cihaz: eski sürümün üstüne gönderim 409 ve güncel durum; kaybolan yanıtın tekrarı zararsız', async () => {
   const db = memoryDb();
   const web = await webPlayer(db, THURSDAY, 'Çift Cihaz');
@@ -315,6 +349,22 @@ test('aynı anda katılım: haftalık grup 30\'u aşmıyor, özel ligin son yeri
   assert.equal(last.find((r) => r.status === 409)!.body.error, 'full');
   const count = await db.first<{ n: number }>('SELECT COUNT(*) AS n FROM league_members WHERE code = ?', league.body.code);
   assert.equal(count!.n, 50);
+
+  // Oyuncu başına sınır: dokuz ligdeyken bağlı iki cihazdan aynı anda iki lig kurma; yalnızca biri.
+  const busy = extra[19]!;
+  for (let k = 0; k < 9; k++) assert.equal((await call(db, THURSDAY + 5_000, 'POST', '/v1/leagues', { name: `Lig ${k}` }, busy.account)).status, 201);
+  const created = await Promise.all([0, 1].map((k) => call(db, THURSDAY + 6_000, 'POST', '/v1/leagues', { name: `Son ${k}` }, busy.account)));
+  assert.deepEqual(created.map((r) => r.status).sort(), [201, 409]);
+  assert.equal((await db.first<{ n: number }>('SELECT COUNT(*) AS n FROM league_members WHERE player_id = ?', busy.account.id))!.n, 10);
+
+  // Son üye ayrılırken biri katılıyor: sahipsiz üyelik kalmıyor.
+  const lonely = await call(db, THURSDAY + 7_000, 'POST', '/v1/leagues', { name: 'Yalnız' }, extra[18]!.account);
+  await Promise.all([
+    call(db, THURSDAY + 8_000, 'DELETE', `/v1/leagues/${lonely.body.code}`, undefined, extra[18]!.account),
+    call(db, THURSDAY + 8_000, 'POST', '/v1/leagues/join', { code: lonely.body.code }, extra[17]!.account),
+  ]);
+  const orphans = await db.first<{ n: number }>('SELECT COUNT(*) AS n FROM league_members m WHERE NOT EXISTS (SELECT 1 FROM leagues l WHERE l.code = m.code)');
+  assert.equal(orphans!.n, 0);
 });
 
 test('yıldız tablosu: bütün platformlar, adsızlar yok, sıram ve arkadaşlar', async () => {

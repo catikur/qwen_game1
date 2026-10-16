@@ -617,7 +617,20 @@ async function createLeague(request: Request, db: Db, me: Player, now: number): 
   for (let attempt = 0; attempt < 6; attempt++) {
     const code = shortCode();
     if ((await db.run('INSERT OR IGNORE INTO leagues (code, name, owner, created_at) VALUES (?, ?, ?, ?)', code, name, me.id, now)) === 0) continue;
-    await db.run('INSERT INTO league_members (code, player_id, joined_at) VALUES (?, ?, ?)', code, me.id, now);
+    // Oyuncu başına sınır yerleşmeyle tek ifadede (bağlı iki cihazdan aynı anda kurulsa da aşılmasın).
+    const joined = await db.run(
+      `INSERT INTO league_members (code, player_id, joined_at)
+       SELECT ?, ?, ? WHERE (SELECT COUNT(*) FROM league_members WHERE player_id = ?) < ?`,
+      code,
+      me.id,
+      now,
+      me.id,
+      LEAGUE.privatePerPlayer,
+    );
+    if (joined === 0) {
+      await db.run('DELETE FROM leagues WHERE code = ?', code);
+      throw new HttpError(409, 'limit');
+    }
     return json({ code, name }, 201);
   }
   throw new HttpError(503, 'code');
@@ -634,11 +647,13 @@ async function joinLeague(request: Request, db: Db, me: Player, now: number): Pr
   const joined = await db.run(
     `INSERT OR IGNORE INTO league_members (code, player_id, joined_at)
      SELECT ?, ?, ?
-      WHERE (SELECT COUNT(*) FROM league_members WHERE code = ?) < ?
+      WHERE EXISTS (SELECT 1 FROM leagues WHERE code = ?)
+        AND (SELECT COUNT(*) FROM league_members WHERE code = ?) < ?
         AND (SELECT COUNT(*) FROM league_members WHERE player_id = ?) < ?`,
     code,
     me.id,
     now,
+    code,
     code,
     LEAGUE.privateMembers,
     me.id,
@@ -646,6 +661,8 @@ async function joinLeague(request: Request, db: Db, me: Player, now: number): Pr
   );
   if (joined === 0) {
     if (await db.first('SELECT 1 AS x FROM league_members WHERE code = ? AND player_id = ?', code, me.id)) return json(league);
+    // Bu arada son üye ayrılıp lig silindi.
+    if (!(await db.first('SELECT 1 AS x FROM leagues WHERE code = ?', code))) throw new HttpError(404, 'code');
     const members = (await db.first<{ n: number }>('SELECT COUNT(*) AS n FROM league_members WHERE code = ?', code))?.n ?? 0;
     throw new HttpError(409, members >= LEAGUE.privateMembers ? 'full' : 'limit');
   }
@@ -665,8 +682,8 @@ async function deleteAccount(db: Db, me: Player): Promise<Response> {
 
 async function leaveLeague(db: Db, me: Player, code: string): Promise<Response> {
   await db.run('DELETE FROM league_members WHERE code = ? AND player_id = ?', code, me.id);
-  const left = (await db.first<{ n: number }>('SELECT COUNT(*) AS n FROM league_members WHERE code = ?', code))?.n ?? 0;
-  if (left === 0) await db.run('DELETE FROM leagues WHERE code = ?', code);
+  // Boşalan lig siliniyor; sayım ve silme tek ifadede (bu arada katılan olduysa lig kalıyor).
+  await db.run('DELETE FROM leagues WHERE code = ? AND NOT EXISTS (SELECT 1 FROM league_members WHERE code = ?)', code, code);
   return json({ ok: true });
 }
 

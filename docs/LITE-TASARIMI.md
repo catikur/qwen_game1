@@ -691,6 +691,9 @@ tek tablo. Bir cihazda başlayan oyun öbüründe sürüyor.
     çevrimiçi oyun en çok 1 saat; uzun bir boşluk sonradan "çevrimiçiydim" diye
     doldurulamıyor (`rest` ne derse desin). Ayrılış (`o`) yerinde kalıp bütün
     süresini alıyor (yarım verim ve tavan). Ağsız 1 saatten eski oyun sayılmıyor.
+    Arada (sayılan) çevrimiçi adım olmayan ayrılışlar tek ayrılış: kazanç tavanını
+    paylaşıyor; açık kalan ayrılışın kalan tavanı kayıtta, sonraki gönderimde
+    sürüyor (uzun ayrılışı kayıtlara ya da gönderimlere bölmek tavanı yenilemiyor).
   - 30 günden uzun ayrılış günlüğe 30 gün yazılıyor (kazanç tavanı zaten kısa);
     sunucu günlüğü yine de reddederse (400) istemci sunucunun durumuna dönüyor.
     Taşıma kodu ya da silme sırasında yolda kalan eski hesap yanıtı (web ve iOS)

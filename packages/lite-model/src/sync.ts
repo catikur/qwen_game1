@@ -27,6 +27,7 @@ import {
   claimGoal,
   goPublic,
   newGame,
+  offlineCap,
   prestige,
   startCampaign,
   type ActionResult,
@@ -97,6 +98,12 @@ export interface Replay {
    * haftasına yazıyor.
    */
   spans: Array<{ seconds: number; score: number }>;
+  /**
+   * Açık kalan ayrılışın kalan kazanç tavanı (sn): günlük bir ayrılışla
+   * bittiyse; sonraki gönderim aynı ayrılışla başlarsa tavan ondan sürüyor.
+   * Çevrimiçi adımla biten günlükte null.
+   */
+  awayLeft: number | null;
 }
 
 function isInt(value: unknown, min: number, max: number): value is number {
@@ -235,8 +242,11 @@ export function step(state: LiteState, steps: number): LiteState {
  * geçiyor ama oyun ilerlemiyor (sonraki kayıtlar, ör. ayrılış, yerinde kalıyor).
  * Bütçeyi aşan süre kırpılıyor.
  */
-export function replay(start: LiteState, ops: readonly SyncOp[], budget: number = Infinity, complete = false): Replay {
+export function replay(start: LiteState, ops: readonly SyncOp[], budget: number = Infinity, complete = false, awayFrom: number | null = null): Replay {
   let state = start;
+  // Arada çevrimiçi adım olmayan ayrılışlar tek ayrılış: kazanç tavanını paylaşıyor
+  // (uzun bir ayrılış birçok kayda bölünüp her birine yeni tavan alınamasın).
+  let awayLeft = awayFrom;
   let applied = 0;
   let skipped = 0;
   let seconds = 0;
@@ -275,10 +285,15 @@ export function replay(start: LiteState, ops: readonly SyncOp[], budget: number 
         state = step(state, n);
         steps += n;
         used = n * SYNC.step;
+        awayLeft = null;
       } else {
         used = Math.min(op[1], Math.max(0, budget - seconds));
         clipped += op[1] - used;
-        state = applyOffline(state, used).state;
+        if (awayLeft === null) awayLeft = offlineCap(state);
+        // Tavanı aşan süre geçiyor ama kazanç getirmiyor.
+        const earning = Math.min(used, awayLeft);
+        awayLeft -= earning;
+        state = applyOffline(state, earning).state;
       }
       seconds += used;
       applied += 1;
@@ -293,7 +308,7 @@ export function replay(start: LiteState, ops: readonly SyncOp[], budget: number 
       skipped += 1;
     }
   }
-  return { state, applied, skipped, seconds, clipped, spans };
+  return { state, applied, skipped, seconds, clipped, spans, awayLeft };
 }
 
 /**

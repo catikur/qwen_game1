@@ -8,6 +8,7 @@ import {
   advance,
   applyOffline,
   newGame,
+  offlineCap,
   replay,
   starFree,
   step,
@@ -175,6 +176,28 @@ test('istemci: sunucu başka yerden ilerlediyse bekleyenler onun üstüne yenide
   assert.equal(game.journal.pending, pending.length, 'gönderimdekiler serbest');
   assert.deepEqual(game.state, replay(server, pending as SyncOp[]).state);
   assert.equal(game.state.chains.bakery.levels[0], 4);
+});
+
+test('eşitleme: arada çevrimiçi adım olmayan ayrılışlar tek tavanı paylaşıyor (bölmek kazanç getirmiyor)', () => {
+  const start = newGame();
+  start.chains.bakery.levels = [5, 5, 5];
+  const day = 86_400;
+  const once = replay(start, [['o', day]], day);
+  const split = replay(start, Array.from({ length: 12 }, () => ['o', 7_200] as SyncOp), day);
+  assert.equal(split.seconds, day);
+  assert.deepEqual(split.state, once.state, 'bölünmüş ayrılış tek ayrılış kadar');
+  assert.equal(split.awayLeft, 0, 'tavan bitti');
+  // Arada (son saatte) çevrimiçi adım varsa uygulama açılmış: yeni ayrılış yeni tavanla.
+  const reopened = replay(start, [['o', 7_200], ['t', 1], ['o', 1_800]], 9_011, true);
+  const joined = replay(start, [['o', 7_200], ['o', 1_800]], 9_010, true);
+  assert.ok(reopened.state.cash > joined.state.cash, `${reopened.state.cash} > ${joined.state.cash}`);
+  assert.equal(reopened.awayLeft, offlineCap(reopened.state) - 1_800);
+  // Son saatten eski "çevrimiçi" adımlar ayrılışı bölmüyor (aralara 1 sn koyup tavanı yenilemek işe yaramıyor).
+  const sneaky = replay(start, [['o', 7_200], ['t', 1], ['o', 7_200], ['t', 1], ['o', 7_200]], day);
+  assert.equal(sneaky.state.cash, replay(start, [['o', 21_602]], day).state.cash);
+  // Önceki gönderim ayrılışla bittiyse tavan oradan sürüyor.
+  assert.deepEqual(replay(start, [['o', 7_200]], day, false, 0).state, applyOffline(start, 0).state);
+  assert.equal(replay(start, [['t', 5]], 100, true, 0).awayLeft, null, 'çevrimiçi adım ayrılışı kapatıyor');
 });
 
 test('günlük: yanıtı belirsiz gönderim aynı kayıtlarla yineleniyor; kayıttan yüklenince de donuk', () => {

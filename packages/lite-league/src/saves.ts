@@ -34,19 +34,24 @@ const MIN_SYNC_GAP = 2_000;
 const RECENT_BATCHES = 16;
 
 /**
- * `saves.batch`: `{ids, nonce}` (JSON). `ids` son gönderim kimlikleri (yeniden
- * eskiye); `nonce` kaydı yazan isteğe özgü: puan yalnızca kayıt o isteğin
- * yazdığı haldeyse ekleniyor.
+ * `saves.batch`: `{ids, nonce, away}` (JSON). `ids` son gönderim kimlikleri
+ * (yeniden eskiye); `nonce` kaydı yazan isteğe özgü (puan yalnızca kayıt o
+ * isteğin yazdığı haldeyse ekleniyor); `away` günlük bir ayrılışla bittiyse o
+ * ayrılışın kalan kazanç tavanı (sonraki gönderim aynı ayrılışla sürerse).
  */
-function recentBatches(raw: string | null): string[] {
-  if (!raw) return [];
+function marker(raw: string | null): { ids: string[]; away: number | null } {
+  if (!raw) return { ids: [], away: null };
   try {
-    const parsed = JSON.parse(raw) as { ids?: unknown };
-    return Array.isArray(parsed?.ids) ? parsed.ids.filter((id): id is string => typeof id === 'string') : [raw];
+    const parsed = JSON.parse(raw) as { ids?: unknown; away?: unknown };
+    const ids = Array.isArray(parsed?.ids) ? parsed.ids.filter((id): id is string => typeof id === 'string') : [raw];
+    const away = typeof parsed?.away === 'number' && Number.isFinite(parsed.away) && parsed.away >= 0 ? parsed.away : null;
+    return { ids, away };
   } catch {
-    return [raw];
+    return { ids: [raw], away: null };
   }
 }
+
+const recentBatches = (raw: string | null): string[] => marker(raw).ids;
 
 export type Platform = 'ios' | 'web' | 'android';
 export const PLATFORMS: readonly Platform[] = ['ios', 'web', 'android'];
@@ -108,8 +113,11 @@ export async function uploadSave(db: Db, playerId: string, now: number, body: Re
   }
   if (body.base !== row.version) throw await staleSave(db, playerId, now, row);
   const changed = await db.run(
-    // Gönderim kimlikleri korunuyor: web ya da Android'in yanıtı kaybolan gönderimi iOS yüklemesinden sonra da tanınsın.
-    'UPDATE saves SET version = ?, state = ?, cursor = ?, at = ? WHERE player_id = ? AND version = ?',
+    // Gönderim kimlikleri korunuyor (web ya da Android'in yanıtı kaybolan gönderimi iOS yüklemesinden sonra da
+    // tanınsın); açık ayrılış kapanıyor (kayıt iOS'un, ayrılışı orada sayıldı).
+    `UPDATE saves SET version = ?, state = ?, cursor = ?, at = ?,
+       batch = CASE WHEN json_valid(batch) THEN json_set(batch, '$.away', NULL) ELSE batch END
+     WHERE player_id = ? AND version = ?`,
     row.version + 1,
     JSON.stringify(state),
     Math.max(row.cursor, now),
@@ -195,14 +203,18 @@ export async function sync(db: Db, playerId: string, now: number, body: Record<s
   if (now - row.at < MIN_SYNC_GAP && ops.length > 0) throw new HttpError(429, 'slow');
 
   const budget = Math.max(0, (now - row.cursor) / 1000 + SYNC.slack);
-  const result = replay(current.state, ops as SyncOp[], budget, body.rest === 0);
+  const result = replay(current.state, ops as SyncOp[], budget, body.rest === 0, marker(row.batch).away);
   let cursor = row.cursor + result.seconds * 1000;
   // Günlük şimdiye kadar tamsa kullanılmayan süre birikmiyor (sonra "çevrimiçi
   // oynadım" diye harcanamasın).
   if (body.rest === 0) cursor = Math.max(cursor, now - SYNC.slack * 1000);
   const gained = weekShare(result.spans, row.cursor, week);
   const next = row.version + 1;
-  const marker = JSON.stringify({ ids: [batch, ...recent.filter((id) => id !== batch)].slice(0, RECENT_BATCHES), nonce: crypto.randomUUID() });
+  const written = JSON.stringify({
+    ids: [batch, ...recent.filter((id) => id !== batch)].slice(0, RECENT_BATCHES),
+    nonce: crypto.randomUUID(),
+    away: result.awayLeft,
+  });
   const done = result.state;
   // Kayıt ve haftalık puan tek işlemde: biri yazılıp öbürü düşerse tekrar "zaten uygulandı"
   // diye dönüp puanı kaybederdi. Puan yalnızca kayıt bu isteğin yazdığı haldeyse (işareti)
@@ -213,7 +225,7 @@ export async function sync(db: Db, playerId: string, now: number, body: Record<s
       next,
       JSON.stringify(done),
       cursor,
-      marker,
+      written,
       now,
       playerId,
       row.version,
@@ -234,11 +246,11 @@ export async function sync(db: Db, playerId: string, now: number, body: Record<s
       now,
       playerId,
       next,
-      marker,
+      written,
     ],
   ]);
   const after = await db.first<{ batch: string | null }>('SELECT batch FROM saves WHERE player_id = ?', playerId);
-  if (after?.batch !== marker) {
+  if (after?.batch !== written) {
     // Aynı anda gelen başka bir gönderim kazandı; aynı kimlikli kopyaysa o zaten uygulandı.
     const fresh = await loadSave(db, playerId);
     if (fresh && recentBatches(after?.batch ?? null).includes(batch)) {

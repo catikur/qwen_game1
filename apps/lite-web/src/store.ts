@@ -509,6 +509,9 @@ export class GameStore {
       this.toast(t('sync.replaced'));
       this.save();
       if (this.game.journal.pending > 0) setTimeout(() => void this.sync(), 2_100);
+    } else if (error.status === 429) {
+      // Bir öncekine çok yakın (ör. eşitlemenin hemen ardından arka plana geçildi): biraz sonra yeniden.
+      setTimeout(() => void this.sync(), 2_100);
     } else if (error.status === 400 && error.code === 'body') {
       // Sunucu günlüğü geçersiz buldu: aynısını sonsuza dek denemek yerine sunucunun durumuna dön.
       void this.recover();
