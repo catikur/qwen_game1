@@ -4156,6 +4156,14 @@ section('Holding: ikinci şehir', () => {
    *     şirketin yarısını hazineye çekmek demek);
    *   - şehirde tutulan kâr baskını caydırıyor (%0), holding değeri
    *     yarısıyla aynı: para kasada değil şehirde duruyor.
+   *
+   * Tur 37a: yönetim yükü büyük şehrin kârını kısınca kârın hepsini
+   * çeken şehrin savunma bütçesi de küçüldü. Tohum 1'de baskın eskiden
+   * %14'te kalıyordu, savunma tetiklenmiyordu (%20 eşiği); artık geliyor,
+   * savunma 37 M ₺ harcıyor ve şehri %32'de tutuyor (main %14/21/25 →
+   * %32/21/21). İddianın özü — şehir ayakta, baskıncı kontrolden uzak —
+   * yerinde; geç oyunda büyük şehrin daha kırılgan olması 37a'nın
+   * amacı. Eşik %30'dan %35'e.
    */
   expect(
     'kârın hepsini çeken uzak şehre baskın derinleşiyor (üç tohumda)',
@@ -4163,8 +4171,8 @@ section('Holding: ikinci şehir', () => {
     directives.map((d) => `tohum ${d.seed}: %${Math.round(d.half * 100)} → %${Math.round(d.all.peak * 100)}`).join(' · '),
   );
   expect(
-    'savunma talimatı uzak şehri tutuyor: kâr hepsi kasaya giderken de ayakta, dış pay %30\'un altında',
-    directives.every((d) => d.allDefended.lostDay === null && d.allDefended.peak < 0.3),
+    'savunma talimatı uzak şehri tutuyor: kâr hepsi kasaya giderken de ayakta, dış pay %35\'in altında',
+    directives.every((d) => d.allDefended.lostDay === null && d.allDefended.peak < 0.35),
     directives.map((d) => `tohum ${d.seed}: %${Math.round(d.allDefended.peak * 100)}${d.allDefended.lostDay !== null ? ' kayıp' : ''}`).join(' · '),
   );
   expect(
