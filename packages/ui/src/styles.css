@@ -458,10 +458,17 @@ button.icon {
   color: var(--muted);
 }
 
+/*
+ * Satır yüksekliği SABİT. Fredoka'da ₺ yok; işaret yedek aileden
+ * (Nunito) geliyor ve Nunito'nun satır ölçüsü daha büyük — `normal`
+ * bırakılınca metrik satırı 18 yerine 20 px çıkıyor, telefonda iki
+ * satırlık bar 4 px uzuyordu.
+ */
 .metric-value {
   font-family: var(--font-display);
   font-size: 18px;
   font-weight: 700;
+  line-height: 1.2;
   font-variant-numeric: tabular-nums;
 }
 
@@ -1460,12 +1467,20 @@ button.icon {
    * yazı için 24 px yer istiyor. Satır yüksekliğini sabitleyince yükseklik
    * yeniden padding'in kontrolüne giriyor. 34 px, WCAG 2.5.8'in istediği
    * 24 px'lik dokunma hedefinin üstünde kalıyor.
+   *
+   * Tur 35'te boy da sabitlendi: Nunito ile yedek fontun taban çizgileri
+   * farklı yerde, iki satır kutusunun birleşimi `line-height: 1`'e rağmen
+   * düğmeyi 38 px'e itiyordu. Sabit boy + flex ortalama fonttan bağımsız.
    */
   .speed {
     min-width: 40px;
+    height: 34px;
     min-height: 34px;
-    padding: 10px 6px;
+    padding: 0 6px;
     line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
   }
 
   .metric {

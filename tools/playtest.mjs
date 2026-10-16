@@ -2988,7 +2988,13 @@ async function finish(browser, consoleErrors) {
     const lookBecomes = (want, ms = 4000) =>
       ap.waitForFunction((w) => document.documentElement.dataset.appearance === w, want, { timeout: ms })
         .then(() => true, () => false);
-    const panelColor = () => ap.evaluate(() => getComputedStyle(document.querySelector('.topbar')).backgroundColor);
+    // Renk 0,9 sn'lik geçişin SONUNDA okunuyor: geçiş sürerken hesaplanan
+    // değer eski renkte kalıyor (ilk sürüm tam bunu okuyup kırmızı yandı).
+    const panelColor = async () => {
+      await ap.waitForFunction(() => !document.documentElement.hasAttribute('data-appearance-shift'), null, { timeout: 4000 })
+        .catch(() => null);
+      return ap.evaluate(() => getComputedStyle(document.querySelector('.topbar')).backgroundColor);
+    };
     await ap.goto('http://127.0.0.1:8811/');
     await ap.waitForSelector('.newgame', { timeout: 20000 });
     check('Açık modlu cihazda kurulum gündüz camı', (await look()) === 'day', await look());
