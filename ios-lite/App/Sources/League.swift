@@ -202,6 +202,8 @@ final class LeagueService {
         defer { submitting = false }
         lastSubmit = Date()
         let report = Lite.leagueReport(state, week: tracker.week, score: tracker.score)
+        // Yanıt gelene kadar başka hesaba geçildiyse (taşıma kodu) sonuç eski hesabın: yok sayılıyor.
+        let owner = account?.id
         do {
             if attestor.keyId == nil { try await attestDevice() }
             // L10: önce kaydı yükle (başka cihaz devam edebilsin); başka cihaz ilerlemişse
@@ -211,9 +213,11 @@ final class LeagueService {
             let assertion = try await attestor.assertion(for: body)
             let headers = ["X-Attest-Key": attestor.keyId ?? "", "X-Attest-Assertion": assertion.base64EncodedString()]
             let updated: LeagueStandings = try await send("POST", "v1/reports", body: body, headers: headers)
+            guard account?.id == owner else { return }
             standings = updated
             problem = nil
         } catch LeagueError.http(let status, let code) {
+            guard account?.id == owner else { return }
             switch status {
             case 401:
                 signOut()
@@ -237,7 +241,7 @@ final class LeagueService {
                 break
             }
         } catch let error as DCError where error.code == .invalidKey || error.code == .invalidInput {
-            attestor.reset()
+            if account?.id == owner { attestor.reset() }
         } catch {
             // Ağ ya da Apple'ın App Attest sunucusu: sonraki turda yeniden.
         }

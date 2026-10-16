@@ -325,9 +325,17 @@ async function starsBoard(db: Db, me: Player) {
   );
   const mine = await db.first<{ stars: number; platform: string }>('SELECT stars, platform FROM profiles WHERE player_id = ?', me.id);
   const stars = mine?.stars ?? 0;
+  // Sıram: listedeki sırayla aynı (eşit yıldızda önce katılan, sonra kimlik).
   const above = await db.first<{ n: number }>(
-    `SELECT COUNT(*) AS n FROM profiles f JOIN players p ON p.id = f.player_id WHERE p.name <> '' AND f.stars > ?`,
+    `SELECT COUNT(*) AS n FROM profiles f JOIN players p ON p.id = f.player_id
+      WHERE p.name <> '' AND p.id <> ?
+        AND (f.stars > ? OR (f.stars = ? AND (p.created_at < ? OR (p.created_at = ? AND p.id < ?))))`,
+    me.id,
     stars,
+    stars,
+    me.created_at,
+    me.created_at,
+    me.id,
   );
   const friends = await db.all<{ id: string; name: string; stars: number | null; platform: string | null }>(
     `SELECT DISTINCT p.id AS id, p.name AS name, f.stars AS stars, f.platform AS platform

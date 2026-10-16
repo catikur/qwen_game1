@@ -161,6 +161,22 @@ test('eşitleme: çevrimiçi adımlar yalnızca bütçenin son saatinde sayılı
   assert.equal(replay(start, [['t', 600]]).state.clock, 600);
 });
 
+test('istemci: sunucu başka yerden ilerlediyse bekleyenler onun üstüne yeniden uygulanıyor', () => {
+  const server = newGame();
+  server.cash = 1e6;
+  server.chains.bakery.levels = [3, 3, 3];
+  const game = new SyncedGame(newGame());
+  game.tick(10);
+  game.act(['b', 'bakery', 0, 1]);
+  const pending = game.journal.ops.map((op) => [...op]);
+  game.journal.take();
+  game.rebased(server);
+  assert.deepEqual(game.journal.ops, pending, 'günlük yerinde');
+  assert.equal(game.journal.pending, pending.length, 'gönderimdekiler serbest');
+  assert.deepEqual(game.state, replay(server, pending as SyncOp[]).state);
+  assert.equal(game.state.chains.bakery.levels[0], 4);
+});
+
 test('günlük: büyük adım sayısı sunucunun kabul ettiği kayıtlara bölünüyor', () => {
   const game = new SyncedGame(newGame());
   game.tick(SYNC.maxSteps * 2 + 5);

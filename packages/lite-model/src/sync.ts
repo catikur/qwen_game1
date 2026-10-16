@@ -402,6 +402,16 @@ export class SyncedGame {
     this.state = replay(server, this.journal.ops).state;
   }
 
+  /**
+   * Sunucu başka yerden ilerledi (başka cihaz, kapanan eski sekme): bekleyen
+   * kayıtlar onun durumunun üstüne yeniden uygulanıyor. Gönderilince sunucu
+   * yine doğruluyor; süre bütçesi aynı zamanı iki kez saydırmıyor.
+   */
+  rebased(server: LiteState): void {
+    this.journal.release();
+    this.state = replay(server, this.journal.ops).state;
+  }
+
   /** Kayıt başka cihazda ilerledi: sunucunun durumuna dön, bekleyenler gidiyor. */
   replaced(server: LiteState): void {
     this.journal.clear();

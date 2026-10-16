@@ -467,8 +467,14 @@ export class GameStore {
   private handleSyncError(error: unknown): void {
     if (!(error instanceof LeagueError)) return;
     if (error.status === 409 && error.code === 'stale') {
+      // Sunucu başka yerden ilerlemiş: bekleyenler atılmıyor, onun üstüne yeniden uygulanıp gönderiliyor.
       const body = error.body as { version: number; state: LiteState };
-      this.adopt(body.state, body.version, true);
+      this.game.rebased(body.state);
+      this.base = body.version;
+      this.lastSample = this.state.clock;
+      this.toast(t('sync.replaced'));
+      this.save();
+      if (this.game.journal.pending > 0) setTimeout(() => void this.sync(), 2_100);
     } else if (error.status === 400 && error.code === 'body') {
       // Sunucu günlüğü geçersiz buldu: aynısını sonsuza dek denemek yerine sunucunun durumuna dön.
       void this.recover();

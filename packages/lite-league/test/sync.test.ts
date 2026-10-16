@@ -260,6 +260,13 @@ test('yıldız tablosu: bütün platformlar, adsızlar yok, sıram ve arkadaşla
   assert.deepEqual(friends.body.friends.map((r: any) => r.name), ['Elma Holding', 'Ağ Holding']);
   // Adsız hesap özel lig kuramıyor ve katılamıyor.
   assert.equal((await call(db, THURSDAY, 'POST', '/v1/leagues/join', { code: league.body.code }, anon.account)).body.error, 'unnamed');
+  // Eşit yıldızda sıram listedeki sırayla aynı: önce katılan önde.
+  const early = await webPlayer(db, THURSDAY + 1_000, 'Erken');
+  const late = await webPlayer(db, THURSDAY + 2_000, 'Geç');
+  const ranks = await Promise.all([early, late].map(async (p) => (await call(db, THURSDAY + 3_000, 'GET', '/v1/stars', undefined, p.account)).body));
+  const listed = ranks[1].top.map((r: any) => r.name);
+  assert.deepEqual([ranks[0].me.rank, ranks[1].me.rank], [listed.indexOf('Erken') + 1, listed.indexOf('Geç') + 1]);
+  assert.deepEqual([ranks[0].me.rank, ranks[1].me.rank], [3, 4]);
 });
 
 test('haftalık pay: pazartesiyi aşan dilim süresiyle bölünüyor, geçen haftanınki sayılmıyor', () => {
