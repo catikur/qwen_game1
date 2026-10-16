@@ -2165,6 +2165,19 @@ async function finish(browser, consoleErrors) {
   check('Gece pencereler yanıyor', midnight.fabricEmissive > 0.5,
     `${midnight.fabricEmissive.toFixed(2)} (eski düz emisyon 0,03 idi)`);
 
+  // Ayrıntı (Tur 36): kavşak ve yaya geçidi kendi dokusunda, gece lambaların
+  // altına ışık düşüyor, gece yarısına doğru pencereler tek tek sönüyor.
+  const cells = visual.roadCells;
+  check('Kavşaklar ve yaya geçitleri kendi dokusunda',
+    cells.intersection > 0 && cells.crosswalk >= cells.intersection * 2 && cells.straight > 0,
+    `kavşak ${cells.intersection} · geçit ${cells.crosswalk} · düz ${cells.straight}`);
+  check('Gece lambaların altına ışık düşüyor, gündüz düşmüyor',
+    !noon.lampPools.visible && midnight.lampPools.visible && midnight.lampPools.count > 20 && midnight.lampPools.opacity > 0.2,
+    `${midnight.lampPools.count} havuz · gece ${midnight.lampPools.opacity.toFixed(2)} · gündüz ${noon.lampPools.visible ? 'görünür' : 'yok'}`);
+  check('Gece yarısına doğru pencereler sönmeye başlıyor',
+    noon.windowLateNight === 0 && midnight.windowLateNight > 0.9,
+    `gündüz ${noon.windowLateNight.toFixed(2)} · gece yarısı ${midnight.windowLateNight.toFixed(2)}`);
+
   // Canlılık (Tur 34): kırsalda gerçek ağaçlar, üç tür fon aracı ve gece
   // farları, kaldırımda yayalar, üretim yapan tesisin bacasında duman.
   check('Kırsalda 3B ağaçlar var', visual.countrysideTrees > 100, `${visual.countrysideTrees} ağaç`);

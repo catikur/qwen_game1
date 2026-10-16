@@ -373,6 +373,49 @@ export function decorateBuilding(
 }
 
 /** Şehir dokusunun yapıları (oyuncuya ait olmayan). */
+/**
+ * Ev bahçesi (Tur 36): çim, iki yanda alçak çit, kapıdan kaldırıma yürüyüş
+ * yolu. Evler parselin ortasında düz bir levhanın üstünde duruyordu; bahçe
+ * mahalleyi "konut" diye okutan şey ve aradaki boşluğu dolduruyor. Çim
+ * kaldırım bandının içinde kalıyor: bordür ve kaldırım görünmeye devam
+ * ediyor.
+ */
+const LAWNS = ['#7fae5c', '#78a656', '#86b263', '#73a052'];
+const HEDGE = '#4d7a3c';
+const PATH = '#d4ccbb';
+function frontYard(
+  layer: DecorLayer,
+  x: number,
+  z: number,
+  footprint: MassFootprint,
+  side: { yaw: number; nx: number; nz: number },
+): void {
+  const lawn = 0.8;
+  layer.add('box', x, 0.07, z, lawn, 0.008, lawn, c(LAWNS[Math.floor(dice(x, z, 30) * LAWNS.length)]!));
+  // Çitler sokağa dik iki kenarda: komşu bahçeleri ayırıyor.
+  const lateralX = side.nz !== 0;
+  for (const k of [-1, 1]) {
+    const hx = lateralX ? x + k * (lawn / 2 - 0.02) : x;
+    const hz = lateralX ? z : z + k * (lawn / 2 - 0.02);
+    layer.add('box', hx, 0.078, hz, lateralX ? 0.04 : lawn - 0.06, 0.05, lateralX ? lawn - 0.06 : 0.04, c(HEDGE));
+  }
+  // Yürüyüş yolu: kapıdan çimin kenarına.
+  const from = footprint.bodyWidth / 2;
+  const to = lawn / 2;
+  const mid = (from + to) / 2;
+  const length = Math.max(0.02, to - from);
+  layer.add(
+    'box',
+    x + side.nx * mid,
+    0.078,
+    z + side.nz * mid,
+    side.nx !== 0 ? length : 0.09,
+    0.004,
+    side.nz !== 0 ? length : 0.09,
+    c(PATH),
+  );
+}
+
 export function decorateStructure(
   layer: DecorLayer,
   structure: StructureDef,
@@ -388,7 +431,10 @@ export function decorateStructure(
       if (dice(x, z, 6) > 0.85) roof.set(SLATE);
       hipRoof(layer, x, z, footprint, roof, side.yaw);
       if (dice(x, z, 14) > 0.4) houseChimney(layer, x, z, footprint, side.yaw, dice(x, z, 15) > 0.5 ? 0.2 : -0.2);
-      if (structure.id !== 'old_shopfront') entrance(layer, x, z, footprint, side, false);
+      if (structure.id !== 'old_shopfront') {
+        entrance(layer, x, z, footprint, side, false);
+        frontYard(layer, x, z, footprint, side);
+      }
       if (structure.id === 'old_shopfront') {
         const shades = ['#b9583d', '#3f7f6a', '#3c5f8f', '#a1873a'];
         const awning = c(shades[Math.floor(dice(x, z, 7) * shades.length)]!).clone();
@@ -457,13 +503,15 @@ export function decorateStructure(
  * Sokak ağaçları ve lambaları — yol karelerinin kaldırımlarında, kavşaklar
  * hariç. Her karede bir ağaç, kaldırımı sırayla değiştirerek; karşı
  * kaldırımda iki karede bir lamba. Bir kez yerleşiyor: yollar oyun
- * boyunca değişmiyor.
+ * boyunca değişmiyor. Lambaların yerini döndürüyor: gece ışık havuzları
+ * oraya düşüyor (lamplight.ts).
  */
 export function placeStreetTrees(
   layer: DecorLayer,
   tiles: readonly { x: number; y: number; kind: string }[],
   block: number,
-): void {
+): { x: number; z: number }[] {
+  const lamps: { x: number; z: number }[] = [];
   layer.begin();
   const pole = new THREE.Color('#4a4f57');
   const head = new THREE.Color('#ffffff');
@@ -485,7 +533,9 @@ export function placeStreetTrees(
       const lamp = at(-k);
       layer.add('box', lamp.x, 0.02, lamp.z, 0.025, 0.42, 0.025, pole);
       layer.add('lamp', lamp.x, 0.44, lamp.z, 0.07, 0.035, 0.07, head);
+      lamps.push(lamp);
     }
   }
   layer.end();
+  return lamps;
 }

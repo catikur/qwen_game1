@@ -72,6 +72,12 @@ export interface MassPlacement {
    * koyuyor (Tur 24). Ölçüler `MassFootprint` ile dönüyor.
    */
   pitchedRoof?: boolean;
+  /**
+   * Çatı kapağı, korniş ve çatı ekipmanının rengi (Tur 36). Verilirse
+   * gövde kendi rengini, çatı bu rengi giyiyor: sahibin rengi yukarıdan
+   * okunuyor, cephe doğal malzemede kalıyor.
+   */
+  accent?: THREE.Color;
 }
 
 /**
@@ -226,8 +232,13 @@ export class BuildingMass {
     // canlı olmalı. (Tek renk paylaşılırken sıra bağımlılığı vardı;
     // ayrı alanlar o tuzağı tamamen kaldırıyor.)
     this.baseColor.copy(placement.color).multiplyScalar(BASE_SHADE);
-    this.trimColor.copy(placement.color).multiplyScalar(CAP_SHADE);
-    this.accentColor.copy(placement.color).multiplyScalar(CAP_SHADE * 0.82);
+    if (placement.accent) {
+      this.trimColor.copy(placement.accent).multiplyScalar(0.92);
+      this.accentColor.copy(placement.accent).multiplyScalar(0.72);
+    } else {
+      this.trimColor.copy(placement.color).multiplyScalar(CAP_SHADE);
+      this.accentColor.copy(placement.color).multiplyScalar(CAP_SHADE * 0.82);
+    }
 
     // Form verilmemişse yükseklikten seçilir — form bilmeyen çağıranlar
     // için Tur 14 davranışı birebir korunuyor.

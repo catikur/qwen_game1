@@ -257,14 +257,18 @@ export function makeFacadeAtlas(): THREE.CanvasTexture {
   );
 }
 
+/*
+ * Gece dokusunda BÜTÜN pencereler ışıklı (Tur 36). Hangisinin yandığına
+ * gölgelendirici pencere başına karar veriyor (surface.ts
+ * `cfWindowLight`); dokuda sönük pencere bırakmak her binada aynı yerde
+ * sönük pencere demekti.
+ */
 export function makeWindowAtlas(): THREE.CanvasTexture {
-  const lit = (seed: number, threshold: number) => hash(seed) > threshold;
   return paintAtlas(
     {
       residential: (ctx, x0, y0) => {
         for (let r = 0; r < RES_ROWS; r++) {
           for (let c = 0; c < RES_COLS; c++) {
-            if (!lit(r * 11 + c * 5 + 1, 0.42)) continue;
             const value = 0.55 + hash(r * 3 + c * 17) * 0.45;
             const shade = Math.round(value * 255);
             const win = residentialWindow(x0, y0, r, c);
@@ -277,11 +281,10 @@ export function makeWindowAtlas(): THREE.CanvasTexture {
           }
         }
       },
-      // Ofis gecesi: katların çoğu yanık, ışık daha soğuk ve düz.
+      // Ofis gecesi: ışık daha soğuk ve düz.
       office: (ctx, x0, y0) => {
         for (let r = 0; r < OFFICE_ROWS; r++) {
           for (let c = 0; c < OFFICE_COLS; c++) {
-            if (!lit(r * 7 + c * 13 + 3, 0.3)) continue;
             const value = 0.6 + hash(r * 19 + c * 7) * 0.3;
             const shade = Math.round(value * 255);
             const pane = officePane(x0, y0, r, c);
@@ -393,6 +396,61 @@ export function makeContactShadowTexture(): THREE.CanvasTexture {
 }
 
 /**
+ * Parsel zemini (Tur 36) — kaldırım bandı ve döşeme.
+ *
+ * Parseller düz pastel levhalardı: bölge rengi doğru bilgiyi taşıyordu ama
+ * binaların arasında kalan geniş düz yüzey şehri maket kartonu gibi
+ * gösteriyordu. Doku RENK TAŞIMIYOR — örnek rengiyle (bölge tonu) çarpılıyor,
+ * ortalaması beyaza yakın: bölge tonu ve lens renkleri aynı kalıyor, yalnızca
+ * dokusu geliyor:
+ *   - kenarda kaldırım bandı: küçük karo derzleri ve koyu bordür çizgisi;
+ *   - içeride iri döşeme derzleri ve hafif tanecik.
+ */
+export function makePlotTexture(): THREE.CanvasTexture {
+  const size = 128;
+  const { ctx, el } = canvas(size);
+  ctx.fillStyle = 'rgb(238, 238, 234)';
+  ctx.fillRect(0, 0, size, size);
+  for (let i = 0; i < 1400; i++) {
+    const v = 226 + Math.round(hash(i * 1.7) * 22);
+    ctx.fillStyle = `rgb(${v}, ${v}, ${v - 3})`;
+    ctx.fillRect(hash(i * 2.3) * size, hash(i * 5.1) * size, 1.5, 1.5);
+  }
+  // İç döşeme: iri, soluk derzler.
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.045)';
+  for (let k = 32; k < size; k += 32) {
+    ctx.fillRect(k - 0.5, 0, 1, size);
+    ctx.fillRect(0, k - 0.5, size, 1);
+  }
+  // Kaldırım bandı: biraz daha açık, küçük karolu.
+  const band = 15;
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
+  ctx.fillRect(0, 0, size, band);
+  ctx.fillRect(0, size - band, size, band);
+  ctx.fillRect(0, band, band, size - 2 * band);
+  ctx.fillRect(size - band, band, band, size - 2 * band);
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.07)';
+  for (let k = 8; k < size; k += 8) {
+    ctx.fillRect(k - 0.5, 0, 1, band);
+    ctx.fillRect(k - 0.5, size - band, 1, band);
+    ctx.fillRect(0, k - 0.5, band, 1);
+    ctx.fillRect(size - band, k - 0.5, band, 1);
+  }
+  // Bandın iç sınırı ve dış bordür.
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.09)';
+  ctx.strokeStyle = 'rgba(0, 0, 0, 0.09)';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(band + 0.5, band + 0.5, size - 2 * band - 1, size - 2 * band - 1);
+  ctx.strokeStyle = 'rgba(0, 0, 0, 0.22)';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(1, 1, size - 2, size - 2);
+  const texture = new THREE.CanvasTexture(el);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.anisotropy = 4;
+  return texture;
+}
+
+/**
  * Asfalt dokusu — şerit çizgisi ve kaldırım kenarı.
  *
  * Haritanın %44'ü sokak ve bugüne kadar hepsi tek düz renkti. Doku iki
@@ -400,43 +458,118 @@ export function makeContactShadowTexture(): THREE.CanvasTexture {
  * bandı). İkisi birden şehri okunur yapıyor — hangi kare yol, hangisi
  * parsel, tek bakışta ayrılıyor.
  *
- * Kare başına bir kez tekrar eden bir desen; yolun yönü örnek matrisinin
- * döndürülmesiyle geliyor, ayrı doku gerekmiyor.
+ * Yolun yönü örnek matrisinin döndürülmesiyle geliyor.
+ *
+ * ÜÇ HÜCRE (Tur 36). Kavşak da düz yol gibi çiziliyordu: kesikli çizgi ve
+ * kaldırım bandı karşıdan gelen yolun üstüne düşüyor, kavşak bir yolun
+ * öbürünü kesmesi değil iki yolun üst üste yapıştırılması gibi duruyordu.
+ * Doku artık yan yana üç hücre; hangisinin kullanıldığı örnek başına
+ * (`aRoadCell`, bkz. `roadAtlasSurface`):
+ *   - düz yol;
+ *   - yaya geçidi: kavşağa giren karonun kavşak ucunda (-X) zebra, kesikli
+ *     çizgi geçitten önce bitiyor (dur çizgisi yok: fon araçları ile
+ *     kamyonların şerit tarafı aynı değil, çizgi yarı yarıya yanlış
+ *     şeride düşerdi);
+ *   - kavşak: düz asfalt, kaldırımlar yalnızca köşelerde birleşiyor.
  */
+export const ROAD_CELL = { straight: 0, crosswalk: 1, intersection: 2 } as const;
+export const ROAD_CELLS = 3;
+const ROAD_PX = 128;
+
 export function makeRoadTexture(): THREE.CanvasTexture {
-  const size = 128;
-  const { ctx, el } = canvas(size);
+  const size = ROAD_PX;
+  const el = document.createElement('canvas');
+  el.width = size * ROAD_CELLS;
+  el.height = size;
+  const ctx = el.getContext('2d');
+  if (!ctx) throw new Error('2D bağlamı alınamadı — doku üretilemez.');
 
-  ctx.fillStyle = '#16181d';
-  ctx.fillRect(0, 0, size, size);
-
-  // Asfalt taneciği.
-  for (let i = 0; i < 900; i++) {
-    const value = hash(i);
-    const grey = 22 + Math.round(value * 26);
-    ctx.fillStyle = `rgb(${grey}, ${grey + 1}, ${grey + 3})`;
-    ctx.fillRect(hash(i * 3.1) * size, hash(i * 7.7) * size, 1.4, 1.4);
-  }
-
-  // Kaldırım bandı: karenin iki kenarında açık gri şerit.
   const curb = size * 0.11;
-  ctx.fillStyle = '#2f353e';
-  ctx.fillRect(0, 0, size, curb);
-  ctx.fillRect(0, size - curb, size, curb);
+  const asphalt = (x0: number) => {
+    ctx.fillStyle = '#16181d';
+    ctx.fillRect(x0, 0, size, size);
+    // Asfalt taneciği — her hücrede aynı desen, dikiş görünmesin.
+    for (let i = 0; i < 900; i++) {
+      const value = hash(i);
+      const grey = 22 + Math.round(value * 26);
+      ctx.fillStyle = `rgb(${grey}, ${grey + 1}, ${grey + 3})`;
+      ctx.fillRect(x0 + hash(i * 3.1) * (size - 1.4), hash(i * 7.7) * size, 1.4, 1.4);
+    }
+  };
+  const curbs = (x0: number) => {
+    ctx.fillStyle = '#2f353e';
+    ctx.fillRect(x0, 0, size, curb);
+    ctx.fillRect(x0, size - curb, size, curb);
+  };
+  const dashes = (x0: number, from: number) => {
+    ctx.fillStyle = '#c9b46a';
+    const dash = size * 0.2;
+    const gap = size * 0.14;
+    for (let x = gap / 2; x < size; x += dash + gap) {
+      const a = Math.max(x, from);
+      const b = Math.min(x + dash, size);
+      if (b > a) ctx.fillRect(x0 + a, size / 2 - 1.6, b - a, 3.2);
+    }
+  };
 
-  // Kesikli orta çizgi.
-  ctx.fillStyle = '#c9b46a';
-  const dash = size * 0.2;
-  const gap = size * 0.14;
-  for (let x = gap / 2; x < size; x += dash + gap) {
-    ctx.fillRect(x, size / 2 - 1.6, dash, 3.2);
+  // 0 · düz yol
+  const straight = ROAD_CELL.straight * size;
+  asphalt(straight);
+  curbs(straight);
+  dashes(straight, 0);
+
+  // 1 · yaya geçidi: zebra çubukları yol yönünde, yolun genişliği boyunca.
+  const crossing = ROAD_CELL.crosswalk * size;
+  asphalt(crossing);
+  curbs(crossing);
+  const zebraEnd = size * 0.3;
+  ctx.fillStyle = '#d9d6cc';
+  const bar = 7;
+  const span = size - 2 * curb - 6;
+  const bars = Math.floor((span + bar) / (bar * 2));
+  const startY = curb + 3 + (span - (bars * bar * 2 - bar)) / 2;
+  for (let k = 0; k < bars; k++) ctx.fillRect(crossing + 5, startY + k * bar * 2, zebraEnd - 5, bar);
+  dashes(crossing, zebraEnd + 12);
+
+  // 2 · kavşak: düz asfalt, dört köşede kaldırım birleşimi.
+  const junction = ROAD_CELL.intersection * size;
+  asphalt(junction);
+  ctx.fillStyle = '#2f353e';
+  for (const [cx, cy] of [[0, 0], [size - curb, 0], [0, size - curb], [size - curb, size - curb]] as const) {
+    ctx.fillRect(junction + cx, cy, curb, curb);
   }
+  // Rögar kapağı: düz asfaltın ortasında küçük bir ayrıntı.
+  ctx.fillStyle = '#25282e';
+  ctx.beginPath();
+  ctx.arc(junction + size * 0.62, size * 0.4, size * 0.05, 0, Math.PI * 2);
+  ctx.fill();
 
   const texture = new THREE.CanvasTexture(el);
-  texture.wrapS = THREE.RepeatWrapping;
-  texture.wrapT = THREE.RepeatWrapping;
+  texture.wrapS = THREE.ClampToEdgeWrapping;
+  texture.wrapT = THREE.ClampToEdgeWrapping;
   texture.colorSpace = THREE.SRGBColorSpace;
   return texture;
+}
+
+/**
+ * Yol malzemesine atlas hücresi seçimini takar: geometrinin `aRoadCell`
+ * özniteliği (örnek başına) U'yu kendi hücresine kaydırıyor. Hücre
+ * kenarından iki texel içeride: komşu hücrenin rengi süzgeçle sızmasın.
+ */
+export function roadAtlasSurface(material: THREE.Material): void {
+  const pad = (2 / ROAD_PX).toFixed(5);
+  material.onBeforeCompile = (shader) => {
+    shader.vertexShader = shader.vertexShader
+      .replace('#include <common>', `#include <common>\n attribute float aRoadCell;`)
+      .replace(
+        '#include <uv_vertex>',
+        `#include <uv_vertex>
+         #ifdef USE_MAP
+           vMapUv.x = (aRoadCell + mix(${pad}, 1.0 - ${pad}, vMapUv.x)) / ${ROAD_CELLS.toFixed(1)};
+         #endif`,
+      );
+  };
+  material.customProgramCacheKey = () => `road-atlas-${material.type}`;
 }
 
 /**
