@@ -941,20 +941,20 @@ export class CityRenderer {
       const tile = tiles[building.tileId];
       if (!def || !tile) continue;
 
-      // Rakip binaları sahibinin rengiyle hafifçe boyanır: kimin nerede
-      // olduğu haritaya bakınca anlaşılmalı.
+      /*
+       * SAHİBİN RENGİ ÇATIDA (Tur 36).
+       *
+       * Eskiden gövdenin tamamı sahibin rengine çekiliyordu (%55): rakibin
+       * moru ya da pembesi şehrin yarısını boyuyor, şehir oyuncak gibi
+       * duruyordu. Artık gövde doğal malzemede (sıva/tuğla, cam/çelik,
+       * sanayi paneli; kategori renginden yalnızca bir ima). Kimin nerede
+       * olduğu çatı kapağından, kornişten, kırma çatıdan, tenteden ve
+       * tabeladan okunuyor; kamera yukarıdan baktığı için en çok görünen
+       * yüzey zaten çatı. Kullanıcı A/B karelerinden B'yi seçti.
+       */
       const company = state.companies[building.companyId];
-      const accentMode = OWNER_TINT === 'accent';
-      if (accentMode) {
-        // Tur 36 önizlemesi (B): gövde doğal malzemede, kategori rengi bir
-        // ima; sahibin rengi çatıda, tentede ve tabelada.
-        naturalColor(this.color, buildingFacade(def), tile.x, tile.y).lerp(this.categoryColor.set(def.color), 0.18);
-        this.ownerColor.set(company && !company.isPlayer ? company.color : PLAYER_ACCENT);
-      } else {
-        this.color.set(def.color);
-        if (company && !company.isPlayer) this.color.lerp(new THREE.Color(company.color), 0.55);
-        else this.color.lerp(new THREE.Color('#8ef0c0'), 0.12);
-      }
+      naturalColor(this.color, buildingFacade(def), tile.x, tile.y).lerp(this.categoryColor.set(def.color), 0.18);
+      this.ownerColor.set(company && !company.isPlayer ? company.color : PLAYER_ACCENT);
 
       const growth = this.growthOf(building.id);
       if (growth < 1) growing = true;
@@ -971,16 +971,12 @@ export class CityRenderer {
         form,
         facade: buildingFacade(def),
         pitchedRoof: form === 'house' && growth >= 1,
-        ...(accentMode ? { accent: this.ownerColor } : {}),
+        accent: this.ownerColor,
       });
       // Detaylar bina tamamlanınca: yükselen kütleye tente asmak tuhaf durur.
+      // Kırma çatı da sahibin renginde (çatı rengi = `tint`).
       if (growth >= 1) {
-        if (accentMode) {
-          decorateBuilding(this.buildingDecor, def, footprint, tile.x, tile.y, streetSide(tile.x, tile.y, BLOCK_SIZE), this.ownerColor, this.ownerColor);
-        } else {
-          const owner = company && !company.isPlayer ? this.ownerColor.set(company.color) : this.ownerColor.copy(OWN_COLOR);
-          decorateBuilding(this.buildingDecor, def, footprint, tile.x, tile.y, streetSide(tile.x, tile.y, BLOCK_SIZE), this.color, owner);
-        }
+        decorateBuilding(this.buildingDecor, def, footprint, tile.x, tile.y, streetSide(tile.x, tile.y, BLOCK_SIZE), this.ownerColor, this.ownerColor);
       }
       if (def.role !== 'extract') this.buildingShadows.place(tile.x, 0.07, tile.y, 0.68 * Math.max(0.3, growth), Math.min(1, def.height));
       // Duman bilgi: yalnızca dün gerçekten üretim yapmış tesis tütüyor.
@@ -1748,16 +1744,9 @@ export class CityRenderer {
  * −π/2 −Z'ye götürüyor.
  */
 /**
- * Tur 36 önizlemesi: sahibin rengi gövdede mi (A, bugünkü) çatıda mı (B).
- * Adres parametresiyle (`?tint=accent`); kullanıcı seçince kalıcılaşacak.
+ * Oyuncunun çatı rengi: kamyon ve müşteri araçlarındaki nane yeşiliyle aynı
+ * (`syncRoutes`). Sokakta tek bir "benim" rengi var.
  */
-const OWNER_TINT: 'body' | 'accent' = (() => {
-  try {
-    return new URLSearchParams(globalThis.location?.search ?? '').get('tint') === 'accent' ? 'accent' : 'body';
-  } catch {
-    return 'body';
-  }
-})();
 const PLAYER_ACCENT = '#3fd39a';
 
 /** Cephe türüne göre doğal malzeme: sıva ve tuğla, cam ve çelik, sanayi paneli. */

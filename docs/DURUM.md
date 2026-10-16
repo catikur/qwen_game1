@@ -4,7 +4,7 @@
 > `pnpm bench` çıktısından; iddialar `pnpm balance` ve `pnpm playtest`
 > tarafından her koşuda doğrulanıyor.
 >
-> Son güncelleme: şema **v6**, 35 tur (Tur 33 denendi ve geri alındı; Tur 34 eski görünüme canlılık ekledi; Tur 35 arayüzü Lite'ın "Cam & Bulut" diline taşıdı).
+> Son güncelleme: şema **v6**, 36 tur (Tur 33 denendi ve geri alındı; Tur 34 eski görünüme canlılık ekledi; Tur 35 arayüzü Lite'ın "Cam & Bulut" diline taşıdı; Tur 36 şehre ayrıntı kattı).
 
 ---
 
@@ -2347,6 +2347,65 @@ yüzey:
   - Gündüz sabitlenince şehir gecesi arayüzü değiştirmiyor;
   - Gece seçimi yenilemeden sonra hatırlanıyor.
 - Telefonlarda "rıhtım ekranın altında" kontrolü eklendi.
+
+### Tur 36 — Şehir ayrıntısı
+
+Sıradaki iş şehir grafiğinde ayrıntı ve çeşitti. Önce kareleri T34'teki
+düzenekle çekildi: sabit kayıt, sabit kameralar. Dört şey göze battı:
+- binaların tamamı sahibinin renginde, şehir mor ağırlıklı bir oyuncaktı;
+- parseller düz pastel levhalardı;
+- kavşakta kesikli çizgi ve kaldırım bandı karşıdan gelen yolun üstüne
+  düşüyordu;
+- gece bütün binalar aynı pencere desenini taşıyor, şehir çizgili
+  görünüyordu.
+
+**Gece pencereleri.**
+- Gece dokusunda hangi pencerenin yanacağı sabitti ve her kat tekrarında
+  aynıydı. Artık dokuda bütün pencereler ışıklı. Hangisinin yandığına
+  gölgelendirici pencere başına karar veriyor:
+  - doluluk bina başına %35–85;
+  - konut pencerelerinin bir kısmı soğuk ışıklı;
+  - ofislerde yarım kat bölümleri (tek tek yanan küçük camlar uzaktan
+    kumlu bir parazit gibi okunuyordu);
+  - vitrin hep yanık.
+- Gece yarısına doğru yanık pencerelerin üçte biri sönüyor, sabaha doğru
+  yeniden yanıyor.
+- Zar flat değişkenlerden geliyor. Aradeğerlenen sabit değer piksel piksel
+  küçük hatalar taşıyordu; zar bunları büyütüp aynı pencereyi kumlu bir
+  parazite çeviriyordu.
+
+**Sokak.**
+- Yol dokusu üç hücreli atlas: düz yol, yaya geçidi, kavşak. Hücre örnek
+  başına (`aRoadCell`), ek çizim çağrısı yok.
+  - Kavşak düz asfalt; kaldırımlar köşelerde birleşiyor.
+  - Kavşağa giren karonun ucunda zebra var.
+- Dur çizgisi denendi ve çıkarıldı: fon araçlarıyla kamyonların şerit
+  tarafı aynı değil, çizgi yarı yarıya yanlış şeride düşerdi.
+- Gece lambaların altına sıcak, toplamalı bir ışık havuzu düşüyor. Tek
+  örneklenmiş ağ; gündüz ve veri lensinde görünmüyor.
+
+**Mahalle.**
+- Parsel zemininde kaldırım bandı (küçük karolar, bordür) ve iri döşeme
+  derzleri var. Doku renk taşımıyor: bölge tonu ve lens renkleri aynı.
+- Müstakil evler bahçeli: çim, iki yanda çit, kapıdan kaldırıma yürüyüş
+  yolu. Evler parseli kaplıyordu (0,8); bahçeye yer açmak için 0,62'ye
+  indi.
+
+**Bina rengi (A/B).** İki seçenek aynı karelerle gösterildi:
+- **A:** renk bugünkü gibi gövdede.
+- **B:** gövde doğal malzemede (sıva/tuğla, cam/çelik, sanayi paneli;
+  kategori renginden yalnızca bir ima). Sahibin rengi çatı kapağında,
+  kornişte, kırma çatıda, tentede ve tabelada.
+
+Kullanıcı B'yi seçti. Kamera yukarıdan baktığı için en çok görünen yüzey
+zaten çatı; kimin nerede olduğu okunmaya devam ediyor. Oyuncunun çatı
+rengi kamyon ve müşteri araçlarıyla aynı nane yeşili.
+
+**Doğrulama.**
+- Oynanış testine eklenen kontroller:
+  - kavşak ve yaya geçidi kendi dokusunda;
+  - gece lambaların altına ışık düşüyor, gündüz düşmüyor;
+  - gece yarısına doğru pencereler sönmeye başlıyor.
 
 ---
 
