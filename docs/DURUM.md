@@ -2495,6 +2495,50 @@ kadar bitmişti. Kontrol artık bölgenin açıldığı gün yapılıyor. Sınan
 `flags.lateCosts = false` ile eski zeminde ölçmeye devam ediyor. Krizler
 laboratuvarda olaylarla birlikte zaten kapalı (`randomEvents`).
 
+**Baskın tehdidi azaldı.** Yönetim yükü yavaş oyuncudan çok büyük
+rakipleri frenliyor; sıralama sıkışıyor. 20 tohumda ölçüldü (900 gün,
+15 günde bir oynayan savunmasız oyuncu):
+- yük yokken 9 tohumda baskınla düşüyordu, yükle 5 tohumda;
+- 900. günde en iyi rakibe oranı 0,5–0,9'dan 0,6–1,2'ye çıktı; üç
+  tohumda yavaş oyuncu rakibin önünde.
+
+Yani pasif oyun eskisinden az cezalandırılıyor. Kayıp koşulu yerinde
+("savunmasız yavaş oyuncu Dengeli ve Acımasız'da düşüyor" geçiyor), ama
+geç oyunun riski şimdilik krizlerden geliyor. Rakip tarafı 37d'de (canlı
+pazar) yeniden ele alınacak.
+
+**Denge sınavında değişen dört kontrol.** Hepsinde yönetim yükü,
+sınanan mekanizmanın ölçümüne karışıyordu:
+- *İmar:* "açılan bölgeden parsel alınabiliyor" kontrolü açılış gününe
+  taşındı (yukarıda).
+- *Sendika:* ücret oranı ×1,08'den ×1,39'a çıkmıştı, çünkü yük ücretin
+  üstüne biniyor. Yük Tur 17 tabanına da girdi; oran yine ×1,07–1,08.
+- *İhraç kalkanı:*
+  - Eski tohumlarda (42, 5, 31) savunmasız oyuncu artık düşmüyor, yani
+    kalkanı ölçemiyorlardı. Tohumlar tehdidin gerçekleştiği yerden
+    seçildi: 7, 1, 2, 9.
+  - Gelen baskın hep tek baskıncılı. Yalnızca ihraçla korunan oyuncu dört
+    tohumun birinde ayakta; üçünde düşüş belgelenen sondan geliyor (kurucu
+    %51 tabanında) ve 33–71 gün gecikiyor. Main'de iki tehditli tohumun
+    ikisi de ayaktaydı.
+  - İddia artık: ihraç düşüşü erteliyor, düşüş yalnızca belgelenen
+    sondan. Kalıcı kalkan (ihraç + piyasadan geri alım) dört tohumun
+    dördünde ayakta.
+- *Uzak şehir savunması:* kârın hepsini çeken şehrin savunma bütçesi
+  küçüldü. Tohum 1'de baskın artık geliyor; savunma 37 M ₺ harcıyor ve
+  şehri %32'de tutuyor (main %14/21/25 → %32/21/21). Şehir ayakta; eşik
+  %30'dan %35'e.
+
+**Main'deki tarayıcı kırmızısı.** Tur 35'ten beri main'in tam oynanış
+koşusunda tek bir kontrol düşüyordu: "Otomatik: şehirde gece olunca
+arayüz gece camına dönüyor". PR'larda yalnızca duman koşusu döndüğü için
+görünmemişti.
+- Arayüz geceye dönüyordu, ama 4 sn'den sonra.
+- Yazılım GL'de bir kare 0,5–2 sn sürüyor; en uzunu ilk gece karesi.
+  500 ms'lik döngü kareler arasında geç uyanıyor.
+- Ölçümde ilk dönüş 3,9 sn, ikincisi 2,0 sn sürdü. Kontrol ilk dönüşü
+  artık 20 sn bekliyor.
+
 **Doğrulama.**
 - Yeni birim testleri (`economy.test.ts`, 7 test):
   - yük eşiği ve tavanı;
@@ -2591,9 +2635,9 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi) |
-| Birim testi | **205 test** (`pnpm test`; Tur 24'te render paketi de) |
+| Birim testi | **310 test** (`pnpm test`; Tur 24'te render paketi de) |
 | Denge testi | **288 kontrol, hepsi geçiyor** (20 bölüm, süreleriyle; ~11 dk) |
-| Tarayıcı testi | **339 kontrol, hepsi geçiyor**, 0 konsol hatası (~15–20 dk); duman koşusu 97 (~5 dk, rehber dahil) |
+| Tarayıcı testi | **358 kontrol**, 0 konsol hatası (~25 dk); duman koşusu 101 (~6 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + duman oynanışı |
 | Kapsam | 35 bina · 25 ürün · 7 kategori · 8 rakip profili · 10 CEO · 22 olay (11 şehir + 11 sektör) · 10 şehir yapısı (6 siluet) |
 
@@ -2783,8 +2827,8 @@ nüfus tavanı ve arsa değeri). Hâlâ açık olanlar:
 
 ```bash
 pnpm typecheck       # altı paketin tamamı
-pnpm test            # birim testleri — 105 test, test yoksa kırmızı
-pnpm balance         # denge testi — 249 kontrol, geçti/kaldı (~15 dk)
+pnpm test            # birim testleri — 310 test, test yoksa kırmızı
+pnpm balance         # denge testi — 288 kontrol, geçti/kaldı (~11 dk)
 pnpm balance meclis  # yalnızca adında "meclis" geçen bölümler
 pnpm bench           # benchmark — sayıların kendisi
 pnpm constraint      # kısıt deneyi — bağlayıcı kısıt hangisi?
