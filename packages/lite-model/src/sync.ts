@@ -69,8 +69,12 @@ export const SYNC = {
   maxOps: 1_000,
   /** Saat payı (sn): istemci ile sunucunun saati arasındaki küçük fark. */
   slack: 10,
-  /** Yeni hesaba, açılmadan önce oynanmış süre için en çok (sn). */
-  headStart: 3_600,
+  /**
+   * Yeni hesaba, açılmadan önce oynanmış süre için en çok (sn): ilk açılışta
+   * internetsiz oynanan oyun da `maxBank` kadar sayılıyor (bir dakika pay:
+   * hesap açılışıyla ilk gönderim arasındaki süre pencereden düşmesin).
+   */
+  headStart: 86_400 - 60,
   /** Bir çevrimdışı kaydın en çok süresi (sn); tavanı zaten model uyguluyor. */
   maxAway: 30 * 86_400,
   /**

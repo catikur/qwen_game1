@@ -81,7 +81,7 @@ const AWAY_MIN = 60;
 /**
  * Sessiz hesap ancak bu kadar oynanınca (sn) ya da lig penceresi açılınca:
  * her ziyaret (özel pencere, bir bakıp çıkan) sunucuda boş hesap bırakmasın.
- * Önceki oyun sunucuda yeniden oynanıyor (yeni hesaba en çok 1 saatlik pay).
+ * Önceki oyun sunucuda yeniden oynanıyor (yeni hesaba en çok bir günlük pay).
  */
 const REGISTER_AFTER = 60;
 
@@ -147,6 +147,10 @@ export class GameStore {
    */
   private inflight: { batch: string; count: number } | null = null;
   private readonly startedAt = Date.now();
+  /** Son `online` olayı (ms): ondan önce yola çıkmış isteğin ağ hatası çevrimdışı saymıyor. */
+  private onlineAt = 0;
+  /** `online` geldiğinde bir gönderim sürüyordu: o bitince hemen yeniden. */
+  private again = false;
   /** Açılıştan bu yana hamle yapıldı, günlük gönderildi ya da sunucunun durumuna geçildi: eski örneğin geç yazımı artık alınmıyor. */
   private diverged = false;
 
@@ -446,6 +450,7 @@ export class GameStore {
    */
   private async connect(force = false): Promise<void> {
     if (!this.league.configured || this.isScenario || this.superseded) return;
+    const startedAt = Date.now();
     try {
       if (this.league.account) {
         await this.refresh();
@@ -470,7 +475,7 @@ export class GameStore {
       await this.sync();
     } catch (error) {
       // Ağ yok: sonraki eşitlemede yeniden.
-      this.reached(GameStore.answered(error));
+      this.failed(error, startedAt);
     } finally {
       this.registering = false;
       this.registration = null;
@@ -479,7 +484,9 @@ export class GameStore {
 
   /** İnternet geldi: bekleyen ilerleme hemen gidiyor (göstergeyi ilk yanıt kapatıyor). */
   private wentOnline = (): void => {
-    void this.sync();
+    this.onlineAt = Date.now();
+    if (this.syncing) this.again = true;
+    else void this.sync();
   };
 
   private wentOffline = (): void => {
@@ -505,10 +512,18 @@ export class GameStore {
     return !(error instanceof LeagueError && error.code === 'transport');
   }
 
+  /** İstek hatası göstergeye: internet geri geldikten sonra düşen eski istek çevrimdışı saymıyor. */
+  private failed(error: unknown, startedAt: number): void {
+    const answered = GameStore.answered(error);
+    if (!answered && startedAt < this.onlineAt) return;
+    this.reached(answered);
+  }
+
   /** Başka cihaz ilerlediyse onun durumuna geç (günlükte bekleyen yoksa sessizce). */
   async refresh(): Promise<void> {
     if (!this.league.account || this.isScenario || this.superseded) return;
     const epoch = this.epoch;
+    const startedAt = Date.now();
     try {
       const save = await this.league.loadSave();
       this.reached(true);
@@ -527,7 +542,7 @@ export class GameStore {
         }
       }
     } catch (error) {
-      this.reached(GameStore.answered(error));
+      this.failed(error, startedAt);
       if (epoch === this.epoch) this.handleSyncError(error);
     }
   }
@@ -542,6 +557,7 @@ export class GameStore {
     this.syncing = true;
     this.diverged = true;
     this.lastSync = Date.now();
+    const startedAt = this.lastSync;
     const retry = this.inflight !== null && this.game.journal.frozen === this.inflight.count ? this.inflight : null;
     const ops = retry ? this.game.journal.resend() : this.game.journal.take();
     const rest = this.game.journal.pending - ops.length;
@@ -573,7 +589,7 @@ export class GameStore {
       // Sunucu kesin yanıt verdiyse (4xx) gönderim düştü; ağ ya da sunucu hatasında
       // belirsiz: kayıtlar donuk ve kimlik saklı kalıyor, sonraki gönderim aynısı.
       const certain = error instanceof LeagueError && error.status >= 400 && error.status < 500;
-      this.reached(GameStore.answered(error));
+      this.failed(error, startedAt);
       // Yanıtı belirsiz gönderimin tekrarına sunucu "bilinmiyor" dedi (arada başka cihazdan çok
       // gönderim geçti, kimlik artık listede yok): o kayıtlar uygulanmış olabilir, yeniden
       // uygulanmıyor (bir alım iki kez yapılmasın); uygulanmadıysa kayboluyor.
@@ -586,6 +602,10 @@ export class GameStore {
       if (epoch === this.epoch) this.handleSyncError(error);
     } finally {
       this.syncing = false;
+      if (this.again) {
+        this.again = false;
+        setTimeout(() => void this.sync(), 0);
+      }
     }
   }
 

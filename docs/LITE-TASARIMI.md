@@ -690,7 +690,8 @@ tek tablo. Bir cihazda başlayan oyun öbüründe sürüyor.
   - Sunucu aynı kodu aynı sırayla oynatıyor: dürüst istemcide sonuç bit bit
     aynı (testte ve tarayıcıda doğrulanıyor). Süre bütçesi hesap açıldığından
     beri gerçekten geçen süre (+10 sn pay; yeni hesaba açılış öncesi için en çok
-    1 saat). Günlük tamken (`rest: 0`) kullanılmayan süre birikmiyor.
+    bir gün: ilk açılışta internetsiz oynanan da sayılıyor). Günlük tamken
+    (`rest: 0`) kullanılmayan süre birikmiyor.
     Kayıtlar gerçek zamana art arda yerleşiyor: günlük tamsa (`rest: 0`) şimdide
     bitiyor (baştaki boşluk oynanmamış geçmiş), değilse imleçten başlıyor.
     Çevrimiçi adımlar yalnızca son 24 saatte tam sayılıyor (`SYNC.maxBank`):
@@ -745,7 +746,8 @@ tek tablo. Bir cihazda başlayan oyun öbüründe sürüyor.
   çıkıyor (tarayıcı çevrimdışı dedikçe, yolda kalmış bir isteğin geç yanıtı
   onu kapatmıyor). İnternet gelince (`online` olayı) bekleyenler hemen gidiyor,
   sonra iki saniye arayla gönderim gönderim; ilk yanıtla şerit kapanıp "eşitlendi"
-  bildirimi çıkıyor. iOS zaten cihaz öncelikli: oyun cihazda, bağlanınca kayıt ve
+  bildirimi çıkıyor. İnternet, yolda kalmış bir istek sürerken gelirse o istek
+  bitince hemen yeniden gönderiliyor; düşmesi şeridi geri açmıyor. iOS zaten cihaz öncelikli: oyun cihazda, bağlanınca kayıt ve
   puan gidiyor (puan denetimi gerçek geçen süreye bakıyor).
 - **Tek örnek:** kaydı en son açılan sekme ya da pencere oynatıyor
   (`lite.owner`); eskisi duruyor, kayda ve sunucuya yazmıyor ("Burada devam

@@ -211,6 +211,34 @@ async function e2e(browser) {
   check(synced.state.clock >= offlineSave.state.clock, `çevrimdışı oynanan süre sunucuda sayıldı (${synced.state.clock} ≥ ${offlineSave.state.clock})`);
   check(JSON.stringify(synced.state) === JSON.stringify((await local(page)).state), 'çevrimdışı oyundan sonra da bit bit aynı');
 
+  // İnternet, yolda kalmış bir eşitleme sürerken geri gelirse: o isteğin sonradan düşmesi göstergeyi
+  // geri açmıyor ve gönderim beklemeden yineleniyor (30 sn'lik olağan aralığı beklemiyor).
+  await show(page);
+  await page.waitForTimeout(2_500);
+  let releaseHeld;
+  const held = new Promise((resolve) => (releaseHeld = resolve));
+  let attempts = 0;
+  await page.route('**/v1/sync', async (route) => {
+    attempts += 1;
+    if (attempts === 1) {
+      await held;
+      await route.abort('failed');
+    } else {
+      await route.continue();
+    }
+  });
+  await hide(page);
+  await wait(() => attempts >= 1, 'yolda kalan eşitleme');
+  await context.setOffline(true);
+  await page.locator('[data-testid="offline"]').waitFor({ timeout: 10_000 });
+  await context.setOffline(false);
+  await page.waitForTimeout(300);
+  releaseHeld();
+  await wait(() => attempts >= 2, 'internet gelince yineleme', 8_000);
+  await page.locator('[data-testid="offline"]').waitFor({ state: 'detached', timeout: 8_000 });
+  await wait(async () => (await local(page))?.ops.length === 0, 'yineleme eşitlendi', 8_000);
+  await page.unroute('**/v1/sync');
+
   // Lige katıl.
   await show(page);
   await page.click('[data-testid="league"]');

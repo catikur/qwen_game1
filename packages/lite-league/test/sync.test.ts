@@ -209,6 +209,23 @@ test('web ve Android: internetsiz açık oynanan beş saat bağlanınca gönderi
   assert.equal(JSON.stringify(web.game.state), expected, 'cihazda oynanan neyse sunucuda da o');
 });
 
+test('web ve Android: ilk açılışta internetsiz oynanan beş saat, hesap bağlanınca açılsa da tam sayılıyor', async () => {
+  const db = memoryDb();
+  // Cihazda hesap yokken beş saat oynanmış oyun; bağlanınca sessiz hesap açılıyor, günlük baştan gidiyor.
+  const web = await webPlayer(db, THURSDAY);
+  web.game.tick(5 * 3_600);
+  const expected = JSON.stringify(web.game.state);
+  const batches = (5 * 3_600) / SYNC.maxSteps;
+  let clipped = 0;
+  for (let k = 0; k < batches; k++) {
+    const sent = await web.push(THURSDAY + 3_000 + k * 2_100, batches - 1 - k);
+    assert.equal(sent.status, 200, JSON.stringify(sent.body));
+    clipped += sent.body.clipped;
+  }
+  assert.equal(clipped, 0);
+  assert.equal(JSON.stringify(web.game.state), expected, 'cihazda oynanan neyse sunucuda da o');
+});
+
 test('web: uzun ayrılışı kayıtlara ya da gönderimlere bölmek tek ayrılıştan fazla kazandırmıyor', async () => {
   const db = memoryDb();
   const back = THURSDAY + 31_000 + 3 * 86_400_000;
