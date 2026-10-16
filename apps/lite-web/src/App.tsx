@@ -20,6 +20,7 @@ import {
   ManagerCard,
   MarketCard,
   NotifyPromptCard,
+  OfflineBanner,
   visibleChains,
 } from './cards';
 import { CityView } from './city/CityView';
@@ -90,6 +91,7 @@ export function App() {
         <div className="app landscape">
           <div className="side">
             {header}
+            <OfflineBanner />
             <EventBanner />
             {city('auto')}
           </div>
@@ -101,6 +103,7 @@ export function App() {
         <div className="app">
           <div style={layout === 'tabletPortrait' ? { maxWidth: 900, margin: '0 auto', width: '100%' } : undefined}>
             {header}
+            <OfflineBanner />
             <EventBanner />
           </div>
           {city(layout === 'phone' ? 214 : Math.min(460, height * 0.36))}

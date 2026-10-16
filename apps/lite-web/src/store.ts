@@ -117,6 +117,8 @@ export class GameStore {
   busy = false;
   /** Android: bildirim izni reddedildi (anahtar açılamıyor). */
   notificationsDenied = false;
+  /** Sunucuya ulaşılamıyor (internet yok): oyun cihazda sürüyor ve kaydediliyor, bağlanınca eşitleniyor. */
+  offline = false;
   /** Kayıt başka bir örnekte açıldı: bu örnek durdu, kayda ve sunucuya bir daha yazmıyor. */
   superseded = false;
 
@@ -228,6 +230,9 @@ export class GameStore {
     document.addEventListener('visibilitychange', this.visibility);
     addEventListener('pagehide', this.leave);
     addEventListener('storage', this.storageChanged);
+    addEventListener('online', this.wentOnline);
+    addEventListener('offline', this.wentOffline);
+    if (navigator.onLine === false) this.offline = true;
     if (isNative) {
       void onAppState((active) => (active ? this.resume() : this.pause()));
       void this.refreshNotifications();
@@ -241,6 +246,8 @@ export class GameStore {
     document.removeEventListener('visibilitychange', this.visibility);
     removeEventListener('pagehide', this.leave);
     removeEventListener('storage', this.storageChanged);
+    removeEventListener('online', this.wentOnline);
+    removeEventListener('offline', this.wentOffline);
   }
 
   /** Kaydı bu örneğe al (açılışta, kayıt okunmadan önce). */
@@ -461,12 +468,41 @@ export class GameStore {
       this.save();
       this.changed();
       await this.sync();
-    } catch {
+    } catch (error) {
       // Ağ yok: sonraki eşitlemede yeniden.
+      this.reached(GameStore.answered(error));
     } finally {
       this.registering = false;
       this.registration = null;
     }
+  }
+
+  /** İnternet geldi: bekleyen ilerleme hemen gidiyor (göstergeyi ilk yanıt kapatıyor). */
+  private wentOnline = (): void => {
+    void this.sync();
+  };
+
+  private wentOffline = (): void => {
+    this.reached(false);
+  };
+
+  /**
+   * Sunucu yanıt verdi mi (hata bile olsa) yoksa ağ mı yok: çevrimdışı göstergesi. Önceden
+   * çevrimdışıysa true. Bağlantı kopmadan önce yola çıkmış isteğin geç yanıtı, tarayıcı hâlâ
+   * çevrimdışıyken göstergeyi kapatmıyor.
+   */
+  private reached(ok: boolean): boolean {
+    const was = this.offline;
+    if (ok && typeof navigator !== 'undefined' && navigator.onLine === false) return was;
+    if (this.isScenario || was === !ok) return was;
+    this.offline = !ok;
+    this.changed();
+    return was;
+  }
+
+  /** Hatada sunucu yanıt vermiş miydi (ağ hatası değil). */
+  private static answered(error: unknown): boolean {
+    return !(error instanceof LeagueError && error.code === 'transport');
   }
 
   /** Başka cihaz ilerlediyse onun durumuna geç (günlükte bekleyen yoksa sessizce). */
@@ -475,6 +511,7 @@ export class GameStore {
     const epoch = this.epoch;
     try {
       const save = await this.league.loadSave();
+      this.reached(true);
       if (epoch !== this.epoch) return;
       // Hesap açıldı ama sürüm kaydedilmeden sayfa kapandı: sunucu hâlâ sıfırda, buradaki günlük onun üstünde.
       if (this.base === null && save.version === 0) {
@@ -490,6 +527,7 @@ export class GameStore {
         }
       }
     } catch (error) {
+      this.reached(GameStore.answered(error));
       if (epoch === this.epoch) this.handleSyncError(error);
     }
   }
@@ -514,6 +552,7 @@ export class GameStore {
     const epoch = this.epoch;
     try {
       const result = await this.league.sync(this.base, batch, ops, rest, keepalive);
+      const wasOffline = this.reached(true);
       this.inflight = null;
       // Bu arada hesap ya da oyun değişti (taşıma kodu, silme): yanıt eski hesabın.
       // Gönderilenler (oyun değişmediyse) yeni hesaba sürümüyle gidip uzlaşıyor.
@@ -525,6 +564,7 @@ export class GameStore {
       const before = JSON.stringify(this.state);
       this.game.accepted(result.state);
       if (result.skipped > 0 || result.clipped > 10 || (rest === 0 && JSON.stringify(this.state) !== before)) this.toast(t('sync.corrected'));
+      else if (wasOffline) this.toast(t('sync.backOnline'));
       this.save();
       this.changed();
       // Günlükte gönderilecek başka kayıt varsa hemen.
@@ -533,6 +573,7 @@ export class GameStore {
       // Sunucu kesin yanıt verdiyse (4xx) gönderim düştü; ağ ya da sunucu hatasında
       // belirsiz: kayıtlar donuk ve kimlik saklı kalıyor, sonraki gönderim aynısı.
       const certain = error instanceof LeagueError && error.status >= 400 && error.status < 500;
+      this.reached(GameStore.answered(error));
       // Yanıtı belirsiz gönderimin tekrarına sunucu "bilinmiyor" dedi (arada başka cihazdan çok
       // gönderim geçti, kimlik artık listede yok): o kayıtlar uygulanmış olabilir, yeniden
       // uygulanmıyor (bir alım iki kez yapılmasın); uygulanmadıysa kayboluyor.

@@ -141,7 +141,7 @@ test('web: günlük tamken kullanılmayan süre birikmiyor; biriktirip "çevrimi
   assert.ok(second.body.clipped >= 600 - 9 - 2 * 10 - 1, `kırpılan ${second.body.clipped}`);
 });
 
-test('web: "bekleyen var" (rest > 0) diyerek günler biriktirip çevrimiçi diye harcamak işe yaramıyor; ağsız son saat sayılıyor', async () => {
+test('web: "bekleyen var" (rest > 0) diyerek günler biriktirip çevrimiçi diye harcamak işe yaramıyor; ağsız son gün sayılıyor', async () => {
   const db = memoryDb();
   const web = await webPlayer(db, THURSDAY);
   play(web.game, 30);
@@ -185,6 +185,28 @@ test('web: "bekleyen var" (rest > 0) diyerek günler biriktirip çevrimiçi diye
   }
   assert.equal(clipped, 0);
   assert.equal(offline.game.journal.pending, 0);
+});
+
+test('web ve Android: internetsiz açık oynanan beş saat bağlanınca gönderim gönderim hepsi sayılıyor', async () => {
+  const db = memoryDb();
+  const web = await webPlayer(db, THURSDAY);
+  play(web.game, 30);
+  assert.equal((await web.push(THURSDAY + 31_000, 0)).status, 200);
+  const before = web.game.state.clock;
+  web.game.tick(5 * 3_600);
+  const expected = JSON.stringify(web.game.state);
+  const batches = (5 * 3_600) / SYNC.maxSteps;
+  const back = THURSDAY + 31_000 + 5 * 3_600_000;
+  let clipped = 0;
+  for (let k = 0; k < batches; k++) {
+    const sent = await web.push(back + k * 2_100, batches - 1 - k);
+    assert.equal(sent.status, 200, JSON.stringify(sent.body));
+    clipped += sent.body.clipped;
+  }
+  assert.equal(clipped, 0);
+  assert.equal(web.game.journal.pending, 0);
+  assert.equal(web.game.state.clock, before + 5 * 3_600);
+  assert.equal(JSON.stringify(web.game.state), expected, 'cihazda oynanan neyse sunucuda da o');
 });
 
 test('web: uzun ayrılışı kayıtlara ya da gönderimlere bölmek tek ayrılıştan fazla kazandırmıyor', async () => {

@@ -133,23 +133,29 @@ test('eşitleme: sıfırlama yeni oyun; sonrası yeniden sayılıyor', () => {
   assert.deepEqual(replay(newGame(), game.journal.ops).state, game.state);
 });
 
-test('eşitleme: çevrimiçi adımlar yalnızca bütçenin son saatinde sayılıyor; ayrılış yerinde kalıyor', () => {
+test('eşitleme: çevrimiçi adımlar bütçenin son gününde tam sayılıyor; daha eskisi çevrimdışı kazanç; ayrılış yerinde kalıyor', () => {
   const start = newGame();
   start.cash = 1e9;
+  start.chains.bakery.levels = [5, 5, 5];
   const day = 86_400;
   const online: SyncOp[] = [['t', 600], ['t', 600], ['t', 600], ['t', 600], ['t', 600], ['t', 600]];
-  // "Sırada başka kayıt var" (rest > 0) deyip bir gün önceden başlayan adımlar: zamanı geçiyor, sayılmıyor.
-  const old = replay(start, online, day);
-  assert.equal(old.state.clock, 0);
+  // Bağlanmadan 20 saat önce (rest > 0, imleçten başlıyor) internetsiz açık oynanan on dakika: son günde, tam sayılıyor.
+  const flight = replay(start, [['t', 600]], 20 * 3_600);
+  assert.equal(flight.clipped, 0);
+  assert.equal(flight.state.clock, 600);
+  // Üç gün önceden başlayan adımlar çevrimiçi sayılmıyor: o bir saat ayrılış gibi çevrimdışı kazanç getiriyor.
+  const old = replay(start, online, 3 * day);
   assert.equal(old.seconds, 3_600);
   assert.equal(old.clipped, 3_600);
-  assert.ok(old.spans.every((span) => span.score === 0), 'haftalık pay yok');
+  assert.equal(old.applied, online.length);
+  assert.deepEqual(old.state, replay(start, [['o', 3_600]], 3 * day).state, 'bir saatlik ayrılış kadar');
+  assert.ok(old.spans.reduce((sum, span) => sum + span.score, 0) > 0, 'çevrimdışı kazanç haftalık puanda');
   // Günlük tamsa (rest = 0) kayıtlar şimdide bitiyor: son on dakika sayılıyor, öncesi boşluk.
   const recent = replay(start, [['t', 600]], day, true);
   assert.equal(recent.state.clock, 600);
   assert.equal(recent.clipped, 0);
   assert.equal(recent.seconds, day - SYNC.slack);
-  // Ağsız on dakika, sonra bir günlük ayrılış: eski adımlar sayılmıyor ama ayrılış bütün gününü alıyor.
+  // Ağsız on dakika, sonra bir günlük ayrılış: eski adımlar çevrimiçi sayılmıyor, ayrılışla tek tavanı paylaşıyor.
   const away = replay(start, [['t', 600], ['o', day]], day + 600, true);
   assert.equal(away.clipped, 600);
   assert.deepEqual(away.state, applyOffline(start, day).state);
@@ -187,14 +193,14 @@ test('eşitleme: arada çevrimiçi adım olmayan ayrılışlar tek tavanı payla
   assert.equal(split.seconds, day);
   assert.deepEqual(split.state, once.state, 'bölünmüş ayrılış tek ayrılış kadar');
   assert.equal(split.awayLeft, 0, 'tavan bitti');
-  // Arada (son saatte) çevrimiçi adım varsa uygulama açılmış: yeni ayrılış yeni tavanla.
+  // Arada (son günde) çevrimiçi adım varsa uygulama açılmış: yeni ayrılış yeni tavanla.
   const reopened = replay(start, [['o', 7_200], ['t', 1], ['o', 1_800]], 9_011, true);
   const joined = replay(start, [['o', 7_200], ['o', 1_800]], 9_010, true);
   assert.ok(reopened.state.cash > joined.state.cash, `${reopened.state.cash} > ${joined.state.cash}`);
   assert.equal(reopened.awayLeft, offlineCap(reopened.state) - 1_800);
-  // Son saatten eski "çevrimiçi" adımlar ayrılışı bölmüyor (aralara 1 sn koyup tavanı yenilemek işe yaramıyor).
-  const sneaky = replay(start, [['o', 7_200], ['t', 1], ['o', 7_200], ['t', 1], ['o', 7_200]], day);
-  assert.equal(sneaky.state.cash, replay(start, [['o', 21_602]], day).state.cash);
+  // Son günden eski "çevrimiçi" adımlar ayrılışı bölmüyor (aralara 1 sn koyup tavanı yenilemek işe yaramıyor).
+  const sneaky = replay(start, [['o', 7_200], ['t', 1], ['o', 7_200], ['t', 1], ['o', 7_200]], 3 * day);
+  assert.equal(sneaky.state.cash, replay(start, [['o', 21_602]], 3 * day).state.cash);
   // Önceki gönderim ayrılışla bittiyse tavan oradan sürüyor.
   assert.deepEqual(replay(start, [['o', 7_200]], day, false, 0).state, applyOffline(start, 0).state);
   assert.equal(replay(start, [['t', 5]], 100, true, 0).awayLeft, null, 'çevrimiçi adım ayrılışı kapatıyor');

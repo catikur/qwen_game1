@@ -693,11 +693,15 @@ tek tablo. Bir cihazda başlayan oyun öbüründe sürüyor.
     1 saat). Günlük tamken (`rest: 0`) kullanılmayan süre birikmiyor.
     Kayıtlar gerçek zamana art arda yerleşiyor: günlük tamsa (`rest: 0`) şimdide
     bitiyor (baştaki boşluk oynanmamış geçmiş), değilse imleçten başlıyor.
-    Çevrimiçi adımlar yalnızca son saatte sayılıyor (`SYNC.maxBank`); daha eskiye
-    düşen adımın zamanı geçiyor ama oyun ilerlemiyor. Böylece eşitlenmemiş
-    çevrimiçi oyun en çok 1 saat; uzun bir boşluk sonradan "çevrimiçiydim" diye
-    doldurulamıyor (`rest` ne derse desin). Ayrılış (`o`) yerinde kalıp bütün
-    süresini alıyor (yarım verim ve tavan). Ağsız 1 saatten eski oyun sayılmıyor.
+    Çevrimiçi adımlar yalnızca son 24 saatte tam sayılıyor (`SYNC.maxBank`):
+    internetsiz açık oynanan bir gün (uçak, yolculuk) bağlanınca olduğu gibi
+    sunucuya geçiyor. Daha eskiye düşen adımlar ayrılış gibi çevrimdışı kazanç
+    getiriyor (yarım verim, yanındaki ayrılışlarla ortak tavan); böylece
+    günlerce boşluk sonradan "çevrimiçiydim" diye doldurulamıyor (`rest` ne derse
+    desin). Ayrılış (`o`) yerinde kalıp bütün süresini alıyor (yarım verim ve tavan).
+    Takas: değiştirilmiş bir istemci son 24 saati "açıktım" diye yazabilir; bu da
+    uygulamayı sürekli açık tutan bir oyuncunun kazancı kadar (Android'de Play
+    Integrity ile sıkılaştırılabilir).
     Arada (sayılan) çevrimiçi adım olmayan ayrılışlar tek ayrılış: kazanç tavanını
     paylaşıyor; açık kalan ayrılışın kalan tavanı kayıtta, sonraki gönderimde
     sürüyor (uzun ayrılışı kayıtlara ya da gönderimlere bölmek tavanı yenilemiyor).
@@ -736,6 +740,13 @@ tek tablo. Bir cihazda başlayan oyun öbüründe sürüyor.
   `IsoPainter`'ının Canvas karşılığı (aynı geometri, renkler, belirlenimci
   rastgele diziler). PWA (çevrimdışı, ana ekrana ekleme). Telefon, tablet ve
   masaüstü düzeni. Metinler `L10n.swift`'ten derleme anında.
+- **Çevrimdışı:** oyun internetsiz de sürüyor; her hamlede ve her saniye cihaza
+  kaydediliyor. Sunucuya ulaşılamayınca başlığın altında "Çevrimdışı" şeridi
+  çıkıyor (tarayıcı çevrimdışı dedikçe, yolda kalmış bir isteğin geç yanıtı
+  onu kapatmıyor). İnternet gelince (`online` olayı) bekleyenler hemen gidiyor,
+  sonra iki saniye arayla gönderim gönderim; ilk yanıtla şerit kapanıp "eşitlendi"
+  bildirimi çıkıyor. iOS zaten cihaz öncelikli: oyun cihazda, bağlanınca kayıt ve
+  puan gidiyor (puan denetimi gerçek geçen süreye bakıyor).
 - **Tek örnek:** kaydı en son açılan sekme ya da pencere oynatıyor
   (`lite.owner`); eskisi duruyor, kayda ve sunucuya yazmıyor ("Burada devam
   et" sayfayı yeniden açıp geri alıyor). Android'de etkinlik ilk çizimden önce

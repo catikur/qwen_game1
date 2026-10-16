@@ -28,6 +28,7 @@ import {
   TriangleAlert,
   Trophy,
   UserCheck,
+  WifiOff,
   Zap,
   type LucideIcon,
 } from 'lucide-react';
@@ -168,6 +169,28 @@ function eventTone(kind: EventKind): [Rgb, Rgb] {
   if (kind === 'fashionWeek') return [0xe59bf5, 0xc062de];
   if (kind === 'exportBoom') return [0x6fd4ff, 0x2e9ce8];
   return [0xff8a8a, 0xe04848];
+}
+
+/** İnternet yok: oyun cihazda sürüyor ve kaydediliyor, bağlanınca eşitleniyor (başlığın altında ince şerit). */
+export function OfflineBanner() {
+  const store = useStore();
+  if (!store.offline) return null;
+  return (
+    <div style={{ padding: '0 14px 8px' }}>
+      <div
+        className="row"
+        role="status"
+        data-testid="offline"
+        style={{ gap: 8, padding: '7px 12px', borderRadius: 14, background: 'var(--card)', border: '1px solid var(--card-border)', fontSize: 12 }}
+      >
+        <WifiOff size={15} strokeWidth={2.6} style={{ flex: 'none' }} />
+        <span>
+          <b>{t('sync.offline')}</b>
+          <span className="muted"> · {t('sync.offlineBody')}</span>
+        </span>
+      </div>
+    </div>
+  );
 }
 
 export function EventBanner() {
