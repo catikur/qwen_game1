@@ -64,6 +64,7 @@ import { build, buyTile } from '../src/actions';
 import { buyShares } from '../src/systems/equity';
 import { PRUNE_MEMORY_DAYS, isPrunable } from '../src/systems/npc';
 import { WAGE_PER_JOB } from '../src/systems/labor';
+import { overheadMultiplier } from '../src/systems/economy';
 import { loanQuote } from '../src/systems/credit';
 import { issueQuote } from '../src/systems/issuance';
 import { capRemaining, dailyBuyCap, findOrder, orderEstimate } from '../src/systems/orders';
@@ -3453,10 +3454,13 @@ section('İşgücü ve sendika', () => {
       const state = engine.getState();
       const player = getPlayer(state);
       paid += player.today.wages;
+      // Yönetim yükü (Tur 37a) ücretin üstüne ayrı bir kalem; sınanan
+      // sendikanın çarpanı, o yüzden yük tabana da giriyor.
+      const overhead = overheadMultiplier(state, player.id);
       for (const building of Object.values(state.buildings)) {
         if (building.companyId !== player.id) continue;
         const def = BUILDING_BY_ID[building.defId]!;
-        base += def.jobs * WAGE_PER_JOB * (0.6 + state.districts[building.districtId]!.incomeLevel);
+        base += def.jobs * WAGE_PER_JOB * (0.6 + state.districts[building.districtId]!.incomeLevel) * overhead;
       }
       const strike = player.labor?.strike;
       if (strike && state.time.day >= strike.startedDay && !strikeSeen) {
