@@ -16,6 +16,12 @@ export function scenarioActive(state: GameState): boolean {
   return state.scenario !== undefined && state.scenario.finishedDay === undefined;
 }
 
+/** Açılış ekranı bekliyor mu: takvim o kapanana kadar yürümüyor. */
+export function scenarioBriefPending(state: GameState): boolean {
+  const run = state.scenario;
+  return run !== undefined && !run.briefSeen && run.finishedDay === undefined;
+}
+
 export function scenarioDefOf(state: GameState): ScenarioDef | null {
   return state.scenario ? (SCENARIO_BY_ID[state.scenario.id] ?? null) : null;
 }
@@ -50,9 +56,21 @@ export function scenarioGoalText(def: ScenarioDef): string {
   });
 }
 
+/**
+ * Aşağı yuvarlama, kayan noktanın ×1,29'u ×1,2899… diye okumasına karşı
+ * küçük bir payla. Öndelik hiçbir yerde yukarı yuvarlanmıyor: eşiğin
+ * altındaki skor eşikte görünmesin.
+ */
+function floorTo(value: number, digits: number): number {
+  const scale = 10 ** digits;
+  return Math.floor(value * scale + 1e-6) / scale;
+}
+
 /** Skorun okunur hâli: "212 gün" ya da "×1,34". */
 export function scenarioScoreText(def: ScenarioDef, score: number): string {
-  return def.stars.metric === 'days' ? tc('core.scenario.scoreDays', { days: score }) : tc('core.scenario.scoreLead', { ratio: formatDecimal(score, 2) });
+  return def.stars.metric === 'days'
+    ? tc('core.scenario.scoreDays', { days: score })
+    : tc('core.scenario.scoreLead', { ratio: formatDecimal(floorTo(score, 2), 2) });
 }
 
 export interface ScenarioProgress {
@@ -84,7 +102,10 @@ export function scenarioProgress(state: GameState): ScenarioProgress | null {
   const span = Math.max(1, run.endDay - run.startDay);
   return {
     progress: Math.max(0, Math.min(1, (day - run.startDay) / span)),
-    detail: lead > 1 ? tc('core.scenario.progressAhead', { ratio: formatDecimal(Math.min(lead, 9.99), 2) }) : tc('core.scenario.progressBehind', { percent: Math.round(lead * 100) }),
+    detail:
+      lead > 1
+        ? tc('core.scenario.progressAhead', { ratio: formatDecimal(floorTo(Math.min(lead, 9.99), 2), 2) })
+        : tc('core.scenario.progressBehind', { percent: Math.floor(lead * 100) }),
     daysLeft,
     ahead: lead > 1,
   };
@@ -93,8 +114,10 @@ export function scenarioProgress(state: GameState): ScenarioProgress | null {
 function finish(state: GameState, run: ScenarioState, def: ScenarioDef, won: boolean, score: number): void {
   run.finishedDay = state.time.day;
   run.outcome = won ? 'won' : 'lost';
-  run.score = Math.round(score * 1000) / 1000;
-  run.stars = won ? starsFor(def, run.score) : 0;
+  // Yıldız ham skordan, saklanan skor aşağı yuvarlanmış (Codex #66): ×1,3996
+  // yuvarlanınca ×1,4 olup üç yıldız eşiğini geçmiş gibi görünüyordu.
+  run.score = floorTo(score, 3);
+  run.stars = won ? starsFor(def, score) : 0;
   state.time.speed = 0;
   pushNews(
     state,

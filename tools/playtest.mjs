@@ -3114,6 +3114,11 @@ async function finish(browser, consoleErrors) {
     });
     check('Ön tarihten sonra açılış ekranı: 200. gün, oyun duraklamış, durgunluk uyarıda',
       brief.day === 200 && brief.speed === 0 && brief.crisis === 'warning', JSON.stringify(brief));
+    // Codex #66: boşluk tuşu açılış ekranının arkasında takvimi yürütmüyor.
+    await sp.keyboard.press('Space');
+    await sp.waitForTimeout(400);
+    const held = await sp.evaluate(() => ({ speed: window.__capital.getState().time.speed, day: window.__capital.getState().time.day }));
+    check('Açılış ekranı açıkken boşluk tuşu takvimi yürütmüyor', held.speed === 0 && held.day === 200, JSON.stringify(held));
     await sp.locator('[data-scenario-begin]').click();
     await sp.waitForTimeout(300);
     const begun = await sp.evaluate(() => {

@@ -5,7 +5,7 @@ import type { ScenarioDef } from '@capital/content';
 import { formatMoney, getPlayer, scenarioDefOf, scenarioGoalText, scenarioProgress, scenarioScoreText } from '@capital/core';
 import type { GameState } from '@capital/core';
 import { useGame, useGameState } from './useGame';
-import { recordScenarioResult, scenarioRecord } from './scenarioBest';
+import { recordScenarioResult, scenarioRecord, scenarioRunKey } from './scenarioBest';
 import { t } from './i18n';
 
 /**
@@ -76,7 +76,9 @@ export function ScenarioResultScreen({ onNewGame, onReplay }: { onNewGame: () =>
   const scenario = state.scenario;
   const def = scenarioDefOf(state);
   const pending = scenarioResultPending(state);
-  const runKey = scenario ? `${state.meta.createdAtIso}:${scenario.finishedDay ?? ''}` : '';
+  const runKey = scenario
+    ? scenarioRunKey({ createdAtIso: state.meta.createdAtIso, finishedDay: scenario.finishedDay, outcome: scenario.outcome, score: scenario.score })
+    : '';
   const [best, setBest] = useState(false);
 
   // Sonuç cihazda bir kez sayılıyor (sonuç ekranı yeniden açılsa da).

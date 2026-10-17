@@ -7,7 +7,7 @@ import { agenda } from '../src/agenda';
 import { openCityQuote } from '../src/holding';
 import { createScenarioGame, startScenario } from '../src/scenario';
 import { getPlayer } from '../src/selectors';
-import { leadRatio, scenarioProgress, starsFor } from '../src/systems/scenario';
+import { leadRatio, runScenarioTick, scenarioProgress, scenarioScoreText, starsFor } from '../src/systems/scenario';
 import { TOTAL_SHARES, sharesHeld } from '../src/systems/equity';
 import type { GameState } from '../src/types';
 
@@ -170,6 +170,36 @@ describe('senaryo modu', () => {
     assert.deepEqual([1.01, 1.2, 1.39, 1.4].map((score) => starsFor(lead, score)), [1, 2, 2, 3]);
     const days: ScenarioDef = { ...def, stars: { metric: 'days', two: 300, three: 230 } };
     assert.deepEqual([400, 300, 231, 230].map((score) => starsFor(days, score)), [1, 2, 2, 3]);
+  });
+
+  test('açılış ekranı açıkken takvim yürümüyor (boşluk tuşu, hız düğmeleri)', () => {
+    const engine = new GameEngine(scenario('crisis'));
+    const state = engine.getState();
+    assert.equal(engine.dispatch({ type: 'TOGGLE_PAUSE' }).ok, false);
+    assert.equal(engine.dispatch({ type: 'SET_SPEED', speed: 3 }).ok, false);
+    assert.equal(state.time.speed, 0);
+    assert.ok(engine.dispatch({ type: 'SET_SPEED', speed: 0 }).ok, 'duraklatmak serbest');
+    assert.ok(engine.dispatch({ type: 'DISMISS_SCENARIO', screen: 'brief' }).ok);
+    assert.ok(engine.dispatch({ type: 'TOGGLE_PAUSE' }).ok);
+    assert.equal(state.time.speed, 0);
+    assert.ok(engine.dispatch({ type: 'SET_SPEED', speed: 3 }).ok);
+  });
+
+  test('yıldız ham skordan; saklanan ve gösterilen skor aşağı yuvarlanıyor', () => {
+    // ×1,3996 üç yıldızın ×1,4 eşiğinin altında: yuvarlanıp eşiği geçmemeli.
+    const def = SCENARIO_BY_ID.crisis!;
+    const state = scenario('crisis');
+    state.scenario!.briefSeen = true;
+    state.time.day = state.scenario!.endDay;
+    const rivals = Object.values(state.companies).filter((company) => !company.isPlayer);
+    for (const rival of rivals) rival.netWorth = 1_000_000;
+    rivals[0]!.netWorth = 10_000_000;
+    getPlayer(state).netWorth = 13_996_000;
+    runScenarioTick(state);
+    assert.equal(state.scenario!.outcome, 'won');
+    assert.equal(state.scenario!.stars, 2);
+    assert.equal(state.scenario!.score, 1.399);
+    assert.equal(scenarioScoreText(def, state.scenario!.score!), '×1,39');
   });
 
   test('kurallar kilitli; açılış ekranı takvimi başlatıyor, sonuç ekranı bitince kapanıyor', () => {

@@ -17,6 +17,7 @@ export const commands: Record<keyof typeof trCommands, string> = {
   'core.engine.noScenario': 'There is no scenario in progress.',
   'core.engine.scenarioBriefSeen': 'The scenario has already started.',
   'core.engine.scenarioRunning': 'The scenario is still in progress.',
+  'core.engine.scenarioBriefPending': 'Press "Begin" on the scenario briefing first.',
   'core.engine.noVictory': 'No victory yet.',
   'core.engine.cityUnchanged': "The city didn't change.",
   'core.engine.unknownCommand': 'Unknown command.',

@@ -15,7 +15,7 @@ export interface ScenarioRecord {
   best?: { stars: number; score: number; run: string };
   /** Biten koşu sayısı (kazanılan ve kaybedilen). */
   attempts: number;
-  /** Sayılmış son koşunun kimliği — sonuç ekranı yeniden açılınca iki kez sayılmasın. */
+  /** Sayılmış son koşunun kimliği (`scenarioRunKey`) — sonuç ekranı yeniden açılınca iki kez sayılmasın. */
   last?: string;
 }
 
@@ -57,9 +57,9 @@ function better(id: string, a: { stars: number; score: number }, b: { stars: num
 }
 
 /**
- * Biten koşuyu kaydeder. `runKey` koşuyu tanımlıyor (kuruluş anı +
- * bitiş günü): sonuç ekranı yeniden açılınca aynı koşu ikinci kez
- * sayılmıyor. Dönen değer: bu koşu cihazdaki en iyi sonuç mu.
+ * Biten koşuyu kaydeder. `runKey` koşuyu tanımlıyor (`scenarioRunKey`):
+ * sonuç ekranı yeniden açılınca aynı koşu ikinci kez sayılmıyor. Dönen
+ * değer: bu koşu cihazdaki en iyi sonuç mu.
  */
 export function recordScenarioResult(id: string, runKey: string, stars: number, score: number): boolean {
   const all = read();
@@ -70,4 +70,15 @@ export function recordScenarioResult(id: string, runKey: string, stars: number, 
     write({ ...all, [id]: { attempts: record.attempts + 1, last: runKey, ...(best ? { best } : {}) } });
   }
   return scenarioRecord(id).best?.run === runKey;
+}
+
+/**
+ * Koşunun kimliği: kuruluş anı, bitiş günü ve sonuç (Codex #66). Kuruluş
+ * anı ve gün tek başına yetmiyordu: kayıttan dönüp aynı gün başka bir
+ * sonuçla biten koşu (Krizin ortasında hep son gün bitiyor) aynı kimliği
+ * alıyor, daha iyi sonucu da sayılmıyordu. Aynı sonuç — sonuç ekranı
+ * yeniden açıldı — aynı kimlik.
+ */
+export function scenarioRunKey(run: { createdAtIso: string; finishedDay: number | undefined; outcome?: string; score?: number }): string {
+  return `${run.createdAtIso}:${run.finishedDay ?? ''}:${run.outcome ?? ''}:${run.score ?? ''}`;
 }

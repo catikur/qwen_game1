@@ -15,6 +15,7 @@ export const commands = {
   'core.engine.noScenario': 'Süren bir senaryo yok.',
   'core.engine.scenarioBriefSeen': 'Senaryo zaten başladı.',
   'core.engine.scenarioRunning': 'Senaryo sürüyor.',
+  'core.engine.scenarioBriefPending': 'Önce senaryonun açılış ekranındaki "Başla"ya bas.',
   'core.engine.noVictory': 'Henüz bir zafer yok.',
   'core.engine.cityUnchanged': 'Şehir değişmedi.',
   'core.engine.unknownCommand': 'Bilinmeyen komut.',
