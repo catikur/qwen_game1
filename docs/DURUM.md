@@ -2623,6 +2623,8 @@ gelen karar kartları ve konuşan, saldıran rakipler.
   - Saldıran, o kategoride zaten satış yapan rakipler arasından en büyük
     paylı olan. Kategoride hiçbir rakip yoksa kampanya açılmıyor, iki
     hafta sonra yeniden bakılıyor (pazarda olmayan rakip fiyat kıramaz).
+  - Saldıran kategorideki son mağazasını kapatırsa kampanya o gün
+    bitiyor ("… saldırısından çekildi" haberi); sadakat markası yok.
   - Fiyat kıran %14, diğerleri %7 kırıyor.
   - Duyuru haberi var; gündemde geri sayım var, çip rekabet panelini açıyor.
   - Sonunda pay ölçülüyor. Pay 2 puandan fazla düşmediyse kampanya geri
@@ -2782,7 +2784,7 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi) |
-| Birim testi | **331 test** (`pnpm test`; Tur 24'te render paketi de) |
+| Birim testi | **332 test** (`pnpm test`; Tur 24'te render paketi de) |
 | Denge testi | **288 kontrol, hepsi geçiyor** (20 bölüm, süreleriyle; ~11 dk) |
 | Tarayıcı testi | **370 kontrol, hepsi geçiyor**, 0 konsol hatası (~17–25 dk); duman koşusu 111 (~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + duman oynanışı |

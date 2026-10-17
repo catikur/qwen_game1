@@ -1,11 +1,12 @@
 import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
-import { BUILDING_BY_ID, CAMPAIGN, CARD_BY_ID, CARD_TIMING, CATEGORIES, NPC_PROFILES } from '@capital/content';
+import { BUILDINGS, BUILDING_BY_ID, CAMPAIGN, CARD_BY_ID, CARD_TIMING, CATEGORIES, NPC_PROFILES } from '@capital/content';
 import type { CategoryId } from '@capital/content';
 import { GameEngine } from '../src/engine';
 import { createNewGame } from '../src/worldgen';
 import { getPlayer } from '../src/selectors';
 import { agenda } from '../src/agenda';
+import { build, demolish } from '../src/actions';
 import { createLeagueGame, replayRun, runFromState } from '../src/league';
 import { boostMultiplier, cardAmount, chooseCard, runCardTick, settleCardAway } from '../src/systems/cards';
 import { campaignPriceFactor, rivalQuote, runRivalryTick } from '../src/systems/rivalry';
@@ -259,6 +260,19 @@ describe('karar kartları', () => {
 });
 
 describe('rakip hikâyeleri', () => {
+  /** Rakibe kategoride gerçek bir mağaza aç: kampanya yalnız rafı olan rakiple sürüyor. */
+  function openOutlet(state: GameState, company: CompanyState, category: CategoryId): string {
+    const def = BUILDINGS.find((b) => b.role === 'outlet' && b.category === category)!;
+    company.cash += 100_000_000;
+    for (const tile of state.map.tiles) {
+      if (tile.kind !== 'plot' || tile.ownerId || tile.structureId) continue;
+      tile.ownerId = company.id;
+      if (build(state, company.id, tile.id, def.id).ok) return tile.buildingId!;
+      tile.ownerId = null;
+    }
+    throw new Error(`${category} mağazası açılamadı`);
+  }
+
   function rival(state: GameState, trait: string): CompanyState {
     const profile = NPC_PROFILES.find((p) => p.trait === trait)!;
     return Object.values(state.companies).find((c) => c.profileId === profile.id) ?? Object.values(state.companies).find((c) => !c.isPlayer)!;
@@ -284,6 +298,7 @@ describe('rakip hikâyeleri', () => {
     player.marketShare[category] = 0.4;
     const attacker = rival(state, 'price_cutter');
     attacker.marketShare[category] = 0.3;
+    openOutlet(state, attacker, category);
     state.time.day = 200;
     state.nextCampaignDay = 200;
     runRivalryTick(state);
@@ -312,7 +327,9 @@ describe('rakip hikâyeleri', () => {
     const state = createNewGame({ seed: 6 });
     const player = getPlayer(state);
     player.marketShare.dining = 0.5;
-    rival(state, 'expansionist').marketShare.dining = 0.2;
+    const attacker = rival(state, 'expansionist');
+    attacker.marketShare.dining = 0.2;
+    openOutlet(state, attacker, 'dining');
     state.time.day = 300;
     state.nextCampaignDay = 300;
     runRivalryTick(state);
@@ -348,6 +365,33 @@ describe('rakip hikâyeleri', () => {
     off.nextCampaignDay = 200;
     runRivalryTick(off);
     assert.equal(off.campaign, undefined);
+  });
+
+  test('kampanya: saldıran kategorideki son mağazasını kapatınca bitiyor, ödül yok', () => {
+    const state = createNewGame({ seed: 5 });
+    const player = getPlayer(state);
+    player.marketShare.retail = 0.4;
+    const attacker = rival(state, 'price_cutter');
+    attacker.marketShare.retail = 0.3;
+    for (const building of Object.values(state.buildings)) {
+      if (building.companyId === attacker.id && BUILDING_BY_ID[building.defId]?.category === 'retail') {
+        demolish(state, attacker.id, building.tileId);
+      }
+    }
+    const shop = openOutlet(state, attacker, 'retail');
+    state.time.day = 200;
+    state.nextCampaignDay = 200;
+    runRivalryTick(state);
+    assert.ok(state.campaign);
+    const brand = player.brand.retail ?? 0;
+    demolish(state, attacker.id, state.buildings[shop]!.tileId);
+    state.time.day = 210;
+    runRivalryTick(state);
+    assert.equal(state.campaign, undefined);
+    assert.equal(state.news[0]!.tone, 'neutral');
+    assert.ok(state.news[0]!.title.includes(attacker.name));
+    assert.equal(player.brand.retail ?? 0, brand, 'çekilen rakibe karşı sadakat markası yok');
+    assert.equal(state.nextCampaignDay, 210 + CAMPAIGN.gapDays[0]);
   });
 
   test('uzun oyunda kampanya ve sözlü haberler çıkıyor', () => {

@@ -127,4 +127,6 @@ export const world = {
   'core.rivalry.campaignHeldBody': 'Kampanya geri tepti; {category} payın {from} → {to}. Müşteri sadakati markana yansıdı.',
   'core.rivalry.campaignLostTitle': '{name}, {category} kampanyasını kazandı',
   'core.rivalry.campaignLostBody': '{category} payın {from} → {to} düştü.',
+  'core.rivalry.campaignRetreatTitle': '{name} {category} saldırısından çekildi',
+  'core.rivalry.campaignRetreatBody': 'Kategorideki son mağazasını kapattı; fiyat savaşı bitti.',
 } as const;

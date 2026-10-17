@@ -1,4 +1,4 @@
-import { CAMPAIGN, CATEGORIES, CONSUMER_CATEGORIES, fillTemplate, formatPercent, rivalLines } from '@capital/content';
+import { BUILDING_BY_ID, CAMPAIGN, CATEGORIES, CONSUMER_CATEGORIES, fillTemplate, formatPercent, rivalLines } from '@capital/content';
 import type { CategoryId, RivalBeat } from '@capital/content';
 import { pushNews } from '../news';
 import { tc } from '../i18n';
@@ -103,6 +103,16 @@ export function campaignPriceFactor(state: GameState, companyId: string, categor
   return trait === 'price_cutter' ? CAMPAIGN.priceCut.price_cutter : CAMPAIGN.priceCut.default;
 }
 
+/** Rakibin kategoride açık mağazası var mı — fiyat kırabileceği bir raf. */
+function sellsIn(state: GameState, companyId: string, category: CategoryId): boolean {
+  for (const building of Object.values(state.buildings)) {
+    if (building.companyId !== companyId) continue;
+    const def = BUILDING_BY_ID[building.defId];
+    if (def?.role === 'outlet' && def.category === category) return true;
+  }
+  return false;
+}
+
 function rangeFrom(dice: ReturnType<typeof createRng>, [min, max]: readonly [number, number]): number {
   return min + Math.floor(nextFloat(dice) * (max - min + 1));
 }
@@ -127,12 +137,12 @@ function pickCampaign(state: GameState): { rival: CompanyState; category: Catego
     if (category === null || value > (player.marketShare[category] ?? 0)) category = id;
   }
   if (!category) return null;
-  // Kategoride satışı olmayan rakip orada fiyat kıramaz; kimse yoksa kampanya bekler.
+  // Kategoride mağazası ve payı olmayan rakip orada fiyat kıramaz; kimse yoksa kampanya bekler.
   let rival: CompanyState | null = null;
   for (const company of Object.values(state.companies)) {
     if (company.isPlayer || !rivalProfile(state, company.profileId)) continue;
     const a = company.marketShare[category] ?? 0;
-    if (a <= 0) continue;
+    if (a <= 0 || !sellsIn(state, company.id, category)) continue;
     const b = rival ? (rival.marketShare[category] ?? 0) : 0;
     if (!rival || a > b || (a === b && company.netWorth > rival.netWorth)) rival = company;
   }
@@ -200,6 +210,19 @@ export function runRivalryTick(state: GameState): void {
     if (!rival) {
       delete state.campaign;
       state.nextCampaignDay = day + CAMPAIGN.gapDays[0];
+    } else if (!sellsIn(state, rival.id, campaign.category)) {
+      // Son mağazasını kapattıysa fiyat kıracak rafı kalmadı: saldırı biter,
+      // sadakat markası yok — oyuncu bir şeye karşı durmadı (Codex #62).
+      delete state.campaign;
+      state.nextCampaignDay = day + CAMPAIGN.gapDays[0];
+      const name = CATEGORIES[campaign.category].name;
+      pushNews(
+        state,
+        'neutral',
+        tc('core.rivalry.campaignRetreatTitle', { name: rival.name, category: name }),
+        tc('core.rivalry.campaignRetreatBody', { category: name }),
+        rival.id,
+      );
     } else if (day >= campaign.endDay) {
       finishCampaign(state, campaign);
     }

@@ -132,4 +132,6 @@ export const world: Record<keyof typeof trWorld, string> = {
   'core.rivalry.campaignHeldBody': 'The campaign backfired; your {category} share went {from} → {to}. Customer loyalty strengthened your brand.',
   'core.rivalry.campaignLostTitle': '{name} wins the {category} campaign',
   'core.rivalry.campaignLostBody': 'Your {category} share fell {from} → {to}.',
+  'core.rivalry.campaignRetreatTitle': '{name} pulled out of its {category} attack',
+  'core.rivalry.campaignRetreatBody': 'It closed its last store in the category; the price war is over.',
 };
