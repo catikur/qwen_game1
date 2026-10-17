@@ -15,7 +15,7 @@ import {
   verifyRun,
 } from '../src/league';
 import type { LeagueRun, RunVerdict } from '../src/league';
-import { BUBBLE_TIMING, setLocale } from '@capital/content';
+import { BUBBLE_TIMING, PROJECT_TIMING, setLocale } from '@capital/content';
 import { LEAGUE_DAYS, leagueSeed, leagueWeekId } from '../src/systems/league';
 import { createNewGame } from '../src/worldgen';
 import type { GameState } from '../src/types';
@@ -144,6 +144,15 @@ describe('lig güvenliği', () => {
       timing.amountMin = amountMin;
     }
     assert.equal(computeSimFingerprint(), base);
+    // Şehir projesi takvimi de izde (Tur 37d).
+    const projects = PROJECT_TIMING as { firstDay: readonly [number, number] };
+    const first = projects.firstDay;
+    try {
+      projects.firstDay = [first[0] + 5, first[1] + 5];
+      assert.notEqual(computeSimFingerprint(), base, 'proje takvimi izi değiştirmiyor');
+    } finally {
+      projects.firstDay = first;
+    }
   });
 
   test('dürüst koşu doğrulanıyor; skor, eğri, ad ve CEO tekrarın kendisinden', async () => {

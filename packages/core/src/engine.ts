@@ -10,11 +10,13 @@ import { lobby } from './systems/council';
 import { respondUnion, setWagePolicy } from './systems/labor';
 import { chooseCard } from './systems/cards';
 import { claimBubble, claimQuest, evaluateCommandQuests, runQuestTick } from './systems/opportunities';
+import { contributeToProject } from './systems/projects';
 import { QUOTE_COOLDOWN_DAYS, rivalQuote, withQuote } from './systems/rivalry';
 import { repayLoan, takeLoan } from './systems/credit';
 import { issueShares } from './systems/issuance';
 import { cancelTakeoverOrder, placeTakeoverOrder, playerBuy } from './systems/orders';
 import { recomputeNetWorth } from './systems/city';
+import { runConsortiumTick } from './systems/consortium';
 import { acceptContract, declineContract } from './systems/contracts';
 import { placeBid } from './systems/auction';
 import { sellShares } from './systems/equity';
@@ -298,6 +300,9 @@ export class GameEngine {
       case 'CLAIM_QUEST':
         return claimQuest(state, command.index);
 
+      case 'CONTRIBUTE_PROJECT':
+        return contributeToProject(state, command.amount);
+
       case 'TAKE_LOAN':
         return takeLoan(state, playerId, command.kind, command.amount, command.termDays);
 
@@ -386,6 +391,8 @@ export class GameEngine {
     recomputeNetWorth(state);
     // Görev panosu günün net değeriyle (Tur 37c, Codex #63).
     runQuestTick(state);
+    // Rakip konsorsiyumu yalnız oynanan şehirde, günün net değeriyle (Tur 37d-3).
+    runConsortiumTick(state);
     this.checkMilestones();
     runGoalTick(state);
     // Holding hedeflerinin son basamağı: üç şehirde zafer (Tur 32).

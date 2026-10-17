@@ -239,6 +239,20 @@ export const contentEn: Record<string, string> = {
   'content.structure.school.description': 'Public building. Not for sale — draws families to the district.',
   'content.structure.plaza.name': 'Square',
   'content.structure.plaza.description': 'Town square. Not for sale — boosts foot traffic.',
+  'content.structure.construction_site.name': 'Construction Site',
+  'content.structure.construction_site.description': 'Site of a city project. The landmark rises here once construction ends.',
+  'content.structure.metro_station.name': 'Metro Station',
+  'content.structure.metro_station.description': 'City project. Brings commuters to the district and its neighbors, and value to the land.',
+  'content.structure.stadium.name': 'Stadium',
+  'content.structure.stadium.description': 'City project. On match days the nearby cafés and shops fill up.',
+  'content.structure.convention_center.name': 'Convention Center',
+  'content.structure.convention_center.description': 'City project. Fairs and conferences draw the business world to the district.',
+  'content.structure.tech_campus.name': 'Tech Campus',
+  'content.structure.tech_campus.description': 'City project. Engineers and students grow electronics demand.',
+  'content.structure.city_mall.name': 'City Mall',
+  'content.structure.city_mall.description': 'City project. On weekends the whole city comes here to shop.',
+  'content.structure.food_hall.name': 'Covered Bazaar',
+  'content.structure.food_hall.description': 'City project. The food market brings tourists and locals together.',
 
   // ---- Goals (goals.ts) ----
   'content.goal.first_shop.title': 'First shop',
@@ -587,4 +601,32 @@ export const contentEn: Record<string, string> = {
   'content.quest.overtake.hint': 'The rival right above you in the ranking.',
   'content.quest.bubble.title': 'Catch an opportunity bubble',
   'content.quest.bubble.hint': 'Tap the bubble that appears above the city.',
+
+  // Living market (Tur 37d)
+  'content.season.winter.name': 'Winter',
+  'content.season.winter.news': 'Winter is here: clothing and electronics windows come alive, the streets quieten.',
+  'content.season.spring.name': 'Spring',
+  'content.season.spring.news': 'Spring: demand for services and clothing picks up slightly.',
+  'content.season.summer.name': 'Summer',
+  'content.season.summer.news': 'Summer is here: cafes and services are busy, clothing and electronics are slow.',
+  'content.season.autumn.name': 'Autumn',
+  'content.season.autumn.news': 'Autumn: the school term lifts electronics and grocery shopping.',
+  'content.project.metro.name': 'Metro Line',
+  'content.project.metro.pitch':
+    'The council is opening a station on the new metro line. Contributing companies are listed on the board; the biggest contribution names the station.',
+  'content.project.stadium.name': 'City Stadium',
+  'content.project.stadium.pitch':
+    'The council is building a stadium. Match days fill the nearby cafés and shops; the biggest contribution names the stadium.',
+  'content.project.convention.name': 'Convention Center',
+  'content.project.convention.pitch':
+    'A center for fairs and conferences is going up. The business world comes along; the biggest contribution names the center.',
+  'content.project.tech_campus.name': 'Tech Campus',
+  'content.project.tech_campus.pitch':
+    'The university and local firms are building a shared campus. Young people and engineers move in; the biggest contribution names the campus.',
+  'content.project.city_mall.name': 'City Mall',
+  'content.project.city_mall.pitch':
+    'The council is bringing a big shopping mall to the district. On weekends the whole city flows there; the biggest contribution names the mall.',
+  'content.project.food_hall.name': 'Covered Bazaar and Food Market',
+  'content.project.food_hall.pitch':
+    'The historic bazaar is being restored and reopened with a food market. Tourists and locals side by side; the biggest contribution names the bazaar.',
 };

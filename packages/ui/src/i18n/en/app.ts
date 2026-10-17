@@ -91,6 +91,13 @@ export const app: Record<keyof typeof trApp, string> = {
   // CompetitionPanel.tsx: competition cards.
   'app.rivalry.empty':
     "You don't have a store yet. Once you start selling in a category, you'll see here where you stand against your rival — in quality, brand and price.",
+  'app.rivalry.pulse.title': 'Market pulse',
+  'app.rivalry.pulse.season': 'Season: {season}',
+  'app.rivalry.pulse.lead': "Each category's demand today: trend × season × fad. The arrow shows where the trend is heading; the number next to it is where it will land.",
+  'app.rivalry.pulse.trend': 'target {target} · {days} days',
+  'app.rivalry.pulse.trendTitle': "Trend: where this category's demand lands, and in how many days",
+  'app.rivalry.pulse.seasonChip': 'season {change}',
+  'app.rivalry.pulse.fad': 'Fad: {good} · {days} days',
   'app.rivalry.cardLabel': '{category} competition',
   'app.rivalry.meta': 'stores: {outlets} · share',
   'app.rivalry.you': 'You',

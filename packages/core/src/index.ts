@@ -114,6 +114,18 @@ export {
   questValue,
   questsEnabled,
 } from './systems/opportunities';
+export { activeFad, fadSchedule, livingDemand, livingEnabled, seasonMultiplier, seasonOf, trendAt } from './systems/living';
+export type { FadWindow, TrendPoint } from './systems/living';
+export { consortiumEnabled, consortiumPressure, consortiumStake, runConsortiumTick } from './systems/consortium';
+export type { ConsortiumPressure } from './systems/consortium';
+export {
+  projectAttraction,
+  projectUpkeep,
+  projectDistrictDemand,
+  projectName,
+  projectStandings,
+  projectsEnabled,
+} from './systems/projects';
 export { campaignPriceFactor, campaignsLive, effectivePriceMultiplier, rivalQuote, storiesEnabled } from './systems/rivalry';
 export { activeContract, contractProgress, OFFER_LIFETIME_DAYS } from './systems/contracts';
 export type { EventModifiers } from './systems/events';

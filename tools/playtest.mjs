@@ -1342,6 +1342,139 @@ async function finish(browser, consoleErrors) {
   await page.waitForTimeout(200);
   check('Balon ve görev akışı konsolu kirletmiyor', consoleErrors.length === 0, consoleErrors.slice(0, 2).join(' | '));
 
+  // ---------- Canlı pazar (Tur 37d) ----------
+  section('Canlı pazar');
+  await page.locator('.topbar-actions [data-panel="rivalry"]').click();
+  await page.waitForTimeout(400);
+  const pulse = await page.evaluate(() => {
+    const box = document.querySelector('.modal [data-market-pulse]');
+    if (!box) return null;
+    return {
+      rows: box.querySelectorAll('[data-pulse]').length,
+      season: box.querySelector('.pulse-season')?.textContent?.trim() ?? '',
+      trends: [...box.querySelectorAll('.pulse-trend')].map((el) => el.textContent?.trim() ?? ''),
+    };
+  });
+  check('Rekabet panelinde pazar nabzı: beş kategori, mevsim ve eğilim yönü',
+    pulse?.rows === 5 && pulse.season.startsWith('Mevsim') && pulse.trends.every((text) => /[↗↘→]/.test(text) && /gün/.test(text)),
+    pulse ? `${pulse.rows} kategori · ${pulse.season} · ${pulse.trends[0]}` : 'nabız yok');
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(200);
+  check('Canlı pazar konsolu kirletmiyor', consoleErrors.length === 0, consoleErrors.slice(0, 2).join(' | '));
+
+  // ---------- Şehir projesi (Tur 37d) ----------
+  section('Şehir projesi');
+  // Takvimi beklemeden bir proje aç (oyundaki gibi bir park ya da meydanda),
+  // bir rakip 300 B ₺ ile önde başlasın. Test arayüzü ölçüyor.
+  const projectSetup = await page.evaluate(() => {
+    const c = window.__capital;
+    const s = c.getState();
+    const tile = s.map.tiles.find((t) => t.kind === 'civic' && (t.structureId === 'park' || t.structureId === 'plaza') && s.districts[t.districtId]?.opensOnDay === undefined);
+    const rival = Object.values(s.companies).find((company) => !company.isPlayer);
+    if (!tile || !rival) return null;
+    s.project = {
+      defId: 'metro', districtId: tile.districtId, tileId: tile.id,
+      openedDay: s.time.day, closesDay: s.time.day + 90, doneDay: s.time.day + 130,
+      phase: 'funding', contributions: { [rival.id]: 300_000 }, previousStructureId: tile.structureId,
+    };
+    s.companies[s.playerCompanyId].cash = Math.max(s.companies[s.playerCompanyId].cash, 5_000_000);
+    c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+    return { tileId: tile.id };
+  });
+  await page.waitForTimeout(400);
+  const projectChip = page.locator('[data-agenda="project"] .project-chip');
+  check('Gündemde proje çipi: ad ve geri sayım', projectSetup !== null && (await projectChip.count()) === 1
+    && /Metro Hattı/.test((await projectChip.textContent()) ?? ''), (await projectChip.textContent().catch(() => '')) ?? 'çip yok');
+  await projectChip.click();
+  await page.waitForTimeout(400);
+  const projectView = await page.evaluate(() => {
+    const card = document.querySelector('.modal .project-card');
+    if (!card) return null;
+    return {
+      phase: card.getAttribute('data-phase'),
+      rows: card.querySelectorAll('[data-project-row]').length,
+      gives: [...card.querySelectorAll('[data-project-give]')].map((el) => Number(el.getAttribute('data-project-give'))),
+      effects: card.querySelectorAll('.project-effects .pulse-chip').length,
+      cash: window.__capital.getState().companies[window.__capital.getState().playerCompanyId].cash,
+    };
+  });
+  check('Proje paneli: katkı tablosu, etkiler ve katkı düğmeleri',
+    projectView?.phase === 'funding' && projectView.rows === 1 && projectView.effects >= 3 && projectView.gives.length >= 2 && projectView.gives[0] === 301_000,
+    JSON.stringify(projectView));
+  await page.locator('.modal [data-project-give]').first().click();
+  await page.waitForTimeout(400);
+  const afterGive = await page.evaluate(() => {
+    const s = window.__capital.getState();
+    const first = document.querySelector('.modal [data-project-row]');
+    return {
+      top: first?.getAttribute('data-project-row') ?? '',
+      given: s.project?.contributions[s.playerCompanyId] ?? 0,
+      cash: s.companies[s.playerCompanyId].cash,
+      chip: document.querySelector('[data-agenda="project"] .project-chip')?.textContent ?? '',
+    };
+  });
+  check('"Öne geç" katkıyı kasadan düşüyor; oyuncu tablonun başında, çip sırayı yazıyor',
+    afterGive.top === 'player' && afterGive.given === 301_000 && projectView !== null && afterGive.cash === projectView.cash - 301_000 && /1\./.test(afterGive.chip),
+    JSON.stringify(afterGive));
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(200);
+  await page.evaluate((tileId) => window.__capital.selectTile(tileId), projectSetup?.tileId ?? null);
+  await page.waitForTimeout(400);
+  const siteNote = await page.locator('[data-project-site]').textContent().catch(() => null);
+  check('Proje sahasının penceresinde şehir projesi notu', Boolean(siteNote?.includes('Metro Hattı')), siteNote ?? 'not yok');
+  await page.evaluate(() => {
+    const s = window.__capital.getState();
+    delete s.project;
+    window.__capital.selectTile(null);
+    window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+  });
+  await page.waitForTimeout(200);
+  check('Şehir projesi konsolu kirletmiyor', consoleErrors.length === 0, consoleErrors.slice(0, 2).join(' | '));
+
+  // ---------- Rakip konsorsiyumu (Tur 37d-3) ----------
+  section('Rakip konsorsiyumu');
+  // Kurulmuş bir konsorsiyum: savunma penceresinde 30 gün. Test arayüzü ölçüyor.
+  await page.evaluate(() => {
+    const c = window.__capital;
+    const s = c.getState();
+    const members = Object.values(s.companies).filter((company) => !company.isPlayer).sort((a, b) => b.netWorth - a.netWorth).slice(0, 2);
+    s.consortium = {
+      leaderId: members[0].id, memberIds: members.map((m) => m.id), names: members.map((m) => m.name),
+      formedDay: s.time.day, startsDay: s.time.day + 30, baseShares: 0,
+    };
+    c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+  });
+  await page.waitForTimeout(400);
+  const consortiumChip = page.locator('[data-agenda="consortium"] .consortium-chip');
+  const warningText = (await consortiumChip.textContent().catch(() => '')) ?? '';
+  check('Gündemde konsorsiyum çipi: önder, ortak sayısı ve alıma kalan gün',
+    (await consortiumChip.count()) === 1 && /Konsorsiyum/.test(warningText) && /30g/.test(warningText), warningText || 'çip yok');
+  await consortiumChip.click();
+  await page.waitForTimeout(400);
+  check('Konsorsiyum çipi borsa panelini açıyor', (await page.locator('.modal').count()) === 1);
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(200);
+  await page.evaluate(() => {
+    const c = window.__capital;
+    const s = c.getState();
+    const leader = s.companies[s.consortium.leaderId];
+    s.consortium.startsDay = s.time.day;
+    leader.shares[s.playerCompanyId] = Math.round((s.companies[s.playerCompanyId].shareCount ?? 10000) * 0.18);
+    c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+  });
+  await page.waitForTimeout(300);
+  const buyingText = (await page.locator('[data-agenda="consortium"] .consortium-chip').textContent().catch(() => '')) ?? '';
+  check('Alım başlayınca çip konsorsiyumun payını yazıyor; tek baskıncı çipi tekrarlanmıyor',
+    /%18/.test(buyingText) && (await page.locator('[data-agenda="raid"]').count()) === 0, buyingText || 'çip yok');
+  await page.evaluate(() => {
+    const s = window.__capital.getState();
+    delete s.companies[s.consortium.leaderId].shares[s.playerCompanyId];
+    delete s.consortium;
+    window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+  });
+  await page.waitForTimeout(200);
+  check('Konsorsiyum konsolu kirletmiyor', consoleErrors.length === 0, consoleErrors.slice(0, 2).join(' | '));
+
   if (SMOKE) {
     await finish(browser, consoleErrors);
     return;

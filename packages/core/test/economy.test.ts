@@ -6,6 +6,7 @@ import { GameEngine } from '../src/engine';
 import { createNewGame } from '../src/worldgen';
 import { getPlayer } from '../src/selectors';
 import { collectEventModifiers } from '../src/systems/events';
+import { livingDemand } from '../src/systems/living';
 import { overdraftRate } from '../src/systems/credit';
 import {
   annualWealthTax,
@@ -132,7 +133,7 @@ describe('kriz', () => {
   });
 
   test('kriz sürerken talep, faiz ve inşaat maliyeti etkileniyor; uyarıda etkilemiyor', () => {
-    // 1. gün: dönem ve olay yok, çarpanların tek kaynağı kriz.
+    // 1. gün: dönem ve olay yok; çarpanlar kriz ve canlı pazar (eğilim × mevsim, Tur 37d).
     const state = runTo(1);
     const player = getPlayer(state);
     const baseRate = overdraftRate(state, player);
@@ -150,7 +151,8 @@ describe('kriz', () => {
     const recession = CRISIS_BY_ID['deep_recession']!;
     const mods = collectEventModifiers(state);
     for (const category of CONSUMER_CATEGORIES) {
-      assert.ok(Math.abs((mods.demand[category] ?? 1) - recession.effects.demand!) < 1e-9);
+      const expected = recession.effects.demand! * livingDemand(state, category);
+      assert.ok(Math.abs((mods.demand[category] ?? 1) - expected) < 1e-9);
     }
     assert.ok(mods.landValueDrift < 0);
     assert.ok(buildCost(state, player.id, 'corner_shop') < baseBuild);

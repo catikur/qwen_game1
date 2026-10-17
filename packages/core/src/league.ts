@@ -64,6 +64,7 @@ const LOGGABLE: ReadonlySet<string> = new Set<GameCommand['type']>([
   'CHOOSE_CARD',
   'CLAIM_BUBBLE',
   'CLAIM_QUEST',
+  'CONTRIBUTE_PROJECT',
   'DECLINE_CONTRACT',
   'DEMOLISH',
   'HOLDING_TRANSFER',
@@ -229,6 +230,8 @@ function fingerprintOf(state: GameState): string {
   // Fırsatların takvimi ve ödülleri de izde (ödül alınmasa da).
   parts.push(`bubbles:${state.bubblesShown ?? 0}/${state.bubblesCaught ?? 0}/${state.nextBubbleDay ?? '-'}`);
   parts.push(`quests:${state.questsDone ?? 0}`);
+  // Şehir projesi takvimi (Tur 37d): ilk proje izin 60 gününden sonra açılıyor, takvimi önceden belli.
+  parts.push(`project:${state.nextProjectDay ?? '-'}:${state.project?.defId ?? '-'}:${state.cityProjects?.length ?? 0}`);
   for (const quest of state.quests?.items ?? []) parts.push(`${quest.defId}:${quest.target}:${quest.reward}:${quest.doneDay ?? '-'}`);
   for (const id of Object.keys(state.companies).sort()) {
     const c = state.companies[id]!;

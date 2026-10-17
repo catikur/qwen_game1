@@ -223,6 +223,12 @@ export const hud: Record<keyof typeof trHud, string> = {
   'hud.bubble.parcel': '−{percent} · {price}',
   'hud.agenda.quests': 'Quests',
   'hud.agenda.questsTitle': "This month's quests — tap to open the board",
+  'hud.agenda.fad': 'Fad',
+  'hud.agenda.fadTitle': 'Product fad — stores that stock this good sell more',
+  'hud.agenda.consortium': 'Consortium',
+  'hud.agenda.consortiumTitle': 'Rival consortium — defence: put cash to work, buy back shares or issue shares',
+  'hud.agenda.project': 'Project',
+  'hud.agenda.projectTitle': 'City project — contribution table and privilege',
   'hud.quests.title': '{month} quests',
   'hud.quests.lead':
     "Three short quests each month. Claim a finished quest's reward here; the board refreshes when the month ends and unclaimed rewards lapse.",

@@ -287,7 +287,7 @@ describe('görev panosu', () => {
     assert.equal(engine.dispatch({ type: 'CLAIM_QUEST', index: 1 }).ok, false, 'bitmeyen görevin ödülü yok');
     assert.equal(engine.dispatch({ type: 'CLAIM_QUEST', index: 5 }).ok, false);
     assert.ok(engine.dispatch({ type: 'CLAIM_QUEST', index: 0 }).ok);
-    assert.equal(getPlayer(state).cash - before, 77_000);
+    assert.equal(Math.round(getPlayer(state).cash - before), 77_000);
     assert.equal(state.questsDone, 1);
     assert.equal(engine.dispatch({ type: 'CLAIM_QUEST', index: 0 }).ok, false, 'ikinci ödül yok');
 

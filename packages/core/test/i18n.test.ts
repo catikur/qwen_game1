@@ -20,9 +20,11 @@ import {
   hasMessage,
   MOTION_TEXT,
   NPC_PROFILES,
+  PROJECTS,
   QUESTS,
   RIVAL_LINES,
   registerMessages,
+  SEASONS,
   setLocale,
   STRUCTURES,
   translate,
@@ -170,6 +172,8 @@ describe('İngilizce sözlükler', () => {
       ['rivalLine', RIVAL_LINES, Object.keys(RIVAL_LINES.expansionist)],
       ['bubble', byId(BUBBLES), ['title', 'caught']],
       ['quest', byId(QUESTS), ['title', 'hint']],
+      ['season', byId(SEASONS), ['name', 'news']],
+      ['project', byId(PROJECTS), ['name', 'pitch']],
     ];
     const expected = new Set<string>();
     for (const [kind, record, fields] of lists) {

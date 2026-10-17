@@ -1,4 +1,4 @@
-import { CARD_BY_ID, CATEGORIES, CREDIT, CRISIS_BY_ID, ERA_BY_ID, EVENT_BY_ID, fillTemplate, localizeDecimal } from '@capital/content';
+import { CARD_BY_ID, CATEGORIES, CREDIT, CRISIS_BY_ID, ERA_BY_ID, EVENT_BY_ID, GOOD_BY_ID, PROJECT_BY_ID, fillTemplate, localizeDecimal } from '@capital/content';
 import { nextGoal } from './systems/goals';
 import { OFFER_LIFETIME_DAYS, contractProgress } from './systems/contracts';
 import { sharesHeld, sharesOutstanding } from './systems/equity';
@@ -9,6 +9,9 @@ import { crisesEnabled } from './systems/economy';
 import { cardParams, cardsEnabled } from './systems/cards';
 import { campaignsLive } from './systems/rivalry';
 import { questsEnabled, questsReady } from './systems/opportunities';
+import { activeFad } from './systems/living';
+import { projectStandings, projectsEnabled } from './systems/projects';
+import { consortiumEnabled, consortiumStake } from './systems/consortium';
 import { formatMoney, monthName } from './selectors';
 import { tc } from './i18n';
 import type { GameState } from './types';
@@ -27,6 +30,7 @@ import type { GameState } from './types';
  */
 export type AgendaKind =
   | 'raid'
+  | 'consortium'
   | 'order'
   | 'bank'
   | 'union'
@@ -42,6 +46,8 @@ export type AgendaKind =
   | 'card'
   | 'campaign'
   | 'quests'
+  | 'fad'
+  | 'project'
   | 'goal';
 
 export interface AgendaItem {
@@ -82,7 +88,24 @@ export function agenda(state: GameState): AgendaItem[] {
       }
     }
     const fraction = top / sharesOutstanding(state, player.id);
-    if (raider && fraction >= 0.1) {
+    // Konsorsiyumun önderi kendi kalemiyle görünüyor (aşağıda).
+    const consortium = consortiumEnabled(state) ? state.consortium : undefined;
+    if (consortium && !state.gameOver) {
+      const buying = day >= consortium.startsDay;
+      const stake = consortiumStake(state, consortium);
+      items.push({
+        kind: 'consortium',
+        key: `consortium:${consortium.formedDay}`,
+        urgency: buying ? (stake >= 0.25 ? 3 : 2) : 2,
+        daysLeft: buying ? null : consortium.startsDay - day,
+        label: buying
+          ? tc('core.agenda.consortiumBuying', { leader: consortium.names[0] ?? '', percent: Math.round(stake * 100) })
+          : tc('core.agenda.consortiumWarning', { leader: consortium.names[0] ?? '', count: consortium.memberIds.length - 1 }),
+        tone: 'bad',
+        ...(buying ? { progress: Math.min(1, stake / 0.5) } : {}),
+      });
+    }
+    if (raider && fraction >= 0.1 && raider !== consortium?.leaderId) {
       items.push({
         kind: 'raid',
         key: `raid:${raider}`,
@@ -374,6 +397,41 @@ export function agenda(state: GameState): AgendaItem[] {
           : tc('core.agenda.quests', { month: monthName(board.startDay), done, total: board.items.length }),
       tone: ready > 0 ? 'good' : 'neutral',
       progress: done / board.items.length,
+    });
+  }
+
+  // Şehir projesi (Tur 37d): katkı penceresinde sıran, inşaatta kalan gün.
+  const project = state.project;
+  if (project && projectsEnabled(state) && !state.gameOver) {
+    const def = PROJECT_BY_ID[project.defId];
+    const funding = project.phase === 'funding';
+    const rank = projectStandings(state, project).findIndex((row) => row.companyId === state.playerCompanyId) + 1;
+    items.push({
+      kind: 'project',
+      key: `project:${project.defId}:${project.openedDay}`,
+      urgency: funding ? 1 : 0,
+      daysLeft: Math.max(0, (funding ? project.closesDay : project.doneDay) - day),
+      label: funding
+        ? rank > 0
+          ? tc('core.agenda.projectRank', { project: def.name, rank })
+          : tc('core.agenda.projectOpen', { project: def.name })
+        : tc('core.agenda.projectBuilding', { project: def.name }),
+      tone: rank === 1 ? 'good' : 'neutral',
+      tileId: project.tileId,
+    });
+  }
+
+  // Ürün modası (Tur 37d): hangi ürün, kaç gün kaldı — rafı çevirmek için zaman.
+  const fad = activeFad(state);
+  const fadGood = fad ? GOOD_BY_ID[fad.goodId] : undefined;
+  if (fad && fadGood && !state.gameOver) {
+    items.push({
+      kind: 'fad',
+      key: `fad:${fad.goodId}:${fad.startDay}`,
+      urgency: 0,
+      daysLeft: Math.max(0, fad.endDay - day),
+      label: tc('core.agenda.fad', { good: fadGood.name }),
+      tone: 'good',
     });
   }
 

@@ -9,8 +9,9 @@ import type {
   LoanKind,
   MotionKind,
   NpcProfileDef,
-  UnionResponse,
+  ProjectId,
   QuestKind,
+  UnionResponse,
   WagePolicy,
 } from '@capital/content';
 import type { RngState } from './rng';
@@ -497,6 +498,22 @@ export interface FeatureFlags {
   bubbles?: boolean;
   /** Görev panosu (Tur 37c). Aynı sözleşme: yokluğu AÇIK. */
   quests?: boolean;
+  /**
+   * Canlı pazar: kategori eğilimleri, mevsimler, ürün modaları (Tur 37d).
+   * Yokluğu AÇIK; `randomEvents` kapalıyken (laboratuvar) de çalışmıyor.
+   */
+  livingMarket?: boolean;
+  /**
+   * Şehir projeleri: belediyenin dev projesine katkı yarışı (Tur 37d).
+   * Yokluğu AÇIK; `randomEvents` kapalıyken (laboratuvar) de çalışmıyor.
+   */
+  cityProjects?: boolean;
+  /**
+   * Rakip konsorsiyumu: öndeki pasif oyuncuya ortak baskın (Tur 37d-3).
+   * Yokluğu AÇIK; baskınlar ya da rakipler kapalıyken, laboratuvarda da
+   * çalışmıyor.
+   */
+  consortium?: boolean;
 }
 
 /** Masadaki karar kartı (Tur 37b). */
@@ -575,6 +592,53 @@ export interface QuestBoard {
   /** Bir sonraki ayın ilk günü: pano o gün yenileniyor. */
   endDay: number;
   items: QuestState[];
+}
+
+/** Süren şehir projesi (Tur 37d). */
+export interface ProjectState {
+  defId: ProjectId;
+  districtId: number;
+  /** Şantiyenin ve simge yapının karesi. */
+  tileId: number;
+  openedDay: number;
+  /** Katkı penceresi bu gün kapanıyor; sponsor belli oluyor, inşaat başlıyor. */
+  closesDay: number;
+  /** İnşaat bu gün bitiyor; etki başlıyor. */
+  doneDay: number;
+  phase: 'funding' | 'building';
+  /** Şirket → toplam katkı (₺). */
+  contributions: Record<string, number>;
+  sponsorId?: string;
+  /** Sponsor devralınsa da ad okunsun. */
+  sponsorName?: string;
+  /** Sitenin proje öncesi hâli (kayıtta dursun; bilgi için). */
+  previousStructureId: string | null;
+}
+
+/** Bitmiş şehir projesi: bölgeye kalıcı etkisi buradan okunuyor. */
+/**
+ * Rakip konsorsiyumu (Tur 37d-3). Hisseler önderin hesabına toplanıyor;
+ * üyeler alımın bedelini kasalarından paylaşıyor.
+ */
+export interface ConsortiumState {
+  leaderId: string;
+  memberIds: string[];
+  /** Görünen adlar: üye oyundan çıksa da haber ve çip okunur kalsın. */
+  names: string[];
+  formedDay: number;
+  /** Alımın başladığı gün (duyuru + savunma penceresi). */
+  startsDay: number;
+  /** Önderin kuruluş günündeki payı: konsorsiyumun topladığı bunun üstü. */
+  baseShares: number;
+}
+
+export interface CompletedProject {
+  defId: ProjectId;
+  districtId: number;
+  tileId: number;
+  doneDay: number;
+  sponsorId?: string;
+  sponsorName?: string;
 }
 
 /** Rakip kampanyası (Tur 37b): bir rakibin oyuncunun kategorisine süreli saldırısı. */
@@ -704,6 +768,16 @@ export interface GameState {
   quests?: QuestBoard;
   /** Tamamlanan görev sayısı (bütün oyun). */
   questsDone?: number;
+  /** Süren şehir projesi (Tur 37d). */
+  project?: ProjectState;
+  /** Bir sonraki projenin açılış günü; yoksa ilk projenin takvimi kurulur. */
+  nextProjectDay?: number;
+  /** Bitmiş şehir projeleri. */
+  cityProjects?: CompletedProject[];
+  /** Oyuncuya karşı kurulan rakip konsorsiyumu (Tur 37d-3). */
+  consortium?: ConsortiumState;
+  /** Dağılan konsorsiyumdan sonra yenisinin en erken günü. */
+  nextConsortiumDay?: number;
   /**
    * Masadaki sözleşme teklifi ve aktif sözleşme. Üçü de seçime bağlı:
    * eski kayıtlarda yoklukları "teklif yok" demek, şema sürümü sabit.
@@ -906,6 +980,8 @@ export type GameCommand =
   | { type: 'CLAIM_BUBBLE' }
   /** Panodaki tamamlanmış görevin ödülünü al (Tur 37c). */
   | { type: 'CLAIM_QUEST'; index: number }
+  /** Süren şehir projesine katkı ver (Tur 37d). */
+  | { type: 'CONTRIBUTE_PROJECT'; amount: number }
   /** Bankadan kredi: vadeli ya da arsa teminatlı. */
   | { type: 'TAKE_LOAN'; kind: LoanKind; amount: number; termDays: number }
   /** Bir krediyi kalan anaparasıyla erken kapatır. */

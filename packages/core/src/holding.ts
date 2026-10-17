@@ -10,6 +10,7 @@ import { runGoalTick } from './systems/goals';
 import { respondUnion } from './systems/labor';
 import { settleCardAway } from './systems/cards';
 import { runQuestTick, settleBubbleAway } from './systems/opportunities';
+import { settleConsortiumAway } from './systems/consortium';
 import { capRemaining, playerBuy } from './systems/orders';
 import { createNewGame } from './worldgen';
 import type { CityDirective, CommandResult, DormantCity, GameState, HoldingState, RemotePayout } from './types';
@@ -390,6 +391,8 @@ function liveAway(active: GameState, holding: HoldingState, city: DormantCity): 
   // Fırsat balonuna dokunan yok. Görev panosu ölçülmeye devam ediyor; ödülü
   // oyuncu şehre dönünce, ay bitmeden alıyor (Tur 37c).
   settleBubbleAway(s);
+  // Konsorsiyum oynanan şehrin tehdidi: uzaktaki şehir zaten pasif (Tur 37d-3).
+  settleConsortiumAway(s);
 
   // Savunma talimatı (Tur 32): kâr payından önce — şehrin korunması önce geliyor.
   city.lastDefense = player && !s.gameOver && cityDirective(s).defend ? localDefense(s) : undefined;

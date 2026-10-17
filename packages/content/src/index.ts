@@ -20,6 +20,9 @@ export * from './holding';
 export * from './economy';
 export * from './stories';
 export * from './opportunities';
+export * from './living';
+export * from './projects';
+export * from './consortium';
 
 /** İçerik sürümü — save migration'ında denge değişikliklerini izlemek için. */
 export const CONTENT_VERSION = 6;

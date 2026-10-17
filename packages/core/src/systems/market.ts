@@ -21,6 +21,8 @@ import {
   zeroByCategory,
 } from './demand';
 import { collectEventModifiers } from './events';
+import { activeFad } from './living';
+import { projectAttraction, projectUpkeep } from './projects';
 import { buildingStrikeFactor, serviceFactor, wageFor } from './labor';
 import { marketingLeverage } from './focus';
 import { SURPLUS_HAIRCUT, distributionRelief, unitCogsFor } from './supply';
@@ -251,7 +253,9 @@ export function estimateInvestment(
   // Süren kart etkileri (Tur 37b) yeni binaya da ilk günden uygulanıyor: tahmin de görsün (Codex #62).
   const wages =
     wageFor(state, companyId, defId, districtId) * overheadMultiplier(state, companyId) * boostMultiplier(state, companyId, 'wages');
-  const fixedCosts = upkeepFor(state, companyId, defId) * boostMultiplier(state, companyId, 'upkeep') + wages;
+  // Sponsorun belediye ayrıcalığı (Tur 37d): bölgedeki bakım indirimi yeni binaya da.
+  const fixedCosts =
+    upkeepFor(state, companyId, defId) * boostMultiplier(state, companyId, 'upkeep') * projectUpkeep(state, companyId, districtId) + wages;
   // Geri ödeme, oyuncunun gerçekten ödeyeceği maliyete göre hesaplanır.
   const investmentCost = def.cost * getCeoModifiers(company.ceoId).buildCost * constructionMultiplier(state);
 
@@ -403,7 +407,8 @@ export function estimateInvestment(
     Math.pow(qualityFor(state, companyId, defId), 1.15) *
     brand *
     Math.pow(1 / priceMultiplier, category.elasticity) *
-    boostMultiplier(state, companyId, 'attraction', def.category);
+    boostMultiplier(state, companyId, 'attraction', def.category) *
+    projectAttraction(state, companyId, districtId);
   const sources = categoryAttractiveness(state, def.category, companyId);
 
   let reachable = 0;
@@ -499,7 +504,8 @@ function categoryAttractiveness(
         Math.pow(qualityFor(state, building.companyId, building.defId), 1.15) *
         brand *
         priceFactor *
-        boostMultiplier(state, building.companyId, 'attraction', categoryId);
+        boostMultiplier(state, building.companyId, 'attraction', categoryId) *
+        projectAttraction(state, building.companyId, building.districtId);
       const entry = byDistrict.get(building.districtId) ?? { total: 0, own: 0 };
       entry.total += value;
       if (building.companyId === companyId) entry.own += value;
@@ -552,6 +558,8 @@ function marketStep(state: GameState): void {
   applyAutoPricing(state);
 
   const mods = collectEventModifiers(state);
+  // Moda olan ürün (Tur 37d): kategori içinde talep ona kayıyor.
+  const fadGood = activeFad(state)?.goodId ?? null;
   const buildings = Object.values(state.buildings);
 
   // Outlet'leri district kırılımıyla indeksle ve rakip sayacını kur.
@@ -594,6 +602,9 @@ function marketStep(state: GameState): void {
         if (entry.archetype === district.archetype) {
           eventMultiplier *= entry.multipliers[categoryId] ?? 1;
         }
+      }
+      for (const entry of mods.districtDemand) {
+        if (entry.districtId === district.id) eventMultiplier *= entry.multipliers[categoryId] ?? 1;
       }
       district.demand[categoryId] = Math.max(
         0,
@@ -664,7 +675,7 @@ function marketStep(state: GameState): void {
       // payı için ayrı yarışır. Pay bölgeye göre değişir — ekmek orta
       // gelir mahallesinde, bisküvi turizmde daha çok satar. Kapasite
       // ise raflar arasında ORTAKTIR.
-      for (const { good, share } of goodShares(district.archetype, categoryId)) {
+      for (const { good, share } of goodShares(district.archetype, categoryId, fadGood)) {
         const goodDemand = demandUnits * share;
         if (goodDemand <= 0) continue;
 
@@ -714,7 +725,8 @@ function marketStep(state: GameState): void {
                 priceFactor *
                 access *
                 serviceFactor(state, building.companyId) *
-                boostMultiplier(state, building.companyId, 'attraction', categoryId),
+                boostMultiplier(state, building.companyId, 'attraction', categoryId) *
+                projectAttraction(state, building.companyId, building.districtId),
               capacityLeft,
             });
           }

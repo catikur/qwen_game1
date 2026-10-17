@@ -5,11 +5,15 @@ import { createRng, nextFloat, pickWeighted } from '../rng';
 import { pushNews } from '../news';
 import type { GameState } from '../types';
 import { activeCrisis } from './economy';
+import { activeFad, livingDemand, livingEnabled } from './living';
+import { projectDistrictDemand } from './projects';
 
 export interface EventModifiers {
   demand: Record<CategoryId, number>;
   /** Sadece belirli arketipe uygulanan çarpanlar. */
   archetypeDemand: Array<{ archetype: string; multipliers: Partial<Record<CategoryId, number>> }>;
+  /** Sadece belirli bölgeye uygulanan çarpanlar (şehir projeleri, Tur 37d). */
+  districtDemand: Array<{ districtId: number; multipliers: Partial<Record<CategoryId, number>> }>;
   /** Ürün → spot fiyat çarpanı. Zinciri olan oyuncu bundan etkilenmez. */
   goodPrice: Record<string, number>;
   costMultiplier: number;
@@ -28,6 +32,8 @@ export function collectEventModifiers(state: GameState): EventModifiers {
   const mods: EventModifiers = {
     demand,
     archetypeDemand: [],
+    // Bitmiş şehir projeleri (Tur 37d): bölgeye ve komşulara kalıcı talep.
+    districtDemand: projectDistrictDemand(state),
     goodPrice: {},
     costMultiplier: 1,
     landValueDrift: 0,
@@ -67,6 +73,14 @@ export function collectEventModifiers(state: GameState): EventModifiers {
           mods.demand[key] = (mods.demand[key] ?? 1) * (mult as number);
         }
       }
+    }
+  }
+
+  // Canlı pazar (Tur 37d): eğilim × mevsim × moda, aynı boru hattından.
+  if (livingEnabled(state)) {
+    const fad = activeFad(state);
+    for (const category of CONSUMER_CATEGORIES) {
+      mods.demand[category] = (mods.demand[category] ?? 1) * livingDemand(state, category, fad);
     }
   }
 

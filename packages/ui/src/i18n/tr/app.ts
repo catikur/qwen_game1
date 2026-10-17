@@ -89,6 +89,13 @@ export const app = {
   // CompetitionPanel.tsx: rekabet kartları.
   'app.rivalry.empty':
     'Henüz bir mağazan yok. Bir kategoride satış yapmaya başladığında rakibine karşı nerede olduğunu — kalite, marka ve fiyat olarak — burada görürsün.',
+  'app.rivalry.pulse.title': 'Pazar nabzı',
+  'app.rivalry.pulse.season': 'Mevsim: {season}',
+  'app.rivalry.pulse.lead': 'Kategorinin bugünkü talebi: eğilim × mevsim × moda. Ok eğilimin yönünü, yanındaki sayı varacağı yeri gösteriyor.',
+  'app.rivalry.pulse.trend': 'hedef {target} · {days} gün',
+  'app.rivalry.pulse.trendTitle': 'Eğilim: bu kategorinin talebi kaç gün içinde nereye varacak',
+  'app.rivalry.pulse.seasonChip': 'mevsim {change}',
+  'app.rivalry.pulse.fad': 'Moda: {good} · {days} gün',
   'app.rivalry.cardLabel': '{category} rekabeti',
   'app.rivalry.meta': '{outlets} mağaza · pay',
   'app.rivalry.you': 'Sen',
