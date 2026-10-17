@@ -3,6 +3,7 @@ import { runMarketTick } from './systems/market';
 import { runCrisisTick } from './systems/economy';
 import { runCardTick } from './systems/cards';
 import { runRivalryTick } from './systems/rivalry';
+import { runBubbleTick } from './systems/opportunities';
 import { runEntrantTick } from './systems/entrants';
 import { runCouncilTick } from './systems/council';
 import { runLaborTick } from './systems/labor';
@@ -92,4 +93,8 @@ export function simulateCityDay(state: GameState): void {
   runEntrantTick(state);
   // Banka: taksit, kredili hesap, not, haciz.
   runCreditTick(state);
+  // Fırsat balonu (Tur 37c) günün SONUNDA: tutarı bugünkü cirodan. Görev
+  // panosu burada değil: net değerin günlük hesabından SONRA çalışıyor
+  // (`runQuestTick`'e bakın).
+  runBubbleTick(state);
 }

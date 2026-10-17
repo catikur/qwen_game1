@@ -15,7 +15,7 @@ import {
   verifyRun,
 } from '../src/league';
 import type { LeagueRun, RunVerdict } from '../src/league';
-import { setLocale } from '@capital/content';
+import { BUBBLE_TIMING, setLocale } from '@capital/content';
 import { LEAGUE_DAYS, leagueSeed, leagueWeekId } from '../src/systems/league';
 import { createNewGame } from '../src/worldgen';
 import type { GameState } from '../src/types';
@@ -127,6 +127,23 @@ describe('lig güvenliği', () => {
     } finally {
       setLocale('tr');
     }
+  });
+
+  test('iz fırsatları da işletiyor: balon takvimi ya da ödülü değişince iz değişiyor (Codex #63)', () => {
+    const base = computeSimFingerprint();
+    const timing = BUBBLE_TIMING as { firstDay: number; amountMin: number };
+    const { firstDay, amountMin } = timing;
+    try {
+      timing.firstDay = firstDay + 3;
+      assert.notEqual(computeSimFingerprint(), base, 'balon takvimi izi değiştirmiyor');
+      timing.firstDay = firstDay;
+      timing.amountMin = amountMin + 7_000;
+      assert.notEqual(computeSimFingerprint(), base, 'balon ödülü izi değiştirmiyor');
+    } finally {
+      timing.firstDay = firstDay;
+      timing.amountMin = amountMin;
+    }
+    assert.equal(computeSimFingerprint(), base);
   });
 
   test('dürüst koşu doğrulanıyor; skor, eğri, ad ve CEO tekrarın kendisinden', async () => {

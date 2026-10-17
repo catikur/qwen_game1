@@ -70,6 +70,11 @@ export interface GameContextValue {
    * çipleri ve haberler "olay yerine git" için bunu çağırıyor.
    */
   focusOn: (target: FocusTarget) => void;
+  /**
+   * Bir karenin (binası varsa çatısının) ekrandaki yeri, sayfa pikseliyle;
+   * sahne yoksa null. Fırsat balonu (Tur 37c) her karede buna bağlanıyor.
+   */
+  projectTile?: (tileId: number) => { x: number; y: number; visible: boolean } | null;
   /** Tohum Ligi tablosu — barındırıcıda paylaşılan, değilse bu tarayıcıya ait. */
   league: LeagueBoard;
   /** Ses manzarası: ilk dokunuşta başlar; sessize alma hatırlanır. */

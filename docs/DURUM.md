@@ -4,7 +4,7 @@
 > `pnpm bench` çıktısından; iddialar `pnpm balance` ve `pnpm playtest`
 > tarafından her koşuda doğrulanıyor.
 >
-> Son güncelleme: şema **v6**, 36 tur (Tur 33 denendi ve geri alındı; Tur 34 eski görünüme canlılık ekledi; Tur 35 arayüzü Lite'ın "Cam & Bulut" diline taşıdı; Tur 36 şehre ayrıntı kattı; Tur 37a geç oyuna yönetim yükü, servet vergisi ve kriz dönemleri getirdi; Tur 37b karar kartlarını ve rakip hikâyelerini ekledi).
+> Son güncelleme: şema **v6**, 36 tur (Tur 33 denendi ve geri alındı; Tur 34 eski görünüme canlılık ekledi; Tur 35 arayüzü Lite'ın "Cam & Bulut" diline taşıdı; Tur 36 şehre ayrıntı kattı; Tur 37a geç oyuna yönetim yükü, servet vergisi ve kriz dönemleri getirdi; Tur 37b karar kartlarını ve rakip hikâyelerini ekledi; Tur 37c fırsat balonlarını ve aylık görev panosunu getirdi).
 
 ---
 
@@ -2714,6 +2714,146 @@ geçiyor ve zafer 57 gün gecikiyor.
 - Mobil bölüme her cihazda "kart rıhtımın üstünde ve ekranda" kontrolü
   eklendi.
 
+### Tur 37c — Fırsat balonları ve görev panosu
+
+Kart, kampanya ve kriz şehre bir şey yapıyordu; oyuncu yalnızca cevap
+veriyordu. Bu aşama dikkati ödüllendiriyor: mağazaların çatısında beliren
+fırsat balonları ve her ay dönen kısa görevler.
+
+**Fırsat balonları** (`content/src/opportunities.ts`,
+`core/src/systems/opportunities.ts`, `ui/src/OpportunityBubble.tsx`).
+- 5 tür:
+  - toplu sipariş: bağlandığı mağazanın 2 günlük cirosu;
+  - VIP müşteri: 4 günlük ciro;
+  - kapıda kuyruk: mağazanın kategorisinde çekicilik +%20, 6 gün;
+  - yatırımcı: merkezin üstünde, kâr eğiliminin 3 günü;
+  - indirimli arsa: oyuncunun binalarına en çok 3 kare uzak boş parsel,
+    %30 indirimle.
+- Balon bağlandığı yere bağlı: mağaza balonu oyuncunun o mağazasına (bina
+  kimliğiyle; aynı kareye yeniden kurulan mağaza sayılmıyor), yatırımcı
+  genel merkeze, indirimli arsa boş parsele. Mağaza yıkılır ya da
+  satılırsa, merkez değişirse, parsele yapı dikilirse balon sönüyor ve
+  ödemiyor (Codex #63: kaybolan mağazanın siparişi ödeniyor, yapılı parsel
+  boş arsa fiyatıyla veriliyordu).
+- Nakit ödül 15 B – 1,5 M ₺ arası, bine yuvarlı. Tutar balonun çıktığı
+  gün sabitleniyor: gösterilen, ödenen.
+- **Takvim:** ilk balon 24–31. gün; sonraki, öncekinin bitişinden 18–32
+  gün sonra. 720 günde ~21 balon.
+- **Ömür:** 8 gün. Normal hızda ~21 sn, en hızlıda ~4 sn; duraklatınca
+  balon bekliyor. Simülasyon günle ilerlediği (ve lig tekrarı günü
+  tekrarladığı) için Lite'taki saniyelik ömür burada gün.
+- Zar dışsal (tohum, gün); `state.rng` çekilmiyor. Yakalamak
+  `CLAIM_BUBBLE` komutu, lig günlüğüne giriyor.
+- Lig simülasyon izi fırsatları da işletiyor: iz senaryosu ilk gün bir
+  bakkal kuruyor, her balonu ve tamamlanan her görevi alıyor; izde balon
+  ve görev durumu da var. Boşta dünyada balon çıkmıyordu: takvim ya da
+  ödül değişince iz aynı kalır, dürüst koşu tekrarda sahte sayılırdı
+  (sürüm farkı yerine) (Codex #63).
+- Uzaktaki şehirde dokunan yok: balon sönüyor. Bina tahmini balon
+  üretmiyor; süren "kuyruk" etkisi tahmine giriyor.
+- **Arayüz:**
+  - balon her karede çatıya bağlanıyor (`CityRenderer.screenOfTile`);
+    kuyruğu binayı gösteriyor, simgenin çevresinde geri sayım halkası var;
+  - bina ekran dışındaysa balon ekranın kenarına yapışıyor, taşmıyor;
+  - bina bir yan panelin (lens, yatırım listesi, bina penceresi) arkasında
+    kalırsa balon panelin üstüne binmiyor, kenarına yapışıyor (önce sağdaki
+    bina penceresinin başlığını örtüyordu; şehir projesi karelerinde
+    görüldü);
+  - ilk üç balonda "Dokun, yakala";
+  - yakalayınca ödül balonun yerinden yukarı süzülüyor ve tost çıkıyor;
+  - pencere açıkken balon gizli.
+
+**Görev panosu.**
+- **"Haftalık" değil, aylık.** Oyun haftası normal hızda ~18 sn; görev
+  için kısa. Pano tarih çubuğundaki takvim ayıyla dönüyor; ilk pano
+  1 Şubat'ta (31. gün) kuruluyor.
+- 8 tür; panoya üçü geliyor:
+  - 1–2 yeni mağaza;
+  - bir üretim tesisi (mağaza dışında her bina);
+  - 2 arsa;
+  - en güçlü kategoride +5 puan pay (ödülüne marka +0,03 ekleniyor);
+  - günlük ciroyu ×1,2'ye çıkarmak;
+  - kasada kâr eğiliminin 15 günü;
+  - net değerde hemen öndeki rakibi geçmek (en çok %30 öndeyse). Görev
+    adımı şehir gününün içinde değil, net değerin günlük hesabından SONRA
+    çalışıyor: önce geçiş bir gün geç sayılıyor (ayın son gününde geçenin
+    ödülü düşüyordu) ve pano dünkü sıralamayla kuruluyordu. Görev adımında
+    ikinci bir hesap da çözüm değildi: net değer geçmişine günde iki örnek
+    yazıyordu (Codex #63);
+  - bir balon yakalamak (ay içinde takvimde balon varsa).
+- Başarılı her komuttan sonra panonun bütün görevleri ölçülüyor; holding
+  aktarımı uzaktaki şehre gittiyse o şehrin panosu da. Günlük adım pano
+  değişirken eskisini değerlendirmediği için panonun son gününde yapılan
+  eylem (mağaza, parsel, kasaya giren para, net değeri yeniden hesaplayan
+  aktarım) kayboluyordu (Codex #63). Görev hemen tamamlanınca ödülü aynı
+  gün alınabiliyor. Gün arasında geçme görevi güncel net değere bakıyor
+  (`netWorthNow`: kayıtlı değeri ve geçmişi değiştirmeden); ödül, balon
+  ve indirimli parsel net değeri kayıt yenilenmeden de değiştiriyor.
+- Hedef, pano kurulurken bugünkü şehirden türüyor. Sayaç görevleri
+  panodan sonrasını sayıyor.
+- Ödül: kâr eğiliminin 0,4–0,75 günü (10 B – 2,5 M ₺), pano kurulurken
+  sabit.
+- **Ödül komutla alınıyor** (`CLAIM_QUEST`); ay bitince alınmayan ödül
+  panoyla birlikte düşüyor. Gündemdeki "Görevler" çipi ödül hazırsa öne
+  çıkıyor.
+  - İlk sürümde ödül kendiliğinden ödeniyordu. Denge sınavında iki
+    kontrol kırıldı: savunmasız yavaş oyuncu Dengeli'de artık düşmüyordu
+    (bekleyen oyuncu "biriktir" ve "payını koru" ödüllerini topluyordu),
+    zincir deneyi de 2/3 tohuma düştü. Sistem dikkati ödüllendirmeli,
+    beklemeyi değil. Komutla alınca ikisi de geçti.
+- Tarih çubuğu UTC'ye alındı: batı saat dilimlerinde tarih bir gün geride
+  görünüyordu ve pano çubuktaki aydan önce dönerdi.
+
+**Ölçüm** (20 tohum, 720 gün; vekil oyuncu balonu hep yakalıyor, görev
+ödülünü hep alıyor — üst sınır):
+
+| | Zafer günü farkı | Net değer oranı | 720 günde zafer |
+|---|---|---|---|
+| 37c kapalı | — | 1 | 16/20 |
+| İlk sürüm | −50 ± 7 | 1,13 | 20/20 |
+| Son | −26 ± 8 | 1,07 | 19/20 |
+
+- İlk sürümde ayrık ölçüm: görevler −32 ± 7, balonlar −24 ± 7 gün.
+  Görev ödülü kâr eğiliminin 5–9 günüydü, şimdi 0,4–0,75 günü. Balonlar
+  seyrekleşti (14–26 → 18–32 gün arayla) ve hafifledi.
+- Tek bir balon türü öne çıkmıyor: kuyruksuz −14 ± 7, arsasız −16 ± 8.
+- **Gürültü:** 50. günde verilen 100 B ₺ hediye zafer gününü tohum başına
+  ±50 gün oynatıyor. Beş tohumluk ölçüm bu yüzden yanıltıcıydı; kararlar
+  20 tohumla verildi.
+- Denge sınavının vekili balona dokunmuyor ve ödül almıyor. Sınav
+  sonuçları 37b ile aynı.
+
+**Laboratuvar.** `flags.bubbles` ve `flags.quests` eklendi (yoklukları
+açık). Kartlar kapalıyken balonun kuyruk etkisi sürüyor; balon bayrağı
+kapanınca kalkıyor.
+
+**Doğrulama.**
+- Yeni birim testleri (`opportunities.test.ts`, 15 test):
+  - takvim (UTC ay başı);
+  - balon ömrü, nakit, kuyruk etkisi ve bayrağı, indirimli arsa;
+  - bayrak ve uzak şehir;
+  - zarın dışsal olması (`state.rng` aynı kalıyor);
+  - lig tekrarı: balon ve görev ödülleri günlükte, skor aynı;
+  - bina tahmini;
+  - pano kuruluşu ve yenilenmesi;
+  - ödül alma: bir kez, bitmeyen görev reddediliyor, ay sonunda düşüyor;
+  - pay ve geçme görevleri, sayaç görevleri, bayrak.
+- i18n tamlık testi balon ve görev metinlerini de kapsıyor.
+- Oynanış testine eklenen bölüm ("Fırsat balonu ve görev panosu", 9
+  kontrol, duman koşusunda):
+  - balon çatıda, ödülü rakamla yazılı;
+  - dokununca ödül kasada, tost çıkıyor, ödül balonun yerinden süzülüyor;
+  - ekran dışındaki balon kenarda ve ekranın içinde;
+  - pencere açıkken gizli;
+  - gündemde "ödül hazır", pano açılıyor, ödül alınıyor;
+  - konsol temiz.
+- Mobil bölüme her cihazda "balon ekranda ve rıhtımın üstünde" kontrolü
+  eklendi.
+- Kareler arasında bulunan hata: balon kalkınca React çapanın `<div>`'ini
+  patlama katmanı için yeniden kullanıyordu. Elle verilen `transform`
+  katmanda kalıyor, ödül ekranın öbür ucundan süzülüyordu. Anahtarlı
+  yapıyla düzeldi.
+
 ---
 
 ## 3. Ölçülen durum
@@ -2795,11 +2935,11 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi) |
-| Birim testi | **337 test** (`pnpm test`; Tur 24'te render paketi de) |
+| Birim testi | **361 test** (`pnpm test`; Tur 24'te render paketi de) |
 | Denge testi | **288 kontrol, hepsi geçiyor** (20 bölüm, süreleriyle; ~11 dk) |
-| Tarayıcı testi | **370 kontrol, hepsi geçiyor**, 0 konsol hatası (~17–25 dk); duman koşusu 111 (~5 dk, rehber dahil) |
+| Tarayıcı testi | **382 kontrol, hepsi geçiyor**, 0 konsol hatası (~17–25 dk); duman koşusu 121 (~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + duman oynanışı |
-| Kapsam | 35 bina · 25 ürün · 7 kategori · 8 rakip profili · 10 CEO · 22 olay (11 şehir + 11 sektör) · 2 kriz · 12 karar kartı · 70 rakip sözü · 10 şehir yapısı (6 siluet) |
+| Kapsam | 35 bina · 25 ürün · 7 kategori · 8 rakip profili · 10 CEO · 22 olay (11 şehir + 11 sektör) · 2 kriz · 12 karar kartı · 70 rakip sözü · 5 fırsat balonu · 8 görev türü · 10 şehir yapısı (6 siluet) |
 
 ### Render (Tur 6 sonrası)
 

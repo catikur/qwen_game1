@@ -226,6 +226,9 @@ export const panels: Record<keyof typeof trPanels, string> = {
   'panels.help.step.stories.title': 'Decisions on the table, voices for the rivals.',
   'panels.help.step.stories.body':
     ' Now and then a decision card opens: a viral video, an inspection, a supply offer. Every option lists its cost and payoff; if you do not decide, "do nothing" applies when time runs out. Rival CEOs now speak too, and sometimes they open a 45-day price war against your strongest category. Hold your share and the campaign backfires, strengthening your brand.',
+  'panels.help.step.opportunities.title': 'Watch the city, collect rewards.',
+  'panels.help.step.opportunities.body':
+    ' Now and then an opportunity bubble appears on one of your roofs: a bulk order, a VIP customer, a queue at the door, an investor or a discount plot. Tap it within a few days and the reward is yours; pausing keeps it waiting. At the start of each month the quest board gets three short quests ("Quests" in the agenda). Claim a finished quest\'s reward from the board before the month ends.',
   'panels.company.boosts': 'Active card effects',
   'panels.help.step.late.body':
     ' Past 30 buildings, each building adds a little to upkeep and wages (overhead); wealth above ₺25M is taxed progressively, so idle cash melts away. Now and then a crisis hits, announced a month ahead: in a recession demand drops but land and construction get cheaper; in a rate shock the overdraft and new loans get expensive, while term loans keep their fixed rate.',

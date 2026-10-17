@@ -51,7 +51,26 @@ export function formatMoney(value: number): string {
 
 export function formatDate(day: number): string {
   const date = new Date(EPOCH + day * 86_400_000);
-  return date.toLocaleDateString(numberLocale(), { day: '2-digit', month: 'short', year: 'numeric' });
+  // Takvim UTC'de: batı saat dilimlerinde tarih bir gün geride görünüyordu
+  // ve ay başında dönen görev panosu (Tur 37c) çubuktaki aydan önce dönerdi.
+  return date.toLocaleDateString(numberLocale(), { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' });
+}
+
+/** Oyun gününün takvimdeki ay günü (1..31). */
+export function dayOfMonth(day: number): number {
+  return new Date(EPOCH + day * 86_400_000).getUTCDate();
+}
+
+/** `day`'den SONRAKİ ilk ay başının oyun günü. */
+export function nextMonthStart(day: number): number {
+  const date = new Date(EPOCH + day * 86_400_000);
+  return Math.round((Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + 1, 1) - EPOCH) / 86_400_000);
+}
+
+/** Oyun gününün ay adı (etkin dilde, "Mart"). */
+export function monthName(day: number): string {
+  const date = new Date(EPOCH + day * 86_400_000);
+  return date.toLocaleDateString(numberLocale(), { month: 'long', timeZone: 'UTC' });
 }
 
 /** Haritada gösterilebilecek veri lensleri. */

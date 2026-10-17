@@ -9,6 +9,7 @@ import { buybackToLock, freeFloat, sharePrice, sharesHeld, sharesOutstanding } f
 import { runGoalTick } from './systems/goals';
 import { respondUnion } from './systems/labor';
 import { settleCardAway } from './systems/cards';
+import { runQuestTick, settleBubbleAway } from './systems/opportunities';
 import { capRemaining, playerBuy } from './systems/orders';
 import { createNewGame } from './worldgen';
 import type { CityDirective, CommandResult, DormantCity, GameState, HoldingState, RemotePayout } from './types';
@@ -386,6 +387,9 @@ function liveAway(active: GameState, holding: HoldingState, city: DormantCity): 
   if (player?.labor?.demand && !s.gameOver) respondUnion(s, s.playerCompanyId, 'compromise');
   // Karar kartını da bekletmiyor: varsayılan seçenek (Tur 37b).
   if (!s.gameOver) settleCardAway(s);
+  // Fırsat balonuna dokunan yok. Görev panosu ölçülmeye devam ediyor; ödülü
+  // oyuncu şehre dönünce, ay bitmeden alıyor (Tur 37c).
+  settleBubbleAway(s);
 
   // Savunma talimatı (Tur 32): kâr payından önce — şehrin korunması önce geliyor.
   city.lastDefense = player && !s.gameOver && cityDirective(s).defend ? localDefense(s) : undefined;
@@ -402,6 +406,7 @@ function liveAway(active: GameState, holding: HoldingState, city: DormantCity): 
   city.lastDividend = dividend;
 
   recomputeNetWorth(s);
+  runQuestTick(s);
   runGoalTick(s);
   city.trend = cityTrend(s);
 

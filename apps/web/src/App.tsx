@@ -36,6 +36,7 @@ import {
   ModalHost,
   NewGameScreen,
   NewsFeed,
+  OpportunityBubble,
   Toasts,
   TopBar,
   setCityDaylight,
@@ -486,6 +487,8 @@ function GameRoot({
     [engine],
   );
 
+  const projectTile = useCallback((tileId: number) => rendererRef.current?.screenOfTile(tileId) ?? null, []);
+
   const context = useMemo<GameContextValue>(
     () => ({
       engine,
@@ -502,6 +505,7 @@ function GameRoot({
       importSave,
       importSaveText,
       focusOn,
+      projectTile,
       league,
       audio,
     }),
@@ -520,6 +524,7 @@ function GameRoot({
       importSave,
       importSaveText,
       focusOn,
+      projectTile,
       league,
       audio,
     ],
@@ -539,6 +544,7 @@ function GameRoot({
           <NewsFeed />
           <Inspector />
         </div>
+        <OpportunityBubble />
         <ModalHost />
         <DecisionCard />
         <Coach />

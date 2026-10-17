@@ -1,8 +1,134 @@
 import type { ReactElement } from 'react';
-import { getDifficulty, formatPercent } from '@capital/content';
-import { companyRanking, formatMoney, getPlayer, goalLadder, nextGoal, openCityQuote, victoryNetWorth } from '@capital/core';
+import { QUEST_BY_ID, QUEST_TIMING, getDifficulty, formatPercent } from '@capital/content';
+import {
+  companyRanking,
+  formatDate,
+  formatMoney,
+  getPlayer,
+  goalLadder,
+  monthName,
+  nextGoal,
+  nextMonthStart,
+  openCityQuote,
+  questProgress,
+  questTitle,
+  questValue,
+  questsEnabled,
+  victoryNetWorth,
+} from '@capital/core';
+import type { GameState, QuestBoard, QuestState } from '@capital/core';
 import { useGame, useGameState } from './useGame';
 import { t } from './i18n';
+
+/** Görevin "şu an / hedef" satırı, görevin kendi biriminde. */
+function questNumbers(state: GameState, board: QuestBoard, quest: QuestState): string {
+  const value = questValue(state, board, quest);
+  switch (quest.defId) {
+    case 'share':
+      return `${formatPercent(Math.round(value * 100))} / ${formatPercent(Math.round(quest.target * 100))}`;
+    case 'revenue':
+    case 'cash':
+      return `${formatMoney(value)} / ${formatMoney(quest.target)}`;
+    case 'overtake':
+      return formatPercent(Math.round(questProgress(state, board, quest) * 100));
+    default:
+      return `${Math.max(0, Math.min(value, quest.target))} / ${quest.target}`;
+  }
+}
+
+/**
+ * Ayın görev panosu (Tur 37c): üç kısa görev, ilerleme, ödül. Ödül
+ * tamamlandığı gün kasaya giriyor; satır "Tamam" diye kalıyor.
+ */
+function QuestBoardView(): ReactElement | null {
+  const state = useGameState();
+  const { run, toast } = useGame();
+  if (!questsEnabled(state) || state.gameOver) return null;
+  const board = state.quests;
+  if (!board) {
+    // İlk ay: panonun ne zaman kurulacağı (ilk ay başı, `firstDay`'den sonra).
+    const opens = nextMonthStart(Math.max(state.time.day, QUEST_TIMING.firstDay - 1));
+    return (
+      <section className="quest-board quest-board-empty" data-quests="none">
+        <p className="muted">{t('hud.quests.none', { date: formatDate(opens) })}</p>
+      </section>
+    );
+  }
+  return (
+    <section className="quest-board" data-quests={board.startDay}>
+      <header className="quest-head">
+        <h3>{t('hud.quests.title', { month: monthName(board.startDay) })}</h3>
+        <span className="quest-days">{t('hud.quests.daysLeft', { days: Math.max(0, board.endDay - state.time.day) })}</span>
+      </header>
+      <p className="muted quest-lead">{t('hud.quests.lead')}</p>
+      <ul className="quest-list">
+        {board.items.map((quest, index) => {
+          const def = QUEST_BY_ID[quest.defId];
+          const done = quest.doneDay !== undefined;
+          const ready = done && !quest.claimed;
+          const progress = questProgress(state, board, quest);
+          const title = questTitle(state, quest);
+          return (
+            <li
+              key={quest.defId}
+              className={`quest${quest.claimed ? ' quest-done' : ''}${ready ? ' quest-ready' : ''}`}
+              data-quest={quest.defId}
+            >
+              <span className="quest-check" aria-hidden="true">
+                {quest.claimed ? '✓' : ready ? '!' : ''}
+              </span>
+              <div className="quest-body">
+                <div className="quest-row">
+                  <span className="quest-title">{title}</span>
+                  <span className="quest-reward">
+                    {t(def.brand && quest.category ? 'hud.quests.rewardBrand' : 'hud.quests.reward', {
+                      amount: formatMoney(quest.reward),
+                    })}
+                  </span>
+                </div>
+                {ready ? (
+                  <div className="quest-claim">
+                    <button
+                      type="button"
+                      className="primary"
+                      data-quest-claim={index}
+                      onClick={() => {
+                        if (run({ type: 'CLAIM_QUEST', index })) {
+                          toast(t('hud.quests.claimedToast', { amount: formatMoney(quest.reward) }), 'good');
+                        }
+                      }}
+                    >
+                      {t('hud.quests.claim')}
+                    </button>
+                    <span className="quest-detail">{t('hud.quests.claimHint')}</span>
+                  </div>
+                ) : done ? (
+                  <p className="quest-detail">{t('hud.quests.done', { day: quest.doneDay ?? 0 })}</p>
+                ) : (
+                  <>
+                    <div
+                      className="goal-bar"
+                      role="progressbar"
+                      aria-valuemin={0}
+                      aria-valuemax={100}
+                      aria-valuenow={Math.round(progress * 100)}
+                      aria-label={title}
+                    >
+                      <span style={{ width: `${Math.round(progress * 100)}%` }} />
+                    </div>
+                    <p className="quest-detail">
+                      {questNumbers(state, board, quest)} — {def.hint}
+                    </p>
+                  </>
+                )}
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
+}
 
 /**
  * Hedef merdiveni paneli.
@@ -23,6 +149,8 @@ export function GoalsPanel(): ReactElement {
 
   return (
     <div className="goals">
+      <QuestBoardView />
+      <h3 className="goals-ladder-title">{t('hud.quests.ladder')}</h3>
       <p className="muted">
         {t('hud.goals.summary', {
           difficulty: difficulty.name,

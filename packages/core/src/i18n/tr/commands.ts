@@ -138,6 +138,8 @@ export const commands = {
   'core.agenda.council': 'Meclis · {count} önerge',
   'core.agenda.crisisWarning': 'Kriz yaklaşıyor: {title}',
   'core.agenda.campaign': '{name}: {category} saldırısı',
+  'core.agenda.quests': '{month} görevleri {done}/{total}',
+  'core.agenda.questsReady': 'Ödül hazır: {count} görev',
 
   // chain.ts — zincir kartı
   'core.chain.stateOwn': 'Sende',

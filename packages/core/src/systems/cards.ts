@@ -5,6 +5,7 @@ import { tc } from '../i18n';
 import { rivalProfile } from '../profiles';
 import { createRng, nextFloat, pickWeighted } from '../rng';
 import { laborEnabled } from './labor';
+import { bubblesEnabled } from './opportunities';
 import { formatMoney } from '../selectors';
 import type { CardState, CommandResult, CompanyState, GameState } from '../types';
 
@@ -35,7 +36,7 @@ function rangeFrom(dice: ReturnType<typeof createRng>, [min, max]: readonly [num
 }
 
 /** Oyuncunun günlük kâr eğilimi: bina eğilimlerinin toplamı. */
-function profitTrend(state: GameState): number {
+export function profitTrend(state: GameState): number {
   let total = 0;
   for (const building of Object.values(state.buildings)) {
     if (building.companyId !== state.playerCompanyId) continue;
@@ -267,11 +268,15 @@ export function boostMultiplier(
   category?: CategoryId,
 ): number {
   const boosts = state.companies[companyId]?.boosts;
-  if (!boosts || !cardsEnabled(state)) return 1;
+  if (!boosts) return 1;
   const day = state.time.day;
+  const cards = cardsEnabled(state);
+  const bubbles = bubblesEnabled(state);
   let multiplier = 1;
   for (const boost of boosts) {
     if (boost.target !== target || boost.untilDay < day) continue;
+    // Kaynağının bayrağı kapalıysa etki de yok (Codex #60): kart ya da fırsat balonu (Tur 37c).
+    if (!(boost.cardId.startsWith('bubble:') ? bubbles : cards)) continue;
     if (boost.category && boost.category !== category) continue;
     multiplier *= boost.multiplier;
   }

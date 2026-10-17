@@ -2,6 +2,7 @@ import { CEO_BY_ID } from '@capital/content';
 import { GameEngine } from './engine';
 import { formatMoney } from './selectors';
 import { LEAGUE_DAYS, LEAGUE_SAMPLE_DAYS } from './systems/league';
+import { isPurchasable } from './systems/city';
 import { createNewGame } from './worldgen';
 import type { GameCommand, GameState, LoggedCommand } from './types';
 
@@ -61,6 +62,8 @@ const LOGGABLE: ReadonlySet<string> = new Set<GameCommand['type']>([
   'BUY_TILE',
   'CANCEL_TAKEOVER_ORDER',
   'CHOOSE_CARD',
+  'CLAIM_BUBBLE',
+  'CLAIM_QUEST',
   'DECLINE_CONTRACT',
   'DEMOLISH',
   'HOLDING_TRANSFER',
@@ -197,8 +200,36 @@ function fingerprintWorld(): GameEngine {
   return new GameEngine(createNewGame({ seed: 20_261_013, companyName: 'Parmak İzi', league: { weekId: '2000-W01' } }));
 }
 
+/**
+ * İz senaryosu: boşta bir dünya değil, fırsatları da işleten küçük bir oyun.
+ * Balon ve görev ödülleri lig skorunu değiştirebiliyor; boşta dünyada mağaza
+ * olmadığı için balon çıkmıyor, ödül de alınmıyordu. Takvimleri ya da
+ * ödülleri değişince iz değişmezse dürüst bir koşu tekrarda sahte sayılırdı
+ * (sürüm farkı yerine). İlk gün tek bir bakkal, sonra her balon ve her
+ * tamamlanan görev alınıyor (Codex #63).
+ */
+function fingerprintStep(engine: GameEngine, day: number): void {
+  const state = engine.getState();
+  if (day === 1) {
+    for (const tile of state.map.tiles) {
+      if (!isPurchasable(tile) || tile.structureId || tile.buildingId) continue;
+      if (!engine.dispatch({ type: 'BUY_TILE', tileId: tile.id }).ok) continue;
+      if (engine.dispatch({ type: 'BUILD', tileId: tile.id, defId: 'corner_shop' }).ok) break;
+    }
+  }
+  if (state.bubble) engine.dispatch({ type: 'CLAIM_BUBBLE' });
+  state.quests?.items.forEach((quest, index) => {
+    if (quest.doneDay !== undefined && !quest.claimed) engine.dispatch({ type: 'CLAIM_QUEST', index });
+  });
+  engine.runDay();
+}
+
 function fingerprintOf(state: GameState): string {
   const parts: string[] = [String(state.time.day), String(state.rng.s)];
+  // Fırsatların takvimi ve ödülleri de izde (ödül alınmasa da).
+  parts.push(`bubbles:${state.bubblesShown ?? 0}/${state.bubblesCaught ?? 0}/${state.nextBubbleDay ?? '-'}`);
+  parts.push(`quests:${state.questsDone ?? 0}`);
+  for (const quest of state.quests?.items ?? []) parts.push(`${quest.defId}:${quest.target}:${quest.reward}:${quest.doneDay ?? '-'}`);
   for (const id of Object.keys(state.companies).sort()) {
     const c = state.companies[id]!;
     parts.push(`${id}:${Math.round(c.cash)}:${Math.round(c.netWorth)}`);
@@ -214,7 +245,7 @@ function fingerprintOf(state: GameState): string {
 /** Önbelleksiz hesap (test: dil değişince iz aynı kalmalı). */
 export function computeSimFingerprint(): string {
   const engine = fingerprintWorld();
-  for (let day = 0; day < FINGERPRINT_DAYS; day++) engine.runDay();
+  for (let day = 1; day <= FINGERPRINT_DAYS; day++) fingerprintStep(engine, day);
   return fingerprintOf(engine.getState());
 }
 
@@ -226,7 +257,7 @@ export async function simFingerprintAsync(yieldEvery = 10): Promise<string> {
   if (fingerprint) return fingerprint;
   const engine = fingerprintWorld();
   for (let day = 1; day <= FINGERPRINT_DAYS; day++) {
-    engine.runDay();
+    fingerprintStep(engine, day);
     if (day % yieldEvery === 0) await new Promise((resolve) => setTimeout(resolve, 0));
   }
   fingerprint ??= fingerprintOf(engine.getState());

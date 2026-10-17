@@ -3310,6 +3310,374 @@ button.icon {
   border-color: color-mix(in srgb, var(--bad) 65%, transparent);
 }
 
+/* ---------- Fırsat balonu (Tur 37c) ---------- */
+
+/*
+ * Çapa sıfır boyutlu bir nokta: `transform`'u her karede binanın
+ * çatısına taşınıyor (OpportunityBubble). Balon çapanın üstünde, kuyruğu
+ * çatıyı gösteriyor. Haritanın ve HUD'un (≤30) üstünde, karar kartının
+ * (35) ve pencerenin (40) altında.
+ */
+.bubble-anchor {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+  z-index: 32;
+  pointer-events: none;
+}
+
+.opportunity-bubble {
+  position: absolute;
+  left: 0;
+  bottom: 12px;
+  translate: -50% 0;
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 14px 5px 5px;
+  border-radius: 999px;
+  border: 2px solid var(--panel-edge);
+  background: var(--panel-solid);
+  color: var(--text);
+  box-shadow: var(--shadow), var(--button-shadow);
+  font: inherit;
+  white-space: nowrap;
+  cursor: pointer;
+  animation:
+    bubble-in 280ms ease-out,
+    bubble-bob 2.4s ease-in-out 280ms infinite;
+  transition: scale 120ms ease-out;
+}
+
+.opportunity-bubble:hover {
+  scale: 1.06;
+}
+
+.opportunity-bubble:focus-visible {
+  outline: 3px solid var(--select-ring);
+  outline-offset: 2px;
+}
+
+/* Kuyruk: balonun çatıya bağlandığı yer. Kenara yapışınca anlamı yok. */
+.opportunity-bubble::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -8px;
+  width: 12px;
+  height: 12px;
+  background: var(--panel-solid);
+  border-right: 2px solid var(--panel-edge);
+  border-bottom: 2px solid var(--panel-edge);
+  transform: translateX(-50%) rotate(45deg);
+}
+
+.bubble-anchor[data-edge='yes'] .opportunity-bubble::after {
+  display: none;
+}
+
+.bubble-icon {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  color: #ffffff;
+  background: var(--gloss-green);
+  box-shadow: inset 0 1.5px 0 rgba(255, 255, 255, 0.5);
+}
+
+/* Geri sayım halkası: kalan gün / ömür (`--left`, derece). */
+.bubble-icon::before {
+  content: '';
+  position: absolute;
+  inset: -5px;
+  border-radius: 50%;
+  background: conic-gradient(var(--good) var(--left, 360deg), var(--tint-3) 0);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 3px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 3px));
+}
+
+.bubble-boost .bubble-icon {
+  background: linear-gradient(180deg, #ffcf70 0%, #f7b23a 50%, #eea21c 50%, #f4ab2a 100%);
+}
+
+.bubble-boost .bubble-icon::before {
+  background: conic-gradient(var(--warn) var(--left, 360deg), var(--tint-3) 0);
+}
+
+.bubble-parcel .bubble-icon {
+  background: var(--gloss-blue);
+}
+
+.bubble-parcel .bubble-icon::before {
+  background: conic-gradient(var(--accent) var(--left, 360deg), var(--tint-3) 0);
+}
+
+.bubble-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1.15;
+}
+
+.bubble-title {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.bubble-reward {
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--good);
+}
+
+.bubble-boost .bubble-reward {
+  color: var(--warn);
+}
+
+.bubble-parcel .bubble-reward {
+  color: var(--accent);
+}
+
+/* İlk balonlarda "dokun" ipucu, çatının hemen altında. */
+.bubble-hint {
+  position: absolute;
+  left: 0;
+  top: 6px;
+  translate: -50% 0;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+  color: var(--on-accent);
+  background: var(--accent);
+  box-shadow: var(--button-shadow);
+  animation: bubble-hint 1.4s ease-in-out infinite;
+}
+
+.bubble-bursts {
+  position: fixed;
+  inset: 0;
+  z-index: 33;
+  pointer-events: none;
+}
+
+/* Yakalanınca ödül yukarı süzülüp sönüyor. */
+.bubble-burst {
+  position: absolute;
+  translate: -50% 0;
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 700;
+  white-space: nowrap;
+  color: var(--good);
+  text-shadow:
+    0 2px 0 var(--panel-solid),
+    0 0 12px var(--panel-solid);
+  animation: bubble-burst 1.2s ease-out forwards;
+}
+
+@keyframes bubble-in {
+  from {
+    opacity: 0;
+    scale: 0.6;
+  }
+  to {
+    opacity: 1;
+    scale: 1;
+  }
+}
+
+@keyframes bubble-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes bubble-hint {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.65;
+  }
+}
+
+@keyframes bubble-burst {
+  0% {
+    opacity: 0;
+    transform: translateY(10px) scale(0.8);
+  }
+  15% {
+    opacity: 1;
+    transform: translateY(0) scale(1.1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-48px) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .opportunity-bubble,
+  .bubble-hint,
+  .bubble-burst {
+    animation: none;
+  }
+}
+
+/* ---------- Görev panosu (Tur 37c) ---------- */
+
+.quests-chip {
+  font-weight: 800;
+}
+
+.quests-chip.tone-good {
+  border-color: color-mix(in srgb, var(--good) 60%, transparent);
+}
+
+.quest-board {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 14px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--tint-1);
+}
+
+.quest-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.quest-head h3,
+.goals-ladder-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 17px;
+  text-wrap: balance;
+}
+
+.goals-ladder-title {
+  margin-bottom: 2px;
+}
+
+.quest-days {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.quest-lead {
+  margin: 0;
+  font-size: 12px;
+}
+
+.quest-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.quest {
+  display: grid;
+  grid-template-columns: 22px 1fr;
+  gap: 10px;
+  align-items: start;
+}
+
+.quest-check {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border: 2px solid var(--line-strong);
+  border-radius: 50%;
+  font-size: 13px;
+  font-weight: 800;
+  color: #ffffff;
+}
+
+.quest-done .quest-check {
+  border-color: var(--edge-green);
+  background: var(--gloss-green);
+}
+
+.quest-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.quest-title {
+  font-weight: 700;
+}
+
+.quest-done .quest-title {
+  color: var(--muted);
+}
+
+.quest-done .quest-reward {
+  color: var(--muted);
+}
+
+.quest-reward {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--good);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.quest-detail {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.quest-ready .quest-check {
+  border-color: var(--edge-green);
+  color: var(--good);
+}
+
+.quest-claim {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  margin-top: 6px;
+}
+
+.quest-claim .quest-detail {
+  margin: 0;
+}
+
 /* Şirket panelinde süren kart etkileri. */
 .card-boosts {
   display: flex;

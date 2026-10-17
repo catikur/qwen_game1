@@ -9,6 +9,7 @@ import { isLoggable, leagueActive, runLeagueTick } from './systems/league';
 import { lobby } from './systems/council';
 import { respondUnion, setWagePolicy } from './systems/labor';
 import { chooseCard } from './systems/cards';
+import { claimBubble, claimQuest, evaluateCommandQuests, runQuestTick } from './systems/opportunities';
 import { QUOTE_COOLDOWN_DAYS, rivalQuote, withQuote } from './systems/rivalry';
 import { repayLoan, takeLoan } from './systems/credit';
 import { issueShares } from './systems/issuance';
@@ -138,6 +139,13 @@ export class GameEngine {
     const day = this.state.time.day;
     const result = this.apply(command);
     if (result.ok) {
+      // Görev eylemin hemen ardından (panonun son gününde de) tamamlanıyor;
+      // aktarım uzak şehre gittiyse o şehrin panosu da.
+      evaluateCommandQuests(this.state);
+      if (command.type === 'HOLDING_TRANSFER' && command.index !== undefined) {
+        const city = this.state.holding?.dormant[command.index]?.state;
+        if (city) evaluateCommandQuests(city);
+      }
       // Tekrar doğrulaması bu günlükten oynatıyor (league.ts).
       if (league && isLoggable(command)) {
         (this.state.commandLog ??= []).push([day, JSON.parse(JSON.stringify(command)) as GameCommand]);
@@ -284,6 +292,12 @@ export class GameEngine {
       case 'CHOOSE_CARD':
         return chooseCard(state, command.choiceId);
 
+      case 'CLAIM_BUBBLE':
+        return claimBubble(state);
+
+      case 'CLAIM_QUEST':
+        return claimQuest(state, command.index);
+
       case 'TAKE_LOAN':
         return takeLoan(state, playerId, command.kind, command.amount, command.termDays);
 
@@ -370,6 +384,8 @@ export class GameEngine {
     // Holding: bekleyen şehirler de bir gün yaşıyor, kârlarının payı kasaya (Tur 30).
     runHoldingTick(state);
     recomputeNetWorth(state);
+    // Görev panosu günün net değeriyle (Tur 37c, Codex #63).
+    runQuestTick(state);
     this.checkMilestones();
     runGoalTick(state);
     // Holding hedeflerinin son basamağı: üç şehirde zafer (Tur 32).

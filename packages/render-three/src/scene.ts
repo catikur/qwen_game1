@@ -222,6 +222,8 @@ export class CityRenderer {
   private districtLines: THREE.LineSegments;
 
   private state: GameState | null = null;
+  /** `screenOfTile` için tekrar kullanılan vektör (her karede çağrılıyor). */
+  private readonly projected = new THREE.Vector3();
   private view: ViewOptions = {
     lens: 'none',
     selectedTileId: null,
@@ -1647,6 +1649,27 @@ export class CityRenderer {
     const point = new THREE.Vector3();
     if (!this.controller.screenToGround(ndcX, ndcY, point)) return null;
     return { x: point.x, z: point.z };
+  }
+
+  /**
+   * Bir karenin (binası varsa çatısının) ekrandaki yeri, sayfa CSS
+   * pikseliyle. Fırsat balonu (Tur 37c) her karede buna bağlanıyor;
+   * `visible` kare kameranın önünde ve tuvalin içindeyse doğru.
+   * Yükseklik `syncBuildings` ile aynı formül — balon çatıya otursun.
+   */
+  screenOfTile(tileId: number): { x: number; y: number; visible: boolean } | null {
+    const tile = this.state?.map.tiles[tileId];
+    if (!this.state || !tile) return null;
+    const building = tile.buildingId ? this.state.buildings[tile.buildingId] : undefined;
+    const def = building ? BUILDING_BY_ID[building.defId] : undefined;
+    const height = building && def ? Math.max(0.3, def.height) * 1.5 * this.growthOf(building.id) : 0.2;
+    const point = this.projected.set(tile.x, height + 0.12, tile.y).project(this.controller.camera);
+    const rect = this.canvas.getBoundingClientRect();
+    return {
+      x: rect.left + ((point.x + 1) / 2) * rect.width,
+      y: rect.top + ((1 - point.y) / 2) * rect.height,
+      visible: point.z < 1 && Math.abs(point.x) <= 1 && Math.abs(point.y) <= 1,
+    };
   }
 
   /** Testlerin gün döngüsünü beklemeden istediği saate atlaması için. */
