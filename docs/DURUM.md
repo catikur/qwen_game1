@@ -4,7 +4,7 @@
 > `pnpm bench` çıktısından; iddialar `pnpm balance` ve `pnpm playtest`
 > tarafından her koşuda doğrulanıyor.
 >
-> Son güncelleme: şema **v6**, 36 tur (Tur 33 denendi ve geri alındı; Tur 34 eski görünüme canlılık ekledi; Tur 35 arayüzü Lite'ın "Cam & Bulut" diline taşıdı; Tur 36 şehre ayrıntı kattı; Tur 37a geç oyuna yönetim yükü, servet vergisi ve kriz dönemleri getirdi).
+> Son güncelleme: şema **v6**, 36 tur (Tur 33 denendi ve geri alındı; Tur 34 eski görünüme canlılık ekledi; Tur 35 arayüzü Lite'ın "Cam & Bulut" diline taşıdı; Tur 36 şehre ayrıntı kattı; Tur 37a geç oyuna yönetim yükü, servet vergisi ve kriz dönemleri getirdi; Tur 37b karar kartlarını ve rakip hikâyelerini ekledi).
 
 ---
 
@@ -2554,6 +2554,150 @@ görünmemişti.
   - şirket panelinde iki geç oyun satırı var;
   - konsol temiz.
 
+### Tur 37b — Karar kartları ve rakip hikâyeleri
+
+Olaylar piyasayı değiştiriyordu ama oyuncuya bir şey sormuyordu. Oyunun
+gerçek karar anları sendika talebi ve sözleşme teklifiydi. Rakiplerin
+yüzleri (portre) vardı, sesleri yoktu. Bu aşama iki şey ekliyor: masaya
+gelen karar kartları ve konuşan, saldıran rakipler.
+
+**Karar kartları** (`content/src/stories.ts`, `core/src/systems/cards.ts`).
+- 12 kart:
+  - viral video;
+  - toplu alım teklifi;
+  - sağlık denetimi;
+  - sendika temsilcisiyle öğle yemeği;
+  - festival sponsorluğu;
+  - kasa sistemi;
+  - rakibin müdür transferi;
+  - gazeteci;
+  - okul bağışı;
+  - fırtına uyarısı;
+  - enerji anlaşması;
+  - fenomen tanıtımı.
+- Her kartta 2–3 seçenek var. Etki türleri:
+  - nakit;
+  - süreli çarpanlar: çekicilik (kategoriye özel ya da şirket geneli),
+    bakım, ücret, satış maliyeti;
+  - sendika baskısı;
+  - şanslı seçenekler: ihtimal ve "tutmazsa" etkisi kartta yazılı.
+- Hiçbir seçenek açıkça doğru değil: bedel ve risk farklı.
+- **Bedel:** günlük kâr eğiliminin 1,2 katı, 30 B ₺ – 2,5 M ₺ arası.
+  Teklif gününde sabitleniyor; gösterilen bedel ödenen bedel.
+  - Net değere bağlansaydı, geç oyunda servetin %90'ı nakit olduğu için
+    bedel kârın günlerce üstüne çıkardı.
+  - Sabit olsaydı erken oyunda yıkıcı, geç oyunda önemsiz olurdu.
+- **Takvim:** dışsal zardan (tohum, gün).
+  - İlk kart 45–59. günler arasında geliyor.
+  - Bir kart kapandıktan 22–46 gün sonra yenisi geliyor.
+  - Son 4 kart tekrar gelmiyor.
+  - Kartlar oyuncunun durumuna göre süzülüyor: mağaza ve bina sayısı, en
+    çok kazandıran kategori, sendika baskısı.
+- **Süre:** kart 12 gün masada kalıyor; dolunca "hiçbir şey yapma"
+  uygulanıyor. Uzak şehirde yerel müdür hemen varsayılanı seçiyor.
+- **Komut:** seçim `CHOOSE_CARD`, lig günlüğüne giriyor. Birim testi: lig
+  koşusunda seçilen kartlar tekrarda aynı skoru veriyor.
+- **Arayüz** (`ui/src/DecisionCard.tsx`):
+  - kart haritanın üstünde, altta ortada; telefonda rıhtımın üstünde;
+  - etkiler renkli etiketler: yeşil iyi, kırmızı kötü, gri bedel;
+  - "Sonra" kartı gündem çipine indiriyor, çip kartı yeniden açıyor;
+  - panel açıkken, arsa seçiliyken ve yerleştirme modunda kart çekiliyor;
+  - şirket panelinde süren kart etkileri görünüyor.
+
+Ölçüm (vekil, 720 gün, tohum 1/7/42):
+- 13–15 kart geliyor, yaklaşık 50 günde bir.
+- Bedel erken oyunda 30–60 B ₺, sonra 180–340 B ₺.
+
+**Rakip hikâyeleri** (`core/src/systems/rivalry.ts`).
+- **Söz:** CEO kişiliğine göre konuşuyor. 5 kişilik × 7 an, her biri iki
+  söz.
+  - Genişlemeci kendinden emin, fiyat kıran alaycı, premium soğuk, arsa
+    sahibi sabırlı, teknoloji veriyle konuşuyor.
+  - Sıralama ve bölge liderliği haberlerinde söz var. Kriz başlarken en
+    büyük rakip açıklama yapıyor.
+  - Erken oyunda sıralama haftada birkaç kez el değiştiriyor. İlk
+    sürümde aynı CEO aynı sözü bir hafta içinde üç kez söylüyordu. Sık
+    anlarda söz artık aynı rakip ve an için 60 günde bir.
+- **Kampanya:** bir rakip, oyuncunun payı en büyük kategoriye (en az %15)
+  45 günlük bir fiyat savaşı açıyor.
+  - Fiyat kıran %14, diğerleri %7 kırıyor.
+  - Duyuru haberi var; gündemde geri sayım var, çip rekabet panelini açıyor.
+  - Sonunda pay ölçülüyor. Pay 2 puandan fazla düşmediyse kampanya geri
+    tepiyor ve kategoride marka +0,04 artıyor; düştüyse rakip kazanıyor.
+  - Takvim: ilk kampanya 170–210. günler arasında, sonra 150–260 günde
+    bir; 720 günde 2–3 kampanya.
+- **Kaldırılan genişleme yönelimi:** İlk sürümde rakip kampanya boyunca o
+  kategoride şube açmaya da yöneliyordu (genişleme puanı ×1,8). Denge
+  sınavı kayıp koşulunu kaybetti ("savunmasız yavaş oyuncu Dengeli'de
+  ayakta").
+  - 20 tohumluk ölçümde baskınla düşüş 5 tohumdan 1'e inmişti.
+  - Bileşen bileşen kapatıldı: fiyat kırma ve marka ödülü etkisizdi;
+    sebep yönelimdi.
+  - Kampanyayı açan çoğu zaman en büyük rakip, yani baskıncı. Nakdini
+    şubeye harcayınca baskına para kalmıyordu.
+  - Yönelim kaldırıldı. Düşüşler aynı günlerde geri geldi; 20 tohumda
+    artık 7 tohum düşüyor.
+- **Başlık düzeltmesi:** "{ad}'i geçtin" başlığı Türkçe ek yüzünden
+  "Atlas Yapı'i geçtin" diye çıkıyordu; artık "{ad} artık arkanda".
+
+**Etkisi** (`pnpm longrun`, 1440 gün; `STORIES=0` kapatıyor):
+
+| | 37b kapalı | 37b açık |
+|---|---|---|
+| Net değer, 1440. gün | 294 / 293 / 273 M ₺ | 297 / 273 / 289 M ₺ |
+| Oyuncu / en iyi rakip | 1,35 / 1,18 / 1,29 | 1,39 / 0,99 / 1,34 |
+| Zafer günü | 623 / 645 / 638 | 621 / 702 / 637 |
+
+Vekil kartlara cevap vermiyor; süre dolunca varsayılan uygulanıyor. Etki
+ılımlı. Tohum 7'de kampanya payı aşındırıyor; rakip 1440. günde öne
+geçiyor ve zafer 57 gün gecikiyor.
+
+**Denge sınavında değişen kontrol: Acımasız iki tohum.**
+- Acımasız zafer tek tohumla (1) ölçülüyordu. Kart ve kampanya birlikte
+  açıkken bu tohumda rakip 900. günden sonra öne geçiyor ve 2.200 güne
+  kadar zafer yok. Kart ya da kampanya tek başına açıkken zafer
+  914 / 897. günde.
+- Beş tohumluk ölçümde diğer dördü zafere aynı ya da daha erken ulaşıyor:
+  7: 981 → 974 · 42: 792 → 792 · 5: 942 → 919 · 3: 888 → 831.
+- Kontrol artık tohum 1 ve 3'ü koşuyor. İddia: Acımasız kazanılabilir ve
+  ortalaması Dengeli'den geç (428 / 629 / 831).
+
+**Laboratuvar.**
+- `flags.cards` (`randomEvents` ile birlikte) ve `flags.rivalStories`
+  (`npcCompetition` ile birlikte) bayrakları eklendi. Laboratuvar motoru
+  olayları kapattığı için orada kart yok.
+- Bayrak kapanınca süren etkiler de kalkıyor. Bu, #60'taki Codex bulgusu
+  (kriz bayrağı) ile aynı ders.
+
+**Doğrulama.**
+- Yeni birim testleri (`stories.test.ts`, 16 test):
+  - kartlar normal oyunda geliyor ve süresi doluyor;
+  - bedel ölçeği;
+  - seçimin nakdi, etkisi ve süresi;
+  - sendika kartı;
+  - bakım etkisinin deftere girmesi;
+  - şansın belirlenimci olması;
+  - reddedilen komutlar;
+  - bayraklar;
+  - gündem;
+  - yerel müdür;
+  - lig tekrarı;
+  - sözler ve söz soğuması;
+  - kampanyanın iki sonucu;
+  - kampanyanın açılmadığı durumlar.
+- i18n tamlık testi kartları, seçenekleri ve rakip sözlerini de kapsıyor.
+- Oynanış testine eklenen bölüm ("Karar kartı ve rakip kampanyası", 9
+  kontrol):
+  - kart açılıyor, etiketleri ve ihtimali yazıyor;
+  - "Sonra" ve çip;
+  - seçim uygulanıyor;
+  - şirket panelinde etki görünüyor;
+  - panel açıkken kart çekiliyor;
+  - kampanya çipi görünüyor;
+  - konsol temiz.
+- Mobil bölüme her cihazda "kart rıhtımın üstünde ve ekranda" kontrolü
+  eklendi.
+
 ---
 
 ## 3. Ölçülen durum
@@ -2635,11 +2779,11 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi) |
-| Birim testi | **310 test** (`pnpm test`; Tur 24'te render paketi de) |
+| Birim testi | **327 test** (`pnpm test`; Tur 24'te render paketi de) |
 | Denge testi | **288 kontrol, hepsi geçiyor** (20 bölüm, süreleriyle; ~11 dk) |
 | Tarayıcı testi | **358 kontrol**, 0 konsol hatası (~25 dk); duman koşusu 101 (~6 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + duman oynanışı |
-| Kapsam | 35 bina · 25 ürün · 7 kategori · 8 rakip profili · 10 CEO · 22 olay (11 şehir + 11 sektör) · 10 şehir yapısı (6 siluet) |
+| Kapsam | 35 bina · 25 ürün · 7 kategori · 8 rakip profili · 10 CEO · 22 olay (11 şehir + 11 sektör) · 2 kriz · 12 karar kartı · 70 rakip sözü · 10 şehir yapısı (6 siluet) |
 
 ### Render (Tur 6 sonrası)
 
@@ -2827,7 +2971,7 @@ nüfus tavanı ve arsa değeri). Hâlâ açık olanlar:
 
 ```bash
 pnpm typecheck       # altı paketin tamamı
-pnpm test            # birim testleri — 310 test, test yoksa kırmızı
+pnpm test            # birim testleri — 327 test, test yoksa kırmızı
 pnpm balance         # denge testi — 288 kontrol, geçti/kaldı (~11 dk)
 pnpm balance meclis  # yalnızca adında "meclis" geçen bölümler
 pnpm bench           # benchmark — sayıların kendisi
@@ -2859,7 +3003,7 @@ güvenebildi. Artık ikisi de koşulabilir:
 |---|---|
 | `pnpm constraint` | Oyunu ne sınırlıyor — para mı, toprak mı, tempo mu? |
 | `pnpm land` | Bir geometri değişikliği abonman oranını ne yapar? |
-| `pnpm longrun` | Geç oyunda kartopu ne kadar hızlı? (`OFF=1` frenleri kapatır) |
+| `pnpm longrun` | Geç oyunda kartopu ne kadar hızlı? (`OFF=1` Tur 37a frenlerini, `STORIES=0` Tur 37b kartlarını ve kampanyalarını kapatır) |
 
 ---
 
