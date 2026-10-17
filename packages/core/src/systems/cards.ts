@@ -106,10 +106,10 @@ export function cardParams(state: GameState, card: CardState): Record<string, st
   const params: Record<string, string> = {};
   if (card.category) params['category'] = CATEGORIES[card.category].name;
   const rival = card.rivalId ? state.companies[card.rivalId] : undefined;
-  if (rival) {
-    params['rival'] = rival.name;
-    params['ceo'] = rivalProfile(state, rival.profileId)?.ceoName ?? rival.name;
-  }
+  const rivalName = rival?.name ?? card.rivalName;
+  const ceoName = (rival ? rivalProfile(state, rival.profileId)?.ceoName : undefined) ?? card.ceoName ?? rivalName;
+  if (rivalName) params['rival'] = rivalName;
+  if (ceoName) params['ceo'] = ceoName;
   return params;
 }
 
@@ -159,7 +159,13 @@ export function runCardTick(state: GameState): void {
     deadlineDay: day + CARD_TIMING.lifetimeDays,
     amount: cardAmount(state),
     ...(def.requires.category && shape.topCategory ? { category: shape.topCategory } : {}),
-    ...(def.requires.rival && rival ? { rivalId: rival.id } : {}),
+    ...(def.requires.rival && rival
+      ? {
+          rivalId: rival.id,
+          rivalName: rival.name,
+          ceoName: rivalProfile(state, rival.profileId)?.ceoName ?? rival.name,
+        }
+      : {}),
   };
 }
 

@@ -504,6 +504,12 @@ export interface CardState {
   category?: CategoryId;
   /** Kartın rakip yüzü (rakipli kartlarda). */
   rivalId?: string;
+  /**
+   * Teklif günündeki rakip ve CEO adı. Rakip kart masadayken devralınırsa
+   * şirket listeden düşüyor; metin yine de dolu kalsın (Codex #62).
+   */
+  rivalName?: string;
+  ceoName?: string;
 }
 
 /** Kart seçiminden gelen süreli çarpan (Tur 37b). */

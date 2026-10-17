@@ -164,6 +164,35 @@ describe('karar kartları', () => {
     assert.equal(active, 12, 'varsayılan "kendi haline bırak" 12 gün');
   });
 
+  test('rakip kart masadayken oyundan çıksa da metin dolu kalıyor', () => {
+    const state = createNewGame({ seed: 5 });
+    const rival = Object.values(state.companies).find((c) => !c.isPlayer)!;
+    putCard(state, 'poached_manager', { rivalId: rival.id, rivalName: rival.name, ceoName: 'Deniz Arkın' });
+    delete state.companies[rival.id];
+    const label = agenda(state).find((entry) => entry.kind === 'card')!.label;
+    assert.ok(label.includes(rival.name) && !label.includes('{'), label);
+    chooseCard(state, 'counter');
+    assert.ok(!state.news[0]!.body.includes('{') && state.news[0]!.body.includes('Deniz Arkın'), state.news[0]!.body);
+  });
+
+  test('bina tahmini kartları iki kolda da kapatıyor', async () => {
+    const { projectBuilding } = await import('../src/projection');
+    const engine = play(7, 80, false);
+    const state = engine.getState();
+    const tile = state.map.tiles.find((t) => t.kind === 'plot' && !t.ownerId && !t.structureId && !t.buildingId);
+    assert.ok(tile);
+    // Pencerede kesin bir kart: süresi dolunca Perakende'ye +%7 (varsayılan). Kart
+    // izdüşüme girseydi yeni bakkalın farkını büyütürdü. İzdüşüm kartsız koşuyor:
+    // oyunda kartlar açık da olsa kapalı da olsa aynı cevap.
+    putCard(state, 'viral_video', { category: 'retail', deadlineDay: state.time.day + 3 });
+    const withCards = projectBuilding(state, state.playerCompanyId, 'corner_shop', tile.id, 120);
+    assert.notEqual(state.flags.cards, false);
+    state.flags.cards = false;
+    const withoutCards = projectBuilding(state, state.playerCompanyId, 'corner_shop', tile.id, 120);
+    assert.ok(withCards);
+    assert.deepEqual(withCards, withoutCards);
+  });
+
   test('uzaktaki şehirde yerel müdür varsayılanı seçiyor', () => {
     const state = createNewGame({ seed: 5 });
     putCard(state, 'storm_warning');
