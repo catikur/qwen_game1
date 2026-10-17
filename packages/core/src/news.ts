@@ -5,6 +5,9 @@ export interface NewsRef {
   companyId?: string;
   tileId?: number;
   districtId?: number;
+  /** Özet haber (Tur 38): aynı anahtarlı eski haber `takeNews` ile alınıp birleştiriliyor. */
+  group?: string;
+  tally?: Record<string, number>;
 }
 
 const MAX_NEWS = 60;
@@ -46,6 +49,16 @@ export function pushNews(
     ...(where.companyId !== undefined ? { companyId: where.companyId } : {}),
     ...(where.tileId !== undefined ? { tileId: where.tileId } : {}),
     ...(where.districtId !== undefined ? { districtId: where.districtId } : {}),
+    ...(where.group !== undefined ? { group: where.group } : {}),
+    ...(where.tally !== undefined ? { tally: where.tally } : {}),
   });
   if (state.news.length > MAX_NEWS) state.news.length = MAX_NEWS;
+}
+
+/** Aynı anahtarlı haberi akıştan çıkarıp döndürüyor (özet haberi yenilemek için). */
+export function takeNews(state: GameState, group: string): GameState['news'][number] | undefined {
+  const index = state.news.findIndex((item) => item.group === group);
+  if (index < 0) return undefined;
+  const [item] = state.news.splice(index, 1);
+  return item;
 }

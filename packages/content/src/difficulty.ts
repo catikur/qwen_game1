@@ -26,6 +26,11 @@ export interface DifficultyDef {
   raidWarmupDays: number;
   /** Bir baskıncının tek günde alabileceği en fazla hisse. */
   raidDailyCap: number;
+  /**
+   * Baskıncı, net değeri kendisinin bu katının altındaki şirkete saldırır
+   * (Tur 38). 0,9: yalnız belirgin küçüğe.
+   */
+  raidTargetRatio: number;
   /** Zafer için gereken net değer (ve şehrin bir numarası olmak). */
   victoryNetWorth: number;
   /** Kurulum ekranında gösterilen, oyuncunun bileceği farklar. */
@@ -41,6 +46,7 @@ export const DIFFICULTIES: DifficultyDef[] = [
     rivalBudgetMultiplier: 0.8,
     raidWarmupDays: 320,
     raidDailyCap: 200,
+    raidTargetRatio: 0.9,
     victoryNetWorth: 60_000_000,
     facts: ['%40 fazla başlangıç sermayesi', 'Baskınlar 320. günden sonra, günde en çok %2', 'Zafer: 60M ₺ ve bir numara'],
   },
@@ -52,6 +58,7 @@ export const DIFFICULTIES: DifficultyDef[] = [
     rivalBudgetMultiplier: 1,
     raidWarmupDays: 160,
     raidDailyCap: 350,
+    raidTargetRatio: 0.9,
     victoryNetWorth: 100_000_000,
     facts: ['Standart sermaye', 'Baskınlar 160. günden sonra, günde en çok %3,5', 'Zafer: 100M ₺ ve bir numara'],
   },
@@ -63,6 +70,7 @@ export const DIFFICULTIES: DifficultyDef[] = [
     rivalBudgetMultiplier: 1.2,
     raidWarmupDays: 110,
     raidDailyCap: 450,
+    raidTargetRatio: 0.9,
     victoryNetWorth: 150_000_000,
     facts: ['%20 az başlangıç sermayesi', 'Rakipler %20 daha cesur yatırır', 'Baskınlar 110. günden sonra, günde en çok %4,5', 'Zafer: 150M ₺ ve bir numara'],
   },
