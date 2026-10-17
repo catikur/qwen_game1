@@ -632,6 +632,8 @@ export interface GameState {
   campaign?: CampaignState;
   /** Bir sonraki kampanyanın günü. */
   nextCampaignDay?: number;
+  /** Rakip sözlerinin son günü (`şirket|an`) — sık anlarda aynı söz tekrar etmesin. */
+  quoteDays?: Record<string, number>;
   /**
    * Masadaki sözleşme teklifi ve aktif sözleşme. Üçü de seçime bağlı:
    * eski kayıtlarda yoklukları "teklif yok" demek, şema sürümü sabit.

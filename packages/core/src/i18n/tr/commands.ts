@@ -28,7 +28,7 @@ export const commands = {
   'core.engine.overtakenBodyLead': 'Artık {rank}. sıradasın. Aradaki fark {gap}. Elinde senden {lead} fazla bina var.',
   'core.engine.overtakenBodyMoreBuildings':
     'Artık {rank}. sıradasın. Aradaki fark {gap}. Senin binan daha çok — fark arsada ve markada.',
-  'core.engine.passedTitle': "{name}'i geçtin",
+  'core.engine.passedTitle': '{name} artık arkanda',
   'core.engine.climbedTitle': '{rank}. sıraya yükseldin',
   'core.engine.climbedBodyAhead': '{rank}. sıradasın. Önünde {name} var — fark {gap}.',
   'core.engine.climbedBodyTop': '{rank}. sıradasın. Şehrin en değerli şirketi sensin.',

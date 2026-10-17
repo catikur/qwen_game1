@@ -184,6 +184,8 @@ describe('rakip hikâyeleri', () => {
     const quote = rivalQuote(state, company, 'overtook');
     assert.ok(quote && quote.includes('“'), String(quote));
     assert.equal(rivalQuote(state, company, 'overtook'), quote, 'aynı gün aynı söz');
+    assert.ok(rivalQuote(state, company, 'passed', {}, 60), 'soğuma ilk sözü engellemiyor');
+    assert.equal(rivalQuote(state, company, 'passed', {}, 60), null, 'soğuma ikinci sözü susturuyor');
     assert.equal(rivalQuote(state, getPlayer(state), 'overtook'), null);
     state.flags.rivalStories = false;
     assert.equal(rivalQuote(state, company, 'overtook'), null);

@@ -37,18 +37,34 @@ function hashOf(text: string): number {
 }
 
 /**
+ * Sık anlarda (sıralama, bölge liderliği) aynı şirketin aynı anı en fazla
+ * bu kadar günde bir söz taşıyor. Erken oyunda sıralama haftada birkaç
+ * kez el değiştiriyor; her haberde söz olsaydı aynı cümle bir hafta içinde
+ * üç kez okunurdu ve CEO bir karakter değil bir otomat gibi konuşurdu.
+ */
+export const QUOTE_COOLDOWN_DAYS = 60;
+
+/**
  * Rakibin bu andaki sözü: `Deniz Arkın: “…”`. Profili olmayan şirkette
- * (oyuncu) ya da hikâyeler kapalıyken null — çağıran haberi sözsüz yazar.
+ * (oyuncu), hikâyeler kapalıyken ya da `cooldown` dolmadıysa null —
+ * çağıran haberi sözsüz yazar. `cooldown` verilirse söz günü hatırlanıyor.
  */
 export function rivalQuote(
   state: GameState,
   company: CompanyState | undefined,
   beat: RivalBeat,
   params: Record<string, string> = {},
+  cooldown?: number,
 ): string | null {
   if (!company || !storiesEnabled(state)) return null;
   const profile = rivalProfile(state, company.profileId);
   if (!profile) return null;
+  if (cooldown !== undefined) {
+    const key = `${company.id}|${beat}`;
+    const last = state.quoteDays?.[key];
+    if (last !== undefined && state.time.day - last < cooldown) return null;
+    (state.quoteDays ??= {})[key] = state.time.day;
+  }
   const lines = rivalLines(profile.trait, beat);
   const pick = Math.floor(nextFloat(storyDice(state, state.time.day ^ hashOf(company.id + beat))) * lines.length);
   return tc('core.rivalry.quote', { ceo: profile.ceoName, line: fillTemplate(lines[pick] ?? lines[0] ?? '', params) });

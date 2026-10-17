@@ -218,6 +218,10 @@ export const panels = {
   'panels.help.step.holding.body':
     " Bir şehirde zafere ulaşınca yeni bir şehre açılabilirsin: sermaye ve marka bilinirliğinin yarısı seninle gelir, rakipler farklıdır. Aynı anda bir şehir oynanır; öbürleri de yaşamaya devam eder. Şehirler panelinden uzaktaki her şehrin yerel müdürüne talimat verirsin: kârın ne kadarı holding kasasına aksın (hepsini çekersen şehir nakitsiz kalır ve ucuzlar) ve baskına karşı geri alım yapsın mı. Kasadan her şehre para gönderebilirsin. Hedef üç şehirde zafer; zafer her şehirde orada yarattığın değerle ölçülür.",
   'panels.help.step.late.title': 'Büyümek pahalılaşır, krizler gelir.',
+  'panels.help.step.stories.title': 'Masaya kararlar, rakiplere ses geldi.',
+  'panels.help.step.stories.body':
+    ' Ara sıra bir karar kartı açılır: viral bir video, bir denetim, bir tedarik teklifi. Her seçeneğin bedeli ve getirisi yazılı; karar vermezsen süre dolunca "hiçbir şey yapma" uygulanır. Rakiplerin CEO\'ları da artık konuşuyor ve bazen en güçlü kategorine 45 günlük bir kampanya açıyorlar: fiyat kırıp şube açarlar. Payını korursan kampanya geri teper ve markan güçlenir.',
+  'panels.company.boosts': 'Süren kart etkileri',
   'panels.help.step.late.body':
     ' 30 binadan sonra her bina bakım ve ücreti biraz daha artırır (yönetim yükü); 25 M ₺ üstü servete kademeli vergi var, kasada yatan para erir. Ara sıra kriz gelir ve bir ay önceden haber verir: durgunlukta talep düşer ama arsa ve inşaat ucuzlar; faiz şokunda kredili hesap ve yeni krediler pahalanır, vadeli kredinin faizi sabit kalır.',
   'panels.help.controls':

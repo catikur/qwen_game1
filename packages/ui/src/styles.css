@@ -3113,6 +3113,225 @@ button.icon {
   box-shadow: 0 0 0 1px var(--select-ring), var(--shadow);
 }
 
+/* ------------------------------------------------------------ karar kartı (Tur 37b) */
+
+/*
+ * KART HARİTANIN ÜSTÜNDE, ALTTA ORTADA.
+ *
+ * Oyunu durdurmuyor (casual kuralı): arkasındaki her şey tıklanabilir ve
+ * "Sonra" kartı gündem çipine indiriyor. Seçenekler yan yana; dar ekranda
+ * alt alta. Her seçeneğin bedeli ve getirisi küçük renkli etiketlerde:
+ * yeşil iyi, kırmızı kötü, gri bedel. Kalın kenar karar mavisi değil
+ * sıcak "dikkat" tonu — rehberin (seçim mavisi) bir bildirim değil bir
+ * soru olduğunu ayırt etsin.
+ */
+.decision-card {
+  position: fixed;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%);
+  width: min(580px, calc(100vw - 20px));
+  max-height: calc(100vh - 150px);
+  overflow-y: auto;
+  /* HUD'un (≤30) üstünde, panel penceresinin (40) ve rehberin (45) altında. */
+  z-index: 35;
+  /* Masaüstünde haber akışının üstüne iniyor: yarı saydam cam altındaki haberleri okutuyordu. */
+  background: var(--panel-solid);
+  border: 2px solid color-mix(in srgb, var(--warn) 70%, transparent);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: auto;
+  animation: decision-in 0.22s ease-out;
+}
+
+@keyframes decision-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 8px);
+  }
+}
+
+.card-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.card-face svg {
+  display: block;
+  border-radius: 12px;
+}
+
+.card-heading {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.card-eyebrow {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--warn);
+}
+
+.card-days {
+  font-family: var(--font-num);
+  font-variant-numeric: tabular-nums;
+}
+
+.card-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.2;
+  text-wrap: balance;
+}
+
+.card-later {
+  align-self: flex-start;
+  min-height: 30px;
+  padding: 2px 10px;
+  font-size: 12px;
+}
+
+.card-body {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+
+.card-choices {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 8px;
+}
+
+.card-choice {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 5px;
+  min-height: 0;
+  padding: 10px 12px;
+  text-align: left;
+  white-space: normal;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--line);
+  background: var(--tile);
+  box-shadow: var(--button-shadow);
+  color: var(--text);
+}
+
+.card-choice:hover {
+  background: var(--tile-hover);
+  border-color: var(--select-ring);
+}
+
+.card-choice-label {
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.card-choice-flavor {
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--muted);
+}
+
+.card-effects {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.card-effect {
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  background: var(--tint-2);
+  color: var(--text);
+}
+
+.card-effect.tone-good {
+  color: var(--good);
+  background: color-mix(in srgb, var(--good) 13%, transparent);
+}
+
+.card-effect.tone-bad {
+  color: var(--bad);
+  background: color-mix(in srgb, var(--bad) 12%, transparent);
+}
+
+.card-none {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.card-odds {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--warn);
+}
+
+.card-fail {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.card-fallback {
+  margin: 0;
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+/* Gündemde küçültülmüş kart: sıcak kenar; kampanya: kriz gibi kırmızı kenar. */
+.card-chip {
+  border-color: color-mix(in srgb, var(--warn) 70%, transparent);
+  font-weight: 700;
+}
+
+.campaign-chip {
+  font-weight: 800;
+  border-color: color-mix(in srgb, var(--bad) 65%, transparent);
+}
+
+/* Şirket panelinde süren kart etkileri. */
+.card-boosts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 2px 0 10px;
+}
+
+@media (max-width: 860px) {
+  /* Rıhtımın üstünde; seçenekler alt alta. */
+  .decision-card {
+    bottom: calc(70px + env(safe-area-inset-bottom, 0px));
+    max-height: calc(100vh - 210px);
+    padding: 10px 12px;
+  }
+
+  .card-choices {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* ---- Elle kayıt aktarımı (D1) ---- */
 .manual-transfer {
   display: grid;

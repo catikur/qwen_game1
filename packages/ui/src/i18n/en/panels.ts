@@ -222,6 +222,10 @@ export const panels: Record<keyof typeof trPanels, string> = {
   'panels.help.step.holding.body':
     " Once you reach victory in a city, you can expand to a new one: your capital and half of your brand awareness come with you, and the rivals are different. One city is played at a time; the others keep living. From the Cities panel you give each remote city's local manager orders: how much of the profit flows into the holding treasury (take it all and the city runs out of cash and gets cheap), and whether to buy back shares against raids. You can send money from the treasury to any city. The goal is victory in three cities; victory in each city is measured by the value you created there.",
   'panels.help.step.late.title': 'Growing gets expensive, and crises come.',
+  'panels.help.step.stories.title': 'Decisions on the table, voices for the rivals.',
+  'panels.help.step.stories.body':
+    ' Now and then a decision card opens: a viral video, an inspection, a supply offer. Every option lists its cost and payoff; if you do not decide, "do nothing" applies when time runs out. Rival CEOs now speak too, and sometimes they open a 45-day campaign against your strongest category: they cut prices and open branches. Hold your share and the campaign backfires, strengthening your brand.',
+  'panels.company.boosts': 'Active card effects',
   'panels.help.step.late.body':
     ' Past 30 buildings, each building adds a little to upkeep and wages (overhead); wealth above ₺25M is taxed progressively, so idle cash melts away. Now and then a crisis hits, announced a month ahead: in a recession demand drops but land and construction get cheaper; in a rate shock the overdraft and new loans get expensive, while term loans keep their fixed rate.',
   'panels.help.controls':

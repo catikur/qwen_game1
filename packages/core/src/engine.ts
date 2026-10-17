@@ -9,7 +9,7 @@ import { isLoggable, leagueActive, runLeagueTick } from './systems/league';
 import { lobby } from './systems/council';
 import { respondUnion, setWagePolicy } from './systems/labor';
 import { chooseCard } from './systems/cards';
-import { rivalQuote, withQuote } from './systems/rivalry';
+import { QUOTE_COOLDOWN_DAYS, rivalQuote, withQuote } from './systems/rivalry';
 import { repayLoan, takeLoan } from './systems/credit';
 import { issueShares } from './systems/issuance';
 import { cancelTakeoverOrder, placeTakeoverOrder, playerBuy } from './systems/orders';
@@ -473,7 +473,7 @@ export class GameEngine {
         state,
         'bad',
         tc('core.engine.overtakenTitle', { name: passer.company.name }),
-        withQuote(body, rivalQuote(state, passer.company, 'overtook')),
+        withQuote(body, rivalQuote(state, passer.company, 'overtook', {}, QUOTE_COOLDOWN_DAYS)),
         passer.company.id,
       );
       return;
@@ -496,7 +496,7 @@ export class GameEngine {
       passed
         ? tc('core.engine.passedTitle', { name: passed.company.name })
         : tc('core.engine.climbedTitle', { rank: mine.rank }),
-      withQuote(body, rivalQuote(state, passed?.company, 'passed')),
+      withQuote(body, rivalQuote(state, passed?.company, 'passed', {}, QUOTE_COOLDOWN_DAYS)),
       passed?.company.id,
     );
   }
@@ -524,7 +524,7 @@ export class GameEngine {
           tc('core.engine.leadLostTitle', { rival: rival.name, district: district.name }),
           withQuote(
             tc('core.engine.leadLostBody', { toShare: pct(change.toShare), fromShare: pct(change.fromShare) }),
-            rivalQuote(state, rival, 'leadLost', { district: district.name }),
+            rivalQuote(state, rival, 'leadLost', { district: district.name }, QUOTE_COOLDOWN_DAYS),
           ),
           { companyId: rival.id, districtId: district.id },
         );
