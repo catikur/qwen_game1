@@ -407,7 +407,7 @@ export class GameEngine {
    * Oyuncunun hissesine yönelen baskını eşiklerde haber yapıyor.
    *
    * Kaybedilebilir bir oyunun ilk şartı, kaybın GELDİĞİNİ GÖRMEK.
-   * Devralma eşiği %50 ve baskıncı günde en fazla %3,5 toplayabiliyor;
+   * Devralma eşiği %50 ve baskıncı günde en fazla %4,5 (Dengeli) toplayabiliyor;
    * %10/%25/%40 uyarıları oyuncuya tepki verecek günler bırakıyor —
    * geri alım yap, nakit biriktir, ya da bile bile riske gir.
    */

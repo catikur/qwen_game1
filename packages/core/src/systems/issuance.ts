@@ -65,7 +65,7 @@ export function issueQuote(state: GameState, companyId: string): IssueQuote {
    *
    * Kalkanın gücü yatırımcı payından geliyor: yeni hisse kurumsal
    * yatırımcıda kalıyor, baskıncı onu alamıyor. Ama baskıncının günlük
-   * tavanı da bir PAY (%3,5), adet değil; ihraç baskıncının payını
+   * tavanı da bir PAY (Dengeli %4,5), adet değil; ihraç baskıncının payını
    * yalnızca 1/1,25'e indiriyor (%31,5 → %25,2) ve bu fark iki alımda
    * kapanıyor. Ölçüm: tek ihraç ~40 gün kazandırıyor, iki ihraç arası
    * 180 gün. On tohumda savunmasız düşen dokuz oyuncudan main'de altısı,

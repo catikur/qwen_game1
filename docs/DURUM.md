@@ -4,7 +4,7 @@
 > `pnpm bench` çıktısından; iddialar `pnpm balance` ve `pnpm playtest`
 > tarafından her koşuda doğrulanıyor.
 >
-> Son güncelleme: şema **v6**, 36 tur (Tur 33 denendi ve geri alındı; Tur 34 eski görünüme canlılık ekledi; Tur 35 arayüzü Lite'ın "Cam & Bulut" diline taşıdı; Tur 36 şehre ayrıntı kattı; Tur 37a geç oyuna yönetim yükü, servet vergisi ve kriz dönemleri getirdi; Tur 37b karar kartlarını ve rakip hikâyelerini ekledi; Tur 37c fırsat balonlarını ve aylık görev panosunu getirdi; Tur 37d canlı pazarı, şehir projesi ihalesini ve rakip konsorsiyumunu getirdi).
+> Son güncelleme: şema **v6**, 38 tur (Tur 33 denendi ve geri alındı; Tur 34 eski görünüme canlılık ekledi; Tur 35 arayüzü Lite'ın "Cam & Bulut" diline taşıdı; Tur 36 şehre ayrıntı kattı; Tur 37a geç oyuna yönetim yükü, servet vergisi ve kriz dönemleri getirdi; Tur 37b karar kartlarını ve rakip hikâyelerini ekledi; Tur 37c fırsat balonlarını ve aylık görev panosunu getirdi; Tur 37d canlı pazarı, şehir projesi ihalesini ve rakip konsorsiyumunu getirdi; Tur 38 değerlendirme turuydu: geç oyun hızı, gündem ve haber akışı, zorluk eğrisi).
 
 ---
 
@@ -3129,7 +3129,8 @@ dört aşamada sekiz yeni sistem ekledi: kartlar, rakip hikâyeleri, balonlar,
 görevler, canlı pazar, şehir projesi, konsorsiyum, geç oyun giderleri ve
 krizler. Soru, birlikte nasıl oynandıkları.
 
-**Ölçüm** (vekil oyuncu 5 günde bir; balonu yakalıyor, biten görevi alıyor):
+**Ölçüm** (Tur 38'in ayarlarından önce; vekil oyuncu 5 günde bir, balonu
+yakalıyor, biten görevi alıyor):
 
 | 1000 günde | Standart (10 tohum) | Büyük şehir (3 tohum) |
 |---|---|---|
@@ -3177,7 +3178,92 @@ açılış doğrudan rekabet: tek başına haber. Gerisi haftanın özetinde
 ("Rakipler genişliyor · bu hafta N yeni işletme", şirket başına sayım, son
 açılışın yeri). Haber akışını okuyan oyun mantığı yok; simülasyon aynı.
 
-<!-- T38-ZORLUK -->
+**4 · Zorluk eğrisi kaymıştı.** Tur 17'nin kalibrasyonu yeniden koşuldu,
+daha çok tohumla (8: 1/7/42/101/202/3/5/11; bilgili 5 günde bir ve
+savunmasız, yavaş 15 günde bir):
+
+| Tur 38 öncesi | Bilgili | Yavaş, savunmasız | Yavaş, savunan |
+|---|---|---|---|
+| Rahat | 391–503'te kazanıyor | 0 düşüş, 7 zafer | — |
+| Dengeli | 605–780 (8/8) | **2/8 düşüyor, 4/8 kazanıyor** | 0 düşüş |
+| Acımasız | 6/8 kazanıyor, 2 düşüyor | 5/8 düşüyor (454–738) | — |
+
+Tur 17'de Dengeli'de savunmasız yavaş oyuncu 5'in 4'ünde düşüyordu. Tur
+37'nin aşamaları kapatılınca (aynı 8 tohum): hepsi kapalı 5/8 düşüş;
+yalnız 37a kapalı 0 zafer; 37b ya da 37d kapalı 2/8 düşüş. Etki birikimli,
+en büyük payı geç oyun giderlerinin.
+
+Teşhis (tohum 5, 50 günde bir): Tur 37 kapalıyken 600. günde oyuncu 46 M ₺,
+Meridyen 56, Nova 55,7 — oyuncu baskıncının 0,9'unun altında, ikisi birden
+alıyor (%25 + %53), 691. günde düşüyor. Açıkken geç oyun giderleri 100'ü
+aşkın binalı rakipleri çok daha fazla frenliyor: 600. günde oyuncu 55,1 M ₺
+(50 bina), Meridyen 51,7. Yavaş oyuncu en büyük şirket; tek baskıncının
+hedefi değil (0,9 kuralı), konsorsiyumun da değil (1,3 kat öndelik ve 90
+gün yatırımsızlık ister). 0,9 ile 1,3 arasındaki boşlukta 806. günde
+kazanıyor.
+
+Denenen kollar (Dengeli, 8 tohum):
+
+| Kol | Yavaş savunmasız: düşüş / zafer | Savunan düşüş | Bilgili |
+|---|---|---|---|
+| Baskın hedef eşiği 1,05 / 1,15 | 3 / 4 | 1 (tohum 1) | aynı |
+| Eşik 1,1 + bütçe 1,5 + konsorsiyum | 7 / 0 | 1 | 1 düşüş (995) |
+| Başa baş lidere konsorsiyum | 3 / 3 | 0 | aynı |
+| Rakip bütçesi ×1,5 | 3 / 0 | 0 | 613–755 |
+| Bütçe ×1,5 + günlük tavan %4,5 (seçilen) | **7 / 0** | **0** | **625–752 (8/8)** |
+
+Eşik tek başına işe yaramıyor: baskıncı adaylar arasında en küçüğü seçiyor,
+oyuncu sona kalıyor. Başa baş lidere konsorsiyum etkin oyuncuya da her
+120 günde bir uyarı veriyordu (yatırımla dağıtıyor ama gürültü). Bütçe
+tek başına baskını geç başlatıyor (düşüşler 900 günlük pencerenin sonunda).
+Seçilen ayar kuralları değiştirmiyor, herkese aynı:
+- Rakip bütçesi üç kademede 1,5 katı: Rahat 0,8 → 1,2 · Dengeli 1 → 1,5 ·
+  Acımasız 1,2 → 1,8. Kademeler arası oran aynı ("Rakipler %20 daha cesur
+  yatırır" hâlâ doğru).
+- Günlük baskın tavanı Dengeli %3,5 → %4,5, Acımasız %4,5 → %5,5 (Rahat %2).
+  Oyuncunun kendi alım tavanı da aynı (yardım metni artık zorluktan
+  okuyor; eskiden her zorlukta "%3,5" yazıyordu).
+
+| Tur 38 sonrası | Bilgili | Yavaş, savunmasız | Yavaş, savunan |
+|---|---|---|---|
+| Rahat | 390–503'te kazanıyor | 0 düşüş | — |
+| Dengeli | 625–752 (8/8) | **7/8 düşüyor (754–886)** | **0 düşüş** |
+| Acımasız | 5/8 kazanıyor (809–929), 3 düşüyor | 8/8 düşüyor (367–815) | — |
+
+Denge sınavı: iddia yeniden Tur 17'nin cümlesi — Dengeli'de "çoğunlukla"
+düşüyor (≥3/5, ölçüm 5/5). İkisi de 5/5'e yaklaşınca "Acımasız daha sık"
+beş tohumla ayırt edilemiyor; kontrol artık "en az o kadar sık ve daha
+erken" (ortalama 495 < 810). Konsorsiyum testi: pasif lider yine önderce
+devralınıyor; ama rakipler daha hızlı büyüdüğü için öndelik eriyor,
+konsorsiyum "öndelik" gerekçesiyle dağılıyor (%19 toplamışken) ve işi önder
+tek başına 202 günde bitiriyor (önce ~70); pencere 300 gün.
+
+Ayarın başka iki yan etkisi, ikisi de bilerek kabul edildi:
+- *Konsorsiyum bölümü:* seed 3'te 400. günde el çeken oyuncu artık hiç 1,3
+  kat öne geçmiyor, konsorsiyum kurulmuyor. "Cevap veren lider" iddiası
+  konsorsiyumun kurulduğu tohumlarda ölçülüyor (en az ikisinde; 615 ve
+  669'da zafer).
+- *Holding:* varsayılan talimat (kârın yarısı, savunmasız) iki tohumda
+  kurucu şehri ayrılıştan ~300 gün sonra kaybediyor (955-956. gün; önce dış
+  pay en çok %42'ydi). Uzak şehir tanımı gereği pasif ve oyuncu %25/%40'ta
+  oynadığı şehirde uyarılıyor; savunma talimatı şehri %23-27'de tutuyor.
+  Savunmasız pasif şirketin avlanması Dengeli'nin kuralı. Kârın hepsini
+  çeken şehir artık "daha derin ya da daha erken" düşüyor (915/936 <
+  955/956); iki talimat da tavana vurunca derinlik ayırt edemiyor.
+
+**Değişmeyenler.** Yardım ve rehber T37'nin bütün sistemlerini anlatıyor
+(geç oyun, hikâyeler, fırsatlar, canlı pazar, projeler, konsorsiyum); ilk
+balon 24., ilk görev panosu 20.'den sonraki ay başı, ilk kart 45. günden
+önce gelmiyor (rehberle çakışmıyor). Zaferden sonra kasa servetin %93'ü,
+ama zafer ekranı "Yeni şehre açıl"ı (holding) öneriyor. Paket gzip ile
+~495 kB.
+
+**Doğrulama.** `pnpm test` 394/394 (yeni: frensiz kart, dalga çipi, iki
+haber testi). `pnpm balance` 290/290; değişen kontroller yukarıda (zorluk
+iddiası, Acımasız karşılaştırması, konsorsiyum, holding talimatı). Tarayıcı tam koşu 393/393, konsol hatası yok (hız
+değişikliğiyle); gündem değişiklikleri ayrı tarayıcı kontrolüyle
+(masaüstü "+N" gizli; telefonda teklif çipi 370 piksel, ekran 390).
+
 
 ---
 
@@ -3260,7 +3346,7 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi) |
-| Birim testi | **390 test** (`pnpm test`; Tur 24'te render paketi de) |
+| Birim testi | **394 test** (`pnpm test`; Tur 24'te render paketi de) |
 | Denge testi | **290 kontrol, hepsi geçiyor** (21 bölüm, süreleriyle; ~12 dk) |
 | Tarayıcı testi | **393 kontrol, hepsi geçiyor**, 0 konsol hatası (~17–25 dk); duman koşusu 132 (~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + duman oynanışı |

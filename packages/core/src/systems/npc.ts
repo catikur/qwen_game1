@@ -671,7 +671,7 @@ function buildOnce(state: GameState, profile: NpcProfileDef, budget: number, isL
 
 /*
  * Baskının ısınma süresi (erken oyun inşaatın) ve günlük tavanı zorluktan
- * okunur: Dengeli'de 160 gün ve 350 hisse (%3,5).
+ * okunur: Dengeli'de 160 gün ve 450 hisse (%4,5; Tur 38'e kadar 350).
  */
 
 /** Baskın bütçesine dokunulmayan nakit tabanı. */
@@ -692,7 +692,7 @@ const RAID_CASH_RESERVE = 320_000;
  *   devamı bu — geride kalmak artık yalnızca bir sıra numarası değil,
  *   somut bir tehdit.
  *
- * - GÜNLÜK TAVAN VAR (350 hisse, %3,5): baskın bir anda değil dalga
+ * - GÜNLÜK TAVAN VAR (Dengeli'de 450 hisse, %4,5): baskın bir anda değil dalga
  *   dalga gelir. Bu bir merhamet değil OKUNABİLİRLİK kuralı — motor
  *   eşiklerde haber düşürüyor (%10/%25/%40) ve tek günde %0'dan %50'ye
  *   sıçrayan bir baskın o uyarıların hepsini atlardı.
@@ -769,7 +769,7 @@ function tryRaidMove(state: GameState, profile: NpcProfileDef): void {
   const price = sharePrice(state, target.id);
   if (price <= 0) return;
 
-  // Günlük tavan bir PAY (%3,5): sermaye artırımı yapmış hedefte adet büyür.
+  // Günlük tavan bir PAY (Dengeli %4,5): sermaye artırımı yapmış hedefte adet büyür.
   const cap = Math.floor((difficulty.raidDailyCap * sharesOutstanding(state, target.id)) / TOTAL_SHARES);
   const wanted = Math.min(cap, Math.floor(budget / price), freeFloat(state, target.id));
   if (wanted <= 0) return;
