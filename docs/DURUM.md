@@ -2765,10 +2765,12 @@ fırsat balonları ve her ay dönen kısa görevler.
   - en güçlü kategoride +5 puan pay (ödülüne marka +0,03 ekleniyor);
   - günlük ciroyu ×1,2'ye çıkarmak;
   - kasada kâr eğiliminin 15 günü;
-  - net değerde hemen öndeki rakibi geçmek (en çok %30 öndeyse). Bugünün
-    net değeriyle ölçülüyor: günlük yeniden hesap günün adımından sonra
-    geldiği için geçiş bir gün geç sayılıyor, ayın son gününde geçenin
-    ödülü düşüyordu (Codex #63);
+  - net değerde hemen öndeki rakibi geçmek (en çok %30 öndeyse). Görev
+    adımı şehir gününün içinde değil, net değerin günlük hesabından SONRA
+    çalışıyor: önce geçiş bir gün geç sayılıyor (ayın son gününde geçenin
+    ödülü düşüyordu) ve pano dünkü sıralamayla kuruluyordu. Görev adımında
+    ikinci bir hesap da çözüm değildi: net değer geçmişine günde iki örnek
+    yazıyordu (Codex #63);
   - bir balon yakalamak (ay içinde takvimde balon varsa).
 - Hedef, pano kurulurken bugünkü şehirden türüyor. Sayaç görevleri
   panodan sonrasını sayıyor.

@@ -9,7 +9,7 @@ import { buybackToLock, freeFloat, sharePrice, sharesHeld, sharesOutstanding } f
 import { runGoalTick } from './systems/goals';
 import { respondUnion } from './systems/labor';
 import { settleCardAway } from './systems/cards';
-import { settleBubbleAway } from './systems/opportunities';
+import { runQuestTick, settleBubbleAway } from './systems/opportunities';
 import { capRemaining, playerBuy } from './systems/orders';
 import { createNewGame } from './worldgen';
 import type { CityDirective, CommandResult, DormantCity, GameState, HoldingState, RemotePayout } from './types';
@@ -405,6 +405,7 @@ function liveAway(active: GameState, holding: HoldingState, city: DormantCity): 
   city.lastDividend = dividend;
 
   recomputeNetWorth(s);
+  runQuestTick(s);
   runGoalTick(s);
   city.trend = cityTrend(s);
 

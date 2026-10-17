@@ -292,8 +292,7 @@ describe('görev panosu', () => {
     player.marketShare.retail = 0.4;
     const brand = player.brand.retail ?? 0;
     const rival = Object.values(state.companies).find((c) => !c.isPlayer)!;
-    // Görev bugünün net değerini yeniden hesaplıyor: rakip gerçekten önde olsun.
-    rival.cash += Math.max(0, player.netWorth - rival.netWorth) + 1_000_000;
+    rival.netWorth = player.netWorth * 1.2;
     const board: QuestBoard = {
       startDay: state.time.day,
       endDay: nextMonthStart(state.time.day),
@@ -312,9 +311,9 @@ describe('görev panosu', () => {
     assert.equal(questValue(state, board, board.items[1]!), 1);
   });
 
-  test('geçme görevi bugünün net değeriyle tamamlanıyor, bir gün geç değil (Codex #63)', () => {
-    const state = play(3, 31).getState();
-    recomputeNetWorth(state);
+  test('geçme görevi günün net değeriyle aynı gün tamamlanıyor; net değer geçmişine günde bir örnek (Codex #63)', () => {
+    const engine = play(3, 31);
+    const state = engine.getState();
     const player = getPlayer(state);
     const rival = Object.values(state.companies).find((c) => !c.isPlayer && c.netWorth > player.netWorth)
       ?? Object.values(state.companies).find((c) => !c.isPlayer)!;
@@ -323,13 +322,16 @@ describe('görev panosu', () => {
     assert.ok(rival.netWorth > player.netWorth);
     state.quests = {
       startDay: state.time.day,
-      endDay: nextMonthStart(state.time.day),
+      endDay: nextMonthStart(state.time.day + 1),
       items: [{ defId: 'overtake', base: 0, target: 1, reward: 10_000, rivalId: rival.id, rivalName: rival.name }],
     };
-    // Bugün oyuncu rakibi geçti (kasaya giren para); dünkü net değer henüz eski.
-    player.cash += rival.netWorth - player.netWorth + 500_000;
-    runQuestTick(state);
-    assert.equal(state.quests.items[0]!.doneDay, state.time.day);
+    // Bu gün oyuncu rakibi geçiyor (kasaya giren para); dünkü net değer eski.
+    player.cash += rival.netWorth - player.netWorth + 5_000_000;
+    const history = player.netWorthHistory.length;
+    const full = history >= 120;
+    engine.runDay();
+    assert.equal(state.quests!.items[0]!.doneDay, state.time.day, 'geçiş bir gün geç sayıldı');
+    if (!full) assert.equal(player.netWorthHistory.length, history + 1, 'net değer geçmişine çift örnek');
   });
 
   test('sayaç görevleri pano kurulduktan sonrasını sayıyor', () => {

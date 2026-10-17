@@ -7,7 +7,7 @@ import { createRng, nextFloat, pickWeighted } from '../rng';
 import { formatMoney, nextMonthStart, dayOfMonth } from '../selectors';
 import { purchaseBlocker } from '../actions';
 import { profitTrend } from './cards';
-import { recomputeNetWorth, tilePrice } from './city';
+import { tilePrice } from './city';
 import type { BubbleState, CommandResult, CompanyState, GameState, QuestBoard, QuestState } from '../types';
 
 /**
@@ -405,6 +405,12 @@ export function questsReady(state: GameState): number {
  * Günlük görev adımı — günün SONUNDA: pay, ciro ve net değer bugünün
  * defterinden okunuyor. Pano ay başında kuruluyor; tamamlanan görev
  * işaretleniyor, ödülü `CLAIM_QUEST` ile alınıyor.
+ *
+ * Şehir gününün (`simulateCityDay`) içinde değil, net değerin günlük
+ * hesabından SONRA çağrılıyor (motorun günü ve holdingin bekleyen
+ * şehirleri): geçme görevi ve panonun "hemen öndeki rakibi" bugünün net
+ * değeriyle ölçülsün. Gün içinde ikinci bir hesap net değer geçmişine çift
+ * örnek yazardı (Codex #63).
  */
 export function runQuestTick(state: GameState): void {
   if (!questsEnabled(state)) {
@@ -424,10 +430,6 @@ export function runQuestTick(state: GameState): void {
     state.quests = board;
     return;
   }
-  // Geçme görevi bugünün net değeriyle ölçülüyor: günlük yeniden hesap
-  // ancak `simulateCityDay`'den sonra geliyor; dünkü değerle geçiş bir gün
-  // geç sayılır, ayın son gününde geçen oyuncunun ödülü düşerdi (Codex #63).
-  if (board.items.some((quest) => quest.defId === 'overtake' && quest.doneDay === undefined)) recomputeNetWorth(state);
   for (const quest of board.items) {
     if (quest.doneDay !== undefined) continue;
     if (questValue(state, board, quest) >= quest.target) completeQuest(state, quest);
