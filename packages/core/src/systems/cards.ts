@@ -163,10 +163,16 @@ export function runCardTick(state: GameState): void {
   };
 }
 
-function applyEffects(state: GameState, card: CardState, effects: readonly CardEffect[]): void {
+/**
+ * `firstDay`: süreli etkinin ilk etkili günü. Oyuncu kartı (ve uzaktaki
+ * şehirde yerel müdür) gün ARASINDA seçiyor: bugünün pazarı kapandı, etki
+ * yarından başlıyor. Süresi dolan kart ise günün adımında, pazardan önce
+ * kapanıyor ve bugünü de sayıyor. İkisinde de etki tam `days` pazar günü
+ * sürüyor (Codex #62: seçilen kartta bir gün eksik kalıyordu).
+ */
+function applyEffects(state: GameState, card: CardState, effects: readonly CardEffect[], firstDay: number): void {
   const player = state.companies[state.playerCompanyId];
   if (!player) return;
-  const day = state.time.day;
   for (const effect of effects) {
     if (effect.kind === 'cash') {
       player.cash += card.amount * effect.times;
@@ -174,7 +180,7 @@ function applyEffects(state: GameState, card: CardState, effects: readonly CardE
       (player.boosts ??= []).push({
         target: effect.target,
         multiplier: effect.multiplier,
-        untilDay: day + effect.days - 1,
+        untilDay: firstDay + effect.days - 1,
         ...(effect.category && card.category ? { category: card.category } : {}),
         cardId: card.defId,
       });
@@ -206,7 +212,7 @@ function resolveCard(state: GameState, card: CardState, choiceId: string, how: R
 
   const success = rolled(state, card, choice);
   const effects = success ? choice.effects : (choice.fail ?? []);
-  applyEffects(state, card, effects);
+  applyEffects(state, card, effects, how === 'expired' ? day : day + 1);
 
   const params = cardParams(state, card);
   const text = fillTemplate(success ? choice.result : (choice.failResult ?? choice.result), params);

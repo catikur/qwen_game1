@@ -204,14 +204,15 @@ export function DecisionCard(): ReactElement | null {
 /** Şirket panelinde süren kart etkileri: "Çekicilik +%20 · 12 gün · Market". */
 export function BoostChips({ boosts, day }: { boosts: readonly CardBoost[]; day: number }): ReactElement {
   const chips = boosts
-    .filter((boost) => boost.untilDay >= day)
+    .filter((boost) => boost.untilDay > day)
     .map((boost): Chip => {
       const change = boost.multiplier - 1;
       const good = boost.target === 'attraction' ? change > 0 : change < 0;
       return {
         text: t(`hud.card.boost.${boost.target}` as MessageKey, {
           change: signedPercent(change),
-          days: boost.untilDay - day + 1,
+          // Gösterim gün arasında: kalan etkili gün yarından `untilDay`'e kadar.
+          days: boost.untilDay - day,
           scope: boost.category ? CATEGORIES[boost.category].name : t('hud.card.scopeAll'),
         }),
         tone: good ? 'good' : 'bad',

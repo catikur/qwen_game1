@@ -854,7 +854,11 @@ export function ActiveEvents(): ReactElement | null {
           <button
             type="button"
             className={`event-chip card-chip urgency-${item.urgency}`}
-            onClick={reopenDecisionCard}
+            onClick={() => {
+              // Kartı gizleyen işi bırak (seçili arsa, yerleştirme, açık panel), sonra aç.
+              setView({ selectedTileId: null, ghostDefId: null, openPanel: 'none' });
+              reopenDecisionCard();
+            }}
             title={t('hud.agenda.cardTitle')}
           >
             <span className="agenda-label">{t('hud.agenda.card')}</span>

@@ -70,8 +70,14 @@ describe('karar kartları', () => {
     assert.equal(boostMultiplier(state, player.id, 'attraction', 'dining'), 1);
     assert.equal(boostMultiplier(state, player.id, 'upkeep'), 1);
     assert.ok(state.news[0]!.body.includes('Bedel'));
-    state.time.day += 30;
-    assert.equal(boostMultiplier(state, player.id, 'attraction', 'retail'), 1);
+    // Gün arasında seçildi: etki yarından başlıyor ve tam 30 pazar günü sürüyor.
+    const chosenDay = state.time.day;
+    let active = 0;
+    for (let day = chosenDay + 1; day <= chosenDay + 40; day++) {
+      state.time.day = day;
+      if (boostMultiplier(state, player.id, 'attraction', 'retail') > 1) active++;
+    }
+    assert.equal(active, 30);
     runCardTick(state);
     assert.equal(player.boosts, undefined, 'biten etki temizlendi');
   });
@@ -141,6 +147,21 @@ describe('karar kartları', () => {
     assert.ok(item);
     assert.equal(item.daysLeft, CARD_TIMING.lifetimeDays);
     assert.ok(!item.label.includes('{rival}'), item.label);
+  });
+
+  test('süresi dolan kartın etkisi de tam süre: gün adımında, pazardan önce başlıyor', () => {
+    const state = createNewGame({ seed: 5 });
+    state.time.day = 100;
+    putCard(state, 'viral_video', { category: 'retail', offeredDay: 80, deadlineDay: 99 });
+    runCardTick(state);
+    assert.equal(state.card, undefined);
+    const player = getPlayer(state);
+    let active = 0;
+    for (let day = 100; day <= 130; day++) {
+      state.time.day = day;
+      if (boostMultiplier(state, player.id, 'attraction', 'retail') > 1) active++;
+    }
+    assert.equal(active, 12, 'varsayılan "kendi haline bırak" 12 gün');
   });
 
   test('uzaktaki şehirde yerel müdür varsayılanı seçiyor', () => {
