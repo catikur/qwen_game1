@@ -2744,6 +2744,11 @@ fırsat balonları ve her ay dönen kısa görevler.
   tekrarladığı) için Lite'taki saniyelik ömür burada gün.
 - Zar dışsal (tohum, gün); `state.rng` çekilmiyor. Yakalamak
   `CLAIM_BUBBLE` komutu, lig günlüğüne giriyor.
+- Lig simülasyon izi fırsatları da işletiyor: iz senaryosu ilk gün bir
+  bakkal kuruyor, her balonu ve tamamlanan her görevi alıyor; izde balon
+  ve görev durumu da var. Boşta dünyada balon çıkmıyordu: takvim ya da
+  ödül değişince iz aynı kalır, dürüst koşu tekrarda sahte sayılırdı
+  (sürüm farkı yerine) (Codex #63).
 - Uzaktaki şehirde dokunan yok: balon sönüyor. Bina tahmini balon
   üretmiyor; süren "kuyruk" etkisi tahmine giriyor.
 - **Arayüz:**
@@ -2930,7 +2935,7 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi) |
-| Birim testi | **360 test** (`pnpm test`; Tur 24'te render paketi de) |
+| Birim testi | **361 test** (`pnpm test`; Tur 24'te render paketi de) |
 | Denge testi | **288 kontrol, hepsi geçiyor** (20 bölüm, süreleriyle; ~11 dk) |
 | Tarayıcı testi | **382 kontrol, hepsi geçiyor**, 0 konsol hatası (~17–25 dk); duman koşusu 121 (~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + duman oynanışı |
