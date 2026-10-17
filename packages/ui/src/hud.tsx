@@ -951,6 +951,24 @@ export function ActiveEvents(): ReactElement | null {
         );
         break;
       }
+      case 'quests':
+        // Ayın görev panosu (Tur 37c): hedef merdiveniyle aynı pencerede.
+        chip = (
+          <button
+            type="button"
+            className={`event-chip quests-chip tone-${item.tone}`}
+            onClick={() => togglePanel('goals')}
+            title={t('hud.agenda.questsTitle')}
+          >
+            <span className="agenda-label">{t('hud.agenda.quests')}</span>
+            {item.label}
+            <span className="goal-chip-bar" aria-hidden="true">
+              <span style={{ width: `${Math.round((item.progress ?? 0) * 100)}%` }} />
+            </span>
+            {days}
+          </button>
+        );
+        break;
       case 'goal':
         chip = (
           <button

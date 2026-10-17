@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   ALL_EVENTS,
   baseText,
+  BUBBLES,
   BUILDINGS,
   CARDS,
   CATEGORIES,
@@ -19,6 +20,7 @@ import {
   hasMessage,
   MOTION_TEXT,
   NPC_PROFILES,
+  QUESTS,
   RIVAL_LINES,
   registerMessages,
   setLocale,
@@ -166,6 +168,8 @@ describe('İngilizce sözlükler', () => {
         ['label', 'flavor', 'result', 'failResult'],
       ]),
       ['rivalLine', RIVAL_LINES, Object.keys(RIVAL_LINES.expansionist)],
+      ['bubble', byId(BUBBLES), ['title', 'caught']],
+      ['quest', byId(QUESTS), ['title', 'hint']],
     ];
     const expected = new Set<string>();
     for (const [kind, record, fields] of lists) {

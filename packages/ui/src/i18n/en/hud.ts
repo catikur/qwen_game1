@@ -215,4 +215,24 @@ export const hud: Record<keyof typeof trHud, string> = {
   'hud.agenda.cardTitle': 'A decision is waiting — tap to open the card',
   'hud.agenda.campaign': 'Campaign',
   'hud.agenda.campaignTitle': 'Rival campaign — answer with your competitive arms',
+
+  // Opportunity bubble and quest board (Tur 37c)
+  'hud.bubble.hint': 'Tap to catch',
+  'hud.bubble.daysLeft': '{days} days left',
+  'hud.bubble.boost': '+{percent} · {days} days',
+  'hud.bubble.parcel': '−{percent} · {price}',
+  'hud.agenda.quests': 'Quests',
+  'hud.agenda.questsTitle': "This month's quests — tap to open the board",
+  'hud.quests.title': '{month} quests',
+  'hud.quests.lead':
+    "Three short quests each month. Claim a finished quest's reward here; the board refreshes when the month ends and unclaimed rewards lapse.",
+  'hud.quests.daysLeft': 'New board in {days} days',
+  'hud.quests.done': 'Done · day {day}',
+  'hud.quests.claim': 'Claim reward',
+  'hud.quests.claimHint': 'Claim it before the month ends; it lapses with the new board.',
+  'hud.quests.claimedToast': 'Quest reward paid: {amount}',
+  'hud.quests.reward': 'Reward {amount}',
+  'hud.quests.rewardBrand': 'Reward {amount} + brand',
+  'hud.quests.none': 'The first quest board opens on {date}.',
+  'hud.quests.ladder': 'Goal ladder',
 };

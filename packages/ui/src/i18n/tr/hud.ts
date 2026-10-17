@@ -213,4 +213,23 @@ export const hud = {
   'hud.agenda.cardTitle': 'Masada bekleyen karar — dokun, kartı aç',
   'hud.agenda.campaign': 'Kampanya',
   'hud.agenda.campaignTitle': 'Rakip kampanyası — rekabet kollarıyla karşılık ver',
+
+  // Fırsat balonu ve görev panosu (Tur 37c)
+  'hud.bubble.hint': 'Dokun, yakala',
+  'hud.bubble.daysLeft': '{days} gün kaldı',
+  'hud.bubble.boost': '+{percent} · {days} gün',
+  'hud.bubble.parcel': '−{percent} · {price}',
+  'hud.agenda.quests': 'Görevler',
+  'hud.agenda.questsTitle': 'Ayın görevleri — dokun, panoyu aç',
+  'hud.quests.title': '{month} görevleri',
+  'hud.quests.lead': 'Her ay üç kısa görev. Bitirdiğin görevin ödülünü buradan al; ay bitince pano yenileniyor, alınmayan ödül düşüyor.',
+  'hud.quests.daysLeft': 'Yeni pano {days} gün sonra',
+  'hud.quests.done': 'Tamam · {day}. gün',
+  'hud.quests.claim': 'Ödülü al',
+  'hud.quests.claimHint': 'Ay bitmeden al; yeni panoyla birlikte düşer.',
+  'hud.quests.claimedToast': 'Görev ödülü kasada: {amount}',
+  'hud.quests.reward': 'Ödül {amount}',
+  'hud.quests.rewardBrand': 'Ödül {amount} + marka',
+  'hud.quests.none': 'İlk görev panosu {date} kuruluyor.',
+  'hud.quests.ladder': 'Hedef merdiveni',
 } as const;

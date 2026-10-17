@@ -134,4 +134,11 @@ export const world: Record<keyof typeof trWorld, string> = {
   'core.rivalry.campaignLostBody': 'Your {category} share fell {from} → {to}.',
   'core.rivalry.campaignRetreatTitle': '{name} pulled out of its {category} attack',
   'core.rivalry.campaignRetreatBody': 'It closed its last store in the category; the price war is over.',
+  'core.bubbles.none': 'There is no opportunity to catch in the city.',
+  'core.bubbles.noCash': 'The discounted plot needs {price} in cash.',
+  'core.quests.doneTitle': 'Quest complete: {title}',
+  'core.quests.doneBody': 'Your reward ({amount}) is waiting on the quest board; claim it before the month ends.',
+  'core.quests.none': 'There is no such quest on the board.',
+  'core.quests.notDone': 'This quest is not complete yet.',
+  'core.quests.claimed': 'This reward has already been claimed.',
 };

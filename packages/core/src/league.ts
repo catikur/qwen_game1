@@ -61,6 +61,8 @@ const LOGGABLE: ReadonlySet<string> = new Set<GameCommand['type']>([
   'BUY_TILE',
   'CANCEL_TAKEOVER_ORDER',
   'CHOOSE_CARD',
+  'CLAIM_BUBBLE',
+  'CLAIM_QUEST',
   'DECLINE_CONTRACT',
   'DEMOLISH',
   'HOLDING_TRANSFER',

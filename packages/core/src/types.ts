@@ -1,4 +1,5 @@
 import type {
+  BubbleKind,
   CardBoostTarget,
   CategoryId,
   CitySizeId,
@@ -9,6 +10,7 @@ import type {
   MotionKind,
   NpcProfileDef,
   UnionResponse,
+  QuestKind,
   WagePolicy,
 } from '@capital/content';
 import type { RngState } from './rng';
@@ -491,6 +493,10 @@ export interface FeatureFlags {
    * kampanya yok; süren kampanya süresini dolduruyor.
    */
   rivalStories?: boolean;
+  /** Fırsat balonları (Tur 37c). Aynı sözleşme: yokluğu AÇIK. */
+  bubbles?: boolean;
+  /** Görev panosu (Tur 37c). Aynı sözleşme: yokluğu AÇIK. */
+  quests?: boolean;
 }
 
 /** Masadaki karar kartı (Tur 37b). */
@@ -523,6 +529,47 @@ export interface CardBoost {
   category?: CategoryId;
   /** Kaynak kart (gösterim için). */
   cardId: string;
+}
+
+/** Şehrin üstündeki fırsat balonu (Tur 37c). */
+export interface BubbleState {
+  kind: BubbleKind;
+  /** Balonun durduğu parsel (mağaza, merkez ya da indirimli arsa). */
+  tileId: number;
+  offeredDay: number;
+  /** Bu gün dahil yakalanabilir. */
+  untilDay: number;
+  /** Nakit ödülde tutar, arsada indirimli bedel (₺) — çıktığı gün sabit. */
+  amount: number;
+  /** Bağlandığı mağazanın kategorisi (süreli çekicilikte). */
+  category?: CategoryId;
+}
+
+/** Panodaki bir görev (Tur 37c). */
+export interface QuestState {
+  defId: QuestKind;
+  /** Pano kurulurken okunan değer (sayaç görevlerinde fark buradan). */
+  base: number;
+  /** Ulaşılacak değer — panoda yazan. */
+  target: number;
+  /** Ödül (₺), pano kurulurken sabit. */
+  reward: number;
+  category?: CategoryId;
+  rivalId?: string;
+  /** Rakip devralınırsa satır yine okunsun. */
+  rivalName?: string;
+  /** Tamamlandığı gün. */
+  doneDay?: number;
+  /** Ödül alındı mı — tamamlanan görevin ödülü dokununca kasaya giriyor. */
+  claimed?: boolean;
+}
+
+/** Ayın görev panosu (Tur 37c). */
+export interface QuestBoard {
+  startDay: number;
+  /** Bir sonraki ayın ilk günü: pano o gün yenileniyor. */
+  endDay: number;
+  items: QuestState[];
 }
 
 /** Rakip kampanyası (Tur 37b): bir rakibin oyuncunun kategorisine süreli saldırısı. */
@@ -641,6 +688,17 @@ export interface GameState {
   nextCampaignDay?: number;
   /** Rakip sözlerinin son günü (`şirket|an`) — sık anlarda aynı söz tekrar etmesin. */
   quoteDays?: Record<string, number>;
+  /** Şehrin üstündeki fırsat balonu (Tur 37c). */
+  bubble?: BubbleState;
+  /** Bir sonraki balonun günü; yoksa ilk balonun takvimi kurulur. */
+  nextBubbleDay?: number;
+  /** Bu şehirde çıkan ve yakalanan balon sayısı (ipucu ve görev için). */
+  bubblesShown?: number;
+  bubblesCaught?: number;
+  /** Ayın görev panosu (Tur 37c). */
+  quests?: QuestBoard;
+  /** Tamamlanan görev sayısı (bütün oyun). */
+  questsDone?: number;
   /**
    * Masadaki sözleşme teklifi ve aktif sözleşme. Üçü de seçime bağlı:
    * eski kayıtlarda yoklukları "teklif yok" demek, şema sürümü sabit.
@@ -839,6 +897,10 @@ export type GameCommand =
   | { type: 'RESPOND_UNION'; response: UnionResponse }
   /** Masadaki karar kartında bir seçenek (Tur 37b). */
   | { type: 'CHOOSE_CARD'; choiceId: string }
+  /** Şehrin üstündeki fırsat balonunu yakala (Tur 37c). */
+  | { type: 'CLAIM_BUBBLE' }
+  /** Panodaki tamamlanmış görevin ödülünü al (Tur 37c). */
+  | { type: 'CLAIM_QUEST'; index: number }
   /** Bankadan kredi: vadeli ya da arsa teminatlı. */
   | { type: 'TAKE_LOAN'; kind: LoanKind; amount: number; termDays: number }
   /** Bir krediyi kalan anaparasıyla erken kapatır. */

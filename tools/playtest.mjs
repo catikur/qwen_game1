@@ -1184,6 +1184,128 @@ async function finish(browser, consoleErrors) {
   });
   check('Kart ve kampanya akışı konsolu kirletmiyor', consoleErrors.length === 0, consoleErrors.slice(0, 2).join(' | '));
 
+  // ---------- Fırsat balonu ve görev panosu (Tur 37c) ----------
+  section('Fırsat balonu ve görev panosu');
+  const bubbleAt = await page.evaluate(() => {
+    const cap = window.__capital;
+    const s = cap.getState();
+    const outlet = Object.values(s.buildings).find((b) => b.companyId === s.playerCompanyId);
+    if (!outlet) return null;
+    s.bubble = { kind: 'order', tileId: outlet.tileId, offeredDay: s.time.day, untilDay: s.time.day + 5, amount: 84000 };
+    const tile = s.map.tiles[outlet.tileId];
+    cap.setView({ x: tile.x, z: tile.y, distance: 14 });
+    cap.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+    return outlet.tileId;
+  });
+  await page.waitForTimeout(1500);
+  const bubbleView = await page.evaluate(() => {
+    const anchor = document.querySelector('.bubble-anchor');
+    const button = anchor?.querySelector('.opportunity-bubble');
+    if (!anchor || !button) return null;
+    const r = button.getBoundingClientRect();
+    return {
+      text: button.textContent?.trim() ?? '',
+      edge: anchor.getAttribute('data-edge'),
+      inside: r.left >= 0 && r.right <= innerWidth && r.top >= 0 && r.bottom <= innerHeight,
+    };
+  });
+  check('Fırsat balonu mağazanın çatısında, ödülü rakamla yazılı',
+    bubbleAt !== null && bubbleView?.edge === 'no' && bubbleView.inside && /84/.test(bubbleView.text),
+    JSON.stringify(bubbleView));
+
+  const bubbleCash = await page.evaluate(() => window.__capital.getState().companies[window.__capital.getState().playerCompanyId].cash);
+  const anchorBox = await page.evaluate(() => {
+    const r = document.querySelector('.bubble-anchor')?.getBoundingClientRect();
+    return r ? { x: r.left, y: r.top } : null;
+  });
+  // Balon hafifçe sallanıyor: Playwright "kararlı değil" diye beklemesin.
+  await page.locator('.opportunity-bubble').click({ force: true });
+  await page.waitForTimeout(120);
+  const caught = await page.evaluate((before) => {
+    const s = window.__capital.getState();
+    const burst = document.querySelector('.bubble-burst')?.getBoundingClientRect();
+    return {
+      gone: !s.bubble && !document.querySelector('.opportunity-bubble'),
+      gained: Math.round(s.companies[s.playerCompanyId].cash - before),
+      caught: s.bubblesCaught ?? 0,
+      burst: burst ? { x: burst.left + burst.width / 2, y: burst.top } : null,
+      toast: [...document.querySelectorAll('.toast')].map((el) => el.textContent ?? '').join(' | '),
+    };
+  }, bubbleCash);
+  check('Dokununca ödül kasada, balon kalkıyor, tost çıkıyor',
+    caught.gone && caught.gained === 84000 && caught.caught >= 1 && caught.toast.includes('Toplu sipariş'),
+    JSON.stringify({ ...caught, burst: undefined }));
+  check('Ödül balonun yerinden süzülüyor',
+    Boolean(caught.burst && anchorBox && Math.abs(caught.burst.x - anchorBox.x) < 40 && Math.abs(caught.burst.y - anchorBox.y) < 120),
+    JSON.stringify({ burst: caught.burst, anchor: anchorBox }));
+
+  // Bina ekran dışında: balon kenara yapışıyor ama ekranın içinde kalıyor.
+  await page.evaluate(() => {
+    const cap = window.__capital;
+    const s = cap.getState();
+    const outlet = Object.values(s.buildings).find((b) => b.companyId === s.playerCompanyId);
+    s.bubble = { kind: 'investor', tileId: outlet.tileId, offeredDay: s.time.day, untilDay: s.time.day + 5, amount: 50000 };
+    const tile = s.map.tiles[outlet.tileId];
+    cap.setView({ x: tile.x > s.map.width / 2 ? 1 : s.map.width - 2, z: tile.y > s.map.height / 2 ? 1 : s.map.height - 2, distance: 8 });
+    cap.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+  });
+  await page.waitForTimeout(1500);
+  const edged = await page.evaluate(() => {
+    const anchor = document.querySelector('.bubble-anchor');
+    const r = anchor?.querySelector('.opportunity-bubble')?.getBoundingClientRect();
+    return r ? { edge: anchor.getAttribute('data-edge'), inside: r.left >= 0 && r.right <= innerWidth && r.top >= 0 && r.bottom <= innerHeight } : null;
+  });
+  check('Ekran dışındaki balon kenara yapışıyor, taşmıyor', edged?.edge === 'yes' && edged.inside, JSON.stringify(edged));
+  await page.locator('.topbar-actions [data-panel="company"]').click();
+  await page.waitForTimeout(300);
+  check('Pencere açıkken balon gizli', (await page.locator('.opportunity-bubble').count()) === 0);
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(300);
+  await page.evaluate(() => {
+    const cap = window.__capital;
+    const s = cap.getState();
+    delete s.bubble;
+    // Panoda biri tamamlanmış (ödül bekliyor), biri yolda.
+    s.quests = {
+      startDay: s.time.day,
+      endDay: s.time.day + 20,
+      items: [
+        { defId: 'producer', base: 0, target: 1, reward: 64000, doneDay: s.time.day },
+        { defId: 'parcels', base: 0, target: 2, reward: 30000 },
+      ],
+    };
+    cap.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+  });
+  await page.waitForTimeout(300);
+  const questChip = await page.evaluate(() => document.querySelector('[data-agenda="quests"]')?.textContent?.trim() ?? '');
+  check('Gündemde görev ödülü hazır', questChip.includes('Ödül hazır') && /20/.test(questChip), questChip);
+  await page.locator('[data-agenda="quests"] button').click();
+  await page.waitForTimeout(400);
+  const board = await page.evaluate(() => ({
+    rows: document.querySelectorAll('.modal .quest').length,
+    claim: Boolean(document.querySelector('.modal [data-quest-claim="0"]')),
+    text: document.querySelector('.modal .quest-board')?.textContent ?? '',
+  }));
+  check('Görev panosu açılıyor: satırlar, ödül ve "Ödülü al"',
+    board.rows === 2 && board.claim && board.text.includes('64 B') && board.text.includes('Bir üretim tesisi kur'),
+    `${board.rows} satır · ${board.claim ? 'düğme var' : 'düğme yok'}`);
+  const questCash = await page.evaluate(() => window.__capital.getState().companies[window.__capital.getState().playerCompanyId].cash);
+  await page.locator('.modal [data-quest-claim="0"]').click();
+  await page.waitForTimeout(300);
+  const claimed = await page.evaluate((before) => {
+    const s = window.__capital.getState();
+    return {
+      gained: Math.round(s.companies[s.playerCompanyId].cash - before),
+      done: Boolean(document.querySelector('.modal .quest.quest-done[data-quest="producer"]')),
+      button: Boolean(document.querySelector('.modal [data-quest-claim="0"]')),
+    };
+  }, questCash);
+  check('Ödül alınıyor: kasaya giriyor, satır tamam, düğme kalkıyor',
+    claimed.gained === 64000 && claimed.done && !claimed.button, JSON.stringify(claimed));
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(200);
+  check('Balon ve görev akışı konsolu kirletmiyor', consoleErrors.length === 0, consoleErrors.slice(0, 2).join(' | '));
+
   if (SMOKE) {
     await finish(browser, consoleErrors);
     return;
@@ -3296,6 +3418,30 @@ async function finish(browser, consoleErrors) {
       `${deviceName}: karar kartı rıhtımın üstünde ve ekranda`,
       Boolean(mobileCard) && mobileCard.bottom <= mobileCard.dock && mobileCard.top >= 0 && mobileCard.left >= 0 && mobileCard.right <= mobileCard.vw,
       mobileCard ? `kart ${mobileCard.top}–${mobileCard.bottom} · rıhtım ${mobileCard.dock}` : 'kart yok',
+    );
+    // Fırsat balonu (Tur 37c): bina nerede olursa olsun balon ekranda ve rıhtımın üstünde.
+    const mobileBubble = await m.evaluate(async () => {
+      const cap = window.__capital;
+      const s = cap.getState();
+      // Telefon oyunu yeni kurulmuş olabilir: balon herhangi bir kareye bağlanabiliyor, köşeden uzak bir kare.
+      // Kamera yerinde kalıyor (sonraki dokunma kontrolleri ona bağlı): balon karede de olsa kenara
+      // yapışmış da olsa ekranda ve rıhtımın üstünde olmalı.
+      const tile = s.map.tiles[(s.map.height - 2) * s.map.width + (s.map.width - 2)];
+      s.bubble = { kind: 'parcel', tileId: tile.id, offeredDay: s.time.day, untilDay: s.time.day + 5, amount: 96000 };
+      cap.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+      const r = document.querySelector('.opportunity-bubble')?.getBoundingClientRect();
+      const nav = document.querySelector('.topbar-actions')?.getBoundingClientRect();
+      const result = r && nav ? { left: Math.round(r.left), right: Math.round(r.right), top: Math.round(r.top), bottom: Math.round(r.bottom), dock: Math.round(nav.top), vw: innerWidth } : null;
+      delete s.bubble;
+      cap.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+      await new Promise((resolve) => setTimeout(resolve, 200));
+      return result;
+    });
+    check(
+      `${deviceName}: fırsat balonu ekranda ve rıhtımın üstünde`,
+      Boolean(mobileBubble) && mobileBubble.left >= 0 && mobileBubble.right <= mobileBubble.vw && mobileBubble.top >= 0 && mobileBubble.bottom <= mobileBubble.dock,
+      mobileBubble ? `balon ${mobileBubble.left}–${mobileBubble.right} × ${mobileBubble.top}–${mobileBubble.bottom} · rıhtım ${mobileBubble.dock}` : 'balon yok',
     );
     // KATLANABİLİR PANELLER — dar ekranın dikey bütçesi.
     //

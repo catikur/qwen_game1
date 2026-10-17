@@ -105,6 +105,15 @@ export {
   overheadRate,
 } from './systems/economy';
 export { boostMultiplier, cardAmount, cardParams, cardsEnabled, cashEffect } from './systems/cards';
+export {
+  bubbleText,
+  bubblesEnabled,
+  questProgress,
+  questsReady,
+  questTitle,
+  questValue,
+  questsEnabled,
+} from './systems/opportunities';
 export { campaignPriceFactor, campaignsLive, effectivePriceMultiplier, rivalQuote, storiesEnabled } from './systems/rivalry';
 export { activeContract, contractProgress, OFFER_LIFETIME_DAYS } from './systems/contracts';
 export type { EventModifiers } from './systems/events';

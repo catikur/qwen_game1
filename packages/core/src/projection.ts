@@ -51,6 +51,17 @@ function freeze(state: GameState): GameState {
    */
   delete copy.card;
   copy.nextCardDay = Number.MAX_SAFE_INTEGER;
+  /*
+   * Fırsat balonu ve görev (Tur 37c) de kollarda ayrışabilir: yeni bina
+   * "mağaza aç" görevini bitirip markayı artırır, balon başka mağazaya
+   * bağlanır. Balon üretimi duruyor (süren "kuyruk" etkisi kalıyor),
+   * görev panosu kapanıyor — kalıcı etkisi yok, verdiği marka zaten
+   * şirkette.
+   */
+  delete copy.bubble;
+  copy.nextBubbleDay = Number.MAX_SAFE_INTEGER;
+  delete copy.quests;
+  copy.flags.quests = false;
   // Oyun bitmiş ya da zafer ekranı açıkken de takvim aksın.
   delete copy.gameOver;
   delete copy.league;

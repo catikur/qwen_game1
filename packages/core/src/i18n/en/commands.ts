@@ -140,6 +140,8 @@ export const commands: Record<keyof typeof trCommands, string> = {
   'core.agenda.council': 'Council · motions: {count}',
   'core.agenda.crisisWarning': 'Crisis ahead: {title}',
   'core.agenda.campaign': '{name}: {category} attack',
+  'core.agenda.quests': '{month} quests {done}/{total}',
+  'core.agenda.questsReady': 'Reward ready: {count} quest(s)',
 
   // chain.ts — chain card
   'core.chain.stateOwn': 'Yours',

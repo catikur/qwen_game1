@@ -22,6 +22,7 @@ export { CeoPortrait } from './CeoPortrait';
 export { NewGameScreen } from './NewGame';
 export { Coach } from './Coach';
 export { DecisionCard, reopenDecisionCard } from './DecisionCard';
+export { OpportunityBubble, bubbleReward } from './OpportunityBubble';
 export { startTutorial, tutorialSeen, tutorialStepOf } from './tutorial';
 export type { TutorialStepId } from './tutorial';
 export { currentLocale, registerLocale, setLocale, t } from './i18n';

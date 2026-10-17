@@ -9,6 +9,7 @@ import { isLoggable, leagueActive, runLeagueTick } from './systems/league';
 import { lobby } from './systems/council';
 import { respondUnion, setWagePolicy } from './systems/labor';
 import { chooseCard } from './systems/cards';
+import { claimBubble, claimQuest } from './systems/opportunities';
 import { QUOTE_COOLDOWN_DAYS, rivalQuote, withQuote } from './systems/rivalry';
 import { repayLoan, takeLoan } from './systems/credit';
 import { issueShares } from './systems/issuance';
@@ -283,6 +284,12 @@ export class GameEngine {
 
       case 'CHOOSE_CARD':
         return chooseCard(state, command.choiceId);
+
+      case 'CLAIM_BUBBLE':
+        return claimBubble(state);
+
+      case 'CLAIM_QUEST':
+        return claimQuest(state, command.index);
 
       case 'TAKE_LOAN':
         return takeLoan(state, playerId, command.kind, command.amount, command.termDays);

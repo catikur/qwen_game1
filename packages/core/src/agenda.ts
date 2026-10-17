@@ -8,7 +8,8 @@ import { laborEnabled } from './systems/labor';
 import { crisesEnabled } from './systems/economy';
 import { cardParams, cardsEnabled } from './systems/cards';
 import { campaignsLive } from './systems/rivalry';
-import { formatMoney } from './selectors';
+import { questsEnabled, questsReady } from './systems/opportunities';
+import { formatMoney, monthName } from './selectors';
 import { tc } from './i18n';
 import type { GameState } from './types';
 
@@ -40,6 +41,7 @@ export type AgendaKind =
   | 'crisis'
   | 'card'
   | 'campaign'
+  | 'quests'
   | 'goal';
 
 export interface AgendaItem {
@@ -352,6 +354,26 @@ export function agenda(state: GameState): AgendaItem[] {
       daysLeft: null,
       label: era.title,
       tone: era.tone,
+    });
+  }
+
+  // Ayın görev panosu (Tur 37c): kaç görev bitti, ay bitimine kaç gün.
+  const board = state.quests;
+  if (board && board.items.length > 0 && questsEnabled(state) && !state.gameOver) {
+    const done = board.items.filter((quest) => quest.doneDay !== undefined).length;
+    // Alınmayı bekleyen ödül varsa kalem öne çıkıyor: ay bitince ödül düşüyor.
+    const ready = questsReady(state);
+    items.push({
+      kind: 'quests',
+      key: `quests:${board.startDay}`,
+      urgency: ready > 0 ? 1 : 0,
+      daysLeft: Math.max(0, board.endDay - day),
+      label:
+        ready > 0
+          ? tc('core.agenda.questsReady', { count: ready })
+          : tc('core.agenda.quests', { month: monthName(board.startDay), done, total: board.items.length }),
+      tone: ready > 0 ? 'good' : 'neutral',
+      progress: done / board.items.length,
     });
   }
 

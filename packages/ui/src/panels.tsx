@@ -1276,6 +1276,10 @@ function HelpPanel(): ReactElement {
           <strong>{t('panels.help.step.stories.title')}</strong>
           {t('panels.help.step.stories.body')}
         </li>
+        <li>
+          <strong>{t('panels.help.step.opportunities.title')}</strong>
+          {t('panels.help.step.opportunities.body')}
+        </li>
       </ol>
       <p className="muted">
         {t('panels.help.controls')}

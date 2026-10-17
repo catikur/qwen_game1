@@ -129,4 +129,11 @@ export const world = {
   'core.rivalry.campaignLostBody': '{category} payın {from} → {to} düştü.',
   'core.rivalry.campaignRetreatTitle': '{name} {category} saldırısından çekildi',
   'core.rivalry.campaignRetreatBody': 'Kategorideki son mağazasını kapattı; fiyat savaşı bitti.',
+  'core.bubbles.none': 'Şehirde yakalanacak bir fırsat yok.',
+  'core.bubbles.noCash': 'İndirimli arsa için kasada {price} gerekiyor.',
+  'core.quests.doneTitle': 'Görev tamam: {title}',
+  'core.quests.doneBody': 'Ödülün ({amount}) görev panosunda seni bekliyor; ay bitmeden al.',
+  'core.quests.none': 'Panoda böyle bir görev yok.',
+  'core.quests.notDone': 'Bu görev henüz tamamlanmadı.',
+  'core.quests.claimed': 'Bu görevin ödülü zaten alındı.',
 } as const;
