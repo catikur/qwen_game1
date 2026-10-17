@@ -3348,9 +3348,9 @@ vekil üç yıldıza ulaşıyordu; 5 M ₺ seçildi. Yıldız eşikleri ×1,2 ve
 **Doğrulama.** `pnpm test` 403/403 (yeni `scenario.test.ts`, 9 test:
 kurulum, aynı şehir, Kurtarma ve kriz kurulumları, iki hedef türü, devralma,
 yıldız eşikleri, kural kilidi ve ekranlar, gündem çipi; içerik metinlerinin
-İngilizce kapsamına senaryolar girdi). `pnpm balance`: yeni bölüm
-"Senaryolar: kazanılabilir ama bedava değil" (10 kontrol, ~17 sn). Tarayıcı:
-yeni bölüm "Senaryo modu" (18 kontrol: liste, kurulumdan kalkan seçimler,
+İngilizce kapsamına senaryolar girdi). `pnpm balance` 300/300; yeni bölüm
+"Senaryolar: kazanılabilir ama bedava değil" (10 kontrol, ~17 sn). Tarayıcı
+tam koşu 411/411, konsol hatası yok; yeni bölüm "Senaryo modu" (18 kontrol: liste, kurulumdan kalkan seçimler,
 ön tarih ve duraklamış açılış, kural kilidi, gündem çipi, hedef paneli,
 kriz bitiminde sonuç, üç yıldız, yerel en iyi, yenilemede sonuç ve tek
 sayım, serbest oyun, kayıp ekranı, "Baştan oyna").
@@ -3438,10 +3438,10 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi) |
 | Birim testi | **403 test** (`pnpm test`; Tur 24'te render paketi de) |
-| Denge testi | **290 kontrol, hepsi geçiyor** (21 bölüm, süreleriyle; ~12 dk) |
-| Tarayıcı testi | **393 kontrol, hepsi geçiyor**, 0 konsol hatası (~17–25 dk); duman koşusu 132 (~5 dk, rehber dahil) |
+| Denge testi | **300 kontrol, hepsi geçiyor** (22 bölüm, süreleriyle; ~12 dk) |
+| Tarayıcı testi | **411 kontrol, hepsi geçiyor**, 0 konsol hatası (~17–25 dk); duman koşusu 132 (~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + duman oynanışı |
-| Kapsam | 35 bina · 25 ürün · 7 kategori · 8 rakip profili · 10 CEO · 22 olay (11 şehir + 11 sektör) · 2 kriz · 12 karar kartı · 70 rakip sözü · 5 fırsat balonu · 8 görev türü · 4 mevsim · 9 moda ürünü · 17 şehir yapısı (6 siluet) · 6 şehir projesi |
+| Kapsam | 35 bina · 25 ürün · 7 kategori · 8 rakip profili · 10 CEO · 22 olay (11 şehir + 11 sektör) · 2 kriz · 12 karar kartı · 70 rakip sözü · 5 fırsat balonu · 8 görev türü · 4 mevsim · 9 moda ürünü · 17 şehir yapısı (6 siluet) · 6 şehir projesi · 2 senaryo |
 
 ### Render (Tur 6 sonrası)
 
