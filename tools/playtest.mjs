@@ -1189,7 +1189,7 @@ async function finish(browser, consoleErrors) {
   const bubbleAt = await page.evaluate(() => {
     const cap = window.__capital;
     const s = cap.getState();
-    const outlet = Object.values(s.buildings).find((b) => b.companyId === s.playerCompanyId);
+    const outlet = Object.values(s.buildings).find((b) => b.companyId === s.playerCompanyId && cap.buildingRole(b.defId) === 'outlet');
     if (!outlet) return null;
     s.bubble = { kind: 'order', tileId: outlet.tileId, offeredDay: s.time.day, untilDay: s.time.day + 5, amount: 84000 };
     const tile = s.map.tiles[outlet.tileId];
@@ -1243,8 +1243,8 @@ async function finish(browser, consoleErrors) {
   await page.evaluate(() => {
     const cap = window.__capital;
     const s = cap.getState();
-    const outlet = Object.values(s.buildings).find((b) => b.companyId === s.playerCompanyId);
-    s.bubble = { kind: 'investor', tileId: outlet.tileId, offeredDay: s.time.day, untilDay: s.time.day + 5, amount: 50000 };
+    const outlet = Object.values(s.buildings).find((b) => b.companyId === s.playerCompanyId && cap.buildingRole(b.defId) === 'outlet');
+    s.bubble = { kind: 'vip', tileId: outlet.tileId, offeredDay: s.time.day, untilDay: s.time.day + 5, amount: 50000 };
     const tile = s.map.tiles[outlet.tileId];
     cap.setView({ x: tile.x > s.map.width / 2 ? 1 : s.map.width - 2, z: tile.y > s.map.height / 2 ? 1 : s.map.height - 2, distance: 8 });
     cap.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
@@ -1264,9 +1264,9 @@ async function finish(browser, consoleErrors) {
     const behind = await page.evaluate(async () => {
       const cap = window.__capital;
       const s = cap.getState();
-      const outlet = Object.values(s.buildings).find((b) => b.companyId === s.playerCompanyId);
+      const outlet = Object.values(s.buildings).find((b) => b.companyId === s.playerCompanyId && cap.buildingRole(b.defId) === 'outlet');
       const tile = s.map.tiles[outlet.tileId];
-      s.bubble = { kind: 'investor', tileId: outlet.tileId, offeredDay: s.time.day, untilDay: s.time.day + 5, amount: 50000 };
+      s.bubble = { kind: 'vip', tileId: outlet.tileId, offeredDay: s.time.day, untilDay: s.time.day + 5, amount: 50000 };
       cap.selectTile(outlet.tileId);
       cap.setView({ x: tile.x, z: tile.y, distance: 14 });
       cap.engine.dispatch({ type: 'SET_SPEED', speed: 0 });

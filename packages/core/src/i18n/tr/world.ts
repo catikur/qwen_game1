@@ -132,6 +132,7 @@ export const world = {
   'core.bubbles.none': 'Şehirde yakalanacak bir fırsat yok.',
   'core.bubbles.noCash': 'İndirimli arsa için kasada {price} gerekiyor.',
   'core.bubbles.parcelGone': 'Arsaya bu arada yapı dikildi; indirim geçerliliğini yitirdi.',
+  'core.bubbles.anchorGone': 'Fırsatın bağlı olduğu bina artık senin değil; fırsat kaçtı.',
   'core.quests.doneTitle': 'Görev tamam: {title}',
   'core.quests.doneBody': 'Ödülün ({amount}) görev panosunda seni bekliyor; ay bitmeden al.',
   'core.quests.none': 'Panoda böyle bir görev yok.',

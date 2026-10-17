@@ -123,12 +123,29 @@ function placeBubble(state: GameState, def: BubbleDef, die: ReturnType<typeof cr
   };
 }
 
-/** Günlük balon adımı: süresi dolanı kaldır, takvimi gelince yenisini çıkar. */
 function parcelStillFree(state: GameState, tileId: number): boolean {
   const tile = state.map.tiles[tileId];
   return Boolean(tile && !tile.structureId && !tile.buildingId && purchaseBlocker(state, tileId) === null);
 }
 
+/**
+ * Balonun bağlandığı yer hâlâ yerinde mi? Mağaza balonu oyuncunun o
+ * karedeki mağazasına, yatırımcı genel merkeze, indirimli arsa boş parsele
+ * bağlı. Bina yıkılır, satılır ya da merkez değişirse balon sönüyor:
+ * kaybolan mağazanın siparişi ödenmesin (Codex #63).
+ */
+function anchorStillThere(state: GameState, bubble: BubbleState): boolean {
+  const anchor = BUBBLE_BY_ID[bubble.kind].anchor;
+  if (anchor === 'hq') return headquarters(state, state.playerCompanyId)?.tileId === bubble.tileId;
+  if (anchor === 'outlet') {
+    const buildingId = state.map.tiles[bubble.tileId]?.buildingId;
+    const building = buildingId ? state.buildings[buildingId] : undefined;
+    return Boolean(building && building.companyId === state.playerCompanyId && BUILDING_BY_ID[building.defId]?.role === 'outlet');
+  }
+  return parcelStillFree(state, bubble.tileId);
+}
+
+/** Günlük balon adımı: süresi dolanı ya da yeri kaybolanı kaldır, takvimi gelince yenisini çıkar. */
 export function runBubbleTick(state: GameState): void {
   if (!bubblesEnabled(state)) {
     delete state.bubble;
@@ -136,10 +153,8 @@ export function runBubbleTick(state: GameState): void {
   }
   const day = state.time.day;
   if (state.bubble && day > state.bubble.untilDay) delete state.bubble;
-  // İndirimli arsa elden çıktıysa (yapı dikildi, satıldı) balon da sönüyor.
-  if (state.bubble && BUBBLE_BY_ID[state.bubble.kind].reward.kind === 'parcel' && !parcelStillFree(state, state.bubble.tileId)) {
-    delete state.bubble;
-  }
+  // Bağlandığı mağaza, merkez ya da boş parsel elden çıktıysa balon da sönüyor.
+  if (state.bubble && !anchorStillThere(state, state.bubble)) delete state.bubble;
   if (state.bubble || state.gameOver) return;
 
   state.nextBubbleDay ??= BUBBLE_TIMING.firstDay + Math.floor(nextFloat(dice(state, 0x2b0b1e5, 0)) * 8);
@@ -185,6 +200,10 @@ export function claimBubble(state: GameState): CommandResult {
   const def = BUBBLE_BY_ID[bubble.kind];
   const day = state.time.day;
 
+  if (def.anchor !== 'tile' && !anchorStillThere(state, bubble)) {
+    delete state.bubble;
+    return { ok: false, reason: tc('core.bubbles.anchorGone') };
+  }
   if (def.reward.kind === 'parcel') {
     // Balonun ömründe şehir parsele yapı dikmiş olabilir; `purchaseBlocker`
     // yapıya bakmıyor (normal alımda yapının devir bedeli ayrıca ödeniyor).
@@ -378,15 +397,18 @@ function completeQuest(state: GameState, quest: QuestState): void {
   );
 }
 
-/** Yalnız oyuncunun eylemiyle değişen sayaç görevleri: mağaza, tesis, parsel, balon. */
-const COMMAND_QUESTS: ReadonlySet<string> = new Set(['outlets', 'producer', 'parcels', 'bubble']);
+/**
+ * Komutla değişebilen görevler: sayaçlar (mağaza, tesis, parsel, balon) ve
+ * kasa (ödül, satış, kredi). Pay, ciro ve geçme yalnızca günün defteriyle
+ * değişiyor; onlar günlük adımda.
+ */
+const COMMAND_QUESTS: ReadonlySet<string> = new Set(['outlets', 'producer', 'parcels', 'bubble', 'cash']);
 
 /**
  * Komuttan hemen sonra sayaç görevleri ölçülüyor. Günlük adım pano
  * değişirken eskisini değerlendirmiyor: panonun son gününde kurulan mağaza,
  * alınan parsel ya da yakalanan balon ertesi günün adımında pano yenilenirken
- * kaybolurdu (Codex #63). Pazara bağlı görevler (pay, ciro, kasa, geçme)
- * günün defterinden ölçülüyor, günlük adımda kalıyor.
+ * kaybolurdu (Codex #63).
  */
 export function evaluateCommandQuests(state: GameState): void {
   const board = state.quests;

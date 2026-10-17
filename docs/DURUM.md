@@ -2728,9 +2728,12 @@ fırsat balonları ve her ay dönen kısa görevler.
   - kapıda kuyruk: mağazanın kategorisinde çekicilik +%20, 6 gün;
   - yatırımcı: merkezin üstünde, kâr eğiliminin 3 günü;
   - indirimli arsa: oyuncunun binalarına en çok 3 kare uzak boş parsel,
-    %30 indirimle. Balonun ömründe şehir parsele yapı dikerse (ya da
-    parsel elden çıkarsa) balon sönüyor; yapılı parsel boş arsa fiyatıyla
-    verilmiyor (Codex #63).
+    %30 indirimle.
+- Balon bağlandığı yere bağlı: mağaza balonu oyuncunun o mağazasına,
+  yatırımcı genel merkeze, indirimli arsa boş parsele. Mağaza yıkılır ya
+  da satılırsa, merkez değişirse, parsele yapı dikilirse balon sönüyor ve
+  ödemiyor (Codex #63: kaybolan mağazanın siparişi ödeniyor, yapılı parsel
+  boş arsa fiyatıyla veriliyordu).
 - Nakit ödül 15 B – 1,5 M ₺ arası, bine yuvarlı. Tutar balonun çıktığı
   gün sabitleniyor: gösterilen, ödenen.
 - **Takvim:** ilk balon 24–31. gün; sonraki, öncekinin bitişinden 18–32
@@ -2772,9 +2775,11 @@ fırsat balonları ve her ay dönen kısa görevler.
     ikinci bir hesap da çözüm değildi: net değer geçmişine günde iki örnek
     yazıyordu (Codex #63);
   - bir balon yakalamak (ay içinde takvimde balon varsa).
-- Sayaç görevleri (mağaza, tesis, parsel, balon) komuttan hemen sonra
-  ölçülüyor: günlük adım pano değişirken eskisini değerlendirmediği için
-  panonun son gününde yapılan eylem kayboluyordu (Codex #63).
+- Komutla değişebilen görevler (mağaza, tesis, parsel, balon ve kasa)
+  komuttan hemen sonra ölçülüyor: günlük adım pano değişirken eskisini
+  değerlendirmediği için panonun son gününde yapılan eylem kayboluyordu
+  (Codex #63). Pay, ciro ve geçme yalnızca günün defteriyle değişiyor;
+  onlar günlük adımda.
 - Hedef, pano kurulurken bugünkü şehirden türüyor. Sayaç görevleri
   panodan sonrasını sayıyor.
 - Ödül: kâr eğiliminin 0,4–0,75 günü (10 B – 2,5 M ₺), pano kurulurken
@@ -2921,7 +2926,7 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi) |
-| Birim testi | **355 test** (`pnpm test`; Tur 24'te render paketi de) |
+| Birim testi | **357 test** (`pnpm test`; Tur 24'te render paketi de) |
 | Denge testi | **288 kontrol, hepsi geçiyor** (20 bölüm, süreleriyle; ~11 dk) |
 | Tarayıcı testi | **382 kontrol, hepsi geçiyor**, 0 konsol hatası (~17–25 dk); duman koşusu 121 (~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + duman oynanışı |

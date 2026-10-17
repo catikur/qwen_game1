@@ -5,7 +5,7 @@ import { GameEngine } from '../src/engine';
 import { createNewGame } from '../src/worldgen';
 import { dayOfMonth, formatDate, getPlayer, nextMonthStart } from '../src/selectors';
 import { agenda } from '../src/agenda';
-import { purchaseBlocker } from '../src/actions';
+import { demolish, purchaseBlocker } from '../src/actions';
 import { createLeagueGame, replayRun, runFromState } from '../src/league';
 import { boostMultiplier } from '../src/systems/cards';
 import { recomputeNetWorth } from '../src/systems/city';
@@ -142,6 +142,23 @@ describe('fırsat balonları', () => {
     const other = state.map.tiles.find((t) => t.id !== tile.id && !t.structureId && !t.buildingId && purchaseBlocker(state, t.id) === null)!;
     putBubble(state, 'parcel', { tileId: other.id, amount: 120_000 });
     other.structureId = 'row_houses';
+    runBubbleTick(state);
+    assert.equal(state.bubble, undefined);
+  });
+
+  test('mağaza balonu: mağaza yıkılınca ödemiyor ve sönüyor (Codex #63)', () => {
+    const state = play(7, 60).getState();
+    const player = getPlayer(state);
+    const bubble = putBubble(state, 'order', { amount: 70_000 });
+    assert.ok(demolish(state, player.id, bubble.tileId).ok);
+    const cash = player.cash;
+    assert.equal(claimBubble(state).ok, false, 'yıkılan mağazanın siparişi ödendi');
+    assert.equal(player.cash, cash);
+    assert.equal(state.bubble, undefined);
+
+    // Günün adımı da yeri kaybolan balonu söndürüyor.
+    const again = putBubble(state, 'rush');
+    assert.ok(demolish(state, player.id, again.tileId).ok);
     runBubbleTick(state);
     assert.equal(state.bubble, undefined);
   });
@@ -375,6 +392,23 @@ describe('görev panosu', () => {
     const cash = player.cash;
     assert.ok(engine.dispatch({ type: 'CLAIM_QUEST', index: 0 }).ok);
     assert.equal(player.cash, cash + 40_000);
+  });
+
+  test('son gün kasayı artıran komut kasa görevini de tamamlıyor (Codex #63)', () => {
+    const engine = play(3, 31);
+    const state = engine.getState();
+    const player = getPlayer(state);
+    state.quests = {
+      startDay: state.time.day - 20,
+      endDay: state.time.day + 1,
+      items: [
+        { defId: 'producer', base: 0, target: 1, reward: 60_000, doneDay: state.time.day - 3 },
+        { defId: 'cash', base: 0, target: player.cash + 40_000, reward: 20_000 },
+      ],
+    };
+    // Bir görevin ödülünü almak kasayı hedefin üstüne çıkarıyor.
+    assert.ok(engine.dispatch({ type: 'CLAIM_QUEST', index: 0 }).ok);
+    assert.equal(state.quests.items[1]!.doneDay, state.time.day, 'kasa görevi son gün sayılmadı');
   });
 
   test('bayrak kapalıyken pano yok', () => {
