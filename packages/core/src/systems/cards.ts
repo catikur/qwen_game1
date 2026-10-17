@@ -145,14 +145,21 @@ export function runCardTick(state: GameState): void {
 
   const shape = playerShape(state);
   const rival = strongestRival(state);
-  const recent = new Set(state.recentCards ?? []);
-  const options = CARDS.filter((def) => !recent.has(def.id) && eligible(state, def, shape, rival));
-  if (options.length === 0) {
+  const recentCards = state.recentCards ?? [];
+  const pool = CARDS.filter((def) => eligible(state, def, shape, rival));
+  if (pool.length === 0) {
     // Erken oyunda uygun kart yoksa bir hafta sonra yeniden bak.
     state.nextCardDay = day + 7;
     return;
   }
-  const def = pickWeighted(cardDice(state, day), options, (option) => option.weight);
+  const fresh = pool.filter((def) => !recentCards.includes(def.id));
+  // Bellek uygun havuzun tamamını kapatıyorsa (tek mağazalı küçük şirket)
+  // en eski görülen kart geri geliyor: bellek arka arkaya tekrarı önlüyor,
+  // kartları kesmiyor (Codex #62).
+  const def =
+    fresh.length > 0
+      ? pickWeighted(cardDice(state, day), fresh, (option) => option.weight)
+      : pool.reduce((oldest, option) => (recentCards.indexOf(option.id) > recentCards.indexOf(oldest.id) ? option : oldest));
   state.card = {
     defId: def.id,
     offeredDay: day,

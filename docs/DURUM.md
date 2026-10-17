@@ -2590,7 +2590,9 @@ gelen karar kartları ve konuşan, saldıran rakipler.
 - **Takvim:** dışsal zardan (tohum, gün).
   - İlk kart 45–59. günler arasında geliyor.
   - Bir kart kapandıktan 22–46 gün sonra yenisi geliyor.
-  - Son 4 kart tekrar gelmiyor.
+  - Son 4 kart tekrar gelmiyor. Uygun havuz belleğe sığıyorsa (tek
+    mağazalı küçük şirket) en eski görülen kart geri geliyor; bellek
+    kartları kesmiyor, yalnız arka arkaya tekrarı önlüyor (Codex #62).
   - Kartlar oyuncunun durumuna göre süzülüyor: mağaza ve bina sayısı, en
     çok kazandıran kategori, sendika baskısı.
 - **Süre:** kart 12 gün masada kalıyor; dolunca "hiçbir şey yapma"
@@ -2793,7 +2795,7 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi) |
-| Birim testi | **336 test** (`pnpm test`; Tur 24'te render paketi de) |
+| Birim testi | **337 test** (`pnpm test`; Tur 24'te render paketi de) |
 | Denge testi | **288 kontrol, hepsi geçiyor** (20 bölüm, süreleriyle; ~11 dk) |
 | Tarayıcı testi | **370 kontrol, hepsi geçiyor**, 0 konsol hatası (~17–25 dk); duman koşusu 111 (~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + duman oynanışı |

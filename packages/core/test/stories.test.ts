@@ -253,6 +253,33 @@ describe('karar kartları', () => {
     assert.notEqual(state.flags.cards, false);
   });
 
+  test('küçük ve büyümeyen şirkete kart gelmeye devam ediyor (bellek havuzu tüketse de)', () => {
+    // Codex #62: tek mağazalı şirket için uygun kart havuzu belleğe (4) sığıyor;
+    // bellek dolunca kartlar kesilmesin, en eski görülen geri gelsin.
+    const engine = new GameEngine(createNewGame({ seed: 5 }));
+    const state = engine.getState();
+    const player = getPlayer(state);
+    const shop = BUILDING_BY_ID['corner_shop']!;
+    const tile = state.map.tiles.find((t) => t.kind === 'plot' && !t.ownerId && !t.structureId && !t.buildingId)!;
+    tile.ownerId = player.id;
+    assert.ok(build(state, player.id, tile.id, shop.id).ok);
+    const offered: Array<{ day: number; defId: string }> = [];
+    for (let day = 1; day <= 500; day++) {
+      const card = engine.getState().card;
+      if (card) {
+        offered.push({ day: card.offeredDay, defId: card.defId });
+        engine.dispatch({ type: 'CHOOSE_CARD', choiceId: CARD_BY_ID[card.defId]!.choices[0]!.id });
+      }
+      engine.runDay();
+    }
+    const kinds = new Set(offered.map((entry) => entry.defId));
+    assert.ok(kinds.size <= CARD_TIMING.memory, `havuz belleği aşıyor (${kinds.size}); senaryo geçersiz`);
+    assert.ok(offered.some((entry) => entry.day > 350), `son kart ${offered.at(-1)?.day ?? '-'}. günde`);
+    for (let i = 1; i < offered.length; i++) {
+      if (kinds.size > 1) assert.notEqual(offered[i]!.defId, offered[i - 1]!.defId, 'aynı kart arka arkaya');
+    }
+  });
+
   test('uzaktaki şehirde yerel müdür varsayılanı seçiyor', () => {
     const state = createNewGame({ seed: 5 });
     putCard(state, 'storm_warning');
