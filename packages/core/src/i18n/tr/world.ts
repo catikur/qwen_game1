@@ -122,7 +122,7 @@ export const world = {
   'core.rivalry.crisisTitle': 'Kriz açıklaması: {name}',
   'core.rivalry.campaignTitle': '{name}, {category} pazarında saldırıya geçti',
   'core.rivalry.campaignBody':
-    '{days} gün boyunca {category} fiyatlarını kıracak ve senin bölgelerine şube açmaya yönelecek. Bugünkü payın {share}.',
+    '{days} gün boyunca {category} fiyatlarını kıracak. Bugünkü payın {share}; kampanya bitince payına bakılacak.',
   'core.rivalry.campaignHeldTitle': '{name} geri çekildi: {category} sende kaldı',
   'core.rivalry.campaignHeldBody': 'Kampanya geri tepti; {category} payın {from} → {to}. Müşteri sadakati markana yansıdı.',
   'core.rivalry.campaignLostTitle': '{name}, {category} kampanyasını kazandı',

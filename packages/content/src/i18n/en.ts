@@ -495,7 +495,7 @@ export const contentEn: Record<string, string> = {
   'content.rivalLine.expansionist.passed.1': 'Fast growers stumble sometimes. We know how to get back up.',
   'content.rivalLine.expansionist.leadLost.0': '{district} is our neighborhood now.',
   'content.rivalLine.expansionist.leadLost.1': '{district} customers have found their new address.',
-  'content.rivalLine.expansionist.campaignStart.0': 'We will open a branch in every {category} district you own.',
+  'content.rivalLine.expansionist.campaignStart.0': 'We want every {category} customer. Prices are coming down.',
   'content.rivalLine.expansionist.campaignStart.1': '{category} is our growth area. Make room.',
   'content.rivalLine.expansionist.campaignWon.0': 'The {category} market is on our map now.',
   'content.rivalLine.expansionist.campaignWon.1': 'We promised, we delivered: {category} is ours.',

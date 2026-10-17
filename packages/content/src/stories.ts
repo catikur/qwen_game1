@@ -466,7 +466,7 @@ export const RIVAL_LINES: Record<NpcTrait, Record<RivalBeat, readonly string[]>>
     overtook: ['Şehrin her köşesinde biz varız. Sıradaki köşe de bizim.', 'Durmak yok. Bir sonraki hedefimiz zaten belli.'],
     passed: ['Bir tur kaybettik, yarışı değil.', 'Hızlı büyüyenler bazen tökezler. Biz kalkmasını biliriz.'],
     leadLost: ['{district} artık bizim mahallemiz.', '{district} müşterisi yeni adresini buldu.'],
-    campaignStart: ['{category} pazarında senin olan her bölgeye şube açacağız.', '{category} bizim büyüme alanımız. Yer açın.'],
+    campaignStart: ['{category} pazarında her müşteriyi istiyoruz. Fiyatlar düşüyor.', '{category} bizim büyüme alanımız. Yer açın.'],
     campaignWon: ['{category} pazarı artık bizim haritamızda.', 'Söz verdik, yaptık: {category} bizim.'],
     campaignLost: ['{category} şimdilik sende kalsın. Şimdilik.', 'Bu kez geri çekiliyoruz; haritayı yeniden çiziyoruz.'],
     crisis: ['Kriz mi? Biz buna indirimli arsa diyoruz.', 'Herkes dururken biz kuracağız.'],
@@ -516,8 +516,16 @@ export function rivalLines(trait: NpcTrait, beat: RivalBeat): string[] {
 
 /**
  * Rakip kampanyası (Tur 37b): bir rakip oyuncunun en güçlü kategorisine
- * süreli bir saldırı açıyor. Başı (duyuru), ortası (gündemde geri sayım)
- * ve sonu (kazanan ilan ediliyor) olan bir hikâye.
+ * süreli bir fiyat savaşı açıyor. Başı (duyuru), ortası (gündemde geri
+ * sayım) ve sonu (kazanan ilan ediliyor) olan bir hikâye.
+ *
+ * YALNIZCA FİYAT. İlk sürümde rakip kampanya boyunca o kategoride şube
+ * açmaya da yöneliyordu (genişleme puanı ×1,8). Ölçüm (20 tohum, 900 gün,
+ * 15 günde bir oynayan savunmasız oyuncu): baskınla düşüş 5 tohumdan 1'e
+ * indi. Kampanyayı açan çoğu zaman en büyük rakip, yani baskıncı; nakdini
+ * şubeye harcayınca baskına para kalmıyordu — kampanya oyunu zorlaştırmak
+ * yerine kayıp koşulunu siliyordu. Yönelim kaldırılınca düşüşler geri
+ * geldi (4/4 tohum, aynı günler).
  */
 export const CAMPAIGN = {
   /** İlk kampanya bu günden önce gelmez. */
@@ -527,8 +535,6 @@ export const CAMPAIGN = {
   durationDays: 45,
   /** Kampanya fiyat çarpanı: fiyat kıran derin, diğerleri hafif. */
   priceCut: { price_cutter: 0.86, default: 0.93 } as const,
-  /** Rakibin genişleme puanında hedef kategoriye çarpan. */
-  expansionBias: 1.8,
   /** Oyuncunun payı bu kadardan fazla düşmediyse kampanya geri tepmiş sayılır. */
   holdMargin: 0.02,
   /** Kampanya ancak oyuncunun bu kadar payı olan kategoriye açılır. */

@@ -220,7 +220,7 @@ export const panels = {
   'panels.help.step.late.title': 'Büyümek pahalılaşır, krizler gelir.',
   'panels.help.step.stories.title': 'Masaya kararlar, rakiplere ses geldi.',
   'panels.help.step.stories.body':
-    ' Ara sıra bir karar kartı açılır: viral bir video, bir denetim, bir tedarik teklifi. Her seçeneğin bedeli ve getirisi yazılı; karar vermezsen süre dolunca "hiçbir şey yapma" uygulanır. Rakiplerin CEO\'ları da artık konuşuyor ve bazen en güçlü kategorine 45 günlük bir kampanya açıyorlar: fiyat kırıp şube açarlar. Payını korursan kampanya geri teper ve markan güçlenir.',
+    ' Ara sıra bir karar kartı açılır: viral bir video, bir denetim, bir tedarik teklifi. Her seçeneğin bedeli ve getirisi yazılı; karar vermezsen süre dolunca "hiçbir şey yapma" uygulanır. Rakiplerin CEO\'ları da artık konuşuyor ve bazen en güçlü kategorine 45 günlük bir fiyat savaşı açıyorlar. Payını korursan kampanya geri teper ve markan güçlenir.',
   'panels.company.boosts': 'Süren kart etkileri',
   'panels.help.step.late.body':
     ' 30 binadan sonra her bina bakım ve ücreti biraz daha artırır (yönetim yükü); 25 M ₺ üstü servete kademeli vergi var, kasada yatan para erir. Ara sıra kriz gelir ve bir ay önceden haber verir: durgunlukta talep düşer ama arsa ve inşaat ucuzlar; faiz şokunda kredili hesap ve yeni krediler pahalanır, vadeli kredinin faizi sabit kalır.',

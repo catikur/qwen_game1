@@ -15,8 +15,8 @@ import type { CampaignState, CompanyState, GameState } from '../types';
  *     liderliği haberleri (motor), kriz başlangıcı ve kampanyalar söz
  *     taşıyor.
  *   - KAMPANYA: bir rakip oyuncunun en güçlü kategorisine 45 günlük bir
- *     saldırı açıyor (fiyat kırıyor, oraya şube açmaya yöneliyor). Başı,
- *     gündemde geri sayan ortası ve kazananı ilan eden sonu var.
+ *     fiyat savaşı açıyor. Başı, gündemde geri sayan ortası ve kazananı
+ *     ilan eden sonu var.
  *
  * Sözün zarı dışsal (tohum, gün, şirket, an): paylaşılan rng'ye
  * dokunmuyor, simülasyonun izi değişmiyor.
@@ -101,13 +101,6 @@ export function campaignPriceFactor(state: GameState, companyId: string, categor
   if (!campaign || campaign.companyId !== companyId || campaign.category !== category || !storiesEnabled(state)) return 1;
   const trait = rivalProfile(state, state.companies[companyId]?.profileId)?.trait;
   return trait === 'price_cutter' ? CAMPAIGN.priceCut.price_cutter : CAMPAIGN.priceCut.default;
-}
-
-/** Süren kampanyada rakibin genişleme puanına çarpan (npc.ts). */
-export function campaignBias(state: GameState, companyId: string, category: CategoryId): number {
-  const campaign = state.campaign;
-  if (!campaign || campaign.companyId !== companyId || campaign.category !== category || !storiesEnabled(state)) return 1;
-  return CAMPAIGN.expansionBias;
 }
 
 function rangeFrom(dice: ReturnType<typeof createRng>, [min, max]: readonly [number, number]): number {
@@ -195,7 +188,7 @@ function finishCampaign(state: GameState, campaign: CampaignState): void {
   );
 }
 
-/** Günlük adım: kampanyanın takvimi. Rakiplerden ÖNCE — fiyat ve genişleme aynı gün otursun. */
+/** Günlük adım: kampanyanın takvimi. Pazardan ÖNCE — kampanya fiyatı aynı gün satışa girsin. */
 export function runRivalryTick(state: GameState): void {
   if (!storiesEnabled(state)) {
     delete state.campaign;

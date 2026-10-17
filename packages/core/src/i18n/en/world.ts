@@ -127,7 +127,7 @@ export const world: Record<keyof typeof trWorld, string> = {
   'core.rivalry.crisisTitle': 'Crisis statement: {name}',
   'core.rivalry.campaignTitle': '{name} goes on the attack in {category}',
   'core.rivalry.campaignBody':
-    'For {days} days they will cut {category} prices and push new branches into your districts. Your share today: {share}.',
+    'For {days} days they will cut {category} prices. Your share today: {share}; the campaign is judged on your share when it ends.',
   'core.rivalry.campaignHeldTitle': '{name} backs down: {category} stays yours',
   'core.rivalry.campaignHeldBody': 'The campaign backfired; your {category} share went {from} → {to}. Customer loyalty strengthened your brand.',
   'core.rivalry.campaignLostTitle': '{name} wins the {category} campaign',
