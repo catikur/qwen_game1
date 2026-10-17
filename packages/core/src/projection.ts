@@ -38,11 +38,17 @@ function freeze(state: GameState): GameState {
   const copy = structuredClone(state);
   copy.flags.npcCompetition = false;
   copy.flags.landAuctions = false;
-  // Karar kartları (Tur 37b) iki kolda farklı gelebilir: yeni bina mağaza ya
-  // da bina sayısı eşiğini geçirince uygun kart değişiyor ve süre dolunca
-  // uygulanan varsayılanın etkisi farka binerdi. Rakip kampanyası
-  // `npcCompetition` ile zaten kapalı.
-  copy.flags.cards = false;
+  /*
+   * Karar kartları (Tur 37b) iki kolda farklı gelebilir: yeni bina mağaza
+   * ya da bina sayısı eşiğini geçirince uygun kart değişiyor ve süre dolunca
+   * uygulanan varsayılanın etkisi farka binerdi. Kart ÜRETİMİ duruyor
+   * (masadaki kart kalkıyor, yenisi gelmiyor) ama bayrak açık kalıyor:
+   * süren kart etkileri (bakım, ücret, çekicilik) bugün işi gerçekten
+   * etkiliyor ve tahmine girmeli (Codex #62). Rakip kampanyası
+   * `npcCompetition` ile zaten kapalı.
+   */
+  delete copy.card;
+  copy.nextCardDay = Number.MAX_SAFE_INTEGER;
   // Oyun bitmiş ya da zafer ekranı açıkken de takvim aksın.
   delete copy.gameOver;
   delete copy.league;

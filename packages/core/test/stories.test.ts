@@ -175,22 +175,31 @@ describe('karar kartları', () => {
     assert.ok(!state.news[0]!.body.includes('{') && state.news[0]!.body.includes('Deniz Arkın'), state.news[0]!.body);
   });
 
-  test('bina tahmini kartları iki kolda da kapatıyor', async () => {
+  test('bina tahmini yeni kart üretmiyor, süren kart etkisini koruyor', async () => {
     const { projectBuilding } = await import('../src/projection');
-    const engine = play(7, 80, false);
-    const state = engine.getState();
+    const state = play(7, 80, false).getState();
     const tile = state.map.tiles.find((t) => t.kind === 'plot' && !t.ownerId && !t.structureId && !t.buildingId);
     assert.ok(tile);
-    // Pencerede kesin bir kart: süresi dolunca Perakende'ye +%7 (varsayılan). Kart
-    // izdüşüme girseydi yeni bakkalın farkını büyütürdü. İzdüşüm kartsız koşuyor:
-    // oyunda kartlar açık da olsa kapalı da olsa aynı cevap.
+    const player = getPlayer(state);
+    delete player.boosts;
+    const ask = () => projectBuilding(state, state.playerCompanyId, 'corner_shop', tile.id, 120)!;
+
+    // Pencerede kesin bir kart (süresi dolunca Perakende'ye +%7) ve ardından
+    // yenisi: izdüşüm ikisini de görmüyor — kartsız durumla aynı cevap.
     putCard(state, 'viral_video', { category: 'retail', deadlineDay: state.time.day + 3 });
-    const withCards = projectBuilding(state, state.playerCompanyId, 'corner_shop', tile.id, 120);
+    state.nextCardDay = state.time.day + 5;
+    const withCard = ask();
+    delete state.card;
+    state.nextCardDay = Number.MAX_SAFE_INTEGER;
+    const quiet = ask();
+    assert.deepEqual(withCard, quiet);
+
+    // Süren etki (bakım −%50) ise bugünü etkiliyor: yeni bakkalın kârı daha yüksek çıkıyor.
+    player.boosts = [{ target: 'upkeep', multiplier: 0.5, untilDay: state.time.day + 500, cardId: 'pos_system' }];
+    const boosted = ask();
+    assert.ok(boosted.finalProfit > quiet.finalProfit, `${boosted.finalProfit} > ${quiet.finalProfit}`);
+    // Kaynak durumun kartına ve bayrağına dokunulmuyor.
     assert.notEqual(state.flags.cards, false);
-    state.flags.cards = false;
-    const withoutCards = projectBuilding(state, state.playerCompanyId, 'corner_shop', tile.id, 120);
-    assert.ok(withCards);
-    assert.deepEqual(withCards, withoutCards);
   });
 
   test('uzaktaki şehirde yerel müdür varsayılanı seçiyor', () => {
