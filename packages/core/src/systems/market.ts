@@ -9,6 +9,8 @@ import {
 import { categoryRevenueRate } from './council';
 import { constructionMultiplier } from '../actions';
 import { dailyWealthTax, overheadMultiplier } from './economy';
+import { boostMultiplier } from './cards';
+import { campaignPriceFactor } from './rivalry';
 import { settleInterest } from './credit';
 import type { CategoryId } from '@capital/content';
 import {
@@ -679,7 +681,9 @@ function marketStep(state: GameState): void {
             if (!company) continue;
 
             // ---- 3. Çekicilik ----
-            const price = category.basePrice * building.priceMultiplier;
+            // Rakip kampanyası (Tur 37b): saldıran şirket hedef kategoride fiyat kırıyor.
+            const price =
+              category.basePrice * building.priceMultiplier * campaignPriceFactor(state, building.companyId, categoryId);
             const priceFactor = Math.pow(category.basePrice / price, category.elasticity);
             const brand = 0.45 + 0.55 * (company.brand[categoryId] ?? 0);
             const quality = Math.pow(qualityFor(state, building.companyId, building.defId), 1.15);
@@ -693,8 +697,15 @@ function marketStep(state: GameState): void {
             candidates.push({
               building,
               price,
-              // Ücret politikası mağaza hizmetinde görünür (düşük −%4, yüksek +%4).
-              attractiveness: quality * brand * priceFactor * access * serviceFactor(state, building.companyId),
+              // Ücret politikası mağaza hizmetinde görünür (düşük −%4, yüksek +%4);
+              // karar kartının süreli çekiciliği (Tur 37b) de burada.
+              attractiveness:
+                quality *
+                brand *
+                priceFactor *
+                access *
+                serviceFactor(state, building.companyId) *
+                boostMultiplier(state, building.companyId, 'attraction', categoryId),
               capacityLeft,
             });
           }
@@ -759,7 +770,8 @@ function marketStep(state: GameState): void {
               good.id,
               reliefByOutlet.get(building.id) ?? 0,
               mods.costMultiplier,
-            );
+            ) *
+            boostMultiplier(state, building.companyId, 'cogs');
 
           building.last.unitsSold += units;
           const goods = soldByGood.get(building.id) ?? {};
@@ -834,7 +846,7 @@ function marketStep(state: GameState): void {
 
     // basePrice = birim başına günlük kira; kapasite = kiralanabilir birim.
     const revenue = def.capacity * occupancy * category.basePrice;
-    const cogs = revenue * category.costRatio * mods.costMultiplier;
+    const cogs = revenue * category.costRatio * mods.costMultiplier * boostMultiplier(state, building.companyId, 'cogs');
 
     building.last.unitsSold = def.capacity * occupancy;
     building.last.capacityUsed = occupancy;

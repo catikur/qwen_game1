@@ -8,6 +8,7 @@ import {
 import { collectEventModifiers } from './events';
 import { buildingStrikeFactor, wageFor } from './labor';
 import { overheadMultiplier } from './economy';
+import { boostMultiplier } from './cards';
 import { scopedDepots } from './buildingIndex';
 import { estimateBaselineDemand, goodShares } from './demand';
 import type { BuildingInstance, DistrictState, GameState } from '../types';
@@ -104,7 +105,8 @@ function wagesFor(state: GameState, building: BuildingInstance): number {
   return (
     wageFor(state, building.companyId, building.defId, building.districtId) *
     buildingStrikeFactor(state, building.companyId, def) *
-    overheadMultiplier(state, building.companyId)
+    overheadMultiplier(state, building.companyId) *
+    boostMultiplier(state, building.companyId, 'wages')
   );
 }
 
@@ -119,7 +121,7 @@ function upkeepFor(state: GameState, building: BuildingInstance): number {
   const def = BUILDING_BY_ID[building.defId];
   if (!def) return 0;
   const ceo = getCeoModifiers(state.companies[building.companyId]?.ceoId ?? null);
-  return def.upkeepPerDay * ceo.upkeep * overheadMultiplier(state, building.companyId);
+  return def.upkeepPerDay * ceo.upkeep * overheadMultiplier(state, building.companyId) * boostMultiplier(state, building.companyId, 'upkeep');
 }
 
 /**

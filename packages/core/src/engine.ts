@@ -8,6 +8,8 @@ import { runGoalTick } from './systems/goals';
 import { isLoggable, leagueActive, runLeagueTick } from './systems/league';
 import { lobby } from './systems/council';
 import { respondUnion, setWagePolicy } from './systems/labor';
+import { chooseCard } from './systems/cards';
+import { rivalQuote, withQuote } from './systems/rivalry';
 import { repayLoan, takeLoan } from './systems/credit';
 import { issueShares } from './systems/issuance';
 import { cancelTakeoverOrder, placeTakeoverOrder, playerBuy } from './systems/orders';
@@ -279,6 +281,9 @@ export class GameEngine {
       case 'RESPOND_UNION':
         return respondUnion(state, playerId, command.response);
 
+      case 'CHOOSE_CARD':
+        return chooseCard(state, command.choiceId);
+
       case 'TAKE_LOAN':
         return takeLoan(state, playerId, command.kind, command.amount, command.termDays);
 
@@ -468,7 +473,7 @@ export class GameEngine {
         state,
         'bad',
         tc('core.engine.overtakenTitle', { name: passer.company.name }),
-        body,
+        withQuote(body, rivalQuote(state, passer.company, 'overtook')),
         passer.company.id,
       );
       return;
@@ -491,7 +496,7 @@ export class GameEngine {
       passed
         ? tc('core.engine.passedTitle', { name: passed.company.name })
         : tc('core.engine.climbedTitle', { rank: mine.rank }),
-      body,
+      withQuote(body, rivalQuote(state, passed?.company, 'passed')),
       passed?.company.id,
     );
   }
@@ -517,7 +522,10 @@ export class GameEngine {
           state,
           'bad',
           tc('core.engine.leadLostTitle', { rival: rival.name, district: district.name }),
-          tc('core.engine.leadLostBody', { toShare: pct(change.toShare), fromShare: pct(change.fromShare) }),
+          withQuote(
+            tc('core.engine.leadLostBody', { toShare: pct(change.toShare), fromShare: pct(change.fromShare) }),
+            rivalQuote(state, rival, 'leadLost', { district: district.name }),
+          ),
           { companyId: rival.id, districtId: district.id },
         );
       } else if (change.to === playerId) {

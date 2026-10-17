@@ -107,4 +107,24 @@ export const world = {
   // citygrowth.ts — siluetin ilk değişimi
   'core.citygrowth.risingTitle': '{district} yükseliyor',
   'core.citygrowth.risingBody': '{district} bölgesinde ilk {structure} yükseldi. Arsa değerleri onu izleyecek.',
+
+  // cards.ts — karar kartları (Tur 37b)
+  'core.cards.paid': 'Bedel: {amount}.',
+  'core.cards.earned': 'Gelir: {amount}.',
+  'core.cards.expired': 'Süre doldu, karar verilmedi: "{choice}" uygulandı.',
+  'core.cards.away': 'Yerel müdür karar verdi: "{choice}".',
+  'core.cards.disabled': 'Karar kartları kapalı.',
+  'core.cards.none': 'Masada karar bekleyen bir kart yok.',
+  'core.cards.unknownChoice': 'Bu kartta böyle bir seçenek yok.',
+
+  // rivalry.ts — rakip hikâyeleri (Tur 37b)
+  'core.rivalry.quote': '{ceo}: “{line}”',
+  'core.rivalry.crisisTitle': 'Kriz açıklaması: {name}',
+  'core.rivalry.campaignTitle': '{name}, {category} pazarında saldırıya geçti',
+  'core.rivalry.campaignBody':
+    '{days} gün boyunca {category} fiyatlarını kıracak ve senin bölgelerine şube açmaya yönelecek. Bugünkü payın {share}.',
+  'core.rivalry.campaignHeldTitle': '{name} geri çekildi: {category} sende kaldı',
+  'core.rivalry.campaignHeldBody': 'Kampanya geri tepti; {category} payın {from} → {to}. Müşteri sadakati markana yansıdı.',
+  'core.rivalry.campaignLostTitle': '{name}, {category} kampanyasını kazandı',
+  'core.rivalry.campaignLostBody': '{category} payın {from} → {to} düştü.',
 } as const;

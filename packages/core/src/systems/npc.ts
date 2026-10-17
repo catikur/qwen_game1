@@ -15,6 +15,7 @@ import { pushNews } from '../news';
 import { rivalProfiles } from '../profiles';
 import { nextFloat } from '../rng';
 import { estimateInvestment } from './market';
+import { campaignBias } from './rivalry';
 import { isDistrictOpen, tilePrice } from './city';
 import {
   blockTrade,
@@ -311,6 +312,8 @@ function findOpportunities(state: GameState, profile: NpcProfileDef): Opportunit
       if (player && (player.marketShare[category] ?? 0) > PLAYER_THREAT_SHARE) {
         score *= 1.4;
       }
+      // Süren kampanyası varsa (Tur 37b) hedef kategoriye yöneliyor.
+      score *= campaignBias(state, profile.id, category);
 
       opportunities.push({ districtId: district.id, category, score });
     }

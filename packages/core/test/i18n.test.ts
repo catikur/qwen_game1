@@ -4,6 +4,7 @@ import {
   ALL_EVENTS,
   baseText,
   BUILDINGS,
+  CARDS,
   CATEGORIES,
   CEOS,
   CITY_SIZES,
@@ -18,6 +19,7 @@ import {
   hasMessage,
   MOTION_TEXT,
   NPC_PROFILES,
+  RIVAL_LINES,
   registerMessages,
   setLocale,
   STRUCTURES,
@@ -157,6 +159,13 @@ describe('İngilizce sözlükler', () => {
       ['ceo', byId(CEOS), ['title', 'perk', 'drawback', 'bio']],
       ['rival', byId(NPC_PROFILES), ['description']],
       ['crisis', byId(CRISES), ['title', 'warningTitle', 'warningBody', 'body', 'endTitle', 'endBody']],
+      ['card', byId(CARDS), ['title', 'body']],
+      ...CARDS.map((card): [string, Record<string, object>, string[]] => [
+        `card.${card.id}.choice`,
+        byId(card.choices),
+        ['label', 'flavor', 'result', 'failResult'],
+      ]),
+      ['rivalLine', RIVAL_LINES, Object.keys(RIVAL_LINES.expansionist)],
     ];
     const expected = new Set<string>();
     for (const [kind, record, fields] of lists) {
