@@ -8,6 +8,7 @@ import { agenda } from '../src/agenda';
 import { purchaseBlocker } from '../src/actions';
 import { createLeagueGame, replayRun, runFromState } from '../src/league';
 import { boostMultiplier } from '../src/systems/cards';
+import { recomputeNetWorth } from '../src/systems/city';
 import {
   claimBubble,
   claimQuest,
@@ -121,6 +122,28 @@ describe('fırsat balonları', () => {
     assert.ok(claimBubble(state).ok);
     assert.equal(tile.ownerId, player.id);
     assert.equal(player.cash, cash - 120_000);
+  });
+
+  test('indirimli arsa: ömrü içinde parsele yapı dikilirse indirimle verilmiyor, balon sönüyor (Codex #63)', () => {
+    const state = play(7, 60).getState();
+    const tile = state.map.tiles.find((t) => !t.structureId && !t.buildingId && purchaseBlocker(state, t.id) === null)!;
+    putBubble(state, 'parcel', { tileId: tile.id, amount: 120_000 });
+    const player = getPlayer(state);
+    const cash = player.cash;
+    // Şehir büyümesi parsele devredilebilir bir yapı dikti.
+    tile.structureId = 'row_houses';
+    const refused = claimBubble(state);
+    assert.equal(refused.ok, false);
+    assert.equal(tile.ownerId, null, 'yapılı parsel indirimle verildi');
+    assert.equal(player.cash, cash);
+    assert.equal(state.bubble, undefined);
+
+    // Günün adımı da elden çıkan parselin balonunu söndürüyor.
+    const other = state.map.tiles.find((t) => t.id !== tile.id && !t.structureId && !t.buildingId && purchaseBlocker(state, t.id) === null)!;
+    putBubble(state, 'parcel', { tileId: other.id, amount: 120_000 });
+    other.structureId = 'row_houses';
+    runBubbleTick(state);
+    assert.equal(state.bubble, undefined);
   });
 
   test('bayrak kapalıyken balon yok, uzaktaki şehirde sönüyor', () => {
@@ -269,7 +292,8 @@ describe('görev panosu', () => {
     player.marketShare.retail = 0.4;
     const brand = player.brand.retail ?? 0;
     const rival = Object.values(state.companies).find((c) => !c.isPlayer)!;
-    rival.netWorth = player.netWorth * 1.2;
+    // Görev bugünün net değerini yeniden hesaplıyor: rakip gerçekten önde olsun.
+    rival.cash += Math.max(0, player.netWorth - rival.netWorth) + 1_000_000;
     const board: QuestBoard = {
       startDay: state.time.day,
       endDay: nextMonthStart(state.time.day),
@@ -286,6 +310,26 @@ describe('görev panosu', () => {
     assert.equal(board.items[1]!.doneDay, undefined, 'rakip hâlâ önde');
     delete state.companies[rival.id];
     assert.equal(questValue(state, board, board.items[1]!), 1);
+  });
+
+  test('geçme görevi bugünün net değeriyle tamamlanıyor, bir gün geç değil (Codex #63)', () => {
+    const state = play(3, 31).getState();
+    recomputeNetWorth(state);
+    const player = getPlayer(state);
+    const rival = Object.values(state.companies).find((c) => !c.isPlayer && c.netWorth > player.netWorth)
+      ?? Object.values(state.companies).find((c) => !c.isPlayer)!;
+    rival.cash += Math.max(0, player.netWorth - rival.netWorth) + 100_000;
+    recomputeNetWorth(state);
+    assert.ok(rival.netWorth > player.netWorth);
+    state.quests = {
+      startDay: state.time.day,
+      endDay: nextMonthStart(state.time.day),
+      items: [{ defId: 'overtake', base: 0, target: 1, reward: 10_000, rivalId: rival.id, rivalName: rival.name }],
+    };
+    // Bugün oyuncu rakibi geçti (kasaya giren para); dünkü net değer henüz eski.
+    player.cash += rival.netWorth - player.netWorth + 500_000;
+    runQuestTick(state);
+    assert.equal(state.quests.items[0]!.doneDay, state.time.day);
   });
 
   test('sayaç görevleri pano kurulduktan sonrasını sayıyor', () => {

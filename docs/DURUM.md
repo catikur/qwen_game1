@@ -2728,7 +2728,9 @@ fırsat balonları ve her ay dönen kısa görevler.
   - kapıda kuyruk: mağazanın kategorisinde çekicilik +%20, 6 gün;
   - yatırımcı: merkezin üstünde, kâr eğiliminin 3 günü;
   - indirimli arsa: oyuncunun binalarına en çok 3 kare uzak boş parsel,
-    %30 indirimle.
+    %30 indirimle. Balonun ömründe şehir parsele yapı dikerse (ya da
+    parsel elden çıkarsa) balon sönüyor; yapılı parsel boş arsa fiyatıyla
+    verilmiyor (Codex #63).
 - Nakit ödül 15 B – 1,5 M ₺ arası, bine yuvarlı. Tutar balonun çıktığı
   gün sabitleniyor: gösterilen, ödenen.
 - **Takvim:** ilk balon 24–31. gün; sonraki, öncekinin bitişinden 18–32
@@ -2763,7 +2765,10 @@ fırsat balonları ve her ay dönen kısa görevler.
   - en güçlü kategoride +5 puan pay (ödülüne marka +0,03 ekleniyor);
   - günlük ciroyu ×1,2'ye çıkarmak;
   - kasada kâr eğiliminin 15 günü;
-  - net değerde hemen öndeki rakibi geçmek (en çok %30 öndeyse);
+  - net değerde hemen öndeki rakibi geçmek (en çok %30 öndeyse). Bugünün
+    net değeriyle ölçülüyor: günlük yeniden hesap günün adımından sonra
+    geldiği için geçiş bir gün geç sayılıyor, ayın son gününde geçenin
+    ödülü düşüyordu (Codex #63);
   - bir balon yakalamak (ay içinde takvimde balon varsa).
 - Hedef, pano kurulurken bugünkü şehirden türüyor. Sayaç görevleri
   panodan sonrasını sayıyor.
@@ -2911,7 +2916,7 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi) |
-| Birim testi | **352 test** (`pnpm test`; Tur 24'te render paketi de) |
+| Birim testi | **354 test** (`pnpm test`; Tur 24'te render paketi de) |
 | Denge testi | **288 kontrol, hepsi geçiyor** (20 bölüm, süreleriyle; ~11 dk) |
 | Tarayıcı testi | **382 kontrol, hepsi geçiyor**, 0 konsol hatası (~17–25 dk); duman koşusu 121 (~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + duman oynanışı |

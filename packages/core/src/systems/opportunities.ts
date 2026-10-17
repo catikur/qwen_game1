@@ -7,7 +7,7 @@ import { createRng, nextFloat, pickWeighted } from '../rng';
 import { formatMoney, nextMonthStart, dayOfMonth } from '../selectors';
 import { purchaseBlocker } from '../actions';
 import { profitTrend } from './cards';
-import { tilePrice } from './city';
+import { recomputeNetWorth, tilePrice } from './city';
 import type { BubbleState, CommandResult, CompanyState, GameState, QuestBoard, QuestState } from '../types';
 
 /**
@@ -124,6 +124,11 @@ function placeBubble(state: GameState, def: BubbleDef, die: ReturnType<typeof cr
 }
 
 /** Günlük balon adımı: süresi dolanı kaldır, takvimi gelince yenisini çıkar. */
+function parcelStillFree(state: GameState, tileId: number): boolean {
+  const tile = state.map.tiles[tileId];
+  return Boolean(tile && !tile.structureId && !tile.buildingId && purchaseBlocker(state, tileId) === null);
+}
+
 export function runBubbleTick(state: GameState): void {
   if (!bubblesEnabled(state)) {
     delete state.bubble;
@@ -131,6 +136,10 @@ export function runBubbleTick(state: GameState): void {
   }
   const day = state.time.day;
   if (state.bubble && day > state.bubble.untilDay) delete state.bubble;
+  // İndirimli arsa elden çıktıysa (yapı dikildi, satıldı) balon da sönüyor.
+  if (state.bubble && BUBBLE_BY_ID[state.bubble.kind].reward.kind === 'parcel' && !parcelStillFree(state, state.bubble.tileId)) {
+    delete state.bubble;
+  }
   if (state.bubble || state.gameOver) return;
 
   state.nextBubbleDay ??= BUBBLE_TIMING.firstDay + Math.floor(nextFloat(dice(state, 0x2b0b1e5, 0)) * 8);
@@ -177,7 +186,11 @@ export function claimBubble(state: GameState): CommandResult {
   const day = state.time.day;
 
   if (def.reward.kind === 'parcel') {
-    const blocker = purchaseBlocker(state, bubble.tileId);
+    // Balonun ömründe şehir parsele yapı dikmiş olabilir; `purchaseBlocker`
+    // yapıya bakmıyor (normal alımda yapının devir bedeli ayrıca ödeniyor).
+    // İndirim boş arsanın fiyatıydı: yapılı parsel indirimle verilmiyor (Codex #63).
+    const blocker =
+      purchaseBlocker(state, bubble.tileId) ?? (state.map.tiles[bubble.tileId]?.structureId ? tc('core.bubbles.parcelGone') : null);
     if (blocker) {
       delete state.bubble;
       return { ok: false, reason: blocker };
@@ -411,6 +424,10 @@ export function runQuestTick(state: GameState): void {
     state.quests = board;
     return;
   }
+  // Geçme görevi bugünün net değeriyle ölçülüyor: günlük yeniden hesap
+  // ancak `simulateCityDay`'den sonra geliyor; dünkü değerle geçiş bir gün
+  // geç sayılır, ayın son gününde geçen oyuncunun ödülü düşerdi (Codex #63).
+  if (board.items.some((quest) => quest.defId === 'overtake' && quest.doneDay === undefined)) recomputeNetWorth(state);
   for (const quest of board.items) {
     if (quest.doneDay !== undefined) continue;
     if (questValue(state, board, quest) >= quest.target) completeQuest(state, quest);
