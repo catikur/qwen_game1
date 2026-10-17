@@ -3345,10 +3345,11 @@ artık yalnız bunu söylüyor.
 Kasa 4 M ₺'de beş günde bir kuran ×1,004'le sınırdaydı, 6 M ₺'de en keskin
 vekil üç yıldıza ulaşıyordu; 5 M ₺ seçildi. Yıldız eşikleri ×1,2 ve ×1,4.
 
-**Codex (#66).** Üç bulgu, üçü de düzeltmeden önce kalan testle:
-- *Açılış ekranının arkasında takvim:* boşluk tuşu (`TOGGLE_PAUSE`) ekran
-  açıkken oyunu yürütüyordu. Motor açılış ekranı kapanana kadar takvimi
-  başlatan komutları reddediyor; duraklatmak serbest.
+**Codex (#66).** Dört bulgu (ikisi aynı kuralın iki ekranı), hepsi düzeltmeden önce kalan testle:
+- *Ekranın arkasında takvim:* boşluk tuşu (`TOGGLE_PAUSE`) açılış ekranı
+  açıkken senaryonun günlerini, sonuç ekranı açıkken serbest oyunu
+  yürütüyordu. Motor senaryonun ekranı kapanana kadar takvimi başlatan
+  komutları reddediyor; duraklatmak serbest.
 - *Yuvarlanan skor:* yıldız üç haneye yuvarlanmış öndelikten hesaplanıyordu,
   ×1,3996 ×1,4 olup üç yıldız alıyordu. Yıldız ham skordan; saklanan ve
   gösterilen öndelik aşağı yuvarlanıyor (×1,39), eşiğin altındaki skor
@@ -3358,15 +3359,15 @@ vekil üç yıldıza ulaşıyordu; 5 M ₺ seçildi. Yıldız eşikleri ×1,2 ve
   ortasında hep son gün bitiyor) sayılmıyordu. Kimlik artık sonucu da
   taşıyor; arayüz paketinin ilk birim testi bunu sınıyor.
 
-**Doğrulama.** `pnpm test` 407/407 (yeni `scenario.test.ts`, 11 test:
+**Doğrulama.** `pnpm test` 408/408 (yeni `scenario.test.ts`, 12 test:
 kurulum, aynı şehir, Kurtarma ve kriz kurulumları, iki hedef türü, devralma,
-yıldız eşikleri, açılış ekranında duran takvim, aşağı yuvarlanan skor, kural
+yıldız eşikleri, açılış ve sonuç ekranında duran takvim, aşağı yuvarlanan skor, kural
 kilidi ve ekranlar, gündem çipi; arayüzde `scenarioBest.test.ts`, 2 test;
 içerik metinlerinin İngilizce kapsamına senaryolar girdi). `pnpm balance`
 300/300; yeni bölüm "Senaryolar: kazanılabilir ama bedava değil" (10
 kontrol, ~17 sn). Tarayıcı tam koşu 411/411, konsol hatası yok; yeni bölüm
-"Senaryo modu" (Codex düzeltmesiyle 19 kontrol: liste, kurulumdan kalkan seçimler,
-ön tarih ve duraklamış açılış, boşluk tuşunda duran takvim, kural kilidi, gündem çipi, hedef paneli,
+"Senaryo modu" (Codex düzeltmeleriyle 20 kontrol: liste, kurulumdan kalkan seçimler,
+ön tarih ve duraklamış açılış, iki ekranda da boşluk tuşunda duran takvim, kural kilidi, gündem çipi, hedef paneli,
 kriz bitiminde sonuç, üç yıldız, yerel en iyi, yenilemede sonuç ve tek
 sayım, serbest oyun, kayıp ekranı, "Baştan oyna").
 
@@ -3452,9 +3453,9 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi) |
-| Birim testi | **407 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi de) |
+| Birim testi | **408 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi de) |
 | Denge testi | **300 kontrol, hepsi geçiyor** (22 bölüm, süreleriyle; ~12 dk) |
-| Tarayıcı testi | **412 kontrol, hepsi geçiyor**, 0 konsol hatası (~17–25 dk); duman koşusu 132 (~5 dk, rehber dahil) |
+| Tarayıcı testi | **413 kontrol, hepsi geçiyor**, 0 konsol hatası (~17–25 dk); duman koşusu 132 (~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + duman oynanışı |
 | Kapsam | 35 bina · 25 ürün · 7 kategori · 8 rakip profili · 10 CEO · 22 olay (11 şehir + 11 sektör) · 2 kriz · 12 karar kartı · 70 rakip sözü · 5 fırsat balonu · 8 görev türü · 4 mevsim · 9 moda ürünü · 17 şehir yapısı (6 siluet) · 6 şehir projesi · 2 senaryo |
 

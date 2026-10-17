@@ -6,7 +6,7 @@ import type { LeadershipMemory } from './leadership';
 import { companyRanking, formatMoney } from './selectors';
 import { runGoalTick } from './systems/goals';
 import { isLoggable, leagueActive, runLeagueTick } from './systems/league';
-import { runScenarioTick, scenarioActive, scenarioBriefPending } from './systems/scenario';
+import { runScenarioTick, scenarioActive, scenarioScreenPending } from './systems/scenario';
 import { lobby } from './systems/council';
 import { respondUnion, setWagePolicy } from './systems/labor';
 import { chooseCard } from './systems/cards';
@@ -143,11 +143,12 @@ export class GameEngine {
     if (command.type === 'SET_FLAG' && scenarioActive(this.state)) {
       return { ok: false, reason: tc('core.engine.scenarioRulesLocked') };
     }
-    // Açılış ekranı kapanmadan takvim yürümüyor (Codex #66): boşluk tuşu ve
-    // hız düğmeleri senaryonun günlerini ekranın arkasında harcamasın.
+    // Senaryonun açılış ya da sonuç ekranı kapanmadan takvim yürümüyor
+    // (Codex #66): boşluk tuşu ve hız düğmeleri şehri ekranın arkasında
+    // yürütmesin — açılışta senaryonun günlerini, sonuçta serbest oyunu.
     const running = command.type === 'TOGGLE_PAUSE' || (command.type === 'SET_SPEED' && command.speed > 0);
-    if (running && scenarioBriefPending(this.state)) {
-      return { ok: false, reason: tc('core.engine.scenarioBriefPending') };
+    if (running && scenarioScreenPending(this.state)) {
+      return { ok: false, reason: tc('core.engine.scenarioScreenPending') };
     }
     const day = this.state.time.day;
     const result = this.apply(command);

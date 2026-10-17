@@ -20,7 +20,7 @@ export { AuctionChip, AuctionPanel } from './AuctionPanel';
 export { MarketPanel } from './MarketPanel';
 export { CeoPortrait } from './CeoPortrait';
 export { NewGameScreen } from './NewGame';
-export { ScenarioBriefScreen, ScenarioResultScreen, scenarioResultPending } from './ScenarioScreens';
+export { ScenarioBriefScreen, ScenarioResultScreen } from './ScenarioScreens';
 export { recordScenarioResult, scenarioRecord } from './scenarioBest';
 export { Coach } from './Coach';
 export { DecisionCard, reopenDecisionCard } from './DecisionCard';

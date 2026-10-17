@@ -11,6 +11,7 @@ import {
   formatMoney,
   getPlayer,
   rivalProfile,
+  scenarioResultPending,
 } from '@capital/core';
 import type { GameSpeed } from '@capital/core';
 import { CeoPortrait } from './CeoPortrait';
@@ -19,7 +20,6 @@ import { AuctionChip } from './AuctionPanel';
 import { ghostValueAt, useGhost } from './LeaguePanel';
 import { useCollapsible } from './collapse';
 import { reopenDecisionCard } from './DecisionCard';
-import { scenarioResultPending } from './ScenarioScreens';
 import { useGame, useGameState } from './useGame';
 import type { ViewState } from './useGame';
 import { t } from './i18n';

@@ -24,6 +24,7 @@ export {
   scenarioDefOf,
   scenarioGoalText,
   scenarioProgress,
+  scenarioResultPending,
   scenarioScoreText,
   starsFor,
 } from './systems/scenario';

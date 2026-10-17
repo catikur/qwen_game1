@@ -2,8 +2,7 @@ import { useEffect, useState } from 'react';
 import type { ReactElement } from 'react';
 import { formatDecimal, formatPercent } from '@capital/content';
 import type { ScenarioDef } from '@capital/content';
-import { formatMoney, getPlayer, scenarioDefOf, scenarioGoalText, scenarioProgress, scenarioScoreText } from '@capital/core';
-import type { GameState } from '@capital/core';
+import { formatMoney, getPlayer, scenarioDefOf, scenarioGoalText, scenarioProgress, scenarioResultPending, scenarioScoreText } from '@capital/core';
 import { useGame, useGameState } from './useGame';
 import { recordScenarioResult, scenarioRecord, scenarioRunKey } from './scenarioBest';
 import { t } from './i18n';
@@ -24,12 +23,6 @@ export function starThresholds(def: ScenarioDef): string {
   return metric === 'days'
     ? t('hud.scenario.thresholdsDays', { two, three })
     : t('hud.scenario.thresholdsLead', { two: formatDecimal(two, 2), three: formatDecimal(three, 2) });
-}
-
-/** Sonuç ekranı bekliyor mu — oyun sonu ve zafer ekranı o sırada çekiliyor. */
-export function scenarioResultPending(state: GameState): boolean {
-  const run = state.scenario;
-  return run !== undefined && run.finishedDay !== undefined && !run.resultSeen;
 }
 
 export function ScenarioBriefScreen(): ReactElement | null {

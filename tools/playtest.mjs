@@ -3155,6 +3155,10 @@ async function finish(browser, consoleErrors) {
     check('Sonuç ekranı: kazanıldı, üç yıldız, cihazdaki en iyi', stars === '3'
       && /en iyi sonucun/.test((await sp.locator('[data-scenario-best]').textContent().catch(() => '')) ?? ''), `yıldız ${stars}`);
     check('Sonuç beklerken zafer ve oyun sonu ekranı çıkmıyor', (await sp.locator('.gameover:not(.scenario-result)').count()) === 0);
+    await sp.keyboard.press('Space');
+    await sp.waitForTimeout(400);
+    const resultHeld = await sp.evaluate(() => ({ speed: window.__capital.getState().time.speed, day: window.__capital.getState().time.day }));
+    check('Sonuç ekranı açıkken boşluk tuşu takvimi yürütmüyor', resultHeld.speed === 0 && resultHeld.day === 350, JSON.stringify(resultHeld));
     const stored = await sp.evaluate(() => JSON.parse(localStorage.getItem('capitalforge.scenarios.v1') ?? '{}'));
     check('En iyi sonuç bu cihazda saklanıyor', stored.crisis?.best?.stars === 3 && stored.crisis.attempts === 1, JSON.stringify(stored.crisis ?? null));
     await sp.reload();

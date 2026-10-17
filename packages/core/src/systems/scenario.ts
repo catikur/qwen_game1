@@ -16,10 +16,24 @@ export function scenarioActive(state: GameState): boolean {
   return state.scenario !== undefined && state.scenario.finishedDay === undefined;
 }
 
-/** Açılış ekranı bekliyor mu: takvim o kapanana kadar yürümüyor. */
+/** Açılış ekranı bekliyor mu. */
 export function scenarioBriefPending(state: GameState): boolean {
   const run = state.scenario;
   return run !== undefined && !run.briefSeen && run.finishedDay === undefined;
+}
+
+/** Sonuç ekranı bekliyor mu (bitti, ekran kapanmadı). */
+export function scenarioResultPending(state: GameState): boolean {
+  const run = state.scenario;
+  return run !== undefined && run.finishedDay !== undefined && !run.resultSeen;
+}
+
+/**
+ * Senaryonun bir ekranı (açılış ya da sonuç) bekliyor mu: takvim o ekran
+ * kapanana kadar yürümüyor (Codex #66) — şehir ekranın arkasında yaşamasın.
+ */
+export function scenarioScreenPending(state: GameState): boolean {
+  return scenarioBriefPending(state) || scenarioResultPending(state);
 }
 
 export function scenarioDefOf(state: GameState): ScenarioDef | null {

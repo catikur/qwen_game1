@@ -14,12 +14,13 @@ import {
   questTitle,
   questValue,
   questsEnabled,
+  scenarioResultPending,
   victoryNetWorth,
 } from '@capital/core';
 import type { GameState, QuestBoard, QuestState } from '@capital/core';
 import { useGame, useGameState } from './useGame';
 import { t } from './i18n';
-import { ScenarioGoalSection, scenarioResultPending } from './ScenarioScreens';
+import { ScenarioGoalSection } from './ScenarioScreens';
 
 /** Görevin "şu an / hedef" satırı, görevin kendi biriminde. */
 function questNumbers(state: GameState, board: QuestBoard, quest: QuestState): string {

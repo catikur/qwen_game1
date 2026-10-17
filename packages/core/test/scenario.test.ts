@@ -185,6 +185,21 @@ describe('senaryo modu', () => {
     assert.ok(engine.dispatch({ type: 'SET_SPEED', speed: 3 }).ok);
   });
 
+  test('sonuç ekranı açıkken de takvim yürümüyor; kapanınca serbest oyun', () => {
+    const engine = started('rescue');
+    const state = engine.getState();
+    getPlayer(state).cash += 100_000_000;
+    engine.runDay();
+    assert.equal(state.scenario!.outcome, 'won');
+    assert.equal(state.time.speed, 0);
+    assert.equal(engine.dispatch({ type: 'TOGGLE_PAUSE' }).ok, false);
+    assert.equal(engine.dispatch({ type: 'SET_SPEED', speed: 1 }).ok, false);
+    assert.equal(state.time.speed, 0);
+    assert.ok(engine.dispatch({ type: 'DISMISS_SCENARIO', screen: 'result' }).ok);
+    assert.ok(engine.dispatch({ type: 'SET_SPEED', speed: 1 }).ok);
+    assert.equal(state.time.speed, 1);
+  });
+
   test('yıldız ham skordan; saklanan ve gösterilen skor aşağı yuvarlanıyor', () => {
     // ×1,3996 üç yıldızın ×1,4 eşiğinin altında: yuvarlanıp eşiği geçmemeli.
     const def = SCENARIO_BY_ID.crisis!;
