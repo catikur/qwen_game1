@@ -7,6 +7,7 @@ import {
   getPlayer,
   projectName,
   projectStandings,
+  projectTable,
   projectsEnabled,
   rivalProfile,
 } from '@capital/core';
@@ -53,23 +54,19 @@ function contributionSteps(state: GameState, project: ProjectState): Array<{ amo
 
 function Standings({ project }: { project: ProjectState }): ReactElement {
   const state = useGameState();
-  const standings = projectStandings(state, project);
-  const top = standings[0]?.amount ?? 0;
+  const rows = projectTable(state, project);
+  const top = rows[0]?.amount ?? 0;
   const player = getPlayer(state);
-  const rows = standings.slice(0, 5);
-  if (!rows.some((row) => row.companyId === player.id) && (project.contributions[player.id] ?? 0) > 0) {
-    rows.push({ companyId: player.id, amount: project.contributions[player.id]! });
-  }
   if (rows.length === 0) return <p className="muted">{t('panels.project.noContributions')}</p>;
   return (
     <ol className="project-standings">
-      {rows.map((row, index) => {
+      {rows.map((row) => {
         const company = state.companies[row.companyId];
         const profile = rivalProfile(state, company?.profileId);
         const isPlayer = row.companyId === player.id;
         return (
           <li key={row.companyId} className={`project-row${isPlayer ? ' is-player' : ''}`} data-project-row={isPlayer ? 'player' : 'rival'}>
-            <span className="project-rank">{index + 1}</span>
+            <span className="project-rank">{row.rank}</span>
             {profile ? <CeoPortrait portrait={profile.portrait} size={24} /> : <span className="project-dot" style={{ background: company?.color }} />}
             <span className="project-name">{isPlayer ? t('panels.project.you') : (company?.name ?? row.companyId)}</span>
             <span className="project-bar" aria-hidden="true">

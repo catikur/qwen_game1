@@ -97,6 +97,23 @@ export function projectStandings(state: GameState, project: ProjectState): Array
     .sort((a, b) => b.amount - a.amount || (a.companyId < b.companyId ? -1 : 1));
 }
 
+/**
+ * Katkı tablosunun satırları: ilk `limit` şirket ve dışarıda kaldıysa oyuncu,
+ * GERÇEK sıralarıyla. Önce sıra kesilmiş diziden okunuyordu; yedinci oyuncu
+ * altıncı görünüyordu (Codex #64).
+ */
+export function projectTable(
+  state: GameState,
+  project: ProjectState,
+  limit = 5,
+): Array<{ companyId: string; amount: number; rank: number }> {
+  const ranked = projectStandings(state, project).map((row, index) => ({ ...row, rank: index + 1 }));
+  const rows = ranked.slice(0, limit);
+  const mine = ranked.find((row) => row.companyId === state.playerCompanyId);
+  if (mine && mine.rank > limit) rows.push(mine);
+  return rows;
+}
+
 function contribute(state: GameState, company: CompanyState, amount: number): void {
   const project = state.project!;
   company.cash -= amount;
@@ -212,6 +229,12 @@ function pickSite(state: GameState, def: ProjectDef): { districtId: number; tile
     if (tile) return { districtId: district.id, tileId: tile.id };
   }
   return null;
+}
+
+/** Bu proje bugün açılsa sahası (lig izi her projenin saha kuralını sınıyor). */
+export function projectSite(state: GameState, defId: ProjectDef['id']): { districtId: number; tileId: number } | null {
+  const def = PROJECT_BY_ID[defId];
+  return def ? pickSite(state, def) : null;
 }
 
 function openProject(state: GameState): boolean {

@@ -124,6 +124,7 @@ export {
   projectDistrictDemand,
   projectName,
   projectStandings,
+  projectTable,
   projectsEnabled,
 } from './systems/projects';
 export { campaignPriceFactor, campaignsLive, effectivePriceMultiplier, rivalQuote, storiesEnabled } from './systems/rivalry';

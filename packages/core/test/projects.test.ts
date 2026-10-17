@@ -14,6 +14,7 @@ import {
   contributeToProject,
   projectAttraction,
   projectStandings,
+  projectTable,
   projectUpkeep,
   runProjectTick,
 } from '../src/systems/projects';
@@ -200,6 +201,37 @@ describe('şehir projeleri', () => {
     const other = Object.values(state.companies).find((c) => !c.isPlayer && c.id !== acquirer!.id)!;
     const ghost = { [other.id]: 900_000, missing: 1_000_000 };
     assert.deepEqual(projectStandings(state, { ...project, contributions: ghost }).map((row) => row.companyId), [other.id]);
+  });
+
+  test('katkı tablosu: ilk beş ve dışarıda kalan oyuncu gerçek sırasıyla (Codex #64)', () => {
+    const state = createNewGame({ seed: 7 });
+    openNow(state);
+    const project = state.project!;
+    // Büyük şehirde altıdan çok rakip olabiliyor: eksikleri kopyayla tamamla.
+    const template = Object.values(state.companies).find((company) => !company.isPlayer)!;
+    for (let i = 0; Object.values(state.companies).filter((company) => !company.isPlayer).length < 6; i++) {
+      const id = `extra${i}`;
+      state.companies[id] = { ...structuredClone(template), id, name: `Ek Rakip ${i}` };
+    }
+    const rivals = Object.values(state.companies).filter((company) => !company.isPlayer);
+    // Altı rakip oyuncunun önünde: oyuncu yedinci.
+    rivals.slice(0, 6).forEach((rival, index) => {
+      project.contributions[rival.id] = 1_000_000 - index * 10_000;
+    });
+    project.contributions[state.playerCompanyId] = 5_000;
+    const rows = projectTable(state, project);
+    assert.equal(rows.length, 6);
+    assert.deepEqual(rows.slice(0, 5).map((row) => row.rank), [1, 2, 3, 4, 5]);
+    assert.equal(rows[5]!.companyId, state.playerCompanyId);
+    assert.equal(rows[5]!.rank, 7, 'oyuncu yedinci, altıncı değil');
+    // Panelin altındaki özetle aynı sıra.
+    assert.equal(projectStandings(state, project).findIndex((row) => row.companyId === state.playerCompanyId) + 1, 7);
+    // İlk beşteyse eklenmiyor; katkısı yoksa satırı yok.
+    project.contributions[state.playerCompanyId] = 995_000;
+    assert.deepEqual(projectTable(state, project).map((row) => row.rank), [1, 2, 3, 4, 5]);
+    assert.equal(projectTable(state, project)[1]!.companyId, state.playerCompanyId);
+    delete project.contributions[state.playerCompanyId];
+    assert.ok(projectTable(state, project).every((row) => row.companyId !== state.playerCompanyId));
   });
 
   test('laboratuvarda (olaylar kapalı) ve bayrak kapalıyken proje yok', () => {

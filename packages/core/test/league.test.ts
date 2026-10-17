@@ -4,6 +4,7 @@ import { GameEngine } from '../src/engine';
 import {
   RUN_LIMITS,
   computeSimFingerprint,
+  simFingerprintParts,
   createLeagueGame,
   decodeRun,
   decodeRunChecked,
@@ -15,7 +16,7 @@ import {
   verifyRun,
 } from '../src/league';
 import type { LeagueRun, RunVerdict } from '../src/league';
-import { BUBBLE_TIMING, CONSORTIUM, FAD, PROJECT_BY_ID, PROJECT_TIMING, setLocale } from '@capital/content';
+import { BUBBLE_TIMING, CONSORTIUM, FAD, PROJECTS, PROJECT_BY_ID, PROJECT_TIMING, setLocale } from '@capital/content';
 import { LEAGUE_DAYS, leagueSeed, leagueWeekId } from '../src/systems/league';
 import { createNewGame } from '../src/worldgen';
 import type { GameState } from '../src/types';
@@ -196,6 +197,45 @@ describe('lig güvenliği', () => {
       fad.categoryBoost = categoryBoost;
     }
     assert.equal(computeSimFingerprint(), base);
+  });
+
+  test('iz her projenin saha kuralını taşıyor: yoklamanın açmadığı projelerin tercih ettiği bölge de (Codex #64)', () => {
+    const base = computeSimFingerprint();
+    for (const def of PROJECTS) {
+      const mutable = def as { archetypes: readonly string[] };
+      const { archetypes } = mutable;
+      try {
+        mutable.archetypes = [];
+        assert.notEqual(computeSimFingerprint(), base, `${def.id} saha kuralı izi değiştirmiyor`);
+      } finally {
+        mutable.archetypes = archetypes;
+      }
+    }
+    assert.equal(computeSimFingerprint(), base);
+  });
+
+  test('iz modanın satış yolunu da işletiyor: moda gününde gerçek bir pazar günü (Codex #64)', () => {
+    const market = (): string => {
+      const part = simFingerprintParts().find((entry) => entry.startsWith('fad-market:'));
+      assert.ok(part, 'izde moda pazarı yok');
+      return part;
+    };
+    const base = market();
+    const [, shop, store] = base.split(':');
+    assert.notEqual(shop, '-', 'tek yuvalı yoklama mağazası kurulmadı');
+    assert.notEqual(store, '-', 'büyük yoklama mağazası kurulmadı');
+    assert.match(base, new RegExp(`${shop}=\\{"[a-z_]+":[1-9]`), 'yoklama mağazası satmıyor');
+    // Parça modayı pazarın içinden görüyor: ağırlık değişince satış ve
+    // karşılanmayan talep değişiyor.
+    const fad = FAD as { weight: number };
+    const { weight } = fad;
+    try {
+      fad.weight = weight + 0.4;
+      assert.notEqual(market(), base, 'moda pazarı ağırlığa bakmıyor');
+    } finally {
+      fad.weight = weight;
+    }
+    assert.equal(market(), base);
   });
 
   test('dürüst koşu doğrulanıyor; skor, eğri, ad ve CEO tekrarın kendisinden', async () => {

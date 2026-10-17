@@ -2898,8 +2898,11 @@ bakmıyor):
 
 | | Zafer günü farkı | Net değer oranı | 720 günde zafer |
 |---|---|---|---|
-| Canlı pazar kapalı | — | 1 | 16/20 |
-| Açık | +6 ± 6 | 0,96 | 14/20 |
+| Canlı pazar kapalı | — | 1 | 17/20 |
+| Açık | +5 ± 7 | 0,96 | 15/20 |
+
+(Son ölçüm moda payı düzeltmesinden ve 37d-2/3'ten sonra; ilk ölçüm
++6 ± 6, 0,96, 16/20 → 14/20. Etki değişmedi.)
 
 Etki gürültü içinde. Vekil kategorilerini eğilime göre seçmediği için
 dalgalanma ona hafif pahalı. Eğilimi okuyan oyuncu kazanır.
@@ -2916,6 +2919,15 @@ dalgalanma ona hafif pahalı. Eğilimi okuyan oyuncu kazanır.
 - Aynı ölçümün yan bulgusu: savunmasız yavaş oyuncu Dengeli'de 12
   tohumun 3–4'ünde **kazanıyor**. "Pasif oyun yeterince cezalandırılmıyor"
   kaygısı ölçüyle doğrulandı; 37d-3'ün (rakip konsorsiyumu) hedefi bu.
+
+**Denge sınavında değişen kontrol: dönem çarpanı oranla.** "Dönem çarpanı
+pazara ulaşıyor" sıkılaşma döneminin yeme-içme talebini birleşik çarpanda
+1'in altında arıyordu. Canlı pazar aynı çarpana giriyor ve dönemden
+bağımsız: moda payı düzeltmesi rakiplerin kararlarını kaydırınca seed 77'de
+oyun 1297. günde dondu, o gün yeme-içme eğilim ve mevsimle ×1,17 ve
+dönemin 0,88'i birleşikte 1,03 çıktı. Kontrol olayları zaten aynı gerekçeyle
+temizliyordu; artık dönemin katkısı dönemli ve dönemsiz çarpanın oranı
+(0,88). İddia aynı.
 
 **Doğrulama.**
 - Birim testleri (`living.test.ts`, 7 test):
@@ -2980,7 +2992,18 @@ adını veriyor ve bölgede bir ayrıcalık alıyor (`content/src/projects.ts`,
   canlı pazarın uzak günleri ve ayarlar ize giriyor (Codex #64). Moda
   için takvim yetmiyordu: kopya ilk modanın gününe alınıp kategori talebi
   ve moda kategorisinin ürün payları da ize giriyor; moda ağırlığı ya da
-  kategori eki değişince iz değişiyor (Codex #64).
+  kategori eki değişince iz değişiyor (Codex #64). Yardımcıların çıktısı
+  da yetmiyordu: moda gününde iki yoklama mağazasıyla (en kalabalık
+  bölgede yalnız moda ürünlü tek yuvalı, en tenha bölgede bütün ürünlü
+  büyük mağaza) gerçek bir pazar günü işletiliyor; ürün başına satış ve
+  bölge başına karşılanmayan talep izde. Satıştaki ya da kapasite
+  bölüşümündeki moda geçişi geri alınınca bu parça değişiyor (elle
+  sınandı). Yoklama tek projeyi açtığı için bütün projelerin sahası da
+  (bugün ve bir proje bittikten sonra) ve tercih ettikleri arketipler
+  izde (Codex #64).
+- **Katkı tablosu:** ilk beş ve dışarıda kalan oyuncu, gerçek sırasıyla
+  (`projectTable`). Önce sıra kesilmiş diziden okunuyordu; yedinci oyuncu
+  altıncı görünüyordu (Codex #64).
 
 **Ayrıcalık neden bakım indirimi** (20 tohum, 720 gün; vekil oyuncu
 katkıyı pencerenin son günü lideri geçecek kadar veriyor, 0,5–3,3 M ₺):
@@ -3180,7 +3203,7 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi) |
-| Birim testi | **387 test** (`pnpm test`; Tur 24'te render paketi de) |
+| Birim testi | **390 test** (`pnpm test`; Tur 24'te render paketi de) |
 | Denge testi | **290 kontrol, hepsi geçiyor** (21 bölüm, süreleriyle; ~12 dk) |
 | Tarayıcı testi | **393 kontrol, hepsi geçiyor**, 0 konsol hatası (~17–25 dk); duman koşusu 132 (~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + duman oynanışı |

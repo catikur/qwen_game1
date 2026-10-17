@@ -2709,11 +2709,19 @@ section('Dönemler: şehrin makro iklimi', () => {
   // sözleşme sistemi rng akışını kaydırınca tam o güne bir olay denk
   // geldi ve kontrol kırıldı. Paylaşılan rng'ye yaslanan her kontrol,
   // akıştaki her yeni tüketiciyle kayar; yalıtım şart.
+  //
+  // Canlı pazar da (Tur 37d) aynı çarpana giriyor ve dönemden bağımsız:
+  // seed 77'de oyun 1297. günde donuyor, o gün yeme-içme eğilim ve mevsimle
+  // ×1,17 ve dönemin 0,88'i birleşikte 1,03 çıkıyordu. Dönemin katkısı,
+  // dönemli ve dönemsiz çarpanın oranı; canlı pazar ikisinde de aynı.
   state.activeEvents.length = 0;
+  state.era = undefined;
+  const calm = collectEventModifiers(state).demand.dining ?? 1;
   state.era = { defId: 'era_sikilasma', startedDay: state.time.day, remainingDays: 100 };
   const mods = collectEventModifiers(state);
-  expect('dönem çarpanı pazara ulaşıyor', (mods.demand.dining ?? 1) < 1,
-    `yeme-içme çarpanı ${(mods.demand.dining ?? 1).toFixed(2)}`);
+  const eraFactor = (mods.demand.dining ?? 1) / calm;
+  expect('dönem çarpanı pazara ulaşıyor', eraFactor < 1,
+    `yeme-içme çarpanı ${eraFactor.toFixed(2)} (canlı pazarla birlikte ${(mods.demand.dining ?? 1).toFixed(2)})`);
 }
 
 });
