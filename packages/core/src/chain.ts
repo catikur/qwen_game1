@@ -489,12 +489,19 @@ function bestMove(
  * Satmadığın ürün listelenmez: hiçbir şey satmıyorsan panel boş açılır ve
  * oyuncu hiç ilgilenmediği bir tabloyla karşılaşmaz.
  */
-export function chainCards(state: GameState, companyId: string): ChainCard[] {
+export function chainCards(state: GameState, companyId: string, options: { brake?: boolean } = {}): ChainCard[] {
   // Kart saf bir hesap: bina indeksi kart boyunca açık (Tur 21 hız düzeltmesi).
-  return withBuildingIndex(state, () => chainCardsFor(state, companyId));
+  return withBuildingIndex(state, () => chainCardsFor(state, companyId, options.brake ?? true));
 }
 
-function chainCardsFor(state: GameState, companyId: string): ChainCard[] {
+/**
+ * `brake`: fırsat maliyeti freni (`deferred`) hesaplansın mı. Fren oyuncu
+ * tavsiyesi; rakipler onu bilerek okumuyor (npc.ts). Frenin girdisi
+ * şehirdeki her mağaza türü × her bölge için bir yatırım tahmini ve büyük
+ * şehrin geç oyununda günün beşte biriydi (Tur 38). Rakip kartında
+ * hesaplanmıyor; hamlenin geri kalanı birebir aynı.
+ */
+function chainCardsFor(state: GameState, companyId: string, brake: boolean): ChainCard[] {
   const company = state.companies[companyId];
   if (!company) return [];
 
@@ -514,7 +521,7 @@ function chainCardsFor(state: GameState, companyId: string): ChainCard[] {
 
   // Fırsat maliyeti freni için TEK SEFER hesaplanır: kart başına
   // hesaplansaydı parsel + tahmin taraması kart sayısıyla çarpılırdı.
-  const outletPayback = bestOutletPaybackFor(state, companyId);
+  const outletPayback = brake ? bestOutletPaybackFor(state, companyId) : Number.POSITIVE_INFINITY;
 
   // Tempo çapası: şirketin EN YENİ üretim ünitesi. Hiç ünite yoksa
   // sonsuz geçmiş — ilk ünite frene takılmaz, zincire giriş serbest.

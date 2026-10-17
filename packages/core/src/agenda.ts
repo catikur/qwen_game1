@@ -261,18 +261,31 @@ export function agenda(state: GameState): AgendaItem[] {
     });
   }
 
+  // Aynı gün açılan bölgeler tek çip (Tur 38): büyük şehrin dış halkası
+  // dalga dalga açılıyor ve her dalga dört ayrı, aynı geri sayımlı çipti.
+  // Çip ilk bölgeye götürüyor; adı ve kalanların sayısı yazıyor.
+  const waves = new Map<number, Array<(typeof state.districts)[number]>>();
   for (const district of state.districts) {
     if (district.opensOnDay === undefined || district.opensOnDay <= day) continue;
-    const left = district.opensOnDay - day;
-    if (left > UNLOCK_HORIZON_DAYS) continue;
+    if (district.opensOnDay - day > UNLOCK_HORIZON_DAYS) continue;
+    const wave = waves.get(district.opensOnDay) ?? [];
+    wave.push(district);
+    waves.set(district.opensOnDay, wave);
+  }
+  for (const [opensOnDay, wave] of waves) {
+    const left = opensOnDay - day;
+    const first = wave[0]!;
     items.push({
       kind: 'unlock',
-      key: `unlock:${district.id}`,
+      key: wave.length > 1 ? `unlock:wave:${opensOnDay}` : `unlock:${first.id}`,
       urgency: left <= 7 ? 2 : 1,
       daysLeft: left,
-      label: tc('core.agenda.unlock', { district: district.name }),
+      label:
+        wave.length > 1
+          ? tc('core.agenda.unlockWave', { district: first.name, count: wave.length - 1 })
+          : tc('core.agenda.unlock', { district: first.name }),
       tone: 'good',
-      districtId: district.id,
+      districtId: first.id,
     });
   }
 

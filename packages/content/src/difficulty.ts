@@ -32,13 +32,22 @@ export interface DifficultyDef {
   facts: string[];
 }
 
+/*
+ * Rakip bütçesi ve günlük baskın tavanı Tur 38'de ayarlandı. Geç oyun
+ * giderleri (Tur 37a) büyüyen herkesi yavaşlatıyor ve rakipler oyuncudan
+ * çok bina kurduğu için en çok onları: Dengeli'de savunmasız yavaş oyuncu
+ * rakipleri geride bırakıyor, baskıncının hedefi olmaktan çıkıyordu (8
+ * tohumda 2 düşüş, Tur 17'nin hedefi 5'te 4). Bütçe üç kademede aynı katla
+ * (0,8/1/1,2 → 1,2/1,5/1,8: kademeler arası oran aynı), tavan Dengeli ve
+ * Acımasız'da +%1. Ölçüm DURUM Tur 38'de.
+ */
 export const DIFFICULTIES: DifficultyDef[] = [
   {
     id: 'easy',
     name: 'Rahat',
     blurb: 'Şehri öğrenmek için. Rakipler temkinli, baskınlar geç ve yavaş başlar.',
     startingCashMultiplier: 1.4,
-    rivalBudgetMultiplier: 0.8,
+    rivalBudgetMultiplier: 1.2,
     raidWarmupDays: 320,
     raidDailyCap: 200,
     victoryNetWorth: 60_000_000,
@@ -49,22 +58,22 @@ export const DIFFICULTIES: DifficultyDef[] = [
     name: 'Dengeli',
     blurb: 'Oyunun tasarlandığı hâli. Geride kalan şirket avlanır.',
     startingCashMultiplier: 1,
-    rivalBudgetMultiplier: 1,
+    rivalBudgetMultiplier: 1.5,
     raidWarmupDays: 160,
-    raidDailyCap: 350,
+    raidDailyCap: 450,
     victoryNetWorth: 100_000_000,
-    facts: ['Standart sermaye', 'Baskınlar 160. günden sonra, günde en çok %3,5', 'Zafer: 100M ₺ ve bir numara'],
+    facts: ['Standart sermaye', 'Baskınlar 160. günden sonra, günde en çok %4,5', 'Zafer: 100M ₺ ve bir numara'],
   },
   {
     id: 'hard',
     name: 'Acımasız',
     blurb: 'Rakipler daha cesur yatırır ve erken avlanır. Hata affedilmez.',
     startingCashMultiplier: 0.8,
-    rivalBudgetMultiplier: 1.2,
+    rivalBudgetMultiplier: 1.8,
     raidWarmupDays: 110,
-    raidDailyCap: 450,
+    raidDailyCap: 550,
     victoryNetWorth: 150_000_000,
-    facts: ['%20 az başlangıç sermayesi', 'Rakipler %20 daha cesur yatırır', 'Baskınlar 110. günden sonra, günde en çok %4,5', 'Zafer: 150M ₺ ve bir numara'],
+    facts: ['%20 az başlangıç sermayesi', 'Rakipler %20 daha cesur yatırır', 'Baskınlar 110. günden sonra, günde en çok %5,5', 'Zafer: 150M ₺ ve bir numara'],
   },
 ];
 

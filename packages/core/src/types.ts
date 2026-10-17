@@ -397,6 +397,12 @@ export interface NewsItem {
    */
   tileId?: number;
   districtId?: number;
+  /**
+   * Özet haberin anahtarı ve sayımı (Tur 38): rakiplerin haftalık
+   * genişleme özeti. Seçime bağlı; eski kayıtlarda yok.
+   */
+  group?: string;
+  tally?: Record<string, number>;
 }
 
 /**

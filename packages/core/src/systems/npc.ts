@@ -11,7 +11,7 @@ import { chainCards } from '../chain';
 import { competitionCards } from '../competition';
 import { tc } from '../i18n';
 import { formatMoney } from '../selectors';
-import { pushNews } from '../news';
+import { pushNews, takeNews } from '../news';
 import { rivalProfiles } from '../profiles';
 import { nextFloat } from '../rng';
 import { estimateInvestment } from './market';
@@ -137,7 +137,7 @@ function tryChainMove(state: GameState, profile: NpcProfileDef): boolean {
   const budget = company.cash * Math.min(0.85, profile.aggression + 0.3);
   const maxPayback = CHAIN_MAX_PAYBACK_DAYS * appetite;
 
-  for (const card of chainCards(state, profile.id)) {
+  for (const card of chainCards(state, profile.id, { brake: false })) {
     const move = card.move;
     if (!move) continue;
     if (move.premature && appetite < 1.2) continue;
@@ -580,6 +580,61 @@ function idleCash(company: CompanyState): boolean {
 }
 
 /** Bir mağaza kurma denemesi; kurduysa true. */
+/**
+ * Rakibin yeni binası haber akışında (Tur 38).
+ *
+ * Ölçüm: "X genişliyor" akışın %41'iydi, büyük şehirde %58'i (720 günde
+ * 732 haber, günde bir). Kart, kriz ve baskın uyarısı bu kalabalığın içinde
+ * kayboluyordu. Oyuncunun aynı kategoride mağazası olan bölgedeki açılış
+ * doğrudan rekabet: tek başına haber. Gerisi haftanın özetine giriyor —
+ * ilk açılış tek haber, ikincisinden itibaren "Rakipler genişliyor · bu
+ * hafta N yeni işletme" (şirket başına sayım, son açılışın yeri).
+ */
+function reportExpansion(
+  state: GameState,
+  profile: NpcProfileDef,
+  def: BuildingDef,
+  districtId: number,
+  tileId: number,
+  buyout: boolean,
+): void {
+  const districtName = state.districts[districtId]?.name ?? tc('core.npc.expandCity');
+  const body = tc(buyout ? 'core.npc.expandBuyoutBody' : 'core.npc.expandBody', { district: districtName, building: def.name });
+  const rivalsPlayer =
+    def.role === 'outlet' &&
+    Object.values(state.buildings).some(
+      (building) =>
+        building.companyId === state.playerCompanyId &&
+        building.districtId === districtId &&
+        BUILDING_BY_ID[building.defId]?.role === 'outlet' &&
+        BUILDING_BY_ID[building.defId]?.category === def.category,
+    );
+  if (rivalsPlayer) {
+    pushNews(state, 'rival', tc('core.npc.expandTitle', { name: profile.name }), body, { companyId: profile.id, tileId });
+    return;
+  }
+  const group = `expand:${Math.floor(state.time.day / 7)}`;
+  const previous = takeNews(state, group);
+  const tally = { ...(previous?.tally ?? {}) };
+  tally[profile.id] = (tally[profile.id] ?? 0) + 1;
+  const total = Object.values(tally).reduce((sum, count) => sum + count, 0);
+  if (total === 1) {
+    pushNews(state, 'rival', tc('core.npc.expandTitle', { name: profile.name }), body, { companyId: profile.id, tileId, group, tally });
+    return;
+  }
+  const list = Object.entries(tally)
+    .sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1))
+    .map(([companyId, count]) => `${state.companies[companyId]?.name ?? companyId} ${count}`)
+    .join(' · ');
+  pushNews(
+    state,
+    'rival',
+    tc('core.npc.expandDigestTitle', { count: total }),
+    tc('core.npc.expandDigestBody', { list, name: profile.name, latest: body }),
+    { companyId: profile.id, tileId, group, tally },
+  );
+}
+
 function buildOnce(state: GameState, profile: NpcProfileDef, budget: number, isLandlord: boolean): boolean {
   const company = state.companies[profile.id];
   if (!company) return false;
@@ -607,17 +662,7 @@ function buildOnce(state: GameState, profile: NpcProfileDef, budget: number, isL
       building.priceMultiplier = profile.priceMultiplier;
     }
 
-    const district = state.districts[opportunity.districtId];
-    pushNews(
-      state,
-      'rival',
-      tc('core.npc.expandTitle', { name: profile.name }),
-      tc(spot.needsBuyout ? 'core.npc.expandBuyoutBody' : 'core.npc.expandBody', {
-        district: district?.name ?? tc('core.npc.expandCity'),
-        building: def.name,
-      }),
-      { companyId: profile.id, tileId: spot.tileId },
-    );
+    reportExpansion(state, profile, def, opportunity.districtId, spot.tileId, spot.needsBuyout);
     return true;
   }
   return false;
@@ -626,7 +671,7 @@ function buildOnce(state: GameState, profile: NpcProfileDef, budget: number, isL
 
 /*
  * Baskının ısınma süresi (erken oyun inşaatın) ve günlük tavanı zorluktan
- * okunur: Dengeli'de 160 gün ve 350 hisse (%3,5).
+ * okunur: Dengeli'de 160 gün ve 450 hisse (%4,5; Tur 38'e kadar 350).
  */
 
 /** Baskın bütçesine dokunulmayan nakit tabanı. */
@@ -647,7 +692,7 @@ const RAID_CASH_RESERVE = 320_000;
  *   devamı bu — geride kalmak artık yalnızca bir sıra numarası değil,
  *   somut bir tehdit.
  *
- * - GÜNLÜK TAVAN VAR (350 hisse, %3,5): baskın bir anda değil dalga
+ * - GÜNLÜK TAVAN VAR (Dengeli'de 450 hisse, %4,5): baskın bir anda değil dalga
  *   dalga gelir. Bu bir merhamet değil OKUNABİLİRLİK kuralı — motor
  *   eşiklerde haber düşürüyor (%10/%25/%40) ve tek günde %0'dan %50'ye
  *   sıçrayan bir baskın o uyarıların hepsini atlardı.
@@ -724,7 +769,7 @@ function tryRaidMove(state: GameState, profile: NpcProfileDef): void {
   const price = sharePrice(state, target.id);
   if (price <= 0) return;
 
-  // Günlük tavan bir PAY (%3,5): sermaye artırımı yapmış hedefte adet büyür.
+  // Günlük tavan bir PAY (Dengeli %4,5): sermaye artırımı yapmış hedefte adet büyür.
   const cap = Math.floor((difficulty.raidDailyCap * sharesOutstanding(state, target.id)) / TOTAL_SHARES);
   const wanted = Math.min(cap, Math.floor(budget / price), freeFloat(state, target.id));
   if (wanted <= 0) return;

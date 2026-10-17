@@ -12,7 +12,7 @@ import { dailyWealthTax, overheadMultiplier } from './economy';
 import { boostMultiplier } from './cards';
 import { campaignPriceFactor } from './rivalry';
 import { settleInterest } from './credit';
-import type { CategoryId } from '@capital/content';
+import type { CategoryId, DistrictArchetypeId } from '@capital/content';
 import {
   defaultShelf,
   estimateBaselineDemand,
@@ -563,12 +563,36 @@ function marketStep(state: GameState): void {
   const mods = collectEventModifiers(state);
   // Moda olan ürün (Tur 37d): kategori içinde talep ona kayıyor.
   const fadGood = activeFad(state)?.goodId ?? null;
+  // Ürün payları gün boyunca sabit (arketip × kategori × moda): bir kez
+  // hesaplanıp gün boyunca okunuyor. Bütçe adımı her mağaza × bölge için
+  // yeni bir dizi kuruyordu (Tur 38). Erişim `shelfReach` ile aynı toplam.
+  const sharesMemo = new Map<string, ReturnType<typeof goodShares>>();
+  const sharesOf = (archetype: DistrictArchetypeId, categoryId: CategoryId): ReturnType<typeof goodShares> => {
+    const key = `${archetype}|${categoryId}`;
+    let shares = sharesMemo.get(key);
+    if (!shares) {
+      shares = goodShares(archetype, categoryId, fadGood);
+      sharesMemo.set(key, shares);
+    }
+    return shares;
+  };
+  const reachOf = (archetype: DistrictArchetypeId, categoryId: CategoryId, stocked: readonly string[]): number => {
+    let reach = 0;
+    for (const entry of sharesOf(archetype, categoryId)) {
+      if (stocked.includes(entry.good.id)) reach += entry.share;
+    }
+    return reach;
+  };
   const buildings = Object.values(state.buildings);
 
   // Outlet'leri district kırılımıyla indeksle ve rakip sayacını kur.
   // Depo indirimi outlet başına bir kez çözülür; iç döngüde tekrar
   // hesaplamak günlük maliyeti kare kadar büyütürdü.
   const outletsByDistrict = new Map<number, BuildingInstance[]>();
+  // Aynı liste kategoriye göre de (Tur 38): dağıtım her (bölge, ürün) için
+  // yalnız o kategorinin mağazalarını geziyor, şehrin bütün mağazalarını
+  // değil. Bölge sırası ve bölge içindeki sıra aynı — sonuç birebir aynı.
+  const outletsByDistrictCategory = new Map<number, Map<CategoryId, BuildingInstance[]>>();
   const reliefByOutlet = new Map<string, number>();
   for (const district of state.districts) district.outletCount = zeroByCategory();
 
@@ -579,6 +603,11 @@ function marketStep(state: GameState): void {
     const list = outletsByDistrict.get(building.districtId) ?? [];
     list.push(building);
     outletsByDistrict.set(building.districtId, list);
+    const byCategory = outletsByDistrictCategory.get(building.districtId) ?? new Map<CategoryId, BuildingInstance[]>();
+    const categoryList = byCategory.get(def.category) ?? [];
+    categoryList.push(building);
+    byCategory.set(def.category, categoryList);
+    outletsByDistrictCategory.set(building.districtId, byCategory);
     reliefByOutlet.set(building.id, distributionRelief(state, building));
 
     const district = state.districts[building.districtId];
@@ -642,7 +671,7 @@ function marketStep(state: GameState): void {
         const access = accessWeight(state, district.id, sourceDistrictId);
         if (access <= 0) continue;
         // Kapasite, satışın kullanacağı paylarla bölünüyor: moda da (Codex #64).
-        const reach = shelfReach(district.archetype, def.category, building.stocked, fadGood);
+        const reach = reachOf(district.archetype, def.category, building.stocked);
         const pull = (district.demand[def.category] ?? 0) * reach * access;
         if (pull <= 0) continue;
         pulls.set(district.id, pull);
@@ -679,7 +708,7 @@ function marketStep(state: GameState): void {
       // payı için ayrı yarışır. Pay bölgeye göre değişir — ekmek orta
       // gelir mahallesinde, bisküvi turizmde daha çok satar. Kapasite
       // ise raflar arasında ORTAKTIR.
-      for (const { good, share } of goodShares(district.archetype, categoryId, fadGood)) {
+      for (const { good, share } of sharesOf(district.archetype, categoryId)) {
         const goodDemand = demandUnits * share;
         if (goodDemand <= 0) continue;
 
@@ -692,13 +721,13 @@ function marketStep(state: GameState): void {
         }
         const candidates: Candidate[] = [];
 
-        for (const [sourceDistrictId, list] of outletsByDistrict) {
+        for (const sourceDistrictId of outletsByDistrict.keys()) {
+          const list = outletsByDistrictCategory.get(sourceDistrictId)?.get(categoryId);
+          if (!list) continue;
           const access = accessWeight(state, district.id, sourceDistrictId);
           if (access <= 0) continue;
 
           for (const building of list) {
-            const def = BUILDING_BY_ID[building.defId]!;
-            if (def.category !== categoryId) continue;
             if (!building.stocked.includes(good.id)) continue;
 
             const company = state.companies[building.companyId];
@@ -843,6 +872,16 @@ function marketStep(state: GameState): void {
   }
 
   // ---- Kira üreten binalar ----
+  // Bölge × kategori kiralık kapasitesi tek taramada (Tur 38): her kiralık
+  // için bütün binaları taramak bina sayısının karesiydi. Kapasiteler tam
+  // sayı; toplam sıradan bağımsız, sonuç birebir aynı.
+  const rentalCapacity = new Map<string, number>();
+  for (const other of buildings) {
+    const otherDef = BUILDING_BY_ID[other.defId];
+    if (!otherDef || otherDef.role !== 'rental') continue;
+    const key = `${other.districtId}|${otherDef.category}`;
+    rentalCapacity.set(key, (rentalCapacity.get(key) ?? 0) + otherDef.capacity);
+  }
   for (const building of buildings) {
     const def = BUILDING_BY_ID[building.defId];
     if (!def || def.role !== 'rental') continue;
@@ -853,14 +892,7 @@ function marketStep(state: GameState): void {
 
     const category = CATEGORIES[def.category];
     // Aynı bölgede ne kadar çok kiralık varsa doluluk o kadar düşer.
-    const rivalCapacity = buildings.reduce((total, other) => {
-      if (other.districtId !== building.districtId) return total;
-      const otherDef = BUILDING_BY_ID[other.defId];
-      if (!otherDef || otherDef.role !== 'rental' || otherDef.category !== def.category) {
-        return total;
-      }
-      return total + otherDef.capacity;
-    }, 0);
+    const rivalCapacity = rentalCapacity.get(`${building.districtId}|${def.category}`) ?? 0;
 
     const absorbable = district.population * 0.06 + 40;
     const pressure = Math.min(1, rivalCapacity / Math.max(1, absorbable));

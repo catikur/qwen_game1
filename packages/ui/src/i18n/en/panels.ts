@@ -244,7 +244,7 @@ export const panels: Record<keyof typeof trPanels, string> = {
     " New shares bring in cash and dilute a raider's stake; the cost is a permanent share of the company's growth going to investors. In the Stock Market panel.",
   'panels.help.step.takeover.title': 'A takeover is an order, not a single click.',
   'panels.help.step.takeover.body':
-    " You can buy at most 3.5% of a rival's shares per day, and rivals can buy yours at the same pace. The order buys every day; once the target sees 30%, it starts gathering up its shares, and if there aren't enough shares in circulation, the order drops.",
+    " You can buy at most {cap} of a rival's shares per day, and rivals can buy yours at the same pace. The order buys every day; once the target sees 30%, it starts gathering up its shares, and if there aren't enough shares in circulation, the order drops.",
   'panels.help.step.holding.title': 'Victory is a turning point: the holding.',
   'panels.help.step.holding.body':
     " Once you reach victory in a city, you can expand to a new one: your capital and half of your brand awareness come with you, and the rivals are different. One city is played at a time; the others keep living. From the Cities panel you give each remote city's local manager orders: how much of the profit flows into the holding treasury (take it all and the city runs out of cash and gets cheap), and whether to buy back shares against raids. You can send money from the treasury to any city. The goal is victory in three cities; victory in each city is measured by the value you created there.",

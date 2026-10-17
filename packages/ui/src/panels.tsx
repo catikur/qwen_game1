@@ -1,6 +1,6 @@
 import {useEffect, useState} from 'react';
 import type { ReactElement } from 'react';
-import { BUILDING_BY_ID, CATEGORIES, DISTRICT_ARCHETYPES, CONSUMER_CATEGORIES, GOODS_BY_CATEGORY, GOOD_BY_ID, STRUCTURE_BY_ID, formatPercent, numberLocale } from '@capital/content';
+import { BUILDING_BY_ID, CATEGORIES, DISTRICT_ARCHETYPES, CONSUMER_CATEGORIES, GOODS_BY_CATEGORY, GOOD_BY_ID, STRUCTURE_BY_ID, formatDecimal, formatPercent, getDifficulty, numberLocale } from '@capital/content';
 import {
   activeFad,
   buildOptions,
@@ -1269,7 +1269,10 @@ function HelpPanel(): ReactElement {
         </li>
         <li>
           <strong>{t('panels.help.step.takeover.title')}</strong>
-          {t('panels.help.step.takeover.body')}
+          {t('panels.help.step.takeover.body', {
+            // Günlük tavan zorluktan (Tur 38): metin eskiden Dengeli'nin %3,5'ini yazıyordu.
+            cap: formatPercent(formatDecimal(getDifficulty(engine.getState().difficulty).raidDailyCap / 100, 1)),
+          })}
         </li>
         <li>
           <strong>{t('panels.help.step.holding.title')}</strong>

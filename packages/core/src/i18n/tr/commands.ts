@@ -135,6 +135,7 @@ export const commands = {
   'core.agenda.bondDue': 'Tahvil vadesi · {amount}',
   'core.agenda.auction': 'İhale',
   'core.agenda.unlock': '{district} imara açılıyor',
+  'core.agenda.unlockWave': '{district} ve {count} bölge daha imara açılıyor',
   'core.agenda.league': 'Lig {week}',
   'core.agenda.leagueDone': 'Lig {week} · tablo',
   'core.agenda.council': 'Meclis · {count} önerge',

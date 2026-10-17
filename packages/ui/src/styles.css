@@ -4293,8 +4293,12 @@ button.icon {
   font-weight: 800;
 }
 
-/* Masaüstünde her şey görünür; "+N" yalnızca dar ekranda anlamlı. */
-.agenda-more {
+/*
+ * Masaüstünde her şey görünür; "+N" yalnızca dar ekranda anlamlı.
+ * Seçici `.agenda .event-chip` (inline-flex) ile aynı ağırlıkta olmalı:
+ * tek sınıfla yazılmıştı ve masaüstünde işe yaramayan bir "+8" görünüyordu (Tur 38).
+ */
+.agenda .agenda-more {
   display: none;
 }
 
@@ -4303,8 +4307,20 @@ button.icon {
     display: none;
   }
 
-  .agenda-more {
+  .agenda .agenda-more {
     display: inline-flex;
+  }
+
+  /*
+   * Uzun çip ekrandan taşmasın (Tur 38): sözleşme teklifi başlık, gün ve
+   * iki düğmeyle 390 piksellik ekranda 441 piksel tutuyordu; şerit ortalı
+   * olduğu için iki ucu da kesiliyordu ("Geç" düğmesi yarım). Dar ekranda
+   * çip satır kırıyor.
+   */
+  .agenda .event-chip {
+    max-width: 100%;
+    white-space: normal;
+    flex-wrap: wrap;
   }
 }
 

@@ -1,4 +1,4 @@
-import { withBuildingIndex } from './systems/buildingIndex';
+import { scopedMemo, withBuildingIndex } from './systems/buildingIndex';
 import {
   BUILDING_BY_ID,
   CATEGORIES,
@@ -162,35 +162,49 @@ interface Profile {
   districts: Set<number>;
 }
 
-/** Bir şirketin bir kategorideki mağaza profili. */
+/**
+ * Bir şirketin bir kategorideki mağaza profili.
+ *
+ * Kart boyunca bütün şirketlerin profilleri tek taramada (Tur 38): lider
+ * araması her kategoride her şirketi soruyordu ve her soru bütün binaları
+ * tarıyordu — büyük şehrin geç oyununda günün onda biri. Toplamlar aynı
+ * sırayla (bina sırası) birikiyor; sonuç birebir aynı.
+ */
 function profileOf(state: GameState, companyId: string, categoryId: CategoryId): Profile {
-  let outlets = 0;
-  let quality = 0;
-  let price = 0;
-  let sold = 0;
-  let capacity = 0;
-  const districts = new Set<number>();
+  const profile = scopedMemo(state, 'competition-profiles', () => allProfiles(state)).get(`${companyId}|${categoryId}`);
+  return profile ?? { outlets: 0, quality: 0, price: 1, utilisation: 0, districts: new Set<number>() };
+}
 
+function allProfiles(state: GameState): Map<string, Profile> {
+  const sums = new Map<string, { outlets: number; quality: number; price: number; sold: number; capacity: number; districts: Set<number> }>();
   for (const building of Object.values(state.buildings)) {
-    if (building.companyId !== companyId) continue;
     const def = BUILDING_BY_ID[building.defId];
-    if (def?.role !== 'outlet' || def.category !== categoryId) continue;
-    outlets += 1;
-    quality += effectiveQuality(state, companyId, building.defId);
+    if (def?.role !== 'outlet') continue;
+    const key = `${building.companyId}|${def.category}`;
+    let sum = sums.get(key);
+    if (!sum) {
+      sum = { outlets: 0, quality: 0, price: 0, sold: 0, capacity: 0, districts: new Set<number>() };
+      sums.set(key, sum);
+    }
+    sum.outlets += 1;
+    sum.quality += effectiveQuality(state, building.companyId, building.defId);
     // Kampanyadaki rakibin fiyatı indirimli (Tur 37b): panel gerçek fiyatı göstersin.
-    price += effectivePriceMultiplier(state, building);
-    sold += building.last.unitsSold;
-    capacity += def.capacity;
-    districts.add(building.districtId);
+    sum.price += effectivePriceMultiplier(state, building);
+    sum.sold += building.last.unitsSold;
+    sum.capacity += def.capacity;
+    sum.districts.add(building.districtId);
   }
-
-  return {
-    outlets,
-    quality: outlets > 0 ? quality / outlets : 0,
-    price: outlets > 0 ? price / outlets : 1,
-    utilisation: capacity > 0 ? sold / capacity : 0,
-    districts,
-  };
+  const profiles = new Map<string, Profile>();
+  for (const [key, sum] of sums) {
+    profiles.set(key, {
+      outlets: sum.outlets,
+      quality: sum.quality / sum.outlets,
+      price: sum.price / sum.outlets,
+      utilisation: sum.capacity > 0 ? sum.sold / sum.capacity : 0,
+      districts: sum.districts,
+    });
+  }
+  return profiles;
 }
 
 function armsFor(state: GameState, companyId: string, categoryId: CategoryId): CompetitionArm[] {

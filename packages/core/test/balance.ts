@@ -2274,7 +2274,7 @@ section('Borsa', () => {
   const price = sharePrice(state, targetId);
   const cashBefore = player.cash;
   const floatStart = freeFloat(state, targetId);
-  // Günlük tavan (Tur 20): oyuncu da rakip gibi günde en fazla %3,5 alır.
+  // Günlük tavan (Tur 20): oyuncu da rakip gibi günde en fazla zorluğun tavanı kadar alır (Dengeli %4,5, Tur 38'e kadar %3,5).
   const cap = dailyBuyCap(state, targetId);
   const lot = cap - 50;
   const buy = engine.dispatch({ type: 'BUY_SHARES', companyId: targetId, count: lot });
@@ -3273,6 +3273,15 @@ section('Hedefler, zafer ve zorluk', () => {
    * Girişler ilk ölçümde oyunu kaybedilemez yapmıştı — sebep girişin
    * kendisi değil, hissesi tükenmiş hedefe çakılan baskıncılardı.)
    *
+   * Tur 38'de eğri kaymıştı: geç oyun giderleri (Tur 37a) çok bina kuran
+   * rakipleri yavaşlatıyor, savunmasız yavaş oyuncu onları geçip baskın
+   * hedefi olmaktan çıkıyordu (Dengeli'de 8 tohumda 2 düşüş, 4 zafer).
+   * Rakip bütçesi üç kademede 1,5 katına, günlük tavan Dengeli ve
+   * Acımasız'da +%1'e çıktı. Yeni eğri (8 tohum: 1/7/42/101/202/3/5/11):
+   *   Rahat     bilgili 390-503   · yavaş hayatta kalıyor (8/8)
+   *   Dengeli   bilgili 625-752   · yavaş 754-886'da düşüyor (7/8), savunan 0/8
+   *   Acımasız  bilgili 809-929 (5/8; üçü düşüyor) · yavaş 367-815'te (8/8)
+   *
    * Sınanan iddialar: zafer erişilebilir ama bedava değil; kademeler
    * sıralı; oyun Dengeli ve Acımasız'da kaybedilebilir kalıyor, Rahat'ta
    * yavaş oyuncu affediliyor; uyarıyı okuyup savunan yavaş oyuncu
@@ -3360,15 +3369,18 @@ section('Hedefler, zafer ve zorluk', () => {
   const slowEasy = play(7, 'easy', 15, false, 900);
   const slowDefended = play(7, 'normal', 15, true, 900);
   const list = (days: number[]): string => (days.length > 0 ? days.join(', ') : '—');
+  // Tur 38: iddia "düşebilir"den (≥1/5) Tur 17'nin cümlesine döndü —
+  // savunmasız yavaş oyuncu Dengeli'de çoğunlukla düşüyor (ölçüm 5/5).
   expect(
-    'oyun kaybedilebilir kalıyor: savunmasız yavaş oyuncu Dengeli ve Acımasız\'da düşüyor',
-    normalFalls.length >= 1 && hardFalls.length >= 3,
+    'oyun kaybedilebilir: savunmasız yavaş oyuncu Dengeli\'de çoğunlukla, Acımasız\'da neredeyse hep düşüyor',
+    normalFalls.length >= 3 && hardFalls.length >= 4,
     `Dengeli ${normalFalls.length}/5 (${list(normalFalls)}) · Acımasız ${hardFalls.length}/5 (${list(hardFalls)})`,
   );
+  // İkisi de 5/5'e yaklaşınca "daha sık" beş tohumla ayırt edilemiyor; ayıran erken düşüş.
   expect(
-    'Acımasız daha sık ve daha erken düşürüyor',
-    hardFalls.length > normalFalls.length && normalFalls.length > 0 && mean(hardFalls) < mean(normalFalls),
-    `${hardFalls.length} > ${normalFalls.length} · ortalama ${Math.round(mean(hardFalls))} < ${normalFalls.length > 0 ? Math.round(mean(normalFalls)) : '—'}`,
+    'Acımasız en az o kadar sık ve daha erken düşürüyor',
+    hardFalls.length >= normalFalls.length && normalFalls.length > 0 && mean(hardFalls) < mean(normalFalls),
+    `${hardFalls.length} ≥ ${normalFalls.length} · ortalama ${Math.round(mean(hardFalls))} < ${normalFalls.length > 0 ? Math.round(mean(normalFalls)) : '—'}`,
   );
   expect('Rahat yavaş oyuncuyu affediyor', slowEasy.lostDay === null, slowEasy.lostDay === null ? '900 gün ayakta' : `${slowEasy.lostDay}. günde düştü`);
   expect(
@@ -3958,16 +3970,26 @@ section('Rakip konsorsiyumu: güçlü ama pasif oyuncu', () => {
     fell.length >= 2,
     runs.map(({ seed, idle }) => `seed ${seed}: ${idle.lost ?? 'ayakta'}`).join(' · '),
   );
+  /*
+   * Tur 38: rakip bütçesi büyüyünce seed 3'te 400. günde el çeken oyuncu
+   * hiç 1,3 kat öne geçmiyor: konsorsiyum kurulmuyor, "cevap veren" vekil de
+   * yalnız konsorsiyum varken oynadığı için el çekmiş kalıyor. İddia
+   * konsorsiyuma cevap veren lider hakkında; konsorsiyumun kurulduğu
+   * tohumlarda ölçülüyor (en az ikisinde).
+   */
+  const answered = runs.filter(({ respond }) => respond.formed !== null);
   expect(
     'konsorsiyuma yatırımla cevap veren lider ayakta kalıyor ve zafere ulaşıyor',
-    runs.every(({ respond }) => respond.lost === null && respond.victory !== null),
-    runs.map(({ seed, respond }) => `seed ${seed}: ${respond.lost ?? 'ayakta'}, zafer ${respond.victory ?? '-'}`).join(' · '),
+    answered.length >= 2 && answered.every(({ respond }) => respond.lost === null && respond.victory !== null),
+    runs
+      .map(({ seed, respond }) => `seed ${seed}: ${respond.formed === null ? 'konsorsiyum yok' : `${respond.lost ?? 'ayakta'}, zafer ${respond.victory ?? '-'}`}`)
+      .join(' · '),
   );
 });
 
 section('Devralma emri: günlük tavan ve savunma', () => {
   /*
-   * Tur 20: oyuncunun alımı da rakiplerinki gibi günde %3,5 (Dengeli).
+   * Tur 20: oyuncunun alımı da rakiplerinki gibi günde %3,5 (Dengeli; Tur 38'den beri %4,5).
    * Devralma tek tık değil bir emir; hedef %30'u görünce geri alım (ve
    * doktrini varsa ihraç) ile savunuyor, dolaşım kontrole yetmez hâle
    * gelirse emir düşüyor.
@@ -4160,7 +4182,7 @@ section('Holding: ikinci şehir', () => {
    * holding mekaniği her tohumda.
    */
   const results: { seed: number; second: number | null }[] = [];
-  const directives: { seed: number; half: number; all: DirectiveRun; allDefended: DirectiveRun; keep: DirectiveRun }[] = [];
+  const directives: { seed: number; half: number; halfLost: number | null; all: DirectiveRun; allDefended: DirectiveRun; keep: DirectiveRun }[] = [];
   for (const seed of [1, 7, 42]) {
     const engine = new GameEngine(createNewGame({ seed, companyName: 'Holding AŞ' }));
     const state = () => engine.getState();
@@ -4242,7 +4264,7 @@ section('Holding: ikinci şehir', () => {
     const all = directiveRun(snapshot, days, 'all', false);
     const allDefended = directiveRun(snapshot, days, 'all', true);
     const keep = directiveRun(snapshot, days, 'keep', false);
-    directives.push({ seed, half: awayPeak, all, allDefended, keep });
+    directives.push({ seed, half: awayPeak, halfLost: away.gameOver?.day ?? null, all, allDefended, keep });
     const line = (label: string, run: DirectiveRun) =>
       `${label}: ${run.lostDay !== null ? `${run.lostDay}. günde kaybedildi` : 'ayakta'} · tepe dış pay %${Math.round(run.peak * 100)} · ` +
       `savunma ${formatMoney(run.defense)} · kurucu ${formatMoney(run.worth)} · kasa ${formatMoney(run.treasury)} · holding ${formatMoney(run.holding)}`;
@@ -4266,11 +4288,21 @@ section('Holding: ikinci şehir', () => {
    * %32/21/21). İddianın özü — şehir ayakta, baskıncı kontrolden uzak —
    * yerinde; geç oyunda büyük şehrin daha kırılgan olması 37a'nın
    * amacı. Eşik %30'dan %35'e.
+   *
+   * Tur 38: rakip bütçesi büyüyünce varsayılan talimat (yarısı, savunmasız)
+   * da iki tohumda kurucu şehri kaybediyor (7 ve 42: 955-956. gün, dış pay
+   * %54). Uzak şehir tanımı gereği pasif ve oyuncu %25/%40'ta uyarılıyor;
+   * savunmasız pasif şirketin avlanması Dengeli'nin kuralı. Kârın hepsini
+   * çeken şehir artık "daha derin" değil "daha derin ya da daha erken"
+   * düşüyor (915/936 < 955/956); iki talimat da tavana vurunca derinlik
+   * ayırt edemiyor.
    */
   expect(
-    'kârın hepsini çeken uzak şehre baskın derinleşiyor (üç tohumda)',
-    directives.every((d) => d.all.peak > d.half),
-    directives.map((d) => `tohum ${d.seed}: %${Math.round(d.half * 100)} → %${Math.round(d.all.peak * 100)}`).join(' · '),
+    'kârın hepsini çeken uzak şehre baskın derinleşiyor ya da şehir daha erken düşüyor (üç tohumda)',
+    directives.every((d) => d.all.peak > d.half || (d.all.lostDay !== null && (d.halfLost === null || d.all.lostDay < d.halfLost))),
+    directives
+      .map((d) => `tohum ${d.seed}: %${Math.round(d.half * 100)}${d.halfLost ? ` (${d.halfLost})` : ''} → %${Math.round(d.all.peak * 100)}${d.all.lostDay ? ` (${d.all.lostDay})` : ''}`)
+      .join(' · '),
   );
   expect(
     'savunma talimatı uzak şehri tutuyor: kâr hepsi kasaya giderken de ayakta, dış pay %35\'in altında',

@@ -286,13 +286,13 @@ export const contentEn: Record<string, string> = {
   'content.difficulty.normal.name': 'Balanced',
   'content.difficulty.normal.blurb': 'The game as designed. Companies that fall behind get hunted.',
   'content.difficulty.normal.facts.0': 'Standard capital',
-  'content.difficulty.normal.facts.1': 'Raids after day 160, at most 3.5% per day',
+  'content.difficulty.normal.facts.1': 'Raids after day 160, at most 4.5% per day',
   'content.difficulty.normal.facts.2': 'Victory: ₺100M and number one',
   'content.difficulty.hard.name': 'Ruthless',
   'content.difficulty.hard.blurb': 'Rivals invest more boldly and hunt early. Mistakes are not forgiven.',
   'content.difficulty.hard.facts.0': '20% less starting capital',
   'content.difficulty.hard.facts.1': 'Rivals invest 20% more boldly',
-  'content.difficulty.hard.facts.2': 'Raids after day 110, at most 4.5% per day',
+  'content.difficulty.hard.facts.2': 'Raids after day 110, at most 5.5% per day',
   'content.difficulty.hard.facts.3': 'Victory: ₺150M and number one',
 
   // ---- Council motions (council.ts) — {district} / {category} are filled in by the game ----

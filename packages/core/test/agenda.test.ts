@@ -21,6 +21,27 @@ describe('gündem', () => {
     assert.ok(unlock?.districtId !== undefined);
   });
 
+  test('aynı gün açılan bölgeler tek çip: büyük şehrin dalgası dört çip değil (Tur 38)', () => {
+    const state = createNewGame({ seed: 2, citySize: 'large' });
+    const days = state.districts.map((d) => d.opensOnDay).filter((d): d is number => d !== undefined);
+    const first = Math.min(...days);
+    const wave = state.districts.filter((d) => d.opensOnDay === first);
+    assert.ok(wave.length >= 2, `ilk dalgada ${wave.length} bölge`);
+    state.time.day = first - 10;
+    const unlocks = agenda(state).filter((item) => item.kind === 'unlock');
+    assert.equal(unlocks.length, new Set(days.filter((d) => d - state.time.day <= 30 && d > state.time.day)).size);
+    const chip = unlocks.find((item) => item.daysLeft === 10)!;
+    assert.equal(chip.districtId, wave[0]!.id);
+    assert.match(chip.label, new RegExp(`${wave[0]!.name} ve ${wave.length - 1} bölge daha`));
+    // Tek bölgelik dalga eskisi gibi.
+    const standard = createNewGame({ seed: 2 });
+    const single = Math.min(...standard.districts.map((d) => d.opensOnDay ?? Infinity));
+    standard.time.day = single - 5;
+    const item = agenda(standard).find((entry) => entry.kind === 'unlock')!;
+    assert.match(item.label, /imara açılıyor$/);
+    assert.ok(!/bölge daha/.test(item.label), item.label);
+  });
+
   test('kontrole yaklaşan baskın en başa geçiyor', () => {
     const state = createNewGame({ seed: 2 });
     const raider = Object.values(state.companies).find((c) => !c.isPlayer)!;
