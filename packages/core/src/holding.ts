@@ -387,7 +387,8 @@ function liveAway(active: GameState, holding: HoldingState, city: DormantCity): 
   if (player?.labor?.demand && !s.gameOver) respondUnion(s, s.playerCompanyId, 'compromise');
   // Karar kartını da bekletmiyor: varsayılan seçenek (Tur 37b).
   if (!s.gameOver) settleCardAway(s);
-  // Fırsat balonuna dokunan yok; görev panosu kendi kendine ölçülüp ödeniyor (Tur 37c).
+  // Fırsat balonuna dokunan yok. Görev panosu ölçülmeye devam ediyor; ödülü
+  // oyuncu şehre dönünce, ay bitmeden alıyor (Tur 37c).
   settleBubbleAway(s);
 
   // Savunma talimatı (Tur 32): kâr payından önce — şehrin korunması önce geliyor.

@@ -543,6 +543,11 @@ export interface BubbleState {
   amount: number;
   /** Bağlandığı mağazanın kategorisi (süreli çekicilikte). */
   category?: CategoryId;
+  /**
+   * Bağlandığı bina (mağaza ya da merkez): aynı kareye yıkılıp yeniden
+   * kurulan bina eskisinin siparişini almasın (Codex #63). Eski kayıtta yok.
+   */
+  buildingId?: string;
 }
 
 /** Panodaki bir görev (Tur 37c). */

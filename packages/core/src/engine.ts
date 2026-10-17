@@ -139,8 +139,13 @@ export class GameEngine {
     const day = this.state.time.day;
     const result = this.apply(command);
     if (result.ok) {
-      // Sayaç görevi eylemin hemen ardından (panonun son gününde de) tamamlanıyor.
+      // Görev eylemin hemen ardından (panonun son gününde de) tamamlanıyor;
+      // aktarım uzak şehre gittiyse o şehrin panosu da.
       evaluateCommandQuests(this.state);
+      if (command.type === 'HOLDING_TRANSFER' && command.index !== undefined) {
+        const city = this.state.holding?.dormant[command.index]?.state;
+        if (city) evaluateCommandQuests(city);
+      }
       // Tekrar doğrulaması bu günlükten oynatıyor (league.ts).
       if (league && isLoggable(command)) {
         (this.state.commandLog ??= []).push([day, JSON.parse(JSON.stringify(command)) as GameCommand]);

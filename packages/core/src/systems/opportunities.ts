@@ -96,6 +96,7 @@ function placeBubble(state: GameState, def: BubbleDef, die: ReturnType<typeof cr
       untilDay,
       amount,
       ...(category && CATEGORIES[category as CategoryId] ? { category: category as CategoryId } : {}),
+      buildingId: outlet.id,
     };
   }
   if (def.anchor === 'hq') {
@@ -108,6 +109,7 @@ function placeBubble(state: GameState, def: BubbleDef, die: ReturnType<typeof cr
       offeredDay: day,
       untilDay,
       amount: clampAmount(profitTrend(state) * days, amountMin, amountMax),
+      buildingId: hq.id,
     };
   }
   const candidates = parcelCandidates(state);
@@ -136,13 +138,13 @@ function parcelStillFree(state: GameState, tileId: number): boolean {
  */
 function anchorStillThere(state: GameState, bubble: BubbleState): boolean {
   const anchor = BUBBLE_BY_ID[bubble.kind].anchor;
-  if (anchor === 'hq') return headquarters(state, state.playerCompanyId)?.tileId === bubble.tileId;
-  if (anchor === 'outlet') {
-    const buildingId = state.map.tiles[bubble.tileId]?.buildingId;
-    const building = buildingId ? state.buildings[buildingId] : undefined;
-    return Boolean(building && building.companyId === state.playerCompanyId && BUILDING_BY_ID[building.defId]?.role === 'outlet');
-  }
-  return parcelStillFree(state, bubble.tileId);
+  if (anchor === 'tile') return parcelStillFree(state, bubble.tileId);
+  // Bağlandığı binanın kendisi: aynı kareye yeniden kurulan bina sayılmıyor.
+  const buildingId = bubble.buildingId ?? state.map.tiles[bubble.tileId]?.buildingId;
+  const building = buildingId ? state.buildings[buildingId] : undefined;
+  if (!building || building.companyId !== state.playerCompanyId || building.tileId !== bubble.tileId) return false;
+  if (anchor === 'hq') return headquarters(state, state.playerCompanyId)?.id === building.id;
+  return BUILDING_BY_ID[building.defId]?.role === 'outlet';
 }
 
 /** Günlük balon adımı: süresi dolanı ya da yeri kaybolanı kaldır, takvimi gelince yenisini çıkar. */
@@ -398,23 +400,19 @@ function completeQuest(state: GameState, quest: QuestState): void {
 }
 
 /**
- * Komutla değişebilen görevler: sayaçlar (mağaza, tesis, parsel, balon) ve
- * kasa (ödül, satış, kredi). Pay, ciro ve geçme yalnızca günün defteriyle
- * değişiyor; onlar günlük adımda.
- */
-const COMMAND_QUESTS: ReadonlySet<string> = new Set(['outlets', 'producer', 'parcels', 'bubble', 'cash']);
-
-/**
- * Komuttan hemen sonra sayaç görevleri ölçülüyor. Günlük adım pano
+ * Komuttan hemen sonra panonun bütün görevleri ölçülüyor. Günlük adım pano
  * değişirken eskisini değerlendirmiyor: panonun son gününde kurulan mağaza,
- * alınan parsel ya da yakalanan balon ertesi günün adımında pano yenilenirken
- * kaybolurdu (Codex #63).
+ * alınan parsel, kasaya giren para ya da net değeri yeniden hesaplayan bir
+ * aktarım ertesi günün adımında pano yenilenirken kaybolurdu (Codex #63).
+ * Görev hemen tamamlanınca ödülü aynı gün alınabiliyor. Geçme görevi
+ * kayıtlı net değerden okuyor: onu değiştiren komut (holding aktarımı)
+ * zaten yeniden hesaplıyor.
  */
 export function evaluateCommandQuests(state: GameState): void {
   const board = state.quests;
   if (!board || !questsEnabled(state) || state.gameOver || state.time.day >= board.endDay) return;
   for (const quest of board.items) {
-    if (quest.doneDay !== undefined || !COMMAND_QUESTS.has(quest.defId)) continue;
+    if (quest.doneDay !== undefined) continue;
     if (questValue(state, board, quest) >= quest.target) completeQuest(state, quest);
   }
 }

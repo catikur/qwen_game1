@@ -1,6 +1,6 @@
 import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
-import { BUBBLE_BY_ID, BUBBLE_TIMING, QUEST_TIMING } from '@capital/content';
+import { BUBBLE_BY_ID, BUBBLE_TIMING, BUILDING_BY_ID, QUEST_TIMING } from '@capital/content';
 import { GameEngine } from '../src/engine';
 import { createNewGame } from '../src/worldgen';
 import { dayOfMonth, formatDate, getPlayer, nextMonthStart } from '../src/selectors';
@@ -161,6 +161,20 @@ describe('fırsat balonları', () => {
     assert.ok(demolish(state, player.id, again.tileId).ok);
     runBubbleTick(state);
     assert.equal(state.bubble, undefined);
+  });
+
+  test('mağaza balonu bağlandığı binaya bağlı: aynı kareye yeniden kurulan mağaza ödül almıyor (Codex #63)', () => {
+    const engine = play(7, 60);
+    const state = engine.getState();
+    const player = getPlayer(state);
+    const outlet = Object.values(state.buildings).find((b) => b.companyId === player.id && BUILDING_BY_ID[b.defId]?.role === 'outlet')!;
+    putBubble(state, 'order', { tileId: outlet.tileId, amount: 70_000, buildingId: outlet.id });
+    assert.ok(demolish(state, player.id, outlet.tileId).ok);
+    player.cash += 5_000_000;
+    assert.ok(engine.dispatch({ type: 'BUILD', tileId: outlet.tileId, defId: outlet.defId }).ok, 'aynı kareye yeniden kurulamadı');
+    const cash = player.cash;
+    assert.equal(claimBubble(state).ok, false, 'yeni mağaza eskisinin siparişini aldı');
+    assert.equal(player.cash, cash);
   });
 
   test('bayrak kapalıyken balon yok, uzaktaki şehirde sönüyor', () => {
@@ -409,6 +423,40 @@ describe('görev panosu', () => {
     // Bir görevin ödülünü almak kasayı hedefin üstüne çıkarıyor.
     assert.ok(engine.dispatch({ type: 'CLAIM_QUEST', index: 0 }).ok);
     assert.equal(state.quests.items[1]!.doneDay, state.time.day, 'kasa görevi son gün sayılmadı');
+  });
+
+  test('holding aktarımı: uzaktaki şehrin kasa görevi ve oynanan şehrin geçme görevi hemen ölçülüyor (Codex #63)', () => {
+    const engine = play(6, 60);
+    const home = engine.getState();
+    getPlayer(home).cash = 30_000_000;
+    home.victory = { day: home.time.day, kind: 'tycoon', dismissed: true };
+    recomputeNetWorth(home);
+    assert.ok(engine.dispatch({ type: 'OPEN_CITY', citySize: 'standard', capital: 8_000_000 }).ok);
+    const city = engine.getState();
+    const away = city.holding!.dormant[0]!.state;
+    city.holding!.treasury = 50_000_000;
+
+    // Uzaktaki şehir: panonun son günü, kasa hedefi aktarımla aşılıyor.
+    away.quests = {
+      startDay: away.time.day - 20,
+      endDay: away.time.day + 1,
+      items: [{ defId: 'cash', base: 0, target: getPlayer(away).cash + 1_000_000, reward: 20_000 }],
+    };
+    assert.ok(engine.dispatch({ type: 'HOLDING_TRANSFER', amount: 2_000_000, index: 0 }).ok);
+    assert.equal(away.quests.items[0]!.doneDay, away.time.day, 'uzaktaki şehrin kasa görevi sayılmadı');
+
+    // Oynanan şehir: aktarım net değeri yeniden hesaplıyor ve rakibi geçiriyor.
+    const player = getPlayer(city);
+    const rival = Object.values(city.companies).find((c) => !c.isPlayer)!;
+    rival.cash += Math.max(0, player.netWorth - rival.netWorth) + 1_000_000;
+    recomputeNetWorth(city);
+    city.quests = {
+      startDay: city.time.day,
+      endDay: city.time.day + 1,
+      items: [{ defId: 'overtake', base: 0, target: 1, reward: 10_000, rivalId: rival.id, rivalName: rival.name }],
+    };
+    assert.ok(engine.dispatch({ type: 'HOLDING_TRANSFER', amount: rival.netWorth - player.netWorth + 2_000_000 }).ok);
+    assert.equal(city.quests.items[0]!.doneDay, city.time.day, 'aktarımla geçilen rakip sayılmadı');
   });
 
   test('bayrak kapalıyken pano yok', () => {
