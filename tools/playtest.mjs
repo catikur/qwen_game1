@@ -1256,6 +1256,42 @@ async function finish(browser, consoleErrors) {
     return r ? { edge: anchor.getAttribute('data-edge'), inside: r.left >= 0 && r.right <= innerWidth && r.top >= 0 && r.bottom <= innerHeight } : null;
   });
   check('Ekran dışındaki balon kenara yapışıyor, taşmıyor', edged?.edge === 'yes' && edged.inside, JSON.stringify(edged));
+
+  // Bina, açık bina penceresinin (sağ panel) arkasında: balon panelin üstüne
+  // binmiyor, kenarına yapışıyor. Kamerayı binayı panelin ortasına düşürecek
+  // kadar kaydır (groundAt: o ekran noktasının altındaki zemin).
+  {
+    const behind = await page.evaluate(async () => {
+      const cap = window.__capital;
+      const s = cap.getState();
+      const outlet = Object.values(s.buildings).find((b) => b.companyId === s.playerCompanyId);
+      const tile = s.map.tiles[outlet.tileId];
+      s.bubble = { kind: 'investor', tileId: outlet.tileId, offeredDay: s.time.day, untilDay: s.time.day + 5, amount: 50000 };
+      cap.selectTile(outlet.tileId);
+      cap.setView({ x: tile.x, z: tile.y, distance: 14 });
+      cap.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+      await new Promise((resolve) => setTimeout(resolve, 600));
+      const panel = document.querySelector('.inspector')?.getBoundingClientRect();
+      if (!panel) return null;
+      const cx = panel.left + panel.width / 2;
+      const cy = panel.top + panel.height / 2;
+      const ground = cap.groundAt((cx / innerWidth) * 2 - 1, -((cy / innerHeight) * 2 - 1));
+      const target = cap.cameraTarget();
+      if (!ground || !target) return null;
+      cap.setView({ x: target.x - (ground.x - (tile.x + 0.5)), z: target.z - (ground.z - (tile.y + 0.5)), distance: 14 });
+      await new Promise((resolve) => setTimeout(resolve, 900));
+      const anchor = document.querySelector('.bubble-anchor');
+      const r = anchor?.querySelector('.opportunity-bubble')?.getBoundingClientRect();
+      const p = document.querySelector('.inspector')?.getBoundingClientRect();
+      if (!r || !p) return null;
+      return { edge: anchor.getAttribute('data-edge'), right: Math.round(r.right), panelLeft: Math.round(p.left), overlaps: r.right > p.left && r.left < p.right && r.bottom > p.top && r.top < p.bottom };
+    });
+    check('Bina penceresinin arkasındaki binanın balonu pencereye binmiyor, kenarında duruyor',
+      behind !== null && behind.edge === 'yes' && !behind.overlaps && behind.panelLeft - behind.right < 40,
+      JSON.stringify(behind));
+    await page.evaluate(() => window.__capital.selectTile(null));
+    await page.waitForTimeout(200);
+  }
   await page.locator('.topbar-actions [data-panel="company"]').click();
   await page.waitForTimeout(300);
   check('Pencere açıkken balon gizli', (await page.locator('.opportunity-bubble').count()) === 0);

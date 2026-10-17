@@ -2744,6 +2744,10 @@ fırsat balonları ve her ay dönen kısa görevler.
   - balon her karede çatıya bağlanıyor (`CityRenderer.screenOfTile`);
     kuyruğu binayı gösteriyor, simgenin çevresinde geri sayım halkası var;
   - bina ekran dışındaysa balon ekranın kenarına yapışıyor, taşmıyor;
+  - bina bir yan panelin (lens, yatırım listesi, bina penceresi) arkasında
+    kalırsa balon panelin üstüne binmiyor, kenarına yapışıyor (önce sağdaki
+    bina penceresinin başlığını örtüyordu; şehir projesi karelerinde
+    görüldü);
   - ilk üç balonda "Dokun, yakala";
   - yakalayınca ödül balonun yerinden yukarı süzülüyor ve tost çıkıyor;
   - pencere açıkken balon gizli.
@@ -2909,7 +2913,7 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi) |
 | Birim testi | **352 test** (`pnpm test`; Tur 24'te render paketi de) |
 | Denge testi | **288 kontrol, hepsi geçiyor** (20 bölüm, süreleriyle; ~11 dk) |
-| Tarayıcı testi | **381 kontrol, hepsi geçiyor**, 0 konsol hatası (~17–25 dk); duman koşusu 120 (~5 dk, rehber dahil) |
+| Tarayıcı testi | **382 kontrol, hepsi geçiyor**, 0 konsol hatası (~17–25 dk); duman koşusu 121 (~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + duman oynanışı |
 | Kapsam | 35 bina · 25 ürün · 7 kategori · 8 rakip profili · 10 CEO · 22 olay (11 şehir + 11 sektör) · 2 kriz · 12 karar kartı · 70 rakip sözü · 5 fırsat balonu · 8 görev türü · 10 şehir yapısı (6 siluet) |
 

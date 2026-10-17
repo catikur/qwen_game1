@@ -40,6 +40,28 @@ function verticalRange(height: number): [number, number] {
   return [top + height + EDGE_GAP, Math.max(top + height + EDGE_GAP, bottom)];
 }
 
+/**
+ * Çapanın yatayda gidebileceği aralık: ekran kenarı ve balonun boyunda
+ * yan paneller (solda lens ve yatırım listesi, sağda bina penceresi).
+ * Bina bir panelin arkasında kalırsa balon panelin üstüne binmiyor,
+ * kenarına yapışıyor. Telefonda paneller ekranı kaplıyor (geniş): onlar
+ * yan panel sayılmıyor.
+ */
+function horizontalRange(half: number, top: number, bottom: number): [number, number] {
+  let left = 0;
+  let right = window.innerWidth;
+  for (const selector of ['.lensbar', '.buildpanel', '.inspector']) {
+    const rect = document.querySelector(selector)?.getBoundingClientRect();
+    if (!rect || rect.width === 0 || rect.width > window.innerWidth * 0.45) continue;
+    if (rect.bottom < top || rect.top > bottom) continue;
+    if (rect.left + rect.width / 2 < window.innerWidth / 2) left = Math.max(left, rect.right);
+    else right = Math.min(right, rect.left);
+  }
+  const min = left + half;
+  const max = right - half;
+  return min <= max ? [min, max] : [half, window.innerWidth - half];
+}
+
 interface Burst {
   id: number;
   x: number;
@@ -129,9 +151,11 @@ export function OpportunityBubble(): ReactElement | null {
         // Balon çapanın üstünde ortalı: kenara yapışırken yarısı ekrandan taşmasın.
         const button = el.firstElementChild as HTMLElement | null;
         const half = (button?.offsetWidth ?? 160) / 2 + EDGE_X;
-        const [minY, maxY] = verticalRange((button?.offsetHeight ?? 48) + 12);
-        const x = Math.min(window.innerWidth - half, Math.max(half, at.x));
+        const height = (button?.offsetHeight ?? 48) + 12;
+        const [minY, maxY] = verticalRange(height);
         const y = Math.min(maxY, Math.max(minY, at.y));
+        const [minX, maxX] = horizontalRange(half, y - height, y + 36);
+        const x = Math.min(maxX, Math.max(minX, at.x));
         el.style.transform = `translate(${Math.round(x)}px, ${Math.round(y)}px)`;
         el.dataset.edge = at.visible && x === at.x && y === at.y ? 'no' : 'yes';
       }
