@@ -5,6 +5,9 @@ import { GameEngine } from '../src/engine';
 import { createNewGame } from '../src/worldgen';
 import { collectEventModifiers } from '../src/systems/events';
 import { goodShares } from '../src/systems/demand';
+import { estimateInvestment, runMarketTick } from '../src/systems/market';
+import { build, buyTile } from '../src/actions';
+import type { GameState } from '../src/types';
 import {
   activeFad,
   fadSchedule,
@@ -102,6 +105,69 @@ describe('canlı pazar', () => {
     const after = fad.find((entry) => entry.good.id === 'biscuit')!.share;
     assert.ok(after > before, `${after} > ${before}`);
     assert.ok(Math.abs(fad.reduce((total, entry) => total + entry.share, 0) - 1) < 1e-9);
+  });
+
+  test('moda bütün pazar boru hattında: kapasite bölüşümü ve yatırım tahmini satışla aynı payı kullanıyor (Codex #64)', () => {
+    // Tohum 1'in ilk modası bisküvi (bakkal kategorisi). Moda ağırlığı
+    // (×1,6) ile bisküvinin taban payını ×1,6 yapmak aynı pazar olmalı:
+    // satış, kapasitenin bölgelere bölünüşü ve tahmin aynı payı görüyorsa
+    // iki dünya birebir aynı.
+    const world = createNewGame({ seed: 1 });
+    const fad = fadSchedule(1, 0).next;
+    assert.equal(fad.goodId, 'biscuit');
+    world.time.day = fad.startDay;
+    world.companies[world.playerCompanyId]!.cash = 50_000_000;
+    // Tek yuvalı bakkallar, rafta yalnız bisküvi: kapasite birden çok
+    // bölgeye bölünüyor ve bölgeler arasında bisküvinin payı farklı.
+    const shops: string[] = [];
+    for (const district of world.districts) {
+      if (district.opensOnDay !== undefined) continue;
+      const tile = world.map.tiles.find((t) => t.districtId === district.id && t.kind === 'plot' && !t.ownerId && !t.structureId && !t.buildingId);
+      if (!tile || !buyTile(world, world.playerCompanyId, tile.id).ok) continue;
+      if (!build(world, world.playerCompanyId, tile.id, 'corner_shop').ok) continue;
+      const id = world.map.tiles[tile.id]!.buildingId!;
+      world.buildings[id]!.stocked = ['biscuit'];
+      shops.push(id);
+    }
+    assert.ok(shops.length >= 4, `${shops.length} bakkal`);
+    const snapshot = JSON.stringify(world);
+
+    const biscuit = GOOD_BY_ID.biscuit as { demandShare: number };
+    const fadSettings = FAD as { weight: number };
+    const { demandShare } = biscuit;
+    const { weight } = fadSettings;
+    const play = (): { sold: number[]; unmet: number[]; estimates: number[] } => {
+      const state = JSON.parse(snapshot) as GameState;
+      runMarketTick(state);
+      const sold = shops.map((id) => state.buildings[id]!.last.unitsSold);
+      const unmet = state.districts.map((district) => district.unmet.grocery ?? 0);
+      // Tahmin: kapasiteye takılmasın diye küçük talep; bisküvinin zaten en
+      // çok satan olduğu bölgelerde (raf iki dünyada da bisküvi).
+      for (const district of state.districts) district.demand.grocery = Math.min(district.demand.grocery ?? 0, 40);
+      const estimates = state.districts
+        .filter((district) => district.opensOnDay === undefined && ['downtown', 'tech_park', 'lux_residential', 'tourism'].includes(district.archetype))
+        .map((district) => estimateInvestment(state, district.id, 'corner_shop', state.playerCompanyId)!.expectedUnits);
+      return { sold, unmet, estimates };
+    };
+    let fadWorld: ReturnType<typeof play>;
+    let shareWorld: ReturnType<typeof play>;
+    try {
+      fadWorld = play();
+      fadSettings.weight = 1;
+      biscuit.demandShare = demandShare * weight;
+      shareWorld = play();
+    } finally {
+      fadSettings.weight = weight;
+      biscuit.demandShare = demandShare;
+    }
+    assert.ok(fadWorld.estimates.length >= 1, 'tahmin bölgesi yok');
+    const close = (a: number[], b: number[], label: string): void => {
+      assert.equal(a.length, b.length);
+      a.forEach((value, i) => assert.ok(Math.abs(value - b[i]!) < 1e-6, `${label} ${i}: moda ${value} ≠ pay ${b[i]}`));
+    };
+    close(fadWorld.sold, shareWorld.sold, 'satış');
+    close(fadWorld.unmet, shareWorld.unmet, 'karşılanmayan');
+    close(fadWorld.estimates, shareWorld.estimates, 'tahmin');
   });
 
   test('haber: mevsim dönümü ve başlayan moda; gündemde moda geri sayımı', () => {

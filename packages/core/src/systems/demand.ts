@@ -105,14 +105,18 @@ export function defaultShelf(
     .map((entry) => entry.good.id);
 }
 
-/** Bir raf dizisinin o bölgede yakalayabildiği kategori talebi oranı. */
+/**
+ * Bir raf dizisinin o bölgede yakalayabildiği kategori talebi oranı.
+ * `fadGoodId`: moda süresince satışla aynı payları kullanmak için (Codex #64).
+ */
 export function shelfReach(
   archetype: DistrictArchetypeId,
   categoryId: CategoryId,
   stocked: readonly string[],
+  fadGoodId: string | null = null,
 ): number {
   let reach = 0;
-  for (const entry of goodShares(archetype, categoryId)) {
+  for (const entry of goodShares(archetype, categoryId, fadGoodId)) {
     if (stocked.includes(entry.good.id)) reach += entry.share;
   }
   return reach;

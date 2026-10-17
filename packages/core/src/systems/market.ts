@@ -402,7 +402,10 @@ export function estimateInvestment(
    * teknoloji mağazası, tanesi günde 377 ₺. Zincirli kol 12 tohumun
    * 3'ünde öndeydi; ayrıntı DURUM.md Tur 25'te.
    */
+  // Raf, inşaatın koyacağı raf: kalıcı karar, modaya göre değil (actions.ts).
+  // Erişim ise bugünün payıyla — moda süresince satışın kullandığı paylar (Codex #64).
   const shelf = defaultShelf(district.archetype, def.category, def.slots ?? 1);
+  const fadGood = activeFad(state)?.goodId ?? null;
   const self =
     Math.pow(qualityFor(state, companyId, defId), 1.15) *
     brand *
@@ -420,7 +423,7 @@ export function estimateInvestment(
       (target.demand[def.category] || estimateBaselineDemand(target, def.category)) *
       // Outlet yalnızca RAFINDAKİ ürünlerin talebine erişir: tek yuvalı bir
       // bakkal kategorinin tamamını değil, taşıdığı ürünün payını yakalar.
-      shelfReach(target.archetype, def.category, shelf);
+      shelfReach(target.archetype, def.category, shelf, fadGood);
     if (demand <= 0) continue;
 
     let total = 0;
@@ -638,7 +641,8 @@ function marketStep(state: GameState): void {
       for (const district of state.districts) {
         const access = accessWeight(state, district.id, sourceDistrictId);
         if (access <= 0) continue;
-        const reach = shelfReach(district.archetype, def.category, building.stocked);
+        // Kapasite, satışın kullanacağı paylarla bölünüyor: moda da (Codex #64).
+        const reach = shelfReach(district.archetype, def.category, building.stocked, fadGood);
         const pull = (district.demand[def.category] ?? 0) * reach * access;
         if (pull <= 0) continue;
         pulls.set(district.id, pull);

@@ -2,6 +2,7 @@ import {useEffect, useState} from 'react';
 import type { ReactElement } from 'react';
 import { BUILDING_BY_ID, CATEGORIES, DISTRICT_ARCHETYPES, CONSUMER_CATEGORIES, GOODS_BY_CATEGORY, GOOD_BY_ID, STRUCTURE_BY_ID, formatPercent, numberLocale } from '@capital/content';
 import {
+  activeFad,
   buildOptions,
   categoryBreakdown,
   companyRanking,
@@ -734,8 +735,9 @@ function ShelfEditor({ buildingId }: { buildingId: string }): ReactElement | nul
   if (goods.length < 2) return null;
 
   const slots = def.slots ?? 1;
+  // Bugünün payları: moda süresince satış da bunları kullanıyor (Codex #64).
   const shares = new Map(
-    goodShares(district.archetype, def.category).map((entry) => [entry.good.id, entry.share]),
+    goodShares(district.archetype, def.category, activeFad(state)?.goodId ?? null).map((entry) => [entry.good.id, entry.share]),
   );
 
   const toggle = (goodId: string): void => {

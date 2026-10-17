@@ -2878,7 +2878,14 @@ kez doğru seçen oyuncu oyunun sonuna kadar haklı kalıyordu. Kullanıcı
   yazılmıyor, `state.rng` çekilmiyor. Aynı tohum aynı pazarı yaşıyor
   (lig adil), bina tahmininin iki kolu da aynı pazarı görüyor.
 - **Boru hattı:** çarpanlar `collectEventModifiers`'tan geçiyor (olay,
-  dönem ve krizle aynı yer); moda ürünü `goodShares`'te.
+  dönem ve krizle aynı yer); moda ürünü `goodShares`'te. Moda payı
+  pazarın her adımında aynı: satış, kapasitenin bölgelere bölünüşü
+  (`shelfReach`), yatırım tahmininin erişimi ve raf panelindeki yüzdeler.
+  İlk sürümde yalnız satış modayı görüyordu; kapasite ve tahmin eski
+  ürün karışımıyla çalışıyordu (Codex #64). Yeni binanın rafı ise kalıcı
+  karar olduğu için modaya göre değil, bölgenin olağan karışımına göre.
+  Test: moda ağırlığıyla ürünün taban payını aynı kat büyütmek birebir
+  aynı pazarı veriyor (satış, karşılanmayan talep, tahmin).
 - **Laboratuvar:** `flags.livingMarket` (yokluğu açık), `randomEvents`
   kapalıyken de kapalı. İlk denemede denge sınavının üç kontrollü deneyi
   kırıldı (Ar-Ge ve pazarlama geri ödemesi, fiyat kırma): ölçüm 60–400
@@ -3173,7 +3180,7 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi) |
-| Birim testi | **386 test** (`pnpm test`; Tur 24'te render paketi de) |
+| Birim testi | **387 test** (`pnpm test`; Tur 24'te render paketi de) |
 | Denge testi | **290 kontrol, hepsi geçiyor** (21 bölüm, süreleriyle; ~12 dk) |
 | Tarayıcı testi | **393 kontrol, hepsi geçiyor**, 0 konsol hatası (~17–25 dk); duman koşusu 132 (~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + duman oynanışı |
