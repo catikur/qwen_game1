@@ -3122,6 +3122,63 @@ değişmeden geçiyor.
   etkin oyuncuya kurulmama; bayraklar, uzak şehir ve zar.
 - Oynanış testi: "Rakip konsorsiyumu" bölümü (4 kontrol, duman koşusunda).
 
+### Tur 38 — Değerlendirme turu: T37'nin sistemleri birlikte
+
+Kullanıcı sıradaki tur için değerlendirmeyi seçti (Tur 17 gibi). Tur 37
+dört aşamada sekiz yeni sistem ekledi: kartlar, rakip hikâyeleri, balonlar,
+görevler, canlı pazar, şehir projesi, konsorsiyum, geç oyun giderleri ve
+krizler. Soru, birlikte nasıl oynandıkları.
+
+**Ölçüm** (vekil oyuncu 5 günde bir; balonu yakalıyor, biten görevi alıyor):
+
+| 1000 günde | Standart (10 tohum) | Büyük şehir (3 tohum) |
+|---|---|---|
+| Zafer günü | 598–715 | 658–724 (biri 1000 günde yok) |
+| Karar kartı | 21 (48 günde bir) | 21 |
+| Kriz · dönem · rakip kampanyası | 1,8 · 4,9 · 3,9 | 1,7 · 5 · 4 |
+| Moda · balon · görev | 7 · 30 · 51 | 7 · 30 · 53 |
+| Şehir projesi (sponsor oyuncu) | 2 (0) | 2 (0) |
+| Gündem: ortalama · en çok · 8'den kalabalık gün | 6,1 · 11 · %9 | 6,4 · 15 · %15 |
+| Haber / gün | 0,77 | 1,6 |
+| Gün süresi (ms): erken → geç | 6 → 25–37 | 17–37 → 140 |
+
+Sistemler takvimlerine uyuyor ve üst üste binmiyor. Sorunlar dört yerde:
+
+**1 · Büyük şehrin geç oyunu yavaştı.** 930. gün 143 ms sürüyordu (en hızlı
+oyun hızı 480 ms/gün; telefon bu sunucudan 3–4 kat yavaş). Profil üç
+gereksiz iş gösterdi:
+- Rakip zincir kartı fırsat maliyeti frenini hesaplıyordu (her mağaza türü ×
+  her bölge için bir yatırım tahmini: günün beşte biri). Rakip freni bilerek
+  okumuyor (Tur 15); rakip kartında fren yok.
+- Rekabet kartında her şirket × kategori profili bütün binaları ayrı ayrı
+  tarıyordu (günün onda biri); artık kart boyunca tek tarama.
+- Pazar adımı her (bölge, ürün) için şehrin bütün mağazalarını geziyordu;
+  artık yalnız o kategorininkileri. Ürün payları gün boyunca bir kez,
+  kiralık kapasitesi tek taramada.
+
+Toplama sıraları korundu: geç oyun durumundan 30 gün sonra durumun özeti ve
+lig izi iki şehir boyunda da birebir aynı. **Büyük şehir 143 → 94 ms/gün,
+standart 30 → 28.** Test: frensiz kart aynı hamleyi veriyor.
+
+**2 · Gündem şeridi.**
+- Masaüstünde işe yaramayan "+N" düğmesi görünüyordu (gizleyen seçici tek
+  sınıftı, `.agenda .event-chip` onu eziyordu).
+- Telefonda sözleşme teklifi çipi 390 piksellik ekranda 441 piksel tutuyordu;
+  şerit ortalı olduğu için iki ucu da kesiliyordu ("Geç" yarım). Dar ekranda
+  çipler satır kırıyor.
+- Büyük şehrin dış halkası dalga dalga açılıyor; her dalga dört ayrı, aynı
+  geri sayımlı çipti. Aynı gün açılan bölgeler tek çip ("Liman ve 3 bölge
+  daha imara açılıyor"). Büyük şehirde 100. gün gündem 11 → 7 çip.
+
+**3 · Haber akışı.** "X genişliyor" akışın %41'iydi, büyük şehirde %58'i
+(720 günde 732 haber, günde bir); kart, kriz ve baskın uyarısı bu
+kalabalıkta kayboluyordu. Oyuncunun aynı kategoride mağazası olan bölgedeki
+açılış doğrudan rekabet: tek başına haber. Gerisi haftanın özetinde
+("Rakipler genişliyor · bu hafta N yeni işletme", şirket başına sayım, son
+açılışın yeri). Haber akışını okuyan oyun mantığı yok; simülasyon aynı.
+
+<!-- T38-ZORLUK -->
+
 ---
 
 ## 3. Ölçülen durum
