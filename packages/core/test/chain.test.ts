@@ -13,6 +13,42 @@ describe('zincir kartı', () => {
    * bir sektör olayıyla bunu yakaladı). Artık sebebini yazıyor; kriz
    * geçince hamle geri geliyor.
    */
+  /*
+   * Tur 38. Rakip kartı fırsat maliyeti frenini hesaplamıyor: fren oyuncu
+   * tavsiyesi, rakip onu okumuyor ve girdisi büyük şehrin geç oyununda
+   * günün beşte biriydi. Frensiz kart, frenli kartla aynı hamleyi vermeli;
+   * yalnız `deferred` ve sebep metni değişebilir.
+   */
+  test('frensiz kart (rakip) aynı hamleyi veriyor; yalnız erteleme ve sebep farklı', () => {
+    const engine = new GameEngine(createNewGame({ seed: 7, companyName: 'Fren AŞ' }));
+    for (let day = 1; day <= 240; day++) {
+      if (day % 5 === 0) playerStrategy(engine);
+      engine.runDay();
+    }
+    const state = engine.getState();
+    let compared = 0;
+    for (const companyId of Object.keys(state.companies)) {
+      const full = chainCards(state, companyId);
+      const lean = chainCards(state, companyId, { brake: false });
+      assert.equal(lean.length, full.length, companyId);
+      full.forEach((card, i) => {
+        const other = lean[i]!;
+        assert.equal(other.goodId, card.goodId);
+        if (!card.move) {
+          assert.equal(other.move, null);
+          return;
+        }
+        const { deferred, reason, ...rest } = card.move;
+        const { deferred: leanDeferred, reason: leanReason, ...leanRest } = other.move!;
+        assert.deepEqual(leanRest, rest, `${companyId} ${card.goodId}`);
+        assert.equal(leanDeferred, false);
+        void deferred; void reason; void leanReason;
+        compared++;
+      });
+    }
+    assert.ok(compared >= 3, `${compared} hamle karşılaştırıldı`);
+  });
+
   test('girdi krizinde hamle yerine sebep; taban fiyatta hamle geri geliyor', () => {
     const engine = new GameEngine(createNewGame({ seed: 3, companyName: 'Kriz AŞ' }));
     for (let day = 1; day <= 120; day++) {

@@ -137,7 +137,7 @@ function tryChainMove(state: GameState, profile: NpcProfileDef): boolean {
   const budget = company.cash * Math.min(0.85, profile.aggression + 0.3);
   const maxPayback = CHAIN_MAX_PAYBACK_DAYS * appetite;
 
-  for (const card of chainCards(state, profile.id)) {
+  for (const card of chainCards(state, profile.id, { brake: false })) {
     const move = card.move;
     if (!move) continue;
     if (move.premature && appetite < 1.2) continue;
