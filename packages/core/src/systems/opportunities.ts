@@ -378,6 +378,25 @@ function completeQuest(state: GameState, quest: QuestState): void {
   );
 }
 
+/** Yalnız oyuncunun eylemiyle değişen sayaç görevleri: mağaza, tesis, parsel, balon. */
+const COMMAND_QUESTS: ReadonlySet<string> = new Set(['outlets', 'producer', 'parcels', 'bubble']);
+
+/**
+ * Komuttan hemen sonra sayaç görevleri ölçülüyor. Günlük adım pano
+ * değişirken eskisini değerlendirmiyor: panonun son gününde kurulan mağaza,
+ * alınan parsel ya da yakalanan balon ertesi günün adımında pano yenilenirken
+ * kaybolurdu (Codex #63). Pazara bağlı görevler (pay, ciro, kasa, geçme)
+ * günün defterinden ölçülüyor, günlük adımda kalıyor.
+ */
+export function evaluateCommandQuests(state: GameState): void {
+  const board = state.quests;
+  if (!board || !questsEnabled(state) || state.gameOver || state.time.day >= board.endDay) return;
+  for (const quest of board.items) {
+    if (quest.doneDay !== undefined || !COMMAND_QUESTS.has(quest.defId)) continue;
+    if (questValue(state, board, quest) >= quest.target) completeQuest(state, quest);
+  }
+}
+
 /** Tamamlanan görevin ödülü: nakit (ve pay görevinde marka). Ay bitince alınmayan ödül düşüyor. */
 export function claimQuest(state: GameState, index: number): CommandResult {
   const quest = questsEnabled(state) ? state.quests?.items[index] : undefined;

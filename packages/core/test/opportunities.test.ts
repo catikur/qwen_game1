@@ -358,6 +358,25 @@ describe('görev panosu', () => {
     assert.equal(questValue(state, board, board.items[1]!), 2);
   });
 
+  test('panonun son gününde yapılan eylem görevi hemen tamamlıyor, ödül alınabiliyor (Codex #63)', () => {
+    const engine = play(3, 31);
+    const state = engine.getState();
+    const player = getPlayer(state);
+    player.cash += 10_000_000;
+    // Panonun son günü: bir sonraki günlük adım panoyu yeniliyor.
+    state.quests = {
+      startDay: state.time.day - 20,
+      endDay: state.time.day + 1,
+      items: [{ defId: 'parcels', base: state.map.tiles.filter((t) => t.ownerId === player.id).length, target: 1, reward: 40_000 }],
+    };
+    const tile = state.map.tiles.find((t) => t.kind === 'plot' && !t.ownerId && !t.structureId && !t.buildingId && purchaseBlocker(state, t.id) === null)!;
+    assert.ok(engine.dispatch({ type: 'BUY_TILE', tileId: tile.id }).ok);
+    assert.equal(state.quests.items[0]!.doneDay, state.time.day, 'son gün alınan parsel sayılmadı');
+    const cash = player.cash;
+    assert.ok(engine.dispatch({ type: 'CLAIM_QUEST', index: 0 }).ok);
+    assert.equal(player.cash, cash + 40_000);
+  });
+
   test('bayrak kapalıyken pano yok', () => {
     const engine = new GameEngine(createNewGame({ seed: 3 }));
     engine.getState().flags.quests = false;

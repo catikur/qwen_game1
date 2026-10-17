@@ -9,7 +9,7 @@ import { isLoggable, leagueActive, runLeagueTick } from './systems/league';
 import { lobby } from './systems/council';
 import { respondUnion, setWagePolicy } from './systems/labor';
 import { chooseCard } from './systems/cards';
-import { claimBubble, claimQuest, runQuestTick } from './systems/opportunities';
+import { claimBubble, claimQuest, evaluateCommandQuests, runQuestTick } from './systems/opportunities';
 import { QUOTE_COOLDOWN_DAYS, rivalQuote, withQuote } from './systems/rivalry';
 import { repayLoan, takeLoan } from './systems/credit';
 import { issueShares } from './systems/issuance';
@@ -139,6 +139,8 @@ export class GameEngine {
     const day = this.state.time.day;
     const result = this.apply(command);
     if (result.ok) {
+      // Sayaç görevi eylemin hemen ardından (panonun son gününde de) tamamlanıyor.
+      evaluateCommandQuests(this.state);
       // Tekrar doğrulaması bu günlükten oynatıyor (league.ts).
       if (league && isLoggable(command)) {
         (this.state.commandLog ??= []).push([day, JSON.parse(JSON.stringify(command)) as GameCommand]);
