@@ -285,6 +285,7 @@ describe('rakip hikâyeleri', () => {
     const state = createNewGame({ seed: 6 });
     const player = getPlayer(state);
     player.marketShare.dining = 0.5;
+    rival(state, 'expansionist').marketShare.dining = 0.2;
     state.time.day = 300;
     state.nextCampaignDay = 300;
     runRivalryTick(state);
@@ -302,6 +303,16 @@ describe('rakip hikâyeleri', () => {
     runRivalryTick(state);
     assert.equal(state.campaign, undefined);
     assert.equal(state.nextCampaignDay, 214);
+
+    // Oyuncu güçlü ama kategoride hiçbir rakip satış yapmıyor: saldıracak kimse yok, kampanya bekliyor.
+    const empty = createNewGame({ seed: 5 });
+    getPlayer(empty).marketShare.retail = 0.5;
+    for (const company of Object.values(empty.companies)) if (!company.isPlayer) company.marketShare.retail = 0;
+    empty.time.day = 200;
+    empty.nextCampaignDay = 200;
+    runRivalryTick(empty);
+    assert.equal(empty.campaign, undefined);
+    assert.equal(empty.nextCampaignDay, 214);
 
     const off = createNewGame({ seed: 5 });
     getPlayer(off).marketShare.retail = 0.5;

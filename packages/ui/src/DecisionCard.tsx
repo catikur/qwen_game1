@@ -3,7 +3,7 @@ import type { ReactElement } from 'react';
 import { CARD_BY_ID, CATEGORIES, fillTemplate, formatPercent } from '@capital/content';
 import type { CardChoiceDef, CardEffect } from '@capital/content';
 import { cardParams, formatMoney, rivalProfile } from '@capital/core';
-import type { CardBoost, CardState } from '@capital/core';
+import type { CardBoost, CardState, GameState } from '@capital/core';
 import { CeoPortrait } from './CeoPortrait';
 import { useGame, useGameState } from './useGame';
 import { t } from './i18n';
@@ -24,12 +24,17 @@ import type { MessageKey } from './i18n';
 
 // ------------------------------------------------------------ açık/kapalı
 
-/** Küçültülmüş kartın anahtarı (kart kimliği + teklif günü); yeni kart her zaman açık gelir. */
+/**
+ * Küçültülmüş kartın anahtarı (oyun + kart kimliği + teklif günü); yeni kart
+ * her zaman açık gelir. Oyun kimliği (tohum + kuruluş anı) anahtarda: kayıt
+ * yüklenince ya da yeni oyun açılınca aynı kart aynı günde gelse bile gizli
+ * kalmasın.
+ */
 let closedKey: string | null = null;
 const listeners = new Set<() => void>();
 
-function keyOf(card: CardState): string {
-  return `${card.defId}:${card.offeredDay}`;
+function keyOf(state: GameState, card: CardState): string {
+  return `${state.meta.seed}:${state.meta.createdAtIso}:${card.defId}:${card.offeredDay}`;
 }
 
 function setClosed(key: string | null): void {
@@ -144,7 +149,7 @@ export function DecisionCard(): ReactElement | null {
   const card = state.card;
   const def = card ? CARD_BY_ID[card.defId] : undefined;
   if (!card || !def || state.gameOver) return null;
-  if (closed === keyOf(card)) return null;
+  if (closed === keyOf(state, card)) return null;
   /*
    * Oyuncu başka bir işin ortasındayken kart çekiliyor: panel açıkken,
    * arsa seçiliyken (telefonda alttaki "Satın al" düğmesini örterdi) ya
@@ -176,7 +181,7 @@ export function DecisionCard(): ReactElement | null {
         <button
           type="button"
           className="card-later"
-          onClick={() => setClosed(keyOf(card))}
+          onClick={() => setClosed(keyOf(state, card))}
           title={t('hud.card.laterTitle')}
         >
           {t('hud.card.later')}

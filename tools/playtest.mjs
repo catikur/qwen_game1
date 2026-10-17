@@ -1111,6 +1111,20 @@ async function finish(browser, consoleErrors) {
     chip: Boolean(document.querySelector('[data-agenda="card"] .card-chip')),
   }));
   check('"Sonra" kartı gündem çipine indiriyor', !collapsed.card && collapsed.chip, JSON.stringify(collapsed));
+  // Başka bir oyun (kayıt yükleme, yeni oyun) aynı kartı aynı günde getirirse kart açık gelmeli.
+  const otherGame = await page.evaluate(async () => {
+    const s = window.__capital.getState();
+    const own = s.meta.createdAtIso;
+    s.meta.createdAtIso = '2000-01-01T00:00:00.000Z';
+    window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    const open = Boolean(document.querySelector('.decision-card'));
+    s.meta.createdAtIso = own;
+    window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    return { open, back: Boolean(document.querySelector('.decision-card')) };
+  });
+  check('Küçültme yalnız o oyunun kartında geçerli', otherGame.open && !otherGame.back, JSON.stringify(otherGame));
   await page.locator('[data-agenda="card"] .card-chip').click();
   await page.waitForTimeout(250);
   check('Gündem çipi kartı yeniden açıyor', (await page.locator('.decision-card').count()) === 1);

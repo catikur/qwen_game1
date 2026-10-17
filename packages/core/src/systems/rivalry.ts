@@ -127,16 +127,14 @@ function pickCampaign(state: GameState): { rival: CompanyState; category: Catego
     if (category === null || value > (player.marketShare[category] ?? 0)) category = id;
   }
   if (!category) return null;
+  // Kategoride satışı olmayan rakip orada fiyat kıramaz; kimse yoksa kampanya bekler.
   let rival: CompanyState | null = null;
   for (const company of Object.values(state.companies)) {
     if (company.isPlayer || !rivalProfile(state, company.profileId)) continue;
-    if (!rival) {
-      rival = company;
-      continue;
-    }
     const a = company.marketShare[category] ?? 0;
-    const b = rival.marketShare[category] ?? 0;
-    if (a > b || (a === b && company.netWorth > rival.netWorth)) rival = company;
+    if (a <= 0) continue;
+    const b = rival ? (rival.marketShare[category] ?? 0) : 0;
+    if (!rival || a > b || (a === b && company.netWorth > rival.netWorth)) rival = company;
   }
   return rival ? { rival, category, playerShare: player.marketShare[category] ?? 0 } : null;
 }

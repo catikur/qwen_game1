@@ -2620,6 +2620,9 @@ gelen karar kartları ve konuşan, saldıran rakipler.
     anlarda söz artık aynı rakip ve an için 60 günde bir.
 - **Kampanya:** bir rakip, oyuncunun payı en büyük kategoriye (en az %15)
   45 günlük bir fiyat savaşı açıyor.
+  - Saldıran, o kategoride zaten satış yapan rakipler arasından en büyük
+    paylı olan. Kategoride hiçbir rakip yoksa kampanya açılmıyor, iki
+    hafta sonra yeniden bakılıyor (pazarda olmayan rakip fiyat kıramaz).
   - Fiyat kıran %14, diğerleri %7 kırıyor.
   - Duyuru haberi var; gündemde geri sayım var, çip rekabet panelini açıyor.
   - Sonunda pay ölçülüyor. Pay 2 puandan fazla düşmediyse kampanya geri
@@ -2781,7 +2784,7 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi) |
 | Birim testi | **327 test** (`pnpm test`; Tur 24'te render paketi de) |
 | Denge testi | **288 kontrol, hepsi geçiyor** (20 bölüm, süreleriyle; ~11 dk) |
-| Tarayıcı testi | **369 kontrol, hepsi geçiyor**, 0 konsol hatası (~17–25 dk); duman koşusu 110 (~5 dk, rehber dahil) |
+| Tarayıcı testi | **370 kontrol, hepsi geçiyor**, 0 konsol hatası (~17–25 dk); duman koşusu 111 (~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + duman oynanışı |
 | Kapsam | 35 bina · 25 ürün · 7 kategori · 8 rakip profili · 10 CEO · 22 olay (11 şehir + 11 sektör) · 2 kriz · 12 karar kartı · 70 rakip sözü · 10 şehir yapısı (6 siluet) |
 
