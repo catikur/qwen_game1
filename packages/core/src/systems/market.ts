@@ -846,7 +846,8 @@ function marketStep(state: GameState): void {
 
     // basePrice = birim başına günlük kira; kapasite = kiralanabilir birim.
     const revenue = def.capacity * occupancy * category.basePrice;
-    const cogs = revenue * category.costRatio * mods.costMultiplier * boostMultiplier(state, building.companyId, 'cogs');
+    // Kart indirimi (`cogs`) raftaki mal için; kiralığın rafı yok (Codex #62).
+    const cogs = revenue * category.costRatio * mods.costMultiplier;
 
     building.last.unitsSold = def.capacity * occupancy;
     building.last.capacityUsed = occupancy;

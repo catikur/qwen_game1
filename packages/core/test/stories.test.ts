@@ -1,6 +1,6 @@
 import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
-import { CAMPAIGN, CARD_BY_ID, CARD_TIMING, CATEGORIES, NPC_PROFILES } from '@capital/content';
+import { BUILDING_BY_ID, CAMPAIGN, CARD_BY_ID, CARD_TIMING, CATEGORIES, NPC_PROFILES } from '@capital/content';
 import type { CategoryId } from '@capital/content';
 import { GameEngine } from '../src/engine';
 import { createNewGame } from '../src/worldgen';
@@ -106,6 +106,33 @@ describe('karar kartları', () => {
     const b = getPlayer(plain.getState()).today.upkeep;
     assert.ok(b > 0);
     assert.ok(Math.abs(a / b - 0.5) < 0.02, `${a} / ${b}`);
+  });
+
+  test('mal indirimi raftaki mala: kiralık binanın maliyeti değişmiyor', () => {
+    const base = play(11, 120, false);
+    const state = base.getState();
+    delete state.card;
+    getPlayer(state).cash += 50_000_000;
+    const built = state.map.tiles.some((tile) => {
+      if (tile.kind !== 'plot' || tile.ownerId || tile.structureId) return false;
+      if (!base.dispatch({ type: 'BUY_TILE', tileId: tile.id }).ok) return false;
+      return base.dispatch({ type: 'BUILD', tileId: tile.id, defId: 'apartment' }).ok;
+    });
+    assert.ok(built, 'kiralık kurulamadı');
+    const boosted = new GameEngine(structuredClone(state));
+    const plain = new GameEngine(structuredClone(state));
+    getPlayer(boosted.getState()).boosts = [
+      { target: 'cogs', multiplier: 0.5, untilDay: state.time.day + 10, cardId: 'bulk_supplier' },
+    ];
+    boosted.runDay();
+    plain.runDay();
+    const cogs = (engine: GameEngine, role: string): number =>
+      Object.values(engine.getState().buildings)
+        .filter((b) => b.companyId === engine.getState().playerCompanyId && BUILDING_BY_ID[b.defId]?.role === role)
+        .reduce((total, b) => total + b.last.cogs, 0);
+    assert.ok(cogs(plain, 'rental') > 0);
+    assert.equal(cogs(boosted, 'rental'), cogs(plain, 'rental'));
+    assert.ok(cogs(boosted, 'outlet') < cogs(plain, 'outlet') * 0.8, `${cogs(boosted, 'outlet')} / ${cogs(plain, 'outlet')}`);
   });
 
   test('şanslı seçenek aynı durumda aynı sonucu veriyor', () => {
