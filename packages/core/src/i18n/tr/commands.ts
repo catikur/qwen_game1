@@ -123,6 +123,8 @@ export const commands = {
 
   // agenda.ts — gündem etiketleri
   'core.agenda.raid': '{name} payında %{percent}',
+  'core.agenda.consortiumWarning': '{leader} ve {count} ortak: alıma',
+  'core.agenda.consortiumBuying': '{leader} konsorsiyumu payında %{percent}',
   'core.agenda.order': '{name} %{percent}',
   'core.agenda.orderWaitingCash': '{name} %{percent} · nakit bekliyor',
   'core.agenda.strike': 'Grev',
@@ -140,6 +142,10 @@ export const commands = {
   'core.agenda.campaign': '{name}: {category} saldırısı',
   'core.agenda.quests': '{month} görevleri {done}/{total}',
   'core.agenda.questsReady': 'Ödül hazır: {count} görev',
+  'core.agenda.fad': '{good} modası',
+  'core.agenda.projectRank': '{project}: {rank}. sıradasın',
+  'core.agenda.projectOpen': '{project}: katkı açık',
+  'core.agenda.projectBuilding': '{project} inşaatta',
 
   // chain.ts — zincir kartı
   'core.chain.stateOwn': 'Sende',

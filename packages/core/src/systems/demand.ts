@@ -2,6 +2,7 @@ import {
   CATEGORIES,
   CATEGORY_LIST,
   DISTRICT_ARCHETYPES,
+  FAD,
   GOODS_BY_CATEGORY,
 } from '@capital/content';
 import type { CategoryId, DistrictArchetypeId, GoodDef } from '@capital/content';
@@ -50,10 +51,14 @@ export function estimateBaselineDemand(
  * Paylar bölge içinde normalize edilir: kategorinin TOPLAM talebi
  * değişmez, yalnızca ürünler arasında farklı dağılır. Bu sayede ikinci
  * ürün eklemek mevcut kalibrasyonu bozmaz.
+ *
+ * `fadGoodId` (Tur 37d): moda olan ürünün ağırlığı `FAD.weight` katına
+ * çıkıyor; kategorinin içinde rafında o ürün olana kayıyor.
  */
 export function goodShares(
   archetype: DistrictArchetypeId,
   categoryId: CategoryId,
+  fadGoodId: string | null = null,
 ): Array<{ good: GoodDef; share: number }> {
   const goods = GOODS_BY_CATEGORY[categoryId] ?? [];
   if (goods.length === 0) return [];
@@ -61,7 +66,7 @@ export function goodShares(
 
   const weighted = goods.map((good) => ({
     good,
-    weight: good.demandShare * (good.archetypeWeights?.[archetype] ?? 1),
+    weight: good.demandShare * (good.archetypeWeights?.[archetype] ?? 1) * (good.id === fadGoodId ? FAD.weight : 1),
   }));
 
   let total = 0;
@@ -100,14 +105,18 @@ export function defaultShelf(
     .map((entry) => entry.good.id);
 }
 
-/** Bir raf dizisinin o bölgede yakalayabildiği kategori talebi oranı. */
+/**
+ * Bir raf dizisinin o bölgede yakalayabildiği kategori talebi oranı.
+ * `fadGoodId`: moda süresince satışla aynı payları kullanmak için (Codex #64).
+ */
 export function shelfReach(
   archetype: DistrictArchetypeId,
   categoryId: CategoryId,
   stocked: readonly string[],
+  fadGoodId: string | null = null,
 ): number {
   let reach = 0;
-  for (const entry of goodShares(archetype, categoryId)) {
+  for (const entry of goodShares(archetype, categoryId, fadGoodId)) {
     if (stocked.includes(entry.good.id)) reach += entry.share;
   }
   return reach;

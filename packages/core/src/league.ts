@@ -1,10 +1,17 @@
-import { CEO_BY_ID } from '@capital/content';
+import { BUILDINGS, BUILDING_BY_ID, CEO_BY_ID, CONSORTIUM, CONSUMER_CATEGORIES, FAD, GOOD_BY_ID, GOODS_BY_CATEGORY, PROJECTS, PROJECT_TIMING, SEASONS, TREND } from '@capital/content';
+import type { CategoryId } from '@capital/content';
 import { GameEngine } from './engine';
 import { formatMoney } from './selectors';
 import { LEAGUE_DAYS, LEAGUE_SAMPLE_DAYS } from './systems/league';
-import { isPurchasable } from './systems/city';
+import { build, buyTile } from './actions';
+import { isDistrictOpen, isPurchasable } from './systems/city';
+import { runConsortiumTick } from './systems/consortium';
+import { fadSchedule, livingDemand, seasonMultiplier, trendAt } from './systems/living';
+import { goodShares } from './systems/demand';
+import { runMarketTick } from './systems/market';
+import { contributeToProject, projectAttraction, projectDistrictDemand, projectSite, projectUpkeep, runProjectTick } from './systems/projects';
 import { createNewGame } from './worldgen';
-import type { GameCommand, GameState, LoggedCommand } from './types';
+import type { GameCommand, GameState, LoggedCommand, ProjectState } from './types';
 
 /**
  * Lig koşu kodu ve tekrar doğrulaması (kural ve takvim: systems/league).
@@ -64,6 +71,7 @@ const LOGGABLE: ReadonlySet<string> = new Set<GameCommand['type']>([
   'CHOOSE_CARD',
   'CLAIM_BUBBLE',
   'CLAIM_QUEST',
+  'CONTRIBUTE_PROJECT',
   'DECLINE_CONTRACT',
   'DEMOLISH',
   'HOLDING_TRANSFER',
@@ -224,11 +232,149 @@ function fingerprintStep(engine: GameEngine, day: number): void {
   engine.runDay();
 }
 
+/**
+ * Geç oyun sondası (Tur 37d): 60 günlük iz şehir projesine (210. günden)
+ * ve konsorsiyuma (300. günden) ulaşmıyor; takvimleri izde ama işleyişleri
+ * değil. İzin son durumunun kopyasında saat ileri alınıp ikisi doğrudan
+ * işletiliyor (proje: aç, oyuncu katkısı, kapanış, bitiş; konsorsiyum:
+ * kuruluş, ortak alım) ve sonuçları ize giriyor. Canlı pazarın uzak günleri
+ * ve üç sistemin ayarları da örnekleniyor (Codex #64). Kopyada çalışıyor,
+ * izin durumuna dokunmuyor; metin değil sayı (dilden bağımsız).
+ */
+function lateGameProbe(state: GameState): string[] {
+  const parts: string[] = [];
+  const clone = (): GameState => JSON.parse(JSON.stringify(state)) as GameState;
+
+  // Saha kuralı her proje için: yoklama tek projeyi açıyor, takvim ise
+  // herhangi birini açabilir (Codex #64). Bugün ve bir proje bittikten sonra.
+  const sites = (world: GameState): string =>
+    PROJECTS.map((def) => `${def.id}@${projectSite(world, def.id)?.tileId ?? '-'}`).join(',');
+  const fresh = clone();
+  delete fresh.project;
+  parts.push(`sites:${sites(fresh)}`);
+
+  const p = clone();
+  delete p.project;
+  p.nextProjectDay = p.time.day;
+  runProjectTick(p);
+  // `delete` daraltmasını aş: proje adımı alanı yeniden dolduruyor.
+  const project = p.project as ProjectState | undefined;
+  if (project) {
+    p.companies[p.playerCompanyId]!.cash += 1_000_000;
+    contributeToProject(p, 400_000);
+    for (const day of [project.openedDay + 3, project.openedDay + 10, project.closesDay, project.doneDay]) {
+      p.time.day = day;
+      runProjectTick(p);
+    }
+  }
+  const done = p.cityProjects?.[0];
+  parts.push(`probe-project:${project?.defId ?? '-'}:${project?.tileId ?? '-'}:${done?.sponsorId ?? '-'}`);
+  for (const entry of projectDistrictDemand(p)) parts.push(`${entry.districtId}:${JSON.stringify(entry.multipliers)}`);
+  if (done) {
+    parts.push(`privilege:${projectUpkeep(p, p.playerCompanyId, done.districtId)}:${projectAttraction(p, p.playerCompanyId, done.districtId)}`);
+  }
+  parts.push(`brand:${JSON.stringify(p.companies[p.playerCompanyId]!.brand)}`);
+  parts.push(`land:${Math.round(p.map.tiles.reduce((sum, tile) => sum + tile.landValue, 0))}`);
+  parts.push(`sites-after:${sites(p)}`);
+
+  const c = clone();
+  c.time.day = Math.max(c.time.day, CONSORTIUM.earliestDay) + CONSORTIUM.idleDays + 1;
+  const me = c.companies[c.playerCompanyId]!;
+  const top = Math.max(0, ...Object.values(c.companies).filter((company) => !company.isPlayer).map((company) => company.netWorth));
+  const lift = Math.max(0, top * (CONSORTIUM.leadRatio + 0.2) - me.netWorth);
+  me.cash += lift;
+  me.netWorth += lift;
+  // 60. günde rakiplerin kasası üye tabanının altında: alımın bedeli ödenebilsin.
+  for (const company of Object.values(c.companies)) if (!company.isPlayer) company.cash += 2_000_000;
+  runConsortiumTick(c);
+  const formed = c.consortium;
+  if (formed) {
+    for (const day of [formed.startsDay, formed.startsDay + 1]) {
+      c.time.day = day;
+      runConsortiumTick(c);
+    }
+  }
+  const stakes = Object.keys(c.companies).sort().map((id) => c.companies[id]!.shares[c.playerCompanyId] ?? 0);
+  parts.push(`probe-consortium:${formed?.leaderId ?? '-'}:${formed?.memberIds.join(',') ?? '-'}:${stakes.join(',')}`);
+
+  // Moda etkisi: ilk moda izin 60 gününden sonra başlıyor. Kopyada moda
+  // gününe geçip kategori talebi ve moda kategorisinin ürün payları — ayar
+  // değil uygulanan etki (Codex #64).
+  const f = clone();
+  const firstFad = fadSchedule(f.meta.seed, f.time.day).next;
+  f.time.day = firstFad.startDay;
+  const fadCategory = GOOD_BY_ID[firstFad.goodId]?.category;
+  parts.push(`fad-demand:${CONSUMER_CATEGORIES.map((category) => livingDemand(f, category).toFixed(6)).join(',')}`);
+  if (fadCategory) {
+    const shares = goodShares('downtown', fadCategory as CategoryId, firstFad.goodId);
+    parts.push(`fad-shares:${shares.map(({ good, share }) => `${good.id}=${share.toFixed(6)}`).join(',')}`);
+    // Yardımcıların çıktısı yetmiyor: modanın satışa giden yolu da izde.
+    // Moda gününde bir pazar günü, iki yoklama mağazasıyla (Codex #64):
+    // en kalabalık bölgede rafında yalnız moda ürünü olan tek yuvalı mağaza
+    // (kapasitesi dolu: bölgelere bölünüşü karşılanmayan talepte görünüyor)
+    // ve en tenha bölgede bütün ürünleri taşıyan büyük mağaza (kapasitesi
+    // boş: ürün başına satışı satıştaki payı gösteriyor).
+    const outlets = BUILDINGS.filter((def) => def.role === 'outlet' && def.category === fadCategory);
+    const small = outlets.find((def) => (def.slots ?? 1) === 1);
+    const large = [...outlets].sort((a, b) => (b.slots ?? 1) - (a.slots ?? 1))[0];
+    const me = f.companies[f.playerCompanyId]!;
+    me.cash += 10_000_000;
+    const byPopulation = f.districts.filter((district) => isDistrictOpen(f, district.id)).sort((a, b) => b.population - a.population || a.id - b.id);
+    const place = (defId: string | undefined, districts: typeof byPopulation): string | null => {
+      for (const district of defId ? districts : []) {
+        const tile = f.map.tiles.find((candidate) => candidate.districtId === district.id && isPurchasable(candidate) && !candidate.structureId && !candidate.buildingId);
+        if (!tile || !buyTile(f, me.id, tile.id).ok || !build(f, me.id, tile.id, defId!).ok) continue;
+        return f.map.tiles[tile.id]!.buildingId;
+      }
+      return null;
+    };
+    const shop = place(small?.id, byPopulation);
+    if (shop) f.buildings[shop]!.stocked = [firstFad.goodId];
+    const store = large && large !== small ? place(large.id, [...byPopulation].reverse()) : null;
+    if (store) f.buildings[store]!.stocked = (GOODS_BY_CATEGORY[fadCategory as CategoryId] ?? []).map((good) => good.id).slice(0, large!.slots ?? 1);
+    runMarketTick(f);
+    const sold = Object.keys(f.buildings)
+      .sort()
+      .filter((id) => {
+        const def = BUILDING_BY_ID[f.buildings[id]!.defId];
+        return def?.role === 'outlet' && def.category === fadCategory;
+      })
+      .map((id) => `${id}=${JSON.stringify(f.buildings[id]!.soldByGood ?? {})}`);
+    const unmet = f.districts.map((district) => (district.unmet[fadCategory as CategoryId] ?? 0).toFixed(6));
+    parts.push(`fad-market:${shop ?? '-'}:${store ?? '-'}:${sold.join(',')}:${unmet.join(',')}`);
+  }
+
+  const seed = state.meta.seed;
+  for (const day of [120, 240, 360]) {
+    parts.push(`living:${day}:${CONSUMER_CATEGORIES.map((category) => trendAt(seed, category, day).value.toFixed(6) + '/' + seasonMultiplier(day, category).toFixed(4)).join(',')}`);
+    const fad = fadSchedule(seed, day);
+    parts.push(`fad:${day}:${fad.next.goodId}:${fad.next.startDay}:${fad.next.endDay}`);
+  }
+  parts.push(
+    `settings:${JSON.stringify({
+      PROJECT_TIMING,
+      CONSORTIUM,
+      TREND,
+      FAD,
+      seasons: SEASONS.map(({ id, months, demand }) => ({ id, months, demand })),
+      projects: PROJECTS.map(({ id, structureId, archetypes, demand, neighborShare, landValue, infrastructure, leadCategory }) => ({ id, structureId, archetypes, demand, neighborShare, landValue, infrastructure, leadCategory })),
+    })}`,
+  );
+  return parts;
+}
+
 function fingerprintOf(state: GameState): string {
+  return fnv(fingerprintParts(state).join('|'));
+}
+
+function fingerprintParts(state: GameState): string[] {
   const parts: string[] = [String(state.time.day), String(state.rng.s)];
   // Fırsatların takvimi ve ödülleri de izde (ödül alınmasa da).
   parts.push(`bubbles:${state.bubblesShown ?? 0}/${state.bubblesCaught ?? 0}/${state.nextBubbleDay ?? '-'}`);
   parts.push(`quests:${state.questsDone ?? 0}`);
+  // Şehir projesi takvimi (Tur 37d): ilk proje izin 60 gününden sonra açılıyor, takvimi önceden belli.
+  parts.push(`project:${state.nextProjectDay ?? '-'}:${state.project?.defId ?? '-'}:${state.cityProjects?.length ?? 0}`);
+  parts.push(...lateGameProbe(state));
   for (const quest of state.quests?.items ?? []) parts.push(`${quest.defId}:${quest.target}:${quest.reward}:${quest.doneDay ?? '-'}`);
   for (const id of Object.keys(state.companies).sort()) {
     const c = state.companies[id]!;
@@ -239,7 +385,7 @@ function fingerprintOf(state: GameState): string {
     parts.push(`${b.defId}@${b.tileId}:${b.companyId}`);
   }
   for (const id of Object.keys(state.market.spot).sort()) parts.push(`${id}=${state.market.spot[id]!.toFixed(6)}`);
-  return fnv(parts.join('|'));
+  return parts;
 }
 
 /** Önbelleksiz hesap (test: dil değişince iz aynı kalmalı). */
@@ -247,6 +393,13 @@ export function computeSimFingerprint(): string {
   const engine = fingerprintWorld();
   for (let day = 1; day <= FINGERPRINT_DAYS; day++) fingerprintStep(engine, day);
   return fingerprintOf(engine.getState());
+}
+
+/** İzin özetlenmemiş parçaları: testler bir yoklamanın gerçekten bir şey ölçtüğünü görsün. */
+export function simFingerprintParts(): string[] {
+  const engine = fingerprintWorld();
+  for (let day = 1; day <= FINGERPRINT_DAYS; day++) fingerprintStep(engine, day);
+  return fingerprintParts(engine.getState());
 }
 
 /**

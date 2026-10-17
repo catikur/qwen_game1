@@ -2709,11 +2709,19 @@ section('Dönemler: şehrin makro iklimi', () => {
   // sözleşme sistemi rng akışını kaydırınca tam o güne bir olay denk
   // geldi ve kontrol kırıldı. Paylaşılan rng'ye yaslanan her kontrol,
   // akıştaki her yeni tüketiciyle kayar; yalıtım şart.
+  //
+  // Canlı pazar da (Tur 37d) aynı çarpana giriyor ve dönemden bağımsız:
+  // seed 77'de oyun 1297. günde donuyor, o gün yeme-içme eğilim ve mevsimle
+  // ×1,17 ve dönemin 0,88'i birleşikte 1,03 çıkıyordu. Dönemin katkısı,
+  // dönemli ve dönemsiz çarpanın oranı; canlı pazar ikisinde de aynı.
   state.activeEvents.length = 0;
+  state.era = undefined;
+  const calm = collectEventModifiers(state).demand.dining ?? 1;
   state.era = { defId: 'era_sikilasma', startedDay: state.time.day, remainingDays: 100 };
   const mods = collectEventModifiers(state);
-  expect('dönem çarpanı pazara ulaşıyor', (mods.demand.dining ?? 1) < 1,
-    `yeme-içme çarpanı ${(mods.demand.dining ?? 1).toFixed(2)}`);
+  const eraFactor = (mods.demand.dining ?? 1) / calm;
+  expect('dönem çarpanı pazara ulaşıyor', eraFactor < 1,
+    `yeme-içme çarpanı ${eraFactor.toFixed(2)} (canlı pazarla birlikte ${(mods.demand.dining ?? 1).toFixed(2)})`);
 }
 
 });
@@ -3335,19 +3343,32 @@ section('Hedefler, zafer ve zorluk', () => {
       ` · Acımasız ${victoryDays['hard']!.length}/2 tohumda zafer`,
   );
 
+  /*
+   * Kaybedilebilirlik tek tohumla (7) ölçülüyordu ve o tohum sınırdaydı:
+   * Dengeli'de 824. günde, 900 günlük pencerenin sonunda düşüyordu. Canlı
+   * pazar (Tur 37d) bu tohumu pencerenin dışına itti; 12 tohumluk ölçümde
+   * düşme oranı değişmedi (Dengeli 3/12 açık · 2/12 kapalı, Acımasız
+   * 10/12 · 10/12). Kontrol artık kalibrasyon notundaki beş tohumu
+   * koşuyor; iddia aynı: Dengeli kaybedilebilir, Acımasız daha sık ve daha
+   * erken düşürüyor.
+   */
+  const SLOW_SEEDS = [1, 7, 42, 101, 202];
+  const falls = (difficulty: 'normal' | 'hard'): number[] =>
+    SLOW_SEEDS.map((seed) => play(seed, difficulty, 15, false, 900).lostDay).filter((day): day is number => day !== null);
+  const normalFalls = falls('normal');
+  const hardFalls = falls('hard');
   const slowEasy = play(7, 'easy', 15, false, 900);
-  const slowNormal = play(7, 'normal', 15, false, 900);
-  const slowHard = play(7, 'hard', 15, false, 900);
   const slowDefended = play(7, 'normal', 15, true, 900);
+  const list = (days: number[]): string => (days.length > 0 ? days.join(', ') : '—');
   expect(
     'oyun kaybedilebilir kalıyor: savunmasız yavaş oyuncu Dengeli ve Acımasız\'da düşüyor',
-    slowNormal.lostDay !== null && slowHard.lostDay !== null,
-    `Dengeli ${slowNormal.lostDay ?? 'ayakta'} · Acımasız ${slowHard.lostDay ?? 'ayakta'}`,
+    normalFalls.length >= 1 && hardFalls.length >= 3,
+    `Dengeli ${normalFalls.length}/5 (${list(normalFalls)}) · Acımasız ${hardFalls.length}/5 (${list(hardFalls)})`,
   );
   expect(
-    'Acımasız daha erken düşürüyor',
-    slowNormal.lostDay !== null && slowHard.lostDay !== null && slowHard.lostDay < slowNormal.lostDay,
-    `${slowHard.lostDay} < ${slowNormal.lostDay}`,
+    'Acımasız daha sık ve daha erken düşürüyor',
+    hardFalls.length > normalFalls.length && normalFalls.length > 0 && mean(hardFalls) < mean(normalFalls),
+    `${hardFalls.length} > ${normalFalls.length} · ortalama ${Math.round(mean(hardFalls))} < ${normalFalls.length > 0 ? Math.round(mean(normalFalls)) : '—'}`,
   );
   expect('Rahat yavaş oyuncuyu affediyor', slowEasy.lostDay === null, slowEasy.lostDay === null ? '900 gün ayakta' : `${slowEasy.lostDay}. günde düştü`);
   expect(
@@ -3744,8 +3765,16 @@ section('Sermaye piyasası: halka arz ve kurucu kilidi', () => {
    * tohumda düşüyor (1, 2, 7, 9, 12); 42, 5 ve 31'de artık savunmasız da
    * ayakta, yani kalkanı ölçemiyorlardı. Tohumlar tehdidin gerçekleştiği
    * yerden yeniden seçildi.
+   *
+   * Tur 37d: şehir projeleri bitince bölgede ve komşularda talep kalıcı
+   * artıyor, arsa değerleniyor; en çok bölgede bulunan oyuncu en çok
+   * kazanıyor. Seed 1'de savunmasız oyuncu 700. günde %6 daha zengin ve
+   * baskıncının %90 eşiğinin üstünde kalıyor (79,2 > 75,6 M ₺). 20 tohumda
+   * savunmasız düşüş oranı değişmiyor (projesiz 4/20: 1, 4, 9, 13; projeli
+   * 3/20: 9, 13, 17), tehdit başka tohumlara kayıyor. Tohumlar yine
+   * tehdidin gerçekleştiği yerden.
    */
-  const shields = [7, 1, 2, 9].map((seed) => ({ seed, bare: defenseRun(seed, 'bare'), issue: defenseRun(seed, 'issue') }));
+  const shields = [9, 13, 17].map((seed) => ({ seed, bare: defenseRun(seed, 'bare'), issue: defenseRun(seed, 'issue') }));
   for (const { seed, bare, issue } of shields) {
     console.log(
       `  baskın seed ${String(seed).padStart(2)} | savunmasız ${bare.lost ? `${bare.lost}. günde düşüyor` : 'ayakta'} · ` +
@@ -3883,6 +3912,57 @@ section('Sermaye piyasası: halka arz ve kurucu kilidi', () => {
   console.log(`  devralmacı vekil | ilk devralma ${firstTakeover ?? '-'}. gün · 420. günde zafer ${victory ? `${victory.kind} ${victory.day}. gün` : 'yok'}`);
   expect('devralmacı vekil kilit bitmeden devralamıyor', firstTakeover !== null && firstTakeover >= 160, `${firstTakeover ?? '-'}. gün`);
   expect('tekel zaferi 400. günden önce gelmiyor', !victory || victory.day >= 400, victory ? `${victory.kind} ${victory.day}. gün` : 'zafer yok');
+});
+
+/*
+ * GÜÇLÜ AMA PASİF OYUNCU (Tur 37d-3).
+ *
+ * Tek baskıncı yalnızca kendinden belirgin küçüğe saldırıyor; öne geçip el
+ * çeken oyuncu baskından kurtuluyordu. Konsorsiyumdan önce 400. günde el
+ * çeken vekil on tohumun onunda 1200. güne ayakta kaldı ve zafere ulaştı.
+ * İddia iki parça: el çeken lider konsorsiyuma düşüyor; uyarı gelince
+ * yatırıma dönen (vekil yeniden oynuyor) ayakta kalıyor ve zafere ulaşıyor.
+ * Etkin oynayan lidere kurulmaması birim testinde (`consortium.test.ts`).
+ */
+section('Rakip konsorsiyumu: güçlü ama pasif oyuncu', () => {
+  function passiveRun(seed: number, respond: boolean) {
+    const engine = new GameEngine(createNewGame({ seed, companyName: 'Pasif AŞ' }));
+    let formed: number | null = null;
+    let lost: number | null = null;
+    for (let day = 1; day <= 800; day++) {
+      const state = engine.getState();
+      if ((day <= 400 || (respond && state.consortium)) && day % 5 === 0) playerStrategy(engine);
+      const labor = getPlayer(engine.getState()).labor;
+      if (labor?.demand) engine.dispatch({ type: 'RESPOND_UNION', response: 'compromise' });
+      engine.runDay();
+      const after = engine.getState();
+      if (after.consortium && formed === null) formed = day;
+      if (after.gameOver) {
+        lost = day;
+        break;
+      }
+    }
+    const state = engine.getState();
+    return { formed, lost, by: state.gameOver?.byCompanyId ?? null, victory: state.victory?.day ?? null };
+  }
+  const runs = [1, 2, 3].map((seed) => ({ seed, idle: passiveRun(seed, false), respond: passiveRun(seed, true) }));
+  for (const { seed, idle, respond } of runs) {
+    console.log(
+      `  seed ${seed} | el çeken: konsorsiyum ${idle.formed ?? '-'}. gün · ${idle.lost ? `${idle.lost}. günde düşüyor` : 'ayakta'} · ` +
+        `cevap veren: ${respond.lost ? `${respond.lost}. günde düşüyor` : 'ayakta'}, zafer ${respond.victory ?? '-'}`,
+    );
+  }
+  const fell = runs.filter(({ idle }) => idle.lost !== null && idle.formed !== null && idle.formed < idle.lost);
+  expect(
+    'güçlü ama pasif oyuncu konsorsiyuma düşüyor',
+    fell.length >= 2,
+    runs.map(({ seed, idle }) => `seed ${seed}: ${idle.lost ?? 'ayakta'}`).join(' · '),
+  );
+  expect(
+    'konsorsiyuma yatırımla cevap veren lider ayakta kalıyor ve zafere ulaşıyor',
+    runs.every(({ respond }) => respond.lost === null && respond.victory !== null),
+    runs.map(({ seed, respond }) => `seed ${seed}: ${respond.lost ?? 'ayakta'}, zafer ${respond.victory ?? '-'}`).join(' · '),
+  );
 });
 
 section('Devralma emri: günlük tavan ve savunma', () => {

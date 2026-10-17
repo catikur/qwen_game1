@@ -2,6 +2,7 @@ import {useEffect, useState} from 'react';
 import type { ReactElement } from 'react';
 import { BUILDING_BY_ID, CATEGORIES, DISTRICT_ARCHETYPES, CONSUMER_CATEGORIES, GOODS_BY_CATEGORY, GOOD_BY_ID, STRUCTURE_BY_ID, formatPercent, numberLocale } from '@capital/content';
 import {
+  activeFad,
   buildOptions,
   categoryBreakdown,
   companyRanking,
@@ -29,6 +30,7 @@ import { ChainPanel } from './ChainPanel';
 import { useCollapsible } from './collapse';
 import { CompetitionPanel } from './CompetitionPanel';
 import { AuctionPanel } from './AuctionPanel';
+import { ProjectPanel, ProjectSiteNote } from './ProjectPanel';
 import { MarketPanel } from './MarketPanel';
 import { GoalsPanel } from './GoalsPanel';
 import { HoldingPanel } from './HoldingPanel';
@@ -411,6 +413,8 @@ export function Inspector(): ReactElement | null {
         <Stat label={t('panels.inspector.stat.development')} value={formatPercent(Math.round(districtPressure(state, district) * 100))} />
       </div>
 
+      <ProjectSiteNote tileId={tile.id} />
+
       <div className="demandlist">
         <h3>{t('panels.inspector.demandTitle')}</h3>
         {Object.entries(district.demand)
@@ -731,8 +735,9 @@ function ShelfEditor({ buildingId }: { buildingId: string }): ReactElement | nul
   if (goods.length < 2) return null;
 
   const slots = def.slots ?? 1;
+  // Bugünün payları: moda süresince satış da bunları kullanıyor (Codex #64).
   const shares = new Map(
-    goodShares(district.archetype, def.category).map((entry) => [entry.good.id, entry.share]),
+    goodShares(district.archetype, def.category, activeFad(state)?.goodId ?? null).map((entry) => [entry.good.id, entry.share]),
   );
 
   const toggle = (goodId: string): void => {
@@ -905,6 +910,7 @@ export function ModalHost(): ReactElement | null {
     chain: t('panels.modal.title.chain'),
     rivalry: t('panels.modal.title.rivalry'),
     auction: t('panels.modal.title.auction'),
+    project: t('panels.modal.title.project'),
     bourse: t('panels.modal.title.bourse'),
     company: t('panels.modal.title.company'),
     rivals: t('panels.modal.title.rivals'),
@@ -929,6 +935,7 @@ export function ModalHost(): ReactElement | null {
           {view.openPanel === 'chain' && <ChainPanel />}
           {view.openPanel === 'rivalry' && <CompetitionPanel />}
           {view.openPanel === 'auction' && <AuctionPanel />}
+          {view.openPanel === 'project' && <ProjectPanel />}
           {view.openPanel === 'bourse' && <MarketPanel />}
           {view.openPanel === 'company' && <CompanyPanel />}
           {view.openPanel === 'rivals' && <RivalsPanel />}
@@ -1279,6 +1286,18 @@ function HelpPanel(): ReactElement {
         <li>
           <strong>{t('panels.help.step.opportunities.title')}</strong>
           {t('panels.help.step.opportunities.body')}
+        </li>
+        <li>
+          <strong>{t('panels.help.step.living.title')}</strong>
+          {t('panels.help.step.living.body')}
+        </li>
+        <li>
+          <strong>{t('panels.help.step.projects.title')}</strong>
+          {t('panels.help.step.projects.body')}
+        </li>
+        <li>
+          <strong>{t('panels.help.step.consortium.title')}</strong>
+          {t('panels.help.step.consortium.body')}
         </li>
       </ol>
       <p className="muted">

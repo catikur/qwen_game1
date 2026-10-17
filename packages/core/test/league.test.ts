@@ -4,6 +4,7 @@ import { GameEngine } from '../src/engine';
 import {
   RUN_LIMITS,
   computeSimFingerprint,
+  simFingerprintParts,
   createLeagueGame,
   decodeRun,
   decodeRunChecked,
@@ -15,7 +16,7 @@ import {
   verifyRun,
 } from '../src/league';
 import type { LeagueRun, RunVerdict } from '../src/league';
-import { BUBBLE_TIMING, setLocale } from '@capital/content';
+import { BUBBLE_TIMING, CONSORTIUM, FAD, PROJECTS, PROJECT_BY_ID, PROJECT_TIMING, setLocale } from '@capital/content';
 import { LEAGUE_DAYS, leagueSeed, leagueWeekId } from '../src/systems/league';
 import { createNewGame } from '../src/worldgen';
 import type { GameState } from '../src/types';
@@ -144,6 +145,97 @@ describe('lig güvenliği', () => {
       timing.amountMin = amountMin;
     }
     assert.equal(computeSimFingerprint(), base);
+    // Şehir projesi takvimi de izde (Tur 37d).
+    const projects = PROJECT_TIMING as { firstDay: readonly [number, number] };
+    const first = projects.firstDay;
+    try {
+      projects.firstDay = [first[0] + 5, first[1] + 5];
+      assert.notEqual(computeSimFingerprint(), base, 'proje takvimi izi değiştirmiyor');
+    } finally {
+      projects.firstDay = first;
+    }
+  });
+
+  test('iz geç oyunu da sınıyor: proje etkisi ve konsorsiyum alımı değişince iz değişiyor (Codex #64)', () => {
+    const base = computeSimFingerprint();
+    const projects = PROJECT_TIMING as { buildDays: number };
+    const consortium = CONSORTIUM as unknown as { memberBudget: number };
+    const { buildDays } = projects;
+    const { memberBudget } = consortium;
+    // Bölge talebi çarpanı: ayarın kendisi değil, bitmiş projenin etkisi.
+    const metro = PROJECT_BY_ID.tech_campus.demand as Record<string, number>;
+    const electronics = metro.electronics!;
+    try {
+      metro.electronics = electronics + 0.01;
+      assert.notEqual(computeSimFingerprint(), base, 'proje etkisi izi değiştirmiyor');
+      metro.electronics = electronics;
+      consortium.memberBudget = memberBudget * 0.5;
+      assert.notEqual(computeSimFingerprint(), base, 'konsorsiyum alımı izi değiştirmiyor');
+      consortium.memberBudget = memberBudget;
+      projects.buildDays = buildDays + 1;
+      assert.notEqual(computeSimFingerprint(), base, 'inşaat süresi izi değiştirmiyor');
+    } finally {
+      metro.electronics = electronics;
+      consortium.memberBudget = memberBudget;
+      projects.buildDays = buildDays;
+    }
+    assert.equal(computeSimFingerprint(), base);
+  });
+
+  test('iz moda etkisini de taşıyor: ürün ağırlığı ya da kategori eki değişince iz değişiyor (Codex #64)', () => {
+    const base = computeSimFingerprint();
+    const fad = FAD as { weight: number; categoryBoost: number };
+    const { weight, categoryBoost } = fad;
+    try {
+      fad.weight = weight + 0.1;
+      assert.notEqual(computeSimFingerprint(), base, 'moda ağırlığı izi değiştirmiyor');
+      fad.weight = weight;
+      fad.categoryBoost = categoryBoost + 0.01;
+      assert.notEqual(computeSimFingerprint(), base, 'moda kategori eki izi değiştirmiyor');
+    } finally {
+      fad.weight = weight;
+      fad.categoryBoost = categoryBoost;
+    }
+    assert.equal(computeSimFingerprint(), base);
+  });
+
+  test('iz her projenin saha kuralını taşıyor: yoklamanın açmadığı projelerin tercih ettiği bölge de (Codex #64)', () => {
+    const base = computeSimFingerprint();
+    for (const def of PROJECTS) {
+      const mutable = def as { archetypes: readonly string[] };
+      const { archetypes } = mutable;
+      try {
+        mutable.archetypes = [];
+        assert.notEqual(computeSimFingerprint(), base, `${def.id} saha kuralı izi değiştirmiyor`);
+      } finally {
+        mutable.archetypes = archetypes;
+      }
+    }
+    assert.equal(computeSimFingerprint(), base);
+  });
+
+  test('iz modanın satış yolunu da işletiyor: moda gününde gerçek bir pazar günü (Codex #64)', () => {
+    const market = (): string => {
+      const part = simFingerprintParts().find((entry) => entry.startsWith('fad-market:'));
+      assert.ok(part, 'izde moda pazarı yok');
+      return part;
+    };
+    const base = market();
+    const [, shop, store] = base.split(':');
+    assert.notEqual(shop, '-', 'tek yuvalı yoklama mağazası kurulmadı');
+    assert.notEqual(store, '-', 'büyük yoklama mağazası kurulmadı');
+    assert.match(base, new RegExp(`${shop}=\\{"[a-z_]+":[1-9]`), 'yoklama mağazası satmıyor');
+    // Parça modayı pazarın içinden görüyor: ağırlık değişince satış ve
+    // karşılanmayan talep değişiyor.
+    const fad = FAD as { weight: number };
+    const { weight } = fad;
+    try {
+      fad.weight = weight + 0.4;
+      assert.notEqual(market(), base, 'moda pazarı ağırlığa bakmıyor');
+    } finally {
+      fad.weight = weight;
+    }
+    assert.equal(market(), base);
   });
 
   test('dürüst koşu doğrulanıyor; skor, eğri, ad ve CEO tekrarın kendisinden', async () => {

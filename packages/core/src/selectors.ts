@@ -56,6 +56,11 @@ export function formatDate(day: number): string {
   return date.toLocaleDateString(numberLocale(), { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' });
 }
 
+/** Oyun gününün takvim ayı (0 = Ocak), UTC. */
+export function monthOf(day: number): number {
+  return new Date(EPOCH + day * 86_400_000).getUTCMonth();
+}
+
 /** Oyun gününün takvimdeki ay günü (1..31). */
 export function dayOfMonth(day: number): number {
   return new Date(EPOCH + day * 86_400_000).getUTCDate();

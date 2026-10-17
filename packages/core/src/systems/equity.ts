@@ -397,6 +397,18 @@ function absorb(state: GameState, acquirerId: string, targetId: string): void {
     if (holder.orders.length === 0) delete holder.orders;
   }
 
+  // Şehir projesi (Tur 37d): katkı ve sponsorluk devralana geçiyor. Tabloda
+  // ölü şirketin satırı kalırsa sponsor bulunamıyor ve proje yanlışlıkla
+  // "belediye karşıladı" diye kapanıyordu (Codex #64). Ad tarih olarak kalıyor.
+  const project = state.project;
+  const given = project?.contributions[targetId];
+  if (project && given) {
+    project.contributions[acquirerId] = (project.contributions[acquirerId] ?? 0) + given;
+    delete project.contributions[targetId];
+  }
+  if (project?.sponsorId === targetId) project.sponsorId = acquirerId;
+  for (const done of state.cityProjects ?? []) if (done.sponsorId === targetId) done.sponsorId = acquirerId;
+
   // Açık ihalede teklifi varsa düşer.
   if (state.auction?.bidderId === targetId) {
     state.auction.bidderId = null;

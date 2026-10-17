@@ -4,7 +4,7 @@
 > `pnpm bench` çıktısından; iddialar `pnpm balance` ve `pnpm playtest`
 > tarafından her koşuda doğrulanıyor.
 >
-> Son güncelleme: şema **v6**, 36 tur (Tur 33 denendi ve geri alındı; Tur 34 eski görünüme canlılık ekledi; Tur 35 arayüzü Lite'ın "Cam & Bulut" diline taşıdı; Tur 36 şehre ayrıntı kattı; Tur 37a geç oyuna yönetim yükü, servet vergisi ve kriz dönemleri getirdi; Tur 37b karar kartlarını ve rakip hikâyelerini ekledi; Tur 37c fırsat balonlarını ve aylık görev panosunu getirdi).
+> Son güncelleme: şema **v6**, 36 tur (Tur 33 denendi ve geri alındı; Tur 34 eski görünüme canlılık ekledi; Tur 35 arayüzü Lite'ın "Cam & Bulut" diline taşıdı; Tur 36 şehre ayrıntı kattı; Tur 37a geç oyuna yönetim yükü, servet vergisi ve kriz dönemleri getirdi; Tur 37b karar kartlarını ve rakip hikâyelerini ekledi; Tur 37c fırsat balonlarını ve aylık görev panosunu getirdi; Tur 37d canlı pazarı, şehir projesi ihalesini ve rakip konsorsiyumunu getirdi).
 
 ---
 
@@ -2854,6 +2854,274 @@ kapanınca kalkıyor.
   katmanda kalıyor, ödül ekranın öbür ucundan süzülüyordu. Anahtarlı
   yapıyla düzeldi.
 
+### Tur 37d-1 — Canlı pazar: eğilim, mevsim, moda
+
+Talep yalnızca nüfusla, olayla, dönemle ve krizle değişiyordu. Gelir
+düzeyi, arketip ağırlıkları ve ürün payları sabitti: bir kategoriyi bir
+kez doğru seçen oyuncu oyunun sonuna kadar haklı kalıyordu. Kullanıcı
+üç katmanın üçünü de seçti (`content/src/living.ts`,
+`core/src/systems/living.ts`).
+
+- **Eğilim (yavaş):** her tüketici kategorisi 120–240 günde bir yeni bir
+  hedefe doğru doğrusal kayıyor (0,88–1,12). Gün 0'da 1'den başlıyor.
+  Hedef ve süre rekabet panelindeki "Pazar nabzı"nda açık: erken okuyan
+  kazanıyor. Büyük bir dönüş (en az 6 puan) haber oluyor.
+- **Mevsim (orta):** takvim ayından (UTC). Kışın giyim ve elektronik,
+  yazın yeme-içme ve hizmet öne çıkıyor. Her kategorinin dört mevsim
+  ortalaması tam 1: toplam talep değişmiyor, yalnızca ne zaman nereye
+  aktığı. Mevsim dönümü haber oluyor.
+- **Moda (hızlı):** tek bir ürüne 30–60 gün kategori içinde ×1,6 ağırlık;
+  kategoriye de +%5. İlk moda 60–100. günde, sonrakiler 70–130 gün arayla.
+  Tek ürünlü kategori (hizmet) modaya girmiyor, aynı ürün üst üste moda
+  olmuyor. Haber ve gündemde geri sayım ("Moda: Kahve · 38 gün").
+- **Durumsuz:** üçü de tohumdan ve günden hesaplanıyor; kayda alan
+  yazılmıyor, `state.rng` çekilmiyor. Aynı tohum aynı pazarı yaşıyor
+  (lig adil), bina tahmininin iki kolu da aynı pazarı görüyor.
+- **Boru hattı:** çarpanlar `collectEventModifiers`'tan geçiyor (olay,
+  dönem ve krizle aynı yer); moda ürünü `goodShares`'te. Moda payı
+  pazarın her adımında aynı: satış, kapasitenin bölgelere bölünüşü
+  (`shelfReach`), yatırım tahmininin erişimi ve raf panelindeki yüzdeler.
+  İlk sürümde yalnız satış modayı görüyordu; kapasite ve tahmin eski
+  ürün karışımıyla çalışıyordu (Codex #64). Yeni binanın rafı ise kalıcı
+  karar olduğu için modaya göre değil, bölgenin olağan karışımına göre.
+  Test: moda ağırlığıyla ürünün taban payını aynı kat büyütmek birebir
+  aynı pazarı veriyor (satış, karşılanmayan talep, tahmin).
+- **Laboratuvar:** `flags.livingMarket` (yokluğu açık), `randomEvents`
+  kapalıyken de kapalı. İlk denemede denge sınavının üç kontrollü deneyi
+  kırıldı (Ar-Ge ve pazarlama geri ödemesi, fiyat kırma): ölçüm 60–400
+  gün sürüyor ve arada mevsim ve eğilim değişince ölçülen şey pazar
+  oluyordu. Düello motoru olayları zaten kapatıyor; canlı pazar da aynı
+  kurala bağlandı.
+
+**Etkisi** (20 tohum, 720 gün, balon ve görev kapalı; vekil eğilime
+bakmıyor):
+
+| | Zafer günü farkı | Net değer oranı | 720 günde zafer |
+|---|---|---|---|
+| Canlı pazar kapalı | — | 1 | 17/20 |
+| Açık | +5 ± 7 | 0,96 | 15/20 |
+
+(Son ölçüm moda payı düzeltmesinden ve 37d-2/3'ten sonra; ilk ölçüm
++6 ± 6, 0,96, 16/20 → 14/20. Etki değişmedi.)
+
+Etki gürültü içinde. Vekil kategorilerini eğilime göre seçmediği için
+dalgalanma ona hafif pahalı. Eğilimi okuyan oyuncu kazanır.
+
+**Denge sınavında değişen kontrol: yavaş oyuncunun düşmesi beş tohum.**
+- Kaybedilebilirlik tek tohumla (7) ölçülüyordu ve o tohum sınırdaydı:
+  Dengeli'de 824. günde, 900 günlük pencerenin sonunda düşüyordu. Canlı
+  pazar onu pencerenin dışına itti.
+- 12 tohumluk ölçümde düşme oranı değişmiyor: Dengeli 3/12 açık, 2/12
+  kapalı; Acımasız 10/12 ve 10/12.
+- Kontrol artık kalibrasyon notundaki beş tohumu (1/7/42/101/202)
+  koşuyor. İddia aynı: Dengeli kaybedilebilir (2/5), Acımasız daha sık
+  ve erken düşürüyor (4/5, ortalama 571 < 819).
+- Aynı ölçümün yan bulgusu: savunmasız yavaş oyuncu Dengeli'de 12
+  tohumun 3–4'ünde **kazanıyor**. "Pasif oyun yeterince cezalandırılmıyor"
+  kaygısı ölçüyle doğrulandı; 37d-3'ün (rakip konsorsiyumu) hedefi bu.
+
+**Denge sınavında değişen kontrol: dönem çarpanı oranla.** "Dönem çarpanı
+pazara ulaşıyor" sıkılaşma döneminin yeme-içme talebini birleşik çarpanda
+1'in altında arıyordu. Canlı pazar aynı çarpana giriyor ve dönemden
+bağımsız: moda payı düzeltmesi rakiplerin kararlarını kaydırınca seed 77'de
+oyun 1297. günde dondu, o gün yeme-içme eğilim ve mevsimle ×1,17 ve
+dönemin 0,88'i birleşikte 1,03 çıktı. Kontrol olayları zaten aynı gerekçeyle
+temizliyordu; artık dönemin katkısı dönemli ve dönemsiz çarpanın oranı
+(0,88). İddia aynı.
+
+**Doğrulama.**
+- Birim testleri (`living.test.ts`, 7 test):
+  - mevsim takvimi ve yıllık ortalamanın 1 olması;
+  - eğilimin 1'den başlaması, aralıkta kalması, parça sınırında
+    kopmaması, tohuma bağlı olması;
+  - moda takvimi (ara, süre, tekrar yok, tek ürünlü kategori yok);
+  - olay boru hattı ve bayrak;
+  - moda payı;
+  - haberler ve gündem;
+  - durumsuzluk.
+- Kriz testi artık kriz × canlı pazar bileşimini sınıyor.
+- i18n tamlık testi mevsimleri kapsıyor.
+- Oynanış testi: "Canlı pazar" bölümü (2 kontrol, duman koşusunda).
+
+
+### Tur 37d-2 — Şehir projesi ihalesi
+
+Kullanıcı mega projeyi "şehir projesi ihalesi" olarak seçti: belediye bir
+proje açıyor, şirketler katkı yarışına giriyor, en büyük katkı projeye
+adını veriyor ve bölgede bir ayrıcalık alıyor (`content/src/projects.ts`,
+`core/src/systems/projects.ts`, `ui/src/ProjectPanel.tsx`).
+
+- **Projeler:** 6 tür: metro, stadyum, kongre merkezi, teknoloji kampüsü,
+  şehir AVM'si, kapalı çarşı. Her birinin tercih ettiği bölge arketipleri,
+  bölge talep çarpanları (+%4–16), arsa değeri çarpanı ve sponsorun marka
+  aldığı kategori var.
+- **Akış:** duyuru → 90 gün katkı → sponsor belli olur, şantiye kurulur →
+  40 gün inşaat → simge yapı ve kalıcı etki.
+  - İlk proje 210–270. günde; sonraki, öncekinin bitişinden 260–380 gün
+    sonra (900 günde 2 proje).
+  - Saha: projesiz bölgeler önce, sonra tercih edilen arketip, sonra
+    nüfus. Belediye kendi arazisine yapıyor: bir park ya da meydan.
+    İlk sürüm park yoksa boş parseli kamuya geçiriyordu ve denge
+    sınavının "büyüme kamu alanı üretmiyor" kontrolü kırıldı (17 → 18).
+    Gerekçe büyümeninkiyle aynı: oyuncunun gözüne kestirdiği parselin bir
+    gecede kamuya geçmesi geri alınamaz bir kayıp.
+  - Takvim ve yer dışsal zardan (tohum, gün); `state.rng` çekilmiyor.
+- **Katkı:** açık tablo, geri dönmüyor (herkes öder, biri kazanır).
+  Oyuncunun katkısı `CONTRIBUTE_PROJECT` komutu, lig günlüğünde. Panelde
+  "Öne geç" (lideri 1 B ₺ geçen tutar) ve kasanın %2/5/10'u.
+- **Rakipler:** haftada bir, kişiliğe göre bütçeyle katkı veriyor (zar
+  yok). Bütçe net değerin %1,5–5'i (genişlemeci ve arsa spekülatörü en
+  istekli), bölgede mağazası varsa ×1,5; kasada 400 B ₺ tampon kalıyor,
+  bütçe 8 haftaya yayılıyor. İlk sürümde bütçe yoktu ve geç oyunda rakipler
+  25–32 M ₺ veriyordu. Rakipler donukken (izdüşüm) katkı yok.
+- **Etki (kimin olursa olsun):** bölgede tam, komşularda yarı
+  (`neighborShare`) kalıcı talep artışı (olay boru hattından); arsa bir kez
+  değerleniyor; metro ve kampüs nüfus tavanını yükseltiyor.
+- **Sponsor ayrıcalığı:** bölgedeki bütün binalarında bakım −%30,
+  mağazalarında çekicilik +%8, projenin kategorisinde marka +0,05. Diğer
+  katkıcılar katkı payları oranında en çok +0,02 marka alıyor.
+- **Laboratuvar:** `flags.cityProjects` (yokluğu açık), `randomEvents`
+  kapalıyken de kapalı. Bayrak kapanınca süren etkiler de kalkıyor.
+- **Devralma:** katkıcı devralınınca katkısı (ve bitmiş projenin
+  sponsorluğu) devralana geçiyor; tabloda oyundan çıkmış şirketin satırı
+  görünmüyor. Önce öndeki katkıcı devralınınca proje "belediye karşıladı"
+  diye kapanıyordu (Codex #64).
+- **Lig izi:** 60 günlük iz projeye ve konsorsiyuma ulaşmıyor; izin son
+  durumunun kopyasında saat ileri alınıp proje (aç, katkı, kapanış, bitiş)
+  ve konsorsiyum (kuruluş, ortak alım) doğrudan işletiliyor, sonuçları,
+  canlı pazarın uzak günleri ve ayarlar ize giriyor (Codex #64). Moda
+  için takvim yetmiyordu: kopya ilk modanın gününe alınıp kategori talebi
+  ve moda kategorisinin ürün payları da ize giriyor; moda ağırlığı ya da
+  kategori eki değişince iz değişiyor (Codex #64). Yardımcıların çıktısı
+  da yetmiyordu: moda gününde iki yoklama mağazasıyla (en kalabalık
+  bölgede yalnız moda ürünlü tek yuvalı, en tenha bölgede bütün ürünlü
+  büyük mağaza) gerçek bir pazar günü işletiliyor; ürün başına satış ve
+  bölge başına karşılanmayan talep izde. Satıştaki ya da kapasite
+  bölüşümündeki moda geçişi geri alınınca bu parça değişiyor (elle
+  sınandı). Yoklama tek projeyi açtığı için bütün projelerin sahası da
+  (bugün ve bir proje bittikten sonra) ve tercih ettikleri arketipler
+  izde (Codex #64).
+- **Katkı tablosu:** ilk beş ve dışarıda kalan oyuncu, gerçek sırasıyla
+  (`projectTable`). Önce sıra kesilmiş diziden okunuyordu; yedinci oyuncu
+  altıncı görünüyordu (Codex #64).
+
+**Ayrıcalık neden bakım indirimi** (20 tohum, 720 gün; vekil oyuncu
+katkıyı pencerenin son günü lideri geçecek kadar veriyor, 0,5–3,3 M ₺):
+
+| Sponsor ayrıcalığı | Pasife göre net değer | Zafer günü farkı |
+|---|---|---|
+| Çekicilik +%8 (ilk sürüm) | 0,993 ± 0,003 | +2,5 ± 1,7 |
+| Çekicilik +%20 | 0,993 ± 0,004 | +2,3 ± 1,8 |
+| Marka +0,15 | 0,992 ± 0,003 | +2,7 ± 1,5 |
+| + bakım −%20 | 0,999 ± 0,003 | −0,1 ± 1,7 |
+| + bakım −%30 (son) | 1,005 ± 0,004 | −2,0 ± 2,1 |
+
+Son iki satırın pasif kolu bakım −%20'li koşu (rakip sponsorun pasif
+oyuncuya etkisi ölçülemeyecek kadar küçük, aşağıda).
+
+- Çekicilik satışa dönmüyordu: bölgedeki mağazaların çoğu kapasitenin
+  %87–100'ünde. Doğrudan ölçümde 60 günde +%8 çekicilik ~60 B ₺ kâr
+  getirdi; kazanmanın bedeli ~750 B ₺.
+- Bakım indirimi kapasiteden bağımsız ve bölgede ne kadar bina varsa o
+  kadar değerli: soru "bu bölgede ne kadar varım".
+- Her 20 günde kasanın %5'ini veren oyuncu her projeyi kazanıyor ama
+  kaybediyor: zafer +11 ± 3 gün, net değer ×0,93, 16/20 zafer. Az ve
+  zamanında vermek ödülleniyor, körü körüne vermek cezalandırılıyor.
+- Hiç vermeyen oyuncu etkilenmiyor (rakip sponsor olsa da: net değer
+  ×1,01, zafer −1 ± 3 gün).
+
+**Denge sınavında değişen kontrol: ihraç kalkanının tohumları.**
+- Proje bitince bölgede ve komşularda talep kalıcı artıyor, arsa
+  değerleniyor; en çok bölgede bulunan oyuncu en çok kazanıyor. Seed 1'de
+  savunmasız yavaş oyuncu 700. günde %6 daha zengin ve baskıncının %90
+  eşiğinin üstünde kalıyor (79,2 > 75,6 M ₺): baskın başlamıyor.
+- 20 tohumda savunmasız düşüş oranı değişmiyor: projesiz 4/20 (1, 4, 9,
+  13), projeli 3/20 (9, 13, 17). Tehdit başka tohumlara kayıyor.
+- Kalkan kontrolleri tehdidin gerçekleştiği tohumlarda: 9, 13, 17 (önce
+  7, 1, 2, 9; 7 ve 2 canlı pazarla zaten ölçüm dışıydı). İhraç üçünü de
+  ayakta tutuyor, geri alımla üçü de kilitli.
+- Önce baskıncının katkı yapmaması denendi (37b'deki kampanya dersi):
+  seed 1'i değiştirmedi; sebep rakibin nakdi değil oyuncunun büyümesi.
+
+**Doğrulama.**
+- Birim testleri (`projects.test.ts`, 8 test):
+  - takvim, kamu sahası, haber ve gündem;
+  - katkı kuralları (en küçük, kasasız, kapalı pencere);
+  - rakip bütçesi ve rakipler donukken katkı olmaması;
+  - sponsor, şantiye, simge yapı, kalıcı etki, bayrak kapanınca etkinin
+    kalkması;
+  - ayrıcalığın hızlı yatırım tahmininde ve defterde aynı çarpanla
+    görünmesi;
+  - laboratuvar;
+  - lig tekrarı.
+- i18n tamlık testi projeleri ve yeni yapıları kapsıyor.
+- Oynanış testi: "Şehir projesi" bölümü (5 kontrol, duman koşusunda):
+  gündem çipi, panel, "Öne geç", saha notu, konsol.
+
+
+### Tur 37d-3 — Rakip konsorsiyumu: öndeki pasif oyuncuya ortak baskın
+
+Tek baskıncı yalnızca kendinden belirgin küçüğe saldırıyor (net değer
+< %90). Bir kez öne geçen oyuncu baskından kurtuluyordu: 400. günde el
+çeken vekil on tohumun onunda 1200. güne ayakta kaldı ve 594–768. günlerde
+zafere de ulaştı, kasasında 160–230 M ₺ atıl dururken. Kullanıcı "rakip
+konsorsiyumu"nu seçti (`content/src/consortium.ts`,
+`core/src/systems/consortium.ts`).
+
+- **Koşullar:** 300. günden sonra, zaferden önce. Oyuncu en güçlü rakibin
+  en az 1,3 katı, kasa net değerin en az %30'u ve son 90 günde yeni bina
+  yok. Kasa payı tek başına ayırt etmiyor (etkin vekilin kasası da net
+  değerin ~%70'i); asıl ölçü duran yatırım.
+- **Akış:** en büyük 2–3 rakip güç birliği yapıyor; duyuru ve 30 günlük
+  savunma penceresi, sonra her gün ortak alım. Günlük tavan tek baskıncı
+  tavanının 0,35 katı (Dengeli'de %1,225); bedeli üyeler kasalarından
+  paylaşıyor, hisseler önderin hesabına. Böylece kontrol, %10/%25/%40
+  uyarıları ve geri alım kilidi tek baskıncıyla aynı yoldan işliyor.
+- **Savunma:** yatırıma dönmek (kuruluştan bu yana üç yeni bina ya da kasa
+  net değerin %20'sinin altına), kontrolü kilitlemek (halka arz + geri
+  alım), ya da öndeliğin 1,1 katın altına inmesi. Zafer gelince süren
+  konsorsiyum dağılıyor. Dağılınca 120 gün soğuma; topladıkları hisse
+  önderde kalıyor.
+- İlk ölçü "kasanın dörtte biri yeni binalara"ydı: 50 M ₺ kasada 12 M ₺,
+  30 günde etkin oynayan vekilin bile ulaşamadığı bir eşik. Yatırıma dönen
+  oyuncu da düşüyordu (10 tohumda 9); ölçü "üç yeni bina" oldu.
+- **Yalnız oynanan şehirde:** uzaktaki şehir tanımı gereği pasif (yerel
+  müdür bina kurmuyor); orada konsorsiyum yok, şehirden ayrılınca süren
+  konsorsiyum dağılıyor. Adım motorun gününde, net değerin günlük
+  hesabından sonra.
+- **Arayüz:** gündemde "Konsorsiyum" çipi (pencerede geri sayım, alımda
+  pay ve kontrol eşiğine ilerleme); tıklayınca borsa paneli. Önderin tek
+  baskıncı çipi tekrarlanmıyor. Yardım adımı.
+- **Belirlenimci:** zar yok; koşullar ve takvim durumdan (lig adil).
+  Bayrak `flags.consortium`; baskınlar, rakipler ya da olaylar
+  (laboratuvar) kapalıyken de yok.
+
+**Ölçüm** (10 tohum, Dengeli, 1000 gün):
+
+| Oyuncu | Konsorsiyum | Sonuç |
+|---|---|---|
+| Etkin (vekil hep 5 günde bir) | hiç kurulmuyor | 10/10 zafer |
+| 400. günde el çeken | 489. günde | 9/10 devralınıyor (~560. gün) |
+| El çekip uyarıda yatırıma dönen | kuruluyor, dağılıyor | 10/10 ayakta, 10/10 zafer |
+
+İlk ayarda (60 gün, tavan 0,5, zafer sonrası da) etkin vekil de zaferden
+sonra şehir dolup bina kurmayı bırakınca 10 tohumun 6'sında düşüyordu;
+konsorsiyum artık zafer yolundaki pasifliği cezalandırıyor, serbest oyun
+güvende.
+
+**Denge sınavı:** yeni bölüm "Rakip konsorsiyumu: güçlü ama pasif oyuncu"
+(3 tohum): el çeken lider düşüyor (560/560/570), uyarıda yatırıma dönen
+ayakta ve zafere ulaşıyor (608/680/592). Mevcut 288 kontrolün hepsi
+değişmeden geçiyor.
+
+**Doğrulama.**
+- Birim testleri (`consortium.test.ts`, 7 test): kuruluş koşulları,
+  duyuru ve gündem; pencerede alım yok; ortak alım (tavan, bedeli üyeler,
+  hisse önderde); savunmasız pasif lider devralınıyor; üç yeni binayla
+  dağılma ve soğuma; kilit ve zaferle dağılma, zaferden sonra kurulmama;
+  etkin oyuncuya kurulmama; bayraklar, uzak şehir ve zar.
+- Oynanış testi: "Rakip konsorsiyumu" bölümü (4 kontrol, duman koşusunda).
+
 ---
 
 ## 3. Ölçülen durum
@@ -2935,11 +3203,11 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi) |
-| Birim testi | **361 test** (`pnpm test`; Tur 24'te render paketi de) |
-| Denge testi | **288 kontrol, hepsi geçiyor** (20 bölüm, süreleriyle; ~11 dk) |
-| Tarayıcı testi | **382 kontrol, hepsi geçiyor**, 0 konsol hatası (~17–25 dk); duman koşusu 121 (~5 dk, rehber dahil) |
+| Birim testi | **390 test** (`pnpm test`; Tur 24'te render paketi de) |
+| Denge testi | **290 kontrol, hepsi geçiyor** (21 bölüm, süreleriyle; ~12 dk) |
+| Tarayıcı testi | **393 kontrol, hepsi geçiyor**, 0 konsol hatası (~17–25 dk); duman koşusu 132 (~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + duman oynanışı |
-| Kapsam | 35 bina · 25 ürün · 7 kategori · 8 rakip profili · 10 CEO · 22 olay (11 şehir + 11 sektör) · 2 kriz · 12 karar kartı · 70 rakip sözü · 5 fırsat balonu · 8 görev türü · 10 şehir yapısı (6 siluet) |
+| Kapsam | 35 bina · 25 ürün · 7 kategori · 8 rakip profili · 10 CEO · 22 olay (11 şehir + 11 sektör) · 2 kriz · 12 karar kartı · 70 rakip sözü · 5 fırsat balonu · 8 görev türü · 4 mevsim · 9 moda ürünü · 17 şehir yapısı (6 siluet) · 6 şehir projesi |
 
 ### Render (Tur 6 sonrası)
 

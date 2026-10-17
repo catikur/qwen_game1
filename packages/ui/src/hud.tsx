@@ -829,6 +829,21 @@ export function ActiveEvents(): ReactElement | null {
           </button>
         );
         break;
+      case 'consortium':
+        // Rakip konsorsiyumu (Tur 37d-3): savunma araçları borsa panelinde.
+        chip = (
+          <button
+            type="button"
+            className={`event-chip raid-chip consortium-chip urgency-${item.urgency}`}
+            onClick={() => togglePanel('bourse')}
+            title={t('hud.agenda.consortiumTitle')}
+          >
+            <span className="agenda-label">{t('hud.agenda.consortium')}</span>
+            {item.label}
+            {days}
+          </button>
+        );
+        break;
       case 'order':
         chip = (
           <button
@@ -965,6 +980,36 @@ export function ActiveEvents(): ReactElement | null {
             <span className="goal-chip-bar" aria-hidden="true">
               <span style={{ width: `${Math.round((item.progress ?? 0) * 100)}%` }} />
             </span>
+            {days}
+          </button>
+        );
+        break;
+      case 'project':
+        // Şehir projesi (Tur 37d): katkı tablosu ve düğmeler panelde.
+        chip = (
+          <button
+            type="button"
+            className={`event-chip project-chip urgency-${item.urgency} tone-${item.tone}`}
+            onClick={() => togglePanel('project')}
+            title={t('hud.agenda.projectTitle')}
+          >
+            <span className="agenda-label">{t('hud.agenda.project')}</span>
+            {item.label}
+            {days}
+          </button>
+        );
+        break;
+      case 'fad':
+        // Ürün modası (Tur 37d): rekabet panelindeki pazar nabzı ayrıntıyı veriyor.
+        chip = (
+          <button
+            type="button"
+            className="event-chip fad-chip tone-good"
+            onClick={() => togglePanel('rivalry')}
+            title={t('hud.agenda.fadTitle')}
+          >
+            <span className="agenda-label">{t('hud.agenda.fad')}</span>
+            {item.label}
             {days}
           </button>
         );

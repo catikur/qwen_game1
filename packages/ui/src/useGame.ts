@@ -25,6 +25,7 @@ export interface ViewState {
     | 'chain'
     | 'rivalry'
     | 'auction'
+    | 'project'
     | 'bourse'
     | 'company'
     | 'rivals'

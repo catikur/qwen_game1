@@ -125,6 +125,8 @@ export const commands: Record<keyof typeof trCommands, string> = {
 
   // agenda.ts — agenda labels
   'core.agenda.raid': '{name} holds {percent}% of your shares',
+  'core.agenda.consortiumWarning': '{leader} and {count} partners: buying in',
+  'core.agenda.consortiumBuying': '{leader} consortium holds {percent}% of your shares',
   'core.agenda.order': '{name} {percent}%',
   'core.agenda.orderWaitingCash': '{name} {percent}% · waiting for cash',
   'core.agenda.strike': 'Strike',
@@ -142,6 +144,10 @@ export const commands: Record<keyof typeof trCommands, string> = {
   'core.agenda.campaign': '{name}: {category} attack',
   'core.agenda.quests': '{month} quests {done}/{total}',
   'core.agenda.questsReady': 'Reward ready: {count} quest(s)',
+  'core.agenda.fad': '{good} fad',
+  'core.agenda.projectRank': '{project}: you are #{rank}',
+  'core.agenda.projectOpen': '{project}: contributions open',
+  'core.agenda.projectBuilding': '{project} under construction',
 
   // chain.ts — chain card
   'core.chain.stateOwn': 'Yours',

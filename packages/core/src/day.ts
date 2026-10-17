@@ -4,6 +4,8 @@ import { runCrisisTick } from './systems/economy';
 import { runCardTick } from './systems/cards';
 import { runRivalryTick } from './systems/rivalry';
 import { runBubbleTick } from './systems/opportunities';
+import { runLivingTick } from './systems/living';
+import { runProjectTick } from './systems/projects';
 import { runEntrantTick } from './systems/entrants';
 import { runCouncilTick } from './systems/council';
 import { runLaborTick } from './systems/labor';
@@ -39,6 +41,8 @@ export function simulateCityDay(state: GameState): void {
 
   runEventTick(state);
   runEraTick(state);
+  // Canlı pazar (Tur 37d): mevsim dönümü, moda ve eğilim haberleri; çarpanlar durumsuz.
+  runLivingTick(state);
   // Kriz takvimi (Tur 37a): dönemin üstüne binen sert ve uzun şok.
   runCrisisTick(state);
   // İmar takvimi sözleşmeden ÖNCE: açılış günü gelen bir inşaat
@@ -48,6 +52,8 @@ export function simulateCityDay(state: GameState): void {
   // aynı gün üretilen teklif güncel takvimi görsün.
   runCouncilTick(state);
   runContractTick(state);
+  // Şehir projesi (Tur 37d): katkı penceresi, sponsor, inşaat ve bitiş.
+  runProjectTick(state);
   // Karar kartı (Tur 37b) işgücünden ÖNCE: sendika baskısına dokunan
   // seçenek aynı günün talebine yansısın.
   runCardTick(state);

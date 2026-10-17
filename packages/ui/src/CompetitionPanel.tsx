@@ -1,7 +1,18 @@
 import type { ReactElement } from 'react';
-import { formatPercent } from '@capital/content';
-import { competitionCards, formatMoney, getPlayer, moveTotalCost } from '@capital/core';
-import type { CompetitionArm, CompetitionCard, CompetitionMove } from '@capital/core';
+import { CATEGORIES, CONSUMER_CATEGORIES, GOOD_BY_ID, TREND, formatPercent } from '@capital/content';
+import {
+  activeFad,
+  competitionCards,
+  formatMoney,
+  getPlayer,
+  livingDemand,
+  livingEnabled,
+  moveTotalCost,
+  seasonMultiplier,
+  seasonOf,
+  trendAt,
+} from '@capital/core';
+import type { CompetitionArm, CompetitionCard, CompetitionMove, GameState } from '@capital/core';
 import { useGame, useGameState } from './useGame';
 import { t } from './i18n';
 
@@ -24,12 +35,16 @@ export function CompetitionPanel(): ReactElement {
 
   if (cards.length === 0) {
     return (
-      <p className="muted">{t('app.rivalry.empty')}</p>
+      <div className="rivalry">
+        <MarketPulse state={state} />
+        <p className="muted">{t('app.rivalry.empty')}</p>
+      </div>
     );
   }
 
   return (
     <div className="rivalry">
+      <MarketPulse state={state} />
       {cards.map((card) => (
         <CompetitionCardView key={card.category} card={card} />
       ))}
@@ -39,6 +54,69 @@ export function CompetitionPanel(): ReactElement {
 
 function pct(value: number): string {
   return formatPercent(Math.round(value * 100));
+}
+
+/** Çarpanın 1'den farkı, işaretli: "+%6", "−%3", "%0". */
+function signed(multiplier: number): string {
+  const change = Math.round((multiplier - 1) * 100);
+  if (change === 0) return formatPercent(0);
+  return `${change > 0 ? '+' : '−'}${formatPercent(Math.abs(change))}`;
+}
+
+/**
+ * Pazar nabzı (Tur 37d): kategorilerin bugünkü talep çarpanı ve nereye
+ * gittiği. Eğilimin hedefi ve süresi açık — "erken okuyan kazanır" ancak
+ * okunabilen bir şeyse doğru.
+ */
+function MarketPulse({ state }: { state: GameState }): ReactElement | null {
+  if (!livingEnabled(state)) return null;
+  const day = state.time.day;
+  const season = seasonOf(day);
+  const fad = activeFad(state);
+  const fadGood = fad ? GOOD_BY_ID[fad.goodId] : undefined;
+  return (
+    <section className="market-pulse" data-market-pulse aria-label={t('app.rivalry.pulse.title')}>
+      <header className="pulse-head">
+        <span className="pulse-title">{t('app.rivalry.pulse.title')}</span>
+        <span className="pulse-season" data-season={season.id}>
+          {t('app.rivalry.pulse.season', { season: season.name })}
+        </span>
+      </header>
+      <p className="muted pulse-lead">{t('app.rivalry.pulse.lead')}</p>
+      <ul className="pulse-list">
+        {CONSUMER_CATEGORIES.map((category) => {
+          const trend = trendAt(state.meta.seed, category, day);
+          const direction =
+            trend.target - trend.value > TREND.arrowThreshold
+              ? 'up'
+              : trend.value - trend.target > TREND.arrowThreshold
+                ? 'down'
+                : 'flat';
+          const total = livingDemand(state, category, fad);
+          const hasFad = fadGood?.category === category;
+          return (
+            <li key={category} className="pulse-row" data-pulse={category}>
+              <span className="pulse-name">
+                <span className="chain-dot" style={{ background: CATEGORIES[category].color }} />
+                {CATEGORIES[category].name}
+              </span>
+              <strong className={`pulse-total ${total >= 1 ? 'pos' : 'neg'}`}>{signed(total)}</strong>
+              <span className={`pulse-trend trend-${direction}`} title={t('app.rivalry.pulse.trendTitle')}>
+                <span aria-hidden="true">{direction === 'up' ? '↗' : direction === 'down' ? '↘' : '→'}</span>{' '}
+                {t('app.rivalry.pulse.trend', { target: signed(trend.target), days: Math.max(0, trend.endDay - day) })}
+              </span>
+              <span className="pulse-chip">{t('app.rivalry.pulse.seasonChip', { change: signed(seasonMultiplier(day, category)) })}</span>
+              {hasFad && fad && fadGood && (
+                <span className="pulse-chip pulse-fad">
+                  {t('app.rivalry.pulse.fad', { good: fadGood.name, days: Math.max(0, fad.endDay - day) })}
+                </span>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
 }
 
 function CompetitionCardView({ card }: { card: CompetitionCard }): ReactElement {

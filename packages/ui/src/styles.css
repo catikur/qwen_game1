@@ -2486,6 +2486,306 @@ button.icon {
   gap: 18px;
 }
 
+/* ---------- Şehir projesi (Tur 37d) ---------- */
+
+.project-chip {
+  font-weight: 800;
+  border-color: color-mix(in srgb, var(--brass) 60%, transparent);
+}
+
+.project-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.project-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--tint-1);
+}
+
+.project-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.project-head h3 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 20px;
+  text-wrap: balance;
+}
+
+.project-where {
+  padding: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent);
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.project-days {
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+  color: var(--on-accent);
+  background: var(--brass);
+}
+
+.project-pitch,
+.project-privilege,
+.project-mine,
+.project-sponsor,
+.project-note,
+.project-day {
+  margin: 0;
+  font-size: 13px;
+}
+
+.project-effects {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.project-label {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--muted);
+}
+
+.project-neighbours {
+  font-size: 12px;
+}
+
+.project-standings {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.project-row {
+  display: grid;
+  grid-template-columns: 18px 24px minmax(80px, 1fr) minmax(60px, 1.2fr) auto;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.project-row.is-player .project-name {
+  font-weight: 800;
+  color: var(--accent);
+}
+
+.project-rank {
+  font-weight: 800;
+  color: var(--muted);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.project-dot {
+  width: 14px;
+  height: 14px;
+  margin: 0 5px;
+  border-radius: 50%;
+}
+
+.project-bar {
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--tint-3);
+}
+
+.project-bar > span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+}
+
+.project-amount {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.project-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.project-history h3 {
+  margin: 0 0 6px;
+  font-family: var(--font-display);
+  font-size: 16px;
+}
+
+.project-history ul {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 13px;
+}
+
+.project-site-note {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 8px 0 0;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 700;
+  background: color-mix(in srgb, var(--brass) 14%, transparent);
+}
+
+@media (max-width: 520px) {
+  .project-row {
+    grid-template-columns: 18px 24px 1fr auto;
+  }
+
+  .project-bar {
+    display: none;
+  }
+}
+
+/* ---------- Pazar nabzı (Tur 37d) ---------- */
+
+.market-pulse {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--tint-1);
+}
+
+.pulse-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.pulse-title {
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.pulse-season {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.pulse-lead {
+  margin: 0;
+  font-size: 12px;
+}
+
+.pulse-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pulse-row {
+  display: grid;
+  grid-template-columns: minmax(96px, 1.2fr) 52px minmax(120px, 1.6fr) auto;
+  align-items: center;
+  gap: 4px 10px;
+  font-size: 13px;
+}
+
+.pulse-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 700;
+}
+
+.pulse-total {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.pulse-trend {
+  font-size: 12px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.pulse-trend.trend-up {
+  color: var(--good);
+}
+
+.pulse-trend.trend-down {
+  color: var(--bad);
+}
+
+.pulse-chip {
+  justify-self: start;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+  background: var(--tint-2);
+  white-space: nowrap;
+}
+
+.pulse-fad {
+  grid-column: 1 / -1;
+  color: var(--on-accent);
+  background: var(--accent);
+}
+
+/* Dar ekranda iki satır: ad · toplam, sonra eğilim · mevsim; moda altta tam genişlik. */
+@media (max-width: 520px) {
+  .pulse-row {
+    grid-template-columns: 1fr auto;
+  }
+
+  .pulse-chip {
+    justify-self: end;
+  }
+
+  .pulse-fad {
+    justify-self: start;
+  }
+}
+
+.fad-chip {
+  font-weight: 800;
+  border-color: color-mix(in srgb, var(--accent) 60%, transparent);
+}
+
 .rival-card {
   border: 1px solid var(--line);
   border-radius: var(--radius);
