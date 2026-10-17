@@ -2781,7 +2781,9 @@ fırsat balonları ve her ay dönen kısa görevler.
   değişirken eskisini değerlendirmediği için panonun son gününde yapılan
   eylem (mağaza, parsel, kasaya giren para, net değeri yeniden hesaplayan
   aktarım) kayboluyordu (Codex #63). Görev hemen tamamlanınca ödülü aynı
-  gün alınabiliyor.
+  gün alınabiliyor. Gün arasında geçme görevi güncel net değere bakıyor
+  (`netWorthNow`: kayıtlı değeri ve geçmişi değiştirmeden); ödül, balon
+  ve indirimli parsel net değeri kayıt yenilenmeden de değiştiriyor.
 - Hedef, pano kurulurken bugünkü şehirden türüyor. Sayaç görevleri
   panodan sonrasını sayıyor.
 - Ödül: kâr eğiliminin 0,4–0,75 günü (10 B – 2,5 M ₺), pano kurulurken
@@ -2928,7 +2930,7 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi) |
-| Birim testi | **359 test** (`pnpm test`; Tur 24'te render paketi de) |
+| Birim testi | **360 test** (`pnpm test`; Tur 24'te render paketi de) |
 | Denge testi | **288 kontrol, hepsi geçiyor** (20 bölüm, süreleriyle; ~11 dk) |
 | Tarayıcı testi | **382 kontrol, hepsi geçiyor**, 0 konsol hatası (~17–25 dk); duman koşusu 121 (~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + duman oynanışı |

@@ -459,6 +459,30 @@ describe('görev panosu', () => {
     assert.equal(city.quests.items[0]!.doneDay, city.time.day, 'aktarımla geçilen rakip sayılmadı');
   });
 
+  test('son gün ödülü alınca rakibi geçen oyuncunun geçme görevi hemen sayılıyor (Codex #63)', () => {
+    const engine = play(3, 31);
+    const state = engine.getState();
+    recomputeNetWorth(state);
+    const player = getPlayer(state);
+    const rival = Object.values(state.companies).find((c) => !c.isPlayer)!;
+    rival.cash += Math.max(0, player.netWorth - rival.netWorth) + 100_000;
+    recomputeNetWorth(state);
+    const gap = rival.netWorth - player.netWorth;
+    assert.ok(gap > 0);
+    const history = player.netWorthHistory.length;
+    state.quests = {
+      startDay: state.time.day - 20,
+      endDay: state.time.day + 1,
+      items: [
+        { defId: 'producer', base: 0, target: 1, reward: Math.ceil(gap) + 50_000, doneDay: state.time.day - 2 },
+        { defId: 'overtake', base: 0, target: 1, reward: 10_000, rivalId: rival.id, rivalName: rival.name },
+      ],
+    };
+    assert.ok(engine.dispatch({ type: 'CLAIM_QUEST', index: 0 }).ok);
+    assert.equal(state.quests.items[1]!.doneDay, state.time.day, 'ödülle geçilen rakip sayılmadı');
+    assert.equal(player.netWorthHistory.length, history, 'komut net değer geçmişine örnek ekledi');
+  });
+
   test('bayrak kapalıyken pano yok', () => {
     const engine = new GameEngine(createNewGame({ seed: 3 }));
     engine.getState().flags.quests = false;

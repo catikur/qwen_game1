@@ -7,7 +7,7 @@ import { createRng, nextFloat, pickWeighted } from '../rng';
 import { formatMoney, nextMonthStart, dayOfMonth } from '../selectors';
 import { purchaseBlocker } from '../actions';
 import { profitTrend } from './cards';
-import { tilePrice } from './city';
+import { netWorthNow, tilePrice } from './city';
 import type { BubbleState, CommandResult, CompanyState, GameState, QuestBoard, QuestState } from '../types';
 
 /**
@@ -318,8 +318,11 @@ function makeQuest(state: GameState, def: QuestDef, endDay: number): QuestState 
   }
 }
 
-/** Görevin bugünkü değeri (hedefle aynı birimde). */
-export function questValue(state: GameState, board: QuestBoard, quest: QuestState): number {
+/**
+ * Görevin bugünkü değeri (hedefle aynı birimde). `live`: gün arasında
+ * (komuttan sonra) geçme görevi kayıtlı değil güncel net değere bakıyor.
+ */
+export function questValue(state: GameState, board: QuestBoard, quest: QuestState, live = false): number {
   const player = state.companies[state.playerCompanyId];
   if (!player) return 0;
   switch (quest.defId) {
@@ -338,7 +341,10 @@ export function questValue(state: GameState, board: QuestBoard, quest: QuestStat
     case 'overtake': {
       // Rakip oyundan çıktıysa (devralma, iflas) yarış bitti: geçilmiş sayılıyor.
       const rival = quest.rivalId ? state.companies[quest.rivalId] : undefined;
-      return !rival || player.netWorth > rival.netWorth ? 1 : 0;
+      if (!rival) return 1;
+      const mine = live ? netWorthNow(state, player.id) : player.netWorth;
+      const theirs = live ? netWorthNow(state, rival.id) : rival.netWorth;
+      return mine > theirs ? 1 : 0;
     }
     case 'bubble':
       return (state.bubblesCaught ?? 0) - quest.base;
@@ -405,15 +411,15 @@ function completeQuest(state: GameState, quest: QuestState): void {
  * alınan parsel, kasaya giren para ya da net değeri yeniden hesaplayan bir
  * aktarım ertesi günün adımında pano yenilenirken kaybolurdu (Codex #63).
  * Görev hemen tamamlanınca ödülü aynı gün alınabiliyor. Geçme görevi
- * kayıtlı net değerden okuyor: onu değiştiren komut (holding aktarımı)
- * zaten yeniden hesaplıyor.
+ * güncel net değere bakıyor (`netWorthNow`): ödül, balon ya da indirimli
+ * parsel net değeri kayıt yenilenmeden de değiştiriyor.
  */
 export function evaluateCommandQuests(state: GameState): void {
   const board = state.quests;
   if (!board || !questsEnabled(state) || state.gameOver || state.time.day >= board.endDay) return;
   for (const quest of board.items) {
     if (quest.doneDay !== undefined) continue;
-    if (questValue(state, board, quest) >= quest.target) completeQuest(state, quest);
+    if (questValue(state, board, quest, true) >= quest.target) completeQuest(state, quest);
   }
 }
 

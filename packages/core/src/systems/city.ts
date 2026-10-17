@@ -218,6 +218,33 @@ export function recomputeNetWorth(state: GameState): void {
   withBuildingIndex(state, () => netWorthStep(state));
 }
 
+/**
+ * Net değer formülü: kasa + arsa + bina defteri − borç + portföy, kurucu
+ * payıyla. Günlük adım ve `netWorthNow` aynı formülü kullanıyor.
+ */
+function worthOf(state: GameState, company: GameState['companies'][string], assets: number): number {
+  return (company.cash + assets - company.debt + portfolioValue(state, company.id)) * ownerFraction(company);
+}
+
+/**
+ * Bir şirketin ŞU ANKİ net değeri, kayda yazmadan: kayıtlı değeri ve net
+ * değer geçmişini değiştirmiyor. Gün arasında (komuttan sonra) güncel
+ * değere bakmak için; kayıtlı değeri ertesi günün rakip kararları okuyor,
+ * o değişmemeli (Codex #63).
+ */
+export function netWorthNow(state: GameState, companyId: string): number {
+  const company = state.companies[companyId];
+  if (!company) return 0;
+  let assets = 0;
+  for (const tile of state.map.tiles) if (tile.ownerId === companyId) assets += tile.landValue;
+  for (const building of Object.values(state.buildings)) {
+    if (building.companyId !== companyId) continue;
+    const def = BUILDING_BY_ID[building.defId];
+    if (def) assets += def.cost * BUILDING_BOOK_RATIO;
+  }
+  return worthOf(state, company, assets);
+}
+
 function netWorthStep(state: GameState): void {
   const assets: Record<string, number> = {};
   for (const id of Object.keys(state.companies)) assets[id] = 0;
@@ -244,9 +271,7 @@ function netWorthStep(state: GameState): void {
     //
     // Sermaye artırımı yapmış şirkette değerin yatırımcı payı düşer
     // (Tur 19): net değer, şirketin KURUCUYA düşen kısmı.
-    company.netWorth =
-      (company.cash + (assets[company.id] ?? 0) - company.debt + portfolioValue(state, company.id)) *
-      ownerFraction(company);
+    company.netWorth = worthOf(state, company, assets[company.id] ?? 0);
     company.netWorthHistory.push(Math.round(company.netWorth));
     if (company.netWorthHistory.length > 120) company.netWorthHistory.shift();
   }
