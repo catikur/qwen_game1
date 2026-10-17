@@ -5,6 +5,7 @@ import { sharesHeld, sharesOutstanding } from './systems/equity';
 import { creditEnabled, overdraftLimit, overdraftOf } from './systems/credit';
 import { dailyBuyCap, sharesToControl } from './systems/orders';
 import { laborEnabled } from './systems/labor';
+import { crisesEnabled } from './systems/economy';
 import { formatMoney } from './selectors';
 import { tc } from './i18n';
 import type { GameState } from './types';
@@ -299,7 +300,7 @@ export function agenda(state: GameState): AgendaItem[] {
 
   // Kriz (Tur 37a): uyarı evresinde geri sayım krize, kriz evresinde bitişe.
   const crisis = state.crisis ? CRISIS_BY_ID[state.crisis.defId] : undefined;
-  if (state.crisis && crisis) {
+  if (state.crisis && crisis && crisesEnabled(state)) {
     const warning = state.crisis.phase === 'warning';
     items.push({
       kind: 'crisis',

@@ -90,9 +90,13 @@ export function crisesEnabled(state: GameState): boolean {
   return state.flags.crises !== false && state.flags.randomEvents !== false;
 }
 
-/** Şu an etkisi süren kriz (uyarı evresinde değil). */
+/**
+ * Şu an etkisi süren kriz (uyarı evresinde değil). Bayrak kapalıyken yok:
+ * kriz sürerken kapatılan bayrak (ortadan alınmış kayıtla eşli deney)
+ * etkiyi de kaldırıyor, yoksa takvim dururken etki sonsuza dek kalırdı.
+ */
 export function activeCrisis(state: GameState): CrisisDef | null {
-  if (state.crisis?.phase !== 'active') return null;
+  if (!crisesEnabled(state) || state.crisis?.phase !== 'active') return null;
   return CRISIS_BY_ID[state.crisis.defId] ?? null;
 }
 

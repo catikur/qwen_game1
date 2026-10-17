@@ -170,4 +170,20 @@ describe('kriz', () => {
     assert.equal(off.crisis, undefined);
     assert.equal(flagged.crisis, undefined);
   });
+
+  test('kriz sürerken bayrak kapanınca etkisi de kalkıyor', () => {
+    const state = runTo(1);
+    const player = getPlayer(state);
+    const baseRate = overdraftRate(state, player);
+    const baseBuild = buildCost(state, player.id, 'corner_shop');
+    state.crisis = { defId: 'rate_shock', phase: 'active', activeDay: 1, endDay: 150 };
+    assert.ok(overdraftRate(state, player) > baseRate);
+
+    state.flags.crises = false;
+    assert.equal(macroRateDelta(state), 0);
+    assert.equal(overdraftRate(state, player), baseRate);
+    state.crisis = { defId: 'deep_recession', phase: 'active', activeDay: 1, endDay: 150 };
+    assert.equal(buildCost(state, player.id, 'corner_shop'), baseBuild);
+    assert.equal(collectEventModifiers(state).landValueDrift, 0);
+  });
 });
