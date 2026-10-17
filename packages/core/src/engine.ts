@@ -6,6 +6,7 @@ import type { LeadershipMemory } from './leadership';
 import { companyRanking, formatMoney } from './selectors';
 import { runGoalTick } from './systems/goals';
 import { isLoggable, leagueActive, runLeagueTick } from './systems/league';
+import { runScenarioTick, scenarioActive } from './systems/scenario';
 import { lobby } from './systems/council';
 import { respondUnion, setWagePolicy } from './systems/labor';
 import { chooseCard } from './systems/cards';
@@ -137,6 +138,10 @@ export class GameEngine {
     // Lig koşusunda kurallar sabit: herkes aynı şehirde aynı kurallarla.
     if (league && command.type === 'SET_FLAG') {
       return { ok: false, reason: tc('core.engine.leagueRulesLocked') };
+    }
+    // Senaryoda da (Tur 39): yıldızlar aynı kurallarla karşılaştırılabilsin.
+    if (command.type === 'SET_FLAG' && scenarioActive(this.state)) {
+      return { ok: false, reason: tc('core.engine.scenarioRulesLocked') };
     }
     const day = this.state.time.day;
     const result = this.apply(command);
@@ -277,6 +282,21 @@ export class GameEngine {
         state.flags[command.flag] = command.value;
         return { ok: true };
 
+      case 'DISMISS_SCENARIO': {
+        const run = state.scenario;
+        if (!run) return { ok: false, reason: tc('core.engine.noScenario') };
+        if (command.screen === 'brief') {
+          if (run.briefSeen) return { ok: false, reason: tc('core.engine.scenarioBriefSeen') };
+          run.briefSeen = true;
+          // Açılış ekranı kapanınca takvim yürüyor.
+          if (run.finishedDay === undefined) state.time.speed = 1;
+          return { ok: true };
+        }
+        if (run.finishedDay === undefined) return { ok: false, reason: tc('core.engine.scenarioRunning') };
+        run.resultSeen = true;
+        return { ok: true };
+      }
+
       case 'DISMISS_LEAGUE':
         if (!state.league || state.league.finishedDay === undefined) return { ok: false, reason: tc('core.engine.leagueRunning') };
         state.league.resultSeen = true;
@@ -400,6 +420,8 @@ export class GameEngine {
     this.checkOvertaking();
     this.checkLeadership();
     this.checkRaid();
+    // Senaryo günün son net değeri ve devralmasıyla (Tur 39).
+    runScenarioTick(state);
     runLeagueTick(state);
   }
 

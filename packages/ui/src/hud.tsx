@@ -19,6 +19,7 @@ import { AuctionChip } from './AuctionPanel';
 import { ghostValueAt, useGhost } from './LeaguePanel';
 import { useCollapsible } from './collapse';
 import { reopenDecisionCard } from './DecisionCard';
+import { scenarioResultPending } from './ScenarioScreens';
 import { useGame, useGameState } from './useGame';
 import type { ViewState } from './useGame';
 import { t } from './i18n';
@@ -553,7 +554,8 @@ export function GameOverScreen({ onNewGame }: { onNewGame: () => void }): ReactE
   const state = useGameState();
   const { run } = useGame();
   const over = state.gameOver;
-  if (!over) return null;
+  // Senaryoda önce senaryonun sonuç ekranı (Tur 39).
+  if (!over || scenarioResultPending(state)) return null;
   // Holding'de bir şehri kaybetmek oyunun sonu değil (Tur 22).
   const alive = aliveDormant(state);
 
@@ -1010,6 +1012,24 @@ export function ActiveEvents(): ReactElement | null {
           >
             <span className="agenda-label">{t('hud.agenda.fad')}</span>
             {item.label}
+            {days}
+          </button>
+        );
+        break;
+      case 'scenario':
+        // Senaryo (Tur 39): hedef, ilerleme ve geri sayım; tıklayınca hedef paneli.
+        chip = (
+          <button
+            type="button"
+            className={`event-chip scenario-chip urgency-${item.urgency} tone-${item.tone}`}
+            onClick={() => togglePanel('goals')}
+            title={t('hud.agenda.scenarioTitle')}
+          >
+            <span className="agenda-label">{t('hud.agenda.scenario')}</span>
+            {item.label}
+            <span className="goal-chip-bar" aria-hidden="true">
+              <span style={{ width: `${Math.round((item.progress ?? 0) * 100)}%` }} />
+            </span>
             {days}
           </button>
         );

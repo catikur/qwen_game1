@@ -12,6 +12,7 @@ import { questsEnabled, questsReady } from './systems/opportunities';
 import { activeFad } from './systems/living';
 import { projectStandings, projectsEnabled } from './systems/projects';
 import { consortiumEnabled, consortiumStake } from './systems/consortium';
+import { scenarioDefOf, scenarioProgress } from './systems/scenario';
 import { formatMoney, monthName } from './selectors';
 import { tc } from './i18n';
 import type { GameState } from './types';
@@ -40,6 +41,7 @@ export type AgendaKind =
   | 'unlock'
   | 'council'
   | 'league'
+  | 'scenario'
   | 'event'
   | 'era'
   | 'crisis'
@@ -311,6 +313,22 @@ export function agenda(state: GameState): AgendaItem[] {
       daysLeft: null,
       label: tc('core.agenda.leagueDone', { week: league.weekId }),
       tone: 'neutral',
+    });
+  }
+
+  // Senaryo (Tur 39): hedef, ilerleme ve kalan süre tek çipte.
+  const run = state.scenario;
+  const scenario = run && run.finishedDay === undefined ? scenarioDefOf(state) : null;
+  const status = scenario ? scenarioProgress(state) : null;
+  if (run && scenario && status) {
+    items.push({
+      kind: 'scenario',
+      key: `scenario:${run.id}`,
+      urgency: status.daysLeft <= 30 ? 2 : 1,
+      daysLeft: status.daysLeft,
+      label: tc('core.agenda.scenario', { title: scenario.title, detail: status.detail }),
+      tone: scenario.goal.kind === 'leadAtEnd' ? (status.ahead ? 'good' : 'bad') : 'neutral',
+      progress: status.progress,
     });
   }
 

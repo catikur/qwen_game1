@@ -4,7 +4,7 @@
 > `pnpm bench` çıktısından; iddialar `pnpm balance` ve `pnpm playtest`
 > tarafından her koşuda doğrulanıyor.
 >
-> Son güncelleme: şema **v6**, 38 tur (Tur 33 denendi ve geri alındı; Tur 34 eski görünüme canlılık ekledi; Tur 35 arayüzü Lite'ın "Cam & Bulut" diline taşıdı; Tur 36 şehre ayrıntı kattı; Tur 37a geç oyuna yönetim yükü, servet vergisi ve kriz dönemleri getirdi; Tur 37b karar kartlarını ve rakip hikâyelerini ekledi; Tur 37c fırsat balonlarını ve aylık görev panosunu getirdi; Tur 37d canlı pazarı, şehir projesi ihalesini ve rakip konsorsiyumunu getirdi; Tur 38 değerlendirme turuydu: geç oyun hızı, gündem ve haber akışı, zorluk eğrisi).
+> Son güncelleme: şema **v6**, 39 tur (Tur 33 denendi ve geri alındı; Tur 34 eski görünüme canlılık ekledi; Tur 35 arayüzü Lite'ın "Cam & Bulut" diline taşıdı; Tur 36 şehre ayrıntı kattı; Tur 37a geç oyuna yönetim yükü, servet vergisi ve kriz dönemleri getirdi; Tur 37b karar kartlarını ve rakip hikâyelerini ekledi; Tur 37c fırsat balonlarını ve aylık görev panosunu getirdi; Tur 37d canlı pazarı, şehir projesi ihalesini ve rakip konsorsiyumunu getirdi; Tur 38 değerlendirme turuydu: geç oyun hızı, gündem ve haber akışı, zorluk eğrisi; Tur 39a senaryo modunu getirdi: Kurtarma ve Krizin ortasında).
 
 ---
 
@@ -3265,6 +3265,97 @@ değişikliğiyle); gündem değişiklikleri ayrı tarayıcı kontrolüyle
 (masaüstü "+N" gizli; telefonda teklif çipi 370 piksel, ekran 390).
 
 
+### Tur 39a — Senaryo modu: çatı, Kurtarma ve Krizin ortasında
+
+Kullanıcı sıradaki tur için senaryo modunu seçti: yedi senaryo, yıldız ve
+bu cihazdaki en iyi sonuç (lig dokunulmuyor). Üç aşamada geliyor; bu aşama
+çatıyı ve ilk iki senaryoyu kuruyor.
+
+**Çatı.**
+- *Tanım içerikte* (`packages/content/src/scenarios.ts`): sabit tohum, şehir
+  boyutu, zorluk, ön tarih günü, süre, hedef, yıldız eşikleri, kurulum.
+- *Ön tarih:* şehir senaryonun tohumuyla kuruluyor ve `preludeDays` gün
+  kendi kendine yaşıyor. Oyuncu sahnede değil (binası yok, kurucu kilidi
+  hisselerini koruyor); rakipler zincirlerini kuruyor. Sonra devir: oyuncunun
+  şirketi baştan kuruluyor ve senaryonun durumuna getiriliyor. Ad ve CEO
+  devirde yazıldığı için ön tarih oyuncudan bağımsız: aynı senaryo her
+  seferinde aynı şehirde (birim testi). Tarayıcı ön tarihi on günlük
+  parçalarla koşuyor, ilerleme çubuğuyla (150–200 gün ~0,6 sn).
+- *Kasa senaryonun kendisi:* CEO'nun başlangıç nakdi çarpanı (2,3 katına
+  kadar) uygulanmıyor; diğer özellikleri geçerli.
+- *Günlük adım* günün sonunda: devralınan oyuncu kaybediyor; hedefe ulaşan
+  ya da süresi dolan koşu bitiyor, oyun duraklıyor; sonra şehir serbest
+  oyuna açık. Senaryo sürerken kurallar kilitli (`SET_FLAG`) ve yeni şehir
+  açılmıyor.
+- *Kayıt:* `state.scenario` seçime bağlı alan, şema sürümü değişmiyor.
+  Başla, bitiş ve sonuç ekranının kapanışı otomatik kaydın 30 saniyesini
+  beklemeden kaydediliyor.
+- *Arayüz:* kurulumda üçüncü oyun türü "Senaryo" (liste, durum, hedef,
+  yıldız eşikleri, cihazdaki en iyi). Oyun duraklamış başlıyor: açılış
+  ekranı durumu ve hedefi anlatıyor. Gündemde senaryo çipi (hedef, ilerleme,
+  geri sayım); tıklayınca hedef panelinin başındaki senaryo bölümü. Sonuç
+  ekranında yıldız, cihazdaki en iyi, "Baştan oyna", "Serbest oyuna devam",
+  "Senaryolar". Sonuç beklerken oyun sonu ve zafer ekranı çekiliyor; aynı
+  gün zafer de geldiyse ekranı sırada bekliyor.
+- *Yerel en iyi:* `capitalforge.scenarios.v1`. Yıldızı çok olan iyi;
+  eşitlikte senaryonun ölçüsü (gün az, öndelik çok). Koşu kuruluş anı ve
+  bitiş günüyle tanınıyor: sonuç ekranı yeniden açılınca ikinci kez
+  sayılmıyor.
+
+**Kurtarma** (seed 7, 150 gün ön tarih, 400 gün, hedef 12 M ₺). Ölçüm ilk
+tasarımı bozdu: "zarar eden şubeler" bu ekonomide yok. Altı mağaza türü ×
+altı bölge yoklandı (150. ve 300. günde, 20 günlük kâr ortalaması): hepsi
+artıda, kalabalık bölgede de. Zararın yeri boşa çalışan destek binaları
+(Ar-Ge ve pazarlama, günde ~2 bin ₺ gider) ve borç. Kurulum:
+- dört küçük şube, rakibin en az mağazası olan bölgelerde (kâr ediyor);
+- şirketin hiç mağazası olmayan elektroniğe odaklı iki Ar-Ge merkezi ve iki
+  pazarlama ofisi (zarar ediyor);
+- 180 günlük 450 bin ₺ kredi, not C. Kaldıraç %40: ilk sürümde 1,2 M ₺ idi,
+  kaldıraç %64'le not ilk gün D'ye düştü, kredi çağrıldı ve şirket 15 günde
+  haczedildi;
+- şehrin en güçlü rakibi hisselerin %30'unda.
+
+| Vekil (400 gün) | Sonuç |
+|---|---|
+| Hiçbir şey yapmayan · yalnızca savunan · yalnızca büyüyen | 130. günde devralınıyor |
+| Beş günde bir kuran, üç günde bir savunan | 348. günde hedefte (1 yıldız) |
+| + boşa çalışan binaları ilk gün yıkan | 259. günde (2 yıldız) |
+| Üç günde bir kuran, her gün savunan, yıkan | 243. günde (2 yıldız) |
+| On beş günde bir kuran | süre doluyor (7,3 M ₺) |
+
+Yıldız eşikleri 300 ve 230 gün: üç yıldız vekilin en keskin oyunundan
+iyisini istiyor. Kazanan koşularda baskıncının payı %44–48'e kadar çıkıyor.
+
+**Krizin ortasında** (seed 42, 200 gün ön tarih, 150 gün, 5 M ₺ kasa, bina
+yok). Durgunluk uyarıda başlıyor, 30 gün sonra etkisi başlıyor, senaryonun
+son günü bitiyor; hedef o gün şehrin en değerli şirketi olmak. Ölçüm iddiayı
+daralttı: kriz rakipleri yavaşlatmıyor (mağazalar kapasitede, talep düşüşü
+satışa inmiyor; lider 150 günde 5,9 → ~20 M ₺) ve hisseleri de ucuzlamıyor
+(fiyat net değerle yükseliyor). Fırsat ucuz inşaat ve gerileyen arsa; metin
+artık yalnız bunu söylüyor.
+
+| Vekil (5 M ₺ kasa) | Bitişte en güçlü rakibe oran |
+|---|---|
+| Kasada bekleyen | ×0,24 |
+| On beş günde bir kuran | ×0,70 |
+| Beş günde bir kuran | **×1,05** (kriz kapalıyken ×0,94) |
+| Üç günde bir kuran | ×1,10 |
+| + krizde rakip hissesi alan | ×1,14–1,22 |
+
+Kasa 4 M ₺'de beş günde bir kuran ×1,004'le sınırdaydı, 6 M ₺'de en keskin
+vekil üç yıldıza ulaşıyordu; 5 M ₺ seçildi. Yıldız eşikleri ×1,2 ve ×1,4.
+
+**Doğrulama.** `pnpm test` 403/403 (yeni `scenario.test.ts`, 9 test:
+kurulum, aynı şehir, Kurtarma ve kriz kurulumları, iki hedef türü, devralma,
+yıldız eşikleri, kural kilidi ve ekranlar, gündem çipi; içerik metinlerinin
+İngilizce kapsamına senaryolar girdi). `pnpm balance`: yeni bölüm
+"Senaryolar: kazanılabilir ama bedava değil" (10 kontrol, ~17 sn). Tarayıcı:
+yeni bölüm "Senaryo modu" (18 kontrol: liste, kurulumdan kalkan seçimler,
+ön tarih ve duraklamış açılış, kural kilidi, gündem çipi, hedef paneli,
+kriz bitiminde sonuç, üç yıldız, yerel en iyi, yenilemede sonuç ve tek
+sayım, serbest oyun, kayıp ekranı, "Baştan oyna").
+
+
 ---
 
 ## 3. Ölçülen durum
@@ -3346,7 +3437,7 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi) |
-| Birim testi | **394 test** (`pnpm test`; Tur 24'te render paketi de) |
+| Birim testi | **403 test** (`pnpm test`; Tur 24'te render paketi de) |
 | Denge testi | **290 kontrol, hepsi geçiyor** (21 bölüm, süreleriyle; ~12 dk) |
 | Tarayıcı testi | **393 kontrol, hepsi geçiyor**, 0 konsol hatası (~17–25 dk); duman koşusu 132 (~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + duman oynanışı |

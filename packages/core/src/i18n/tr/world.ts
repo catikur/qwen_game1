@@ -100,6 +100,22 @@ export const world = {
   'core.league.finishedTitle': 'Lig koşusu bitti: {score}',
   'core.league.finishedBody': '{days} gün doldu. Skorun {score} — koşu kodunu paylaş ya da tabloya gönder.',
 
+  // scenario.ts, systems/scenario.ts — senaryo modu (Tur 39)
+  'core.scenario.startTitle': 'Senaryo: {title}',
+  'core.scenario.rescueRaidTitle': '{name} hisselerini topluyor: %{percent}',
+  'core.scenario.rescueRaidBody':
+    'Pay %50\'yi geçerse şirket gider. Kendi hisseni geri al ya da halka arzla yatırımcı getir (borsa paneli); baskıncı yalnızca kendinden belirgin küçüğe saldırıyor.',
+  'core.scenario.wonTitle': '{title} tamam: {stars} yıldız',
+  'core.scenario.wonBody': 'Sonuç: {score}. Şehir artık serbest oyuna açık; senaryoyu baştan da oynayabilirsin.',
+  'core.scenario.lostTitle': '{title}: başaramadın',
+  'core.scenario.lostTakeover': 'Şirket devralındı. Senaryo aynı şehirde baştan başlayabilir.',
+  'core.scenario.lostTime': 'Süre doldu, hedefe ulaşılamadı. Senaryo aynı şehirde baştan başlayabilir; şehir serbest oyuna da açık.',
+  'core.scenario.scoreDays': '{days} gün',
+  'core.scenario.scoreLead': '×{ratio}',
+  'core.scenario.progressMoney': '{value} / {target}',
+  'core.scenario.progressAhead': 'önde ×{ratio}',
+  'core.scenario.progressBehind': 'liderin %{percent} kadarı',
+
   // events.ts — olay ve dönem kapanışı
   'core.events.endedTitle': '{title} sona erdi',
   'core.events.endedBody': 'Piyasa normale dönüyor.',

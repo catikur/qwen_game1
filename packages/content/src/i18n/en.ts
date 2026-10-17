@@ -629,4 +629,23 @@ export const contentEn: Record<string, string> = {
   'content.project.food_hall.name': 'Covered Bazaar and Food Market',
   'content.project.food_hall.pitch':
     'The historic bazaar is being restored and reopened with a food market. Tourists and locals side by side; the biggest contribution names the bazaar.',
+  'content.scenario.rescue.title': 'Rescue',
+  'content.scenario.rescue.tagline': 'Take over an indebted, loss-making company under a raid.',
+  'content.scenario.rescue.brief':
+    'The previous management built two research centres and two marketing offices for electronics, a category the company has no shops in, and paid for them with a loan. The profit of four small shops cannot carry that weight, and the strongest rival in the city has bought up 30% of the shares.',
+  'content.scenario.rescue.goalText': 'Raise your net worth to {target} within {days} days, without being taken over.',
+  'content.scenario.rescue.facts.0':
+    "A building's window shows its daily profit: demolish a building that works for nothing, or switch its focus to a category you have shops in.",
+  'content.scenario.rescue.facts.1':
+    'If the raider passes 50% the company is gone: buy back your own shares (stock exchange panel). Once the company grows you can also bring in investors with a share issue.',
+  'content.scenario.rescue.facts.2':
+    'The loan runs short; if debt passes half of your assets the rating drops to D and the bank calls the loan.',
+  'content.scenario.crisis.title': 'Into the Crisis',
+  'content.scenario.crisis.tagline': 'A recession starts in a month; your cash is full, your company empty.',
+  'content.scenario.crisis.brief':
+    "The city has been growing for two hundred days and the rivals' chains are in place. Economists are warning of a recession. You run a newly founded company: no buildings, a full cash box.",
+  'content.scenario.crisis.goalText': 'When the crisis ends ({days} days from now), be the most valuable company in the city.',
+  'content.scenario.crisis.facts.0': 'In a recession construction is 15% cheaper and land slips a little every day: a buying window for anyone with cash.',
+  'content.scenario.crisis.facts.1': 'The rivals keep growing; money waiting in the cash box falls behind.',
+  'content.scenario.crisis.facts.2': "At the end your net worth must beat the strongest rival's.",
 };

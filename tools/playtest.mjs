@@ -3082,6 +3082,142 @@ async function finish(browser, consoleErrors) {
     await leagueContext.close();
   }
 
+  // ---------- Senaryo modu (Tur 39) ----------
+  section('Senaryo modu');
+  {
+    const scenarioContext = await browser.newContext({ viewport: { width: 1280, height: 860 } });
+    await scenarioContext.addInitScript(veteran, TUTORIAL_KEY);
+    const sp = await scenarioContext.newPage();
+    const scenarioErrors = [];
+    sp.on('pageerror', (e) => scenarioErrors.push(e.message));
+    sp.on('console', (m) => { if (m.type() === 'error') scenarioErrors.push(m.text()); });
+    await sp.goto('http://127.0.0.1:8811/');
+    await sp.waitForSelector('.newgame', { timeout: 20000 });
+    await sp.locator('.mode-picker [data-mode="scenario"]').click();
+    const cards = await sp.locator('[data-scenario]').count();
+    check('Kurulumda senaryo listesi: her senaryo bir kart, hepsi "Denenmedi"',
+      cards >= 2 && (await sp.locator('[data-scenario-status]:has-text("Denenmedi")').count()) === cards, `${cards} kart`);
+    check('Senaryoda zorluk, şehir boyutu ve rehber seçimi kalkıyor',
+      (await sp.locator('.difficulty-option[data-difficulty]').count()) === 0
+        && (await sp.locator('[data-city-size]').count()) === 0
+        && (await sp.locator('[data-newgame-tutorial]').count()) === 0);
+    await sp.locator('[data-scenario="crisis"]').click();
+    const detail = ((await sp.locator('[data-detail="scenario"] .scenario-detail').textContent()) ?? '').trim();
+    check('Seçilen senaryonun durumu, hedefi ve yıldız eşikleri yazıyor',
+      /Kriz bittiğinde/.test(detail) && /üç yıldız: ×1,40/.test(detail) && /200\. günde başlıyor/.test(detail), detail.slice(0, 120));
+    await sp.fill('.newgame-field input[type="text"]', 'Senaryo Holding');
+    await sp.locator('[data-newgame-start]').click();
+    await sp.waitForSelector('[data-scenario-brief="crisis"]', { timeout: 60000 });
+    const brief = await sp.evaluate(() => {
+      const s = window.__capital.getState();
+      return { day: s.time.day, speed: s.time.speed, crisis: s.crisis?.phase, tutorial: document.querySelector('.coach') !== null };
+    });
+    check('Ön tarihten sonra açılış ekranı: 200. gün, oyun duraklamış, durgunluk uyarıda',
+      brief.day === 200 && brief.speed === 0 && brief.crisis === 'warning', JSON.stringify(brief));
+    await sp.locator('[data-scenario-begin]').click();
+    await sp.waitForTimeout(300);
+    const begun = await sp.evaluate(() => {
+      const c = window.__capital;
+      const speed = c.getState().time.speed;
+      c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+      const locked = c.engine.dispatch({ type: 'SET_FLAG', flag: 'crises', value: false });
+      return { speed, locked: locked.ok, reason: locked.reason ?? '' };
+    });
+    check('"Başla" takvimi yürütüyor; senaryoda kurallar kilitli', begun.speed === 1 && !begun.locked, `hız ${begun.speed} · ${begun.reason}`);
+    await sp.waitForTimeout(300);
+    const chip = ((await sp.locator('.agenda [data-agenda="scenario"]').textContent().catch(() => '')) ?? '').trim();
+    check('Gündemde senaryo çipi: ad, öndelik ve geri sayım', /Krizin ortasında/.test(chip) && /150g/.test(chip), chip);
+    await sp.locator('.agenda [data-agenda="scenario"] button').click();
+    await sp.waitForTimeout(300);
+    check('Senaryo çipi hedef panelini açıyor, senaryo bölümü başta',
+      (await sp.locator('.modal [data-scenario-goals="crisis"]').count()) === 1);
+    await sp.keyboard.press('Escape');
+
+    // Bitiş: kriz bitiminde en değerli şirket — test parayı değil akışı ölçüyor.
+    const won = await sp.evaluate(() => {
+      const c = window.__capital;
+      const s = c.getState();
+      // Üç yıldızın üstü ama zafer eşiğinin altı: zafer ekranı araya girmesin.
+      s.companies[s.playerCompanyId].cash += 40_000_000;
+      let guard = 0;
+      while (s.scenario.finishedDay === undefined && guard++ < 200) c.engine.runDay();
+      c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+      return { day: s.scenario.finishedDay, outcome: s.scenario.outcome, stars: s.scenario.stars, crisis: s.crisis?.phase ?? 'bitti' };
+    });
+    check('Kriz bittiği gün senaryo bitiyor', won.day === 350 && won.crisis === 'bitti', JSON.stringify(won));
+    await sp.waitForSelector('[data-scenario-result="won"]', { timeout: 5000 }).catch(() => null);
+    const stars = await sp.locator('[data-scenario-result] [data-stars]').getAttribute('data-stars').catch(() => null);
+    check('Sonuç ekranı: kazanıldı, üç yıldız, cihazdaki en iyi', stars === '3'
+      && /en iyi sonucun/.test((await sp.locator('[data-scenario-best]').textContent().catch(() => '')) ?? ''), `yıldız ${stars}`);
+    check('Sonuç beklerken zafer ve oyun sonu ekranı çıkmıyor', (await sp.locator('.gameover:not(.scenario-result)').count()) === 0);
+    const stored = await sp.evaluate(() => JSON.parse(localStorage.getItem('capitalforge.scenarios.v1') ?? '{}'));
+    check('En iyi sonuç bu cihazda saklanıyor', stored.crisis?.best?.stars === 3 && stored.crisis.attempts === 1, JSON.stringify(stored.crisis ?? null));
+    await sp.reload();
+    await sp.waitForSelector('[data-scenario-result="won"]', { timeout: 30000 }).catch(() => null);
+    const again = await sp.evaluate(() => JSON.parse(localStorage.getItem('capitalforge.scenarios.v1') ?? '{}').crisis?.attempts);
+    check('Yenilenen sayfada sonuç ekranı geri geliyor (bitişte kayıt), koşu ikinci kez sayılmıyor',
+      (await sp.locator('[data-scenario-result="won"]').count()) === 1 && again === 1, `${again} deneme`);
+    await sp.locator('[data-scenario-continue]').click();
+    await sp.waitForTimeout(300);
+    const free = await sp.evaluate(() => {
+      const c = window.__capital;
+      const speed = c.getState().time.speed;
+      const flag = c.engine.dispatch({ type: 'SET_FLAG', flag: 'crises', value: true }).ok;
+      c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+      return { speed, flag, chip: document.querySelector('.agenda [data-agenda="scenario"]') !== null };
+    });
+    check('"Serbest oyuna devam": takvim yürüyor, kurallar açık, gündem çipi düşüyor', free.speed === 1 && free.flag && !free.chip, JSON.stringify(free));
+
+    // Kayıp: Kurtarma'da baskıncı kontrolü alıyor.
+    await sp.evaluate(() => window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 }));
+    await sp.locator('.topbar-actions [data-panel="saves"]').click();
+    await sp.waitForTimeout(300);
+    await sp.locator('button:has-text("Yeni oyun")').first().click();
+    await sp.waitForSelector('.newgame', { timeout: 10000 });
+    check('Senaryodan dönen oyuncu listeye düşüyor, sonucu kartta',
+      (await sp.locator('.mode-picker [data-mode="scenario"][aria-checked="true"]').count()) === 1
+        && /★★★/.test((await sp.locator('[data-scenario="crisis"] [data-scenario-status]').textContent()) ?? ''));
+    await sp.locator('[data-scenario="rescue"]').click();
+    await sp.locator('[data-newgame-start]').click();
+    await sp.waitForSelector('[data-scenario-brief="rescue"]', { timeout: 60000 });
+    const rescue = await sp.evaluate(() => {
+      const s = window.__capital.getState();
+      const own = Object.values(s.buildings).filter((b) => b.companyId === s.playerCompanyId).length;
+      const raider = s.scenario.rivalId;
+      return { day: s.time.day, own, stake: s.companies[raider]?.shares[s.playerCompanyId] ?? 0, debt: s.companies[s.playerCompanyId].debt };
+    });
+    check('Kurtarma: 150. gün, sekiz bina, baskıncı %30, kredi', rescue.day === 150 && rescue.own === 8 && rescue.stake === 3000 && rescue.debt > 0,
+      JSON.stringify(rescue));
+    await sp.locator('[data-scenario-begin]').click();
+    await sp.evaluate(() => {
+      const c = window.__capital;
+      const s = c.getState();
+      c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+      s.companies[s.scenario.rivalId].shares[s.playerCompanyId] = 5001;
+      c.engine.runDay();
+      c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+    });
+    await sp.waitForSelector('[data-scenario-result="lost"]', { timeout: 5000 }).catch(() => null);
+    check('Devralınan oyuncu: kayıp ekranı, oyun sonu ekranı arkada bekliyor, devam düğmesi yok',
+      (await sp.locator('[data-scenario-result="lost"]').count()) === 1
+        && (await sp.locator('.gameover:not(.scenario-result)').count()) === 0
+        && (await sp.locator('[data-scenario-continue]').count()) === 0);
+    const lostAs = await sp.evaluate(() => {
+      const s = window.__capital.getState();
+      return { name: s.companies[s.playerCompanyId].name, ceo: s.companies[s.playerCompanyId].ceoId };
+    });
+    await sp.locator('[data-scenario-replay]').click();
+    await sp.waitForSelector('[data-scenario-brief="rescue"]', { timeout: 60000 }).catch(() => null);
+    const replay = await sp.evaluate(() => {
+      const s = window.__capital.getState();
+      return { day: s.time.day, over: s.gameOver !== undefined, name: s.companies[s.playerCompanyId].name, ceo: s.companies[s.playerCompanyId].ceoId };
+    });
+    check('"Baştan oyna" aynı senaryoyu aynı ad ve CEO ile yeniden kuruyor',
+      replay.day === 150 && !replay.over && replay.name === lostAs.name && replay.ceo === lostAs.ceo, JSON.stringify(replay));
+    check('Senaryo akışında konsol temiz', scenarioErrors.length === 0, scenarioErrors.slice(0, 2).join(' | '));
+    await scenarioContext.close();
+  }
+
   // ---------- Mobil ----------
   //
   // Bu bölüm eskiden tek satırdı: "dar ekranda yatay taşma yok". O kontrol

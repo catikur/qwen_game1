@@ -11,6 +11,10 @@ export const commands = {
   'core.engine.badCategory': 'Bu kategoriye atanamaz.',
   'core.engine.emptyCompanyName': 'Şirket adı boş olamaz.',
   'core.engine.leagueRunning': 'Lig koşusu sürüyor.',
+  'core.engine.scenarioRulesLocked': 'Senaryoda oyun kuralları değiştirilemez.',
+  'core.engine.noScenario': 'Süren bir senaryo yok.',
+  'core.engine.scenarioBriefSeen': 'Senaryo zaten başladı.',
+  'core.engine.scenarioRunning': 'Senaryo sürüyor.',
   'core.engine.noVictory': 'Henüz bir zafer yok.',
   'core.engine.cityUnchanged': 'Şehir değişmedi.',
   'core.engine.unknownCommand': 'Bilinmeyen komut.',
@@ -76,6 +80,7 @@ export const commands = {
 
   // holding.ts — yeni şehir, şehir değişimi, kasa aktarımı
   'core.holding.leagueNoNewCity': 'Lig koşusunda yeni şehir açılmıyor.',
+  'core.holding.scenarioNoNewCity': 'Senaryo sürerken yeni şehir açılmıyor.',
   'core.holding.lostCityNoOpen': 'Kaybedilen şehirden yeni şehir açılamaz.',
   'core.holding.needVictory': 'Yeni şehir için bu şehirde zafere ulaşmalısın.',
   'core.holding.maxCities': 'Holding en fazla {max} şehir.',
@@ -138,6 +143,7 @@ export const commands = {
   'core.agenda.unlockWave': '{district} ve {count} bölge daha imara açılıyor',
   'core.agenda.league': 'Lig {week}',
   'core.agenda.leagueDone': 'Lig {week} · tablo',
+  'core.agenda.scenario': '{title} · {detail}',
   'core.agenda.council': 'Meclis · {count} önerge',
   'core.agenda.crisisWarning': 'Kriz yaklaşıyor: {title}',
   'core.agenda.campaign': '{name}: {category} saldırısı',

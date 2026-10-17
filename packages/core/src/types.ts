@@ -827,6 +827,8 @@ export interface GameState {
   league?: LeagueState;
   /** Lig koşusunda oyuncunun komut günlüğü: [gün, komut]. */
   commandLog?: LoggedCommand[];
+  /** Senaryo (Tur 39); yoksa serbest oyun ya da lig. */
+  scenario?: ScenarioState;
   /** Belediye meclisi: oturum takvimi, açık önergeler, geçmiş. */
   council?: CouncilState;
   /** Meclisin yürürlükteki kararları (vergi, teşvik, ruhsat). */
@@ -938,6 +940,30 @@ export interface LeagueState {
   resultSeen?: boolean;
 }
 
+/**
+ * Senaryo koşusu (Tur 39). Tanım içerikte (`SCENARIOS`); burada yalnızca
+ * koşunun takvimi ve sonucu.
+ */
+export interface ScenarioState {
+  id: string;
+  /** Oyuncunun sahneye çıktığı gün (ön tarihin sonu). */
+  startDay: number;
+  /** Süre bu günün sonunda doluyor. */
+  endDay: number;
+  /** Kurtarma: hisseleri toplamış baskıncı. */
+  rivalId?: string;
+  /** Açılış ekranı görüldü mü (oyun duraklamış başlıyor). */
+  briefSeen?: boolean;
+  finishedDay?: number;
+  outcome?: 'won' | 'lost';
+  /** 0–3; kaybedilen koşuda 0. */
+  stars?: number;
+  /** Yıldızın ölçüsü: hedefe ulaşılan gün sayısı ya da bitişteki öndelik oranı. */
+  score?: number;
+  /** Sonuç ekranı görüldü mü. */
+  resultSeen?: boolean;
+}
+
 /** Günlükteki tek kayıt: komutun verildiği gün ve komutun kendisi. */
 export type LoggedCommand = [number, GameCommand];
 
@@ -974,6 +1000,8 @@ export type GameCommand =
   | { type: 'DISMISS_VICTORY' }
   /** Lig sonuç ekranını kapatır. */
   | { type: 'DISMISS_LEAGUE' }
+  /** Senaryonun açılış ekranını kapatıp takvimi başlatır ya da sonuç ekranını kapatır (Tur 39). */
+  | { type: 'DISMISS_SCENARIO'; screen: 'brief' | 'result' }
   /** Açık bir meclis önergesine lobi bağışı. */
   | { type: 'LOBBY'; motionId: string; side: 'for' | 'against'; amount: number }
   /** Şirket geneli ücret politikası. */

@@ -23,6 +23,7 @@ export * from './opportunities';
 export * from './living';
 export * from './projects';
 export * from './consortium';
+export * from './scenarios';
 
 /** İçerik sürümü — save migration'ında denge değişikliklerini izlemek için. */
 export const CONTENT_VERSION = 6;

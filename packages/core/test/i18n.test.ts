@@ -21,6 +21,7 @@ import {
   MOTION_TEXT,
   NPC_PROFILES,
   PROJECTS,
+  SCENARIOS,
   QUESTS,
   RIVAL_LINES,
   registerMessages,
@@ -174,6 +175,7 @@ describe('İngilizce sözlükler', () => {
       ['quest', byId(QUESTS), ['title', 'hint']],
       ['season', byId(SEASONS), ['name', 'news']],
       ['project', byId(PROJECTS), ['name', 'pitch']],
+      ['scenario', byId(SCENARIOS), ['title', 'tagline', 'brief', 'goalText', 'facts']],
     ];
     const expected = new Set<string>();
     for (const [kind, record, fields] of lists) {
