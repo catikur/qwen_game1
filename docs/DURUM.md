@@ -2963,6 +2963,14 @@ adını veriyor ve bölgede bir ayrıcalık alıyor (`content/src/projects.ts`,
   katkıcılar katkı payları oranında en çok +0,02 marka alıyor.
 - **Laboratuvar:** `flags.cityProjects` (yokluğu açık), `randomEvents`
   kapalıyken de kapalı. Bayrak kapanınca süren etkiler de kalkıyor.
+- **Devralma:** katkıcı devralınınca katkısı (ve bitmiş projenin
+  sponsorluğu) devralana geçiyor; tabloda oyundan çıkmış şirketin satırı
+  görünmüyor. Önce öndeki katkıcı devralınınca proje "belediye karşıladı"
+  diye kapanıyordu (Codex #64).
+- **Lig izi:** 60 günlük iz projeye ve konsorsiyuma ulaşmıyor; izin son
+  durumunun kopyasında saat ileri alınıp proje (aç, katkı, kapanış, bitiş)
+  ve konsorsiyum (kuruluş, ortak alım) doğrudan işletiliyor, sonuçları,
+  canlı pazarın uzak günleri ve ayarlar ize giriyor (Codex #64).
 
 **Ayrıcalık neden bakım indirimi** (20 tohum, 720 gün; vekil oyuncu
 katkıyı pencerenin son günü lideri geçecek kadar veriyor, 0,5–3,3 M ₺):
@@ -3162,7 +3170,7 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi) |
-| Birim testi | **383 test** (`pnpm test`; Tur 24'te render paketi de) |
+| Birim testi | **385 test** (`pnpm test`; Tur 24'te render paketi de) |
 | Denge testi | **290 kontrol, hepsi geçiyor** (21 bölüm, süreleriyle; ~12 dk) |
 | Tarayıcı testi | **393 kontrol, hepsi geçiyor**, 0 konsol hatası (~17–25 dk); duman koşusu 132 (~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + duman oynanışı |

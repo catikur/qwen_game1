@@ -1,10 +1,13 @@
-import { CEO_BY_ID } from '@capital/content';
+import { CEO_BY_ID, CONSORTIUM, CONSUMER_CATEGORIES, PROJECTS, PROJECT_TIMING } from '@capital/content';
 import { GameEngine } from './engine';
 import { formatMoney } from './selectors';
 import { LEAGUE_DAYS, LEAGUE_SAMPLE_DAYS } from './systems/league';
 import { isPurchasable } from './systems/city';
+import { runConsortiumTick } from './systems/consortium';
+import { fadSchedule, seasonMultiplier, trendAt } from './systems/living';
+import { contributeToProject, projectAttraction, projectDistrictDemand, projectUpkeep, runProjectTick } from './systems/projects';
 import { createNewGame } from './worldgen';
-import type { GameCommand, GameState, LoggedCommand } from './types';
+import type { GameCommand, GameState, LoggedCommand, ProjectState } from './types';
 
 /**
  * Lig koşu kodu ve tekrar doğrulaması (kural ve takvim: systems/league).
@@ -225,6 +228,78 @@ function fingerprintStep(engine: GameEngine, day: number): void {
   engine.runDay();
 }
 
+/**
+ * Geç oyun sondası (Tur 37d): 60 günlük iz şehir projesine (210. günden)
+ * ve konsorsiyuma (300. günden) ulaşmıyor; takvimleri izde ama işleyişleri
+ * değil. İzin son durumunun kopyasında saat ileri alınıp ikisi doğrudan
+ * işletiliyor (proje: aç, oyuncu katkısı, kapanış, bitiş; konsorsiyum:
+ * kuruluş, ortak alım) ve sonuçları ize giriyor. Canlı pazarın uzak günleri
+ * ve üç sistemin ayarları da örnekleniyor (Codex #64). Kopyada çalışıyor,
+ * izin durumuna dokunmuyor; metin değil sayı (dilden bağımsız).
+ */
+function lateGameProbe(state: GameState): string[] {
+  const parts: string[] = [];
+  const clone = (): GameState => JSON.parse(JSON.stringify(state)) as GameState;
+
+  const p = clone();
+  delete p.project;
+  p.nextProjectDay = p.time.day;
+  runProjectTick(p);
+  // `delete` daraltmasını aş: proje adımı alanı yeniden dolduruyor.
+  const project = p.project as ProjectState | undefined;
+  if (project) {
+    p.companies[p.playerCompanyId]!.cash += 1_000_000;
+    contributeToProject(p, 400_000);
+    for (const day of [project.openedDay + 3, project.openedDay + 10, project.closesDay, project.doneDay]) {
+      p.time.day = day;
+      runProjectTick(p);
+    }
+  }
+  const done = p.cityProjects?.[0];
+  parts.push(`probe-project:${project?.defId ?? '-'}:${project?.tileId ?? '-'}:${done?.sponsorId ?? '-'}`);
+  for (const entry of projectDistrictDemand(p)) parts.push(`${entry.districtId}:${JSON.stringify(entry.multipliers)}`);
+  if (done) {
+    parts.push(`privilege:${projectUpkeep(p, p.playerCompanyId, done.districtId)}:${projectAttraction(p, p.playerCompanyId, done.districtId)}`);
+  }
+  parts.push(`brand:${JSON.stringify(p.companies[p.playerCompanyId]!.brand)}`);
+  parts.push(`land:${Math.round(p.map.tiles.reduce((sum, tile) => sum + tile.landValue, 0))}`);
+
+  const c = clone();
+  c.time.day = Math.max(c.time.day, CONSORTIUM.earliestDay) + CONSORTIUM.idleDays + 1;
+  const me = c.companies[c.playerCompanyId]!;
+  const top = Math.max(0, ...Object.values(c.companies).filter((company) => !company.isPlayer).map((company) => company.netWorth));
+  const lift = Math.max(0, top * (CONSORTIUM.leadRatio + 0.2) - me.netWorth);
+  me.cash += lift;
+  me.netWorth += lift;
+  // 60. günde rakiplerin kasası üye tabanının altında: alımın bedeli ödenebilsin.
+  for (const company of Object.values(c.companies)) if (!company.isPlayer) company.cash += 2_000_000;
+  runConsortiumTick(c);
+  const formed = c.consortium;
+  if (formed) {
+    for (const day of [formed.startsDay, formed.startsDay + 1]) {
+      c.time.day = day;
+      runConsortiumTick(c);
+    }
+  }
+  const stakes = Object.keys(c.companies).sort().map((id) => c.companies[id]!.shares[c.playerCompanyId] ?? 0);
+  parts.push(`probe-consortium:${formed?.leaderId ?? '-'}:${formed?.memberIds.join(',') ?? '-'}:${stakes.join(',')}`);
+
+  const seed = state.meta.seed;
+  for (const day of [120, 240, 360]) {
+    parts.push(`living:${day}:${CONSUMER_CATEGORIES.map((category) => trendAt(seed, category, day).value.toFixed(6) + '/' + seasonMultiplier(day, category).toFixed(4)).join(',')}`);
+    const fad = fadSchedule(seed, day);
+    parts.push(`fad:${day}:${fad.next.goodId}:${fad.next.startDay}:${fad.next.endDay}`);
+  }
+  parts.push(
+    `settings:${JSON.stringify({
+      PROJECT_TIMING,
+      CONSORTIUM,
+      projects: PROJECTS.map(({ id, demand, neighborShare, landValue, infrastructure, leadCategory }) => ({ id, demand, neighborShare, landValue, infrastructure, leadCategory })),
+    })}`,
+  );
+  return parts;
+}
+
 function fingerprintOf(state: GameState): string {
   const parts: string[] = [String(state.time.day), String(state.rng.s)];
   // Fırsatların takvimi ve ödülleri de izde (ödül alınmasa da).
@@ -232,6 +307,7 @@ function fingerprintOf(state: GameState): string {
   parts.push(`quests:${state.questsDone ?? 0}`);
   // Şehir projesi takvimi (Tur 37d): ilk proje izin 60 gününden sonra açılıyor, takvimi önceden belli.
   parts.push(`project:${state.nextProjectDay ?? '-'}:${state.project?.defId ?? '-'}:${state.cityProjects?.length ?? 0}`);
+  parts.push(...lateGameProbe(state));
   for (const quest of state.quests?.items ?? []) parts.push(`${quest.defId}:${quest.target}:${quest.reward}:${quest.doneDay ?? '-'}`);
   for (const id of Object.keys(state.companies).sort()) {
     const c = state.companies[id]!;

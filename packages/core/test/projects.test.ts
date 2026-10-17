@@ -9,6 +9,7 @@ import { collectEventModifiers } from '../src/systems/events';
 import { createLeagueGame, replayRun, runFromState } from '../src/league';
 import { purchaseBlocker } from '../src/actions';
 import { estimateInvestment } from '../src/systems/market';
+import { runTakeoverTick, sharesOutstanding } from '../src/systems/equity';
 import {
   contributeToProject,
   projectAttraction,
@@ -176,6 +177,29 @@ describe('şehir projeleri', () => {
     sponsored.runDay();
     const cut = sponsored.getState().buildings[mine.id]!.last.upkeep;
     assert.ok(Math.abs(cut - plain * PROJECT_TIMING.sponsorUpkeep) < 1e-6, `${cut} ≈ ${plain} × ${PROJECT_TIMING.sponsorUpkeep}`);
+  });
+
+  test('öndeki katkıcı devralınınca katkısı devralana geçiyor; sponsor o (Codex #64)', () => {
+    const state = play(1, 200).getState();
+    openNow(state);
+    state.flags.npcCompetition = false;
+    const project = state.project!;
+    const [leader, acquirer] = Object.values(state.companies).filter((c) => !c.isPlayer);
+    project.contributions = { [leader!.id]: 500_000, [acquirer!.id]: 100_000 };
+    // Devralan, öndekinin hisselerinin çoğunu topladı.
+    leader!.lockedUntilDay = undefined;
+    acquirer!.shares[leader!.id] = Math.ceil(sharesOutstanding(state, leader!.id) * 0.6);
+    runTakeoverTick(state, () => {});
+    assert.equal(state.companies[leader!.id], undefined, 'devralma olmadı');
+    assert.equal(project.contributions[acquirer!.id], 600_000);
+    assert.deepEqual(projectStandings(state, project).map((row) => row.companyId), [acquirer!.id]);
+    advanceTo(state, project.closesDay);
+    assert.equal(state.project!.sponsorId, acquirer!.id, 'sponsor bulunamadı, belediye karşıladı sayıldı');
+
+    // Güvenlik ağı: oyundan çıkmış şirketin satırı tabloda görünmüyor.
+    const other = Object.values(state.companies).find((c) => !c.isPlayer && c.id !== acquirer!.id)!;
+    const ghost = { [other.id]: 900_000, missing: 1_000_000 };
+    assert.deepEqual(projectStandings(state, { ...project, contributions: ghost }).map((row) => row.companyId), [other.id]);
   });
 
   test('laboratuvarda (olaylar kapalı) ve bayrak kapalıyken proje yok', () => {

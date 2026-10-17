@@ -15,7 +15,7 @@ import {
   verifyRun,
 } from '../src/league';
 import type { LeagueRun, RunVerdict } from '../src/league';
-import { BUBBLE_TIMING, PROJECT_TIMING, setLocale } from '@capital/content';
+import { BUBBLE_TIMING, CONSORTIUM, PROJECT_BY_ID, PROJECT_TIMING, setLocale } from '@capital/content';
 import { LEAGUE_DAYS, leagueSeed, leagueWeekId } from '../src/systems/league';
 import { createNewGame } from '../src/worldgen';
 import type { GameState } from '../src/types';
@@ -153,6 +153,32 @@ describe('lig güvenliği', () => {
     } finally {
       projects.firstDay = first;
     }
+  });
+
+  test('iz geç oyunu da sınıyor: proje etkisi ve konsorsiyum alımı değişince iz değişiyor (Codex #64)', () => {
+    const base = computeSimFingerprint();
+    const projects = PROJECT_TIMING as { buildDays: number };
+    const consortium = CONSORTIUM as unknown as { memberBudget: number };
+    const { buildDays } = projects;
+    const { memberBudget } = consortium;
+    // Bölge talebi çarpanı: ayarın kendisi değil, bitmiş projenin etkisi.
+    const metro = PROJECT_BY_ID.tech_campus.demand as Record<string, number>;
+    const electronics = metro.electronics!;
+    try {
+      metro.electronics = electronics + 0.01;
+      assert.notEqual(computeSimFingerprint(), base, 'proje etkisi izi değiştirmiyor');
+      metro.electronics = electronics;
+      consortium.memberBudget = memberBudget * 0.5;
+      assert.notEqual(computeSimFingerprint(), base, 'konsorsiyum alımı izi değiştirmiyor');
+      consortium.memberBudget = memberBudget;
+      projects.buildDays = buildDays + 1;
+      assert.notEqual(computeSimFingerprint(), base, 'inşaat süresi izi değiştirmiyor');
+    } finally {
+      metro.electronics = electronics;
+      consortium.memberBudget = memberBudget;
+      projects.buildDays = buildDays;
+    }
+    assert.equal(computeSimFingerprint(), base);
   });
 
   test('dürüst koşu doğrulanıyor; skor, eğri, ad ve CEO tekrarın kendisinden', async () => {

@@ -90,8 +90,9 @@ export function projectUpkeep(state: GameState, companyId: string, districtId: n
 
 /** Katkı tablosu, büyükten küçüğe (eşitlikte önce katkı veren değil, kimlik sırası: belirlenimci). */
 export function projectStandings(state: GameState, project: ProjectState): Array<{ companyId: string; amount: number }> {
+  // Oyundan çıkmış şirketin satırı tabloda yok (devralmada katkı devralana geçiyor).
   return Object.entries(project.contributions)
-    .filter(([, amount]) => amount > 0)
+    .filter(([companyId, amount]) => amount > 0 && state.companies[companyId])
     .map(([companyId, amount]) => ({ companyId, amount }))
     .sort((a, b) => b.amount - a.amount || (a.companyId < b.companyId ? -1 : 1));
 }
