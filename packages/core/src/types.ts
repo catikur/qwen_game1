@@ -1,4 +1,5 @@
 import type {
+  CardBoostTarget,
   CategoryId,
   CitySizeId,
   CreditRating,
@@ -250,6 +251,8 @@ export interface CompanyState {
   issues?: number;
   /** İşgücü: ücret politikası, sendika baskısı, sözleşme, grev. Yokluğu "piyasa ücreti, sendika sessiz". */
   labor?: LaborState;
+  /** Karar kartlarından gelen süreli çarpanlar (Tur 37b; yalnızca oyuncu). */
+  boosts?: CardBoost[];
   /**
    * Banka ilişkisi: krediler, not, ihtar. Yokluğu "kredisi yok, not A".
    *
@@ -477,6 +480,59 @@ export interface FeatureFlags {
    * kapatıyor).
    */
   crises?: boolean;
+  /**
+   * Karar kartları (Tur 37b). Aynı sözleşme: yokluğu AÇIK; `randomEvents`
+   * kapalıyken de çalışmıyor — laboratuvar olaylarla birlikte kapatıyor.
+   */
+  cards?: boolean;
+  /**
+   * Rakip hikâyeleri: CEO sözleri ve rakip kampanyaları (Tur 37b). Aynı
+   * sözleşme: yokluğu AÇIK. `npcCompetition` kapalıyken yeni söz ve
+   * kampanya yok; süren kampanya süresini dolduruyor.
+   */
+  rivalStories?: boolean;
+}
+
+/** Masadaki karar kartı (Tur 37b). */
+export interface CardState {
+  defId: string;
+  offeredDay: number;
+  /** Bu günü geçerse `fallback` seçeneği uygulanır. */
+  deadlineDay: number;
+  /** Kartın tutarı (₺) — teklif gününde sabitleniyor; gösterilen bedel ödenen bedel. */
+  amount: number;
+  /** Kartın kategorisi (kategoriye özel kartlarda). */
+  category?: CategoryId;
+  /** Kartın rakip yüzü (rakipli kartlarda). */
+  rivalId?: string;
+  /**
+   * Teklif günündeki rakip ve CEO adı. Rakip kart masadayken devralınırsa
+   * şirket listeden düşüyor; metin yine de dolu kalsın (Codex #62).
+   */
+  rivalName?: string;
+  ceoName?: string;
+}
+
+/** Kart seçiminden gelen süreli çarpan (Tur 37b). */
+export interface CardBoost {
+  target: CardBoostTarget;
+  multiplier: number;
+  /** Bu gün dahil geçerli. */
+  untilDay: number;
+  /** Yalnızca bu kategoride; yoksa bütün şirket. */
+  category?: CategoryId;
+  /** Kaynak kart (gösterim için). */
+  cardId: string;
+}
+
+/** Rakip kampanyası (Tur 37b): bir rakibin oyuncunun kategorisine süreli saldırısı. */
+export interface CampaignState {
+  companyId: string;
+  category: CategoryId;
+  startDay: number;
+  endDay: number;
+  /** Başlangıçta oyuncunun kategori payı — sonuç buna göre. */
+  playerShare: number;
 }
 
 /** Kriz (Tur 37a): önce uyarı, sonra kriz. */
@@ -573,6 +629,18 @@ export interface GameState {
   crisis?: CrisisState;
   /** Bir sonraki kriz uyarısının günü; yoksa ilk krizin takvimi kurulur. */
   nextCrisisDay?: number;
+  /** Masadaki karar kartı (Tur 37b). */
+  card?: CardState;
+  /** Bir sonraki kartın günü; yoksa ilk kartın takvimi kurulur. */
+  nextCardDay?: number;
+  /** Son kartlar (en yenisi başta) — aynı kart üst üste gelmesin. */
+  recentCards?: string[];
+  /** Süren rakip kampanyası (Tur 37b). */
+  campaign?: CampaignState;
+  /** Bir sonraki kampanyanın günü. */
+  nextCampaignDay?: number;
+  /** Rakip sözlerinin son günü (`şirket|an`) — sık anlarda aynı söz tekrar etmesin. */
+  quoteDays?: Record<string, number>;
   /**
    * Masadaki sözleşme teklifi ve aktif sözleşme. Üçü de seçime bağlı:
    * eski kayıtlarda yoklukları "teklif yok" demek, şema sürümü sabit.
@@ -769,6 +837,8 @@ export type GameCommand =
   | { type: 'SET_WAGE_POLICY'; policy: WagePolicy }
   /** Masadaki sendika talebine cevap. */
   | { type: 'RESPOND_UNION'; response: UnionResponse }
+  /** Masadaki karar kartında bir seçenek (Tur 37b). */
+  | { type: 'CHOOSE_CARD'; choiceId: string }
   /** Bankadan kredi: vadeli ya da arsa teminatlı. */
   | { type: 'TAKE_LOAN'; kind: LoanKind; amount: number; termDays: number }
   /** Bir krediyi kalan anaparasıyla erken kapatır. */

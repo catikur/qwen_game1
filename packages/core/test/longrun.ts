@@ -1,7 +1,8 @@
 declare const process: { env: Record<string, string | undefined> };
 /**
  * Uzun oyun termometresi (Tur 37): kartopu ne kadar hızlı?
- * Çalıştırma: pnpm longrun (SEEDS=1,7 tohum seçer; OFF=1 Tur 37a frenlerini kapatır)
+ * Çalıştırma: pnpm longrun (SEEDS=1,7 tohum seçer; OFF=1 Tur 37a frenlerini,
+ * STORIES=0 Tur 37b kartlarını ve rakip hikâyelerini kapatır)
  */
 import { NPC_PROFILES } from '@capital/content';
 import { GameEngine, createNewGame, formatMoney, getPlayer } from '../src/index';
@@ -15,6 +16,10 @@ for (const seed of SEEDS) {
   if (process.env.OFF === '1') {
     engine.getState().flags.lateCosts = false;
     engine.getState().flags.crises = false;
+  }
+  if (process.env.STORIES === '0') {
+    engine.getState().flags.cards = false;
+    engine.getState().flags.rivalStories = false;
   }
   console.log(`\ntohum ${seed}`);
   console.log('  gün   nakit        net değer    en iyi rakip  oran   bina  günlük kâr   zafer   | ciro / smm / bakım / ücret / faiz (30 gün ort.)');

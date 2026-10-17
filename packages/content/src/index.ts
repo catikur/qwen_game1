@@ -18,6 +18,7 @@ export * from './credit';
 export * from './capital';
 export * from './holding';
 export * from './economy';
+export * from './stories';
 
 /** İçerik sürümü — save migration'ında denge değişikliklerini izlemek için. */
 export const CONTENT_VERSION = 6;

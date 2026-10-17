@@ -26,6 +26,7 @@ import {
   ActiveEvents,
   BuildPanel,
   Coach,
+  DecisionCard,
   GameContext,
   GameOverScreen,
   Inspector,
@@ -539,6 +540,7 @@ function GameRoot({
           <Inspector />
         </div>
         <ModalHost />
+        <DecisionCard />
         <Coach />
         <Toasts />
         <GameOverScreen onNewGame={newGame} />

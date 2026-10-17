@@ -18,6 +18,7 @@ import { CityChip, aliveDormant } from './HoldingPanel';
 import { AuctionChip } from './AuctionPanel';
 import { ghostValueAt, useGhost } from './LeaguePanel';
 import { useCollapsible } from './collapse';
+import { reopenDecisionCard } from './DecisionCard';
 import { useGame, useGameState } from './useGame';
 import type { ViewState } from './useGame';
 import { t } from './i18n';
@@ -843,6 +844,40 @@ export function ActiveEvents(): ReactElement | null {
                 <span style={{ width: `${Math.round(item.progress * 100)}%` }} />
               </span>
             )}
+            {days}
+          </button>
+        );
+        break;
+      case 'card':
+        // Karar kartı (Tur 37b): küçültülmüş kartı yeniden açıyor.
+        chip = (
+          <button
+            type="button"
+            className={`event-chip card-chip urgency-${item.urgency}`}
+            onClick={() => {
+              // Kartı gizleyen işi bırak (seçili arsa, yerleştirme, açık panel), sonra aç.
+              setView({ selectedTileId: null, ghostDefId: null, openPanel: 'none' });
+              reopenDecisionCard();
+            }}
+            title={t('hud.agenda.cardTitle')}
+          >
+            <span className="agenda-label">{t('hud.agenda.card')}</span>
+            {item.label}
+            {days}
+          </button>
+        );
+        break;
+      case 'campaign':
+        // Rakip kampanyası (Tur 37b): cevap rekabet kollarında (pazarlama, Ar-Ge).
+        chip = (
+          <button
+            type="button"
+            className="event-chip campaign-chip tone-bad"
+            onClick={() => togglePanel('rivalry')}
+            title={t('hud.agenda.campaignTitle')}
+          >
+            <span className="agenda-label">{t('hud.agenda.campaign')}</span>
+            {item.label}
             {days}
           </button>
         );

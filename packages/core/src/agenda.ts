@@ -1,4 +1,4 @@
-import { CREDIT, CRISIS_BY_ID, ERA_BY_ID, EVENT_BY_ID, localizeDecimal } from '@capital/content';
+import { CARD_BY_ID, CATEGORIES, CREDIT, CRISIS_BY_ID, ERA_BY_ID, EVENT_BY_ID, fillTemplate, localizeDecimal } from '@capital/content';
 import { nextGoal } from './systems/goals';
 import { OFFER_LIFETIME_DAYS, contractProgress } from './systems/contracts';
 import { sharesHeld, sharesOutstanding } from './systems/equity';
@@ -6,6 +6,8 @@ import { creditEnabled, overdraftLimit, overdraftOf } from './systems/credit';
 import { dailyBuyCap, sharesToControl } from './systems/orders';
 import { laborEnabled } from './systems/labor';
 import { crisesEnabled } from './systems/economy';
+import { cardParams, cardsEnabled } from './systems/cards';
+import { campaignsLive } from './systems/rivalry';
 import { formatMoney } from './selectors';
 import { tc } from './i18n';
 import type { GameState } from './types';
@@ -36,6 +38,8 @@ export type AgendaKind =
   | 'event'
   | 'era'
   | 'crisis'
+  | 'card'
+  | 'campaign'
   | 'goal';
 
 export interface AgendaItem {
@@ -308,6 +312,33 @@ export function agenda(state: GameState): AgendaItem[] {
       urgency: 1,
       daysLeft: Math.max(0, (warning ? state.crisis.activeDay : state.crisis.endDay) - day),
       label: warning ? tc('core.agenda.crisisWarning', { title: crisis.title }) : crisis.title,
+      tone: 'bad',
+    });
+  }
+
+  // Karar kartı (Tur 37b): masada bekliyor, geri sayım karar süresine.
+  const card = state.card ? CARD_BY_ID[state.card.defId] : undefined;
+  if (state.card && card && cardsEnabled(state)) {
+    items.push({
+      kind: 'card',
+      key: `card:${card.id}:${state.card.offeredDay}`,
+      urgency: 2,
+      daysLeft: Math.max(0, state.card.deadlineDay - day),
+      label: fillTemplate(card.title, cardParams(state, state.card)),
+      tone: 'neutral',
+    });
+  }
+
+  // Rakip kampanyası (Tur 37b): kim, hangi kategoride, kaç gün kaldı.
+  const campaign = state.campaign;
+  const attacker = campaign ? state.companies[campaign.companyId] : undefined;
+  if (campaign && attacker && campaignsLive(state)) {
+    items.push({
+      kind: 'campaign',
+      key: `campaign:${campaign.companyId}:${campaign.startDay}`,
+      urgency: 1,
+      daysLeft: Math.max(0, campaign.endDay - day),
+      label: tc('core.agenda.campaign', { name: attacker.name, category: CATEGORIES[campaign.category].name }),
       tone: 'bad',
     });
   }

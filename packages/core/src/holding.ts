@@ -8,6 +8,7 @@ import { recomputeNetWorth } from './systems/city';
 import { buybackToLock, freeFloat, sharePrice, sharesHeld, sharesOutstanding } from './systems/equity';
 import { runGoalTick } from './systems/goals';
 import { respondUnion } from './systems/labor';
+import { settleCardAway } from './systems/cards';
 import { capRemaining, playerBuy } from './systems/orders';
 import { createNewGame } from './worldgen';
 import type { CityDirective, CommandResult, DormantCity, GameState, HoldingState, RemotePayout } from './types';
@@ -383,6 +384,8 @@ function liveAway(active: GameState, holding: HoldingState, city: DormantCity): 
   const player = s.companies[s.playerCompanyId];
   // Yerel müdür: sendika talebine uzlaşma (oyuncu uzaktayken grev çıkmasın).
   if (player?.labor?.demand && !s.gameOver) respondUnion(s, s.playerCompanyId, 'compromise');
+  // Karar kartını da bekletmiyor: varsayılan seçenek (Tur 37b).
+  if (!s.gameOver) settleCardAway(s);
 
   // Savunma talimatı (Tur 32): kâr payından önce — şehrin korunması önce geliyor.
   city.lastDefense = player && !s.gameOver && cityDirective(s).defend ? localDefense(s) : undefined;

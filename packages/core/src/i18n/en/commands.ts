@@ -139,6 +139,7 @@ export const commands: Record<keyof typeof trCommands, string> = {
   'core.agenda.leagueDone': 'League {week} · standings',
   'core.agenda.council': 'Council · motions: {count}',
   'core.agenda.crisisWarning': 'Crisis ahead: {title}',
+  'core.agenda.campaign': '{name}: {category} attack',
 
   // chain.ts — chain card
   'core.chain.stateOwn': 'Yours',

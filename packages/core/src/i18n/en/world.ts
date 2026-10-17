@@ -112,4 +112,26 @@ export const world: Record<keyof typeof trWorld, string> = {
   // citygrowth.ts — first change to the skyline
   'core.citygrowth.risingTitle': '{district} is rising',
   'core.citygrowth.risingBody': 'The first {structure} has gone up in {district}. Land values will follow.',
+
+  // cards.ts — decision cards (Tur 37b)
+  'core.cards.paid': 'Cost: {amount}.',
+  'core.cards.earned': 'Income: {amount}.',
+  'core.cards.expired': 'Time ran out with no decision: "{choice}" was applied.',
+  'core.cards.away': 'The local manager decided: "{choice}".',
+  'core.cards.disabled': 'Decision cards are turned off.',
+  'core.cards.none': 'There is no decision card on the table.',
+  'core.cards.unknownChoice': 'This card has no such option.',
+
+  // rivalry.ts — rival stories (Tur 37b)
+  'core.rivalry.quote': '{ceo}: “{line}”',
+  'core.rivalry.crisisTitle': 'Crisis statement: {name}',
+  'core.rivalry.campaignTitle': '{name} goes on the attack in {category}',
+  'core.rivalry.campaignBody':
+    'For {days} days they will cut {category} prices. Your share today: {share}; the campaign is judged on your share when it ends.',
+  'core.rivalry.campaignHeldTitle': '{name} backs down: {category} stays yours',
+  'core.rivalry.campaignHeldBody': 'The campaign backfired; your {category} share went {from} → {to}. Customer loyalty strengthened your brand.',
+  'core.rivalry.campaignLostTitle': '{name} wins the {category} campaign',
+  'core.rivalry.campaignLostBody': 'Your {category} share fell {from} → {to}.',
+  'core.rivalry.campaignRetreatTitle': '{name} pulled out of its {category} attack',
+  'core.rivalry.campaignRetreatBody': 'It closed its last store in the category; the price war is over.',
 };

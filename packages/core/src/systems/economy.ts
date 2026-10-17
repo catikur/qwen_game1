@@ -4,6 +4,7 @@ import { pushNews } from '../news';
 import { createRng, nextFloat, pickWeighted } from '../rng';
 import type { CompanyState, GameState } from '../types';
 import { ownerFraction } from './equity';
+import { rivalCrisisReaction } from './rivalry';
 
 /**
  * Geç oyun giderleri ve krizler (Tur 37a) — gerekçe ve ölçüm
@@ -141,6 +142,8 @@ export function runCrisisTick(state: GameState): void {
     if (crisis.phase === 'warning' && day >= crisis.activeDay) {
       crisis.phase = 'active';
       if (def) pushNews(state, 'bad', def.title, def.body);
+      // Rakip hikâyesi (Tur 37b): en büyük rakip krize kendi ağzından tepki veriyor.
+      rivalCrisisReaction(state);
     } else if (crisis.phase === 'active' && day >= crisis.endDay) {
       delete state.crisis;
       state.nextCrisisDay = day + rangeFrom(crisisDice(state, day), CRISIS_TIMING.gapDays);

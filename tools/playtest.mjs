@@ -1077,6 +1077,113 @@ async function finish(browser, consoleErrors) {
   await page.waitForTimeout(200);
   check('Kriz ve gider akışı konsolu kirletmiyor', consoleErrors.length === 0, consoleErrors.slice(0, 2).join(' | '));
 
+  // ---------- Karar kartı ve rakip kampanyası (Tur 37b) ----------
+  section('Karar kartı ve rakip kampanyası');
+  await page.evaluate(() => {
+    const s = window.__capital.getState();
+    delete s.card;
+    s.card = { defId: 'inspection', offeredDay: s.time.day, deadlineDay: s.time.day + 12, amount: 100000, category: 'dining' };
+    window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+  });
+  await page.waitForTimeout(400);
+  const cardView = await page.evaluate(() => {
+    const el = document.querySelector('.decision-card');
+    if (!el) return null;
+    return {
+      title: el.querySelector('.card-title')?.textContent?.trim() ?? '',
+      choices: el.querySelectorAll('.card-choice').length,
+      chips: el.querySelectorAll('.card-effect').length,
+      odds: el.querySelector('.card-odds')?.textContent?.trim() ?? '',
+      fallback: el.querySelector('.card-fallback')?.textContent?.trim() ?? '',
+    };
+  });
+  check('Karar kartı masada açılıyor: başlık, iki seçenek, etiketli etkiler',
+    cardView?.title === 'Denetim haftası' && cardView.choices === 2 && cardView.chips >= 4,
+    cardView ? `${cardView.title} · ${cardView.choices} seçenek · ${cardView.chips} etiket` : 'kart yok');
+  check('Şanslı seçenek ihtimali ve varsayılanı yazıyor',
+    Boolean(cardView?.odds.includes('65')) && Boolean(cardView?.fallback.includes('Olduğu gibi bırak')),
+    cardView ? `${cardView.odds} · ${cardView.fallback.slice(0, 60)}` : 'kart yok');
+
+  await page.locator('.decision-card .card-later').click();
+  await page.waitForTimeout(250);
+  const collapsed = await page.evaluate(() => ({
+    card: Boolean(document.querySelector('.decision-card')),
+    chip: Boolean(document.querySelector('[data-agenda="card"] .card-chip')),
+  }));
+  check('"Sonra" kartı gündem çipine indiriyor', !collapsed.card && collapsed.chip, JSON.stringify(collapsed));
+  // Başka bir oyun (kayıt yükleme, yeni oyun) aynı kartı aynı günde getirirse kart açık gelmeli.
+  const otherGame = await page.evaluate(async () => {
+    const s = window.__capital.getState();
+    const own = s.meta.createdAtIso;
+    s.meta.createdAtIso = '2000-01-01T00:00:00.000Z';
+    window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    const open = Boolean(document.querySelector('.decision-card'));
+    s.meta.createdAtIso = own;
+    window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    return { open, back: Boolean(document.querySelector('.decision-card')) };
+  });
+  check('Küçültme yalnız o oyunun kartında geçerli', otherGame.open && !otherGame.back, JSON.stringify(otherGame));
+  await page.locator('[data-agenda="card"] .card-chip').click();
+  await page.waitForTimeout(250);
+  check('Gündem çipi kartı yeniden açıyor', (await page.locator('.decision-card').count()) === 1);
+
+  const cashBefore = await page.evaluate(() => window.__capital.getState().companies[window.__capital.getState().playerCompanyId].cash);
+  await page.locator('.decision-card [data-card-choice="renovate"]').click();
+  await page.waitForTimeout(300);
+  const chosen = await page.evaluate((before) => {
+    const s = window.__capital.getState();
+    const player = s.companies[s.playerCompanyId];
+    return {
+      card: Boolean(s.card),
+      open: Boolean(document.querySelector('.decision-card')),
+      paid: Math.round(before - player.cash),
+      boosts: player.boosts?.length ?? 0,
+      news: s.news[0]?.title ?? '',
+    };
+  }, cashBefore);
+  check('Seçim uygulanıyor: kart kalkıyor, bedel ödeniyor, etki başlıyor, haber düşüyor',
+    !chosen.card && !chosen.open && chosen.paid === 60000 && chosen.boosts >= 1 && chosen.news === 'Denetim haftası',
+    JSON.stringify(chosen));
+
+  await page.locator('.topbar-actions [data-panel="company"]').click();
+  await page.waitForTimeout(300);
+  const boostRow = await page.evaluate(() => document.querySelector('.modal [data-card-boosts]')?.textContent?.trim() ?? '');
+  check('Şirket panelinde süren kart etkisi görünüyor', boostRow.includes('Çekicilik') && boostRow.includes('Yeme-İçme'), boostRow.slice(0, 80));
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(200);
+
+  // Panel açıkken kart çekiliyor (pencerenin üstüne binmesin).
+  await page.evaluate(() => {
+    const s = window.__capital.getState();
+    s.card = { defId: 'charity_drive', offeredDay: s.time.day, deadlineDay: s.time.day + 12, amount: 100000 };
+    window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+  });
+  await page.locator('.topbar-actions [data-panel="company"]').click();
+  await page.waitForTimeout(300);
+  const hiddenUnderPanel = (await page.locator('.decision-card').count()) === 0;
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(300);
+  const backAfterPanel = (await page.locator('.decision-card').count()) === 1;
+  check('Panel açıkken kart çekiliyor, kapanınca geri geliyor', hiddenUnderPanel && backAfterPanel,
+    `panelde ${hiddenUnderPanel ? 'gizli' : 'görünür'} · sonra ${backAfterPanel ? 'açık' : 'yok'}`);
+  await page.evaluate(() => {
+    const s = window.__capital.getState();
+    delete s.card;
+    const rival = Object.values(s.companies).find((c) => !c.isPlayer);
+    s.campaign = { companyId: rival.id, category: 'retail', startDay: s.time.day, endDay: s.time.day + 45, playerShare: 0.3 };
+    window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+  });
+  await page.waitForTimeout(300);
+  const campaignChip = await page.evaluate(() => document.querySelector('[data-agenda="campaign"]')?.textContent?.trim() ?? '');
+  check('Rakip kampanyası gündemde geri sayıyor', campaignChip.includes('Kampanya') && /45/.test(campaignChip), campaignChip);
+  await page.evaluate(() => {
+    delete window.__capital.getState().campaign;
+    window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+  });
+  check('Kart ve kampanya akışı konsolu kirletmiyor', consoleErrors.length === 0, consoleErrors.slice(0, 2).join(' | '));
+
   if (SMOKE) {
     await finish(browser, consoleErrors);
     return;
@@ -1439,7 +1546,8 @@ async function finish(browser, consoleErrors) {
     cap.engine.runDay();
     const after = cap.getState();
     const fresh = after.news.filter((n) => n.id > before);
-    const hit = fresh.find((n) => n.title.includes('geçtin'));
+    // Başlık ekten bağımsız (Tur 37b): "{rakip} artık arkanda".
+    const hit = fresh.find((n) => n.title.includes('arkanda'));
     return hit ? { tone: hit.tone, title: hit.title } : null;
   });
   check('Sırayı geri alınca da olay düşüyor', reclaim?.tone === 'good',
@@ -3170,6 +3278,25 @@ async function finish(browser, consoleErrors) {
       });
       return { vw, vh, bottom: Math.round(nav.getBoundingClientRect().bottom), overflow: nav.scrollWidth - nav.clientWidth, buttons };
     });
+    // Karar kartı (Tur 37b) rıhtımın ÜSTÜNDE ve ekranda; ölçümden sonra masadan kalkıyor.
+    const mobileCard = await m.evaluate(async () => {
+      const s = window.__capital.getState();
+      s.card = { defId: 'inspection', offeredDay: s.time.day, deadlineDay: s.time.day + 12, amount: 50000, category: 'retail' };
+      window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+      await new Promise((resolve) => setTimeout(resolve, 400));
+      const card = document.querySelector('.decision-card')?.getBoundingClientRect();
+      const nav = document.querySelector('.topbar-actions')?.getBoundingClientRect();
+      const result = card && nav ? { top: Math.round(card.top), bottom: Math.round(card.bottom), dock: Math.round(nav.top), vw: innerWidth, right: Math.round(card.right), left: Math.round(card.left) } : null;
+      delete s.card;
+      window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+      await new Promise((resolve) => setTimeout(resolve, 200));
+      return result;
+    });
+    check(
+      `${deviceName}: karar kartı rıhtımın üstünde ve ekranda`,
+      Boolean(mobileCard) && mobileCard.bottom <= mobileCard.dock && mobileCard.top >= 0 && mobileCard.left >= 0 && mobileCard.right <= mobileCard.vw,
+      mobileCard ? `kart ${mobileCard.top}–${mobileCard.bottom} · rıhtım ${mobileCard.dock}` : 'kart yok',
+    );
     // KATLANABİLİR PANELLER — dar ekranın dikey bütçesi.
     //
     // Ölçüm: lens çubuğu 104 px, yapı menüsü 292 px, haber akışı 102 px.

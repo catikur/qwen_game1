@@ -1,6 +1,8 @@
 import { pushNews } from './news';
 import { runMarketTick } from './systems/market';
 import { runCrisisTick } from './systems/economy';
+import { runCardTick } from './systems/cards';
+import { runRivalryTick } from './systems/rivalry';
 import { runEntrantTick } from './systems/entrants';
 import { runCouncilTick } from './systems/council';
 import { runLaborTick } from './systems/labor';
@@ -45,6 +47,11 @@ export function simulateCityDay(state: GameState): void {
   // aynı gün üretilen teklif güncel takvimi görsün.
   runCouncilTick(state);
   runContractTick(state);
+  // Karar kartı (Tur 37b) işgücünden ÖNCE: sendika baskısına dokunan
+  // seçenek aynı günün talebine yansısın.
+  runCardTick(state);
+  // Rakip kampanyası pazardan ÖNCE: başlayan kampanyanın fiyatı aynı gün satışa girsin.
+  runRivalryTick(state);
   // İşgücü defterler sıfırlanmadan ÖNCE: talep dünkü kâr marjını okur,
   // bugünkü ücret ve grev de bugünkü defterin ilk satırına girsin.
   runLaborTick(state);

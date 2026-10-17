@@ -7,6 +7,7 @@ import {
   companyRanking,
   districtOpportunity,
   districtPressure,
+  effectivePriceMultiplier,
   estimateInvestment,
   formatMoney,
   freePlotsIn,
@@ -36,6 +37,7 @@ import { LeaguePanel } from './LeaguePanel';
 import { AppearancePicker } from './AppearancePicker';
 import { LocalePicker } from './LocalePicker';
 import { BankSection, WorkforceSection } from './CompanyFinance';
+import { BoostChips } from './DecisionCard';
 import { t } from './i18n';
 import type { MessageKey } from './i18n';
 import { useGame, useGameState } from './useGame';
@@ -648,7 +650,15 @@ function BuildingDetail({ buildingId }: { buildingId: string }): ReactElement | 
           <div className="statgrid small">
             <Stat label={t('panels.building.stat.utilization')} value={formatPercent(Math.round(ledger.capacityUsed * 100))} />
             <Stat label={t('panels.building.stat.share')} value={formatPercent(Math.round(ledger.share * 100))} />
-            <Stat label={t('panels.building.stat.price')} value={`×${building.priceMultiplier.toFixed(2)}`} />
+            {/* Kampanyadaki rakibin satış fiyatı indirimli (Tur 37b): gösterilen, ödenen. */}
+            <Stat
+              label={t(
+                effectivePriceMultiplier(state, building) !== building.priceMultiplier
+                  ? 'panels.building.stat.priceCampaign'
+                  : 'panels.building.stat.price',
+              )}
+              value={`×${effectivePriceMultiplier(state, building).toFixed(2)}`}
+            />
           </div>
         </>
       )}
@@ -973,6 +983,14 @@ function CompanyPanel(): ReactElement {
         </div>
       )}
 
+      {player.boosts && player.boosts.length > 0 && (
+        // Karar kartlarından süren etkiler (Tur 37b): neyin ne kadar daha süreceği.
+        <div className="card-boosts" data-card-boosts>
+          <span className="stat-label">{t('panels.company.boosts')}</span>
+          <BoostChips boosts={player.boosts} day={state.time.day} />
+        </div>
+      )}
+
       <Sparkline values={history} />
 
       <BankSection />
@@ -1253,6 +1271,10 @@ function HelpPanel(): ReactElement {
         <li>
           <strong>{t('panels.help.step.late.title')}</strong>
           {t('panels.help.step.late.body')}
+        </li>
+        <li>
+          <strong>{t('panels.help.step.stories.title')}</strong>
+          {t('panels.help.step.stories.body')}
         </li>
       </ol>
       <p className="muted">
