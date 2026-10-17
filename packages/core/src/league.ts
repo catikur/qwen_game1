@@ -1,10 +1,12 @@
-import { CEO_BY_ID, CONSORTIUM, CONSUMER_CATEGORIES, PROJECTS, PROJECT_TIMING } from '@capital/content';
+import { CEO_BY_ID, CONSORTIUM, CONSUMER_CATEGORIES, FAD, GOOD_BY_ID, PROJECTS, PROJECT_TIMING, SEASONS, TREND } from '@capital/content';
+import type { CategoryId } from '@capital/content';
 import { GameEngine } from './engine';
 import { formatMoney } from './selectors';
 import { LEAGUE_DAYS, LEAGUE_SAMPLE_DAYS } from './systems/league';
 import { isPurchasable } from './systems/city';
 import { runConsortiumTick } from './systems/consortium';
-import { fadSchedule, seasonMultiplier, trendAt } from './systems/living';
+import { fadSchedule, livingDemand, seasonMultiplier, trendAt } from './systems/living';
+import { goodShares } from './systems/demand';
 import { contributeToProject, projectAttraction, projectDistrictDemand, projectUpkeep, runProjectTick } from './systems/projects';
 import { createNewGame } from './worldgen';
 import type { GameCommand, GameState, LoggedCommand, ProjectState } from './types';
@@ -284,6 +286,19 @@ function lateGameProbe(state: GameState): string[] {
   const stakes = Object.keys(c.companies).sort().map((id) => c.companies[id]!.shares[c.playerCompanyId] ?? 0);
   parts.push(`probe-consortium:${formed?.leaderId ?? '-'}:${formed?.memberIds.join(',') ?? '-'}:${stakes.join(',')}`);
 
+  // Moda etkisi: ilk moda izin 60 gününden sonra başlıyor. Kopyada moda
+  // gününe geçip kategori talebi ve moda kategorisinin ürün payları — ayar
+  // değil uygulanan etki (Codex #64).
+  const f = clone();
+  const firstFad = fadSchedule(f.meta.seed, f.time.day).next;
+  f.time.day = firstFad.startDay;
+  const fadCategory = GOOD_BY_ID[firstFad.goodId]?.category;
+  parts.push(`fad-demand:${CONSUMER_CATEGORIES.map((category) => livingDemand(f, category).toFixed(6)).join(',')}`);
+  if (fadCategory) {
+    const shares = goodShares('downtown', fadCategory as CategoryId, firstFad.goodId);
+    parts.push(`fad-shares:${shares.map(({ good, share }) => `${good.id}=${share.toFixed(6)}`).join(',')}`);
+  }
+
   const seed = state.meta.seed;
   for (const day of [120, 240, 360]) {
     parts.push(`living:${day}:${CONSUMER_CATEGORIES.map((category) => trendAt(seed, category, day).value.toFixed(6) + '/' + seasonMultiplier(day, category).toFixed(4)).join(',')}`);
@@ -294,6 +309,9 @@ function lateGameProbe(state: GameState): string[] {
     `settings:${JSON.stringify({
       PROJECT_TIMING,
       CONSORTIUM,
+      TREND,
+      FAD,
+      seasons: SEASONS.map(({ id, months, demand }) => ({ id, months, demand })),
       projects: PROJECTS.map(({ id, demand, neighborShare, landValue, infrastructure, leadCategory }) => ({ id, demand, neighborShare, landValue, infrastructure, leadCategory })),
     })}`,
   );

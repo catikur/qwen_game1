@@ -15,7 +15,7 @@ import {
   verifyRun,
 } from '../src/league';
 import type { LeagueRun, RunVerdict } from '../src/league';
-import { BUBBLE_TIMING, CONSORTIUM, PROJECT_BY_ID, PROJECT_TIMING, setLocale } from '@capital/content';
+import { BUBBLE_TIMING, CONSORTIUM, FAD, PROJECT_BY_ID, PROJECT_TIMING, setLocale } from '@capital/content';
 import { LEAGUE_DAYS, leagueSeed, leagueWeekId } from '../src/systems/league';
 import { createNewGame } from '../src/worldgen';
 import type { GameState } from '../src/types';
@@ -177,6 +177,23 @@ describe('lig güvenliği', () => {
       metro.electronics = electronics;
       consortium.memberBudget = memberBudget;
       projects.buildDays = buildDays;
+    }
+    assert.equal(computeSimFingerprint(), base);
+  });
+
+  test('iz moda etkisini de taşıyor: ürün ağırlığı ya da kategori eki değişince iz değişiyor (Codex #64)', () => {
+    const base = computeSimFingerprint();
+    const fad = FAD as { weight: number; categoryBoost: number };
+    const { weight, categoryBoost } = fad;
+    try {
+      fad.weight = weight + 0.1;
+      assert.notEqual(computeSimFingerprint(), base, 'moda ağırlığı izi değiştirmiyor');
+      fad.weight = weight;
+      fad.categoryBoost = categoryBoost + 0.01;
+      assert.notEqual(computeSimFingerprint(), base, 'moda kategori eki izi değiştirmiyor');
+    } finally {
+      fad.weight = weight;
+      fad.categoryBoost = categoryBoost;
     }
     assert.equal(computeSimFingerprint(), base);
   });
