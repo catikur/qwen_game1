@@ -103,6 +103,7 @@ export const panels: Record<keyof typeof trPanels, string> = {
   'panels.building.stat.utilization': 'Utilization',
   'panels.building.stat.share': 'District share',
   'panels.building.stat.price': 'Price',
+  'panels.building.stat.priceCampaign': 'Price · campaign',
   'panels.building.autoPrice': 'Let the game set the price',
   'panels.building.priceMultiplierAria': 'Price multiplier',
   'panels.building.priceHint': 'Lowering the price grows market share but eats into margin. Raising it does the opposite.',

@@ -105,7 +105,7 @@ export {
   overheadRate,
 } from './systems/economy';
 export { boostMultiplier, cardAmount, cardParams, cardsEnabled, cashEffect } from './systems/cards';
-export { campaignPriceFactor, rivalQuote, storiesEnabled } from './systems/rivalry';
+export { campaignPriceFactor, effectivePriceMultiplier, rivalQuote, storiesEnabled } from './systems/rivalry';
 export { activeContract, contractProgress, OFFER_LIFETIME_DAYS } from './systems/contracts';
 export type { EventModifiers } from './systems/events';
 export {

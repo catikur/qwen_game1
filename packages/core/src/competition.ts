@@ -12,6 +12,7 @@ import { buildCost } from './actions';
 import { bestPlotFor } from './chain';
 import { MARKETING_CAP, RESEARCH_CAP, marketingLeverage, researchCeiling } from './systems/focus';
 import { tilePrice } from './systems/city';
+import { effectivePriceMultiplier } from './systems/rivalry';
 import { tc } from './i18n';
 import type { GameState } from './types';
 
@@ -176,7 +177,8 @@ function profileOf(state: GameState, companyId: string, categoryId: CategoryId):
     if (def?.role !== 'outlet' || def.category !== categoryId) continue;
     outlets += 1;
     quality += effectiveQuality(state, companyId, building.defId);
-    price += building.priceMultiplier;
+    // Kampanyadaki rakibin fiyatı indirimli (Tur 37b): panel gerçek fiyatı göstersin.
+    price += effectivePriceMultiplier(state, building);
     sold += building.last.unitsSold;
     capacity += def.capacity;
     districts.add(building.districtId);

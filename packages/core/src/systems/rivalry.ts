@@ -4,7 +4,7 @@ import { pushNews } from '../news';
 import { tc } from '../i18n';
 import { rivalProfile } from '../profiles';
 import { createRng, nextFloat } from '../rng';
-import type { CampaignState, CompanyState, GameState } from '../types';
+import type { BuildingInstance, CampaignState, CompanyState, GameState } from '../types';
 
 /**
  * Rakip hikâyeleri (Tur 37b) — içerik ve gerekçe `@capital/content`
@@ -101,6 +101,16 @@ export function campaignPriceFactor(state: GameState, companyId: string, categor
   if (!campaign || campaign.companyId !== companyId || campaign.category !== category || !storiesEnabled(state)) return 1;
   const trait = rivalProfile(state, state.companies[companyId]?.profileId)?.trait;
   return trait === 'price_cutter' ? CAMPAIGN.priceCut.price_cutter : CAMPAIGN.priceCut.default;
+}
+
+/**
+ * Mağazanın satıştaki fiyat çarpanı: kendi çarpanı × süren kampanya
+ * indirimi. Rekabet paneli ve bina penceresi bunu gösteriyor — saldırının
+ * fiyatı gizli kalmasın (Codex #62).
+ */
+export function effectivePriceMultiplier(state: GameState, building: BuildingInstance): number {
+  const category = BUILDING_BY_ID[building.defId]?.category;
+  return building.priceMultiplier * (category ? campaignPriceFactor(state, building.companyId, category) : 1);
 }
 
 /** Rakibin kategoride açık mağazası var mı — fiyat kırabileceği bir raf. */

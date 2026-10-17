@@ -7,6 +7,7 @@ import {
   companyRanking,
   districtOpportunity,
   districtPressure,
+  effectivePriceMultiplier,
   estimateInvestment,
   formatMoney,
   freePlotsIn,
@@ -649,7 +650,15 @@ function BuildingDetail({ buildingId }: { buildingId: string }): ReactElement | 
           <div className="statgrid small">
             <Stat label={t('panels.building.stat.utilization')} value={formatPercent(Math.round(ledger.capacityUsed * 100))} />
             <Stat label={t('panels.building.stat.share')} value={formatPercent(Math.round(ledger.share * 100))} />
-            <Stat label={t('panels.building.stat.price')} value={`×${building.priceMultiplier.toFixed(2)}`} />
+            {/* Kampanyadaki rakibin satış fiyatı indirimli (Tur 37b): gösterilen, ödenen. */}
+            <Stat
+              label={t(
+                effectivePriceMultiplier(state, building) !== building.priceMultiplier
+                  ? 'panels.building.stat.priceCampaign'
+                  : 'panels.building.stat.price',
+              )}
+              value={`×${effectivePriceMultiplier(state, building).toFixed(2)}`}
+            />
           </div>
         </>
       )}

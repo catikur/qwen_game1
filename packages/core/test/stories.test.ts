@@ -9,7 +9,8 @@ import { agenda } from '../src/agenda';
 import { build, demolish } from '../src/actions';
 import { createLeagueGame, replayRun, runFromState } from '../src/league';
 import { boostMultiplier, cardAmount, chooseCard, runCardTick, settleCardAway } from '../src/systems/cards';
-import { campaignPriceFactor, rivalQuote, runRivalryTick } from '../src/systems/rivalry';
+import { campaignPriceFactor, effectivePriceMultiplier, rivalQuote, runRivalryTick } from '../src/systems/rivalry';
+import { competitionCards } from '../src/competition';
 import type { CardState, CompanyState, GameState } from '../src/types';
 import { playerStrategy } from './proxy';
 
@@ -392,6 +393,30 @@ describe('rakip hikâyeleri', () => {
     assert.ok(state.news[0]!.title.includes(attacker.name));
     assert.equal(player.brand.retail ?? 0, brand, 'çekilen rakibe karşı sadakat markası yok');
     assert.equal(state.nextCampaignDay, 210 + CAMPAIGN.gapDays[0]);
+  });
+
+  test('kampanyadaki rakibin indirimli fiyatı rekabet panelinde ve binada görünüyor', () => {
+    const state = play(7, 120, false).getState();
+    delete state.card;
+    const player = getPlayer(state);
+    const category = competitionCards(state, player.id)[0]!.category;
+    const attacker = rival(state, 'price_cutter');
+    const shopId = openOutlet(state, attacker, category);
+    attacker.marketShare[category] = 0.95;
+    const shop = state.buildings[shopId]!;
+    const before = competitionCards(state, player.id).find((card) => card.category === category)!.leader!;
+    assert.equal(before.companyId, attacker.id);
+    assert.equal(effectivePriceMultiplier(state, shop), shop.priceMultiplier);
+
+    state.campaign = { companyId: attacker.id, category, startDay: state.time.day, endDay: state.time.day + 45, playerShare: 0.3 };
+    const factor = campaignPriceFactor(state, attacker.id, category);
+    assert.ok(factor < 1);
+    assert.equal(effectivePriceMultiplier(state, shop), shop.priceMultiplier * factor);
+    const during = competitionCards(state, player.id).find((card) => card.category === category)!.leader!;
+    assert.ok(Math.abs(during.price - before.price * factor) < 1e-9, `${during.price} / ${before.price}`);
+    // Oyuncunun kendi fiyatı kampanyadan etkilenmiyor.
+    const own = Object.values(state.buildings).find((b) => b.companyId === player.id && BUILDING_BY_ID[b.defId]?.category === category)!;
+    assert.equal(effectivePriceMultiplier(state, own), own.priceMultiplier);
   });
 
   test('uzun oyunda kampanya ve sözlü haberler çıkıyor', () => {

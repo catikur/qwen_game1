@@ -99,6 +99,7 @@ export const panels = {
   'panels.building.stat.utilization': 'Doluluk',
   'panels.building.stat.share': 'Bölge payı',
   'panels.building.stat.price': 'Fiyat',
+  'panels.building.stat.priceCampaign': 'Fiyat · kampanya',
   'panels.building.autoPrice': 'Fiyatı oyun yönetsin',
   'panels.building.priceMultiplierAria': 'Fiyat çarpanı',
   'panels.building.priceHint': 'Fiyatı düşürmek pazar payını artırır ama marjı yer. Yükseltmek tersini yapar.',
