@@ -11,6 +11,7 @@ import { createLeagueGame, replayRun, runFromState } from '../src/league';
 import { boostMultiplier, cardAmount, chooseCard, runCardTick, settleCardAway } from '../src/systems/cards';
 import { campaignPriceFactor, effectivePriceMultiplier, rivalQuote, runRivalryTick } from '../src/systems/rivalry';
 import { competitionCards } from '../src/competition';
+import { estimateInvestment } from '../src/systems/market';
 import type { CardState, CompanyState, GameState } from '../src/types';
 import { playerStrategy } from './proxy';
 
@@ -135,6 +136,27 @@ describe('karar kartları', () => {
     assert.ok(cogs(plain, 'rental') > 0);
     assert.equal(cogs(boosted, 'rental'), cogs(plain, 'rental'));
     assert.ok(cogs(boosted, 'outlet') < cogs(plain, 'outlet') * 0.8, `${cogs(boosted, 'outlet')} / ${cogs(plain, 'outlet')}`);
+  });
+
+  test('hızlı yatırım tahmini süren kart etkilerini görüyor', () => {
+    const state = play(11, 120, false).getState();
+    delete state.card;
+    const player = getPlayer(state);
+    delete player.boosts;
+    const district = state.districts.find((d) => d.opensOnDay === undefined)!;
+    const plain = estimateInvestment(state, district.id, 'corner_shop', player.id)!;
+    player.boosts = [
+      { target: 'upkeep', multiplier: 0.5, untilDay: state.time.day + 30, cardId: 'pos_system' },
+      { target: 'wages', multiplier: 0.5, untilDay: state.time.day + 30, cardId: 'union_lunch' },
+      { target: 'cogs', multiplier: 0.5, untilDay: state.time.day + 30, cardId: 'bulk_supplier' },
+    ];
+    const boosted = estimateInvestment(state, district.id, 'corner_shop', player.id)!;
+    assert.ok(boosted.fixedCosts < plain.fixedCosts * 0.6, `${boosted.fixedCosts} / ${plain.fixedCosts}`);
+    if (plain.cogs > 0) assert.ok(boosted.cogs < plain.cogs * 0.6, `${boosted.cogs} / ${plain.cogs}`);
+    assert.ok(boosted.dailyProfit > plain.dailyProfit);
+    player.boosts = [{ target: 'attraction', multiplier: 1.5, untilDay: state.time.day + 30, category: 'grocery', cardId: 'viral_video' }];
+    const attractive = estimateInvestment(state, district.id, 'corner_shop', player.id)!;
+    assert.ok(attractive.expectedUnits >= plain.expectedUnits);
   });
 
   test('şanslı seçenek aynı durumda aynı sonucu veriyor', () => {
@@ -454,6 +476,27 @@ describe('rakip hikâyeleri', () => {
     player.marketShare[category] = 0.5;
     runRivalryTick(state);
     assert.equal(state.campaign, undefined, 'rakipler donukken yeni kampanya');
+  });
+
+  test('hızlı tahmin kampanya indirimini görüyor; üretim binasının fiyatı kampanyadan etkilenmiyor', () => {
+    const state = play(7, 120, false).getState();
+    delete state.card;
+    const player = getPlayer(state);
+    const category = competitionCards(state, player.id)[0]!.category;
+    const attacker = rival(state, 'price_cutter');
+    const shop = state.buildings[openOutlet(state, attacker, category)]!;
+    const def = BUILDINGS.find((b) => b.role === 'outlet' && b.category === category)!;
+    const quiet = estimateInvestment(state, shop.districtId, def.id, player.id)!;
+    state.campaign = { companyId: attacker.id, category, startDay: state.time.day, endDay: state.time.day + 45, playerShare: 0.3 };
+    const attacked = estimateInvestment(state, shop.districtId, def.id, player.id)!;
+    assert.ok(attacked.expectedUnits < quiet.expectedUnits, `${attacked.expectedUnits} < ${quiet.expectedUnits}`);
+
+    // Saldıranın aynı kategorideki üretim binası: gösterilen fiyat ham çarpan.
+    const producerDef = BUILDINGS.find((b) => b.role !== 'outlet' && b.category === category);
+    assert.ok(producerDef, `${category} kategorisinde üretim binası yok`);
+    const producer = { ...shop, id: 'test-producer', defId: producerDef.id, priceMultiplier: 1.1 };
+    assert.equal(effectivePriceMultiplier(state, producer), 1.1);
+    assert.ok(effectivePriceMultiplier(state, shop) < shop.priceMultiplier);
   });
 
   test('uzun oyunda kampanya ve sözlü haberler çıkıyor', () => {

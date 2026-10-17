@@ -120,8 +120,10 @@ export function campaignPriceFactor(state: GameState, companyId: string, categor
  * fiyatı gizli kalmasın (Codex #62).
  */
 export function effectivePriceMultiplier(state: GameState, building: BuildingInstance): number {
-  const category = BUILDING_BY_ID[building.defId]?.category;
-  return building.priceMultiplier * (category ? campaignPriceFactor(state, building.companyId, category) : 1);
+  const def = BUILDING_BY_ID[building.defId];
+  // Kampanya yalnız mağaza rafında fiyat kırıyor; çiftlik ve fabrika aynı kategoride olsa da değil (Codex #62).
+  if (def?.role !== 'outlet') return building.priceMultiplier;
+  return building.priceMultiplier * campaignPriceFactor(state, building.companyId, def.category);
 }
 
 /** Rakibin kategoride açık mağazası var mı — fiyat kırabileceği bir raf. */

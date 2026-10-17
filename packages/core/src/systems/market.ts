@@ -248,8 +248,10 @@ export function estimateInvestment(
   if (!def || !district || !company) return null;
 
   const category = CATEGORIES[def.category];
-  const wages = wageFor(state, companyId, defId, districtId) * overheadMultiplier(state, companyId);
-  const fixedCosts = upkeepFor(state, companyId, defId) + wages;
+  // Süren kart etkileri (Tur 37b) yeni binaya da ilk günden uygulanıyor: tahmin de görsün (Codex #62).
+  const wages =
+    wageFor(state, companyId, defId, districtId) * overheadMultiplier(state, companyId) * boostMultiplier(state, companyId, 'wages');
+  const fixedCosts = upkeepFor(state, companyId, defId) * boostMultiplier(state, companyId, 'upkeep') + wages;
   // Geri ödeme, oyuncunun gerçekten ödeyeceği maliyete göre hesaplanır.
   const investmentCost = def.cost * getCeoModifiers(company.ceoId).buildCost * constructionMultiplier(state);
 
@@ -400,7 +402,8 @@ export function estimateInvestment(
   const self =
     Math.pow(qualityFor(state, companyId, defId), 1.15) *
     brand *
-    Math.pow(1 / priceMultiplier, category.elasticity);
+    Math.pow(1 / priceMultiplier, category.elasticity) *
+    boostMultiplier(state, companyId, 'attraction', def.category);
   const sources = categoryAttractiveness(state, def.category, companyId);
 
   let reachable = 0;
@@ -441,7 +444,7 @@ export function estimateInvestment(
   // Birim maliyet zincirden geliyor. Yeni bina için depo indirimi
   // varsayılmaz — tahmin temkinli olsun.
   const goodId = shelf[0];
-  const unitCogs = goodId ? unitCogsFor(state, companyId, goodId, 0, 1) : 0;
+  const unitCogs = goodId ? unitCogsFor(state, companyId, goodId, 0, 1) * boostMultiplier(state, companyId, 'cogs') : 0;
 
   // Yürürlükteki meclis kararı tahmine de giriyor: vergi gelen kategoride
   // "60 günde döner" demek, oyuncuya yalan söylemek olurdu.
@@ -489,8 +492,14 @@ function categoryAttractiveness(
       if (!def || def.role !== 'outlet' || def.category !== categoryId) return;
       const company = state.companies[building.companyId];
       const brand = 0.45 + 0.55 * (company?.brand[categoryId] ?? 0);
-      const priceFactor = Math.pow(1 / building.priceMultiplier, category.elasticity);
-      const value = Math.pow(qualityFor(state, building.companyId, building.defId), 1.15) * brand * priceFactor;
+      // Pazar adımıyla aynı fiyat ve çekicilik: süren kampanyanın indirimi ve kart etkisi (Codex #62).
+      const price = building.priceMultiplier * campaignPriceFactor(state, building.companyId, categoryId);
+      const priceFactor = Math.pow(1 / price, category.elasticity);
+      const value =
+        Math.pow(qualityFor(state, building.companyId, building.defId), 1.15) *
+        brand *
+        priceFactor *
+        boostMultiplier(state, building.companyId, 'attraction', categoryId);
       const entry = byDistrict.get(building.districtId) ?? { total: 0, own: 0 };
       entry.total += value;
       if (building.companyId === companyId) entry.own += value;

@@ -2631,6 +2631,9 @@ gelen karar kartları ve konuşan, saldıran rakipler.
     tahmini) yeni kampanya açılmıyor, süren kampanya ise süresini
     dolduruyor. Bina tahmini saldırı altındaki kategoride bugünkü fiyat
     savaşını görüyor.
+  - Yapı menüsündeki hızlı tahmin de aynı koşulları görüyor: kampanya
+    indirimi, süren kart etkileri (bakım, ücret, satış maliyeti,
+    çekicilik). Kampanya fiyatı yalnız mağazada gösteriliyor.
   - Fiyat kıran %14, diğerleri %7 kırıyor.
   - Duyuru haberi var; gündemde geri sayım var, çip rekabet panelini açıyor.
   - Sonunda pay ölçülüyor. Pay 2 puandan fazla düşmediyse kampanya geri
@@ -2790,7 +2793,7 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi) |
-| Birim testi | **334 test** (`pnpm test`; Tur 24'te render paketi de) |
+| Birim testi | **336 test** (`pnpm test`; Tur 24'te render paketi de) |
 | Denge testi | **288 kontrol, hepsi geçiyor** (20 bölüm, süreleriyle; ~11 dk) |
 | Tarayıcı testi | **370 kontrol, hepsi geçiyor**, 0 konsol hatası (~17–25 dk); duman koşusu 111 (~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + duman oynanışı |
