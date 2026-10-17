@@ -736,7 +736,7 @@ function tryRaidMove(state: GameState, profile: NpcProfileDef): void {
   const candidates = Object.values(state.companies).filter(
     (c) =>
       c.id !== raider.id &&
-      c.netWorth < raider.netWorth * difficulty.raidTargetRatio &&
+      c.netWorth < raider.netWorth * 0.9 &&
       // Kilitli yeni gelen hedef değil: zarı ona harcamak baskını boşa yakar.
       !(c.lockedUntilDay !== undefined && state.time.day < c.lockedUntilDay) &&
       /*

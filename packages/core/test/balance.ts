@@ -3273,6 +3273,15 @@ section('Hedefler, zafer ve zorluk', () => {
    * Girişler ilk ölçümde oyunu kaybedilemez yapmıştı — sebep girişin
    * kendisi değil, hissesi tükenmiş hedefe çakılan baskıncılardı.)
    *
+   * Tur 38'de eğri kaymıştı: geç oyun giderleri (Tur 37a) çok bina kuran
+   * rakipleri yavaşlatıyor, savunmasız yavaş oyuncu onları geçip baskın
+   * hedefi olmaktan çıkıyordu (Dengeli'de 8 tohumda 2 düşüş, 4 zafer).
+   * Rakip bütçesi üç kademede 1,5 katına, günlük tavan Dengeli ve
+   * Acımasız'da +%1'e çıktı. Yeni eğri (8 tohum: 1/7/42/101/202/3/5/11):
+   *   Rahat     bilgili 390-503   · yavaş hayatta kalıyor (8/8)
+   *   Dengeli   bilgili 625-752   · yavaş 754-886'da düşüyor (7/8), savunan 0/8
+   *   Acımasız  bilgili 809-929 (5/8; üçü düşüyor) · yavaş 367-815'te (8/8)
+   *
    * Sınanan iddialar: zafer erişilebilir ama bedava değil; kademeler
    * sıralı; oyun Dengeli ve Acımasız'da kaybedilebilir kalıyor, Rahat'ta
    * yavaş oyuncu affediliyor; uyarıyı okuyup savunan yavaş oyuncu
@@ -3360,15 +3369,18 @@ section('Hedefler, zafer ve zorluk', () => {
   const slowEasy = play(7, 'easy', 15, false, 900);
   const slowDefended = play(7, 'normal', 15, true, 900);
   const list = (days: number[]): string => (days.length > 0 ? days.join(', ') : '—');
+  // Tur 38: iddia "düşebilir"den (≥1/5) Tur 17'nin cümlesine döndü —
+  // savunmasız yavaş oyuncu Dengeli'de çoğunlukla düşüyor (ölçüm 5/5).
   expect(
-    'oyun kaybedilebilir kalıyor: savunmasız yavaş oyuncu Dengeli ve Acımasız\'da düşüyor',
-    normalFalls.length >= 1 && hardFalls.length >= 3,
+    'oyun kaybedilebilir: savunmasız yavaş oyuncu Dengeli\'de çoğunlukla, Acımasız\'da neredeyse hep düşüyor',
+    normalFalls.length >= 3 && hardFalls.length >= 4,
     `Dengeli ${normalFalls.length}/5 (${list(normalFalls)}) · Acımasız ${hardFalls.length}/5 (${list(hardFalls)})`,
   );
+  // İkisi de 5/5'e yaklaşınca "daha sık" beş tohumla ayırt edilemiyor; ayıran erken düşüş.
   expect(
-    'Acımasız daha sık ve daha erken düşürüyor',
-    hardFalls.length > normalFalls.length && normalFalls.length > 0 && mean(hardFalls) < mean(normalFalls),
-    `${hardFalls.length} > ${normalFalls.length} · ortalama ${Math.round(mean(hardFalls))} < ${normalFalls.length > 0 ? Math.round(mean(normalFalls)) : '—'}`,
+    'Acımasız en az o kadar sık ve daha erken düşürüyor',
+    hardFalls.length >= normalFalls.length && normalFalls.length > 0 && mean(hardFalls) < mean(normalFalls),
+    `${hardFalls.length} ≥ ${normalFalls.length} · ortalama ${Math.round(mean(hardFalls))} < ${normalFalls.length > 0 ? Math.round(mean(normalFalls)) : '—'}`,
   );
   expect('Rahat yavaş oyuncuyu affediyor', slowEasy.lostDay === null, slowEasy.lostDay === null ? '900 gün ayakta' : `${slowEasy.lostDay}. günde düştü`);
   expect(

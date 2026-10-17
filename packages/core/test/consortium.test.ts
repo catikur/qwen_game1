@@ -82,7 +82,10 @@ describe('rakip konsorsiyumu', () => {
   test('savunmasız pasif lider devralınıyor; önder şirketi alıyor', () => {
     const engine = passiveLeader();
     const leaderId = engine.getState().consortium!.leaderId;
-    for (let day = 0; day < 200 && !engine.getState().gameOver; day++) engine.runDay();
+    // Pencere 300 gün (Tur 38): rakip bütçesi büyüyünce pasif liderin öndeliği
+    // eriyor ve konsorsiyum "öndelik" gerekçesiyle dağılıyor (%19 toplamışken);
+    // işi önder tek başına bitiriyor — kuruluştan 202 gün sonra (önce ~70).
+    for (let day = 0; day < 300 && !engine.getState().gameOver; day++) engine.runDay();
     assert.equal(engine.getState().gameOver?.byCompanyId, leaderId);
   });
 

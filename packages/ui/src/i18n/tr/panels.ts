@@ -240,7 +240,7 @@ export const panels = {
     ' Yeni hisse nakit getirir ve baskıncının payını sulandırır; bedeli, şirketin büyümesinden yatırımcılara giden kalıcı pay. Borsa panelinden.',
   'panels.help.step.takeover.title': 'Devralma bir emir, tek tık değil.',
   'panels.help.step.takeover.body':
-    " Rakip hissesinden günde en fazla %3,5 alabilirsin, rakipler de seninkinden öyle. Emir her gün alır; hedef %30'u görünce hisselerini toplamaya başlar ve dolaşım yetmezse emir düşer.",
+    " Rakip hissesinden günde en fazla {cap} alabilirsin, rakipler de seninkinden öyle. Emir her gün alır; hedef %30'u görünce hisselerini toplamaya başlar ve dolaşım yetmezse emir düşer.",
   'panels.help.step.holding.title': 'Zafer bir dönemeç: holding.',
   'panels.help.step.holding.body':
     " Bir şehirde zafere ulaşınca yeni bir şehre açılabilirsin: sermaye ve marka bilinirliğinin yarısı seninle gelir, rakipler farklıdır. Aynı anda bir şehir oynanır; öbürleri de yaşamaya devam eder. Şehirler panelinden uzaktaki her şehrin yerel müdürüne talimat verirsin: kârın ne kadarı holding kasasına aksın (hepsini çekersen şehir nakitsiz kalır ve ucuzlar) ve baskına karşı geri alım yapsın mı. Kasadan her şehre para gönderebilirsin. Hedef üç şehirde zafer; zafer her şehirde orada yarattığın değerle ölçülür.",
