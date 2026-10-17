@@ -487,7 +487,8 @@ export interface FeatureFlags {
   cards?: boolean;
   /**
    * Rakip hikâyeleri: CEO sözleri ve rakip kampanyaları (Tur 37b). Aynı
-   * sözleşme: yokluğu AÇIK; `npcCompetition` kapalıyken çalışmıyor.
+   * sözleşme: yokluğu AÇIK. `npcCompetition` kapalıyken yeni söz ve
+   * kampanya yok; süren kampanya süresini dolduruyor.
    */
   rivalStories?: boolean;
 }

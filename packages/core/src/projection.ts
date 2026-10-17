@@ -44,8 +44,10 @@ function freeze(state: GameState): GameState {
    * uygulanan varsayılanın etkisi farka binerdi. Kart ÜRETİMİ duruyor
    * (masadaki kart kalkıyor, yenisi gelmiyor) ama bayrak açık kalıyor:
    * süren kart etkileri (bakım, ücret, çekicilik) bugün işi gerçekten
-   * etkiliyor ve tahmine girmeli (Codex #62). Rakip kampanyası
-   * `npcCompetition` ile zaten kapalı.
+   * etkiliyor ve tahmine girmeli (Codex #62). Rakip kampanyası da aynı
+   * kural: yeni kampanya açılmıyor (`npcCompetition` kapalı), süren kampanya
+   * ise indirimiyle süresini dolduruyor — saldırı altındaki kategoride
+   * bugünkü fiyat savaşı tahmine girmeli (Codex #62).
    */
   delete copy.card;
   copy.nextCardDay = Number.MAX_SAFE_INTEGER;

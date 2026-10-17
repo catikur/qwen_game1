@@ -419,6 +419,43 @@ describe('rakip hikâyeleri', () => {
     assert.equal(effectivePriceMultiplier(state, own), own.priceMultiplier);
   });
 
+  test('bina tahmini süren kampanyayı görüyor; rakipler donukken yeni kampanya yok', async () => {
+    const { projectBuilding } = await import('../src/projection');
+    const state = play(7, 120, false).getState();
+    delete state.card;
+    state.nextCardDay = Number.MAX_SAFE_INTEGER;
+    const player = getPlayer(state);
+    const category = competitionCards(state, player.id)[0]!.category;
+    const attacker = rival(state, 'price_cutter');
+    const shop = state.buildings[openOutlet(state, attacker, category)]!;
+    const def = BUILDINGS.find((b) => b.role === 'outlet' && b.category === category)!;
+    const tile = state.map.tiles.find(
+      (t) => t.districtId === shop.districtId && t.kind === 'plot' && !t.ownerId && !t.structureId && !t.buildingId,
+    )!;
+    assert.ok(tile, 'aynı bölgede boş parsel yok');
+    const ask = () => projectBuilding(state, player.id, def.id, tile.id, 60)!;
+    const quiet = ask();
+    state.campaign = { companyId: attacker.id, category, startDay: state.time.day, endDay: state.time.day + 45, playerShare: 0.3 };
+    const attacked = ask();
+    // Yön kategoriye göre değişiyor (saldırı altındaki kategoride yeni mağazanın
+    // marjinal değeri); önemli olan tahminin bugünkü fiyat savaşını görmesi.
+    assert.notDeepEqual(attacked, quiet, 'tahmin kampanyayı görmüyor');
+    assert.ok(state.campaign, 'kaynak durumun kampanyası yerinde');
+
+    // Rakipler donuk (npcCompetition kapalı): süren kampanya indirimiyle sürüyor, bitince yenisi açılmıyor.
+    state.flags.npcCompetition = false;
+    runRivalryTick(state);
+    assert.ok(state.campaign);
+    assert.ok(campaignPriceFactor(state, attacker.id, category) < 1);
+    state.time.day = state.campaign.endDay;
+    runRivalryTick(state);
+    assert.equal(state.campaign, undefined);
+    state.time.day = state.nextCampaignDay!;
+    player.marketShare[category] = 0.5;
+    runRivalryTick(state);
+    assert.equal(state.campaign, undefined, 'rakipler donukken yeni kampanya');
+  });
+
   test('uzun oyunda kampanya ve sözlü haberler çıkıyor', () => {
     const state = play(1, 560, true).getState();
     const quoted = state.news.filter((item) => item.companyId && item.body.includes('“'));

@@ -7,7 +7,7 @@ import { dailyBuyCap, sharesToControl } from './systems/orders';
 import { laborEnabled } from './systems/labor';
 import { crisesEnabled } from './systems/economy';
 import { cardParams, cardsEnabled } from './systems/cards';
-import { storiesEnabled } from './systems/rivalry';
+import { campaignsLive } from './systems/rivalry';
 import { formatMoney } from './selectors';
 import { tc } from './i18n';
 import type { GameState } from './types';
@@ -332,7 +332,7 @@ export function agenda(state: GameState): AgendaItem[] {
   // Rakip kampanyası (Tur 37b): kim, hangi kategoride, kaç gün kaldı.
   const campaign = state.campaign;
   const attacker = campaign ? state.companies[campaign.companyId] : undefined;
-  if (campaign && attacker && storiesEnabled(state)) {
+  if (campaign && attacker && campaignsLive(state)) {
     items.push({
       kind: 'campaign',
       key: `campaign:${campaign.companyId}:${campaign.startDay}`,

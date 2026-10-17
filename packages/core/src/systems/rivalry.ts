@@ -26,6 +26,17 @@ export function storiesEnabled(state: GameState): boolean {
   return state.flags.rivalStories !== false && state.flags.npcCompetition !== false;
 }
 
+/**
+ * Süren kampanya yalnız kendi bayrağına bağlı. `npcCompetition` kapalıyken
+ * rakip yeni hamle yapmıyor (yeni kampanya, söz yok) ama mağazaları satmayı
+ * sürdürüyor; açılmış fiyat savaşı da süresini dolduruyor. Bina tahmini
+ * (`freeze`) rakipleri böyle donduruyor ve saldırı altındaki kategoride
+ * bugünkü indirimi görmeli (Codex #62).
+ */
+export function campaignsLive(state: GameState): boolean {
+  return state.flags.rivalStories !== false;
+}
+
 function storyDice(state: GameState, salt: number): ReturnType<typeof createRng> {
   return createRng(((state.meta.seed ^ 0x3c6ef372) ^ Math.imul(salt, 0x85ebca6b)) >>> 0);
 }
@@ -98,7 +109,7 @@ export function rivalCrisisReaction(state: GameState): void {
 /** Süren kampanyada bu şirketin bu kategorideki fiyat çarpanı. */
 export function campaignPriceFactor(state: GameState, companyId: string, category: CategoryId): number {
   const campaign = state.campaign;
-  if (!campaign || campaign.companyId !== companyId || campaign.category !== category || !storiesEnabled(state)) return 1;
+  if (!campaign || campaign.companyId !== companyId || campaign.category !== category || !campaignsLive(state)) return 1;
   const trait = rivalProfile(state, state.companies[companyId]?.profileId)?.trait;
   return trait === 'price_cutter' ? CAMPAIGN.priceCut.price_cutter : CAMPAIGN.priceCut.default;
 }
@@ -208,7 +219,7 @@ function finishCampaign(state: GameState, campaign: CampaignState): void {
 
 /** Günlük adım: kampanyanın takvimi. Pazardan ÖNCE — kampanya fiyatı aynı gün satışa girsin. */
 export function runRivalryTick(state: GameState): void {
-  if (!storiesEnabled(state)) {
+  if (!campaignsLive(state)) {
     delete state.campaign;
     return;
   }
@@ -238,6 +249,8 @@ export function runRivalryTick(state: GameState): void {
     }
     return;
   }
+  // Yeni kampanya rakibin hamlesi: rakipler donukken (laboratuvar, bina tahmini) yok.
+  if (!storiesEnabled(state)) return;
   state.nextCampaignDay ??= CAMPAIGN.firstDay + Math.floor(nextFloat(storyDice(state, 2)) * 41);
   if (day < state.nextCampaignDay) return;
   // Uygun hedef yoksa (oyuncunun güçlü kategorisi yok) iki hafta sonra yeniden bak.
