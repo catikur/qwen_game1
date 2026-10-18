@@ -7,6 +7,7 @@ import { createRng, nextFloat } from '../rng';
 import { formatMoney } from '../selectors';
 import { isDistrictOpen } from './city';
 import { rivalQuote, withQuote } from './rivalry';
+import { scenarioProjectGap } from './scenario';
 import type { CommandResult, CompanyState, DistrictState, GameState, ProjectState } from '../types';
 
 /**
@@ -333,7 +334,8 @@ function finishProject(state: GameState, project: ProjectState): void {
     ...(project.sponsorId ? { sponsorId: project.sponsorId, sponsorName: project.sponsorName } : {}),
   });
   delete state.project;
-  state.nextProjectDay = state.time.day + rangeInt(dice(state, state.time.day ^ 0x5bd1e995), PROJECT_TIMING.gapDays);
+  // Senaryonun takvimi (Tur 39: Şehrin sponsoru) serbest oyununkinden sık.
+  state.nextProjectDay = state.time.day + rangeInt(dice(state, state.time.day ^ 0x5bd1e995), scenarioProjectGap(state) ?? PROJECT_TIMING.gapDays);
   pushNews(
     state,
     'good',

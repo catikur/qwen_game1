@@ -1,9 +1,10 @@
-import { SCENARIO_BY_ID, fillTemplate, formatDecimal } from '@capital/content';
+import { BUILDING_BY_ID, GOOD_BY_ID, SCENARIO_BY_ID, fillTemplate, formatDecimal } from '@capital/content';
 import type { ScenarioDef } from '@capital/content';
 import { tc } from '../i18n';
 import { pushNews } from '../news';
 import { formatMoney } from '../selectors';
-import type { GameState, ScenarioState } from '../types';
+import { victoryNetWorth } from './goals';
+import type { GameState, ScenarioLostReason, ScenarioState } from '../types';
 
 /**
  * Senaryo modu (Tur 39): günlük hedef, süre ve yıldız. Kurulum
@@ -55,6 +56,77 @@ export function leadRatio(state: GameState): number {
   return Math.max(0, player.netWorth / best);
 }
 
+/** Oyuncunun net değere göre sırası (1: en değerli). */
+export function playerRank(state: GameState): number {
+  const player = state.companies[state.playerCompanyId];
+  if (!player) return Number.POSITIVE_INFINITY;
+  let rank = 1;
+  for (const company of Object.values(state.companies)) {
+    if (!company.isPlayer && company.netWorth > player.netWorth) rank++;
+  }
+  return rank;
+}
+
+export interface ChainGoalStatus {
+  /** Zincirin malları: hammadde ve ara mal (ürün tanımından). */
+  rawGoodId: string;
+  intermediateId: string;
+  /** Hammadde ünitesi, işleme ünitesi, ürünü rafında taşıyan mağaza. */
+  raw: boolean;
+  process: boolean;
+  outlet: boolean;
+  /** Ara malın şirket birim maliyeti ve spot fiyatı. */
+  cost: number;
+  spot: number;
+  /** Ürünün kategorisinde pay (0..1). */
+  share: number;
+  met: boolean;
+}
+
+/**
+ * Zincir hedefi: `goodId` tüketici ürünü; ara malı ve hammaddesi ürün
+ * tanımından. Maliyet koşulu ara malın harmanlanmış birim maliyeti (kendi
+ * üretimi + piyasadan alınan) spot fiyatın altında.
+ */
+export function chainGoalStatus(state: GameState, goodId: string, target: number): ChainGoalStatus | null {
+  const good = GOOD_BY_ID[goodId];
+  const intermediate = good?.inputGoodId ? GOOD_BY_ID[good.inputGoodId] : undefined;
+  const raw = intermediate?.inputGoodId;
+  const player = state.companies[state.playerCompanyId];
+  if (!good || !intermediate || !raw || !good.category || !player) return null;
+  let hasRaw = false;
+  let hasProcess = false;
+  let hasOutlet = false;
+  for (const building of Object.values(state.buildings)) {
+    if (building.companyId !== player.id) continue;
+    const def = BUILDING_BY_ID[building.defId];
+    if (!def) continue;
+    if (def.role === 'extract' && def.outputGoodId === raw) hasRaw = true;
+    if (def.role === 'process' && def.outputGoodId === intermediate.id) hasProcess = true;
+    if (def.role === 'outlet' && building.stocked.includes(goodId)) hasOutlet = true;
+  }
+  const spot = state.market.spot[intermediate.id] ?? intermediate.basePrice;
+  const cost = player.unitCost[intermediate.id] ?? spot;
+  const share = player.marketShare[good.category] ?? 0;
+  return {
+    rawGoodId: raw,
+    intermediateId: intermediate.id,
+    raw: hasRaw,
+    process: hasProcess,
+    outlet: hasOutlet,
+    cost,
+    spot,
+    share,
+    met: hasRaw && hasProcess && hasOutlet && cost < spot && share >= target,
+  };
+}
+
+/** Şehirde yaratılan değer (holding aktarımı hariç; zaferin ölçüsü). */
+function createdValue(state: GameState): number {
+  const player = state.companies[state.playerCompanyId];
+  return (player?.netWorth ?? 0) - (state.importedCapital ?? 0);
+}
+
 /** Bir skorun yıldızı (hedefe ulaşılmışsa en az bir). */
 export function starsFor(def: ScenarioDef, score: number): number {
   const { metric, two, three } = def.stars;
@@ -67,6 +139,7 @@ export function scenarioGoalText(def: ScenarioDef): string {
   return fillTemplate(def.goalText, {
     days: def.days,
     target: def.goal.kind === 'netWorth' ? formatMoney(def.goal.target) : '',
+    share: def.goal.kind === 'chain' ? Math.round(def.goal.share * 100) : '',
   });
 }
 
@@ -112,6 +185,57 @@ export function scenarioProgress(state: GameState): ScenarioProgress | null {
       daysLeft,
     };
   }
+  const clamp = (value: number) => Math.max(0, Math.min(1, value));
+  const goal = def.goal;
+  if (goal.kind === 'victory') {
+    const target = victoryNetWorth(state);
+    const rank = playerRank(state);
+    return {
+      progress: clamp(createdValue(state) / target),
+      detail: tc(rank === 1 ? 'core.scenario.progressVictory' : 'core.scenario.progressVictoryRank', {
+        value: formatMoney(Math.max(0, createdValue(state))),
+        target: formatMoney(target),
+        rank,
+      }),
+      daysLeft,
+    };
+  }
+  if (goal.kind === 'chain') {
+    const status = chainGoalStatus(state, goal.goodId, goal.share);
+    if (!status) return null;
+    const links = [status.raw, status.process, status.outlet].filter(Boolean).length;
+    const cheaper = status.cost < status.spot;
+    return {
+      progress: clamp((clamp(status.share / goal.share) * 3 + links + (cheaper ? 1 : 0)) / 7),
+      // Maliyet ancak kendi üretimi varken söz konusu (yoksa piyasa fiyatı).
+      detail: tc(cheaper || !status.process ? 'core.scenario.progressChain' : 'core.scenario.progressChainCost', {
+        share: Math.floor(status.share * 100),
+        target: Math.round(goal.share * 100),
+        links,
+      }),
+      daysLeft,
+      ahead: status.met,
+    };
+  }
+  if (goal.kind === 'sponsor') {
+    const done = run.sponsored ?? 0;
+    const rank = playerRank(state);
+    return {
+      progress: clamp(done / goal.projects),
+      detail:
+        run.outOfRankDay === undefined
+          ? tc('core.scenario.progressSponsor', { done, total: goal.projects, rank })
+          : tc('core.scenario.progressSponsorOut', {
+              done,
+              total: goal.projects,
+              rank,
+              max: goal.maxRank,
+              days: Math.max(0, run.outOfRankDay + goal.graceDays - day),
+            }),
+      daysLeft,
+      ahead: rank <= goal.maxRank,
+    };
+  }
   const lead = leadRatio(state);
   const span = Math.max(1, run.endDay - run.startDay);
   return {
@@ -125,24 +249,78 @@ export function scenarioProgress(state: GameState): ScenarioProgress | null {
   };
 }
 
-function finish(state: GameState, run: ScenarioState, def: ScenarioDef, won: boolean, score: number): void {
+const LOST_BODY: Record<ScenarioLostReason, 'core.scenario.lostTakeover' | 'core.scenario.lostTime' | 'core.scenario.lostRank' | 'core.scenario.lostProject'> = {
+  takeover: 'core.scenario.lostTakeover',
+  time: 'core.scenario.lostTime',
+  rank: 'core.scenario.lostRank',
+  project: 'core.scenario.lostProject',
+};
+
+function finish(state: GameState, run: ScenarioState, def: ScenarioDef, won: boolean, score: number, reason?: ScenarioLostReason): void {
   run.finishedDay = state.time.day;
   run.outcome = won ? 'won' : 'lost';
   // Yıldız ham skordan, saklanan skor aşağı yuvarlanmış (Codex #66): ×1,3996
   // yuvarlanınca ×1,4 olup üç yıldız eşiğini geçmiş gibi görünüyordu.
   run.score = floorTo(score, 3);
   run.stars = won ? starsFor(def, score) : 0;
+  if (!won) run.lostReason = reason ?? 'time';
+  // Zafer hedefinde zafer ekranı senaryonun sonuç ekranıyla aynı haberi verirdi.
+  if (won && def.goal.kind === 'victory' && state.victory) state.victory.dismissed = true;
   state.time.speed = 0;
+  const maxRank = def.goal.kind === 'sponsor' ? def.goal.maxRank : 0;
+  const graceDays = def.goal.kind === 'sponsor' ? def.goal.graceDays : 0;
   pushNews(
     state,
     won ? 'good' : 'bad',
     won ? tc('core.scenario.wonTitle', { title: def.title, stars: run.stars }) : tc('core.scenario.lostTitle', { title: def.title }),
-    won
-      ? tc('core.scenario.wonBody', { score: scenarioScoreText(def, run.score) })
-      : state.gameOver
-        ? tc('core.scenario.lostTakeover')
-        : tc('core.scenario.lostTime'),
+    won ? tc('core.scenario.wonBody', { score: scenarioScoreText(def, run.score) }) : tc(LOST_BODY[run.lostReason!], { rank: maxRank, days: graceDays }),
   );
+}
+
+/**
+ * Şehrin sponsoru: senaryoda katkı penceresi kapanan projeyi bir kez
+ * sayar. Kapanan proje inşaat evresinde (`closeFunding` sponsoru yazdı);
+ * açılış günü projenin kimliği. Dönen değer: bugün kapandıysa sponsor
+ * oyuncu mu.
+ */
+function closedToday(state: GameState, run: ScenarioState): boolean | null {
+  const project = state.project;
+  if (!project || project.phase !== 'building' || project.openedDay < run.startDay) return null;
+  const closed = run.closedProjects ?? [];
+  if (closed.includes(project.openedDay)) return null;
+  run.closedProjects = [...closed, project.openedDay];
+  return project.sponsorId === state.playerCompanyId;
+}
+
+/**
+ * Şehrin sponsoru: sıra tutuluyor mu. Sıranın dışına düşen şirketin geri
+ * dönmek için `graceDays` günü var (bina kurmak da katkı da net değeri bir
+ * an düşürüyor; ilk ölçümde ilk inşaat oyuncuyu ilk gün üçüncülüğe
+ * indiriyordu). Düştüğü gün haber; geri dönünce sayaç siliniyor.
+ */
+function rankHeld(state: GameState, run: ScenarioState, maxRank: number, graceDays: number): boolean {
+  const rank = playerRank(state);
+  if (rank <= maxRank) {
+    delete run.outOfRankDay;
+    return true;
+  }
+  if (run.outOfRankDay === undefined) {
+    run.outOfRankDay = state.time.day;
+    pushNews(
+      state,
+      'bad',
+      tc('core.scenario.outOfRankTitle', { max: maxRank }),
+      tc('core.scenario.outOfRankBody', { rank, max: maxRank, days: graceDays }),
+    );
+  }
+  return state.time.day - run.outOfRankDay < graceDays;
+}
+
+/** Senaryonun proje takvimi: biri bitince sonrakinin açılışına (yoksa serbest oyunun takvimi). */
+export function scenarioProjectGap(state: GameState): readonly [number, number] | null {
+  if (!scenarioActive(state)) return null;
+  const gap = scenarioDefOf(state)?.setup.projects?.gapDays;
+  return gap === undefined ? null : [gap, gap];
 }
 
 /**
@@ -157,19 +335,46 @@ export function runScenarioTick(state: GameState): void {
   const player = state.companies[state.playerCompanyId];
   if (!def || !player) return;
   const day = state.time.day;
+  const goal = def.goal;
 
   if (state.gameOver) {
-    finish(state, run, def, false, 0);
+    finish(state, run, def, false, 0, 'takeover');
     return;
   }
 
-  if (def.goal.kind === 'netWorth') {
-    if (player.netWorth >= def.goal.target) finish(state, run, def, true, day - run.startDay);
-    else if (day >= run.endDay) finish(state, run, def, false, player.netWorth / def.goal.target);
-    return;
+  switch (goal.kind) {
+    case 'netWorth':
+      if (player.netWorth >= goal.target) finish(state, run, def, true, day - run.startDay);
+      else if (day >= run.endDay) finish(state, run, def, false, player.netWorth / goal.target);
+      return;
+    case 'victory':
+      // Zafer günün hedef adımında yazıldı (`runGoalTick` bu adımdan önce).
+      if (state.victory) finish(state, run, def, true, state.victory.day - run.startDay);
+      else if (day >= run.endDay) finish(state, run, def, false, createdValue(state) / victoryNetWorth(state));
+      return;
+    case 'chain': {
+      const status = chainGoalStatus(state, goal.goodId, goal.share);
+      if (status?.met) finish(state, run, def, true, day - run.startDay);
+      else if (day >= run.endDay) finish(state, run, def, false, (status?.share ?? 0) / goal.share);
+      return;
+    }
+    case 'sponsor': {
+      const sponsor = closedToday(state, run);
+      if (sponsor === false) {
+        finish(state, run, def, false, run.sponsored ?? 0, 'project');
+        return;
+      }
+      if (sponsor === true) run.sponsored = (run.sponsored ?? 0) + 1;
+      if (!rankHeld(state, run, goal.maxRank, goal.graceDays)) finish(state, run, def, false, run.sponsored ?? 0, 'rank');
+      else if ((run.sponsored ?? 0) >= goal.projects) finish(state, run, def, true, leadRatio(state));
+      else if (day >= run.endDay) finish(state, run, def, false, run.sponsored ?? 0);
+      return;
+    }
+    case 'leadAtEnd': {
+      if (day < run.endDay) return;
+      const lead = leadRatio(state);
+      finish(state, run, def, lead > 1, lead);
+      return;
+    }
   }
-
-  if (day < run.endDay) return;
-  const lead = leadRatio(state);
-  finish(state, run, def, lead > 1, lead);
 }

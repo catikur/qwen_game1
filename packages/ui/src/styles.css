@@ -5495,6 +5495,28 @@ button.icon {
   font-weight: 600;
 }
 
+.scenario-checklist {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.scenario-checklist li.done {
+  color: var(--text);
+}
+
+.scenario-checklist li.done > span {
+  color: var(--good);
+  font-weight: 700;
+}
+
 .scenario-preparing-card {
   width: min(420px, calc(100vw - 32px));
   display: flex;

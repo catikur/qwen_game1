@@ -4,7 +4,7 @@
 > `pnpm bench` çıktısından; iddialar `pnpm balance` ve `pnpm playtest`
 > tarafından her koşuda doğrulanıyor.
 >
-> Son güncelleme: şema **v6**, 39 tur (Tur 33 denendi ve geri alındı; Tur 34 eski görünüme canlılık ekledi; Tur 35 arayüzü Lite'ın "Cam & Bulut" diline taşıdı; Tur 36 şehre ayrıntı kattı; Tur 37a geç oyuna yönetim yükü, servet vergisi ve kriz dönemleri getirdi; Tur 37b karar kartlarını ve rakip hikâyelerini ekledi; Tur 37c fırsat balonlarını ve aylık görev panosunu getirdi; Tur 37d canlı pazarı, şehir projesi ihalesini ve rakip konsorsiyumunu getirdi; Tur 38 değerlendirme turuydu: geç oyun hızı, gündem ve haber akışı, zorluk eğrisi; Tur 39a senaryo modunu getirdi: Kurtarma ve Krizin ortasında).
+> Son güncelleme: şema **v6**, 39 tur (Tur 33 denendi ve geri alındı; Tur 34 eski görünüme canlılık ekledi; Tur 35 arayüzü Lite'ın "Cam & Bulut" diline taşıdı; Tur 36 şehre ayrıntı kattı; Tur 37a geç oyuna yönetim yükü, servet vergisi ve kriz dönemleri getirdi; Tur 37b karar kartlarını ve rakip hikâyelerini ekledi; Tur 37c fırsat balonlarını ve aylık görev panosunu getirdi; Tur 37d canlı pazarı, şehir projesi ihalesini ve rakip konsorsiyumunu getirdi; Tur 38 değerlendirme turuydu: geç oyun hızı, gündem ve haber akışı, zorluk eğrisi; Tur 39a senaryo modunu getirdi: Kurtarma ve Krizin ortasında; Tur 39b Konsorsiyuma karşı, Zincir ustası ve Şehrin sponsoru senaryolarını ekledi).
 
 ---
 
@@ -3377,6 +3377,98 @@ kontrol, ~17 sn). Tarayıcı tam koşu 411/411, konsol hatası yok; yeni bölüm
 kriz bitiminde sonuç, üç yıldız, yerel en iyi, yenilemede sonuç ve tek
 sayım, serbest oyun, kayıp ekranı, "Baştan oyna").
 
+### Tur 39b — Senaryo modu: Konsorsiyuma karşı, Zincir ustası, Şehrin sponsoru
+
+İkinci aşama üç senaryo getiriyor; kurulum ve hedef türleri genişliyor.
+
+**Çatıda değişen.**
+- *Kurulum parçalı* (`ScenarioSetup`): şube, boşa çalışan bina, bina yaşı,
+  kredi, baskıncı payı, kriz, konsorsiyum, proje takvimi. Her senaryo yalnız
+  kendi parçalarını yazıyor.
+- *Üç yeni hedef türü:* zafer (`victory`), zincir (`chain`), sponsorluk
+  (`sponsor`). Kaybın nedeni kayıtta (`lostReason`: devralma, süre, sıra,
+  proje); sonuç ekranı onu yazıyor.
+- *Devralınan binalar:* bina sayısı bölge sayısını geçince aynı parsel iki
+  kez seçiliyordu; ikinci bina kurulamıyor, sessizce düşüyordu (konsorsiyumda
+  12 şubenin 9'u). Seçilen parsel bir daha seçilmiyor; Kurtarma ve sponsor
+  kurulumları değişmedi (sayıldı).
+
+**Konsorsiyuma karşı** (seed 7, 200 gün ön tarih, 550 gün, hedef zafer).
+35 M ₺ kasa ve 150 günlük on iki mağaza; konsorsiyum devir günü kuruluyor,
+30 gün sonra ortak alım. Konsorsiyumun "yatırıma dönüş" sayacı kuruluştan
+sonra kurulan binaları sayıyor; bina yaşı devralınan mağazaları bu sayımın
+dışında tutuyor. Ölçüm: 300 günlük ön tarihte rakipler oyuncuyu geçiyor ve
+arsa azalıyordu; atıl kasa işe koşulamıyor, hiçbir vekil zafere
+ulaşamıyordu.
+
+| Vekil (550 gün) | Sonuç |
+|---|---|
+| Hiçbir şey yapmayan | 109. günde devralınıyor |
+| On beş günde bir kuran | süre doluyor (değer hedefte, sıra ikinci) |
+| Beş günde bir kuran | 435. günde zafer (1 yıldız) |
+| Üç günde bir kuran, her gün savunan | 415. günde (2 yıldız) |
+| + atıl kasayı aynı gün işe koşan | 413. günde (2 yıldız) |
+
+Eşikler 420 ve 380 gün. Zafer ekranı senaryonun sonuç ekranıyla aynı haberi
+verirdi: zafer hedefinde zafer ekranı kapatılıyor, serbest oyuna dönünce de
+çıkmıyor.
+
+**Zincir ustası** (seed 42, 300 gün ön tarih, 250 gün, 3 M ₺ kasa, bina
+yok). Hedef: silikon ocağı, çip fabrikası ve telefonu rafında tutan mağaza;
+çipin birim maliyeti piyasanın altında; elektronikte %40 pay. Üçü aynı gün
+sağlanmalı. Ölçüm ürünü değiştirdi: giyimde ve ekmekte pay 4–49 günde %40'ı
+geçiyordu. Elektronikte iki kapı var: Silikon Ocağı 6 M ₺ şirket değeriyle
+açılıyor, kurulmuş şehirde de pay yavaş birikiyor. Sanayide boş arsa
+kalmamış (yapılı arsa alınabiliyor, liman 90. günde açılıyor); metin bunu
+söylüyor. İlk vekil ölçümü yanıltıcıydı: vekil kilit açılmadan sanayi
+arsası alıp kuramıyor, sonra kendi boş arsasını görmüyordu.
+
+| Vekil (250 gün) | Sonuç |
+|---|---|
+| Hiçbir şey yapmayan | süre doluyor |
+| Zinciri kurmayan büyüme, üç günde bir | 223. günde devralınıyor |
+| Beş günde bir oynayıp zinciri kuran | 101. günde (2 yıldız) |
+| Zinciri öne alan, üç günde bir | 97. günde (2 yıldız) |
+| On beş günde bir oynayıp zinciri kuran | 196. günde (1 yıldız) |
+
+Eşikler 150 ve 90 gün. Hedef panelinde beş koşulun listesi var: üç halka,
+maliyet ve pay. Kendi üretimi olmayan için maliyet satırı "kendi üretimi
+yok" diyor.
+
+**Şehrin sponsoru** (seed 1, 180 gün ön tarih, 300 gün). 5 M ₺ kasa ve altı
+mağaza. İlk ihale devirden 10 gün sonra açılıyor, ikincisi birincinin
+bitişinden 30 gün sonra (serbest oyunda 260–380). Bir ihaleyi rakip kaparsa
+senaryo biter. Ölçüm ilk kuralı değiştirdi: "ilk ikiden düşme" her gün
+sınanıyordu, ilk inşaat net değeri bir an düşürüp oyuncuyu ilk gün
+üçüncülüğe indiriyordu. Sıradan düşen şirketin geri dönmek için 20 günü var:
+düştüğü gün haber çıkıyor, hedef panelinde geri sayım. 4 M ₺ kasayla bütün
+vekiller ilk ayda sıradan düşüyordu (rakipler bu evrede hızlı büyüyor).
+
+| Vekil (5 M ₺ kasa) | Sonuç |
+|---|---|
+| Hiçbir şey yapmayan | 86. günde sıradan düşüyor |
+| On beş günde bir kuran, son haftada lideri geçen | ilk ihaleden sonra sıradan düşüyor (114. gün) |
+| Beş günde bir kuran, son haftada %10 geçen | ×1,25 (1 yıldız) |
+| Üç günde bir kuran, son üç günde %5 geçen | ×1,57 (2 yıldız) |
+
+Yıldızın ölçüsü ikinci ihalenin kapandığı günkü öndelik; eşikler ×1,35 ve
+×1,65. Vekilin katkıları ~0,7 ve ~1,8 M ₺.
+
+**Arayüz.** Sonuç ekranı kaybın nedenini yazıyor: devralma, süre, sıra ya
+da proje. Zafer hedefinde değer hedefteyse eksik olanın birincilik olduğunu
+söylüyor. Açılış ekranı konsorsiyumun önderini ve ortak alımın gününü,
+sponsor senaryosunda ilk ihalenin gününü yazıyor. Öndelik ölçülü yıldız
+eşiklerinde, hedef "en değerli şirket" değilse bir yıldız "hedef" oluyor.
+
+**Doğrulama.** `pnpm test` 415/415. Altı yeni test var: konsorsiyum
+kurulumu ve bina yaşı, zafer hedefi, zincirin koşulları, iki sponsorluk ve
+proje takvimi, rakibin kaptığı ihale, sıradan düşüş ve 20 gün.
+`pnpm balance` 314/314; yeni bölüm "Senaryolar II: konsorsiyum, zincir ve
+sponsor" (14 kontrol, ~33 sn). Tarayıcı tam koşu 420/420, konsol hatası
+yok; "Senaryo modu" bölümüne 7 kontrol eklendi: konsorsiyumun açılışı,
+zafer günü sonuç ve araya girmeyen zafer ekranı, zincir listesi, ihale
+günü, sıradan düşüş ve geri sayım, kaybın nedeni.
+
 
 ---
 
@@ -3459,11 +3551,11 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi) |
-| Birim testi | **409 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi de) |
-| Denge testi | **300 kontrol, hepsi geçiyor** (22 bölüm, süreleriyle; ~12 dk) |
-| Tarayıcı testi | **413 kontrol, hepsi geçiyor**, 0 konsol hatası (~17–25 dk); duman koşusu 132 (~5 dk, rehber dahil) |
+| Birim testi | **415 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi de) |
+| Denge testi | **314 kontrol, hepsi geçiyor** (23 bölüm, süreleriyle; ~12 dk) |
+| Tarayıcı testi | **420 kontrol, hepsi geçiyor**, 0 konsol hatası (~17–25 dk); duman koşusu 132 (~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + duman oynanışı |
-| Kapsam | 35 bina · 25 ürün · 7 kategori · 8 rakip profili · 10 CEO · 22 olay (11 şehir + 11 sektör) · 2 kriz · 12 karar kartı · 70 rakip sözü · 5 fırsat balonu · 8 görev türü · 4 mevsim · 9 moda ürünü · 17 şehir yapısı (6 siluet) · 6 şehir projesi · 2 senaryo |
+| Kapsam | 35 bina · 25 ürün · 7 kategori · 8 rakip profili · 10 CEO · 22 olay (11 şehir + 11 sektör) · 2 kriz · 12 karar kartı · 70 rakip sözü · 5 fırsat balonu · 8 görev türü · 4 mevsim · 9 moda ürünü · 17 şehir yapısı (6 siluet) · 6 şehir projesi · 5 senaryo |
 
 ### Render (Tur 6 sonrası)
 

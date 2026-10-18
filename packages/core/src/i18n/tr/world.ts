@@ -115,6 +115,16 @@ export const world = {
   'core.scenario.progressMoney': '{value} / {target}',
   'core.scenario.progressAhead': 'önde ×{ratio}',
   'core.scenario.progressBehind': 'liderin %{percent} kadarı',
+  'core.scenario.progressVictory': '{value} / {target}',
+  'core.scenario.progressVictoryRank': '{value} / {target} · {rank}. sırada',
+  'core.scenario.progressChain': 'pay %{share}/%{target} · zincir {links}/3',
+  'core.scenario.progressChainCost': 'pay %{share}/%{target} · zincir {links}/3 · maliyet piyasanın altına inmedi',
+  'core.scenario.progressSponsor': 'sponsor {done}/{total} · {rank}. sırada',
+  'core.scenario.progressSponsorOut': 'sponsor {done}/{total} · {rank}. sırada: ilk {max} arasına dönmek için {days} gün',
+  'core.scenario.outOfRankTitle': 'İlk {max} şirketin dışına düştün',
+  'core.scenario.outOfRankBody': 'Şirket şehrin {rank}. sırasında. {days} gün içinde ilk {max} arasına dönmezsen senaryo biter.',
+  'core.scenario.lostRank': 'Şirket ilk {rank} şirketin dışına düştü ve {days} gün içinde geri dönemedi.',
+  'core.scenario.lostProject': 'Projenin sponsorluğunu bir rakip kaptı.',
 
   // events.ts — olay ve dönem kapanışı
   'core.events.endedTitle': '{title} sona erdi',

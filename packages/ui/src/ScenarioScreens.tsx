@@ -1,8 +1,18 @@
 import { useEffect, useState } from 'react';
 import type { ReactElement } from 'react';
-import { formatDecimal, formatPercent } from '@capital/content';
+import { CATEGORIES, GOOD_BY_ID, formatDecimal, formatPercent } from '@capital/content';
 import type { ScenarioDef } from '@capital/content';
-import { formatMoney, getPlayer, scenarioDefOf, scenarioGoalText, scenarioProgress, scenarioResultPending, scenarioScoreText } from '@capital/core';
+import {
+  chainGoalStatus,
+  formatMoney,
+  getPlayer,
+  scenarioDefOf,
+  scenarioGoalText,
+  scenarioProgress,
+  scenarioResultPending,
+  scenarioScoreText,
+} from '@capital/core';
+import type { GameState, ScenarioState } from '@capital/core';
 import { useGame, useGameState } from './useGame';
 import { recordScenarioResult, scenarioRecord, scenarioRunKey } from './scenarioBest';
 import { t } from './i18n';
@@ -17,12 +27,80 @@ export function starRow(stars: number): string {
   return '★'.repeat(stars) + '☆'.repeat(Math.max(0, 3 - stars));
 }
 
-/** İki ve üç yıldızın eşikleri, senaryonun ölçüsünde. */
+/**
+ * İki ve üç yıldızın eşikleri, senaryonun ölçüsünde. Öndelik ölçüsünde
+ * bir yıldız ya en değerli şirket olmak (hedef o) ya da hedefin kendisi
+ * (Şehrin sponsoru: iki sponsorluk; öndelik yalnızca yıldızın ölçüsü).
+ */
 export function starThresholds(def: ScenarioDef): string {
   const { metric, two, three } = def.stars;
-  return metric === 'days'
-    ? t('hud.scenario.thresholdsDays', { two, three })
-    : t('hud.scenario.thresholdsLead', { two: formatDecimal(two, 2), three: formatDecimal(three, 2) });
+  if (metric === 'days') return t('hud.scenario.thresholdsDays', { two, three });
+  const values = { two: formatDecimal(two, 2), three: formatDecimal(three, 2) };
+  return def.goal.kind === 'leadAtEnd' ? t('hud.scenario.thresholdsLead', values) : t('hud.scenario.thresholdsLeadGoal', values);
+}
+
+/** Sonuç ekranının cümlesi: kazanılan skor ya da kaybın nedeni. */
+function resultBody(def: ScenarioDef, scenario: ScenarioState): string {
+  const used = (scenario.finishedDay ?? scenario.startDay) - scenario.startDay;
+  const score = scenario.score ?? 0;
+  if (scenario.outcome === 'won') {
+    return def.stars.metric === 'days'
+      ? t('hud.scenario.wonBodyDays', { days: used })
+      : t('hud.scenario.wonBodyLead', { score: scenarioScoreText(def, score) });
+  }
+  const goal = def.goal;
+  const sponsor = goal.kind === 'sponsor' ? { done: scenario.sponsored ?? 0, total: goal.projects } : null;
+  switch (scenario.lostReason) {
+    case 'takeover':
+      return t('hud.scenario.lostTakeover', { days: used });
+    case 'rank':
+      return t('hud.scenario.lostRank', {
+        max: goal.kind === 'sponsor' ? goal.maxRank : 0,
+        grace: goal.kind === 'sponsor' ? goal.graceDays : 0,
+        done: sponsor?.done ?? 0,
+        total: sponsor?.total ?? 0,
+      });
+    case 'project':
+      return t('hud.scenario.lostProject', { days: used, done: sponsor?.done ?? 0, total: sponsor?.total ?? 0 });
+    default:
+      break;
+  }
+  switch (goal.kind) {
+    case 'netWorth':
+      return t('hud.scenario.lostTimeMoney', { percent: formatPercent(Math.round(score * 100)) });
+    case 'victory':
+      // Değer hedefteyse eksik olan birincilik.
+      return score >= 1
+        ? t('hud.scenario.lostTimeVictoryRank')
+        : t('hud.scenario.lostTimeVictory', { percent: formatPercent(Math.floor(score * 100)) });
+    case 'chain':
+      return t('hud.scenario.lostTimeChain');
+    case 'sponsor':
+      return t('hud.scenario.lostTimeSponsor', { done: sponsor?.done ?? 0, total: sponsor?.total ?? 0 });
+    case 'leadAtEnd':
+      return t('hud.scenario.lostTimeLead', { score: scenarioScoreText(def, score) });
+  }
+}
+
+/** Açılış ekranında senaryonun karşı tarafı: baskıncı, konsorsiyum ya da ihale takvimi. */
+function briefExtras(state: GameState, def: ScenarioDef, scenario: ScenarioState): string[] {
+  const lines: string[] = [];
+  const consortium = state.consortium;
+  if (consortium) {
+    lines.push(
+      t('hud.scenario.briefConsortium', {
+        leader: state.companies[consortium.leaderId]?.name ?? consortium.names[0] ?? '',
+        count: consortium.memberIds.length - 1,
+        days: Math.max(0, consortium.startsDay - state.time.day),
+      }),
+    );
+  } else if (scenario.rivalId && state.companies[scenario.rivalId]) {
+    lines.push(t('hud.scenario.briefRaider', { rival: state.companies[scenario.rivalId]!.name }));
+  }
+  if (def.setup.projects && state.nextProjectDay !== undefined && !state.project) {
+    lines.push(t('hud.scenario.briefProjects', { days: Math.max(0, state.nextProjectDay - state.time.day) }));
+  }
+  return lines;
 }
 
 export function ScenarioBriefScreen(): ReactElement | null {
@@ -32,7 +110,7 @@ export function ScenarioBriefScreen(): ReactElement | null {
   const def = scenarioDefOf(state);
   if (!scenario || !def || scenario.briefSeen || scenario.finishedDay !== undefined) return null;
   const player = getPlayer(state);
-  const rival = scenario.rivalId ? state.companies[scenario.rivalId] : undefined;
+  const extras = briefExtras(state, def, scenario);
 
   return (
     <div className="gameover scenario-brief" role="alertdialog" aria-label={t('hud.scenario.briefLabel')} data-scenario-brief={def.id}>
@@ -50,7 +128,7 @@ export function ScenarioBriefScreen(): ReactElement | null {
         </ul>
         <p className="muted">
           {t('hud.scenario.briefCompany', { company: player.name, cash: formatMoney(player.cash), worth: formatMoney(player.netWorth) })}
-          {rival ? ` ${t('hud.scenario.briefRaider', { rival: rival.name })}` : ''}
+          {extras.map((line) => ` ${line}`).join('')}
         </p>
         <p className="muted scenario-stars">{starThresholds(def)}</p>
         <div className="gameover-actions">
@@ -83,7 +161,6 @@ export function ScenarioResultScreen({ onNewGame, onReplay }: { onNewGame: () =>
   if (!pending || !scenario || !def) return null;
   const won = scenario.outcome === 'won';
   const record = scenarioRecord(def.id);
-  const used = (scenario.finishedDay ?? state.time.day) - scenario.startDay;
 
   return (
     <div className="gameover scenario-result" role="alertdialog" aria-label={t('hud.scenario.resultLabel')} data-scenario-result={scenario.outcome}>
@@ -92,17 +169,7 @@ export function ScenarioResultScreen({ onNewGame, onReplay }: { onNewGame: () =>
         <p className="scenario-result-stars" aria-label={t('hud.scenario.starsLabel', { stars: scenario.stars ?? 0 })} data-stars={scenario.stars ?? 0}>
           {starRow(scenario.stars ?? 0)}
         </p>
-        <p>
-          {won
-            ? def.stars.metric === 'days'
-              ? t('hud.scenario.wonBodyDays', { days: used })
-              : t('hud.scenario.wonBodyLead', { score: scenarioScoreText(def, scenario.score ?? 0) })
-            : state.gameOver
-              ? t('hud.scenario.lostTakeover', { days: used })
-              : def.goal.kind === 'netWorth'
-                ? t('hud.scenario.lostTimeMoney', { percent: formatPercent(Math.round((scenario.score ?? 0) * 100)) })
-                : t('hud.scenario.lostTimeLead', { score: scenarioScoreText(def, scenario.score ?? 0) })}
-        </p>
+        <p data-scenario-reason={won ? 'won' : (scenario.lostReason ?? 'time')}>{resultBody(def, scenario)}</p>
         <p className="muted" data-scenario-best>
           {best
             ? t('hud.scenario.newBest')
@@ -174,7 +241,51 @@ export function ScenarioGoalSection(): ReactElement | null {
             : t('hud.scenario.panelLost')
           : status.detail}
       </p>
+      {!finished && def.goal.kind === 'chain' && <ChainChecklist state={state} goodId={def.goal.goodId} target={def.goal.share} />}
       <p className="muted scenario-stars">{starThresholds(def)}</p>
     </section>
+  );
+}
+
+/**
+ * Zincir ustası: hedefin beş koşulu, her biri sağlandı mı. Üçü aynı gün
+ * sağlanmalı (zincir, maliyet, pay); oyuncu hangisinin eksik olduğunu
+ * buradan görüyor.
+ */
+function ChainChecklist({ state, goodId, target }: { state: GameState; goodId: string; target: number }): ReactElement | null {
+  const status = chainGoalStatus(state, goodId, target);
+  const good = GOOD_BY_ID[goodId];
+  if (!status || !good?.category) return null;
+  const rawName = GOOD_BY_ID[status.rawGoodId]?.name ?? status.rawGoodId;
+  const intermediateName = GOOD_BY_ID[status.intermediateId]?.name ?? status.intermediateId;
+  const items: Array<{ key: string; done: boolean; label: string }> = [
+    { key: 'raw', done: status.raw, label: t('hud.scenario.chainRaw', { good: rawName }) },
+    { key: 'process', done: status.process, label: t('hud.scenario.chainProcess', { good: intermediateName }) },
+    { key: 'outlet', done: status.outlet, label: t('hud.scenario.chainOutlet', { good: good.name }) },
+    {
+      key: 'cost',
+      done: status.cost < status.spot,
+      label: status.process
+        ? t('hud.scenario.chainCost', { good: intermediateName, cost: formatMoney(status.cost), spot: formatMoney(status.spot) })
+        : t('hud.scenario.chainCostNone', { good: intermediateName, spot: formatMoney(status.spot) }),
+    },
+    {
+      key: 'share',
+      done: status.share >= target,
+      label: t('hud.scenario.chainShare', {
+        category: CATEGORIES[good.category].name,
+        share: Math.floor(status.share * 100),
+        target: Math.round(target * 100),
+      }),
+    },
+  ];
+  return (
+    <ul className="scenario-checklist" aria-label={t('hud.scenario.chainLabel')}>
+      {items.map((item) => (
+        <li key={item.key} className={item.done ? 'done' : undefined} data-chain-item={item.key} data-done={item.done ? '1' : '0'}>
+          <span aria-hidden="true">{item.done ? '✓' : '○'}</span> {item.label}
+        </li>
+      ))}
+    </ul>
   );
 }

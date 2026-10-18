@@ -7,7 +7,18 @@ import { agenda } from '../src/agenda';
 import { openCityQuote } from '../src/holding';
 import { createScenarioGame, startScenario } from '../src/scenario';
 import { getPlayer } from '../src/selectors';
-import { leadRatio, runScenarioTick, scenarioProgress, scenarioScoreText, starsFor } from '../src/systems/scenario';
+import {
+  chainGoalStatus,
+  leadRatio,
+  playerRank,
+  runScenarioTick,
+  scenarioProgress,
+  scenarioProjectGap,
+  scenarioScoreText,
+  starsFor,
+} from '../src/systems/scenario';
+import { isDistrictOpen } from '../src/systems/city';
+import { createNewGame } from '../src/worldgen';
 import { TOTAL_SHARES, sharesHeld } from '../src/systems/equity';
 import type { GameState } from '../src/types';
 
@@ -25,6 +36,29 @@ function started(id: string): GameEngine {
   const engine = new GameEngine(scenario(id));
   assert.ok(engine.dispatch({ type: 'DISMISS_SCENARIO', screen: 'brief' }).ok);
   return engine;
+}
+
+/**
+ * Senaryonun şehrinde bir arsa alıp binayı kurar (hedef testleri için).
+ * Boş arsa yoksa yapılı arsa (Zincir ustası: sanayide boş arsa kalmamış).
+ */
+function buildOn(engine: GameEngine, defId: string, archetypes?: string[]): string {
+  const state = engine.getState();
+  const open = state.map.tiles.filter(
+    (candidate) =>
+      candidate.kind === 'plot' &&
+      !candidate.ownerId &&
+      !candidate.buildingId &&
+      isDistrictOpen(state, candidate.districtId) &&
+      (!archetypes || archetypes.includes(state.districts[candidate.districtId]!.archetype)),
+  );
+  const tile = open.find((candidate) => !candidate.structureId) ?? open[0];
+  assert.ok(tile, `${defId}: arsa`);
+  const bought = engine.dispatch(tile.structureId ? { type: 'BUYOUT_TILE', tileId: tile.id } : { type: 'BUY_TILE', tileId: tile.id });
+  assert.ok(bought.ok, `${defId}: ${bought.ok ? '' : bought.reason}`);
+  const result = engine.dispatch({ type: 'BUILD', tileId: tile.id, defId });
+  assert.ok(result.ok, `${defId}: ${result.ok ? '' : result.reason}`);
+  return state.map.tiles[tile.id]!.buildingId!;
 }
 
 function rivalWorths(state: GameState): string {
@@ -76,21 +110,21 @@ describe('senaryo modu', () => {
 
   test('Kurtarma: dört kârlı şube, boşa çalışan dört destek binası, C notunda kredi, baskıncı %30', () => {
     const setup = SCENARIO_BY_ID.rescue!.setup;
-    if (setup.kind !== 'rescue') throw new Error('kurulum türü');
+    const idleSetup = setup.idle!;
     const engine = started('rescue');
     const state = engine.getState();
     const player = getPlayer(state);
     const own = Object.values(state.buildings).filter((b) => b.companyId === player.id);
     const outlets = own.filter((b) => BUILDING_BY_ID[b.defId]?.role === 'outlet');
-    const idle = own.filter((b) => b.focus === setup.idle.focus);
-    assert.equal(outlets.length, setup.outlets.length);
-    assert.equal(idle.length, setup.idle.defIds.length);
+    const idle = own.filter((b) => b.focus === idleSetup.focus);
+    assert.equal(outlets.length, setup.outlets!.length);
+    assert.equal(idle.length, idleSetup.defIds.length);
     // Odak kategorisinde şirketin mağazası yok: destek binaları boşa çalışıyor.
-    assert.ok(outlets.every((b) => BUILDING_BY_ID[b.defId]!.category !== setup.idle.focus));
-    assert.equal(player.debt, setup.loan.amount);
+    assert.ok(outlets.every((b) => BUILDING_BY_ID[b.defId]!.category !== idleSetup.focus));
+    assert.equal(player.debt, setup.loan!.amount);
     assert.equal(player.credit?.loans.length, 1);
     const raider = state.companies[state.scenario!.rivalId!]!;
-    assert.equal(sharesHeld(state, raider.id, player.id), Math.round(setup.raiderStake * TOTAL_SHARES));
+    assert.equal(sharesHeld(state, raider.id, player.id), Math.round(setup.raiderStake! * TOTAL_SHARES));
     assert.equal(
       raider.netWorth,
       Math.max(...Object.values(state.companies).filter((c) => !c.isPlayer).map((c) => c.netWorth)),
@@ -107,13 +141,13 @@ describe('senaryo modu', () => {
 
   test('Krizin ortasında: durgunluk uyarıda başlıyor ve senaryonun son gününde bitiyor', () => {
     const setup = SCENARIO_BY_ID.crisis!.setup;
-    if (setup.kind !== 'crisis') throw new Error('kurulum türü');
+    const crisisSetup = setup.crisis!;
     const engine = started('crisis');
     const state = engine.getState();
     const run = state.scenario!;
-    assert.deepEqual(state.crisis, { defId: setup.crisisId, phase: 'warning', activeDay: run.startDay + setup.warningDays, endDay: run.endDay });
+    assert.deepEqual(state.crisis, { defId: crisisSetup.id, phase: 'warning', activeDay: run.startDay + crisisSetup.warningDays, endDay: run.endDay });
     assert.equal(getPlayer(state).cash, setup.cash);
-    while (state.time.day < run.startDay + setup.warningDays) engine.runDay();
+    while (state.time.day < run.startDay + crisisSetup.warningDays) engine.runDay();
     assert.equal(state.crisis?.phase, 'active');
     while (state.time.day < run.endDay) engine.runDay();
     assert.equal(state.crisis, undefined, 'kriz son gün bitti');
@@ -261,5 +295,170 @@ describe('senaryo modu', () => {
     getPlayer(state).cash += 100_000_000;
     engine.runDay();
     assert.equal(agenda(state).find((item) => item.kind === 'scenario'), undefined);
+  });
+  test('Konsorsiyuma karşı: konsorsiyum devir günü kuruluyor; devralınan binalar dağılma sayacına girmiyor', () => {
+    const def = SCENARIO_BY_ID.consortium!;
+    const setup = def.setup;
+    const engine = started('consortium');
+    const state = engine.getState();
+    const run = state.scenario!;
+    const consortium = state.consortium;
+    assert.ok(consortium, 'konsorsiyum kuruldu');
+    assert.equal(consortium.formedDay, run.startDay);
+    assert.equal(consortium.startsDay, run.startDay + setup.consortium!.warningDays);
+    assert.equal(run.rivalId, consortium.leaderId, 'baskıncı konsorsiyumun önderi');
+    const player = getPlayer(state);
+    assert.equal(player.cash, setup.cash);
+    const own = Object.values(state.buildings).filter((building) => building.companyId === player.id);
+    assert.equal(own.length, setup.outlets!.length);
+    assert.ok(own.every((building) => building.builtDay === run.startDay - setup.builtDaysAgo!), 'binalar 150 günlük');
+    // Kasa net değerin çoğu: konsorsiyumun hedefi atıl kasa.
+    assert.ok(player.cash > player.netWorth * 0.6, `kasa ${player.cash} / ${player.netWorth}`);
+    for (let day = 0; day < 5; day++) engine.runDay();
+    assert.ok(state.consortium, 'devralınan on iki bina "yatırıma dönüş" sayılmadı');
+    assert.match(state.news.map((item) => item.title).join(' | '), /konsorsiyum/);
+  });
+
+  test('zafer hedefi: zafer günü kazanıyor, zafer ekranı senaryonun sonucuna bırakılıyor; süre dolarsa kaybediyor', () => {
+    const engine = started('consortium');
+    const state = engine.getState();
+    getPlayer(state).cash += 2_000_000_000;
+    engine.runDay();
+    assert.ok(state.victory, 'zafer yazıldı');
+    assert.equal(state.scenario!.outcome, 'won');
+    assert.equal(state.scenario!.score, 1);
+    assert.equal(state.scenario!.stars, 3);
+    assert.equal(state.victory!.dismissed, true, 'aynı haberi iki ekran vermesin');
+
+    const late = started('consortium');
+    late.getState().time.day = late.getState().scenario!.endDay - 1;
+    late.runDay();
+    assert.equal(late.getState().scenario!.outcome, 'lost');
+    assert.equal(late.getState().scenario!.lostReason, 'time');
+    assert.ok(late.getState().scenario!.score! < 1);
+  });
+
+  test('Zincir ustası: zincir, maliyet ve pay aynı gün sağlanınca kazanılıyor', () => {
+    const def = SCENARIO_BY_ID.chain!;
+    if (def.goal.kind !== 'chain') throw new Error('hedef türü');
+    const goal = def.goal;
+    const engine = started('chain');
+    const state = engine.getState();
+    const player = getPlayer(state);
+    assert.equal(player.cash, def.setup.cash);
+    const before = chainGoalStatus(state, goal.goodId, goal.share)!;
+    assert.deepEqual([before.rawGoodId, before.intermediateId], ['silicon', 'chip']);
+    assert.deepEqual([before.raw, before.process, before.outlet, before.met], [false, false, false, false]);
+
+    // Silikon Ocağı 6 M ₺ şirket değeriyle açılıyor.
+    player.cash += 30_000_000;
+    player.netWorth += 30_000_000;
+    buildOn(engine, 'silicon_mine', ['industrial', 'port']);
+    buildOn(engine, 'chip_fab', ['industrial', 'port']);
+    const shop = buildOn(engine, 'phone_shop');
+    if (!state.buildings[shop]!.stocked.includes(goal.goodId)) {
+      assert.ok(engine.dispatch({ type: 'SET_STOCK', buildingId: shop, goodIds: [goal.goodId] }).ok);
+    }
+    for (let day = 0; day < 10 && state.scenario!.finishedDay === undefined; day++) engine.runDay();
+    const built = chainGoalStatus(state, goal.goodId, goal.share)!;
+    assert.deepEqual([built.raw, built.process, built.outlet], [true, true, true]);
+    assert.ok(built.cost < built.spot, `çip ${built.cost} / piyasa ${built.spot}`);
+
+    // Pay hedefin altındayken bitmiyor; hedefte kazanılıyor.
+    const run = state.scenario!;
+    delete run.finishedDay;
+    delete run.outcome;
+    player.marketShare.electronics = goal.share - 0.01;
+    runScenarioTick(state);
+    assert.equal(run.finishedDay, undefined);
+    assert.match(scenarioProgress(state)!.detail, /zincir 3\/3/);
+    player.marketShare.electronics = goal.share;
+    runScenarioTick(state);
+    assert.equal(run.outcome, 'won');
+    assert.equal(run.score, state.time.day - run.startDay);
+  });
+
+  test('Şehrin sponsoru: iki ihale de oyuncuda; proje takvimi senaryonun', () => {
+    const def = SCENARIO_BY_ID.sponsor!;
+    if (def.goal.kind !== 'sponsor') throw new Error('hedef türü');
+    const projects = def.setup.projects!;
+    const engine = started('sponsor');
+    const state = engine.getState();
+    const run = state.scenario!;
+    assert.equal(state.nextProjectDay, run.startDay + projects.firstInDays);
+    assert.deepEqual(scenarioProjectGap(state), [projects.gapDays, projects.gapDays]);
+    assert.equal(scenarioProjectGap(createNewGame({ seed: 3 })), null, 'serbest oyunun takvimi değişmiyor');
+    // Sıra sorun olmasın: oyuncu açık ara önde, her ihalede herkesten çok veriyor.
+    getPlayer(state).cash += 200_000_000;
+    let finished = -1;
+    for (let day = 0; day < def.days && run.finishedDay === undefined; day++) {
+      const project = state.project;
+      if (project?.phase === 'funding' && project.closesDay - state.time.day === 1 && !project.contributions[state.playerCompanyId]) {
+        assert.ok(engine.dispatch({ type: 'CONTRIBUTE_PROJECT', amount: 20_000_000 }).ok);
+      }
+      engine.runDay();
+      // İlk proje bitti: sonraki serbest oyunun 260–380 günü yerine 30 gün sonra.
+      if (finished < 0 && run.sponsored === 1 && !state.project) {
+        finished = state.time.day;
+        assert.equal(state.nextProjectDay, finished + projects.gapDays);
+      }
+    }
+    assert.equal(run.outcome, 'won');
+    assert.equal(run.sponsored, 2);
+    assert.equal(run.closedProjects!.length, 2);
+    assert.ok(finished > 0);
+    assert.ok(Math.abs(run.score! - Math.floor(leadRatio(state) * 1000) / 1000) < 1e-9);
+  });
+
+  test('Şehrin sponsoru: ihaleyi rakip kaparsa senaryo biter', () => {
+    const engine = started('sponsor');
+    const state = engine.getState();
+    const run = state.scenario!;
+    getPlayer(state).cash += 200_000_000;
+    for (let day = 0; day < 200 && run.finishedDay === undefined; day++) engine.runDay();
+    assert.equal(run.outcome, 'lost');
+    assert.equal(run.lostReason, 'project');
+    assert.equal(state.project?.phase, 'building');
+    assert.notEqual(state.project?.sponsorId, state.playerCompanyId);
+    assert.equal(run.sponsored ?? 0, 0);
+  });
+
+  test('Şehrin sponsoru: ilk ikiden düşen şirketin geri dönmek için 20 günü var', () => {
+    const def = SCENARIO_BY_ID.sponsor!;
+    if (def.goal.kind !== 'sponsor') throw new Error('hedef türü');
+    const grace = def.goal.graceDays;
+    const state = scenario('sponsor');
+    state.scenario!.briefSeen = true;
+    const run = state.scenario!;
+    const player = getPlayer(state);
+    const rivals = Object.values(state.companies).filter((company) => !company.isPlayer);
+    const drop = () => {
+      for (const rival of rivals.slice(0, 2)) rival.netWorth = player.netWorth * 2;
+    };
+    const recover = () => {
+      for (const rival of rivals) rival.netWorth = player.netWorth / 2;
+    };
+
+    drop();
+    assert.equal(playerRank(state), 3);
+    runScenarioTick(state);
+    assert.equal(run.finishedDay, undefined, 'düştüğü gün bitmiyor');
+    assert.equal(run.outOfRankDay, state.time.day);
+    assert.match(state.news[0]!.title, /İlk 2 şirketin dışına düştün/);
+    assert.match(scenarioProgress(state)!.detail, new RegExp(`${grace} gün`));
+    state.time.day += grace - 1;
+    runScenarioTick(state);
+    assert.equal(run.finishedDay, undefined, 'son gün de geri dönebilir');
+    recover();
+    runScenarioTick(state);
+    assert.equal(run.outOfRankDay, undefined, 'geri dönünce sayaç siliniyor');
+
+    drop();
+    runScenarioTick(state);
+    state.time.day += grace;
+    runScenarioTick(state);
+    assert.equal(run.outcome, 'lost');
+    assert.equal(run.lostReason, 'rank');
+    assert.equal(state.time.speed, 0);
   });
 });

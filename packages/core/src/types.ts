@@ -960,9 +960,23 @@ export interface ScenarioState {
   stars?: number;
   /** Yıldızın ölçüsü: hedefe ulaşılan gün sayısı ya da bitişteki öndelik oranı. */
   score?: number;
+  /** Kaybedilen koşunun nedeni (sonuç ekranı ve haber). */
+  lostReason?: ScenarioLostReason;
+  /** Şehrin sponsoru: senaryoda katkı penceresi kapanan projelerin açılış günleri. */
+  closedProjects?: number[];
+  /** Şehrin sponsoru: oyuncunun sponsor olduğu proje sayısı. */
+  sponsored?: number;
+  /** Şehrin sponsoru: oyuncunun izin verilen sıranın dışına düştüğü gün (geri dönünce siliniyor). */
+  outOfRankDay?: number;
   /** Sonuç ekranı görüldü mü. */
   resultSeen?: boolean;
 }
+
+/**
+ * `takeover`: devralındı · `time`: süre doldu · `rank`: sıralamada izin
+ * verilenin altına düştü · `project`: bir projenin sponsorluğunu rakip kaptı.
+ */
+export type ScenarioLostReason = 'takeover' | 'time' | 'rank' | 'project';
 
 /** Günlükteki tek kayıt: komutun verildiği gün ve komutun kendisi. */
 export type LoggedCommand = [number, GameCommand];
