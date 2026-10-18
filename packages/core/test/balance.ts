@@ -72,7 +72,8 @@ import { cityTrend, holdingNetWorth, raidStatus } from '../src/holding';
 import { createScenarioGame } from '../src/scenario';
 import { PROJECT_TIMING, SCENARIO_BY_ID } from '@capital/content';
 import { projectStandings } from '../src/systems/projects';
-import { buybackToLock, ownerFraction, sharesOutstanding } from '../src/systems/equity';
+import { holdingCities, rivalsLeft } from '../src/systems/scenario';
+import { buybackToLock, ownerFraction, sharesHeld, sharesOutstanding } from '../src/systems/equity';
 import type { GameEngine as Engine } from '../src/engine';
 import type { GameState, RemotePayout } from '../src/types';
 import {
@@ -4659,6 +4660,133 @@ section('Senaryolar II: konsorsiyum, zincir ve sponsor', () => {
     'Şehrin sponsoru: üç yıldız vekilin en keskin oyunundan iyisini istiyor',
     p.sharp.won && p.sharp.score < sponsor.stars.three,
     `${show(p.sharp)} < ${sponsor.stars.three}`,
+  );
+});
+
+section('Senaryolar III: fetih ve holding', () => {
+  /*
+   * Tur 39c. Büyük şehir fethi: tekel. Avcı vekil her seferinde en ucuz
+   * alınabilir rakibe devralma emri veriyor; sızan vekil ayrıca her
+   * rakipte payı savunma eşiğinin altında (%29) tutuyor, sonra vuruyor.
+   * Holding: iki şehir: vekil şehirler arasında gidip geliyor, uzaktaki
+   * şehrin talimatı "şehirde tut + savun".
+   */
+  const bases = new Map<string, string>();
+  const base = (id: string) => {
+    if (!bases.has(id)) bases.set(id, JSON.stringify(createScenarioGame(id, { companyName: 'Senaryo AŞ' })));
+    return JSON.parse(bases.get(id)!) as GameState;
+  };
+  const result = (state: GameState) => {
+    const run = state.scenario!;
+    return { won: run.outcome === 'won', stars: run.stars ?? 0, score: run.score ?? 0, reason: run.lostReason, day: run.finishedDay! - run.startDay };
+  };
+  type Result = ReturnType<typeof result>;
+  const show = (r: Result) => `${r.won ? `kazandı ${r.stars}★` : `kaybetti (${r.reason})`} · ${r.day}. gün · skor ${r.score}`;
+
+  /** En ucuz alınabilir rakibe emir (bedeli kasanın %90'ından azsa). */
+  function hunt(engine: Engine): void {
+    const state = engine.getState();
+    const player = getPlayer(state);
+    if (player.orders && player.orders.length > 0) return;
+    let best: { id: string; cost: number } | null = null;
+    for (const company of Object.values(state.companies)) {
+      if (company.isPlayer || (company.lockedUntilDay !== undefined && state.time.day < company.lockedUntilDay)) continue;
+      const estimate = orderEstimate(state, player.id, company.id);
+      if (estimate.need > 0 && !estimate.floatShort && (!best || estimate.cost < best.cost)) best = { id: company.id, cost: estimate.cost };
+    }
+    if (best && best.cost < player.cash * 0.9) engine.dispatch({ type: 'PLACE_TAKEOVER_ORDER', companyId: best.id });
+  }
+  /** Her rakipte payı %29'a kadar, günlük tavanla, 2 M ₺ yedek bırakarak. */
+  function creep(engine: Engine): void {
+    const state = engine.getState();
+    const player = getPlayer(state);
+    const rivals = Object.values(state.companies).filter((c) => !c.isPlayer).sort((a, b) => a.netWorth - b.netWorth);
+    for (const company of rivals) {
+      if (player.orders?.some((order) => order.issuerId === company.id)) continue;
+      const want = Math.floor(sharesOutstanding(state, company.id) * 0.29) - sharesHeld(state, player.id, company.id);
+      const price = sharePrice(state, company.id);
+      const count = Math.min(want, capRemaining(state, player.id, company.id), freeFloat(state, company.id), Math.floor((player.cash - 2_000_000) / Math.max(1, price)));
+      if (count > 0) engine.dispatch({ type: 'BUY_SHARES', companyId: company.id, count });
+    }
+  }
+  function conquest(plan: { every: number; defend: number; hunt?: boolean; creep?: boolean }): Result {
+    const state = base('conquest');
+    const engine = new GameEngine(state);
+    engine.dispatch({ type: 'DISMISS_SCENARIO', screen: 'brief' });
+    const start = state.time.day;
+    while (state.scenario!.finishedDay === undefined) {
+      const day = state.time.day - start;
+      if (plan.every > 0 && day % plan.every === 0) {
+        if (plan.hunt) hunt(engine);
+        playerStrategy(engine);
+      }
+      if (plan.creep) creep(engine);
+      if (plan.defend > 0 && day % plan.defend === 0) defendAgainstRaids(engine);
+      engine.runDay();
+    }
+    return result(state);
+  }
+  const conquestDef = SCENARIO_BY_ID.conquest!;
+  const f = {
+    passive: conquest({ every: 0, defend: 0 }),
+    grow: conquest({ every: 5, defend: 3 }),
+    hunter: conquest({ every: 5, defend: 3, hunt: true }),
+    creep: conquest({ every: 5, defend: 3, hunt: true, creep: true }),
+    sharp: conquest({ every: 3, defend: 1, hunt: true, creep: true }),
+  };
+  for (const [name, r] of Object.entries(f)) console.log(`  Büyük şehir fethi · ${name.padEnd(8)} ${show(r)}`);
+  expect('Büyük şehir fethi: el sürmeyen ve yalnız büyüyen tekele ulaşamıyor', !f.passive.won && !f.grow.won, `${show(f.passive)} | ${show(f.grow)}`);
+  expect('Büyük şehir fethi: devralma emriyle avlanan tekelde', f.hunter.won, show(f.hunter));
+  expect('Büyük şehir fethi: payı savunma eşiğinin altında toplayıp vuran daha erken', f.creep.won && f.creep.day < f.hunter.day, `${show(f.creep)} < ${f.hunter.day}`);
+  expect(
+    'Büyük şehir fethi: üç yıldız vekilin en keskin oyunundan iyisini istiyor',
+    f.sharp.won && f.sharp.day > conquestDef.stars.three,
+    `${show(f.sharp)} > ${conquestDef.stars.three}`,
+  );
+
+  function holding(plan: { every: number; defend: number; mode: 'none' | 'second' | 'alternate' | 'focus'; period?: number; keep?: boolean }): Result {
+    const engine = new GameEngine(base('holding'));
+    engine.dispatch({ type: 'DISMISS_SCENARIO', screen: 'brief' });
+    const directive = () => {
+      if (plan.keep) engine.dispatch({ type: 'SET_CITY_DIRECTIVE', index: 0, payout: 'keep', defend: true });
+    };
+    directive();
+    while (engine.getState().scenario!.finishedDay === undefined) {
+      const state = engine.getState();
+      const day = state.time.day - state.scenario!.startDay;
+      const cities = holdingCities(state);
+      const swap =
+        (plan.mode === 'alternate' && day > 0 && day % plan.period! === 0) ||
+        (plan.mode === 'focus' && cities[0]!.won && !cities[1]!.won);
+      if (swap) {
+        engine.dispatch({ type: 'SWITCH_CITY', index: 0 });
+        directive();
+      }
+      if (plan.every > 0 && day % plan.every === 0) playerStrategy(engine);
+      if (plan.defend > 0 && day % plan.defend === 0) defendAgainstRaids(engine);
+      engine.runDay();
+    }
+    return result(engine.getState());
+  }
+  const holdingDef = SCENARIO_BY_ID.holding!;
+  const h = {
+    passive: holding({ every: 0, defend: 0, mode: 'none' }),
+    second: holding({ every: 5, defend: 3, mode: 'second', keep: true }),
+    focus: holding({ every: 5, defend: 3, mode: 'focus', keep: true }),
+    half: holding({ every: 5, defend: 3, mode: 'alternate', period: 60 }),
+    alternate: holding({ every: 5, defend: 3, mode: 'alternate', period: 60, keep: true }),
+    sharp: holding({ every: 3, defend: 1, mode: 'alternate', period: 45, keep: true }),
+  };
+  for (const [name, r] of Object.entries(h)) console.log(`  Holding: iki şehir · ${name.padEnd(9)} ${show(r)}`);
+  expect('Holding: el sürmeyen kaybediyor', !h.passive.won, show(h.passive));
+  expect('Holding: yalnız yeni şehri oynayan bir şehirde kalıyor', !h.second.won && h.second.score === 1, show(h.second));
+  expect('Holding: önce yeni şehri bitirip dönen de yetişemiyor (kurucu şehir ihmal edilince sırası düşüyor)', !h.focus.won, show(h.focus));
+  expect('Holding: kârın yarısını kasaya akıtıp savunmasız bırakan gidip gelse de yetişemiyor', !h.half.won, show(h.half));
+  expect('Holding: şehirler arasında gidip gelen, talimatı "şehirde tut + savun" olan iki şehirde de zaferde', h.alternate.won, show(h.alternate));
+  expect(
+    'Holding: üç yıldız vekilin en keskin oyunundan iyisini istiyor',
+    h.sharp.won && h.sharp.day > holdingDef.stars.three,
+    `${show(h.sharp)} > ${holdingDef.stars.three}`,
   );
 });
 

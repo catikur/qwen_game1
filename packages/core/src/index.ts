@@ -20,6 +20,8 @@ export { LEAGUE_DAYS, LEAGUE_SAMPLE_DAYS, leagueActive, leagueSeed, leagueWeekId
 export * from './scenario';
 export {
   chainGoalStatus,
+  holdingCities,
+  rivalsLeft,
   leadRatio,
   playerRank,
   scenarioActive,
@@ -30,7 +32,7 @@ export {
   scenarioScoreText,
   starsFor,
 } from './systems/scenario';
-export type { ChainGoalStatus, ScenarioProgress } from './systems/scenario';
+export type { ChainGoalStatus, HoldingCityStatus, ScenarioProgress } from './systems/scenario';
 export {
   tilePrice,
   isPurchasable,

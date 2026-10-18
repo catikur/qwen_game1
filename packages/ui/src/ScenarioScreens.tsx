@@ -5,6 +5,7 @@ import type { ScenarioDef } from '@capital/content';
 import {
   chainGoalStatus,
   formatMoney,
+  holdingCities,
   getPlayer,
   scenarioDefOf,
   scenarioGoalText,
@@ -62,6 +63,8 @@ function resultBody(def: ScenarioDef, scenario: ScenarioState): string {
       });
     case 'project':
       return t('hud.scenario.lostProject', { days: used, done: sponsor?.done ?? 0, total: sponsor?.total ?? 0 });
+    case 'city':
+      return t('hud.scenario.lostCity', { days: used, won: score });
     default:
       break;
   }
@@ -77,6 +80,12 @@ function resultBody(def: ScenarioDef, scenario: ScenarioState): string {
       return t('hud.scenario.lostTimeChain');
     case 'sponsor':
       return t('hud.scenario.lostTimeSponsor', { done: sponsor?.done ?? 0, total: sponsor?.total ?? 0 });
+    case 'monopoly':
+      // Skor kalan rakip sayısı.
+      return t('hud.scenario.lostTimeMonopoly', { left: score });
+    case 'holding':
+      // Skor zafer kazanılan şehir sayısı.
+      return t('hud.scenario.lostTimeHolding', { won: score });
     case 'leadAtEnd':
       return t('hud.scenario.lostTimeLead', { score: scenarioScoreText(def, score) });
   }
@@ -100,6 +109,14 @@ function briefExtras(state: GameState, def: ScenarioDef, scenario: ScenarioState
   if (def.setup.projects && state.nextProjectDay !== undefined && !state.project) {
     lines.push(t('hud.scenario.briefProjects', { days: Math.max(0, state.nextProjectDay - state.time.day) }));
   }
+  if (def.setup.freeze) {
+    lines.push(t('hud.scenario.briefFreeze', { count: Object.values(state.companies).filter((company) => !company.isPlayer).length }));
+  }
+  if (def.setup.secondCity) {
+    for (const city of holdingCities(state).filter((entry) => !entry.active)) {
+      lines.push(t('hud.scenario.briefFounding', { city: city.name, value: formatMoney(Math.max(0, city.value)), rank: city.rank }));
+    }
+  }
   return lines;
 }
 
@@ -115,7 +132,11 @@ export function ScenarioBriefScreen(): ReactElement | null {
   return (
     <div className="gameover scenario-brief" role="alertdialog" aria-label={t('hud.scenario.briefLabel')} data-scenario-brief={def.id}>
       <div className="gameover-card">
-        <p className="newgame-eyebrow">{t('hud.scenario.eyebrow', { day: state.time.day })}</p>
+        <p className="newgame-eyebrow">
+          {def.setup.secondCity && state.cityName
+            ? t('hud.scenario.eyebrowCity', { city: state.cityName })
+            : t('hud.scenario.eyebrow', { day: state.time.day })}
+        </p>
         <h2>{def.title}</h2>
         <p>{def.brief}</p>
         <p className="scenario-goal">
@@ -242,6 +263,7 @@ export function ScenarioGoalSection(): ReactElement | null {
           : status.detail}
       </p>
       {!finished && def.goal.kind === 'chain' && <ChainChecklist state={state} goodId={def.goal.goodId} target={def.goal.share} />}
+      {!finished && def.goal.kind === 'holding' && <HoldingChecklist state={state} />}
       <p className="muted scenario-stars">{starThresholds(def)}</p>
     </section>
   );
@@ -284,6 +306,30 @@ function ChainChecklist({ state, goodId, target }: { state: GameState; goodId: s
       {items.map((item) => (
         <li key={item.key} className={item.done ? 'done' : undefined} data-chain-item={item.key} data-done={item.done ? '1' : '0'}>
           <span aria-hidden="true">{item.done ? '✓' : '○'}</span> {item.label}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/** Holding: iki şehir — her şehrin zafer durumu; oynanan şehir başta. */
+function HoldingChecklist({ state }: { state: GameState }): ReactElement {
+  return (
+    <ul className="scenario-checklist" aria-label={t('hud.scenario.holdingLabel')}>
+      {holdingCities(state).map((city) => (
+        <li
+          key={city.name}
+          className={city.won ? 'done' : undefined}
+          data-holding-city={city.active ? 'active' : 'away'}
+          data-done={city.won ? '1' : '0'}
+        >
+          <span aria-hidden="true">{city.won ? '✓' : city.lost ? '✗' : '○'}</span>{' '}
+          {t(city.active ? 'hud.scenario.holdingHere' : 'hud.scenario.holdingAway', {
+            city: city.name,
+            value: formatMoney(Math.max(0, city.value)),
+            target: formatMoney(city.target),
+            rank: city.rank,
+          })}
         </li>
       ))}
     </ul>

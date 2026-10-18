@@ -1,7 +1,8 @@
 import { BUILDING_BY_ID, CRISIS_BY_ID, SCENARIO_BY_ID, getCeoModifiers } from '@capital/content';
-import type { ScenarioDef } from '@capital/content';
+import type { ScenarioDef, ScenarioSetup } from '@capital/content';
 import { build, buyTile, purchaseBlocker, zoningBlocker } from './actions';
 import { GameEngine } from './engine';
+import { foundCity } from './holding';
 import { tc } from './i18n';
 import { pushNews } from './news';
 import { recomputeNetWorth } from './systems/city';
@@ -55,7 +56,7 @@ export function startScenario(id: string, options: ScenarioOptions = {}): Scenar
   state.companies[state.playerCompanyId]!.lockedUntilDay = def.preludeDays + 1;
   const engine = new GameEngine(state);
   let done = 0;
-  let finished = false;
+  let played: GameState | null = null;
   const step = (days: number): boolean => {
     for (let i = 0; i < days && done < def.preludeDays; i++) {
       engine.runDay();
@@ -69,12 +70,11 @@ export function startScenario(id: string, options: ScenarioOptions = {}): Scenar
     daysDone: () => done,
     step,
     finish: () => {
-      if (!finished) {
+      if (!played) {
         step(Number.POSITIVE_INFINITY);
-        handOver(state, def, options);
-        finished = true;
+        played = handOver(state, def, options);
       }
-      return state;
+      return played;
     },
   };
 }
@@ -93,8 +93,11 @@ export function createScenarioGame(id: string, options: ScenarioOptions = {}): G
  * Kasa senaryonun kendisi: CEO'nun başlangıç nakdi çarpanı uygulanmıyor
  * (Krizin ortasında 2,3 katı kasayla başlamak hedefi anlamsızlaştırırdı).
  * CEO'nun diğer özellikleri — inşaat pazarlığı, marka, ücret — geçerli.
+ *
+ * Dönen durum oynanacak şehir: ikinci şehirle başlayan senaryoda (Holding:
+ * iki şehir) yeni şehir, kurulan şehir onun holding'inde uzakta.
  */
-function handOver(state: GameState, def: ScenarioDef, options: ScenarioOptions): void {
+function handOver(state: GameState, def: ScenarioDef, options: ScenarioOptions): GameState {
   const playerId = state.playerCompanyId;
   const previous = state.companies[playerId]!;
   const ceoId = options.ceoId ?? null;
@@ -198,6 +201,16 @@ function handOver(state: GameState, def: ScenarioDef, options: ScenarioOptions):
     // Belediyenin takvimi senaryonun: ilk proje yakında (sonrakiler `scenarioProjectGap`).
     state.nextProjectDay = day + setup.projects.firstInDays;
   }
+  if (setup.freeze?.entrants) {
+    // Ruhsat dondurması: boşalan koltuğa kimse girmiyor (senaryo bitince kalkıyor).
+    state.flags.rivalEntry = false;
+    delete state.rivalVacancyDay;
+  }
+  // İhraç dondurması: rakibin de oyuncunun da yeni hisse ihracı kapalı.
+  if (setup.freeze?.issuance) state.flags.issuance = false;
+  if (def.goal.kind === 'monopoly') {
+    state.scenario.rivalsAtStart = Object.values(state.companies).filter((company) => !company.isPlayer).length;
+  }
 
   fresh.netWorthHistory = [Math.round(fresh.netWorth)];
   // Oyun duraklamış başlıyor: önce açılış ekranı (durum, hedef, süre).
@@ -206,6 +219,32 @@ function handOver(state: GameState, def: ScenarioDef, options: ScenarioOptions):
 
   pushNews(state, 'neutral', tc('core.scenario.startTitle', { title: def.title }), def.brief);
   for (const step of afterBrief) step();
+  return setup.secondCity ? openSecondCity(state, def, setup.secondCity) : state;
+}
+
+/**
+ * Holding: iki şehir. Kurulan şehir kurucu şehir olup uzağa geçiyor;
+ * oyuncu sermayeyle açılan yeni şehirde başlıyor ve senaryo onunla
+ * geliyor. Sermaye kurucu şehrin kasasından düşülmüyor (kasa senaryonun
+ * `cash`i) ve kurucu şehrin zafer ölçüsüne "dışarı aktarılan" diye
+ * eklenmiyor: o şehrin zaferi kendi değeriyle.
+ */
+function openSecondCity(founding: GameState, def: ScenarioDef, city: NonNullable<ScenarioSetup['secondCity']>): GameState {
+  const run = founding.scenario!;
+  delete founding.scenario;
+  const owner = founding.companies[founding.playerCompanyId]!;
+  owner.cash += city.capital;
+  const next = foundCity(founding, city.citySize, city.capital);
+  const away = next.holding!.dormant[0]!.state;
+  delete away.importedCapital;
+  recomputeNetWorth(away);
+
+  const day = next.time.day;
+  next.scenario = { ...run, startDay: day, endDay: day + def.days };
+  next.time.speed = 0;
+  next.time.accumulatorMs = 0;
+  pushNews(next, 'neutral', tc('core.scenario.startTitle', { title: def.title }), def.brief);
+  return next;
 }
 
 /**

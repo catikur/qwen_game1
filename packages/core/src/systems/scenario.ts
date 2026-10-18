@@ -42,6 +42,51 @@ export function scenarioDefOf(state: GameState): ScenarioDef | null {
 }
 
 /**
+ * Senaryo başka bir şehre geçerken (Holding: iki şehir, `switchCity`):
+ * şehirlerin takvimleri birlikte yürüyor, günler aradaki farkla kayıyor.
+ */
+export function shiftScenario(run: ScenarioState, offset: number): ScenarioState {
+  const shift = (day: number | undefined) => (day === undefined ? undefined : day + offset);
+  const next: ScenarioState = { ...run, startDay: run.startDay + offset, endDay: run.endDay + offset };
+  const finished = shift(run.finishedDay);
+  const out = shift(run.outOfRankDay);
+  if (finished !== undefined) next.finishedDay = finished;
+  if (out !== undefined) next.outOfRankDay = out;
+  return next;
+}
+
+/** Şehirdeki rakip sayısı. */
+export function rivalsLeft(state: GameState): number {
+  return Object.values(state.companies).filter((company) => !company.isPlayer).length;
+}
+
+export interface HoldingCityStatus {
+  name: string;
+  /** Oynanan şehir mi. */
+  active: boolean;
+  /** Şehirde yaratılan değer ve zafer eşiği. */
+  value: number;
+  target: number;
+  rank: number;
+  won: boolean;
+  lost: boolean;
+}
+
+/** Holding: iki şehir — her şehrin zafer durumu, oynanan şehir başta. */
+export function holdingCities(state: GameState): HoldingCityStatus[] {
+  const cities = [state, ...(state.holding?.dormant.map((city) => city.state) ?? [])];
+  return cities.map((city, index) => ({
+    name: city.cityName ?? '',
+    active: index === 0,
+    value: createdValue(city),
+    target: victoryNetWorth(city),
+    rank: playerRank(city),
+    won: city.victory !== undefined,
+    lost: city.gameOver !== undefined,
+  }));
+}
+
+/**
  * Oyuncunun net değerinin en güçlü rakibinkine oranı. Rakip kalmadıysa
  * tavan (99): oran JSON'a yazılıyor, sonsuz yazılamaz.
  */
@@ -217,6 +262,32 @@ export function scenarioProgress(state: GameState): ScenarioProgress | null {
       ahead: status.met,
     };
   }
+  if (goal.kind === 'monopoly') {
+    const total = Math.max(1, run.rivalsAtStart ?? rivalsLeft(state));
+    const left = rivalsLeft(state);
+    return {
+      progress: clamp((total - left) / total),
+      detail: tc('core.scenario.progressMonopoly', { taken: Math.max(0, total - left), total, left }),
+      daysLeft,
+      ahead: left === 0,
+    };
+  }
+  if (goal.kind === 'holding') {
+    const cities = holdingCities(state);
+    const here = cities[0]!;
+    const won = cities.filter((city) => city.won).length;
+    return {
+      progress: clamp(cities.reduce((sum, city) => sum + (city.won ? 1 : clamp(city.value / city.target)), 0) / cities.length),
+      detail: tc(here.won ? 'core.scenario.progressHoldingWon' : 'core.scenario.progressHolding', {
+        won,
+        total: cities.length,
+        value: formatMoney(Math.max(0, here.value)),
+        target: formatMoney(here.target),
+      }),
+      daysLeft,
+      ahead: won === cities.length,
+    };
+  }
   if (goal.kind === 'sponsor') {
     const done = run.sponsored ?? 0;
     const rank = playerRank(state);
@@ -249,11 +320,15 @@ export function scenarioProgress(state: GameState): ScenarioProgress | null {
   };
 }
 
-const LOST_BODY: Record<ScenarioLostReason, 'core.scenario.lostTakeover' | 'core.scenario.lostTime' | 'core.scenario.lostRank' | 'core.scenario.lostProject'> = {
+const LOST_BODY: Record<
+  ScenarioLostReason,
+  'core.scenario.lostTakeover' | 'core.scenario.lostTime' | 'core.scenario.lostRank' | 'core.scenario.lostProject' | 'core.scenario.lostCity'
+> = {
   takeover: 'core.scenario.lostTakeover',
   time: 'core.scenario.lostTime',
   rank: 'core.scenario.lostRank',
   project: 'core.scenario.lostProject',
+  city: 'core.scenario.lostCity',
 };
 
 function finish(state: GameState, run: ScenarioState, def: ScenarioDef, won: boolean, score: number, reason?: ScenarioLostReason): void {
@@ -266,6 +341,9 @@ function finish(state: GameState, run: ScenarioState, def: ScenarioDef, won: boo
   if (!won) run.lostReason = reason ?? 'time';
   // Zafer hedefinde zafer ekranı senaryonun sonuç ekranıyla aynı haberi verirdi.
   if (won && def.goal.kind === 'victory' && state.victory) state.victory.dismissed = true;
+  // Dondurmalar senaryoyla bitiyor: serbest oyunda boşalan koltuk yine doluyor, ihraç açılıyor.
+  if (def.setup.freeze?.entrants) state.flags.rivalEntry = true;
+  if (def.setup.freeze?.issuance) state.flags.issuance = true;
   state.time.speed = 0;
   const maxRank = def.goal.kind === 'sponsor' ? def.goal.maxRank : 0;
   const graceDays = def.goal.kind === 'sponsor' ? def.goal.graceDays : 0;
@@ -368,6 +446,22 @@ export function runScenarioTick(state: GameState): void {
       if (!rankHeld(state, run, goal.maxRank, goal.graceDays)) finish(state, run, def, false, run.sponsored ?? 0, 'rank');
       else if ((run.sponsored ?? 0) >= goal.projects) finish(state, run, def, true, leadRatio(state));
       else if (day >= run.endDay) finish(state, run, def, false, run.sponsored ?? 0);
+      return;
+    }
+    case 'monopoly': {
+      const left = rivalsLeft(state);
+      if (left === 0) finish(state, run, def, true, day - run.startDay);
+      else if (day >= run.endDay) finish(state, run, def, false, left);
+      return;
+    }
+    case 'holding': {
+      const away = state.holding?.dormant ?? [];
+      // Uzaktaki şehrin zaferi de senaryonun bir adımı: şehre dönünce zafer ekranı açılmasın.
+      for (const city of away) if (city.state.victory) city.state.victory.dismissed = true;
+      const cities = holdingCities(state);
+      if (cities.some((city) => city.lost)) finish(state, run, def, false, cities.filter((city) => city.won).length, 'city');
+      else if (cities.every((city) => city.won)) finish(state, run, def, true, day - run.startDay);
+      else if (day >= run.endDay) finish(state, run, def, false, cities.filter((city) => city.won).length);
       return;
     }
     case 'leadAtEnd': {

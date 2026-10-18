@@ -4,7 +4,7 @@
 > `pnpm bench` çıktısından; iddialar `pnpm balance` ve `pnpm playtest`
 > tarafından her koşuda doğrulanıyor.
 >
-> Son güncelleme: şema **v6**, 39 tur (Tur 33 denendi ve geri alındı; Tur 34 eski görünüme canlılık ekledi; Tur 35 arayüzü Lite'ın "Cam & Bulut" diline taşıdı; Tur 36 şehre ayrıntı kattı; Tur 37a geç oyuna yönetim yükü, servet vergisi ve kriz dönemleri getirdi; Tur 37b karar kartlarını ve rakip hikâyelerini ekledi; Tur 37c fırsat balonlarını ve aylık görev panosunu getirdi; Tur 37d canlı pazarı, şehir projesi ihalesini ve rakip konsorsiyumunu getirdi; Tur 38 değerlendirme turuydu: geç oyun hızı, gündem ve haber akışı, zorluk eğrisi; Tur 39a senaryo modunu getirdi: Kurtarma ve Krizin ortasında; Tur 39b Konsorsiyuma karşı, Zincir ustası ve Şehrin sponsoru senaryolarını ekledi).
+> Son güncelleme: şema **v6**, 39 tur (Tur 33 denendi ve geri alındı; Tur 34 eski görünüme canlılık ekledi; Tur 35 arayüzü Lite'ın "Cam & Bulut" diline taşıdı; Tur 36 şehre ayrıntı kattı; Tur 37a geç oyuna yönetim yükü, servet vergisi ve kriz dönemleri getirdi; Tur 37b karar kartlarını ve rakip hikâyelerini ekledi; Tur 37c fırsat balonlarını ve aylık görev panosunu getirdi; Tur 37d canlı pazarı, şehir projesi ihalesini ve rakip konsorsiyumunu getirdi; Tur 38 değerlendirme turuydu: geç oyun hızı, gündem ve haber akışı, zorluk eğrisi; Tur 39a senaryo modunu getirdi: Kurtarma ve Krizin ortasında; Tur 39b Konsorsiyuma karşı, Zincir ustası ve Şehrin sponsoru senaryolarını ekledi; Tur 39c Büyük şehir fethi ve Holding: iki şehir ile listeyi yediye tamamladı).
 
 ---
 
@@ -3469,6 +3469,97 @@ yok; "Senaryo modu" bölümüne 7 kontrol eklendi: konsorsiyumun açılışı,
 zafer günü sonuç ve araya girmeyen zafer ekranı, zincir listesi, ihale
 günü, sıradan düşüş ve geri sayım, kaybın nedeni.
 
+### Tur 39c — Senaryo modu: Büyük şehir fethi, Holding: iki şehir
+
+Üçüncü aşama son iki senaryoyu getiriyor; liste yedi senaryoda tamamlandı.
+
+**Çatıda değişen.**
+- *İki yeni hedef türü:* tekel (`monopoly`: şehirde rakip kalmamalı) ve
+  holding (`holding`: holding'in bütün şehirlerinde zafer, hiçbiri
+  kaybedilmeden). Yeni kayıp nedeni: `city` (uzaktaki şehir kaybedildi).
+- *Ertelenen zafer:* hedefi şehrin zaferinin ötesinde olan senaryoda
+  (tekel, iki şehir) değer ve birincilik zaferi kaydediliyor ama oyunu
+  durdurmuyor, ekranı açılmıyor; sonucu senaryo veriyor.
+- *Dondurma* (`freeze`): senaryo boyunca yeni şirket ruhsatı ve hisse
+  ihracı; senaryo bitince kalkıyor.
+- *İkinci şehir* (`secondCity`): kurulan şehir kurucu şehir olup uzağa
+  geçiyor, oyuncu sermayeyle açılan yeni şehirde başlıyor. Yeni şehri
+  kuran yol serbest oyunun `openCity`siyle ortak (`foundCity`). Sermaye
+  kurucu şehrin kasasından düşülmüyor ve kurucu şehrin zafer ölçüsüne
+  "dışarı aktarılan" diye eklenmiyor.
+- *Şehir değişince senaryo oyuncuyla geliyor* (`switchCity`): takvimler
+  birlikte yürüdüğü için günleri şehirler arasındaki farkla kayıyor;
+  uzaktaki şehrin zaferi de ekran açmadan kaydediliyor.
+
+**Büyük şehir fethi** (seed 7, büyük şehir, 200 gün ön tarih, 400 gün,
+12 M ₺ kasa, sekiz mağaza; hedef tekel). Ölçüm iki dondurma getirdi:
+- *Ruhsat:* büyük şehirde boşalan koltuk 60 günde bir doluyor, gelen
+  rakip kurucu kilidiyle; tekel kovalanan bir hedef oluyordu.
+- *İhraç:* premium ve teknoloji doktrinli rakip (Meridyen, Veri, Firuze)
+  baskıncı %30'u geçtiği gün kurucu payının tabanına kadar ihraç ediyor.
+  Yatırımcının hissesi dolaşıma girmiyor; geri alımla birlikte kontrol
+  bir hisse farkla kilitleniyor (Tur 28'in kuralı). İhraç açıkken üç
+  rakip hiçbir vekille alınamadı (1.200 gün, 500 M ₺ net değerle de);
+  payı %29'da toplayıp vurmak bile yetmedi. İhraç kapalıyken geri alım
+  savunması sürüyor ama kilide yetmiyor: sızıp vuran dört günde alıyor.
+
+40 M ₺ kasayla her avcı vekil 44–176 günde tekeldeydi; kasa 12 M ₺. Geç
+kalan avcının karşısında rakipler birbirini yutup büyüyor (Meridyen ve
+Firuze 150–280 M ₺).
+
+| Vekil (400 gün) | Sonuç |
+|---|---|
+| Hiçbir şey yapmayan · yalnızca büyüyen | süre doluyor (4–5 rakip kalıyor) |
+| Kasasını hedefe saklayan avcılar · 15 günde bir oynayan | süre doluyor (3 rakip) |
+| Devralma emriyle avlanan | 311. günde tekel (1 yıldız) |
+| + her rakipte payı %29'da toplayıp vuran | 241–245. günde (2 yıldız) |
+| + bunu yaparken kasasını hedefe saklayan | 155–169. günde (2 yıldız) |
+
+Yıldız eşikleri 250 ve 150 gün. Büyük şehrin ön tarihi tarayıcıda ~3 sn;
+sahnenin kurulması yazılımsal GPU'da ~10 sn daha.
+
+**Holding: iki şehir** (seed 11, Rahat, kurucu şehirde 150 gün ön tarih,
+550 gün). Kurucu şehirde 10 M ₺ kasa ve on mağaza (1. sırada, 12 M ₺);
+oyuncu 4 M ₺'yle açılan yeni şehrin ilk gününde. Ölçüm: 300 günlük kurucu
+şehirde rakiplerin ivmesi oyuncuyu üçüncülüğe itiyordu; değer hedefi
+geçse de (84/60 M ₺) birincilik gelmiyor, hiçbir vekil kazanamıyordu.
+
+| Vekil (550 gün) | Sonuç |
+|---|---|
+| Hiçbir şey yapmayan | süre doluyor |
+| Yalnızca yeni şehri oynayan | yeni şehirde 350. gün civarı zafer; kurucu şehir üçüncülüğe düşüyor |
+| Önce yeni şehri bitirip dönen | süre doluyor (ihmal edilen kurucu şehir 400. günde üçüncü) |
+| Gidip gelen, talimatı varsayılan (kârın yarısı kasaya, savunmasız) | süre doluyor (kurucu şehir ikinci) |
+| 15 günde bir oynayan | süre doluyor |
+| Gidip gelen (30 ya da 60 günde bir), talimatı "şehirde tut + savun" | 419–427. günde (1 yıldız) |
+| Aynısı, üç günde bir oynayan | 356–389. günde (2 yıldız) |
+
+Yıldız eşikleri 400 ve 350 gün.
+
+**Arayüz.**
+- *Açılış ekranı:* Büyük şehir fethi'nde rakip sayısı ve dondurmalar;
+  Holding'de "yeni şehir" başlığı ve kurucu şehrin değeri ile sırası.
+- *Hedef paneli:* Holding'de iki şehrin zafer durumu; gündem çipi
+  tekelde devralınan ve kalan rakibi yazıyor.
+- *Sonuç ekranı:* kalan rakip, zafer kazanılan şehir sayısı ve
+  kaybedilen uzak şehir.
+- *Senaryo listesi:* Holding'in kurulum satırı yeni şehrin sermayesini
+  ve kurucu şehrin gününü ayrı yazıyor.
+
+**Doğrulama.** `pnpm test` 419/419. Dört yeni test var:
+- fethin dondurmaları, ertelenen zafer, tekel ve süre;
+- holding kurulumu ve sermayenin kurucu şehre sayılmaması;
+- şehir değişince taşınan senaryo;
+- iki şehirde zafer ve kaybedilen uzak şehir.
+
+Yeni denge bölümü "Senaryolar III: fetih ve holding" 10/10 (~160 sn).
+Tarayıcıda "Senaryo modu" bölümüne 7 kontrol eklendi:
+- büyük şehrin açılışı, dondurmalar ve ön tarih süresi;
+- ertelenen zafer ve gündem çipi;
+- holding açılışı ve iki şehrin listesi;
+- şehir değişince gelen senaryo;
+- iki şehirde zafer.
+
 
 ---
 
@@ -3551,11 +3642,11 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi) |
-| Birim testi | **415 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi de) |
+| Birim testi | **419 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi de) |
 | Denge testi | **314 kontrol, hepsi geçiyor** (23 bölüm, süreleriyle; ~12 dk) |
 | Tarayıcı testi | **420 kontrol, hepsi geçiyor**, 0 konsol hatası (~17–25 dk); duman koşusu 132 (~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + duman oynanışı |
-| Kapsam | 35 bina · 25 ürün · 7 kategori · 8 rakip profili · 10 CEO · 22 olay (11 şehir + 11 sektör) · 2 kriz · 12 karar kartı · 70 rakip sözü · 5 fırsat balonu · 8 görev türü · 4 mevsim · 9 moda ürünü · 17 şehir yapısı (6 siluet) · 6 şehir projesi · 5 senaryo |
+| Kapsam | 35 bina · 25 ürün · 7 kategori · 8 rakip profili · 10 CEO · 22 olay (11 şehir + 11 sektör) · 2 kriz · 12 karar kartı · 70 rakip sözü · 5 fırsat balonu · 8 görev türü · 4 mevsim · 9 moda ürünü · 17 şehir yapısı (6 siluet) · 6 şehir projesi · 7 senaryo |
 
 ### Render (Tur 6 sonrası)
 

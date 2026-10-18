@@ -682,4 +682,26 @@ export const contentEn: Record<string, string> = {
   'content.scenario.sponsor.facts.1':
     'If a rival takes a project the scenario ends. If you drop out of the top two you have 20 days to get back.',
   'content.scenario.sponsor.facts.2': 'Stars: your ratio to the strongest rival when the second tender closes.',
+  'content.scenario.conquest.title': 'Conquest of the Big City',
+  'content.scenario.conquest.tagline': 'Take over every one of the eight rivals in the big city: a monopoly, against the clock.',
+  'content.scenario.conquest.brief':
+    'For two hundred days the big city has been in the hands of eight companies. The council has frozen new business licences and the markets board has frozen new share issues: nobody will fill an empty seat, and the rivals cannot print shares to defend themselves. Take them over one by one until yours is the only company left.',
+  'content.scenario.conquest.goalText': 'Take over every rival in the city within {days} days.',
+  'content.scenario.conquest.facts.0':
+    'A takeover is a process: the order buys up to the daily cap every day; once the target sees 30% it buys back its own shares. Quietly building a stake below 30% and then placing the order leaves the defence few days.',
+  'content.scenario.conquest.facts.1':
+    "If the free float is not enough for control, the order drops. The shares a company you take over holds in other companies become yours.",
+  'content.scenario.conquest.facts.2': 'The waiting rivals take each other over and grow too: a target you leave for later gets expensive.',
+  'content.scenario.conquest.facts.3': 'Both freezes last for the scenario and lift when it ends (your own share issues are frozen too).',
+  'content.scenario.holding.title': 'Holding: Two Cities',
+  'content.scenario.holding.tagline': 'Start from scratch in a new city while the founding city lives on far away: win in both.',
+  'content.scenario.holding.brief':
+    'In the founding city the company pulled ahead but has not won. The holding is opening a second city: you start from scratch there while the founding city lives on by itself far away. The rivals keep growing and raiding there too.',
+  'content.scenario.holding.goalText': 'Reach victory in both cities within {days} days, without losing either.',
+  'content.scenario.holding.facts.0':
+    'From the holding panel you can switch between cities; the scenario comes with you. You can give the remote city a directive (how much of its profit flows to the treasury, buybacks against raids) and send it money.',
+  'content.scenario.holding.facts.1':
+    'The remote city makes no new investments: it stands still while its rivals grow. Leave a city alone for too long and it loses its place.',
+  'content.scenario.holding.facts.2':
+    'Victory is measured by value created in the city: money sent to it does not count, and profit flowing to the treasury comes off its value.',
 };
