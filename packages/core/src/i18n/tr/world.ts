@@ -125,6 +125,10 @@ export const world = {
   'core.scenario.outOfRankBody': 'Şirket şehrin {rank}. sırasında. {days} gün içinde ilk {max} arasına dönmezsen senaryo biter.',
   'core.scenario.lostRank': 'Şirket ilk {rank} şirketin dışına düştü ve {days} gün içinde geri dönemedi.',
   'core.scenario.lostProject': 'Projenin sponsorluğunu bir rakip kaptı.',
+  'core.scenario.lostCity': 'Holding\'in uzaktaki şehri kaybedildi.',
+  'core.scenario.progressMonopoly': 'devralınan {taken}/{total} · {left} rakip kaldı',
+  'core.scenario.progressHolding': '{won}/{total} şehirde zafer · bu şehir {value} / {target}',
+  'core.scenario.progressHoldingWon': '{won}/{total} şehirde zafer · bu şehirde zafer var',
 
   // events.ts — olay ve dönem kapanışı
   'core.events.endedTitle': '{title} sona erdi',

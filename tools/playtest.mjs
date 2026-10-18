@@ -3226,9 +3226,14 @@ async function finish(browser, consoleErrors) {
     // Tur 39b: Konsorsiyuma karşı, Zincir ustası, Şehrin sponsoru.
     const openScenario = async (id) => {
       await sp.evaluate(() => window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 }));
-      await sp.locator('.topbar-actions [data-panel="saves"]').click();
-      await sp.waitForTimeout(300);
-      await sp.locator('button:has-text("Yeni oyun")').first().click();
+      if ((await sp.locator('[data-scenario-result]').count()) > 0) {
+        // Sonuç ekranı açıksa listeye onun "Senaryolar" düğmesiyle.
+        await sp.locator('[data-scenario-result] .gameover-actions button').last().click();
+      } else {
+        await sp.locator('.topbar-actions [data-panel="saves"]').click();
+        await sp.waitForTimeout(300);
+        await sp.locator('button:has-text("Yeni oyun")').first().click();
+      }
       await sp.waitForSelector('.newgame', { timeout: 10000 });
       await sp.locator(`[data-scenario="${id}"]`).click();
       await sp.locator('[data-newgame-start]').click();
@@ -3314,6 +3319,126 @@ async function finish(browser, consoleErrors) {
     check('20 gün içinde dönmeyen kaybediyor; sonuç ekranı nedeni yazıyor',
       sponsorReason === 'rank' && /ilk 2 şirketin dışına düştü ve 20 gün içinde geri dönemedi/.test(sponsorText), `${sponsorReason} · ${sponsorText}`);
     await sp.screenshot({ path: `${OUT}/scenario-sponsor-lost.png` });
+    // Tur 39c: Büyük şehir fethi, Holding: iki şehir.
+    const preludeStart = Date.now();
+    await openScenario('conquest');
+    const preludeMs = Date.now() - preludeStart;
+    const conquestBrief = ((await sp.locator('[data-scenario-brief="conquest"]').textContent()) ?? '').trim();
+    const conquestState = await sp.evaluate(() => {
+      const s = window.__capital.getState();
+      return {
+        size: s.citySize,
+        day: s.time.day,
+        rivals: Object.values(s.companies).filter((c) => !c.isPlayer).length,
+        entry: s.flags.rivalEntry,
+        issuance: s.flags.issuance,
+      };
+    });
+    check('Büyük şehir fethi: büyük şehirde 200. gün, sekiz rakip; ruhsat ve ihraç dondurulmuş, açılış ekranı yazıyor',
+      conquestState.size === 'large' && conquestState.day === 200 && conquestState.rivals === 8 && conquestState.entry === false
+        && conquestState.issuance === false && /8 rakip var; yeni şirket ruhsatı ve hisse ihracı donduruldu/.test(conquestBrief),
+      `${JSON.stringify(conquestState)} · ön tarih ${preludeMs} ms`);
+    check('Büyük şehrin 200 günlük ön tarihi bir dakikadan kısa', preludeMs < 60_000, `${preludeMs} ms`);
+    await sp.locator('[data-scenario-begin]').click();
+    const deferred = await sp.evaluate(() => {
+      const c = window.__capital;
+      const s = c.getState();
+      c.engine.dispatch({ type: 'SET_SPEED', speed: 1 });
+      s.companies[s.playerCompanyId].cash += 2_000_000_000;
+      c.engine.runDay();
+      const out = { victory: s.victory?.kind ?? null, dismissed: s.victory?.dismissed === true, speed: s.time.speed, finished: s.scenario.finishedDay ?? null };
+      c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+      return out;
+    });
+    await sp.waitForTimeout(300);
+    const conquestChip = ((await sp.locator('.agenda [data-agenda="scenario"]').textContent().catch(() => '')) ?? '').trim();
+    check('Tekel beklenirken değer zaferi oyunu durdurmuyor, zafer ekranı açılmıyor; gündem kalan rakibi yazıyor',
+      deferred.victory === 'tycoon' && deferred.dismissed && deferred.speed === 1 && deferred.finished === null
+        && (await sp.locator('.gameover').count()) === 0 && /0\/8 · 8 rakip kaldı/.test(conquestChip),
+      `${JSON.stringify(deferred)} · ${conquestChip}`);
+
+    await openScenario('holding');
+    const holdingBrief = ((await sp.locator('[data-scenario-brief="holding"]').textContent()) ?? '').trim();
+    const holdingState = await sp.evaluate(() => {
+      const s = window.__capital.getState();
+      return { day: s.time.day, city: s.cityName, away: s.holding?.dormant.map((d) => d.state.cityName) ?? [], awayDay: s.holding?.dormant[0]?.state.time.day };
+    });
+    check('Holding: iki şehir — yeni şehrin ilk günü, kurucu şehir 150. günde uzakta; açılış ekranı ikisini de yazıyor',
+      holdingState.day === 0 && holdingState.away.length === 1 && holdingState.awayDay === 150
+        && holdingBrief.includes(`yeni şehir ${holdingState.city}`) && new RegExp(`Kurucu şehir ${holdingState.away[0]} uzakta: değer .+, \\d\\. sırada`).test(holdingBrief),
+      `${JSON.stringify(holdingState)} · ${holdingBrief.slice(-110)}`);
+    await sp.screenshot({ path: `${OUT}/scenario-holding-brief.png` });
+    await sp.locator('[data-scenario-begin]').click();
+    await sp.evaluate(() => {
+      const c = window.__capital;
+      c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+      for (let i = 0; i < 5; i++) c.engine.runDay();
+    });
+    await sp.locator('.agenda [data-agenda="scenario"] button').click();
+    await sp.waitForTimeout(300);
+    const cityItems = await sp.locator('.modal [data-scenario-goals="holding"] [data-holding-city]').evaluateAll((els) =>
+      els.map((el) => `${el.getAttribute('data-holding-city')}:${(el.textContent ?? '').trim()}`));
+    check('Hedef panelinde iki şehrin zafer durumu, oynanan şehir başta',
+      cityItems.length === 2 && cityItems[0].startsWith('active:') && cityItems[0].includes(holdingState.city) && cityItems[1].startsWith('away:'),
+      cityItems.join(' | '));
+    await sp.locator('.modal [data-scenario-goals="holding"]').screenshot({ path: `${OUT}/scenario-holding-goals.png` });
+    await sp.keyboard.press('Escape');
+    const leftBefore = await sp.evaluate(() => window.__capital.getState().scenario.endDay - window.__capital.getState().time.day);
+    await sp.locator('[data-city-chip]').click();
+    await sp.waitForTimeout(300);
+    await sp.locator('.city-row:not(.current) .city-switch').first().click();
+    await sp.waitForTimeout(900);
+    const switched = await sp.evaluate(() => {
+      const s = window.__capital.getState();
+      return {
+        city: s.cityName,
+        scenario: s.scenario?.id ?? null,
+        left: s.scenario ? s.scenario.endDay - s.time.day : null,
+        awayScenario: s.holding?.dormant[0]?.state.scenario?.id ?? null,
+        chip: document.querySelector('.agenda [data-agenda="scenario"]') !== null,
+      };
+    });
+    check('Şehir değişince senaryo oyuncuyla geliyor: kalan süre aynı, gündem çipi yerinde',
+      switched.city === holdingState.away[0] && switched.scenario === 'holding' && switched.left === leftBefore && switched.awayScenario === null && switched.chip,
+      JSON.stringify(switched));
+    await sp.keyboard.press('Escape');
+    await sp.evaluate(() => {
+      const c = window.__capital;
+      const s = c.getState();
+      s.victory = { day: s.time.day, kind: 'tycoon', dismissed: true };
+      s.holding.dormant[0].state.victory = { day: s.holding.dormant[0].state.time.day, kind: 'tycoon' };
+      c.engine.runDay();
+      c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+    });
+    await sp.waitForSelector('[data-scenario-result="won"]', { timeout: 5000 }).catch(() => null);
+    check('İki şehirde de zafer: senaryo kazanılıyor, zafer ekranı araya girmiyor',
+      (await sp.locator('[data-scenario-result="won"]').count()) === 1 && (await sp.locator('.gameover:not(.scenario-result)').count()) === 0);
+    // Tur 39c: uzun açılış telefonda ekrana sığmıyordu; katman kaymıyor, "Başla" düğmesine ulaşılamıyordu.
+    {
+      const phoneContext = await browser.newContext({ ...devices['iPhone 13'] });
+      await phoneContext.addInitScript(veteran, TUTORIAL_KEY);
+      const pp = await phoneContext.newPage();
+      pp.on('pageerror', (e) => scenarioErrors.push(e.message));
+      await pp.goto('http://127.0.0.1:8811/');
+      await pp.waitForSelector('.newgame', { timeout: 20000 });
+      await pp.locator('.mode-picker [data-mode="scenario"]').click();
+      await pp.locator('[data-scenario="holding"]').click();
+      await pp.locator('[data-newgame-start]').click();
+      await pp.waitForSelector('[data-scenario-brief="holding"]', { timeout: 60000 });
+      await pp.waitForTimeout(500);
+      const overflow = await pp.evaluate(() => {
+        const layer = document.querySelector('[data-scenario-brief]');
+        const card = layer.querySelector('.gameover-card');
+        return { layer: layer.clientHeight, card: card.scrollHeight, top: card.getBoundingClientRect().top };
+      });
+      await pp.locator('[data-scenario-begin]').scrollIntoViewIfNeeded();
+      await pp.locator('[data-scenario-begin]').click();
+      await pp.waitForTimeout(300);
+      const begun = await pp.evaluate(() => window.__capital.getState().scenario.briefSeen === true);
+      check('Telefonda ekrana sığmayan açılışın başı görünüyor, katman kayıyor, "Başla" düğmesine ulaşılıyor',
+        overflow.card > overflow.layer && overflow.top >= 0 && begun, JSON.stringify(overflow));
+      await phoneContext.close();
+    }
     check('Senaryo akışında konsol temiz', scenarioErrors.length === 0, scenarioErrors.slice(0, 2).join(' | '));
     await scenarioContext.close();
   }

@@ -13,7 +13,7 @@ import { runQuestTick, settleBubbleAway } from './systems/opportunities';
 import { settleConsortiumAway } from './systems/consortium';
 import { capRemaining, playerBuy } from './systems/orders';
 import { createNewGame } from './worldgen';
-import { scenarioActive } from './systems/scenario';
+import { scenarioActive, shiftScenario } from './systems/scenario';
 import type { CityDirective, CommandResult, DormantCity, GameState, HoldingState, RemotePayout } from './types';
 
 /**
@@ -190,10 +190,18 @@ export function openCity(
   const amount = Math.floor(capital);
   if (!(amount >= HOLDING.minCapital)) return { ok: false, reason: tc('core.holding.minCapital', { min: formatMoney(HOLDING.minCapital) }) };
   if (amount > quote.maxCapital) return { ok: false, reason: tc('core.holding.notEnoughCash') };
+  return { ok: true, next: foundCity(state, citySize, amount) };
+}
 
+/**
+ * Yeni şehri kurar; koşulları (zafer, sermaye, şehir sınırı) çağıran
+ * tarttı. `openCity` ve senaryonun kurulumu (Holding: iki şehir) aynı yol.
+ */
+export function foundCity(state: GameState, citySize: CitySizeId, amount: number): GameState {
   const player = state.companies[state.playerCompanyId]!;
   const seed = foundingSeed(state);
   const opened = state.holding?.opened ?? 1;
+  const name = cityNameAt(seed, opened);
   const brand = carriedBrand(state);
 
   // Ayrılan şehir: sermaye kasasından çıkıyor ve bu şehirden aktarılmış
@@ -214,7 +222,7 @@ export function openCity(
     rivalOffset: opened * 4,
   });
   next.flags = { ...state.flags };
-  next.cityName = quote.name;
+  next.cityName = name;
   next.importedCapital = amount;
   const holding: HoldingState = {
     foundingSeed: seed,
@@ -232,7 +240,7 @@ export function openCity(
   pushNews(
     next,
     'good',
-    tc('core.holding.openedTitle', { city: quote.name }),
+    tc('core.holding.openedTitle', { city: name }),
     tc('core.holding.openedBody', {
       capital: formatMoney(amount),
       brand: Math.round(brand * 100),
@@ -240,7 +248,7 @@ export function openCity(
       previous: state.cityName,
     }),
   );
-  return { ok: true, next };
+  return next;
 }
 
 export function switchCity(state: GameState, index: number): CommandResult & { next?: GameState } {
@@ -250,9 +258,16 @@ export function switchCity(state: GameState, index: number): CommandResult & { n
   if (!holding || !target) return { ok: false, reason: tc('core.holding.noSuchCity') };
 
   const next = target.state;
+  const away = toDormant(state);
+  // Senaryo oynanan şehirle gidiyor (Tur 39c, Holding: iki şehir): takvimler
+  // birlikte yürüdüğü için günleri şehirler arasındaki farkla kayıyor.
+  if (state.scenario) {
+    next.scenario = shiftScenario(state.scenario, next.time.day - state.time.day);
+    delete away.state.scenario;
+  }
   next.holding = {
     ...holding,
-    dormant: [...holding.dormant.filter((_, i) => i !== index), toDormant(state)],
+    dormant: [...holding.dormant.filter((_, i) => i !== index), away],
   };
   recomputeNetWorth(next);
   return { ok: true, next };

@@ -130,6 +130,10 @@ export const world: Record<keyof typeof trWorld, string> = {
   'core.scenario.outOfRankBody': 'The company ranks {rank} in the city. Get back into the top {max} within {days} days or the scenario ends.',
   'core.scenario.lostRank': 'The company fell out of the top {rank} and did not get back within {days} days.',
   'core.scenario.lostProject': 'A rival took the sponsorship of the project.',
+  'core.scenario.lostCity': "One of the holding's remote cities was lost.",
+  'core.scenario.progressMonopoly': 'taken over {taken}/{total} · {left} rivals left',
+  'core.scenario.progressHolding': 'victory in {won}/{total} cities · this city {value} / {target}',
+  'core.scenario.progressHoldingWon': 'victory in {won}/{total} cities · this city has won',
 
   // events.ts — event and era endings
   'core.events.endedTitle': '{title} has ended',

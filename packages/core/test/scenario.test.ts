@@ -9,7 +9,9 @@ import { createScenarioGame, startScenario } from '../src/scenario';
 import { getPlayer } from '../src/selectors';
 import {
   chainGoalStatus,
+  holdingCities,
   leadRatio,
+  rivalsLeft,
   playerRank,
   runScenarioTick,
   scenarioProgress,
@@ -72,9 +74,18 @@ describe('senaryo modu', () => {
   test('her senaryo kuruluyor: ön tarih, taze şirket, duraklamış başlangıç', () => {
     for (const def of SCENARIOS) {
       const state = scenario(def.id);
+      // İkinci şehirle başlayan senaryoda ön tarih kurucu şehrin (uzakta).
+      const founding = def.setup.secondCity ? state.holding!.dormant[0]!.state : state;
       const player = getPlayer(state);
-      assert.equal(state.time.day, def.preludeDays, def.id);
-      assert.deepEqual(state.scenario, { id: def.id, startDay: def.preludeDays, endDay: def.preludeDays + def.days, ...(state.scenario?.rivalId ? { rivalId: state.scenario.rivalId } : {}) });
+      assert.equal(founding.time.day, def.preludeDays, def.id);
+      const start = state.time.day;
+      assert.deepEqual(state.scenario, {
+        id: def.id,
+        startDay: start,
+        endDay: start + def.days,
+        ...(state.scenario?.rivalId ? { rivalId: state.scenario.rivalId } : {}),
+        ...(state.scenario?.rivalsAtStart !== undefined ? { rivalsAtStart: state.scenario.rivalsAtStart } : {}),
+      });
       assert.equal(state.time.speed, 0, `${def.id}: açılış ekranı görülene kadar duraklamış`);
       assert.equal(player.name, 'Senaryo AŞ');
       assert.equal(player.lockedUntilDay, undefined, `${def.id}: kurucu kilidi ön tarihte kaldı`);
@@ -82,9 +93,9 @@ describe('senaryo modu', () => {
       assert.equal(state.contractOffer, undefined);
       assert.equal(state.bubble, undefined);
       assert.equal(state.quests, undefined);
-      assert.match(state.news.at(-1)!.title, new RegExp(def.title));
+      assert.ok(state.news.some((item) => item.title.includes(def.title)), `${def.id}: açılış haberi`);
       // Rakipler şehri kurdu.
-      const rivalBuildings = Object.values(state.buildings).filter((b) => b.companyId !== player.id).length;
+      const rivalBuildings = Object.values(founding.buildings).filter((b) => b.companyId !== founding.playerCompanyId).length;
       assert.ok(rivalBuildings >= 40, `${def.id}: ${rivalBuildings} rakip binası`);
     }
   });
@@ -460,5 +471,106 @@ describe('senaryo modu', () => {
     assert.equal(run.outcome, 'lost');
     assert.equal(run.lostReason, 'rank');
     assert.equal(state.time.speed, 0);
+  });
+  test('Büyük şehir fethi: ruhsat ve ihraç donduruluyor, ara zafer oyunu durdurmuyor, tekel kazanıyor', () => {
+    const def = SCENARIO_BY_ID.conquest!;
+    const engine = started('conquest');
+    const state = engine.getState();
+    const run = state.scenario!;
+    assert.equal(state.citySize, 'large');
+    assert.equal(state.flags.rivalEntry, false);
+    assert.equal(state.flags.issuance, false);
+    assert.equal(run.rivalsAtStart, 8);
+    assert.equal(rivalsLeft(state), 8);
+    assert.equal(getPlayer(state).cash, def.setup.cash);
+    assert.equal(engine.dispatch({ type: 'ISSUE_SHARES', count: 500 }).ok, false, 'oyuncunun ihracı da kapalı');
+    // Değer ve birincilik zaferi kaydediliyor ama senaryo sürüyor: ekran yok, takvim yürüyor.
+    getPlayer(state).cash += 2_000_000_000;
+    engine.runDay();
+    assert.equal(state.victory?.kind, 'tycoon');
+    assert.equal(state.victory?.dismissed, true);
+    assert.equal(state.time.speed, 1);
+    assert.equal(run.finishedDay, undefined);
+    assert.match(scenarioProgress(state)!.detail, /devralınan 0\/8 · 8 rakip kaldı/);
+    // Son rakip de gidince tekel.
+    for (const company of Object.values(state.companies)) if (!company.isPlayer) delete state.companies[company.id];
+    runScenarioTick(state);
+    assert.equal(run.outcome, 'won');
+    assert.equal(run.score, state.time.day - run.startDay);
+    assert.equal(state.flags.rivalEntry, true, 'dondurma senaryoyla kalkıyor');
+    assert.equal(state.flags.issuance, true);
+
+    const late = scenario('conquest');
+    late.scenario!.briefSeen = true;
+    late.time.day = late.scenario!.endDay;
+    runScenarioTick(late);
+    assert.equal(late.scenario!.outcome, 'lost');
+    assert.equal(late.scenario!.lostReason, 'time');
+    assert.equal(late.scenario!.score, 8, 'skor kalan rakip');
+  });
+
+  test('Holding: iki şehir — yeni şehirde başlıyor, kurucu şehir uzakta; sermaye kurucu şehrin zaferine sayılmıyor', () => {
+    const def = SCENARIO_BY_ID.holding!;
+    const setup = def.setup;
+    const state = scenario('holding');
+    const founding = state.holding!.dormant[0]!.state;
+    assert.equal(state.time.day, 0);
+    assert.equal(founding.time.day, def.preludeDays);
+    assert.equal(founding.scenario, undefined, 'senaryo oynanan şehirde');
+    assert.equal(getPlayer(founding).cash, setup.cash);
+    assert.equal(founding.importedCapital, undefined);
+    assert.equal(
+      Object.values(founding.buildings).filter((b) => b.companyId === founding.playerCompanyId).length,
+      setup.outlets!.length,
+    );
+    assert.equal(getPlayer(state).cash, setup.secondCity!.capital);
+    assert.equal(state.importedCapital, setup.secondCity!.capital);
+    const cities = holdingCities(state);
+    assert.deepEqual(cities.map((city) => [city.active, city.won, city.lost]), [[true, false, false], [false, false, false]]);
+    assert.equal(cities[0]!.value, 0, 'yeni şehirde yaratılan değer sıfırdan');
+    assert.equal(Math.round(cities[1]!.value), Math.round(getPlayer(founding).netWorth));
+  });
+
+  test('Holding: şehir değişince senaryo oyuncuyla geliyor, günleri kayıyor', () => {
+    const engine = started('holding');
+    for (let day = 0; day < 5; day++) engine.runDay();
+    const second = engine.getState();
+    const before = scenarioProgress(second)!;
+    assert.ok(engine.dispatch({ type: 'SWITCH_CITY', index: 0 }).ok);
+    const founding = engine.getState();
+    assert.notEqual(founding, second);
+    assert.equal(founding.scenario?.id, 'holding');
+    assert.equal(founding.scenario!.startDay, founding.time.day - 5);
+    assert.equal(scenarioProgress(founding)!.daysLeft, before.daysLeft);
+    assert.equal(founding.holding!.dormant[0]!.state.scenario, undefined, 'uzaktaki şehirde senaryo kalmıyor');
+    engine.runDay();
+    assert.ok(engine.dispatch({ type: 'SWITCH_CITY', index: 0 }).ok);
+    const back = engine.getState();
+    assert.equal(back.scenario!.startDay, 0);
+    assert.equal(scenarioProgress(back)!.daysLeft, before.daysLeft - 1);
+  });
+
+  test('Holding: iki şehirde de zafer kazanıyor; uzaktaki şehir kaybedilirse senaryo biter', () => {
+    const state = scenario('holding');
+    state.scenario!.briefSeen = true;
+    const run = state.scenario!;
+    const founding = state.holding!.dormant[0]!.state;
+    state.time.day = 120;
+    state.victory = { day: 120, kind: 'tycoon', dismissed: true };
+    runScenarioTick(state);
+    assert.equal(run.finishedDay, undefined, 'bir şehir yetmiyor');
+    assert.match(scenarioProgress(state)!.detail, /1\/2 şehirde zafer/);
+    founding.victory = { day: founding.time.day, kind: 'tycoon' };
+    runScenarioTick(state);
+    assert.equal(run.outcome, 'won');
+    assert.equal(run.score, 120);
+    assert.equal(founding.victory.dismissed, true, 'şehre dönünce zafer ekranı açılmasın');
+
+    const lost = scenario('holding');
+    lost.scenario!.briefSeen = true;
+    lost.holding!.dormant[0]!.state.gameOver = { day: 300, byCompanyId: 'nova_holding' };
+    runScenarioTick(lost);
+    assert.equal(lost.scenario!.outcome, 'lost');
+    assert.equal(lost.scenario!.lostReason, 'city');
   });
 });

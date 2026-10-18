@@ -968,15 +968,18 @@ export interface ScenarioState {
   sponsored?: number;
   /** Şehrin sponsoru: oyuncunun izin verilen sıranın dışına düştüğü gün (geri dönünce siliniyor). */
   outOfRankDay?: number;
+  /** Büyük şehir fethi: devirdeki rakip sayısı (ilerleme "devralınan / başta"). */
+  rivalsAtStart?: number;
   /** Sonuç ekranı görüldü mü. */
   resultSeen?: boolean;
 }
 
 /**
  * `takeover`: devralındı · `time`: süre doldu · `rank`: sıralamada izin
- * verilenin altına düştü · `project`: bir projenin sponsorluğunu rakip kaptı.
+ * verilenin altına düştü · `project`: bir projenin sponsorluğunu rakip kaptı ·
+ * `city`: holding'in uzaktaki bir şehri kaybedildi.
  */
-export type ScenarioLostReason = 'takeover' | 'time' | 'rank' | 'project';
+export type ScenarioLostReason = 'takeover' | 'time' | 'rank' | 'project' | 'city';
 
 /** Günlükteki tek kayıt: komutun verildiği gün ve komutun kendisi. */
 export type LoggedCommand = [number, GameCommand];

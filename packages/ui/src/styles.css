@@ -3276,9 +3276,21 @@ button.icon {
   inset: 0;
   z-index: 60;
   display: grid;
-  place-items: center;
+  /*
+   * Kart ekrana sığmayınca (telefonda uzun senaryo açılışı) katman
+   * kayıyor. Ortalama `place-items` ile değil kartın `margin: auto`suyla:
+   * sığmayan kart üstten de taşar ve o kısma kaydırılamazdı, "Başla"
+   * düğmesine ulaşılamıyordu (Tur 39c).
+   */
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 16px 0;
   background: var(--scrim);
   pointer-events: auto;
+}
+
+.gameover > * {
+  margin: auto;
 }
 
 .gameover-card {

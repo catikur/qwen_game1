@@ -10,8 +10,23 @@ import { tutorialSeen } from './tutorial';
 import { scenarioRecord } from './scenarioBest';
 import { starRow, starThresholds } from './ScenarioScreens';
 
-/** Kurulumun sayılarla özeti: şehir, zorluk, başlangıç günü, süre, kasa. */
+/**
+ * Kurulumun sayılarla özeti: şehir, zorluk, başlangıç günü, süre, kasa.
+ * İkinci şehirle başlayan senaryoda oyuncu yeni şehrin ilk gününde,
+ * sermayeyle; kurucu şehrin günü ve kasası ayrı.
+ */
 function scenarioSetupLine(def: ScenarioDef): string {
+  const second = def.setup.secondCity;
+  if (second) {
+    return t('hud.scenario.setupLineHolding', {
+      size: getCitySize(second.citySize).name,
+      difficulty: getDifficulty(def.difficulty).name,
+      days: def.days,
+      capital: formatMoney(second.capital),
+      day: def.preludeDays,
+      cash: formatMoney(def.setup.cash),
+    });
+  }
   return t('hud.scenario.setupLine', {
     size: getCitySize(def.citySize).name,
     difficulty: getDifficulty(def.difficulty).name,

@@ -21,7 +21,7 @@ import type { CategoryId } from './types';
  * öndelikten (`lead`: oyuncunun net değeri / en güçlü rakibinki) geliyor.
  * Eşikler vekil ölçümünden (`packages/core/test/balance.ts`, "Senaryolar").
  */
-export type ScenarioId = 'rescue' | 'crisis' | 'consortium' | 'chain' | 'sponsor';
+export type ScenarioId = 'rescue' | 'crisis' | 'consortium' | 'chain' | 'sponsor' | 'conquest' | 'holding';
 
 /**
  * Devirde oyuncunun şirketi. Parçalar birleşebiliyor: her senaryo
@@ -58,6 +58,24 @@ export interface ScenarioSetup {
    * biri bitince sonraki bu kadar gün sonra (serbest oyunda 260–380).
    */
   projects?: { firstInDays: number; gapDays: number };
+  /**
+   * Senaryo boyunca dondurulan kurallar; senaryo bitince kalkıyor.
+   * `entrants`: belediye yeni şirket ruhsatını donduruyor, boşalan rakip
+   * koltuğuna kimse girmiyor (yoksa büyük şehirde 60 günde bir yeni rakip,
+   * kurucu kilidiyle). `issuance`: SPK yeni hisse ihracını donduruyor.
+   * Ölçüm (Büyük şehir fethi): premium ve teknoloji doktrinli rakip,
+   * baskıncı %30'u geçtiği gün kurucu payının tabanına kadar ihraç ediyor;
+   * yatırımcının hissesi dolaşıma girmiyor, geri alımla birlikte kontrol
+   * bir hisse farkla kilitleniyor ve şirket bir daha alınamıyordu. İhraç
+   * kapalıyken geri alım savunması sürüyor ama kilide yetmiyor.
+   */
+  freeze?: { entrants?: boolean; issuance?: boolean };
+  /**
+   * Holding: kurulan şehir kurucu şehir olup uzağa geçiyor, oyuncu bu
+   * sermayeyle açılan yeni şehirde başlıyor. Kurucu şehrin kasası `cash`;
+   * sermaye ondan düşülmüyor ve kurucu şehrin zafer ölçüsüne eklenmiyor.
+   */
+  secondCity?: { capital: number; citySize: CitySizeId };
 }
 
 export type ScenarioGoal =
@@ -77,7 +95,11 @@ export type ScenarioGoal =
    * `maxRank` içinde kal. Sıranın dışına düşen şirketin geri dönmek için
    * `graceDays` günü var: bina kurmak da katkı da net değeri bir an düşürüyor.
    */
-  | { kind: 'sponsor'; projects: number; maxRank: number; graceDays: number };
+  | { kind: 'sponsor'; projects: number; maxRank: number; graceDays: number }
+  /** Bütün rakipleri devral (tekel). */
+  | { kind: 'monopoly' }
+  /** Holding'in bütün şehirlerinde zafer; hiçbir şehir kaybedilmeden. */
+  | { kind: 'holding' };
 
 export interface ScenarioStars {
   /** `days`: hedefe kaç günde ulaşıldı (az iyi) · `lead`: bitişte en güçlü rakibe oran (çok iyi). */
@@ -302,6 +324,94 @@ export const SCENARIOS: ScenarioDef[] = [
       cash: 5_000_000,
       outlets: ['supermarket', 'restaurant', 'cafe', 'boutique', 'electronics_store', 'gym'],
       projects: { firstInDays: 10, gapDays: 30 },
+    },
+  },
+  /*
+   * BÜYÜK ŞEHİR FETHİ (seed 7, büyük şehir, 200 gün ön tarih). Hedef
+   * tekel: şehirde rakip kalmamalı. Ölçüm iki dondurma getirdi:
+   *   - yeni rakip ruhsatı: büyük şehirde boşalan koltuk 60 günde bir
+   *     doluyor, gelen kurucu kilidiyle;
+   *   - ihraç: premium ve teknoloji doktrinli rakip (Meridyen, Veri,
+   *     Firuze) %30 baskıncı görünce kurucu payının tabanına kadar ihraç
+   *     ediyor, geri alımla birlikte kontrol bir hisse farkla kilitleniyor.
+   *     İhraç açıkken üç rakip hiçbir vekille alınamıyordu (1.200 gün,
+   *     500 M ₺ net değerle de).
+   * İhraç kapalıyken 40 M ₺ kasayla her avcı vekil 44–176 günde
+   * kazanıyordu; kasa 12 M ₺. Geç kalan avcının karşısında rakipler
+   * birbirini yutup büyüyor (Meridyen ve Firuze 150–280 M ₺).
+   *
+   * Vekil (400 gün): hiçbir şey yapmayan, yalnızca büyüyen, kasasını
+   * hedefe saklayan avcılar ve 15 günde bir oynayan süreyi dolduruyor.
+   * Emirle avlanan 311. günde; her rakipte payı %29'da toplayıp en
+   * ucuzdan vuran 241–245. günde, bunu yaparken kasasını hedefe saklayan
+   * 155–169. günde tekelde.
+   */
+  {
+    id: 'conquest',
+    title: 'Büyük şehir fethi',
+    tagline: 'Sekiz rakipli büyük şehirde hepsini devral: tekel, süre sınırıyla.',
+    brief:
+      'Büyük şehir iki yüz gündür sekiz şirketin elinde. Belediye yeni şirket ruhsatını, SPK yeni hisse ihracını dondurdu: boşalan koltuğa kimse girmeyecek, rakipler de savunmak için hisse basamayacak. Şehirde tek şirket kalana kadar rakipleri tek tek devral.',
+    goalText: '{days} gün içinde şehirdeki bütün rakipleri devral.',
+    facts: [
+      'Devralma bir süreç: emir her gün tavan kadar hisse alıyor; hedef %30\'u görünce kendi hissesini geri alıyor. Payı %30\'un altında sessizce toplayıp sonra emir vermek savunmaya az gün bırakır.',
+      'Dolaşımdaki hisse kontrole yetmezse emir düşer. Devraldığın şirketin elindeki başka şirket hisseleri sana geçer.',
+      'Bekleyen rakipler birbirini de devralıp büyüyor: geç kalan hedef pahalılaşır.',
+      'İki dondurma senaryo boyunca sürüyor; senaryo bitince kalkıyor (senin ihracın da kapalı).',
+    ],
+    seed: 7,
+    citySize: 'large',
+    difficulty: 'normal',
+    preludeDays: 200,
+    days: 400,
+    goal: { kind: 'monopoly' },
+    stars: { metric: 'days', two: 250, three: 150 },
+    setup: {
+      cash: 12_000_000,
+      outlets: ['supermarket', 'supermarket', 'restaurant', 'restaurant', 'department_store', 'cafe', 'boutique', 'electronics_store'],
+      builtDaysAgo: 120,
+      freeze: { entrants: true, issuance: true },
+    },
+  },
+  /*
+   * HOLDİNG: İKİ ŞEHİR (seed 11, Rahat, kurucu şehirde 150 gün ön tarih).
+   * Kurucu şehir uzakta yaşıyor, oyuncu 4 M ₺'yle açılan yeni şehirde
+   * başlıyor. Ölçüm: 300 günlük kurucu şehirde rakiplerin ivmesi
+   * oyuncuyu üçüncülüğe itiyordu; değer hedefi geçse de (84/60 M ₺)
+   * birincilik gelmiyor, hiçbir vekil kazanamıyordu.
+   *
+   * Vekil (550 gün): hiçbir şey yapmayan ve yalnızca yeni şehri oynayan
+   * süreyi dolduruyor (kurucu şehir üçüncülüğe düşüyor). Önce yeni şehri
+   * bitirip dönen de: ihmal edilen kurucu şehir 400. günde üçüncü. 15
+   * günde bir oynayan ve kârın yarısını kasaya akıtıp savunmasız bırakan
+   * da (kurucu şehir ikinciliğe düşüyor). Şehirler arasında gidip gelen,
+   * talimatı "şehirde tut + savun" olan: beş günde bir oynayınca 419–427.,
+   * üç günde bir oynayınca 356–389. günde.
+   */
+  {
+    id: 'holding',
+    title: 'Holding: iki şehir',
+    tagline: 'Yeni şehirde sıfırdan başla, kurucu şehir uzakta yaşıyor: ikisinde de zafer.',
+    brief:
+      'Kurucu şehirde şirket öne geçti ama zafere ulaşmadı. Holding ikinci şehre açılıyor: sen yeni şehirde sıfırdan başlıyorsun, kurucu şehir uzakta kendi kendine yaşıyor. Rakipler orada da büyüyor ve baskın yapıyor.',
+    goalText: '{days} gün içinde iki şehirde de zafere ulaş; hiçbir şehri kaybetme.',
+    facts: [
+      'Holding panelinden şehirler arasında geçebilirsin; senaryo seninle gelir. Uzaktaki şehre talimat verebilir (kârın ne kadarı kasaya aksın, baskına karşı geri alım) ve para gönderebilirsin.',
+      'Uzaktaki şehir yeni yatırım yapmıyor: rakipleri büyürken o yerinde sayar. Bir şehri uzun süre bırakırsan sırası düşer.',
+      'Zafer şehirde yaratılan değerle ölçülüyor: şehre gönderilen para sayılmıyor, kasaya akan kâr şehrin değerinden düşüyor.',
+    ],
+    seed: 11,
+    citySize: 'standard',
+    difficulty: 'easy',
+    preludeDays: 150,
+    days: 550,
+    goal: { kind: 'holding' },
+    stars: { metric: 'days', two: 400, three: 350 },
+    setup: {
+      cash: 10_000_000,
+      outlets: ['supermarket', 'supermarket', 'restaurant', 'restaurant', 'department_store', 'cafe', 'cafe', 'boutique', 'electronics_store', 'gym'],
+      builtDaysAgo: 120,
+      secondCity: { capital: 4_000_000, citySize: 'standard' },
     },
   },
 ];

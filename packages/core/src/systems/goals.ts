@@ -1,4 +1,4 @@
-import { BUILDING_BY_ID, GOALS, getCitySize, getDifficulty } from '@capital/content';
+import { BUILDING_BY_ID, GOALS, SCENARIO_BY_ID, getCitySize, getDifficulty } from '@capital/content';
 import type { GoalDef } from '@capital/content';
 import { tc } from '../i18n';
 import { pushNews } from '../news';
@@ -163,6 +163,18 @@ export function goalLadder(state: GameState): GoalStatus[] {
   });
 }
 
+/**
+ * Senaryonun hedefi şehrin zaferinin ötesindeyse (Tur 39c — Büyük şehir
+ * fethi: tekel; Holding: iki şehirde zafer) zafer kaydediliyor ama oyunu
+ * durdurmuyor ve ekranı açılmıyor: senaryo sürüyor, sonucu o veriyor.
+ */
+function victoryDeferred(state: GameState): boolean {
+  const run = state.scenario;
+  if (!run || run.finishedDay !== undefined) return false;
+  const kind = SCENARIO_BY_ID[run.id]?.goal.kind;
+  return kind === 'monopoly' || kind === 'holding';
+}
+
 /** Sıradaki (ilk tamamlanmamış) basamak; merdiven bittiyse null. */
 export function nextGoal(state: GameState): GoalStatus | null {
   return goalLadder(state).find((goal) => goal.completedDay === null) ?? null;
@@ -196,8 +208,9 @@ export function runGoalTick(state: GameState): void {
   if (!state.victory) {
     const kind = victoryReached(state);
     if (kind) {
-      state.victory = { day: state.time.day, kind };
-      state.time.speed = 0;
+      const deferred = victoryDeferred(state);
+      state.victory = { day: state.time.day, kind, ...(deferred ? { dismissed: true } : {}) };
+      if (!deferred) state.time.speed = 0;
       pushNews(
         state,
         'good',
