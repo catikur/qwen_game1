@@ -339,6 +339,9 @@ export function closeCity(state: GameState, index: number): CommandResult {
   if (!holding || !city) return { ok: false, reason: tc('core.holding.noSuchCity') };
   if (!city.state.gameOver) return { ok: false, reason: tc('core.holding.closeOnlyLost') };
   if (city.state.victory) holding.closedWins = (holding.closedWins ?? 0) + 1;
+  // Kariyer (Tur 41): eski kayıtta kuruluş anı şehirlerin en erkeninden okunuyor;
+  // kurucu şehir kapanmadan yazılmazsa koşunun kimliği değişirdi (Codex #70).
+  holding.foundedAtIso ??= holdingFoundedAt(state);
   holding.dormant = holding.dormant.filter((_, i) => i !== index);
   return { ok: true };
 }

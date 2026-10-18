@@ -92,6 +92,19 @@ describe('kariyer deposu', () => {
     assert.deepEqual(ids(observeCareer(last)), ['bubble_hunter'], '49 + 1: budanan koşunun balonları sayılıyor');
   });
 
+  test('zaferle budanan koşunun zaferden önceki kaydı geri gelince zafer kalıyor (Codex #70)', () => {
+    const won = game(1);
+    const before = JSON.parse(JSON.stringify(won)) as GameState;
+    won.victory = { day: 600, kind: 'tycoon', dismissed: true };
+    observeCareer(won);
+    for (let i = 0; i < MAX_CAREER_RUNS; i++) observeCareer(game(300 + i));
+    assert.equal(careerSummary().victories, 1);
+    observeCareer(before);
+    const summary = careerSummary();
+    assert.equal(summary.victories, 1, 'zafer sayısı düşmedi');
+    assert.deepEqual(summary.runs[0]!.wins, [{ day: 600, citySize: 'standard' }]);
+  });
+
   test('budanan koşunun kaydı geri gelirse iki kez sayılmıyor (Codex #70)', () => {
     const old = game(1);
     old.bubblesCaught = 30;

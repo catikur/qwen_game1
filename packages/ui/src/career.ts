@@ -1,7 +1,7 @@
 import { ACHIEVEMENTS, SCENARIOS } from '@capital/content';
 import type { AchievementDef } from '@capital/content';
 import { achievementStatuses, careerTotals, runFacts, runKeyOf, victoryCeos } from '@capital/core';
-import type { AchievementStatus, CareerInput, CareerTotals, GameState, RunFacts } from '@capital/core';
+import type { AchievementStatus, CareerInput, CareerTotals, GameState, RunFacts, RunWin } from '@capital/core';
 import { scenarioRecord } from './scenarioBest';
 
 /**
@@ -38,6 +38,9 @@ interface FoldedRun {
   totals: CareerTotals;
   victorious: boolean;
   worth: number;
+  /** Zaferler: koşu zaferinden önceki bir kayıtla geri gelirse zafer kaybolmasın (Codex #70). */
+  wins: RunWin[];
+  closedWins: number;
 }
 
 /** Budanan koşulardan kalan: toplamlar, zafer CEO'ları ve özet sayılar. */
@@ -162,7 +165,7 @@ function fold(archive: CareerArchive | undefined, run: CareerRun): CareerArchive
     runs: base.runs + 1,
     victories: base.victories + (isVictorious(run) ? 1 : 0),
     bestWorth: Math.max(base.bestWorth, worth),
-    folded: { ...base.folded, [run.key]: { totals: own, victorious: isVictorious(run), worth } },
+    folded: { ...base.folded, [run.key]: { totals: own, victorious: isVictorious(run), worth, wins: run.wins, closedWins: run.closedWins } },
   };
 }
 
@@ -187,8 +190,12 @@ function unfold(archive: CareerArchive, key: string): { archive: CareerArchive; 
 /** Geri gelen koşu, budanmadan önceki toplamlarının altına düşmesin. */
 function withFolded(run: CareerRun, folded: FoldedRun): CareerRun {
   const max = (a: number, b: number) => Math.max(a, b);
+  const wins = new Map(folded.wins.map((win) => [winKey(win), win]));
+  for (const win of run.wins) wins.set(winKey(win), win);
   return {
     ...run,
+    wins: [...wins.values()],
+    closedWins: max(run.closedWins, folded.closedWins),
     worth: max(run.worth, folded.worth),
     bubbles: max(run.bubbles, folded.totals.bubbles),
     quests: max(run.quests, folded.totals.quests),

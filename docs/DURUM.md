@@ -3727,7 +3727,9 @@ Hepsi bu cihazda saklanıyor; lig ve senaryo tabloları değişmiyor.
 - *Koşunun özeti* (`career.ts`, `runFacts`): koşunun kimliği kurucu şehrin
   kuruluş anı ve tohumu. `holding.foundedAtIso` yeni bir alan; eski kayıtta
   şehirlerin en erkeni alınıyor. Şehir açılınca ya da değişince koşu aynı
-  kalıyor.
+  kalıyor. Kaybedilen şehir kapatılmadan önce kuruluş anı holding'e
+  yazılıyor: eski kayıtta kurucu şehir kapanınca kimlik değişip koşu iki
+  kez sayılırdı (Codex #70).
 - *Kurallar* (`achievementStatus`): saf işlev, düğümde test ediliyor;
   koşular arası depo arayüzde.
 
@@ -3736,7 +3738,9 @@ Hepsi bu cihazda saklanıyor; lig ve senaryo tabloları değişmiyor.
   - Son 100 koşu saklanıyor; daha eskisi toplamlara katlanıyor. Katlanan
     koşunun anahtarı ve katkısı arşivde kalıyor. O koşunun kaydı yeniden
     yüklenirse katkısı arşivden düşülüyor ve koşu listeye geri dönüyor;
-    yoksa yeni koşu sanılıp iki kez sayılırdı (Codex #70).
+    yoksa yeni koşu sanılıp iki kez sayılırdı (Codex #70). Katkı koşunun
+    zaferlerini de taşıyor: zaferden önceki bir kayıtla geri gelen koşu
+    zaferini kaybetmiyor.
   - Aynı koşu yeniden görülünce sayaçlar ve değer en yükseğinde kalıyor:
     eski bir kayıttan dönmek kazanılanı geri almıyor.
   - Açılan rozet kalıcı; açıldığı an, şirket ve gün saklanıyor.
@@ -3762,25 +3766,27 @@ Hepsi bu cihazda saklanıyor; lig ve senaryo tabloları değişmiyor.
   kazanılan rozetleri yazıyor.
 - *Yardım:* "Koşuların ötesine bak" adımı eklendi.
 
-**Doğrulama.** `pnpm test` 439/439; 18 yeni test.
+**Doğrulama.** `pnpm test` 441/441; 20 yeni test.
 
-`packages/core/test/career.test.ts` (11 test):
+`packages/core/test/career.test.ts` (12 test):
 - katalog tutarlılığı;
 - her sayacın kendi anında artması: kriz, konsorsiyum, sözleşme, ihale,
   meclis, baskın;
 - holding'de koşu kimliği, lig ve senaryo kipi, senaryonun ön tarihinin
   sayılmaması;
+- eski holding kaydında kurucu şehir kapanınca kimliğin değişmemesi
+  (düzeltmeden önce kaldı);
 - zafer süzgeçleri, koşu ve kariyer kapsamı, senaryo yıldızı, farklı CEO.
 
-`packages/ui/test/career.test.ts` (7 test):
+`packages/ui/test/career.test.ts` (8 test):
 - rozetin bir kez açılması;
 - eski kayıttan dönünce kazanılanın kalması;
 - koşuların toplamı;
 - senaryonun büyüme rozetine sayılmaması;
 - kurulum ekranında senaryo yıldızı;
 - budanan koşunun toplamlara katlanması;
-- budanan koşunun kaydı geri gelince iki kez sayılmaması (düzeltmeden önce
-  kaldı).
+- budanan koşunun kaydı geri gelince iki kez sayılmaması ve zaferini
+  kaybetmemesi (ikisi de düzeltmeden önce kaldı).
 
 İçerik çevirileri testi rozetleri de kapsıyor.
 
@@ -3880,7 +3886,7 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi) |
-| Birim testi | **439 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer de) |
+| Birim testi | **441 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer de) |
 | Denge testi | **324 kontrol, hepsi geçiyor** (24 bölüm, süreleriyle; ~15 dk) |
 | Tarayıcı testi | **446 kontrol, hepsi geçiyor**, 0 konsol hatası (~25–40 dk); duman koşusu 132 (~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + duman oynanışı |

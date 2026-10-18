@@ -197,6 +197,26 @@ describe('kariyer: koşunun özeti', () => {
     assert.equal(runFacts(state).monopoly, true);
   });
 
+  test('eski holding kaydında kurucu şehir kapanınca koşunun kimliği değişmiyor (Codex #70)', () => {
+    const engine = played(30, 6);
+    let state = engine.getState();
+    state.meta.createdAtIso = '2026-01-01T00:00:00.000Z';
+    state.victory = { day: 420, kind: 'tycoon', dismissed: true };
+    player(state).cash = 30_000_000;
+    recomputeNetWorth(state);
+    assert.ok(engine.dispatch({ type: 'OPEN_CITY', citySize: 'standard', capital: 8_000_000 }).ok);
+    state = engine.getState();
+    state.meta.createdAtIso = '2026-02-01T00:00:00.000Z';
+    // Tur 41 öncesi kayıt: kuruluş anı yazılı değil, şehirlerin en erkeninden okunuyor.
+    delete state.holding!.foundedAtIso;
+    const key = runKeyOf(state);
+    assert.ok(key.startsWith('2026-01-01'), key);
+    state.holding!.dormant[0]!.state.gameOver = { day: 400, byCompanyId: rivals(state)[0]!.id };
+    assert.ok(engine.dispatch({ type: 'CLOSE_CITY', index: 0 }).ok);
+    assert.equal(engine.getState().holding!.dormant.length, 0);
+    assert.equal(runKeyOf(engine.getState()), key, 'kurucu şehir kapandıktan sonra da aynı koşu');
+  });
+
   test('lig ve senaryo kendi kipiyle; senaryonun sayaçları devir gününden', () => {
     assert.equal(runFacts(createLeagueGame('2026-W40', 'Lig AŞ', null)).mode, 'league');
     for (const id of ['crisis', 'holding']) {
