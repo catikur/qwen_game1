@@ -3413,6 +3413,32 @@ async function finish(browser, consoleErrors) {
     await sp.waitForSelector('[data-scenario-result="won"]', { timeout: 5000 }).catch(() => null);
     check('İki şehirde de zafer: senaryo kazanılıyor, zafer ekranı araya girmiyor',
       (await sp.locator('[data-scenario-result="won"]').count()) === 1 && (await sp.locator('.gameover:not(.scenario-result)').count()) === 0);
+    // Tur 39c: uzun açılış telefonda ekrana sığmıyordu; katman kaymıyor, "Başla" düğmesine ulaşılamıyordu.
+    {
+      const phoneContext = await browser.newContext({ ...devices['iPhone 13'] });
+      await phoneContext.addInitScript(veteran, TUTORIAL_KEY);
+      const pp = await phoneContext.newPage();
+      pp.on('pageerror', (e) => scenarioErrors.push(e.message));
+      await pp.goto('http://127.0.0.1:8811/');
+      await pp.waitForSelector('.newgame', { timeout: 20000 });
+      await pp.locator('.mode-picker [data-mode="scenario"]').click();
+      await pp.locator('[data-scenario="holding"]').click();
+      await pp.locator('[data-newgame-start]').click();
+      await pp.waitForSelector('[data-scenario-brief="holding"]', { timeout: 60000 });
+      await pp.waitForTimeout(500);
+      const overflow = await pp.evaluate(() => {
+        const layer = document.querySelector('[data-scenario-brief]');
+        const card = layer.querySelector('.gameover-card');
+        return { layer: layer.clientHeight, card: card.scrollHeight, top: card.getBoundingClientRect().top };
+      });
+      await pp.locator('[data-scenario-begin]').scrollIntoViewIfNeeded();
+      await pp.locator('[data-scenario-begin]').click();
+      await pp.waitForTimeout(300);
+      const begun = await pp.evaluate(() => window.__capital.getState().scenario.briefSeen === true);
+      check('Telefonda ekrana sığmayan açılışın başı görünüyor, katman kayıyor, "Başla" düğmesine ulaşılıyor',
+        overflow.card > overflow.layer && overflow.top >= 0 && begun, JSON.stringify(overflow));
+      await phoneContext.close();
+    }
     check('Senaryo akışında konsol temiz', scenarioErrors.length === 0, scenarioErrors.slice(0, 2).join(' | '));
     await scenarioContext.close();
   }

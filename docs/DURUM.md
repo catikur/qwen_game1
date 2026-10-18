@@ -3545,6 +3545,11 @@ Yıldız eşikleri 400 ve 350 gün.
   kaybedilen uzak şehir.
 - *Senaryo listesi:* Holding'in kurulum satırı yeni şehrin sermayesini
   ve kurucu şehrin gününü ayrı yazıyor.
+- *Telefonda uzun açılış:* sonuç ve açılış katmanı kartı ortalıyor ama
+  kaymıyordu. Holding'in açılışı iPhone 13'te ekrana sığmıyor (kart 793,
+  katman 664 px), "Başla" düğmesine ulaşılamıyordu (Tur 39a'dan beri uzun
+  açılışlarda da). Katman artık kayıyor; kart sığınca ortada, sığmayınca
+  baştan başlıyor. Tarayıcı kontrolü düzeltmeden önce kaldı.
 
 **Doğrulama.** `pnpm test` 419/419. Dört yeni test var:
 - fethin dondurmaları, ertelenen zafer, tekel ve süre;
@@ -3552,13 +3557,16 @@ Yıldız eşikleri 400 ve 350 gün.
 - şehir değişince taşınan senaryo;
 - iki şehirde zafer ve kaybedilen uzak şehir.
 
-Yeni denge bölümü "Senaryolar III: fetih ve holding" 10/10 (~160 sn).
-Tarayıcıda "Senaryo modu" bölümüne 7 kontrol eklendi:
+`pnpm balance` 324/324 (24 bölüm); yeni bölüm "Senaryolar III: fetih ve
+holding" 10 kontrol, ~165 sn. "Holding: ikinci şehir" bölümü yeni şehri
+kuran yolun ayrılmasından sonra değişmeden geçiyor. Tarayıcıda "Senaryo
+modu" bölümüne 8 kontrol eklendi:
 - büyük şehrin açılışı, dondurmalar ve ön tarih süresi;
 - ertelenen zafer ve gündem çipi;
 - holding açılışı ve iki şehrin listesi;
 - şehir değişince gelen senaryo;
-- iki şehirde zafer.
+- iki şehirde zafer;
+- telefonda ekrana sığmayan açılışta "Başla" düğmesine ulaşılması.
 
 
 ---
@@ -3643,7 +3651,7 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi) |
 | Birim testi | **419 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi de) |
-| Denge testi | **314 kontrol, hepsi geçiyor** (23 bölüm, süreleriyle; ~12 dk) |
+| Denge testi | **324 kontrol, hepsi geçiyor** (24 bölüm, süreleriyle; ~15 dk) |
 | Tarayıcı testi | **420 kontrol, hepsi geçiyor**, 0 konsol hatası (~17–25 dk); duman koşusu 132 (~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + duman oynanışı |
 | Kapsam | 35 bina · 25 ürün · 7 kategori · 8 rakip profili · 10 CEO · 22 olay (11 şehir + 11 sektör) · 2 kriz · 12 karar kartı · 70 rakip sözü · 5 fırsat balonu · 8 görev türü · 4 mevsim · 9 moda ürünü · 17 şehir yapısı (6 siluet) · 6 şehir projesi · 7 senaryo |
