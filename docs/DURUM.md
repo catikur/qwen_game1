@@ -3644,10 +3644,10 @@ sonuna kadar akıtıldı:
 | Kurtarma | devralındı | 130 | 5 ms |
 | Krizin ortasında | süre doldu | 150 | 4 ms |
 | Konsorsiyuma karşı | devralındı | 109 | 5 ms |
-| Zincir ustası | süre doldu | 250 | 6 ms |
-| Şehrin sponsoru | sıra kaybedildi | 86 | 3 ms |
-| Büyük şehir fethi | süre doldu | 400 | 20 ms |
-| Holding: iki şehir | süre doldu | 550 | 11 ms |
+| Zincir ustası | süre doldu | 250 | 7 ms |
+| Şehrin sponsoru | sıra kaybedildi | 86 | 2 ms |
+| Büyük şehir fethi | süre doldu | 400 | 19 ms |
+| Holding: iki şehir | süre doldu | 550 | 10 ms |
 
 **Doğrulama.** `pnpm test` 421/421. Yeni `fonts.test.ts` iki test getiriyor:
 Lite'ın altı Fredoka dosyasında ve ana oyunun gömülü alt kümesinde Türkçe
@@ -3672,7 +3672,7 @@ Tarayıcı testine "Cila" bölümü eklendi (9 kontrol):
 - uygulamanın kendi konsol uyarısı yok;
 - konsol temiz.
 
-Tam tarayıcı koşusu sürüyor.
+Tarayıcı tam koşu 437/437, konsol hatası yok (~26 dk); "Cila" bölümü ~110 sn.
 
 
 ---
@@ -3758,7 +3758,7 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi) |
 | Birim testi | **421 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri de) |
 | Denge testi | **324 kontrol, hepsi geçiyor** (24 bölüm, süreleriyle; ~15 dk) |
-| Tarayıcı testi | **428 kontrol, hepsi geçiyor**, 0 konsol hatası (~25–40 dk); duman koşusu 132 (~5 dk, rehber dahil) |
+| Tarayıcı testi | **437 kontrol, hepsi geçiyor**, 0 konsol hatası (~25–40 dk); duman koşusu 132 (~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + duman oynanışı |
 | Kapsam | 35 bina · 25 ürün · 7 kategori · 8 rakip profili · 10 CEO · 22 olay (11 şehir + 11 sektör) · 2 kriz · 12 karar kartı · 70 rakip sözü · 5 fırsat balonu · 8 görev türü · 4 mevsim · 9 moda ürünü · 17 şehir yapısı (6 siluet) · 6 şehir projesi · 7 senaryo |
 
