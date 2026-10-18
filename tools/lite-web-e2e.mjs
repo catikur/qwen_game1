@@ -8,14 +8,17 @@
 // - taşıma koduyla ikinci tarayıcı aynı oyunu alıyor;
 // - kasayı elle şişiren istemci sunucunun durumuna dönüyor;
 // - aynı tarayıcıda ikinci sekme açılınca eskisi duruyor (tek örnek);
-// - yanıtı kaybolan eşitleme aynı kimlikle yineleniyor (ikinci kez uygulanmıyor).
+// - yanıtı kaybolan eşitleme aynı kimlikle yineleniyor (ikinci kez uygulanmıyor);
+// - oyuncunun tarayıcısındaki hizmet çalışanı güncellenince çevrimdışı açılış
+//   sürüyor, adresi sabit değişen dosyalar (yazı tipleri) tazeleniyor.
 // Ardından senaryo kareleri (SHOTS dizinine).
 //
 // Çalıştırma: node tools/lite-web-e2e.mjs [--shots-only] [--only=<kare adı öneki>]
 import { execFileSync, spawn } from 'node:child_process';
-import { mkdirSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, statSync } from 'node:fs';
+import { createServer } from 'node:http';
 import { createRequire } from 'node:module';
-import { join } from 'node:path';
+import { extname, join } from 'node:path';
 
 const require = createRequire(import.meta.url);
 function loadPlaywright() {
@@ -34,6 +37,7 @@ const ROOT = new URL('..', import.meta.url).pathname;
 const SHOTS = process.env.SHOTS || join(ROOT, 'apps/lite-web/shots');
 const LEAGUE_PORT = 8788;
 const WEB_PORT = 4174;
+const WORKER_PORT = 4176;
 const LEAGUE = `http://127.0.0.1:${LEAGUE_PORT}`;
 const WEB = `http://127.0.0.1:${WEB_PORT}/`;
 const shotsOnly = process.argv.includes('--shots-only');
@@ -407,6 +411,82 @@ async function e2e(browser) {
   await context.close();
 }
 
+/**
+ * Hizmet çalışanının güncellenmesi. Oyuncunun tarayıcısında Tur 40'tan önceki
+ * çalışan (tools/fixtures/lite-sw-v1.js) ve onun önbelleği var. Yeni çalışan
+ * gelince oyun yine çevrimdışı açılmalı ve adresi sabit olup içeriği değişen
+ * yazı tipleri önbellekte tazelenmeli. Vite'ın önizleme sunucusu çalışanı
+ * değiştiremediği için paket burada küçük bir sunucudan veriliyor.
+ */
+async function workerUpdate(browser) {
+  const dist = join(ROOT, 'apps/lite-web/dist');
+  const types = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.ttf': 'font/ttf', '.png': 'image/png', '.webmanifest': 'application/manifest+json' };
+  let worker = readFileSync(join(ROOT, 'tools/fixtures/lite-sw-v1.js'));
+  // Önceki sürümde yazı tiplerinin eski hâli: içerik farklı olsun yeter.
+  let staleFonts = true;
+  // Çevrimdışı: sunucu bağlantıyı kesiyor. Playwright'ın setOffline'ı hizmet
+  // çalışanının isteklerine uygulanmıyor; çalışan ağdan alıp geçiyordu.
+  let down = false;
+  const site = createServer((request, response) => {
+    if (down) return request.socket.destroy();
+    const path = decodeURIComponent(new URL(request.url, WEB).pathname);
+    let file = join(dist, path === '/' ? 'index.html' : path);
+    if (staleFonts && /\/fonts\/Fredoka-\w+\.ttf$/.test(path)) file = join(dist, 'fonts/Nunito-Bold.ttf');
+    if (path !== '/sw.js' && (!existsSync(file) || statSync(file).isDirectory())) return response.writeHead(404).end();
+    response.writeHead(200, { 'content-type': types[extname(file)] ?? 'application/octet-stream', 'cache-control': 'no-cache' });
+    response.end(path === '/sw.js' ? worker : readFileSync(file));
+  });
+  await new Promise((resolve) => site.listen(WORKER_PORT, '127.0.0.1', resolve));
+  const origin = `http://127.0.0.1:${WORKER_PORT}/`;
+  const context = await browser.newContext({ viewport: { width: 430, height: 932 }, locale: 'tr-TR', serviceWorkers: 'allow' });
+  const page = await context.newPage();
+  const opens = async () => {
+    try {
+      await page.reload();
+      await page.locator('[data-testid="cash"]').waitFor({ timeout: 10_000 });
+      return true;
+    } catch {
+      return false;
+    }
+  };
+  try {
+    await page.goto(origin);
+    await page.evaluate(() => navigator.serviceWorker.ready);
+    // Çalışan sayfayı ele aldıktan sonraki açılış: sayfa ve paket önbelleğe giriyor.
+    await page.reload();
+    await page.evaluate(() => document.fonts.ready);
+    await page.waitForTimeout(500);
+    down = true;
+    check(await opens(), 'önceki çalışanla oyun çevrimdışı açılıyor');
+    down = false;
+
+    worker = readFileSync(join(dist, 'sw.js'));
+    staleFonts = false;
+    const updated = await page.evaluate(async () => {
+      const registration = await navigator.serviceWorker.getRegistration();
+      const changed = new Promise((resolve) => navigator.serviceWorker.addEventListener('controllerchange', () => resolve(true), { once: true }));
+      await registration.update();
+      return Promise.race([changed, new Promise((resolve) => setTimeout(() => resolve(false), 15_000))]);
+    });
+    check(updated, 'yeni çalışan kuruldu ve sayfayı aldı');
+    down = true;
+    check(await opens(), 'çalışan güncellendikten sonra da oyun çevrimdışı açılıyor');
+    const fonts = await page.evaluate(async () => {
+      const sizes = {};
+      for (const weight of ['Medium', 'SemiBold', 'Bold']) {
+        const cached = await caches.match(`fonts/Fredoka-${weight}.ttf`);
+        sizes[weight] = cached ? (await cached.arrayBuffer()).byteLength : 0;
+      }
+      return sizes;
+    });
+    const fresh = Object.entries(fonts).every(([weight, size]) => size === statSync(join(dist, `fonts/Fredoka-${weight}.ttf`)).size);
+    check(fresh, `önbellekteki yazı tipleri yeni dosyalar (${JSON.stringify(fonts)})`);
+  } finally {
+    await context.close();
+    site.close();
+  }
+}
+
 /** Senaryo kareleri: [ad, adres, [genişlik, yükseklik]]. */
 const SCENES = [
   ['tr-start', '?scenario=start&lang=tr'],
@@ -474,7 +554,10 @@ try {
   execFileSync('pnpm', ['--filter', '@capital/lite-web', 'build'], { cwd: ROOT, stdio: 'inherit', env: { ...process.env, VITE_LEAGUE_URL: LEAGUE } });
   await start('pnpm', ['--filter', '@capital/lite-web', 'exec', 'vite', 'preview', '--port', String(WEB_PORT), '--strictPort', '--host', '127.0.0.1']);
   browser = await chromium.launch();
-  if (!shotsOnly) await e2e(browser);
+  if (!shotsOnly) {
+    await e2e(browser);
+    await workerUpdate(browser);
+  }
   await shots(browser);
   console.log('Lite web: uçtan uca test ve kareler tamam.');
 } catch (error) {

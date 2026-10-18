@@ -271,7 +271,9 @@ export class CityRenderer {
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.05;
     this.renderer.shadowMap.enabled = true;
-    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    // three 0.185 PCFSoftShadowMap'i kaldırdı: her açılışta uyarıyla PCFShadowMap'e
+    // düşüyordu (Tur 40). Görüntü aynı, konsol temiz.
+    this.renderer.shadowMap.type = THREE.PCFShadowMap;
 
     /*
      * İlk kare de aydınlık. Eski değer koyu laciverttir ve sahne

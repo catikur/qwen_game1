@@ -4,6 +4,11 @@ Nunito — Copyright 2014 The Nunito Project Authors (https://github.com/googlef
 Bu yazı tipleri SIL Open Font License 1.1 ile dağıtılıyor. Uygulamayla birlikte
 paketlenmeleri lisansa uygun; lisans metni aşağıda.
 
+Fredoka dosyaları değiştirilmiş sürüm: Türkçe'nin eksik beş harfi (Ş ş Ğ ğ İ)
+eklendi. Harfler yazı tipinin kendi harflerinden ve birleşen işaretlerinden
+kuruldu (tools/fredoka_turkish.py); başka hiçbir glif değişmedi. Değiştirilmiş
+sürüm de aynı lisansla dağıtılıyor.
+
 This Font Software is licensed under the SIL Open Font License, Version 1.1.
 This license is copied below, and is also available with a FAQ at:
 https://openfontlicense.org
