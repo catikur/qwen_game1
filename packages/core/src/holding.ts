@@ -236,7 +236,9 @@ export function foundCity(state: GameState, citySize: CitySizeId, amount: number
   next.flags = { ...state.flags };
   next.cityName = name;
   next.importedCapital = amount;
+  // Holding'in kalıcı alanları (kapatılanların zaferi ve payı, tamamlanma günü) yeni şehre de geçiyor (Codex #70).
   const holding: HoldingState = {
+    ...state.holding,
     foundingSeed: seed,
     foundedAtIso: holdingFoundedAt(state),
     opened: opened + 1,

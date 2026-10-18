@@ -299,6 +299,40 @@ describe('kariyer: koşunun özeti', () => {
       [after.acquisitions, after.ipo, after.bubbles, after.quests],
       [before.acquisitions, true, before.bubbles, before.quests],
     );
+
+    // Yerine yeni şehir açılınca da kapatılanların payı kalıyor (Codex #70).
+    state.victory = { day: 300, kind: 'tycoon', dismissed: true };
+    player(state).cash = 30_000_000;
+    recomputeNetWorth(state);
+    assert.ok(engine.dispatch({ type: 'OPEN_CITY', citySize: 'standard', capital: 8_000_000 }).ok);
+    state = engine.getState();
+    (state.feats ??= {}).contractsDone = 1;
+    const reopened = runFacts(state);
+    assert.equal(reopened.counters.contractsDone, after.counters.contractsDone + 1, '4 + 1 + 1');
+    assert.equal(reopened.acquisitions, after.acquisitions);
+    assert.equal(reopened.ipo, true);
+  });
+
+  test('yeni şehir açılınca kapatılan şehrin zaferi holding\'de kalıyor', () => {
+    const engine = played(30, 6);
+    let state = engine.getState();
+    state.victory = { day: 420, kind: 'tycoon', dismissed: true };
+    player(state).cash = 30_000_000;
+    recomputeNetWorth(state);
+    assert.ok(engine.dispatch({ type: 'OPEN_CITY', citySize: 'standard', capital: 8_000_000 }).ok);
+    state = engine.getState();
+    // Kurucu şehir (zaferli) kaybedilip kapatılıyor; yeni şehirde zafer var, bir şehir daha açılıyor.
+    state.holding!.dormant[0]!.state.gameOver = { day: 500, byCompanyId: rivals(state.holding!.dormant[0]!.state)[0]!.id };
+    assert.ok(engine.dispatch({ type: 'CLOSE_CITY', index: 0 }).ok);
+    assert.equal(engine.getState().holding!.closedWins, 1);
+    state = engine.getState();
+    state.victory = { day: 300, kind: 'tycoon', dismissed: true };
+    player(state).cash = 30_000_000;
+    recomputeNetWorth(state);
+    assert.ok(engine.dispatch({ type: 'OPEN_CITY', citySize: 'standard', capital: 8_000_000 }).ok);
+    state = engine.getState();
+    assert.equal(state.holding!.closedWins, 1, 'kapatılan şehrin zaferi');
+    assert.equal(runFacts(state).wins.length + runFacts(state).closedWins, 2);
   });
 
   test('lig ve senaryo kendi kipiyle; senaryonun sayaçları devir gününden', () => {
