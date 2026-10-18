@@ -3721,7 +3721,9 @@ Hepsi bu cihazda saklanıyor; lig ve senaryo tabloları değişmiyor.
   - baskın: %25'i geçip %10'un altına itilen (karşı devralma dahil); gün
     sonunda ve başarılı her komuttan sonra bakılıyor, duraklatılmış oyunda
     da hemen sayılıyor (Codex #70). Uzaktaki şehrin borsası da yaşıyor:
-    orada püskürtülen baskın şehrin kendi gününde sayılıyor (Codex #70);
+    orada püskürtülen baskın şehrin kendi gününde sayılıyor (Codex #70).
+    Eşik, uyarılar gibi gün sonunda okunuyor: aynı gün içinde %25'i geçip
+    inen baskın sayılmıyor, oyuncu onu hiç görmedi;
   - teslim edilen sözleşme, oyuncunun lobi yaptığı tarafın kazandığı
     oylama, kazanılan ihale.
 
