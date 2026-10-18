@@ -1,11 +1,23 @@
 // CapitalForge Lite: çevrimdışı çalışma. Sayfa önce ağdan (yeni sürüm hemen
 // gelsin), yoksa önbellekten; paket, yazı tipi ve görseller önbellekten.
 // Lig sunucusu (başka adres) hiç önbelleğe girmiyor.
-// Adresi sabit bir dosya (yazı tipi, görsel) değişince sürüm artar; eski önbellek
-// açılışta siliniyor. v2: Fredoka'ya Türkçe harfler eklendi (Tur 40).
-const CACHE = 'cf-lite-v2';
+//
+// Önbelleğin adı değişmiyor: değişirse eskisi silinir ve oyun bir sonraki
+// çevrimiçi açılışa kadar çevrimdışı açılmaz. Adresi sabit bir dosyanın
+// (yazı tipi, görsel) içeriği değişince REFRESH listesine giriyor: çalışan
+// kurulurken onu ağdan taze alıp önbellektekinin üstüne yazıyor.
+const CACHE = 'cf-lite-v1';
+// Tur 40: Fredoka'ya Türkçe harfler eklendi.
+const REFRESH = ['fonts/Fredoka-Medium.ttf', 'fonts/Fredoka-SemiBold.ttf', 'fonts/Fredoka-Bold.ttf'];
 
-self.addEventListener('install', () => self.skipWaiting());
+self.addEventListener('install', (event) => {
+  event.waitUntil(
+    caches
+      .open(CACHE)
+      .then((cache) => cache.addAll(REFRESH.map((path) => new Request(path, { cache: 'reload' }))))
+      .then(() => self.skipWaiting()),
+  );
+});
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) => Promise.all(keys.filter((key) => key !== CACHE).map((key) => caches.delete(key)))).then(() => self.clients.claim()),

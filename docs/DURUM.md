@@ -3594,8 +3594,13 @@ yedi senaryonun tarayıcıda sonuna kadar oynanması.
 - *Lisans:* OFL 1.1 değiştirilmiş sürüme izin veriyor ve ayrılmış yazı
   tipi adı yok. Değişiklik OFL.txt'ye yazıldı.
 - *Lite web'in önbelleği:* hizmet çalışanı yazı tiplerini önbellekten
-  veriyor ve adresleri sabit. Önbellek sürümü arttı (`cf-lite-v2`); geri
-  dönen oyuncu yeni dosyaları alıyor.
+  veriyor ve adresleri sabit; geri dönen oyuncu eski dosyayı görmeye devam
+  ederdi.
+  - İlk düzeltme önbelleğin adını artırıyordu. Yeni çalışan eski önbelleği
+    siliyor, yenisi boş kalıyordu: oyuncu sonraki açılışta çevrimdışıysa
+    oyun açılmıyordu (Codex #69).
+  - Önbellek artık yerinde kalıyor. Yeni çalışan kurulurken üç yazı
+    tipini ağdan taze alıp önbellektekinin üstüne yazıyor (`REFRESH`).
 
 **Açılış süresi.** Tarayıcıda CPU profili alındı (yazılımsal GPU,
 swiftshader):
@@ -3647,6 +3652,14 @@ sonuna kadar akıtıldı:
 **Doğrulama.** `pnpm test` 421/421. Yeni `fonts.test.ts` iki test getiriyor:
 Lite'ın altı Fredoka dosyasında ve ana oyunun gömülü alt kümesinde Türkçe
 harfler var mı. Testler eski dosyalarla kaldı.
+
+Lite web uçtan uca testine çalışan güncellemesi eklendi (4 kontrol).
+Oyuncuların tarayıcısındaki önceki çalışan (`tools/fixtures/lite-sw-v1.js`)
+yeni çalışana geçiyor. Ardından oyun yine çevrimdışı açılıyor ve
+önbellekteki yazı tipleri yeni dosyalar. Çevrimdışı, sunucunun bağlantıyı
+kesmesiyle kuruluyor: Playwright'ın `setOffline`'ı hizmet çalışanının
+isteklerine uygulanmıyor. Kontrol önbellek adını artıran ilk düzeltmede
+kaldı.
 
 Tarayıcı testine "Cila" bölümü eklendi (9 kontrol):
 - başlık yazı tipinde Türkçe harfler (eski gömülü dosyayla kaldı);
