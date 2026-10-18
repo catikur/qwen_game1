@@ -3463,10 +3463,11 @@ eşiklerinde, hedef "en değerli şirket" değilse bir yıldız "hedef" oluyor.
 **Doğrulama.** `pnpm test` 415/415. Altı yeni test var: konsorsiyum
 kurulumu ve bina yaşı, zafer hedefi, zincirin koşulları, iki sponsorluk ve
 proje takvimi, rakibin kaptığı ihale, sıradan düşüş ve 20 gün.
-Yeni denge bölümü "Senaryolar II: konsorsiyum, zincir ve sponsor" 14/14 (~30 sn).
-Tarayıcıda "Senaryo modu" bölümü 27/27 (7 yeni kontrol):
-konsorsiyumun açılışı, zafer günü sonuç ve araya girmeyen zafer ekranı,
-zincir listesi, ihale günü, sıradan düşüş ve geri sayım, kaybın nedeni.
+`pnpm balance` 314/314; yeni bölüm "Senaryolar II: konsorsiyum, zincir ve
+sponsor" (14 kontrol, ~33 sn). Tarayıcı tam koşu 420/420, konsol hatası
+yok; "Senaryo modu" bölümüne 7 kontrol eklendi: konsorsiyumun açılışı,
+zafer günü sonuç ve araya girmeyen zafer ekranı, zincir listesi, ihale
+günü, sıradan düşüş ve geri sayım, kaybın nedeni.
 
 
 ---
@@ -3551,8 +3552,8 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi) |
 | Birim testi | **415 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi de) |
-| Denge testi | **300 kontrol, hepsi geçiyor** (22 bölüm, süreleriyle; ~12 dk) |
-| Tarayıcı testi | **413 kontrol, hepsi geçiyor**, 0 konsol hatası (~17–25 dk); duman koşusu 132 (~5 dk, rehber dahil) |
+| Denge testi | **314 kontrol, hepsi geçiyor** (23 bölüm, süreleriyle; ~12 dk) |
+| Tarayıcı testi | **420 kontrol, hepsi geçiyor**, 0 konsol hatası (~17–25 dk); duman koşusu 132 (~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + duman oynanışı |
 | Kapsam | 35 bina · 25 ürün · 7 kategori · 8 rakip profili · 10 CEO · 22 olay (11 şehir + 11 sektör) · 2 kriz · 12 karar kartı · 70 rakip sözü · 5 fırsat balonu · 8 görev türü · 4 mevsim · 9 moda ürünü · 17 şehir yapısı (6 siluet) · 6 şehir projesi · 5 senaryo |
 
