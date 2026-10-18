@@ -70,7 +70,8 @@ import { issueQuote } from '../src/systems/issuance';
 import { capRemaining, dailyBuyCap, findOrder, orderEstimate } from '../src/systems/orders';
 import { cityTrend, holdingNetWorth, raidStatus } from '../src/holding';
 import { createScenarioGame } from '../src/scenario';
-import { SCENARIO_BY_ID } from '@capital/content';
+import { PROJECT_TIMING, SCENARIO_BY_ID } from '@capital/content';
+import { projectStandings } from '../src/systems/projects';
 import { buybackToLock, ownerFraction, sharesOutstanding } from '../src/systems/equity';
 import type { GameEngine as Engine } from '../src/engine';
 import type { GameState, RemotePayout } from '../src/types';
@@ -4481,6 +4482,183 @@ section('Senaryolar: kazanılabilir ama bedava değil', () => {
     'Krizin ortasında: üç yıldız vekilin en keskin oyunundan iyisini istiyor',
     c.sharp.won && c.sharp.score < crisis.stars.three,
     `${show(c.sharp)} < ${crisis.stars.three}`,
+  );
+});
+
+section('Senaryolar II: konsorsiyum, zincir ve sponsor', () => {
+  /*
+   * Tur 39b. Aynı yöntem: el sürmeyen kaybediyor, oyunun tavsiyesine uyan
+   * kazanıyor, üç yıldız vekilin en keskin oyunundan iyisini istiyor.
+   * Zincir ustası için büyüme vekili yetmiyor (zincir kurmuyor): zincir
+   * vekili önce hammadde ve işlemeyi, sonra ürünü satan mağazayı kuruyor.
+   * Şehrin sponsoru için ihale vekili katkı penceresinin sonunda lideri bir
+   * payla geçiyor.
+   */
+  interface Plan {
+    /** Vekilin kaç günde bir oynadığı (0: hiç). */
+    every: number;
+    /** Baskına karşı geri alım: 0 hiç, n günde bir. */
+    defend: number;
+    /** Büyüme vekili (oyunun tavsiyesi). */
+    general?: boolean;
+    /** Zincir vekili. */
+    chain?: boolean;
+    /** Açılmış halka eksikken büyüme bekliyor, nakit halkaya. */
+    chainFirst?: boolean;
+    /** İhale: son `last` günde lideri `margin` payla geç. */
+    sponsor?: { margin: number; last: number };
+  }
+  // Zincir ustasının zinciri; hedef ürün değişirse vekil de değişmeli.
+  const CHAIN = { goodId: 'phone', raw: 'silicon_mine', process: 'chip_fab', small: 'phone_shop', big: 'electronics_store' };
+  const chainGoal = SCENARIO_BY_ID.chain!.goal;
+  expect('Zincir ustası: vekilin zinciri senaryonun ürünü', chainGoal.kind === 'chain' && chainGoal.goodId === CHAIN.goodId, JSON.stringify(chainGoal));
+
+  /** Açık bir arsaya (kendi boş arsası da olur) binayı kurar; mağazanın rafına hedef ürünü koyar. */
+  function buildAt(engine: Engine, defId: string, zones: string[] | null): boolean {
+    const state = engine.getState();
+    const player = getPlayer(state);
+    const def = BUILDING_BY_ID[defId]!;
+    if (player.netWorth < def.unlockNetWorth) return false;
+    const tiles = state.map.tiles
+      .filter((t) => t.kind === 'plot' && (!t.ownerId || t.ownerId === player.id) && !t.buildingId && isDistrictOpen(state, t.districtId))
+      .filter((t) => !zones || zones.includes(state.districts[t.districtId]!.archetype))
+      .map((t) => ({ t, price: t.ownerId === player.id ? 0 : tilePrice(state, t.id, player.id) }))
+      .filter((e) => e.price > 0 || e.t.ownerId === player.id)
+      .sort((a, b) => {
+        if (def.role === 'outlet') {
+          const ua = state.districts[a.t.districtId]!.unmet[def.category] ?? 0;
+          const ub = state.districts[b.t.districtId]!.unmet[def.category] ?? 0;
+          if (ua !== ub) return ub - ua;
+        }
+        return (a.t.structureId ? 1 : 0) - (b.t.structureId ? 1 : 0) || a.price - b.price;
+      });
+    for (const { t, price } of tiles.slice(0, 6)) {
+      if (price + def.cost > player.cash * 0.8) continue;
+      const bought =
+        t.ownerId === player.id ||
+        engine.dispatch(t.structureId ? { type: 'BUYOUT_TILE', tileId: t.id } : { type: 'BUY_TILE', tileId: t.id }).ok;
+      if (!bought || !engine.dispatch({ type: 'BUILD', tileId: t.id, defId }).ok) continue;
+      const building = state.buildings[state.map.tiles[t.id]!.buildingId!]!;
+      if (def.role === 'outlet' && !building.stocked.includes(CHAIN.goodId)) {
+        const goodIds = [CHAIN.goodId, ...building.stocked.filter((g) => g !== CHAIN.goodId)].slice(0, def.slots ?? 1);
+        engine.dispatch({ type: 'SET_STOCK', buildingId: building.id, goodIds });
+      }
+      return true;
+    }
+    return false;
+  }
+  const owns = (state: GameState, defId: string) =>
+    Object.values(state.buildings).some((b) => b.companyId === state.playerCompanyId && b.defId === defId);
+  /** Eksik halkalardan açılmış olan var mı (nakit ona saklanıyor). */
+  function linkWaiting(state: GameState): boolean {
+    const player = getPlayer(state);
+    return [CHAIN.raw, CHAIN.process].some((d) => !owns(state, d) && player.netWorth >= BUILDING_BY_ID[d]!.unlockNetWorth);
+  }
+  function chainStep(engine: Engine): void {
+    const state = engine.getState();
+    const player = getPlayer(state);
+    const missing = [CHAIN.raw, CHAIN.process].filter((d) => !owns(state, d));
+    let built = false;
+    for (const d of missing) built = buildAt(engine, d, ['industrial', 'port']) || built;
+    if (!built && linkWaiting(state)) return;
+    const big = BUILDING_BY_ID[CHAIN.big]!;
+    buildAt(engine, player.netWorth >= big.unlockNetWorth && player.cash > big.cost * 2 ? CHAIN.big : CHAIN.small, null);
+  }
+  function sponsorStep(engine: Engine, margin: number, last: number): void {
+    const state = engine.getState();
+    const project = state.project;
+    if (!project || project.phase !== 'funding' || project.closesDay - state.time.day > last) return;
+    const mine = project.contributions[state.playerCompanyId] ?? 0;
+    const top = projectStandings(state, project).filter((row) => row.companyId !== state.playerCompanyId)[0]?.amount ?? 0;
+    const need = Math.max(PROJECT_TIMING.minContribution, Math.ceil(top * (1 + margin) - mine));
+    if (top * (1 + margin) > mine && getPlayer(state).cash > need) engine.dispatch({ type: 'CONTRIBUTE_PROJECT', amount: need });
+  }
+
+  const bases = new Map<string, string>();
+  function play(id: string, plan: Plan) {
+    if (!bases.has(id)) bases.set(id, JSON.stringify(createScenarioGame(id, { companyName: 'Senaryo AŞ' })));
+    const state = JSON.parse(bases.get(id)!) as GameState;
+    const engine = new GameEngine(state);
+    engine.dispatch({ type: 'DISMISS_SCENARIO', screen: 'brief' });
+    const start = state.time.day;
+    while (state.scenario!.finishedDay === undefined) {
+      const day = state.time.day - start;
+      if (plan.every > 0 && day % plan.every === 0) {
+        if (plan.chain) chainStep(engine);
+        if (plan.general && !(plan.chainFirst && linkWaiting(state))) playerStrategy(engine);
+      }
+      if (plan.sponsor) sponsorStep(engine, plan.sponsor.margin, plan.sponsor.last);
+      if (plan.defend > 0 && day % plan.defend === 0) defendAgainstRaids(engine);
+      engine.runDay();
+    }
+    const run = state.scenario!;
+    return {
+      won: run.outcome === 'won',
+      stars: run.stars ?? 0,
+      score: run.score ?? 0,
+      reason: run.lostReason,
+      sponsored: run.sponsored ?? 0,
+      day: run.finishedDay! - start,
+    };
+  }
+  const show = (result: ReturnType<typeof play>) =>
+    `${result.won ? `kazandı ${result.stars}★` : `kaybetti (${result.reason})`} · ${result.day}. gün · skor ${result.score}`;
+
+  const consortium = SCENARIO_BY_ID.consortium!;
+  const k = {
+    passive: play('consortium', { every: 0, defend: 0 }),
+    slow: play('consortium', { every: 15, defend: 3, general: true }),
+    informed: play('consortium', { every: 5, defend: 3, general: true }),
+    sharp: play('consortium', { every: 3, defend: 1, general: true }),
+  };
+  for (const [name, result] of Object.entries(k)) console.log(`  Konsorsiyuma karşı · ${name.padEnd(8)} ${show(result)}`);
+  expect('Konsorsiyuma karşı: el sürmeyen devralınıyor', k.passive.reason === 'takeover', show(k.passive));
+  expect('Konsorsiyuma karşı: on beş günde bir kuran zafere yetişemiyor', !k.slow.won, show(k.slow));
+  expect('Konsorsiyuma karşı: beş günde bir kurup savunan zaferde', k.informed.won, show(k.informed));
+  expect(
+    'Konsorsiyuma karşı: üç yıldız vekilin en keskin oyunundan iyisini istiyor',
+    k.sharp.won && k.sharp.day > consortium.stars.three,
+    `${show(k.sharp)} > ${consortium.stars.three}`,
+  );
+
+  const chain = SCENARIO_BY_ID.chain!;
+  const z = {
+    passive: play('chain', { every: 0, defend: 0 }),
+    growth: play('chain', { every: 3, defend: 1, general: true }),
+    chain: play('chain', { every: 5, defend: 3, general: true, chain: true }),
+    first: play('chain', { every: 3, defend: 1, general: true, chain: true, chainFirst: true }),
+    slow: play('chain', { every: 15, defend: 5, general: true, chain: true }),
+  };
+  for (const [name, result] of Object.entries(z)) console.log(`  Zincir ustası · ${name.padEnd(8)} ${show(result)}`);
+  expect('Zincir ustası: el sürmeyen kaybediyor', !z.passive.won, show(z.passive));
+  expect('Zincir ustası: zinciri kurmayan büyüme yetmiyor (üç günde bir kursa da)', !z.growth.won, show(z.growth));
+  expect('Zincir ustası: beş günde bir oynayıp zinciri kuran hedefte', z.chain.won, show(z.chain));
+  expect(
+    'Zincir ustası: üç yıldız vekilin en keskin oyunundan iyisini istiyor',
+    z.first.won && z.first.day > chain.stars.three,
+    `${show(z.first)} > ${chain.stars.three}`,
+  );
+  expect(
+    'Zincir ustası: on beş günde bir oynayan da zinciri kurarsa yetişiyor; yıldızı hız veriyor',
+    z.slow.won && z.slow.stars === 1,
+    show(z.slow),
+  );
+
+  const sponsor = SCENARIO_BY_ID.sponsor!;
+  const p = {
+    passive: play('sponsor', { every: 0, defend: 0 }),
+    slow: play('sponsor', { every: 15, defend: 3, general: true, sponsor: { margin: 0.1, last: 7 } }),
+    informed: play('sponsor', { every: 5, defend: 3, general: true, sponsor: { margin: 0.1, last: 7 } }),
+    sharp: play('sponsor', { every: 3, defend: 1, general: true, sponsor: { margin: 0.05, last: 3 } }),
+  };
+  for (const [name, result] of Object.entries(p)) console.log(`  Şehrin sponsoru · ${name.padEnd(8)} ${show(result)} · sponsor ${result.sponsored}`);
+  expect('Şehrin sponsoru: el sürmeyen ilk ikiden düşüyor', p.passive.reason === 'rank', show(p.passive));
+  expect('Şehrin sponsoru: on beş günde bir kuran yetişemiyor', !p.slow.won, show(p.slow));
+  expect('Şehrin sponsoru: beş günde bir kurup son haftada lideri geçen iki ihaleyi de alıyor', p.informed.won, show(p.informed));
+  expect(
+    'Şehrin sponsoru: üç yıldız vekilin en keskin oyunundan iyisini istiyor',
+    p.sharp.won && p.sharp.score < sponsor.stars.three,
+    `${show(p.sharp)} < ${sponsor.stars.three}`,
   );
 });
 

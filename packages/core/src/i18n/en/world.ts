@@ -120,6 +120,16 @@ export const world: Record<keyof typeof trWorld, string> = {
   'core.scenario.progressMoney': '{value} / {target}',
   'core.scenario.progressAhead': 'ahead ×{ratio}',
   'core.scenario.progressBehind': '{percent}% of the leader',
+  'core.scenario.progressVictory': '{value} / {target}',
+  'core.scenario.progressVictoryRank': '{value} / {target} · ranked {rank}',
+  'core.scenario.progressChain': 'share {share}%/{target}% · chain {links}/3',
+  'core.scenario.progressChainCost': 'share {share}%/{target}% · chain {links}/3 · cost not below market',
+  'core.scenario.progressSponsor': 'sponsor {done}/{total} · ranked {rank}',
+  'core.scenario.progressSponsorOut': 'sponsor {done}/{total} · ranked {rank}: {days} days to get back into the top {max}',
+  'core.scenario.outOfRankTitle': 'You fell out of the top {max}',
+  'core.scenario.outOfRankBody': 'The company ranks {rank} in the city. Get back into the top {max} within {days} days or the scenario ends.',
+  'core.scenario.lostRank': 'The company fell out of the top {rank} and did not get back within {days} days.',
+  'core.scenario.lostProject': 'A rival took the sponsorship of the project.',
 
   // events.ts — event and era endings
   'core.events.endedTitle': '{title} has ended',

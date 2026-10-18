@@ -6,6 +6,7 @@ import { tc } from './i18n';
 import { pushNews } from './news';
 import { recomputeNetWorth } from './systems/city';
 import { annuityPayment, loanRate } from './systems/credit';
+import { formConsortium } from './systems/consortium';
 import { TOTAL_SHARES } from './systems/equity';
 import { createNewGame, makeCompany } from './worldgen';
 import type { BuildingInstance, GameState } from './types';
@@ -117,76 +118,94 @@ function handOver(state: GameState, def: ScenarioDef, options: ScenarioOptions):
   state.scenario = { id: def.id, startDay: day, endDay: day + def.days };
 
   const setup = def.setup;
-  switch (setup.kind) {
-    case 'rescue': {
-      for (const site of inheritedSites(state, setup.outlets)) placeInherited(state, playerId, site.tileId, site.defId);
-      for (const site of inheritedSites(state, setup.idle.defIds)) {
-        const building = placeInherited(state, playerId, site.tileId, site.defId);
-        if (building) building.focus = setup.idle.focus;
-      }
-      fresh.cash = setup.cash;
-      // Şubeler krediyle kurulmuş: vadeli kredi, not C (kredili hesap pahalı).
-      const rate = loanRate('C', 'term', setup.loan.termDays);
-      fresh.debt = setup.loan.amount;
-      fresh.credit = {
-        loans: [
-          {
-            id: `${playerId}-L1`,
-            kind: 'term',
-            principal: setup.loan.amount,
-            balance: setup.loan.amount,
-            rate,
-            termDays: setup.loan.termDays,
-            startDay: day,
-            payment: annuityPayment(setup.loan.amount, rate, setup.loan.termDays),
-          },
-        ],
-        rating: 'C',
-        overdraftDays: 0,
-        loanSeq: 1,
-      };
-      // Baskıncı: şehrin en güçlü rakibi, payı topladı bile.
-      const raider = Object.values(state.companies)
-        .filter((company) => !company.isPlayer)
-        .sort((a, b) => b.netWorth - a.netWorth || a.id.localeCompare(b.id))[0];
-      if (raider) {
-        raider.shares[playerId] = Math.round(setup.raiderStake * TOTAL_SHARES);
-        state.scenario.rivalId = raider.id;
-      }
-      break;
-    }
-    case 'crisis': {
-      fresh.cash = setup.cash;
-      const crisis = CRISIS_BY_ID[setup.crisisId];
-      if (crisis) {
-        // Kriz senaryonun bitiş gününde sona eriyor: hedef "kriz bittiğinde".
-        state.crisis = { defId: crisis.id, phase: 'warning', activeDay: day + setup.warningDays, endDay: state.scenario.endDay };
-      }
-      break;
+  for (const site of inheritedSites(state, setup.outlets ?? [])) placeInherited(state, playerId, site.tileId, site.defId);
+  if (setup.idle) {
+    for (const site of inheritedSites(state, setup.idle.defIds)) {
+      const building = placeInherited(state, playerId, site.tileId, site.defId);
+      if (building) building.focus = setup.idle.focus;
     }
   }
-
+  // Devralınan binalar önceki yönetimin: konsorsiyumun "yeni bina" sayımına girmesin.
+  if (setup.builtDaysAgo) {
+    for (const building of Object.values(state.buildings)) {
+      if (building.companyId === playerId) building.builtDay = day - setup.builtDaysAgo;
+    }
+  }
+  fresh.cash = setup.cash;
+  if (setup.loan) {
+    // Şubeler krediyle kurulmuş: vadeli kredi, not C (kredili hesap pahalı).
+    const rate = loanRate('C', 'term', setup.loan.termDays);
+    fresh.debt = setup.loan.amount;
+    fresh.credit = {
+      loans: [
+        {
+          id: `${playerId}-L1`,
+          kind: 'term',
+          principal: setup.loan.amount,
+          balance: setup.loan.amount,
+          rate,
+          termDays: setup.loan.termDays,
+          startDay: day,
+          payment: annuityPayment(setup.loan.amount, rate, setup.loan.termDays),
+        },
+      ],
+      rating: 'C',
+      overdraftDays: 0,
+      loanSeq: 1,
+    };
+  }
   recomputeNetWorth(state);
+
+  // Senaryonun açılış haberinden SONRA olanlar (haber akışının sırası).
+  const afterBrief: Array<() => void> = [];
+  if (setup.raiderStake) {
+    // Baskıncı: şehrin en güçlü rakibi, payı topladı bile.
+    const stake = setup.raiderStake;
+    const raider = Object.values(state.companies)
+      .filter((company) => !company.isPlayer)
+      .sort((a, b) => b.netWorth - a.netWorth || a.id.localeCompare(b.id))[0];
+    if (raider) {
+      raider.shares[playerId] = Math.round(stake * TOTAL_SHARES);
+      state.scenario.rivalId = raider.id;
+      afterBrief.push(() =>
+        pushNews(
+          state,
+          'bad',
+          tc('core.scenario.rescueRaidTitle', { name: raider.name, percent: Math.round(stake * 100) }),
+          tc('core.scenario.rescueRaidBody'),
+          raider.id,
+        ),
+      );
+    }
+  }
+  if (setup.crisis) {
+    const crisis = CRISIS_BY_ID[setup.crisis.id];
+    if (crisis) {
+      // Kriz senaryonun bitiş gününde sona eriyor: hedef "kriz bittiğinde".
+      state.crisis = { defId: crisis.id, phase: 'warning', activeDay: day + setup.crisis.warningDays, endDay: state.scenario.endDay };
+      afterBrief.push(() => pushNews(state, 'bad', crisis.warningTitle, crisis.warningBody));
+    }
+  }
+  if (setup.consortium) {
+    const warningDays = setup.consortium.warningDays;
+    // Konsorsiyum devir günü kuruluyor; duyurusu senaryonun açılışından sonra.
+    afterBrief.push(() => {
+      formConsortium(state, warningDays);
+      if (state.consortium) state.scenario!.rivalId = state.consortium.leaderId;
+    });
+  }
+  if (setup.projects) {
+    // Belediyenin takvimi senaryonun: ilk proje yakında (sonrakiler `scenarioProjectGap`).
+    state.nextProjectDay = day + setup.projects.firstInDays;
+  }
+
   fresh.netWorthHistory = [Math.round(fresh.netWorth)];
   // Oyun duraklamış başlıyor: önce açılış ekranı (durum, hedef, süre).
   state.time.speed = 0;
   state.time.accumulatorMs = 0;
 
   pushNews(state, 'neutral', tc('core.scenario.startTitle', { title: def.title }), def.brief);
-  if (setup.kind === 'crisis') {
-    const crisis = CRISIS_BY_ID[setup.crisisId];
-    if (crisis) pushNews(state, 'bad', crisis.warningTitle, crisis.warningBody);
-  }
-  if (setup.kind === 'rescue' && state.scenario.rivalId) {
-    const raider = state.companies[state.scenario.rivalId]!;
-    pushNews(
-      state,
-      'bad',
-      tc('core.scenario.rescueRaidTitle', { name: raider.name, percent: Math.round(setup.raiderStake * 100) }),
-      tc('core.scenario.rescueRaidBody'),
-      raider.id,
-    );
-  }
+  for (const step of afterBrief) step();
 }
 
 /**
@@ -208,10 +227,11 @@ function placeInherited(state: GameState, companyId: string, tileId: number, def
 }
 
 /**
- * Kurtarma'nın binaları: her biri, o kategoride rakibin en az mağazası
+ * Devralınan binalar: her biri, o kategoride rakibin en az mağazası
  * olan açık bölgede (eşitlikte az kullanılmış bölge, sonra kimlik).
  * Parsel bölgenin rakip mağazalarının ortasına en yakın boş parsel; rakip
- * yoksa bölgenin ortası.
+ * yoksa bölgenin ortası. Binadan çok bölge olunca bir bölgeye ikinci bina
+ * düşüyor; seçilen parsel bir daha seçilmiyor (yerleştirme listeden sonra).
  */
 export function inheritedSites(state: GameState, defIds: readonly string[]): Array<{ tileId: number; defId: string }> {
   const width = state.map.width;
@@ -220,6 +240,7 @@ export function inheritedSites(state: GameState, defIds: readonly string[]): Arr
     if (building.companyId === state.playerCompanyId) used.set(building.districtId, (used.get(building.districtId) ?? 0) + 1);
   }
   const sites: Array<{ tileId: number; defId: string }> = [];
+  const taken = new Set<number>();
   for (const defId of defIds) {
     const def = BUILDING_BY_ID[defId];
     if (!def) continue;
@@ -244,12 +265,14 @@ export function inheritedSites(state: GameState, defIds: readonly string[]): Arr
       let best: { tileId: number; distance: number } | null = null;
       for (const tile of state.map.tiles) {
         if (tile.districtId !== district.id || tile.kind !== 'plot' || tile.structureId || tile.buildingId || tile.ownerId) continue;
+        if (taken.has(tile.id)) continue;
         if (purchaseBlocker(state, tile.id)) continue;
         const distance = Math.abs(tile.x - cx) + Math.abs(tile.y - cy);
         if (!best || distance < best.distance) best = { tileId: tile.id, distance };
       }
       if (!best) continue;
       used.set(district.id, (used.get(district.id) ?? 0) + 1);
+      taken.add(best.tileId);
       sites.push({ tileId: best.tileId, defId });
       break;
     }

@@ -80,17 +80,30 @@ function tryForm(state: GameState): void {
   if (pressure.lead < CONSORTIUM.leadRatio) return;
   if (pressure.cashShare < CONSORTIUM.idleCashShare) return;
   if (pressure.idleFor < CONSORTIUM.idleDays) return;
+  formConsortium(state, CONSORTIUM.warningDays);
+}
+
+/**
+ * Konsorsiyumu bugün kurar: üyeler, duyuru, savunma penceresi. Koşullara
+ * bakmıyor (onları `tryForm` ya da senaryo kurulumu tartıyor); üye
+ * yetmezse ya da kontrol artık alınamıyorsa kurmuyor. Kurduysa true.
+ */
+export function formConsortium(state: GameState, warningDays: number): boolean {
+  const day = state.time.day;
+  const player = state.companies[state.playerCompanyId];
+  if (!player) return false;
   const members = pickMembers(state);
-  if (members.length < CONSORTIUM.minMembers) return;
+  if (members.length < CONSORTIUM.minMembers) return false;
   const leader = members[0]!;
-  if (!controlReachable(state, leader.id, player.id)) return;
+  if (!controlReachable(state, leader.id, player.id)) return false;
+  const pressure = consortiumPressure(state);
 
   const consortium: ConsortiumState = {
     leaderId: leader.id,
     memberIds: members.map((member) => member.id),
     names: members.map((member) => member.name),
     formedDay: day,
-    startsDay: day + CONSORTIUM.warningDays,
+    startsDay: day + warningDays,
     baseShares: sharesHeld(state, leader.id, player.id),
   };
   state.consortium = consortium;
@@ -102,11 +115,12 @@ function tryForm(state: GameState): void {
       members: names(state, consortium.memberIds),
       share: formatPercent(Math.round(pressure.cashShare * 100)),
       idle: Number.isFinite(pressure.idleFor) ? pressure.idleFor : CONSORTIUM.idleDays,
-      days: CONSORTIUM.warningDays,
+      days: warningDays,
       builds: CONSORTIUM.workedBuilds,
     }),
     leader.id,
   );
+  return true;
 }
 
 type DissolveReason = 'worked' | 'invested' | 'lead' | 'locked' | 'members' | 'victory';

@@ -3223,6 +3223,97 @@ async function finish(browser, consoleErrors) {
     });
     check('"Baştan oyna" aynı senaryoyu aynı ad ve CEO ile yeniden kuruyor',
       replay.day === 150 && !replay.over && replay.name === lostAs.name && replay.ceo === lostAs.ceo, JSON.stringify(replay));
+    // Tur 39b: Konsorsiyuma karşı, Zincir ustası, Şehrin sponsoru.
+    const openScenario = async (id) => {
+      await sp.evaluate(() => window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 }));
+      await sp.locator('.topbar-actions [data-panel="saves"]').click();
+      await sp.waitForTimeout(300);
+      await sp.locator('button:has-text("Yeni oyun")').first().click();
+      await sp.waitForSelector('.newgame', { timeout: 10000 });
+      await sp.locator(`[data-scenario="${id}"]`).click();
+      await sp.locator('[data-newgame-start]').click();
+      await sp.waitForSelector(`[data-scenario-brief="${id}"]`, { timeout: 60000 });
+    };
+    await sp.locator('[data-scenario-begin]').click();
+    await openScenario('consortium');
+    const consortiumBrief = ((await sp.locator('[data-scenario-brief="consortium"]').textContent()) ?? '').trim();
+    const consortiumState = await sp.evaluate(() => {
+      const s = window.__capital.getState();
+      return {
+        day: s.time.day,
+        own: Object.values(s.buildings).filter((b) => b.companyId === s.playerCompanyId).length,
+        members: s.consortium?.memberIds.length ?? 0,
+      };
+    });
+    check('Konsorsiyuma karşı: 200. gün, on iki şube, konsorsiyum kurulmuş; açılış ekranı önderi ve takvimi yazıyor',
+      consortiumState.day === 200 && consortiumState.own === 12 && consortiumState.members >= 2
+        && /Konsorsiyum: .+ ortak; ortak alım 30 gün sonra başlıyor/.test(consortiumBrief),
+      `${JSON.stringify(consortiumState)} · ${consortiumBrief.slice(-90)}`);
+    await sp.screenshot({ path: `${OUT}/scenario-consortium-brief.png` });
+    await sp.locator('[data-scenario-begin]').click();
+    const consortiumWon = await sp.evaluate(() => {
+      const c = window.__capital;
+      const s = c.getState();
+      c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+      s.companies[s.playerCompanyId].cash += 2_000_000_000;
+      c.engine.runDay();
+      c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+      return { outcome: s.scenario.outcome, stars: s.scenario.stars, victory: s.victory !== undefined, dismissed: s.victory?.dismissed === true };
+    });
+    await sp.waitForSelector('[data-scenario-result="won"]', { timeout: 5000 }).catch(() => null);
+    check('Zafer hedefi: zafer günü senaryo kazanılıyor, zafer ekranı ayrıca çıkmıyor',
+      consortiumWon.outcome === 'won' && consortiumWon.stars === 3 && consortiumWon.victory && consortiumWon.dismissed
+        && (await sp.locator('.gameover:not(.scenario-result)').count()) === 0, JSON.stringify(consortiumWon));
+    await sp.locator('[data-scenario-continue]').click();
+    await sp.waitForTimeout(300);
+    check('"Serbest oyuna devam"dan sonra da zafer ekranı araya girmiyor', (await sp.locator('.gameover').count()) === 0);
+
+    await openScenario('chain');
+    await sp.locator('[data-scenario-begin]').click();
+    await sp.evaluate(() => window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 }));
+    await sp.locator('.agenda [data-agenda="scenario"] button').click();
+    await sp.waitForTimeout(300);
+    const chainItems = await sp.locator('.modal [data-scenario-goals="chain"] [data-chain-item]').evaluateAll((els) =>
+      els.map((el) => `${el.getAttribute('data-chain-item')}:${el.getAttribute('data-done')}:${(el.textContent ?? '').trim()}`));
+    check('Zincir ustası: hedef panelinde beş koşul (üç halka, maliyet, pay), başta hiçbiri sağlanmamış',
+      chainItems.length === 5 && chainItems.every((item) => item.split(':')[1] === '0')
+        && /üretimi/.test(chainItems[0] ?? '') && /rafta/.test(chainItems[2] ?? '') && /payı %\d+ · hedef %40/.test(chainItems[4] ?? ''),
+      chainItems.join(' | '));
+    await sp.locator('.modal [data-scenario-goals="chain"]').screenshot({ path: `${OUT}/scenario-chain-goals.png` });
+    await sp.keyboard.press('Escape');
+
+    await openScenario('sponsor');
+    const sponsorBrief = ((await sp.locator('[data-scenario-brief="sponsor"]').textContent()) ?? '').trim();
+    check('Şehrin sponsoru: açılış ekranı ilk ihalenin gününü yazıyor', /İlk ihale 10 gün sonra açılıyor/.test(sponsorBrief), sponsorBrief.slice(-90));
+    await sp.locator('[data-scenario-begin]').click();
+    const dropped = await sp.evaluate(() => {
+      const c = window.__capital;
+      const s = c.getState();
+      c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+      for (const rival of Object.values(s.companies).filter((x) => !x.isPlayer).slice(0, 2)) rival.cash += 200_000_000;
+      c.engine.runDay();
+      c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+      return { out: s.scenario.outOfRankDay !== undefined, finished: s.scenario.finishedDay ?? null };
+    });
+    await sp.locator('.agenda [data-agenda="scenario"] button').click();
+    await sp.waitForTimeout(300);
+    const sponsorDetail = ((await sp.locator('.modal [data-scenario-goals="sponsor"] .goal-detail').textContent().catch(() => '')) ?? '').trim();
+    check('İlk ikiden düşünce senaryo sürüyor; hedef paneli geri dönüş süresini yazıyor',
+      dropped.out && dropped.finished === null && /ilk 2 arasına dönmek için 20 gün/.test(sponsorDetail), `${JSON.stringify(dropped)} · ${sponsorDetail}`);
+    await sp.keyboard.press('Escape');
+    await sp.evaluate(() => {
+      const c = window.__capital;
+      const s = c.getState();
+      let guard = 0;
+      while (s.scenario.finishedDay === undefined && guard++ < 40) c.engine.runDay();
+      c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+    });
+    await sp.waitForSelector('[data-scenario-result="lost"]', { timeout: 5000 }).catch(() => null);
+    const sponsorReason = await sp.locator('[data-scenario-reason]').getAttribute('data-scenario-reason').catch(() => null);
+    const sponsorText = ((await sp.locator('[data-scenario-reason]').textContent().catch(() => '')) ?? '').trim();
+    check('20 gün içinde dönmeyen kaybediyor; sonuç ekranı nedeni yazıyor',
+      sponsorReason === 'rank' && /ilk 2 şirketin dışına düştü ve 20 gün içinde geri dönemedi/.test(sponsorText), `${sponsorReason} · ${sponsorText}`);
+    await sp.screenshot({ path: `${OUT}/scenario-sponsor-lost.png` });
     check('Senaryo akışında konsol temiz', scenarioErrors.length === 0, scenarioErrors.slice(0, 2).join(' | '));
     await scenarioContext.close();
   }

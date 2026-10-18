@@ -648,4 +648,38 @@ export const contentEn: Record<string, string> = {
   'content.scenario.crisis.facts.0': 'In a recession construction is 15% cheaper and land slips a little every day: a buying window for anyone with cash.',
   'content.scenario.crisis.facts.1': 'The rivals keep growing; money waiting in the cash box falls behind.',
   'content.scenario.crisis.facts.2': "At the end your net worth must beat the strongest rival's.",
+  'content.scenario.consortium.title': 'Against the Consortium',
+  'content.scenario.consortium.tagline': 'You are the most valuable company in the city, but your money sits idle; the rivals have joined forces.',
+  'content.scenario.consortium.brief':
+    'The company is by far the most valuable in the city, but most of its value sits in the cash box and no new building has gone up in months. The biggest rivals have joined forces: once the defence window ends they will buy up your shares together, every day.',
+  'content.scenario.consortium.goalText': 'Reach victory within {days} days, without being taken over.',
+  'content.scenario.consortium.facts.0':
+    'The consortium breaks up if you put up three new buildings, if your cash falls below 20% of your net worth, or if your lead drops below 1.1×.',
+  'content.scenario.consortium.facts.1':
+    'Locking control is another way: buy back your own shares (stock exchange panel). If they cannot pass half even by buying every remaining share, they break up.',
+  'content.scenario.consortium.facts.2':
+    'Victory: company value above the target and first in the city, or taking over every rival.',
+  'content.scenario.chain.title': 'Chain Master',
+  'content.scenario.chain.tagline': 'From silicon to the shop window: build the whole electronics chain and take the shelves.',
+  'content.scenario.chain.brief':
+    'The city is built and the rivals share its electronics; their shops buy chips on the market. You are a new company with cash in hand. A silicon mine and a chip fab are big investments, but if you make your own chips for less than the market price, the shelves are yours too.',
+  'content.scenario.chain.goalText':
+    'Within {days} days build the whole electronics chain (silicon mine, chip fab, a shop selling phones), bring the unit cost of chips below the market price and reach a {share}% share of electronics.',
+  'content.scenario.chain.facts.0':
+    'The Silicon Mine unlocks at 6M company value and the Chip Fab at 5M; both can only be built in the industrial district and the port.',
+  'content.scenario.chain.facts.1':
+    'No empty plots are left in the industrial district: you can buy a plot together with the structure on it. The port opens for building in 90 days.',
+  'content.scenario.chain.facts.2': "Share is the part of the city's electronics sales that goes through your shops.",
+  'content.scenario.chain.facts.3':
+    "All three conditions must hold on the same day: chain, cost and share. The scenario section of the goals panel shows all three.",
+  'content.scenario.sponsor.title': 'City Sponsor',
+  'content.scenario.sponsor.tagline': 'The council opens two big projects; put your name on both and stay in the top two.',
+  'content.scenario.sponsor.brief':
+    "The council is tendering two city projects back to back. The biggest contribution names the project and gives the sponsor's buildings in that district a lasting privilege. The company is the most valuable in the city, but only just; two rivals are growing fast and contributions are not paid back.",
+  'content.scenario.sponsor.goalText': 'Sponsor two city projects in a row, and stay one of the two most valuable companies in the city meanwhile.',
+  'content.scenario.sponsor.facts.0':
+    'The contribution table is open: the project panel shows who gave what. Rivals contribute once a week, and those with a shop in the district are keener.',
+  'content.scenario.sponsor.facts.1':
+    'If a rival takes a project the scenario ends. If you drop out of the top two you have 20 days to get back.',
+  'content.scenario.sponsor.facts.2': 'Stars: your ratio to the strongest rival when the second tender closes.',
 };
