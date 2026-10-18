@@ -16,6 +16,8 @@ import pathlib
 from fontTools import subset
 from fontTools.ttLib import TTFont
 
+from fredoka_turkish import add_turkish
+
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 SOURCE = ROOT / 'apps/lite-web/public/fonts'
 TARGET = ROOT / 'packages/ui/src/fonts-cam.css'
@@ -42,7 +44,11 @@ FACES = [
 
 
 def woff2(path: pathlib.Path) -> bytes:
-    font = TTFont(path)
+    # Zaman damgası kaynaktan kalıyor: aynı kaynak her koşuda aynı dosyayı veriyor.
+    font = TTFont(path, recalcTimestamp=False)
+    # Kaynak dosyalar yamalı (tools/fredoka_turkish.py); yükseltilmiş bir kaynak gelirse de harfler eksik kalmasın.
+    if font['name'].getDebugName(1).startswith('Fredoka'):
+        add_turkish(font)
     options = subset.Options()
     options.flavor = 'woff2'
     options.layout_features = ['kern', 'liga', 'tnum', 'lnum', 'case', 'locl', 'ccmp', 'mark', 'mkmk']

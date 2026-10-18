@@ -8,7 +8,7 @@ import { dirname, join } from 'node:path';
  * ile geçici bir dizine paketlenip oradan koşuyor, `import.meta.url` kaynağı
  * göstermiyor.
  */
-function repoRoot(): string {
+export function repoRoot(): string {
   let dir = process.cwd();
   while (!existsSync(join(dir, 'pnpm-workspace.yaml'))) {
     const parent = dirname(dir);

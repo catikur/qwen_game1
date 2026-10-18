@@ -3569,6 +3569,98 @@ eklendi:
 - iki şehirde zafer;
 - telefonda ekrana sığmayan açılışta "Başla" düğmesine ulaşılması.
 
+### Tur 40 — Cila ve performans
+
+Tur 39'dan kalan dört başlık: başlık yazı tipinde Türkçe harfler, büyük
+şehrin açılış süresi, telefonda bütün katman ve panellerin taranması ve
+yedi senaryonun tarayıcıda sonuna kadar oynanması.
+
+**Türkçe harfler.**
+- *Sorun:* Fredoka (başlık ve sayılar) Ş ş Ğ ğ İ taşımıyor; resmî 2.001
+  sürümü de taşımıyor (320 karakter).
+  - Ana oyunun gömülü alt kümesinde bu harfler Nunito'ya düşüyordu:
+    "Şehrin sponsoru" ve "karşı" aynı başlıkta iki yazı tipiyle.
+  - Lite'ın tam dosyası (web, Android, iOS) birleşen işaretleri de
+    taşıyor. Tarayıcı ş'yi s + çengelden kendisi kuruyordu; çengel harften
+    kopuk duruyordu.
+- *Düzeltme:* harfler yazı tipinin kendi harflerinden ve birleşen
+  işaretlerinden kuruluyor (s + çengel, g + ayraç, I + nokta).
+  - Yükseklik yazı tipinin kendi bileşiklerinden okunuyor (ç, Ç, Â, Ï).
+    Yatayda işaret gövdenin ortasına hizalanıyor.
+  - `tools/fredoka_turkish.py` Lite'ın altı dosyasını yerinde yamalıyor.
+  - `tools/make-cam-fonts.py` ana oyunun alt kümesini aynı işlevle
+    üretiyor. Zaman damgası artık kaynaktan geliyor, her koşu aynı dosyayı
+    veriyor. Gömülü woff2'lerin toplamı 71 KB.
+- *Lisans:* OFL 1.1 değiştirilmiş sürüme izin veriyor ve ayrılmış yazı
+  tipi adı yok. Değişiklik OFL.txt'ye yazıldı.
+- *Lite web'in önbelleği:* hizmet çalışanı yazı tiplerini önbellekten
+  veriyor ve adresleri sabit. Önbellek sürümü arttı (`cf-lite-v2`); geri
+  dönen oyuncu yeni dosyaları alıyor.
+
+**Açılış süresi.** Tarayıcıda CPU profili alındı (yazılımsal GPU,
+swiftshader):
+
+| Açılış | Profil süresi | JS | GPU sürücüsü ve tarayıcı |
+|---|---|---|---|
+| Krizin ortasında | 12,0 sn | 1,8 sn | 10,1 sn |
+| Büyük şehir, serbest oyun | 7,3 sn | 0,9 sn | 6,3 sn |
+| Büyük şehir fethi (200 gün ön tarih) | 11,4 sn | 3,0 sn | 8,1 sn |
+
+- Sürenin dörtte üçünden fazlası JS değil: yazılımsal GPU'da gölgelendirici
+  derlemesi ve ilk kareler.
+- Süre büyük şehre özgü değil; Krizin ortasında'nın açılışı serbest büyük
+  şehirden uzun.
+- JS'nin en büyük kalemi three.js'nin gölgelendirici kurulumu (0,6–0,9 sn).
+  Fetihte JS'nin fazlası 200 günlük ön tarihten geliyor: aynı büyük şehir
+  serbest oyunda 0,9 sn, fetihte 3,0 sn.
+- Gerçek GPU'da ölçülemedi. Bu ortamda kodda kazanılabilecek pay JS'nin
+  1–3 saniyesi, o yüzden kod değişmedi.
+
+**Konsol.** three 0.185 `PCFSoftShadowMap`'i kaldırdı; sahne her açılışta
+uyarıyla `PCFShadowMap`'e düşüyordu. Sahne artık doğrudan `PCFShadowMap`
+istiyor: görüntü aynı, konsol temiz.
+
+**Telefon taraması.** iPhone SE'de (375×667) şu ekranlar tarandı:
+- kurulum ve senaryo listesi;
+- sekiz panel: zincir, rekabet, borsa, meclis, şirket, rakipler,
+  kayıtlar, yardım;
+- karar kartı, zafer ve oyun sonu ekranı;
+- yedi senaryonun açılışı ve sonucu.
+
+Her görünür düğme, bağlantı ve giriş kaydırılarak görünür alana
+getiriliyor; ortasına tıklanınca başka bir öğeye denk gelmemeli. 282
+denetimde sorun çıkmadı (Tur 39c'nin kayan katmanından sonra).
+
+**Yedi senaryo sonuna kadar.** Her senaryo tarayıcıda el sürülmeden
+sonuna kadar akıtıldı:
+
+| Senaryo | Sonuç | Gün | Gün başına |
+|---|---|---|---|
+| Kurtarma | devralındı | 130 | 5 ms |
+| Krizin ortasında | süre doldu | 150 | 4 ms |
+| Konsorsiyuma karşı | devralındı | 109 | 5 ms |
+| Zincir ustası | süre doldu | 250 | 6 ms |
+| Şehrin sponsoru | sıra kaybedildi | 86 | 3 ms |
+| Büyük şehir fethi | süre doldu | 400 | 20 ms |
+| Holding: iki şehir | süre doldu | 550 | 11 ms |
+
+**Doğrulama.** `pnpm test` 421/421. Yeni `fonts.test.ts` iki test getiriyor:
+Lite'ın altı Fredoka dosyasında ve ana oyunun gömülü alt kümesinde Türkçe
+harfler var mı. Testler eski dosyalarla kaldı.
+
+Tarayıcı testine "Cila" bölümü eklendi (9 kontrol):
+- başlık yazı tipinde Türkçe harfler (eski gömülü dosyayla kaldı);
+- telefon taraması: kurulum ve liste, sekiz panel, karar kartı, zafer ve
+  oyun sonu;
+- yedi senaryonun açılış ve sonuç ekranı;
+- yedi senaryo sonuna kadar akıyor, el sürülmeyen her senaryo
+  kaybediliyor;
+- gün başına süre 120 ms'nin altında;
+- uygulamanın kendi konsol uyarısı yok;
+- konsol temiz.
+
+Tam tarayıcı koşusu sürüyor.
+
 
 ---
 
@@ -3651,7 +3743,7 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi) |
-| Birim testi | **419 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi de) |
+| Birim testi | **421 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri de) |
 | Denge testi | **324 kontrol, hepsi geçiyor** (24 bölüm, süreleriyle; ~15 dk) |
 | Tarayıcı testi | **428 kontrol, hepsi geçiyor**, 0 konsol hatası (~25–40 dk); duman koşusu 132 (~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + duman oynanışı |

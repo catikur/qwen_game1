@@ -3443,6 +3443,161 @@ async function finish(browser, consoleErrors) {
     await scenarioContext.close();
   }
 
+  // ---------- Cila (Tur 40) ----------
+  section('Cila: glifler, konsol, telefon taraması, senaryo sonları');
+  {
+    /*
+     * Kökün içindeki her görünür düğme kaydırılarak görünür alana gelebiliyor
+     * ve üstünde başka bir şey yok mu? Telefon katmanı kaymadığı için uzun
+     * senaryo açılışında "Başla" düğmesine ulaşılamıyordu (Tur 39c).
+     */
+    const reachable = (page, selector) =>
+      page.evaluate(async (sel) => {
+        const root = document.querySelector(sel);
+        if (!root) return { count: 0, bad: ['katman yok'] };
+        const controls = [...root.querySelectorAll('button, a[href], input, select')].filter(
+          (el) => el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden',
+        );
+        const bad = [];
+        for (const el of controls) {
+          el.scrollIntoView({ block: 'center', inline: 'center' });
+          await new Promise((r) => requestAnimationFrame(() => r(null)));
+          const r = el.getBoundingClientRect();
+          const inside = r.top >= -1 && r.bottom <= innerHeight + 1 && r.left >= -1 && r.right <= innerWidth + 1;
+          const top = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+          if (!inside || !top || !(top === el || el.contains(top))) bad.push((el.textContent || el.tagName).trim().slice(0, 30));
+        }
+        return { count: controls.length, bad };
+      }, selector);
+    const appWarnings = [];
+    const polishErrors = [];
+    const phone = await browser.newContext({ ...devices['iPhone SE'] });
+    await phone.addInitScript(veteran, TUTORIAL_KEY);
+    const pp = await phone.newPage();
+    pp.on('pageerror', (e) => polishErrors.push(e.message));
+    pp.on('console', (m) => {
+      if (m.type() === 'error') polishErrors.push(m.text());
+      // Sürücü mesajları (yazılımsal GPU) ortamın; uygulamanın kendi uyarıları sayılıyor.
+      if (m.type() === 'warning' && !m.text().includes('GL Driver Message')) appWarnings.push(m.text());
+    });
+    await pp.goto('http://127.0.0.1:8811/');
+    await pp.waitForSelector('.newgame', { timeout: 20000 });
+    // Fredoka Türkçe'nin beş harfini taşımıyordu; harf Nunito'ya düşüyordu.
+    const glyphs = await pp.evaluate(async () => {
+      await document.fonts.load("700 40px 'Fredoka'", 'ŞşĞğİ');
+      const ctx = document.createElement('canvas').getContext('2d');
+      return [...'ŞşĞğİ'].filter((ch) => {
+        ctx.font = "700 40px 'Fredoka', monospace";
+        const own = ctx.measureText(ch).width;
+        ctx.font = '700 40px monospace';
+        return Math.abs(own - ctx.measureText(ch).width) < 0.01;
+      });
+    });
+    check('Başlık yazı tipinde Türkçe harfler var (Ş ş Ğ ğ İ yedek yazı tipine düşmüyor)', glyphs.length === 0, glyphs.length ? `eksik: ${glyphs.join(' ')}` : '');
+    const setup = await reachable(pp, '.newgame');
+    await pp.locator('.mode-picker [data-mode="scenario"]').click();
+    const list = await reachable(pp, '.newgame');
+    check('iPhone SE: kurulumun ve senaryo listesinin her düğmesine ulaşılıyor', setup.bad.length === 0 && list.bad.length === 0,
+      `${setup.count + list.count} düğme · ${[...setup.bad, ...list.bad].join(', ')}`);
+    await pp.locator('.mode-picker [data-mode="free"]').click();
+    await pp.locator('button:has-text("Şirketi kur")').click();
+    await pp.waitForSelector('.topbar', { timeout: 30000 });
+    await pp.evaluate(() => {
+      const c = window.__capital;
+      c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+      const s = c.getState();
+      const tile = s.map.tiles.find((t) => t.kind === 'plot' && !t.structureId && !t.ownerId && !t.buildingId && s.districts[t.districtId].opensOnDay === undefined);
+      c.engine.dispatch({ type: 'BUY_TILE', tileId: tile.id });
+      c.engine.dispatch({ type: 'BUILD', tileId: tile.id, defId: 'grocery' });
+      for (let i = 0; i < 20; i++) c.engine.runDay();
+      c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+    });
+    const panelBad = [];
+    let panelCount = 0;
+    for (const panel of ['chain', 'rivalry', 'bourse', 'council', 'company', 'rivals', 'saves', 'help']) {
+      await pp.locator(`[data-panel="${panel}"]`).click();
+      await pp.waitForTimeout(250);
+      const r = await reachable(pp, '.modal');
+      panelCount += r.count;
+      panelBad.push(...r.bad.map((b) => `${panel}: ${b}`));
+      await pp.keyboard.press('Escape');
+      await pp.waitForTimeout(150);
+    }
+    check('iPhone SE: sekiz panelin her düğmesine ulaşılıyor', panelBad.length === 0, `${panelCount} düğme · ${panelBad.slice(0, 3).join(', ')}`);
+    await pp.evaluate(() => {
+      const c = window.__capital;
+      const s = c.getState();
+      s.card = { defId: 'viral_video', offeredDay: s.time.day, deadlineDay: s.time.day + 10, amount: 20000, category: 'grocery' };
+      c.engine.runDay();
+      c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+    });
+    await pp.waitForTimeout(300);
+    const card = await reachable(pp, '.decision-card');
+    await pp.evaluate(() => {
+      const c = window.__capital;
+      const s = c.getState();
+      delete s.card;
+      s.victory = { day: s.time.day, kind: 'tycoon' };
+      // Komut arayüzü yeniden çizdiriyor (durumu elle değiştirmek çizdirmiyor).
+      c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+    });
+    await pp.waitForTimeout(400);
+    const victory = await reachable(pp, '.gameover.victory');
+    await pp.evaluate(() => {
+      const c = window.__capital;
+      c.engine.dispatch({ type: 'DISMISS_VICTORY' });
+      const s = c.getState();
+      s.gameOver = { day: s.time.day, byCompanyId: Object.keys(s.companies).find((id) => id !== s.playerCompanyId) };
+      c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+    });
+    await pp.waitForTimeout(400);
+    const over = await reachable(pp, '.gameover');
+    check('iPhone SE: karar kartı, zafer ve oyun sonu ekranının her düğmesine ulaşılıyor',
+      card.count > 0 && victory.count > 0 && over.count > 0 && [...card.bad, ...victory.bad, ...over.bad].length === 0,
+      `${card.count}/${victory.count}/${over.count} düğme · ${[...card.bad, ...victory.bad, ...over.bad].join(', ')}`);
+
+    // Yedi senaryo: açılış ve sonuç telefonda erişilebilir; koşu tarayıcıda sonuna kadar akıyor.
+    const runs = [];
+    for (const id of ['rescue', 'crisis', 'consortium', 'chain', 'sponsor', 'conquest', 'holding']) {
+      await pp.evaluate(() => window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 }));
+      // Oyun sonu ya da senaryo sonucu açık: son düğmesi kuruluma döndürüyor ("Yeni şirket", "Senaryolar").
+      await pp.locator('.gameover .gameover-actions button').last().click();
+      await pp.waitForSelector('.newgame', { timeout: 20000 });
+      await pp.locator('.mode-picker [data-mode="scenario"]').click();
+      await pp.locator(`[data-scenario="${id}"]`).click();
+      await pp.locator('[data-newgame-start]').click();
+      await pp.waitForSelector(`[data-scenario-brief="${id}"]`, { timeout: 120000 });
+      await pp.waitForTimeout(300);
+      const brief = await reachable(pp, `[data-scenario-brief="${id}"]`);
+      await pp.locator('[data-scenario-begin]').click();
+      const run = await pp.evaluate(() => {
+        const c = window.__capital;
+        c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+        const start = c.getState().scenario.startDay;
+        const t0 = performance.now();
+        let days = 0;
+        while (c.getState().scenario.finishedDay === undefined && days < 700) {
+          c.engine.runDay();
+          days++;
+        }
+        const s = c.getState();
+        return { days, ms: (performance.now() - t0) / Math.max(1, days), outcome: s.scenario.outcome, reason: s.scenario.lostReason ?? null, day: s.scenario.finishedDay - start };
+      });
+      await pp.waitForSelector('[data-scenario-result]', { timeout: 10000 }).catch(() => null);
+      await pp.waitForTimeout(300);
+      const result = await reachable(pp, '[data-scenario-result]');
+      runs.push({ id, ...run, brief: brief.bad.length === 0 && brief.count > 0, result: result.bad.length === 0 && result.count > 0 });
+    }
+    const line = runs.map((r) => `${r.id} ${r.outcome}${r.reason ? `/${r.reason}` : ''} ${r.day}g ${r.ms.toFixed(0)}ms/g`).join(' · ');
+    check('Yedi senaryo tarayıcıda sonuna kadar akıyor; el sürmeyen her senaryoyu kaybediyor', runs.every((r) => r.outcome === 'lost' && r.days < 700), line);
+    check('iPhone SE: yedi senaryonun açılış ve sonuç ekranının her düğmesine ulaşılıyor', runs.every((r) => r.brief && r.result),
+      runs.filter((r) => !r.brief || !r.result).map((r) => r.id).join(', '));
+    check('Senaryo günleri tarayıcıda akıcı (gün başına 120 ms altında)', runs.every((r) => r.ms < 120), line);
+    check('Uygulamanın kendi konsol uyarısı yok (three.js dahil)', appWarnings.length === 0, appWarnings.slice(0, 2).join(' | '));
+    check('Cila akışında konsol temiz', polishErrors.length === 0, polishErrors.slice(0, 2).join(' | '));
+    await phone.close();
+  }
+
   // ---------- Mobil ----------
   //
   // Bu bölüm eskiden tek satırdı: "dar ekranda yatay taşma yok". O kontrol
