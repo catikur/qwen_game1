@@ -11,6 +11,7 @@ import { respondUnion } from './systems/labor';
 import { settleCardAway } from './systems/cards';
 import { runQuestTick, settleBubbleAway } from './systems/opportunities';
 import { settleConsortiumAway } from './systems/consortium';
+import { noteRaidStage } from './systems/feats';
 import { capRemaining, playerBuy } from './systems/orders';
 import { createNewGame } from './worldgen';
 import { scenarioActive, shiftScenario } from './systems/scenario';
@@ -464,6 +465,8 @@ function liveAway(active: GameState, holding: HoldingState, city: DormantCity): 
     );
   }
   city.raidStage = raid.stage;
+  // Kariyer (Tur 41): uzaktaki şehirde de borsa yaşıyor, püskürtülen baskın sayılıyor (Codex #70).
+  noteRaidStage(s, raid.stage);
   if (!wonBefore && s.victory) {
     pushNews(active, 'good', tc('core.holding.remoteVictoryTitle', { city: name }), tc('core.holding.remoteVictoryBody', { city: name }));
   }

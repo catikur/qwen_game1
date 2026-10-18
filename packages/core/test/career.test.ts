@@ -196,6 +196,26 @@ describe('kariyer: aynı gün', () => {
     assert.ok(runValue(ACHIEVEMENT_BY_ID.quarter_billion!, runFacts(state)) >= ACHIEVEMENT_BY_ID.quarter_billion!.target);
   });
 
+  test('baskın: uzaktaki şehirde püskürtülen de sayılıyor (Codex #70)', () => {
+    const engine = played(60);
+    let state = engine.getState();
+    state.victory = { day: 420, kind: 'tycoon', dismissed: true };
+    player(state).cash = 30_000_000;
+    recomputeNetWorth(state);
+    assert.ok(engine.dispatch({ type: 'OPEN_CITY', citySize: 'standard', capital: 8_000_000 }).ok);
+    state = engine.getState();
+    const away = state.holding!.dormant[0]!.state;
+    const raider = rivals(away)[0]!;
+    raider.shares[away.playerCompanyId] = 3_000;
+    engine.runDay();
+    assert.ok((away.feats?.raidPeak ?? 0) >= 2);
+    // Baskıncı borcu için hisseyi sattı; şehir hâlâ uzakta.
+    raider.shares[away.playerCompanyId] = 0;
+    engine.runDay();
+    assert.equal(away.feats?.raidsRepelled, 1);
+    assert.equal(runFacts(engine.getState()).counters.raidsRepelled, 1);
+  });
+
   test('kapatılan şehir de açılmış sayılıyor (Codex #70)', () => {
     const state = played(10, 6).getState();
     state.holding = { foundingSeed: state.meta.seed, opened: 2, treasury: 0, dormant: [], closedWins: 0 };
