@@ -115,6 +115,8 @@ function handOver(state: GameState, def: ScenarioDef, options: ScenarioOptions):
   delete state.bubblesShown;
   delete state.bubblesCaught;
   delete state.questsDone;
+  // Kariyer sayaçları (Tur 41) oyuncunun devraldığı günden sayılıyor: ön tarihte biten kriz onun değil.
+  delete state.feats;
   state.news = [];
 
   const day = state.time.day;

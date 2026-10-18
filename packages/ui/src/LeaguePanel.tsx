@@ -7,6 +7,7 @@ import { useGame, useGameState } from './useGame';
 import type { LeagueBoard, LeagueEntry } from './useGame';
 import { progressFor, useLeagueStanding, verdictFor } from './leagueVerify';
 import { t } from './i18n';
+import { CareerRunLine } from './CareerPanel';
 import type { MessageKey } from './i18n';
 
 /**
@@ -427,6 +428,7 @@ export function LeagueResultScreen({ onNewGame }: { onNewGame: () => void }): Re
         </p>
         {sent && <p>{sent}</p>}
         {code && <textarea className="manual-text" readOnly value={code} onFocus={(e) => e.target.select()} aria-label={t('app.league.codeLabel')} />}
+        <CareerRunLine state={state} />
         <div className="gameover-actions">
           {!lost && (
             <button type="button" className="primary" onClick={() => void submit()} disabled={sent !== null}>

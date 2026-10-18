@@ -5,6 +5,7 @@ import { pushNews } from '../news';
 import { rivalProfiles } from '../profiles';
 import { formatMoney } from '../selectors';
 import { tc } from '../i18n';
+import { noteFeat } from './feats';
 import type { CommandResult, CompanyState, GameState, MotionState, PolicyState } from '../types';
 
 /**
@@ -300,6 +301,9 @@ export function runCouncilTick(state: GameState): void {
         const breakdown = motionSupport(motion);
         const passed = breakdown.support >= 0.5;
         motion.result = { passed, support: breakdown.support, day };
+        // Kariyer (Tur 41): oyuncunun lobi yaptığı taraf kazandı mı?
+        const side = motion.lobby[state.playerCompanyId] ?? 0;
+        if ((side > 0 && passed) || (side < 0 && !passed)) noteFeat(state, 'motionsWon');
         const effect = passed ? ` ${applyMotion(state, motion)}` : '';
         pushNews(
           state,

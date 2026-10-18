@@ -21,6 +21,8 @@ import type { GameState, QuestBoard, QuestState } from '@capital/core';
 import { useGame, useGameState } from './useGame';
 import { t } from './i18n';
 import { ScenarioGoalSection } from './ScenarioScreens';
+import { CareerRunLine, useCareerRevision } from './CareerPanel';
+import { careerSummary } from './career';
 
 /** Görevin "şu an / hedef" satırı, görevin kendi biriminde. */
 function questNumbers(state: GameState, board: QuestBoard, quest: QuestState): string {
@@ -148,9 +150,18 @@ export function GoalsPanel(): ReactElement {
   const next = nextGoal(state);
   const difficulty = getDifficulty(state.difficulty);
   const done = ladder.filter((goal) => goal.completedDay !== null).length;
+  useCareerRevision();
+  const career = careerSummary();
 
   return (
     <div className="goals">
+      {/* Kariyer (Tur 41): rozetler ve koşu geçmişi; oyun içinde buradan. */}
+      <button type="button" className="ghost career-open" data-career-open onClick={() => setView({ openPanel: 'career' })}>
+        {t('hud.career.open', {
+          done: career.statuses.filter((status) => career.unlocked[status.def.id]).length,
+          total: career.statuses.length,
+        })}
+      </button>
       <ScenarioGoalSection />
       <QuestBoardView />
       <h3 className="goals-ladder-title">{t('hud.quests.ladder')}</h3>
@@ -249,6 +260,7 @@ export function VictoryScreen({ onNewGame }: { onNewGame: () => void }): ReactEl
           })}
         </p>
         <p className="muted">{t('hud.victory.note')}</p>
+        <CareerRunLine state={state} />
         <div className="gameover-actions">
           <button
             type="button"

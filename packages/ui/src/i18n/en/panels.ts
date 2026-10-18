@@ -172,6 +172,7 @@ export const panels: Record<keyof typeof trPanels, string> = {
   'panels.modal.title.council': 'City Council',
   'panels.modal.title.league': 'Seed League',
   'panels.modal.title.cities': 'Cities',
+  'panels.modal.title.career': 'Career',
 
   // company panel (CompanyPanel, Sparkline)
   'panels.company.nameLabel': 'Company name',
@@ -264,6 +265,9 @@ export const panels: Record<keyof typeof trPanels, string> = {
   'panels.help.step.consortium.title': 'Do not stand still when ahead.',
   'panels.help.step.consortium.body':
     ' If you stop building while far ahead and let cash sit in the treasury, the biggest rivals form a consortium: 30 days later they start buying your shares together, and if they pass half, the company is theirs. When "Consortium" shows up in the agenda, go back to investing (three new buildings), buy back shares or bring in investors with a share issue.',
+  'panels.help.step.career.title': 'Look beyond a single run.',
+  'panels.help.step.career.body':
+    ' The Career page in the Goals panel and on the setup screen keeps your badges and run history: takeovers, crises, consortiums, the council, holdings, scenarios, the league. Badges give no reward; they point you to every corner of the game. They are kept on this device.',
   'panels.company.boosts': 'Active card effects',
   'panels.help.step.late.body':
     ' Past 30 buildings, each building adds a little to upkeep and wages (overhead); wealth above ₺25M is taxed progressively, so idle cash melts away. Now and then a crisis hits, announced a month ahead: in a recession demand drops but land and construction get cheaper; in a rate shock the overdraft and new loans get expensive, while term loans keep their fixed rate.',

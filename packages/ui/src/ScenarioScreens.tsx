@@ -17,6 +17,7 @@ import type { GameState, ScenarioState } from '@capital/core';
 import { useGame, useGameState } from './useGame';
 import { recordScenarioResult, scenarioRecord, scenarioRunKey } from './scenarioBest';
 import { t } from './i18n';
+import { CareerRunLine } from './CareerPanel';
 
 /**
  * Senaryo ekranları (Tur 39): açılış (durum, hedef, süre — oyun duraklamış
@@ -199,6 +200,7 @@ export function ScenarioResultScreen({ onNewGame, onReplay }: { onNewGame: () =>
               : t('hud.scenario.noBest')}
         </p>
         <p className="muted scenario-stars">{starThresholds(def)}</p>
+        <CareerRunLine state={state} />
         <div className="gameover-actions">
           <button type="button" className="primary" data-scenario-replay onClick={() => onReplay(def.id)}>
             {t('hud.scenario.replay')}

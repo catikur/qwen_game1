@@ -168,6 +168,7 @@ export const panels = {
   'panels.modal.title.council': 'Belediye Meclisi',
   'panels.modal.title.league': 'Tohum Ligi',
   'panels.modal.title.cities': 'Şehirler',
+  'panels.modal.title.career': 'Kariyer',
 
   // şirket paneli (CompanyPanel, Sparkline)
   'panels.company.nameLabel': 'Şirket adı',
@@ -260,6 +261,9 @@ export const panels = {
   'panels.help.step.consortium.title': 'Öndeyken de durma.',
   'panels.help.step.consortium.body':
     ' Çok öndeyken bina kurmayı bırakıp parayı kasada bekletirsen en büyük rakipler konsorsiyum kurar: 30 gün sonra hisseni birlikte toplamaya başlarlar ve yarıyı geçerlerse şirket onların. Gündemde "Konsorsiyum" çıkınca yatırıma dön (üç yeni bina), hisse geri al ya da halka arzla yatırımcı getir.',
+  'panels.help.step.career.title': 'Koşuların ötesine bak.',
+  'panels.help.step.career.body':
+    ' Hedefler panelindeki Kariyer sayfası ve kurulum ekranı rozetlerini ve koşu geçmişini tutar: devralma, kriz, konsorsiyum, meclis, holding, senaryo, lig. Rozet ödül vermez, oyunun her köşesini gösterir. Bu cihazda saklanır.',
   'panels.company.boosts': 'Süren kart etkileri',
   'panels.help.step.late.body':
     ' 30 binadan sonra her bina bakım ve ücreti biraz daha artırır (yönetim yükü); 25 M ₺ üstü servete kademeli vergi var, kasada yatan para erir. Ara sıra kriz gelir ve bir ay önceden haber verir: durgunlukta talep düşer ama arsa ve inşaat ucuzlar; faiz şokunda kredili hesap ve yeni krediler pahalanır, vadeli kredinin faizi sabit kalır.',

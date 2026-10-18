@@ -34,6 +34,7 @@ import { ProjectPanel, ProjectSiteNote } from './ProjectPanel';
 import { MarketPanel } from './MarketPanel';
 import { GoalsPanel } from './GoalsPanel';
 import { HoldingPanel } from './HoldingPanel';
+import { CareerPanel } from './CareerPanel';
 import { CouncilPanel } from './CouncilPanel';
 import { LeaguePanel } from './LeaguePanel';
 import { AppearancePicker } from './AppearancePicker';
@@ -920,6 +921,7 @@ export function ModalHost(): ReactElement | null {
     council: t('panels.modal.title.council'),
     league: t('panels.modal.title.league'),
     cities: t('panels.modal.title.cities'),
+    career: t('panels.modal.title.career'),
   };
 
   return (
@@ -945,6 +947,7 @@ export function ModalHost(): ReactElement | null {
           {view.openPanel === 'council' && <CouncilPanel />}
           {view.openPanel === 'league' && <LeaguePanel />}
           {view.openPanel === 'cities' && <HoldingPanel />}
+          {view.openPanel === 'career' && <CareerPanel />}
         </div>
       </div>
     </div>
@@ -1301,6 +1304,10 @@ function HelpPanel(): ReactElement {
         <li>
           <strong>{t('panels.help.step.consortium.title')}</strong>
           {t('panels.help.step.consortium.body')}
+        </li>
+        <li>
+          <strong>{t('panels.help.step.career.title')}</strong>
+          {t('panels.help.step.career.body')}
         </li>
       </ol>
       <p className="muted">

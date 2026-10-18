@@ -854,6 +854,35 @@ export interface GameState {
    * okunmuyor. Yokluğu varsayılan: kârın yarısı kasaya, savunma kapalı.
    */
   remote?: CityDirective;
+  /**
+   * Bu şehirde yaşanan dikkate değer anların sayacı (Tur 41). Kariyer
+   * rozetleri okuyor, simülasyon okumuyor: o anlar durumda iz bırakmadan
+   * bitiyor (kriz siliniyor, konsorsiyum dağılıyor), sayaç olmadan sonradan
+   * görülemezdi. Yokluğu "hiçbiri yaşanmadı" demek; şema sürümü sabit.
+   */
+  feats?: RunFeats;
+}
+
+/** Şehrin sayaçları (Tur 41); hepsi seçime bağlı, yokluğu 0. */
+export interface RunFeats {
+  /** Oyuncu ayaktayken biten kriz. */
+  crisesWeathered?: number;
+  /** Başladığı günden değerli bitirilen kriz. */
+  crisesGrown?: number;
+  /** Süren krizin başladığı gün oyuncunun net değeri. */
+  crisisWorth?: number;
+  /** Oyuncunun direnişiyle dağılan konsorsiyum (üyeleri dağılan sayılmıyor). */
+  consortiumsBroken?: number;
+  /** %25'i geçip %10'un altına geri itilen baskın. */
+  raidsRepelled?: number;
+  /** Süren baskının ulaştığı en yüksek eşik (0..3); baskın %10'un altına inince sıfırlanıyor. */
+  raidPeak?: number;
+  /** Teslim edilen belediye sözleşmesi. */
+  contractsDone?: number;
+  /** Oyuncunun lobi yaptığı tarafın kazandığı meclis oylaması. */
+  motionsWon?: number;
+  /** Oyuncunun kazandığı parsel ihalesi. */
+  auctionsWon?: number;
 }
 
 /** Uzaktaki şehrin kârından holding kasasına akan pay (Tur 32). */
@@ -894,6 +923,12 @@ export interface HoldingState {
   closedWins?: number;
   /** Holding hedeflerinin son basamağı — üç şehirde zafer — tamamlandığı gün (Tur 32). */
   completedDay?: number;
+  /**
+   * Kurucu şehrin kuruluş anı (Tur 41): holding'in her şehri kendi
+   * `meta.createdAtIso`sunu taşıyor, kariyer koşuyu bununla tanıyor.
+   * Yokluğu (eski kayıt) şehirlerin en erkeni.
+   */
+  foundedAtIso?: string;
 }
 
 /** Meclis önergesi — açıkken lobi toplar, oylanınca sonucu taşır. */

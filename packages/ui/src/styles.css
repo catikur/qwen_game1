@@ -5196,6 +5196,9 @@ button.icon {
 .newgame-locale {
   display: flex;
   justify-content: flex-end;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .help-locale {
@@ -5536,4 +5539,202 @@ button.icon {
   gap: 10px;
   text-align: center;
   color: var(--text);
+}
+
+/* ================================================================
+ * Kariyer (Tur 41): rozetler ve koşu geçmişi.
+ * ================================================================ */
+
+.career {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.career-stats {
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+}
+
+.career-group h3 {
+  margin: 0 0 8px;
+  font-size: 15px;
+}
+
+.career-badges {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 8px;
+}
+
+.career-badge {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--tint-1);
+}
+
+.career-badge.done {
+  border-color: var(--line-strong);
+  background: var(--tint-3);
+}
+
+.career-medal {
+  flex: none;
+  width: 34px;
+  height: 34px;
+}
+
+.career-medal-ribbon {
+  fill: var(--accent);
+}
+
+.career-medal-disc {
+  fill: var(--warn);
+  stroke: rgba(0, 0, 0, 0.18);
+  stroke-width: 0.8;
+}
+
+.career-medal-star {
+  fill: rgba(255, 255, 255, 0.85);
+}
+
+.career-badge.locked .career-medal {
+  opacity: 0.38;
+  filter: grayscale(1);
+}
+
+.career-badge-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  flex: 1;
+}
+
+.career-badge-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.career-badge-title {
+  font-family: var(--font-display);
+  font-weight: 600;
+}
+
+.career-badge-state {
+  flex: none;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.career-badge.done .career-badge-state {
+  color: var(--good);
+}
+
+.career-badge-hint,
+.career-badge-when,
+.career-badge-progress {
+  margin: 0;
+  font-size: 13px;
+}
+
+.career-badge-hint,
+.career-badge-progress {
+  color: var(--muted);
+}
+
+.career-badge-progress {
+  font-variant-numeric: tabular-nums;
+}
+
+.career-runs {
+  list-style: none;
+  margin: 0 0 6px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.career-run {
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--tint-1);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.career-run-head,
+.career-run-meta {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 12px;
+}
+
+.career-run-title {
+  font-weight: 700;
+}
+
+.career-run-worth,
+.career-run-result {
+  font-variant-numeric: tabular-nums;
+}
+
+.career-run-meta {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.career-run-result {
+  color: var(--text);
+}
+
+.career-note {
+  margin: 0;
+  font-size: 13px;
+}
+
+/* Hedefler panelinden ve kurulum ekranından giriş. */
+.career-open {
+  align-self: flex-start;
+}
+
+/* Sonuç ekranlarında bu koşunun rozetleri. */
+.career-run-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+
+.career-run-line .career-medal {
+  width: 26px;
+  height: 26px;
+}
+
+/* Kurulum ekranındaki kariyer katmanı: sayfa kaysa da ekranı kaplıyor; altında rıhtım yok. */
+.modal-backdrop.career-overlay {
+  position: fixed;
+  z-index: 70;
+}
+
+@media (max-width: 860px) {
+  .modal-backdrop.career-overlay {
+    bottom: 0;
+  }
+
+  .career-badges {
+    grid-template-columns: 1fr;
+  }
 }

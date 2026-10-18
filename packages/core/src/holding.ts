@@ -122,6 +122,17 @@ export function holdingNetWorth(state: GameState): number {
   return total;
 }
 
+/**
+ * Koşunun kuruluş anı (Tur 41): holding'de kurucu şehrinki. Eski kayıtta
+ * `foundedAtIso` yok; şehirlerin en erkeni kurucu şehir.
+ */
+export function holdingFoundedAt(state: GameState): string {
+  if (state.holding?.foundedAtIso) return state.holding.foundedAtIso;
+  let first = state.meta.createdAtIso;
+  for (const city of state.holding?.dormant ?? []) if (city.state.meta.createdAtIso < first) first = city.state.meta.createdAtIso;
+  return first;
+}
+
 export function cityCount(state: GameState): number {
   return 1 + (state.holding?.dormant.length ?? 0);
 }
@@ -226,6 +237,7 @@ export function foundCity(state: GameState, citySize: CitySizeId, amount: number
   next.importedCapital = amount;
   const holding: HoldingState = {
     foundingSeed: seed,
+    foundedAtIso: holdingFoundedAt(state),
     opened: opened + 1,
     treasury: state.holding?.treasury ?? 0,
     dormant: [...(state.holding?.dormant ?? []), toDormant(state)],

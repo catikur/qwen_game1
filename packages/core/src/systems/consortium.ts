@@ -2,6 +2,7 @@ import { CONSORTIUM, formatDecimal, formatPercent, getDifficulty } from '@capita
 import { tc } from '../i18n';
 import { pushNews } from '../news';
 import { rivalProfile } from '../profiles';
+import { noteFeat } from './feats';
 import { buyShares, controlReachable, freeFloat, sharePrice, sharesHeld, sharesOutstanding, TOTAL_SHARES } from './equity';
 import type { CompanyState, ConsortiumState, GameState } from '../types';
 
@@ -137,6 +138,8 @@ const DISSOLVE_BODY = {
 function dissolve(state: GameState, consortium: ConsortiumState, reason: DissolveReason, cashShare: number): void {
   delete state.consortium;
   state.nextConsortiumDay = state.time.day + CONSORTIUM.cooldownDays;
+  // Kariyer (Tur 41): üyelerin oyundan çıkması oyuncunun direnişi değil.
+  if (reason !== 'members') noteFeat(state, 'consortiumsBroken');
   pushNews(
     state,
     reason === 'members' ? 'neutral' : 'good',

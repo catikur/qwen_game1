@@ -6,6 +6,7 @@ import { estimateInvestment } from './market';
 import { isDistrictOpen, tilePrice } from './city';
 import type { AuctionState, GameState } from '../types';
 import { withBuildingIndex } from './buildingIndex';
+import { noteFeat } from './feats';
 
 /**
  * Parsel ihalesi.
@@ -293,6 +294,7 @@ function settle(state: GameState): void {
 
   winner.cash -= auction.bid;
   tile.ownerId = winner.id;
+  if (winner.id === state.playerCompanyId) noteFeat(state, 'auctionsWon');
   // Kentsel dönüşüm: yapı yıkılır, parsel boş olarak el değiştirir.
   const razed = tile.structureId ? STRUCTURE_BY_ID[tile.structureId]?.name ?? tc('core.auction.structure') : null;
   tile.structureId = null;

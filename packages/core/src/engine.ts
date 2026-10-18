@@ -20,6 +20,7 @@ import { recomputeNetWorth } from './systems/city';
 import { runConsortiumTick } from './systems/consortium';
 import { acceptContract, declineContract } from './systems/contracts';
 import { placeBid } from './systems/auction';
+import { noteRaidStage } from './systems/feats';
 import { sellShares } from './systems/equity';
 import {
   checkHoldingComplete,
@@ -436,6 +437,8 @@ export class GameEngine {
     this.checkOvertaking();
     this.checkLeadership();
     this.checkRaid();
+    // Kariyer (Tur 41): püskürtülen baskın.
+    if (state.companies[state.playerCompanyId]) noteRaidStage(state, raidStatus(state).stage);
     // Senaryo günün son net değeri ve devralmasıyla (Tur 39).
     runScenarioTick(state);
     runLeagueTick(state);
