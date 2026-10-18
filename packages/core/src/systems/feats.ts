@@ -8,7 +8,7 @@ import type { GameState, RunFeats } from '../types';
  * baskıncı satıp gidiyor. Sayaç olduğu yerde, anın kendisinde artıyor.
  * Simülasyon sayacı okumuyor; zar atmıyor, hiçbir şeyi değiştirmiyor.
  */
-export type FeatCounter = Exclude<keyof RunFeats, 'crisisWorth' | 'raidPeak'>;
+export type FeatCounter = Exclude<keyof RunFeats, 'crisisWorth' | 'raidPeak' | 'peakWorth'>;
 
 export function noteFeat(state: GameState, key: FeatCounter, by = 1): void {
   const feats = (state.feats ??= {});
@@ -29,4 +29,13 @@ export function noteRaidStage(state: GameState, stage: number): void {
     return;
   }
   if (peak !== (state.feats?.raidPeak ?? 0)) (state.feats ??= {}).raidPeak = peak;
+}
+
+/**
+ * Koşunun en yüksek değeri, gün sonunda. Motor bir karede birkaç gün
+ * ilerletip bir kez haber veriyor; arada eşiği geçip geri düşen değer
+ * kariyerde görünmezdi (Codex #70).
+ */
+export function notePeakWorth(state: GameState, worth: number): void {
+  if (worth > (state.feats?.peakWorth ?? 0)) (state.feats ??= {}).peakWorth = worth;
 }

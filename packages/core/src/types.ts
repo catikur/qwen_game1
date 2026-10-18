@@ -883,6 +883,8 @@ export interface RunFeats {
   motionsWon?: number;
   /** Oyuncunun kazandığı parsel ihalesi. */
   auctionsWon?: number;
+  /** Gün sonlarının en yüksek holding değeri: bir karede birkaç gün geçebiliyor. */
+  peakWorth?: number;
 }
 
 /** Uzaktaki şehrin kârından holding kasasına akan pay (Tur 32). */

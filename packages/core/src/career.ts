@@ -46,7 +46,7 @@ export interface RunFacts {
   citySize: CitySizeId;
   /** Oynanan şehrin günü. */
   day: number;
-  /** Holding'in toplam değeri (tek şehirde şirketin net değeri). */
+  /** Holding'in en yüksek toplam değeri (tek şehirde şirketin net değeri). */
   worth: number;
   cities: number;
   wins: RunWin[];
@@ -86,6 +86,7 @@ export function runFacts(state: GameState): RunFacts {
   let sponsored = 0;
   let bubbles = 0;
   let quests = 0;
+  let peak = 0;
   for (const city of cities) {
     const own = city.companies[city.playerCompanyId];
     if (city.victory) wins.push({ day: city.victory.day, citySize: city.citySize ?? 'standard' });
@@ -96,6 +97,7 @@ export function runFacts(state: GameState): RunFacts {
     bubbles += city.bubblesCaught ?? 0;
     quests += city.questsDone ?? 0;
     for (const key of COUNTERS) counters[key] += city.feats?.[key] ?? 0;
+    peak = Math.max(peak, city.feats?.peakWorth ?? 0);
   }
   const league = state.league;
   const scenario = state.scenario;
@@ -108,7 +110,8 @@ export function runFacts(state: GameState): RunFacts {
     difficulty: state.difficulty ?? 'normal',
     citySize: founder.citySize ?? 'standard',
     day: state.time.day,
-    worth: holdingNetWorth(state),
+    // Bir karede birkaç gün geçebiliyor: arada kalan tepe günün sayacından (Codex #70).
+    worth: Math.max(holdingNetWorth(state), peak),
     // Kapatılan şehir de açılmıştı: sayı kalıcı sayaçtan (Codex #70).
     cities: Math.max(cities.length, state.holding?.opened ?? 1),
     wins,
