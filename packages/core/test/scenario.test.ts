@@ -200,6 +200,19 @@ describe('senaryo modu', () => {
     assert.equal(state.time.speed, 1);
   });
 
+  test('bitiş günü karenin kalan günlerini durduruyor (geciken kare, arka plandan dönüş)', () => {
+    const engine = started('rescue');
+    const state = engine.getState();
+    getPlayer(state).cash += 100_000_000;
+    engine.dispatch({ type: 'SET_SPEED', speed: 3 });
+    const day = state.time.day;
+    // Bir karede dört günlük birikmiş zaman: ilk gün senaryo bitiyor.
+    engine.advance(60_000);
+    assert.equal(state.scenario!.finishedDay, day + 1);
+    assert.equal(state.time.day, day + 1, 'bitişten sonra gün koşulmamalı');
+    assert.equal(state.time.speed, 0);
+  });
+
   test('yıldız ham skordan; saklanan ve gösterilen skor aşağı yuvarlanıyor', () => {
     // ×1,3996 üç yıldızın ×1,4 eşiğinin altında: yuvarlanıp eşiği geçmemeli.
     const def = SCENARIO_BY_ID.crisis!;

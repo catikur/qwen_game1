@@ -3345,11 +3345,16 @@ artık yalnız bunu söylüyor.
 Kasa 4 M ₺'de beş günde bir kuran ×1,004'le sınırdaydı, 6 M ₺'de en keskin
 vekil üç yıldıza ulaşıyordu; 5 M ₺ seçildi. Yıldız eşikleri ×1,2 ve ×1,4.
 
-**Codex (#66).** Dört bulgu (ikisi aynı kuralın iki ekranı), hepsi düzeltmeden önce kalan testle:
+**Codex (#66).** Beş bulgu (ikisi aynı kuralın iki ekranı), hepsi düzeltmeden önce kalan testle:
 - *Ekranın arkasında takvim:* boşluk tuşu (`TOGGLE_PAUSE`) açılış ekranı
   açıkken senaryonun günlerini, sonuç ekranı açıkken serbest oyunu
   yürütüyordu. Motor senaryonun ekranı kapanana kadar takvimi başlatan
   komutları reddediyor; duraklatmak serbest.
+- *Karenin kalan günleri:* `advance()` bir karede dört güne kadar koşuyor;
+  senaryo bitip oyun duraklasa da döngü kalan günleri koşuyordu (geciken
+  kare, arka plandan dönüş): şehir sonuç ekranının arkasında ilerliyor ve
+  öyle kaydediliyordu. Gün oyunu duraklattıysa döngü kesiliyor (lig bitişi
+  ve zafer de aynı yoldan).
 - *Yuvarlanan skor:* yıldız üç haneye yuvarlanmış öndelikten hesaplanıyordu,
   ×1,3996 ×1,4 olup üç yıldız alıyordu. Yıldız ham skordan; saklanan ve
   gösterilen öndelik aşağı yuvarlanıyor (×1,39), eşiğin altındaki skor
@@ -3359,9 +3364,10 @@ vekil üç yıldıza ulaşıyordu; 5 M ₺ seçildi. Yıldız eşikleri ×1,2 ve
   ortasında hep son gün bitiyor) sayılmıyordu. Kimlik artık sonucu da
   taşıyor; arayüz paketinin ilk birim testi bunu sınıyor.
 
-**Doğrulama.** `pnpm test` 408/408 (yeni `scenario.test.ts`, 12 test:
+**Doğrulama.** `pnpm test` 409/409 (yeni `scenario.test.ts`, 13 test:
 kurulum, aynı şehir, Kurtarma ve kriz kurulumları, iki hedef türü, devralma,
-yıldız eşikleri, açılış ve sonuç ekranında duran takvim, aşağı yuvarlanan skor, kural
+yıldız eşikleri, açılış ve sonuç ekranında duran takvim, bitiş gününde duran
+kare, aşağı yuvarlanan skor, kural
 kilidi ve ekranlar, gündem çipi; arayüzde `scenarioBest.test.ts`, 2 test;
 içerik metinlerinin İngilizce kapsamına senaryolar girdi). `pnpm balance`
 300/300; yeni bölüm "Senaryolar: kazanılabilir ama bedava değil" (10
@@ -3453,7 +3459,7 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi) |
-| Birim testi | **408 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi de) |
+| Birim testi | **409 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi de) |
 | Denge testi | **300 kontrol, hepsi geçiyor** (22 bölüm, süreleriyle; ~12 dk) |
 | Tarayıcı testi | **413 kontrol, hepsi geçiyor**, 0 konsol hatası (~17–25 dk); duman koşusu 132 (~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + duman oynanışı |

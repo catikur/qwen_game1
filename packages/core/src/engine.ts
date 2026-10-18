@@ -391,6 +391,15 @@ export class GameEngine {
       state.time.accumulatorMs -= dayMs;
       this.runDay();
       ticks++;
+      // Gün oyunu duraklattıysa (senaryo ya da lig bitişi, zafer) karenin
+      // kalan günleri koşmuyor (Codex #66): geciken kare ya da arka plandan
+      // dönüş sonuç ekranının arkasında şehri birkaç gün ilerletiyordu.
+      // (`this.state` üzerinden okunuyor: yerel `state`in hızı yukarıda sıfır
+      // değil diye daraltıldı, ama gün onu değiştirebiliyor.)
+      if (this.state.time.speed === 0) {
+        state.time.accumulatorMs = 0;
+        break;
+      }
     }
 
     // Birikmiş fazlayı at, yoksa sekmeye dönünce oyun ileri sarar.
