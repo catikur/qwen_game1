@@ -17,6 +17,18 @@ export * from './engine';
 export * from './agenda';
 export * from './league';
 export { LEAGUE_DAYS, LEAGUE_SAMPLE_DAYS, leagueActive, leagueSeed, leagueWeekId } from './systems/league';
+export * from './scenario';
+export {
+  leadRatio,
+  scenarioActive,
+  scenarioDefOf,
+  scenarioGoalText,
+  scenarioProgress,
+  scenarioResultPending,
+  scenarioScoreText,
+  starsFor,
+} from './systems/scenario';
+export type { ScenarioProgress } from './systems/scenario';
 export {
   tilePrice,
   isPurchasable,

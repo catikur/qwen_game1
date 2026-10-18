@@ -5379,3 +5379,127 @@ button.icon {
     transform: none;
   }
 }
+
+/* --- senaryo modu (Tur 39) --- */
+/* Oyun türü üç seçenek: serbest, lig, senaryo. Dar ekranda lig (uzun ad) alta. */
+.mode-picker.game-mode {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+@media (max-width: 560px) {
+  .mode-picker.game-mode {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .mode-picker.game-mode [data-mode='league'] {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+}
+
+.scenario-pick {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 10px;
+}
+
+.scenario-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 8px;
+}
+
+.scenario-card {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 12px 12px 10px;
+  text-align: left;
+}
+
+.scenario-card.selected {
+  border-color: var(--select-ring);
+  background: var(--tile-hover);
+  box-shadow: 0 0 0 2px var(--select-ring), var(--button-shadow);
+}
+
+.scenario-card-title {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.scenario-card-tagline {
+  font-size: 12.5px;
+  line-height: 1.4;
+  color: var(--muted);
+}
+
+.scenario-card-status {
+  margin-top: auto;
+  padding-top: 4px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--warn);
+  font-weight: 700;
+}
+
+.scenario-detail .scenario-goal {
+  font-weight: 600;
+}
+
+.scenario-setup,
+.scenario-stars {
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.gameover-card .scenario-facts {
+  margin: 0;
+  padding-left: 18px;
+  text-align: left;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.gameover-card .scenario-goal {
+  font-weight: 600;
+}
+
+.gameover-card .scenario-result-stars {
+  font-size: 38px;
+  letter-spacing: 6px;
+  line-height: 1;
+  color: var(--warn);
+}
+
+.scenario-goals {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.scenario-goals .scenario-goal {
+  font-size: 13px;
+  line-height: 1.45;
+  font-weight: 600;
+}
+
+.scenario-preparing-card {
+  width: min(420px, calc(100vw - 32px));
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  text-align: center;
+  color: var(--text);
+}

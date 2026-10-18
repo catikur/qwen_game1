@@ -13,6 +13,11 @@ export const commands: Record<keyof typeof trCommands, string> = {
   'core.engine.badCategory': "It can't be assigned to this category.",
   'core.engine.emptyCompanyName': "Company name can't be empty.",
   'core.engine.leagueRunning': 'The league run is still in progress.',
+  'core.engine.scenarioRulesLocked': "Game rules can't be changed during a scenario.",
+  'core.engine.noScenario': 'There is no scenario in progress.',
+  'core.engine.scenarioBriefSeen': 'The scenario has already started.',
+  'core.engine.scenarioRunning': 'The scenario is still in progress.',
+  'core.engine.scenarioScreenPending': 'Close the scenario screen first ("Begin" or "Continue in free play").',
   'core.engine.noVictory': 'No victory yet.',
   'core.engine.cityUnchanged': "The city didn't change.",
   'core.engine.unknownCommand': 'Unknown command.',
@@ -78,6 +83,7 @@ export const commands: Record<keyof typeof trCommands, string> = {
 
   // holding.ts — new city, city switch, treasury transfer
   'core.holding.leagueNoNewCity': "You can't open a new city during a league run.",
+  'core.holding.scenarioNoNewCity': "You can't open a new city while a scenario is in progress.",
   'core.holding.lostCityNoOpen': "You can't open a new city from a lost city.",
   'core.holding.needVictory': 'Reach victory in this city to open a new one.',
   'core.holding.maxCities': 'A holding can have at most {max} cities.',
@@ -140,6 +146,7 @@ export const commands: Record<keyof typeof trCommands, string> = {
   'core.agenda.unlockWave': '{district} + {count} more open for zoning',
   'core.agenda.league': 'League {week}',
   'core.agenda.leagueDone': 'League {week} · standings',
+  'core.agenda.scenario': '{title} · {detail}',
   'core.agenda.council': 'Council · motions: {count}',
   'core.agenda.crisisWarning': 'Crisis ahead: {title}',
   'core.agenda.campaign': '{name}: {category} attack',

@@ -13,6 +13,7 @@ import { runQuestTick, settleBubbleAway } from './systems/opportunities';
 import { settleConsortiumAway } from './systems/consortium';
 import { capRemaining, playerBuy } from './systems/orders';
 import { createNewGame } from './worldgen';
+import { scenarioActive } from './systems/scenario';
 import type { CityDirective, CommandResult, DormantCity, GameState, HoldingState, RemotePayout } from './types';
 
 /**
@@ -146,6 +147,7 @@ export function openCityQuote(state: GameState): { ok: boolean; reason?: string;
   const name = cityNameAt(foundingSeed(state), opened);
   const closed = (reason: string) => ({ ok: false, reason, maxCapital: 0, name });
   if (state.league) return closed(tc('core.holding.leagueNoNewCity'));
+  if (scenarioActive(state)) return closed(tc('core.holding.scenarioNoNewCity'));
   if (state.gameOver) return closed(tc('core.holding.lostCityNoOpen'));
   if (!state.victory) return closed(tc('core.holding.needVictory'));
   if (cityCount(state) >= HOLDING.maxCities) return closed(tc('core.holding.maxCities', { max: HOLDING.maxCities }));

@@ -14,11 +14,13 @@ import {
   questTitle,
   questValue,
   questsEnabled,
+  scenarioResultPending,
   victoryNetWorth,
 } from '@capital/core';
 import type { GameState, QuestBoard, QuestState } from '@capital/core';
 import { useGame, useGameState } from './useGame';
 import { t } from './i18n';
+import { ScenarioGoalSection } from './ScenarioScreens';
 
 /** Görevin "şu an / hedef" satırı, görevin kendi biriminde. */
 function questNumbers(state: GameState, board: QuestBoard, quest: QuestState): string {
@@ -149,6 +151,7 @@ export function GoalsPanel(): ReactElement {
 
   return (
     <div className="goals">
+      <ScenarioGoalSection />
       <QuestBoardView />
       <h3 className="goals-ladder-title">{t('hud.quests.ladder')}</h3>
       <p className="muted">
@@ -218,7 +221,7 @@ export function VictoryScreen({ onNewGame }: { onNewGame: () => void }): ReactEl
   const { run, setView } = useGame();
   const state = useGameState();
   const victory = state.victory;
-  if (!victory || victory.dismissed || state.gameOver) return null;
+  if (!victory || victory.dismissed || state.gameOver || scenarioResultPending(state)) return null;
 
   const player = getPlayer(state);
   const ranking = companyRanking(state);

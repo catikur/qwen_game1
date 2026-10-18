@@ -69,6 +69,8 @@ import { loanQuote } from '../src/systems/credit';
 import { issueQuote } from '../src/systems/issuance';
 import { capRemaining, dailyBuyCap, findOrder, orderEstimate } from '../src/systems/orders';
 import { cityTrend, holdingNetWorth, raidStatus } from '../src/holding';
+import { createScenarioGame } from '../src/scenario';
+import { SCENARIO_BY_ID } from '@capital/content';
 import { buybackToLock, ownerFraction, sharesOutstanding } from '../src/systems/equity';
 import type { GameEngine as Engine } from '../src/engine';
 import type { GameState, RemotePayout } from '../src/types';
@@ -4381,6 +4383,104 @@ section('Rakip koltukları dolu kalıyor', () => {
     'sahnedeki adlar ve renkler tekrar etmiyor',
     new Set(onStage.map((c) => c.name)).size === onStage.length && new Set(onStage.map((c) => c.color)).size === onStage.length,
     onStage.map((c) => `${c.name} ${c.color}`).join(' · '),
+  );
+});
+
+section('Senaryolar: kazanılabilir ama bedava değil', () => {
+  /*
+   * Tur 39. Her senaryo vekille oynanıyor: hiçbir şey yapmayan, yalnızca
+   * savunan, yalnızca büyüyen, ikisini de yapan ve daha keskin oynayan.
+   * İddia: el sürmeyen kaybediyor, oyunun tavsiyesine uyan kazanıyor, üç
+   * yıldız vekilin en iyisinden iyi oyun istiyor. Ön tarih senaryo başına
+   * bir kez; her kol kopyasıyla.
+   */
+  interface Plan {
+    /** Vekilin kaç günde bir kurduğu (0: hiç). */
+    every: number;
+    /** Baskına karşı geri alım: 0 hiç, 1 her gün, 3 üç günde bir. */
+    defend: number;
+    /** Boşa çalışan Ar-Ge ve pazarlamayı ilk gün yık. */
+    prune?: boolean;
+  }
+  const bases = new Map<string, string>();
+  function play(id: string, plan: Plan, crises = true) {
+    if (!bases.has(id)) bases.set(id, JSON.stringify(createScenarioGame(id, { companyName: 'Senaryo AŞ' })));
+    const state = JSON.parse(bases.get(id)!) as GameState;
+    // Kriz kapalı kol (Krizin ortasında): fırsatın krizden geldiğini ölçmek için.
+    if (!crises) state.flags.crises = false;
+    const engine = new GameEngine(state);
+    engine.dispatch({ type: 'DISMISS_SCENARIO', screen: 'brief' });
+    const start = state.time.day;
+    if (plan.prune) {
+      for (const building of Object.values(state.buildings)) {
+        const role = BUILDING_BY_ID[building.defId]?.role;
+        if (building.companyId === state.playerCompanyId && (role === 'research' || role === 'marketing')) {
+          engine.dispatch({ type: 'DEMOLISH', tileId: building.tileId });
+        }
+      }
+    }
+    while (state.scenario!.finishedDay === undefined) {
+      const day = state.time.day - start;
+      if (plan.every > 0 && day % plan.every === 0) playerStrategy(engine);
+      if (plan.defend > 0 && day % plan.defend === 0) defendAgainstRaids(engine);
+      engine.runDay();
+    }
+    const run = state.scenario!;
+    return { won: run.outcome === 'won', stars: run.stars ?? 0, score: run.score ?? 0, taken: state.gameOver !== undefined, day: run.finishedDay! - start };
+  }
+  const show = (result: ReturnType<typeof play>) =>
+    `${result.won ? `kazandı ${result.stars}★` : result.taken ? 'devralındı' : 'süre doldu'} · ${result.day}. gün · skor ${result.score}`;
+
+  const rescue = SCENARIO_BY_ID.rescue!;
+  const r = {
+    passive: play('rescue', { every: 0, defend: 0 }),
+    defend: play('rescue', { every: 0, defend: 3 }),
+    grow: play('rescue', { every: 5, defend: 0 }),
+    informed: play('rescue', { every: 5, defend: 3 }),
+    prune: play('rescue', { every: 5, defend: 3, prune: true }),
+    sharp: play('rescue', { every: 3, defend: 1, prune: true }),
+    slow: play('rescue', { every: 15, defend: 3 }),
+  };
+  for (const [name, result] of Object.entries(r)) console.log(`  Kurtarma · ${name.padEnd(8)} ${show(result)}`);
+  expect(
+    'Kurtarma: el sürmeyen, yalnız savunan ve yalnız büyüyen devralınıyor',
+    [r.passive, r.defend, r.grow].every((result) => result.taken),
+    [r.passive, r.defend, r.grow].map(show).join(' | '),
+  );
+  expect('Kurtarma: savunup büyüyen hedefe ulaşıyor', r.informed.won, show(r.informed));
+  expect(
+    'Kurtarma: boşa çalışan binaları da yıkan daha erken (en az iki yıldız)',
+    r.prune.won && r.prune.stars >= 2 && r.prune.day < r.informed.day,
+    `${show(r.prune)} < ${r.informed.day}`,
+  );
+  expect(
+    'Kurtarma: üç yıldız vekilin en keskin oyunundan iyisini istiyor',
+    r.sharp.won && r.sharp.day > rescue.stars.three,
+    `${show(r.sharp)} > ${rescue.stars.three}`,
+  );
+  expect('Kurtarma: on beş günde bir kuran süreyi dolduruyor', !r.slow.won, show(r.slow));
+
+  const crisis = SCENARIO_BY_ID.crisis!;
+  const c = {
+    passive: play('crisis', { every: 0, defend: 0 }),
+    slow: play('crisis', { every: 15, defend: 3 }),
+    informed: play('crisis', { every: 5, defend: 3 }),
+    calm: play('crisis', { every: 5, defend: 3 }, false),
+    sharp: play('crisis', { every: 3, defend: 1 }),
+  };
+  for (const [name, result] of Object.entries(c)) console.log(`  Krizin ortasında · ${name.padEnd(8)} ${show(result)}`);
+  expect('Krizin ortasında: kasada bekleyen geride kalıyor', !c.passive.won && c.passive.score < 0.5, show(c.passive));
+  expect('Krizin ortasında: on beş günde bir kuran yetişemiyor', !c.slow.won, show(c.slow));
+  expect('Krizin ortasında: beş günde bir kuran en değerli şirket', c.informed.won, show(c.informed));
+  expect(
+    'Krizin ortasında: fırsat krizden geliyor (kriz kapalıyken aynı oyun daha geride)',
+    c.calm.score < c.informed.score,
+    `kriz yok ${c.calm.score} < kriz ${c.informed.score}`,
+  );
+  expect(
+    'Krizin ortasında: üç yıldız vekilin en keskin oyunundan iyisini istiyor',
+    c.sharp.won && c.sharp.score < crisis.stars.three,
+    `${show(c.sharp)} < ${crisis.stars.three}`,
   );
 });
 

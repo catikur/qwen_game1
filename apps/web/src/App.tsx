@@ -9,9 +9,10 @@ import {
   getPlayer,
   leagueWeekId,
   routeSignature,
+  startScenario,
   supplyRoutes,
 } from '@capital/core';
-import type { GameCommand } from '@capital/core';
+import type { GameCommand, GameState } from '@capital/core';
 import { BUILDING_BY_ID, GOOD_BY_ID } from '@capital/content';
 import type { CitySizeId, DifficultyId } from '@capital/content';
 import { CityRenderer } from '@capital/render-three';
@@ -37,6 +38,8 @@ import {
   NewGameScreen,
   NewsFeed,
   OpportunityBubble,
+  ScenarioBriefScreen,
+  ScenarioResultScreen,
   Toasts,
   TopBar,
   setCityDaylight,
@@ -63,7 +66,9 @@ export function App(): ReactElement {
   // Dil değişince bütün ağaç yeniden çiziliyor (bileşenler memo'lu değil);
   // oyun durumu ve sahne olduğu gibi kalıyor.
   useLocale();
-  const [phase, setPhase] = useState<'loading' | 'menu' | 'playing'>('loading');
+  const [phase, setPhase] = useState<'loading' | 'menu' | 'preparing' | 'playing'>('loading');
+  // Senaryonun ön tarihi parça parça koşuyor (Tur 39): ekran donmasın, ilerleme görünsün.
+  const [preparing, setPreparing] = useState<{ title: string; done: number; total: number } | null>(null);
   const [engine, setEngine] = useState<GameEngine | null>(null);
   const [bootMessage, setBootMessage] = useState<string | null>(null);
 
@@ -92,6 +97,27 @@ export function App(): ReactElement {
     };
   }, []);
 
+  const begin = (next: GameState) => {
+    if (engine) engine.replaceState(next);
+    else setEngine(new GameEngine(next));
+    setBootMessage(null);
+    setPreparing(null);
+    setPhase('playing');
+  };
+
+  const launchScenario = (id: string, companyName: string, ceoId: string | null) => {
+    const builder = startScenario(id, { companyName, ceoId });
+    setPreparing({ title: builder.def.title, done: 0, total: builder.totalDays });
+    setPhase('preparing');
+    const tick = () => {
+      const finished = builder.step(10);
+      setPreparing({ title: builder.def.title, done: builder.daysDone(), total: builder.totalDays });
+      if (finished) begin(builder.finish());
+      else setTimeout(tick, 0);
+    };
+    setTimeout(tick, 0);
+  };
+
   const start = (
     companyName: string,
     ceoId: string,
@@ -99,23 +125,41 @@ export function App(): ReactElement {
     league: boolean,
     citySize: CitySizeId,
     tutorial: boolean,
+    scenarioId: string | null,
   ) => {
+    if (scenarioId) {
+      launchScenario(scenarioId, companyName, ceoId);
+      return;
+    }
     const next = league
       ? createLeagueGame(leagueWeekId(), companyName, ceoId)
       : createNewGame({ companyName, ceoId, difficulty, citySize });
     if (tutorial) startTutorial(next);
-    if (engine) engine.replaceState(next);
-    else setEngine(new GameEngine(next));
-    setBootMessage(null);
-    setPhase('playing');
+    begin(next);
   };
 
   if (phase === 'loading') return <div className="loading">{t('app.boot.loading')}</div>;
+
+  if (phase === 'preparing' && preparing) {
+    const percent = Math.round((preparing.done / Math.max(1, preparing.total)) * 100);
+    return (
+      <div className="loading scenario-preparing" data-scenario-preparing={percent}>
+        <div className="scenario-preparing-card">
+          <p className="newgame-eyebrow">{t('hud.newGame.preparing')}</p>
+          <p>{t('hud.newGame.preparingBody', { title: preparing.title, days: preparing.done, percent })}</p>
+          <div className="goal-bar" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={percent} aria-label={preparing.title}>
+            <span style={{ width: `${percent}%` }} />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (phase === 'menu' || !engine) {
     return (
       <NewGameScreen
         onStart={start}
+        {...(engine?.getState().scenario ? { initialScenario: engine.getState().scenario!.id } : {})}
         {...(engine ? { onCancel: () => setPhase('playing') } : {})}
       />
     );
@@ -126,6 +170,10 @@ export function App(): ReactElement {
       engine={engine}
       bootMessage={bootMessage}
       onRequestNewGame={() => setPhase('menu')}
+      onReplayScenario={(id) => {
+        const player = getPlayer(engine.getState());
+        launchScenario(id, player.name, player.ceoId);
+      }}
     />
   );
 }
@@ -134,10 +182,12 @@ function GameRoot({
   engine,
   bootMessage,
   onRequestNewGame,
+  onReplayScenario,
 }: {
   engine: GameEngine;
   bootMessage: string | null;
   onRequestNewGame: () => void;
+  onReplayScenario: (id: string) => void;
 }): ReactElement {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rendererRef = useRef<CityRenderer | null>(null);
@@ -273,6 +323,18 @@ function GameRoot({
     }, AUTOSAVE_INTERVAL_MS);
     return () => clearInterval(timer);
   }, [engine]);
+
+  // ---- Senaryonun dönüm noktalarında hemen kayıt (Tur 39) ----
+  // Başla, bitiş ve sonuç ekranının kapanışı otomatik kaydın 30 saniyesini
+  // beklemiyor: yenilenen sayfa ön tarihe ya da bitmemiş koşuya dönmesin.
+  const scenarioRun = engine.getState().scenario;
+  const scenarioMark = scenarioRun ? `${scenarioRun.briefSeen ?? false}:${scenarioRun.finishedDay ?? ''}:${scenarioRun.resultSeen ?? false}` : null;
+  useEffect(() => {
+    if (scenarioMark === null) return;
+    void saveGame(engine.getState(), AUTOSAVE_SLOT).catch((error) => {
+      console.warn('Otomatik kayıt başarısız:', error);
+    });
+  }, [engine, scenarioMark]);
 
   // ---- Klavye kısayolları ----
   useEffect(() => {
@@ -552,6 +614,8 @@ function GameRoot({
         <GameOverScreen onNewGame={newGame} />
         <VictoryScreen onNewGame={newGame} />
         <LeagueResultScreen onNewGame={newGame} />
+        <ScenarioBriefScreen />
+        <ScenarioResultScreen onNewGame={newGame} onReplay={onReplayScenario} />
       </div>
     </GameContext.Provider>
   );

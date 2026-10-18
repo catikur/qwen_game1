@@ -105,6 +105,22 @@ export const world: Record<keyof typeof trWorld, string> = {
   'core.league.finishedTitle': 'League run over: {score}',
   'core.league.finishedBody': '{days} days are up. Your score is {score} — share the run code or submit it to the leaderboard.',
 
+  // scenario.ts, systems/scenario.ts — scenario mode (Round 39)
+  'core.scenario.startTitle': 'Scenario: {title}',
+  'core.scenario.rescueRaidTitle': '{name} is buying up your shares: {percent}%',
+  'core.scenario.rescueRaidBody':
+    'If the stake passes 50% the company is gone. Buy back your own shares or bring in investors with a share issue (stock exchange panel); a raider only goes after companies clearly smaller than itself.',
+  'core.scenario.wonTitle': '{title} complete: {stars} stars',
+  'core.scenario.wonBody': 'Result: {score}. The city is now open for free play; you can also replay the scenario from the start.',
+  'core.scenario.lostTitle': '{title}: not this time',
+  'core.scenario.lostTakeover': 'The company was taken over. The scenario can start again in the same city.',
+  'core.scenario.lostTime': "Time ran out before the goal was reached. The scenario can start again in the same city; the city is also open for free play.",
+  'core.scenario.scoreDays': '{days} days',
+  'core.scenario.scoreLead': '×{ratio}',
+  'core.scenario.progressMoney': '{value} / {target}',
+  'core.scenario.progressAhead': 'ahead ×{ratio}',
+  'core.scenario.progressBehind': '{percent}% of the leader',
+
   // events.ts — event and era endings
   'core.events.endedTitle': '{title} has ended',
   'core.events.endedBody': 'The market is returning to normal.',
