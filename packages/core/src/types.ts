@@ -931,6 +931,18 @@ export interface HoldingState {
    * Yokluğu (eski kayıt) şehirlerin en erkeni.
    */
   foundedAtIso?: string;
+  /** Kapatılan şehirlerin kariyer payı (Tur 41): şehir listeden çıkınca sayaçları kaybolmasın. */
+  closedTally?: CityTally;
+}
+
+/** Bir şehrin koşuya kattığı (Tur 41); hepsi seçime bağlı, yokluğu 0. */
+export interface CityTally {
+  acquisitions?: number;
+  ipo?: boolean;
+  sponsored?: number;
+  bubbles?: number;
+  quests?: number;
+  feats?: RunFeats;
 }
 
 /** Meclis önergesi — açıkken lobi toplar, oylanınca sonucu taşır. */

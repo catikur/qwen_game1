@@ -1,4 +1,4 @@
-import type { GameState, RunFeats } from '../types';
+import type { CityTally, GameState, RunFeats } from '../types';
 
 /**
  * Şehrin dikkate değer anlarının sayacı (Tur 41).
@@ -9,6 +9,16 @@ import type { GameState, RunFeats } from '../types';
  * Simülasyon sayacı okumuyor; zar atmıyor, hiçbir şeyi değiştirmiyor.
  */
 export type FeatCounter = Exclude<keyof RunFeats, 'crisisWorth' | 'raidPeak' | 'peakWorth'>;
+
+export const FEAT_COUNTERS: FeatCounter[] = [
+  'crisesWeathered',
+  'crisesGrown',
+  'consortiumsBroken',
+  'raidsRepelled',
+  'motionsWon',
+  'contractsDone',
+  'auctionsWon',
+];
 
 export function noteFeat(state: GameState, key: FeatCounter, by = 1): void {
   const feats = (state.feats ??= {});
@@ -38,4 +48,32 @@ export function noteRaidStage(state: GameState, stage: number): void {
  */
 export function notePeakWorth(state: GameState, worth: number): void {
   if (worth > (state.feats?.peakWorth ?? 0)) (state.feats ??= {}).peakWorth = worth;
+}
+
+/** Şehrin koşuya kattığı: kariyerin topladığı sayılar. */
+export function cityTally(state: GameState): CityTally {
+  const own = state.companies[state.playerCompanyId];
+  const feats: RunFeats = {};
+  for (const key of FEAT_COUNTERS) if (state.feats?.[key]) feats[key] = state.feats[key];
+  return {
+    acquisitions: own?.acquisitions ?? 0,
+    ipo: (own?.issues ?? 0) > 0,
+    sponsored: (state.cityProjects ?? []).filter((project) => project.sponsorId === state.playerCompanyId).length,
+    bubbles: state.bubblesCaught ?? 0,
+    quests: state.questsDone ?? 0,
+    feats,
+  };
+}
+
+export function addTally(into: CityTally, add: CityTally): CityTally {
+  const feats: RunFeats = { ...into.feats };
+  for (const key of FEAT_COUNTERS) if (add.feats?.[key]) feats[key] = (feats[key] ?? 0) + add.feats[key]!;
+  return {
+    acquisitions: (into.acquisitions ?? 0) + (add.acquisitions ?? 0),
+    ipo: Boolean(into.ipo || add.ipo),
+    sponsored: (into.sponsored ?? 0) + (add.sponsored ?? 0),
+    bubbles: (into.bubbles ?? 0) + (add.bubbles ?? 0),
+    quests: (into.quests ?? 0) + (add.quests ?? 0),
+    feats,
+  };
 }

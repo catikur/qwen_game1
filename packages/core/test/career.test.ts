@@ -274,6 +274,33 @@ describe('kariyer: koşunun özeti', () => {
     assert.equal(runKeyOf(engine.getState()), key, 'kurucu şehir kapandıktan sonra da aynı koşu');
   });
 
+  test('kapatılan şehrin katkısı koşuda kalıyor, sonraki ilerleme üstüne ekleniyor (Codex #70)', () => {
+    const engine = played(30, 6);
+    let state = engine.getState();
+    state.victory = { day: 420, kind: 'tycoon', dismissed: true };
+    player(state).cash = 30_000_000;
+    recomputeNetWorth(state);
+    assert.ok(engine.dispatch({ type: 'OPEN_CITY', citySize: 'standard', capital: 8_000_000 }).ok);
+    state = engine.getState();
+    const lost = state.holding!.dormant[0]!.state;
+    (lost.feats ??= {}).contractsDone = 4;
+    lost.companies[lost.playerCompanyId]!.acquisitions = 2;
+    lost.companies[lost.playerCompanyId]!.issues = 1;
+    lost.bubblesCaught = (lost.bubblesCaught ?? 0) + 3;
+    const before = runFacts(state);
+    lost.gameOver = { day: 400, byCompanyId: rivals(lost)[0]!.id };
+    assert.ok(engine.dispatch({ type: 'CLOSE_CITY', index: 0 }).ok);
+    state = engine.getState();
+    assert.equal(state.holding!.dormant.length, 0);
+    (state.feats ??= {}).contractsDone = (state.feats.contractsDone ?? 0) + 1;
+    const after = runFacts(state);
+    assert.equal(after.counters.contractsDone, before.counters.contractsDone + 1, '4 + 1');
+    assert.deepEqual(
+      [after.acquisitions, after.ipo, after.bubbles, after.quests],
+      [before.acquisitions, true, before.bubbles, before.quests],
+    );
+  });
+
   test('lig ve senaryo kendi kipiyle; senaryonun sayaçları devir gününden', () => {
     assert.equal(runFacts(createLeagueGame('2026-W40', 'Lig AŞ', null)).mode, 'league');
     for (const id of ['crisis', 'holding']) {

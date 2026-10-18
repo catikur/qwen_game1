@@ -3733,7 +3733,10 @@ Hepsi bu cihazda saklanıyor; lig ve senaryo tabloları değişmiyor.
   kalıyor. Kaybedilen şehir kapatılmadan önce kuruluş anı holding'e
   yazılıyor: eski kayıtta kurucu şehir kapanınca kimlik değişip koşu iki
   kez sayılırdı (Codex #70). Şehir sayısı kalıcı `holding.opened`dan
-  geliyor; kapatılan şehir de açılmıştı.
+  geliyor; kapatılan şehir de açılmıştı. Kapatılan şehrin sayaçları
+  (devralma, halka arz, sponsorluk, balon, görev, şehir sayaçları)
+  `holding.closedTally`de birikiyor: şehir listeden çıkınca koşunun
+  toplamı düşmüyor, sonraki ilerleme üstüne ekleniyor (Codex #70).
 - *Kurallar* (`achievementStatus`): saf işlev, düğümde test ediliyor;
   koşular arası depo arayüzde.
 
@@ -3774,9 +3777,9 @@ Hepsi bu cihazda saklanıyor; lig ve senaryo tabloları değişmiyor.
   kazanılan rozetleri yazıyor.
 - *Yardım:* "Koşuların ötesine bak" adımı eklendi.
 
-**Doğrulama.** `pnpm test` 446/446; 25 yeni test.
+**Doğrulama.** `pnpm test` 447/447; 26 yeni test.
 
-`packages/core/test/career.test.ts` (16 test):
+`packages/core/test/career.test.ts` (17 test):
 - katalog tutarlılığı;
 - her sayacın kendi anında artması: kriz, konsorsiyum, sözleşme, ihale,
   meclis, baskın;
@@ -3785,8 +3788,8 @@ Hepsi bu cihazda saklanıyor; lig ve senaryo tabloları değişmiyor.
 - eski holding kaydında kurucu şehir kapanınca kimliğin değişmemesi,
   duraklatılmış oyunda komutla biten baskının hemen sayılması, uzaktaki
   şehirde püskürtülen baskının sayılması, kapatılan şehrin açılmış
-  sayılması, bir karenin arasında kalan en yüksek değerin sayılması
-  (beşi de düzeltmeden önce kaldı);
+  sayılması ve sayaçlarının koşuda kalması, bir karenin arasında kalan en
+  yüksek değerin sayılması (altısı da düzeltmeden önce kaldı);
 - zafer süzgeçleri, koşu ve kariyer kapsamı, senaryo yıldızı, farklı CEO.
 
 `packages/ui/test/career.test.ts` (9 test):
@@ -3898,7 +3901,7 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi) |
-| Birim testi | **446 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer de) |
+| Birim testi | **447 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer de) |
 | Denge testi | **324 kontrol, hepsi geçiyor** (24 bölüm, süreleriyle; ~15 dk) |
 | Tarayıcı testi | **446 kontrol, hepsi geçiyor**, 0 konsol hatası (~25–40 dk); duman koşusu 132 (~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + duman oynanışı |

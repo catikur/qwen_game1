@@ -1,7 +1,8 @@
 import { ACHIEVEMENTS, SCENARIOS } from '@capital/content';
 import type { AchievementDef, AchievementFeat, AchievementTotal, CitySizeId, DifficultyId } from '@capital/content';
 import { holdingFoundedAt, holdingNetWorth } from './holding';
-import type { GameState } from './types';
+import { FEAT_COUNTERS, addTally, cityTally } from './systems/feats';
+import type { CityTally, GameState } from './types';
 
 /**
  * Kariyer (Tur 41): koşunun özeti ve rozet kuralları.
@@ -17,15 +18,7 @@ export type RunMode = 'free' | 'league' | 'scenario';
 /** Koşu sayaçları: rozetlerin okuduğu `RunFeats` alanları ve toplamların kaynağı. */
 export type RunCounter = AchievementFeat | 'motionsWon' | 'contractsDone' | 'auctionsWon';
 
-const COUNTERS: RunCounter[] = [
-  'crisesWeathered',
-  'crisesGrown',
-  'consortiumsBroken',
-  'raidsRepelled',
-  'motionsWon',
-  'contractsDone',
-  'auctionsWon',
-];
+const COUNTERS: readonly RunCounter[] = FEAT_COUNTERS;
 
 export interface RunWin {
   /** Zaferin günü, şehrin kendi takviminde. */
@@ -78,27 +71,19 @@ export function runFacts(state: GameState): RunFacts {
   const cities = citiesOf(state);
   const founder = cities.find((city) => city.meta.createdAtIso === holdingFoundedAt(state)) ?? state;
   const player = state.companies[state.playerCompanyId];
-  const counters = Object.fromEntries(COUNTERS.map((key) => [key, 0])) as Record<RunCounter, number>;
   const wins: RunWin[] = [];
   let monopoly = false;
-  let acquisitions = 0;
-  let ipo = false;
-  let sponsored = 0;
-  let bubbles = 0;
-  let quests = 0;
   let peak = 0;
+  // Kapatılan şehirlerin payı holding'de duruyor (Codex #70).
+  let tally: CityTally = state.holding?.closedTally ?? {};
   for (const city of cities) {
     const own = city.companies[city.playerCompanyId];
     if (city.victory) wins.push({ day: city.victory.day, citySize: city.citySize ?? 'standard' });
     if (!city.gameOver && own && !Object.values(city.companies).some((company) => !company.isPlayer)) monopoly = true;
-    acquisitions += own?.acquisitions ?? 0;
-    if ((own?.issues ?? 0) > 0) ipo = true;
-    sponsored += (city.cityProjects ?? []).filter((project) => project.sponsorId === city.playerCompanyId).length;
-    bubbles += city.bubblesCaught ?? 0;
-    quests += city.questsDone ?? 0;
-    for (const key of COUNTERS) counters[key] += city.feats?.[key] ?? 0;
+    tally = addTally(tally, cityTally(city));
     peak = Math.max(peak, city.feats?.peakWorth ?? 0);
   }
+  const counters = Object.fromEntries(COUNTERS.map((key) => [key, tally.feats?.[key] ?? 0])) as Record<RunCounter, number>;
   const league = state.league;
   const scenario = state.scenario;
   return {
@@ -118,11 +103,11 @@ export function runFacts(state: GameState): RunFacts {
     closedWins: state.holding?.closedWins ?? 0,
     holdingComplete: state.holding?.completedDay !== undefined,
     monopoly,
-    acquisitions,
-    ipo,
-    sponsored,
-    bubbles,
-    quests,
+    acquisitions: tally.acquisitions ?? 0,
+    ipo: Boolean(tally.ipo),
+    sponsored: tally.sponsored ?? 0,
+    bubbles: tally.bubbles ?? 0,
+    quests: tally.quests ?? 0,
     counters,
     lost: Boolean(state.gameOver),
     ...(league ? { league: league.outcome ?? 'playing' } : {}),

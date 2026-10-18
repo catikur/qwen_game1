@@ -11,7 +11,7 @@ import { respondUnion } from './systems/labor';
 import { settleCardAway } from './systems/cards';
 import { runQuestTick, settleBubbleAway } from './systems/opportunities';
 import { settleConsortiumAway } from './systems/consortium';
-import { noteRaidStage } from './systems/feats';
+import { addTally, cityTally, noteRaidStage } from './systems/feats';
 import { capRemaining, playerBuy } from './systems/orders';
 import { createNewGame } from './worldgen';
 import { scenarioActive, shiftScenario } from './systems/scenario';
@@ -343,6 +343,8 @@ export function closeCity(state: GameState, index: number): CommandResult {
   // Kariyer (Tur 41): eski kayıtta kuruluş anı şehirlerin en erkeninden okunuyor;
   // kurucu şehir kapanmadan yazılmazsa koşunun kimliği değişirdi (Codex #70).
   holding.foundedAtIso ??= holdingFoundedAt(state);
+  // Şehrin sayaçları da: kapatılan şehirden sonraki ilerleme üstüne eklensin (Codex #70).
+  holding.closedTally = addTally(holding.closedTally ?? {}, cityTally(city.state));
   holding.dormant = holding.dormant.filter((_, i) => i !== index);
   return { ok: true };
 }
