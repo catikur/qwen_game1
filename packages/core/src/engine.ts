@@ -161,6 +161,10 @@ export class GameEngine {
         const city = this.state.holding?.dormant[command.index]?.state;
         if (city) evaluateCommandQuests(city);
       }
+      // Kariyer (Tur 41): duraklatılmış oyunda karşı devralma baskını hemen bitirebiliyor (Codex #70).
+      if (this.state.companies[this.state.playerCompanyId] && !this.state.gameOver) {
+        noteRaidStage(this.state, raidStatus(this.state).stage);
+      }
       // Tekrar doğrulaması bu günlükten oynatıyor (league.ts).
       if (league && isLoggable(command)) {
         (this.state.commandLog ??= []).push([day, JSON.parse(JSON.stringify(command)) as GameCommand]);

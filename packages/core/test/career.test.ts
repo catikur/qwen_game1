@@ -167,6 +167,28 @@ describe('kariyer: koşu sayaçları', () => {
   });
 });
 
+describe('kariyer: aynı gün', () => {
+  test('baskın: duraklatılmış oyunda komutla bitince de hemen sayılıyor (Codex #70)', () => {
+    const engine = played(60);
+    const state = engine.getState();
+    const raider = rivals(state)[0]!;
+    raider.shares[state.playerCompanyId] = 3_000;
+    engine.runDay();
+    assert.ok((state.feats?.raidPeak ?? 0) >= 2);
+    // Karşı devralma baskıncıyı yuttu (payı oyuncuya geçti): gün ilerlemeden başarılı bir komut.
+    raider.shares[state.playerCompanyId] = 0;
+    assert.ok(engine.dispatch({ type: 'SET_SPEED', speed: 0 }).ok);
+    assert.equal(state.feats?.raidsRepelled, 1);
+  });
+
+  test('kapatılan şehir de açılmış sayılıyor (Codex #70)', () => {
+    const state = played(10, 6).getState();
+    state.holding = { foundingSeed: state.meta.seed, opened: 2, treasury: 0, dormant: [], closedWins: 0 };
+    assert.equal(runFacts(state).cities, 2);
+    assert.equal(runValue(ACHIEVEMENT_BY_ID.second_city!, runFacts(state)), 2);
+  });
+});
+
 describe('kariyer: koşunun özeti', () => {
   test('serbest oyun, tekel, holding: kimlik şehirden şehre aynı', () => {
     const engine = played(30, 6);

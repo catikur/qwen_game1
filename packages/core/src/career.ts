@@ -109,7 +109,8 @@ export function runFacts(state: GameState): RunFacts {
     citySize: founder.citySize ?? 'standard',
     day: state.time.day,
     worth: holdingNetWorth(state),
-    cities: cities.length,
+    // Kapatılan şehir de açılmıştı: sayı kalıcı sayaçtan (Codex #70).
+    cities: Math.max(cities.length, state.holding?.opened ?? 1),
     wins,
     closedWins: state.holding?.closedWins ?? 0,
     holdingComplete: state.holding?.completedDay !== undefined,

@@ -3718,7 +3718,9 @@ Hepsi bu cihazda saklanıyor; lig ve senaryo tabloları değişmiyor.
   - kriz: oyuncu ayaktayken biten ve başladığı günden değerli biten;
   - konsorsiyum: oyuncunun direnişiyle dağılan (üyeleri oyundan çıkan
     sayılmıyor);
-  - baskın: %25'i geçip %10'un altına itilen (karşı devralma dahil);
+  - baskın: %25'i geçip %10'un altına itilen (karşı devralma dahil); gün
+    sonunda ve başarılı her komuttan sonra bakılıyor, duraklatılmış oyunda
+    da hemen sayılıyor (Codex #70);
   - teslim edilen sözleşme, oyuncunun lobi yaptığı tarafın kazandığı
     oylama, kazanılan ihale.
 
@@ -3729,7 +3731,8 @@ Hepsi bu cihazda saklanıyor; lig ve senaryo tabloları değişmiyor.
   şehirlerin en erkeni alınıyor. Şehir açılınca ya da değişince koşu aynı
   kalıyor. Kaybedilen şehir kapatılmadan önce kuruluş anı holding'e
   yazılıyor: eski kayıtta kurucu şehir kapanınca kimlik değişip koşu iki
-  kez sayılırdı (Codex #70).
+  kez sayılırdı (Codex #70). Şehir sayısı kalıcı `holding.opened`dan
+  geliyor; kapatılan şehir de açılmıştı.
 - *Kurallar* (`achievementStatus`): saf işlev, düğümde test ediliyor;
   koşular arası depo arayüzde.
 
@@ -3766,16 +3769,17 @@ Hepsi bu cihazda saklanıyor; lig ve senaryo tabloları değişmiyor.
   kazanılan rozetleri yazıyor.
 - *Yardım:* "Koşuların ötesine bak" adımı eklendi.
 
-**Doğrulama.** `pnpm test` 441/441; 20 yeni test.
+**Doğrulama.** `pnpm test` 443/443; 22 yeni test.
 
-`packages/core/test/career.test.ts` (12 test):
+`packages/core/test/career.test.ts` (14 test):
 - katalog tutarlılığı;
 - her sayacın kendi anında artması: kriz, konsorsiyum, sözleşme, ihale,
   meclis, baskın;
 - holding'de koşu kimliği, lig ve senaryo kipi, senaryonun ön tarihinin
   sayılmaması;
-- eski holding kaydında kurucu şehir kapanınca kimliğin değişmemesi
-  (düzeltmeden önce kaldı);
+- eski holding kaydında kurucu şehir kapanınca kimliğin değişmemesi,
+  duraklatılmış oyunda komutla biten baskının hemen sayılması, kapatılan
+  şehrin açılmış sayılması (üçü de düzeltmeden önce kaldı);
 - zafer süzgeçleri, koşu ve kariyer kapsamı, senaryo yıldızı, farklı CEO.
 
 `packages/ui/test/career.test.ts` (8 test):
@@ -3886,7 +3890,7 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi) |
-| Birim testi | **441 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer de) |
+| Birim testi | **443 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer de) |
 | Denge testi | **324 kontrol, hepsi geçiyor** (24 bölüm, süreleriyle; ~15 dk) |
 | Tarayıcı testi | **446 kontrol, hepsi geçiyor**, 0 konsol hatası (~25–40 dk); duman koşusu 132 (~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + duman oynanışı |
