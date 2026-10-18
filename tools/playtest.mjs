@@ -3611,8 +3611,29 @@ async function finish(browser, consoleErrors) {
         if (m.type() === 'error') careerErrors.push(m.text());
       });
     };
+    /*
+     * Bildirimler 3,6 sn yaşıyor; oyun yeni açılmışken yazılımsal GPU ana
+     * iş parçacığını tutunca yoklama onu kaçırabiliyordu. Sayfaya eklenen
+     * her bildirim bir günlüğe yazılıyor, kontrol günlüğe bakıyor.
+     */
+    const toastLog = () => {
+      window.__toastLog = [];
+      new MutationObserver((records) => {
+        for (const record of records) {
+          for (const node of record.addedNodes) {
+            if (node.nodeType === 1 && node.classList.contains('toast')) window.__toastLog.push(node.textContent);
+          }
+        }
+      }).observe(document, { childList: true, subtree: true });
+    };
+    const toastSeen = (page, text) =>
+      page
+        .waitForFunction((t) => window.__toastLog?.find((line) => line.includes(t)), text, { timeout: 8000 })
+        .then((handle) => handle.jsonValue())
+        .catch(() => '');
     const ctx = await browser.newContext({ viewport: { width: 1280, height: 860 } });
     await ctx.addInitScript(veteran, TUTORIAL_KEY);
+    await ctx.addInitScript(toastLog);
     const cp = await ctx.newPage();
     watch(cp);
     await cp.goto('http://127.0.0.1:8811/');
@@ -3640,14 +3661,22 @@ async function finish(browser, consoleErrors) {
       c.engine.runDay();
       c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
     });
-    const toastText = await cp
-      .waitForSelector('.toast:has-text("İlk devralma")', { timeout: 5000 })
-      .then((el) => el.textContent())
-      .catch(() => '');
+    const toastText = await toastSeen(cp, 'İlk devralma');
     const stored = await cp.evaluate(() => JSON.parse(localStorage.getItem('capitalforge.career.v1') ?? '{}'));
     check('Rozet açılınca bildirim çıkıyor ve hemen cihaza yazılıyor',
       (toastText ?? '').includes('Rozet kazandın') && Boolean(stored.unlocked?.first_takeover) && stored.runs?.length === 1,
       `${toastText} · ${Object.keys(stored.unlocked ?? {}).join(',')}`);
+
+    // Duraklatılmış oyunda aynı gün: halka arz günü değiştirmiyor, rozet yine hemen (Codex #70).
+    await cp.evaluate(() => {
+      const c = window.__capital;
+      const s = c.getState();
+      s.companies[s.playerCompanyId].issues = 1;
+      c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+    });
+    const sameDay = await toastSeen(cp, 'Borsada');
+    const dayNow = await cp.evaluate(() => window.__capital.getState().time.day);
+    check('Duraklatılmış oyunda aynı gün açılan rozet de hemen bildiriliyor', (sameDay ?? '').includes('Borsada') && dayNow === 1, `${sameDay} · gün ${dayNow}`);
 
     await cp.locator('.goal-chip').first().click();
     const goalsButton = (await cp.locator('.goals [data-career-open]').textContent()) ?? '';
@@ -3658,7 +3687,7 @@ async function finish(browser, consoleErrors) {
       return { done: el?.getAttribute('data-done'), when: el?.querySelector('.career-badge-when')?.textContent ?? '', runs: document.querySelectorAll('.career-run').length };
     });
     check('Hedefler panelinden Kariyer açılıyor; kazanılan rozet, açıldığı gün ve koşu satırı',
-      goalsButton.includes('1/26') && badge.done === 'true' && badge.when.includes('1. gün') && badge.runs === 1, `${goalsButton} · ${JSON.stringify(badge)}`);
+      goalsButton.includes('2/26') && badge.done === 'true' && badge.when.includes('1. gün') && badge.runs === 1, `${goalsButton} · ${JSON.stringify(badge)}`);
     await cp.locator('.modal-head button.icon').click();
 
     // Zafer: ekran bu koşuda kazanılan rozetleri yazıyor (zaferin kendisi dahil).

@@ -33,6 +33,13 @@ export interface UnlockRecord {
   day?: number;
 }
 
+/** Budanan bir koşunun toplamlara ve özet sayılara giren katkısı. */
+interface FoldedRun {
+  totals: CareerTotals;
+  victorious: boolean;
+  worth: number;
+}
+
 /** Budanan koşulardan kalan: toplamlar, zafer CEO'ları ve özet sayılar. */
 export interface CareerArchive {
   totals: Partial<CareerTotals>;
@@ -40,6 +47,12 @@ export interface CareerArchive {
   runs: number;
   victories: number;
   bestWorth: number;
+  /**
+   * Budanan koşuların anahtarı ve katkısı (Codex #70): o koşunun kaydı
+   * yeniden yüklenirse katkısı arşivden düşülüp koşu listeye geri dönüyor;
+   * yoksa yeni koşu sanılıp iki kez sayılırdı.
+   */
+  folded?: Record<string, FoldedRun>;
 }
 
 interface CareerFile {
@@ -142,12 +155,50 @@ function fold(archive: CareerArchive | undefined, run: CareerRun): CareerArchive
   for (const key of Object.keys(own) as (keyof CareerTotals)[]) totals[key] = (totals[key] ?? 0) + own[key];
   const ceos = new Set(base.victoryCeos);
   if (isVictorious(run) && run.ceoId) ceos.add(run.ceoId);
+  const worth = run.mode === 'scenario' ? 0 : run.worth;
   return {
     totals,
     victoryCeos: [...ceos],
     runs: base.runs + 1,
     victories: base.victories + (isVictorious(run) ? 1 : 0),
-    bestWorth: Math.max(base.bestWorth, run.mode === 'scenario' ? 0 : run.worth),
+    bestWorth: Math.max(base.bestWorth, worth),
+    folded: { ...base.folded, [run.key]: { totals: own, victorious: isVictorious(run), worth } },
+  };
+}
+
+/**
+ * Budanmış koşu geri geldi: katkısı arşivden düşülüyor. En yüksek değer ve
+ * zafer CEO'ları birleşim gibi davranıyor (aynı koşu iki kez artırmıyor),
+ * onlara dokunulmuyor.
+ */
+function unfold(archive: CareerArchive, key: string): { archive: CareerArchive; folded: FoldedRun } | null {
+  const folded = archive.folded?.[key];
+  if (!folded) return null;
+  const totals = { ...archive.totals };
+  for (const name of Object.keys(folded.totals) as (keyof CareerTotals)[]) totals[name] = (totals[name] ?? 0) - folded.totals[name];
+  const rest = { ...archive.folded };
+  delete rest[key];
+  return {
+    archive: { ...archive, totals, runs: archive.runs - 1, victories: archive.victories - (folded.victorious ? 1 : 0), folded: rest },
+    folded,
+  };
+}
+
+/** Geri gelen koşu, budanmadan önceki toplamlarının altına düşmesin. */
+function withFolded(run: CareerRun, folded: FoldedRun): CareerRun {
+  const max = (a: number, b: number) => Math.max(a, b);
+  return {
+    ...run,
+    worth: max(run.worth, folded.worth),
+    bubbles: max(run.bubbles, folded.totals.bubbles),
+    quests: max(run.quests, folded.totals.quests),
+    counters: {
+      ...run.counters,
+      motionsWon: max(run.counters.motionsWon, folded.totals.motionsWon),
+      contractsDone: max(run.counters.contractsDone, folded.totals.contractsDone),
+      auctionsWon: max(run.counters.auctionsWon, folded.totals.auctionsWon),
+    },
+    ...(folded.totals.leagueRuns > 0 ? { league: 'finished' as const } : {}),
   };
 }
 
@@ -188,9 +239,14 @@ export function observeCareer(state: GameState, nowIso = new Date().toISOString(
   const facts = runFacts(state);
   const index = file.runs.findIndex((run) => run.key === facts.key);
   const previous = index >= 0 ? file.runs[index] : undefined;
-  const merged = mergeRun(previous, facts, nowIso);
-  const runs = [merged, ...file.runs.filter((_, i) => i !== index)];
   let archived = file.archived;
+  let merged = mergeRun(previous, facts, nowIso);
+  const back = index < 0 && archived ? unfold(archived, facts.key) : null;
+  if (back) {
+    archived = back.archive;
+    merged = withFolded(merged, back.folded);
+  }
+  const runs = [merged, ...file.runs.filter((_, i) => i !== index)];
   while (runs.length > MAX_CAREER_RUNS) archived = fold(archived, runs.pop()!);
   const next: CareerFile = { version: 1, runs, unlocked: { ...file.unlocked }, ...(archived ? { archived } : {}) };
   const opened = unlock(next, achievementStatuses(inputOf(next)), nowIso, facts);

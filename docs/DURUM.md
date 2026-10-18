@@ -3733,7 +3733,10 @@ Hepsi bu cihazda saklanıyor; lig ve senaryo tabloları değişmiyor.
 
 **Arayüz.**
 - *Depo* (`packages/ui/src/career.ts`, `capitalforge.career.v1`):
-  - Son 100 koşu saklanıyor; daha eskisi toplamlara katlanıyor.
+  - Son 100 koşu saklanıyor; daha eskisi toplamlara katlanıyor. Katlanan
+    koşunun anahtarı ve katkısı arşivde kalıyor. O koşunun kaydı yeniden
+    yüklenirse katkısı arşivden düşülüyor ve koşu listeye geri dönüyor;
+    yoksa yeni koşu sanılıp iki kez sayılırdı (Codex #70).
   - Aynı koşu yeniden görülünce sayaçlar ve değer en yükseğinde kalıyor:
     eski bir kayıttan dönmek kazanılanı geri almıyor.
   - Açılan rozet kalıcı; açıldığı an, şirket ve gün saklanıyor.
@@ -3741,9 +3744,12 @@ Hepsi bu cihazda saklanıyor; lig ve senaryo tabloları değişmiyor.
     dışında en fazla 10 sn'de bir.
 - *İzleyici* (`useCareerWatch`): motor gün başı haber vermiyor; durumu
   yerinde değiştiriyor ve bir karede birkaç gün ilerleyebiliyor. İzleyici
-  koşunun imzası değişince koşuyu kaydediyor: gün, zafer, oyun sonu,
-  senaryo ve lig bitişi, şehir sayısı. Açılan rozet bildirim olarak düşüyor;
-  ikiden fazlası tek bildirimde.
+  her motor sürümünde koşuyu kaydediyor.
+  - İlk sürüm yalnızca gün ya da sonuç değişince bakıyordu. Duraklatılmış
+    oyunda aynı gün verilen komut (halka arz, balon, görev) rozeti ertesi
+    güne bırakıyordu (Codex #70).
+  - Gözlem ucuz; depoya yazma seyreltiliyor.
+  - Açılan rozet bildirim olarak düşüyor; ikiden fazlası tek bildirimde.
 - *Kariyer sayfası:*
   - özet: rozet, senaryo yıldızı, zafer, en yüksek değer, koşu;
   - gruplara göre rozetler: kazanılanın tarihi, şirketi ve günü,
@@ -3756,7 +3762,7 @@ Hepsi bu cihazda saklanıyor; lig ve senaryo tabloları değişmiyor.
   kazanılan rozetleri yazıyor.
 - *Yardım:* "Koşuların ötesine bak" adımı eklendi.
 
-**Doğrulama.** `pnpm test` 438/438; 17 yeni test.
+**Doğrulama.** `pnpm test` 439/439; 18 yeni test.
 
 `packages/core/test/career.test.ts` (11 test):
 - katalog tutarlılığı;
@@ -3766,19 +3772,23 @@ Hepsi bu cihazda saklanıyor; lig ve senaryo tabloları değişmiyor.
   sayılmaması;
 - zafer süzgeçleri, koşu ve kariyer kapsamı, senaryo yıldızı, farklı CEO.
 
-`packages/ui/test/career.test.ts` (6 test):
+`packages/ui/test/career.test.ts` (7 test):
 - rozetin bir kez açılması;
 - eski kayıttan dönünce kazanılanın kalması;
 - koşuların toplamı;
 - senaryonun büyüme rozetine sayılmaması;
 - kurulum ekranında senaryo yıldızı;
-- budanan koşunun toplamlara katlanması.
+- budanan koşunun toplamlara katlanması;
+- budanan koşunun kaydı geri gelince iki kez sayılmaması (düzeltmeden önce
+  kaldı).
 
 İçerik çevirileri testi rozetleri de kapsıyor.
 
-Tarayıcı testine "Kariyer" bölümü eklendi (8 kontrol):
+Tarayıcı testine "Kariyer" bölümü eklendi (9 kontrol):
 - kurulumda Kariyer: 26 rozet, boş geçmiş;
 - rozet açılınca bildirim ve depoya hemen yazılması;
+- duraklatılmış oyunda aynı gün açılan rozetin de hemen bildirilmesi
+  (düzeltmeden önce kaldı);
 - Hedefler panelinden Kariyer, kazanılan rozetin günü ve koşu satırı;
 - zafer ekranında bu koşunun rozetleri;
 - sayfa yenilenince kalıcılık;
@@ -3786,7 +3796,7 @@ Tarayıcı testine "Kariyer" bölümü eklendi (8 kontrol):
 - iPhone SE'de ulaşılabilirlik ve yana taşmama;
 - konsol.
 
-Tarayıcı tam koşu 445/445, konsol hatası yok (~25 dk); "Kariyer" bölümü ~30 sn.
+Tarayıcı tam koşu 446/446, konsol hatası yok (~26 dk); "Kariyer" bölümü ~30 sn.
 
 
 ---
@@ -3870,9 +3880,9 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi) |
-| Birim testi | **438 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer de) |
+| Birim testi | **439 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer de) |
 | Denge testi | **324 kontrol, hepsi geçiyor** (24 bölüm, süreleriyle; ~15 dk) |
-| Tarayıcı testi | **445 kontrol, hepsi geçiyor**, 0 konsol hatası (~25–40 dk); duman koşusu 132 (~5 dk, rehber dahil) |
+| Tarayıcı testi | **446 kontrol, hepsi geçiyor**, 0 konsol hatası (~25–40 dk); duman koşusu 132 (~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + duman oynanışı |
 | Kapsam | 35 bina · 25 ürün · 7 kategori · 8 rakip profili · 10 CEO · 22 olay (11 şehir + 11 sektör) · 2 kriz · 12 karar kartı · 70 rakip sözü · 5 fırsat balonu · 8 görev türü · 4 mevsim · 9 moda ürünü · 17 şehir yapısı (6 siluet) · 6 şehir projesi · 7 senaryo · 26 rozet |
 

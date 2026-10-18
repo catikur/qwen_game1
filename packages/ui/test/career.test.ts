@@ -91,4 +91,21 @@ describe('kariyer deposu', () => {
     last.bubblesCaught = 1;
     assert.deepEqual(ids(observeCareer(last)), ['bubble_hunter'], '49 + 1: budanan koşunun balonları sayılıyor');
   });
+
+  test('budanan koşunun kaydı geri gelirse iki kez sayılmıyor (Codex #70)', () => {
+    const old = game(1);
+    old.bubblesCaught = 30;
+    observeCareer(old);
+    for (let i = 0; i < MAX_CAREER_RUNS; i++) observeCareer(game(200 + i));
+    assert.equal(careerSummary().runCount, MAX_CAREER_RUNS + 1);
+    // Eski kaydın yüklendiği gün: aynı koşu, aynı 30 balon.
+    assert.deepEqual(observeCareer(old), [], 'balonlar ikinci kez sayılıp rozet açmadı');
+    const summary = careerSummary();
+    assert.equal(summary.runCount, MAX_CAREER_RUNS + 1, 'koşu sayısı aynı');
+    assert.equal(summary.statuses.find((s) => s.def.id === 'bubble_hunter')!.value, 30);
+    assert.equal(summary.runs[0]!.bubbles, 30, 'geri gelen koşu listede, budanmadan önceki değeriyle');
+    const next = game(999);
+    next.bubblesCaught = 20;
+    assert.deepEqual(ids(observeCareer(next)), ['bubble_hunter'], '30 + 20');
+  });
 });
