@@ -3742,9 +3742,10 @@ Hepsi bu cihazda saklanıyor; lig ve senaryo tabloları değişmiyor.
   - Son 100 koşu saklanıyor; daha eskisi toplamlara katlanıyor. Katlanan
     koşunun anahtarı ve katkısı arşivde kalıyor. O koşunun kaydı yeniden
     yüklenirse katkısı arşivden düşülüyor ve koşu listeye geri dönüyor;
-    yoksa yeni koşu sanılıp iki kez sayılırdı (Codex #70). Katkı koşunun
-    zaferlerini de taşıyor: zaferden önceki bir kayıtla geri gelen koşu
-    zaferini kaybetmiyor.
+    yoksa yeni koşu sanılıp iki kez sayılırdı (Codex #70). Arşiv koşunun
+    bütün özetini tutuyor; geri gelen koşu onunla birleşiyor. Zaferden,
+    devralmadan ya da halka arzdan önceki bir kayıt kazanılanı geri
+    almıyor (Codex #70).
   - Aynı koşu yeniden görülünce sayaçlar ve değer en yükseğinde kalıyor:
     eski bir kayıttan dönmek kazanılanı geri almıyor.
   - Açılan rozet kalıcı; açıldığı an, şirket ve gün saklanıyor.
@@ -3773,7 +3774,7 @@ Hepsi bu cihazda saklanıyor; lig ve senaryo tabloları değişmiyor.
   kazanılan rozetleri yazıyor.
 - *Yardım:* "Koşuların ötesine bak" adımı eklendi.
 
-**Doğrulama.** `pnpm test` 445/445; 24 yeni test.
+**Doğrulama.** `pnpm test` 446/446; 25 yeni test.
 
 `packages/core/test/career.test.ts` (16 test):
 - katalog tutarlılığı;
@@ -3788,15 +3789,16 @@ Hepsi bu cihazda saklanıyor; lig ve senaryo tabloları değişmiyor.
   (beşi de düzeltmeden önce kaldı);
 - zafer süzgeçleri, koşu ve kariyer kapsamı, senaryo yıldızı, farklı CEO.
 
-`packages/ui/test/career.test.ts` (8 test):
+`packages/ui/test/career.test.ts` (9 test):
 - rozetin bir kez açılması;
 - eski kayıttan dönünce kazanılanın kalması;
 - koşuların toplamı;
 - senaryonun büyüme rozetine sayılmaması;
 - kurulum ekranında senaryo yıldızı;
 - budanan koşunun toplamlara katlanması;
-- budanan koşunun kaydı geri gelince iki kez sayılmaması ve zaferini
-  kaybetmemesi (ikisi de düzeltmeden önce kaldı).
+- budanan koşunun kaydı geri gelince iki kez sayılmaması, zaferini ve
+  devralma, halka arz gibi özetini kaybetmemesi (üçü de düzeltmeden önce
+  kaldı).
 
 İçerik çevirileri testi rozetleri de kapsıyor.
 
@@ -3896,7 +3898,7 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi) |
-| Birim testi | **445 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer de) |
+| Birim testi | **446 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer de) |
 | Denge testi | **324 kontrol, hepsi geçiyor** (24 bölüm, süreleriyle; ~15 dk) |
 | Tarayıcı testi | **446 kontrol, hepsi geçiyor**, 0 konsol hatası (~25–40 dk); duman koşusu 132 (~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + duman oynanışı |

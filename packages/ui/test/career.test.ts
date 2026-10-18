@@ -105,6 +105,20 @@ describe('kariyer deposu', () => {
     assert.deepEqual(summary.runs[0]!.wins, [{ day: 600, citySize: 'standard' }]);
   });
 
+  test('budanan koşunun eski kaydı geri gelince koşu özetinin hiçbiri düşmüyor (Codex #70)', () => {
+    const run = game(1);
+    const before = JSON.parse(JSON.stringify(run)) as GameState;
+    player(run).acquisitions = 4;
+    player(run).issues = 1;
+    observeCareer(run);
+    for (let i = 0; i < MAX_CAREER_RUNS; i++) observeCareer(game(400 + i));
+    // Devralmalardan ve halka arzdan önceki kayıt.
+    observeCareer(before);
+    const back = careerSummary().runs[0]!;
+    assert.deepEqual([back.acquisitions, back.ipo], [4, true]);
+    assert.equal(careerSummary().statuses.find((s) => s.def.id === 'serial_acquirer')!.value, 4, '4/5 olarak kaldı');
+  });
+
   test('budanan koşunun kaydı geri gelirse iki kez sayılmıyor (Codex #70)', () => {
     const old = game(1);
     old.bubblesCaught = 30;
