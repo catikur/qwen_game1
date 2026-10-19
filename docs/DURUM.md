@@ -3859,6 +3859,113 @@ Tarayıcı testine "Kariyer" bölümü eklendi (9 kontrol):
 
 Tarayıcı tam koşu 446/446, konsol hatası yok (~26 dk); "Kariyer" bölümü ~30 sn.
 
+### Tur 42 — Açılış hızı: gölgelendiriciler
+
+Kullanıcı "Açılış hızı: gölgelendiriciler"i seçti. Tur 40'ın profili
+açılışın dörtte üçünden fazlasının JS değil, yazılımsal GPU'da
+gölgelendirici derlemesi ve ilk kareler olduğunu göstermişti. Bu tur
+derlenen programları saydı, sayıyı indirdi ve derlemeyi ilk karenin önüne
+aldı. Oyun ve görüntü aynı.
+
+**Ölçüm.** Sayfada WebGL'in `linkProgram`'ı sarıldı: her programın adı,
+kaynağı ve derlendiği an tutuldu. Kare zamanları sayfanın içinden,
+`frameCount`'tan okundu; Playwright'ın beklemesi meşgul sayfada 2–3 sn
+geç kalıyordu. Standart şehrin açılışı 44 program derliyordu:
+
+| Malzeme | Program |
+|---|---|
+| MeshStandardMaterial | 20 |
+| ShaderMaterial (bloom ve son işlem) | 8 |
+| MeshBasicMaterial | 6 |
+| MeshDepthMaterial (gölge) | 5 |
+| Çizgi, ortam haritası, çıkış | 5 |
+
+Üç kök neden:
+- *Kademe inişi.* Yazılımsal GPU en pahalı kademeden (gölge, bloom, ortam
+  haritası) başlıyordu. İlk kareler ~2 sn sürüyor, uyarlama 2,5 sn'lik
+  pencereden sonra kademeyi en alta indiriyor, her malzeme yeni kademe
+  için ikinci kez derleniyordu. Testler zaten hep en alt kademede
+  oturuyordu.
+- *Gölge geçişi ışıklardan önce.* three ilk karede gölge haritasını
+  ışıklar sayılmadan çiziyor. Derinlik programları önce "ışıksız"
+  anahtarla, ikinci karede ışıklarla yeniden derleniyordu. Kademe
+  değişiminde gölgeler açılınca da aynısı oluyordu.
+- *Bloom'un beş bulanıklığı.* `UnrealBloomPass` beş mip düzeyinin çekirdek
+  yarıçapını (`KERNEL_RADIUS` 6, 10, 14, 18, 22) `#define` olarak yazıyor:
+  aynı bulanıklık beş ayrı program.
+
+**Değişiklikler** (`packages/render-three`):
+- *Yazılımsal GPU en ucuz kademeden başlıyor.* GPU'nun adı `RENDERER`'dan
+  okunuyor; Chrome onu "WebKit WebGL" diye gizliyorsa
+  `WEBGL_debug_renderer_info`'dan. SwiftShader, llvmpipe, softpipe ve
+  Windows'un temel sürücüsü tanınıyor. Uyarlama yine çalışıyor; gerçek
+  GPU'nun açılış tahmini değişmedi.
+- *Ön derleme.* Sahne durumu gelince ilk karede görünen her malzeme
+  `renderer.compile` ile derleniyor. Işıklar önceden sayılıyor. Programın
+  anahtarı ton eşlemesine, o da çizilen hedefe bağlı: bloom açıksa
+  derleme ara hedefe. Görünmeyenler (yerleştirme hayaleti, genel merkez
+  işareti, veri merceği) eskisi gibi ilk kullanıldıklarında derleniyor.
+  - Tarayıcı paralel derlemeyi destekliyorsa (`KHR_parallel_shader_compile`,
+    gerçek GPU'larda var) çizim döngüsü programların hazır olmasını
+    bekliyor, arayüz canlı kalıyor. Tuval o sırada gökyüzü rengiyle
+    siliniyor. Üst sınır 10 sn.
+  - Kademe değişince ön derleme yeniden: yeni kademenin programları
+    derlenirken son kare ekranda kalıyor.
+- *Bloom tek programla* (`bloom.ts`): yarıçap bir uniform. Döngü en büyük
+  yarıçapa kadar sabit sınırla dönüyor ve kendi yarıçapında duruyor.
+  Katsayılar ve toplama sırası aynı.
+
+**Sonuç.** Yazılımsal GPU'da (SwiftShader), iki koşunun ortalaması;
+süreler "Şirketi kur"a tıklanınca başlıyor:
+
+| Açılış | Program | İlk kare | 5. kare |
+|---|---|---|---|
+| Standart şehir | 44 → **16** | 6,3 → **2,1 sn** | 13,1 → **4,0 sn** |
+| Büyük şehir | 36 → **16** | 7,1 → **2,7 sn** | 14,9 → **5,0 sn** |
+| Krizin ortasında | 36 → **14** | 5,9 → **3,0 sn** | 16,0 → **5,7 sn** |
+| Büyük şehir fethi | 38 → **15** | 7,3 → **4,2 sn** | 18,6 → **8,0 sn** |
+
+- Fetihte kalan sürenin büyük kısmı 200 günlük ön tarihin JS'si (Tur 40:
+  ~3 sn).
+- En üst kademede (gerçek GPU'lu masaüstü) derinlik programları 5 → 3,
+  bloom ve son işlem programları 8 → 4. Kademe değişince hiçbir program
+  aynı kaynakla iki kez derlenmiyor.
+- Gerçek GPU'da ölçülemedi. Orada derleme hızlı; kazanç daha az program,
+  ikinci derlemenin kalkması ve derleme sırasında canlı kalan arayüz.
+
+**Görüntü.**
+- Bloom birebir aynı: 480×320'lik bir sahne iki geçişle de çizildi;
+  153.600 pikselin hiçbirinde fark yok.
+- En üst kademede, Krizin ortasında'nın şehrinde gündüz ve gece kareleri
+  önce ve sonra aynı; yalnız trafik farklı. Gece bloom'un en çok
+  göründüğü an: pencere ışıkları ve sokak lambaları.
+
+**Doğrulama.** `pnpm test` 458/458. Yeni `bloom.test.ts` iki test:
+- beş bulanıklık malzemesi aynı gölgelendiriciyi ve tanımları paylaşıyor
+  (three üst sınıfın yöntemini yeniden adlandırırsa kalır);
+- yarıçaplar ve katsayılar three'ninkiyle aynı, yarıçapın ötesi sıfır.
+
+Tarayıcı testine "Açılış: gölgelendiriciler" bölümü eklendi (9 kontrol):
+- yazılımsal GPU tanınıyor, açılış en ucuz kademede;
+- açılışta kademe inmiyor;
+- gölgelendiriciler ilk kareden önce derleniyor;
+- açılışta en fazla 20 program;
+- en üst kademede bloom tek bulanıklık programıyla;
+- açılışta ve kademe değişiminde hiçbir program aynı kaynakla iki kez
+  derlenmiyor;
+- paralel derleme taklit edilince (her program 600 ms sonra hazır) çizim
+  döngüsü bekliyor;
+- o sırada tuval siyah değil, gökyüzü renginde;
+- konsol temiz.
+
+Eski yapıda (main) konsol dışındaki ilk altı kontrol ve paralel derleme
+kontrolü kalıyor. "Tuval siyah değil" kontrolü bu turun ilk sürümünde
+kaldı: three'nin silme rengi sahne çizilene dek siyah, bekleyen döngü
+tuvali siyaha siliyordu. Kontrol önce yazılımsal GPU'nun kendi
+açılışındaydı ve düzeltmesiz yapıda da geçiyordu; orada ön derleme
+eşzamanlı bitiyor, bekleme yolu hiç koşmuyor. Bu yüzden uzantının
+taklit edildiği ayrı bir açılışa taşındı.
+
 
 ---
 
@@ -3941,7 +4048,7 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi) |
-| Birim testi | **456 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer de) |
+| Birim testi | **458 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom da) |
 | Denge testi | **324 kontrol, hepsi geçiyor** (24 bölüm, süreleriyle; ~15 dk) |
 | Tarayıcı testi | **446 kontrol, hepsi geçiyor**, 0 konsol hatası (~25–40 dk); duman koşusu 132 (~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + duman oynanışı |
