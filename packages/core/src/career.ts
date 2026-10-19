@@ -170,8 +170,15 @@ export interface CareerInput {
   /**
    * Depodan budanmış eski koşular: toplamları ve zafer kazanılan CEO'ları,
    * koşu rozetinin en iyisi için de özetleri (toplamlara zaten katlanmış).
+   * Özeti de silinmiş en eski koşulardan yalnız koşu rozetlerinin en iyi
+   * değeri (`best`, rozet kimliği → değer) kalıyor.
    */
-  archived?: { totals?: Partial<CareerTotals>; victoryCeos?: readonly string[]; runs?: readonly RunFacts[] };
+  archived?: {
+    totals?: Partial<CareerTotals>;
+    victoryCeos?: readonly string[];
+    runs?: readonly RunFacts[];
+    best?: Readonly<Record<string, number>>;
+  };
 }
 
 export function careerTotals(input: CareerInput): CareerTotals {
@@ -217,6 +224,7 @@ export function achievementStatus(def: AchievementDef, input: CareerInput, total
       if (v >= def.target && runKey === undefined) runKey = run.key;
       value = Math.max(value, v);
     }
+    value = Math.max(value, input.archived?.best?.[def.id] ?? 0);
     return { def, value, target: def.target, done: value >= def.target, ...(runKey ? { runKey } : {}) };
   }
   let value = 0;

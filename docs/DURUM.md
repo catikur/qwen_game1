@@ -3761,6 +3761,11 @@ Hepsi bu cihazda saklanıyor; lig ve senaryo tabloları değişmiyor.
     almıyor (Codex #70). Budanan koşunun özeti koşu rozetinin en iyisinde
     de sayılıyor (Seri alıcı 4/5 budanınca düşmüyor); toplamlara zaten
     katlandığı için kariyer rozetlerine ikinci kez girmiyor (Codex #70).
+  - Arşiv sınırlı (Codex #70): bütün özetiyle en fazla 200 budanmış koşu
+    (koşu başına ~550 bayt; depo en fazla ~165 KB). Daha eskisinin özeti
+    siliniyor; toplamları arşivde, koşu rozetlerindeki en iyi değeri
+    rozet başına tek sayıda (`best`) kalıyor. Bedeli: 300 koşudan eski bir
+    kaydın yeniden yüklenmesi yeni koşu sayılıyor.
   - Aynı koşu yeniden görülünce sayaçlar ve değer en yükseğinde kalıyor:
     eski bir kayıttan dönmek kazanılanı geri almıyor.
   - Açılan rozet kalıcı; açıldığı an, şirket ve gün saklanıyor.
@@ -3789,7 +3794,7 @@ Hepsi bu cihazda saklanıyor; lig ve senaryo tabloları değişmiyor.
   kazanılan rozetleri yazıyor.
 - *Yardım:* "Koşuların ötesine bak" adımı eklendi.
 
-**Doğrulama.** `pnpm test` 450/450; 29 yeni test.
+**Doğrulama.** `pnpm test` 451/451; 30 yeni test.
 
 `packages/core/test/career.test.ts` (19 test):
 - katalog tutarlılığı;
@@ -3806,14 +3811,15 @@ Hepsi bu cihazda saklanıyor; lig ve senaryo tabloları değişmiyor.
   kalan en yüksek değerin sayılması (sekizi de düzeltmeden önce kaldı);
 - zafer süzgeçleri, koşu ve kariyer kapsamı, senaryo yıldızı, farklı CEO.
 
-`packages/ui/test/career.test.ts` (10 test):
+`packages/ui/test/career.test.ts` (11 test):
 - rozetin bir kez açılması;
 - eski kayıttan dönünce kazanılanın kalması;
 - koşuların toplamı;
 - senaryonun büyüme rozetine sayılmaması;
 - kurulum ekranında senaryo yıldızı;
 - budanan koşunun toplamlara katlanması ve koşu rozetinin ilerlemesinde
-  sayılmaya devam etmesi (ikincisi düzeltmeden önce kaldı);
+  sayılmaya devam etmesi, arşivin sınırlı kalıp en eski koşunun en iyi
+  değerini koruması (ikisi de düzeltmeden önce kaldı);
 - budanan koşunun kaydı geri gelince iki kez sayılmaması, zaferini ve
   devralma, halka arz gibi özetini kaybetmemesi (üçü de düzeltmeden önce
   kaldı).
@@ -3916,7 +3922,7 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi) |
-| Birim testi | **450 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer de) |
+| Birim testi | **451 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer de) |
 | Denge testi | **324 kontrol, hepsi geçiyor** (24 bölüm, süreleriyle; ~15 dk) |
 | Tarayıcı testi | **446 kontrol, hepsi geçiyor**, 0 konsol hatası (~25–40 dk); duman koşusu 132 (~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + duman oynanışı |

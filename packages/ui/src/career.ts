@@ -1,6 +1,6 @@
 import { ACHIEVEMENTS, SCENARIOS } from '@capital/content';
 import type { AchievementDef } from '@capital/content';
-import { achievementStatuses, careerTotals, runFacts, runKeyOf, victoryCeos } from '@capital/core';
+import { achievementStatuses, careerTotals, isRunScoped, runFacts, runKeyOf, runValue, victoryCeos } from '@capital/core';
 import type { AchievementStatus, CareerInput, CareerTotals, GameState, RunFacts } from '@capital/core';
 import { scenarioRecord } from './scenarioBest';
 
@@ -18,6 +18,12 @@ import { scenarioRecord } from './scenarioBest';
 const STORAGE_KEY = 'capitalforge.career.v1';
 /** Saklanan koşu sayısı; eskiler toplamlara katlanıyor. */
 export const MAX_CAREER_RUNS = 100;
+/**
+ * Arşivde bütün özetiyle tutulan budanmış koşu sayısı (Codex #70): depo
+ * sınırlı kalsın. Daha eskisi yalnız toplamlarda ve koşu rozetlerinin en
+ * iyisinde kalıyor.
+ */
+export const MAX_FOLDED_RUNS = 200;
 /** Olaysız günlerde depoya en sık yazma aralığı. */
 const WRITE_EVERY_MS = 10_000;
 
@@ -47,6 +53,12 @@ export interface CareerArchive {
    * özetiyle birleşiyor: eski kayıt zaferi, devralmayı, halka arzı geri almıyor.
    */
   folded?: Record<string, CareerRun>;
+  /**
+   * `MAX_FOLDED_RUNS`ten eski koşuların koşu rozeti en iyileri (rozet
+   * kimliği → değer): özet silinince ilerleme düşmesin. O koşunun kaydı
+   * geri gelirse yeni koşu sayılıyor; sınırın bedeli bu.
+   */
+  best?: Record<string, number>;
 }
 
 interface CareerFile {
@@ -149,14 +161,33 @@ function fold(archive: CareerArchive | undefined, run: CareerRun): CareerArchive
   for (const key of Object.keys(own) as (keyof CareerTotals)[]) totals[key] = (totals[key] ?? 0) + own[key];
   const ceos = new Set(base.victoryCeos);
   if (isVictorious(run) && run.ceoId) ceos.add(run.ceoId);
+  // Ekleme sırası korunuyor: ilk anahtar en eski budanan koşu.
+  const folded = { ...base.folded, [run.key]: run };
+  let best = base.best;
+  for (const key of Object.keys(folded).slice(0, Math.max(0, Object.keys(folded).length - MAX_FOLDED_RUNS))) {
+    best = withBest(best, folded[key]!);
+    delete folded[key];
+  }
   return {
     totals,
     victoryCeos: [...ceos],
     runs: base.runs + 1,
     victories: base.victories + (isVictorious(run) ? 1 : 0),
     bestWorth: Math.max(base.bestWorth, run.mode === 'scenario' ? 0 : run.worth),
-    folded: { ...base.folded, [run.key]: run },
+    folded,
+    ...(best ? { best } : {}),
   };
+}
+
+/** Özeti silinen koşunun koşu rozeti değerleri en iyilere katılıyor. */
+function withBest(best: Record<string, number> | undefined, run: RunFacts): Record<string, number> {
+  const next = { ...best };
+  for (const def of ACHIEVEMENTS) {
+    if (!isRunScoped(def)) continue;
+    const value = runValue(def, run);
+    if (value > (next[def.id] ?? 0)) next[def.id] = value;
+  }
+  return next;
 }
 
 /**
@@ -188,7 +219,14 @@ function inputOf(file: CareerFile): CareerInput {
     runs: file.runs,
     scenarioStars: scenarioStars(),
     ...(file.archived
-      ? { archived: { totals: file.archived.totals, victoryCeos: file.archived.victoryCeos, runs: Object.values(file.archived.folded ?? {}) } }
+      ? {
+          archived: {
+            totals: file.archived.totals,
+            victoryCeos: file.archived.victoryCeos,
+            runs: Object.values(file.archived.folded ?? {}),
+            ...(file.archived.best ? { best: file.archived.best } : {}),
+          },
+        }
       : {}),
   };
 }
@@ -283,4 +321,10 @@ export function resetCareerForTests(): void {
   loaded = true;
   lastWrite = 0;
   revision++;
+}
+
+/** Yalnız testler: depodaki koşu ve arşivlenmiş özet sayısı. */
+export function careerStoreSizeForTests(): { runs: number; folded: number } {
+  const file = read();
+  return { runs: file.runs.length, folded: Object.keys(file.archived?.folded ?? {}).length };
 }

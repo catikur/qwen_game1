@@ -3,7 +3,16 @@ import assert from 'node:assert/strict';
 import { SCENARIOS } from '@capital/content';
 import { createNewGame } from '@capital/core';
 import type { GameState } from '@capital/core';
-import { MAX_CAREER_RUNS, careerSummary, observeCareer, resetCareerForTests, syncCareer, unlockedInRun } from '../src/career';
+import {
+  MAX_CAREER_RUNS,
+  MAX_FOLDED_RUNS,
+  careerStoreSizeForTests,
+  careerSummary,
+  observeCareer,
+  resetCareerForTests,
+  syncCareer,
+  unlockedInRun,
+} from '../src/career';
 import { recordScenarioResult } from '../src/scenarioBest';
 
 /**
@@ -130,6 +139,20 @@ describe('kariyer deposu', () => {
     const serial = () => careerSummary().statuses.find((s) => s.def.id === 'serial_acquirer')!;
     assert.equal(serial().value, 4, '4/5 budanınca düşmüyor');
     assert.equal(careerSummary().statuses.find((s) => s.def.id === 'bubble_hunter')!.value, 30, 'toplamlar iki kez sayılmıyor');
+  });
+
+  test('arşiv sınırlı: en eski özet yalnız en iyi değerlerde kalıyor (Codex #70)', () => {
+    const first = game(1);
+    player(first).acquisitions = 4;
+    first.bubblesCaught = 30;
+    observeCareer(first);
+    const total = MAX_CAREER_RUNS + MAX_FOLDED_RUNS + 20;
+    for (let i = 1; i < total; i++) observeCareer(game(2000 + i));
+    assert.deepEqual(careerStoreSizeForTests(), { runs: MAX_CAREER_RUNS, folded: MAX_FOLDED_RUNS });
+    const summary = careerSummary();
+    assert.equal(summary.runCount, total);
+    assert.equal(summary.statuses.find((s) => s.def.id === 'serial_acquirer')!.value, 4, 'koşu rozetinin en iyisi kalıyor');
+    assert.equal(summary.statuses.find((s) => s.def.id === 'bubble_hunter')!.value, 30, 'toplam bir kez');
   });
 
   test('budanan koşunun kaydı geri gelirse iki kez sayılmıyor (Codex #70)', () => {
