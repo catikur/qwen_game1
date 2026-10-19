@@ -187,7 +187,9 @@ function inputOf(file: CareerFile): CareerInput {
   return {
     runs: file.runs,
     scenarioStars: scenarioStars(),
-    ...(file.archived ? { archived: { totals: file.archived.totals, victoryCeos: file.archived.victoryCeos } } : {}),
+    ...(file.archived
+      ? { archived: { totals: file.archived.totals, victoryCeos: file.archived.victoryCeos, runs: Object.values(file.archived.folded ?? {}) } }
+      : {}),
   };
 }
 

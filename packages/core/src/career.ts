@@ -167,8 +167,11 @@ export interface CareerInput {
   runs: readonly RunFacts[];
   /** Senaryo kimliği → bu cihazdaki en iyi yıldız. */
   scenarioStars: Readonly<Record<string, number>>;
-  /** Depodan budanmış eski koşuların toplamları ve zafer kazanılan CEO'ları. */
-  archived?: { totals?: Partial<CareerTotals>; victoryCeos?: readonly string[] };
+  /**
+   * Depodan budanmış eski koşular: toplamları ve zafer kazanılan CEO'ları,
+   * koşu rozetinin en iyisi için de özetleri (toplamlara zaten katlanmış).
+   */
+  archived?: { totals?: Partial<CareerTotals>; victoryCeos?: readonly string[]; runs?: readonly RunFacts[] };
 }
 
 export function careerTotals(input: CareerInput): CareerTotals {
@@ -208,7 +211,8 @@ export function achievementStatus(def: AchievementDef, input: CareerInput, total
   if (isRunScoped(def)) {
     let value = 0;
     let runKey: string | undefined;
-    for (const run of input.runs) {
+    // Budanan koşu da koşu rozetinin en iyisinde sayılıyor (Codex #70).
+    for (const run of [...input.runs, ...(input.archived?.runs ?? [])]) {
       const v = runValue(def, run);
       if (v >= def.target && runKey === undefined) runKey = run.key;
       value = Math.max(value, v);

@@ -121,6 +121,17 @@ describe('kariyer deposu', () => {
     assert.equal(careerSummary().statuses.find((s) => s.def.id === 'serial_acquirer')!.value, 4, '4/5 olarak kaldı');
   });
 
+  test('budanan koşu, koşu rozetinin ilerlemesinde sayılmaya devam ediyor (Codex #70)', () => {
+    const old = game(1);
+    player(old).acquisitions = 4;
+    old.bubblesCaught = 30;
+    observeCareer(old);
+    for (let i = 0; i < MAX_CAREER_RUNS; i++) observeCareer(game(500 + i));
+    const serial = () => careerSummary().statuses.find((s) => s.def.id === 'serial_acquirer')!;
+    assert.equal(serial().value, 4, '4/5 budanınca düşmüyor');
+    assert.equal(careerSummary().statuses.find((s) => s.def.id === 'bubble_hunter')!.value, 30, 'toplamlar iki kez sayılmıyor');
+  });
+
   test('budanan koşunun kaydı geri gelirse iki kez sayılmıyor (Codex #70)', () => {
     const old = game(1);
     old.bubblesCaught = 30;
