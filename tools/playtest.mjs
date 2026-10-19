@@ -4022,6 +4022,74 @@ async function finish(browser, consoleErrors) {
     check('Açılış ölçümünde konsol temiz', openErrors.length === 0, openErrors.slice(0, 2).join(' | '));
   }
 
+  // ---------- Akıcılık (Tur 43) ----------
+  section('Akıcılık: kare ve gün');
+  {
+    const flowErrors = [];
+    /*
+     * Kare başına GPU'ya yüklenen tampon verisi: WebGL'in `bufferSubData`'sı
+     * sarılıyor. Örnek tamponları en kalabalık hâle göre ayrılmış; yalnız
+     * çizilen kısım yüklenmeli.
+     */
+    const uploadLog = () => {
+      window.__uploaded = 0;
+      const proto = WebGL2RenderingContext.prototype;
+      const sub = proto.bufferSubData;
+      proto.bufferSubData = function (target, offset, data, srcOffset, length) {
+        const bytes = data?.BYTES_PER_ELEMENT ?? 1;
+        window.__uploaded += length ? length * bytes : (data?.byteLength ?? 0) - (srcOffset ?? 0) * bytes;
+        return sub.apply(this, arguments);
+      };
+    };
+    const ctx = await browser.newContext({ viewport: { width: 1280, height: 860 } });
+    await ctx.addInitScript(veteran, TUTORIAL_KEY);
+    await ctx.addInitScript(uploadLog);
+    const fp = await ctx.newPage();
+    fp.on('pageerror', (e) => flowErrors.push(e.message));
+    fp.on('console', (m) => {
+      if (m.type() === 'error') flowErrors.push(m.text());
+    });
+    await fp.goto('http://127.0.0.1:8811/');
+    await fp.waitForSelector('.newgame', { timeout: 20000 });
+    await fp.locator('button:has-text("Şirketi kur")').click();
+    await fp.waitForFunction(() => (window.__capital?.renderInfo()?.frameCount ?? 0) >= 4, null, { timeout: 60000 });
+
+    // Oyun duruyor, araçlar ve yayalar yürüyor: her kare yalnız onların konumunu yüklüyor.
+    await fp.evaluate(() => window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 }));
+    await fp.waitForTimeout(1000);
+    const upload = await fp.evaluate(() => new Promise((resolve) => {
+      const frames = window.__capital.renderInfo().frameCount;
+      const bytes = window.__uploaded;
+      setTimeout(() => {
+        const drawn = window.__capital.renderInfo().frameCount - frames;
+        resolve({ frames: drawn, perFrame: Math.round((window.__uploaded - bytes) / Math.max(1, drawn)) });
+      }, 6000);
+    }));
+    // Tur 42'nin sonunda bu açılış kare başına 44.928 bayt yüklüyordu; 4.608'i çizilen yuvalardı.
+    check('Araç ve yaya tamponlarından yalnız çizilen kısım yükleniyor',
+      upload.frames >= 3 && upload.perFrame < 20000,
+      `${upload.frames} kare · kare başına ${upload.perFrame.toLocaleString('tr-TR')} bayt`);
+
+    // Oyun akıyor: doku yalnız değiştiği günlerde yeniden yerleşiyor, çizilen doku kalıyor.
+    const before = await fp.evaluate(() => {
+      const info = window.__capital.renderInfo();
+      window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 3 });
+      return { day: window.__capital.getState().time.day, stateSyncs: info.stateSyncs, fabricSyncs: info.fabricSyncs };
+    });
+    await fp.waitForFunction((day) => window.__capital.getState().time.day >= day + 20, before.day, { timeout: 120000 });
+    const after = await fp.evaluate(() => {
+      window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+      return { ...window.__capital.renderInfo(), day: window.__capital.getState().time.day };
+    });
+    const syncs = (after.stateSyncs ?? 0) - (before.stateSyncs ?? 0);
+    const fabricSyncs = (after.fabricSyncs ?? 0) - (before.fabricSyncs ?? 0);
+    check('Şehir dokusu yalnız değiştiği günlerde yeniden yerleşiyor',
+      syncs >= 20 && fabricSyncs < syncs && (after.fabricInstances ?? 0) > 0,
+      `${after.day - before.day} gün · ${syncs} eşitleme · dokuyu ${fabricSyncs} kez yerleştirdi · ${after.fabricInstances} doku örneği`);
+    await ctx.close();
+    check('Akıcılık ölçümünde konsol temiz', flowErrors.length === 0, flowErrors.slice(0, 2).join(' | '));
+  }
+
   // ---------- Mobil ----------
   //
   // Bu bölüm eskiden tek satırdı: "dar ekranda yatay taşma yok". O kontrol

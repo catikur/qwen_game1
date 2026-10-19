@@ -13,7 +13,7 @@ import { buildCost } from './actions';
 import { isDistrictOpen, tilePrice } from './systems/city';
 import { estimateInvestment } from './systems/market';
 import { distributionRelief } from './systems/supply';
-import { withBuildingIndex } from './systems/buildingIndex';
+import { scopedMemo, withBuildingIndex } from './systems/buildingIndex';
 import { wageFor } from './systems/labor';
 import { overheadMultiplier } from './systems/economy';
 import { tc } from './i18n';
@@ -175,40 +175,65 @@ function percent(value: number): string {
   return formatPercent(Math.round(value * 100));
 }
 
+interface GoodFlow {
+  produced: number;
+  consumed: number;
+  units: BuildingInstance[];
+}
+
 /** Bir şirketin bir üründeki günlük üretim ve tüketim hacmi. */
-function flowFor(
-  state: GameState,
-  companyId: string,
-  goodId: string,
-): { produced: number; consumed: number; units: BuildingInstance[] } {
-  let produced = 0;
-  let consumed = 0;
-  const units: BuildingInstance[] = [];
+function flowFor(state: GameState, companyId: string, goodId: string): GoodFlow {
+  // Kart boyunca bina değişmiyor: şirketin bütün ürünleri tek taramada (Tur 43).
+  const flows = scopedMemo(state, `flows|${companyId}`, () => companyFlows(state, companyId));
+  return flows.get(goodId) ?? { produced: 0, consumed: 0, units: [] };
+}
+
+/**
+ * Şirketin bütün ürünlerindeki üretim ve tüketim, tek taramada (Tur 43).
+ *
+ * `flowFor` her ürün halkası için şehrin bütün binalarını tarıyordu; bir
+ * kart halkayı iki kez soruyor, rakip her karar gününde bütün kartları.
+ * Toplama sırası ürün başına aynı (bina sırası, bina içinde raf sırası):
+ * sonuçlar birebir aynı.
+ */
+function companyFlows(state: GameState, companyId: string): Map<string, GoodFlow> {
+  const flows = new Map<string, GoodFlow>();
+  const of = (goodId: string): GoodFlow => {
+    let flow = flows.get(goodId);
+    if (!flow) {
+      flow = { produced: 0, consumed: 0, units: [] };
+      flows.set(goodId, flow);
+    }
+    return flow;
+  };
 
   for (const building of Object.values(state.buildings)) {
     if (building.companyId !== companyId) continue;
     const def = BUILDING_BY_ID[building.defId];
     if (!def) continue;
 
-    if (def.outputGoodId === goodId) {
-      produced += def.capacity;
-      units.push(building);
+    if (def.outputGoodId) {
+      const flow = of(def.outputGoodId);
+      flow.produced += def.capacity;
+      flow.units.push(building);
     }
 
     if (def.role === 'process' && def.outputGoodId) {
-      if (GOOD_BY_ID[def.outputGoodId]?.inputGoodId === goodId) consumed += def.capacity;
+      const input = GOOD_BY_ID[def.outputGoodId]?.inputGoodId;
+      if (input) of(input).consumed += def.capacity;
     }
     if (def.role === 'outlet' && building.stocked.length > 0) {
       // Ürün başına gerçek satış (Tur 21; motorun üretim adımıyla aynı kural).
       const draw = building.last.unitsSold > 0 ? building.last.unitsSold : def.capacity;
       for (const stockedId of building.stocked) {
-        if (GOOD_BY_ID[stockedId]?.inputGoodId !== goodId) continue;
-        consumed += building.soldByGood ? (building.soldByGood[stockedId] ?? 0) : draw / building.stocked.length;
+        const input = GOOD_BY_ID[stockedId]?.inputGoodId;
+        if (!input) continue;
+        of(input).consumed += building.soldByGood ? (building.soldByGood[stockedId] ?? 0) : draw / building.stocked.length;
       }
     }
   }
 
-  return { produced, consumed, units };
+  return flows;
 }
 
 function slotState(
@@ -253,6 +278,16 @@ function projectedUnitCost(
  * değil; tıkanınca devralırsın.
  */
 export function bestPlotFor(
+  state: GameState,
+  def: BuildingDef,
+): { districtId: number; tileId: number; needsBuyout: boolean } | null {
+  // Kart boyunca parseller değişmiyor: tür başına bir tarama (Tur 43). Kopya
+  // dönüyor, çağıran sonucu değiştirse de bellektekine dokunmasın.
+  const plot = scopedMemo(state, `plot|${def.id}`, () => cheapestPlotFor(state, def));
+  return plot ? { ...plot } : null;
+}
+
+function cheapestPlotFor(
   state: GameState,
   def: BuildingDef,
 ): { districtId: number; tileId: number; needsBuyout: boolean } | null {

@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import type { CustomerFlow, SupplyLeg } from '@capital/core';
 import { allocateShoppers } from './shopper-allocation';
+import { uploadDrawn } from './instances';
 
 /**
  * Trafik: fon araçları + zincir kamyonları + müşteri araçları.
@@ -789,8 +790,11 @@ export class TrafficSystem {
       }
     }
     this.dummy.scale.set(1, 1, 1);
-    for (const kind of VEHICLE_KINDS) this.vehicleMeshes[kind].instanceMatrix.needsUpdate = true;
-    if (lights) this.lightMesh.instanceMatrix.needsUpdate = true;
+    for (const kind of VEHICLE_KINDS) {
+      const mesh = this.vehicleMeshes[kind];
+      uploadDrawn(mesh.instanceMatrix, mesh.count);
+    }
+    if (lights) uploadDrawn(this.lightMesh.instanceMatrix, this.lightMesh.count);
   }
 
   private updateTrucks(dt: number): void {
@@ -854,8 +858,8 @@ export class TrafficSystem {
       this.truckMesh.setMatrixAt(i, this.dummy.matrix);
     }
 
-    this.truckMesh.instanceMatrix.needsUpdate = true;
-    if (repaint && this.truckMesh.instanceColor) this.truckMesh.instanceColor.needsUpdate = true;
+    uploadDrawn(this.truckMesh.instanceMatrix, this.truckMesh.count);
+    if (repaint && this.truckMesh.instanceColor) uploadDrawn(this.truckMesh.instanceColor, this.truckMesh.count);
   }
 
   private updateShoppers(dt: number): void {
@@ -921,8 +925,8 @@ export class TrafficSystem {
       this.shopperMesh.setMatrixAt(i, this.dummy.matrix);
     }
 
-    this.shopperMesh.instanceMatrix.needsUpdate = true;
-    if (repaint && this.shopperMesh.instanceColor) this.shopperMesh.instanceColor.needsUpdate = true;
+    uploadDrawn(this.shopperMesh.instanceMatrix, this.shopperMesh.count);
+    if (repaint && this.shopperMesh.instanceColor) uploadDrawn(this.shopperMesh.instanceColor, this.shopperMesh.count);
   }
 
   /**

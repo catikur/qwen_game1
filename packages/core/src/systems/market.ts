@@ -12,7 +12,7 @@ import { dailyWealthTax, overheadMultiplier } from './economy';
 import { boostMultiplier } from './cards';
 import { campaignPriceFactor } from './rivalry';
 import { settleInterest } from './credit';
-import type { CategoryId, DistrictArchetypeId } from '@capital/content';
+import type { BuildingDef, CategoryId, DistrictArchetypeId } from '@capital/content';
 import {
   defaultShelf,
   estimateBaselineDemand,
@@ -26,7 +26,7 @@ import { projectAttraction, projectUpkeep } from './projects';
 import { buildingStrikeFactor, serviceFactor, wageFor } from './labor';
 import { marketingLeverage } from './focus';
 import { SURPLUS_HAIRCUT, distributionRelief, unitCogsFor } from './supply';
-import type { BuildingInstance, GameState } from '../types';
+import type { BuildingInstance, CompanyState, DistrictState, GameState } from '../types';
 import { scopedMemo, scopedOutlets, withBuildingIndex } from './buildingIndex';
 
 /**
@@ -557,6 +557,83 @@ export function runMarketTick(state: GameState): void {
   withBuildingIndex(state, () => marketStep(state));
 }
 
+/**
+ * Mağazanın pazar adımı boyunca sabit kalan değerleri (Tur 43).
+ *
+ * Dağıtım fiyatı, kaliteyi, markayı ve kart, hizmet, proje çarpanlarını her
+ * (bölge, ürün) çifti için yeniden hesaplıyordu. Büyük şehirde bir günün
+ * yarısı buradaydı. Hiçbiri gün içinde değişmiyor: fiyat otomatik fiyattan
+ * sonra, marka dağıtımdan sonra güncelleniyor. Burada mağaza başına bir kez.
+ *
+ * Çekicilik eskisiyle aynı sırayla çarpılıyor:
+ * `kalite × marka × fiyat` (`appeal`), sonra `× erişim × hizmet × kart × proje`.
+ * Sonuç bit bit aynı; parmak izi testi bunu tutuyor.
+ */
+interface OutletDay {
+  building: BuildingInstance;
+  def: BuildingDef;
+  /** Şirketi yoksa mağaza satış yapmıyor (eskiden de aday olmuyordu). */
+  company: CompanyState | undefined;
+  /** Deponun perakende maliyetinden sildiği pay. */
+  relief: number;
+  price: number;
+  appeal: number;
+  service: number;
+  boost: number;
+  project: number;
+  cogsBoost: number;
+  /** Ürün başına birim maliyet, ilk satışta. */
+  unitCogs: Map<string, number>;
+  /** Bölge başına kalan kapasite; bölge kimliği dizinin indisi. */
+  budget: Float64Array;
+  soldGoods: Record<string, number>;
+  /** Kendi bölgesindeki satış: pay bundan. */
+  ownUnits: number;
+  /** Şirketin kategori başına bugünkü satışı; şirketin bütün mağazaları aynı kaydı paylaşıyor. */
+  companySold: Record<CategoryId, number>;
+}
+
+function outletDay(
+  state: GameState,
+  building: BuildingInstance,
+  def: BuildingDef,
+  companySold: Record<CategoryId, number>,
+): OutletDay {
+  const company = state.companies[building.companyId];
+  const category = CATEGORIES[def.category];
+  const outlet: OutletDay = {
+    building,
+    def,
+    company,
+    relief: distributionRelief(state, building),
+    price: 0,
+    appeal: 0,
+    service: 1,
+    boost: 1,
+    project: 1,
+    cogsBoost: 1,
+    unitCogs: new Map(),
+    budget: new Float64Array(state.districts.length),
+    soldGoods: {},
+    ownUnits: 0,
+    companySold,
+  };
+  if (!company) return outlet;
+  // Rakip kampanyası (Tur 37b): saldıran şirket hedef kategoride fiyat kırıyor.
+  outlet.price = category.basePrice * building.priceMultiplier * campaignPriceFactor(state, building.companyId, def.category);
+  const priceFactor = Math.pow(category.basePrice / outlet.price, category.elasticity);
+  const brand = 0.45 + 0.55 * (company.brand[def.category] ?? 0);
+  const quality = Math.pow(qualityFor(state, building.companyId, building.defId), 1.15);
+  outlet.appeal = quality * brand * priceFactor;
+  // Ücret politikası mağaza hizmetinde görünür (düşük −%4, yüksek +%4);
+  // karar kartının süreli çekiciliği (Tur 37b) de burada.
+  outlet.service = serviceFactor(state, building.companyId);
+  outlet.boost = boostMultiplier(state, building.companyId, 'attraction', def.category);
+  outlet.project = projectAttraction(state, building.companyId, building.districtId);
+  outlet.cogsBoost = boostMultiplier(state, building.companyId, 'cogs');
+  return outlet;
+}
+
 function marketStep(state: GameState): void {
   applyAutoPricing(state);
 
@@ -588,34 +665,41 @@ function marketStep(state: GameState): void {
   // Outlet'leri district kırılımıyla indeksle ve rakip sayacını kur.
   // Depo indirimi outlet başına bir kez çözülür; iç döngüde tekrar
   // hesaplamak günlük maliyeti kare kadar büyütürdü.
-  const outletsByDistrict = new Map<number, BuildingInstance[]>();
+  const outlets: OutletDay[] = [];
+  // Şehir geneli pazar payı için şirket × kategori satışı; mağazalar şirketinkini paylaşıyor.
+  const soldByCompany = new Map<string, Record<CategoryId, number>>();
+  const outletsByDistrict = new Map<number, OutletDay[]>();
   // Aynı liste kategoriye göre de (Tur 38): dağıtım her (bölge, ürün) için
   // yalnız o kategorinin mağazalarını geziyor, şehrin bütün mağazalarını
   // değil. Bölge sırası ve bölge içindeki sıra aynı — sonuç birebir aynı.
-  const outletsByDistrictCategory = new Map<number, Map<CategoryId, BuildingInstance[]>>();
-  const reliefByOutlet = new Map<string, number>();
+  const outletsByDistrictCategory = new Map<number, Map<CategoryId, OutletDay[]>>();
   for (const district of state.districts) district.outletCount = zeroByCategory();
 
   for (const building of buildings) {
     const def = BUILDING_BY_ID[building.defId];
     if (def?.role !== 'outlet') continue;
 
+    let companySold = soldByCompany.get(building.companyId);
+    if (!companySold) {
+      companySold = zeroByCategory();
+      soldByCompany.set(building.companyId, companySold);
+    }
+    const outlet = outletDay(state, building, def, companySold);
+    outlets.push(outlet);
     const list = outletsByDistrict.get(building.districtId) ?? [];
-    list.push(building);
+    list.push(outlet);
     outletsByDistrict.set(building.districtId, list);
-    const byCategory = outletsByDistrictCategory.get(building.districtId) ?? new Map<CategoryId, BuildingInstance[]>();
+    const byCategory = outletsByDistrictCategory.get(building.districtId) ?? new Map<CategoryId, OutletDay[]>();
     const categoryList = byCategory.get(def.category) ?? [];
-    categoryList.push(building);
+    categoryList.push(outlet);
     byCategory.set(def.category, categoryList);
     outletsByDistrictCategory.set(building.districtId, byCategory);
-    reliefByOutlet.set(building.id, distributionRelief(state, building));
 
     const district = state.districts[building.districtId];
     if (district) district.outletCount[def.category] += 1;
   }
 
-  // Şehir geneli pazar payı için birikimler.
-  const soldByCompanyCategory = new Map<string, number>();
+  // Şehir geneli pazar payı için birikimler. Şirketin satışı `OutletDay.companySold`'da.
   const soldByCategory = zeroByCategory();
 
   // ---- 1. Talep: outlet'lerden BAĞIMSIZ, tek geçişte ----
@@ -660,42 +744,53 @@ function marketStep(state: GameState): void {
    * Bunun yerine her outlet, kapasitesini erişebildiği bölgelere o
    * bölgelerin talep ağırlığı oranında ayırır. Sonuç sıradan bağımsız.
    */
-  const budgetByOutlet = new Map<string, Map<number, number>>();
   for (const [sourceDistrictId, list] of outletsByDistrict) {
-    for (const building of list) {
-      const def = BUILDING_BY_ID[building.defId]!;
-      const pulls = new Map<number, number>();
+    // Kaynak bölgeden erişilen bölgeler bir kez (Tur 43); bölge sırası aynı.
+    const reachable: Array<{ district: DistrictState; access: number }> = [];
+    for (const district of state.districts) {
+      const access = accessWeight(state, district.id, sourceDistrictId);
+      if (access > 0) reachable.push({ district, access });
+    }
+    for (const outlet of list) {
+      const { building, def, budget } = outlet;
+      // Raf erişimi arketip başına bir kez: bölgeler aynı arketipi paylaşıyor.
+      const reachByArchetype = new Map<DistrictArchetypeId, number>();
       let total = 0;
 
-      for (const district of state.districts) {
-        const access = accessWeight(state, district.id, sourceDistrictId);
-        if (access <= 0) continue;
+      for (const { district, access } of reachable) {
         // Kapasite, satışın kullanacağı paylarla bölünüyor: moda da (Codex #64).
-        const reach = reachOf(district.archetype, def.category, building.stocked);
+        let reach = reachByArchetype.get(district.archetype);
+        if (reach === undefined) {
+          reach = reachOf(district.archetype, def.category, building.stocked);
+          reachByArchetype.set(district.archetype, reach);
+        }
         const pull = (district.demand[def.category] ?? 0) * reach * access;
         if (pull <= 0) continue;
-        pulls.set(district.id, pull);
+        budget[district.id] = pull;
         total += pull;
       }
 
       // Grevde mağaza kapasitesinin yalnızca çalışan kısmı satabilir.
       const capacity = def.capacity * buildingStrikeFactor(state, building.companyId, def);
-      const budget = new Map<number, number>();
-      for (const [districtId, pull] of pulls) {
-        budget.set(districtId, capacity * (pull / total));
+      for (const { district } of reachable) {
+        const pull = budget[district.id]!;
+        if (pull > 0) budget[district.id] = capacity * (pull / total);
       }
-      budgetByOutlet.set(building.id, budget);
     }
   }
 
-  // Bir outlet'in kendi bölgesindeki kategori payı için birikim.
-  const ownDistrictUnits = new Map<string, number>();
-  // Ürün başına satış: yarının üretim adımı tüketimi buradan okuyacak.
-  const soldByGood = new Map<string, Record<string, number>>();
   const servedByDistrictCategory = new Map<string, number>();
 
   // ---- 3. Dağıtım ----
   for (const district of state.districts) {
+    // Erişim kaynak bölge başına bir kez (Tur 43); kategori ve ürün döngüsü
+    // onu her seferinde yeniden soruyordu. Kaynak sırası aynı.
+    const sources: Array<{ byCategory: Map<CategoryId, OutletDay[]>; access: number }> = [];
+    for (const sourceDistrictId of outletsByDistrict.keys()) {
+      const access = accessWeight(state, district.id, sourceDistrictId);
+      if (access <= 0) continue;
+      sources.push({ byCategory: outletsByDistrictCategory.get(sourceDistrictId)!, access });
+    }
     for (const categoryId of CONSUMER_CATEGORIES) {
       const category = CATEGORIES[categoryId];
       const demandUnits = district.demand[categoryId] ?? 0;
@@ -714,53 +809,33 @@ function marketStep(state: GameState): void {
 
         // ---- 2. Bu talebe erişebilen, ürünü rafında taşıyan outlet'ler ----
         interface Candidate {
-          building: BuildingInstance;
-          price: number;
+          outlet: OutletDay;
           attractiveness: number;
           capacityLeft: number;
+          /** Bu (bölge, ürün) turunda sattığı; iki geçişin toplamı. */
+          sold: number;
         }
         const candidates: Candidate[] = [];
 
-        for (const sourceDistrictId of outletsByDistrict.keys()) {
-          const list = outletsByDistrictCategory.get(sourceDistrictId)?.get(categoryId);
+        for (const source of sources) {
+          const list = source.byCategory.get(categoryId);
           if (!list) continue;
-          const access = accessWeight(state, district.id, sourceDistrictId);
-          if (access <= 0) continue;
 
-          for (const building of list) {
-            if (!building.stocked.includes(good.id)) continue;
+          for (const outlet of list) {
+            if (!outlet.building.stocked.includes(good.id)) continue;
+            if (!outlet.company) continue;
 
-            const company = state.companies[building.companyId];
-            if (!company) continue;
-
-            // ---- 3. Çekicilik ----
-            // Rakip kampanyası (Tur 37b): saldıran şirket hedef kategoride fiyat kırıyor.
-            const price =
-              category.basePrice * building.priceMultiplier * campaignPriceFactor(state, building.companyId, categoryId);
-            const priceFactor = Math.pow(category.basePrice / price, category.elasticity);
-            const brand = 0.45 + 0.55 * (company.brand[categoryId] ?? 0);
-            const quality = Math.pow(qualityFor(state, building.companyId, building.defId), 1.15);
             // Kapasite, bu bölgeye ayrılmış bütçeden düşer — komşu
             // bölgelerin sırası bu bölgeyi aç bırakamaz.
-            const budget = budgetByOutlet.get(building.id);
-            const capacityLeft = Math.max(0, budget?.get(district.id) ?? 0);
-
+            const capacityLeft = Math.max(0, outlet.budget[district.id]!);
             if (capacityLeft <= 0) continue;
 
             candidates.push({
-              building,
-              price,
-              // Ücret politikası mağaza hizmetinde görünür (düşük −%4, yüksek +%4);
-              // karar kartının süreli çekiciliği (Tur 37b) de burada.
-              attractiveness:
-                quality *
-                brand *
-                priceFactor *
-                access *
-                serviceFactor(state, building.companyId) *
-                boostMultiplier(state, building.companyId, 'attraction', categoryId) *
-                projectAttraction(state, building.companyId, building.districtId),
+              outlet,
+              // ---- 3. Çekicilik ---- Çarpım sırası `outletDay`'deki notta.
+              attractiveness: outlet.appeal * source.access * outlet.service * outlet.boost * outlet.project,
               capacityLeft,
+              sold: 0,
             });
           }
         }
@@ -772,7 +847,6 @@ function marketStep(state: GameState): void {
 
         // ---- 4-5. Payları dağıt, kapasiteyi uygula, artanı yeniden dağıt ----
         let remaining = goodDemand;
-        const soldHere = new Map<string, number>();
 
         for (let pass = 0; pass < 2 && remaining > 0.01; pass++) {
           const open = candidates.filter((c) => c.capacityLeft > 0.01);
@@ -789,9 +863,9 @@ function marketStep(state: GameState): void {
             if (sold <= 0) continue;
 
             c.capacityLeft -= sold;
-            budgetByOutlet.get(c.building.id)?.set(district.id, c.capacityLeft);
+            c.outlet.budget[district.id] = c.capacityLeft;
             consumed += sold;
-            soldHere.set(c.building.id, (soldHere.get(c.building.id) ?? 0) + sold);
+            c.sold += sold;
           }
 
           remaining -= consumed;
@@ -805,32 +879,27 @@ function marketStep(state: GameState): void {
 
         // ---- Defterleri işle ----
         for (const candidate of candidates) {
-          const units = soldHere.get(candidate.building.id) ?? 0;
+          const units = candidate.sold;
           if (units <= 0) continue;
 
-          const building = candidate.building;
-          const def = BUILDING_BY_ID[building.defId]!;
-          const company = state.companies[building.companyId]!;
+          const { outlet } = candidate;
+          const { building, def } = outlet;
+          const company = outlet.company!;
 
-          const revenue = units * candidate.price;
+          const revenue = units * outlet.price;
           // Satış maliyeti zincirden: dışarıdan alınan girdi payı +
           // perakende işleme. Kendi ürettiğin kısmın maliyeti zaten
-          // üretim ünitesinin defterinde duruyor.
-          const cogs =
-            units *
-            unitCogsFor(
-              state,
-              building.companyId,
-              good.id,
-              reliefByOutlet.get(building.id) ?? 0,
-              mods.costMultiplier,
-            ) *
-            boostMultiplier(state, building.companyId, 'cogs');
+          // üretim ünitesinin defterinde duruyor. Birim maliyet ürün başına
+          // günde bir kez (Tur 43): spot fiyat ve tedarik payı gün içinde sabit.
+          let unitCogs = outlet.unitCogs.get(good.id);
+          if (unitCogs === undefined) {
+            unitCogs = unitCogsFor(state, building.companyId, good.id, outlet.relief, mods.costMultiplier);
+            outlet.unitCogs.set(good.id, unitCogs);
+          }
+          const cogs = units * unitCogs * outlet.cogsBoost;
 
           building.last.unitsSold += units;
-          const goods = soldByGood.get(building.id) ?? {};
-          goods[good.id] = (goods[good.id] ?? 0) + units;
-          soldByGood.set(building.id, goods);
+          outlet.soldGoods[good.id] = (outlet.soldGoods[good.id] ?? 0) + units;
           building.last.revenue += revenue;
           building.last.cogs += cogs;
           building.last.profit += revenue - cogs;
@@ -840,18 +909,15 @@ function marketStep(state: GameState): void {
           // Pay yalnızca outlet'in KENDİ bölgesindeki kategori satışından
           // hesaplanır. Eskiden her (bölge, ürün) turunda bir kesir
           // toplanıyordu; iki ürünlü bir mağaza "%134 pay" gösterebiliyordu.
-          if (building.districtId === district.id) {
-            ownDistrictUnits.set(building.id, (ownDistrictUnits.get(building.id) ?? 0) + units);
-          }
+          if (building.districtId === district.id) outlet.ownUnits += units;
 
           company.today.revenue += revenue;
           company.today.cogs += cogs;
 
-          const key = `${building.companyId}|${categoryId}`;
-          soldByCompanyCategory.set(key, (soldByCompanyCategory.get(key) ?? 0) + units);
+          outlet.companySold[categoryId] += units;
           soldByCategory[categoryId] += units;
 
-          priceSum += candidate.price * units;
+          priceSum += outlet.price * units;
           priceWeight += units;
         }
       }
@@ -863,12 +929,10 @@ function marketStep(state: GameState): void {
   }
 
   // Payları döngüden sonra tek seferde çöz.
-  for (const building of buildings) {
-    const def = BUILDING_BY_ID[building.defId];
-    if (def?.role !== 'outlet') continue;
+  for (const { building, def, ownUnits, soldGoods } of outlets) {
     const served = servedByDistrictCategory.get(`${building.districtId}|${def.category}`) ?? 0;
-    building.last.share = served > 0 ? (ownDistrictUnits.get(building.id) ?? 0) / served : 0;
-    building.soldByGood = soldByGood.get(building.id) ?? {};
+    building.last.share = served > 0 ? ownUnits / served : 0;
+    building.soldByGood = soldGoods;
   }
 
   // ---- Kira üreten binalar ----
@@ -951,7 +1015,7 @@ function marketStep(state: GameState): void {
   for (const company of Object.values(state.companies)) {
     for (const categoryId of CONSUMER_CATEGORIES) {
       const total = soldByCategory[categoryId];
-      const own = soldByCompanyCategory.get(`${company.id}|${categoryId}`) ?? 0;
+      const own = soldByCompany.get(company.id)?.[categoryId] ?? 0;
       const share = total > 0 ? own / total : 0;
       company.marketShare[categoryId] = share;
 

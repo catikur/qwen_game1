@@ -226,6 +226,11 @@ function bidRound(state: GameState): void {
 
   let raises = 0;
   let active = true;
+  // Değerleme tur boyunca sabit (Tur 43): teklif ne parseli ne kasayı
+  // değiştiriyor, kasa ihale kapanınca düşüyor. Her artırmada yeniden
+  // hesaplanıyordu; değerleme her bina türü için yatırım tahmini demek ve
+  // ihale günü büyük şehirde günün en pahalı kalemiydi.
+  const valuations = new Map<string, number>();
 
   while (active && raises < MAX_RAISES_PER_ROUND) {
     active = false;
@@ -235,7 +240,11 @@ function bidRound(state: GameState): void {
       if (!company) continue;
       if (auction.bidderId === profile.id) continue;
 
-      const valuation = valuationFor(state, profile.id, auction.tileId);
+      let valuation = valuations.get(profile.id);
+      if (valuation === undefined) {
+        valuation = valuationFor(state, profile.id, auction.tileId);
+        valuations.set(profile.id, valuation);
+      }
       // Kişilik burada da konuşuyor: arsa spekülatörü değerlemesinin
       // üstüne çıkar (arsa onun asıl işi), ucuzcu altında kalır.
       const appetite =

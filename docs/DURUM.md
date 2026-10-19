@@ -4007,6 +4007,120 @@ Tarayıcı tam koşu 458/458, konsol hatası yok (~32 dk); "Açılış" bölüm�
 ~50 sn. Firefox düzeltmesi bu koşudan sonra geldi; ardından "Açılış"
 bölümü yeniden koşuldu, 12/12.
 
+### Tur 43 — Oyun içi akıcılık
+
+Kullanıcı "Oyun içi akıcılık"ı seçti. Tur 42 açılışa bakmıştı; bu tur
+oyunun kendisine baktı: büyük şehirde ve geç oyunda bir karenin JS süresi
+ve bir oyun gününün süresi. Oyun ve görüntü aynı.
+
+**Ölçüm.** Tarayıcıda kare JS'i sayfanın içinden ölçüldü (`engine.advance`
+ve çizim ayrı), gün başına süre Node'da ve tarayıcıda. CPU profili Node'da
+`--cpu-prof`, tarayıcıda CDP ile, küçültülmemiş bir yapıyla alındı.
+- Yazılımsal GPU'da (SwiftShader) kare GPU'ya bağlı: kare aralığı
+  0,5–1 sn, JS bunun ~%3'ü. Gerçek cihazda takılmayı GPU değil günün JS'i
+  yapıyor: 3. hızda gün 480 ms'de bir geliyor ve o kareyi bekletiyor.
+- Büyük şehir fethinde (430 bina) bir gün tarayıcıda ~20 ms: simülasyon
+  günü, state eşitlemesi (~4,5 ms), React (~1,5 ms).
+- Günün içinde pazar adımı her gün ~5,6 ms. İhale günleri 52,8 ms'ye,
+  rakip karar günleri ~18 ms'ye çıkıyordu.
+
+Kök nedenler:
+- *Pazar adımı aynı değerleri tekrar tekrar hesaplıyordu.* Dağıtım her
+  (bölge, ürün) çifti için mağazanın fiyatını, kalitesini, markasını,
+  hizmet, kart ve proje çarpanlarını ve kaynak bölgeden erişimi yeniden
+  soruyordu. Hiçbiri gün içinde değişmiyor.
+- *İhale değerlemesi her artırmada.* Değerleme her bina türü için yatırım
+  tahmini demek. Bir teklif turunda her rakip her artırmada yeniden
+  değerliyordu; parsel de kasa da tur boyunca değişmiyor.
+- *Rakip kartları şehri halka başına tarıyordu.* `flowFor` her ürün halkası
+  için bütün binaları tarıyordu, en ucuz parsel araması her kart için
+  bütün parselleri.
+- *Örnek tamponlarının tamamı her karede yükleniyordu.* Tamponlar en
+  kalabalık hâle göre ayrılmış (araç türü başına bütün araçlar, en büyük
+  şehrin binaları); çizilen `count` kadarı. `needsUpdate` tamponun
+  tamamını yüklüyor.
+- *Şehir dokusu her gün yeniden yerleşiyordu.* Oyuncuya ait olmayan
+  yapılar, süsleri ve gölgeleri her state eşitlemesinde baştan
+  yerleşiyordu. Doku 150 günün 51–67'sinde değişiyor.
+
+**Değişiklikler.**
+- *Pazar adımı* (`market.ts`): mağazanın gün boyu sabit değerleri
+  (`OutletDay`) mağaza başına bir kez. Erişilen bölgeler ve erişim kaynak
+  bölge başına bir kez, raf erişimi arketip başına bir kez, birim maliyet
+  ürün başına bir kez. Şirketin kategori satışı şirketin mağazalarında
+  paylaşılan bir kayıtta. Çekicilik eskisiyle aynı sırayla çarpılıyor:
+  `kalite × marka × fiyat`, sonra `× erişim × hizmet × kart × proje`.
+- *İhale* (`auction.ts`): değerleme teklif turu başına rakip başına bir
+  kez.
+- *Rakip kartları* (`chain.ts`): şirketin bütün ürünlerindeki üretim ve
+  tüketim tek taramada; en ucuz parsel bina türü başına bir kez. İkisi de
+  bina indeksinin kapsamında (`scopedMemo`): kapsamda bina değişmiyor.
+- *Yalnız çizilen kısım yükleniyor* (`instances.ts`): araç, ışık, kamyon,
+  yaya, duman, doku ve süs tamponlarında yükleme aralığı `[0, count)`.
+  Çağıranlar her yüklemede ilk `count` yuvanın hepsini yeniden yazıyor.
+  `count` sıfırsa hiçbir şey yüklenmiyor: WebGL'de sıfır uzunluklu aralık
+  "tamponun sonuna kadar" demek.
+- *Doku yalnız değiştiği günlerde yerleşiyor* (`scene.ts`): karenin yapısı
+  ve yüksekliği aklında tutuluyor. Yerleşim yalnız bu ikisine bakıyor (renk
+  sapması ve cephe karenin kimliğinden); ikisi aynıysa çıktı da aynı.
+  Binalar 150 günün 119'unda değişiyor; onların atlanması denenmedi.
+
+**Sonuç bit bit aynı.** Her adımdan sonra 11 koşu (standart ve büyük şehir,
+yedi senaryo, iki uzun koşu) günün sonundaki state'in parmak iziyle
+karşılaştırıldı; hepsi eskisiyle aynı. Zaman damgaları (`…AtIso`) ize
+girmiyor, her koşuda değişiyorlar. Yeni `pnpm dayperf` gün başına süreyi
+senaryo şehirlerinde yazıyor, sonda izle.
+
+**Gün başına süre, Node** (`pnpm dayperf`, 10 gün ısınma, 120 gün; ms).
+Önce ve sonra iç içe üçer koşu, aralıklar koşular arası:
+
+| Senaryo | Bina | Ortalama | p95 | En yavaş gün |
+|---|---|---|---|---|
+| Büyük şehir fethi | 430 | 22,5–24,0 → **15,8–18,0** | 40–46 → **29–32** | 63–103 → **40–47** |
+| Holding | 60 | 9,5–10,5 → **6,8–7,9** | 17–18 → **11–14** | 35–37 → **16–22** |
+| Zincir ustası | 225 | 9,0–10,4 → **6,6–8,4** | 17–20 → **11–15** | 30–41 → **14–19** |
+| Konsorsiyum | 157 | 6,2–7,2 → **3,9–4,3** | 11–15 → **7–10** | 17–24 → **10–13** |
+| Krizin ortasında | 149 | 4,5–5,4 → **2,9–3,5** | 8–10 → **5–6** | 20–27 → **6–10** |
+
+Sponsorda (121 bina, gün ~3,5 ms) fark gürültü düzeyinde.
+
+**Tarayıcı** (SwiftShader, en üst kademe, 3. hız, ~21 sn; iki koşunun
+ortalaması):
+
+| | Fetih önce | Fetih sonra | Holding önce | Holding sonra |
+|---|---|---|---|---|
+| Kare JS, ortalama | 28,2 ms | **18,4 ms** | 9,7 ms | **7,3 ms** |
+| Kare JS, p95 | 48,9 ms | **34,4 ms** | 16,0 ms | **12,2 ms** |
+| Çizim JS (gün dışı) | 7,5 ms | **3,7 ms** | 2,5 ms | **1,6 ms** |
+| Gün | 19,7 ms | **14,0 ms** | 7,2 ms | **5,8 ms** |
+
+- Standart şehirde oyun dururken kare başına yüklenen tampon verisi
+  44.928 → **4.608 bayt**: araçlar ve yayalar yürüyor, yalnız onların
+  çizilen yuvaları gidiyor.
+- 3. hızda 20 günde doku 6 kez yerleşti.
+- Gerçek GPU'da ölçülemedi. Orada kare JS'i kare bütçesinin (16,7 ms)
+  büyük kısmı; kazanç daha çok orada görünür.
+- Kalan en büyük kalemler: rakip karar günü (yatırım tahmini, rekabet
+  kartları) ve her gün yeniden yerleşen binalar.
+
+**Görüntü.** Krizin ortasında'nın şehrinde en ucuz kademede gündüz ve
+gece, en üst kademede gündüz kareleri önce ve sonra aynı; yalnız trafik
+farklı.
+
+**Doğrulama.** `pnpm test` 466/466. Yeni `instances.test.ts` üç test:
+yükleme aralığı çizilen örnek sayısı kadar; her yükleme önceki aralığı
+siliyor; çizilen yoksa hiçbir şey yüklenmiyor.
+
+Tarayıcı testine "Akıcılık: kare ve gün" bölümü eklendi (3 kontrol):
+- araç ve yaya tamponlarından yalnız çizilen kısım yükleniyor (kare başına
+  20.000 bayttan az);
+- şehir dokusu yalnız değiştiği günlerde yeniden yerleşiyor (3. hızda 20
+  gün; çizilen doku kalıyor);
+- konsol temiz.
+
+Eski yapıda (main) ilk iki kontrol kalıyor: kare başına 44.928 bayt,
+doku sayaçları yok.
+
 
 ---
 
@@ -4088,8 +4202,8 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 | | Değer |
 |---|---|
 | Determinizm | birebir |
-| Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi) |
-| Birim testi | **463 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma da) |
+| Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi). Senaryo şehirlerinde gün 3–17 ms (`pnpm dayperf`, Tur 43) |
+| Birim testi | **466 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi de) |
 | Denge testi | **324 kontrol, hepsi geçiyor** (24 bölüm, süreleriyle; ~15 dk) |
 | Tarayıcı testi | **458 kontrol, hepsi geçiyor**, 0 konsol hatası (~25–40 dk); duman koşusu 132 (~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + duman oynanışı |
@@ -4285,6 +4399,7 @@ pnpm test            # birim testleri — 327 test, test yoksa kırmızı
 pnpm balance         # denge testi — 288 kontrol, geçti/kaldı (~11 dk)
 pnpm balance meclis  # yalnızca adında "meclis" geçen bölümler
 pnpm bench           # benchmark — sayıların kendisi
+pnpm dayperf         # gün başına süre, senaryo şehirlerinde (en yavaş günler ve parmak izi)
 pnpm constraint      # kısıt deneyi — bağlayıcı kısıt hangisi?
 pnpm land            # abonman oranı — geometri varyantları
 pnpm longrun         # uzun oyun — 1440 gün, kartopu ve geç oyun frenleri
