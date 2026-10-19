@@ -66,6 +66,8 @@ describe('kariyer deposu', () => {
     state.scenario = { id: 'conquest', startDay: 0, endDay: 400 };
     player(state).netWorth = 600_000_000;
     player(state).acquisitions = 1;
+    // Kurtarma'da halka arz açık ve öneriliyor; Borsada büyüme rozeti (Codex #70).
+    player(state).issues = 1;
     assert.deepEqual(ids(observeCareer(state)), ['first_takeover']);
     assert.equal(careerSummary().bestWorth, 0, 'en yüksek değer serbest oyundan');
   });

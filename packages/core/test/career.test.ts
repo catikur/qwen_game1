@@ -66,7 +66,7 @@ describe('kariyer: katalog', () => {
       if (def.kind === 'victory') assert.ok(def.victory, `${def.id}: süzgeç`);
     }
     // Büyüme ve zafer senaryoda sayılmıyor: kurulum hazır servet ve şehir veriyor.
-    for (const def of ACHIEVEMENTS.filter((a) => ['worth', 'victory', 'cities', 'holding', 'ceoVictories'].includes(a.kind))) {
+    for (const def of ACHIEVEMENTS.filter((a) => a.group === 'growth' || a.group === 'victory')) {
       assert.equal(def.freePlayOnly, true, def.id);
     }
     assert.equal(ACHIEVEMENT_BY_ID.scenario_perfect!.target, SCENARIOS.length * 3);

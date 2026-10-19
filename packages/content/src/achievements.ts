@@ -91,6 +91,8 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     hint: 'Şirketini halka arz et.',
     kind: 'ipo',
     target: 1,
+    // Kurtarma'da halka arz açık ve öneriliyor; büyüme rozeti senaryoda sayılmıyor (Codex #70).
+    freePlayOnly: true,
   },
   {
     id: 'quarter_billion',

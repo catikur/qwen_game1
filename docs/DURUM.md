@@ -3699,7 +3699,9 @@ Hepsi bu cihazda saklanıyor; lig ve senaryo tabloları değişmiyor.
   geliyor: meclis, sözleşme, ihale, balon, görev, lig, senaryo yıldızı ve
   farklı CEO.
 - *Senaryo:* büyüme ve zafer rozetleri senaryoda sayılmıyor, çünkü kurulum
-  hazır servet ve şehir veriyor. Rekabet ve şehir rozetleri her oyunda
+  hazır servet ve şehir veriyor. Borsada da büyüme rozeti: Kurtarma'da
+  halka arz açık ve öneriliyor (Codex #70); katalog testi kuralı grup
+  üzerinden denetliyor. Rekabet ve şehir rozetleri her oyunda
   sayılıyor. Sayaçlar devir gününden başlıyor: ön tarihte biten kriz
   oyuncunun değil.
 - *Eşikler ölçümden:* `pnpm longrun` (üç tohum, Dengeli) koşuldu. Vekil
