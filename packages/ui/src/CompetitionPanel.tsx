@@ -1,5 +1,5 @@
 import type { ReactElement } from 'react';
-import { CATEGORIES, CONSUMER_CATEGORIES, GOOD_BY_ID, TREND, formatPercent } from '@capital/content';
+import { CATEGORIES, CONSUMER_CATEGORIES, GOOD_BY_ID, TREND, formatDecimal, formatPercent } from '@capital/content';
 import {
   activeFad,
   competitionCards,
@@ -152,14 +152,14 @@ function CompetitionCardView({ card }: { card: CompetitionCard }): ReactElement 
           <Row label={t('app.rivalry.row.share')} mine={pct(card.share)} theirs={leader ? pct(leader.share) : '—'} good={ahead} />
           <Row
             label={t('app.rivalry.row.quality')}
-            mine={card.quality.toFixed(2)}
-            theirs={leader ? leader.quality.toFixed(2) : '—'}
+            mine={formatDecimal(card.quality, 2)}
+            theirs={leader ? formatDecimal(leader.quality, 2) : '—'}
             good={!leader || card.quality >= leader.quality}
           />
           <Row
             label={t('app.rivalry.row.brand')}
-            mine={card.brand.toFixed(2)}
-            theirs={leader ? leader.brand.toFixed(2) : '—'}
+            mine={formatDecimal(card.brand, 2)}
+            theirs={leader ? formatDecimal(leader.brand, 2) : '—'}
             good={!leader || card.brand >= leader.brand}
           />
           {/* Fiyat NÖTR: ucuz olmak iyi, pahalı olmak kötü değil —
@@ -167,8 +167,8 @@ function CompetitionCardView({ card }: { card: CompetitionCard }): ReactElement 
               "öndesin" sinyali veriyordu. */}
           <Row
             label={t('app.rivalry.row.price')}
-            mine={`×${card.price.toFixed(2)}`}
-            theirs={leader ? `×${leader.price.toFixed(2)}` : '—'}
+            mine={`×${formatDecimal(card.price, 2)}`}
+            theirs={leader ? `×${formatDecimal(leader.price, 2)}` : '—'}
           />
         </tbody>
       </table>
@@ -222,7 +222,7 @@ function ArmView({ arm }: { arm: CompetitionArm }): ReactElement {
       <span className="rival-arm-head">
         <strong>{arm.label}</strong>
         <span className="rival-arm-value">
-          +{arm.value.toFixed(2)} / {arm.cap.toFixed(2)}
+          +{formatDecimal(arm.value, 2)} / {formatDecimal(arm.cap, 2)}
         </span>
       </span>
       <span className="rival-bar" aria-hidden="true">

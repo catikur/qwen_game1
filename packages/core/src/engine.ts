@@ -1,4 +1,4 @@
-import { BUILDING_BY_ID, CONSUMER_CATEGORIES, GOODS_BY_CATEGORY, formatPercent } from '@capital/content';
+import { BUILDING_BY_ID, CONSUMER_CATEGORIES, GOODS_BY_CATEGORY, formatDecimal, formatPercent } from '@capital/content';
 import { build, buyTile, buyoutTile, demolish, sellTile } from './actions';
 import { pushNews } from './news';
 import { stepLeadership } from './leadership';
@@ -636,7 +636,7 @@ export class GameEngine {
       pushNews(
         this.state,
         'good',
-        tc('core.engine.milestoneTitle', { value: (milestone / 1_000_000).toFixed(milestone >= 1_000_000 ? 1 : 2) }),
+        tc('core.engine.milestoneTitle', { value: formatDecimal(milestone / 1_000_000, milestone >= 1_000_000 ? 1 : 2) }),
         unlocked.length > 0
           ? tc('core.engine.milestoneUnlocked', { names: unlocked.join(', ') })
           : tc('core.engine.milestoneScale'),

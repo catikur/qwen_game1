@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { ReactElement } from 'react';
 import { CEOS, CITY_SIZES, DEFAULT_CEO_ID, DEFAULT_CITY_SIZE, DEFAULT_DIFFICULTY, DIFFICULTIES, SCENARIOS, getCitySize, getDifficulty } from '@capital/content';
 import type { CitySizeId, DifficultyId, ScenarioDef } from '@capital/content';
@@ -90,6 +90,15 @@ export function NewGameScreen({
   const level = DIFFICULTIES.find((d) => d.id === difficulty) ?? DIFFICULTIES[1]!;
   // Kariyer (Tur 41): oyun dışında da açılabilsin, koşular arasında bakılan yer burası.
   const [careerOpen, setCareerOpen] = useState(false);
+  // Oyun içindeki paneller gibi Escape kapatıyor (Tur 44).
+  useEffect(() => {
+    if (!careerOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.code === 'Escape') setCareerOpen(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [careerOpen]);
   useCareerRevision();
   const career = careerSummary();
   const badges = career.statuses.filter((status) => career.unlocked[status.def.id]).length;

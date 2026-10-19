@@ -23,7 +23,8 @@ describe('haber akışı', () => {
       engine.runDay();
       for (const item of s.news) {
         if (item.id <= last) break;
-        if (!item.group) continue;
+        // Mağazanın yanına açılışların kendi özeti var (`near:`, Tur 44).
+        if (!item.group || item.group.startsWith('near:')) continue;
         assert.match(item.group, /^expand:\d+$/);
         const total = Object.values(item.tally ?? {}).reduce((sum, n) => sum + n, 0);
         if (total > 1) {
@@ -51,7 +52,8 @@ describe('haber akışı', () => {
       engine.runDay();
       for (const item of s.news) {
         if (item.id <= last) break;
-        if (item.group || !/genişliyor$/.test(item.title) || item.tileId === undefined) continue;
+        // Haftanın ilk doğrudan rekabet haberi tek başına; özetler `expand:` ve sonraki `near:` haberleri.
+        if (item.group?.startsWith('expand:') || !/genişliyor$/.test(item.title) || item.tileId === undefined) continue;
         const building = Object.values(s.buildings).find((b) => b.tileId === item.tileId);
         const def = building ? BUILDING_BY_ID[building.defId] : undefined;
         if (!building || def?.role !== 'outlet') continue;
@@ -68,5 +70,32 @@ describe('haber akışı', () => {
       last = s.news[0]?.id ?? last;
     }
     assert.ok(direct >= 1, `${direct} doğrudan rekabet haberi`);
+  });
+
+  /*
+   * Tur 44. Oyuncu büyüdükçe neredeyse her rakip mağaza "doğrudan rekabet"
+   * oluyor: büyük şehirde görünen 60 haberin 10–20'si tek tek "X genişliyor"du
+   * (50–60 günün akışı). Haftanın ilki tek haber; ikincisinden itibaren
+   * "Mağazalarının yanına rakip · bu hafta N açılış", bölge başına sayım.
+   */
+  test('mağazanın yanına açılışlar haftada tek haber; sayım başlıkla aynı', () => {
+    const engine = new GameEngine(createNewGame({ seed: 3, companyName: 'Haber AŞ', citySize: 'large' }));
+    const s = engine.getState();
+    let digests = 0;
+    let biggest = 0;
+    for (let day = 1; day <= 400; day++) {
+      if (day % 5 === 0) playerStrategy(engine);
+      engine.runDay();
+      const near = s.news.filter((item) => item.group?.startsWith('near:'));
+      assert.equal(new Set(near.map((item) => item.group)).size, near.length, `gün ${day}: aynı haftanın iki yakın rekabet haberi`);
+      for (const item of near) {
+        const total = Object.values(item.tally ?? {}).reduce((sum, n) => sum + n, 0);
+        if (total < 2) continue;
+        assert.match(item.title, new RegExp(`bu hafta ${total} açılış`), item.title);
+        biggest = Math.max(biggest, total);
+      }
+      digests = Math.max(digests, near.filter((item) => Object.values(item.tally ?? {}).reduce((a, b) => a + b, 0) >= 2).length);
+    }
+    assert.ok(digests >= 1 && biggest >= 2, `en çok ${biggest} açılışlık özet`);
   });
 });

@@ -15,6 +15,7 @@ export const world = {
   'core.npc.expandBuyoutBody': '{district} bölgesinde bir parseli devralıp {building} açtı.',
   'core.npc.expandBody': '{district} bölgesinde {building} açtı.',
   'core.npc.expandDigestTitle': 'Rakipler genişliyor · bu hafta {count} yeni işletme',
+  'core.npc.nearDigestTitle': 'Mağazalarının yanına rakip · bu hafta {count} açılış',
   'core.npc.expandDigestBody': '{list}. Son açılış {name}: {latest}',
   'core.npc.buybackTitle': '{name} kendi hissesini topluyor',
   'core.npc.buybackBody':

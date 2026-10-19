@@ -261,6 +261,21 @@ export const panels = {
   'panels.help.step.consortium.title': 'Öndeyken de durma.',
   'panels.help.step.consortium.body':
     ' Çok öndeyken bina kurmayı bırakıp parayı kasada bekletirsen en büyük rakipler konsorsiyum kurar: 30 gün sonra hisseni birlikte toplamaya başlarlar ve yarıyı geçerlerse şirket onların. Gündemde "Konsorsiyum" çıkınca yatırıma dön (üç yeni bina), hisse geri al ya da halka arzla yatırımcı getir.',
+  'panels.help.step.auction.title': 'Bazı arsalar açık artırmada.',
+  'panels.help.step.auction.body':
+    " Belediye ara sıra bir parseli ihaleye çıkarır; o parsel normal yoldan satılmaz. Gündemdeki çipten teklif verirsin, rakipler de artırır; üç günün sonunda en yüksek teklif parseli alır. Kentsel dönüşüm ihalesinde parselde şehir yapısı vardır: kazanan onu yıktırıp parseli boş alır.",
+  'panels.help.step.council.title': 'Meclis kuralları değiştirir.',
+  'panels.help.step.council.body':
+    " 120. günden sonra her 90 günde meclise iki önerge gelir: imarı öne çekmek, bir kategoriye vergi ya da teşvik, metro, ruhsat. Oylamaya 20 gün var; Meclis panelinden lehte ya da aleyhte bağış yaparsın. Bağış geri dönmez ve herkes görür; rakipler de çıkarlarına göre bağışlar. Desteği %50'yi geçen önerge kabul edilir.",
+  'panels.help.step.contracts.title': 'Belediye iş teklif eder.',
+  'panels.help.step.contracts.body':
+    ' Ara sıra süreli bir sözleşme gelir: bir bölgeye bina kurmak ya da bir kategoride pazar payına ulaşmak. Teklifi gündemdeki çipten kabul edersin; süresinde bitirirsen ödül kasaya girer, bitiremezsen cayma bedeli ödersin. Reddetmek bedava.',
+  'panels.help.step.scenario.title': 'Senaryolar hazır bir dönemeçten başlar.',
+  'panels.help.step.scenario.body':
+    " Kurulumda Senaryo'yu seçersen yedi hazır durumdan birini oynarsın: borçlu bir şirket, kapıdaki kriz, birleşmiş rakipler… Her birinin hedefi ve süresi var; ne kadar iyi bitirdiğine göre bir, iki ya da üç yıldız alırsın. Bu cihazdaki en iyi sonuç saklanır.",
+  'panels.help.step.league.title': 'Tohum Ligi: herkes aynı şehirde.',
+  'panels.help.step.league.body':
+    " Kurulumda Tohum Ligi'ni seçersen haftanın şehrinde 360 gün oynarsın; şehir ve olaylar herkes için aynı. Skor tekrarla doğrulanır: koşu her tarayıcıda baştan oynanır ve aynı skoru bulmalıdır.",
   'panels.help.step.career.title': 'Koşuların ötesine bak.',
   'panels.help.step.career.body':
     ' Hedefler panelindeki Kariyer sayfası ve kurulum ekranı rozetlerini ve koşu geçmişini tutar: devralma, kriz, konsorsiyum, meclis, holding, senaryo, lig. Rozet ödül vermez, oyunun her köşesini gösterir. Bu cihazda saklanır.',

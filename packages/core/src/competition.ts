@@ -4,6 +4,7 @@ import {
   CATEGORIES,
   CONSUMER_CATEGORIES,
   baseText,
+  formatDecimal,
   formatShortMoney,
   getCeoModifiers,
 } from '@capital/content';
@@ -233,10 +234,10 @@ function armsFor(state: GameState, companyId: string, categoryId: CategoryId): C
           : research < researchTarget * 0.95
             ? tc('core.competition.researchGrowing', {
                 count: counts.research,
-                value: research.toFixed(2),
-                ceiling: researchTarget.toFixed(2),
+                value: formatDecimal(research, 2),
+                ceiling: formatDecimal(researchTarget, 2),
               })
-            : tc('core.competition.researchCapped', { count: counts.research, value: research.toFixed(2) }),
+            : tc('core.competition.researchCapped', { count: counts.research, value: formatDecimal(research, 2) }),
     },
     {
       kind: 'marketing',
@@ -249,7 +250,7 @@ function armsFor(state: GameState, companyId: string, categoryId: CategoryId): C
       detail:
         counts.marketing === 0
           ? tc('core.competition.marketingNone')
-          : tc('core.competition.marketingActive', { count: counts.marketing, value: leverage.toFixed(2) }),
+          : tc('core.competition.marketingActive', { count: counts.marketing, value: formatDecimal(leverage, 2) }),
     },
   ];
 }
