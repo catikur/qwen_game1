@@ -3985,8 +3985,8 @@ taklit edildiği ayrı bir açılışa taşındı.
 kaldı. Düzeltmenin ilk sürümünde de kaldı: normalli dörtgen bulanıklığı
 ikinci bir programla derletiyordu.
 
-Tarayıcı tam koşu 455/455, konsol hatası yok (~34 dk; Codex düzeltmesinden
-önceki yapıda). Bölüm düzeltmeden sonra 10/10.
+Tarayıcı tam koşu 456/456, konsol hatası yok (~33 dk); "Açılış" bölümü
+~50 sn.
 
 
 ---
@@ -4072,7 +4072,7 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi) |
 | Birim testi | **460 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom da) |
 | Denge testi | **324 kontrol, hepsi geçiyor** (24 bölüm, süreleriyle; ~15 dk) |
-| Tarayıcı testi | **446 kontrol, hepsi geçiyor**, 0 konsol hatası (~25–40 dk); duman koşusu 132 (~5 dk, rehber dahil) |
+| Tarayıcı testi | **456 kontrol, hepsi geçiyor**, 0 konsol hatası (~25–40 dk); duman koşusu 132 (~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + duman oynanışı |
 | Kapsam | 35 bina · 25 ürün · 7 kategori · 8 rakip profili · 10 CEO · 22 olay (11 şehir + 11 sektör) · 2 kriz · 12 karar kartı · 70 rakip sözü · 5 fırsat balonu · 8 görev türü · 4 mevsim · 9 moda ürünü · 17 şehir yapısı (6 siluet) · 6 şehir projesi · 7 senaryo · 26 rozet |
 
