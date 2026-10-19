@@ -565,7 +565,7 @@ function PlotActions({ tileId, price }: { tileId: number; price: number }): Reac
         </button>
         <p className="muted">
           {/* Çarpan yoksa eskisi gibi boş kalır (React `undefined`'ı çizmiyordu). */}
-          {t('panels.plot.buyoutNote', { multiplier: structure.buyoutMultiplier?.toFixed(1) ?? '' })}
+          {t('panels.plot.buyoutNote', { multiplier: structure.buyoutMultiplier != null ? formatDecimal(structure.buyoutMultiplier, 1) : '' })}
         </p>
       </div>
     );
@@ -662,7 +662,7 @@ function BuildingDetail({ buildingId }: { buildingId: string }): ReactElement | 
                   ? 'panels.building.stat.priceCampaign'
                   : 'panels.building.stat.price',
               )}
-              value={`×${effectivePriceMultiplier(state, building).toFixed(2)}`}
+              value={`×${formatDecimal(effectivePriceMultiplier(state, building), 2)}`}
             />
           </div>
         </>
@@ -1233,82 +1233,51 @@ function SavePanel(): ReactElement {
   );
 }
 
+/**
+ * Yardımın maddeleri, oyunda karşılaşılma sırasıyla. Her sistem bir madde
+ * (Tur 44: ihale, meclis, sözleşme, lig ve senaryo eksikti).
+ */
+const HELP_STEPS = [
+  'opportunity',
+  'land',
+  'auction',
+  'invest',
+  'losses',
+  'pricing',
+  'bank',
+  'workforce',
+  'council',
+  'contracts',
+  'ipo',
+  'takeover',
+  'holding',
+  'late',
+  'stories',
+  'opportunities',
+  'living',
+  'projects',
+  'consortium',
+  'scenario',
+  'league',
+  'career',
+] as const;
+
 function HelpPanel(): ReactElement {
   const { engine, setView } = useGame();
   return (
     <div className="help">
       <ol>
-        <li>
-          <strong>{t('panels.help.step.opportunity.title')}</strong>
-          {t('panels.help.step.opportunity.body')}
-        </li>
-        <li>
-          <strong>{t('panels.help.step.land.title')}</strong>
-          {t('panels.help.step.land.body')}
-        </li>
-        <li>
-          <strong>{t('panels.help.step.invest.title')}</strong>
-          {t('panels.help.step.invest.body')}
-        </li>
-        <li>
-          <strong>{t('panels.help.step.losses.title')}</strong>
-          {t('panels.help.step.losses.body')}
-        </li>
-        <li>
-          <strong>{t('panels.help.step.pricing.title')}</strong>
-          {t('panels.help.step.pricing.body')}
-        </li>
-        <li>
-          <strong>{t('panels.help.step.bank.title')}</strong>
-          {t('panels.help.step.bank.body')}
-        </li>
-        <li>
-          <strong>{t('panels.help.step.workforce.title')}</strong>
-          {t('panels.help.step.workforce.body')}
-        </li>
-        <li>
-          <strong>{t('panels.help.step.ipo.title')}</strong>
-          {t('panels.help.step.ipo.body')}
-        </li>
-        <li>
-          <strong>{t('panels.help.step.takeover.title')}</strong>
-          {t('panels.help.step.takeover.body', {
-            // Günlük tavan zorluktan (Tur 38): metin eskiden Dengeli'nin %3,5'ini yazıyordu.
-            cap: formatPercent(formatDecimal(getDifficulty(engine.getState().difficulty).raidDailyCap / 100, 1)),
-          })}
-        </li>
-        <li>
-          <strong>{t('panels.help.step.holding.title')}</strong>
-          {t('panels.help.step.holding.body')}
-        </li>
-        <li>
-          <strong>{t('panels.help.step.late.title')}</strong>
-          {t('panels.help.step.late.body')}
-        </li>
-        <li>
-          <strong>{t('panels.help.step.stories.title')}</strong>
-          {t('panels.help.step.stories.body')}
-        </li>
-        <li>
-          <strong>{t('panels.help.step.opportunities.title')}</strong>
-          {t('panels.help.step.opportunities.body')}
-        </li>
-        <li>
-          <strong>{t('panels.help.step.living.title')}</strong>
-          {t('panels.help.step.living.body')}
-        </li>
-        <li>
-          <strong>{t('panels.help.step.projects.title')}</strong>
-          {t('panels.help.step.projects.body')}
-        </li>
-        <li>
-          <strong>{t('panels.help.step.consortium.title')}</strong>
-          {t('panels.help.step.consortium.body')}
-        </li>
-        <li>
-          <strong>{t('panels.help.step.career.title')}</strong>
-          {t('panels.help.step.career.body')}
-        </li>
+        {HELP_STEPS.map((step) => (
+          <li key={step} data-help-step={step}>
+            <strong>{t(`panels.help.step.${step}.title`)}</strong>
+            {step === 'takeover'
+              ? t('panels.help.step.takeover.body', {
+                  // Günlük tavan zorluktan (Tur 38): metin eskiden Dengeli'nin %3,5'ini yazıyordu.
+                  cap: formatPercent(formatDecimal(getDifficulty(engine.getState().difficulty).raidDailyCap / 100, 1)),
+                })
+              : t(`panels.help.step.${step}.body`)}
+          </li>
+        ))}
       </ol>
       <p className="muted">
         {t('panels.help.controls')}

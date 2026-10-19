@@ -5,6 +5,7 @@ import {
   GOOD_BY_ID,
   chainOf,
   formatPercent,
+  formatUnitMoney,
   numberLocale,
 } from '@capital/content';
 import type { BuildingDef, CategoryId, GoodDef } from '@capital/content';
@@ -168,7 +169,7 @@ const STATE_LABEL: Record<ChainSlotState, string> = {
 };
 
 function money(value: number): string {
-  return `₺${value.toFixed(2)}`;
+  return formatUnitMoney(value);
 }
 
 function percent(value: number): string {

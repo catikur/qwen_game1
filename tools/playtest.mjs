@@ -4090,6 +4090,119 @@ async function finish(browser, consoleErrors) {
     check('Akıcılık ölçümünde konsol temiz', flowErrors.length === 0, flowErrors.slice(0, 2).join(' | '));
   }
 
+  // ---------- Değerlendirme (Tur 44) ----------
+  section('Değerlendirme: yardım, sayılar, İngilizce ekranlar');
+  {
+    const evalErrors = [];
+    const ctx = await browser.newContext({ viewport: { width: 1280, height: 860 } });
+    await ctx.addInitScript(veteran, TUTORIAL_KEY);
+    const ep = await ctx.newPage();
+    ep.on('pageerror', (e) => evalErrors.push(e.message));
+    ep.on('console', (m) => {
+      if (m.type() === 'error') evalErrors.push(m.text());
+    });
+    await ep.goto('http://127.0.0.1:8811/');
+    await ep.waitForSelector('.newgame', { timeout: 20000 });
+    await ep.locator('button:has-text("Şirketi kur")').click();
+    await ep.waitForSelector('.topbar', { timeout: 20000 });
+
+    // Yardım her sistemi bir maddede anlatıyor: meclis, sözleşme, ihale, lig ve senaryo eksikti.
+    await ep.locator('.topbar-actions [data-panel="help"]').click();
+    await ep.waitForSelector('.help');
+    const steps = await ep.locator('.help [data-help-step]').evaluateAll((items) => items.map((item) => item.getAttribute('data-help-step')));
+    const wanted = ['auction', 'council', 'contracts', 'league', 'scenario'];
+    check('Yardım meclisi, sözleşmeyi, ihaleyi, ligi ve senaryoyu anlatıyor',
+      wanted.every((id) => steps.includes(id)),
+      `${steps.length} madde · eksik: ${wanted.filter((id) => !steps.includes(id)).join(', ') || 'yok'}`);
+    await ep.keyboard.press('Escape');
+
+    /*
+     * Türkçede ondalık virgül, binlik nokta. Para "1.23 M ₺" yazıyordu;
+     * yanındaki "1.616 ₺" bin altı yüz on altı demek. Çarpanlar (×1.05),
+     * kalite ve zincirin birim fiyatı ("₺2.80") de noktalıydı.
+     */
+    await ep.evaluate(() => {
+      const { engine, getState } = window.__capital;
+      const s = getState();
+      // Milyonlu tutar görünsün: serbest oyun 250 B ₺ kasayla açılıyor.
+      s.companies[s.playerCompanyId].cash = 3_456_000;
+      let built = 0;
+      for (const t of s.map.tiles) {
+        if (built >= 3) break;
+        if (t.kind !== 'plot' || t.ownerId || t.structureId || t.buildingId) continue;
+        if (!engine.dispatch({ type: 'BUY_TILE', tileId: t.id }).ok) continue;
+        if (engine.dispatch({ type: 'BUILD', tileId: t.id, defId: 'corner_shop' }).ok) built++;
+      }
+      for (let i = 0; i < 40; i++) engine.runDay();
+      engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+    });
+    await ep.waitForTimeout(300);
+    const DOT_DECIMAL = /\d\.\d{1,2}(?!\d)/;
+    const texts = { topbar: ((await ep.locator('.topbar').textContent()) ?? '').trim() };
+    for (const panel of ['chain', 'rivalry', 'company', 'bourse']) {
+      await ep.locator(`.topbar-actions [data-panel="${panel}"]`).click();
+      await ep.waitForTimeout(300);
+      texts[panel] = ((await ep.locator('.modal').textContent()) ?? '').trim();
+      await ep.keyboard.press('Escape');
+      await ep.waitForTimeout(150);
+    }
+    const dotted = Object.entries(texts)
+      .map(([name, text]) => [name, text.match(DOT_DECIMAL)?.[0]])
+      .filter(([, hit]) => hit);
+    check('Türkçede para, çarpan ve birim fiyat virgüllü',
+      dotted.length === 0 && /\d,\d{2} M ₺/.test(texts.topbar),
+      dotted.map(([name, hit]) => `${name}: ${hit}`).join(' · ') || texts.topbar.slice(0, 60));
+    await ctx.close();
+
+    /*
+     * İngilizce: "Dil" bölümü altı paneli tarıyor. Tur 39–41'in ekranları
+     * (senaryo seçimi ve açılışı, kariyer, hedefler) da taransın. Kişi adları
+     * (CEO'lar) Türkçe kalıyor; aranan arayüz sözcükleri.
+     */
+    const enCtx = await browser.newContext({ viewport: { width: 1280, height: 860 } });
+    await enCtx.addInitScript(veteran, TUTORIAL_KEY);
+    await enCtx.addInitScript(() => localStorage.setItem('capitalforge.locale', 'en'));
+    const en = await enCtx.newPage();
+    en.on('pageerror', (e) => evalErrors.push(e.message));
+    en.on('console', (m) => {
+      if (m.type() === 'error') evalErrors.push(m.text());
+    });
+    const TURKISH_UI = /\b(Şirket|Nakit|Kapat|bölge|Mağaza|Rakip|Hisse|Kredi|günlük|Kâr|Meclis|Senaryo|Hedef|Rozet|Kariyer|gün içinde|yıldız|Başla|Henüz)/;
+    const leftovers = {};
+    await en.goto('http://127.0.0.1:8811/');
+    await en.waitForSelector('.newgame', { timeout: 20000 });
+    await en.locator('.mode-picker [data-mode="scenario"]').click();
+    leftovers.scenarios = ((await en.locator('.newgame').textContent()) ?? '').match(TURKISH_UI)?.[0];
+    await en.locator('.newgame [data-career-open]').first().click();
+    await en.waitForSelector('[data-career]');
+    leftovers.career = ((await en.locator('[data-career]').textContent()) ?? '').match(TURKISH_UI)?.[0];
+    // Oyun içindeki paneller gibi kurulumdaki Kariyer de Escape ile kapanıyor.
+    await en.keyboard.press('Escape');
+    await en.waitForTimeout(200);
+    const careerOpen = await en.locator('.career-overlay').count();
+    check('Kurulumdaki Kariyer Escape ile kapanıyor', careerOpen === 0, `${careerOpen} katman açık`);
+    if (careerOpen > 0) await en.locator('.career-overlay .modal-head button.icon').click();
+    await en.locator('[data-scenario="rescue"]').click();
+    await en.locator('[data-newgame-start]').click();
+    await en.waitForSelector('[data-scenario-begin]', { timeout: 120000 });
+    leftovers.brief = ((await en.locator('[data-scenario-brief]').textContent()) ?? '').match(TURKISH_UI)?.[0];
+    await en.locator('[data-scenario-begin]').click();
+    await en.waitForTimeout(500);
+    await en.locator('[data-agenda="scenario"] button').first().click();
+    await en.waitForTimeout(300);
+    leftovers.goals = ((await en.locator('.modal').textContent()) ?? '').match(TURKISH_UI)?.[0];
+    await en.keyboard.press('Escape');
+    await en.locator('.topbar-actions [data-panel="help"]').click();
+    await en.waitForTimeout(300);
+    leftovers.help = ((await en.locator('.help').textContent()) ?? '').match(TURKISH_UI)?.[0];
+    const found = Object.entries(leftovers).filter(([, hit]) => hit);
+    check('İngilizce senaryo, kariyer, hedefler ve yardımda Türkçe kalıntı yok',
+      Object.keys(leftovers).length === 5 && found.length === 0,
+      found.map(([name, hit]) => `${name}: ${hit}`).join(' · ') || Object.keys(leftovers).join(', '));
+    await enCtx.close();
+    check('Değerlendirme bölümünde konsol temiz', evalErrors.length === 0, evalErrors.slice(0, 2).join(' | '));
+  }
+
   // ---------- Mobil ----------
   //
   // Bu bölüm eskiden tek satırdı: "dar ekranda yatay taşma yok". O kontrol

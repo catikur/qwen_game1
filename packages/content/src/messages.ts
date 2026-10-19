@@ -112,12 +112,21 @@ export function moneyUnits(): { thousand: string; million: string; billion: stri
 }
 
 /**
- * Kısa para biçimi (kart ve ipucu metinleri): "1.2M ₺", "45B ₺", "500 ₺";
- * İngilizcede "₺1.2M", "₺45K", "₺500". Türkçe biçim Tur 23 öncesiyle aynı.
+ * Birim fiyat, kuruşuyla (zincir kartı): Türkçede "2,80 ₺", İngilizcede
+ * "₺2.80". Birim ekonomisinde ₺2,80 ile ₺3,40 arasındaki fark kararın
+ * kendisi; `formatMoney` bin ve milyon ölçeği için yuvarlıyor.
+ */
+export function formatUnitMoney(value: number): string {
+  return withCurrency(formatDecimal(value, 2));
+}
+
+/**
+ * Kısa para biçimi (kart ve ipucu metinleri): "1,2M ₺", "45B ₺", "500 ₺";
+ * İngilizcede "₺1.2M", "₺45K", "₺500". Türkçede ondalık virgül (Tur 44).
  */
 export function formatShortMoney(value: number): string {
   const thousand = active === 'en' ? 'K' : 'B';
-  if (value >= 1_000_000) return withCurrency(`${(value / 1_000_000).toFixed(1)}M`);
+  if (value >= 1_000_000) return withCurrency(`${formatDecimal(value / 1_000_000, 1)}M`);
   if (value >= 1_000) return withCurrency(`${Math.round(value / 1_000)}${thousand}`);
   return withCurrency(`${Math.round(value)}`);
 }

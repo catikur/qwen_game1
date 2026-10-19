@@ -18,6 +18,7 @@ export const world: Record<keyof typeof trWorld, string> = {
   'core.npc.expandBuyoutBody': 'Bought out a plot in {district} and opened a new {building} there.',
   'core.npc.expandBody': 'Opened a new {building} in {district}.',
   'core.npc.expandDigestTitle': 'Rivals expanding · {count} new sites this week',
+  'core.npc.nearDigestTitle': 'Rivals next to your shops · {count} openings this week',
   'core.npc.expandDigestBody': '{list}. Latest, {name}: {latest}',
   'core.npc.buybackTitle': '{name} buys back its own shares',
   'core.npc.buybackBody':

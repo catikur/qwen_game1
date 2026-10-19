@@ -4,7 +4,7 @@
 > `pnpm bench` çıktısından; iddialar `pnpm balance` ve `pnpm playtest`
 > tarafından her koşuda doğrulanıyor.
 >
-> Son güncelleme: şema **v6**, 39 tur (Tur 33 denendi ve geri alındı; Tur 34 eski görünüme canlılık ekledi; Tur 35 arayüzü Lite'ın "Cam & Bulut" diline taşıdı; Tur 36 şehre ayrıntı kattı; Tur 37a geç oyuna yönetim yükü, servet vergisi ve kriz dönemleri getirdi; Tur 37b karar kartlarını ve rakip hikâyelerini ekledi; Tur 37c fırsat balonlarını ve aylık görev panosunu getirdi; Tur 37d canlı pazarı, şehir projesi ihalesini ve rakip konsorsiyumunu getirdi; Tur 38 değerlendirme turuydu: geç oyun hızı, gündem ve haber akışı, zorluk eğrisi; Tur 39a senaryo modunu getirdi: Kurtarma ve Krizin ortasında; Tur 39b Konsorsiyuma karşı, Zincir ustası ve Şehrin sponsoru senaryolarını ekledi; Tur 39c Büyük şehir fethi ve Holding: iki şehir ile listeyi yediye tamamladı).
+> Son güncelleme: şema **v6**, 44 tur (Tur 33 denendi ve geri alındı; Tur 34 eski görünüme canlılık ekledi; Tur 35 arayüzü Lite'ın "Cam & Bulut" diline taşıdı; Tur 36 şehre ayrıntı kattı; Tur 37a geç oyuna yönetim yükü, servet vergisi ve kriz dönemleri getirdi; Tur 37b karar kartlarını ve rakip hikâyelerini ekledi; Tur 37c fırsat balonlarını ve aylık görev panosunu getirdi; Tur 37d canlı pazarı, şehir projesi ihalesini ve rakip konsorsiyumunu getirdi; Tur 38 değerlendirme turuydu: geç oyun hızı, gündem ve haber akışı, zorluk eğrisi; Tur 39a senaryo modunu getirdi: Kurtarma ve Krizin ortasında; Tur 39b Konsorsiyuma karşı, Zincir ustası ve Şehrin sponsoru senaryolarını ekledi; Tur 39c Büyük şehir fethi ve Holding: iki şehir ile listeyi yediye tamamladı; Tur 40 cila ve performans; Tur 41 başarımlar ve kariyer; Tur 42 açılışta gölgelendirici derlemesi; Tur 43 oyun içi akıcılık; Tur 44 değerlendirme turuydu: Türkçe sayı biçimi, yardımın kapsamı, haber akışı).
 
 ---
 
@@ -4124,6 +4124,127 @@ doku sayaçları yok.
 Tarayıcı tam koşu 461/461, konsol hatası yok (~33 dk); "Akıcılık" bölümü
 ~1 dk.
 
+### Tur 44 — Değerlendirme turu: senaryolar, kariyer ve hız turlarından sonra
+
+Kullanıcı sıradaki tur için değerlendirmeyi seçti (Tur 17 ve 38 gibi). Tur
+38'den beri senaryo modu (Tur 39), cila (40), kariyer (41) ve iki hız turu
+(42, 43) geldi. Soru, oyunun bütün olarak nerede durduğu.
+
+**Ölçüm.** Tur 38'in vekilleri ve tohumları; betikler oturumun karalama
+alanında, koşu başına 1000 gün.
+
+*Zorluk eğrisi* (8 tohum: 1/7/42/101/202/3/5/11; bilgili 5 günde bir ve
+savunmasız, yavaş 15 günde bir; savunan yavaş üç günde bir geri alıyor):
+
+| | Bilgili | Yavaş, savunmasız | Yavaş, savunan |
+|---|---|---|---|
+| Rahat | 390–503'te kazanıyor (8/8) | 0 düşüş; bir tohumda zafer (537) | 0 düşüş |
+| Dengeli | 625–752 (8/8) | 7/8 düşüyor (754–886) | 0 düşüş |
+| Acımasız | 5/8 kazanıyor (809–929), 2 düşüyor, biri 1000 günde zafersiz | 8/8 düşüyor (367–815) | 2/8 düşüyor (405, 426) |
+
+Dengeli'nin üç kolu Tur 38'in ayarından sonraki ölçümle birebir aynı;
+Acımasız'da bir tohum düşüş yerine 1000 günü zafersiz bitiriyor. Eğri
+senaryo, kariyer ve hız turlarından etkilenmemiş: hiçbiri kuralı
+değiştirmedi.
+
+*Sistemler, 1000 günde* (bilgili vekil balonu yakalıyor, biten görevi
+alıyor, zaferden sonra oynamaya devam ediyor):
+
+| | Standart (10 tohum) | Büyük şehir (3 tohum) |
+|---|---|---|
+| Zafer günü | 573–752 | 684, 701 (biri 1000 günde yok) |
+| Karar kartı · kriz · dönem · kampanya | 20,6 · 1,8 · 4,7 · 3,8 | 20,3 · 1,7 · 4,7 · 3,7 |
+| Balon · görev · şehir projesi | 30 · 49 · 2 | 30 · 57 · 2 |
+| Gündem: ortalama · en çok · 8'den kalabalık gün | 6,1 · 11 · %10 | 6,1 · 11 · %9 |
+| Gün süresi (ms): erken → orta → geç | 2 → 8 → 10 | 4–8 → 21–25 → 40–47 |
+
+Takvimler Tur 38'deki gibi, üst üste binme yok. Geç oyunda gün standart
+şehirde 25–37 ms'den 9–11 ms'ye, büyük şehirde 94 ms'den 40–47 ms'ye
+indi (Tur 38 ve 43).
+
+*Rozetler.* Vekil 26 rozetin yalnız üçünü açıyor: Şehrin sahibi, Fırtınayı
+atlat, Fırtınada büyü (büyük şehirde Büyük şehrin sahibi; zafersiz tohum
+Çeyrek milyarı açıyor). Gerisi bilinçli hamle istiyor: meclis oyu,
+sözleşme, ihale, devralma, halka arz, holding. Rozet bunun için var.
+Fırtınayı atlat ile Fırtınada büyü büyüyen oyuncuda her krizde birlikte
+açılıyor; ayrışmaları küçülen oyuncuda. Bilerek bırakıldı.
+
+*Tarayıcıda yeni oyuncu.* Masaüstü (1280×860) ve telefon (390×844),
+Türkçe ve İngilizce: kurulum, senaryo seçimi, boş Kariyer, Kurtarma'nın
+açılışı ve ilk saniyeler. Yana taşma yok, konsol temiz. İngilizce
+ekranlarda Türkçe harf yalnız kişi adlarında (CEO'lar) ve dil seçicinin
+"Türkçe"sinde.
+
+**Bulgular ve düzeltmeler.**
+
+**1 · Türkçe ondalık ayırıcı tutarsızdı.** Para "1.23 M ₺" yazıyordu;
+telefonda hemen yanında "-1.616 ₺" bin altı yüz on altı demek. Yüzde ve
+ondalıklar virgüllüydü ("%3,5"), Türkçe yazımda da ondalık virgül.
+Zincirin birim fiyatı Türkçede de "₺12.60" diye öndeydi; panelin kendi
+yorumu "₺2,80" yazıyordu. Kalite, marka ve çarpanlar ("×1.05") da
+noktalıydı.
+- Para (`formatMoney`, `formatShortMoney`), birim fiyat (yeni
+  `formatUnitMoney`), sözleşme ve değer eşiği haberleri, rekabet kartının
+  Ar-Ge ve pazarlama satırları, borsa, rekabet, şirket ve arsa
+  panellerindeki çarpanlar artık dilin ondalığıyla: "1,23 M ₺", "12,60 ₺",
+  "×1,05". İngilizce aynı ("₺1.23M", "₺12.60").
+- Lig parmak izi ve tekrarı sayıyı biçimlemiyor; kayıtlı haberlerin metni
+  eski biçimde kalıyor.
+
+**2 · Yardımda beş sistem yoktu.** Yardım 17 maddeydi; ihale, meclis,
+sözleşme, Tohum Ligi ve senaryo modu anlatılmıyordu (zincir rehberde
+anlatılıyor). Beş madde eklendi, oyunda karşılaşılma sırasıyla: ihale
+arsadan sonra, meclis ve sözleşme işgücünden sonra, senaryo ve lig
+kariyerden önce. Panel artık madde listesinden çiziliyor (`HELP_STEPS`),
+her madde `data-help-step` taşıyor.
+
+**3 · Mağazanın yanına açılışlar akışı yine dolduruyordu.** Tur 38 rakip
+genişlemelerini haftalık özete toplamıştı; oyuncunun aynı kategoride
+mağazası olan bölgedeki açılış tek başına haberdi. Oyuncu büyüdükçe
+neredeyse her açılış doğrudan rekabet oluyor. Büyük şehirde görünen 60
+haberin tohum başına ortalama 10–13'ü (en çok 20'si) tek tek "X
+genişliyor"du. Akış 44–71 günü kapsıyordu.
+- Haftanın ilk doğrudan rekabet açılışı yine tek haber; ikincisinden
+  itibaren "Mağazalarının yanına rakip · bu hafta N açılış", bölge başına
+  sayım ve son açılışın yeri.
+- Sonra (aynı tohumlar): ortalama 4–6 özet (en çok 10), akış 50–77 gün.
+  Simülasyon aynı; haber akışını okuyan oyun mantığı yok.
+
+**4 · Kurulumdaki Kariyer Escape ile kapanmıyordu.** Oyun içindeki
+paneller kapanıyor; kurulum ekranındaki katman yalnız × ile kapanıyordu.
+
+**5 · İngilizce taraması dar kalmıştı.** Tarayıcı testinin "Dil" bölümü
+altı paneli tarıyordu; Tur 39–41'in ekranları (senaryo seçimi ve açılışı,
+kariyer, hedefler) ve yardım taranmıyordu. Bunlar da tarandı, kalıntı
+yok; kontrol kalıcı.
+
+**Değişmeyenler.** Rozet eşikleri (Tur 41'de ölçümle kondu), senaryo
+yıldızları (denge testinin üç senaryo bölümü sınıyor) ve zorluk ayarı.
+
+**Doğrulama.** `pnpm test` 468/468.
+- `i18n.test.ts`: para, kısa para ve birim fiyat iki dilde. Yeni test:
+  400 günlük oyunun haberlerinde, zincir ve rekabet kartlarında Türkçe
+  noktalı ondalık yok. İkisi de düzeltmeden önce kaldı ("1.23 M ₺",
+  "9.17").
+- `news.test.ts`: yeni test, büyük şehirde 400 gün; mağazanın yanına
+  açılışlar haftada tek haber ve sayım başlıkla aynı. Düzeltmeden önce
+  kaldı (özet yok). Tur 38'in iki testi yeni grubu tanıyor.
+
+Tarayıcı testine "Değerlendirme: yardım, sayılar, İngilizce ekranlar"
+bölümü eklendi (5 kontrol):
+- yardım ihaleyi, meclisi, sözleşmeyi, ligi ve senaryoyu anlatıyor;
+- Türkçede para, çarpan ve birim fiyat virgüllü (üst bar ve dört panel);
+- kurulumdaki Kariyer Escape ile kapanıyor;
+- İngilizce senaryo seçimi, kariyer, senaryo açılışı, hedefler ve yardımda
+  Türkçe kalıntı yok;
+- konsol temiz.
+
+Eski yapıda (main) ilk üçü kalıyor: yardımda madde kimliği yok, "chain:
+8.16 · rivalry: 0.45 · company: 1.00 · bourse: 1.00", katman açık kalıyor.
+
+Tarayıcı tam koşu 466/466, konsol hatası yok (~26 dk); "Değerlendirme"
+bölümü ~40 sn. CI'da tip, test, denge ve duman koşusu yeşil.
+
 
 ---
 
@@ -4206,9 +4327,9 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi). Senaryo şehirlerinde gün 3–17 ms (`pnpm dayperf`, Tur 43) |
-| Birim testi | **466 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi de) |
+| Birim testi | **468 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi de) |
 | Denge testi | **324 kontrol, hepsi geçiyor** (24 bölüm, süreleriyle; ~15 dk) |
-| Tarayıcı testi | **461 kontrol, hepsi geçiyor**, 0 konsol hatası (~25–40 dk); duman koşusu 132 (~5 dk, rehber dahil) |
+| Tarayıcı testi | **466 kontrol, hepsi geçiyor**, 0 konsol hatası (~25–40 dk); duman koşusu 132 (~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + duman oynanışı |
 | Kapsam | 35 bina · 25 ürün · 7 kategori · 8 rakip profili · 10 CEO · 22 olay (11 şehir + 11 sektör) · 2 kriz · 12 karar kartı · 70 rakip sözü · 5 fırsat balonu · 8 görev türü · 4 mevsim · 9 moda ürünü · 17 şehir yapısı (6 siluet) · 6 şehir projesi · 7 senaryo · 26 rozet |
 

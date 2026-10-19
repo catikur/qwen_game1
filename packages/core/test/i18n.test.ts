@@ -15,6 +15,8 @@ import {
   DISTRICT_ARCHETYPES,
   ERAS,
   formatPercent,
+  formatShortMoney,
+  formatUnitMoney,
   GOALS,
   GOODS,
   hasMessage,
@@ -39,6 +41,8 @@ import { coreTr } from '../src/i18n';
 import { GameEngine } from '../src/engine';
 import { createNewGame } from '../src/worldgen';
 import { formatMoney } from '../src/selectors';
+import { chainCards } from '../src/chain';
+import { competitionCards } from '../src/competition';
 import { playerStrategy } from './proxy';
 
 /** Türkçeye özgü harfler — İngilizce metinde kalmamalı. */
@@ -119,14 +123,48 @@ describe('sözlük motoru', () => {
 
   test('yüzde ve para dile göre biçimleniyor', () => {
     assert.equal(formatPercent(45), '%45');
-    assert.equal(formatMoney(1_234_000), '1.23 M ₺');
+    assert.equal(formatMoney(1_234_000), '1,23 M ₺');
+    assert.equal(formatMoney(2_500_000_000), '2,50 Mr ₺');
     assert.equal(formatMoney(-45_600), '-46 B ₺');
     assert.equal(formatMoney(1234), '1.234 ₺');
+    assert.equal(formatShortMoney(1_200_000), '1,2M ₺');
+    assert.equal(formatUnitMoney(2.8), '2,80 ₺');
     setLocale('en');
     assert.equal(formatPercent(45), '45%');
     assert.equal(formatMoney(1_234_000), '₺1.23M');
+    assert.equal(formatMoney(2_500_000_000), '₺2.50B');
     assert.equal(formatMoney(-45_600), '-₺46K');
     assert.equal(formatMoney(1234), '₺1,234');
+    assert.equal(formatShortMoney(1_200_000), '₺1.2M');
+    assert.equal(formatUnitMoney(2.8), '₺2.80');
+  });
+
+  /*
+   * Türkçede ondalık virgül, binlik nokta (Tur 44). Para eskiden "1.23 M ₺"
+   * yazıyordu; hemen yanında "1.234 ₺" bin iki yüz otuz dört demek. Yüzde ve
+   * ondalıklar zaten virgüllüydü ("%3,5").
+   */
+  test('Türkçe metinlerde ondalık ayırıcı virgül', () => {
+    const engine = new GameEngine(createNewGame({ seed: 7, companyName: 'Virgül AŞ' }));
+    for (let day = 1; day <= 400; day++) {
+      if (day % 5 === 0) playerStrategy(engine);
+      engine.runDay();
+    }
+    const state = engine.getState();
+    // Kartların bütün metin alanları; sayı alanları (oranlar) metin değil.
+    const strings = (value: unknown): string[] =>
+      typeof value === 'string'
+        ? [value]
+        : value && typeof value === 'object'
+          ? Object.values(value).flatMap(strings)
+          : [];
+    const texts = [
+      ...state.news.map((item) => `${item.title} ${item.body}`),
+      ...strings(chainCards(state, state.playerCompanyId)),
+      ...strings(competitionCards(state, state.playerCompanyId)),
+    ].join('\n');
+    // "12.34" biçimi Türkçede yalnız binlik olabilir: üç haneden az ondalık kuyruğu nokta değil.
+    assert.equal(texts.match(/\d\.\d{1,2}(?!\d)/)?.[0], undefined, 'Türkçe metinde noktalı ondalık');
   });
 });
 

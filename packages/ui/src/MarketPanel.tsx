@@ -142,7 +142,7 @@ function Defense({ state }: { state: GameState }): ReactElement {
           <div className="defense-threat">
             <span>
               <strong>{topHolder.name}</strong>{' '}
-              {t('finance.market.defense.threat', { percent: percent.toFixed(1), threshold })}
+              {t('finance.market.defense.threat', { percent: formatDecimal(percent, 1), threshold })}
             </span>
             {!locked && (
               <button type="button" disabled={affordable <= 0} onClick={() => buyback(affordable)}>
@@ -347,7 +347,7 @@ function Listing({ company, state }: { company: CompanyState; state: GameState }
           {/* Güven fiyatın NEDEN o olduğunu söylüyor. Tek başına bir sayı
               olsaydı oyuncu "pahalı mı ucuz mu" sorusuna cevap bulamazdı. */}
           <span className={trust >= 1 ? 'bourse-trust pos' : 'bourse-trust neg'}>
-            {trust >= 1 ? t('finance.market.listing.premium') : t('finance.market.listing.discount')} ×{trust.toFixed(2)}
+            {trust >= 1 ? t('finance.market.listing.premium') : t('finance.market.listing.discount')} ×{formatDecimal(trust, 2)}
           </span>
         </span>
       </header>

@@ -265,6 +265,21 @@ export const panels: Record<keyof typeof trPanels, string> = {
   'panels.help.step.consortium.title': 'Do not stand still when ahead.',
   'panels.help.step.consortium.body':
     ' If you stop building while far ahead and let cash sit in the treasury, the biggest rivals form a consortium: 30 days later they start buying your shares together, and if they pass half, the company is theirs. When "Consortium" shows up in the agenda, go back to investing (three new buildings), buy back shares or bring in investors with a share issue.',
+  'panels.help.step.auction.title': 'Some plots go to auction.',
+  'panels.help.step.auction.body':
+    " Now and then the city auctions a plot; that plot cannot be bought the normal way. Bid from the chip in the agenda, rivals raise too, and after three days the highest bid takes the plot. In an urban renewal auction the plot holds a city building: the winner has it torn down and gets the plot empty.",
+  'panels.help.step.council.title': 'The council changes the rules.',
+  'panels.help.step.council.body':
+    ' After day 120, every 90 days the council takes up two motions: bringing zoning forward, a tax or incentive for a category, a metro line, licensing. There are 20 days until the vote; donate for or against from the Council panel. Donations are not refunded and everyone sees them; rivals donate in their own interest too. A motion passes with more than 50% support.',
+  'panels.help.step.contracts.title': 'The city offers work.',
+  'panels.help.step.contracts.body':
+    ' Now and then a contract with a deadline arrives: put up buildings in a district or reach a market share in a category. Accept the offer from the chip in the agenda; finish in time and the reward goes to your cash, miss it and you pay a penalty. Declining is free.',
+  'panels.help.step.scenario.title': 'Scenarios start at a turning point.',
+  'panels.help.step.scenario.body':
+    ' Pick Scenario at setup to play one of seven ready-made situations: a company in debt, a crisis at the door, rivals who have joined forces… Each has a goal and a time limit; you earn one, two or three stars by how well you finish. Your best result is kept on this device.',
+  'panels.help.step.league.title': 'Seed League: everyone in the same city.',
+  'panels.help.step.league.body':
+    " Pick the Seed League at setup to play this week's city for 360 days; the city and its events are the same for everyone. Scores are verified by replay: the run is played again from the start in every browser and must reach the same score.",
   'panels.help.step.career.title': 'Look beyond a single run.',
   'panels.help.step.career.body':
     ' The Career page in the Goals panel and on the setup screen keeps your badges and run history: takeovers, crises, consortiums, the council, holdings, scenarios, the league. Badges give no reward; they point you to every corner of the game. They are kept on this device.',

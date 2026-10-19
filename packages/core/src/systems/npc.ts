@@ -610,7 +610,31 @@ function reportExpansion(
         BUILDING_BY_ID[building.defId]?.category === def.category,
     );
   if (rivalsPlayer) {
-    pushNews(state, 'rival', tc('core.npc.expandTitle', { name: profile.name }), body, { companyId: profile.id, tileId });
+    /*
+     * Tur 44: oyuncu büyüdükçe neredeyse her açılış doğrudan rekabet oluyor;
+     * büyük şehirde görünen 60 haberin 10–20'si buydu. Haftanın ilki tek
+     * haber, ikincisinden itibaren bölge başına sayımlı özet.
+     */
+    const group = `near:${Math.floor(state.time.day / 7)}`;
+    const previous = takeNews(state, group);
+    const tally = { ...(previous?.tally ?? {}) };
+    tally[districtId] = (tally[districtId] ?? 0) + 1;
+    const total = Object.values(tally).reduce((sum, count) => sum + count, 0);
+    if (total === 1) {
+      pushNews(state, 'rival', tc('core.npc.expandTitle', { name: profile.name }), body, { companyId: profile.id, tileId, group, tally });
+      return;
+    }
+    const list = Object.entries(tally)
+      .sort((a, b) => b[1] - a[1] || Number(a[0]) - Number(b[0]))
+      .map(([id, count]) => `${state.districts[Number(id)]?.name ?? id} ${count}`)
+      .join(' · ');
+    pushNews(
+      state,
+      'rival',
+      tc('core.npc.nearDigestTitle', { count: total }),
+      tc('core.npc.expandDigestBody', { list, name: profile.name, latest: body }),
+      { companyId: profile.id, tileId, group, tally },
+    );
     return;
   }
   const group = `expand:${Math.floor(state.time.day / 7)}`;

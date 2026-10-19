@@ -109,7 +109,7 @@ export function WorkforceSection(): ReactElement | null {
         <div className="stat" title={t('finance.labor.stat.indexTitle')}>
           <span className="stat-label">{t('finance.labor.stat.index')}</span>
           <span className="stat-value">
-            ×{index.toFixed(2)} · ×{(labor?.agreement ?? 1).toFixed(2)}
+            ×{formatDecimal(index, 2)} · ×{formatDecimal(labor?.agreement ?? 1, 2)}
           </span>
         </div>
       </div>

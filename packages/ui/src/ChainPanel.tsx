@@ -1,19 +1,10 @@
 import type { ReactElement } from 'react';
-import { formatPercent } from '@capital/content';
+import { formatPercent, formatUnitMoney } from '@capital/content';
 import { chainCards, formatMoney, getPlayer, tilePrice } from '@capital/core';
 import type { ChainCard, ChainMove, ChainSlot } from '@capital/core';
 import { useGame, useGameState } from './useGame';
 import { t } from './i18n';
 
-/**
- * Birim ekonomisi kuruşla okunur.
- *
- * `formatMoney` bin ve milyon ölçeği için; burada ₺2,80 ile ₺3,40
- * arasındaki fark kararın kendisi olduğu için yuvarlanamaz.
- */
-function unit(value: number): string {
-  return `₺${value.toFixed(2)}`;
-}
 
 /**
  * Zincir paneli.
@@ -55,7 +46,7 @@ function ChainCardView({ card }: { card: ChainCard }): ReactElement {
           {card.goodName}
         </span>
         <span className="chain-meta">
-          {t('app.chain.meta', { unit: unit(card.unitCost), sale: unit(card.salePrice) })}{' '}
+          {t('app.chain.meta', { unit: formatUnitMoney(card.unitCost), sale: formatUnitMoney(card.salePrice) })}{' '}
           <strong className={card.margin >= 0.3 ? 'pos' : card.margin >= 0 ? '' : 'neg'}>
             {formatPercent(Math.round(card.margin * 100))}
           </strong>{' '}

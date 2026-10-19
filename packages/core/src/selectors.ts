@@ -1,4 +1,4 @@
-import { BUILDING_BY_ID, BUILDINGS, CONSUMER_CATEGORIES, formatNumber, moneyUnits, numberLocale, withCurrency } from '@capital/content';
+import { BUILDING_BY_ID, BUILDINGS, CONSUMER_CATEGORIES, formatDecimal, formatNumber, moneyUnits, numberLocale, withCurrency } from '@capital/content';
 import type { BuildingDef, CategoryId } from '@capital/content';
 import { estimateInvestment } from './systems/market';
 import type { InvestmentEstimate } from './systems/market';
@@ -42,8 +42,9 @@ export function formatMoney(value: number): string {
   const abs = Math.abs(value);
   const units = moneyUnits();
   let amount: string;
-  if (abs >= 1_000_000_000) amount = `${(abs / 1_000_000_000).toFixed(2)}${units.billion}`;
-  else if (abs >= 1_000_000) amount = `${(abs / 1_000_000).toFixed(2)}${units.million}`;
+  // Türkçede ondalık virgül: "1,23 M ₺"; yanındaki "1.234 ₺" bin (Tur 44).
+  if (abs >= 1_000_000_000) amount = `${formatDecimal(abs / 1_000_000_000, 2)}${units.billion}`;
+  else if (abs >= 1_000_000) amount = `${formatDecimal(abs / 1_000_000, 2)}${units.million}`;
   else if (abs >= 10_000) amount = `${Math.round(abs / 1_000)}${units.thousand}`;
   else amount = formatNumber(Math.round(abs));
   return `${sign}${withCurrency(amount)}`;

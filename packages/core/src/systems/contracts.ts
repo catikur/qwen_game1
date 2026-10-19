@@ -1,4 +1,4 @@
-import { BUILDING_BY_ID, CATEGORIES, CONSUMER_CATEGORIES } from '@capital/content';
+import { BUILDING_BY_ID, CATEGORIES, CONSUMER_CATEGORIES, formatDecimal } from '@capital/content';
 import type { CategoryId } from '@capital/content';
 import { tc } from '../i18n';
 import { nextFloat, nextInt, pick } from '../rng';
@@ -256,6 +256,6 @@ function generateOffer(state: GameState): ContractState {
 
 /** Haber gövdesi için kısa para biçimi — selectors'a bağımlılık kurmadan. */
 function formatShort(value: number): string {
-  if (value >= 1_000_000) return tc('core.contracts.millions', { value: (value / 1_000_000).toFixed(2) });
+  if (value >= 1_000_000) return tc('core.contracts.millions', { value: formatDecimal(value / 1_000_000, 2) });
   return tc('core.contracts.thousands', { value: Math.round(value / 1_000) });
 }
