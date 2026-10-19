@@ -49,7 +49,7 @@ function roundMoney(value: number): string {
 function progressText(status: AchievementStatus): string | null {
   // Şehir sayısı hep birden başlıyor: "1 / 2" ilerleme değil.
   if (status.target <= 1 || status.def.kind === 'cities') return null;
-  const money = status.def.kind === 'worth';
+  const money = status.def.kind === 'worth' || status.def.kind === 'companyWorth';
   const value = Math.min(status.value, status.target);
   return t('hud.career.progress', {
     value: money ? roundMoney(value) : String(Math.floor(value)),

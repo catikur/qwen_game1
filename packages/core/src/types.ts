@@ -885,6 +885,8 @@ export interface RunFeats {
   auctionsWon?: number;
   /** Gün sonlarının en yüksek holding değeri: bir karede birkaç gün geçebiliyor. */
   peakWorth?: number;
+  /** Bu şehirdeki şirketin gün sonlarındaki en yüksek değeri (Çeyrek milyar). */
+  peakCompanyWorth?: number;
   /** Oyuncunun sponsor olarak bitirdiği şehir projesi: devralma sponsorluğu sonradan devredebiliyor. */
   projectsSponsored?: number;
 }
@@ -941,6 +943,8 @@ export interface HoldingState {
 
 /** Bir şehrin koşuya kattığı (Tur 41); hepsi seçime bağlı, yokluğu 0. */
 export interface CityTally {
+  /** Şirketin en yüksek değeri; toplanmıyor, en büyüğü alınıyor. */
+  companyWorth?: number;
   acquisitions?: number;
   ipo?: boolean;
   sponsored?: number;

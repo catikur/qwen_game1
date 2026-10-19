@@ -8,7 +8,7 @@ import type { CityTally, GameState, RunFeats } from '../types';
  * baskıncı satıp gidiyor. Sayaç olduğu yerde, anın kendisinde artıyor.
  * Simülasyon sayacı okumuyor; zar atmıyor, hiçbir şeyi değiştirmiyor.
  */
-export type FeatCounter = Exclude<keyof RunFeats, 'crisisWorth' | 'raidPeak' | 'peakWorth'>;
+export type FeatCounter = Exclude<keyof RunFeats, 'crisisWorth' | 'raidPeak' | 'peakWorth' | 'peakCompanyWorth'>;
 
 /** Koşu özetinin sayaçları (`RunFacts.counters`); sponsorluk özette ayrı alan. */
 export const FEAT_COUNTERS = [
@@ -51,12 +51,23 @@ export function notePeakWorth(state: GameState, worth: number): void {
   if (worth > (state.feats?.peakWorth ?? 0)) (state.feats ??= {}).peakWorth = worth;
 }
 
+/** Şehirdeki şirketin en yüksek değeri, gün sonunda (Çeyrek milyar tek şirketi okuyor; Codex #70). */
+export function noteCompanyPeak(state: GameState): void {
+  const worth = companyWorthNow(state);
+  if (worth > (state.feats?.peakCompanyWorth ?? 0)) (state.feats ??= {}).peakCompanyWorth = worth;
+}
+
+function companyWorthNow(state: GameState): number {
+  return state.gameOver ? 0 : (state.companies[state.playerCompanyId]?.netWorth ?? 0);
+}
+
 /** Şehrin koşuya kattığı: kariyerin topladığı sayılar. */
 export function cityTally(state: GameState): CityTally {
   const own = state.companies[state.playerCompanyId];
   const feats: RunFeats = {};
   for (const key of FEAT_COUNTERS) if (state.feats?.[key]) feats[key] = state.feats[key];
   return {
+    companyWorth: Math.max(state.feats?.peakCompanyWorth ?? 0, companyWorthNow(state)),
     acquisitions: own?.acquisitions ?? 0,
     ipo: (own?.issues ?? 0) > 0,
     // Bitiş anının sayacı; eski kayıtta (sayaçtan önce biten proje) bugünkü sponsorluk.
@@ -74,6 +85,7 @@ export function addTally(into: CityTally, add: CityTally): CityTally {
   const feats: RunFeats = { ...into.feats };
   for (const key of FEAT_COUNTERS) if (add.feats?.[key]) feats[key] = (feats[key] ?? 0) + add.feats[key]!;
   return {
+    companyWorth: Math.max(into.companyWorth ?? 0, add.companyWorth ?? 0),
     acquisitions: (into.acquisitions ?? 0) + (add.acquisitions ?? 0),
     ipo: Boolean(into.ipo || add.ipo),
     sponsored: (into.sponsored ?? 0) + (add.sponsored ?? 0),

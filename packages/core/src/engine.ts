@@ -20,7 +20,7 @@ import { recomputeNetWorth } from './systems/city';
 import { runConsortiumTick } from './systems/consortium';
 import { acceptContract, declineContract } from './systems/contracts';
 import { placeBid } from './systems/auction';
-import { notePeakWorth, noteRaidStage } from './systems/feats';
+import { noteCompanyPeak, notePeakWorth, noteRaidStage } from './systems/feats';
 import { sellShares } from './systems/equity';
 import {
   checkHoldingComplete,
@@ -446,6 +446,8 @@ export class GameEngine {
     if (state.companies[state.playerCompanyId]) {
       noteRaidStage(state, raidStatus(state).stage);
       notePeakWorth(state, holdingNetWorth(state));
+      noteCompanyPeak(state);
+      for (const city of state.holding?.dormant ?? []) noteCompanyPeak(city.state);
     }
     // Senaryo günün son net değeri ve devralmasıyla (Tur 39).
     runScenarioTick(state);

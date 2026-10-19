@@ -39,6 +39,7 @@ function facts(over: Partial<RunFacts> = {}): RunFacts {
     citySize: 'standard',
     day: 100,
     worth: 0,
+    companyWorth: 0,
     cities: 1,
     wins: [],
     closedWins: 0,
@@ -235,6 +236,25 @@ describe('kariyer: aynı gün', () => {
     engine.runDay();
     assert.equal(away.feats?.raidsRepelled, 1);
     assert.equal(runFacts(engine.getState()).counters.raidsRepelled, 1);
+  });
+
+  test('Çeyrek milyar tek şirketin değeri, Yarım milyar holding\'in toplamı (Codex #70)', () => {
+    const engine = played(30, 6);
+    let state = engine.getState();
+    state.victory = { day: 420, kind: 'tycoon', dismissed: true };
+    player(state).cash = 30_000_000;
+    recomputeNetWorth(state);
+    assert.ok(engine.dispatch({ type: 'OPEN_CITY', citySize: 'standard', capital: 8_000_000 }).ok);
+    state = engine.getState();
+    const away = state.holding!.dormant[0]!.state;
+    player(state).cash += 150_000_000;
+    away.companies[away.playerCompanyId]!.cash += 150_000_000;
+    recomputeNetWorth(state);
+    recomputeNetWorth(away);
+    const run = runFacts(state);
+    assert.ok(run.worth > 250_000_000, 'holding 250 M üstünde');
+    assert.ok(runValue(ACHIEVEMENT_BY_ID.quarter_billion!, run) < 250_000_000, 'hiçbir şirket 250 M değil');
+    assert.equal(runValue(ACHIEVEMENT_BY_ID.half_billion!, run), run.worth);
   });
 
   test('kapatılan şehir de açılmış sayılıyor (Codex #70)', () => {

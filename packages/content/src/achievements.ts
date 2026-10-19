@@ -33,6 +33,8 @@ export type AchievementGroup = 'growth' | 'victory' | 'rivalry' | 'city' | 'care
 export type AchievementKind =
   /** Koşunun değeri (holding'in toplamı) ≥ hedef. */
   | 'worth'
+  /** Tek bir şehirdeki şirketin değeri ≥ hedef. */
+  | 'companyWorth'
   /** Bir şehirde zafer; `victory` süzgeciyle. */
   | 'victory'
   /** Bir şehirde hiç rakip kalmadı. */
@@ -99,7 +101,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     group: 'growth',
     title: 'Çeyrek milyar',
     hint: "Şirketinin değerini 250 M ₺'ye çıkar.",
-    kind: 'worth',
+    kind: 'companyWorth',
     target: 250_000_000,
     freePlayOnly: true,
   },

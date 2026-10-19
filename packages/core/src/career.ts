@@ -41,6 +41,8 @@ export interface RunFacts {
   day: number;
   /** Holding'in en yüksek toplam değeri (tek şehirde şirketin net değeri). */
   worth: number;
+  /** Tek bir şehirdeki şirketin en yüksek değeri. */
+  companyWorth: number;
   cities: number;
   wins: RunWin[];
   /** Kapatılmış şehirlerde kazanılmış zafer (günü ve boyutu bilinmiyor). */
@@ -97,6 +99,7 @@ export function runFacts(state: GameState): RunFacts {
     day: state.time.day,
     // Bir karede birkaç gün geçebiliyor: arada kalan tepe günün sayacından (Codex #70).
     worth: Math.max(holdingNetWorth(state), peak),
+    companyWorth: tally.companyWorth ?? 0,
     // Kapatılan şehir de açılmıştı: sayı kalıcı sayaçtan (Codex #70).
     cities: Math.max(cities.length, state.holding?.opened ?? 1),
     wins,
@@ -140,6 +143,8 @@ export function runValue(def: AchievementDef, run: RunFacts): number {
   switch (def.kind) {
     case 'worth':
       return run.worth;
+    case 'companyWorth':
+      return run.companyWorth;
     case 'victory':
       return victoriesIn(def, run);
     case 'monopoly':

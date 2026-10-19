@@ -131,6 +131,7 @@ export function mergeRun(previous: CareerRun | undefined, next: RunFacts, nowIso
   return {
     ...next,
     worth: Math.max(previous.worth, next.worth),
+    companyWorth: Math.max(previous.companyWorth ?? 0, next.companyWorth),
     cities: Math.max(previous.cities, next.cities),
     wins: [...wins.values()],
     closedWins: Math.max(previous.closedWins, next.closedWins),
