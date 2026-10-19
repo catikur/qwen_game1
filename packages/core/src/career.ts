@@ -73,14 +73,11 @@ export function runFacts(state: GameState): RunFacts {
   const cities = citiesOf(state);
   const player = state.companies[state.playerCompanyId];
   const wins: RunWin[] = [];
-  let monopoly = false;
   let peak = 0;
   // Kapatılan şehirlerin payı holding'de duruyor (Codex #70).
   let tally: CityTally = state.holding?.closedTally ?? {};
   for (const city of cities) {
-    const own = city.companies[city.playerCompanyId];
     if (city.victory) wins.push({ day: city.victory.day, citySize: city.citySize ?? 'standard' });
-    if (!city.gameOver && own && !Object.values(city.companies).some((company) => !company.isPlayer)) monopoly = true;
     tally = addTally(tally, cityTally(city));
     peak = Math.max(peak, city.feats?.peakWorth ?? 0);
   }
@@ -105,7 +102,7 @@ export function runFacts(state: GameState): RunFacts {
     wins,
     closedWins: state.holding?.closedWins ?? 0,
     holdingComplete: state.holding?.completedDay !== undefined,
-    monopoly,
+    monopoly: Boolean(tally.monopoly),
     acquisitions: tally.acquisitions ?? 0,
     ipo: Boolean(tally.ipo),
     sponsored: tally.sponsored ?? 0,

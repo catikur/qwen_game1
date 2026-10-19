@@ -66,8 +66,11 @@ export function cityTally(state: GameState): CityTally {
   const own = state.companies[state.playerCompanyId];
   const feats: RunFeats = {};
   for (const key of FEAT_COUNTERS) if (state.feats?.[key]) feats[key] = state.feats[key];
+  // Tekel: bugün rakipsiz ya da tekelle kazanılmış (sonra yeni rakip girse de; Codex #70).
+  const alone = !state.gameOver && own !== undefined && !Object.values(state.companies).some((company) => !company.isPlayer);
   return {
     companyWorth: Math.max(state.feats?.peakCompanyWorth ?? 0, companyWorthNow(state)),
+    monopoly: alone || state.victory?.kind === 'monopoly',
     acquisitions: own?.acquisitions ?? 0,
     ipo: (own?.issues ?? 0) > 0,
     // Bitiş anının sayacı; eski kayıtta (sayaçtan önce biten proje) bugünkü sponsorluk.
@@ -86,6 +89,7 @@ export function addTally(into: CityTally, add: CityTally): CityTally {
   for (const key of FEAT_COUNTERS) if (add.feats?.[key]) feats[key] = (feats[key] ?? 0) + add.feats[key]!;
   return {
     companyWorth: Math.max(into.companyWorth ?? 0, add.companyWorth ?? 0),
+    monopoly: Boolean(into.monopoly || add.monopoly),
     acquisitions: (into.acquisitions ?? 0) + (add.acquisitions ?? 0),
     ipo: Boolean(into.ipo || add.ipo),
     sponsored: (into.sponsored ?? 0) + (add.sponsored ?? 0),

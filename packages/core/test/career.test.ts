@@ -257,6 +257,15 @@ describe('kariyer: aynı gün', () => {
     assert.equal(runValue(ACHIEVEMENT_BY_ID.half_billion!, run), run.worth);
   });
 
+  test('tekel zaferi, sonra yeni rakip gelse de Tekel sayılıyor (Codex #70)', () => {
+    const state = played(30, 6).getState();
+    assert.ok(rivals(state).length > 0);
+    // Eski kayıt: tekelle kazanılmış, oyun sürmüş, yeni bir rakip girmiş.
+    state.victory = { day: 900, kind: 'monopoly', dismissed: true };
+    assert.equal(runFacts(state).monopoly, true);
+    assert.equal(runValue(ACHIEVEMENT_BY_ID.monopoly!, runFacts(state)), 1);
+  });
+
   test('kapatılan şehir de açılmış sayılıyor (Codex #70)', () => {
     const state = played(10, 6).getState();
     state.holding = { foundingSeed: state.meta.seed, opened: 2, treasury: 0, dormant: [], closedWins: 0 };

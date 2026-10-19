@@ -945,6 +945,8 @@ export interface HoldingState {
 export interface CityTally {
   /** Şirketin en yüksek değeri; toplanmıyor, en büyüğü alınıyor. */
   companyWorth?: number;
+  /** Rakipsiz kaldı ya da tekelle kazandı. */
+  monopoly?: boolean;
   acquisitions?: number;
   ipo?: boolean;
   sponsored?: number;

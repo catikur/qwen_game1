@@ -3749,7 +3749,10 @@ Hepsi bu cihazda saklanıyor; lig ve senaryo tabloları değişmiyor.
   geliyor; kapatılan şehir de açılmıştı. Kapatılan şehrin sayaçları
   (devralma, halka arz, sponsorluk, balon, görev, şehir sayaçları)
   `holding.closedTally`de birikiyor: şehir listeden çıkınca koşunun
-  toplamı düşmüyor, sonraki ilerleme üstüne ekleniyor (Codex #70).
+  toplamı düşmüyor, sonraki ilerleme üstüne ekleniyor (Codex #70). Tekel
+  bugünkü rakip listesinden ya da tekelle kazanılmış zaferden
+  (`victory.kind`): tekelden sonra yeni rakip giren eski kayıt da Tekel'i
+  alıyor (Codex #70).
   Yeni şehir açılınca holding'in kalıcı alanları da geçiyor. Tur 32'den
   beri `foundCity` holding'i baştan kuruyor, kapatılan şehrin zaferini
   (`closedWins`) ve tamamlanma gününü düşürüyordu; holding hedefleri de
@@ -3803,9 +3806,9 @@ Hepsi bu cihazda saklanıyor; lig ve senaryo tabloları değişmiyor.
   kazanılan rozetleri yazıyor.
 - *Yardım:* "Koşuların ötesine bak" adımı eklendi.
 
-**Doğrulama.** `pnpm test` 455/455; 34 yeni test.
+**Doğrulama.** `pnpm test` 456/456; 35 yeni test.
 
-`packages/core/test/career.test.ts` (21 test):
+`packages/core/test/career.test.ts` (22 test):
 - katalog tutarlılığı;
 - her sayacın kendi anında artması: kriz, konsorsiyum, sözleşme, ihale,
   meclis, baskın, sponsorluk (sonuncusu düzeltmeden önce kaldı);
@@ -3818,8 +3821,9 @@ Hepsi bu cihazda saklanıyor; lig ve senaryo tabloları değişmiyor.
   sayılması ve sayaçlarının koşuda kalması (yeni şehir açılınca da), yeni
   şehir açılınca kapatılan şehrin zaferinin kalması, bir karenin arasında
   kalan en yüksek değerin sayılması (sekizi de düzeltmeden önce kaldı);
-- Çeyrek milyarın tek şirketi, Yarım milyarın holding'i okuması
-  (düzeltmeden önce kaldı);
+- Çeyrek milyarın tek şirketi, Yarım milyarın holding'i okuması; tekel
+  zaferinden sonra yeni rakip girse de Tekel'in sayılması (ikisi de
+  düzeltmeden önce kaldı);
 - zafer süzgeçleri, koşu ve kariyer kapsamı, senaryo yıldızı, farklı CEO.
 
 `packages/ui/test/career.test.ts` (11 test):
@@ -3937,7 +3941,7 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi) |
-| Birim testi | **455 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer de) |
+| Birim testi | **456 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer de) |
 | Denge testi | **324 kontrol, hepsi geçiyor** (24 bölüm, süreleriyle; ~15 dk) |
 | Tarayıcı testi | **446 kontrol, hepsi geçiyor**, 0 konsol hatası (~25–40 dk); duman koşusu 132 (~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + duman oynanışı |
