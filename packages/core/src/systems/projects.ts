@@ -6,6 +6,7 @@ import { rivalProfile } from '../profiles';
 import { createRng, nextFloat } from '../rng';
 import { formatMoney } from '../selectors';
 import { isDistrictOpen } from './city';
+import { noteFeat } from './feats';
 import { rivalQuote, withQuote } from './rivalry';
 import { scenarioProjectGap } from './scenario';
 import type { CommandResult, CompanyState, DistrictState, GameState, ProjectState } from '../types';
@@ -334,6 +335,8 @@ function finishProject(state: GameState, project: ProjectState): void {
     ...(project.sponsorId ? { sponsorId: project.sponsorId, sponsorName: project.sponsorName } : {}),
   });
   delete state.project;
+  // Kariyer (Tur 41): sponsorluk bitiş anında; devralma `sponsorId`yi sonradan devrediyor (Codex #70).
+  if (project.sponsorId === state.playerCompanyId) noteFeat(state, 'projectsSponsored');
   // Senaryonun takvimi (Tur 39: Şehrin sponsoru) serbest oyununkinden sık.
   state.nextProjectDay = state.time.day + rangeInt(dice(state, state.time.day ^ 0x5bd1e995), scenarioProjectGap(state) ?? PROJECT_TIMING.gapDays);
   pushNews(

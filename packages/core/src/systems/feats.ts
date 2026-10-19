@@ -10,7 +10,8 @@ import type { CityTally, GameState, RunFeats } from '../types';
  */
 export type FeatCounter = Exclude<keyof RunFeats, 'crisisWorth' | 'raidPeak' | 'peakWorth'>;
 
-export const FEAT_COUNTERS: FeatCounter[] = [
+/** Koşu özetinin sayaçları (`RunFacts.counters`); sponsorluk özette ayrı alan. */
+export const FEAT_COUNTERS = [
   'crisesWeathered',
   'crisesGrown',
   'consortiumsBroken',
@@ -18,7 +19,7 @@ export const FEAT_COUNTERS: FeatCounter[] = [
   'motionsWon',
   'contractsDone',
   'auctionsWon',
-];
+] as const satisfies readonly FeatCounter[];
 
 export function noteFeat(state: GameState, key: FeatCounter, by = 1): void {
   const feats = (state.feats ??= {});
@@ -58,7 +59,11 @@ export function cityTally(state: GameState): CityTally {
   return {
     acquisitions: own?.acquisitions ?? 0,
     ipo: (own?.issues ?? 0) > 0,
-    sponsored: (state.cityProjects ?? []).filter((project) => project.sponsorId === state.playerCompanyId).length,
+    // Bitiş anının sayacı; eski kayıtta (sayaçtan önce biten proje) bugünkü sponsorluk.
+    sponsored: Math.max(
+      state.feats?.projectsSponsored ?? 0,
+      (state.cityProjects ?? []).filter((project) => project.sponsorId === state.playerCompanyId).length,
+    ),
     bubbles: state.bubblesCaught ?? 0,
     quests: state.questsDone ?? 0,
     feats,

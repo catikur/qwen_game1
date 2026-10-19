@@ -332,6 +332,7 @@ export const hud: Record<keyof typeof trHud, string> = {
   'hud.career.mode.league': 'Seed League',
   'hud.career.mode.scenario': 'Scenario: {title}',
   'hud.career.result.victory': 'Victory · day {day}',
+  'hud.career.result.victoryNoDay': 'Victory',
   'hud.career.result.lost': 'Taken over · day {day}',
   'hud.career.result.playing': 'In progress · day {day}',
   'hud.career.result.scenarioWon': 'Won',

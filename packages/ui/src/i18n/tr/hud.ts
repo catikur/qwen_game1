@@ -329,6 +329,7 @@ export const hud = {
   'hud.career.mode.league': 'Tohum Ligi',
   'hud.career.mode.scenario': 'Senaryo: {title}',
   'hud.career.result.victory': 'Zafer · {day}. gün',
+  'hud.career.result.victoryNoDay': 'Zafer',
   'hud.career.result.lost': 'Devralındı · {day}. gün',
   'hud.career.result.playing': 'Sürüyor · {day}. gün',
   'hud.career.result.scenarioWon': 'Kazanıldı',

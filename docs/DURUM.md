@@ -3727,7 +3727,11 @@ Hepsi bu cihazda saklanıyor; lig ve senaryo tabloları değişmiyor.
     Eşik, uyarılar gibi gün sonunda okunuyor: aynı gün içinde %25'i geçip
     inen baskın sayılmıyor, oyuncu onu hiç görmedi;
   - teslim edilen sözleşme, oyuncunun lobi yaptığı tarafın kazandığı
-    oylama, kazanılan ihale.
+    oylama, kazanılan ihale;
+  - oyuncunun sponsor olarak bitirdiği şehir projesi: bitiş anında
+    sayılıyor, çünkü devralma `sponsorId`yi sonradan devralana geçiriyor
+    (Codex #70). Eski kayıtta sayaçtan önce biten proje bugünkü
+    sponsorluktan okunuyor (ikisinin büyüğü).
 
   Simülasyon sayacı okumuyor; kararlılık, lig ve iki dilde aynı oyun
   testleri değişmeden geçiyor.
@@ -3786,7 +3790,9 @@ Hepsi bu cihazda saklanıyor; lig ve senaryo tabloları değişmiyor.
   - özet: rozet, senaryo yıldızı, zafer, en yüksek değer, koşu;
   - gruplara göre rozetler: kazanılanın tarihi, şirketi ve günü,
     kazanılmayanın ilerlemesi;
-  - son 12 koşu: tür, CEO, zorluk, şehir, sonuç, değer, tarih.
+  - son 12 koşu: tür, CEO, zorluk, şehir, sonuç, değer, tarih. Zaferi
+    yalnız kapatılan şehirde kalan koşu "Zafer" yazıyor; günü bilinmiyor
+    (Codex #70).
 - *Girişler:* kurulum ekranı (koşular arasında bakılan yer) ve Hedefler
   paneli. Rıhtıma dokuzuncu sekme eklenmedi: eşit sütunlu rıhtımda sütun
   375 px'de ~39 px'e inerdi, etiketlerin hepsi kesilirdi.
@@ -3794,12 +3800,12 @@ Hepsi bu cihazda saklanıyor; lig ve senaryo tabloları değişmiyor.
   kazanılan rozetleri yazıyor.
 - *Yardım:* "Koşuların ötesine bak" adımı eklendi.
 
-**Doğrulama.** `pnpm test` 451/451; 30 yeni test.
+**Doğrulama.** `pnpm test` 454/454; 33 yeni test.
 
-`packages/core/test/career.test.ts` (19 test):
+`packages/core/test/career.test.ts` (20 test):
 - katalog tutarlılığı;
 - her sayacın kendi anında artması: kriz, konsorsiyum, sözleşme, ihale,
-  meclis, baskın;
+  meclis, baskın, sponsorluk (sonuncusu düzeltmeden önce kaldı);
 - holding'de koşu kimliği, lig ve senaryo kipi, senaryonun ön tarihinin
   sayılmaması;
 - kurucu şehir kapanınca koşunun kurucu boyutunun değişmemesi, eski
@@ -3823,6 +3829,10 @@ Hepsi bu cihazda saklanıyor; lig ve senaryo tabloları değişmiyor.
 - budanan koşunun kaydı geri gelince iki kez sayılmaması, zaferini ve
   devralma, halka arz gibi özetini kaybetmemesi (üçü de düzeltmeden önce
   kaldı).
+
+`packages/ui/test/careerFormat.test.ts` (2 test): geçmişteki sonuç
+satırı; zaferi yalnız kapatılan şehirde kalan koşunun zaferli görünmesi
+(düzeltmeden önce kaldı).
 
 İçerik çevirileri testi rozetleri de kapsıyor.
 
@@ -3922,7 +3932,7 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi) |
-| Birim testi | **451 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer de) |
+| Birim testi | **454 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer de) |
 | Denge testi | **324 kontrol, hepsi geçiyor** (24 bölüm, süreleriyle; ~15 dk) |
 | Tarayıcı testi | **446 kontrol, hepsi geçiyor**, 0 konsol hatası (~25–40 dk); duman koşusu 132 (~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + duman oynanışı |

@@ -10,6 +10,7 @@ import type { RunFacts } from '../src/career';
 import { formConsortium, runConsortiumTick } from '../src/systems/consortium';
 import { runContractTick } from '../src/systems/contracts';
 import { runAuctionTick } from '../src/systems/auction';
+import { contributeToProject, runProjectTick } from '../src/systems/projects';
 import { recomputeNetWorth } from '../src/systems/city';
 import { playerStrategy } from './proxy';
 import type { GameState } from '../src/types';
@@ -150,6 +151,26 @@ describe('kariyer: koşu sayaçları', () => {
     while (state.council!.session) engine.runDay();
     assert.equal(motion.result?.passed, true);
     assert.equal(state.feats?.motionsWon, 1);
+  });
+
+  test('şehir projesinin sponsorluğu bittiği anda sayılıyor; sonraki devralma almıyor (Codex #70)', () => {
+    const state = played(200, 1).getState();
+    delete state.project;
+    state.nextProjectDay = state.time.day;
+    runProjectTick(state);
+    assert.ok(state.project, 'proje açılmadı');
+    state.flags.npcCompetition = false;
+    player(state).cash = 50_000_000;
+    assert.ok(contributeToProject(state, 2_000_000).ok);
+    for (let i = 0; i < 400 && state.project; i++) {
+      state.time.day += 1;
+      runProjectTick(state);
+    }
+    assert.equal(state.cityProjects?.at(-1)?.sponsorId, state.playerCompanyId);
+    assert.equal(state.feats?.projectsSponsored, 1);
+    // Aynı karede oyuncu devralındı: `absorb` sponsorluğu devralana geçiriyor.
+    for (const done of state.cityProjects!) if (done.sponsorId === state.playerCompanyId) done.sponsorId = rivals(state)[0]!.id;
+    assert.equal(runFacts(state).sponsored, 1);
   });
 
   test('baskın: %25\'i geçip %10\'un altına itilen sayılıyor', () => {

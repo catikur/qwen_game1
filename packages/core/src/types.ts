@@ -885,6 +885,8 @@ export interface RunFeats {
   auctionsWon?: number;
   /** Gün sonlarının en yüksek holding değeri: bir karede birkaç gün geçebiliyor. */
   peakWorth?: number;
+  /** Oyuncunun sponsor olarak bitirdiği şehir projesi: devralma sponsorluğu sonradan devredebiliyor. */
+  projectsSponsored?: number;
 }
 
 /** Uzaktaki şehrin kârından holding kasasına akan pay (Tur 32). */

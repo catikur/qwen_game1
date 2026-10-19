@@ -6,6 +6,7 @@ import { formatMoney } from '@capital/core';
 import type { AchievementStatus, GameState } from '@capital/core';
 import { careerRevision, careerSummary, subscribeCareer, syncCareer, unlockedInRun } from './career';
 import type { CareerRun, UnlockRecord } from './career';
+import { careerRunResult } from './careerFormat';
 import { t } from './i18n';
 import type { MessageKey } from './i18n';
 
@@ -26,9 +27,6 @@ function dateOf(iso: string): string {
   return new Date(iso).toLocaleDateString(numberLocale(), { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
-function stars(count: number): string {
-  return '★'.repeat(count) + '☆'.repeat(Math.max(0, 3 - count));
-}
 
 function Medal(): ReactElement {
   return (
@@ -98,19 +96,6 @@ function runTitle(run: CareerRun): string {
   return t(run.mode === 'league' ? 'hud.career.mode.league' : 'hud.career.mode.free');
 }
 
-function runResult(run: CareerRun): string {
-  if (run.mode === 'scenario') {
-    if (run.scenario?.outcome === 'won') return `${stars(run.scenario.stars)} ${t('hud.career.result.scenarioWon')}`;
-    if (run.scenario?.outcome === 'lost') return t('hud.career.result.scenarioLost');
-    return t('hud.career.result.playing', { day: run.day });
-  }
-  if (run.league === 'finished') return t('hud.career.result.leagueFinished');
-  const firstWin = run.wins.reduce<number | null>((best, win) => (best === null || win.day < best ? win.day : best), null);
-  if (firstWin !== null) return t('hud.career.result.victory', { day: firstWin });
-  if (run.lost) return t('hud.career.result.lost', { day: run.day });
-  return t('hud.career.result.playing', { day: run.day });
-}
-
 function RunRow({ run }: { run: CareerRun }): ReactElement {
   const ceo = run.ceoId ? CEO_BY_ID[run.ceoId] : undefined;
   const facts = [
@@ -129,7 +114,7 @@ function RunRow({ run }: { run: CareerRun }): ReactElement {
       </div>
       <div className="career-run-meta">
         <span>{facts.join(' · ')}</span>
-        <span className="career-run-result">{runResult(run)}</span>
+        <span className="career-run-result">{careerRunResult(run)}</span>
         <span className="muted">{dateOf(run.lastSeenIso)}</span>
       </div>
     </li>
