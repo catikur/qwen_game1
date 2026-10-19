@@ -46,6 +46,7 @@ import {
   startTutorial,
   t,
   tutorialStepOf,
+  useCareerWatch,
   useGameVersion,
   useLocale,
 } from '@capital/ui';
@@ -233,6 +234,9 @@ function GameRoot({
     setToasts((current) => [...current, { id, text, tone }]);
     setTimeout(() => setToasts((current) => current.filter((t) => t.id !== id)), 3600);
   }, []);
+
+  // Kariyer (Tur 41): koşu kariyere işleniyor, açılan rozet bildiriliyor.
+  useCareerWatch(engine, version, toast);
 
   const run = useCallback(
     (command: GameCommand) => {

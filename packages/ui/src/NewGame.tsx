@@ -9,6 +9,8 @@ import { t } from './i18n';
 import { tutorialSeen } from './tutorial';
 import { scenarioRecord } from './scenarioBest';
 import { starRow, starThresholds } from './ScenarioScreens';
+import { CareerPanel, useCareerRevision } from './CareerPanel';
+import { careerSummary } from './career';
 
 /**
  * Kurulumun sayılarla özeti: şehir, zorluk, başlangıç günü, süre, kasa.
@@ -86,6 +88,11 @@ export function NewGameScreen({
   const weekId = leagueWeekId();
   const selected = CEOS.find((c) => c.id === ceoId) ?? CEOS[0]!;
   const level = DIFFICULTIES.find((d) => d.id === difficulty) ?? DIFFICULTIES[1]!;
+  // Kariyer (Tur 41): oyun dışında da açılabilsin, koşular arasında bakılan yer burası.
+  const [careerOpen, setCareerOpen] = useState(false);
+  useCareerRevision();
+  const career = careerSummary();
+  const badges = career.statuses.filter((status) => career.unlocked[status.def.id]).length;
 
   // Lig herkese aynı şehri verir: zorluk Dengeli, şehir standart. Senaryonun
   // şehri ve zorluğu tanımından; rehber ilk oyun içindir, senaryoda kapalı.
@@ -104,6 +111,9 @@ export function NewGameScreen({
     <div className="newgame">
       <div className="newgame-inner">
         <div className="newgame-locale">
+          <button type="button" className="ghost newgame-career" data-career-open onClick={() => setCareerOpen(true)}>
+            {t('hud.career.open', { done: badges, total: career.statuses.length })}
+          </button>
           <LocalePicker />
         </div>
         <header className="newgame-head">
@@ -332,6 +342,21 @@ export function NewGameScreen({
           </button>
         </div>
       </div>
+      {careerOpen && (
+        <div className="modal-backdrop career-overlay" onClick={() => setCareerOpen(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
+            <header className="modal-head">
+              <h2>{t('hud.career.title')}</h2>
+              <button type="button" className="icon" onClick={() => setCareerOpen(false)} aria-label={t('hud.career.close')}>
+                ×
+              </button>
+            </header>
+            <div className="modal-body">
+              <CareerPanel />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

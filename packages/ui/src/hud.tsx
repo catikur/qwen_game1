@@ -23,6 +23,7 @@ import { reopenDecisionCard } from './DecisionCard';
 import { useGame, useGameState } from './useGame';
 import type { ViewState } from './useGame';
 import { t } from './i18n';
+import { CareerRunLine } from './CareerPanel';
 import type { MessageKey } from './i18n';
 
 /** Üst bar: oyuncunun her an görmesi gereken beş sayı ve zaman kontrolü. */
@@ -581,6 +582,7 @@ export function GameOverScreen({ onNewGame }: { onNewGame: () => void }): ReactE
           })}
         </p>
         <p className="muted">{alive.length > 0 ? t('hud.gameOver.holdingNote') : t('hud.gameOver.note')}</p>
+        <CareerRunLine state={state} />
         <div className="gameover-actions">
           {alive.map((city) => (
             <button

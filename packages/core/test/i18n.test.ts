@@ -22,6 +22,7 @@ import {
   NPC_PROFILES,
   PROJECTS,
   SCENARIOS,
+  ACHIEVEMENTS,
   QUESTS,
   RIVAL_LINES,
   registerMessages,
@@ -176,6 +177,7 @@ describe('İngilizce sözlükler', () => {
       ['season', byId(SEASONS), ['name', 'news']],
       ['project', byId(PROJECTS), ['name', 'pitch']],
       ['scenario', byId(SCENARIOS), ['title', 'tagline', 'brief', 'goalText', 'facts']],
+      ['achievement', byId(ACHIEVEMENTS), ['title', 'hint']],
     ];
     const expected = new Set<string>();
     for (const [kind, record, fields] of lists) {

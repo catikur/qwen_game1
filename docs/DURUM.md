@@ -3674,6 +3674,191 @@ Tarayıcı testine "Cila" bölümü eklendi (9 kontrol):
 
 Tarayıcı tam koşu 437/437, konsol hatası yok (~26 dk); "Cila" bölümü ~110 sn.
 
+### Tur 41 — Başarımlar ve kariyer
+
+Kullanıcı "Başarımlar ve kariyer"i seçti. Tur dört şey getiriyor:
+- rozetler;
+- koşu geçmişi;
+- en iyiler;
+- senaryo yıldızlarının toplamı.
+
+Hepsi bu cihazda saklanıyor; lig ve senaryo tabloları değişmiyor.
+
+**Rozetler.** 26 rozet, beş grup (`packages/content/src/achievements.ts`):
+
+| Grup | Rozetler |
+|---|---|
+| Büyüme | Borsada · Çeyrek milyar · Yarım milyar · İkinci şehir · İmparatorluk |
+| Zafer | Şehrin sahibi · Yıldırım · Zor yoldan · Büyük şehrin sahibi · Üç CEO |
+| Rekabet | İlk devralma · Seri alıcı · Tekel · Kalkan · Konsorsiyumu dağıt |
+| Şehir | Fırtınayı atlat · Fırtınada büyü · Şehrin sponsoru · Meclisin sesi · Belediyenin güvendiği · Açık artırma · Balon avcısı · Görev adamı |
+| Kariyer | Senaryo turu · Kusursuz · Ligde |
+
+- *Kapsam:* koşu rozeti tek bir koşuda kazanılıyor; holding'in bütün
+  şehirleri tek koşu sayılıyor. Kariyer rozeti bütün koşuların toplamından
+  geliyor: meclis, sözleşme, ihale, balon, görev, lig, senaryo yıldızı ve
+  farklı CEO.
+- *Senaryo:* büyüme ve zafer rozetleri senaryoda sayılmıyor, çünkü kurulum
+  hazır servet ve şehir veriyor. Borsada da büyüme rozeti: Kurtarma'da
+  halka arz açık ve öneriliyor (Codex #70); katalog testi kuralı grup
+  üzerinden denetliyor. Rekabet ve şehir rozetleri her oyunda
+  sayılıyor. Sayaçlar devir gününden başlıyor: ön tarihte biten kriz
+  oyuncunun değil.
+- *Eşikler ölçümden:* `pnpm longrun` (üç tohum, Dengeli) koşuldu. Vekil
+  625–730. günde kazanıyor, 1.440. günde 277–308 M ₺'de.
+  - Çeyrek milyar uzun oyunun rozeti; tek bir şehirdeki şirketin değeri
+    (`companyWorth`, gün sonlarının en yükseği). Holding'in toplamı
+    sayılmıyor; yoksa iki 150 M'lik şirket Çeyrek milyarı açıyordu
+    (Codex #70).
+  - Yarım milyar holding'in toplamıyla ölçülüyor.
+  - Yıldırım (Dengeli ya da Zor'da 500. günden önce zafer) vekilin en
+    iyisinden %20 hızlı.
+- *Ödül yok:* hedef merdiveninin gerekçesiyle aynı; rozet dengeyi
+  oynatmıyor.
+
+**Çekirdek.**
+- *Sayaçlar* (`state.feats`, `systems/feats.ts`): bu anlar durumda iz
+  bırakmadan bitiyor: kriz siliniyor, konsorsiyum dağılıyor, baskıncı satıp
+  gidiyor. Sayaç anın kendisinde artıyor. Sayılanlar:
+  - kriz: oyuncu ayaktayken biten ve başladığı günden değerli biten;
+  - konsorsiyum: oyuncunun direnişiyle dağılan (üyeleri oyundan çıkan
+    sayılmıyor);
+  - baskın: %25'i geçip %10'un altına itilen (karşı devralma dahil); gün
+    sonunda ve başarılı her komuttan sonra bakılıyor, duraklatılmış oyunda
+    da hemen sayılıyor (Codex #70). Uzaktaki şehrin borsası da yaşıyor:
+    orada püskürtülen baskın şehrin kendi gününde sayılıyor (Codex #70).
+    Eşik, uyarılar gibi gün sonunda okunuyor: aynı gün içinde %25'i geçip
+    inen baskın sayılmıyor, oyuncu onu hiç görmedi;
+  - teslim edilen sözleşme, oyuncunun lobi yaptığı tarafın kazandığı
+    oylama, kazanılan ihale;
+  - oyuncunun sponsor olarak bitirdiği şehir projesi: bitiş anında
+    sayılıyor, çünkü devralma `sponsorId`yi sonradan devralana geçiriyor
+    (Codex #70). Eski kayıtta sayaçtan önce biten proje bugünkü
+    sponsorluktan okunuyor (ikisinin büyüğü).
+
+  Simülasyon sayacı okumuyor; kararlılık, lig ve iki dilde aynı oyun
+  testleri değişmeden geçiyor.
+- *Koşunun özeti* (`career.ts`, `runFacts`): koşunun kimliği kurucu şehrin
+  kuruluş anı ve tohumu. `holding.foundedAtIso` yeni bir alan; eski kayıtta
+  şehirlerin en erkeni alınıyor. Şehir açılınca ya da değişince koşu aynı
+  kalıyor. Kaybedilen şehir kapatılmadan önce kuruluş anı holding'e
+  yazılıyor: eski kayıtta kurucu şehir kapanınca kimlik değişip koşu iki
+  kez sayılırdı (Codex #70). Kurucu şehrin boyutu da aynı anda yazılıyor
+  (`holding.foundedCitySize`); yoksa koşu geçmişinde oynanan şehrin boyutu
+  görünürdü (Codex #70). Şehir sayısı kalıcı `holding.opened`dan
+  geliyor; kapatılan şehir de açılmıştı. Kapatılan şehrin sayaçları
+  (devralma, halka arz, sponsorluk, balon, görev, şehir sayaçları)
+  `holding.closedTally`de birikiyor: şehir listeden çıkınca koşunun
+  toplamı düşmüyor, sonraki ilerleme üstüne ekleniyor (Codex #70). Tekel
+  bugünkü rakip listesinden ya da tekelle kazanılmış zaferden
+  (`victory.kind`): tekelden sonra yeni rakip giren eski kayıt da Tekel'i
+  alıyor (Codex #70).
+  Yeni şehir açılınca holding'in kalıcı alanları da geçiyor. Tur 32'den
+  beri `foundCity` holding'i baştan kuruyor, kapatılan şehrin zaferini
+  (`closedWins`) ve tamamlanma gününü düşürüyordu; holding hedefleri de
+  bu yüzden geri gidebiliyordu (Codex #70).
+- *Kurallar* (`achievementStatus`): saf işlev, düğümde test ediliyor;
+  koşular arası depo arayüzde.
+
+**Arayüz.**
+- *Depo* (`packages/ui/src/career.ts`, `capitalforge.career.v1`):
+  - Son 100 koşu saklanıyor; daha eskisi toplamlara katlanıyor. Katlanan
+    koşunun anahtarı ve katkısı arşivde kalıyor. O koşunun kaydı yeniden
+    yüklenirse katkısı arşivden düşülüyor ve koşu listeye geri dönüyor;
+    yoksa yeni koşu sanılıp iki kez sayılırdı (Codex #70). Arşiv koşunun
+    bütün özetini tutuyor; geri gelen koşu onunla birleşiyor. Zaferden,
+    devralmadan ya da halka arzdan önceki bir kayıt kazanılanı geri
+    almıyor (Codex #70). Budanan koşunun özeti koşu rozetinin en iyisinde
+    de sayılıyor (Seri alıcı 4/5 budanınca düşmüyor); toplamlara zaten
+    katlandığı için kariyer rozetlerine ikinci kez girmiyor (Codex #70).
+  - Arşiv sınırlı (Codex #70): bütün özetiyle en fazla 200 budanmış koşu
+    (koşu başına ~550 bayt; depo en fazla ~165 KB). Daha eskisinin özeti
+    siliniyor; toplamları arşivde, koşu rozetlerindeki en iyi değeri
+    rozet başına tek sayıda (`best`) kalıyor. Bedeli: 300 koşudan eski bir
+    kaydın yeniden yüklenmesi yeni koşu sayılıyor.
+  - Aynı koşu yeniden görülünce sayaçlar ve değer en yükseğinde kalıyor:
+    eski bir kayıttan dönmek kazanılanı geri almıyor.
+  - Açılan rozet kalıcı; açıldığı an, şirket ve gün saklanıyor.
+  - Depoya rozet açılınca ya da koşunun sonucu değişince yazılıyor; bunun
+    dışında en fazla 10 sn'de bir.
+- *İzleyici* (`useCareerWatch`): motor gün başı haber vermiyor; durumu
+  yerinde değiştiriyor ve bir karede birkaç gün ilerleyebiliyor. İzleyici
+  her motor sürümünde koşuyu kaydediyor.
+  - İlk sürüm yalnızca gün ya da sonuç değişince bakıyordu. Duraklatılmış
+    oyunda aynı gün verilen komut (halka arz, balon, görev) rozeti ertesi
+    güne bırakıyordu (Codex #70).
+  - Kare yalnız sonunda görülüyor: arada eşiği geçip geri düşen değer
+    kariyere girmiyordu (Codex #70). Çekirdek gün sonlarının en yüksek
+    holding değerini tutuyor (`feats.peakWorth`); koşunun değeri ondan.
+  - Gözlem ucuz; depoya yazma seyreltiliyor.
+  - Açılan rozet bildirim olarak düşüyor; ikiden fazlası tek bildirimde.
+- *Kariyer sayfası:*
+  - özet: rozet, senaryo yıldızı, zafer, en yüksek değer, koşu;
+  - gruplara göre rozetler: kazanılanın tarihi, şirketi ve günü,
+    kazanılmayanın ilerlemesi;
+  - son 12 koşu: tür, CEO, zorluk, şehir, sonuç, değer, tarih. Zaferi
+    yalnız kapatılan şehirde kalan koşu "Zafer" yazıyor; günü bilinmiyor
+    (Codex #70).
+- *Girişler:* kurulum ekranı (koşular arasında bakılan yer) ve Hedefler
+  paneli. Rıhtıma dokuzuncu sekme eklenmedi: eşit sütunlu rıhtımda sütun
+  375 px'de ~39 px'e inerdi, etiketlerin hepsi kesilirdi.
+- *Sonuç ekranları:* zafer, oyun sonu, senaryo ve lig sonucu bu koşuda
+  kazanılan rozetleri yazıyor.
+- *Yardım:* "Koşuların ötesine bak" adımı eklendi.
+
+**Doğrulama.** `pnpm test` 456/456; 35 yeni test.
+
+`packages/core/test/career.test.ts` (22 test):
+- katalog tutarlılığı;
+- her sayacın kendi anında artması: kriz, konsorsiyum, sözleşme, ihale,
+  meclis, baskın, sponsorluk (sonuncusu düzeltmeden önce kaldı);
+- holding'de koşu kimliği, lig ve senaryo kipi, senaryonun ön tarihinin
+  sayılmaması;
+- kurucu şehir kapanınca koşunun kurucu boyutunun değişmemesi, eski
+  holding kaydında kurucu şehir kapanınca kimliğin değişmemesi,
+  duraklatılmış oyunda komutla biten baskının hemen sayılması, uzaktaki
+  şehirde püskürtülen baskının sayılması, kapatılan şehrin açılmış
+  sayılması ve sayaçlarının koşuda kalması (yeni şehir açılınca da), yeni
+  şehir açılınca kapatılan şehrin zaferinin kalması, bir karenin arasında
+  kalan en yüksek değerin sayılması (sekizi de düzeltmeden önce kaldı);
+- Çeyrek milyarın tek şirketi, Yarım milyarın holding'i okuması; tekel
+  zaferinden sonra yeni rakip girse de Tekel'in sayılması (ikisi de
+  düzeltmeden önce kaldı);
+- zafer süzgeçleri, koşu ve kariyer kapsamı, senaryo yıldızı, farklı CEO.
+
+`packages/ui/test/career.test.ts` (11 test):
+- rozetin bir kez açılması;
+- eski kayıttan dönünce kazanılanın kalması;
+- koşuların toplamı;
+- senaryonun büyüme rozetine sayılmaması;
+- kurulum ekranında senaryo yıldızı;
+- budanan koşunun toplamlara katlanması ve koşu rozetinin ilerlemesinde
+  sayılmaya devam etmesi, arşivin sınırlı kalıp en eski koşunun en iyi
+  değerini koruması (ikisi de düzeltmeden önce kaldı);
+- budanan koşunun kaydı geri gelince iki kez sayılmaması, zaferini ve
+  devralma, halka arz gibi özetini kaybetmemesi (üçü de düzeltmeden önce
+  kaldı).
+
+`packages/ui/test/careerFormat.test.ts` (2 test): geçmişteki sonuç
+satırı; zaferi yalnız kapatılan şehirde kalan koşunun zaferli görünmesi
+(düzeltmeden önce kaldı).
+
+İçerik çevirileri testi rozetleri de kapsıyor.
+
+Tarayıcı testine "Kariyer" bölümü eklendi (9 kontrol):
+- kurulumda Kariyer: 26 rozet, boş geçmiş;
+- rozet açılınca bildirim ve depoya hemen yazılması;
+- duraklatılmış oyunda aynı gün açılan rozetin de hemen bildirilmesi
+  (düzeltmeden önce kaldı);
+- Hedefler panelinden Kariyer, kazanılan rozetin günü ve koşu satırı;
+- zafer ekranında bu koşunun rozetleri;
+- sayfa yenilenince kalıcılık;
+- İngilizce;
+- iPhone SE'de ulaşılabilirlik ve yana taşmama;
+- konsol.
+
+Tarayıcı tam koşu 446/446, konsol hatası yok (~26 dk); "Kariyer" bölümü ~30 sn.
+
 
 ---
 
@@ -3756,11 +3941,11 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi) |
-| Birim testi | **421 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri de) |
+| Birim testi | **456 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer de) |
 | Denge testi | **324 kontrol, hepsi geçiyor** (24 bölüm, süreleriyle; ~15 dk) |
-| Tarayıcı testi | **437 kontrol, hepsi geçiyor**, 0 konsol hatası (~25–40 dk); duman koşusu 132 (~5 dk, rehber dahil) |
+| Tarayıcı testi | **446 kontrol, hepsi geçiyor**, 0 konsol hatası (~25–40 dk); duman koşusu 132 (~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + duman oynanışı |
-| Kapsam | 35 bina · 25 ürün · 7 kategori · 8 rakip profili · 10 CEO · 22 olay (11 şehir + 11 sektör) · 2 kriz · 12 karar kartı · 70 rakip sözü · 5 fırsat balonu · 8 görev türü · 4 mevsim · 9 moda ürünü · 17 şehir yapısı (6 siluet) · 6 şehir projesi · 7 senaryo |
+| Kapsam | 35 bina · 25 ürün · 7 kategori · 8 rakip profili · 10 CEO · 22 olay (11 şehir + 11 sektör) · 2 kriz · 12 karar kartı · 70 rakip sözü · 5 fırsat balonu · 8 görev türü · 4 mevsim · 9 moda ürünü · 17 şehir yapısı (6 siluet) · 6 şehir projesi · 7 senaryo · 26 rozet |
 
 ### Render (Tur 6 sonrası)
 

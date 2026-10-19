@@ -4,6 +4,7 @@ import { tc } from '../i18n';
 import { nextFloat, nextInt, pick } from '../rng';
 import { pushNews } from '../news';
 import { isDistrictOpen } from './city';
+import { noteFeat } from './feats';
 import type { ContractState, GameState } from '../types';
 
 /**
@@ -126,6 +127,7 @@ export function runContractTick(state: GameState): void {
       );
       delete state.contract;
       state.lastContractDay = state.time.day;
+      noteFeat(state, 'contractsDone');
       return;
     }
 

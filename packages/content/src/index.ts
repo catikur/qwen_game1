@@ -24,6 +24,7 @@ export * from './living';
 export * from './projects';
 export * from './consortium';
 export * from './scenarios';
+export * from './achievements';
 
 /** İçerik sürümü — save migration'ında denge değişikliklerini izlemek için. */
 export const CONTENT_VERSION = 6;

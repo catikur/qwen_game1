@@ -114,6 +114,32 @@ function veteran(key) {
   }
 }
 
+/*
+ * Kökün içindeki her görünür düğme kaydırılarak görünür alana gelebiliyor
+ * ve üstünde başka bir şey yok mu? Telefon katmanı kaymadığı için uzun
+ * senaryo açılışında "Başla" düğmesine ulaşılamıyordu (Tur 39c). Cila ve
+ * Kariyer bölümleri kullanıyor.
+ */
+function reachable(page, selector) {
+  return page.evaluate(async (sel) => {
+    const root = document.querySelector(sel);
+    if (!root) return { count: 0, bad: ['katman yok'] };
+    const controls = [...root.querySelectorAll('button, a[href], input, select')].filter(
+      (el) => el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden',
+    );
+    const bad = [];
+    for (const el of controls) {
+      el.scrollIntoView({ block: 'center', inline: 'center' });
+      await new Promise((r) => requestAnimationFrame(() => r(null)));
+      const r = el.getBoundingClientRect();
+      const inside = r.top >= -1 && r.bottom <= innerHeight + 1 && r.left >= -1 && r.right <= innerWidth + 1;
+      const top = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+      if (!inside || !top || !(top === el || el.contains(top))) bad.push((el.textContent || el.tagName).trim().slice(0, 30));
+    }
+    return { count: controls.length, bad };
+  }, selector);
+}
+
 /** Rehberi baştan sona oynar; her adımda halkanın hedefi kartın altında mı, ona bakar. */
 async function tutorialWalk(context, label) {
   const p = await context.newPage();
@@ -3446,29 +3472,6 @@ async function finish(browser, consoleErrors) {
   // ---------- Cila (Tur 40) ----------
   section('Cila: glifler, konsol, telefon taraması, senaryo sonları');
   {
-    /*
-     * Kökün içindeki her görünür düğme kaydırılarak görünür alana gelebiliyor
-     * ve üstünde başka bir şey yok mu? Telefon katmanı kaymadığı için uzun
-     * senaryo açılışında "Başla" düğmesine ulaşılamıyordu (Tur 39c).
-     */
-    const reachable = (page, selector) =>
-      page.evaluate(async (sel) => {
-        const root = document.querySelector(sel);
-        if (!root) return { count: 0, bad: ['katman yok'] };
-        const controls = [...root.querySelectorAll('button, a[href], input, select')].filter(
-          (el) => el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden',
-        );
-        const bad = [];
-        for (const el of controls) {
-          el.scrollIntoView({ block: 'center', inline: 'center' });
-          await new Promise((r) => requestAnimationFrame(() => r(null)));
-          const r = el.getBoundingClientRect();
-          const inside = r.top >= -1 && r.bottom <= innerHeight + 1 && r.left >= -1 && r.right <= innerWidth + 1;
-          const top = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
-          if (!inside || !top || !(top === el || el.contains(top))) bad.push((el.textContent || el.tagName).trim().slice(0, 30));
-        }
-        return { count: controls.length, bad };
-      }, selector);
     const appWarnings = [];
     const polishErrors = [];
     const phone = await browser.newContext({ ...devices['iPhone SE'] });
@@ -3596,6 +3599,164 @@ async function finish(browser, consoleErrors) {
     check('Uygulamanın kendi konsol uyarısı yok (three.js dahil)', appWarnings.length === 0, appWarnings.slice(0, 2).join(' | '));
     check('Cila akışında konsol temiz', polishErrors.length === 0, polishErrors.slice(0, 2).join(' | '));
     await phone.close();
+  }
+
+  // ---------- Kariyer (Tur 41) ----------
+  section('Kariyer: rozetler, bildirim, kalıcılık, telefon');
+  {
+    const careerErrors = [];
+    const watch = (page) => {
+      page.on('pageerror', (e) => careerErrors.push(e.message));
+      page.on('console', (m) => {
+        if (m.type() === 'error') careerErrors.push(m.text());
+      });
+    };
+    /*
+     * Bildirimler 3,6 sn yaşıyor; oyun yeni açılmışken yazılımsal GPU ana
+     * iş parçacığını tutunca yoklama onu kaçırabiliyordu. Sayfaya eklenen
+     * her bildirim bir günlüğe yazılıyor, kontrol günlüğe bakıyor.
+     */
+    const toastLog = () => {
+      window.__toastLog = [];
+      new MutationObserver((records) => {
+        for (const record of records) {
+          for (const node of record.addedNodes) {
+            if (node.nodeType === 1 && node.classList.contains('toast')) window.__toastLog.push(node.textContent);
+          }
+        }
+      }).observe(document, { childList: true, subtree: true });
+    };
+    const toastSeen = (page, text) =>
+      page
+        .waitForFunction((t) => window.__toastLog?.find((line) => line.includes(t)), text, { timeout: 8000 })
+        .then((handle) => handle.jsonValue())
+        .catch(() => '');
+    const ctx = await browser.newContext({ viewport: { width: 1280, height: 860 } });
+    await ctx.addInitScript(veteran, TUTORIAL_KEY);
+    await ctx.addInitScript(toastLog);
+    const cp = await ctx.newPage();
+    watch(cp);
+    await cp.goto('http://127.0.0.1:8811/');
+    await cp.waitForSelector('.newgame', { timeout: 20000 });
+    const setupButton = (await cp.locator('.newgame [data-career-open]').textContent()) ?? '';
+    await cp.locator('.newgame [data-career-open]').click();
+    await cp.waitForSelector('.career-overlay [data-career]');
+    const empty = await cp.evaluate(() => ({
+      total: document.querySelectorAll('[data-achievement]').length,
+      done: document.querySelectorAll('[data-achievement][data-done="true"]').length,
+      runs: document.querySelectorAll('.career-run').length,
+    }));
+    check('Kurulumda Kariyer açılıyor: 26 rozet, hiçbiri kazanılmamış, koşu yok',
+      setupButton.includes('0/26') && empty.total === 26 && empty.done === 0 && empty.runs === 0, `${setupButton} · ${JSON.stringify(empty)}`);
+    await cp.locator('.career-overlay .modal-head button.icon').click();
+
+    await cp.locator('[data-newgame-start]').click();
+    await cp.waitForFunction(() => window.__capital?.getState?.().time.day >= 0, null, { timeout: 60000 });
+    // İlk devralma: sayaç günün sonunda okunuyor, bildirim hemen.
+    await cp.evaluate(() => {
+      const c = window.__capital;
+      c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+      const s = c.getState();
+      s.companies[s.playerCompanyId].acquisitions = 1;
+      c.engine.runDay();
+      c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+    });
+    const toastText = await toastSeen(cp, 'İlk devralma');
+    const stored = await cp.evaluate(() => JSON.parse(localStorage.getItem('capitalforge.career.v1') ?? '{}'));
+    check('Rozet açılınca bildirim çıkıyor ve hemen cihaza yazılıyor',
+      (toastText ?? '').includes('Rozet kazandın') && Boolean(stored.unlocked?.first_takeover) && stored.runs?.length === 1,
+      `${toastText} · ${Object.keys(stored.unlocked ?? {}).join(',')}`);
+
+    // Duraklatılmış oyunda aynı gün: halka arz günü değiştirmiyor, rozet yine hemen (Codex #70).
+    await cp.evaluate(() => {
+      const c = window.__capital;
+      const s = c.getState();
+      s.companies[s.playerCompanyId].issues = 1;
+      c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+    });
+    const sameDay = await toastSeen(cp, 'Borsada');
+    const dayNow = await cp.evaluate(() => window.__capital.getState().time.day);
+    check('Duraklatılmış oyunda aynı gün açılan rozet de hemen bildiriliyor', (sameDay ?? '').includes('Borsada') && dayNow === 1, `${sameDay} · gün ${dayNow}`);
+
+    await cp.locator('.goal-chip').first().click();
+    const goalsButton = (await cp.locator('.goals [data-career-open]').textContent()) ?? '';
+    await cp.locator('.goals [data-career-open]').click();
+    await cp.waitForSelector('.modal [data-career]');
+    const badge = await cp.evaluate(() => {
+      const el = document.querySelector('[data-achievement="first_takeover"]');
+      return { done: el?.getAttribute('data-done'), when: el?.querySelector('.career-badge-when')?.textContent ?? '', runs: document.querySelectorAll('.career-run').length };
+    });
+    check('Hedefler panelinden Kariyer açılıyor; kazanılan rozet, açıldığı gün ve koşu satırı',
+      goalsButton.includes('2/26') && badge.done === 'true' && badge.when.includes('1. gün') && badge.runs === 1, `${goalsButton} · ${JSON.stringify(badge)}`);
+    await cp.locator('.modal-head button.icon').click();
+
+    // Zafer: ekran bu koşuda kazanılan rozetleri yazıyor (zaferin kendisi dahil).
+    await cp.evaluate(() => {
+      const c = window.__capital;
+      const s = c.getState();
+      s.victory = { day: s.time.day, kind: 'tycoon' };
+      c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+    });
+    const runLine = await cp
+      .waitForSelector('.gameover.victory [data-career-run-line]', { timeout: 5000 })
+      .then((el) => el.textContent())
+      .catch(() => '');
+    check('Zafer ekranı bu koşunun rozetlerini yazıyor', (runLine ?? '').includes('Şehrin sahibi') && (runLine ?? '').includes('İlk devralma'), runLine ?? '');
+    await cp.locator('.gameover.victory .gameover-actions button.primary').click();
+    await cp.reload();
+    await cp.waitForFunction(() => window.__capital?.getState?.() || document.querySelector('.newgame'), null, { timeout: 60000 });
+    const kept = await cp.evaluate(() => Object.keys(JSON.parse(localStorage.getItem('capitalforge.career.v1') ?? '{}').unlocked ?? {}));
+    check('Rozetler sayfa yenilenince yerinde', kept.includes('first_takeover') && kept.includes('first_victory'), kept.join(','));
+    await ctx.close();
+
+    // İngilizce kurulum: düğme ve rozet adları çevrilmiş.
+    const enCtx = await browser.newContext({ viewport: { width: 1280, height: 860 } });
+    await enCtx.addInitScript(veteran, TUTORIAL_KEY);
+    const ep = await enCtx.newPage();
+    watch(ep);
+    await ep.goto('http://127.0.0.1:8811/?lang=en');
+    await ep.waitForSelector('.newgame', { timeout: 20000 });
+    const enButton = (await ep.locator('.newgame [data-career-open]').textContent()) ?? '';
+    await ep.locator('.newgame [data-career-open]').click();
+    await ep.waitForSelector('.career-overlay [data-career]');
+    const enTexts = await ep.evaluate(() => ({
+      first: document.querySelector('[data-achievement="public_company"] .career-badge-title')?.textContent ?? '',
+      title: document.querySelector('.career-overlay .modal-head h2')?.textContent ?? '',
+    }));
+    check('İngilizcede Kariyer çevrilmiş', enButton.includes('Career') && enButton.includes('0/26 badges') && enTexts.first === 'Going public' && enTexts.title === 'Career',
+      `${enButton} · ${JSON.stringify(enTexts)}`);
+    await enCtx.close();
+
+    // iPhone SE: kurulumdaki ve oyundaki Kariyer sayfasının her düğmesi ulaşılabilir, yana taşma yok.
+    const phoneCtx = await browser.newContext({ ...devices['iPhone SE'] });
+    await phoneCtx.addInitScript(veteran, TUTORIAL_KEY);
+    const pp = await phoneCtx.newPage();
+    watch(pp);
+    await pp.goto('http://127.0.0.1:8811/');
+    await pp.waitForSelector('.newgame', { timeout: 20000 });
+    await pp.locator('.newgame [data-career-open]').click();
+    await pp.waitForSelector('.career-overlay [data-career]');
+    const overlay = await reachable(pp, '.career-overlay');
+    const overlayWide = await pp.evaluate(() => {
+      const body = document.querySelector('.career-overlay .modal-body');
+      return body ? body.scrollWidth - body.clientWidth : -1;
+    });
+    await pp.locator('.career-overlay .modal-head button.icon').click();
+    await pp.locator('[data-newgame-start]').click();
+    await pp.waitForFunction(() => window.__capital?.getState?.().time.day >= 0, null, { timeout: 60000 });
+    await pp.locator('.goal-chip').first().click();
+    await pp.locator('.goals [data-career-open]').click();
+    await pp.waitForSelector('.modal [data-career]');
+    const inGame = await reachable(pp, '.modal');
+    const inGameWide = await pp.evaluate(() => {
+      const body = document.querySelector('.modal .modal-body');
+      return body ? body.scrollWidth - body.clientWidth : -1;
+    });
+    check('iPhone SE: Kariyer sayfasının her düğmesine ulaşılıyor, yana taşmıyor',
+      overlay.bad.length === 0 && overlay.count > 0 && inGame.bad.length === 0 && inGame.count > 0 && overlayWide === 0 && inGameWide === 0,
+      `kurulum ${overlay.count} düğme ${overlay.bad.join(',')} taşma ${overlayWide} · oyun ${inGame.count} düğme ${inGame.bad.join(',')} taşma ${inGameWide}`);
+    await phoneCtx.close();
+    check('Kariyer akışında konsol temiz', careerErrors.length === 0, careerErrors.slice(0, 2).join(' | '));
   }
 
   // ---------- Mobil ----------

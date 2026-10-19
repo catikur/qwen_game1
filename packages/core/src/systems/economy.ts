@@ -4,6 +4,7 @@ import { pushNews } from '../news';
 import { createRng, nextFloat, pickWeighted } from '../rng';
 import type { CompanyState, GameState } from '../types';
 import { ownerFraction } from './equity';
+import { noteFeat } from './feats';
 import { rivalCrisisReaction } from './rivalry';
 
 /**
@@ -141,11 +142,21 @@ export function runCrisisTick(state: GameState): void {
     const def = CRISIS_BY_ID[crisis.defId];
     if (crisis.phase === 'warning' && day >= crisis.activeDay) {
       crisis.phase = 'active';
+      // Kariyer (Tur 41): kriz başlarken oyuncunun değeri — "krizden büyüyerek çıktı mı?"
+      const player = state.companies[state.playerCompanyId];
+      if (player) (state.feats ??= {}).crisisWorth = player.netWorth;
       if (def) pushNews(state, 'bad', def.title, def.body);
       // Rakip hikâyesi (Tur 37b): en büyük rakip krize kendi ağzından tepki veriyor.
       rivalCrisisReaction(state);
     } else if (crisis.phase === 'active' && day >= crisis.endDay) {
       delete state.crisis;
+      // Oyun bitince gün koşmuyor: buraya gelen oyuncu krizi ayakta atlattı.
+      const player = state.companies[state.playerCompanyId];
+      if (player) {
+        noteFeat(state, 'crisesWeathered');
+        if (state.feats?.crisisWorth !== undefined && player.netWorth > state.feats.crisisWorth) noteFeat(state, 'crisesGrown');
+        delete state.feats!.crisisWorth;
+      }
       state.nextCrisisDay = day + rangeFrom(crisisDice(state, day), CRISIS_TIMING.gapDays);
       if (def) pushNews(state, 'good', def.endTitle, def.endBody);
     }

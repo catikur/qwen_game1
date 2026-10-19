@@ -11,6 +11,7 @@ import { respondUnion } from './systems/labor';
 import { settleCardAway } from './systems/cards';
 import { runQuestTick, settleBubbleAway } from './systems/opportunities';
 import { settleConsortiumAway } from './systems/consortium';
+import { addTally, cityTally, noteRaidStage } from './systems/feats';
 import { capRemaining, playerBuy } from './systems/orders';
 import { createNewGame } from './worldgen';
 import { scenarioActive, shiftScenario } from './systems/scenario';
@@ -122,6 +123,25 @@ export function holdingNetWorth(state: GameState): number {
   return total;
 }
 
+/**
+ * Koşunun kuruluş anı (Tur 41): holding'de kurucu şehrinki. Eski kayıtta
+ * `foundedAtIso` yok; şehirlerin en erkeni kurucu şehir.
+ */
+export function holdingFoundedAt(state: GameState): string {
+  if (state.holding?.foundedAtIso) return state.holding.foundedAtIso;
+  let first = state.meta.createdAtIso;
+  for (const city of state.holding?.dormant ?? []) if (city.state.meta.createdAtIso < first) first = city.state.meta.createdAtIso;
+  return first;
+}
+
+/** Kurucu şehrin boyutu (Tur 41); kurucu şehir kapatıldıysa holding'de saklanan. */
+export function holdingFounderSize(state: GameState): CitySizeId {
+  if (state.holding?.foundedCitySize) return state.holding.foundedCitySize;
+  const founded = holdingFoundedAt(state);
+  const founder = [state, ...(state.holding?.dormant ?? []).map((city) => city.state)].find((city) => city.meta.createdAtIso === founded);
+  return (founder ?? state).citySize ?? 'standard';
+}
+
 export function cityCount(state: GameState): number {
   return 1 + (state.holding?.dormant.length ?? 0);
 }
@@ -224,8 +244,11 @@ export function foundCity(state: GameState, citySize: CitySizeId, amount: number
   next.flags = { ...state.flags };
   next.cityName = name;
   next.importedCapital = amount;
+  // Holding'in kalıcı alanları (kapatılanların zaferi ve payı, tamamlanma günü) yeni şehre de geçiyor (Codex #70).
   const holding: HoldingState = {
+    ...state.holding,
     foundingSeed: seed,
+    foundedAtIso: holdingFoundedAt(state),
     opened: opened + 1,
     treasury: state.holding?.treasury ?? 0,
     dormant: [...(state.holding?.dormant ?? []), toDormant(state)],
@@ -327,6 +350,12 @@ export function closeCity(state: GameState, index: number): CommandResult {
   if (!holding || !city) return { ok: false, reason: tc('core.holding.noSuchCity') };
   if (!city.state.gameOver) return { ok: false, reason: tc('core.holding.closeOnlyLost') };
   if (city.state.victory) holding.closedWins = (holding.closedWins ?? 0) + 1;
+  // Kariyer (Tur 41): eski kayıtta kuruluş anı şehirlerin en erkeninden okunuyor;
+  // kurucu şehir kapanmadan yazılmazsa koşunun kimliği değişirdi (Codex #70).
+  holding.foundedAtIso ??= holdingFoundedAt(state);
+  holding.foundedCitySize ??= holdingFounderSize(state);
+  // Şehrin sayaçları da: kapatılan şehirden sonraki ilerleme üstüne eklensin (Codex #70).
+  holding.closedTally = addTally(holding.closedTally ?? {}, cityTally(city.state));
   holding.dormant = holding.dormant.filter((_, i) => i !== index);
   return { ok: true };
 }
@@ -449,6 +478,8 @@ function liveAway(active: GameState, holding: HoldingState, city: DormantCity): 
     );
   }
   city.raidStage = raid.stage;
+  // Kariyer (Tur 41): uzaktaki şehirde de borsa yaşıyor, püskürtülen baskın sayılıyor (Codex #70).
+  noteRaidStage(s, raid.stage);
   if (!wonBefore && s.victory) {
     pushNews(active, 'good', tc('core.holding.remoteVictoryTitle', { city: name }), tc('core.holding.remoteVictoryBody', { city: name }));
   }
