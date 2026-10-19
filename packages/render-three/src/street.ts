@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { uploadDrawn } from './instances';
 
 /**
  * Sokak hayatı (Tur 34): kaldırımda yürüyen insanlar ve tüten bacalar.
@@ -239,8 +240,8 @@ export class StreetLife {
       this.bodies.setMatrixAt(i, this.dummy.matrix);
       this.heads.setMatrixAt(i, this.dummy.matrix);
     }
-    this.bodies.instanceMatrix.needsUpdate = true;
-    this.heads.instanceMatrix.needsUpdate = true;
+    uploadDrawn(this.bodies.instanceMatrix, this.drawnWalkers);
+    uploadDrawn(this.heads.instanceMatrix, this.drawnWalkers);
   }
 
   private updateSmoke(): void {
@@ -275,8 +276,8 @@ export class StreetLife {
       }
     }
     this.smoke.count = index;
-    this.smoke.instanceMatrix.needsUpdate = true;
-    if (this.smoke.instanceColor) this.smoke.instanceColor.needsUpdate = true;
+    uploadDrawn(this.smoke.instanceMatrix, index);
+    if (this.smoke.instanceColor) uploadDrawn(this.smoke.instanceColor, index);
   }
 
   /**

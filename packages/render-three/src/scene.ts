@@ -259,6 +259,16 @@ export class CityRenderer {
   private groundPlaced = false;
   /** Kare kimliğinden zemin örnek yuvasına eşleme; sokaklarda -1. */
   private groundSlotOfTile = new Int32Array(0);
+  /**
+   * Şehir dokusunun son yerleştirildiği hâl, kare başına (Tur 43): yapı ve
+   * yüksekliği. Doku günlerin yarısından çoğunda değişmiyor; değişmediyse
+   * yapılar, süsleri ve gölgeleri yeniden yerleştirilmiyor.
+   */
+  private fabricStructures: Array<string | null> = [];
+  private fabricHeights = new Float64Array(0);
+  /** Hata ayıklama: kaç state eşitlemesi, dokuyu kaçında yeniden yerleştirdi. */
+  private stateSyncs = 0;
+  private fabricSyncs = 0;
   /** Bina kimliği → inşaatın başladığı an (0 = animasyonsuz). */
   private buildStart = new Map<string, number>();
   private sawBuildings = false;
@@ -842,6 +852,7 @@ export class CityRenderer {
 
   /** State veya görünüm değiştiğinde çağrılır; her karede değil. */
   syncState(state: GameState, view: ViewOptions): void {
+    this.stateSyncs++;
     this.state = state;
     this.view = view;
     this.applyLensMode(view.lens);
@@ -906,7 +917,51 @@ export class CityRenderer {
     }
     if (this.ground.instanceColor) this.ground.instanceColor.needsUpdate = true;
 
-    // Şehrin mevcut dokusu: oyuncuya ait olmayan yapılar.
+    // Şehrin mevcut dokusu: oyuncuya ait olmayan yapılar. Değişmediyse dünkü yerleşim duruyor.
+    if (this.fabricChanged(tiles)) this.syncFabric(tiles);
+
+    this.syncBuildings(state);
+
+    if (view.selectedTileId !== null) {
+      const tile = tiles[view.selectedTileId];
+      this.selection.visible = Boolean(tile);
+      if (tile) this.selection.position.set(tile.x, 0.1, tile.y);
+    } else {
+      this.selection.visible = false;
+    }
+
+    this.syncRoutes(state, view.playerCompanyId);
+    this.syncShoppers(state);
+    this.syncHeadquarters(state, view.playerCompanyId);
+    this.syncGhost(width);
+  }
+
+  /**
+   * Doku dünden beri değişti mi; değiştiyse yeni hâli aklında tutar (Tur 43).
+   * Yerleşim yalnızca karenin yapısına ve yüksekliğine bakıyor (renk sapması
+   * ve cephe karenin kimliğinden), yani bu ikisi aynıysa çıktı da aynı.
+   */
+  private fabricChanged(tiles: GameState['map']['tiles']): boolean {
+    let changed = this.fabricStructures.length !== tiles.length;
+    if (changed) {
+      this.fabricStructures = new Array<string | null>(tiles.length).fill(null);
+      this.fabricHeights = new Float64Array(tiles.length);
+    }
+    for (let i = 0; i < tiles.length; i++) {
+      const tile = tiles[i]!;
+      const structure = tile.structureId ?? null;
+      const height = structure ? tile.structureHeight : 0;
+      if (this.fabricStructures[i] === structure && this.fabricHeights[i] === height) continue;
+      this.fabricStructures[i] = structure;
+      this.fabricHeights[i] = height;
+      changed = true;
+    }
+    return changed;
+  }
+
+  /** Şehrin mevcut dokusu: oyuncuya ait olmayan yapılar, süsleri, gölgeleri ve bacaları. */
+  private syncFabric(tiles: GameState['map']['tiles']): void {
+    this.fabricSyncs++;
     this.fabric.begin();
     this.fabricShadows.begin();
     this.fabricDecor.begin();
@@ -947,21 +1002,6 @@ export class CityRenderer {
     this.fabricShadows.end();
     this.fabricDecor.end();
     this.street.setEmitters('fabric', fabricSmoke);
-
-    this.syncBuildings(state);
-
-    if (view.selectedTileId !== null) {
-      const tile = tiles[view.selectedTileId];
-      this.selection.visible = Boolean(tile);
-      if (tile) this.selection.position.set(tile.x, 0.1, tile.y);
-    } else {
-      this.selection.visible = false;
-    }
-
-    this.syncRoutes(state, view.playerCompanyId);
-    this.syncShoppers(state);
-    this.syncHeadquarters(state, view.playerCompanyId);
-    this.syncGhost(width);
   }
 
   /**
@@ -1709,6 +1749,11 @@ export class CityRenderer {
     shaderWarmupMs: number | null;
     /** Yazılımsal GPU mu. */
     softwareRenderer: boolean;
+    /** State eşitleme sayısı ve şehir dokusunun yeniden yerleştirildiği kaçı (Tur 43). */
+    stateSyncs: number;
+    fabricSyncs: number;
+    /** Şehir dokusunun çizilen örnekleri (taban, gövde, çatı). */
+    fabricInstances: number;
   } {
     const hsl = { h: 0, s: 0, l: 0 };
     this.skyColor.getHSL(hsl);
@@ -1768,6 +1813,9 @@ export class CityRenderer {
       programs: this.renderer.info.programs?.length ?? 0,
       shaderWarmupMs: this.shaderWarmupMs,
       softwareRenderer: this.softwareRenderer,
+      stateSyncs: this.stateSyncs,
+      fabricSyncs: this.fabricSyncs,
+      fabricInstances: this.fabric.meshes.reduce((sum, mesh) => sum + mesh.count, 0),
     };
   }
 

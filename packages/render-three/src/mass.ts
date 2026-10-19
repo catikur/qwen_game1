@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import type { MassForm } from '@capital/content';
 import { FACADE } from './surface';
 import type { FacadeStyle } from './surface';
+import { uploadDrawn } from './instances';
 
 /**
  * Bina kütlesi.
@@ -517,10 +518,10 @@ export class BuildingMass {
     this.body.count = this.bodyCount;
     this.cap.count = this.capCount;
     for (const mesh of this.meshes) {
-      mesh.instanceMatrix.needsUpdate = true;
-      if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+      uploadDrawn(mesh.instanceMatrix, mesh.count);
+      if (mesh.instanceColor) uploadDrawn(mesh.instanceColor, mesh.count);
     }
-    this.facadeAttribute.needsUpdate = true;
+    uploadDrawn(this.facadeAttribute, this.bodyCount);
   }
 
   /** Veri lensinde siluete inerken üç parça birlikte davranır. */

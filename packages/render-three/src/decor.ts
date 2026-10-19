@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { makeAwningTexture, makeContactShadowTexture, makeRoofTileTexture } from './textures';
+import { uploadDrawn } from './instances';
 
 /**
  * Temas gölgeleri (Tur 24).
@@ -312,8 +313,8 @@ export class DecorLayer {
       const mesh = this.meshes[part];
       mesh.count = this.counts[part];
       mesh.visible = mesh.count > 0;
-      mesh.instanceMatrix.needsUpdate = true;
-      if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+      uploadDrawn(mesh.instanceMatrix, mesh.count);
+      if (mesh.instanceColor) uploadDrawn(mesh.instanceColor, mesh.count);
     }
   }
 
