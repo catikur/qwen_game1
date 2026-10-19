@@ -285,13 +285,20 @@ function GameRoot({
 
     let frame = 0;
     let last = performance.now();
+    let warmBefore = false;
     const loop = (now: number) => {
       // Üst sınır yalnızca sekmeden dönüşteki devasa sıçramayı keser.
       // Fazla dar tutulursa düşük kare hızında oyun saati gerçek zamanın
       // gerisine düşüyor ve seçilen hız kademesi yalan söylüyordu.
       const dt = Math.min(0.5, (now - last) / 1000);
       last = now;
-      engine.advance(dt * 1000);
+      // Gölgelendiriciler derlenirken şehir çizilmiyor; oyun saati de bekliyor
+      // (Tur 42). Derlemenin bittiği karenin ardındaki kare de saymıyor:
+      // paralel derleme yoksa programlar o karede eşzamanlı derleniyor ve
+      // süresi bir sonraki `dt`'ye düşüyordu (Codex #71).
+      const warm = renderer.shadersWarm();
+      if (warm && warmBefore) engine.advance(dt * 1000);
+      warmBefore = warm;
       renderer.render(dt);
       frame = requestAnimationFrame(loop);
     };

@@ -1,8 +1,9 @@
 import * as THREE from 'three';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
-import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
+import { SharedKernelBloomPass, postProcessingMaterials } from './bloom';
+import { isSoftwareRenderer } from './gpu';
 import { BUILDING_BY_ID, DISTRICT_ARCHETYPES, STRUCTURE_BY_ID } from '@capital/content';
 import type { BuildingDef, MassForm, StructureDef } from '@capital/content';
 import { BLOCK_SIZE, customerFlows, headquarters, lensValue, supplyRoutes } from '@capital/core';
@@ -139,8 +140,15 @@ const QUALITY_CEILING_FPS = 52;
  * Cihazı ölçmeden önce makul bir tahmin gerekiyor, yoksa zayıf bir telefon
  * ilk 2,5 saniyeyi en pahalı kademede geçirir — yani oyunun ilk izlenimi
  * en kötü hali olur. Tahmin yanlışsa uyarlama zaten düzeltiyor.
+ *
+ * Yazılımsal GPU (Tur 42) doğrudan en ucuz kademeden başlıyor. Eskiden en
+ * pahalı kademeden başlıyordu: ilk kareler saniyelerce sürüyor, uyarlama
+ * kademeyi indiriyor ve her malzeme yeni kademe için ikinci kez
+ * derleniyordu. Uyarlama yine çalışıyor; yazılımsal GPU zaten en alt
+ * kademeye iniyordu.
  */
-function initialQualityTier(): number {
+function initialQualityTier(software: boolean): number {
+  if (software) return QUALITY_LEVELS.length - 1;
   if (typeof navigator === 'undefined') return 0;
   const cores = navigator.hardwareConcurrency ?? 8;
   const touch = (navigator.maxTouchPoints ?? 0) > 0;
@@ -149,6 +157,22 @@ function initialQualityTier(): number {
   if (touch) return 1;
   return 0;
 }
+
+/**
+ * Gölgelendiricilerin ilk kareden önce derlenmesi için üst sınır (Tur 42).
+ * Hazır olduğunu hiç bildirmeyen bir sürücüde sahne sonsuza dek boş kalmasın.
+ */
+const SHADER_WARMUP_LIMIT_MS = 10_000;
+/** `clearUntilReady`'nin eski silme rengini tuttuğu yer; her karede yeni renk ayrılmasın. */
+const CLEAR_SCRATCH = new THREE.Color();
+/**
+ * Son işlem malzemelerinin ön derlemesi için tam ekran dörtgen. three'nin
+ * `FullScreenQuad`'ı gibi kendi başına bir sahne (ışık yok) ve yalnız konum
+ * ile uv taşıyor: normal olsaydı program `HAS_NORMAL` ile ayrı derlenirdi,
+ * gerçek çizim yine kendi programını derlerdi.
+ */
+const FULLSCREEN_QUAD = new THREE.Mesh(new THREE.PlaneGeometry(2, 2).deleteAttribute('normal'));
+const FULLSCREEN_CAMERA = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
 
 /** Gün döngüsünün iki ucu — ton üzerinden geçmemek için sabit renkler. */
 const MOONLIGHT = new THREE.Color('#9db9e8');
@@ -257,6 +281,20 @@ export class CityRenderer {
   private qualityLocked = false;
   /** Kademe değişiminden sonra sayılmayacak kare sayısı (derleme takılması). */
   private qualityWarmup = QUALITY_WARMUP_FRAMES;
+  /** Yazılımsal GPU mu (Tur 42): açılış kademesi ve hata ayıklama bilgisi için. */
+  private softwareRenderer = false;
+  /**
+   * Gölgelendiricilerin ön derlemesi (Tur 42): ilk karede görünen sahne
+   * önceden derleniyor, paralel derleme varsa çizim döngüsü beklemiyor.
+   */
+  private shaderWarmup: 'idle' | 'compiling' | 'done' = 'idle';
+  private shaderWarmupStarted = 0;
+  private shaderWarmupMs: number | null = null;
+  /**
+   * Kademe değişince ön derleme yeniden (Tur 42): yeni kademenin
+   * programları paralel derleniyor, o sırada son kare ekranda kalıyor.
+   */
+  private shaderRewarm = false;
   /** Son iki dokunuş arasındaki süre — çift dokunuş testinin okuduğu sayı. */
   private lastTapGapMs = Number.POSITIVE_INFINITY;
 
@@ -475,7 +513,8 @@ export class CityRenderer {
     this.bindInput();
     this.resize();
     // Cihaz tahmininden başla; uyarlama ilk 2,5 saniyede düzeltir.
-    this.applyQuality(initialQualityTier());
+    this.softwareRenderer = isSoftwareRenderer(this.renderer.getContext());
+    this.applyQuality(initialQualityTier(this.softwareRenderer));
   }
 
   private setupLights(width: number, height: number): void {
@@ -1312,6 +1351,7 @@ export class CityRenderer {
 
   render(dt: number): void {
     if (this.disposed) return;
+    if (!this.shadersReady()) return;
 
     /*
      * Kare sayacı — testlerin "bir kare çizildi mi" sorusunu sorabilmesi
@@ -1350,6 +1390,92 @@ export class CityRenderer {
   }
 
   /**
+   * Gölgelendiricileri ilk kareden önce derler (Tur 42).
+   *
+   * Eskiden programlar ilk karenin içinde, sahne çizilirken teker teker
+   * derleniyordu: ilk kare derleme bitene dek bekliyordu. Şimdi sahne
+   * durumu geldiğinde ilk karede görünen bütün malzemeler bir kerede
+   * derleniyor; tarayıcı paralel derlemeyi destekliyorsa
+   * (`KHR_parallel_shader_compile`) çizim döngüsü bu sırada beklemiyor,
+   * arayüz canlı kalıyor. Hazır olana dek tuval gökyüzü rengiyle
+   * siliniyor; siyah bir kare görünmüyor.
+   *
+   * Yan kazanç: three ilk karede gölge geçişini ışıklar sayılmadan
+   * çiziyordu; derinlik programları önce "ışıksız" anahtarla, ikinci
+   * karede yeniden derleniyordu. Ön derleme ışıkları önceden sayıyor.
+   *
+   * Programın anahtarı çizilen hedefe bağlı: bloom açıkken sahne ara
+   * hedefe çiziliyor (ton eşlemesi `OutputPass`'te), ön derleme de oraya.
+   * Bloom ve çıkış geçişlerinin tam ekran malzemeleri sahnede değil; onlar
+   * `postProcessingMaterials`'tan, kendi hedefleriyle derleniyor.
+   */
+  private shadersReady(): boolean {
+    if (this.shaderWarmup === 'done') return true;
+    if (!this.state) return this.shaderRewarm ? false : this.clearUntilReady();
+    if (this.shaderWarmup === 'idle') {
+      this.shaderWarmup = 'compiling';
+      this.shaderWarmupStarted = performance.now();
+      const previous = this.renderer.getRenderTarget();
+      this.renderer.setRenderTarget(this.composer ? this.composer.readBuffer : null);
+      try {
+        // Yalnız ilk karede görünenler. Görünmeyenler (yerleştirme hayaleti,
+        // genel merkez işareti, veri merceğinin düz malzemeleri) eskisi gibi
+        // ilk kullanıldıklarında derleniyor; açılışı uzatmıyorlar.
+        const camera = this.controller.camera;
+        this.scene.traverseVisible((object) => {
+          const drawable = object as THREE.Mesh & { isLine?: boolean; isPoints?: boolean };
+          if ((drawable.isMesh || drawable.isLine || drawable.isPoints) && drawable.material) {
+            this.renderer.compile(drawable, camera, this.scene);
+          }
+        });
+        // Bloom ve çıkış geçişlerinin malzemeleri sahnede değil (Codex #71).
+        if (this.composer) {
+          for (const { material, toScreen } of postProcessingMaterials(this.composer, this.renderer)) {
+            this.renderer.setRenderTarget(toScreen ? null : this.composer.readBuffer);
+            FULLSCREEN_QUAD.material = material;
+            this.renderer.compile(FULLSCREEN_QUAD, FULLSCREEN_CAMERA);
+          }
+        }
+      } finally {
+        this.renderer.setRenderTarget(previous);
+      }
+    }
+    const programs = this.renderer.info.programs ?? [];
+    const ready = programs.every((program) => (program as THREE.WebGLProgram & { isReady?: () => boolean }).isReady?.() ?? true);
+    if (!ready && performance.now() - this.shaderWarmupStarted < SHADER_WARMUP_LIMIT_MS) {
+      // Oyun içinde kademe değişiyorsa son kare ekranda kalsın; tuval silinmesin.
+      return this.shaderRewarm ? false : this.clearUntilReady();
+    }
+    this.shaderWarmup = 'done';
+    this.shaderWarmupMs ??= Math.round(performance.now() - this.shaderWarmupStarted);
+    this.shaderRewarm = false;
+    return true;
+  }
+
+  /**
+   * Gölgelendiriciler hazır mı, yani `render` şehri çiziyor mu (Tur 42).
+   * Ön derleme sürerken oyun döngüsü oyun saatini de ilerletmiyor
+   * (Codex #71): yoksa oyuncu göremediği günleri kaçırırdı.
+   */
+  shadersWarm(): boolean {
+    return this.shaderWarmup === 'done';
+  }
+
+  /**
+   * Ön derleme sürerken tuvali gökyüzü rengiyle siler; kare çizilmedi sayılır.
+   * three'nin silme rengi sahne çizilene dek siyah: rengi burada vermek gerekiyor.
+   */
+  private clearUntilReady(): false {
+    const previous = this.renderer.getClearColor(CLEAR_SCRATCH);
+    const alpha = this.renderer.getClearAlpha();
+    this.renderer.setRenderTarget(null);
+    this.renderer.setClearColor(this.scene.background as THREE.Color, 1);
+    this.renderer.clear();
+    this.renderer.setClearColor(previous, alpha);
+    return false;
+  }
+
+  /**
    * Bloom zincirini kurar ya da söker.
    *
    * Zincir kurulunca ton eşleme ve renk uzayı dönüşümü `OutputPass`'e
@@ -1378,7 +1504,7 @@ export class CityRenderer {
     const composer = new EffectComposer(this.renderer, target);
     composer.addPass(new RenderPass(this.scene, this.controller.camera));
     composer.addPass(
-      new UnrealBloomPass(
+      new SharedKernelBloomPass(
         new THREE.Vector2(width, height),
         BLOOM_STRENGTH,
         BLOOM_RADIUS,
@@ -1429,6 +1555,12 @@ export class CityRenderer {
       const mesh = object as THREE.Mesh;
       if (mesh.material) (mesh.material as THREE.Material).needsUpdate = true;
     });
+    // Gölgeler açılınca three ilk gölge geçişini eski ışık sayısıyla çiziyor ve
+    // derinlik programlarını iki kez derliyordu; ön derleme ışıkları önce sayar.
+    if (this.shaderWarmup === 'done') {
+      this.shaderWarmup = 'idle';
+      this.shaderRewarm = true;
+    }
   }
 
   /**
@@ -1571,6 +1703,12 @@ export class CityRenderer {
     drawCalls: number;
     /** Çizilen kare sayısı; sondajlar kare beklemek için okur. */
     frameCount: number;
+    /** Derlenmiş gölgelendirici programı sayısı (Tur 42). */
+    programs: number;
+    /** Ön derlemenin süresi; ilk kare çizilmeden önce null. */
+    shaderWarmupMs: number | null;
+    /** Yazılımsal GPU mu. */
+    softwareRenderer: boolean;
   } {
     const hsl = { h: 0, s: 0, l: 0 };
     this.skyColor.getHSL(hsl);
@@ -1627,6 +1765,9 @@ export class CityRenderer {
       emissiveMapped: this.bodyMaterials.every((material) => Boolean(material.emissiveMap)),
       drawCalls: this.renderer.info.render.calls,
       frameCount: this.frameCount,
+      programs: this.renderer.info.programs?.length ?? 0,
+      shaderWarmupMs: this.shaderWarmupMs,
+      softwareRenderer: this.softwareRenderer,
     };
   }
 

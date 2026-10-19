@@ -3759,6 +3759,269 @@ async function finish(browser, consoleErrors) {
     check('Kariyer akışında konsol temiz', careerErrors.length === 0, careerErrors.slice(0, 2).join(' | '));
   }
 
+  // ---------- Açılış (Tur 42) ----------
+  section('Açılış: gölgelendiriciler');
+  {
+    const openErrors = [];
+    const qualityLog = [];
+    /*
+     * Derlenen her program sayfada sayılıyor: WebGL'in `linkProgram`'ı
+     * sarılıyor, three'nin yazdığı gölgelendirici adı ve kaynağı tutuluyor.
+     * Canlı program sayısı (`renderInfo().programs`) yetmiyor: kademe inince
+     * eski programlar siliniyor, iki kez derlenen açılış görünmez olurdu.
+     */
+    const programLog = () => {
+      window.__programLog = [];
+      for (const Ctx of [WebGLRenderingContext, WebGL2RenderingContext]) {
+        const proto = Ctx.prototype;
+        const source = proto.shaderSource;
+        const attach = proto.attachShader;
+        const link = proto.linkProgram;
+        proto.shaderSource = function (shader, text) {
+          shader.__source = text;
+          return source.call(this, shader, text);
+        };
+        proto.attachShader = function (program, shader) {
+          (program.__shaders ??= []).push(shader);
+          return attach.call(this, program, shader);
+        };
+        proto.linkProgram = function (program) {
+          const text = (program.__shaders ?? []).map((shader) => shader.__source ?? '').join('\n//--\n');
+          const name = /#define SHADER_NAME (\S+)/.exec(text)?.[1] ?? /#define SHADER_TYPE (\S+)/.exec(text)?.[1] ?? '';
+          window.__programLog.push({ name, text, at: Math.round(performance.now()) });
+          return link.call(this, program);
+        };
+      }
+    };
+    /*
+     * Paralel derleme (`KHR_parallel_shader_compile`) gerçek GPU'larda var,
+     * buradaki yazılımsal GPU'da yok: ön derleme eşzamanlı bitiyor, çizim
+     * döngüsünün beklediği yol hiç koşmuyordu. İkinci açılışta uzantı
+     * taklit ediliyor: her program bağlandıktan `delay` ms sonra hazır.
+     * Hazır olmadan kullanılan programlar `__usedEarly`'de: gerçek GPU'da
+     * bunlar çizimi derleme bitene dek bekletir.
+     */
+    const parallelCompile = (delay) => {
+      const COMPLETION_STATUS_KHR = 0x91b1;
+      const extension = { COMPLETION_STATUS_KHR };
+      window.__usedEarly = [];
+      for (const Ctx of [WebGLRenderingContext, WebGL2RenderingContext]) {
+        const proto = Ctx.prototype;
+        const getExtension = proto.getExtension;
+        const getProgramParameter = proto.getProgramParameter;
+        const link = proto.linkProgram;
+        const use = proto.useProgram;
+        proto.getExtension = function (name) {
+          return name === 'KHR_parallel_shader_compile' ? extension : getExtension.call(this, name);
+        };
+        proto.linkProgram = function (program) {
+          program.__readyAt = performance.now() + delay;
+          const text = (this.getAttachedShaders(program) ?? []).map((shader) => this.getShaderSource(shader) ?? '').join('\n');
+          program.__name = /#define SHADER_NAME (\S+)/.exec(text)?.[1] ?? /#define SHADER_TYPE (\S+)/.exec(text)?.[1] ?? '?';
+          return link.call(this, program);
+        };
+        proto.useProgram = function (program) {
+          if (program && performance.now() < (program.__readyAt ?? 0)) window.__usedEarly.push(program.__name);
+          return use.call(this, program);
+        };
+        proto.getProgramParameter = function (program, pname) {
+          if (pname === COMPLETION_STATUS_KHR) return performance.now() >= (program.__readyAt ?? 0);
+          return getProgramParameter.call(this, program, pname);
+        };
+      }
+    };
+    /*
+     * İlk kareden önce ekranı silen her çağrının rengi tutuluyor: ön derleme
+     * sürerken tuval siyah kalmamalı. Yalnız ekrana yapılan silmeler; ara
+     * hedeflere (bloom, gölge, ortam haritası) yapılanlar sayılmıyor.
+     */
+    const clearLog = () => {
+      window.__screenClears = [];
+      window.__screenDrawn = false;
+      const DRAW_FRAMEBUFFER = 0x8ca9;
+      for (const Ctx of [WebGLRenderingContext, WebGL2RenderingContext]) {
+        const proto = Ctx.prototype;
+        const bind = proto.bindFramebuffer;
+        const clear = proto.clear;
+        proto.bindFramebuffer = function (target, framebuffer) {
+          if (target === this.FRAMEBUFFER || target === DRAW_FRAMEBUFFER) this.__toScreen = framebuffer === null;
+          return bind.call(this, target, framebuffer);
+        };
+        proto.clear = function (mask) {
+          if ((this.__toScreen ?? true) && !window.__screenDrawn && mask & this.COLOR_BUFFER_BIT) {
+            window.__screenClears.push([...this.getParameter(this.COLOR_CLEAR_VALUE)].map((c) => Math.round(c * 100) / 100));
+          }
+          return clear.call(this, mask);
+        };
+        for (const name of ['drawArrays', 'drawElements', 'drawArraysInstanced', 'drawElementsInstanced']) {
+          const draw = proto[name];
+          if (!draw) continue;
+          proto[name] = function (...args) {
+            if (this.__toScreen ?? true) window.__screenDrawn = true;
+            return draw.apply(this, args);
+          };
+        }
+      }
+    };
+    const ctx = await browser.newContext({ viewport: { width: 1280, height: 860 } });
+    await ctx.addInitScript(veteran, TUTORIAL_KEY);
+    await ctx.addInitScript(programLog);
+    const op = await ctx.newPage();
+    op.on('pageerror', (e) => openErrors.push(e.message));
+    op.on('console', (m) => {
+      if (m.type() === 'error') openErrors.push(m.text());
+      if (m.text().includes('kademesine')) qualityLog.push(m.text());
+    });
+    await op.goto('http://127.0.0.1:8811/');
+    await op.waitForSelector('.newgame', { timeout: 20000 });
+    await op.evaluate(() => (window.__programLog = []));
+    await op.locator('button:has-text("Şirketi kur")').click();
+    await op.waitForSelector('.topbar', { timeout: 60000 });
+    await op.waitForFunction(() => (window.__capital?.renderInfo()?.frameCount ?? 0) >= 4, null, { timeout: 60000 });
+    // Uyarlama 2,5 sn'lik pencereyle karar veriyor: bir pencere daha bekle.
+    await op.waitForTimeout(3500);
+    const opened = await op.evaluate(() => {
+      const info = window.__capital.renderInfo();
+      return { info, created: window.__programLog.length, names: window.__programLog.map((p) => p.name) };
+    });
+    check('Yazılımsal GPU tanınıyor, açılış en ucuz kademede',
+      opened.info.softwareRenderer === true && opened.info.qualityTier === 3,
+      `yazılımsal ${opened.info.softwareRenderer} · kademe ${opened.info.qualityTier}`);
+    check('Açılışta kademe inmiyor: sahne ikinci kez derlenmiyor', qualityLog.length === 0, qualityLog.slice(0, 2).join(' | '));
+    check('Gölgelendiriciler ilk kareden önce derleniyor',
+      typeof opened.info.shaderWarmupMs === 'number' && opened.info.frameCount >= 4,
+      `ön derleme ${opened.info.shaderWarmupMs} ms · kare ${opened.info.frameCount}`);
+    // Tur 41'in sonunda bu açılış 44 program derliyordu (en pahalı kademe, sonra iniş).
+    check('Açılışta derlenen program sayısı 20 ya da az',
+      opened.created <= 20,
+      `${opened.created} program (canlı ${opened.info.programs}) · ${[...new Set(opened.names)].join(', ')}`);
+
+    /*
+     * En üst kademe: bloom zinciri, gölgeler, ortam haritası. Yazılımsal
+     * GPU'da paralel derleme yok; yeni kademenin programları tek, uzun bir
+     * karede eşzamanlı derleniyor. O karenin süresi bir sonraki karede oyun
+     * saatine yazılmamalı (Codex #71): oyuncu o süre boyunca şehri görmedi.
+     * Derlemenin ağırlığı JS'te değil GPU sürecinde; iki kare arasındaki
+     * sürede görünüyor. Oyun bu yüzden kısa bir süre akıyor ve derleme
+     * karesinden sonra şehri çizen kareler kaydediliyor. Derleme karesinin
+     * kendisi zaten sıradaydı, sarmalanmıyor.
+     */
+    const cold = await op.evaluate(() => new Promise((resolve) => {
+      const cap = window.__capital;
+      const raf = window.requestAnimationFrame;
+      const frames = [];
+      let previous = performance.now();
+      window.requestAnimationFrame = (callback) => raf.call(window, (time) => {
+        const drawn = cap.renderInfo().frameCount;
+        const played = cap.engine.getState().meta.playTimeMs;
+        callback(time);
+        if (cap.renderInfo().frameCount !== drawn) {
+          frames.push({ wait: Math.round(time - previous), played: cap.engine.getState().meta.playTimeMs - played });
+          previous = time;
+        }
+      });
+      cap.engine.dispatch({ type: 'SET_SPEED', speed: 1 });
+      cap.setQuality(0);
+      const poll = setInterval(() => {
+        if (frames.length < 2) return;
+        clearInterval(poll);
+        window.requestAnimationFrame = raf;
+        cap.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+        resolve(frames.slice(0, 2));
+      }, 20);
+    }));
+    check('Eşzamanlı derleme karesinin süresi oyun saatine yazılmıyor',
+      cold[0].wait >= 100 && cold[0].played === 0 && cold[1].played > 0,
+      `derlemeden sonraki kare ${cold[0].wait} ms sonra, oyun saati +${Math.round(cold[0].played)} ms · ` +
+        `bir sonraki ${cold[1].wait} ms sonra, +${Math.round(cold[1].played)} ms`);
+    const framesAt = await op.evaluate(() => window.__capital.renderInfo().frameCount);
+    await op.waitForFunction((n) => window.__capital.renderInfo().frameCount >= n + 4, framesAt, { timeout: 90000 });
+    const top = await op.evaluate(() => {
+      const log = window.__programLog;
+      const seen = new Map();
+      for (const program of log) seen.set(program.text, (seen.get(program.text) ?? 0) + 1);
+      const duplicates = [...seen.entries()]
+        .filter(([, n]) => n > 1)
+        .map(([text]) => /#define SHADER_(?:NAME|TYPE) (\S+)/.exec(text)?.[1] ?? '?');
+      return {
+        info: window.__capital.renderInfo(),
+        blur: log.filter((program) => program.text.includes('gaussianCoefficients')).length,
+        duplicates,
+      };
+    });
+    check('En üst kademede bloom tek bulanıklık programıyla',
+      top.info.postProcessing === true && top.blur === 1,
+      `bloom ${top.info.postProcessing} · bulanıklık programı ${top.blur}`);
+    check('Hiçbir gölgelendirici aynı kaynakla iki kez derlenmiyor (açılış ve kademe değişimi)',
+      top.duplicates.length === 0,
+      top.duplicates.length ? `iki kez: ${top.duplicates.join(', ')}` : `${top.info.programs} canlı program`);
+    await ctx.close();
+
+    // Paralel derleme: çizim döngüsü programları bekliyor, tuval o sırada gökyüzü renginde.
+    const PARALLEL_DELAY_MS = 600;
+    const pctx = await browser.newContext({ viewport: { width: 1280, height: 860 } });
+    await pctx.addInitScript(veteran, TUTORIAL_KEY);
+    await pctx.addInitScript(parallelCompile, PARALLEL_DELAY_MS);
+    await pctx.addInitScript(clearLog);
+    const pp = await pctx.newPage();
+    pp.on('pageerror', (e) => openErrors.push(e.message));
+    pp.on('console', (m) => {
+      if (m.type() === 'error') openErrors.push(m.text());
+    });
+    await pp.goto('http://127.0.0.1:8811/');
+    await pp.waitForSelector('.newgame', { timeout: 20000 });
+    await pp.locator('button:has-text("Şirketi kur")').click();
+    await pp.waitForFunction(() => (window.__capital?.renderInfo()?.frameCount ?? 0) >= 2, null, { timeout: 60000 });
+    const parallel = await pp.evaluate(() => ({ info: window.__capital.renderInfo(), clears: window.__screenClears }));
+    check('Paralel derlemede çizim döngüsü programların hazır olmasını bekliyor',
+      (parallel.info.shaderWarmupMs ?? 0) >= PARALLEL_DELAY_MS - 50,
+      `ön derleme ${parallel.info.shaderWarmupMs} ms · kare ${parallel.info.frameCount}`);
+    // three'nin silme rengi sahne çizilene dek siyah; bekleyen döngü rengi kendisi vermeli.
+    const dark = parallel.clears.filter(([r, g, b]) => Math.max(r, g, b) < 0.05);
+    check('İlk kare beklenirken tuval siyah değil, gökyüzü renginde',
+      parallel.clears.length > 0 && dark.length === 0,
+      `${parallel.clears.length} silme · ilki ${JSON.stringify(parallel.clears[0] ?? null)} · siyah ${dark.length}`);
+    /*
+     * En üst kademe: bloom ve çıkış geçişlerinin malzemeleri sahnede değil, ön
+     * derleme onları ayrıca derlemeli. Oyun bu sırada akıyor: kareler
+     * beklerken oyun saati de beklemeli (Codex #71), yoksa oyuncu görmediği
+     * günleri kaçırır.
+     */
+    const held = await pp.evaluate(() => new Promise((resolve) => {
+      const cap = window.__capital;
+      cap.engine.dispatch({ type: 'SET_SPEED', speed: 1 });
+      window.__usedEarly = [];
+      const frames = cap.renderInfo().frameCount;
+      cap.setQuality(0);
+      const start = cap.engine.getState().meta.playTimeMs;
+      let last = start;
+      let samples = 0;
+      const poll = setInterval(() => {
+        if (cap.renderInfo().frameCount !== frames) {
+          clearInterval(poll);
+          cap.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+          resolve({ advanced: last - start, samples });
+          return;
+        }
+        last = cap.engine.getState().meta.playTimeMs;
+        samples++;
+      }, 20);
+    }));
+    check('Ön derleme kareleri beklettikçe oyun saati de bekliyor',
+      held.samples >= 5 && held.advanced === 0,
+      `bekleme ${held.samples * 20} ms · ilerleyen oyun saati ${Math.round(held.advanced)} ms`);
+    const pFramesAt = await pp.evaluate(() => window.__capital.renderInfo().frameCount);
+    await pp.waitForFunction((n) => window.__capital.renderInfo().frameCount >= n + 4, pFramesAt, { timeout: 90000 });
+    const early = await pp.evaluate(() => ({ names: window.__usedEarly, info: window.__capital.renderInfo() }));
+    // Gölge derinliği ve ortam haritası (PMREM) programlarını three çizimin içinde kuruyor; onlar ayrı.
+    const postEarly = early.names.filter((name) => name === 'ShaderMaterial' || name === 'OutputShader');
+    check('Paralel derlemede bloom ve çıkış programları ilk karelerinden önce hazır',
+      early.info.postProcessing === true && postEarly.length === 0,
+      `bloom ${early.info.postProcessing} · hazır olmadan kullanılan: ${[...new Set(early.names)].join(', ') || 'yok'}`);
+    await pctx.close();
+    check('Açılış ölçümünde konsol temiz', openErrors.length === 0, openErrors.slice(0, 2).join(' | '));
+  }
+
   // ---------- Mobil ----------
   //
   // Bu bölüm eskiden tek satırdı: "dar ekranda yatay taşma yok". O kontrol
