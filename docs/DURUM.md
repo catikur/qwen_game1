@@ -3913,6 +3913,11 @@ geç kalıyordu. Standart şehrin açılışı 44 program derliyordu:
     `shadersWarm()` sormadan günü ilerletmiyor. Yoksa yeni oyun gökyüzü
     renginin arkasında, kademe değişimi donmuş karenin arkasında akıyordu;
     hızlı kademede oyuncu görmediği günleri kaçırırdı.
+  - Derlemenin bittiği karenin ardındaki kare de oyun saatine yazılmıyor
+    (Codex #71). Paralel derleme yoksa programlar o karede eşzamanlı
+    derleniyor; ağırlık JS'te değil GPU sürecinde, sonraki karenin
+    aralığında görünüyor. Yazılımsal GPU'da en üst kademeye geçince sonraki
+    kare 3,1 sn sonra geliyor ve oyun saatine 500 ms yazıyordu.
   - Kademe değişince ön derleme yeniden: yeni kademenin programları
     derlenirken son kare ekranda kalıyor.
   - Bloom ve çıkış geçişlerinin tam ekran malzemeleri sahnede değil; ön
@@ -3962,11 +3967,13 @@ süreler "Şirketi kur"a tıklanınca başlıyor:
 - çıkış geçişinin tanımları önceden kuruluyor ve ilk çizim onları
   değiştirmiyor.
 
-Tarayıcı testine "Açılış: gölgelendiriciler" bölümü eklendi (11 kontrol):
+Tarayıcı testine "Açılış: gölgelendiriciler" bölümü eklendi (12 kontrol):
 - yazılımsal GPU tanınıyor, açılış en ucuz kademede;
 - açılışta kademe inmiyor;
 - gölgelendiriciler ilk kareden önce derleniyor;
 - açılışta en fazla 20 program;
+- yazılımsal GPU'da eşzamanlı derleme karesinin süresi oyun saatine
+  yazılmıyor;
 - en üst kademede bloom tek bulanıklık programıyla;
 - açılışta ve kademe değişiminde hiçbir program aynı kaynakla iki kez
   derlenmiyor;
@@ -3990,9 +3997,10 @@ taklit edildiği ayrı bir açılışa taşındı.
 kaldı. Düzeltmenin ilk sürümünde de kaldı: normalli dörtgen bulanıklığı
 ikinci bir programla derletiyordu. "Oyun saati bekliyor" kontrolü de
 düzeltmeden önce kaldı: 600 ms'lik beklemede oyun saati 1.083 ms ilerledi.
+"Eşzamanlı derleme karesi" kontrolü de düzeltmeden önce kaldı (+500 ms).
 
 Tarayıcı tam koşu 456/456, konsol hatası yok (~33 dk; oyun saati
-düzeltmesinden önceki yapıda). Bölüm düzeltmeden sonra 11/11, ~50 sn.
+düzeltmelerinden önceki yapıda). Bölüm düzeltmelerden sonra 12/12, ~50 sn.
 
 
 ---

@@ -3896,11 +3896,44 @@ async function finish(browser, consoleErrors) {
       opened.created <= 20,
       `${opened.created} program (canlı ${opened.info.programs}) · ${[...new Set(opened.names)].join(', ')}`);
 
-    // En üst kademe: bloom zinciri, gölgeler, ortam haritası. Oyun duraklatılmış, görüntü sabit.
-    await op.evaluate(() => {
-      window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
-      window.__capital.setQuality(0);
-    });
+    /*
+     * En üst kademe: bloom zinciri, gölgeler, ortam haritası. Yazılımsal
+     * GPU'da paralel derleme yok; yeni kademenin programları tek, uzun bir
+     * karede eşzamanlı derleniyor. O karenin süresi bir sonraki karede oyun
+     * saatine yazılmamalı (Codex #71): oyuncu o süre boyunca şehri görmedi.
+     * Derlemenin ağırlığı JS'te değil GPU sürecinde; iki kare arasındaki
+     * sürede görünüyor. Oyun bu yüzden kısa bir süre akıyor ve derleme
+     * karesinden sonra şehri çizen kareler kaydediliyor. Derleme karesinin
+     * kendisi zaten sıradaydı, sarmalanmıyor.
+     */
+    const cold = await op.evaluate(() => new Promise((resolve) => {
+      const cap = window.__capital;
+      const raf = window.requestAnimationFrame;
+      const frames = [];
+      let previous = performance.now();
+      window.requestAnimationFrame = (callback) => raf.call(window, (time) => {
+        const drawn = cap.renderInfo().frameCount;
+        const played = cap.engine.getState().meta.playTimeMs;
+        callback(time);
+        if (cap.renderInfo().frameCount !== drawn) {
+          frames.push({ wait: Math.round(time - previous), played: cap.engine.getState().meta.playTimeMs - played });
+          previous = time;
+        }
+      });
+      cap.engine.dispatch({ type: 'SET_SPEED', speed: 1 });
+      cap.setQuality(0);
+      const poll = setInterval(() => {
+        if (frames.length < 2) return;
+        clearInterval(poll);
+        window.requestAnimationFrame = raf;
+        cap.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+        resolve(frames.slice(0, 2));
+      }, 20);
+    }));
+    check('Eşzamanlı derleme karesinin süresi oyun saatine yazılmıyor',
+      cold[0].wait >= 100 && cold[0].played === 0 && cold[1].played > 0,
+      `derlemeden sonraki kare ${cold[0].wait} ms sonra, oyun saati +${Math.round(cold[0].played)} ms · ` +
+        `bir sonraki ${cold[1].wait} ms sonra, +${Math.round(cold[1].played)} ms`);
     const framesAt = await op.evaluate(() => window.__capital.renderInfo().frameCount);
     await op.waitForFunction((n) => window.__capital.renderInfo().frameCount >= n + 4, framesAt, { timeout: 90000 });
     const top = await op.evaluate(() => {
