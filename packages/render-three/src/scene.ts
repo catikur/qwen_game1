@@ -3,6 +3,7 @@ import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { SharedKernelBloomPass, postProcessingMaterials } from './bloom';
+import { isSoftwareRenderer } from './gpu';
 import { BUILDING_BY_ID, DISTRICT_ARCHETYPES, STRUCTURE_BY_ID } from '@capital/content';
 import type { BuildingDef, MassForm, StructureDef } from '@capital/content';
 import { BLOCK_SIZE, customerFlows, headquarters, lensValue, supplyRoutes } from '@capital/core';
@@ -155,22 +156,6 @@ function initialQualityTier(software: boolean): number {
   if (touch && cores <= 6) return 2;
   if (touch) return 1;
   return 0;
-}
-
-/** Yazılımsal rasterleştirici: SwiftShader, llvmpipe, Windows'un temel sürücüsü. */
-const SOFTWARE_RENDERER = /swiftshader|llvmpipe|softpipe|software|basic render|\bwarp\b/i;
-
-/**
- * GPU'nun adı. Chrome `RENDERER`'ı "WebKit WebGL" diye gizliyor, gerçek adı
- * hata ayıklama uzantısı veriyor; Firefox o uzantı istenince uyarı yazıyor,
- * gerçek adı zaten `RENDERER`'da.
- */
-function rendererName(renderer: THREE.WebGLRenderer): string {
-  const gl = renderer.getContext();
-  const plain = String(gl.getParameter(gl.RENDERER));
-  if (!/^webkit webgl$/i.test(plain)) return plain;
-  const info = gl.getExtension('WEBGL_debug_renderer_info');
-  return info ? String(gl.getParameter(info.UNMASKED_RENDERER_WEBGL)) : plain;
 }
 
 /**
@@ -528,7 +513,7 @@ export class CityRenderer {
     this.bindInput();
     this.resize();
     // Cihaz tahmininden başla; uyarlama ilk 2,5 saniyede düzeltir.
-    this.softwareRenderer = SOFTWARE_RENDERER.test(rendererName(this.renderer));
+    this.softwareRenderer = isSoftwareRenderer(this.renderer.getContext());
     this.applyQuality(initialQualityTier(this.softwareRenderer));
   }
 

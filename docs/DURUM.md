@@ -3895,10 +3895,11 @@ geç kalıyordu. Standart şehrin açılışı 44 program derliyordu:
   aynı bulanıklık beş ayrı program.
 
 **Değişiklikler** (`packages/render-three`):
-- *Yazılımsal GPU en ucuz kademeden başlıyor.* GPU'nun adı `RENDERER`'dan
-  okunuyor; Chrome onu "WebKit WebGL" diye gizliyorsa
-  `WEBGL_debug_renderer_info`'dan. SwiftShader, llvmpipe, softpipe ve
-  Windows'un temel sürücüsü tanınıyor. Uyarlama yine çalışıyor; gerçek
+- *Yazılımsal GPU en ucuz kademeden başlıyor* (`gpu.ts`). GPU'nun adı
+  `RENDERER`'dan okunuyor. Chrome onu "WebKit WebGL", eski Firefox "Mozilla"
+  diye gizliyorsa ad `WEBGL_debug_renderer_info`'dan okunuyor (Firefox:
+  Codex #71). SwiftShader, llvmpipe, softpipe ve Windows'un temel sürücüsü
+  tanınıyor. Uyarlama yine çalışıyor; gerçek
   GPU'nun açılış tahmini değişmedi.
 - *Ön derleme.* Sahne durumu gelince ilk karede görünen her malzeme
   `renderer.compile` ile derleniyor. Işıklar önceden sayılıyor. Programın
@@ -3959,13 +3960,16 @@ süreler "Şirketi kur"a tıklanınca başlıyor:
   önce ve sonra aynı; yalnız trafik farklı. Gece bloom'un en çok
   göründüğü an: pencere ışıkları ve sokak lambaları.
 
-**Doğrulama.** `pnpm test` 460/460. Yeni `bloom.test.ts` dört test:
+**Doğrulama.** `pnpm test` 463/463. Yeni `bloom.test.ts` dört test:
 - beş bulanıklık malzemesi aynı gölgelendiriciyi ve tanımları paylaşıyor
   (three üst sınıfın yöntemini yeniden adlandırırsa kalır);
 - yarıçaplar ve katsayılar three'ninkiyle aynı, yarıçapın ötesi sıfır;
 - son işlem malzemeleri: bloom'unkiler ara hedefe, çıkışınki ekrana;
 - çıkış geçişinin tanımları önceden kuruluyor ve ilk çizim onları
   değiştirmiyor.
+
+Yeni `gpu.test.ts` üç test: adı açık sürücüler, Chrome'un ve Firefox'un
+gizlediği adlar. Firefox testi düzeltmeden önce kaldı.
 
 Tarayıcı testine "Açılış: gölgelendiriciler" bölümü eklendi (12 kontrol):
 - yazılımsal GPU tanınıyor, açılış en ucuz kademede;
@@ -4000,7 +4004,8 @@ düzeltmeden önce kaldı: 600 ms'lik beklemede oyun saati 1.083 ms ilerledi.
 "Eşzamanlı derleme karesi" kontrolü de düzeltmeden önce kaldı (+500 ms).
 
 Tarayıcı tam koşu 458/458, konsol hatası yok (~32 dk); "Açılış" bölümü
-~50 sn.
+~50 sn. Firefox düzeltmesi bu koşudan sonra geldi; ardından "Açılış"
+bölümü yeniden koşuldu, 12/12.
 
 
 ---
@@ -4084,7 +4089,7 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi) |
-| Birim testi | **460 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom da) |
+| Birim testi | **463 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma da) |
 | Denge testi | **324 kontrol, hepsi geçiyor** (24 bölüm, süreleriyle; ~15 dk) |
 | Tarayıcı testi | **458 kontrol, hepsi geçiyor**, 0 konsol hatası (~25–40 dk); duman koşusu 132 (~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + duman oynanışı |
