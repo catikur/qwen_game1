@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
-import { SharedKernelBloomPass } from './bloom';
+import { SharedKernelBloomPass, postProcessingMaterials } from './bloom';
 import { BUILDING_BY_ID, DISTRICT_ARCHETYPES, STRUCTURE_BY_ID } from '@capital/content';
 import type { BuildingDef, MassForm, StructureDef } from '@capital/content';
 import { BLOCK_SIZE, customerFlows, headquarters, lensValue, supplyRoutes } from '@capital/core';
@@ -180,6 +180,14 @@ function rendererName(renderer: THREE.WebGLRenderer): string {
 const SHADER_WARMUP_LIMIT_MS = 10_000;
 /** `clearUntilReady`'nin eski silme rengini tuttuğu yer; her karede yeni renk ayrılmasın. */
 const CLEAR_SCRATCH = new THREE.Color();
+/**
+ * Son işlem malzemelerinin ön derlemesi için tam ekran dörtgen. three'nin
+ * `FullScreenQuad`'ı gibi kendi başına bir sahne (ışık yok) ve yalnız konum
+ * ile uv taşıyor: normal olsaydı program `HAS_NORMAL` ile ayrı derlenirdi,
+ * gerçek çizim yine kendi programını derlerdi.
+ */
+const FULLSCREEN_QUAD = new THREE.Mesh(new THREE.PlaneGeometry(2, 2).deleteAttribute('normal'));
+const FULLSCREEN_CAMERA = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
 
 /** Gün döngüsünün iki ucu — ton üzerinden geçmemek için sabit renkler. */
 const MOONLIGHT = new THREE.Color('#9db9e8');
@@ -1413,6 +1421,8 @@ export class CityRenderer {
    *
    * Programın anahtarı çizilen hedefe bağlı: bloom açıkken sahne ara
    * hedefe çiziliyor (ton eşlemesi `OutputPass`'te), ön derleme de oraya.
+   * Bloom ve çıkış geçişlerinin tam ekran malzemeleri sahnede değil; onlar
+   * `postProcessingMaterials`'tan, kendi hedefleriyle derleniyor.
    */
   private shadersReady(): boolean {
     if (this.shaderWarmup === 'done') return true;
@@ -1433,6 +1443,14 @@ export class CityRenderer {
             this.renderer.compile(drawable, camera, this.scene);
           }
         });
+        // Bloom ve çıkış geçişlerinin malzemeleri sahnede değil (Codex #71).
+        if (this.composer) {
+          for (const { material, toScreen } of postProcessingMaterials(this.composer, this.renderer)) {
+            this.renderer.setRenderTarget(toScreen ? null : this.composer.readBuffer);
+            FULLSCREEN_QUAD.material = material;
+            this.renderer.compile(FULLSCREEN_QUAD, FULLSCREEN_CAMERA);
+          }
+        }
       } finally {
         this.renderer.setRenderTarget(previous);
       }

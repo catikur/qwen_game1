@@ -1,4 +1,6 @@
 import * as THREE from 'three';
+import type { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
+import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 
 /**
@@ -70,4 +72,55 @@ export class SharedKernelBloomPass extends UnrealBloomPass {
         }`,
     });
   }
+}
+
+/** Son işlem zincirinin tam ekran malzemesi ve çizildiği yer: ekran ya da ara hedef. */
+export interface PassMaterial {
+  material: THREE.Material;
+  toScreen: boolean;
+}
+
+/**
+ * Son işlem zincirinin tam ekran malzemeleri (Tur 42, Codex #71).
+ *
+ * Bu malzemeler sahnede değil: ön derleme sahneyi gezerken onları görmüyor,
+ * ilk `composer.render()` hepsini eşzamanlı derliyordu. Programın anahtarı
+ * çizilen hedefe bağlı; `toScreen` o yüzden geçişin kendi sırasından
+ * hesaplanıyor (`EffectComposer` bunu her çizimde yeniden kuruyor).
+ *
+ * `OutputPass` ton eşleme ve renk uzayı tanımlarını ilk çiziminde kuruyor.
+ * Burada aynı yöntem hiçbir şey çizmeyen bir çiziciyle önceden çağrılıyor:
+ * tanımları three'nin kendi kodu kuruyor ve ilk gerçek çizim onları
+ * değiştirmiyor, program yeniden derlenmiyor.
+ */
+export function postProcessingMaterials(composer: EffectComposer, renderer: THREE.WebGLRenderer): PassMaterial[] {
+  const materials: PassMaterial[] = [];
+  composer.passes.forEach((pass, index) => {
+    if (!pass.enabled) return;
+    const toScreen = composer.renderToScreen && composer.isLastEnabledPass(index);
+    if (pass instanceof UnrealBloomPass) {
+      // Parlak alan, bulanıklık ve birleştirme hep bloom'un kendi hedeflerine çiziliyor.
+      for (const material of [pass.materialHighPassFilter, ...pass.separableBlurMaterials, pass.compositeMaterial]) {
+        materials.push({ material, toScreen: false });
+      }
+      // Zincirin sonundaysa ekrana önce düz bir kopya da çiziyor; bizim zincirde son geçiş OutputPass.
+      materials.push({ material: pass.blendMaterial, toScreen });
+    } else if (pass instanceof OutputPass) {
+      primeOutputPass(pass, renderer, composer.readBuffer);
+      materials.push({ material: pass.material, toScreen });
+    }
+  });
+  return materials;
+}
+
+function primeOutputPass(pass: OutputPass, renderer: THREE.WebGLRenderer, buffer: THREE.WebGLRenderTarget): void {
+  const silent = {
+    outputColorSpace: renderer.outputColorSpace,
+    toneMapping: renderer.toneMapping,
+    toneMappingExposure: renderer.toneMappingExposure,
+    setRenderTarget() {},
+    clear() {},
+    render() {},
+  } as unknown as THREE.WebGLRenderer;
+  pass.render(silent, buffer, buffer, 0, false);
 }

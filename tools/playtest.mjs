@@ -3798,21 +3798,31 @@ async function finish(browser, consoleErrors) {
      * buradaki yazılımsal GPU'da yok: ön derleme eşzamanlı bitiyor, çizim
      * döngüsünün beklediği yol hiç koşmuyordu. İkinci açılışta uzantı
      * taklit ediliyor: her program bağlandıktan `delay` ms sonra hazır.
+     * Hazır olmadan kullanılan programlar `__usedEarly`'de: gerçek GPU'da
+     * bunlar çizimi derleme bitene dek bekletir.
      */
     const parallelCompile = (delay) => {
       const COMPLETION_STATUS_KHR = 0x91b1;
       const extension = { COMPLETION_STATUS_KHR };
+      window.__usedEarly = [];
       for (const Ctx of [WebGLRenderingContext, WebGL2RenderingContext]) {
         const proto = Ctx.prototype;
         const getExtension = proto.getExtension;
         const getProgramParameter = proto.getProgramParameter;
         const link = proto.linkProgram;
+        const use = proto.useProgram;
         proto.getExtension = function (name) {
           return name === 'KHR_parallel_shader_compile' ? extension : getExtension.call(this, name);
         };
         proto.linkProgram = function (program) {
           program.__readyAt = performance.now() + delay;
+          const text = (this.getAttachedShaders(program) ?? []).map((shader) => this.getShaderSource(shader) ?? '').join('\n');
+          program.__name = /#define SHADER_NAME (\S+)/.exec(text)?.[1] ?? /#define SHADER_TYPE (\S+)/.exec(text)?.[1] ?? '?';
           return link.call(this, program);
+        };
+        proto.useProgram = function (program) {
+          if (program && performance.now() < (program.__readyAt ?? 0)) window.__usedEarly.push(program.__name);
+          return use.call(this, program);
         };
         proto.getProgramParameter = function (program, pname) {
           if (pname === COMPLETION_STATUS_KHR) return performance.now() >= (program.__readyAt ?? 0);
@@ -3938,6 +3948,20 @@ async function finish(browser, consoleErrors) {
     check('İlk kare beklenirken tuval siyah değil, gökyüzü renginde',
       parallel.clears.length > 0 && dark.length === 0,
       `${parallel.clears.length} silme · ilki ${JSON.stringify(parallel.clears[0] ?? null)} · siyah ${dark.length}`);
+    // En üst kademe: bloom ve çıkış geçişlerinin malzemeleri sahnede değil, ön derleme onları ayrıca derlemeli.
+    await pp.evaluate(() => {
+      window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+      window.__usedEarly = [];
+      window.__capital.setQuality(0);
+    });
+    const pFramesAt = await pp.evaluate(() => window.__capital.renderInfo().frameCount);
+    await pp.waitForFunction((n) => window.__capital.renderInfo().frameCount >= n + 4, pFramesAt, { timeout: 90000 });
+    const early = await pp.evaluate(() => ({ names: window.__usedEarly, info: window.__capital.renderInfo() }));
+    // Gölge derinliği ve ortam haritası (PMREM) programlarını three çizimin içinde kuruyor; onlar ayrı.
+    const postEarly = early.names.filter((name) => name === 'ShaderMaterial' || name === 'OutputShader');
+    check('Paralel derlemede bloom ve çıkış programları ilk karelerinden önce hazır',
+      early.info.postProcessing === true && postEarly.length === 0,
+      `bloom ${early.info.postProcessing} · hazır olmadan kullanılan: ${[...new Set(early.names)].join(', ') || 'yok'}`);
     await pctx.close();
     check('Açılış ölçümünde konsol temiz', openErrors.length === 0, openErrors.slice(0, 2).join(' | '));
   }

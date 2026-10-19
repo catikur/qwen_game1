@@ -3911,6 +3911,16 @@ geç kalıyordu. Standart şehrin açılışı 44 program derliyordu:
     siliniyor. Üst sınır 10 sn.
   - Kademe değişince ön derleme yeniden: yeni kademenin programları
     derlenirken son kare ekranda kalıyor.
+  - Bloom ve çıkış geçişlerinin tam ekran malzemeleri sahnede değil; ön
+    derleme onları da kendi hedefleriyle derliyor (Codex #71).
+    - Derleme, three'nin `FullScreenQuad`'ı gibi yalnız konum ve uv taşıyan
+      bir dörtgenle yapılıyor; normal olsaydı program `HAS_NORMAL` ile ayrı
+      derlenirdi.
+    - `OutputPass` ton eşleme tanımlarını ilk çiziminde kuruyor. Ön derleme
+      aynı yöntemi hiçbir şey çizmeyen bir çiziciyle önceden çağırıyor.
+  - Gölge derinliği programları hâlâ ilk gölge karesinde derleniyor. three
+    onları gölge geçişinin içinde kuruyor ve dışarıdan derletmenin bir yolu
+    yok. En üst kademede bunlar birkaç küçük program.
 - *Bloom tek programla* (`bloom.ts`): yarıçap bir uniform. Döngü en büyük
   yarıçapa kadar sabit sınırla dönüyor ve kendi yarıçapında duruyor.
   Katsayılar ve toplama sırası aynı.
@@ -3940,12 +3950,15 @@ süreler "Şirketi kur"a tıklanınca başlıyor:
   önce ve sonra aynı; yalnız trafik farklı. Gece bloom'un en çok
   göründüğü an: pencere ışıkları ve sokak lambaları.
 
-**Doğrulama.** `pnpm test` 458/458. Yeni `bloom.test.ts` iki test:
+**Doğrulama.** `pnpm test` 460/460. Yeni `bloom.test.ts` dört test:
 - beş bulanıklık malzemesi aynı gölgelendiriciyi ve tanımları paylaşıyor
   (three üst sınıfın yöntemini yeniden adlandırırsa kalır);
-- yarıçaplar ve katsayılar three'ninkiyle aynı, yarıçapın ötesi sıfır.
+- yarıçaplar ve katsayılar three'ninkiyle aynı, yarıçapın ötesi sıfır;
+- son işlem malzemeleri: bloom'unkiler ara hedefe, çıkışınki ekrana;
+- çıkış geçişinin tanımları önceden kuruluyor ve ilk çizim onları
+  değiştirmiyor.
 
-Tarayıcı testine "Açılış: gölgelendiriciler" bölümü eklendi (9 kontrol):
+Tarayıcı testine "Açılış: gölgelendiriciler" bölümü eklendi (10 kontrol):
 - yazılımsal GPU tanınıyor, açılış en ucuz kademede;
 - açılışta kademe inmiyor;
 - gölgelendiriciler ilk kareden önce derleniyor;
@@ -3956,6 +3969,8 @@ Tarayıcı testine "Açılış: gölgelendiriciler" bölümü eklendi (9 kontrol
 - paralel derleme taklit edilince (her program 600 ms sonra hazır) çizim
   döngüsü bekliyor;
 - o sırada tuval siyah değil, gökyüzü renginde;
+- en üst kademede bloom ve çıkış programları ilk karelerinden önce hazır;
+  hiçbiri hazır olmadan kullanılmıyor;
 - konsol temiz.
 
 Eski yapıda (main) konsol dışındaki ilk altı kontrol ve paralel derleme
@@ -3965,6 +3980,13 @@ tuvali siyaha siliyordu. Kontrol önce yazılımsal GPU'nun kendi
 açılışındaydı ve düzeltmesiz yapıda da geçiyordu; orada ön derleme
 eşzamanlı bitiyor, bekleme yolu hiç koşmuyor. Bu yüzden uzantının
 taklit edildiği ayrı bir açılışa taşındı.
+
+"Bloom ve çıkış programları hazır" kontrolü Codex düzeltmesinden önce
+kaldı. Düzeltmenin ilk sürümünde de kaldı: normalli dörtgen bulanıklığı
+ikinci bir programla derletiyordu.
+
+Tarayıcı tam koşu 455/455, konsol hatası yok (~34 dk; Codex düzeltmesinden
+önceki yapıda). Bölüm düzeltmeden sonra 10/10.
 
 
 ---
@@ -4048,7 +4070,7 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi) |
-| Birim testi | **458 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom da) |
+| Birim testi | **460 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom da) |
 | Denge testi | **324 kontrol, hepsi geçiyor** (24 bölüm, süreleriyle; ~15 dk) |
 | Tarayıcı testi | **446 kontrol, hepsi geçiyor**, 0 konsol hatası (~25–40 dk); duman koşusu 132 (~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + duman oynanışı |

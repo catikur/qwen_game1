@@ -1,8 +1,11 @@
 import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
+import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
+import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
+import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
-import { BLOOM_MAX_KERNEL_RADIUS, SharedKernelBloomPass } from '../src/bloom';
+import { BLOOM_MAX_KERNEL_RADIUS, SharedKernelBloomPass, postProcessingMaterials } from '../src/bloom';
 
 /**
  * Bloom'un tek bulanıklık programı (Tur 42). Geçiş WebGL'siz kuruluyor:
@@ -41,5 +44,53 @@ describe('bloom: tek bulanıklık programı', () => {
     }
     pass.dispose();
     reference.dispose();
+  });
+});
+
+/** Sahnedeki zincirin aynısı, WebGL'siz: geçişler kurulurken çizici yalnız piksel oranını soruyor. */
+function silentRenderer(): THREE.WebGLRenderer {
+  return {
+    getPixelRatio: () => 1,
+    outputColorSpace: THREE.SRGBColorSpace,
+    toneMapping: THREE.ACESFilmicToneMapping,
+    toneMappingExposure: 1.05,
+    setRenderTarget() {},
+    clear() {},
+    render() {},
+  } as unknown as THREE.WebGLRenderer;
+}
+
+function cityChain(renderer: THREE.WebGLRenderer) {
+  const composer = new EffectComposer(renderer, new THREE.WebGLRenderTarget(256, 256, { type: THREE.HalfFloatType }));
+  composer.addPass(new RenderPass(new THREE.Scene(), new THREE.PerspectiveCamera()));
+  const bloom = new SharedKernelBloomPass(new THREE.Vector2(256, 256), 0.6, 0.4, 0.8);
+  const output = new OutputPass();
+  composer.addPass(bloom);
+  composer.addPass(output);
+  return { composer, bloom, output };
+}
+
+describe('son işlem malzemeleri: ön derleme (Codex #71)', () => {
+  test('bloom malzemeleri ara hedefe, çıkış ekrana derleniyor', () => {
+    const renderer = silentRenderer();
+    const { composer, bloom, output } = cityChain(renderer);
+    const materials = postProcessingMaterials(composer, renderer);
+    const expected = [bloom.materialHighPassFilter, ...bloom.separableBlurMaterials, bloom.compositeMaterial, bloom.blendMaterial];
+    assert.deepEqual(materials.slice(0, expected.length).map((m) => m.material), expected);
+    assert.ok(materials.slice(0, expected.length).every((m) => m.toScreen === false), 'bloom zincirin sonunda değil');
+    assert.equal(materials.at(-1)!.material, output.material);
+    assert.equal(materials.at(-1)!.toScreen, true);
+    assert.equal(materials.length, expected.length + 1);
+  });
+
+  test('çıkış geçişinin tanımları önceden kuruluyor; ilk çizim programı yenilemiyor', () => {
+    const renderer = silentRenderer();
+    const { composer, output } = cityChain(renderer);
+    postProcessingMaterials(composer, renderer);
+    assert.ok('SRGB_TRANSFER' in output.material.defines);
+    assert.ok('ACES_FILMIC_TONE_MAPPING' in output.material.defines);
+    const version = output.material.version;
+    output.render(renderer, composer.writeBuffer, composer.readBuffer, 0, false);
+    assert.equal(output.material.version, version, 'ilk çizim tanımları yeniden kurarsa ön derlenen program boşa gider');
   });
 });
