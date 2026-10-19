@@ -1,6 +1,6 @@
 import { ACHIEVEMENTS, SCENARIOS } from '@capital/content';
 import type { AchievementDef, AchievementFeat, AchievementTotal, CitySizeId, DifficultyId } from '@capital/content';
-import { holdingFoundedAt, holdingNetWorth } from './holding';
+import { holdingFoundedAt, holdingFounderSize, holdingNetWorth } from './holding';
 import { FEAT_COUNTERS, addTally, cityTally } from './systems/feats';
 import type { CityTally, GameState } from './types';
 
@@ -69,7 +69,6 @@ export function runKeyOf(state: GameState): string {
 
 export function runFacts(state: GameState): RunFacts {
   const cities = citiesOf(state);
-  const founder = cities.find((city) => city.meta.createdAtIso === holdingFoundedAt(state)) ?? state;
   const player = state.companies[state.playerCompanyId];
   const wins: RunWin[] = [];
   let monopoly = false;
@@ -93,7 +92,8 @@ export function runFacts(state: GameState): RunFacts {
     companyName: player?.name ?? '',
     ceoId: player?.ceoId ?? null,
     difficulty: state.difficulty ?? 'normal',
-    citySize: founder.citySize ?? 'standard',
+    // Kurucu şehir kapatıldıysa boyutu holding'de (Codex #70).
+    citySize: holdingFounderSize(state),
     day: state.time.day,
     // Bir karede birkaç gün geçebiliyor: arada kalan tepe günün sayacından (Codex #70).
     worth: Math.max(holdingNetWorth(state), peak),

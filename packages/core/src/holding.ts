@@ -134,6 +134,14 @@ export function holdingFoundedAt(state: GameState): string {
   return first;
 }
 
+/** Kurucu şehrin boyutu (Tur 41); kurucu şehir kapatıldıysa holding'de saklanan. */
+export function holdingFounderSize(state: GameState): CitySizeId {
+  if (state.holding?.foundedCitySize) return state.holding.foundedCitySize;
+  const founded = holdingFoundedAt(state);
+  const founder = [state, ...(state.holding?.dormant ?? []).map((city) => city.state)].find((city) => city.meta.createdAtIso === founded);
+  return (founder ?? state).citySize ?? 'standard';
+}
+
 export function cityCount(state: GameState): number {
   return 1 + (state.holding?.dormant.length ?? 0);
 }
@@ -345,6 +353,7 @@ export function closeCity(state: GameState, index: number): CommandResult {
   // Kariyer (Tur 41): eski kayıtta kuruluş anı şehirlerin en erkeninden okunuyor;
   // kurucu şehir kapanmadan yazılmazsa koşunun kimliği değişirdi (Codex #70).
   holding.foundedAtIso ??= holdingFoundedAt(state);
+  holding.foundedCitySize ??= holdingFounderSize(state);
   // Şehrin sayaçları da: kapatılan şehirden sonraki ilerleme üstüne eklensin (Codex #70).
   holding.closedTally = addTally(holding.closedTally ?? {}, cityTally(city.state));
   holding.dormant = holding.dormant.filter((_, i) => i !== index);

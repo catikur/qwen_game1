@@ -3736,7 +3736,9 @@ Hepsi bu cihazda saklanıyor; lig ve senaryo tabloları değişmiyor.
   şehirlerin en erkeni alınıyor. Şehir açılınca ya da değişince koşu aynı
   kalıyor. Kaybedilen şehir kapatılmadan önce kuruluş anı holding'e
   yazılıyor: eski kayıtta kurucu şehir kapanınca kimlik değişip koşu iki
-  kez sayılırdı (Codex #70). Şehir sayısı kalıcı `holding.opened`dan
+  kez sayılırdı (Codex #70). Kurucu şehrin boyutu da aynı anda yazılıyor
+  (`holding.foundedCitySize`); yoksa koşu geçmişinde oynanan şehrin boyutu
+  görünürdü (Codex #70). Şehir sayısı kalıcı `holding.opened`dan
   geliyor; kapatılan şehir de açılmıştı. Kapatılan şehrin sayaçları
   (devralma, halka arz, sponsorluk, balon, görev, şehir sayaçları)
   `holding.closedTally`de birikiyor: şehir listeden çıkınca koşunun
@@ -3787,20 +3789,21 @@ Hepsi bu cihazda saklanıyor; lig ve senaryo tabloları değişmiyor.
   kazanılan rozetleri yazıyor.
 - *Yardım:* "Koşuların ötesine bak" adımı eklendi.
 
-**Doğrulama.** `pnpm test` 449/449; 28 yeni test.
+**Doğrulama.** `pnpm test` 450/450; 29 yeni test.
 
-`packages/core/test/career.test.ts` (18 test):
+`packages/core/test/career.test.ts` (19 test):
 - katalog tutarlılığı;
 - her sayacın kendi anında artması: kriz, konsorsiyum, sözleşme, ihale,
   meclis, baskın;
 - holding'de koşu kimliği, lig ve senaryo kipi, senaryonun ön tarihinin
   sayılmaması;
-- eski holding kaydında kurucu şehir kapanınca kimliğin değişmemesi,
+- kurucu şehir kapanınca koşunun kurucu boyutunun değişmemesi, eski
+  holding kaydında kurucu şehir kapanınca kimliğin değişmemesi,
   duraklatılmış oyunda komutla biten baskının hemen sayılması, uzaktaki
   şehirde püskürtülen baskının sayılması, kapatılan şehrin açılmış
   sayılması ve sayaçlarının koşuda kalması (yeni şehir açılınca da), yeni
   şehir açılınca kapatılan şehrin zaferinin kalması, bir karenin arasında
-  kalan en yüksek değerin sayılması (yedisi de düzeltmeden önce kaldı);
+  kalan en yüksek değerin sayılması (sekizi de düzeltmeden önce kaldı);
 - zafer süzgeçleri, koşu ve kariyer kapsamı, senaryo yıldızı, farklı CEO.
 
 `packages/ui/test/career.test.ts` (10 test):
@@ -3913,7 +3916,7 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi) |
-| Birim testi | **449 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer de) |
+| Birim testi | **450 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer de) |
 | Denge testi | **324 kontrol, hepsi geçiyor** (24 bölüm, süreleriyle; ~15 dk) |
 | Tarayıcı testi | **446 kontrol, hepsi geçiyor**, 0 konsol hatası (~25–40 dk); duman koşusu 132 (~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + duman oynanışı |

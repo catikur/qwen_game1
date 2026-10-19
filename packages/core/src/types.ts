@@ -931,6 +931,8 @@ export interface HoldingState {
    * Yokluğu (eski kayıt) şehirlerin en erkeni.
    */
   foundedAtIso?: string;
+  /** Kurucu şehrin boyutu (Tur 41): kurucu şehir kapatılınca yazılıyor; yokluğu kurucu şehrinki. */
+  foundedCitySize?: CitySizeId;
   /** Kapatılan şehirlerin kariyer payı (Tur 41): şehir listeden çıkınca sayaçları kaybolmasın. */
   closedTally?: CityTally;
 }

@@ -335,6 +335,20 @@ describe('kariyer: koşunun özeti', () => {
     assert.equal(runFacts(state).wins.length + runFacts(state).closedWins, 2);
   });
 
+  test('kurucu şehir kapanınca koşunun kurucu boyutu değişmiyor (Codex #70)', () => {
+    const engine = played(30, 6);
+    let state = engine.getState();
+    state.victory = { day: 420, kind: 'tycoon', dismissed: true };
+    player(state).cash = 30_000_000;
+    recomputeNetWorth(state);
+    assert.ok(engine.dispatch({ type: 'OPEN_CITY', citySize: 'large', capital: 8_000_000 }).ok);
+    state = engine.getState();
+    assert.equal(runFacts(state).citySize, 'standard');
+    state.holding!.dormant[0]!.state.gameOver = { day: 400, byCompanyId: rivals(state.holding!.dormant[0]!.state)[0]!.id };
+    assert.ok(engine.dispatch({ type: 'CLOSE_CITY', index: 0 }).ok);
+    assert.equal(runFacts(engine.getState()).citySize, 'standard', 'kurucu şehir standarttı');
+  });
+
   test('lig ve senaryo kendi kipiyle; senaryonun sayaçları devir gününden', () => {
     assert.equal(runFacts(createLeagueGame('2026-W40', 'Lig AŞ', null)).mode, 'league');
     for (const id of ['crisis', 'holding']) {
