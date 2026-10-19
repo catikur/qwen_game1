@@ -3909,6 +3909,10 @@ geç kalıyordu. Standart şehrin açılışı 44 program derliyordu:
     gerçek GPU'larda var) çizim döngüsü programların hazır olmasını
     bekliyor, arayüz canlı kalıyor. Tuval o sırada gökyüzü rengiyle
     siliniyor. Üst sınır 10 sn.
+  - Kareler beklerken oyun saati de bekliyor (Codex #71): oyun döngüsü
+    `shadersWarm()` sormadan günü ilerletmiyor. Yoksa yeni oyun gökyüzü
+    renginin arkasında, kademe değişimi donmuş karenin arkasında akıyordu;
+    hızlı kademede oyuncu görmediği günleri kaçırırdı.
   - Kademe değişince ön derleme yeniden: yeni kademenin programları
     derlenirken son kare ekranda kalıyor.
   - Bloom ve çıkış geçişlerinin tam ekran malzemeleri sahnede değil; ön
@@ -3958,7 +3962,7 @@ süreler "Şirketi kur"a tıklanınca başlıyor:
 - çıkış geçişinin tanımları önceden kuruluyor ve ilk çizim onları
   değiştirmiyor.
 
-Tarayıcı testine "Açılış: gölgelendiriciler" bölümü eklendi (10 kontrol):
+Tarayıcı testine "Açılış: gölgelendiriciler" bölümü eklendi (11 kontrol):
 - yazılımsal GPU tanınıyor, açılış en ucuz kademede;
 - açılışta kademe inmiyor;
 - gölgelendiriciler ilk kareden önce derleniyor;
@@ -3969,6 +3973,7 @@ Tarayıcı testine "Açılış: gölgelendiriciler" bölümü eklendi (10 kontro
 - paralel derleme taklit edilince (her program 600 ms sonra hazır) çizim
   döngüsü bekliyor;
 - o sırada tuval siyah değil, gökyüzü renginde;
+- kareler beklerken oyun saati de bekliyor;
 - en üst kademede bloom ve çıkış programları ilk karelerinden önce hazır;
   hiçbiri hazır olmadan kullanılmıyor;
 - konsol temiz.
@@ -3983,10 +3988,11 @@ taklit edildiği ayrı bir açılışa taşındı.
 
 "Bloom ve çıkış programları hazır" kontrolü Codex düzeltmesinden önce
 kaldı. Düzeltmenin ilk sürümünde de kaldı: normalli dörtgen bulanıklığı
-ikinci bir programla derletiyordu.
+ikinci bir programla derletiyordu. "Oyun saati bekliyor" kontrolü de
+düzeltmeden önce kaldı: 600 ms'lik beklemede oyun saati 1.083 ms ilerledi.
 
-Tarayıcı tam koşu 456/456, konsol hatası yok (~33 dk); "Açılış" bölümü
-~50 sn.
+Tarayıcı tam koşu 456/456, konsol hatası yok (~33 dk; oyun saati
+düzeltmesinden önceki yapıda). Bölüm düzeltmeden sonra 11/11, ~50 sn.
 
 
 ---

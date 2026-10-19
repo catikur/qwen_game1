@@ -291,7 +291,8 @@ function GameRoot({
       // gerisine düşüyor ve seçilen hız kademesi yalan söylüyordu.
       const dt = Math.min(0.5, (now - last) / 1000);
       last = now;
-      engine.advance(dt * 1000);
+      // Gölgelendiriciler derlenirken şehir çizilmiyor; oyun saati de bekliyor (Tur 42).
+      if (renderer.shadersWarm()) engine.advance(dt * 1000);
       renderer.render(dt);
       frame = requestAnimationFrame(loop);
     };

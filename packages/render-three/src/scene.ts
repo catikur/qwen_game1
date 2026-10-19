@@ -1468,6 +1468,15 @@ export class CityRenderer {
   }
 
   /**
+   * Gölgelendiriciler hazır mı, yani `render` şehri çiziyor mu (Tur 42).
+   * Ön derleme sürerken oyun döngüsü oyun saatini de ilerletmiyor
+   * (Codex #71): yoksa oyuncu göremediği günleri kaçırırdı.
+   */
+  shadersWarm(): boolean {
+    return this.shaderWarmup === 'done';
+  }
+
+  /**
    * Ön derleme sürerken tuvali gökyüzü rengiyle siler; kare çizilmedi sayılır.
    * three'nin silme rengi sahne çizilene dek siyah: rengi burada vermek gerekiyor.
    */

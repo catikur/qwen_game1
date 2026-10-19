@@ -3948,12 +3948,35 @@ async function finish(browser, consoleErrors) {
     check('İlk kare beklenirken tuval siyah değil, gökyüzü renginde',
       parallel.clears.length > 0 && dark.length === 0,
       `${parallel.clears.length} silme · ilki ${JSON.stringify(parallel.clears[0] ?? null)} · siyah ${dark.length}`);
-    // En üst kademe: bloom ve çıkış geçişlerinin malzemeleri sahnede değil, ön derleme onları ayrıca derlemeli.
-    await pp.evaluate(() => {
-      window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+    /*
+     * En üst kademe: bloom ve çıkış geçişlerinin malzemeleri sahnede değil, ön
+     * derleme onları ayrıca derlemeli. Oyun bu sırada akıyor: kareler
+     * beklerken oyun saati de beklemeli (Codex #71), yoksa oyuncu görmediği
+     * günleri kaçırır.
+     */
+    const held = await pp.evaluate(() => new Promise((resolve) => {
+      const cap = window.__capital;
+      cap.engine.dispatch({ type: 'SET_SPEED', speed: 1 });
       window.__usedEarly = [];
-      window.__capital.setQuality(0);
-    });
+      const frames = cap.renderInfo().frameCount;
+      cap.setQuality(0);
+      const start = cap.engine.getState().meta.playTimeMs;
+      let last = start;
+      let samples = 0;
+      const poll = setInterval(() => {
+        if (cap.renderInfo().frameCount !== frames) {
+          clearInterval(poll);
+          cap.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+          resolve({ advanced: last - start, samples });
+          return;
+        }
+        last = cap.engine.getState().meta.playTimeMs;
+        samples++;
+      }, 20);
+    }));
+    check('Ön derleme kareleri beklettikçe oyun saati de bekliyor',
+      held.samples >= 5 && held.advanced === 0,
+      `bekleme ${held.samples * 20} ms · ilerleyen oyun saati ${Math.round(held.advanced)} ms`);
     const pFramesAt = await pp.evaluate(() => window.__capital.renderInfo().frameCount);
     await pp.waitForFunction((n) => window.__capital.renderInfo().frameCount >= n + 4, pFramesAt, { timeout: 90000 });
     const early = await pp.evaluate(() => ({ names: window.__usedEarly, info: window.__capital.renderInfo() }));
