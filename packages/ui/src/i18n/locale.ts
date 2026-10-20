@@ -60,16 +60,21 @@ export async function initLocale(): Promise<void> {
   applyDocumentLang(currentLocale());
 }
 
+let latestChoice = 0;
+
 /**
  * Kullanıcının seçimi: sözlük iner, etkin dil değişir ve hatırlanır.
- * İnmezse dil değişmiyor; sonuç `false`.
+ * İnmezse dil değişmiyor; sonuç `false`. Sözlük inerken başka bir dil
+ * seçildiyse geç inen eski seçim uygulanmıyor: son seçim geçerli (Codex #75).
  */
 export async function chooseLocale(locale: string): Promise<boolean> {
+  const choice = ++latestChoice;
   try {
     if (!(await loadLocale(locale))) return false;
   } catch {
     return false;
   }
+  if (choice !== latestChoice) return false;
   if (!setLocale(locale)) return false;
   writeStored(locale);
   applyDocumentLang(locale);

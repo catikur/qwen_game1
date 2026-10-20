@@ -4461,7 +4461,7 @@ kazancı İngilizcenin düşmesi (476 KB), süre aynı. Masaüstündeki fark
 ölçüm gürültüsünün içinde.
 
 **Doğrulama.**
-- `pnpm test` 484/484. `i18n.test.ts`'e iki yeni test:
+- `pnpm test` 485/485. `i18n.test.ts`'e iki yeni test:
   - sonradan yüklenen dil seçicide görünüyor, inmeden geçilmiyor, aynı
     anda iki istek tek indirme oluyor;
   - dil inmezse hata dönüyor, sonraki çağrı yeniden deniyor.
@@ -4485,6 +4485,11 @@ kazancı İngilizcenin düşmesi (476 KB), süre aynı. Masaüstündeki fark
   dönüyor, konsol temiz.
 
 Tarayıcı tam koşu 478/478, konsol hatası yok (~29 dk); yeni bölüm ~3 sn.
+
+Codex #75: İngilizce sözlük inerken oyuncu Türkçeye dönerse Türkçe hemen
+uygulanıyor, geç inen İngilizce sonra son seçimin üstüne yazıyordu. Her
+seçim sıra alıyor, sözlük inince yalnız son seçim uygulanıyor. Yeni
+`ui/test/locale.test.ts` düzeltmeden önce kaldı.
 
 
 ---
@@ -4568,7 +4573,7 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi). Senaryo şehirlerinde gün 3–17 ms (`pnpm dayperf`, Tur 43) |
-| Birim testi | **484 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil da) |
+| Birim testi | **485 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil da) |
 | Denge testi | **331 kontrol, hepsi geçiyor** (25 bölüm, süreleriyle; ~13 dk) |
 | Tarayıcı testi | **478 kontrol, hepsi geçiyor**, 0 konsol hatası (~25–40 dk); duman koşusu 132 (~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + paket bütçesi (Tur 46) + duman oynanışı |
