@@ -135,6 +135,15 @@ export function sharesHeld(state: GameState, holderId: string, issuerId: string)
 }
 
 /**
+ * Kurucu kilidinin bu alıcı için bittiği gün; kilit yoksa undefined.
+ * Oyuncu için kilit `playerLockedUntilDay`'e uzayabiliyor (Tur 45, Codex #74).
+ */
+export function founderLockFor(state: GameState, issuer: CompanyState, buyerId: string): number | undefined {
+  if (buyerId !== state.playerCompanyId || issuer.playerLockedUntilDay === undefined) return issuer.lockedUntilDay;
+  return Math.max(issuer.lockedUntilDay ?? 0, issuer.playerLockedUntilDay);
+}
+
+/**
  * Bir şirketin serbest dolaşımdaki hissesi.
  *
  * Şirketin KENDİ elindeki hisseler de (hazine, geri alım) dolaşımdan
@@ -203,10 +212,11 @@ export function buyShares(
 
   // Kurucu kilidi: yeni gelen şirketin hisseleri bir süre piyasada yok.
   // Şirketin kendi geri alımı serbest.
-  if (buyerId !== issuerId && issuer.lockedUntilDay !== undefined && state.time.day < issuer.lockedUntilDay) {
+  const lock = founderLockFor(state, issuer, buyerId);
+  if (buyerId !== issuerId && lock !== undefined && state.time.day < lock) {
     return {
       ok: false,
-      reason: tc('core.equity.founderLock', { name: issuer.name, days: issuer.lockedUntilDay - state.time.day }),
+      reason: tc('core.equity.founderLock', { name: issuer.name, days: lock - state.time.day }),
     };
   }
 

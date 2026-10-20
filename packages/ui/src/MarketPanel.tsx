@@ -9,6 +9,7 @@ import {
   dailyBuyCap,
   findOrder,
   formatMoney,
+  founderLockFor,
   freeFloat,
   getPlayer,
   issuanceEnabled,
@@ -283,8 +284,8 @@ function Listing({ company, state }: { company: CompanyState; state: GameState }
   const controlCost = toControl * price;
   // Kurucu kilidinde hisse piyasada değil (oyun başı rakipler ısınma
   // süresince, yeni gelenler bir yıl).
-  const lockedDays =
-    company.lockedUntilDay !== undefined ? Math.max(0, company.lockedUntilDay - state.time.day) : 0;
+  const lock = founderLockFor(state, company, player.id);
+  const lockedDays = lock !== undefined ? Math.max(0, lock - state.time.day) : 0;
   const affordable =
     lockedDays > 0 ? 0 : Math.min(available, Math.floor(player.cash / Math.max(1, price)));
   const investors = company.investorShares ?? 0;

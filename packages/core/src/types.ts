@@ -237,6 +237,12 @@ export interface CompanyState {
   /** Kurucu kilidi: bu güne kadar hisseleri başkası alamaz (yeni gelen). */
   lockedUntilDay?: number;
   /**
+   * Oyuncu için daha uzun kurucu kilidi (Tur 45). Aç gözlü rakipler kurucu
+   * rakiplerin kilidini baskın gününe çekiyor; oyuncunun alımı kademenin
+   * asıl gününü bekliyor, kural oyuncuya erken devralma vermesin (Codex #74).
+   */
+  playerLockedUntilDay?: number;
+  /**
    * Toplam hisse adedi. Yokluğu 10.000 (Tur 4'ten beri sabit); sermaye
    * artırımı büyütüyor. Fiyat, dolaşım, kontrol eşiği ve temettü buna göre.
    */

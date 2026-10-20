@@ -6,6 +6,7 @@ import {
   CONTROL_THRESHOLD,
   TOTAL_SHARES,
   buyShares,
+  founderLockFor,
   freeFloat,
   sharePrice,
   sharesHeld,
@@ -151,10 +152,11 @@ export function placeTakeoverOrder(state: GameState, buyerId: string, issuerId: 
   if (!buyer || !issuer) return { ok: false, reason: tc('core.orders.unknownCompany') };
   if (buyerId === issuerId) return { ok: false, reason: tc('core.orders.selfOrder') };
   if (findOrder(state, buyerId, issuerId)) return { ok: false, reason: tc('core.orders.duplicate', { name: issuer.name }) };
-  if (issuer.lockedUntilDay !== undefined && state.time.day < issuer.lockedUntilDay) {
+  const lock = founderLockFor(state, issuer, buyerId);
+  if (lock !== undefined && state.time.day < lock) {
     return {
       ok: false,
-      reason: tc('core.orders.founderLock', { name: issuer.name, days: issuer.lockedUntilDay - state.time.day }),
+      reason: tc('core.orders.founderLock', { name: issuer.name, days: lock - state.time.day }),
     };
   }
   const price = sharePrice(state, issuerId);

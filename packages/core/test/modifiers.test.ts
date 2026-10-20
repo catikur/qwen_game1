@@ -9,6 +9,8 @@ import { createScenarioGame } from '../src/scenario';
 import { recomputeNetWorth, tilePrice } from '../src/systems/city';
 import { loanQuote, loanRate, overdraftRate } from '../src/systems/credit';
 import { crisisBuildMultiplier } from '../src/systems/economy';
+import { buyShares, founderLockFor } from '../src/systems/equity';
+import { placeTakeoverOrder } from '../src/systems/orders';
 import { difficultyOf } from '../src/systems/rules';
 import type { GameState } from '../src/types';
 
@@ -84,10 +86,35 @@ describe('zorluk değiştiricileri', () => {
     const rules = difficultyOf(state);
     assert.equal(rules.rivalBudgetMultiplier, base.rivalBudgetMultiplier * MODIFIER_RULES.hungryRivals.budgetMultiplier);
     assert.equal(rules.raidWarmupDays, Math.round(base.raidWarmupDays * MODIFIER_RULES.hungryRivals.raidWarmupMultiplier));
-    const rival = Object.values(state.companies).find((company) => !company.isPlayer)!;
-    assert.equal(rival.lockedUntilDay, rules.raidWarmupDays, 'rakiplerin ilk kilidi de kısa');
     // Kural rakibin cesaretini değiştiriyor, zafer çıtasını değil.
     assert.equal(rules.victoryNetWorth, base.victoryNetWorth);
+  });
+
+  test('Aç gözlü rakipler: kurucu kilidi rakip alıcıya erken açılıyor, oyuncuya kademenin gününde (Codex #74)', () => {
+    const base = getDifficulty('normal');
+    const state = game(['hungry_rivals']);
+    const rules = difficultyOf(state);
+    const [rival, raider] = Object.values(state.companies).filter((company) => !company.isPlayer);
+    const player = state.companies[state.playerCompanyId]!;
+    player.cash = raider!.cash = 50_000_000;
+    // Rakiplerin baskını başladı, oyuncunun kilidi sürüyor.
+    state.time.day = rules.raidWarmupDays + 10;
+    const days = base.raidWarmupDays - state.time.day;
+    const order = placeTakeoverOrder(state, player.id, rival!.id);
+    assert.equal(order.ok, false);
+    assert.match(order.reason ?? '', new RegExp(`${days} `), `oyuncunun emri bekliyor: ${order.reason}`);
+    assert.equal(buyShares(state, player.id, rival!.id, 10).ok, false, 'oyuncunun alımı bekliyor');
+    assert.equal(founderLockFor(state, rival!, player.id), base.raidWarmupDays);
+    const bought = buyShares(state, raider!.id, rival!.id, 10);
+    assert.ok(bought.ok, `rakip alıcı alabiliyor: ${bought.reason}`);
+    // Kilit bitince oyuncu da serbest.
+    state.time.day = base.raidWarmupDays;
+    assert.ok(buyShares(state, player.id, rival!.id, 10).ok);
+    // Kural yokken oyuncu ile rakibin kilidi aynı gün; ek alan yok.
+    const plain = game([]);
+    const plainRival = Object.values(plain.companies).find((company) => !company.isPlayer)!;
+    assert.equal(plainRival.lockedUntilDay, base.raidWarmupDays);
+    assert.equal(plainRival.playerLockedUntilDay, undefined);
   });
 
   test('Sıkı banka: kuruluş sermayesinin yarısı 360 günlük kredi; kasa aynı, net değer borç kadar eksik', () => {

@@ -12,6 +12,7 @@ import {
   MODIFIER_RULES,
   difficultyWith,
   getCitySize,
+  getDifficulty,
   hasModifier,
   normalizeModifiers,
   rootStructureOf,
@@ -447,8 +448,16 @@ export function createNewGame(input: NewGameOptions = {}): GameState {
      * yokken hiçbir şirket ilk gün kendini savunamıyordu; en ucuzunu alan
      * bir vekil Kilit Market'i 5. günde devralıp tekel zaferine 130–235.
      * günde ulaşıyordu. Sonradan gelen rakiplerin kilidi zaten vardı.
+     *
+     * Aç gözlü rakiplerde kilit rakip alıcılar için kısalıyor, oyuncu için
+     * kademenin gününde kalıyor (Codex #74). Kilidi herkese uzatmak ölçümde
+     * baskınların hepsini oyuncuya yığdı: yavaş vekil 735. yerine 246.
+     * günde düştü.
      */
-    companies[profile.id]!.lockedUntilDay = rules.raidWarmupDays;
+    const founder = companies[profile.id]!;
+    founder.lockedUntilDay = rules.raidWarmupDays;
+    const playerLock = getDifficulty(options.difficulty).raidWarmupDays;
+    if (playerLock > rules.raidWarmupDays) founder.playerLockedUntilDay = playerLock;
   }
 
   const state: GameState = {

@@ -4326,12 +4326,13 @@ kariyerin koşu satırında yazıyor.
 - Rozet ipuçları zorluğa "Zor" diyordu, arayüz "Acımasız"; ipuçları
   düzeldi (İngilizcede "Hard" → "Ruthless").
 
-**Doğrulama.** `pnpm test` 481/481. Yeni `modifiers.test.ts` (12 test):
+**Doğrulama.** `pnpm test` 482/482. Yeni `modifiers.test.ts` (13 test):
 - katalog sırası, çarpan, lig ve senaryoda kural yok, kayıttan geri geliyor;
 - kural yokken kademe aynı nesne;
 - her kuralın etkisi: kriz takvimi ve inşaat indirimi, rakip bütçesi ve
-  baskın kilidi, açılış kredisi, oyuncuya faiz ve limit (rakibin teklifi
-  aynı), arsa fiyatı ve imar günü;
+  baskın günü, kurucu kilidi (rakip alıcıya erken, oyuncuya kademenin
+  gününde), açılış kredisi, oyuncuya faiz ve limit (rakibin teklifi aynı),
+  arsa fiyatı ve imar günü;
 - holding'in yeni şehri kuralları devralıyor, açılış kredisi vermiyor.
 
 `career.test.ts`: iki rozetin kuralı ve koşu özetinin kuralları taşıması.
@@ -4359,6 +4360,18 @@ Codex #74: Sıkı banka'nın açılış kredisi net değeri düşürüyordu ama 
 geçmişinin ilk kaydı kasa kadar kalıyordu; şirket panelinde 120 örnek
 boyunca sahte bir ilk tepe. Geçmiş de borçlu değerle açılıyor; test
 düzeltmeden önce kaldı.
+
+Codex #74: Aç gözlü rakipler kurucu rakiplerin kilidini 160'tan 104. güne
+çekiyordu; kilit oyuncunun devralma emrini ve alımını da bekletiyor, yani
+kural oyuncuya 56 gün erken devralma veriyordu. İlk düzeltme kilidi herkes
+için 160'ta tuttu ve ölçüm bozuldu: 104–160 arasında rakipler birbirine
+dokunamayınca bütün baskınlar oyuncuya yığıldı, yavaş vekil 735. yerine
+246. günde düştü, dört kuralla bilgili vekil 5 tohumun 4'ünde düştü (denge
+kontrolü kaldı). Son hâli: kilit rakip alıcılar için 104'te, oyuncu için
+yeni `playerLockedUntilDay` alanıyla 160'ta (`founderLockFor`; hisse alımı,
+devralma emri ve Borsa paneli bunu okuyor). Kural yokken alan yok, sayılar
+aynı. Yeniden ölçüm yukarıdaki tabloyla birebir aynı çıktı: vekiller o
+aralıkta rakip almıyordu. Test düzeltmeden önce kaldı.
 
 Denge testi tam koşu 331/331 (~12,5 dk; yeni bölüm ~200 sn). Tarayıcı tam
 koşu 472/472, konsol hatası yok (~28 dk).
@@ -4445,7 +4458,7 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi). Senaryo şehirlerinde gün 3–17 ms (`pnpm dayperf`, Tur 43) |
-| Birim testi | **481 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar da) |
+| Birim testi | **482 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar da) |
 | Denge testi | **331 kontrol, hepsi geçiyor** (25 bölüm, süreleriyle; ~13 dk) |
 | Tarayıcı testi | **472 kontrol, hepsi geçiyor**, 0 konsol hatası (~25–40 dk); duman koşusu 132 (~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + duman oynanışı |
