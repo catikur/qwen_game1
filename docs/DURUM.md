@@ -4355,6 +4355,14 @@ eklendi (6 kontrol):
 - telefonda iki satır, taşma yok; İngilizce adlar ve etki;
 - konsol temiz.
 
+Codex #74: Sıkı banka'nın açılış kredisi net değeri düşürüyordu ama değer
+geçmişinin ilk kaydı kasa kadar kalıyordu; şirket panelinde 120 örnek
+boyunca sahte bir ilk tepe. Geçmiş de borçlu değerle açılıyor; test
+düzeltmeden önce kaldı.
+
+Denge testi tam koşu 331/331 (~12,5 dk; yeni bölüm ~200 sn). Tarayıcı tam
+koşu 472/472, konsol hatası yok (~28 dk).
+
 
 ---
 
@@ -4438,8 +4446,8 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi). Senaryo şehirlerinde gün 3–17 ms (`pnpm dayperf`, Tur 43) |
 | Birim testi | **481 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar da) |
-| Denge testi | **331 kontrol, hepsi geçiyor** (25 bölüm, süreleriyle; ~18 dk) |
-| Tarayıcı testi | **466 kontrol, hepsi geçiyor**, 0 konsol hatası (~25–40 dk); duman koşusu 132 (~5 dk, rehber dahil) |
+| Denge testi | **331 kontrol, hepsi geçiyor** (25 bölüm, süreleriyle; ~13 dk) |
+| Tarayıcı testi | **472 kontrol, hepsi geçiyor**, 0 konsol hatası (~25–40 dk); duman koşusu 132 (~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + duman oynanışı |
 | Kapsam | 35 bina · 25 ürün · 7 kategori · 8 rakip profili · 10 CEO · 22 olay (11 şehir + 11 sektör) · 2 kriz · 12 karar kartı · 70 rakip sözü · 5 fırsat balonu · 8 görev türü · 4 mevsim · 9 moda ürünü · 17 şehir yapısı (6 siluet) · 6 şehir projesi · 7 senaryo · 4 ek kural · 28 rozet |
 
