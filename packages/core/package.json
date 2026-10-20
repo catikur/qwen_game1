@@ -8,6 +8,9 @@
   "exports": {
     ".": "./src/index.ts"
   },
+  "sideEffects": [
+    "./src/i18n/index.ts"
+  ],
   "dependencies": {
     "@capital/content": "workspace:*"
   }

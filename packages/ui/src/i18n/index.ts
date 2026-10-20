@@ -1,6 +1,5 @@
-import { BASE_LOCALE, registerMessages, translate } from '@capital/content';
+import { BASE_LOCALE, registerLocaleLoader, registerMessages, translate } from '@capital/content';
 import { tr } from './tr';
-import { en } from './en';
 
 /**
  * Arayüz metinleri (Tur 21, §4.9 "yerelleştirme").
@@ -24,7 +23,8 @@ export type Messages = Record<MessageKey, string>;
  * kaydediliyor; `t` anahtar türünü koruyan ince bir sarmalayıcı.
  */
 registerMessages(BASE_LOCALE, tr);
-registerMessages('en', en);
+// İngilizce dil seçilince iniyor (Tur 46): Türkçe oynayanın açılışında yok.
+registerLocaleLoader('en', () => import('./en').then((m) => registerMessages('en', m.en)));
 
 /** Yeni bir dil sözlüğü kaydeder (eksik anahtarlar Türkçeye düşer). */
 export function registerLocale(locale: string, messages: Partial<Messages>): void {

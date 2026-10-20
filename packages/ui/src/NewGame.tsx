@@ -6,9 +6,9 @@ import { formatMoney, leagueWeekId, scenarioGoalText, scenarioScoreText } from '
 import { CeoPortrait } from './CeoPortrait';
 import { LocalePicker } from './LocalePicker';
 import { t } from './i18n';
-import { tutorialSeen } from './tutorial';
+import { tutorialSeen } from './tutorialStore';
 import { scenarioRecord } from './scenarioBest';
-import { starRow, starThresholds } from './ScenarioScreens';
+import { starRow, starThresholds } from './stars';
 import { CareerPanel, useCareerRevision } from './CareerPanel';
 import { careerSummary } from './career';
 

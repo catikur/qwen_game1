@@ -1,8 +1,9 @@
-import { BUILDING_BY_ID, GOOD_BY_ID, SCENARIO_BY_ID, fillTemplate, formatDecimal } from '@capital/content';
+import { BUILDING_BY_ID, GOOD_BY_ID, SCENARIO_BY_ID, formatDecimal } from '@capital/content';
 import type { ScenarioDef } from '@capital/content';
 import { tc } from '../i18n';
 import { pushNews } from '../news';
-import { formatMoney } from '../selectors';
+import { formatMoney } from '../format';
+import { floorTo, scenarioScoreText, starsFor } from './scenarioText';
 import { victoryNetWorth } from './goals';
 import type { GameState, ScenarioLostReason, ScenarioState } from '../types';
 
@@ -172,38 +173,8 @@ function createdValue(state: GameState): number {
   return (player?.netWorth ?? 0) - (state.importedCapital ?? 0);
 }
 
-/** Bir skorun yıldızı (hedefe ulaşılmışsa en az bir). */
-export function starsFor(def: ScenarioDef, score: number): number {
-  const { metric, two, three } = def.stars;
-  if (metric === 'days') return score <= three ? 3 : score <= two ? 2 : 1;
-  return score >= three ? 3 : score >= two ? 2 : 1;
-}
-
-/** Hedef cümlesi, sayılar doldurulmuş. */
-export function scenarioGoalText(def: ScenarioDef): string {
-  return fillTemplate(def.goalText, {
-    days: def.days,
-    target: def.goal.kind === 'netWorth' ? formatMoney(def.goal.target) : '',
-    share: def.goal.kind === 'chain' ? Math.round(def.goal.share * 100) : '',
-  });
-}
-
-/**
- * Aşağı yuvarlama, kayan noktanın ×1,29'u ×1,2899… diye okumasına karşı
- * küçük bir payla. Öndelik hiçbir yerde yukarı yuvarlanmıyor: eşiğin
- * altındaki skor eşikte görünmesin.
- */
-function floorTo(value: number, digits: number): number {
-  const scale = 10 ** digits;
-  return Math.floor(value * scale + 1e-6) / scale;
-}
-
-/** Skorun okunur hâli: "212 gün" ya da "×1,34". */
-export function scenarioScoreText(def: ScenarioDef, score: number): string {
-  return def.stars.metric === 'days'
-    ? tc('core.scenario.scoreDays', { days: score })
-    : tc('core.scenario.scoreLead', { ratio: formatDecimal(floorTo(score, 2), 2) });
-}
+// Yıldız ve metinler kurulum ekranında da okunuyor; hafif modülde (Tur 46).
+export { scenarioGoalText, scenarioScoreText, starsFor } from './scenarioText';
 
 export interface ScenarioProgress {
   /** 0..1: net değer hedefinde hedefe oran; öndelik hedefinde geçen süre. */

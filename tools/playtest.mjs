@@ -4555,6 +4555,79 @@ async function finish(browser, consoleErrors) {
     await hContext.close();
   }
 
+  // ---------- Açılış paketi (Tur 46) ----------
+  // Kurulum ekranı küçük bir parçayla geliyor; oyun ekranı (three, HUD,
+  // paneller) kurulum açıkken iniyor, İngilizce sözlük yalnız seçilince.
+  section('Açılış paketi: geç parçalar');
+  {
+    const bContext = await browser.newContext({ viewport: { width: 1280, height: 860 } });
+    await bContext.addInitScript(veteran, TUTORIAL_KEY);
+    const bp = await bContext.newPage();
+    const fetched = [];
+    bp.on('request', (r) => fetched.push(new URL(r.url()).pathname.replace(/^.*\//, '')));
+    const bErrors = [];
+    bp.on('pageerror', (e) => bErrors.push(e.message));
+    await bp.goto('http://127.0.0.1:8811/');
+    await bp.waitForSelector('.newgame', { timeout: 20000 });
+    const scripts = () => fetched.filter((f) => f.endsWith('.js'));
+    for (let i = 0; i < 100 && !scripts().some((f) => /^three-/.test(f)); i++) await bp.waitForTimeout(100);
+    check('Türkçe açılış İngilizce sözlüğü indirmiyor; oyun ekranı ve şehir sahnesi kurulum açıkken iniyor',
+      !scripts().some((f) => /^locale-en-/.test(f)) && scripts().some((f) => /^GameRoot-/.test(f)) && scripts().some((f) => /^three-/.test(f)),
+      scripts().join(' '));
+    await bp.locator('.newgame [data-locale="en"]').click();
+    await bp.waitForFunction(() => document.documentElement.lang === 'en', null, { timeout: 10000 });
+    const english = scripts().filter((f) => /^locale-en-/.test(f));
+    check('İngilizceye geçince sözlük tek parça olarak iniyor, kurulum İngilizce',
+      english.length === 1 && (await bp.locator('button:has-text("Found the company")').count()) === 1, english.join(' '));
+    check('Geç parçalarda yakalanmamış hata yok', bErrors.length === 0, bErrors.slice(0, 2).join(' | '));
+    await bContext.close();
+  }
+  {
+    // Bağlantıyla İngilizce: ilk çizim İngilizce, Türkçe kurulum bir an bile görünmüyor.
+    const fContext = await browser.newContext({ viewport: { width: 1280, height: 860 } });
+    await fContext.addInitScript(veteran, TUTORIAL_KEY);
+    await fContext.addInitScript(() => {
+      new MutationObserver((_records, observer) => {
+        const setup = document.querySelector('.newgame');
+        if (!setup) return;
+        window.__firstSetup = setup.textContent ?? '';
+        observer.disconnect();
+      }).observe(document, { childList: true, subtree: true });
+    });
+    const fp = await fContext.newPage();
+    await fp.goto('http://127.0.0.1:8811/?lang=en');
+    await fp.waitForSelector('.newgame', { timeout: 20000 });
+    const first = await fp.evaluate(() => window.__firstSetup ?? '');
+    check('?lang=en ile kurulumun ilk çizimi İngilizce', first.includes('Found the company') && !first.includes('Şirketi kur'), first.slice(0, 60));
+    await fContext.close();
+  }
+  {
+    // Oyun parçası inmezse (yayından sonra eski sayfa, kopan bağlantı): kurulum
+    // açılıyor, başlatınca açık bir mesaj ve yenile düğmesi; bağlantı dönünce oyun açılıyor.
+    const xContext = await browser.newContext({ viewport: { width: 1280, height: 860 } });
+    await xContext.addInitScript(veteran, TUTORIAL_KEY);
+    const block = /\/GameRoot-[^/]*\.js$/;
+    await xContext.route(block, (route) => route.abort());
+    const xp = await xContext.newPage();
+    const xErrors = [];
+    xp.on('pageerror', (e) => xErrors.push(e.message));
+    await xp.goto('http://127.0.0.1:8811/');
+    await xp.waitForSelector('.newgame', { timeout: 20000 });
+    await xp.locator('button:has-text("Şirketi kur")').click();
+    await xp.waitForSelector('[data-boot-failed]', { timeout: 20000 });
+    const message = ((await xp.locator('[data-boot-failed]').textContent()) ?? '').trim();
+    check('Oyun parçası inmezse kurulum açılıyor, başlatınca açık mesaj ve yenile düğmesi',
+      message.includes('inmedi') && (await xp.locator('[data-boot-failed] button').count()) === 1 && xErrors.length === 0,
+      `${message.slice(0, 70)}${xErrors.length ? ` · ${xErrors[0]}` : ''}`);
+    await xContext.unroute(block);
+    await xp.locator('[data-boot-failed] button').click();
+    await xp.waitForSelector('.newgame', { timeout: 20000 });
+    await xp.locator('button:has-text("Şirketi kur")').click();
+    await xp.waitForSelector('.topbar', { timeout: 30000 });
+    check('Bağlantı dönünce yenile düğmesi oyunu açıyor', (await xp.locator('.topbar').count()) === 1 && xErrors.length === 0, xErrors.slice(0, 2).join(' | '));
+    await xContext.close();
+  }
+
   // ---------- Dil (Tur 23) ----------
   // Kendi bağlamında: seçim tarayıcıda hatırlanıyor, diğer bölümler Türkçe kalmalı.
   section('Dil');
@@ -4576,7 +4649,8 @@ async function finish(browser, consoleErrors) {
       (await lp.locator('.newgame .locale-option').count()) === 2 &&
         (await lp.locator('.newgame [data-locale="tr"][aria-pressed="true"]').count()) === 1);
     await lp.locator('.newgame [data-locale="en"]').click();
-    await lp.waitForTimeout(200);
+    // İngilizce sözlük seçilince iniyor (Tur 46): dil değişene kadar bekle.
+    await lp.waitForFunction(() => document.documentElement.lang === 'en', null, { timeout: 10000 });
     const setupText = ((await lp.locator('.newgame').textContent()) ?? '').trim();
     const setupLang = await lp.evaluate(() => document.documentElement.lang);
     check('İngilizceye geçince kurulum ekranı İngilizce',

@@ -8,7 +8,7 @@ import { repoRoot } from './fixture-path';
 /*
  * Fredoka (başlık yazı tipi) Türkçe'nin beş harfini taşımıyor; harfler
  * tools/fredoka_turkish.py ile ekleniyor (Tur 40). Lite'ın dosyaları (web ve
- * iOS) yerinde yamalı, ana oyunun gömülü alt kümesi bu dosyalardan üretiliyor.
+ * iOS) yerinde yamalı, ana oyunun alt kümesi bu dosyalardan üretiliyor.
  * Dosyalardan biri yamasız bir sürümle değişirse harfler başka yazı tipine
  * düşer ya da çengeli kopuk çizilir; bu test onu yakalıyor.
  */
@@ -92,12 +92,13 @@ test("Lite'ın Fredoka dosyalarında Türkçe harfler var (web ve iOS)", () => {
   }
 });
 
-test('ana oyunun gömülü Fredoka alt kümesinde Türkçe harfler var', () => {
+test('ana oyunun Fredoka alt kümesinde Türkçe harfler var', () => {
+  // Tur 46'dan beri ayrı woff2 dosyaları (index.html önden yüklüyor); CSS onlara bağlı.
   const css = readFileSync(join(root, 'packages/ui/src/fonts-cam.css'), 'utf8');
-  const faces = [...css.matchAll(/font-family: 'Fredoka';[^}]*?font-weight: (\d+);[^}]*?base64,([A-Za-z0-9+/=]+)/g)];
+  const faces = [...css.matchAll(/font-family: 'Fredoka';[^}]*?font-weight: (\d+);[^}]*?url\('\.\/(fonts\/[^']+\.woff2)'\)/g)];
   assert.equal(faces.length, 2);
-  for (const [, weight, data] of faces) {
-    const gone = missing(cmapCodes(woff2Cmap(Buffer.from(data!, 'base64'))));
+  for (const [, weight, file] of faces) {
+    const gone = missing(cmapCodes(woff2Cmap(readFileSync(join(root, 'packages/ui/src', file!)))));
     assert.equal(gone, '', `Fredoka ${weight}: ${gone} eksik — python3 tools/make-cam-fonts.py`);
   }
 });

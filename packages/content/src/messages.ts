@@ -29,7 +29,46 @@ export function registerMessages(locale: string, messages: Readonly<Record<strin
   else dictionaries.set(locale, { ...messages });
 }
 
-/** Etkin dili değiştirir; kayıtlı olmayan dilde hiçbir şey yapmaz. */
+/*
+ * Sonradan yüklenen diller (Tur 46). İngilizce sözlükler ilk açılışın
+ * yolunda değil: her paket kendi sözlüğünü indiren bir işlev kaydediyor,
+ * dil seçilince hepsi birlikte iniyor. Türkçe temel dil, hep yüklü.
+ */
+const loaders = new Map<string, Array<() => Promise<void>>>();
+const loading = new Map<string, Promise<boolean>>();
+
+/** Bir dilin sözlüğünü sonradan kaydeden işlev; `loadLocale` çağırır. */
+export function registerLocaleLoader(locale: string, loader: () => Promise<void>): void {
+  const list = loaders.get(locale);
+  if (list) list.push(loader);
+  else loaders.set(locale, [loader]);
+}
+
+/**
+ * Dilin sözlüklerini indirip kaydeder; dil kullanılabilir olunca `true`.
+ * Bir kez iner; inmezse sonraki çağrı yeniden dener.
+ */
+export function loadLocale(locale: string): Promise<boolean> {
+  const pending = loaders.get(locale);
+  if (!pending) return Promise.resolve(dictionaries.has(locale));
+  let promise = loading.get(locale);
+  if (!promise) {
+    promise = Promise.all(pending.map((load) => load())).then(
+      () => {
+        loaders.delete(locale);
+        return true;
+      },
+      (error: unknown) => {
+        loading.delete(locale);
+        throw error;
+      },
+    );
+    loading.set(locale, promise);
+  }
+  return promise;
+}
+
+/** Etkin dili değiştirir; kayıtlı olmayan (ya da henüz inmemiş) dilde hiçbir şey yapmaz. */
 export function setLocale(locale: string): boolean {
   if (!dictionaries.has(locale)) return false;
   if (locale === active) return true;
@@ -42,8 +81,9 @@ export function currentLocale(): string {
   return active;
 }
 
+/** Seçilebilen diller: yüklü olanlar ve sonradan yüklenebilenler. */
 export function availableLocales(): string[] {
-  return [...dictionaries.keys()];
+  return [...new Set([...dictionaries.keys(), ...loaders.keys()])];
 }
 
 export function onLocaleChange(listener: (locale: string) => void): () => void {

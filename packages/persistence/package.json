@@ -8,6 +8,7 @@
   "exports": {
     ".": "./src/index.ts"
   },
+  "sideEffects": false,
   "dependencies": {
     "@capital/core": "workspace:*",
     "@capital/content": "workspace:*"

@@ -36,6 +36,8 @@ jobs:
         run: pnpm balance
       - name: Paket
         run: pnpm build
+      - name: Paket bütçesi
+        run: node tools/bundle-check.mjs
       - uses: actions/upload-artifact@v5
         with:
           name: web-dist

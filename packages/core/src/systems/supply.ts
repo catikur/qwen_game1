@@ -6,6 +6,7 @@ import {
   getCeoModifiers,
 } from '@capital/content';
 import { collectEventModifiers } from './events';
+import { zeroByGood } from './defaults';
 import { buildingStrikeFactor, wageFor } from './labor';
 import { overheadMultiplier } from './economy';
 import { boostMultiplier } from './cards';
@@ -51,14 +52,9 @@ const SPOT_SMOOTHING = 0.15;
 const SPOT_FLOOR = 0.6;
 const SPOT_CEILING = 1.8;
 
-/** Ürün kimliği → 0 sözlüğü. */
-export function zeroByGood(): Record<string, number> {
-  const out: Record<string, number> = {};
-  for (const good of GOODS) out[good.id] = 0;
-  return out;
-}
+// Kayıt taşıma da kullanıyor; bağımlılıksız modülde (Tur 46).
+export { seedSpotPrices, zeroByGood } from './defaults';
 
-/** Spot fiyatları referans değerleriyle tohumlar (yeni oyun ve migration). */
 /**
  * Spot pazarın referans hacmi — fazla üretimin fiyatı ne kadar kırdığını
  * ölçekler.
@@ -92,11 +88,6 @@ export function referenceVolumes(districts: DistrictState[]): Record<string, num
   return reference;
 }
 
-export function seedSpotPrices(): Record<string, number> {
-  const out: Record<string, number> = {};
-  for (const good of GOODS) out[good.id] = good.basePrice;
-  return out;
-}
 
 function wagesFor(state: GameState, building: BuildingInstance): number {
   const def = BUILDING_BY_ID[building.defId];

@@ -1,15 +1,19 @@
 """
-"Cam & Bulut" yazı tiplerini (Fredoka, Nunito) ana oyuna gömülü üretir.
+"Cam & Bulut" yazı tiplerini (Fredoka, Nunito) ana oyun için üretir.
 
 Kaynak: Lite web'in dosyaları (apps/lite-web/public/fonts, SIL OFL 1.1).
-Ana oyun tek dosya olarak da derlendiği için yazı tipleri CSS'e base64
-woff2 olarak gömülüyor; boyut için Latin + Türkçe ve arayüzde geçen
-simgelerle sınırlı alt küme alınıyor.
+Boyut için Latin + Türkçe ve arayüzde geçen simgelerle sınırlı alt küme
+alınıyor.
+
+Tur 46'ya kadar woff2'ler CSS'e base64 gömülüydü: ilk çizimi bekleten
+stil dosyasının 72 KB'ı yazı tipiydi ve CSS'in değiştiği her yayında
+yeniden iniyordu. Artık ayrı dosyalar; Vite adlarına içerik özeti
+ekliyor, index.html onları önden yüklüyor (apps/web/vite.config.ts). Tek
+dosyalık pakette Vite yine CSS'e gömüyor.
 
 Çalıştırma: python3 tools/make-cam-fonts.py  (fonttools + brotli gerekir)
-Çıktı: packages/ui/src/fonts-cam.css
+Çıktı: packages/ui/src/fonts-cam.css ve packages/ui/src/fonts/*.woff2
 """
-import base64
 import io
 import pathlib
 
@@ -21,6 +25,7 @@ from fredoka_turkish import add_turkish
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 SOURCE = ROOT / 'apps/lite-web/public/fonts'
 TARGET = ROOT / 'packages/ui/src/fonts-cam.css'
+FONTS = ROOT / 'packages/ui/src/fonts'
 
 # Latin, Latin-1, Türkçe harfler, tipografi ve arayüz simgeleri (₺, oklar, ≈, ×, üçgenler).
 UNICODES = (
@@ -72,30 +77,33 @@ def main() -> None:
         ' * İkisi de SIL Open Font License 1.1: https://scripts.sil.org/OFL',
         ' *',
         ' * Lite ile aynı aile. Latin + Türkçe ve arayüz simgeleriyle sınırlı alt küme,',
-        ' * woff2, CSS\'e gömülü (oyun tek dosya olarak da derleniyor).',
+        ' * woff2 dosyaları (fonts/); index.html önden yüklüyor, tek dosyalık pakette',
+        ' * Vite CSS\'e gömüyor.',
         ' *',
         ' * BU DOSYA ÜRETİLMİŞTİR — elle düzenlenmez: python3 tools/make-cam-fonts.py',
         ' */',
         '',
     ]
     total = 0
+    FONTS.mkdir(exist_ok=True)
     for family, weight, file in FACES:
         data = woff2(SOURCE / file)
         total += len(data)
-        encoded = base64.b64encode(data).decode('ascii')
+        name = f'{family.lower()}-{weight}.woff2'
+        (FONTS / name).write_bytes(data)
         parts += [
             '@font-face {',
             f"  font-family: '{family}';",
             '  font-style: normal;',
             f'  font-weight: {weight};',
             '  font-display: swap;',
-            f"  src: url(data:font/woff2;base64,{encoded}) format('woff2');",
+            f"  src: url('./fonts/{name}') format('woff2');",
             '}',
             '',
         ]
         print(f'{family} {weight}: {len(data) / 1024:.1f} KB')
     TARGET.write_text('\n'.join(parts), encoding='utf-8')
-    print(f'toplam {total / 1024:.1f} KB woff2 → {TARGET.relative_to(ROOT)}')
+    print(f'toplam {total / 1024:.1f} KB woff2 → {FONTS.relative_to(ROOT)}, {TARGET.relative_to(ROOT)}')
 
 
 if __name__ == '__main__':
