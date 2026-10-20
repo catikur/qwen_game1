@@ -8,7 +8,7 @@ import type { DifficultyId } from './difficulty';
  * Hedef merdiveni bir koşunun içinde yön veriyor; rozetler koşuların
  * üstünde duruyor: oyunun her köşesini (devralma, kriz, konsorsiyum,
  * meclis, holding, senaryo, lig) en az bir kez yaşatmak ve zor olanı
- * (Zor'da zafer, 500. günden önce zafer, tekel) ölçülebilir kılmak.
+ * (Acımasız'da zafer, 500. günden önce zafer, tekel) ölçülebilir kılmak.
  *
  * Ödül yok — merdivendeki gerekçeyle aynı: rozet dengeyi oynatmıyor.
  * Rozetler bu cihazda saklanıyor (`packages/ui/src/career.ts`); lig ve
@@ -76,8 +76,11 @@ export interface AchievementDef {
   target: number;
   feat?: AchievementFeat;
   total?: AchievementTotal;
-  /** Zafer süzgeci: en geç gün (şehrin kendi takvimi), en az zorluk, şehir boyutu. */
-  victory?: { maxDay?: number; minDifficulty?: DifficultyId; citySize?: CitySizeId };
+  /**
+   * Zafer süzgeci: en geç gün (şehrin kendi takvimi), en az zorluk, şehir
+   * boyutu, en az kaç ek kural (Tur 45; koşunun kuralları bütün şehirlerinde aynı).
+   */
+  victory?: { maxDay?: number; minDifficulty?: DifficultyId; citySize?: CitySizeId; minModifiers?: number };
   /** Senaryoda sayılmıyor. */
   freePlayOnly?: boolean;
 }
@@ -147,7 +150,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     id: 'blitz',
     group: 'victory',
     title: 'Yıldırım',
-    hint: "Dengeli ya da Zor'da, şehrin 500. gününden önce zafer kazan.",
+    hint: "Dengeli ya da Acımasız'da, şehrin 500. gününden önce zafer kazan.",
     kind: 'victory',
     target: 1,
     victory: { maxDay: 500, minDifficulty: 'normal' },
@@ -157,7 +160,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     id: 'hard_victory',
     group: 'victory',
     title: 'Zor yoldan',
-    hint: "Zor'da zafer kazan.",
+    hint: "Acımasız'da zafer kazan.",
     kind: 'victory',
     target: 1,
     victory: { minDifficulty: 'hard' },
@@ -171,6 +174,26 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     kind: 'victory',
     target: 1,
     victory: { citySize: 'large' },
+    freePlayOnly: true,
+  },
+  {
+    id: 'house_rules',
+    group: 'victory',
+    title: 'Kendi kuralların',
+    hint: "Dengeli ya da Acımasız'da, en az iki ek kuralla zafer kazan.",
+    kind: 'victory',
+    target: 1,
+    victory: { minDifficulty: 'normal', minModifiers: 2 },
+    freePlayOnly: true,
+  },
+  {
+    id: 'all_rules',
+    group: 'victory',
+    title: 'Dört kural birden',
+    hint: "Dengeli ya da Acımasız'da, dört ek kuralın hepsi açıkken zafer kazan.",
+    kind: 'victory',
+    target: 1,
+    victory: { minDifficulty: 'normal', minModifiers: 4 },
     freePlayOnly: true,
   },
   {

@@ -56,6 +56,7 @@ export { auctionHint, minimumBid, valuationFor } from './systems/auction';
 export {
   bookValue,
   confidence,
+  founderLockFor,
   freeFloat,
   marketCap,
   portfolioValue,

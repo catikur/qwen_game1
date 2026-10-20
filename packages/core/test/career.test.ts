@@ -432,6 +432,25 @@ describe('kariyer: rozet kuralları', () => {
     assert.equal(runValue(ACHIEVEMENT_BY_ID.first_takeover!, facts({ mode: 'scenario', acquisitions: 1 })), 1, 'devralma senaryoda da');
   });
 
+  test('ek kural rozetleri (Tur 45): Dengeli ve üstünde iki kural ve dört kural; kural koşudan', () => {
+    const house = ACHIEVEMENT_BY_ID.house_rules!;
+    const all = ACHIEVEMENT_BY_ID.all_rules!;
+    const win = facts({ wins: [{ day: 700, citySize: 'standard' }] });
+    assert.equal(runValue(house, win), 0, 'kuralsız zafer sayılmıyor');
+    assert.equal(runValue(house, { ...win, modifiers: ['storms'] }), 0, 'tek kural yetmiyor');
+    assert.equal(runValue(house, { ...win, modifiers: ['storms', 'scarce_land'] }), 1);
+    assert.equal(runValue(house, { ...win, difficulty: 'easy', modifiers: ['storms', 'scarce_land'] }), 0, 'Rahat sayılmıyor');
+    const four: RunFacts['modifiers'] = ['storms', 'hungry_rivals', 'tight_credit', 'scarce_land'];
+    assert.equal(runValue(all, { ...win, modifiers: ['storms', 'hungry_rivals', 'tight_credit'] }), 0);
+    assert.equal(runValue(all, { ...win, modifiers: four }), 1);
+    assert.equal(runValue(all, { ...win, difficulty: 'hard', modifiers: four }), 1);
+    assert.equal(runValue(all, { ...win, difficulty: 'easy', modifiers: four }), 0, 'Rahat sayılmıyor');
+    assert.equal(runValue(all, { ...facts(), modifiers: ['storms', 'hungry_rivals', 'tight_credit', 'scarce_land'] }), 0, 'zafer yoksa sayılmıyor');
+    // Koşunun özeti kuralları taşıyor; kuralsız koşuda alan yok.
+    assert.deepEqual(runFacts(createNewGame({ seed: 5, companyName: 'Kural AŞ', modifiers: ['scarce_land', 'storms'] })).modifiers, ['storms', 'scarce_land']);
+    assert.equal(runFacts(createNewGame({ seed: 5, companyName: 'Kural AŞ' })).modifiers, undefined);
+  });
+
   test('koşu rozeti en iyi koşudan, kariyer rozeti toplamdan', () => {
     const runs = [
       facts({ key: 'a', acquisitions: 2, bubbles: 30, counters: { ...facts().counters, motionsWon: 3 }, league: 'finished' }),

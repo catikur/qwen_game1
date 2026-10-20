@@ -1,10 +1,11 @@
-import { CONSORTIUM, formatDecimal, formatPercent, getDifficulty } from '@capital/content';
+import { CONSORTIUM, formatDecimal, formatPercent } from '@capital/content';
 import { tc } from '../i18n';
 import { pushNews } from '../news';
 import { rivalProfile } from '../profiles';
 import { noteFeat } from './feats';
 import { buyShares, controlReachable, freeFloat, sharePrice, sharesHeld, sharesOutstanding, TOTAL_SHARES } from './equity';
 import type { CompanyState, ConsortiumState, GameState } from '../types';
+import { difficultyOf } from './rules';
 
 /**
  * Rakip konsorsiyumu (Tur 37d-3) — içerik ve gerekçe `@capital/content`
@@ -164,7 +165,7 @@ function buyTogether(state: GameState, consortium: ConsortiumState): void {
   const members = consortium.memberIds.map((id) => state.companies[id]!).filter(Boolean);
   const price = sharePrice(state, player.id);
   if (price <= 0) return;
-  const difficulty = getDifficulty(state.difficulty);
+  const difficulty = difficultyOf(state);
   const cap = Math.floor((difficulty.raidDailyCap * CONSORTIUM.capShare * sharesOutstanding(state, player.id)) / TOTAL_SHARES);
   const budgets = members.map((member) => Math.max(0, (member.cash - CONSORTIUM.memberReserve) * CONSORTIUM.memberBudget));
   const pool = budgets.reduce((sum, value) => sum + value, 0);
@@ -245,7 +246,7 @@ export function runConsortiumTick(state: GameState): void {
   const day = state.time.day;
   if (day < consortium.startsDay) return;
   if (day === consortium.startsDay) {
-    const difficulty = getDifficulty(state.difficulty);
+    const difficulty = difficultyOf(state);
     pushNews(
       state,
       'bad',

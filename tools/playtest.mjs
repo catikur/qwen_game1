@@ -3646,8 +3646,8 @@ async function finish(browser, consoleErrors) {
       done: document.querySelectorAll('[data-achievement][data-done="true"]').length,
       runs: document.querySelectorAll('.career-run').length,
     }));
-    check('Kurulumda Kariyer açılıyor: 26 rozet, hiçbiri kazanılmamış, koşu yok',
-      setupButton.includes('0/26') && empty.total === 26 && empty.done === 0 && empty.runs === 0, `${setupButton} · ${JSON.stringify(empty)}`);
+    check('Kurulumda Kariyer açılıyor: 28 rozet, hiçbiri kazanılmamış, koşu yok',
+      setupButton.includes('0/28') && empty.total === 28 && empty.done === 0 && empty.runs === 0, `${setupButton} · ${JSON.stringify(empty)}`);
     await cp.locator('.career-overlay .modal-head button.icon').click();
 
     await cp.locator('[data-newgame-start]').click();
@@ -3687,7 +3687,7 @@ async function finish(browser, consoleErrors) {
       return { done: el?.getAttribute('data-done'), when: el?.querySelector('.career-badge-when')?.textContent ?? '', runs: document.querySelectorAll('.career-run').length };
     });
     check('Hedefler panelinden Kariyer açılıyor; kazanılan rozet, açıldığı gün ve koşu satırı',
-      goalsButton.includes('2/26') && badge.done === 'true' && badge.when.includes('1. gün') && badge.runs === 1, `${goalsButton} · ${JSON.stringify(badge)}`);
+      goalsButton.includes('2/28') && badge.done === 'true' && badge.when.includes('1. gün') && badge.runs === 1, `${goalsButton} · ${JSON.stringify(badge)}`);
     await cp.locator('.modal-head button.icon').click();
 
     // Zafer: ekran bu koşuda kazanılan rozetleri yazıyor (zaferin kendisi dahil).
@@ -3723,7 +3723,7 @@ async function finish(browser, consoleErrors) {
       first: document.querySelector('[data-achievement="public_company"] .career-badge-title')?.textContent ?? '',
       title: document.querySelector('.career-overlay .modal-head h2')?.textContent ?? '',
     }));
-    check('İngilizcede Kariyer çevrilmiş', enButton.includes('Career') && enButton.includes('0/26 badges') && enTexts.first === 'Going public' && enTexts.title === 'Career',
+    check('İngilizcede Kariyer çevrilmiş', enButton.includes('Career') && enButton.includes('0/28 badges') && enTexts.first === 'Going public' && enTexts.title === 'Career',
       `${enButton} · ${JSON.stringify(enTexts)}`);
     await enCtx.close();
 
@@ -4201,6 +4201,97 @@ async function finish(browser, consoleErrors) {
       found.map(([name, hit]) => `${name}: ${hit}`).join(' · ') || Object.keys(leftovers).join(', '));
     await enCtx.close();
     check('Değerlendirme bölümünde konsol temiz', evalErrors.length === 0, evalErrors.slice(0, 2).join(' | '));
+  }
+
+  // ---------- Ek kurallar (Tur 45) ----------
+  section('Ek kurallar: kurulum, oyun, zafer, kariyer');
+  {
+    const ruleErrors = [];
+    const ctx = await browser.newContext({ viewport: { width: 1280, height: 860 } });
+    await ctx.addInitScript(veteran, TUTORIAL_KEY);
+    const rp = await ctx.newPage();
+    rp.on('pageerror', (e) => ruleErrors.push(e.message));
+    rp.on('console', (m) => {
+      if (m.type() === 'error') ruleErrors.push(m.text());
+    });
+    await rp.goto('http://127.0.0.1:8811/');
+    await rp.waitForSelector('.newgame', { timeout: 20000 });
+    const empty = ((await rp.locator('[data-detail="modifiers"]').textContent()) ?? '').trim();
+    await rp.locator('[data-modifier="storms"]').click();
+    await rp.locator('[data-modifier="scarce_land"]').click();
+    const picked = await rp.evaluate(() => ({
+      options: document.querySelectorAll('[data-modifier]').length,
+      pressed: [...document.querySelectorAll('[data-modifier][aria-pressed="true"]')].map((el) => el.getAttribute('data-modifier')),
+      facts: [...document.querySelectorAll('[data-modifier-facts]')].map((el) => el.getAttribute('data-modifier-facts')),
+      multiplier: document.querySelector('[data-modifier-multiplier]')?.textContent ?? '',
+    }));
+    check('Kurulumda dört ek kural; seçilenin etkisi ve zorluk çarpanı yazıyor',
+      picked.options === 4 && empty.includes('İsteğe bağlı') && picked.pressed.join() === 'storms,scarce_land' &&
+        picked.facts.join() === 'storms,scarce_land' && picked.multiplier.includes('×1,10'),
+      `${picked.options} kural · ${picked.pressed.join(', ')} · ${picked.multiplier}`);
+
+    // Lig ve senaryoda kural yok: seçici görünmüyor, seçim oyuna geçmiyor.
+    await rp.locator('.mode-picker [data-mode="scenario"]').click();
+    const inScenario = await rp.locator('[data-modifiers]').count();
+    await rp.locator('.mode-picker [data-mode="league"]').click();
+    const inLeague = await rp.locator('[data-modifiers]').count();
+    await rp.locator('.mode-picker [data-mode="free"]').click();
+    check('Lig ve senaryo kipinde ek kural seçicisi yok', inScenario === 0 && inLeague === 0, `senaryo ${inScenario} · lig ${inLeague}`);
+
+    await rp.locator('[data-newgame-start]').click();
+    await rp.waitForSelector('.topbar', { timeout: 20000 });
+    const started = await rp.evaluate(() => window.__capital.getState().modifiers ?? null);
+    await rp.locator('.goal-chip').first().click();
+    await rp.waitForSelector('.goals');
+    const goalsLine = (await rp.locator('.goals [data-modifier-line]').getAttribute('data-modifier-line')) ?? '';
+    const goalsText = ((await rp.locator('.goals [data-modifier-line]').textContent()) ?? '').trim();
+    check('Seçilen kurallar oyunda; Hedefler paneli kuralları ve çarpanı yazıyor',
+      JSON.stringify(started) === '["storms","scarce_land"]' && goalsLine === 'storms scarce_land' && goalsText.includes('Fırtınalı yıllar') && goalsText.includes('×1,10'),
+      `${JSON.stringify(started)} · ${goalsText}`);
+    await rp.keyboard.press('Escape');
+
+    // Zafer: ekran kuralları yazıyor; Dengeli + iki kural "Kendi kuralların"ı açıyor.
+    await rp.evaluate(() => {
+      const c = window.__capital;
+      const s = c.getState();
+      s.victory = { day: s.time.day, kind: 'tycoon' };
+      c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+    });
+    await rp.waitForSelector('.victory [data-modifier-line]', { timeout: 10000 });
+    const victoryLine = ((await rp.locator('.victory [data-modifier-line]').textContent()) ?? '').trim();
+    await rp.waitForFunction(() => Boolean(JSON.parse(localStorage.getItem('capitalforge.career.v1') ?? '{}').unlocked?.house_rules), null, { timeout: 10000 }).catch(() => {});
+    const career = await rp.evaluate(() => JSON.parse(localStorage.getItem('capitalforge.career.v1') ?? '{}'));
+    const run = career.runs?.[0];
+    check('Zafer ekranı kuralları yazıyor; iki kuralla Dengeli zafer "Kendi kuralların" rozetini açıyor',
+      victoryLine.includes('Kıt arsa') && Boolean(career.unlocked?.house_rules) && !career.unlocked?.all_rules && JSON.stringify(run?.modifiers) === '["storms","scarce_land"]',
+      `${victoryLine} · ${Object.keys(career.unlocked ?? {}).join(',')} · ${JSON.stringify(run?.modifiers)}`);
+    await ctx.close();
+
+    // Telefon ve İngilizce: dört kural iki sütunda, taşma yok, adlar çevrilmiş.
+    const phone = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+    await phone.addInitScript(veteran, TUTORIAL_KEY);
+    await phone.addInitScript(() => localStorage.setItem('capitalforge.locale', 'en'));
+    const pp = await phone.newPage();
+    pp.on('pageerror', (e) => ruleErrors.push(e.message));
+    await pp.goto('http://127.0.0.1:8811/');
+    await pp.waitForSelector('.newgame', { timeout: 20000 });
+    await pp.locator('[data-modifier="tight_credit"]').tap();
+    const phoneView = await pp.evaluate(() => {
+      const vw = document.documentElement.clientWidth;
+      const boxes = [...document.querySelectorAll('[data-modifier]')].map((el) => el.getBoundingClientRect());
+      return {
+        inside: boxes.every((box) => box.left >= 0 && box.right <= vw + 1),
+        rows: new Set(boxes.map((box) => Math.round(box.top))).size,
+        names: [...document.querySelectorAll('[data-modifier]')].map((el) => el.textContent?.trim()).join(', '),
+        detail: document.querySelector('[data-detail="modifiers"]')?.textContent ?? '',
+      };
+    });
+    check('Telefonda kurallar iki satırda, taşma yok; İngilizce adlar ve etki',
+      phoneView.inside && phoneView.rows === 2 && phoneView.names === 'Stormy years, Hungry rivals, Tight bank, Scarce land' &&
+        phoneView.detail.includes('360-day loan') && phoneView.detail.includes('×1.20'),
+      `${phoneView.rows} satır · ${phoneView.names} · ${phoneView.detail.slice(-40)}`);
+    await phone.close();
+    check('Ek kurallar bölümünde konsol temiz', ruleErrors.length === 0, ruleErrors.slice(0, 2).join(' | '));
   }
 
   // ---------- Mobil ----------

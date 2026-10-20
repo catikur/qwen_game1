@@ -14,7 +14,7 @@ import {
 } from '@capital/core';
 import type { GameCommand, GameState } from '@capital/core';
 import { BUILDING_BY_ID, GOOD_BY_ID } from '@capital/content';
-import type { CitySizeId, DifficultyId } from '@capital/content';
+import type { CitySizeId, DifficultyId, ModifierId } from '@capital/content';
 import { CityRenderer } from '@capital/render-three';
 import {
   AUTOSAVE_SLOT,
@@ -127,6 +127,7 @@ export function App(): ReactElement {
     citySize: CitySizeId,
     tutorial: boolean,
     scenarioId: string | null,
+    modifiers: ModifierId[],
   ) => {
     if (scenarioId) {
       launchScenario(scenarioId, companyName, ceoId);
@@ -134,7 +135,7 @@ export function App(): ReactElement {
     }
     const next = league
       ? createLeagueGame(leagueWeekId(), companyName, ceoId)
-      : createNewGame({ companyName, ceoId, difficulty, citySize });
+      : createNewGame({ companyName, ceoId, difficulty, citySize, modifiers });
     if (tutorial) startTutorial(next);
     begin(next);
   };

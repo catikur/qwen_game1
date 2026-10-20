@@ -11,6 +11,7 @@ export * from './events';
 export * from './ceos';
 export * from './structures';
 export * from './difficulty';
+export * from './modifiers';
 export * from './goals';
 export * from './council';
 export * from './labor';

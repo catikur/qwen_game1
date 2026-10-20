@@ -4,7 +4,7 @@
 > `pnpm bench` çıktısından; iddialar `pnpm balance` ve `pnpm playtest`
 > tarafından her koşuda doğrulanıyor.
 >
-> Son güncelleme: şema **v6**, 44 tur (Tur 33 denendi ve geri alındı; Tur 34 eski görünüme canlılık ekledi; Tur 35 arayüzü Lite'ın "Cam & Bulut" diline taşıdı; Tur 36 şehre ayrıntı kattı; Tur 37a geç oyuna yönetim yükü, servet vergisi ve kriz dönemleri getirdi; Tur 37b karar kartlarını ve rakip hikâyelerini ekledi; Tur 37c fırsat balonlarını ve aylık görev panosunu getirdi; Tur 37d canlı pazarı, şehir projesi ihalesini ve rakip konsorsiyumunu getirdi; Tur 38 değerlendirme turuydu: geç oyun hızı, gündem ve haber akışı, zorluk eğrisi; Tur 39a senaryo modunu getirdi: Kurtarma ve Krizin ortasında; Tur 39b Konsorsiyuma karşı, Zincir ustası ve Şehrin sponsoru senaryolarını ekledi; Tur 39c Büyük şehir fethi ve Holding: iki şehir ile listeyi yediye tamamladı; Tur 40 cila ve performans; Tur 41 başarımlar ve kariyer; Tur 42 açılışta gölgelendirici derlemesi; Tur 43 oyun içi akıcılık; Tur 44 değerlendirme turuydu: Türkçe sayı biçimi, yardımın kapsamı, haber akışı).
+> Son güncelleme: şema **v6**, 45 tur (Tur 33 denendi ve geri alındı; Tur 34 eski görünüme canlılık ekledi; Tur 35 arayüzü Lite'ın "Cam & Bulut" diline taşıdı; Tur 36 şehre ayrıntı kattı; Tur 37a geç oyuna yönetim yükü, servet vergisi ve kriz dönemleri getirdi; Tur 37b karar kartlarını ve rakip hikâyelerini ekledi; Tur 37c fırsat balonlarını ve aylık görev panosunu getirdi; Tur 37d canlı pazarı, şehir projesi ihalesini ve rakip konsorsiyumunu getirdi; Tur 38 değerlendirme turuydu: geç oyun hızı, gündem ve haber akışı, zorluk eğrisi; Tur 39a senaryo modunu getirdi: Kurtarma ve Krizin ortasında; Tur 39b Konsorsiyuma karşı, Zincir ustası ve Şehrin sponsoru senaryolarını ekledi; Tur 39c Büyük şehir fethi ve Holding: iki şehir ile listeyi yediye tamamladı; Tur 40 cila ve performans; Tur 41 başarımlar ve kariyer; Tur 42 açılışta gölgelendirici derlemesi; Tur 43 oyun içi akıcılık; Tur 44 değerlendirme turuydu: Türkçe sayı biçimi, yardımın kapsamı, haber akışı; Tur 45 dört ek kural getirdi: Fırtınalı yıllar, Aç gözlü rakipler, Sıkı banka, Kıt arsa).
 
 ---
 
@@ -4245,6 +4245,137 @@ Eski yapıda (main) ilk üçü kalıyor: yardımda madde kimliği yok, "chain:
 Tarayıcı tam koşu 466/466, konsol hatası yok (~26 dk); "Değerlendirme"
 bölümü ~40 sn. CI'da tip, test, denge ve duman koşusu yeşil.
 
+### Tur 45 — Zorluk değiştiricileri: dört ek kural
+
+Kullanıcı "Zorluk değiştiricileri"ni seçti. Değerlendirme dengeyi sağlam
+buldu; en büyük boşluk tekrar oynamak için bir sebepti. Serbest şehirde
+kurulumda isteğe bağlı dört kural seçiliyor. Her biri zorluk kademesinin
+üstüne ekleniyor ve etkisi kurulumda açıkça yazıyor. Tohum Ligi'nde ve
+senaryolarda kural yok: ligde herkes aynı kurallarla oynuyor, senaryoların
+yıldızları kendi kurulumlarıyla ölçüldü.
+
+**Kurallar** (`packages/content/src/modifiers.ts`, değerler `MODIFIER_RULES`):
+
+| Kural | Etkisi | Kime |
+|---|---|---|
+| Fırtınalı yıllar | İlk kriz uyarısı 160–220. gün (önce 320–440), sonraki 150–240 gün sonra (önce 300–480); durgunlukta inşaat ucuzlamıyor | herkese |
+| Aç gözlü rakipler | Rakiplerin yatırım cesareti ×1,3, baskın ısınması ×0,65 (Dengeli 160 → 104. gün) | rakiplere |
+| Sıkı banka | Kuruluş sermayesinin yarısı 360 günlük kredi; faiz +4 puan; kredi limiti ×0,6 | yalnız oyuncuya |
+| Kıt arsa | Arsa fiyatı ×1,7 (ihale taban fiyatı da); kilitli bölgeler %50 geç imara açılıyor | herkese |
+
+- *Kurallar kademenin üstünde* (`difficultyWith`, çekirdekte `difficultyOf`):
+  sistemler kademeyi buradan okuyor. Kural yoksa kademenin kendisi dönüyor.
+  Altı koşunun parmak izi (standart, büyük, dört senaryo) önce ve sonra
+  aynı.
+- *Durumda* `modifiers` (katalog sırasıyla, yalnız kural varsa). Şema
+  sürümü sabit, eski kayıtlarda alan yok. Holding'in yeni şehri kuralları
+  devralıyor. Sıkı banka'nın açılış kredisi yalnız kurucu şehirde: yeni
+  şehre giden sermaye oyuncunun kendi parası.
+- *Sıkı banka yalnız oyuncuya.* Rakipler doktrinle borçlanıyor; kural
+  herkese uygulansa borçla büyüyen rakipler yavaşlar, oyun kolaylaşırdı.
+
+**İlk sürüm üç kuralda ters ya da boş çıktı** (Dengeli, 8 tohum; bilgili
+vekil 5 günde bir ve savunmasız, yavaş vekil 15 günde bir ve savunmasız):
+- *Fırtınalı yıllar yalnız sıklıkla oyunu kolaylaştırıyordu.* Bilgili
+  vekil 680 yerine ortalama 667. günde kazandı, yavaş vekil 7/8 yerine 5/8
+  düştü. Durgunluk inşaatı %15 ucuzlatıyor; nakdi olan oyuncu bundan
+  büyüyor (Tur 37a'nın tasarımı). Fırtınalı yıllarda bu indirim yok.
+- *Sıkı banka yalnız faiz ve limitle hiçbir şey değiştirmiyordu.* Kredi
+  çekmeyen bilgili vekil gün gün aynı kazandı; azami krediyle büyüyen vekil
+  720. günde %1,6 geride. Kuralın yükü artık açılışta: sermayenin yarısı
+  borç.
+- *Kıt arsa yalnız fiyatla gürültüde kalıyordu.* ×1,4'te bilgili vekil %2
+  geç, ×1,7'de yavaş vekil daha az düştü; arsa toplayan rakipler de
+  yavaşlıyor. İmar takvimi de uzayınca bilgili vekil 8 tohumun hepsinde geç
+  kazanıyor.
+
+**Sonuç** (son ayarla, aynı 8 tohum; zafersiz ya da düşen bilgili koşu ve
+düşmeyen yavaş koşu 1000. gün sayıldı):
+
+| Kural | Bilgili: zafer | Ortalama gün | Yavaş: düşüş | Ortalama gün |
+|---|---|---|---|---|
+| Kural yok | 8/8 | 680 | 7/8 | 842 |
+| Fırtınalı yıllar | 7/8 | 715 (+%5) | 6/8 | 799 (%5 erken) |
+| Aç gözlü rakipler | 8/8 | 672 (−%1) | 8/8 | 735 (%13 erken) |
+| Sıkı banka | 5/8, 1 düşüş | 808 (+%19) | 8/8 | 674 (%20 erken) |
+| Kıt arsa | 8/8 | 725 (+%7) | 7/8 | 829 (%2 erken) |
+| Dördü birden | 6/8, 1 düşüş | 812 (+%19) | 8/8 | 621 (%26 erken) |
+
+- Aç gözlü rakipler bilgili oyuncuyu yavaşlatmıyor; pasif oyuncuyu daha
+  erken ve daha sık avlıyor. Kural "hata affedilmez" demek.
+- Kuralların hiçbiri savunmayı gereksiz kılmıyor ya da zaferi kapatmıyor:
+  dördüyle bilgili vekil 8 tohumun 6'sında kazanıyor.
+
+**Zorluk çarpanı** (`modifierMultiplier`): 1 + kuralların ağırlığı. Ağırlık
+bilgili vekilin gecikmesiyle yavaş vekilin erken düşüşünün ortalaması,
+0,05'e yuvarlanmış: Fırtınalı yıllar 0,05 · Aç gözlü rakipler 0,05 · Sıkı
+banka 0,20 · Kıt arsa 0,05. Dördü ×1,35; birlikte ölçülen ~%23, kurallar
+üst üste binmiyor. Çarpan kurulumda, Hedefler panelinde, zafer ekranında ve
+kariyerin koşu satırında yazıyor.
+
+**Arayüz.**
+- *Kurulum:* "Ek kurallar" dört açma-kapama düğmesi (telefonda iki sütun);
+  seçilenin etkisi kural başına bir satır, altında çarpan. Yalnız serbest
+  şehirde.
+- *Oyun:* Hedefler panelinde ve zafer ekranında "Ek kurallar: … · zorluk
+  ×1,35".
+- *Kariyer:* koşu satırında "2 ek kural ×1,10". İki yeni rozet: Kendi
+  kuralların (Dengeli ya da Acımasız'da en az iki kuralla zafer) ve Dört
+  kural birden (Dengeli ya da Acımasız'da dördüyle zafer). Rozet 28.
+- *Yardım:* "Kuralları sen sertleştir" maddesi.
+- Rozet ipuçları zorluğa "Zor" diyordu, arayüz "Acımasız"; ipuçları
+  düzeldi (İngilizcede "Hard" → "Ruthless").
+
+**Doğrulama.** `pnpm test` 482/482. Yeni `modifiers.test.ts` (13 test):
+- katalog sırası, çarpan, lig ve senaryoda kural yok, kayıttan geri geliyor;
+- kural yokken kademe aynı nesne;
+- her kuralın etkisi: kriz takvimi ve inşaat indirimi, rakip bütçesi ve
+  baskın günü, kurucu kilidi (rakip alıcıya erken, oyuncuya kademenin
+  gününde), açılış kredisi, oyuncuya faiz ve limit (rakibin teklifi aynı),
+  arsa fiyatı ve imar günü;
+- holding'in yeni şehri kuralları devralıyor, açılış kredisi vermiyor.
+
+`career.test.ts`: iki rozetin kuralı ve koşu özetinin kuralları taşıması.
+`i18n.test.ts`: kuralların İngilizcesi eksiksiz.
+
+Denge testine "Zorluk değiştiricileri" bölümü eklendi (7 kontrol, 5 tohum,
+~165 sn): Fırtınalı yıllarda kriz en az 1,5 kat sık (ölçüm 1,2 → 2,9) ve
+yavaş oyuncu daha erken düşüyor; Aç gözlü rakiplerde yavaş oyuncu daha erken
+düşüyor; Sıkı bankada bilgili oyuncu daha geç kazanıyor, yavaş oyuncu daha
+erken düşüyor; Kıt arsada bilgili oyuncu daha geç kazanıyor; dört kuralla
+bilgili oyuncu çoğunlukla kazanıyor ama en az %8 geç, yavaş oyuncu çok daha
+erken düşüyor.
+
+Tarayıcı testine "Ek kurallar: kurulum, oyun, zafer, kariyer" bölümü
+eklendi (6 kontrol):
+- kurulumda dört kural, seçilenin etkisi ve çarpan (×1,10);
+- lig ve senaryo kipinde seçici yok;
+- seçilen kurallar oyunda, Hedefler paneli yazıyor;
+- zafer ekranı kuralları yazıyor, iki kuralla Dengeli zafer "Kendi
+  kuralların"ı açıyor, koşu kuralları taşıyor;
+- telefonda iki satır, taşma yok; İngilizce adlar ve etki;
+- konsol temiz.
+
+Codex #74: Sıkı banka'nın açılış kredisi net değeri düşürüyordu ama değer
+geçmişinin ilk kaydı kasa kadar kalıyordu; şirket panelinde 120 örnek
+boyunca sahte bir ilk tepe. Geçmiş de borçlu değerle açılıyor; test
+düzeltmeden önce kaldı.
+
+Codex #74: Aç gözlü rakipler kurucu rakiplerin kilidini 160'tan 104. güne
+çekiyordu; kilit oyuncunun devralma emrini ve alımını da bekletiyor, yani
+kural oyuncuya 56 gün erken devralma veriyordu. İlk düzeltme kilidi herkes
+için 160'ta tuttu ve ölçüm bozuldu: 104–160 arasında rakipler birbirine
+dokunamayınca bütün baskınlar oyuncuya yığıldı, yavaş vekil 735. yerine
+246. günde düştü, dört kuralla bilgili vekil 5 tohumun 4'ünde düştü (denge
+kontrolü kaldı). Son hâli: kilit rakip alıcılar için 104'te, oyuncu için
+yeni `playerLockedUntilDay` alanıyla 160'ta (`founderLockFor`; hisse alımı,
+devralma emri ve Borsa paneli bunu okuyor). Kural yokken alan yok, sayılar
+aynı. Yeniden ölçüm yukarıdaki tabloyla birebir aynı çıktı: vekiller o
+aralıkta rakip almıyordu. Test düzeltmeden önce kaldı.
+
+Denge testi tam koşu 331/331 (~12,5 dk; yeni bölüm ~200 sn). Tarayıcı tam
+koşu 472/472, konsol hatası yok (~28 dk).
+
 
 ---
 
@@ -4327,11 +4458,11 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi). Senaryo şehirlerinde gün 3–17 ms (`pnpm dayperf`, Tur 43) |
-| Birim testi | **468 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi de) |
-| Denge testi | **324 kontrol, hepsi geçiyor** (24 bölüm, süreleriyle; ~15 dk) |
-| Tarayıcı testi | **466 kontrol, hepsi geçiyor**, 0 konsol hatası (~25–40 dk); duman koşusu 132 (~5 dk, rehber dahil) |
+| Birim testi | **482 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar da) |
+| Denge testi | **331 kontrol, hepsi geçiyor** (25 bölüm, süreleriyle; ~13 dk) |
+| Tarayıcı testi | **472 kontrol, hepsi geçiyor**, 0 konsol hatası (~25–40 dk); duman koşusu 132 (~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + duman oynanışı |
-| Kapsam | 35 bina · 25 ürün · 7 kategori · 8 rakip profili · 10 CEO · 22 olay (11 şehir + 11 sektör) · 2 kriz · 12 karar kartı · 70 rakip sözü · 5 fırsat balonu · 8 görev türü · 4 mevsim · 9 moda ürünü · 17 şehir yapısı (6 siluet) · 6 şehir projesi · 7 senaryo · 26 rozet |
+| Kapsam | 35 bina · 25 ürün · 7 kategori · 8 rakip profili · 10 CEO · 22 olay (11 şehir + 11 sektör) · 2 kriz · 12 karar kartı · 70 rakip sözü · 5 fırsat balonu · 8 görev türü · 4 mevsim · 9 moda ürünü · 17 şehir yapısı (6 siluet) · 6 şehir projesi · 7 senaryo · 4 ek kural · 28 rozet |
 
 ### Render (Tur 6 sonrası)
 

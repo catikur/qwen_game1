@@ -1,10 +1,11 @@
-import { BUILDING_BY_ID, GOALS, SCENARIO_BY_ID, getCitySize, getDifficulty } from '@capital/content';
+import { BUILDING_BY_ID, GOALS, SCENARIO_BY_ID, getCitySize } from '@capital/content';
 import type { GoalDef } from '@capital/content';
 import { tc } from '../i18n';
 import { pushNews } from '../news';
 import { formatMoney } from '../selectors';
 import { sharesOutstanding } from './equity';
 import type { GameState, VictoryKind } from '../types';
+import { difficultyOf } from './rules';
 
 /**
  * Hedef merdiveni ve zafer.
@@ -67,7 +68,7 @@ function bestRivalStake(state: GameState): number {
 
 export function victoryNetWorth(state: GameState): number {
   // Büyük şehirde ekonomi de büyük (Tur 21): eşik şehir boyutuyla ölçekli.
-  return getDifficulty(state.difficulty).victoryNetWorth * getCitySize(state.citySize).victoryScale;
+  return difficultyOf(state).victoryNetWorth * getCitySize(state.citySize).victoryScale;
 }
 
 /**

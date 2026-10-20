@@ -1,5 +1,5 @@
 import { ACHIEVEMENTS, SCENARIOS } from '@capital/content';
-import type { AchievementDef, AchievementFeat, AchievementTotal, CitySizeId, DifficultyId } from '@capital/content';
+import type { AchievementDef, AchievementFeat, AchievementTotal, CitySizeId, DifficultyId, ModifierId } from '@capital/content';
 import { holdingFoundedAt, holdingFounderSize, holdingNetWorth } from './holding';
 import { FEAT_COUNTERS, addTally, cityTally } from './systems/feats';
 import type { CityTally, GameState } from './types';
@@ -35,6 +35,8 @@ export interface RunFacts {
   companyName: string;
   ceoId: string | null;
   difficulty: DifficultyId;
+  /** Ek kurallar (Tur 45); koşunun bütün şehirlerinde aynı. Eski koşularda yok. */
+  modifiers?: ModifierId[];
   /** Kurucu şehrin boyutu. */
   citySize: CitySizeId;
   /** Oynanan şehrin günü. */
@@ -91,6 +93,7 @@ export function runFacts(state: GameState): RunFacts {
     companyName: player?.name ?? '',
     ceoId: player?.ceoId ?? null,
     difficulty: state.difficulty ?? 'normal',
+    ...(state.modifiers?.length ? { modifiers: [...state.modifiers] } : {}),
     // Kurucu şehir kapatıldıysa boyutu holding'de (Codex #70).
     citySize: holdingFounderSize(state),
     day: state.time.day,
@@ -127,6 +130,7 @@ export function isRunScoped(def: AchievementDef): boolean {
 function victoriesIn(def: AchievementDef, run: RunFacts): number {
   const filter = def.victory ?? {};
   if (filter.minDifficulty && DIFFICULTY_RANK[run.difficulty] < DIFFICULTY_RANK[filter.minDifficulty]) return 0;
+  if (filter.minModifiers && (run.modifiers?.length ?? 0) < filter.minModifiers) return 0;
   const matching = run.wins.filter(
     (win) => (filter.maxDay === undefined || win.day < filter.maxDay) && (filter.citySize === undefined || win.citySize === filter.citySize),
   ).length;

@@ -1,4 +1,4 @@
-import { getDifficulty, numberLocale } from '@capital/content';
+import { numberLocale } from '@capital/content';
 import { pushNews } from '../news';
 import { formatMoney } from '../selectors';
 import { tc } from '../i18n';
@@ -6,12 +6,14 @@ import {
   CONTROL_THRESHOLD,
   TOTAL_SHARES,
   buyShares,
+  founderLockFor,
   freeFloat,
   sharePrice,
   sharesHeld,
   sharesOutstanding,
 } from './equity';
 import type { CommandResult, CompanyState, GameState, TakeoverOrder } from '../types';
+import { difficultyOf } from './rules';
 
 /**
  * Günlük alım tavanı ve devralma emri (Tur 20).
@@ -48,7 +50,7 @@ const ORDER_RESERVE_DAYS = 5;
 
 /** Bir şirketin hissesinden bir alıcının bir günde alabileceği en fazla adet. */
 export function dailyBuyCap(state: GameState, issuerId: string): number {
-  const cap = getDifficulty(state.difficulty).raidDailyCap;
+  const cap = difficultyOf(state).raidDailyCap;
   return Math.floor((cap * sharesOutstanding(state, issuerId)) / TOTAL_SHARES);
 }
 
@@ -150,10 +152,11 @@ export function placeTakeoverOrder(state: GameState, buyerId: string, issuerId: 
   if (!buyer || !issuer) return { ok: false, reason: tc('core.orders.unknownCompany') };
   if (buyerId === issuerId) return { ok: false, reason: tc('core.orders.selfOrder') };
   if (findOrder(state, buyerId, issuerId)) return { ok: false, reason: tc('core.orders.duplicate', { name: issuer.name }) };
-  if (issuer.lockedUntilDay !== undefined && state.time.day < issuer.lockedUntilDay) {
+  const lock = founderLockFor(state, issuer, buyerId);
+  if (lock !== undefined && state.time.day < lock) {
     return {
       ok: false,
-      reason: tc('core.orders.founderLock', { name: issuer.name, days: issuer.lockedUntilDay - state.time.day }),
+      reason: tc('core.orders.founderLock', { name: issuer.name, days: lock - state.time.day }),
     };
   }
   const price = sharePrice(state, issuerId);

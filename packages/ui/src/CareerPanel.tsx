@@ -1,6 +1,6 @@
 import { useEffect, useSyncExternalStore } from 'react';
 import type { ReactElement } from 'react';
-import { ACHIEVEMENT_GROUPS, CEO_BY_ID, SCENARIO_BY_ID, getCitySize, getDifficulty, moneyUnits, numberLocale, withCurrency } from '@capital/content';
+import { ACHIEVEMENT_GROUPS, CEO_BY_ID, SCENARIO_BY_ID, formatDecimal, getCitySize, getDifficulty, modifierMultiplier, moneyUnits, numberLocale, withCurrency } from '@capital/content';
 import type { AchievementGroup } from '@capital/content';
 import { formatMoney } from '@capital/core';
 import type { AchievementStatus, GameState } from '@capital/core';
@@ -102,6 +102,10 @@ function RunRow({ run }: { run: CareerRun }): ReactElement {
     ceo ? ceo.name : t('hud.career.noCeo'),
     getDifficulty(run.difficulty).name,
     getCitySize(run.citySize).name,
+    // Ek kurallar (Tur 45): sayısı ve zorluk çarpanı.
+    ...(run.modifiers?.length
+      ? [t('hud.career.rules', { count: run.modifiers.length, value: formatDecimal(modifierMultiplier(run.modifiers), 2) })]
+      : []),
     ...(run.cities > 1 ? [t('hud.career.cities', { count: run.cities })] : []),
   ];
   return (
