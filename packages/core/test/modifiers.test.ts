@@ -99,6 +99,8 @@ describe('zorluk değiştiricileri', () => {
     assert.equal(after.cash, before.cash);
     assert.equal(after.debt, Math.round(before.cash * rules.startingLoanShare));
     assert.equal(after.netWorth, before.cash - after.debt);
+    // Değer geçmişi de borçlu değerle açılıyor; yoksa şirket panelinde sahte bir ilk tepe (Codex #74).
+    assert.deepEqual(after.netWorthHistory, [after.netWorth]);
     const loan = after.credit!.loans[0]!;
     assert.equal(loan.termDays, rules.startingLoanDays);
     assert.ok(Math.abs(loan.rate - (loanRate('A', 'term', rules.startingLoanDays) + rules.rateDelta)) < 1e-12, `${loan.rate}`);

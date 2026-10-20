@@ -116,6 +116,8 @@ export function grantStartingLoan(state: GameState): void {
   });
   company.debt += amount;
   company.netWorth -= amount;
+  // Açılışın değer geçmişi de borçlu değerle: şirket panelinde sahte ilk tepe olmasın (Codex #74).
+  if (company.netWorthHistory.length > 0) company.netWorthHistory[company.netWorthHistory.length - 1] = company.netWorth;
 }
 
 /** Bugünkü faiz gideri (bekleyen dosya masrafı hariç). */
