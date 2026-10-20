@@ -23,6 +23,7 @@ import { t } from './i18n';
 import { ScenarioGoalSection } from './ScenarioScreens';
 import { CareerRunLine, useCareerRevision } from './CareerPanel';
 import { careerSummary } from './career';
+import { ModifierLine } from './ModifierLine';
 
 /** Görevin "şu an / hedef" satırı, görevin kendi biriminde. */
 function questNumbers(state: GameState, board: QuestBoard, quest: QuestState): string {
@@ -173,6 +174,7 @@ export function GoalsPanel(): ReactElement {
           target: formatMoney(victoryNetWorth(state)),
         })}
       </p>
+      <ModifierLine modifiers={state.modifiers} />
       <ol className="goal-list">
         {ladder.map((goal) => {
           const isNext = next?.def.id === goal.def.id;
@@ -259,6 +261,7 @@ export function VictoryScreen({ onNewGame }: { onNewGame: () => void }): ReactEl
               : t('hud.victory.alone'),
           })}
         </p>
+        <ModifierLine modifiers={state.modifiers} />
         <p className="muted">{t('hud.victory.note')}</p>
         <CareerRunLine state={state} />
         <div className="gameover-actions">

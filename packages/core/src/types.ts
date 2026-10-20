@@ -7,6 +7,7 @@ import type {
   DifficultyId,
   DistrictArchetypeId,
   LoanKind,
+  ModifierId,
   MotionKind,
   NpcProfileDef,
   ProjectId,
@@ -800,6 +801,12 @@ export interface GameState {
    * tasarlandığı hâliyle devam eder, şema sürümü sabit.
    */
   difficulty?: DifficultyId;
+  /**
+   * Zorluk değiştiricileri (Tur 45), katalog sırasıyla. Yokluğu "kural yok"
+   * demek; yalnız serbest oyunda, holding'in şehirleri devralıyor. Şema
+   * sürümü sabit.
+   */
+  modifiers?: ModifierId[];
   /** Hedef merdiveni: hedef kimliği → tamamlandığı gün. */
   goals?: Record<string, number>;
   /** Sahneye çıkmış bütün rakip kimlikleri (devralınanlar dahil). */

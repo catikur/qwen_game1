@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { ReactElement } from 'react';
-import { CEOS, CITY_SIZES, DEFAULT_CEO_ID, DEFAULT_CITY_SIZE, DEFAULT_DIFFICULTY, DIFFICULTIES, SCENARIOS, getCitySize, getDifficulty } from '@capital/content';
-import type { CitySizeId, DifficultyId, ScenarioDef } from '@capital/content';
+import { CEOS, CITY_SIZES, DEFAULT_CEO_ID, DEFAULT_CITY_SIZE, DEFAULT_DIFFICULTY, DIFFICULTIES, MODIFIERS, SCENARIOS, formatDecimal, getCitySize, getDifficulty, modifierMultiplier, normalizeModifiers } from '@capital/content';
+import type { CitySizeId, DifficultyId, ModifierId, ScenarioDef } from '@capital/content';
 import { formatMoney, leagueWeekId, scenarioGoalText, scenarioScoreText } from '@capital/core';
 import { CeoPortrait } from './CeoPortrait';
 import { LocalePicker } from './LocalePicker';
@@ -66,6 +66,7 @@ export function NewGameScreen({
     citySize: CitySizeId,
     tutorial: boolean,
     scenarioId: string | null,
+    modifiers: ModifierId[],
   ) => void;
   onCancel?: () => void;
   /** Senaryodan dönen oyuncu listeye düşsün (Tur 39). */
@@ -74,6 +75,10 @@ export function NewGameScreen({
   const [name, setName] = useState('');
   const [ceoId, setCeoId] = useState(DEFAULT_CEO_ID);
   const [difficulty, setDifficulty] = useState<DifficultyId>(DEFAULT_DIFFICULTY);
+  // Ek kurallar (Tur 45): yalnız serbest şehirde, kademenin üstüne.
+  const [modifiers, setModifiers] = useState<ModifierId[]>([]);
+  const toggleModifier = (id: ModifierId) =>
+    setModifiers((current) => normalizeModifiers(current.includes(id) ? current.filter((m) => m !== id) : [...current, id]));
   // Oyun türü: serbest şehir, haftanın tohumu ya da senaryo (Tur 39).
   const [mode, setMode] = useState<'free' | 'league' | 'scenario'>(initialScenario ? 'scenario' : 'free');
   const league = mode === 'league';
@@ -114,6 +119,7 @@ export function NewGameScreen({
       league ? 'standard' : mode === 'scenario' ? scenario.citySize : citySize,
       mode === 'scenario' ? false : tutorial,
       mode === 'scenario' ? scenario.id : null,
+      free ? modifiers : [],
     );
 
   return (
@@ -297,6 +303,49 @@ export function NewGameScreen({
                 <li key={fact}>{fact}</li>
               ))}
             </ul>
+          </div>
+        </div>
+        )}
+
+        {/*
+          Ek kurallar (Tur 45) de görünmez değil: seçilenin etkisi yazıyor,
+          zorluk çarpanı zafer ekranında ve kariyerde.
+        */}
+        {free && (
+        <div className="newgame-field" data-modifiers>
+          <span>{t('hud.newGame.modifiersQuestion')}</span>
+          <div className="modifier-picker" role="group" aria-label={t('hud.newGame.modifiersGroup')}>
+            {MODIFIERS.map((option) => (
+              <button
+                key={option.id}
+                type="button"
+                aria-pressed={modifiers.includes(option.id)}
+                className={`difficulty-option${modifiers.includes(option.id) ? ' selected' : ''}`}
+                data-modifier={option.id}
+                title={option.blurb}
+                onClick={() => toggleModifier(option.id)}
+              >
+                {option.name}
+              </button>
+            ))}
+          </div>
+          <div className="difficulty-detail" data-detail="modifiers">
+            {modifiers.length === 0 ? (
+              <p className="muted">{t('hud.newGame.modifiersNone')}</p>
+            ) : (
+              <>
+                <ul>
+                  {MODIFIERS.filter((option) => modifiers.includes(option.id)).map((option) => (
+                    <li key={option.id} data-modifier-facts={option.id}>
+                      <strong>{option.name}:</strong> {option.facts.join(' · ')}
+                    </li>
+                  ))}
+                </ul>
+                <p className="modifier-multiplier" data-modifier-multiplier>
+                  {t('hud.newGame.modifiersMultiplier', { value: formatDecimal(modifierMultiplier(modifiers), 2) })}
+                </p>
+              </>
+            )}
           </div>
         </div>
         )}

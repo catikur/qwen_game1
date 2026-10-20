@@ -3,7 +3,6 @@ import {
   BUILDING_BY_ID,
   CATEGORIES,
   CONSUMER_CATEGORIES,
-  getDifficulty,
 } from '@capital/content';
 import type { BuildingDef, CategoryId, NpcProfileDef } from '@capital/content';
 import { build, buyTile, buyoutTile, demolish, sellTile } from '../actions';
@@ -30,6 +29,7 @@ import {
 import { npcBorrow } from './credit';
 import { npcDefensiveIssue, npcIssue } from './issuance';
 import type { BuildingInstance, CompanyState, GameState } from '../types';
+import { difficultyOf } from './rules';
 
 /**
  * Rakip yapay zekâsı.
@@ -497,7 +497,7 @@ function actFor(state: GameState, profile: NpcProfileDef): void {
 
   // Zorluk rakibin cesaretini ölçekliyor, nakdini değil: tavan nakdin
   // tamamı — rakip olmayan parayı harcamaz.
-  const nerve = profile.aggression * getDifficulty(state.difficulty).rivalBudgetMultiplier;
+  const nerve = profile.aggression * difficultyOf(state).rivalBudgetMultiplier;
   const budget = company.cash * Math.min(1, nerve);
   const isLandlord = profile.trait === 'landlord';
 
@@ -729,7 +729,7 @@ const RAID_CASH_RESERVE = 320_000;
  */
 function tryRaidMove(state: GameState, profile: NpcProfileDef): void {
   if (state.flags.raids === false) return;
-  const difficulty = getDifficulty(state.difficulty);
+  const difficulty = difficultyOf(state);
   if (state.time.day < difficulty.raidWarmupDays) return;
 
   const raider = state.companies[profile.id];
@@ -880,7 +880,7 @@ function tryBuybackDefense(state: GameState, profile: NpcProfileDef): void {
   const price = sharePrice(state, company.id);
   if (budget <= 0 || price <= 0) return;
 
-  const cap = Math.floor((getDifficulty(state.difficulty).raidDailyCap * outstanding) / TOTAL_SHARES);
+  const cap = Math.floor((difficultyOf(state).raidDailyCap * outstanding) / TOTAL_SHARES);
   const wanted = Math.min(cap, Math.floor(budget / price), freeFloat(state, company.id), toLock);
   if (wanted <= 0) return;
 

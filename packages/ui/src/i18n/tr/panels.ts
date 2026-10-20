@@ -276,6 +276,9 @@ export const panels = {
   'panels.help.step.league.title': 'Tohum Ligi: herkes aynı şehirde.',
   'panels.help.step.league.body':
     " Kurulumda Tohum Ligi'ni seçersen haftanın şehrinde 360 gün oynarsın; şehir ve olaylar herkes için aynı. Skor tekrarla doğrulanır: koşu her tarayıcıda baştan oynanır ve aynı skoru bulmalıdır.",
+  'panels.help.step.modifiers.title': 'Kuralları sen sertleştir.',
+  'panels.help.step.modifiers.body':
+    ' Serbest şehirde kurulumda ek kural seçebilirsin: Fırtınalı yıllar, Aç gözlü rakipler, Sıkı banka, Kıt arsa. Her biri kademenin üstüne eklenir ve etkisi kurulumda yazar; zorluk çarpanı Hedefler panelinde, zafer ekranında ve kariyerde görünür. Tohum Ligi ve senaryolarda ek kural yok.',
   'panels.help.step.career.title': 'Koşuların ötesine bak.',
   'panels.help.step.career.body':
     ' Hedefler panelindeki Kariyer sayfası ve kurulum ekranı rozetlerini ve koşu geçmişini tutar: devralma, kriz, konsorsiyum, meclis, holding, senaryo, lig. Rozet ödül vermez, oyunun her köşesini gösterir. Bu cihazda saklanır.',

@@ -24,7 +24,7 @@ import {
   getCeoModifiers,
   rootStructureOf,
 } from '@capital/content';
-import type { CategoryId } from '@capital/content';
+import type { CategoryId, ModifierId } from '@capital/content';
 import {
   GameEngine,
   buildOptions,
@@ -4788,6 +4788,73 @@ section('Senaryolar III: fetih ve holding', () => {
     h.sharp.won && h.sharp.day > holdingDef.stars.three,
     `${show(h.sharp)} > ${holdingDef.stars.three}`,
   );
+});
+
+section('Zorluk değiştiricileri', () => {
+  /*
+   * Tur 45. Dört ek kural; her biri yazdığını yapıyor (birim testi) ve oyunu
+   * zorlaştırıyor (burası). Dengeli, beş tohum; bilgili vekil 5 günde bir ve
+   * savunmasız, yavaş vekil 15 günde bir ve savunmasız. Zafersiz ya da düşen
+   * bilgili koşu 1000. gün, düşmeyen yavaş koşu 1000. gün sayılıyor.
+   *
+   * Ölçüm (8 tohum, DURUM Tur 45): bilgili vekilin ortalama zaferi 680 →
+   * Fırtınalı yıllar +%5 · Aç gözlü rakipler −%1 · Sıkı banka +%19 · Kıt arsa
+   * +%7 · dördü +%19; yavaş vekilin düşüşü 842 → %5 · %13 · %20 · %2 · %26
+   * erken. İlk sürümde Fırtınalı yıllar oyunu KOLAYLAŞTIRIYORDU (durgunlukta
+   * ucuz inşaat), Sıkı banka kredi çekmeyene dokunmuyordu, Kıt arsa gürültüde
+   * kalıyordu; üçü de ölçümden sonra değişti.
+   */
+  const SEEDS = [1, 7, 42, 202, 3];
+  const FOUR: ModifierId[] = ['storms', 'hungry_rivals', 'tight_credit', 'scarce_land'];
+  type Run = { day: number; won: boolean; fell: boolean; crises: number };
+  function play(seed: number, modifiers: ModifierId[], every: number): Run {
+    const engine = new GameEngine(createNewGame({ seed, difficulty: 'normal', companyName: 'Kural AŞ', modifiers }));
+    const state = engine.getState();
+    let crises = 0;
+    for (let day = 1; day <= 1000; day++) {
+      if (day % every === 0) playerStrategy(engine);
+      const calm = state.crisis === undefined;
+      engine.runDay();
+      if (calm && state.crisis) crises++;
+      // Bilgili ölçüde düşüş kazanamamak (1000. gün); yavaşta düştüğü gün.
+      if (state.gameOver) return { day: every === 5 ? 1000 : day, won: false, fell: true, crises };
+      if (every === 5 && state.victory) return { day: state.victory.day, won: true, fell: false, crises };
+    }
+    return { day: 1000, won: false, fell: false, crises };
+  }
+  const runs = (modifiers: ModifierId[], every: number) => SEEDS.map((seed) => play(seed, modifiers, every));
+  const mean = (list: Run[]) => list.reduce((sum, run) => sum + run.day, 0) / list.length;
+  const line = (list: Run[]) => list.map((run) => (run.won ? `zafer ${run.day}` : run.fell ? 'düştü' : '—')).join(' · ');
+
+  const base = { informed: runs([], 5), slow: runs([], 15) };
+  const storms = runs(['storms'], 15);
+  const hungry = runs(['hungry_rivals'], 15);
+  const tight = { informed: runs(['tight_credit'], 5), slow: runs(['tight_credit'], 15) };
+  const scarce = runs(['scarce_land'], 5);
+  const four = { informed: runs(FOUR, 5), slow: runs(FOUR, 15) };
+  const slowDay = (list: Run[]) => `${falls(list)} · ortalama ${Math.round(mean(list))} < ${Math.round(mean(base.slow))}`;
+  const falls = (list: Run[]) => list.map((run) => (run.fell ? run.day : '—')).join(' · ');
+  console.log(`  kuralsız   · bilgili ${line(base.informed)} | yavaş ${falls(base.slow)}`);
+
+  const crisesBase = base.slow.reduce((sum, run) => sum + run.crises, 0) / base.slow.reduce((sum, run) => sum + run.day, 0);
+  const crisesStorm = storms.reduce((sum, run) => sum + run.crises, 0) / storms.reduce((sum, run) => sum + run.day, 0);
+  expect('Fırtınalı yıllar: krizler en az 1,5 kat sık', crisesStorm >= 1.5 * crisesBase,
+    `bin günde ${(crisesBase * 1000).toFixed(1)} → ${(crisesStorm * 1000).toFixed(1)} kriz`);
+  expect('Fırtınalı yıllar: savunmasız yavaş oyuncu daha erken düşüyor', mean(storms) < mean(base.slow) - 40, slowDay(storms));
+  expect('Aç gözlü rakipler: savunmasız yavaş oyuncu daha erken düşüyor', mean(hungry) < mean(base.slow) - 40, slowDay(hungry));
+  expect(
+    'Sıkı banka: bilgili oyuncu daha geç kazanıyor ya da kazanamıyor, yavaş oyuncu daha erken düşüyor',
+    mean(tight.informed) > mean(base.informed) * 1.05 && mean(tight.slow) < mean(base.slow) - 60,
+    `bilgili ${line(tight.informed)} · ${slowDay(tight.slow)}`,
+  );
+  expect('Kıt arsa: bilgili oyuncu daha geç kazanıyor', mean(scarce) > mean(base.informed) * 1.03,
+    `${line(scarce)} · ortalama ${Math.round(mean(scarce))} > ${Math.round(mean(base.informed))}`);
+  expect(
+    'Dört kural: bilgili oyuncu çoğunlukla yine kazanıyor ama en az %8 geç',
+    four.informed.filter((run) => run.won).length >= 3 && mean(four.informed) > mean(base.informed) * 1.08,
+    `${line(four.informed)} · ortalama ${Math.round(mean(four.informed))}`,
+  );
+  expect('Dört kural: savunmasız yavaş oyuncu çok daha erken düşüyor', mean(four.slow) < mean(base.slow) - 150, slowDay(four.slow));
 });
 
 if (timings.length === 0) {

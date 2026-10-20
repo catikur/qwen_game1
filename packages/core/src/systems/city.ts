@@ -1,8 +1,10 @@
 import { withBuildingIndex } from './buildingIndex';
+import { hasRule } from './rules';
 import {
   BUILDING_BY_ID,
   COUNCIL,
   DISTRICT_ARCHETYPES,
+  MODIFIER_RULES,
   STRUCTURE_BY_ID,
   getCeoModifiers,
 } from '@capital/content';
@@ -203,6 +205,8 @@ export function tilePrice(state: GameState, tileId: number, companyId?: string):
 
   const company = companyId ? state.companies[companyId] : undefined;
   price *= getCeoModifiers(company?.ceoId ?? null).landCost;
+  // Kıt arsa kuralı (Tur 45): satın alma fiyatı herkese; arsanın defter değeri aynı.
+  if (hasRule(state, 'scarce_land')) price *= MODIFIER_RULES.scarceLand.priceMultiplier;
 
   return Math.round(price);
 }

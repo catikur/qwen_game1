@@ -235,6 +235,8 @@ export function foundCity(state: GameState, citySize: CitySizeId, amount: number
     seed: citySeed(seed, opened),
     citySize,
     ...(state.difficulty ? { difficulty: state.difficulty } : {}),
+    // Değiştiriciler koşunun kuralı: holding'in bütün şehirlerinde aynı (Tur 45).
+    ...(state.modifiers ? { modifiers: state.modifiers } : {}),
     companyName: player.name,
     ceoId: player.ceoId,
     startingCash: amount,

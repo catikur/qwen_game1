@@ -9,16 +9,20 @@ import {
   NPC_PROFILES,
   STRUCTURE_BY_ID,
   getCeoModifiers,
+  MODIFIER_RULES,
+  difficultyWith,
   getCitySize,
-  getDifficulty,
+  hasModifier,
+  normalizeModifiers,
   rootStructureOf,
 } from '@capital/content';
-import type { CategoryId, CitySizeId, DifficultyId, DistrictArchetypeId } from '@capital/content';
+import type { CategoryId, CitySizeId, DifficultyId, DistrictArchetypeId, ModifierId } from '@capital/content';
 import { tc } from './i18n';
 import { createRng, nextRange, pickWeighted } from './rng';
 import { LEAGUE_DAYS, leagueSeed } from './systems/league';
 import { referenceVolumes, seedSpotPrices, zeroByGood } from './systems/supply';
 import { zeroByCategory } from './systems/demand';
+import { grantStartingLoan } from './systems/credit';
 import { SCHEMA_VERSION } from './types';
 import type { CompanyState, DistrictState, GameState, MarketState, Tile, TileKind } from './types';
 
@@ -183,6 +187,11 @@ export interface NewGameOptions {
   /** Zorluk kademesi; varsayılan Dengeli (alan state'e yazılmaz). */
   difficulty?: DifficultyId;
   /**
+   * Zorluk değiştiricileri (Tur 45). Lig koşusunda yok sayılır: herkes
+   * aynı kurallarla. Senaryo kurulumu bu seçeneği hiç vermiyor.
+   */
+  modifiers?: readonly ModifierId[];
+  /**
    * Tohum Ligi koşusu: tohum haftadan türer, zorluk Dengeli'ye sabitlenir
    * ve oyuncunun komutları günlüğe yazılır. Verilen `seed`/`difficulty`
    * yok sayılır — herkes aynı şehirde oynamalı.
@@ -205,8 +214,13 @@ export function rivalSlotsFor(plotCapacity: number): number {
 
 export function createNewGame(input: NewGameOptions = {}): GameState {
   const options: NewGameOptions = input.league
-    ? { ...input, seed: leagueSeed(input.league.weekId), difficulty: 'normal' }
+    ? { ...input, seed: leagueSeed(input.league.weekId), difficulty: 'normal', modifiers: [] }
     : input;
+  const modifiers = normalizeModifiers(options.modifiers);
+  const rules = difficultyWith(options.difficulty, modifiers);
+  // Kıt arsa (Tur 45): kilitli bölgeler daha geç imara açılıyor.
+  const unlockScale = hasModifier(modifiers, 'scarce_land') ? MODIFIER_RULES.scarceLand.unlockDelay : 1;
+  const unlockDay = (day: number): number => Math.round(day * unlockScale);
   const seed = options.seed ?? Math.floor(Math.random() * 2 ** 31);
   const rng = createRng(seed);
   const ceoId = options.ceoId ?? null;
@@ -274,7 +288,7 @@ export function createNewGame(input: NewGameOptions = {}): GameState {
     }
     const perWave = Math.ceil(ring.length / DISTRICT_UNLOCK_DAYS.length);
     ring.forEach((districtId, index) => {
-      districts[districtId]!.opensOnDay = DISTRICT_UNLOCK_DAYS[Math.floor(index / perWave)]!;
+      districts[districtId]!.opensOnDay = unlockDay(DISTRICT_UNLOCK_DAYS[Math.floor(index / perWave)]!);
       lockedDistricts.add(districtId);
     });
   } else if ((options.districtUnlocks ?? true) && rows >= 3 && cols >= 3) {
@@ -285,7 +299,7 @@ export function createNewGame(input: NewGameOptions = {}): GameState {
       [corners[i], corners[j]] = [corners[j]!, corners[i]!];
     }
     corners.forEach((districtId, index) => {
-      districts[districtId]!.opensOnDay = DISTRICT_UNLOCK_DAYS[index]!;
+      districts[districtId]!.opensOnDay = unlockDay(DISTRICT_UNLOCK_DAYS[index]!);
       lockedDistricts.add(districtId);
     });
   }
@@ -391,7 +405,7 @@ export function createNewGame(input: NewGameOptions = {}): GameState {
     options.companyName?.trim() || tc('core.worldgen.defaultCompanyName'),
     true,
     '#4cc9f0',
-    options.startingCash ?? Math.round(STARTING_CASH * ceo.startingCash * getDifficulty(options.difficulty).startingCashMultiplier),
+    options.startingCash ?? Math.round(STARTING_CASH * ceo.startingCash * rules.startingCashMultiplier),
     null,
     ceoId,
     Math.max(ceo.startingBrand, options.startingBrand ?? 0),
@@ -434,10 +448,10 @@ export function createNewGame(input: NewGameOptions = {}): GameState {
      * bir vekil Kilit Market'i 5. günde devralıp tekel zaferine 130–235.
      * günde ulaşıyordu. Sonradan gelen rakiplerin kilidi zaten vardı.
      */
-    companies[profile.id]!.lockedUntilDay = getDifficulty(options.difficulty).raidWarmupDays;
+    companies[profile.id]!.lockedUntilDay = rules.raidWarmupDays;
   }
 
-  return {
+  const state: GameState = {
     meta: {
       schemaVersion: SCHEMA_VERSION,
       contentVersion: CONTENT_VERSION,
@@ -488,5 +502,9 @@ export function createNewGame(input: NewGameOptions = {}): GameState {
       : {}),
     // Dengeli kayıt alanı taşımaz: yokluğu zaten Dengeli demek.
     ...(options.difficulty && options.difficulty !== 'normal' ? { difficulty: options.difficulty } : {}),
+    ...(modifiers.length > 0 ? { modifiers } : {}),
   };
+  // Sıkı banka (Tur 45): sermayenin yarısı bankadan, yalnız kurucu şehirde.
+  if (!options.startingCash) grantStartingLoan(state);
+  return state;
 }

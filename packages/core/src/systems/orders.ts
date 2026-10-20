@@ -1,4 +1,4 @@
-import { getDifficulty, numberLocale } from '@capital/content';
+import { numberLocale } from '@capital/content';
 import { pushNews } from '../news';
 import { formatMoney } from '../selectors';
 import { tc } from '../i18n';
@@ -12,6 +12,7 @@ import {
   sharesOutstanding,
 } from './equity';
 import type { CommandResult, CompanyState, GameState, TakeoverOrder } from '../types';
+import { difficultyOf } from './rules';
 
 /**
  * Günlük alım tavanı ve devralma emri (Tur 20).
@@ -48,7 +49,7 @@ const ORDER_RESERVE_DAYS = 5;
 
 /** Bir şirketin hissesinden bir alıcının bir günde alabileceği en fazla adet. */
 export function dailyBuyCap(state: GameState, issuerId: string): number {
-  const cap = getDifficulty(state.difficulty).raidDailyCap;
+  const cap = difficultyOf(state).raidDailyCap;
   return Math.floor((cap * sharesOutstanding(state, issuerId)) / TOTAL_SHARES);
 }
 

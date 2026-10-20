@@ -1,4 +1,4 @@
-import { CRISES, CRISIS_BY_ID, CRISIS_TIMING, LATE_COSTS } from '@capital/content';
+import { CRISES, CRISIS_BY_ID, CRISIS_TIMING, LATE_COSTS, MODIFIER_RULES } from '@capital/content';
 import type { CrisisDef } from '@capital/content';
 import { pushNews } from '../news';
 import { createRng, nextFloat, pickWeighted } from '../rng';
@@ -6,6 +6,7 @@ import type { CompanyState, GameState } from '../types';
 import { ownerFraction } from './equity';
 import { noteFeat } from './feats';
 import { rivalCrisisReaction } from './rivalry';
+import { hasRule } from './rules';
 
 /**
  * Geç oyun giderleri ve krizler (Tur 37a) — gerekçe ve ölçüm
@@ -107,9 +108,10 @@ export function macroRateDelta(state: GameState): number {
   return activeCrisis(state)?.effects.rateDelta ?? 0;
 }
 
-/** İnşaat maliyetine kriz çarpanı. */
+/** İnşaat maliyetine kriz çarpanı. Fırtınalı yıllar kuralında indirim yok (Tur 45). */
 export function crisisBuildMultiplier(state: GameState): number {
-  return activeCrisis(state)?.effects.buildCost ?? 1;
+  const multiplier = activeCrisis(state)?.effects.buildCost ?? 1;
+  return multiplier < 1 && hasRule(state, 'storms') && !MODIFIER_RULES.storms.buildDiscount ? 1 : multiplier;
 }
 
 /**
@@ -119,6 +121,11 @@ export function crisisBuildMultiplier(state: GameState): number {
  */
 function crisisDice(state: GameState, salt: number): ReturnType<typeof createRng> {
   return createRng(((state.meta.seed ^ 0x2c1b3c6d) ^ Math.imul(salt, 0x9e3779b1)) >>> 0);
+}
+
+/** Kriz takvimi; Fırtınalı yıllar kuralında yarısı (Tur 45). */
+function crisisTiming(state: GameState): { firstDay: number; firstSpread: number; gapDays: readonly [number, number] } {
+  return hasRule(state, 'storms') ? MODIFIER_RULES.storms : CRISIS_TIMING;
 }
 
 function rangeFrom(dice: ReturnType<typeof createRng>, [min, max]: readonly [number, number]): number {
@@ -157,14 +164,14 @@ export function runCrisisTick(state: GameState): void {
         if (state.feats?.crisisWorth !== undefined && player.netWorth > state.feats.crisisWorth) noteFeat(state, 'crisesGrown');
         delete state.feats!.crisisWorth;
       }
-      state.nextCrisisDay = day + rangeFrom(crisisDice(state, day), CRISIS_TIMING.gapDays);
+      state.nextCrisisDay = day + rangeFrom(crisisDice(state, day), crisisTiming(state).gapDays);
       if (def) pushNews(state, 'good', def.endTitle, def.endBody);
     }
     return;
   }
 
-  state.nextCrisisDay ??=
-    CRISIS_TIMING.firstDay + Math.floor(nextFloat(crisisDice(state, 1)) * (CRISIS_TIMING.firstSpread + 1));
+  const timing = crisisTiming(state);
+  state.nextCrisisDay ??= timing.firstDay + Math.floor(nextFloat(crisisDice(state, 1)) * (timing.firstSpread + 1));
   if (day < state.nextCrisisDay) return;
 
   const dice = crisisDice(state, day);

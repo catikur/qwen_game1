@@ -280,6 +280,9 @@ export const panels: Record<keyof typeof trPanels, string> = {
   'panels.help.step.league.title': 'Seed League: everyone in the same city.',
   'panels.help.step.league.body':
     " Pick the Seed League at setup to play this week's city for 360 days; the city and its events are the same for everyone. Scores are verified by replay: the run is played again from the start in every browser and must reach the same score.",
+  'panels.help.step.modifiers.title': 'Make the rules harder yourself.',
+  'panels.help.step.modifiers.body':
+    ' In a free-play city you can pick extra rules at setup: Stormy years, Hungry rivals, Tight bank, Scarce land. Each is added on top of the difficulty and its effect is spelled out at setup; the difficulty multiplier shows in the Goals panel, on the victory screen and in your career. The Seed League and scenarios have no extra rules.',
   'panels.help.step.career.title': 'Look beyond a single run.',
   'panels.help.step.career.body':
     ' The Career page in the Goals panel and on the setup screen keeps your badges and run history: takeovers, crises, consortiums, the council, holdings, scenarios, the league. Badges give no reward; they point you to every corner of the game. They are kept on this device.',

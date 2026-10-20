@@ -1259,6 +1259,7 @@ const HELP_STEPS = [
   'consortium',
   'scenario',
   'league',
+  'modifiers',
   'career',
 ] as const;
 
