@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react';
-import { availableLocales, currentLocale, onLocaleChange, setLocale } from '@capital/content';
+import { availableLocales, currentLocale, loadLocale, onLocaleChange, setLocale } from '@capital/content';
 
 /**
  * Dil seçimi (Tur 23).
@@ -36,8 +36,12 @@ function applyDocumentLang(locale: string): void {
   if (typeof document !== 'undefined') document.documentElement.lang = locale;
 }
 
-/** Açılışta bir kez: adres parametresi, sonra hatırlanan seçim. */
-export function initLocale(): void {
+/**
+ * Açılışta bir kez, ilk çizimden önce: adres parametresi, sonra hatırlanan
+ * seçim. Türkçe dışı dilin sözlüğü ayrı parçada (Tur 46); çizim onu
+ * bekliyor. İnmezse oyun Türkçe açılıyor, açılış durmuyor.
+ */
+export async function initLocale(): Promise<void> {
   if (typeof window === 'undefined') return;
   let wanted: string | null = null;
   try {
@@ -46,15 +50,30 @@ export function initLocale(): void {
     wanted = null;
   }
   wanted ??= readStored();
-  if (wanted && availableLocales().includes(wanted)) setLocale(wanted);
+  if (wanted && availableLocales().includes(wanted)) {
+    try {
+      if (await loadLocale(wanted)) setLocale(wanted);
+    } catch {
+      /* sözlük inmedi: Türkçe */
+    }
+  }
   applyDocumentLang(currentLocale());
 }
 
-/** Kullanıcının seçimi: etkin dil değişir ve hatırlanır. */
-export function chooseLocale(locale: string): void {
-  if (!setLocale(locale)) return;
+/**
+ * Kullanıcının seçimi: sözlük iner, etkin dil değişir ve hatırlanır.
+ * İnmezse dil değişmiyor; sonuç `false`.
+ */
+export async function chooseLocale(locale: string): Promise<boolean> {
+  try {
+    if (!(await loadLocale(locale))) return false;
+  } catch {
+    return false;
+  }
+  if (!setLocale(locale)) return false;
   writeStored(locale);
   applyDocumentLang(locale);
+  return true;
 }
 
 /** Etkin dil; değişince bileşeni yeniden çizer. Uygulama kökünde bir kez yeter. */

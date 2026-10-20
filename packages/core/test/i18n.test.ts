@@ -1,4 +1,4 @@
-import { afterEach, describe, test } from 'node:test';
+import { afterEach, before, describe, test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   ALL_EVENTS,
@@ -28,6 +28,9 @@ import {
   ACHIEVEMENTS,
   QUESTS,
   RIVAL_LINES,
+  availableLocales,
+  loadLocale,
+  registerLocaleLoader,
   registerMessages,
   SEASONS,
   setLocale,
@@ -98,6 +101,11 @@ function play(locale: string, days: number): GameEngine {
   return engine;
 }
 
+// İngilizce sözlükler dil seçilince iniyor (Tur 46); testler önce indiriyor.
+before(async () => {
+  assert.equal(await loadLocale('en'), true);
+});
+
 afterEach(() => {
   setLocale('tr');
 });
@@ -115,6 +123,36 @@ describe('sözlük motoru', () => {
     registerMessages('en', { 'test.partial': '{a} and {b}' });
     setLocale('en');
     assert.equal(translate('test.partial', { a: 1 }), '1 and {b}');
+  });
+
+  test('sonradan yüklenen dil: seçilebilir görünüyor, inmeden geçilmiyor, bir kez iniyor (Tur 46)', async () => {
+    let calls = 0;
+    registerLocaleLoader('xa', async () => {
+      calls++;
+      registerMessages('xa', { 'test.late': 'geç geldi' });
+    });
+    assert.ok(availableLocales().includes('xa'), 'seçicide görünüyor');
+    assert.equal(setLocale('xa'), false, 'sözlük inmeden geçilmiyor');
+    const [first, second] = await Promise.all([loadLocale('xa'), loadLocale('xa')]);
+    assert.equal(first && second, true);
+    assert.equal(await loadLocale('xa'), true);
+    assert.equal(calls, 1, 'aynı anda iki istek de tek indirme');
+    assert.equal(setLocale('xa'), true);
+    assert.equal(translate('test.late'), 'geç geldi');
+  });
+
+  test('sonradan yüklenen dil inmezse hata dönüyor, sonraki çağrı yeniden deniyor (Tur 46)', async () => {
+    let fail = true;
+    registerLocaleLoader('xb', async () => {
+      if (fail) throw new Error('ağ yok');
+      registerMessages('xb', { 'test.retry': 'ikinci denemede' });
+    });
+    await assert.rejects(loadLocale('xb'));
+    assert.equal(setLocale('xb'), false);
+    fail = false;
+    assert.equal(await loadLocale('xb'), true);
+    assert.equal(setLocale('xb'), true);
+    assert.equal(translate('test.retry'), 'ikinci denemede');
   });
 
   test('kayıtlı olmayan dile geçilmez', () => {

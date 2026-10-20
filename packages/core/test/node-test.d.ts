@@ -11,6 +11,7 @@ declare module 'node:test' {
   export function test(name: string, fn: TestFn): void;
   export function describe(name: string, fn: () => void): void;
   export function afterEach(fn: TestFn): void;
+  export function before(fn: TestFn): void;
   export default test;
 }
 
@@ -23,6 +24,7 @@ declare module 'node:assert/strict' {
     deepEqual<T>(actual: unknown, expected: T, message?: string): asserts actual is T;
     notDeepEqual(actual: unknown, expected: unknown, message?: string): void;
     match(value: string, pattern: RegExp, message?: string): void;
+    rejects(promise: Promise<unknown>, message?: string): Promise<void>;
     fail(message?: string): never;
   }
   const assert: Assert;

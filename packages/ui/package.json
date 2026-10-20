@@ -9,6 +9,10 @@
     ".": "./src/index.ts",
     "./styles.css": "./src/styles.css"
   },
+  "sideEffects": [
+    "*.css",
+    "./src/i18n/index.ts"
+  ],
   "dependencies": {
     "@capital/core": "workspace:*",
     "@capital/content": "workspace:*",

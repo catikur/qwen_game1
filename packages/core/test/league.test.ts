@@ -1,4 +1,4 @@
-import { describe, test } from 'node:test';
+import { before, describe, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { GameEngine } from '../src/engine';
 import {
@@ -16,7 +16,7 @@ import {
   verifyRun,
 } from '../src/league';
 import type { LeagueRun, RunVerdict } from '../src/league';
-import { BUBBLE_TIMING, CONSORTIUM, FAD, PROJECTS, PROJECT_BY_ID, PROJECT_TIMING, setLocale } from '@capital/content';
+import { BUBBLE_TIMING, CONSORTIUM, FAD, PROJECTS, PROJECT_BY_ID, PROJECT_TIMING, loadLocale, setLocale } from '@capital/content';
 import { LEAGUE_DAYS, leagueSeed, leagueWeekId } from '../src/systems/league';
 import { createNewGame } from '../src/worldgen';
 import type { GameState } from '../src/types';
@@ -37,6 +37,11 @@ function playLeague(options: { reloadAt?: number; cheatAt?: number } = {}): Game
   }
   return engine.getState();
 }
+
+// İngilizce sözlük dil seçilince iniyor (Tur 46).
+before(async () => {
+  assert.equal(await loadLocale('en'), true);
+});
 
 describe('lig takvimi', () => {
   test('ISO hafta kimliği', () => {

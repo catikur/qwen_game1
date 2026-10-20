@@ -4,6 +4,8 @@ export const app = {
   'app.boot.loading': 'Şehir hazırlanıyor…',
   'app.boot.migrated': 'Kayıt v{version} sürümünden taşındı.',
   'app.boot.resumed': 'Kaldığın yerden devam.',
+  'app.boot.failed': 'Oyun dosyaları inmedi. Bağlantını kontrol edip sayfayı yenile.',
+  'app.boot.reload': 'Yenile',
   'app.save.saved': 'Slot {slot} kaydedildi.',
   'app.save.failed': 'Kayıt başarısız: {message}',
   'app.load.migrated': 'Yüklendi (v{version} → güncel şema).',

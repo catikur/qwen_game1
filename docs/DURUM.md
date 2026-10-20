@@ -4,7 +4,7 @@
 > `pnpm bench` çıktısından; iddialar `pnpm balance` ve `pnpm playtest`
 > tarafından her koşuda doğrulanıyor.
 >
-> Son güncelleme: şema **v6**, 45 tur (Tur 33 denendi ve geri alındı; Tur 34 eski görünüme canlılık ekledi; Tur 35 arayüzü Lite'ın "Cam & Bulut" diline taşıdı; Tur 36 şehre ayrıntı kattı; Tur 37a geç oyuna yönetim yükü, servet vergisi ve kriz dönemleri getirdi; Tur 37b karar kartlarını ve rakip hikâyelerini ekledi; Tur 37c fırsat balonlarını ve aylık görev panosunu getirdi; Tur 37d canlı pazarı, şehir projesi ihalesini ve rakip konsorsiyumunu getirdi; Tur 38 değerlendirme turuydu: geç oyun hızı, gündem ve haber akışı, zorluk eğrisi; Tur 39a senaryo modunu getirdi: Kurtarma ve Krizin ortasında; Tur 39b Konsorsiyuma karşı, Zincir ustası ve Şehrin sponsoru senaryolarını ekledi; Tur 39c Büyük şehir fethi ve Holding: iki şehir ile listeyi yediye tamamladı; Tur 40 cila ve performans; Tur 41 başarımlar ve kariyer; Tur 42 açılışta gölgelendirici derlemesi; Tur 43 oyun içi akıcılık; Tur 44 değerlendirme turuydu: Türkçe sayı biçimi, yardımın kapsamı, haber akışı; Tur 45 dört ek kural getirdi: Fırtınalı yıllar, Aç gözlü rakipler, Sıkı banka, Kıt arsa).
+> Son güncelleme: şema **v6**, 46 tur (Tur 33 denendi ve geri alındı; Tur 34 eski görünüme canlılık ekledi; Tur 35 arayüzü Lite'ın "Cam & Bulut" diline taşıdı; Tur 36 şehre ayrıntı kattı; Tur 37a geç oyuna yönetim yükü, servet vergisi ve kriz dönemleri getirdi; Tur 37b karar kartlarını ve rakip hikâyelerini ekledi; Tur 37c fırsat balonlarını ve aylık görev panosunu getirdi; Tur 37d canlı pazarı, şehir projesi ihalesini ve rakip konsorsiyumunu getirdi; Tur 38 değerlendirme turuydu: geç oyun hızı, gündem ve haber akışı, zorluk eğrisi; Tur 39a senaryo modunu getirdi: Kurtarma ve Krizin ortasında; Tur 39b Konsorsiyuma karşı, Zincir ustası ve Şehrin sponsoru senaryolarını ekledi; Tur 39c Büyük şehir fethi ve Holding: iki şehir ile listeyi yediye tamamladı; Tur 40 cila ve performans; Tur 41 başarımlar ve kariyer; Tur 42 açılışta gölgelendirici derlemesi; Tur 43 oyun içi akıcılık; Tur 44 değerlendirme turuydu: Türkçe sayı biçimi, yardımın kapsamı, haber akışı; Tur 45 dört ek kural getirdi: Fırtınalı yıllar, Aç gözlü rakipler, Sıkı banka, Kıt arsa; Tur 46 açılış paketini böldü: kurulum ekranı telefonda yarı sürede).
 
 ---
 
@@ -4376,6 +4376,116 @@ aralıkta rakip almıyordu. Test düzeltmeden önce kaldı.
 Denge testi tam koşu 331/331 (~12,5 dk; yeni bölüm ~200 sn). Tarayıcı tam
 koşu 472/472, konsol hatası yok (~28 dk).
 
+### Tur 46 — Açılış paketi: kod bölme
+
+Kullanıcı "Açılış paketi: kod bölme"yi seçti. Tur 42 ve 43 gölgelendirici
+derlemesine ve oyun içi kareye bakmıştı. Bu tur kurulum ekranı görünmeden
+önce inen ve çözülen koda baktı.
+
+**Ölçüm.** Yerel sunucu dosyaları gzip'li veriyor (Pages gibi), her koşu
+boş önbellekle. İki profil var:
+- masaüstü: 1280×860, kısıtsız;
+- telefon: 390×844, yavaş 4G (1,6 Mbit/sn, 150 ms gecikme), işlemci 4× yavaş.
+
+Değerler üç koşunun ortancası; betik oturumun karalama alanında.
+
+Önce, kurulum ekranından önce inen 517 KB (gzip):
+
+| Parça | gzip | İçinde |
+|---|---|---|
+| Ana parça | 240 KB | çekirdek, arayüz, içerik (ham 786 KB; %31'i iki dilin sözlükleri) |
+| three | 133 KB | şehir sahnesi — kurulumda gerekmiyor |
+| CSS | 85 KB | 72 KB'ı gömülü yazı tipi |
+| react | 59 KB | |
+
+Telefonda kurulum ekranının 3,3 saniyesi neredeyse tamamen indirme.
+
+**Bölme.**
+- *Oyun ekranı ayrı parça.* `apps/web/src/GameRoot.tsx` şehir sahnesini
+  (three), HUD'u, panelleri, sesi ve simülasyon motorunu taşıyor.
+  `App.tsx`'te yalnız açılış akışı ve kurulum ekranı kaldı. Oyun parçası
+  açılışın ilk anında isteniyor: ne kayıtla dönen oyuncu ne de kurulumu
+  dolduran yeni oyuncu bekliyor.
+- *İngilizce sözlük ayrı parça.*
+  - Üç paketin İngilizcesi (151 KB ham) dil seçilince iniyor. Motorun yeni
+    işlevleri `registerLocaleLoader` ve `loadLocale` (`content/messages.ts`).
+  - `?lang=en` ya da hatırlanan İngilizce ilk çizimden önce iniyor; Türkçe
+    kurulum bir an bile görünmüyor.
+  - Dil seçici dili sözlük inince değiştiriyor.
+- *Kurulumun yolundaki ağır içe aktarmalar.* Kurulum ekranı çekirdekten
+  yalnız küçük yardımcılar alıyordu, ama yardımcılar ağır modüllerde
+  duruyordu. Rollup bir modülü bölemediği için o modülün bağımlılıklarının
+  hepsi ana parçaya geliyordu. Örneğin `formatMoney` seçicilerdeydi;
+  seçiciler yatırım tahmini üzerinden pazarı ve simülasyonun çoğunu içe
+  aktarıyor.
+  - Hafif modüllere taşınanlar:
+    - para biçimi (`format.ts`);
+    - senaryo yıldızı ve metinleri (`scenarioText.ts`);
+    - lig haftası (`leagueWeek.ts`);
+    - holding değeri (`holdingFacts.ts`);
+    - kayıt taşımanın boş sözlükleri (`defaults.ts`);
+    - arayüzün yıldız gösterimi (`stars.ts`) ve rehber deposu (`tutorialStore.ts`).
+  - Eski modüller aynı adları yeniden dışa aktarıyor; davranış aynı.
+  - Paketler yan etkili dosyalarını bildiriyor (`sideEffects`): üç sözlük
+    kaydı, içeriğin dil yükleyicisi ve CSS. Bildirim olmadan ana parça
+    104 KB, bildirimle 58 KB.
+  - Başka modülün verisine dokunan üst düzey kod arandı, yok. `localizeList`
+    yalnız kendi kataloğunu, `market.ts`'teki döngü kendi önbelleğini kuruyor.
+- *Yazı tipleri ayrı dosya, önden yükleniyor.*
+  - `tools/make-cam-fonts.py` woff2'leri `packages/ui/src/fonts/` altına
+    yazıyor; dosyalar eski gömülülerle bayt bayt aynı. CSS onlara bağlı.
+  - Vite eklentisi (`apps/web/vite.config.ts`) beşini `index.html`'de
+    önden yüklüyor; kurulum ekranı beşini de kullanıyor. Tek dosyalık
+    pakette Vite yine CSS'e gömüyor.
+  - Deney (telefon): önden yüklemesiz ayrı dosya kurulumu 1338 ms'ye
+    indiriyordu, ama ekran ~600 ms yedek yazı tipiyle açılıp sonra
+    kayıyordu. Önden yüklemeyle ekran ilk çizimde doğru yazı tipiyle
+    geliyor. Ayrıca CSS'in değiştiği her yayında 72 KB yeniden inmiyor.
+- *Oyun parçası inmezse.* Yayından sonra açık kalmış eski sayfa eski
+  parçayı bulamaz. Kurulum ekranı yine açılıyor; başlatınca "Oyun
+  dosyaları inmedi…" mesajı ve Yenile düğmesi geliyor.
+
+**Sonra** (aynı oturum, aynı betik):
+
+| | Telefon: önce | Telefon: sonra | Masaüstü: önce | Masaüstü: sonra |
+|---|---|---|---|---|
+| Kurulum ekranı | 3293 ms | **1658 ms** | 132 ms | 126 ms |
+| Yazı tipleri hazır | 3345 ms | 1658 ms (ilk çizimde) | — | — |
+| Kurulumdan önce inen | 517 KB | 202 KB (yazı tipleri dahil) | | |
+| Şirketi kur → ilk şehir karesi | 2097–2477 ms | 2073 ms | 1522 ms | 1490 ms |
+| Kayıtla dönüş → ilk şehir karesi | 5348 ms | 5315 ms | 1567 ms | 1555 ms |
+
+Kurulumun yolu (gzip, yazı tipleri hariç) 517 KB'tan 128 KB'a, ana parça
+246 KB'tan 56 KB'a indi. Dönen oyuncu yine her şeyi indiriyor; tek
+kazancı İngilizcenin düşmesi (476 KB), süre aynı. Masaüstündeki fark
+ölçüm gürültüsünün içinde.
+
+**Doğrulama.**
+- `pnpm test` 484/484. `i18n.test.ts`'e iki yeni test:
+  - sonradan yüklenen dil seçicide görünüyor, inmeden geçilmiyor, aynı
+    anda iki istek tek indirme oluyor;
+  - dil inmezse hata dönüyor, sonraki çağrı yeniden deniyor.
+  - İngilizceyi kullanan testler sözlüğü önce indiriyor.
+- Yeni `tools/bundle-check.mjs` CI'da derlemeden sonra çalışıyor:
+  - kurulumun yolunda three, oyun ekranı ve İngilizce yok;
+  - yol 160 KB'ın, ana parça 75 KB'ın altında;
+  - yazı tipleri gömülü değil, her biri önden yükleniyor;
+  - oyun ekranı ve İngilizce ayrı parça.
+  - Eski pakette altı kontrolün altısı da kalıyor.
+- Tarayıcı testine "Açılış paketi: geç parçalar" bölümü eklendi (6 kontrol):
+  - Türkçe açılış İngilizceyi indirmiyor; oyun ekranı ve three kurulum
+    açıkken iniyor;
+  - İngilizce tek parça olarak iniyor;
+  - `?lang=en` ile ilk çizim İngilizce;
+  - oyun parçası inmezse mesaj ve Yenile geliyor, bağlantı dönünce oyun açılıyor;
+  - geç parçalarda yakalanmamış hata yok.
+- "Dil" bölümü sabit 200 ms beklemek yerine dilin değişmesini bekliyor.
+- Tek dosyalık sayfa 8/8: beş yazı tipi gömülü, dış istek yok.
+- Pages'in alt yolunda (`--base=/qwen_game1/`) her parça ve yazı tipi 200
+  dönüyor, konsol temiz.
+
+Tarayıcı tam koşu 478/478, konsol hatası yok (~29 dk); yeni bölüm ~3 sn.
+
 
 ---
 
@@ -4458,10 +4568,10 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi). Senaryo şehirlerinde gün 3–17 ms (`pnpm dayperf`, Tur 43) |
-| Birim testi | **482 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar da) |
+| Birim testi | **484 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil da) |
 | Denge testi | **331 kontrol, hepsi geçiyor** (25 bölüm, süreleriyle; ~13 dk) |
-| Tarayıcı testi | **472 kontrol, hepsi geçiyor**, 0 konsol hatası (~25–40 dk); duman koşusu 132 (~5 dk, rehber dahil) |
-| CI | her PR'da tip + test + denge + paket + duman oynanışı |
+| Tarayıcı testi | **478 kontrol, hepsi geçiyor**, 0 konsol hatası (~25–40 dk); duman koşusu 132 (~5 dk, rehber dahil) |
+| CI | her PR'da tip + test + denge + paket + paket bütçesi (Tur 46) + duman oynanışı |
 | Kapsam | 35 bina · 25 ürün · 7 kategori · 8 rakip profili · 10 CEO · 22 olay (11 şehir + 11 sektör) · 2 kriz · 12 karar kartı · 70 rakip sözü · 5 fırsat balonu · 8 görev türü · 4 mevsim · 9 moda ürünü · 17 şehir yapısı (6 siluet) · 6 şehir projesi · 7 senaryo · 4 ek kural · 28 rozet |
 
 ### Render (Tur 6 sonrası)
@@ -4660,6 +4770,7 @@ pnpm land            # abonman oranı — geometri varyantları
 pnpm longrun         # uzun oyun — 1440 gün, kartopu ve geç oyun frenleri
 pnpm playtest        # tarayıcı testi (build dahil), tam koşu ~20 dk
 pnpm playtest:smoke  # duman koşusu ~3,5 dk — PR'da CI bunu koşar
+pnpm bundle:check    # açılış paketi bütçesi (build dahil): kurulumun yolu, ana parça, yazı tipleri
 node tools/build-single-file.mjs   # paylaşılan sayfa için tek HTML
 pnpm dev             # oyunu aç
 ```

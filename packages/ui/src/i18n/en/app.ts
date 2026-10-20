@@ -6,6 +6,8 @@ export const app: Record<keyof typeof trApp, string> = {
   'app.boot.loading': 'Preparing the city…',
   'app.boot.migrated': 'Save migrated from v{version}.',
   'app.boot.resumed': 'Picking up where you left off.',
+  'app.boot.failed': 'The game files did not download. Check your connection and reload the page.',
+  'app.boot.reload': 'Reload',
   'app.save.saved': 'Slot {slot} saved.',
   'app.save.failed': 'Save failed: {message}',
   'app.load.migrated': 'Loaded (v{version} → current schema).',

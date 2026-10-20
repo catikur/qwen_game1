@@ -2,6 +2,7 @@ import { BUILDING_BY_ID, CONSUMER_CATEGORIES } from '@capital/content';
 import type { CategoryId } from '@capital/content';
 import type { GameState } from '../types';
 import { scopedPotency, withBuildingIndex } from './buildingIndex';
+import { zeroByCategoryRecord } from './defaults';
 
 /**
  * Rekabet kolları — Ar-Ge ve pazarlama.
@@ -40,12 +41,8 @@ export const MARKETING_CAP = 0.35;
  */
 const RESEARCH_RATE = 0.025;
 
-/** Kategori → 0 sözlüğü. */
-export function zeroByCategoryRecord(): Record<CategoryId, number> {
-  const out = {} as Record<CategoryId, number>;
-  for (const category of CONSUMER_CATEGORIES) out[category] = 0;
-  return out;
-}
+// Kayıt taşıma da kullanıyor; bağımlılıksız modülde (Tur 46).
+export { zeroByCategoryRecord } from './defaults';
 
 /**
  * Bir şirketin bir kategoriye atadığı binaların toplam gücü.

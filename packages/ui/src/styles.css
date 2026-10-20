@@ -5557,13 +5557,19 @@ button.icon {
   font-weight: 700;
 }
 
-.scenario-preparing-card {
+.scenario-preparing-card,
+.boot-failed-card {
   width: min(420px, calc(100vw - 32px));
   display: flex;
   flex-direction: column;
   gap: 10px;
   text-align: center;
   color: var(--text);
+}
+
+/* Oyun parçası inmediyse (Tur 46): mesaj ve yenile düğmesi. */
+.boot-failed-card .primary {
+  align-self: center;
 }
 
 /* ================================================================

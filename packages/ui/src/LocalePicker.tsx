@@ -18,7 +18,7 @@ export function LocalePicker(): ReactElement {
           className={id === locale ? 'locale-option selected' : 'locale-option'}
           aria-pressed={id === locale}
           data-locale={id}
-          onClick={() => chooseLocale(id)}
+          onClick={() => void chooseLocale(id)}
         >
           {LOCALE_NAMES[id] ?? id}
         </button>

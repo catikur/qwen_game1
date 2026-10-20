@@ -1,6 +1,6 @@
 import { ACHIEVEMENTS, SCENARIOS } from '@capital/content';
 import type { AchievementDef, AchievementFeat, AchievementTotal, CitySizeId, DifficultyId, ModifierId } from '@capital/content';
-import { holdingFoundedAt, holdingFounderSize, holdingNetWorth } from './holding';
+import { holdingFoundedAt, holdingFounderSize, holdingNetWorth } from './holdingFacts';
 import { FEAT_COUNTERS, addTally, cityTally } from './systems/feats';
 import type { CityTally, GameState } from './types';
 

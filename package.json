@@ -21,6 +21,7 @@
     "longrun": "node tools/run-node-script.mjs packages/core/test/longrun.ts",
     "playtest": "pnpm build && node tools/playtest.mjs",
     "playtest:smoke": "pnpm build && node tools/playtest.mjs --smoke",
+    "bundle:check": "pnpm build && node tools/bundle-check.mjs",
     "lite:web": "pnpm --filter @capital/lite-web dev",
     "lite:web-build": "pnpm --filter @capital/lite-web build",
     "lite:web-e2e": "node tools/lite-web-e2e.mjs",
