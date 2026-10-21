@@ -1,5 +1,7 @@
 import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
+import { createNewGame } from '@capital/core';
+import { Soundscape } from '../src/audio';
 import { MusicPlayer } from '../src/music/player';
 import { BEATS_PER_BAR, MOODS, PHRASE_BARS, chordOf, composeBar, scaleNote } from '../src/music/score';
 import type { Mood } from '../src/music/score';
@@ -77,12 +79,18 @@ describe('müzik: besteleme', () => {
   });
 });
 
-/** Çalıcının istediği kadar WebAudio: düğümler bağlanıyor, osilatörlerin başlangıcı kaydediliyor. */
+/**
+ * Çalıcının ve ses manzarasının istediği kadar WebAudio: düğümler
+ * bağlanıyor, osilatörlerin başlangıcı kaydediliyor, kazancın hedefi
+ * hemen değer oluyor (zarf yok).
+ */
 function fakeContext() {
   const starts: number[] = [];
   const param = () => ({
     value: 0,
-    setTargetAtTime() {},
+    setTargetAtTime(target: number) {
+      this.value = target;
+    },
     setValueAtTime() {},
     linearRampToValueAtTime() {},
     exponentialRampToValueAtTime() {},
@@ -91,14 +99,16 @@ function fakeContext() {
     gain: param(),
     frequency: param(),
     detune: param(),
+    Q: param(),
     type: '',
     buffer: null as unknown,
+    loop: false,
     onended: null as unknown,
     connect(target: unknown) {
       return target;
     },
     disconnect() {},
-    start(at: number) {
+    start(at = 0) {
       starts.push(at);
     },
     stop() {},
@@ -106,11 +116,15 @@ function fakeContext() {
   const ctx = {
     currentTime: 0,
     sampleRate: 8000,
+    state: 'running',
+    destination: node(),
     createGain: node,
     createConvolver: node,
     createBiquadFilter: node,
     createOscillator: node,
+    createBufferSource: node,
     createBuffer: (channels: number, length: number) => ({ getChannelData: () => new Float32Array(length), numberOfChannels: channels }),
+    close: async () => undefined,
   };
   return { ctx, starts };
 }
@@ -131,4 +145,34 @@ describe('müzik: çalıcı', () => {
     assert.ok(late.every((at) => at >= 30), `geçmişe sıralanan nota: ${late.filter((at) => at < 30).length}`);
     assert.ok(player.debug().bar <= 4, `bir anda ${player.debug().bar} ölçü sıralandı`);
   });
+
+  test('ses ilk dokunuşla açılınca müzik oyunun o anki hâliyle başlıyor: gece ve duraklatılmış (Codex #78)', () => {
+    // Bağlam yokken de ses manzarası yarım saniyede bir durumu okuyor. İlk
+    // dokunuşta çalıcı hemen ilk ölçüyü sıraya koyuyor; karışımı bilmeseydi
+    // o ölçü gündüz ve duraklamamış çalardı.
+    const { ctx } = fakeContext();
+    const listeners = new Map<string, () => void>();
+    const fakeWindow = {
+      AudioContext: function FakeAudioContext() {
+        return ctx;
+      },
+      addEventListener: (type: string, listener: () => void) => listeners.set(type, listener),
+      removeEventListener: (type: string) => listeners.delete(type),
+    };
+    Object.defineProperty(globalThis, 'window', { value: fakeWindow, configurable: true });
+    const state = createNewGame({ seed: 3, companyName: 'Gece AŞ' });
+    state.time.speed = 0;
+    const soundscape = new Soundscape();
+    soundscape.update(state, 0.1);
+    soundscape.attach();
+    listeners.get('pointerdown')?.();
+    const music = soundscape.debug().music;
+    soundscape.dispose();
+    assert.ok(music, 'müzik başladı');
+    assert.equal(music.mood, 'night', 'ilk ölçü gecenin');
+    assert.equal(music.layers.arp, 0, 'duraklatılmış: arpej susuk');
+    assert.equal(music.layers.lead, 0, 'duraklatılmış: melodi susuk');
+    assert.ok(music.layers.pad > 0, 'pad çalıyor');
+  });
 });
+

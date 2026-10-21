@@ -2,7 +2,7 @@ import { sharesHeld, sharesOutstanding } from '@capital/core';
 import type { GameState } from '@capital/core';
 import { getSettings, subscribeSettings, updateSettings } from '@capital/ui';
 import { MusicPlayer } from './music/player';
-import type { MusicDebug } from './music/player';
+import type { MusicDebug, MusicMix } from './music/player';
 import type { Mood } from './music/score';
 
 /**
@@ -84,6 +84,8 @@ export class Soundscape {
   private music: MusicPlayer | null = null;
   /** Gündüz/gece eşiği aşılırken gidip gelmesin: son seçilen. */
   private musicMood: Mood = 'day';
+  /** Şehrin istediği son karışım; bağlam yokken de güncel (aşağıda `start`). */
+  private musicMix: MusicMix | null = null;
   private hum: GainNode | null = null;
   private traffic: GainNode | null = null;
   private night: GainNode | null = null;
@@ -196,6 +198,10 @@ export class Soundscape {
     musicBus.connect(master);
     this.musicBus = musicBus;
     this.music = new MusicPlayer(ctx, musicBus);
+    // Çalıcı ilk ölçüyü hemen sıraya koyuyor: karışımı ondan önce bilsin.
+    // Yoksa gece, krizde ya da duraklatılmış oyunda ilk birkaç saniye
+    // gündüzün müziği çalardı (Codex #78).
+    if (this.musicMix) this.music.setMix(this.musicMix);
     this.music.start();
 
     const loop = (buffer: AudioBuffer) => {
@@ -302,13 +308,14 @@ export class Soundscape {
     else if (this.musicMood !== 'day' && daylight > 0.5) this.musicMood = 'day';
     else if (this.musicMood !== 'night' && daylight < 0.35) this.musicMood = 'night';
     else if (this.musicMood === 'crisis') this.musicMood = daylight >= 0.42 ? 'day' : 'night';
-    this.music?.setMix({
+    this.musicMix = {
       mood: this.musicMood,
       heartbeat: crisis?.phase === 'warning' || stage >= 2,
       intensity: Math.min(1, buildings / 1200),
       paused: speed === 0,
       silent: state.gameOver !== undefined,
-    });
+    };
+    this.music?.setMix(this.musicMix);
 
     if (this.ctx && this.hum && this.traffic && this.night && this.tension) {
       const now = this.ctx.currentTime;

@@ -4838,7 +4838,7 @@ Tepe −18 dBFS'in altında; şehrin sesi ve olaylarla birlikte bile kırpılma
 payı geniş.
 
 **Doğrulama.**
-- `pnpm test` 515/515; tip denetimi temiz. Yeni `apps/web/test/music.test.ts` (8 test):
+- `pnpm test` 516/516; tip denetimi temiz. Yeni `apps/web/test/music.test.ts` (9 test):
   - her nota dizide ve ölçünün içinde;
   - pad o ölçünün akoru;
   - gündüz Re majör, kriz Si minör;
@@ -4847,7 +4847,8 @@ payı geniş.
   - gece ve kasaba seyrek, krizde kalp atışı;
   - kriz uyarısında uyum değişmiyor, altında kalp atışı;
   - sekme uyuyup uyanınca kaçan ölçüler bir anda çalmıyor (düzeltmeden önce
-    135 nota geçmişe sıralanıyordu).
+    135 nota geçmişe sıralanıyordu);
+  - ses ilk dokunuşla açılınca müzik oyunun o anki hâliyle başlıyor (Codex #78).
 - Tarayıcı testine "Müzik" bölümü (8 kontrol):
   - ilk dokunuştan sonra gündüz müziği;
   - gece olunca gece;
@@ -4863,6 +4864,13 @@ Tarayıcı tam koşu 508/508, konsol hatası yok (~33 dk); "Müzik" bölümü
 bölüm son derlemede yeniden koştu, 8/8. Paket bütçesi tamam: ana parça
 60,3 KB (değişmedi; müzik oyun ekranının parçasında), kurulumun yolu
 132,7 KB.
+
+Codex #78: ses ilk dokunuşla açıldığında çalıcı ilk ölçüyü hemen sıraya
+koyuyordu, ama şehrin karışımı yarım saniye sonra geliyordu. Gece, krizde,
+duraklatılmış ya da bitmiş oyunda ilk birkaç saniye gündüzün müziği
+çalıyordu. Ses manzarası artık son karışımı bağlam yokken de tutuyor ve
+çalıcıya başlamadan önce veriyor. Test düzeltmeden önce kaldı (ilk ölçü
+gündüzün).
 
 ---
 
@@ -4945,7 +4953,7 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi). Senaryo şehirlerinde gün 3–17 ms (`pnpm dayperf`, Tur 43) |
-| Birim testi | **515 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik de) |
+| Birim testi | **516 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik de) |
 | Denge testi | **331 kontrol, hepsi geçiyor** (25 bölüm, süreleriyle; ~13 dk) |
 | Tarayıcı testi | **508 kontrol, hepsi geçiyor**, 0 konsol hatası (~25–40 dk); duman koşusu 132 (~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + paket bütçesi (Tur 46; Tur 48'den beri hizmet çalışanı ve manifest de) + duman oynanışı |
