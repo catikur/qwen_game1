@@ -36,6 +36,7 @@ import {
   setLocale,
   STRUCTURES,
   translate,
+  fillTemplate,
   WAGE_POLICIES,
 } from '@capital/content';
 import { contentEn } from '../../content/src/i18n/en';
@@ -224,10 +225,30 @@ describe('İngilizce sözlükler', () => {
     // çoğul isim `{n|# day|# days}` biçiminde; "(s)" eki de yok.
     const nouns = 'days|shares|stores|plots|rivals|cities|runs|stars|partners|quests|buildings|projects';
     const bare = new RegExp(`\\{\\w+\\} (${nouns})\\b|\\(s\\)`);
+    // Biçim yalnız sayı alır: ay, semt, kategori adı tekil/çoğul olmaz
+    // ("{month|# quest|# quests}" Mart görevlerini sayı sanıyordu; Codex #79).
+    const words = /\{(month|district|category|name|good|place|title|company|player|ceo|city|members|leader)\|/;
     const found: string[] = [];
     for (const [name, dictionary] of [['arayüz', uiEn], ['çekirdek', coreEn], ['içerik', contentEn]] as const) {
       for (const [key, text] of Object.entries(dictionary as Record<string, string>)) {
-        if (bare.test(text)) found.push(`${name} ${key}: ${text}`);
+        if (bare.test(text) || words.test(text)) found.push(`${name} ${key}: ${text}`);
+      }
+    }
+    assert.deepEqual(found, []);
+  });
+
+  test('tekil biçimde fiil de tekil: "1 share are" yok (Codex #79)', () => {
+    // Biçim yalnız ismi değiştirirse fiil dışarıda çoğul kalıyordu. Her
+    // tekil/çoğul metni bütün sayıları 1 vererek doldur, isimden sonra
+    // çoğul fiil arama.
+    const found: string[] = [];
+    for (const [name, dictionary] of [['arayüz', uiEn], ['çekirdek', coreEn], ['içerik', contentEn]] as const) {
+      for (const [key, text] of Object.entries(dictionary as Record<string, string>)) {
+        const plural = [...text.matchAll(/\{(\w+)\|[^|{}]*\|[^|{}]*\}/g)].map((m) => m[1]!);
+        if (plural.length === 0) continue;
+        const ones = Object.fromEntries(plural.map((p) => [p, 1]));
+        const singular = fillTemplate(text, ones);
+        if (/\b1 [a-z]+ (are|were|have|go|reach|need)\b/.test(singular)) found.push(`${name} ${key}: ${singular}`);
       }
     }
     assert.deepEqual(found, []);

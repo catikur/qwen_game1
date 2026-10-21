@@ -4949,11 +4949,20 @@ Hisse, şehir, rakip, yıldız ve koşu sayıları da aynıydı.
   `#` değerin kendisi (`fillTemplate`, `packages/content/src/messages.ts`).
 - Türkçede sayıdan sonra isim çoğul olmadığından Türkçe metinler
   değişmedi.
-- İngilizcede 136 yer tutucu bu biçime geçti. Fiil uyumu gerekenler elle
-  yazıldı: "1 rival is left", "There is 1 rival", "The last run". "(s)"
-  eki kalmadı.
+- İngilizcede 134 yer tutucu bu biçime geçti. Fiil uyumu gerekenler
+  yazıldı: "1 rival is left", "There is 1 rival", "The last run", "1 share
+  is on the market". "(s)" eki kalmadı.
 - Ay adı alan "{month} quests" yanlış alarm verirdi; "Quests for {month}"
   oldu.
+
+Codex #79: dönüşüm bazı yerlerde yalnız ismi değiştirmiş, fiili dışarıda
+bırakmıştı. Örnek: "Only 1 share are on the market". Yeni test her
+tekil/çoğul metni sayılar 1 iken dolduruyor ve isimden sonra çoğul fiil
+arıyor. Dört metin yakaladı, hepsi düzeltildi; birinde yalnız cümle
+belirsizdi, o da yeniden yazıldı. Bu arada iki yanlış dönüşüm çıktı: ay ve
+semt adı alan iki yer tutucu sayı sanılmıştı ("{month} quests", "{district}
+plots"). Ad alan yer tutucular artık bu biçimde kullanılamıyor; test bunu
+da tarıyor.
 
 **3 · DURUM'un "Ölçülen durum" tablosu Tur 25'ten kalmıştı.** Oran 2,28
 yazıyordu, bugün 1,55. Aynı ölçüm altı eski sürümde koşuldu:
@@ -4987,11 +4996,13 @@ Tablo ve geçmişi güncellendi (bölüm 3).
   - `kareler.mjs`: şehri oyuna kayıt yükler gibi veriyor
     (`engine.replaceState`), gün saatini ayarlayıp kareyi alıyor.
 
-**Doğrulama.** `pnpm test` 519/519; tip denetimi temiz.
-- `i18n.test.ts`, iki yeni test:
+**Doğrulama.** `pnpm test` 520/520; tip denetimi temiz.
+- `i18n.test.ts`, üç yeni test:
   - tekil/çoğul biçimi: 1, 12, "1" ve eksik parametre;
-  - İngilizce sözlüklerde sayıdan sonra çıplak çoğul isim ve "(s)" yok.
-  - İkisi de düzeltmeden önce kaldı.
+  - İngilizce sözlüklerde sayıdan sonra çıplak çoğul isim ve "(s)" yok; ad
+    alan yer tutucu bu biçimde değil;
+  - tekil biçimde fiil de tekil (Codex #79).
+  - Üçü de düzeltmeden önce kaldı.
   - Yer tutucu karşılaştırması yeni biçimi tanıyor.
 - Tarayıcı testine "Değerlendirme: Faz 1 sonu" bölümü (2 kontrol):
   - telefonda rıhtım etiketleri kesilmiyor ve tek boyda, 42 durum: açılışta,
@@ -5104,7 +5115,7 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi). Senaryo şehirlerinde gün 3–17 ms (`pnpm dayperf`, Tur 43) |
-| Birim testi | **519 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul da) |
+| Birim testi | **520 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul da) |
 | Denge testi | **331 kontrol, hepsi geçiyor** (25 bölüm, süreleriyle; ~13 dk) |
 | Tarayıcı testi | **510 kontrol, hepsi geçiyor**, 0 konsol hatası (~25–40 dk); duman koşusu 132 (~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + paket bütçesi (Tur 46; Tur 48'den beri hizmet çalışanı ve manifest de) + duman oynanışı |

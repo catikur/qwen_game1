@@ -568,7 +568,7 @@ export const contentEn: Record<string, string> = {
   'content.rivalLine.landlord.overtook.1': 'We count plots, not buildings.',
   'content.rivalLine.landlord.passed.0': 'The plots are still there. Their value will rise too.',
   'content.rivalLine.landlord.passed.1': 'Patience wins; we are in no hurry.',
-  'content.rivalLine.landlord.leadLost.0': 'We bought the {district|# plot|# plots} years ago.',
+  'content.rivalLine.landlord.leadLost.0': 'We bought the plots in {district} years ago.',
   'content.rivalLine.landlord.leadLost.1': 'Rents in {district} run on our calendar.',
   'content.rivalLine.landlord.campaignStart.0': 'We hold the best corners for {category}. Time to use them.',
   'content.rivalLine.landlord.campaignStart.1': 'We are entering the {category} market with our land.',

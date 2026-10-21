@@ -253,7 +253,7 @@ export const hud: Record<keyof typeof trHud, string> = {
   'hud.holding.payout.halfHint': 'Half the profit to the treasury, half stays in the city.',
   'hud.holding.payout.allHint': 'All the profit to the treasury: the city runs out of cash, its shares get cheap and raids get easier.',
   'hud.holding.defense.toggle': 'Defense: the local manager buys back shares against raids',
-  'hud.holding.defense.yesterday': "Yesterday {shares|# share|# shares} were bought back ({cost}, from the city's cash).",
+  'hud.holding.defense.yesterday': "Yesterday {shares|# share was|# shares were} bought back ({cost}, from the city's cash).",
   'hud.holding.defense.toLock': '{shares|# share|# shares} left to lock control (≈ {cost}).',
   'hud.holding.defense.locked': 'Control is locked: no one can pass 50%, so the defense spends nothing.',
   'hud.holding.defense.offUnderRaid': 'Defense is off and a raid is advancing.',

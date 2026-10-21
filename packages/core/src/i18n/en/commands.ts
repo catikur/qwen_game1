@@ -150,7 +150,7 @@ export const commands: Record<keyof typeof trCommands, string> = {
   'core.agenda.council': 'Council · motions: {count}',
   'core.agenda.crisisWarning': 'Crisis ahead: {title}',
   'core.agenda.campaign': '{name}: {category} attack',
-  'core.agenda.quests': '{month|# quest|# quests} {done}/{total}',
+  'core.agenda.quests': '{month} · {done}/{total}',
   'core.agenda.questsReady': 'Reward ready: {count|# quest|# quests}',
   'core.agenda.fad': '{good} fad',
   'core.agenda.projectRank': '{project}: you are #{rank}',

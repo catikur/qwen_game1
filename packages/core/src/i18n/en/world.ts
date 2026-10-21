@@ -104,7 +104,7 @@ export const world: Record<keyof typeof trWorld, string> = {
   'core.league.lostTitle': 'League run over: you were taken over',
   'core.league.lostBody': "This week's score is zero. A new run starts over in the same city.",
   'core.league.finishedTitle': 'League run over: {score}',
-  'core.league.finishedBody': '{days|# day|# days} are up. Your score is {score} — share the run code or submit it to the leaderboard.',
+  'core.league.finishedBody': '{days|# day is|# days are} up. Your score is {score} — share the run code or submit it to the leaderboard.',
 
   // scenario.ts, systems/scenario.ts — scenario mode (Round 39)
   'core.scenario.startTitle': 'Scenario: {title}',
@@ -192,7 +192,7 @@ export const world: Record<keyof typeof trWorld, string> = {
   'core.projects.rivalLeadBody': 'If it stays ahead until the window closes, {project} will carry its name and its stores in the district will grow stronger.',
   'core.consortium.formedTitle': 'Consortium led by {leader}: you are the target',
   'core.consortium.formedBody':
-    '{members} have joined forces. Idle cash in your treasury ({share} of net worth) and investment that has stood still for {idle|# day|# days} are making shareholders restless. In {days|# day|# days} they start buying your shares together. Defence: go back to investing ({builds} new buildings), buy back shares or bring in investors with a share issue.',
+    '{members} have joined forces. Shareholders are getting restless: idle cash sits in your treasury ({share} of net worth) and investment has stood still for {idle|# day|# days}. In {days|# day|# days} they start buying your shares together. Defence: go back to investing ({builds} new buildings), buy back shares or bring in investors with a share issue.',
   'core.consortium.buyingTitle': 'The consortium is buying your shares',
   'core.consortium.buyingBody':
     '{leader} and partners buy {cap} of your shares every day. If they pass half of control, the company is theirs.',

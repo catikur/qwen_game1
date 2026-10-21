@@ -112,7 +112,7 @@ export const markets: Record<keyof typeof trMarkets, string> = {
     'You have no cash left beyond a few days of operating costs. The order resumes on its own as money comes in.',
   'core.orders.defendedTitle': '{name} fends off the takeover',
   'core.orders.defendedBody':
-    'Only {float|# share|# shares} were left in float; control needed {need}. The order is closed; your {pct}% stake keeps paying dividends, and you can sell it if you like.',
+    'Only {float|# share was|# shares were} left in float; control needed {need}. The order is closed; your {pct}% stake keeps paying dividends, and you can sell it if you like.',
 
   // labor.ts — union demand, strike, wage policy
   'core.labor.strikeTitle': 'Strike begins',
@@ -148,7 +148,7 @@ export const markets: Record<keyof typeof trMarkets, string> = {
   'core.equity.unknownCompany': 'Unknown company.',
   'core.equity.invalidCount': 'Invalid quantity.',
   'core.equity.founderLock': '{name} is under founder lock — its shares reach the market in {days|# day|# days}.',
-  'core.equity.floatShort': 'Only {available|# share|# shares} are on the market.',
+  'core.equity.floatShort': 'Only {available|# share is|# shares are} on the market.',
   'core.equity.noCash': 'Not enough cash.',
   'core.equity.notEnoughHeld': 'You hold {held|# share|# shares}.',
   'core.equity.playerTakenTitle': '{name} takes over your company',
