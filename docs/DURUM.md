@@ -4,7 +4,7 @@
 > `pnpm bench` çıktısından; iddialar `pnpm balance` ve `pnpm playtest`
 > tarafından her koşuda doğrulanıyor.
 >
-> Son güncelleme: şema **v6**, 46 tur (Tur 33 denendi ve geri alındı; Tur 34 eski görünüme canlılık ekledi; Tur 35 arayüzü Lite'ın "Cam & Bulut" diline taşıdı; Tur 36 şehre ayrıntı kattı; Tur 37a geç oyuna yönetim yükü, servet vergisi ve kriz dönemleri getirdi; Tur 37b karar kartlarını ve rakip hikâyelerini ekledi; Tur 37c fırsat balonlarını ve aylık görev panosunu getirdi; Tur 37d canlı pazarı, şehir projesi ihalesini ve rakip konsorsiyumunu getirdi; Tur 38 değerlendirme turuydu: geç oyun hızı, gündem ve haber akışı, zorluk eğrisi; Tur 39a senaryo modunu getirdi: Kurtarma ve Krizin ortasında; Tur 39b Konsorsiyuma karşı, Zincir ustası ve Şehrin sponsoru senaryolarını ekledi; Tur 39c Büyük şehir fethi ve Holding: iki şehir ile listeyi yediye tamamladı; Tur 40 cila ve performans; Tur 41 başarımlar ve kariyer; Tur 42 açılışta gölgelendirici derlemesi; Tur 43 oyun içi akıcılık; Tur 44 değerlendirme turuydu: Türkçe sayı biçimi, yardımın kapsamı, haber akışı; Tur 45 dört ek kural getirdi: Fırtınalı yıllar, Aç gözlü rakipler, Sıkı banka, Kıt arsa; Tur 46 açılış paketini böldü: kurulum ekranı telefonda yarı sürede).
+> Son güncelleme: şema **v6**, 47 tur (Tur 33 denendi ve geri alındı; Tur 34 eski görünüme canlılık ekledi; Tur 35 arayüzü Lite'ın "Cam & Bulut" diline taşıdı; Tur 36 şehre ayrıntı kattı; Tur 37a geç oyuna yönetim yükü, servet vergisi ve kriz dönemleri getirdi; Tur 37b karar kartlarını ve rakip hikâyelerini ekledi; Tur 37c fırsat balonlarını ve aylık görev panosunu getirdi; Tur 37d canlı pazarı, şehir projesi ihalesini ve rakip konsorsiyumunu getirdi; Tur 38 değerlendirme turuydu: geç oyun hızı, gündem ve haber akışı, zorluk eğrisi; Tur 39a senaryo modunu getirdi: Kurtarma ve Krizin ortasında; Tur 39b Konsorsiyuma karşı, Zincir ustası ve Şehrin sponsoru senaryolarını ekledi; Tur 39c Büyük şehir fethi ve Holding: iki şehir ile listeyi yediye tamamladı; Tur 40 cila ve performans; Tur 41 başarımlar ve kariyer; Tur 42 açılışta gölgelendirici derlemesi; Tur 43 oyun içi akıcılık; Tur 44 değerlendirme turuydu: Türkçe sayı biçimi, yardımın kapsamı, haber akışı; Tur 45 dört ek kural getirdi: Fırtınalı yıllar, Aç gözlü rakipler, Sıkı banka, Kıt arsa; Tur 46 açılış paketini böldü: kurulum ekranı telefonda yarı sürede; Tur 47 tek Ayarlar paneli ve erişilebilirlik getirdi: metin boyutu, renk körlüğüne uygun palet, hareket, ses düzeyleri, pencerelerde klavye). Önümüzdeki işin sırası `docs/YOL-HARITASI.md`'de.
 
 ---
 
@@ -4492,6 +4492,112 @@ seçim sıra alıyor, sözlük inince yalnız son seçim uygulanıyor. Yeni
 `ui/test/locale.test.ts` düzeltmeden önce kaldı.
 
 
+### Tur 47 — Ayarlar ve erişilebilirlik
+
+Faz 1'in ilk turu (`docs/YOL-HARITASI.md`, bu turda eklendi). Kullanıcı
+yol haritasında Faz 1'i seçti ve "fazı baştan sona yürüt" dedi.
+
+**Neden.** Ayarlar dağınıktı ve erişilebilirlik hiç yoktu:
+- dil ve görünüm Yardım panelindeydi;
+- ses yalnız aç/kapa;
+- metin boyutu sabitti;
+- hareket yalnız cihazın tercihine uyuyordu;
+- pencereler `role="dialog"` taşıyordu ama odak dışarıda kalıyordu.
+
+Renk körlüğünde durum ölçüldü. Yöntem: Machado 2009 benzetimi, OKLab
+ΔE×100. 15 ve üstü rahat ayrışıyor; 8–15 yalnız ikinci bir işaretle
+(sözcük, ok, simge) yeterli; 8'in altı ayrışmıyor. Betik oturumun
+karalama alanında.
+
+| Çift | Normal | En kötü renk körlüğü |
+|---|---|---|
+| Gündüz yükseliş/düşüş (#0e9f5a/#e04848) | 30,9 | **3,9** (deutan) |
+| Gece yükseliş/düşüş (#5be39a/#ff7a7a) | 30,9 | **7,9** (deutan) |
+| Oyuncunun nanesi / 16 rakip rengi | 9,9 | 7,6 (deutan) |
+| Sahiplik merceğinde aynısı (×0,7) | **7,5** | 5,8 |
+
+Yani yükseliş ile düşüş döteranopide neredeyse aynı renk. Mercekte
+oyuncunun parseli normal görüşte bile bir rakibinkine yakın.
+
+**Ayarlar paneli.** Üst barda ses düğmesinin yanında dişli; kurulum
+ekranında "Ayarlar" düğmesi. Yedi bölüm var:
+- dil ve görünüm (Yardım'dan taşındı; Yardım artık oraya yönlendiriyor);
+- metin boyutu: Küçük %90, Normal, Büyük %115, Çok büyük %130;
+- renkler: Standart ya da Renk körlüğüne uygun;
+- hareket: Otomatik (cihaza uyuyor), Azaltılmış, Tam;
+- ses: aç/kapa, genel, şehir ve olaylar düzeyi;
+- klavye ve fare kısayolları.
+
+Seçimler tarayıcıda hatırlanıyor (`capitalforge.settings.v1`). Eski
+sessize alma anahtarı ilk açılışta taşınıyor. Kayda girmiyor: ayar
+kişinin, koşunun değil.
+
+**Uygulama.**
+- *Metin boyutu.* Arayüzün 196 `font-size` değeri `--text-scale` ile
+  çarpılıyor. Kutular ve boşluklar yerinde kalıyor; yalnız yazı büyüyor.
+  Telefonda Çok büyük'te kurulum, oyun ve Ayarlar yana taşmıyor.
+- *Renk körlüğüne uygun palet.*
+  - Yükseliş camgöbeği, düşüş turuncu, uyarı mor:
+    - gündüz #0b7f86 / #c2410c / #8b46c9;
+    - gece #5fd4d0 / #ff9f43 / #a78bfa.
+  - Gündüz yükseliş/düşüş 26,2 → en kötü 16,1; gece 23,8 → 16,3.
+  - Uyarı ile yükseliş gündüz döteranopide 12,3. Uyarı her yerde sözcükle
+    yazıyor, yeterli.
+  - Şehirde oyuncunun rengi limon (#fff36b), mercekte ×0,9. 16 rakip
+    rengine en yakın 30,3 → en kötü 28,3 (nane ×0,7'de 7,5 → 5,8).
+  - İlk aday #ffe14d en kötü 13,2'de kaldı.
+  - Trafik renkleri yeniden boyanıyor.
+- *Hareket.*
+  - CSS'teki `@media (prefers-reduced-motion)` blokları
+    `:root[data-motion='reduced']` oldu. Böylece seçim cihazın tercihini
+    iki yönde de geçersiz kılabiliyor: Tam, cihaz azaltılmış istese de tam
+    hareket.
+  - Sahne de biliyor. Olay yerine giderken kamera süzülmek yerine atlıyor
+    (`controller.snap()`).
+- *Ses.*
+  - Genel kazancın altında iki yol var: şehir (uğultu, trafik, gece,
+    gerilim) ve olaylar (kasa, inşaat, kötü haber, tokmak).
+  - Genel %100 Tur 46'ya kadarki sabit düzey (0,55).
+  - Ses düğmesi ve Ayarlar aynı seçimi değiştiriyor. Kapalıyken
+    kaydırıcılar pasif.
+- *Pencerelerin klavye sözleşmesi* (`ui/src/dialog.ts`). Panel, kurulumun
+  Ayarlar'ı ve Kariyer'i için aynı:
+  - açılınca odak pencereye giriyor;
+  - Tab ve Shift+Tab pencerenin içinde dönüyor;
+  - kapanınca odak açan düğmeye dönüyor;
+  - başlık `aria-labelledby` ile bağlı.
+  - Escape odak bir onay kutusunda ya da kaydırıcıdayken de kapatıyor.
+    İlk sürümde kısayol işleyicisi alanları atlıyordu, pencere açık
+    kalıyordu; tarayıcı testi yakaladı.
+- *Hız kısayolları.* 1, 2 ve 3 tuşları üst bardaki ▶ ▶▶ ▶▶▶ ile aynı.
+
+**Doğrulama.**
+- `pnpm test` 489/489. Yeni `ui/test/settings.test.ts` (4 test):
+  - bozuk ve bilinmeyen değerler varsayılana düşüyor, düzeyler 0–1 arasında kalıyor;
+  - eski sessize alma taşınıyor;
+  - değişiklik abonelere duyuruluyor, ses düzeyleri tek tek değişiyor;
+  - hareket seçimi cihaz tercihiyle birleşiyor.
+- Tarayıcı testine "Ayarlar ve erişilebilirlik" bölümü (14 kontrol):
+  - kurulumda Ayarlar, odak ve Escape;
+  - hız tuşları;
+  - pencerede Tab döngüsü;
+  - %130 metin;
+  - palet: arayüz ve sahne;
+  - azaltılmış hareket: geçişler ve sahne;
+  - klavyeyle ses düzeyi ve ses yolları;
+  - sessizde düğme ve kaydırıcılar;
+  - odağın geri dönüşü ve kameranın atlaması/süzülmesi;
+  - Yardım'dan Ayarlar'a;
+  - yenilemeden sonra hatırlanma;
+  - İngilizce Ayarlar'da Türkçe kalıntı yok;
+  - konsol temiz;
+  - telefonda Çok büyük yazıda taşma yok.
+- "Dil" ve "Görünüm" bölümleri seçicileri Ayarlar'da arıyor.
+- Paket bütçesi: CSS 13,8 KB gzip, ana parça 58,8 KB, kurulumun yolu 131 KB.
+
+Tarayıcı tam koşu TARAYICI_SAYISI, konsol hatası yok.
+
+
 ---
 
 ## 3. Ölçülen durum
@@ -4573,7 +4679,7 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi). Senaryo şehirlerinde gün 3–17 ms (`pnpm dayperf`, Tur 43) |
-| Birim testi | **485 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil da) |
+| Birim testi | **489 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar da) |
 | Denge testi | **331 kontrol, hepsi geçiyor** (25 bölüm, süreleriyle; ~13 dk) |
 | Tarayıcı testi | **478 kontrol, hepsi geçiyor**, 0 konsol hatası (~25–40 dk); duman koşusu 132 (~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + paket bütçesi (Tur 46) + duman oynanışı |
@@ -4751,7 +4857,7 @@ nüfus tavanı ve arsa değeri). Hâlâ açık olanlar:
   (kurucu payı, kurumsal yatırımcı), tahvil.
 - ~~**Yerelleştirme**~~ — Tur 21'de başladı (arayüz metinleri sözlükte),
   Tur 23'te kapandı: çekirdek ve içerik metinleri de sözlükte, İngilizce
-  tam, dil seçici kurulumda ve Yardım'da. Üçüncü bir dil için üç sözlük
+  tam, dil seçici kurulumda ve Ayarlar'da (Tur 47'ye kadar Yardım'daydı). Üçüncü bir dil için üç sözlük
   dosyası, dil adı (`LOCALE_NAMES`) ve `messages.ts`'teki biçim kuralları
   (para, yüzde, ondalık) gerekiyor.
 - ~~**Lig tablosunun güvenliği**~~ — Tur 31'de kapandı: her tarayıcı her

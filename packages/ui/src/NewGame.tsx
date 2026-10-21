@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import type { ReactElement } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import type { ReactElement, ReactNode } from 'react';
 import { CEOS, CITY_SIZES, DEFAULT_CEO_ID, DEFAULT_CITY_SIZE, DEFAULT_DIFFICULTY, DIFFICULTIES, MODIFIERS, SCENARIOS, formatDecimal, getCitySize, getDifficulty, modifierMultiplier, normalizeModifiers } from '@capital/content';
 import type { CitySizeId, DifficultyId, ModifierId, ScenarioDef } from '@capital/content';
 import { formatMoney, leagueWeekId, scenarioGoalText, scenarioScoreText } from '@capital/core';
@@ -10,6 +10,8 @@ import { tutorialSeen } from './tutorialStore';
 import { scenarioRecord } from './scenarioBest';
 import { starRow, starThresholds } from './stars';
 import { CareerPanel, useCareerRevision } from './CareerPanel';
+import { SettingsPanel } from './SettingsPanel';
+import { useDialogFocus } from './dialog';
 import { careerSummary } from './career';
 
 /**
@@ -94,16 +96,17 @@ export function NewGameScreen({
   const selected = CEOS.find((c) => c.id === ceoId) ?? CEOS[0]!;
   const level = DIFFICULTIES.find((d) => d.id === difficulty) ?? DIFFICULTIES[1]!;
   // Kariyer (Tur 41): oyun dışında da açılabilsin, koşular arasında bakılan yer burası.
-  const [careerOpen, setCareerOpen] = useState(false);
+  // Ayarlar (Tur 47) da: metin boyutu ve renkler kurulumda da gerekiyor.
+  const [overlay, setOverlay] = useState<'none' | 'career' | 'settings'>('none');
   // Oyun içindeki paneller gibi Escape kapatıyor (Tur 44).
   useEffect(() => {
-    if (!careerOpen) return;
+    if (overlay === 'none') return;
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.code === 'Escape') setCareerOpen(false);
+      if (e.code === 'Escape') setOverlay('none');
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [careerOpen]);
+  }, [overlay]);
   useCareerRevision();
   const career = careerSummary();
   const badges = career.statuses.filter((status) => career.unlocked[status.def.id]).length;
@@ -126,8 +129,11 @@ export function NewGameScreen({
     <div className="newgame">
       <div className="newgame-inner">
         <div className="newgame-locale">
-          <button type="button" className="ghost newgame-career" data-career-open onClick={() => setCareerOpen(true)}>
+          <button type="button" className="ghost newgame-career" data-career-open onClick={() => setOverlay('career')}>
             {t('hud.career.open', { done: badges, total: career.statuses.length })}
+          </button>
+          <button type="button" className="ghost newgame-settings" data-settings-open onClick={() => setOverlay('settings')}>
+            {t('hud.settings.open')}
           </button>
           <LocalePicker />
         </div>
@@ -400,21 +406,47 @@ export function NewGameScreen({
           </button>
         </div>
       </div>
-      {careerOpen && (
-        <div className="modal-backdrop career-overlay" onClick={() => setCareerOpen(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
-            <header className="modal-head">
-              <h2>{t('hud.career.title')}</h2>
-              <button type="button" className="icon" onClick={() => setCareerOpen(false)} aria-label={t('hud.career.close')}>
-                ×
-              </button>
-            </header>
-            <div className="modal-body">
-              <CareerPanel />
-            </div>
-          </div>
-        </div>
+      {overlay === 'career' && (
+        <SetupOverlay className="career-overlay" title={t('hud.career.title')} closeLabel={t('hud.career.close')} onClose={() => setOverlay('none')}>
+          <CareerPanel />
+        </SetupOverlay>
       )}
+      {overlay === 'settings' && (
+        <SetupOverlay className="settings-overlay" title={t('panels.modal.title.settings')} closeLabel={t('panels.common.close')} onClose={() => setOverlay('none')}>
+          <SettingsPanel />
+        </SetupOverlay>
+      )}
+    </div>
+  );
+}
+
+/** Kurulum ekranının penceresi: oyun içindeki panellerle aynı kabuk ve klavye sözleşmesi. */
+function SetupOverlay({
+  className,
+  title,
+  closeLabel,
+  onClose,
+  children,
+}: {
+  className: string;
+  title: string;
+  closeLabel: string;
+  onClose: () => void;
+  children: ReactNode;
+}): ReactElement {
+  const frame = useRef<HTMLDivElement>(null);
+  useDialogFocus(frame);
+  return (
+    <div className={`modal-backdrop ${className}`} onClick={onClose}>
+      <div className="modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="setup-overlay-title" tabIndex={-1} ref={frame}>
+        <header className="modal-head">
+          <h2 id="setup-overlay-title">{title}</h2>
+          <button type="button" className="icon" onClick={onClose} aria-label={closeLabel}>
+            ×
+          </button>
+        </header>
+        <div className="modal-body">{children}</div>
+      </div>
     </div>
   );
 }

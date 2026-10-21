@@ -313,6 +313,7 @@ export const hud: Record<keyof typeof trHud, string> = {
   'hud.career.title': 'Career',
   'hud.career.open': 'Career · {done}/{total} badges',
   'hud.career.openShort': 'Career',
+  'hud.settings.open': 'Settings',
   'hud.career.unlockedToast': 'Badge earned: {title}',
   'hud.career.moreToast': '+{count} more badges. See the Career page.',
   'hud.career.stat.badges': 'Badges',

@@ -137,9 +137,27 @@ export class RtsCameraController {
     return { x: this.desiredTarget.x, z: this.desiredTarget.z };
   }
 
+  /** Kameranın şu an baktığı nokta (yumuşamanın ortasında hedeften geride). */
+  get currentPoint(): { x: number; z: number } {
+    return { x: this.target.x, z: this.target.z };
+  }
+
   focusOn(x: number, z: number): void {
     this.desiredTarget.set(x, 0, z);
     this.clampTarget();
+  }
+
+  /**
+   * Hedefe kaymadan atlar (Tur 47, azaltılmış hareket): programın kamerayı
+   * bir yere götürmesi süzülmesin. Oyuncunun kendi sürüklemesi ve
+   * tekerleği yumuşak kalıyor; hareketi o başlatıyor.
+   */
+  snap(): void {
+    this.target.copy(this.desiredTarget);
+    this.distance = this.desiredDistance;
+    this.azimuth = this.desiredAzimuth;
+    this.polar = this.desiredPolar;
+    this.apply();
   }
 
   /**

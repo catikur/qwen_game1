@@ -310,6 +310,7 @@ export const hud = {
   'hud.career.title': 'Kariyer',
   'hud.career.open': 'Kariyer · {done}/{total} rozet',
   'hud.career.openShort': 'Kariyer',
+  'hud.settings.open': 'Ayarlar',
   'hud.career.unlockedToast': 'Rozet kazandın: {title}',
   'hud.career.moreToast': '+{count} rozet daha. Kariyer sayfasında.',
   'hud.career.stat.badges': 'Rozet',

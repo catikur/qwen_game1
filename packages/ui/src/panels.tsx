@@ -1,4 +1,4 @@
-import {useEffect, useState} from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { ReactElement } from 'react';
 import { BUILDING_BY_ID, CATEGORIES, DISTRICT_ARCHETYPES, CONSUMER_CATEGORIES, GOODS_BY_CATEGORY, GOOD_BY_ID, STRUCTURE_BY_ID, formatDecimal, formatPercent, getDifficulty, numberLocale } from '@capital/content';
 import {
@@ -37,8 +37,8 @@ import { HoldingPanel } from './HoldingPanel';
 import { CareerPanel } from './CareerPanel';
 import { CouncilPanel } from './CouncilPanel';
 import { LeaguePanel } from './LeaguePanel';
-import { AppearancePicker } from './AppearancePicker';
-import { LocalePicker } from './LocalePicker';
+import { SettingsPanel } from './SettingsPanel';
+import { useDialogFocus } from './dialog';
 import { BankSection, WorkforceSection } from './CompanyFinance';
 import { BoostChips } from './DecisionCard';
 import { t } from './i18n';
@@ -904,8 +904,16 @@ function Stat({ label, value }: { label: string; value: string }): ReactElement 
 /* ---------------------------------------------------------------- modallar */
 
 export function ModalHost(): ReactElement | null {
-  const { view, setView } = useGame();
+  const { view } = useGame();
   if (view.openPanel === 'none') return null;
+  // Panel değişince pencere yeniden kuruluyor: odak yeni panelin başına girsin.
+  return <ModalFrame key={view.openPanel} />;
+}
+
+function ModalFrame(): ReactElement {
+  const { view, setView } = useGame();
+  const frame = useRef<HTMLDivElement>(null);
+  useDialogFocus(frame);
 
   const titles: Record<string, string> = {
     chain: t('panels.modal.title.chain'),
@@ -922,13 +930,22 @@ export function ModalHost(): ReactElement | null {
     league: t('panels.modal.title.league'),
     cities: t('panels.modal.title.cities'),
     career: t('panels.modal.title.career'),
+    settings: t('panels.modal.title.settings'),
   };
 
   return (
     <div className="modal-backdrop" onClick={() => setView({ openPanel: 'none' })}>
-      <div className="modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
+      <div
+        className="modal"
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="modal-title"
+        tabIndex={-1}
+        ref={frame}
+      >
         <header className="modal-head">
-          <h2>{titles[view.openPanel]}</h2>
+          <h2 id="modal-title">{titles[view.openPanel]}</h2>
           <button type="button" className="icon" onClick={() => setView({ openPanel: 'none' })} aria-label={t('panels.common.close')}>
             ×
           </button>
@@ -948,6 +965,7 @@ export function ModalHost(): ReactElement | null {
           {view.openPanel === 'league' && <LeaguePanel />}
           {view.openPanel === 'cities' && <HoldingPanel />}
           {view.openPanel === 'career' && <CareerPanel />}
+          {view.openPanel === 'settings' && <SettingsPanel />}
         </div>
       </div>
     </div>
@@ -1284,12 +1302,10 @@ function HelpPanel(): ReactElement {
         {t('panels.help.controls')}
       </p>
       <div className="help-locale">
-        <span className="muted">{t('panels.help.language')}</span>
-        <LocalePicker />
-      </div>
-      <div className="help-locale">
-        <span className="muted">{t('panels.help.appearance')}</span>
-        <AppearancePicker />
+        <span className="muted">{t('panels.help.settings.hint')}</span>
+        <button type="button" data-open-settings onClick={() => setView({ openPanel: 'settings' })}>
+          {t('panels.help.settings')}
+        </button>
       </div>
       <button
         type="button"

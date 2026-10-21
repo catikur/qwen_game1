@@ -35,6 +35,18 @@ export { currentLocale, registerLocale, setLocale, t } from './i18n';
 export { LOCALE_NAMES, chooseLocale, initLocale, useLocale } from './i18n/locale';
 export { LocalePicker } from './LocalePicker';
 export { AppearancePicker } from './AppearancePicker';
+export { SettingsPanel } from './SettingsPanel';
+export {
+  DEFAULT_SETTINGS,
+  getSettings,
+  initSettings,
+  reducedMotion,
+  sanitizeSettings,
+  subscribeSettings,
+  updateSettings,
+  useSettings,
+} from './settings';
+export type { MotionChoice, Palette, Settings, TextSize, VolumeChannel } from './settings';
 export {
   APPEARANCE_CHOICES,
   chooseAppearance,

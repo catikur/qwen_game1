@@ -1,11 +1,13 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import '@capital/ui/styles.css';
-import { initAppearance, initLocale } from '@capital/ui';
+import { initAppearance, initLocale, initSettings } from '@capital/ui';
 import { App } from './App';
 
 // Görünüm ilk çizimden önce: gündüz/gece camı arasında açılışta kayma olmasın.
 initAppearance();
+// Ayarlar da (Tur 47): metin boyutu, palet ve hareket ilk çizimde doğru.
+initSettings();
 
 const container = document.getElementById('root');
 if (!container) throw new Error('#root bulunamadı');

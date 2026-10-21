@@ -136,6 +136,24 @@ export function TopBar(): ReactElement {
             {audio.muted ? <path d="M16 9l5 6M21 9l-5 6" /> : <path d="M16 9.5a3.5 3.5 0 0 1 0 5M18.5 7a7 7 0 0 1 0 10" />}
           </svg>
         </button>
+        {/*
+          Ayarlar (Tur 47) sesin yanında: rıhtım sekiz sekmeyle dar ekrana
+          ancak sığıyor, bu grup ise telefonda da üst barda kalıyor.
+        */}
+        <button
+          type="button"
+          className={view.openPanel === 'settings' ? 'speed settings-toggle active' : 'speed settings-toggle'}
+          data-panel="settings"
+          aria-pressed={view.openPanel === 'settings'}
+          aria-label={t('hud.settings.open')}
+          title={t('hud.settings.open')}
+          onClick={() => setView({ openPanel: view.openPanel === 'settings' ? 'none' : 'settings' })}
+        >
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
+            <circle cx="12" cy="12" r="3" />
+            <path d="M12 2.8v2.4M12 18.8v2.4M2.8 12h2.4M18.8 12h2.4M5.5 5.5l1.7 1.7M16.8 16.8l1.7 1.7M5.5 18.5l1.7-1.7M16.8 7.2l1.7-1.7" />
+          </svg>
+        </button>
       </div>
 
       <nav className="topbar-actions" aria-label={t('hud.dock.label')}>
