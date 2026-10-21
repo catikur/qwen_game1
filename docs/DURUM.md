@@ -4683,11 +4683,14 @@ konum kuralını almamıştı. Telefonda altta rıhtımın 56 px'i boş kalıyor
 artık ekranı kaplıyor.
 
 **Doğrulama.**
-- `pnpm test` 505/505.
+- `pnpm test` 507/507.
   - Birim test koşucusu artık `apps/*/test`'i de tarıyor.
-  - Yeni `apps/web/test/update.test.ts` (2 test): Yenile tek sekmede
-    kaydedip bekleyen sürüme geçiriyor; kayıt sürerken başka sekme geçirdiyse
-    sayfayı yeniliyor.
+  - Yeni `apps/web/test/update.test.ts` (4 test):
+    - Yenile tek sekmede kaydedip bekleyen sürüme geçiriyor, devralınca
+      yeniliyor;
+    - kayıt sürerken başka sekme geçirdiyse sayfayı yeniliyor;
+    - sayfa yüklenirken başka sekme geçirse de "yeni sürüm hazır" çıkıyor;
+    - ilk kurulumdaki devralma yeni sürüm sayılmıyor.
   - Yeni `apps/web/test/pwa.test.ts` (13 test). Çalışan sahte bir ortamda
     koşuyor; kapsam Pages'teki gibi `/qwen_game1/`. Sınananlar:
     - liste;
@@ -4755,6 +4758,13 @@ kabuğunu bulup veriyor, oyun yeni çalışanın altında eski sürümle açıl�
 dosya da hiç geri konmuyordu. Öteki önbelleklere artık yalnız eski sürümün
 parçası için bakılıyor; bu sürümün dosyası ağdan alınıp geri konuyor. Test
 düzeltmeden önce kaldı.
+
+Dördüncü turda bir bulgu daha geldi. Başka sekmenin sürüm geçişi
+(`controllerchange`) ancak sayfa yüklenip kayıt bittikten sonra
+dinleniyordu. Sayfa yüklenirken öteki sekme Yenile'ye basarsa olay
+kaçıyor, bu sekme eski kodla "yeni sürüm hazır" demeden sürüyordu. Artık
+açılışın hemen başında dinleniyor (`listenForTakeover`). Test düzeltmeden
+önce kaldı.
 
 
 ---
@@ -4838,7 +4848,7 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi). Senaryo şehirlerinde gün 3–17 ms (`pnpm dayperf`, Tur 43) |
-| Birim testi | **505 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı da) |
+| Birim testi | **507 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı da) |
 | Denge testi | **331 kontrol, hepsi geçiyor** (25 bölüm, süreleriyle; ~13 dk) |
 | Tarayıcı testi | **500 kontrol, hepsi geçiyor**, 0 konsol hatası (~25–40 dk); duman koşusu 132 (~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + paket bütçesi (Tur 46; Tur 48'den beri hizmet çalışanı ve manifest de) + duman oynanışı |

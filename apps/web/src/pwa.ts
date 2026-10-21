@@ -57,7 +57,27 @@ export async function applyUpdate(): Promise<void> {
   waiting.postMessage('skip-waiting');
 }
 
-function watch(registration: ServiceWorkerRegistration, hadController: boolean): void {
+/**
+ * Başka bir sekme yeni sürüme geçirince bu sekmenin denetleyicisi değişiyor.
+ * Açılışın hemen başında dinleniyor, kayıt bitmeden önce de (Codex #77):
+ * sayfa yüklenirken öteki sekme Yenile'ye basarsa olay kaçmasın.
+ */
+export function listenForTakeover(container: ServiceWorkerContainer): void {
+  // İlk kurulumda çalışanın sayfayı devralması yeni sürüm değil.
+  const hadController = container.controller !== null;
+  container.addEventListener('controllerchange', () => {
+    if (applying) {
+      applying = false;
+      location.reload();
+      return;
+    }
+    // Bu sekme hâlâ eski sürümün kodunu çalıştırıyor. Oyuncuya söyle, ne
+    // zaman yenileyeceğine o karar versin.
+    if (hadController) setAppShell({ updateReady: true });
+  });
+}
+
+function watch(registration: ServiceWorkerRegistration): void {
   const announce = () => {
     // İlk kurulumda bekleyen yok; beklemek yalnız eski bir sürüm sayfayı tutarken oluyor.
     if (registration.waiting && navigator.serviceWorker.controller) setAppShell({ updateReady: true });
@@ -70,17 +90,6 @@ function watch(registration: ServiceWorkerRegistration, hadController: boolean):
     });
   });
   void navigator.serviceWorker.ready.then(() => setAppShell({ offlineReady: true }));
-
-  navigator.serviceWorker.addEventListener('controllerchange', () => {
-    if (applying) {
-      applying = false;
-      location.reload();
-      return;
-    }
-    // Başka bir sekme yeni sürüme geçti; bu sekme hâlâ eski sürümün kodunu
-    // çalıştırıyor. Oyuncuya söyle, ne zaman yenileyeceğine o karar versin.
-    if (hadController) setAppShell({ updateReady: true });
-  });
 
   const check = () => void registration.update().catch(() => undefined);
   setInterval(check, UPDATE_CHECK_MS);
@@ -122,14 +131,14 @@ export function initAppShell(): void {
 
   if (!__CF_SERVICE_WORKER__ || !import.meta.env.PROD || !('serviceWorker' in navigator)) return;
   setAppShell({ supported: true });
-  const hadController = navigator.serviceWorker.controller !== null;
+  listenForTakeover(navigator.serviceWorker);
   const register = () => {
     const base = import.meta.env.BASE_URL;
     navigator.serviceWorker.register(`${base}sw.js`, { scope: base }).then(
       (registration: ServiceWorkerRegistration | undefined) => {
         // Kaydı engelleyen ortam (otomasyonun "çalışan kapalı" ayarı) sözü
         // boş çözebiliyor; o zaman bu sayfada çevrimdışı yok.
-        if (registration) watch(registration, hadController);
+        if (registration) watch(registration);
         else setAppShell({ supported: false });
       },
       (error: unknown) => {
