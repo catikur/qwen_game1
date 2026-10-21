@@ -31,8 +31,8 @@ export const world: Record<keyof typeof trWorld, string> = {
   'core.issuance.cooldown': 'Days until the next issue: {days}.',
   'core.issuance.founderFloor': "Founder stake can't drop below {percent}%.",
   'core.issuance.noPrice': 'No share price.',
-  'core.issuance.minShares': 'At least {count} shares.',
-  'core.issuance.maxShares': 'At most {count} shares in this issue.',
+  'core.issuance.minShares': 'At least {count|# share|# shares}.',
+  'core.issuance.maxShares': 'At most {count|# share|# shares} in this issue.',
   'core.issuance.ipoDone': 'IPO complete',
   'core.issuance.raiseDone': 'Share issue complete',
   'core.issuance.playerBody':
@@ -40,10 +40,10 @@ export const world: Record<keyof typeof trWorld, string> = {
   'core.issuance.rivalIpo': '{name} goes public',
   'core.issuance.rivalRaise': '{name} issues new shares',
   'core.issuance.rivalBody':
-    '{shares} new shares went to institutional investors, adding {raised} to its cash. The control threshold rose: 50% now takes {control} shares.',
+    '{shares} new shares went to institutional investors, adding {raised} to its cash. The control threshold rose: 50% now takes {control|# share|# shares}.',
 
   // goals.ts — goal details, goal and victory news
-  'core.goals.outletsDetail': '{count} / {target} stores',
+  'core.goals.outletsDetail': '{count} / {target|# store|# stores}',
   'core.goals.unitsDetail': '{count} / {target} production units',
   'core.goals.moneyDetail': '{value} / {target}',
   'core.goals.rankAhead': "you're number one",
@@ -70,7 +70,7 @@ export const world: Record<keyof typeof trWorld, string> = {
   'core.contracts.expiredBody': '{title} was not delivered. Exit penalty: {penalty}.',
   'core.contracts.offerTitle': 'Contract offer from the city',
   'core.contracts.offerBody':
-    '{title} — reward {reward}, term {days} days. The offer stays on the table for ~{lifetime} days.',
+    '{title} — reward {reward}, term {days|# day|# days}. The offer stays on the table for ~{lifetime|# day|# days}.',
   'core.contracts.buildTitle': '{count} {category} businesses in {district}',
   'core.contracts.shareTitle': '{percent}% share of the {category} market',
   'core.contracts.millions': '₺{value}M',
@@ -87,15 +87,15 @@ export const world: Record<keyof typeof trWorld, string> = {
   // entrants.ts — new rival entry
   'core.entrants.vacancyTitle': 'A new company is coming to the city',
   'core.entrants.vacancyBody':
-    'A group eyeing the vacated market will enter the city within {days} days. You can fill the gap first.',
+    'A group eyeing the vacated market will enter the city within {days|# day|# days}. You can fill the gap first.',
   'core.entrants.entryTitle': 'New rival in the city: {name}',
   'core.entrants.entryBody':
-    'Arrived under {ceo} with {capital} in capital. {description} Its shares are under founder lock for {lockDays} days.',
+    'Arrived under {ceo} with {capital} in capital. {description} Its shares are under founder lock for {lockDays|# day|# days}.',
 
   // city.ts — zoning schedule
   'core.city.planTitle': 'Zoning plan announced: {district}',
   'core.city.planBody':
-    '{district} will be zoned for development in {days} days. Land is cheap for now — the race starts on opening day.',
+    '{district} will be zoned for development in {days|# day|# days}. Land is cheap for now — the race starts on opening day.',
   'core.city.openedTitle': '{district} is now zoned',
   'core.city.openedBody':
     "New plots are for sale. The district's population will grow fast — early movers meet demand without rivals.",
@@ -104,19 +104,19 @@ export const world: Record<keyof typeof trWorld, string> = {
   'core.league.lostTitle': 'League run over: you were taken over',
   'core.league.lostBody': "This week's score is zero. A new run starts over in the same city.",
   'core.league.finishedTitle': 'League run over: {score}',
-  'core.league.finishedBody': '{days} days are up. Your score is {score} — share the run code or submit it to the leaderboard.',
+  'core.league.finishedBody': '{days|# day is|# days are} up. Your score is {score} — share the run code or submit it to the leaderboard.',
 
   // scenario.ts, systems/scenario.ts — scenario mode (Round 39)
   'core.scenario.startTitle': 'Scenario: {title}',
   'core.scenario.rescueRaidTitle': '{name} is buying up your shares: {percent}%',
   'core.scenario.rescueRaidBody':
     'If the stake passes 50% the company is gone. Buy back your own shares or bring in investors with a share issue (stock exchange panel); a raider only goes after companies clearly smaller than itself.',
-  'core.scenario.wonTitle': '{title} complete: {stars} stars',
+  'core.scenario.wonTitle': '{title} complete: {stars|# star|# stars}',
   'core.scenario.wonBody': 'Result: {score}. The city is now open for free play; you can also replay the scenario from the start.',
   'core.scenario.lostTitle': '{title}: not this time',
   'core.scenario.lostTakeover': 'The company was taken over. The scenario can start again in the same city.',
   'core.scenario.lostTime': "Time ran out before the goal was reached. The scenario can start again in the same city; the city is also open for free play.",
-  'core.scenario.scoreDays': '{days} days',
+  'core.scenario.scoreDays': '{days|# day|# days}',
   'core.scenario.scoreLead': '×{ratio}',
   'core.scenario.progressMoney': '{value} / {target}',
   'core.scenario.progressAhead': 'ahead ×{ratio}',
@@ -126,21 +126,21 @@ export const world: Record<keyof typeof trWorld, string> = {
   'core.scenario.progressChain': 'share {share}%/{target}% · chain {links}/3',
   'core.scenario.progressChainCost': 'share {share}%/{target}% · chain {links}/3 · cost not below market',
   'core.scenario.progressSponsor': 'sponsor {done}/{total} · ranked {rank}',
-  'core.scenario.progressSponsorOut': 'sponsor {done}/{total} · ranked {rank}: {days} days to get back into the top {max}',
+  'core.scenario.progressSponsorOut': 'sponsor {done}/{total} · ranked {rank}: {days|# day|# days} to get back into the top {max}',
   'core.scenario.outOfRankTitle': 'You fell out of the top {max}',
-  'core.scenario.outOfRankBody': 'The company ranks {rank} in the city. Get back into the top {max} within {days} days or the scenario ends.',
-  'core.scenario.lostRank': 'The company fell out of the top {rank} and did not get back within {days} days.',
+  'core.scenario.outOfRankBody': 'The company ranks {rank} in the city. Get back into the top {max} within {days|# day|# days} or the scenario ends.',
+  'core.scenario.lostRank': 'The company fell out of the top {rank} and did not get back within {days|# day|# days}.',
   'core.scenario.lostProject': 'A rival took the sponsorship of the project.',
   'core.scenario.lostCity': "One of the holding's remote cities was lost.",
-  'core.scenario.progressMonopoly': 'taken over {taken}/{total} · {left} rivals left',
-  'core.scenario.progressHolding': 'victory in {won}/{total} cities · this city {value} / {target}',
-  'core.scenario.progressHoldingWon': 'victory in {won}/{total} cities · this city has won',
+  'core.scenario.progressMonopoly': 'taken over {taken}/{total} · {left|# rival|# rivals} left',
+  'core.scenario.progressHolding': 'victory in {won}/{total|# city|# cities} · this city {value} / {target}',
+  'core.scenario.progressHoldingWon': 'victory in {won}/{total|# city|# cities} · this city has won',
 
   // events.ts — event and era endings
   'core.events.endedTitle': '{title} has ended',
   'core.events.endedBody': 'The market is returning to normal.',
   'core.events.eraClosingTitle': '{title} is drawing to a close',
-  'core.events.eraClosingBody': 'A new era begins in about {days} days. Plan accordingly.',
+  'core.events.eraClosingBody': 'A new era begins in about {days|# day|# days}. Plan accordingly.',
 
   // citygrowth.ts — first change to the skyline
   'core.citygrowth.risingTitle': '{district} is rising',
@@ -160,7 +160,7 @@ export const world: Record<keyof typeof trWorld, string> = {
   'core.rivalry.crisisTitle': 'Crisis statement: {name}',
   'core.rivalry.campaignTitle': '{name} goes on the attack in {category}',
   'core.rivalry.campaignBody':
-    'For {days} days they will cut {category} prices. Your share today: {share}; the campaign is judged on your share when it ends.',
+    'For {days|# day|# days} they will cut {category} prices. Your share today: {share}; the campaign is judged on your share when it ends.',
   'core.rivalry.campaignHeldTitle': '{name} backs down: {category} stays yours',
   'core.rivalry.campaignHeldBody': 'The campaign backfired; your {category} share went {from} → {to}. Customer loyalty strengthened your brand.',
   'core.rivalry.campaignLostTitle': '{name} wins the {category} campaign',
@@ -178,10 +178,10 @@ export const world: Record<keyof typeof trWorld, string> = {
   'core.quests.claimed': 'This reward has already been claimed.',
   'core.living.seasonTitle': 'Season: {season}',
   'core.living.fadTitle': '{good} craze',
-  'core.living.fadBody': 'For {days} days everyone wants {good}: stores that stock {good} take a bigger share of the category.',
+  'core.living.fadBody': 'For {days|# day|# days} everyone wants {good}: stores that stock {good} take a bigger share of the category.',
   'core.living.trendUpTitle': '{category} is on the rise',
   'core.living.trendDownTitle': '{category} is slowing down',
-  'core.living.trendBody': 'Analysts expect this {category} demand trend to last {days} days. The rivalry panel shows its direction and target.',
+  'core.living.trendBody': 'Analysts expect this {category} demand trend to last {days|# day|# days}. The rivalry panel shows its direction and target.',
   'core.projects.none': 'There is no city project to contribute to right now.',
   'core.projects.closed': 'The contribution window is closed; the project is under construction.',
   'core.projects.tooSmall': 'The smallest contribution is {amount}.',
@@ -192,7 +192,7 @@ export const world: Record<keyof typeof trWorld, string> = {
   'core.projects.rivalLeadBody': 'If it stays ahead until the window closes, {project} will carry its name and its stores in the district will grow stronger.',
   'core.consortium.formedTitle': 'Consortium led by {leader}: you are the target',
   'core.consortium.formedBody':
-    '{members} have joined forces. Idle cash in your treasury ({share} of net worth) and investment that has stood still for {idle} days are making shareholders restless. In {days} days they start buying your shares together. Defence: go back to investing ({builds} new buildings), buy back shares or bring in investors with a share issue.',
+    '{members} have joined forces. Shareholders are getting restless: idle cash sits in your treasury ({share} of net worth) and investment has stood still for {idle|# day|# days}. In {days|# day|# days} they start buying your shares together. Defence: go back to investing ({builds} new buildings), buy back shares or bring in investors with a share issue.',
   'core.consortium.buyingTitle': 'The consortium is buying your shares',
   'core.consortium.buyingBody':
     '{leader} and partners buy {cap} of your shares every day. If they pass half of control, the company is theirs.',
@@ -204,10 +204,10 @@ export const world: Record<keyof typeof trWorld, string> = {
   'core.consortium.dissolvedLocked': 'Control is locked: even buying every remaining share, they cannot pass half.',
   'core.consortium.dissolvedMembers': 'A partner left the game; the consortium dissolved.',
   'core.projects.openTitle': 'City project: {project} · {district}',
-  'core.projects.openBody': '{pitch} The contribution window is {days} days.',
+  'core.projects.openBody': '{pitch} The contribution window is {days|# day|# days}.',
   'core.projects.sponsorTitle': '{project}: sponsored by {sponsor}',
-  'core.projects.sponsorBody': 'The biggest contribution came from {sponsor} ({amount}). The site is set up; construction takes {days} days.',
-  'core.projects.citySponsorBody': 'Nobody contributed; the council funds the project alone. Construction takes {days} days.',
+  'core.projects.sponsorBody': 'The biggest contribution came from {sponsor} ({amount}). The site is set up; construction takes {days|# day|# days}.',
+  'core.projects.citySponsorBody': 'Nobody contributed; the council funds the project alone. Construction takes {days|# day|# days}.',
   'core.projects.city': 'City council',
   'core.projects.doneTitle': '{name} opened',
   'core.projects.doneBody': 'Demand in {district} and its neighbours rose for good, and land values went up.',

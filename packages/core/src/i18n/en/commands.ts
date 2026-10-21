@@ -86,7 +86,7 @@ export const commands: Record<keyof typeof trCommands, string> = {
   'core.holding.scenarioNoNewCity': "You can't open a new city while a scenario is in progress.",
   'core.holding.lostCityNoOpen': "You can't open a new city from a lost city.",
   'core.holding.needVictory': 'Reach victory in this city to open a new one.',
-  'core.holding.maxCities': 'A holding can have at most {max} cities.',
+  'core.holding.maxCities': 'A holding can have at most {max|# city|# cities}.',
   'core.holding.minCapitalQuote': 'A new city needs at least {min} in capital; you have {cash} in cash.',
   'core.holding.minCapital': 'At least {min}.',
   'core.holding.notEnoughCash': "You don't have that much cash.",
@@ -112,7 +112,7 @@ export const commands: Record<keyof typeof trCommands, string> = {
   'core.holding.lostCityNoDirective': "A lost city can't be given orders.",
   'core.holding.badDirective': "That order doesn't exist.",
   'core.holding.closeOnlyLost': 'Only a lost city can be closed.',
-  'core.holding.completeTitle': 'Holding complete: victory in {count} cities',
+  'core.holding.completeTitle': 'Holding complete: victory in {count|# city|# cities}',
   'core.holding.completeBody': 'Holding value {worth}. The cities keep living; free play continues.',
 
   // selectors.ts — map lenses
@@ -131,7 +131,7 @@ export const commands: Record<keyof typeof trCommands, string> = {
 
   // agenda.ts — agenda labels
   'core.agenda.raid': '{name} holds {percent}% of your shares',
-  'core.agenda.consortiumWarning': '{leader} and {count} partners: buying in',
+  'core.agenda.consortiumWarning': '{leader} and {count|# partner|# partners}: buying in',
   'core.agenda.consortiumBuying': '{leader} consortium holds {percent}% of your shares',
   'core.agenda.order': '{name} {percent}%',
   'core.agenda.orderWaitingCash': '{name} {percent}% · waiting for cash',
@@ -150,8 +150,8 @@ export const commands: Record<keyof typeof trCommands, string> = {
   'core.agenda.council': 'Council · motions: {count}',
   'core.agenda.crisisWarning': 'Crisis ahead: {title}',
   'core.agenda.campaign': '{name}: {category} attack',
-  'core.agenda.quests': '{month} quests {done}/{total}',
-  'core.agenda.questsReady': 'Reward ready: {count} quest(s)',
+  'core.agenda.quests': '{month} · {done}/{total}',
+  'core.agenda.questsReady': 'Reward ready: {count|# quest|# quests}',
   'core.agenda.fad': '{good} fad',
   'core.agenda.projectRank': '{project}: you are #{rank}',
   'core.agenda.projectOpen': '{project}: contributions open',
@@ -173,7 +173,7 @@ export const commands: Record<keyof typeof trCommands, string> = {
   'core.chain.reasonPremature':
     '{shortfall} But one {name} produces {capacity} units a day and you use {consumed} — only {utilisation} of its capacity would be filled.',
   'core.chain.reasonDeferred':
-    "{shortfall} But there's no rush: the same cash pays back in a store in ~{payback} days. Days since your last unit: {since}. Days until the chain's turn: ~{wait}.",
+    "{shortfall} But there's no rush: the same cash pays back in a store in ~{payback|# day|# days}. Days since your last unit: {since}. Days until the chain's turn: ~{wait}.",
   'core.chain.countLabel': '{count} {name}',
   'core.chain.detailOwn': '{cost} · {ratio} self-supplied',
   'core.chain.detailMarket': '{cost} · market price',
@@ -181,7 +181,7 @@ export const commands: Record<keyof typeof trCommands, string> = {
   'core.chain.depotFull': 'Warehoused',
   'core.chain.depotPartial': 'Partial',
   'core.chain.depotNone': 'No warehouse',
-  'core.chain.depotCoverage': '{cost} · {covered}/{total} stores in warehouse range',
+  'core.chain.depotCoverage': '{cost} · {covered}/{total|# store|# stores} in warehouse range',
   'core.chain.noDepot': '{cost} · no warehouse',
   'core.chain.outletFallback': 'Store',
   'core.chain.retailDetail': 'sale price {price} · {units} units/day',
@@ -200,7 +200,7 @@ export const commands: Record<keyof typeof trCommands, string> = {
   'core.competition.needsNetWorth': '{name} requires a company value of {amount}.',
   'core.competition.noPlot': 'There are no vacant plots left to buy in the city.',
   'core.competition.reasonPremature':
-    '{arm} adds a fixed cost, while its benefit is multiplied by your store count. Your stores in this category: {outlets}; it starts paying off after {min} stores.',
+    '{arm} adds a fixed cost, while its benefit is multiplied by your store count. Your stores in this category: {outlets}; it starts paying off after {min|# store|# stores}.',
   'core.competition.reasonMarketingPrice':
     'Brand also feeds into the price premium: while your capacity is full, the lever pays off in margin. Marketing is cheaper than R&D and works from the day you build it — this is the fastest premium.',
   'core.competition.reasonMarketingShare':

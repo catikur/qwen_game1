@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import type { ReactElement } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
+import type { ReactElement, RefObject } from 'react';
 import { CEO_BY_ID, CRISIS_BY_ID, ERA_BY_ID, EVENT_BY_ID, formatPercent } from '@capital/content';
 import {
   LENSES,
@@ -23,12 +23,61 @@ import { reopenDecisionCard } from './DecisionCard';
 import { useGame, useGameState } from './useGame';
 import type { ViewState } from './useGame';
 import { t } from './i18n';
+import { useLocale } from './i18n/locale';
+import { useSettings } from './settings';
 import { CareerRunLine } from './CareerPanel';
 import type { MessageKey } from './i18n';
+
+/**
+ * Telefonda rıhtımın sekiz sütunu 320–412 px'de 31–42 px (Tur 50). Etiketler
+ * metin boyutuyla büyüyor; en uzunu sütununa sığmazsa hepsi aynı oranla
+ * küçülüyor (`--dock-fit`, styles.css). Tek tek küçülselerdi yan yana
+ * etiketlerin boyu karışırdı. Masaüstünde etiket kesilmiyor, oran 1.
+ */
+function useDockFit(ref: RefObject<HTMLElement | null>): void {
+  const { textSize } = useSettings();
+  const locale = useLocale();
+  useLayoutEffect(() => {
+    const nav = ref.current;
+    if (!nav) return;
+    const range = document.createRange();
+    /** En uzun etiketin sığması için gereken oran; 1 = hepsi sığıyor. */
+    const shortfall = () => {
+      let ratio = 1;
+      for (const label of nav.querySelectorAll<HTMLElement>('.dock-label')) {
+        // Kesirli genişlik: `scrollWidth` yuvarlıyor, 40,3 px'lik yazı 40 px'e
+        // "sığıyor" görünürken tarayıcı üç nokta koyuyordu.
+        range.selectNodeContents(label);
+        const need = range.getBoundingClientRect().width;
+        const room = label.getBoundingClientRect().width;
+        if (need > room) ratio = Math.min(ratio, room / need);
+      }
+      return ratio;
+    };
+    const fit = () => {
+      nav.style.removeProperty('--dock-fit');
+      // Yazı küçülünce genişliği tam orantılı küçülmüyor: sığana kadar en çok üç geçiş.
+      let scale = 1;
+      for (let pass = 0; pass < 3; pass++) {
+        const ratio = shortfall();
+        if (ratio >= 1) break;
+        scale = Math.floor(scale * ratio * 100) / 100;
+        nav.style.setProperty('--dock-fit', String(scale));
+      }
+    };
+    fit();
+    // Ekran dönünce ve yazı tipi geç gelince yeniden ölç.
+    window.addEventListener('resize', fit);
+    void document.fonts?.ready.then(fit);
+    return () => window.removeEventListener('resize', fit);
+  }, [ref, textSize, locale]);
+}
 
 /** Üst bar: oyuncunun her an görmesi gereken beş sayı ve zaman kontrolü. */
 export function TopBar(): ReactElement {
   const { run, view, setView, audio } = useGame();
+  const dock = useRef<HTMLElement>(null);
+  useDockFit(dock);
   const state = useGameState();
   const player = getPlayer(state);
   const ceo = player.ceoId ? CEO_BY_ID[player.ceoId] : undefined;
@@ -157,7 +206,7 @@ export function TopBar(): ReactElement {
         </button>
       </div>
 
-      <nav className="topbar-actions" aria-label={t('hud.dock.label')}>
+      <nav ref={dock} className="topbar-actions" aria-label={t('hud.dock.label')}>
         {PANEL_TABS.map((tab) => {
           const open = view.openPanel === tab.id;
           return (

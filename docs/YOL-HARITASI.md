@@ -1,6 +1,6 @@
 # Capital — Yol Haritası
 
-> Tur 47'de yazıldı, her turda güncelleniyor (son: Tur 49). Biten işin ayrıntısı
+> Tur 47'de yazıldı, her turda güncelleniyor (son: Tur 50). Biten işin ayrıntısı
 > `docs/DURUM.md`'de; bu dosya önümüzdeki işin sırasını ve gerekçesini
 > tutuyor.
 
@@ -35,7 +35,7 @@ Bir bağlantıyla açılan, istenirse kurulan ve çevrimdışı da oynanan bir
 
 | Faz | Amaç | Turlar | Bitti sayılır | Durum |
 |---|---|---|---|---|
-| **1 · Ürün temeli** | Oyun bir ürün gibi davransın | 47–50 | Kuruluyor, çevrimdışı açılıyor, tek Ayarlar paneli var, müzik var | **sürüyor** |
+| **1 · Ürün temeli** | Oyun bir ürün gibi davransın | 47–50 | Kuruluyor, çevrimdışı açılıyor, tek Ayarlar paneli var, müzik var | **bitti** (Tur 50) |
 | **2 · Çevrimiçi rekabet** | Herkes aynı şehirde | 51–55 | Pages'te paylaşılan tablo var, skor sunucuda doğrulanıyor | |
 | **3 · Yeni yollar** | Her koşu farklı bir şirket | 56–61 | Zafere en az üç farklı yol var, her birini kazanan bir vekil var | |
 | **4 · Şehrin hissi** | Oynaması keyifli | 62–65 | Mevsim ve hava görünüyor, önemli anlar hissediliyor | |
@@ -52,8 +52,8 @@ Kullanıcı "fazı baştan sona yürüt" dedi:
 |---|---|---|
 | **47 · Ayarlar ve erişilebilirlik** | Tek Ayarlar paneli: dil, görünüm, metin boyutu, renk körlüğüne uygun palet, hareketi azaltma, ayrı ses düzeyleri, kısayollar. Pencerelerde klavye sözleşmesi (odak, Tab, Escape). | bitti (#76) |
 | **48 · Kurulabilir ve çevrimdışı oyun** | Simge ve kurulum, çevrimdışı açılış, yayından sonra "yeni sürüm hazır" bildirimi. Tur 46'daki "eski sayfa yeni parçayı bulamıyor" sorununu kökten çözer. | bitti (#77) |
-| **49 · Müzik** | Gündüz, gece ve kriz katmanları olan dinamik müzik; Tur 47'deki ses düzeyleriyle birleşir. | bu PR |
-| **50 · Değerlendirme ve tanıtım** | Yeni oyuncu, telefon ve ilk saat değerlendirmesi. Tanıtım malzemesi: ekran görüntüleri, TR/EN tanıtım metni. Faz 1 raporu. | |
+| **49 · Müzik** | Gündüz, gece ve kriz katmanları olan dinamik müzik; Tur 47'deki ses düzeyleriyle birleşir. | bitti (#78) |
+| **50 · Değerlendirme ve tanıtım** | Yeni oyuncu, telefon ve ilk saat değerlendirmesi. Tanıtım malzemesi: ekran görüntüleri, TR/EN tanıtım metni. Faz 1 raporu. | bu PR |
 
 ### Faz 2 · Çevrimiçi rekabet
 

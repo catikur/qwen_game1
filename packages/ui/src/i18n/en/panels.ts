@@ -38,9 +38,9 @@ export const panels: Record<keyof typeof trPanels, string> = {
   'panels.estimate.indirectTitle':
     "In today's city, once its effect settles in. Grows as the city and unmet demand grow; while placing, you can check the 120-day projection.",
   'panels.estimate.indirectGain': '≈ +{gain}/day contribution · {where} ·',
-  'panels.estimate.payback': 'pays back in {days} days',
+  'panels.estimate.payback': 'pays back in {days|# day|# days}',
   'panels.estimate.indirectNoPayback': "doesn't cover its costs",
-  'panels.estimate.ramp': ' · settles in ~{days} days',
+  'panels.estimate.ramp': ' · settles in ~{days|# day|# days}',
   'panels.estimate.directProfit': '≈ {profit}/day ·',
   'panels.estimate.loss': 'loses money',
   'panels.estimate.cannibalized': ' · takes {amount}/day from your own branches (deducted)',
@@ -51,7 +51,7 @@ export const panels: Record<keyof typeof trPanels, string> = {
   'panels.projection.profitNote': "profit (contribution {gain}/day). If rivals don't move and you build nothing else.",
   'panels.projection.failed': "Couldn't run a projection for this plot.",
   'panels.projection.busy': 'Calculating…',
-  'panels.projection.run': 'What will it add after {days} days?',
+  'panels.projection.run': 'What will it add after {days|# day|# days}?',
 
   // plot details (Inspector)
   'panels.inspector.emptyTitle': 'Plot Details',
@@ -77,7 +77,7 @@ export const panels: Record<keyof typeof trPanels, string> = {
   'panels.plot.road': '🚧 Street — not for sale.',
   'panels.plot.civic': '🏛️ {name} — city property, not for sale.',
   'panels.plot.civicDefaultName': 'Public land',
-  'panels.plot.lockedDistrict': '🌱 {district} is not zoned yet — opens in {days} days.',
+  'panels.plot.lockedDistrict': '🌱 {district} is not zoned yet — opens in {days|# day|# days}.',
   'panels.plot.lockedHint': 'Land is cheap here for now. The rush starts on opening day — it pays to keep cash ready.',
   'panels.plot.structure': '🏚️ On this plot: {name}.',
   'panels.plot.buyout': 'Buy out from owner · {price}',
@@ -99,7 +99,7 @@ export const panels: Record<keyof typeof trPanels, string> = {
   'panels.building.supportNote.logistics':
     "This building doesn't sell anything. Its payoff shows up in the cost of sales of your stores within its range.",
   'panels.building.supportNote.focus':
-    "This building doesn't sell anything. Its payoff shows up in the quality and brand of your stores in its assigned category — you can measure it in the Competition panel.",
+    "This building doesn't sell anything. Its payoff shows up in the quality and brand of your stores in its assigned category — you can measure it in the Rivalry panel.",
   'panels.building.stat.utilization': 'Utilization',
   'panels.building.stat.share': 'District share',
   'panels.building.stat.price': 'Price',
@@ -135,7 +135,7 @@ export const panels: Record<keyof typeof trPanels, string> = {
 
   // modal titles (ModalHost)
   'panels.modal.title.chain': 'Supply Chain',
-  'panels.modal.title.rivalry': 'Competition',
+  'panels.modal.title.rivalry': 'Rivalry',
   'panels.modal.title.auction': 'Plot Auction',
   'panels.modal.title.project': 'City Project',
   'panels.project.disabled': 'City projects are turned off.',
@@ -143,8 +143,8 @@ export const panels: Record<keyof typeof trPanels, string> = {
   'panels.project.next': 'The council will announce the next project around {date}.',
   'panels.project.historyTitle': "The city's projects",
   'panels.project.today': 'Today is {date}',
-  'panels.project.fundingDays': '{days} days to contribute',
-  'panels.project.buildingDays': '{days} days to opening',
+  'panels.project.fundingDays': '{days|# day|# days} to contribute',
+  'panels.project.buildingDays': '{days|# day|# days} to opening',
   'panels.project.effects': 'When finished, in the district:',
   'panels.project.land': 'land {change}',
   'panels.project.neighbours': 'neighbouring districts get {share} of the effect',
@@ -192,7 +192,7 @@ export const panels: Record<keyof typeof trPanels, string> = {
   'panels.company.col.profit': 'Profit/day',
   'panels.company.col.share': 'Market share',
   'panels.company.sparklineAria': 'Company value curve',
-  'panels.company.sparklineCaption': 'Last {days} days · {min} → {max}',
+  'panels.company.sparklineCaption': 'Last {days|# day|# days} · {min} → {max}',
 
   // rivals table (RivalsPanel)
   'panels.rivals.col.company': 'Company',

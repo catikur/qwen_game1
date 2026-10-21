@@ -36,12 +36,14 @@ import {
   setLocale,
   STRUCTURES,
   translate,
+  fillTemplate,
   WAGE_POLICIES,
 } from '@capital/content';
 import { contentEn } from '../../content/src/i18n/en';
 import { tr as uiTr } from '../../ui/src/i18n/tr';
 import { en as uiEn } from '../../ui/src/i18n/en';
 import { coreTr } from '../src/i18n';
+import { coreEn } from '../src/i18n/en';
 import { GameEngine } from '../src/engine';
 import { createNewGame } from '../src/worldgen';
 import { formatMoney } from '../src/selectors';
@@ -53,7 +55,8 @@ import { playerStrategy } from './proxy';
 const TURKISH = /[çğıöşüÇĞİÖŞÜ]/;
 
 function placeholders(text: string): string {
-  return [...text.matchAll(/\{(\w+)\}/g)]
+  // Tekil/çoğul biçimi (`{days|# day|# days}`) de aynı yer tutucu.
+  return [...text.matchAll(/\{(\w+)(?:\|[^|{}]*\|[^|{}]*)?\}/g)]
     .map((m) => m[1]!)
     .sort()
     .join(',');
@@ -123,6 +126,15 @@ describe('sözlük motoru', () => {
     registerMessages('en', { 'test.partial': '{a} and {b}' });
     setLocale('en');
     assert.equal(translate('test.partial', { a: 1 }), '1 and {b}');
+  });
+
+  test('sayıya göre tekil ya da çoğul: "{days|# day|# days}" (Tur 50)', () => {
+    registerMessages('en', { 'test.plural': 'ends in {days|# day|# days} · {count|one rival is|# rivals are} left' });
+    setLocale('en');
+    assert.equal(translate('test.plural', { days: 1, count: 1 }), 'ends in 1 day · one rival is left');
+    assert.equal(translate('test.plural', { days: 12, count: 3 }), 'ends in 12 days · 3 rivals are left');
+    assert.equal(translate('test.plural', { days: '1', count: 0 }), 'ends in 1 day · 0 rivals are left');
+    assert.equal(translate('test.plural', { count: 2 }), 'ends in {days|# day|# days} · 2 rivals are left');
   });
 
   test('sonradan yüklenen dil: seçilebilir görünüyor, inmeden geçilmiyor, bir kez iniyor (Tur 46)', async () => {
@@ -208,6 +220,40 @@ describe('sözlük motoru', () => {
 });
 
 describe('İngilizce sözlükler', () => {
+  test('sayıdan sonra gelen isim tekilini de taşıyor: "1 days" yok (Tur 50)', () => {
+    // Geri sayım 1'e indiğinde "Auction · 1 days" yazıyordu. Sayı alan her
+    // çoğul isim `{n|# day|# days}` biçiminde; "(s)" eki de yok.
+    const nouns = 'days|shares|stores|plots|rivals|cities|runs|stars|partners|quests|buildings|projects';
+    const bare = new RegExp(`\\{\\w+\\} (${nouns})\\b|\\(s\\)`);
+    // Biçim yalnız sayı alır: ay, semt, kategori adı tekil/çoğul olmaz
+    // ("{month|# quest|# quests}" Mart görevlerini sayı sanıyordu; Codex #79).
+    const words = /\{(month|district|category|name|good|place|title|company|player|ceo|city|members|leader)\|/;
+    const found: string[] = [];
+    for (const [name, dictionary] of [['arayüz', uiEn], ['çekirdek', coreEn], ['içerik', contentEn]] as const) {
+      for (const [key, text] of Object.entries(dictionary as Record<string, string>)) {
+        if (bare.test(text) || words.test(text)) found.push(`${name} ${key}: ${text}`);
+      }
+    }
+    assert.deepEqual(found, []);
+  });
+
+  test('tekil biçimde fiil de tekil: "1 share are" yok (Codex #79)', () => {
+    // Biçim yalnız ismi değiştirirse fiil dışarıda çoğul kalıyordu. Her
+    // tekil/çoğul metni bütün sayıları 1 vererek doldur, isimden sonra
+    // çoğul fiil arama.
+    const found: string[] = [];
+    for (const [name, dictionary] of [['arayüz', uiEn], ['çekirdek', coreEn], ['içerik', contentEn]] as const) {
+      for (const [key, text] of Object.entries(dictionary as Record<string, string>)) {
+        const plural = [...text.matchAll(/\{(\w+)\|[^|{}]*\|[^|{}]*\}/g)].map((m) => m[1]!);
+        if (plural.length === 0) continue;
+        const ones = Object.fromEntries(plural.map((p) => [p, 1]));
+        const singular = fillTemplate(text, ones);
+        if (/\b1 [a-z]+ (are|were|have|go|reach|need)\b/.test(singular)) found.push(`${name} ${key}: ${singular}`);
+      }
+    }
+    assert.deepEqual(found, []);
+  });
+
   test('çekirdek metinlerinin hepsi İngilizcede var', () => {
     const en: Record<string, string> = {};
     for (const key of Object.keys(coreTr)) {

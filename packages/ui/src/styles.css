@@ -1919,8 +1919,9 @@ button.icon {
     box-shadow: var(--selected-shadow);
   }
 
+  /* `--dock-fit`: en uzun etiket sütununa sığsın diye hepsinin ortak oranı (hud.tsx, Tur 50). */
   .dock-label {
-    font-size: calc(9.5px * var(--text-scale));
+    font-size: calc(9.5px * var(--text-scale) * var(--dock-fit, 1));
     line-height: 1.1;
     max-width: 100%;
     overflow: hidden;
