@@ -104,6 +104,12 @@
    * gerekmiyor.
    */
   --font-num: 'Nunito', ui-sans-serif, system-ui, sans-serif;
+
+  /*
+   * Metin boyutu (Tur 47, Ayarlar): arayüzün bütün yazı boyları bununla
+   * çarpılıyor. Değeri settings.ts yazıyor; ilk çizimden önce 1.
+   */
+  --text-scale: 1;
 }
 
 /* Gece camı: Lite'ın gece belirteçleri. */
@@ -146,6 +152,30 @@
 }
 
 /*
+ * Renk körlüğünde ayrışan palet (Tur 47, Ayarlar). Standart gündüz
+ * çiftinde yeşil yükseliş ile kırmızı düşüş döteranopide neredeyse aynı
+ * görünüyordu (OKLab ΔE 3,9; gece 7,9). Camgöbeği ile turuncu her üç renk
+ * körlüğünde en az 16 ayrışıyor ve mavi vurgudan da ayrı kalıyor; saf mavi
+ * vurguyla karışırdı (ΔE 4). Uyarı mor: turuncu düşüşle karışmasın.
+ * Metin kontrastı panel üstünde AA'nın üstünde (gündüz 4,8 ve 5,2).
+ */
+:root[data-palette='safe'] {
+  --good: #0b7f86;
+  --bad: #c2410c;
+  --warn: #8b46c9;
+  --gloss-green: linear-gradient(180deg, #3fb7bd 0%, #1a9aa1 50%, #0b8a91 50%, #1597a0 100%);
+  --gloss-red: linear-gradient(180deg, #ff9a5c 0%, #f2762c 50%, #c2410c 50%, #d4561d 100%);
+  --edge-green: #0a6a70;
+  --edge-red: #8f2f08;
+}
+
+:root[data-palette='safe'][data-appearance='night'] {
+  --good: #5fd4d0;
+  --bad: #ff9f43;
+  --warn: #a78bfa;
+}
+
+/*
  * Gündüzden geceye geçiş bir an sürüyor, bir anda olmuyor. Yalnızca geçiş
  * sırasında açık (appearance.ts `data-appearance-shift` koyup kaldırıyor):
  * kalıcı bir `transition` her üzerine gelmeyi de yavaşlatırdı.
@@ -160,12 +190,11 @@
     box-shadow 0.9s ease !important;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  :root[data-appearance-shift] *,
-  :root[data-appearance-shift] *::before,
-  :root[data-appearance-shift] *::after {
-    transition: none !important;
-  }
+/* Azaltılmış hareket (Tur 47): cihazın tercihi ya da Ayarlar, settings.ts karar veriyor. */
+:root[data-motion='reduced'][data-appearance-shift] *,
+:root[data-motion='reduced'][data-appearance-shift] *::before,
+:root[data-motion='reduced'][data-appearance-shift] *::after {
+  transition: none !important;
 }
 
 * {
@@ -183,7 +212,7 @@ body {
   background: var(--bg);
   color: var(--text);
   font-family: var(--font-sans);
-  font-size: 14px;
+  font-size: calc(14px * var(--text-scale));
   /* Nunito'nun en ince gömülü ağırlığı 600: gövde de ondan başlıyor. */
   font-weight: 600;
   overflow: hidden;
@@ -204,7 +233,7 @@ body {
 .lens-body h3,
 .demandlist h3 {
   font-family: var(--font-display);
-  font-size: 17px;
+  font-size: calc(17px * var(--text-scale));
   font-weight: 700;
   letter-spacing: 0;
   text-transform: none;
@@ -289,7 +318,7 @@ button.primary:hover:not(:disabled) {
 
 button.icon {
   padding: 2px 9px;
-  font-size: 18px;
+  font-size: calc(18px * var(--text-scale));
   line-height: 1;
 }
 
@@ -300,7 +329,7 @@ button.icon {
 
 .muted {
   color: var(--muted);
-  font-size: 12.5px;
+  font-size: calc(12.5px * var(--text-scale));
   margin: 0;
 }
 
@@ -427,7 +456,7 @@ button.icon {
 
 .brand-sub {
   color: var(--muted);
-  font-size: 12px;
+  font-size: calc(12px * var(--text-scale));
 }
 
 .metrics {
@@ -451,7 +480,7 @@ button.icon {
 
 /* Küçük etiketler büyük harf kalıyor: başlık değil, rakamın adı. */
 .metric-label {
-  font-size: 11px;
+  font-size: calc(11px * var(--text-scale));
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -466,7 +495,7 @@ button.icon {
  */
 .metric-value {
   font-family: var(--font-display);
-  font-size: 18px;
+  font-size: calc(18px * var(--text-scale));
   font-weight: 700;
   line-height: 1.2;
   font-variant-numeric: tabular-nums;
@@ -527,7 +556,7 @@ button.icon {
 .speed {
   min-width: 42px;
   padding: 6px 8px;
-  font-size: 12px;
+  font-size: calc(12px * var(--text-scale));
 }
 
 /* ------------------------------------------------------------ sol sütun */
@@ -588,7 +617,7 @@ button.icon {
   white-space: nowrap;
   min-height: 32px;
   padding: 0 6px;
-  font-size: 11.5px;
+  font-size: calc(11.5px * var(--text-scale));
 }
 
 .lens-icon {
@@ -611,7 +640,7 @@ button.icon {
 .lens-hint {
   margin: 8px 0 0;
   color: var(--muted);
-  font-size: 12px;
+  font-size: calc(12px * var(--text-scale));
   line-height: 1.4;
 }
 
@@ -629,7 +658,7 @@ button.icon {
 .news h2 {
   margin: 0 0 2px;
   font-family: var(--font-display);
-  font-size: 17px;
+  font-size: calc(17px * var(--text-scale));
   font-weight: 700;
 }
 
@@ -701,7 +730,7 @@ button.icon {
   flex-shrink: 0;
   font-variant-numeric: tabular-nums;
   color: var(--muted);
-  font-size: 12.5px;
+  font-size: calc(12.5px * var(--text-scale));
   white-space: nowrap;
 }
 
@@ -712,13 +741,13 @@ button.icon {
 .buildcard-meta,
 .buildcard-hint,
 .buildcard-lock {
-  font-size: 11.5px;
+  font-size: calc(11.5px * var(--text-scale));
   color: var(--muted);
   line-height: 1.35;
 }
 
 .estimate {
-  font-size: 12px;
+  font-size: calc(12px * var(--text-scale));
   font-variant-numeric: tabular-nums;
 }
 
@@ -739,7 +768,7 @@ button.icon {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  font-size: 12px;
+  font-size: calc(12px * var(--text-scale));
   padding: 8px 10px;
   border-radius: var(--radius-sm);
   background: var(--accent-soft);
@@ -799,7 +828,7 @@ button.icon {
 }
 
 .stat-label {
-  font-size: 11px;
+  font-size: calc(11px * var(--text-scale));
   color: var(--muted);
 }
 
@@ -810,7 +839,7 @@ button.icon {
 .demandlist h3,
 .building h3 {
   margin: 0 0 6px;
-  font-size: 15px;
+  font-size: calc(15px * var(--text-scale));
   display: flex;
   align-items: center;
   gap: 7px;
@@ -821,7 +850,7 @@ button.icon {
   grid-template-columns: 78px 1fr 62px;
   align-items: center;
   gap: 8px;
-  font-size: 12px;
+  font-size: calc(12px * var(--text-scale));
   margin-bottom: 4px;
 }
 
@@ -853,7 +882,7 @@ button.icon {
 .ledgerrow {
   display: flex;
   justify-content: space-between;
-  font-size: 12.5px;
+  font-size: calc(12.5px * var(--text-scale));
   font-variant-numeric: tabular-nums;
   padding: 3px 0;
 }
@@ -863,14 +892,14 @@ button.icon {
   margin-top: 3px;
   padding-top: 7px;
   font-weight: 650;
-  font-size: 14px;
+  font-size: calc(14px * var(--text-scale));
 }
 
 .pricing {
   display: flex;
   flex-direction: column;
   gap: 7px;
-  font-size: 12.5px;
+  font-size: calc(12.5px * var(--text-scale));
 }
 
 .pricing label {
@@ -948,7 +977,7 @@ button.icon {
 .news-head {
   display: flex;
   gap: 8px;
-  font-size: 10.5px;
+  font-size: calc(10.5px * var(--text-scale));
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -968,12 +997,12 @@ button.icon {
 .news-title {
   font-family: var(--font-display);
   font-weight: 600;
-  font-size: 13.5px;
+  font-size: calc(13.5px * var(--text-scale));
 }
 
 .news-body {
   margin: 1px 0 0;
-  font-size: 12px;
+  font-size: calc(12px * var(--text-scale));
   color: var(--muted);
   line-height: 1.4;
 }
@@ -994,7 +1023,7 @@ button.icon {
   border: 1px solid var(--panel-edge);
   border-radius: 999px;
   padding: 5px 12px;
-  font-size: 12px;
+  font-size: calc(12px * var(--text-scale));
   box-shadow: var(--shadow);
   backdrop-filter: var(--glass);
   -webkit-backdrop-filter: var(--glass);
@@ -1044,7 +1073,7 @@ button.icon {
 
 .modal-head h2 {
   margin: 0;
-  font-size: 19px;
+  font-size: calc(19px * var(--text-scale));
 }
 
 .modal-body {
@@ -1058,7 +1087,7 @@ button.icon {
 .table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 13px;
+  font-size: calc(13px * var(--text-scale));
   font-variant-numeric: tabular-nums;
 }
 
@@ -1068,7 +1097,7 @@ button.icon {
  */
 .table th {
   text-align: left;
-  font-size: 10.5px;
+  font-size: calc(10.5px * var(--text-scale));
   text-transform: uppercase;
   letter-spacing: 0.04em;
   font-weight: 800;
@@ -1111,7 +1140,7 @@ button.icon {
   display: flex;
   flex-direction: column;
   gap: 5px;
-  font-size: 12px;
+  font-size: calc(12px * var(--text-scale));
   color: var(--muted);
 }
 
@@ -1127,7 +1156,7 @@ button.icon {
 
 .fileinput {
   cursor: pointer;
-  font-size: 13px;
+  font-size: calc(13px * var(--text-scale));
 }
 
 .fileinput input {
@@ -1221,7 +1250,7 @@ button.icon {
   border: 1px solid var(--panel-edge);
   border-radius: var(--radius-sm);
   padding: 9px 14px;
-  font-size: 13px;
+  font-size: calc(13px * var(--text-scale));
   box-shadow: var(--shadow);
   animation: toast-in 0.18s ease-out;
   max-width: 320px;
@@ -1265,11 +1294,9 @@ button.icon {
   color: var(--muted);
 }
 
-@media (prefers-reduced-motion: reduce) {
-  * {
-    animation: none !important;
-    transition: none !important;
-  }
+:root[data-motion='reduced'] * {
+  animation: none !important;
+  transition: none !important;
 }
 
 /* Orta genişlik: üç sütun tek sütuna iner, sahne arkada kalır. */
@@ -1505,7 +1532,7 @@ button.icon {
   }
 
   .metric-value {
-    font-size: 14px;
+    font-size: calc(14px * var(--text-scale));
   }
 
   /*
@@ -1530,7 +1557,7 @@ button.icon {
   }
 
   .brand-sub {
-    font-size: 11px;
+    font-size: calc(11px * var(--text-scale));
   }
 
   .active-events {
@@ -1580,7 +1607,7 @@ button.icon {
     border: none;
     box-shadow: none;
     text-align: left;
-    font-size: 13px;
+    font-size: calc(13px * var(--text-scale));
     color: var(--text);
   }
 
@@ -1597,7 +1624,7 @@ button.icon {
 
   .collapse-badge {
     flex: 0 0 auto;
-    font-size: 11px;
+    font-size: calc(11px * var(--text-scale));
     color: var(--muted);
   }
 
@@ -1773,7 +1800,7 @@ button.icon {
     gap: 3px;
     min-height: 52px;
     padding: 6px 4px;
-    font-size: 11px;
+    font-size: calc(11px * var(--text-scale));
     text-align: center;
   }
 
@@ -1833,11 +1860,11 @@ button.icon {
   }
 
   .metric-value {
-    font-size: 15px;
+    font-size: calc(15px * var(--text-scale));
   }
 
   .brand-sub {
-    font-size: 11px;
+    font-size: calc(11px * var(--text-scale));
   }
 
   /* Alt rıhtım: yatay kaydırmalı düğme şeridi. */
@@ -1893,7 +1920,7 @@ button.icon {
   }
 
   .dock-label {
-    font-size: 9.5px;
+    font-size: calc(9.5px * var(--text-scale));
     line-height: 1.1;
     max-width: 100%;
     overflow: hidden;
@@ -1973,7 +2000,7 @@ button.icon {
     left: 50%;
     top: -12px;
     transform: translateX(-50%);
-    font-size: 14px;
+    font-size: calc(14px * var(--text-scale));
   }
 }
 
@@ -1999,7 +2026,7 @@ button.icon {
 
 .newgame-eyebrow {
   margin: 0;
-  font-size: 11.5px;
+  font-size: calc(11.5px * var(--text-scale));
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -2009,7 +2036,7 @@ button.icon {
 .newgame-head h1 {
   margin: 6px 0 8px;
   font-family: var(--font-display);
-  font-size: clamp(32px, 5vw, 50px);
+  font-size: calc(clamp(32px, 5vw, 50px) * var(--text-scale));
   font-weight: 700;
   text-wrap: balance;
 }
@@ -2028,7 +2055,7 @@ button.icon {
 }
 
 .newgame-field > span {
-  font-size: 11.5px;
+  font-size: calc(11.5px * var(--text-scale));
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -2041,7 +2068,7 @@ button.icon {
   border-radius: var(--radius-sm);
   box-shadow: var(--button-shadow);
   padding: 13px 15px;
-  font-size: 17px;
+  font-size: calc(17px * var(--text-scale));
   font-weight: 700;
   color: var(--text);
 }
@@ -2091,12 +2118,12 @@ button.icon {
 .ceo-name {
   font-family: var(--font-display);
   font-weight: 600;
-  font-size: 13.5px;
+  font-size: calc(13.5px * var(--text-scale));
   margin-top: 4px;
 }
 
 .ceo-title {
-  font-size: 11.5px;
+  font-size: calc(11.5px * var(--text-scale));
   color: var(--muted);
 }
 
@@ -2115,7 +2142,7 @@ button.icon {
 
 .ceo-detail h2 {
   margin: 0 0 6px;
-  font-size: 19px;
+  font-size: calc(19px * var(--text-scale));
 }
 
 .ceo-bio {
@@ -2127,7 +2154,7 @@ button.icon {
 
 .ceo-perk {
   margin: 0 0 5px;
-  font-size: 13px;
+  font-size: calc(13px * var(--text-scale));
   display: flex;
   gap: 8px;
   align-items: baseline;
@@ -2136,7 +2163,7 @@ button.icon {
 /* Etiket bir hap: tonu hem yazıda hem açık zeminde. */
 .tag {
   flex-shrink: 0;
-  font-size: 10.5px;
+  font-size: calc(10.5px * var(--text-scale));
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -2160,7 +2187,7 @@ button.icon {
 
 .newgame-actions .primary {
   padding: 12px 26px;
-  font-size: 15px;
+  font-size: calc(15px * var(--text-scale));
 }
 
 .brand-ceo {
@@ -2175,7 +2202,7 @@ button.icon {
 
 .plot-note {
   margin: 0;
-  font-size: 13px;
+  font-size: calc(13px * var(--text-scale));
   font-weight: 700;
   padding: 8px 10px;
   border-radius: var(--radius-xs);
@@ -2228,7 +2255,7 @@ button.icon {
   gap: 8px;
   font-family: var(--font-display);
   font-weight: 700;
-  font-size: 16px;
+  font-size: calc(16px * var(--text-scale));
 }
 
 .chain-dot {
@@ -2239,7 +2266,7 @@ button.icon {
 }
 
 .chain-meta {
-  font-size: 12.5px;
+  font-size: calc(12.5px * var(--text-scale));
   color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
@@ -2268,7 +2295,7 @@ button.icon {
   top: 50%;
   transform: translateY(-50%);
   color: var(--muted);
-  font-size: 15px;
+  font-size: calc(15px * var(--text-scale));
   line-height: 1;
 }
 
@@ -2284,7 +2311,7 @@ button.icon {
 }
 
 .chain-state {
-  font-size: 10px;
+  font-size: calc(10px * var(--text-scale));
   font-weight: 800;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -2326,12 +2353,12 @@ button.icon {
 
 .chain-name {
   font-family: var(--font-display);
-  font-size: 13.5px;
+  font-size: calc(13.5px * var(--text-scale));
   font-weight: 600;
 }
 
 .chain-detail {
-  font-size: 11.5px;
+  font-size: calc(11.5px * var(--text-scale));
   color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
@@ -2358,7 +2385,7 @@ button.icon {
 
 .chain-reason {
   margin: 0 0 9px;
-  font-size: 13px;
+  font-size: calc(13px * var(--text-scale));
   color: var(--text);
 }
 
@@ -2370,14 +2397,14 @@ button.icon {
 }
 
 .chain-gain {
-  font-size: 12px;
+  font-size: calc(12px * var(--text-scale));
   color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
 
 .chain-warn {
   margin: 8px 0 0;
-  font-size: 12px;
+  font-size: calc(12px * var(--text-scale));
   color: var(--bad);
 }
 
@@ -2385,14 +2412,14 @@ button.icon {
   margin: 12px 0 0;
   padding-top: 11px;
   border-top: 1px solid var(--line);
-  font-size: 12.5px;
+  font-size: calc(12.5px * var(--text-scale));
   color: var(--muted);
 }
 
 /* Ölçek henüz yetmiyorsa hamle gizlenmez, uyarılır. */
 .chain-early {
   margin: 8px 0 0;
-  font-size: 12px;
+  font-size: calc(12px * var(--text-scale));
   color: var(--warn);
 }
 
@@ -2414,13 +2441,13 @@ button.icon {
   align-items: baseline;
   justify-content: space-between;
   gap: 10px;
-  font-size: 12.5px;
+  font-size: calc(12.5px * var(--text-scale));
   font-weight: 600;
   margin-bottom: 8px;
 }
 .shelf-head .muted {
   font-weight: 400;
-  font-size: 11.5px;
+  font-size: calc(11.5px * var(--text-scale));
 }
 
 .shelf-list {
@@ -2437,7 +2464,7 @@ button.icon {
   align-items: center;
   gap: 7px;
   padding: 6px 12px;
-  font-size: 12.5px;
+  font-size: calc(12.5px * var(--text-scale));
   border-radius: 999px;
 }
 
@@ -2465,7 +2492,7 @@ button.icon {
 .shelf-share {
   font-family: var(--font-num);
   font-weight: 800;
-  font-size: 11.5px;
+  font-size: calc(11.5px * var(--text-scale));
   color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
@@ -2519,13 +2546,13 @@ button.icon {
 .project-head h3 {
   margin: 0;
   font-family: var(--font-display);
-  font-size: 20px;
+  font-size: calc(20px * var(--text-scale));
   text-wrap: balance;
 }
 
 .project-where {
   padding: 0;
-  font-size: 13px;
+  font-size: calc(13px * var(--text-scale));
   font-weight: 700;
   color: var(--accent);
   background: none;
@@ -2536,7 +2563,7 @@ button.icon {
 .project-days {
   padding: 3px 10px;
   border-radius: 999px;
-  font-size: 12px;
+  font-size: calc(12px * var(--text-scale));
   font-weight: 800;
   white-space: nowrap;
   color: var(--on-accent);
@@ -2550,7 +2577,7 @@ button.icon {
 .project-note,
 .project-day {
   margin: 0;
-  font-size: 13px;
+  font-size: calc(13px * var(--text-scale));
 }
 
 .project-effects {
@@ -2561,13 +2588,13 @@ button.icon {
 }
 
 .project-label {
-  font-size: 12px;
+  font-size: calc(12px * var(--text-scale));
   font-weight: 800;
   color: var(--muted);
 }
 
 .project-neighbours {
-  font-size: 12px;
+  font-size: calc(12px * var(--text-scale));
 }
 
 .project-standings {
@@ -2584,7 +2611,7 @@ button.icon {
   grid-template-columns: 18px 24px minmax(80px, 1fr) minmax(60px, 1.2fr) auto;
   align-items: center;
   gap: 8px;
-  font-size: 13px;
+  font-size: calc(13px * var(--text-scale));
 }
 
 .project-row.is-player .project-name {
@@ -2633,7 +2660,7 @@ button.icon {
 .project-history h3 {
   margin: 0 0 6px;
   font-family: var(--font-display);
-  font-size: 16px;
+  font-size: calc(16px * var(--text-scale));
 }
 
 .project-history ul {
@@ -2643,7 +2670,7 @@ button.icon {
   margin: 0;
   padding: 0;
   list-style: none;
-  font-size: 13px;
+  font-size: calc(13px * var(--text-scale));
 }
 
 .project-site-note {
@@ -2654,7 +2681,7 @@ button.icon {
   margin: 8px 0 0;
   padding: 8px 10px;
   border-radius: var(--radius-sm);
-  font-size: 13px;
+  font-size: calc(13px * var(--text-scale));
   font-weight: 700;
   background: color-mix(in srgb, var(--brass) 14%, transparent);
 }
@@ -2690,12 +2717,12 @@ button.icon {
 
 .pulse-title {
   font-family: var(--font-display);
-  font-size: 17px;
+  font-size: calc(17px * var(--text-scale));
   font-weight: 700;
 }
 
 .pulse-season {
-  font-size: 12px;
+  font-size: calc(12px * var(--text-scale));
   font-weight: 800;
   color: var(--muted);
   white-space: nowrap;
@@ -2703,7 +2730,7 @@ button.icon {
 
 .pulse-lead {
   margin: 0;
-  font-size: 12px;
+  font-size: calc(12px * var(--text-scale));
 }
 
 .pulse-list {
@@ -2720,7 +2747,7 @@ button.icon {
   grid-template-columns: minmax(96px, 1.2fr) 52px minmax(120px, 1.6fr) auto;
   align-items: center;
   gap: 4px 10px;
-  font-size: 13px;
+  font-size: calc(13px * var(--text-scale));
 }
 
 .pulse-name {
@@ -2736,7 +2763,7 @@ button.icon {
 }
 
 .pulse-trend {
-  font-size: 12px;
+  font-size: calc(12px * var(--text-scale));
   color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
@@ -2753,7 +2780,7 @@ button.icon {
   justify-self: start;
   padding: 1px 8px;
   border-radius: 999px;
-  font-size: 11px;
+  font-size: calc(11px * var(--text-scale));
   font-weight: 700;
   color: var(--muted);
   background: var(--tint-2);
@@ -2808,11 +2835,11 @@ button.icon {
   gap: 8px;
   font-family: var(--font-display);
   font-weight: 700;
-  font-size: 16px;
+  font-size: calc(16px * var(--text-scale));
 }
 
 .rival-meta {
-  font-size: 12.5px;
+  font-size: calc(12.5px * var(--text-scale));
   color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
@@ -2826,7 +2853,7 @@ button.icon {
   margin: 0 0 12px;
   padding: 7px 10px;
   border-radius: var(--radius-xs);
-  font-size: 12.5px;
+  font-size: calc(12.5px * var(--text-scale));
   line-height: 1.45;
   border: 1px solid var(--line);
 }
@@ -2844,7 +2871,7 @@ button.icon {
 .rival-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 12.5px;
+  font-size: calc(12.5px * var(--text-scale));
   font-variant-numeric: tabular-nums;
   margin-bottom: 12px;
 }
@@ -2859,7 +2886,7 @@ button.icon {
 .rival-table thead th {
   color: var(--muted);
   font-weight: 700;
-  font-size: 11.5px;
+  font-size: calc(11.5px * var(--text-scale));
 }
 
 .rival-table tbody th {
@@ -2902,7 +2929,7 @@ button.icon {
   align-items: baseline;
   justify-content: space-between;
   gap: 8px;
-  font-size: 12.5px;
+  font-size: calc(12.5px * var(--text-scale));
 }
 
 .rival-arm-value {
@@ -2944,7 +2971,7 @@ button.icon {
 }
 
 .rival-arm-detail {
-  font-size: 11.5px;
+  font-size: calc(11.5px * var(--text-scale));
   color: var(--muted);
   line-height: 1.4;
 }
@@ -2959,7 +2986,7 @@ button.icon {
   padding: 8px 10px;
   border-radius: var(--radius-xs);
   background: var(--tint-1);
-  font-size: 12.5px;
+  font-size: calc(12.5px * var(--text-scale));
   line-height: 1.5;
   color: var(--muted);
 }
@@ -3001,7 +3028,7 @@ button.icon {
 .auction-place {
   font-family: var(--font-display);
   font-weight: 700;
-  font-size: 16px;
+  font-size: calc(16px * var(--text-scale));
 }
 
 .auction-state {
@@ -3009,7 +3036,7 @@ button.icon {
   padding: 8px 10px;
   border-radius: var(--radius-xs);
   border: 1px solid var(--line);
-  font-size: 12.5px;
+  font-size: calc(12.5px * var(--text-scale));
   line-height: 1.45;
 }
 
@@ -3029,7 +3056,7 @@ button.icon {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 12.5px;
+  font-size: calc(12.5px * var(--text-scale));
 }
 
 .auction-custom input {
@@ -3075,7 +3102,7 @@ button.icon {
   gap: 8px;
   font-family: var(--font-display);
   font-weight: 700;
-  font-size: 15px;
+  font-size: calc(15px * var(--text-scale));
 }
 
 .bourse-price {
@@ -3088,7 +3115,7 @@ button.icon {
 
 /* Güven, fiyatın NEDEN o olduğunu söyleyen etiket. */
 .bourse-trust {
-  font-size: 11.5px;
+  font-size: calc(11.5px * var(--text-scale));
   font-weight: 700;
   padding: 1px 8px;
   border-radius: 999px;
@@ -3099,7 +3126,7 @@ button.icon {
   display: flex;
   gap: 14px;
   flex-wrap: wrap;
-  font-size: 12px;
+  font-size: calc(12px * var(--text-scale));
   color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
@@ -3139,7 +3166,7 @@ button.icon {
 }
 
 .bourse-stake-text {
-  font-size: 12px;
+  font-size: calc(12px * var(--text-scale));
   color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
@@ -3158,7 +3185,7 @@ button.icon {
 
 .bourse-cap {
   margin: 0;
-  font-size: 11.5px;
+  font-size: calc(11.5px * var(--text-scale));
   font-variant-numeric: tabular-nums;
 }
 
@@ -3172,7 +3199,7 @@ button.icon {
   padding: 6px 10px;
   border: 1px solid var(--good);
   border-radius: var(--radius-xs);
-  font-size: 12.5px;
+  font-size: calc(12.5px * var(--text-scale));
   font-variant-numeric: tabular-nums;
 }
 
@@ -3182,7 +3209,7 @@ button.icon {
 
 .bourse-order button {
   padding: 3px 10px;
-  font-size: 12px;
+  font-size: calc(12px * var(--text-scale));
 }
 
 .order-chip {
@@ -3206,7 +3233,7 @@ button.icon {
  */
 .buildpanel-scarce {
   margin: 2px 0 0;
-  font-size: 11.5px;
+  font-size: calc(11.5px * var(--text-scale));
   color: var(--muted);
 }
 
@@ -3219,7 +3246,7 @@ button.icon {
   display: block;
   width: fit-content;
   margin: 3px 0 1px;
-  font-size: 10px;
+  font-size: calc(10px * var(--text-scale));
   font-weight: 800;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -3257,7 +3284,7 @@ button.icon {
   border-radius: 999px;
   background: color-mix(in srgb, var(--brass) 14%, transparent);
   color: var(--brass);
-  font-size: 10.5px;
+  font-size: calc(10.5px * var(--text-scale));
   font-weight: 800;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -3310,12 +3337,12 @@ button.icon {
 
 .gameover-card h2 {
   font-family: var(--font-display);
-  font-size: 24px;
+  font-size: calc(24px * var(--text-scale));
   font-weight: 700;
 }
 
 .gameover-card p {
-  font-size: 13.5px;
+  font-size: calc(13.5px * var(--text-scale));
   line-height: 1.55;
 }
 
@@ -3359,13 +3386,13 @@ button.icon {
   align-items: center;
   gap: 12px;
   flex-wrap: wrap;
-  font-size: 13px;
+  font-size: calc(13px * var(--text-scale));
 }
 
 /* Kilit satırı (Tur 28): kilitliyken iyi haber rengi, değilken sönük ipucu. */
 .defense-lock {
   margin: 0;
-  font-size: 12.5px;
+  font-size: calc(12.5px * var(--text-scale));
 }
 
 .defense-lock[data-defense-lock='locked'] {
@@ -3378,7 +3405,7 @@ button.icon {
   font-weight: 800;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  font-size: 10.5px;
+  font-size: calc(10.5px * var(--text-scale));
 }
 
 /* Kriz çipi (Tur 37a): uyarı kesik kenarlı (henüz gelmedi), süren kriz dolu kırmızı kenar. */
@@ -3400,7 +3427,7 @@ button.icon {
 
 /* "Teklif" / "Sözleşme" ön eki: küçük büyük harf etiket. */
 .contract-label {
-  font-size: 9.5px;
+  font-size: calc(9.5px * var(--text-scale));
   font-weight: 800;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -3416,7 +3443,7 @@ button.icon {
 
 .contract-chip button {
   padding: 2px 8px;
-  font-size: 11px;
+  font-size: calc(11px * var(--text-scale));
 }
 
 /* Aktif sözleşme "senin" işaret diliyle: seçim mavisi halka. */
@@ -3487,7 +3514,7 @@ button.icon {
 }
 
 .card-eyebrow {
-  font-size: 10px;
+  font-size: calc(10px * var(--text-scale));
   font-weight: 800;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -3502,7 +3529,7 @@ button.icon {
 .card-title {
   margin: 0;
   font-family: var(--font-display);
-  font-size: 18px;
+  font-size: calc(18px * var(--text-scale));
   font-weight: 700;
   line-height: 1.2;
   text-wrap: balance;
@@ -3512,12 +3539,12 @@ button.icon {
   align-self: flex-start;
   min-height: 30px;
   padding: 2px 10px;
-  font-size: 12px;
+  font-size: calc(12px * var(--text-scale));
 }
 
 .card-body {
   margin: 0;
-  font-size: 13.5px;
+  font-size: calc(13.5px * var(--text-scale));
   line-height: 1.5;
 }
 
@@ -3549,12 +3576,12 @@ button.icon {
 }
 
 .card-choice-label {
-  font-size: 14px;
+  font-size: calc(14px * var(--text-scale));
   font-weight: 800;
 }
 
 .card-choice-flavor {
-  font-size: 12px;
+  font-size: calc(12px * var(--text-scale));
   line-height: 1.35;
   color: var(--muted);
 }
@@ -3568,7 +3595,7 @@ button.icon {
 .card-effect {
   padding: 2px 7px;
   border-radius: 999px;
-  font-size: 11px;
+  font-size: calc(11px * var(--text-scale));
   font-weight: 800;
   font-variant-numeric: tabular-nums;
   background: var(--tint-2);
@@ -3586,12 +3613,12 @@ button.icon {
 }
 
 .card-none {
-  font-size: 11px;
+  font-size: calc(11px * var(--text-scale));
   color: var(--muted);
 }
 
 .card-odds {
-  font-size: 11px;
+  font-size: calc(11px * var(--text-scale));
   font-weight: 800;
   color: var(--warn);
 }
@@ -3601,13 +3628,13 @@ button.icon {
   flex-wrap: wrap;
   align-items: center;
   gap: 4px;
-  font-size: 11px;
+  font-size: calc(11px * var(--text-scale));
   color: var(--muted);
 }
 
 .card-fallback {
   margin: 0;
-  font-size: 11.5px;
+  font-size: calc(11.5px * var(--text-scale));
   color: var(--muted);
 }
 
@@ -3738,7 +3765,7 @@ button.icon {
 }
 
 .bubble-title {
-  font-size: 11px;
+  font-size: calc(11px * var(--text-scale));
   font-weight: 800;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -3747,7 +3774,7 @@ button.icon {
 
 .bubble-reward {
   font-family: var(--font-display);
-  font-size: 17px;
+  font-size: calc(17px * var(--text-scale));
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   color: var(--good);
@@ -3769,7 +3796,7 @@ button.icon {
   translate: -50% 0;
   padding: 2px 9px;
   border-radius: 999px;
-  font-size: 11px;
+  font-size: calc(11px * var(--text-scale));
   font-weight: 800;
   white-space: nowrap;
   color: var(--on-accent);
@@ -3790,7 +3817,7 @@ button.icon {
   position: absolute;
   translate: -50% 0;
   font-family: var(--font-display);
-  font-size: 22px;
+  font-size: calc(22px * var(--text-scale));
   font-weight: 700;
   white-space: nowrap;
   color: var(--good);
@@ -3846,12 +3873,10 @@ button.icon {
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .opportunity-bubble,
-  .bubble-hint,
-  .bubble-burst {
-    animation: none;
-  }
+:root[data-motion='reduced'] .opportunity-bubble,
+:root[data-motion='reduced'] .bubble-hint,
+:root[data-motion='reduced'] .bubble-burst {
+  animation: none;
 }
 
 /* ---------- Görev panosu (Tur 37c) ---------- */
@@ -3886,7 +3911,7 @@ button.icon {
 .goals-ladder-title {
   margin: 0;
   font-family: var(--font-display);
-  font-size: 17px;
+  font-size: calc(17px * var(--text-scale));
   text-wrap: balance;
 }
 
@@ -3895,7 +3920,7 @@ button.icon {
 }
 
 .quest-days {
-  font-size: 12px;
+  font-size: calc(12px * var(--text-scale));
   font-weight: 700;
   color: var(--muted);
   font-variant-numeric: tabular-nums;
@@ -3904,7 +3929,7 @@ button.icon {
 
 .quest-lead {
   margin: 0;
-  font-size: 12px;
+  font-size: calc(12px * var(--text-scale));
 }
 
 .quest-list {
@@ -3930,7 +3955,7 @@ button.icon {
   height: 22px;
   border: 2px solid var(--line-strong);
   border-radius: 50%;
-  font-size: 13px;
+  font-size: calc(13px * var(--text-scale));
   font-weight: 800;
   color: #ffffff;
 }
@@ -3960,7 +3985,7 @@ button.icon {
 }
 
 .quest-reward {
-  font-size: 12px;
+  font-size: calc(12px * var(--text-scale));
   font-weight: 800;
   color: var(--good);
   white-space: nowrap;
@@ -3969,7 +3994,7 @@ button.icon {
 
 .quest-detail {
   margin: 4px 0 0;
-  font-size: 12px;
+  font-size: calc(12px * var(--text-scale));
   color: var(--muted);
 }
 
@@ -4025,7 +4050,7 @@ button.icon {
   max-height: 180px;
   resize: vertical;
   font-family: var(--font-num);
-  font-size: 11px;
+  font-size: calc(11px * var(--text-scale));
   line-height: 1.35;
   color: var(--text);
   background: var(--tile);
@@ -4062,7 +4087,7 @@ button.icon {
 
 .difficulty-detail {
   padding: 10px 2px 0;
-  font-size: 13px;
+  font-size: calc(13px * var(--text-scale));
   line-height: 1.5;
 }
 
@@ -4139,7 +4164,7 @@ button.icon {
 
 .goal-state {
   font-family: var(--font-num);
-  font-size: 11.5px;
+  font-size: calc(11.5px * var(--text-scale));
   font-variant-numeric: tabular-nums;
   color: var(--muted);
 }
@@ -4183,7 +4208,7 @@ button.icon {
 
 .goal-detail {
   margin: 0;
-  font-size: 12.5px;
+  font-size: calc(12.5px * var(--text-scale));
   line-height: 1.45;
   color: var(--muted);
 }
@@ -4236,7 +4261,7 @@ button.icon {
 .agenda button.event-chip {
   cursor: pointer;
   font: inherit;
-  font-size: 12px;
+  font-size: calc(12px * var(--text-scale));
   color: inherit;
 }
 
@@ -4250,7 +4275,7 @@ button.icon {
 }
 
 .agenda-label {
-  font-size: 10px;
+  font-size: calc(10px * var(--text-scale));
   font-weight: 800;
   letter-spacing: 0.05em;
   text-transform: uppercase;
@@ -4259,7 +4284,7 @@ button.icon {
 
 .agenda-days {
   font-family: var(--font-num);
-  font-size: 11px;
+  font-size: calc(11px * var(--text-scale));
   font-variant-numeric: tabular-nums;
   color: var(--muted);
 }
@@ -4361,17 +4386,15 @@ button.icon {
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .agenda button.event-chip {
-    transition: none;
-  }
+:root[data-motion='reduced'] .agenda button.event-chip {
+  transition: none;
 }
 
 /* --- haberden olay yerine --- */
 .news-goto {
   margin-left: auto;
   padding: 1px 9px;
-  font-size: 10.5px;
+  font-size: calc(10.5px * var(--text-scale));
   font-weight: 800;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -4394,7 +4417,7 @@ button.icon {
 .council h3 {
   margin: 0;
   font-family: var(--font-display);
-  font-size: 15px;
+  font-size: calc(15px * var(--text-scale));
   font-weight: 700;
 }
 
@@ -4410,7 +4433,7 @@ button.icon {
 
 .council-summary {
   margin: 0;
-  font-size: 12.5px;
+  font-size: calc(12.5px * var(--text-scale));
   line-height: 1.5;
   color: var(--muted);
 }
@@ -4450,7 +4473,7 @@ button.icon {
   justify-content: space-between;
   gap: 8px;
   margin-top: 4px;
-  font-size: 12px;
+  font-size: calc(12px * var(--text-scale));
   font-variant-numeric: tabular-nums;
 }
 
@@ -4469,7 +4492,7 @@ button.icon {
 
 .council-give {
   font-family: var(--font-num);
-  font-size: 11px;
+  font-size: calc(11px * var(--text-scale));
   font-weight: 800;
   padding: 5px 9px;
 }
@@ -4491,7 +4514,7 @@ button.icon {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  font-size: 12px;
+  font-size: calc(12px * var(--text-scale));
 }
 
 .council-lobby li {
@@ -4516,7 +4539,7 @@ button.icon {
 
 .council-empty {
   margin: 0;
-  font-size: 12px;
+  font-size: calc(12px * var(--text-scale));
 }
 
 .council-chip {
@@ -4537,7 +4560,7 @@ button.icon {
 .league h3 {
   margin: 0 0 6px;
   font-family: var(--font-display);
-  font-size: 15px;
+  font-size: calc(15px * var(--text-scale));
   font-weight: 700;
 }
 
@@ -4583,7 +4606,7 @@ button.icon {
   display: flex;
   flex-wrap: wrap;
   gap: 4px 16px;
-  font-size: 12px;
+  font-size: calc(12px * var(--text-scale));
   font-variant-numeric: tabular-nums;
 }
 
@@ -4617,7 +4640,7 @@ button.icon {
   align-items: baseline;
   padding: 8px 2px;
   border-bottom: 1px solid var(--line);
-  font-size: 12.5px;
+  font-size: calc(12.5px * var(--text-scale));
 }
 
 .league-table li.mine {
@@ -4642,7 +4665,7 @@ button.icon {
 .league-rejected > button {
   align-self: flex-start;
   padding: 3px 8px;
-  font-size: 11.5px;
+  font-size: calc(11.5px * var(--text-scale));
 }
 
 .league-rejected .league-verdict {
@@ -4653,7 +4676,7 @@ button.icon {
 .league-rank {
   grid-area: rank;
   font-family: var(--font-num);
-  font-size: 11px;
+  font-size: calc(11px * var(--text-scale));
   color: var(--muted);
 }
 
@@ -4679,7 +4702,7 @@ button.icon {
 
 .league-actions button {
   padding: 3px 8px;
-  font-size: 11px;
+  font-size: calc(11px * var(--text-scale));
 }
 
 .league-actions button[aria-pressed='true'] {
@@ -4691,7 +4714,7 @@ button.icon {
 
 .league-verdict {
   grid-area: verdict;
-  font-size: 11.5px;
+  font-size: calc(11.5px * var(--text-scale));
   text-align: right;
 }
 
@@ -4701,7 +4724,7 @@ button.icon {
 
 .league-final {
   font-family: var(--font-display);
-  font-size: 28px;
+  font-size: calc(28px * var(--text-scale));
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
@@ -4714,11 +4737,12 @@ button.icon {
 .league-chip .pos,
 .league-chip .neg {
   font-family: var(--font-num);
-  font-size: 11px;
+  font-size: calc(11px * var(--text-scale));
 }
 
 /* --- ses düğmesi --- */
-.sound-toggle {
+.sound-toggle,
+.settings-toggle {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -4726,6 +4750,19 @@ button.icon {
 
 .sound-toggle.muted {
   color: var(--muted);
+}
+
+/*
+ * Dar telefonda ses düğmesi Ayarlar'da (Tur 47). Üst barın ikinci
+ * satırında portre ve tarih (93 px) ile hız grubu yan yana; dişli eklenince
+ * grup 278 px oldu ve 390 px'lik ekranda satır üçe bölündü. Düğmeleri
+ * 34 px'e daraltmak dokunma hedefini küçültürdü; sesin aç/kapa anahtarı
+ * zaten Ayarlar'ın ses bölümünün başında.
+ */
+@media (max-width: 480px) {
+  .sound-toggle {
+    display: none;
+  }
 }
 
 /* --- şirket paneli: işgücü ve banka --- */
@@ -4743,14 +4780,14 @@ button.icon {
 .bank h3 {
   margin: 0;
   font-family: var(--font-display);
-  font-size: 16px;
+  font-size: calc(16px * var(--text-scale));
   font-weight: 700;
 }
 
 .labor p,
 .bank p {
   margin: 0;
-  font-size: 12.5px;
+  font-size: calc(12.5px * var(--text-scale));
   line-height: 1.5;
 }
 
@@ -4762,7 +4799,7 @@ button.icon {
 
 .labor-policy button {
   padding: 5px 10px;
-  font-size: 12px;
+  font-size: calc(12px * var(--text-scale));
 }
 
 .labor-policy button[aria-pressed='true'] {
@@ -4776,7 +4813,7 @@ button.icon {
   display: flex;
   flex-direction: column;
   gap: 5px;
-  font-size: 12px;
+  font-size: calc(12px * var(--text-scale));
 }
 
 .labor-meter {
@@ -4812,7 +4849,7 @@ button.icon {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 13px;
+  font-size: calc(13px * var(--text-scale));
 }
 
 .labor-demand header .agenda-days {
@@ -4839,7 +4876,7 @@ button.icon {
 }
 
 .labor-choices .muted {
-  font-size: 11px;
+  font-size: calc(11px * var(--text-scale));
 }
 
 .labor-strike,
@@ -4867,7 +4904,7 @@ button.icon {
   justify-content: center;
   min-width: 46px;
   font-family: var(--font-display);
-  font-size: 24px;
+  font-size: calc(24px * var(--text-scale));
   font-weight: 700;
   border-radius: var(--radius-sm);
   border: 2px solid currentColor;
@@ -4904,7 +4941,7 @@ button.icon {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  font-size: 12.5px;
+  font-size: calc(12.5px * var(--text-scale));
   font-variant-numeric: tabular-nums;
 }
 
@@ -4927,7 +4964,7 @@ button.icon {
 
 .bank-loans td button {
   padding: 3px 8px;
-  font-size: 11px;
+  font-size: calc(11px * var(--text-scale));
 }
 
 .stat-value.neg {
@@ -4936,7 +4973,7 @@ button.icon {
 
 .stat-value .muted {
   font-weight: 600;
-  font-size: 11px;
+  font-size: calc(11px * var(--text-scale));
 }
 
 /* --- borsa: sermaye artırımı --- */
@@ -4946,7 +4983,7 @@ button.icon {
 
 .issuance p {
   margin: 0;
-  font-size: 12.5px;
+  font-size: calc(12.5px * var(--text-scale));
   line-height: 1.5;
 }
 
@@ -4964,7 +5001,7 @@ button.icon {
   padding: 8px 10px;
   border: 1px dashed var(--line-strong);
   border-radius: var(--radius-xs);
-  font-size: 12.5px;
+  font-size: calc(12.5px * var(--text-scale));
   font-variant-numeric: tabular-nums;
 }
 
@@ -4990,7 +5027,7 @@ button.icon {
 
 .holding > p {
   margin: 0;
-  font-size: 12.5px;
+  font-size: calc(12.5px * var(--text-scale));
   line-height: 1.5;
 }
 
@@ -5018,7 +5055,7 @@ button.icon {
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
   background: var(--tint-1);
-  font-size: 12.5px;
+  font-size: calc(12.5px * var(--text-scale));
 }
 
 .city-row.current {
@@ -5037,7 +5074,7 @@ button.icon {
 }
 
 .city-tag {
-  font-size: 11px;
+  font-size: calc(11px * var(--text-scale));
   font-weight: 800;
   color: var(--muted);
   text-transform: uppercase;
@@ -5056,7 +5093,7 @@ button.icon {
 /* Uzak şehirde baskın (Tur 30): %25'ten itibaren kötü haber rengi. */
 .city-raid {
   grid-column: 1;
-  font-size: 12px;
+  font-size: calc(12px * var(--text-scale));
   color: var(--muted);
 }
 
@@ -5087,7 +5124,7 @@ button.icon {
   grid-template-columns: 22px 1fr auto;
   gap: 8px;
   align-items: center;
-  font-size: 12.5px;
+  font-size: calc(12.5px * var(--text-scale));
 }
 
 .ladder-mark {
@@ -5097,7 +5134,7 @@ button.icon {
   height: 20px;
   border: 1px solid var(--line);
   border-radius: 50%;
-  font-size: 11px;
+  font-size: calc(11px * var(--text-scale));
   font-variant-numeric: tabular-nums;
   color: var(--muted);
 }
@@ -5126,7 +5163,7 @@ button.icon {
 
 .city-directive p {
   margin: 0;
-  font-size: 12px;
+  font-size: calc(12px * var(--text-scale));
   line-height: 1.45;
 }
 
@@ -5142,13 +5179,13 @@ button.icon {
   gap: 8px;
   align-items: center;
   min-height: 24px;
-  font-size: 12.5px;
+  font-size: calc(12.5px * var(--text-scale));
   cursor: pointer;
 }
 
 .city-note {
   grid-column: 1;
-  font-size: 12px;
+  font-size: calc(12px * var(--text-scale));
 }
 
 .holding-open .primary {
@@ -5157,7 +5194,7 @@ button.icon {
 
 .holding .defense p {
   margin: 0;
-  font-size: 12.5px;
+  font-size: calc(12.5px * var(--text-scale));
   line-height: 1.5;
 }
 
@@ -5189,7 +5226,7 @@ button.icon {
 
 .goals-holding {
   margin: 0;
-  font-size: 12.5px;
+  font-size: calc(12.5px * var(--text-scale));
   line-height: 1.5;
 }
 
@@ -5202,16 +5239,19 @@ button.icon {
 }
 
 .locale-option,
-.appearance-option {
+.appearance-option,
+.settings-option {
   min-height: 32px;
   padding: 4px 12px;
-  font-size: 12.5px;
+  font-size: calc(12.5px * var(--text-scale));
 }
 
 .locale-option.selected,
 .locale-option.selected:hover,
 .appearance-option.selected,
-.appearance-option.selected:hover {
+.appearance-option.selected:hover,
+.settings-option.selected,
+.settings-option.selected:hover {
   background: var(--selected);
   color: var(--on-selected);
   border-color: transparent;
@@ -5232,6 +5272,132 @@ button.icon {
   flex-wrap: wrap;
   gap: 10px;
   margin-top: 12px;
+}
+
+/* ------------------------------------------------------------ ayarlar (Tur 47) */
+
+.settings {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.settings-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.settings-group h3 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: calc(15px * var(--text-scale));
+}
+
+.settings-group p {
+  margin: 0;
+  max-width: 62ch;
+}
+
+.settings-choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.settings-swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.settings-swatch {
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: calc(12px * var(--text-scale));
+  color: var(--tone);
+  background: color-mix(in srgb, var(--tone) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--tone) 40%, transparent);
+}
+
+.settings-swatch.good {
+  --tone: var(--good);
+}
+
+.settings-swatch.bad {
+  --tone: var(--bad);
+}
+
+.settings-swatch.warn {
+  --tone: var(--warn);
+}
+
+.settings-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+
+.settings-volume {
+  display: grid;
+  grid-template-columns: minmax(64px, 7em) minmax(0, 1fr) 3.6em;
+  align-items: center;
+  gap: 10px;
+}
+
+.settings-volume input[type='range'] {
+  width: 100%;
+  accent-color: var(--accent);
+}
+
+.settings-volume output {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+
+.settings-keys {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+}
+
+.settings-keys > div {
+  display: grid;
+  grid-template-columns: minmax(0, 13em) minmax(0, 1fr);
+  gap: 10px;
+  align-items: baseline;
+}
+
+.settings-keys dt,
+.settings-keys dd {
+  margin: 0;
+}
+
+.settings-keys kbd {
+  display: inline-block;
+  padding: 1px 7px;
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--line-strong);
+  background: var(--tile);
+  font-family: var(--font-num);
+  font-size: calc(12px * var(--text-scale));
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+@media (max-width: 560px) {
+  .settings-keys > div {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2px;
+  }
+}
+
+/* Pencere açılınca odak kabuğa giriyor (Tur 47); kabuğun çevresine halka çizilmesin. */
+.modal:focus-visible {
+  outline: none;
 }
 
 /* ------------------------------------------------------------ rehber (Tur 26) */
@@ -5277,7 +5443,7 @@ button.icon {
 
 .coach-count {
   font-family: var(--font-num);
-  font-size: 11px;
+  font-size: calc(11px * var(--text-scale));
   font-weight: 800;
   font-variant-numeric: tabular-nums;
   color: var(--muted);
@@ -5287,7 +5453,7 @@ button.icon {
   flex: 1;
   margin: 0;
   font-family: var(--font-display);
-  font-size: 17px;
+  font-size: calc(17px * var(--text-scale));
   font-weight: 700;
   text-wrap: balance;
 }
@@ -5300,7 +5466,7 @@ button.icon {
 
 .coach-body {
   margin: 0;
-  font-size: 13.5px;
+  font-size: calc(13.5px * var(--text-scale));
   line-height: 1.5;
   max-width: 62ch;
 }
@@ -5337,7 +5503,7 @@ button.icon {
   transform: translateX(-50%);
   z-index: 45;
   pointer-events: auto;
-  font-size: 12px;
+  font-size: calc(12px * var(--text-scale));
   border: 2px solid var(--select-ring);
   border-radius: 999px;
   background: var(--panel-thick);
@@ -5392,7 +5558,7 @@ button.icon {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  font-size: 13px;
+  font-size: calc(13px * var(--text-scale));
 }
 
 [data-coach-restart] {
@@ -5410,7 +5576,7 @@ button.icon {
   }
 
   .coach-body {
-    font-size: 13px;
+    font-size: calc(13px * var(--text-scale));
   }
 
   .coach-pill {
@@ -5472,11 +5638,11 @@ button.icon {
 .scenario-card-title {
   font-family: var(--font-display);
   font-weight: 600;
-  font-size: 15px;
+  font-size: calc(15px * var(--text-scale));
 }
 
 .scenario-card-tagline {
-  font-size: 12.5px;
+  font-size: calc(12.5px * var(--text-scale));
   line-height: 1.4;
   color: var(--muted);
 }
@@ -5484,7 +5650,7 @@ button.icon {
 .scenario-card-status {
   margin-top: auto;
   padding-top: 4px;
-  font-size: 12px;
+  font-size: calc(12px * var(--text-scale));
   font-variant-numeric: tabular-nums;
   color: var(--warn);
   font-weight: 700;
@@ -5496,7 +5662,7 @@ button.icon {
 
 .scenario-setup,
 .scenario-stars {
-  font-size: 12px;
+  font-size: calc(12px * var(--text-scale));
   line-height: 1.45;
 }
 
@@ -5504,7 +5670,7 @@ button.icon {
   margin: 0;
   padding-left: 18px;
   text-align: left;
-  font-size: 13px;
+  font-size: calc(13px * var(--text-scale));
   line-height: 1.5;
   color: var(--muted);
 }
@@ -5514,7 +5680,7 @@ button.icon {
 }
 
 .gameover-card .scenario-result-stars {
-  font-size: 38px;
+  font-size: calc(38px * var(--text-scale));
   letter-spacing: 6px;
   line-height: 1;
   color: var(--warn);
@@ -5530,7 +5696,7 @@ button.icon {
 }
 
 .scenario-goals .scenario-goal {
-  font-size: 13px;
+  font-size: calc(13px * var(--text-scale));
   line-height: 1.45;
   font-weight: 600;
 }
@@ -5542,7 +5708,7 @@ button.icon {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  font-size: 12.5px;
+  font-size: calc(12.5px * var(--text-scale));
   line-height: 1.45;
   color: var(--muted);
   font-variant-numeric: tabular-nums;
@@ -5588,7 +5754,7 @@ button.icon {
 
 .career-group h3 {
   margin: 0 0 8px;
-  font-size: 15px;
+  font-size: calc(15px * var(--text-scale));
 }
 
 .career-badges {
@@ -5662,7 +5828,7 @@ button.icon {
 
 .career-badge-state {
   flex: none;
-  font-size: 12px;
+  font-size: calc(12px * var(--text-scale));
   color: var(--muted);
 }
 
@@ -5674,7 +5840,7 @@ button.icon {
 .career-badge-when,
 .career-badge-progress {
   margin: 0;
-  font-size: 13px;
+  font-size: calc(13px * var(--text-scale));
 }
 
 .career-badge-hint,
@@ -5723,7 +5889,7 @@ button.icon {
 }
 
 .career-run-meta {
-  font-size: 13px;
+  font-size: calc(13px * var(--text-scale));
   color: var(--muted);
 }
 
@@ -5733,7 +5899,7 @@ button.icon {
 
 .career-note {
   margin: 0;
-  font-size: 13px;
+  font-size: calc(13px * var(--text-scale));
 }
 
 /* Hedefler panelinden ve kurulum ekranından giriş. */

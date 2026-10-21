@@ -485,6 +485,16 @@ export class TrafficSystem {
   // ------------------------------------------------------------- rotalar
 
   /**
+   * Renk kuralı değişince (Tur 47, renk körlüğüne uygun palet) kamyonlar ve
+   * müşteri araçları bir sonraki eşitlemede yeniden kuruluyor: imzalar
+   * yalnızca rotaya bakıyor, renk değişimini görmezdi.
+   */
+  invalidateColors(): void {
+    this.signature = '';
+    this.flowSignature = '';
+  }
+
+  /**
    * Kamyon filosunu tedarik bacaklarına göre kurar.
    *
    * Liste değişmediyse HİÇBİR ŞEY yapmaz. State her gün senkronlandığı için

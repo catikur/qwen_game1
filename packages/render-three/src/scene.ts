@@ -183,6 +183,14 @@ const DAY_SKY_LIGHT = new THREE.Color('#8fb6d9');
 const LENS_COLD = new THREE.Color('#1d3b57');
 const LENS_HOT = new THREE.Color('#f0654a');
 const OWN_COLOR = new THREE.Color('#3ba55d');
+/*
+ * Renk körlüğüne uygun palette oyuncunun rengi (Tur 47). Nane yeşili on
+ * altı rakip rengine karşı döteranopide OKLab ΔE 7,6'ya, sahiplik lensinde
+ * (×0,7) normal görüşte bile 7,5'e iniyordu (Atlas'ın camgöbeği). Limon en
+ * kötü renk körlüğünde 17,1; lenste parlak kaldığı için (×0,9) 28,3.
+ */
+const SAFE_PLAYER_ACCENT = '#fff36b';
+const SAFE_OWN_COLOR = new THREE.Color('#e6db60');
 const FREE_COLOR = new THREE.Color('#2a3446');
 
 export class CityRenderer {
@@ -246,6 +254,9 @@ export class CityRenderer {
   private districtLines: THREE.LineSegments;
 
   private state: GameState | null = null;
+  /** Erişilebilirlik (Tur 47): renk körlüğüne uygun palet, azaltılmış hareket. */
+  private safePalette = false;
+  private reducedMotion = false;
   /** `screenOfTile` için tekrar kullanılan vektör (her karede çağrılıyor). */
   private readonly projected = new THREE.Vector3();
   private view: ViewOptions = {
@@ -1037,7 +1048,7 @@ export class CityRenderer {
        */
       const company = state.companies[building.companyId];
       naturalColor(this.color, buildingFacade(def), tile.x, tile.y).lerp(this.categoryColor.set(def.color), 0.18);
-      this.ownerColor.set(company && !company.isPlayer ? company.color : PLAYER_ACCENT);
+      this.ownerColor.set(company && !company.isPlayer ? company.color : this.playerAccent());
 
       const growth = this.growthOf(building.id);
       if (growth < 1) growing = true;
@@ -1127,7 +1138,7 @@ export class CityRenderer {
         // Oyuncunun kamyonları kendi şirket rengini değil, binalarında
         // kullanılan nane yeşilinin daha doygun tonunu taşıyor: "benimki"
         // tek bakışta ayrılsın ama ışıksız çizildiği için beyaza kaçmasın.
-        color: company?.isPlayer ? '#3fd39a' : (company?.color ?? '#8899aa'),
+        color: company?.isPlayer ? this.playerAccent() : (company?.color ?? '#8899aa'),
       };
     });
   }
@@ -1150,7 +1161,7 @@ export class CityRenderer {
       const company = state.companies[flow.companyId];
       return {
         at: { x: tile.x, y: tile.y },
-        color: company?.isPlayer ? '#3fd39a' : (company?.color ?? '#8899aa'),
+        color: company?.isPlayer ? this.playerAccent() : (company?.color ?? '#8899aa'),
       };
     });
   }
@@ -1180,7 +1191,7 @@ export class CityRenderer {
     const height = Math.max(0.3, def.height) * 1.5;
     const company = state.companies[playerCompanyId];
     (this.hqFlag.material as THREE.MeshStandardMaterial).color.set(
-      company?.isPlayer ? '#3fd39a' : (company?.color ?? '#8899aa'),
+      company?.isPlayer ? this.playerAccent() : (company?.color ?? '#8899aa'),
     );
     this.hqMarker.position.set(tile.x, 0.07 + height * this.growthOf(hq.id), tile.y);
     this.hqMarker.visible = true;
@@ -1238,6 +1249,7 @@ export class CityRenderer {
     if (view.lens === 'ownership') {
       if (!tile.ownerId) return this.color.copy(FREE_COLOR);
       const owner = state.companies[tile.ownerId];
+      if (owner?.isPlayer && this.safePalette) return this.color.set(SAFE_PLAYER_ACCENT).multiplyScalar(0.9);
       return this.color.set(owner?.color ?? '#888888').multiplyScalar(0.7);
     }
 
@@ -1248,7 +1260,7 @@ export class CityRenderer {
       // Boş parsel biraz daha aydınlık: "burası alınabilir" sinyali.
       if (!tile.structureId && !tile.ownerId) this.color.offsetHSL(0, 0.02, 0.07);
       // Kendi arsan hafif yeşile çalsın; sahiplik lens açmadan da okunsun.
-      if (tile.ownerId === view.playerCompanyId) this.color.lerp(OWN_COLOR, 0.35);
+      if (tile.ownerId === view.playerCompanyId) this.color.lerp(this.safePalette ? SAFE_OWN_COLOR : OWN_COLOR, 0.35);
       else if (tile.ownerId) {
         const owner = state.companies[tile.ownerId];
         if (owner) this.color.lerp(new THREE.Color(owner.color), 0.28);
@@ -1696,6 +1708,11 @@ export class CityRenderer {
     shopperPositionSum: number;
     /** Müşteri araçlarının rengi — akışın kime gittiğini sınamak için. */
     shopperColors: string[];
+    /** Erişilebilirlik ayarları (Tur 47). */
+    palette: 'standard' | 'safe';
+    reducedMotion: boolean;
+    /** Kameranın şu an baktığı nokta; azaltılmış harekette odaklanınca hedefle aynı. */
+    cameraCurrent: { x: number; z: number };
     /** Genel merkez işareti görünür mü ve nerede duruyor. */
     hqVisible: boolean;
     hqPosition: { x: number; y: number; z: number } | null;
@@ -1789,6 +1806,9 @@ export class CityRenderer {
       shopperCount: this.traffic.shopperCount,
       shopperPositionSum: this.traffic.shopperPositionSum,
       shopperColors: this.traffic.shopperColors,
+      palette: this.safePalette ? 'safe' : 'standard',
+      reducedMotion: this.reducedMotion,
+      cameraCurrent: this.controller.currentPoint,
       hqVisible: this.hqMarker.visible,
       hqPosition: this.hqMarker.visible
         ? { x: this.hqMarker.position.x, y: this.hqMarker.position.y, z: this.hqMarker.position.z }
@@ -1871,6 +1891,24 @@ export class CityRenderer {
    */
   focusWorld(x: number, z: number): void {
     this.controller.focusOn(x, z);
+    if (this.reducedMotion) this.controller.snap();
+  }
+
+  /**
+   * Erişilebilirlik ayarları (Tur 47): renk körlüğüne uygun palette
+   * oyuncunun rengi, azaltılmış harekette kameranın atlaması. Palet
+   * değişince şehir bir sonraki karede yeni renkle boyanıyor.
+   */
+  setAccessibility(options: { safePalette: boolean; reducedMotion: boolean }): void {
+    this.reducedMotion = options.reducedMotion;
+    if (options.safePalette === this.safePalette) return;
+    this.safePalette = options.safePalette;
+    this.traffic.invalidateColors();
+    if (this.state) this.syncState(this.state, this.view);
+  }
+
+  private playerAccent(): string {
+    return this.safePalette ? SAFE_PLAYER_ACCENT : PLAYER_ACCENT;
   }
 
   /** Testler ve görsel karşılaştırma: sabit bir kamera bakışı. */

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactElement } from 'react';
 import { SCHEMA_VERSION, customerFlows, getPlayer, routeSignature, supplyRoutes } from '@capital/core';
-import type { GameCommand, GameEngine } from '@capital/core';
+import type { GameCommand, GameEngine, GameSpeed } from '@capital/core';
 import { BUILDING_BY_ID, GOOD_BY_ID } from '@capital/content';
 import { CityRenderer } from '@capital/render-three';
 import { AUTOSAVE_SLOT, exportToJson, importFromJson, loadGame, saveGame } from '@capital/persistence';
@@ -23,7 +23,10 @@ import {
   ScenarioResultScreen,
   Toasts,
   TopBar,
+  getSettings,
+  reducedMotion,
   setCityDaylight,
+  subscribeSettings,
   t,
   tutorialStepOf,
   useCareerWatch,
@@ -150,6 +153,13 @@ export function GameRoot({
       state.map.height,
     );
     rendererRef.current = renderer;
+    // Erişilebilirlik ayarları (Tur 47): palet ve hareket sahneye de iniyor.
+    const applyAccessibility = () => {
+      const settings = getSettings();
+      renderer.setAccessibility({ safePalette: settings.palette === 'safe', reducedMotion: reducedMotion(settings) });
+    };
+    applyAccessibility();
+    const stopAccessibility = subscribeSettings(applyAccessibility);
 
     let frame = 0;
     let last = performance.now();
@@ -178,6 +188,7 @@ export function GameRoot({
     return () => {
       cancelAnimationFrame(frame);
       window.removeEventListener('resize', onResize);
+      stopAccessibility();
       renderer.dispose();
       rendererRef.current = null;
     };
@@ -218,14 +229,22 @@ export function GameRoot({
   // ---- Klavye kısayolları ----
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
+      // Escape her yerden pencereyi kapatıyor: Ayarlar'da odak çoğu zaman bir
+      // kaydırıcıda ya da onay kutusunda (Tur 47). Diğer tuşlar alanın kendisinin.
+      if (e.code === 'Escape') {
+        setViewState((current) => ({ ...current, ghostDefId: null, openPanel: 'none' }));
+        return;
+      }
       const target = e.target as HTMLElement | null;
       if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) return;
 
+      const digit = /^(?:Digit|Numpad)([123])$/.exec(e.code);
       if (e.code === 'Space') {
         e.preventDefault();
         engine.dispatch({ type: 'TOGGLE_PAUSE' });
-      } else if (e.code === 'Escape') {
-        setViewState((current) => ({ ...current, ghostDefId: null, openPanel: 'none' }));
+      } else if (digit) {
+        // Hız kısayolları (Tur 47): üst bardaki ▶ ▶▶ ▶▶▶ düğmeleriyle aynı komut.
+        engine.dispatch({ type: 'SET_SPEED', speed: Number(digit[1]) as GameSpeed });
       }
     };
     window.addEventListener('keydown', onKeyDown);
@@ -261,6 +280,8 @@ export function GameRoot({
       routeSignature: () => routeSignature(supplyRoutes(engine.getState())),
       customerFlows: () => customerFlows(engine.getState()),
       cameraTarget: () => rendererRef.current?.cameraTarget() ?? null,
+      // Olay yerine gitmenin kamerası (Tur 47): azaltılmış harekette atlıyor.
+      focusWorld: (x: number, z: number) => rendererRef.current?.focusWorld(x, z),
       setView: (view: { x: number; z: number; distance?: number; azimuth?: number; polar?: number }) =>
         rendererRef.current?.setView(view),
       tutorialStep: () => tutorialStepOf(engine.getState()),

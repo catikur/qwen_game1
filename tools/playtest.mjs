@@ -892,7 +892,8 @@ async function finish(browser, consoleErrors) {
   await page.waitForTimeout(150);
   const mutedNow = await page.evaluate(() => ({
     muted: window.__capital.audio().muted,
-    stored: localStorage.getItem('capitalforge.audio.muted'),
+    // Tur 47'den beri sessize alma Ayarlar'ın içinde saklanıyor.
+    stored: JSON.parse(localStorage.getItem('capitalforge.settings.v1') ?? '{}').muted === true ? '1' : '0',
     pressed: document.querySelector('.sound-toggle')?.getAttribute('aria-pressed'),
   }));
   check('Sessize alma çalışıyor ve hatırlanıyor', mutedNow.muted && mutedNow.stored === '1' && mutedNow.pressed === 'false',
@@ -4682,10 +4683,12 @@ async function finish(browser, consoleErrors) {
     await lp.screenshot({ path: `${OUT}/locale-en.png` });
     // Yardım panelinden Türkçeye dönüş: oyun sürüyor, metinler anında değişiyor.
     const dayBefore = await lp.evaluate(() => window.__capital.getState().time.day);
-    await lp.locator('.topbar-actions [data-panel="help"]').click();
+    // Tur 47'den beri dil Ayarlar'da; Yardım oraya yönlendiriyor.
+    await lp.locator('.speeds [data-panel="settings"]').click();
     await lp.waitForTimeout(300);
-    check('Yardım panelinde dil seçici', (await lp.locator('.help .locale-option').count()) === 2);
-    await lp.locator('.help [data-locale="tr"]').click();
+    check('Ayarlar panelinde dil seçici', (await lp.locator('.settings .locale-option').count()) === 2);
+    await lp.locator('.settings [data-locale="tr"]').click();
+    await lp.waitForFunction(() => document.documentElement.lang === 'tr', null, { timeout: 10000 });
     await lp.waitForTimeout(300);
     await lp.keyboard.press('Escape');
     const topbarTr = ((await lp.locator('.topbar').textContent()) ?? '').trim();
@@ -4753,18 +4756,19 @@ async function finish(browser, consoleErrors) {
     await ap.evaluate(() => window.__capital.setTimeOfDay(0.28));
     check('Sabah olunca arayüz gündüze dönüyor', await lookBecomes('day'), await look());
 
-    await ap.locator('.topbar-actions [data-panel="help"]').click();
+    // Tur 47'den beri görünüm Ayarlar'da.
+    await ap.locator('.speeds [data-panel="settings"]').click();
     await ap.waitForTimeout(300);
-    check('Yardım panelinde görünüm seçici, Otomatik seçili',
-      (await ap.locator('.help .appearance-option').count()) === 3 &&
-        (await ap.locator('.help [data-appearance-choice="auto"][aria-pressed="true"]').count()) === 1);
-    await ap.locator('.help [data-appearance-choice="day"]').click();
+    check('Ayarlar panelinde görünüm seçici, Otomatik seçili',
+      (await ap.locator('.settings .appearance-option').count()) === 3 &&
+        (await ap.locator('.settings [data-appearance-choice="auto"][aria-pressed="true"]').count()) === 1);
+    await ap.locator('.settings [data-appearance-choice="day"]').click();
     await ap.keyboard.press('Escape');
     await ap.evaluate(() => window.__capital.setTimeOfDay(0.75));
     // Otomatik olsaydı bu sürede geceye dönerdi (yukarıdaki kontrol).
     check('Gündüz sabitlenince şehir gecesi arayüzü değiştirmiyor', !(await lookBecomes('night', 2000)), await look());
-    await ap.locator('.topbar-actions [data-panel="help"]').click();
-    await ap.locator('.help [data-appearance-choice="night"]').click();
+    await ap.locator('.speeds [data-panel="settings"]').click();
+    await ap.locator('.settings [data-appearance-choice="night"]').click();
     check('Gece seçilince arayüz hemen gece', (await look()) === 'night', await look());
     await ap.keyboard.press('Escape');
     // Yenileme oyuna ya da kuruluma açılabilir: otomatik kayıt 30 sn'de bir
@@ -4786,6 +4790,197 @@ async function finish(browser, consoleErrors) {
     const darkLook = await dp.evaluate(() => document.documentElement.dataset.appearance ?? '');
     check('Koyu modlu cihazda Otomatik gece camı', darkLook === 'night', darkLook);
     await dContext.close();
+  }
+
+  // ---------- Ayarlar ve erişilebilirlik (Tur 47) ----------
+  // Kendi bağlamında: seçimler tarayıcıda hatırlanıyor, diğer bölümler varsayılanda kalmalı.
+  section('Ayarlar ve erişilebilirlik');
+  {
+    const sContext = await browser.newContext({ viewport: { width: 1280, height: 860 } });
+    await sContext.addInitScript(veteran, TUTORIAL_KEY);
+    const sp = await sContext.newPage();
+    const sErrors = [];
+    sp.on('pageerror', (e) => sErrors.push(e.message));
+    sp.on('console', (m) => { if (m.type() === 'error') sErrors.push(m.text()); });
+    await sp.goto('http://127.0.0.1:8811/?appearance=day');
+    await sp.waitForSelector('.newgame', { timeout: 20000 });
+    await sp.locator('[data-settings-open]').focus();
+    await sp.keyboard.press('Enter');
+    await sp.waitForSelector('.settings-overlay .settings', { timeout: 5000 });
+    const setupFocus = await sp.evaluate(() => Boolean(document.activeElement?.closest('.settings-overlay')));
+    await sp.keyboard.press('Escape');
+    await sp.waitForTimeout(150);
+    const backOnButton = await sp.evaluate(() => document.activeElement?.hasAttribute('data-settings-open') ?? false);
+    check('Kurulumda Ayarlar açılıyor; odak pencerede, Escape kapatıp odağı düğmeye veriyor',
+      setupFocus && backOnButton && (await sp.locator('.settings-overlay').count()) === 0, `odak ${setupFocus} · geri ${backOnButton}`);
+
+    await sp.locator('button:has-text("Şirketi kur")').click();
+    await sp.waitForSelector('.topbar', { timeout: 30000 });
+    await sp.waitForFunction(() => (window.__capital?.renderInfo?.()?.frameCount ?? 0) >= 2, null, { timeout: 60000 });
+    await sp.evaluate(() => {
+      window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+      document.activeElement?.blur?.();
+    });
+    await sp.keyboard.press('Digit2');
+    const speedTwo = await sp.evaluate(() => window.__capital.getState().time.speed);
+    await sp.keyboard.press('Digit3');
+    const speedThree = await sp.evaluate(() => window.__capital.getState().time.speed);
+    await sp.keyboard.press('Digit1');
+    const speedOne = await sp.evaluate(() => window.__capital.getState().time.speed);
+    await sp.evaluate(() => window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 }));
+    check('1, 2 ve 3 tuşları hızı seçiyor', speedTwo === 2 && speedThree === 3 && speedOne === 1, `${speedTwo} · ${speedThree} · ${speedOne}`);
+
+    // Üst bardaki dişli: pencere odağı alıyor, Tab ve Shift+Tab içeride dönüyor.
+    await sp.locator('.speeds [data-panel="settings"]').focus();
+    await sp.keyboard.press('Enter');
+    await sp.waitForSelector('.modal .settings', { timeout: 5000 });
+    const opened = await sp.evaluate(() => ({
+      inside: Boolean(document.activeElement?.closest('.modal')),
+      groups: document.querySelectorAll('.settings .settings-group').length,
+      title: document.getElementById(document.querySelector('.modal')?.getAttribute('aria-labelledby') ?? '')?.textContent ?? '',
+    }));
+    await sp.keyboard.press('Tab');
+    await sp.keyboard.press('Shift+Tab');
+    const wrappedBack = await sp.evaluate(() => document.activeElement?.getAttribute('data-volume') ?? document.activeElement?.className ?? '');
+    await sp.keyboard.press('Tab');
+    const wrappedForward = await sp.evaluate(() => Boolean(document.activeElement?.closest('.modal-head')));
+    check('Ayarlar penceresi: yedi bölüm, odak içeride, Tab ve Shift+Tab pencerede dönüyor',
+      opened.inside && opened.groups === 7 && opened.title === 'Ayarlar' && wrappedBack === 'effects' && wrappedForward,
+      `${JSON.stringify(opened)} · geri ${wrappedBack} · ileri ${wrappedForward}`);
+
+    const headSize = () => sp.evaluate(() => parseFloat(getComputedStyle(document.querySelector('.settings-group h3')).fontSize));
+    const before = await headSize();
+    await sp.locator('[data-setting="text"][data-choice="xlarge"]').click();
+    const after = await headSize();
+    check('Çok büyük metin: yazılar %130', Math.abs(after / before - 1.3) < 0.02, `${before} → ${after} px`);
+
+    await sp.locator('[data-setting="palette"][data-choice="safe"]').click();
+    await sp.waitForTimeout(200);
+    const palette = await sp.evaluate(() => ({
+      good: getComputedStyle(document.documentElement).getPropertyValue('--good').trim(),
+      bad: getComputedStyle(document.documentElement).getPropertyValue('--bad').trim(),
+      scene: window.__capital.renderInfo().palette,
+    }));
+    check('Renk körlüğüne uygun palet: yükseliş camgöbeği, düşüş turuncu, şehir de değişiyor',
+      palette.good === '#0b7f86' && palette.bad === '#c2410c' && palette.scene === 'safe', JSON.stringify(palette));
+
+    await sp.locator('[data-setting="motion"][data-choice="reduced"]').click();
+    await sp.waitForTimeout(100);
+    const motion = await sp.evaluate(() => ({
+      root: document.documentElement.dataset.motion ?? '',
+      transition: getComputedStyle(document.querySelector('.settings-option')).transitionDuration,
+      scene: window.__capital.renderInfo().reducedMotion,
+    }));
+    check('Azaltılmış hareket: geçişler kapalı, sahne biliyor', motion.root === 'reduced' && /^0s(, 0s)*$/.test(motion.transition) && motion.scene, JSON.stringify(motion));
+
+    // Ses düzeyleri klavyeyle: ok tuşu adımı %5.
+    await sp.locator('[data-volume="effects"]').focus();
+    for (let i = 0; i < 12; i++) await sp.keyboard.press('ArrowLeft');
+    await sp.locator('[data-volume="master"]').focus();
+    for (let i = 0; i < 10; i++) await sp.keyboard.press('ArrowLeft');
+    const buses = await sp.evaluate(() => window.__capital.audio().buses);
+    const effectsText = ((await sp.locator('[data-volume="effects"] + output').textContent()) ?? '').trim();
+    check('Ses düzeyleri klavyeyle iniyor; ses yolları ayarı izliyor',
+      Math.abs(buses.effects - 0.4) < 1e-9 && Math.abs(buses.master - 0.55 * 0.5) < 1e-9 && buses.ambience === 1 && effectsText === '%40',
+      `${JSON.stringify(buses)} · ${effectsText}`);
+    await sp.locator('[data-settings-sound]').click();
+    const mutedState = await sp.evaluate(() => ({
+      muted: window.__capital.audio().muted,
+      master: window.__capital.audio().buses.master,
+      toggle: document.querySelector('.sound-toggle')?.getAttribute('aria-pressed'),
+      disabled: document.querySelector('[data-volume="master"]')?.disabled,
+    }));
+    check('Ses kapatılınca üst bardaki düğme de kapalı, kaydırıcılar pasif',
+      mutedState.muted && mutedState.master === 0 && mutedState.toggle === 'false' && mutedState.disabled === true, JSON.stringify(mutedState));
+    await sp.locator('[data-settings-sound]').click();
+
+    // Odak onay kutusundayken de Escape kapatıyor (ilk sürümde kısayol
+    // işleyicisi alanları atlıyordu, pencere açık kalıyordu).
+    await sp.keyboard.press('Escape');
+    await sp.waitForTimeout(150);
+    const gearFocused = await sp.evaluate(() => document.activeElement?.getAttribute('data-panel') === 'settings');
+    // Olay yerine gitmek: azaltılmış harekette kamera atlıyor, Tam'da süzülüyor.
+    const jump = async (fx, fz) => sp.evaluate(([x, z]) => {
+      window.__capital.focusWorld(x, z);
+      const now = window.__capital.renderInfo().cameraCurrent;
+      const goal = window.__capital.cameraTarget();
+      return Math.hypot(now.x - goal.x, now.z - goal.z);
+    }, [fx, fz]);
+    const size = await sp.evaluate(() => ({ w: window.__capital.getState().map.width, h: window.__capital.getState().map.height }));
+    const reducedGap = await jump(3, 3);
+    await sp.waitForTimeout(300);
+    await sp.locator('.speeds [data-panel="settings"]').click();
+    await sp.locator('[data-setting="motion"][data-choice="full"]').click();
+    await sp.keyboard.press('Escape');
+    await sp.waitForTimeout(150);
+    const fullGap = await jump(size.w - 4, size.h - 4);
+    check('Onay kutusundan Escape kapatıyor, odak dişliye dönüyor; azaltılmış harekette kamera atlıyor, Tam\'da süzülüyor',
+      gearFocused && reducedGap < 0.01 && fullGap > 1, `odak ${gearFocused} · atlama ${reducedGap.toFixed(3)} · süzülme ${fullGap.toFixed(2)}`);
+
+    await sp.locator('.topbar-actions [data-panel="help"]').click();
+    await sp.locator('[data-open-settings]').click();
+    await sp.waitForTimeout(200);
+    const redirected = (await sp.locator('.modal .settings').count()) === 1 && (await sp.locator('.help .locale-option').count()) === 0;
+    await sp.keyboard.press('Escape');
+    await sp.waitForTimeout(150);
+    // Yardım'ın içindeki düğme pencereyle birlikte gidiyor; odak yine Yardım'ı
+    // açan rıhtım düğmesine dönmeli, sayfanın başına düşmemeli (Codex #76).
+    const backTo = await sp.evaluate(() => document.activeElement?.getAttribute('data-panel') ?? document.activeElement?.tagName);
+    check('Yardım, dil ve görünümü Ayarlar\'a yönlendiriyor; Ayarlar kapanınca odak Yardım düğmesinde',
+      redirected && backTo === 'help', `odak ${backTo}`);
+
+    // Yenilemeden sonra: seçimler yerinde (oyun ya da kurulum, otomatik kayda göre).
+    await sp.goto('http://127.0.0.1:8811/?appearance=day&lang=en');
+    await sp.waitForSelector('.topbar, .newgame', { timeout: 30000 });
+    const kept = await sp.evaluate(() => ({
+      size: document.documentElement.dataset.textSize,
+      palette: document.documentElement.dataset.palette,
+      motion: document.documentElement.dataset.motion ?? '',
+      stored: JSON.parse(localStorage.getItem('capitalforge.settings.v1') ?? '{}'),
+    }));
+    check('Seçimler yenilemeden sonra hatırlanıyor',
+      kept.size === 'xlarge' && kept.palette === 'safe' && kept.motion === '' && kept.stored.volume?.effects === 0.4 && kept.stored.motion === 'full',
+      JSON.stringify({ ...kept, stored: undefined }));
+    const opener = (await sp.locator('.newgame').count()) > 0 ? '[data-settings-open]' : '.speeds [data-panel="settings"]';
+    await sp.locator(opener).click();
+    await sp.waitForSelector('.settings', { timeout: 5000 });
+    const english = ((await sp.locator('.settings').textContent()) ?? '').replace('Türkçe', '');
+    const turkish = english.match(/\b(Ayarlar|Metin|Renkler|Hareket|Genel|Şehir|Olaylar|Kamerayı|Duraklat|Yükseliş|Düşüş|Azaltılmış)\b/g) ?? [];
+    check('İngilizce Ayarlar\'da Türkçe kalıntı yok', english.includes('Text size') && english.includes('Color-blind friendly') && turkish.length === 0,
+      turkish.join(', ') || english.slice(0, 60));
+    check('Ayarlar akışında konsol temiz', sErrors.length === 0, sErrors.slice(0, 2).join(' | '));
+    await sContext.close();
+  }
+  {
+    // Telefon, Çok büyük yazı: kurulum, oyun ve Ayarlar yana taşmıyor.
+    const phone = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+    await phone.addInitScript(veteran, TUTORIAL_KEY);
+    await phone.addInitScript(() => localStorage.setItem('capitalforge.settings.v1', JSON.stringify({ textSize: 'xlarge' })));
+    const pp = await phone.newPage();
+    await pp.goto('http://127.0.0.1:8811/');
+    await pp.waitForSelector('.newgame', { timeout: 20000 });
+    const overflow = () => pp.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+    const setupOverflow = await overflow();
+    await pp.locator('button:has-text("Şirketi kur")').click();
+    await pp.waitForSelector('.topbar', { timeout: 30000 });
+    await pp.waitForTimeout(500);
+    const gameOverflow = await overflow();
+    // Dar telefonda ses düğmesi Ayarlar'da: dişliyle hız grubu ikinci satıra
+    // sığıyor (ilk sürümde üst bar üç satıra bölündü, Mobil bölümü yakaladı).
+    const soundShown = await pp.locator('.sound-toggle').isVisible();
+    await pp.locator('.speeds [data-panel="settings"]').click();
+    await pp.waitForSelector('.modal .settings', { timeout: 5000 });
+    const modalOverflow = await pp.evaluate(() => {
+      const body = document.querySelector('.modal-body');
+      return body ? body.scrollWidth - body.clientWidth : -1;
+    });
+    const soundSwitch = await pp.locator('.modal [data-settings-sound]').count();
+    check('Telefonda ses düğmesi Ayarlar\'da: üst barda dişli var, ses anahtarı pencerede', !soundShown && soundSwitch === 1,
+      `üst barda ses ${soundShown} · pencerede ${soundSwitch}`);
+    await pp.screenshot({ path: `${OUT}/settings-phone-xlarge.png` });
+    check('Telefonda Çok büyük yazı: kurulum, oyun ve Ayarlar yana taşmıyor', setupOverflow <= 0 && gameOverflow <= 0 && modalOverflow === 0,
+      `kurulum ${setupOverflow} · oyun ${gameOverflow} · pencere ${modalOverflow}`);
+    await phone.close();
   }
 
   section('Mobil');

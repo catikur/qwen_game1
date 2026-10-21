@@ -1,5 +1,6 @@
 import { sharesHeld, sharesOutstanding } from '@capital/core';
 import type { GameState } from '@capital/core';
+import { getSettings, subscribeSettings, updateSettings } from '@capital/ui';
 
 /**
  * Yaşayan ses manzarası — tamamen üretilmiş, tek bir ses dosyası yok.
@@ -20,27 +21,16 @@ import type { GameState } from '@capital/core';
  *
  * Kural: ilk kullanıcı dokunuşuna kadar SESSİZ (tarayıcı politikası ve
  * nezaket). Sessize alma bu tarayıcıda hatırlanıyor.
+ *
+ * Düzeyler Ayarlar'dan (Tur 47): genel, şehir (sürekli katmanlar) ve
+ * olaylar (tek atımlık sesler) ayrı yollardan geçiyor. Sessize alma da
+ * ayarların içinde; ses düğmesi ve Ayarlar aynı seçimi değiştiriyor.
  */
 
-const MUTE_KEY = 'capitalforge.audio.muted';
+/** Genel sesin %100'deki kazancı: Tur 47'ye kadarki sabit düzey. */
+const MASTER_LEVEL = 0.55;
 
 type SoundName = 'cash' | 'build' | 'bad' | 'gavel';
-
-function readMuted(): boolean {
-  try {
-    return localStorage.getItem(MUTE_KEY) === '1';
-  } catch {
-    return false;
-  }
-}
-
-function writeMuted(muted: boolean): void {
-  try {
-    localStorage.setItem(MUTE_KEY, muted ? '1' : '0');
-  } catch {
-    /* depolama kapalı — tercih bu oturumda kalır */
-  }
-}
 
 function noiseBuffer(ctx: AudioContext, kind: 'brown' | 'white', seconds = 2): AudioBuffer {
   const buffer = ctx.createBuffer(1, Math.floor(ctx.sampleRate * seconds), ctx.sampleRate);
@@ -71,16 +61,19 @@ export interface SoundscapeDebug {
   muted: boolean;
   played: Record<SoundName, number>;
   levels: { hum: number; traffic: number; night: number; tension: number };
+  /** Ses yollarına verilen kazanç: genel, şehir, olaylar (Tur 47). */
+  buses: { master: number; ambience: number; effects: number };
 }
 
 export class Soundscape {
   private ctx: AudioContext | null = null;
   private master: GainNode | null = null;
+  private ambience: GainNode | null = null;
+  private effects: GainNode | null = null;
   private hum: GainNode | null = null;
   private traffic: GainNode | null = null;
   private night: GainNode | null = null;
   private tension: GainNode | null = null;
-  private muted = readMuted();
   /** Olay tabanı hangi durum nesnesine ait — yeni oyun/kayıt tabanı sıfırlar. */
   private baseline: GameState | null = null;
   private lastNewsId = 0;
@@ -90,6 +83,10 @@ export class Soundscape {
   private readonly levels = { hum: 0, traffic: 0, night: 0, tension: 0 };
 
   constructor() {
+    subscribeSettings(() => {
+      this.applyLevels(0.08);
+      this.listeners.forEach((listener) => listener());
+    });
     const start = () => {
       this.start();
       window.removeEventListener('pointerdown', start);
@@ -100,7 +97,22 @@ export class Soundscape {
   }
 
   isMuted(): boolean {
-    return this.muted;
+    return getSettings().muted;
+  }
+
+  /** Ayarlardaki düzeyler; bağlam yokken yalnızca hedefler. */
+  private buses(): SoundscapeDebug['buses'] {
+    const { muted, volume } = getSettings();
+    return { master: muted ? 0 : MASTER_LEVEL * volume.master, ambience: volume.ambience, effects: volume.effects };
+  }
+
+  private applyLevels(seconds: number): void {
+    if (!this.ctx || !this.master || !this.ambience || !this.effects) return;
+    const target = this.buses();
+    const now = this.ctx.currentTime;
+    this.master.gain.setTargetAtTime(target.master, now, seconds);
+    this.ambience.gain.setTargetAtTime(target.ambience, now, seconds);
+    this.effects.gain.setTargetAtTime(target.effects, now, seconds);
   }
 
   subscribe(listener: () => void): () => void {
@@ -109,10 +121,8 @@ export class Soundscape {
   }
 
   setMuted(muted: boolean): void {
-    this.muted = muted;
-    writeMuted(muted);
-    if (this.master && this.ctx) this.master.gain.setTargetAtTime(muted ? 0 : 0.55, this.ctx.currentTime, 0.08);
-    this.listeners.forEach((listener) => listener());
+    // Ayarlar abonesi düzeyleri uyguluyor ve dinleyicilere duyuruyor.
+    updateSettings({ muted });
   }
 
   /** İlk dokunuşta: bağlam ve sürekli katmanlar. */
@@ -127,10 +137,20 @@ export class Soundscape {
       return;
     }
     this.ctx = ctx;
+    const levels = this.buses();
     const master = ctx.createGain();
-    master.gain.value = this.muted ? 0 : 0.55;
+    master.gain.value = levels.master;
     master.connect(ctx.destination);
     this.master = master;
+    // Şehir: sürekli katmanlar. Olaylar: tek atımlık sesler.
+    const ambience = ctx.createGain();
+    ambience.gain.value = levels.ambience;
+    ambience.connect(master);
+    this.ambience = ambience;
+    const effects = ctx.createGain();
+    effects.gain.value = levels.effects;
+    effects.connect(master);
+    this.effects = effects;
 
     const loop = (buffer: AudioBuffer) => {
       const source = ctx.createBufferSource();
@@ -148,7 +168,7 @@ export class Soundscape {
     humFilter.frequency.value = 320;
     this.hum = ctx.createGain();
     this.hum.gain.value = 0;
-    loop(brown).connect(humFilter).connect(this.hum).connect(master);
+    loop(brown).connect(humFilter).connect(this.hum).connect(ambience);
 
     // Trafik: bant geçirgen + yavaş dalga
     const band = ctx.createBiquadFilter();
@@ -165,7 +185,7 @@ export class Soundscape {
     lfo.start();
     this.traffic = ctx.createGain();
     this.traffic.gain.value = 0;
-    loop(white).connect(band).connect(swell).connect(this.traffic).connect(master);
+    loop(white).connect(band).connect(swell).connect(this.traffic).connect(ambience);
 
     // Gece: iki yüksek ton, hızlı genlik titreşimi
     this.night = ctx.createGain();
@@ -189,7 +209,7 @@ export class Soundscape {
     }
     const nightLevel = ctx.createGain();
     nightLevel.gain.value = 0.035;
-    this.night.connect(nightLevel).connect(master);
+    this.night.connect(nightLevel).connect(ambience);
 
     // Gerilim: iki kayık testere dişi, alçak geçirgen
     const tensionFilter = ctx.createBiquadFilter();
@@ -204,7 +224,7 @@ export class Soundscape {
       saw.connect(tensionFilter);
       saw.start();
     }
-    tensionFilter.connect(this.tension).connect(master);
+    tensionFilter.connect(this.tension).connect(ambience);
     this.listeners.forEach((listener) => listener());
   }
 
@@ -264,8 +284,9 @@ export class Soundscape {
   private play(name: SoundName): void {
     this.played[name]++;
     const ctx = this.ctx;
-    const master = this.master;
-    if (!ctx || !master || this.muted) return;
+    // Olay sesleri kendi yolundan: Ayarlar'daki "Olaylar" düzeyi.
+    const out = this.effects;
+    if (!ctx || !out || getSettings().muted) return;
     const now = ctx.currentTime;
     const envelope = (gain: GainNode, peak: number, attack: number, decay: number) => {
       gain.gain.setValueAtTime(0, now);
@@ -286,7 +307,7 @@ export class Soundscape {
         gain.gain.setValueAtTime(0, now + delay);
         gain.gain.linearRampToValueAtTime(0.18, now + delay + 0.005);
         gain.gain.exponentialRampToValueAtTime(0.0001, now + delay + 0.45);
-        osc.connect(gain).connect(master);
+        osc.connect(gain).connect(out);
         osc.start(now + delay);
         osc.stop(now + delay + 0.5);
       }
@@ -297,7 +318,7 @@ export class Soundscape {
       osc.frequency.exponentialRampToValueAtTime(48, now + 0.25);
       const gain = ctx.createGain();
       envelope(gain, 0.35, 0.004, 0.32);
-      osc.connect(gain).connect(master);
+      osc.connect(gain).connect(out);
       osc.start(now);
       osc.stop(now + 0.4);
     } else if (name === 'bad') {
@@ -308,7 +329,7 @@ export class Soundscape {
         osc.frequency.value = pitch;
         const gain = ctx.createGain();
         envelope(gain, 0.12, 0.35, 1.1);
-        osc.connect(gain).connect(master);
+        osc.connect(gain).connect(out);
         osc.start(now);
         osc.stop(now + 1.6);
       }
@@ -325,7 +346,7 @@ export class Soundscape {
         gain.gain.setValueAtTime(0, now + delay);
         gain.gain.linearRampToValueAtTime(0.16, now + delay + 0.002);
         gain.gain.exponentialRampToValueAtTime(0.0001, now + delay + 0.09);
-        osc.connect(filter).connect(gain).connect(master);
+        osc.connect(filter).connect(gain).connect(out);
         osc.start(now + delay);
         osc.stop(now + delay + 0.12);
       }
@@ -335,9 +356,10 @@ export class Soundscape {
   debug(): SoundscapeDebug {
     return {
       context: this.ctx ? this.ctx.state : 'none',
-      muted: this.muted,
+      muted: getSettings().muted,
       played: { ...this.played },
       levels: { ...this.levels },
+      buses: this.buses(),
     };
   }
 }
