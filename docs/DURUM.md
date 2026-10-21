@@ -4998,7 +4998,9 @@ Tablo ve geçmişi güncellendi (bölüm 3).
     dört metin boyutunda (Ayarlar'dan), ekran daralınca;
   - konsol temiz.
 
-TARAYICI_SATIRI
+Tarayıcı tam koşu 510/510, konsol hatası yok (~30 dk). "Değerlendirme"
+bölümü ~2 dk: 8 sayfa açılışı, her birinde beş ölçüm. Paket bütçesi tamam:
+ana parça 60,4 KB, kurulumun yolu 132,7 KB.
 
 ---
 
@@ -5104,7 +5106,7 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi). Senaryo şehirlerinde gün 3–17 ms (`pnpm dayperf`, Tur 43) |
 | Birim testi | **519 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul da) |
 | Denge testi | **331 kontrol, hepsi geçiyor** (25 bölüm, süreleriyle; ~13 dk) |
-| Tarayıcı testi | **508 kontrol, hepsi geçiyor**, 0 konsol hatası (~25–40 dk); duman koşusu 132 (~5 dk, rehber dahil) |
+| Tarayıcı testi | **510 kontrol, hepsi geçiyor**, 0 konsol hatası (~25–40 dk); duman koşusu 132 (~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + paket bütçesi (Tur 46; Tur 48'den beri hizmet çalışanı ve manifest de) + duman oynanışı |
 | Kapsam | 35 bina · 25 ürün · 7 kategori · 8 rakip profili · 10 CEO · 22 olay (11 şehir + 11 sektör) · 2 kriz · 12 karar kartı · 70 rakip sözü · 5 fırsat balonu · 8 görev türü · 4 mevsim · 9 moda ürünü · 17 şehir yapısı (6 siluet) · 6 şehir projesi · 7 senaryo · 4 ek kural · 28 rozet |
 
