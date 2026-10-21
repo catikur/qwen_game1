@@ -568,7 +568,7 @@ export const contentEn: Record<string, string> = {
   'content.rivalLine.landlord.overtook.1': 'We count plots, not buildings.',
   'content.rivalLine.landlord.passed.0': 'The plots are still there. Their value will rise too.',
   'content.rivalLine.landlord.passed.1': 'Patience wins; we are in no hurry.',
-  'content.rivalLine.landlord.leadLost.0': 'We bought the {district} plots years ago.',
+  'content.rivalLine.landlord.leadLost.0': 'We bought the {district|# plot|# plots} years ago.',
   'content.rivalLine.landlord.leadLost.1': 'Rents in {district} run on our calendar.',
   'content.rivalLine.landlord.campaignStart.0': 'We hold the best corners for {category}. Time to use them.',
   'content.rivalLine.landlord.campaignStart.1': 'We are entering the {category} market with our land.',
@@ -599,16 +599,16 @@ export const contentEn: Record<string, string> = {
   'content.bubble.vip.title': 'VIP customer',
   'content.bubble.vip.caught': 'A VIP bought the whole shelf: {amount}',
   'content.bubble.rush.title': 'Queue at the door',
-  'content.bubble.rush.caught': 'The queue spilled into the street: {category} appeal +20% for {days} days',
+  'content.bubble.rush.caught': 'The queue spilled into the street: {category} appeal +20% for {days|# day|# days}',
   'content.bubble.investor.title': 'Investor',
   'content.bubble.investor.caught': 'An angel investor put in {amount}',
   'content.bubble.parcel.title': 'Discount plot',
   'content.bubble.parcel.caught': 'The plot is yours at 30% off: paid {amount}',
-  'content.quest.outlets.title': 'Open {n} new store(s)',
+  'content.quest.outlets.title': 'Open {n|# new store|# new stores}',
   'content.quest.outlets.hint': 'Stores opened this month count.',
   'content.quest.producer.title': 'Build a production site',
   'content.quest.producer.hint': 'Farm, mine, factory, depot, R&D or marketing — any building that is not a store.',
-  'content.quest.parcels.title': 'Buy {n} plots',
+  'content.quest.parcels.title': 'Buy {n|# plot|# plots}',
   'content.quest.parcels.hint': 'Open plot, auction or buyout — the number of plots you own must grow.',
   'content.quest.share.title': 'Reach {target}% share in {category}',
   'content.quest.share.hint': 'Share is measured daily; touching the target once is enough.',
@@ -652,7 +652,7 @@ export const contentEn: Record<string, string> = {
   'content.scenario.rescue.tagline': 'Take over an indebted, loss-making company under a raid.',
   'content.scenario.rescue.brief':
     'The previous management built two research centres and two marketing offices for electronics, a category the company has no shops in, and paid for them with a loan. The profit of four small shops cannot carry that weight, and the strongest rival in the city has bought up 30% of the shares.',
-  'content.scenario.rescue.goalText': 'Raise your net worth to {target} within {days} days, without being taken over.',
+  'content.scenario.rescue.goalText': 'Raise your net worth to {target} within {days|# day|# days}, without being taken over.',
   'content.scenario.rescue.facts.0':
     "A building's window shows its daily profit: demolish a building that works for nothing, or switch its focus to a category you have shops in.",
   'content.scenario.rescue.facts.1':
@@ -663,7 +663,7 @@ export const contentEn: Record<string, string> = {
   'content.scenario.crisis.tagline': 'A recession starts in a month; your cash is full, your company empty.',
   'content.scenario.crisis.brief':
     "The city has been growing for two hundred days and the rivals' chains are in place. Economists are warning of a recession. You run a newly founded company: no buildings, a full cash box.",
-  'content.scenario.crisis.goalText': 'When the crisis ends ({days} days from now), be the most valuable company in the city.',
+  'content.scenario.crisis.goalText': 'When the crisis ends ({days|# day|# days} from now), be the most valuable company in the city.',
   'content.scenario.crisis.facts.0': 'In a recession construction is 15% cheaper and land slips a little every day: a buying window for anyone with cash.',
   'content.scenario.crisis.facts.1': 'The rivals keep growing; money waiting in the cash box falls behind.',
   'content.scenario.crisis.facts.2': "At the end your net worth must beat the strongest rival's.",
@@ -671,7 +671,7 @@ export const contentEn: Record<string, string> = {
   'content.scenario.consortium.tagline': 'You are the most valuable company in the city, but your money sits idle; the rivals have joined forces.',
   'content.scenario.consortium.brief':
     'The company is by far the most valuable in the city, but most of its value sits in the cash box and no new building has gone up in months. The biggest rivals have joined forces: once the defence window ends they will buy up your shares together, every day.',
-  'content.scenario.consortium.goalText': 'Reach victory within {days} days, without being taken over.',
+  'content.scenario.consortium.goalText': 'Reach victory within {days|# day|# days}, without being taken over.',
   'content.scenario.consortium.facts.0':
     'The consortium breaks up if you put up three new buildings, if your cash falls below 20% of your net worth, or if your lead drops below 1.1×.',
   'content.scenario.consortium.facts.1':
@@ -683,7 +683,7 @@ export const contentEn: Record<string, string> = {
   'content.scenario.chain.brief':
     'The city is built and the rivals share its electronics; their shops buy chips on the market. You are a new company with cash in hand. A silicon mine and a chip fab are big investments, but if you make your own chips for less than the market price, the shelves are yours too.',
   'content.scenario.chain.goalText':
-    'Within {days} days build the whole electronics chain (silicon mine, chip fab, a shop selling phones), bring the unit cost of chips below the market price and reach a {share}% share of electronics.',
+    'Within {days|# day|# days} build the whole electronics chain (silicon mine, chip fab, a shop selling phones), bring the unit cost of chips below the market price and reach a {share}% share of electronics.',
   'content.scenario.chain.facts.0':
     'The Silicon Mine unlocks at 6M company value and the Chip Fab at 5M; both can only be built in the industrial district and the port.',
   'content.scenario.chain.facts.1':
@@ -705,7 +705,7 @@ export const contentEn: Record<string, string> = {
   'content.scenario.conquest.tagline': 'Take over every one of the eight rivals in the big city: a monopoly, against the clock.',
   'content.scenario.conquest.brief':
     'For two hundred days the big city has been in the hands of eight companies. The council has frozen new business licences and the markets board has frozen new share issues: nobody will fill an empty seat, and the rivals cannot print shares to defend themselves. Take them over one by one until yours is the only company left.',
-  'content.scenario.conquest.goalText': 'Take over every rival in the city within {days} days.',
+  'content.scenario.conquest.goalText': 'Take over every rival in the city within {days|# day|# days}.',
   'content.scenario.conquest.facts.0':
     'A takeover is a process: the order buys up to the daily cap every day; once the target sees 30% it buys back its own shares. Quietly building a stake below 30% and then placing the order leaves the defence few days.',
   'content.scenario.conquest.facts.1':
@@ -716,7 +716,7 @@ export const contentEn: Record<string, string> = {
   'content.scenario.holding.tagline': 'Start from scratch in a new city while the founding city lives on far away: win in both.',
   'content.scenario.holding.brief':
     'In the founding city the company pulled ahead but has not won. The holding is opening a second city: you start from scratch there while the founding city lives on by itself far away. The rivals keep growing and raiding there too.',
-  'content.scenario.holding.goalText': 'Reach victory in both cities within {days} days, without losing either.',
+  'content.scenario.holding.goalText': 'Reach victory in both cities within {days|# day|# days}, without losing either.',
   'content.scenario.holding.facts.0':
     'From the holding panel you can switch between cities; the scenario comes with you. You can give the remote city a directive (how much of its profit flows to the treasury, buybacks against raids) and send it money.',
   'content.scenario.holding.facts.1':

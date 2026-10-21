@@ -4,7 +4,7 @@
 > `pnpm bench` çıktısından; iddialar `pnpm balance` ve `pnpm playtest`
 > tarafından her koşuda doğrulanıyor.
 >
-> Son güncelleme: şema **v6**, 49 tur (Tur 33 denendi ve geri alındı; Tur 34 eski görünüme canlılık ekledi; Tur 35 arayüzü Lite'ın "Cam & Bulut" diline taşıdı; Tur 36 şehre ayrıntı kattı; Tur 37a geç oyuna yönetim yükü, servet vergisi ve kriz dönemleri getirdi; Tur 37b karar kartlarını ve rakip hikâyelerini ekledi; Tur 37c fırsat balonlarını ve aylık görev panosunu getirdi; Tur 37d canlı pazarı, şehir projesi ihalesini ve rakip konsorsiyumunu getirdi; Tur 38 değerlendirme turuydu: geç oyun hızı, gündem ve haber akışı, zorluk eğrisi; Tur 39a senaryo modunu getirdi: Kurtarma ve Krizin ortasında; Tur 39b Konsorsiyuma karşı, Zincir ustası ve Şehrin sponsoru senaryolarını ekledi; Tur 39c Büyük şehir fethi ve Holding: iki şehir ile listeyi yediye tamamladı; Tur 40 cila ve performans; Tur 41 başarımlar ve kariyer; Tur 42 açılışta gölgelendirici derlemesi; Tur 43 oyun içi akıcılık; Tur 44 değerlendirme turuydu: Türkçe sayı biçimi, yardımın kapsamı, haber akışı; Tur 45 dört ek kural getirdi: Fırtınalı yıllar, Aç gözlü rakipler, Sıkı banka, Kıt arsa; Tur 46 açılış paketini böldü: kurulum ekranı telefonda yarı sürede; Tur 47 tek Ayarlar paneli ve erişilebilirlik getirdi: metin boyutu, renk körlüğüne uygun palet, hareket, ses düzeyleri, pencerelerde klavye; Tur 48 oyunu kurulabilir ve çevrimdışı açılır yaptı, yayından sonra "yeni sürüm hazır" diyor; Tur 49 müziği getirdi: gündüz, gece ve kriz, şehirle birlikte dönüyor). Önümüzdeki işin sırası `docs/YOL-HARITASI.md`'de.
+> Son güncelleme: şema **v6**, 50 tur (Tur 33 denendi ve geri alındı; Tur 34 eski görünüme canlılık ekledi; Tur 35 arayüzü Lite'ın "Cam & Bulut" diline taşıdı; Tur 36 şehre ayrıntı kattı; Tur 37a geç oyuna yönetim yükü, servet vergisi ve kriz dönemleri getirdi; Tur 37b karar kartlarını ve rakip hikâyelerini ekledi; Tur 37c fırsat balonlarını ve aylık görev panosunu getirdi; Tur 37d canlı pazarı, şehir projesi ihalesini ve rakip konsorsiyumunu getirdi; Tur 38 değerlendirme turuydu: geç oyun hızı, gündem ve haber akışı, zorluk eğrisi; Tur 39a senaryo modunu getirdi: Kurtarma ve Krizin ortasında; Tur 39b Konsorsiyuma karşı, Zincir ustası ve Şehrin sponsoru senaryolarını ekledi; Tur 39c Büyük şehir fethi ve Holding: iki şehir ile listeyi yediye tamamladı; Tur 40 cila ve performans; Tur 41 başarımlar ve kariyer; Tur 42 açılışta gölgelendirici derlemesi; Tur 43 oyun içi akıcılık; Tur 44 değerlendirme turuydu: Türkçe sayı biçimi, yardımın kapsamı, haber akışı; Tur 45 dört ek kural getirdi: Fırtınalı yıllar, Aç gözlü rakipler, Sıkı banka, Kıt arsa; Tur 46 açılış paketini böldü: kurulum ekranı telefonda yarı sürede; Tur 47 tek Ayarlar paneli ve erişilebilirlik getirdi: metin boyutu, renk körlüğüne uygun palet, hareket, ses düzeyleri, pencerelerde klavye; Tur 48 oyunu kurulabilir ve çevrimdışı açılır yaptı, yayından sonra "yeni sürüm hazır" diyor; Tur 49 müziği getirdi: gündüz, gece ve kriz, şehirle birlikte dönüyor; Tur 50 Faz 1'i değerlendirdi ve tanıtım paketini hazırladı). Önümüzdeki işin sırası `docs/YOL-HARITASI.md`'de.
 
 ---
 
@@ -4879,6 +4879,127 @@ katmanında nota olmadığı için yalnız pad kalıyordu. Kalp atışının alt
 alçak, sürekli bir kök eklendi (bas katmanında). Krizin düzeyi −33'ten −32
 dBFS'e çıktı. Test düzeltmeden önce kaldı.
 
+### Tur 50 — Değerlendirme ve tanıtım: Faz 1'in sonu
+
+Faz 1'in son turu (`docs/YOL-HARITASI.md`). Faz 1'de dört şey geldi:
+- tek Ayarlar paneli ve erişilebilirlik (Tur 47);
+- kurulabilir ve çevrimdışı oyun (48);
+- müzik (49).
+
+Soru, bunların yeni oyuncuya nasıl göründüğü ve tanıtım için neyin hazır
+olduğu.
+
+**Değerlendirme.** Yeni oyuncunun yolu yedi ekranda:
+- ekranlar:
+  - masaüstü 1280×860;
+  - telefon 390×844, Türkçe ve İngilizce;
+  - aynı telefonda "Çok büyük" metin, renk körlüğüne uygun palet ve
+    azaltılmış hareket;
+  - küçük telefon 360×640;
+  - yatay telefon 844×390;
+  - tablet 820×1180.
+- Her ekranda:
+  - kurulum ve kurulumdaki Ayarlar;
+  - rehberin ilk iki adımı;
+  - ilk 45–80 gün;
+  - Zincir, Borsa ve Ayarlar pencereleri.
+- Sonuç: konsol hatası yok, sayfa yana taşmıyor. Yatay telefonda üst bar
+  ve rıhtım 390 px'in 125'ini alıyor; şehir ve pencereler kullanılabilir.
+
+Denge: Faz 1 kurala dokunmadı. `pnpm bench` Tur 46 ile birebir aynı
+(oran 1,55; 36,11 / 23,26 M ₺).
+
+**Bulgular ve düzeltmeler.**
+
+**1 · Telefonda rıhtım etiketleri kesiliyordu.** Sekiz sütun 320–412 px'de
+31–42 px. Ölçüm:
+- dört genişlik × iki dil × dört metin boyutu, 32 durumdan 27'sinde
+  kesik etiket vardı;
+- İngilizcede "Competition" hiçbir genişliğe sığmıyordu. Yanında "Company"
+  da kesiliyordu: rıhtımda "Compe…" ile "Compa…" yan yana duruyordu ve
+  ayırt edilmiyordu;
+- Türkçede 360 px'de "Rekabet", "Çok büyük" metinde "Yardım" da kesikti.
+
+Düzeltme:
+- İngilizce etiket "Rivalry", pencerenin başlığı da. Türkçedeki "Rekabet /
+  Rakip" çiftinin karşılığı.
+- Etiketler metin boyutuyla büyüyor, ama en uzunu sütununa sığmazsa
+  hepsi aynı oranla küçülüyor (`--dock-fit`, `hud.tsx`). Tek tek
+  küçülselerdi yan yana boylar karışırdı; ilk deneme öyleydi ve kareden
+  belli oluyordu.
+- Ekran dönünce ve yazı tipi geç gelince yeniden ölçülüyor.
+
+Yolda çıkan iki tuzak:
+- *`scrollWidth` yuvarlıyor.* 40,3 px'lik "Company" 40 px'lik sütuna sığıyor
+  görünüyordu, tarayıcı ise üç nokta koyuyordu. Ölçüm artık kesirli
+  genişlikle.
+- *Yazı küçülünce genişliği tam orantılı küçülmüyor.* 412 px'de "Büyük"
+  metinde "Company" ilk orandan sonra da taşıyordu. Sığana kadar en çok
+  üç geçiş yapılıyor.
+
+İkisi de tarayıcı kontrolünde duruyor. Kontrol, düzeltmeden önceki
+yapıda 27 durumda, yuvarlanan ölçümle yapılmış ilk düzeltmede 20 durumda
+kaldı.
+
+**2 · İngilizcede "1 days".** Geri sayım 1'e inince "Auction · Downtown ·
+₺25,108 · 1 days", "Reward ready: 1 quest(s)" yazıyordu. Sözlük
+motorunda tekil/çoğul yoktu; sayı alan 53 metin "{days} days" biçimindeydi.
+Hisse, şehir, rakip, yıldız ve koşu sayıları da aynıydı.
+- Şablonda yeni biçim: `{days|# day|# days}`. Değer 1 ise ilki seçiliyor;
+  `#` değerin kendisi (`fillTemplate`, `packages/content/src/messages.ts`).
+- Türkçede sayıdan sonra isim çoğul olmadığından Türkçe metinler
+  değişmedi.
+- İngilizcede 136 yer tutucu bu biçime geçti. Fiil uyumu gerekenler elle
+  yazıldı: "1 rival is left", "There is 1 rival", "The last run". "(s)"
+  eki kalmadı.
+- Ay adı alan "{month} quests" yanlış alarm verirdi; "Quests for {month}"
+  oldu.
+
+**3 · DURUM'un "Ölçülen durum" tablosu Tur 25'ten kalmıştı.** Oran 2,28
+yazıyordu, bugün 1,55. Aynı ölçüm altı eski sürümde koşuldu:
+- düşüş Tur 37c ile 38 arasında: canlı pazar, şehir projesi, rakip
+  konsorsiyumu ve Tur 38'in ayarı;
+- Tur 38'den beri sayılar birebir aynı.
+
+Tablo ve geçmişi güncellendi (bölüm 3).
+
+**Bakılan, değişmeyenler.**
+- Telefonda karar kartı pencere açıkken bekliyor, pencere kapanınca
+  geliyor. Doğru davranış.
+- Escape'ten sonra odak halkası pencereyi açan düğmede (Tur 47'nin
+  sözleşmesi). Tanıtım karelerinde odak bırakılıyor.
+- Masaüstünde haber akışı katlanmıyor, yalnız telefonda katlanıyor. Tanıtım
+  karesinde şehrin bir kısmını örtüyor; oyun böyle.
+
+**Tanıtım malzemesi** (`docs/tanitim/`).
+- `README.md`:
+  - künye: ad, tür, adres, yayıncı Conforcus, destek info@conforcus.com,
+    ücretsiz, hesap yok;
+  - iki dilde tek satır, kısa açıklama, uzun açıklama ve anahtar kelimeler,
+    karakter sayılarıyla;
+  - karelerin başlıkları ve hangi mağazaya hangilerinin gideceği.
+- `kareler/`: 20 kare, iki dilde aynı sahneler, JPEG, toplam 8 MB.
+  - Masaüstü 1920×1080: kurulum, şehir, gece, zincir, borsa, karar kartı.
+  - Telefon 1170×2532: şehir, gece, zincir, karar kartı.
+- `tools/tanitim/`: kareleri yeniden üreten iki betik.
+  - `sehir.ts`: oyunun denge vekili 420 gün oynuyor, 305 binalık bir şehir.
+    Haberler state'e dile dökülerek yazıldığı için her dil ayrı koşuluyor.
+  - `kareler.mjs`: şehri oyuna kayıt yükler gibi veriyor
+    (`engine.replaceState`), gün saatini ayarlayıp kareyi alıyor.
+
+**Doğrulama.** `pnpm test` 519/519; tip denetimi temiz.
+- `i18n.test.ts`, iki yeni test:
+  - tekil/çoğul biçimi: 1, 12, "1" ve eksik parametre;
+  - İngilizce sözlüklerde sayıdan sonra çıplak çoğul isim ve "(s)" yok.
+  - İkisi de düzeltmeden önce kaldı.
+  - Yer tutucu karşılaştırması yeni biçimi tanıyor.
+- Tarayıcı testine "Değerlendirme: Faz 1 sonu" bölümü (2 kontrol):
+  - telefonda rıhtım etiketleri kesilmiyor ve tek boyda, 42 durum: açılışta,
+    dört metin boyutunda (Ayarlar'dan), ekran daralınca;
+  - konsol temiz.
+
+TARAYICI_SATIRI
+
 ---
 
 ## 3. Ölçülen durum
@@ -4887,13 +5008,33 @@ dBFS'e çıktı. Test düzeltmeden önce kaldı.
 
 ### Büyüme ve rekabet
 
+Tur 50'de yeniden ölçüldü. Bu tablo Tur 25'ten beri güncellenmemişti ve
+2,28 yazıyordu.
+
 | | Değer |
 |---|---|
-| Oyuncu / rakip oranı | **2,28** — Tur 25 öncesi 2,00; Tur 21 öncesi 1,75; Tur 7 öncesi 0,76 idi |
-| Oyuncu net değeri / en iyi rakip | 42,67 M ₺ / 18,74 M ₺ |
-| Oyuncu bina sayısı | 84 |
-| Günlük kâr | 275 B ₺ |
+| Oyuncu / rakip oranı | **1,55** (tohumlar 1,80 · 1,30 · 1,60) |
+| Oyuncu net değeri / en iyi rakip | 36,11 M ₺ / 23,26 M ₺ |
+| Oyuncu bina sayısı | 85 |
+| Günlük kâr | 218 B ₺ |
 | Batan şirket | **0** |
+
+Oranın geçmişi, aynı ölçümün eski sürümlerde koşmasıyla (Tur 50):
+
+| Sürüm | Oran | Oyuncu / en iyi rakip |
+|---|---|---|
+| Tur 25 | 2,28 | 42,67 / 18,74 M ₺ |
+| Tur 37a'dan hemen önce | 2,11 | 41,39 / 19,58 M ₺ |
+| Tur 37a (geç oyun giderleri, krizler) | 2,12 | 40,08 / 18,95 M ₺ |
+| Tur 37b (karar kartları, rakip hikâyeleri) | 2,10 | 39,65 / 18,91 M ₺ |
+| Tur 38 ve sonrası (44, 46, 49) | **1,55** | 36,11 / 23,26 M ₺ |
+
+Düşüş Tur 37c ile 38 arasında. Bu aralıkta fırsat balonları ve görev
+panosu (37c), canlı pazar, şehir projesi ihalesi ve rakip konsorsiyumu
+(37d) geldi, Tur 38 de zorluğu ayarladı. Rakipler güçlendi (18,9 → 23,3 M
+₺), oyuncu biraz yavaşladı. Tur 38'den beri sayılar birebir aynı; Faz 1
+(Tur 47–50) kurala dokunmadı. Oyunun zorluğunu bu oran değil zorluk eğrisi
+anlatıyor (Tur 38 ve 44).
 
 Not: vekil Tur 14'te devralmayı öğrendi (boş parsel bitince mevcut
 yapıyı primli alıyor — oyunun kendi öğretisi). Önceki satırlarla kıyasta
@@ -4910,7 +5051,8 @@ tahmininden: vekil artık kendi şubesini yiyen mağazayı açmıyor.
 | Tur 14 | %10 | **%0** | **%0** |
 | Tur 16 | %11 | **%1** | **%0** |
 | Tur 21 | %9 | **%0** | **%0** |
-| **Tur 25** | %12 | **%10** | **%17** |
+| Tur 25 | %12 | **%10** | **%17** |
+| **Tur 50** | %18 | **%12** | **%17** |
 
 Okunması gereken şey sayı değil **yön**. İlk iki satırda boş talep
 zamanla artıyor: şehir büyüdükçe geri kalıyor. Son ikisinde azalıyor —
@@ -4960,7 +5102,7 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi). Senaryo şehirlerinde gün 3–17 ms (`pnpm dayperf`, Tur 43) |
-| Birim testi | **517 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik de) |
+| Birim testi | **519 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul da) |
 | Denge testi | **331 kontrol, hepsi geçiyor** (25 bölüm, süreleriyle; ~13 dk) |
 | Tarayıcı testi | **508 kontrol, hepsi geçiyor**, 0 konsol hatası (~25–40 dk); duman koşusu 132 (~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + paket bütçesi (Tur 46; Tur 48'den beri hizmet çalışanı ve manifest de) + duman oynanışı |

@@ -5225,6 +5225,68 @@ async function finish(browser, consoleErrors) {
     await mContext.close();
   }
 
+  // ---------- Değerlendirme: Faz 1 sonu (Tur 50) ----------
+  // Yeni oyuncunun gözünden telefon: dört genişlik, iki dil, dört metin boyutu.
+  section('Değerlendirme: Faz 1 sonu');
+  {
+    const cut = [];
+    const eErrors = [];
+    for (const locale of ['tr', 'en']) {
+      for (const width of [320, 360, 390, 412]) {
+        const eContext = await browser.newContext({ viewport: { width, height: 760 }, hasTouch: true });
+        await eContext.addInitScript(veteran, TUTORIAL_KEY);
+        await eContext.addInitScript((loc) => localStorage.setItem('capitalforge.locale', loc), locale);
+        const ep = await eContext.newPage();
+        ep.on('pageerror', (e) => eErrors.push(e.message));
+        ep.on('console', (m) => { if (m.type() === 'error') eErrors.push(m.text()); });
+        await ep.goto('http://127.0.0.1:8811/');
+        await ep.waitForSelector('[data-newgame-start]', { timeout: 20000 });
+        await ep.locator('[data-newgame-start]').click();
+        await ep.waitForSelector('.topbar-actions .dock-label', { timeout: 30000 });
+        await ep.evaluate(() => document.fonts.ready);
+        const cutLabels = () =>
+          ep.evaluate(async () => {
+            await new Promise((r) => requestAnimationFrame(() => r(null)));
+            const labels = [...document.querySelectorAll('.topbar-actions .dock-label')];
+            const sizes = new Set(labels.map((el) => getComputedStyle(el).fontSize));
+            // Kesirli genişlik: `scrollWidth` yuvarlıyor, yarım piksellik taşma da üç nokta demek.
+            const range = document.createRange();
+            const cut = labels
+              .filter((el) => {
+                range.selectNodeContents(el);
+                return range.getBoundingClientRect().width > el.getBoundingClientRect().width + 0.01;
+              })
+              .map((el) => el.textContent);
+            // Etiketler tek boyda: sığmayan varsa hepsi birlikte küçülüyor.
+            if (sizes.size > 1) cut.push(`boylar karışık (${[...sizes].join(' ')})`);
+            return cut;
+          });
+        // İlk açılış: yazı tipi geç gelse de etiketler yeniden ölçülmüş olmalı.
+        await ep.waitForTimeout(600);
+        const first = await cutLabels();
+        if (first.length) cut.push(`${locale} ${width}px açılışta: ${first.join(', ')}`);
+        // Metin boyutu oyuncunun yolundan: Ayarlar.
+        for (const size of ['small', 'normal', 'large', 'xlarge']) {
+          await ep.locator('.topbar [data-panel="settings"]').click();
+          await ep.locator(`[data-setting="text"][data-choice="${size}"]`).click();
+          await ep.keyboard.press('Escape');
+          const labels = await cutLabels();
+          if (labels.length) cut.push(`${locale} ${width}px ${size}: ${labels.join(', ')}`);
+        }
+        // Ekran daralınca (telefon döndü, pencere küçüldü) yeniden ölçülüyor.
+        if (width === 412) {
+          await ep.setViewportSize({ width: 320, height: 760 });
+          const labels = await cutLabels();
+          if (labels.length) cut.push(`${locale} 412→320px xlarge: ${labels.join(', ')}`);
+        }
+        await eContext.close();
+      }
+    }
+    check('Telefonda rıhtım etiketleri kesilmiyor ve tek boyda: 320–412 px, Türkçe ve İngilizce, açılışta, dört metin boyutunda, ekran daralınca',
+      cut.length === 0, cut.length ? `${cut.length} durumda — ${cut.slice(0, 3).join(' | ')}` : '42 durum');
+    check('Değerlendirme akışında konsol temiz', eErrors.length === 0, eErrors.slice(0, 2).join(' | '));
+  }
+
   section('Mobil');
   for (const deviceName of ['iPhone 13', 'Pixel 7']) {
     const mobileContext = await browser.newContext({ ...devices[deviceName] });

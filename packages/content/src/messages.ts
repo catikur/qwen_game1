@@ -93,10 +93,23 @@ export function onLocaleChange(listener: (locale: string) => void): () => void {
   };
 }
 
-/** `{ad}` biçimindeki yer tutucuları doldurur. */
+/**
+ * `{ad}` biçimindeki yer tutucuları doldurur. `{ad|tekil|çoğul}` sayıya göre
+ * birini seçiyor, içindeki `#` değerin kendisi: "{days|# day|# days}" (Tur 50).
+ * Geri sayım 1'e inince İngilizcede "1 days" yazıyordu. Türkçede sayıdan
+ * sonra isim çoğul olmadığından Türkçe metinler bunu kullanmıyor.
+ */
 export function fillTemplate(template: string, params?: MessageParams): string {
   if (!params) return template;
-  return template.replace(/\{(\w+)\}/g, (match: string, name: string) => (name in params ? String(params[name]) : match));
+  return template.replace(
+    /\{(\w+)(?:\|([^|{}]*)\|([^|{}]*))?\}/g,
+    (match: string, name: string, one: string | undefined, other: string | undefined) => {
+      if (!(name in params)) return match;
+      const value = String(params[name]);
+      if (one === undefined || other === undefined) return value;
+      return (value === '1' ? one : other).replace(/#/g, value);
+    },
+  );
 }
 
 /** Etkin dilde anahtarın metni; yoksa Türkçe, o da yoksa `fallback`, o da yoksa anahtar. */
