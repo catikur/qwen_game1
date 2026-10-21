@@ -18,6 +18,10 @@ export function useDialogFocus(ref: RefObject<HTMLElement | null>): void {
   useEffect(() => {
     const dialog = ref.current;
     if (!dialog) return;
+    // Bir pencereden ötekine geçişte (Yardım → Ayarlar) eskisinin temizliği
+    // bundan önce çalışıyor: React kaldırılan bileşenin etkisini yeni
+    // bileşeninkinden önce kapatıyor. Odak o an eski pencereyi açan düğmeye
+    // dönmüş oluyor; yeni pencere onu açan olarak alıyor.
     const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     dialog.focus({ preventScroll: true });
     const onKeyDown = (e: KeyboardEvent) => {

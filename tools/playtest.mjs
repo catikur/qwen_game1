@@ -4920,9 +4920,14 @@ async function finish(browser, consoleErrors) {
     await sp.locator('.topbar-actions [data-panel="help"]').click();
     await sp.locator('[data-open-settings]').click();
     await sp.waitForTimeout(200);
-    check('Yardım, dil ve görünümü Ayarlar\'a yönlendiriyor',
-      (await sp.locator('.modal .settings').count()) === 1 && (await sp.locator('.help .locale-option').count()) === 0);
+    const redirected = (await sp.locator('.modal .settings').count()) === 1 && (await sp.locator('.help .locale-option').count()) === 0;
     await sp.keyboard.press('Escape');
+    await sp.waitForTimeout(150);
+    // Yardım'ın içindeki düğme pencereyle birlikte gidiyor; odak yine Yardım'ı
+    // açan rıhtım düğmesine dönmeli, sayfanın başına düşmemeli (Codex #76).
+    const backTo = await sp.evaluate(() => document.activeElement?.getAttribute('data-panel') ?? document.activeElement?.tagName);
+    check('Yardım, dil ve görünümü Ayarlar\'a yönlendiriyor; Ayarlar kapanınca odak Yardım düğmesinde',
+      redirected && backTo === 'help', `odak ${backTo}`);
 
     // Yenilemeden sonra: seçimler yerinde (oyun ya da kurulum, otomatik kayda göre).
     await sp.goto('http://127.0.0.1:8811/?appearance=day&lang=en');
