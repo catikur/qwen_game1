@@ -4,7 +4,7 @@
 > `pnpm bench` çıktısından; iddialar `pnpm balance` ve `pnpm playtest`
 > tarafından her koşuda doğrulanıyor.
 >
-> Son güncelleme: şema **v6**, 48 tur (Tur 33 denendi ve geri alındı; Tur 34 eski görünüme canlılık ekledi; Tur 35 arayüzü Lite'ın "Cam & Bulut" diline taşıdı; Tur 36 şehre ayrıntı kattı; Tur 37a geç oyuna yönetim yükü, servet vergisi ve kriz dönemleri getirdi; Tur 37b karar kartlarını ve rakip hikâyelerini ekledi; Tur 37c fırsat balonlarını ve aylık görev panosunu getirdi; Tur 37d canlı pazarı, şehir projesi ihalesini ve rakip konsorsiyumunu getirdi; Tur 38 değerlendirme turuydu: geç oyun hızı, gündem ve haber akışı, zorluk eğrisi; Tur 39a senaryo modunu getirdi: Kurtarma ve Krizin ortasında; Tur 39b Konsorsiyuma karşı, Zincir ustası ve Şehrin sponsoru senaryolarını ekledi; Tur 39c Büyük şehir fethi ve Holding: iki şehir ile listeyi yediye tamamladı; Tur 40 cila ve performans; Tur 41 başarımlar ve kariyer; Tur 42 açılışta gölgelendirici derlemesi; Tur 43 oyun içi akıcılık; Tur 44 değerlendirme turuydu: Türkçe sayı biçimi, yardımın kapsamı, haber akışı; Tur 45 dört ek kural getirdi: Fırtınalı yıllar, Aç gözlü rakipler, Sıkı banka, Kıt arsa; Tur 46 açılış paketini böldü: kurulum ekranı telefonda yarı sürede; Tur 47 tek Ayarlar paneli ve erişilebilirlik getirdi: metin boyutu, renk körlüğüne uygun palet, hareket, ses düzeyleri, pencerelerde klavye; Tur 48 oyunu kurulabilir ve çevrimdışı açılır yaptı, yayından sonra "yeni sürüm hazır" diyor). Önümüzdeki işin sırası `docs/YOL-HARITASI.md`'de.
+> Son güncelleme: şema **v6**, 49 tur (Tur 33 denendi ve geri alındı; Tur 34 eski görünüme canlılık ekledi; Tur 35 arayüzü Lite'ın "Cam & Bulut" diline taşıdı; Tur 36 şehre ayrıntı kattı; Tur 37a geç oyuna yönetim yükü, servet vergisi ve kriz dönemleri getirdi; Tur 37b karar kartlarını ve rakip hikâyelerini ekledi; Tur 37c fırsat balonlarını ve aylık görev panosunu getirdi; Tur 37d canlı pazarı, şehir projesi ihalesini ve rakip konsorsiyumunu getirdi; Tur 38 değerlendirme turuydu: geç oyun hızı, gündem ve haber akışı, zorluk eğrisi; Tur 39a senaryo modunu getirdi: Kurtarma ve Krizin ortasında; Tur 39b Konsorsiyuma karşı, Zincir ustası ve Şehrin sponsoru senaryolarını ekledi; Tur 39c Büyük şehir fethi ve Holding: iki şehir ile listeyi yediye tamamladı; Tur 40 cila ve performans; Tur 41 başarımlar ve kariyer; Tur 42 açılışta gölgelendirici derlemesi; Tur 43 oyun içi akıcılık; Tur 44 değerlendirme turuydu: Türkçe sayı biçimi, yardımın kapsamı, haber akışı; Tur 45 dört ek kural getirdi: Fırtınalı yıllar, Aç gözlü rakipler, Sıkı banka, Kıt arsa; Tur 46 açılış paketini böldü: kurulum ekranı telefonda yarı sürede; Tur 47 tek Ayarlar paneli ve erişilebilirlik getirdi: metin boyutu, renk körlüğüne uygun palet, hareket, ses düzeyleri, pencerelerde klavye; Tur 48 oyunu kurulabilir ve çevrimdışı açılır yaptı, yayından sonra "yeni sürüm hazır" diyor; Tur 49 müziği getirdi: gündüz, gece ve kriz, şehirle birlikte dönüyor). Önümüzdeki işin sırası `docs/YOL-HARITASI.md`'de.
 
 ---
 
@@ -4767,6 +4767,118 @@ açılışın hemen başında dinleniyor (`listenForTakeover`). Test düzeltmede
 önce kaldı.
 
 
+### Tur 49 — Müzik
+
+Faz 1'in üçüncü turu (`docs/YOL-HARITASI.md`). Ses manzarası Tur 17'den
+beri vardı: uğultu, trafik, gece böcekleri, baskın gerilimi ve olay
+sesleri. Müzik yoktu.
+
+**Besteleme** (`apps/web/src/music/score.ts`, saf). Ses manzarası gibi
+dosyasız. Her ölçü notalara dökülüyor; aynı ölçü hep aynı. Üç ruh hâli
+var:
+
+| Ruh hâli | Ton | Akorlar | Vuruş/dk | Karakter |
+|---|---|---|---|---|
+| Gündüz | Re majör | I–vi–IV–V | 84 | ılık pad, kök ve beşli bas, sekizlik arpej, ikinci yarıda melodi |
+| Gece | Re majör | vi–IV–I–V | 68 | pad alçakta, arpej dörtlük ve seyrek, melodi nadiren |
+| Kriz | Si minör | i–VI–III–VII | 96 | kalp atışı gibi bas (altında sürekli bir kök), kısa arpej, melodi yok |
+
+Tekrar hissine karşı:
+- sekiz ölçülük cümleler; melodi yalnız cümlenin ikinci yarısında;
+- arpej biçimi cümleden cümleye değişiyor;
+- notalar ölçü numarası ve tohumla seçiliyor, iki cümle birbirinin aynı değil.
+
+Yoğunluk şehrin büyüklüğünden geliyor (bina sayısı): kasabada arpej ve
+melodi seyrek, metropolde dolu.
+
+**Çalıcı** (`apps/web/src/music/player.ts`).
+- İleri bakan zamanlayıcı: 100 ms'de bir, önümüzdeki 1,5 saniyenin
+  notalarını sıraya koyuyor. Arka plandaki sekmede zamanlayıcı saniyede
+  bire iniyor; pencere ondan geniş, müzik kesilmiyor.
+- Zamanlayıcı daha uzun durursa (sekme uyudu, kare takıldı) kaçan ölçüler
+  geçmişe sıralanmıyor; hepsi bir anda çalardı. Müzik bir sonraki ölçüden
+  sürüyor.
+- Tınılar:
+  - pad: iki hafif kayık üçgen, alçak geçirgen;
+  - bas: üçgen;
+  - arpej: tıngırtılı üçgen;
+  - melodi: titreşimli sinüs;
+  - kalp atışı: perdesi düşen sinüs.
+- Pad, arpej ve melodi yankıya da gidiyor; yankı üretilmiş, sabit tohumlu.
+
+**Şehir müziği seçiyor** (`audio.ts`).
+- Gün ışığına göre gündüz ya da gece. Eşikte gidip gelmesin diye iki eşik
+  var: 0,5'in üstünde gündüz, 0,35'in altında gece.
+- Kriz başlayınca kriz.
+- Kriz uyarısında ve baskında (ikinci aşamadan, rakibin payı %25 olunca) günün müziği
+  sürüyor, altında usul bir kalp atışı.
+- Ruh hâli ölçü başında dönüyor, ölçünün ortasında değil.
+- Duraklayınca yalnız pad ve bas kalıyor; oyun bitince müzik susuyor.
+
+**Ayarlar.** Ses bölümünde dört kaydırıcı: Genel, Müzik, Şehir, Olaylar.
+Müzik %70'te başlıyor: şehrin sesi ve olaylar önde kalsın. Tur 49 öncesi
+depoda müzik yok, varsayılanına düşüyor.
+
+**Menüde ses.** Tur 49'a kadar oyun ekranından yeni oyun menüsüne
+dönülünce şehir sesi son düzeyinde çalmaya devam ediyordu. Artık ses
+manzarası ve müzik susuyor, bağlam kapanıyor; oyuna dönünce ilk dokunuşta
+yeniden açılıyor.
+
+**Ses düzeyi** (üretilmiş, çevrimdışı ölçüm; genel %100, müzik %70):
+| Ruh hâli | RMS | Tepe |
+|---|---|---|
+| Gündüz, kasaba | 0,027 (−31 dBFS) | 0,11 (−19 dBFS) |
+| Gündüz, metropol | 0,028 (−31 dBFS) | 0,11 (−19 dBFS) |
+| Gece | 0,023 (−33 dBFS) | 0,10 (−20 dBFS) |
+| Kriz uyarısı (kalp atışıyla) | 0,028 (−31 dBFS) | 0,12 (−18 dBFS) |
+| Kriz | 0,024 (−32 dBFS) | 0,13 (−18 dBFS) |
+
+Ruh hâlleri arasında düzey farkı 2 dB içinde: geçişte müzik sıçramıyor.
+Tepe −18 dBFS'in altında; şehrin sesi ve olaylarla birlikte bile kırpılma
+payı geniş.
+
+**Doğrulama.**
+- `pnpm test` 517/517; tip denetimi temiz. Yeni `apps/web/test/music.test.ts` (10 test):
+  - her nota dizide ve ölçünün içinde;
+  - pad o ölçünün akoru;
+  - gündüz Re majör, kriz Si minör;
+  - aynı ölçü hep aynı, iki cümle aynı değil;
+  - melodi yalnız cümlenin ikinci yarısında, krizde yok;
+  - gece ve kasaba seyrek, krizde kalp atışı;
+  - kriz uyarısında uyum değişmiyor, altında kalp atışı;
+  - duraklayınca kalan pad ve bas her ruh hâlinde çalıyor, krizde de (Codex #78);
+  - sekme uyuyup uyanınca kaçan ölçüler bir anda çalmıyor (düzeltmeden önce
+    135 nota geçmişe sıralanıyordu);
+  - ses ilk dokunuşla açılınca müzik oyunun o anki hâliyle başlıyor (Codex #78).
+- Tarayıcı testine "Müzik" bölümü (8 kontrol):
+  - ilk dokunuştan sonra gündüz müziği;
+  - gece olunca gece;
+  - kriz uyarısında kalp atışı;
+  - kriz başlayınca kriz;
+  - duraklayınca yalnız pad ve bas;
+  - Ayarlar'da müzik düzeyi;
+  - menüye dönünce ses susuyor;
+  - konsol temiz.
+
+Tarayıcı tam koşu 508/508, konsol hatası yok (~33 dk); "Müzik" bölümü
+~27 sn. Tam koşu "kaçan ölçüler" düzeltmesinden önceki derlemedeydi;
+bölüm son derlemede yeniden koştu, 8/8. Paket bütçesi tamam: ana parça
+60,3 KB (değişmedi; müzik oyun ekranının parçasında), kurulumun yolu
+132,7 KB.
+
+Codex #78: ses ilk dokunuşla açıldığında çalıcı ilk ölçüyü hemen sıraya
+koyuyordu, ama şehrin karışımı yarım saniye sonra geliyordu. Gece, krizde,
+duraklatılmış ya da bitmiş oyunda ilk birkaç saniye gündüzün müziği
+çalıyordu. Ses manzarası artık son karışımı bağlam yokken de tutuyor ve
+çalıcıya başlamadan önce veriyor. Test düzeltmeden önce kaldı (ilk ölçü
+gündüzün).
+
+Codex #78'in ikinci turu: krizin bütün alt sesi kalp atışı katmanındaydı.
+Duraklayınca çalıcı yalnız pad ve bas katmanını açık tutuyor; krizde bas
+katmanında nota olmadığı için yalnız pad kalıyordu. Kalp atışının altına
+alçak, sürekli bir kök eklendi (bas katmanında). Krizin düzeyi −33'ten −32
+dBFS'e çıktı. Test düzeltmeden önce kaldı.
+
 ---
 
 ## 3. Ölçülen durum
@@ -4848,9 +4960,9 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi). Senaryo şehirlerinde gün 3–17 ms (`pnpm dayperf`, Tur 43) |
-| Birim testi | **507 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı da) |
+| Birim testi | **517 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik de) |
 | Denge testi | **331 kontrol, hepsi geçiyor** (25 bölüm, süreleriyle; ~13 dk) |
-| Tarayıcı testi | **500 kontrol, hepsi geçiyor**, 0 konsol hatası (~25–40 dk); duman koşusu 132 (~5 dk, rehber dahil) |
+| Tarayıcı testi | **508 kontrol, hepsi geçiyor**, 0 konsol hatası (~25–40 dk); duman koşusu 132 (~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + paket bütçesi (Tur 46; Tur 48'den beri hizmet çalışanı ve manifest de) + duman oynanışı |
 | Kapsam | 35 bina · 25 ürün · 7 kategori · 8 rakip profili · 10 CEO · 22 olay (11 şehir + 11 sektör) · 2 kriz · 12 karar kartı · 70 rakip sözü · 5 fırsat balonu · 8 görev türü · 4 mevsim · 9 moda ürünü · 17 şehir yapısı (6 siluet) · 6 şehir projesi · 7 senaryo · 4 ek kural · 28 rozet |
 

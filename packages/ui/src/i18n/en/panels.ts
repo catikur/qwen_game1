@@ -324,6 +324,7 @@ export const panels: Record<keyof typeof trPanels, string> = {
   'panels.settings.sound': 'Sound',
   'panels.settings.sound.on': 'Sound on',
   'panels.settings.volume.master': 'Overall',
+  'panels.settings.volume.music': 'Music',
   'panels.settings.volume.ambience': 'City',
   'panels.settings.volume.effects': 'Events',
   'panels.settings.volume.value': '{percent}%',

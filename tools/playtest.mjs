@@ -5127,6 +5127,104 @@ async function finish(browser, consoleErrors) {
     await wContext.close();
   }
 
+  // ---------- Müzik (Tur 49) ----------
+  // Dosyasız, üretilmiş müzik: ruh hâlini şehir seçiyor, ölçü başında dönüyor.
+  section('Müzik');
+  {
+    const mContext = await browser.newContext({ viewport: { width: 1280, height: 860 } });
+    await mContext.addInitScript(veteran, TUTORIAL_KEY);
+    const mp = await mContext.newPage();
+    const mErrors = [];
+    mp.on('pageerror', (e) => mErrors.push(e.message));
+    mp.on('console', (m) => { if (m.type() === 'error') mErrors.push(m.text()); });
+    await mp.goto('http://127.0.0.1:8811/');
+    await mp.waitForSelector('.newgame', { timeout: 20000 });
+    await mp.fill('.newgame-field input[type="text"]', 'Nota AŞ');
+    await mp.locator('button:has-text("Şirketi kur")').click();
+    await mp.waitForSelector('.topbar', { timeout: 30000 });
+    // İlk dokunuş ses bağlamını (ve müziği) açıyor; haritaya tıklamadan.
+    await mp.keyboard.press('Shift');
+    await mp.evaluate(() => {
+      window.__capital.setTimeOfDay(0.28);
+      window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 1 });
+    });
+    const music = () => mp.evaluate(() => window.__capital.audio()?.music ?? null);
+    /** Müzik koşulu sağlanana kadar bekle (ölçü 2,5–3,5 sn; yazılımsal GPU'da gün de yavaş). */
+    const until = async (predicate, ms) => {
+      const end = Date.now() + ms;
+      let last = await music();
+      while (Date.now() < end) {
+        if (last && predicate(last)) return { ok: true, last };
+        await mp.waitForTimeout(400);
+        last = await music();
+      }
+      return { ok: Boolean(last && predicate(last)), last };
+    };
+    const brief = (m) => (m ? `${m.mood} · ölçü ${m.bar} · ${JSON.stringify(m.played)}` : 'müzik yok');
+
+    const day = await until((m) => m.mood === 'day' && m.played.pad >= 3 && m.played.bass >= 1 && m.played.arp >= 2, 10000);
+    check('Müzik ilk dokunuştan sonra başlıyor; gündüz pad, bas ve arpej çalıyor', day.ok, brief(day.last));
+
+    await mp.evaluate(() => window.__capital.setTimeOfDay(0.75));
+    const night = await until((m) => m.mood === 'night', 15000);
+    check('Şehirde gece olunca müzik ölçü başında geceye dönüyor', night.ok, brief(night.last));
+
+    const pulseBefore = night.last?.played.pulse ?? 0;
+    await mp.evaluate(() => {
+      const s = window.__capital.getState();
+      s.crisis = { defId: 'rate_shock', phase: 'warning', activeDay: s.time.day + 30, endDay: s.time.day + 150 };
+    });
+    const warned = await until((m) => m.played.pulse > pulseBefore, 10000);
+    check('Kriz uyarısında günün müziği sürüyor, altında kalp atışı', warned.ok && warned.last.mood === 'night', brief(warned.last));
+
+    await mp.evaluate(() => {
+      const s = window.__capital.getState();
+      s.crisis = { defId: 'deep_recession', phase: 'active', activeDay: s.time.day, endDay: s.time.day + 400 };
+    });
+    const crisis = await until((m) => m.mood === 'crisis', 12000);
+    check('Kriz başlayınca müzik krize dönüyor (Si minör, kalp atışı bas)', crisis.ok, brief(crisis.last));
+    await mp.evaluate(() => {
+      delete window.__capital.getState().crisis;
+      window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+    });
+
+    await mp.waitForTimeout(2500);
+    const paused = await music();
+    check('Duraklayınca yalnız pad ve bas kalıyor',
+      paused !== null && paused.layers.pad > 0.3 && paused.layers.bass > 0.3 && paused.layers.arp < 0.02 && paused.layers.lead < 0.02 && paused.layers.pulse < 0.02,
+      paused ? JSON.stringify(paused.layers) : 'müzik yok');
+
+    await mp.locator('.speeds [data-panel="settings"]').click();
+    await mp.locator('[data-volume="music"]').focus();
+    await mp.keyboard.press('Home');
+    const levels = await mp.evaluate(() => ({
+      buses: window.__capital.audio().buses,
+      sliders: [...document.querySelectorAll('[data-volume]')].map((el) => el.getAttribute('data-volume')),
+      output: document.querySelector('[data-volume="music"] + output')?.textContent?.trim(),
+    }));
+    check('Ayarlar\'da Müzik düzeyi: sıfırlanınca müzik yolu susuyor, şehir ve olaylar yerinde',
+      levels.buses.music === 0 && levels.buses.ambience === 1 && levels.buses.effects === 1 && levels.sliders.join() === 'master,music,ambience,effects' && levels.output === '%0',
+      JSON.stringify(levels));
+    await mp.keyboard.press('Escape');
+
+    // Yeni oyun menüsüne dönünce şehir sesi ve müzik susuyor (Tur 49'a kadar
+    // şehir sesi menüde son düzeyinde çalmaya devam ediyordu).
+    // Köprü oyun ekranıyla gidiyor; ses manzarasının kancası önceden tutuluyor.
+    await mp.evaluate(() => {
+      window.__soundProbe = window.__capital.audio;
+      window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 1 });
+    });
+    await mp.locator('.topbar-actions [data-panel="saves"]').click();
+    await mp.locator('.modal button', { hasText: 'Yeni oyun' }).click();
+    await mp.waitForSelector('.newgame', { timeout: 10000 });
+    await mp.waitForTimeout(500);
+    const afterMenu = await mp.evaluate(() => window.__soundProbe?.() ?? null);
+    check('Yeni oyun menüsüne dönünce şehir sesi ve müzik susuyor', afterMenu !== null && afterMenu.context === 'none' && afterMenu.music === null,
+      afterMenu ? `bağlam ${afterMenu.context} · müzik ${afterMenu.music ? afterMenu.music.mood : 'yok'}` : 'kanca yok');
+    check('Müzik akışında konsol temiz', mErrors.length === 0, mErrors.slice(0, 2).join(' | '));
+    await mContext.close();
+  }
+
   section('Mobil');
   for (const deviceName of ['iPhone 13', 'Pixel 7']) {
     const mobileContext = await browser.newContext({ ...devices[deviceName] });
