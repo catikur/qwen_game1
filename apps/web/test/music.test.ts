@@ -77,6 +77,22 @@ describe('müzik: besteleme', () => {
     assert.equal(pulse.length, 2);
     assert.ok(pulse.every((n) => inScale('day', n.midi) && n.velocity < 0.5));
   });
+
+  test('duraklayınca kalan pad ve bas her ruh hâlinde çalıyor, krizde de (Codex #78)', () => {
+    // Duraklatılmış oyunda çalıcı yalnız pad ve bas katmanını açık tutuyor.
+    // Krizin bütün alt sesi kalp atışındaydı: duraklayınca yalnız pad kalıyordu.
+    for (const mood of ['day', 'night', 'crisis'] as const) {
+      for (const bar of bars(8)) {
+        const layers = new Set(composeBar(mood, bar, 4, 0.5).map((n) => n.layer));
+        assert.ok(layers.has('pad') && layers.has('bass'), `${mood} ölçü ${bar}: ${[...layers].join(', ')}`);
+      }
+    }
+    // Krizin basını kalp atışı taşıyor; sürekli bas alçakta, altta duruyor.
+    const crisis = composeBar('crisis', 0);
+    const bass = crisis.filter((n) => n.layer === 'bass');
+    const pulse = crisis.filter((n) => n.layer === 'pulse');
+    assert.ok(bass.every((n) => n.velocity < Math.min(...pulse.map((p) => p.velocity))), 'bas kalp atışının altında');
+  });
 });
 
 /**

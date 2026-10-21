@@ -4781,7 +4781,7 @@ var:
 |---|---|---|---|---|
 | Gündüz | Re majör | I–vi–IV–V | 84 | ılık pad, kök ve beşli bas, sekizlik arpej, ikinci yarıda melodi |
 | Gece | Re majör | vi–IV–I–V | 68 | pad alçakta, arpej dörtlük ve seyrek, melodi nadiren |
-| Kriz | Si minör | i–VI–III–VII | 96 | kalp atışı gibi bas, kısa arpej, melodi yok |
+| Kriz | Si minör | i–VI–III–VII | 96 | kalp atışı gibi bas (altında sürekli bir kök), kısa arpej, melodi yok |
 
 Tekrar hissine karşı:
 - sekiz ölçülük cümleler; melodi yalnız cümlenin ikinci yarısında;
@@ -4831,14 +4831,14 @@ yeniden açılıyor.
 | Gündüz, metropol | 0,028 (−31 dBFS) | 0,11 (−19 dBFS) |
 | Gece | 0,023 (−33 dBFS) | 0,10 (−20 dBFS) |
 | Kriz uyarısı (kalp atışıyla) | 0,028 (−31 dBFS) | 0,12 (−18 dBFS) |
-| Kriz | 0,022 (−33 dBFS) | 0,13 (−18 dBFS) |
+| Kriz | 0,024 (−32 dBFS) | 0,13 (−18 dBFS) |
 
 Ruh hâlleri arasında düzey farkı 2 dB içinde: geçişte müzik sıçramıyor.
 Tepe −18 dBFS'in altında; şehrin sesi ve olaylarla birlikte bile kırpılma
 payı geniş.
 
 **Doğrulama.**
-- `pnpm test` 516/516; tip denetimi temiz. Yeni `apps/web/test/music.test.ts` (9 test):
+- `pnpm test` 517/517; tip denetimi temiz. Yeni `apps/web/test/music.test.ts` (10 test):
   - her nota dizide ve ölçünün içinde;
   - pad o ölçünün akoru;
   - gündüz Re majör, kriz Si minör;
@@ -4846,6 +4846,7 @@ payı geniş.
   - melodi yalnız cümlenin ikinci yarısında, krizde yok;
   - gece ve kasaba seyrek, krizde kalp atışı;
   - kriz uyarısında uyum değişmiyor, altında kalp atışı;
+  - duraklayınca kalan pad ve bas her ruh hâlinde çalıyor, krizde de (Codex #78);
   - sekme uyuyup uyanınca kaçan ölçüler bir anda çalmıyor (düzeltmeden önce
     135 nota geçmişe sıralanıyordu);
   - ses ilk dokunuşla açılınca müzik oyunun o anki hâliyle başlıyor (Codex #78).
@@ -4871,6 +4872,12 @@ duraklatılmış ya da bitmiş oyunda ilk birkaç saniye gündüzün müziği
 çalıyordu. Ses manzarası artık son karışımı bağlam yokken de tutuyor ve
 çalıcıya başlamadan önce veriyor. Test düzeltmeden önce kaldı (ilk ölçü
 gündüzün).
+
+Codex #78'in ikinci turu: krizin bütün alt sesi kalp atışı katmanındaydı.
+Duraklayınca çalıcı yalnız pad ve bas katmanını açık tutuyor; krizde bas
+katmanında nota olmadığı için yalnız pad kalıyordu. Kalp atışının altına
+alçak, sürekli bir kök eklendi (bas katmanında). Krizin düzeyi −33'ten −32
+dBFS'e çıktı. Test düzeltmeden önce kaldı.
 
 ---
 
@@ -4953,7 +4960,7 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi). Senaryo şehirlerinde gün 3–17 ms (`pnpm dayperf`, Tur 43) |
-| Birim testi | **516 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik de) |
+| Birim testi | **517 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik de) |
 | Denge testi | **331 kontrol, hepsi geçiyor** (25 bölüm, süreleriyle; ~13 dk) |
 | Tarayıcı testi | **508 kontrol, hepsi geçiyor**, 0 konsol hatası (~25–40 dk); duman koşusu 132 (~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + paket bütçesi (Tur 46; Tur 48'den beri hizmet çalışanı ve manifest de) + duman oynanışı |

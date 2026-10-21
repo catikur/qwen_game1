@@ -9,8 +9,8 @@
  *   bas, sekizlik arpej, ikinci yarısında kısa bir melodi.
  * - **Gece:** aynı tonda vi–IV–I–V, 68 vuruş. Pad alçakta, arpej seyrek,
  *   melodi nadiren. Şehir uyuyor ama ışıklar yanık.
- * - **Kriz:** Si minör, i–VI–III–VII, 96 vuruş. Kalp atışı gibi bas,
- *   kısa vuruşlu arpej, melodi yok. Kriz uyarısında ve baskında günün
+ * - **Kriz:** Si minör, i–VI–III–VII, 96 vuruş. Kalp atışı gibi bas (altında
+ *   alçak, sürekli bir kök), kısa vuruşlu arpej, melodi yok. Kriz uyarısında ve baskında günün
  *   müziği sürüyor, altında usul bir kalp atışı (`heartbeat`).
  *
  * Tekrar hissini kırmak için: sekiz ölçülük cümleler, melodi yalnız
@@ -116,6 +116,9 @@ export function composeBar(mood: Mood, bar: number, seed = 1, intensity = 0.5, h
     for (const beat of [0, 0.5, 2, 2.5]) {
       events.push({ layer: 'pulse', beat, length: 0.35, midi: bassRoot, velocity: beat % 2 === 0 ? 0.7 : 0.45 });
     }
+    // Altında alçak, sürekli bir kök. Duraklayınca kalp atışı susuyor, pad ve
+    // bas kalıyor; bu olmasa krizde yalnız pad kalırdı (Codex #78).
+    events.push({ layer: 'bass', beat: 0, length: BEATS_PER_BAR, midi: bassRoot, velocity: 0.3 });
   } else {
     events.push({ layer: 'bass', beat: 0, length: mood === 'night' ? 4 : 2, midi: bassRoot, velocity: 0.55 });
     if (mood === 'day') events.push({ layer: 'bass', beat: 2, length: 2, midi: scaleNote(def, degree + 4) - 24, velocity: 0.45 });
