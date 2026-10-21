@@ -33,6 +33,7 @@ import {
   useGameVersion,
 } from '@capital/ui';
 import type { ExportOutcome, FocusTarget, GameContextValue, LeagueBoard, ToastMessage, ViewState } from '@capital/ui';
+import { setBeforeUpdate } from './pwa';
 import { deliverTextFile } from './host';
 import { createLeagueBoard, fallbackLeagueBoard } from './league-board';
 import { Soundscape } from './audio';
@@ -213,6 +214,8 @@ export function GameRoot({
     }, AUTOSAVE_INTERVAL_MS);
     return () => clearInterval(timer);
   }, [engine]);
+  // Yeni sürüme geçmeden önce (Tur 48): yenilenen oyun kaldığı günden açılsın.
+  useEffect(() => setBeforeUpdate(() => saveGame(engine.getState(), AUTOSAVE_SLOT)), [engine]);
 
   // ---- Senaryonun dönüm noktalarında hemen kayıt (Tur 39) ----
   // Başla, bitiş ve sonuç ekranının kapanışı otomatik kaydın 30 saniyesini

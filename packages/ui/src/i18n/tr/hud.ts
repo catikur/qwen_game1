@@ -311,6 +311,11 @@ export const hud = {
   'hud.career.open': 'Kariyer · {done}/{total} rozet',
   'hud.career.openShort': 'Kariyer',
   'hud.settings.open': 'Ayarlar',
+  // Yeni sürüm (Tur 48)
+  'hud.update.ready': 'Oyunun yeni sürümü hazır. Yenileyince oyunun kaydedilip yeni sürümle açılır.',
+  'hud.update.apply': 'Yenile',
+  'hud.update.applying': 'Yenileniyor…',
+  'hud.update.later': 'Sonra (bir dahaki açılışta gelir)',
   'hud.career.unlockedToast': 'Rozet kazandın: {title}',
   'hud.career.moreToast': '+{count} rozet daha. Kariyer sayfasında.',
   'hud.career.stat.badges': 'Rozet',

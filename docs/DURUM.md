@@ -4,7 +4,7 @@
 > `pnpm bench` çıktısından; iddialar `pnpm balance` ve `pnpm playtest`
 > tarafından her koşuda doğrulanıyor.
 >
-> Son güncelleme: şema **v6**, 47 tur (Tur 33 denendi ve geri alındı; Tur 34 eski görünüme canlılık ekledi; Tur 35 arayüzü Lite'ın "Cam & Bulut" diline taşıdı; Tur 36 şehre ayrıntı kattı; Tur 37a geç oyuna yönetim yükü, servet vergisi ve kriz dönemleri getirdi; Tur 37b karar kartlarını ve rakip hikâyelerini ekledi; Tur 37c fırsat balonlarını ve aylık görev panosunu getirdi; Tur 37d canlı pazarı, şehir projesi ihalesini ve rakip konsorsiyumunu getirdi; Tur 38 değerlendirme turuydu: geç oyun hızı, gündem ve haber akışı, zorluk eğrisi; Tur 39a senaryo modunu getirdi: Kurtarma ve Krizin ortasında; Tur 39b Konsorsiyuma karşı, Zincir ustası ve Şehrin sponsoru senaryolarını ekledi; Tur 39c Büyük şehir fethi ve Holding: iki şehir ile listeyi yediye tamamladı; Tur 40 cila ve performans; Tur 41 başarımlar ve kariyer; Tur 42 açılışta gölgelendirici derlemesi; Tur 43 oyun içi akıcılık; Tur 44 değerlendirme turuydu: Türkçe sayı biçimi, yardımın kapsamı, haber akışı; Tur 45 dört ek kural getirdi: Fırtınalı yıllar, Aç gözlü rakipler, Sıkı banka, Kıt arsa; Tur 46 açılış paketini böldü: kurulum ekranı telefonda yarı sürede; Tur 47 tek Ayarlar paneli ve erişilebilirlik getirdi: metin boyutu, renk körlüğüne uygun palet, hareket, ses düzeyleri, pencerelerde klavye). Önümüzdeki işin sırası `docs/YOL-HARITASI.md`'de.
+> Son güncelleme: şema **v6**, 48 tur (Tur 33 denendi ve geri alındı; Tur 34 eski görünüme canlılık ekledi; Tur 35 arayüzü Lite'ın "Cam & Bulut" diline taşıdı; Tur 36 şehre ayrıntı kattı; Tur 37a geç oyuna yönetim yükü, servet vergisi ve kriz dönemleri getirdi; Tur 37b karar kartlarını ve rakip hikâyelerini ekledi; Tur 37c fırsat balonlarını ve aylık görev panosunu getirdi; Tur 37d canlı pazarı, şehir projesi ihalesini ve rakip konsorsiyumunu getirdi; Tur 38 değerlendirme turuydu: geç oyun hızı, gündem ve haber akışı, zorluk eğrisi; Tur 39a senaryo modunu getirdi: Kurtarma ve Krizin ortasında; Tur 39b Konsorsiyuma karşı, Zincir ustası ve Şehrin sponsoru senaryolarını ekledi; Tur 39c Büyük şehir fethi ve Holding: iki şehir ile listeyi yediye tamamladı; Tur 40 cila ve performans; Tur 41 başarımlar ve kariyer; Tur 42 açılışta gölgelendirici derlemesi; Tur 43 oyun içi akıcılık; Tur 44 değerlendirme turuydu: Türkçe sayı biçimi, yardımın kapsamı, haber akışı; Tur 45 dört ek kural getirdi: Fırtınalı yıllar, Aç gözlü rakipler, Sıkı banka, Kıt arsa; Tur 46 açılış paketini böldü: kurulum ekranı telefonda yarı sürede; Tur 47 tek Ayarlar paneli ve erişilebilirlik getirdi: metin boyutu, renk körlüğüne uygun palet, hareket, ses düzeyleri, pencerelerde klavye; Tur 48 oyunu kurulabilir ve çevrimdışı açılır yaptı, yayından sonra "yeni sürüm hazır" diyor). Önümüzdeki işin sırası `docs/YOL-HARITASI.md`'de.
 
 ---
 
@@ -4612,6 +4612,161 @@ dönmüş oluyor ve Ayarlar onu açan olarak alıyor. Bu sıra `dialog.ts`'te
 yazıldı; Yardım → Ayarlar kontrolü odağın dönüşünü de doğruluyor.
 
 
+### Tur 48 — Kurulabilir ve çevrimdışı oyun
+
+Faz 1'in ikinci turu (`docs/YOL-HARITASI.md`).
+
+**Neden.** Oyunun evi tek bir tarayıcı sekmesiydi:
+- cihaza kurulamıyordu;
+- bağlantı olmadan açılmıyordu;
+- yayından sonra açık kalmış eski sayfa yeni parçayı bulamıyordu. Tur 46
+  bunu yalnız bir mesajla karşılamıştı.
+
+**Simge ve manifest.**
+- `tools/make-app-icons.mjs` tek bir SVG'yi Chromium'la PNG'ye çiziyor.
+  Çizim: gökyüzü, üç bina (ışıkları yanan kule) ve üstlerinden yükselen
+  yeşil çizgi. Çıktılar `apps/web/public/` altında:
+  - 192 ve 512 (köşeleri yuvarlak);
+  - maskelenebilir 512 (çizim 410 px'lik güvenli dairenin içinde);
+  - Apple simgesi 180.
+- `manifest.webmanifest`: ad, tam ekran, gökyüzü renkleri, Türkçe.
+- Bağlantılar `index.html`'e Vite eklentisiyle giriyor; tarayıcı çubuğunun
+  rengi gündüz ve gece için ayrı. Tek dosyalık sayfada ne manifest ne
+  hizmet çalışanı var.
+
+**Hizmet çalışanı** (`apps/web/pwa/sw.js` şablonu, `plugin.mjs` eklentisi).
+- Derleme paketin her dosyasını listeliyor; haritalar, çalışanın kendisi
+  ve `lite/` hariç.
+- Listeden ve içeriklerden bir özet çıkarıyor. Aynı kaynaktan iki
+  derleme aynı çalışanı veriyor; tarayıcı boşuna güncellemiyor.
+- Önbellek ~1,7 MB ham. İlk açılışta zaten inen dosyalar tarayıcının HTTP
+  önbelleğinden geliyor; yeniden inenler İngilizce sözlük ve simgeler.
+- Kabuk ve parçalar önbellekten geliyor. Açık sayfa hep kendi sürümünün
+  parçalarıyla çalışıyor; Tur 46'daki "eski sayfa yeni parçayı bulamadı"
+  artık olmuyor.
+- Yeni sürüm arka planda iniyor ve bekliyor. Kendiliğinden devralmıyor:
+  oyun ortasında sayfanın altından sürüm değişmesin.
+- Etkinleşince en yeni iki *etkinleşmiş* sürümün önbelleği kalıyor. Başka
+  sekmede açık kalan eski sürüm, sonradan istediği parçayı önceki
+  önbellekten alıyor.
+- Önbellekten düşen dosya ağdan alınıp geri konuyor.
+- Listede olmayan isteğe karışmıyor.
+
+**Yeni sürüm hazır.**
+- Sayfa bekleyen çalışanı görünce ekranın altında bildirim çıkıyor;
+  kurulumda da oyunda da aynı yerde.
+- *Yenile*: oyun kaydediliyor (`GameRoot` kancası), yeni çalışan
+  devralıyor, sayfa yeni sürümle ve kaldığı günden açılıyor.
+- *Sonra*: yeni sürüm bir dahaki açılışta geliyor.
+- Uzun açık kalan oyun yarım saatte bir ve sekmeye dönünce güncelleme
+  arıyor.
+
+**Ayarlar'da Uygulama bölümü.**
+- Chromium'da "Cihaza kur" düğmesi; tarayıcının kendi şeridi çıkmıyor.
+- iOS'ta Safari'nin Paylaş → Ana Ekrana Ekle yolu yazıyor, ötekilerde
+  tarayıcı menüsü. Kuruluysa "Oyun bu cihazda kurulu."
+- Çevrimdışı hazır olunca söylüyor.
+- Hizmet çalışanı olmayan sayfada bölüm yok.
+
+**Lite ile aynı kökende.** Pages'te ana oyun `/qwen_game1/`, Lite
+`/qwen_game1/lite/` altında; kapsamlar iç içe.
+- Ana oyunun çalışanı Lite'ın isteklerine karışmıyor ve önbelleğine
+  dokunmuyor. Lite'ın sayfası kendi çalışanına geçiyor.
+- Alt yolla derlenip Lite yanına konunca denendi. Sınamada bir hata çıktı:
+  Lite'ın çalışanı etkinleşirken kendi adı dışındaki bütün önbellekleri
+  siliyordu. Lite'ı açan oyuncunun ana oyunu çevrimdışı açılmıyordu. Artık
+  yalnız `cf-lite-` önekli eski önbellekleri siliyor. Yeni
+  `apps/lite-web/test/sw.test.ts` düzeltmeden önce kaldı.
+
+**Tur 47'den kalan.** Kurulumdaki Ayarlar katmanı Kariyer'in sabit
+konum kuralını almamıştı. Telefonda altta rıhtımın 56 px'i boş kalıyordu;
+artık ekranı kaplıyor.
+
+**Doğrulama.**
+- `pnpm test` 507/507.
+  - Birim test koşucusu artık `apps/*/test`'i de tarıyor.
+  - Yeni `apps/web/test/update.test.ts` (4 test):
+    - Yenile tek sekmede kaydedip bekleyen sürüme geçiriyor, devralınca
+      yeniliyor;
+    - kayıt sürerken başka sekme geçirdiyse sayfayı yeniliyor;
+    - sayfa yüklenirken başka sekme geçirse de "yeni sürüm hazır" çıkıyor;
+    - ilk kurulumdaki devralma yeni sürüm sayılmıyor.
+  - Yeni `apps/web/test/pwa.test.ts` (13 test). Çalışan sahte bir ortamda
+    koşuyor; kapsam Pages'teki gibi `/qwen_game1/`. Sınananlar:
+    - liste;
+    - özet;
+    - kabuk ve sorgulu adres;
+    - Lite'a ve başka kökene karışmama;
+    - en yeni iki etkinleşmiş sürüm, yarım kalan kurulumun sayılmaması,
+      aynı sürümün düşen yeniden kurulumunun çalışan önbelleğe dokunmaması,
+      Lite'ınkine dokunmama;
+    - yalnız şablon değişince de sürümün değişmesi;
+    - eski sekmenin eski parçası;
+    - düşen dosyanın geri konması; bu sürümün dosyası düşünce eski sürümünkinin
+      verilmemesi;
+    - kendiliğinden devralmama.
+- Paket denetimine iki kontrol eklendi:
+  - çalışan paketin her parçasını alıyor, haritaları almıyor;
+  - manifest kurulabilir ve simgeler pakette.
+- Tarayıcı testinde hizmet çalışanı varsayılan olarak kapalı. Açıkken
+  bağlamın istek yakalaması çalışanın cevapladığı istekleri görmüyor;
+  bölümler eskisi gibi koşuyor.
+- Yeni bölüm "Kurulabilir ve çevrimdışı oyun" çalışanla koşuyor (7 kontrol):
+  - manifest ve simgeler beyan edilen boyutta;
+  - çalışan sayfayı devralıyor, bütün parçalar önbellekte;
+  - Ayarlar'da çevrimdışı hazır;
+  - sunucuya ulaşılamazken kurulum açılıyor, İngilizceye geçiliyor, şirket
+    kuruluyor;
+  - yeni sürüm bekliyor ve bildirim çıkıyor;
+  - Yenile'den sonra oyun kaldığı günden yeni sürümle açılıyor, önceki
+    önbellek duruyor;
+  - konsol temiz.
+- Çevrimdışını sunucu bağlantıyı keserek taklit ediyor. Playwright'ın
+  `setOffline`'ı çalışanın isteklerine uygulanmıyor; ilk sürüm onunla
+  geçiyordu ama çalışan ağdan alıyordu.
+- Tek dosyalık sayfa 8/8; içinde çalışan da manifest de yok.
+- Paket bütçesi: ana parça 60,3 KB (Tur 47'de 58,8), kurulumun yolu 132,6 KB.
+
+Tarayıcı tam koşu 500 kontrol, konsol hatası yok (~30 dk). İlk tam koşuda
+499 geçti. Kalan kontrol "Cila" bölümünün "uygulamanın kendi konsol uyarısı
+yok" kontrolüydü. Uyarı Playwright'ındı: çalışanı engellerken konsola
+kendisi yazıyor. Kontrol artık onu saymıyor; bölüm yeniden koşunca 9/9.
+
+Codex #77: kurulumu yarıda kalan sürüm (bağlantı koptu) boş bir önbellek
+bırakıyordu. Bir sonraki sürüm etkinleşince "en yeni iki" kuralı onu
+önceki sürüm sayıp çalışan sürümün önbelleğini siliyordu; o sürümde açık
+kalan sekme sonradan istediği parçayı kaybediyordu. Önbellekler artık
+oluşturulma sırasına göre değil etkinleşmiş sürümlerin kaydına göre
+tutuluyor (`capitalforge-meta`). Kurulum düşerse yarım önbellek hemen
+siliniyor. Yeni test düzeltmeden önce kaldı.
+
+Codex #77'nin ikinci turunda iki bulgu daha geldi:
+- *Yalnız çalışanı değişen yayın.* Sürüm özeti çalışanın şablonunu
+  içermiyordu. Yeni çalışan eskisinin önbelleğine yazıyordu ve kurulumu
+  düşerse az önceki düzeltme çalışan sürümün dosyalarını siliyordu. Artık
+  şablon da özete giriyor; kurulum düşerse yalnız bu kurulumun açtığı
+  önbellek siliniyor.
+- *İki sekme.* Bir sekmede Yenile'ye basılıp oyun kaydedilirken öteki sekme
+  yeni sürüme geçirirse ilk sekme etkinleşmiş çalışana "geç" diyordu. Sayfa
+  hiç yenilenmiyor, düğme "Yenileniyor…"da kalıyordu. Kayıttan sonra çalışan
+  ya da denetleyici değiştiyse sayfa doğrudan yenileniyor.
+- İkisinin testi de düzeltmeden önce kaldı.
+
+Üçüncü turda bir bulgu daha geldi. Bu sürümün bir dosyası (kabuk dahil)
+önbellekten düşünce çalışan bütün önbelleklere bakıyordu. Eski sürümün
+kabuğunu bulup veriyor, oyun yeni çalışanın altında eski sürümle açılıyordu;
+dosya da hiç geri konmuyordu. Öteki önbelleklere artık yalnız eski sürümün
+parçası için bakılıyor; bu sürümün dosyası ağdan alınıp geri konuyor. Test
+düzeltmeden önce kaldı.
+
+Dördüncü turda bir bulgu daha geldi. Başka sekmenin sürüm geçişi
+(`controllerchange`) ancak sayfa yüklenip kayıt bittikten sonra
+dinleniyordu. Sayfa yüklenirken öteki sekme Yenile'ye basarsa olay
+kaçıyor, bu sekme eski kodla "yeni sürüm hazır" demeden sürüyordu. Artık
+açılışın hemen başında dinleniyor (`listenForTakeover`). Test düzeltmeden
+önce kaldı.
+
+
 ---
 
 ## 3. Ölçülen durum
@@ -4693,10 +4848,10 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi). Senaryo şehirlerinde gün 3–17 ms (`pnpm dayperf`, Tur 43) |
-| Birim testi | **489 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar da) |
+| Birim testi | **507 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı da) |
 | Denge testi | **331 kontrol, hepsi geçiyor** (25 bölüm, süreleriyle; ~13 dk) |
-| Tarayıcı testi | **493 kontrol, hepsi geçiyor**, 0 konsol hatası (~25–40 dk); duman koşusu 132 (~5 dk, rehber dahil) |
-| CI | her PR'da tip + test + denge + paket + paket bütçesi (Tur 46) + duman oynanışı |
+| Tarayıcı testi | **500 kontrol, hepsi geçiyor**, 0 konsol hatası (~25–40 dk); duman koşusu 132 (~5 dk, rehber dahil) |
+| CI | her PR'da tip + test + denge + paket + paket bütçesi (Tur 46; Tur 48'den beri hizmet çalışanı ve manifest de) + duman oynanışı |
 | Kapsam | 35 bina · 25 ürün · 7 kategori · 8 rakip profili · 10 CEO · 22 olay (11 şehir + 11 sektör) · 2 kriz · 12 karar kartı · 70 rakip sözü · 5 fırsat balonu · 8 görev türü · 4 mevsim · 9 moda ürünü · 17 şehir yapısı (6 siluet) · 6 şehir projesi · 7 senaryo · 4 ek kural · 28 rozet |
 
 ### Render (Tur 6 sonrası)
@@ -4895,14 +5050,17 @@ pnpm land            # abonman oranı — geometri varyantları
 pnpm longrun         # uzun oyun — 1440 gün, kartopu ve geç oyun frenleri
 pnpm playtest        # tarayıcı testi (build dahil), tam koşu ~20 dk
 pnpm playtest:smoke  # duman koşusu ~3,5 dk — PR'da CI bunu koşar
-pnpm bundle:check    # açılış paketi bütçesi (build dahil): kurulumun yolu, ana parça, yazı tipleri
+pnpm bundle:check    # açılış paketi bütçesi (build dahil): kurulumun yolu, ana parça, yazı tipleri, hizmet çalışanı, manifest
 node tools/build-single-file.mjs   # paylaşılan sayfa için tek HTML
+node tools/make-app-icons.mjs      # uygulama simgelerini SVG'den yeniden çiz (apps/web/public/)
 pnpm dev             # oyunu aç
 ```
 
 Yayın: main'e her girişte `.github/workflows/pages.yml` oyunu alt yolla
 (`--base=/qwen_game1/`) derleyip GitHub Pages'e koyuyor:
 https://catikur.github.io/qwen_game1/. PR'da yalnızca paket deneniyor.
+Tur 48'den beri oyun oradan kurulabiliyor ve çevrimdışı açılıyor; yeni
+yayın açık oyunda "yeni sürüm hazır" bildirimiyle geliyor.
 Tek seferlik ayar: Settings → Pages → Source: GitHub Actions.
 
 `balance` bir **sınav**, `bench` bir **termometre**: ilki bir şey

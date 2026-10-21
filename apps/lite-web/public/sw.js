@@ -18,9 +18,15 @@ self.addEventListener('install', (event) => {
       .then(() => self.skipWaiting()),
   );
 });
+// Yalnız kendi eski önbelleklerini siliyor. Pages'te aynı kökende ana oyun
+// da var (`capitalforge-…`, Tur 48); eskiden bu satır onunkini de siliyordu
+// ve Lite'ı açan oyuncunun ana oyunu çevrimdışı açılmıyordu.
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((keys) => Promise.all(keys.filter((key) => key !== CACHE).map((key) => caches.delete(key)))).then(() => self.clients.claim()),
+    caches
+      .keys()
+      .then((keys) => Promise.all(keys.filter((key) => key.startsWith('cf-lite-') && key !== CACHE).map((key) => caches.delete(key))))
+      .then(() => self.clients.claim()),
   );
 });
 

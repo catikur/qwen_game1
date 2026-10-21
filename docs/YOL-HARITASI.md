@@ -1,6 +1,6 @@
 # Capital — Yol Haritası
 
-> Tur 47'de yazıldı, her turda güncelleniyor. Biten işin ayrıntısı
+> Tur 47'de yazıldı, her turda güncelleniyor (son: Tur 48). Biten işin ayrıntısı
 > `docs/DURUM.md`'de; bu dosya önümüzdeki işin sırasını ve gerekçesini
 > tutuyor.
 
@@ -50,8 +50,8 @@ Kullanıcı "fazı baştan sona yürüt" dedi:
 
 | Tur | İş | Durum |
 |---|---|---|
-| **47 · Ayarlar ve erişilebilirlik** | Tek Ayarlar paneli: dil, görünüm, metin boyutu, renk körlüğüne uygun palet, hareketi azaltma, ayrı ses düzeyleri, kısayollar. Pencerelerde klavye sözleşmesi (odak, Tab, Escape). | bu PR |
-| **48 · Kurulabilir ve çevrimdışı oyun** | Simge ve kurulum, çevrimdışı açılış, yayından sonra "yeni sürüm hazır" bildirimi. Tur 46'daki "eski sayfa yeni parçayı bulamıyor" sorununu kökten çözer. | |
+| **47 · Ayarlar ve erişilebilirlik** | Tek Ayarlar paneli: dil, görünüm, metin boyutu, renk körlüğüne uygun palet, hareketi azaltma, ayrı ses düzeyleri, kısayollar. Pencerelerde klavye sözleşmesi (odak, Tab, Escape). | bitti (#76) |
+| **48 · Kurulabilir ve çevrimdışı oyun** | Simge ve kurulum, çevrimdışı açılış, yayından sonra "yeni sürüm hazır" bildirimi. Tur 46'daki "eski sayfa yeni parçayı bulamıyor" sorununu kökten çözer. | bu PR |
 | **49 · Müzik** | Gündüz, gece ve kriz katmanları olan dinamik müzik; Tur 47'deki ses düzeyleriyle birleşir. | |
 | **50 · Değerlendirme ve tanıtım** | Yeni oyuncu, telefon ve ilk saat değerlendirmesi. Tanıtım malzemesi: ekran görüntüleri, TR/EN tanıtım metni. Faz 1 raporu. | |
 

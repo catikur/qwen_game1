@@ -36,6 +36,9 @@ export { LOCALE_NAMES, chooseLocale, initLocale, useLocale } from './i18n/locale
 export { LocalePicker } from './LocalePicker';
 export { AppearancePicker } from './AppearancePicker';
 export { SettingsPanel } from './SettingsPanel';
+export { UpdateNotice } from './UpdateNotice';
+export { applyUpdate, getAppShell, installApp, setAppShell, setAppShellActions, subscribeAppShell, useAppShell } from './appShell';
+export type { AppShellActions, AppShellState } from './appShell';
 export {
   DEFAULT_SETTINGS,
   getSettings,

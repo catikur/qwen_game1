@@ -1,5 +1,7 @@
 import type { ReactElement } from 'react';
 import { AppearancePicker } from './AppearancePicker';
+import { installApp, useAppShell } from './appShell';
+import type { AppShellState } from './appShell';
 import { LocalePicker } from './LocalePicker';
 import { t, type MessageKey } from './i18n';
 import {
@@ -78,12 +80,42 @@ function Choices<T extends string>({
 }
 
 /**
- * Ayarlar (Tur 47): dil, görünüm, metin boyutu, renkler, hareket, ses ve
- * kısayollar tek yerde. Oyun bağlamına ihtiyacı yok; kurulum ekranında da
- * açılıyor (ses düzeyleri depoda, ses manzarası oyun başlayınca okuyor).
+ * Uygulama (Tur 48): cihaza kurma ve çevrimdışı hazırlık. Hizmet çalışanı
+ * olmayan sayfada (tek dosyalık sayfa, geliştirme sunucusu) bölüm yok.
+ */
+function AppSection({ shell }: { shell: AppShellState }): ReactElement {
+  let install: ReactElement;
+  if (shell.installed) install = <p>{t('panels.settings.app.installed')}</p>;
+  else if (shell.installable) {
+    install = (
+      <>
+        <button type="button" data-install-app onClick={() => void installApp()}>
+          {t('panels.settings.app.install')}
+        </button>
+        <p className="muted">{t('panels.settings.app.install.hint')}</p>
+      </>
+    );
+  } else install = <p className="muted">{t(shell.platform === 'ios' ? 'panels.settings.app.ios' : 'panels.settings.app.browser')}</p>;
+  return (
+    <section className="settings-group settings-app" data-settings-app>
+      <h3 id="settings-app">{t('panels.settings.app')}</h3>
+      {install}
+      <p data-offline-ready={shell.offlineReady}>
+        {t(shell.offlineReady ? 'panels.settings.app.offline.ready' : 'panels.settings.app.offline.pending')}
+      </p>
+    </section>
+  );
+}
+
+/**
+ * Ayarlar (Tur 47): dil, görünüm, metin boyutu, renkler, hareket, ses,
+ * uygulama (Tur 48) ve kısayollar tek yerde. Oyun bağlamına ihtiyacı yok;
+ * kurulum ekranında da açılıyor (ses düzeyleri depoda, ses manzarası oyun
+ * başlayınca okuyor).
  */
 export function SettingsPanel(): ReactElement {
   const settings = useSettings();
+  const shell = useAppShell();
   return (
     <div className="settings" data-settings>
       <section className="settings-group">
@@ -141,6 +173,7 @@ export function SettingsPanel(): ReactElement {
           );
         })}
       </section>
+      {shell.supported && <AppSection shell={shell} />}
       <section className="settings-group">
         <h3 id="settings-keys">{t('panels.settings.keys')}</h3>
         <dl className="settings-keys">
