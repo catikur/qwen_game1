@@ -4683,12 +4683,12 @@ konum kuralını almamıştı. Telefonda altta rıhtımın 56 px'i boş kalıyor
 artık ekranı kaplıyor.
 
 **Doğrulama.**
-- `pnpm test` 504/504.
+- `pnpm test` 505/505.
   - Birim test koşucusu artık `apps/*/test`'i de tarıyor.
   - Yeni `apps/web/test/update.test.ts` (2 test): Yenile tek sekmede
     kaydedip bekleyen sürüme geçiriyor; kayıt sürerken başka sekme geçirdiyse
     sayfayı yeniliyor.
-  - Yeni `apps/web/test/pwa.test.ts` (12 test). Çalışan sahte bir ortamda
+  - Yeni `apps/web/test/pwa.test.ts` (13 test). Çalışan sahte bir ortamda
     koşuyor; kapsam Pages'teki gibi `/qwen_game1/`. Sınananlar:
     - liste;
     - özet;
@@ -4699,7 +4699,8 @@ artık ekranı kaplıyor.
       Lite'ınkine dokunmama;
     - yalnız şablon değişince de sürümün değişmesi;
     - eski sekmenin eski parçası;
-    - düşen dosyanın geri konması;
+    - düşen dosyanın geri konması; bu sürümün dosyası düşünce eski sürümünkinin
+      verilmemesi;
     - kendiliğinden devralmama.
 - Paket denetimine iki kontrol eklendi:
   - çalışan paketin her parçasını alıyor, haritaları almıyor;
@@ -4747,6 +4748,13 @@ Codex #77'nin ikinci turunda iki bulgu daha geldi:
   hiç yenilenmiyor, düğme "Yenileniyor…"da kalıyordu. Kayıttan sonra çalışan
   ya da denetleyici değiştiyse sayfa doğrudan yenileniyor.
 - İkisinin testi de düzeltmeden önce kaldı.
+
+Üçüncü turda bir bulgu daha geldi. Bu sürümün bir dosyası (kabuk dahil)
+önbellekten düşünce çalışan bütün önbelleklere bakıyordu. Eski sürümün
+kabuğunu bulup veriyor, oyun yeni çalışanın altında eski sürümle açılıyordu;
+dosya da hiç geri konmuyordu. Öteki önbelleklere artık yalnız eski sürümün
+parçası için bakılıyor; bu sürümün dosyası ağdan alınıp geri konuyor. Test
+düzeltmeden önce kaldı.
 
 
 ---
@@ -4830,7 +4838,7 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi). Senaryo şehirlerinde gün 3–17 ms (`pnpm dayperf`, Tur 43) |
-| Birim testi | **504 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı da) |
+| Birim testi | **505 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı da) |
 | Denge testi | **331 kontrol, hepsi geçiyor** (25 bölüm, süreleriyle; ~13 dk) |
 | Tarayıcı testi | **500 kontrol, hepsi geçiyor**, 0 konsol hatası (~25–40 dk); duman koşusu 132 (~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + paket bütçesi (Tur 46; Tur 48'den beri hizmet çalışanı ve manifest de) + duman oynanışı |

@@ -192,6 +192,20 @@ describe('hizmet çalışanı', () => {
     assert.equal(failing.store.get('capitalforge-v1')!.size, 4);
   });
 
+  test('bu sürümün dosyası önbellekten düşünce eski sürümünkini değil ağdakini veriyor ve geri koyuyor (Codex #77)', async () => {
+    const caches = fakeCaches();
+    const v1 = boot('v1', caches);
+    await v1.install();
+    await v1.run('activate', {});
+    caches.store.get('capitalforge-v1')!.set('https://oyun.test/qwen_game1/index.html', new FakeResponse('eski kabuk'));
+    const v2 = boot('v2', caches);
+    await v2.install();
+    await v2.run('activate', {});
+    caches.store.get('capitalforge-v2')!.delete('https://oyun.test/qwen_game1/index.html');
+    assert.equal(await v2.fetch('https://oyun.test/qwen_game1/', 'navigate'), 'ağdan /qwen_game1/index.html', 'eski sürümün kabuğu açılmıyor');
+    assert.equal(caches.store.get('capitalforge-v2')!.has('https://oyun.test/qwen_game1/index.html'), true, 'geri kondu');
+  });
+
   test('yeni sürüm devralınca eski sekmenin istediği eski parça önceki önbellekten geliyor', async () => {
     const caches = fakeCaches();
     const v1 = boot('v1', caches);

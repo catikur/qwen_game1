@@ -113,7 +113,10 @@ self.addEventListener('fetch', (event) => {
     (async () => {
       const key = page ? shell : bare;
       const cache = await caches.open(CACHE);
-      const hit = (await cache.match(key)) ?? (await caches.match(key));
+      // Öteki önbelleklere yalnız eski sürümün parçası için bakılıyor. Bu
+      // sürümün dosyası (kabuk dahil) düştüyse eski sürümünkini vermek oyunu
+      // yeni çalışanın altında eski sürümle açardı (Codex #77): ağdan alınıyor.
+      const hit = (await cache.match(key)) ?? (older ? await caches.match(key) : undefined);
       if (hit) return hit;
       // Önbellekte yok: tarayıcı yer açmak için silmiş ya da aynı kökendeki
       // başka bir uygulama temizlemiş. Ağdan al ve geri koy; bir sonraki
