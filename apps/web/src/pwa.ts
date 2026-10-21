@@ -35,17 +35,21 @@ export function setBeforeUpdate(save: () => Promise<unknown>): () => void {
   };
 }
 
-async function applyUpdate(): Promise<void> {
+/** "Yenile": kaydet, bekleyen sürüme geçmesini söyle; devralınca sayfa yenileniyor. */
+export async function applyUpdate(): Promise<void> {
   const registration = await navigator.serviceWorker.getRegistration();
   const waiting = registration?.waiting;
+  const controller = navigator.serviceWorker.controller;
   try {
     await beforeUpdate?.();
   } catch (error) {
     // Kayıt düşmezse yine de yenile: otomatik kayıt en fazla 30 sn geride.
     console.warn('Güncellemeden önce kayıt başarısız:', error);
   }
-  if (!waiting) {
-    // Yeni sürüm başka bir sekmede çoktan devraldı: yenilemek yeter.
+  // Yeni sürüm başka bir sekmede çoktan devraldıysa (kayıt sürerken de
+  // olabilir: Codex #77) bekleyen yok ya da artık bekleyen değil; mesaj boşa
+  // gider ve sayfa hiç yenilenmezdi. Yenilemek yeter.
+  if (!waiting || waiting.state === 'activated' || waiting.state === 'redundant' || navigator.serviceWorker.controller !== controller) {
     location.reload();
     return;
   }

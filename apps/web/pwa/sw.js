@@ -41,6 +41,9 @@ const assets = new URL('assets/', scope).href;
 self.addEventListener('install', (event) => {
   event.waitUntil(
     (async () => {
+      // Aynı sürümün yeniden kurulumu (tarayıcı çalışanı yeniden denedi)
+      // çalışan sürümün önbelleğine yazıyor; düşerse onu silmemeli.
+      const existed = await caches.has(CACHE);
       const cache = await caches.open(CACHE);
       try {
         // Kabuk ve manifest HTTP önbelleğini atlıyor: yeni sürümün kabuğu
@@ -50,7 +53,7 @@ self.addEventListener('install', (event) => {
         );
       } catch (error) {
         // Bağlantı koptu: yarım önbellek kalmasın, tarayıcı bu çalışanı atıyor.
-        await caches.delete(CACHE);
+        if (!existed) await caches.delete(CACHE);
         throw error;
       }
     })(),

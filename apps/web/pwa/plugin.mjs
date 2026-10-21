@@ -30,9 +30,14 @@ export function precacheEntries(files) {
     .sort();
 }
 
-/** Listenin ve içeriklerin özeti: biri değişince önbelleğin adı da değişiyor. */
-export function cacheVersion(entries, read) {
+/**
+ * Listenin ve içeriklerin özeti: biri değişince önbelleğin adı da değişiyor.
+ * `salt` listede olmayan ama sürümü belirleyen içerik (çalışanın şablonu).
+ */
+export function cacheVersion(entries, read, salt = '') {
   const hash = createHash('sha256');
+  hash.update(salt);
+  hash.update('\0');
   for (const entry of entries) {
     hash.update(entry);
     hash.update('\0');
@@ -47,6 +52,15 @@ export function renderServiceWorker(template, entries, version) {
     throw new Error('sw.js şablonunda yer tutucu yok');
   }
   return template.replace('__CF_VERSION__', JSON.stringify(version)).replace('__CF_PRECACHE__', JSON.stringify(entries));
+}
+
+/**
+ * Çalışanın kaynağı. Şablon da sürüme giriyor (Codex #77): yalnız çalışan
+ * değişen bir yayında sürüm aynı kalırsa yeni çalışan eskisinin önbelleğine
+ * yazar, kurulumu düşerse çalışan sürümün dosyalarına dokunurdu.
+ */
+export function serviceWorkerSource(template, entries, read) {
+  return renderServiceWorker(template, entries, cacheVersion(entries, read, template));
 }
 
 function walk(dir, root = dir) {
@@ -70,9 +84,8 @@ export function serviceWorker() {
       sequential: true,
       handler() {
         const entries = precacheEntries(walk(outDir));
-        const version = cacheVersion(entries, (entry) => readFileSync(join(outDir, entry)));
         const template = readFileSync(new URL('./sw.js', import.meta.url), 'utf8');
-        writeFileSync(join(outDir, 'sw.js'), renderServiceWorker(template, entries, version));
+        writeFileSync(join(outDir, 'sw.js'), serviceWorkerSource(template, entries, (entry) => readFileSync(join(outDir, entry))));
       },
     },
   };

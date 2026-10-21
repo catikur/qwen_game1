@@ -1,6 +1,6 @@
 import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
-import { cacheVersion, precacheEntries, renderServiceWorker } from '../pwa/plugin.mjs';
+import { cacheVersion, precacheEntries, renderServiceWorker, serviceWorkerSource } from '../pwa/plugin.mjs';
 import template from '../pwa/sw.js' with { type: 'text' };
 
 /**
@@ -32,6 +32,15 @@ describe('önbellek listesi ve sürüm', () => {
     assert.match(first, /^[0-9a-f]{12}$/);
     assert.notEqual(first, cacheVersion(entries, (entry) => (entry === 'index.html' ? '<html> ' : files[entry]!)));
     assert.notEqual(first, cacheVersion(['assets/b.js', 'index.html'], (entry) => files[entry] ?? 'a'));
+  });
+
+  test('yalnız çalışanın şablonu değişse de sürüm değişiyor (Codex #77)', () => {
+    const read = () => 'aynı';
+    const version = (source: string) => /const VERSION = "([0-9a-f]+)"/.exec(source)?.[1];
+    const before = serviceWorkerSource(template, ['index.html'], read);
+    const after = serviceWorkerSource(`${template}\n// yeni bir satır`, ['index.html'], read);
+    assert.notEqual(version(before), version(after));
+    assert.equal(version(before), version(serviceWorkerSource(template, ['index.html'], read)), 'aynı girdi aynı sürüm');
   });
 
   test('şablon yer tutucusuz kalırsa derleme duruyor', () => {
@@ -70,6 +79,7 @@ function fakeCaches(failing?: string) {
     store,
     api: {
       open,
+      has: async (name: string) => store.has(name),
       keys: async () => [...store.keys()],
       delete: async (name: string) => store.delete(name),
       match: async (key: string) => {
@@ -167,6 +177,19 @@ describe('hizmet çalışanı', () => {
     await v3.run('activate', {});
     const names = [...caches.store.keys()].filter((name) => /^capitalforge-v/.test(name));
     assert.deepEqual(names, ['capitalforge-v1', 'capitalforge-v3'], 'v1 açık sekmeler için duruyor, yarım v2 yok');
+  });
+
+  test('aynı sürümün yeniden kurulumu düşerse çalışan sürümün önbelleği silinmiyor (Codex #77)', async () => {
+    const caches = fakeCaches();
+    const active = boot('v1', caches);
+    await active.install();
+    await active.run('activate', {});
+    // Aynı önbellek adına kurulan ikinci çalışan; bağlantı kopuyor.
+    const failing = fakeCaches('capitalforge-v1');
+    failing.store.set('capitalforge-v1', caches.store.get('capitalforge-v1')!);
+    assert.equal(await boot('v1', failing).install(), false);
+    assert.equal(failing.store.has('capitalforge-v1'), true, 'açık sekmelerin dosyaları yerinde');
+    assert.equal(failing.store.get('capitalforge-v1')!.size, 4);
   });
 
   test('yeni sürüm devralınca eski sekmenin istediği eski parça önceki önbellekten geliyor', async () => {
