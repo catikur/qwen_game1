@@ -3516,7 +3516,11 @@ async function finish(browser, consoleErrors) {
     pp.on('console', (m) => {
       if (m.type() === 'error') polishErrors.push(m.text());
       // Sürücü mesajları (yazılımsal GPU) ortamın; uygulamanın kendi uyarıları sayılıyor.
-      if (m.type() === 'warning' && !m.text().includes('GL Driver Message')) appWarnings.push(m.text());
+      // Playwright'ın kendi uyarısı sayılmıyor: hizmet çalışanı bu bağlamda
+      // kapalı (Tur 48), kaydı engellerken konsola kendisi yazıyor.
+      if (m.type() === 'warning' && !m.text().includes('GL Driver Message') && !m.text().includes('Service Worker registration blocked by Playwright')) {
+        appWarnings.push(m.text());
+      }
     });
     await pp.goto('http://127.0.0.1:8811/');
     await pp.waitForSelector('.newgame', { timeout: 20000 });
