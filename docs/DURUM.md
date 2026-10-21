@@ -4716,7 +4716,10 @@ artık ekranı kaplıyor.
 - Tek dosyalık sayfa 8/8; içinde çalışan da manifest de yok.
 - Paket bütçesi: ana parça 60,3 KB (Tur 47'de 58,8), kurulumun yolu 132,6 KB.
 
-Tarayıcı tam koşu TARAYICI_SAYISI, konsol hatası yok.
+Tarayıcı tam koşu 500 kontrol, konsol hatası yok (~30 dk). İlk tam koşuda
+499 geçti. Kalan kontrol "Cila" bölümünün "uygulamanın kendi konsol uyarısı
+yok" kontrolüydü. Uyarı Playwright'ındı: çalışanı engellerken konsola
+kendisi yazıyor. Kontrol artık onu saymıyor; bölüm yeniden koşunca 9/9.
 
 
 ---
@@ -4802,7 +4805,7 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi). Senaryo şehirlerinde gün 3–17 ms (`pnpm dayperf`, Tur 43) |
 | Birim testi | **499 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı da) |
 | Denge testi | **331 kontrol, hepsi geçiyor** (25 bölüm, süreleriyle; ~13 dk) |
-| Tarayıcı testi | **493 kontrol, hepsi geçiyor**, 0 konsol hatası (~25–40 dk); duman koşusu 132 (~5 dk, rehber dahil) |
+| Tarayıcı testi | **500 kontrol, hepsi geçiyor**, 0 konsol hatası (~25–40 dk); duman koşusu 132 (~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + paket bütçesi (Tur 46; Tur 48'den beri hizmet çalışanı ve manifest de) + duman oynanışı |
 | Kapsam | 35 bina · 25 ürün · 7 kategori · 8 rakip profili · 10 CEO · 22 olay (11 şehir + 11 sektör) · 2 kriz · 12 karar kartı · 70 rakip sözü · 5 fırsat balonu · 8 görev türü · 4 mevsim · 9 moda ürünü · 17 şehir yapısı (6 siluet) · 6 şehir projesi · 7 senaryo · 4 ek kural · 28 rozet |
 
