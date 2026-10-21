@@ -5060,7 +5060,7 @@ async function finish(browser, consoleErrors) {
     // İlk açılış: çalışan sayfa yüklenince kuruluyor ve sayfayı devralıyor.
     const controlled = await wp.waitForFunction(() => navigator.serviceWorker.controller !== null, null, { timeout: 30000 }).then(() => true, () => false);
     const cached = await wp.evaluate(async () => {
-      const mine = (await caches.keys()).filter((key) => key.startsWith('capitalforge-'));
+      const mine = (await caches.keys()).filter((key) => key.startsWith('capitalforge-') && key !== 'capitalforge-meta');
       const paths = mine.length ? (await (await caches.open(mine[mine.length - 1])).keys()).map((r) => new URL(r.url).pathname) : [];
       return { caches: mine, paths };
     });
@@ -5116,7 +5116,7 @@ async function finish(browser, consoleErrors) {
     const after = await wp.evaluate(async () => ({
       day: window.__capital.getState().time.day,
       name: window.__capital.getState().companies[window.__capital.getState().playerCompanyId]?.name,
-      caches: (await caches.keys()).filter((key) => key.startsWith('capitalforge-')),
+      caches: (await caches.keys()).filter((key) => key.startsWith('capitalforge-') && key !== 'capitalforge-meta'),
       notice: document.querySelector('[data-update-ready]') !== null,
     }));
     check('Yenile: oyun kaydediliyor, yeni sürüm devralıyor, oyun kaldığı günden açılıyor; önceki sürümün önbelleği duruyor',

@@ -4646,8 +4646,9 @@ Faz 1'in ikinci turu (`docs/YOL-HARITASI.md`).
   artık olmuyor.
 - Yeni sürüm arka planda iniyor ve bekliyor. Kendiliğinden devralmıyor:
   oyun ortasında sayfanın altından sürüm değişmesin.
-- Etkinleşince en yeni iki önbellek kalıyor. Başka sekmede açık kalan eski
-  sürüm, sonradan istediği parçayı önceki önbellekten alıyor.
+- Etkinleşince en yeni iki *etkinleşmiş* sürümün önbelleği kalıyor. Başka
+  sekmede açık kalan eski sürüm, sonradan istediği parçayı önceki
+  önbellekten alıyor.
 - Önbellekten düşen dosya ağdan alınıp geri konuyor.
 - Listede olmayan isteğe karışmıyor.
 
@@ -4682,15 +4683,16 @@ konum kuralını almamıştı. Telefonda altta rıhtımın 56 px'i boş kalıyor
 artık ekranı kaplıyor.
 
 **Doğrulama.**
-- `pnpm test` 499/499.
+- `pnpm test` 500/500.
   - Birim test koşucusu artık `apps/*/test`'i de tarıyor.
-  - Yeni `apps/web/test/pwa.test.ts` (9 test). Çalışan sahte bir ortamda
+  - Yeni `apps/web/test/pwa.test.ts` (10 test). Çalışan sahte bir ortamda
     koşuyor; kapsam Pages'teki gibi `/qwen_game1/`. Sınananlar:
     - liste;
     - özet;
     - kabuk ve sorgulu adres;
     - Lite'a ve başka kökene karışmama;
-    - en yeni iki önbellek, Lite'ınkine dokunmama;
+    - en yeni iki etkinleşmiş sürüm, yarım kalan kurulumun sayılmaması,
+      Lite'ınkine dokunmama;
     - eski sekmenin eski parçası;
     - düşen dosyanın geri konması;
     - kendiliğinden devralmama.
@@ -4720,6 +4722,14 @@ Tarayıcı tam koşu 500 kontrol, konsol hatası yok (~30 dk). İlk tam koşuda
 499 geçti. Kalan kontrol "Cila" bölümünün "uygulamanın kendi konsol uyarısı
 yok" kontrolüydü. Uyarı Playwright'ındı: çalışanı engellerken konsola
 kendisi yazıyor. Kontrol artık onu saymıyor; bölüm yeniden koşunca 9/9.
+
+Codex #77: kurulumu yarıda kalan sürüm (bağlantı koptu) boş bir önbellek
+bırakıyordu. Bir sonraki sürüm etkinleşince "en yeni iki" kuralı onu
+önceki sürüm sayıp çalışan sürümün önbelleğini siliyordu; o sürümde açık
+kalan sekme sonradan istediği parçayı kaybediyordu. Önbellekler artık
+oluşturulma sırasına göre değil etkinleşmiş sürümlerin kaydına göre
+tutuluyor (`capitalforge-meta`). Kurulum düşerse yarım önbellek hemen
+siliniyor. Yeni test düzeltmeden önce kaldı.
 
 
 ---
@@ -4803,7 +4813,7 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi). Senaryo şehirlerinde gün 3–17 ms (`pnpm dayperf`, Tur 43) |
-| Birim testi | **499 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı da) |
+| Birim testi | **500 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı da) |
 | Denge testi | **331 kontrol, hepsi geçiyor** (25 bölüm, süreleriyle; ~13 dk) |
 | Tarayıcı testi | **500 kontrol, hepsi geçiyor**, 0 konsol hatası (~25–40 dk); duman koşusu 132 (~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + paket bütçesi (Tur 46; Tur 48'den beri hizmet çalışanı ve manifest de) + duman oynanışı |

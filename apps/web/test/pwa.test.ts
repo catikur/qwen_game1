@@ -51,14 +51,15 @@ class FakeResponse {
 }
 const fromNetwork = (url: string) => new FakeResponse(`ağdan ${new URL(url).pathname}`);
 
-/** Önbellek deposunun asgari sahtesi: adlar oluşturulma sırasında. */
-function fakeCaches() {
+/** Önbellek deposunun asgari sahtesi: adlar oluşturulma sırasında. `failing` adlı önbelleğe yazma ağda kopuyor. */
+function fakeCaches(failing?: string) {
   const store = new Map<string, Map<string, FakeResponse>>();
   const open = async (name: string) => {
     if (!store.has(name)) store.set(name, new Map());
     const cache = store.get(name)!;
     return {
       addAll: async (requests: Request[]) => {
+        if (name === failing) throw new TypeError('Failed to fetch');
         for (const request of requests) cache.set(request.url, fromNetwork(request.url));
       },
       put: async (key: string, response: FakeResponse) => void cache.set(key, response),
@@ -97,6 +98,8 @@ function boot(version: string, caches: ReturnType<typeof fakeCaches>) {
     listeners.get(type)!({ ...event, waitUntil: (promise: Promise<unknown>) => void (waited = promise) });
     await waited;
   };
+  /** Kurulum düşerse tarayıcı çalışanı atıyor; söz reddediliyor. */
+  const install = () => run('install', {}).then(() => true, () => false);
   /** İsteğe karışırsa cevabı, karışmazsa `null` (tarayıcı kendisi ağa gider). */
   const fetch = async (url: string, mode: 'navigate' | 'cors' = 'cors') => {
     let answer: Promise<FakeResponse> | null = null;
@@ -106,7 +109,7 @@ function boot(version: string, caches: ReturnType<typeof fakeCaches>) {
     const settled = answer as Promise<FakeResponse> | null;
     return settled ? (await settled).body : null;
   };
-  return { run, fetch, message: (data: unknown) => listeners.get('message')!({ data }), state: () => ({ claimed, skipped }) };
+  return { run, install, fetch, message: (data: unknown) => listeners.get('message')!({ data }), state: () => ({ claimed, skipped }) };
 }
 
 describe('hizmet çalışanı', () => {
@@ -139,22 +142,44 @@ describe('hizmet çalışanı', () => {
 
   test('etkinleşince en yeni iki sürüm kalıyor, Lite\'ın önbelleğine dokunmuyor; sayfayı devralıyor', async () => {
     const caches = fakeCaches();
-    for (const name of ['capitalforge-v1', 'cf-lite-v1', 'capitalforge-v2']) await caches.api.open(name);
+    await caches.api.open('cf-lite-v1');
+    for (const version of ['v1', 'v2']) {
+      const worker = boot(version, caches);
+      await worker.install();
+      await worker.run('activate', {});
+    }
     const worker = boot('v3', caches);
-    await worker.run('install', {});
+    await worker.install();
     await worker.run('activate', {});
-    assert.deepEqual([...caches.store.keys()], ['cf-lite-v1', 'capitalforge-v2', 'capitalforge-v3']);
+    assert.deepEqual([...caches.store.keys()], ['cf-lite-v1', 'capitalforge-meta', 'capitalforge-v2', 'capitalforge-v3']);
     assert.equal(worker.state().claimed, true);
+  });
+
+  test('kurulumu yarıda kalan sürümün önbelleği sayılmıyor: çalışan sürümünki silinmiyor (Codex #77)', async () => {
+    const caches = fakeCaches('capitalforge-v2');
+    const v1 = boot('v1', caches);
+    await v1.install();
+    await v1.run('activate', {});
+    // v2'nin kurulumu ağda koptu; tarayıcı onu attı, v1 çalışmaya devam ediyor.
+    assert.equal(await boot('v2', caches).install(), false);
+    const v3 = boot('v3', caches);
+    await v3.install();
+    await v3.run('activate', {});
+    const names = [...caches.store.keys()].filter((name) => /^capitalforge-v/.test(name));
+    assert.deepEqual(names, ['capitalforge-v1', 'capitalforge-v3'], 'v1 açık sekmeler için duruyor, yarım v2 yok');
   });
 
   test('yeni sürüm devralınca eski sekmenin istediği eski parça önceki önbellekten geliyor', async () => {
     const caches = fakeCaches();
-    const old = await caches.api.open('capitalforge-v1');
-    await old.addAll([new Request('https://oyun.test/qwen_game1/assets/locale-en-OLD.js')]);
-    const worker = boot('v2', caches);
-    await worker.run('install', {});
-    await worker.run('activate', {});
-    assert.equal(await worker.fetch('https://oyun.test/qwen_game1/assets/locale-en-OLD.js'), 'ağdan /qwen_game1/assets/locale-en-OLD.js');
+    const v1 = boot('v1', caches);
+    await v1.install();
+    await v1.run('activate', {});
+    // v1'in sekmesi İngilizceyi henüz açmamıştı; dosya v1'in önbelleğinde.
+    caches.store.get('capitalforge-v1')!.set('https://oyun.test/qwen_game1/assets/locale-en-OLD.js', new FakeResponse('eski sözlük'));
+    const v2 = boot('v2', caches);
+    await v2.install();
+    await v2.run('activate', {});
+    assert.equal(await v2.fetch('https://oyun.test/qwen_game1/assets/locale-en-OLD.js'), 'eski sözlük');
     assert.equal(caches.store.has('capitalforge-v1'), true, 'önceki sürüm duruyor');
   });
 

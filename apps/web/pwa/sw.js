@@ -15,9 +15,9 @@
  * - Listede olmayan isteğe karışmıyor. Aynı kapsamın altında başka bir
  *   uygulama var (CapitalForge Lite, `lite/`, kendi çalışanı ve kendi
  *   önbelleğiyle); onun ne isteği ne önbelleği bu dosyanın işi.
- * - Önbellekler `capitalforge-<özet>` adında. Etkinleşince en yeni ikisi
- *   kalıyor: başka bir sekmede hâlâ açık duran eski sürüm, sonradan
- *   istediği parçayı (İngilizce sözlük) yine bulsun.
+ * - Önbellekler `capitalforge-<özet>` adında. Etkinleşince en yeni iki
+ *   etkinleşmiş sürümünki kalıyor: başka bir sekmede hâlâ açık duran eski
+ *   sürüm, sonradan istediği parçayı (İngilizce sözlük) yine bulsun.
  * - Önbellekten düşen dosya ağdan alınıp geri konuyor.
  */
 const VERSION = __CF_VERSION__;
@@ -25,6 +25,12 @@ const PRECACHE = __CF_PRECACHE__;
 const PREFIX = 'capitalforge-';
 const CACHE = PREFIX + VERSION;
 const KEEP = 2;
+/**
+ * Etkinleşmiş sürümlerin kaydı. Önbellekler oluşturulma sırasına göre
+ * değil buna göre tutuluyor: kurulumu yarıda kalan sürümün önbelleği hiç
+ * etkinleşmediği için "önceki sürüm" sayılmıyor (Codex #77).
+ */
+const META = PREFIX + 'meta';
 
 const scope = new URL(self.registration.scope);
 const shell = new URL('index.html', scope).href;
@@ -34,22 +40,43 @@ const assets = new URL('assets/', scope).href;
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE).then((cache) =>
-      // Kabuk ve manifest HTTP önbelleğini atlıyor: yeni sürümün kabuğu
-      // eski parçalara bağlı kalmasın. Parçaların adı içeriklerinin özeti.
-      cache.addAll(
-        PRECACHE.map((path) => new Request(new URL(path, scope), { cache: /\.(html|webmanifest)$/.test(path) ? 'no-cache' : 'default' })),
-      ),
-    ),
+    (async () => {
+      const cache = await caches.open(CACHE);
+      try {
+        // Kabuk ve manifest HTTP önbelleğini atlıyor: yeni sürümün kabuğu
+        // eski parçalara bağlı kalmasın. Parçaların adı içeriklerinin özeti.
+        await cache.addAll(
+          PRECACHE.map((path) => new Request(new URL(path, scope), { cache: /\.(html|webmanifest)$/.test(path) ? 'no-cache' : 'default' })),
+        );
+      } catch (error) {
+        // Bağlantı koptu: yarım önbellek kalmasın, tarayıcı bu çalışanı atıyor.
+        await caches.delete(CACHE);
+        throw error;
+      }
+    })(),
   );
 });
+
+/** Etkinleşmiş sürümler, eskiden yeniye. */
+async function activated() {
+  const hit = await (await caches.open(META)).match(new URL('__versions', scope).href);
+  try {
+    const list = hit ? await hit.json() : [];
+    return Array.isArray(list) ? list.filter((item) => typeof item === 'string') : [];
+  } catch {
+    return [];
+  }
+}
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     (async () => {
-      // Önbellek adları oluşturulma sırasıyla dönüyor; en yeni ikisi kalıyor.
+      // En yeni iki etkinleşmiş sürüm kalıyor; ötekiler (yarım kalan
+      // kurulumlar dahil) siliniyor.
+      const versions = [...(await activated()).filter((item) => item !== VERSION), VERSION].slice(-KEEP);
+      await (await caches.open(META)).put(new URL('__versions', scope).href, new Response(JSON.stringify(versions)));
+      const keep = new Set([META, ...versions.map((item) => PREFIX + item)]);
       const ours = (await caches.keys()).filter((key) => key.startsWith(PREFIX));
-      const keep = new Set([...ours.filter((key) => key !== CACHE).slice(-(KEEP - 1)), CACHE]);
       await Promise.all(ours.filter((key) => !keep.has(key)).map((key) => caches.delete(key)));
       // İlk kurulumda açık sayfa da bu çalışana geçiyor: sonradan inen
       // parçalar (İngilizce sözlük) çevrimdışı da bulunsun.
