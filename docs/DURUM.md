@@ -4602,7 +4602,14 @@ küçültürdü. Şimdi bar yine iki satır, 72 px.
 - "Dil" ve "Görünüm" bölümleri seçicileri Ayarlar'da arıyor.
 - Paket bütçesi: CSS 13,8 KB gzip, ana parça 58,8 KB, kurulumun yolu 131 KB.
 
-Tarayıcı tam koşu TARAYICI_SAYISI, konsol hatası yok.
+Tarayıcı tam koşu 493/493, konsol hatası yok (~29 dk).
+
+Codex #76: Yardım'ın içindeki Ayarlar düğmesi pencereyle birlikte gidince
+Ayarlar kapanınca odağın sayfanın başına düşeceğini söyledi. Klavye ve
+fareyle denendi, düşmüyor. React kaldırılan pencerenin etkisini
+yenisininkinden önce kapatıyor; odak o an Yardım'ı açan rıhtım düğmesine
+dönmüş oluyor ve Ayarlar onu açan olarak alıyor. Bu sıra `dialog.ts`'te
+yazıldı; Yardım → Ayarlar kontrolü odağın dönüşünü de doğruluyor.
 
 
 ---
@@ -4688,7 +4695,7 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi). Senaryo şehirlerinde gün 3–17 ms (`pnpm dayperf`, Tur 43) |
 | Birim testi | **489 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar da) |
 | Denge testi | **331 kontrol, hepsi geçiyor** (25 bölüm, süreleriyle; ~13 dk) |
-| Tarayıcı testi | **478 kontrol, hepsi geçiyor**, 0 konsol hatası (~25–40 dk); duman koşusu 132 (~5 dk, rehber dahil) |
+| Tarayıcı testi | **493 kontrol, hepsi geçiyor**, 0 konsol hatası (~25–40 dk); duman koşusu 132 (~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + paket bütçesi (Tur 46) + duman oynanışı |
 | Kapsam | 35 bina · 25 ürün · 7 kategori · 8 rakip profili · 10 CEO · 22 olay (11 şehir + 11 sektör) · 2 kriz · 12 karar kartı · 70 rakip sözü · 5 fırsat balonu · 8 görev türü · 4 mevsim · 9 moda ürünü · 17 şehir yapısı (6 siluet) · 6 şehir projesi · 7 senaryo · 4 ek kural · 28 rozet |
 
