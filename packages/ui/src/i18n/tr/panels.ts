@@ -320,6 +320,7 @@ export const panels = {
   'panels.settings.sound': 'Ses',
   'panels.settings.sound.on': 'Ses açık',
   'panels.settings.volume.master': 'Genel',
+  'panels.settings.volume.music': 'Müzik',
   'panels.settings.volume.ambience': 'Şehir',
   'panels.settings.volume.effects': 'Olaylar',
   'panels.settings.volume.value': '%{percent}',

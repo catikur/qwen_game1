@@ -12,14 +12,15 @@ import { useSyncExternalStore } from 'react';
  * Kök etiketleri ilk çizimden önce yazılıyor (`initSettings`): metin
  * boyutu `--text-scale`, palet `data-palette`, azaltılmış hareket
  * `data-motion` (styles.css). Ses düzeyleri ses manzarasının işi; o bu
- * depoya abone oluyor (apps/web `audio.ts`).
+ * depoya abone oluyor (apps/web `audio.ts`). Müzik kanalı Tur 49'da geldi;
+ * eski depoda yoksa varsayılanına düşüyor.
  */
 export type TextSize = 'small' | 'normal' | 'large' | 'xlarge';
 /** Standart ya da renk körlüğünde ayrışan palet (iyi/kötü/uyarı ve oyuncunun rengi). */
 export type Palette = 'standard' | 'safe';
 /** Otomatik cihazın "hareketi azalt" tercihine uyuyor. */
 export type MotionChoice = 'auto' | 'reduced' | 'full';
-export type VolumeChannel = 'master' | 'ambience' | 'effects';
+export type VolumeChannel = 'master' | 'music' | 'ambience' | 'effects';
 
 export interface Settings {
   textSize: TextSize;
@@ -35,13 +36,14 @@ export const TEXT_SIZES: readonly TextSize[] = ['small', 'normal', 'large', 'xla
 export const TEXT_SCALE: Record<TextSize, number> = { small: 0.9, normal: 1, large: 1.15, xlarge: 1.3 };
 export const PALETTES: readonly Palette[] = ['standard', 'safe'];
 export const MOTION_CHOICES: readonly MotionChoice[] = ['auto', 'reduced', 'full'];
-export const VOLUME_CHANNELS: readonly VolumeChannel[] = ['master', 'ambience', 'effects'];
+export const VOLUME_CHANNELS: readonly VolumeChannel[] = ['master', 'music', 'ambience', 'effects'];
 
 export const DEFAULT_SETTINGS: Settings = {
   textSize: 'normal',
   palette: 'standard',
   motion: 'auto',
-  volume: { master: 1, ambience: 1, effects: 1 },
+  // Müzik (Tur 49) biraz geride başlıyor: şehrin sesi ve olaylar önde kalsın.
+  volume: { master: 1, music: 0.7, ambience: 1, effects: 1 },
   muted: false,
 };
 
@@ -65,6 +67,7 @@ export function sanitizeSettings(raw: unknown, legacyMuted = false): Settings {
     motion: pick(source['motion'], MOTION_CHOICES, DEFAULT_SETTINGS.motion),
     volume: {
       master: level(volume['master'], DEFAULT_SETTINGS.volume.master),
+      music: level(volume['music'], DEFAULT_SETTINGS.volume.music),
       ambience: level(volume['ambience'], DEFAULT_SETTINGS.volume.ambience),
       effects: level(volume['effects'], DEFAULT_SETTINGS.volume.effects),
     },

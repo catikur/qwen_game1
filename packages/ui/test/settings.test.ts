@@ -27,7 +27,7 @@ describe('ayarlar', () => {
     assert.equal(cleaned.textSize, 'normal');
     assert.equal(cleaned.palette, 'safe');
     assert.equal(cleaned.motion, 'auto');
-    assert.deepEqual(cleaned.volume, { master: 1, ambience: 0, effects: 1 });
+    assert.deepEqual(cleaned.volume, { master: 1, music: 0.7, ambience: 0, effects: 1 }, 'Tur 49 öncesi depoda müzik yok: varsayılan');
   });
 
   test('eski sessize alma seçimi taşınıyor; ayarlarda açıkça yazan geçerli', () => {
@@ -41,7 +41,7 @@ describe('ayarlar', () => {
     const stop = subscribeSettings(() => calls++);
     updateSettings({ textSize: 'xlarge', volume: { effects: 0.4 } });
     assert.equal(getSettings().textSize, 'xlarge');
-    assert.deepEqual(getSettings().volume, { master: 1, ambience: 1, effects: 0.4 }, 'diğer düzeyler yerinde');
+    assert.deepEqual(getSettings().volume, { master: 1, music: 0.7, ambience: 1, effects: 0.4 }, 'diğer düzeyler yerinde');
     assert.equal(TEXT_SCALE[getSettings().textSize], 1.3);
     assert.equal(calls, 1);
     stop();

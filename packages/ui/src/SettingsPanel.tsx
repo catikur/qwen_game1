@@ -32,6 +32,7 @@ const MOTION_LABELS: Record<MotionChoice, MessageKey> = {
 };
 const VOLUME_LABELS: Record<VolumeChannel, MessageKey> = {
   master: 'panels.settings.volume.master',
+  music: 'panels.settings.volume.music',
   ambience: 'panels.settings.volume.ambience',
   effects: 'panels.settings.volume.effects',
 };

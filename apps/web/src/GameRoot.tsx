@@ -393,6 +393,11 @@ export function GameRoot({
    */
   // Ses manzarası: tek örnek, ilk dokunuşta kendini başlatıyor.
   const soundscape = useMemo(() => new Soundscape(), []);
+  // Menüye dönünce ses ve müzik susuyor (Tur 49).
+  useEffect(() => {
+    soundscape.attach();
+    return () => soundscape.dispose();
+  }, [soundscape]);
   const [muted, setMuted] = useState(() => soundscape.isMuted());
   useEffect(() => soundscape.subscribe(() => setMuted(soundscape.isMuted())), [soundscape]);
   useEffect(() => {
