@@ -1,13 +1,16 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import '@capital/ui/styles.css';
-import { initAppearance, initLocale, initSettings } from '@capital/ui';
+import { UpdateNotice, initAppearance, initLocale, initSettings } from '@capital/ui';
 import { App } from './App';
+import { initAppShell } from './pwa';
 
 // Görünüm ilk çizimden önce: gündüz/gece camı arasında açılışta kayma olmasın.
 initAppearance();
 // Ayarlar da (Tur 47): metin boyutu, palet ve hareket ilk çizimde doğru.
 initSettings();
+// Kurulabilir ve çevrimdışı oyun (Tur 48): hizmet çalışanı sayfa yüklenince kaydediliyor.
+initAppShell();
 
 const container = document.getElementById('root');
 if (!container) throw new Error('#root bulunamadı');
@@ -19,6 +22,8 @@ void initLocale().then(() => {
   createRoot(container).render(
     <StrictMode>
       <App />
+      {/* Yeni sürüm hazır (Tur 48): kurulumda da oyunda da. */}
+      <UpdateNotice />
     </StrictMode>,
   );
 });

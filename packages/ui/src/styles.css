@@ -5920,14 +5920,20 @@ button.icon {
   height: 26px;
 }
 
-/* Kurulum ekranındaki kariyer katmanı: sayfa kaysa da ekranı kaplıyor; altında rıhtım yok. */
-.modal-backdrop.career-overlay {
+/*
+ * Kurulum ekranındaki kariyer ve ayarlar katmanı: sayfa kaysa da ekranı
+ * kaplıyor; altında rıhtım yok. (Ayarlar Tur 47'de bu kuralı almamıştı,
+ * telefonda altta rıhtımın 56 px'i boş kalıyordu; Tur 48.)
+ */
+.modal-backdrop.career-overlay,
+.modal-backdrop.settings-overlay {
   position: fixed;
   z-index: 70;
 }
 
 @media (max-width: 860px) {
-  .modal-backdrop.career-overlay {
+  .modal-backdrop.career-overlay,
+  .modal-backdrop.settings-overlay {
     bottom: 0;
   }
 
@@ -5935,3 +5941,55 @@ button.icon {
     grid-template-columns: 1fr;
   }
 }
+
+/* --- kurulabilir oyun (Tur 48) --- */
+
+/*
+ * "Yeni sürüm hazır": ekranın altında ortada, her katmanın üstünde (kurulum
+ * ve ayarlar katmanı dahil). Telefonda rıhtımın üstünde duruyor.
+ */
+.update-notice {
+  position: fixed;
+  left: 50%;
+  bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  z-index: 80;
+  width: min(460px, calc(100% - 24px));
+  display: grid;
+  gap: 10px;
+  padding: 12px 14px;
+  background: var(--panel-thick);
+  backdrop-filter: var(--glass);
+  -webkit-backdrop-filter: var(--glass);
+  border: 1px solid var(--panel-edge);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.update-notice p {
+  margin: 0;
+  font-size: calc(14px * var(--text-scale));
+}
+
+.update-notice-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+@media (max-width: 860px) {
+  .update-notice {
+    bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+.settings-app {
+  display: grid;
+  gap: 6px;
+  justify-items: start;
+}
+
+.settings-app p {
+  margin: 0;
+}
+

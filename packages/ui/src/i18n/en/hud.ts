@@ -314,6 +314,11 @@ export const hud: Record<keyof typeof trHud, string> = {
   'hud.career.open': 'Career · {done}/{total} badges',
   'hud.career.openShort': 'Career',
   'hud.settings.open': 'Settings',
+  // New version (Tur 48)
+  'hud.update.ready': 'A new version of the game is ready. Reload to save your game and open it in the new version.',
+  'hud.update.apply': 'Reload',
+  'hud.update.applying': 'Reloading…',
+  'hud.update.later': 'Later (it arrives next time you open the game)',
   'hud.career.unlockedToast': 'Badge earned: {title}',
   'hud.career.moreToast': '+{count} more badges. See the Career page.',
   'hud.career.stat.badges': 'Badges',

@@ -75,6 +75,25 @@ const game = files.find((file) => /^GameRoot-.*\.js$/.test(file));
 check('Oyun ekranı ayrı parça ve şehir sahnesini o getiriyor', Boolean(game) && staticImports(read(game)).some((dep) => /^three-/.test(dep)), game ?? 'yok');
 check('İngilizce sözlük ayrı parça', files.some((file) => /^locale-en-.*\.js$/.test(file)));
 
+// Kurulabilir oyun (Tur 48): hizmet çalışanı paketin her parçasını önbelleğe
+// alıyor; biri listede yoksa çevrimdışı açılış o parçada kırılır.
+const swPath = path.join(DIST, 'sw.js');
+const sw = fs.existsSync(swPath) ? fs.readFileSync(swPath, 'utf8') : '';
+const precache = JSON.parse(/const PRECACHE = (\[.*?\]);/.exec(sw)?.[1] ?? 'null') ?? [];
+const missing = ['index.html', 'manifest.webmanifest', ...files.filter((file) => !file.endsWith('.map')).map((file) => `assets/${file}`)].filter(
+  (file) => !precache.includes(file),
+);
+check('Hizmet çalışanı paketin her parçasını önbelleğe alıyor, haritaları almıyor',
+  precache.length > 0 && missing.length === 0 && !precache.some((file) => file.endsWith('.map')) && /const VERSION = "[0-9a-f]{12}"/.test(sw),
+  `${precache.length} dosya${missing.length ? ` · eksik: ${missing.slice(0, 3).join(', ')}` : ''}`);
+const manifest = JSON.parse(fs.readFileSync(path.join(DIST, 'manifest.webmanifest'), 'utf8'));
+const icons = manifest.icons ?? [];
+check('Manifest kurulabilir: ad, kapsam, tam ekran, 192 ve 512 simgesi, maskelenebilir simge; dosyalar pakette',
+  Boolean(manifest.name && manifest.short_name) && manifest.start_url === './' && manifest.scope === './' && manifest.display === 'standalone' &&
+    ['192x192', '512x512'].every((size) => icons.some((icon) => icon.sizes === size)) && icons.some((icon) => icon.purpose === 'maskable') &&
+    icons.every((icon) => fs.existsSync(path.join(DIST, icon.src)) && precache.includes(icon.src)) && html.includes('rel="manifest"'),
+  `${icons.length} simge`);
+
 if (failed > 0) {
   console.log(`\n${failed} kontrol kaldı.`);
   process.exit(1);

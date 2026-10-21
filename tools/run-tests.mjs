@@ -1,4 +1,5 @@
-// Birim testleri: `packages/*/test/*.test.ts`.
+// Birim testleri: `packages/*/test/*.test.ts` ve `apps/*/test/*.test.ts`
+// (Tur 48'den beri: oyun kabuğunun derleme eklentisi `apps/web`'de).
 //
 // Eski `pnpm test` komutu `node --test --experimental-strip-types` ile
 // hiç var olmayan dosyaları arıyordu ve SIFIR testle "geçti" diyordu.
@@ -14,10 +15,12 @@ import { findEsbuild } from './esbuild-path.mjs';
 
 const root = new URL('..', import.meta.url).pathname;
 const files = [];
-for (const pkg of readdirSync(join(root, 'packages'))) {
-  const dir = join(root, 'packages', pkg, 'test');
-  if (!existsSync(dir)) continue;
-  for (const name of readdirSync(dir)) if (name.endsWith('.test.ts')) files.push(join(dir, name));
+for (const group of ['packages', 'apps']) {
+  for (const pkg of readdirSync(join(root, group))) {
+    const dir = join(root, group, pkg, 'test');
+    if (!existsSync(dir)) continue;
+    for (const name of readdirSync(dir)) if (name.endsWith('.test.ts')) files.push(join(dir, name));
+  }
 }
 const filter = process.argv[2];
 const selected = filter ? files.filter((f) => f.includes(filter)) : files;

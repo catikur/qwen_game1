@@ -1,0 +1,20 @@
+{
+  "name": "CapitalForge — Şehir Ekonomisi",
+  "short_name": "CapitalForge",
+  "description": "Tarayıcıda çalışan 3B kapitalizm simülasyonu: arsa al, işletme kur, talebi oku, rakip şirketlerle yarış.",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#d3eeff",
+  "theme_color": "#7ccbff",
+  "lang": "tr",
+  "dir": "ltr",
+  "categories": ["games", "simulation"],
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

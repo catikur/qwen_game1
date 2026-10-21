@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite';
 import type { Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
+import { serviceWorker } from './pwa/plugin.mjs';
 
 /**
  * İki paket biçimi.
@@ -47,6 +48,33 @@ function preloadFonts(): Plugin {
   };
 }
 
+/**
+ * Kurulabilir oyun (Tur 48): manifest, simgeler ve tarayıcı çubuğunun
+ * rengi. Tek dosyalık sayfada yok: orada ne manifest ne hizmet çalışanı
+ * var (gömülü sayfanın kendi adresi yok).
+ */
+function appLinks(): Plugin {
+  let base = '/';
+  return {
+    name: 'capital:app-links',
+    configResolved(config) {
+      base = config.base;
+    },
+    transformIndexHtml() {
+      const link = (attrs: Record<string, string>) => ({ tag: 'link', attrs, injectTo: 'head' as const });
+      const meta = (attrs: Record<string, string>) => ({ tag: 'meta', attrs, injectTo: 'head' as const });
+      return [
+        link({ rel: 'manifest', href: `${base}manifest.webmanifest` }),
+        link({ rel: 'icon', type: 'image/png', sizes: '192x192', href: `${base}icon-192.png` }),
+        link({ rel: 'apple-touch-icon', href: `${base}apple-touch-icon.png` }),
+        meta({ name: 'theme-color', content: '#7ccbff', media: '(prefers-color-scheme: light)' }),
+        meta({ name: 'theme-color', content: '#142659', media: '(prefers-color-scheme: dark)' }),
+        meta({ name: 'apple-mobile-web-app-title', content: 'CapitalForge' }),
+      ];
+    },
+  };
+}
+
 function vendorChunk(id: string): string | undefined {
   if (id.includes('/node_modules/three/')) return 'three';
   if (/\/node_modules\/(react|react-dom|scheduler)\//.test(id)) return 'react';
@@ -56,7 +84,11 @@ function vendorChunk(id: string): string | undefined {
 }
 
 export default defineConfig({
-  plugins: [react(), preloadFonts()],
+  plugins: [react(), preloadFonts(), ...(single ? [] : [appLinks(), serviceWorker()])],
+  // Simgeler ve manifest `public/`'te; tek dosyalık pakete girmiyorlar.
+  publicDir: single ? false : 'public',
+  // Hizmet çalışanı yalnız bölünmüş pakette kaydediliyor (apps/web/src/pwa.ts).
+  define: { __CF_SERVICE_WORKER__: JSON.stringify(!single) },
   server: { port: 5173, host: '127.0.0.1' },
   build: {
     target: 'es2022',

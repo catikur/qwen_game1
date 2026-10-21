@@ -32,7 +32,22 @@ const MIME = {
   '.js': 'text/javascript; charset=utf-8',
   '.css': 'text/css; charset=utf-8',
   '.map': 'application/json',
+  '.woff2': 'font/woff2',
+  '.png': 'image/png',
+  '.webmanifest': 'application/manifest+json',
 };
+/**
+ * Yeni sürümü taklit etmek için (Tur 48, "Kurulabilir ve çevrimdışı oyun"):
+ * doluyken sunucu `sw.js`'teki sürümün sonuna bunu ekliyor. Tarayıcı
+ * çalışanın baytları değişti diye yeni sürümü kurmaya başlıyor.
+ */
+let swBump = '';
+/**
+ * Bağlantı yok (Tur 48): sunucu her isteği kesiyor. Playwright'ın
+ * `setOffline`'ı hizmet çalışanının isteklerine uygulanmıyor; çalışan
+ * ağdan alıp geçerdi (Lite'ın uçtan uca testi de aynı yolu kullanıyor).
+ */
+let serverDown = false;
 
 let pass = 0;
 let fail = 0;
@@ -57,6 +72,10 @@ const CHROMIUM = process.env.CHROMIUM_PATH
   || (fs.existsSync('/opt/pw-browsers/chromium') ? '/opt/pw-browsers/chromium' : undefined);
 
 const server = http.createServer((req, res) => {
+  if (serverDown) {
+    req.socket.destroy();
+    return;
+  }
   // Sorgu önce ayrılıyor: '/?lang=en' de kök sayfa.
   const bare = req.url.split('?')[0];
   const rel = bare === '/' ? '/index.html' : bare;
@@ -72,6 +91,10 @@ const server = http.createServer((req, res) => {
     return;
   }
   res.writeHead(200, { 'Content-Type': MIME[path.extname(file)] || 'application/octet-stream' });
+  if (rel === '/sw.js' && swBump) {
+    res.end(fs.readFileSync(file, 'utf8').replace(/const VERSION = "([0-9a-f]+)"/, `const VERSION = "$1-${swBump}"`));
+    return;
+  }
   res.end(fs.readFileSync(file));
 });
 
@@ -265,6 +288,17 @@ async function finish(browser, consoleErrors) {
     ...(CHROMIUM ? { executablePath: CHROMIUM } : {}),
     args: ['--use-gl=swiftshader', '--enable-unsafe-swiftshader', '--disable-dev-shm-usage'],
   });
+  /*
+   * Hizmet çalışanı (Tur 48) varsayılan olarak kapalı. Açıkken yenilenen
+   * sayfa önbellekten açılıyor ve bağlamın istek yakalaması (`route`)
+   * çalışanın cevapladığı istekleri görmüyor; bölümler Tur 47'ye kadar
+   * nasıl koşuyorsa öyle koşsun. Çalışanı "Kurulabilir ve çevrimdışı oyun"
+   * bölümü açıkça açıyor.
+   */
+  const openContext = browser.newContext.bind(browser);
+  browser.newContext = (options = {}) => openContext({ serviceWorkers: 'block', ...options });
+  const openPage = browser.newPage.bind(browser);
+  browser.newPage = (options = {}) => openPage({ serviceWorkers: 'block', ...options });
   /*
    * REHBER EN BAŞTA, ana sayfa açılmadan (Tur 26). İkinci bir bağlamda
    * yeni oyun kurmak, ana sayfanın WebGL bağlamı canlıyken yazılımsal
@@ -4836,7 +4870,8 @@ async function finish(browser, consoleErrors) {
     await sp.waitForSelector('.modal .settings', { timeout: 5000 });
     const opened = await sp.evaluate(() => ({
       inside: Boolean(document.activeElement?.closest('.modal')),
-      groups: document.querySelectorAll('.settings .settings-group').length,
+      // Uygulama bölümü (Tur 48) yalnız hizmet çalışanı olan sayfada; burada kapalı.
+      groups: document.querySelectorAll('.settings .settings-group:not([data-settings-app])').length,
       title: document.getElementById(document.querySelector('.modal')?.getAttribute('aria-labelledby') ?? '')?.textContent ?? '',
     }));
     await sp.keyboard.press('Tab');
@@ -4981,6 +5016,111 @@ async function finish(browser, consoleErrors) {
     check('Telefonda Çok büyük yazı: kurulum, oyun ve Ayarlar yana taşmıyor', setupOverflow <= 0 && gameOverflow <= 0 && modalOverflow === 0,
       `kurulum ${setupOverflow} · oyun ${gameOverflow} · pencere ${modalOverflow}`);
     await phone.close();
+  }
+
+  // ---------- Kurulabilir ve çevrimdışı oyun (Tur 48) ----------
+  // Tek bölüm hizmet çalışanıyla koşuyor (varsayılan kapalı, yukarıda):
+  // manifest ve simgeler, önbellek, çevrimdışı açılış ve yeni sürüm akışı.
+  section('Kurulabilir ve çevrimdışı oyun');
+  {
+    const wContext = await browser.newContext({ viewport: { width: 1280, height: 860 }, serviceWorkers: 'allow' });
+    await wContext.addInitScript(veteran, TUTORIAL_KEY);
+    const wp = await wContext.newPage();
+    const wErrors = [];
+    wp.on('pageerror', (e) => wErrors.push(e.message));
+    // Çevrimdışıyken tarayıcının kendi "ağ yok" kayıtları sayılmıyor; oyunun hatası sayılıyor.
+    wp.on('console', (m) => { if (m.type() === 'error' && !/ERR_(INTERNET_DISCONNECTED|CONNECTION|EMPTY_RESPONSE)|Failed to load resource|Failed to update a ServiceWorker/.test(m.text())) wErrors.push(m.text()); });
+    await wp.goto('http://127.0.0.1:8811/');
+    await wp.waitForSelector('.newgame', { timeout: 20000 });
+    const app = await wp.evaluate(async () => {
+      const link = document.querySelector('link[rel="manifest"]');
+      const manifest = await (await fetch(link.href)).json();
+      const sizes = await Promise.all(manifest.icons.map((icon) => new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => resolve(`${img.naturalWidth}x${img.naturalHeight}`);
+        img.onerror = () => resolve('inmedi');
+        img.src = new URL(icon.src, link.href).href;
+      })));
+      return {
+        name: manifest.short_name,
+        display: manifest.display,
+        sizes,
+        declared: manifest.icons.map((icon) => icon.sizes),
+        apple: document.querySelector('link[rel="apple-touch-icon"]') !== null,
+      };
+    });
+    check('Manifest ve simgeler: kurulabilir, tam ekran, simgeler beyan edilen boyutta',
+      app.name === 'CapitalForge' && app.display === 'standalone' && app.sizes.join() === app.declared.join() && app.apple,
+      `${app.sizes.join(' ')}`);
+
+    // İlk açılış: çalışan sayfa yüklenince kuruluyor ve sayfayı devralıyor.
+    const controlled = await wp.waitForFunction(() => navigator.serviceWorker.controller !== null, null, { timeout: 30000 }).then(() => true, () => false);
+    const cached = await wp.evaluate(async () => {
+      const mine = (await caches.keys()).filter((key) => key.startsWith('capitalforge-'));
+      const paths = mine.length ? (await (await caches.open(mine[mine.length - 1])).keys()).map((r) => new URL(r.url).pathname) : [];
+      return { caches: mine, paths };
+    });
+    const has = (re) => cached.paths.some((p) => re.test(p));
+    check('Hizmet çalışanı sayfayı devralıyor; kabuk, oyun ekranı, şehir sahnesi, İngilizce ve yazı tipleri önbellekte',
+      controlled && cached.caches.length === 1 && has(/\/index\.html$/) && has(/GameRoot-/) && has(/three-/) && has(/locale-en-/) && has(/\.woff2$/) && !has(/\.map$/),
+      `${cached.caches.join(', ')} · ${cached.paths.length} dosya`);
+    await wp.locator('[data-settings-open]').click();
+    await wp.waitForSelector('.settings [data-settings-app]', { timeout: 5000 });
+    const appSection = await wp.evaluate(() => ({
+      ready: document.querySelector('[data-offline-ready]')?.getAttribute('data-offline-ready'),
+      text: document.querySelector('[data-settings-app]')?.textContent ?? '',
+    }));
+    check('Ayarlar\'da Uygulama bölümü: çevrimdışı hazır, kurma yolu yazıyor', appSection.ready === 'true' && /Çevrimdışı hazır/.test(appSection.text) && /kur/i.test(appSection.text),
+      appSection.text.slice(0, 90));
+    await wp.keyboard.press('Escape');
+
+    // Bağlantı yok: oyun yine açılıyor, İngilizce ve oyun ekranı önbellekten geliyor.
+    serverDown = true;
+    await wp.reload();
+    await wp.waitForSelector('.newgame', { timeout: 20000 });
+    await wp.locator('.newgame [data-locale="en"]').click();
+    const english = await wp.waitForFunction(() => document.documentElement.lang === 'en', null, { timeout: 10000 }).then(() => true, () => false);
+    await wp.fill('.newgame-field input[type="text"]', 'Offline Ltd');
+    await wp.locator('button:has-text("Found the company")').click();
+    const started = await wp.waitForSelector('.topbar', { timeout: 30000 }).then(() => true, () => false);
+    check('Sunucuya ulaşılamıyor: kurulum açılıyor, İngilizceye geçiliyor, şirket kuruluyor ve şehir çiziliyor',
+      english && started && (await wp.evaluate(() => window.__capital.getState().companies[window.__capital.getState().playerCompanyId]?.name)) === 'Offline Ltd');
+    serverDown = false;
+
+    // Yeni sürüm: sunucu çalışanın baytlarını değiştiriyor, tarayıcı arka planda kuruyor.
+    await wp.evaluate(() => {
+      const c = window.__capital;
+      for (let i = 0; i < 40; i++) c.engine.runDay();
+      c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+    });
+    const dayBefore = await wp.evaluate(() => window.__capital.getState().time.day);
+    swBump = 'yeni';
+    await wp.evaluate(async () => (await navigator.serviceWorker.getRegistration()).update());
+    const noticed = await wp.waitForSelector('[data-update-ready]', { timeout: 30000 }).then(() => true, () => false);
+    const waiting = await wp.evaluate(async () => {
+      const registration = await navigator.serviceWorker.getRegistration();
+      return { waiting: registration.waiting !== null, day: window.__capital.getState().time.day, text: document.querySelector('[data-update-ready]')?.textContent ?? '' };
+    });
+    check('Yeni sürüm arka planda iniyor ve bekliyor; "yeni sürüm hazır" görünüyor, oyun sürüyor',
+      noticed && waiting.waiting && waiting.day === dayBefore && /new version/i.test(waiting.text), waiting.text.slice(0, 60));
+    await wp.screenshot({ path: `${OUT}/update-ready.png` });
+    await Promise.all([
+      wp.waitForNavigation({ timeout: 30000 }),
+      wp.locator('[data-update-apply]').click(),
+    ]);
+    await wp.waitForSelector('.topbar', { timeout: 30000 });
+    const after = await wp.evaluate(async () => ({
+      day: window.__capital.getState().time.day,
+      name: window.__capital.getState().companies[window.__capital.getState().playerCompanyId]?.name,
+      caches: (await caches.keys()).filter((key) => key.startsWith('capitalforge-')),
+      notice: document.querySelector('[data-update-ready]') !== null,
+    }));
+    check('Yenile: oyun kaydediliyor, yeni sürüm devralıyor, oyun kaldığı günden açılıyor; önceki sürümün önbelleği duruyor',
+      after.day === dayBefore && after.name === 'Offline Ltd' && after.caches.length === 2 && after.caches[1].endsWith('-yeni') && !after.notice,
+      `gün ${dayBefore} → ${after.day} · ${after.caches.join(', ')}`);
+    swBump = '';
+    check('Kurulabilir oyun akışında konsol temiz', wErrors.length === 0, wErrors.slice(0, 2).join(' | '));
+    await wContext.close();
   }
 
   section('Mobil');
