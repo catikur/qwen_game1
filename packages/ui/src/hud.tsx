@@ -138,7 +138,8 @@ export function TopBar(): ReactElement {
         </button>
         {/*
           Ayarlar (Tur 47) sesin yanında: rıhtım sekiz sekmeyle dar ekrana
-          ancak sığıyor, bu grup ise telefonda da üst barda kalıyor.
+          ancak sığıyor, bu grup ise telefonda da üst barda kalıyor. Dar
+          telefonda ses düğmesi gizleniyor, anahtarı Ayarlar'da (styles.css).
         */}
         <button
           type="button"

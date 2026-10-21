@@ -4960,12 +4960,18 @@ async function finish(browser, consoleErrors) {
     await pp.waitForSelector('.topbar', { timeout: 30000 });
     await pp.waitForTimeout(500);
     const gameOverflow = await overflow();
+    // Dar telefonda ses düğmesi Ayarlar'da: dişliyle hız grubu ikinci satıra
+    // sığıyor (ilk sürümde üst bar üç satıra bölündü, Mobil bölümü yakaladı).
+    const soundShown = await pp.locator('.sound-toggle').isVisible();
     await pp.locator('.speeds [data-panel="settings"]').click();
     await pp.waitForSelector('.modal .settings', { timeout: 5000 });
     const modalOverflow = await pp.evaluate(() => {
       const body = document.querySelector('.modal-body');
       return body ? body.scrollWidth - body.clientWidth : -1;
     });
+    const soundSwitch = await pp.locator('.modal [data-settings-sound]').count();
+    check('Telefonda ses düğmesi Ayarlar\'da: üst barda dişli var, ses anahtarı pencerede', !soundShown && soundSwitch === 1,
+      `üst barda ses ${soundShown} · pencerede ${soundSwitch}`);
     await pp.screenshot({ path: `${OUT}/settings-phone-xlarge.png` });
     check('Telefonda Çok büyük yazı: kurulum, oyun ve Ayarlar yana taşmıyor', setupOverflow <= 0 && gameOverflow <= 0 && modalOverflow === 0,
       `kurulum ${setupOverflow} · oyun ${gameOverflow} · pencere ${modalOverflow}`);

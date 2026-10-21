@@ -4532,6 +4532,12 @@ Seçimler tarayıcıda hatırlanıyor (`capitalforge.settings.v1`). Eski
 sessize alma anahtarı ilk açılışta taşınıyor. Kayda girmiyor: ayar
 kişinin, koşunun değil.
 
+Dar telefonda (≤480 px) üst barın ses düğmesi gizleniyor; aç/kapa
+anahtarı Ayarlar'ın ses bölümünün başında. İlk sürümde dişli eklenince
+hız grubu 278 px oldu ve üst bar telefonda üç satıra bölündü (100 px);
+Mobil bölümü yakaladı. Düğmeleri 34 px'e daraltmak dokunma hedefini
+küçültürdü. Şimdi bar yine iki satır, 72 px.
+
 **Uygulama.**
 - *Metin boyutu.* Arayüzün 196 `font-size` değeri `--text-scale` ile
   çarpılıyor. Kutular ve boşluklar yerinde kalıyor; yalnız yazı büyüyor.
@@ -4577,7 +4583,7 @@ kişinin, koşunun değil.
   - eski sessize alma taşınıyor;
   - değişiklik abonelere duyuruluyor, ses düzeyleri tek tek değişiyor;
   - hareket seçimi cihaz tercihiyle birleşiyor.
-- Tarayıcı testine "Ayarlar ve erişilebilirlik" bölümü (14 kontrol):
+- Tarayıcı testine "Ayarlar ve erişilebilirlik" bölümü (15 kontrol):
   - kurulumda Ayarlar, odak ve Escape;
   - hız tuşları;
   - pencerede Tab döngüsü;
@@ -4591,6 +4597,7 @@ kişinin, koşunun değil.
   - yenilemeden sonra hatırlanma;
   - İngilizce Ayarlar'da Türkçe kalıntı yok;
   - konsol temiz;
+  - telefonda ses anahtarı Ayarlar'da, dişli üst barda;
   - telefonda Çok büyük yazıda taşma yok.
 - "Dil" ve "Görünüm" bölümleri seçicileri Ayarlar'da arıyor.
 - Paket bütçesi: CSS 13,8 KB gzip, ana parça 58,8 KB, kurulumun yolu 131 KB.

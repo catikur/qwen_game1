@@ -4752,6 +4752,19 @@ button.icon {
   color: var(--muted);
 }
 
+/*
+ * Dar telefonda ses düğmesi Ayarlar'da (Tur 47). Üst barın ikinci
+ * satırında portre ve tarih (93 px) ile hız grubu yan yana; dişli eklenince
+ * grup 278 px oldu ve 390 px'lik ekranda satır üçe bölündü. Düğmeleri
+ * 34 px'e daraltmak dokunma hedefini küçültürdü; sesin aç/kapa anahtarı
+ * zaten Ayarlar'ın ses bölümünün başında.
+ */
+@media (max-width: 480px) {
+  .sound-toggle {
+    display: none;
+  }
+}
+
 /* --- şirket paneli: işgücü ve banka --- */
 .labor,
 .bank {
