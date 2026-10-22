@@ -67,6 +67,8 @@ interface Query {
 interface DocRef {
   get(): Promise<DocSnapshot>;
   set(data: Record<string, unknown>): Promise<void>;
+  /** Üst düzey alanları birleştiriyor (belge var olmalı). */
+  update?(data: Record<string, unknown>): Promise<void>;
 }
 interface Db {
   collection(path: string): Query & { doc(id: string): DocRef };
@@ -193,13 +195,11 @@ export function sharedBoard(db: Db, user: User | null): LeagueBoard {
         if (current && current['weekId'] === entry.weekId && typeof current['score'] === 'number' && current['score'] >= entry.score) {
           return 'kept-better';
         }
-        // Kişi başına tek belge: haftanın koşusu günün koşusunu, günün koşusu haftanınkini silmesin.
-        const daily = day
-          ? { day: { ...entry }, dayWeekId: entry.weekId, dayScore: entry.score }
-          : body?.['day']
-            ? { day: body['day'], dayWeekId: body['dayWeekId'], dayScore: body['dayScore'] }
-            : {};
-        await ref.set(day ? { ...(body ?? {}), ...daily } : { ...entry, ...daily });
+        // Kişi başına tek belge: her tablo yalnız kendi alanlarını yazıyor. Belge varken
+        // birleştirerek: aynı anda öbür tabloya gönderen sekmenin sonucu silinmesin (Codex #82).
+        const fields: Record<string, unknown> = day ? { day: { ...entry }, dayWeekId: entry.weekId, dayScore: entry.score } : { ...entry };
+        if (existing.exists && ref.update) await ref.update(fields);
+        else await ref.set({ ...(body ?? {}), ...fields });
         return 'saved';
       } catch {
         return 'error';

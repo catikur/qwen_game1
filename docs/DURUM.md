@@ -5514,8 +5514,12 @@ günün koşusu, 90 gün, her gün yeni şehir ve yeni tablo.
   biri ötekini silmiyor. Kimliği ve skoru üst düzeyde de (`dayWeekId`,
   `dayScore`): gün tablosu sorguda süzülüp sıralanıyor. İlk düzeltme 200
   belge okuyup tarayıcıda süzüyordu; kalabalık tabloda günün koşusu
-  okunmayan belgede kalabiliyordu (Codex #82'nin ikinci turu). Testleri
-  düzeltmeden önce kaldı.
+  okunmayan belgede kalabiliyordu (Codex #82'nin ikinci turu). Her tablo
+  yalnız kendi alanlarını yazıyor, belge varken birleştirerek (`update`):
+  iki sekmeden aynı anda gelen haftanın ve günün koşusu ikisi de kalıyor;
+  belgeyi bütün olarak yeniden yazmak birini siliyordu. Belgenin ilk
+  yazımında iki sekme hâlâ yarışabiliyor (çok dar). Testleri düzeltmeden
+  önce kaldı.
 
 **Sunucu (`seed.ts`).** Günün koşuları aynı tabloda (`seed_verified`,
 kimlik `week` sütununda); şema değişmedi. Açık: bugün, ilk 6 saatinde dün.
@@ -5547,7 +5551,7 @@ beceriyi bastırmıyor. Her kural iki vekilin ortalamasını düşürüyor (−%
 koşusunda bilgili 1,5–2,0 M, yavaş 1,15–1,35 M, hiç oynamayan 250 B (6–8
 kat); beş günün beş ayrı şehri var.
 
-**Doğrulama.** `pnpm test` 599/599; tip denetimi temiz.
+**Doğrulama.** `pnpm test` 600/600; tip denetimi temiz.
 - Çekirdek (`league.test.ts`, 7 yeni): kimlikler, kural sırası ve yıl
   dönümü, kurulumun kuralları yok sayılıyor, kurallı haftanın koşusu
   tekrarda tutuyor ve kural skoru değiştiriyor, günün koşusu 90 günde
@@ -5555,9 +5559,10 @@ kat); beş günün beş ayrı şehri var.
   taşıyor. `modifiers.test.ts`: "ligde kural yok" testi yeni kurala göre.
   `career.test.ts` (1 yeni): günün koşusu "Ligde" rozetini açmıyor.
   `agenda.test.ts` (1 yeni): gündem çipi günün koşusunu adıyla yazıyor.
-- Paylaşılan tablo (`apps/web/test/league-board.test.ts`, 2 yeni): hafta ve
+- Paylaşılan tablo (`apps/web/test/league-board.test.ts`, 3 yeni): hafta ve
   gün aynı belgede, biri ötekini ezmiyor; her tablonun "daha iyisi" kendi;
-  250 oyunculu tabloda günün koşusu görünüyor.
+  250 oyunculu tabloda günün koşusu görünüyor; iki sekmeden aynı anda gelen
+  iki koşu da kalıyor.
 - Sunucu (`seed.test.ts`, 4 yeni): gün tablosu ayrı ve uçlar birbirinin
   kimliğini almıyor; dünün koşusu yalnız ilk saatlerde; günün koşuları iki
   hafta sonra siliniyor; sunucu gerçek bir 90 günlük koşuyu yeniden oynatıyor,
@@ -5685,7 +5690,7 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi). Senaryo şehirlerinde gün 3–17 ms (`pnpm dayperf`, Tur 43) |
-| Birim testi | **599 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de, Tur 52'de sunucuda tekrar, Tur 53'te haftanın kuralı ve günün koşusu) |
+| Birim testi | **600 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de, Tur 52'de sunucuda tekrar, Tur 53'te haftanın kuralı ve günün koşusu) |
 | Denge testi | **331 kontrol, hepsi geçiyor** (25 bölüm, süreleriyle; ~13 dk) |
 | Tarayıcı testi | **521 kontrol, hepsi geçiyor**, 0 konsol hatası (~40 dk); duman koşusu 132 (~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + paket bütçesi (Tur 46; Tur 48'den beri hizmet çalışanı ve manifest de) + duman oynanışı |

@@ -10,7 +10,11 @@ import { sharedBoard } from '../src/league-board';
 function memoryDb() {
   const docs = new Map<string, Record<string, unknown>>();
   const watchers = new Set<() => void>();
-  const snapshot = (id: string) => ({ id, exists: docs.has(id), data: () => docs.get(id) });
+  // Okuma anının kopyası: gerçek depo gibi, sonraki yazımlar eski okumayı değiştirmiyor.
+  const snapshot = (id: string) => {
+    const data = docs.has(id) ? structuredClone(docs.get(id)) : undefined;
+    return { id, exists: data !== undefined, data: () => data };
+  };
   const query = (filters: Array<[string, unknown]>, order: string | null, cap: number) => ({
     where: (field: string, _op: string, value: unknown) => query([...filters, [field, value]], order, cap),
     orderBy: (field: string) => query(filters, field, cap),
@@ -34,6 +38,12 @@ function memoryDb() {
         get: async () => snapshot(id),
         set: async (data: Record<string, unknown>) => {
           docs.set(id, data);
+          watchers.forEach((emit) => emit());
+        },
+        // Üst düzey alanları birleştiriyor; belge yoksa hata (barındırıcının `update`'i gibi).
+        update: async (data: Record<string, unknown>) => {
+          if (!docs.has(id)) throw new Error('not-found');
+          docs.set(id, { ...docs.get(id)!, ...data });
           watchers.forEach((emit) => emit());
         },
       }),
@@ -87,4 +97,18 @@ test('paylaşılan tablo: günün koşusu okunacak belge sınırından önce sü
   assert.equal(await board.submit(entry('2026-10-26', 900_000)), 'saved');
   assert.deepEqual(await rows(board, '2026-10-26'), [['2026-10-26', 900_000]]);
   assert.equal((await rows(board, '2026-W44')).length, 50, 'haftanın tablosu ilk 50');
+});
+
+test('paylaşılan tablo: iki sekmeden aynı anda haftanın ve günün koşusu; ikisi de kalıyor (Codex #82)', async () => {
+  const db = memoryDb();
+  const first = sharedBoard(db, user('ben'));
+  assert.equal(await first.submit(entry('2026-W44', 5_000_000)), 'saved');
+  // İkisi de belgeyi yazmadan önce okuyor.
+  const [week, day] = await Promise.all([
+    sharedBoard(db, user('ben')).submit(entry('2026-W44', 6_000_000)),
+    sharedBoard(db, user('ben')).submit(entry('2026-10-26', 900_000)),
+  ]);
+  assert.deepEqual([week, day], ['saved', 'saved']);
+  assert.deepEqual(await rows(first, '2026-W44'), [['2026-W44', 6_000_000]]);
+  assert.deepEqual(await rows(first, '2026-10-26'), [['2026-10-26', 900_000]]);
 });
