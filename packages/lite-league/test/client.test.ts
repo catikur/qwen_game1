@@ -900,3 +900,100 @@ test('istemci: tarayıcı çevrimiçiyken istek kopsa da (DNS, zaman aşımı) b
   assert.equal(drops, 0, 'kopuk istekler yeniden denendi');
   assert.equal(await total(), 1, 'yol açılınca koşu gitti');
 });
+
+/** İki sekme: aynı tarayıcı deposu, aynı sunucu; bu sekmenin koşu gönderimi ve öbürünün silmesi elle tutulabiliyor. */
+function twoTabs() {
+  const db = memoryDb();
+  const net: Net = { online: true, old: false, now: THURSDAY, requests: [] };
+  const storage = memoryStorage();
+  const gates: { post: Promise<void> | null; postFails: boolean; deleteReply: Promise<void> | null } = { post: null, postFails: false, deleteReply: null };
+  const fetcher = (tab: 'this' | 'other') =>
+    (async (input: RequestInfo | URL, init?: RequestInit) => {
+      const request = new Request(input, init);
+      const path = new globalThis.URL(request.url).pathname;
+      net.requests.push(`${tab} ${request.method} ${path}`);
+      if (!net.online) throw new TypeError('fetch failed');
+      if (tab === 'this' && request.method === 'POST' && path === '/v1/seed/runs' && gates.post) {
+        await gates.post;
+        if (gates.postFails) throw new TypeError('fetch failed');
+      }
+      const response = await handle(request, db, net.now);
+      // Silme sunucuda oldu; cevap (ve sekmenin depoyu temizlemesi) gecikiyor.
+      if (tab === 'other' && request.method === 'DELETE' && gates.deleteReply) await gates.deleteReply;
+      return response;
+    }) as typeof fetch;
+  const online = new EventTarget();
+  const mine = createServerBoard({ url: URL, fetch: fetcher('this'), storage, online, pollMs: 2 ** 30, retryMs: 2 });
+  const other = createServerBoard({ url: URL, fetch: fetcher('other'), storage, online: new EventTarget(), pollMs: 2 ** 30, retryMs: 2 });
+  const posts = () => net.requests.filter((line) => line === 'this POST /v1/seed/runs').length;
+  const players = async () => (await db.first<{ n: number }>('SELECT COUNT(*) AS n FROM players'))?.n ?? 0;
+  const total = async () => (await (await handle(new Request(`${URL}/v1/seed/weeks/${WEEK}`), db, net.now)).json()).total as number;
+  return { db, net, storage, gates, online, mine, other, posts, players, total };
+}
+
+async function until(check: () => boolean | Promise<boolean>, tries = 100): Promise<void> {
+  for (let i = 0; i < tries && !(await check()); i++) await new Promise((resolve) => setTimeout(resolve, 5));
+}
+
+test('istemci: öbür sekme hesabı silerken yoldaki doğrudan gönderim yeni hesap açmıyor (Codex #80)', async () => {
+  // Cevap öbür sekme depoyu temizledikten sonra geliyor.
+  {
+    const t = twoTabs();
+    assert.equal(await t.mine.probe(), 'ok');
+    assert.equal(await t.mine.submit(entryOf(run())), 'saved');
+    t.net.now += SEED.minGapMs;
+    let release = () => {};
+    t.gates.post = new Promise((resolve) => (release = resolve));
+    const sending = t.mine.submit(entryOf(run({ score: 2_000_000 })));
+    await until(() => t.posts() >= 2);
+    assert.equal(await t.other.account!.forget(), true);
+    release();
+    assert.equal(await sending, 'error', 'silinen hesabın gönderimi düşüyor');
+    assert.equal(await t.players(), 0, 'yeni hesap açılmadı');
+    assert.equal(await t.total(), 0, 'koşu tabloya girmedi');
+  }
+  // Cevap, sunucu hesabı sildikten sonra ama öbür sekme depoyu temizlemeden geliyor.
+  {
+    const t = twoTabs();
+    assert.equal(await t.mine.probe(), 'ok');
+    assert.equal(await t.mine.submit(entryOf(run())), 'saved');
+    t.net.now += SEED.minGapMs;
+    let release = () => {};
+    let answer = () => {};
+    t.gates.post = new Promise((resolve) => (release = resolve));
+    t.gates.deleteReply = new Promise((resolve) => (answer = resolve));
+    const sending = t.mine.submit(entryOf(run({ score: 2_000_000 })));
+    await until(() => t.posts() >= 2);
+    const forgotten = t.other.account!.forget();
+    await until(async () => (await t.players()) === 0);
+    release();
+    const outcome = await sending;
+    answer();
+    assert.equal(await forgotten, true);
+    assert.equal(outcome, 'error', 'silme sürerken gelen 401 yeni hesap açmıyor');
+    assert.equal(await t.players(), 0, 'yeni hesap açılmadı');
+    assert.equal(t.storage.getItem('capitalforge.league.account'), null);
+  }
+});
+
+test('istemci: öbür sekme hesabı silerken kopan doğrudan gönderim hesapsız kuyruğa girmiyor (Codex #80)', async () => {
+  const t = twoTabs();
+  assert.equal(await t.mine.probe(), 'ok');
+  assert.equal(await t.mine.submit(entryOf(run())), 'saved');
+  t.net.now += SEED.minGapMs;
+  let release = () => {};
+  t.gates.post = new Promise((resolve) => (release = resolve));
+  t.gates.postFails = true;
+  const sending = t.mine.submit(entryOf(run({ score: 2_000_000 })));
+  await until(() => t.posts() >= 2);
+  assert.equal(await t.other.account!.forget(), true);
+  release();
+  assert.equal(await sending, 'error', 'silinen hesabın koşusu kuyruğa girmiyor');
+  assert.equal(t.storage.getItem('capitalforge.league.pending'), null, 'kuyruk boş');
+  // Bağlantı gelince de bir şey gitmiyor.
+  t.gates.post = null;
+  t.online.dispatchEvent(new Event('online'));
+  await new Promise((resolve) => setTimeout(resolve, 100));
+  assert.equal(await t.players(), 0, 'yeni hesap açılmadı');
+  assert.equal(await t.total(), 0);
+});

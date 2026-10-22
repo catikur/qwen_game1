@@ -45,6 +45,13 @@ export interface ServerBoard extends LeagueBoard {
 const ACCOUNT_KEY = 'capitalforge.league.account';
 const PENDING_KEY = 'capitalforge.league.pending';
 const SEEN_KEY = 'capitalforge.league.server';
+/**
+ * Bir sekme hesabı siliyor (Codex #80): silme isteğinden depo temizlenene
+ * kadar öbür sekmeler 401'de yeni hesap açmasın. Çöken sekmenin işareti bir
+ * dakika sonra yok sayılıyor.
+ */
+const FORGET_KEY = 'capitalforge.league.forgetting';
+const FORGET_TTL_MS = 60_000;
 /** Son görülen tablo (bir hafta): bağlantısız yeniden açılışta boş tablo yerine o (Codex #80). */
 const TABLE_KEY = 'capitalforge.league.table';
 /** Bekleyen gönderim sınırı: en yenileri kalıyor. */
@@ -212,22 +219,41 @@ export function createServerBoard(options: ServerBoardOptions): ServerBoard {
     if (typeof after === 'number' && after > 0) retryAt = Math.max(retryAt, Date.now() + after * 1000);
   }
 
-  /** `owner`: bekleyen koşunun hesabı; yalnız onunla gidiyor. */
-  function send(code: string, owner?: string): Promise<SendOutcome> {
+  /** Herhangi bir sekme bu hesabı siliyor mu (işaret tazeyse). */
+  function deleting(id: string): boolean {
+    const mark = parse<{ url: string; id: string; at: number }>(FORGET_KEY);
+    return !!mark && mark.url === url && mark.id === id && Date.now() - mark.at < FORGET_TTL_MS;
+  }
+
+  /**
+   * Bir gönderimin hesabı. `owner`: koşu yalnız bu hesapla gidiyor (bekleyen
+   * koşunun kuyruğa girdiği, doğrudan gönderimin başladığı andaki hesap).
+   * `direct`: oyuncunun kendi gönderimi; hesap sunucuda yoksa (başka yerden
+   * silindi) bir kez yenisiyle. `used`: son denemenin hesabı.
+   */
+  interface Attempt {
+    owner?: string;
+    direct?: boolean;
+    used?: string;
+  }
+
+  function send(code: string, attempt: Attempt = {}): Promise<SendOutcome> {
     if (forgetting) return Promise.resolve('error');
-    const promise = sendOnce(code, false, owner);
+    const promise = sendOnce(code, false, attempt);
     inflight.add(promise);
     const done = () => void inflight.delete(promise);
     void promise.then(done, done);
     return promise;
   }
 
-  async function sendOnce(code: string, retried = false, owner?: string): Promise<SendOutcome> {
-    // Bekleyen koşu yalnız kuyruğa girdiği hesapla: o hesap gittiyse ya da
-    // değiştiyse koşu düşüyor, başka hesapla yeniden yayımlanmıyor (Codex #80).
+  async function sendOnce(code: string, retried: boolean, attempt: Attempt): Promise<SendOutcome> {
+    const { owner } = attempt;
+    // Koşu yalnız kendi hesabıyla: o hesap gittiyse ya da değiştiyse koşu
+    // düşüyor, başka hesapla yeniden yayımlanmıyor (Codex #80).
     if (owner !== undefined && account()?.id !== owner) return 'error';
     const me = await ensureAccount();
     if (typeof me === 'string') return me;
+    attempt.used = me.id;
     // Hesapsız kuyruğa giren koşu açılan hesaba bağlanıyor: istek kopsa da sonra
     // yalnız bu hesapla gitsin (Codex #80).
     if (owner === undefined) bindPending(code, me.id);
@@ -238,11 +264,19 @@ export function createServerBoard(options: ServerBoardOptions): ServerBoard {
     if (reply.status === 201) return 'saved';
     if (reply.status === 200 && reply.body.outcome === 'kept-better') return 'kept-better';
     if (reply.status === 401) {
-      // Hesap sunucuda yok (başka sekmeden silindi): bir kez yenisiyle. Depodaki
-      // başka bir hesapsa (öbür sekme açtı) ona dokunulmuyor. Hesap bu sekmede
-      // siliniyorsa yenisi açılmıyor.
-      if (account()?.id === me.id) write(ACCOUNT_KEY, null);
-      return retried || forgetting || owner !== undefined ? 'error' : sendOnce(code, true);
+      // Hesap sunucuda yok. Depoda hâlâ bu hesap varsa ve hiçbir sekme onu
+      // silmiyorsa (başka yerden silindi) oyuncunun gönderimi bir kez yenisiyle.
+      // Bir sekme siliyorsa, sildiyse ya da depoda başka hesap varsa yenisi
+      // açılmıyor: koşu oyuncunun sildiği hesabın yerine yazılmasın (Codex #80).
+      // Bekleyen koşu yalnız kendi hesabıyla.
+      const stillMine = account()?.id === me.id;
+      if (stillMine) write(ACCOUNT_KEY, null);
+      const renew = !retried && !forgetting && stillMine && !deleting(me.id) && (owner === undefined || attempt.direct === true);
+      if (!renew) return 'error';
+      // Yeni hesapla: koşu ona bağlanıyor (hesap açılamazsa hesapsız kuyruğa).
+      attempt.owner = undefined;
+      attempt.used = undefined;
+      return sendOnce(code, true, attempt);
     }
     if (reply.status === 400 && reply.body.error === 'name-blocked') return 'name-blocked';
     if (reply.status === 409 && reply.body.error === 'week') return 'closed';
@@ -264,8 +298,7 @@ export function createServerBoard(options: ServerBoardOptions): ServerBoard {
     write(PENDING_KEY, JSON.stringify(items.map((item) => (item.code === code && item.account === undefined ? { ...item, account: owner } : item))));
   }
 
-  function queue(weekId: string, code: string): void {
-    const owner = account()?.id;
+  function queue(weekId: string, code: string, owner: string | undefined): void {
     const items = [...pending().filter((item) => item.code !== code), { url, weekId, code, ...(owner ? { account: owner } : {}) }].slice(-PENDING_MAX);
     write(PENDING_KEY, JSON.stringify(items));
   }
@@ -309,7 +342,7 @@ export function createServerBoard(options: ServerBoardOptions): ServerBoard {
         for (const item of pending()) {
           // Hesap silinirken kuyruk olduğu gibi kalıyor (silme başarısız olursa da).
           if (forgetting) return;
-          const outcome = await send(item.code, item.account);
+          const outcome = await send(item.code, { owner: item.account });
           // Kalan koşu yeniden deneniyor: yoğunluk da, kopan istek de. Tarayıcı
           // çevrimiçiyken yol kopabiliyor (DNS, zaman aşımı); yol açılınca
           // `online` olayı gelmiyor (Codex #80).
@@ -471,9 +504,16 @@ export function createServerBoard(options: ServerBoardOptions): ServerBoard {
     },
 
     async submit(entry) {
-      const outcome = await send(entry.code);
+      // Gönderim başladığı andaki hesapla (Codex #80): yolda öbür sekme hesabı
+      // silerse koşu yeni hesapla yayımlanmıyor, hesapsız kuyruğa da girmiyor.
+      const attempt: Attempt = { owner: account()?.id, direct: true };
+      const outcome = await send(entry.code, attempt);
       if (outcome === 'offline') {
-        queue(entry.weekId, entry.code);
+        // Kuyruğa denediği hesapla (hesap açılamadıysa hesapsız); o hesap bu
+        // arada gittiyse ya da siliniyorsa kuyruğa girmiyor.
+        const owner = attempt.used ?? attempt.owner;
+        if (owner !== undefined && (account()?.id !== owner || deleting(owner))) return 'error';
+        queue(entry.weekId, entry.code, owner);
         return 'queued';
       }
       if (outcome === 'saved' || outcome === 'kept-better') refreshAll();
@@ -487,6 +527,7 @@ export function createServerBoard(options: ServerBoardOptions): ServerBoard {
         const me = account();
         if (!me) return true;
         forgetting = true;
+        write(FORGET_KEY, JSON.stringify({ url, id: me.id, at: Date.now() }));
         try {
           // Süren gönderimler önce bitiyor: koşu silinecek hesaba düşüyor ve onunla gidiyor.
           await Promise.all([...inflight]);
@@ -509,6 +550,7 @@ export function createServerBoard(options: ServerBoardOptions): ServerBoard {
           return true;
         } finally {
           forgetting = false;
+          if (parse<{ id: string }>(FORGET_KEY)?.id === me.id) write(FORGET_KEY, null);
         }
       },
     },

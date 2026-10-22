@@ -5210,7 +5210,13 @@ Tur 51"). "Canlı sunucu denetimi" yeni uçları yalnız okuyarak deniyor
   değiştiyse koşu düşüyor, 401'i yeni hesap açmıyor (öbür sekme hesabı
   sunucuda sildiyse koşu yeni hesapla yayımlanmasın). Hesapsız kuyruğa
   giren ilk koşu da hesap açılır açılmaz ona bağlanıyor; istek o an kopsa
-  da sonra yalnız o hesapla gidiyor. Testler düzeltmeden önce kaldı.
+  da sonra yalnız o hesapla gidiyor. Oyuncunun doğrudan gönderimi de
+  başladığı andaki hesapla: yolda öbür sekme hesabı silerse 401 yeni hesap
+  açmıyor, kopan istek hesapsız kuyruğa girmiyor. Silen sekme depoya kısa
+  ömürlü bir işaret bırakıyor (bir dakika): sunucu sildi ama sekme depoyu
+  henüz temizlemedi aralığında da öbür sekme yeni hesap açmıyor. Hesap
+  başka yerden silindiyse (işaret yok, depo aynı) gönderim yine bir kez
+  yenisiyle. Testler düzeltmeden önce kaldı.
 - *Codex #80: gönderim aralığına takılan bekleyen koşu takılı kalıyordu.*
   Kuyrukta iki koşu varken bağlantı gelince ilki gidiyor, ikincisi sunucunun
   30 sn'lik aralığına takılıyordu; serbest oyunda bir sonraki bağlantı
@@ -5293,7 +5299,7 @@ makinede 42 durumun hepsi geçiyordu.
 - CI'nin tam koşusu 27 dk'ydı, sınır 30 dk. Tarayıcı işinin süresi 45 dk
   oldu; iş artık bağımlılıkları da kuruyor (yerel lig sunucusu için).
 
-**Doğrulama.** `pnpm test` 566/566; tip denetimi temiz.
+**Doğrulama.** `pnpm test` 568/568; tip denetimi temiz.
 - `seed.test.ts` (15 test):
   - hesap, gönderim, herkese açık tablo ve kod;
   - en iyisi kalıyor, satırın kimliği aynı, gönderim aralığı; daha kötü
@@ -5310,7 +5316,7 @@ makinede 42 durumun hepsi geçiyordu.
   - haftalık temizlik;
   - sunucunun haftası oyununkiyle aynı;
   - CORS.
-- `client.test.ts` (27 test): oyunun istemcisi gerçek sunucuya karşı
+- `client.test.ts` (29 test): oyunun istemcisi gerçek sunucuya karşı
   (bellekte SQLite):
   - sunucuyu tanıma, eski sunucu, bağlantısızlık;
   - ilk gönderimde hesap, satır ve kodun ayrı inmesi, başka tarayıcı;
@@ -5323,7 +5329,8 @@ makinede 42 durumun hepsi geçiyordu.
     bırakılan tablonun dinleyicisi, silmeyle yarışan gönderim, aralığa
     takılan koşunun yeniden denenmesi, bellekteki hesabın yeni tabloya
     geçmesi, silmede öbür sekmenin hesabı, uzun sunucu kesintisinde ve
-    kopan istekte süren denemeler (Codex #80).
+    kopan istekte süren denemeler, öbür sekme silerken yoldaki doğrudan
+    gönderim (Codex #80).
 - `deploy.test.ts` (2 test): Worker paketine giren her dosya dağıtımı
   tetikliyor; birleşme canlıya kendiliğinden dağıtmıyor (Codex #80).
 - `leagueVerify.test.ts` (2 test): önbellek anahtarı kodun özetiyle; kod
@@ -5447,7 +5454,7 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi). Senaryo şehirlerinde gün 3–17 ms (`pnpm dayperf`, Tur 43) |
-| Birim testi | **566 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de) |
+| Birim testi | **568 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de) |
 | Denge testi | **331 kontrol, hepsi geçiyor** (25 bölüm, süreleriyle; ~13 dk) |
 | Tarayıcı testi | **521 kontrol, hepsi geçiyor**, 0 konsol hatası (~40 dk); duman koşusu 132 (~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + paket bütçesi (Tur 46; Tur 48'den beri hizmet çalışanı ve manifest de) + duman oynanışı |
