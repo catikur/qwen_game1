@@ -747,3 +747,62 @@ test('istemci: bekleyen koşu yalnız kendi hesabıyla gidiyor; hesap silindiyse
   assert.equal(net.requests.slice(before).filter((line) => line === 'POST /v1/seed/players').length, 0, 'yeni hesap açılmadı');
   assert.deepEqual(JSON.parse(storage.getItem('capitalforge.league.pending') ?? '[]'), [], 'koşu kuyruktan düştü');
 });
+
+test('istemci: hesapsız kuyruğa giren koşu hesap açılınca ona bağlanıyor (Codex #80)', async () => {
+  const db = memoryDb();
+  const net: Net = { online: true, old: false, now: THURSDAY, requests: [] };
+  const storage = memoryStorage();
+  const online = new EventTarget();
+  let runsDown = true;
+  const fetcher = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const request = new Request(input, init);
+    if (!net.online) throw new TypeError('fetch failed');
+    // Hesap açılıyor ama koşu isteği yolda kopuyor.
+    if (runsDown && request.method === 'POST' && new globalThis.URL(request.url).pathname === '/v1/seed/runs') throw new TypeError('fetch failed');
+    return handle(request, db, net.now);
+  }) as typeof fetch;
+  const board = createServerBoard({ url: URL, fetch: fetcher, storage, online, pollMs: 2 ** 30 });
+  subscriptions.push(() => board.close?.());
+  assert.equal(await board.probe(), 'ok');
+  net.online = false;
+  assert.equal(await board.submit(entryOf(run())), 'queued');
+  net.online = true;
+  online.dispatchEvent(new Event('online'));
+  for (let i = 0; i < 50 && !storage.getItem('capitalforge.league.account'); i++) await new Promise((resolve) => setTimeout(resolve, 10));
+  await new Promise((resolve) => setTimeout(resolve, 30));
+  const a = JSON.parse(storage.getItem('capitalforge.league.account')!) as { id: string };
+  const queued = JSON.parse(storage.getItem('capitalforge.league.pending')!) as Array<{ account?: string }>;
+  assert.equal(queued.length, 1, 'koşu kuyrukta');
+  assert.equal(queued[0].account, a.id, 'koşu açılan hesaba bağlandı');
+  runsDown = false;
+});
+
+test('istemci: "şu kadar sonra dene" süresi son tarih olarak tutuluyor; eski uzun süre yenisini ezmiyor (Codex #80)', async () => {
+  const db = memoryDb();
+  const net: Net = { online: true, old: false, now: THURSDAY, requests: [] };
+  const storage = memoryStorage();
+  const online = new EventTarget();
+  const hints = [1.5, 0.05];
+  const fetcher = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const request = new Request(input, init);
+    if (!net.online) throw new TypeError('fetch failed');
+    if (request.method === 'POST' && new globalThis.URL(request.url).pathname === '/v1/seed/runs' && hints.length > 0) {
+      return Response.json({ error: 'busy', retryAfter: hints.shift() }, { status: 429 });
+    }
+    return handle(request, db, net.now);
+  }) as typeof fetch;
+  const board = createServerBoard({ url: URL, fetch: fetcher, storage, online, pollMs: 2 ** 30, retryMs: 10 });
+  subscriptions.push(() => board.close?.());
+  assert.equal(await board.probe(), 'ok');
+  // Doğrudan gönderim "1,5 sn sonra" cevabı alıyor; süre neredeyse doluyor.
+  assert.equal(await board.submit(entryOf(run())), 'busy');
+  await new Promise((resolve) => setTimeout(resolve, 1450));
+  // Bekleyen koşu "0,05 sn sonra" cevabı alıyor: eski sürenin kalanı kadar beklenmeli, baştan 1,5 sn değil.
+  net.online = false;
+  assert.equal(await board.submit(entryOf(run({ score: 2_000_000 }))), 'queued');
+  net.online = true;
+  online.dispatchEvent(new Event('online'));
+  const total = async () => (await (await handle(new Request(`${URL}/v1/seed/weeks/${WEEK}`), db, net.now)).json()).total as number;
+  for (let i = 0; i < 40 && (await total()) === 0; i++) await new Promise((resolve) => setTimeout(resolve, 10));
+  assert.equal(await total(), 1, 'koşu sunucunun yeni süresiyle gitti');
+});

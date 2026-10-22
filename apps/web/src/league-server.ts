@@ -204,11 +204,11 @@ export function createServerBoard(options: ServerBoardOptions): ServerBoard {
    */
   let forgetting = false;
   const inflight = new Set<Promise<SendOutcome>>();
-  /** Son yoğunluk cevabının "şu kadar sonra dene" süresi (ms). */
-  let retryHint = 0;
+  /** Yoğunluk cevabının "şu kadar sonra dene" son tarihi (ms, saat): süre değil, geçen zaman düşülsün (Codex #80). */
+  let retryAt = 0;
   /** Sunucu ne zaman yeniden denenebileceğini söylüyor (saatlik sınırda saatin sonu). */
   function noteRetry(after: unknown): void {
-    if (typeof after === 'number' && after > 0) retryHint = Math.max(retryHint, after * 1000);
+    if (typeof after === 'number' && after > 0) retryAt = Math.max(retryAt, Date.now() + after * 1000);
   }
 
   /** `owner`: bekleyen koşunun hesabı; yalnız onunla gidiyor. */
@@ -227,10 +227,13 @@ export function createServerBoard(options: ServerBoardOptions): ServerBoard {
     if (owner !== undefined && account()?.id !== owner) return 'error';
     const me = await ensureAccount();
     if (typeof me === 'string') return me;
+    // Hesapsız kuyruğa giren koşu açılan hesaba bağlanıyor: istek kopsa da sonra
+    // yalnız bu hesapla gitsin (Codex #80).
+    if (owner === undefined) bindPending(code, me.id);
     const reply = await call('/v1/seed/runs', { method: 'POST', body: { code }, auth: me });
     if (!reply) return 'offline';
     // Gönderim geçti: eski "şu kadar sonra dene" süresi artık geçerli değil (Codex #80).
-    if (reply.status === 201 || (reply.status === 200 && reply.body.outcome === 'kept-better')) retryHint = 0;
+    if (reply.status === 201 || (reply.status === 200 && reply.body.outcome === 'kept-better')) retryAt = 0;
     if (reply.status === 201) return 'saved';
     if (reply.status === 200 && reply.body.outcome === 'kept-better') return 'kept-better';
     if (reply.status === 401) {
@@ -250,6 +253,13 @@ export function createServerBoard(options: ServerBoardOptions): ServerBoard {
   }
 
   const pending = (): Pending[] => (parse<Pending[]>(PENDING_KEY) ?? []).filter((item) => item && item.url === url && typeof item.code === 'string');
+
+  /** Hesapsız bekleyen koşuya hesabını yaz. */
+  function bindPending(code: string, owner: string): void {
+    const items = pending();
+    if (!items.some((item) => item.code === code && item.account === undefined)) return;
+    write(PENDING_KEY, JSON.stringify(items.map((item) => (item.code === code && item.account === undefined ? { ...item, account: owner } : item))));
+  }
 
   function queue(weekId: string, code: string): void {
     const owner = account()?.id;
@@ -271,8 +281,8 @@ export function createServerBoard(options: ServerBoardOptions): ServerBoard {
   function retryLater(): void {
     if (retryTimer !== null || closed || retries >= RETRY_MAX) return;
     // Sunucunun söylediği süreden önce değil: saatlik sınır geri çekilmeden uzun sürebiliyor.
-    const delay = Math.max(retryMs * 2 ** retries, retryHint);
-    retryHint = 0;
+    const delay = Math.max(retryMs * 2 ** retries, retryAt - Date.now());
+    retryAt = 0;
     retries++;
     retryTimer = setTimeout(() => {
       retryTimer = null;
