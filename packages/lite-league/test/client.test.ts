@@ -7,7 +7,7 @@
 import { afterEach, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { encodeRun, type LeagueRun } from '../../core/src/index';
-import { createServerBoard, type ServerBoard } from '../../../apps/web/src/league-server';
+import { createServerBoard as createBoard, type ServerBoard } from '../../../apps/web/src/league-server';
 import { handle } from '../src/app';
 import { SEED } from '../src/seed';
 import type { Db } from '../src/db';
@@ -70,6 +70,13 @@ function entryOf(value: LeagueRun) {
 /** Açık abonelikler: test kalsa da kapanıyor (zamanlayıcı süreci açık tutmasın). */
 const subscriptions: Array<() => void> = [];
 afterEach(() => subscriptions.splice(0).forEach((stop) => stop()));
+
+/** Testin tablosu; test bitince bırakılıyor: yeniden deneme zamanlayıcısı süreci açık tutmasın. */
+function createServerBoard(...args: Parameters<typeof createBoard>): ServerBoard {
+  const board = createBoard(...args);
+  subscriptions.push(() => board.close?.());
+  return board;
+}
 
 /** Aboneliğin teslimatları: son hâli ve bir sonrakini bekleme. */
 function watch(board: ServerBoard, week = WEEK) {
@@ -861,4 +868,35 @@ test('istemci: sunucu uzun süre hata verse de bekleyen koşu seyrek aralıkla d
   for (let i = 0; i < 150 && (await total()) === 0; i++) await new Promise((resolve) => setTimeout(resolve, 10));
   assert.equal(failures, 0, 'kesinti boyunca denemeler sürdü');
   assert.equal(await total(), 1, 'kesinti bitince koşu gitti');
+});
+
+test('istemci: tarayıcı çevrimiçiyken istek kopsa da (DNS, zaman aşımı) bekleyen koşu yeniden deneniyor (Codex #80)', async () => {
+  const db = memoryDb();
+  const net: Net = { online: true, old: false, now: THURSDAY, requests: [] };
+  const storage = memoryStorage();
+  const online = new EventTarget();
+  let drops = 0;
+  const fetcher = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const request = new Request(input, init);
+    if (!net.online) throw new TypeError('fetch failed');
+    // Sunucuya giden yol kopuk: tarayıcı çevrimiçi, `online` olayı gelmeyecek.
+    if (request.method === 'POST' && new globalThis.URL(request.url).pathname === '/v1/seed/runs' && drops > 0) {
+      drops--;
+      throw new TypeError('fetch failed');
+    }
+    return handle(request, db, net.now);
+  }) as typeof fetch;
+  const board = createServerBoard({ url: URL, fetch: fetcher, storage, online, pollMs: 2 ** 30, retryMs: 2 });
+  subscriptions.push(() => board.close?.());
+  assert.equal(await board.probe(), 'ok');
+  net.online = false;
+  assert.equal(await board.submit(entryOf(run())), 'queued');
+  // Bağlantı geliyor ama ilk denemeler sunucuya ulaşamıyor.
+  drops = 3;
+  net.online = true;
+  online.dispatchEvent(new Event('online'));
+  const total = async () => (await (await handle(new Request(`${URL}/v1/seed/weeks/${WEEK}`), db, net.now)).json()).total as number;
+  for (let i = 0; i < 100 && (await total()) === 0; i++) await new Promise((resolve) => setTimeout(resolve, 10));
+  assert.equal(drops, 0, 'kopuk istekler yeniden denendi');
+  assert.equal(await total(), 1, 'yol açılınca koşu gitti');
 });

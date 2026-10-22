@@ -273,12 +273,12 @@ export function createServerBoard(options: ServerBoardOptions): ServerBoard {
   let flushing: Promise<void> | null = null;
   let again = false;
   /**
-   * Yoğunluğa takılan bekleyen gönderim kendiliğinden yeniden deneniyor: art
-   * arda iki koşu bağlantı gelince gönderilince ikincisi 30 sn aralığa
-   * takılıyordu ve serbest oyunda bir sonraki olaya kadar bekliyordu (Codex
-   * #80). Aralık 31 sn'den başlayıp beş kez ikiye katlanıyor; sonra o
-   * seyrek aralıkla (~16 dk) sürüyor: uzun bir sunucu kesintisinde de koşu
-   * bir sonraki olayı beklemeden gidiyor (Codex #80).
+   * Yoğunluğa takılan ya da isteği kopan bekleyen gönderim kendiliğinden
+   * yeniden deneniyor: art arda iki koşu bağlantı gelince gönderilince
+   * ikincisi 30 sn aralığa takılıyordu ve serbest oyunda bir sonraki olaya
+   * kadar bekliyordu (Codex #80). Aralık 31 sn'den başlayıp beş kez ikiye
+   * katlanıyor; sonra o seyrek aralıkla (~16 dk) sürüyor: uzun bir sunucu
+   * kesintisinde de koşu bir sonraki olayı beklemeden gidiyor (Codex #80).
    */
   let retryTimer: ReturnType<typeof setTimeout> | null = null;
   let retries = 0;
@@ -302,20 +302,25 @@ export function createServerBoard(options: ServerBoardOptions): ServerBoard {
       return flushing;
     }
     const run = (async () => {
-      let busy = false;
+      let kept = false;
       do {
         again = false;
-        busy = false;
+        kept = false;
         for (const item of pending()) {
           // Hesap silinirken kuyruk olduğu gibi kalıyor (silme başarısız olursa da).
           if (forgetting) return;
           const outcome = await send(item.code, item.account);
-          if (outcome === 'busy') busy = true;
-          if (outcome === 'offline' || outcome === 'busy') continue;
+          // Kalan koşu yeniden deneniyor: yoğunluk da, kopan istek de. Tarayıcı
+          // çevrimiçiyken yol kopabiliyor (DNS, zaman aşımı); yol açılınca
+          // `online` olayı gelmiyor (Codex #80).
+          if (outcome === 'offline' || outcome === 'busy') {
+            kept = true;
+            continue;
+          }
           write(PENDING_KEY, JSON.stringify(pending().filter((other) => other.code !== item.code)));
         }
       } while (again && !forgetting);
-      if (busy) retryLater();
+      if (kept) retryLater();
       else retries = 0;
     })();
     // İşaret iş bitince kalkıyor. Kuyruk boşken iş hemen bitiyor: işareti
