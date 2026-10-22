@@ -141,7 +141,11 @@ CREATE TABLE IF NOT EXISTS seed_runs (
   -- Koşu kodu (CF1.…) ve SHA-256 özeti: tablo özeti veriyor, kod ayrı uçtan iniyor.
   code TEXT NOT NULL,
   code_key TEXT NOT NULL,
+  -- Satırdaki koşunun sunucu saati (eşit skorda önce gönderen).
   at INTEGER NOT NULL,
+  -- Son gönderim denemesi, daha kötüsü de: aynı hesaptan iki gönderim arası
+  -- aralık bununla (satırın saati `at` ileri alınmasın).
+  tried_at INTEGER NOT NULL,
   PRIMARY KEY (player_id, week)
 );
 CREATE INDEX IF NOT EXISTS seed_runs_by_week ON seed_runs (week, score DESC, at);

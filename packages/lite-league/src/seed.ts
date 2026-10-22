@@ -165,20 +165,25 @@ export async function submitRun(request: Request, db: Db, playerId: string, now:
   if (!open.includes(run.weekId)) throw new HttpError(409, 'week', { week: open[0] });
   if (!publicCompanyName(run.companyName)) throw new HttpError(400, 'name-blocked');
 
-  const last = await db.first<{ at: number }>('SELECT at FROM seed_runs WHERE player_id = ? ORDER BY at DESC LIMIT 1', playerId);
-  if (last && now - last.at < SEED.minGapMs) throw new HttpError(429, 'slow');
+  // Aralık son denemeden: daha kötü gönderim de aralığı dolduruyor (Codex #80).
+  const last = await db.first<{ t: number | null }>('SELECT MAX(tried_at) AS t FROM seed_runs WHERE player_id = ?', playerId);
+  if (last?.t != null && now - last.t < SEED.minGapMs) throw new HttpError(429, 'slow');
+  const tried = () => db.run('UPDATE seed_runs SET tried_at = MAX(tried_at, ?) WHERE player_id = ? AND week = ?', now, playerId, run.weekId);
   const existing = await db.first<SeedRow>(`SELECT ${ROW_COLUMNS} FROM seed_runs WHERE player_id = ? AND week = ?`, playerId, run.weekId);
-  if (existing && existing.score >= run.score) return json({ outcome: 'kept-better', entry: toEntry(existing, run.weekId, playerId) });
+  if (existing && existing.score >= run.score) {
+    await tried();
+    return json({ outcome: 'kept-better', entry: toEntry(existing, run.weekId, playerId) });
+  }
 
   const key = await sha256(code);
   // Yazım koşullu: aynı anda gelen daha kötü gönderim iyisini ezmesin; hesap bu
   // arada silindiyse satır yazılmasın (`deleteAccount`).
   const changed = await db.run(
-    `INSERT INTO seed_runs (player_id, week, id, company, ceo, score, curve, code, code_key, at)
-     SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ? WHERE EXISTS (SELECT 1 FROM players WHERE id = ?)
+    `INSERT INTO seed_runs (player_id, week, id, company, ceo, score, curve, code, code_key, at, tried_at)
+     SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? WHERE EXISTS (SELECT 1 FROM players WHERE id = ?)
      ON CONFLICT (player_id, week) DO UPDATE SET
        company = excluded.company, ceo = excluded.ceo, score = excluded.score, curve = excluded.curve,
-       code = excluded.code, code_key = excluded.code_key, at = excluded.at
+       code = excluded.code, code_key = excluded.code_key, at = excluded.at, tried_at = excluded.tried_at
      WHERE excluded.score > seed_runs.score`,
     playerId,
     run.weekId,
@@ -190,11 +195,15 @@ export async function submitRun(request: Request, db: Db, playerId: string, now:
     code,
     key,
     now,
+    now,
     playerId,
   );
   const row = await db.first<SeedRow>(`SELECT ${ROW_COLUMNS} FROM seed_runs WHERE player_id = ? AND week = ?`, playerId, run.weekId);
   if (!row) throw new HttpError(401, 'auth');
-  return json({ outcome: changed > 0 && row.code_key === key ? 'saved' : 'kept-better', entry: toEntry(row, run.weekId, playerId) }, changed > 0 ? 201 : 200);
+  const saved = changed > 0 && row.code_key === key;
+  // Aynı anda gelen daha iyisi kazandıysa bu deneme de aralığı dolduruyor.
+  if (!saved) await tried();
+  return json({ outcome: saved ? 'saved' : 'kept-better', entry: toEntry(row, run.weekId, playerId) }, changed > 0 ? 201 : 200);
 }
 
 /** Haftanın tablosu: en iyi `tableSize` satır, skor sonra gönderim sırası; oyuncunun satırı dışarıdaysa o da. */

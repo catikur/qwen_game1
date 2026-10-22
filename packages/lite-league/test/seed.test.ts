@@ -123,6 +123,26 @@ test('Tohum Ligi: haftanın en iyisi kalıyor, satırın kimliği değişmiyor; 
   assert.equal(table.body.entries[0].submittedAt, new Date(THURSDAY + SEED.minGapMs * 2).toISOString());
 });
 
+test('Tohum Ligi: daha kötü gönderim de aralığı dolduruyor; satırın saati değişmiyor (Codex #80)', async () => {
+  const db = memoryDb();
+  const me = await seedAccount(db);
+  assert.equal((await submit(db, THURSDAY, me, run({ score: 1_000_000 }))).body.outcome, 'saved');
+
+  // Aralık geçti; daha kötü koşu satırı değiştirmiyor ama aralığı dolduruyor.
+  const worse = await submit(db, THURSDAY + SEED.minGapMs, me, run({ score: 900_000 }));
+  assert.equal(worse.body.outcome, 'kept-better');
+  assert.deepEqual((await submit(db, THURSDAY + SEED.minGapMs + 1000, me, run({ score: 800_000 }))).body, { error: 'slow' });
+  assert.deepEqual((await submit(db, THURSDAY + SEED.minGapMs + 2000, me, run({ score: 2_000_000 }))).body, { error: 'slow' });
+
+  // Eşit skorda "önce gönderen" satırın saati: daha kötü gönderimler onu ileri almıyor.
+  const table = await call(db, THURSDAY, 'GET', `/v1/seed/weeks/${WEEK}`);
+  assert.equal(table.body.entries[0].score, 1_000_000);
+  assert.equal(table.body.entries[0].submittedAt, new Date(THURSDAY).toISOString());
+
+  const better = await submit(db, THURSDAY + SEED.minGapMs * 2, me, run({ score: 2_000_000 }));
+  assert.equal(better.body.outcome, 'saved');
+});
+
 test('Tohum Ligi: bozuk, eski ve sınır dışı kodlar reddediliyor', async () => {
   const db = memoryDb();
   const me = await seedAccount(db);
