@@ -24,7 +24,7 @@
 import { RUN_LIMITS, decodeRunChecked } from '../../core/src/league';
 import { weekId } from '../../lite-model/src/index';
 import type { Db } from './db';
-import { HttpError, json, randomToken, readJson, sha256 } from './http';
+import { HttpError, allowedOrigin, json, randomToken, readJson, sha256 } from './http';
 import { offensiveName } from './names';
 
 export const SEED = {
@@ -90,7 +90,8 @@ export function openWeeks(now: number): string[] {
  * ve küfür süzgeci (`offensiveName`, Lite ile aynı).
  */
 export function publicCompanyName(name: string): boolean {
-  if (name.trim().length === 0) return false;
+  // En az bir görünen harf ya da rakam: yalnız biçim karakterinden (U+200B gibi) ibaret ad tabloda boş görünürdü (Codex #80).
+  if (!/[\p{L}\p{N}]/u.test(name.normalize('NFKC'))) return false;
   if (/[\p{Cc}‎‏‪-‮⁦-⁩]/u.test(name)) return false;
   return !offensiveName(name);
 }
@@ -119,6 +120,11 @@ async function limit(db: Db, request: Request, kind: 'account' | 'run', cap: num
 
 /** Anonim hesap: ad yok, Lite'ın oyunu yok. */
 export async function registerSeed(request: Request, db: Db, now: number): Promise<Response> {
+  // Gövdesiz POST ön uçuşsuz gidiyor: başka bir site oyuncunun tarayıcısından
+  // hesap açıp IP'nin saatlik hesap kotasını tüketemesin (Codex #80). Origin
+  // göndermeyen istemci (uygulama, denetim) etkilenmiyor.
+  const origin = request.headers.get('origin');
+  if (origin && !allowedOrigin(origin)) throw new HttpError(403, 'origin');
   await limit(db, request, 'account', SEED.accountsPerHour, now);
   const id = crypto.randomUUID();
   const token = randomToken();

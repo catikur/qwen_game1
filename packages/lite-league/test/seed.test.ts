@@ -217,6 +217,11 @@ test('Tohum Ligi: herkese görünen şirket adı süzgeçten geçiyor', async ()
     assert.equal(publicCompanyName(bad), false, bad);
   }
   assert.equal(publicCompanyName('Ｋａｈｖｅ Ｅｖｉ'), true);
+  // Görünmeyen biçim karakterlerinden ibaret ad tabloda boş görünürdü (Codex #80).
+  for (const blank of ['\u200B', '\u200B\u200C', '\uFEFF', '\u2060 \u200D']) {
+    assert.equal(publicCompanyName(blank), false, JSON.stringify(blank));
+  }
+  assert.equal(publicCompanyName('\u200BAyşe AŞ'), true);
   const db = memoryDb();
   const me = await seedAccount(db);
   assert.deepEqual((await submit(db, THURSDAY, me, run({ companyName: 'F-U-C-K Ltd' }))).body, { error: 'name-blocked' });
@@ -281,6 +286,21 @@ test('Tohum Ligi: hesap silinince koşuları da gidiyor', async () => {
   assert.equal((await call(db, THURSDAY, 'GET', `/v1/seed/weeks/${WEEK}`)).body.total, 0);
   assert.equal((await call(db, THURSDAY, 'GET', `/v1/seed/codes/${sent.body.entry.codeKey}`)).status, 404);
   assert.equal((await submit(db, THURSDAY + SEED.minGapMs, me, run())).status, 401);
+});
+
+test('Tohum Ligi: başka sitelerden hesap açılmıyor; IP kotası da harcanmıyor (Codex #80)', async () => {
+  const db = memoryDb();
+  const ip = { 'cf-connecting-ip': '203.0.113.9' };
+  // Ziyaret edilen başka bir site gövdesiz POST'la hesap açamıyor (ön uçuşsuz basit istek).
+  for (let i = 0; i < SEED.accountsPerHour + 2; i++) {
+    const r = await call(db, THURSDAY, 'POST', '/v1/seed/players', undefined, undefined, { ...ip, origin: 'https://kotu.example' });
+    assert.equal(r.status, 403, JSON.stringify(r.body));
+    assert.equal(r.body.error, 'origin');
+  }
+  assert.equal((await db.first<{ n: number }>('SELECT COUNT(*) AS n FROM players'))?.n, 0, 'hesap açılmadı');
+  // Oyunun kendi adresi ve Origin göndermeyen istemci (uygulama, denetim) açıyor; kota yerinde.
+  assert.equal((await call(db, THURSDAY, 'POST', '/v1/seed/players', undefined, undefined, { ...ip, origin: 'https://catikur.github.io' })).status, 201);
+  assert.equal((await call(db, THURSDAY, 'POST', '/v1/seed/players', undefined, undefined, ip)).status, 201);
 });
 
 test('Tohum Ligi: IP başına saatlik sınır; IP saklanmıyor, eski sayaç siliniyor', async () => {

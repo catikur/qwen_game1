@@ -5139,6 +5139,15 @@ Tur 51"). "Canlı sunucu denetimi" yeni uçları yalnız okuyarak deniyor
   için "F.U.C.K Ltd", "Oro.spu" herkese açık tabloya girerdi. Harf ve rakam
   dışındaki her işaret artık ayırıcı, "!" ve "|" de "i". Lite'ın adında
   zaten yalnız boşluk, _ ve - var; davranışı değişmedi.
+- *Codex #80: başka siteler oyuncunun tarayıcısından hesap açabiliyordu.*
+  Gövdesiz `POST /v1/seed/players` ön uçuşsuz gidiyor; CORS cevabı gizliyor
+  ama hesap açılıyor ve IP'nin saatlik hesap kotası tükeniyordu (oyuncunun
+  kendi ilk gönderimi hesap açamazdı). İzinli olmayan bir Origin'den gelen
+  hesap açma artık 403, kotaya da dokunmuyor; Origin göndermeyen istemci
+  (uygulama, denetim) etkilenmiyor. Test düzeltmeden önce kaldı.
+- *Codex #80: görünmeyen karakterden ibaret şirket adı.* Yalnız U+200B gibi
+  biçim karakterleri tabloda boş ad olarak görünürdü. Ad artık en az bir
+  görünen harf ya da rakam istiyor. Test düzeltmeden önce kaldı.
 - *Codex #80: büyük harfle İngilizce küfür geçiyordu.* Süzgeç Türkçe küçük
   harfe çeviriyor; "I" "ı" oluyor, listedeki "shit", "dick", "bitch" ise
   noktalı "i" ile. "SHIT Ltd" herkese açık tabloya girerdi. Büyük "I" artık
@@ -5270,8 +5279,8 @@ makinede 42 durumun hepsi geçiyordu.
 - CI'nin tam koşusu 27 dk'ydı, sınır 30 dk. Tarayıcı işinin süresi 45 dk
   oldu; iş artık bağımlılıkları da kuruyor (yerel lig sunucusu için).
 
-**Doğrulama.** `pnpm test` 561/561; tip denetimi temiz.
-- `seed.test.ts` (14 test):
+**Doğrulama.** `pnpm test` 562/562; tip denetimi temiz.
+- `seed.test.ts` (15 test):
   - hesap, gönderim, herkese açık tablo ve kod;
   - en iyisi kalıyor, satırın kimliği aynı, gönderim aralığı; daha kötü
     gönderim de aralığı dolduruyor, satırın saati değişmiyor; aynı anda
@@ -5283,7 +5292,7 @@ makinede 42 durumun hepsi geçiyordu.
   - en iyi 50 ve benim satırım, eşitlikte önce gönderen;
   - Lite ve ana oyun hesapları birbirinin uçlarını kullanamıyor;
   - hesap silme;
-  - IP sınırı, IP saklanmıyor;
+  - IP sınırı, IP saklanmıyor; başka sitelerden hesap açılmıyor (Codex #80);
   - haftalık temizlik;
   - sunucunun haftası oyununkiyle aynı;
   - CORS.
@@ -5423,7 +5432,7 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi). Senaryo şehirlerinde gün 3–17 ms (`pnpm dayperf`, Tur 43) |
-| Birim testi | **561 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de) |
+| Birim testi | **562 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de) |
 | Denge testi | **331 kontrol, hepsi geçiyor** (25 bölüm, süreleriyle; ~13 dk) |
 | Tarayıcı testi | **521 kontrol, hepsi geçiyor**, 0 konsol hatası (~40 dk); duman koşusu 132 (~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + paket bütçesi (Tur 46; Tur 48'den beri hizmet çalışanı ve manifest de) + duman oynanışı |
