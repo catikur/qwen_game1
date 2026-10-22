@@ -1,8 +1,10 @@
 import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
+import { createElement } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server.edge';
 import { encodeRun } from '@capital/core';
 import type { LeagueRun } from '@capital/core';
-import { loadGhostLog, moveText, movesWindow } from '../src/LeagueGhosts';
+import { GhostChart, loadGhostLog, moveText, movesWindow } from '../src/LeagueGhosts';
 import type { LeagueEntry } from '../src/useGame';
 
 /** Hayalet eğri (Tur 54): kartın metni ve liderin kodunun inişi. */
@@ -72,5 +74,33 @@ describe('hayalet eğri: hamle kartı', () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
     assert.deepEqual(await loadGhostLog(entry), run.log);
     assert.equal(calls, 2);
+  });
+
+  test('tablodan gelen uzun eğri koşunun uzunluğuyla sınırlı (Codex #83)', () => {
+    // Doğrulanmamış satırın eğrisi beyandır; 5 bin örnek 5 bin satır çizdirmesin.
+    const huge = Array.from({ length: 5_000 }, (_, i) => 1000 + i);
+    const render = (endDay: number) =>
+      renderToStaticMarkup(
+        createElement(GhostChart, {
+          series: [
+            { id: 'you', name: 'Sen', curve: [1000, 1100], slot: 'you' },
+            { id: 'x', name: 'Şişkin AŞ', curve: huge, slot: 'ghost' },
+          ],
+          endDay,
+          today: 10,
+          focus: null,
+          onFocus: () => undefined,
+        }),
+      );
+    for (const [endDay, samples] of [
+      [360, 37],
+      [90, 10],
+    ] as const) {
+      const html = render(endDay);
+      assert.equal((html.match(/<tr>/g) ?? []).length, 1 + samples, `${endDay} gün: başlık + ${samples} örnek`);
+      const ghost = /data-league-line="ghost"[^>]*points="([^"]*)"|points="([^"]*)"[^>]*data-league-line="ghost"/.exec(html);
+      const points = (ghost?.[1] ?? ghost?.[2] ?? '').trim().split(' ');
+      assert.equal(points.length, samples, `${endDay} gün: çizgi ${samples} noktalı`);
+    }
   });
 });

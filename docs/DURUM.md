@@ -5624,6 +5624,11 @@ kendi günlüğünden).
   ikinci Escape pencereyi kapatıyor. Grafiğin tablo hâli ekran okuyucu için.
 - Çizim kabın gerçek genişliğinde: geniş pencerede ölçeklenen bir çizim
   yazıyı iki katına çıkarıyordu (tarayıcı karesinde görüldü).
+- *Codex #83: eğri koşunun uzunluğunda.* Doğrulanmamış satırın eğrisi
+  beyandır; çok uzun bir eğri grafiğin tablo hâlinde örnek başına bir satır
+  çizdiriyordu (50 bin örnek, 50 bin satır: panel donardı). Eğriler artık
+  koşunun örnek sayısında kesiliyor (haftada 37, günün koşusunda 10). Test
+  düzeltmeden önce kaldı.
 
 **Kart.** Hayaletin seçili günden itibaren 30 günü (günün koşusunda 10):
 "Gün 304 · Kafe kurdu ×2", "Gün 312 · Kredi çekti · 400 B ₺"; en çok altı
@@ -5634,13 +5639,14 @@ sunucusunda satırın kodu ayrı iniyor: yalnızca kartta gösterilen
 hayaletinki, oturumda bir kez (tablo tazelense de); inmezse panel yeniden
 açılınca deneniyor.
 
-**Doğrulama.** `pnpm test` 610/610; tip denetimi temiz.
+**Doğrulama.** `pnpm test` 611/611; tip denetimi temiz.
 - Çekirdek (`ghost.test.ts`, 5 yeni): pencere ve toplama, sayılmayan
   komutlar ve para toplamı, bozuk satır, o gün dahil sayım, gerçek bir
   günün koşusunda koddan çözülen günlük oyuncunun kendi sayımıyla aynı.
-- Arayüz (`leagueGhosts.test.ts`, 4 yeni): hamle metni (bina adı, adet,
+- Arayüz (`leagueGhosts.test.ts`, 5 yeni): hamle metni (bina adı, adet,
   para), pencere uzunluğu, liderin kodu bir kez iniyor, inmeyen kod sonra
-  yeniden deneniyor.
+  yeniden deneniyor; uzun eğri koşunun uzunluğunda kesiliyor (grafik
+  sunucu tarafında çiziliyor, satır ve nokta sayılıyor; Codex #83).
 - Tarayıcı testi: "Tohum Ligi: lig sunucusu" 19 kontrol (4 yeni: liderin
   çizgisi ve koddan okunan hamleleri, üzerine gelince 180. günün değerleri,
   sabitlenen gün ve o güne kadarki sayı, klavye ve Escape; liderin kodu bir
@@ -5753,7 +5759,7 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi). Senaryo şehirlerinde gün 3–17 ms (`pnpm dayperf`, Tur 43) |
-| Birim testi | **610 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de, Tur 52'de sunucuda tekrar, Tur 53'te haftanın kuralı ve günün koşusu, Tur 54'te hayalet eğri) |
+| Birim testi | **611 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de, Tur 52'de sunucuda tekrar, Tur 53'te haftanın kuralı ve günün koşusu, Tur 54'te hayalet eğri) |
 | Denge testi | **331 kontrol, hepsi geçiyor** (25 bölüm, süreleriyle; ~13 dk) |
 | Tarayıcı testi | **521 kontrol, hepsi geçiyor**, 0 konsol hatası (~40 dk); duman koşusu 132 (~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + paket bütçesi (Tur 46; Tur 48'den beri hizmet çalışanı ve manifest de) + duman oynanışı |

@@ -53,7 +53,7 @@ export function sampleOf(day: number): number {
 }
 
 export function GhostChart({
-  series,
+  series: given,
   endDay,
   today,
   focus,
@@ -66,6 +66,10 @@ export function GhostChart({
   focus: number | null;
   onFocus: (sample: number | null) => void;
 }): ReactElement {
+  // Eğri koşunun uzunluğunda kesiliyor: doğrulanmamış satırın eğrisi beyandır,
+  // binlerce örnek binlerce satır çizdirmesin (Codex #83).
+  const samples = Math.floor(endDay / LEAGUE_SAMPLE_DAYS) + 1;
+  const series = given.map((s) => (s.curve.length > samples ? { ...s, curve: s.curve.slice(0, samples) } : s));
   const svgRef = useRef<SVGSVGElement>(null);
   const box = useWidth(320);
   const W = Math.max(240, box.width);
