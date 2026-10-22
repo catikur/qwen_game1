@@ -74,20 +74,41 @@ type Reply = { status: number; body: Record<string, unknown> } | null;
 /** Gönderimin sunucudaki sonucu; `offline` bekleyen kuyruğa giriyor. */
 type SendOutcome = Exclude<LeagueSubmitOutcome, 'queued'> | 'offline';
 
+/**
+ * Depoya geçemeyen yazımların bellekteki kopyası: tablo başına değil, depo
+ * başına (sayfa boyunca). Oyun ekranı her açılışta yeni tablo kuruyor; kopya
+ * tablonun içinde olsaydı menüye dönen oyuncunun hesabı ve bekleyen koşusu
+ * kaybolurdu (Codex #80).
+ */
+interface Fallback {
+  memory: Map<string, string | null>;
+  /** Son yazımı depoya geçemeyen anahtarlar: okuma onlarda bellekten. */
+  unsaved: Set<string>;
+}
+const NO_STORAGE = {};
+const fallbacks = new WeakMap<object, Fallback>();
+function fallbackFor(storage: object | null): Fallback {
+  const key = storage ?? NO_STORAGE;
+  let found = fallbacks.get(key);
+  if (!found) {
+    found = { memory: new Map(), unsaved: new Set() };
+    fallbacks.set(key, found);
+  }
+  return found;
+}
+
 export function createServerBoard(options: ServerBoardOptions): ServerBoard {
   const { url } = options;
   const pollMs = options.pollMs ?? 60_000;
   const timeoutMs = options.timeoutMs ?? 10_000;
   // Sunucu aynı hesaptan iki gönderim arasında 30 sn istiyor (SEED.minGapMs).
   const retryMs = options.retryMs ?? 31_000;
-  const memory = new Map<string, string | null>();
   /**
-   * Son yazımı depoya geçemeyen anahtarlar: okuma onlarda bellekten. Depo
-   * okunup yazılamıyorsa (dolu, yazma kapalı) yeni açılan hesap ve bekleyen
-   * gönderim bu oturumda kaybolmasın (Codex #80). Depo çalışırken depo esas:
-   * öbür sekmelerin yazdıkları görülüyor.
+   * Depo okunup yazılamıyorsa (dolu, yazma kapalı) yeni açılan hesap ve
+   * bekleyen gönderim bu oturumda bellekte (Codex #80). Depo çalışırken depo
+   * esas: öbür sekmelerin yazdıkları görülüyor.
    */
-  const unsaved = new Set<string>();
+  const { memory, unsaved } = fallbackFor(options.storage);
 
   const read = (key: string): string | null => {
     if (!options.storage || unsaved.has(key)) return memory.get(key) ?? null;
@@ -423,12 +444,17 @@ export function createServerBoard(options: ServerBoardOptions): ServerBoard {
           // Süren gönderimler önce bitiyor: koşu silinecek hesaba düşüyor ve onunla gidiyor.
           await Promise.all([...inflight]);
           await flushing;
-          if (!account()) return true;
-          const reply = await call('/v1/players/me', { method: 'DELETE', auth: true });
+          const me = account();
+          if (!me) return true;
+          const reply = await call('/v1/players/me', { method: 'DELETE', auth: me });
           // 401: hesap sunucuda zaten yok.
           if (!reply || (reply.status !== 200 && reply.status !== 401)) return false;
-          write(ACCOUNT_KEY, null);
-          write(PENDING_KEY, null);
+          // Yalnız silinen hesap: öbür sekme bu arada yenisini açtıysa onun
+          // anahtarı ve kuyruğu yerinde kalıyor (Codex #80).
+          if (account()?.id === me.id) {
+            write(ACCOUNT_KEY, null);
+            write(PENDING_KEY, null);
+          }
           // Depodaki tablo silinen satırı "benim" diye taşımasın.
           write(TABLE_KEY, null);
           refreshAll();

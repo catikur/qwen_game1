@@ -5174,6 +5174,14 @@ Tur 51"). "Canlı sunucu denetimi" yeni uçları yalnız okuyarak deniyor
   gidiyor); silme sürerken yeni gönderim başlamıyor, 401 yeni hesap
   açmıyor, kuyruk olduğu gibi kalıyor (silme başarısız olursa kaybolmasın).
   Test düzeltmeden önce kaldı.
+- *Codex #80: yazılamayan depoda bellekteki hesap menüye dönünce
+  kayboluyordu.* Bellekteki kopya tablonun içindeydi; oyun ekranı her
+  açılışta yeni tablo kurduğu için hesap ve bekleyen koşu gidiyordu. Kopya
+  artık depo başına, sayfa boyunca. Test düzeltmeden önce kaldı.
+- *Codex #80: silme öbür sekmenin yeni hesabını da siliyordu.* Silme
+  sürerken öbür sekme yeni hesap açıp depoya yazdıysa silme sonunda depo
+  koşulsuz temizleniyordu. Artık yalnız silinen hesap gidiyor: depodaki hesap
+  başkasıysa anahtarı ve kuyruğu yerinde. Test düzeltmeden önce kaldı.
 - *Codex #80: gönderim aralığına takılan bekleyen koşu takılı kalıyordu.*
   Kuyrukta iki koşu varken bağlantı gelince ilki gidiyor, ikincisi sunucunun
   30 sn'lik aralığına takılıyordu; serbest oyunda bir sonraki bağlantı
@@ -5233,7 +5241,7 @@ makinede 42 durumun hepsi geçiyordu.
 - CI'nin tam koşusu 27 dk'ydı, sınır 30 dk. Tarayıcı işinin süresi 45 dk
   oldu; iş artık bağımlılıkları da kuruyor (yerel lig sunucusu için).
 
-**Doğrulama.** `pnpm test` 551/551; tip denetimi temiz.
+**Doğrulama.** `pnpm test` 553/553; tip denetimi temiz.
 - `seed.test.ts` (14 test):
   - hesap, gönderim, herkese açık tablo ve kod;
   - en iyisi kalıyor, satırın kimliği aynı, gönderim aralığı; daha kötü
@@ -5249,7 +5257,7 @@ makinede 42 durumun hepsi geçiyordu.
   - haftalık temizlik;
   - sunucunun haftası oyununkiyle aynı;
   - CORS.
-- `client.test.ts` (14 test): oyunun istemcisi gerçek sunucuya karşı
+- `client.test.ts` (16 test): oyunun istemcisi gerçek sunucuya karşı
   (bellekte SQLite):
   - sunucuyu tanıma, eski sunucu, bağlantısızlık;
   - ilk gönderimde hesap, satır ve kodun ayrı inmesi, başka tarayıcı;
@@ -5260,7 +5268,8 @@ makinede 42 durumun hepsi geçiyordu.
   - yazılamayan tarayıcı deposu, bağlantısız yeniden açılışta son tablo, iki
     sekmenin aynı anda ilk gönderimi, bağlantısız açılışta bekleyen gönderim,
     bırakılan tablonun dinleyicisi, silmeyle yarışan gönderim, aralığa
-    takılan koşunun yeniden denenmesi (Codex #80).
+    takılan koşunun yeniden denenmesi, bellekteki hesabın yeni tabloya
+    geçmesi, silmede öbür sekmenin hesabı (Codex #80).
 - `deploy.test.ts` (1 test): Worker paketine giren her dosya dağıtımı
   tetikliyor (Codex #80).
 - `leagueVerify.test.ts` (2 test): önbellek anahtarı kodun özetiyle; kod
@@ -5384,7 +5393,7 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi). Senaryo şehirlerinde gün 3–17 ms (`pnpm dayperf`, Tur 43) |
-| Birim testi | **551 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de) |
+| Birim testi | **553 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de) |
 | Denge testi | **331 kontrol, hepsi geçiyor** (25 bölüm, süreleriyle; ~13 dk) |
 | Tarayıcı testi | **521 kontrol, hepsi geçiyor**, 0 konsol hatası (~40 dk); duman koşusu 132 (~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + paket bütçesi (Tur 46; Tur 48'den beri hizmet çalışanı ve manifest de) + duman oynanışı |

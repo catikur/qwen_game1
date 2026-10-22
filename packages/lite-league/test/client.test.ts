@@ -462,3 +462,74 @@ test('istemci: gönderim aralığına takılan bekleyen koşu sonra kendiliğind
   assert.equal(storage.getItem('capitalforge.league.pending'), '[]');
   board.close?.();
 });
+
+test('istemci: yazılamayan depoda bellekteki hesap ve kuyruk yeni oyun ekranının tablosuna da geçiyor (Codex #80)', async () => {
+  const db = memoryDb();
+  const net: Net = { online: true, old: false, now: THURSDAY, requests: [] };
+  const full = {
+    getItem: () => null,
+    setItem: () => {
+      throw new DOMException('dolu', 'QuotaExceededError');
+    },
+    removeItem: () => undefined,
+  };
+  const online = new EventTarget();
+  const fetcher = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const request = new Request(input, init);
+    net.requests.push(`${request.method} ${new globalThis.URL(request.url).pathname}`);
+    if (!net.online) throw new TypeError('fetch failed');
+    return handle(request, db, net.now);
+  }) as typeof fetch;
+  const open = () => createServerBoard({ url: URL, fetch: fetcher, storage: full as never, online, pollMs: 2 ** 30 });
+
+  const first = open();
+  assert.equal(await first.probe(), 'ok');
+  assert.equal(await first.submit(entryOf(run())), 'saved');
+  net.online = false;
+  net.now += SEED.minGapMs;
+  assert.equal(await first.submit(entryOf(run({ score: 2_000_000 }))), 'queued');
+  // Menüye dönüldü: tablo bırakılıyor, yeni oyun ekranı yeni tablo kuruyor.
+  first.close?.();
+  const second = open();
+  assert.equal(second.account!.exists(), true, 'hesap kaybolmadı');
+  net.online = true;
+  assert.equal(await second.probe(), 'ok');
+  const best = async () => (await (await handle(new Request(`${URL}/v1/seed/weeks/${WEEK}`), db, net.now)).json()).entries[0]?.score as number;
+  for (let i = 0; i < 50 && (await best()) !== 2_000_000; i++) await new Promise((resolve) => setTimeout(resolve, 10));
+  assert.equal(await best(), 2_000_000, 'bekleyen koşu yeni tabloyla gitti');
+  assert.equal(net.requests.filter((line) => line === 'POST /v1/seed/players').length, 1, 'tek hesap');
+  second.close?.();
+});
+
+test('istemci: hesap silinirken öbür sekme yeni hesap açtıysa onunki silinmiyor (Codex #80)', async () => {
+  const db = memoryDb();
+  const net: Net = { online: true, old: false, now: THURSDAY, requests: [] };
+  const storage = memoryStorage();
+  let hold: Promise<void> | null = null;
+  let release = () => {};
+  let deleting = () => {};
+  const fetcher = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const request = new Request(input, init);
+    if (request.method === 'DELETE' && hold) {
+      deleting();
+      await hold;
+    }
+    return handle(request, db, net.now);
+  }) as typeof fetch;
+  const board = createServerBoard({ url: URL, fetch: fetcher, storage, online: new EventTarget(), pollMs: 2 ** 30 });
+  assert.equal(await board.probe(), 'ok');
+  assert.equal(await board.submit(entryOf(run())), 'saved');
+
+  // Silme yolda; öbür sekme bu arada kendi hesabını açıp depoya yazıyor.
+  hold = new Promise((resolve) => (release = resolve));
+  const started = new Promise<void>((resolve) => (deleting = resolve));
+  const forgotten = board.account!.forget();
+  await started;
+  const other = { url: URL, id: 'öbür-sekme', token: 'anahtar' };
+  storage.setItem('capitalforge.league.account', JSON.stringify(other));
+  storage.setItem('capitalforge.league.pending', JSON.stringify([{ url: URL, weekId: WEEK, code: 'öbür' }]));
+  release();
+  assert.equal(await forgotten, true);
+  assert.deepEqual(JSON.parse(storage.getItem('capitalforge.league.account')!), other, 'öbür sekmenin hesabı yerinde');
+  assert.equal(JSON.parse(storage.getItem('capitalforge.league.pending')!).length, 1, 'öbür sekmenin kuyruğu yerinde');
+});
