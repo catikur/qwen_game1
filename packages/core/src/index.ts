@@ -16,7 +16,21 @@ export { generateProfile } from './systems/entrants';
 export * from './engine';
 export * from './agenda';
 export * from './league';
-export { LEAGUE_DAYS, LEAGUE_SAMPLE_DAYS, leagueActive, leagueSeed, leagueWeekId } from './systems/league';
+export {
+  LEAGUE_DAILY_DAYS,
+  LEAGUE_DAYS,
+  LEAGUE_RULES_FROM,
+  LEAGUE_RULE_ROTATION,
+  LEAGUE_SAMPLE_DAYS,
+  leagueActive,
+  leagueBoardKind,
+  leagueDayId,
+  leagueLength,
+  leagueRule,
+  leagueSeed,
+  leagueWeekId,
+} from './systems/league';
+export type { LeagueBoardKind } from './systems/league';
 export * from './scenario';
 export * from './career';
 export {
