@@ -123,5 +123,7 @@ yazılan.
 |---|---|---|
 | **Platform:** yalnız web mi, masaüstü ve Steam de mi? | Faz 5'in kapsamı | yalnız web |
 | **Sunucu:** Lite'ın lig sunucusu ana oyuna açılsın mı? Yayın ve maliyet kullanıcının hesabında. | Faz 2 | **evet** (Tur 51'den önce kullanıcı açtı) |
+| **Canlı güncelleme:** Tur 51'in sunucusu canlıya ne zaman? Tablo doğrulanmamış beyanla kesiliyor (Codex #80). | Faz 2 | **Tur 52 birleşince** (kullanıcı, Tur 51) |
+| **Sunucuda doğrulama planı:** tekrar koşu başına 0,7–1,8 sn CPU; Workers'ın ücretsiz katmanı istek başına 10 ms. | Tur 52 | **Workers Paid, aylık 5 $** (kullanıcı, Tur 51) |
 | **Gelir modeli:** tamamen ücretsiz mi, ücretsiz web + ücretli masaüstü mü? | Faz 5 | ücretsiz |
 | **Lite:** App Store yayını ve canlı işletim bu haritanın neresinde? | sıra | ayrı hat, bu haritanın dışında |
