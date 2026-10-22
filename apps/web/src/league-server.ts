@@ -211,16 +211,20 @@ export function createServerBoard(options: ServerBoardOptions): ServerBoard {
     if (typeof after === 'number' && after > 0) retryHint = Math.max(retryHint, after * 1000);
   }
 
-  function send(code: string): Promise<SendOutcome> {
+  /** `owner`: bekleyen koşunun hesabı; yalnız onunla gidiyor. */
+  function send(code: string, owner?: string): Promise<SendOutcome> {
     if (forgetting) return Promise.resolve('error');
-    const promise = sendOnce(code);
+    const promise = sendOnce(code, false, owner);
     inflight.add(promise);
     const done = () => void inflight.delete(promise);
     void promise.then(done, done);
     return promise;
   }
 
-  async function sendOnce(code: string, retried = false): Promise<SendOutcome> {
+  async function sendOnce(code: string, retried = false, owner?: string): Promise<SendOutcome> {
+    // Bekleyen koşu yalnız kuyruğa girdiği hesapla: o hesap gittiyse ya da
+    // değiştiyse koşu düşüyor, başka hesapla yeniden yayımlanmıyor (Codex #80).
+    if (owner !== undefined && account()?.id !== owner) return 'error';
     const me = await ensureAccount();
     if (typeof me === 'string') return me;
     const reply = await call('/v1/seed/runs', { method: 'POST', body: { code }, auth: me });
@@ -234,7 +238,7 @@ export function createServerBoard(options: ServerBoardOptions): ServerBoard {
       // başka bir hesapsa (öbür sekme açtı) ona dokunulmuyor. Hesap bu sekmede
       // siliniyorsa yenisi açılmıyor.
       if (account()?.id === me.id) write(ACCOUNT_KEY, null);
-      return retried || forgetting ? 'error' : sendOnce(code, true);
+      return retried || forgetting || owner !== undefined ? 'error' : sendOnce(code, true);
     }
     if (reply.status === 400 && reply.body.error === 'name-blocked') return 'name-blocked';
     if (reply.status === 409 && reply.body.error === 'week') return 'closed';
@@ -290,7 +294,7 @@ export function createServerBoard(options: ServerBoardOptions): ServerBoard {
         for (const item of pending()) {
           // Hesap silinirken kuyruk olduğu gibi kalıyor (silme başarısız olursa da).
           if (forgetting) return;
-          const outcome = await send(item.code);
+          const outcome = await send(item.code, item.account);
           if (outcome === 'busy') busy = true;
           if (outcome === 'offline' || outcome === 'busy') continue;
           write(PENDING_KEY, JSON.stringify(pending().filter((other) => other.code !== item.code)));

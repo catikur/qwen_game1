@@ -720,3 +720,30 @@ test('istemci: hesap açma da yoğunluğa takılırsa sunucunun söylediği sür
   for (let i = 0; i < 60 && (await total()) === 0; i++) await new Promise((resolve) => setTimeout(resolve, 50));
   assert.equal(await total(), 1, 'hesap açıldı, koşu gitti');
 });
+
+test('istemci: bekleyen koşu yalnız kendi hesabıyla gidiyor; hesap silindiyse yeni hesapla yeniden yayımlanmıyor (Codex #80)', async () => {
+  const db = memoryDb();
+  const net: Net = { online: true, old: false, now: THURSDAY, requests: [] };
+  const storage = memoryStorage();
+  const { board, online } = client(db, net, storage);
+  subscriptions.push(() => board.close?.());
+  assert.equal(await board.probe(), 'ok');
+  assert.equal(await board.submit(entryOf(run())), 'saved');
+  const a = JSON.parse(storage.getItem('capitalforge.league.account')!) as { id: string; token: string };
+  net.now += SEED.minGapMs;
+  net.online = false;
+  assert.equal(await board.submit(entryOf(run({ score: 2_000_000 }))), 'queued');
+
+  // Öbür sekme hesabı sunucuda sildi; cevabı daha o sekmeye ulaşmadı, depo yerinde.
+  const deleted = await handle(new Request(`${URL}/v1/players/me`, { method: 'DELETE', headers: { authorization: `Bearer ${a.id}.${a.token}` } }), db, net.now);
+  assert.equal(deleted.status, 200);
+  const before = net.requests.length;
+  net.online = true;
+  online.dispatchEvent(new Event('online'));
+  for (let i = 0; i < 50 && JSON.parse(storage.getItem('capitalforge.league.pending') ?? '[]').length > 0; i++) await new Promise((resolve) => setTimeout(resolve, 10));
+  await new Promise((resolve) => setTimeout(resolve, 50));
+  const table = (await (await handle(new Request(`${URL}/v1/seed/weeks/${WEEK}`), db, net.now)).json()) as { total: number };
+  assert.equal(table.total, 0, 'silinen hesabın koşusu yeni hesapla yayımlanmadı');
+  assert.equal(net.requests.slice(before).filter((line) => line === 'POST /v1/seed/players').length, 0, 'yeni hesap açılmadı');
+  assert.deepEqual(JSON.parse(storage.getItem('capitalforge.league.pending') ?? '[]'), [], 'koşu kuyruktan düştü');
+});

@@ -33,7 +33,9 @@ export function offensiveName(name: string): boolean {
   // Büyük "I" Türkçede "ı", İngilizcede "i": iki okuma da denetleniyor. Yalnız
   // Türkçe okumayla "SHIT", "DICK" geçiyordu; her "ı"yı "i" saymak da
   // "Sıkışık"ı engellerdi (Codex #80).
-  return [name, name.replace(/I/g, 'i')].some(blocked);
+  // Görünüşte aynı uyumluluk harfleri ("ＦＵＣＫ", "𝐅𝐔𝐂𝐊") önce sade biçime (NFKC; Codex #80).
+  const plain = name.normalize('NFKC');
+  return [plain, plain.replace(/I/g, 'i')].some(blocked);
 }
 
 function blocked(name: string): boolean {
