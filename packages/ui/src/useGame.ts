@@ -92,8 +92,15 @@ export interface LeagueEntry {
   ceoId: string | null;
   score: number;
   curve: number[];
-  /** Doğrulama için koşu kodu (encodeRun). */
+  /**
+   * Doğrulama için koşu kodu (encodeRun). Lig sunucusunun tablosunda boş:
+   * kod ayrı iniyor (`loadCode`), satırda yalnızca özeti var (`codeKey`).
+   */
   code: string;
+  /** Kodun değişmez özeti (sunucu verdiyse); doğrulama önbelleğinin anahtarı. */
+  codeKey?: string;
+  /** Kodu indir (lig sunucusu): doğrulama kuyruğu sırası gelince çağırıyor. */
+  loadCode?: () => Promise<string>;
   submittedAt: string;
   /** Bu tarayıcının / bu kişinin koşusu mu. */
   mine?: boolean;
@@ -101,17 +108,32 @@ export interface LeagueEntry {
   who?: string;
 }
 
-export type LeagueSubmitOutcome = 'saved' | 'kept-better' | 'error';
+/**
+ * Gönderimin sonucu. Lig sunucusunun kendi cevapları: bağlantı yok, gönderim
+ * bekliyor (`queued`); şirket adı herkese açık tabloya giremiyor
+ * (`name-blocked`); haftanın ligi kapandı (`closed`); sunucu yoğun (`busy`).
+ */
+export type LeagueSubmitOutcome = 'saved' | 'kept-better' | 'error' | 'queued' | 'name-blocked' | 'closed' | 'busy';
+
+/** Tablonun durumu: sunucuya ulaşılamıyorsa son görülen tablo gösteriliyor. */
+export interface LeagueFeedInfo {
+  offline?: boolean;
+}
 
 /**
  * Lig tablosu sözleşmesi. Arayüz nerede saklandığını bilmiyor: paylaşılan
- * sayfada herkesin gördüğü bir tablo, yerelde yalnızca bu tarayıcının
- * koşuları. `kind` bunu oyuncuya dürüstçe söylemek için var.
+ * sayfada herkesin gördüğü bir tablo, lig sunucusunda herkese açık tablo
+ * (Tur 51), yerelde yalnızca bu tarayıcının koşuları. `kind` bunu oyuncuya
+ * dürüstçe söylemek için var.
  */
 export interface LeagueBoard {
-  kind: 'shared' | 'local';
-  subscribe(weekId: string, onChange: (entries: LeagueEntry[]) => void): () => void;
-  submit(entry: Omit<LeagueEntry, 'id' | 'mine' | 'who'>): Promise<LeagueSubmitOutcome>;
+  kind: 'shared' | 'local' | 'server';
+  subscribe(weekId: string, onChange: (entries: LeagueEntry[], info?: LeagueFeedInfo) => void): () => void;
+  submit(entry: Omit<LeagueEntry, 'id' | 'mine' | 'who' | 'codeKey' | 'loadCode'>): Promise<LeagueSubmitOutcome>;
+  /** Lig sunucusu: bu tarayıcının anonim hesabı (var mı; hesabı ve koşularını sil). */
+  account?: { exists(): boolean; forget(): Promise<boolean> };
+  /** Tablo bırakılınca (oyun ekranı kapandı): kalıcı dinleyiciler kalkıyor. */
+  close?(): void;
 }
 
 export interface FocusTarget {

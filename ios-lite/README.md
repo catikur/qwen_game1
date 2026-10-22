@@ -198,7 +198,7 @@ Kod değişince sunucuyu güncellemek için aşağıdaki A ya da B.
 
 Kod değiştikçe 1 ve 3 tekrarlanıyor.
 
-**B · Otomatik dağıtım (her `main` değişikliğinde):**
+**B · CI'den dağıtım (elle başlatılan, isteğe bağlı her `main` değişikliğinde):**
 
 1. **My Profile → API Tokens → Create Token** aç:
    - **Edit Cloudflare Workers** şablonunu seç;
@@ -208,6 +208,11 @@ Kod değiştikçe 1 ve 3 tekrarlanıyor.
    - `CLOUDFLARE_ACCOUNT_ID`: Workers & Pages sayfasının sağındaki **Account ID**.
 3. **Actions → Lite lig sunucusu → Run workflow**. İş, var olan veritabanını adından
    buluyor.
+4. İsteğe bağlı: `main`'e her birleşmede dağıtım için depo değişkeni
+   `LITE_LEAGUE_AUTODEPLOY` = `true` (**Settings → Secrets and variables →
+   Actions → Variables**). Varsayılan kapalı: canlıya geçiş senin kararın
+   (Tur 51, Codex #80). Sırlar olsa da değişken yoksa birleşme yalnız denetimi
+   koşturuyor, dağıtmıyor.
 
 ### Game Center (ücretli Apple Developer üyeliği)
 
@@ -293,4 +298,33 @@ dağıtım işi ya da D1 konsolunda `schema.sql`'in L10 bölümü). `TURNSTILE_S
 sırrını şimdilik **tanımlama**: sunucu tarafı hazır ama web ve Android
 istemcisinde doğrulama kutusu henüz yok; sır tanımlanırsa yeni web ve Android
 hesapları açılamaz (bot sorunu çıkarsa istemci tarafı eklenecek).
+
+**Sunucuyu güncellerken (Tur 51, ana oyunun Tohum Ligi):** GitHub Pages'teki
+CapitalForge de lig tablosunu bu sunucudan okuyor (`src/seed.ts`). Canlı
+sunucu bu sürüme gelene kadar oyun kendi yerel tablosuyla açılıyor; bir şey
+bozulmuyor.
+
+**Öneri: Tur 52'yi bekle.** Bu sürümde skoru sunucu değil, her tarayıcı
+yeniden oynayarak doğruluyor. Tablo en iyi 50 satırı beyan edilen skora göre
+seçiyor. Biri 50 hesapla şişirilmiş koşu gönderirse tarayıcılar onları
+reddeder ama dürüst satırlar tabloya giremez (Codex #80). Tur 52'de sunucu
+koşuyu gönderimde yeniden oynatıyor; tabloya yalnız doğrulanmış skor giriyor.
+
+Açmak için:
+
+1. Önce şema. **Storage & Databases → D1 → capitalforge-lite-league →
+   Console**: `schema.sql`'in tamamını çalıştır. Her tablo `IF NOT EXISTS`;
+   var olanlar değişmiyor, eski kod yeni tablolarla sorunsuz çalışıyor.
+   Konsol toplu ifade almazsa son üç bölüm (`seed_runs`, `seed_gaps` ve
+   `seed_limits`) tek tek.
+2. Sonra kod. `pnpm lite:league-bundle` → paketi paneldeki Worker kodunun
+   yerine yapıştır, **Deploy** (A'nın 1. ve 3. adımı). Paket artık ana oyunun
+   koşu çözücüsünü de taşıyor (~265 KB, sıkıştırılmış ~72 KB). Sıra önemli:
+   yeni kod sağlık ucunda hemen `"seed":1` diyor ve oyun sunucu tablosuna
+   geçiyor; tablolar yoksa istekleri düşerdi (Codex #80).
+3. Denetim: `/v1/health` cevabında `"seed":1`. Pages'teki oyun sonraki
+   açılışta lig sunucusunun tablosuna geçiyor.
+
+B kuruluysa bu üç adımı **Run workflow** ile CI yapıyor; `main`'e
+birleşmek kendiliğinden dağıtmıyor (4. adımdaki değişken açılmadıkça).
 

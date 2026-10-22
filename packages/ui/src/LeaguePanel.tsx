@@ -1,10 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { ReactElement } from 'react';
 import { CEO_BY_ID } from '@capital/content';
 import { LEAGUE_SAMPLE_DAYS, encodeRun, formatMoney, getPlayer, runFromState, verifyRun } from '@capital/core';
 import type { GameState, RunRejection, RunVerdict } from '@capital/core';
 import { useGame, useGameState } from './useGame';
-import type { LeagueBoard, LeagueEntry } from './useGame';
+import type { LeagueBoard, LeagueEntry, LeagueFeedInfo, LeagueSubmitOutcome } from './useGame';
 import { progressFor, useLeagueStanding, verdictFor } from './leagueVerify';
 import { t } from './i18n';
 import { CareerRunLine } from './CareerPanel';
@@ -47,28 +47,33 @@ function writeGhostId(id: string | null): void {
  * her teslimatta iki ad çözümü koşuyordu. Tablo + hafta başına bir
  * abonelik açılıyor, okuyanlar onu paylaşıyor, son okuyan gidince kapanıyor.
  */
-interface SharedFeed {
+interface Feed {
   entries: LeagueEntry[];
-  listeners: Set<(entries: LeagueEntry[]) => void>;
+  info: LeagueFeedInfo;
+}
+interface SharedFeed extends Feed {
+  listeners: Set<(feed: Feed) => void>;
   stop: () => void;
 }
 const feeds = new Map<LeagueBoard, Map<string, SharedFeed>>();
 
-function joinFeed(board: LeagueBoard, weekId: string, listener: (entries: LeagueEntry[]) => void): () => void {
+function joinFeed(board: LeagueBoard, weekId: string, listener: (feed: Feed) => void): () => void {
   let byWeek = feeds.get(board);
   if (!byWeek) feeds.set(board, (byWeek = new Map()));
   let feed = byWeek.get(weekId);
   if (!feed) {
-    const created: SharedFeed = { entries: [], listeners: new Set(), stop: () => undefined };
-    created.stop = board.subscribe(weekId, (next) => {
+    const created: SharedFeed = { entries: [], info: {}, listeners: new Set(), stop: () => undefined };
+    created.stop = board.subscribe(weekId, (next, info) => {
       created.entries = [...next].sort((a, b) => b.score - a.score);
-      created.listeners.forEach((notify) => notify(created.entries));
+      created.info = info ?? {};
+      const snapshot = { entries: created.entries, info: created.info };
+      created.listeners.forEach((notify) => notify(snapshot));
     });
     byWeek.set(weekId, created);
     feed = created;
   }
   feed.listeners.add(listener);
-  listener(feed.entries);
+  listener({ entries: feed.entries, info: feed.info });
   return () => {
     feed!.listeners.delete(listener);
     if (feed!.listeners.size === 0) {
@@ -78,15 +83,22 @@ function joinFeed(board: LeagueBoard, weekId: string, listener: (entries: League
   };
 }
 
-/** Bu haftanın tablosu (paylaşılan tek abonelikten). */
-export function useLeagueEntries(weekId: string | null): LeagueEntry[] {
+const EMPTY_FEED: Feed = { entries: [], info: {} };
+
+/** Bu haftanın tablosu ve durumu (paylaşılan tek abonelikten). */
+function useLeagueFeed(weekId: string | null): Feed {
   const { league } = useGame();
-  const [entries, setEntries] = useState<LeagueEntry[]>([]);
+  const [feed, setFeed] = useState<Feed>(EMPTY_FEED);
   useEffect(() => {
     if (!weekId) return;
-    return joinFeed(league, weekId, setEntries);
+    return joinFeed(league, weekId, setFeed);
   }, [league, weekId]);
-  return entries;
+  return feed;
+}
+
+/** Bu haftanın tablosu (paylaşılan tek abonelikten). */
+export function useLeagueEntries(weekId: string | null): LeagueEntry[] {
+  return useLeagueFeed(weekId).entries;
 }
 
 /**
@@ -190,6 +202,48 @@ function usePasteVerifier() {
   return { state, verify };
 }
 
+const BOARD_TEXT: Record<LeagueBoard['kind'], MessageKey> = {
+  shared: 'app.league.board.shared',
+  server: 'app.league.board.server',
+  local: 'app.league.board.local',
+};
+
+/**
+ * Lig sunucusundaki anonim hesap: bu tarayıcıda bir anahtar. Silmek iki
+ * adımda (yanlışlıkla basılmasın); hesap ve bütün koşuları sunucudan gidiyor.
+ */
+function LeagueAccount({ board }: { board: LeagueBoard }): ReactElement {
+  const { toast } = useGame();
+  const [confirm, setConfirm] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const forget = async () => {
+    setBusy(true);
+    const ok = (await board.account?.forget()) ?? false;
+    setBusy(false);
+    setConfirm(false);
+    toast(ok ? t('app.league.account.deleted') : t('app.league.account.deleteFailed'), ok ? 'good' : 'bad');
+  };
+  return (
+    <section className="league-account" data-league-account>
+      <p className="muted">{t('app.league.account.note')}</p>
+      {confirm ? (
+        <div className="manual-actions">
+          <button type="button" className="danger" disabled={busy} onClick={() => void forget()} data-league-forget="confirm">
+            {t('app.league.account.confirm')}
+          </button>
+          <button type="button" className="ghost" disabled={busy} onClick={() => setConfirm(false)}>
+            {t('app.league.account.cancel')}
+          </button>
+        </div>
+      ) : (
+        <button type="button" className="ghost" onClick={() => setConfirm(true)} data-league-forget="ask">
+          {t('app.league.account.delete')}
+        </button>
+      )}
+    </section>
+  );
+}
+
 function EntryWho({ entry, name, ceoId }: { entry: LeagueEntry; name: string; ceoId: string | null }): ReactElement {
   return (
     <span className="league-who">
@@ -206,7 +260,7 @@ export function LeaguePanel(): ReactElement {
   const state = useGameState();
   const { league: board } = useGame();
   const weekId = state.league?.weekId ?? null;
-  const entries = useLeagueEntries(weekId);
+  const { entries, info } = useLeagueFeed(weekId);
   // Panel açıkken bu tarayıcı her satırı yeniden oynatıyor.
   const standing = useLeagueStanding(entries, state.league !== undefined);
   const [ghostId, setGhostId] = useState(readGhostId);
@@ -241,13 +295,15 @@ export function LeaguePanel(): ReactElement {
 
   return (
     <div className="league">
-      <p className="muted">
-        {t('app.league.intro', { weekId: weekId ?? '', endDay: state.league.endDay })}{' '}
-        {board.kind === 'shared'
-          ? t('app.league.board.shared')
-          : t('app.league.board.local')}{' '}
+      <p className="muted" data-league-board={board.kind}>
+        {t('app.league.intro', { weekId: weekId ?? '', endDay: state.league.endDay })} {t(BOARD_TEXT[board.kind])}{' '}
         {t('app.league.trust')}
       </p>
+      {info.offline && (
+        <p className="league-offline" data-league-offline role="status">
+          {t('app.league.board.offline')}
+        </p>
+      )}
 
       <section className="league-compare">
         <Sparks mine={mine} ghost={ghost?.curve ?? null} slots={state.league.endDay / LEAGUE_SAMPLE_DAYS} />
@@ -342,6 +398,8 @@ export function LeaguePanel(): ReactElement {
         )}
       </section>
 
+      {board.account?.exists() && <LeagueAccount board={board} />}
+
       <section className="league-paste">
         <h3>{t('app.league.paste.title')}</h3>
         <textarea
@@ -369,14 +427,50 @@ export function LeaguePanel(): ReactElement {
   );
 }
 
+const SUBMIT_LABEL: Record<LeagueBoard['kind'], MessageKey> = {
+  shared: 'app.league.result.submitShared',
+  server: 'app.league.result.submitServer',
+  local: 'app.league.result.submitLocal',
+};
+
+/** Yeniden denenebilen sonuçlar: düğme açık kalıyor. */
+const RETRYABLE: ReadonlySet<LeagueSubmitOutcome> = new Set(['error', 'busy']);
+
+function submitText(outcome: LeagueSubmitOutcome, kind: LeagueBoard['kind']): string {
+  switch (outcome) {
+    case 'saved':
+      return t(kind === 'local' ? 'app.league.submit.savedLocal' : kind === 'server' ? 'app.league.submit.savedServer' : 'app.league.submit.savedShared');
+    case 'kept-better':
+      return t('app.league.submit.keptBetter');
+    case 'queued':
+      return t('app.league.submit.queued');
+    case 'name-blocked':
+      return t('app.league.submit.nameBlocked');
+    case 'closed':
+      return t('app.league.submit.closed');
+    case 'busy':
+      return t('app.league.submit.busy');
+    case 'error':
+      return t('app.league.submit.error');
+  }
+}
+
 /**
  * Lig sonu ekranı: skor, tabloya gönderme ve koşu kodu.
  */
 export function LeagueResultScreen({ onNewGame }: { onNewGame: () => void }): ReactElement | null {
   const state = useGameState();
   const { run, league: board, toast, setView } = useGame();
-  const [sent, setSent] = useState<string | null>(null);
+  const [sent, setSent] = useState<{ text: string; final: boolean } | null>(null);
+  const [sending, setSending] = useState(false);
   const [code, setCode] = useState<string | null>(null);
+  // Tablo değişince (ör. yerel tablodan sunucuya geçildi) gönderim yeniden açık: koşu yeni tabloya da gidebilsin (Codex #80).
+  const current = useRef(board);
+  useEffect(() => {
+    current.current = board;
+    setSent(null);
+    setSending(false);
+  }, [board]);
   const league = state.league;
   if (!league || league.finishedDay === undefined || league.resultSeen) return null;
 
@@ -385,7 +479,9 @@ export function LeagueResultScreen({ onNewGame }: { onNewGame: () => void }): Re
 
   const submit = async () => {
     if (!leagueRun) return;
-    const outcome = await board.submit({
+    setSending(true);
+    const target = board;
+    const outcome = await target.submit({
       weekId: leagueRun.weekId,
       companyName: leagueRun.companyName,
       ceoId: leagueRun.ceoId,
@@ -394,13 +490,12 @@ export function LeagueResultScreen({ onNewGame }: { onNewGame: () => void }): Re
       code: encodeRun(leagueRun),
       submittedAt: new Date().toISOString(),
     });
-    const text: Record<typeof outcome, string> = {
-      saved: board.kind === 'shared' ? t('app.league.submit.savedShared') : t('app.league.submit.savedLocal'),
-      'kept-better': t('app.league.submit.keptBetter'),
-      error: t('app.league.submit.error'),
-    };
-    setSent(text[outcome]);
-    toast(text[outcome], outcome === 'error' ? 'bad' : 'good');
+    // Gönderim sürerken tablo değiştiyse sonucu eski tablonun: yeni tablonun düğmesi açık kalıyor.
+    if (current.current !== target) return;
+    setSending(false);
+    const text = submitText(outcome, target.kind);
+    setSent({ text, final: !RETRYABLE.has(outcome) });
+    toast(text, outcome === 'saved' || outcome === 'kept-better' || outcome === 'queued' ? 'good' : 'bad');
   };
 
   const copy = async () => {
@@ -426,13 +521,14 @@ export function LeagueResultScreen({ onNewGame }: { onNewGame: () => void }): Re
             moves: state.commandLog?.length ?? 0,
           })}
         </p>
-        {sent && <p>{sent}</p>}
+        {sent && <p data-league-sent>{sent.text}</p>}
+        {board.kind === 'server' && !lost && !sent?.final && <p className="muted league-server-note">{t('app.league.result.serverNote')}</p>}
         {code && <textarea className="manual-text" readOnly value={code} onFocus={(e) => e.target.select()} aria-label={t('app.league.codeLabel')} />}
         <CareerRunLine state={state} />
         <div className="gameover-actions">
           {!lost && (
-            <button type="button" className="primary" onClick={() => void submit()} disabled={sent !== null}>
-              {board.kind === 'shared' ? t('app.league.result.submitShared') : t('app.league.result.submitLocal')}
+            <button type="button" className="primary" onClick={() => void submit()} disabled={sending || sent?.final === true}>
+              {t(SUBMIT_LABEL[board.kind])}
             </button>
           )}
           <button type="button" className="ghost-invert" onClick={() => void copy()}>

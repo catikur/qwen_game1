@@ -48,16 +48,19 @@ jobs:
     name: Tarayıcıda oynanış
     needs: check
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # Tam koşu Tur 50'de 27 dk; Tur 51 lig sunucusu bölümünü (~4 dk) ve
+    # rıhtımın yuvarlanan yazıda denemesini ekledi.
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v5
+      # Tur 51: tarayıcı testi yerel lig sunucusunu açıyor (TypeScript,
+      # esbuild'le derleniyor); bağımlılıklar gerekiyor.
+      - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v5
         with:
           node-version: 22
-          # v5, package.json'daki packageManager alanını görünce pnpm
-          # önbelleğini kendiliğinden açıyor; bu iş bağımlılık kurmuyor ve
-          # pnpm'i hiç kurmadığı için adım "pnpm bulunamadı" diye düşüyordu.
-          package-manager-cache: false
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
       - uses: actions/download-artifact@v5
         with:
           name: web-dist

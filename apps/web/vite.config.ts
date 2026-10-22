@@ -88,7 +88,12 @@ export default defineConfig({
   // Simgeler ve manifest `public/`'te; tek dosyalık pakete girmiyorlar.
   publicDir: single ? false : 'public',
   // Hizmet çalışanı yalnız bölünmüş pakette kaydediliyor (apps/web/src/pwa.ts).
-  define: { __CF_SERVICE_WORKER__: JSON.stringify(!single) },
+  // Lig sunucusu (Tur 51): yalnız verilince (Pages, `.github/workflows/pages.yml`).
+  // Varsayılan boş: yerel derleme ve testler canlı sunucuya gitmiyor.
+  define: {
+    __CF_SERVICE_WORKER__: JSON.stringify(!single),
+    __LEAGUE_URL__: JSON.stringify(single ? '' : (process.env.VITE_LEAGUE_URL ?? '')),
+  },
   server: { port: 5173, host: '127.0.0.1' },
   build: {
     target: 'es2022',

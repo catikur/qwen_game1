@@ -38,8 +38,14 @@ jobs:
       - run: pnpm install --frozen-lockfile
       # Pages oyunu depo adının altında sunuyor (/qwen_game1/); varlık
       # yolları o önekle yazılmalı. Yerel derleme ve CI kökte kalıyor.
+      # Tohum Ligi'nin tablosu lig sunucusunda (Tur 51): Lite ile aynı adres,
+      # `ios-lite/App/project.yml` → `LiteLeagueURL`. Yalnız burada veriliyor;
+      # yerel derleme ve testler canlı sunucuya gitmiyor.
       - name: Alt yolla derleme
-        run: pnpm --filter @capital/web exec vite build --base=/${{ github.event.repository.name }}/
+        run: |
+          export VITE_LEAGUE_URL=$(sed -n 's/^ *LiteLeagueURL: *"\(.*\)"/\1/p' ios-lite/App/project.yml)
+          echo "Lig sunucusu: ${VITE_LEAGUE_URL:-yok}"
+          pnpm --filter @capital/web exec vite build --base=/${{ github.event.repository.name }}/
       # CapitalForge Lite web sürümü /lite/ altında (göreli yollarla derleniyor);
       # gizlilik ve destek sayfaları da onun paketinde.
       - name: Lite web sürümü

@@ -4723,6 +4723,36 @@ button.icon {
   align-items: center;
 }
 
+/* Lig sunucusu (Tur 51): bağlantı yokken son görülen tablo; anonim hesap. */
+.league-offline {
+  margin: 0;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px dashed var(--tile-edge);
+  font-size: calc(12px * var(--text-scale));
+}
+
+.league-account {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+
+.league-account p {
+  margin: 0;
+  flex: 1 1 260px;
+}
+
+.league-account button.danger {
+  border-color: var(--bad);
+  color: var(--bad);
+}
+
+.league-server-note {
+  font-size: calc(12px * var(--text-scale));
+}
+
 .league-final {
   font-family: var(--font-display);
   font-size: calc(28px * var(--text-scale));

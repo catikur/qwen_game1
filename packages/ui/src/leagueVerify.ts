@@ -75,10 +75,28 @@ function notify(): void {
   listeners.forEach((listener) => listener());
 }
 
-/** Satırın önbellek anahtarı: kod ve beyan. */
-function keyOf(entry: LeagueEntry): string {
+/**
+ * Satırın önbellek anahtarı: kod ve beyan. Lig sunucusu kodun özetini
+ * veriyor (`codeKey`, kod ayrı iniyor); öbür tablolarda kodun kendisi var.
+ */
+export function keyOf(entry: LeagueEntry): string {
   const claim = JSON.stringify([entry.weekId, entry.score, entry.companyName, entry.ceoId]);
-  return `${fnv(entry.code)}:${fnv(claim)}`;
+  return `${entry.codeKey ?? fnv(entry.code)}:${fnv(claim)}`;
+}
+
+/**
+ * Satırın kodu: satırda varsa o, yoksa indiriliyor (lig sunucusu). İnmezse
+ * (bağlantı yok) `null`: satır sonuçsuz kalıyor, tablo bir sonraki
+ * tazelenişte yeniden sıraya koyuyor.
+ */
+export async function codeOf(entry: LeagueEntry): Promise<string | null> {
+  if (entry.code) return entry.code;
+  if (!entry.loadCode) return '';
+  try {
+    return await entry.loadCode();
+  } catch {
+    return null;
+  }
 }
 
 /** Bu sürümde geçerli sonuç; iz henüz hesaplanmadıysa ya da sonuç eski sürümdense yok. */
@@ -128,8 +146,14 @@ async function pump(): Promise<void> {
       }
       running = { key, day: 0 };
       notify();
+      const code = await codeOf(entry);
+      if (code === null) {
+        running = null;
+        notify();
+        continue;
+      }
       const verdict = await verifyRun(
-        entry.code,
+        code,
         { weekId: entry.weekId, score: entry.score, companyName: entry.companyName, ceoId: entry.ceoId },
         {
           yieldEvery: 10,

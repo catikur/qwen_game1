@@ -4,7 +4,7 @@
 > `pnpm bench` çıktısından; iddialar `pnpm balance` ve `pnpm playtest`
 > tarafından her koşuda doğrulanıyor.
 >
-> Son güncelleme: şema **v6**, 50 tur (Tur 33 denendi ve geri alındı; Tur 34 eski görünüme canlılık ekledi; Tur 35 arayüzü Lite'ın "Cam & Bulut" diline taşıdı; Tur 36 şehre ayrıntı kattı; Tur 37a geç oyuna yönetim yükü, servet vergisi ve kriz dönemleri getirdi; Tur 37b karar kartlarını ve rakip hikâyelerini ekledi; Tur 37c fırsat balonlarını ve aylık görev panosunu getirdi; Tur 37d canlı pazarı, şehir projesi ihalesini ve rakip konsorsiyumunu getirdi; Tur 38 değerlendirme turuydu: geç oyun hızı, gündem ve haber akışı, zorluk eğrisi; Tur 39a senaryo modunu getirdi: Kurtarma ve Krizin ortasında; Tur 39b Konsorsiyuma karşı, Zincir ustası ve Şehrin sponsoru senaryolarını ekledi; Tur 39c Büyük şehir fethi ve Holding: iki şehir ile listeyi yediye tamamladı; Tur 40 cila ve performans; Tur 41 başarımlar ve kariyer; Tur 42 açılışta gölgelendirici derlemesi; Tur 43 oyun içi akıcılık; Tur 44 değerlendirme turuydu: Türkçe sayı biçimi, yardımın kapsamı, haber akışı; Tur 45 dört ek kural getirdi: Fırtınalı yıllar, Aç gözlü rakipler, Sıkı banka, Kıt arsa; Tur 46 açılış paketini böldü: kurulum ekranı telefonda yarı sürede; Tur 47 tek Ayarlar paneli ve erişilebilirlik getirdi: metin boyutu, renk körlüğüne uygun palet, hareket, ses düzeyleri, pencerelerde klavye; Tur 48 oyunu kurulabilir ve çevrimdışı açılır yaptı, yayından sonra "yeni sürüm hazır" diyor; Tur 49 müziği getirdi: gündüz, gece ve kriz, şehirle birlikte dönüyor; Tur 50 Faz 1'i değerlendirdi ve tanıtım paketini hazırladı). Önümüzdeki işin sırası `docs/YOL-HARITASI.md`'de.
+> Son güncelleme: şema **v6**, 51 tur (Tur 33 denendi ve geri alındı; Tur 34 eski görünüme canlılık ekledi; Tur 35 arayüzü Lite'ın "Cam & Bulut" diline taşıdı; Tur 36 şehre ayrıntı kattı; Tur 37a geç oyuna yönetim yükü, servet vergisi ve kriz dönemleri getirdi; Tur 37b karar kartlarını ve rakip hikâyelerini ekledi; Tur 37c fırsat balonlarını ve aylık görev panosunu getirdi; Tur 37d canlı pazarı, şehir projesi ihalesini ve rakip konsorsiyumunu getirdi; Tur 38 değerlendirme turuydu: geç oyun hızı, gündem ve haber akışı, zorluk eğrisi; Tur 39a senaryo modunu getirdi: Kurtarma ve Krizin ortasında; Tur 39b Konsorsiyuma karşı, Zincir ustası ve Şehrin sponsoru senaryolarını ekledi; Tur 39c Büyük şehir fethi ve Holding: iki şehir ile listeyi yediye tamamladı; Tur 40 cila ve performans; Tur 41 başarımlar ve kariyer; Tur 42 açılışta gölgelendirici derlemesi; Tur 43 oyun içi akıcılık; Tur 44 değerlendirme turuydu: Türkçe sayı biçimi, yardımın kapsamı, haber akışı; Tur 45 dört ek kural getirdi: Fırtınalı yıllar, Aç gözlü rakipler, Sıkı banka, Kıt arsa; Tur 46 açılış paketini böldü: kurulum ekranı telefonda yarı sürede; Tur 47 tek Ayarlar paneli ve erişilebilirlik getirdi: metin boyutu, renk körlüğüne uygun palet, hareket, ses düzeyleri, pencerelerde klavye; Tur 48 oyunu kurulabilir ve çevrimdışı açılır yaptı, yayından sonra "yeni sürüm hazır" diyor; Tur 49 müziği getirdi: gündüz, gece ve kriz, şehirle birlikte dönüyor; Tur 50 Faz 1'i değerlendirdi ve tanıtım paketini hazırladı; Tur 51 Faz 2'yi açtı: Lite'ın lig sunucusu ana oyunun Tohum Ligi koşularını da alıyor, tablo herkese açık). Önümüzdeki işin sırası `docs/YOL-HARITASI.md`'de.
 
 ---
 
@@ -5013,6 +5013,353 @@ Tarayıcı tam koşu 510/510, konsol hatası yok (~30 dk). "Değerlendirme"
 bölümü ~2 dk: 8 sayfa açılışı, her birinde beş ölçüm. Paket bütçesi tamam:
 ana parça 60,4 KB, kurulumun yolu 132,7 KB.
 
+### Tur 51 — Lig sunucusu ana oyuna: Faz 2'nin ilk turu
+
+Kullanıcı Faz 2'den önceki kararı verdi: Lite'ın lig sunucusu ana oyuna
+açılıyor (`docs/YOL-HARITASI.md`). Bu tur sunucuyu ana oyunun koşularını
+alır, oyunu da tabloyu oradan okur hâle getirdi. GitHub Pages'teki oyunun
+Tohum Ligi tablosu artık yalnız o tarayıcının koşuları değil, herkesin
+gördüğü tek tablo.
+
+**Sunucu (`packages/lite-league/src/seed.ts`).** Lite'ın Worker'ı ve D1
+veritabanı; ana oyuna ayrı uçlar:
+
+| Uç | Ne yapıyor |
+|---|---|
+| `POST /v1/seed/players` | anonim hesap: kimlik ve anahtar, ad yok |
+| `POST /v1/seed/runs {code}` | koşuyu gönder; oyuncunun o haftaki en iyisi kalıyor |
+| `GET /v1/seed/weeks/:hafta` | haftanın tablosu, herkese açık; kimlikle gelen kendi satırını görüyor |
+| `GET /v1/seed/codes/:özet` | bir satırın koşu kodu |
+
+- Hesaplar Lite'ınkilerle aynı tabloda (`players`, `tokens`) ama ayrı türde
+  (`capital`). Ana oyunun hesabı Lite'ın hiçbir ucunu, Lite'ın hesabı ana
+  oyunun gönderim ucunu kullanamıyor; hesap silme (`DELETE /v1/players/me`)
+  ikisinde de aynı ve koşuları da siliyor.
+- Gönderim oyunun kendi çözücüsünden geçiyor (`decodeRunChecked`): kod
+  sınırı, komut türleri, gün aralığı, CEO. Parmak izsiz eski kod, kapalı
+  hafta ve herkese gösterilemeyecek şirket adı (Lite'ın küfür süzgeci,
+  denetim karakterleri, yön değiştiren işaretler) reddediliyor.
+- Hafta sunucunun saatiyle. Pazar gecesi başlayıp pazartesi biten koşu
+  kaybolmasın diye geçen hafta 6 saat daha açık. Oyunun haftasıyla
+  sunucununki üç yıl boyunca her 5 saatte bir karşılaştırıldı, aynı.
+- Oyuncu başına haftada tek satır. Yalnız daha iyi skor eskisini
+  değiştiriyor; satırın kimliği aynı kalıyor, seçilen hayalet kopmuyor.
+  Yazım koşullu: aynı anda gelen daha kötü gönderim iyisini ezmiyor.
+- Sınırlar: aynı hesaptan iki gönderim arası 30 sn; IP başına saatte 10
+  hesap ve 30 gönderim. Sayaç IP'nin kendisini değil IP ile saatin özetini
+  tutuyor; bir saatten eskisi her yazımda siliniyor.
+- Tabloda oyuncunun kimliği yok (satırın kendi kimliği var) ve kod yok,
+  yalnız özeti ve boyu. Elli satırın kodu birlikte inseydi telefon
+  megabaytlarca bekleyecekti. Kod özetle adresleniyor, içerik değişmiyor:
+  tarayıcı saklayabiliyor.
+- Eski haftalar 12 hafta sonra haftalık temizlikte gidiyor.
+- Paket 86 KB'tan 265 KB'a çıktı (sıkıştırılmış 72 KB; ücretsiz sınır
+  3 MB): çözücü oyunun çekirdeğiyle geliyor. Açılış 17 ms.
+
+**Güven bu turda nerede.** Sunucu koşuyu yeniden oynatmıyor; o Tur 52'nin
+işi. Sıralamayı hâlâ her tarayıcı kendi tekrarıyla kuruyor (Tur 31). İki
+şey değişti:
+- tablo tek ve herkese açık;
+- "aynı koşuyu kim önce gönderdi" artık satırın kendi beyanı değil,
+  sunucunun saati. Tur 31'in "sunucusuz bir tabloda başka saat yok"
+  sınırı kalktı.
+
+**Bilinen sınır (Codex #80): tablo beyan edilen skorla kesiliyor.** Sunucu
+en iyi 50 satırı beyana göre veriyor. Biri 50 hesapla (IP başına saatte 10)
+şişirilmiş koşu gönderirse tarayıcılar onları reddeder, ama dürüst satırlar
+yanıta hiç girmez. Kesim ne olursa olsun sahte satırları her tarayıcı tek
+tek oynatmak zorunda: bu güven modelinde çözülmüyor. Kökten çözüm Tur 52:
+sunucu gönderimde yeniden oynatıyor, tabloya yalnız doğrulanmış skor
+giriyor. Canlı sunucunun güncellenmesi bu yüzden Tur 52'ye bırakıldı
+(`ios-lite/README.md`).
+- Tekrarın bedeli ölçüldü: 360 günlük koşu Node'da 0,5–1 sn duvar, 0,7–1,8
+  sn CPU. Cloudflare Workers'ın ücretsiz katmanında istek başına CPU sınırı
+  10 ms; sunucuda doğrulama ücretli plan istiyor (Tur 52'nin kararı).
+
+**Oyun (`apps/web/src/league-server.ts`).** Tablonun üçüncü deposu:
+- Paylaşılan sayfada (claude.ai) eskisi gibi barındırıcının deposu.
+  Değilse lig sunucusu ayakta ve bu sürümdeyse onun tablosu (`/v1/health`
+  → `seed`). O da yoksa yerel tablo.
+- Hesap tembel: ilk gönderimde açılıyor, anahtar bu tarayıcıda.
+  Göndermeyen oyuncunun hesabı yok; tabloyu okumak hesap istemiyor.
+- Kod doğrulama sırası gelince iniyor (`loadCode`). Doğrulama önbelleği
+  kodun özetiyle anahtarlanıyor.
+- Bağlantı yoksa gönderim bekliyor ve oyuncuya söyleniyor. Tablo bir
+  sonraki tazelenişte önce onu gönderiyor: bağlantı gelince, sayfa görünür
+  olunca, dakikada bir.
+- Sunucuya ulaşılamıyorsa son görülen tablo, üstünde bir not.
+- Sunucu ilk denemede yoksa yerelde kalmıyor: bağlantı gelince, sayfaya
+  dönünce ve beş dakikada bir yeniden deneniyor.
+- Lig panelinde "Lig hesabımı sil": iki adımda; hesap ve koşular
+  sunucudan, anahtar tarayıcıdan gidiyor.
+- Sonuç ekranı neyin paylaşıldığını yazıyor: şirket adı, CEO ve koşu kodu
+  herkese açık tabloya; ad ya da e-posta yok.
+- Yeni metinler iki dilde. Yeniden denenebilen sonuçta (hata, yoğunluk)
+  gönderim düğmesi açık kalıyor.
+
+**Adres ve canlı sunucu.** Paket lig adresini yalnız Pages'te alıyor
+(`VITE_LEAGUE_URL`, `ios-lite/App/project.yml` → `LiteLeagueURL`).
+Varsayılan boş: yerel derleme, CI ve tarayıcı testi canlı sunucuya hiç
+gitmiyor. Tarayıcı testi yerel sunucuyu test kancasıyla veriyor
+(`window.__capitalLeagueUrl`).
+
+Canlı sunucuda Lite'ın bütün uçları var ama ana oyunun Tohum Ligi yok
+(bu PR'ın "Canlı sunucu denetimi", 22 Ekim). Bu sürüm yapıştırılıp şema
+uygulanana kadar Pages'teki oyun yerel tabloyla açılıyor; bir şey
+bozulmuyor. Adımlar `ios-lite/README.md`'de ("Sunucuyu güncellerken,
+Tur 51"). "Canlı sunucu denetimi" yeni uçları yalnız okuyarak deniyor
+(sağlık, tablo, CORS); eski sürümde uyarı veriyor.
+
+**Bulgular (tur içinde).**
+- *Bekleyen gönderim hiç gitmiyordu.* Kuyruk boşken temizleme adımı,
+  "sürüyor" işareti atanmadan çalışıyordu. İşaret takılı kalıyor, sonraki
+  her tazeleme kuyruğu atlıyordu. Uçtan uca test yakaladı, düzeltmeden
+  önce kalıyordu.
+- *Açılışta sunucu bir kez gecikince oyun sayfa açık kaldıkça yerel
+  tabloda kalıyordu.* Tarayıcı testinde sahne derlenirken sağlık isteğinin
+  cevabı 6,7 sn sürdü, bir koşuda 10 sn'lik sınırı aştı. Telefonda kötü
+  bağlantıyla açılan oyun da öyle kalırdı. Cevap gelmezse 10 ve 30 sn sonra
+  yeniden deneniyor; sonra bağlantı gelince, sayfaya dönünce ve beş
+  dakikada bir.
+- *Bağlantı yokken gönderilen koşu yalnız tablo açıkken gidiyordu.* Oyuncu
+  serbest oyuna geçerse bir sonraki lig koşusunu bekliyordu. Artık sunucu
+  tanınınca ve bağlantı gelince de gidiyor. İki birim testi düzeltmeden önce
+  kaldı.
+- *Codex #80: tarayıcı deposu okunup yazılamıyorsa (dolu, yazma kapalı)
+  yeni hesap hemen sonraki gönderimde bulunamıyordu.* Değer belleğe düşüyor
+  ama okuma belleğe bakmıyordu; bekleyen gönderim de kayboluyordu. Son
+  yazımı depoya geçemeyen anahtar artık bellekten okunuyor; depo çalışırken
+  depo esas (öbür sekmeler). Test düzeltmeden önce kaldı.
+- *Codex #80: bağlantısız yeniden açılışta "son görülen tablo" boştu.*
+  Sunucu daha önce görüldüğü için sunucu tablosu seçiliyordu ama tablo yalnız
+  bellekteydi. Son tablo (bir hafta) artık depoda; hesap silinince o da
+  gidiyor. Test düzeltmeden önce kaldı.
+- *Codex #80: noktalamalı küfür süzgeçten geçiyordu.* Süzgeç yalnız boşluk,
+  _ ve - işaretini ayırıcı sayıyordu; ana oyun adda noktalamaya izin verdiği
+  için "F.U.C.K Ltd", "Oro.spu" herkese açık tabloya girerdi. Harf ve rakam
+  dışındaki her işaret artık ayırıcı, "!" ve "|" de "i". Lite'ın adında
+  zaten yalnız boşluk, _ ve - var; davranışı değişmedi.
+- *Codex #80: başka siteler oyuncunun tarayıcısından hesap açabiliyordu.*
+  Gövdesiz `POST /v1/seed/players` ön uçuşsuz gidiyor; CORS cevabı gizliyor
+  ama hesap açılıyor ve IP'nin saatlik hesap kotası tükeniyordu (oyuncunun
+  kendi ilk gönderimi hesap açamazdı). İzinli olmayan bir Origin'den gelen
+  hesap açma artık 403, kotaya da dokunmuyor; Origin göndermeyen istemci
+  (uygulama, denetim) etkilenmiyor. Test düzeltmeden önce kaldı.
+- *Codex #80: görünmeyen karakterden ibaret şirket adı.* Yalnız U+200B gibi
+  biçim karakterleri tabloda boş ad olarak görünürdü. Ad artık en az bir
+  görünen harf ya da rakam istiyor. Sonraki tur: Hangul dolgu harfleri
+  (U+3164, U+1160) Unicode'da harf ama boş görünüyor; görünmez sayılan
+  karakterler (`Default_Ignorable_Code_Point`) sayılmıyor. Testler
+  düzeltmeden önce kaldı.
+- *Codex #80: büyük harfle İngilizce küfür geçiyordu.* Süzgeç Türkçe küçük
+  harfe çeviriyor; "I" "ı" oluyor, listedeki "shit", "dick", "bitch" ise
+  noktalı "i" ile. "SHIT Ltd" herkese açık tabloya girerdi. Büyük "I" artık
+  iki okumayla da denetleniyor (Türkçe "ı", İngilizce "i"). Her "ı"yı "i"
+  saymak "Sıkışık Lojistik"i engellerdi; bu yolla yalnız tamamı büyük
+  harfle ve noktasız "I" ile yazılmış, gerçekten iki anlamlı adlar
+  ("SIKIŞ") takılıyor. Lite'ın adları da aynı süzgeçten. Sonraki turda
+  görünüşte aynı uyumluluk harfleri de ("ＦＵＣＫ Ltd", "𝐅𝐔𝐂𝐊"): ad
+  denetimden önce NFKC ile sade biçime çevriliyor. Testler düzeltmeden önce
+  kaldı.
+- *Codex #80: iki sekme ilk gönderimi aynı anda yaparsa iki hesap.* Biri
+  depoyu ezince koşu tarayıcının artık tutmadığı hesapta kalıyordu. Hesap
+  açıldıktan sonra depo yeniden okunuyor: öbür sekme açtıysa onunki;
+  gönderim kendi elindeki hesapla. Sonraki tur: kaybeden sekmenin açtığı
+  hesap da siliniyor; anahtarını kimse tutmuyor, sunucuda boşuna kalmasın.
+  Silme ulaşamazsa anahtar tarayıcıda saklanıyor, sunucu tanınınca yeniden
+  siliniyor. Testler düzeltmeden önce kaldı.
+- *Codex #80: sunucuyu güncelleme sırası.* Kod önce yapıştırılırsa şema
+  gelene kadar oyun sunucu tablosunu seçip hata alırdı; README'de önce şema.
+- *Codex #80: bağlantısız açılışta bekleyen gönderim gitmiyordu.* Sunucu
+  daha önce görüldüğü için sunucu tablosu seçiliyor ama dinleme yalnız
+  sunucu tanınınca başlıyordu; oyuncu serbest oyundaysa koşu bekliyordu.
+  Dinleme artık görülmüş sunucuda bağlantısızken de başlıyor. Test bir şey
+  daha yakaladı: bağlantı, bağlantısızken başlamış bir gönderim turu
+  sürerken gelirse o tura katılıyor ve boşa düşüyordu. İş sürerken gelen
+  istek artık bir tur daha koşturuyor. Test düzeltmeden önce kaldı.
+- *Codex #80: tablo değişince sonuç ekranı kapalı kalıyordu.* Açılışta
+  sunucu daha seçilmemişken gönderen oyuncunun koşusu yerel tabloya
+  yazılıyor, düğme "gönderildi" diye kapanıyordu; sunucu sonra bulununca da
+  kapalı kalıyordu. Tablo değişince gönderim yeniden açık. Gönderim sürerken
+  tablo değişirse sonuç eski tablonun, yeni tablonun düğmesi açık kalıyor.
+  Açılışta yerel tablodan yerel tabloya geçiş de artık yok. Tarayıcı
+  kontrolü düzeltmeden önce kaldı.
+- *Codex #80: menüye dönülünce eski tablo dinlemeyi bırakmıyordu.* Oyun
+  ekranı her açılışta yeni bir tablo kuruyor; sunucu tablosunun bağlantı
+  dinleyicisi hiç kalkmıyordu. Her yeni oyunda biri daha birikiyor ve her
+  biri bağlantı gelince aynı bekleyen kuyruğu göndermeye kalkıyordu. Tablonun
+  artık `close()`'u var; oyun ekranı kapanınca kullandığı tabloyu, kapandıktan
+  sonra gelen tabloyu da bırakıyor. Birim testi ve tarayıcı kontrolü (art
+  arda iki oyunda dinleyici sayısı 3 → 4 yerine 3 → 3) düzeltmeden önce kaldı.
+- *Codex #80: hesap silme süren gönderimle yarışıyordu.* Bekleyen kuyruk
+  tam silme sırasında gönderiliyorsa koşu silinmiş hesaba gidip 401 alıyor,
+  istemci yeni hesap açıp koşuyu yeniden gönderiyordu: oyuncu "sildim"
+  dedikten sonra sunucuda erişemediği bir hesap ve koşusu kalıyordu. Silme
+  artık süren gönderimleri bekliyor (koşu silinecek hesaba düşüp onunla
+  gidiyor); silme sürerken yeni gönderim başlamıyor, 401 yeni hesap
+  açmıyor, kuyruk olduğu gibi kalıyor (silme başarısız olursa kaybolmasın).
+  Test düzeltmeden önce kaldı.
+- *Codex #80: yazılamayan depoda bellekteki hesap menüye dönünce
+  kayboluyordu.* Bellekteki kopya tablonun içindeydi; oyun ekranı her
+  açılışta yeni tablo kurduğu için hesap ve bekleyen koşu gidiyordu. Kopya
+  artık depo başına, sayfa boyunca. Test düzeltmeden önce kaldı.
+- *Codex #80: silme öbür sekmenin yeni hesabını da siliyordu.* Silme
+  sürerken öbür sekme yeni hesap açıp depoya yazdıysa silme sonunda depo
+  koşulsuz temizleniyordu. Artık yalnız silinen hesap gidiyor: depodaki hesap
+  başkasıysa anahtarı ve kuyruğu yerinde. Sonraki turda bir adım daha: silme
+  hangi hesabı sileceğini süren gönderimleri beklemeden önce alıyor;
+  beklerken öbür sekme yenisini yazarsa istek de o hesaba gitmiyor. Bekleyen
+  koşu artık kuyruğa girdiği andaki hesabı da taşıyor: öbür sekme hesabı
+  değiştirdiyse silinen hesabın koşuları kuyruktan gidiyor, öbür sekmeninkiler
+  kalıyor (yoksa silinen hesabın koşusu yeni hesapla yeniden yayımlanırdı).
+  Bekleyen koşu ayrıca yalnız kendi hesabıyla gidiyor: o hesap gittiyse ya da
+  değiştiyse koşu düşüyor, 401'i yeni hesap açmıyor (öbür sekme hesabı
+  sunucuda sildiyse koşu yeni hesapla yayımlanmasın). Hesapsız kuyruğa
+  giren ilk koşu da hesap açılır açılmaz ona bağlanıyor; istek o an kopsa
+  da sonra yalnız o hesapla gidiyor. Oyuncunun doğrudan gönderimi de
+  başladığı andaki hesapla: yolda öbür sekme hesabı silerse 401 yeni hesap
+  açmıyor, kopan istek hesapsız kuyruğa girmiyor. Silen sekme depoya kısa
+  ömürlü bir işaret bırakıyor (bir dakika): sunucu sildi ama sekme depoyu
+  henüz temizlemedi aralığında da öbür sekme yeni hesap açmıyor. Hesap
+  başka yerden silindiyse (işaret yok, depo aynı) gönderim yine bir kez
+  yenisiyle. Bekleyen koşu gidince kuyruktan yalnız kendi girdisi çıkıyor
+  (kod ve hesapla): beklerken öbür sekme aynı koşuyu yeni hesapla kuyruğa
+  koyduysa o kalıyor. Testler düzeltmeden önce kaldı.
+- *Codex #80: gönderim aralığına takılan bekleyen koşu takılı kalıyordu.*
+  Kuyrukta iki koşu varken bağlantı gelince ilki gidiyor, ikincisi sunucunun
+  30 sn'lik aralığına takılıyordu; serbest oyunda bir sonraki bağlantı
+  olayına ya da panele kadar bekliyordu. Yoğunluğa (429) takılan koşu artık
+  kendiliğinden yeniden deneniyor: 31 sn'den başlayıp ikiye katlanarak en
+  çok beş kez (IP'nin saatlik sınırında da sunucuyu dövmesin). Tablo
+  bırakılınca zamanlayıcı da kalkıyor. Sonraki tur: saatlik sınır saatin
+  başında takılırsa beş deneme (~16 dk) saatin sonuna yetmiyordu. Sunucu
+  429'da artık ne zaman denenebileceğini söylüyor (`retryAfter`, sn: aralıkta
+  kalan süre, saatlik sınırda saatin sonu); istemci ondan önce denemiyor.
+  Süre gövdede, başlıkta değil: Pages kökeninden `Retry-After` CORS'la
+  okunamıyor. Başarılı gönderim eski süreyi siliyor: saatlik sınırdan sonra
+  gelen sıradan 30 sn ret bir saat beklemesin. Hesap açma da (saatlik hesap
+  sınırı) aynı süreye uyuyor. Süre son tarih olarak tutuluyor: geçen zaman
+  düşülüyor, eski uzun süre sunucunun sonraki kısa süresini ezmiyor.
+  Sunucunun geçici hatası (5xx) da yoğunluk sayılıyor: bekleyen koşu
+  kuyruktan atılmıyor, yeniden deneniyor (kesin retler, 400 ve 401, yine
+  düşürüyor). Beş katlamadan sonra denemeler durmuyor, o seyrek aralıkla
+  (~16 dk) sürüyor: uzun bir sunucu kesintisinde de koşu bir sonraki olayı
+  beklemeden gidiyor. Kopan istek de (tarayıcı çevrimiçiyken DNS ya da zaman
+  aşımı; yol açılınca `online` olayı gelmiyor) aynı yeniden denemeye giriyor.
+  Testler düzeltmeden önce kaldı.
+- *Codex #80: daha kötü gönderim aralığı doldurmuyordu.* Aralık satırın
+  saatine (`at`) bakıyordu; daha kötü koşu satırı değiştirmediği için saat
+  ilerlemiyor, arkası arkasına gönderim 30 sn'lik aralığı aşıyordu. Satırın
+  saati eşitlikte "önce gönderen" için gerekli, ileri alınamaz. Son deneme
+  artık ayrı tabloda (`seed_gaps`, hesap başına bir satır): her kabul edilen
+  deneme, daha kötüsü de, onu ileri alıyor. Codex'in sonraki turu bir açık
+  daha buldu: okuma ile yazma arasında aynı anda gelen iki istek ikisi de
+  geçiyordu. Aralık artık tek koşullu yazımla ayrılıyor (`INSERT … ON
+  CONFLICT DO UPDATE … WHERE` aralık geçtiyse); yazım değiştirmediyse
+  `slow`. Hesap silinince ve günlük temizlikte satır gidiyor. Tablo yeni,
+  canlıda henüz şema yok. İki test düzeltmeden önce kaldı.
+- *Codex #80: Worker'ın dağıtımı çözücünün bağımlılıklarını izlemiyordu.*
+  İş akışı yalnız `packages/core/src/league.ts` değişince dağıtıyordu; oysa
+  çözücü pakete çekirdeğin 59, içeriğin 30 dosyasını getiriyor (CEO'lar,
+  binalar...). Yeni bir CEO Pages'e çıkıp Worker'a çıkmasaydı o CEO'yla
+  oynanan koşu sunucuda "bozuk" sayılırdı. İş akışı artık
+  `packages/core/src/**` ve `packages/content/src/**` değişince de dağıtıyor
+  (Tur 52'nin sunucuda tekrarı da bütün motoru istiyor). Yeni test
+  (`deploy.test.ts`) paketi esbuild'le kurup giren her dosyanın tetikleyici
+  yollarda olduğunu denetliyor; düzeltmeden önce kaldı. PR'larda canlı
+  sunucu denetimi eskisi gibi yalnız sunucu dosyalarında.
+- *Codex #80: birleşme canlıya kendiliğinden dağıtabilirdi.* Sırlar
+  kurulursa `main`'e her birleşme Worker'ı dağıtıyordu; kullanıcının kararı
+  ise canlıya geçişin Tur 52 birleşince olması (Tur 52'nin tekrarı da
+  Workers Paid ister). Sırlar bugün kurulu değil (dağıtım işi "atlandı"
+  diyor), açık kâğıt üzerindeydi. Dağıtım artık elle (**Run workflow**) ya
+  da açıkça açılmış depo değişkeniyle (`LITE_LEAGUE_AUTODEPLOY=true`).
+  `deploy.test.ts` kapı adımının betiğini dört durumda koşturuyor; düzeltmeden
+  önce kaldı.
+- *Codex #80, yapılmadı: sekmeler arası bekleyen kuyruk.* İki sekme aynı
+  anda bağlantısız gönderirse birinin yazımı ötekini ezebilir. Okuma ve
+  yazma aynı eşzamanlı adımda, arada bekleme yok; iki sekmenin aynı anda
+  bağlantısız koşu bitirmesi gerekiyor. Kilit kodu buna değmiyor.
+- *Kodun tarayıcıda saklanma süresi bir yıldan bir güne indi.* Silinen
+  hesabın kodu başkasının tarayıcısında aylarca kalmasın; her tarayıcı bir
+  kodu zaten bir kez doğruluyor.
+- *Tarayıcı testinin yerel sunucusu kapanmıyordu.* `run-node-script`
+  sunucuyu alt süreçte koşturuyor; test yalnız üsttekini kapatınca port
+  dolu kalıyor, sonraki koşu sunucuyu açamıyordu. Süreç kendi grubunda
+  açılıyor, grup kapanıyor; test çökse de.
+
+**`main` kırmızısı: Tur 50'nin rıhtım etiketleri.** #79 birleştikten sonra
+`main`'in tam tarayıcı koşusu 510 kontrolün 509'unu geçti. Kalan, Tur 50'nin
+rıhtım kontrolü: İngilizce 320 px'te "Company" beş durumda kesiliyordu. Bu
+makinede 42 durumun hepsi geçiyordu.
+- *Neden.* CI'de tarayıcı yolu verilmiyor; Playwright başsız kabuğu
+  (`headless_shell`) açıyor ve o harf genişliklerini piksele yuvarlıyor.
+  Yazı küçüldükçe genişlik basamak basamak iniyor. Tur 50'nin sığdırması en
+  çok üç geçiş yapıyordu ve 0,25 px taşma kalıyordu. Burada kabuk
+  `--font-render-hinting=full` ile açılınca aynı dört durum çıktı.
+- *Düzeltme (`hud.tsx`).* Sığana kadar en çok 12 geçiş, her geçişte en az
+  %1 küçülüyor. Ayrıca yeniden ölçüm: her yazı tipi inince (`loadingdone`;
+  `fonts.ready` o an inen yazı tipi yoksa hemen çözülüyor), rıhtımın
+  genişliği değişince (`ResizeObserver`) ve bir sonraki karede.
+- *Test.* Rıhtım kontrolü en dar ekranda iki dilde bir de bu ayarla açılan
+  başsız kabukta koşuyor (52 durum). Eski kodla bu makinede de kalıyor,
+  yenisiyle geçiyor.
+- CI'nin tam koşusu 27 dk'ydı, sınır 30 dk. Tarayıcı işinin süresi 45 dk
+  oldu; iş artık bağımlılıkları da kuruyor (yerel lig sunucusu için).
+
+**Doğrulama.** `pnpm test` 570/570; tip denetimi temiz.
+- `seed.test.ts` (15 test):
+  - hesap, gönderim, herkese açık tablo ve kod;
+  - en iyisi kalıyor, satırın kimliği aynı, gönderim aralığı; daha kötü
+    gönderim de aralığı dolduruyor, satırın saati değişmiyor; aynı anda
+    gelen iki gönderimden yalnız biri geçiyor (Codex #80);
+  - bozuk, eski ve sınır dışı kodlar;
+  - hafta ve 6 saatlik pay;
+  - şirket adı süzgeci, noktalamalı, büyük harfli ve uyumluluk harfli yazım
+    da (Codex #80);
+  - en iyi 50 ve benim satırım, eşitlikte önce gönderen;
+  - Lite ve ana oyun hesapları birbirinin uçlarını kullanamıyor;
+  - hesap silme;
+  - IP sınırı, IP saklanmıyor; başka sitelerden hesap açılmıyor (Codex #80);
+  - haftalık temizlik;
+  - sunucunun haftası oyununkiyle aynı;
+  - CORS.
+- `client.test.ts` (31 test): oyunun istemcisi gerçek sunucuya karşı
+  (bellekte SQLite):
+  - sunucuyu tanıma, eski sunucu, bağlantısızlık;
+  - ilk gönderimde hesap, satır ve kodun ayrı inmesi, başka tarayıcı;
+  - bağlantısız gönderim ve son tablo;
+  - kesin retler, silinen hesap yenisiyle;
+  - hesap silme;
+  - bekleyen gönderimin tablo kapalıyken ve açılışta gitmesi;
+  - yazılamayan tarayıcı deposu, bağlantısız yeniden açılışta son tablo, iki
+    sekmenin aynı anda ilk gönderimi, bağlantısız açılışta bekleyen gönderim,
+    bırakılan tablonun dinleyicisi, silmeyle yarışan gönderim, aralığa
+    takılan koşunun yeniden denenmesi, bellekteki hesabın yeni tabloya
+    geçmesi, silmede öbür sekmenin hesabı, uzun sunucu kesintisinde ve
+    kopan istekte süren denemeler, öbür sekme silerken yoldaki doğrudan
+    gönderim (Codex #80).
+- `deploy.test.ts` (2 test): Worker paketine giren her dosya dağıtımı
+  tetikliyor; birleşme canlıya kendiliğinden dağıtmıyor (Codex #80).
+- `leagueVerify.test.ts` (2 test): önbellek anahtarı kodun özetiyle; kod
+  satırda yoksa iniyor, inmezse sonuçsuz.
+- Tarayıcı testine "Tohum Ligi: lig sunucusu" bölümü (14 kontrol, ~5 dk).
+  Yerel lig sunucusu ve beş tarayıcı:
+  - sonuç ekranı sunucuya gönderiyor ve ne paylaşıldığını yazıyor;
+  - koşu sunucuda (şirket adı, skor), tabloda oyuncunun kimliği ve kod yok;
+  - tablo sunucunun, kod sırası gelince iniyor ve doğrulanıyor;
+  - başka tarayıcı aynı tabloyu görüyor, hayaleti o koşu, hesabı yok;
+  - bağlantısız gönderim bekliyor, bağlantı gelince gidiyor;
+  - hesap silme koşuyu sunucudan, anahtarı tarayıcıdan siliyor;
+  - sunucuya ulaşılamayınca yerel tablo; konsol temiz;
+  - yerel tabloya yazan sonuç ekranı sunucu bulununca yeniden gönderebiliyor,
+    koşu sunucuda da; yeni oyunda eski tablo bırakılıyor (Codex #80).
+
+Tarayıcı tam koşu 521/521, konsol hatası yok (~40 dk; lig sunucusu bölümü
+~3 dk). Son Codex düzeltmeleriyle lig sunucusu bölümü yeniden: 14/14 (~4 dk;
+yeni üç kontrol eski kodla kalıyor). Paket bütçesi tamam: ana parça 60,8 KB,
+kurulumun yolu 133,2 KB.
+
 ---
 
 ## 3. Ölçülen durum
@@ -5115,9 +5462,9 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi). Senaryo şehirlerinde gün 3–17 ms (`pnpm dayperf`, Tur 43) |
-| Birim testi | **520 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul da) |
+| Birim testi | **570 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de) |
 | Denge testi | **331 kontrol, hepsi geçiyor** (25 bölüm, süreleriyle; ~13 dk) |
-| Tarayıcı testi | **510 kontrol, hepsi geçiyor**, 0 konsol hatası (~25–40 dk); duman koşusu 132 (~5 dk, rehber dahil) |
+| Tarayıcı testi | **521 kontrol, hepsi geçiyor**, 0 konsol hatası (~40 dk); duman koşusu 132 (~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + paket bütçesi (Tur 46; Tur 48'den beri hizmet çalışanı ve manifest de) + duman oynanışı |
 | Kapsam | 35 bina · 25 ürün · 7 kategori · 8 rakip profili · 10 CEO · 22 olay (11 şehir + 11 sektör) · 2 kriz · 12 karar kartı · 70 rakip sözü · 5 fırsat balonu · 8 görev türü · 4 mevsim · 9 moda ürünü · 17 şehir yapısı (6 siluet) · 6 şehir projesi · 7 senaryo · 4 ek kural · 28 rozet |
 
@@ -5301,7 +5648,8 @@ nüfus tavanı ve arsa değeri). Hâlâ açık olanlar:
   koşulardan ve tekrarın skoruyla; kod sınırları, simülasyon parmak izi,
   kopya tespiti. Sunucu tarafında doğrulama bu mimaride hâlâ yok: dürüst
   cümle "her tarayıcı kendisi doğruluyor". Kalan tek boşluk kopya — önlenemiyor,
-  görünür kılınıyor (Tur 31 bölümü).
+  görünür kılınıyor (Tur 31 bölümü). Tur 51: Pages'te tablo lig sunucusunda;
+  "kim önce gönderdi" artık sunucunun saati. Sunucuda tekrar Tur 52'de.
 
 ## 5. Nasıl koşulur
 

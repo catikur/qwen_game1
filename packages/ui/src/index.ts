@@ -5,6 +5,7 @@ export type {
   GameContextValue,
   LeagueBoard,
   LeagueEntry,
+  LeagueFeedInfo,
   LeagueSubmitOutcome,
   ToastMessage,
   ViewState,
