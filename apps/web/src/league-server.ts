@@ -67,23 +67,32 @@ export function createServerBoard(options: ServerBoardOptions): ServerBoard {
   const { url } = options;
   const pollMs = options.pollMs ?? 60_000;
   const timeoutMs = options.timeoutMs ?? 10_000;
-  const memory = new Map<string, string>();
+  const memory = new Map<string, string | null>();
+  /**
+   * Son yazımı depoya geçemeyen anahtarlar: okuma onlarda bellekten. Depo
+   * okunup yazılamıyorsa (dolu, yazma kapalı) yeni açılan hesap ve bekleyen
+   * gönderim bu oturumda kaybolmasın (Codex #80). Depo çalışırken depo esas:
+   * öbür sekmelerin yazdıkları görülüyor.
+   */
+  const unsaved = new Set<string>();
 
   const read = (key: string): string | null => {
+    if (!options.storage || unsaved.has(key)) return memory.get(key) ?? null;
     try {
-      return options.storage ? options.storage.getItem(key) : (memory.get(key) ?? null);
+      return options.storage.getItem(key);
     } catch {
       return memory.get(key) ?? null;
     }
   };
   const write = (key: string, value: string | null): void => {
-    if (value === null) memory.delete(key);
-    else memory.set(key, value);
+    memory.set(key, value);
     try {
       if (value === null) options.storage?.removeItem(key);
       else options.storage?.setItem(key, value);
+      unsaved.delete(key);
     } catch {
       // Depo kapalı ya da dolu: bu oturumda bellekte.
+      unsaved.add(key);
     }
   };
   const parse = <T>(key: string): T | null => {

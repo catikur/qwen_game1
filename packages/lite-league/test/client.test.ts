@@ -238,3 +238,34 @@ test('istemci: açılışta bekleyen gönderim varsa sunucu tanınınca gidiyor'
   for (let i = 0; i < 50 && (await total()) === 0; i++) await new Promise((resolve) => setTimeout(resolve, 10));
   assert.equal(await total(), 1);
 });
+
+test('istemci: tarayıcı deposu yazılamıyorsa (dolu, kapalı) hesap ve bekleyen gönderim bu oturumda bellekte', async () => {
+  const db = memoryDb();
+  const net: Net = { online: true, old: false, now: THURSDAY, requests: [] };
+  // Okunuyor ama yazılamıyor: `setItem` hata veriyor (Codex #80).
+  const full = {
+    getItem: () => null,
+    setItem: () => {
+      throw new DOMException('dolu', 'QuotaExceededError');
+    },
+    removeItem: () => undefined,
+  };
+  const online = new EventTarget();
+  const fetcher = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    if (!net.online) throw new TypeError('fetch failed');
+    return handle(new Request(input, init), db, net.now);
+  }) as typeof fetch;
+  const board = createServerBoard({ url: URL, fetch: fetcher, storage: full as never, online, pollMs: 2 ** 30 });
+  assert.equal(await board.probe(), 'ok');
+  assert.equal(await board.submit(entryOf(run())), 'saved', 'yeni hesap hemen sonraki gönderimde bulunuyor');
+  assert.equal(board.account!.exists(), true);
+
+  net.now += SEED.minGapMs;
+  net.online = false;
+  assert.equal(await board.submit(entryOf(run({ score: 2_000_000 }))), 'queued');
+  net.online = true;
+  online.dispatchEvent(new Event('online'));
+  const best = async () => (await (await handle(new Request(`${URL}/v1/seed/weeks/${WEEK}`), db, net.now)).json()).entries[0]?.score as number;
+  for (let i = 0; i < 50 && (await best()) !== 2_000_000; i++) await new Promise((resolve) => setTimeout(resolve, 10));
+  assert.equal(await best(), 2_000_000, 'bekleyen gönderim kaybolmadı');
+});
