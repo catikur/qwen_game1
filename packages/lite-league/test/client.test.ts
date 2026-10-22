@@ -388,3 +388,45 @@ test('istemci: bırakılan tablo bağlantı dinleyicisini kaldırıyor, bekleyen
   assert.equal(online.count, 1);
   fresh.close?.();
 });
+
+test('istemci: hesap silinirken süren gönderim bekleniyor, 401 yeni hesap açmıyor (Codex #80)', async () => {
+  const db = memoryDb();
+  const net: Net = { online: true, old: false, now: THURSDAY, requests: [] };
+  const storage = memoryStorage();
+  const online = new EventTarget();
+  // Koşu gönderimi elle bırakılana kadar yolda bekliyor.
+  let hold: Promise<void> | null = null;
+  let release = () => {};
+  const fetcher = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const request = new Request(input, init);
+    const path = new globalThis.URL(request.url).pathname;
+    net.requests.push(`${request.method} ${path}`);
+    if (!net.online) throw new TypeError('fetch failed');
+    if (request.method === 'POST' && path === '/v1/seed/runs' && hold) await hold;
+    return handle(request, db, net.now);
+  }) as typeof fetch;
+  const board = createServerBoard({ url: URL, fetch: fetcher, storage, online, pollMs: 2 ** 30 });
+  assert.equal(await board.probe(), 'ok');
+  assert.equal(await board.submit(entryOf(run())), 'saved');
+
+  // İkinci koşu bağlantısızken kuyrukta; bağlantı gelince gönderimi yolda kalıyor.
+  net.online = false;
+  assert.equal(await board.submit(entryOf(run({ score: 2_000_000 }))), 'queued');
+  net.now += SEED.minGapMs + 1000;
+  net.online = true;
+  hold = new Promise((resolve) => (release = resolve));
+  online.dispatchEvent(new Event('online'));
+  for (let i = 0; i < 50 && net.requests.filter((line) => line === 'POST /v1/seed/runs').length < 2; i++) await new Promise((resolve) => setTimeout(resolve, 5));
+
+  // Oyuncu tam o sırada hesabını siliyor.
+  const forgotten = board.account!.forget();
+  await new Promise((resolve) => setTimeout(resolve, 30));
+  release();
+  assert.equal(await forgotten, true);
+  for (let i = 0; i < 20; i++) await new Promise((resolve) => setTimeout(resolve, 5));
+
+  const table = (await (await handle(new Request(`${URL}/v1/seed/weeks/${WEEK}`), db, net.now)).json()) as { total: number };
+  assert.equal(table.total, 0, 'silinen hesabın koşusu sunucuda kalmıyor');
+  assert.equal(net.requests.filter((line) => line === 'POST /v1/seed/players').length, 1, 'silinirken yeni hesap açılmıyor');
+  assert.equal(board.account!.exists(), false);
+});

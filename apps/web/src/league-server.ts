@@ -166,7 +166,24 @@ export function createServerBoard(options: ServerBoardOptions): ServerBoard {
     return created;
   }
 
-  async function send(code: string, retried = false): Promise<SendOutcome> {
+  /**
+   * Hesap siliniyor: yeni gönderim başlamıyor, süren gönderimler bekleniyor.
+   * Yoksa silmeyle yarışan gönderim 401 alıp yeni hesap açıyor ve koşuyu
+   * oyuncunun "sildim" dediği verinin yerine yazıyordu (Codex #80).
+   */
+  let forgetting = false;
+  const inflight = new Set<Promise<SendOutcome>>();
+
+  function send(code: string): Promise<SendOutcome> {
+    if (forgetting) return Promise.resolve('error');
+    const promise = sendOnce(code);
+    inflight.add(promise);
+    const done = () => void inflight.delete(promise);
+    void promise.then(done, done);
+    return promise;
+  }
+
+  async function sendOnce(code: string, retried = false): Promise<SendOutcome> {
     const me = await ensureAccount();
     if (typeof me === 'string') return me;
     const reply = await call('/v1/seed/runs', { method: 'POST', body: { code }, auth: me });
@@ -175,9 +192,10 @@ export function createServerBoard(options: ServerBoardOptions): ServerBoard {
     if (reply.status === 200 && reply.body.outcome === 'kept-better') return 'kept-better';
     if (reply.status === 401) {
       // Hesap sunucuda yok (başka sekmeden silindi): bir kez yenisiyle. Depodaki
-      // başka bir hesapsa (öbür sekme açtı) ona dokunulmuyor.
+      // başka bir hesapsa (öbür sekme açtı) ona dokunulmuyor. Hesap bu sekmede
+      // siliniyorsa yenisi açılmıyor.
       if (account()?.id === me.id) write(ACCOUNT_KEY, null);
-      return retried ? 'error' : send(code, true);
+      return retried || forgetting ? 'error' : sendOnce(code, true);
     }
     if (reply.status === 400 && reply.body.error === 'name-blocked') return 'name-blocked';
     if (reply.status === 409 && reply.body.error === 'week') return 'closed';
@@ -205,11 +223,13 @@ export function createServerBoard(options: ServerBoardOptions): ServerBoard {
       do {
         again = false;
         for (const item of pending()) {
+          // Hesap silinirken kuyruk olduğu gibi kalıyor (silme başarısız olursa da).
+          if (forgetting) return;
           const outcome = await send(item.code);
           if (outcome === 'offline' || outcome === 'busy') continue;
           write(PENDING_KEY, JSON.stringify(pending().filter((other) => other.code !== item.code)));
         }
-      } while (again);
+      } while (again && !forgetting);
     })();
     // İşaret iş bitince kalkıyor. Kuyruk boşken iş hemen bitiyor: işareti
     // işin içinden kaldırmak atamadan önce olurdu ve işaret takılı kalırdı.
@@ -369,16 +389,24 @@ export function createServerBoard(options: ServerBoardOptions): ServerBoard {
     account: {
       exists: () => account() !== null,
       async forget() {
-        if (!account()) return true;
-        const reply = await call('/v1/players/me', { method: 'DELETE', auth: true });
-        // 401: hesap sunucuda zaten yok.
-        if (!reply || (reply.status !== 200 && reply.status !== 401)) return false;
-        write(ACCOUNT_KEY, null);
-        write(PENDING_KEY, null);
-        // Depodaki tablo silinen satırı "benim" diye taşımasın.
-        write(TABLE_KEY, null);
-        refreshAll();
-        return true;
+        forgetting = true;
+        try {
+          // Süren gönderimler önce bitiyor: koşu silinecek hesaba düşüyor ve onunla gidiyor.
+          await Promise.all([...inflight]);
+          await flushing;
+          if (!account()) return true;
+          const reply = await call('/v1/players/me', { method: 'DELETE', auth: true });
+          // 401: hesap sunucuda zaten yok.
+          if (!reply || (reply.status !== 200 && reply.status !== 401)) return false;
+          write(ACCOUNT_KEY, null);
+          write(PENDING_KEY, null);
+          // Depodaki tablo silinen satırı "benim" diye taşımasın.
+          write(TABLE_KEY, null);
+          refreshAll();
+          return true;
+        } finally {
+          forgetting = false;
+        }
       },
     },
   };
