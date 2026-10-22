@@ -431,7 +431,9 @@ export function LeaguePanel(): ReactElement {
       </section>
 
       {/* Davetli ligler (Tur 55): lig sunucusu tanıyorsa. */}
-      {board.friends?.available() && weekId && <LeagueFriends key={accountDeletions} friends={board.friends} boardId={weekId} daily={daily} onAccount={accountChanged} />}
+      {board.friends?.available() && weekId && (
+        <LeagueFriends key={accountDeletions} friends={board.friends} boardId={weekId} daily={daily} onAccount={accountChanged} />
+      )}
 
       {board.account?.exists() && <LeagueAccount board={board} onDeleted={accountDeleted} />}
 
