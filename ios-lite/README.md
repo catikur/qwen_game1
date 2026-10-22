@@ -297,7 +297,15 @@ hesapları açılamaz (bot sorunu çıkarsa istemci tarafı eklenecek).
 **Sunucuyu güncellerken (Tur 51, ana oyunun Tohum Ligi):** GitHub Pages'teki
 CapitalForge de lig tablosunu bu sunucudan okuyor (`src/seed.ts`). Canlı
 sunucu bu sürüme gelene kadar oyun kendi yerel tablosuyla açılıyor; bir şey
-bozulmuyor. Açmak için:
+bozulmuyor.
+
+**Öneri: Tur 52'yi bekle.** Bu sürümde skoru sunucu değil, her tarayıcı
+yeniden oynayarak doğruluyor. Tablo en iyi 50 satırı beyan edilen skora göre
+seçiyor. Biri 50 hesapla şişirilmiş koşu gönderirse tarayıcılar onları
+reddeder ama dürüst satırlar tabloya giremez (Codex #80). Tur 52'de sunucu
+koşuyu gönderimde yeniden oynatıyor; tabloya yalnız doğrulanmış skor giriyor.
+
+Açmak için:
 
 1. Önce şema. **Storage & Databases → D1 → capitalforge-lite-league →
    Console**: `schema.sql`'in tamamını çalıştır. Her tablo `IF NOT EXISTS`;

@@ -5064,6 +5064,18 @@ işi. Sıralamayı hâlâ her tarayıcı kendi tekrarıyla kuruyor (Tur 31). İk
   sunucunun saati. Tur 31'in "sunucusuz bir tabloda başka saat yok"
   sınırı kalktı.
 
+**Bilinen sınır (Codex #80): tablo beyan edilen skorla kesiliyor.** Sunucu
+en iyi 50 satırı beyana göre veriyor. Biri 50 hesapla (IP başına saatte 10)
+şişirilmiş koşu gönderirse tarayıcılar onları reddeder, ama dürüst satırlar
+yanıta hiç girmez. Kesim ne olursa olsun sahte satırları her tarayıcı tek
+tek oynatmak zorunda: bu güven modelinde çözülmüyor. Kökten çözüm Tur 52:
+sunucu gönderimde yeniden oynatıyor, tabloya yalnız doğrulanmış skor
+giriyor. Canlı sunucunun güncellenmesi bu yüzden Tur 52'ye bırakıldı
+(`ios-lite/README.md`).
+- Tekrarın bedeli ölçüldü: 360 günlük koşu Node'da 0,5–1 sn duvar, 0,7–1,8
+  sn CPU. Cloudflare Workers'ın ücretsiz katmanında istek başına CPU sınırı
+  10 ms; sunucuda doğrulama ücretli plan istiyor (Tur 52'nin kararı).
+
 **Oyun (`apps/web/src/league-server.ts`).** Tablonun üçüncü deposu:
 - Paylaşılan sayfada (claude.ai) eskisi gibi barındırıcının deposu.
   Değilse lig sunucusu ayakta ve bu sürümdeyse onun tablosu (`/v1/health`
