@@ -559,3 +559,76 @@ test('Tur 52: güncellenmiş veritabanında hesap silme Tur 51 tablosundaki sat�
   assert.equal(await db.first("SELECT id FROM seed_runs WHERE id = 'eski-satir'"), null, 'sahipsiz eski satır temizlikte gitti');
   assert.ok(await db.first("SELECT id FROM seed_runs WHERE id = 'onun-eski-satiri'"), 'hesabı olanınki temizlikte de yerinde');
 });
+
+// ---------------------------------------------------------------- Tur 53: günün koşusu
+
+const DAY = '2026-10-15';
+
+test('Tur 53: günün koşusu ayrı tabloda; hafta ve gün uçları birbirinin kimliğini almıyor', async () => {
+  const db = memoryDb();
+  const me = await seedAccount(db);
+  const week = await submit(db, THURSDAY, me, run({ score: 2_000_000 }));
+  assert.equal(week.status, 201, JSON.stringify(week.body));
+  const day = await submit(db, THURSDAY + 31_000, me, run({ weekId: DAY, score: 400_000, curve: [100_000, 400_000] }));
+  assert.equal(day.status, 201, JSON.stringify(day.body));
+  assert.equal(day.body.entry.weekId, DAY);
+
+  const dayTable = await call(db, THURSDAY, 'GET', `/v1/seed/days/${DAY}`);
+  assert.equal(dayTable.status, 200);
+  assert.equal(dayTable.body.open, true);
+  assert.deepEqual(dayTable.body.entries.map((e: { score: number }) => e.score), [400_000]);
+  const weekTable = await call(db, THURSDAY, 'GET', `/v1/seed/weeks/${WEEK}`);
+  assert.deepEqual(weekTable.body.entries.map((e: { score: number }) => e.score), [2_000_000], 'haftanın satırı yerinde');
+
+  assert.equal((await call(db, THURSDAY, 'GET', `/v1/seed/weeks/${DAY}`)).status, 400);
+  assert.equal((await call(db, THURSDAY, 'GET', `/v1/seed/days/${WEEK}`)).status, 400);
+  assert.equal((await call(db, THURSDAY, 'GET', '/v1/seed/days/2026-02-30')).status, 400);
+});
+
+test('Tur 53: dünün koşusu yalnız bugünün ilk saatlerinde; daha eskisi 409, cevapta bugünün kimliği', async () => {
+  const db = memoryDb();
+  const me = await seedAccount(db);
+  const midnight = Date.UTC(2026, 9, 16);
+  const early = await submit(db, midnight + 2 * HOUR, me, run({ weekId: DAY }));
+  assert.equal(early.status, 201, 'gece yarısından 2 saat sonra dünün koşusu');
+  const late = await submit(db, midnight + 7 * HOUR, me, run({ weekId: DAY, score: 1_300_000 }));
+  assert.equal(late.status, 409);
+  assert.equal(late.body.error, 'week');
+  assert.equal(late.body.week, '2026-10-16');
+  assert.equal((await call(db, midnight + 7 * HOUR, 'GET', `/v1/seed/days/${DAY}`)).body.open, false);
+});
+
+test('Tur 53: günün koşuları iki hafta sonra siliniyor, haftanınki yerinde', async () => {
+  const db = memoryDb();
+  const me = await seedAccount(db);
+  assert.equal((await submit(db, THURSDAY, me, run())).status, 201);
+  assert.equal((await submit(db, THURSDAY + 31_000, me, run({ weekId: DAY }))).status, 201);
+  await weekly(db, THURSDAY + 15 * 86_400_000);
+  const left = await db.all<{ week: string }>('SELECT week FROM seed_verified ORDER BY week');
+  assert.deepEqual(left.map((row) => row.week), [WEEK]);
+});
+
+/** Gerçek bir günün koşusu (90 gün). */
+function playedDay(companyName: string, every: number): LeagueRun {
+  const engine = new GameEngine(createLeagueGame(DAY, companyName, null));
+  while (engine.getState().league!.finishedDay === undefined) {
+    if (every > 0 && engine.getState().time.day % every === 0) playerStrategy(engine);
+    engine.runDay();
+  }
+  return runFromState(engine.getState())!;
+}
+
+test('Tur 53: sunucu günün koşusunu da yeniden oynatıyor; şişirilmiş skor girmiyor', async () => {
+  const db = memoryDb();
+  const me = await seedAccount(db);
+  const value = playedDay('Gün AŞ', 10);
+  assert.equal(value.curve.length, 10);
+  const forged = await submitReal(db, THURSDAY, me, { ...value, score: value.score + 1_000_000 });
+  assert.equal(forged.status, 422);
+  const sent = await submitReal(db, THURSDAY + 31_000, me, value);
+  assert.equal(sent.status, 201, JSON.stringify(sent.body));
+  assert.equal(sent.body.entry.verified, true);
+  assert.equal(sent.body.entry.score, value.score);
+  const table = await call(db, THURSDAY, 'GET', `/v1/seed/days/${DAY}`);
+  assert.deepEqual(table.body.entries[0].curve, value.curve);
+});

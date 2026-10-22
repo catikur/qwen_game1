@@ -17,14 +17,21 @@
  * eşleşince gidiyor. Başka bir oyuncunun koşusunun aynısı (skor ve eğri)
  * kabul edilmiyor (409 `copy`): ilk gönderen sayılıyor, sunucunun saatiyle.
  *
+ * İKİ TÜR TABLO (Tur 53). Haftanın tohumu (360 gün, haftanın kuralıyla) ve
+ * günün koşusu (90 gün, UTC günü). Koşunun kodu hangisi olduğunu kimliğinden
+ * söylüyor (`2026-W43` ya da `2026-10-22`); ikisi aynı tabloda, kimlik
+ * `week` sütununda. Oyuncu başına tablo başına tek satır.
+ *
  * Uç noktalar (JSON):
  * - `POST /v1/seed/players`        → anonim hesap: {id, token}
- * - `POST /v1/seed/runs {code}`    → koşu gönder; oyuncunun o haftaki en iyisi kalıyor
+ * - `POST /v1/seed/runs {code}`    → koşu gönder; oyuncunun o tablodaki en iyisi kalıyor
  * - `GET  /v1/seed/weeks/:week`    → haftanın tablosu, herkese açık (kimlikle gelince `mine`)
+ * - `GET  /v1/seed/days/:day`      → günün koşusunun tablosu (Tur 53), aynı biçim
  * - `GET  /v1/seed/codes/:key`     → bir satırın koşu kodu (tabloda yalnız özeti var)
  * - `DELETE /v1/players/me`        → hesabı ve koşularını sil (Lite ile aynı uç)
  */
 import { RUN_LIMITS, decodeRunChecked, replayRun, simFingerprint, type LeagueRun, type ReplayResult } from '../../core/src/league';
+import { leagueBoardKind, leagueDayId, type LeagueBoardKind } from '../../core/src/systems/leagueWeek';
 import { weekId } from '../../lite-model/src/index';
 import type { Db } from './db';
 import { HttpError, allowedOrigin, json, randomToken, readJson, sha256 } from './http';
@@ -42,6 +49,8 @@ export const SEED = {
   tableSize: 50,
   /** Koşular bu kadar hafta saklanıyor (`weekly` temizliği). */
   keepWeeks: 12,
+  /** Günün koşuları bu kadar gün (Tur 53): her gün yeni tablo, eskisine bakılmıyor. */
+  keepDays: 14,
   /** IP başına saatlik sınırlar (IP'nin kendisi değil, saatle birlikte özeti). */
   accountsPerHour: 10,
   runsPerHour: 30,
@@ -63,7 +72,6 @@ export const SERVER_REPLAY: SeedReplay = { sim: simFingerprint, replay: (run) =>
 export const MAX_RUN_BODY = RUN_LIMITS.codeLength + 1_024;
 
 const HOUR = 3_600_000;
-const WEEK_ID = /^\d{4}-W\d{2}$/;
 const CODE_KEY = /^[0-9a-f]{64}$/;
 
 interface SeedRow {
@@ -102,6 +110,18 @@ export function openWeeks(now: number): string[] {
   const current = weekId(now);
   const previous = weekId(now - SEED.graceMs);
   return previous === current ? [current] : [current, previous];
+}
+
+/** Gönderim kabul eden günler (Tur 53): bugün (UTC), ilk saatlerinde dün de. */
+export function openDays(now: number): string[] {
+  const current = leagueDayId(new Date(now));
+  const previous = leagueDayId(new Date(now - SEED.graceMs));
+  return previous === current ? [current] : [current, previous];
+}
+
+/** Türün açık tabloları. */
+export function openBoards(now: number, kind: LeagueBoardKind): string[] {
+  return kind === 'day' ? openDays(now) : openWeeks(now);
 }
 
 /**
@@ -194,7 +214,8 @@ export async function submitRun(request: Request, db: Db, playerId: string, now:
   const run = decoded.run;
   // Parmak izsiz eski kod (Tur 17) hangi sürümde oynandığını söylemiyor.
   if (run.version !== 2 || run.sim === undefined) throw new HttpError(400, 'run', { reason: 'version' });
-  const open = openWeeks(now);
+  // Hafta ya da gün: çözücü kimliği tanıdı (Tur 53).
+  const open = openBoards(now, leagueBoardKind(run.weekId)!);
   if (!open.includes(run.weekId)) throw new HttpError(409, 'week', { week: open[0] });
   if (!publicCompanyName(run.companyName)) throw new HttpError(400, 'name-blocked');
   // Başka sürümde oynanmış koşuyu sunucu yargılayamıyor (sahte değil): oyun bekletiyor.
@@ -279,9 +300,12 @@ export async function submitRun(request: Request, db: Db, playerId: string, now:
   return json({ outcome: changed > 0 && row.code_key === key ? 'saved' : 'kept-better', entry: toEntry(row, run.weekId, playerId) }, changed > 0 ? 201 : 200);
 }
 
-/** Haftanın tablosu: en iyi `tableSize` satır, skor sonra gönderim sırası; oyuncunun satırı dışarıdaysa o da. */
-export async function weekTable(db: Db, week: string, me: string | null, now: number) {
-  if (!WEEK_ID.test(week)) throw new HttpError(400, 'week');
+/**
+ * Bir tablo (hafta ya da gün, `kind` uca göre): en iyi `tableSize` satır, skor
+ * sonra gönderim sırası; oyuncunun satırı dışarıdaysa o da.
+ */
+export async function boardTable(db: Db, kind: LeagueBoardKind, week: string, me: string | null, now: number) {
+  if (leagueBoardKind(week) !== kind) throw new HttpError(400, kind);
   const rows = await db.all<SeedRow>(
     `SELECT ${ROW_COLUMNS} FROM seed_verified WHERE week = ? ORDER BY score DESC, at ASC, id ASC LIMIT ?`,
     week,
@@ -292,7 +316,7 @@ export async function weekTable(db: Db, week: string, me: string | null, now: nu
     if (mine) rows.push(mine);
   }
   const total = (await db.first<{ n: number }>('SELECT COUNT(*) AS n FROM seed_verified WHERE week = ?', week))?.n ?? 0;
-  return { week, open: openWeeks(now).includes(week), total, entries: rows.map((row) => toEntry(row, week, me)) };
+  return { week, open: openBoards(now, kind).includes(week), total, entries: rows.map((row) => toEntry(row, week, me)) };
 }
 
 /**
@@ -310,10 +334,12 @@ export async function runCode(db: Db, key: string): Promise<Response> {
   return response;
 }
 
-/** Haftalık temizlik (`purgeOrphans` ile aynı işlemde): eski haftaların koşuları, eski sayaçlar. */
+/** Haftalık temizlik (`purgeOrphans` ile aynı işlemde): eski haftaların ve günlerin koşuları, eski sayaçlar. */
 export function seedPurge(now: number): Array<[string, number]> {
   return [
     ['DELETE FROM seed_verified WHERE at < ?', now - SEED.keepWeeks * 7 * 86_400_000],
+    // Gün kimliği 10 karakter ("2026-10-22"), hafta 8 ("2026-W43").
+    ['DELETE FROM seed_verified WHERE length(week) = 10 AND at < ?', now - SEED.keepDays * 86_400_000],
     ['DELETE FROM seed_limits WHERE hour < ?', Math.floor(now / HOUR) - 1],
     // Aralık 30 sn; bir günden eski deneme saati bir şey ayırmıyor.
     ['DELETE FROM seed_gaps WHERE at < ?', now - 86_400_000],
