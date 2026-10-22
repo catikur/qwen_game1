@@ -3447,6 +3447,11 @@ async function finish(browser, consoleErrors) {
       // Tur 54: hayalet eğri. Liderin çizgisi grafikte; kart liderin hamlelerini
       // koşu kodundan okuyor (kod bir kez iniyor); grafikte gün seçilebiliyor.
       const movesReady = await b.p.waitForSelector('[data-league-moves="ready"]', { timeout: 20000 }).then(() => true).catch(() => false);
+      // B'nin bugünü 0 ya da 1 (takvim durdurulana kadar bir gün geçebiliyor): liderin ilk günleri için kart 0. güne sabitleniyor.
+      const todayB = await b.p.evaluate(() => window.__capital.getState().time.day);
+      await b.p.locator('.league-sparks').focus();
+      await b.p.keyboard.press('Home');
+      await b.p.waitForSelector('[data-league-moves-day="0"][data-league-moves="ready"]', { timeout: 5000 }).catch(() => null);
       const curves = await b.p.evaluate(() => ({
         lines: [...document.querySelectorAll('[data-league-line]')].map((el) => el.getAttribute('data-league-line')),
         title: document.querySelector('.league-moves h4')?.textContent ?? '',
@@ -3455,6 +3460,8 @@ async function finish(browser, consoleErrors) {
       check('Hayalet eğri: liderin çizgisi grafikte, kart liderin ilk günlerdeki hamlelerini koşu kodundan okuyor',
         movesReady && curves.lines.includes('ghost') && curves.title.includes('Sunucu Holding') && curves.moves.some((m) => m.includes('Arsa aldı')) && curves.moves.some((m) => m.includes('Bakkal kurdu')),
         `${curves.lines.join(',')} · ${curves.title} · ${curves.moves.join(' | ')}`);
+      // Sabitleme bırakılıyor: kart yeniden bugünü anlatıyor.
+      await b.p.keyboard.press('Escape');
       const chartBox = await b.p.locator('.league-sparks').boundingBox();
       const middle = { x: chartBox.x + chartBox.width * 0.5, y: chartBox.y + chartBox.height * 0.5 };
       await b.p.mouse.move(middle.x, middle.y);
@@ -3479,7 +3486,7 @@ async function finish(browser, consoleErrors) {
       const byKey = await b.p.waitForSelector('[data-league-moves-day="10"]', { timeout: 3000 }).then(() => true).catch(() => false);
       // Gün seçiliyken Escape bugüne dönüyor, pencere açık kalıyor; ikinci Escape pencereyi kapatıyor.
       await b.p.keyboard.press('Escape');
-      const back = await b.p.waitForSelector('[data-league-moves-day="0"]', { timeout: 3000 }).then(() => true).catch(() => false);
+      const back = await b.p.waitForSelector(`[data-league-moves-day="${todayB}"]`, { timeout: 3000 }).then(() => true).catch(() => false);
       await b.p.keyboard.press('Escape');
       const closed = await b.p.waitForSelector('.league-moves', { state: 'detached', timeout: 3000 }).then(() => true).catch(() => false);
       const codesB = codeRequests.filter((label) => label === 'B').length;
@@ -3505,6 +3512,32 @@ async function finish(browser, consoleErrors) {
         prefilled === friendCode && (invitedNote ?? '').includes(friendCode) && friendB !== null && friendB.tab.includes('Kuzey Ligi') && friendB.tab.includes('2') &&
           friendB.rows.length === 1 && friendB.rows[0].includes('Sunucu Holding') && /2 üyeden 1 kişi/.test(friendB.played) && !friendB.search.includes('lig=') && friendB.account,
         JSON.stringify({ prefilled, note: (invitedNote ?? '').slice(0, 30), tab: friendB?.tab, rows: friendB?.rows.length, search: friendB?.search, account: friendB?.account }));
+      // Codex #84: üye sayısı ligin tablosuyla tazeleniyor. Üçüncü oyuncu sunucudan katılıyor; B ligin sekmesine dokunuyor.
+      const third = await (async () => {
+        try {
+          const account = await (await fetch(`${leagueUrl}/v1/seed/players`, { method: 'POST' })).json();
+          const reply = await fetch(`${leagueUrl}/v1/seed/leagues/join`, {
+            method: 'POST',
+            headers: { 'content-type': 'application/json', authorization: `Bearer ${account.id}.${account.token}` },
+            body: JSON.stringify({ code: friendCode }),
+          });
+          return reply.status;
+        } catch {
+          return 0;
+        }
+      })();
+      await b.p.locator(`[data-league-friend="${friendCode}"]`).click();
+      const fresh = await b.p
+        .waitForFunction((code) => {
+          const tab = document.querySelector(`[data-league-friend="${code}"]`)?.textContent ?? '';
+          const box = document.querySelector('.league-friend')?.textContent ?? '';
+          return tab.includes('· 3') && box.includes('3 üye') && /3 üyeden 1 kişi/.test(box) ? { tab, box: box.slice(0, 80) } : null;
+        }, friendCode, { timeout: 10000 })
+        .then((handle) => handle.jsonValue())
+        .catch(() => null);
+      const staleView = fresh ?? (await b.p.evaluate(() => (document.querySelector('.league-friend')?.textContent ?? '').slice(0, 120)));
+      check('Üye sayısı ligin tablosuyla tazeleniyor: üçüncü üye katılınca sekme ve başlık 3 diyor (Codex #84)', third === 200 && fresh !== null,
+        `${third} · ${JSON.stringify(staleView)}`);
       await b.p.screenshot({ path: path.join(OUT, 'playtest-lig-sunucu.png') });
       await b.context.close();
 

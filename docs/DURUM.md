@@ -5705,8 +5705,18 @@ sunucunun doğruladığı koşular.
   adresten kalkıyor.
 - Paylaşılan (claude.ai) ve yerel tabloda arkadaş ligi yok: orada tablo
   zaten sayfayı açanların ya da bu tarayıcının.
+- *Codex #84: üye sayısı tablodan.* Sekme, başlık ve "kaç kişi gönderdi"
+  satırı panel açılırken alınan listeden sayıyordu; arkadaş katılınca
+  dakikalık tazeleme yeni tabloyu getiriyor ama sayı eski kalıyordu. Tablo
+  üye sayısını da getiriyor, liste ondan güncelleniyor; seçili sekmeye
+  dokunmak tabloyu tazeliyor. Tarayıcı testi düzeltmeden önce kaldı
+  ("2 üye", beklenen 3).
+- *Codex #84: bağlantı gelince yeniden soruluyor.* Bağlantısız açılışta
+  görülmüş sunucu seçiliyor ama sağlık ucu sorulamıyordu: davetli ligler o
+  oturum boyunca kapalı kalıyordu. Tablo ilk kez gelince sağlık ucu da
+  soruluyor. Test düzeltmeden önce kaldı.
 
-**Doğrulama.** `pnpm test` 621/621; tip denetimi temiz.
+**Doğrulama.** `pnpm test` 622/622; tip denetimi temiz.
 - Sunucu (`seedLeagues.test.ts`, 8 yeni):
   - kur, kodla katıl; tablo yalnız üyelerin koşuları, yalnız üyelere;
   - günün koşusunun tablosu ayrı, uç kimliğin türünü istiyor;
@@ -5716,13 +5726,20 @@ sunucunun doğruladığı koşular.
   - haftalık temizlik;
   - Lite hesabı kullanamıyor;
   - şema yokken sağlık ucu 0, uçlar 503, silme ve temizlik bozulmuyor.
-- İstemci (`client.test.ts`, 2 yeni): bütün akış gerçek sunucuya karşı;
-  şeması olmayan sunucu ve Tur 53'ün sunucusu davetli ligleri kapatıyor.
-- Tarayıcı testi: "Tohum Ligi: lig sunucusu" 23 kontrol (4 yeni: A lig
+- İstemci (`client.test.ts`, 3 yeni): bütün akış gerçek sunucuya karşı;
+  şeması olmayan sunucu ve Tur 53'ün sunucusu davetli ligleri kapatıyor;
+  bağlantısız açılıştan sonra bağlantı gelince davetli ligler açılıyor
+  (Codex #84).
+- Tarayıcı testi: "Tohum Ligi: lig sunucusu" 24 kontrol (5 yeni: A lig
   kuruyor ve tablosunda kendi koşusu; B davet bağlantısıyla geliyor, kurulum
   Tohum Ligi'yle açılıyor; B koda katılıyor, arkadaşının koşusunu görüyor,
-  kod adresten kalkıyor; A hesabını silince arkadaş ligleri panelden
-  gidiyor). "Tohum Ligi" 20/20, "Günün koşusu" 7/7. Hepsi geçti, konsol
+  kod adresten kalkıyor; üçüncü üye katılınca sayı 3 (Codex #84); A
+  hesabını silince arkadaş ligleri panelden gidiyor). Tur 54'ün iki
+  kontrolü B'nin bugününü 0 sayıyordu; takvim durdurulana kadar bir gün
+  geçince kalıyordu. Artık B'nin gerçek gününe bakıyor ve liderin ilk
+  günleri için kartı 0. güne sabitliyor. Bunun için grafikte bugünün örneği
+  de sabitlenebiliyor (önceden bugüne dönüyordu; o örneğin bugünden önceki
+  günleri görünmüyordu). "Tohum Ligi" 20/20, "Günün koşusu" 7/7. Hepsi geçti, konsol
   temiz. Tarayıcı testi bir hatayı yakaladı: katılmak hesabı açıyordu ama
   oyun duraklatılmışken lig hesabı bölümü panel yeniden çizilene kadar
   görünmüyordu; artık hemen. Hesap silinince de bölüm baştan kuruluyor
@@ -5854,7 +5871,7 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi). Senaryo şehirlerinde gün 3–17 ms (`pnpm dayperf`, Tur 43) |
-| Birim testi | **621 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de, Tur 52'de sunucuda tekrar, Tur 53'te haftanın kuralı ve günün koşusu, Tur 54'te hayalet eğri, Tur 55'te davetli ligler) |
+| Birim testi | **622 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de, Tur 52'de sunucuda tekrar, Tur 53'te haftanın kuralı ve günün koşusu, Tur 54'te hayalet eğri, Tur 55'te davetli ligler) |
 | Denge testi | **331 kontrol, hepsi geçiyor** (25 bölüm, süreleriyle; ~13 dk) |
 | Tarayıcı testi | **521 kontrol, hepsi geçiyor**, 0 konsol hatası (~40 dk); duman koşusu 132 (~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + paket bütçesi (Tur 46; Tur 48'den beri hizmet çalışanı ve manifest de) + duman oynanışı |

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { FormEvent, ReactElement } from 'react';
 import { CEO_BY_ID } from '@capital/content';
 import { formatMoney } from '@capital/core';
@@ -47,16 +47,30 @@ const OUTCOME: Record<Exclude<FriendOutcome, 'ok'>, MessageKey> = {
   error: 'app.league.friends.error.other',
 };
 
-/** Ligin tablosu: açılınca ve dakikada bir tazeleniyor. */
-function useFriendTable(friends: FriendLeagues, code: string | null, boardId: string): FriendTable | 'gone' | 'offline' | 'loading' {
+/**
+ * Ligin tablosu: açılınca, dakikada bir ve sekmeye dokununca (`reload`)
+ * tazeleniyor. Tablo üye sayısını da getiriyor: liste ondan güncelleniyor
+ * (`onMembers`), sekme ve başlık eski sayıda kalmasın (Codex #84).
+ */
+function useFriendTable(
+  friends: FriendLeagues,
+  code: string | null,
+  boardId: string,
+  reload: number,
+  onMembers: (code: string, members: number) => void,
+): FriendTable | 'gone' | 'offline' | 'loading' {
   const [state, setState] = useState<{ key: string; value: FriendTable | 'gone' | 'offline' }>({ key: '', value: 'offline' });
   const key = code ? `${code}:${boardId}` : '';
+  const report = useRef(onMembers);
+  report.current = onMembers;
   useEffect(() => {
     if (!code) return;
     let alive = true;
     const load = async () => {
       const table = await friends.table(code, boardId);
-      if (alive) setState({ key, value: table ?? 'offline' });
+      if (!alive) return;
+      setState({ key, value: table ?? 'offline' });
+      if (table && table !== 'gone') report.current(code, table.members);
     };
     void load();
     const timer = setInterval(() => void load(), 60_000);
@@ -64,7 +78,7 @@ function useFriendTable(friends: FriendLeagues, code: string | null, boardId: st
       alive = false;
       clearInterval(timer);
     };
-  }, [friends, code, boardId, key]);
+  }, [friends, code, boardId, key, reload]);
   return state.key === key ? state.value : 'loading';
 }
 
@@ -107,7 +121,14 @@ export function LeagueFriends({
 
   const list = Array.isArray(leagues) ? leagues : [];
   const current = list.find((league) => league.code === selected) ?? null;
-  const table = useFriendTable(friends, current?.code ?? null, boardId);
+  const [reload, setReload] = useState(0);
+  const table = useFriendTable(friends, current?.code ?? null, boardId, reload, (code, members) =>
+    setLeagues((before) =>
+      Array.isArray(before) && before.some((league) => league.code === code && league.members !== members)
+        ? before.map((league) => (league.code === code ? { ...league, members } : league))
+        : before,
+    ),
+  );
   // Davet bağlantısıyla gelen kod zaten liglerimden biriyse katılma alanı boş kalsın.
   const alreadyIn = invited !== null && list.some((league) => league.code === invited);
 
@@ -184,6 +205,8 @@ export function LeagueFriends({
                 setSelected(league.code);
                 writeSelected(league.code);
                 setConfirmLeave(false);
+                // Seçili sekmeye dokunmak tabloyu tazeliyor.
+                if (league.code === current?.code) setReload((count) => count + 1);
               }}
             >
               {league.name}

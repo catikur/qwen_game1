@@ -1302,3 +1302,25 @@ test('Tur 55: şeması uygulanmamış sunucu (friends 0) tabloyu veriyor, davetl
   assert.equal(await old.probe(), 'ok');
   assert.equal(old.friends?.available(), false);
 });
+
+test('Tur 55: bağlantısız açılışta görülmüş sunucu; bağlantı gelince davetli ligler açılıyor (Codex #84)', async () => {
+  const db = memoryDb();
+  const net: Net = { online: true, old: false, now: THURSDAY, requests: [] };
+  const storage = memoryStorage();
+  assert.equal(await client(db, net, storage).board.probe(), 'ok');
+
+  // Sayfa bağlantısız yeniden açıldı: tablo sunucunun (görülmüş), davetli ligler henüz bilinmiyor.
+  net.online = false;
+  const { board, online } = client(db, net, storage);
+  assert.equal(await board.probe(), 'offline');
+  assert.equal(board.friends?.available(), false);
+  const feed = watch(board);
+  await feed.next();
+  if (!feed.last().offline) await feed.next();
+
+  // Bağlantı geldi: tablo tazelenince sağlık ucu da yeniden soruluyor.
+  net.online = true;
+  online.dispatchEvent(new Event('online'));
+  while (feed.last().offline) await feed.next();
+  assert.equal(board.friends?.available(), true);
+});

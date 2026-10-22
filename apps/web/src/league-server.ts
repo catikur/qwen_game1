@@ -486,6 +486,14 @@ export function createServerBoard(options: ServerBoardOptions): ServerBoard {
 
   /** Davetli ligler (Tur 55): sağlık ucu `friends` dediyse. */
   let friendsOk = false;
+  /** Sağlık ucunun cevabı alındı mı (bağlantısız açılışta alınamıyor). */
+  let friendsKnown = false;
+  async function learnFriends(): Promise<void> {
+    const reply = await call('/v1/health');
+    if (reply?.status !== 200) return;
+    friendsKnown = true;
+    friendsOk = atLeastOne(reply.body.seed) && atLeastOne(reply.body.verify) && atLeastOne(reply.body.daily) && atLeastOne(reply.body.friends);
+  }
 
   function toLeague(raw: unknown): FriendLeague | null {
     if (!raw || typeof raw !== 'object') return null;
@@ -583,6 +591,7 @@ export function createServerBoard(options: ServerBoardOptions): ServerBoard {
       const ok = reply.status === 200 && atLeastOne(reply.body.seed) && atLeastOne(reply.body.verify) && atLeastOne(reply.body.daily);
       // Davetli ligler (Tur 55) ayrı bayrak: şeması uygulanmamış sunucu (`friends: 0`) tabloyu yine veriyor.
       friendsOk = ok && atLeastOne(reply.body.friends);
+      friendsKnown = ok;
       write(SEEN_KEY, ok ? url : null);
       // Dinleme yalnız kullanılacak tabloda: tanınmayan sunucunun tablosu atılıyor.
       if (ok) listen();
@@ -612,6 +621,10 @@ export function createServerBoard(options: ServerBoardOptions): ServerBoard {
         // Sonradan başlayan tazeleme önce bittiyse eskisinin cevabı yazılmıyor.
         if (stopped || mine !== sequence) return;
         if (reply?.status === 200 && Array.isArray(reply.body.entries)) {
+          // Bağlantısız açılışta sağlık ucu sorulamadı (Codex #84): tablo gelince davetli ligler
+          // de soruluyor, panel bu teslimatla yeniden çizildiğinde bölüm açık.
+          if (!friendsKnown) await learnFriends();
+          if (stopped || mine !== sequence) return;
           const entries = reply.body.entries.map(toEntry).filter((entry): entry is LeagueEntry => entry !== null);
           tables.set(weekId, entries);
           write(TABLE_KEY, JSON.stringify({ url, weekId, rows: reply.body.entries } satisfies StoredTable));
