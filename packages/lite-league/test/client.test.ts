@@ -533,3 +533,53 @@ test('istemci: hesap silinirken öbür sekme yeni hesap açtıysa onunki silinmi
   assert.deepEqual(JSON.parse(storage.getItem('capitalforge.league.account')!), other, 'öbür sekmenin hesabı yerinde');
   assert.equal(JSON.parse(storage.getItem('capitalforge.league.pending')!).length, 1, 'öbür sekmenin kuyruğu yerinde');
 });
+
+test('istemci: silme başladığı andaki hesabı siliyor; beklerken öbür sekmenin açtığı hesap ve koşusu kalıyor (Codex #80)', async () => {
+  const db = memoryDb();
+  const net: Net = { online: true, old: false, now: THURSDAY, requests: [] };
+  const storage = memoryStorage();
+  const online = new EventTarget();
+  let hold: Promise<void> | null = null;
+  let release = () => {};
+  const fetcher = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const request = new Request(input, init);
+    net.requests.push(`${request.method} ${new globalThis.URL(request.url).pathname}`);
+    if (!net.online) throw new TypeError('fetch failed');
+    if (request.method === 'POST' && new globalThis.URL(request.url).pathname === '/v1/seed/runs' && hold) await hold;
+    return handle(request, db, net.now);
+  }) as typeof fetch;
+  const board = createServerBoard({ url: URL, fetch: fetcher, storage, online, pollMs: 2 ** 30 });
+  assert.equal(await board.probe(), 'ok');
+  assert.equal(await board.submit(entryOf(run())), 'saved');
+  const a = JSON.parse(storage.getItem('capitalforge.league.account')!) as { id: string };
+
+  // Bu sekmenin gönderimi yolda; oyuncu hesabını siliyor.
+  net.now += SEED.minGapMs;
+  hold = new Promise((resolve) => (release = resolve));
+  const sending = board.submit(entryOf(run({ score: 2_000_000 })));
+  for (let i = 0; i < 50 && net.requests.filter((line) => line === 'POST /v1/seed/runs').length < 2; i++) await new Promise((resolve) => setTimeout(resolve, 5));
+  const forgotten = board.account!.forget();
+
+  // Silme gönderimi beklerken öbür sekme yeni hesap açıp koşusunu gönderiyor.
+  const opened = (await (await handle(new Request(`${URL}/v1/seed/players`, { method: 'POST' }), db, net.now)).json()) as { id: string; token: string };
+  const other = { url: URL, id: opened.id, token: opened.token };
+  const posted = await handle(
+    new Request(`${URL}/v1/seed/runs`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${other.id}.${other.token}` },
+      body: JSON.stringify({ code: encodeRun(run({ companyName: 'Öbür Sekme', score: 500_000 })) }),
+    }),
+    db,
+    net.now,
+  );
+  assert.equal(posted.status, 201);
+  storage.setItem('capitalforge.league.account', JSON.stringify(other));
+  release();
+  await sending;
+  assert.equal(await forgotten, true);
+
+  const table = (await (await handle(new Request(`${URL}/v1/seed/weeks/${WEEK}`), db, net.now)).json()) as { entries: Array<{ companyName: string }> };
+  assert.deepEqual(table.entries.map((entry) => entry.companyName), ['Öbür Sekme'], 'silinen hesabın koşusu gitti, öbür sekmeninki kaldı');
+  assert.equal(JSON.parse(storage.getItem('capitalforge.league.account')!).id, other.id, 'öbür sekmenin anahtarı yerinde');
+  assert.equal(await db.first('SELECT id FROM players WHERE id = ?', a.id), null, 'silme başladığı andaki hesap silindi');
+});

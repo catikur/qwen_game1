@@ -439,13 +439,14 @@ export function createServerBoard(options: ServerBoardOptions): ServerBoard {
     account: {
       exists: () => account() !== null,
       async forget() {
+        // Silinecek hesap baştaki: beklerken öbür sekme yenisini yazarsa o silinmiyor (Codex #80).
+        const me = account();
+        if (!me) return true;
         forgetting = true;
         try {
           // Süren gönderimler önce bitiyor: koşu silinecek hesaba düşüyor ve onunla gidiyor.
           await Promise.all([...inflight]);
           await flushing;
-          const me = account();
-          if (!me) return true;
           const reply = await call('/v1/players/me', { method: 'DELETE', auth: me });
           // 401: hesap sunucuda zaten yok.
           if (!reply || (reply.status !== 200 && reply.status !== 401)) return false;
