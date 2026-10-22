@@ -4,7 +4,7 @@
 > `pnpm bench` çıktısından; iddialar `pnpm balance` ve `pnpm playtest`
 > tarafından her koşuda doğrulanıyor.
 >
-> Son güncelleme: şema **v6**, 54 tur (Tur 33 denendi ve geri alındı; Tur 34 eski görünüme canlılık ekledi; Tur 35 arayüzü Lite'ın "Cam & Bulut" diline taşıdı; Tur 36 şehre ayrıntı kattı; Tur 37a geç oyuna yönetim yükü, servet vergisi ve kriz dönemleri getirdi; Tur 37b karar kartlarını ve rakip hikâyelerini ekledi; Tur 37c fırsat balonlarını ve aylık görev panosunu getirdi; Tur 37d canlı pazarı, şehir projesi ihalesini ve rakip konsorsiyumunu getirdi; Tur 38 değerlendirme turuydu: geç oyun hızı, gündem ve haber akışı, zorluk eğrisi; Tur 39a senaryo modunu getirdi: Kurtarma ve Krizin ortasında; Tur 39b Konsorsiyuma karşı, Zincir ustası ve Şehrin sponsoru senaryolarını ekledi; Tur 39c Büyük şehir fethi ve Holding: iki şehir ile listeyi yediye tamamladı; Tur 40 cila ve performans; Tur 41 başarımlar ve kariyer; Tur 42 açılışta gölgelendirici derlemesi; Tur 43 oyun içi akıcılık; Tur 44 değerlendirme turuydu: Türkçe sayı biçimi, yardımın kapsamı, haber akışı; Tur 45 dört ek kural getirdi: Fırtınalı yıllar, Aç gözlü rakipler, Sıkı banka, Kıt arsa; Tur 46 açılış paketini böldü: kurulum ekranı telefonda yarı sürede; Tur 47 tek Ayarlar paneli ve erişilebilirlik getirdi: metin boyutu, renk körlüğüne uygun palet, hareket, ses düzeyleri, pencerelerde klavye; Tur 48 oyunu kurulabilir ve çevrimdışı açılır yaptı, yayından sonra "yeni sürüm hazır" diyor; Tur 49 müziği getirdi: gündüz, gece ve kriz, şehirle birlikte dönüyor; Tur 50 Faz 1'i değerlendirdi ve tanıtım paketini hazırladı; Tur 51 Faz 2'yi açtı: Lite'ın lig sunucusu ana oyunun Tohum Ligi koşularını da alıyor, tablo herkese açık; Tur 52'de sunucu her koşuyu gönderimde yeniden oynatıyor, tabloya yalnız doğrulanmış skor giriyor; Tur 53 ligin her haftasına bir ek kural ve 90 günlük günün koşusunu getirdi; Tur 54 liderlerin eğrisini senin koşunun üstüne koydu ve liderin o günlerde ne yaptığını koşu kodundan anlatıyor). Önümüzdeki işin sırası `docs/YOL-HARITASI.md`'de.
+> Son güncelleme: şema **v6**, 55 tur (Tur 33 denendi ve geri alındı; Tur 34 eski görünüme canlılık ekledi; Tur 35 arayüzü Lite'ın "Cam & Bulut" diline taşıdı; Tur 36 şehre ayrıntı kattı; Tur 37a geç oyuna yönetim yükü, servet vergisi ve kriz dönemleri getirdi; Tur 37b karar kartlarını ve rakip hikâyelerini ekledi; Tur 37c fırsat balonlarını ve aylık görev panosunu getirdi; Tur 37d canlı pazarı, şehir projesi ihalesini ve rakip konsorsiyumunu getirdi; Tur 38 değerlendirme turuydu: geç oyun hızı, gündem ve haber akışı, zorluk eğrisi; Tur 39a senaryo modunu getirdi: Kurtarma ve Krizin ortasında; Tur 39b Konsorsiyuma karşı, Zincir ustası ve Şehrin sponsoru senaryolarını ekledi; Tur 39c Büyük şehir fethi ve Holding: iki şehir ile listeyi yediye tamamladı; Tur 40 cila ve performans; Tur 41 başarımlar ve kariyer; Tur 42 açılışta gölgelendirici derlemesi; Tur 43 oyun içi akıcılık; Tur 44 değerlendirme turuydu: Türkçe sayı biçimi, yardımın kapsamı, haber akışı; Tur 45 dört ek kural getirdi: Fırtınalı yıllar, Aç gözlü rakipler, Sıkı banka, Kıt arsa; Tur 46 açılış paketini böldü: kurulum ekranı telefonda yarı sürede; Tur 47 tek Ayarlar paneli ve erişilebilirlik getirdi: metin boyutu, renk körlüğüne uygun palet, hareket, ses düzeyleri, pencerelerde klavye; Tur 48 oyunu kurulabilir ve çevrimdışı açılır yaptı, yayından sonra "yeni sürüm hazır" diyor; Tur 49 müziği getirdi: gündüz, gece ve kriz, şehirle birlikte dönüyor; Tur 50 Faz 1'i değerlendirdi ve tanıtım paketini hazırladı; Tur 51 Faz 2'yi açtı: Lite'ın lig sunucusu ana oyunun Tohum Ligi koşularını da alıyor, tablo herkese açık; Tur 52'de sunucu her koşuyu gönderimde yeniden oynatıyor, tabloya yalnız doğrulanmış skor giriyor; Tur 53 ligin her haftasına bir ek kural ve 90 günlük günün koşusunu getirdi; Tur 54 liderlerin eğrisini senin koşunun üstüne koydu ve liderin o günlerde ne yaptığını koşu kodundan anlatıyor; Tur 55 davet kodlu arkadaş liglerini getirdi ve Faz 2'yi kapattı). Önümüzdeki işin sırası `docs/YOL-HARITASI.md`'de.
 
 ---
 
@@ -5657,6 +5657,101 @@ açılınca deneniyor.
 **Canlıya geçiş.** Gerekmiyor: sunucu ve simülasyon aynı, Worker olduğu
 gibi kalıyor. Pages yayınıyla geliyor.
 
+
+### Tur 55 — Davetli ligler ve arkadaş tablosu: Faz 2'nin sonu
+
+Faz 2'nin son turu. Lite'ta Tur L8'den beri olan davet kodlu lig ana oyuna
+geldi: arkadaşlar kendi tablolarında. Lig bir ad ve altı harflik kod; kodu ya
+da davet bağlantısını alan katılıyor. Ligin tablosu ayrı bir skor tutmuyor:
+üyelerin o hafta (ya da günün koşusunda o gün) genel tabloya gönderdiği,
+sunucunun doğruladığı koşular.
+
+**Sunucu (`packages/lite-league/src/seedLeagues.ts`).**
+- İki yeni tablo: `seed_leagues` (kod, ad, kuruluş) ve `seed_league_members`.
+  Lite'ın liglerinden (`leagues`) ayrı: Lite'ın haftalık puanı ile Tohum
+  Ligi'nin skoru aynı tabloya girmesin. Kurucu ilk üye, ayrı sahiplik yok;
+  son üye ayrılınca lig siliniyor.
+- Uçlar ana oyunun hesabıyla: liglerim, kur, koda katıl, ayrıl, ligin
+  haftalık ve günlük tablosu (`/v1/seed/leagues/:kod/weeks|days/:id`). Lite
+  hesabı bu uçları kullanamıyor.
+- Ligin tablosunu yalnız üyeler görüyor (kim hangi ligde, dışarıdan
+  görünmesin); satırların kendisi zaten herkese açık tablodan.
+- Sınırlar:
+  - oyuncu başına 5 lig, lig başına 50 üye;
+  - ad 2–24 karakter, küfür süzgeci herkese açık adlardaki gibi;
+  - IP başına saatte 30 kurma ya da katılma denemesi: kodları deneyerek
+    liglere girilmesin.
+  Sınırlar ve yerleşme Lite'taki gibi tek ifadede (iki sekmeden aynı anda
+  gelen iki katılım son yere sığmasın).
+- Hesap silinince üyelikler ve boşalan ligler gidiyor; haftalık temizlik
+  hesabı silinmiş üyeleri ve boş ligleri siliyor.
+- *Şema sonra gelebilir.* Sıra şema, kod; ama insan işi. Kod şemadan önce
+  canlıya giderse sağlık ucu `"friends":0` diyor, uçlar 503 `schema`; oyun
+  arkadaş liglerini göstermiyor, genel tablo ve Lite eskisi gibi. Hesap
+  silme ve haftalık temizlik yeni tablolar yoksa onları atlıyor (yoksa Lite'ın
+  haftalık işi de dururdu). Test şemasız veritabanında hepsini deniyor.
+
+**İstemci ve arayüz.**
+- `league-server.ts`: `friends` (liglerim, kur, katıl, ayrıl, tablo).
+  Sağlık ucunda `friends` yoksa kapalı. Kurmak ya da katılmak hesap yoksa
+  açıyor: ilk koşudan önce de lige girilebiliyor. Hesap sunucuda yoksa
+  (başka yerden silindi) gönderimdeki gibi bir kez yenisiyle; bir sekme
+  hesabı siliyorsa yenisi açılmıyor (Codex #80'in kuralı).
+- Lig panelinde "Arkadaş ligleri": liglerim sekme sekme, seçili ligin kodu
+  ve tablosu ("2 üyeden 1 kişi koşusunu gönderdi"), davet bağlantısını
+  kopyala, ligden ayrıl (iki adımda), lig kur ve koda katıl.
+- Davet bağlantısı `?lig=ABC234`: kurulum Tohum Ligi'yle açılıyor ve daveti
+  yazıyor; lig panelinin katılma alanı kodla dolu geliyor. Katılınca kod
+  adresten kalkıyor.
+- Paylaşılan (claude.ai) ve yerel tabloda arkadaş ligi yok: orada tablo
+  zaten sayfayı açanların ya da bu tarayıcının.
+
+**Doğrulama.** `pnpm test` 621/621; tip denetimi temiz.
+- Sunucu (`seedLeagues.test.ts`, 8 yeni):
+  - kur, kodla katıl; tablo yalnız üyelerin koşuları, yalnız üyelere;
+  - günün koşusunun tablosu ayrı, uç kimliğin türünü istiyor;
+  - ad kuralları, bilinmeyen kod, oyuncu ve lig sınırları;
+  - IP başına deneme sınırı;
+  - son üyeyle lig gidiyor, hesap silinince üyelikler de;
+  - haftalık temizlik;
+  - Lite hesabı kullanamıyor;
+  - şema yokken sağlık ucu 0, uçlar 503, silme ve temizlik bozulmuyor.
+- İstemci (`client.test.ts`, 2 yeni): bütün akış gerçek sunucuya karşı;
+  şeması olmayan sunucu ve Tur 53'ün sunucusu davetli ligleri kapatıyor.
+- Tarayıcı testi: "Tohum Ligi: lig sunucusu" 23 kontrol (4 yeni: A lig
+  kuruyor ve tablosunda kendi koşusu; B davet bağlantısıyla geliyor, kurulum
+  Tohum Ligi'yle açılıyor; B koda katılıyor, arkadaşının koşusunu görüyor,
+  kod adresten kalkıyor; A hesabını silince arkadaş ligleri panelden
+  gidiyor). "Tohum Ligi" 20/20, "Günün koşusu" 7/7. Hepsi geçti, konsol
+  temiz. Tarayıcı testi bir hatayı yakaladı: katılmak hesabı açıyordu ama
+  oyun duraklatılmışken lig hesabı bölümü panel yeniden çizilene kadar
+  görünmüyordu; artık hemen. Hesap silinince de bölüm baştan kuruluyor
+  (eski lig listesi kalmıyor).
+- Paket bütçesi tamam: ana parça 63,7 KB (62,9'dan). Worker paketi 713 KB
+  (sıkıştırılmış 185 KB).
+
+**Canlıya geçiş.** Şema, sonra kod (`ios-lite/README.md`, "Tur 55"): D1
+konsolunda üç ifade, sonra paket. `/v1/health` `"friends":1` diyor.
+
+**Faz 2'nin özeti (Tur 51–55).** Ana oyunun Tohum Ligi çevrimiçi oldu:
+- Tur 51: Lite'ın lig sunucusu ana oyunun koşularını da alıyor; GitHub
+  Pages'teki oyunun tablosu herkese açık ve tek (#80).
+- Tur 52: sunucu her koşuyu gönderimde yeniden oynatıyor; tabloya yalnız
+  doğrulanmış skor giriyor, tarayıcılar satırları yeniden oynatmıyor (#81).
+  Yol haritasının dediği en eski güvenlik açığı kapandı.
+- Tur 53: her haftanın bir ek kuralı var, herkese aynı; 90 günlük günün
+  koşusu her gün yeni şehirle geldi (#82).
+- Tur 54: liderlerin eğrisi senin koşunun üstünde; liderin o günlerde ne
+  yaptığı koşu kodundan (#83).
+- Tur 55: davet kodlu arkadaş ligleri (bu tur).
+
+Faz boyunca şema iki kez değişti (Tur 52: `seed_verified`; Tur 55: davetli
+ligler), simülasyon bir kez (Tur 53: haftanın kuralı ve günün koşusu). Canlı
+sunucu her adımda kullanıcının hesabında güncellendi; o güncellenene kadar
+oyun hep yerel tabloyla açıldı, bir şey bozulmadı. Tur 51–54'te Codex'in
+her bulgusu düzeltildi; her bulgunun testi düzeltmeden önce kaldı. Birim
+testi fazın başında 520'ydi (Tur 50), şimdi 621.
+
 ---
 
 ## 3. Ölçülen durum
@@ -5759,7 +5854,7 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi). Senaryo şehirlerinde gün 3–17 ms (`pnpm dayperf`, Tur 43) |
-| Birim testi | **611 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de, Tur 52'de sunucuda tekrar, Tur 53'te haftanın kuralı ve günün koşusu, Tur 54'te hayalet eğri) |
+| Birim testi | **621 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de, Tur 52'de sunucuda tekrar, Tur 53'te haftanın kuralı ve günün koşusu, Tur 54'te hayalet eğri, Tur 55'te davetli ligler) |
 | Denge testi | **331 kontrol, hepsi geçiyor** (25 bölüm, süreleriyle; ~13 dk) |
 | Tarayıcı testi | **521 kontrol, hepsi geçiyor**, 0 konsol hatası (~40 dk); duman koşusu 132 (~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + paket bütçesi (Tur 46; Tur 48'den beri hizmet çalışanı ve manifest de) + duman oynanışı |

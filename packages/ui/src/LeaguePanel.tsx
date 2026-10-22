@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useReducer, useRef, useState } from 'react';
 import type { ReactElement } from 'react';
 import { CEO_BY_ID, MODIFIER_BY_ID } from '@capital/content';
 import { LEAGUE_SAMPLE_DAYS, encodeRun, formatMoney, getPlayer, leagueBoardKind, leagueRule, runFromState, verifyRun } from '@capital/core';
@@ -9,6 +9,7 @@ import { progressFor, useLeagueStanding, verdictFor } from './leagueVerify';
 import { t } from './i18n';
 import { CareerRunLine } from './CareerPanel';
 import { GhostChart, GhostMoves } from './LeagueGhosts';
+import { LeagueFriends } from './LeagueFriends';
 import type { CurveSeries } from './LeagueGhosts';
 import type { MessageKey } from './i18n';
 
@@ -192,7 +193,7 @@ const BOARD_TEXT: Record<LeagueBoard['kind'], MessageKey> = {
  * Lig sunucusundaki anonim hesap: bu tarayıcıda bir anahtar. Silmek iki
  * adımda (yanlışlıkla basılmasın); hesap ve bütün koşuları sunucudan gidiyor.
  */
-function LeagueAccount({ board }: { board: LeagueBoard }): ReactElement {
+function LeagueAccount({ board, onDeleted }: { board: LeagueBoard; onDeleted?: () => void }): ReactElement {
   const { toast } = useGame();
   const [confirm, setConfirm] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -202,6 +203,7 @@ function LeagueAccount({ board }: { board: LeagueBoard }): ReactElement {
     setBusy(false);
     setConfirm(false);
     toast(ok ? t('app.league.account.deleted') : t('app.league.account.deleteFailed'), ok ? 'good' : 'bad');
+    if (ok) onDeleted?.();
   };
   return (
     <section className="league-account" data-league-account>
@@ -249,6 +251,10 @@ export function LeaguePanel(): ReactElement {
   const [showRejected, setShowRejected] = useState(false);
   // Grafikte sabitlenmiş gün (örnek dizini); yoksa kart bugünü anlatıyor (Tur 54).
   const [focus, setFocus] = useState<number | null>(null);
+  // Arkadaş ligine katılmak hesabı açabiliyor (Tur 55): hesap bölümü hemen görünsün.
+  const [, accountChanged] = useReducer((count: number) => count + 1, 0);
+  // Hesap silinince arkadaş ligleri bölümü baştan kuruluyor: eski liglerin listesi kalmasın.
+  const [accountDeletions, accountDeleted] = useReducer((count: number) => count + 1, 0);
 
   if (!state.league) {
     return (
@@ -424,7 +430,10 @@ export function LeaguePanel(): ReactElement {
         )}
       </section>
 
-      {board.account?.exists() && <LeagueAccount board={board} />}
+      {/* Davetli ligler (Tur 55): lig sunucusu tanıyorsa. */}
+      {board.friends?.available() && weekId && <LeagueFriends key={accountDeletions} friends={board.friends} boardId={weekId} daily={daily} onAccount={accountChanged} />}
+
+      {board.account?.exists() && <LeagueAccount board={board} onDeleted={accountDeleted} />}
 
       <section className="league-paste">
         <h3>{t('app.league.paste.title')}</h3>

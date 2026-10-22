@@ -3232,7 +3232,7 @@ async function finish(browser, consoleErrors) {
     // Satır kodunun indirilmesi (Tur 52: sunucunun doğruladığı satırın kodu inmemeli).
     const codeRequests = [];
     // Bağlamın kaydı varsa oyun kurulum yerine kayıttan açılıyor (A'nın ikinci sayfası).
-    const page = async (context, label) => {
+    const page = async (context, label, search = '') => {
       const p = await context.newPage();
       p.on('pageerror', (e) => errors.push(`${label}: ${e.message}`));
       p.on('request', (r) => {
@@ -3241,11 +3241,11 @@ async function finish(browser, consoleErrors) {
       p.on('console', (m) => {
         if (m.type() === 'error' && !network(m.text())) errors.push(`${label}: ${m.text()}`);
       });
-      await p.goto('http://127.0.0.1:8811/');
+      await p.goto(`http://127.0.0.1:8811/${search}`);
       await p.waitForSelector('.newgame, .topbar', { timeout: 30000 });
       return p;
     };
-    const open = async (url, label) => {
+    const open = async (url, label, search = '') => {
       const context = await browser.newContext({ viewport: { width: 1280, height: 860 } });
       contexts.push(context);
       await context.addInitScript(veteran, TUTORIAL_KEY);
@@ -3267,7 +3267,7 @@ async function finish(browser, consoleErrors) {
           return remove.call(this, type, listener, ...rest);
         };
       });
-      return { context, p: await page(context, label) };
+      return { context, p: await page(context, label, search) };
     };
     // Oyun sunucuyu 10 ve 30 sn sonra yeniden deniyor (her deneme en çok 10 sn):
     // yük altında üçüncü deneme ~70. saniyede.
@@ -3399,10 +3399,35 @@ async function finish(browser, consoleErrors) {
       check('Tablo sunucunun; satır sunucuda doğrulanmış, tarayıcı yeniden oynatmıyor (kod inmiyor)',
         boardA === 'server' && okA && rowA.text.includes('doğrulandı') && rowA.mine && rowA.codes === 0,
         `${boardA} · ${rowA.text.trim().slice(0, 80)} · ${rowA.codes} kod indi`);
+
+      // Tur 55: arkadaş ligi. A lig kuruyor; ligin tablosunda kendi koşusu, kodu ekranda.
+      await a.p.fill('[data-league-friend-form="create"] input', 'Kuzey Ligi');
+      await a.p.locator('[data-league-friend-form="create"] button').click();
+      const friendA = await a.p
+        .waitForSelector('[data-league-row="friend"]', { timeout: 15000 })
+        .then(() => a.p.evaluate(() => ({
+          code: document.querySelector('.league-friend-code code')?.textContent ?? '',
+          tab: document.querySelector('[data-league-friend][aria-selected="true"]')?.textContent ?? '',
+          row: document.querySelector('[data-league-row="friend"]')?.textContent ?? '',
+          mine: document.querySelector('[data-league-row="friend"]')?.classList.contains('mine') ?? false,
+          message: document.querySelector('[data-league-friend-message]')?.textContent ?? '',
+        })))
+        .catch(() => null);
+      check('Arkadaş ligi kuruluyor: kodu ekranda, ligin tablosunda kendi koşusu (Tur 55)',
+        friendA !== null && /^[A-Z2-9]{6}$/.test(friendA.code) && friendA.tab.includes('Kuzey Ligi') && friendA.row.includes('Sunucu Holding') && friendA.mine && /kuruldu/.test(friendA.message),
+        JSON.stringify(friendA).slice(0, 200));
+      const friendCode = friendA?.code ?? '';
       await a.p.close();
 
       // B: başka bir tarayıcı aynı haftada: tablo aynı, satır onun değil, hayalet o.
-      const b = await open(leagueUrl, 'B');
+      // B davet bağlantısıyla geliyor (Tur 55): kurulum Tohum Ligi'yle açılıyor, davet yazıyor.
+      const b = await open(leagueUrl, 'B', friendCode ? `?lig=${friendCode}` : '');
+      const inviteSetup = await b.p.evaluate(() => ({
+        mode: document.querySelector('.mode-picker [data-mode="league"]')?.getAttribute('aria-checked') ?? '',
+        invite: document.querySelector('.newgame [data-league-invite]')?.textContent ?? '',
+      }));
+      check('Davet bağlantısıyla kurulum Tohum Ligi\'yle açılıyor ve daveti yazıyor (Tur 55)',
+        inviteSetup.mode === 'true' && inviteSetup.invite.includes(friendCode), JSON.stringify(inviteSetup));
       await startLeague(b.p, 'İkinci Holding');
       // Takvim dursun: panel açılırken oyun ilerlemesin.
       await b.p.evaluate(() => window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 }));
@@ -3460,9 +3485,26 @@ async function finish(browser, consoleErrors) {
       const codesB = codeRequests.filter((label) => label === 'B').length;
       check('Klavyeyle gün değişiyor; Escape önce bugüne dönüyor, sonra pencereyi kapatıyor; liderin kodu bir kez indi',
         byKey && back && closed && codesB === 1, `ok ${byKey}/${back}/${closed} · ${codesB} kod indi`);
-      // Kare için pencere yeniden açık.
+      // Pencere yeniden açık: B davetle gelen koda katılıyor (alan dolu geliyor).
       await b.p.locator('.agenda [data-agenda="league"] button').first().click();
       await b.p.waitForSelector('[data-league-moves="ready"]', { timeout: 10000 }).catch(() => null);
+      const prefilled = await b.p.inputValue('[data-league-friend-form="join"] input').catch(() => '');
+      const invitedNote = await b.p.locator('.league-friends [data-league-invite]').textContent().catch(() => '');
+      await b.p.locator('[data-league-friend-form="join"] button').click();
+      const friendB = await b.p
+        .waitForSelector('[data-league-row="friend"]', { timeout: 15000 })
+        .then(() => b.p.evaluate(() => ({
+          tab: document.querySelector('[data-league-friend][aria-selected="true"]')?.textContent ?? '',
+          rows: [...document.querySelectorAll('[data-league-row="friend"]')].map((row) => row.textContent ?? ''),
+          played: document.querySelector('.league-friend')?.textContent ?? '',
+          search: location.search,
+          account: document.querySelector('[data-league-account]') !== null,
+        })))
+        .catch(() => null);
+      check('Davetle gelen koda katılıyor: ligin tablosunda arkadaşın koşusu; kod adresten kalkıyor (Tur 55)',
+        prefilled === friendCode && (invitedNote ?? '').includes(friendCode) && friendB !== null && friendB.tab.includes('Kuzey Ligi') && friendB.tab.includes('2') &&
+          friendB.rows.length === 1 && friendB.rows[0].includes('Sunucu Holding') && /2 üyeden 1 kişi/.test(friendB.played) && !friendB.search.includes('lig=') && friendB.account,
+        JSON.stringify({ prefilled, note: (invitedNote ?? '').slice(0, 30), tab: friendB?.tab, rows: friendB?.rows.length, search: friendB?.search, account: friendB?.account }));
       await b.p.screenshot({ path: path.join(OUT, 'playtest-lig-sunucu.png') });
       await b.context.close();
 
@@ -3494,6 +3536,8 @@ async function finish(browser, consoleErrors) {
       await a.p.evaluate(() => window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 }));
       await a.p.locator('.agenda [data-agenda="league"] button').first().click();
       await serverBoard(a.p);
+      // Tur 55: A'nın arkadaş ligi panelde (B de üyesi).
+      const friendsBefore = await a.p.waitForSelector('[data-league-friend-table]', { timeout: 15000 }).then(() => true).catch(() => false);
       await a.p.waitForSelector('[data-league-forget="ask"]', { timeout: 10000 }).catch(() => null);
       await a.p.locator('[data-league-forget="ask"]').click();
       await a.p.locator('[data-league-forget="confirm"]').click();
@@ -3502,6 +3546,9 @@ async function finish(browser, consoleErrors) {
         return t?.total === 1 ? t : null;
       });
       const accountGone = await a.p.waitForFunction(() => document.querySelector('[data-league-account]') === null || null, null, { timeout: 5000 }).then(() => true).catch(() => false);
+      // Hesap gidince arkadaş ligleri bölümü baştan: eski lig listesi kalmıyor; sunucuda lig B ile duruyor.
+      const friendsAfter = await a.p.waitForSelector('[data-league-friends="0"]', { timeout: 5000 }).then(() => true).catch(() => false);
+      check('Hesap silinince arkadaş ligleri panelden gidiyor (Tur 55)', friendsBefore && friendsAfter, `önce ${friendsBefore} · sonra ${friendsAfter}`);
       check('Lig hesabı siliniyor: koşusu sunucudan gidiyor, anahtar tarayıcıdan', left?.entries[0]?.companyName === 'Bekleyen Holding' && accountGone,
         `${left?.total ?? '?'} koşu kaldı`);
       await a.context.close();

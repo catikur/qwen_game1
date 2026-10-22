@@ -125,6 +125,40 @@ export interface LeagueEntry {
  */
 export type LeagueSubmitOutcome = 'saved' | 'kept-better' | 'error' | 'queued' | 'name-blocked' | 'closed' | 'busy' | 'version' | 'rejected' | 'copy';
 
+/** Davetli lig (Tur 55): ad, altı harflik kod, üye sayısı. */
+export interface FriendLeague {
+  code: string;
+  name: string;
+  members: number;
+}
+
+/**
+ * Davetli lig isteğinin sonucu. `unknown-code`: böyle bir lig yok; `full`:
+ * lig dolu; `limit`: oyuncunun lig hakkı doldu; `name` ve `name-blocked`:
+ * ligin adı kurallara uymuyor ya da herkese açık olamaz.
+ */
+export type FriendOutcome = 'ok' | 'offline' | 'busy' | 'name' | 'name-blocked' | 'unknown-code' | 'full' | 'limit' | 'error';
+
+/** Ligin bir tablosu (hafta ya da gün): üyelerin doğrulanmış koşuları. */
+export interface FriendTable {
+  name: string;
+  members: number;
+  entries: LeagueEntry[];
+}
+
+export interface FriendLeagues {
+  /** Sunucu davetli ligleri tanıyor mu (sağlık ucunda `friends`). */
+  available(): boolean;
+  /** Liglerim; hesap yoksa boş, sunucuya ulaşılamazsa `null`. */
+  list(): Promise<FriendLeague[] | null>;
+  /** Lig kur ya da koda katıl; hesap yoksa açılıyor. */
+  create(name: string): Promise<{ outcome: FriendOutcome; league?: FriendLeague }>;
+  join(code: string): Promise<{ outcome: FriendOutcome; league?: FriendLeague }>;
+  leave(code: string): Promise<boolean>;
+  /** Ligin o hafta ya da o günkü tablosu; lig yoksa ya da üye değilsek `gone`, ulaşılamazsa `null`. */
+  table(code: string, boardId: string): Promise<FriendTable | 'gone' | null>;
+}
+
 /** Tablonun durumu: sunucuya ulaşılamıyorsa son görülen tablo gösteriliyor. */
 export interface LeagueFeedInfo {
   offline?: boolean;
@@ -142,6 +176,8 @@ export interface LeagueBoard {
   submit(entry: Omit<LeagueEntry, 'id' | 'mine' | 'who' | 'codeKey' | 'loadCode'>): Promise<LeagueSubmitOutcome>;
   /** Lig sunucusu: bu tarayıcının anonim hesabı (var mı; hesabı ve koşularını sil). */
   account?: { exists(): boolean; forget(): Promise<boolean> };
+  /** Lig sunucusu (Tur 55): davetli ligler; sunucu tanımıyorsa `available()` yanlış. */
+  friends?: FriendLeagues;
   /** Tablo bırakılınca (oyun ekranı kapandı): kalıcı dinleyiciler kalkıyor. */
   close?(): void;
 }

@@ -339,6 +339,26 @@ koşuları da `seed_verified`'da. Yalnız 3. adım (kod). Oyun `"daily":1`
 demeyen sunucuyu (Tur 52'ninki: günün koşusunun ucu ve haftanın kuralı yok)
 eski sayıp yerel tabloyla açılıyor; yeni kod gelince sunucuya dönüyor.
 
+**Tur 55 (davetli ligler ve arkadaş tablosu):** iki yeni tablo
+(`seed_leagues`, `seed_league_members`, `schema.sql`'in son bölümü). Sıra yine
+şema, kod:
+
+1. D1 konsolunda yalnız Tur 55 bölümü (ya da `schema.sql`'in tamamı; her
+   tablo `IF NOT EXISTS`, var olanlar değişmiyor):
+
+   ```sql
+   CREATE TABLE IF NOT EXISTS seed_leagues (code TEXT PRIMARY KEY, name TEXT NOT NULL, created_at INTEGER NOT NULL);
+   CREATE TABLE IF NOT EXISTS seed_league_members (code TEXT NOT NULL, player_id TEXT NOT NULL, joined_at INTEGER NOT NULL, PRIMARY KEY (code, player_id));
+   CREATE INDEX IF NOT EXISTS seed_league_members_by_player ON seed_league_members (player_id);
+   ```
+
+2. Kod: 3. adım (paketi yapıştır, Deploy).
+3. Denetim: `/v1/health` cevabında `"friends":1`.
+
+Kod şemadan önce giderse bir şey bozulmuyor: sağlık ucu `"friends":0` diyor,
+oyun arkadaş liglerini göstermiyor, genel tablo ve Lite eskisi gibi; hesap
+silme ve haftalık temizlik yeni tabloları yoksa atlıyor.
+
 **Sürüm uyumu.** Sunucu koşuyu yalnız kendi simülasyon sürümüyle
 yargılayabiliyor. Pages'teki oyun her `main` birleşmesinde kendiliğinden
 güncelleniyor, Worker elle. Oyunun simülasyonunu değiştiren bir birleşmeden

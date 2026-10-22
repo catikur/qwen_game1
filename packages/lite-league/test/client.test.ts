@@ -73,7 +73,15 @@ function run(overrides: Partial<LeagueRun> = {}): LeagueRun {
 }
 
 function entryOf(value: LeagueRun) {
-  return { weekId: value.weekId, companyName: value.companyName, ceoId: value.ceoId, score: value.score, curve: value.curve, code: encodeRun(value), submittedAt: '' };
+  return {
+    weekId: value.weekId,
+    companyName: value.companyName,
+    ceoId: value.ceoId,
+    score: value.score,
+    curve: value.curve,
+    code: encodeRun(value),
+    submittedAt: '',
+  };
 }
 
 /** Açık abonelikler: test kalsa da kapanıyor (zamanlayıcı süreci açık tutmasın). */
@@ -121,7 +129,7 @@ test('istemci: sunucuyu tanıyor; eski sunucu ve bağlantısızlık ayrılıyor'
   assert.equal(storage.map.has('capitalforge.league.account'), false, 'tanımak hesap açmıyor');
 });
 
-test('istemci: Tur 51\'in sunucusu (doğrulamıyor) eski sayılıyor; koşu ona gitmiyor (Codex #81)', async () => {
+test("istemci: Tur 51'in sunucusu (doğrulamıyor) eski sayılıyor; koşu ona gitmiyor (Codex #81)", async () => {
   const db = memoryDb();
   const net: Net = { online: true, old: false, tur51: true, now: THURSDAY, requests: [] };
   const { board } = client(db, net);
@@ -134,7 +142,7 @@ test('istemci: Tur 51\'in sunucusu (doğrulamıyor) eski sayılıyor; koşu ona 
   assert.equal(board.seen(), true);
 });
 
-test('istemci: Tur 52\'nin sunucusu (günün koşusu ve haftanın kuralı yok) eski sayılıyor (Tur 53)', async () => {
+test("istemci: Tur 52'nin sunucusu (günün koşusu ve haftanın kuralı yok) eski sayılıyor (Tur 53)", async () => {
   const db = memoryDb();
   const net: Net = { online: true, old: false, tur52: true, now: THURSDAY, requests: [] };
   const { board } = client(db, net);
@@ -159,7 +167,10 @@ test('istemci: günün koşusu kendi tablosunda; haftanınkiyle karışmıyor (T
   const refreshed = days.next();
   assert.equal(await board.submit(entryOf(value)), 'saved');
   await refreshed;
-  assert.deepEqual(days.last().entries.map((entry) => [entry.weekId, entry.score, entry.mine]), [[DAY, 400_000, true]]);
+  assert.deepEqual(
+    days.last().entries.map((entry) => [entry.weekId, entry.score, entry.mine]),
+    [[DAY, 400_000, true]],
+  );
   const weeks = watch(board, WEEK);
   await weeks.next();
   assert.deepEqual(weeks.last().entries, [], 'haftanın tablosu boş');
@@ -242,7 +253,15 @@ test('istemci: sunucunun kesin retleri; silinen hesap yenisiyle', async () => {
 
   // Hesap başka sekmeden silindi: gönderim yeni hesapla.
   const before = JSON.parse(storage.map.get('capitalforge.league.account')!).id;
-  await handle(new Request(`${URL}/v1/players/me`, { method: 'DELETE', headers: { authorization: `Bearer ${before}.${JSON.parse(storage.map.get('capitalforge.league.account')!).token}` } }), db, net.now, TRUSTING);
+  await handle(
+    new Request(`${URL}/v1/players/me`, {
+      method: 'DELETE',
+      headers: { authorization: `Bearer ${before}.${JSON.parse(storage.map.get('capitalforge.league.account')!).token}` },
+    }),
+    db,
+    net.now,
+    TRUSTING,
+  );
   net.now += SEED.minGapMs;
   assert.equal(await board.submit(entryOf(run({ score: 3_000_000 }))), 'saved');
   assert.notEqual(JSON.parse(storage.map.get('capitalforge.league.account')!).id, before);
@@ -384,7 +403,9 @@ test('istemci: iki sekme ilk gönderimi aynı anda yaparsa tek hesap; koşu tara
   release();
   await late;
   const stored = JSON.parse(storage.map.get('capitalforge.league.account')!);
-  const table = await (await handle(new Request(`${URL}/v1/seed/weeks/${WEEK}`, { headers: { authorization: `Bearer ${stored.id}.${stored.token}` } }), db, net.now, TRUSTING)).json();
+  const table = await (
+    await handle(new Request(`${URL}/v1/seed/weeks/${WEEK}`, { headers: { authorization: `Bearer ${stored.id}.${stored.token}` } }), db, net.now, TRUSTING)
+  ).json();
   assert.equal(table.total, 1, 'tarayıcının erişemediği hesapta satır kalmıyor');
   assert.equal(table.entries[0].mine, true, 'satır tarayıcının tuttuğu hesabın');
   // Kaybeden sekmenin açtığı hesap sunucuda kalmıyor: anahtarını kimse tutmuyor (Codex #80).
@@ -520,7 +541,8 @@ test('istemci: hesap silinirken süren gönderim bekleniyor, 401 yeni hesap açm
   net.online = true;
   hold = new Promise((resolve) => (release = resolve));
   online.dispatchEvent(new Event('online'));
-  for (let i = 0; i < 50 && net.requests.filter((line) => line === 'POST /v1/seed/runs').length < 2; i++) await new Promise((resolve) => setTimeout(resolve, 5));
+  for (let i = 0; i < 50 && net.requests.filter((line) => line === 'POST /v1/seed/runs').length < 2; i++)
+    await new Promise((resolve) => setTimeout(resolve, 5));
 
   // Oyuncu tam o sırada hesabını siliyor.
   const forgotten = board.account!.forget();
@@ -558,7 +580,8 @@ test('istemci: gönderim aralığına takılan bekleyen koşu sonra kendiliğind
   assert.equal(await board.submit(entryOf(run({ score: 2_000_000 }))), 'queued');
   net.online = true;
   online.dispatchEvent(new Event('online'));
-  const best = async () => (await (await handle(new Request(`${URL}/v1/seed/weeks/${WEEK}`), db, net.now, TRUSTING)).json()).entries[0]?.score as number | undefined;
+  const best = async () =>
+    (await (await handle(new Request(`${URL}/v1/seed/weeks/${WEEK}`), db, net.now, TRUSTING)).json()).entries[0]?.score as number | undefined;
   for (let i = 0; i < 50 && (await best()) === undefined; i++) await new Promise((resolve) => setTimeout(resolve, 5));
   assert.equal(await best(), 1_250_000, 'ilk koşu gitti, ikincisi aralığa takıldı');
 
@@ -664,11 +687,15 @@ test('istemci: silme başladığı andaki hesabı siliyor; beklerken öbür sekm
   net.now += SEED.minGapMs;
   hold = new Promise((resolve) => (release = resolve));
   const sending = board.submit(entryOf(run({ score: 2_000_000 })));
-  for (let i = 0; i < 50 && net.requests.filter((line) => line === 'POST /v1/seed/runs').length < 2; i++) await new Promise((resolve) => setTimeout(resolve, 5));
+  for (let i = 0; i < 50 && net.requests.filter((line) => line === 'POST /v1/seed/runs').length < 2; i++)
+    await new Promise((resolve) => setTimeout(resolve, 5));
   const forgotten = board.account!.forget();
 
   // Silme gönderimi beklerken öbür sekme yeni hesap açıp koşusunu gönderiyor.
-  const opened = (await (await handle(new Request(`${URL}/v1/seed/players`, { method: 'POST' }), db, net.now, TRUSTING)).json()) as { id: string; token: string };
+  const opened = (await (await handle(new Request(`${URL}/v1/seed/players`, { method: 'POST' }), db, net.now, TRUSTING)).json()) as {
+    id: string;
+    token: string;
+  };
   const other = { url: URL, id: opened.id, token: opened.token };
   const posted = await handle(
     new Request(`${URL}/v1/seed/runs`, {
@@ -686,8 +713,14 @@ test('istemci: silme başladığı andaki hesabı siliyor; beklerken öbür sekm
   await sending;
   assert.equal(await forgotten, true);
 
-  const table = (await (await handle(new Request(`${URL}/v1/seed/weeks/${WEEK}`), db, net.now, TRUSTING)).json()) as { entries: Array<{ companyName: string }> };
-  assert.deepEqual(table.entries.map((entry) => entry.companyName), ['Öbür Sekme'], 'silinen hesabın koşusu gitti, öbür sekmeninki kaldı');
+  const table = (await (await handle(new Request(`${URL}/v1/seed/weeks/${WEEK}`), db, net.now, TRUSTING)).json()) as {
+    entries: Array<{ companyName: string }>;
+  };
+  assert.deepEqual(
+    table.entries.map((entry) => entry.companyName),
+    ['Öbür Sekme'],
+    'silinen hesabın koşusu gitti, öbür sekmeninki kaldı',
+  );
   assert.equal(JSON.parse(storage.getItem('capitalforge.league.account')!).id, other.id, 'öbür sekmenin anahtarı yerinde');
   assert.equal(await db.first('SELECT id FROM players WHERE id = ?', a.id), null, 'silme başladığı andaki hesap silindi');
 });
@@ -796,7 +829,11 @@ test('istemci: silinen hesabın bekleyen koşuları kuyruktan gidiyor, öbür se
   release();
   assert.equal(await forgotten, true);
   const left = JSON.parse(storage.getItem('capitalforge.league.pending')!) as Array<{ code: string }>;
-  assert.deepEqual(left.map((item) => item.code), ['öbür'], 'silinen hesabın koşusu kuyruktan gitti, öbür sekmeninki kaldı');
+  assert.deepEqual(
+    left.map((item) => item.code),
+    ['öbür'],
+    'silinen hesabın koşusu kuyruktan gitti, öbür sekmeninki kaldı',
+  );
 });
 
 test('istemci: hesap açma da yoğunluğa takılırsa sunucunun söylediği süre sonra yeniden deniyor (Codex #80)', async () => {
@@ -840,12 +877,18 @@ test('istemci: bekleyen koşu yalnız kendi hesabıyla gidiyor; hesap silindiyse
   assert.equal(await board.submit(entryOf(run({ score: 2_000_000 }))), 'queued');
 
   // Öbür sekme hesabı sunucuda sildi; cevabı daha o sekmeye ulaşmadı, depo yerinde.
-  const deleted = await handle(new Request(`${URL}/v1/players/me`, { method: 'DELETE', headers: { authorization: `Bearer ${a.id}.${a.token}` } }), db, net.now, TRUSTING);
+  const deleted = await handle(
+    new Request(`${URL}/v1/players/me`, { method: 'DELETE', headers: { authorization: `Bearer ${a.id}.${a.token}` } }),
+    db,
+    net.now,
+    TRUSTING,
+  );
   assert.equal(deleted.status, 200);
   const before = net.requests.length;
   net.online = true;
   online.dispatchEvent(new Event('online'));
-  for (let i = 0; i < 50 && JSON.parse(storage.getItem('capitalforge.league.pending') ?? '[]').length > 0; i++) await new Promise((resolve) => setTimeout(resolve, 10));
+  for (let i = 0; i < 50 && JSON.parse(storage.getItem('capitalforge.league.pending') ?? '[]').length > 0; i++)
+    await new Promise((resolve) => setTimeout(resolve, 10));
   await new Promise((resolve) => setTimeout(resolve, 50));
   const table = (await (await handle(new Request(`${URL}/v1/seed/weeks/${WEEK}`), db, net.now, TRUSTING)).json()) as { total: number };
   assert.equal(table.total, 0, 'silinen hesabın koşusu yeni hesapla yayımlanmadı');
@@ -1128,7 +1171,11 @@ test('istemci: bekleyen koşu gidince kuyruktan yalnız kendi girdisi çıkıyor
   for (let i = 0; i < 100 && posts < 1; i++) await new Promise((resolve) => setTimeout(resolve, 5));
   await new Promise((resolve) => setTimeout(resolve, 50));
   const left = JSON.parse(storage.getItem('capitalforge.league.pending')!) as Array<{ account: string }>;
-  assert.deepEqual(left.map((item) => item.account), ['b-hesabi'], "B'nin koşusu kuyrukta");
+  assert.deepEqual(
+    left.map((item) => item.account),
+    ['b-hesabi'],
+    "B'nin koşusu kuyrukta",
+  );
 });
 
 test('Tur 52: sunucunun tablosu doğrulanmış; sürüm farkında koşu bekliyor, tutmayan ve kopya düşüyor', async () => {
@@ -1181,4 +1228,77 @@ test('Tur 52: sunucunun tablosu doğrulanmış; sürüm farkında koşu bekliyor
   const thief = createServerBoard({ url: URL, fetch: fetcher, storage: memoryStorage(), online: new EventTarget(), pollMs: 2 ** 30 });
   assert.equal(await thief.probe(), 'ok');
   assert.equal(await thief.submit(entryOf(run())), 'copy');
+});
+
+test('Tur 55: davetli ligler istemciden — kur, kodla katıl, ligin tablosu, ayrıl', async () => {
+  const db = memoryDb();
+  const net: Net = { online: true, old: false, now: THURSDAY, requests: [] };
+  const a = client(db, net).board;
+  const b = client(db, net).board;
+  assert.equal(await a.probe(), 'ok');
+  assert.equal(await b.probe(), 'ok');
+  assert.equal(a.friends?.available(), true, 'sağlık ucu friends: 1');
+
+  // Hesap yokken liglerim boş, istek de gitmiyor.
+  net.requests.length = 0;
+  assert.deepEqual(await a.friends!.list(), []);
+  assert.deepEqual(net.requests, []);
+
+  // Lig kurmak hesabı açıyor; ilk koşudan önce de.
+  const made = await a.friends!.create('Kuzey Ligi');
+  assert.equal(made.outcome, 'ok');
+  assert.equal(a.account?.exists(), true);
+  const code = made.league!.code;
+  assert.match(code, /^[A-Z2-9]{6}$/);
+
+  const joined = await b.friends!.join(code.toLowerCase());
+  assert.deepEqual(joined, { outcome: 'ok', league: { code, name: 'Kuzey Ligi', members: 2 } });
+  assert.deepEqual((await b.friends!.join('ZZZZZZ')).outcome, 'unknown-code');
+  assert.deepEqual((await a.friends!.create('x')).outcome, 'name');
+
+  assert.equal(await a.submit(entryOf(run({ companyName: 'Atilla Holding', score: 1_200_000, curve: [100_000, 600_000, 1_200_000] }))), 'saved');
+  assert.equal(await b.submit(entryOf(run({ companyName: 'Deniz Ticaret', score: 1_500_000, curve: [100_000, 750_000, 1_500_000] }))), 'saved');
+
+  const table = await a.friends!.table(code, WEEK);
+  assert.ok(table && table !== 'gone');
+  assert.deepEqual({ name: table.name, members: table.members }, { name: 'Kuzey Ligi', members: 2 });
+  assert.deepEqual(
+    table.entries.map((entry) => [entry.companyName, entry.score, entry.mine, entry.verified]),
+    [
+      ['Deniz Ticaret', 1_500_000, false, true],
+      ['Atilla Holding', 1_200_000, true, true],
+    ],
+  );
+  assert.deepEqual(await a.friends!.list(), [{ code, name: 'Kuzey Ligi', members: 2 }]);
+
+  // B ayrılınca kendi tablosu yok; A'nınki tek kişi.
+  assert.equal(await b.friends!.leave(code), true);
+  assert.equal(await b.friends!.table(code, WEEK), 'gone');
+  assert.deepEqual(await a.friends!.list(), [{ code, name: 'Kuzey Ligi', members: 1 }]);
+
+  // Bağlantı yokken.
+  net.online = false;
+  assert.equal(await a.friends!.list(), null);
+  assert.equal(await a.friends!.table(code, WEEK), null);
+  assert.equal((await a.friends!.create('Çevrimdışı Lig')).outcome, 'offline');
+});
+
+test('Tur 55: şeması uygulanmamış sunucu (friends 0) tabloyu veriyor, davetli ligler kapalı; Tur 53 sunucusunda da', async () => {
+  const db = memoryDb();
+  await db.run('DROP TABLE seed_league_members');
+  await db.run('DROP TABLE seed_leagues');
+  const net: Net = { online: true, old: false, now: THURSDAY, requests: [] };
+  const board = client(db, net).board;
+  assert.equal(await board.probe(), 'ok', 'genel tablo çalışıyor');
+  assert.equal(board.friends?.available(), false);
+
+  // Tur 53'ün sunucusu: sağlık ucunda friends yok.
+  const fetcher = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const request = new Request(input, init);
+    if (new globalThis.URL(request.url).pathname === '/v1/health') return Response.json({ ok: true, week: WEEK, seed: 1, verify: 1, daily: 1 });
+    return handle(request, memoryDb(), net.now, TRUSTING);
+  }) as typeof fetch;
+  const old = createServerBoard({ url: URL, fetch: fetcher, storage: memoryStorage(), pollMs: 2 ** 30 });
+  assert.equal(await old.probe(), 'ok');
+  assert.equal(old.friends?.available(), false);
 });
