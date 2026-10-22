@@ -59,6 +59,15 @@
   /* Rakip kartının iki kolu (Ar-Ge, pazarlama): kimlik, anlam değil. */
   --arm-research: #2f7fb0;
   --arm-marketing: #8a63b8;
+  /*
+   * Lig grafiğinin çizgileri (Tur 54): hayalet, ikinci ve üçüncü lider.
+   * Kimlik renkleri, anlam değil; gündüz ve gece ayrı seçildi ve renk
+   * körlüğü denetiminden geçti (OKLab ΔE ≥ 8,5 gündüz; gece yeşil–pembe
+   * 7,4, hayalet kesik çizgi olduğu için ikinci bir ayrım da var).
+   */
+  --curve-ghost: #12925a;
+  --curve-b: #2a6fd6;
+  --curve-c: #d15a9b;
 
   /* --- anlam renkleri: yalnızca yön ve durum --- */
   --good: #0e9f5a;
@@ -132,6 +141,9 @@
   --brass: #5be39a;
   --arm-research: #6cc0f0;
   --arm-marketing: #c09cf0;
+  --curve-ghost: #1fa05e;
+  --curve-b: #4a83e6;
+  --curve-c: #d65d9c;
   --good: #5be39a;
   --bad: #ff7a7a;
   --warn: #ffc65c;
@@ -4575,35 +4587,152 @@ button.icon {
   gap: 6px;
 }
 
+.league-curves {
+  position: relative;
+}
+
 .league-sparks {
   width: 100%;
   height: auto;
   display: block;
+  touch-action: pan-y;
+  border-radius: var(--radius-xs);
+}
+
+.league-sparks:focus {
+  outline: none;
+}
+
+.league-sparks:focus-visible {
+  outline: 2px solid var(--select-ring);
+  outline-offset: 2px;
 }
 
 .league-axis {
-  stroke: var(--line);
+  stroke: var(--line-strong);
   stroke-width: 1;
 }
 
-.league-mine-line,
-.league-ghost-line {
+.league-grid line {
+  stroke: var(--line);
+  stroke-dasharray: 2 3;
+}
+
+.league-grid text,
+.league-days text,
+.league-today text {
+  fill: var(--muted);
+  font-size: calc(10px * var(--text-scale));
+  font-variant-numeric: tabular-nums;
+}
+
+/* Değer yazısı çizginin üstüne düşerse okunabilsin: yüzey renginde hale. */
+.league-grid text {
+  paint-order: stroke;
+  stroke: var(--panel-solid);
+  stroke-width: 3px;
+  stroke-linejoin: round;
+}
+
+.league-today line {
+  stroke: var(--line-strong);
+  stroke-dasharray: 3 3;
+}
+
+.league-cross line {
+  stroke: var(--muted);
+  stroke-width: 1;
+}
+
+/* Tur 54: çizgiler kimliğe göre — sen düz ve kalın, hayalet kesik, öbür liderler ince. */
+.league-line {
   fill: none;
-  stroke-width: 2;
+  stroke-width: 1.75;
   stroke-linejoin: round;
   stroke-linecap: round;
 }
 
-.league-mine-line {
+.league-line.slot-you {
   stroke: var(--text);
+  stroke-width: 2.5;
 }
 
-.league-ghost-line {
-  stroke: var(--brass);
-  stroke-dasharray: 4 3;
+.league-line.slot-ghost {
+  stroke: var(--curve-ghost);
+  stroke-width: 2;
+  stroke-dasharray: 5 3;
+}
+
+.league-line.slot-b {
+  stroke: var(--curve-b);
+}
+
+.league-line.slot-c {
+  stroke: var(--curve-c);
+}
+
+.league-dot {
+  stroke: var(--panel-solid);
+  stroke-width: 2;
+}
+
+.league-dot.slot-you {
+  fill: var(--text);
+}
+
+.league-dot.slot-ghost {
+  fill: var(--curve-ghost);
+}
+
+.league-dot.slot-b {
+  fill: var(--curve-b);
+}
+
+.league-dot.slot-c {
+  fill: var(--curve-c);
+}
+
+.league-tip {
+  position: absolute;
+  top: 18px;
+  transform: translateX(10px);
+  pointer-events: none;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 8px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-xs);
+  background: var(--panel-solid);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.14);
+  font-size: calc(11.5px * var(--text-scale));
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.league-tip.side-left {
+  transform: translateX(calc(-100% - 10px));
+}
+
+.league-tip b {
+  font-weight: 700;
+}
+
+/* Grafiğin tablo hâli: ekran okuyucu için, görünmez. */
+.league-curves-table {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 .league-legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
   display: flex;
   flex-wrap: wrap;
   gap: 4px 16px;
@@ -4620,8 +4749,84 @@ button.icon {
   margin-right: 4px;
 }
 
-.league-key.ghost {
-  border-top: 2px dashed var(--brass);
+.league-key.slot-you {
+  border-top-width: 3px;
+}
+
+.league-key.slot-ghost {
+  border-top: 2px dashed var(--curve-ghost);
+}
+
+.league-key.slot-b {
+  border-top-color: var(--curve-b);
+}
+
+.league-key.slot-c {
+  border-top-color: var(--curve-c);
+}
+
+.league-hint {
+  margin: 0;
+  font-size: calc(12px * var(--text-scale));
+}
+
+.league-moves {
+  border-top: 1px solid var(--line);
+  padding-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.league-moves h4 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: calc(13px * var(--text-scale));
+  font-weight: 700;
+  text-wrap: balance;
+}
+
+.league-moves p {
+  margin: 0;
+  font-size: calc(12px * var(--text-scale));
+}
+
+.league-move-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 3px;
+  font-size: calc(12.5px * var(--text-scale));
+}
+
+.league-move-list li {
+  display: grid;
+  grid-template-columns: 11ch minmax(0, 1fr);
+  gap: 8px;
+}
+
+.league-move-day {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.league-tally {
+  margin: 0;
+  display: grid;
+  gap: 2px;
+  font-size: calc(12px * var(--text-scale));
+  font-variant-numeric: tabular-nums;
+}
+
+.league-tally dt {
+  color: var(--muted);
+}
+
+.league-tally dd {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .league-table {
