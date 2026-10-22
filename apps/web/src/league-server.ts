@@ -198,6 +198,8 @@ export function createServerBoard(options: ServerBoardOptions): ServerBoard {
    */
   let forgetting = false;
   const inflight = new Set<Promise<SendOutcome>>();
+  /** Son yoğunluk cevabının "şu kadar sonra dene" süresi (ms). */
+  let retryHint = 0;
 
   function send(code: string): Promise<SendOutcome> {
     if (forgetting) return Promise.resolve('error');
@@ -224,7 +226,12 @@ export function createServerBoard(options: ServerBoardOptions): ServerBoard {
     }
     if (reply.status === 400 && reply.body.error === 'name-blocked') return 'name-blocked';
     if (reply.status === 409 && reply.body.error === 'week') return 'closed';
-    if (reply.status === 429) return 'busy';
+    if (reply.status === 429) {
+      // Sunucu ne zaman yeniden denenebileceğini söylüyor (saatlik sınırda saatin sonu).
+      const after = reply.body.retryAfter;
+      if (typeof after === 'number' && after > 0) retryHint = Math.max(retryHint, after * 1000);
+      return 'busy';
+    }
     return 'error';
   }
 
@@ -248,7 +255,9 @@ export function createServerBoard(options: ServerBoardOptions): ServerBoard {
   const RETRY_MAX = 5;
   function retryLater(): void {
     if (retryTimer !== null || closed || retries >= RETRY_MAX) return;
-    const delay = retryMs * 2 ** retries;
+    // Sunucunun söylediği süreden önce değil: saatlik sınır geri çekilmeden uzun sürebiliyor.
+    const delay = Math.max(retryMs * 2 ** retries, retryHint);
+    retryHint = 0;
     retries++;
     retryTimer = setTimeout(() => {
       retryTimer = null;

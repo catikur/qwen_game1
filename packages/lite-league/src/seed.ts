@@ -113,7 +113,8 @@ async function limit(db: Db, request: Request, kind: 'account' | 'run', cap: num
     key,
     hour,
   );
-  if ((row?.count ?? 0) > cap) throw new HttpError(429, 'busy');
+  // Sayaç saat başında sıfırlanıyor: istemci ne zaman yeniden deneyeceğini bilsin (Codex #80).
+  if ((row?.count ?? 0) > cap) throw new HttpError(429, 'busy', { retryAfter: Math.ceil((HOUR - (now % HOUR)) / 1000) });
 }
 
 /** Anonim hesap: ad yok, Lite'ın oyunu yok. */
@@ -174,7 +175,10 @@ export async function submitRun(request: Request, db: Db, playerId: string, now:
     now,
     SEED.minGapMs,
   );
-  if (reserved === 0) throw new HttpError(429, 'slow');
+  if (reserved === 0) {
+    const gap = await db.first<{ at: number }>('SELECT at FROM seed_gaps WHERE player_id = ?', playerId);
+    throw new HttpError(429, 'slow', { retryAfter: Math.max(1, Math.ceil(((gap?.at ?? now) + SEED.minGapMs - now) / 1000)) });
+  }
   const existing = await db.first<SeedRow>(`SELECT ${ROW_COLUMNS} FROM seed_runs WHERE player_id = ? AND week = ?`, playerId, run.weekId);
   if (existing && existing.score >= run.score) return json({ outcome: 'kept-better', entry: toEntry(existing, run.weekId, playerId) });
 

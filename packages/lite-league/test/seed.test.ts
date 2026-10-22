@@ -104,7 +104,7 @@ test('Tohum Ligi: haftanın en iyisi kalıyor, satırın kimliği değişmiyor; 
   const first = await submit(db, THURSDAY, me, run({ score: 1_000_000 }));
   assert.equal(first.body.outcome, 'saved');
 
-  assert.deepEqual((await submit(db, THURSDAY + 10_000, me, run({ score: 2_000_000 }))).body, { error: 'slow' });
+  assert.deepEqual((await submit(db, THURSDAY + 10_000, me, run({ score: 2_000_000 }))).body, { error: 'slow', retryAfter: 20 });
   const worse = await submit(db, THURSDAY + SEED.minGapMs, me, run({ score: 900_000, companyName: 'Daha Kötü' }));
   assert.equal(worse.status, 200);
   assert.equal(worse.body.outcome, 'kept-better');
@@ -131,8 +131,8 @@ test('Tohum Ligi: daha kötü gönderim de aralığı dolduruyor; satırın saat
   // Aralık geçti; daha kötü koşu satırı değiştirmiyor ama aralığı dolduruyor.
   const worse = await submit(db, THURSDAY + SEED.minGapMs, me, run({ score: 900_000 }));
   assert.equal(worse.body.outcome, 'kept-better');
-  assert.deepEqual((await submit(db, THURSDAY + SEED.minGapMs + 1000, me, run({ score: 800_000 }))).body, { error: 'slow' });
-  assert.deepEqual((await submit(db, THURSDAY + SEED.minGapMs + 2000, me, run({ score: 2_000_000 }))).body, { error: 'slow' });
+  assert.deepEqual((await submit(db, THURSDAY + SEED.minGapMs + 1000, me, run({ score: 800_000 }))).body, { error: 'slow', retryAfter: 29 });
+  assert.deepEqual((await submit(db, THURSDAY + SEED.minGapMs + 2000, me, run({ score: 2_000_000 }))).body, { error: 'slow', retryAfter: 28 });
 
   // Eşit skorda "önce gönderen" satırın saati: daha kötü gönderimler onu ileri almıyor.
   const table = await call(db, THURSDAY, 'GET', `/v1/seed/weeks/${WEEK}`);
@@ -275,7 +275,8 @@ test('Tohum Ligi: IP başına saatlik sınır; IP saklanmıyor, eski sayaç sili
   const db = memoryDb();
   for (let i = 0; i < SEED.accountsPerHour; i++) await seedAccount(db, THURSDAY, '203.0.113.7');
   const blocked = await call(db, THURSDAY, 'POST', '/v1/seed/players', undefined, undefined, { 'cf-connecting-ip': '203.0.113.7' });
-  assert.deepEqual(blocked.body, { error: 'busy' });
+  // Sayaç saat başında sıfırlanıyor; cevap ne zaman yeniden denenebileceğini söylüyor (Codex #80).
+  assert.deepEqual(blocked.body, { error: 'busy', retryAfter: 3600 });
   assert.equal(blocked.status, 429);
   await seedAccount(db, THURSDAY, '203.0.113.8');
   await seedAccount(db, THURSDAY + HOUR, '203.0.113.7');
@@ -290,7 +291,7 @@ test('Tohum Ligi: IP başına saatlik sınır; IP saklanmıyor, eski sayaç sili
     assert.ok(r.status === 200 || r.status === 201, `${i}. gönderim: ${JSON.stringify(r.body)}`);
   }
   const over = await submit(db, hourStart + SEED.runsPerHour * SEED.minGapMs, me, run(), { 'cf-connecting-ip': '198.51.100.1' });
-  assert.deepEqual(over.body, { error: 'busy' });
+  assert.deepEqual(over.body, { error: 'busy', retryAfter: 2700 });
 });
 
 test('Tohum Ligi: haftalık temizlik eski haftaları siliyor; sunucu sürümü sağlıkta', async () => {
