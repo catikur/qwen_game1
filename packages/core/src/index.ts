@@ -16,6 +16,7 @@ export { generateProfile } from './systems/entrants';
 export * from './engine';
 export * from './agenda';
 export * from './league';
+export * from './ghost';
 export {
   LEAGUE_DAILY_DAYS,
   LEAGUE_DAYS,

@@ -8,6 +8,8 @@ import type { LeagueBoard, LeagueEntry, LeagueFeedInfo, LeagueSubmitOutcome } fr
 import { progressFor, useLeagueStanding, verdictFor } from './leagueVerify';
 import { t } from './i18n';
 import { CareerRunLine } from './CareerPanel';
+import { GhostChart, GhostMoves } from './LeagueGhosts';
+import type { CurveSeries } from './LeagueGhosts';
 import type { MessageKey } from './i18n';
 
 /**
@@ -143,31 +145,9 @@ export function useGhost(state: GameState): Ghost | null {
 }
 
 /** Hayaletin bu gündeki değeri — eğri 10 günde bir örneklendi. */
-export function ghostValueAt(ghost: Ghost, day: number): number | null {
+export function ghostValueAt(ghost: Pick<Ghost, 'curve'>, day: number): number | null {
   const index = Math.floor(day / LEAGUE_SAMPLE_DAYS);
   return ghost.curve[Math.min(index, ghost.curve.length - 1)] ?? null;
-}
-
-function Sparks({ mine, ghost, slots }: { mine: number[]; ghost: number[] | null; slots: number }): ReactElement {
-  const width = 320;
-  const height = 96;
-  const all = [...mine, ...(ghost ?? [])];
-  const max = Math.max(1, ...all);
-  const points = (series: number[]) =>
-    series
-      .map((value, index) => {
-        const x = (index / Math.max(1, slots)) * (width - 8) + 4;
-        const y = height - 6 - (value / max) * (height - 16);
-        return `${x.toFixed(1)},${y.toFixed(1)}`;
-      })
-      .join(' ');
-  return (
-    <svg className="league-sparks" viewBox={`0 0 ${width} ${height}`} role="img" aria-label={t('app.league.sparksLabel')}>
-      <line x1="4" x2={width - 4} y1={height - 6} y2={height - 6} className="league-axis" />
-      {ghost && ghost.length > 1 && <polyline points={points(ghost)} className="league-ghost-line" />}
-      {mine.length > 1 && <polyline points={points(mine)} className="league-mine-line" />}
-    </svg>
-  );
 }
 
 const REJECTION: Record<RunRejection, MessageKey> = {
@@ -267,6 +247,8 @@ export function LeaguePanel(): ReactElement {
   const paste = usePasteVerifier();
   const [pasted, setPasted] = useState('');
   const [showRejected, setShowRejected] = useState(false);
+  // Grafikte sabitlenmiş gün (örnek dizini); yoksa kart bugünü anlatıyor (Tur 54).
+  const [focus, setFocus] = useState<number | null>(null);
 
   if (!state.league) {
     return (
@@ -282,7 +264,13 @@ export function LeaguePanel(): ReactElement {
   const rule = leagueRule(state.league.weekId);
   const mine = state.league.curve;
   const now = getPlayer(state).netWorth;
-  const ghostNow = ghost ? ghostValueAt(ghost, state.time.day) : null;
+  // Grafiğin çizgileri: sen, hayalet ve tablonun başındaki iki lider daha (Tur 54).
+  const series: CurveSeries[] = [{ id: 'you', name: t('app.league.moves.you'), curve: mine, slot: 'you' }];
+  if (ghost) series.push({ id: ghost.entry.id, name: ghost.name, curve: ghost.curve, slot: 'ghost' });
+  const leaders = standing.ranked.filter(({ entry }) => !entry.mine && entry.id !== ghost?.entry.id).slice(0, 2);
+  leaders.forEach(({ entry, verdict }, index) => {
+    series.push({ id: entry.id, name: verdict.companyName, curve: verdict.curve, slot: index === 0 ? 'b' : 'c' });
+  });
   const ghostButton = (entry: LeagueEntry) => (
     <button
       type="button"
@@ -314,19 +302,49 @@ export function LeaguePanel(): ReactElement {
       )}
 
       <section className="league-compare">
-        <Sparks mine={mine} ghost={ghost?.curve ?? null} slots={state.league.endDay / LEAGUE_SAMPLE_DAYS} />
-        <div className="league-legend">
-          <span>
-            <span className="league-key mine" aria-hidden="true" /> {t('app.league.legend.you', { money: formatMoney(now) })}
-          </span>
-          {ghost && (
-            <span>
-              <span className="league-key ghost" aria-hidden="true" /> {ghost.name}
-              {ghostNow !== null ? t('app.league.legend.ghostToday', { money: formatMoney(ghostNow) }) : ''}
-              {!ghost.verified && <span className="muted"> · {t('app.league.legend.unverified')}</span>}
-            </span>
-          )}
-        </div>
+        <GhostChart series={series} endDay={state.league.endDay} today={state.time.day} focus={focus} onFocus={setFocus} />
+        <ul className="league-legend">
+          {series.map((s) => (
+            <li key={s.id} data-league-legend={s.slot}>
+              <span className={`league-key slot-${s.slot}`} aria-hidden="true" />{' '}
+              {s.slot === 'you' ? (
+                t('app.league.legend.you', { money: formatMoney(now) })
+              ) : (
+                <>
+                  {s.name}
+                  {ghostValueAt({ curve: s.curve }, state.time.day) !== null
+                    ? t('app.league.legend.ghostToday', { money: formatMoney(ghostValueAt({ curve: s.curve }, state.time.day)!) })
+                    : ''}
+                  {s.slot === 'ghost' && ghost && !ghost.verified && <span className="muted"> · {t('app.league.legend.unverified')}</span>}
+                </>
+              )}
+            </li>
+          ))}
+        </ul>
+        {ghost && (
+          <>
+            <p className="league-hint muted">
+              {t('app.league.chart.hint')}
+              {focus !== null && (
+                <>
+                  {' '}
+                  <button type="button" className="ghost" onClick={() => setFocus(null)} data-league-focus-reset>
+                    {t('app.league.chart.backToToday')}
+                  </button>
+                </>
+              )}
+            </p>
+            <GhostMoves
+              entry={ghost.entry}
+              name={ghost.name}
+              verified={ghost.verified}
+              day={focus !== null ? focus * LEAGUE_SAMPLE_DAYS : state.time.day}
+              today={state.time.day}
+              endDay={state.league.endDay}
+              myLog={state.commandLog ?? []}
+            />
+          </>
+        )}
       </section>
 
       <section>

@@ -3418,6 +3418,51 @@ async function finish(browser, consoleErrors) {
       check('Başka tarayıcı aynı tabloyu görüyor; satır onun değil, hayaleti o koşu',
         okB && rowB.text.includes('Sunucu Holding') && !rowB.mine && rowB.legend.includes('Sunucu Holding'), `${boardB} · ${rowB.text.trim().slice(0, 60)} · ${rowB.legend.trim().slice(0, 60)}`);
       check('Göndermeyen tarayıcıda lig hesabı açılmıyor', !rowB.account);
+
+      // Tur 54: hayalet eğri. Liderin çizgisi grafikte; kart liderin hamlelerini
+      // koşu kodundan okuyor (kod bir kez iniyor); grafikte gün seçilebiliyor.
+      const movesReady = await b.p.waitForSelector('[data-league-moves="ready"]', { timeout: 20000 }).then(() => true).catch(() => false);
+      const curves = await b.p.evaluate(() => ({
+        lines: [...document.querySelectorAll('[data-league-line]')].map((el) => el.getAttribute('data-league-line')),
+        title: document.querySelector('.league-moves h4')?.textContent ?? '',
+        moves: [...document.querySelectorAll('[data-league-move]')].map((el) => el.textContent ?? ''),
+      }));
+      check('Hayalet eğri: liderin çizgisi grafikte, kart liderin ilk günlerdeki hamlelerini koşu kodundan okuyor',
+        movesReady && curves.lines.includes('ghost') && curves.title.includes('Sunucu Holding') && curves.moves.some((m) => m.includes('Arsa aldı')) && curves.moves.some((m) => m.includes('Bakkal kurdu')),
+        `${curves.lines.join(',')} · ${curves.title} · ${curves.moves.join(' | ')}`);
+      const chartBox = await b.p.locator('.league-sparks').boundingBox();
+      const middle = { x: chartBox.x + chartBox.width * 0.5, y: chartBox.y + chartBox.height * 0.5 };
+      await b.p.mouse.move(middle.x, middle.y);
+      const tip = await b.p.waitForSelector('[data-league-tip]', { timeout: 3000 }).then((h) => h.textContent()).catch(() => '');
+      check('Grafiğin üzerine gelince o günün değerleri: liderin 180. günü', /Gün 180/.test(tip ?? '') && (tip ?? '').includes('Sunucu Holding'), tip ?? '');
+      await b.p.mouse.click(middle.x, middle.y);
+      const pinned = await b.p
+        .waitForSelector('[data-league-moves-day="180"]', { timeout: 3000 })
+        .then(() => b.p.evaluate(() => ({
+          title: document.querySelector('.league-moves h4')?.textContent ?? '',
+          body: document.querySelector('.league-moves')?.textContent ?? '',
+          tally: document.querySelector('[data-league-tally]')?.textContent ?? '',
+          reset: document.querySelector('[data-league-focus-reset]') !== null,
+        })))
+        .catch(() => null);
+      check('Grafikte gün seçilince kart o günleri anlatıyor: liderin o güne kadarki sayısı, ileride sen yoksun',
+        pinned !== null && /gün 180–209/.test(pinned.title) && /hamle yok/.test(pinned.body) && /Sunucu Holding: 1 bina · 1 arsa · 0 kredi/.test(pinned.tally) && !/Sen:/.test(pinned.tally) && pinned.reset,
+        JSON.stringify(pinned).slice(0, 220));
+      await b.p.locator('[data-league-focus-reset]').click();
+      await b.p.locator('.league-sparks').focus();
+      await b.p.keyboard.press('ArrowRight');
+      const byKey = await b.p.waitForSelector('[data-league-moves-day="10"]', { timeout: 3000 }).then(() => true).catch(() => false);
+      // Gün seçiliyken Escape bugüne dönüyor, pencere açık kalıyor; ikinci Escape pencereyi kapatıyor.
+      await b.p.keyboard.press('Escape');
+      const back = await b.p.waitForSelector('[data-league-moves-day="0"]', { timeout: 3000 }).then(() => true).catch(() => false);
+      await b.p.keyboard.press('Escape');
+      const closed = await b.p.waitForSelector('.league-moves', { state: 'detached', timeout: 3000 }).then(() => true).catch(() => false);
+      const codesB = codeRequests.filter((label) => label === 'B').length;
+      check('Klavyeyle gün değişiyor; Escape önce bugüne dönüyor, sonra pencereyi kapatıyor; liderin kodu bir kez indi',
+        byKey && back && closed && codesB === 1, `ok ${byKey}/${back}/${closed} · ${codesB} kod indi`);
+      // Kare için pencere yeniden açık.
+      await b.p.locator('.agenda [data-agenda="league"] button').first().click();
+      await b.p.waitForSelector('[data-league-moves="ready"]', { timeout: 10000 }).catch(() => null);
       await b.p.screenshot({ path: path.join(OUT, 'playtest-lig-sunucu.png') });
       await b.context.close();
 
