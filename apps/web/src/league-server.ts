@@ -30,6 +30,8 @@ export interface ServerBoardOptions {
   pollMs?: number;
   /** İstek zaman aşımı (ms). */
   timeoutMs?: number;
+  /** Yoğunluğa (429) takılan bekleyen gönderimin ilk yeniden denemesi (ms); her seferinde iki katı. */
+  retryMs?: number;
 }
 
 export interface ServerBoard extends LeagueBoard {
@@ -76,6 +78,8 @@ export function createServerBoard(options: ServerBoardOptions): ServerBoard {
   const { url } = options;
   const pollMs = options.pollMs ?? 60_000;
   const timeoutMs = options.timeoutMs ?? 10_000;
+  // Sunucu aynı hesaptan iki gönderim arasında 30 sn istiyor (SEED.minGapMs).
+  const retryMs = options.retryMs ?? 31_000;
   const memory = new Map<string, string | null>();
   /**
    * Son yazımı depoya geçemeyen anahtarlar: okuma onlarda bellekten. Depo
@@ -212,6 +216,24 @@ export function createServerBoard(options: ServerBoardOptions): ServerBoard {
 
   let flushing: Promise<void> | null = null;
   let again = false;
+  /**
+   * Yoğunluğa takılan bekleyen gönderim kendiliğinden yeniden deneniyor: art
+   * arda iki koşu bağlantı gelince gönderilince ikincisi 30 sn aralığa
+   * takılıyordu ve serbest oyunda bir sonraki olaya kadar bekliyordu (Codex
+   * #80). Aralık 31 sn'den başlayıp ikiye katlanıyor, en çok beş kez.
+   */
+  let retryTimer: ReturnType<typeof setTimeout> | null = null;
+  let retries = 0;
+  const RETRY_MAX = 5;
+  function retryLater(): void {
+    if (retryTimer !== null || closed || retries >= RETRY_MAX) return;
+    const delay = retryMs * 2 ** retries;
+    retries++;
+    retryTimer = setTimeout(() => {
+      retryTimer = null;
+      void flushPending().then(refreshAll);
+    }, delay);
+  }
   /** Bekleyen gönderimler: bağlantı ya da yoğunluk yüzünden gidemeyen kalıyor, gerisi (gitti ya da kesin ret) düşüyor. */
   function flushPending(): Promise<void> {
     // İş sürerken gelen istek (ör. bağlantı geldi) bir tur daha: süren tur bağlantısızken başlamış olabilir.
@@ -220,16 +242,21 @@ export function createServerBoard(options: ServerBoardOptions): ServerBoard {
       return flushing;
     }
     const run = (async () => {
+      let busy = false;
       do {
         again = false;
+        busy = false;
         for (const item of pending()) {
           // Hesap silinirken kuyruk olduğu gibi kalıyor (silme başarısız olursa da).
           if (forgetting) return;
           const outcome = await send(item.code);
+          if (outcome === 'busy') busy = true;
           if (outcome === 'offline' || outcome === 'busy') continue;
           write(PENDING_KEY, JSON.stringify(pending().filter((other) => other.code !== item.code)));
         }
       } while (again && !forgetting);
+      if (busy) retryLater();
+      else retries = 0;
     })();
     // İşaret iş bitince kalkıyor. Kuyruk boşken iş hemen bitiyor: işareti
     // işin içinden kaldırmak atamadan önce olurdu ve işaret takılı kalırdı.
@@ -330,6 +357,8 @@ export function createServerBoard(options: ServerBoardOptions): ServerBoard {
       closed = true;
       if (listening) options.online?.removeEventListener('online', onOnline);
       listening = false;
+      if (retryTimer !== null) clearTimeout(retryTimer);
+      retryTimer = null;
     },
 
     subscribe(weekId, onChange: (entries: LeagueEntry[], info?: LeagueFeedInfo) => void) {

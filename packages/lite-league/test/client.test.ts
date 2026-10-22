@@ -430,3 +430,35 @@ test('istemci: hesap silinirken süren gönderim bekleniyor, 401 yeni hesap açm
   assert.equal(net.requests.filter((line) => line === 'POST /v1/seed/players').length, 1, 'silinirken yeni hesap açılmıyor');
   assert.equal(board.account!.exists(), false);
 });
+
+test('istemci: gönderim aralığına takılan bekleyen koşu sonra kendiliğinden yeniden deneniyor (Codex #80)', async () => {
+  const db = memoryDb();
+  const net: Net = { online: true, old: false, now: THURSDAY, requests: [] };
+  const storage = memoryStorage();
+  const online = new EventTarget();
+  const fetcher = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const request = new Request(input, init);
+    net.requests.push(`${request.method} ${new globalThis.URL(request.url).pathname}`);
+    if (!net.online) throw new TypeError('fetch failed');
+    return handle(request, db, net.now);
+  }) as typeof fetch;
+  const board = createServerBoard({ url: URL, fetch: fetcher, storage, online, pollMs: 2 ** 30, retryMs: 40 });
+  assert.equal(await board.probe(), 'ok');
+
+  // Bağlantısızken iki koşu; bağlantı gelince ilki gidiyor, ikincisi 30 sn aralığa takılıyor.
+  net.online = false;
+  assert.equal(await board.submit(entryOf(run())), 'queued');
+  assert.equal(await board.submit(entryOf(run({ score: 2_000_000 }))), 'queued');
+  net.online = true;
+  online.dispatchEvent(new Event('online'));
+  const best = async () => (await (await handle(new Request(`${URL}/v1/seed/weeks/${WEEK}`), db, net.now)).json()).entries[0]?.score as number | undefined;
+  for (let i = 0; i < 50 && (await best()) === undefined; i++) await new Promise((resolve) => setTimeout(resolve, 5));
+  assert.equal(await best(), 1_250_000, 'ilk koşu gitti, ikincisi aralığa takıldı');
+
+  // Aralık geçiyor; serbest oyunda (tablo aboneliği yok), yeni bağlantı olayı olmadan.
+  net.now += SEED.minGapMs + 1000;
+  for (let i = 0; i < 100 && (await best()) !== 2_000_000; i++) await new Promise((resolve) => setTimeout(resolve, 10));
+  assert.equal(await best(), 2_000_000, 'bekleyen ikinci koşu kendiliğinden gitti');
+  assert.equal(storage.getItem('capitalforge.league.pending'), '[]');
+  board.close?.();
+});
