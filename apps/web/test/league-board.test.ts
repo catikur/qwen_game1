@@ -78,3 +78,13 @@ test('paylaşılan tablo: günün koşusu haftanınkini ezmiyor, haftanınki de 
   assert.equal(await third.submit(entry('2026-10-25', 2_000_000)), 'saved');
   assert.deepEqual(await rows(board, '2026-10-26'), [['2026-10-26', 1_200_000], ['2026-10-26', 900_000]]);
 });
+
+test('paylaşılan tablo: günün koşusu okunacak belge sınırından önce süzülüyor; kalabalık tabloda da görünüyor (Codex #82)', async () => {
+  const db = memoryDb();
+  // Önce yalnız haftanın koşusunu oynamış 250 oyuncu, sonra günün koşusunu oynayan.
+  for (let i = 0; i < 250; i++) await sharedBoard(db, user(`h${i}`)).submit(entry('2026-W44', 1_000_000 + i));
+  const board = sharedBoard(db, user('ben'));
+  assert.equal(await board.submit(entry('2026-10-26', 900_000)), 'saved');
+  assert.deepEqual(await rows(board, '2026-10-26'), [['2026-10-26', 900_000]]);
+  assert.equal((await rows(board, '2026-W44')).length, 50, 'haftanın tablosu ilk 50');
+});

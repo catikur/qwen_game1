@@ -10,7 +10,9 @@ import { createServerBoard } from './league-server';
  * yazabiliyor (yayın kuralı `league/{self}`), herkes hepsini okuyor. Belge
  * kişi başına tek — haftanın en iyi koşusu orada durur, yeni hafta onu
  * ezer. Günün koşusu (Tur 53) aynı belgenin `day` alanında: ikisi birbirini
- * ezmiyor (Codex #82). Ad saklanmıyor: kimlik saklanıyor, ad her çizimde
+ * ezmiyor (Codex #82). Kimliği ve skoru üst düzeyde de (`dayWeekId`,
+ * `dayScore`): tablo sorgusu haftanınki gibi süzüp sıralıyor, iç alanda
+ * sorguya güvenmiyor. Ad saklanmıyor: kimlik saklanıyor, ad her çizimde
  * `profiles()` ile çözülüyor.
  *
  * Lig sunucusu (Tur 51): GitHub Pages'teki oyun. Lite'ın sunucusu ana
@@ -123,8 +125,6 @@ function localBoard(): LeagueBoard {
 
 /** Günün koşusunun kimliği ("2026-10-22"); hafta "2026-W43". */
 const DAY_ID = /^\d{4}-\d{2}-\d{2}$/;
-/** Paylaşılan tabloda günün koşusu için okunan en çok belge (süzgeç ve sıra tarayıcıda). */
-const SHARED_DAY_SCAN = 200;
 
 /** Belgenin koşusu: haftanınki üst düzeyde, günün koşusu `day` alanında. */
 function toEntry(doc: DocSnapshot, me: string | null, day = false): LeagueEntry | null {
@@ -155,14 +155,13 @@ export function sharedBoard(db: Db, user: User | null): LeagueBoard {
       const day = DAY_ID.test(weekId);
       void meP.then((me) => {
         if (cancelled) return;
-        // Günün koşusu iç alanda: süzgeç ve sıra burada, ilk 50.
+        // Süzgeç ve sıra sınırdan önce, sorguda (Codex #82): günün koşusu üst düzeydeki kopyasıyla.
         const query = day
-          ? db.collection('league').limit(SHARED_DAY_SCAN)
+          ? db.collection('league').where('dayWeekId', '==', weekId).orderBy('dayScore', 'desc').limit(50)
           : db.collection('league').where('weekId', '==', weekId).orderBy('score', 'desc').limit(50);
         stop = query.onSnapshot(
           (snap) => {
-            let entries = snap.docs.map((doc) => toEntry(doc, me, day)).filter((e): e is LeagueEntry => e !== null && e.weekId === weekId);
-            if (day) entries = entries.sort((a, b) => b.score - a.score).slice(0, 50);
+            const entries = snap.docs.map((doc) => toEntry(doc, me, day)).filter((e): e is LeagueEntry => e !== null && e.weekId === weekId);
             onChange(entries);
             // Adlar kaydedilmiyor; her teslimatta çözülüyor.
             if (user && entries.length > 0) {
@@ -195,7 +194,12 @@ export function sharedBoard(db: Db, user: User | null): LeagueBoard {
           return 'kept-better';
         }
         // Kişi başına tek belge: haftanın koşusu günün koşusunu, günün koşusu haftanınkini silmesin.
-        await ref.set(day ? { ...(body ?? {}), day: { ...entry } } : { ...entry, ...(body?.['day'] ? { day: body['day'] } : {}) });
+        const daily = day
+          ? { day: { ...entry }, dayWeekId: entry.weekId, dayScore: entry.score }
+          : body?.['day']
+            ? { day: body['day'], dayWeekId: body['dayWeekId'], dayScore: body['dayScore'] }
+            : {};
+        await ref.set(day ? { ...(body ?? {}), ...daily } : { ...entry, ...daily });
         return 'saved';
       } catch {
         return 'error';
