@@ -9,8 +9,9 @@ import { createServerBoard } from './league-server';
  * Her kişi `league/<kendi kimliği>` belgesine yalnızca kendi koşusunu
  * yazabiliyor (yayın kuralı `league/{self}`), herkes hepsini okuyor. Belge
  * kişi başına tek — haftanın en iyi koşusu orada durur, yeni hafta onu
- * ezer. Ad saklanmıyor: kimlik saklanıyor, ad her çizimde `profiles()`
- * ile çözülüyor.
+ * ezer. Günün koşusu (Tur 53) aynı belgenin `day` alanında: ikisi birbirini
+ * ezmiyor (Codex #82). Ad saklanmıyor: kimlik saklanıyor, ad her çizimde
+ * `profiles()` ile çözülüyor.
  *
  * Lig sunucusu (Tur 51): GitHub Pages'teki oyun. Lite'ın sunucusu ana
  * oyunun koşularını da alıyor; tablo herkese açık (`league-server.ts`).
@@ -120,8 +121,16 @@ function localBoard(): LeagueBoard {
   };
 }
 
-function toEntry(doc: DocSnapshot, me: string | null): LeagueEntry | null {
-  const body = doc.data();
+/** Günün koşusunun kimliği ("2026-10-22"); hafta "2026-W43". */
+const DAY_ID = /^\d{4}-\d{2}-\d{2}$/;
+/** Paylaşılan tabloda günün koşusu için okunan en çok belge (süzgeç ve sıra tarayıcıda). */
+const SHARED_DAY_SCAN = 200;
+
+/** Belgenin koşusu: haftanınki üst düzeyde, günün koşusu `day` alanında. */
+function toEntry(doc: DocSnapshot, me: string | null, day = false): LeagueEntry | null {
+  const data = doc.data();
+  const inner = day ? data?.['day'] : data;
+  const body = inner && typeof inner === 'object' ? (inner as Record<string, unknown>) : undefined;
   if (!body || typeof body['score'] !== 'number' || typeof body['code'] !== 'string') return null;
   return {
     id: doc.id,
@@ -136,36 +145,37 @@ function toEntry(doc: DocSnapshot, me: string | null): LeagueEntry | null {
   };
 }
 
-function sharedBoard(db: Db, user: User | null): LeagueBoard {
+export function sharedBoard(db: Db, user: User | null): LeagueBoard {
   const meP = user ? user.id().catch(() => null) : Promise.resolve(null);
   return {
     kind: 'shared',
     subscribe(weekId, onChange) {
       let stop: (() => void) | null = null;
       let cancelled = false;
+      const day = DAY_ID.test(weekId);
       void meP.then((me) => {
         if (cancelled) return;
-        stop = db
-          .collection('league')
-          .where('weekId', '==', weekId)
-          .orderBy('score', 'desc')
-          .limit(50)
-          .onSnapshot(
-            (snap) => {
-              const entries = snap.docs.map((doc) => toEntry(doc, me)).filter((e): e is LeagueEntry => e !== null);
-              onChange(entries);
-              // Adlar kaydedilmiyor; her teslimatta çözülüyor.
-              if (user && entries.length > 0) {
-                void user
-                  .profiles(entries.map((e) => e.id))
-                  .then((profiles) => {
-                    if (!cancelled) onChange(entries.map((e) => ({ ...e, who: profiles[e.id]?.name || '' })));
-                  })
-                  .catch(() => undefined);
-              }
-            },
-            () => onChange([]),
-          );
+        // Günün koşusu iç alanda: süzgeç ve sıra burada, ilk 50.
+        const query = day
+          ? db.collection('league').limit(SHARED_DAY_SCAN)
+          : db.collection('league').where('weekId', '==', weekId).orderBy('score', 'desc').limit(50);
+        stop = query.onSnapshot(
+          (snap) => {
+            let entries = snap.docs.map((doc) => toEntry(doc, me, day)).filter((e): e is LeagueEntry => e !== null && e.weekId === weekId);
+            if (day) entries = entries.sort((a, b) => b.score - a.score).slice(0, 50);
+            onChange(entries);
+            // Adlar kaydedilmiyor; her teslimatta çözülüyor.
+            if (user && entries.length > 0) {
+              void user
+                .profiles(entries.map((e) => e.id))
+                .then((profiles) => {
+                  if (!cancelled) onChange(entries.map((e) => ({ ...e, who: profiles[e.id]?.name || '' })));
+                })
+                .catch(() => undefined);
+            }
+          },
+          () => onChange([]),
+        );
       });
       return () => {
         cancelled = true;
@@ -179,10 +189,13 @@ function sharedBoard(db: Db, user: User | null): LeagueBoard {
         const ref = db.collection('league').doc(me);
         const existing = await ref.get();
         const body = existing.exists ? existing.data() : undefined;
-        if (body && body['weekId'] === entry.weekId && typeof body['score'] === 'number' && body['score'] >= entry.score) {
+        const day = DAY_ID.test(entry.weekId);
+        const current = (day ? body?.['day'] : body) as Record<string, unknown> | undefined;
+        if (current && current['weekId'] === entry.weekId && typeof current['score'] === 'number' && current['score'] >= entry.score) {
           return 'kept-better';
         }
-        await ref.set({ ...entry });
+        // Kişi başına tek belge: haftanın koşusu günün koşusunu, günün koşusu haftanınkini silmesin.
+        await ref.set(day ? { ...(body ?? {}), day: { ...entry } } : { ...entry, ...(body?.['day'] ? { day: body['day'] } : {}) });
         return 'saved';
       } catch {
         return 'error';

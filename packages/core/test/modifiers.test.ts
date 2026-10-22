@@ -29,10 +29,10 @@ describe('zorluk değiştiricileri', () => {
   test('kuralları oyuncu yalnız serbest oyunda seçiyor: kural yoksa alan yok; ligde haftanın kuralı, senaryoda yok', () => {
     assert.equal(game([]).modifiers, undefined);
     assert.deepEqual(game(['scarce_land', 'storms']).modifiers, ['storms', 'scarce_land']);
-    const before = createNewGame({ companyName: 'Lig AŞ', league: { weekId: '2026-W42' }, modifiers: ['storms'] });
+    const before = createNewGame({ companyName: 'Lig AŞ', league: { weekId: '2026-W43' }, modifiers: ['storms'] });
     assert.equal(before.modifiers, undefined, 'ligde herkes aynı kurallarla');
     // Tur 53: kural haftadan, oyuncunun seçtiği yok sayılıyor.
-    const league = createNewGame({ companyName: 'Lig AŞ', league: { weekId: '2026-W43' }, modifiers: ['storms'] });
+    const league = createNewGame({ companyName: 'Lig AŞ', league: { weekId: '2026-W44' }, modifiers: ['storms'] });
     assert.deepEqual(league.modifiers, ['scarce_land'], 'haftanın kuralı');
     assert.equal(createScenarioGame('rescue', { companyName: 'Senaryo AŞ' }).modifiers, undefined);
   });

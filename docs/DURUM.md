@@ -5482,9 +5482,14 @@ günün koşusu, 90 gün, her gün yeni şehir ve yeni tablo.
 
 **Haftanın kuralı (`systems/leagueWeek.ts`).**
 - Sıra sabit: Kıt arsa, Aç gözlü rakipler, Fırtınalı yıllar, Sıkı banka,
-  sonra baştan. 2026-W43'ten başlıyor; ondan önceki haftalar kuralsız
+  sonra baştan. 2026-W44'ten başlıyor; ondan önceki haftalar kuralsız
   (eski koşular eskisi gibi oynanıyor). Yıl dönümünde sıra kaymıyor
   (2026'nın 53 haftası var, test ediliyor).
+- *Codex #82: kural açılmamış ilk haftadan.* İlk sürüm W43'ten başlıyordu;
+  tur W43'ün ortasında geldi. O haftanın tablosunda kuralsız oynanmış ve
+  doğrulanmış satırlar kurallı skorlarla yan yana sıralanacaktı; süren
+  kayıtlar da kuralsız bitip kurallı tekrarda "sahte" çıkacaktı. Test
+  düzeltmeden önce kaldı.
 - Kural koşunun kimliğinden: oyuncu seçmiyor, kurulumun kuralları ligde yok
   sayılıyor. Tekrar da aynı kuralla oynuyor; ayrı bir alan gerekmedi.
 - Kurulum bu haftanın kuralını ve gelecek haftanınkini söylüyor; lig paneli
@@ -5499,6 +5504,13 @@ günün koşusu, 90 gün, her gün yeni şehir ve yeni tablo.
 - Kurulumun dördüncü türü ("Günün koşusu · 22 Ekim"). Lig paneli "Bugünün
   tablosu" diyor; kapanan ya da daha iyisi kalan gönderimin metni gün için.
   Kariyer "Günün koşusu" ve "Gün tamamlandı" yazıyor (`leagueKind`).
+- *Codex #82: "Ligde" rozeti bir hafta istiyor.* Kariyer toplamı günün
+  koşusunu da sayıyordu: 90 günlük koşu "Tohum Ligi'nde bir haftayı sonuna
+  kadar oyna" rozetini açıyordu. Artık yalnız haftanın koşusu sayılıyor.
+- *Codex #82: paylaşılan tablo.* claude.ai'de yayınlanmış sayfada kişi
+  başına tek belge var (yayın kuralı `league/{self}`); günün koşusu
+  haftanınkini eziyordu. Günün koşusu artık aynı belgenin `day` alanında,
+  biri ötekini silmiyor. İkisinin de testi düzeltmeden önce kaldı.
 
 **Sunucu (`seed.ts`).** Günün koşuları aynı tabloda (`seed_verified`,
 kimlik `week` sütununda); şema değişmedi. Açık: bugün, ilk 6 saatinde dün.
@@ -5518,23 +5530,27 @@ ve yavaş vekil (15 günde bir); kuralın etkisi aynı şehrin kuralsız hâliyl
 
 | hafta | kural | bilgili | kuralsız | yavaş | kuralsız |
 |---|---|---|---|---|---|
-| W43 | Kıt arsa | 39,8 M | 43,0 M (−%7) | 22,5 M | 25,8 M (−%13) |
-| W44 | Aç gözlü rakipler | 45,1 M | 44,8 M (+%1) | 25,9 M | 28,0 M (−%8) |
-| W45 | Fırtınalı yıllar | 37,6 M | 40,0 M (−%6) | 25,5 M | 26,7 M (−%4) |
-| W46 | Sıkı banka | 27,3 M | 32,6 M (−%16) | 18,1 M | 19,5 M (−%7) |
+| W44 | Kıt arsa | 42,4 M | 41,7 M (+%2) | 25,5 M | 27,7 M (−%8) |
+| W45 | Aç gözlü rakipler | 37,7 M | 40,0 M (−%6) | 24,8 M | 26,7 M (−%7) |
+| W46 | Fırtınalı yıllar | 29,8 M | 32,6 M (−%9) | 17,8 M | 19,5 M (−%9) |
+| W47 | Sıkı banka | 38,1 M | 44,6 M (−%15) | 24,9 M | 28,3 M (−%12) |
 
-Bilgili vekil her hafta yavaştan %47–77 önde, kimse düşmüyor: kural
-beceriyi bastırmıyor. Aç gözlü rakipler bilgili oyuncuya dokunmuyor, yalnız
-savunmasız olanı geriletiyor (Tur 45'teki ölçümle aynı yön). Günün
+Bilgili vekil her hafta yavaştan %52–68 önde, kimse düşmüyor: kural
+beceriyi bastırmıyor. Her kural iki vekilin ortalamasını düşürüyor (−%3,
+−%6, −%9, −%13). Kıt arsa bilgili vekilde bu şehirde gürültüde kalıyor
+(+%2; Tur 45'te de tek tohumda öyleydi), yavaşı geriletiyor. Günün
 koşusunda bilgili 1,5–2,0 M, yavaş 1,15–1,35 M, hiç oynamayan 250 B (6–8
 kat); beş günün beş ayrı şehri var.
 
-**Doğrulama.** `pnpm test` 595/595; tip denetimi temiz.
+**Doğrulama.** `pnpm test` 597/597; tip denetimi temiz.
 - Çekirdek (`league.test.ts`, 7 yeni): kimlikler, kural sırası ve yıl
   dönümü, kurulumun kuralları yok sayılıyor, kurallı haftanın koşusu
   tekrarda tutuyor ve kural skoru değiştiriyor, günün koşusu 90 günde
   bitip doğrulanıyor, kısa koşunun kod sınırları, iz kuralların değerini
   taşıyor. `modifiers.test.ts`: "ligde kural yok" testi yeni kurala göre.
+  `career.test.ts` (1 yeni): günün koşusu "Ligde" rozetini açmıyor.
+- Paylaşılan tablo (`apps/web/test/league-board.test.ts`, yeni): hafta ve
+  gün aynı belgede, biri ötekini ezmiyor; her tablonun "daha iyisi" kendi.
 - Sunucu (`seed.test.ts`, 4 yeni): gün tablosu ayrı ve uçlar birbirinin
   kimliğini almıyor; dünün koşusu yalnız ilk saatlerde; günün koşuları iki
   hafta sonra siliniyor; sunucu gerçek bir 90 günlük koşuyu yeniden oynatıyor,
@@ -5543,7 +5559,8 @@ kat); beş günün beş ayrı şehri var.
   koşusu kendi tablosunda.
 - Tarayıcı testi:
   - "Tohum Ligi" 20 kontrol (3 yeni: kurulumda kural ve gelecek haftanınki,
-    koşu kuralla başlıyor, panelde kural);
+    koşu kuralla başlıyor, panelde kural; kuralların başlamadığı haftada
+    yalnız gelecek haftanınki);
   - "Tohum Ligi: lig sunucusu" 15/15;
   - yeni "Günün koşusu" bölümü 7 kontrol: kurulum, bugünün kimliği ve 90
     gün, 90. günde bitiş, sunucunun gün tablosu ve doğrulanmış satır,
@@ -5661,7 +5678,7 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi). Senaryo şehirlerinde gün 3–17 ms (`pnpm dayperf`, Tur 43) |
-| Birim testi | **595 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de, Tur 52'de sunucuda tekrar, Tur 53'te haftanın kuralı ve günün koşusu) |
+| Birim testi | **597 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de, Tur 52'de sunucuda tekrar, Tur 53'te haftanın kuralı ve günün koşusu) |
 | Denge testi | **331 kontrol, hepsi geçiyor** (25 bölüm, süreleriyle; ~13 dk) |
 | Tarayıcı testi | **521 kontrol, hepsi geçiyor**, 0 konsol hatası (~40 dk); duman koşusu 132 (~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + paket bütçesi (Tur 46; Tur 48'den beri hizmet çalışanı ve manifest de) + duman oynanışı |

@@ -376,8 +376,10 @@ describe('haftanın kuralı ve günün koşusu (Tur 53)', () => {
 
   test('her hafta sıradaki kural; öncesi ve günün koşusu kuralsız; yıl dönümünde sıra kaymıyor', () => {
     assert.equal(leagueRule('2026-W42'), null, 'kurallardan önceki hafta');
+    // Tur 53 W43'ün ortasında geldi: o hafta açıktı, koşuları kuralsız oynandı (Codex #82).
+    assert.equal(leagueRule('2026-W43'), null, 'açılmış hafta kuralsız kalıyor');
     assert.deepEqual(
-      ['2026-W43', '2026-W44', '2026-W45', '2026-W46', '2026-W47'].map(leagueRule),
+      ['2026-W44', '2026-W45', '2026-W46', '2026-W47', '2026-W48'].map(leagueRule),
       [...LEAGUE_RULE_ROTATION, LEAGUE_RULE_ROTATION[0]],
     );
     // 2026'nın 53 haftası var: 2026-W53'ten sonra 2027-W01, sıra kesintisiz.
@@ -399,12 +401,12 @@ describe('haftanın kuralı ve günün koşusu (Tur 53)', () => {
 
   test('kurallı haftanın koşusu tekrarda tutuyor; kural koşuyu gerçekten değiştiriyor', async () => {
     // Kıt arsa: arsa pahalı, aynı vekil daha az değerle bitiriyor.
-    const ruled = playLeague({ board: '2026-W43' });
+    const ruled = playLeague({ board: '2026-W44' });
     assert.deepEqual(ruled.modifiers, ['scarce_land']);
     const run = runFromState(ruled)!;
     const result = await replayRun(run);
     assert.ok(result.ok, result.reason);
-    const plain = createLeagueGame('2026-W43', 'Lig AŞ', null);
+    const plain = createLeagueGame('2026-W44', 'Lig AŞ', null);
     delete plain.modifiers;
     let engine = new GameEngine(plain);
     while (engine.getState().league!.finishedDay === undefined) {
@@ -412,7 +414,7 @@ describe('haftanın kuralı ve günün koşusu (Tur 53)', () => {
       engine.runDay();
     }
     assert.notEqual(engine.getState().league!.score, run.score, 'kural skoru değiştirmiyor');
-    engine = new GameEngine(createLeagueGame('2026-W43', 'Lig AŞ', null));
+    engine = new GameEngine(createLeagueGame('2026-W44', 'Lig AŞ', null));
     assert.deepEqual(engine.getState().modifiers, ['scarce_land']);
   });
 
@@ -421,7 +423,7 @@ describe('haftanın kuralı ve günün koşusu (Tur 53)', () => {
     assert.equal(day.league!.endDay, LEAGUE_DAILY_DAYS);
     assert.equal(day.modifiers, undefined);
     assert.notEqual(day.meta.seed, createLeagueGame('2026-10-23', 'Gün AŞ', null).meta.seed);
-    assert.notEqual(day.meta.seed, createLeagueGame('2026-W43', 'Gün AŞ', null).meta.seed);
+    assert.notEqual(day.meta.seed, createLeagueGame('2026-W44', 'Gün AŞ', null).meta.seed);
     const state = playLeague({ board: '2026-10-22' });
     assert.equal(state.league!.finishedDay, LEAGUE_DAILY_DAYS);
     assert.equal(state.league!.curve.length, LEAGUE_DAILY_DAYS / 10 + 1);

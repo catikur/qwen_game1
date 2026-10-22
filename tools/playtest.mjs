@@ -3033,7 +3033,8 @@ async function finish(browser, consoleErrors) {
       ((await lp.locator('.mode-picker [data-mode="league"]').textContent()) ?? '').trim());
     check('Ligde zorluk seçimi kalkıyor', (await lp.locator('.difficulty-option[data-difficulty]').count()) === 0);
     check('Ligde şehir boyutu seçimi kalkıyor', (await lp.locator('[data-city-size]').count()) === 0);
-    // Tur 53: haftanın kuralı ve gelecek haftanınki kurulumda yazıyor.
+    // Tur 53: haftanın kuralı ve gelecek haftanınki kurulumda yazıyor. Test gerçek
+    // tarihle koşuyor: kurallar 2026-W44'te başlıyor, o haftadan önce bu haftanın kuralı yok.
     const ruleShown = await lp.evaluate(() => {
       const rule = document.querySelector('[data-detail="league"] [data-league-rule]');
       return {
@@ -3042,9 +3043,9 @@ async function finish(browser, consoleErrors) {
         next: document.querySelector('[data-detail="league"] [data-league-next-rule]')?.getAttribute('data-league-next-rule') ?? null,
       };
     });
-    check('Kurulumda haftanın kuralı ve gelecek haftanınki yazıyor (Tur 53)',
-      Boolean(ruleShown.rule) && Boolean(ruleShown.next) && ruleShown.rule !== ruleShown.next && /Haftanın kuralı/.test(ruleShown.text),
-      `${ruleShown.text.slice(0, 80)} · sonra ${ruleShown.next}`);
+    check('Kurulumda gelecek haftanın kuralı yazıyor; bu haftanınki de, kurallar başladıysa (Tur 53)',
+      Boolean(ruleShown.next) && ruleShown.rule !== ruleShown.next && (ruleShown.rule === null || /Haftanın kuralı/.test(ruleShown.text)),
+      `${ruleShown.rule ? ruleShown.text.slice(0, 80) : 'bu hafta kuralsız'} · sonra ${ruleShown.next}`);
     await lp.fill('.newgame-field input[type="text"]', 'Lig Holding');
     await lp.locator('button:has-text("Şirketi kur")').click();
     await lp.waitForSelector('.topbar', { timeout: 20000 });
@@ -3053,7 +3054,7 @@ async function finish(browser, consoleErrors) {
       return { week: s.league?.weekId, log: s.commandLog?.length ?? -1, modifiers: s.modifiers ?? null };
     });
     check('Lig koşusu haftanın kimliğiyle başlıyor', /^\d{4}-W\d{2}$/.test(leagueBoot.week ?? ''), leagueBoot.week);
-    check('Lig koşusu haftanın kuralıyla başlıyor (Tur 53)', JSON.stringify(leagueBoot.modifiers) === JSON.stringify([ruleShown.rule]),
+    check('Lig koşusu haftanın kuralıyla başlıyor (Tur 53)', JSON.stringify(leagueBoot.modifiers) === JSON.stringify(ruleShown.rule ? [ruleShown.rule] : null),
       `${JSON.stringify(leagueBoot.modifiers)} · kurulumda ${ruleShown.rule}`);
     check('Gündemde lig geri sayıyor', (await lp.locator('.agenda [data-agenda="league"]').count()) === 1);
     const silent = await lp.evaluate(() => window.__capital.audio?.().context ?? 'kanca yok');
@@ -3095,8 +3096,10 @@ async function finish(browser, consoleErrors) {
       await lp.waitForSelector('[data-league-row]', { timeout: 5000 }).catch(() => null);
       const rows = await lp.locator('[data-league-row]').count();
       check('Skor tabloya yazılıyor', rows === 1, `${rows} satır`);
-      check('Lig panelinde haftanın kuralı yazıyor (Tur 53)',
-        (await lp.locator(`.league [data-league-rule="${ruleShown.rule}"]`).count()) === 1);
+      check('Lig panelinde haftanın kuralı yazıyor, kuralsız haftada satır yok (Tur 53)',
+        (await lp.locator('.league [data-league-rule]').count()) === (ruleShown.rule ? 1 : 0) &&
+          (!ruleShown.rule || (await lp.locator(`.league [data-league-rule="${ruleShown.rule}"]`).count()) === 1),
+        ruleShown.rule ?? 'bu hafta kuralsız');
       // Tur 31: düğme yok — panel açılınca satır bu tarayıcıda kendiliğinden
       // yeniden oynanıyor ve doğrulanınca sıralamaya giriyor.
       const autoVerified = await lp

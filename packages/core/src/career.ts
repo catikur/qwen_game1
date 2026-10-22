@@ -199,7 +199,8 @@ export function careerTotals(input: CareerInput): CareerTotals {
     totals.auctionsWon += run.counters.auctionsWon;
     totals.bubbles += run.bubbles;
     totals.quests += run.quests;
-    if (run.league === 'finished') totals.leagueRuns++;
+    // "Ligde" bir haftayı istiyor: 90 günlük günün koşusu sayılmıyor (Tur 53, Codex #82).
+    if (run.league === 'finished' && run.leagueKind !== 'day') totals.leagueRuns++;
   }
   for (const key of Object.keys(totals) as AchievementTotal[]) totals[key] += input.archived?.totals?.[key] ?? 0;
   return totals;

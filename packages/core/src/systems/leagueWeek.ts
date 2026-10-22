@@ -64,8 +64,12 @@ export function leagueBoardKind(id: string): LeagueBoardKind | null {
  * eskisi gibi oynanıyor); günün koşusu kuralsız.
  */
 export const LEAGUE_RULE_ROTATION: readonly ModifierId[] = ['scarce_land', 'hungry_rivals', 'storms', 'tight_credit'];
-/** Kuralların başladığı hafta. */
-export const LEAGUE_RULES_FROM = '2026-W43';
+/**
+ * Kuralların başladığı hafta: açılmamış ilk hafta. Tur 53 2026-W43'ün
+ * ortasında geldi; o haftanın tablosundaki ve kayıtlardaki koşular kuralsız
+ * oynandı, kuralla karışmasınlar (Codex #82).
+ */
+export const LEAGUE_RULES_FROM = '2026-W44';
 
 /** ISO haftasının pazartesisi (UTC, ms). */
 function weekMonday(weekId: string): number | null {

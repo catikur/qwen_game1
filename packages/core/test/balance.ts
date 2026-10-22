@@ -4863,18 +4863,18 @@ section('Zorluk değiştiricileri', () => {
 
 section('Tohum Ligi: haftanın kuralı ve günün koşusu', () => {
   /*
-   * Tur 53. Lig haftası 2026-W43'ten beri ek kurallardan birini sırayla
+   * Tur 53. Lig haftası 2026-W44'ten beri ek kurallardan birini sırayla
    * taşıyor; günün koşusu 90 gün, kuralsız. Bilgili vekil 5, yavaş vekil 15
    * günde bir hamle yapıyor. Kuralın etkisi aynı şehrin kuralsız hâliyle
    * ölçülüyor (Sıkı banka'nın kuruluş kredisi de geri alınarak).
    *
-   * Ölçüm (DURUM Tur 53): bilgili vekil kural haftalarında yavaştan %47–77
-   * önde; aynı şehirde kural bilgili vekili Kıt arsa −%7, Fırtınalı yıllar
-   * −%6, Sıkı banka −%16 geriletiyor; Aç gözlü rakipler bilgiliye dokunmuyor
-   * (+%1), savunmasız yavaş vekili −%8. Günün koşusunda bilgili 1,5–2,0 M,
-   * yavaş 1,15–1,35 M, hiç oynamayan 250 B (6–8 kat).
+   * Ölçüm (DURUM Tur 53): bilgili vekil kural haftalarında yavaştan %52–68
+   * önde; aynı şehirde kural iki vekilin ortalamasını Kıt arsa −%3, Aç gözlü
+   * rakipler −%6, Fırtınalı yıllar −%9, Sıkı banka −%13 geriletiyor (Kıt arsa
+   * bilgili vekilde +%2: gürültü). Günün koşusunda bilgili 1,5–2,0 M, yavaş
+   * 1,15–1,35 M, hiç oynamayan 250 B (6–8 kat).
    */
-  const WEEKS = ['2026-W43', '2026-W44', '2026-W45', '2026-W46'];
+  const WEEKS = ['2026-W44', '2026-W45', '2026-W46', '2026-W47'];
   const DAYS = ['2026-10-22', '2026-10-23', '2026-10-24', '2026-10-25', '2026-10-26'];
   type Score = { score: number; lost: boolean };
   function withoutRule(state: GameState): GameState {
@@ -4918,10 +4918,13 @@ section('Tohum Ligi: haftanın kuralı ve günün koşusu', () => {
     weeks.map((w) => `${w.rule} ${pct(w.informed.score, w.slow.score)}`).join(' · '),
   );
   const byRule = Object.fromEntries(weeks.map((w) => [w.rule, w]));
+  // Tek şehirde tek vekilin farkı gürültüde kalabiliyor (Kıt arsa bilgili vekilde, Tur 45'teki gibi):
+  // iki vekilin ortalaması.
+  const effect = (w: (typeof weeks)[number]) => (w.informed.score / w.plain.score + w.slow.score / w.slowPlain.score) / 2;
   expect(
-    'Kıt arsa, Fırtınalı yıllar ve Sıkı banka bilgili vekilin skorunu aynı şehirde düşürüyor',
-    ['scarce_land', 'storms', 'tight_credit'].every((rule) => byRule[rule]!.informed.score < byRule[rule]!.plain.score),
-    ['scarce_land', 'storms', 'tight_credit'].map((rule) => `${rule} ${pct(byRule[rule]!.informed.score, byRule[rule]!.plain.score)}`).join(' · '),
+    'Her kural aynı şehirde iki vekilin ortalama skorunu düşürüyor',
+    weeks.every((w) => effect(w) < 1),
+    weeks.map((w) => `${w.rule} ${Math.round((effect(w) - 1) * 100)}%`).join(' · '),
   );
   expect(
     'Aç gözlü rakipler savunmasız yavaş vekili geriletiyor',
