@@ -65,8 +65,8 @@ sırayla, her tur ayrı PR, rapor fazın sonunda.
 | **51 · Lig sunucusu ana oyuna** | Lite'ın sunucusu ana oyunun koşularını da alıyor, Pages'te paylaşılan tablo oluyor. | bitti (#80) |
 | **52 · Sunucuda doğrulama** | Gönderilen koşu sunucuda yeniden oynanıyor, skor orada hesaplanıyor. Simülasyon da sunucu da TypeScript. Bu, DURUM'daki en eski güvenlik açığını kapatır. | bitti (#81) |
 | **53 · Haftanın kuralı ve günlük kısa koşu** | Ligde ek kurallar her hafta dönüyor; bir de 90 günlük günlük koşu geliyor. | bitti (#82) |
-| **54 · Hayalet eğri** | Liderlerin değer eğrisi senin koşunun üstünde görünüyor ("lider 300. günde ne yapmıştı"). | bu PR |
-| **55 · Davetli ligler ve arkadaş tablosu** | Lite'ta var, ana oyuna geliyor. | |
+| **54 · Hayalet eğri** | Liderlerin değer eğrisi senin koşunun üstünde görünüyor ("lider 300. günde ne yapmıştı"). | bitti (#83) |
+| **55 · Davetli ligler ve arkadaş tablosu** | Lite'ta var, ana oyuna geliyor. | bu PR |
 
 Kodu ve yerel sunucu testlerini Claude yapıyor. Canlı yayın kullanıcının
 hesabında; canlı veritabanına yazılmıyor. Tur 51'den beri canlı sunucu
@@ -76,7 +76,9 @@ sıra: Workers Paid, şema, kod. Simülasyonu değiştiren her birleşmeden sonr
 Worker yeniden dağıtılıyor; o zamana kadar yeni koşular bekliyor. Tur 53
 şemayı değiştirmiyor, yalnız kodu; oyun yeni kodu (`"daily":1`) görene kadar
 yerel tabloyla açılıyor. Tur 54 sunucuya ve simülasyona dokunmuyor; Worker
-olduğu gibi kalıyor.
+olduğu gibi kalıyor. Tur 55 şemayı değiştiriyor (iki yeni tablo): önce şema,
+sonra kod; oyun `"friends":1` görene kadar arkadaş liglerini göstermiyor.
+Faz 2'nin raporu `docs/DURUM.md`'de, Tur 55 bölümünün sonunda.
 
 ### Faz 3 · Yeni yollar
 

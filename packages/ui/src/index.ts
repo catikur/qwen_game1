@@ -2,6 +2,10 @@ export { GameContext, useGame, useGameState, useGameVersion } from './useGame';
 export type {
   FocusTarget,
   ExportOutcome,
+  FriendLeague,
+  FriendLeagues,
+  FriendOutcome,
+  FriendTable,
   GameContextValue,
   LeagueBoard,
   LeagueEntry,

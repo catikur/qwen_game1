@@ -29,6 +29,7 @@
  * - `GET  /v1/seed/days/:day`      → günün koşusunun tablosu (Tur 53), aynı biçim
  * - `GET  /v1/seed/codes/:key`     → bir satırın koşu kodu (tabloda yalnız özeti var)
  * - `DELETE /v1/players/me`        → hesabı ve koşularını sil (Lite ile aynı uç)
+ * - `…/v1/seed/leagues…`           → davetli ligler (Tur 55, `seedLeagues.ts`)
  */
 import { RUN_LIMITS, decodeRunChecked, replayRun, simFingerprint, type LeagueRun, type ReplayResult } from '../../core/src/league';
 import { leagueBoardKind, leagueDayId, type LeagueBoardKind } from '../../core/src/systems/leagueWeek';
@@ -142,7 +143,7 @@ export function publicCompanyName(name: string): boolean {
  * kimseyi izlemiyor, bir saatten eskisi her yazımda siliniyor. Cloudflare
  * her isteğe `cf-connecting-ip` koyuyor; başlık yoksa (yerel sunucu) sınır yok.
  */
-async function limit(db: Db, request: Request, kind: 'account' | 'run', cap: number, now: number): Promise<void> {
+export async function limit(db: Db, request: Request, kind: 'account' | 'run' | 'league', cap: number, now: number): Promise<void> {
   const ip = request.headers.get('cf-connecting-ip');
   if (!ip) return;
   const hour = Math.floor(now / HOUR);
@@ -317,6 +318,23 @@ export async function boardTable(db: Db, kind: LeagueBoardKind, week: string, me
   }
   const total = (await db.first<{ n: number }>('SELECT COUNT(*) AS n FROM seed_verified WHERE week = ?', week))?.n ?? 0;
   return { week, open: openBoards(now, kind).includes(week), total, entries: rows.map((row) => toEntry(row, week, me)) };
+}
+
+/**
+ * Davetli ligin tablosu (Tur 55, `seedLeagues.ts`): yalnız üyelerin
+ * doğrulanmış koşuları, genel tablonun sırasıyla. Üye sayısı sınırlı
+ * (`SEED_LEAGUE.members`), hepsi sığıyor.
+ */
+export async function memberTable(db: Db, kind: LeagueBoardKind, week: string, code: string, me: string, now: number) {
+  if (leagueBoardKind(week) !== kind) throw new HttpError(400, kind);
+  const rows = await db.all<SeedRow>(
+    `SELECT ${ROW_COLUMNS} FROM seed_verified
+      WHERE week = ? AND player_id IN (SELECT player_id FROM seed_league_members WHERE code = ?)
+      ORDER BY score DESC, at ASC, id ASC`,
+    week,
+    code,
+  );
+  return { week, open: openBoards(now, kind).includes(week), total: rows.length, entries: rows.map((row) => toEntry(row, week, me)) };
 }
 
 /**

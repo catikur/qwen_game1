@@ -99,7 +99,8 @@ export function GhostChart({
   const onMove = (event: PointerEvent<SVGSVGElement>) => setHover(sampleAt(event.clientX));
   const onClick = (event: MouseEvent<SVGSVGElement>) => {
     const sample = sampleAt(event.clientX);
-    onFocus(sample === todaySample ? null : sample);
+    // Bugünün örneği de sabitlenebiliyor: o örneğin bugünden önceki günleri de görünsün.
+    onFocus(sample);
   };
   const onKey = (event: KeyboardEvent<SVGSVGElement>) => {
     const from = focus ?? todaySample;
@@ -114,7 +115,7 @@ export function GhostChart({
     event.preventDefault();
     // Oyunun kısayolları (kamera, pencere) grafiğin tuşunu almasın.
     event.stopPropagation();
-    onFocus(next === todaySample ? null : next);
+    onFocus(next);
   };
 
   // Üstte çizilen son: sen. Hayalet senden önce, öbür liderler en altta.

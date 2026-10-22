@@ -27,6 +27,7 @@
  * - `POST /v1/link/claim {code, platform}` → kodla hesabı bu cihaza al
  * - `GET  /v1/stars`                 → bütün platformların yıldız tablosu
  * - `…/v1/seed/…`                    → ana oyunun Tohum Ligi (Tur 51, `seed.ts`)
+ * - `…/v1/seed/leagues…`            → ana oyunun davetli ligleri (Tur 55, `seedLeagues.ts`)
  *
  * Kimlik: `Authorization: Bearer <id>.<token>`. Token yalnızca özetiyle
  * saklanıyor; bir hesabın birden çok cihazı olabiliyor (`tokens`). Ana
@@ -49,6 +50,16 @@ import { HttpError, base64, json, preflight, randomToken, readBody, readJson, sh
 import { cleanName, offensiveName } from './names';
 import { MAX_SYNC_BODY, PLATFORMS, createSave, loadSave, saveWithScore, sync, touchProfile, uploadSave, type Platform } from './saves';
 import { boardTable, registerSeed, runCode, seedPurge, submitRun, type SeedReplay } from './seed';
+import {
+  createSeedLeague,
+  joinSeedLeague,
+  leaveSeedLeague,
+  mySeedLeagues,
+  removeSeedMemberships,
+  seedLeaguePurge,
+  seedLeagueTable,
+  seedLeaguesReady,
+} from './seedLeagues';
 
 export { cleanName, offensiveName } from './names';
 
@@ -145,7 +156,10 @@ async function route(request: Request, db: Db, now: number, options: Options): P
     // `seed`: ana oyunun Tohum Ligi bu sürümde (istemci ve canlı denetim eski sunucuyu buradan ayırıyor).
     // `verify`: koşuyu sunucu yeniden oynatıyor (Tur 52); tablonun satırları doğrulanmış.
     // `daily`: günün koşusunun tabloları ve haftanın kuralı (Tur 53).
-    if (route === 'GET /v1/health') return json({ ok: true, week: weekId(now), seed: 1, verify: 1, daily: 1 });
+    // `friends`: davetli ligler (Tur 55); şema henüz uygulanmadıysa 0 (`seedLeagues.ts`).
+    if (route === 'GET /v1/health') {
+      return json({ ok: true, week: weekId(now), seed: 1, verify: 1, daily: 1, friends: (await seedLeaguesReady(db)) ? 1 : 0 });
+    }
     if (route === 'POST /v1/players') return await register(request, db, now, options);
     if (route === 'POST /v1/link/claim') return await claimLink(request, db, now);
     if (route === 'POST /v1/seed/players') return await registerSeed(request, db, now);
@@ -185,6 +199,14 @@ async function route(request: Request, db: Db, now: number, options: Options): P
 async function seedSignedIn(route: string, request: Request, db: Db, me: Player, now: number, options: Options): Promise<Response> {
   if (route === 'POST /v1/seed/runs') return await submitRun(request, db, me.id, now, options.seed);
   if (route === 'DELETE /v1/players/me') return await deleteAccount(db, me);
+  // Davetli ligler (Tur 55).
+  if (route === 'GET /v1/seed/leagues') return await mySeedLeagues(db, me.id);
+  if (route === 'POST /v1/seed/leagues') return await createSeedLeague(request, db, me.id, now);
+  if (route === 'POST /v1/seed/leagues/join') return await joinSeedLeague(request, db, me.id, now);
+  const leave = /^DELETE \/v1\/seed\/leagues\/([^/]+)$/.exec(route);
+  if (leave) return await leaveSeedLeague(db, me.id, leave[1]!);
+  const table = /^GET \/v1\/seed\/leagues\/([^/]+)\/(weeks|days)\/([^/]+)$/.exec(route);
+  if (table) return await seedLeagueTable(db, table[2] === 'days' ? 'day' : 'week', table[1]!, table[3]!, me.id, now);
   throw new HttpError(403, 'platform');
 }
 
@@ -741,6 +763,8 @@ async function removeRows(db: Db, id: string): Promise<void> {
   for (const { code } of left) await dropIfEmpty(db, code);
   await db.run(`UPDATE leagues SET owner = ${OLDEST_MEMBER} WHERE owner = ?`, id);
   for (const table of [...PLAYER_TABLES, ...(await legacyTables(db))]) await db.run(`DELETE FROM ${table} WHERE player_id = ?`, id);
+  // Ana oyunun davetli ligleri (Tur 55): üyelikler ve boşalan ligler.
+  await removeSeedMemberships(db, id);
 }
 
 /** Ligin en eski üyesi (kuruculuk ona geçiyor); üye yoksa boş. */
@@ -768,6 +792,7 @@ async function purgeOrphans(db: Db, now: number): Promise<void> {
     ['DELETE FROM leagues WHERE created_at < ? AND NOT EXISTS (SELECT 1 FROM league_members m WHERE m.code = leagues.code)', now - 60_000],
     [`UPDATE leagues SET owner = ${OLDEST_MEMBER} WHERE owner <> '' AND owner NOT IN (SELECT id FROM players)`],
     ...seedPurge(now),
+    ...(await seedLeaguePurge(db, now)),
   ]);
 }
 

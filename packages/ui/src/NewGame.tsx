@@ -14,6 +14,7 @@ import { CareerPanel, useCareerRevision } from './CareerPanel';
 import { SettingsPanel } from './SettingsPanel';
 import { useDialogFocus } from './dialog';
 import { careerSummary } from './career';
+import { inviteCode } from './invite';
 
 /** Günün koşusunun adı: "22 Ekim" (etkin dilde; gün UTC). */
 function leagueDayLabel(dayId: string): string {
@@ -93,7 +94,9 @@ export function NewGameScreen({
   const toggleModifier = (id: ModifierId) =>
     setModifiers((current) => normalizeModifiers(current.includes(id) ? current.filter((m) => m !== id) : [...current, id]));
   // Oyun türü: serbest şehir, haftanın tohumu, günün koşusu (Tur 53) ya da senaryo (Tur 39).
-  const [mode, setMode] = useState<'free' | 'league' | 'daily' | 'scenario'>(initialScenario ? 'scenario' : 'free');
+  // Davet bağlantısıyla gelen (Tur 55) Tohum Ligi'yle başlıyor: arkadaşının ligine lig panelinden katılıyor.
+  const invite = inviteCode();
+  const [mode, setMode] = useState<'free' | 'league' | 'daily' | 'scenario'>(initialScenario ? 'scenario' : invite ? 'league' : 'free');
   const league = mode === 'league';
   const daily = mode === 'daily';
   const leagueKind: LeagueBoardKind | null = league ? 'week' : daily ? 'day' : null;
@@ -261,6 +264,11 @@ export function NewGameScreen({
           </div>
           {league && (
             <div className="difficulty-detail" data-detail="league">
+              {invite && (
+                <p className="league-invite" data-league-invite={invite}>
+                  {t('hud.newGame.leagueInvite', { code: invite })}
+                </p>
+              )}
               <p>{t('hud.newGame.leagueBlurb')}</p>
               {rule && (
                 <p className="league-rule" data-league-rule={rule}>

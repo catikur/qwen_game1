@@ -105,6 +105,7 @@ export const hud: Record<keyof typeof trHud, string> = {
   'hud.newGame.modeGroup': 'Game mode',
   'hud.newGame.modeFree': 'Free play',
   'hud.newGame.modeLeague': 'Seed League · {week}',
+  'hud.newGame.leagueInvite': "Invitation: {code}. Start your run, then join your friend's league in the league panel.",
   'hud.newGame.leagueBlurb':
     "This week's city is the same for everyone. You play 360 days; your score is your company value on day 360. Every move is recorded — your score is verified by replaying your run from the start.",
   'hud.newGame.leagueFactRules': 'Balanced difficulty, fixed rules',

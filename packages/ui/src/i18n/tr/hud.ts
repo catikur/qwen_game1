@@ -102,6 +102,7 @@ export const hud = {
   'hud.newGame.modeGroup': 'Oyun türü',
   'hud.newGame.modeFree': 'Serbest şehir',
   'hud.newGame.modeLeague': 'Tohum Ligi · {week}',
+  'hud.newGame.leagueInvite': 'Davet: {code}. Koşuya başla, lig panelinde arkadaşının ligine katıl.',
   'hud.newGame.leagueBlurb':
     'Bu haftanın şehri herkes için aynı. 360 gün oynarsın; skor 360. gündeki şirket değerin. Her hamlen kaydedilir — skorun, koşun baştan oynatılarak doğrulanır.',
   'hud.newGame.leagueFactRules': 'Zorluk Dengeli, kurallar sabit',

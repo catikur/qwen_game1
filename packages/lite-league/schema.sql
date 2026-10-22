@@ -171,3 +171,20 @@ CREATE TABLE IF NOT EXISTS seed_limits (
   hour INTEGER NOT NULL,
   count INTEGER NOT NULL
 );
+
+-- Tur 55: ana oyunun davetli ligleri (`src/seedLeagues.ts`). Lite'ın liglerinden
+-- (`leagues`) ayrı: Lite'ın haftalık puanı ile Tohum Ligi'nin skoru aynı
+-- tabloya girmesin. Ligin tablosu üyelerin `seed_verified` satırları; kurucu
+-- ilk üye, ayrı bir sahiplik yok. Son üye ayrılınca lig siliniyor.
+CREATE TABLE IF NOT EXISTS seed_leagues (
+  code TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  created_at INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS seed_league_members (
+  code TEXT NOT NULL,
+  player_id TEXT NOT NULL,
+  joined_at INTEGER NOT NULL,
+  PRIMARY KEY (code, player_id)
+);
+CREATE INDEX IF NOT EXISTS seed_league_members_by_player ON seed_league_members (player_id);

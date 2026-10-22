@@ -4958,6 +4958,93 @@ button.icon {
   font-size: calc(12px * var(--text-scale));
 }
 
+/* Tur 55: arkadaş ligleri — sekmeler, ligin kodu ve tablosu, kur ve katıl. */
+.league-friends {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.league-friends p {
+  margin: 0;
+}
+
+.league-invite {
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--accent-soft);
+  font-size: calc(12.5px * var(--text-scale));
+}
+
+.league-friend-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.league-friend-tabs button {
+  border-radius: 999px;
+  padding: 4px 12px;
+}
+
+.league-friend-tabs button[aria-selected='true'] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent);
+}
+
+.league-friend-tabs button[aria-selected='true'] .muted {
+  color: inherit;
+  opacity: 0.8;
+}
+
+.league-friend {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.league-friend-code {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 12px;
+  font-size: calc(12.5px * var(--text-scale));
+}
+
+.league-friend-code code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.league-friend-forms {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 8px 12px;
+}
+
+.league-friend-forms form {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.league-friend-forms label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: calc(12px * var(--text-scale));
+  color: var(--muted);
+}
+
+.league-friend-forms input {
+  width: 100%;
+}
+
 .league-final {
   font-family: var(--font-display);
   font-size: calc(28px * var(--text-scale));

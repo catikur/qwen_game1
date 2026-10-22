@@ -1,4 +1,4 @@
-import type { LeagueBoard, LeagueEntry, LeagueFeedInfo, LeagueSubmitOutcome } from '@capital/ui';
+import type { FriendLeague, FriendOutcome, FriendTable, LeagueBoard, LeagueEntry, LeagueFeedInfo, LeagueSubmitOutcome } from '@capital/ui';
 
 /**
  * Tohum Ligi tablosunun üçüncü deposu (Tur 51): lig sunucusu.
@@ -484,8 +484,98 @@ export function createServerBoard(options: ServerBoardOptions): ServerBoard {
     if (pending().length > 0) void flushPending().then(refreshAll);
   };
 
+  /** Davetli ligler (Tur 55): sağlık ucu `friends` dediyse. */
+  let friendsOk = false;
+  /** Sağlık ucunun cevabı alındı mı (bağlantısız açılışta alınamıyor). */
+  let friendsKnown = false;
+  async function learnFriends(): Promise<void> {
+    const reply = await call('/v1/health');
+    if (reply?.status !== 200) return;
+    friendsKnown = true;
+    friendsOk = atLeastOne(reply.body.seed) && atLeastOne(reply.body.verify) && atLeastOne(reply.body.daily) && atLeastOne(reply.body.friends);
+  }
+
+  function toLeague(raw: unknown): FriendLeague | null {
+    if (!raw || typeof raw !== 'object') return null;
+    const { code, name, members } = raw as Record<string, unknown>;
+    if (typeof code !== 'string' || !/^[A-Z2-9]{6}$/.test(code) || typeof name !== 'string') return null;
+    return { code, name: name.slice(0, 24), members: typeof members === 'number' ? members : 0 };
+  }
+
+  /** Sunucunun ret kodları oyuncunun anlayacağı sonuca. */
+  function friendOutcome(reply: NonNullable<Reply>): FriendOutcome {
+    const error = reply.body.error;
+    if (reply.status === 400 && (error === 'name' || error === 'name-blocked')) return error;
+    if (reply.status === 404) return 'unknown-code';
+    if (reply.status === 409 && (error === 'full' || error === 'limit')) return error;
+    if (reply.status === 429) {
+      noteRetry(reply.body.retryAfter);
+      return 'busy';
+    }
+    if (reply.status >= 500) return 'busy';
+    return 'error';
+  }
+
+  /**
+   * Kur ya da katıl: hesap yoksa açılıyor (ilk koşudan önce de lige girilebilsin).
+   * Hesap sunucuda yoksa (başka yerden silindi) gönderimdeki gibi bir kez yenisiyle;
+   * bir sekme hesabı siliyorsa yenisi açılmıyor (Codex #80).
+   */
+  async function friendWrite(path: string, body: unknown, retried = false): Promise<{ outcome: FriendOutcome; league?: FriendLeague }> {
+    if (forgetting) return { outcome: 'error' };
+    const me = await ensureAccount();
+    if (typeof me === 'string') return { outcome: me === 'offline' ? 'offline' : me === 'busy' ? 'busy' : 'error' };
+    const reply = await call(path, { method: 'POST', body, auth: me });
+    if (!reply) return { outcome: 'offline' };
+    if (reply.status === 401) {
+      const stillMine = account()?.id === me.id;
+      if (stillMine) write(ACCOUNT_KEY, null);
+      if (retried || forgetting || !stillMine || deleting(me.id)) return { outcome: 'error' };
+      return friendWrite(path, body, true);
+    }
+    if (reply.status === 200 || reply.status === 201) {
+      const league = toLeague(reply.body);
+      return league ? { outcome: 'ok', league } : { outcome: 'error' };
+    }
+    return { outcome: friendOutcome(reply) };
+  }
+
+  const friends = {
+    available: () => friendsOk,
+    async list(): Promise<FriendLeague[] | null> {
+      if (!account()) return [];
+      const reply = await call('/v1/seed/leagues', { auth: true });
+      if (!reply) return null;
+      if (reply.status === 401) return [];
+      if (reply.status !== 200 || !Array.isArray(reply.body.leagues)) return null;
+      return reply.body.leagues.map(toLeague).filter((league): league is FriendLeague => league !== null);
+    },
+    create: (name: string) => friendWrite('/v1/seed/leagues', { name }),
+    join: (code: string) => friendWrite('/v1/seed/leagues/join', { code: code.trim().toUpperCase() }),
+    async leave(code: string): Promise<boolean> {
+      if (!account()) return true;
+      const reply = await call(`/v1/seed/leagues/${encodeURIComponent(code)}`, { method: 'DELETE', auth: true });
+      return reply !== null && (reply.status === 200 || reply.status === 401);
+    },
+    async table(code: string, boardId: string): Promise<FriendTable | 'gone' | null> {
+      if (!account()) return 'gone';
+      const reply = await call(`/v1/seed/leagues/${encodeURIComponent(code)}${boardPath(boardId).slice('/v1/seed'.length)}/${encodeURIComponent(boardId)}`, {
+        auth: true,
+      });
+      if (!reply) return null;
+      if (reply.status === 401 || reply.status === 403 || reply.status === 404) return 'gone';
+      if (reply.status !== 200 || !Array.isArray(reply.body.entries)) return null;
+      return {
+        name: typeof reply.body.name === 'string' ? reply.body.name.slice(0, 24) : code,
+        members: typeof reply.body.members === 'number' ? reply.body.members : 0,
+        entries: reply.body.entries.map(toEntry).filter((entry): entry is LeagueEntry => entry !== null),
+      };
+    },
+  };
+
   return {
     kind: 'server',
+    friends,
 
     async probe() {
       const reply = await call('/v1/health');
@@ -499,6 +589,9 @@ export function createServerBoard(options: ServerBoardOptions): ServerBoard {
       // 52'ninki (`daily` yok) günün koşusunu tanımıyor ve haftanın kuralı
       // olmadan oynatıyor: o da eski (Tur 53).
       const ok = reply.status === 200 && atLeastOne(reply.body.seed) && atLeastOne(reply.body.verify) && atLeastOne(reply.body.daily);
+      // Davetli ligler (Tur 55) ayrı bayrak: şeması uygulanmamış sunucu (`friends: 0`) tabloyu yine veriyor.
+      friendsOk = ok && atLeastOne(reply.body.friends);
+      friendsKnown = ok;
       write(SEEN_KEY, ok ? url : null);
       // Dinleme yalnız kullanılacak tabloda: tanınmayan sunucunun tablosu atılıyor.
       if (ok) listen();
@@ -528,6 +621,10 @@ export function createServerBoard(options: ServerBoardOptions): ServerBoard {
         // Sonradan başlayan tazeleme önce bittiyse eskisinin cevabı yazılmıyor.
         if (stopped || mine !== sequence) return;
         if (reply?.status === 200 && Array.isArray(reply.body.entries)) {
+          // Bağlantısız açılışta sağlık ucu sorulamadı (Codex #84): tablo gelince davetli ligler
+          // de soruluyor, panel bu teslimatla yeniden çizildiğinde bölüm açık.
+          if (!friendsKnown) await learnFriends();
+          if (stopped || mine !== sequence) return;
           const entries = reply.body.entries.map(toEntry).filter((entry): entry is LeagueEntry => entry !== null);
           tables.set(weekId, entries);
           write(TABLE_KEY, JSON.stringify({ url, weekId, rows: reply.body.entries } satisfies StoredTable));
