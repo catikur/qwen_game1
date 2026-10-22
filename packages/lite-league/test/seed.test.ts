@@ -492,6 +492,8 @@ INSERT INTO seed_runs VALUES ('eski-oyuncu', '${WEEK}', 'eski-satir', 'Şişik A
 
 test('Tur 52: Tur 51 şemasıyla kurulmuş veritabanı güncelleniyor; doğrulanmamış eski satır sunulmuyor', async () => {
   const db = memoryDb(TUR51_SEED_RUNS);
+  // Şema Worker'dan önce uygulanıyor: eski tablo yerinde kalmalı, eski Worker yeni kod gelene kadar çalışsın (Codex #81).
+  assert.equal((await db.first<{ n: number }>('SELECT COUNT(*) AS n FROM seed_runs'))?.n, 1, 'eski tablo ve satırı yerinde');
   const me = await seedAccount(db);
   const sent = await submit(db, THURSDAY, me, run());
   assert.equal(sent.status, 201, JSON.stringify(sent.body));

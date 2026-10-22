@@ -315,10 +315,8 @@ Açmak için (sıra önemli):
 2. Şema. **Storage & Databases → D1 → capitalforge-lite-league →
    Console**: `schema.sql`'in tamamını çalıştır. Her tablo `IF NOT EXISTS`;
    var olanlar değişmiyor, eski kod yeni tablolarla sorunsuz çalışıyor.
-   Tek istisna Tur 51'in `seed_runs` tablosu: sunucunun doğrulamadığı
-   koşular, varsa siliniyor (`DROP TABLE IF EXISTS`); doğrulanmış koşular
-   `seed_verified`'da. Konsol toplu ifade almazsa son bölümler (`seed_runs`'ın
-   silinmesi, `seed_verified`, `seed_gaps` ve `seed_limits`) tek tek.
+   Doğrulanmış koşular `seed_verified`'da. Konsol toplu ifade almazsa son
+   bölümler (`seed_verified`, `seed_gaps` ve `seed_limits`) tek tek.
 3. Kod. `pnpm lite:league-bundle` → paketi paneldeki Worker kodunun yerine
    yapıştır, **Deploy** (A'nın 1. ve 3. adımı). Paket ana oyunun motorunu da
    taşıyor (~700 KB, sıkıştırılmış ~185 KB; ücretli sınır 10 MB). Yeni kod
@@ -326,6 +324,11 @@ Açmak için (sıra önemli):
    tablolar yoksa istekleri düşerdi (Codex #80).
 4. Denetim: `/v1/health` cevabında `"seed":1` ve `"verify":1`. Pages'teki
    oyun sonraki açılışta lig sunucusunun tablosuna geçiyor.
+5. Yalnız Tur 51 canlıya gittiyse (gitmedi): yeni Worker çalışırken konsolda
+   `DROP TABLE IF EXISTS seed_runs;`. O tabloda sunucunun doğrulamadığı
+   koşular var; yeni kod onu okumuyor. Şema Worker'dan önce uygulandığı için
+   2. adımda silinmiyor: eski Worker yeni kod gelene kadar onunla çalışsın
+   (Codex #81).
 
 **Sürüm uyumu.** Sunucu koşuyu yalnız kendi simülasyon sürümüyle
 yargılayabiliyor. Pages'teki oyun her `main` birleşmesinde kendiliğinden

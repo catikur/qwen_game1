@@ -126,9 +126,10 @@ CREATE TABLE IF NOT EXISTS links (
 );
 CREATE INDEX IF NOT EXISTS links_by_player ON links (player_id);
 
--- Tur 51'in tablosu: sunucunun doğrulamadığı koşular (Tur 52'den önce). Satırları
--- tabloya hiç sunulmuyor; varsa siliniyor (Codex #81). Yeni tablo aşağıda.
-DROP TABLE IF EXISTS seed_runs;
+-- Tur 51'in tablosu (`seed_runs`): sunucunun doğrulamadığı koşular. Yeni kod onu
+-- hiç okumuyor. Burada silinmiyor: şema Worker'dan önce uygulanıyor, eski
+-- Worker yeni kod gelene kadar onunla çalışsın (Codex #81). Tur 51 canlıya
+-- gittiyse, yeni Worker dağıtıldıktan sonra elle: DROP TABLE IF EXISTS seed_runs;
 
 -- Tur 52: ana oyunun Tohum Ligi koşuları (`src/seed.ts`), sunucunun yeniden
 -- oynattığı. Oyuncu başına haftada tek satır: en iyisi. Hesap `players` +

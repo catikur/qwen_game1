@@ -5387,11 +5387,14 @@ doğrulama Workers Paid ile (aylık 5 $). DURUM'un en eski güvenlik açığı
 - Tablodaki satır `verified: true` ve `idle` taşıyor; skor ve eğri
   sunucunun tekrarından. Sağlık ucu `"verify":1` diyor.
 - Şema: doğrulanmış koşular yeni tabloda (`seed_verified`, `idle` sütunuyla).
-  Tur 51'in `seed_runs`'ı varsa siliniyor. Codex #81'in bulgusu: Tur 51'in
-  şemasıyla kurulmuş bir veritabanında `CREATE TABLE IF NOT EXISTS` eski
-  tabloyu olduğu gibi bırakıyor, her sorgu "no such column: idle" ile
-  düşüyordu; eski satırlar da hiç doğrulanmadığı hâlde `verified` diye
-  sunulacaktı. Canlıda Tur 51'in tablosu hiç olmadı; yine de yol açık. Test
+  Codex #81'in bulgusu: Tur 51'in şemasıyla kurulmuş bir veritabanında
+  `CREATE TABLE IF NOT EXISTS` eski tabloyu olduğu gibi bırakıyor, her sorgu
+  "no such column: idle" ile düşüyordu; eski satırlar da hiç doğrulanmadığı
+  hâlde `verified` diye sunulacaktı. Tur 51'in `seed_runs`'ı şemada
+  silinmiyor: şema Worker'dan önce uygulanıyor, eski Worker yeni kod gelene
+  kadar onunla çalışsın (Codex #81'in ikinci turu). Yeni kod onu okumuyor;
+  Tur 51 canlıya gittiyse yeni Worker'dan sonra elle siliniyor (README).
+  Canlıda Tur 51'in tablosu hiç olmadı; yine de yol açık. Testler
   düzeltmeden önce kaldı.
 - *Codex #81: kopya denetimi yazımla birlikte.* Aynı koşuyu aynı anda iki
   oyuncu gönderirse ikisi de tekrardan (1–2 sn) önce denetimi geçip
