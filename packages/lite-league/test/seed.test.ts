@@ -143,6 +143,18 @@ test('Tohum Ligi: daha kötü gönderim de aralığı dolduruyor; satırın saat
   assert.equal(better.body.outcome, 'saved');
 });
 
+test('Tohum Ligi: aynı anda gelen iki gönderimden yalnız biri aralıktan geçiyor (Codex #80)', async () => {
+  const db = memoryDb();
+  const me = await seedAccount(db);
+  const [a, b] = await Promise.all([
+    submit(db, THURSDAY, me, run({ score: 1_000_000 })),
+    submit(db, THURSDAY, me, run({ score: 2_000_000 })),
+  ]);
+  const statuses = [a.status, b.status].sort();
+  assert.deepEqual(statuses, [201, 429], JSON.stringify([a.body, b.body]));
+  assert.equal([a, b].find((reply) => reply.status === 429)!.body.error, 'slow');
+});
+
 test('Tohum Ligi: bozuk, eski ve sınır dışı kodlar reddediliyor', async () => {
   const db = memoryDb();
   const me = await seedAccount(db);

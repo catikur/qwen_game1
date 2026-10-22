@@ -5185,9 +5185,13 @@ Tur 51"). "Canlı sunucu denetimi" yeni uçları yalnız okuyarak deniyor
   saatine (`at`) bakıyordu; daha kötü koşu satırı değiştirmediği için saat
   ilerlemiyor, arkası arkasına gönderim 30 sn'lik aralığı aşıyordu. Satırın
   saati eşitlikte "önce gönderen" için gerekli, ileri alınamaz. Son deneme
-  artık ayrı sütunda (`tried_at`): her kabul edilen deneme, daha kötüsü de,
-  onu ileri alıyor; aralık ondan ölçülüyor. `seed_runs` canlıda henüz yok,
-  sütun doğrudan tabloda. Test düzeltmeden önce kaldı.
+  artık ayrı tabloda (`seed_gaps`, hesap başına bir satır): her kabul edilen
+  deneme, daha kötüsü de, onu ileri alıyor. Codex'in sonraki turu bir açık
+  daha buldu: okuma ile yazma arasında aynı anda gelen iki istek ikisi de
+  geçiyordu. Aralık artık tek koşullu yazımla ayrılıyor (`INSERT … ON
+  CONFLICT DO UPDATE … WHERE` aralık geçtiyse); yazım değiştirmediyse
+  `slow`. Hesap silinince ve günlük temizlikte satır gidiyor. Tablo yeni,
+  canlıda henüz şema yok. İki test düzeltmeden önce kaldı.
 - *Codex #80: Worker'ın dağıtımı çözücünün bağımlılıklarını izlemiyordu.*
   İş akışı yalnız `packages/core/src/league.ts` değişince dağıtıyordu; oysa
   çözücü pakete çekirdeğin 59, içeriğin 30 dosyasını getiriyor (CEO'lar,
@@ -5229,11 +5233,12 @@ makinede 42 durumun hepsi geçiyordu.
 - CI'nin tam koşusu 27 dk'ydı, sınır 30 dk. Tarayıcı işinin süresi 45 dk
   oldu; iş artık bağımlılıkları da kuruyor (yerel lig sunucusu için).
 
-**Doğrulama.** `pnpm test` 550/550; tip denetimi temiz.
-- `seed.test.ts` (13 test):
+**Doğrulama.** `pnpm test` 551/551; tip denetimi temiz.
+- `seed.test.ts` (14 test):
   - hesap, gönderim, herkese açık tablo ve kod;
   - en iyisi kalıyor, satırın kimliği aynı, gönderim aralığı; daha kötü
-    gönderim de aralığı dolduruyor, satırın saati değişmiyor (Codex #80);
+    gönderim de aralığı dolduruyor, satırın saati değişmiyor; aynı anda
+    gelen iki gönderimden yalnız biri geçiyor (Codex #80);
   - bozuk, eski ve sınır dışı kodlar;
   - hafta ve 6 saatlik pay;
   - şirket adı süzgeci, noktalamalı yazım da (Codex #80);
@@ -5379,7 +5384,7 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi). Senaryo şehirlerinde gün 3–17 ms (`pnpm dayperf`, Tur 43) |
-| Birim testi | **550 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de) |
+| Birim testi | **551 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de) |
 | Denge testi | **331 kontrol, hepsi geçiyor** (25 bölüm, süreleriyle; ~13 dk) |
 | Tarayıcı testi | **521 kontrol, hepsi geçiyor**, 0 konsol hatası (~40 dk); duman koşusu 132 (~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + paket bütçesi (Tur 46; Tur 48'den beri hizmet çalışanı ve manifest de) + duman oynanışı |

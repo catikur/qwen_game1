@@ -143,13 +143,18 @@ CREATE TABLE IF NOT EXISTS seed_runs (
   code_key TEXT NOT NULL,
   -- Satırdaki koşunun sunucu saati (eşit skorda önce gönderen).
   at INTEGER NOT NULL,
-  -- Son gönderim denemesi, daha kötüsü de: aynı hesaptan iki gönderim arası
-  -- aralık bununla (satırın saati `at` ileri alınmasın).
-  tried_at INTEGER NOT NULL,
   PRIMARY KEY (player_id, week)
 );
 CREATE INDEX IF NOT EXISTS seed_runs_by_week ON seed_runs (week, score DESC, at);
 CREATE INDEX IF NOT EXISTS seed_runs_by_code ON seed_runs (code_key);
+
+-- Tur 51: hesabın son gönderim denemesi (daha kötüsü de). Aynı hesaptan iki
+-- gönderim arası aralık tek koşullu yazımla ayrılıyor: aynı anda gelen iki
+-- istekten yalnız biri geçiyor. Satırın saati (`seed_runs.at`) ileri alınmıyor.
+CREATE TABLE IF NOT EXISTS seed_gaps (
+  player_id TEXT PRIMARY KEY,
+  at INTEGER NOT NULL
+);
 
 -- Tur 51: IP başına saatlik sayaç. Anahtar IP ile saatin özeti; bir saatten
 -- eskisi her yazımda siliniyor.

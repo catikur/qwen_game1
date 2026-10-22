@@ -697,7 +697,7 @@ async function joinLeague(request: Request, db: Db, me: Player, now: number): Pr
 }
 
 /** Oyuncuya bağlı tablolar (`league_members` dışında); hesap silinince hepsinden siliniyor. */
-const PLAYER_TABLES = ['groups', 'reports', 'rejects', 'attest_keys', 'attest_challenges', 'tokens', 'saves', 'profiles', 'links', 'seed_runs'];
+const PLAYER_TABLES = ['groups', 'reports', 'rejects', 'attest_keys', 'attest_challenges', 'tokens', 'saves', 'profiles', 'links', 'seed_runs', 'seed_gaps'];
 
 /**
  * Hesabı sil (App Store 5.1.1(v)): oyuncunun her izi gidiyor; boşalan özel ligler de.
