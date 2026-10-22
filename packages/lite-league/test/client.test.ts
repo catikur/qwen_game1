@@ -269,3 +269,29 @@ test('istemci: tarayıcı deposu yazılamıyorsa (dolu, kapalı) hesap ve bekley
   for (let i = 0; i < 50 && (await best()) !== 2_000_000; i++) await new Promise((resolve) => setTimeout(resolve, 10));
   assert.equal(await best(), 2_000_000, 'bekleyen gönderim kaybolmadı');
 });
+
+test('istemci: bağlantısız yeniden açılışta son görülen tablo depodan geliyor', async () => {
+  const db = memoryDb();
+  const net: Net = { online: true, old: false, now: THURSDAY, requests: [] };
+  const storage = memoryStorage();
+  const first = client(db, net, storage).board;
+  assert.equal(await first.probe(), 'ok');
+  assert.equal(await first.submit(entryOf(run())), 'saved');
+  const seen = watch(first);
+  await seen.next();
+  assert.equal(seen.last().entries.length, 1);
+  seen.stop();
+
+  // Sayfa bağlantısız yeniden açıldı: yeni tablo nesnesi, aynı depo (Codex #80).
+  net.online = false;
+  const again = client(db, net, storage).board;
+  assert.equal(await again.probe(), 'offline');
+  assert.equal(again.seen(), true);
+  const feed = watch(again);
+  await feed.next();
+  if (!feed.last().offline) await feed.next();
+  assert.equal(feed.last().offline, true);
+  assert.equal(feed.last().entries.length, 1, 'boş tablo değil, son görülen');
+  assert.equal(feed.last().entries[0]!.companyName, 'Atilla Holding');
+  assert.equal(feed.last().entries[0]!.mine, true);
+});

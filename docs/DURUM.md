@@ -5118,6 +5118,10 @@ Tur 51"). "Canlı sunucu denetimi" yeni uçları yalnız okuyarak deniyor
   ama okuma belleğe bakmıyordu; bekleyen gönderim de kayboluyordu. Son
   yazımı depoya geçemeyen anahtar artık bellekten okunuyor; depo çalışırken
   depo esas (öbür sekmeler). Test düzeltmeden önce kaldı.
+- *Codex #80: bağlantısız yeniden açılışta "son görülen tablo" boştu.*
+  Sunucu daha önce görüldüğü için sunucu tablosu seçiliyordu ama tablo yalnız
+  bellekteydi. Son tablo (bir hafta) artık depoda; hesap silinince o da
+  gidiyor. Test düzeltmeden önce kaldı.
 - *Kodun tarayıcıda saklanma süresi bir yıldan bir güne indi.* Silinen
   hesabın kodu başkasının tarayıcısında aylarca kalmasın; her tarayıcı bir
   kodu zaten bir kez doğruluyor.
@@ -5145,7 +5149,7 @@ makinede 42 durumun hepsi geçiyordu.
 - CI'nin tam koşusu 27 dk'ydı, sınır 30 dk. Tarayıcı işinin süresi 45 dk
   oldu; iş artık bağımlılıkları da kuruyor (yerel lig sunucusu için).
 
-**Doğrulama.** `pnpm test` 542/542; tip denetimi temiz.
+**Doğrulama.** `pnpm test` 543/543; tip denetimi temiz.
 - `seed.test.ts` (12 test):
   - hesap, gönderim, herkese açık tablo ve kod;
   - en iyisi kalıyor, satırın kimliği aynı, gönderim aralığı;
@@ -5159,7 +5163,7 @@ makinede 42 durumun hepsi geçiyordu.
   - haftalık temizlik;
   - sunucunun haftası oyununkiyle aynı;
   - CORS.
-- `client.test.ts` (8 test): oyunun istemcisi gerçek sunucuya karşı
+- `client.test.ts` (9 test): oyunun istemcisi gerçek sunucuya karşı
   (bellekte SQLite):
   - sunucuyu tanıma, eski sunucu, bağlantısızlık;
   - ilk gönderimde hesap, satır ve kodun ayrı inmesi, başka tarayıcı;
@@ -5167,7 +5171,8 @@ makinede 42 durumun hepsi geçiyordu.
   - kesin retler, silinen hesap yenisiyle;
   - hesap silme;
   - bekleyen gönderimin tablo kapalıyken ve açılışta gitmesi;
-  - yazılamayan tarayıcı deposu (Codex #80).
+  - yazılamayan tarayıcı deposu, bağlantısız yeniden açılışta son tablo
+    (Codex #80).
 - `leagueVerify.test.ts` (2 test): önbellek anahtarı kodun özetiyle; kod
   satırda yoksa iniyor, inmezse sonuçsuz.
 - Tarayıcı testine "Tohum Ligi: lig sunucusu" bölümü (11 kontrol, ~4 dk).
@@ -5285,7 +5290,7 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi). Senaryo şehirlerinde gün 3–17 ms (`pnpm dayperf`, Tur 43) |
-| Birim testi | **542 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de) |
+| Birim testi | **543 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de) |
 | Denge testi | **331 kontrol, hepsi geçiyor** (25 bölüm, süreleriyle; ~13 dk) |
 | Tarayıcı testi | **521 kontrol, hepsi geçiyor**, 0 konsol hatası (~40 dk); duman koşusu 132 (~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + paket bütçesi (Tur 46; Tur 48'den beri hizmet çalışanı ve manifest de) + duman oynanışı |

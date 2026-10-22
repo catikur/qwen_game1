@@ -43,6 +43,8 @@ export interface ServerBoard extends LeagueBoard {
 const ACCOUNT_KEY = 'capitalforge.league.account';
 const PENDING_KEY = 'capitalforge.league.pending';
 const SEEN_KEY = 'capitalforge.league.server';
+/** Son görülen tablo (bir hafta): bağlantısız yeniden açılışta boş tablo yerine o (Codex #80). */
+const TABLE_KEY = 'capitalforge.league.table';
 /** Bekleyen gönderim sınırı: en yenileri kalıyor. */
 const PENDING_MAX = 3;
 
@@ -56,6 +58,13 @@ interface Pending {
   url: string;
   weekId: string;
   code: string;
+}
+
+interface StoredTable {
+  url: string;
+  weekId: string;
+  /** Sunucunun satırları olduğu gibi (`toEntry` yeniden denetliyor). */
+  rows: unknown[];
 }
 
 type Reply = { status: number; body: Record<string, unknown> } | null;
@@ -239,6 +248,12 @@ export function createServerBoard(options: ServerBoardOptions): ServerBoard {
   }
 
   const tables = new Map<string, LeagueEntry[]>();
+  /** Sayfa bağlantısız yeniden açıldıysa bellekte tablo yok: depodaki son görülen. */
+  const storedTable = (weekId: string): LeagueEntry[] | null => {
+    const stored = parse<StoredTable>(TABLE_KEY);
+    if (!stored || stored.url !== url || stored.weekId !== weekId || !Array.isArray(stored.rows)) return null;
+    return stored.rows.map(toEntry).filter((entry): entry is LeagueEntry => entry !== null);
+  };
   const active = new Set<() => Promise<void>>();
   const refreshAll = () => active.forEach((refresh) => void refresh());
   /**
@@ -281,14 +296,18 @@ export function createServerBoard(options: ServerBoardOptions): ServerBoard {
         if (reply?.status === 200 && Array.isArray(reply.body.entries)) {
           const entries = reply.body.entries.map(toEntry).filter((entry): entry is LeagueEntry => entry !== null);
           tables.set(weekId, entries);
+          write(TABLE_KEY, JSON.stringify({ url, weekId, rows: reply.body.entries } satisfies StoredTable));
           onChange(entries, {});
         } else {
           onChange(tables.get(weekId) ?? [], { offline: true });
         }
       };
       active.add(refresh);
-      const cached = tables.get(weekId);
-      if (cached) onChange(cached, {});
+      const cached = tables.get(weekId) ?? storedTable(weekId);
+      if (cached) {
+        tables.set(weekId, cached);
+        onChange(cached, {});
+      }
       void refresh();
       const visible = () => options.visibility?.visible() ?? true;
       const timer = setInterval(() => {
@@ -328,6 +347,8 @@ export function createServerBoard(options: ServerBoardOptions): ServerBoard {
         if (!reply || (reply.status !== 200 && reply.status !== 401)) return false;
         write(ACCOUNT_KEY, null);
         write(PENDING_KEY, null);
+        // Depodaki tablo silinen satırı "benim" diye taşımasın.
+        write(TABLE_KEY, null);
         refreshAll();
         return true;
       },
