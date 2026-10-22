@@ -200,6 +200,15 @@ export function sharedBoard(db: Db, user: User | null): LeagueBoard {
         const fields: Record<string, unknown> = day ? { day: { ...entry }, dayWeekId: entry.weekId, dayScore: entry.score } : { ...entry };
         if (existing.exists && ref.update) await ref.update(fields);
         else await ref.set({ ...(body ?? {}), ...fields });
+        // Depoda işlem yok: aynı tabloya başka sekmeden daha düşük skor bizden sonra
+        // yazıldıysa geri okuyup düzeltiyoruz; en iyi skor kalsın (Codex #82).
+        for (let attempt = 0; attempt < 2; attempt++) {
+          const after = (await ref.get()).data();
+          const stored = (day ? after?.['day'] : after) as Record<string, unknown> | undefined;
+          if (stored?.['weekId'] !== entry.weekId || typeof stored['score'] !== 'number' || stored['score'] >= entry.score) break;
+          if (ref.update) await ref.update(fields);
+          else await ref.set({ ...(after ?? {}), ...fields });
+        }
         return 'saved';
       } catch {
         return 'error';

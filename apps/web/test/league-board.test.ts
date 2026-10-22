@@ -112,3 +112,23 @@ test('paylaşılan tablo: iki sekmeden aynı anda haftanın ve günün koşusu; 
   assert.deepEqual(await rows(first, '2026-W44'), [['2026-W44', 6_000_000]]);
   assert.deepEqual(await rows(first, '2026-10-26'), [['2026-10-26', 900_000]]);
 });
+
+test('paylaşılan tablo: aynı tabloya iki sekmeden aynı anda iki skor; düşüğü sonra yazılsa da yükseği kalıyor (Codex #82)', async () => {
+  const db = memoryDb();
+  const board = sharedBoard(db, user('ben'));
+  assert.equal(await board.submit(entry('2026-10-26', 500_000)), 'saved');
+  // İkisi de 500 bini okuyup geçiyor; düşük olan sonra yazıyor.
+  const results = await Promise.all([
+    sharedBoard(db, user('ben')).submit(entry('2026-10-26', 1_200_000)),
+    sharedBoard(db, user('ben')).submit(entry('2026-10-26', 800_000)),
+  ]);
+  assert.deepEqual(results, ['saved', 'saved']);
+  assert.deepEqual(await rows(board, '2026-10-26'), [['2026-10-26', 1_200_000]]);
+  // Haftanın tablosu da aynı yolda.
+  assert.equal(await board.submit(entry('2026-W44', 3_000_000)), 'saved');
+  await Promise.all([
+    sharedBoard(db, user('ben')).submit(entry('2026-W44', 7_000_000)),
+    sharedBoard(db, user('ben')).submit(entry('2026-W44', 4_000_000)),
+  ]);
+  assert.deepEqual(await rows(board, '2026-W44'), [['2026-W44', 7_000_000]]);
+});
