@@ -347,3 +347,44 @@ test('istemci: bağlantısız açılışta görülmüş sunucu seçilince de bek
   for (let i = 0; i < 50 && (await total()) === 0; i++) await new Promise((resolve) => setTimeout(resolve, 10));
   assert.equal(await total(), 1, 'bekleyen koşu gitti');
 });
+
+test('istemci: bırakılan tablo bağlantı dinleyicisini kaldırıyor, bekleyen kuyruğa dokunmuyor (Codex #80)', async () => {
+  const db = memoryDb();
+  const net: Net = { online: true, old: false, now: THURSDAY, requests: [] };
+  const storage = memoryStorage();
+  // Pencere gibi: dinleyici ekle ve kaldır sayılıyor.
+  class Counting extends EventTarget {
+    count = 0;
+    override addEventListener(...args: Parameters<EventTarget['addEventListener']>) {
+      if (args[0] === 'online') this.count++;
+      super.addEventListener(...args);
+    }
+    override removeEventListener(...args: Parameters<EventTarget['removeEventListener']>) {
+      if (args[0] === 'online') this.count--;
+      super.removeEventListener(...args);
+    }
+  }
+  const online = new Counting();
+  const old = client(db, net, storage, online).board;
+  assert.equal(await old.probe(), 'ok');
+  assert.equal(online.count, 1, 'tanınan sunucuda dinleme var');
+  old.close?.();
+  assert.equal(online.count, 0, 'bırakılınca dinleyici kalkıyor');
+  assert.equal(await old.probe(), 'ok');
+  assert.equal(online.count, 0, 'bırakılan tablo yeniden dinlemeye başlamıyor');
+
+  // Yeni oyun ekranının tablosu: bağlantısız gönderim, sonra bağlantı.
+  const fresh = client(db, net, storage, online).board;
+  assert.equal(await fresh.probe(), 'ok');
+  net.online = false;
+  assert.equal(await fresh.submit(entryOf(run())), 'queued');
+  net.online = true;
+  const before = net.requests.length;
+  online.dispatchEvent(new Event('online'));
+  for (let i = 0; i < 50 && !net.requests.slice(before).includes('POST /v1/seed/runs'); i++) await new Promise((resolve) => setTimeout(resolve, 10));
+  await new Promise((resolve) => setTimeout(resolve, 50));
+  const sends = net.requests.slice(before).filter((line) => line === 'POST /v1/seed/runs').length;
+  assert.equal(sends, 1, 'bekleyen koşuyu yalnız yeni tablo gönderiyor');
+  assert.equal(online.count, 1);
+  fresh.close?.();
+});

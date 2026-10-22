@@ -433,15 +433,24 @@ export function GameRoot({
   useEffect(() => {
     let cancelled = false;
     let current: LeagueBoard['kind'] = 'local';
+    // Ekran kapanınca kullanılan tablo bırakılıyor (kalıcı dinleyicileri kalkıyor).
+    let active: LeagueBoard | null = null;
+    const adopt = (board: LeagueBoard) => {
+      if (cancelled) {
+        board.close?.();
+        return;
+      }
+      current = board.kind;
+      active = board;
+      setLeague(board);
+    };
     let trying = false;
     const pick = () => {
       if (current !== 'local' || trying || !leagueServerConfigured()) return;
       trying = true;
       void createLeagueBoard()
         .then((board) => {
-          if (cancelled || board.kind === 'local') return;
-          current = board.kind;
-          setLeague(board);
+          if (board.kind !== 'local') adopt(board);
         })
         .finally(() => {
           trying = false;
@@ -454,9 +463,7 @@ export function GameRoot({
     void createLeagueBoard()
       .then((board) => {
         // Yerel tablodan yerel tabloya geçiş yok: sonuç ekranının gönderimi tablo değişince yeniden açılıyor.
-        if (cancelled || board.kind === 'local') return;
-        current = board.kind;
-        setLeague(board);
+        if (board.kind !== 'local') adopt(board);
       })
       .finally(() => {
         trying = false;
@@ -469,6 +476,7 @@ export function GameRoot({
       window.clearInterval(timer);
       window.removeEventListener('online', pick);
       document.removeEventListener('visibilitychange', onVisible);
+      active?.close?.();
     };
   }, []);
 

@@ -3192,9 +3192,10 @@ async function finish(browser, consoleErrors) {
   // ---------- Tohum Ligi: lig sunucusu (Tur 51) ----------
   //
   // Pages'teki oyun tabloyu Lite'ın sunucusundan okuyor. Burada yerel lig
-  // sunucusu: aynı işleyici, bellekte SQLite. Dört tarayıcı: biri oynayıp
+  // sunucusu: aynı işleyici, bellekte SQLite. Beş tarayıcı: biri oynayıp
   // gönderiyor, biri aynı tabloyu görüyor, biri bağlantısızken gönderiyor,
-  // biri sunucuya önce ulaşamıyor, sonra ulaşıyor. Koşular gerçek (360 gün motorun gün adımıyla).
+  // biri sunucuya önce ulaşamıyor, sonra ulaşıyor, biri art arda iki oyun
+  // açıyor. Koşular gerçek (360 gün motorun gün adımıyla).
   section('Tohum Ligi: lig sunucusu');
   {
     const LEAGUE_PORT = 8789;
@@ -3227,6 +3228,21 @@ async function finish(browser, consoleErrors) {
       await context.addInitScript((u) => {
         window.__capitalLeagueUrl = u;
       }, url);
+      // Pencerenin bağlantı dinleyicileri (E: yeni oyunda eski tablo bırakılıyor mu).
+      await context.addInitScript(() => {
+        const listeners = new Set();
+        window.__onlineListeners = listeners;
+        const add = window.addEventListener;
+        const remove = window.removeEventListener;
+        window.addEventListener = function (type, listener, ...rest) {
+          if (type === 'online') listeners.add(listener);
+          return add.call(this, type, listener, ...rest);
+        };
+        window.removeEventListener = function (type, listener, ...rest) {
+          if (type === 'online') listeners.delete(listener);
+          return remove.call(this, type, listener, ...rest);
+        };
+      });
       return { context, p: await page(context, label) };
     };
     // Oyun sunucuyu 10 ve 30 sn sonra yeniden deniyor (her deneme en çok 10 sn):
@@ -3435,6 +3451,30 @@ async function finish(browser, consoleErrors) {
       });
       check('Aynı koşu sunucuda da', /lig tablosuna yazıldı/.test(serverSent ?? '') && reachedD !== null, `${serverSent} · sunucuda ${reachedD?.total ?? '?'} koşu`);
       await d.context.close();
+
+      // E: oyun ekranı her açılışta yeni tablo kuruyor. Menüye dönülünce eski
+      // tablo bırakılıyor; bırakılmazsa bağlantı dinleyicisi her oyunda birikiyor
+      // ve her biri aynı bekleyen kuyruğu göndermeye kalkıyordu (Codex #80).
+      const e = await open(leagueUrl, 'E');
+      const freshGame = async (name) => {
+        await startLeague(e.p, name);
+        await e.p.evaluate(() => window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 }));
+        await e.p.locator('.agenda [data-agenda="league"] button').first().click();
+        const kind = await serverBoard(e.p);
+        await e.p.waitForTimeout(1000);
+        const count = await e.p.evaluate(() => window.__onlineListeners.size);
+        await e.p.keyboard.press('Escape');
+        return { kind, count };
+      };
+      const firstE = await freshGame('Birinci Oyun Holding');
+      await e.p.locator('.topbar-actions [data-panel="saves"]').click();
+      await e.p.locator('.modal button', { hasText: 'Yeni oyun' }).click();
+      await e.p.waitForSelector('.newgame', { timeout: 10000 });
+      const secondE = await freshGame('İkinci Oyun Holding');
+      check('Yeni oyunda eski tablo bırakılıyor: bağlantı dinleyicileri birikmiyor',
+        firstE.kind === 'server' && secondE.kind === 'server' && secondE.count === firstE.count,
+        `${firstE.kind} ${firstE.count} → ${secondE.kind} ${secondE.count}`);
+      await e.context.close();
     } catch (error) {
       // Bölüm yarıda kalırsa koşunun geri kalanı sürsün; kalan bir kontrol olarak yazılıyor.
       check('Lig sunucusu bölümü sonuna kadar koşuyor', false, String(error).split('\n')[0]);

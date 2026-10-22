@@ -276,10 +276,12 @@ export function createServerBoard(options: ServerBoardOptions): ServerBoard {
    * koşusu bir sonraki lig koşusunu beklemesin.
    */
   let listening = false;
+  let closed = false;
+  const onOnline = () => void flushPending().then(refreshAll);
   const listen = () => {
-    if (listening) return;
+    if (listening || closed) return;
     listening = true;
-    options.online?.addEventListener('online', () => void flushPending().then(refreshAll));
+    options.online?.addEventListener('online', onOnline);
     if (pending().length > 0) void flushPending().then(refreshAll);
   };
 
@@ -301,6 +303,14 @@ export function createServerBoard(options: ServerBoardOptions): ServerBoard {
     },
 
     seen: () => read(SEEN_KEY) === url,
+
+    // Oyun ekranı her açılışta yeni tablo kuruyor: eskisi dinlemeyi bırakmazsa
+    // her bağlantıda o da aynı bekleyen kuyruğu göndermeye kalkardı (Codex #80).
+    close() {
+      closed = true;
+      if (listening) options.online?.removeEventListener('online', onOnline);
+      listening = false;
+    },
 
     subscribe(weekId, onChange: (entries: LeagueEntry[], info?: LeagueFeedInfo) => void) {
       let stopped = false;

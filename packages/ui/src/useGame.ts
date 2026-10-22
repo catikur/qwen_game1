@@ -132,6 +132,8 @@ export interface LeagueBoard {
   submit(entry: Omit<LeagueEntry, 'id' | 'mine' | 'who' | 'codeKey' | 'loadCode'>): Promise<LeagueSubmitOutcome>;
   /** Lig sunucusu: bu tarayıcının anonim hesabı (var mı; hesabı ve koşularını sil). */
   account?: { exists(): boolean; forget(): Promise<boolean> };
+  /** Tablo bırakılınca (oyun ekranı kapandı): kalıcı dinleyiciler kalkıyor. */
+  close?(): void;
 }
 
 export interface FocusTarget {
