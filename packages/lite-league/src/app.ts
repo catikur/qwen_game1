@@ -26,9 +26,12 @@
  * - `POST /v1/link`                  → başka cihaza taşıma kodu (10 dakika)
  * - `POST /v1/link/claim {code, platform}` → kodla hesabı bu cihaza al
  * - `GET  /v1/stars`                 → bütün platformların yıldız tablosu
+ * - `…/v1/seed/…`                    → ana oyunun Tohum Ligi (Tur 51, `seed.ts`)
  *
  * Kimlik: `Authorization: Bearer <id>.<token>`. Token yalnızca özetiyle
- * saklanıyor; bir hesabın birden çok cihazı olabiliyor (`tokens`).
+ * saklanıyor; bir hesabın birden çok cihazı olabiliyor (`tokens`). Ana
+ * oyunun hesapları (`capital`) yalnız kendi uçlarını ve hesap silmeyi
+ * kullanabiliyor; Lite hesapları ana oyunun gönderim ucunu kullanamıyor.
  */
 import {
   CHAIN_IDS,
@@ -43,7 +46,11 @@ import {
 import { APPLE_ATTEST, AttestError, fromBase64, toBase64, verifyAssertion, verifyAttestation, type AttestConfig } from './attest';
 import type { Db, Statement } from './db';
 import { HttpError, base64, json, preflight, randomToken, readBody, readJson, sha256, shortCode, withCors } from './http';
+import { cleanName, offensiveName } from './names';
 import { MAX_SYNC_BODY, PLATFORMS, createSave, loadSave, saveWithScore, sync, touchProfile, uploadSave, type Platform } from './saves';
+import { registerSeed, runCode, seedPurge, submitRun, weekTable } from './seed';
+
+export { cleanName, offensiveName } from './names';
 
 export interface Options {
   /** App Attest: uygulama kimliği ve güvenilen kök (testler kendi kökünü veriyor). */
@@ -85,47 +92,6 @@ interface ReportRow {
   at: number;
 }
 
-/** Ad: harf, rakam, boşluk, alt çizgi, tire; baştaki/sondaki boşluk kırpılıyor. */
-export function cleanName(raw: unknown, max: number = LEAGUE.nameMax): string | null {
-  if (typeof raw !== 'string') return null;
-  const name = raw.normalize('NFC').trim().replace(/\s+/g, ' ');
-  if (name.length < LEAGUE.nameMin || name.length > max) return null;
-  return /^[\p{L}\p{N} _-]+$/u.test(name) ? name : null;
-}
-
-/**
- * Herkesin gördüğü adlarda küfür ve hakaret yok (App Store 1.2). Kısa ve
- * belirsiz kökler yalnızca tek başına sözcükken ("sik" değil ama "Sikke"
- * geçiyor), uzun ve tek anlamlılar ad içinde de yakalanıyor. Rakamla yazılmış
- * harfler (0→o, 1→i, 3→e, 4→a, 5→s, 7→t) ve araya konan boşluk, _ ve -
- * çözülüyor.
- */
-const BLOCKED_WORDS = new Set([
-  'am', 'amk', 'aq', 'göt', 'got', 'piç', 'pic', 'sik', 'sikik', 'ibne', 'kahpe', 'şerefsiz', 'serefsiz', 'yavşak', 'yavsak',
-  'oç', 'oc', 'gerizekalı', 'salak', 'fuck', 'shit', 'dick', 'cock', 'slut', 'sex', 'seks', 'porn', 'porno', 'rape', 'nazi',
-]);
-const BLOCKED_ROOTS = [
-  'orospu', 'yarrak', 'yarak', 'amcık', 'amcik', 'sikiş', 'sikis', 'siktir', 'sikerim', 'pezevenk', 'gavat', 'ananı', 'anani',
-  'fuck', 'bitch', 'cunt', 'nigger', 'nigga', 'faggot', 'whore', 'asshole', 'pussy', 'hitler', 'porn',
-];
-const LEET: Record<string, string> = { '0': 'o', '1': 'i', '3': 'e', '4': 'a', '5': 's', '7': 't', '@': 'a', $: 's' };
-
-export function offensiveName(name: string): boolean {
-  const lower = name.toLocaleLowerCase('tr').replace(/[013457@$]/g, (ch) => LEET[ch] ?? ch);
-  const words = lower.split(/[\s_-]+/).filter(Boolean);
-  // Kısa sözcükler tek başınayken; araya işaret konmuşsa ("S-İ-K", "si k")
-  // yan yana sözcüklerin birleşimi de. Alt dizgi değil: "Sikke" geçiyor.
-  for (let start = 0; start < words.length; start++) {
-    let joined = '';
-    for (let end = start; end < Math.min(words.length, start + 6); end++) {
-      joined += words[end];
-      if (BLOCKED_WORDS.has(joined)) return true;
-    }
-  }
-  const compact = words.join('');
-  return BLOCKED_ROOTS.some((root) => compact.includes(root));
-}
-
 /** Ad kuralları ve küfür süzgeci: 400 `name` ya da 400 `name-blocked`. */
 function acceptName(raw: unknown, max?: number): string {
   const name = cleanName(raw, max);
@@ -134,10 +100,13 @@ function acceptName(raw: unknown, max?: number): string {
   return name;
 }
 
+/** Bir cihazın türü: Lite'ın üç platformu ya da ana oyun (Tur 51). */
+type Device = Platform | 'capital';
+
 interface Session {
   player: Player;
   /** Bu cihazın platformu (ilk cihaz iOS uygulaması: `players.token_hash`). */
-  platform: Platform;
+  platform: Device;
 }
 
 async function authenticate(request: Request, db: Db): Promise<Session | null> {
@@ -147,10 +116,10 @@ async function authenticate(request: Request, db: Db): Promise<Session | null> {
   if (!player) return null;
   const hash = await sha256(match[2]!);
   if (player.token_hash === hash) {
-    const first = await db.first<{ platform: Platform }>('SELECT platform FROM tokens WHERE token_hash = ?', hash);
+    const first = await db.first<{ platform: Device }>('SELECT platform FROM tokens WHERE token_hash = ?', hash);
     return { player, platform: first?.platform ?? 'ios' };
   }
-  const device = await db.first<{ platform: Platform }>('SELECT platform FROM tokens WHERE token_hash = ? AND player_id = ?', hash, player.id);
+  const device = await db.first<{ platform: Device }>('SELECT platform FROM tokens WHERE token_hash = ? AND player_id = ?', hash, player.id);
   return device ? { player, platform: device.platform } : null;
 }
 
@@ -168,9 +137,21 @@ async function route(request: Request, db: Db, now: number, options: Options): P
   const path = new URL(request.url).pathname.replace(/\/+$/, '');
   const route = `${request.method} ${path}`;
   try {
-    if (route === 'GET /v1/health') return json({ ok: true, week: weekId(now) });
+    // `seed`: ana oyunun Tohum Ligi bu sürümde (istemci ve canlı denetim eski sunucuyu buradan ayırıyor).
+    if (route === 'GET /v1/health') return json({ ok: true, week: weekId(now), seed: 1 });
     if (route === 'POST /v1/players') return await register(request, db, now, options);
     if (route === 'POST /v1/link/claim') return await claimLink(request, db, now);
+    if (route === 'POST /v1/seed/players') return await registerSeed(request, db, now);
+    const week = /^GET \/v1\/seed\/weeks\/([^/]+)$/.exec(route);
+    if (week) {
+      // Herkese açık; kimlikle gelen kendi satırını `mine` diye görüyor. Yazım yok.
+      const session = request.headers.has('authorization') ? await authenticate(request, db) : null;
+      const response = json(await weekTable(db, week[1]!, session?.platform === 'capital' ? session.player.id : null, now));
+      response.headers.set('cache-control', 'no-store');
+      return response;
+    }
+    const code = /^GET \/v1\/seed\/codes\/([^/]+)$/.exec(route);
+    if (code) return await runCode(db, code[1]!);
     const session = await authenticate(request, db);
     if (!session) throw new HttpError(401, 'auth');
     // Geçen haftanın bölüm değişimi henüz yapılmadıysa şimdi (cron kaçarsa da doğru kalsın).
@@ -179,6 +160,8 @@ async function route(request: Request, db: Db, now: number, options: Options): P
     // Bu arada hesap silindi (bağlı başka cihazdan).
     if (!me) throw new HttpError(401, 'auth');
     try {
+      if (session.platform === 'capital') return await seedSignedIn(route, request, db, me, now);
+      if (route === 'POST /v1/seed/runs') throw new HttpError(403, 'platform');
       return await signedIn(route, request, db, me, session.platform, now, options);
     } finally {
       // Hesap bu istek sürerken silindiyse (bağlı başka cihazdan) bu isteğin yazdıkları da gidiyor.
@@ -190,7 +173,14 @@ async function route(request: Request, db: Db, now: number, options: Options): P
   }
 }
 
-/** Hesaplı istekler. */
+/** Ana oyunun hesabı (Tur 51): koşu gönderimi ve hesap silme; Lite'ın uçları kapalı. */
+async function seedSignedIn(route: string, request: Request, db: Db, me: Player, now: number): Promise<Response> {
+  if (route === 'POST /v1/seed/runs') return await submitRun(request, db, me.id, now);
+  if (route === 'DELETE /v1/players/me') return await deleteAccount(db, me);
+  throw new HttpError(403, 'platform');
+}
+
+/** Hesaplı istekler (Lite). */
 async function signedIn(route: string, request: Request, db: Db, me: Player, platform: Platform, now: number, options: Options): Promise<Response> {
   switch (route) {
     case 'PATCH /v1/players/me':
@@ -707,7 +697,7 @@ async function joinLeague(request: Request, db: Db, me: Player, now: number): Pr
 }
 
 /** Oyuncuya bağlı tablolar (`league_members` dışında); hesap silinince hepsinden siliniyor. */
-const PLAYER_TABLES = ['groups', 'reports', 'rejects', 'attest_keys', 'attest_challenges', 'tokens', 'saves', 'profiles', 'links'];
+const PLAYER_TABLES = ['groups', 'reports', 'rejects', 'attest_keys', 'attest_challenges', 'tokens', 'saves', 'profiles', 'links', 'seed_runs'];
 
 /**
  * Hesabı sil (App Store 5.1.1(v)): oyuncunun her izi gidiyor; boşalan özel ligler de.
@@ -747,12 +737,14 @@ async function fence(db: Db, id: string): Promise<void> {
 /**
  * Hesabı silinmiş oyuncunun artıkları ve boş ligler, tek işlemde (`weekly`). Yeni kurulan lig,
  * kurucusu yerleşene kadar bir an boş kalıyor: bir dakikadan yeni liglere dokunulmuyor.
+ * Ana oyunun eski haftaları ve IP sayaçları da burada gidiyor (`seedPurge`).
  */
 async function purgeOrphans(db: Db, now: number): Promise<void> {
   await db.batch([
     ...['league_members', ...PLAYER_TABLES].map((table): Statement => [`DELETE FROM ${table} WHERE player_id NOT IN (SELECT id FROM players)`]),
     ['DELETE FROM leagues WHERE created_at < ? AND NOT EXISTS (SELECT 1 FROM league_members m WHERE m.code = leagues.code)', now - 60_000],
     [`UPDATE leagues SET owner = ${OLDEST_MEMBER} WHERE owner <> '' AND owner NOT IN (SELECT id FROM players)`],
+    ...seedPurge(now),
   ]);
 }
 

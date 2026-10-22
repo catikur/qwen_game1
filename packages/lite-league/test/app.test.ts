@@ -93,7 +93,7 @@ test('küfür süzgeci: tek sözcük ve kök, rakamlı yazım; masum adlar geçi
 test('kayıt ve kimlik: token olmadan, yanlış tokenla girilmiyor', async () => {
   const db = memoryDb();
   const health = await call(db, THURSDAY, 'GET', '/v1/health');
-  assert.deepEqual(health.body, { ok: true, week: '2026-W42' });
+  assert.deepEqual(health.body, { ok: true, week: '2026-W42', seed: 1 });
   assert.equal((await call(db, THURSDAY, 'POST', '/v1/players', { name: 'x' })).status, 400);
   const me = await signUp(db, THURSDAY, 'Atilla');
   assert.equal((await call(db, THURSDAY, 'GET', '/v1/league')).status, 401);

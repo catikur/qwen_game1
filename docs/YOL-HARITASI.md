@@ -1,6 +1,6 @@
 # Capital — Yol Haritası
 
-> Tur 47'de yazıldı, her turda güncelleniyor (son: Tur 50). Biten işin ayrıntısı
+> Tur 47'de yazıldı, her turda güncelleniyor (son: Tur 51). Biten işin ayrıntısı
 > `docs/DURUM.md`'de; bu dosya önümüzdeki işin sırasını ve gerekçesini
 > tutuyor.
 
@@ -36,7 +36,7 @@ Bir bağlantıyla açılan, istenirse kurulan ve çevrimdışı da oynanan bir
 | Faz | Amaç | Turlar | Bitti sayılır | Durum |
 |---|---|---|---|---|
 | **1 · Ürün temeli** | Oyun bir ürün gibi davransın | 47–50 | Kuruluyor, çevrimdışı açılıyor, tek Ayarlar paneli var, müzik var | **bitti** (Tur 50) |
-| **2 · Çevrimiçi rekabet** | Herkes aynı şehirde | 51–55 | Pages'te paylaşılan tablo var, skor sunucuda doğrulanıyor | |
+| **2 · Çevrimiçi rekabet** | Herkes aynı şehirde | 51–55 | Pages'te paylaşılan tablo var, skor sunucuda doğrulanıyor | sürüyor (Tur 51) |
 | **3 · Yeni yollar** | Her koşu farklı bir şirket | 56–61 | Zafere en az üç farklı yol var, her birini kazanan bir vekil var | |
 | **4 · Şehrin hissi** | Oynaması keyifli | 62–65 | Mevsim ve hava görünüyor, önemli anlar hissediliyor | |
 | **5 · Platform ve topluluk** | Oyunun evi büyüsün | 66+ | Masaüstü sürümü ve paylaşılabilir senaryolar var | |
@@ -53,23 +53,25 @@ Kullanıcı "fazı baştan sona yürüt" dedi:
 | **47 · Ayarlar ve erişilebilirlik** | Tek Ayarlar paneli: dil, görünüm, metin boyutu, renk körlüğüne uygun palet, hareketi azaltma, ayrı ses düzeyleri, kısayollar. Pencerelerde klavye sözleşmesi (odak, Tab, Escape). | bitti (#76) |
 | **48 · Kurulabilir ve çevrimdışı oyun** | Simge ve kurulum, çevrimdışı açılış, yayından sonra "yeni sürüm hazır" bildirimi. Tur 46'daki "eski sayfa yeni parçayı bulamıyor" sorununu kökten çözer. | bitti (#77) |
 | **49 · Müzik** | Gündüz, gece ve kriz katmanları olan dinamik müzik; Tur 47'deki ses düzeyleriyle birleşir. | bitti (#78) |
-| **50 · Değerlendirme ve tanıtım** | Yeni oyuncu, telefon ve ilk saat değerlendirmesi. Tanıtım malzemesi: ekran görüntüleri, TR/EN tanıtım metni. Faz 1 raporu. | bu PR |
+| **50 · Değerlendirme ve tanıtım** | Yeni oyuncu, telefon ve ilk saat değerlendirmesi. Tanıtım malzemesi: ekran görüntüleri, TR/EN tanıtım metni. Faz 1 raporu. | bitti (#79) |
 
 ### Faz 2 · Çevrimiçi rekabet
 
-- **51 · Lig sunucusu ana oyuna.** Lite'ın sunucusu ana oyunun koşularını
-  da alıyor, Pages'te paylaşılan tablo oluyor.
-- **52 · Sunucuda doğrulama.** Gönderilen koşu sunucuda yeniden oynanıyor,
-  skor orada hesaplanıyor. Simülasyon da sunucu da TypeScript. Bu,
-  DURUM'daki en eski güvenlik açığını kapatır.
-- **53 · Haftanın kuralı ve günlük kısa koşu.** Ligde ek kurallar her hafta
-  dönüyor; bir de 90 günlük günlük koşu geliyor.
-- **54 · Hayalet eğri.** Liderlerin değer eğrisi senin koşunun üstünde
-  görünüyor ("lider 300. günde ne yapmıştı").
-- **55 · Davetli ligler ve arkadaş tablosu.** Lite'ta var, ana oyuna geliyor.
+Kullanıcı sunucuyu açtı ve "Faz 2'yi yürüt" dedi; Faz 1'deki gibi turlar
+sırayla, her tur ayrı PR, rapor fazın sonunda.
+
+| Tur | İş | Durum |
+|---|---|---|
+| **51 · Lig sunucusu ana oyuna** | Lite'ın sunucusu ana oyunun koşularını da alıyor, Pages'te paylaşılan tablo oluyor. | bu PR |
+| **52 · Sunucuda doğrulama** | Gönderilen koşu sunucuda yeniden oynanıyor, skor orada hesaplanıyor. Simülasyon da sunucu da TypeScript. Bu, DURUM'daki en eski güvenlik açığını kapatır. | |
+| **53 · Haftanın kuralı ve günlük kısa koşu** | Ligde ek kurallar her hafta dönüyor; bir de 90 günlük günlük koşu geliyor. | |
+| **54 · Hayalet eğri** | Liderlerin değer eğrisi senin koşunun üstünde görünüyor ("lider 300. günde ne yapmıştı"). | |
+| **55 · Davetli ligler ve arkadaş tablosu** | Lite'ta var, ana oyuna geliyor. | |
 
 Kodu ve yerel sunucu testlerini Claude yapıyor. Canlı yayın kullanıcının
-hesabında; canlı veritabanına yazılmıyor.
+hesabında; canlı veritabanına yazılmıyor. Tur 51'den beri canlı sunucu
+eski sürümde kaldıkça Pages'teki oyun yerel tabloyla açılıyor; güncelleme
+adımları `ios-lite/README.md`'de ("Sunucuyu güncellerken").
 
 ### Faz 3 · Yeni yollar
 
@@ -120,6 +122,6 @@ yazılan.
 | Karar | Etkilediği | Varsayılan |
 |---|---|---|
 | **Platform:** yalnız web mi, masaüstü ve Steam de mi? | Faz 5'in kapsamı | yalnız web |
-| **Sunucu:** Lite'ın lig sunucusu ana oyuna açılsın mı? Yayın ve maliyet kullanıcının hesabında. | Faz 2 | Faz 2'ye gelmeden sorulacak |
+| **Sunucu:** Lite'ın lig sunucusu ana oyuna açılsın mı? Yayın ve maliyet kullanıcının hesabında. | Faz 2 | **evet** (Tur 51'den önce kullanıcı açtı) |
 | **Gelir modeli:** tamamen ücretsiz mi, ücretsiz web + ücretli masaüstü mü? | Faz 5 | ücretsiz |
 | **Lite:** App Store yayını ve canlı işletim bu haritanın neresinde? | sıra | ayrı hat, bu haritanın dışında |

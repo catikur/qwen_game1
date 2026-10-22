@@ -35,7 +35,7 @@ import {
 import type { ExportOutcome, FocusTarget, GameContextValue, LeagueBoard, ToastMessage, ViewState } from '@capital/ui';
 import { setBeforeUpdate } from './pwa';
 import { deliverTextFile } from './host';
-import { createLeagueBoard, fallbackLeagueBoard } from './league-board';
+import { createLeagueBoard, fallbackLeagueBoard, leagueServerConfigured } from './league-board';
 import { Soundscape } from './audio';
 
 /**
@@ -425,15 +425,49 @@ export function GameRoot({
     if (bridge) bridge['audio'] = () => soundscape.debug();
   }, [engine, soundscape]);
 
-  // Lig tablosu: yerel tabloyla açılır, barındırıcı paylaşılanı verirse ona geçer.
+  // Lig tablosu: yerel tabloyla açılır, barındırıcı paylaşılanı ya da lig
+  // sunucusu (Tur 51) hazırsa ona geçer. Sunucu ilk denemede yoksa (bağlantı
+  // yok, yavaş açılış, eski sürüm) yerelde kalmıyor: bağlantı gelince, sayfaya
+  // dönünce ve beş dakikada bir yeniden deneniyor; bulunca bir kez geçiyor.
   const [league, setLeague] = useState<LeagueBoard>(fallbackLeagueBoard);
   useEffect(() => {
     let cancelled = false;
-    void createLeagueBoard().then((board) => {
-      if (!cancelled) setLeague(board);
-    });
+    let current: LeagueBoard['kind'] = 'local';
+    let trying = false;
+    const pick = () => {
+      if (current !== 'local' || trying || !leagueServerConfigured()) return;
+      trying = true;
+      void createLeagueBoard()
+        .then((board) => {
+          if (cancelled || board.kind === 'local') return;
+          current = board.kind;
+          setLeague(board);
+        })
+        .finally(() => {
+          trying = false;
+        });
+    };
+    const onVisible = () => {
+      if (document.visibilityState !== 'hidden') pick();
+    };
+    trying = true;
+    void createLeagueBoard()
+      .then((board) => {
+        if (cancelled) return;
+        current = board.kind;
+        setLeague(board);
+      })
+      .finally(() => {
+        trying = false;
+      });
+    const timer = window.setInterval(pick, 5 * 60_000);
+    window.addEventListener('online', pick);
+    document.addEventListener('visibilitychange', onVisible);
     return () => {
       cancelled = true;
+      window.clearInterval(timer);
+      window.removeEventListener('online', pick);
+      document.removeEventListener('visibilitychange', onVisible);
     };
   }, []);
 

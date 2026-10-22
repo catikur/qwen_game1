@@ -18,7 +18,7 @@ Kareler gerçek oyundan, `tools/tanitim/` ile yeniden üretiliyor (aşağıda).
 | Destek | info@conforcus.com |
 | Telif | © 2026 Conforcus |
 | Fiyat | Ücretsiz; reklam ve satın alma yok |
-| Hesap ve veri | Hesap yok; kayıtlar ve ayarlar oyuncunun tarayıcısında kalıyor |
+| Hesap ve veri | Hesap yok; kayıtlar ve ayarlar oyuncunun tarayıcısında kalıyor. Tohum Ligi'ne gönderilen koşu (şirket adı, CEO, koşu kodu) herkese açık tabloda; bunun için tarayıcıya anonim bir lig anahtarı kaydediliyor, oyunun lig panelinden siliniyor (Tur 51) |
 
 ## Türkçe
 

@@ -294,3 +294,21 @@ sırrını şimdilik **tanımlama**: sunucu tarafı hazır ama web ve Android
 istemcisinde doğrulama kutusu henüz yok; sır tanımlanırsa yeni web ve Android
 hesapları açılamaz (bot sorunu çıkarsa istemci tarafı eklenecek).
 
+**Sunucuyu güncellerken (Tur 51, ana oyunun Tohum Ligi):** GitHub Pages'teki
+CapitalForge de lig tablosunu bu sunucudan okuyor (`src/seed.ts`). Canlı
+sunucu bu sürüme gelene kadar oyun kendi yerel tablosuyla açılıyor; bir şey
+bozulmuyor. Açmak için:
+
+1. `pnpm lite:league-bundle` → paketi paneldeki Worker kodunun yerine
+   yapıştır, **Deploy** (A'nın 1. ve 3. adımı). Paket artık ana oyunun koşu
+   çözücüsünü de taşıyor (~265 KB, sıkıştırılmış ~72 KB).
+2. **Storage & Databases → D1 → capitalforge-lite-league → Console**:
+   `schema.sql`'in tamamını çalıştır. Her tablo `IF NOT EXISTS`; var olanlar
+   değişmiyor. Konsol toplu ifade almazsa son iki bölüm (`seed_runs` ve
+   `seed_limits`) ve daha önce uygulanmadıysa L10 bölümü tek tek.
+3. Denetim: `/v1/health` cevabında `"seed":1`. Pages'teki oyun sonraki
+   açılışta lig sunucusunun tablosuna geçiyor.
+
+B (otomatik dağıtım) kuruluysa bu üç adımı `main`'e giren her sunucu
+değişikliğinde CI yapıyor.
+

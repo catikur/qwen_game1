@@ -6,6 +6,7 @@
 // ve oynanıyor" cevabı. Tam koşu birleştirmeden önce; duman her değişiklikte.
 import http from 'node:http';
 import fs from 'node:fs';
+import { spawn } from 'node:child_process';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 
@@ -62,6 +63,50 @@ function check(name, ok, detail = '') {
     console.log(`  FAIL  ${name}${detail ? ' — ' + detail : ''}`);
   }
 }
+/**
+ * Testin açtığı süreçler (yerel lig sunucusu): bitişte, test çökse de
+ * kapanıyor. `run-node-script` sunucuyu kendi alt sürecinde koşturuyor;
+ * yalnız üsttekini kapatmak sunucuyu açık (ve portu dolu) bırakıyordu.
+ * Süreç kendi grubunda açılıyor, grup bütün kapanıyor.
+ */
+const children = [];
+function stopChild(child) {
+  try {
+    process.kill(-child.pid, 'SIGTERM');
+  } catch {
+    // zaten kapanmış
+  }
+}
+process.on('exit', () => children.forEach(stopChild));
+const REPO = new URL('..', import.meta.url).pathname;
+
+/**
+ * Yerel lig sunucusu (Tur 51): Worker'ın işleyicisi Node'un SQLite'ı
+ * üstünde, bellekte. Tarayıcı testi canlı sunucuya hiç gitmiyor; oyun
+ * adresi test kancasından alıyor (`window.__capitalLeagueUrl`).
+ */
+function startLeagueServer(port) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(process.execPath, [path.join(REPO, 'tools/run-node-script.mjs'), 'packages/lite-league/test/local-server.ts', String(port)], {
+      cwd: REPO,
+      stdio: ['ignore', 'pipe', 'pipe'],
+      detached: true,
+    });
+    children.push(child);
+    const timer = setTimeout(() => reject(new Error('lig sunucusu 60 sn içinde açılmadı')), 60000);
+    child.stdout.on('data', (chunk) => {
+      if (String(chunk).includes('lig sunucusu:')) {
+        clearTimeout(timer);
+        resolve(child);
+      }
+    });
+    child.on('exit', (code) => {
+      clearTimeout(timer);
+      reject(new Error(`lig sunucusu kapandı (${code})`));
+    });
+  });
+}
+
 const startedAt = Date.now();
 const section = (t) => console.log(`\n=== ${t} === (${Math.round((Date.now() - startedAt) / 1000)} sn)`);
 const SMOKE = process.argv.includes('--smoke') || process.env.PLAYTEST === 'smoke';
@@ -279,6 +324,7 @@ async function finish(browser, consoleErrors) {
 
   await browser.close();
   server.close();
+  children.forEach(stopChild);
   process.exit(fail ? 1 : 0);
 }
 
@@ -3143,6 +3189,206 @@ async function finish(browser, consoleErrors) {
     await leagueContext.close();
   }
 
+  // ---------- Tohum Ligi: lig sunucusu (Tur 51) ----------
+  //
+  // Pages'teki oyun tabloyu Lite'ın sunucusundan okuyor. Burada yerel lig
+  // sunucusu: aynı işleyici, bellekte SQLite. Dört tarayıcı: biri oynayıp
+  // gönderiyor, biri aynı tabloyu görüyor, biri bağlantısızken gönderiyor,
+  // biri sunucuya ulaşamıyor. Koşular gerçek (360 gün motorun gün adımıyla).
+  section('Tohum Ligi: lig sunucusu');
+  {
+    const LEAGUE_PORT = 8789;
+    const leagueUrl = `http://127.0.0.1:${LEAGUE_PORT}`;
+    let leagueServer = null;
+    try {
+      leagueServer = await startLeagueServer(LEAGUE_PORT);
+    } catch (error) {
+      check('Yerel lig sunucusu açılıyor', false, String(error));
+    }
+    // Bağlantısızlık ve kapalı adres tarayıcının kendi kaydına düşüyor; oyunun hatası değil.
+    const network = (text) => /Failed to load resource|ERR_INTERNET_DISCONNECTED|ERR_CONNECTION_REFUSED|ERR_NETWORK_CHANGED/.test(text);
+    const errors = [];
+    const contexts = [];
+    const open = async (url, label) => {
+      const context = await browser.newContext({ viewport: { width: 1280, height: 860 } });
+      contexts.push(context);
+      await context.addInitScript(veteran, TUTORIAL_KEY);
+      await context.addInitScript((u) => {
+        window.__capitalLeagueUrl = u;
+      }, url);
+      const p = await context.newPage();
+      p.on('pageerror', (e) => errors.push(`${label}: ${e.message}`));
+      p.on('console', (m) => {
+        if (m.type() === 'error' && !network(m.text())) errors.push(`${label}: ${m.text()}`);
+      });
+      await p.goto('http://127.0.0.1:8811/');
+      await p.waitForSelector('.newgame', { timeout: 20000 });
+      return { context, p };
+    };
+    const startLeague = async (p, name) => {
+      await p.locator('.mode-picker [data-mode="league"]').click();
+      await p.fill('.newgame-field input[type="text"]', name);
+      await p.locator('button:has-text("Şirketi kur")').click();
+      await p.waitForSelector('.topbar', { timeout: 20000 });
+    };
+    const playLeague = (p) =>
+      p.evaluate(() => {
+        const cap = window.__capital;
+        const s = cap.getState();
+        const t = s.map.tiles.find((x) => {
+          const d = s.districts[x.districtId];
+          return x.kind === 'plot' && !x.ownerId && !x.structureId && (d.opensOnDay === undefined || d.opensOnDay <= s.time.day);
+        });
+        cap.engine.dispatch({ type: 'BUY_TILE', tileId: t.id });
+        cap.engine.dispatch({ type: 'BUILD', tileId: t.id, defId: 'corner_shop' });
+        cap.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+        let guard = 0;
+        while (cap.getState().league.finishedDay === undefined && guard++ < 400) cap.engine.runDay();
+        cap.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+        return { week: cap.getState().league.weekId, score: cap.getState().league.score };
+      });
+    const table = async (week) => {
+      try {
+        const response = await fetch(`${leagueUrl}/v1/seed/weeks/${week}`);
+        return response.ok ? await response.json() : null;
+      } catch {
+        return null;
+      }
+    };
+    const until = async (probe, timeout = 15000) => {
+      const end = Date.now() + timeout;
+      while (Date.now() < end) {
+        const value = await probe();
+        if (value) return value;
+        await new Promise((r) => setTimeout(r, 250));
+      }
+      return null;
+    };
+    const verified = (p, timeout = 90000) =>
+      p
+        .waitForFunction(
+          () => document.querySelectorAll('[data-league-row="ranked"]').length > 0 && document.querySelectorAll('[data-league-row="pending"]').length === 0 || null,
+          null,
+          { timeout },
+        )
+        .then(() => true)
+        .catch(() => false);
+
+    // Oyun sunucuyu açılışta tanıyor; sonuç ekranının düğmesi ona göre.
+    const serverReady = (p) =>
+      p
+        .waitForFunction(() => (document.querySelector('.league-result .primary')?.textContent ?? '').includes('Lig tablosuna') || null, null, { timeout: 60000 })
+        .then(() => true)
+        .catch(() => false);
+
+    // Bağlamlar sırayla kapanıyor: GPU'suz ortamda açık her sahne aynı
+    // yazılımsal GPU'yu paylaşıyor; üç sahne birden açıkken tekrar ve
+    // tıklamalar zaman aşımına düşüyordu.
+    if (leagueServer) {
+      // A: oynuyor, sonuç ekranından sunucuya gönderiyor.
+      const a = await open(leagueUrl, 'A');
+      await startLeague(a.p, 'Sunucu Holding');
+      const runA = await playLeague(a.p);
+      await a.p.waitForSelector('.league-result', { timeout: 5000 }).catch(() => null);
+      await serverReady(a.p);
+      const result = await a.p.evaluate(() => ({
+        button: document.querySelector('.league-result .primary')?.textContent ?? '',
+        note: document.querySelector('.league-server-note')?.textContent ?? '',
+      }));
+      check('Sonuç ekranı lig sunucusuna gönderiyor ve neyin paylaşıldığını yazıyor',
+        result.button.includes('Lig tablosuna gönder') && /herkese açık/.test(result.note) && /e-posta/.test(result.note),
+        `${result.button} · ${result.note.slice(0, 70)}`);
+      await a.p.locator('.league-result .primary').click();
+      const sent = await a.p.waitForSelector('[data-league-sent]', { timeout: 10000 }).then((h) => h.textContent()).catch(() => '');
+      const onServer = await until(async () => {
+        const t = await table(runA.week);
+        return t?.total === 1 ? t : null;
+      });
+      check('Koşu lig sunucusunda: şirket adı, skor, sunucunun saati',
+        /lig tablosuna yazıldı/.test(sent ?? '') && onServer?.entries[0]?.companyName === 'Sunucu Holding' && onServer?.entries[0]?.score === runA.score,
+        `${sent} · ${JSON.stringify(onServer?.entries[0] ?? null).slice(0, 120)}`);
+      check('Tabloda oyuncunun kimliği yok, kodun yerine özeti var',
+        onServer !== null && !('code' in onServer.entries[0]) && /^[0-9a-f]{64}$/.test(onServer.entries[0].codeKey ?? ''));
+
+      await a.p.locator('.league-result button:has-text("Tabloyu aç")').click();
+      const boardA = await a.p.locator('[data-league-board]').first().getAttribute('data-league-board').catch(() => null);
+      const okA = await verified(a.p);
+      const rowA = await a.p.evaluate(() => ({
+        text: document.querySelector('[data-league-row="ranked"]')?.textContent ?? '',
+        mine: document.querySelector('[data-league-row="ranked"]')?.classList.contains('mine') ?? false,
+      }));
+      check('Tablo sunucunun; satırın kodu sırası gelince iniyor ve tarayıcıda doğrulanıyor',
+        boardA === 'server' && okA && rowA.text.includes('doğrulandı') && rowA.mine, `${boardA} · ${rowA.text.trim().slice(0, 80)}`);
+      await a.p.keyboard.press('Escape');
+
+      // B: başka bir tarayıcı aynı haftada: tablo aynı, satır onun değil, hayalet o.
+      const b = await open(leagueUrl, 'B');
+      await startLeague(b.p, 'İkinci Holding');
+      // Takvim dursun: tekrar bu tarayıcıda koşuyor, oyunla yarışmasın.
+      await b.p.evaluate(() => window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 }));
+      await b.p.locator('.agenda [data-agenda="league"] button').first().click();
+      // Açılışta sayfa meşgulse oyun sunucuyu 10 ve 30 sn sonra yeniden deniyor.
+      const boardB = await b.p.waitForSelector('[data-league-board="server"]', { timeout: 60000 }).then(() => 'server').catch(() => 'yok');
+      const okB = boardB === 'server' && (await verified(b.p));
+      const rowB = await b.p.evaluate(() => ({
+        text: document.querySelector('[data-league-row="ranked"]')?.textContent ?? '',
+        mine: document.querySelector('[data-league-row="ranked"]')?.classList.contains('mine') ?? true,
+        legend: document.querySelector('.league-legend')?.textContent ?? '',
+        account: document.querySelector('[data-league-account]') !== null,
+      }));
+      check('Başka tarayıcı aynı tabloyu görüyor; satır onun değil, hayaleti o koşu',
+        okB && rowB.text.includes('Sunucu Holding') && !rowB.mine && rowB.legend.includes('Sunucu Holding'), `${rowB.text.trim().slice(0, 60)} · ${rowB.legend.trim().slice(0, 60)}`);
+      check('Göndermeyen tarayıcıda lig hesabı açılmıyor', !rowB.account);
+      await b.p.screenshot({ path: path.join(OUT, 'playtest-lig-sunucu.png') });
+      await b.context.close();
+
+      // C: sonuç ekranında bağlantı yok: gönderim bekliyor, bağlantı gelince gidiyor.
+      const c = await open(leagueUrl, 'C');
+      await startLeague(c.p, 'Bekleyen Holding');
+      const runC = await playLeague(c.p);
+      await c.p.waitForSelector('.league-result', { timeout: 5000 }).catch(() => null);
+      await serverReady(c.p);
+      await c.context.setOffline(true);
+      await c.p.locator('.league-result .primary').click();
+      const queued = await c.p.waitForSelector('[data-league-sent]', { timeout: 15000 }).then((h) => h.textContent()).catch(() => '');
+      const notYet = await table(runC.week);
+      check('Bağlantı yokken gönderim bekliyor ve oyuncuya söyleniyor', /bağlantı gelince/.test(queued ?? '') && notYet?.total === 1, `${queued} · sunucuda ${notYet?.total}`);
+      await c.context.setOffline(false);
+      const arrived = await until(async () => {
+        const t = await table(runC.week);
+        return t?.total === 2 ? t : null;
+      }, 20000);
+      check('Bağlantı gelince bekleyen koşu kendiliğinden gidiyor', arrived?.entries.some((e) => e.companyName === 'Bekleyen Holding') === true,
+        `sunucuda ${arrived?.total ?? '?'} koşu`);
+      await c.context.close();
+
+      // A: lig hesabını siliyor; koşusu tablodan gidiyor, öbürü kalıyor.
+      await a.p.locator('.agenda [data-agenda="league"] button').first().click();
+      await a.p.waitForSelector('[data-league-forget="ask"]', { timeout: 5000 }).catch(() => null);
+      await a.p.locator('[data-league-forget="ask"]').click();
+      await a.p.locator('[data-league-forget="confirm"]').click();
+      const left = await until(async () => {
+        const t = await table(runA.week);
+        return t?.total === 1 ? t : null;
+      });
+      const accountGone = await a.p.waitForFunction(() => document.querySelector('[data-league-account]') === null || null, null, { timeout: 5000 }).then(() => true).catch(() => false);
+      check('Lig hesabı siliniyor: koşusu sunucudan gidiyor, anahtar tarayıcıdan', left?.entries[0]?.companyName === 'Bekleyen Holding' && accountGone,
+        `${left?.total ?? '?'} koşu kaldı`);
+      await a.context.close();
+
+      // D: sunucuya ulaşılamıyor: oyun yerel tabloyla açılıyor.
+      const d = await open(`http://127.0.0.1:${LEAGUE_PORT + 1}`, 'D');
+      await startLeague(d.p, 'Yerel Holding');
+      await d.p.locator('.agenda [data-agenda="league"] button').first().click();
+      const boardD = await d.p.locator('[data-league-board]').first().getAttribute('data-league-board').catch(() => null);
+      check('Sunucuya ulaşılamayınca yerel tablo', boardD === 'local', String(boardD));
+      await d.context.close();
+    }
+    check('Lig sunucusu akışında konsol temiz', errors.length === 0, errors.slice(0, 2).join(' | '));
+    for (const context of contexts) await context.close().catch(() => undefined);
+    if (leagueServer) stopChild(leagueServer);
+  }
+
   // ---------- Senaryo modu (Tur 39) ----------
   section('Senaryo modu');
   {
@@ -5231,9 +5477,27 @@ async function finish(browser, consoleErrors) {
   {
     const cut = [];
     const eErrors = [];
-    for (const locale of ['tr', 'en']) {
-      for (const width of [320, 360, 390, 412]) {
-        const eContext = await browser.newContext({ viewport: { width, height: 760 }, hasTouch: true });
+    /*
+     * Tur 51: aynı kontrol bir de harf genişliklerinin piksele yuvarlandığı
+     * tarayıcıda (`--font-render-hinting=full`). CI'nin Chromium'u öyle çiziyor:
+     * genişlik yazı küçüldükçe basamak basamak iniyor ve Tur 50'nin üç geçişi
+     * İngilizce 320 px'te "Company"yi 0,25 px taşırıyordu (main kırmızısı). Bu
+     * makinenin tarayıcısında görünmüyordu. En dar ekranda, iki dilde.
+     */
+    // Bayrak yalnız Playwright'ın başsız kabuğunda geçiyor (CI'nin tarayıcısı o);
+    // tam Chromium onu yok sayıyor. Kabuk kurulu değilse elimizdeki tarayıcı.
+    const hintedArgs = ['--font-render-hinting=full', '--use-gl=swiftshader', '--enable-unsafe-swiftshader', '--disable-dev-shm-usage'];
+    const hinted = await chromium
+      .launch({ args: hintedArgs })
+      .catch(() => chromium.launch({ ...(CHROMIUM ? { executablePath: CHROMIUM } : {}), args: hintedArgs }));
+    const runs = [
+      ...['tr', 'en'].flatMap((locale) => [320, 360, 390, 412].map((width) => ({ locale, width, on: browser, tag: '' }))),
+      ...['tr', 'en'].map((locale) => ({ locale, width: 320, on: hinted, tag: ' (yuvarlanan yazı)' })),
+    ];
+    for (const { locale, width: viewportWidth, on, tag } of runs) {
+      {
+        const width = viewportWidth;
+        const eContext = await on.newContext({ viewport: { width, height: 760 }, hasTouch: true, serviceWorkers: 'block' });
         await eContext.addInitScript(veteran, TUTORIAL_KEY);
         await eContext.addInitScript((loc) => localStorage.setItem('capitalforge.locale', loc), locale);
         const ep = await eContext.newPage();
@@ -5264,17 +5528,17 @@ async function finish(browser, consoleErrors) {
         // İlk açılış: yazı tipi geç gelse de etiketler yeniden ölçülmüş olmalı.
         await ep.waitForTimeout(600);
         const first = await cutLabels();
-        if (first.length) cut.push(`${locale} ${width}px açılışta: ${first.join(', ')}`);
+        if (first.length) cut.push(`${locale} ${width}px${tag} açılışta: ${first.join(', ')}`);
         // Metin boyutu oyuncunun yolundan: Ayarlar.
         for (const size of ['small', 'normal', 'large', 'xlarge']) {
           await ep.locator('.topbar [data-panel="settings"]').click();
           await ep.locator(`[data-setting="text"][data-choice="${size}"]`).click();
           await ep.keyboard.press('Escape');
           const labels = await cutLabels();
-          if (labels.length) cut.push(`${locale} ${width}px ${size}: ${labels.join(', ')}`);
+          if (labels.length) cut.push(`${locale} ${width}px${tag} ${size}: ${labels.join(', ')}`);
         }
         // Ekran daralınca (telefon döndü, pencere küçüldü) yeniden ölçülüyor.
-        if (width === 412) {
+        if (width === 412 && !tag) {
           await ep.setViewportSize({ width: 320, height: 760 });
           const labels = await cutLabels();
           if (labels.length) cut.push(`${locale} 412→320px xlarge: ${labels.join(', ')}`);
@@ -5282,8 +5546,9 @@ async function finish(browser, consoleErrors) {
         await eContext.close();
       }
     }
-    check('Telefonda rıhtım etiketleri kesilmiyor ve tek boyda: 320–412 px, Türkçe ve İngilizce, açılışta, dört metin boyutunda, ekran daralınca',
-      cut.length === 0, cut.length ? `${cut.length} durumda — ${cut.slice(0, 3).join(' | ')}` : '42 durum');
+    await hinted.close();
+    check('Telefonda rıhtım etiketleri kesilmiyor ve tek boyda: 320–412 px, Türkçe ve İngilizce, açılışta, dört metin boyutunda, ekran daralınca, yuvarlanan yazıda da',
+      cut.length === 0, cut.length ? `${cut.length} durumda — ${cut.slice(0, 3).join(' | ')}` : '52 durum');
     check('Değerlendirme akışında konsol temiz', eErrors.length === 0, eErrors.slice(0, 2).join(' | '));
   }
 

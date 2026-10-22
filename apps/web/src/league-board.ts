@@ -1,8 +1,9 @@
 import type { LeagueBoard, LeagueEntry, LeagueSubmitOutcome } from '@capital/ui';
 import { hostCapability } from './host';
+import { createServerBoard } from './league-server';
 
 /**
- * Tohum Ligi tablosunun iki deposu.
+ * Tohum Ligi tablosunun depoları.
  *
  * Paylaşılan: claude.ai'de yayınlanmış sayfada `db` + `user` yetenekleri.
  * Her kişi `league/<kendi kimliği>` belgesine yalnızca kendi koşusunu
@@ -11,9 +12,40 @@ import { hostCapability } from './host';
  * ezer. Ad saklanmıyor: kimlik saklanıyor, ad her çizimde `profiles()`
  * ile çözülüyor.
  *
- * Yerel: barındırıcı yoksa (geliştirme sunucusu, indirilen dosya) bu
- * tarayıcının kendi koşuları. Arayüz farkı oyuncuya `kind` ile söylüyor.
+ * Lig sunucusu (Tur 51): GitHub Pages'teki oyun. Lite'ın sunucusu ana
+ * oyunun koşularını da alıyor; tablo herkese açık (`league-server.ts`).
+ *
+ * Yerel: barındırıcı ve sunucu yoksa (geliştirme sunucusu, indirilen dosya,
+ * sunucu eski sürümde) bu tarayıcının kendi koşuları. Arayüz farkı oyuncuya
+ * `kind` ile söylüyor.
  */
+
+/**
+ * Lig sunucusunun adresi. Paket derlenirken veriliyor (`VITE_LEAGUE_URL`;
+ * Pages'te `ios-lite/App/project.yml` → `LiteLeagueURL`), varsayılan boş:
+ * yerel derleme ve testler canlı sunucuya hiç gitmiyor. Tarayıcı testi
+ * yerel sunucuyu `window.__capitalLeagueUrl` ile veriyor.
+ */
+declare const __LEAGUE_URL__: string | undefined;
+
+/** Bu pakette lig sunucusu var mı (yoksa yeniden denemenin anlamı yok). */
+export function leagueServerConfigured(): boolean {
+  return leagueServerUrl() !== '';
+}
+
+function leagueServerUrl(): string {
+  const override = (window as unknown as { __capitalLeagueUrl?: unknown }).__capitalLeagueUrl;
+  const url = typeof override === 'string' ? override : typeof __LEAGUE_URL__ === 'string' ? __LEAGUE_URL__ : '';
+  return url.replace(/\/+$/, '');
+}
+
+function browserStorage(): Storage | null {
+  try {
+    return window.localStorage;
+  } catch {
+    return null;
+  }
+}
 
 interface DocSnapshot {
   id: string;
@@ -160,15 +192,44 @@ function sharedBoard(db: Db, user: User | null): LeagueBoard {
 }
 
 /**
- * Tabloyu kurar: barındırıcı `db` verirse paylaşılan, yoksa yerel.
- * Barındırıcının cevabı geç gelebilir (en çok 10 sn); arayüz o arada
- * yerel tabloyla açılıyor ve paylaşılan hazır olunca bir kez ona geçiyor.
+ * Tabloyu kurar: barındırıcı `db` verirse paylaşılan; değilse lig sunucusu
+ * ayakta ve bu sürümdeyse onun tablosu; o da yoksa yerel. Bağlantısız
+ * açılışta sunucu daha önce görüldüyse yine sunucu tablosu (son görülen
+ * tablo, gönderim bağlantı gelince). Barındırıcının cevabı geç gelebilir
+ * (en çok 10 sn); arayüz o arada yerel tabloyla açılıyor ve hazır olunca
+ * bir kez geçiyor.
  */
 export async function createLeagueBoard(): Promise<LeagueBoard> {
   const db = await hostCapability<Db>('db');
-  if (!db) return localBoard();
-  const user = await hostCapability<User>('user');
-  return sharedBoard(db, user);
+  if (db) {
+    const user = await hostCapability<User>('user');
+    return sharedBoard(db, user);
+  }
+  const url = leagueServerUrl();
+  if (url) {
+    const board = createServerBoard({
+      url,
+      fetch: (input, init) => fetch(input, init),
+      storage: browserStorage(),
+      online: window,
+      visibility: { target: document, visible: () => document.visibilityState !== 'hidden' },
+    });
+    // Cevap gelmediyse (bağlantı yok ya da açılışta sayfa meşgul: yazılımsal
+    // GPU'da gölgelendirici derlerken sağlık isteğinin cevabı 7 sn'yi
+    // buluyordu) iki kez daha. Eski sürümde hemen vazgeçiliyor.
+    for (const wait of PROBE_RETRIES) {
+      if (wait > 0) await new Promise((resolve) => setTimeout(resolve, wait));
+      const status = await board.probe();
+      if (status === 'ok') return board;
+      if (status === 'old') break;
+      // Bağlantı yok ama sunucu daha önce görüldü: son görülen tablo, gönderim beklemede.
+      if (board.seen()) return board;
+    }
+  }
+  return localBoard();
 }
+
+/** Sunucu denemeleri arası bekleme (ms): ilk deneme hemen. */
+const PROBE_RETRIES = [0, 10_000, 30_000];
 
 export const fallbackLeagueBoard: LeagueBoard = localBoard();

@@ -56,20 +56,42 @@ function useDockFit(ref: RefObject<HTMLElement | null>): void {
     };
     const fit = () => {
       nav.style.removeProperty('--dock-fit');
-      // Yazı küçülünce genişliği tam orantılı küçülmüyor: sığana kadar en çok üç geçiş.
+      // Yazı küçülünce genişliği tam orantılı küçülmüyor; bazı tarayıcılarda
+      // (CI'nin başsız Chromium'u) harf genişlikleri piksele yuvarlanıyor ve
+      // genişlik basamak basamak iniyor. Sığana kadar, her geçişte en az %1.
       let scale = 1;
-      for (let pass = 0; pass < 3; pass++) {
+      for (let pass = 0; pass < 12; pass++) {
         const ratio = shortfall();
         if (ratio >= 1) break;
-        scale = Math.floor(scale * ratio * 100) / 100;
+        scale = Math.min(scale - 0.01, Math.floor(scale * ratio * 100) / 100);
         nav.style.setProperty('--dock-fit', String(scale));
       }
     };
     fit();
-    // Ekran dönünce ve yazı tipi geç gelince yeniden ölç.
+    // Yeniden ölç: ekran dönünce ya da rıhtımın genişliği değişince, her yazı
+    // tipi inince (`ready` o an inen yoksa hemen çözülüyor; sonra inen yazı tipi
+    // etiketi genişletiyordu) ve bir sonraki karede.
+    let width = nav.getBoundingClientRect().width;
+    const observer =
+      typeof ResizeObserver === 'function'
+        ? new ResizeObserver(() => {
+            const next = nav.getBoundingClientRect().width;
+            if (next === width) return;
+            width = next;
+            fit();
+          })
+        : null;
+    observer?.observe(nav);
     window.addEventListener('resize', fit);
+    document.fonts?.addEventListener?.('loadingdone', fit);
     void document.fonts?.ready.then(fit);
-    return () => window.removeEventListener('resize', fit);
+    const frame = requestAnimationFrame(fit);
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener('resize', fit);
+      document.fonts?.removeEventListener?.('loadingdone', fit);
+      cancelAnimationFrame(frame);
+    };
   }, [ref, textSize, locale]);
 }
 
