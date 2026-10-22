@@ -119,10 +119,11 @@ export function createServerBoard(options: ServerBoardOptions): ServerBoard {
     return stored && stored.url === url && typeof stored.id === 'string' && typeof stored.token === 'string' ? stored : null;
   };
 
-  async function call(path: string, init: { method?: string; body?: unknown; auth?: boolean } = {}): Promise<Reply> {
+  /** `auth`: `true` depodaki hesap; bir hesap verilirse o (gönderim, açtığı hesapla). */
+  async function call(path: string, init: { method?: string; body?: unknown; auth?: boolean | Account } = {}): Promise<Reply> {
     const headers: Record<string, string> = {};
     if (init.body !== undefined) headers['content-type'] = 'application/json';
-    const me = init.auth ? account() : null;
+    const me = init.auth === true ? account() : init.auth || null;
     if (me) headers.authorization = `Bearer ${me.id}.${me.token}`;
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -156,6 +157,10 @@ export function createServerBoard(options: ServerBoardOptions): ServerBoard {
     if (reply.status === 429) return 'busy';
     const { id, token } = reply.body;
     if (reply.status !== 201 || typeof id !== 'string' || typeof token !== 'string') return 'error';
+    // Bu arada öbür sekme hesap açtıysa onunki: tarayıcı tek hesap tutuyor, koşu
+    // tarayıcının erişemediği bir hesapta kalmasın (Codex #80). Bizimki boş kalıyor.
+    const meanwhile = account();
+    if (meanwhile) return meanwhile;
     const created: Account = { url, id, token };
     write(ACCOUNT_KEY, JSON.stringify(created));
     return created;
@@ -164,13 +169,14 @@ export function createServerBoard(options: ServerBoardOptions): ServerBoard {
   async function send(code: string, retried = false): Promise<SendOutcome> {
     const me = await ensureAccount();
     if (typeof me === 'string') return me;
-    const reply = await call('/v1/seed/runs', { method: 'POST', body: { code }, auth: true });
+    const reply = await call('/v1/seed/runs', { method: 'POST', body: { code }, auth: me });
     if (!reply) return 'offline';
     if (reply.status === 201) return 'saved';
     if (reply.status === 200 && reply.body.outcome === 'kept-better') return 'kept-better';
     if (reply.status === 401) {
-      // Hesap sunucuda yok (başka sekmeden silindi): bir kez yenisiyle.
-      write(ACCOUNT_KEY, null);
+      // Hesap sunucuda yok (başka sekmeden silindi): bir kez yenisiyle. Depodaki
+      // başka bir hesapsa (öbür sekme açtı) ona dokunulmuyor.
+      if (account()?.id === me.id) write(ACCOUNT_KEY, null);
       return retried ? 'error' : send(code, true);
     }
     if (reply.status === 400 && reply.body.error === 'name-blocked') return 'name-blocked';

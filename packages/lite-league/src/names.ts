@@ -27,11 +27,14 @@ const BLOCKED_ROOTS = [
   'orospu', 'yarrak', 'yarak', 'amcık', 'amcik', 'sikiş', 'sikis', 'siktir', 'sikerim', 'pezevenk', 'gavat', 'ananı', 'anani',
   'fuck', 'bitch', 'cunt', 'nigger', 'nigga', 'faggot', 'whore', 'asshole', 'pussy', 'hitler', 'porn',
 ];
-const LEET: Record<string, string> = { '0': 'o', '1': 'i', '3': 'e', '4': 'a', '5': 's', '7': 't', '@': 'a', $: 's' };
+const LEET: Record<string, string> = { '0': 'o', '1': 'i', '3': 'e', '4': 'a', '5': 's', '7': 't', '@': 'a', $: 's', '!': 'i', '|': 'i' };
 
 export function offensiveName(name: string): boolean {
-  const lower = name.toLocaleLowerCase('tr').replace(/[013457@$]/g, (ch) => LEET[ch] ?? ch);
-  const words = lower.split(/[\s_-]+/).filter(Boolean);
+  const lower = name.toLocaleLowerCase('tr').replace(/[013457@$!|]/g, (ch) => LEET[ch] ?? ch);
+  // Harf ve rakam dışındaki her işaret ayırıcı: ana oyunun şirket adı noktalamaya
+  // izin veriyor ("F.U.C.K", "Oro.spu"; Codex #80). Lite'ın adında zaten yalnız
+  // boşluk, _ ve - var.
+  const words = lower.split(/[^\p{L}\p{N}]+/u).filter(Boolean);
   // Kısa sözcükler tek başınayken; araya işaret konmuşsa ("S-İ-K", "si k")
   // yan yana sözcüklerin birleşimi de. Alt dizgi değil: "Sikke" geçiyor.
   for (let start = 0; start < words.length; start++) {

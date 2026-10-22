@@ -299,13 +299,16 @@ CapitalForge de lig tablosunu bu sunucudan okuyor (`src/seed.ts`). Canlı
 sunucu bu sürüme gelene kadar oyun kendi yerel tablosuyla açılıyor; bir şey
 bozulmuyor. Açmak için:
 
-1. `pnpm lite:league-bundle` → paketi paneldeki Worker kodunun yerine
-   yapıştır, **Deploy** (A'nın 1. ve 3. adımı). Paket artık ana oyunun koşu
-   çözücüsünü de taşıyor (~265 KB, sıkıştırılmış ~72 KB).
-2. **Storage & Databases → D1 → capitalforge-lite-league → Console**:
-   `schema.sql`'in tamamını çalıştır. Her tablo `IF NOT EXISTS`; var olanlar
-   değişmiyor. Konsol toplu ifade almazsa son iki bölüm (`seed_runs` ve
-   `seed_limits`) ve daha önce uygulanmadıysa L10 bölümü tek tek.
+1. Önce şema. **Storage & Databases → D1 → capitalforge-lite-league →
+   Console**: `schema.sql`'in tamamını çalıştır. Her tablo `IF NOT EXISTS`;
+   var olanlar değişmiyor, eski kod yeni tablolarla sorunsuz çalışıyor.
+   Konsol toplu ifade almazsa son iki bölüm (`seed_runs` ve `seed_limits`)
+   tek tek.
+2. Sonra kod. `pnpm lite:league-bundle` → paketi paneldeki Worker kodunun
+   yerine yapıştır, **Deploy** (A'nın 1. ve 3. adımı). Paket artık ana oyunun
+   koşu çözücüsünü de taşıyor (~265 KB, sıkıştırılmış ~72 KB). Sıra önemli:
+   yeni kod sağlık ucunda hemen `"seed":1` diyor ve oyun sunucu tablosuna
+   geçiyor; tablolar yoksa istekleri düşerdi (Codex #80).
 3. Denetim: `/v1/health` cevabında `"seed":1`. Pages'teki oyun sonraki
    açılışta lig sunucusunun tablosuna geçiyor.
 

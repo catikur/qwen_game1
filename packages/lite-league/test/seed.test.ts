@@ -166,6 +166,13 @@ test('Tohum Ligi: herkese görünen şirket adı süzgeçten geçiyor', async ()
   assert.equal(publicCompanyName('   '), false);
   assert.equal(publicCompanyName('Kötü‮AŞ'), false, 'yön değiştiren işaret');
   assert.equal(publicCompanyName('Satır\nSonu'), false);
+  // Noktalama ayırıcı sayılıyor: ana oyun adda noktalamaya izin veriyor (Codex #80).
+  for (const bad of ['F.U.C.K Ltd', 'F*U*C*K', 'S.İ.K AŞ', 'Oro.spu Holding', 'A.M.K', 'sh!t.co']) {
+    assert.equal(publicCompanyName(bad), false, bad);
+  }
+  for (const fine of ['A.Ş. Holding', 'Ayşe & Ortakları A.Ş.', "O'Brien Ltd", 'Amazon.Kahve', 'S. İ. Kara Ltd']) {
+    assert.equal(publicCompanyName(fine), true, fine);
+  }
   const db = memoryDb();
   const me = await seedAccount(db);
   assert.deepEqual((await submit(db, THURSDAY, me, run({ companyName: 'F-U-C-K Ltd' }))).body, { error: 'name-blocked' });

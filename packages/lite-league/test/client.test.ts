@@ -295,3 +295,34 @@ test('istemci: bağlantısız yeniden açılışta son görülen tablo depodan g
   assert.equal(feed.last().entries[0]!.companyName, 'Atilla Holding');
   assert.equal(feed.last().entries[0]!.mine, true);
 });
+
+test('istemci: iki sekme ilk gönderimi aynı anda yaparsa tek hesap; koşu tarayıcının tuttuğu hesapta (Codex #80)', async () => {
+  const db = memoryDb();
+  const net: Net = { online: true, old: false, now: THURSDAY, requests: [] };
+  const storage = memoryStorage();
+  let release: () => void = () => undefined;
+  const gate = new Promise<void>((resolve) => (release = resolve));
+  // İkinci sekmenin hesap açma cevabı, birinci sekme koşusunu gönderene kadar gecikiyor.
+  const tab = (hold: boolean) =>
+    createServerBoard({
+      url: URL,
+      fetch: (async (input: RequestInfo | URL, init?: RequestInit) => {
+        const request = new Request(input, init);
+        const response = await handle(request, db, net.now);
+        if (hold && new globalThis.URL(request.url).pathname === '/v1/seed/players') await gate;
+        return response;
+      }) as typeof fetch,
+      storage,
+      pollMs: 2 ** 30,
+    });
+  const first = tab(false);
+  const second = tab(true);
+  const late = second.submit(entryOf(run({ companyName: 'İkinci Sekme' })));
+  assert.equal(await first.submit(entryOf(run())), 'saved');
+  release();
+  await late;
+  const stored = JSON.parse(storage.map.get('capitalforge.league.account')!);
+  const table = await (await handle(new Request(`${URL}/v1/seed/weeks/${WEEK}`, { headers: { authorization: `Bearer ${stored.id}.${stored.token}` } }), db, net.now)).json();
+  assert.equal(table.total, 1, 'tarayıcının erişemediği hesapta satır kalmıyor');
+  assert.equal(table.entries[0].mine, true, 'satır tarayıcının tuttuğu hesabın');
+});
