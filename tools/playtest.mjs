@@ -3033,14 +3033,28 @@ async function finish(browser, consoleErrors) {
       ((await lp.locator('.mode-picker [data-mode="league"]').textContent()) ?? '').trim());
     check('Ligde zorluk seçimi kalkıyor', (await lp.locator('.difficulty-option[data-difficulty]').count()) === 0);
     check('Ligde şehir boyutu seçimi kalkıyor', (await lp.locator('[data-city-size]').count()) === 0);
+    // Tur 53: haftanın kuralı ve gelecek haftanınki kurulumda yazıyor.
+    const ruleShown = await lp.evaluate(() => {
+      const rule = document.querySelector('[data-detail="league"] [data-league-rule]');
+      return {
+        rule: rule?.getAttribute('data-league-rule') ?? null,
+        text: rule?.textContent ?? '',
+        next: document.querySelector('[data-detail="league"] [data-league-next-rule]')?.getAttribute('data-league-next-rule') ?? null,
+      };
+    });
+    check('Kurulumda haftanın kuralı ve gelecek haftanınki yazıyor (Tur 53)',
+      Boolean(ruleShown.rule) && Boolean(ruleShown.next) && ruleShown.rule !== ruleShown.next && /Haftanın kuralı/.test(ruleShown.text),
+      `${ruleShown.text.slice(0, 80)} · sonra ${ruleShown.next}`);
     await lp.fill('.newgame-field input[type="text"]', 'Lig Holding');
     await lp.locator('button:has-text("Şirketi kur")').click();
     await lp.waitForSelector('.topbar', { timeout: 20000 });
     const leagueBoot = await lp.evaluate(() => {
       const s = window.__capital.getState();
-      return { week: s.league?.weekId, log: s.commandLog?.length ?? -1 };
+      return { week: s.league?.weekId, log: s.commandLog?.length ?? -1, modifiers: s.modifiers ?? null };
     });
     check('Lig koşusu haftanın kimliğiyle başlıyor', /^\d{4}-W\d{2}$/.test(leagueBoot.week ?? ''), leagueBoot.week);
+    check('Lig koşusu haftanın kuralıyla başlıyor (Tur 53)', JSON.stringify(leagueBoot.modifiers) === JSON.stringify([ruleShown.rule]),
+      `${JSON.stringify(leagueBoot.modifiers)} · kurulumda ${ruleShown.rule}`);
     check('Gündemde lig geri sayıyor', (await lp.locator('.agenda [data-agenda="league"]').count()) === 1);
     const silent = await lp.evaluate(() => window.__capital.audio?.().context ?? 'kanca yok');
     check('Oyun açılınca dokunuşa kadar ses yok', silent === 'none', `bağlam: ${silent}`);
@@ -3081,6 +3095,8 @@ async function finish(browser, consoleErrors) {
       await lp.waitForSelector('[data-league-row]', { timeout: 5000 }).catch(() => null);
       const rows = await lp.locator('[data-league-row]').count();
       check('Skor tabloya yazılıyor', rows === 1, `${rows} satır`);
+      check('Lig panelinde haftanın kuralı yazıyor (Tur 53)',
+        (await lp.locator(`.league [data-league-rule="${ruleShown.rule}"]`).count()) === 1);
       // Tur 31: düğme yok — panel açılınca satır bu tarayıcıda kendiliğinden
       // yeniden oynanıyor ve doğrulanınca sıralamaya giriyor.
       const autoVerified = await lp
@@ -3334,7 +3350,8 @@ async function finish(browser, consoleErrors) {
         result.button.includes('Lig tablosuna gönder') && /herkese açık/.test(result.note) && /e-posta/.test(result.note),
         `${result.button} · ${result.note.slice(0, 70)}`);
       await a.p.locator('.league-result .primary').click();
-      const sent = await a.p.waitForSelector('[data-league-sent]', { timeout: 10000 }).then((h) => h.textContent()).catch(() => '');
+      // Sunucu koşuyu yeniden oynatıyor (Tur 52, ~2 sn; yük altında daha uzun): gönderimin zaman aşımı kadar.
+      const sent = await a.p.waitForSelector('[data-league-sent]', { timeout: 30000 }).then((h) => h.textContent()).catch(() => '');
       const onServer = await until(async () => {
         const t = await table(runA.week);
         return t?.total === 1 ? t : null;
@@ -3514,6 +3531,108 @@ async function finish(browser, consoleErrors) {
     check('Lig sunucusu akışında konsol temiz', errors.length === 0, errors.slice(0, 2).join(' | '));
     for (const context of contexts) await context.close().catch(() => undefined);
     if (leagueServer) stopChild(leagueServer);
+  }
+
+  // ---------- Günün koşusu (Tur 53) ----------
+  //
+  // Kurulumun dördüncü türü: bugünün şehri, 90 gün, kuralsız. Koşu yerel lig
+  // sunucusunun gün tablosuna gidiyor; sunucu yeniden oynatıyor.
+  section('Günün koşusu');
+  {
+    const DAILY_PORT = 8793;
+    const dailyUrl = `http://127.0.0.1:${DAILY_PORT}`;
+    let dailyServer = null;
+    try {
+      dailyServer = await startLeagueServer(DAILY_PORT);
+    } catch (error) {
+      check('Yerel lig sunucusu açılıyor (günün koşusu)', false, String(error));
+    }
+    const dailyErrors = [];
+    const network = (text) => /Failed to load resource|ERR_INTERNET_DISCONNECTED|ERR_CONNECTION_REFUSED|ERR_NETWORK_CHANGED/.test(text);
+    const dailyContext = await browser.newContext({ viewport: { width: 1280, height: 860 } });
+    await dailyContext.addInitScript(veteran, TUTORIAL_KEY);
+    await dailyContext.addInitScript((u) => {
+      window.__capitalLeagueUrl = u;
+    }, dailyUrl);
+    const dp = await dailyContext.newPage();
+    dp.on('pageerror', (e) => dailyErrors.push(e.message));
+    dp.on('console', (m) => { if (m.type() === 'error' && !network(m.text())) dailyErrors.push(m.text()); });
+    if (dailyServer) try {
+      await dp.goto('http://127.0.0.1:8811/');
+      await dp.waitForSelector('.newgame', { timeout: 30000 });
+      await dp.locator('.mode-picker [data-mode="daily"]').click();
+      const setup = await dp.evaluate(() => ({
+        label: document.querySelector('.mode-picker [data-mode="daily"]')?.textContent ?? '',
+        detail: document.querySelector('[data-detail="daily"]')?.textContent ?? '',
+        difficulty: document.querySelectorAll('.difficulty-option[data-difficulty]').length,
+        modifiers: document.querySelectorAll('[data-modifier]').length,
+      }));
+      check('Kurulumda günün koşusu seçilebiliyor: 90 gün, zorluk ve ek kural seçimi yok',
+        /Günün koşusu/.test(setup.label) && /90 gün/.test(setup.detail) && setup.difficulty === 0 && setup.modifiers === 0,
+        `${setup.label} · ${setup.detail.slice(0, 70)}`);
+      await dp.fill('.newgame-field input[type="text"]', 'Günlük Holding');
+      await dp.locator('button:has-text("Şirketi kur")').click();
+      await dp.waitForSelector('.topbar', { timeout: 20000 });
+      const boot = await dp.evaluate(() => {
+        const s = window.__capital.getState();
+        return { id: s.league?.weekId, endDay: s.league?.endDay, modifiers: s.modifiers ?? null, today: new Date().toISOString().slice(0, 10) };
+      });
+      check('Günün koşusu bugünün kimliğiyle, 90 gün ve kuralsız başlıyor',
+        boot.id === boot.today && boot.endDay === 90 && boot.modifiers === null, JSON.stringify(boot));
+      const run = await dp.evaluate(() => {
+        const cap = window.__capital;
+        const s = cap.getState();
+        const t = s.map.tiles.find((x) => {
+          const d = s.districts[x.districtId];
+          return x.kind === 'plot' && !x.ownerId && !x.structureId && (d.opensOnDay === undefined || d.opensOnDay <= s.time.day);
+        });
+        cap.engine.dispatch({ type: 'BUY_TILE', tileId: t.id });
+        cap.engine.dispatch({ type: 'BUILD', tileId: t.id, defId: 'corner_shop' });
+        cap.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+        let guard = 0;
+        while (cap.getState().league.finishedDay === undefined && guard++ < 200) cap.engine.runDay();
+        cap.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+        const l = cap.getState().league;
+        return { day: l.finishedDay, score: l.score, curve: l.curve.length };
+      });
+      check('Günün koşusu 90. günde bitiyor', run.day === 90 && run.curve === 10, `${run.day}. gün · ${run.curve} örnek · ${run.score}`);
+      await dp.waitForSelector('.league-result', { timeout: 5000 }).catch(() => null);
+      const ready = await dp
+        .waitForFunction(() => (document.querySelector('.league-result .primary')?.textContent ?? '').includes('Lig tablosuna') || null, null, { timeout: 90000 })
+        .then(() => true)
+        .catch(() => false);
+      check('Günün koşusunun sonucu lig sunucusuna gönderiliyor', ready);
+      if (ready) {
+        await dp.locator('.league-result .primary').click();
+        const sent = await dp.waitForSelector('[data-league-sent]', { timeout: 30000 }).then((h) => h.textContent()).catch(() => '');
+        const day = await (async () => {
+          try {
+            const response = await fetch(`${dailyUrl}/v1/seed/days/${boot.today}`);
+            return response.ok ? await response.json() : null;
+          } catch {
+            return null;
+          }
+        })();
+        const weekTable = await fetch(`${dailyUrl}/v1/seed/weeks/${encodeURIComponent(boot.today)}`).then((r) => r.status).catch(() => 0);
+        check('Koşu sunucunun gün tablosunda, doğrulanmış; hafta ucu gün kimliğini almıyor',
+          /lig tablosuna yazıldı/.test(sent ?? '') && day?.total === 1 && day.entries[0].score === run.score && day.entries[0].verified === true && weekTable === 400,
+          `${sent} · ${JSON.stringify(day?.entries?.[0] ?? null).slice(0, 100)} · hafta ucu ${weekTable}`);
+        await dp.locator('.league-result button:has-text("Tabloyu aç")').click();
+        await dp.waitForSelector('[data-league-row="ranked"]', { timeout: 30000 }).catch(() => null);
+        const panel = await dp.evaluate(() => ({
+          title: document.querySelector('.league h3')?.textContent ?? '',
+          ranked: document.querySelectorAll('[data-league-row="ranked"]').length,
+          rule: document.querySelectorAll('.league [data-league-rule]').length,
+        }));
+        check('Panel bugünün tablosunu gösteriyor, kural satırı yok', /Bugünün tablosu/.test(panel.title) && panel.ranked === 1 && panel.rule === 0,
+          `${panel.title} · ${panel.ranked} sıralı · kural ${panel.rule}`);
+      }
+    } catch (error) {
+      check('Günün koşusu bölümü sonuna kadar koşuyor', false, String(error).split('\n')[0]);
+    }
+    check('Günün koşusu akışında konsol temiz', dailyErrors.length === 0, dailyErrors.slice(0, 2).join(' | '));
+    await dailyContext.close().catch(() => undefined);
+    if (dailyServer) stopChild(dailyServer);
   }
 
   // ---------- Senaryo modu (Tur 39) ----------
@@ -4647,8 +4766,11 @@ async function finish(browser, consoleErrors) {
     const inScenario = await rp.locator('[data-modifiers]').count();
     await rp.locator('.mode-picker [data-mode="league"]').click();
     const inLeague = await rp.locator('[data-modifiers]').count();
+    await rp.locator('.mode-picker [data-mode="daily"]').click();
+    const inDaily = await rp.locator('[data-modifiers]').count();
     await rp.locator('.mode-picker [data-mode="free"]').click();
-    check('Lig ve senaryo kipinde ek kural seçicisi yok', inScenario === 0 && inLeague === 0, `senaryo ${inScenario} · lig ${inLeague}`);
+    check('Lig, günün koşusu ve senaryo kipinde ek kural seçicisi yok', inScenario === 0 && inLeague === 0 && inDaily === 0,
+      `senaryo ${inScenario} · lig ${inLeague} · gün ${inDaily}`);
 
     await rp.locator('[data-newgame-start]').click();
     await rp.waitForSelector('.topbar', { timeout: 20000 });

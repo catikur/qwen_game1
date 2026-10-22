@@ -299,7 +299,7 @@ sırrını şimdilik **tanımlama**: sunucu tarafı hazır ama web ve Android
 istemcisinde doğrulama kutusu henüz yok; sır tanımlanırsa yeni web ve Android
 hesapları açılamaz (bot sorunu çıkarsa istemci tarafı eklenecek).
 
-**Sunucuyu güncellerken (Tur 51–52, ana oyunun Tohum Ligi):** GitHub
+**Sunucuyu güncellerken (Tur 51–53, ana oyunun Tohum Ligi):** GitHub
 Pages'teki CapitalForge de lig tablosunu bu sunucudan okuyor (`src/seed.ts`).
 Canlı sunucu bu sürüme gelene kadar oyun kendi yerel tablosuyla açılıyor; bir
 şey bozulmuyor. Tur 52'den beri sunucu her koşuyu gönderimde yeniden
@@ -320,18 +320,24 @@ Açmak için (sıra önemli):
 3. Kod. `pnpm lite:league-bundle` → paketi paneldeki Worker kodunun yerine
    yapıştır, **Deploy** (A'nın 1. ve 3. adımı). Paket ana oyunun motorunu da
    taşıyor (~700 KB, sıkıştırılmış ~185 KB; ücretli sınır 10 MB). Yeni kod
-   sağlık ucunda hemen `"seed":1` ve `"verify":1` diyor ve oyun sunucu
+   sağlık ucunda hemen `"seed":1`, `"verify":1` ve `"daily":1` diyor ve oyun sunucu
    tablosuna geçiyor; tablolar yoksa istekleri düşerdi (Codex #80). Oyun
    `"verify":1` demeyen sunucuyu (Tur 51'inki) kullanmıyor: o koşuyu
    doğrulamadan eski tabloya yazıyor, yeni kod gelince görünmez olurdu
    (Codex #81).
-4. Denetim: `/v1/health` cevabında `"seed":1` ve `"verify":1`. Pages'teki
-   oyun sonraki açılışta lig sunucusunun tablosuna geçiyor.
+4. Denetim: `/v1/health` cevabında `"seed":1`, `"verify":1` ve (Tur 53'ten
+   beri) `"daily":1`. Pages'teki oyun sonraki açılışta lig sunucusunun
+   tablosuna geçiyor.
 5. Yalnız Tur 51 canlıya gittiyse (gitmedi): yeni Worker çalışırken konsolda
    `DROP TABLE IF EXISTS seed_runs;`. O tabloda sunucunun doğrulamadığı
    koşular var; yeni kod onu okumuyor. Şema Worker'dan önce uygulandığı için
    2. adımda silinmiyor: eski Worker yeni kod gelene kadar onunla çalışsın
    (Codex #81).
+
+**Tur 53 (haftanın kuralı ve günün koşusu):** şema değişmedi, günün
+koşuları da `seed_verified`'da. Yalnız 3. adım (kod). Oyun `"daily":1`
+demeyen sunucuyu (Tur 52'ninki: günün koşusunun ucu ve haftanın kuralı yok)
+eski sayıp yerel tabloyla açılıyor; yeni kod gelince sunucuya dönüyor.
 
 **Sürüm uyumu.** Sunucu koşuyu yalnız kendi simülasyon sürümüyle
 yargılayabiliyor. Pages'teki oyun her `main` birleşmesinde kendiliğinden

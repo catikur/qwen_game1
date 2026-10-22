@@ -59,6 +59,10 @@ import {
   TOTAL_SHARES,
   MARKETING_CAP,
   RESEARCH_CAP,
+  LEAGUE_DAILY_DAYS,
+  LEAGUE_RULE_ROTATION,
+  createLeagueGame,
+  leagueRule,
 } from '../src/index';
 import { build, buyTile } from '../src/actions';
 import { buyShares } from '../src/systems/equity';
@@ -4855,6 +4859,87 @@ section('Zorluk değiştiricileri', () => {
     `${line(four.informed)} · ortalama ${Math.round(mean(four.informed))}`,
   );
   expect('Dört kural: savunmasız yavaş oyuncu çok daha erken düşüyor', mean(four.slow) < mean(base.slow) - 150, slowDay(four.slow));
+});
+
+section('Tohum Ligi: haftanın kuralı ve günün koşusu', () => {
+  /*
+   * Tur 53. Lig haftası 2026-W43'ten beri ek kurallardan birini sırayla
+   * taşıyor; günün koşusu 90 gün, kuralsız. Bilgili vekil 5, yavaş vekil 15
+   * günde bir hamle yapıyor. Kuralın etkisi aynı şehrin kuralsız hâliyle
+   * ölçülüyor (Sıkı banka'nın kuruluş kredisi de geri alınarak).
+   *
+   * Ölçüm (DURUM Tur 53): bilgili vekil kural haftalarında yavaştan %47–77
+   * önde; Kıt arsa −%7, Fırtınalı yıllar −%6, Sıkı banka −%? (bilgili);
+   * Aç gözlü rakipler yavaş vekili −%8 geriletiyor. Günün koşusunda bilgili
+   * 1,5–2,0 M, yavaş 1,15–1,35 M, hiç oynamayan 250 B.
+   */
+  const WEEKS = ['2026-W43', '2026-W44', '2026-W45', '2026-W46'];
+  const DAYS = ['2026-10-22', '2026-10-23', '2026-10-24', '2026-10-25', '2026-10-26'];
+  type Score = { score: number; lost: boolean };
+  function withoutRule(state: GameState): GameState {
+    delete state.modifiers;
+    const player = state.companies[state.playerCompanyId]!;
+    const loan = player.credit?.loans.shift();
+    if (loan) {
+      player.debt -= loan.balance;
+      player.netWorth += loan.balance;
+      player.credit!.loanSeq = 0;
+    }
+    return state;
+  }
+  function play(id: string, every: number, plain = false): Score {
+    const start = createLeagueGame(id, 'Lig AŞ', null);
+    const engine = new GameEngine(plain ? withoutRule(start) : start);
+    while (engine.getState().league!.finishedDay === undefined) {
+      if (every > 0 && engine.getState().time.day % every === 0) playerStrategy(engine);
+      engine.runDay();
+    }
+    const league = engine.getState().league!;
+    return { score: league.score ?? 0, lost: league.outcome === 'lost' };
+  }
+  const m = (value: number) => `${(value / 1e6).toFixed(1)} M`;
+  const pct = (a: number, b: number) => `${a >= b ? '+' : ''}${Math.round((a / b - 1) * 100)}%`;
+  const weeks = WEEKS.map((week) => ({
+    week,
+    rule: leagueRule(week)!,
+    informed: play(week, 5),
+    plain: play(week, 5, true),
+    slow: play(week, 15),
+    slowPlain: play(week, 15, true),
+  }));
+  for (const w of weeks) {
+    console.log(`  ${w.week} ${w.rule.padEnd(13)} bilgili ${m(w.informed.score)} (kuralsız ${m(w.plain.score)}, ${pct(w.informed.score, w.plain.score)}) · yavaş ${m(w.slow.score)} (kuralsız ${m(w.slowPlain.score)}, ${pct(w.slow.score, w.slowPlain.score)})`);
+  }
+  expect('Dört haftada dört kural, sıra döngüde', weeks.map((w) => w.rule).join() === LEAGUE_RULE_ROTATION.join(), weeks.map((w) => w.rule).join(', '));
+  expect(
+    'Her kural haftasında bilgili vekil yavaştan en az %30 önde; kimse düşmüyor',
+    weeks.every((w) => w.informed.score > w.slow.score * 1.3 && !w.informed.lost && !w.slow.lost),
+    weeks.map((w) => `${w.rule} ${pct(w.informed.score, w.slow.score)}`).join(' · '),
+  );
+  const byRule = Object.fromEntries(weeks.map((w) => [w.rule, w]));
+  expect(
+    'Kıt arsa, Fırtınalı yıllar ve Sıkı banka bilgili vekilin skorunu aynı şehirde düşürüyor',
+    ['scarce_land', 'storms', 'tight_credit'].every((rule) => byRule[rule]!.informed.score < byRule[rule]!.plain.score),
+    ['scarce_land', 'storms', 'tight_credit'].map((rule) => `${rule} ${pct(byRule[rule]!.informed.score, byRule[rule]!.plain.score)}`).join(' · '),
+  );
+  expect(
+    'Aç gözlü rakipler savunmasız yavaş vekili geriletiyor',
+    byRule['hungry_rivals']!.slow.score < byRule['hungry_rivals']!.slowPlain.score,
+    pct(byRule['hungry_rivals']!.slow.score, byRule['hungry_rivals']!.slowPlain.score),
+  );
+
+  const days = DAYS.map((day) => ({ day, informed: play(day, 5), slow: play(day, 15), idle: play(day, 0) }));
+  for (const d of days) console.log(`  ${d.day} bilgili ${m(d.informed.score)} · yavaş ${m(d.slow.score)} · boş ${m(d.idle.score)}`);
+  expect(
+    `Günün koşusu (${LEAGUE_DAILY_DAYS} gün): her gün bilgili > yavaş > boş; bilgili boşun en az 4 katı`,
+    days.every((d) => d.informed.score > d.slow.score && d.slow.score > d.idle.score && d.informed.score >= 4 * d.idle.score && !d.informed.lost),
+    days.map((d) => `${pct(d.informed.score, d.slow.score)} / ×${(d.informed.score / d.idle.score).toFixed(1)}`).join(' · '),
+  );
+  expect(
+    'Günün koşusunun şehirleri farklı: beş günün bilgili skoru beş ayrı sayı',
+    new Set(days.map((d) => d.informed.score)).size === days.length,
+    days.map((d) => m(d.informed.score)).join(' · '),
+  );
 });
 
 if (timings.length === 0) {
