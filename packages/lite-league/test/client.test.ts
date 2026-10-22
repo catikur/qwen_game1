@@ -806,3 +806,30 @@ test('istemci: "şu kadar sonra dene" süresi son tarih olarak tutuluyor; eski u
   for (let i = 0; i < 40 && (await total()) === 0; i++) await new Promise((resolve) => setTimeout(resolve, 10));
   assert.equal(await total(), 1, 'koşu sunucunun yeni süresiyle gitti');
 });
+
+test('istemci: sunucunun geçici hatasında (5xx) bekleyen koşu kuyrukta kalıyor ve sonra gidiyor (Codex #80)', async () => {
+  const db = memoryDb();
+  const net: Net = { online: true, old: false, now: THURSDAY, requests: [] };
+  const storage = memoryStorage();
+  const online = new EventTarget();
+  let failures = 2;
+  const fetcher = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const request = new Request(input, init);
+    if (!net.online) throw new TypeError('fetch failed');
+    if (request.method === 'POST' && new globalThis.URL(request.url).pathname === '/v1/seed/runs' && failures > 0) {
+      failures--;
+      return Response.json({ error: 'internal' }, { status: 503 });
+    }
+    return handle(request, db, net.now);
+  }) as typeof fetch;
+  const board = createServerBoard({ url: URL, fetch: fetcher, storage, online, pollMs: 2 ** 30, retryMs: 10 });
+  subscriptions.push(() => board.close?.());
+  assert.equal(await board.probe(), 'ok');
+  net.online = false;
+  assert.equal(await board.submit(entryOf(run())), 'queued');
+  net.online = true;
+  online.dispatchEvent(new Event('online'));
+  const total = async () => (await (await handle(new Request(`${URL}/v1/seed/weeks/${WEEK}`), db, net.now)).json()).total as number;
+  for (let i = 0; i < 50 && (await total()) === 0; i++) await new Promise((resolve) => setTimeout(resolve, 10));
+  assert.equal(await total(), 1, 'geçici hatadan sonra koşu gitti');
+});

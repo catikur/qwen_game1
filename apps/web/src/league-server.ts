@@ -186,6 +186,7 @@ export function createServerBoard(options: ServerBoardOptions): ServerBoard {
       noteRetry(reply.body.retryAfter);
       return 'busy';
     }
+    if (reply.status >= 500) return 'busy';
     const { id, token } = reply.body;
     if (reply.status !== 201 || typeof id !== 'string' || typeof token !== 'string') return 'error';
     // Bu arada öbür sekme hesap açtıysa onunki: tarayıcı tek hesap tutuyor, koşu
@@ -249,6 +250,8 @@ export function createServerBoard(options: ServerBoardOptions): ServerBoard {
       noteRetry(reply.body.retryAfter);
       return 'busy';
     }
+    // Sunucunun geçici hatası: kesin ret değil, bekleyen koşu kuyrukta kalıp yeniden deneniyor (Codex #80).
+    if (reply.status >= 500) return 'busy';
     return 'error';
   }
 
