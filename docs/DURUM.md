@@ -4,7 +4,7 @@
 > `pnpm bench` çıktısından; iddialar `pnpm balance` ve `pnpm playtest`
 > tarafından her koşuda doğrulanıyor.
 >
-> Son güncelleme: şema **v6**, 51 tur (Tur 33 denendi ve geri alındı; Tur 34 eski görünüme canlılık ekledi; Tur 35 arayüzü Lite'ın "Cam & Bulut" diline taşıdı; Tur 36 şehre ayrıntı kattı; Tur 37a geç oyuna yönetim yükü, servet vergisi ve kriz dönemleri getirdi; Tur 37b karar kartlarını ve rakip hikâyelerini ekledi; Tur 37c fırsat balonlarını ve aylık görev panosunu getirdi; Tur 37d canlı pazarı, şehir projesi ihalesini ve rakip konsorsiyumunu getirdi; Tur 38 değerlendirme turuydu: geç oyun hızı, gündem ve haber akışı, zorluk eğrisi; Tur 39a senaryo modunu getirdi: Kurtarma ve Krizin ortasında; Tur 39b Konsorsiyuma karşı, Zincir ustası ve Şehrin sponsoru senaryolarını ekledi; Tur 39c Büyük şehir fethi ve Holding: iki şehir ile listeyi yediye tamamladı; Tur 40 cila ve performans; Tur 41 başarımlar ve kariyer; Tur 42 açılışta gölgelendirici derlemesi; Tur 43 oyun içi akıcılık; Tur 44 değerlendirme turuydu: Türkçe sayı biçimi, yardımın kapsamı, haber akışı; Tur 45 dört ek kural getirdi: Fırtınalı yıllar, Aç gözlü rakipler, Sıkı banka, Kıt arsa; Tur 46 açılış paketini böldü: kurulum ekranı telefonda yarı sürede; Tur 47 tek Ayarlar paneli ve erişilebilirlik getirdi: metin boyutu, renk körlüğüne uygun palet, hareket, ses düzeyleri, pencerelerde klavye; Tur 48 oyunu kurulabilir ve çevrimdışı açılır yaptı, yayından sonra "yeni sürüm hazır" diyor; Tur 49 müziği getirdi: gündüz, gece ve kriz, şehirle birlikte dönüyor; Tur 50 Faz 1'i değerlendirdi ve tanıtım paketini hazırladı; Tur 51 Faz 2'yi açtı: Lite'ın lig sunucusu ana oyunun Tohum Ligi koşularını da alıyor, tablo herkese açık). Önümüzdeki işin sırası `docs/YOL-HARITASI.md`'de.
+> Son güncelleme: şema **v6**, 52 tur (Tur 33 denendi ve geri alındı; Tur 34 eski görünüme canlılık ekledi; Tur 35 arayüzü Lite'ın "Cam & Bulut" diline taşıdı; Tur 36 şehre ayrıntı kattı; Tur 37a geç oyuna yönetim yükü, servet vergisi ve kriz dönemleri getirdi; Tur 37b karar kartlarını ve rakip hikâyelerini ekledi; Tur 37c fırsat balonlarını ve aylık görev panosunu getirdi; Tur 37d canlı pazarı, şehir projesi ihalesini ve rakip konsorsiyumunu getirdi; Tur 38 değerlendirme turuydu: geç oyun hızı, gündem ve haber akışı, zorluk eğrisi; Tur 39a senaryo modunu getirdi: Kurtarma ve Krizin ortasında; Tur 39b Konsorsiyuma karşı, Zincir ustası ve Şehrin sponsoru senaryolarını ekledi; Tur 39c Büyük şehir fethi ve Holding: iki şehir ile listeyi yediye tamamladı; Tur 40 cila ve performans; Tur 41 başarımlar ve kariyer; Tur 42 açılışta gölgelendirici derlemesi; Tur 43 oyun içi akıcılık; Tur 44 değerlendirme turuydu: Türkçe sayı biçimi, yardımın kapsamı, haber akışı; Tur 45 dört ek kural getirdi: Fırtınalı yıllar, Aç gözlü rakipler, Sıkı banka, Kıt arsa; Tur 46 açılış paketini böldü: kurulum ekranı telefonda yarı sürede; Tur 47 tek Ayarlar paneli ve erişilebilirlik getirdi: metin boyutu, renk körlüğüne uygun palet, hareket, ses düzeyleri, pencerelerde klavye; Tur 48 oyunu kurulabilir ve çevrimdışı açılır yaptı, yayından sonra "yeni sürüm hazır" diyor; Tur 49 müziği getirdi: gündüz, gece ve kriz, şehirle birlikte dönüyor; Tur 50 Faz 1'i değerlendirdi ve tanıtım paketini hazırladı; Tur 51 Faz 2'yi açtı: Lite'ın lig sunucusu ana oyunun Tohum Ligi koşularını da alıyor, tablo herkese açık; Tur 52'de sunucu her koşuyu gönderimde yeniden oynatıyor, tabloya yalnız doğrulanmış skor giriyor). Önümüzdeki işin sırası `docs/YOL-HARITASI.md`'de.
 
 ---
 
@@ -5360,6 +5360,120 @@ Tarayıcı tam koşu 521/521, konsol hatası yok (~40 dk; lig sunucusu bölümü
 yeni üç kontrol eski kodla kalıyor). Paket bütçesi tamam: ana parça 60,8 KB,
 kurulumun yolu 133,2 KB.
 
+### Tur 52 — Sunucuda doğrulama: tabloya yalnız doğrulanmış koşu
+
+Tur 51'in bilinen sınırı kapandı. Lig sunucusu ana oyunun koşusunu
+gönderimde baştan oynatıyor; skor ve eğri tutmazsa koşu tabloya girmiyor.
+Tablonun en iyi 50'si artık doğrulanmış skorla kesiliyor: şişirilmiş
+koşular dürüst satırları dışarıda bırakamıyor. Kullanıcının kararı:
+doğrulama Workers Paid ile (aylık 5 $). DURUM'un en eski güvenlik açığı
+("sunucu tarafında doğrulama yok") da bununla kapandı.
+
+**Sunucu (`packages/lite-league/src/seed.ts`).**
+- Gönderimin sırası: kodun yapısı, hafta, şirket adı, sürüm, 30 sn aralığı,
+  "daha iyisi var mı", kopya, en son tekrar. Pahalı adım sona kaldı: daha
+  kötü ya da aynı skor yeniden oynatılmıyor, zaten yazılmayacak.
+- Tekrar oyunun kendi motoruyla (`replayRun`). Tutmazsa 422 `replay`,
+  nedeniyle: `score` (skor tutmadı), `curve` (skor tuttu, eğri tutmadı),
+  `error` (tekrar hata verdi).
+- Sürüm: koşu sunucununkinden başka bir simülasyon sürümünde oynanmışsa
+  (parmak izi farklı) sunucu onu yargılayamıyor; sahte değil. 409 `sim`.
+  Aralığa sayılmıyor: sunucu güncellenince ilk deneme geçiyor.
+- Kopya: başka bir oyuncunun satırıyla aynı skor ve eğri 409 `copy`. İlk
+  gönderen sayılıyor, sunucunun saatiyle; adı değiştirmek kopyayı
+  gizlemiyor. Hiç oynanmamış (günlüğü boş) koşular ayrılmıyor: hepsi aynı.
+  Tur 31'de tarayıcı kopyayı yalnız gösterebiliyordu; artık tabloya hiç
+  girmiyor.
+- Tablodaki satır `verified: true` ve `idle` taşıyor; skor ve eğri
+  sunucunun tekrarından. Sağlık ucu `"verify":1` diyor.
+- Şema: doğrulanmış koşular yeni tabloda (`seed_verified`, `idle` sütunuyla).
+  Codex #81'in bulgusu: Tur 51'in şemasıyla kurulmuş bir veritabanında
+  `CREATE TABLE IF NOT EXISTS` eski tabloyu olduğu gibi bırakıyor, her sorgu
+  "no such column: idle" ile düşüyordu; eski satırlar da hiç doğrulanmadığı
+  hâlde `verified` diye sunulacaktı. Tur 51'in `seed_runs`'ı şemada
+  silinmiyor: şema Worker'dan önce uygulanıyor, eski Worker yeni kod gelene
+  kadar onunla çalışsın (Codex #81'in ikinci turu). Yeni kod onu okumuyor;
+  Tur 51 canlıya gittiyse yeni Worker'dan sonra elle siliniyor (README).
+  Canlıda Tur 51'in tablosu hiç olmadı; yine de yol açık. Eski tablo
+  durdukça hesap silme ve haftalık temizlik onun satırlarını da siliyor
+  (tablo varsa; Codex #81'in üçüncü turu). Testler düzeltmeden önce kaldı.
+- *Codex #81: kopya denetimi yazımla birlikte.* Aynı koşuyu aynı anda iki
+  oyuncu gönderirse ikisi de tekrardan (1–2 sn) önce denetimi geçip
+  yazılıyordu. Denetim artık yazımın kendisinde (tek koşullu ifade); erken
+  denetim yalnız pahalı tekrarı önlemek için. Test düzeltmeden önce kaldı.
+- Paket 265 KB'tan 701 KB'a çıktı (sıkıştırılmış 183 KB; ücretli sınır
+  10 MB, ücretsiz 3 MB): motorun tamamı geliyor. Açılış 38 ms.
+- Bedel, Node'da ölçüldü: koşu başına 1,4–2,2 sn CPU (hiç oynanmamış koşu
+  0,9 sn); parmak izi sunucu örneği başına bir kez, 0,45 sn. Workers
+  Paid'in istek başına sınırı 30 sn. Aylık 30 milyon CPU-ms dahil (~15 bin
+  tekrar); üstü milyon CPU-ms başına 0,02 $, yani bin tekrar ~0,04 $.
+  Saldırgan IP başına saatte en çok 30 tekrar yaptırabiliyor (Tur 51'in
+  sınırı).
+- Testlerin sahte koşuları için sunucu ayarı (`test/trust.ts`): iz sabit,
+  tekrar beyanı kabul ediyor. Canlı sunucu ve yerel lig sunucusu her zaman
+  oyunun motoru; gerçek tekrarı `seed.test.ts`'in gerçek koşulu testleri
+  deniyor.
+
+**Oyun.**
+- Sunucunun doğruladığı satır tarayıcıda yeniden oynatılmıyor, kodu da
+  inmiyor. Sıralama, hayalet ve kopya ayrımı sunucunun sonucuyla. Tablo
+  açılır açılmaz oturuyor: Tur 31'den beri her satır bu tarayıcıda 1–3 sn
+  oynatılıyordu. Eski sunucunun satırlarını (`verified` yok) ve yerel
+  tabloyu tarayıcı eskisi gibi doğruluyor.
+- Yeni gönderim sonuçları (iki dilde):
+  - sürüm farkı (`version`): "sunucu bu sürümü henüz tanımıyor"; koşu
+    kuyrukta bekliyor, kendiliğinden yeniden deneniyor;
+  - tekrar tutmadı (`rejected`) ve kopya (`copy`): koşu düşüyor, oyuncuya
+    söyleniyor.
+- Gönderimin zaman aşımı 30 sn (öbür istekler 10 sn): sunucu koşuyu ~2 sn
+  oynatıyor.
+- Doğrudan gönderim kuyruğa girerse (kopan istek, sürüm farkı) kendiliğinden
+  yeniden deneniyor; önceden yalnız bağlantı olayını bekliyordu.
+
+**Sürüm uyumu (işletim).** Pages'teki oyun her `main` birleşmesinde
+kendiliğinden güncelleniyor, Worker elle (Tur 51'de otomatik dağıtım
+kapandı). Simülasyonu değiştiren bir birleşmeden sonra Worker yeniden
+dağıtılana kadar yeni koşular 409 `sim` alıp bekliyor; dağıtılınca
+kendiliğinden gidiyor. Hafta kapanırsa bekleyen koşu düşüyor. Adımlar
+`ios-lite/README.md`'de ("Sunucuyu güncellerken, Tur 51–52").
+
+**Canlıya geçiş (kullanıcının hesabında).** Sıra: Workers Paid, şema,
+kod. Sonra `/v1/health` `"seed":1` ve `"verify":1` diyor. Oyun `"verify":1`
+demeyen sunucuyu (Tur 51'inki) eski sayıp yerel tabloyla açılıyor: o sunucu
+koşuyu doğrulamadan eski tabloya yazıyor, Tur 52 gelince koşu görünmez
+olurdu (Codex #81). Test düzeltmeden önce kaldı. Ücretsiz katmanda
+gönderim CPU sınırına takılır; oyun bunu geçici hata sayıp koşuyu
+bekletiyor, Lite etkilenmiyor.
+
+**Doğrulama.** `pnpm test` 582/582; tip denetimi temiz.
+- `seed.test.ts` (23 test; 8'i yeni): gerçek koşularla, oyunun motoruyla:
+  - dürüst koşu doğrulanmış giriyor, eğri tekrarın kendisi;
+  - şişirilmiş skor, değiştirilmiş eğri ve günlükten hamlesi düşmüş koşu
+    giremiyor;
+  - başka sürümün koşusu 409 `sim`, aralığa sayılmıyor;
+  - başka oyuncunun koşusu (kodun aynısı da, adı değiştirilmişi de) 409
+    `copy`; hiç oynanmamış iki koşu ikisi de tabloda;
+  - daha kötü ve aynı skor yeniden oynatılmıyor; tekrar hata verirse koşu
+    girmiyor;
+  - Tur 51'in şemasıyla kurulmuş veritabanı güncelleniyor, eski satır
+    sunulmuyor, hesap silinince eski satırı da gidiyor; aynı anda gelen iki
+    kopyadan yalnız ilki tabloda (Codex #81).
+- `client.test.ts` (33 test): sürüm farkında koşu bekleyip sunucu
+  güncellenince kendiliğinden gidiyor; Tur 51'in sunucusu eski sayılıyor; sunucunun satırı doğrulanmış; tutmayan
+  ve kopya koşu düşüyor.
+- `leagueVerify.test.ts` (4 test): sunucunun doğruladığı satır tekrar
+  beklemeden sıralamada, kodu inmiyor; sunucunun boş dediği iki koşu kopya
+  sayılmıyor.
+- Tarayıcı testinin "Tohum Ligi: lig sunucusu" bölümü 15 kontrol (yerel lig
+  sunucusu oyunun motoruyla yeniden oynatıyor):
+  - yeni: skoru şişirilmiş kod sunucuya doğrudan gönderiliyor, 422;
+  - tablonun satırı sunucuda doğrulanmış, tarayıcı kodu indirmiyor (eskiden
+    "kod iniyor ve tarayıcıda doğrulanıyor");
+  - her tarayıcı başka bir oyun oynuyor: aynı hamleler aynı skoru ve eğriyi
+    verir, sunucu onu başkasının kopyası sayar. Test bunu ilk koşuda yakaladı.
+  15/15, konsol hatası yok (~3,5 dk).
+- Paket bütçesi tamam: ana parça 60,9 KB.
+
 ---
 
 ## 3. Ölçülen durum
@@ -5462,7 +5576,7 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi). Senaryo şehirlerinde gün 3–17 ms (`pnpm dayperf`, Tur 43) |
-| Birim testi | **570 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de) |
+| Birim testi | **582 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de, Tur 52'de sunucuda tekrar) |
 | Denge testi | **331 kontrol, hepsi geçiyor** (25 bölüm, süreleriyle; ~13 dk) |
 | Tarayıcı testi | **521 kontrol, hepsi geçiyor**, 0 konsol hatası (~40 dk); duman koşusu 132 (~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + paket bütçesi (Tur 46; Tur 48'den beri hizmet çalışanı ve manifest de) + duman oynanışı |
@@ -5649,7 +5763,9 @@ nüfus tavanı ve arsa değeri). Hâlâ açık olanlar:
   kopya tespiti. Sunucu tarafında doğrulama bu mimaride hâlâ yok: dürüst
   cümle "her tarayıcı kendisi doğruluyor". Kalan tek boşluk kopya — önlenemiyor,
   görünür kılınıyor (Tur 31 bölümü). Tur 51: Pages'te tablo lig sunucusunda;
-  "kim önce gönderdi" artık sunucunun saati. Sunucuda tekrar Tur 52'de.
+  "kim önce gönderdi" artık sunucunun saati. Tur 52: sunucu her koşuyu
+  gönderimde yeniden oynatıyor, tabloya yalnız doğrulanmış skor giriyor;
+  kopya artık tabloya hiç girmiyor.
 
 ## 5. Nasıl koşulur
 

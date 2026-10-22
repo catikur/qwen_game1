@@ -18,8 +18,10 @@ function schemaPath(): string {
   return join(dir, 'packages/lite-league/schema.sql');
 }
 
-export function memoryDb(): Db {
+/** `before`: şemadan önce koşan SQL (eski bir sürümün şemasıyla kurulmuş veritabanı). */
+export function memoryDb(before?: string): Db {
   const database = new DatabaseSync(':memory:');
+  if (before) database.exec(before);
   database.exec(readFileSync(schemaPath(), 'utf8'));
   return {
     async run(sql: string, ...args: Value[]) {

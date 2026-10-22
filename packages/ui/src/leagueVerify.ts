@@ -99,8 +99,13 @@ export async function codeOf(entry: LeagueEntry): Promise<string | null> {
   }
 }
 
-/** Bu sürümde geçerli sonuç; iz henüz hesaplanmadıysa ya da sonuç eski sürümdense yok. */
+/**
+ * Bu sürümde geçerli sonuç; iz henüz hesaplanmadıysa ya da sonuç eski
+ * sürümdense yok. Lig sunucusunun doğruladığı satır (Tur 52) tekrar
+ * beklemeden sonuçlu: skor ve eğri sunucunun tekrarından.
+ */
 export function verdictFor(entry: LeagueEntry): RunVerdict | undefined {
+  if (entry.verified) return { status: 'ok', score: entry.score, curve: entry.curve, companyName: entry.companyName, ceoId: entry.ceoId, idle: entry.idle === true };
   load();
   void ensureSim();
   if (!sim) return undefined;
@@ -119,6 +124,8 @@ function enqueue(entries: readonly LeagueEntry[]): void {
   load();
   let added = false;
   for (const entry of entries) {
+    // Sunucunun doğruladığı satır bu tarayıcıda yeniden oynanmıyor (Tur 52).
+    if (entry.verified) continue;
     const key = keyOf(entry);
     const cached = verdicts.get(key);
     if ((cached && sim && cached.sim === sim) || running?.key === key || queue.some((item) => item.key === key)) continue;

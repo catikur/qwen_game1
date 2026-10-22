@@ -106,14 +106,24 @@ export interface LeagueEntry {
   mine?: boolean;
   /** Gönderen kişinin görünen adı (biliniyorsa). */
   who?: string;
+  /**
+   * Lig sunucusu koşuyu gönderimde yeniden oynattı, skor ve eğri tuttu
+   * (Tur 52): tarayıcı satırı yeniden oynatmıyor.
+   */
+  verified?: boolean;
+  /** Günlük boş (hiç oynanmamış koşu; sunucu söylüyor): kopya denetimi ayırmıyor. */
+  idle?: boolean;
 }
 
 /**
  * Gönderimin sonucu. Lig sunucusunun kendi cevapları: bağlantı yok, gönderim
  * bekliyor (`queued`); şirket adı herkese açık tabloya giremiyor
  * (`name-blocked`); haftanın ligi kapandı (`closed`); sunucu yoğun (`busy`).
+ * Tur 52: sunucu oyunun bu sürümünü henüz tanımıyor, koşu bekliyor
+ * (`version`); tekrar tutmadı (`rejected`); başka oyuncunun koşusunun aynısı
+ * (`copy`).
  */
-export type LeagueSubmitOutcome = 'saved' | 'kept-better' | 'error' | 'queued' | 'name-blocked' | 'closed' | 'busy';
+export type LeagueSubmitOutcome = 'saved' | 'kept-better' | 'error' | 'queued' | 'name-blocked' | 'closed' | 'busy' | 'version' | 'rejected' | 'copy';
 
 /** Tablonun durumu: sunucuya ulaşılamıyorsa son görülen tablo gösteriliyor. */
 export interface LeagueFeedInfo {

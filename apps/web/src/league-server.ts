@@ -30,13 +30,15 @@ export interface ServerBoardOptions {
   pollMs?: number;
   /** İstek zaman aşımı (ms). */
   timeoutMs?: number;
+  /** Koşu gönderiminin zaman aşımı (ms): sunucu koşuyu yeniden oynatıyor. */
+  submitTimeoutMs?: number;
   /** Yoğunluğa (429) takılan bekleyen gönderimin ilk yeniden denemesi (ms); her seferinde iki katı. */
   retryMs?: number;
 }
 
 export interface ServerBoard extends LeagueBoard {
   kind: 'server';
-  /** Sunucu ayakta ve bu sürümde mi (sağlık ucunda `seed`)? */
+  /** Sunucu ayakta ve bu sürümde mi (sağlık ucunda `seed` ve `verify`)? */
   probe(): Promise<'ok' | 'old' | 'offline'>;
   /** Bu tarayıcı sunucuyu daha önce çalışırken gördü mü (bağlantısız açılışta da sunucu tablosu kalsın)? */
   seen(): boolean;
@@ -112,10 +114,17 @@ function fallbackFor(storage: object | null): Fallback {
   return found;
 }
 
+/** Sağlık ucunun sürüm işareti (`seed`, `verify`) var ve en az 1 mi? */
+function atLeastOne(value: unknown): boolean {
+  return typeof value === 'number' && value >= 1;
+}
+
 export function createServerBoard(options: ServerBoardOptions): ServerBoard {
   const { url } = options;
   const pollMs = options.pollMs ?? 60_000;
   const timeoutMs = options.timeoutMs ?? 10_000;
+  // Koşu gönderimi daha uzun: sunucu koşuyu yeniden oynatıyor (Tur 52, ~1–3 sn).
+  const submitTimeoutMs = options.submitTimeoutMs ?? 30_000;
   // Sunucu aynı hesaptan iki gönderim arasında 30 sn istiyor (SEED.minGapMs).
   const retryMs = options.retryMs ?? 31_000;
   /**
@@ -160,13 +169,13 @@ export function createServerBoard(options: ServerBoardOptions): ServerBoard {
   };
 
   /** `auth`: `true` depodaki hesap; bir hesap verilirse o (gönderim, açtığı hesapla). */
-  async function call(path: string, init: { method?: string; body?: unknown; auth?: boolean | Account } = {}): Promise<Reply> {
+  async function call(path: string, init: { method?: string; body?: unknown; auth?: boolean | Account; timeout?: number } = {}): Promise<Reply> {
     const headers: Record<string, string> = {};
     if (init.body !== undefined) headers['content-type'] = 'application/json';
     const me = init.auth === true ? account() : init.auth || null;
     if (me) headers.authorization = `Bearer ${me.id}.${me.token}`;
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    const timer = setTimeout(() => controller.abort(), init.timeout ?? timeoutMs);
     try {
       const response = await options.fetch(`${url}${path}`, {
         method: init.method ?? 'GET',
@@ -284,7 +293,7 @@ export function createServerBoard(options: ServerBoardOptions): ServerBoard {
     // Hesapsız kuyruğa giren koşu açılan hesaba bağlanıyor: istek kopsa da sonra
     // yalnız bu hesapla gitsin (Codex #80).
     if (owner === undefined) bindPending(code, me.id);
-    const reply = await call('/v1/seed/runs', { method: 'POST', body: { code }, auth: me });
+    const reply = await call('/v1/seed/runs', { method: 'POST', body: { code }, auth: me, timeout: submitTimeoutMs });
     if (!reply) return 'offline';
     // Gönderim geçti: eski "şu kadar sonra dene" süresi artık geçerli değil (Codex #80).
     if (reply.status === 201 || (reply.status === 200 && reply.body.outcome === 'kept-better')) retryAt = 0;
@@ -307,6 +316,11 @@ export function createServerBoard(options: ServerBoardOptions): ServerBoard {
     }
     if (reply.status === 400 && reply.body.error === 'name-blocked') return 'name-blocked';
     if (reply.status === 409 && reply.body.error === 'week') return 'closed';
+    // Tur 52: sunucu koşuyu yeniden oynatıyor. Başka sürümün koşusu bekliyor
+    // (sunucu ya da oyun güncellenince gidiyor); tutmayan ve kopya koşu düşüyor.
+    if (reply.status === 409 && reply.body.error === 'sim') return 'version';
+    if (reply.status === 409 && reply.body.error === 'copy') return 'copy';
+    if (reply.status === 422 && reply.body.error === 'replay') return 'rejected';
     if (reply.status === 429) {
       noteRetry(reply.body.retryAfter);
       return 'busy';
@@ -374,7 +388,7 @@ export function createServerBoard(options: ServerBoardOptions): ServerBoard {
           // Kalan koşu yeniden deneniyor: yoğunluk da, kopan istek de. Tarayıcı
           // çevrimiçiyken yol kopabiliyor (DNS, zaman aşımı); yol açılınca
           // `online` olayı gelmiyor (Codex #80).
-          if (outcome === 'offline' || outcome === 'busy') {
+          if (outcome === 'offline' || outcome === 'busy' || outcome === 'version') {
             kept = true;
             continue;
           }
@@ -420,7 +434,7 @@ export function createServerBoard(options: ServerBoardOptions): ServerBoard {
   function toEntry(raw: unknown): LeagueEntry | null {
     if (!raw || typeof raw !== 'object') return null;
     const row = raw as Record<string, unknown>;
-    const { id, weekId, companyName, ceoId, score, curve, submittedAt, codeKey, mine } = row;
+    const { id, weekId, companyName, ceoId, score, curve, submittedAt, codeKey, mine, verified, idle } = row;
     if (typeof id !== 'string' || typeof weekId !== 'string' || typeof companyName !== 'string' || typeof score !== 'number') return null;
     if (typeof codeKey !== 'string' || !/^[0-9a-f]{64}$/.test(codeKey)) return null;
     return {
@@ -435,6 +449,9 @@ export function createServerBoard(options: ServerBoardOptions): ServerBoard {
       loadCode: () => loadCode(codeKey),
       submittedAt: typeof submittedAt === 'string' ? submittedAt : '',
       mine: mine === true,
+      // Sunucu gönderimde yeniden oynattı (Tur 52); eski sunucunun satırlarını tarayıcı doğruluyor.
+      verified: verified === true,
+      idle: idle === true,
     };
   }
 
@@ -472,7 +489,9 @@ export function createServerBoard(options: ServerBoardOptions): ServerBoard {
         if (read(SEEN_KEY) === url) listen();
         return 'offline';
       }
-      const ok = reply.status === 200 && typeof reply.body.seed === 'number' && reply.body.seed >= 1;
+      // Tur 51'in sunucusu (`verify` yok) koşuyu doğrulamıyor, eski tabloya
+      // yazıyor; Tur 52 gelince o koşular görünmez olurdu (Codex #81).
+      const ok = reply.status === 200 && atLeastOne(reply.body.seed) && atLeastOne(reply.body.verify);
       write(SEEN_KEY, ok ? url : null);
       // Dinleme yalnız kullanılacak tabloda: tanınmayan sunucunun tablosu atılıyor.
       if (ok) listen();
@@ -541,13 +560,17 @@ export function createServerBoard(options: ServerBoardOptions): ServerBoard {
       // silerse koşu yeni hesapla yayımlanmıyor, hesapsız kuyruğa da girmiyor.
       const attempt: Attempt = { owner: account()?.id, direct: true };
       const outcome = await send(entry.code, attempt);
-      if (outcome === 'offline') {
+      if (outcome === 'offline' || outcome === 'version') {
         // Kuyruğa denediği hesapla (hesap açılamadıysa hesapsız); o hesap bu
-        // arada gittiyse ya da siliniyorsa kuyruğa girmiyor.
+        // arada gittiyse ya da siliniyorsa kuyruğa girmiyor. Sürüm farkında
+        // da koşu bekliyor (Tur 52): sürümler eşleşince gidiyor.
         const owner = attempt.used ?? attempt.owner;
         if (owner !== undefined && (account()?.id !== owner || deleting(owner))) return 'error';
         queue(entry.weekId, entry.code, owner);
-        return 'queued';
+        // Kendiliğinden yeniden deneniyor: tarayıcı çevrimiçiyken kopan istekte
+        // ve sürüm farkında `online` olayı gelmiyor.
+        retryLater();
+        return outcome === 'version' ? 'version' : 'queued';
       }
       if (outcome === 'saved' || outcome === 'kept-better') refreshAll();
       return outcome;

@@ -89,6 +89,10 @@ jobs:
             SEED=$(curl -fsS -H 'origin: https://catikur.github.io' -D seed.headers "$URL/v1/seed/weeks/$WEEK")
             grep -qi '^access-control-allow-origin: https://catikur.github.io' seed.headers
             echo "$SEED" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const t=JSON.parse(s);if(!Array.isArray(t.entries))process.exit(1);console.log("Tohum Ligi:",t.week,t.total,"koşu")})'
+            # Tur 52: sunucu koşuyu gönderimde yeniden oynatıyor (Workers Paid).
+            if ! curl -fsS "$URL/v1/health" | grep -q '"verify":1'; then
+              echo "::warning::Canlı sunucu Tur 51 sürümünde: koşuyu sunucu doğrulamıyor. Workers Paid'i aç, yeni paketi yapıştır (ios-lite/README.md, Tur 51–52)."
+            fi
           else
             echo "::warning::Canlı sunucu eski sürüm (ana oyunun Tohum Ligi yok); yeni paketi yapıştır ve şemayı uygula (ios-lite/README.md). O zamana kadar oyun yerel tabloyla açılıyor."
           fi

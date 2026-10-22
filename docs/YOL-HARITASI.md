@@ -62,8 +62,8 @@ sırayla, her tur ayrı PR, rapor fazın sonunda.
 
 | Tur | İş | Durum |
 |---|---|---|
-| **51 · Lig sunucusu ana oyuna** | Lite'ın sunucusu ana oyunun koşularını da alıyor, Pages'te paylaşılan tablo oluyor. | bu PR |
-| **52 · Sunucuda doğrulama** | Gönderilen koşu sunucuda yeniden oynanıyor, skor orada hesaplanıyor. Simülasyon da sunucu da TypeScript. Bu, DURUM'daki en eski güvenlik açığını kapatır. | |
+| **51 · Lig sunucusu ana oyuna** | Lite'ın sunucusu ana oyunun koşularını da alıyor, Pages'te paylaşılan tablo oluyor. | bitti (#80) |
+| **52 · Sunucuda doğrulama** | Gönderilen koşu sunucuda yeniden oynanıyor, skor orada hesaplanıyor. Simülasyon da sunucu da TypeScript. Bu, DURUM'daki en eski güvenlik açığını kapatır. | bu PR |
 | **53 · Haftanın kuralı ve günlük kısa koşu** | Ligde ek kurallar her hafta dönüyor; bir de 90 günlük günlük koşu geliyor. | |
 | **54 · Hayalet eğri** | Liderlerin değer eğrisi senin koşunun üstünde görünüyor ("lider 300. günde ne yapmıştı"). | |
 | **55 · Davetli ligler ve arkadaş tablosu** | Lite'ta var, ana oyuna geliyor. | |
@@ -71,7 +71,9 @@ sırayla, her tur ayrı PR, rapor fazın sonunda.
 Kodu ve yerel sunucu testlerini Claude yapıyor. Canlı yayın kullanıcının
 hesabında; canlı veritabanına yazılmıyor. Tur 51'den beri canlı sunucu
 eski sürümde kaldıkça Pages'teki oyun yerel tabloyla açılıyor; güncelleme
-adımları `ios-lite/README.md`'de ("Sunucuyu güncellerken").
+adımları `ios-lite/README.md`'de ("Sunucuyu güncellerken"). Tur 52'den beri
+sıra: Workers Paid, şema, kod. Simülasyonu değiştiren her birleşmeden sonra
+Worker yeniden dağıtılıyor; o zamana kadar yeni koşular bekliyor.
 
 ### Faz 3 · Yeni yollar
 

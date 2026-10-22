@@ -3210,10 +3210,15 @@ async function finish(browser, consoleErrors) {
     const network = (text) => /Failed to load resource|ERR_INTERNET_DISCONNECTED|ERR_CONNECTION_REFUSED|ERR_NETWORK_CHANGED/.test(text);
     const errors = [];
     const contexts = [];
+    // Satır kodunun indirilmesi (Tur 52: sunucunun doğruladığı satırın kodu inmemeli).
+    const codeRequests = [];
     // Bağlamın kaydı varsa oyun kurulum yerine kayıttan açılıyor (A'nın ikinci sayfası).
     const page = async (context, label) => {
       const p = await context.newPage();
       p.on('pageerror', (e) => errors.push(`${label}: ${e.message}`));
+      p.on('request', (r) => {
+        if (r.url().includes('/v1/seed/codes/')) codeRequests.push(label);
+      });
       p.on('console', (m) => {
         if (m.type() === 'error' && !network(m.text())) errors.push(`${label}: ${m.text()}`);
       });
@@ -3258,14 +3263,16 @@ async function finish(browser, consoleErrors) {
       await p.locator('button:has-text("Şirketi kur")').click();
       await p.waitForSelector('.topbar', { timeout: 20000 });
     };
-    const playLeague = (p) =>
-      p.evaluate(() => {
+    // `nth`: kaçıncı boş arsa. Her tarayıcı başka bir oyun oynuyor: aynı hamleler
+    // aynı skoru ve eğriyi verir, sunucu da onu başkasının kopyası sayar (Tur 52).
+    const playLeague = (p, nth) =>
+      p.evaluate((nth) => {
         const cap = window.__capital;
         const s = cap.getState();
-        const t = s.map.tiles.find((x) => {
+        const t = s.map.tiles.filter((x) => {
           const d = s.districts[x.districtId];
           return x.kind === 'plot' && !x.ownerId && !x.structureId && (d.opensOnDay === undefined || d.opensOnDay <= s.time.day);
-        });
+        })[nth];
         cap.engine.dispatch({ type: 'BUY_TILE', tileId: t.id });
         cap.engine.dispatch({ type: 'BUILD', tileId: t.id, defId: 'corner_shop' });
         cap.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
@@ -3273,7 +3280,7 @@ async function finish(browser, consoleErrors) {
         while (cap.getState().league.finishedDay === undefined && guard++ < 400) cap.engine.runDay();
         cap.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
         return { week: cap.getState().league.weekId, score: cap.getState().league.score };
-      });
+      }, nth);
     const table = async (week) => {
       try {
         const response = await fetch(`${leagueUrl}/v1/seed/weeks/${week}`);
@@ -3316,7 +3323,7 @@ async function finish(browser, consoleErrors) {
       // A: oynuyor, sonuç ekranından sunucuya gönderiyor.
       const a = await open(leagueUrl, 'A');
       await startLeague(a.p, 'Sunucu Holding');
-      const runA = await playLeague(a.p);
+      const runA = await playLeague(a.p, 0);
       await a.p.waitForSelector('.league-result', { timeout: 5000 }).catch(() => null);
       await serverReady(a.p);
       const result = await a.p.evaluate(() => ({
@@ -3338,6 +3345,28 @@ async function finish(browser, consoleErrors) {
       check('Tabloda oyuncunun kimliği yok, kodun yerine özeti var',
         onServer !== null && !('code' in onServer.entries[0]) && /^[0-9a-f]{64}$/.test(onServer.entries[0].codeKey ?? ''));
 
+      // Tur 52: sunucu koşuyu yeniden oynatıyor; skoru şişirilmiş kod tabloya girmiyor.
+      const forged = await (async () => {
+        try {
+          const { code } = await (await fetch(`${leagueUrl}/v1/seed/codes/${onServer.entries[0].codeKey}`)).json();
+          const run = JSON.parse(Buffer.from(code.slice(4), 'base64').toString('utf8'));
+          run.score *= 10;
+          run.companyName = 'Şişik Holding';
+          const forgedCode = `CF1.${Buffer.from(JSON.stringify(run), 'utf8').toString('base64')}`;
+          const account = await (await fetch(`${leagueUrl}/v1/seed/players`, { method: 'POST' })).json();
+          const reply = await fetch(`${leagueUrl}/v1/seed/runs`, {
+            method: 'POST',
+            headers: { 'content-type': 'application/json', authorization: `Bearer ${account.id}.${account.token}` },
+            body: JSON.stringify({ code: forgedCode }),
+          });
+          return { status: reply.status, body: await reply.json(), total: (await table(runA.week))?.total };
+        } catch (error) {
+          return { status: 0, body: String(error) };
+        }
+      })();
+      check('Sunucu koşuyu yeniden oynatıyor: skoru şişirilmiş kod tabloya girmiyor (Tur 52)',
+        forged.status === 422 && forged.body?.error === 'replay' && forged.total === 1, JSON.stringify(forged).slice(0, 120));
+
       await a.p.locator('.league-result button:has-text("Tabloyu aç")').click();
       const boardA = await a.p.locator('[data-league-board]').first().getAttribute('data-league-board').catch(() => null);
       const okA = await verified(a.p);
@@ -3345,14 +3374,17 @@ async function finish(browser, consoleErrors) {
         text: document.querySelector('[data-league-row="ranked"]')?.textContent ?? '',
         mine: document.querySelector('[data-league-row="ranked"]')?.classList.contains('mine') ?? false,
       }));
-      check('Tablo sunucunun; satırın kodu sırası gelince iniyor ve tarayıcıda doğrulanıyor',
-        boardA === 'server' && okA && rowA.text.includes('doğrulandı') && rowA.mine, `${boardA} · ${rowA.text.trim().slice(0, 80)}`);
+      // Tur 52: satır sunucuda doğrulanmış; tarayıcı kodu indirip yeniden oynatmıyor.
+      rowA.codes = codeRequests.filter((label) => label === 'A').length;
+      check('Tablo sunucunun; satır sunucuda doğrulanmış, tarayıcı yeniden oynatmıyor (kod inmiyor)',
+        boardA === 'server' && okA && rowA.text.includes('doğrulandı') && rowA.mine && rowA.codes === 0,
+        `${boardA} · ${rowA.text.trim().slice(0, 80)} · ${rowA.codes} kod indi`);
       await a.p.close();
 
       // B: başka bir tarayıcı aynı haftada: tablo aynı, satır onun değil, hayalet o.
       const b = await open(leagueUrl, 'B');
       await startLeague(b.p, 'İkinci Holding');
-      // Takvim dursun: tekrar bu tarayıcıda koşuyor, oyunla yarışmasın.
+      // Takvim dursun: panel açılırken oyun ilerlemesin.
       await b.p.evaluate(() => window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 }));
       await b.p.locator('.agenda [data-agenda="league"] button').first().click();
       const boardB = await serverBoard(b.p);
@@ -3372,7 +3404,7 @@ async function finish(browser, consoleErrors) {
       // C: sonuç ekranında bağlantı yok: gönderim bekliyor, bağlantı gelince gidiyor.
       const c = await open(leagueUrl, 'C');
       await startLeague(c.p, 'Bekleyen Holding');
-      const runC = await playLeague(c.p);
+      const runC = await playLeague(c.p, 1);
       await c.p.waitForSelector('.league-result', { timeout: 5000 }).catch(() => null);
       await serverReady(c.p);
       await c.context.setOffline(true);
@@ -3418,7 +3450,7 @@ async function finish(browser, consoleErrors) {
       const boardD = await d.p.locator('[data-league-board]').first().getAttribute('data-league-board').catch(() => null);
       check('Sunucuya ulaşılamayınca yerel tablo', boardD === 'local', String(boardD));
       await d.p.keyboard.press('Escape');
-      const runD = await playLeague(d.p);
+      const runD = await playLeague(d.p, 2);
       await d.p.waitForSelector('.league-result', { timeout: 5000 }).catch(() => null);
       await d.p.locator('.league-result .primary:has-text("Tabloya yaz")').click();
       const localSent = await d.p.waitForSelector('[data-league-sent]', { timeout: 10000 }).then((h) => h.textContent()).catch(() => '');

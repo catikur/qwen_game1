@@ -299,32 +299,47 @@ sırrını şimdilik **tanımlama**: sunucu tarafı hazır ama web ve Android
 istemcisinde doğrulama kutusu henüz yok; sır tanımlanırsa yeni web ve Android
 hesapları açılamaz (bot sorunu çıkarsa istemci tarafı eklenecek).
 
-**Sunucuyu güncellerken (Tur 51, ana oyunun Tohum Ligi):** GitHub Pages'teki
-CapitalForge de lig tablosunu bu sunucudan okuyor (`src/seed.ts`). Canlı
-sunucu bu sürüme gelene kadar oyun kendi yerel tablosuyla açılıyor; bir şey
-bozulmuyor.
+**Sunucuyu güncellerken (Tur 51–52, ana oyunun Tohum Ligi):** GitHub
+Pages'teki CapitalForge de lig tablosunu bu sunucudan okuyor (`src/seed.ts`).
+Canlı sunucu bu sürüme gelene kadar oyun kendi yerel tablosuyla açılıyor; bir
+şey bozulmuyor. Tur 52'den beri sunucu her koşuyu gönderimde yeniden
+oynatıyor: tabloya yalnız doğrulanmış skor giriyor.
 
-**Öneri: Tur 52'yi bekle.** Bu sürümde skoru sunucu değil, her tarayıcı
-yeniden oynayarak doğruluyor. Tablo en iyi 50 satırı beyan edilen skora göre
-seçiyor. Biri 50 hesapla şişirilmiş koşu gönderirse tarayıcılar onları
-reddeder ama dürüst satırlar tabloya giremez (Codex #80). Tur 52'de sunucu
-koşuyu gönderimde yeniden oynatıyor; tabloya yalnız doğrulanmış skor giriyor.
+Açmak için (sıra önemli):
 
-Açmak için:
-
-1. Önce şema. **Storage & Databases → D1 → capitalforge-lite-league →
+1. **Workers Paid** (aylık 5 $): Cloudflare panelinde **Workers & Pages →
+   Plans**. Tekrar koşu başına ~1,5–2 sn CPU harcıyor; ücretsiz katmanın
+   istek başına sınırı 10 ms. Ücretsiz katmanda gönderimler CPU sınırına
+   takılır (oyun bunu geçici hata sayıp koşuyu bekletiyor); Lite etkilenmiyor.
+   Ücretli planın varsayılan sınırı (istek başına 30 sn) yetiyor, ayar gerekmiyor.
+2. Şema. **Storage & Databases → D1 → capitalforge-lite-league →
    Console**: `schema.sql`'in tamamını çalıştır. Her tablo `IF NOT EXISTS`;
    var olanlar değişmiyor, eski kod yeni tablolarla sorunsuz çalışıyor.
-   Konsol toplu ifade almazsa son üç bölüm (`seed_runs`, `seed_gaps` ve
-   `seed_limits`) tek tek.
-2. Sonra kod. `pnpm lite:league-bundle` → paketi paneldeki Worker kodunun
-   yerine yapıştır, **Deploy** (A'nın 1. ve 3. adımı). Paket artık ana oyunun
-   koşu çözücüsünü de taşıyor (~265 KB, sıkıştırılmış ~72 KB). Sıra önemli:
-   yeni kod sağlık ucunda hemen `"seed":1` diyor ve oyun sunucu tablosuna
-   geçiyor; tablolar yoksa istekleri düşerdi (Codex #80).
-3. Denetim: `/v1/health` cevabında `"seed":1`. Pages'teki oyun sonraki
-   açılışta lig sunucusunun tablosuna geçiyor.
+   Doğrulanmış koşular `seed_verified`'da. Konsol toplu ifade almazsa son
+   bölümler (`seed_verified`, `seed_gaps` ve `seed_limits`) tek tek.
+3. Kod. `pnpm lite:league-bundle` → paketi paneldeki Worker kodunun yerine
+   yapıştır, **Deploy** (A'nın 1. ve 3. adımı). Paket ana oyunun motorunu da
+   taşıyor (~700 KB, sıkıştırılmış ~185 KB; ücretli sınır 10 MB). Yeni kod
+   sağlık ucunda hemen `"seed":1` ve `"verify":1` diyor ve oyun sunucu
+   tablosuna geçiyor; tablolar yoksa istekleri düşerdi (Codex #80). Oyun
+   `"verify":1` demeyen sunucuyu (Tur 51'inki) kullanmıyor: o koşuyu
+   doğrulamadan eski tabloya yazıyor, yeni kod gelince görünmez olurdu
+   (Codex #81).
+4. Denetim: `/v1/health` cevabında `"seed":1` ve `"verify":1`. Pages'teki
+   oyun sonraki açılışta lig sunucusunun tablosuna geçiyor.
+5. Yalnız Tur 51 canlıya gittiyse (gitmedi): yeni Worker çalışırken konsolda
+   `DROP TABLE IF EXISTS seed_runs;`. O tabloda sunucunun doğrulamadığı
+   koşular var; yeni kod onu okumuyor. Şema Worker'dan önce uygulandığı için
+   2. adımda silinmiyor: eski Worker yeni kod gelene kadar onunla çalışsın
+   (Codex #81).
 
-B kuruluysa bu üç adımı **Run workflow** ile CI yapıyor; `main`'e
-birleşmek kendiliğinden dağıtmıyor (4. adımdaki değişken açılmadıkça).
+**Sürüm uyumu.** Sunucu koşuyu yalnız kendi simülasyon sürümüyle
+yargılayabiliyor. Pages'teki oyun her `main` birleşmesinde kendiliğinden
+güncelleniyor, Worker elle. Oyunun simülasyonunu değiştiren bir birleşmeden
+sonra (çekirdek ya da içerik; "Lite lig sunucusu" iş akışı bu dosyalarda
+koşuyor) 3. adımı tekrarla. O zamana kadar yeni koşular "sunucu bu sürümü
+henüz tanımıyor" diye bekliyor, dağıtılınca kendiliğinden gidiyor.
+
+B kuruluysa 2. ve 3. adımı **Run workflow** ile CI yapıyor; `main`'e
+birleşmek kendiliğinden dağıtmıyor (B'nin 4. adımındaki değişken açılmadıkça).
 
