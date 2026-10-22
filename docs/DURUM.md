@@ -5438,11 +5438,14 @@ kendiliğinden gidiyor. Hafta kapanırsa bekleyen koşu düşüyor. Adımlar
 `ios-lite/README.md`'de ("Sunucuyu güncellerken, Tur 51–52").
 
 **Canlıya geçiş (kullanıcının hesabında).** Sıra: Workers Paid, şema,
-kod. Sonra `/v1/health` `"seed":1` ve `"verify":1` diyor. Ücretsiz katmanda
+kod. Sonra `/v1/health` `"seed":1` ve `"verify":1` diyor. Oyun `"verify":1`
+demeyen sunucuyu (Tur 51'inki) eski sayıp yerel tabloyla açılıyor: o sunucu
+koşuyu doğrulamadan eski tabloya yazıyor, Tur 52 gelince koşu görünmez
+olurdu (Codex #81). Test düzeltmeden önce kaldı. Ücretsiz katmanda
 gönderim CPU sınırına takılır; oyun bunu geçici hata sayıp koşuyu
 bekletiyor, Lite etkilenmiyor.
 
-**Doğrulama.** `pnpm test` 581/581; tip denetimi temiz.
+**Doğrulama.** `pnpm test` 582/582; tip denetimi temiz.
 - `seed.test.ts` (23 test; 8'i yeni): gerçek koşularla, oyunun motoruyla:
   - dürüst koşu doğrulanmış giriyor, eğri tekrarın kendisi;
   - şişirilmiş skor, değiştirilmiş eğri ve günlükten hamlesi düşmüş koşu
@@ -5455,8 +5458,8 @@ bekletiyor, Lite etkilenmiyor.
   - Tur 51'in şemasıyla kurulmuş veritabanı güncelleniyor, eski satır
     sunulmuyor, hesap silinince eski satırı da gidiyor; aynı anda gelen iki
     kopyadan yalnız ilki tabloda (Codex #81).
-- `client.test.ts` (32 test): sürüm farkında koşu bekleyip sunucu
-  güncellenince kendiliğinden gidiyor; sunucunun satırı doğrulanmış; tutmayan
+- `client.test.ts` (33 test): sürüm farkında koşu bekleyip sunucu
+  güncellenince kendiliğinden gidiyor; Tur 51'in sunucusu eski sayılıyor; sunucunun satırı doğrulanmış; tutmayan
   ve kopya koşu düşüyor.
 - `leagueVerify.test.ts` (4 test): sunucunun doğruladığı satır tekrar
   beklemeden sıralamada, kodu inmiyor; sunucunun boş dediği iki koşu kopya
@@ -5573,7 +5576,7 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi). Senaryo şehirlerinde gün 3–17 ms (`pnpm dayperf`, Tur 43) |
-| Birim testi | **581 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de, Tur 52'de sunucuda tekrar) |
+| Birim testi | **582 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de, Tur 52'de sunucuda tekrar) |
 | Denge testi | **331 kontrol, hepsi geçiyor** (25 bölüm, süreleriyle; ~13 dk) |
 | Tarayıcı testi | **521 kontrol, hepsi geçiyor**, 0 konsol hatası (~40 dk); duman koşusu 132 (~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + paket bütçesi (Tur 46; Tur 48'den beri hizmet çalışanı ve manifest de) + duman oynanışı |

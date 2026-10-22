@@ -24,6 +24,8 @@ interface Net {
   online: boolean;
   /** Eski sunucu: sağlık ucu `seed` demiyor, ana oyunun uçları yok. */
   old: boolean;
+  /** Tur 51'in sunucusu: sağlık ucu `seed` diyor, `verify` demiyor (koşuyu doğrulamıyor). */
+  tur51?: boolean;
   now: number;
   requests: string[];
 }
@@ -44,6 +46,7 @@ function client(db: Db, net: Net, storage = memoryStorage(), online = new EventT
     net.requests.push(`${request.method} ${new globalThis.URL(request.url).pathname}`);
     if (!net.online) throw new TypeError('fetch failed');
     if (net.old && new globalThis.URL(request.url).pathname === '/v1/health') return Response.json({ ok: true, week: WEEK });
+    if (net.tur51 && new globalThis.URL(request.url).pathname === '/v1/health') return Response.json({ ok: true, week: WEEK, seed: 1 });
     if (net.old) return Response.json({ error: 'route' }, { status: 404 });
     return handle(request, db, net.now, TRUSTING);
   }) as typeof fetch;
@@ -113,6 +116,19 @@ test('istemci: sunucuyu tanıyor; eski sunucu ve bağlantısızlık ayrılıyor'
   assert.equal(await board.probe(), 'old');
   assert.equal(board.seen(), false, 'eski sürüme dönen sunucu artık sayılmıyor');
   assert.equal(storage.map.has('capitalforge.league.account'), false, 'tanımak hesap açmıyor');
+});
+
+test('istemci: Tur 51\'in sunucusu (doğrulamıyor) eski sayılıyor; koşu ona gitmiyor (Codex #81)', async () => {
+  const db = memoryDb();
+  const net: Net = { online: true, old: false, tur51: true, now: THURSDAY, requests: [] };
+  const { board } = client(db, net);
+  assert.equal(await board.probe(), 'old');
+  assert.equal(board.seen(), false, 'tablo seçilmiyor: oyun yerel tabloyla açılıyor');
+  assert.deepEqual(net.requests, ['GET /v1/health'], 'hesap açılmıyor, koşu gönderilmiyor');
+  // Sunucu Tur 52'ye geçince tanınıyor.
+  net.tur51 = false;
+  assert.equal(await board.probe(), 'ok');
+  assert.equal(board.seen(), true);
 });
 
 test('istemci: ilk gönderim hesap açıyor; tablo satırı geliyor, kod ayrı iniyor', async () => {

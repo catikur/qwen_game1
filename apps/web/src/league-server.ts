@@ -38,7 +38,7 @@ export interface ServerBoardOptions {
 
 export interface ServerBoard extends LeagueBoard {
   kind: 'server';
-  /** Sunucu ayakta ve bu sürümde mi (sağlık ucunda `seed`)? */
+  /** Sunucu ayakta ve bu sürümde mi (sağlık ucunda `seed` ve `verify`)? */
   probe(): Promise<'ok' | 'old' | 'offline'>;
   /** Bu tarayıcı sunucuyu daha önce çalışırken gördü mü (bağlantısız açılışta da sunucu tablosu kalsın)? */
   seen(): boolean;
@@ -112,6 +112,11 @@ function fallbackFor(storage: object | null): Fallback {
     fallbacks.set(key, found);
   }
   return found;
+}
+
+/** Sağlık ucunun sürüm işareti (`seed`, `verify`) var ve en az 1 mi? */
+function atLeastOne(value: unknown): boolean {
+  return typeof value === 'number' && value >= 1;
 }
 
 export function createServerBoard(options: ServerBoardOptions): ServerBoard {
@@ -484,7 +489,9 @@ export function createServerBoard(options: ServerBoardOptions): ServerBoard {
         if (read(SEEN_KEY) === url) listen();
         return 'offline';
       }
-      const ok = reply.status === 200 && typeof reply.body.seed === 'number' && reply.body.seed >= 1;
+      // Tur 51'in sunucusu (`verify` yok) koşuyu doğrulamıyor, eski tabloya
+      // yazıyor; Tur 52 gelince o koşular görünmez olurdu (Codex #81).
+      const ok = reply.status === 200 && atLeastOne(reply.body.seed) && atLeastOne(reply.body.verify);
       write(SEEN_KEY, ok ? url : null);
       // Dinleme yalnız kullanılacak tabloda: tanınmayan sunucunun tablosu atılıyor.
       if (ok) listen();

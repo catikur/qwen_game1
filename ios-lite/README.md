@@ -320,8 +320,11 @@ Açmak için (sıra önemli):
 3. Kod. `pnpm lite:league-bundle` → paketi paneldeki Worker kodunun yerine
    yapıştır, **Deploy** (A'nın 1. ve 3. adımı). Paket ana oyunun motorunu da
    taşıyor (~700 KB, sıkıştırılmış ~185 KB; ücretli sınır 10 MB). Yeni kod
-   sağlık ucunda hemen `"seed":1` diyor ve oyun sunucu tablosuna geçiyor;
-   tablolar yoksa istekleri düşerdi (Codex #80).
+   sağlık ucunda hemen `"seed":1` ve `"verify":1` diyor ve oyun sunucu
+   tablosuna geçiyor; tablolar yoksa istekleri düşerdi (Codex #80). Oyun
+   `"verify":1` demeyen sunucuyu (Tur 51'inki) kullanmıyor: o koşuyu
+   doğrulamadan eski tabloya yazıyor, yeni kod gelince görünmez olurdu
+   (Codex #81).
 4. Denetim: `/v1/health` cevabında `"seed":1` ve `"verify":1`. Pages'teki
    oyun sonraki açılışta lig sunucusunun tablosuna geçiyor.
 5. Yalnız Tur 51 canlıya gittiyse (gitmedi): yeni Worker çalışırken konsolda
