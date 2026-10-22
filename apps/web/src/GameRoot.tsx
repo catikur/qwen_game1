@@ -46,7 +46,7 @@ import { Soundscape } from './audio';
  * arka planda iniyor (`App.tsx`). Kurulumun oyunu başlatmak için
  * istediği motor ve yeni oyun işlevleri de buradan geliyor.
  */
-export { GameEngine, createLeagueGame, createNewGame, leagueWeekId, startScenario } from '@capital/core';
+export { GameEngine, createLeagueGame, createNewGame, leagueDayId, leagueWeekId, startScenario } from '@capital/core';
 export { startTutorial } from '@capital/ui';
 
 const AUTOSAVE_INTERVAL_MS = 30_000;
