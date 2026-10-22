@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { ReactElement } from 'react';
 import { CEO_BY_ID } from '@capital/content';
 import { LEAGUE_SAMPLE_DAYS, encodeRun, formatMoney, getPlayer, runFromState, verifyRun } from '@capital/core';
@@ -464,6 +464,13 @@ export function LeagueResultScreen({ onNewGame }: { onNewGame: () => void }): Re
   const [sent, setSent] = useState<{ text: string; final: boolean } | null>(null);
   const [sending, setSending] = useState(false);
   const [code, setCode] = useState<string | null>(null);
+  // Tablo değişince (ör. yerel tablodan sunucuya geçildi) gönderim yeniden açık: koşu yeni tabloya da gidebilsin (Codex #80).
+  const current = useRef(board);
+  useEffect(() => {
+    current.current = board;
+    setSent(null);
+    setSending(false);
+  }, [board]);
   const league = state.league;
   if (!league || league.finishedDay === undefined || league.resultSeen) return null;
 
@@ -473,7 +480,8 @@ export function LeagueResultScreen({ onNewGame }: { onNewGame: () => void }): Re
   const submit = async () => {
     if (!leagueRun) return;
     setSending(true);
-    const outcome = await board.submit({
+    const target = board;
+    const outcome = await target.submit({
       weekId: leagueRun.weekId,
       companyName: leagueRun.companyName,
       ceoId: leagueRun.ceoId,
@@ -482,8 +490,10 @@ export function LeagueResultScreen({ onNewGame }: { onNewGame: () => void }): Re
       code: encodeRun(leagueRun),
       submittedAt: new Date().toISOString(),
     });
+    // Gönderim sürerken tablo değiştiyse sonucu eski tablonun: yeni tablonun düğmesi açık kalıyor.
+    if (current.current !== target) return;
     setSending(false);
-    const text = submitText(outcome, board.kind);
+    const text = submitText(outcome, target.kind);
     setSent({ text, final: !RETRYABLE.has(outcome) });
     toast(text, outcome === 'saved' || outcome === 'kept-better' || outcome === 'queued' ? 'good' : 'bad');
   };

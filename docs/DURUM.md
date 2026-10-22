@@ -5145,6 +5145,20 @@ Tur 51"). "Canlı sunucu denetimi" yeni uçları yalnız okuyarak deniyor
   gönderim kendi elindeki hesapla. Test düzeltmeden önce kaldı.
 - *Codex #80: sunucuyu güncelleme sırası.* Kod önce yapıştırılırsa şema
   gelene kadar oyun sunucu tablosunu seçip hata alırdı; README'de önce şema.
+- *Codex #80: bağlantısız açılışta bekleyen gönderim gitmiyordu.* Sunucu
+  daha önce görüldüğü için sunucu tablosu seçiliyor ama dinleme yalnız
+  sunucu tanınınca başlıyordu; oyuncu serbest oyundaysa koşu bekliyordu.
+  Dinleme artık görülmüş sunucuda bağlantısızken de başlıyor. Test bir şey
+  daha yakaladı: bağlantı, bağlantısızken başlamış bir gönderim turu
+  sürerken gelirse o tura katılıyor ve boşa düşüyordu. İş sürerken gelen
+  istek artık bir tur daha koşturuyor. Test düzeltmeden önce kaldı.
+- *Codex #80: tablo değişince sonuç ekranı kapalı kalıyordu.* Açılışta
+  sunucu daha seçilmemişken gönderen oyuncunun koşusu yerel tabloya
+  yazılıyor, düğme "gönderildi" diye kapanıyordu; sunucu sonra bulununca da
+  kapalı kalıyordu. Tablo değişince gönderim yeniden açık. Gönderim sürerken
+  tablo değişirse sonuç eski tablonun, yeni tablonun düğmesi açık kalıyor.
+  Açılışta yerel tablodan yerel tabloya geçiş de artık yok. Tarayıcı
+  kontrolü düzeltmeden önce kaldı.
 - *Codex #80, yapılmadı: sekmeler arası bekleyen kuyruk.* İki sekme aynı
   anda bağlantısız gönderirse birinin yazımı ötekini ezebilir. Okuma ve
   yazma aynı eşzamanlı adımda, arada bekleme yok; iki sekmenin aynı anda
@@ -5176,7 +5190,7 @@ makinede 42 durumun hepsi geçiyordu.
 - CI'nin tam koşusu 27 dk'ydı, sınır 30 dk. Tarayıcı işinin süresi 45 dk
   oldu; iş artık bağımlılıkları da kuruyor (yerel lig sunucusu için).
 
-**Doğrulama.** `pnpm test` 544/544; tip denetimi temiz.
+**Doğrulama.** `pnpm test` 545/545; tip denetimi temiz.
 - `seed.test.ts` (12 test):
   - hesap, gönderim, herkese açık tablo ve kod;
   - en iyisi kalıyor, satırın kimliği aynı, gönderim aralığı;
@@ -5190,7 +5204,7 @@ makinede 42 durumun hepsi geçiyordu.
   - haftalık temizlik;
   - sunucunun haftası oyununkiyle aynı;
   - CORS.
-- `client.test.ts` (10 test): oyunun istemcisi gerçek sunucuya karşı
+- `client.test.ts` (11 test): oyunun istemcisi gerçek sunucuya karşı
   (bellekte SQLite):
   - sunucuyu tanıma, eski sunucu, bağlantısızlık;
   - ilk gönderimde hesap, satır ve kodun ayrı inmesi, başka tarayıcı;
@@ -5199,10 +5213,11 @@ makinede 42 durumun hepsi geçiyordu.
   - hesap silme;
   - bekleyen gönderimin tablo kapalıyken ve açılışta gitmesi;
   - yazılamayan tarayıcı deposu, bağlantısız yeniden açılışta son tablo, iki
-    sekmenin aynı anda ilk gönderimi (Codex #80).
+    sekmenin aynı anda ilk gönderimi, bağlantısız açılışta bekleyen gönderim
+    (Codex #80).
 - `leagueVerify.test.ts` (2 test): önbellek anahtarı kodun özetiyle; kod
   satırda yoksa iniyor, inmezse sonuçsuz.
-- Tarayıcı testine "Tohum Ligi: lig sunucusu" bölümü (11 kontrol, ~4 dk).
+- Tarayıcı testine "Tohum Ligi: lig sunucusu" bölümü (13 kontrol, ~5 dk).
   Yerel lig sunucusu ve dört tarayıcı:
   - sonuç ekranı sunucuya gönderiyor ve ne paylaşıldığını yazıyor;
   - koşu sunucuda (şirket adı, skor), tabloda oyuncunun kimliği ve kod yok;
@@ -5210,10 +5225,14 @@ makinede 42 durumun hepsi geçiyordu.
   - başka tarayıcı aynı tabloyu görüyor, hayaleti o koşu, hesabı yok;
   - bağlantısız gönderim bekliyor, bağlantı gelince gidiyor;
   - hesap silme koşuyu sunucudan, anahtarı tarayıcıdan siliyor;
-  - sunucuya ulaşılamayınca yerel tablo; konsol temiz.
+  - sunucuya ulaşılamayınca yerel tablo; konsol temiz;
+  - yerel tabloya yazan sonuç ekranı sunucu bulununca yeniden gönderebiliyor,
+    koşu sunucuda da (Codex #80).
 
 Tarayıcı tam koşu 521/521, konsol hatası yok (~40 dk; lig sunucusu bölümü
-~3 dk). Paket bütçesi tamam: ana parça 60,8 KB, kurulumun yolu 133,2 KB.
+~3 dk). Son Codex düzeltmeleriyle lig sunucusu bölümü yeniden: 13/13 (~4 dk;
+yeni iki kontrol eski kodla kalıyor). Paket bütçesi tamam: ana parça 60,8 KB,
+kurulumun yolu 133,2 KB.
 
 ---
 
@@ -5317,7 +5336,7 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi). Senaryo şehirlerinde gün 3–17 ms (`pnpm dayperf`, Tur 43) |
-| Birim testi | **544 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de) |
+| Birim testi | **545 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de) |
 | Denge testi | **331 kontrol, hepsi geçiyor** (25 bölüm, süreleriyle; ~13 dk) |
 | Tarayıcı testi | **521 kontrol, hepsi geçiyor**, 0 konsol hatası (~40 dk); duman koşusu 132 (~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + paket bütçesi (Tur 46; Tur 48'den beri hizmet çalışanı ve manifest de) + duman oynanışı |

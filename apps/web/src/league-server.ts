@@ -193,15 +193,23 @@ export function createServerBoard(options: ServerBoardOptions): ServerBoard {
   }
 
   let flushing: Promise<void> | null = null;
+  let again = false;
   /** Bekleyen gönderimler: bağlantı ya da yoğunluk yüzünden gidemeyen kalıyor, gerisi (gitti ya da kesin ret) düşüyor. */
   function flushPending(): Promise<void> {
-    if (flushing) return flushing;
+    // İş sürerken gelen istek (ör. bağlantı geldi) bir tur daha: süren tur bağlantısızken başlamış olabilir.
+    if (flushing) {
+      again = true;
+      return flushing;
+    }
     const run = (async () => {
-      for (const item of pending()) {
-        const outcome = await send(item.code);
-        if (outcome === 'offline' || outcome === 'busy') continue;
-        write(PENDING_KEY, JSON.stringify(pending().filter((other) => other.code !== item.code)));
-      }
+      do {
+        again = false;
+        for (const item of pending()) {
+          const outcome = await send(item.code);
+          if (outcome === 'offline' || outcome === 'busy') continue;
+          write(PENDING_KEY, JSON.stringify(pending().filter((other) => other.code !== item.code)));
+        }
+      } while (again);
     })();
     // İşaret iş bitince kalkıyor. Kuyruk boşken iş hemen bitiyor: işareti
     // işin içinden kaldırmak atamadan önce olurdu ve işaret takılı kalırdı.
@@ -280,7 +288,11 @@ export function createServerBoard(options: ServerBoardOptions): ServerBoard {
 
     async probe() {
       const reply = await call('/v1/health');
-      if (!reply || reply.status >= 500) return 'offline';
+      if (!reply || reply.status >= 500) {
+        // Görülmüş sunucu bağlantısız açılışta da seçiliyor: bekleyen gönderim bağlantı gelince gitsin (Codex #80).
+        if (read(SEEN_KEY) === url) listen();
+        return 'offline';
+      }
       const ok = reply.status === 200 && typeof reply.body.seed === 'number' && reply.body.seed >= 1;
       write(SEEN_KEY, ok ? url : null);
       // Dinleme yalnız kullanılacak tabloda: tanınmayan sunucunun tablosu atılıyor.

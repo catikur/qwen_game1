@@ -326,3 +326,24 @@ test('istemci: iki sekme ilk gönderimi aynı anda yaparsa tek hesap; koşu tara
   assert.equal(table.total, 1, 'tarayıcının erişemediği hesapta satır kalmıyor');
   assert.equal(table.entries[0].mine, true, 'satır tarayıcının tuttuğu hesabın');
 });
+
+test('istemci: bağlantısız açılışta görülmüş sunucu seçilince de bekleyen gönderim bağlantı gelince gidiyor (Codex #80)', async () => {
+  const db = memoryDb();
+  const net: Net = { online: true, old: false, now: THURSDAY, requests: [] };
+  const storage = memoryStorage();
+  const first = client(db, net, storage).board;
+  assert.equal(await first.probe(), 'ok');
+  net.online = false;
+  assert.equal(await first.submit(entryOf(run())), 'queued');
+
+  // Sayfa bağlantısız yeniden açıldı; oyuncu serbest oyunda (tablo aboneliği yok).
+  const online = new EventTarget();
+  const again = client(db, net, storage, online).board;
+  assert.equal(await again.probe(), 'offline');
+  assert.equal(again.seen(), true);
+  net.online = true;
+  online.dispatchEvent(new Event('online'));
+  const total = async () => (await (await handle(new Request(`${URL}/v1/seed/weeks/${WEEK}`), db, net.now)).json()).total as number;
+  for (let i = 0; i < 50 && (await total()) === 0; i++) await new Promise((resolve) => setTimeout(resolve, 10));
+  assert.equal(await total(), 1, 'bekleyen koşu gitti');
+});

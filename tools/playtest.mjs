@@ -3194,7 +3194,7 @@ async function finish(browser, consoleErrors) {
   // Pages'teki oyun tabloyu Lite'ın sunucusundan okuyor. Burada yerel lig
   // sunucusu: aynı işleyici, bellekte SQLite. Dört tarayıcı: biri oynayıp
   // gönderiyor, biri aynı tabloyu görüyor, biri bağlantısızken gönderiyor,
-  // biri sunucuya ulaşamıyor. Koşular gerçek (360 gün motorun gün adımıyla).
+  // biri sunucuya önce ulaşamıyor, sonra ulaşıyor. Koşular gerçek (360 gün motorun gün adımıyla).
   section('Tohum Ligi: lig sunucusu');
   {
     const LEAGUE_PORT = 8789;
@@ -3393,12 +3393,47 @@ async function finish(browser, consoleErrors) {
         `${left?.total ?? '?'} koşu kaldı`);
       await a.context.close();
 
-      // D: sunucuya ulaşılamıyor: oyun yerel tabloyla açılıyor.
+      // D: sunucuya ulaşılamıyor: oyun yerel tabloyla açılıyor, sonuç ekranı
+      // yerel tabloya yazıyor. Sunucu sonradan bulununca aynı ekrandan sunucuya
+      // da gönderilebiliyor (Codex #80).
       const d = await open(`http://127.0.0.1:${LEAGUE_PORT + 1}`, 'D');
       await startLeague(d.p, 'Yerel Holding');
       await d.p.locator('.agenda [data-agenda="league"] button').first().click();
       const boardD = await d.p.locator('[data-league-board]').first().getAttribute('data-league-board').catch(() => null);
       check('Sunucuya ulaşılamayınca yerel tablo', boardD === 'local', String(boardD));
+      await d.p.keyboard.press('Escape');
+      const runD = await playLeague(d.p);
+      await d.p.waitForSelector('.league-result', { timeout: 5000 }).catch(() => null);
+      await d.p.locator('.league-result .primary:has-text("Tabloya yaz")').click();
+      const localSent = await d.p.waitForSelector('[data-league-sent]', { timeout: 10000 }).then((h) => h.textContent()).catch(() => '');
+      const closedD = await d.p.locator('.league-result .primary').isDisabled();
+      // Sunucu bulunuyor: adres değişiyor, bağlantı olayı tabloyu yeniden seçtiriyor.
+      // İlk seçim kapalı adresi ~40 sn deniyor; o bitene kadar olay boşa düşüyor.
+      let reopened = false;
+      for (const end = Date.now() + 90000; !reopened && Date.now() < end; ) {
+        reopened = await d.p.evaluate((u) => {
+          window.__capitalLeagueUrl = u;
+          window.dispatchEvent(new Event('online'));
+          const button = document.querySelector('.league-result .primary');
+          return Boolean(button && !button.disabled && (button.textContent ?? '').includes('Lig tablosuna gönder'));
+        }, leagueUrl);
+        if (!reopened) await new Promise((r) => setTimeout(r, 2000));
+      }
+      check('Yerel tabloya yazan sonuç ekranı sunucu bulununca yeniden gönderebiliyor',
+        /bu tarayıcının tablosuna/.test(localSent ?? '') && closedD && reopened, `${localSent} · kapalı ${closedD} · açıldı ${reopened}`);
+      let serverSent = '';
+      if (reopened) {
+        await d.p.locator('.league-result .primary').click();
+        serverSent = await d.p
+          .waitForFunction(() => /lig tablosuna yazıldı/.test(document.querySelector('[data-league-sent]')?.textContent ?? '') || null, null, { timeout: 15000 })
+          .then(() => d.p.locator('[data-league-sent]').textContent())
+          .catch(() => '');
+      }
+      const reachedD = await until(async () => {
+        const t = await table(runD.week);
+        return t?.entries.some((e) => e.companyName === 'Yerel Holding') ? t : null;
+      });
+      check('Aynı koşu sunucuda da', /lig tablosuna yazıldı/.test(serverSent ?? '') && reachedD !== null, `${serverSent} · sunucuda ${reachedD?.total ?? '?'} koşu`);
       await d.context.close();
     } catch (error) {
       // Bölüm yarıda kalırsa koşunun geri kalanı sürsün; kalan bir kontrol olarak yazılıyor.

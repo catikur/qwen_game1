@@ -453,7 +453,8 @@ export function GameRoot({
     trying = true;
     void createLeagueBoard()
       .then((board) => {
-        if (cancelled) return;
+        // Yerel tablodan yerel tabloya geçiş yok: sonuç ekranının gönderimi tablo değişince yeniden açılıyor.
+        if (cancelled || board.kind === 'local') return;
         current = board.kind;
         setLeague(board);
       })
