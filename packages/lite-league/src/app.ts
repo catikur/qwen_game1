@@ -704,6 +704,20 @@ async function joinLeague(request: Request, db: Db, me: Player, now: number): Pr
 
 /** Oyuncuya bağlı tablolar (`league_members` dışında); hesap silinince hepsinden siliniyor. */
 const PLAYER_TABLES = ['groups', 'reports', 'rejects', 'attest_keys', 'attest_challenges', 'tokens', 'saves', 'profiles', 'links', 'seed_verified', 'seed_gaps'];
+/**
+ * Eski sürümlerin, yalnız güncellenmiş veritabanında kalan tabloları: Tur 51'in
+ * `seed_runs`'ı şemada silinmiyor (eski Worker'a yol). Hesap silme ve haftalık
+ * temizlik onlara da uğruyor; yeni veritabanında yoklar (Codex #81).
+ */
+const LEGACY_PLAYER_TABLES = ['seed_runs'];
+
+async function legacyTables(db: Db): Promise<string[]> {
+  const rows = await db.all<{ name: string }>(
+    `SELECT name FROM sqlite_master WHERE type = 'table' AND name IN (${LEGACY_PLAYER_TABLES.map(() => '?').join(', ')})`,
+    ...LEGACY_PLAYER_TABLES,
+  );
+  return rows.map((row) => row.name);
+}
 
 /**
  * Hesabı sil (App Store 5.1.1(v)): oyuncunun her izi gidiyor; boşalan özel ligler de.
@@ -724,7 +738,7 @@ async function removeRows(db: Db, id: string): Promise<void> {
   const left = await db.all<{ code: string }>('DELETE FROM league_members WHERE player_id = ? RETURNING code', id);
   for (const { code } of left) await dropIfEmpty(db, code);
   await db.run(`UPDATE leagues SET owner = ${OLDEST_MEMBER} WHERE owner = ?`, id);
-  for (const table of PLAYER_TABLES) await db.run(`DELETE FROM ${table} WHERE player_id = ?`, id);
+  for (const table of [...PLAYER_TABLES, ...(await legacyTables(db))]) await db.run(`DELETE FROM ${table} WHERE player_id = ?`, id);
 }
 
 /** Ligin en eski üyesi (kuruculuk ona geçiyor); üye yoksa boş. */
@@ -746,8 +760,9 @@ async function fence(db: Db, id: string): Promise<void> {
  * Ana oyunun eski haftaları ve IP sayaçları da burada gidiyor (`seedPurge`).
  */
 async function purgeOrphans(db: Db, now: number): Promise<void> {
+  const legacy = await legacyTables(db);
   await db.batch([
-    ...['league_members', ...PLAYER_TABLES].map((table): Statement => [`DELETE FROM ${table} WHERE player_id NOT IN (SELECT id FROM players)`]),
+    ...['league_members', ...PLAYER_TABLES, ...legacy].map((table): Statement => [`DELETE FROM ${table} WHERE player_id NOT IN (SELECT id FROM players)`]),
     ['DELETE FROM leagues WHERE created_at < ? AND NOT EXISTS (SELECT 1 FROM league_members m WHERE m.code = leagues.code)', now - 60_000],
     [`UPDATE leagues SET owner = ${OLDEST_MEMBER} WHERE owner <> '' AND owner NOT IN (SELECT id FROM players)`],
     ...seedPurge(now),

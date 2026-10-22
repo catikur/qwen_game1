@@ -533,3 +533,29 @@ test('Tur 52: aynı koşuyu aynı anda gönderen iki oyuncudan yalnız ilki tabl
   assert.deepEqual(statuses, [201, 409]);
   assert.equal((await call(db, THURSDAY, 'GET', `/v1/seed/weeks/${WEEK}`)).body.total, 1, 'kopya tabloda değil');
 });
+
+test('Tur 52: güncellenmiş veritabanında hesap silme Tur 51 tablosundaki satırı da siliyor (Codex #81)', async () => {
+  const db = memoryDb(TUR51_SEED_RUNS);
+  const me = await seedAccount(db);
+  const other = await seedAccount(db);
+  for (const [player, id, key] of [
+    [me.id, 'benim-eski-satirim', 'b'],
+    [other.id, 'onun-eski-satiri', 'c'],
+  ]) {
+    await db.run(
+      "INSERT INTO seed_runs VALUES (?, ?, ?, 'Eski AŞ', NULL, 1, '[1]', 'CF1.e30=', ?, ?)",
+      player,
+      WEEK,
+      id,
+      key.repeat(64),
+      THURSDAY,
+    );
+  }
+  assert.equal((await call(db, THURSDAY, 'DELETE', '/v1/players/me', undefined, me)).status, 200);
+  assert.equal(await db.first('SELECT id FROM seed_runs WHERE player_id = ?', me.id), null, 'eski satırı da gitti');
+  assert.ok(await db.first("SELECT id FROM seed_runs WHERE id = 'onun-eski-satiri'"), 'başkasınınki yerinde');
+  // Hesabı olmayan eski satırı (Tur 51'de silinmiş hesap) temizlik siliyor.
+  await weekly(db, THURSDAY + 7 * 86_400_000);
+  assert.equal(await db.first("SELECT id FROM seed_runs WHERE id = 'eski-satir'"), null, 'sahipsiz eski satır temizlikte gitti');
+  assert.ok(await db.first("SELECT id FROM seed_runs WHERE id = 'onun-eski-satiri'"), 'hesabı olanınki temizlikte de yerinde');
+});

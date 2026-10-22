@@ -5394,8 +5394,9 @@ doğrulama Workers Paid ile (aylık 5 $). DURUM'un en eski güvenlik açığı
   silinmiyor: şema Worker'dan önce uygulanıyor, eski Worker yeni kod gelene
   kadar onunla çalışsın (Codex #81'in ikinci turu). Yeni kod onu okumuyor;
   Tur 51 canlıya gittiyse yeni Worker'dan sonra elle siliniyor (README).
-  Canlıda Tur 51'in tablosu hiç olmadı; yine de yol açık. Testler
-  düzeltmeden önce kaldı.
+  Canlıda Tur 51'in tablosu hiç olmadı; yine de yol açık. Eski tablo
+  durdukça hesap silme ve haftalık temizlik onun satırlarını da siliyor
+  (tablo varsa; Codex #81'in üçüncü turu). Testler düzeltmeden önce kaldı.
 - *Codex #81: kopya denetimi yazımla birlikte.* Aynı koşuyu aynı anda iki
   oyuncu gönderirse ikisi de tekrardan (1–2 sn) önce denetimi geçip
   yazılıyordu. Denetim artık yazımın kendisinde (tek koşullu ifade); erken
@@ -5441,8 +5442,8 @@ kod. Sonra `/v1/health` `"seed":1` ve `"verify":1` diyor. Ücretsiz katmanda
 gönderim CPU sınırına takılır; oyun bunu geçici hata sayıp koşuyu
 bekletiyor, Lite etkilenmiyor.
 
-**Doğrulama.** `pnpm test` 580/580; tip denetimi temiz.
-- `seed.test.ts` (22 test; 7'si yeni): gerçek koşularla, oyunun motoruyla:
+**Doğrulama.** `pnpm test` 581/581; tip denetimi temiz.
+- `seed.test.ts` (23 test; 8'i yeni): gerçek koşularla, oyunun motoruyla:
   - dürüst koşu doğrulanmış giriyor, eğri tekrarın kendisi;
   - şişirilmiş skor, değiştirilmiş eğri ve günlükten hamlesi düşmüş koşu
     giremiyor;
@@ -5452,7 +5453,8 @@ bekletiyor, Lite etkilenmiyor.
   - daha kötü ve aynı skor yeniden oynatılmıyor; tekrar hata verirse koşu
     girmiyor;
   - Tur 51'in şemasıyla kurulmuş veritabanı güncelleniyor, eski satır
-    sunulmuyor; aynı anda gelen iki kopyadan yalnız ilki tabloda (Codex #81).
+    sunulmuyor, hesap silinince eski satırı da gidiyor; aynı anda gelen iki
+    kopyadan yalnız ilki tabloda (Codex #81).
 - `client.test.ts` (32 test): sürüm farkında koşu bekleyip sunucu
   güncellenince kendiliğinden gidiyor; sunucunun satırı doğrulanmış; tutmayan
   ve kopya koşu düşüyor.
@@ -5571,7 +5573,7 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi). Senaryo şehirlerinde gün 3–17 ms (`pnpm dayperf`, Tur 43) |
-| Birim testi | **580 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de, Tur 52'de sunucuda tekrar) |
+| Birim testi | **581 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de, Tur 52'de sunucuda tekrar) |
 | Denge testi | **331 kontrol, hepsi geçiyor** (25 bölüm, süreleriyle; ~13 dk) |
 | Tarayıcı testi | **521 kontrol, hepsi geçiyor**, 0 konsol hatası (~40 dk); duman koşusu 132 (~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + paket bütçesi (Tur 46; Tur 48'den beri hizmet çalışanı ve manifest de) + duman oynanışı |
