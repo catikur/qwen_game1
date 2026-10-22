@@ -5386,8 +5386,17 @@ doğrulama Workers Paid ile (aylık 5 $). DURUM'un en eski güvenlik açığı
   girmiyor.
 - Tablodaki satır `verified: true` ve `idle` taşıyor; skor ve eğri
   sunucunun tekrarından. Sağlık ucu `"verify":1` diyor.
-- Şemada `seed_runs.idle`. Tur 51'in tablosu canlıda henüz yok (canlıya
-  geçiş bu turla), değişiklik aynı `CREATE TABLE`'da.
+- Şema: doğrulanmış koşular yeni tabloda (`seed_verified`, `idle` sütunuyla).
+  Tur 51'in `seed_runs`'ı varsa siliniyor. Codex #81'in bulgusu: Tur 51'in
+  şemasıyla kurulmuş bir veritabanında `CREATE TABLE IF NOT EXISTS` eski
+  tabloyu olduğu gibi bırakıyor, her sorgu "no such column: idle" ile
+  düşüyordu; eski satırlar da hiç doğrulanmadığı hâlde `verified` diye
+  sunulacaktı. Canlıda Tur 51'in tablosu hiç olmadı; yine de yol açık. Test
+  düzeltmeden önce kaldı.
+- *Codex #81: kopya denetimi yazımla birlikte.* Aynı koşuyu aynı anda iki
+  oyuncu gönderirse ikisi de tekrardan (1–2 sn) önce denetimi geçip
+  yazılıyordu. Denetim artık yazımın kendisinde (tek koşullu ifade); erken
+  denetim yalnız pahalı tekrarı önlemek için. Test düzeltmeden önce kaldı.
 - Paket 265 KB'tan 701 KB'a çıktı (sıkıştırılmış 183 KB; ücretli sınır
   10 MB, ücretsiz 3 MB): motorun tamamı geliyor. Açılış 38 ms.
 - Bedel, Node'da ölçüldü: koşu başına 1,4–2,2 sn CPU (hiç oynanmamış koşu
@@ -5429,8 +5438,8 @@ kod. Sonra `/v1/health` `"seed":1` ve `"verify":1` diyor. Ücretsiz katmanda
 gönderim CPU sınırına takılır; oyun bunu geçici hata sayıp koşuyu
 bekletiyor, Lite etkilenmiyor.
 
-**Doğrulama.** `pnpm test` 578/578; tip denetimi temiz.
-- `seed.test.ts` (20 test; 5'i yeni): gerçek koşularla, oyunun motoruyla:
+**Doğrulama.** `pnpm test` 580/580; tip denetimi temiz.
+- `seed.test.ts` (22 test; 7'si yeni): gerçek koşularla, oyunun motoruyla:
   - dürüst koşu doğrulanmış giriyor, eğri tekrarın kendisi;
   - şişirilmiş skor, değiştirilmiş eğri ve günlükten hamlesi düşmüş koşu
     giremiyor;
@@ -5438,7 +5447,9 @@ bekletiyor, Lite etkilenmiyor.
   - başka oyuncunun koşusu (kodun aynısı da, adı değiştirilmişi de) 409
     `copy`; hiç oynanmamış iki koşu ikisi de tabloda;
   - daha kötü ve aynı skor yeniden oynatılmıyor; tekrar hata verirse koşu
-    girmiyor.
+    girmiyor;
+  - Tur 51'in şemasıyla kurulmuş veritabanı güncelleniyor, eski satır
+    sunulmuyor; aynı anda gelen iki kopyadan yalnız ilki tabloda (Codex #81).
 - `client.test.ts` (32 test): sürüm farkında koşu bekleyip sunucu
   güncellenince kendiliğinden gidiyor; sunucunun satırı doğrulanmış; tutmayan
   ve kopya koşu düşüyor.
@@ -5557,7 +5568,7 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi). Senaryo şehirlerinde gün 3–17 ms (`pnpm dayperf`, Tur 43) |
-| Birim testi | **578 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de, Tur 52'de sunucuda tekrar) |
+| Birim testi | **580 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de, Tur 52'de sunucuda tekrar) |
 | Denge testi | **331 kontrol, hepsi geçiyor** (25 bölüm, süreleriyle; ~13 dk) |
 | Tarayıcı testi | **521 kontrol, hepsi geçiyor**, 0 konsol hatası (~40 dk); duman koşusu 132 (~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + paket bütçesi (Tur 46; Tur 48'den beri hizmet çalışanı ve manifest de) + duman oynanışı |

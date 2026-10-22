@@ -126,34 +126,38 @@ CREATE TABLE IF NOT EXISTS links (
 );
 CREATE INDEX IF NOT EXISTS links_by_player ON links (player_id);
 
--- Tur 51: ana oyunun Tohum Ligi koşuları (`src/seed.ts`). Oyuncu başına haftada
--- tek satır: en iyisi. Hesap `players` + `tokens` (platform `capital`).
-CREATE TABLE IF NOT EXISTS seed_runs (
+-- Tur 51'in tablosu: sunucunun doğrulamadığı koşular (Tur 52'den önce). Satırları
+-- tabloya hiç sunulmuyor; varsa siliniyor (Codex #81). Yeni tablo aşağıda.
+DROP TABLE IF EXISTS seed_runs;
+
+-- Tur 52: ana oyunun Tohum Ligi koşuları (`src/seed.ts`), sunucunun yeniden
+-- oynattığı. Oyuncu başına haftada tek satır: en iyisi. Hesap `players` +
+-- `tokens` (platform `capital`).
+CREATE TABLE IF NOT EXISTS seed_verified (
   player_id TEXT NOT NULL,
   week TEXT NOT NULL,
   -- Satırın herkese görünen kimliği (oyuncunun kimliği gösterilmiyor); koşu iyileşse de aynı.
   id TEXT NOT NULL UNIQUE,
   company TEXT NOT NULL,
   ceo TEXT,
+  -- Skor ve net değer eğrisi (JSON) sunucunun tekrarından.
   score REAL NOT NULL,
-  -- Net değer eğrisi (JSON).
   curve TEXT NOT NULL,
   -- Koşu kodu (CF1.…) ve SHA-256 özeti: tablo özeti veriyor, kod ayrı uçtan iniyor.
   code TEXT NOT NULL,
   code_key TEXT NOT NULL,
-  -- Tur 52: günlük boş (hiç oynanmamış koşu); kopya denetimi bunları ayırmıyor.
-  -- Skor ve eğri sunucunun tekrarından: tablodaki her satır doğrulanmış.
+  -- Günlük boş (hiç oynanmamış koşu); kopya denetimi bunları ayırmıyor.
   idle INTEGER NOT NULL DEFAULT 0,
   -- Satırdaki koşunun sunucu saati (eşit skorda önce gönderen).
   at INTEGER NOT NULL,
   PRIMARY KEY (player_id, week)
 );
-CREATE INDEX IF NOT EXISTS seed_runs_by_week ON seed_runs (week, score DESC, at);
-CREATE INDEX IF NOT EXISTS seed_runs_by_code ON seed_runs (code_key);
+CREATE INDEX IF NOT EXISTS seed_verified_by_week ON seed_verified (week, score DESC, at);
+CREATE INDEX IF NOT EXISTS seed_verified_by_code ON seed_verified (code_key);
 
 -- Tur 51: hesabın son gönderim denemesi (daha kötüsü de). Aynı hesaptan iki
 -- gönderim arası aralık tek koşullu yazımla ayrılıyor: aynı anda gelen iki
--- istekten yalnız biri geçiyor. Satırın saati (`seed_runs.at`) ileri alınmıyor.
+-- istekten yalnız biri geçiyor. Satırın saati (`seed_verified.at`) ileri alınmıyor.
 CREATE TABLE IF NOT EXISTS seed_gaps (
   player_id TEXT PRIMARY KEY,
   at INTEGER NOT NULL

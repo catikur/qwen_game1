@@ -214,23 +214,24 @@ export async function submitRun(request: Request, db: Db, playerId: string, now:
     const gap = await db.first<{ at: number }>('SELECT at FROM seed_gaps WHERE player_id = ?', playerId);
     throw new HttpError(429, 'slow', { retryAfter: Math.max(1, Math.ceil(((gap?.at ?? now) + SEED.minGapMs - now) / 1000)) });
   }
-  const existing = await db.first<SeedRow>(`SELECT ${ROW_COLUMNS} FROM seed_runs WHERE player_id = ? AND week = ?`, playerId, run.weekId);
+  const existing = await db.first<SeedRow>(`SELECT ${ROW_COLUMNS} FROM seed_verified WHERE player_id = ? AND week = ?`, playerId, run.weekId);
   if (existing && existing.score >= run.score) return json({ outcome: 'kept-better', entry: toEntry(existing, run.weekId, playerId) });
 
   // Başka bir oyuncunun koşusunun aynısı (skor ve eğri; boş koşular hariç):
-  // tabloyu kopyalarla doldurup dürüst satırları dışarıda bırakmasın.
+  // tabloyu kopyalarla doldurup dürüst satırları dışarıda bırakmasın. Burada
+  // erken ret (tekrar pahalı); kesin denetim yazımın kendisinde (Codex #81).
   const idle = run.log.length === 0;
   const curve = JSON.stringify(run.curve);
-  if (!idle) {
-    const copy = await db.first<{ id: string }>(
-      'SELECT id FROM seed_runs WHERE week = ? AND score = ? AND curve = ? AND idle = 0 AND player_id != ? LIMIT 1',
+  const copied = async () =>
+    !idle &&
+    (await db.first<{ id: string }>(
+      'SELECT id FROM seed_verified WHERE week = ? AND score = ? AND curve = ? AND idle = 0 AND player_id != ? LIMIT 1',
       run.weekId,
       run.score,
       curve,
       playerId,
-    );
-    if (copy) throw new HttpError(409, 'copy');
-  }
+    )) !== null;
+  if (await copied()) throw new HttpError(409, 'copy');
 
   // Tekrar: skor ve eğri sunucunun kendi oynatışından.
   let replayed: ReplayResult;
@@ -243,14 +244,17 @@ export async function submitRun(request: Request, db: Db, playerId: string, now:
 
   const key = await sha256(code);
   // Yazım koşullu: aynı anda gelen daha kötü gönderim iyisini ezmesin; hesap bu
-  // arada silindiyse satır yazılmasın (`deleteAccount`).
+  // arada silindiyse satır yazılmasın (`deleteAccount`); tekrar sürerken başka
+  // oyuncu aynı koşuyu yazdıysa bu yazılmasın (tek ifade, Codex #81).
   const changed = await db.run(
-    `INSERT INTO seed_runs (player_id, week, id, company, ceo, score, curve, code, code_key, idle, at)
+    `INSERT INTO seed_verified (player_id, week, id, company, ceo, score, curve, code, code_key, idle, at)
      SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? WHERE EXISTS (SELECT 1 FROM players WHERE id = ?)
+       AND (? = 1 OR NOT EXISTS (
+         SELECT 1 FROM seed_verified WHERE week = ? AND score = ? AND curve = ? AND idle = 0 AND player_id != ?))
      ON CONFLICT (player_id, week) DO UPDATE SET
        company = excluded.company, ceo = excluded.ceo, score = excluded.score, curve = excluded.curve,
        code = excluded.code, code_key = excluded.code_key, idle = excluded.idle, at = excluded.at
-     WHERE excluded.score > seed_runs.score`,
+     WHERE excluded.score > seed_verified.score`,
     playerId,
     run.weekId,
     crypto.randomUUID(),
@@ -263,8 +267,14 @@ export async function submitRun(request: Request, db: Db, playerId: string, now:
     idle ? 1 : 0,
     now,
     playerId,
+    idle ? 1 : 0,
+    run.weekId,
+    replayed.score,
+    JSON.stringify(replayed.curve),
+    playerId,
   );
-  const row = await db.first<SeedRow>(`SELECT ${ROW_COLUMNS} FROM seed_runs WHERE player_id = ? AND week = ?`, playerId, run.weekId);
+  if (changed === 0 && (await copied())) throw new HttpError(409, 'copy');
+  const row = await db.first<SeedRow>(`SELECT ${ROW_COLUMNS} FROM seed_verified WHERE player_id = ? AND week = ?`, playerId, run.weekId);
   if (!row) throw new HttpError(401, 'auth');
   return json({ outcome: changed > 0 && row.code_key === key ? 'saved' : 'kept-better', entry: toEntry(row, run.weekId, playerId) }, changed > 0 ? 201 : 200);
 }
@@ -273,15 +283,15 @@ export async function submitRun(request: Request, db: Db, playerId: string, now:
 export async function weekTable(db: Db, week: string, me: string | null, now: number) {
   if (!WEEK_ID.test(week)) throw new HttpError(400, 'week');
   const rows = await db.all<SeedRow>(
-    `SELECT ${ROW_COLUMNS} FROM seed_runs WHERE week = ? ORDER BY score DESC, at ASC, id ASC LIMIT ?`,
+    `SELECT ${ROW_COLUMNS} FROM seed_verified WHERE week = ? ORDER BY score DESC, at ASC, id ASC LIMIT ?`,
     week,
     SEED.tableSize,
   );
   if (me && !rows.some((row) => row.player_id === me)) {
-    const mine = await db.first<SeedRow>(`SELECT ${ROW_COLUMNS} FROM seed_runs WHERE week = ? AND player_id = ?`, week, me);
+    const mine = await db.first<SeedRow>(`SELECT ${ROW_COLUMNS} FROM seed_verified WHERE week = ? AND player_id = ?`, week, me);
     if (mine) rows.push(mine);
   }
-  const total = (await db.first<{ n: number }>('SELECT COUNT(*) AS n FROM seed_runs WHERE week = ?', week))?.n ?? 0;
+  const total = (await db.first<{ n: number }>('SELECT COUNT(*) AS n FROM seed_verified WHERE week = ?', week))?.n ?? 0;
   return { week, open: openWeeks(now).includes(week), total, entries: rows.map((row) => toEntry(row, week, me)) };
 }
 
@@ -293,7 +303,7 @@ export async function weekTable(db: Db, week: string, me: string | null, now: nu
  */
 export async function runCode(db: Db, key: string): Promise<Response> {
   if (!CODE_KEY.test(key)) throw new HttpError(400, 'code');
-  const row = await db.first<{ code: string }>('SELECT code FROM seed_runs WHERE code_key = ? LIMIT 1', key);
+  const row = await db.first<{ code: string }>('SELECT code FROM seed_verified WHERE code_key = ? LIMIT 1', key);
   if (!row) throw new HttpError(404, 'code');
   const response = json({ code: row.code });
   response.headers.set('cache-control', 'public, max-age=86400');
@@ -303,7 +313,7 @@ export async function runCode(db: Db, key: string): Promise<Response> {
 /** Haftalık temizlik (`purgeOrphans` ile aynı işlemde): eski haftaların koşuları, eski sayaçlar. */
 export function seedPurge(now: number): Array<[string, number]> {
   return [
-    ['DELETE FROM seed_runs WHERE at < ?', now - SEED.keepWeeks * 7 * 86_400_000],
+    ['DELETE FROM seed_verified WHERE at < ?', now - SEED.keepWeeks * 7 * 86_400_000],
     ['DELETE FROM seed_limits WHERE hour < ?', Math.floor(now / HOUR) - 1],
     // Aralık 30 sn; bir günden eski deneme saati bir şey ayırmıyor.
     ['DELETE FROM seed_gaps WHERE at < ?', now - 86_400_000],

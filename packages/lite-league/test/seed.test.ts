@@ -478,3 +478,56 @@ test('Tur 52: daha kötü ya da aynı skor yeniden oynatılmıyor (yazılmayacak
   const broken = await call(db, THURSDAY + 3 * SEED.minGapMs, 'POST', '/v1/seed/runs', { code: encodeRun(run({ score: 3_000_000 })) }, me, {}, failing);
   assert.deepEqual(broken.body, { error: 'replay', reason: 'error' });
 });
+
+/** Tur 51'in şeması: `seed_runs` tablosu (idle yok) ve sunucunun doğrulamadığı bir satır. */
+const TUR51_SEED_RUNS = `
+CREATE TABLE seed_runs (
+  player_id TEXT NOT NULL, week TEXT NOT NULL, id TEXT NOT NULL UNIQUE, company TEXT NOT NULL, ceo TEXT,
+  score REAL NOT NULL, curve TEXT NOT NULL, code TEXT NOT NULL, code_key TEXT NOT NULL, at INTEGER NOT NULL,
+  PRIMARY KEY (player_id, week)
+);
+CREATE INDEX seed_runs_by_week ON seed_runs (week, score DESC, at);
+INSERT INTO seed_runs VALUES ('eski-oyuncu', '${WEEK}', 'eski-satir', 'Şişik AŞ', NULL, 999999999999, '[1]', 'CF1.e30=', '${'a'.repeat(64)}', ${THURSDAY});
+`;
+
+test('Tur 52: Tur 51 şemasıyla kurulmuş veritabanı güncelleniyor; doğrulanmamış eski satır sunulmuyor', async () => {
+  const db = memoryDb(TUR51_SEED_RUNS);
+  const me = await seedAccount(db);
+  const sent = await submit(db, THURSDAY, me, run());
+  assert.equal(sent.status, 201, JSON.stringify(sent.body));
+  const table = await call(db, THURSDAY, 'GET', `/v1/seed/weeks/${WEEK}`);
+  assert.equal(table.body.total, 1, 'yalnız doğrulanmış satır');
+  assert.deepEqual(table.body.entries.map((entry: { companyName: string }) => entry.companyName), ['Atilla Holding']);
+  assert.equal((await call(db, THURSDAY, 'GET', `/v1/seed/codes/${'a'.repeat(64)}`)).status, 404, 'eski satırın kodu da yok');
+  assert.equal((await call(db, THURSDAY, 'DELETE', '/v1/players/me', undefined, me)).status, 200, 'hesap silme çalışıyor');
+});
+
+test('Tur 52: aynı koşuyu aynı anda gönderen iki oyuncudan yalnız ilki tabloda (kopya denetimi yazımla birlikte)', async () => {
+  const db = memoryDb();
+  let release = () => {};
+  const gate = new Promise<void>((resolve) => (release = resolve));
+  let waiting = 0;
+  // Tekrar ~1–2 sn sürüyor: iki gönderim de kopya denetimini tekrardan önce geçiyor.
+  const slow: Options = {
+    attest: APPLE_ATTEST,
+    seed: {
+      sim: () => TEST_SIM,
+      replay: async (value) => {
+        waiting++;
+        await gate;
+        return { ok: true, score: value.score, curve: value.curve };
+      },
+    },
+  };
+  const a = await seedAccount(db);
+  const b = await seedAccount(db);
+  const post = (who: Account, name: string) => call(db, THURSDAY, 'POST', '/v1/seed/runs', { code: encodeRun(run({ companyName: name })) }, who, {}, slow);
+  const first = post(a, 'Birinci AŞ');
+  const second = post(b, 'İkinci AŞ');
+  for (let i = 0; i < 100 && waiting < 2; i++) await new Promise((resolve) => setTimeout(resolve, 5));
+  assert.equal(waiting, 2, 'ikisi de tekrarda');
+  release();
+  const statuses = [(await first).status, (await second).status].sort();
+  assert.deepEqual(statuses, [201, 409]);
+  assert.equal((await call(db, THURSDAY, 'GET', `/v1/seed/weeks/${WEEK}`)).body.total, 1, 'kopya tabloda değil');
+});
