@@ -1,11 +1,15 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { encodeRun, leagueWeekId, type LeagueRun } from '../../core/src/index';
+import { createLeagueGame, encodeRun, leagueWeekId, runFromState, simFingerprint, type LeagueRun } from '../../core/src/index';
+import { GameEngine } from '../../core/src/engine';
+import { playerStrategy } from '../../core/test/proxy';
+import { APPLE_ATTEST } from '../src/attest';
 import { weekId, weekStart } from '../../lite-model/src/index';
-import { handle, weekly } from '../src/app';
+import { handle, weekly, type Options } from '../src/app';
 import type { Db } from '../src/db';
 import { SEED, openWeeks, publicCompanyName } from '../src/seed';
 import { memoryDb } from './sqlite';
+import { TEST_SIM, TRUSTING } from './trust';
 
 /** 2026-W42'nin perşembesi, öğlen. */
 const THURSDAY = Date.UTC(2026, 9, 15, 12);
@@ -17,11 +21,11 @@ interface Account {
   token: string;
 }
 
-async function call(db: Db, now: number, method: string, path: string, body?: unknown, who?: Account, extra: Record<string, string> = {}) {
+async function call(db: Db, now: number, method: string, path: string, body?: unknown, who?: Account, extra: Record<string, string> = {}, options: Options = TRUSTING) {
   const headers: Record<string, string> = { 'content-type': 'application/json', ...extra };
   if (who) headers.authorization = `Bearer ${who.id}.${who.token}`;
   const text = body === undefined ? undefined : typeof body === 'string' ? body : JSON.stringify(body);
-  const response = await handle(new Request(`https://lig.test${path}`, { method, headers, body: text }), db, now);
+  const response = await handle(new Request(`https://lig.test${path}`, { method, headers, body: text }), db, now, options);
   return { status: response.status, headers: response.headers, body: (await response.json()) as Record<string, any> };
 }
 
@@ -82,6 +86,8 @@ test('Tohum Ligi: anonim hesap, gönderim, herkese açık tablo ve kod', async (
       codeKey: 'string',
       codeSize: code.length,
       mine: false,
+      verified: true,
+      idle: false,
     },
   );
   assert.notEqual(entry.id, me.id);
@@ -238,7 +244,8 @@ test('Tohum Ligi: tablo en iyi 50 ve benim satırım; eşit skorda önce gönder
     accounts.push(who);
     // İlk ikisi en düşük skorlu; 3. ve 4. aynı skor, 3. önce.
     const score = i < 2 ? 1_000 + i : i === 3 ? 500_000 + 2 : 500_000 + i;
-    const sent = await submit(db, THURSDAY + i * 1000, who, run({ score, companyName: `Şirket ${i}` }));
+    // Eğriler farklı: aynı skor ve eğri başka oyuncunun kopyası sayılıyor (Tur 52).
+    const sent = await submit(db, THURSDAY + i * 1000, who, run({ score, companyName: `Şirket ${i}`, curve: [100_000, 180_000 + i, 260_000] }));
     assert.equal(sent.status, 201);
   }
   const table = await call(db, THURSDAY, 'GET', `/v1/seed/weeks/${WEEK}`, undefined, accounts[0]);
@@ -350,4 +357,124 @@ test('Tohum Ligi: Pages kökeninden okunuyor (CORS)', async () => {
   assert.equal(table.headers.get('access-control-allow-origin'), 'https://catikur.github.io');
   const foreign = await call(db, THURSDAY, 'GET', `/v1/seed/weeks/${WEEK}`, undefined, undefined, { origin: 'https://evil.test' });
   assert.equal(foreign.headers.get('access-control-allow-origin'), null);
+});
+
+// ---------------------------------------------------------------- Tur 52: sunucuda tekrar
+
+/** Sunucunun gerçek ayarı: oyunun motoru (`SERVER_REPLAY`). */
+const REAL: Options = { attest: APPLE_ATTEST };
+
+/** Gerçek bir lig koşusu: vekil `every` günde bir hamle yapıyor; 0 ise hiç (boş koşu). */
+function playedRun(companyName: string, every: number): LeagueRun {
+  const engine = new GameEngine(createLeagueGame(WEEK, companyName, null));
+  while (engine.getState().league!.finishedDay === undefined) {
+    if (every > 0 && engine.getState().time.day % every === 0) playerStrategy(engine);
+    engine.runDay();
+  }
+  return runFromState(engine.getState())!;
+}
+
+let honestRun: LeagueRun | null = null;
+/** Testler arasında bir kez oynanıyor (~1–2 sn). */
+const honest = (): LeagueRun => (honestRun ??= playedRun('Dürüst AŞ', 15));
+
+async function submitReal(db: Db, now: number, who: Account, value: LeagueRun | string) {
+  return call(db, now, 'POST', '/v1/seed/runs', { code: typeof value === 'string' ? value : encodeRun(value) }, who, {}, REAL);
+}
+
+test('Tur 52: sunucu koşuyu yeniden oynatıyor; dürüst koşu tabloya doğrulanmış giriyor', async () => {
+  const db = memoryDb();
+  const me = await seedAccount(db);
+  const value = honest();
+  assert.ok(value.log.length > 0, 'koşuda hamle var');
+  const sent = await submitReal(db, THURSDAY, me, value);
+  assert.equal(sent.status, 201, JSON.stringify(sent.body));
+  assert.equal(sent.body.entry.score, value.score);
+  assert.equal(sent.body.entry.verified, true);
+  assert.equal(sent.body.entry.idle, false);
+  const table = await call(db, THURSDAY, 'GET', `/v1/seed/weeks/${WEEK}`);
+  assert.deepEqual(table.body.entries[0].curve, value.curve, 'eğri tekrarın kendisi');
+  assert.equal((await call(db, THURSDAY, 'GET', '/v1/health')).body.verify, 1);
+});
+
+test('Tur 52: şişirilmiş skor ya da değiştirilmiş eğri tabloya girmiyor', async () => {
+  const db = memoryDb();
+  const value = honest();
+  const inflated = await submitReal(db, THURSDAY, await seedAccount(db), { ...value, score: value.score * 10 });
+  assert.equal(inflated.status, 422);
+  assert.deepEqual(inflated.body, { error: 'replay', reason: 'score' });
+  const curve = [...value.curve];
+  curve[curve.length - 2] += 1;
+  const bent = await submitReal(db, THURSDAY, await seedAccount(db), { ...value, curve });
+  assert.deepEqual(bent.body, { error: 'replay', reason: 'curve' });
+  // Günlükten bir hamle düşmüş koşu da (skor ve eğri yerinde) tutmuyor.
+  const trimmed = await submitReal(db, THURSDAY, await seedAccount(db), { ...value, log: value.log.slice(1) });
+  assert.equal(trimmed.status, 422, JSON.stringify(trimmed.body));
+  assert.equal((await call(db, THURSDAY, 'GET', `/v1/seed/weeks/${WEEK}`)).body.total, 0, 'hiçbiri tabloda değil');
+});
+
+test('Tur 52: başka sürümün koşusu bekletiliyor (409 sim), aralığa sayılmıyor', async () => {
+  const db = memoryDb();
+  const me = await seedAccount(db);
+  const value = honest();
+  assert.equal(value.sim, simFingerprint());
+  const other = await submitReal(db, THURSDAY, me, { ...value, sim: '0123456789abcdef' });
+  assert.equal(other.status, 409);
+  assert.deepEqual(other.body, { error: 'sim' });
+  // Aynı saniyede bu sürümün koşusu: aralık dolmamış sayılmıyor.
+  const sent = await submitReal(db, THURSDAY, me, value);
+  assert.equal(sent.status, 201, JSON.stringify(sent.body));
+});
+
+test('Tur 52: başka oyuncunun koşusunun aynısı kabul edilmiyor; boş koşular ayrılmıyor', async () => {
+  const db = memoryDb();
+  const value = honest();
+  const first = await submitReal(db, THURSDAY, await seedAccount(db), value);
+  assert.equal(first.status, 201);
+  // Kodun aynısı, başka hesaptan.
+  const copied = await submitReal(db, THURSDAY + 1000, await seedAccount(db), value);
+  assert.equal(copied.status, 409);
+  assert.deepEqual(copied.body, { error: 'copy' });
+  // Ad değiştirilmiş kopya: skor ve eğri aynı.
+  const renamed = await submitReal(db, THURSDAY + 2000, await seedAccount(db), { ...value, companyName: 'Kopya AŞ' });
+  assert.deepEqual(renamed.body, { error: 'copy' });
+  // Hiç oynanmamış iki koşu: ikisi de tabloda.
+  const idle = playedRun('Boş AŞ', 0);
+  assert.equal(idle.log.length, 0);
+  for (const [i, name] of ['Boş Bir', 'Boş İki'].entries()) {
+    const sent = await submitReal(db, THURSDAY + 3000 + i * 1000, await seedAccount(db), { ...idle, companyName: name });
+    assert.equal(sent.status, 201, JSON.stringify(sent.body));
+    assert.equal(sent.body.entry.idle, true);
+  }
+  const table = await call(db, THURSDAY, 'GET', `/v1/seed/weeks/${WEEK}`);
+  assert.deepEqual(
+    table.body.entries.map((entry: { companyName: string }) => entry.companyName),
+    ['Dürüst AŞ', 'Boş Bir', 'Boş İki'],
+  );
+});
+
+test('Tur 52: daha kötü ya da aynı skor yeniden oynatılmıyor (yazılmayacak)', async () => {
+  const db = memoryDb();
+  const me = await seedAccount(db);
+  let replays = 0;
+  const counting: Options = {
+    attest: APPLE_ATTEST,
+    seed: {
+      sim: () => TEST_SIM,
+      replay: async (value) => {
+        replays++;
+        return { ok: true, score: value.score, curve: value.curve };
+      },
+    },
+  };
+  const post = (now: number, value: LeagueRun) => call(db, now, 'POST', '/v1/seed/runs', { code: encodeRun(value) }, me, {}, counting);
+  assert.equal((await post(THURSDAY, run({ score: 2_000_000 }))).status, 201);
+  assert.equal(replays, 1);
+  assert.equal((await post(THURSDAY + SEED.minGapMs, run({ score: 1_000_000 }))).body.outcome, 'kept-better');
+  assert.equal((await post(THURSDAY + 2 * SEED.minGapMs, run({ score: 2_000_000 }))).body.outcome, 'kept-better');
+  assert.equal(replays, 1, 'daha kötüsü ve aynısı tekrar edilmedi');
+  // Tekrar hata verirse koşu girmiyor.
+  const failing: Options = { attest: APPLE_ATTEST, seed: { sim: () => TEST_SIM, replay: async () => { throw new Error('motor'); } } };
+  const broken = await call(db, THURSDAY + 3 * SEED.minGapMs, 'POST', '/v1/seed/runs', { code: encodeRun(run({ score: 3_000_000 })) }, me, {}, failing);
+  assert.deepEqual(broken.body, { error: 'replay', reason: 'error' });
 });

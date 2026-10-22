@@ -7,12 +7,15 @@
  * ama ayrı türde (`tokens.platform = 'capital'`); biri ötekinin uçlarını
  * kullanamıyor (`app.ts`).
  *
- * GÜVEN. Sunucu bu turda koşuyu yeniden OYNATMIYOR (Tur 52'nin işi). Kodu
- * oyunun kendi çözücüsüyle açıp yapısını denetliyor (`decodeRunChecked`),
- * haftayı ve şirket adını denetliyor, gönderim zamanını kendi saatiyle
- * yazıyor. Sıralamayı hâlâ her tarayıcı kendi tekrarıyla kuruyor (Tur 31).
- * Kazanılan: tablo herkese açık ve tek; "aynı koşuyu kim önce gönderdi"
- * artık satırın beyanı değil sunucunun saati.
+ * GÜVEN (Tur 52). Sunucu koşuyu gönderimde baştan oynatıyor (`replayRun`,
+ * oyunun kendi motoru); skor ve eğri tutmazsa koşu tabloya girmiyor. Tabloya
+ * yalnız doğrulanmış koşu giriyor, en iyi 50 de doğrulanmış skorla kesiliyor;
+ * tarayıcılar sunucunun satırlarını yeniden oynatmıyor (`verified`). Tekrar
+ * pahalı (koşu başına ~1–2 sn CPU, Workers Paid): ucuz denetimler önce, tekrar
+ * en son. Koşu sunucununkinden başka bir simülasyon sürümünde oynanmışsa
+ * sunucu yargılayamıyor (409 `sim`): oyun koşuyu bekletiyor, sürümler
+ * eşleşince gidiyor. Başka bir oyuncunun koşusunun aynısı (skor ve eğri)
+ * kabul edilmiyor (409 `copy`): ilk gönderen sayılıyor, sunucunun saatiyle.
  *
  * Uç noktalar (JSON):
  * - `POST /v1/seed/players`        → anonim hesap: {id, token}
@@ -21,7 +24,7 @@
  * - `GET  /v1/seed/codes/:key`     → bir satırın koşu kodu (tabloda yalnız özeti var)
  * - `DELETE /v1/players/me`        → hesabı ve koşularını sil (Lite ile aynı uç)
  */
-import { RUN_LIMITS, decodeRunChecked } from '../../core/src/league';
+import { RUN_LIMITS, decodeRunChecked, replayRun, simFingerprint, type LeagueRun, type ReplayResult } from '../../core/src/league';
 import { weekId } from '../../lite-model/src/index';
 import type { Db } from './db';
 import { HttpError, allowedOrigin, json, randomToken, readJson, sha256 } from './http';
@@ -44,6 +47,18 @@ export const SEED = {
   runsPerHour: 30,
 } as const;
 
+/**
+ * Sunucunun tekrarı. Testler kendi izini ve tekrarını veriyor (sahte koşularla
+ * istemciyi denemek için); canlı sunucu her zaman oyunun motoru.
+ */
+export interface SeedReplay {
+  /** Sunucunun simülasyon izi (`simFingerprint`, ilk ihtiyaçta ~0,5 sn). */
+  sim(): string;
+  replay(run: LeagueRun): Promise<ReplayResult>;
+}
+
+export const SERVER_REPLAY: SeedReplay = { sim: simFingerprint, replay: (run) => replayRun(run) };
+
 /** Gönderim gövdesi sınırı (bayt): oyunun kendi kod sınırı ve zarf. */
 export const MAX_RUN_BODY = RUN_LIMITS.codeLength + 1_024;
 
@@ -60,6 +75,7 @@ interface SeedRow {
   curve: string;
   code_key: string;
   size: number;
+  idle: number;
   at: number;
 }
 
@@ -75,6 +91,10 @@ export interface SeedEntry {
   codeKey: string;
   codeSize: number;
   mine: boolean;
+  /** Sunucu yeniden oynattı, skor ve eğri tuttu (Tur 52; tablodaki her satır). */
+  verified: true;
+  /** Günlük boş (hiç oynanmamış): kopya denetimi bunları ayırmıyor. */
+  idle: boolean;
 }
 
 /** Gönderim kabul eden haftalar: bu hafta, ilk saatlerinde geçen hafta da. */
@@ -149,18 +169,23 @@ function toEntry(row: SeedRow, week: string, me: string | null): SeedEntry {
     codeKey: row.code_key,
     codeSize: row.size,
     mine: row.player_id === me,
+    verified: true,
+    idle: row.idle === 1,
   };
 }
 
-const ROW_COLUMNS = 'id, player_id, company, ceo, score, curve, code_key, length(code) AS size, at';
+const ROW_COLUMNS = 'id, player_id, company, ceo, score, curve, code_key, length(code) AS size, idle, at';
 
 /**
  * Koşu gönder. Kod oyunun kendi çözücüsünden geçiyor (sınırlar, komut
  * türleri, gün aralığı, CEO); hafta açık olmalı, şirket adı herkese
  * gösterilebilir olmalı. Oyuncunun o haftaki satırı yalnız daha iyi skorla
  * değişiyor; satırın kimliği aynı kalıyor (hayalet seçimi kopmasın).
+ *
+ * Sıra (Tur 52): ucuz denetimler, aralık, "daha iyisi var mı", kopya, en son
+ * tekrar. Daha kötü ya da aynı skor tekrar edilmiyor: yazılmayacak.
  */
-export async function submitRun(request: Request, db: Db, playerId: string, now: number): Promise<Response> {
+export async function submitRun(request: Request, db: Db, playerId: string, now: number, verifier: SeedReplay = SERVER_REPLAY): Promise<Response> {
   await limit(db, request, 'run', SEED.runsPerHour, now);
   const body = await readJson(request, MAX_RUN_BODY);
   const code = typeof body.code === 'string' ? body.code.trim() : '';
@@ -172,6 +197,9 @@ export async function submitRun(request: Request, db: Db, playerId: string, now:
   const open = openWeeks(now);
   if (!open.includes(run.weekId)) throw new HttpError(409, 'week', { week: open[0] });
   if (!publicCompanyName(run.companyName)) throw new HttpError(400, 'name-blocked');
+  // Başka sürümde oynanmış koşuyu sunucu yargılayamıyor (sahte değil): oyun bekletiyor.
+  // Aralığa sayılmıyor; sunucu güncellenince ilk denemede geçsin.
+  if (run.sim !== verifier.sim()) throw new HttpError(409, 'sim');
 
   // Aralık tek koşullu yazımla ayrılıyor: aynı anda gelen iki istekten yalnız
   // biri geçiyor; daha kötü gönderim de aralığı dolduruyor (Codex #80).
@@ -189,25 +217,50 @@ export async function submitRun(request: Request, db: Db, playerId: string, now:
   const existing = await db.first<SeedRow>(`SELECT ${ROW_COLUMNS} FROM seed_runs WHERE player_id = ? AND week = ?`, playerId, run.weekId);
   if (existing && existing.score >= run.score) return json({ outcome: 'kept-better', entry: toEntry(existing, run.weekId, playerId) });
 
+  // Başka bir oyuncunun koşusunun aynısı (skor ve eğri; boş koşular hariç):
+  // tabloyu kopyalarla doldurup dürüst satırları dışarıda bırakmasın.
+  const idle = run.log.length === 0;
+  const curve = JSON.stringify(run.curve);
+  if (!idle) {
+    const copy = await db.first<{ id: string }>(
+      'SELECT id FROM seed_runs WHERE week = ? AND score = ? AND curve = ? AND idle = 0 AND player_id != ? LIMIT 1',
+      run.weekId,
+      run.score,
+      curve,
+      playerId,
+    );
+    if (copy) throw new HttpError(409, 'copy');
+  }
+
+  // Tekrar: skor ve eğri sunucunun kendi oynatışından.
+  let replayed: ReplayResult;
+  try {
+    replayed = await verifier.replay(run);
+  } catch {
+    throw new HttpError(422, 'replay', { reason: 'error' });
+  }
+  if (!replayed.ok) throw new HttpError(422, 'replay', { reason: replayed.score === run.score ? 'curve' : 'score' });
+
   const key = await sha256(code);
   // Yazım koşullu: aynı anda gelen daha kötü gönderim iyisini ezmesin; hesap bu
   // arada silindiyse satır yazılmasın (`deleteAccount`).
   const changed = await db.run(
-    `INSERT INTO seed_runs (player_id, week, id, company, ceo, score, curve, code, code_key, at)
-     SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ? WHERE EXISTS (SELECT 1 FROM players WHERE id = ?)
+    `INSERT INTO seed_runs (player_id, week, id, company, ceo, score, curve, code, code_key, idle, at)
+     SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? WHERE EXISTS (SELECT 1 FROM players WHERE id = ?)
      ON CONFLICT (player_id, week) DO UPDATE SET
        company = excluded.company, ceo = excluded.ceo, score = excluded.score, curve = excluded.curve,
-       code = excluded.code, code_key = excluded.code_key, at = excluded.at
+       code = excluded.code, code_key = excluded.code_key, idle = excluded.idle, at = excluded.at
      WHERE excluded.score > seed_runs.score`,
     playerId,
     run.weekId,
     crypto.randomUUID(),
     run.companyName,
     run.ceoId,
-    run.score,
-    JSON.stringify(run.curve),
+    replayed.score,
+    JSON.stringify(replayed.curve),
     code,
     key,
+    idle ? 1 : 0,
     now,
     playerId,
   );

@@ -141,6 +141,9 @@ CREATE TABLE IF NOT EXISTS seed_runs (
   -- Koşu kodu (CF1.…) ve SHA-256 özeti: tablo özeti veriyor, kod ayrı uçtan iniyor.
   code TEXT NOT NULL,
   code_key TEXT NOT NULL,
+  -- Tur 52: günlük boş (hiç oynanmamış koşu); kopya denetimi bunları ayırmıyor.
+  -- Skor ve eğri sunucunun tekrarından: tablodaki her satır doğrulanmış.
+  idle INTEGER NOT NULL DEFAULT 0,
   -- Satırdaki koşunun sunucu saati (eşit skorda önce gönderen).
   at INTEGER NOT NULL,
   PRIMARY KEY (player_id, week)

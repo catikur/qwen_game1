@@ -48,7 +48,7 @@ import type { Db, Statement } from './db';
 import { HttpError, base64, json, preflight, randomToken, readBody, readJson, sha256, shortCode, withCors } from './http';
 import { cleanName, offensiveName } from './names';
 import { MAX_SYNC_BODY, PLATFORMS, createSave, loadSave, saveWithScore, sync, touchProfile, uploadSave, type Platform } from './saves';
-import { registerSeed, runCode, seedPurge, submitRun, weekTable } from './seed';
+import { registerSeed, runCode, seedPurge, submitRun, weekTable, type SeedReplay } from './seed';
 
 export { cleanName, offensiveName } from './names';
 
@@ -60,6 +60,11 @@ export interface Options {
    * (sır tanımlı değil) denetim yok.
    */
   turnstile?: (token: string, ip: string | null) => Promise<boolean>;
+  /**
+   * Ana oyunun koşu tekrarı (Tur 52). Yoksa oyunun motoru (`SERVER_REPLAY`);
+   * testler sahte koşularla istemciyi denerken kendi izini ve tekrarını veriyor.
+   */
+  seed?: SeedReplay;
 }
 
 const DEFAULTS: Options = { attest: APPLE_ATTEST };
@@ -138,7 +143,8 @@ async function route(request: Request, db: Db, now: number, options: Options): P
   const route = `${request.method} ${path}`;
   try {
     // `seed`: ana oyunun Tohum Ligi bu sürümde (istemci ve canlı denetim eski sunucuyu buradan ayırıyor).
-    if (route === 'GET /v1/health') return json({ ok: true, week: weekId(now), seed: 1 });
+    // `verify`: koşuyu sunucu yeniden oynatıyor (Tur 52); tablonun satırları doğrulanmış.
+    if (route === 'GET /v1/health') return json({ ok: true, week: weekId(now), seed: 1, verify: 1 });
     if (route === 'POST /v1/players') return await register(request, db, now, options);
     if (route === 'POST /v1/link/claim') return await claimLink(request, db, now);
     if (route === 'POST /v1/seed/players') return await registerSeed(request, db, now);
@@ -160,7 +166,7 @@ async function route(request: Request, db: Db, now: number, options: Options): P
     // Bu arada hesap silindi (bağlı başka cihazdan).
     if (!me) throw new HttpError(401, 'auth');
     try {
-      if (session.platform === 'capital') return await seedSignedIn(route, request, db, me, now);
+      if (session.platform === 'capital') return await seedSignedIn(route, request, db, me, now, options);
       if (route === 'POST /v1/seed/runs') throw new HttpError(403, 'platform');
       return await signedIn(route, request, db, me, session.platform, now, options);
     } finally {
@@ -174,8 +180,8 @@ async function route(request: Request, db: Db, now: number, options: Options): P
 }
 
 /** Ana oyunun hesabı (Tur 51): koşu gönderimi ve hesap silme; Lite'ın uçları kapalı. */
-async function seedSignedIn(route: string, request: Request, db: Db, me: Player, now: number): Promise<Response> {
-  if (route === 'POST /v1/seed/runs') return await submitRun(request, db, me.id, now);
+async function seedSignedIn(route: string, request: Request, db: Db, me: Player, now: number, options: Options): Promise<Response> {
+  if (route === 'POST /v1/seed/runs') return await submitRun(request, db, me.id, now, options.seed);
   if (route === 'DELETE /v1/players/me') return await deleteAccount(db, me);
   throw new HttpError(403, 'platform');
 }

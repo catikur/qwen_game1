@@ -452,6 +452,12 @@ function submitText(outcome: LeagueSubmitOutcome, kind: LeagueBoard['kind']): st
       return t('app.league.submit.busy');
     case 'error':
       return t('app.league.submit.error');
+    case 'version':
+      return t('app.league.submit.version');
+    case 'rejected':
+      return t('app.league.submit.rejected');
+    case 'copy':
+      return t('app.league.submit.copy');
   }
 }
 

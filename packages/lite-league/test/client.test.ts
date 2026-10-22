@@ -12,6 +12,9 @@ import { handle } from '../src/app';
 import { SEED } from '../src/seed';
 import type { Db } from '../src/db';
 import { memoryDb } from './sqlite';
+import { TEST_SIM, TRUSTING } from './trust';
+import { APPLE_ATTEST } from '../src/attest';
+import type { Options } from '../src/app';
 
 const THURSDAY = Date.UTC(2026, 9, 15, 12);
 const WEEK = '2026-W42';
@@ -42,7 +45,7 @@ function client(db: Db, net: Net, storage = memoryStorage(), online = new EventT
     if (!net.online) throw new TypeError('fetch failed');
     if (net.old && new globalThis.URL(request.url).pathname === '/v1/health') return Response.json({ ok: true, week: WEEK });
     if (net.old) return Response.json({ error: 'route' }, { status: 404 });
-    return handle(request, db, net.now);
+    return handle(request, db, net.now, TRUSTING);
   }) as typeof fetch;
   // Dakikalık tazeleme testte işlemesin (Node'un zamanlayıcısı 2^31 ms'den uzununu 1 ms sayıyor).
   const board = createServerBoard({ url: URL, fetch: fetcher, storage, online, pollMs: 2 ** 30 });
@@ -187,7 +190,7 @@ test('istemci: sunucunun kesin retleri; silinen hesap yenisiyle', async () => {
 
   // Hesap başka sekmeden silindi: gönderim yeni hesapla.
   const before = JSON.parse(storage.map.get('capitalforge.league.account')!).id;
-  await handle(new Request(`${URL}/v1/players/me`, { method: 'DELETE', headers: { authorization: `Bearer ${before}.${JSON.parse(storage.map.get('capitalforge.league.account')!).token}` } }), db, net.now);
+  await handle(new Request(`${URL}/v1/players/me`, { method: 'DELETE', headers: { authorization: `Bearer ${before}.${JSON.parse(storage.map.get('capitalforge.league.account')!).token}` } }), db, net.now, TRUSTING);
   net.now += SEED.minGapMs;
   assert.equal(await board.submit(entryOf(run({ score: 3_000_000 }))), 'saved');
   assert.notEqual(JSON.parse(storage.map.get('capitalforge.league.account')!).id, before);
@@ -226,7 +229,7 @@ test('istemci: bekleyen gönderim tablo açık değilken de bağlantı gelince g
   assert.equal(await board.submit(entryOf(run())), 'queued');
   net.online = true;
   online.dispatchEvent(new Event('online'));
-  const total = async () => (await (await handle(new Request(`${URL}/v1/seed/weeks/${WEEK}`), db, net.now)).json()).total as number;
+  const total = async () => (await (await handle(new Request(`${URL}/v1/seed/weeks/${WEEK}`), db, net.now, TRUSTING)).json()).total as number;
   for (let i = 0; i < 50 && (await total()) === 0; i++) await new Promise((resolve) => setTimeout(resolve, 10));
   assert.equal(await total(), 1, 'serbest oyuna geçen oyuncunun koşusu da gitti');
   assert.deepEqual(JSON.parse(storage.map.get('capitalforge.league.pending')!), []);
@@ -241,7 +244,7 @@ test('istemci: açılışta bekleyen gönderim varsa sunucu tanınınca gidiyor'
   net.online = true;
   const { board } = client(db, net, storage);
   assert.equal(await board.probe(), 'ok');
-  const total = async () => (await (await handle(new Request(`${URL}/v1/seed/weeks/${WEEK}`), db, net.now)).json()).total as number;
+  const total = async () => (await (await handle(new Request(`${URL}/v1/seed/weeks/${WEEK}`), db, net.now, TRUSTING)).json()).total as number;
   for (let i = 0; i < 50 && (await total()) === 0; i++) await new Promise((resolve) => setTimeout(resolve, 10));
   assert.equal(await total(), 1);
 });
@@ -260,7 +263,7 @@ test('istemci: tarayıcı deposu yazılamıyorsa (dolu, kapalı) hesap ve bekley
   const online = new EventTarget();
   const fetcher = (async (input: RequestInfo | URL, init?: RequestInit) => {
     if (!net.online) throw new TypeError('fetch failed');
-    return handle(new Request(input, init), db, net.now);
+    return handle(new Request(input, init), db, net.now, TRUSTING);
   }) as typeof fetch;
   const board = createServerBoard({ url: URL, fetch: fetcher, storage: full as never, online, pollMs: 2 ** 30 });
   assert.equal(await board.probe(), 'ok');
@@ -272,7 +275,7 @@ test('istemci: tarayıcı deposu yazılamıyorsa (dolu, kapalı) hesap ve bekley
   assert.equal(await board.submit(entryOf(run({ score: 2_000_000 }))), 'queued');
   net.online = true;
   online.dispatchEvent(new Event('online'));
-  const best = async () => (await (await handle(new Request(`${URL}/v1/seed/weeks/${WEEK}`), db, net.now)).json()).entries[0]?.score as number;
+  const best = async () => (await (await handle(new Request(`${URL}/v1/seed/weeks/${WEEK}`), db, net.now, TRUSTING)).json()).entries[0]?.score as number;
   for (let i = 0; i < 50 && (await best()) !== 2_000_000; i++) await new Promise((resolve) => setTimeout(resolve, 10));
   assert.equal(await best(), 2_000_000, 'bekleyen gönderim kaybolmadı');
 });
@@ -315,7 +318,7 @@ test('istemci: iki sekme ilk gönderimi aynı anda yaparsa tek hesap; koşu tara
       url: URL,
       fetch: (async (input: RequestInfo | URL, init?: RequestInit) => {
         const request = new Request(input, init);
-        const response = await handle(request, db, net.now);
+        const response = await handle(request, db, net.now, TRUSTING);
         if (hold && new globalThis.URL(request.url).pathname === '/v1/seed/players') await gate;
         return response;
       }) as typeof fetch,
@@ -329,7 +332,7 @@ test('istemci: iki sekme ilk gönderimi aynı anda yaparsa tek hesap; koşu tara
   release();
   await late;
   const stored = JSON.parse(storage.map.get('capitalforge.league.account')!);
-  const table = await (await handle(new Request(`${URL}/v1/seed/weeks/${WEEK}`, { headers: { authorization: `Bearer ${stored.id}.${stored.token}` } }), db, net.now)).json();
+  const table = await (await handle(new Request(`${URL}/v1/seed/weeks/${WEEK}`, { headers: { authorization: `Bearer ${stored.id}.${stored.token}` } }), db, net.now, TRUSTING)).json();
   assert.equal(table.total, 1, 'tarayıcının erişemediği hesapta satır kalmıyor');
   assert.equal(table.entries[0].mine, true, 'satır tarayıcının tuttuğu hesabın');
   // Kaybeden sekmenin açtığı hesap sunucuda kalmıyor: anahtarını kimse tutmuyor (Codex #80).
@@ -352,7 +355,7 @@ test('istemci: kaybeden sekmenin hesabı silinemezse anahtarı saklanıyor, sonr
         const path = new globalThis.URL(request.url).pathname;
         // Kaybedenin silme isteği önce sunucuya ulaşamıyor.
         if (request.method === 'DELETE' && path === '/v1/players/me' && deleteFails) throw new TypeError('fetch failed');
-        const response = await handle(request, db, net.now);
+        const response = await handle(request, db, net.now, TRUSTING);
         if (hold && path === '/v1/seed/players') await gate;
         return response;
       }) as typeof fetch,
@@ -392,7 +395,7 @@ test('istemci: bağlantısız açılışta görülmüş sunucu seçilince de bek
   assert.equal(again.seen(), true);
   net.online = true;
   online.dispatchEvent(new Event('online'));
-  const total = async () => (await (await handle(new Request(`${URL}/v1/seed/weeks/${WEEK}`), db, net.now)).json()).total as number;
+  const total = async () => (await (await handle(new Request(`${URL}/v1/seed/weeks/${WEEK}`), db, net.now, TRUSTING)).json()).total as number;
   for (let i = 0; i < 50 && (await total()) === 0; i++) await new Promise((resolve) => setTimeout(resolve, 10));
   assert.equal(await total(), 1, 'bekleyen koşu gitti');
 });
@@ -452,7 +455,7 @@ test('istemci: hesap silinirken süren gönderim bekleniyor, 401 yeni hesap açm
     net.requests.push(`${request.method} ${path}`);
     if (!net.online) throw new TypeError('fetch failed');
     if (request.method === 'POST' && path === '/v1/seed/runs' && hold) await hold;
-    return handle(request, db, net.now);
+    return handle(request, db, net.now, TRUSTING);
   }) as typeof fetch;
   const board = createServerBoard({ url: URL, fetch: fetcher, storage, online, pollMs: 2 ** 30 });
   assert.equal(await board.probe(), 'ok');
@@ -474,7 +477,7 @@ test('istemci: hesap silinirken süren gönderim bekleniyor, 401 yeni hesap açm
   assert.equal(await forgotten, true);
   for (let i = 0; i < 20; i++) await new Promise((resolve) => setTimeout(resolve, 5));
 
-  const table = (await (await handle(new Request(`${URL}/v1/seed/weeks/${WEEK}`), db, net.now)).json()) as { total: number };
+  const table = (await (await handle(new Request(`${URL}/v1/seed/weeks/${WEEK}`), db, net.now, TRUSTING)).json()) as { total: number };
   assert.equal(table.total, 0, 'silinen hesabın koşusu sunucuda kalmıyor');
   assert.equal(net.requests.filter((line) => line === 'POST /v1/seed/players').length, 1, 'silinirken yeni hesap açılmıyor');
   assert.equal(board.account!.exists(), false);
@@ -489,7 +492,7 @@ test('istemci: gönderim aralığına takılan bekleyen koşu sonra kendiliğind
     const request = new Request(input, init);
     net.requests.push(`${request.method} ${new globalThis.URL(request.url).pathname}`);
     if (!net.online) throw new TypeError('fetch failed');
-    const response = await handle(request, db, net.now);
+    const response = await handle(request, db, net.now, TRUSTING);
     if (response.status !== 429) return response;
     // Sunucu "30 sn sonra" diyor; testin saati elle ilerliyor, bekleme kısaltılıyor.
     return Response.json({ ...((await response.json()) as object), retryAfter: 0.05 }, { status: 429 });
@@ -503,7 +506,7 @@ test('istemci: gönderim aralığına takılan bekleyen koşu sonra kendiliğind
   assert.equal(await board.submit(entryOf(run({ score: 2_000_000 }))), 'queued');
   net.online = true;
   online.dispatchEvent(new Event('online'));
-  const best = async () => (await (await handle(new Request(`${URL}/v1/seed/weeks/${WEEK}`), db, net.now)).json()).entries[0]?.score as number | undefined;
+  const best = async () => (await (await handle(new Request(`${URL}/v1/seed/weeks/${WEEK}`), db, net.now, TRUSTING)).json()).entries[0]?.score as number | undefined;
   for (let i = 0; i < 50 && (await best()) === undefined; i++) await new Promise((resolve) => setTimeout(resolve, 5));
   assert.equal(await best(), 1_250_000, 'ilk koşu gitti, ikincisi aralığa takıldı');
 
@@ -530,7 +533,7 @@ test('istemci: yazılamayan depoda bellekteki hesap ve kuyruk yeni oyun ekranın
     const request = new Request(input, init);
     net.requests.push(`${request.method} ${new globalThis.URL(request.url).pathname}`);
     if (!net.online) throw new TypeError('fetch failed');
-    return handle(request, db, net.now);
+    return handle(request, db, net.now, TRUSTING);
   }) as typeof fetch;
   const open = () => createServerBoard({ url: URL, fetch: fetcher, storage: full as never, online, pollMs: 2 ** 30 });
 
@@ -546,7 +549,7 @@ test('istemci: yazılamayan depoda bellekteki hesap ve kuyruk yeni oyun ekranın
   assert.equal(second.account!.exists(), true, 'hesap kaybolmadı');
   net.online = true;
   assert.equal(await second.probe(), 'ok');
-  const best = async () => (await (await handle(new Request(`${URL}/v1/seed/weeks/${WEEK}`), db, net.now)).json()).entries[0]?.score as number;
+  const best = async () => (await (await handle(new Request(`${URL}/v1/seed/weeks/${WEEK}`), db, net.now, TRUSTING)).json()).entries[0]?.score as number;
   for (let i = 0; i < 50 && (await best()) !== 2_000_000; i++) await new Promise((resolve) => setTimeout(resolve, 10));
   assert.equal(await best(), 2_000_000, 'bekleyen koşu yeni tabloyla gitti');
   assert.equal(net.requests.filter((line) => line === 'POST /v1/seed/players').length, 1, 'tek hesap');
@@ -566,7 +569,7 @@ test('istemci: hesap silinirken öbür sekme yeni hesap açtıysa onunki silinmi
       deleting();
       await hold;
     }
-    return handle(request, db, net.now);
+    return handle(request, db, net.now, TRUSTING);
   }) as typeof fetch;
   const board = createServerBoard({ url: URL, fetch: fetcher, storage, online: new EventTarget(), pollMs: 2 ** 30 });
   assert.equal(await board.probe(), 'ok');
@@ -598,7 +601,7 @@ test('istemci: silme başladığı andaki hesabı siliyor; beklerken öbür sekm
     net.requests.push(`${request.method} ${new globalThis.URL(request.url).pathname}`);
     if (!net.online) throw new TypeError('fetch failed');
     if (request.method === 'POST' && new globalThis.URL(request.url).pathname === '/v1/seed/runs' && hold) await hold;
-    return handle(request, db, net.now);
+    return handle(request, db, net.now, TRUSTING);
   }) as typeof fetch;
   const board = createServerBoard({ url: URL, fetch: fetcher, storage, online, pollMs: 2 ** 30 });
   assert.equal(await board.probe(), 'ok');
@@ -613,7 +616,7 @@ test('istemci: silme başladığı andaki hesabı siliyor; beklerken öbür sekm
   const forgotten = board.account!.forget();
 
   // Silme gönderimi beklerken öbür sekme yeni hesap açıp koşusunu gönderiyor.
-  const opened = (await (await handle(new Request(`${URL}/v1/seed/players`, { method: 'POST' }), db, net.now)).json()) as { id: string; token: string };
+  const opened = (await (await handle(new Request(`${URL}/v1/seed/players`, { method: 'POST' }), db, net.now, TRUSTING)).json()) as { id: string; token: string };
   const other = { url: URL, id: opened.id, token: opened.token };
   const posted = await handle(
     new Request(`${URL}/v1/seed/runs`, {
@@ -623,6 +626,7 @@ test('istemci: silme başladığı andaki hesabı siliyor; beklerken öbür sekm
     }),
     db,
     net.now,
+    TRUSTING,
   );
   assert.equal(posted.status, 201);
   storage.setItem('capitalforge.league.account', JSON.stringify(other));
@@ -630,7 +634,7 @@ test('istemci: silme başladığı andaki hesabı siliyor; beklerken öbür sekm
   await sending;
   assert.equal(await forgotten, true);
 
-  const table = (await (await handle(new Request(`${URL}/v1/seed/weeks/${WEEK}`), db, net.now)).json()) as { entries: Array<{ companyName: string }> };
+  const table = (await (await handle(new Request(`${URL}/v1/seed/weeks/${WEEK}`), db, net.now, TRUSTING)).json()) as { entries: Array<{ companyName: string }> };
   assert.deepEqual(table.entries.map((entry) => entry.companyName), ['Öbür Sekme'], 'silinen hesabın koşusu gitti, öbür sekmeninki kaldı');
   assert.equal(JSON.parse(storage.getItem('capitalforge.league.account')!).id, other.id, 'öbür sekmenin anahtarı yerinde');
   assert.equal(await db.first('SELECT id FROM players WHERE id = ?', a.id), null, 'silme başladığı andaki hesap silindi');
@@ -649,7 +653,7 @@ test('istemci: sunucunun söylediği süre sonra yeniden deniyor; saatlik sını
     if (request.method === 'POST' && new globalThis.URL(request.url).pathname === '/v1/seed/runs' && Date.now() < busyUntil) {
       return Response.json({ error: 'busy', retryAfter: 1 }, { status: 429 });
     }
-    return handle(request, db, net.now);
+    return handle(request, db, net.now, TRUSTING);
   }) as typeof fetch;
   const board = createServerBoard({ url: URL, fetch: fetcher, storage, online, pollMs: 2 ** 30, retryMs: 10 });
   assert.equal(await board.probe(), 'ok');
@@ -657,7 +661,7 @@ test('istemci: sunucunun söylediği süre sonra yeniden deniyor; saatlik sını
   assert.equal(await board.submit(entryOf(run())), 'queued');
   net.online = true;
   online.dispatchEvent(new Event('online'));
-  const total = async () => (await (await handle(new Request(`${URL}/v1/seed/weeks/${WEEK}`), db, net.now)).json()).total as number;
+  const total = async () => (await (await handle(new Request(`${URL}/v1/seed/weeks/${WEEK}`), db, net.now, TRUSTING)).json()).total as number;
   for (let i = 0; i < 60 && (await total()) === 0; i++) await new Promise((resolve) => setTimeout(resolve, 50));
   assert.equal(await total(), 1, 'koşu sınır kalkınca gitti');
   board.close?.();
@@ -675,7 +679,7 @@ test('istemci: başarılı gönderim eski "saat sonra dene" süresini siliyor (C
     const runs = request.method === 'POST' && new globalThis.URL(request.url).pathname === '/v1/seed/runs';
     // Saatlik sınır: bir saat sonra dene.
     if (runs && hourly) return Response.json({ error: 'busy', retryAfter: 3600 }, { status: 429 });
-    const response = await handle(request, db, net.now);
+    const response = await handle(request, db, net.now, TRUSTING);
     if (response.status !== 429) return response;
     // 30 sn aralığı; testin saati elle ilerliyor, bekleme kısaltılıyor.
     return Response.json({ ...((await response.json()) as object), retryAfter: 0.05 }, { status: 429 });
@@ -696,7 +700,7 @@ test('istemci: başarılı gönderim eski "saat sonra dene" süresini siliyor (C
   assert.equal(await board.submit(entryOf(run({ score: 3_000_000 }))), 'queued');
   net.online = true;
   online.dispatchEvent(new Event('online'));
-  const best = async () => (await (await handle(new Request(`${URL}/v1/seed/weeks/${WEEK}`), db, net.now)).json()).entries[0]?.score as number;
+  const best = async () => (await (await handle(new Request(`${URL}/v1/seed/weeks/${WEEK}`), db, net.now, TRUSTING)).json()).entries[0]?.score as number;
   for (let i = 0; i < 50 && (await best()) !== 2_000_000; i++) await new Promise((resolve) => setTimeout(resolve, 10));
   net.now += SEED.minGapMs + 1000;
   for (let i = 0; i < 100 && (await best()) !== 3_000_000; i++) await new Promise((resolve) => setTimeout(resolve, 10));
@@ -718,7 +722,7 @@ test('istemci: silinen hesabın bekleyen koşuları kuyruktan gidiyor, öbür se
       deleting();
       await hold;
     }
-    return handle(request, db, net.now);
+    return handle(request, db, net.now, TRUSTING);
   }) as typeof fetch;
   const board = createServerBoard({ url: URL, fetch: fetcher, storage, online: new EventTarget(), pollMs: 2 ** 30 });
   assert.equal(await board.probe(), 'ok');
@@ -756,7 +760,7 @@ test('istemci: hesap açma da yoğunluğa takılırsa sunucunun söylediği sür
     if (request.method === 'POST' && new globalThis.URL(request.url).pathname === '/v1/seed/players' && Date.now() < busyUntil) {
       return Response.json({ error: 'busy', retryAfter: 1 }, { status: 429 });
     }
-    return handle(request, db, net.now);
+    return handle(request, db, net.now, TRUSTING);
   }) as typeof fetch;
   const board = createServerBoard({ url: URL, fetch: fetcher, storage, online, pollMs: 2 ** 30, retryMs: 10 });
   subscriptions.push(() => board.close?.());
@@ -765,7 +769,7 @@ test('istemci: hesap açma da yoğunluğa takılırsa sunucunun söylediği sür
   assert.equal(await board.submit(entryOf(run())), 'queued');
   net.online = true;
   online.dispatchEvent(new Event('online'));
-  const total = async () => (await (await handle(new Request(`${URL}/v1/seed/weeks/${WEEK}`), db, net.now)).json()).total as number;
+  const total = async () => (await (await handle(new Request(`${URL}/v1/seed/weeks/${WEEK}`), db, net.now, TRUSTING)).json()).total as number;
   for (let i = 0; i < 60 && (await total()) === 0; i++) await new Promise((resolve) => setTimeout(resolve, 50));
   assert.equal(await total(), 1, 'hesap açıldı, koşu gitti');
 });
@@ -784,14 +788,14 @@ test('istemci: bekleyen koşu yalnız kendi hesabıyla gidiyor; hesap silindiyse
   assert.equal(await board.submit(entryOf(run({ score: 2_000_000 }))), 'queued');
 
   // Öbür sekme hesabı sunucuda sildi; cevabı daha o sekmeye ulaşmadı, depo yerinde.
-  const deleted = await handle(new Request(`${URL}/v1/players/me`, { method: 'DELETE', headers: { authorization: `Bearer ${a.id}.${a.token}` } }), db, net.now);
+  const deleted = await handle(new Request(`${URL}/v1/players/me`, { method: 'DELETE', headers: { authorization: `Bearer ${a.id}.${a.token}` } }), db, net.now, TRUSTING);
   assert.equal(deleted.status, 200);
   const before = net.requests.length;
   net.online = true;
   online.dispatchEvent(new Event('online'));
   for (let i = 0; i < 50 && JSON.parse(storage.getItem('capitalforge.league.pending') ?? '[]').length > 0; i++) await new Promise((resolve) => setTimeout(resolve, 10));
   await new Promise((resolve) => setTimeout(resolve, 50));
-  const table = (await (await handle(new Request(`${URL}/v1/seed/weeks/${WEEK}`), db, net.now)).json()) as { total: number };
+  const table = (await (await handle(new Request(`${URL}/v1/seed/weeks/${WEEK}`), db, net.now, TRUSTING)).json()) as { total: number };
   assert.equal(table.total, 0, 'silinen hesabın koşusu yeni hesapla yayımlanmadı');
   assert.equal(net.requests.slice(before).filter((line) => line === 'POST /v1/seed/players').length, 0, 'yeni hesap açılmadı');
   assert.deepEqual(JSON.parse(storage.getItem('capitalforge.league.pending') ?? '[]'), [], 'koşu kuyruktan düştü');
@@ -808,7 +812,7 @@ test('istemci: hesapsız kuyruğa giren koşu hesap açılınca ona bağlanıyor
     if (!net.online) throw new TypeError('fetch failed');
     // Hesap açılıyor ama koşu isteği yolda kopuyor.
     if (runsDown && request.method === 'POST' && new globalThis.URL(request.url).pathname === '/v1/seed/runs') throw new TypeError('fetch failed');
-    return handle(request, db, net.now);
+    return handle(request, db, net.now, TRUSTING);
   }) as typeof fetch;
   const board = createServerBoard({ url: URL, fetch: fetcher, storage, online, pollMs: 2 ** 30 });
   subscriptions.push(() => board.close?.());
@@ -838,7 +842,7 @@ test('istemci: "şu kadar sonra dene" süresi son tarih olarak tutuluyor; eski u
     if (request.method === 'POST' && new globalThis.URL(request.url).pathname === '/v1/seed/runs' && hints.length > 0) {
       return Response.json({ error: 'busy', retryAfter: hints.shift() }, { status: 429 });
     }
-    return handle(request, db, net.now);
+    return handle(request, db, net.now, TRUSTING);
   }) as typeof fetch;
   const board = createServerBoard({ url: URL, fetch: fetcher, storage, online, pollMs: 2 ** 30, retryMs: 10 });
   subscriptions.push(() => board.close?.());
@@ -851,7 +855,7 @@ test('istemci: "şu kadar sonra dene" süresi son tarih olarak tutuluyor; eski u
   assert.equal(await board.submit(entryOf(run({ score: 2_000_000 }))), 'queued');
   net.online = true;
   online.dispatchEvent(new Event('online'));
-  const total = async () => (await (await handle(new Request(`${URL}/v1/seed/weeks/${WEEK}`), db, net.now)).json()).total as number;
+  const total = async () => (await (await handle(new Request(`${URL}/v1/seed/weeks/${WEEK}`), db, net.now, TRUSTING)).json()).total as number;
   for (let i = 0; i < 40 && (await total()) === 0; i++) await new Promise((resolve) => setTimeout(resolve, 10));
   assert.equal(await total(), 1, 'koşu sunucunun yeni süresiyle gitti');
 });
@@ -869,7 +873,7 @@ test('istemci: sunucunun geçici hatasında (5xx) bekleyen koşu kuyrukta kalıy
       failures--;
       return Response.json({ error: 'internal' }, { status: 503 });
     }
-    return handle(request, db, net.now);
+    return handle(request, db, net.now, TRUSTING);
   }) as typeof fetch;
   const board = createServerBoard({ url: URL, fetch: fetcher, storage, online, pollMs: 2 ** 30, retryMs: 10 });
   subscriptions.push(() => board.close?.());
@@ -878,7 +882,7 @@ test('istemci: sunucunun geçici hatasında (5xx) bekleyen koşu kuyrukta kalıy
   assert.equal(await board.submit(entryOf(run())), 'queued');
   net.online = true;
   online.dispatchEvent(new Event('online'));
-  const total = async () => (await (await handle(new Request(`${URL}/v1/seed/weeks/${WEEK}`), db, net.now)).json()).total as number;
+  const total = async () => (await (await handle(new Request(`${URL}/v1/seed/weeks/${WEEK}`), db, net.now, TRUSTING)).json()).total as number;
   for (let i = 0; i < 50 && (await total()) === 0; i++) await new Promise((resolve) => setTimeout(resolve, 10));
   assert.equal(await total(), 1, 'geçici hatadan sonra koşu gitti');
 });
@@ -897,7 +901,7 @@ test('istemci: sunucu uzun süre hata verse de bekleyen koşu seyrek aralıkla d
       failures--;
       return Response.json({ error: 'internal' }, { status: 503 });
     }
-    return handle(request, db, net.now);
+    return handle(request, db, net.now, TRUSTING);
   }) as typeof fetch;
   const board = createServerBoard({ url: URL, fetch: fetcher, storage, online, pollMs: 2 ** 30, retryMs: 2 });
   subscriptions.push(() => board.close?.());
@@ -906,7 +910,7 @@ test('istemci: sunucu uzun süre hata verse de bekleyen koşu seyrek aralıkla d
   assert.equal(await board.submit(entryOf(run())), 'queued');
   net.online = true;
   online.dispatchEvent(new Event('online'));
-  const total = async () => (await (await handle(new Request(`${URL}/v1/seed/weeks/${WEEK}`), db, net.now)).json()).total as number;
+  const total = async () => (await (await handle(new Request(`${URL}/v1/seed/weeks/${WEEK}`), db, net.now, TRUSTING)).json()).total as number;
   for (let i = 0; i < 150 && (await total()) === 0; i++) await new Promise((resolve) => setTimeout(resolve, 10));
   assert.equal(failures, 0, 'kesinti boyunca denemeler sürdü');
   assert.equal(await total(), 1, 'kesinti bitince koşu gitti');
@@ -926,7 +930,7 @@ test('istemci: tarayıcı çevrimiçiyken istek kopsa da (DNS, zaman aşımı) b
       drops--;
       throw new TypeError('fetch failed');
     }
-    return handle(request, db, net.now);
+    return handle(request, db, net.now, TRUSTING);
   }) as typeof fetch;
   const board = createServerBoard({ url: URL, fetch: fetcher, storage, online, pollMs: 2 ** 30, retryMs: 2 });
   subscriptions.push(() => board.close?.());
@@ -937,7 +941,7 @@ test('istemci: tarayıcı çevrimiçiyken istek kopsa da (DNS, zaman aşımı) b
   drops = 3;
   net.online = true;
   online.dispatchEvent(new Event('online'));
-  const total = async () => (await (await handle(new Request(`${URL}/v1/seed/weeks/${WEEK}`), db, net.now)).json()).total as number;
+  const total = async () => (await (await handle(new Request(`${URL}/v1/seed/weeks/${WEEK}`), db, net.now, TRUSTING)).json()).total as number;
   for (let i = 0; i < 100 && (await total()) === 0; i++) await new Promise((resolve) => setTimeout(resolve, 10));
   assert.equal(drops, 0, 'kopuk istekler yeniden denendi');
   assert.equal(await total(), 1, 'yol açılınca koşu gitti');
@@ -959,7 +963,7 @@ function twoTabs() {
         await gates.post;
         if (gates.postFails) throw new TypeError('fetch failed');
       }
-      const response = await handle(request, db, net.now);
+      const response = await handle(request, db, net.now, TRUSTING);
       // Silme sunucuda oldu; cevap (ve sekmenin depoyu temizlemesi) gecikiyor.
       if (tab === 'other' && request.method === 'DELETE' && gates.deleteReply) await gates.deleteReply;
       return response;
@@ -969,7 +973,7 @@ function twoTabs() {
   const other = createServerBoard({ url: URL, fetch: fetcher('other'), storage, online: new EventTarget(), pollMs: 2 ** 30, retryMs: 2 });
   const posts = () => net.requests.filter((line) => line === 'this POST /v1/seed/runs').length;
   const players = async () => (await db.first<{ n: number }>('SELECT COUNT(*) AS n FROM players'))?.n ?? 0;
-  const total = async () => (await (await handle(new Request(`${URL}/v1/seed/weeks/${WEEK}`), db, net.now)).json()).total as number;
+  const total = async () => (await (await handle(new Request(`${URL}/v1/seed/weeks/${WEEK}`), db, net.now, TRUSTING)).json()).total as number;
   return { db, net, storage, gates, online, mine, other, posts, players, total };
 }
 
@@ -1055,7 +1059,7 @@ test('istemci: bekleyen koşu gidince kuyruktan yalnız kendi girdisi çıkıyor
       posts++;
       if (hold) await hold;
     }
-    return handle(request, db, net.now);
+    return handle(request, db, net.now, TRUSTING);
   }) as typeof fetch;
   // A sunucuda yok (silindi): gönderimi 401 alıp kesin ret sayılacak.
   const code = encodeRun(run());
@@ -1073,4 +1077,56 @@ test('istemci: bekleyen koşu gidince kuyruktan yalnız kendi girdisi çıkıyor
   await new Promise((resolve) => setTimeout(resolve, 50));
   const left = JSON.parse(storage.getItem('capitalforge.league.pending')!) as Array<{ account: string }>;
   assert.deepEqual(left.map((item) => item.account), ['b-hesabi'], "B'nin koşusu kuyrukta");
+});
+
+test('Tur 52: sunucunun tablosu doğrulanmış; sürüm farkında koşu bekliyor, tutmayan ve kopya düşüyor', async () => {
+  const db = memoryDb();
+  const net: Net = { online: true, old: false, now: THURSDAY, requests: [] };
+  const storage = memoryStorage();
+  const online = new EventTarget();
+  // Sunucunun izi elle: önce oyunun izinden başka (sunucu eski sürümde).
+  let serverSim = 'fedcba9876543210';
+  let honest = true;
+  const options: Options = {
+    attest: APPLE_ATTEST,
+    seed: {
+      sim: () => serverSim,
+      replay: async (value) => (honest ? { ok: true, score: value.score, curve: value.curve } : { ok: false, score: value.score - 1, curve: value.curve }),
+    },
+  };
+  const fetcher = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const request = new Request(input, init);
+    if (!net.online) throw new TypeError('fetch failed');
+    return handle(request, db, net.now, options);
+  }) as typeof fetch;
+  const board = createServerBoard({ url: URL, fetch: fetcher, storage, online, pollMs: 2 ** 30, retryMs: 5 });
+  assert.equal(await board.probe(), 'ok');
+
+  // Sürüm farkı: koşu kuyrukta bekliyor, sunucu güncellenince kendiliğinden gidiyor.
+  assert.equal(await board.submit(entryOf(run())), 'version');
+  assert.equal(JSON.parse(storage.getItem('capitalforge.league.pending')!).length, 1, 'koşu bekliyor');
+  serverSim = TEST_SIM;
+  const table = async () => (await (await handle(new Request(`${URL}/v1/seed/weeks/${WEEK}`), db, net.now, options)).json()) as { total: number };
+  for (let i = 0; i < 100 && (await table()).total === 0; i++) await new Promise((resolve) => setTimeout(resolve, 10));
+  assert.equal((await table()).total, 1, 'sürümler eşleşince gitti');
+  assert.equal(storage.getItem('capitalforge.league.pending'), '[]');
+
+  // Satır sunucuda doğrulanmış: tarayıcı yeniden oynatmıyor.
+  const seen = watch(board);
+  for (let i = 0; i < 20 && !(seen.seen.length > 0 && seen.last().entries.length > 0); i++) await seen.next();
+  const [row] = seen.last().entries;
+  assert.equal(row!.verified, true);
+  assert.equal(row!.idle, false);
+
+  // Tekrar tutmuyor: düşüyor, kuyruğa girmiyor.
+  net.now += SEED.minGapMs;
+  honest = false;
+  assert.equal(await board.submit(entryOf(run({ score: 9_000_000 }))), 'rejected');
+  assert.equal(storage.getItem('capitalforge.league.pending'), '[]');
+
+  // Başka oyuncunun koşusunun aynısı: düşüyor.
+  honest = true;
+  const thief = createServerBoard({ url: URL, fetch: fetcher, storage: memoryStorage(), online: new EventTarget(), pollMs: 2 ** 30 });
+  assert.equal(await thief.probe(), 'ok');
+  assert.equal(await thief.submit(entryOf(run())), 'copy');
 });
