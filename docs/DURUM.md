@@ -5503,6 +5503,7 @@ günün koşusu, 90 gün, her gün yeni şehir ve yeni tablo.
   olmayan günü ("2026-02-30") tanıyor.
 - Kurulumun dördüncü türü ("Günün koşusu · 22 Ekim"). Lig paneli "Bugünün
   tablosu" diyor; kapanan ya da daha iyisi kalan gönderimin metni gün için.
+  Gündem çipi "Günün koşusu" ("Lig 2026-10-22" değil).
   Kariyer "Günün koşusu" ve "Gün tamamlandı" yazıyor (`leagueKind`).
 - *Codex #82: "Ligde" rozeti bir hafta istiyor.* Kariyer toplamı günün
   koşusunu da sayıyordu: 90 günlük koşu "Tohum Ligi'nde bir haftayı sonuna
@@ -5542,13 +5543,14 @@ beceriyi bastırmıyor. Her kural iki vekilin ortalamasını düşürüyor (−%
 koşusunda bilgili 1,5–2,0 M, yavaş 1,15–1,35 M, hiç oynamayan 250 B (6–8
 kat); beş günün beş ayrı şehri var.
 
-**Doğrulama.** `pnpm test` 597/597; tip denetimi temiz.
+**Doğrulama.** `pnpm test` 598/598; tip denetimi temiz.
 - Çekirdek (`league.test.ts`, 7 yeni): kimlikler, kural sırası ve yıl
   dönümü, kurulumun kuralları yok sayılıyor, kurallı haftanın koşusu
   tekrarda tutuyor ve kural skoru değiştiriyor, günün koşusu 90 günde
   bitip doğrulanıyor, kısa koşunun kod sınırları, iz kuralların değerini
   taşıyor. `modifiers.test.ts`: "ligde kural yok" testi yeni kurala göre.
   `career.test.ts` (1 yeni): günün koşusu "Ligde" rozetini açmıyor.
+  `agenda.test.ts` (1 yeni): gündem çipi günün koşusunu adıyla yazıyor.
 - Paylaşılan tablo (`apps/web/test/league-board.test.ts`, yeni): hafta ve
   gün aynı belgede, biri ötekini ezmiyor; her tablonun "daha iyisi" kendi.
 - Sunucu (`seed.test.ts`, 4 yeni): gün tablosu ayrı ve uçlar birbirinin
@@ -5678,7 +5680,7 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi). Senaryo şehirlerinde gün 3–17 ms (`pnpm dayperf`, Tur 43) |
-| Birim testi | **597 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de, Tur 52'de sunucuda tekrar, Tur 53'te haftanın kuralı ve günün koşusu) |
+| Birim testi | **598 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de, Tur 52'de sunucuda tekrar, Tur 53'te haftanın kuralı ve günün koşusu) |
 | Denge testi | **331 kontrol, hepsi geçiyor** (25 bölüm, süreleriyle; ~13 dk) |
 | Tarayıcı testi | **521 kontrol, hepsi geçiyor**, 0 konsol hatası (~40 dk); duman koşusu 132 (~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + paket bütçesi (Tur 46; Tur 48'den beri hizmet çalışanı ve manifest de) + duman oynanışı |

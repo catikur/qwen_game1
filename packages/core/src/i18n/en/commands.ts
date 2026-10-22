@@ -146,6 +146,8 @@ export const commands: Record<keyof typeof trCommands, string> = {
   'core.agenda.unlockWave': '{district} + {count} more open for zoning',
   'core.agenda.league': 'League {week}',
   'core.agenda.leagueDone': 'League {week} · standings',
+  'core.agenda.leagueDay': 'Daily run',
+  'core.agenda.leagueDayDone': 'Daily run · standings',
   'core.agenda.scenario': '{title} · {detail}',
   'core.agenda.council': 'Council · motions: {count}',
   'core.agenda.crisisWarning': 'Crisis ahead: {title}',

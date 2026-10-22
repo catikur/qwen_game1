@@ -144,6 +144,8 @@ export const commands = {
   'core.agenda.unlockWave': '{district} ve {count} bölge daha imara açılıyor',
   'core.agenda.league': 'Lig {week}',
   'core.agenda.leagueDone': 'Lig {week} · tablo',
+  'core.agenda.leagueDay': 'Günün koşusu',
+  'core.agenda.leagueDayDone': 'Günün koşusu · tablo',
   'core.agenda.scenario': '{title} · {detail}',
   'core.agenda.council': 'Meclis · {count} önerge',
   'core.agenda.crisisWarning': 'Kriz yaklaşıyor: {title}',

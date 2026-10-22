@@ -1,5 +1,6 @@
 import { CARD_BY_ID, CATEGORIES, CREDIT, CRISIS_BY_ID, ERA_BY_ID, EVENT_BY_ID, GOOD_BY_ID, PROJECT_BY_ID, fillTemplate, localizeDecimal } from '@capital/content';
 import { nextGoal } from './systems/goals';
+import { leagueBoardKind } from './systems/leagueWeek';
 import { OFFER_LIFETIME_DAYS, contractProgress } from './systems/contracts';
 import { sharesHeld, sharesOutstanding } from './systems/equity';
 import { creditEnabled, overdraftLimit, overdraftOf } from './systems/credit';
@@ -292,6 +293,8 @@ export function agenda(state: GameState): AgendaItem[] {
   }
 
   const league = state.league;
+  // Günün koşusu (Tur 53) kendi adıyla: "Lig 2026-10-22" değil.
+  const daily = league !== undefined && leagueBoardKind(league.weekId) === 'day';
   if (league && league.finishedDay === undefined) {
     const left = Math.max(0, league.endDay - day);
     items.push({
@@ -299,7 +302,7 @@ export function agenda(state: GameState): AgendaItem[] {
       key: `league:${league.weekId}`,
       urgency: left <= 10 ? 2 : 0,
       daysLeft: left,
-      label: tc('core.agenda.league', { week: league.weekId }),
+      label: daily ? tc('core.agenda.leagueDay') : tc('core.agenda.league', { week: league.weekId }),
       tone: 'neutral',
       progress: day / league.endDay,
     });
@@ -311,7 +314,7 @@ export function agenda(state: GameState): AgendaItem[] {
       key: `league:${league.weekId}:done`,
       urgency: 0,
       daysLeft: null,
-      label: tc('core.agenda.leagueDone', { week: league.weekId }),
+      label: daily ? tc('core.agenda.leagueDayDone') : tc('core.agenda.leagueDone', { week: league.weekId }),
       tone: 'neutral',
     });
   }
