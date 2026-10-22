@@ -198,7 +198,7 @@ Kod değişince sunucuyu güncellemek için aşağıdaki A ya da B.
 
 Kod değiştikçe 1 ve 3 tekrarlanıyor.
 
-**B · Otomatik dağıtım (her `main` değişikliğinde):**
+**B · CI'den dağıtım (elle başlatılan, isteğe bağlı her `main` değişikliğinde):**
 
 1. **My Profile → API Tokens → Create Token** aç:
    - **Edit Cloudflare Workers** şablonunu seç;
@@ -208,6 +208,11 @@ Kod değiştikçe 1 ve 3 tekrarlanıyor.
    - `CLOUDFLARE_ACCOUNT_ID`: Workers & Pages sayfasının sağındaki **Account ID**.
 3. **Actions → Lite lig sunucusu → Run workflow**. İş, var olan veritabanını adından
    buluyor.
+4. İsteğe bağlı: `main`'e her birleşmede dağıtım için depo değişkeni
+   `LITE_LEAGUE_AUTODEPLOY` = `true` (**Settings → Secrets and variables →
+   Actions → Variables**). Varsayılan kapalı: canlıya geçiş senin kararın
+   (Tur 51, Codex #80). Sırlar olsa da değişken yoksa birleşme yalnız denetimi
+   koşturuyor, dağıtmıyor.
 
 ### Game Center (ücretli Apple Developer üyeliği)
 
@@ -320,6 +325,6 @@ Açmak için:
 3. Denetim: `/v1/health` cevabında `"seed":1`. Pages'teki oyun sonraki
    açılışta lig sunucusunun tablosuna geçiyor.
 
-B (otomatik dağıtım) kuruluysa bu üç adımı `main`'e giren her sunucu
-değişikliğinde CI yapıyor.
+B kuruluysa bu üç adımı **Run workflow** ile CI yapıyor; `main`'e
+birleşmek kendiliğinden dağıtmıyor (4. adımdaki değişken açılmadıkça).
 

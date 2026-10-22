@@ -2,6 +2,8 @@ name: Lite lig sunucusu
 
 # Cloudflare Workers + D1. Sırlar (CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID)
 # yoksa iş "atlandı" diyip yeşil bitiyor; kurulum adımları ios-lite/README.md'de.
+# Sırlar olsa da main'e birleşme kendiliğinden dağıtmıyor (Tur 51, Codex #80):
+# elle başlatılan koşu ya da depo değişkeni LITE_LEAGUE_AUTODEPLOY=true.
 # İlk koşu veritabanını kuruyor, şemayı uyguluyor ve Worker'ı dağıtıyor;
 # sonrakiler yalnızca şemayı (IF NOT EXISTS) ve kodu güncelliyor.
 on:
@@ -102,11 +104,21 @@ jobs:
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       DB_NAME: capitalforge-lite-league
     steps:
-      - name: Sırlar
+      # Canlıya geçiş kullanıcının kararı (Codex #80): Tur 51'in sunucusu Tur 52
+      # birleşince, Tur 52'ninki de Workers Paid açıldıktan sonra (tekrar CPU'su
+      # ücretsiz katmanın sınırını aşıyor). Bu yüzden main'e birleşmek kendiliğinden
+      # dağıtmıyor: elle (Actions → Run workflow) ya da depo değişkeni
+      # LITE_LEAGUE_AUTODEPLOY=true ile.
+      - name: Sırlar ve dağıtım kapısı
         id: secrets
+        env:
+          AUTODEPLOY: ${{ vars.LITE_LEAGUE_AUTODEPLOY }}
         run: |
           if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
             echo "::notice::Cloudflare sırları yok; lig sunucusu dağıtılmadı (bkz. ios-lite/README.md)."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          elif [ "$GITHUB_EVENT_NAME" != "workflow_dispatch" ] && [ "$AUTODEPLOY" != "true" ]; then
+            echo "::notice::Otomatik dağıtım kapalı; canlıya geçiş elle: Actions → Lite lig sunucusu → Run workflow (ya da LITE_LEAGUE_AUTODEPLOY=true, ios-lite/README.md)."
             echo "ready=false" >> "$GITHUB_OUTPUT"
           else
             echo "ready=true" >> "$GITHUB_OUTPUT"

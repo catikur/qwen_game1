@@ -276,15 +276,17 @@ export function createServerBoard(options: ServerBoardOptions): ServerBoard {
    * Yoğunluğa takılan bekleyen gönderim kendiliğinden yeniden deneniyor: art
    * arda iki koşu bağlantı gelince gönderilince ikincisi 30 sn aralığa
    * takılıyordu ve serbest oyunda bir sonraki olaya kadar bekliyordu (Codex
-   * #80). Aralık 31 sn'den başlayıp ikiye katlanıyor, en çok beş kez.
+   * #80). Aralık 31 sn'den başlayıp beş kez ikiye katlanıyor; sonra o
+   * seyrek aralıkla (~16 dk) sürüyor: uzun bir sunucu kesintisinde de koşu
+   * bir sonraki olayı beklemeden gidiyor (Codex #80).
    */
   let retryTimer: ReturnType<typeof setTimeout> | null = null;
   let retries = 0;
-  const RETRY_MAX = 5;
+  const RETRY_DOUBLINGS = 5;
   function retryLater(): void {
-    if (retryTimer !== null || closed || retries >= RETRY_MAX) return;
+    if (retryTimer !== null || closed) return;
     // Sunucunun söylediği süreden önce değil: saatlik sınır geri çekilmeden uzun sürebiliyor.
-    const delay = Math.max(retryMs * 2 ** retries, retryAt - Date.now());
+    const delay = Math.max(retryMs * 2 ** Math.min(retries, RETRY_DOUBLINGS), retryAt - Date.now());
     retryAt = 0;
     retries++;
     retryTimer = setTimeout(() => {

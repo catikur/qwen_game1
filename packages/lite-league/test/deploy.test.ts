@@ -3,7 +3,8 @@
  * #80). Sunucu ana oyunun koşu kodunu oyunun kendi çözücüsüyle açıyor; çözücü
  * çekirdeğin ve içeriğin yarısını getiriyor (CEO'lar, binalar...). Biri
  * değişip Worker yeniden dağıtılmazsa Pages'teki oyunun geçerli koşusu
- * sunucuda "bozuk" sayılırdı.
+ * sunucuda "bozuk" sayılırdı. (Otomatik dağıtım açıkken: varsayılan kapalı,
+ * canlıya geçiş kullanıcının kararı; aşağıdaki kapı testi.)
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -66,6 +67,48 @@ test('dağıtım: Worker paketine giren her dosya main\'e birleşince dağıtım
     const patterns = paths.map(globToRegExp);
     const missed = inputs.filter((file) => !patterns.some((pattern) => pattern.test(file)));
     assert.deepEqual(missed, [], `dağıtımı tetiklemeyen paket dosyaları: ${missed.slice(0, 5).join(', ')}`);
+  } finally {
+    rmSync(out, { recursive: true, force: true });
+  }
+});
+
+/** Dağıtım işinin kapı adımı (`id: secrets`): betiği ve adımın kendi ortamı. */
+function gateStep(workflow: string): { script: string; env: Record<string, string> } {
+  const deploy = workflow.split(/^  deploy:\s*$/m)[1] ?? '';
+  const step = deploy.split(/^      - /m).find((block) => /^\s*id: secrets\s*$/m.test(block)) ?? '';
+  const script = (step.split(/^        run: \|\s*$/m)[1] ?? '')
+    .split('\n')
+    .filter((line) => line.startsWith('          ') || line.trim() === '')
+    .map((line) => line.slice(10))
+    .join('\n');
+  const env: Record<string, string> = {};
+  const envBlock = step.split(/^        env:\s*$/m)[1]?.split(/^        \S/m)[0] ?? '';
+  for (const [, name, value] of envBlock.matchAll(/^          (\w+): (.+)$/gm)) env[name] = value.trim();
+  return { script, env };
+}
+
+test('dağıtım: main\'e birleşmek canlıya kendiliğinden dağıtmıyor; elle ya da açıkça açılmış otomatik dağıtımla (Codex #80)', () => {
+  const root = repoRoot();
+  const { script, env } = gateStep(readFileSync(join(root, '.github/workflows/lite-league.yml'), 'utf8'));
+  assert.ok(script.includes('GITHUB_OUTPUT'), 'kapı adımı bulundu');
+  const out = mkdtempSync(join(tmpdir(), 'capital-gate-'));
+  try {
+    const ready = (vars: Record<string, string>): string => {
+      const output = join(out, 'output');
+      execFileSync('bash', ['-c', `: > "${output}"\n${script}`], {
+        env: { PATH: process.env.PATH ?? '', GITHUB_OUTPUT: output, ...vars },
+        stdio: ['ignore', 'ignore', 'ignore'],
+      });
+      return /ready=(\w+)/.exec(readFileSync(output, 'utf8'))?.[1] ?? '';
+    };
+    const secrets = { CLOUDFLARE_API_TOKEN: 'x', CLOUDFLARE_ACCOUNT_ID: 'y' };
+    // Kapı depo değişkeninden okuyor: adımın ortamında `vars.LITE_LEAGUE_AUTODEPLOY`.
+    const auto = Object.entries(env).find(([, value]) => value.includes('vars.LITE_LEAGUE_AUTODEPLOY'))?.[0];
+    assert.ok(auto, 'otomatik dağıtım depo değişkenine bağlı');
+    assert.equal(ready({ GITHUB_EVENT_NAME: 'push' }), 'false', 'sır yoksa dağıtım yok');
+    assert.equal(ready({ ...secrets, GITHUB_EVENT_NAME: 'push' }), 'false', 'sırlar var ama otomatik dağıtım açılmadı: birleşme canlıya gitmiyor');
+    assert.equal(ready({ ...secrets, GITHUB_EVENT_NAME: 'workflow_dispatch' }), 'true', 'elle başlatılan koşu dağıtıyor');
+    assert.equal(ready({ ...secrets, GITHUB_EVENT_NAME: 'push', [auto!]: 'true' }), 'true', 'açıkça açılmış otomatik dağıtım');
   } finally {
     rmSync(out, { recursive: true, force: true });
   }
