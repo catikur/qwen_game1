@@ -30,6 +30,13 @@ const BLOCKED_ROOTS = [
 const LEET: Record<string, string> = { '0': 'o', '1': 'i', '3': 'e', '4': 'a', '5': 's', '7': 't', '@': 'a', $: 's', '!': 'i', '|': 'i' };
 
 export function offensiveName(name: string): boolean {
+  // Büyük "I" Türkçede "ı", İngilizcede "i": iki okuma da denetleniyor. Yalnız
+  // Türkçe okumayla "SHIT", "DICK" geçiyordu; her "ı"yı "i" saymak da
+  // "Sıkışık"ı engellerdi (Codex #80).
+  return [name, name.replace(/I/g, 'i')].some(blocked);
+}
+
+function blocked(name: string): boolean {
   const lower = name.toLocaleLowerCase('tr').replace(/[013457@$!|]/g, (ch) => LEET[ch] ?? ch);
   // Harf ve rakam dışındaki her işaret ayırıcı: ana oyunun şirket adı noktalamaya
   // izin veriyor ("F.U.C.K", "Oro.spu"; Codex #80). Lite'ın adında zaten yalnız

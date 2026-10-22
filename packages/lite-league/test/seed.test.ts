@@ -205,6 +205,13 @@ test('Tohum Ligi: herkese görünen şirket adı süzgeçten geçiyor', async ()
   for (const fine of ['A.Ş. Holding', 'Ayşe & Ortakları A.Ş.', "O'Brien Ltd", 'Amazon.Kahve', 'S. İ. Kara Ltd']) {
     assert.equal(publicCompanyName(fine), true, fine);
   }
+  // Büyük "I" Türkçede "ı", İngilizcede "i": iki okuma da denetleniyor (Codex #80).
+  for (const bad of ['SHIT Ltd', 'DICK', 'BITCH Holding', 'NIGGER', 'SIKTIR AŞ']) {
+    assert.equal(publicCompanyName(bad), false, bad);
+  }
+  for (const fine of ['Sıkışık Lojistik', 'KIRMIZI HOLDING', 'IŞIK AŞ', 'Dicle Tekstil', 'MISIR UNU']) {
+    assert.equal(publicCompanyName(fine), true, fine);
+  }
   const db = memoryDb();
   const me = await seedAccount(db);
   assert.deepEqual((await submit(db, THURSDAY, me, run({ companyName: 'F-U-C-K Ltd' }))).body, { error: 'name-blocked' });

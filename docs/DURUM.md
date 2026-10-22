@@ -5139,6 +5139,14 @@ Tur 51"). "Canlı sunucu denetimi" yeni uçları yalnız okuyarak deniyor
   için "F.U.C.K Ltd", "Oro.spu" herkese açık tabloya girerdi. Harf ve rakam
   dışındaki her işaret artık ayırıcı, "!" ve "|" de "i". Lite'ın adında
   zaten yalnız boşluk, _ ve - var; davranışı değişmedi.
+- *Codex #80: büyük harfle İngilizce küfür geçiyordu.* Süzgeç Türkçe küçük
+  harfe çeviriyor; "I" "ı" oluyor, listedeki "shit", "dick", "bitch" ise
+  noktalı "i" ile. "SHIT Ltd" herkese açık tabloya girerdi. Büyük "I" artık
+  iki okumayla da denetleniyor (Türkçe "ı", İngilizce "i"). Her "ı"yı "i"
+  saymak "Sıkışık Lojistik"i engellerdi; bu yolla yalnız tamamı büyük
+  harfle ve noktasız "I" ile yazılmış, gerçekten iki anlamlı adlar
+  ("SIKIŞ") takılıyor. Lite'ın adları da aynı süzgeçten. Test düzeltmeden
+  önce kaldı.
 - *Codex #80: iki sekme ilk gönderimi aynı anda yaparsa iki hesap.* Biri
   depoyu ezince koşu tarayıcının artık tutmadığı hesapta kalıyordu. Hesap
   açıldıktan sonra depo yeniden okunuyor: öbür sekme açtıysa onunki;
@@ -5200,8 +5208,8 @@ Tur 51"). "Canlı sunucu denetimi" yeni uçları yalnız okuyarak deniyor
   kalan süre, saatlik sınırda saatin sonu); istemci ondan önce denemiyor.
   Süre gövdede, başlıkta değil: Pages kökeninden `Retry-After` CORS'la
   okunamıyor. Başarılı gönderim eski süreyi siliyor: saatlik sınırdan sonra
-  gelen sıradan 30 sn ret bir saat beklemesin. Testler düzeltmeden önce
-  kaldı.
+  gelen sıradan 30 sn ret bir saat beklemesin. Hesap açma da (saatlik hesap
+  sınırı) aynı süreye uyuyor. Testler düzeltmeden önce kaldı.
 - *Codex #80: daha kötü gönderim aralığı doldurmuyordu.* Aralık satırın
   saatine (`at`) bakıyordu; daha kötü koşu satırı değiştirmediği için saat
   ilerlemiyor, arkası arkasına gönderim 30 sn'lik aralığı aşıyordu. Satırın
@@ -5254,7 +5262,7 @@ makinede 42 durumun hepsi geçiyordu.
 - CI'nin tam koşusu 27 dk'ydı, sınır 30 dk. Tarayıcı işinin süresi 45 dk
   oldu; iş artık bağımlılıkları da kuruyor (yerel lig sunucusu için).
 
-**Doğrulama.** `pnpm test` 557/557; tip denetimi temiz.
+**Doğrulama.** `pnpm test` 558/558; tip denetimi temiz.
 - `seed.test.ts` (14 test):
   - hesap, gönderim, herkese açık tablo ve kod;
   - en iyisi kalıyor, satırın kimliği aynı, gönderim aralığı; daha kötü
@@ -5262,7 +5270,7 @@ makinede 42 durumun hepsi geçiyordu.
     gelen iki gönderimden yalnız biri geçiyor (Codex #80);
   - bozuk, eski ve sınır dışı kodlar;
   - hafta ve 6 saatlik pay;
-  - şirket adı süzgeci, noktalamalı yazım da (Codex #80);
+  - şirket adı süzgeci, noktalamalı ve büyük harfli yazım da (Codex #80);
   - en iyi 50 ve benim satırım, eşitlikte önce gönderen;
   - Lite ve ana oyun hesapları birbirinin uçlarını kullanamıyor;
   - hesap silme;
@@ -5270,7 +5278,7 @@ makinede 42 durumun hepsi geçiyordu.
   - haftalık temizlik;
   - sunucunun haftası oyununkiyle aynı;
   - CORS.
-- `client.test.ts` (20 test): oyunun istemcisi gerçek sunucuya karşı
+- `client.test.ts` (21 test): oyunun istemcisi gerçek sunucuya karşı
   (bellekte SQLite):
   - sunucuyu tanıma, eski sunucu, bağlantısızlık;
   - ilk gönderimde hesap, satır ve kodun ayrı inmesi, başka tarayıcı;
@@ -5406,7 +5414,7 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi). Senaryo şehirlerinde gün 3–17 ms (`pnpm dayperf`, Tur 43) |
-| Birim testi | **557 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de) |
+| Birim testi | **558 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de) |
 | Denge testi | **331 kontrol, hepsi geçiyor** (25 bölüm, süreleriyle; ~13 dk) |
 | Tarayıcı testi | **521 kontrol, hepsi geçiyor**, 0 konsol hatası (~40 dk); duman koşusu 132 (~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + paket bütçesi (Tur 46; Tur 48'den beri hizmet çalışanı ve manifest de) + duman oynanışı |
