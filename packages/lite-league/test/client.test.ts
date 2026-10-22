@@ -332,6 +332,9 @@ test('istemci: iki sekme ilk gönderimi aynı anda yaparsa tek hesap; koşu tara
   const table = await (await handle(new Request(`${URL}/v1/seed/weeks/${WEEK}`, { headers: { authorization: `Bearer ${stored.id}.${stored.token}` } }), db, net.now)).json();
   assert.equal(table.total, 1, 'tarayıcının erişemediği hesapta satır kalmıyor');
   assert.equal(table.entries[0].mine, true, 'satır tarayıcının tuttuğu hesabın');
+  // Kaybeden sekmenin açtığı hesap sunucuda kalmıyor: anahtarını kimse tutmuyor (Codex #80).
+  assert.equal((await db.first<{ n: number }>('SELECT COUNT(*) AS n FROM players'))?.n, 1, 'tek hesap');
+  assert.equal((await db.first<{ n: number }>('SELECT COUNT(*) AS n FROM tokens'))?.n, 1, 'tek anahtar');
 });
 
 test('istemci: bağlantısız açılışta görülmüş sunucu seçilince de bekleyen gönderim bağlantı gelince gidiyor (Codex #80)', async () => {
@@ -996,4 +999,39 @@ test('istemci: öbür sekme hesabı silerken kopan doğrudan gönderim hesapsız
   await new Promise((resolve) => setTimeout(resolve, 100));
   assert.equal(await t.players(), 0, 'yeni hesap açılmadı');
   assert.equal(await t.total(), 0);
+});
+
+test('istemci: bekleyen koşu gidince kuyruktan yalnız kendi girdisi çıkıyor; öbür sekmenin aynı koşusu kalıyor (Codex #80)', async () => {
+  const db = memoryDb();
+  const net: Net = { online: true, old: false, now: THURSDAY, requests: [] };
+  const storage = memoryStorage();
+  const online = new EventTarget();
+  let release = () => {};
+  let hold: Promise<void> | null = null;
+  let posts = 0;
+  const fetcher = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const request = new Request(input, init);
+    if (!net.online) throw new TypeError('fetch failed');
+    if (request.method === 'POST' && new globalThis.URL(request.url).pathname === '/v1/seed/runs') {
+      posts++;
+      if (hold) await hold;
+    }
+    return handle(request, db, net.now);
+  }) as typeof fetch;
+  // A sunucuda yok (silindi): gönderimi 401 alıp kesin ret sayılacak.
+  const code = encodeRun(run());
+  storage.setItem('capitalforge.league.account', JSON.stringify({ url: URL, id: 'a-hesabi', token: 'eski' }));
+  storage.setItem('capitalforge.league.pending', JSON.stringify([{ url: URL, weekId: WEEK, code, account: 'a-hesabi' }]));
+  const board = createServerBoard({ url: URL, fetch: fetcher, storage, online, pollMs: 2 ** 30, retryMs: 2 ** 30 });
+  hold = new Promise((resolve) => (release = resolve));
+  assert.equal(await board.probe(), 'ok');
+  for (let i = 0; i < 100 && posts === 0; i++) await new Promise((resolve) => setTimeout(resolve, 5));
+  // A'nın gönderimi yoldayken öbür sekme yeni hesap B ile aynı koşuyu kuyruğa koyuyor.
+  storage.setItem('capitalforge.league.account', JSON.stringify({ url: URL, id: 'b-hesabi', token: 'yeni' }));
+  storage.setItem('capitalforge.league.pending', JSON.stringify([{ url: URL, weekId: WEEK, code, account: 'b-hesabi' }]));
+  release();
+  for (let i = 0; i < 100 && posts < 1; i++) await new Promise((resolve) => setTimeout(resolve, 5));
+  await new Promise((resolve) => setTimeout(resolve, 50));
+  const left = JSON.parse(storage.getItem('capitalforge.league.pending')!) as Array<{ account: string }>;
+  assert.deepEqual(left.map((item) => item.account), ['b-hesabi'], "B'nin koşusu kuyrukta");
 });

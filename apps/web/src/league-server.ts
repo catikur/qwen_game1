@@ -197,9 +197,13 @@ export function createServerBoard(options: ServerBoardOptions): ServerBoard {
     const { id, token } = reply.body;
     if (reply.status !== 201 || typeof id !== 'string' || typeof token !== 'string') return 'error';
     // Bu arada öbür sekme hesap açtıysa onunki: tarayıcı tek hesap tutuyor, koşu
-    // tarayıcının erişemediği bir hesapta kalmasın (Codex #80). Bizimki boş kalıyor.
+    // tarayıcının erişemediği bir hesapta kalmasın (Codex #80). Bizim açtığımız
+    // siliniyor: anahtarını kimse tutmayacak, sunucuda boşuna kalmasın.
     const meanwhile = account();
-    if (meanwhile) return meanwhile;
+    if (meanwhile) {
+      await call('/v1/players/me', { method: 'DELETE', auth: { url, id, token } });
+      return meanwhile;
+    }
     const created: Account = { url, id, token };
     write(ACCOUNT_KEY, JSON.stringify(created));
     return created;
@@ -342,7 +346,8 @@ export function createServerBoard(options: ServerBoardOptions): ServerBoard {
         for (const item of pending()) {
           // Hesap silinirken kuyruk olduğu gibi kalıyor (silme başarısız olursa da).
           if (forgetting) return;
-          const outcome = await send(item.code, { owner: item.account });
+          const attempt: Attempt = { owner: item.account };
+          const outcome = await send(item.code, attempt);
           // Kalan koşu yeniden deneniyor: yoğunluk da, kopan istek de. Tarayıcı
           // çevrimiçiyken yol kopabiliyor (DNS, zaman aşımı); yol açılınca
           // `online` olayı gelmiyor (Codex #80).
@@ -350,7 +355,11 @@ export function createServerBoard(options: ServerBoardOptions): ServerBoard {
             kept = true;
             continue;
           }
-          write(PENDING_KEY, JSON.stringify(pending().filter((other) => other.code !== item.code)));
+          // Yalnız bu girdi (hesapsızsa gönderimde bağlandığı hesapla): beklerken öbür
+          // sekme aynı koşuyu başka hesapla kuyruğa koyduysa o kalıyor (Codex #80).
+          const mine = (other: Pending) =>
+            other.code === item.code && (other.account === item.account || (item.account === undefined && other.account === attempt.used));
+          write(PENDING_KEY, JSON.stringify(pending().filter((other) => !mine(other))));
         }
       } while (again && !forgetting);
       if (kept) retryLater();
