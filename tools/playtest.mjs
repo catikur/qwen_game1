@@ -3209,6 +3209,7 @@ async function finish(browser, consoleErrors) {
     const network = (text) => /Failed to load resource|ERR_INTERNET_DISCONNECTED|ERR_CONNECTION_REFUSED|ERR_NETWORK_CHANGED/.test(text);
     const errors = [];
     const contexts = [];
+    // Bağlamın kaydı varsa oyun kurulum yerine kayıttan açılıyor (A'nın ikinci sayfası).
     const page = async (context, label) => {
       const p = await context.newPage();
       p.on('pageerror', (e) => errors.push(`${label}: ${e.message}`));
@@ -3216,7 +3217,7 @@ async function finish(browser, consoleErrors) {
         if (m.type() === 'error' && !network(m.text())) errors.push(`${label}: ${m.text()}`);
       });
       await p.goto('http://127.0.0.1:8811/');
-      await p.waitForSelector('.newgame', { timeout: 20000 });
+      await p.waitForSelector('.newgame, .topbar', { timeout: 30000 });
       return p;
     };
     const open = async (url, label) => {
@@ -3295,7 +3296,7 @@ async function finish(browser, consoleErrors) {
     // GPU'yu ve dört çekirdeği paylaşıyor. İki sahne açıkken yerel sunucunun
     // cevabı da 10 sn'yi aşıyordu (tam koşuda). A'nın sayfası işi bitince
     // kapanıyor; hesabı silmek için aynı bağlamda (aynı anahtar) yeni sayfa.
-    if (leagueServer) {
+    if (leagueServer) try {
       // A: oynuyor, sonuç ekranından sunucuya gönderiyor.
       const a = await open(leagueUrl, 'A');
       await startLeague(a.p, 'Sunucu Holding');
@@ -3375,7 +3376,8 @@ async function finish(browser, consoleErrors) {
       // A: lig hesabını siliyor; koşusu tablodan gidiyor, öbürü kalıyor. Aynı
       // tarayıcı (bağlam), yeni sayfa ve yeni bir lig koşusu: anahtar yerinde.
       a.p = await page(a.context, 'A2');
-      await startLeague(a.p, 'Sunucu Holding');
+      if ((await a.p.locator('.newgame').count()) > 0) await startLeague(a.p, 'Sunucu Holding');
+      await a.p.waitForSelector('.agenda [data-agenda="league"]', { timeout: 30000 });
       await a.p.evaluate(() => window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 }));
       await a.p.locator('.agenda [data-agenda="league"] button').first().click();
       await serverBoard(a.p);
@@ -3398,6 +3400,9 @@ async function finish(browser, consoleErrors) {
       const boardD = await d.p.locator('[data-league-board]').first().getAttribute('data-league-board').catch(() => null);
       check('Sunucuya ulaşılamayınca yerel tablo', boardD === 'local', String(boardD));
       await d.context.close();
+    } catch (error) {
+      // Bölüm yarıda kalırsa koşunun geri kalanı sürsün; kalan bir kontrol olarak yazılıyor.
+      check('Lig sunucusu bölümü sonuna kadar koşuyor', false, String(error).split('\n')[0]);
     }
     check('Lig sunucusu akışında konsol temiz', errors.length === 0, errors.slice(0, 2).join(' | '));
     for (const context of contexts) await context.close().catch(() => undefined);
