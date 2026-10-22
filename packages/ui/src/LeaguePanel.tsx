@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ReactElement } from 'react';
-import { CEO_BY_ID } from '@capital/content';
-import { LEAGUE_SAMPLE_DAYS, encodeRun, formatMoney, getPlayer, runFromState, verifyRun } from '@capital/core';
+import { CEO_BY_ID, MODIFIER_BY_ID } from '@capital/content';
+import { LEAGUE_SAMPLE_DAYS, encodeRun, formatMoney, getPlayer, leagueBoardKind, leagueRule, runFromState, verifyRun } from '@capital/core';
 import type { GameState, RunRejection, RunVerdict } from '@capital/core';
 import { useGame, useGameState } from './useGame';
 import type { LeagueBoard, LeagueEntry, LeagueFeedInfo, LeagueSubmitOutcome } from './useGame';
@@ -277,6 +277,9 @@ export function LeaguePanel(): ReactElement {
   }
 
   const ghost = pickGhost(entries, ghostId);
+  // Günün koşusu ya da haftanın tohumu; haftanın kuralı (Tur 53).
+  const daily = leagueBoardKind(state.league.weekId) === 'day';
+  const rule = leagueRule(state.league.weekId);
   const mine = state.league.curve;
   const now = getPlayer(state).netWorth;
   const ghostNow = ghost ? ghostValueAt(ghost, state.time.day) : null;
@@ -299,6 +302,11 @@ export function LeaguePanel(): ReactElement {
         {t('app.league.intro', { weekId: weekId ?? '', endDay: state.league.endDay })} {t(BOARD_TEXT[board.kind])}{' '}
         {t('app.league.trust')}
       </p>
+      {rule && (
+        <p className="league-rule" data-league-rule={rule}>
+          {t('app.league.rule', { name: MODIFIER_BY_ID[rule].name, blurb: MODIFIER_BY_ID[rule].blurb })}
+        </p>
+      )}
       {info.offline && (
         <p className="league-offline" data-league-offline role="status">
           {t('app.league.board.offline')}
@@ -322,7 +330,7 @@ export function LeaguePanel(): ReactElement {
       </section>
 
       <section>
-        <h3>{t('app.league.tableTitle')}</h3>
+        <h3>{t(daily ? 'app.league.tableTitleDay' : 'app.league.tableTitle')}</h3>
         {entries.length === 0 ? (
           <p className="muted">{t('app.league.empty')}</p>
         ) : (
@@ -436,18 +444,18 @@ const SUBMIT_LABEL: Record<LeagueBoard['kind'], MessageKey> = {
 /** Yeniden denenebilen sonuçlar: düğme açık kalıyor. */
 const RETRYABLE: ReadonlySet<LeagueSubmitOutcome> = new Set(['error', 'busy']);
 
-function submitText(outcome: LeagueSubmitOutcome, kind: LeagueBoard['kind']): string {
+function submitText(outcome: LeagueSubmitOutcome, kind: LeagueBoard['kind'], daily: boolean): string {
   switch (outcome) {
     case 'saved':
       return t(kind === 'local' ? 'app.league.submit.savedLocal' : kind === 'server' ? 'app.league.submit.savedServer' : 'app.league.submit.savedShared');
     case 'kept-better':
-      return t('app.league.submit.keptBetter');
+      return t(daily ? 'app.league.submit.keptBetterDay' : 'app.league.submit.keptBetter');
     case 'queued':
       return t('app.league.submit.queued');
     case 'name-blocked':
       return t('app.league.submit.nameBlocked');
     case 'closed':
-      return t('app.league.submit.closed');
+      return t(daily ? 'app.league.submit.closedDay' : 'app.league.submit.closed');
     case 'busy':
       return t('app.league.submit.busy');
     case 'error':
@@ -499,7 +507,7 @@ export function LeagueResultScreen({ onNewGame }: { onNewGame: () => void }): Re
     // Gönderim sürerken tablo değiştiyse sonucu eski tablonun: yeni tablonun düğmesi açık kalıyor.
     if (current.current !== target) return;
     setSending(false);
-    const text = submitText(outcome, target.kind);
+    const text = submitText(outcome, target.kind, leagueBoardKind(leagueRun.weekId) === 'day');
     setSent({ text, final: !RETRYABLE.has(outcome) });
     toast(text, outcome === 'saved' || outcome === 'kept-better' || outcome === 'queued' ? 'good' : 'bad');
   };

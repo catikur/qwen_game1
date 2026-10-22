@@ -466,6 +466,17 @@ describe('kariyer: rozet kuralları', () => {
     assert.equal(isRunScoped(ACHIEVEMENT_BY_ID.council_voice!), false);
   });
 
+  test('günün koşusu "Ligde" rozetini açmıyor: rozet bir haftayı istiyor (Codex #82)', () => {
+    const daily = { runs: [facts({ key: 'g', league: 'finished', leagueKind: 'day' })], scenarioStars: {} };
+    assert.equal(careerTotals(daily).leagueRuns, 0);
+    assert.equal(achievementStatus(ACHIEVEMENT_BY_ID.league_player!, daily).done, false);
+    const weekly = { runs: [...daily.runs, facts({ key: 'h', league: 'finished' })], scenarioStars: {} };
+    assert.equal(careerTotals(weekly).leagueRuns, 1);
+    // Koşunun özeti günün koşusunu işaretliyor, haftanınkini değil.
+    assert.equal(runFacts(createLeagueGame('2026-10-22', 'Gün AŞ', null)).leagueKind, 'day');
+    assert.equal(runFacts(createLeagueGame('2026-W44', 'Hafta AŞ', null)).leagueKind, undefined);
+  });
+
   test('senaryo yıldızları ve farklı CEO zaferleri', () => {
     const stars = Object.fromEntries(SCENARIOS.map((s) => [s.id, 1]));
     const tour = achievementStatus(ACHIEVEMENT_BY_ID.scenario_tour!, { runs: [], scenarioStars: stars });

@@ -102,7 +102,7 @@ export const world: Record<keyof typeof trWorld, string> = {
 
   // league.ts — end of the league run
   'core.league.lostTitle': 'League run over: you were taken over',
-  'core.league.lostBody': "This week's score is zero. A new run starts over in the same city.",
+  'core.league.lostBody': 'This run scores zero. A new run starts over in the same city.',
   'core.league.finishedTitle': 'League run over: {score}',
   'core.league.finishedBody': '{days|# day is|# days are} up. Your score is {score} — share the run code or submit it to the leaderboard.',
 

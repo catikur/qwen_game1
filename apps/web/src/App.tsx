@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { ReactElement } from 'react';
-import type { GameEngine, GameState } from '@capital/core';
+import type { GameEngine, GameState, LeagueBoardKind } from '@capital/core';
 import type { CitySizeId, DifficultyId, ModifierId } from '@capital/content';
 import { AUTOSAVE_SLOT, loadGame } from '@capital/persistence';
 import { NewGameScreen, t, useLocale } from '@capital/ui';
@@ -114,7 +114,7 @@ export function App(): ReactElement {
     companyName: string,
     ceoId: string,
     difficulty: DifficultyId,
-    league: boolean,
+    league: LeagueBoardKind | null,
     citySize: CitySizeId,
     tutorial: boolean,
     scenarioId: string | null,
@@ -125,8 +125,9 @@ export function App(): ReactElement {
       return;
     }
     withGame((loaded) => {
+      // Haftanın tohumu ya da günün koşusu (Tur 53): kimlik oyunu kuruyor.
       const next = league
-        ? loaded.createLeagueGame(loaded.leagueWeekId(), companyName, ceoId)
+        ? loaded.createLeagueGame(league === 'day' ? loaded.leagueDayId() : loaded.leagueWeekId(), companyName, ceoId)
         : loaded.createNewGame({ companyName, ceoId, difficulty, citySize, modifiers });
       if (tutorial) loaded.startTutorial(next);
       begin(loaded, next);

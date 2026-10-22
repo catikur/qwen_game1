@@ -16,15 +16,15 @@ import {
   verifyRun,
 } from '../src/league';
 import type { LeagueRun, RunVerdict } from '../src/league';
-import { BUBBLE_TIMING, CONSORTIUM, FAD, PROJECTS, PROJECT_BY_ID, PROJECT_TIMING, loadLocale, setLocale } from '@capital/content';
-import { LEAGUE_DAYS, leagueSeed, leagueWeekId } from '../src/systems/league';
+import { BUBBLE_TIMING, CONSORTIUM, FAD, MODIFIER_RULES, PROJECTS, PROJECT_BY_ID, PROJECT_TIMING, loadLocale, setLocale } from '@capital/content';
+import { LEAGUE_DAILY_DAYS, LEAGUE_DAYS, LEAGUE_RULE_ROTATION, leagueBoardKind, leagueDayId, leagueLength, leagueRule, leagueSeed, leagueWeekId } from '../src/systems/league';
 import { createNewGame } from '../src/worldgen';
 import type { GameState } from '../src/types';
 import { playerStrategy } from './proxy';
 
 /** Vekil oyuncuyla bir lig koşusu; isteğe bağlı olarak ortada "yeniden yükleme". */
-function playLeague(options: { reloadAt?: number; cheatAt?: number } = {}): GameState {
-  let engine = new GameEngine(createLeagueGame('2026-W40', 'Lig AŞ', null));
+function playLeague(options: { reloadAt?: number; cheatAt?: number; board?: string } = {}): GameState {
+  let engine = new GameEngine(createLeagueGame(options.board ?? '2026-W40', 'Lig AŞ', null));
   while (engine.getState().league!.finishedDay === undefined) {
     const day = engine.getState().time.day;
     if (day === options.reloadAt) {
@@ -358,5 +358,112 @@ describe('lig güvenliği', () => {
     assert.deepEqual(standing.copies.map((c) => [c.entry.id, c.of.id]), [['kopya', 'dürüst']]);
     assert.deepEqual(standing.rejected.map((r) => r.entry.id), ['sahte']);
     assert.deepEqual(standing.pending.map((r) => r.id), ['bekleyen']);
+  });
+});
+
+describe('haftanın kuralı ve günün koşusu (Tur 53)', () => {
+  test('tablo kimlikleri: hafta ya da takvimde olan gün', () => {
+    assert.equal(leagueDayId(new Date(Date.UTC(2026, 9, 22, 23, 59))), '2026-10-22');
+    assert.equal(leagueBoardKind('2026-W43'), 'week');
+    assert.equal(leagueBoardKind('2026-10-22'), 'day');
+    assert.equal(leagueBoardKind('2028-02-29'), 'day', 'artık gün');
+    for (const bad of ['2026-02-30', '2027-02-29', '2026-13-01', '2026-W00', '2026-W54', '2026-10-2', 'x']) {
+      assert.equal(leagueBoardKind(bad), null, bad);
+    }
+    assert.equal(leagueLength('2026-W43'), LEAGUE_DAYS);
+    assert.equal(leagueLength('2026-10-22'), LEAGUE_DAILY_DAYS);
+  });
+
+  test('her hafta sıradaki kural; öncesi ve günün koşusu kuralsız; yıl dönümünde sıra kaymıyor', () => {
+    assert.equal(leagueRule('2026-W42'), null, 'kurallardan önceki hafta');
+    // Tur 53 W43'ün ortasında geldi: o hafta açıktı, koşuları kuralsız oynandı (Codex #82).
+    assert.equal(leagueRule('2026-W43'), null, 'açılmış hafta kuralsız kalıyor');
+    assert.deepEqual(
+      ['2026-W44', '2026-W45', '2026-W46', '2026-W47', '2026-W48'].map(leagueRule),
+      [...LEAGUE_RULE_ROTATION, LEAGUE_RULE_ROTATION[0]],
+    );
+    // 2026'nın 53 haftası var: 2026-W53'ten sonra 2027-W01, sıra kesintisiz.
+    const w53 = LEAGUE_RULE_ROTATION.indexOf(leagueRule('2026-W53')!);
+    assert.equal(leagueRule('2027-W01'), LEAGUE_RULE_ROTATION[(w53 + 1) % LEAGUE_RULE_ROTATION.length]);
+    assert.equal(leagueRule(leagueWeekId(new Date(Date.UTC(2027, 0, 4)))), leagueRule('2027-W01'));
+    assert.equal(leagueRule('2026-10-22'), null);
+  });
+
+  test('kurallı hafta: herkes aynı kuralla, oyuncu değiştiremiyor; kuralsız haftada kural yok', () => {
+    const a = createLeagueGame('2026-W44', 'A', null);
+    const b = createNewGame({ companyName: 'B', league: { weekId: '2026-W44' }, modifiers: ['storms', 'tight_credit'], seed: 7, difficulty: 'hard' });
+    assert.deepEqual(a.modifiers, [leagueRule('2026-W44')]);
+    assert.deepEqual(b.modifiers, a.modifiers, 'kurulumun kuralları yok sayılıyor');
+    assert.equal(b.meta.seed, a.meta.seed);
+    assert.equal(b.difficulty, undefined);
+    assert.equal(createLeagueGame('2026-W40', 'C', null).modifiers, undefined);
+  });
+
+  test('kurallı haftanın koşusu tekrarda tutuyor; kural koşuyu gerçekten değiştiriyor', async () => {
+    // Kıt arsa: arsa pahalı, aynı vekil daha az değerle bitiriyor.
+    const ruled = playLeague({ board: '2026-W44' });
+    assert.deepEqual(ruled.modifiers, ['scarce_land']);
+    const run = runFromState(ruled)!;
+    const result = await replayRun(run);
+    assert.ok(result.ok, result.reason);
+    const plain = createLeagueGame('2026-W44', 'Lig AŞ', null);
+    delete plain.modifiers;
+    let engine = new GameEngine(plain);
+    while (engine.getState().league!.finishedDay === undefined) {
+      if (engine.getState().time.day % 5 === 0) playerStrategy(engine);
+      engine.runDay();
+    }
+    assert.notEqual(engine.getState().league!.score, run.score, 'kural skoru değiştirmiyor');
+    engine = new GameEngine(createLeagueGame('2026-W44', 'Lig AŞ', null));
+    assert.deepEqual(engine.getState().modifiers, ['scarce_land']);
+  });
+
+  test('günün koşusu: 90 gün, kuralsız, her gün başka şehir; kod tekrarla doğrulanıyor', async () => {
+    const day = createLeagueGame('2026-10-22', 'Gün AŞ', null);
+    assert.equal(day.league!.endDay, LEAGUE_DAILY_DAYS);
+    assert.equal(day.modifiers, undefined);
+    assert.notEqual(day.meta.seed, createLeagueGame('2026-10-23', 'Gün AŞ', null).meta.seed);
+    assert.notEqual(day.meta.seed, createLeagueGame('2026-W44', 'Gün AŞ', null).meta.seed);
+    const state = playLeague({ board: '2026-10-22' });
+    assert.equal(state.league!.finishedDay, LEAGUE_DAILY_DAYS);
+    assert.equal(state.league!.curve.length, LEAGUE_DAILY_DAYS / 10 + 1);
+    const run = runFromState(state)!;
+    assert.equal(run.weekId, '2026-10-22');
+    assert.ok(run.score > 0);
+    const code = encodeRun(run);
+    assert.deepEqual(decodeRunChecked(code), { run });
+    const verdict = await verifyRun(code, { weekId: run.weekId, score: run.score });
+    assert.equal(verdict.status, 'ok');
+    assert.equal(verdict.status === 'ok' && verdict.score, run.score);
+  });
+
+  test('günün koşusunun kodu kendi sınırlarında: 90. günden sonraki hamle, uzun eğri, takvimde olmayan gün', () => {
+    const run = runFromState(playLeague({ board: '2026-10-22' }))!;
+    const malformed = (changed: Partial<LeagueRun>) => decodeRunChecked(encodeRun({ ...run, ...changed }));
+    assert.deepEqual(malformed({ log: [[LEAGUE_DAILY_DAYS + 1, { type: 'SET_FOCUS', focus: 'growth' } as never]] }), { error: 'malformed' });
+    assert.deepEqual(malformed({ curve: Array(LEAGUE_DAILY_DAYS / 10 + 2).fill(1) }), { error: 'malformed' });
+    assert.deepEqual(malformed({ weekId: '2026-02-30' }), { error: 'malformed' });
+    // Haftanın koşusunun sınırı değişmedi.
+    assert.ok('run' in malformed({ weekId: '2026-W40', curve: Array(LEAGUE_DAYS / 10 + 1).fill(1) }));
+  });
+
+  test('iz kuralları da taşıyor: bir kuralın değeri değişince iz değişiyor', () => {
+    const base = computeSimFingerprint();
+    assert.ok(simFingerprintParts().some((part) => part.startsWith('rules:')));
+    const land = MODIFIER_RULES.scarceLand as { priceMultiplier: number };
+    const credit = MODIFIER_RULES.tightCredit as { rateDelta: number };
+    const { priceMultiplier } = land;
+    const { rateDelta } = credit;
+    try {
+      land.priceMultiplier = priceMultiplier + 0.1;
+      assert.notEqual(computeSimFingerprint(), base, 'arsa kuralı izi değiştirmiyor');
+      land.priceMultiplier = priceMultiplier;
+      credit.rateDelta = rateDelta + 0.01;
+      assert.notEqual(computeSimFingerprint(), base, 'banka kuralı izi değiştirmiyor');
+    } finally {
+      land.priceMultiplier = priceMultiplier;
+      credit.rateDelta = rateDelta;
+    }
+    assert.equal(computeSimFingerprint(), base);
   });
 });

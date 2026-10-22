@@ -4,7 +4,7 @@
 > `pnpm bench` çıktısından; iddialar `pnpm balance` ve `pnpm playtest`
 > tarafından her koşuda doğrulanıyor.
 >
-> Son güncelleme: şema **v6**, 52 tur (Tur 33 denendi ve geri alındı; Tur 34 eski görünüme canlılık ekledi; Tur 35 arayüzü Lite'ın "Cam & Bulut" diline taşıdı; Tur 36 şehre ayrıntı kattı; Tur 37a geç oyuna yönetim yükü, servet vergisi ve kriz dönemleri getirdi; Tur 37b karar kartlarını ve rakip hikâyelerini ekledi; Tur 37c fırsat balonlarını ve aylık görev panosunu getirdi; Tur 37d canlı pazarı, şehir projesi ihalesini ve rakip konsorsiyumunu getirdi; Tur 38 değerlendirme turuydu: geç oyun hızı, gündem ve haber akışı, zorluk eğrisi; Tur 39a senaryo modunu getirdi: Kurtarma ve Krizin ortasında; Tur 39b Konsorsiyuma karşı, Zincir ustası ve Şehrin sponsoru senaryolarını ekledi; Tur 39c Büyük şehir fethi ve Holding: iki şehir ile listeyi yediye tamamladı; Tur 40 cila ve performans; Tur 41 başarımlar ve kariyer; Tur 42 açılışta gölgelendirici derlemesi; Tur 43 oyun içi akıcılık; Tur 44 değerlendirme turuydu: Türkçe sayı biçimi, yardımın kapsamı, haber akışı; Tur 45 dört ek kural getirdi: Fırtınalı yıllar, Aç gözlü rakipler, Sıkı banka, Kıt arsa; Tur 46 açılış paketini böldü: kurulum ekranı telefonda yarı sürede; Tur 47 tek Ayarlar paneli ve erişilebilirlik getirdi: metin boyutu, renk körlüğüne uygun palet, hareket, ses düzeyleri, pencerelerde klavye; Tur 48 oyunu kurulabilir ve çevrimdışı açılır yaptı, yayından sonra "yeni sürüm hazır" diyor; Tur 49 müziği getirdi: gündüz, gece ve kriz, şehirle birlikte dönüyor; Tur 50 Faz 1'i değerlendirdi ve tanıtım paketini hazırladı; Tur 51 Faz 2'yi açtı: Lite'ın lig sunucusu ana oyunun Tohum Ligi koşularını da alıyor, tablo herkese açık; Tur 52'de sunucu her koşuyu gönderimde yeniden oynatıyor, tabloya yalnız doğrulanmış skor giriyor). Önümüzdeki işin sırası `docs/YOL-HARITASI.md`'de.
+> Son güncelleme: şema **v6**, 53 tur (Tur 33 denendi ve geri alındı; Tur 34 eski görünüme canlılık ekledi; Tur 35 arayüzü Lite'ın "Cam & Bulut" diline taşıdı; Tur 36 şehre ayrıntı kattı; Tur 37a geç oyuna yönetim yükü, servet vergisi ve kriz dönemleri getirdi; Tur 37b karar kartlarını ve rakip hikâyelerini ekledi; Tur 37c fırsat balonlarını ve aylık görev panosunu getirdi; Tur 37d canlı pazarı, şehir projesi ihalesini ve rakip konsorsiyumunu getirdi; Tur 38 değerlendirme turuydu: geç oyun hızı, gündem ve haber akışı, zorluk eğrisi; Tur 39a senaryo modunu getirdi: Kurtarma ve Krizin ortasında; Tur 39b Konsorsiyuma karşı, Zincir ustası ve Şehrin sponsoru senaryolarını ekledi; Tur 39c Büyük şehir fethi ve Holding: iki şehir ile listeyi yediye tamamladı; Tur 40 cila ve performans; Tur 41 başarımlar ve kariyer; Tur 42 açılışta gölgelendirici derlemesi; Tur 43 oyun içi akıcılık; Tur 44 değerlendirme turuydu: Türkçe sayı biçimi, yardımın kapsamı, haber akışı; Tur 45 dört ek kural getirdi: Fırtınalı yıllar, Aç gözlü rakipler, Sıkı banka, Kıt arsa; Tur 46 açılış paketini böldü: kurulum ekranı telefonda yarı sürede; Tur 47 tek Ayarlar paneli ve erişilebilirlik getirdi: metin boyutu, renk körlüğüne uygun palet, hareket, ses düzeyleri, pencerelerde klavye; Tur 48 oyunu kurulabilir ve çevrimdışı açılır yaptı, yayından sonra "yeni sürüm hazır" diyor; Tur 49 müziği getirdi: gündüz, gece ve kriz, şehirle birlikte dönüyor; Tur 50 Faz 1'i değerlendirdi ve tanıtım paketini hazırladı; Tur 51 Faz 2'yi açtı: Lite'ın lig sunucusu ana oyunun Tohum Ligi koşularını da alıyor, tablo herkese açık; Tur 52'de sunucu her koşuyu gönderimde yeniden oynatıyor, tabloya yalnız doğrulanmış skor giriyor; Tur 53 ligin her haftasına bir ek kural ve 90 günlük günün koşusunu getirdi). Önümüzdeki işin sırası `docs/YOL-HARITASI.md`'de.
 
 ---
 
@@ -5474,6 +5474,123 @@ bekletiyor, Lite etkilenmiyor.
   15/15, konsol hatası yok (~3,5 dk).
 - Paket bütçesi tamam: ana parça 60,9 KB.
 
+### Tur 53 — Haftanın kuralı ve günün koşusu
+
+Faz 2'nin üçüncü turu. Tohum Ligi'nin her haftası artık Tur 45'in ek
+kurallarından birini taşıyor, herkese aynı. Bir de kısa bir tür geldi:
+günün koşusu, 90 gün, her gün yeni şehir ve yeni tablo.
+
+**Haftanın kuralı (`systems/leagueWeek.ts`).**
+- Sıra sabit: Kıt arsa, Aç gözlü rakipler, Fırtınalı yıllar, Sıkı banka,
+  sonra baştan. 2026-W44'ten başlıyor; ondan önceki haftalar kuralsız
+  (eski koşular eskisi gibi oynanıyor). Yıl dönümünde sıra kaymıyor
+  (2026'nın 53 haftası var, test ediliyor).
+- *Codex #82: kural açılmamış ilk haftadan.* İlk sürüm W43'ten başlıyordu;
+  tur W43'ün ortasında geldi. O haftanın tablosunda kuralsız oynanmış ve
+  doğrulanmış satırlar kurallı skorlarla yan yana sıralanacaktı; süren
+  kayıtlar da kuralsız bitip kurallı tekrarda "sahte" çıkacaktı. Test
+  düzeltmeden önce kaldı.
+- Kural koşunun kimliğinden: oyuncu seçmiyor, kurulumun kuralları ligde yok
+  sayılıyor. Tekrar da aynı kuralla oynuyor; ayrı bir alan gerekmedi.
+- Kurulum bu haftanın kuralını ve gelecek haftanınkini söylüyor; lig paneli
+  de kuralı yazıyor. Hedefler panelinin kural satırı (Tur 45) ligde de
+  görünüyor.
+
+**Günün koşusu.**
+- Kimlik UTC günü ("2026-10-22"), koşu kodunda haftanın yerinde. Tohum o
+  günden; 90 gün, kuralsız, zorluk Dengeli. Koşu kodu aynı biçim: çözücü gün
+  kimliğini, 90 günün sınırlarını (hamle günü, eğri uzunluğu) ve takvimde
+  olmayan günü ("2026-02-30") tanıyor.
+- Kurulumun dördüncü türü ("Günün koşusu · 22 Ekim"). Lig paneli "Bugünün
+  tablosu" diyor; kapanan ya da daha iyisi kalan gönderimin metni gün için.
+  Gündem çipi "Günün koşusu" ("Lig 2026-10-22" değil).
+  Kariyer "Günün koşusu" ve "Gün tamamlandı" yazıyor (`leagueKind`).
+- *Codex #82: "Ligde" rozeti bir hafta istiyor.* Kariyer toplamı günün
+  koşusunu da sayıyordu: 90 günlük koşu "Tohum Ligi'nde bir haftayı sonuna
+  kadar oyna" rozetini açıyordu. Artık yalnız haftanın koşusu sayılıyor.
+- *Codex #82: paylaşılan tablo.* claude.ai'de yayınlanmış sayfada kişi
+  başına tek belge var (yayın kuralı `league/{self}`); günün koşusu
+  haftanınkini eziyordu. Günün koşusu artık aynı belgenin `day` alanında,
+  biri ötekini silmiyor. Kimliği ve skoru üst düzeyde de (`dayWeekId`,
+  `dayScore`): gün tablosu sorguda süzülüp sıralanıyor. İlk düzeltme 200
+  belge okuyup tarayıcıda süzüyordu; kalabalık tabloda günün koşusu
+  okunmayan belgede kalabiliyordu (Codex #82'nin ikinci turu). Her tablo
+  yalnız kendi alanlarını yazıyor, belge varken birleştirerek (`update`):
+  iki sekmeden aynı anda gelen haftanın ve günün koşusu ikisi de kalıyor;
+  belgeyi bütün olarak yeniden yazmak birini siliyordu. Depoda işlem yok:
+  aynı tabloya iki sekmeden aynı anda iki skor gelirse yazım geri okunuyor,
+  daha düşük olan sonra yazıldıysa yüksek olan yeniden yazılıyor (en çok iki
+  kez). Belgenin ilk yazımında iki sekme hâlâ yarışabiliyor (çok dar).
+  Testleri düzeltmeden önce kaldı.
+
+**Sunucu (`seed.ts`).** Günün koşuları aynı tabloda (`seed_verified`,
+kimlik `week` sütununda); şema değişmedi. Açık: bugün, ilk 6 saatinde dün.
+Tablo `GET /v1/seed/days/:day`; hafta ucu gün kimliğini, gün ucu hafta
+kimliğini almıyor. Günün koşuları iki hafta saklanıyor. Sağlık ucu
+`"daily":1`. Oyun bunu demeyen sunucuyu (Tur 52'ninki: gün ucu yok, kuralsız
+oynatıyor) eski sayıp yerel tabloyla açılıyor; canlı denetim de uyarıyor.
+
+**İz.** Haftanın kuralı izin dünyasında yok (kuralsız bir hafta). Kuralların
+hepsiyle küçük bir dünya izin yanında ilk 15 gün koşuyor; kuralların
+değerleri, sırası ve günün koşusunun uzunluğu da izde. İz 235'ten 311 ms'ye
+çıktı (Node, ilk hesap).
+
+**Denge (`pnpm balance "tohum ligi"`).** Bilgili vekil (5 günde bir hamle)
+ve yavaş vekil (15 günde bir); kuralın etkisi aynı şehrin kuralsız hâliyle
+(Sıkı banka'nın kuruluş kredisi de geri alınarak):
+
+| hafta | kural | bilgili | kuralsız | yavaş | kuralsız |
+|---|---|---|---|---|---|
+| W44 | Kıt arsa | 42,4 M | 41,7 M (+%2) | 25,5 M | 27,7 M (−%8) |
+| W45 | Aç gözlü rakipler | 37,7 M | 40,0 M (−%6) | 24,8 M | 26,7 M (−%7) |
+| W46 | Fırtınalı yıllar | 29,8 M | 32,6 M (−%9) | 17,8 M | 19,5 M (−%9) |
+| W47 | Sıkı banka | 38,1 M | 44,6 M (−%15) | 24,9 M | 28,3 M (−%12) |
+
+Bilgili vekil her hafta yavaştan %52–68 önde, kimse düşmüyor: kural
+beceriyi bastırmıyor. Her kural iki vekilin ortalamasını düşürüyor (−%3,
+−%6, −%9, −%13). Kıt arsa bilgili vekilde bu şehirde gürültüde kalıyor
+(+%2; Tur 45'te de tek tohumda öyleydi), yavaşı geriletiyor. Günün
+koşusunda bilgili 1,5–2,0 M, yavaş 1,15–1,35 M, hiç oynamayan 250 B (6–8
+kat); beş günün beş ayrı şehri var.
+
+**Doğrulama.** `pnpm test` 601/601; tip denetimi temiz.
+- Çekirdek (`league.test.ts`, 7 yeni): kimlikler, kural sırası ve yıl
+  dönümü, kurulumun kuralları yok sayılıyor, kurallı haftanın koşusu
+  tekrarda tutuyor ve kural skoru değiştiriyor, günün koşusu 90 günde
+  bitip doğrulanıyor, kısa koşunun kod sınırları, iz kuralların değerini
+  taşıyor. `modifiers.test.ts`: "ligde kural yok" testi yeni kurala göre.
+  `career.test.ts` (1 yeni): günün koşusu "Ligde" rozetini açmıyor.
+  `agenda.test.ts` (1 yeni): gündem çipi günün koşusunu adıyla yazıyor.
+- Paylaşılan tablo (`apps/web/test/league-board.test.ts`, 4 yeni): hafta ve
+  gün aynı belgede, biri ötekini ezmiyor; her tablonun "daha iyisi" kendi;
+  250 oyunculu tabloda günün koşusu görünüyor; iki sekmeden aynı anda gelen
+  iki koşu da kalıyor; aynı tabloya aynı anda gelen iki skordan yükseği
+  kalıyor.
+- Sunucu (`seed.test.ts`, 4 yeni): gün tablosu ayrı ve uçlar birbirinin
+  kimliğini almıyor; dünün koşusu yalnız ilk saatlerde; günün koşuları iki
+  hafta sonra siliniyor; sunucu gerçek bir 90 günlük koşuyu yeniden oynatıyor,
+  şişirileni almıyor.
+- İstemci (`client.test.ts`, 2 yeni): Tur 52'nin sunucusu eski; günün
+  koşusu kendi tablosunda.
+- Tarayıcı testi:
+  - "Tohum Ligi" 20 kontrol (3 yeni: kurulumda kural ve gelecek haftanınki,
+    koşu kuralla başlıyor, panelde kural; kuralların başlamadığı haftada
+    yalnız gelecek haftanınki);
+  - "Tohum Ligi: lig sunucusu" 15/15;
+  - yeni "Günün koşusu" bölümü 7 kontrol: kurulum, bugünün kimliği ve 90
+    gün, 90. günde bitiş, sunucunun gün tablosu ve doğrulanmış satır,
+    "Bugünün tablosu";
+  - "Ek kurallar" 6 kontrol, seçici günün koşusunda da yok.
+  Hepsi geçti, konsol temiz. Tarayıcı testi gerçek tarihle koşuyor, kural
+  her hafta başka: dört kuralda da pasif koşunun 360. günde bittiği Node'da
+  sınandı.
+- Paket bütçesi tamam: ana parça 62,4 KB (60,9'dan). Worker paketi 722 KB
+  (sıkıştırılmış 184 KB).
+
+**Canlıya geçiş.** Yalnız kod: `pnpm lite:league-bundle`, Worker'a yapıştır,
+Deploy. Sonra `/v1/health` `"daily":1` diyor. O zamana kadar Pages'teki
+oyun yerel tabloyla açılıyor.
+
 ---
 
 ## 3. Ölçülen durum
@@ -5576,7 +5693,7 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi). Senaryo şehirlerinde gün 3–17 ms (`pnpm dayperf`, Tur 43) |
-| Birim testi | **582 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de, Tur 52'de sunucuda tekrar) |
+| Birim testi | **601 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de, Tur 52'de sunucuda tekrar, Tur 53'te haftanın kuralı ve günün koşusu) |
 | Denge testi | **331 kontrol, hepsi geçiyor** (25 bölüm, süreleriyle; ~13 dk) |
 | Tarayıcı testi | **521 kontrol, hepsi geçiyor**, 0 konsol hatası (~40 dk); duman koşusu 132 (~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + paket bütçesi (Tur 46; Tur 48'den beri hizmet çalışanı ve manifest de) + duman oynanışı |

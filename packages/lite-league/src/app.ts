@@ -48,7 +48,7 @@ import type { Db, Statement } from './db';
 import { HttpError, base64, json, preflight, randomToken, readBody, readJson, sha256, shortCode, withCors } from './http';
 import { cleanName, offensiveName } from './names';
 import { MAX_SYNC_BODY, PLATFORMS, createSave, loadSave, saveWithScore, sync, touchProfile, uploadSave, type Platform } from './saves';
-import { registerSeed, runCode, seedPurge, submitRun, weekTable, type SeedReplay } from './seed';
+import { boardTable, registerSeed, runCode, seedPurge, submitRun, type SeedReplay } from './seed';
 
 export { cleanName, offensiveName } from './names';
 
@@ -144,15 +144,17 @@ async function route(request: Request, db: Db, now: number, options: Options): P
   try {
     // `seed`: ana oyunun Tohum Ligi bu sürümde (istemci ve canlı denetim eski sunucuyu buradan ayırıyor).
     // `verify`: koşuyu sunucu yeniden oynatıyor (Tur 52); tablonun satırları doğrulanmış.
-    if (route === 'GET /v1/health') return json({ ok: true, week: weekId(now), seed: 1, verify: 1 });
+    // `daily`: günün koşusunun tabloları ve haftanın kuralı (Tur 53).
+    if (route === 'GET /v1/health') return json({ ok: true, week: weekId(now), seed: 1, verify: 1, daily: 1 });
     if (route === 'POST /v1/players') return await register(request, db, now, options);
     if (route === 'POST /v1/link/claim') return await claimLink(request, db, now);
     if (route === 'POST /v1/seed/players') return await registerSeed(request, db, now);
-    const week = /^GET \/v1\/seed\/weeks\/([^/]+)$/.exec(route);
-    if (week) {
+    const board = /^GET \/v1\/seed\/(weeks|days)\/([^/]+)$/.exec(route);
+    if (board) {
       // Herkese açık; kimlikle gelen kendi satırını `mine` diye görüyor. Yazım yok.
       const session = request.headers.has('authorization') ? await authenticate(request, db) : null;
-      const response = json(await weekTable(db, week[1]!, session?.platform === 'capital' ? session.player.id : null, now));
+      const kind = board[1] === 'days' ? 'day' : 'week';
+      const response = json(await boardTable(db, kind, board[2]!, session?.platform === 'capital' ? session.player.id : null, now));
       response.headers.set('cache-control', 'no-store');
       return response;
     }

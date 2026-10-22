@@ -2,6 +2,7 @@ import { ACHIEVEMENTS, SCENARIOS } from '@capital/content';
 import type { AchievementDef, AchievementFeat, AchievementTotal, CitySizeId, DifficultyId, ModifierId } from '@capital/content';
 import { holdingFoundedAt, holdingFounderSize, holdingNetWorth } from './holdingFacts';
 import { FEAT_COUNTERS, addTally, cityTally } from './systems/feats';
+import { leagueBoardKind } from './systems/leagueWeek';
 import type { CityTally, GameState } from './types';
 
 /**
@@ -60,6 +61,8 @@ export interface RunFacts {
   /** Oynanan şehir devralındı. */
   lost: boolean;
   league?: 'playing' | 'finished' | 'lost';
+  /** Lig koşusu günün koşusuysa (Tur 53); haftanın tohumunda alan yok. */
+  leagueKind?: 'day';
   scenario?: { outcome?: 'won' | 'lost'; stars: number };
 }
 
@@ -114,6 +117,7 @@ export function runFacts(state: GameState): RunFacts {
     counters,
     lost: Boolean(state.gameOver),
     ...(league ? { league: league.outcome ?? 'playing' } : {}),
+    ...(league && leagueBoardKind(league.weekId) === 'day' ? { leagueKind: 'day' as const } : {}),
     ...(scenario ? { scenario: { ...(scenario.outcome ? { outcome: scenario.outcome } : {}), stars: scenario.stars ?? 0 } } : {}),
   };
 }
@@ -195,7 +199,8 @@ export function careerTotals(input: CareerInput): CareerTotals {
     totals.auctionsWon += run.counters.auctionsWon;
     totals.bubbles += run.bubbles;
     totals.quests += run.quests;
-    if (run.league === 'finished') totals.leagueRuns++;
+    // "Ligde" bir haftayı istiyor: 90 günlük günün koşusu sayılmıyor (Tur 53, Codex #82).
+    if (run.league === 'finished' && run.leagueKind !== 'day') totals.leagueRuns++;
   }
   for (const key of Object.keys(totals) as AchievementTotal[]) totals[key] += input.archived?.totals?.[key] ?? 0;
   return totals;

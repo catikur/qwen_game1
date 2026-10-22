@@ -38,7 +38,7 @@ export interface ServerBoardOptions {
 
 export interface ServerBoard extends LeagueBoard {
   kind: 'server';
-  /** Sunucu ayakta ve bu sürümde mi (sağlık ucunda `seed` ve `verify`)? */
+  /** Sunucu ayakta ve bu sürümde mi (sağlık ucunda `seed`, `verify` ve `daily`)? */
   probe(): Promise<'ok' | 'old' | 'offline'>;
   /** Bu tarayıcı sunucuyu daha önce çalışırken gördü mü (bağlantısız açılışta da sunucu tablosu kalsın)? */
   seen(): boolean;
@@ -114,9 +114,14 @@ function fallbackFor(storage: object | null): Fallback {
   return found;
 }
 
-/** Sağlık ucunun sürüm işareti (`seed`, `verify`) var ve en az 1 mi? */
+/** Sağlık ucunun sürüm işareti (`seed`, `verify`, `daily`) var ve en az 1 mi? */
 function atLeastOne(value: unknown): boolean {
   return typeof value === 'number' && value >= 1;
+}
+
+/** Tablonun ucu (Tur 53): günün koşusu ("2026-10-22") ayrı uçta, hafta ("2026-W43") eskisinde. */
+function boardPath(id: string): string {
+  return /^\d{4}-\d{2}-\d{2}$/.test(id) ? '/v1/seed/days' : '/v1/seed/weeks';
 }
 
 export function createServerBoard(options: ServerBoardOptions): ServerBoard {
@@ -490,8 +495,10 @@ export function createServerBoard(options: ServerBoardOptions): ServerBoard {
         return 'offline';
       }
       // Tur 51'in sunucusu (`verify` yok) koşuyu doğrulamıyor, eski tabloya
-      // yazıyor; Tur 52 gelince o koşular görünmez olurdu (Codex #81).
-      const ok = reply.status === 200 && atLeastOne(reply.body.seed) && atLeastOne(reply.body.verify);
+      // yazıyor; Tur 52 gelince o koşular görünmez olurdu (Codex #81). Tur
+      // 52'ninki (`daily` yok) günün koşusunu tanımıyor ve haftanın kuralı
+      // olmadan oynatıyor: o da eski (Tur 53).
+      const ok = reply.status === 200 && atLeastOne(reply.body.seed) && atLeastOne(reply.body.verify) && atLeastOne(reply.body.daily);
       write(SEEN_KEY, ok ? url : null);
       // Dinleme yalnız kullanılacak tabloda: tanınmayan sunucunun tablosu atılıyor.
       if (ok) listen();
@@ -517,7 +524,7 @@ export function createServerBoard(options: ServerBoardOptions): ServerBoard {
       const refresh = async () => {
         const mine = ++sequence;
         await flushPending();
-        const reply = await call(`/v1/seed/weeks/${encodeURIComponent(weekId)}`, { auth: true });
+        const reply = await call(`${boardPath(weekId)}/${encodeURIComponent(weekId)}`, { auth: true });
         // Sonradan başlayan tazeleme önce bittiyse eskisinin cevabı yazılmıyor.
         if (stopped || mine !== sequence) return;
         if (reply?.status === 200 && Array.isArray(reply.body.entries)) {

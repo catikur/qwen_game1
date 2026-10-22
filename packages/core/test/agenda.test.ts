@@ -70,3 +70,14 @@ describe('haber yeri', () => {
     assert.equal(state.news[0]!.tileId, undefined);
   });
 });
+
+describe('gündem: lig çipi (Tur 53)', () => {
+  test('haftanın koşusu haftayla, günün koşusu kendi adıyla', () => {
+    const chip = (weekId: string) => agenda(createNewGame({ companyName: 'Lig AŞ', league: { weekId } })).find((item) => item.kind === 'league');
+    assert.equal(chip('2026-W44')?.label, 'Lig 2026-W44');
+    assert.equal(chip('2026-10-22')?.label, 'Günün koşusu');
+    const done = createNewGame({ companyName: 'Lig AŞ', league: { weekId: '2026-10-22' } });
+    done.league!.finishedDay = 90;
+    assert.equal(agenda(done).find((item) => item.kind === 'league')?.label, 'Günün koşusu · tablo');
+  });
+});

@@ -9,8 +9,11 @@ import { createServerBoard } from './league-server';
  * Her kişi `league/<kendi kimliği>` belgesine yalnızca kendi koşusunu
  * yazabiliyor (yayın kuralı `league/{self}`), herkes hepsini okuyor. Belge
  * kişi başına tek — haftanın en iyi koşusu orada durur, yeni hafta onu
- * ezer. Ad saklanmıyor: kimlik saklanıyor, ad her çizimde `profiles()`
- * ile çözülüyor.
+ * ezer. Günün koşusu (Tur 53) aynı belgenin `day` alanında: ikisi birbirini
+ * ezmiyor (Codex #82). Kimliği ve skoru üst düzeyde de (`dayWeekId`,
+ * `dayScore`): tablo sorgusu haftanınki gibi süzüp sıralıyor, iç alanda
+ * sorguya güvenmiyor. Ad saklanmıyor: kimlik saklanıyor, ad her çizimde
+ * `profiles()` ile çözülüyor.
  *
  * Lig sunucusu (Tur 51): GitHub Pages'teki oyun. Lite'ın sunucusu ana
  * oyunun koşularını da alıyor; tablo herkese açık (`league-server.ts`).
@@ -64,6 +67,8 @@ interface Query {
 interface DocRef {
   get(): Promise<DocSnapshot>;
   set(data: Record<string, unknown>): Promise<void>;
+  /** Üst düzey alanları birleştiriyor (belge var olmalı). */
+  update?(data: Record<string, unknown>): Promise<void>;
 }
 interface Db {
   collection(path: string): Query & { doc(id: string): DocRef };
@@ -120,8 +125,14 @@ function localBoard(): LeagueBoard {
   };
 }
 
-function toEntry(doc: DocSnapshot, me: string | null): LeagueEntry | null {
-  const body = doc.data();
+/** Günün koşusunun kimliği ("2026-10-22"); hafta "2026-W43". */
+const DAY_ID = /^\d{4}-\d{2}-\d{2}$/;
+
+/** Belgenin koşusu: haftanınki üst düzeyde, günün koşusu `day` alanında. */
+function toEntry(doc: DocSnapshot, me: string | null, day = false): LeagueEntry | null {
+  const data = doc.data();
+  const inner = day ? data?.['day'] : data;
+  const body = inner && typeof inner === 'object' ? (inner as Record<string, unknown>) : undefined;
   if (!body || typeof body['score'] !== 'number' || typeof body['code'] !== 'string') return null;
   return {
     id: doc.id,
@@ -136,36 +147,36 @@ function toEntry(doc: DocSnapshot, me: string | null): LeagueEntry | null {
   };
 }
 
-function sharedBoard(db: Db, user: User | null): LeagueBoard {
+export function sharedBoard(db: Db, user: User | null): LeagueBoard {
   const meP = user ? user.id().catch(() => null) : Promise.resolve(null);
   return {
     kind: 'shared',
     subscribe(weekId, onChange) {
       let stop: (() => void) | null = null;
       let cancelled = false;
+      const day = DAY_ID.test(weekId);
       void meP.then((me) => {
         if (cancelled) return;
-        stop = db
-          .collection('league')
-          .where('weekId', '==', weekId)
-          .orderBy('score', 'desc')
-          .limit(50)
-          .onSnapshot(
-            (snap) => {
-              const entries = snap.docs.map((doc) => toEntry(doc, me)).filter((e): e is LeagueEntry => e !== null);
-              onChange(entries);
-              // Adlar kaydedilmiyor; her teslimatta çözülüyor.
-              if (user && entries.length > 0) {
-                void user
-                  .profiles(entries.map((e) => e.id))
-                  .then((profiles) => {
-                    if (!cancelled) onChange(entries.map((e) => ({ ...e, who: profiles[e.id]?.name || '' })));
-                  })
-                  .catch(() => undefined);
-              }
-            },
-            () => onChange([]),
-          );
+        // Süzgeç ve sıra sınırdan önce, sorguda (Codex #82): günün koşusu üst düzeydeki kopyasıyla.
+        const query = day
+          ? db.collection('league').where('dayWeekId', '==', weekId).orderBy('dayScore', 'desc').limit(50)
+          : db.collection('league').where('weekId', '==', weekId).orderBy('score', 'desc').limit(50);
+        stop = query.onSnapshot(
+          (snap) => {
+            const entries = snap.docs.map((doc) => toEntry(doc, me, day)).filter((e): e is LeagueEntry => e !== null && e.weekId === weekId);
+            onChange(entries);
+            // Adlar kaydedilmiyor; her teslimatta çözülüyor.
+            if (user && entries.length > 0) {
+              void user
+                .profiles(entries.map((e) => e.id))
+                .then((profiles) => {
+                  if (!cancelled) onChange(entries.map((e) => ({ ...e, who: profiles[e.id]?.name || '' })));
+                })
+                .catch(() => undefined);
+            }
+          },
+          () => onChange([]),
+        );
       });
       return () => {
         cancelled = true;
@@ -179,10 +190,25 @@ function sharedBoard(db: Db, user: User | null): LeagueBoard {
         const ref = db.collection('league').doc(me);
         const existing = await ref.get();
         const body = existing.exists ? existing.data() : undefined;
-        if (body && body['weekId'] === entry.weekId && typeof body['score'] === 'number' && body['score'] >= entry.score) {
+        const day = DAY_ID.test(entry.weekId);
+        const current = (day ? body?.['day'] : body) as Record<string, unknown> | undefined;
+        if (current && current['weekId'] === entry.weekId && typeof current['score'] === 'number' && current['score'] >= entry.score) {
           return 'kept-better';
         }
-        await ref.set({ ...entry });
+        // Kişi başına tek belge: her tablo yalnız kendi alanlarını yazıyor. Belge varken
+        // birleştirerek: aynı anda öbür tabloya gönderen sekmenin sonucu silinmesin (Codex #82).
+        const fields: Record<string, unknown> = day ? { day: { ...entry }, dayWeekId: entry.weekId, dayScore: entry.score } : { ...entry };
+        if (existing.exists && ref.update) await ref.update(fields);
+        else await ref.set({ ...(body ?? {}), ...fields });
+        // Depoda işlem yok: aynı tabloya başka sekmeden daha düşük skor bizden sonra
+        // yazıldıysa geri okuyup düzeltiyoruz; en iyi skor kalsın (Codex #82).
+        for (let attempt = 0; attempt < 2; attempt++) {
+          const after = (await ref.get()).data();
+          const stored = (day ? after?.['day'] : after) as Record<string, unknown> | undefined;
+          if (stored?.['weekId'] !== entry.weekId || typeof stored['score'] !== 'number' || stored['score'] >= entry.score) break;
+          if (ref.update) await ref.update(fields);
+          else await ref.set({ ...(after ?? {}), ...fields });
+        }
         return 'saved';
       } catch {
         return 'error';

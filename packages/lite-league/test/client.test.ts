@@ -26,6 +26,8 @@ interface Net {
   old: boolean;
   /** Tur 51'in sunucusu: sağlık ucu `seed` diyor, `verify` demiyor (koşuyu doğrulamıyor). */
   tur51?: boolean;
+  /** Tur 52'nin sunucusu: `daily` demiyor (günün koşusu yok, haftanın kuralı yok). */
+  tur52?: boolean;
   now: number;
   requests: string[];
 }
@@ -47,6 +49,7 @@ function client(db: Db, net: Net, storage = memoryStorage(), online = new EventT
     if (!net.online) throw new TypeError('fetch failed');
     if (net.old && new globalThis.URL(request.url).pathname === '/v1/health') return Response.json({ ok: true, week: WEEK });
     if (net.tur51 && new globalThis.URL(request.url).pathname === '/v1/health') return Response.json({ ok: true, week: WEEK, seed: 1 });
+    if (net.tur52 && new globalThis.URL(request.url).pathname === '/v1/health') return Response.json({ ok: true, week: WEEK, seed: 1, verify: 1 });
     if (net.old) return Response.json({ error: 'route' }, { status: 404 });
     return handle(request, db, net.now, TRUSTING);
   }) as typeof fetch;
@@ -129,6 +132,39 @@ test('istemci: Tur 51\'in sunucusu (doğrulamıyor) eski sayılıyor; koşu ona 
   net.tur51 = false;
   assert.equal(await board.probe(), 'ok');
   assert.equal(board.seen(), true);
+});
+
+test('istemci: Tur 52\'nin sunucusu (günün koşusu ve haftanın kuralı yok) eski sayılıyor (Tur 53)', async () => {
+  const db = memoryDb();
+  const net: Net = { online: true, old: false, tur52: true, now: THURSDAY, requests: [] };
+  const { board } = client(db, net);
+  assert.equal(await board.probe(), 'old');
+  assert.equal(board.seen(), false);
+  assert.deepEqual(net.requests, ['GET /v1/health']);
+  net.tur52 = false;
+  assert.equal(await board.probe(), 'ok');
+});
+
+test('istemci: günün koşusu kendi tablosunda; haftanınkiyle karışmıyor (Tur 53)', async () => {
+  const db = memoryDb();
+  const net: Net = { online: true, old: false, now: THURSDAY, requests: [] };
+  const { board } = client(db, net);
+  const DAY = '2026-10-15';
+  const days = watch(board, DAY);
+  await days.next();
+  assert.deepEqual(days.last(), { entries: [], offline: false });
+  assert.ok(net.requests.includes(`GET /v1/seed/days/${DAY}`), net.requests.join(', '));
+
+  const value = run({ weekId: DAY, curve: [100_000, 400_000], score: 400_000 });
+  const refreshed = days.next();
+  assert.equal(await board.submit(entryOf(value)), 'saved');
+  await refreshed;
+  assert.deepEqual(days.last().entries.map((entry) => [entry.weekId, entry.score, entry.mine]), [[DAY, 400_000, true]]);
+  const weeks = watch(board, WEEK);
+  await weeks.next();
+  assert.deepEqual(weeks.last().entries, [], 'haftanın tablosu boş');
+  days.stop();
+  weeks.stop();
 });
 
 test('istemci: ilk gönderim hesap açıyor; tablo satırı geliyor, kod ayrı iniyor', async () => {

@@ -1,8 +1,8 @@
-import { BUILDINGS, BUILDING_BY_ID, CEO_BY_ID, CONSORTIUM, CONSUMER_CATEGORIES, FAD, GOOD_BY_ID, GOODS_BY_CATEGORY, PROJECTS, PROJECT_TIMING, SEASONS, TREND } from '@capital/content';
+import { BUILDINGS, BUILDING_BY_ID, CEO_BY_ID, CONSORTIUM, CONSUMER_CATEGORIES, FAD, GOOD_BY_ID, GOODS_BY_CATEGORY, MODIFIER_RULES, PROJECTS, PROJECT_TIMING, SEASONS, TREND } from '@capital/content';
 import type { CategoryId } from '@capital/content';
 import { GameEngine } from './engine';
 import { formatMoney } from './selectors';
-import { LEAGUE_DAYS, LEAGUE_SAMPLE_DAYS } from './systems/league';
+import { LEAGUE_DAILY_DAYS, LEAGUE_RULES_FROM, LEAGUE_RULE_ROTATION, LEAGUE_SAMPLE_DAYS, leagueBoardKind, leagueLength } from './systems/league';
 import { build, buyTile } from './actions';
 import { isDistrictOpen, isPurchasable } from './systems/city';
 import { runConsortiumTick } from './systems/consortium';
@@ -36,6 +36,7 @@ import type { GameCommand, GameState, LoggedCommand, ProjectState } from './type
 export interface LeagueRun {
   /** 1: Tur 17 · 2: simülasyon parmak izi (Tur 31). */
   version: 1 | 2;
+  /** Tablonun kimliği: hafta ("2026-W43") ya da Tur 53'ten beri gün ("2026-10-22", günün koşusu). */
   weekId: string;
   ceoId: string | null;
   companyName: string;
@@ -95,8 +96,8 @@ const LOGGABLE: ReadonlySet<string> = new Set<GameCommand['type']>([
   'TAKE_LOAN',
 ]);
 
-const WEEK_ID = /^\d{4}-W\d{2}$/;
-const CURVE_MAX = Math.floor(LEAGUE_DAYS / LEAGUE_SAMPLE_DAYS) + 1;
+/** Eğrinin en çok örneği: koşunun uzunluğundan (gün 90, hafta 360). */
+const curveMax = (id: string): number => Math.floor(leagueLength(id) / LEAGUE_SAMPLE_DAYS) + 1;
 
 export function runFromState(state: GameState): LeagueRun | null {
   const league = state.league;
@@ -141,21 +142,23 @@ function wellFormed(raw: unknown): raw is LeagueRun {
   if (!raw || typeof raw !== 'object') return false;
   const run = raw as Record<string, unknown>;
   if (run['version'] !== 1 && run['version'] !== 2) return false;
-  if (typeof run['weekId'] !== 'string' || !WEEK_ID.test(run['weekId'])) return false;
+  const id = run['weekId'];
+  if (typeof id !== 'string' || leagueBoardKind(id) === null) return false;
+  const length = leagueLength(id);
   const ceoId = run['ceoId'];
   if (ceoId !== null && (typeof ceoId !== 'string' || !CEO_BY_ID[ceoId])) return false;
   const name = run['companyName'];
   if (typeof name !== 'string' || name.length === 0 || name.length > RUN_LIMITS.nameLength) return false;
   if (!finite(run['score']) || (run['score'] as number) < 0) return false;
   const curve = run['curve'];
-  if (!Array.isArray(curve) || curve.length > CURVE_MAX || !curve.every(finite)) return false;
+  if (!Array.isArray(curve) || curve.length > curveMax(id) || !curve.every(finite)) return false;
   if (run['sim'] !== undefined && (typeof run['sim'] !== 'string' || run['sim'].length > 32)) return false;
   const log = run['log'];
   if (!Array.isArray(log) || log.length > RUN_LIMITS.logEntries) return false;
   for (const entry of log) {
     if (!Array.isArray(entry) || entry.length !== 2) return false;
     const [day, command] = entry as [unknown, unknown];
-    if (!Number.isInteger(day) || (day as number) < 0 || (day as number) > LEAGUE_DAYS) return false;
+    if (!Number.isInteger(day) || (day as number) < 0 || (day as number) > length) return false;
     if (!command || typeof command !== 'object' || Array.isArray(command)) return false;
     const type = (command as { type?: unknown }).type;
     if (typeof type !== 'string' || !LOGGABLE.has(type)) return false;
@@ -206,6 +209,40 @@ const FINGERPRINT_DAYS = 60;
 
 function fingerprintWorld(): GameEngine {
   return new GameEngine(createNewGame({ seed: 20_261_013, companyName: 'Parmak İzi', league: { weekId: '2000-W01' } }));
+}
+
+/**
+ * Kural yoklaması (Tur 53): haftanın kuralı lig koşusunu değiştiriyor, ama
+ * izin dünyası kuralsız bir hafta. Kuralların hepsiyle küçük bir dünya ilk
+ * günlerinde izin yanında koşuyor (arsa fiyatı ve imar takvimi, kuruluş
+ * kredisi ve faizi, rakiplerin yatırımı); kuralların değerleri, sırası ve
+ * günün koşusunun uzunluğu da izde. Fırtınaların ilk krizi bu günlere
+ * düşmüyor: onun takvimi değerlerinden.
+ */
+const RULE_PROBE_DAYS = 15;
+
+function ruleProbeWorld(): GameEngine {
+  return new GameEngine(createNewGame({ seed: 20_261_013, companyName: 'Parmak İzi', modifiers: LEAGUE_RULE_ROTATION }));
+}
+
+/** İzin ve kural yoklamasının bir günü. */
+function fingerprintDay(engine: GameEngine, probe: GameEngine, day: number): void {
+  fingerprintStep(engine, day);
+  if (day <= RULE_PROBE_DAYS) fingerprintStep(probe, day);
+}
+
+function ruleProbeParts(probe: GameState): string[] {
+  const parts = [`rules:${JSON.stringify({ MODIFIER_RULES, LEAGUE_RULE_ROTATION, LEAGUE_RULES_FROM, LEAGUE_DAILY_DAYS })}`];
+  parts.push(`rule-world:${probe.time.day}:${probe.rng.s}:${probe.districts.map((district) => district.opensOnDay ?? '-').join(',')}`);
+  for (const id of Object.keys(probe.companies).sort()) {
+    const c = probe.companies[id]!;
+    parts.push(`rule-${id}:${Math.round(c.cash)}:${Math.round(c.netWorth)}`);
+  }
+  for (const id of Object.keys(probe.buildings).sort()) {
+    const b = probe.buildings[id]!;
+    parts.push(`rule-${b.defId}@${b.tileId}:${b.companyId}`);
+  }
+  return parts;
 }
 
 /**
@@ -363,8 +400,8 @@ function lateGameProbe(state: GameState): string[] {
   return parts;
 }
 
-function fingerprintOf(state: GameState): string {
-  return fnv(fingerprintParts(state).join('|'));
+function fingerprintOf(state: GameState, probe: GameState): string {
+  return fnv([...fingerprintParts(state), ...ruleProbeParts(probe)].join('|'));
 }
 
 function fingerprintParts(state: GameState): string[] {
@@ -391,15 +428,17 @@ function fingerprintParts(state: GameState): string[] {
 /** Önbelleksiz hesap (test: dil değişince iz aynı kalmalı). */
 export function computeSimFingerprint(): string {
   const engine = fingerprintWorld();
-  for (let day = 1; day <= FINGERPRINT_DAYS; day++) fingerprintStep(engine, day);
-  return fingerprintOf(engine.getState());
+  const probe = ruleProbeWorld();
+  for (let day = 1; day <= FINGERPRINT_DAYS; day++) fingerprintDay(engine, probe, day);
+  return fingerprintOf(engine.getState(), probe.getState());
 }
 
 /** İzin özetlenmemiş parçaları: testler bir yoklamanın gerçekten bir şey ölçtüğünü görsün. */
 export function simFingerprintParts(): string[] {
   const engine = fingerprintWorld();
-  for (let day = 1; day <= FINGERPRINT_DAYS; day++) fingerprintStep(engine, day);
-  return fingerprintParts(engine.getState());
+  const probe = ruleProbeWorld();
+  for (let day = 1; day <= FINGERPRINT_DAYS; day++) fingerprintDay(engine, probe, day);
+  return [...fingerprintParts(engine.getState()), ...ruleProbeParts(probe.getState())];
 }
 
 /**
@@ -409,11 +448,12 @@ export function simFingerprintParts(): string[] {
 export async function simFingerprintAsync(yieldEvery = 10): Promise<string> {
   if (fingerprint) return fingerprint;
   const engine = fingerprintWorld();
+  const probe = ruleProbeWorld();
   for (let day = 1; day <= FINGERPRINT_DAYS; day++) {
-    fingerprintStep(engine, day);
+    fingerprintDay(engine, probe, day);
     if (day % yieldEvery === 0) await new Promise((resolve) => setTimeout(resolve, 0));
   }
-  fingerprint ??= fingerprintOf(engine.getState());
+  fingerprint ??= fingerprintOf(engine.getState(), probe.getState());
   return fingerprint;
 }
 
@@ -474,7 +514,7 @@ export async function replayRun(
       options.onProgress?.(state().time.day);
       await new Promise((resolve) => setTimeout(resolve, 0));
     }
-    if (state().time.day > LEAGUE_DAYS + 5) break; // emniyet
+    if (state().time.day > leagueLength(run.weekId) + 5) break; // emniyet
   }
 
   const score = state().league?.score ?? 0;

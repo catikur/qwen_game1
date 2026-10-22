@@ -20,7 +20,7 @@ import {
 import type { CategoryId, CitySizeId, DifficultyId, DistrictArchetypeId, ModifierId } from '@capital/content';
 import { tc } from './i18n';
 import { createRng, nextRange, pickWeighted } from './rng';
-import { LEAGUE_DAYS, leagueSeed } from './systems/league';
+import { leagueLength, leagueRule, leagueSeed } from './systems/league';
 import { referenceVolumes, seedSpotPrices, zeroByGood } from './systems/supply';
 import { zeroByCategory } from './systems/demand';
 import { grantStartingLoan } from './systems/credit';
@@ -189,13 +189,16 @@ export interface NewGameOptions {
   difficulty?: DifficultyId;
   /**
    * Zorluk değiştiricileri (Tur 45). Lig koşusunda yok sayılır: herkes
-   * aynı kurallarla. Senaryo kurulumu bu seçeneği hiç vermiyor.
+   * aynı kurallarla, haftanın kuralı kimlikten (Tur 53). Senaryo kurulumu
+   * bu seçeneği hiç vermiyor.
    */
   modifiers?: readonly ModifierId[];
   /**
    * Tohum Ligi koşusu: tohum haftadan türer, zorluk Dengeli'ye sabitlenir
-   * ve oyuncunun komutları günlüğe yazılır. Verilen `seed`/`difficulty`
-   * yok sayılır — herkes aynı şehirde oynamalı.
+   * ve oyuncunun komutları günlüğe yazılır. Verilen `seed`/`difficulty`/
+   * `modifiers` yok sayılır — herkes aynı şehirde oynamalı. Tur 53: haftanın
+   * kuralı kimlikten (`leagueRule`); kimlik gün de olabiliyor (günün
+   * koşusu, 90 gün).
    */
   league?: { weekId: string };
   /**
@@ -213,9 +216,15 @@ export function rivalSlotsFor(plotCapacity: number): number {
   return Math.min(NPC_PROFILES.length, Math.max(4, Math.round(plotCapacity / 126)));
 }
 
+/** Lig koşusunun kuralları: haftanın kuralı ya da hiçbiri. */
+function leagueModifiers(id: string): ModifierId[] {
+  const rule = leagueRule(id);
+  return rule ? [rule] : [];
+}
+
 export function createNewGame(input: NewGameOptions = {}): GameState {
   const options: NewGameOptions = input.league
-    ? { ...input, seed: leagueSeed(input.league.weekId), difficulty: 'normal', modifiers: [] }
+    ? { ...input, seed: leagueSeed(input.league.weekId), difficulty: 'normal', modifiers: leagueModifiers(input.league.weekId) }
     : input;
   const modifiers = normalizeModifiers(options.modifiers);
   const rules = difficultyWith(options.difficulty, modifiers);
@@ -505,7 +514,7 @@ export function createNewGame(input: NewGameOptions = {}): GameState {
     ...(!options.layout && !input.league && options.citySize && options.citySize !== 'standard' ? { citySize: options.citySize } : {}),
     ...(options.league
       ? {
-          league: { weekId: options.league.weekId, endDay: LEAGUE_DAYS, curve: [Math.round(companies[PLAYER_COMPANY_ID]!.cash)] },
+          league: { weekId: options.league.weekId, endDay: leagueLength(options.league.weekId), curve: [Math.round(companies[PLAYER_COMPANY_ID]!.cash)] },
           commandLog: [],
         }
       : {}),

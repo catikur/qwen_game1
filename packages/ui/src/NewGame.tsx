@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ReactElement, ReactNode } from 'react';
-import { CEOS, CITY_SIZES, DEFAULT_CEO_ID, DEFAULT_CITY_SIZE, DEFAULT_DIFFICULTY, DIFFICULTIES, MODIFIERS, SCENARIOS, formatDecimal, getCitySize, getDifficulty, modifierMultiplier, normalizeModifiers } from '@capital/content';
+import { CEOS, CITY_SIZES, DEFAULT_CEO_ID, DEFAULT_CITY_SIZE, DEFAULT_DIFFICULTY, DIFFICULTIES, MODIFIERS, MODIFIER_BY_ID, SCENARIOS, formatDecimal, getCitySize, getDifficulty, modifierMultiplier, normalizeModifiers, numberLocale } from '@capital/content';
 import type { CitySizeId, DifficultyId, ModifierId, ScenarioDef } from '@capital/content';
-import { formatMoney, leagueWeekId, scenarioGoalText, scenarioScoreText } from '@capital/core';
+import { LEAGUE_DAILY_DAYS, formatMoney, leagueDayId, leagueRule, leagueWeekId, scenarioGoalText, scenarioScoreText } from '@capital/core';
+import type { LeagueBoardKind } from '@capital/core';
 import { CeoPortrait } from './CeoPortrait';
 import { LocalePicker } from './LocalePicker';
 import { t } from './i18n';
@@ -13,6 +14,15 @@ import { CareerPanel, useCareerRevision } from './CareerPanel';
 import { SettingsPanel } from './SettingsPanel';
 import { useDialogFocus } from './dialog';
 import { careerSummary } from './career';
+
+/** Günün koşusunun adı: "22 Ekim" (etkin dilde; gün UTC). */
+function leagueDayLabel(dayId: string): string {
+  try {
+    return new Intl.DateTimeFormat(numberLocale(), { day: 'numeric', month: 'long', timeZone: 'UTC' }).format(new Date(`${dayId}T00:00:00Z`));
+  } catch {
+    return dayId;
+  }
+}
 
 /**
  * Kurulumun sayılarla özeti: şehir, zorluk, başlangıç günü, süre, kasa.
@@ -64,7 +74,8 @@ export function NewGameScreen({
     companyName: string,
     ceoId: string,
     difficulty: DifficultyId,
-    league: boolean,
+    /** Lig koşusu: haftanın tohumu ya da günün koşusu (Tur 53); serbest oyunda ve senaryoda yok. */
+    league: LeagueBoardKind | null,
     citySize: CitySizeId,
     tutorial: boolean,
     scenarioId: string | null,
@@ -81,9 +92,11 @@ export function NewGameScreen({
   const [modifiers, setModifiers] = useState<ModifierId[]>([]);
   const toggleModifier = (id: ModifierId) =>
     setModifiers((current) => normalizeModifiers(current.includes(id) ? current.filter((m) => m !== id) : [...current, id]));
-  // Oyun türü: serbest şehir, haftanın tohumu ya da senaryo (Tur 39).
-  const [mode, setMode] = useState<'free' | 'league' | 'scenario'>(initialScenario ? 'scenario' : 'free');
+  // Oyun türü: serbest şehir, haftanın tohumu, günün koşusu (Tur 53) ya da senaryo (Tur 39).
+  const [mode, setMode] = useState<'free' | 'league' | 'daily' | 'scenario'>(initialScenario ? 'scenario' : 'free');
   const league = mode === 'league';
+  const daily = mode === 'daily';
+  const leagueKind: LeagueBoardKind | null = league ? 'week' : daily ? 'day' : null;
   const [scenarioId, setScenarioId] = useState<string>(initialScenario ?? SCENARIOS[0]!.id);
   const scenario = SCENARIOS.find((s) => s.id === scenarioId) ?? SCENARIOS[0]!;
   const free = mode === 'free';
@@ -93,6 +106,10 @@ export function NewGameScreen({
   const [tutorial, setTutorialOption] = useState(() => !tutorialSeen());
   const size = CITY_SIZES.find((c) => c.id === citySize) ?? CITY_SIZES[0]!;
   const weekId = leagueWeekId();
+  const dayLabel = leagueDayLabel(leagueDayId());
+  // Haftanın kuralı ve gelecek haftanınki (Tur 53): sıra sabit, oyuncu önceden bilsin.
+  const rule = leagueRule(weekId);
+  const nextRule = leagueRule(leagueWeekId(new Date(Date.now() + 7 * 86_400_000)));
   const selected = CEOS.find((c) => c.id === ceoId) ?? CEOS[0]!;
   const level = DIFFICULTIES.find((d) => d.id === difficulty) ?? DIFFICULTIES[1]!;
   // Kariyer (Tur 41): oyun dışında da açılabilsin, koşular arasında bakılan yer burası.
@@ -117,9 +134,9 @@ export function NewGameScreen({
     onStart(
       name.trim() || t('hud.newGame.defaultName'),
       ceoId,
-      league ? 'normal' : mode === 'scenario' ? scenario.difficulty : difficulty,
-      league,
-      league ? 'standard' : mode === 'scenario' ? scenario.citySize : citySize,
+      leagueKind ? 'normal' : mode === 'scenario' ? scenario.difficulty : difficulty,
+      leagueKind,
+      leagueKind ? 'standard' : mode === 'scenario' ? scenario.citySize : citySize,
       mode === 'scenario' ? false : tutorial,
       mode === 'scenario' ? scenario.id : null,
       free ? modifiers : [],
@@ -224,6 +241,16 @@ export function NewGameScreen({
             <button
               type="button"
               role="radio"
+              aria-checked={daily}
+              className={`difficulty-option${daily ? ' selected' : ''}`}
+              data-mode="daily"
+              onClick={() => setMode('daily')}
+            >
+              {t('hud.newGame.modeDaily', { day: dayLabel })}
+            </button>
+            <button
+              type="button"
+              role="radio"
               aria-checked={mode === 'scenario'}
               className={`difficulty-option${mode === 'scenario' ? ' selected' : ''}`}
               data-mode="scenario"
@@ -235,9 +262,26 @@ export function NewGameScreen({
           {league && (
             <div className="difficulty-detail" data-detail="league">
               <p>{t('hud.newGame.leagueBlurb')}</p>
+              {rule && (
+                <p className="league-rule" data-league-rule={rule}>
+                  <strong>{t('hud.newGame.leagueRule', { name: MODIFIER_BY_ID[rule].name })}</strong> {MODIFIER_BY_ID[rule].blurb}
+                </p>
+              )}
               <ul>
-                <li>{t('hud.newGame.leagueFactRules')}</li>
+                <li>{t(rule ? 'hud.newGame.leagueFactRule' : 'hud.newGame.leagueFactRules')}</li>
                 <li>{t('hud.newGame.leagueFactGhost')}</li>
+                {nextRule && (
+                  <li data-league-next-rule={nextRule}>{t('hud.newGame.leagueNextRule', { name: MODIFIER_BY_ID[nextRule].name })}</li>
+                )}
+              </ul>
+            </div>
+          )}
+          {daily && (
+            <div className="difficulty-detail" data-detail="daily">
+              <p>{t('hud.newGame.dailyBlurb', { days: LEAGUE_DAILY_DAYS })}</p>
+              <ul>
+                <li>{t('hud.newGame.dailyFactRules')}</li>
+                <li>{t('hud.newGame.dailyFactReset')}</li>
               </ul>
             </div>
           )}

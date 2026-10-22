@@ -97,7 +97,7 @@ export const world = {
 
   // league.ts — lig koşusunun sonu
   'core.league.lostTitle': 'Lig koşusu bitti: devralındın',
-  'core.league.lostBody': 'Bu haftanın skoru sıfır. Yeni bir koşu aynı şehirde baştan başlar.',
+  'core.league.lostBody': 'Bu koşunun skoru sıfır. Yeni bir koşu aynı şehirde baştan başlar.',
   'core.league.finishedTitle': 'Lig koşusu bitti: {score}',
   'core.league.finishedBody': '{days} gün doldu. Skorun {score} — koşu kodunu paylaş ya da tabloya gönder.',
 

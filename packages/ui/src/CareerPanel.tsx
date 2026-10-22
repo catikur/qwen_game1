@@ -93,7 +93,8 @@ function Badge({ status, record }: { status: AchievementStatus; record: UnlockRe
 
 function runTitle(run: CareerRun): string {
   if (run.mode === 'scenario') return t('hud.career.mode.scenario', { title: SCENARIO_BY_ID[run.scenarioId ?? '']?.title ?? run.scenarioId ?? '' });
-  return t(run.mode === 'league' ? 'hud.career.mode.league' : 'hud.career.mode.free');
+  if (run.mode === 'league') return t(run.leagueKind === 'day' ? 'hud.career.mode.daily' : 'hud.career.mode.league');
+  return t('hud.career.mode.free');
 }
 
 function RunRow({ run }: { run: CareerRun }): ReactElement {
