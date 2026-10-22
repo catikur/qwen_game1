@@ -60,6 +60,8 @@ interface Pending {
   url: string;
   weekId: string;
   code: string;
+  /** Kuyruğa girdiği andaki hesap: silinen hesabın koşusu öbür sekmenin hesabıyla gitmesin (Codex #80). */
+  account?: string;
 }
 
 interface StoredTable {
@@ -215,6 +217,8 @@ export function createServerBoard(options: ServerBoardOptions): ServerBoard {
     if (typeof me === 'string') return me;
     const reply = await call('/v1/seed/runs', { method: 'POST', body: { code }, auth: me });
     if (!reply) return 'offline';
+    // Gönderim geçti: eski "şu kadar sonra dene" süresi artık geçerli değil (Codex #80).
+    if (reply.status === 201 || (reply.status === 200 && reply.body.outcome === 'kept-better')) retryHint = 0;
     if (reply.status === 201) return 'saved';
     if (reply.status === 200 && reply.body.outcome === 'kept-better') return 'kept-better';
     if (reply.status === 401) {
@@ -238,7 +242,8 @@ export function createServerBoard(options: ServerBoardOptions): ServerBoard {
   const pending = (): Pending[] => (parse<Pending[]>(PENDING_KEY) ?? []).filter((item) => item && item.url === url && typeof item.code === 'string');
 
   function queue(weekId: string, code: string): void {
-    const items = [...pending().filter((item) => item.code !== code), { url, weekId, code }].slice(-PENDING_MAX);
+    const owner = account()?.id;
+    const items = [...pending().filter((item) => item.code !== code), { url, weekId, code, ...(owner ? { account: owner } : {}) }].slice(-PENDING_MAX);
     write(PENDING_KEY, JSON.stringify(items));
   }
 
@@ -464,6 +469,9 @@ export function createServerBoard(options: ServerBoardOptions): ServerBoard {
           if (account()?.id === me.id) {
             write(ACCOUNT_KEY, null);
             write(PENDING_KEY, null);
+          } else {
+            // Öbür sekmenin kuyruğu kalıyor; silinen hesabın koşuları gidiyor.
+            write(PENDING_KEY, JSON.stringify(pending().filter((item) => item.account !== me.id)));
           }
           // Depodaki tablo silinen satırı "benim" diye taşımasın.
           write(TABLE_KEY, null);

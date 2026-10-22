@@ -613,3 +613,83 @@ test('istemci: sunucunun söylediği süre sonra yeniden deniyor; saatlik sını
   assert.equal(await total(), 1, 'koşu sınır kalkınca gitti');
   board.close?.();
 });
+
+test('istemci: başarılı gönderim eski "saat sonra dene" süresini siliyor (Codex #80)', async () => {
+  const db = memoryDb();
+  const net: Net = { online: true, old: false, now: THURSDAY, requests: [] };
+  const storage = memoryStorage();
+  const online = new EventTarget();
+  let hourly = true;
+  const fetcher = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const request = new Request(input, init);
+    if (!net.online) throw new TypeError('fetch failed');
+    const runs = request.method === 'POST' && new globalThis.URL(request.url).pathname === '/v1/seed/runs';
+    // Saatlik sınır: bir saat sonra dene.
+    if (runs && hourly) return Response.json({ error: 'busy', retryAfter: 3600 }, { status: 429 });
+    const response = await handle(request, db, net.now);
+    if (response.status !== 429) return response;
+    // 30 sn aralığı; testin saati elle ilerliyor, bekleme kısaltılıyor.
+    return Response.json({ ...((await response.json()) as object), retryAfter: 0.05 }, { status: 429 });
+  }) as typeof fetch;
+  const board = createServerBoard({ url: URL, fetch: fetcher, storage, online, pollMs: 2 ** 30, retryMs: 20 });
+  // Test kalsa da saatlik zamanlayıcı süreci açık tutmasın.
+  subscriptions.push(() => board.close?.());
+  assert.equal(await board.probe(), 'ok');
+  assert.equal(await board.submit(entryOf(run())), 'busy');
+  // Sınır kalktı; oyuncu yeniden gönderiyor, gidiyor.
+  hourly = false;
+  assert.equal(await board.submit(entryOf(run())), 'saved');
+
+  // Sonra iki bağlantısız koşu: ikincisi 30 sn aralığına takılıyor, saatlik süreye değil.
+  net.now += SEED.minGapMs + 1000;
+  net.online = false;
+  assert.equal(await board.submit(entryOf(run({ score: 2_000_000 }))), 'queued');
+  assert.equal(await board.submit(entryOf(run({ score: 3_000_000 }))), 'queued');
+  net.online = true;
+  online.dispatchEvent(new Event('online'));
+  const best = async () => (await (await handle(new Request(`${URL}/v1/seed/weeks/${WEEK}`), db, net.now)).json()).entries[0]?.score as number;
+  for (let i = 0; i < 50 && (await best()) !== 2_000_000; i++) await new Promise((resolve) => setTimeout(resolve, 10));
+  net.now += SEED.minGapMs + 1000;
+  for (let i = 0; i < 100 && (await best()) !== 3_000_000; i++) await new Promise((resolve) => setTimeout(resolve, 10));
+  assert.equal(await best(), 3_000_000, 'ikinci koşu kısa aralıkla gitti');
+  board.close?.();
+});
+
+test('istemci: silinen hesabın bekleyen koşuları kuyruktan gidiyor, öbür sekmeninkiler kalıyor (Codex #80)', async () => {
+  const db = memoryDb();
+  const net: Net = { online: true, old: false, now: THURSDAY, requests: [] };
+  const storage = memoryStorage();
+  let hold: Promise<void> | null = null;
+  let release = () => {};
+  let deleting = () => {};
+  const fetcher = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const request = new Request(input, init);
+    if (!net.online) throw new TypeError('fetch failed');
+    if (request.method === 'DELETE' && hold) {
+      deleting();
+      await hold;
+    }
+    return handle(request, db, net.now);
+  }) as typeof fetch;
+  const board = createServerBoard({ url: URL, fetch: fetcher, storage, online: new EventTarget(), pollMs: 2 ** 30 });
+  assert.equal(await board.probe(), 'ok');
+  assert.equal(await board.submit(entryOf(run())), 'saved');
+  // Bu hesabın bağlantısızken kuyruğa giren koşusu.
+  net.online = false;
+  assert.equal(await board.submit(entryOf(run({ score: 2_000_000 }))), 'queued');
+  net.online = true;
+
+  hold = new Promise((resolve) => (release = resolve));
+  const started = new Promise<void>((resolve) => (deleting = resolve));
+  const forgotten = board.account!.forget();
+  await started;
+  // Öbür sekme yeni hesabını ve kendi bekleyen koşusunu yazıyor.
+  const other = { url: URL, id: 'öbür-sekme', token: 'anahtar' };
+  const mine = JSON.parse(storage.getItem('capitalforge.league.pending')!) as unknown[];
+  storage.setItem('capitalforge.league.account', JSON.stringify(other));
+  storage.setItem('capitalforge.league.pending', JSON.stringify([...mine, { url: URL, weekId: WEEK, code: 'öbür', account: other.id }]));
+  release();
+  assert.equal(await forgotten, true);
+  const left = JSON.parse(storage.getItem('capitalforge.league.pending')!) as Array<{ code: string }>;
+  assert.deepEqual(left.map((item) => item.code), ['öbür'], 'silinen hesabın koşusu kuyruktan gitti, öbür sekmeninki kaldı');
+});
