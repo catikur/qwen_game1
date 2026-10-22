@@ -4869,9 +4869,10 @@ section('Tohum Ligi: haftanın kuralı ve günün koşusu', () => {
    * ölçülüyor (Sıkı banka'nın kuruluş kredisi de geri alınarak).
    *
    * Ölçüm (DURUM Tur 53): bilgili vekil kural haftalarında yavaştan %47–77
-   * önde; Kıt arsa −%7, Fırtınalı yıllar −%6, Sıkı banka −%? (bilgili);
-   * Aç gözlü rakipler yavaş vekili −%8 geriletiyor. Günün koşusunda bilgili
-   * 1,5–2,0 M, yavaş 1,15–1,35 M, hiç oynamayan 250 B.
+   * önde; aynı şehirde kural bilgili vekili Kıt arsa −%7, Fırtınalı yıllar
+   * −%6, Sıkı banka −%16 geriletiyor; Aç gözlü rakipler bilgiliye dokunmuyor
+   * (+%1), savunmasız yavaş vekili −%8. Günün koşusunda bilgili 1,5–2,0 M,
+   * yavaş 1,15–1,35 M, hiç oynamayan 250 B (6–8 kat).
    */
   const WEEKS = ['2026-W43', '2026-W44', '2026-W45', '2026-W46'];
   const DAYS = ['2026-10-22', '2026-10-23', '2026-10-24', '2026-10-25', '2026-10-26'];
