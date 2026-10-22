@@ -218,10 +218,12 @@ test('Tohum Ligi: herkese görünen şirket adı süzgeçten geçiyor', async ()
   }
   assert.equal(publicCompanyName('Ｋａｈｖｅ Ｅｖｉ'), true);
   // Görünmeyen biçim karakterlerinden ibaret ad tabloda boş görünürdü (Codex #80).
-  for (const blank of ['\u200B', '\u200B\u200C', '\uFEFF', '\u2060 \u200D']) {
+  // Hangul dolgu harfleri de: Unicode'da harf (`L`) ama boş görünüyor (Codex #80).
+  for (const blank of ['\u200B', '\u200B\u200C', '\uFEFF', '\u2060 \u200D', '\u3164', '\u1160\u1160', '\uFFA0 \u115F', '\u3164\u200B']) {
     assert.equal(publicCompanyName(blank), false, JSON.stringify(blank));
   }
   assert.equal(publicCompanyName('\u200BAyşe AŞ'), true);
+  assert.equal(publicCompanyName('한국 무역'), true, 'görünen Hangul hece');
   const db = memoryDb();
   const me = await seedAccount(db);
   assert.deepEqual((await submit(db, THURSDAY, me, run({ companyName: 'F-U-C-K Ltd' }))).body, { error: 'name-blocked' });

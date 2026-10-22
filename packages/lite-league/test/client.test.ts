@@ -337,6 +337,45 @@ test('istemci: iki sekme ilk gönderimi aynı anda yaparsa tek hesap; koşu tara
   assert.equal((await db.first<{ n: number }>('SELECT COUNT(*) AS n FROM tokens'))?.n, 1, 'tek anahtar');
 });
 
+test('istemci: kaybeden sekmenin hesabı silinemezse anahtarı saklanıyor, sonra siliniyor (Codex #80)', async () => {
+  const db = memoryDb();
+  const net: Net = { online: true, old: false, now: THURSDAY, requests: [] };
+  const storage = memoryStorage();
+  let release: () => void = () => undefined;
+  const gate = new Promise<void>((resolve) => (release = resolve));
+  let deleteFails = true;
+  const tab = (hold: boolean) =>
+    createServerBoard({
+      url: URL,
+      fetch: (async (input: RequestInfo | URL, init?: RequestInit) => {
+        const request = new Request(input, init);
+        const path = new globalThis.URL(request.url).pathname;
+        // Kaybedenin silme isteği önce sunucuya ulaşamıyor.
+        if (request.method === 'DELETE' && path === '/v1/players/me' && deleteFails) throw new TypeError('fetch failed');
+        const response = await handle(request, db, net.now);
+        if (hold && path === '/v1/seed/players') await gate;
+        return response;
+      }) as typeof fetch,
+      storage,
+      pollMs: 2 ** 30,
+    });
+  const first = tab(false);
+  const second = tab(true);
+  const late = second.submit(entryOf(run({ companyName: 'İkinci Sekme' })));
+  assert.equal(await first.submit(entryOf(run())), 'saved');
+  release();
+  await late;
+  const count = async () => (await db.first<{ n: number }>('SELECT COUNT(*) AS n FROM players'))?.n;
+  assert.equal(await count(), 2, 'silme ulaşamadı');
+  // Yol açılınca sonraki iş (tablo tazelenince, sunucu tanınınca) silmeyi yeniden deniyor.
+  deleteFails = false;
+  assert.equal(await second.probe(), 'ok');
+  for (let i = 0; i < 50 && (await count()) !== 1; i++) await new Promise((resolve) => setTimeout(resolve, 10));
+  assert.equal(await count(), 1, 'kaybedenin hesabı sonunda silindi');
+  const stored = JSON.parse(storage.map.get('capitalforge.league.account')!);
+  assert.ok(await db.first('SELECT id FROM players WHERE id = ?', stored.id), 'tarayıcının hesabı yerinde');
+});
+
 test('istemci: bağlantısız açılışta görülmüş sunucu seçilince de bekleyen gönderim bağlantı gelince gidiyor (Codex #80)', async () => {
   const db = memoryDb();
   const net: Net = { online: true, old: false, now: THURSDAY, requests: [] };

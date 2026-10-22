@@ -5147,7 +5147,10 @@ Tur 51"). "Canlı sunucu denetimi" yeni uçları yalnız okuyarak deniyor
   (uygulama, denetim) etkilenmiyor. Test düzeltmeden önce kaldı.
 - *Codex #80: görünmeyen karakterden ibaret şirket adı.* Yalnız U+200B gibi
   biçim karakterleri tabloda boş ad olarak görünürdü. Ad artık en az bir
-  görünen harf ya da rakam istiyor. Test düzeltmeden önce kaldı.
+  görünen harf ya da rakam istiyor. Sonraki tur: Hangul dolgu harfleri
+  (U+3164, U+1160) Unicode'da harf ama boş görünüyor; görünmez sayılan
+  karakterler (`Default_Ignorable_Code_Point`) sayılmıyor. Testler
+  düzeltmeden önce kaldı.
 - *Codex #80: büyük harfle İngilizce küfür geçiyordu.* Süzgeç Türkçe küçük
   harfe çeviriyor; "I" "ı" oluyor, listedeki "shit", "dick", "bitch" ise
   noktalı "i" ile. "SHIT Ltd" herkese açık tabloya girerdi. Büyük "I" artık
@@ -5163,7 +5166,8 @@ Tur 51"). "Canlı sunucu denetimi" yeni uçları yalnız okuyarak deniyor
   açıldıktan sonra depo yeniden okunuyor: öbür sekme açtıysa onunki;
   gönderim kendi elindeki hesapla. Sonraki tur: kaybeden sekmenin açtığı
   hesap da siliniyor; anahtarını kimse tutmuyor, sunucuda boşuna kalmasın.
-  Testler düzeltmeden önce kaldı.
+  Silme ulaşamazsa anahtar tarayıcıda saklanıyor, sunucu tanınınca yeniden
+  siliniyor. Testler düzeltmeden önce kaldı.
 - *Codex #80: sunucuyu güncelleme sırası.* Kod önce yapıştırılırsa şema
   gelene kadar oyun sunucu tablosunu seçip hata alırdı; README'de önce şema.
 - *Codex #80: bağlantısız açılışta bekleyen gönderim gitmiyordu.* Sunucu
@@ -5303,7 +5307,7 @@ makinede 42 durumun hepsi geçiyordu.
 - CI'nin tam koşusu 27 dk'ydı, sınır 30 dk. Tarayıcı işinin süresi 45 dk
   oldu; iş artık bağımlılıkları da kuruyor (yerel lig sunucusu için).
 
-**Doğrulama.** `pnpm test` 569/569; tip denetimi temiz.
+**Doğrulama.** `pnpm test` 570/570; tip denetimi temiz.
 - `seed.test.ts` (15 test):
   - hesap, gönderim, herkese açık tablo ve kod;
   - en iyisi kalıyor, satırın kimliği aynı, gönderim aralığı; daha kötü
@@ -5320,7 +5324,7 @@ makinede 42 durumun hepsi geçiyordu.
   - haftalık temizlik;
   - sunucunun haftası oyununkiyle aynı;
   - CORS.
-- `client.test.ts` (30 test): oyunun istemcisi gerçek sunucuya karşı
+- `client.test.ts` (31 test): oyunun istemcisi gerçek sunucuya karşı
   (bellekte SQLite):
   - sunucuyu tanıma, eski sunucu, bağlantısızlık;
   - ilk gönderimde hesap, satır ve kodun ayrı inmesi, başka tarayıcı;
@@ -5458,7 +5462,7 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi). Senaryo şehirlerinde gün 3–17 ms (`pnpm dayperf`, Tur 43) |
-| Birim testi | **569 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de) |
+| Birim testi | **570 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de) |
 | Denge testi | **331 kontrol, hepsi geçiyor** (25 bölüm, süreleriyle; ~13 dk) |
 | Tarayıcı testi | **521 kontrol, hepsi geçiyor**, 0 konsol hatası (~40 dk); duman koşusu 132 (~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + paket bütçesi (Tur 46; Tur 48'den beri hizmet çalışanı ve manifest de) + duman oynanışı |

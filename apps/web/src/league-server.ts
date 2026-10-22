@@ -51,6 +51,12 @@ const SEEN_KEY = 'capitalforge.league.server';
  * dakika sonra yok sayılıyor.
  */
 const FORGET_KEY = 'capitalforge.league.forgetting';
+/**
+ * İki sekmenin aynı anda açtığı hesaplardan kaybedeni (Codex #80): silme
+ * ulaşamadıysa anahtarı burada, sonraki işte yeniden siliniyor.
+ */
+const ORPHAN_KEY = 'capitalforge.league.orphans';
+const ORPHAN_MAX = 10;
 const FORGET_TTL_MS = 60_000;
 /** Son görülen tablo (bir hafta): bağlantısız yeniden açılışta boş tablo yerine o (Codex #80). */
 const TABLE_KEY = 'capitalforge.league.table';
@@ -183,6 +189,21 @@ export function createServerBoard(options: ServerBoardOptions): ServerBoard {
     }
   }
 
+  const orphans = (): Account[] => (parse<Account[]>(ORPHAN_KEY) ?? []).filter((item) => item && item.url === url && typeof item.id === 'string');
+
+  /** Hesabı sunucudan sil; sunucu silindi ya da zaten yok dediyse `true`. */
+  async function drop(target: Account): Promise<boolean> {
+    const reply = await call('/v1/players/me', { method: 'DELETE', auth: target });
+    return reply !== null && (reply.status === 200 || reply.status === 401);
+  }
+
+  /** Silinemeyen artık hesaplar yeniden deneniyor (sunucu tanınınca). */
+  async function sweepOrphans(): Promise<void> {
+    for (const orphan of orphans()) {
+      if (await drop(orphan)) write(ORPHAN_KEY, JSON.stringify(orphans().filter((item) => item.id !== orphan.id)));
+    }
+  }
+
   async function ensureAccount(): Promise<Account | SendOutcome> {
     const existing = account();
     if (existing) return existing;
@@ -201,7 +222,9 @@ export function createServerBoard(options: ServerBoardOptions): ServerBoard {
     // siliniyor: anahtarını kimse tutmayacak, sunucuda boşuna kalmasın.
     const meanwhile = account();
     if (meanwhile) {
-      await call('/v1/players/me', { method: 'DELETE', auth: { url, id, token } });
+      const orphan: Account = { url, id, token };
+      // Silme ulaşamazsa anahtar kaybolmasın: saklanıp sonra yeniden deneniyor.
+      if (!(await drop(orphan))) write(ORPHAN_KEY, JSON.stringify([...orphans(), orphan].slice(-ORPHAN_MAX)));
       return meanwhile;
     }
     const created: Account = { url, id, token };
@@ -453,6 +476,7 @@ export function createServerBoard(options: ServerBoardOptions): ServerBoard {
       write(SEEN_KEY, ok ? url : null);
       // Dinleme yalnız kullanılacak tabloda: tanınmayan sunucunun tablosu atılıyor.
       if (ok) listen();
+      if (ok) void sweepOrphans();
       return ok ? 'ok' : 'old';
     },
 

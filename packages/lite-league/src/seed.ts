@@ -91,7 +91,8 @@ export function openWeeks(now: number): string[] {
  */
 export function publicCompanyName(name: string): boolean {
   // En az bir görünen harf ya da rakam: yalnız biçim karakterinden (U+200B gibi) ibaret ad tabloda boş görünürdü (Codex #80).
-  if (!/[\p{L}\p{N}]/u.test(name.normalize('NFKC'))) return false;
+  // Görünmez sayılan karakterler (Hangul dolgu harfleri U+3164, U+1160 gibi: Unicode'da harf ama boş) sayılmıyor.
+  if (!/[\p{L}\p{N}]/u.test(name.normalize('NFKC').replace(/\p{Default_Ignorable_Code_Point}/gu, ''))) return false;
   if (/[\p{Cc}‎‏‪-‮⁦-⁩]/u.test(name)) return false;
   return !offensiveName(name);
 }
