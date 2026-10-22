@@ -3209,13 +3209,7 @@ async function finish(browser, consoleErrors) {
     const network = (text) => /Failed to load resource|ERR_INTERNET_DISCONNECTED|ERR_CONNECTION_REFUSED|ERR_NETWORK_CHANGED/.test(text);
     const errors = [];
     const contexts = [];
-    const open = async (url, label) => {
-      const context = await browser.newContext({ viewport: { width: 1280, height: 860 } });
-      contexts.push(context);
-      await context.addInitScript(veteran, TUTORIAL_KEY);
-      await context.addInitScript((u) => {
-        window.__capitalLeagueUrl = u;
-      }, url);
+    const page = async (context, label) => {
       const p = await context.newPage();
       p.on('pageerror', (e) => errors.push(`${label}: ${e.message}`));
       p.on('console', (m) => {
@@ -3223,8 +3217,24 @@ async function finish(browser, consoleErrors) {
       });
       await p.goto('http://127.0.0.1:8811/');
       await p.waitForSelector('.newgame', { timeout: 20000 });
-      return { context, p };
+      return p;
     };
+    const open = async (url, label) => {
+      const context = await browser.newContext({ viewport: { width: 1280, height: 860 } });
+      contexts.push(context);
+      await context.addInitScript(veteran, TUTORIAL_KEY);
+      await context.addInitScript((u) => {
+        window.__capitalLeagueUrl = u;
+      }, url);
+      return { context, p: await page(context, label) };
+    };
+    // Oyun sunucuyu 10 ve 30 sn sonra yeniden deniyor (her deneme en çok 10 sn):
+    // yük altında üçüncü deneme ~70. saniyede.
+    const serverBoard = (p) =>
+      p
+        .waitForSelector('[data-league-board="server"]', { timeout: 90000 })
+        .then(() => 'server')
+        .catch(() => 'yok');
     const startLeague = async (p, name) => {
       await p.locator('.mode-picker [data-mode="league"]').click();
       await p.fill('.newgame-field input[type="text"]', name);
@@ -3277,13 +3287,14 @@ async function finish(browser, consoleErrors) {
     // Oyun sunucuyu açılışta tanıyor; sonuç ekranının düğmesi ona göre.
     const serverReady = (p) =>
       p
-        .waitForFunction(() => (document.querySelector('.league-result .primary')?.textContent ?? '').includes('Lig tablosuna') || null, null, { timeout: 60000 })
+        .waitForFunction(() => (document.querySelector('.league-result .primary')?.textContent ?? '').includes('Lig tablosuna') || null, null, { timeout: 90000 })
         .then(() => true)
         .catch(() => false);
 
-    // Bağlamlar sırayla kapanıyor: GPU'suz ortamda açık her sahne aynı
-    // yazılımsal GPU'yu paylaşıyor; üç sahne birden açıkken tekrar ve
-    // tıklamalar zaman aşımına düşüyordu.
+    // Aynı anda tek sahne: GPU'suz ortamda açık her sahne aynı yazılımsal
+    // GPU'yu ve dört çekirdeği paylaşıyor. İki sahne açıkken yerel sunucunun
+    // cevabı da 10 sn'yi aşıyordu (tam koşuda). A'nın sayfası işi bitince
+    // kapanıyor; hesabı silmek için aynı bağlamda (aynı anahtar) yeni sayfa.
     if (leagueServer) {
       // A: oynuyor, sonuç ekranından sunucuya gönderiyor.
       const a = await open(leagueUrl, 'A');
@@ -3319,7 +3330,7 @@ async function finish(browser, consoleErrors) {
       }));
       check('Tablo sunucunun; satırın kodu sırası gelince iniyor ve tarayıcıda doğrulanıyor',
         boardA === 'server' && okA && rowA.text.includes('doğrulandı') && rowA.mine, `${boardA} · ${rowA.text.trim().slice(0, 80)}`);
-      await a.p.keyboard.press('Escape');
+      await a.p.close();
 
       // B: başka bir tarayıcı aynı haftada: tablo aynı, satır onun değil, hayalet o.
       const b = await open(leagueUrl, 'B');
@@ -3327,8 +3338,7 @@ async function finish(browser, consoleErrors) {
       // Takvim dursun: tekrar bu tarayıcıda koşuyor, oyunla yarışmasın.
       await b.p.evaluate(() => window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 }));
       await b.p.locator('.agenda [data-agenda="league"] button').first().click();
-      // Açılışta sayfa meşgulse oyun sunucuyu 10 ve 30 sn sonra yeniden deniyor.
-      const boardB = await b.p.waitForSelector('[data-league-board="server"]', { timeout: 60000 }).then(() => 'server').catch(() => 'yok');
+      const boardB = await serverBoard(b.p);
       const okB = boardB === 'server' && (await verified(b.p));
       const rowB = await b.p.evaluate(() => ({
         text: document.querySelector('[data-league-row="ranked"]')?.textContent ?? '',
@@ -3337,7 +3347,7 @@ async function finish(browser, consoleErrors) {
         account: document.querySelector('[data-league-account]') !== null,
       }));
       check('Başka tarayıcı aynı tabloyu görüyor; satır onun değil, hayaleti o koşu',
-        okB && rowB.text.includes('Sunucu Holding') && !rowB.mine && rowB.legend.includes('Sunucu Holding'), `${rowB.text.trim().slice(0, 60)} · ${rowB.legend.trim().slice(0, 60)}`);
+        okB && rowB.text.includes('Sunucu Holding') && !rowB.mine && rowB.legend.includes('Sunucu Holding'), `${boardB} · ${rowB.text.trim().slice(0, 60)} · ${rowB.legend.trim().slice(0, 60)}`);
       check('Göndermeyen tarayıcıda lig hesabı açılmıyor', !rowB.account);
       await b.p.screenshot({ path: path.join(OUT, 'playtest-lig-sunucu.png') });
       await b.context.close();
@@ -3362,9 +3372,14 @@ async function finish(browser, consoleErrors) {
         `sunucuda ${arrived?.total ?? '?'} koşu`);
       await c.context.close();
 
-      // A: lig hesabını siliyor; koşusu tablodan gidiyor, öbürü kalıyor.
+      // A: lig hesabını siliyor; koşusu tablodan gidiyor, öbürü kalıyor. Aynı
+      // tarayıcı (bağlam), yeni sayfa ve yeni bir lig koşusu: anahtar yerinde.
+      a.p = await page(a.context, 'A2');
+      await startLeague(a.p, 'Sunucu Holding');
+      await a.p.evaluate(() => window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 }));
       await a.p.locator('.agenda [data-agenda="league"] button').first().click();
-      await a.p.waitForSelector('[data-league-forget="ask"]', { timeout: 5000 }).catch(() => null);
+      await serverBoard(a.p);
+      await a.p.waitForSelector('[data-league-forget="ask"]', { timeout: 10000 }).catch(() => null);
       await a.p.locator('[data-league-forget="ask"]').click();
       await a.p.locator('[data-league-forget="confirm"]').click();
       const left = await until(async () => {

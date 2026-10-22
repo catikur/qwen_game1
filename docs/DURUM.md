@@ -5091,8 +5091,9 @@ Varsayılan boş: yerel derleme, CI ve tarayıcı testi canlı sunucuya hiç
 gitmiyor. Tarayıcı testi yerel sunucuyu test kancasıyla veriyor
 (`window.__capitalLeagueUrl`).
 
-Canlı sunucu L8 sürümünde (son denetim 16 Ekim). Bu sürüm yapıştırılıp
-şema uygulanana kadar Pages'teki oyun yerel tabloyla açılıyor; bir şey
+Canlı sunucuda Lite'ın bütün uçları var ama ana oyunun Tohum Ligi yok
+(bu PR'ın "Canlı sunucu denetimi", 22 Ekim). Bu sürüm yapıştırılıp şema
+uygulanana kadar Pages'teki oyun yerel tabloyla açılıyor; bir şey
 bozulmuyor. Adımlar `ios-lite/README.md`'de ("Sunucuyu güncellerken,
 Tur 51"). "Canlı sunucu denetimi" yeni uçları yalnız okuyarak deniyor
 (sağlık, tablo, CORS); eski sürümde uyarı veriyor.
