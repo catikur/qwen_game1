@@ -11,6 +11,7 @@ import { FREIGHT, fleetUsed, freightPenalty, freightProspects, runFreightTick } 
 import { FREIGHT_SHARE, distributionRelief, ownDepotRelief, resetDailyLedgers, runProductionTick, unitCogsFor } from '../src/systems/supply';
 import { runMarketTick } from '../src/systems/market';
 import { isPurchasable } from '../src/systems/city';
+import { indirectEstimate } from '../src/systems/indirect';
 import { playerStrategy } from './proxy';
 import type { BuildingInstance, GameState } from '../src/types';
 
@@ -444,6 +445,45 @@ describe('nakliye terminali ve taşıma sözleşmeleri (Tur 56)', () => {
       legs.every((leg) => leg.fromTileId === pick!.terminal),
       `kamyon ${legs.map((leg) => leg.fromTileId).join(',')} · terminal ${pick.terminal} · depo ${pick.depot}`,
     );
+  });
+
+  test('yapı menüsünün taşıma potansiyeli teklif ve sözleşmeyle güncel (Codex #86)', () => {
+    const state = fresh().getState();
+    const terminal = placeTerminal(state);
+    const radius = BUILDING_BY_ID[TERMINAL]!.radius;
+    // Kurulu terminalin yanında boş bir parsel: aynı rakip mağazaları menzilde.
+    const at = state.map.tiles[terminal.tileId]!;
+    const site = state.map.tiles.find((t) => t.kind === 'plot' && !t.structureId && !t.buildingId && Math.abs(t.x - at.x) + Math.abs(t.y - at.y) <= 2)!;
+    assert.ok(site, 'yakın parsel yok');
+    const before = indirectEstimate(state, state.playerCompanyId, TERMINAL, site.districtId, site.id)!.freight!;
+    assert.ok(before.outlets > 2, `${before.outlets} mağaza`);
+    // Aynı hafta, bina değişmeden: kurulu terminale bir teklif gelip mağazaları tutuyor.
+    const held = freightProspects(state, terminal)
+      .filter((o) => {
+        const t = state.map.tiles[o.tileId]!;
+        return Math.abs(t.x - site.x) + Math.abs(t.y - site.y) <= radius;
+      })
+      .slice(0, 2);
+    state.freight = {
+      offers: [
+        {
+          id: 'fr9',
+          companyId: held[0]!.companyId,
+          terminalId: terminal.id,
+          outletIds: held.map((o) => o.id),
+          durationDays: 120,
+          offeredDay: state.time.day,
+          estimate: 1,
+        },
+      ],
+      contracts: [],
+      nextId: 10,
+      lastOfferDay: state.time.day,
+      declined: {},
+      earnedTotal: 0,
+    };
+    const after = indirectEstimate(state, state.playerCompanyId, TERMINAL, site.districtId, site.id)!.freight!;
+    assert.equal(after.outlets, before.outlets - held.length, 'teklifteki mağazalar hâlâ potansiyelde');
   });
 
   test('komutlar oyunun komutu: tanınmayan teklif ve sözleşme reddediliyor', () => {

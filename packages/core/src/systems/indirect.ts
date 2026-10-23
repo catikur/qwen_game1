@@ -126,7 +126,20 @@ function centralPlot(state: GameState, districtId: number): number | null {
  * kopyada sekizer pazar günü demek. Hafta değişince ya da şehirdeki bina
  * sayısı değişince (oyuncu ya da rakip kurdu, yıktı) yeniden hesaplanır.
  */
-const cache = new Map<string, { day: number; version: number; value: IndirectEstimate | null }>();
+const cache = new Map<string, { day: number; version: string; value: IndirectEstimate | null }>();
+
+/**
+ * Terminalin taşıma potansiyeli (Tur 56) masadaki tekliflere ve süren
+ * sözleşmelere bağlı: teklif gelince ya da sözleşme bitince bina sayısı
+ * değişmeden tahmin değişiyor (Codex #86). Filosu olan bina için sürüm
+ * bunları da taşıyor.
+ */
+function freightVersion(state: GameState): string {
+  const freight = state.freight;
+  if (!freight) return '';
+  const deal = (d: { id: string; outletIds: string[] }) => `${d.id}:${d.outletIds.join('.')}`;
+  return `${freight.offers.map(deal).join(',')}|${freight.contracts.map(deal).join(',')}`;
+}
 let cacheState: GameState | null = null;
 
 export function indirectEstimate(
@@ -145,7 +158,7 @@ export function indirectEstimate(
     cache.clear();
     cacheState = state;
   }
-  const buildings = Object.keys(state.buildings).length;
+  const buildings = `${Object.keys(state.buildings).length}${def.fleet ? `|${freightVersion(state)}` : ''}`;
   // Sonuç bir metin de taşıyor (`none`): dil değişince önbellek eski dilde kalmasın.
   const key = `${companyId}|${defId}|${districtId}|${tileId ?? ''}|${currentLocale()}`;
   const hit = cache.get(key);
