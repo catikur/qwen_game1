@@ -1133,6 +1133,8 @@ export interface HoldingState {
   foundedCitySize?: CitySizeId;
   /** Kapatılan şehirlerin kariyer payı (Tur 41): şehir listeden çıkınca sayaçları kaybolmasın. */
   closedTally?: CityTally;
+  /** Kapatılan şehirlerdeki zaferlerin yolları (Tur 61): "Üç yol" kayıttan okunuyor (Codex #91). */
+  closedPaths?: PathId[];
 }
 
 /** Bir şehrin koşuya kattığı (Tur 41); hepsi seçime bağlı, yokluğu 0. */

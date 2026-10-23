@@ -89,7 +89,8 @@ export function runFacts(state: GameState): RunFacts {
   let peak = 0;
   // Kapatılan şehirlerin payı holding'de duruyor (Codex #70).
   let tally: CityTally = state.holding?.closedTally ?? {};
-  const paths = new Set<PathId>();
+  // Kapatılan şehirlerin zafer yolları da holding'de (Codex #91).
+  const paths = new Set<PathId>(state.holding?.closedPaths ?? []);
   for (const city of cities) {
     if (city.victory) wins.push({ day: city.victory.day, citySize: city.citySize ?? 'standard', ...(city.victory.path ? { path: city.victory.path } : {}) });
     if (city.victory?.path) paths.add(city.victory.path);

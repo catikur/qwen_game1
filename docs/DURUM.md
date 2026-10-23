@@ -6714,7 +6714,7 @@ Zafer günü yol donuyor (`victory.path`).
 karşılaştırıldı: 31 eski bölümün bütün satırları birebir aynı. Yol vekilleri
 yeni; eski bölümlerin vekillerine dokunulmadı.
 
-**Doğrulama.** `pnpm test` 727/727 (712'den); tip denetimi temiz.
+**Doğrulama.** `pnpm test` 728/728 (712'den); tip denetimi temiz.
 - `paths.test.ts` (10 yeni):
   - kaynak rolden;
   - defter: kendi santralinin tasarrufu, terminalin ücreti ve gideri, rakip
@@ -6726,9 +6726,10 @@ yeni; eski bölümlerin vekillerine dokunulmadı.
   - defter şehrin gününde yazılıyor (Codex);
   - zarar eden kaynak varken paylar 0..1 (Codex);
   - müşterinin yeri ve gündem çipi.
-- `career.test.ts` (çekirdek ve arayüz, 3 yeni): zaferin yolu koşu
+- `career.test.ts` (çekirdek ve arayüz, 4 yeni): zaferin yolu koşu
   özetinde; Üç yol farklı yolları sayıyor; budanan koşunun yolu arşivde
-  kalıyor; holding'de aynı gün kazanan iki şehrin iki yolu (Codex).
+  kalıyor; holding'de aynı gün kazanan iki şehrin iki yolu (Codex);
+  kapatılan şehrin yolu (Codex).
 - `pathSummary.test.ts` (2 yeni): canlı defterin payları; zafer ekranı zafer
   gününün paylarını çiziyor (Codex).
 - Denge sınavı 375/375 (32 bölüm; yeni "Yollar" bölümünün 4
@@ -6767,6 +6768,12 @@ yeni; eski bölümlerin vekillerine dokunulmadı.
   var (`paths`), birleştirmede birleşimi alınıyor; anahtara yol eklenseydi
   eski kayıtla birleşen zafer iki kez sayılırdı. Test düzeltmeden önce
   kırılıyordu.
+- *Kapatılan şehrin yolu kayboluyordu:* kaybedilen holding şehri
+  kapatılınca durumu siliniyor; holding yalnız zafer sayısını ve sayaçları
+  tutuyordu. Kariyer deposu silinir ya da kayıt başka cihaza taşınırsa
+  koşu zaferi sayıyor ama yolunu bilmiyordu; Üç yol eksik sayardı. Holding
+  kapatılan şehirlerin zafer yollarını da tutuyor (`closedPaths`), koşu
+  özeti onları okuyor. Test düzeltmeden önce kırılıyordu; lig izi aynı.
 
 **Faz 3'ün özeti (Tur 56–61).** Şehirde yeni iş kolları ve onlara tepki
 veren rakipler:
@@ -6789,7 +6796,7 @@ Faz boyunca şema değişmedi. Simülasyon Tur 56–60'ın her birinde değişti
 Tur 61'de değişmedi; Worker'ın Tur 56–60 için tek dağıtımı kullanıcının
 hesabında bekliyor. Codex'in her bulgusu düzeltildi ya da kanıtla yanıtlandı;
 düzeltilenlerin testi düzeltmeden önce kaldı. Birim testi fazın başında
-625'ti (Tur 55), şimdi 727; denge sınavı 331 kontrolden 375'e.
+625'ti (Tur 55), şimdi 728; denge sınavı 331 kontrolden 375'e.
 
 ---
 
@@ -6893,7 +6900,7 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi). Senaryo şehirlerinde gün 3–17 ms (`pnpm dayperf`, Tur 43) |
-| Birim testi | **727 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de, Tur 52'de sunucuda tekrar, Tur 53'te haftanın kuralı ve günün koşusu, Tur 54'te hayalet eğri, Tur 55'te davetli ligler, Tur 56'da taşıma sözleşmeleri, Tur 57'de enerji, Tur 58'de gayrimenkul, Tur 59'da rakiplerin hafızası, Tur 60'ta senaryo paketi II, Tur 61'de şirketin yolu) |
+| Birim testi | **728 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de, Tur 52'de sunucuda tekrar, Tur 53'te haftanın kuralı ve günün koşusu, Tur 54'te hayalet eğri, Tur 55'te davetli ligler, Tur 56'da taşıma sözleşmeleri, Tur 57'de enerji, Tur 58'de gayrimenkul, Tur 59'da rakiplerin hafızası, Tur 60'ta senaryo paketi II, Tur 61'de şirketin yolu) |
 | Denge testi | **375 kontrol, hepsi geçiyor** (32 bölüm, süreleriyle; ~17 dk) |
 | Tarayıcı testi | **618 kontrol, hepsi geçiyor**, 0 konsol hatası (~43 dk); duman koşusu 132 (~8 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + paket bütçesi (Tur 46; Tur 48'den beri hizmet çalışanı ve manifest de) + duman oynanışı |

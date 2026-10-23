@@ -385,6 +385,25 @@ describe('kariyer: koşunun özeti', () => {
     assert.equal(runFacts(state).wins.length + runFacts(state).closedWins, 2);
   });
 
+  test('kapatılan şehrin zafer yolu koşunun yollarında kalıyor (Codex #91)', () => {
+    const engine = played(30, 6);
+    let state = engine.getState();
+    state.victory = { day: 420, kind: 'tycoon', dismissed: true, path: 'realestate' };
+    player(state).cash = 30_000_000;
+    recomputeNetWorth(state);
+    assert.ok(engine.dispatch({ type: 'OPEN_CITY', citySize: 'standard', capital: 8_000_000 }).ok);
+    state = engine.getState();
+    state.victory = { day: 300, kind: 'tycoon', dismissed: true, path: 'takeover' };
+    assert.deepEqual([...(runFacts(state).paths ?? [])].sort(), ['realestate', 'takeover']);
+    // Kurucu şehir (gayrimenkulle kazanmıştı) kaybedilip kapatılıyor: yolu holding'de kalmalı.
+    state.holding!.dormant[0]!.state.gameOver = { day: 500, byCompanyId: rivals(state.holding!.dormant[0]!.state)[0]!.id };
+    assert.ok(engine.dispatch({ type: 'CLOSE_CITY', index: 0 }).ok);
+    state = engine.getState();
+    assert.deepEqual([...(runFacts(state).paths ?? [])].sort(), ['realestate', 'takeover'], 'kapatılan şehrin yolu');
+    // Aynı yoldan ikinci kapatma listeyi büyütmüyor.
+    assert.deepEqual(state.holding!.closedPaths, ['realestate']);
+  });
+
   test('kurucu şehir kapanınca koşunun kurucu boyutu değişmiyor (Codex #70)', () => {
     const engine = played(30, 6);
     let state = engine.getState();
