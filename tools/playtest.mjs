@@ -2686,11 +2686,14 @@ async function finish(browser, consoleErrors) {
     `çatı ${decorInfo.roof} · ağaç ${decorInfo.tree} · lamba ${decorInfo.lamp} · tabela ${decorInfo.sign} · tente ${decorInfo.awning} · silo/tank ${decorInfo.cylinder}`,
   );
   check('Binalar zemine temas gölgesiyle oturuyor', visual.contactShadows > 0, `${visual.contactShadows} leke`);
+  // Lens arayüzün eşitlemesiyle sahneye iniyor; yazılımsal GPU'da 3 karede
+  // bir kare ~0,3–1,1 sn sürüyor (Tur 62 ölçümü, main'de de aynı). Sabit
+  // 300 ms bekleme bazen bir kare erkendi: durum bekleniyor, en çok 5 sn.
   await page.evaluate(() => window.__capital.setLens('opportunity'));
-  await page.waitForTimeout(300);
+  await page.waitForFunction(() => window.__capital.renderInfo()?.decorVisible === false, null, { timeout: 5000 }).catch(() => {});
   const lensDecor = await page.evaluate(() => window.__capital.renderInfo());
   await page.evaluate(() => window.__capital.setLens('none'));
-  await page.waitForTimeout(300);
+  await page.waitForFunction(() => window.__capital.renderInfo()?.decorVisible === true, null, { timeout: 5000 }).catch(() => {});
   const backDecor = await page.evaluate(() => window.__capital.renderInfo());
   check('Veri lensinde detaylar gizleniyor, dönünce geri geliyor', !lensDecor.decorVisible && backDecor.decorVisible,
     `lens ${lensDecor.decorVisible ? 'görünür' : 'gizli'} · şehir ${backDecor.decorVisible ? 'görünür' : 'gizli'}`);

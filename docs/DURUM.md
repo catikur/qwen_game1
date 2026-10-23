@@ -6849,13 +6849,24 @@ Hava görünüm, simülasyon değil:
 
 *Arayüz* (iki dilde):
 - **Üst bar:** tarihin yanında mevsim ve hava, "Kış · Karlı". Havayı bir
-  olay belirliyorsa ipucu olayı da söylüyor. Telefonda yalnız ikon; ad
-  ipucunda ve ekran okuyucuda.
+  olay belirliyorsa ipucu olayı da söylüyor. Telefonda CEO portresinin
+  köşesinde bir rozet; ad ipucunda ve ekran okuyucuda.
 - **Ayarlar:** "Yağmur ve kar" (açık geliyor). Kapalıyken, azaltılmış
   harekette ve veri lensinde taneler çizilmiyor; mevsimin rengi ve bulutlu
   gök yine görünüyor.
 - **Yardım:** "Pazar yaşıyor" maddesi mevsimin üst barda ve şehirde
   (ağaçlar, hava) okunduğunu da söylüyor.
+
+**Tam tarayıcı koşusunun bulduğu iki şey.**
+- *Telefonda üst bar üçe bölündü.* İkon tarihin yanında ~19 px yer
+  alıyordu; iPhone 13'te (390 px) ikinci satırda marka (112 px) ve hız
+  düğmeleri (232 px) yan yana sığmadı, bar 100 px'e çıktı. Telefonda ikon
+  artık portrenin köşesinde bir rozet, satırda yer kaplamıyor: bar yine iki
+  satır, 72 px.
+- *Veri lensinin iki kontrolü bir kare erken bakıyordu.* Lens arayüzün
+  eşitlemesiyle sahneye iniyor; yazılımsal GPU'da bu 0,3–1,1 sn sürüyor ve
+  main'de de aynı (iki derlemeyle ölçüldü). Kontroller sabit 300 ms
+  bekliyordu; artık durumu bekliyor (en çok 5 sn).
 
 **Bütçe.**
 - Açılışta derlenen program 17 (16'dan; sınır 20). Kar noktaları tek yeni

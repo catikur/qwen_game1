@@ -1599,8 +1599,32 @@ button.icon {
     white-space: nowrap;
   }
 
+  /*
+   * Telefonda hava portrenin köşesinde bir rozet: satırda yer kaplamıyor.
+   * Tarihin yanında ~19 px'ti ve iPhone 13'te marka ile hız düğmeleri aynı
+   * satıra sığmıyor, bar üç satıra bölünüyordu (Tur 62).
+   */
+  .brand {
+    position: relative;
+  }
+
   .brand-weather {
-    margin-left: 4px;
+    position: absolute;
+    left: 13px;
+    top: 12px;
+    margin: 0;
+    width: 15px;
+    height: 15px;
+    justify-content: center;
+    border-radius: 999px;
+    background: var(--panel-solid);
+    box-shadow: 0 0 0 1px var(--line);
+  }
+
+  .brand-weather .weather-icon {
+    width: 11px;
+    height: 11px;
+    opacity: 1;
   }
 
   .brand-sub {
