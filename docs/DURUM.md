@@ -6510,10 +6510,13 @@ vekilin üstüne her gün (Tur 56–59'un vekilleri).
   hedefin ne kadarına varıldığı.
 - Rakip dosyasında devralınan husumetin satırı. İki dilde.
 
-**Eski denge bölümleri.** ESKI_BOLUMLER
+**Eski denge bölümleri.** Tur 59'un tam koşusuyla bölüm bölüm karşılaştırıldı:
+30 eski bölümün bütün sayıları birebir aynı. Kinli rakibin teklif kuralı
+yalnız husumette işliyor; eski bölümlerde taşıma vekili rakiplerle kavga
+etmiyor, hisse toplayan ve fiyat kıran vekiller nakliye yapmıyor.
 
 **Testler.** `pnpm test` 706/706 (698'den); tip denetimi temiz; denge
-sınavı DENGE_SAYISI (31 bölüm); paket bütçesi tamam (ana parça 70,3 KB, 68,7'den).
+sınavı 371/371 (31 bölüm); paket bütçesi tamam (ana parça 70,3 KB, 68,7'den).
 - Çekirdek (`scenario.test.ts`, 6 yeni; `freight.test.ts`, 1 yeni):
   - ek kural ön tarihte; Sıkı bankanın devirdeki kredisi;
   - hedef cümleleri sayılarla;
@@ -6639,9 +6642,9 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi). Senaryo şehirlerinde gün 3–17 ms (`pnpm dayperf`, Tur 43) |
-| Birim testi | **698 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de, Tur 52'de sunucuda tekrar, Tur 53'te haftanın kuralı ve günün koşusu, Tur 54'te hayalet eğri, Tur 55'te davetli ligler, Tur 56'da taşıma sözleşmeleri, Tur 57'de enerji, Tur 58'de gayrimenkul, Tur 59'da rakiplerin hafızası) |
-| Denge testi | **358 kontrol, hepsi geçiyor** (30 bölüm, süreleriyle; ~17 dk) |
-| Tarayıcı testi | **546 kontrol, hepsi geçiyor**, 0 konsol hatası (~40 dk); duman koşusu 132 (~5 dk, rehber dahil) |
+| Birim testi | **706 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de, Tur 52'de sunucuda tekrar, Tur 53'te haftanın kuralı ve günün koşusu, Tur 54'te hayalet eğri, Tur 55'te davetli ligler, Tur 56'da taşıma sözleşmeleri, Tur 57'de enerji, Tur 58'de gayrimenkul, Tur 59'da rakiplerin hafızası, Tur 60'ta senaryo paketi II) |
+| Denge testi | **371 kontrol, hepsi geçiyor** (31 bölüm, süreleriyle; ~15–18 dk) |
+| Tarayıcı testi | **556 kontrol, hepsi geçiyor**, 0 konsol hatası (~40 dk); duman koşusu 132 (~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + paket bütçesi (Tur 46; Tur 48'den beri hizmet çalışanı ve manifest de) + duman oynanışı |
 | Kapsam | 40 bina · 25 ürün · 7 kategori · 8 rakip profili · 10 CEO · 22 olay (11 şehir + 11 sektör) · 3 kriz · 12 karar kartı · 70 rakip sözü · 4 mizaç · 48 ilişki sözü · 5 fırsat balonu · 8 görev türü · 4 mevsim · 9 moda ürünü · 17 şehir yapısı (6 siluet) · 6 şehir projesi · 10 senaryo · 4 ek kural · 28 rozet |
 
