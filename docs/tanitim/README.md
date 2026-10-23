@@ -63,7 +63,7 @@ KENDİ YOLUNU SEÇ
 • Serbest şehir: Rahat, Dengeli ya da Acımasız; dört ek kuralla daha da zor.
 • Yedi senaryo: Kurtarma'dan Holding: iki şehir'e, üç yıldızla.
 • Haftalık Tohum Ligi: herkes aynı şehirde, aynı kurallarla.
-• 28 rozetli kariyer: her koşu bir öncekinin üstüne.
+• 29 rozetli kariyer: her koşu bir öncekinin üstüne.
 
 HER YERDE
 • Tarayıcıda açılıyor; telefona ve bilgisayara kurulabiliyor, bağlantı olmadan da oynanıyor.
@@ -120,7 +120,7 @@ CHOOSE YOUR WAY
 • Free city: Relaxed, Balanced or Ruthless; four extra rules make it harder still.
 • Seven scenarios, from Rescue to Holding: Two Cities, with three stars each.
 • The weekly Seed League: everyone in the same city, under the same rules.
-• A career with 28 badges: every run builds on the last.
+• A career with 29 badges: every run builds on the last.
 
 PLAY ANYWHERE
 • Opens in the browser; installs on phone and computer, and plays without a connection.

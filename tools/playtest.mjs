@@ -4305,8 +4305,8 @@ async function finish(browser, consoleErrors) {
       done: document.querySelectorAll('[data-achievement][data-done="true"]').length,
       runs: document.querySelectorAll('.career-run').length,
     }));
-    check('Kurulumda Kariyer açılıyor: 28 rozet, hiçbiri kazanılmamış, koşu yok',
-      setupButton.includes('0/28') && empty.total === 28 && empty.done === 0 && empty.runs === 0, `${setupButton} · ${JSON.stringify(empty)}`);
+    check('Kurulumda Kariyer açılıyor: 29 rozet, hiçbiri kazanılmamış, koşu yok',
+      setupButton.includes('0/29') && empty.total === 29 && empty.done === 0 && empty.runs === 0, `${setupButton} · ${JSON.stringify(empty)}`);
     await cp.locator('.career-overlay .modal-head button.icon').click();
 
     await cp.locator('[data-newgame-start]').click();
@@ -4346,7 +4346,7 @@ async function finish(browser, consoleErrors) {
       return { done: el?.getAttribute('data-done'), when: el?.querySelector('.career-badge-when')?.textContent ?? '', runs: document.querySelectorAll('.career-run').length };
     });
     check('Hedefler panelinden Kariyer açılıyor; kazanılan rozet, açıldığı gün ve koşu satırı',
-      goalsButton.includes('2/28') && badge.done === 'true' && badge.when.includes('1. gün') && badge.runs === 1, `${goalsButton} · ${JSON.stringify(badge)}`);
+      goalsButton.includes('2/29') && badge.done === 'true' && badge.when.includes('1. gün') && badge.runs === 1, `${goalsButton} · ${JSON.stringify(badge)}`);
     await cp.locator('.modal-head button.icon').click();
 
     // Zafer: ekran bu koşuda kazanılan rozetleri yazıyor (zaferin kendisi dahil).
@@ -4382,7 +4382,7 @@ async function finish(browser, consoleErrors) {
       first: document.querySelector('[data-achievement="public_company"] .career-badge-title')?.textContent ?? '',
       title: document.querySelector('.career-overlay .modal-head h2')?.textContent ?? '',
     }));
-    check('İngilizcede Kariyer çevrilmiş', enButton.includes('Career') && enButton.includes('0/28 badges') && enTexts.first === 'Going public' && enTexts.title === 'Career',
+    check('İngilizcede Kariyer çevrilmiş', enButton.includes('Career') && enButton.includes('0/29 badges') && enTexts.first === 'Going public' && enTexts.title === 'Career',
       `${enButton} · ${JSON.stringify(enTexts)}`);
     await enCtx.close();
 
@@ -4769,8 +4769,8 @@ async function finish(browser, consoleErrors) {
     await ep.locator('.topbar-actions [data-panel="help"]').click();
     await ep.waitForSelector('.help');
     const steps = await ep.locator('.help [data-help-step]').evaluateAll((items) => items.map((item) => item.getAttribute('data-help-step')));
-    const wanted = ['auction', 'council', 'contracts', 'league', 'scenario'];
-    check('Yardım meclisi, sözleşmeyi, ihaleyi, ligi ve senaryoyu anlatıyor',
+    const wanted = ['auction', 'council', 'contracts', 'league', 'scenario', 'paths'];
+    check('Yardım meclisi, sözleşmeyi, ihaleyi, ligi, senaryoyu ve zaferin yollarını anlatıyor',
       wanted.every((id) => steps.includes(id)),
       `${steps.length} madde · eksik: ${wanted.filter((id) => !steps.includes(id)).join(', ') || 'yok'}`);
     await ep.keyboard.press('Escape');
@@ -6734,6 +6734,173 @@ async function finish(browser, consoleErrors) {
 
     check('Senaryo paketi II akışında konsol temiz', xErrors.length === 0, xErrors.slice(0, 2).join(' | '));
     await xContext.close();
+  }
+
+  // ---------- Değerlendirme: şirketin yolu (Tur 61) ----------
+  section('Değerlendirme: şirketin yolu');
+  {
+    const yContext = await browser.newContext({ viewport: { width: 1280, height: 860 } });
+    await yContext.addInitScript(veteran, TUTORIAL_KEY);
+    const yp = await yContext.newPage();
+    const yErrors = [];
+    yp.on('pageerror', (e) => yErrors.push(e.message));
+    yp.on('console', (m) => { if (m.type() === 'error') yErrors.push(m.text()); });
+    await yp.goto('http://127.0.0.1:8811/');
+    await yp.waitForSelector('.newgame', { timeout: 20000 });
+    await yp.fill('.newgame-field input[type="text"]', 'Yol AŞ');
+    await yp.locator('button:has-text("Şirketi kur")').click();
+    await yp.waitForSelector('.topbar', { timeout: 30000 });
+    await yp.evaluate(() => window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 }));
+
+    const goals = async () => {
+      await yp.locator('.goal-chip').first().click();
+      await yp.waitForSelector('.goals .path-summary', { timeout: 5000 });
+      return yp.evaluate(() => {
+        const el = document.querySelector('.goals .path-summary');
+        return {
+          path: el?.getAttribute('data-path'),
+          name: el?.querySelector('[data-path-name]')?.textContent ?? '',
+          text: el?.textContent ?? '',
+          shares: Object.fromEntries([...(el?.querySelectorAll('[data-path-source]') ?? [])].map((li) => [li.getAttribute('data-path-source'), Number(li.getAttribute('data-share'))])),
+        };
+      });
+    };
+    const empty = await goals();
+    check('Hedefler panelinde şirketin yolu: kâr yokken "henüz kâr yok", eşikler yazıyor',
+      empty.path === 'retail' && /Henüz kâr yok/.test(empty.text) && /kira %15, enerji %6, nakliye ücreti %2 ya da 2 devralma/.test(empty.text), empty.text.slice(0, 160));
+    await yp.keyboard.press('Escape');
+
+    // Şehir büyüsün; defter gayrimenkulü gösterecek kadar kira yazsın.
+    await yp.evaluate(() => {
+      const c = window.__capital;
+      for (let i = 0; i < 90; i++) c.engine.runDay();
+      const s = c.getState();
+      s.sources = { retail: 70_000, realestate: 30_000 };
+      c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+    });
+    const live = await goals();
+    check('Defter kira payını gösterince yol "Gayrimenkul"; çubuklar kârın payı',
+      live.path === 'realestate' && live.name === 'Gayrimenkul' && live.shares.retail === 70 && live.shares.realestate === 30 && live.shares.energy === 0 && live.shares.freight === 0,
+      JSON.stringify(live));
+    await yp.keyboard.press('Escape');
+
+    // Zafer: ekran zaferin yolunu yazıyor; kariyerde koşunun yolu ve Üç yol rozeti.
+    await yp.evaluate(() => {
+      const c = window.__capital;
+      const s = c.getState();
+      s.victory = { day: s.time.day, kind: 'tycoon', path: 'realestate' };
+      c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+    });
+    await yp.waitForSelector('.victory .path-summary', { timeout: 10000 });
+    const won = await yp.evaluate(() => {
+      const el = document.querySelector('.victory .path-summary');
+      return { path: el?.getAttribute('data-path'), head: el?.querySelector('.path-head')?.textContent ?? '' };
+    });
+    await yp.screenshot({ path: `${OUT}/victory-path.png` });
+    await yp.waitForFunction(() => JSON.parse(localStorage.getItem('capitalforge.career.v1') ?? '{}').runs?.[0]?.wins?.length > 0, null, { timeout: 10000 }).catch(() => {});
+    const careerWins = await yp.evaluate(() => JSON.parse(localStorage.getItem('capitalforge.career.v1') ?? '{}').runs?.[0]?.wins ?? []);
+    check('Zafer ekranında "Zafere giden yol: Gayrimenkul"; kariyer koşunun zaferini yoluyla saklıyor',
+      won.path === 'realestate' && /Zafere giden yol: Gayrimenkul/.test(won.head) && careerWins[0]?.path === 'realestate', `${won.head} · ${JSON.stringify(careerWins)}`);
+    await yp.locator('.gameover.victory .gameover-actions button.primary').click();
+    await yp.evaluate(() => window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 }));
+    await yp.locator('.goal-chip').first().click();
+    await yp.locator('.goals [data-career-open]').click();
+    await yp.waitForSelector('[data-career]', { timeout: 5000 });
+    const career = await yp.evaluate(() => ({
+      badge: document.querySelector('[data-achievement="three_paths"] .career-badge-progress')?.textContent ?? '',
+      done: document.querySelector('[data-achievement="three_paths"]')?.getAttribute('data-done'),
+      runPaths: document.querySelector('[data-career-runs] [data-run-paths]')?.getAttribute('data-run-paths'),
+      runText: document.querySelector('[data-career-runs] [data-run-paths]')?.textContent ?? '',
+    }));
+    check('Kariyerde Üç yol 1 / 3; koşunun satırında yol', career.done === 'false' && career.badge.trim() === '1 / 3' && career.runPaths === 'realestate' && /yol: Gayrimenkul/.test(career.runText),
+      JSON.stringify(career));
+    await yp.keyboard.press('Escape');
+
+    // Taşıma teklifi: müşterinin yarıştaki yeri; en yakın rakipse çip ve masa söylüyor.
+    const setup = await yp.evaluate(() => {
+      const c = window.__capital;
+      const s = c.getState();
+      const me = s.companies[s.playerCompanyId];
+      me.cash += 5_000_000;
+      me.netWorth += 5_000_000;
+      let tile = null;
+      for (const t of s.map.tiles) {
+        if (t.kind !== 'plot' || t.ownerId || t.buildingId || t.structureId || (s.districts[t.districtId].opensOnDay ?? 0) > s.time.day) continue;
+        tile = t;
+        break;
+      }
+      const built = c.engine.dispatch({ type: 'BUY_TILE', tileId: tile.id }).ok && c.engine.dispatch({ type: 'BUILD', tileId: tile.id, defId: 'freight_terminal' }).ok;
+      const terminal = s.buildings[s.map.tiles[tile.id].buildingId];
+      const rivals = Object.values(s.companies).filter((x) => !x.isPlayer).sort((a, b) => b.netWorth - a.netWorth);
+      rivals[0].netWorth = me.netWorth * 0.9;
+      const outlets = Object.values(s.buildings).filter((b) => b.companyId === rivals[0].id && c.buildingRole(b.defId) === 'outlet').slice(0, 2).map((b) => b.id);
+      s.freight = { offers: [{ id: 'o61', companyId: rivals[0].id, terminalId: terminal.id, outletIds: outlets, durationDays: 120, offeredDay: s.time.day, estimate: 600, rate: 0.21 }], contracts: [], nextId: 2, lastOfferDay: s.time.day, declined: {}, earnedTotal: 0 };
+      c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+      return { built, rival: rivals[0].name, small: rivals[rivals.length - 1].id, tile: tile.id };
+    });
+    const chip = yp.locator('[data-agenda-freight="freight:o61"]');
+    await chip.waitFor({ timeout: 5000 }).catch(() => {});
+    const chipText = ((await chip.textContent().catch(() => '')) ?? '').trim();
+    await chip.click().catch(() => {});
+    await yp.waitForSelector('[data-freight-standing]', { timeout: 5000 }).catch(() => {});
+    const standing = await yp.evaluate(() => ({
+      kind: document.querySelector('[data-freight-standing]')?.getAttribute('data-freight-standing'),
+      text: document.querySelector('[data-freight-standing]')?.textContent ?? '',
+    }));
+    check('Teklifin müşterisi en yakın rakipse gündem çipi ve terminalin masası söylüyor; tasarrufu yazıyor',
+      setup.built && /en yakın rakibin/.test(chipText) && standing.kind === 'challenger' && /^En yakın rakibin: şehrin \d\. şirketi/.test(standing.text) && /günde ~.+ kazandırır/.test(standing.text),
+      `${chipText} · ${standing.text}`);
+    await yp.screenshot({ path: `${OUT}/freight-standing.png` });
+    await yp.evaluate((small) => {
+      const c = window.__capital;
+      c.getState().freight.offers[0].companyId = small;
+      c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+    }, setup.small);
+    await yp.waitForTimeout(200);
+    const other = await yp.evaluate(() => ({ kind: document.querySelector('[data-freight-standing]')?.getAttribute('data-freight-standing'), text: document.querySelector('[data-freight-standing]')?.textContent ?? '' }));
+    check('Küçük rakibin teklifi uyarısız: yalnız sırası, değeri ve tasarrufu', other.kind === 'other' && /^Şehrin \d\. şirketi/.test(other.text), other.text);
+
+    check('Şirketin yolu akışında konsol temiz', yErrors.length === 0, yErrors.slice(0, 2).join(' | '));
+    await yContext.close();
+
+    // Telefon ve İngilizce: kutu taşmıyor, metin çevrilmiş.
+    const yPhone = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+    await yPhone.addInitScript(veteran, TUTORIAL_KEY);
+    await yPhone.addInitScript(() => localStorage.setItem('capitalforge.locale', 'en'));
+    const ym = await yPhone.newPage();
+    const ymErrors = [];
+    ym.on('pageerror', (e) => ymErrors.push(e.message));
+    ym.on('console', (m) => { if (m.type() === 'error') ymErrors.push(m.text()); });
+    await ym.goto('http://127.0.0.1:8811/');
+    await ym.waitForSelector('.newgame', { timeout: 20000 });
+    await ym.locator('[data-newgame-start]').click();
+    await ym.waitForSelector('.topbar', { timeout: 30000 });
+    await ym.evaluate(() => window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 }));
+    // Gündem dolunca telefonda çip katlanıyor: panel önce açılıyor, defter sonra.
+    await ym.locator('.goal-chip').first().click();
+    await ym.waitForSelector('.goals .path-summary', { timeout: 5000 });
+    await ym.evaluate(() => {
+      const c = window.__capital;
+      for (let i = 0; i < 60; i++) c.engine.runDay();
+      c.getState().sources = { retail: 88_000, energy: 12_000 };
+      c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+    });
+    await ym.waitForSelector('.goals .path-summary[data-path="energy"]', { timeout: 5000 }).catch(() => {});
+    const phone = await ym.evaluate(() => {
+      const el = document.querySelector('.goals .path-summary');
+      const rows = [...el.querySelectorAll('.path-source')];
+      return {
+        path: el.getAttribute('data-path'),
+        head: el.querySelector('.path-head')?.textContent ?? '',
+        overflow: rows.some((row) => row.scrollWidth > row.clientWidth + 1) || el.scrollWidth > el.clientWidth + 1,
+        page: document.documentElement.scrollWidth > window.innerWidth + 1,
+      };
+    });
+    await ym.screenshot({ path: `${OUT}/path-phone-en.png` });
+    check('Telefonda İngilizce: "Your company\'s path: Energy", kutu ve sayfa taşmıyor', phone.path === 'energy' && /Your company's path: Energy/.test(phone.head) && !phone.overflow && !phone.page,
+      JSON.stringify(phone));
+    check('Telefonda konsol temiz', ymErrors.length === 0, ymErrors.slice(0, 2).join(' | '));
+    await yPhone.close();
   }
 
   section('Mobil');

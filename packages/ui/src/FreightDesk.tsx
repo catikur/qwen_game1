@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { ReactElement } from 'react';
 import { BUILDING_BY_ID, formatPercent } from '@capital/content';
-import { FREIGHT, FREIGHT_SHARE, fleetUsed, formatMoney, freightPenalty, freightProspects, reliefOf } from '@capital/core';
+import { FREIGHT, FREIGHT_SHARE, fleetUsed, formatMoney, freightPenalty, freightProspects, freightStanding, getPlayer, reliefOf } from '@capital/core';
 import type { FreightDeal } from '@capital/core';
 import { t } from './i18n';
 import { useGame, useGameState } from './useGame';
@@ -57,6 +57,16 @@ export function FreightDesk({ buildingId }: { buildingId: string }): ReactElemen
       {offers.map((offer) => {
         const left = Math.max(0, offer.offeredDay + FREIGHT.offerLifetimeDays - state.time.day);
         const fits = used + offer.outletIds.length <= def.fleet!;
+        // Müşterinin yarıştaki yeri (Tur 61): en yakın rakibe taşımak onu da büyütüyor.
+        const client = freightStanding(state, offer);
+        const clientLine = client
+          ? t(client.challenger ? 'panels.freight.challenger' : 'panels.freight.client', {
+              rank: client.rank,
+              worth: formatMoney(state.companies[offer.companyId]?.netWorth ?? 0),
+              mine: formatMoney(getPlayer(state).netWorth),
+              saving: formatMoney(client.saving),
+            })
+          : null;
         return (
           <div key={offer.id} className="freight-offer" data-freight-offer={offer.id}>
             <p>
@@ -66,6 +76,11 @@ export function FreightDesk({ buildingId }: { buildingId: string }): ReactElemen
               {t('panels.freight.offer', { count: offer.outletIds.length, fee: formatMoney(offer.estimate), days: offer.durationDays })}
               <span className="muted"> · {t('panels.freight.offerLeft', { days: left })}</span>
             </p>
+            {clientLine && (
+              <p className={client?.challenger ? 'freight-client-note warn' : 'freight-client-note muted'} data-freight-standing={client?.challenger ? 'challenger' : 'other'}>
+                {clientLine}
+              </p>
+            )}
             <div className="manual-actions">
               <button
                 type="button"

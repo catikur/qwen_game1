@@ -150,6 +150,8 @@ export const panels: Record<keyof typeof trPanels, string> = {
   'panels.freight.today': "Today's fees",
   'panels.freight.earned': 'Collected',
   'panels.freight.offer': 'wants haulage for {count|# store|# stores}: ~{fee} a day for {days|# day|# days}',
+  'panels.freight.client': 'No. {rank} in the city, worth {worth}. Your trucks save it ~{saving} a day.',
+  'panels.freight.challenger': 'Your closest rival: No. {rank} in the city, worth {worth} (you: {mine}). Your trucks save it ~{saving} a day too.',
   'panels.freight.offerLeft': 'on the table for {days|# day|# days}',
   'panels.freight.accept': 'Accept',
   'panels.freight.decline': 'Pass',
@@ -386,6 +388,9 @@ export const panels: Record<keyof typeof trPanels, string> = {
   'panels.help.step.modifiers.title': 'Make the rules harder yourself.',
   'panels.help.step.modifiers.body':
     ' In a free-play city you can pick extra rules at setup: Stormy years, Hungry rivals, Tight bank, Scarce land. Each is added on top of the difficulty and its effect is spelled out at setup; the difficulty multiplier shows in the Goals panel, on the victory screen and in your career. In the Seed League everyone plays the same rule each week; a scenario comes with its own rule and has no difficulty multiplier.',
+  'panels.help.step.paths.title': 'There is more than one way to win.',
+  'panels.help.step.paths.body':
+    " You can grow with stores and a chain, take rivals over on the stock market or lean on rental projects; power plants and terminals make a side business. \"Your company's path\" in the Goals panel shows where your profit comes from; the victory screen and your career record which path the win took.",
   'panels.help.step.career.title': 'Look beyond a single run.',
   'panels.help.step.career.body':
     ' The Career page in the Goals panel and on the setup screen keeps your badges and run history: takeovers, crises, consortiums, the council, holdings, scenarios, the league. Badges give no reward; they point you to every corner of the game. They are kept on this device.',

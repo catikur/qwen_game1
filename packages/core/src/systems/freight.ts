@@ -66,6 +66,43 @@ export const FREIGHT = {
   hostileOffers: false,
 } as const;
 
+/**
+ * Teklifin müşterisi yarışta nerede (Tur 61). Değeri seninkinin bu payını
+ * geçen en güçlü rakip "en yakın rakibin": kamyonun onu da ucuzlatıyor.
+ * Bunun yarışa etkisi şehre ve zamanlamaya bağlı. Değerlendirmenin ilk
+ * ölçümünde her teklifi kabul eden nakliyeci bir şehirde en yakın rakibine
+ * geçildi; vekilin temposu bir gün kayınca aynı şehri ondan erken kazandı
+ * (DURUM Tur 61). Oyun karar vermiyor, bilgiyi veriyor. Yalnız gösterim:
+ * teklif kuralı değişmiyor, sabit `FREIGHT`'te değil (lig izi aynı).
+ */
+export const FREIGHT_CHALLENGER_SHARE = 0.6;
+
+export interface FreightStanding {
+  /** Şehrin sıralamasında kaçıncı (oyuncu dahil, 1'den). */
+  rank: number;
+  /** Değerinin oyuncunun değerine oranı. */
+  ratio: number;
+  /** Müşterinin günlük tasarrufu: ücretin rakibe kalan payı. */
+  saving: number;
+  /** En güçlü rakip ve değeri seninkinin `FREIGHT_CHALLENGER_SHARE` katını geçiyor. */
+  challenger: boolean;
+}
+
+export function freightStanding(state: GameState, deal: Pick<FreightDeal, 'companyId' | 'estimate'>): FreightStanding | null {
+  const client = state.companies[deal.companyId];
+  const player = state.companies[state.playerCompanyId];
+  if (!client || !player) return null;
+  const companies = Object.values(state.companies).sort((a, b) => b.netWorth - a.netWorth);
+  const strongest = companies.find((company) => !company.isPlayer);
+  const ratio = player.netWorth > 0 ? client.netWorth / player.netWorth : Number.POSITIVE_INFINITY;
+  return {
+    rank: companies.indexOf(client) + 1,
+    ratio,
+    saving: Math.round((deal.estimate * (1 - FREIGHT_SHARE)) / FREIGHT_SHARE),
+    challenger: strongest?.id === client.id && ratio >= FREIGHT_CHALLENGER_SHARE,
+  };
+}
+
 /** Oyuncunun terminalleri (filosu olan lojistik binaları), kimlik sırasıyla. */
 export function freightTerminals(state: GameState, companyId = state.playerCompanyId): BuildingInstance[] {
   return Object.values(state.buildings)

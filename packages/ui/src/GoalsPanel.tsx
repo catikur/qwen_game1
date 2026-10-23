@@ -24,6 +24,7 @@ import { ScenarioGoalSection } from './ScenarioScreens';
 import { CareerRunLine, useCareerRevision } from './CareerPanel';
 import { careerSummary } from './career';
 import { ModifierLine } from './ModifierLine';
+import { PathSummary } from './PathSummary';
 
 /** Görevin "şu an / hedef" satırı, görevin kendi biriminde. */
 function questNumbers(state: GameState, board: QuestBoard, quest: QuestState): string {
@@ -175,6 +176,8 @@ export function GoalsPanel(): ReactElement {
         })}
       </p>
       <ModifierLine modifiers={state.modifiers} scenario={state.scenario !== undefined} />
+      {/* Şirketin yolu (Tur 61): kârın kaynağı, zafere giden iş kolu. */}
+      <PathSummary state={state} />
       <ol className="goal-list">
         {ladder.map((goal) => {
           const isNext = next?.def.id === goal.def.id;
@@ -262,6 +265,7 @@ export function VictoryScreen({ onNewGame }: { onNewGame: () => void }): ReactEl
           })}
         </p>
         <ModifierLine modifiers={state.modifiers} scenario={state.scenario !== undefined} />
+        <PathSummary state={state} {...(victory.path ? { frozen: victory.path } : {})} />
         <p className="muted">{t('hud.victory.note')}</p>
         <CareerRunLine state={state} />
         <div className="gameover-actions">

@@ -43,6 +43,8 @@ export interface UnlockRecord {
 export interface CareerArchive {
   totals: Partial<CareerTotals>;
   victoryCeos: string[];
+  /** Budanan koşuların zafer yolları (Tur 61); eski arşivde yok. */
+  victoryPaths?: string[];
   runs: number;
   victories: number;
   bestWorth: number;
@@ -162,6 +164,8 @@ function fold(archive: CareerArchive | undefined, run: CareerRun): CareerArchive
   for (const key of Object.keys(own) as (keyof CareerTotals)[]) totals[key] = (totals[key] ?? 0) + own[key];
   const ceos = new Set(base.victoryCeos);
   if (isVictorious(run) && run.ceoId) ceos.add(run.ceoId);
+  const paths = new Set(base.victoryPaths ?? []);
+  if (run.mode !== 'scenario') for (const win of run.wins) if (win.path) paths.add(win.path);
   // Ekleme sırası korunuyor: ilk anahtar en eski budanan koşu.
   const folded = { ...base.folded, [run.key]: run };
   let best = base.best;
@@ -172,6 +176,7 @@ function fold(archive: CareerArchive | undefined, run: CareerRun): CareerArchive
   return {
     totals,
     victoryCeos: [...ceos],
+    ...(paths.size > 0 ? { victoryPaths: [...paths] } : {}),
     runs: base.runs + 1,
     victories: base.victories + (isVictorious(run) ? 1 : 0),
     bestWorth: Math.max(base.bestWorth, run.mode === 'scenario' ? 0 : run.worth),
@@ -193,7 +198,7 @@ function withBest(best: Record<string, number> | undefined, run: RunFacts): Reco
 
 /**
  * Budanmış koşu geri geldi: katkısı arşivden düşülüyor. En yüksek değer ve
- * zafer CEO'ları birleşim gibi davranıyor (aynı koşu iki kez artırmıyor),
+ * zafer CEO'ları ve yolları birleşim gibi davranıyor (aynı koşu iki kez artırmıyor),
  * onlara dokunulmuyor.
  */
 function unfold(archive: CareerArchive, key: string): { archive: CareerArchive; run: CareerRun } | null {
@@ -224,6 +229,7 @@ function inputOf(file: CareerFile): CareerInput {
           archived: {
             totals: file.archived.totals,
             victoryCeos: file.archived.victoryCeos,
+            ...(file.archived.victoryPaths ? { victoryPaths: file.archived.victoryPaths } : {}),
             runs: Object.values(file.archived.folded ?? {}),
             ...(file.archived.best ? { best: file.archived.best } : {}),
           },

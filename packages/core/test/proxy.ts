@@ -37,6 +37,7 @@ import {
   powerPlants,
   getPlayer,
   isDistrictOpen,
+  orderEstimate,
   sharePrice,
   sharesHeld,
   tilePrice,
@@ -526,4 +527,71 @@ export function rivalryStrategy(engine: GameEngine, options: RivalryOptions = {}
       }
     }
   }
+}
+
+/**
+ * Devralmacı (Tur 61): her seferinde en ucuz alınabilir rakibe devralma
+ * emri, bedeli kasanın %90'ından azsa (Senaryolar III'ün avcısı).
+ */
+export function takeoverStrategy(engine: GameEngine): void {
+  const state = engine.getState();
+  const player = getPlayer(state);
+  if (player.orders && player.orders.length > 0) return;
+  let best: { id: string; cost: number } | null = null;
+  for (const company of Object.values(state.companies)) {
+    if (company.isPlayer || (company.lockedUntilDay !== undefined && state.time.day < company.lockedUntilDay)) continue;
+    const estimate = orderEstimate(state, player.id, company.id);
+    if (estimate.need > 0 && !estimate.floatShort && (!best || estimate.cost < best.cost)) best = { id: company.id, cost: estimate.cost };
+  }
+  if (best && best.cost < player.cash * 0.9) engine.dispatch({ type: 'PLACE_TAKEOVER_ORDER', companyId: best.id });
+}
+
+export type PathProxy = 'retail' | 'takeover' | 'realestate' | 'energy' | 'freight';
+
+/**
+ * Yol vekilleri (Tur 61): her yol için ayrı bir oyuncu, her gün çağrılıyor.
+ * Hepsi baskın uyarısını okuyor (üç günde bir savunma). Tur 56–58'in
+ * vekilleri temel vekilin üstüne bir iş kolu ekliyordu; yol vekili iş
+ * kolunu öne alıyor:
+ *   - perakende: temel vekil, beş günde bir;
+ *   - devralma: beş günde bir önce devralma emri, sonra temel vekil;
+ *   - gayrimenkul: geliştirici her gün, proje sınırı yok, geri ödeme
+ *     500 güne kadar; temel vekil yedi günde bir (nakit önce projeye);
+ *   - enerji: enerjici beş günde bir, santral sınırı yok, geri ödeme 400
+ *     güne kadar; temel vekil yedi günde bir;
+ *   - nakliye: nakliyeci beş günde bir, terminal sınırı yok, her teklifi
+ *     kabul ediyor, kinli rakiple uzlaşıyor (kinli rakip teklif getirmiyor);
+ *     temel vekil beş günde bir.
+ * Yalnızca komutla oynuyor: lig koşusunda da tekrar tutuyor.
+ */
+export function pathStrategy(engine: GameEngine, path: PathProxy): void {
+  const day = engine.getState().time.day;
+  const every = (n: number) => day % n === 0;
+  switch (path) {
+    case 'retail':
+      if (every(5)) playerStrategy(engine);
+      break;
+    case 'takeover':
+      if (every(5)) {
+        takeoverStrategy(engine);
+        playerStrategy(engine);
+      }
+      break;
+    case 'realestate':
+      developerStrategy(engine, { maxProjects: Infinity, maxPayback: 500 });
+      if (every(7)) playerStrategy(engine);
+      break;
+    case 'energy':
+      if (every(5)) energyStrategy(engine, Infinity, 400);
+      if (every(7)) playerStrategy(engine);
+      break;
+    case 'freight':
+      if (every(5)) {
+        freightStrategy(engine, Infinity);
+        playerStrategy(engine);
+      }
+      rivalryStrategy(engine, { amends: true });
+      break;
+  }
+  if (every(3)) defendAgainstRaids(engine);
 }

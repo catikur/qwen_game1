@@ -1,6 +1,6 @@
 import { useEffect, useSyncExternalStore } from 'react';
 import type { ReactElement } from 'react';
-import { ACHIEVEMENT_GROUPS, CEO_BY_ID, SCENARIO_BY_ID, formatDecimal, getCitySize, getDifficulty, modifierMultiplier, moneyUnits, numberLocale, withCurrency } from '@capital/content';
+import { ACHIEVEMENT_GROUPS, CEO_BY_ID, PATH_BY_ID, SCENARIO_BY_ID, formatDecimal, getCitySize, getDifficulty, modifierMultiplier, moneyUnits, numberLocale, withCurrency } from '@capital/content';
 import type { AchievementGroup } from '@capital/content';
 import { formatMoney } from '@capital/core';
 import type { AchievementStatus, GameState } from '@capital/core';
@@ -99,6 +99,7 @@ function runTitle(run: CareerRun): string {
 
 function RunRow({ run }: { run: CareerRun }): ReactElement {
   const ceo = run.ceoId ? CEO_BY_ID[run.ceoId] : undefined;
+  const winPaths = [...new Set(run.wins.flatMap((win) => (win.path && PATH_BY_ID[win.path] ? [win.path] : [])))];
   const facts = [
     ceo ? ceo.name : t('hud.career.noCeo'),
     getDifficulty(run.difficulty).name,
@@ -112,9 +113,11 @@ function RunRow({ run }: { run: CareerRun }): ReactElement {
         ]
       : []),
     ...(run.cities > 1 ? [t('hud.career.cities', { count: run.cities })] : []),
+    // Zafere giden yol (Tur 61); holding'de her şehrin zaferi kendi yoluyla.
+    ...(winPaths.length > 0 ? [t('hud.career.paths', { list: winPaths.map((id) => PATH_BY_ID[id].name).join(', ') })] : []),
   ];
   return (
-    <li className="career-run" data-run-mode={run.mode}>
+    <li className="career-run" data-run-mode={run.mode} {...(winPaths.length > 0 ? { 'data-run-paths': winPaths.join(',') } : {})}>
       <div className="career-run-head">
         <span className="career-run-title">
           {runTitle(run)} · {run.companyName}

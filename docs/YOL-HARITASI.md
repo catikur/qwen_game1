@@ -1,6 +1,6 @@
 # Capital — Yol Haritası
 
-> Tur 47'de yazıldı, her turda güncelleniyor (son: Tur 51). Biten işin ayrıntısı
+> Tur 47'de yazıldı, her turda güncelleniyor (son: Tur 61). Biten işin ayrıntısı
 > `docs/DURUM.md`'de; bu dosya önümüzdeki işin sırasını ve gerekçesini
 > tutuyor.
 
@@ -37,7 +37,7 @@ Bir bağlantıyla açılan, istenirse kurulan ve çevrimdışı da oynanan bir
 |---|---|---|---|---|
 | **1 · Ürün temeli** | Oyun bir ürün gibi davransın | 47–50 | Kuruluyor, çevrimdışı açılıyor, tek Ayarlar paneli var, müzik var | **bitti** (Tur 50) |
 | **2 · Çevrimiçi rekabet** | Herkes aynı şehirde | 51–55 | Pages'te paylaşılan tablo var, skor sunucuda doğrulanıyor | **bitti** (Tur 55) |
-| **3 · Yeni yollar** | Her koşu farklı bir şirket | 56–61 | Zafere en az üç farklı yol var, her birini kazanan bir vekil var | sürüyor (Tur 56) |
+| **3 · Yeni yollar** | Her koşu farklı bir şirket | 56–61 | Zafere en az üç farklı yol var, her birini kazanan bir vekil var | **bitti** (Tur 61) |
 | **4 · Şehrin hissi** | Oynaması keyifli | 62–65 | Mevsim ve hava görünüyor, önemli anlar hissediliyor | |
 | **5 · Platform ve topluluk** | Oyunun evi büyüsün | 66+ | Masaüstü sürümü ve paylaşılabilir senaryolar var | |
 
@@ -93,14 +93,14 @@ tur ayrı PR, Codex temiz ve CI yeşilse birleşiyor.
 | **57 · Enerji** | Şebeke fiyatı (bakımın enerji payı), doğalgaz santrali ve güneş tarlası, yeni kriz: enerji krizi; yakıt sabitleme. Santral önce kendi binalarına, sonra rakiplere. | bitti (#87) |
 | **58 · Gayrimenkul geliştiricisi** | Konut Sitesi ve Ofis Kampüsü (inşaatı süren, kiracısı zamanla gelen projeler), kira ayarı ve doluluk, kentsel dönüşüm hakkı (imar artışı, hak sahipleri) ve dönüşüm başvurusu. | bitti (#88) |
 | **59 · Rakipler 2.0** | CEO'nun mizacı ve geçmişi; oyuncuya karşı ilişki puanı ve hafıza (hisse, ihale, meclis, nakliye, fiyat kırma, kampanya); husumette rövanş fiyat savaşı, mecliste karşı bağış, rafına mağaza, inadına teklif; ittifakta tersi; uzlaşma. | bitti (#89) |
-| **60 · Senaryo paketi II** | Herkesin nakliyecisi (Aç gözlü rakipler, kinli iki rakip), Karanlık kış (Sıkı banka, enerji krizi), Kentsel dönüşüm (Kıt arsa); üç yeni hedef: taşınan mağaza, rakiplere satılan elektrik, dolu birim ve dönüşüm projesi. Kinli rakip taşıma teklifi getirmiyor. | bu PR |
+| **60 · Senaryo paketi II** | Herkesin nakliyecisi (Aç gözlü rakipler, kinli iki rakip), Karanlık kış (Sıkı banka, enerji krizi), Kentsel dönüşüm (Kıt arsa); üç yeni hedef: taşınan mağaza, rakiplere satılan elektrik, dolu birim ve dönüşüm projesi. Kinli rakip taşıma teklifi getirmiyor. | bitti (#90) |
+| **61 · Değerlendirme** | Strateji çeşitliliği ölçülüyor, her yol için ayrı vekil. Kârın kaynağı defteri ve şirketin yolu (Hedefler, zafer ekranı, kariyer, Üç yol rozeti); taşıma teklifinde müşterinin yarıştaki yeri. Üç yol gerçek (perakende, devralma, gayrimenkul), enerji ve nakliye yan iş kolu. Faz 3 raporu. | bu PR |
 
 Faz 3 simülasyonu değiştiriyor: her birleşmeden sonra Worker yeniden
 dağıtılıyor (`ios-lite/README.md`, "Sürüm uyumu"); o zamana kadar yeni
-koşular bekliyor.
-
-- **61 · Değerlendirme.** Strateji çeşitliliği ölçülüyor; her yol için
-  ayrı bir vekil.
+koşular bekliyor. Tur 61 simülasyona dokunmuyor (lig izi aynı); Tur 56–60
+için tek dağıtım yeterli. Faz 3'ün raporu `docs/DURUM.md`'de, Tur 61
+bölümünün sonunda.
 
 ### Faz 4 · Şehrin hissi
 

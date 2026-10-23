@@ -48,6 +48,7 @@ import {
   routeSignature,
   shelfReach,
   bookValue,
+  companyPath,
   confidence,
   collectEventModifiers,
   controllerOf,
@@ -95,8 +96,10 @@ import {
   energyStrategy,
   freightStrategy,
   playerStrategy,
+  pathStrategy,
   rivalryStrategy,
 } from './proxy';
+import type { PathProxy } from './proxy';
 import { stanceOf, temperamentOf } from '../src/systems/relations';
 
 // Oyuncu vekili ve aktif rakip listesi tek kopya: `./proxy`.
@@ -5500,6 +5503,87 @@ section('Senaryolar IV: nakliye, enerji ve dönüşüm', () => {
       return JSON.stringify(result.modifiers) === JSON.stringify(def.modifiers ?? []);
     }) && h.calm.modifiers.length === 0,
     `${haulage.title}: ${h.informed.modifiers.join(',')} · ${blackout.title}: ${b.informed.modifiers.join(',')} · ${renewal.title}: ${r.informed.modifiers.join(',')}`,
+  );
+});
+
+section('Yollar: zafere farklı yollar', () => {
+  /*
+   * Tur 61: Faz 3'ün ölçüsü. "Zafere en az üç farklı yol var, her birini
+   * kazanan bir vekil var." Her yolun vekili (`pathStrategy`) Dengeli'de
+   * zafere kadar oynuyor; şirketin yolu kârın kaynağıyla ölçülüyor
+   * (`companyPath`, defter `state.sources`).
+   *
+   * İlk ölçüm (Tur 56–58'in vekilleri temel vekilin üstüne, beş şehir): beş
+   * vekil de kazanıyordu ama hepsi aynı şirketti. Kârın %97'si ve fazlası
+   * perakendeden; nakliye %1–2, enerji %0–5, kira %9–13. Sınırı yükseltmek
+   * (sekiz terminal, on iki santral, sekiz proje) payı pek değiştirmedi.
+   * Yol vekili iş kolunu öne alıyor: temel vekil yedi günde bir, nakit önce
+   * projeye ya da santrale. Beş şehirde (1, 7, 42, 101, 202; DURUM Tur 61):
+   *   devralma     551–621. gün · 2–3 devralma, portföy 25–45 M ₺
+   *   nakliye      564–634      · ücret kârın %4–5'i
+   *   gayrimenkul  579–653      · kira %21–27, binaların %33–43'ü kiralık
+   *   perakende    626–713      · kira %1–3
+   *   enerji       641–700      · enerji %8–12
+   * Burada üç şehir (süre bütçesi).
+   */
+  const SEEDS = [1, 7, 42];
+  const PATH_IDS: PathProxy[] = ['retail', 'takeover', 'realestate', 'energy', 'freight'];
+  const m = (v: number) => `${(v / 1_000_000).toFixed(1)} M`;
+  const pc = (v: number) => `%${Math.round(v * 100)}`;
+  const play = (seed: number, path: PathProxy) => {
+    const engine = new GameEngine(createNewGame({ seed, companyName: 'Yol AŞ' }));
+    const state = engine.getState();
+    for (let day = 1; day <= 1400 && !state.victory && !state.gameOver; day++) {
+      pathStrategy(engine, path);
+      engine.runDay();
+    }
+    const own = Object.values(state.buildings).filter((b) => b.companyId === state.playerCompanyId);
+    const result = companyPath(state);
+    return {
+      seed,
+      day: state.victory && !state.gameOver ? state.victory.day : null,
+      frozen: state.victory?.path ?? '-',
+      ...result,
+      portfolio: portfolioValue(state, state.playerCompanyId),
+      buildings: own.length,
+      rentals: own.filter((b) => BUILDING_BY_ID[b.defId]?.role === 'rental').length,
+    };
+  };
+  const runs = PATH_IDS.map((path) => ({ path, results: SEEDS.map((seed) => play(seed, path)) }));
+  for (const { path, results } of runs) {
+    for (const r of results) {
+      console.log(
+        `  ${path.padEnd(10)} seed ${String(r.seed).padStart(2)}: ${r.day === null ? 'zafer yok' : `${r.day}. gün`} · yol ${r.frozen} · perakende ${pc(r.shares.retail)} kira ${pc(r.shares.realestate)} enerji ${pc(r.shares.energy)} nakliye ${pc(r.shares.freight)} · ${r.acquisitions} devralma, portföy ${m(r.portfolio)} · ${r.rentals}/${r.buildings} kiralık`,
+      );
+    }
+  }
+  const of = (path: PathProxy) => runs.find((run) => run.path === path)!.results;
+  expect(
+    "Her yolun vekili Dengeli'de her şehirde kazanıyor",
+    runs.every(({ results }) => results.every((r) => r.day !== null)),
+    runs.map(({ path, results }) => `${path} ${results.map((r) => r.day ?? '—').join('/')}`).join(' · '),
+  );
+  expect(
+    'Her vekil kendi yolunda: zaferin yolu (kârın kaynağı) vekilin yolu',
+    runs.every(({ path, results }) => results.every((r) => r.frozen === path)),
+    runs.map(({ path, results }) => `${path}: ${results.map((r) => r.frozen).join('/')}`).join(' · '),
+  );
+  expect(
+    "Üç yol gerçekten farklı: gayrimenkulde kira kârın en az beşte biri ve binaların en az %30'u, devralmacı en az iki rakibi alıyor; temel vekilde ikisi de yok",
+    of('realestate').every((r) => r.shares.realestate >= 0.2 && r.rentals >= r.buildings * 0.3) &&
+      of('takeover').every((r) => r.acquisitions >= 2) &&
+      of('retail').every((r) => r.shares.realestate < 0.05 && r.acquisitions === 0),
+    `kira ${of('realestate').map((r) => `${pc(r.shares.realestate)} (${r.rentals}/${r.buildings})`).join(', ')} · devralma ${of('takeover').map((r) => r.acquisitions).join(', ')} · temel kira ${of('retail').map((r) => pc(r.shares.realestate)).join(', ')}`,
+  );
+  const mean = (path: PathProxy) => of(path).reduce((sum, r) => sum + (r.day ?? 1400), 0) / SEEDS.length;
+  const means = PATH_IDS.map((path) => ({ path, day: mean(path) })).sort((a, b) => a.day - b.day);
+  expect(
+    "Hiçbir yol baskın değil: en hızlı yolun ortalama zafer günü en yavaşınkinin en az %80'i",
+    means[0]!.day >= means[means.length - 1]!.day * 0.8,
+    means.map((x) => `${x.path} ${Math.round(x.day)}`).join(' < '),
+  );
+  console.log(
+    `  NOT: yan iş kolları kazanıyor ama şirketi taşımıyor: enerji ${of('energy').map((r) => pc(r.shares.energy)).join(', ')}, nakliye ücreti ${of('freight').map((r) => pc(r.shares.freight)).join(', ')} (DURUM Tur 61, açık kalan).`,
   );
 });
 

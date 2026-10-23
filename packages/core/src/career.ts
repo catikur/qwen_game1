@@ -1,5 +1,5 @@
 import { ACHIEVEMENTS, SCENARIOS } from '@capital/content';
-import type { AchievementDef, AchievementFeat, AchievementTotal, CitySizeId, DifficultyId, ModifierId } from '@capital/content';
+import type { AchievementDef, AchievementFeat, AchievementTotal, CitySizeId, DifficultyId, ModifierId, PathId } from '@capital/content';
 import { holdingFoundedAt, holdingFounderSize, holdingNetWorth } from './holdingFacts';
 import { FEAT_COUNTERS, addTally, cityTally } from './systems/feats';
 import { leagueBoardKind } from './systems/leagueWeek';
@@ -25,6 +25,8 @@ export interface RunWin {
   /** Zaferin günü, şehrin kendi takviminde. */
   day: number;
   citySize: CitySizeId;
+  /** Zafere giden yol (Tur 61); eski koşularda yok. */
+  path?: PathId;
 }
 
 /** Bir koşunun kariyere giden özeti; holding'in bütün şehirleri tek koşu. */
@@ -82,7 +84,7 @@ export function runFacts(state: GameState): RunFacts {
   // Kapatılan şehirlerin payı holding'de duruyor (Codex #70).
   let tally: CityTally = state.holding?.closedTally ?? {};
   for (const city of cities) {
-    if (city.victory) wins.push({ day: city.victory.day, citySize: city.citySize ?? 'standard' });
+    if (city.victory) wins.push({ day: city.victory.day, citySize: city.citySize ?? 'standard', ...(city.victory.path ? { path: city.victory.path } : {}) });
     tally = addTally(tally, cityTally(city));
     peak = Math.max(peak, city.feats?.peakWorth ?? 0);
   }
@@ -126,9 +128,11 @@ export function runFacts(state: GameState): RunFacts {
 
 const DIFFICULTY_RANK: Record<DifficultyId, number> = { easy: 0, normal: 1, hard: 2 };
 
-/** Koşu kapsamındaki rozetler; kariyer kapsamındakiler (`total`, senaryo, CEO) toplamdan. */
+/** Koşu kapsamındaki rozetler; kariyer kapsamındakiler (`total`, senaryo, CEO, yol) toplamdan. */
 export function isRunScoped(def: AchievementDef): boolean {
-  return def.kind !== 'total' && def.kind !== 'scenarioEvery' && def.kind !== 'scenarioStars' && def.kind !== 'ceoVictories';
+  return (
+    def.kind !== 'total' && def.kind !== 'scenarioEvery' && def.kind !== 'scenarioStars' && def.kind !== 'ceoVictories' && def.kind !== 'pathVictories'
+  );
 }
 
 function victoriesIn(def: AchievementDef, run: RunFacts): number {
@@ -186,6 +190,8 @@ export interface CareerInput {
   archived?: {
     totals?: Partial<CareerTotals>;
     victoryCeos?: readonly string[];
+    /** Budanan koşuların zafer yolları (Tur 61). */
+    victoryPaths?: readonly string[];
     runs?: readonly RunFacts[];
     best?: Readonly<Record<string, number>>;
   };
@@ -213,6 +219,16 @@ export function victoryCeos(input: CareerInput): string[] {
     if (run.mode !== 'scenario' && run.ceoId && run.wins.length + run.closedWins > 0) ceos.add(run.ceoId);
   }
   return [...ceos];
+}
+
+/** Zafer kazanılan farklı yollar (Tur 61, senaryo dışı). */
+export function victoryPaths(input: CareerInput): string[] {
+  const paths = new Set(input.archived?.victoryPaths ?? []);
+  for (const run of input.runs) {
+    if (run.mode === 'scenario') continue;
+    for (const win of run.wins) if (win.path) paths.add(win.path);
+  }
+  return [...paths];
 }
 
 export interface AchievementStatus {
@@ -253,6 +269,9 @@ export function achievementStatus(def: AchievementDef, input: CareerInput, total
       break;
     case 'ceoVictories':
       value = victoryCeos(input).length;
+      break;
+    case 'pathVictories':
+      value = victoryPaths(input).length;
       break;
   }
   return { def, value, target, done: value >= target };

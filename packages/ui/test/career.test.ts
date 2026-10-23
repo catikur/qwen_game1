@@ -116,6 +116,21 @@ describe('kariyer deposu', () => {
     assert.deepEqual(summary.runs[0]!.wins, [{ day: 600, citySize: 'standard' }]);
   });
 
+  test('budanan koşunun zafer yolu Üç yol rozetinde kalıyor (Tur 61)', () => {
+    const paths = () => careerSummary().statuses.find((s) => s.def.id === 'three_paths')!.value;
+    const won = (seed: number, path: 'retail' | 'realestate' | 'freight') => {
+      const state = game(seed);
+      state.victory = { day: 600, kind: 'tycoon', path, dismissed: true };
+      return state;
+    };
+    observeCareer(won(1, 'freight'));
+    observeCareer(won(2, 'retail'));
+    assert.equal(paths(), 2);
+    for (let i = 0; i < MAX_CAREER_RUNS; i++) observeCareer(game(700 + i));
+    assert.equal(paths(), 2, 'budanan iki koşunun yolları arşivde');
+    assert.deepEqual(ids(observeCareer(won(3, 'realestate'))), ['three_paths']);
+  });
+
   test('budanan koşunun eski kaydı geri gelince koşu özetinin hiçbiri düşmüyor (Codex #70)', () => {
     const run = game(1);
     const before = JSON.parse(JSON.stringify(run)) as GameState;

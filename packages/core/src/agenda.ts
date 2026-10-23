@@ -2,7 +2,7 @@ import { BUILDING_BY_ID, CARD_BY_ID, CATEGORIES, CREDIT, CRISIS_BY_ID, ERA_BY_ID
 import { nextGoal } from './systems/goals';
 import { leagueBoardKind } from './systems/leagueWeek';
 import { OFFER_LIFETIME_DAYS, contractProgress } from './systems/contracts';
-import { FREIGHT } from './systems/freight';
+import { FREIGHT, freightStanding } from './systems/freight';
 import { fuelLock } from './systems/energy';
 import { AUCTION_PERIOD_DAYS } from './systems/auction';
 import { sharesHeld, sharesOutstanding } from './systems/equity';
@@ -260,6 +260,7 @@ export function agenda(state: GameState): AgendaItem[] {
   }
 
   // Taşıma teklifleri (Tur 56): karar terminalin panelinde, çip oraya götürüyor.
+  // Müşteri en yakın rakipse çip söylüyor (Tur 61): kamyon onu da ucuzlatıyor.
   for (const offer of state.freight?.offers ?? []) {
     const left = Math.max(0, offer.offeredDay + FREIGHT.offerLifetimeDays - day);
     items.push({
@@ -267,7 +268,7 @@ export function agenda(state: GameState): AgendaItem[] {
       key: `freight:${offer.id}`,
       urgency: left <= 5 ? 2 : 1,
       daysLeft: left,
-      label: tc('core.agenda.freightOffer', {
+      label: tc(freightStanding(state, offer)?.challenger ? 'core.agenda.freightOfferChallenger' : 'core.agenda.freightOffer', {
         company: state.companies[offer.companyId]?.name ?? offer.companyId,
         count: offer.outletIds.length,
         fee: formatMoney(offer.estimate),

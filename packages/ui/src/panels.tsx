@@ -1275,6 +1275,8 @@ function RivalsPanel(): ReactElement {
 
   return (
     <div className="rivals-panel">
+    {/* Dar telefonda tablo kendi içinde kayıyor; dosya ve düğmeleri ekrana sığıyor (Tur 61). */}
+    <div className="table-scroll">
     <table className="table">
       <thead>
         <tr>
@@ -1324,6 +1326,7 @@ function RivalsPanel(): ReactElement {
         })}
       </tbody>
     </table>
+    </div>
     {selected && <RivalDossier companyId={selected} />}
     </div>
   );
@@ -1475,6 +1478,7 @@ const HELP_STEPS = [
   'ipo',
   'takeover',
   'holding',
+  'paths',
   'late',
   'stories',
   'opportunities',
