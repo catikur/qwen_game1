@@ -105,6 +105,7 @@ export const world: Record<keyof typeof trWorld, string> = {
   'core.realestate.openedRenewalBody': '{name} opened with {units} rental units, {share}% let. Rights holders moved into {rightHolders} flats: they pay no rent.',
   'core.freight.noOffer': 'That haulage offer is no longer on the table.',
   'core.freight.noTerminal': 'The terminal for this offer is gone.',
+  'core.freight.hostile': '{company} holds a grudge against you and withdrew the offer.',
   'core.freight.stale': "None of the offer's stores can be served any more.",
   'core.freight.fleetFull': "The terminal's fleet is full.",
   'core.freight.noContract': 'No such haulage contract.',

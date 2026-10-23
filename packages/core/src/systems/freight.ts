@@ -292,6 +292,11 @@ export function acceptFreight(state: GameState, offerId: string): CommandResult 
     freight.offers.splice(index, 1);
     return { ok: false, reason: tc('core.freight.noTerminal') };
   }
+  // Teklif masadayken sahibi kinli olduysa geri çekiyor: yalnız süren sözleşme husumeti atlatıyor (Codex #90).
+  if (refusesFreight(state, offer.companyId)) {
+    freight.offers.splice(index, 1);
+    return { ok: false, reason: tc('core.freight.hostile', { company: companyName(state, offer.companyId) }) };
+  }
   // Teklif masada beklerken mağaza kapanmış ya da el değiştirmiş olabilir.
   const outlets = liveOutlets(state, offer, terminal);
   const fleet = BUILDING_BY_ID[terminal.defId]?.fleet ?? 0;
@@ -419,6 +424,8 @@ export function runFreightTick(state: GameState): void {
     freight.offers = freight.offers.filter((offer) => {
       const terminal = state.buildings[offer.terminalId];
       if (day >= offer.offeredDay + FREIGHT.offerLifetimeDays || terminal?.companyId !== state.playerCompanyId) return false;
+      // Teklif masadayken sahibi kinli olduysa geri çekiyor (Codex #90).
+      if (refusesFreight(state, offer.companyId)) return false;
       const outlets = state.companies[offer.companyId] ? liveOutlets(state, offer, terminal) : [];
       if (outlets.length === 0) return false;
       if (outlets.length < offer.outletIds.length) {

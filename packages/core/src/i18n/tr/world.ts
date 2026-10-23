@@ -101,6 +101,7 @@ export const world = {
   'core.realestate.openedRenewalBody': '{name} {units} kiralık birimle açıldı, %{share} dolu. Hak sahipleri {rightHolders} daireye taşındı: kira ödemiyorlar.',
   'core.freight.noOffer': 'Bu taşıma teklifi artık masada değil.',
   'core.freight.noTerminal': 'Teklifin terminali yok.',
+  'core.freight.hostile': '{company} sana kinli: teklifini geri çekti.',
   'core.freight.stale': 'Teklifteki mağazaların hiçbirine artık taşınamıyor.',
   'core.freight.fleetFull': 'Terminalin filosu dolu.',
   'core.freight.noContract': 'Böyle bir taşıma sözleşmesi yok.',

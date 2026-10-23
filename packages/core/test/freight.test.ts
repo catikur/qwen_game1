@@ -7,7 +7,7 @@ import { build, buyTile, demolish, purchaseBlocker } from '../src/actions';
 import { supplyRoutes } from '../src/routes';
 import { collectEventModifiers } from '../src/systems/events';
 import { boostMultiplier } from '../src/systems/cards';
-import { FREIGHT, fleetUsed, freightFeeEstimate, freightPenalty, freightPotential, freightProspects, runFreightTick } from '../src/systems/freight';
+import { FREIGHT, acceptFreight, fleetUsed, freightFeeEstimate, freightPenalty, freightPotential, freightProspects, runFreightTick } from '../src/systems/freight';
 import { FREIGHT_SHARE, distributionRelief, ownDepotRelief, resetDailyLedgers, runProductionTick, unitCogsFor } from '../src/systems/supply';
 import { runMarketTick } from '../src/systems/market';
 import { isPurchasable } from '../src/systems/city';
@@ -670,5 +670,25 @@ describe('nakliye terminali ve taşıma sözleşmeleri (Tur 56)', () => {
     const after = freightPotential(state, state.playerCompanyId, TERMINAL, tile.id);
     assert.deepEqual(after, { outlets: 0, fee: 0 }, `kinli rakipler tahminde: ${JSON.stringify(after)}`);
     assert.equal(freightProspects(state, terminal).length, 0, 'kinli rakipler menzilde sayılıyor');
+  });
+  test('masadaki teklifin sahibi kinli olursa teklif düşüyor, kabul edilemiyor (Codex #90)', () => {
+    const state = fresh().getState();
+    placeTerminal(state);
+    awaitOffer(state);
+    const offer = state.freight!.offers[0]!;
+    const hostile = () => {
+      state.companies[offer.companyId]!.relation = { score: -60, stance: 'hostile', since: state.time.day, memory: [] };
+    };
+    // Kabul: husumet sürerken teklif kabul edilmiyor.
+    const copy = JSON.parse(JSON.stringify(state)) as GameState;
+    copy.companies[offer.companyId]!.relation = { score: -60, stance: 'hostile', since: copy.time.day, memory: [] };
+    const accepted = acceptFreight(copy, offer.id);
+    assert.equal(accepted.ok, false, 'kinli rakibin teklifi kabul edildi');
+    assert.equal(copy.freight!.contracts.length, 0);
+    // Gün sonu: teklif masadan kalkıyor.
+    hostile();
+    state.time.day += 1;
+    runFreightTick(state);
+    assert.ok(state.freight!.offers.every((item) => item.id !== offer.id), 'kinli rakibin teklifi masada kaldı');
   });
 });

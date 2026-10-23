@@ -103,9 +103,13 @@ function RunRow({ run }: { run: CareerRun }): ReactElement {
     ceo ? ceo.name : t('hud.career.noCeo'),
     getDifficulty(run.difficulty).name,
     getCitySize(run.citySize).name,
-    // Ek kurallar (Tur 45): sayısı ve zorluk çarpanı.
+    // Ek kurallar (Tur 45): sayısı ve zorluk çarpanı; senaryonun kuralı çarpansız (Tur 60).
     ...(run.modifiers?.length
-      ? [t('hud.career.rules', { count: run.modifiers.length, value: formatDecimal(modifierMultiplier(run.modifiers), 2) })]
+      ? [
+          run.mode === 'scenario'
+            ? t('hud.career.scenarioRules', { count: run.modifiers.length })
+            : t('hud.career.rules', { count: run.modifiers.length, value: formatDecimal(modifierMultiplier(run.modifiers), 2) }),
+        ]
       : []),
     ...(run.cities > 1 ? [t('hud.career.cities', { count: run.cities })] : []),
   ];

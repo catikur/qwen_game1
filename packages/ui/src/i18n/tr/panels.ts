@@ -375,13 +375,13 @@ export const panels = {
     ' Ara sıra süreli bir sözleşme gelir: bir bölgeye bina kurmak ya da bir kategoride pazar payına ulaşmak. Teklifi gündemdeki çipten kabul edersin; süresinde bitirirsen ödül kasaya girer, bitiremezsen cayma bedeli ödersin. Reddetmek bedava.',
   'panels.help.step.scenario.title': 'Senaryolar hazır bir dönemeçten başlar.',
   'panels.help.step.scenario.body':
-    " Kurulumda Senaryo'yu seçersen yedi hazır durumdan birini oynarsın: borçlu bir şirket, kapıdaki kriz, birleşmiş rakipler… Her birinin hedefi ve süresi var; ne kadar iyi bitirdiğine göre bir, iki ya da üç yıldız alırsın. Bu cihazdaki en iyi sonuç saklanır.",
+    " Kurulumda Senaryo'yu seçersen on hazır durumdan birini oynarsın: borçlu bir şirket, kapıdaki kriz, birleşmiş rakipler, kinli rakiplerin şehrinde nakliye, enerji krizi, kentsel dönüşüm… Her birinin hedefi ve süresi var; ne kadar iyi bitirdiğine göre bir, iki ya da üç yıldız alırsın. Bazı senaryolar kendi ek kuralıyla gelir. Bu cihazdaki en iyi sonuç saklanır.",
   'panels.help.step.league.title': 'Tohum Ligi: herkes aynı şehirde.',
   'panels.help.step.league.body':
     " Kurulumda Tohum Ligi'ni seçersen haftanın şehrinde 360 gün oynarsın; şehir ve olaylar herkes için aynı. Skor tekrarla doğrulanır: koşu her tarayıcıda baştan oynanır ve aynı skoru bulmalıdır.",
   'panels.help.step.modifiers.title': 'Kuralları sen sertleştir.',
   'panels.help.step.modifiers.body':
-    ' Serbest şehirde kurulumda ek kural seçebilirsin: Fırtınalı yıllar, Aç gözlü rakipler, Sıkı banka, Kıt arsa. Her biri kademenin üstüne eklenir ve etkisi kurulumda yazar; zorluk çarpanı Hedefler panelinde, zafer ekranında ve kariyerde görünür. Tohum Ligi ve senaryolarda ek kural yok.',
+    ' Serbest şehirde kurulumda ek kural seçebilirsin: Fırtınalı yıllar, Aç gözlü rakipler, Sıkı banka, Kıt arsa. Her biri kademenin üstüne eklenir ve etkisi kurulumda yazar; zorluk çarpanı Hedefler panelinde, zafer ekranında ve kariyerde görünür. Tohum Ligi\'nde haftanın kuralı herkese aynı; senaryo kendi kuralıyla gelir ve onda zorluk çarpanı yok.',
   'panels.help.step.career.title': 'Koşuların ötesine bak.',
   'panels.help.step.career.body':
     ' Hedefler panelindeki Kariyer sayfası ve kurulum ekranı rozetlerini ve koşu geçmişini tutar: devralma, kriz, konsorsiyum, meclis, holding, senaryo, lig. Rozet ödül vermez, oyunun her köşesini gösterir. Bu cihazda saklanır.',

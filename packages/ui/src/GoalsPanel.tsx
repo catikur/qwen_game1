@@ -174,7 +174,7 @@ export function GoalsPanel(): ReactElement {
           target: formatMoney(victoryNetWorth(state)),
         })}
       </p>
-      <ModifierLine modifiers={state.modifiers} />
+      <ModifierLine modifiers={state.modifiers} scenario={state.scenario !== undefined} />
       <ol className="goal-list">
         {ladder.map((goal) => {
           const isNext = next?.def.id === goal.def.id;
@@ -261,7 +261,7 @@ export function VictoryScreen({ onNewGame }: { onNewGame: () => void }): ReactEl
               : t('hud.victory.alone'),
           })}
         </p>
-        <ModifierLine modifiers={state.modifiers} />
+        <ModifierLine modifiers={state.modifiers} scenario={state.scenario !== undefined} />
         <p className="muted">{t('hud.victory.note')}</p>
         <CareerRunLine state={state} />
         <div className="gameover-actions">
