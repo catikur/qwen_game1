@@ -335,6 +335,36 @@ describe('nakliye terminali ve taşıma sözleşmeleri (Tur 56)', () => {
     assert.equal(freightPenalty(deal), Math.round(deal.estimate * FREIGHT.cancelPenaltyDays));
   });
 
+  test('müşteri devralındıktan sonra bitirmek bedelsiz: sözleşme zaten geçersiz (Codex #86)', () => {
+    const engine = fresh();
+    const state = engine.getState();
+    placeTerminal(state);
+    awaitOffer(state);
+    engine.dispatch({ type: 'ACCEPT_FREIGHT', offerId: state.freight!.offers[0]!.id });
+    const deal = state.freight!.contracts[0]!;
+    // Gün sonunda devralma (taşıma adımından sonra): mağazalar oyuncunun, şirket yok.
+    for (const id of deal.outletIds) state.buildings[id]!.companyId = state.playerCompanyId;
+    delete state.companies[deal.companyId];
+    const cash = state.companies[state.playerCompanyId]!.cash;
+    assert.ok(engine.dispatch({ type: 'CANCEL_FREIGHT', contractId: deal.id }).ok);
+    assert.equal(state.freight!.contracts.length, 0);
+    assert.equal(state.companies[state.playerCompanyId]!.cash, cash, 'devralınan müşteriye bedel ödendi');
+  });
+
+  test('terminali yıkıp aynı gün bitirmek bedelden kurtarmıyor', () => {
+    const engine = fresh();
+    const state = engine.getState();
+    const terminal = placeTerminal(state);
+    awaitOffer(state);
+    engine.dispatch({ type: 'ACCEPT_FREIGHT', offerId: state.freight!.offers[0]!.id });
+    const deal = state.freight!.contracts[0]!;
+    const client = state.companies[deal.companyId]!;
+    const clientCash = client.cash;
+    assert.ok(demolish(state, state.playerCompanyId, terminal.tileId).ok);
+    assert.ok(engine.dispatch({ type: 'CANCEL_FREIGHT', contractId: deal.id }).ok);
+    assert.equal(client.cash, clientCash + freightPenalty(deal));
+  });
+
   test('terminal yıkılınca sözleşme bozuluyor ve bedel ödeniyor; teklifleri de düşüyor', () => {
     const engine = fresh();
     const state = engine.getState();

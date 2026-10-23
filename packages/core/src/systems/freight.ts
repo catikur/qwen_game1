@@ -276,6 +276,20 @@ export function cancelFreight(state: GameState, contractId: string): CommandResu
   const index = freight?.contracts.findIndex((deal) => deal.id === contractId) ?? -1;
   if (!freight || index < 0) return { ok: false, reason: tc('core.freight.noContract') };
   const [deal] = freight.contracts.splice(index, 1);
+  // Gün içinde geçersizleşmiş sözleşme (müşteri devralındı, mağazası kalmadı):
+  // taşıma adımı onu yarın bedelsiz bitirecekti; şimdi de bedelsiz (Codex #86).
+  // Terminali yıkılmışsa sözü bozan oyuncu: bedel aşağıda, adımdaki gibi.
+  const terminal = state.buildings[deal!.terminalId];
+  if (terminal?.companyId === state.playerCompanyId && (!state.companies[deal!.companyId] || liveOutlets(state, deal!, terminal).length === 0)) {
+    pushNews(
+      state,
+      'neutral',
+      tc('core.freight.endedTitle'),
+      tc('core.freight.lostBody', { company: companyName(state, deal!.companyId), earned: formatMoney(deal!.earned ?? 0) }),
+      { companyId: deal!.companyId },
+    );
+    return { ok: true };
+  }
   const penalty = payPenalty(state, deal!);
   pushNews(
     state,
