@@ -1018,6 +1018,13 @@ export interface GameState {
     dismissed?: boolean;
     /** Zafer gününde şirketin yolu (Tur 61, `companyPath`); eski kayıtta yok. */
     path?: PathId;
+    /**
+     * Zafer günü kârın kaynaklarının payı ve devralınan rakip: zafer ekranı
+     * bunları çiziyor. Uzaktaki şehir zaferden sonra da yaşıyor, defter
+     * değişiyor; ekran yolu açıklayan günü göstermeli (Codex #91).
+     */
+    shares?: Record<PathSource, number>;
+    acquisitions?: number;
   };
   /** Şehrin adı (Tur 22). Yalnızca holding kurulunca veriliyor. */
   cityName?: string;

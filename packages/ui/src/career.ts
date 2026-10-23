@@ -1,6 +1,6 @@
 import { ACHIEVEMENTS, SCENARIOS } from '@capital/content';
 import type { AchievementDef } from '@capital/content';
-import { achievementStatuses, careerTotals, isRunScoped, runFacts, runKeyOf, runValue, victoryCeos } from '@capital/core';
+import { achievementStatuses, careerTotals, isRunScoped, runFacts, runKeyOf, runPaths, runValue, victoryCeos } from '@capital/core';
 import type { AchievementStatus, CareerInput, CareerTotals, GameState, RunFacts } from '@capital/core';
 import { scenarioRecord } from './scenarioBest';
 
@@ -128,6 +128,9 @@ export function mergeRun(previous: CareerRun | undefined, next: RunFacts, nowIso
   for (const win of next.wins) wins.set(winKey(win), win);
   const counters = { ...next.counters };
   for (const key of Object.keys(counters) as (keyof typeof counters)[]) counters[key] = Math.max(counters[key], previous.counters[key] ?? 0);
+  // Yollar zaferlerden bağımsız birleşiyor: aynı gün ve boyutta kazanan iki
+  // şehrin zaferi tek kayda düşse de iki yol kalıyor (Tur 61, Codex #91).
+  const paths = [...new Set([...runPaths(previous), ...runPaths(next)])];
   const stars = Math.max(previous.scenario?.stars ?? 0, next.scenario?.stars ?? 0);
   const outcome = previous.scenario?.outcome === 'won' || next.scenario?.outcome === 'won' ? 'won' : (next.scenario?.outcome ?? previous.scenario?.outcome);
   return {
@@ -136,6 +139,7 @@ export function mergeRun(previous: CareerRun | undefined, next: RunFacts, nowIso
     companyWorth: Math.max(previous.companyWorth ?? 0, next.companyWorth),
     cities: Math.max(previous.cities, next.cities),
     wins: [...wins.values()],
+    ...(paths.length > 0 ? { paths } : {}),
     closedWins: Math.max(previous.closedWins, next.closedWins),
     holdingComplete: previous.holdingComplete || next.holdingComplete,
     monopoly: previous.monopoly || next.monopoly,
@@ -165,7 +169,7 @@ function fold(archive: CareerArchive | undefined, run: CareerRun): CareerArchive
   const ceos = new Set(base.victoryCeos);
   if (isVictorious(run) && run.ceoId) ceos.add(run.ceoId);
   const paths = new Set(base.victoryPaths ?? []);
-  if (run.mode !== 'scenario') for (const win of run.wins) if (win.path) paths.add(win.path);
+  if (run.mode !== 'scenario') for (const path of runPaths(run)) paths.add(path);
   // Ekleme sırası korunuyor: ilk anahtar en eski budanan koşu.
   const folded = { ...base.folded, [run.key]: run };
   let best = base.best;

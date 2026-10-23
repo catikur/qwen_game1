@@ -1,13 +1,14 @@
 import { beforeEach, describe, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { SCENARIOS } from '@capital/content';
-import { createNewGame } from '@capital/core';
+import { createNewGame, runFacts, victoryPaths } from '@capital/core';
 import type { GameState } from '@capital/core';
 import {
   MAX_CAREER_RUNS,
   MAX_FOLDED_RUNS,
   careerStoreSizeForTests,
   careerSummary,
+  mergeRun,
   observeCareer,
   resetCareerForTests,
   syncCareer,
@@ -114,6 +115,21 @@ describe('kariyer deposu', () => {
     const summary = careerSummary();
     assert.equal(summary.victories, 1, 'zafer sayısı düşmedi');
     assert.deepEqual(summary.runs[0]!.wins, [{ day: 600, citySize: 'standard' }]);
+  });
+
+  test('holding: aynı yerel günde iki şehrin zaferi iki yol sayılıyor (Codex #91)', () => {
+    const base = runFacts(game(1));
+    const at = '2026-10-23T00:00:00.000Z';
+    const first = mergeRun(undefined, { ...base, wins: [] }, at);
+    const next = {
+      ...base,
+      wins: [
+        { day: 600, citySize: 'standard' as const, path: 'retail' as const },
+        { day: 600, citySize: 'standard' as const, path: 'energy' as const },
+      ],
+    };
+    const merged = mergeRun(first, next, at);
+    assert.deepEqual(victoryPaths({ runs: [merged], scenarioStars: {} }).sort(), ['energy', 'retail']);
   });
 
   test('budanan koşunun zafer yolu Üç yol rozetinde kalıyor (Tur 61)', () => {

@@ -165,10 +165,13 @@ describe('şirketin yolu: kârın kaynağı (Tur 61)', () => {
     runGoalTick(state);
     assert.equal(victory()?.kind, 'monopoly');
     assert.equal(victory()?.path, 'realestate');
+    // Zafer günü payları da donuyor (Codex #91): zafer ekranı onları çiziyor.
+    assert.deepEqual(victory()?.shares, { retail: 0.7, realestate: 0.3, energy: 0, freight: 0 });
     // Sonra değişen defter zaferin yolunu değiştirmiyor.
     state.sources = { retail: 100 };
     runGoalTick(state);
     assert.equal(victory()?.path, 'realestate');
+    assert.deepEqual(victory()?.shares, { retail: 0.7, realestate: 0.3, energy: 0, freight: 0 });
   });
 });
 

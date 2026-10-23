@@ -10,13 +10,18 @@ import type { MessageKey } from './i18n';
  * Şirketin yolu (Tur 61): kârın kaynağı ve yolun adı.
  *
  * Hedefler panelinde bugüne kadarki yol, zafer ekranında zafer gününde
- * donan yol (`victory.path`). Çubuklar koşu boyunca toplanan kârın payı;
- * yolun eşikleri altta yazıyor, oyuncu hangi yola ne kadar kaldığını bilsin.
+ * donan yol ve payları (`victory`): uzaktaki şehir zaferden sonra da
+ * yaşıyor, ekran yolu açıklayan günü çiziyor (Codex #91). Çubuklar koşu
+ * boyunca toplanan kârın payı; yolun eşikleri altta yazıyor, oyuncu hangi
+ * yola ne kadar kaldığını bilsin.
  */
-export function PathSummary({ state, frozen }: { state: GameState; frozen?: PathId }): ReactElement {
-  const now = companyPath(state);
-  const path = frozen ? PATH_BY_ID[frozen] : now.path;
-  const empty = PATH_SOURCES.every((source) => now.shares[source] === 0);
+export function PathSummary({ state, victory }: { state: GameState; victory?: GameState['victory'] }): ReactElement {
+  const live = companyPath(state);
+  const frozen = victory?.path;
+  const path = frozen ? PATH_BY_ID[frozen] : live.path;
+  const shares = (frozen && victory?.shares) || live.shares;
+  const acquisitions = frozen ? (victory?.acquisitions ?? live.acquisitions) : live.acquisitions;
+  const empty = PATH_SOURCES.every((source) => shares[source] === 0);
   const rule = (id: PathId) => PATHS.find((def) => def.id === id)!;
   return (
     <section className="path-summary" data-path={path.id}>
@@ -30,7 +35,7 @@ export function PathSummary({ state, frozen }: { state: GameState; frozen?: Path
           <p className="muted path-blurb">{path.blurb}</p>
           <ul className="path-sources">
             {PATH_SOURCES.map((source) => {
-              const share = Math.round(now.shares[source] * 100);
+              const share = Math.round(shares[source] * 100);
               const label = t(`hud.path.source.${source}` as MessageKey);
               return (
                 <li key={source} className="path-source" data-path-source={source} data-share={share}>
@@ -43,7 +48,7 @@ export function PathSummary({ state, frozen }: { state: GameState; frozen?: Path
               );
             })}
           </ul>
-          {now.acquisitions > 0 && <p className="muted">{t('hud.path.acquisitions', { count: now.acquisitions })}</p>}
+          {acquisitions > 0 && <p className="muted">{t('hud.path.acquisitions', { count: acquisitions })}</p>}
         </>
       )}
       <p className="muted path-rule">

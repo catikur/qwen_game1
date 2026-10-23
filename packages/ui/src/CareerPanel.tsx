@@ -2,7 +2,7 @@ import { useEffect, useSyncExternalStore } from 'react';
 import type { ReactElement } from 'react';
 import { ACHIEVEMENT_GROUPS, CEO_BY_ID, PATH_BY_ID, SCENARIO_BY_ID, formatDecimal, getCitySize, getDifficulty, modifierMultiplier, moneyUnits, numberLocale, withCurrency } from '@capital/content';
 import type { AchievementGroup } from '@capital/content';
-import { formatMoney } from '@capital/core';
+import { formatMoney, runPaths } from '@capital/core';
 import type { AchievementStatus, GameState } from '@capital/core';
 import { careerRevision, careerSummary, subscribeCareer, syncCareer, unlockedInRun } from './career';
 import type { CareerRun, UnlockRecord } from './career';
@@ -99,7 +99,7 @@ function runTitle(run: CareerRun): string {
 
 function RunRow({ run }: { run: CareerRun }): ReactElement {
   const ceo = run.ceoId ? CEO_BY_ID[run.ceoId] : undefined;
-  const winPaths = [...new Set(run.wins.flatMap((win) => (win.path && PATH_BY_ID[win.path] ? [win.path] : [])))];
+  const winPaths = runPaths(run).filter((id) => PATH_BY_ID[id]);
   const facts = [
     ceo ? ceo.name : t('hud.career.noCeo'),
     getDifficulty(run.difficulty).name,
