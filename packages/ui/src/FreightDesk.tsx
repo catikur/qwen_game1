@@ -25,8 +25,10 @@ export function FreightDesk({ buildingId }: { buildingId: string }): ReactElemen
   const used = fleetUsed(state, terminal.id);
   const contracts = (state.freight?.contracts ?? []).filter((deal) => deal.terminalId === terminal.id);
   const offers = (state.freight?.offers ?? []).filter((deal) => deal.terminalId === terminal.id);
-  const today = contracts.reduce((sum, deal) => sum + (deal.lastFee ?? 0), 0);
-  const earned = contracts.reduce((sum, deal) => sum + (deal.earned ?? 0), 0);
+  // Bugünkü ücret terminalin defterinden, toplanan terminalin kendi
+  // toplamından: biten sözleşmenin ücreti de sayılıyor (Codex #86).
+  const today = terminal.last.revenue;
+  const earned = terminal.freightEarned ?? 0;
   const name = (deal: FreightDeal): string => state.companies[deal.companyId]?.name ?? deal.companyId;
   const color = (deal: FreightDeal): string | undefined => state.companies[deal.companyId]?.color;
 
@@ -46,7 +48,9 @@ export function FreightDesk({ buildingId }: { buildingId: string }): ReactElemen
         </div>
         <div className="stat">
           <span className="stat-label">{t('panels.freight.earned')}</span>
-          <span className="stat-value">{formatMoney(earned)}</span>
+          <span className="stat-value" data-freight-earned={Math.round(earned)}>
+            {formatMoney(earned)}
+          </span>
         </div>
       </div>
 

@@ -5859,8 +5859,8 @@ rakip mağazalarının en yoğun olduğu boş parsele bir terminal daha (en çok
   550–1.780 ₺ ve geri ödeme 85–270 gündü; filo büyüyüp gider düşünce
   kalibrasyondaki 3 terminalli vekil %2–13 önde.
 
-**Doğrulama.** `pnpm test` 642/642 (625'ten); tip denetimi temiz.
-- Çekirdek (`freight.test.ts`, 15 yeni): terminalin indirimi; terminalsiz
+**Doğrulama.** `pnpm test` 645/645 (625'ten); tip denetimi temiz.
+- Çekirdek (`freight.test.ts`, 18 yeni): terminalin indirimi; terminalsiz
   oyunda taşıma adımı hiçbir şeye dokunmuyor (zar da); teklifin mağazaları,
   menzili ve haberi; kabulde ücret = satış × perakende maliyeti × pay
   (kuruşuna), terminalin defteri; aynı günün sözleşmeli ve sözleşmesiz
@@ -5868,12 +5868,25 @@ rakip mağazalarının en yoğun olduğu boş parsele bir terminal daha (en çok
   soğuma; teklifin süresi; iptal ve terminal yıkımında cayma bedeli; mağaza
   çıkınca bedelsiz, mağaza kalmayınca bitiş; süre sonu; kamyonlar; kayıt.
   Ücret toplama kapatılınca üç test kalıyor.
+- *Codex #86.* Üç bulgu:
+  - Rakip mağazasının notu sözleşmenin toplam ücretini o mağazanınmış gibi
+    yazıyordu; her mağazanın ücreti artık kendi defterinde (`last.freight`).
+  - Terminalin "toplanan" sayısı yalnız süren sözleşmelerden toplanıyordu,
+    sözleşme bitince siliniyordu; terminal kendi toplamını tutuyor
+    (`freightEarned`).
+  - Bu iki testin ikisi de düzeltmeden önce kaldı.
+  - Üçüncü bulgu ("ücret müşteriden kesilmiyor") yerinde değildi: müşterinin
+    maliyeti %14'lük net indirimle hesaplanıyordu, yani ücret zaten içindeydi
+    (1 − 0,35 + 0,21 = 0,86). Yeni test bunu gösteriyor: maliyet, tam indirimle
+    hesaplanan maliyet artı ücret. Kod artık bunu açıkça yazıyor: mağaza malı
+    tam indirimle alıyor, ücret satıştan ayrıca kesiliyor. Sonuç aynı.
 - Lig (`league.test.ts`, 2 yeni): terminal kuran, teklif kabul eden lig
   koşusu tekrarda aynı skoru veriyor; terminalin payı ya da teklifin boyu
   değişince iz değişiyor.
-- Tarayıcı testi "Lojistik" 13/13, konsol temiz: terminal, gündemdeki
+- Tarayıcı testi "Lojistik" 14/14, konsol temiz: terminal, gündemdeki
   teklif, çipten panele, kabul ve filo, ücret ve defter, kamyonlar, rakip
-  mağazasının notu, yıkma uyarısı, iki adımda bitirme ve bedel.
+  mağazasının notu (o mağazanın ücretiyle), yıkma uyarısı, iki adımda
+  bitirme ve bedel, biten sözleşmenin ücreti terminalde kalıyor.
 - Paket bütçesi tamam: ana parça 64,5 KB (63,7'den).
 
 **Canlıya geçiş.** Şema aynı, simülasyon değişti: birleşmeden sonra Worker
@@ -5983,7 +5996,7 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi). Senaryo şehirlerinde gün 3–17 ms (`pnpm dayperf`, Tur 43) |
-| Birim testi | **642 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de, Tur 52'de sunucuda tekrar, Tur 53'te haftanın kuralı ve günün koşusu, Tur 54'te hayalet eğri, Tur 55'te davetli ligler, Tur 56'da taşıma sözleşmeleri) |
+| Birim testi | **645 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de, Tur 52'de sunucuda tekrar, Tur 53'te haftanın kuralı ve günün koşusu, Tur 54'te hayalet eğri, Tur 55'te davetli ligler, Tur 56'da taşıma sözleşmeleri) |
 | Denge testi | **331 kontrol, hepsi geçiyor** (25 bölüm, süreleriyle; ~13 dk) |
 | Tarayıcı testi | **521 kontrol, hepsi geçiyor**, 0 konsol hatası (~40 dk); duman koşusu 132 (~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + paket bütçesi (Tur 46; Tur 48'den beri hizmet çalışanı ve manifest de) + duman oynanışı |

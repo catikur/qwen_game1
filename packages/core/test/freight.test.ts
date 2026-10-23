@@ -8,7 +8,7 @@ import { supplyRoutes } from '../src/routes';
 import { collectEventModifiers } from '../src/systems/events';
 import { boostMultiplier } from '../src/systems/cards';
 import { FREIGHT, fleetUsed, freightPenalty, freightProspects, runFreightTick } from '../src/systems/freight';
-import { FREIGHT_SHARE, distributionRelief, ownDepotRelief, resetDailyLedgers, runProductionTick } from '../src/systems/supply';
+import { FREIGHT_SHARE, distributionRelief, ownDepotRelief, resetDailyLedgers, runProductionTick, unitCogsFor } from '../src/systems/supply';
 import { runMarketTick } from '../src/systems/market';
 import { isPurchasable } from '../src/systems/city';
 import { playerStrategy } from './proxy';
@@ -162,6 +162,67 @@ describe('nakliye terminali ve taşıma sözleşmeleri (Tur 56)', () => {
     runFreightTick(state);
     assert.ok(Math.abs(deal.earned! - expected) < 1e-6);
     assert.ok(Math.abs(state.freight!.earnedTotal - expected) < 1e-6);
+  });
+
+  test('ücret müşterinin maliyetinde: maliyeti terminalin tam indirimiyle artı ücret (Codex #86)', () => {
+    const engine = fresh();
+    const state = engine.getState();
+    placeTerminal(state);
+    awaitOffer(state);
+    engine.dispatch({ type: 'ACCEPT_FREIGHT', offerId: state.freight!.offers[0]!.id });
+    const deal = state.freight!.contracts[0]!;
+    state.time.day += 1;
+    resetDailyLedgers(state);
+    runProductionTick(state);
+    runMarketTick(state);
+    const mods = collectEventModifiers(state);
+    const boost = boostMultiplier(state, deal.companyId, 'cogs');
+    // Ücret olmasaydı müşterinin ödeyeceği: terminalin %35'lik tam indirimiyle mal maliyeti.
+    let full = 0;
+    let cogs = 0;
+    for (const id of deal.outletIds) {
+      const outlet = state.buildings[id]!;
+      cogs += outlet.last.cogs;
+      for (const [goodId, units] of Object.entries(outlet.soldByGood ?? {})) {
+        full += units * unitCogsFor(state, deal.companyId, goodId, 0.35, mods.costMultiplier) * boost;
+      }
+    }
+    assert.ok(deal.lastFee! > 0);
+    assert.ok(Math.abs(cogs - (full + deal.lastFee!)) < 1e-6, `maliyet ${cogs} · tam indirimle ${full} + ücret ${deal.lastFee}`);
+  });
+
+  test('her mağazanın bugünkü ücreti kendi defterinde; toplamı sözleşmenin ücreti (Codex #86)', () => {
+    const engine = fresh();
+    const state = engine.getState();
+    placeTerminal(state);
+    awaitOffer(state);
+    engine.dispatch({ type: 'ACCEPT_FREIGHT', offerId: state.freight!.offers[0]!.id });
+    const deal = state.freight!.contracts[0]!;
+    marketDay(state);
+    const fees = deal.outletIds.map((id) => state.buildings[id]!.last.freight ?? 0);
+    assert.ok(
+      fees.every((fee) => fee > 0),
+      `mağaza ücretleri ${fees.join(', ')}`,
+    );
+    assert.ok(Math.abs(fees.reduce((sum, fee) => sum + fee, 0) - deal.lastFee!) < 1e-6);
+    assert.ok(new Set(fees.map((fee) => Math.round(fee))).size > 1, 'her mağaza aynı ücreti gösteriyor');
+  });
+
+  test('terminalin topladığı ücret sözleşme bitince de kalıyor (Codex #86)', () => {
+    const engine = fresh();
+    const state = engine.getState();
+    const terminal = placeTerminal(state);
+    awaitOffer(state);
+    engine.dispatch({ type: 'ACCEPT_FREIGHT', offerId: state.freight!.offers[0]!.id });
+    const deal = state.freight!.contracts[0]!;
+    for (let i = 0; i < 3; i++) marketDay(state);
+    const earned = deal.earned!;
+    assert.ok(earned > 0);
+    assert.ok(Math.abs((terminal.freightEarned ?? 0) - earned) < 1e-6, `terminal ${terminal.freightEarned} · sözleşme ${earned}`);
+    assert.ok(engine.dispatch({ type: 'CANCEL_FREIGHT', contractId: deal.id }).ok);
+    state.freight!.lastOfferDay = state.time.day + 1_000;
+    marketDay(state);
+    assert.ok(Math.abs((terminal.freightEarned ?? 0) - earned) < 1e-6, 'bitince toplanan sıfırlandı');
   });
 
   test('sözleşme rakibi ucuzlatıyor, oyuncuya para getiriyor (aynı gün, sözleşmeli ve sözleşmesiz)', () => {

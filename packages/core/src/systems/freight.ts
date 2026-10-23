@@ -306,6 +306,8 @@ export function runFreightTick(state: GameState): void {
       freight.earnedTotal += fee;
       const client = state.companies[deal.companyId];
       const terminal = state.buildings[deal.terminalId];
+      // Terminalin toplamı ayrı: sözleşme bitince panelden silinmesin (Codex #86).
+      if (terminal) terminal.freightEarned = (terminal.freightEarned ?? 0) + fee;
       const name = companyName(state, deal.companyId);
 
       if (!terminal || terminal.companyId !== state.playerCompanyId) {

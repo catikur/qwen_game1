@@ -118,6 +118,11 @@ export interface BuildingLedger {
   producedUnits: number;
   /** Üretim üniteleri: pazara satılan fazla üretim. */
   soldToMarket: number;
+  /**
+   * Taşıma sözleşmesindeki mağaza: bugün terminale ödediği ücret (Tur 56;
+   * mal maliyetinin içinde). Sözleşmesiz mağazada yok.
+   */
+  freight?: number;
 }
 
 export interface BuildingInstance {
@@ -160,6 +165,8 @@ export interface BuildingInstance {
    * ilk gün o günün kârıyla başlıyor.
    */
   profitTrend?: number;
+  /** Terminal (Tur 56): bütün sözleşmelerinden bugüne kadar topladığı ücret. */
+  freightEarned?: number;
 }
 
 export interface CompanyLedger {

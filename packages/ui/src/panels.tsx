@@ -711,8 +711,8 @@ function BuildingDetail({ buildingId }: { buildingId: string }): ReactElement | 
         const client = freightClient(state, building);
         if (!client) return null;
         return (
-          <p className="muted freight-client-note" data-freight-client={client.deal.id}>
-            {t('panels.building.freightClient', { owner: owner.name, fee: formatMoney(client.deal.lastFee ?? 0) })}
+          <p className="muted freight-client-note" data-freight-client={client.deal.id} data-freight-fee={Math.round(building.last.freight ?? 0)}>
+            {t('panels.building.freightClient', { owner: owner.name, fee: formatMoney(building.last.freight ?? 0) })}
           </p>
         );
       })()}

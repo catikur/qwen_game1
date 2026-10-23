@@ -6008,7 +6008,8 @@ async function finish(browser, consoleErrors) {
         const terminal = state.buildings[deal.terminalId];
         const legs = api.routeSignature().split('|');
         const reach = deal.outletIds.filter((id) => legs.includes(`player:${terminal.tileId}>${state.buildings[id].tileId}`)).length;
-        return { fee: deal.lastFee, revenue: terminal.last.revenue, reach, outlets: deal.outletIds.length, first: state.buildings[deal.outletIds[0]].tileId };
+        const firstOutlet = state.buildings[deal.outletIds[0]];
+        return { fee: deal.lastFee, revenue: terminal.last.revenue, reach, outlets: deal.outletIds.length, first: firstOutlet.tileId, firstFee: Math.round(firstOutlet.last.freight ?? 0), earned: Math.round(terminal.freightEarned ?? 0) };
       });
       check('Ücret terminalin defterine düşüyor', after.fee > 0 && Math.abs(after.revenue - after.fee) < 1e-6, `bugün ${Math.round(after.fee)} ₺`);
       check('Kamyonlar terminalden rakibin mağazalarına gidiyor', after.reach === after.outlets, `${after.reach}/${after.outlets} mağaza`);
@@ -6020,7 +6021,9 @@ async function finish(browser, consoleErrors) {
       // Rakip mağazasının paneli: dağıtımını senin terminalin yapıyor.
       await fp.evaluate((tile) => window.__capital.selectTile(tile), after.first);
       await fp.waitForTimeout(200);
-      check('Rakip mağazasının panelinde taşıma notu', (await fp.locator('[data-freight-client]').count()) === 1);
+      // Not o mağazanın kendi ücretini yazıyor, sözleşmenin toplamını değil (Codex #86).
+      const noteFee = Number(await fp.locator('[data-freight-client]').getAttribute('data-freight-fee').catch(() => NaN));
+      check('Rakip mağazasının panelinde taşıma notu, o mağazanın ücretiyle', noteFee === after.firstFee && noteFee > 0 && (after.outlets === 1 || noteFee < Math.round(after.fee)), `mağaza ${noteFee} ₺ · sözleşme ${Math.round(after.fee)} ₺`);
 
       // İki adımda bitir: ilk tık bedeli gösteriyor, ikincisi kesiyor.
       const terminalTile = site.id;
@@ -6035,6 +6038,8 @@ async function finish(browser, consoleErrors) {
       const ended = await fp.evaluate(() => ({ cash: window.__capital.getState().companies.player.cash, contracts: window.__capital.getState().freight.contracts.length }));
       check('Bitirmek iki adımda; cayma bedeli düğmede yazıyor ve kesiliyor', confirmText.includes('cayma bedeli') && ended.contracts === 0 && ended.cash < before, `${confirmText.trim()} · ${Math.round(before - ended.cash)} ₺`);
       check('Sözleşme kalmayınca masa menzili söylüyor', (await fp.locator('[data-freight-prospects]').count()) === 1);
+      const kept = Number(await fp.locator('[data-freight-earned]').getAttribute('data-freight-earned').catch(() => NaN));
+      check('Terminalin topladığı ücret sözleşme bitince de duruyor (Codex #86)', kept === after.earned && kept > 0, `${kept} ₺`);
     }
     check('Lojistik akışında konsol temiz', fErrors.length === 0, fErrors.slice(0, 2).join(' | '));
     await fContext.close();
