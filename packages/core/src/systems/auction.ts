@@ -389,7 +389,7 @@ export function auctionHint(state: GameState, companyId: string): string | null 
     if (def.role !== 'outlet' && def.role !== 'rental') continue;
     const company = state.companies[companyId];
     if (!company || company.netWorth < def.unlockNetWorth) continue;
-    const estimate = estimateInvestment(state, tile.districtId, def.id, companyId);
+    const estimate = estimateInvestment(state, tile.districtId, def.id, companyId, auction.tileId);
     if (!estimate?.direct) continue;
     if (estimate.dailyProfit > bestProfit) {
       bestProfit = estimate.dailyProfit;

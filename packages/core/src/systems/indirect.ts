@@ -233,7 +233,7 @@ function compute(
 ): IndirectEstimate | null {
   const def = BUILDING_BY_ID[defId]!;
   const company = state.companies[companyId]!;
-  const fixedCosts = estimateInvestment(state, districtId, defId, companyId)?.fixedCosts ?? 0;
+  const fixedCosts = estimateInvestment(state, districtId, defId, companyId, tileId)?.fixedCosts ?? 0;
   const cost = def.cost;
   const result = (gain: number, rampDays: number, extra: Partial<IndirectEstimate>): IndirectEstimate => {
     const dailyProfit = gain - fixedCosts;

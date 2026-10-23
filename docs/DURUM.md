@@ -6029,14 +6029,24 @@ holdingte tohum 7'de yarısını çeken şehir de kârın hepsini çekenle aynı
 günde (936) düşüyor. İddia "hepsini çekmek şehri korumuyor" olarak
 yazıldı: baskın daha derin ya da şehir en geç aynı gün düşüyor.
 
-**Testler.** `pnpm test` 667/667 (653'ten); tip denetimi temiz; denge sınavı 347/347.
-- Çekirdek (`energy.test.ts`, 12 yeni): fiyat (kriz, olay, durgunluk,
+**Codex incelemesi.** Yapı menüsünün tahmini parseli bilmiyordu: sahibinin
+santralinin menzilindeki parselde bina ertesi gün santralden alıp faturasız
+çalışırken tahmin bakımı şebeke fiyatıyla yazıyordu (köşe dükkânında günde
+213 ₺ yerine 186 ₺). Tahmine seçilen parsel giriyor; dağıtım, kurulacak bina
+aynı kimlikle eklenerek yeniden kuruluyor. Santralden alacaksa bakım
+santralin (sahibinin santrali faturasız, rakibinki tarifeyle), almayacaksa
+eskisi gibi. Rakibin bölge kararı parselsiz, değişmedi; "Enerji" bölümünün
+sayıları satır satır aynı.
+
+**Testler.** `pnpm test` 668/668 (653'ten); tip denetimi temiz; denge sınavı 347/347.
+- Çekirdek (`energy.test.ts`, 13 yeni): fiyat (kriz, olay, durgunluk,
   kapalı kriz); santralsizken bakım bit bit aynı ve enerji adımı hiçbir şeye
   dokunmuyor; krizde şebekedeki binanın bakımı; sahibinin binası önce,
   menzil ve güç; defter (kendi faturası yok, rakibin tarifesi, yakıt, şirket
   günü); krizde kendi santralinden alan bina korunuyor; güneş yakıtsız ve
   mevsimli; eski santral önce; sabitleme; gündem; yapı menüsünün tahmini
-  ertesi günün defteriyle kuruşuna aynı; kayıt.
+  ertesi günün defteriyle kuruşuna aynı; menzildeki santralden alacak
+  binanın tahmini de (Codex); kayıt.
 - Lig (`league.test.ts`, 2 yeni): santralin gücü, rakip tarifesi ya da kriz
   tablosu değişince iz değişiyor; santral kuran, yakıtı sabitleyen lig koşusu
   tekrarda aynı skoru veriyor.
@@ -6153,7 +6163,7 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi). Senaryo şehirlerinde gün 3–17 ms (`pnpm dayperf`, Tur 43) |
-| Birim testi | **667 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de, Tur 52'de sunucuda tekrar, Tur 53'te haftanın kuralı ve günün koşusu, Tur 54'te hayalet eğri, Tur 55'te davetli ligler, Tur 56'da taşıma sözleşmeleri, Tur 57'de enerji) |
+| Birim testi | **668 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de, Tur 52'de sunucuda tekrar, Tur 53'te haftanın kuralı ve günün koşusu, Tur 54'te hayalet eğri, Tur 55'te davetli ligler, Tur 56'da taşıma sözleşmeleri, Tur 57'de enerji) |
 | Denge testi | **347 kontrol, hepsi geçiyor** (28 bölüm, süreleriyle; ~16 dk) |
 | Tarayıcı testi | **521 kontrol, hepsi geçiyor**, 0 konsol hatası (~40 dk); duman koşusu 132 (~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + paket bütçesi (Tur 46; Tur 48'den beri hizmet çalışanı ve manifest de) + duman oynanışı |

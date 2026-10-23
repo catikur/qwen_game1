@@ -1172,8 +1172,9 @@ export type GameCommand =
   | { type: 'RENAME_COMPANY'; name: string }
   | { type: 'ACCEPT_CONTRACT' }
   | { type: 'DECLINE_CONTRACT' }
-  /** Masadaki taşıma teklifini kabul eder (Tur 56). */
+  /** Doğalgaz santrallerinin yakıtını sabitler (Tur 57). */
   | { type: 'LOCK_FUEL' }
+  /** Masadaki taşıma teklifini kabul eder (Tur 56). */
   | { type: 'ACCEPT_FREIGHT'; offerId: string }
   /** Masadaki taşıma teklifini reddeder. */
   | { type: 'DECLINE_FREIGHT'; offerId: string }

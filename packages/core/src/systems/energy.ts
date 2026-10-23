@@ -117,7 +117,8 @@ export function energyNeed(def: BuildingDef, upkeep: number): number {
 /**
  * Bir santralin menzilindeki adaylar, alma sırasıyla: sahibinin binaları
  * önce, sonra yakından uzağa, eşitse kimlik. `taken`deki binalar başka
- * santralden alıyor.
+ * santralden alıyor. `extra` henüz kurulmamış bir bina (yapı menüsünün
+ * tahmini): kurulsaydı aynı sırada yer alırdı.
  */
 function candidates(
   state: GameState,
@@ -127,9 +128,12 @@ function candidates(
   radius: number,
   taken: ReadonlyMap<string, unknown>,
   skip?: string,
+  extra?: BuildingInstance,
 ): Array<{ building: BuildingInstance; def: BuildingDef; distance: number; own: boolean }> {
   const list: Array<{ building: BuildingInstance; def: BuildingDef; distance: number; own: boolean }> = [];
-  for (const building of Object.values(state.buildings)) {
+  const buildings = Object.values(state.buildings);
+  if (extra) buildings.push(extra);
+  for (const building of buildings) {
     if (building.id === skip || taken.has(building.id)) continue;
     const def = BUILDING_BY_ID[building.defId];
     if (!def || energyShare(def) <= 0) continue;
@@ -144,9 +148,14 @@ function candidates(
 
 /**
  * Bugünkü dağıtım. `upkeepOf` binanın bakımı (enerji payı dahil, fiyat
- * hariç): ihtiyaç ondan. Santral yoksa null.
+ * hariç): ihtiyaç ondan. `extra` kurulsaydı dağıtıma girecek bina (yapı
+ * menüsünün tahmini). Santral yoksa null.
  */
-export function powerGrid(state: GameState, upkeepOf: (building: BuildingInstance) => number): PowerGrid | null {
+export function powerGrid(
+  state: GameState,
+  upkeepOf: (building: BuildingInstance) => number,
+  extra?: BuildingInstance,
+): PowerGrid | null {
   const plants = powerPlants(state);
   if (plants.length === 0) return null;
   const served = new Map<string, PowerSupply>();
@@ -158,7 +167,7 @@ export function powerGrid(state: GameState, upkeepOf: (building: BuildingInstanc
     capacity.set(plant.id, power);
     if (!tile) continue;
     let left = power;
-    for (const candidate of candidates(state, plant.companyId, tile.x, tile.y, def.radius, served)) {
+    for (const candidate of candidates(state, plant.companyId, tile.x, tile.y, def.radius, served, undefined, extra)) {
       const mwh = energyNeed(candidate.def, upkeepOf(candidate.building));
       if (mwh <= 0 || mwh > left) continue;
       left -= mwh;
@@ -185,6 +194,41 @@ export function servedUpkeep(
   if (supply.own) return { upkeep: upkeep - energy, bill: 0, saved: grid };
   const bill = grid * (1 - ENERGY.rivalDiscount);
   return { upkeep: upkeep - energy + bill, bill, saved: grid - bill };
+}
+
+/**
+ * Bu parsele kurulacak binanın yarınki bakımı, menzildeki bir santralden
+ * alacaksa (Codex #87): sahibinin santralinden faturasız, rakibinkinden
+ * tarifeyle. `raw` fiyattan önceki bakım, `upkeepOf` diğer binalarınki.
+ * Dağıtım varsayımsal binayla yeniden kuruluyor; bina kurulunca alacağı
+ * kimlikle, yani sırası da aynı. Santralden almayacaksa null: bakım şebeke
+ * fiyatıyla, çağıranın eski hesabı.
+ */
+export function prospectiveUpkeep(
+  state: GameState,
+  companyId: string,
+  def: BuildingDef,
+  tileId: number,
+  raw: number,
+  upkeepOf: (building: BuildingInstance) => number,
+): number | null {
+  const tile = state.map.tiles[tileId];
+  if (!tile || energyShare(def) <= 0) return null;
+  const prospect: BuildingInstance = {
+    id: `b${state.nextId}`,
+    defId: def.id,
+    tileId,
+    districtId: tile.districtId,
+    companyId,
+    priceMultiplier: 1,
+    autoPrice: true,
+    builtDay: state.time.day,
+    stocked: [],
+    focus: null,
+    last: { unitsSold: 0, capacityUsed: 0, revenue: 0, cogs: 0, upkeep: 0, wages: 0, profit: 0, share: 0, producedUnits: 0, soldToMarket: 0 },
+  };
+  const supply = powerGrid(state, (building) => (building === prospect ? raw : upkeepOf(building)), prospect)?.served.get(prospect.id);
+  return supply ? servedUpkeep(raw, def, energyPrice(state), supply).upkeep : null;
 }
 
 /**

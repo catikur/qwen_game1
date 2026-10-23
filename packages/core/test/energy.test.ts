@@ -8,6 +8,7 @@ import { agenda } from '../src/agenda';
 import { isPurchasable } from '../src/systems/city';
 import { energyPrice, energyShare, fuelLock, plantCapacity, runEnergyTick } from '../src/systems/energy';
 import { indirectEstimate } from '../src/systems/indirect';
+import { estimateInvestment } from '../src/systems/market';
 import { buildingUpkeep, resetDailyLedgers } from '../src/systems/supply';
 import { playerStrategy } from './proxy';
 import type { BuildingInstance, GameState } from '../src/types';
@@ -316,6 +317,40 @@ describe('enerji: şebeke fiyatı ve santraller (Tur 57)', () => {
     assert.ok(Math.abs(estimate.energy.saved - ledger.plant!.saved) < 1e-6);
     assert.equal(estimate.covered, ledger.plant!.buildings);
     assert.ok(Math.abs(estimate.dailyGain - (ledger.plant!.saved + ledger.revenue - ledger.cogs)) < 1e-6);
+  });
+
+  test('yapı menüsünün tahmini, menzildeki santralden alacak binanın bakımını sayıyor (Codex #87)', () => {
+    const state = fresh();
+    state.activeEvents = [];
+    state.era = undefined;
+    state.crisis = undefined;
+    const plant = placePlant(state);
+    const me = state.companies[state.playerCompanyId]!;
+    const at = state.map.tiles[plant.tileId]!;
+    const shop = 'corner_shop';
+    const spot = state.map.tiles.find(
+      (tile) =>
+        isPurchasable(tile) &&
+        !tile.structureId &&
+        !tile.buildingId &&
+        !tile.ownerId &&
+        Math.abs(tile.x - at.x) + Math.abs(tile.y - at.y) <= BUILDING_BY_ID[GAS]!.radius,
+    )!;
+    assert.ok(spot, 'menzilde boş parsel yok');
+    assert.ok(buyTile(state, me.id, spot.id).ok);
+    const grid = estimateInvestment(state, spot.districtId, shop, me.id)!;
+    const here = estimateInvestment(state, spot.districtId, shop, me.id, spot.id)!;
+    assert.ok(build(state, me.id, spot.id, shop).ok);
+    nextDay(state);
+    const ledger = state.buildings[spot.buildingId!]!.last;
+    assert.equal(ledger.power?.plantId, plant.id, 'dükkân santralden almıyor');
+    // Parselsiz tahmin şebekeden (rakibin bölge kararı); parselli tahmin ertesi günün defteri.
+    assert.ok(Math.abs(grid.fixedCosts - here.fixedCosts - ledger.power!.saved) < 1e-6);
+    assert.ok(
+      Math.abs(here.fixedCosts - (ledger.upkeep + ledger.wages)) < 1e-6,
+      `tahmin ${here.fixedCosts} ≠ defter ${ledger.upkeep + ledger.wages}`,
+    );
+    assert.ok(Math.abs(here.dailyProfit - grid.dailyProfit - ledger.power!.saved) < 1e-6);
   });
 
   test('kayıt: santral ve sabitleme kaydedilip açılıyor; enerji alanı olmayan eski kayıt da', () => {

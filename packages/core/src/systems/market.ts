@@ -25,8 +25,8 @@ import { activeFad } from './living';
 import { projectAttraction, projectUpkeep } from './projects';
 import { buildingStrikeFactor, serviceFactor, wageFor } from './labor';
 import { marketingLeverage } from './focus';
-import { SURPLUS_HAIRCUT, outletRelief, unitCogsFor } from './supply';
-import { energyPrice, gridUpkeep } from './energy';
+import { SURPLUS_HAIRCUT, buildingUpkeep, outletRelief, unitCogsFor } from './supply';
+import { energyPrice, gridUpkeep, prospectiveUpkeep } from './energy';
 import type { FreightClient } from './supply';
 import type { BuildingInstance, CompanyState, DistrictState, GameState } from '../types';
 import { scopedMemo, scopedOutlets, withBuildingIndex } from './buildingIndex';
@@ -250,6 +250,12 @@ export function estimateInvestment(
   districtId: number,
   defId: string,
   companyId: string,
+  /**
+   * Seçilen parsel (yapı menüsü): menzildeki bir santralden alacak binanın
+   * bakımı ertesi günün defteri gibi (Codex #87). Parselsiz tahmin (rakibin
+   * bölge kararı) şebeke fiyatıyla.
+   */
+  tileId?: number,
 ): InvestmentEstimate | null {
   const def = BUILDING_BY_ID[defId];
   const district = state.districts[districtId];
@@ -261,8 +267,24 @@ export function estimateInvestment(
   const wages =
     wageFor(state, companyId, defId, districtId) * overheadMultiplier(state, companyId) * boostMultiplier(state, companyId, 'wages');
   // Sponsorun belediye ayrıcalığı (Tur 37d): bölgedeki bakım indirimi yeni binaya da.
+  const served =
+    tileId === undefined
+      ? null
+      : prospectiveUpkeep(
+          state,
+          companyId,
+          def,
+          tileId,
+          def.upkeepPerDay *
+            getCeoModifiers(company.ceoId).upkeep *
+            overheadMultiplier(state, companyId) *
+            boostMultiplier(state, companyId, 'upkeep') *
+            projectUpkeep(state, companyId, districtId),
+          (building) => buildingUpkeep(state, building),
+        );
   const fixedCosts =
-    upkeepFor(state, companyId, defId) * boostMultiplier(state, companyId, 'upkeep') * projectUpkeep(state, companyId, districtId) + wages;
+    (served ?? upkeepFor(state, companyId, defId) * boostMultiplier(state, companyId, 'upkeep') * projectUpkeep(state, companyId, districtId)) +
+    wages;
   // Geri ödeme, oyuncunun gerçekten ödeyeceği maliyete göre hesaplanır.
   const investmentCost = def.cost * getCeoModifiers(company.ceoId).buildCost * constructionMultiplier(state);
 
