@@ -36,7 +36,7 @@ Bir bağlantıyla açılan, istenirse kurulan ve çevrimdışı da oynanan bir
 | Faz | Amaç | Turlar | Bitti sayılır | Durum |
 |---|---|---|---|---|
 | **1 · Ürün temeli** | Oyun bir ürün gibi davransın | 47–50 | Kuruluyor, çevrimdışı açılıyor, tek Ayarlar paneli var, müzik var | **bitti** (Tur 50) |
-| **2 · Çevrimiçi rekabet** | Herkes aynı şehirde | 51–55 | Pages'te paylaşılan tablo var, skor sunucuda doğrulanıyor | sürüyor (Tur 51) |
+| **2 · Çevrimiçi rekabet** | Herkes aynı şehirde | 51–55 | Pages'te paylaşılan tablo var, skor sunucuda doğrulanıyor | **bitti** (Tur 55) |
 | **3 · Yeni yollar** | Her koşu farklı bir şirket | 56–61 | Zafere en az üç farklı yol var, her birini kazanan bir vekil var | |
 | **4 · Şehrin hissi** | Oynaması keyifli | 62–65 | Mevsim ve hava görünüyor, önemli anlar hissediliyor | |
 | **5 · Platform ve topluluk** | Oyunun evi büyüsün | 66+ | Masaüstü sürümü ve paylaşılabilir senaryolar var | |
@@ -66,7 +66,7 @@ sırayla, her tur ayrı PR, rapor fazın sonunda.
 | **52 · Sunucuda doğrulama** | Gönderilen koşu sunucuda yeniden oynanıyor, skor orada hesaplanıyor. Simülasyon da sunucu da TypeScript. Bu, DURUM'daki en eski güvenlik açığını kapatır. | bitti (#81) |
 | **53 · Haftanın kuralı ve günlük kısa koşu** | Ligde ek kurallar her hafta dönüyor; bir de 90 günlük günlük koşu geliyor. | bitti (#82) |
 | **54 · Hayalet eğri** | Liderlerin değer eğrisi senin koşunun üstünde görünüyor ("lider 300. günde ne yapmıştı"). | bitti (#83) |
-| **55 · Davetli ligler ve arkadaş tablosu** | Lite'ta var, ana oyuna geliyor. | bu PR |
+| **55 · Davetli ligler ve arkadaş tablosu** | Lite'ta var, ana oyuna geliyor. | bitti (#84) |
 
 Kodu ve yerel sunucu testlerini Claude yapıyor. Canlı yayın kullanıcının
 hesabında; canlı veritabanına yazılmıyor. Tur 51'den beri canlı sunucu
@@ -78,7 +78,9 @@ Worker yeniden dağıtılıyor; o zamana kadar yeni koşular bekliyor. Tur 53
 yerel tabloyla açılıyor. Tur 54 sunucuya ve simülasyona dokunmuyor; Worker
 olduğu gibi kalıyor. Tur 55 şemayı değiştiriyor (iki yeni tablo): önce şema,
 sonra kod; oyun `"friends":1` görene kadar arkadaş liglerini göstermiyor.
-Faz 2'nin raporu `docs/DURUM.md`'de, Tur 55 bölümünün sonunda.
+Faz 2'nin raporu `docs/DURUM.md`'de, Tur 55 bölümünün sonunda. Canlıya
+geçiş 23 Ekim'de yapıldı: şema (D1 konsolunda `d1-console.sql`) ve Tur 55'in
+kodu.
 
 ### Faz 3 · Yeni yollar
 

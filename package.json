@@ -14,6 +14,7 @@
     "lite:balance": "node tools/run-node-script.mjs packages/lite-model/test/balance.ts",
     "lite:fixtures": "node tools/run-node-script.mjs packages/lite-model/test/write-fixtures.ts",
     "lite:league-bundle": "node tools/bundle-lite-league.mjs",
+    "lite:d1-sql": "node tools/run-node-script.mjs packages/lite-league/scripts/write-d1-console.ts",
     "bench": "node tools/run-node-script.mjs packages/core/test/benchmark.ts",
     "dayperf": "node tools/run-node-script.mjs packages/core/test/dayperf.ts",
     "constraint": "node tools/run-node-script.mjs packages/core/test/constraint.ts",

@@ -5750,6 +5750,17 @@ sunucunun doğruladığı koşular.
 **Canlıya geçiş.** Şema, sonra kod (`ios-lite/README.md`, "Tur 55"): D1
 konsolunda üç ifade, sonra paket. `/v1/health` `"friends":1` diyor.
 
+**Canlıda (23 Ekim).** Kullanıcı şemayı ve kodu canlıya aldı. `schema.sql`'i
+D1 konsoluna olduğu gibi yapıştırmak hata verdi: açıklamalardaki `;` ve
+kesme işareti konsolun ifadeleri ayırmasını bozuyor. Konsolun dosyası artık
+ayrı: `packages/lite-league/d1-console.sql`, aynı ifadeler açıklamasız, her
+biri tek satırda (`pnpm lite:d1-sql` üretiyor). Testi (`consoleSql.test.ts`,
+3 test) dosyanın şemayla eşit olduğunu, satır satır ve iki kez çalışınca
+şemanın aynısını kurduğunu, Lite'ın eski veritabanındaki veriye
+dokunmadığını denetliyor. Canlı veritabanı yalnız `SELECT` ile okundu: beş
+`seed_*` tablosu ve üç dizin şemayla birebir; Lite'ın tabloları ve verisi
+yerinde.
+
 **Faz 2'nin özeti (Tur 51–55).** Ana oyunun Tohum Ligi çevrimiçi oldu:
 - Tur 51: Lite'ın lig sunucusu ana oyunun koşularını da alıyor; GitHub
   Pages'teki oyunun tablosu herkese açık ve tek (#80).
@@ -5767,7 +5778,7 @@ ligler), simülasyon bir kez (Tur 53: haftanın kuralı ve günün koşusu). Can
 sunucu her adımda kullanıcının hesabında güncellendi; o güncellenene kadar
 oyun hep yerel tabloyla açıldı, bir şey bozulmadı. Tur 51–54'te Codex'in
 her bulgusu düzeltildi; her bulgunun testi düzeltmeden önce kaldı. Birim
-testi fazın başında 520'ydi (Tur 50), şimdi 621.
+testi fazın başında 520'ydi (Tur 50), şimdi 625.
 
 ---
 
@@ -5871,7 +5882,7 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi). Senaryo şehirlerinde gün 3–17 ms (`pnpm dayperf`, Tur 43) |
-| Birim testi | **622 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de, Tur 52'de sunucuda tekrar, Tur 53'te haftanın kuralı ve günün koşusu, Tur 54'te hayalet eğri, Tur 55'te davetli ligler) |
+| Birim testi | **625 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de, Tur 52'de sunucuda tekrar, Tur 53'te haftanın kuralı ve günün koşusu, Tur 54'te hayalet eğri, Tur 55'te davetli ligler) |
 | Denge testi | **331 kontrol, hepsi geçiyor** (25 bölüm, süreleriyle; ~13 dk) |
 | Tarayıcı testi | **521 kontrol, hepsi geçiyor**, 0 konsol hatası (~40 dk); duman koşusu 132 (~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + paket bütçesi (Tur 46; Tur 48'den beri hizmet çalışanı ve manifest de) + duman oynanışı |
