@@ -6740,6 +6740,8 @@ yeni; eski bölümlerin vekillerine dokunulmadı.
   - telefonda İngilizce, taşma yok;
   - 320 px'te İngilizce rakipler tablosu dört sütun, bina ve arsa adın
     altında, gizli kaydırıcı yok; geniş ekranda yedi sütun.
+- Tam tarayıcı koşusu 618/618, konsol temiz (~43 dk). Sağlık tablosundaki
+  sayı Tur 55'te (556) kalmıştı; Tur 56–61'in bölümleriyle 618.
 - Paket bütçesi tamam: ana parça 71,4 KB (70,3'ten).
 
 **Codex incelemesi.**
@@ -6893,7 +6895,7 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi). Senaryo şehirlerinde gün 3–17 ms (`pnpm dayperf`, Tur 43) |
 | Birim testi | **727 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de, Tur 52'de sunucuda tekrar, Tur 53'te haftanın kuralı ve günün koşusu, Tur 54'te hayalet eğri, Tur 55'te davetli ligler, Tur 56'da taşıma sözleşmeleri, Tur 57'de enerji, Tur 58'de gayrimenkul, Tur 59'da rakiplerin hafızası, Tur 60'ta senaryo paketi II, Tur 61'de şirketin yolu) |
 | Denge testi | **375 kontrol, hepsi geçiyor** (32 bölüm, süreleriyle; ~17 dk) |
-| Tarayıcı testi | **556 kontrol, hepsi geçiyor**, 0 konsol hatası (~40 dk); duman koşusu 132 (~5 dk, rehber dahil) |
+| Tarayıcı testi | **618 kontrol, hepsi geçiyor**, 0 konsol hatası (~43 dk); duman koşusu 132 (~8 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + paket bütçesi (Tur 46; Tur 48'den beri hizmet çalışanı ve manifest de) + duman oynanışı |
 | Kapsam | 40 bina · 25 ürün · 7 kategori · 8 rakip profili · 10 CEO · 22 olay (11 şehir + 11 sektör) · 3 kriz · 12 karar kartı · 70 rakip sözü · 4 mizaç · 48 ilişki sözü · 5 fırsat balonu · 8 görev türü · 4 mevsim · 9 moda ürünü · 17 şehir yapısı (6 siluet) · 6 şehir projesi · 10 senaryo · 4 ek kural · 5 yol · 29 rozet |
 
