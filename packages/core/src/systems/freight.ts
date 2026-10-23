@@ -102,6 +102,20 @@ export function freightFeeEstimate(outlet: BuildingInstance, terminalDefId: stri
   return fee;
 }
 
+/**
+ * Mağazaların günlük ücret tahmininin toplamı. Mağaza düşünce tahmin kalan
+ * mağazalardan yeniden: satışları farklı, sayıyla orantı cayma bedelini
+ * şaşırtıyordu (Codex #86).
+ */
+function estimateFor(state: GameState, outletIds: readonly string[], terminalDefId: string): number {
+  let total = 0;
+  for (const id of outletIds) {
+    const outlet = state.buildings[id];
+    if (outlet) total += freightFeeEstimate(outlet, terminalDefId);
+  }
+  return Math.round(total);
+}
+
 /** Bir mağaza bir sözleşmede ya da masadaki bir teklifte mi? */
 function heldOutlets(state: GameState): Set<string> {
   const held = new Set<string>();
@@ -248,11 +262,10 @@ export function acceptFreight(state: GameState, offerId: string): CommandResult 
   if (fleetUsed(state, terminal.id) + outlets.length > fleet) return { ok: false, reason: tc('core.freight.fleetFull') };
 
   freight.offers.splice(index, 1);
-  const scale = outlets.length / offer.outletIds.length;
   freight.contracts.push({
     ...offer,
     outletIds: outlets,
-    estimate: Math.round(offer.estimate * scale),
+    estimate: outlets.length === offer.outletIds.length ? offer.estimate : estimateFor(state, outlets, terminal.defId),
     acceptedDay: state.time.day,
     endDay: state.time.day + offer.durationDays,
     lastFee: 0,
@@ -341,7 +354,7 @@ export function runFreightTick(state: GameState): void {
         continue;
       }
       if (outlets.length < deal.outletIds.length) {
-        deal.estimate = Math.round((deal.estimate * outlets.length) / deal.outletIds.length);
+        deal.estimate = estimateFor(state, outlets, terminal.defId);
         deal.outletIds = outlets;
       }
       if (day >= (deal.endDay ?? day)) {

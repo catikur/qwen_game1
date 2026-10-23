@@ -7,7 +7,7 @@ import { build, buyTile, demolish, purchaseBlocker } from '../src/actions';
 import { supplyRoutes } from '../src/routes';
 import { collectEventModifiers } from '../src/systems/events';
 import { boostMultiplier } from '../src/systems/cards';
-import { FREIGHT, fleetUsed, freightPenalty, freightProspects, runFreightTick } from '../src/systems/freight';
+import { FREIGHT, fleetUsed, freightFeeEstimate, freightPenalty, freightProspects, runFreightTick } from '../src/systems/freight';
 import { FREIGHT_SHARE, distributionRelief, ownDepotRelief, resetDailyLedgers, runProductionTick, unitCogsFor } from '../src/systems/supply';
 import { runMarketTick } from '../src/systems/market';
 import { isPurchasable } from '../src/systems/city';
@@ -407,6 +407,32 @@ describe('nakliye terminali ve taşıma sözleşmeleri (Tur 56)', () => {
     runFreightTick(state);
     assert.equal(state.freight!.contracts.length, 0);
     assert.equal(state.companies[state.playerCompanyId]!.cash, cash, 'bedel kesilmedi');
+  });
+
+  test('mağaza düşünce tahmin kalan mağazaların ücretinden, sayıyla orantı değil: kabulde ve sözleşmede (Codex #86)', () => {
+    const engine = fresh();
+    const state = engine.getState();
+    const terminal = placeTerminal(state);
+    awaitOffer(state);
+    const offer = state.freight!.offers[0]!;
+    assert.ok(offer.outletIds.length >= 3, `${offer.outletIds.length} mağaza`);
+    const fee = (id: string) => freightFeeEstimate(state.buildings[id]!, terminal.defId);
+    const fees = offer.outletIds.map(fee);
+    assert.ok(Math.max(...fees) > Math.min(...fees) * 1.05, 'mağazaların ücreti birbirine eşit: sınav anlamsız');
+    // En çok satan mağaza teklif masadayken el değiştiriyor.
+    const top = (ids: string[]) => ids.reduce((best, id) => (fee(id) > fee(best) ? id : best));
+    state.buildings[top(offer.outletIds)]!.companyId = state.playerCompanyId;
+    assert.ok(engine.dispatch({ type: 'ACCEPT_FREIGHT', offerId: offer.id }).ok);
+    const deal = state.freight!.contracts[0]!;
+    const sum = (ids: string[]) => Math.round(ids.reduce((total, id) => total + fee(id), 0));
+    assert.equal(deal.estimate, sum(deal.outletIds), 'kabulde tahmin kalanların ücreti değil');
+    assert.equal(freightPenalty(deal), Math.round(sum(deal.outletIds) * FREIGHT.cancelPenaltyDays));
+    // Sözleşmedeyken de: en çok satan kalan mağaza çıkıyor.
+    state.buildings[top(deal.outletIds)]!.companyId = state.playerCompanyId;
+    state.time.day += 1;
+    runFreightTick(state);
+    const after = state.freight!.contracts[0]!;
+    assert.equal(after.estimate, sum(after.outletIds), 'sözleşmede tahmin kalanların ücreti değil');
   });
 
   test('süre dolunca sözleşme bitiyor, ücret toplamı haberde', () => {
