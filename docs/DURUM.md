@@ -4,7 +4,7 @@
 > `pnpm bench` çıktısından; iddialar `pnpm balance` ve `pnpm playtest`
 > tarafından her koşuda doğrulanıyor.
 >
-> Son güncelleme: şema **v6**, 56 tur (Tur 33 denendi ve geri alındı; Tur 34 eski görünüme canlılık ekledi; Tur 35 arayüzü Lite'ın "Cam & Bulut" diline taşıdı; Tur 36 şehre ayrıntı kattı; Tur 37a geç oyuna yönetim yükü, servet vergisi ve kriz dönemleri getirdi; Tur 37b karar kartlarını ve rakip hikâyelerini ekledi; Tur 37c fırsat balonlarını ve aylık görev panosunu getirdi; Tur 37d canlı pazarı, şehir projesi ihalesini ve rakip konsorsiyumunu getirdi; Tur 38 değerlendirme turuydu: geç oyun hızı, gündem ve haber akışı, zorluk eğrisi; Tur 39a senaryo modunu getirdi: Kurtarma ve Krizin ortasında; Tur 39b Konsorsiyuma karşı, Zincir ustası ve Şehrin sponsoru senaryolarını ekledi; Tur 39c Büyük şehir fethi ve Holding: iki şehir ile listeyi yediye tamamladı; Tur 40 cila ve performans; Tur 41 başarımlar ve kariyer; Tur 42 açılışta gölgelendirici derlemesi; Tur 43 oyun içi akıcılık; Tur 44 değerlendirme turuydu: Türkçe sayı biçimi, yardımın kapsamı, haber akışı; Tur 45 dört ek kural getirdi: Fırtınalı yıllar, Aç gözlü rakipler, Sıkı banka, Kıt arsa; Tur 46 açılış paketini böldü: kurulum ekranı telefonda yarı sürede; Tur 47 tek Ayarlar paneli ve erişilebilirlik getirdi: metin boyutu, renk körlüğüne uygun palet, hareket, ses düzeyleri, pencerelerde klavye; Tur 48 oyunu kurulabilir ve çevrimdışı açılır yaptı, yayından sonra "yeni sürüm hazır" diyor; Tur 49 müziği getirdi: gündüz, gece ve kriz, şehirle birlikte dönüyor; Tur 50 Faz 1'i değerlendirdi ve tanıtım paketini hazırladı; Tur 51 Faz 2'yi açtı: Lite'ın lig sunucusu ana oyunun Tohum Ligi koşularını da alıyor, tablo herkese açık; Tur 52'de sunucu her koşuyu gönderimde yeniden oynatıyor, tabloya yalnız doğrulanmış skor giriyor; Tur 53 ligin her haftasına bir ek kural ve 90 günlük günün koşusunu getirdi; Tur 54 liderlerin eğrisini senin koşunun üstüne koydu ve liderin o günlerde ne yaptığını koşu kodundan anlatıyor; Tur 55 davet kodlu arkadaş liglerini getirdi ve Faz 2'yi kapattı; Tur 56 Faz 3'ü açtı: nakliye terminali rakip mağazalarına taşıma sözleşmesiyle taşıyor). Önümüzdeki işin sırası `docs/YOL-HARITASI.md`'de.
+> Son güncelleme: şema **v6**, 57 tur (Tur 33 denendi ve geri alındı; Tur 34 eski görünüme canlılık ekledi; Tur 35 arayüzü Lite'ın "Cam & Bulut" diline taşıdı; Tur 36 şehre ayrıntı kattı; Tur 37a geç oyuna yönetim yükü, servet vergisi ve kriz dönemleri getirdi; Tur 37b karar kartlarını ve rakip hikâyelerini ekledi; Tur 37c fırsat balonlarını ve aylık görev panosunu getirdi; Tur 37d canlı pazarı, şehir projesi ihalesini ve rakip konsorsiyumunu getirdi; Tur 38 değerlendirme turuydu: geç oyun hızı, gündem ve haber akışı, zorluk eğrisi; Tur 39a senaryo modunu getirdi: Kurtarma ve Krizin ortasında; Tur 39b Konsorsiyuma karşı, Zincir ustası ve Şehrin sponsoru senaryolarını ekledi; Tur 39c Büyük şehir fethi ve Holding: iki şehir ile listeyi yediye tamamladı; Tur 40 cila ve performans; Tur 41 başarımlar ve kariyer; Tur 42 açılışta gölgelendirici derlemesi; Tur 43 oyun içi akıcılık; Tur 44 değerlendirme turuydu: Türkçe sayı biçimi, yardımın kapsamı, haber akışı; Tur 45 dört ek kural getirdi: Fırtınalı yıllar, Aç gözlü rakipler, Sıkı banka, Kıt arsa; Tur 46 açılış paketini böldü: kurulum ekranı telefonda yarı sürede; Tur 47 tek Ayarlar paneli ve erişilebilirlik getirdi: metin boyutu, renk körlüğüne uygun palet, hareket, ses düzeyleri, pencerelerde klavye; Tur 48 oyunu kurulabilir ve çevrimdışı açılır yaptı, yayından sonra "yeni sürüm hazır" diyor; Tur 49 müziği getirdi: gündüz, gece ve kriz, şehirle birlikte dönüyor; Tur 50 Faz 1'i değerlendirdi ve tanıtım paketini hazırladı; Tur 51 Faz 2'yi açtı: Lite'ın lig sunucusu ana oyunun Tohum Ligi koşularını da alıyor, tablo herkese açık; Tur 52'de sunucu her koşuyu gönderimde yeniden oynatıyor, tabloya yalnız doğrulanmış skor giriyor; Tur 53 ligin her haftasına bir ek kural ve 90 günlük günün koşusunu getirdi; Tur 54 liderlerin eğrisini senin koşunun üstüne koydu ve liderin o günlerde ne yaptığını koşu kodundan anlatıyor; Tur 55 davet kodlu arkadaş liglerini getirdi ve Faz 2'yi kapattı; Tur 56 Faz 3'ü açtı: nakliye terminali rakip mağazalarına taşıma sözleşmesiyle taşıyor; Tur 57 enerjiyi getirdi: şebeke fiyatı, santraller, enerji krizi). Önümüzdeki işin sırası `docs/YOL-HARITASI.md`'de.
 
 ---
 
@@ -5921,6 +5921,146 @@ yeniden dağıtılıyor (`pnpm lite:league-bundle`, yapıştır, Deploy). O zama
 kadar yeni koşular "sunucu bu sürümü henüz tanımıyor" diye bekliyor; Lite
 etkilenmiyor.
 
+### Tur 57 — Enerji: santraller, şebeke fiyatı ve enerji krizi
+
+Faz 3'ün ikinci turu. Enerji şimdiye kadar yalnız iki yerde vardı: "Enerji
+Sıkışması" olayı satış maliyetini %10 artırıyordu, "Sabit fiyatlı enerji"
+kartı bakımı oynatıyordu. Fiyatın kendisi, onu üreten bina ve ona bağlı bir
+kriz yoktu.
+
+**Şebeke fiyatı (`content/src/energy.ts`, `core/src/systems/energy.ts`).**
+- Her binanın bakımının bir payı enerji faturası: işleme %40, hammadde
+  %35, mağaza %30, diğerleri %25 (santralde sıfır).
+- Fiyat bir endeks: normalde 1, krizler ve olaylar çarpıyor. Yeni "Enerji
+  krizi" ×2, Enerji Sıkışması olayı ×1,3 (satış maliyetine %10'u da
+  duruyor), Durgunluk ×0,85.
+- Fiyat 1'ken ve santral yokken bakım eskisiyle bit bit aynı (test).
+  Değişen yalnız fiyatın oynadığı günler.
+- Yapı menüsünün ve rakiplerin yatırım tahmini bakımı bugünkü fiyatla
+  hesaplıyor.
+
+**Enerji krizi (`content/src/economy.ts`).** Üçüncü kriz: bir ay önceden
+uyarı ("Doğalgaz arzında tıkanma bekleniyor"), 90–130 gün, fiyat ×2, talep
+×0,97. Kriz takvimi aynı (ilk uyarı 320–440. gün, sonra 300–480 günde bir),
+seçim artık üç kriz arasında; 60 tohumda ilk kriz: enerji 21, durgunluk 19, faiz 20.
+
+**Santraller (`content/src/buildings.ts`).** Yeni rol: `energy`. Bina tanımına
+üç alan: `power` (MWh/gün), `fuel` (yakıtın şebeke fiyatına oranı), `solar`.
+Sanayi ve limana kuruluyor.
+- *Doğalgaz Santrali:* 90 B ₺, günde 250 ₺ gider ve 6 kişi, 45 MWh, menzil
+  12, yakıtı şebeke fiyatının %45'i. 2,5 M ₺ değerde açılıyor.
+- *Güneş Tarlası:* 160 B ₺, günde 100 ₺ ve 2 kişi, 20 MWh, menzil 10,
+  yakıtsız. Üretimi mevsimle: kış ×0,6, yaz ×1,35. 4 M ₺ değerde açılıyor.
+
+**Dağıtım.** Gün başında her santral menzilindeki binaları sırayla alıyor:
+önce sahibinin binaları, sonra rakiplerinki, yakından uzağa, gücü
+yettiğince. Eski santral önce seçiyor, bir bina tek santralden alıyor. Zar
+yok: dağıtım binalardan ve fiyattan gün gün yeniden kuruluyor; kayıtta
+durum yok.
+- *Sahibinin binası* faturayı ödemiyor: bakımı enerji payı kadar düşük.
+  Santral yakıtını ödüyor. Kazanç binanın defterinde, depodaki gibi.
+- *Rakibin binası* şebeke fiyatının %5 altından santrale ödüyor: rakibin
+  bakımında, santralin ve oyuncunun cirosunda. Para el değiştiriyor.
+- Santralin defterinde rakiplere satış (ciro) ve yakıt (mal maliyeti);
+  kurulduğundan beri satış, kazanç ve yakıt toplamı da (`energyTotals`).
+
+**Yakıt sabitleme (`LOCK_FUEL`).** Doğalgaz santrali olan oyuncu yakıtı 120
+gün bugünkü fiyatın %8 fazlasına sabitleyebiliyor. Krizin uyarısında
+sabitleyen şoku santralin kârına çeviriyor; fiyat düşerse (durgunluk)
+fazladan ödüyor. Süre bitince haber.
+
+**Lig.** `LOCK_FUEL` koşu günlüğünde; hayalet kartında "Yakıtı sabitledi".
+Parmak izinde bir enerji yoklaması: kopyada menziline en çok bina giren
+izinli parsele doğalgaz santrali, bir gün defter; sonra yakıt sabitlenip
+enerji krizi başlıyor, bir gün daha. Ayarların arasında kriz tablosu da
+var: krizlerin seçimi şimdiye kadar izde değildi.
+
+**Arayüz.**
+- Santralin panelinde "Enerji" masası: güç (31/45 MWh), şebeke fiyatı,
+  MWh başına yakıt; kendi binalarına verdiği ve kazancı, rakiplere satış;
+  kurulduğundan beri toplam; yakıtı sabitleme düğmesi ya da kalan süre.
+- Defter rakiplere satışı, yakıtı, gideri ve kârı yazıyor.
+- Santralden alan bina: kendi binasında "enerjisini … veriyor: faturası
+  yok, bugün … kazanç", rakip binasında "… senin santralinden alıyor".
+- Gündemde "Yakıt" çipi: enerji krizi uyarısında, doğalgaz santrali olan ve
+  sabitlemeyen oyuncuya; çip santrale götürüyor.
+- Yapı menüsü santral için menzildeki kendi ve rakip binalarını, bugünkü
+  fiyatla kazanç, satış ve yakıtı yazıyor; sanayi ve liman dışında
+  "yalnız sanayi bölgesine ve limana kurulur".
+- Şehirde doğalgaz santrali iki soğutma kulesiyle, çalışırken bacası
+  tütüyor; güneş tarlası sıra sıra panel. İki dilde.
+
+**Denge (`pnpm balance enerji`).** Enerjici vekil (`test/proxy.ts`,
+`energyStrategy`): enerji krizi uyarısında yakıtı sabitliyor; en çok dört
+santral, yeterli değer ve maliyetin üç katı nakit varsa yapı menüsünün
+tahminiyle geri ödemesi en kısa parsel (güneşte yıllık ortalama), 300
+günün altındaysa. Temel vekille aynı şehirlerde, 360 gün:
+
+| Tohum | Temel | Enerjici | Santral | Satış | Kazanç | Yakıt | Bedel |
+|---|---|---|---|---|---|---|---|
+| 1 | 35,4 M ₺ | 36,0 M ₺ (+%2) | 3 | 1,5 M ₺ | 1,1 M ₺ | 1,2 M ₺ | 0,3 M ₺ |
+| 7 | 31,9 M ₺ | 34,8 M ₺ (+%9) | 4 (2 güneş) | 1,2 M ₺ | 1,3 M ₺ | 0,9 M ₺ | 0,5 M ₺ |
+| 42 | 41,4 M ₺ | 41,8 M ₺ (+%1) | 3 | 1,6 M ₺ | 1,2 M ₺ | 1,3 M ₺ | 0,3 M ₺ |
+
+- Santraller bedellerinin 3,3–5,5 katını getiriyor (satış + kazanç −
+  yakıt).
+- Sakin yılda tuzak değil, baskın da değil: ortalama +%4. Enerji ölçek
+  olarak küçük bir pazar (360. günde şehrin bütün ihtiyacı günde ~370
+  MWh); değeri sigortada.
+- *Sigorta:* aynı şehrin 300. günü kopyalanıyor, kopyalarda 90 günlük
+  enerji krizi var ya da yok (büyürken kriz takvimi kapalı):
+
+| Tohum | Santralsiz | Santralle | Yakıtı sabit |
+|---|---|---|---|
+| 1 | −1,50 M ₺ (kârın %7'si) | −0,58 M ₺ | −0,08 M ₺ |
+| 7 | −1,49 M ₺ (%10) | −1,10 M ₺ | −0,77 M ₺ |
+| 42 | −1,89 M ₺ (%10) | −0,48 M ₺ | +0,07 M ₺ |
+
+- İlk ayarla (doğalgaz 170 B ₺, 12 kişi, 30 MWh; güneş 300 B ₺, 12 MWh)
+  santral sakin günde kendini ancak 300 günde ödüyordu ve vekil 360 günde
+  temelin %91–100'ündeydi. Bedel ve gider düşüp güç artınca kalibrasyondaki
+  vekil yine kaotik (±%10) ama santraller bedellerinin birkaç katını
+  getiriyor.
+
+**Eski denge bölümleri.** Tur 56'nın aksine sayılar aynı kalmıyor: üçüncü
+kriz kriz sırasını değiştiriyor, enerji sıkışması ve durgunluk bakımı
+oynatıyor. Bölüm bölüm karşılaştırma PR'da. Bir kontrol eşitlikte kaldı:
+holdingte tohum 7'de yarısını çeken şehir de kârın hepsini çekenle aynı
+günde (936) düşüyor. İddia "hepsini çekmek şehri korumuyor" olarak
+yazıldı: baskın daha derin ya da şehir en geç aynı gün düşüyor.
+
+**Codex incelemesi.** Yapı menüsünün tahmini parseli bilmiyordu: sahibinin
+santralinin menzilindeki parselde bina ertesi gün santralden alıp faturasız
+çalışırken tahmin bakımı şebeke fiyatıyla yazıyordu (köşe dükkânında günde
+213 ₺ yerine 186 ₺). Tahmine seçilen parsel giriyor; dağıtım, kurulacak bina
+aynı kimlikle eklenerek yeniden kuruluyor. Santralden alacaksa bakım
+santralin (sahibinin santrali faturasız, rakibinki tarifeyle), almayacaksa
+eskisi gibi. Rakibin bölge kararı parselsiz, değişmedi; "Enerji" bölümünün
+sayıları satır satır aynı.
+
+**Testler.** `pnpm test` 668/668 (653'ten); tip denetimi temiz; denge sınavı 347/347.
+- Çekirdek (`energy.test.ts`, 13 yeni): fiyat (kriz, olay, durgunluk,
+  kapalı kriz); santralsizken bakım bit bit aynı ve enerji adımı hiçbir şeye
+  dokunmuyor; krizde şebekedeki binanın bakımı; sahibinin binası önce,
+  menzil ve güç; defter (kendi faturası yok, rakibin tarifesi, yakıt, şirket
+  günü); krizde kendi santralinden alan bina korunuyor; güneş yakıtsız ve
+  mevsimli; eski santral önce; sabitleme; gündem; yapı menüsünün tahmini
+  ertesi günün defteriyle kuruşuna aynı; menzildeki santralden alacak
+  binanın tahmini de (Codex); kayıt.
+- Lig (`league.test.ts`, 2 yeni): santralin gücü, rakip tarifesi ya da kriz
+  tablosu değişince iz değişiyor; santral kuran, yakıtı sabitleyen lig koşusu
+  tekrarda aynı skoru veriyor.
+- Senaryo testi (`scenario.test.ts`): öndelik skoru Tur 46'dan beri aşağı
+  yuvarlanıyor ama test yakına yuvarlıyordu; eski sayıda ikisi tesadüfen
+  aynı çıkıyordu. Test skorun kuralına bağlandı.
+- Tarayıcı testi "Enerji" 14/14, konsol temiz: parsel, yapı menüsünün
+  tahmini, santral, güç ve defter, kendi binasının ve rakip binasının notu,
+  gündemdeki yakıt çipi, çipten panele, sabitleme, krizde fiyat ×2 ve sabit
+  yakıt, rakiplere satış.
+
+**Canlıya geçiş.** Şema aynı, simülasyon değişti: birleşmeden sonra Worker
+yeniden dağıtılıyor. Lite etkilenmiyor.
+
 ---
 
 ## 3. Ölçülen durum
@@ -6023,11 +6163,11 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi). Senaryo şehirlerinde gün 3–17 ms (`pnpm dayperf`, Tur 43) |
-| Birim testi | **653 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de, Tur 52'de sunucuda tekrar, Tur 53'te haftanın kuralı ve günün koşusu, Tur 54'te hayalet eğri, Tur 55'te davetli ligler, Tur 56'da taşıma sözleşmeleri) |
-| Denge testi | **331 kontrol, hepsi geçiyor** (25 bölüm, süreleriyle; ~13 dk) |
+| Birim testi | **668 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de, Tur 52'de sunucuda tekrar, Tur 53'te haftanın kuralı ve günün koşusu, Tur 54'te hayalet eğri, Tur 55'te davetli ligler, Tur 56'da taşıma sözleşmeleri, Tur 57'de enerji) |
+| Denge testi | **347 kontrol, hepsi geçiyor** (28 bölüm, süreleriyle; ~16 dk) |
 | Tarayıcı testi | **521 kontrol, hepsi geçiyor**, 0 konsol hatası (~40 dk); duman koşusu 132 (~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + paket bütçesi (Tur 46; Tur 48'den beri hizmet çalışanı ve manifest de) + duman oynanışı |
-| Kapsam | 35 bina · 25 ürün · 7 kategori · 8 rakip profili · 10 CEO · 22 olay (11 şehir + 11 sektör) · 2 kriz · 12 karar kartı · 70 rakip sözü · 5 fırsat balonu · 8 görev türü · 4 mevsim · 9 moda ürünü · 17 şehir yapısı (6 siluet) · 6 şehir projesi · 7 senaryo · 4 ek kural · 28 rozet |
+| Kapsam | 38 bina · 25 ürün · 7 kategori · 8 rakip profili · 10 CEO · 22 olay (11 şehir + 11 sektör) · 3 kriz · 12 karar kartı · 70 rakip sözü · 5 fırsat balonu · 8 görev türü · 4 mevsim · 9 moda ürünü · 17 şehir yapısı (6 siluet) · 6 şehir projesi · 7 senaryo · 4 ek kural · 28 rozet |
 
 ### Render (Tur 6 sonrası)
 

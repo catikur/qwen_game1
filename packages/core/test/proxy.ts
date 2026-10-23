@@ -12,7 +12,7 @@
  * iki ölçüm aynı soruya farklı cevap verdi. Artık vekil bir tane; deney
  * yalnızca seçeneklerle (tavan, günlük) ayrışıyor.
  */
-import { BUILDINGS, BUILDING_BY_ID, NPC_PROFILES } from '@capital/content';
+import { BUILDINGS, BUILDING_BY_ID, CRISIS_BY_ID, ENERGY, NPC_PROFILES } from '@capital/content';
 import {
   GameEngine,
   buildOptions,
@@ -23,6 +23,11 @@ import {
   fleetUsed,
   freeFloat,
   freightTerminals,
+  fuelLock,
+  hasFuelPlant,
+  indirectEstimate,
+  plantCapacity,
+  powerPlants,
   getPlayer,
   isDistrictOpen,
   sharePrice,
@@ -286,4 +291,48 @@ export function freightStrategy(engine: GameEngine, maxTerminals = 3): void {
   if (!best || best.count < 6) return;
   if (!engine.dispatch({ type: 'BUY_TILE', tileId: best.tileId }).ok) return;
   engine.dispatch({ type: 'BUILD', tileId: best.tileId, defId: def.id });
+}
+
+/**
+ * Enerjici vekil (Tur 57).
+ *
+ *  - Yakıt: uyarısı gelen kriz enerji fiyatını artırıyorsa ve doğalgaz
+ *    santrali varsa yakıtı sabitliyor (gündemdeki çipin yaptığı).
+ *  - Santral: en çok `maxPlants`; yeterli değer ve maliyetin üç katı nakit.
+ *    İzinli her boş parsel için iki santralin yapı menüsü tahmini (bugünkü
+ *    fiyatla); parselle birlikte geri ödemesi en kısa olan, `maxPayback`
+ *    günün altındaysa. Krizi beklemiyor: santral krize karşı sigorta ama
+ *    sakin günlerde de kendini ödemeli.
+ */
+export function energyStrategy(engine: GameEngine, maxPlants = 4, maxPayback = 300): void {
+  const state = engine.getState();
+  const player = getPlayer(state);
+  const coming = state.crisis?.phase === 'warning' ? CRISIS_BY_ID[state.crisis.defId] : undefined;
+  if (coming && (coming.effects.energyPrice ?? 1) > 1 && hasFuelPlant(state, player.id) && !fuelLock(state, player.id)) {
+    engine.dispatch({ type: 'LOCK_FUEL' });
+  }
+
+  if (powerPlants(state).filter((plant) => plant.companyId === player.id).length >= maxPlants) return;
+  let best: { tileId: number; defId: string; payback: number } | null = null;
+  const seasons = Object.values(ENERGY.solarSeason);
+  const yearly = seasons.reduce((sum, factor) => sum + factor, 0) / seasons.length;
+  for (const def of BUILDINGS) {
+    if (def.role !== 'energy' || player.netWorth < def.unlockNetWorth || player.cash < def.cost * 3) continue;
+    // Güneşin tahmini bugünkü mevsimle; vekil yıllık ortalamayla karar veriyor.
+    const season = def.solar ? yearly / (plantCapacity(state, def) / (def.power ?? 1)) : 1;
+    for (const tile of state.map.tiles) {
+      if (tile.kind !== 'plot' || tile.ownerId || tile.buildingId || tile.structureId || !isDistrictOpen(state, tile.districtId)) continue;
+      const archetype = state.districts[tile.districtId]?.archetype;
+      if (def.zones && (!archetype || !def.zones.includes(archetype))) continue;
+      const estimate = indirectEstimate(state, player.id, def.id, tile.districtId, tile.id);
+      if (!estimate) continue;
+      const profit = estimate.dailyGain * season - (estimate.dailyGain - estimate.dailyProfit);
+      if (profit <= 0) continue;
+      const payback = (def.cost + tilePrice(state, tile.id)) / profit;
+      if (!best || payback < best.payback) best = { tileId: tile.id, defId: def.id, payback };
+    }
+  }
+  if (!best || best.payback > maxPayback) return;
+  if (!engine.dispatch({ type: 'BUY_TILE', tileId: best.tileId }).ok) return;
+  engine.dispatch({ type: 'BUILD', tileId: best.tileId, defId: best.defId });
 }

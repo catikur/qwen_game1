@@ -73,6 +73,12 @@ export const world = {
   'core.contracts.thousands': '{value} B ₺',
 
   // freight.ts — taşıma sözleşmeleri (Tur 56)
+  'core.energy.noFuelPlant': 'Yakıtı sabitlemek için önce bir doğalgaz santrali kur.',
+  'core.energy.alreadyLocked': 'Yakıt zaten sabit; süre bitince yeniden sabitleyebilirsin.',
+  'core.energy.lockedTitle': 'Yakıt fiyatı sabitlendi',
+  'core.energy.lockedBody': 'Doğalgaz santrallerinin yakıtı {days} gün MWh başına {price}. Şebeke fiyatı ne olursa olsun.',
+  'core.energy.unlockedTitle': 'Yakıt sabitlemesi bitti',
+  'core.energy.unlockedBody': 'Doğalgaz santrallerin yakıtı yeniden piyasa fiyatıyla alıyor.',
   'core.freight.noOffer': 'Bu taşıma teklifi artık masada değil.',
   'core.freight.noTerminal': 'Teklifin terminali yok.',
   'core.freight.stale': 'Teklifteki mağazaların hiçbirine artık taşınamıyor.',
@@ -90,6 +96,8 @@ export const world = {
 
   // indirect.ts — dolaylı bina tahmininde etkinin neden sıfır olduğu
   'core.indirect.noUncovered': 'Menzilde deposuz mağazan yok.',
+  'core.indirect.zonedPlant': 'Santral yalnız sanayi bölgesine ve limana kurulur.',
+  'core.indirect.noPowerCustomers': 'Menzilde enerji alacak bina yok.',
   'core.indirect.noOutlets': 'Henüz mağazan yok.',
   'core.indirect.noFocus': 'Çalışacağı kategori yok.',
   'core.indirect.noSales': 'Henüz mağazan yok — çalışacağı satış yok.',

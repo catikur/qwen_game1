@@ -66,6 +66,8 @@ export interface CrisisDef {
     landValueDrift?: number;
     /** İnşaat maliyetine çarpan. */
     buildCost?: number;
+    /** Şebeke enerji fiyatına çarpan (Tur 57). */
+    energyPrice?: number;
   };
 }
 
@@ -81,7 +83,7 @@ export const CRISES: CrisisDef[] = [
     endBody: 'Talep toparlanıyor, inşaat maliyetleri eski düzeyine döndü.',
     weight: 1,
     durationDays: [100, 150],
-    effects: { demand: 0.84, landValueDrift: -0.0022, buildCost: 0.85 },
+    effects: { demand: 0.84, landValueDrift: -0.0022, buildCost: 0.85, energyPrice: 0.85 },
   },
   {
     id: 'rate_shock',
@@ -95,6 +97,21 @@ export const CRISES: CrisisDef[] = [
     weight: 1,
     durationDays: [110, 160],
     effects: { rateDelta: 0.06, demand: 0.95, landValueDrift: -0.0012 },
+  },
+  // Tur 57: şebeke fiyatı iki katına çıkıyor. Bir ay önceden haber veriyor:
+  // santral kuran ya da yakıtını sabitleyen şoku kâra çeviriyor.
+  {
+    id: 'energy_shock',
+    title: 'Enerji krizi',
+    warningTitle: 'Doğalgaz arzında tıkanma bekleniyor',
+    warningBody:
+      'Bir ay içinde enerji fiyatı sert yükselebilir. Santrali olan, yakıtını şimdi sabitlerse şoku kâra çevirir; şebekeye bağlı olanın faturası kabaracak.',
+    body: 'Şebeke fiyatı iki katına çıktı: her binanın enerji faturası kabardı. Kendi santrali olan ve yakıtını sabitleyen korunuyor. Talep hafifçe geriledi.',
+    endTitle: 'Enerji fiyatı normale döndü',
+    endBody: 'Doğalgaz arzı toparlandı, şebeke fiyatı eski düzeyinde.',
+    weight: 1,
+    durationDays: [90, 130],
+    effects: { energyPrice: 2, demand: 0.97 },
   },
 ];
 

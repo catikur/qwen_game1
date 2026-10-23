@@ -895,6 +895,22 @@ export function ActiveEvents(): ReactElement | null {
           </button>
         );
         break;
+      case 'fuelLock':
+        // Enerji krizi geliyor (Tur 57): yakıtı sabitleme düğmesi santralin panelinde.
+        chip = (
+          <button
+            type="button"
+            className={`event-chip contract-chip urgency-${item.urgency}`}
+            onClick={() => item.tileId !== undefined && focusOn({ tileId: item.tileId })}
+            title={t('hud.fuel.lockTitle')}
+            data-agenda-fuel
+          >
+            <span className="contract-label">{t('hud.fuel.lock')}</span>
+            {item.label}
+            {days}
+          </button>
+        );
+        break;
       case 'crisis': {
         // Kriz (Tur 37a): uyarıda ne yapılacağını, krizde etkisini söylüyor.
         const def = CRISIS_BY_ID[state.crisis?.defId ?? ''];

@@ -288,6 +288,7 @@ const MOVE_TEXT: Record<GhostMoveKind, MessageKey> = {
   lobby: 'app.league.move.lobby',
   contract: 'app.league.move.contract',
   freight: 'app.league.move.freight',
+  fuel: 'app.league.move.fuel',
   price: 'app.league.move.price',
   shelf: 'app.league.move.shelf',
   staff: 'app.league.move.staff',

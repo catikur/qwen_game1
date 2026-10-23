@@ -264,7 +264,7 @@ export interface RankedBuildOption extends BuildOption {
 export function rankedBuildOptions(state: GameState, districtId: number, tileId?: number): RankedBuildOption[] {
   const player = getPlayer(state);
   const rows: RankedBuildOption[] = buildOptions(state).map((option) => {
-    const estimate = estimateInvestment(state, districtId, option.def.id, player.id);
+    const estimate = estimateInvestment(state, districtId, option.def.id, player.id, tileId);
     const row: RankedBuildOption = { ...option, estimate, bestPick: false };
     // Kilitli binada pahalı deneyi koşmaya gerek yok.
     if (estimate && !estimate.direct && option.unlocked) row.indirect = indirectEstimate(state, player.id, option.def.id, districtId, tileId);

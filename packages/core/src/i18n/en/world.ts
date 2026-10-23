@@ -77,6 +77,12 @@ export const world: Record<keyof typeof trWorld, string> = {
   'core.contracts.thousands': '₺{value}K',
 
   // freight.ts — haulage contracts (Tur 56)
+  'core.energy.noFuelPlant': 'Build a gas power plant before locking fuel.',
+  'core.energy.alreadyLocked': 'Fuel is already locked; you can lock again when it runs out.',
+  'core.energy.lockedTitle': 'Fuel price locked',
+  'core.energy.lockedBody': 'Your gas plants buy fuel at {price} per MWh for {days|# day|# days}, whatever the grid price does.',
+  'core.energy.unlockedTitle': 'Fuel lock expired',
+  'core.energy.unlockedBody': 'Your gas plants buy fuel at the market price again.',
   'core.freight.noOffer': 'That haulage offer is no longer on the table.',
   'core.freight.noTerminal': 'The terminal for this offer is gone.',
   'core.freight.stale': "None of the offer's stores can be served any more.",
@@ -95,6 +101,8 @@ export const world: Record<keyof typeof trWorld, string> = {
 
   // indirect.ts — why the effect is zero in an indirect building estimate
   'core.indirect.noUncovered': 'No stores without a warehouse in range.',
+  'core.indirect.zonedPlant': 'Power plants can only be built in industrial and port districts.',
+  'core.indirect.noPowerCustomers': 'No buildings in range to supply.',
   'core.indirect.noOutlets': "You don't have any stores yet.",
   'core.indirect.noFocus': 'No category for it to work on.',
   'core.indirect.noSales': "You don't have any stores yet — no sales for it to work on.",

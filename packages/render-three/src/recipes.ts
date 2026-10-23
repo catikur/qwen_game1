@@ -310,6 +310,21 @@ export function decorateBuilding(
       onFace(layer, 'box', x, z, side, w / 2, footprint.bodyBottom + 0.24, w * 0.96, 0.025, 0.16, c(METAL));
       layer.add('sign', x, footprint.roofY, z, footprint.roofWidth * 0.6, 0.14, 0.025, ownerSign, side.yaw);
       return;
+    case 'gas_plant':
+      // Tur 57: iki geniş soğutma kulesi, çatıda şirketin tabelası.
+      for (const k of [-1, 1]) {
+        layer.add('cylinder', x + k * w * 0.25, footprint.bodyBottom, z - w * 0.28, w * 0.36, (footprint.roofY - footprint.bodyBottom) * 1.2, w * 0.36, c('#cfcac2'));
+      }
+      layer.add('sign', x, footprint.roofY, z, footprint.roofWidth * 0.5, 0.12, 0.025, ownerSign, side.yaw);
+      return;
+    case 'solar_farm':
+      // Tur 57: üç sıra koyu mavi panel, köşede evirici dolabı.
+      for (const k of [-1, 0, 1]) {
+        layer.add('box', x, footprint.bodyBottom + 0.05, z + k * w * 0.3, w * 0.82, 0.03, w * 0.2, c('#27406b'));
+        layer.add('box', x, footprint.bodyBottom, z + k * w * 0.3, w * 0.8, 0.05, 0.02, c(METAL));
+      }
+      layer.add('box', x + w * 0.42, footprint.bodyBottom, z + w * 0.42, 0.12, 0.12, 0.08, c('#d8d4cc'));
+      return;
     case 'flour_mill':
       // Üç bitişik silo — değirmeni uzaktan okutan şey.
       for (const k of [-1, 0, 1]) layer.add('cylinder', x + k * w * 0.24, footprint.bodyBottom, z - w * 0.36, w * 0.24, (footprint.roofY - footprint.bodyBottom) * 1.45, w * 0.24, c('#d6d0c2'));

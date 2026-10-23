@@ -30,6 +30,7 @@ import { AUTOSAVE_SLOT, MAX_SLOTS, listSaves } from '@capital/persistence';
 import type { SaveMeta } from '@capital/persistence';
 import { ChainPanel } from './ChainPanel';
 import { FreightDesk } from './FreightDesk';
+import { PowerDesk } from './PowerDesk';
 import { useCollapsible } from './collapse';
 import { CompetitionPanel } from './CompetitionPanel';
 import { AuctionPanel } from './AuctionPanel';
@@ -181,7 +182,7 @@ export function BuildPanel(): ReactElement {
                     </span>
                   </span>
                   <span className="buildcard-meta">
-                    {CATEGORIES[def.category].name}
+                    {def.role === 'energy' ? t('panels.build.role.energy') : CATEGORIES[def.category].name}
                     {def.role === 'rental' && t('panels.build.role.rental')}
                     {def.role === 'logistics' && t('panels.build.role.logistics')}
                     {def.role === 'extract' && t('panels.build.role.extract')}
@@ -243,10 +244,28 @@ const INDIRECT_ROLES = new Set(['logistics', 'research', 'marketing']);
 // Anahtar tutuyor, metin değil: `t` çizim anında çağrılsın, dil değişince
 // modül yüklendiği andaki metinde takılı kalmasın.
 const INDIRECT_HINT: Record<string, MessageKey> = {
+  energy: 'panels.estimate.indirectHint.energy',
   logistics: 'panels.estimate.indirectHint.logistics',
   research: 'panels.estimate.indirectHint.research',
   marketing: 'panels.estimate.indirectHint.marketing',
 };
+
+/** Santralin tahmini (Tur 57): kendi binalarına kazanç, rakiplere satış, yakıt; bugünkü fiyatla. */
+function EnergyPotentialLine({ indirect }: { indirect: IndirectEstimate }): ReactElement | null {
+  const energy = indirect.energy;
+  if (!energy || energy.own + energy.rival === 0) return null;
+  return (
+    <span className="freight-potential" data-energy-potential={energy.own + energy.rival}>
+      {t('panels.estimate.energy', {
+        own: energy.own,
+        rival: energy.rival,
+        saved: formatMoney(energy.saved),
+        sold: formatMoney(energy.sold),
+        fuel: formatMoney(energy.fuel),
+      })}
+    </span>
+  );
+}
 
 /** Terminalin taşıma potansiyeli (Tur 56): katkıya girmiyor, ayrı yazıyor. */
 function FreightPotential({ indirect }: { indirect: IndirectEstimate }): ReactElement | null {
@@ -279,8 +298,9 @@ function EstimateLine({
         </span>
       );
     // Dolaylı katkı: bugünkü şehirde, etkisi oturduğunda (Tur 21).
-    const where =
-      indirect.covered !== undefined
+    const where = indirect.energy
+      ? t('panels.estimate.where.powered', { count: indirect.covered ?? 0 })
+      : indirect.covered !== undefined
         ? t('panels.estimate.where.covered', { count: indirect.covered })
         : indirect.focus
           ? t('panels.estimate.where.focus', { category: CATEGORIES[indirect.focus].name })
@@ -295,6 +315,7 @@ function EstimateLine({
         {Number.isFinite(indirect.paybackDays) ? t('panels.estimate.payback', { days: Math.round(indirect.paybackDays) }) : t('panels.estimate.indirectNoPayback')}
         {indirect.rampDays > 0 ? t('panels.estimate.ramp', { days: indirect.rampDays }) : ''}
         <FreightPotential indirect={indirect} />
+        <EnergyPotentialLine indirect={indirect} />
       </span>
     );
   }
@@ -622,7 +643,11 @@ function BuildingDetail({ buildingId }: { buildingId: string }): ReactElement | 
   const isPlayer = owner.id === state.playerCompanyId;
   const ledger = building.last;
   const support =
-    def.role === 'logistics' || def.role === 'research' || def.role === 'marketing';
+    def.role === 'logistics' || def.role === 'research' || def.role === 'marketing' || def.role === 'energy';
+  // Enerjisini bir santralden alan bina (Tur 57): oyuncunun santrali ya da oyuncunun binası.
+  const power = ledger.power;
+  const plant = power ? state.buildings[power.plantId] : undefined;
+  const plantDef = plant ? BUILDING_BY_ID[plant.defId] : undefined;
 
   return (
     <div className="building">
@@ -644,8 +669,17 @@ function BuildingDetail({ buildingId }: { buildingId: string }): ReactElement | 
       */}
       {support ? (
         <>
-          {/* Terminal (Tur 56) taşıma ücreti yazıyor: gideri ve kârı birlikte. */}
-          {def.fleet ? (
+          {/* Santral (Tur 57): rakiplere satış ve yakıt; kendi binalarına verdiği masada. */}
+          {def.role === 'energy' ? (
+            <div className="ledger">
+              <LedgerRow label={t('panels.building.ledger.powerSales')} value={ledger.revenue} />
+              <LedgerRow label={t('panels.building.ledger.fuel')} value={-ledger.cogs} />
+              <LedgerRow label={t('panels.building.ledger.upkeep')} value={-ledger.upkeep} />
+              <LedgerRow label={t('panels.building.ledger.wages')} value={-ledger.wages} />
+              <LedgerRow label={t('panels.building.ledger.dailyProfit')} value={ledger.profit} strong />
+            </div>
+          ) : /* Terminal (Tur 56) taşıma ücreti yazıyor: gideri ve kârı birlikte. */
+          def.fleet ? (
             <div className="ledger">
               <LedgerRow label={t('panels.building.ledger.freight')} value={ledger.revenue} />
               <LedgerRow label={t('panels.building.ledger.upkeep')} value={-ledger.upkeep} />
@@ -663,7 +697,9 @@ function BuildingDetail({ buildingId }: { buildingId: string }): ReactElement | 
             </div>
           )}
           <p className="muted">
-            {def.fleet
+            {def.role === 'energy'
+              ? t('panels.building.supportNote.energy')
+              : def.fleet
               ? t('panels.building.supportNote.terminal')
               : def.role === 'logistics'
                 ? t('panels.building.supportNote.logistics')
@@ -705,6 +741,20 @@ function BuildingDetail({ buildingId }: { buildingId: string }): ReactElement | 
       )}
 
       {isPlayer && def.fleet ? <FreightDesk buildingId={buildingId} /> : null}
+      {isPlayer && def.role === 'energy' ? <PowerDesk buildingId={buildingId} /> : null}
+
+      {/* Enerjisi santralden (Tur 57): kendi binasında kazanç, rakibinkinde oyuncuya ödediği. */}
+      {power && plant && plantDef && plant.companyId === state.playerCompanyId && (
+        isPlayer ? (
+          <p className="muted power-note" data-power-from={plant.id} data-power-saved={Math.round(power.saved)}>
+            {t('panels.building.powerOwn', { plant: plantDef.name, saved: formatMoney(power.saved) })}
+          </p>
+        ) : (
+          <p className="muted power-note" data-power-client={plant.id} data-power-bill={Math.round(power.bill)}>
+            {t('panels.building.powerClient', { owner: owner.name, plant: plantDef.name, bill: formatMoney(power.bill) })}
+          </p>
+        )
+      )}
 
       {/* Rakip mağazasının dağıtımını oyuncunun terminali yapıyorsa (Tur 56). */}
       {!isPlayer && def.role === 'outlet' && (() => {

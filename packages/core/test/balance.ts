@@ -13,6 +13,7 @@ declare const process: { exit(code: number): never; argv: string[] };
 import {
   BUILDINGS,
   BUILDING_BY_ID,
+  CRISES,
   STRUCTURES,
   STRUCTURE_BY_ID,
   CATEGORIES,
@@ -51,6 +52,7 @@ import {
   controllerOf,
   freeFloat,
   freightTerminals,
+  powerPlants,
   marketCap,
   portfolioValue,
   sharePrice,
@@ -86,6 +88,7 @@ import {
   defendAgainstRaids,
   expandOutletsVacantOnly,
   followChainAdvice,
+  energyStrategy,
   freightStrategy,
   playerStrategy,
 } from './proxy';
@@ -4306,10 +4309,15 @@ section('Holding: ikinci şehir', () => {
    * çeken şehir artık "daha derin" değil "daha derin ya da daha erken"
    * düşüyor (915/936 < 955/956); iki talimat da tavana vurunca derinlik
    * ayırt edemiyor.
+   *
+   * Tur 57: enerji krizi takvime girince kriz sırası değişti ve tohum 7'de
+   * yarısını çeken şehir de 936. günde, kârın hepsini çekenle aynı baskında
+   * düşüyor (main 955 → 936). İddia "hepsini çekmek şehri korumuyor":
+   * baskın daha derin ya da şehir en geç aynı gün düşüyor.
    */
   expect(
-    'kârın hepsini çeken uzak şehre baskın derinleşiyor ya da şehir daha erken düşüyor (üç tohumda)',
-    directives.every((d) => d.all.peak > d.half || (d.all.lostDay !== null && (d.halfLost === null || d.all.lostDay < d.halfLost))),
+    'kârın hepsini çeken uzak şehre baskın derinleşiyor ya da şehir en geç aynı gün düşüyor (üç tohumda)',
+    directives.every((d) => d.all.peak > d.half || (d.all.lostDay !== null && (d.halfLost === null || d.all.lostDay <= d.halfLost))),
     directives
       .map((d) => `tohum ${d.seed}: %${Math.round(d.half * 100)}${d.halfLost ? ` (${d.halfLost})` : ''} → %${Math.round(d.all.peak * 100)}${d.all.lostDay ? ` (${d.all.lostDay})` : ''}`)
       .join(' · '),
@@ -5002,6 +5010,116 @@ section('Lojistik: nakliye terminali ve taşıma sözleşmeleri', () => {
   // 360 günün sonunda rakiplerin değeri oyuncuyla yarışın da sonucu.
   const rivalGain = runs.reduce((sum, r) => sum + r.freight.rivals / r.base.rivals - 1, 0) / runs.length;
   console.log(`  NOT: rakiplerin toplam değeri nakliyeci koşuda ortalama ${pct(rivalGain)} (müşteri ucuzluyor, oyuncu da büyüyor).`);
+});
+
+section('Enerji: santraller, şebeke fiyatı ve enerji krizi', () => {
+  /*
+   * Tur 57. Santral menzilindeki binalara enerji veriyor: sahibinin
+   * binalarının faturası kalkıyor, rakiplerinki santralin cirosu. Enerji
+   * krizi şebeke fiyatını iki katına çıkarıyor. Sınanan iki şey:
+   *   - İş kolu: enerjici vekil santral kuruyor, santraller bedelini
+   *     çıkarıyor; sakin bir yılda tuzak değil, baskın da değil.
+   *   - Sigorta: aynı şehrin 300. günü kopyalanıyor, kopyalarda 90 günlük
+   *     enerji krizi var ya da yok. Kriz santralsiz oyuncuyu vuruyor;
+   *     santrali olan daha az, yakıtını sabitleyen en az kaybediyor.
+   */
+  const m = (v: number) => `${(v / 1_000_000).toFixed(1)} M`;
+  const play = (seed: number, energy: boolean) => {
+    const engine = new GameEngine(createNewGame({ seed, companyName: 'Enerji AŞ' }));
+    const state = engine.getState();
+    for (let day = 1; day <= DAYS; day++) {
+      if (day % 5 === 0) {
+        playerStrategy(engine);
+        if (energy) energyStrategy(engine);
+      }
+      engine.runDay();
+    }
+    const plants = powerPlants(state).filter((plant) => plant.companyId === state.playerCompanyId);
+    const sum = (key: 'sold' | 'saved' | 'fuel') => plants.reduce((total, plant) => total + (plant.energyTotals?.[key] ?? 0), 0);
+    return {
+      net: getPlayer(state).netWorth,
+      plants: plants.length,
+      solar: plants.filter((plant) => BUILDING_BY_ID[plant.defId]?.solar).length,
+      sold: sum('sold'),
+      saved: sum('saved'),
+      fuel: sum('fuel'),
+      cost: plants.reduce((total, plant) => total + (BUILDING_BY_ID[plant.defId]?.cost ?? 0), 0),
+    };
+  };
+  const runs = [1, 7, 42].map((seed) => ({ seed, base: play(seed, false), energy: play(seed, true) }));
+  const pct = (v: number) => `${v >= 0 ? '+' : ''}${Math.round(v * 100)}%`;
+  const gain = (r: (typeof runs)[number]) => r.energy.net / r.base.net - 1;
+  const returned = (r: (typeof runs)[number]) => r.energy.sold + r.energy.saved - r.energy.fuel;
+  for (const r of runs) {
+    console.log(
+      `  seed ${r.seed}: temel ${m(r.base.net)} · enerjici ${m(r.energy.net)} (${pct(gain(r))}; ${r.energy.plants} santral, ${r.energy.solar} güneş) · satış ${m(r.energy.sold)}, kazanç ${m(r.energy.saved)}, yakıt ${m(r.energy.fuel)}, bedel ${m(r.energy.cost)}`,
+    );
+  }
+  const average = runs.reduce((sum, r) => sum + gain(r), 0) / runs.length;
+  expect(
+    'Enerjici vekil her şehirde santral kuruyor; santraller bedelinin en az iki katını getiriyor (satış + kazanç − yakıt)',
+    runs.every((r) => r.energy.plants >= 2 && returned(r) >= 2 * r.energy.cost),
+    runs.map((r) => `${r.energy.plants} santral, ×${(returned(r) / Math.max(1, r.energy.cost)).toFixed(1)}`).join(' · '),
+  );
+  expect('Sakin yılda tuzak değil: ortalama temel vekilin en az %95\'i', average >= -0.05, `${runs.map((r) => pct(gain(r))).join(' · ')} (ortalama ${pct(average)})`);
+  expect('Baskın değil: ortalama kazanç +%25\'in altında', average < 0.25, pct(average));
+
+  // Sigorta: 300. günün kopyalarında 90 günlük enerji krizi. Büyürken kriz
+  // takvimi kapalı (kollar aynı yerden başlasın), kopyalarda takvim yok.
+  const shock = CRISES.find((def) => (def.effects.energyPrice ?? 1) > 1)!;
+  const AT = 300;
+  const SPAN = 90;
+  const grow = (seed: number, energy: boolean): string => {
+    const engine = new GameEngine(createNewGame({ seed, companyName: 'Enerji AŞ' }));
+    const state = engine.getState();
+    state.flags.crises = false;
+    for (let day = 1; day <= AT; day++) {
+      if (day % 5 === 0) {
+        playerStrategy(engine);
+        if (energy) energyStrategy(engine);
+      }
+      engine.runDay();
+    }
+    state.flags.crises = true;
+    return JSON.stringify(state);
+  };
+  const arm = (snapshot: string, crisis: boolean, lock: boolean): number => {
+    const engine = new GameEngine(JSON.parse(snapshot) as GameState);
+    const state = engine.getState();
+    delete state.crisis;
+    state.nextCrisisDay = Number.MAX_SAFE_INTEGER;
+    if (lock) engine.dispatch({ type: 'LOCK_FUEL' });
+    if (crisis) state.crisis = { defId: shock.id, phase: 'active', activeDay: state.time.day + 1, endDay: state.time.day + SPAN };
+    let profit = 0;
+    for (let i = 0; i < SPAN; i++) {
+      engine.runDay();
+      profit += getPlayer(state).today.profit;
+    }
+    return profit;
+  };
+  const hedges = [1, 7, 42].map((seed) => {
+    const base = grow(seed, false);
+    const energy = grow(seed, true);
+    const calm = arm(energy, false, false);
+    return {
+      seed,
+      plants: powerPlants(JSON.parse(energy) as GameState).filter((plant) => plant.companyId === 'player').length,
+      baseCalm: arm(base, false, false),
+      baseShock: arm(base, true, false),
+      calm,
+      shock: arm(energy, true, false),
+      locked: arm(energy, true, true),
+    };
+  });
+  const k = (v: number) => `${v >= 0 ? '+' : '−'}${(Math.abs(v) / 1_000_000).toFixed(2)} M`;
+  for (const h of hedges) {
+    console.log(
+      `  seed ${h.seed}: 90 günlük krizin kâra etkisi · santralsiz ${k(h.baseShock - h.baseCalm)} (${pct(h.baseShock / h.baseCalm - 1)}) · ${h.plants} santralle ${k(h.shock - h.calm)} · yakıtı sabit ${k(h.locked - h.calm)}`,
+    );
+  }
+  expect('Enerji krizi santralsiz oyuncunun kârını vuruyor: 90 günde en az %5', hedges.every((h) => h.baseShock <= h.baseCalm * 0.95), hedges.map((h) => pct(h.baseShock / h.baseCalm - 1)).join(' · '));
+  expect('Santrali olan krizi daha az kayıpla atlatıyor (her şehirde)', hedges.every((h) => h.calm - h.shock < h.baseCalm - h.baseShock), hedges.map((h) => `${k(h.shock - h.calm)} < ${k(h.baseShock - h.baseCalm)}`).join(' · '));
+  expect('Yakıtı sabitleyen en az kaybediyor (her şehirde)', hedges.every((h) => h.locked > h.shock), hedges.map((h) => `${k(h.locked - h.calm)} > ${k(h.shock - h.calm)}`).join(' · '));
 });
 
 if (timings.length === 0) {

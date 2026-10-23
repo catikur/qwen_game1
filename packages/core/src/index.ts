@@ -163,9 +163,24 @@ export {
 export { campaignPriceFactor, campaignsLive, effectivePriceMultiplier, rivalQuote, storiesEnabled } from './systems/rivalry';
 export { activeContract, contractProgress, OFFER_LIFETIME_DAYS } from './systems/contracts';
 export { FREIGHT, fleetUsed, freightFeeEstimate, freightPenalty, freightProspects, freightTerminals } from './systems/freight';
+export {
+  energyNeed,
+  energyPotential,
+  energyPrice,
+  energyShare,
+  fuelCost,
+  fuelLock,
+  fuelLockQuote,
+  gridUpkeep,
+  hasFuelPlant,
+  plantCapacity,
+  powerPlants,
+} from './systems/energy';
+export type { EnergyPotential } from './systems/energy';
 export type { EventModifiers } from './systems/events';
 export {
   FREIGHT_SHARE,
+  buildingUpkeep,
   distributionRelief,
   freightClient,
   ownDepotRelief,

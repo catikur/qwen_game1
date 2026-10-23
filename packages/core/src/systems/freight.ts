@@ -25,7 +25,7 @@ import type { BuildingInstance, CommandResult, FreightDeal, FreightState, GameSt
  *
  * Üç bilinçli sınır:
  *
- * - FİLO. Terminal başına en çok 12 mağaza (`fleet`). Şehrin bütün rakip
+ * - FİLO. Terminal başına en çok 16 mağaza (`fleet`). Şehrin bütün rakip
  *   mağazalarına hizmet etmek için birden çok terminal ve menzil gerekiyor:
  *   lojistik bir yer seçme oyunu olarak kalıyor.
  *

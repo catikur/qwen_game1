@@ -89,14 +89,13 @@ tur ayrı PR, Codex temiz ve CI yeşilse birleşiyor.
 
 | Tur | İş | Durum |
 |---|---|---|
-| **56 · Lojistik** | Nakliye terminali (filolu lojistik binası), rakip mağazalarına taşıma sözleşmeleri, ücret rakibin tasarrufundan; kamyonlar rakibin vitrinine gidiyor. | bu PR |
+| **56 · Lojistik** | Nakliye terminali (filolu lojistik binası), rakip mağazalarına taşıma sözleşmeleri, ücret rakibin tasarrufundan; kamyonlar rakibin vitrinine gidiyor. | bitti (#86) |
+| **57 · Enerji** | Şebeke fiyatı (bakımın enerji payı), doğalgaz santrali ve güneş tarlası, yeni kriz: enerji krizi; yakıt sabitleme. Santral önce kendi binalarına, sonra rakiplere. | bu PR |
 
 Faz 3 simülasyonu değiştiriyor: her birleşmeden sonra Worker yeniden
 dağıtılıyor (`ios-lite/README.md`, "Sürüm uyumu"); o zamana kadar yeni
 koşular bekliyor.
 
-- **57 · Enerji.** Santraller binalara enerji satıyor; fiyat şokları
-  krizlere bağlanıyor.
 - **58 · Gayrimenkul geliştiricisi.** Konut ve ofis projeleri, kira ve
   doluluk; kentsel dönüşüm ihalesiyle bağlantılı.
 - **59 · Rakipler 2.0.** Gelecekler:

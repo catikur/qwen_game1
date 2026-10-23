@@ -20,6 +20,7 @@ export const panels: Record<keyof typeof trPanels, string> = {
   'panels.build.bestPick': 'best for this plot',
   'panels.build.role.rental': ' · rental',
   'panels.build.role.logistics': ' · logistics',
+  'panels.build.role.energy': 'Energy',
   'panels.build.role.extract': ' · raw materials',
   'panels.build.role.process': ' · processing',
   'panels.build.zoned': ' · industrial/port',
@@ -30,10 +31,12 @@ export const panels: Record<keyof typeof trPanels, string> = {
 
   // estimate line on the investment card (EstimateLine)
   'panels.estimate.indirectHint.logistics': 'Lowers distribution costs for your stores within its range.',
+  'panels.estimate.indirectHint.energy': 'Powers buildings in range: your own stop paying the bill, spare power is sold to rivals.',
   'panels.estimate.indirectHint.research': 'Raises quality in one category; pays back as price or share.',
   'panels.estimate.indirectHint.marketing': 'Grows the brand in one category; pays back as price or share.',
   'panels.estimate.indirectHint.default': 'Indirect benefit.',
   'panels.estimate.where.covered': 'stores in range: {count}',
+  'panels.estimate.where.powered': 'buildings in range: {count}',
   'panels.estimate.where.focus': 'for {category}',
   'panels.estimate.indirectTitle':
     "In today's city, once its effect settles in. Grows as the city and unmet demand grow; while placing, you can check the 120-day projection.",
@@ -45,6 +48,7 @@ export const panels: Record<keyof typeof trPanels, string> = {
   'panels.estimate.loss': 'loses money',
   'panels.estimate.cannibalized': ' · takes {amount}/day from your own branches (deducted)',
   'panels.estimate.freight': ' · {count|# rival store|# rival stores} in range: haulage up to ~{fee} a day',
+  'panels.estimate.energy': ' · {own} of your buildings, {rival|# rival building|# rival buildings}: savings {saved}, sales {sold}, fuel {fuel} (at today’s price)',
 
   // 120-day projection (ProjectionBox)
   'panels.projection.atDay': 'On day {days} ≈',
@@ -98,6 +102,25 @@ export const panels: Record<keyof typeof trPanels, string> = {
   'panels.building.ledger.dailyProfit': 'Daily profit',
   'panels.building.ledger.profitTrend': '30-day average',
   'panels.building.ledger.freight': 'Haulage fees',
+  'panels.building.ledger.powerSales': 'Power sold to rivals',
+  'panels.building.ledger.fuel': 'Fuel',
+  'panels.building.powerOwn': 'Powered by your {plant}: no bill, {saved} saved today.',
+  'panels.building.powerClient': '{owner} buys this building’s power from your plant ({plant}): {bill} paid today.',
+  'panels.power.title': 'Power',
+  'panels.power.output': 'Output',
+  'panels.power.mwh': '{used}/{capacity} MWh',
+  'panels.power.price': 'Grid price',
+  'panels.power.perMwh': '{price}/MWh',
+  'panels.power.fuel': 'Fuel',
+  'panels.power.noFuel': 'none',
+  'panels.power.own': 'Your buildings: {mwh} MWh, {saved} saved today (no bills)',
+  'panels.power.rival': 'Rival buildings: {mwh} MWh, {sold} sold today',
+  'panels.power.idle': 'No buildings in range to supply.',
+  'panels.power.totals': 'Since it opened: {sold} sold, {saved} saved, {fuel} fuel.',
+  'panels.power.locked': 'Fuel locked at {price} per MWh for {days|# more day|# more days}.',
+  'panels.power.lock': 'Lock fuel: {price} per MWh for {days|# day|# days}',
+  'panels.power.note':
+    'Power goes to your own buildings first, then rivals, nearest first. Rivals pay {discount} below the grid price. Locking costs {premium} over today’s price: lock before an energy crisis and you win, pay extra if prices fall.',
   'panels.building.freightClient': "Your terminal runs distribution for this {owner} store: {fee} in fees today.",
   'panels.freight.title': 'Haulage',
   'panels.freight.fleet': 'Fleet',
@@ -120,6 +143,8 @@ export const panels: Record<keyof typeof trPanels, string> = {
     "This building doesn't sell anything. Its payoff shows up in the cost of sales of your stores within its range.",
   'panels.building.supportNote.focus':
     "This building doesn't sell anything. Its payoff shows up in the quality and brand of your stores in its assigned category — you can measure it in the Rivalry panel.",
+  'panels.building.supportNote.energy':
+    'Power for your own buildings comes off their upkeep ("saved" on the desk); this ledger shows sales to rivals and fuel.',
   'panels.building.supportNote.terminal':
     "Its discount for your own stores shows in their cost of sales; the fees for hauling to rival stores land in this ledger.",
   'panels.building.stat.utilization': 'Utilization',

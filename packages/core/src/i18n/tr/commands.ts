@@ -153,6 +153,7 @@ export const commands = {
   'core.agenda.quests': '{month} görevleri {done}/{total}',
   'core.agenda.questsReady': 'Ödül hazır: {count} görev',
   'core.agenda.freightOffer': '{company} · {count} mağaza · günde ~{fee}',
+  'core.agenda.fuelLock': 'Enerji krizi geliyor: santrallerinin yakıtını sabitle',
   'core.agenda.fad': '{good} modası',
   'core.agenda.projectRank': '{project}: {rank}. sıradasın',
   'core.agenda.projectOpen': '{project}: katkı açık',

@@ -383,6 +383,11 @@ değişmedi, simülasyon değişti (yeni bina, taşıma ücreti). Yalnız 3. ad�
 değişmiyor. Paket yapıştırılana kadar Tur 56'dan sonra oynanan koşular
 "sunucu bu sürümü henüz tanımıyor" diye bekliyor (aşağıda), Lite etkilenmiyor.
 
+**Tur 57 (enerji: santraller, şebeke fiyatı, enerji krizi):** şema
+değişmedi, simülasyon değişti (iki santral, enerji faturası, yeni kriz,
+yakıt sabitleme komutu). Yine yalnız 3. adım: `pnpm lite:league-bundle`,
+paketi yapıştır, Deploy. Sağlık ucu değişmiyor, Lite etkilenmiyor.
+
 **Sürüm uyumu.** Sunucu koşuyu yalnız kendi simülasyon sürümüyle
 yargılayabiliyor. Pages'teki oyun her `main` birleşmesinde kendiliğinden
 güncelleniyor, Worker elle. Oyunun simülasyonunu değiştiren bir birleşmeden

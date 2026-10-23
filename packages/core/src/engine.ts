@@ -20,6 +20,7 @@ import { recomputeNetWorth } from './systems/city';
 import { runConsortiumTick } from './systems/consortium';
 import { acceptContract, declineContract } from './systems/contracts';
 import { acceptFreight, cancelFreight, declineFreight } from './systems/freight';
+import { lockFuel } from './systems/energy';
 import { placeBid } from './systems/auction';
 import { noteCompanyPeak, notePeakWorth, noteRaidStage } from './systems/feats';
 import { sellShares } from './systems/equity';
@@ -272,6 +273,9 @@ export class GameEngine {
 
       case 'DECLINE_CONTRACT':
         return declineContract(state);
+
+      case 'LOCK_FUEL':
+        return lockFuel(state);
 
       case 'ACCEPT_FREIGHT':
         return acceptFreight(state, command.offerId);

@@ -1072,10 +1072,15 @@ export class CityRenderer {
       if (growth >= 1) {
         decorateBuilding(this.buildingDecor, def, footprint, tile.x, tile.y, streetSide(tile.x, tile.y, BLOCK_SIZE), this.ownerColor, this.ownerColor);
       }
-      if (def.role !== 'extract') this.buildingShadows.place(tile.x, 0.07, tile.y, 0.68 * Math.max(0.3, growth), Math.min(1, def.height));
+      if (def.role !== 'extract' && !def.solar) this.buildingShadows.place(tile.x, 0.07, tile.y, 0.68 * Math.max(0.3, growth), Math.min(1, def.height));
       // Duman bilgi: yalnızca dün gerçekten üretim yapmış tesis tütüyor.
       // Girdisi kesilen tesisin bacası susuyor.
       if (def.role === 'process' && growth >= 1 && building.last.producedUnits > 0 && footprint.stack) {
+        producing.push(smokeFrom(footprint.stack));
+      }
+      // Doğalgaz santrali (Tur 57): dün enerji verdiyse bacası tütüyor.
+      const power = building.last.plant;
+      if (def.role === 'energy' && def.fuel && growth >= 1 && power && power.ownMwh + power.rivalMwh > 0 && footprint.stack) {
         producing.push(smokeFrom(footprint.stack));
       }
     }
@@ -2089,6 +2094,9 @@ function massFormOf(def: BuildingDef): MassForm {
     case 'process':
     case 'logistics':
       return 'shed';
+    // Santral (Tur 57): doğalgaz hangar ve kule, güneş tarlası yatay panel sırası.
+    case 'energy':
+      return def.solar ? 'field' : 'shed';
     case 'rental':
       return def.height > 2 ? 'tower' : 'block';
     case 'research':
@@ -2122,6 +2130,7 @@ function buildingFacade(def: BuildingDef): FacadeStyle {
     case 'process':
     case 'logistics':
     case 'extract':
+    case 'energy':
       return FACADE.industrial;
     default:
       return FACADE.residential;

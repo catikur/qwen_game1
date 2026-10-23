@@ -1,4 +1,4 @@
-import { BUILDINGS, BUILDING_BY_ID, CEO_BY_ID, CONSORTIUM, CONSUMER_CATEGORIES, FAD, GOOD_BY_ID, GOODS_BY_CATEGORY, MODIFIER_RULES, PROJECTS, PROJECT_TIMING, SEASONS, TREND } from '@capital/content';
+import { BUILDINGS, BUILDING_BY_ID, CEO_BY_ID, CONSORTIUM, CRISES, CRISIS_TIMING, ENERGY, ERAS, EVENTS, SECTOR_EVENTS, CONSUMER_CATEGORIES, FAD, GOOD_BY_ID, GOODS_BY_CATEGORY, MODIFIER_RULES, PROJECTS, PROJECT_TIMING, SEASONS, TREND } from '@capital/content';
 import type { CategoryId } from '@capital/content';
 import { GameEngine } from './engine';
 import { formatMoney } from './selectors';
@@ -10,6 +10,7 @@ import { fadSchedule, livingDemand, seasonMultiplier, trendAt } from './systems/
 import { goodShares } from './systems/demand';
 import { runMarketTick } from './systems/market';
 import { FREIGHT, acceptFreight, runFreightTick } from './systems/freight';
+import { energyPrice, lockFuel } from './systems/energy';
 import { DISTRIBUTION_RELIEF } from './systems/buildingIndex';
 import { FREIGHT_SHARE, resetDailyLedgers } from './systems/supply';
 import { contributeToProject, projectAttraction, projectDistrictDemand, projectSite, projectUpkeep, runProjectTick } from './systems/projects';
@@ -84,6 +85,7 @@ const LOGGABLE: ReadonlySet<string> = new Set<GameCommand['type']>([
   'HOLDING_TRANSFER',
   'ISSUE_SHARES',
   'LOBBY',
+  'LOCK_FUEL',
   'OPEN_CITY',
   'PLACE_BID',
   'PLACE_TAKEOVER_ORDER',
@@ -388,6 +390,7 @@ function lateGameProbe(state: GameState): string[] {
   }
 
   parts.push(...freightProbe(clone()));
+  parts.push(...energyProbe(clone()));
 
   const seed = state.meta.seed;
   for (const day of [120, 240, 360]) {
@@ -452,6 +455,67 @@ function freightProbe(world: GameState): string[] {
   parts.push(
     `probe-freight:${site.id}:${world.time.day}:${offer.companyId}:${offer.outletIds.join(',')}:${offer.estimate}:${accepted}:${(deal?.earned ?? 0).toFixed(4)}:${Math.round(me.cash)}:${Math.round(client?.cash ?? 0)}`,
   );
+  return parts;
+}
+
+/**
+ * Enerji yoklaması (Tur 57): izin dünyasında santral yok ve 60 günde kriz
+ * gelmiyor. Kopyada oyuncu menziline en çok binayı alan izinli parsele bir
+ * doğalgaz santrali kuruyor ve bir gün defter yazılıyor; sonra yakıtı
+ * sabitleyip enerji krizini başlatıyor ve bir gün daha. Dağıtım, faturalar,
+ * yakıt, şebeke fiyatıyla bütün binaların bakımı izde. Ayarlarda kriz
+ * tablosu da var: krizlerin seçimi şimdiye kadar izde değildi, yeni kriz
+ * eski sunucuda "aynı sürüm" geçerdi.
+ */
+function energyProbe(world: GameState): string[] {
+  const parts = [
+    `energy-settings:${JSON.stringify({
+      ENERGY,
+      CRISIS_TIMING,
+      crises: CRISES.map(({ id, weight, durationDays, effects }) => ({ id, weight, durationDays, effects })),
+      events: [...EVENTS, ...SECTOR_EVENTS, ...ERAS].filter((def) => def.effects.energyPrice).map((def) => [def.id, def.effects.energyPrice]),
+      plants: BUILDINGS.filter((def) => def.role === 'energy').map(({ id, cost, upkeepPerDay, jobs, radius, power, fuel, solar, unlockNetWorth, zones }) => ({ id, cost, upkeepPerDay, jobs, radius, power, fuel, solar, unlockNetWorth, zones })),
+    })}`,
+  ];
+  const me = world.companies[world.playerCompanyId]!;
+  me.cash += 10_000_000;
+  me.netWorth += 10_000_000;
+  const gas = BUILDINGS.find((def) => def.role === 'energy' && (def.fuel ?? 0) > 0);
+  const shock = CRISES.find((def) => (def.effects.energyPrice ?? 1) > 1);
+  if (!gas || !shock) return parts;
+  let site: { id: number; count: number } | null = null;
+  for (const tile of world.map.tiles) {
+    if (!isPurchasable(tile) || tile.structureId || tile.buildingId || tile.ownerId) continue;
+    const archetype = world.districts[tile.districtId]?.archetype;
+    if (gas.zones && (!archetype || !gas.zones.includes(archetype))) continue;
+    let count = 0;
+    for (const other of Object.values(world.buildings)) {
+      const at = world.map.tiles[other.tileId]!;
+      if (Math.abs(at.x - tile.x) + Math.abs(at.y - tile.y) <= gas.radius) count++;
+    }
+    if (!site || count > site.count) site = { id: tile.id, count };
+  }
+  if (!site || !buyTile(world, me.id, site.id).ok || !build(world, me.id, site.id, gas.id).ok) return [...parts, 'probe-energy:-'];
+  const plant = world.buildings[world.map.tiles[site.id]!.buildingId!]!;
+  const ledger = (): string => {
+    const served = Object.keys(world.buildings)
+      .sort()
+      .filter((id) => world.buildings[id]!.last.power)
+      .map((id) => {
+        const power = world.buildings[id]!.last.power!;
+        return `${id}=${power.plantId}/${power.bill.toFixed(4)}/${power.saved.toFixed(4)}`;
+      });
+    const upkeep = Object.values(world.buildings).reduce((sum, b) => sum + b.last.upkeep, 0);
+    return `${plant.last.revenue.toFixed(4)}:${plant.last.cogs.toFixed(4)}:${JSON.stringify(plant.last.plant)}:${upkeep.toFixed(4)}:${served.join(',')}`;
+  };
+  world.time.day += 1;
+  resetDailyLedgers(world);
+  parts.push(`probe-energy:${site.id}:${world.time.day}:${ledger()}`);
+  const locked = lockFuel(world).ok;
+  world.time.day += 1;
+  world.crisis = { defId: shock.id, phase: 'active', activeDay: world.time.day, endDay: world.time.day + shock.durationDays[0] };
+  resetDailyLedgers(world);
+  parts.push(`probe-energy-shock:${locked}:${energyPrice(world).toFixed(6)}:${ledger()}:${Math.round(me.today.revenue)}:${Math.round(me.today.cogs)}`);
   return parts;
 }
 
