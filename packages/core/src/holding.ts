@@ -329,6 +329,10 @@ export function closeCity(state: GameState, index: number): CommandResult {
   if (!holding || !city) return { ok: false, reason: tc('core.holding.noSuchCity') };
   if (!city.state.gameOver) return { ok: false, reason: tc('core.holding.closeOnlyLost') };
   if (city.state.victory) holding.closedWins = (holding.closedWins ?? 0) + 1;
+  // Zaferin yolu da (Tur 61): kariyer deposu silinse ya da kayıt başka cihaza
+  // taşınsa "Üç yol" kapatılan şehrin yolunu kayıttan okuyor (Codex #91).
+  const path = city.state.victory?.path;
+  if (path && !holding.closedPaths?.includes(path)) holding.closedPaths = [...(holding.closedPaths ?? []), path];
   // Kariyer (Tur 41): eski kayıtta kuruluş anı şehirlerin en erkeninden okunuyor;
   // kurucu şehir kapanmadan yazılmazsa koşunun kimliği değişirdi (Codex #70).
   holding.foundedAtIso ??= holdingFoundedAt(state);

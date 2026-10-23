@@ -6,6 +6,7 @@ import { formatMoney } from '../selectors';
 import { sharesOutstanding } from './equity';
 import type { GameState, VictoryKind } from '../types';
 import { difficultyOf } from './rules';
+import { companyPath } from './paths';
 
 /**
  * Hedef merdiveni ve zafer.
@@ -210,7 +211,16 @@ export function runGoalTick(state: GameState): void {
     const kind = victoryReached(state);
     if (kind) {
       const deferred = victoryDeferred(state);
-      state.victory = { day: state.time.day, kind, ...(deferred ? { dismissed: true } : {}) };
+      // Zafere hangi yoldan gidildi (Tur 61): o günkü defterle donuyor, payları da.
+      const path = companyPath(state);
+      state.victory = {
+        day: state.time.day,
+        kind,
+        path: path.path.id,
+        shares: path.shares,
+        acquisitions: path.acquisitions,
+        ...(deferred ? { dismissed: true } : {}),
+      };
       if (!deferred) state.time.speed = 0;
       pushNews(
         state,

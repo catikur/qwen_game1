@@ -1,13 +1,14 @@
 import { beforeEach, describe, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { SCENARIOS } from '@capital/content';
-import { createNewGame } from '@capital/core';
+import { createNewGame, runFacts, victoryPaths } from '@capital/core';
 import type { GameState } from '@capital/core';
 import {
   MAX_CAREER_RUNS,
   MAX_FOLDED_RUNS,
   careerStoreSizeForTests,
   careerSummary,
+  mergeRun,
   observeCareer,
   resetCareerForTests,
   syncCareer,
@@ -114,6 +115,36 @@ describe('kariyer deposu', () => {
     const summary = careerSummary();
     assert.equal(summary.victories, 1, 'zafer sayısı düşmedi');
     assert.deepEqual(summary.runs[0]!.wins, [{ day: 600, citySize: 'standard' }]);
+  });
+
+  test('holding: aynı yerel günde iki şehrin zaferi iki yol sayılıyor (Codex #91)', () => {
+    const base = runFacts(game(1));
+    const at = '2026-10-23T00:00:00.000Z';
+    const first = mergeRun(undefined, { ...base, wins: [] }, at);
+    const next = {
+      ...base,
+      wins: [
+        { day: 600, citySize: 'standard' as const, path: 'retail' as const },
+        { day: 600, citySize: 'standard' as const, path: 'energy' as const },
+      ],
+    };
+    const merged = mergeRun(first, next, at);
+    assert.deepEqual(victoryPaths({ runs: [merged], scenarioStars: {} }).sort(), ['energy', 'retail']);
+  });
+
+  test('budanan koşunun zafer yolu Üç yol rozetinde kalıyor (Tur 61)', () => {
+    const paths = () => careerSummary().statuses.find((s) => s.def.id === 'three_paths')!.value;
+    const won = (seed: number, path: 'retail' | 'realestate' | 'freight') => {
+      const state = game(seed);
+      state.victory = { day: 600, kind: 'tycoon', path, dismissed: true };
+      return state;
+    };
+    observeCareer(won(1, 'freight'));
+    observeCareer(won(2, 'retail'));
+    assert.equal(paths(), 2);
+    for (let i = 0; i < MAX_CAREER_RUNS; i++) observeCareer(game(700 + i));
+    assert.equal(paths(), 2, 'budanan iki koşunun yolları arşivde');
+    assert.deepEqual(ids(observeCareer(won(3, 'realestate'))), ['three_paths']);
   });
 
   test('budanan koşunun eski kaydı geri gelince koşu özetinin hiçbiri düşmüyor (Codex #70)', () => {

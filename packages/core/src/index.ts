@@ -174,7 +174,10 @@ export {
   undercutRivals,
 } from './systems/relations';
 export { activeContract, contractProgress, OFFER_LIFETIME_DAYS } from './systems/contracts';
-export { FREIGHT, fleetUsed, freightFeeEstimate, freightPenalty, freightProspects, freightTerminals } from './systems/freight';
+export { FREIGHT, FREIGHT_CHALLENGER_SHARE, fleetUsed, freightFeeEstimate, freightPenalty, freightProspects, freightStanding, freightTerminals } from './systems/freight';
+export type { FreightStanding } from './systems/freight';
+export { companyPath, notePathSources, sourceOf } from './systems/paths';
+export type { CompanyPath } from './systems/paths';
 export {
   energyNeed,
   energyPotential,

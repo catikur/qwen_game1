@@ -24,6 +24,7 @@ import { runAuctionTick } from './systems/auction';
 import { runDividendTick, runTakeoverTick } from './systems/equity';
 import { runResearchTick } from './systems/focus';
 import { runNpcTick } from './systems/npc';
+import { notePathSources } from './systems/paths';
 import type { GameState } from './types';
 
 /**
@@ -117,4 +118,8 @@ export function simulateCityDay(state: GameState): void {
   // panosu burada değil: net değerin günlük hesabından SONRA çalışıyor
   // (`runQuestTick`'e bakın).
   runBubbleTick(state);
+  // Şirketin yolu (Tur 61) günün defterleri kapanınca: hedef adımından ÖNCE,
+  // zafer günü donan yol o günün kârını da saysın. Bekleyen şehir de kendi
+  // gününde (Codex #91). Simülasyon defteri okumuyor.
+  notePathSources(state);
 }

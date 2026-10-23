@@ -4,7 +4,7 @@
 > `pnpm bench` çıktısından; iddialar `pnpm balance` ve `pnpm playtest`
 > tarafından her koşuda doğrulanıyor.
 >
-> Son güncelleme: şema **v6**, 60 tur (Tur 33 denendi ve geri alındı; Tur 34 eski görünüme canlılık ekledi; Tur 35 arayüzü Lite'ın "Cam & Bulut" diline taşıdı; Tur 36 şehre ayrıntı kattı; Tur 37a geç oyuna yönetim yükü, servet vergisi ve kriz dönemleri getirdi; Tur 37b karar kartlarını ve rakip hikâyelerini ekledi; Tur 37c fırsat balonlarını ve aylık görev panosunu getirdi; Tur 37d canlı pazarı, şehir projesi ihalesini ve rakip konsorsiyumunu getirdi; Tur 38 değerlendirme turuydu: geç oyun hızı, gündem ve haber akışı, zorluk eğrisi; Tur 39a senaryo modunu getirdi: Kurtarma ve Krizin ortasında; Tur 39b Konsorsiyuma karşı, Zincir ustası ve Şehrin sponsoru senaryolarını ekledi; Tur 39c Büyük şehir fethi ve Holding: iki şehir ile listeyi yediye tamamladı; Tur 40 cila ve performans; Tur 41 başarımlar ve kariyer; Tur 42 açılışta gölgelendirici derlemesi; Tur 43 oyun içi akıcılık; Tur 44 değerlendirme turuydu: Türkçe sayı biçimi, yardımın kapsamı, haber akışı; Tur 45 dört ek kural getirdi: Fırtınalı yıllar, Aç gözlü rakipler, Sıkı banka, Kıt arsa; Tur 46 açılış paketini böldü: kurulum ekranı telefonda yarı sürede; Tur 47 tek Ayarlar paneli ve erişilebilirlik getirdi: metin boyutu, renk körlüğüne uygun palet, hareket, ses düzeyleri, pencerelerde klavye; Tur 48 oyunu kurulabilir ve çevrimdışı açılır yaptı, yayından sonra "yeni sürüm hazır" diyor; Tur 49 müziği getirdi: gündüz, gece ve kriz, şehirle birlikte dönüyor; Tur 50 Faz 1'i değerlendirdi ve tanıtım paketini hazırladı; Tur 51 Faz 2'yi açtı: Lite'ın lig sunucusu ana oyunun Tohum Ligi koşularını da alıyor, tablo herkese açık; Tur 52'de sunucu her koşuyu gönderimde yeniden oynatıyor, tabloya yalnız doğrulanmış skor giriyor; Tur 53 ligin her haftasına bir ek kural ve 90 günlük günün koşusunu getirdi; Tur 54 liderlerin eğrisini senin koşunun üstüne koydu ve liderin o günlerde ne yaptığını koşu kodundan anlatıyor; Tur 55 davet kodlu arkadaş liglerini getirdi ve Faz 2'yi kapattı; Tur 56 Faz 3'ü açtı: nakliye terminali rakip mağazalarına taşıma sözleşmesiyle taşıyor; Tur 57 enerjiyi getirdi: şebeke fiyatı, santraller, enerji krizi; Tur 58 gayrimenkul geliştiricisini getirdi: konut ve ofis projeleri, kira ve doluluk, kentsel dönüşüm hakkı ve başvurusu; Tur 59 rakiplere hafıza verdi: CEO'nun mizacı, husumet ve ittifak, fiyat savaşı ve lobiyle tepki, uzlaşma; Tur 60 Faz 3'ün sektörleriyle üç senaryo ekledi: Herkesin nakliyecisi, Karanlık kış, Kentsel dönüşüm, her biri bir ek kuralla). Önümüzdeki işin sırası `docs/YOL-HARITASI.md`'de.
+> Son güncelleme: şema **v6**, 61 tur (Tur 33 denendi ve geri alındı; Tur 34 eski görünüme canlılık ekledi; Tur 35 arayüzü Lite'ın "Cam & Bulut" diline taşıdı; Tur 36 şehre ayrıntı kattı; Tur 37a geç oyuna yönetim yükü, servet vergisi ve kriz dönemleri getirdi; Tur 37b karar kartlarını ve rakip hikâyelerini ekledi; Tur 37c fırsat balonlarını ve aylık görev panosunu getirdi; Tur 37d canlı pazarı, şehir projesi ihalesini ve rakip konsorsiyumunu getirdi; Tur 38 değerlendirme turuydu: geç oyun hızı, gündem ve haber akışı, zorluk eğrisi; Tur 39a senaryo modunu getirdi: Kurtarma ve Krizin ortasında; Tur 39b Konsorsiyuma karşı, Zincir ustası ve Şehrin sponsoru senaryolarını ekledi; Tur 39c Büyük şehir fethi ve Holding: iki şehir ile listeyi yediye tamamladı; Tur 40 cila ve performans; Tur 41 başarımlar ve kariyer; Tur 42 açılışta gölgelendirici derlemesi; Tur 43 oyun içi akıcılık; Tur 44 değerlendirme turuydu: Türkçe sayı biçimi, yardımın kapsamı, haber akışı; Tur 45 dört ek kural getirdi: Fırtınalı yıllar, Aç gözlü rakipler, Sıkı banka, Kıt arsa; Tur 46 açılış paketini böldü: kurulum ekranı telefonda yarı sürede; Tur 47 tek Ayarlar paneli ve erişilebilirlik getirdi: metin boyutu, renk körlüğüne uygun palet, hareket, ses düzeyleri, pencerelerde klavye; Tur 48 oyunu kurulabilir ve çevrimdışı açılır yaptı, yayından sonra "yeni sürüm hazır" diyor; Tur 49 müziği getirdi: gündüz, gece ve kriz, şehirle birlikte dönüyor; Tur 50 Faz 1'i değerlendirdi ve tanıtım paketini hazırladı; Tur 51 Faz 2'yi açtı: Lite'ın lig sunucusu ana oyunun Tohum Ligi koşularını da alıyor, tablo herkese açık; Tur 52'de sunucu her koşuyu gönderimde yeniden oynatıyor, tabloya yalnız doğrulanmış skor giriyor; Tur 53 ligin her haftasına bir ek kural ve 90 günlük günün koşusunu getirdi; Tur 54 liderlerin eğrisini senin koşunun üstüne koydu ve liderin o günlerde ne yaptığını koşu kodundan anlatıyor; Tur 55 davet kodlu arkadaş liglerini getirdi ve Faz 2'yi kapattı; Tur 56 Faz 3'ü açtı: nakliye terminali rakip mağazalarına taşıma sözleşmesiyle taşıyor; Tur 57 enerjiyi getirdi: şebeke fiyatı, santraller, enerji krizi; Tur 58 gayrimenkul geliştiricisini getirdi: konut ve ofis projeleri, kira ve doluluk, kentsel dönüşüm hakkı ve başvurusu; Tur 59 rakiplere hafıza verdi: CEO'nun mizacı, husumet ve ittifak, fiyat savaşı ve lobiyle tepki, uzlaşma; Tur 60 Faz 3'ün sektörleriyle üç senaryo ekledi: Herkesin nakliyecisi, Karanlık kış, Kentsel dönüşüm, her biri bir ek kuralla; Tur 61 Faz 3'ü değerlendirdi ve kapattı: zafere üç gerçek yol var, şirketin yolu kârın kaynağından okunuyor). Önümüzdeki işin sırası `docs/YOL-HARITASI.md`'de.
 
 ---
 
@@ -6566,6 +6566,238 @@ sınavı 371/371 (31 bölüm); paket bütçesi tamam (ana parça 70,3 KB, 68,7'd
 **Canlıya geçiş.** Şema aynı, simülasyon değişti (kinli rakibin teklifi):
 birleşmeden sonra Worker yeniden dağıtılıyor. Lite etkilenmiyor.
 
+### Tur 61 — Değerlendirme: zafere farklı yollar, Faz 3'ün sonu
+
+Faz 3'ün son turu (`docs/YOL-HARITASI.md`). Faz şunları getirdi:
+- nakliye (Tur 56), enerji (57) ve gayrimenkul (58);
+- rakiplerin hafızası (59);
+- bu sektörlerin senaryoları (60).
+
+Fazın "bitti" ölçüsü: zafere en az üç farklı yol var, her birini kazanan
+bir vekil var. Soru, bunun doğru olup olmadığı.
+
+**İlk ölçüm: beş vekil, tek şirket.** Tur 56–58'in vekilleri temel vekilin
+üstüne bir iş kolu ekliyor. Beşi Dengeli'de, beş şehirde (1, 7, 42, 101,
+202) zafere kadar oynandı.
+- Beşi de kazandı ama hepsi aynı şirketti.
+- Binaların kârının %97'si ve fazlası perakende ve zincirden geldi.
+- Nakliye %1–2, enerji %0–5, kira %9–13.
+- Sınırları yükseltmek (sekiz terminal, on iki santral, sekiz proje) payı
+  pek değiştirmedi: kira %18–20, enerji ~%3, nakliye ~%2.
+
+Kârın kaynağını saymak için bir defter yazıldı (aşağıda).
+
+**Yol vekilleri** (`pathStrategy`, `core/test/proxy.ts`): her yol için ayrı
+oyuncu, iş kolu önde, hepsi baskın uyarısını okuyor.
+
+| Yol | Vekil | Zafer günü (5 şehir) | Kimliği |
+|---|---|---|---|
+| Devralma | beş günde bir devralma emri, sonra temel vekil | 551–621 | 2–3 devralma, portföy 25–45 M ₺ |
+| Nakliye | her teklifi kabul eden nakliyeci, terminal sınırı yok, kinli rakiple uzlaşıyor | 564–634 | ücret kârın %4–5'i |
+| Gayrimenkul | geliştirici her gün, proje sınırı yok; temel vekil yedi günde bir | 579–653 | kira %21–27, binaların %33–43'ü kiralık |
+| Perakende | temel vekil, beş günde bir | 626–713 | kira %1–3 |
+| Enerji | enerjici, santral sınırı yok; temel vekil yedi günde bir | 641–700 | enerji %8–12 |
+
+Beş yolun beşi de her şehirde kazanıyor. Hiçbiri baskın değil: üç
+şehirde ortalama zafer günü 581 (nakliye) ile 677 (enerji) arasında.
+
+**Bulgular.**
+
+**1 · Üç gerçek yol var.** Perakende ve zincir, devralma ve gayrimenkul.
+- *Gayrimenkul:* kiralık projeler kârın beşte birinden fazlası. Şirketin
+  binalarının üçte biri ve fazlası kiralık (47–65 kiralık, 73–88 mağaza).
+- *Devralma:* şirket rakipleri satın alarak büyüyor. Zafer günü net
+  değerinin dörtte biri ve fazlası rakip hissesi; zafere en erken giden yol.
+- *Perakende:* ikisinde de yok.
+
+**2 · Enerji ve nakliye yan iş kolu.** İkisi de kazandırıyor ama şirketi
+taşımıyor; en keskin vekilleri bile kârın sekizde birini geçmiyor. Sebep
+pazarın büyüklüğü:
+- Santral şehrin enerji faturasını satıyor. Fatura bakımın %25–40'ı.
+  Bir mağaza günde ~1,5 MWh istiyor; doğalgaz santralinin 45 MWh'ini
+  doldurmak için menzilde ~30 mağaza gerekiyor. Dolduramayan santral
+  yakıtını ve bakımını taşıyor.
+- Terminal rakip mağazasının perakende maliyetinin %35'ini siliyor, ücret
+  bunun %60'ı.
+- Bu, "Açık kalan işler"de yeni bir kalem (4.10).
+
+**3 · Gayrimenkulün temposu.** Geliştirici temel vekili on günde bir
+çağırınca beş şehrin ikisinde rakipler kaçtı:
+- 101'de 918. günde kazandı;
+- 202'de 1.400 günde zafer yok, en büyük rakip 463 M ₺.
+
+Mağaza parseli boş kalınca perakendenin talebi rakiplere gidiyor. Yedi
+günde bir beşte beş kazanıyor; oyuncu için ders: proje nakdi yiyor,
+mağazayı bırakma.
+
+**4 · Nakliyenin bedeli, ölçülemeyen kadar.** İlk ölçümde her teklifi kabul
+eden nakliyeci 7. şehirde 1.300 günde kazanamadı:
+- 600. günde mağazalarının çoğunu taşıdığı en yakın rakibi (Meridyen)
+  nakliyesiz koşuya göre %32, kendisi %24 büyümüştü;
+- rakip onu 700. günden önce geçti.
+
+Aynı kural setinde vekilin temposu bir gün kayınca (ya da teklifleri
+mağazadan önce kabul edince) aynı şehri 594–606. günde kazandı. Kayıp
+yapısal değil, yarışın zamanlamaya duyarlılığı. Seçici bir nakliyeci (en
+yakın rakibe taşımayan) da denendi:
+- üç şehrin ikisinde her teklifi kabul edenden geç kazandı (606 → 622,
+  564 → 566), birinde erken (573 → 565);
+- kural değişmedi, vekil her teklifi kabul ediyor.
+
+Değişen bilgi: teklif artık müşterinin yarıştaki yerini söylüyor (aşağıda).
+Karar oyuncunun.
+
+**5 · Oyuncu yolu görmüyordu.** Hangi iş kolunun kârın ne kadarını
+getirdiği hiçbir yerde yazmıyordu; zafer ekranı ve kariyer yalnız günü
+ve değeri tutuyordu.
+
+**6 · Küçük telefonda rakipler paneli taşıyordu** (Tur 59'dan beri).
+- iPhone SE'de (320 px) tablo paneli 422 px'e çıkarıyordu; dosyanın
+  "Uzlaşma teklif et" düğmesi ekranın kenarından taşıyordu.
+- Tarayıcı testinin "sekiz panelin her düğmesine ulaşılıyor" kontrolü
+  main'de de kalıyordu.
+- Sebep: telefonda pencere bir ızgara öğesi; `min-width: auto` onu
+  içeriğin en küçük genişliğine uzatıyordu.
+- Pencere ekran genişliğine inince tablo sığmıyordu: yedi sütunun en dar
+  hâli Türkçe 402, İngilizce 440 px; 320 px'lik ekranda tabloya 286 px
+  kalıyor.
+- Düzeltme: pencere ekran genişliğinde kalıyor (`min-width: 0`). Telefonda
+  (≤560 px) bina, arsa ve güçlü sektör sütunları şirketin adının altına,
+  soluk bir satıra iniyor ("Bina 9 · Arsa 9 · Perakende %100"); tablo dört
+  sütun, 320 px'te iki dilde de sığıyor. Bilgi kaybolmuyor. Büyük yazıda yine
+  sığmazsa tablo kendi kutusunda kayıyor, dosyanın düğmeleri ekranda kalıyor.
+- iPhone SE'nin sekiz panel kontrolü ve 390 px'te "gizli yatay kaydırıcı yok"
+  kontrolü ikisi birden geçiyor (ilk düzeltme, tabloyu kaydırma kutusuna
+  koymak, ikincisini kırmıştı).
+
+**Yapılanlar.**
+
+*Kârın kaynağı* (`core/src/systems/paths.ts`, `state.sources`):
+- gün sonunda oyuncunun binalarının günlük kârı kaynağına göre toplanıyor:
+  perakende (mağaza, zincir, depo, Ar-Ge, pazarlama), kira, enerji, nakliye;
+- kendi santralinden enerji alan binanın tasarrufu enerjiye yazılıyor,
+  binanın kaynağından düşülüyor;
+- terminal kendi mağazalarına depo da: bakımı perakendede, nakliyenin kârı
+  rakiplerden topladığı ücret;
+- toplam, binaların kârının toplamı: para kaynaklar arasında yer
+  değiştiriyor, yaratılmıyor.
+
+*Şirketin yolu* (`content/src/paths.ts`, `companyPath`): eşiğini geçen ilk
+yol, sırasıyla devralma (2 rakip), gayrimenkul (kira %15), enerji (%6),
+nakliye (ücret %2); hiçbiri değilse perakende. Eşikler yukarıdaki ölçümden:
+- temel vekilde kira en çok %3, enerji ve nakliye yok;
+- her yolun vekili kendi eşiğini her şehirde geçiyor.
+
+Zafer günü yol donuyor (`victory.path`).
+
+*Arayüz* (iki dilde):
+- **Hedefler paneli:** "Şirketin yolu", kaynak başına bir çubuk ve
+  eşikler.
+- **Zafer ekranı:** "Zafere giden yol".
+- **Kariyer:** koşunun satırında zaferin yolu; yeni rozet **Üç yol** (üç
+  farklı yoldan zafer, serbest oyunda; 29 rozet).
+- **Yardım:** "Zafere birden çok yol var" maddesi.
+
+*Taşıma teklifinde müşterinin yeri* (`freightStanding`):
+- terminalin masası müşterinin sırasını, değerini ve kamyonların ona
+  günlük kazandırdığını yazıyor;
+- en güçlü rakip ve değeri seninkinin %60'ını geçiyorsa "En yakın rakibin"
+  uyarı renginde, gündem çipi de söylüyor;
+- teklif kuralı değişmedi.
+
+**Simülasyon değişmedi.** Defter yalnız okuyor:
+- lig izi Tur 60'la birebir (`a5ded51fb01e62a5`);
+- Worker'a dokunmak gerekmiyor;
+- Tur 56–60 için yapılacak tek dağıtım Tur 61'i de kapsıyor.
+
+**Eski denge bölümleri.** main'in (Tur 60) tam koşusuyla bölüm bölüm
+karşılaştırıldı: 31 eski bölümün bütün satırları birebir aynı. Yol vekilleri
+yeni; eski bölümlerin vekillerine dokunulmadı.
+
+**Doğrulama.** `pnpm test` 728/728 (712'den); tip denetimi temiz.
+- `paths.test.ts` (10 yeni):
+  - kaynak rolden;
+  - defter: kendi santralinin tasarrufu, terminalin ücreti ve gideri, rakip
+    santralin indirimi, rakibin binası;
+  - defter simülasyonun durumuna dokunmuyor;
+  - motorun günlük toplamı binaların kârı;
+  - eşikler ve sıra;
+  - zafer günü yol donuyor, o günün kârıyla (Codex);
+  - defter şehrin gününde yazılıyor (Codex);
+  - zarar eden kaynak varken paylar 0..1 (Codex);
+  - müşterinin yeri ve gündem çipi.
+- `career.test.ts` (çekirdek ve arayüz, 4 yeni): zaferin yolu koşu
+  özetinde; Üç yol farklı yolları sayıyor; budanan koşunun yolu arşivde
+  kalıyor; holding'de aynı gün kazanan iki şehrin iki yolu (Codex);
+  kapatılan şehrin yolu (Codex).
+- `pathSummary.test.ts` (2 yeni): canlı defterin payları; zafer ekranı zafer
+  gününün paylarını çiziyor (Codex).
+- Denge sınavı 375/375 (32 bölüm; yeni "Yollar" bölümünün 4
+  kontrolüyle, ~75 sn).
+- Tarayıcı testi "Değerlendirme: şirketin yolu" 11/11, konsol temiz:
+  - Hedefler panelinde yol ve çubuklar;
+  - zafer ekranı ve kariyer;
+  - teklifin müşterisi (en yakın rakip ve küçük rakip);
+  - telefonda İngilizce, taşma yok;
+  - 320 px'te İngilizce rakipler tablosu dört sütun, bina ve arsa adın
+    altında, gizli kaydırıcı yok; geniş ekranda yedi sütun.
+- Tam tarayıcı koşusu 618/618, konsol temiz (~43 dk). Sağlık tablosundaki
+  sayı Tur 55'te (556) kalmıştı; Tur 56–61'in bölümleriyle 618.
+- Paket bütçesi tamam: ana parça 71,4 KB (70,3'ten).
+
+**Codex incelemesi.**
+- *Zaferin yolu bir gün geriden:* defter `runDay`'in sonunda yazılıyordu,
+  zafer ondan önce hedef adımında donuyordu. Kira, enerji ya da nakliye
+  eşiği tam zafer günü geçilirse zafer ekranı ve kariyer bir önceki günün
+  yolunu yazardı; bekleyen şehirlerde de aynı sıra vardı. Defter artık
+  şehrin gününün sonunda (`simulateCityDay`), iki yolda da hedef adımından
+  önce. İki test düzeltmeden önce kırılıyordu. Lig izi ve "Yollar"
+  bölümünün çıktısı aynı.
+- *Pay 1'i aşıyordu:* bir kaynak zarardayken (perakende −100, kira 200)
+  kira payı 2 çıkıyor, çubuk %200 çiziliyordu. Pay artık kâr eden
+  kaynakların toplamından: 0..1, toplamı 1. Test düzeltmeden önce
+  kırılıyordu.
+- *Zafer ekranı sonraki defteri çiziyordu:* uzaktaki şehir zaferden sonra
+  da yaşıyor ve zaferi oyuncu o şehre dönünce görüyor. Başlık donmuş yolu
+  yazıyor, çubuklar ise sonraki günlerin defterinden çiziliyordu. Zafer
+  günü payları ve devralma sayısı da donuyor (`victory.shares`), ekran
+  onları çiziyor. İki test düzeltmeden önce kırılıyordu.
+- *Holding'de aynı günün iki zaferi:* kariyer deposu zaferleri gün ve
+  boyutla birleştiriyor. İki şehir aynı yerel günde başka yollardan
+  kazanınca bir yol kayboluyordu. Koşu özetinin artık ayrı bir yol listesi
+  var (`paths`), birleştirmede birleşimi alınıyor; anahtara yol eklenseydi
+  eski kayıtla birleşen zafer iki kez sayılırdı. Test düzeltmeden önce
+  kırılıyordu.
+- *Kapatılan şehrin yolu kayboluyordu:* kaybedilen holding şehri
+  kapatılınca durumu siliniyor; holding yalnız zafer sayısını ve sayaçları
+  tutuyordu. Kariyer deposu silinir ya da kayıt başka cihaza taşınırsa
+  koşu zaferi sayıyor ama yolunu bilmiyordu; Üç yol eksik sayardı. Holding
+  kapatılan şehirlerin zafer yollarını da tutuyor (`closedPaths`), koşu
+  özeti onları okuyor. Test düzeltmeden önce kırılıyordu; lig izi aynı.
+
+**Faz 3'ün özeti (Tur 56–61).** Şehirde yeni iş kolları ve onlara tepki
+veren rakipler:
+- Tur 56: nakliye terminali; rakip mağazalarına taşıma sözleşmesi (#86).
+- Tur 57: enerji; şebeke fiyatı, santraller, enerji krizi, yakıt
+  sabitleme (#87).
+- Tur 58: gayrimenkul geliştiricisi; projeler, kira ve doluluk, kentsel
+  dönüşüm (#88).
+- Tur 59: rakiplerin hafızası; CEO'nun mizacı, husumet ve ittifak, tepkiler,
+  uzlaşma (#89).
+- Tur 60: bu sektörlerle üç senaryo, her biri bir ek kuralla; senaryo
+  sayısı 10 (#90).
+- Tur 61: değerlendirme; kârın kaynağı ve şirketin yolu (bu tur).
+
+Ölçü tuttu: zafere üç gerçek yol var (perakende, devralma, gayrimenkul) ve
+beş yolun her birini kazanan bir vekil var. Enerji ve nakliye kazandırıyor
+ama şirketi taşımıyor; 4.10'da.
+
+Faz boyunca şema değişmedi. Simülasyon Tur 56–60'ın her birinde değişti,
+Tur 61'de değişmedi; Worker'ın Tur 56–60 için tek dağıtımı kullanıcının
+hesabında bekliyor. Codex'in her bulgusu düzeltildi ya da kanıtla yanıtlandı;
+düzeltilenlerin testi düzeltmeden önce kaldı. Birim testi fazın başında
+625'ti (Tur 55), şimdi 728; denge sınavı 331 kontrolden 375'e.
+
 ---
 
 ## 3. Ölçülen durum
@@ -6668,11 +6900,11 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi). Senaryo şehirlerinde gün 3–17 ms (`pnpm dayperf`, Tur 43) |
-| Birim testi | **712 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de, Tur 52'de sunucuda tekrar, Tur 53'te haftanın kuralı ve günün koşusu, Tur 54'te hayalet eğri, Tur 55'te davetli ligler, Tur 56'da taşıma sözleşmeleri, Tur 57'de enerji, Tur 58'de gayrimenkul, Tur 59'da rakiplerin hafızası, Tur 60'ta senaryo paketi II) |
-| Denge testi | **371 kontrol, hepsi geçiyor** (31 bölüm, süreleriyle; ~15–18 dk) |
-| Tarayıcı testi | **556 kontrol, hepsi geçiyor**, 0 konsol hatası (~40 dk); duman koşusu 132 (~5 dk, rehber dahil) |
+| Birim testi | **728 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de, Tur 52'de sunucuda tekrar, Tur 53'te haftanın kuralı ve günün koşusu, Tur 54'te hayalet eğri, Tur 55'te davetli ligler, Tur 56'da taşıma sözleşmeleri, Tur 57'de enerji, Tur 58'de gayrimenkul, Tur 59'da rakiplerin hafızası, Tur 60'ta senaryo paketi II, Tur 61'de şirketin yolu) |
+| Denge testi | **375 kontrol, hepsi geçiyor** (32 bölüm, süreleriyle; ~17 dk) |
+| Tarayıcı testi | **618 kontrol, hepsi geçiyor**, 0 konsol hatası (~43 dk); duman koşusu 132 (~8 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + paket bütçesi (Tur 46; Tur 48'den beri hizmet çalışanı ve manifest de) + duman oynanışı |
-| Kapsam | 40 bina · 25 ürün · 7 kategori · 8 rakip profili · 10 CEO · 22 olay (11 şehir + 11 sektör) · 3 kriz · 12 karar kartı · 70 rakip sözü · 4 mizaç · 48 ilişki sözü · 5 fırsat balonu · 8 görev türü · 4 mevsim · 9 moda ürünü · 17 şehir yapısı (6 siluet) · 6 şehir projesi · 10 senaryo · 4 ek kural · 28 rozet |
+| Kapsam | 40 bina · 25 ürün · 7 kategori · 8 rakip profili · 10 CEO · 22 olay (11 şehir + 11 sektör) · 3 kriz · 12 karar kartı · 70 rakip sözü · 4 mizaç · 48 ilişki sözü · 5 fırsat balonu · 8 görev türü · 4 mevsim · 9 moda ürünü · 17 şehir yapısı (6 siluet) · 6 şehir projesi · 10 senaryo · 4 ek kural · 5 yol · 29 rozet |
 
 ### Render (Tur 6 sonrası)
 
@@ -6858,6 +7090,33 @@ nüfus tavanı ve arsa değeri). Hâlâ açık olanlar:
   "kim önce gönderdi" artık sunucunun saati. Tur 52: sunucu her koşuyu
   gönderimde yeniden oynatıyor, tabloya yalnız doğrulanmış skor giriyor;
   kopya artık tabloya hiç girmiyor.
+
+### 4.10 Enerji ve nakliye şirketi taşımıyor (Tur 61)
+
+Değerlendirmenin ölçümü: beş yolun beşi de kazanıyor, ama enerji ve
+nakliye yan iş kolu.
+- Enerjici vekilde santraller kârın %8–12'si (kendi binalarının
+  tasarrufuyla); nakliyecide ücret %4–5.
+- Şirketi taşıyan yine perakende.
+
+Pazarın büyüklüğü bu kadar:
+- Santral şehrin enerji faturasını satıyor (bakımın %25–40'ı). Bir mağaza
+  günde ~1,5 MWh istiyor, doğalgaz santrali 45 MWh üretiyor: menzilde ~30
+  mağaza olmadan santral dolmuyor.
+- Terminal rakip mağazasının perakende maliyetinin %35'ini siliyor, ücret
+  bunun %60'ı.
+
+Seçenekler:
+(a) santralin boşta kalan gücünü şebekeye daha düşük fiyatla satması
+    (güç her zaman paraya dönüşür; enerji kendi başına bir yol olur, güneş
+    tarlası kira gibi çalışır);
+(b) rakip zincirlerin üretim ünitelerine de taşıma (mal akışı, perakende
+    maliyetinden büyük bir pazar);
+(c) olduğu gibi bırakmak: ikisi omurganın yanında iş kolu, perakendeyi
+    ucuzlatıyor ve krize karşı sigorta.
+
+(a) ve (b) bütün denge bölümlerini oynatıyor; bir tasarım kararı. Bu turda
+(c): ölçü (üç gerçek yol) tutuyor.
 
 ## 5. Nasıl koşulur
 

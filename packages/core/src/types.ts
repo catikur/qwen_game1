@@ -10,6 +10,8 @@ import type {
   ModifierId,
   MotionKind,
   NpcProfileDef,
+  PathId,
+  PathSource,
   ProjectId,
   QuestKind,
   RelationEventKind,
@@ -1010,7 +1012,20 @@ export interface GameState {
    * Zafer — `gameOver`un ikizi ama bir SON değil: oyuncu serbest oyuna
    * devam edebilir. `dismissed` ekranın bir kez görüldüğünü tutar.
    */
-  victory?: { day: number; kind: VictoryKind; dismissed?: boolean };
+  victory?: {
+    day: number;
+    kind: VictoryKind;
+    dismissed?: boolean;
+    /** Zafer gününde şirketin yolu (Tur 61, `companyPath`); eski kayıtta yok. */
+    path?: PathId;
+    /**
+     * Zafer günü kârın kaynaklarının payı ve devralınan rakip: zafer ekranı
+     * bunları çiziyor. Uzaktaki şehir zaferden sonra da yaşıyor, defter
+     * değişiyor; ekran yolu açıklayan günü göstermeli (Codex #91).
+     */
+    shares?: Record<PathSource, number>;
+    acquisitions?: number;
+  };
   /** Şehrin adı (Tur 22). Yalnızca holding kurulunca veriliyor. */
   cityName?: string;
   /**
@@ -1034,6 +1049,12 @@ export interface GameState {
    * görülemezdi. Yokluğu "hiçbiri yaşanmadı" demek; şema sürümü sabit.
    */
   feats?: RunFeats;
+  /**
+   * Oyuncunun binalarının koşu boyunca kârı, kaynağına göre (Tur 61,
+   * `systems/paths.ts`): şirketin yolu bundan okunuyor. Simülasyon okumuyor.
+   * Yokluğu "henüz kâr yok" demek (eski kayıt da); şema sürümü sabit.
+   */
+  sources?: Partial<Record<PathSource, number>>;
 }
 
 /** Şehrin sayaçları (Tur 41); hepsi seçime bağlı, yokluğu 0. */
@@ -1112,6 +1133,8 @@ export interface HoldingState {
   foundedCitySize?: CitySizeId;
   /** Kapatılan şehirlerin kariyer payı (Tur 41): şehir listeden çıkınca sayaçları kaybolmasın. */
   closedTally?: CityTally;
+  /** Kapatılan şehirlerdeki zaferlerin yolları (Tur 61): "Üç yol" kayıttan okunuyor (Codex #91). */
+  closedPaths?: PathId[];
 }
 
 /** Bir şehrin koşuya kattığı (Tur 41); hepsi seçime bağlı, yokluğu 0. */

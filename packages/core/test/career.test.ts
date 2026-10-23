@@ -385,6 +385,25 @@ describe('kariyer: koşunun özeti', () => {
     assert.equal(runFacts(state).wins.length + runFacts(state).closedWins, 2);
   });
 
+  test('kapatılan şehrin zafer yolu koşunun yollarında kalıyor (Codex #91)', () => {
+    const engine = played(30, 6);
+    let state = engine.getState();
+    state.victory = { day: 420, kind: 'tycoon', dismissed: true, path: 'realestate' };
+    player(state).cash = 30_000_000;
+    recomputeNetWorth(state);
+    assert.ok(engine.dispatch({ type: 'OPEN_CITY', citySize: 'standard', capital: 8_000_000 }).ok);
+    state = engine.getState();
+    state.victory = { day: 300, kind: 'tycoon', dismissed: true, path: 'takeover' };
+    assert.deepEqual([...(runFacts(state).paths ?? [])].sort(), ['realestate', 'takeover']);
+    // Kurucu şehir (gayrimenkulle kazanmıştı) kaybedilip kapatılıyor: yolu holding'de kalmalı.
+    state.holding!.dormant[0]!.state.gameOver = { day: 500, byCompanyId: rivals(state.holding!.dormant[0]!.state)[0]!.id };
+    assert.ok(engine.dispatch({ type: 'CLOSE_CITY', index: 0 }).ok);
+    state = engine.getState();
+    assert.deepEqual([...(runFacts(state).paths ?? [])].sort(), ['realestate', 'takeover'], 'kapatılan şehrin yolu');
+    // Aynı yoldan ikinci kapatma listeyi büyütmüyor.
+    assert.deepEqual(state.holding!.closedPaths, ['realestate']);
+  });
+
   test('kurucu şehir kapanınca koşunun kurucu boyutu değişmiyor (Codex #70)', () => {
     const engine = played(30, 6);
     let state = engine.getState();
@@ -496,6 +515,31 @@ describe('kariyer: rozet kuralları', () => {
     assert.equal(ceos.value, 2, 'aynı CEO bir kez, senaryo ve zafersiz koşu sayılmıyor');
     const more = achievementStatus(ACHIEVEMENT_BY_ID.three_ceos!, { runs, scenarioStars: {}, archived: { victoryCeos: ['girisimci'] } });
     assert.equal(more.done, true);
+  });
+
+  test('zaferin yolu koşu özetinde; Üç yol farklı yolları sayıyor, senaryo ve budanan koşu dahil (Tur 61)', () => {
+    const engine = played(30);
+    const state = engine.getState();
+    state.victory = { day: 30, kind: 'tycoon', path: 'realestate' };
+    assert.deepEqual(runFacts(state).wins, [{ day: 30, citySize: 'standard', path: 'realestate' }]);
+    delete state.victory.path;
+    assert.deepEqual(runFacts(state).wins, [{ day: 30, citySize: 'standard' }], 'eski kayıtta yol yok');
+
+    const at = (path?: 'retail' | 'takeover' | 'realestate' | 'energy' | 'freight') => [{ day: 600, citySize: 'standard' as const, ...(path ? { path } : {}) }];
+    const runs = [
+      facts({ key: 'a', wins: at('retail') }),
+      facts({ key: 'b', wins: at('retail') }),
+      facts({ key: 'c', wins: at('realestate') }),
+      facts({ key: 'd', wins: at('energy'), mode: 'scenario' }),
+      facts({ key: 'e', wins: at() }),
+      facts({ key: 'f' }),
+    ];
+    const def = ACHIEVEMENT_BY_ID.three_paths!;
+    assert.equal(isRunScoped(def), false, 'kariyer kapsamında');
+    const paths = achievementStatus(def, { runs, scenarioStars: {} });
+    assert.deepEqual([paths.value, paths.target, paths.done], [2, 3, false], 'aynı yol bir kez; senaryo, yolsuz eski zafer ve zafersiz koşu sayılmıyor');
+    const more = achievementStatus(def, { runs, scenarioStars: {}, archived: { victoryPaths: ['takeover'] } });
+    assert.equal(more.done, true, 'budanan koşunun yolu');
   });
 
   test('her rozetin bir durumu var; boş kariyerde hiçbiri açık değil', () => {

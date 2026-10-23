@@ -1275,21 +1275,30 @@ function RivalsPanel(): ReactElement {
 
   return (
     <div className="rivals-panel">
-    <table className="table">
+    {/*
+      * Telefonda bina, arsa ve güçlü sektör sütunları şirketin adının altına
+      * iniyor (`rival-minor`, `rival-facts`): yedi sütun 320 px'e sığmıyordu.
+      * Kutu, büyük yazıda yine sığmazsa tablonun kendi içinde kaymasına (Tur 61).
+      */}
+    <div className="table-scroll">
+    <table className="table rivals-table">
       <thead>
         <tr>
           <th>#</th>
           <th>{t('panels.rivals.col.company')}</th>
           <th>{t('panels.rivals.col.value')}</th>
-          <th>{t('panels.rivals.col.buildings')}</th>
-          <th>{t('panels.rivals.col.tiles')}</th>
-          <th>{t('panels.rivals.col.strongest')}</th>
+          <th className="rival-minor">{t('panels.rivals.col.buildings')}</th>
+          <th className="rival-minor">{t('panels.rivals.col.tiles')}</th>
+          <th className="rival-minor">{t('panels.rivals.col.strongest')}</th>
           <th>{t('panels.rivals.col.relation')}</th>
         </tr>
       </thead>
       <tbody>
         {rows.map((row) => {
           const best = Object.entries(row.company.marketShare).sort((a, b) => b[1] - a[1])[0];
+          const strongest = best && best[1] > 0.01
+            ? `${CATEGORIES[best[0] as keyof typeof CATEGORIES].name} ${formatPercent(Math.round(best[1] * 100))}`
+            : '—';
           const pickable = !row.company.isPlayer;
           return (
             <tr
@@ -1309,21 +1318,22 @@ function RivalsPanel(): ReactElement {
                   row.company.name
                 )}
                 {row.company.isPlayer && t('panels.rivals.you')}
+                <span className="rival-facts muted">
+                  {t('panels.rivals.col.buildings')} {row.buildings} · {t('panels.rivals.col.tiles')} {row.tiles}
+                  {strongest !== '—' && ` · ${strongest}`}
+                </span>
               </td>
-              <td>{formatMoney(row.company.netWorth)}</td>
-              <td>{row.buildings}</td>
-              <td>{row.tiles}</td>
-              <td>
-                {best && best[1] > 0.01
-                  ? `${CATEGORIES[best[0] as keyof typeof CATEGORIES].name} ${formatPercent(Math.round(best[1] * 100))}`
-                  : '—'}
-              </td>
+              <td className="rival-value">{formatMoney(row.company.netWorth)}</td>
+              <td className="rival-minor">{row.buildings}</td>
+              <td className="rival-minor">{row.tiles}</td>
+              <td className="rival-minor">{strongest}</td>
               <td>{pickable ? <RelationChip companyId={row.company.id} /> : null}</td>
             </tr>
           );
         })}
       </tbody>
     </table>
+    </div>
     {selected && <RivalDossier companyId={selected} />}
     </div>
   );
@@ -1475,6 +1485,7 @@ const HELP_STEPS = [
   'ipo',
   'takeover',
   'holding',
+  'paths',
   'late',
   'stories',
   'opportunities',

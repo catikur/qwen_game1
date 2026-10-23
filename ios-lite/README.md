@@ -403,6 +403,11 @@ rakip taşıma teklifi getirmiyor; senaryolar ligde yok). Yine yalnız 3.
 adım: `pnpm lite:league-bundle`, paketi yapıştır, Deploy. Sağlık ucu
 değişmiyor, Lite etkilenmiyor.
 
+**Tur 61 (değerlendirme: şirketin yolu):** şema da simülasyon da değişmedi.
+Kârın kaynağını sayan defter yalnız okuyor; lig izi Tur 60'la aynı
+(`a5ded51fb01e62a5`). Worker'a dokunmak gerekmiyor: Tur 56–60 için yapılacak
+tek dağıtım Tur 61'i de kapsıyor. Lite etkilenmiyor.
+
 **Sürüm uyumu.** Sunucu koşuyu yalnız kendi simülasyon sürümüyle
 yargılayabiliyor. Pages'teki oyun her `main` birleşmesinde kendiliğinden
 güncelleniyor, Worker elle. Oyunun simülasyonunu değiştiren bir birleşmeden

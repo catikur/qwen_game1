@@ -1064,6 +1064,12 @@ button.icon {
 /* Modal kalın cam: arkasında karartılmış şehir var, tablolar okunmalı. */
 .modal {
   width: min(720px, 92vw);
+  /*
+   * Izgara öğesi: `min-width: auto` içeriğin en küçük genişliğine uzatıyordu.
+   * Telefonda rakipler tablosu paneli 422 px'e çıkarıyor, 320 px'lik ekranda
+   * uzlaşma düğmesi kenardan taşıyordu (Tur 61). Tablo telefonda daralıyor.
+   */
+  min-width: 0;
   max-height: 82vh;
   background: var(--panel-thick);
   backdrop-filter: var(--glass);
@@ -4222,6 +4228,47 @@ button.icon {
   background: var(--line-strong);
 }
 
+/* Şirketin yolu (Tur 61): kârın kaynağı, kaynak başına bir çubuk. */
+.path-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 8px 0;
+}
+.path-head {
+  margin: 0;
+}
+.path-blurb,
+.path-rule {
+  margin: 0;
+}
+.path-sources {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.path-source {
+  display: grid;
+  grid-template-columns: minmax(7em, 9em) 1fr 3.2em;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85em;
+}
+.path-source-share {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+/* Zafer kartı renkli: çubuk zeminin üstünde açık renkte okunsun. */
+.gameover.victory .path-summary .goal-bar {
+  background: rgba(255, 255, 255, 0.25);
+}
+.gameover.victory .path-summary .goal-bar > span {
+  background: #fff;
+}
+
 .goal-detail {
   margin: 0;
   font-size: calc(12.5px * var(--text-scale));
@@ -6403,6 +6450,15 @@ button.icon {
   background: var(--accent-soft);
 }
 
+/* Müşterinin yarıştaki yeri (Tur 61); en yakın rakipse uyarı renginde. */
+.freight-client-note {
+  margin: 0;
+  font-size: 0.85em;
+}
+.freight-client-note.warn {
+  color: var(--warn);
+}
+
 .freight-contracts,
 .power-customers {
   list-style: none;
@@ -6451,6 +6507,33 @@ button.icon {
 
 .rivals-panel tr.picked td {
   background: var(--accent-soft);
+}
+
+/* Geniş ekranda kendi sütunlarında; telefonda şirketin adının altında (Tur 61). */
+.rival-facts {
+  display: none;
+}
+
+.rivals-table .rival-value {
+  white-space: nowrap;
+}
+
+@media (max-width: 560px) {
+  .rivals-table .rival-minor {
+    display: none;
+  }
+
+  .rivals-table th,
+  .rivals-table td {
+    padding: 7px 5px;
+  }
+
+  .rival-facts {
+    display: block;
+    margin-top: 2px;
+    font-size: calc(11.5px * var(--text-scale));
+    font-weight: 600;
+  }
 }
 
 .linklike {

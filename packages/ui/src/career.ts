@@ -1,6 +1,6 @@
 import { ACHIEVEMENTS, SCENARIOS } from '@capital/content';
 import type { AchievementDef } from '@capital/content';
-import { achievementStatuses, careerTotals, isRunScoped, runFacts, runKeyOf, runValue, victoryCeos } from '@capital/core';
+import { achievementStatuses, careerTotals, isRunScoped, runFacts, runKeyOf, runPaths, runValue, victoryCeos } from '@capital/core';
 import type { AchievementStatus, CareerInput, CareerTotals, GameState, RunFacts } from '@capital/core';
 import { scenarioRecord } from './scenarioBest';
 
@@ -43,6 +43,8 @@ export interface UnlockRecord {
 export interface CareerArchive {
   totals: Partial<CareerTotals>;
   victoryCeos: string[];
+  /** Budanan koşuların zafer yolları (Tur 61); eski arşivde yok. */
+  victoryPaths?: string[];
   runs: number;
   victories: number;
   bestWorth: number;
@@ -126,6 +128,9 @@ export function mergeRun(previous: CareerRun | undefined, next: RunFacts, nowIso
   for (const win of next.wins) wins.set(winKey(win), win);
   const counters = { ...next.counters };
   for (const key of Object.keys(counters) as (keyof typeof counters)[]) counters[key] = Math.max(counters[key], previous.counters[key] ?? 0);
+  // Yollar zaferlerden bağımsız birleşiyor: aynı gün ve boyutta kazanan iki
+  // şehrin zaferi tek kayda düşse de iki yol kalıyor (Tur 61, Codex #91).
+  const paths = [...new Set([...runPaths(previous), ...runPaths(next)])];
   const stars = Math.max(previous.scenario?.stars ?? 0, next.scenario?.stars ?? 0);
   const outcome = previous.scenario?.outcome === 'won' || next.scenario?.outcome === 'won' ? 'won' : (next.scenario?.outcome ?? previous.scenario?.outcome);
   return {
@@ -134,6 +139,7 @@ export function mergeRun(previous: CareerRun | undefined, next: RunFacts, nowIso
     companyWorth: Math.max(previous.companyWorth ?? 0, next.companyWorth),
     cities: Math.max(previous.cities, next.cities),
     wins: [...wins.values()],
+    ...(paths.length > 0 ? { paths } : {}),
     closedWins: Math.max(previous.closedWins, next.closedWins),
     holdingComplete: previous.holdingComplete || next.holdingComplete,
     monopoly: previous.monopoly || next.monopoly,
@@ -162,6 +168,8 @@ function fold(archive: CareerArchive | undefined, run: CareerRun): CareerArchive
   for (const key of Object.keys(own) as (keyof CareerTotals)[]) totals[key] = (totals[key] ?? 0) + own[key];
   const ceos = new Set(base.victoryCeos);
   if (isVictorious(run) && run.ceoId) ceos.add(run.ceoId);
+  const paths = new Set(base.victoryPaths ?? []);
+  if (run.mode !== 'scenario') for (const path of runPaths(run)) paths.add(path);
   // Ekleme sırası korunuyor: ilk anahtar en eski budanan koşu.
   const folded = { ...base.folded, [run.key]: run };
   let best = base.best;
@@ -172,6 +180,7 @@ function fold(archive: CareerArchive | undefined, run: CareerRun): CareerArchive
   return {
     totals,
     victoryCeos: [...ceos],
+    ...(paths.size > 0 ? { victoryPaths: [...paths] } : {}),
     runs: base.runs + 1,
     victories: base.victories + (isVictorious(run) ? 1 : 0),
     bestWorth: Math.max(base.bestWorth, run.mode === 'scenario' ? 0 : run.worth),
@@ -193,7 +202,7 @@ function withBest(best: Record<string, number> | undefined, run: RunFacts): Reco
 
 /**
  * Budanmış koşu geri geldi: katkısı arşivden düşülüyor. En yüksek değer ve
- * zafer CEO'ları birleşim gibi davranıyor (aynı koşu iki kez artırmıyor),
+ * zafer CEO'ları ve yolları birleşim gibi davranıyor (aynı koşu iki kez artırmıyor),
  * onlara dokunulmuyor.
  */
 function unfold(archive: CareerArchive, key: string): { archive: CareerArchive; run: CareerRun } | null {
@@ -224,6 +233,7 @@ function inputOf(file: CareerFile): CareerInput {
           archived: {
             totals: file.archived.totals,
             victoryCeos: file.archived.victoryCeos,
+            ...(file.archived.victoryPaths ? { victoryPaths: file.archived.victoryPaths } : {}),
             runs: Object.values(file.archived.folded ?? {}),
             ...(file.archived.best ? { best: file.archived.best } : {}),
           },

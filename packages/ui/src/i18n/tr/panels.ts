@@ -146,6 +146,8 @@ export const panels = {
   'panels.freight.today': 'Bugünkü ücret',
   'panels.freight.earned': 'Toplanan',
   'panels.freight.offer': '{count} mağazasına taşıma istiyor: günde ~{fee}, {days} gün',
+  'panels.freight.client': 'Şehrin {rank}. şirketi, değeri {worth}. Kamyonların ona günde ~{saving} kazandırır.',
+  'panels.freight.challenger': 'En yakın rakibin: şehrin {rank}. şirketi, değeri {worth} (seninki {mine}). Kamyonların ona da günde ~{saving} kazandırır.',
   'panels.freight.offerLeft': '{days} gün masada',
   'panels.freight.accept': 'Kabul et',
   'panels.freight.decline': 'Geç',
@@ -382,6 +384,9 @@ export const panels = {
   'panels.help.step.modifiers.title': 'Kuralları sen sertleştir.',
   'panels.help.step.modifiers.body':
     ' Serbest şehirde kurulumda ek kural seçebilirsin: Fırtınalı yıllar, Aç gözlü rakipler, Sıkı banka, Kıt arsa. Her biri kademenin üstüne eklenir ve etkisi kurulumda yazar; zorluk çarpanı Hedefler panelinde, zafer ekranında ve kariyerde görünür. Tohum Ligi\'nde haftanın kuralı herkese aynı; senaryo kendi kuralıyla gelir ve onda zorluk çarpanı yok.',
+  'panels.help.step.paths.title': 'Zafere birden çok yol var.',
+  'panels.help.step.paths.body':
+    ' Mağaza ve zincirle büyüyebilir, rakipleri borsadan devralabilir ya da kiralık projelere yaslanabilirsin; santral ve terminal de yanına bir iş kolu olur. Hedefler panelindeki "Şirketin yolu" kârının nereden geldiğini gösterir; zafer ekranı ve kariyer zaferin hangi yoldan geldiğini yazar.',
   'panels.help.step.career.title': 'Koşuların ötesine bak.',
   'panels.help.step.career.body':
     ' Hedefler panelindeki Kariyer sayfası ve kurulum ekranı rozetlerini ve koşu geçmişini tutar: devralma, kriz, konsorsiyum, meclis, holding, senaryo, lig. Rozet ödül vermez, oyunun her köşesini gösterir. Bu cihazda saklanır.',

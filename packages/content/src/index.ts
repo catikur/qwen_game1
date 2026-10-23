@@ -12,6 +12,7 @@ export * from './ceos';
 export * from './structures';
 export * from './difficulty';
 export * from './modifiers';
+export * from './paths';
 export * from './goals';
 export * from './council';
 export * from './labor';

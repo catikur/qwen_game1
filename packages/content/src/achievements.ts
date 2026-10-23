@@ -59,7 +59,9 @@ export type AchievementKind =
   /** Senaryo yıldızlarının toplamı ≥ hedef. */
   | 'scenarioStars'
   /** Zafer kazanılan farklı CEO ≥ hedef. */
-  | 'ceoVictories';
+  | 'ceoVictories'
+  /** Zafer kazanılan farklı yol ≥ hedef (Tur 61, `PATHS`). */
+  | 'pathVictories';
 
 /** Koşu sayaçları — çekirdeğin `RunFeats` alanları. */
 export type AchievementFeat = 'crisesWeathered' | 'crisesGrown' | 'consortiumsBroken' | 'raidsRepelled';
@@ -203,6 +205,16 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     title: 'Üç CEO',
     hint: 'Üç farklı CEO ile zafer kazan.',
     kind: 'ceoVictories',
+    target: 3,
+    freePlayOnly: true,
+  },
+  {
+    // Faz 3'ün ölçüsü (Tur 61): her koşu farklı bir şirket.
+    id: 'three_paths',
+    group: 'victory',
+    title: 'Üç yol',
+    hint: 'Üç farklı yoldan zafer kazan: perakende, devralma, gayrimenkul, enerji ya da nakliye.',
+    kind: 'pathVictories',
     target: 3,
     freePlayOnly: true,
   },
