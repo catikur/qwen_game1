@@ -66,6 +66,8 @@ export const hud = {
   'hud.contract.activeTitle': 'Ödül {reward} · cayma {penalty}',
   'hud.contract.active': 'Sözleşme',
   'hud.freight.offer': 'Taşıma',
+  'hud.fuel.lock': 'Yakıt',
+  'hud.fuel.lockTitle': 'Santralin panelinde yakıtı sabitle',
   'hud.freight.offerTitle': 'Terminalin panelinde kabul et ya da geç',
 
   // Gündem şeridi

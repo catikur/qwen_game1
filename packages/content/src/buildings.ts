@@ -356,6 +356,54 @@ export const BUILDINGS: BuildingDef[] = [
     unlockNetWorth: 1_500_000,
     description: 'Kamyon filosu: menzilindeki kendi mağazalarına depodan ucuz dağıtım, rakiplerin mağazalarına taşıma sözleşmesi.',
   },
+  // ---- Enerji (Tur 57) ----
+  //
+  // Santral menzilindeki binalara enerji veriyor: önce sahibinin binaları,
+  // güç artarsa rakiplerinkiler. Kendi binasının faturası kalkıyor (yerine
+  // santralin yakıtı), rakibinki santralin cirosu. Doğalgaz yakıtını
+  // piyasadan alıyor, kârı fiyatla büyüyor; güneş tarlası pahalı ve küçük
+  // ama yakıtsız, mevsimle üretiyor: enerji krizine karşı tam sigorta.
+  {
+    id: 'gas_plant',
+    name: 'Doğalgaz Santrali',
+    role: 'energy',
+    category: 'office',
+    tier: 1,
+    cost: 90_000,
+    upkeepPerDay: 250,
+    capacity: 0,
+    quality: 0,
+    jobs: 6,
+    radius: 12,
+    power: 45,
+    fuel: 0.45,
+    color: '#8a6d5b',
+    height: 1.4,
+    unlockNetWorth: 2_500_000,
+    description: 'Menzilindeki binalara enerji: kendi binalarının faturası kalkıyor, artan gücü rakiplere satıyor. Yakıtı piyasadan.',
+    zones: ['industrial', 'port'],
+  },
+  {
+    id: 'solar_farm',
+    name: 'Güneş Tarlası',
+    role: 'energy',
+    category: 'office',
+    tier: 2,
+    cost: 160_000,
+    upkeepPerDay: 100,
+    capacity: 0,
+    quality: 0,
+    jobs: 2,
+    radius: 10,
+    power: 20,
+    fuel: 0,
+    solar: true,
+    color: '#3f5f8a',
+    height: 0.3,
+    unlockNetWorth: 4_000_000,
+    description: 'Yakıtsız enerji: pahalı ve küçük, üretimi mevsimle değişiyor, ama fiyat şokunda faturası yerinde.',
+    zones: ['industrial', 'port'],
+  },
 
   // ---- Rekabet kolları ----
   //

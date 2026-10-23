@@ -1,8 +1,9 @@
-import { CARD_BY_ID, CATEGORIES, CREDIT, CRISIS_BY_ID, ERA_BY_ID, EVENT_BY_ID, GOOD_BY_ID, PROJECT_BY_ID, fillTemplate, localizeDecimal } from '@capital/content';
+import { BUILDING_BY_ID, CARD_BY_ID, CATEGORIES, CREDIT, CRISIS_BY_ID, ERA_BY_ID, EVENT_BY_ID, GOOD_BY_ID, PROJECT_BY_ID, fillTemplate, localizeDecimal } from '@capital/content';
 import { nextGoal } from './systems/goals';
 import { leagueBoardKind } from './systems/leagueWeek';
 import { OFFER_LIFETIME_DAYS, contractProgress } from './systems/contracts';
 import { FREIGHT } from './systems/freight';
+import { fuelLock } from './systems/energy';
 import { sharesHeld, sharesOutstanding } from './systems/equity';
 import { creditEnabled, overdraftLimit, overdraftOf } from './systems/credit';
 import { dailyBuyCap, sharesToControl } from './systems/orders';
@@ -40,6 +41,7 @@ export type AgendaKind =
   | 'contractOffer'
   | 'contract'
   | 'freightOffer'
+  | 'fuelLock'
   | 'auction'
   | 'unlock'
   | 'council'
@@ -269,6 +271,24 @@ export function agenda(state: GameState): AgendaItem[] {
       tone: 'neutral',
       tileId: state.buildings[offer.terminalId]?.tileId,
     });
+  }
+
+  // Enerji krizi geliyor (Tur 57): doğalgaz santrali olan, yakıtı sabit
+  // değilse karar zamanı. Çip santrale gidiyor; düğme panelinde.
+  const coming = state.crisis?.phase === 'warning' ? CRISIS_BY_ID[state.crisis.defId] : undefined;
+  if (state.crisis && coming && (coming.effects.energyPrice ?? 1) > 1 && crisesEnabled(state) && !fuelLock(state, state.playerCompanyId)) {
+    const plant = Object.values(state.buildings).find((b) => b.companyId === state.playerCompanyId && (BUILDING_BY_ID[b.defId]?.fuel ?? 0) > 0);
+    if (plant) {
+      items.push({
+        kind: 'fuelLock',
+        key: 'fuelLock',
+        urgency: 2,
+        daysLeft: Math.max(0, state.crisis.activeDay - day),
+        label: tc('core.agenda.fuelLock'),
+        tone: 'neutral',
+        tileId: plant.tileId,
+      });
+    }
   }
 
   if (state.auction) {

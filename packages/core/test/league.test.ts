@@ -16,12 +16,13 @@ import {
   verifyRun,
 } from '../src/league';
 import type { LeagueRun, RunVerdict } from '../src/league';
-import { BUBBLE_TIMING, BUILDING_BY_ID, CONSORTIUM, FAD, MODIFIER_RULES, PROJECTS, PROJECT_BY_ID, PROJECT_TIMING, loadLocale, setLocale } from '@capital/content';
+import { BUBBLE_TIMING, BUILDING_BY_ID, CONSORTIUM, CRISES, ENERGY, FAD, MODIFIER_RULES, PROJECTS, PROJECT_BY_ID, PROJECT_TIMING, loadLocale, setLocale } from '@capital/content';
 import { FREIGHT } from '../src/systems/freight';
+import { hasFuelPlant } from '../src/systems/energy';
 import { LEAGUE_DAILY_DAYS, LEAGUE_DAYS, LEAGUE_RULE_ROTATION, leagueBoardKind, leagueDayId, leagueLength, leagueRule, leagueSeed, leagueWeekId } from '../src/systems/league';
 import { createNewGame } from '../src/worldgen';
 import type { GameState } from '../src/types';
-import { freightStrategy, playerStrategy } from './proxy';
+import { energyStrategy, freightStrategy, playerStrategy } from './proxy';
 
 /** Vekil oyuncuyla bir lig koşusu; isteğe bağlı olarak ortada "yeniden yükleme". */
 function playLeague(options: { reloadAt?: number; cheatAt?: number; board?: string } = {}): GameState {
@@ -487,6 +488,61 @@ describe('haftanın kuralı ve günün koşusu (Tur 53)', () => {
       freight.maxOutlets = maxOutlets;
     }
     assert.equal(computeSimFingerprint(), base);
+  });
+
+  test('iz enerjiyi de işletiyor: santral, tarife, yakıt ve kriz tablosu değişince iz değişiyor (Tur 57)', () => {
+    const base = computeSimFingerprint();
+    const parts = simFingerprintParts();
+    const probe = parts.find((part) => part.startsWith('probe-energy:'))!;
+    assert.ok(probe && !probe.endsWith(':-'), `yoklama santral kurmadı: ${probe}`);
+    assert.ok(/=b\d+\//.test(probe), `santral kimseye enerji vermedi: ${probe}`);
+    const shock = parts.find((part) => part.startsWith('probe-energy-shock:'))!;
+    assert.ok(shock.startsWith('probe-energy-shock:true:2.000000:'), `kriz yoklaması: ${shock.slice(0, 60)}`);
+    const gas = BUILDING_BY_ID.gas_plant as { power: number };
+    const energy = ENERGY as { rivalDiscount: number };
+    const crisis = CRISES.find((def) => (def.effects.energyPrice ?? 1) > 1)!;
+    const { power } = gas;
+    const { rivalDiscount } = energy;
+    const { weight } = crisis;
+    try {
+      gas.power = power + 1;
+      assert.notEqual(computeSimFingerprint(), base, 'santralin gücü izi değiştirmiyor');
+      gas.power = power;
+      energy.rivalDiscount = rivalDiscount + 0.01;
+      assert.notEqual(computeSimFingerprint(), base, 'rakip tarifesi izi değiştirmiyor');
+      energy.rivalDiscount = rivalDiscount;
+      crisis.weight = weight + 1;
+      assert.notEqual(computeSimFingerprint(), base, 'kriz tablosu izi değiştirmiyor');
+    } finally {
+      gas.power = power;
+      energy.rivalDiscount = rivalDiscount;
+      crisis.weight = weight;
+    }
+    assert.equal(computeSimFingerprint(), base);
+  });
+});
+
+describe('enerjili lig koşusu (Tur 57)', () => {
+  test('santral kuran, yakıtını sabitleyen koşu tekrarda tutuyor', async () => {
+    const engine = new GameEngine(createLeagueGame('2026-W41', 'Enerji AŞ', null));
+    while (engine.getState().league!.finishedDay === undefined) {
+      const state = engine.getState();
+      if (state.time.day % 5 === 0) {
+        playerStrategy(engine);
+        energyStrategy(engine);
+        if (hasFuelPlant(state, state.playerCompanyId) && !state.energy?.fuelLocks[state.playerCompanyId]) engine.dispatch({ type: 'LOCK_FUEL' });
+      }
+      engine.runDay();
+    }
+    const state = engine.getState();
+    const plants = Object.values(state.buildings).filter((b) => b.companyId === state.playerCompanyId && BUILDING_BY_ID[b.defId]?.role === 'energy');
+    assert.ok(plants.length > 0, 'koşuda santral yok');
+    assert.ok(plants.some((plant) => (plant.energyTotals?.saved ?? 0) + (plant.energyTotals?.sold ?? 0) > 0), 'santral enerji vermedi');
+    assert.ok((state.commandLog ?? []).some(([, command]) => command.type === 'LOCK_FUEL'), 'sabitleme günlükte yok');
+    const run = runFromState(state)!;
+    const result = await replayRun(decodeRun(encodeRun(run))!);
+    assert.ok(result.ok, result.reason);
+    assert.equal(result.score, run.score);
   });
 });
 

@@ -26,6 +26,8 @@ export interface EventDef {
     costMultiplier?: number;
     /** Arsa değerine günlük çarpan. */
     landValueDrift?: number;
+    /** Şebeke enerji fiyatına çarpan (Tur 57). */
+    energyPrice?: number;
     /**
      * Belirli ürünlerin spot fiyatına çarpan.
      *
@@ -110,7 +112,7 @@ export const EVENTS: EventDef[] = [
     durationDays: 20,
     weight: 7,
     tone: 'bad',
-    effects: { costMultiplier: 1.1 },
+    effects: { costMultiplier: 1.1, energyPrice: 1.3 },
   },
 
   // ---- Tedarik zinciri olayları ----

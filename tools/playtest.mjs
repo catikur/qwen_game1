@@ -6045,6 +6045,173 @@ async function finish(browser, consoleErrors) {
     await fContext.close();
   }
 
+  section('Enerji: santraller, şebeke fiyatı ve yakıt sabitleme');
+  {
+    const eContext = await browser.newContext({ viewport: { width: 1280, height: 860 } });
+    await eContext.addInitScript(veteran, TUTORIAL_KEY);
+    const ep = await eContext.newPage();
+    const eErrors = [];
+    ep.on('pageerror', (e) => eErrors.push(e.message));
+    ep.on('console', (m) => { if (m.type() === 'error') eErrors.push(m.text()); });
+    await ep.goto('http://127.0.0.1:8811/');
+    await ep.waitForSelector('.newgame', { timeout: 20000 });
+    await ep.fill('.newgame-field input[type="text"]', 'Enerji AŞ');
+    await ep.locator('button:has-text("Şirketi kur")').click();
+    await ep.waitForSelector('.topbar', { timeout: 30000 });
+
+    // Şehir 150 gün büyüsün; oyuncuya santrali açacak değer ve nakit, sanayi/limanda
+    // menziline en çok bina giren boş parsel.
+    const site = await ep.evaluate(() => {
+      const api = window.__capital;
+      api.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+      for (let i = 0; i < 150; i++) api.engine.runDay();
+      const state = api.getState();
+      delete state.crisis;
+      state.activeEvents = [];
+      delete state.era;
+      const me = state.companies[state.playerCompanyId];
+      me.cash += 5_000_000;
+      me.netWorth += 5_000_000;
+      let best = null;
+      for (const tile of state.map.tiles) {
+        if (tile.kind !== 'plot' || tile.ownerId || tile.buildingId || tile.structureId) continue;
+        const archetype = state.districts[tile.districtId].archetype;
+        if (archetype !== 'industrial' && archetype !== 'port') continue;
+        let count = 0;
+        for (const b of Object.values(state.buildings)) {
+          const at = state.map.tiles[b.tileId];
+          if (Math.abs(at.x - tile.x) + Math.abs(at.y - tile.y) <= 12) count++;
+        }
+        if (!best || count > best.count) best = { id: tile.id, count };
+      }
+      const bought = api.engine.dispatch({ type: 'BUY_TILE', tileId: best.id }).ok;
+      return { ...best, bought, day: state.time.day };
+    });
+    check('Sanayide menziline bina giren boş parsel alınıyor', site.bought && site.count >= 4, `${site.count} bina menzilde, ${site.day}. gün`);
+
+    // Yapı menüsü: santralin tahmini parsele göre, kazanç-satış-yakıt kırılımıyla.
+    await ep.evaluate((tile) => window.__capital.selectTile(tile), site.id);
+    await ep.waitForTimeout(300);
+    const card = ep.locator('.buildcard:has(.buildcard-name:text-is("Doğalgaz Santrali"))');
+    const cardText = (await card.textContent().catch(() => '')) ?? '';
+    const potential = Number(await card.locator('[data-energy-potential]').getAttribute('data-energy-potential').catch(() => NaN));
+    check('Yapı menüsünde santralin tahmini: menzildeki binalar, kazanç, satış, yakıt', potential > 0 && cardText.includes('yakıt'), cardText.replace(/\s+/g, ' ').slice(0, 140));
+    await card.click();
+    await ep.waitForTimeout(200);
+    await ep.locator('button:has-text("Seçili arsaya inşa et")').click();
+    await ep.waitForTimeout(300);
+    const plantId = await ep.evaluate((tile) => window.__capital.getState().map.tiles[tile].buildingId, site.id);
+    check('Doğalgaz santrali kuruluyor', Boolean(plantId), plantId ?? 'yok');
+    // Menzile bir de oyuncunun bakkalı: güç önce sahibinin binasına gidiyor.
+    await ep.evaluate((plantTile) => {
+      const api = window.__capital;
+      const state = api.getState();
+      const at = state.map.tiles[plantTile];
+      const near = state.map.tiles
+        .filter((tile) => tile.kind === 'plot' && !tile.ownerId && !tile.buildingId && !tile.structureId && Math.abs(tile.x - at.x) + Math.abs(tile.y - at.y) <= 8)
+        .sort((a, b) => Math.abs(a.x - at.x) + Math.abs(a.y - at.y) - (Math.abs(b.x - at.x) + Math.abs(b.y - at.y)));
+      for (const tile of near) {
+        if (!api.engine.dispatch({ type: 'BUY_TILE', tileId: tile.id }).ok) continue;
+        if (api.engine.dispatch({ type: 'BUILD', tileId: tile.id, defId: 'corner_shop' }).ok) return tile.id;
+      }
+      return null;
+    }, site.id);
+
+    const day = await ep.evaluate((id) => {
+      const api = window.__capital;
+      api.engine.runDay();
+      api.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+      const state = api.getState();
+      const plant = state.buildings[id];
+      const served = Object.values(state.buildings).filter((b) => b.last.power?.plantId === id);
+      const own = served.find((b) => b.companyId === state.playerCompanyId);
+      const rival = served.find((b) => b.companyId !== state.playerCompanyId);
+      return {
+        used: (plant.last.plant?.ownMwh ?? 0) + (plant.last.plant?.rivalMwh ?? 0),
+        buildings: plant.last.plant?.buildings ?? 0,
+        sold: plant.last.revenue,
+        fuel: plant.last.cogs,
+        own: own ? { tile: own.tileId, saved: Math.round(own.last.power.saved) } : null,
+        rival: rival ? { tile: rival.tileId, bill: Math.round(rival.last.power.bill) } : null,
+      };
+    }, plantId);
+    check('Santral menzilindeki binalara enerji veriyor, yakıtını ödüyor', day.used > 0 && day.buildings > 0 && day.fuel > 0, `${day.buildings} bina, ${day.used.toFixed(1)} MWh, yakıt ${Math.round(day.fuel)} ₺`);
+    await ep.waitForTimeout(300);
+    const used = await ep.locator('[data-power-used]').getAttribute('data-power-used').catch(() => null);
+    check('Santralin masası gücü yazıyor', used !== null && Number(used.split('/')[0]) > 0, used ?? 'masa yok');
+    const ledger = (await ep.locator('.building .ledger').first().textContent().catch(() => '')) ?? '';
+    check('Santralin defteri rakiplere satışı ve yakıtı yazıyor', ledger.includes('Rakiplere enerji satışı') && ledger.includes('Yakıt'), ledger.slice(0, 90));
+    await ep.screenshot({ path: `${OUT}/energy-desk.png` });
+
+    if (day.own) {
+      await ep.evaluate((tile) => window.__capital.selectTile(tile), day.own.tile);
+      await ep.waitForTimeout(200);
+      const saved = Number(await ep.locator('[data-power-from]').getAttribute('data-power-saved').catch(() => NaN));
+      check('Kendi binasının panelinde enerjinin santralden geldiği ve kazancı', saved === day.own.saved && saved > 0, `${saved} ₺`);
+    } else check('Kendi binasının panelinde enerjinin santralden geldiği ve kazancı', false, 'menzilde kendi binası yok');
+    if (day.rival) {
+      await ep.evaluate((tile) => window.__capital.selectTile(tile), day.rival.tile);
+      await ep.waitForTimeout(200);
+      const bill = Number(await ep.locator('[data-power-client]').getAttribute('data-power-bill').catch(() => NaN));
+      check('Rakip binasının panelinde santraline ödediği', bill === day.rival.bill && bill > 0, `${bill} ₺`);
+    } else check('Rakip binasının panelinde santraline ödediği', true, 'güç kendi binalarına yetti (rakip almıyor)');
+
+    // Enerji krizi uyarısı: gündemde yakıt çipi, çip santrale götürüyor.
+    const shockId = await ep.evaluate(() => {
+      const api = window.__capital;
+      const state = api.getState();
+      state.crisis = { defId: 'energy_shock', phase: 'warning', activeDay: state.time.day + 20, endDay: state.time.day + 120 };
+      api.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+      return state.crisis.defId;
+    });
+    const fuelChip = ep.locator('[data-agenda-fuel]');
+    await fuelChip.waitFor({ timeout: 5000 }).catch(() => {});
+    check('Enerji krizi uyarısında gündemde yakıt çipi', (await fuelChip.count()) === 1, shockId);
+    await ep.evaluate(() => window.__capital.selectTile(null));
+    await fuelChip.click().catch(() => {});
+    await ep.waitForSelector('[data-fuel-lock]', { timeout: 5000 }).catch(() => {});
+    check('Çip santralin paneline götürüyor: sabitleme düğmesi', (await ep.locator('[data-fuel-lock]').count()) === 1);
+    const calmFuel = await ep.evaluate((id) => window.__capital.getState().buildings[id].last.cogs, plantId);
+    await ep.locator('[data-fuel-lock]').click();
+    await ep.waitForSelector('[data-fuel-locked]', { timeout: 5000 }).catch(() => {});
+    check('Sabitleme masada görünüyor, çip gündemden kalkıyor', (await ep.locator('[data-fuel-locked]').count()) === 1 && (await ep.locator('[data-agenda-fuel]').count()) === 0);
+
+    // Kriz başlıyor: şebeke iki katı, sabit yakıt yerinde.
+    const shock = await ep.evaluate((id) => {
+      const api = window.__capital;
+      const state = api.getState();
+      state.crisis.phase = 'active';
+      state.crisis.activeDay = state.time.day;
+      api.engine.runDay();
+      api.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+      const plant = state.buildings[id];
+      return { fuel: plant.last.cogs, sold: plant.last.revenue };
+    }, plantId);
+    await ep.waitForTimeout(300);
+    const price = await ep.locator('[data-energy-price]').getAttribute('data-energy-price').catch(() => null);
+    const ratio = shock.fuel / Math.max(1, calmFuel);
+    check('Krizde şebeke fiyatı iki katı, yakıt sabit fiyatla (×1,08)', price === '2.00' && Math.abs(ratio - 1.08) < 0.1, `fiyat ×${price} · yakıt ×${ratio.toFixed(2)}`);
+    check('Krizde rakiplere satış büyüyor', shock.sold >= day.sold, `${Math.round(day.sold)} → ${Math.round(shock.sold)} ₺`);
+    await ep.screenshot({ path: `${OUT}/energy-shock.png` });
+    // Yakın plan: santral ve yanına bir güneş tarlası (görsel kayıt).
+    await ep.evaluate((tile) => {
+      const api = window.__capital;
+      const state = api.getState();
+      const at = state.map.tiles[tile];
+      const spot = state.map.tiles.find((t) => t.kind === 'plot' && !t.ownerId && !t.buildingId && !t.structureId && t.districtId === at.districtId && Math.abs(t.x - at.x) + Math.abs(t.y - at.y) <= 3);
+      if (spot && api.engine.dispatch({ type: 'BUY_TILE', tileId: spot.id }).ok) api.engine.dispatch({ type: 'BUILD', tileId: spot.id, defId: 'solar_farm' });
+      api.engine.runDay();
+      api.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+      api.selectTile(null);
+      api.setTimeOfDay(0.3);
+      api.setView({ x: at.x, z: at.y, distance: 14 });
+    }, site.id);
+    await ep.waitForTimeout(1500);
+    await ep.screenshot({ path: `${OUT}/energy-plant.png` });
+    check('Enerji akışında konsol temiz', eErrors.length === 0, eErrors.slice(0, 2).join(' | '));
+    await eContext.close();
+  }
+
   section('Mobil');
   for (const deviceName of ['iPhone 13', 'Pixel 7']) {
     const mobileContext = await browser.newContext({ ...devices[deviceName] });

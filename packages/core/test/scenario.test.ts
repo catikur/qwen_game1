@@ -19,6 +19,7 @@ import {
   scenarioScoreText,
   starsFor,
 } from '../src/systems/scenario';
+import { floorTo } from '../src/systems/scenarioText';
 import { isDistrictOpen } from '../src/systems/city';
 import { createNewGame } from '../src/worldgen';
 import { TOTAL_SHARES, sharesHeld } from '../src/systems/equity';
@@ -208,7 +209,8 @@ describe('senaryo modu', () => {
     getPlayer(state).cash += 400_000_000;
     engine.runDay();
     assert.equal(state.scenario!.outcome, 'won');
-    assert.ok(Math.abs(state.scenario!.score! - Math.round(leadRatio(state) * 1000) / 1000) < 1e-9);
+    // Skor aşağı yuvarlanıyor (Tur 46): eşiğin altındaki skor eşikte görünmesin.
+    assert.ok(Math.abs(state.scenario!.score! - floorTo(leadRatio(state), 3)) < 1e-9);
     assert.equal(state.scenario!.stars, 3);
 
     const lead: ScenarioDef = { ...def, stars: { metric: 'lead', two: 1.2, three: 1.4 } };

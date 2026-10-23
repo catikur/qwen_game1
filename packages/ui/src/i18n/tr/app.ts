@@ -86,6 +86,7 @@ export const app = {
   'app.league.move.lobby': 'Mecliste lobi yaptı',
   'app.league.move.contract': 'Sözleşme kabul etti',
   'app.league.move.freight': 'Taşıma sözleşmesi aldı',
+  'app.league.move.fuel': 'Yakıtı sabitledi',
   'app.league.move.price': 'Fiyat ayarladı',
   'app.league.move.shelf': 'Raf ya da odak değiştirdi',
   'app.league.move.staff': 'Ücret ya da sendika kararı verdi',

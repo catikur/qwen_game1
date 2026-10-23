@@ -13,6 +13,7 @@ import { boostMultiplier } from './cards';
 import { projectUpkeep } from './projects';
 import { DISTRIBUTION_RELIEF, scopedDepots } from './buildingIndex';
 import { estimateBaselineDemand, goodShares } from './demand';
+import { energyPrice, gridUpkeep, powerGrid, servedUpkeep, settlePlants } from './energy';
 import type { BuildingDef } from '@capital/content';
 import type { BuildingInstance, DistrictState, FreightDeal, GameState } from '../types';
 
@@ -238,8 +239,17 @@ export function resetDailyLedgers(state: GameState): void {
     company.today = { revenue: 0, cogs: 0, upkeep: 0, wages: 0, interest: 0, tax: 0, profit: 0 };
   }
 
+  // Enerji (Tur 57): bakımın enerji payı şebeke fiyatıyla; santralden alan
+  // binada santralin defterine. Santral yoksa ve fiyat 1'ken bakım aynı.
+  const price = energyPrice(state);
+  const grid = powerGrid(state, (building) => upkeepFor(state, building));
+
   for (const building of Object.values(state.buildings)) {
-    const upkeep = upkeepFor(state, building);
+    const def = BUILDING_BY_ID[building.defId];
+    const base = upkeepFor(state, building);
+    const supply = grid?.served.get(building.id);
+    const served = supply && def ? servedUpkeep(base, def, price, supply) : null;
+    const upkeep = served ? served.upkeep : def ? gridUpkeep(base, def, price) : base;
     const wages = wagesFor(state, building);
     building.last = {
       unitsSold: 0,
@@ -253,7 +263,14 @@ export function resetDailyLedgers(state: GameState): void {
       producedUnits: 0,
       soldToMarket: 0,
     };
+    if (served) building.last.power = { plantId: supply!.plant.id, bill: served.bill, saved: served.saved };
   }
+  if (grid) settlePlants(state, grid, price);
+}
+
+/** Binanın bakımı, enerji fiyatından ve santralden önce: enerji ihtiyacı bundan (Tur 57). */
+export function buildingUpkeep(state: GameState, building: BuildingInstance): number {
+  return upkeepFor(state, building);
 }
 
 /** Kâr eğiliminin penceresi (gün) — üstel ortalamanın zaman sabiti. */

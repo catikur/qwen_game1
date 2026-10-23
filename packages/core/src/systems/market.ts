@@ -26,6 +26,7 @@ import { projectAttraction, projectUpkeep } from './projects';
 import { buildingStrikeFactor, serviceFactor, wageFor } from './labor';
 import { marketingLeverage } from './focus';
 import { SURPLUS_HAIRCUT, outletRelief, unitCogsFor } from './supply';
+import { energyPrice, gridUpkeep } from './energy';
 import type { FreightClient } from './supply';
 import type { BuildingInstance, CompanyState, DistrictState, GameState } from '../types';
 import { scopedMemo, scopedOutlets, withBuildingIndex } from './buildingIndex';
@@ -75,7 +76,12 @@ function qualityFor(state: GameState, companyId: string, defId: string): number 
 function upkeepFor(state: GameState, companyId: string, defId: string): number {
   const def = BUILDING_BY_ID[defId];
   if (!def) return 0;
-  return def.upkeepPerDay * getCeoModifiers(state.companies[companyId]?.ceoId ?? null).upkeep * overheadMultiplier(state, companyId);
+  // Enerji (Tur 57): tahmin bugünkü şebeke fiyatıyla; fiyat 1'ken eskisiyle aynı.
+  return gridUpkeep(
+    def.upkeepPerDay * getCeoModifiers(state.companies[companyId]?.ceoId ?? null).upkeep * overheadMultiplier(state, companyId),
+    def,
+    energyPrice(state),
+  );
 }
 
 /**
@@ -324,7 +330,9 @@ export function estimateInvestment(
   // dağılır. Buraya uydurma bir "beklenen kâr" yazmak yerine dürüst
   // davranıyoruz: `direct: false` diyoruz ve gerçek değerlendirmeyi
   // rekabet kartına bırakıyoruz — tıpkı zincirde deponun yaptığı gibi.
-  if (def.role === 'logistics' || def.role === 'research' || def.role === 'marketing') {
+  // Santral (Tur 57) de: kazancı kendi binalarının defterinde ve parsele bağlı
+  // (`energyPotential`); rakipler santral kurmuyor.
+  if (def.role === 'logistics' || def.role === 'research' || def.role === 'marketing' || def.role === 'energy') {
     return {
       direct: false,
       expectedUnits: 0,

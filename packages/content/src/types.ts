@@ -100,7 +100,12 @@ export type BuildingRole =
   /** Atandığı kategorideki kendi outlet'lerinin kalitesini yükseltir. */
   | 'research'
   /** Atandığı kategorideki marka hedefini payının üstüne çeker. */
-  | 'marketing';
+  | 'marketing'
+  /**
+   * Santral (Tur 57): menzilindeki binalara enerji veriyor. Kendi
+   * binalarının faturası tasarrufa, rakiplerinki santralin cirosuna dönüyor.
+   */
+  | 'energy';
 
 export interface BuildingDef {
   id: string;
@@ -148,6 +153,18 @@ export interface BuildingDef {
    * taşıma sözleşmesiyle hizmet verebildiği; verilmezse sözleşme almaz.
    */
   fleet?: number;
+  /**
+   * `energy`: günlük üretim gücü, MWh (Tur 57). Menzilindeki binaların
+   * enerji ihtiyacını bu kadarına kadar karşılıyor.
+   */
+  power?: number;
+  /**
+   * `energy`: yakıtın şebeke fiyatına oranı (Tur 57). Doğalgaz santrali
+   * yakıtını piyasadan alıyor; güneş tarlasında yakıt yok (0).
+   */
+  fuel?: number;
+  /** `energy`: üretim mevsime bağlı (güneş tarlası; Tur 57). */
+  solar?: boolean;
   /**
    * Kurulabileceği district arketipleri. Verilmezse her yere kurulur.
    *

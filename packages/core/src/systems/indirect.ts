@@ -3,7 +3,9 @@ import type { BuildingDef, CategoryId } from '@capital/content';
 import { tc } from '../i18n';
 import { MARKETING_CAP, RESEARCH_CAP, defaultFocus, marketingLeverage, researchCeiling } from './focus';
 import { estimateInvestment, runMarketTick } from './market';
-import { distributionRelief, reliefOf, resetDailyLedgers, runProductionTick } from './supply';
+import { buildingUpkeep, distributionRelief, reliefOf, resetDailyLedgers, runProductionTick } from './supply';
+import { energyPotential } from './energy';
+import type { EnergyPotential } from './energy';
 import { freightPotential } from './freight';
 import type { BuildingInstance, GameState } from '../types';
 
@@ -53,6 +55,11 @@ export interface IndirectEstimate {
    * ve kabul edilirse.
    */
   freight?: { outlets: number; fee: number };
+  /**
+   * Santralde (Tur 57): menzilde alacağı kendi ve rakip binaları, bugünkü
+   * fiyatla kazanç, satış ve yakıt. Katkı = kazanç + satış − yakıt.
+   */
+  energy?: EnergyPotential;
   /** Etki neden sıfır (mağaza yok, menzil boş, tavan dolu). */
   none?: string;
 }
@@ -139,6 +146,8 @@ export function indirectEstimate(
   const def = BUILDING_BY_ID[defId];
   const company = state.companies[companyId];
   if (!def || !company) return null;
+  // Santral (Tur 57): tek bina taraması, bugünkü fiyat ve dağıtımla; önbellekte değil.
+  if (def.role === 'energy') return energyEstimate(state, companyId, def, districtId, tileId);
   if (def.role !== 'logistics' && def.role !== 'research' && def.role !== 'marketing') return null;
 
   if (cacheState !== state) {
@@ -176,6 +185,43 @@ function withFreight(
   const at = tileId !== undefined && state.map.tiles[tileId]?.districtId === districtId ? tileId : centralPlot(state, districtId);
   if (at === null) return value;
   return { ...value, freight: freightPotential(state, companyId, def.id, at) };
+}
+
+/**
+ * Santralin tahmini (Tur 57): kendi binalarına kazandıracağı şebeke
+ * faturası, rakiplere satış, eksi yakıt; bugünkü fiyatla. Karşı-olgusal
+ * gün gerekmiyor: santral pazarı değil faturayı değiştiriyor ve hesap
+ * simülasyonun kendi kuralı (`energyPotential`).
+ */
+function energyEstimate(
+  state: GameState,
+  companyId: string,
+  def: BuildingDef,
+  districtId: number,
+  tileId: number | undefined,
+): IndirectEstimate | null {
+  // Sanayi ve limana kuruluyor: başka bölgede tahmin yerine bunu söyle.
+  const archetype = state.districts[districtId]?.archetype;
+  if (def.zones && (!archetype || !def.zones.includes(archetype))) {
+    return { dailyGain: 0, dailyProfit: 0, paybackDays: Infinity, rampDays: 0, none: tc('core.indirect.zonedPlant') };
+  }
+  const at = tileId !== undefined && state.map.tiles[tileId]?.districtId === districtId ? tileId : centralPlot(state, districtId);
+  if (at === null) return null;
+  const energy = energyPotential(state, companyId, def.id, at, (building) => buildingUpkeep(state, building));
+  if (!energy) return null;
+  const fixedCosts = estimateInvestment(state, districtId, def.id, companyId)?.fixedCosts ?? 0;
+  const gain = energy.saved + energy.sold - energy.fuel;
+  const dailyProfit = gain - fixedCosts;
+  const covered = energy.own + energy.rival;
+  return {
+    dailyGain: gain,
+    dailyProfit,
+    paybackDays: dailyProfit > 0 ? def.cost / dailyProfit : Infinity,
+    rampDays: 0,
+    covered,
+    energy,
+    ...(covered === 0 ? { none: tc('core.indirect.noPowerCustomers') } : {}),
+  };
 }
 
 function compute(

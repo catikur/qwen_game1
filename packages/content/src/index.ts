@@ -19,6 +19,7 @@ export * from './credit';
 export * from './capital';
 export * from './holding';
 export * from './economy';
+export * from './energy';
 export * from './stories';
 export * from './opportunities';
 export * from './living';

@@ -123,6 +123,18 @@ export interface BuildingLedger {
    * mal maliyetinin içinde). Sözleşmesiz mağazada yok.
    */
   freight?: number;
+  /**
+   * Enerjisini bir santralden alan bina (Tur 57): hangi santral, bugün
+   * santrale ödediği fatura (sahibinin binasında 0) ve şebekeye göre
+   * kazancı. Şebekeye bağlı binada yok.
+   */
+  power?: { plantId: string; bill: number; saved: number };
+  /**
+   * Santral (Tur 57): bugünkü gücü (MWh), sahibinin ve rakiplerin
+   * binalarına verdiği, sahibinin binalarına şebeke fiyatıyla kazandırdığı.
+   * Rakiplere satış cirosunda, yakıt mal maliyetinde.
+   */
+  plant?: { capacity: number; ownMwh: number; rivalMwh: number; buildings: number; saved: number };
 }
 
 export interface BuildingInstance {
@@ -167,6 +179,8 @@ export interface BuildingInstance {
   profitTrend?: number;
   /** Terminal (Tur 56): bütün sözleşmelerinden bugüne kadar topladığı ücret. */
   freightEarned?: number;
+  /** Santral (Tur 57): kurulduğundan beri rakiplere satış, kendi binalarına kazanç, yakıt. */
+  energyTotals?: { sold: number; saved: number; fuel: number };
 }
 
 export interface CompanyLedger {
@@ -484,6 +498,21 @@ export interface FreightState {
   declined: Record<string, number>;
   /** Bütün sözleşmelerden toplanan ücret (koşunun özeti için). */
   earnedTotal: number;
+}
+
+/**
+ * Yakıt sabitleme (Tur 57): şirketin doğalgaz santralleri `untilDay`e
+ * kadar yakıtı `price` endeksiyle alıyor (şebeke fiyatı ne olursa olsun).
+ */
+export interface FuelLock {
+  price: number;
+  fromDay: number;
+  untilDay: number;
+}
+
+export interface EnergyState {
+  /** Şirket → süren yakıt sabitlemesi. */
+  fuelLocks: Record<string, FuelLock>;
 }
 
 /** Sistemleri kademeli açmak için — plandaki feature flag katmanı. */
@@ -856,6 +885,8 @@ export interface GameState {
    * "terminal yok, teklif yok" demek, şema sürümü sabit.
    */
   freight?: FreightState;
+  /** Enerji (Tur 57): yakıt sabitlemeleri. Seçime bağlı; eski kayıtta yok. */
+  energy?: EnergyState;
   flags: FeatureFlags;
   /** Açık ihale; yoksa null. */
   auction: AuctionState | null;
@@ -1142,6 +1173,7 @@ export type GameCommand =
   | { type: 'ACCEPT_CONTRACT' }
   | { type: 'DECLINE_CONTRACT' }
   /** Masadaki taşıma teklifini kabul eder (Tur 56). */
+  | { type: 'LOCK_FUEL' }
   | { type: 'ACCEPT_FREIGHT'; offerId: string }
   /** Masadaki taşıma teklifini reddeder. */
   | { type: 'DECLINE_FREIGHT'; offerId: string }

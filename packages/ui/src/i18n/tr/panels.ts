@@ -17,6 +17,7 @@ export const panels = {
   'panels.build.bestPick': 'bu parsel için en iyi',
   'panels.build.role.rental': ' · kira',
   'panels.build.role.logistics': ' · lojistik',
+  'panels.build.role.energy': 'Enerji',
   'panels.build.role.extract': ' · hammadde',
   'panels.build.role.process': ' · işleme',
   'panels.build.zoned': ' · sanayi/liman',
@@ -27,10 +28,12 @@ export const panels = {
 
   // yatırım kartındaki tahmin satırı (EstimateLine)
   'panels.estimate.indirectHint.logistics': 'Menzilindeki mağazalarının dağıtım maliyetini düşürür.',
+  'panels.estimate.indirectHint.energy': 'Menzilindeki binalara enerji verir: kendi binalarının faturası kalkar, artanı rakiplere satar.',
   'panels.estimate.indirectHint.research': 'Bir kategoride kaliteyi yükseltir; fiyat ya da pay olarak döner.',
   'panels.estimate.indirectHint.marketing': 'Bir kategoride markayı büyütür; fiyat ya da pay olarak döner.',
   'panels.estimate.indirectHint.default': 'Dolaylı fayda.',
   'panels.estimate.where.covered': '{count} mağaza menzilde',
+  'panels.estimate.where.powered': '{count} bina menzilde',
   'panels.estimate.where.focus': '{category} için',
   'panels.estimate.indirectTitle':
     'Bugünkü şehirde, etkisi oturduğunda. Şehir ve karşılanmayan talep büyüdükçe artar; yerleştirirken 120 günlük projeksiyona bakabilirsin.',
@@ -42,6 +45,7 @@ export const panels = {
   'panels.estimate.loss': 'zarar eder',
   'panels.estimate.cannibalized': ' · kendi şubelerinden {amount}/gün alıyor (düşüldü)',
   'panels.estimate.freight': ' · menzilde {count} rakip mağazası: taşımadan günde en çok ~{fee}',
+  'panels.estimate.energy': ' · kendi {own} binan, {rival} rakip binası: kazanç {saved}, satış {sold}, yakıt {fuel} (bugünkü fiyatla)',
 
   // 120 günlük projeksiyon (ProjectionBox)
   'panels.projection.atDay': '{days}. günde ≈',
@@ -94,6 +98,25 @@ export const panels = {
   'panels.building.ledger.dailyProfit': 'Günlük kâr',
   'panels.building.ledger.profitTrend': '30 günlük ortalama',
   'panels.building.ledger.freight': 'Taşıma ücreti',
+  'panels.building.ledger.powerSales': 'Rakiplere enerji satışı',
+  'panels.building.ledger.fuel': 'Yakıt',
+  'panels.building.powerOwn': 'Enerjisini {plant} veriyor: faturası yok, bugün {saved} kazanç.',
+  'panels.building.powerClient': '{owner} bu binanın enerjisini senin santralinden alıyor ({plant}): bugün {bill} ödedi.',
+  'panels.power.title': 'Enerji',
+  'panels.power.output': 'Güç',
+  'panels.power.mwh': '{used}/{capacity} MWh',
+  'panels.power.price': 'Şebeke fiyatı',
+  'panels.power.perMwh': '{price}/MWh',
+  'panels.power.fuel': 'Yakıt',
+  'panels.power.noFuel': 'yok',
+  'panels.power.own': 'Kendi binalarına {mwh} MWh: bugün {saved} kazanç (faturaları yok)',
+  'panels.power.rival': 'Rakip binalarına {mwh} MWh: bugün {sold} satış',
+  'panels.power.idle': 'Menzilde enerji alacak bina yok.',
+  'panels.power.totals': 'Kurulduğundan beri: satış {sold}, kazanç {saved}, yakıt {fuel}.',
+  'panels.power.locked': 'Yakıt sabit: MWh başına {price}, {days} gün daha.',
+  'panels.power.lock': 'Yakıtı sabitle: {days} gün MWh başına {price}',
+  'panels.power.note':
+    'Güç önce kendi binalarına, sonra rakiplere gidiyor; yakından uzağa. Rakipler şebeke fiyatının {discount} altından öder. Sabitleme bugünkü fiyatın {premium} fazlası: enerji krizinden önce sabitleyen kazanır, fiyat düşerse fazla öder.',
   'panels.building.freightClient': '{owner} mağazasının dağıtımını senin terminalin yapıyor: bugün {fee} ücret.',
   'panels.freight.title': 'Taşıma',
   'panels.freight.fleet': 'Filo',
@@ -116,6 +139,8 @@ export const panels = {
     'Bu bina satış yapmaz. Karşılığı, menzilindeki mağazalarının satış maliyetinde görünür.',
   'panels.building.supportNote.focus':
     'Bu bina satış yapmaz. Karşılığı, atandığı kategorideki mağazalarının kalitesinde ve markasında görünür — Rekabet panelinde ölçebilirsin.',
+  'panels.building.supportNote.energy':
+    'Kendi binalarına verdiği enerji onların bakımından düşüyor (masada "kazanç"); bu defterde rakiplere satış ve yakıt var.',
   'panels.building.supportNote.terminal':
     'Kendi mağazalarına indirimi onların satış maliyetinde görünür; rakip mağazalarına taşımanın ücreti bu defterde.',
   'panels.building.stat.utilization': 'Doluluk',
