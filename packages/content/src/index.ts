@@ -20,6 +20,7 @@ export * from './capital';
 export * from './holding';
 export * from './economy';
 export * from './energy';
+export * from './realestate';
 export * from './stories';
 export * from './opportunities';
 export * from './living';

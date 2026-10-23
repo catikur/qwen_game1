@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ReactElement } from 'react';
-import { BUILDING_BY_ID, CATEGORIES, DISTRICT_ARCHETYPES, CONSUMER_CATEGORIES, GOODS_BY_CATEGORY, GOOD_BY_ID, STRUCTURE_BY_ID, formatDecimal, formatPercent, getDifficulty, numberLocale } from '@capital/content';
+import { BUILDING_BY_ID, CATEGORIES, DISTRICT_ARCHETYPES, CONSUMER_CATEGORIES, GOODS_BY_CATEGORY, GOOD_BY_ID, REAL_ESTATE, STRUCTURE_BY_ID, formatDecimal, formatPercent, getDifficulty, numberLocale } from '@capital/content';
 import {
+  AUCTION_PERIOD_DAYS,
   activeFad,
   buildOptions,
   categoryBreakdown,
@@ -18,11 +19,15 @@ import {
   getPlayer,
   goodShares,
   headquarters,
+  isProject,
   lateCostsEnabled,
   overheadRate,
   projectBuilding,
   PROJECTION_DAYS,
   rankedBuildOptions,
+  renewalBlocker,
+  renewalFee,
+  renewalRight,
   tilePrice,
 } from '@capital/core';
 import type { IndirectEstimate, InvestmentEstimate, Projection } from '@capital/core';
@@ -31,6 +36,7 @@ import type { SaveMeta } from '@capital/persistence';
 import { ChainPanel } from './ChainPanel';
 import { FreightDesk } from './FreightDesk';
 import { PowerDesk } from './PowerDesk';
+import { RentDesk } from './RentDesk';
 import { useCollapsible } from './collapse';
 import { CompetitionPanel } from './CompetitionPanel';
 import { AuctionPanel } from './AuctionPanel';
@@ -142,6 +148,15 @@ export function BuildPanel(): ReactElement {
             ? t('panels.build.subtitle.district', { district: district.name })
             : t('panels.build.subtitle.noSelection')}
         </p>
+        {/* Dönüşüm hakkı (Tur 58): proje imar artışıyla; başka bina hakkı düşürüyor. */}
+        {selectedTile && selectedTile.ownerId === player.id && !selectedTile.buildingId && renewalRight(state, selectedTile.id) && (
+          <p className="renewal-note" data-renewal-right={selectedTile.id}>
+            {t('panels.build.renewalRight', {
+              bonus: formatPercent(Math.round(REAL_ESTATE.renewal.capacityBonus * 100)),
+              holders: formatPercent(Math.round(REAL_ESTATE.renewal.rightHolders * 100)),
+            })}
+          </p>
+        )}
         {district && freePlots !== null && (
           <p className={freePlots <= 4 ? 'buildpanel-scarce tight' : 'buildpanel-scarce'}>
             {freePlots === 0
@@ -184,17 +199,18 @@ export function BuildPanel(): ReactElement {
                   <span className="buildcard-meta">
                     {def.role === 'energy' ? t('panels.build.role.energy') : CATEGORIES[def.category].name}
                     {def.role === 'rental' && t('panels.build.role.rental')}
+                    {def.buildDays ? t('panels.build.project', { days: def.buildDays }) : ''}
                     {def.role === 'logistics' && t('panels.build.role.logistics')}
                     {def.role === 'extract' && t('panels.build.role.extract')}
                     {def.role === 'process' && t('panels.build.role.process')}
-                    {def.zones && t('panels.build.zoned')}
+                    {def.zones && (def.role === 'rental' ? t(def.category === 'office' ? 'panels.build.zonedOffice' : 'panels.build.zonedHousing') : t('panels.build.zoned'))}
                   </span>
                   {!unlocked ? (
                     <span className="buildcard-lock">
                       {t('panels.build.locked', { netWorth: formatMoney(def.unlockNetWorth) })}
                     </span>
                   ) : estimate ? (
-                    <EstimateLine estimate={estimate} indirect={indirect} role={def.role} />
+                    <EstimateLine estimate={estimate} indirect={indirect} role={def.role} buildDays={def.buildDays} />
                   ) : (
                     <span className="buildcard-hint">{def.description}</span>
                   )}
@@ -282,10 +298,13 @@ function EstimateLine({
   estimate,
   indirect,
   role,
+  buildDays,
 }: {
   estimate: InvestmentEstimate;
   indirect?: IndirectEstimate | null;
   role: string;
+  /** Proje (Tur 58): kâr açılıp dolduktan sonra, geri ödeme inşaat ve doluş dahil. */
+  buildDays?: number;
 }): ReactElement {
   if (!estimate.direct) {
     const hint = t(INDIRECT_HINT[role] ?? 'panels.estimate.indirectHint.default');
@@ -335,6 +354,11 @@ function EstimateLine({
       {cannibalized >= 50 ? (
         <span className="cannibal" data-cannibalized={cannibalized}>
           {t('panels.estimate.cannibalized', { amount: formatMoney(cannibalized) })}
+        </span>
+      ) : null}
+      {buildDays ? (
+        <span className="project-note" data-project-estimate={Math.round(estimate.utilisation * 100)}>
+          {t('panels.estimate.project', { days: buildDays, occupancy: formatPercent(Math.round(estimate.utilisation * 100)) })}
         </span>
       ) : null}
     </span>
@@ -484,6 +508,14 @@ export function Inspector(): ReactElement | null {
         owner.id === player.id ? (
           <div className="actions">
             <p className="muted">{t('panels.inspector.ownVacant')}</p>
+            {tile.renewal && (
+              <p className="renewal-note" data-renewal-right={tile.id}>
+                {t('panels.build.renewalRight', {
+                  bonus: formatPercent(Math.round(REAL_ESTATE.renewal.capacityBonus * 100)),
+                  holders: formatPercent(Math.round(REAL_ESTATE.renewal.rightHolders * 100)),
+                })}
+              </p>
+            )}
             {/*
              * Telefonda yapı listesi bu detayın ARKASINDA kalıyor (detay alt
              * sayfa, liste sütunda). Rehber bunu ilk mobil yürüyüşte buldu
@@ -531,6 +563,42 @@ export function Inspector(): ReactElement | null {
         <PlotActions tileId={tile.id} price={price} />
       )}
     </aside>
+  );
+}
+
+/**
+ * Kentsel dönüşüm başvurusu (Tur 58): belediye sıradaki ihalesini bu
+ * parsele açıyor. Satın almaktan farkı: ihalede rakipler de var, ama kazanan
+ * dönüşüm hakkını alıyor (proje imar artışıyla, hak sahipleri yeni binada).
+ */
+function RenewalRequest({ tileId }: { tileId: number }): ReactElement | null {
+  const { run } = useGame();
+  const state = useGameState();
+  const player = getPlayer(state);
+  const request = state.renewalRequest;
+  if (request?.tileId === tileId) {
+    const opens = (Math.floor(state.time.day / AUCTION_PERIOD_DAYS) + 1) * AUCTION_PERIOD_DAYS;
+    return (
+      <p className="renewal-note" data-renewal-pending={tileId}>
+        {t('panels.plot.renewalPending', { days: opens - state.time.day })}
+      </p>
+    );
+  }
+  const blocker = renewalBlocker(state, tileId);
+  if (blocker !== null) return request ? <p className="muted">{blocker}</p> : null;
+  const fee = renewalFee(state, tileId);
+  return (
+    <>
+      <button type="button" disabled={player.cash < fee} onClick={() => run({ type: 'REQUEST_RENEWAL', tileId })} data-renewal-request={tileId}>
+        {t('panels.plot.renewalRequest', { fee: formatMoney(fee) })}
+      </button>
+      <p className="muted">
+        {t('panels.plot.renewalNote', {
+          bonus: formatPercent(Math.round(REAL_ESTATE.renewal.capacityBonus * 100)),
+          holders: formatPercent(Math.round(REAL_ESTATE.renewal.rightHolders * 100)),
+        })}
+      </p>
+    </>
   );
 }
 
@@ -609,6 +677,7 @@ function PlotActions({ tileId, price }: { tileId: number; price: number }): Reac
           {/* Çarpan yoksa eskisi gibi boş kalır (React `undefined`'ı çizmiyordu). */}
           {t('panels.plot.buyoutNote', { multiplier: structure.buyoutMultiplier != null ? formatDecimal(structure.buyoutMultiplier, 1) : '' })}
         </p>
+        <RenewalRequest tileId={tileId} />
       </div>
     );
   }
@@ -724,19 +793,24 @@ function BuildingDetail({ buildingId }: { buildingId: string }): ReactElement | 
             )}
           </div>
 
-          <div className="statgrid small">
-            <Stat label={t('panels.building.stat.utilization')} value={formatPercent(Math.round(ledger.capacityUsed * 100))} />
-            <Stat label={t('panels.building.stat.share')} value={formatPercent(Math.round(ledger.share * 100))} />
-            {/* Kampanyadaki rakibin satış fiyatı indirimli (Tur 37b): gösterilen, ödenen. */}
-            <Stat
-              label={t(
-                effectivePriceMultiplier(state, building) !== building.priceMultiplier
-                  ? 'panels.building.stat.priceCampaign'
-                  : 'panels.building.stat.price',
-              )}
-              value={`×${formatDecimal(effectivePriceMultiplier(state, building), 2)}`}
-            />
-          </div>
+          {/* Kiralık (Tur 58): doluluk, hedef, kira; projede inşaat. Fiyat çarpanı kiralıkta işlemiyordu. */}
+          {def.role === 'rental' ? (
+            <RentDesk buildingId={buildingId} />
+          ) : (
+            <div className="statgrid small">
+              <Stat label={t('panels.building.stat.utilization')} value={formatPercent(Math.round(ledger.capacityUsed * 100))} />
+              <Stat label={t('panels.building.stat.share')} value={formatPercent(Math.round(ledger.share * 100))} />
+              {/* Kampanyadaki rakibin satış fiyatı indirimli (Tur 37b): gösterilen, ödenen. */}
+              <Stat
+                label={t(
+                  effectivePriceMultiplier(state, building) !== building.priceMultiplier
+                    ? 'panels.building.stat.priceCampaign'
+                    : 'panels.building.stat.price',
+                )}
+                value={`×${formatDecimal(effectivePriceMultiplier(state, building), 2)}`}
+              />
+            </div>
+          )}
         </>
       )}
 

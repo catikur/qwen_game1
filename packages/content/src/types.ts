@@ -166,6 +166,12 @@ export interface BuildingDef {
   /** `energy`: üretim mevsime bağlı (güneş tarlası; Tur 57). */
   solar?: boolean;
   /**
+   * `rental` proje (Tur 58): inşaat süresi, gün. Bina bu kadar gün şantiye
+   * (kira yok, bakımın bir payı); açılınca kiracılar zamanla geliyor.
+   * Verilmezse bina kurulduğu gün dolu açılır.
+   */
+  buildDays?: number;
+  /**
    * Kurulabileceği district arketipleri. Verilmezse her yere kurulur.
    *
    * Üretim üniteleri yalnızca sanayi ve limana kurulabilir: şehir

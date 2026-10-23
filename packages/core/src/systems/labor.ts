@@ -3,8 +3,9 @@ import type { BuildingDef, UnionResponse, WagePolicy } from '@capital/content';
 import { pushNews } from '../news';
 import { tc } from '../i18n';
 import { rivalProfile } from '../profiles';
+import { underConstruction } from './realestate';
 import { createRng, nextFloat, nextRange } from '../rng';
-import type { CommandResult, CompanyState, GameState, LaborState } from '../types';
+import type { BuildingInstance, CommandResult, CompanyState, GameState, LaborState } from '../types';
 
 /**
  * İşgücü — ücretin tek doğru kaynağı.
@@ -69,13 +70,18 @@ export function serviceFactor(state: GameState, companyId: string): number {
   return WAGE_POLICIES[state.companies[companyId]?.labor?.policy ?? 'market'].service;
 }
 
+/** Binanın bugün çalışan kadrosu: inşaattaki projenin kadrosu açılışta işe başlıyor. */
+export function staffedJobs(building: BuildingInstance, def: BuildingDef | undefined = BUILDING_BY_ID[building.defId]): number {
+  return def && !underConstruction(building) ? def.jobs : 0;
+}
+
 /** Şirketin toplam çalışanı ve çalışan ağırlıklı ücret endeksi. */
 export function workforce(state: GameState, companyId: string): { employees: number; index: number } {
   let employees = 0;
   let weighted = 0;
   for (const building of Object.values(state.buildings)) {
     if (building.companyId !== companyId) continue;
-    const jobs = BUILDING_BY_ID[building.defId]?.jobs ?? 0;
+    const jobs = staffedJobs(building);
     employees += jobs;
     weighted += jobs * (state.districts[building.districtId]?.wageIndex ?? 1);
   }
@@ -282,7 +288,7 @@ export function runLaborTick(state: GameState): void {
   // ---- Bölge ücret endeksi ----
   const jobs = new Array<number>(state.districts.length).fill(0);
   for (const building of Object.values(state.buildings)) {
-    jobs[building.districtId] = (jobs[building.districtId] ?? 0) + (BUILDING_BY_ID[building.defId]?.jobs ?? 0);
+    jobs[building.districtId] = (jobs[building.districtId] ?? 0) + staffedJobs(building);
   }
   for (const district of state.districts) {
     const target = wageIndexTarget(jobs[district.id] ?? 0, district.population);

@@ -343,6 +343,8 @@ function seize(state: GameState, company: CompanyState, credit: CreditState): { 
     const tile = state.map.tiles[tileId]!;
     const value = Math.round(tile.landValue * LAND_SELL_RATIO * CREDIT.seizeHaircut);
     tile.ownerId = null;
+    // Dönüşüm hakkı (Tur 58) el değiştiren parselde düşüyor; satışla aynı (Codex #88).
+    delete tile.renewal;
     firstTile ??= tileId;
     sold++;
     proceeds += value;

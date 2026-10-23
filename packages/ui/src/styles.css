@@ -6319,7 +6319,8 @@ button.icon {
 
 /* Tur 56: terminalin taşıma masası — filo, masadaki teklifler, süren sözleşmeler. */
 .freight-desk,
-.power-desk {
+.power-desk,
+.rent-desk {
   margin-top: 12px;
   padding-top: 11px;
   border-top: 1px solid var(--line);
@@ -6329,14 +6330,57 @@ button.icon {
 }
 
 .freight-desk h4,
-.power-desk h4 {
+.power-desk h4,
+.rent-desk h4 {
   margin: 0;
   font-size: calc(12.5px * var(--text-scale));
 }
 
 .freight-desk p,
-.power-desk p {
+.power-desk p,
+.rent-desk p {
   margin: 0;
+}
+
+/* Tur 58: kiralığın masası — inşaat, doluluk, kira ayarı. */
+.rent-site {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--accent-soft);
+}
+
+.rent-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rent-control button {
+  min-width: 36px;
+  font-variant-numeric: tabular-nums;
+}
+
+.rent-level {
+  flex: 1;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.renewal-note {
+  margin: 0;
+  padding: 6px 10px;
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius-sm);
+  background: var(--accent-soft);
+  font-size: calc(12px * var(--text-scale));
+}
+
+.project-note {
+  display: block;
+  color: var(--muted);
 }
 
 .freight-offer {

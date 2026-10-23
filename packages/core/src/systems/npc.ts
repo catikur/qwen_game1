@@ -343,6 +343,8 @@ function chooseBuilding(
 ): BuildingDef | null {
   const candidates = BUILDINGS.filter((def) => {
     if (wantRental ? def.role !== 'rental' : def.role !== 'outlet') return false;
+    // Rakipler proje kurmuyor (Tur 58): geliştirici yolu oyuncunun.
+    if (def.buildDays) return false;
     if (!wantRental && def.category !== category) return false;
     if (def.cost > budget) return false;
     if (company.netWorth < def.unlockNetWorth) return false;

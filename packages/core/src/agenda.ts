@@ -4,6 +4,7 @@ import { leagueBoardKind } from './systems/leagueWeek';
 import { OFFER_LIFETIME_DAYS, contractProgress } from './systems/contracts';
 import { FREIGHT } from './systems/freight';
 import { fuelLock } from './systems/energy';
+import { AUCTION_PERIOD_DAYS } from './systems/auction';
 import { sharesHeld, sharesOutstanding } from './systems/equity';
 import { creditEnabled, overdraftLimit, overdraftOf } from './systems/credit';
 import { dailyBuyCap, sharesToControl } from './systems/orders';
@@ -42,6 +43,7 @@ export type AgendaKind =
   | 'contract'
   | 'freightOffer'
   | 'fuelLock'
+  | 'renewal'
   | 'auction'
   | 'unlock'
   | 'council'
@@ -289,6 +291,34 @@ export function agenda(state: GameState): AgendaItem[] {
         tileId: plant.tileId,
       });
     }
+  }
+
+  // Kentsel dönüşüm (Tur 58): bekleyen başvuru ihaleye kadar; dönüşüm hakkı
+  // olan boş parsel proje bekliyor (başka bina hakkı düşürür).
+  const request = state.renewalRequest;
+  if (request) {
+    const opens = (Math.floor(day / AUCTION_PERIOD_DAYS) + 1) * AUCTION_PERIOD_DAYS;
+    items.push({
+      kind: 'renewal',
+      key: 'renewal:request',
+      urgency: 0,
+      daysLeft: opens - day,
+      label: tc('core.agenda.renewalRequest'),
+      tone: 'neutral',
+      tileId: request.tileId,
+    });
+  }
+  for (const tile of state.map.tiles) {
+    if (!tile.renewal || tile.ownerId !== state.playerCompanyId || tile.buildingId) continue;
+    items.push({
+      kind: 'renewal',
+      key: `renewal:${tile.id}`,
+      urgency: 1,
+      daysLeft: null,
+      label: tc('core.agenda.renewalPlot'),
+      tone: 'good',
+      tileId: tile.id,
+    });
   }
 
   if (state.auction) {

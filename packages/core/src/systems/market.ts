@@ -27,6 +27,19 @@ import { buildingStrikeFactor, serviceFactor, wageFor } from './labor';
 import { marketingLeverage } from './focus';
 import { SURPLUS_HAIRCUT, buildingUpkeep, outletRelief, unitCogsFor } from './supply';
 import { energyPrice, gridUpkeep, prospectiveUpkeep } from './energy';
+import {
+  isProject,
+  leaseStep,
+  projectPayback,
+  projectUnits,
+  rawOccupancy,
+  renewalRight,
+  rentOf,
+  rentalSupply,
+  rentalTarget,
+  rentalUnits,
+  underConstruction,
+} from './realestate';
 import type { FreightClient } from './supply';
 import type { BuildingInstance, CompanyState, DistrictState, GameState } from '../types';
 import { scopedMemo, scopedOutlets, withBuildingIndex } from './buildingIndex';
@@ -369,33 +382,32 @@ export function estimateInvestment(
   }
 
   if (def.role === 'rental') {
-    let rivalCapacity = def.capacity;
+    // Proje (Tur 58): dönüşüm parselinde imar artışıyla; tahmin açıldıktan ve
+    // dolduktan sonraki günü söylüyor, geri ödeme inşaatı ve doluşu da sayıyor.
+    const project = isProject(def);
+    const { units } = projectUnits(def, project && tileId !== undefined && renewalRight(state, tileId));
+    let rivalCapacity = units;
     for (const other of Object.values(state.buildings)) {
       if (other.districtId !== districtId) continue;
       const otherDef = BUILDING_BY_ID[other.defId];
       if (otherDef?.role === 'rental' && otherDef.category === def.category) {
-        rivalCapacity += otherDef.capacity;
+        rivalCapacity += rentalUnits(other, otherDef).units;
       }
     }
-    const absorbable = district.population * 0.06 + 40;
-    const pressure = Math.min(1, rivalCapacity / Math.max(1, absorbable));
-    const occupancy = Math.max(
-      0.15,
-      Math.min(1, 0.55 + 0.5 * district.incomeLevel - 0.4 * pressure),
-    );
-    const revenue = def.capacity * occupancy * category.basePrice;
+    const occupancy = rentalTarget(rawOccupancy(district, rivalCapacity), def.category, 1);
+    const revenue = units * occupancy * category.basePrice;
     const cogs = revenue * category.costRatio;
     const dailyProfit = revenue - cogs - fixedCosts;
     return {
       direct: true,
-      expectedUnits: def.capacity * occupancy,
+      expectedUnits: units * occupancy,
       utilisation: occupancy,
       revenue,
       cogs,
       fixedCosts,
       dailyProfit,
       cannibalized: 0,
-      paybackDays: dailyProfit > 0 ? investmentCost / dailyProfit : Infinity,
+      paybackDays: dailyProfit > 0 ? (project ? projectPayback(def, investmentCost, dailyProfit, occupancy) : investmentCost / dailyProfit) : Infinity,
     };
   }
 
@@ -1001,17 +1013,14 @@ function marketStep(state: GameState): void {
   // ---- Kira üreten binalar ----
   // Bölge × kategori kiralık kapasitesi tek taramada (Tur 38): her kiralık
   // için bütün binaları taramak bina sayısının karesiydi. Kapasiteler tam
-  // sayı; toplam sıradan bağımsız, sonuç birebir aynı.
-  const rentalCapacity = new Map<string, number>();
-  for (const other of buildings) {
-    const otherDef = BUILDING_BY_ID[other.defId];
-    if (!otherDef || otherDef.role !== 'rental') continue;
-    const key = `${other.districtId}|${otherDef.category}`;
-    rentalCapacity.set(key, (rentalCapacity.get(key) ?? 0) + otherDef.capacity);
-  }
+  // sayı; toplam sıradan bağımsız, sonuç birebir aynı. İnşaattaki proje
+  // pazarda yok; dönüşüm projesinde hak sahiplerinin daireleri de (Tur 58).
+  const rentalCapacity = rentalSupply(buildings);
   for (const building of buildings) {
     const def = BUILDING_BY_ID[building.defId];
     if (!def || def.role !== 'rental') continue;
+    // İnşaattaki proje (Tur 58): kirası yok, defterinde şantiyenin gideri.
+    if (underConstruction(building)) continue;
 
     const district = state.districts[building.districtId];
     const company = state.companies[building.companyId];
@@ -1020,20 +1029,20 @@ function marketStep(state: GameState): void {
     const category = CATEGORIES[def.category];
     // Aynı bölgede ne kadar çok kiralık varsa doluluk o kadar düşer.
     const rivalCapacity = rentalCapacity.get(`${building.districtId}|${def.category}`) ?? 0;
-
-    const absorbable = district.population * 0.06 + 40;
-    const pressure = Math.min(1, rivalCapacity / Math.max(1, absorbable));
-    const occupancy = Math.max(
-      0.15,
-      Math.min(1, 0.55 + 0.5 * district.incomeLevel - 0.4 * pressure),
-    );
+    // Kira (Tur 58) hedefi kaydırıyor; projede doluluk hedefe gün gün yürüyor.
+    const rent = rentOf(building);
+    const target = rentalTarget(rawOccupancy(district, rivalCapacity), def.category, rent);
+    const development = building.development;
+    const occupancy = development ? leaseStep(development.occupancy!, target, def.category) : target;
+    if (development) development.occupancy = occupancy;
+    const { units, rightHolders } = rentalUnits(building, def);
 
     // basePrice = birim başına günlük kira; kapasite = kiralanabilir birim.
-    const revenue = def.capacity * occupancy * category.basePrice;
+    const revenue = units * occupancy * category.basePrice * rent;
     // Kart indirimi (`cogs`) raftaki mal için; kiralığın rafı yok (Codex #62).
     const cogs = revenue * category.costRatio * mods.costMultiplier;
 
-    building.last.unitsSold = def.capacity * occupancy;
+    building.last.unitsSold = units * occupancy;
     building.last.capacityUsed = occupancy;
     building.last.revenue = revenue;
     building.last.cogs = cogs;
@@ -1048,7 +1057,7 @@ function marketStep(state: GameState): void {
       const archetype = DISTRICT_ARCHETYPES[district.archetype];
       const ceiling = archetype.population * 2.4;
       if (district.population < ceiling) {
-        district.population = Math.min(ceiling, district.population + def.capacity * occupancy * 0.02);
+        district.population = Math.min(ceiling, district.population + (units * occupancy + rightHolders) * 0.02);
       }
     }
   }

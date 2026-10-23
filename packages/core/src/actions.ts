@@ -109,6 +109,11 @@ export function purchaseBlocker(state: GameState, tileId: number): string | null
   if (state.auction?.tileId === tileId) {
     return tc('core.actions.tileInAuction');
   }
+  // Belediyedeki dönüşüm başvurusunun parseli (Tur 58) ihale gününe kadar
+  // satılmıyor: başvuru, rakip yapıyı ihaleden önce devralınca düşüyordu.
+  if (state.renewalRequest?.tileId === tileId) {
+    return tc('core.actions.tileInRenewal');
+  }
   return null;
 }
 
@@ -188,6 +193,8 @@ export function sellTile(state: GameState, companyId: string, tileId: number): C
 
   company.cash += Math.round(tile.landValue * LAND_SELL_RATIO);
   tile.ownerId = null;
+  // Dönüşüm hakkı (Tur 58) parselin yeni sahibine geçmiyor.
+  delete tile.renewal;
   return { ok: true };
 }
 
@@ -254,6 +261,16 @@ export function build(
       soldToMarket: 0,
     },
   };
+  // Proje (Tur 58): inşaat süresince şantiye; dönüşüm parselinde imar
+  // artışıyla. Parseldeki dönüşüm hakkını ilk kurulan bina kullanıyor:
+  // proje değilse hak düşüyor.
+  if (def.buildDays) {
+    state.buildings[id]!.development = {
+      opensOnDay: state.time.day + def.buildDays,
+      ...(tile.renewal ? { renewal: true } : {}),
+    };
+  }
+  delete tile.renewal;
   tile.buildingId = id;
   return { ok: true };
 }

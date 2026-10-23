@@ -7,6 +7,8 @@ import { isDistrictOpen, tilePrice } from './city';
 import type { AuctionState, GameState } from '../types';
 import { withBuildingIndex } from './buildingIndex';
 import { noteFeat } from './feats';
+import { isProject, takeRenewalRequest } from './realestate';
+import { zoningBlocker } from '../actions';
 
 /**
  * Parsel ihalesi.
@@ -27,7 +29,7 @@ import { noteFeat } from './feats';
  */
 
 /** Kaç günde bir yeni ihale açılır. */
-const AUCTION_PERIOD_DAYS = 30;
+export const AUCTION_PERIOD_DAYS = 30;
 
 /** İhale kaç gün açık kalır. */
 const AUCTION_DAYS = 3;
@@ -150,6 +152,8 @@ export function valuationFor(state: GameState, companyId: string, tileId: number
   let bestPayback = Number.POSITIVE_INFINITY;
   for (const def of BUILDINGS) {
     if (def.role !== 'outlet' && def.role !== 'rental') continue;
+    // Rakipler proje kurmuyor (Tur 58): dönüşüm hakkının değeri yalnız oyuncuda.
+    if (isProject(def)) continue;
     if (company.netWorth < def.unlockNetWorth) continue;
     if (def.zones && !def.zones.includes(state.districts[tile.districtId]?.archetype ?? 'downtown')) {
       continue;
@@ -304,8 +308,10 @@ function settle(state: GameState): void {
   winner.cash -= auction.bid;
   tile.ownerId = winner.id;
   if (winner.id === state.playerCompanyId) noteFeat(state, 'auctionsWon');
-  // Kentsel dönüşüm: yapı yıkılır, parsel boş olarak el değiştirir.
+  // Kentsel dönüşüm: yapı yıkılır, parsel boş olarak el değiştirir. Parsel
+  // dönüşüm hakkını taşıyor (Tur 58): üstüne kurulan proje imar artışıyla.
   const razed = tile.structureId ? STRUCTURE_BY_ID[tile.structureId]?.name ?? tc('core.auction.structure') : null;
+  if (tile.structureId) tile.renewal = { day: state.time.day, structureId: tile.structureId };
   tile.structureId = null;
   tile.structureHeight = 0;
 
@@ -340,7 +346,9 @@ export function runAuctionTick(state: GameState): void {
 
   if (!shouldOpen(state)) return;
 
-  const tileId = pickTile(state);
+  // Oyuncunun dönüşüm başvurusu (Tur 58) sıradaki ihalenin parseli.
+  const requested = takeRenewalRequest(state);
+  const tileId = requested ?? pickTile(state);
   if (tileId === null) return;
 
   const district = state.districts[state.map.tiles[tileId]!.districtId];
@@ -359,7 +367,7 @@ export function runAuctionTick(state: GameState): void {
     state,
     'neutral',
     occupied ? tc('core.auction.openedRenewalTitle') : tc('core.auction.openedTitle'),
-    occupied
+    (occupied
       ? tc('core.auction.openedRenewalBody', {
           district: district?.name ?? tc('core.auction.city'),
           structure: occupied,
@@ -370,7 +378,7 @@ export function runAuctionTick(state: GameState): void {
           district: district?.name ?? tc('core.auction.city'),
           days: AUCTION_DAYS,
           price: Math.round(state.auction.reserve).toLocaleString(numberLocale()),
-        }),
+        })) + (requested !== null ? ` ${tc('core.realestate.requestOpened')}` : ''),
     { tileId: state.auction.tileId },
   );
 }
@@ -389,6 +397,8 @@ export function auctionHint(state: GameState, companyId: string): string | null 
     if (def.role !== 'outlet' && def.role !== 'rental') continue;
     const company = state.companies[companyId];
     if (!company || company.netWorth < def.unlockNetWorth) continue;
+    // İnşaatın imar kuralı: kurulamayacak bina teklifin gerekçesi olmasın (Codex #88).
+    if (zoningBlocker(state, tile.districtId, def.id)) continue;
     const estimate = estimateInvestment(state, tile.districtId, def.id, companyId, auction.tileId);
     if (!estimate?.direct) continue;
     if (estimate.dailyProfit > bestProfit) {

@@ -15,7 +15,10 @@ import { World } from './world';
 import { BuildingMass } from './mass';
 import { ContactShadows, DecorKit, DecorLayer } from './decor';
 import type { DecorPart } from './decor';
-import { decorateBuilding, decorateStructure, placeStreetTrees, streetSide } from './recipes';
+import { decorateBuilding, decorateSite, decorateStructure, placeStreetTrees, streetSide } from './recipes';
+
+/** İnşaattaki projenin beton iskeleti (Tur 58). */
+const SITE_CONCRETE = '#bdb8ae';
 import { LampLight } from './lamplight';
 import { FACADE, buildingSurface, setWindowLateNight, windowLateNight } from './surface';
 import type { FacadeStyle } from './surface';
@@ -1053,23 +1056,34 @@ export class CityRenderer {
       const growth = this.growthOf(building.id);
       if (growth < 1) growing = true;
 
-      const form = massFormOf(def);
+      // İnşaattaki proje (Tur 58): beton iskelet gün gün yükseliyor, vinç başında.
+      const development = building.development;
+      const site =
+        development && development.occupancy === undefined
+          ? Math.min(1, Math.max(0, (state.time.day - building.builtDay) / Math.max(1, development.opensOnDay - building.builtDay)))
+          : null;
+      if (site !== null) this.color.set(SITE_CONCRETE);
+      const form = site !== null ? 'block' : massFormOf(def);
+      const height = Math.max(0.3, def.height) * 1.5 * (site !== null ? 0.2 + 0.6 * site : 1);
       const footprint = this.buildings.place({
         x: tile.x,
         z: tile.y,
-        height: Math.max(0.3, def.height) * 1.5,
+        height,
         width: 0.68,
         groundY: 0.07,
         color: this.color,
         growth,
         form,
-        facade: buildingFacade(def),
+        facade: site !== null ? FACADE.industrial : buildingFacade(def),
         pitchedRoof: form === 'house' && growth >= 1,
-        accent: this.ownerColor,
+        // Şantiyenin kornişi de beton: sahibin rengi açılışta.
+        accent: site !== null ? this.color : this.ownerColor,
       });
       // Detaylar bina tamamlanınca: yükselen kütleye tente asmak tuhaf durur.
       // Kırma çatı da sahibin renginde (çatı rengi = `tint`).
-      if (growth >= 1) {
+      if (growth >= 1 && site !== null) {
+        decorateSite(this.buildingDecor, footprint, tile.x, tile.y, streetSide(tile.x, tile.y, BLOCK_SIZE), height);
+      } else if (growth >= 1) {
         decorateBuilding(this.buildingDecor, def, footprint, tile.x, tile.y, streetSide(tile.x, tile.y, BLOCK_SIZE), this.ownerColor, this.ownerColor);
       }
       if (def.role !== 'extract' && !def.solar) this.buildingShadows.place(tile.x, 0.07, tile.y, 0.68 * Math.max(0.3, growth), Math.min(1, def.height));

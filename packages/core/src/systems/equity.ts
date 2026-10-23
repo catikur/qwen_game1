@@ -362,7 +362,10 @@ function absorb(state: GameState, acquirerId: string, targetId: string): void {
 
   // Varlıklar: parseller, binalar, nakit ve borç.
   for (const tile of state.map.tiles) {
-    if (tile.ownerId === targetId) tile.ownerId = acquirerId;
+    if (tile.ownerId !== targetId) continue;
+    tile.ownerId = acquirerId;
+    // Dönüşüm hakkı (Tur 58) el değiştiren parselde düşüyor (Codex #88).
+    delete tile.renewal;
   }
   for (const building of Object.values(state.buildings)) {
     if (building.companyId === targetId) building.companyId = acquirerId;

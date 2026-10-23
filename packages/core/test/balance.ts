@@ -53,6 +53,8 @@ import {
   freeFloat,
   freightTerminals,
   powerPlants,
+  projectUnits,
+  rentalOutlook,
   marketCap,
   portfolioValue,
   sharePrice,
@@ -86,6 +88,7 @@ import type { GameState, RemotePayout } from '../src/types';
 import {
   activeProfiles,
   defendAgainstRaids,
+  developerStrategy,
   expandOutletsVacantOnly,
   followChainAdvice,
   energyStrategy,
@@ -5120,6 +5123,85 @@ section('Enerji: santraller, şebeke fiyatı ve enerji krizi', () => {
   expect('Enerji krizi santralsiz oyuncunun kârını vuruyor: 90 günde en az %5', hedges.every((h) => h.baseShock <= h.baseCalm * 0.95), hedges.map((h) => pct(h.baseShock / h.baseCalm - 1)).join(' · '));
   expect('Santrali olan krizi daha az kayıpla atlatıyor (her şehirde)', hedges.every((h) => h.calm - h.shock < h.baseCalm - h.baseShock), hedges.map((h) => `${k(h.shock - h.calm)} < ${k(h.baseShock - h.baseCalm)}`).join(' · '));
   expect('Yakıtı sabitleyen en az kaybediyor (her şehirde)', hedges.every((h) => h.locked > h.shock), hedges.map((h) => `${k(h.locked - h.calm)} > ${k(h.shock - h.calm)}`).join(' · '));
+});
+
+section('Gayrimenkul: proje, kira ve kentsel dönüşüm', () => {
+  /*
+   * Tur 58. Geliştiricinin projeleri (Konut Sitesi, Ofis Kampüsü) inşaatı
+   * süren, kiracısı zamanla gelen büyük kiralıklar; kira hedef doluluğu
+   * kaydırıyor; kentsel dönüşüm ihalesinden alınan parselde proje imar
+   * artışıyla büyük. Geliştirici vekil (`developerStrategy`) temel vekilin
+   * üstüne proje kuruyor, kirayı ayarlıyor, dönüşüm başvurusu yapıp kendi
+   * ihalesinde artırıyor.
+   *
+   * Gayrimenkul uzun vadeli: proje 75–100 gün kira getirmiyor, bedeli
+   * mağazalardan çekilen nakit. O yüzden iki gün ölçülüyor: 360. günde
+   * bedel ödeniyor (en çok %10 geride), 540. günde tuzak değil ve baskın
+   * değil.
+   */
+  const LONG = 540;
+  const m = (v: number) => `${(v / 1_000_000).toFixed(1)} M`;
+  const pct = (v: number) => `${v >= 0 ? '+' : ''}${Math.round(v * 100)}%`;
+  const play = (seed: number, developer: boolean) => {
+    const engine = new GameEngine(createNewGame({ seed, companyName: 'Gayrimenkul AŞ' }));
+    const state = engine.getState();
+    const earned = new Map<string, number>();
+    let year = 0;
+    for (let day = 1; day <= LONG; day++) {
+      if (day % 5 === 0) playerStrategy(engine);
+      if (developer) developerStrategy(engine);
+      engine.runDay();
+      for (const b of Object.values(state.buildings)) {
+        if (b.companyId === state.playerCompanyId && b.development?.occupancy !== undefined) earned.set(b.id, (earned.get(b.id) ?? 0) + b.last.profit);
+      }
+      if (day === DAYS) year = getPlayer(state).netWorth;
+    }
+    const projects = Object.values(state.buildings).filter((b) => b.companyId === state.playerCompanyId && b.development);
+    const open = projects.filter((b) => b.development!.occupancy !== undefined);
+    const rented = Object.values(state.buildings).filter((b) => b.companyId === state.playerCompanyId && b.rent !== undefined);
+    return {
+      year,
+      net: getPlayer(state).netWorth,
+      projects: projects.length,
+      renewals: projects.filter((b) => b.development!.renewal).length,
+      open: open.length,
+      earned: open.reduce((sum, b) => sum + (earned.get(b.id) ?? 0), 0),
+      cost: open.reduce((sum, b) => sum + BUILDING_BY_ID[b.defId]!.cost, 0),
+      occupancy: open.length ? open.reduce((sum, b) => sum + b.development!.occupancy!, 0) / open.length : 0,
+      // Kira ayarının değeri: bugünkü hedefte, ayarlanan kirayla ve piyasa kirasıyla.
+      rentGain: rented.reduce((sum, b) => sum + rentalOutlook(state, b.id)!.rentAtTarget - rentalOutlook(state, b.id, 1)!.rentAtTarget, 0),
+      rentBase: rented.reduce((sum, b) => sum + rentalOutlook(state, b.id, 1)!.rentAtTarget, 0),
+      rents: rented.map((b) => b.rent!),
+    };
+  };
+  const runs = [1, 7, 42].map((seed) => ({ seed, base: play(seed, false), dev: play(seed, true) }));
+  const at = (r: (typeof runs)[number], year: boolean) => (year ? r.dev.year / r.base.year : r.dev.net / r.base.net) - 1;
+  for (const r of runs) {
+    console.log(
+      `  seed ${r.seed}: ${DAYS}. gün ${m(r.base.year)} → ${m(r.dev.year)} (${pct(at(r, true))}) · ${LONG}. gün ${m(r.base.net)} → ${m(r.dev.net)} (${pct(at(r, false))}) · ${r.dev.projects} proje (${r.dev.renewals} dönüşüm, ${r.dev.open} açık, doluluk %${Math.round(r.dev.occupancy * 100)}) · açılandan beri kâr ${m(r.dev.earned)} / bedel ${m(r.dev.cost)} · kira ${r.dev.rents.length} binada (${[...new Set(r.dev.rents)].sort().join(', ')}), hedefte günde ${pct(r.dev.rentGain / Math.max(1, r.dev.rentBase))}`,
+    );
+  }
+  const mean = (year: boolean) => runs.reduce((sum, r) => sum + at(r, year), 0) / runs.length;
+  expect(
+    'Geliştirici vekil her şehirde proje kuruyor; açılan projeler açıldıklarından beri bedellerini çıkarıyor',
+    runs.every((r) => r.dev.open >= 2 && r.dev.earned >= r.dev.cost),
+    runs.map((r) => `${r.dev.open} açık, ×${(r.dev.earned / Math.max(1, r.dev.cost)).toFixed(1)}`).join(' · '),
+  );
+  expect(`İlk yıl bedel ödeniyor: ${DAYS}. günde ortalama temelin en az %90'ı`, mean(true) >= -0.1, `${runs.map((r) => pct(at(r, true))).join(' · ')} (ortalama ${pct(mean(true))})`);
+  expect(`Uzun vadede tuzak değil: ${LONG}. günde ortalama temelin en az %95'i`, mean(false) >= -0.05, `${runs.map((r) => pct(at(r, false))).join(' · ')} (ortalama ${pct(mean(false))})`);
+  expect(`Baskın değil: ${LONG}. günde ortalama kazanç +%25'in altında`, mean(false) < 0.25, pct(mean(false)));
+  expect(
+    'Kira ayarı kazandırıyor: ayarlanan kiralarla hedefteki kira geliri piyasa kirasındakinden az değil',
+    runs.some((r) => r.dev.rents.length > 0) && runs.every((r) => r.dev.rentGain >= 0),
+    runs.map((r) => `${pct(r.dev.rentGain / Math.max(1, r.dev.rentBase))} (${r.dev.rents.length} bina)`).join(' · '),
+  );
+  const estate = BUILDING_BY_ID.housing_estate!;
+  const units = projectUnits(estate, true);
+  expect(
+    'Kentsel dönüşüm işliyor: vekil en az bir şehirde dönüşüm ihalesini kazanıp proje kuruyor; projesi imar artışıyla daha çok kiralık birim',
+    runs.some((r) => r.dev.renewals > 0) && units.units > estate.capacity,
+    `${runs.map((r) => `${r.dev.renewals} dönüşüm`).join(' · ')}; Konut Sitesi ${estate.capacity} → ${units.units} kiralık + ${units.rightHolders} hak sahibi`,
+  );
 });
 
 if (timings.length === 0) {

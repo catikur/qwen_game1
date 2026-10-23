@@ -388,6 +388,11 @@ değişmedi, simülasyon değişti (iki santral, enerji faturası, yeni kriz,
 yakıt sabitleme komutu). Yine yalnız 3. adım: `pnpm lite:league-bundle`,
 paketi yapıştır, Deploy. Sağlık ucu değişmiyor, Lite etkilenmiyor.
 
+**Tur 58 (gayrimenkul: proje, kira, kentsel dönüşüm):** şema değişmedi,
+simülasyon değişti (iki proje, kira ve doluluk, dönüşüm hakkı, iki yeni
+komut). Yine yalnız 3. adım: `pnpm lite:league-bundle`, paketi yapıştır,
+Deploy. Sağlık ucu değişmiyor, Lite etkilenmiyor.
+
 **Sürüm uyumu.** Sunucu koşuyu yalnız kendi simülasyon sürümüyle
 yargılayabiliyor. Pages'teki oyun her `main` birleşmesinde kendiliğinden
 güncelleniyor, Worker elle. Oyunun simülasyonunu değiştiren bir birleşmeden

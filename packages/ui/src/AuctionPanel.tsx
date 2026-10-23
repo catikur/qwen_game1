@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { STRUCTURE_BY_ID, formatNumber, withCurrency } from '@capital/content';
+import { REAL_ESTATE, STRUCTURE_BY_ID, formatNumber, formatPercent, withCurrency } from '@capital/content';
 import type { ReactElement } from 'react';
 import { auctionHint, getPlayer, minimumBid } from '@capital/core';
 import { t } from './i18n';
@@ -120,6 +120,15 @@ export function AuctionPanel(): ReactElement {
         <p className="muted auction-occupied" data-occupied={tile.structureId}>
           {t('finance.auction.occupied', {
             structure: STRUCTURE_BY_ID[tile.structureId]?.name ?? t('finance.auction.occupied.someStructure'),
+          })}
+        </p>
+      )}
+      {/* Dönüşüm hakkı (Tur 58): kazananın projesi imar artışıyla, hak sahipleri yeni binada. */}
+      {tile?.structureId && (
+        <p className="muted renewal-note" data-auction-renewal>
+          {t('finance.auction.renewalRight', {
+            bonus: formatPercent(Math.round(REAL_ESTATE.renewal.capacityBonus * 100)),
+            holders: formatPercent(Math.round(REAL_ESTATE.renewal.rightHolders * 100)),
           })}
         </p>
       )}

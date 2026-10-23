@@ -21,6 +21,7 @@ import { runConsortiumTick } from './systems/consortium';
 import { acceptContract, declineContract } from './systems/contracts';
 import { acceptFreight, cancelFreight, declineFreight } from './systems/freight';
 import { lockFuel } from './systems/energy';
+import { requestRenewal, setRent } from './systems/realestate';
 import { placeBid } from './systems/auction';
 import { noteCompanyPeak, notePeakWorth, noteRaidStage } from './systems/feats';
 import { sellShares } from './systems/equity';
@@ -273,6 +274,12 @@ export class GameEngine {
 
       case 'DECLINE_CONTRACT':
         return declineContract(state);
+
+      case 'SET_RENT':
+        return setRent(state, playerId, command.buildingId, command.rent);
+
+      case 'REQUEST_RENEWAL':
+        return requestRenewal(state, command.tileId);
 
       case 'LOCK_FUEL':
         return lockFuel(state);

@@ -68,6 +68,8 @@ export const hud = {
   'hud.freight.offer': 'Taşıma',
   'hud.fuel.lock': 'Yakıt',
   'hud.fuel.lockTitle': 'Santralin panelinde yakıtı sabitle',
+  'hud.renewal.label': 'Dönüşüm',
+  'hud.renewal.title': 'Kentsel dönüşüm parseline git',
   'hud.freight.offerTitle': 'Terminalin panelinde kabul et ya da geç',
 
   // Gündem şeridi
