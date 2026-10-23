@@ -1,6 +1,6 @@
 import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
-import { BUILDINGS, BUILDING_BY_ID, CATEGORIES, REAL_ESTATE, STRUCTURE_BY_ID } from '@capital/content';
+import { BUILDINGS, BUILDING_BY_ID, CATEGORIES, CREDIT, REAL_ESTATE, STRUCTURE_BY_ID } from '@capital/content';
 import { GameEngine } from '../src/engine';
 import { createNewGame } from '../src/worldgen';
 import { build, buyTile, buyoutTile, zoningBlocker } from '../src/actions';
@@ -8,6 +8,7 @@ import { agenda } from '../src/agenda';
 import { isPurchasable, isDistrictOpen, runPopulationTick } from '../src/systems/city';
 import { runLaborTick, workforce } from '../src/systems/labor';
 import { auctionHint, runAuctionTick } from '../src/systems/auction';
+import { overdraftLimit, runCreditTick } from '../src/systems/credit';
 import { estimateInvestment, runMarketTick } from '../src/systems/market';
 import {
   projectUnits,
@@ -344,6 +345,25 @@ describe('gayrimenkul: proje, kira, doluluk ve kentsel dönüşüm (Tur 58)', ()
       if (zoningBlocker(state, tile.districtId, def.id) === null) continue;
       assert.ok(!hint?.includes(def.name), `ipucu imarsız ${def.name} gösteriyor: ${hint}`);
     }
+  });
+
+  test('haciz: bankanın sattığı dönüşüm parseli hakkı yeni sahibine taşımıyor', () => {
+    const state = fresh();
+    const me = state.companies[state.playerCompanyId]!;
+    // Oyuncunun boş parselleri dönüşüm hakkıyla; kasa limitin çok altında.
+    const plots = state.map.tiles.filter((t) => isPurchasable(t) && !t.structureId && !t.buildingId).slice(0, 6);
+    for (const tile of plots) {
+      tile.ownerId = me.id;
+      tile.renewal = { day: state.time.day, structureId: 'row_houses' };
+    }
+    me.cash = -(overdraftLimit(me) + 2_000_000);
+    for (let i = 0; i <= CREDIT.graceDays; i++) {
+      state.time.day += 1;
+      runCreditTick(state);
+    }
+    const seized = plots.filter((t) => t.ownerId !== me.id);
+    assert.ok(seized.length > 0, 'haciz parsel satmadı');
+    for (const tile of seized) assert.equal(tile.renewal, undefined, `hacizle satılan parsel ${tile.id} hakkı taşıyor`);
   });
 
   test('kayıt: proje, kira, başvuru ve dönüşüm hakkı kaydedilip açılıyor', () => {

@@ -262,6 +262,7 @@ function openProject(state: GameState): boolean {
   // Saha zaten kamunun (park ya da meydan): satılmıyor, ihaleye çıkmıyor.
   tile.kind = 'civic';
   tile.ownerId = null;
+  delete tile.renewal;
   const district = state.districts[site.districtId]!;
   pushNews(
     state,

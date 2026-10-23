@@ -6104,7 +6104,8 @@ Rakipler kira ayarlamıyor. Kira 1'ken hesap eskisiyle bit bit aynı.
   dairede kirasız oturuyor. Konut Sitesi 400 yerine 540 kiralık ve 100 hak
   sahibi daire. Hak sahiplerinin daireleri pazara çıkmıyor (zaten
   oradaydılar): baskıda yok, nüfus artışında var. Parselde ilk kurulan
-  bina hakkı kullanıyor; proje değilse hak düşüyor, parsel satılınca da.
+  bina hakkı kullanıyor; proje değilse hak düşüyor. Parsel el değiştirince
+  de düşüyor: satış, banka haczi, devralma.
 - *Dönüşüm başvurusu (`REQUEST_RENEWAL`):* oyuncu şehrin satılabilir bir
   yapısı için belediyeye başvuruyor. Belediye sıradaki ihalesini (en geç
   30 gün) o parsele açıyor.
@@ -6198,15 +6199,16 @@ aynı. Tur 57'nin tam koşusuyla bölüm bölüm karşılaştırıldı: 28 eski 
 bütün sayıları aynı; değişen tek şey katalogdaki bina sayısı (38 → 40,
 "her bina kurulabiliyor" ve yapı menüsü sırası).
 
-**Testler.** `pnpm test` 680/680 (668'den); tip denetimi temiz; denge
+**Testler.** `pnpm test` 681/681 (668'den); tip denetimi temiz; denge
 sınavı 353/353; paket bütçesi tamam (ana parça 67,1 KB, 65,6'dan).
-- Çekirdek (`realestate.test.ts`, 10 yeni):
+- Çekirdek (`realestate.test.ts`, 11 yeni):
   - kira: esneklik kadar kaydırıyor, geliri çarpıyor, adım ve sınır;
   - şantiye: kira yok, bakımın %30'u, ücret yok, pazarda yok;
   - şantiyenin kadrosu yok: çalışan sayısı, ücret endeksi ve nüfus artışı
     proje yokmuş gibi, açılınca sayılıyor;
   - projeye imarı olmayan bölgede başvuru yok, ihale ipucu orada
     kurulamayan binayı göstermiyor;
+  - hacizle satılan dönüşüm parseli hakkı taşımıyor;
   - açılış: ön kiralama, günde en çok kiracı gelişi kadar, hedefte duruyor;
   - başvuru: kurallar, bedel, parsel satılmıyor, sıradaki ihale o parsel,
     el değiştiren parselde düşüyor, ihalesiz oyunda yok, ihale sonradan
@@ -6333,7 +6335,7 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi). Senaryo şehirlerinde gün 3–17 ms (`pnpm dayperf`, Tur 43) |
-| Birim testi | **680 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de, Tur 52'de sunucuda tekrar, Tur 53'te haftanın kuralı ve günün koşusu, Tur 54'te hayalet eğri, Tur 55'te davetli ligler, Tur 56'da taşıma sözleşmeleri, Tur 57'de enerji, Tur 58'de gayrimenkul) |
+| Birim testi | **681 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de, Tur 52'de sunucuda tekrar, Tur 53'te haftanın kuralı ve günün koşusu, Tur 54'te hayalet eğri, Tur 55'te davetli ligler, Tur 56'da taşıma sözleşmeleri, Tur 57'de enerji, Tur 58'de gayrimenkul) |
 | Denge testi | **353 kontrol, hepsi geçiyor** (29 bölüm, süreleriyle; ~16 dk) |
 | Tarayıcı testi | **537 kontrol, hepsi geçiyor**, 0 konsol hatası (~40 dk); duman koşusu 132 (~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + paket bütçesi (Tur 46; Tur 48'den beri hizmet çalışanı ve manifest de) + duman oynanışı |
