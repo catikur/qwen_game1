@@ -2,6 +2,13 @@ import { BUILDING_BY_ID } from '@capital/content';
 import type { BuildingInstance, GameState } from '../types';
 
 /**
+ * Deponun perakende maliyetinden sildiği pay; payını yazmayan lojistik
+ * binası için (Tur 56'dan önce tek pay buydu). Bağımlılıksız modülde:
+ * hem bu indeks hem tedarik okuyor.
+ */
+export const DISTRIBUTION_RELIEF = 0.25;
+
+/**
  * Bina indeksi — saf hesaplamalar süresince (Tur 21).
  *
  * Büyük şehir (5×5) geç oyunda günü 300 ms'ye çıkardı; standart şehirde
@@ -22,6 +29,8 @@ interface Depot {
   x: number;
   y: number;
   radius: number;
+  /** Perakende maliyetinden sildiği pay (depo %25, terminal daha çok; Tur 56). */
+  relief: number;
 }
 
 interface BuildingIndex {
@@ -54,7 +63,7 @@ function buildIndex(state: GameState): BuildingIndex {
       const tile = state.map.tiles[building.tileId];
       if (!tile) continue;
       const list = depots.get(building.companyId);
-      const entry = { x: tile.x, y: tile.y, radius: def.radius };
+      const entry = { x: tile.x, y: tile.y, radius: def.radius, relief: def.relief ?? DISTRIBUTION_RELIEF };
       if (list) list.push(entry);
       else depots.set(building.companyId, [entry]);
     } else if ((def.role === 'research' || def.role === 'marketing') && building.focus) {

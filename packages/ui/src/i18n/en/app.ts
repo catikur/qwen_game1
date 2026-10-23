@@ -87,6 +87,7 @@ export const app: Record<keyof typeof trApp, string> = {
   'app.league.move.bid': 'Bid in the auction',
   'app.league.move.lobby': 'Lobbied the council',
   'app.league.move.contract': 'Accepted a contract',
+  'app.league.move.freight': 'Took a haulage contract',
   'app.league.move.price': 'Adjusted prices',
   'app.league.move.shelf': 'Changed shelves or focus',
   'app.league.move.staff': 'Made a wage or union call',

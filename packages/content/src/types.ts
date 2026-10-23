@@ -88,7 +88,10 @@ export type BuildingRole =
   | 'outlet'
   /** Kira geliri üretir; pazar payı yarışına girmez. */
   | 'rental'
-  /** Menzilindeki kendi outlet'lerinin dağıtım maliyetini düşürür. */
+  /**
+   * Menzilindeki kendi outlet'lerinin dağıtım maliyetini düşürür. Filosu
+   * olan (terminal, Tur 56) rakip mağazalarına da sözleşmeyle taşır.
+   */
   | 'logistics'
   /** Hammadde üretir; girdisi yoktur. */
   | 'extract'
@@ -135,6 +138,16 @@ export interface BuildingDef {
    * görüneceğini o belirliyor.
    */
   focusPotency?: number;
+  /**
+   * `logistics`: menzilindeki mağazanın perakende maliyetinden sildiği pay
+   * (Tur 56). Verilmezse deponun payı (%25).
+   */
+  relief?: number;
+  /**
+   * `logistics`: kamyon filosu (Tur 56). Aynı anda kaç rakip mağazasına
+   * taşıma sözleşmesiyle hizmet verebildiği; verilmezse sözleşme almaz.
+   */
+  fleet?: number;
   /**
    * Kurulabileceği district arketipleri. Verilmezse her yere kurulur.
    *

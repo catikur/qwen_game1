@@ -300,6 +300,16 @@ export function decorateBuilding(
       }
       onFace(layer, 'box', x, z, side, w / 2, footprint.bodyBottom + 0.22, w * 0.9, 0.025, 0.12, c(METAL));
       return;
+    case 'freight_terminal':
+      // Depodan geniş: üç yükleme kapısı, uzun saçak, çatıda şirketin tabelası.
+      for (const k of [-0.3, 0, 0.3]) {
+        const ox = side.nz !== 0 ? k * w : 0;
+        const oz = side.nx !== 0 ? k * w : 0;
+        onFace(layer, 'box', x + ox, z + oz, side, w / 2, footprint.bodyBottom, w * 0.22, 0.22, 0.01, c('#3d4148'));
+      }
+      onFace(layer, 'box', x, z, side, w / 2, footprint.bodyBottom + 0.24, w * 0.96, 0.025, 0.16, c(METAL));
+      layer.add('sign', x, footprint.roofY, z, footprint.roofWidth * 0.6, 0.14, 0.025, ownerSign, side.yaw);
+      return;
     case 'flour_mill':
       // Üç bitişik silo — değirmeni uzaktan okutan şey.
       for (const k of [-1, 0, 1]) layer.add('cylinder', x + k * w * 0.24, footprint.bodyBottom, z - w * 0.36, w * 0.24, (footprint.roofY - footprint.bodyBottom) * 1.45, w * 0.24, c('#d6d0c2'));

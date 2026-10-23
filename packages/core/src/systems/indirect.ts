@@ -1,9 +1,10 @@
 import { BUILDING_BY_ID, CONSUMER_CATEGORIES, currentLocale, getCeoModifiers } from '@capital/content';
-import type { CategoryId } from '@capital/content';
+import type { BuildingDef, CategoryId } from '@capital/content';
 import { tc } from '../i18n';
 import { MARKETING_CAP, RESEARCH_CAP, defaultFocus, marketingLeverage, researchCeiling } from './focus';
 import { estimateInvestment, runMarketTick } from './market';
-import { distributionRelief, resetDailyLedgers, runProductionTick } from './supply';
+import { distributionRelief, reliefOf, resetDailyLedgers, runProductionTick } from './supply';
+import { freightPotential } from './freight';
 import type { BuildingInstance, GameState } from '../types';
 
 /**
@@ -46,6 +47,12 @@ export interface IndirectEstimate {
   focus?: CategoryId;
   /** Depoda menzile girecek, şimdiye kadar depolu olmayan mağaza sayısı. */
   covered?: number;
+  /**
+   * Terminalde (Tur 56): menzilde taşınabilecek rakip mağazaları ve filo
+   * kadarının günlük taşıma ücreti tahmini. Katkıya girmiyor: teklif gelir
+   * ve kabul edilirse.
+   */
+  freight?: { outlets: number; fee: number };
   /** Etki neden sıfır (mağaza yok, menzil boş, tavan dolu). */
   none?: string;
 }
@@ -143,10 +150,32 @@ export function indirectEstimate(
   const key = `${companyId}|${defId}|${districtId}|${tileId ?? ''}|${currentLocale()}`;
   const hit = cache.get(key);
   const week = Math.floor(state.time.day / 7);
-  if (hit && hit.day === week && hit.version === buildings) return hit.value;
-  const value = compute(state, companyId, defId, districtId, tileId);
-  cache.set(key, { day: week, version: buildings, value });
-  return value;
+  let value: IndirectEstimate | null;
+  if (hit && hit.day === week && hit.version === buildings) value = hit.value;
+  else {
+    value = compute(state, companyId, defId, districtId, tileId);
+    cache.set(key, { day: week, version: buildings, value });
+  }
+  return withFreight(state, companyId, def, districtId, tileId, value);
+}
+
+/**
+ * Terminalin taşıma potansiyeli (Tur 56) haftalık önbellekte değil: teklif,
+ * sözleşme, devralma ve her günün satışı onu değiştiriyor, hesabı da tek
+ * bina taraması (Codex #86). Önbellekten gelen tahminin üstüne her seferinde.
+ */
+function withFreight(
+  state: GameState,
+  companyId: string,
+  def: BuildingDef,
+  districtId: number,
+  tileId: number | undefined,
+  value: IndirectEstimate | null,
+): IndirectEstimate | null {
+  if (!value || !def.fleet) return value;
+  const at = tileId !== undefined && state.map.tiles[tileId]?.districtId === districtId ? tileId : centralPlot(state, districtId);
+  if (at === null) return value;
+  return { ...value, freight: freightPotential(state, companyId, def.id, at) };
 }
 
 function compute(
@@ -179,11 +208,12 @@ function compute(
     const at = tileId !== undefined && state.map.tiles[tileId]?.districtId === districtId ? tileId : centralPlot(state, districtId);
     if (at === null) return null;
     const tile = state.map.tiles[at]!;
-    // Menzile girecek ve henüz depolu olmayan mağazalar.
+    // Menzile girecek ve indirimi artacak mağazalar: depolu olmayan ya da
+    // terminalden (Tur 56) daha az indirim alan.
     const covered = Object.values(state.buildings).filter((b) => {
       if (b.companyId !== companyId || BUILDING_BY_ID[b.defId]?.role !== 'outlet') return false;
       const other = state.map.tiles[b.tileId];
-      if (!other || distributionRelief(state, b) > 0) return false;
+      if (!other || distributionRelief(state, b) >= reliefOf(def)) return false;
       return Math.abs(other.x - tile.x) + Math.abs(other.y - tile.y) <= def.radius;
     }).length;
     if (covered === 0) {

@@ -37,6 +37,8 @@ export const contentEn: Record<string, string> = {
   'content.building.business_center.description': 'The office step before the tower: mid-size rent, daytime population nearby.',
   'content.building.warehouse.name': 'Warehouse',
   'content.building.warehouse.description': 'Cuts distribution costs for your own stores within its range.',
+  'content.building.freight_terminal.name': 'Freight Terminal',
+  'content.building.freight_terminal.description': 'A truck fleet: cheaper distribution than a warehouse for your own stores in range, and haulage contracts for rival stores.',
   'content.building.research_center.name': 'R&D Center',
   'content.building.research_center.description':
     'Assigned to a category; permanently raises the quality of all your stores in that category. Pays back slowly; pays off when rivals are many.',

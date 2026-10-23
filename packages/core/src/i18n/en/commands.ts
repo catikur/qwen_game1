@@ -154,6 +154,7 @@ export const commands: Record<keyof typeof trCommands, string> = {
   'core.agenda.campaign': '{name}: {category} attack',
   'core.agenda.quests': '{month} · {done}/{total}',
   'core.agenda.questsReady': 'Reward ready: {count|# quest|# quests}',
+  'core.agenda.freightOffer': '{company} · {count|# store|# stores} · ~{fee} a day',
   'core.agenda.fad': '{good} fad',
   'core.agenda.projectRank': '{project}: you are #{rank}',
   'core.agenda.projectOpen': '{project}: contributions open',

@@ -37,7 +37,7 @@ Bir bağlantıyla açılan, istenirse kurulan ve çevrimdışı da oynanan bir
 |---|---|---|---|---|
 | **1 · Ürün temeli** | Oyun bir ürün gibi davransın | 47–50 | Kuruluyor, çevrimdışı açılıyor, tek Ayarlar paneli var, müzik var | **bitti** (Tur 50) |
 | **2 · Çevrimiçi rekabet** | Herkes aynı şehirde | 51–55 | Pages'te paylaşılan tablo var, skor sunucuda doğrulanıyor | **bitti** (Tur 55) |
-| **3 · Yeni yollar** | Her koşu farklı bir şirket | 56–61 | Zafere en az üç farklı yol var, her birini kazanan bir vekil var | |
+| **3 · Yeni yollar** | Her koşu farklı bir şirket | 56–61 | Zafere en az üç farklı yol var, her birini kazanan bir vekil var | sürüyor (Tur 56) |
 | **4 · Şehrin hissi** | Oynaması keyifli | 62–65 | Mevsim ve hava görünüyor, önemli anlar hissediliyor | |
 | **5 · Platform ve topluluk** | Oyunun evi büyüsün | 66+ | Masaüstü sürümü ve paylaşılabilir senaryolar var | |
 
@@ -84,10 +84,17 @@ kodu.
 
 ### Faz 3 · Yeni yollar
 
-- **56 · Lojistik.** Kamyonlar zaten şehirde dolaşıyor. Gelecekler:
-  - nakliye şirketi kurmak;
-  - taşıma sözleşmeleri;
-  - rakiplerin zincirine hizmet etmek.
+Kullanıcı Faz 2'nin sonunda "devam edelim" dedi; turlar yine sırayla, her
+tur ayrı PR, Codex temiz ve CI yeşilse birleşiyor.
+
+| Tur | İş | Durum |
+|---|---|---|
+| **56 · Lojistik** | Nakliye terminali (filolu lojistik binası), rakip mağazalarına taşıma sözleşmeleri, ücret rakibin tasarrufundan; kamyonlar rakibin vitrinine gidiyor. | bu PR |
+
+Faz 3 simülasyonu değiştiriyor: her birleşmeden sonra Worker yeniden
+dağıtılıyor (`ios-lite/README.md`, "Sürüm uyumu"); o zamana kadar yeni
+koşular bekliyor.
+
 - **57 · Enerji.** Santraller binalara enerji satıyor; fiyat şokları
   krizlere bağlanıyor.
 - **58 · Gayrimenkul geliştiricisi.** Konut ve ofis projeleri, kira ve

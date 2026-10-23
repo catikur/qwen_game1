@@ -9,6 +9,9 @@ import { runConsortiumTick } from './systems/consortium';
 import { fadSchedule, livingDemand, seasonMultiplier, trendAt } from './systems/living';
 import { goodShares } from './systems/demand';
 import { runMarketTick } from './systems/market';
+import { FREIGHT, acceptFreight, runFreightTick } from './systems/freight';
+import { DISTRIBUTION_RELIEF } from './systems/buildingIndex';
+import { FREIGHT_SHARE, resetDailyLedgers } from './systems/supply';
 import { contributeToProject, projectAttraction, projectDistrictDemand, projectSite, projectUpkeep, runProjectTick } from './systems/projects';
 import { createNewGame } from './worldgen';
 import type { GameCommand, GameState, LoggedCommand, ProjectState } from './types';
@@ -64,16 +67,19 @@ export const RUN_LIMITS = {
  */
 const LOGGABLE: ReadonlySet<string> = new Set<GameCommand['type']>([
   'ACCEPT_CONTRACT',
+  'ACCEPT_FREIGHT',
   'BUILD',
   'BUYOUT_TILE',
   'BUY_SHARES',
   'BUY_TILE',
+  'CANCEL_FREIGHT',
   'CANCEL_TAKEOVER_ORDER',
   'CHOOSE_CARD',
   'CLAIM_BUBBLE',
   'CLAIM_QUEST',
   'CONTRIBUTE_PROJECT',
   'DECLINE_CONTRACT',
+  'DECLINE_FREIGHT',
   'DEMOLISH',
   'HOLDING_TRANSFER',
   'ISSUE_SHARES',
@@ -381,6 +387,8 @@ function lateGameProbe(state: GameState): string[] {
     parts.push(`fad-market:${shop ?? '-'}:${store ?? '-'}:${sold.join(',')}:${unmet.join(',')}`);
   }
 
+  parts.push(...freightProbe(clone()));
+
   const seed = state.meta.seed;
   for (const day of [120, 240, 360]) {
     parts.push(`living:${day}:${CONSUMER_CATEGORIES.map((category) => trendAt(seed, category, day).value.toFixed(6) + '/' + seasonMultiplier(day, category).toFixed(4)).join(',')}`);
@@ -396,6 +404,53 @@ function lateGameProbe(state: GameState): string[] {
       seasons: SEASONS.map(({ id, months, demand }) => ({ id, months, demand })),
       projects: PROJECTS.map(({ id, structureId, archetypes, demand, neighborShare, landValue, infrastructure, leadCategory }) => ({ id, structureId, archetypes, demand, neighborShare, landValue, infrastructure, leadCategory })),
     })}`,
+  );
+  return parts;
+}
+
+/**
+ * Taşıma yoklaması (Tur 56): izin dünyasında terminal yok, ücret de akmıyor.
+ * Kopyada oyuncu rakip mağazalarının en yoğun olduğu parsele bir terminal
+ * kuruyor, ilk teklif gelene kadar taşıma adımı koşuyor, teklif kabul
+ * ediliyor ve bir pazar günüyle bir taşıma adımı daha. Teklifin seçimi,
+ * ücret, terminalin indirimi ve sözleşmenin defteri izde; ayarlar da.
+ */
+function freightProbe(world: GameState): string[] {
+  const parts = [
+    `freight-settings:${JSON.stringify({ FREIGHT, FREIGHT_SHARE, DISTRIBUTION_RELIEF, depots: BUILDINGS.filter((def) => def.role === 'logistics').map(({ id, cost, upkeepPerDay, jobs, radius, relief, fleet, unlockNetWorth }) => ({ id, cost, upkeepPerDay, jobs, radius, relief, fleet, unlockNetWorth })) })}`,
+  ];
+  const me = world.companies[world.playerCompanyId]!;
+  me.cash += 10_000_000;
+  me.netWorth += 10_000_000;
+  const terminal = BUILDINGS.find((def) => (def.fleet ?? 0) > 0);
+  if (!terminal) return parts;
+  const rivals = Object.values(world.buildings).filter((b) => b.companyId !== me.id && BUILDING_BY_ID[b.defId]?.role === 'outlet');
+  let site: { id: number; count: number } | null = null;
+  for (const tile of world.map.tiles) {
+    if (!isPurchasable(tile) || tile.structureId || tile.buildingId || tile.ownerId) continue;
+    let count = 0;
+    for (const outlet of rivals) {
+      const at = world.map.tiles[outlet.tileId]!;
+      if (Math.abs(at.x - tile.x) + Math.abs(at.y - tile.y) <= terminal.radius) count++;
+    }
+    if (!site || count > site.count) site = { id: tile.id, count };
+  }
+  if (!site || !buyTile(world, me.id, site.id).ok || !build(world, me.id, site.id, terminal.id).ok) return [...parts, 'probe-freight:-'];
+  for (let i = 0; i < 60 && !world.freight?.offers.length; i++) {
+    world.time.day += 1;
+    runFreightTick(world);
+  }
+  const offer = world.freight?.offers[0];
+  if (!offer) return [...parts, `probe-freight:${site.id}:-`];
+  const accepted = acceptFreight(world, offer.id).ok;
+  world.time.day += 1;
+  resetDailyLedgers(world);
+  runMarketTick(world);
+  runFreightTick(world);
+  const deal = world.freight?.contracts[0];
+  const client = world.companies[offer.companyId];
+  parts.push(
+    `probe-freight:${site.id}:${world.time.day}:${offer.companyId}:${offer.outletIds.join(',')}:${offer.estimate}:${accepted}:${(deal?.earned ?? 0).toFixed(4)}:${Math.round(me.cash)}:${Math.round(client?.cash ?? 0)}`,
   );
   return parts;
 }

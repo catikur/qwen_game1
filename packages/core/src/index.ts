@@ -162,9 +162,14 @@ export {
 } from './systems/projects';
 export { campaignPriceFactor, campaignsLive, effectivePriceMultiplier, rivalQuote, storiesEnabled } from './systems/rivalry';
 export { activeContract, contractProgress, OFFER_LIFETIME_DAYS } from './systems/contracts';
+export { FREIGHT, fleetUsed, freightFeeEstimate, freightPenalty, freightProspects, freightTerminals } from './systems/freight';
 export type { EventModifiers } from './systems/events';
 export {
+  FREIGHT_SHARE,
   distributionRelief,
+  freightClient,
+  ownDepotRelief,
+  reliefOf,
   outletUnitCogs,
   seedSpotPrices,
   unitCogsFor,

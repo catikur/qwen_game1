@@ -11,6 +11,8 @@ import {
   effectivePriceMultiplier,
   estimateInvestment,
   formatMoney,
+  freightClient,
+  freightPenalty,
   freePlotsIn,
   getBuildingOnTile,
   getPlayer,
@@ -27,6 +29,7 @@ import type { IndirectEstimate, InvestmentEstimate, Projection } from '@capital/
 import { AUTOSAVE_SLOT, MAX_SLOTS, listSaves } from '@capital/persistence';
 import type { SaveMeta } from '@capital/persistence';
 import { ChainPanel } from './ChainPanel';
+import { FreightDesk } from './FreightDesk';
 import { useCollapsible } from './collapse';
 import { CompetitionPanel } from './CompetitionPanel';
 import { AuctionPanel } from './AuctionPanel';
@@ -245,6 +248,17 @@ const INDIRECT_HINT: Record<string, MessageKey> = {
   marketing: 'panels.estimate.indirectHint.marketing',
 };
 
+/** Terminalin taşıma potansiyeli (Tur 56): katkıya girmiyor, ayrı yazıyor. */
+function FreightPotential({ indirect }: { indirect: IndirectEstimate }): ReactElement | null {
+  const freight = indirect.freight;
+  if (!freight || freight.outlets === 0) return null;
+  return (
+    <span className="freight-potential" data-freight-potential={freight.outlets}>
+      {t('panels.estimate.freight', { count: freight.outlets, fee: formatMoney(freight.fee) })}
+    </span>
+  );
+}
+
 function EstimateLine({
   estimate,
   indirect,
@@ -257,7 +271,13 @@ function EstimateLine({
   if (!estimate.direct) {
     const hint = t(INDIRECT_HINT[role] ?? 'panels.estimate.indirectHint.default');
     if (!indirect) return <span className="buildcard-hint">{hint}</span>;
-    if (indirect.none) return <span className="buildcard-hint">{hint} {indirect.none}</span>;
+    if (indirect.none)
+      return (
+        <span className="buildcard-hint">
+          {hint} {indirect.none}
+          <FreightPotential indirect={indirect} />
+        </span>
+      );
     // Dolaylı katkı: bugünkü şehirde, etkisi oturduğunda (Tur 21).
     const where =
       indirect.covered !== undefined
@@ -274,6 +294,7 @@ function EstimateLine({
         {t('panels.estimate.indirectGain', { gain: formatMoney(indirect.dailyGain), where })}{' '}
         {Number.isFinite(indirect.paybackDays) ? t('panels.estimate.payback', { days: Math.round(indirect.paybackDays) }) : t('panels.estimate.indirectNoPayback')}
         {indirect.rampDays > 0 ? t('panels.estimate.ramp', { days: indirect.rampDays }) : ''}
+        <FreightPotential indirect={indirect} />
       </span>
     );
   }
@@ -623,15 +644,30 @@ function BuildingDetail({ buildingId }: { buildingId: string }): ReactElement | 
       */}
       {support ? (
         <>
-          <div className="ledger">
-            <LedgerRow label={t('panels.building.ledger.upkeep')} value={-ledger.upkeep} />
-            <LedgerRow label={t('panels.building.ledger.wages')} value={-ledger.wages} />
-            <LedgerRow label={t('panels.building.ledger.dailyCost')} value={-(ledger.upkeep + ledger.wages)} strong />
-          </div>
+          {/* Terminal (Tur 56) taşıma ücreti yazıyor: gideri ve kârı birlikte. */}
+          {def.fleet ? (
+            <div className="ledger">
+              <LedgerRow label={t('panels.building.ledger.freight')} value={ledger.revenue} />
+              <LedgerRow label={t('panels.building.ledger.upkeep')} value={-ledger.upkeep} />
+              <LedgerRow label={t('panels.building.ledger.wages')} value={-ledger.wages} />
+              <LedgerRow label={t('panels.building.ledger.dailyProfit')} value={ledger.profit} strong />
+              {building.profitTrend !== undefined && (
+                <LedgerRow label={t('panels.building.ledger.profitTrend')} value={Math.round(building.profitTrend)} />
+              )}
+            </div>
+          ) : (
+            <div className="ledger">
+              <LedgerRow label={t('panels.building.ledger.upkeep')} value={-ledger.upkeep} />
+              <LedgerRow label={t('panels.building.ledger.wages')} value={-ledger.wages} />
+              <LedgerRow label={t('panels.building.ledger.dailyCost')} value={-(ledger.upkeep + ledger.wages)} strong />
+            </div>
+          )}
           <p className="muted">
-            {def.role === 'logistics'
-              ? t('panels.building.supportNote.logistics')
-              : t('panels.building.supportNote.focus')}
+            {def.fleet
+              ? t('panels.building.supportNote.terminal')
+              : def.role === 'logistics'
+                ? t('panels.building.supportNote.logistics')
+                : t('panels.building.supportNote.focus')}
           </p>
         </>
       ) : (
@@ -668,6 +704,19 @@ function BuildingDetail({ buildingId }: { buildingId: string }): ReactElement | 
         </>
       )}
 
+      {isPlayer && def.fleet ? <FreightDesk buildingId={buildingId} /> : null}
+
+      {/* Rakip mağazasının dağıtımını oyuncunun terminali yapıyorsa (Tur 56). */}
+      {!isPlayer && def.role === 'outlet' && (() => {
+        const client = freightClient(state, building);
+        if (!client) return null;
+        return (
+          <p className="muted freight-client-note" data-freight-client={client.deal.id} data-freight-fee={Math.round(building.last.freight ?? 0)}>
+            {t('panels.building.freightClient', { owner: owner.name, fee: formatMoney(building.last.freight ?? 0) })}
+          </p>
+        );
+      })()}
+
       {isPlayer && def.role === 'outlet' && <ShelfEditor buildingId={buildingId} />}
 
       {isPlayer && (def.role === 'research' || def.role === 'marketing') && (
@@ -702,6 +751,14 @@ function BuildingDetail({ buildingId }: { buildingId: string }): ReactElement | 
           </p>
         </div>
       )}
+
+      {isPlayer && def.fleet && (() => {
+        // Terminali yıkmak sözleşmelerini bozar: bedel düğmeden önce yazsın.
+        const deals = (state.freight?.contracts ?? []).filter((deal) => deal.terminalId === building.id);
+        if (deals.length === 0) return null;
+        const penalty = deals.reduce((sum, deal) => sum + freightPenalty(state, deal), 0);
+        return <p className="muted" data-freight-demolish>{t('panels.freight.demolishWarning', { count: deals.length, penalty: formatMoney(penalty) })}</p>;
+      })()}
 
       {isPlayer && (
         <button type="button" onClick={() => run({ type: 'DEMOLISH', tileId: building.tileId })}>

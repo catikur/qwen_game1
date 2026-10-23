@@ -11,9 +11,10 @@ import { buildingStrikeFactor, wageFor } from './labor';
 import { overheadMultiplier } from './economy';
 import { boostMultiplier } from './cards';
 import { projectUpkeep } from './projects';
-import { scopedDepots } from './buildingIndex';
+import { DISTRIBUTION_RELIEF, scopedDepots } from './buildingIndex';
 import { estimateBaselineDemand, goodShares } from './demand';
-import type { BuildingInstance, DistrictState, GameState } from '../types';
+import type { BuildingDef } from '@capital/content';
+import type { BuildingInstance, DistrictState, FreightDeal, GameState } from '../types';
 
 /**
  * Tedarik zinciri.
@@ -40,8 +41,12 @@ import type { BuildingInstance, DistrictState, GameState } from '../types';
 /** Fazla üretim satarken fiyat kırılır — hacim döken taraf sensin. */
 export const SURPLUS_HAIRCUT = 0.85;
 
-/** Depo, perakende maliyetinin bu kadarını hafifletir. */
-const DISTRIBUTION_RELIEF = 0.25;
+/**
+ * Taşıma ücreti (Tur 56): terminalin rakip mağazasına sağladığı indirimin
+ * terminale giden payı. Müşteri kalanını tutuyor: ikisi de kazanıyor, ama
+ * rakip senin kamyonunla ucuzluyor.
+ */
+export const FREIGHT_SHARE = 0.6;
 
 /** Arz fazlası referans hacme ulaştığında spot fiyat bu oranda düşer. */
 const GLUT_DEPTH = 0.4;
@@ -122,24 +127,31 @@ function upkeepFor(state: GameState, building: BuildingInstance): number {
   );
 }
 
+/** Bir lojistik binasının perakende maliyetinden sildiği pay. */
+export function reliefOf(def: BuildingDef): number {
+  return def.relief ?? DISTRIBUTION_RELIEF;
+}
+
 /**
- * Bir outlet depo menzilinde mi?
+ * Şirketin KENDİ deposundan gelen indirim: menzilindeki en cömert depo.
  *
  * Mesafeyi rota çizerek değil burada modelliyoruz: deposu olmayan şirket
  * de şehir geneli havuzu kullanır, sadece birim başına daha çok dağıtım
- * öder. Mevcut `warehouse.radius = 8` mekaniği aynen korunuyor.
+ * öder. Mevcut `warehouse.radius = 8` mekaniği aynen korunuyor; terminal
+ * (Tur 56) daha geniş menzil ve daha büyük pay.
  */
-export function distributionRelief(state: GameState, outlet: BuildingInstance): number {
+export function ownDepotRelief(state: GameState, outlet: BuildingInstance): number {
   const outletTile = state.map.tiles[outlet.tileId];
   if (!outletTile) return 0;
+  let best = 0;
 
   // Bina indeksi açıksa (pazar adımı, zincir kartı) yalnızca şirketin depoları.
   const depots = scopedDepots(state, outlet.companyId);
   if (depots) {
     for (const depot of depots) {
-      if (Math.abs(depot.x - outletTile.x) + Math.abs(depot.y - outletTile.y) <= depot.radius) return DISTRIBUTION_RELIEF;
+      if (Math.abs(depot.x - outletTile.x) + Math.abs(depot.y - outletTile.y) <= depot.radius) best = Math.max(best, depot.relief);
     }
-    return 0;
+    return best;
   }
 
   for (const other of Object.values(state.buildings)) {
@@ -150,9 +162,60 @@ export function distributionRelief(state: GameState, outlet: BuildingInstance): 
     const tile = state.map.tiles[other.tileId];
     if (!tile) continue;
     const distance = Math.abs(tile.x - outletTile.x) + Math.abs(tile.y - outletTile.y);
-    if (distance <= def.radius) return DISTRIBUTION_RELIEF;
+    if (distance <= def.radius) best = Math.max(best, reliefOf(def));
   }
-  return 0;
+  return best;
+}
+
+/** Taşıma sözleşmesindeki bir mağaza: terminalin payı ve ücrete giden kısmı. */
+export interface FreightClient {
+  deal: FreightDeal;
+  /** Terminalin perakende maliyetinden sildiği pay. */
+  relief: number;
+  /** Bu payın ücret olarak terminale giden kısmı (perakende maliyetinin oranı). */
+  rate: number;
+}
+
+/**
+ * Mağaza bir taşıma sözleşmesinde mi (Tur 56)? Sözleşme geçerliyse:
+ * terminal duruyor, hâlâ oyuncunun, mağaza hâlâ müşterinin ve menzilde.
+ * Geçersiz sözleşmeyi günün sonunda taşıma adımı temizliyor; o güne kadar
+ * ücret de indirim de yok.
+ */
+export function freightClient(state: GameState, outlet: BuildingInstance): FreightClient | null {
+  const contracts = state.freight?.contracts;
+  if (!contracts || contracts.length === 0) return null;
+  for (const deal of contracts) {
+    if (deal.companyId !== outlet.companyId || !deal.outletIds.includes(outlet.id)) continue;
+    const terminal = state.buildings[deal.terminalId];
+    if (!terminal || terminal.companyId !== state.playerCompanyId) return null;
+    const def = BUILDING_BY_ID[terminal.defId];
+    if (!def?.fleet) return null;
+    const a = state.map.tiles[terminal.tileId];
+    const b = state.map.tiles[outlet.tileId];
+    if (!a || !b || Math.abs(a.x - b.x) + Math.abs(a.y - b.y) > def.radius) return null;
+    const relief = reliefOf(def);
+    return { deal, relief, rate: relief * FREIGHT_SHARE };
+  }
+  return null;
+}
+
+/**
+ * Mağazanın dağıtım indirimi ve varsa taşıma sözleşmesi. Kendi deposu
+ * önce: kendi deposu olan mağaza sözleşmeye girmiyor (taşıma adımı onu
+ * sözleşmeden çıkarıyor). Sözleşmedeki mağazanın indirimi terminalin payı
+ * eksi ücret: müşterinin ödediği toplam bu, ücret de oyuncunun cirosu.
+ */
+export function outletRelief(state: GameState, outlet: BuildingInstance): { relief: number; freight: FreightClient | null } {
+  const own = ownDepotRelief(state, outlet);
+  if (own > 0) return { relief: own, freight: null };
+  const freight = freightClient(state, outlet);
+  return { relief: freight ? freight.relief - freight.rate : 0, freight };
+}
+
+/** Bir outlet'in dağıtım indirimi (0..1): kendi deposu ya da taşıma sözleşmesi. */
+export function distributionRelief(state: GameState, outlet: BuildingInstance): number {
+  return outletRelief(state, outlet).relief;
 }
 
 

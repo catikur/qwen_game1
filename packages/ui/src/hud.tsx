@@ -879,6 +879,22 @@ export function ActiveEvents(): ReactElement | null {
         contractDrawn = true;
         chip = <ContractChip />;
         break;
+      case 'freightOffer':
+        // Taşıma teklifi (Tur 56): karar terminalin panelinde; çip oraya götürüyor.
+        chip = (
+          <button
+            type="button"
+            className={`event-chip contract-chip urgency-${item.urgency}`}
+            onClick={() => item.tileId !== undefined && focusOn({ tileId: item.tileId })}
+            title={t('hud.freight.offerTitle')}
+            data-agenda-freight={item.key}
+          >
+            <span className="contract-label">{t('hud.freight.offer')}</span>
+            {item.label}
+            {days}
+          </button>
+        );
+        break;
       case 'crisis': {
         // Kriz (Tur 37a): uyarıda ne yapılacağını, krizde etkisini söylüyor.
         const def = CRISIS_BY_ID[state.crisis?.defId ?? ''];

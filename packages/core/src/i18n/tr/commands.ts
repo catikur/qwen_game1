@@ -152,6 +152,7 @@ export const commands = {
   'core.agenda.campaign': '{name}: {category} saldırısı',
   'core.agenda.quests': '{month} görevleri {done}/{total}',
   'core.agenda.questsReady': 'Ödül hazır: {count} görev',
+  'core.agenda.freightOffer': '{company} · {count} mağaza · günde ~{fee}',
   'core.agenda.fad': '{good} modası',
   'core.agenda.projectRank': '{project}: {rank}. sıradasın',
   'core.agenda.projectOpen': '{project}: katkı açık',
