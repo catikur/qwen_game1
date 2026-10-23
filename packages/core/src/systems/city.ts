@@ -11,6 +11,7 @@ import {
 import { tc } from '../i18n';
 import { pushNews } from '../news';
 import { ownerFraction, portfolioValue } from './equity';
+import { staffedJobs } from './labor';
 import type { GameState } from '../types';
 
 /**
@@ -157,7 +158,7 @@ export function runPopulationTick(state: GameState): void {
     // kadarını satıyor. Aynı kurulum temel istihdam modeliyle %69 doluluk
     // veriyor — yani müşteriyi artık gerçekten REKABET belirliyor.
     if (def.role === 'outlet') continue;
-    jobsByDistrict.set(building.districtId, (jobsByDistrict.get(building.districtId) ?? 0) + def.jobs);
+    jobsByDistrict.set(building.districtId, (jobsByDistrict.get(building.districtId) ?? 0) + staffedJobs(building, def));
   }
 
   for (const district of state.districts) {

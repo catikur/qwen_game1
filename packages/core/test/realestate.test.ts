@@ -5,7 +5,8 @@ import { GameEngine } from '../src/engine';
 import { createNewGame } from '../src/worldgen';
 import { build, buyTile, buyoutTile } from '../src/actions';
 import { agenda } from '../src/agenda';
-import { isPurchasable, isDistrictOpen } from '../src/systems/city';
+import { isPurchasable, isDistrictOpen, runPopulationTick } from '../src/systems/city';
+import { runLaborTick, workforce } from '../src/systems/labor';
 import { runAuctionTick } from '../src/systems/auction';
 import { estimateInvestment, runMarketTick } from '../src/systems/market';
 import {
@@ -159,6 +160,25 @@ describe('gayrimenkul: proje, kira, doluluk ve kentsel dönüşüm (Tur 58)', ()
     }
     const outlook = rentalOutlook(state, project.id)!;
     assert.equal(outlook.opensIn, def.buildDays! - 1);
+  });
+
+  test('inşaattaki projenin kadrosu yok: çalışan sayısı, ücret endeksi ve nüfus artışı proje yokmuş gibi; açılınca sayılıyor', () => {
+    const state = fresh();
+    const without = JSON.parse(JSON.stringify(state)) as GameState;
+    const me = state.playerCompanyId;
+    const project = placeProject(state, CAMPUS);
+    const def = BUILDING_BY_ID[project.defId]!;
+    assert.equal(workforce(state, me).employees, workforce(without, me).employees);
+    for (const city of [state, without]) {
+      runLaborTick(city);
+      runPopulationTick(city);
+    }
+    const district = state.districts[project.districtId]!;
+    const before = without.districts[project.districtId]!;
+    assert.equal(district.wageIndex, before.wageIndex);
+    assert.equal(district.population, before.population);
+    openProject(state, project);
+    assert.equal(workforce(state, me).employees, workforce(without, me).employees + def.jobs);
   });
 
   test('açılış: ön kiralamayla açılıyor, kiracılar günde en çok gelişi kadar geliyor, hedefte duruyor', () => {

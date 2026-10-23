@@ -6077,8 +6077,10 @@ Bina tanımına `buildDays` (inşaat süresi). İki proje, ikisi de `rental`:
 
 Bir parsele en çok kiralık birim bu yoldan sığıyor (Rezidans 240, Plaza
 210), ama:
-- *Şantiye:* bina inşaat süresince pazarda yok. Kirası yok, kadrosu
-  açılışta işe başlıyor, bakımın %30'u şantiyeye gidiyor.
+- *Şantiye:* bina inşaat süresince pazarda yok. Kirası yok, bakımın %30'u
+  şantiyeye gidiyor. Kadrosu açılışta işe başlıyor: o güne kadar ne
+  ücrette ne çalışan sayısında (sendika), ne bölgenin ücret endeksinde ne
+  nüfus artışında.
 - *Doluş:* açılış günü konutun %15'i, ofisin %25'i (çapa kiracı) dolu.
   Doluluk projede bir durum: hedefe günde en çok konutta 2,5, ofiste 1,2
   puan yaklaşıyor. Hedef düşerse konutta 1,2, ofiste 0,5 puan boşalıyor
@@ -6167,21 +6169,21 @@ yüzden değişmedi.
 
 | Tohum | 360. gün | 540. gün | Proje | Açıldığından beri kâr / bedel | Kira |
 |---|---|---|---|---|---|
-| 1 | 35,4 → 34,6 M ₺ (−%2) | 75,9 → 78,9 M ₺ (+%4) | 4 | 4,4 / 2,5 M ₺ | 3 binada, hedefte +%6 |
-| 7 | 31,9 → 33,4 M ₺ (+%4) | 61,0 → 67,0 M ₺ (+%10) | 6 (2 dönüşüm, 5 açık) | 5,0 / 3,3 M ₺ | 4 binada, +%3 |
-| 42 | 41,4 → 40,1 M ₺ (−%3) | 75,3 → 87,0 M ₺ (+%15) | 4 | 4,8 / 2,5 M ₺ | 1 binada, +%11 |
+| 1 | 35,4 → 34,0 M ₺ (−%4) | 75,9 → 79,8 M ₺ (+%5) | 4 | 4,4 / 2,5 M ₺ | 3 binada, hedefte +%6 |
+| 7 | 31,9 → 33,1 M ₺ (+%4) | 61,0 → 69,6 M ₺ (+%14) | 6 (2 dönüşüm) | 5,1 / 4,2 M ₺ | 8 binada, +%3 |
+| 42 | 41,4 → 40,1 M ₺ (−%3) | 75,3 → 78,4 M ₺ (+%4) | 5 (1 dönüşüm, 4 açık) | 4,8 / 2,5 M ₺ | 4 binada, +%9 |
 
 - İlk yıl bedel ödeniyor: proje 75–100 gün kira getirmiyor, bedeli
   mağazalardan çekilen nakit (mağaza 20–60 günde dönüyor). 360. günde
   ortalama başa baş.
-- 540. günde ortalama +%10: tuzak değil, baskın değil (sınır +%25).
-- Kira ayarı hedefteki kira gelirine +%3–11 ekliyor. Konutta en iyi kira
+- 540. günde ortalama +%8: tuzak değil, baskın değil (sınır +%25).
+- Kira ayarı hedefteki kira gelirine +%3–9 ekliyor. Konutta en iyi kira
   çoğu bölgede ×1,00–1,05; iş merkezi ve apartmanda ×1,10–1,30.
 - İlk ayar: esneklik konutta 1,1 idi; vekil her projede kirayı en alta
   (×0,80) çekiyordu, kira bir karar değildi. 0,6'da en iyi kira piyasaya
   göre değişiyor.
-- Dönüşüm tohum 7'de iki kez kazanıldı. Diğer iki tohumda rakip (arsa
-  spekülatörü değerlemesinin 1,5 katına çıkıyor) ihaleyi aldı. İlk
+- Dönüşüm tohum 7'de iki, tohum 42'de bir kez kazanıldı. Tohum 1'de rakip
+  (arsa spekülatörü değerlemesinin 1,5 katına çıkıyor) ihaleyi aldı. İlk
   ayarlarda imar artışı +%50 / hak sahibi %30'du: kiralık birim yalnız
   %20 artıyordu ve vekil tabanın 1,6 katıyla hiç kazanamıyordu.
 
@@ -6191,11 +6193,13 @@ aynı. Tur 57'nin tam koşusuyla bölüm bölüm karşılaştırıldı: 28 eski 
 bütün sayıları aynı; değişen tek şey katalogdaki bina sayısı (38 → 40,
 "her bina kurulabiliyor" ve yapı menüsü sırası).
 
-**Testler.** `pnpm test` 678/678 (668'den); tip denetimi temiz; denge
+**Testler.** `pnpm test` 679/679 (668'den); tip denetimi temiz; denge
 sınavı 353/353; paket bütçesi tamam (ana parça 67,1 KB, 65,6'dan).
-- Çekirdek (`realestate.test.ts`, 8 yeni):
+- Çekirdek (`realestate.test.ts`, 9 yeni):
   - kira: esneklik kadar kaydırıyor, geliri çarpıyor, adım ve sınır;
   - şantiye: kira yok, bakımın %30'u, ücret yok, pazarda yok;
+  - şantiyenin kadrosu yok: çalışan sayısı, ücret endeksi ve nüfus artışı
+    proje yokmuş gibi, açılınca sayılıyor;
   - açılış: ön kiralama, günde en çok kiracı gelişi kadar, hedefte duruyor;
   - başvuru: kurallar, bedel, parsel satılmıyor, sıradaki ihale o parsel,
     el değiştiren parselde düşüyor, ihalesiz oyunda yok, ihale sonradan
@@ -6322,7 +6326,7 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi). Senaryo şehirlerinde gün 3–17 ms (`pnpm dayperf`, Tur 43) |
-| Birim testi | **678 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de, Tur 52'de sunucuda tekrar, Tur 53'te haftanın kuralı ve günün koşusu, Tur 54'te hayalet eğri, Tur 55'te davetli ligler, Tur 56'da taşıma sözleşmeleri, Tur 57'de enerji, Tur 58'de gayrimenkul) |
+| Birim testi | **679 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de, Tur 52'de sunucuda tekrar, Tur 53'te haftanın kuralı ve günün koşusu, Tur 54'te hayalet eğri, Tur 55'te davetli ligler, Tur 56'da taşıma sözleşmeleri, Tur 57'de enerji, Tur 58'de gayrimenkul) |
 | Denge testi | **353 kontrol, hepsi geçiyor** (29 bölüm, süreleriyle; ~16 dk) |
 | Tarayıcı testi | **537 kontrol, hepsi geçiyor**, 0 konsol hatası (~40 dk); duman koşusu 132 (~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + paket bütçesi (Tur 46; Tur 48'den beri hizmet çalışanı ve manifest de) + duman oynanışı |
