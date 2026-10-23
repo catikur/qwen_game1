@@ -9,7 +9,9 @@ import { createScenarioGame, startScenario } from '../src/scenario';
 import { getPlayer } from '../src/selectors';
 import {
   chainGoalStatus,
+  freightGoalStatus,
   holdingCities,
+  rentalGoalStatus,
   leadRatio,
   rivalsLeft,
   playerRank,
@@ -19,7 +21,10 @@ import {
   scenarioScoreText,
   starsFor,
 } from '../src/systems/scenario';
-import { floorTo } from '../src/systems/scenarioText';
+import { floorTo, scenarioGoalText } from '../src/systems/scenarioText';
+import { loanQuote } from '../src/systems/credit';
+import { stanceOf } from '../src/systems/relations';
+import { rentalOutlook } from '../src/systems/realestate';
 import { isDistrictOpen } from '../src/systems/city';
 import { createNewGame } from '../src/worldgen';
 import { TOTAL_SHARES, sharesHeld } from '../src/systems/equity';
@@ -574,5 +579,187 @@ describe('senaryo modu', () => {
     runScenarioTick(lost);
     assert.equal(lost.scenario!.outcome, 'lost');
     assert.equal(lost.scenario!.lostReason, 'city');
+  });
+});
+
+describe('senaryo paketi II (Tur 60)', () => {
+  test('ek kural ön tarihle birlikte: şehir kuralla kurulmuş, kuralsız senaryoda kural yok', () => {
+    for (const def of SCENARIOS) {
+      const state = scenario(def.id);
+      const founding = def.setup.secondCity ? state.holding!.dormant[0]!.state : state;
+      assert.deepEqual(founding.modifiers ?? [], [...(def.modifiers ?? [])], def.id);
+    }
+    assert.deepEqual(SCENARIO_BY_ID.haulage!.modifiers, ['hungry_rivals']);
+    assert.deepEqual(SCENARIO_BY_ID.blackout!.modifiers, ['tight_credit']);
+    assert.deepEqual(SCENARIO_BY_ID.renewal!.modifiers, ['scarce_land']);
+    // Sıkı banka devirde de: kredi teklifi kuralın faiz farkıyla ve küçük limitle.
+    const tight = scenario('blackout');
+    const free = scenario('blackout');
+    delete free.modifiers;
+    const [withRule, without] = [loanQuote(tight, tight.playerCompanyId, 'term', 360), loanQuote(free, free.playerCompanyId, 'term', 360)];
+    assert.ok(withRule.rate > without.rate && withRule.max < without.max, `${withRule.max}@${withRule.rate} / ${without.max}@${without.rate}`);
+  });
+
+  test('hedef cümleleri sayılarla dolu', () => {
+    assert.match(scenarioGoalText(SCENARIO_BY_ID.haulage!), /en az 2 rakibin toplam 40 mağazasını/);
+    assert.match(scenarioGoalText(SCENARIO_BY_ID.blackout!), /4,00 M ₺ değerinde elektrik/);
+    assert.match(scenarioGoalText(SCENARIO_BY_ID.renewal!), /1\.500 dolu birime ulaş; en az 2 dönüşüm projesi/);
+  });
+
+  test('Herkesin nakliyecisi: en değerli iki rakip kinli başlıyor, hafızada önceki yönetimin fiyat savaşı', () => {
+    const state = scenario('haulage');
+    const rivals = Object.values(state.companies)
+      .filter((company) => !company.isPlayer)
+      .sort((a, b) => b.netWorth - a.netWorth || a.id.localeCompare(b.id));
+    const count = SCENARIO_BY_ID.haulage!.setup.feud!;
+    for (const [index, rival] of rivals.entries()) {
+      if (index < count) {
+        assert.equal(stanceOf(state, rival.id), 'hostile', rival.id);
+        assert.equal(rival.relation!.memory[0]!.kind, 'feud');
+        assert.ok(rival.relation!.score <= -40);
+      } else {
+        assert.equal(stanceOf(state, rival.id), null, rival.id);
+      }
+    }
+    // Husumetin haberi senaryonun açılışından sonra (akış yeniden eskiye: önce husumet).
+    const opening = state.news.findIndex((item) => item.title.includes(SCENARIO_BY_ID.haulage!.title));
+    const feuds = rivals.slice(0, count).map((rival) => state.news.findIndex((item) => item.tone === 'rival' && item.companyId === rival.id));
+    assert.ok(opening >= 0);
+    assert.ok(feuds.every((index) => index >= 0 && index < opening), `${feuds.join(',')} < ${opening}`);
+  });
+
+  test('nakliye hedefi: aynı gün iki rakibin kırk mağazası; el değiştiren mağaza sayılmıyor', () => {
+    const engine = started('haulage');
+    const state = engine.getState();
+    const goal = SCENARIO_BY_ID.haulage!.goal as { kind: 'freight'; rivals: number; outlets: number };
+    const outlets = new Map<string, string[]>();
+    for (const building of Object.values(state.buildings)) {
+      if (building.companyId === state.playerCompanyId || BUILDING_BY_ID[building.defId]?.role !== 'outlet') continue;
+      outlets.set(building.companyId, [...(outlets.get(building.companyId) ?? []), building.id]);
+    }
+    const [a, b] = [...outlets.entries()].sort((x, y) => y[1].length - x[1].length);
+    assert.ok(a && b && a[1].length + b[1].length >= goal.outlets, 'iki büyük rakibin mağazası hedefe yetiyor');
+    const deal = (companyId: string, ids: string[], n: number) => ({
+      id: `fr-${companyId}`,
+      companyId,
+      terminalId: 'yok',
+      outletIds: ids.slice(0, n),
+      durationDays: 120,
+      offeredDay: state.time.day,
+      estimate: 100,
+      rate: 0.2,
+    });
+    const first = Math.min(a[1].length, goal.outlets);
+    state.freight = { offers: [], contracts: [deal(a[0], a[1], first)], nextId: 2, lastOfferDay: 0, declined: {}, earnedTotal: 0 };
+    let status = freightGoalStatus(state, goal.rivals, goal.outlets);
+    assert.equal(status.served, 1);
+    assert.equal(status.met, false, 'tek rakip yetmiyor');
+    state.freight.contracts.push(deal(b[0], b[1], goal.outlets - first));
+    status = freightGoalStatus(state, goal.rivals, goal.outlets);
+    assert.equal(status.outlets, goal.outlets);
+    assert.equal(status.met, true);
+    assert.match(scenarioProgress(state)!.detail, /2\/2 rakip · 40\/40 mağaza/);
+    // Mağaza el değiştirdi: sayılmıyor, hedef bugün tutmuyor.
+    state.buildings[state.freight.contracts[1]!.outletIds[0]!]!.companyId = state.playerCompanyId;
+    assert.equal(freightGoalStatus(state, goal.rivals, goal.outlets).met, false);
+    state.buildings[state.freight.contracts[1]!.outletIds[0]!]!.companyId = b[0];
+    state.time.day += 7;
+    runScenarioTick(state);
+    assert.equal(state.scenario!.outcome, 'won');
+    assert.equal(state.scenario!.score, 7);
+  });
+
+  test('Karanlık kış: kriz bir ay sonra, son gün bitiyor; satış gün gün birikiyor, kendi binası sayılmıyor', () => {
+    const engine = started('blackout');
+    const state = engine.getState();
+    const run = state.scenario!;
+    assert.equal(state.crisis?.defId, 'energy_shock');
+    assert.equal(state.crisis?.activeDay, run.startDay + 30);
+    assert.equal(state.crisis?.endDay, run.endDay);
+    // Santral: rakip binalarının en yoğun olduğu boş sanayi ya da liman parseli.
+    const def = BUILDING_BY_ID.gas_plant!;
+    const rivals = Object.values(state.buildings).filter((b) => b.companyId !== state.playerCompanyId);
+    const tiles = state.map.tiles.filter(
+      (tile) =>
+        tile.kind === 'plot' && !tile.ownerId && !tile.buildingId && !tile.structureId && isDistrictOpen(state, tile.districtId) &&
+        def.zones!.includes(state.districts[tile.districtId]!.archetype),
+    );
+    const near = (tile: (typeof tiles)[number]) =>
+      rivals.filter((b) => {
+        const at = state.map.tiles[b.tileId]!;
+        return Math.abs(at.x - tile.x) + Math.abs(at.y - tile.y) <= def.radius;
+      }).length;
+    const tile = tiles.sort((x, y) => near(y) - near(x) || x.id - y.id)[0]!;
+    assert.ok(engine.dispatch({ type: 'BUY_TILE', tileId: tile.id }).ok);
+    const built = engine.dispatch({ type: 'BUILD', tileId: tile.id, defId: def.id });
+    assert.ok(built.ok, built.ok ? '' : built.reason);
+    const plant = state.buildings[state.map.tiles[tile.id]!.buildingId!]!;
+    let sold = 0;
+    for (let day = 0; day < 40; day++) {
+      engine.runDay();
+      sold = Math.round(sold + plant.last.revenue);
+      assert.equal(run.powerSold, sold, `gün ${day}`);
+    }
+    assert.ok(sold > 0, 'santral rakiplere satıyor');
+    assert.ok((plant.last.plant?.rivalMwh ?? 0) > 0);
+    assert.match(scenarioProgress(state)!.detail, /rakiplere .* \/ 4,00 M ₺ elektrik/);
+    // Hedef: satış eşiği geçen gün kazanıyor; skor gün sayısı.
+    run.powerSold = 4_000_000 - 1;
+    engine.runDay();
+    assert.equal(run.outcome, 'won');
+    assert.equal(run.score, state.time.day - run.startDay);
+  });
+
+  test('Kentsel dönüşüm: dolu birim ve açılmış iki dönüşüm projesi; inşaat ve hak sahipleri sayılmıyor', () => {
+    const engine = started('renewal');
+    const state = engine.getState();
+    const run = state.scenario!;
+    const goal = SCENARIO_BY_ID.renewal!.goal as { kind: 'rental'; units: number; renewals: number };
+    const start = rentalGoalStatus(state);
+    const rentals = Object.values(state.buildings).filter((b) => b.companyId === state.playerCompanyId && BUILDING_BY_ID[b.defId]?.role === 'rental');
+    assert.equal(rentals.length, 2);
+    const expected = rentals.reduce((sum, b) => sum + rentalOutlook(state, b.id)!.units * rentalOutlook(state, b.id)!.occupancy, 0);
+    assert.equal(start.occupied, Math.floor(expected + 1e-6));
+    assert.equal(start.renewals, 0);
+    // Dört Konut Sitesi: ikisi dönüşüm parselinde. İnşaatta sayılmıyor.
+    const projects: string[] = [];
+    for (let i = 0; i < 4; i++) {
+      const tile = state.map.tiles.find(
+        (candidate) =>
+          candidate.kind === 'plot' && !candidate.ownerId && !candidate.buildingId && !candidate.structureId &&
+          isDistrictOpen(state, candidate.districtId) && BUILDING_BY_ID.housing_estate!.zones!.includes(state.districts[candidate.districtId]!.archetype),
+      )!;
+      assert.ok(engine.dispatch({ type: 'BUY_TILE', tileId: tile.id }).ok);
+      if (i < 2) tile.renewal = { day: state.time.day, structureId: 'eski_yapi' };
+      const built = engine.dispatch({ type: 'BUILD', tileId: tile.id, defId: 'housing_estate' });
+      assert.ok(built.ok, built.ok ? '' : built.reason);
+      projects.push(tile.buildingId!);
+    }
+    const [renewalA, renewalB, plainA, plainB] = projects as [string, string, string, string];
+    let status = rentalGoalStatus(state);
+    assert.equal(status.renewals, 0);
+    assert.equal(status.renewalsBuilding, 2);
+    assert.equal(status.occupied, start.occupied);
+    // Hak sahipleri birime sayılmıyor: dönüşüm projesi 1,6 kat, eksi hak sahipleri.
+    const estate = rentalOutlook(state, renewalA)!;
+    assert.ok(estate.rightHolders > 0);
+    assert.equal(estate.units, Math.round(BUILDING_BY_ID.housing_estate!.capacity * 1.6) - estate.rightHolders);
+    // Üçü açılıyor ve doluyor: birim hedefin üstünde ama tek dönüşüm projesi açık.
+    const open = (ids: string[]) => {
+      for (const id of ids) state.buildings[id]!.development!.opensOnDay = state.time.day + 1;
+      engine.runDay();
+    };
+    open([renewalA, plainA, plainB]);
+    for (const id of [renewalA, plainA, plainB]) state.buildings[id]!.development!.occupancy = 1;
+    runScenarioTick(state);
+    status = rentalGoalStatus(state);
+    assert.ok(status.occupied >= goal.units, `${status.occupied}`);
+    assert.equal(status.renewals, 1);
+    assert.equal(run.outcome, undefined, 'tek dönüşüm projesi yetmiyor');
+    assert.match(scenarioProgress(state)!.detail, /dönüşüm 1\/2/);
+    // İkinci dönüşüm projesi açılınca kazanıyor; skor gün sayısı.
+    open([renewalB]);
+    assert.equal(run.outcome, 'won');
+    assert.equal(run.score, state.time.day - run.startDay);
   });
 });

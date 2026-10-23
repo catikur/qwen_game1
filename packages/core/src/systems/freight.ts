@@ -3,7 +3,7 @@ import { formatMoney } from '../format';
 import { tc } from '../i18n';
 import { nextFloat } from '../rng';
 import { pushNews } from '../news';
-import { noteRelation } from './relations';
+import { noteRelation, stanceOf } from './relations';
 import { FREIGHT_SHARE, ownDepotRelief, reliefOf } from './supply';
 import type { BuildingInstance, CommandResult, FreightDeal, FreightState, GameState } from '../types';
 
@@ -33,7 +33,7 @@ import type { BuildingInstance, CommandResult, FreightDeal, FreightState, GameSt
  * - TEKLİF RAKİPTEN GELİYOR. Oyuncu rakibin mağazasını seçip "sana
  *   taşıyorum" diyemiyor; teklif masaya gelir, kabul ya da ret. Reddedilen
  *   rakip bir süre yeniden teklif getirmiyor. Belediye sözleşmesindeki gibi
- *   reddin bedeli yok.
+ *   reddin bedeli yok. Kinli rakip (Rakipler 2.0) hiç getirmiyor (Tur 60).
  *
  * - CAYMA BEDELİ. Kabul edilen sözleşmeyi bitirmek (ya da terminali yıkmak)
  *   rakibe günlük ücret tahmininin 20 katını ödetiyor. Rakibin mağazası
@@ -59,6 +59,11 @@ export const FREIGHT = {
   declineCooldownDays: 60,
   /** Cayma bedeli: günlük ücret tahmininin bu katı. */
   cancelPenaltyDays: 20,
+  /**
+   * Kinli rakip (Rakipler 2.0) dağıtımını sana vermiyor: husumet sürdükçe
+   * teklif getirmiyor (Tur 60). Süren sözleşmesi bitene kadar sürüyor.
+   */
+  hostileOffers: false,
 } as const;
 
 /** Oyuncunun terminalleri (filosu olan lojistik binaları), kimlik sırasıyla. */
@@ -129,8 +134,17 @@ function heldOutlets(state: GameState): Set<string> {
 }
 
 /**
+ * Kinli rakip (Rakipler 2.0) taşıma teklifi getirmiyor (Tur 60): mağazası
+ * ne teklife ne menzildeki işe ne de yapı menüsünün tahminine sayılıyor
+ * (Codex #90).
+ */
+function refusesFreight(state: GameState, companyId: string): boolean {
+  return !FREIGHT.hostileOffers && stanceOf(state, companyId) === 'hostile';
+}
+
+/**
  * Terminalin menzilindeki, taşınabilecek rakip mağazaları: kendi deposu
- * yok, başka sözleşmede ya da teklifte değil. Yakından uzağa.
+ * yok, başka sözleşmede ya da teklifte değil, sahibi kinli değil. Yakından uzağa.
  */
 export function freightProspects(state: GameState, terminal: BuildingInstance): BuildingInstance[] {
   const def = BUILDING_BY_ID[terminal.defId];
@@ -140,6 +154,7 @@ export function freightProspects(state: GameState, terminal: BuildingInstance): 
     .filter((outlet) => {
       if (outlet.companyId === state.playerCompanyId || held.has(outlet.id)) return false;
       if (BUILDING_BY_ID[outlet.defId]?.role !== 'outlet' || !state.companies[outlet.companyId]) return false;
+      if (refusesFreight(state, outlet.companyId)) return false;
       if (distance(state, terminal, outlet) > def.radius) return false;
       return ownDepotRelief(state, outlet) === 0;
     })
@@ -160,6 +175,7 @@ export function freightPotential(state: GameState, companyId: string, defId: str
   for (const outlet of Object.values(state.buildings)) {
     if (outlet.companyId === companyId || held.has(outlet.id)) continue;
     if (BUILDING_BY_ID[outlet.defId]?.role !== 'outlet' || !state.companies[outlet.companyId]) continue;
+    if (refusesFreight(state, outlet.companyId)) continue;
     const at = state.map.tiles[outlet.tileId];
     if (!at || Math.abs(at.x - tile.x) + Math.abs(at.y - tile.y) > def.radius) continue;
     if (ownDepotRelief(state, outlet) > 0) continue;
@@ -275,6 +291,11 @@ export function acceptFreight(state: GameState, offerId: string): CommandResult 
   if (!terminal || terminal.companyId !== state.playerCompanyId) {
     freight.offers.splice(index, 1);
     return { ok: false, reason: tc('core.freight.noTerminal') };
+  }
+  // Teklif masadayken sahibi kinli olduysa geri çekiyor: yalnız süren sözleşme husumeti atlatıyor (Codex #90).
+  if (refusesFreight(state, offer.companyId)) {
+    freight.offers.splice(index, 1);
+    return { ok: false, reason: tc('core.freight.hostile', { company: companyName(state, offer.companyId) }) };
   }
   // Teklif masada beklerken mağaza kapanmış ya da el değiştirmiş olabilir.
   const outlets = liveOutlets(state, offer, terminal);
@@ -403,6 +424,8 @@ export function runFreightTick(state: GameState): void {
     freight.offers = freight.offers.filter((offer) => {
       const terminal = state.buildings[offer.terminalId];
       if (day >= offer.offeredDay + FREIGHT.offerLifetimeDays || terminal?.companyId !== state.playerCompanyId) return false;
+      // Teklif masadayken sahibi kinli olduysa geri çekiyor (Codex #90).
+      if (refusesFreight(state, offer.companyId)) return false;
       const outlets = state.companies[offer.companyId] ? liveOutlets(state, offer, terminal) : [];
       if (outlets.length === 0) return false;
       if (outlets.length < offer.outletIds.length) {

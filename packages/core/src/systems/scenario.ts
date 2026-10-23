@@ -1,10 +1,12 @@
-import { BUILDING_BY_ID, GOOD_BY_ID, SCENARIO_BY_ID, formatDecimal } from '@capital/content';
+import { BUILDING_BY_ID, GOOD_BY_ID, SCENARIO_BY_ID, formatDecimal, formatNumber } from '@capital/content';
 import type { ScenarioDef } from '@capital/content';
 import { tc } from '../i18n';
 import { pushNews } from '../news';
 import { formatMoney } from '../format';
 import { floorTo, scenarioScoreText, starsFor } from './scenarioText';
 import { victoryNetWorth } from './goals';
+import { rentalOutlook } from './realestate';
+import { stanceOf } from './relations';
 import type { GameState, ScenarioLostReason, ScenarioState } from '../types';
 
 /**
@@ -167,6 +169,101 @@ export function chainGoalStatus(state: GameState, goodId: string, target: number
   };
 }
 
+export interface FreightGoalRival {
+  companyId: string;
+  name: string;
+  /** Bugün sözleşmede taşınan mağazaları. */
+  outlets: number;
+  hostile: boolean;
+}
+
+export interface FreightGoalStatus {
+  /** Şehrin rakipleri: taşınan mağazası çoktan aza, sonra kimlik. */
+  rivals: FreightGoalRival[];
+  /** Mağazası taşınan ayrı rakip ve toplam taşınan mağaza. */
+  served: number;
+  outlets: number;
+  met: boolean;
+}
+
+/**
+ * Herkesin nakliyecisi (Tur 60): bugün sözleşmedeki mağazalar, rakip
+ * rakip. Mağaza el değiştirdiyse ya da kapandıysa sayılmıyor (taşıma
+ * adımı onu sözleşmeden düşürüyor; aynı gün de sayılmasın).
+ */
+export function freightGoalStatus(state: GameState, rivals: number, outlets: number): FreightGoalStatus {
+  const counts = new Map<string, number>();
+  for (const deal of state.freight?.contracts ?? []) {
+    const live = deal.outletIds.filter((id) => state.buildings[id]?.companyId === deal.companyId).length;
+    if (live > 0) counts.set(deal.companyId, (counts.get(deal.companyId) ?? 0) + live);
+  }
+  const list = Object.values(state.companies)
+    .filter((company) => !company.isPlayer)
+    .map((company) => ({
+      companyId: company.id,
+      name: company.name,
+      outlets: counts.get(company.id) ?? 0,
+      hostile: stanceOf(state, company.id) === 'hostile',
+    }))
+    .sort((a, b) => b.outlets - a.outlets || a.companyId.localeCompare(b.companyId));
+  const served = list.filter((rival) => rival.outlets > 0).length;
+  const total = list.reduce((sum, rival) => sum + rival.outlets, 0);
+  return { rivals: list, served, outlets: total, met: served >= rivals && total >= outlets };
+}
+
+/** Karanlık kış (Tur 60): oyuncunun santrallerinin bugün rakiplere sattığı elektrik. */
+function powerSoldToday(state: GameState): number {
+  let sold = 0;
+  for (const building of Object.values(state.buildings)) {
+    if (building.companyId !== state.playerCompanyId) continue;
+    if (BUILDING_BY_ID[building.defId]?.role === 'energy') sold += building.last.revenue;
+  }
+  return sold;
+}
+
+export interface RentalGoalStatus {
+  /** Kiralık birimlerin dolu olanları (hak sahipleri hariç) ve toplamı. */
+  occupied: number;
+  units: number;
+  /** İnşaattaki projelerin açılınca gelecek birimi. */
+  building: number;
+  /** Dönüşüm parselinde açılmış ve inşaattaki projeler. */
+  renewals: number;
+  renewalsBuilding: number;
+}
+
+/**
+ * Kentsel dönüşüm (Tur 60): kiralıklarındaki dolu birim. Proje doluluğu
+ * kendi durumunda, diğer kiralıklar hedefte (pazar adımının hesabı).
+ * Dolu birim tam sayıya aşağı.
+ */
+export function rentalGoalStatus(state: GameState): RentalGoalStatus {
+  let occupied = 0;
+  let units = 0;
+  let building = 0;
+  let renewals = 0;
+  let renewalsBuilding = 0;
+  for (const rental of Object.values(state.buildings)) {
+    if (rental.companyId !== state.playerCompanyId || BUILDING_BY_ID[rental.defId]?.role !== 'rental') continue;
+    const outlook = rentalOutlook(state, rental.id);
+    if (!outlook) continue;
+    const renewal = Boolean(rental.development?.renewal);
+    if (outlook.opensIn !== null) {
+      building += outlook.units;
+      if (renewal) renewalsBuilding++;
+      continue;
+    }
+    if (renewal) renewals++;
+    units += outlook.units;
+    occupied += outlook.units * outlook.occupancy;
+  }
+  return { occupied: Math.floor(occupied + 1e-6), units, building, renewals, renewalsBuilding };
+}
+
+function rentalMet(status: RentalGoalStatus, goal: { units: number; renewals: number }): boolean {
+  return status.occupied >= goal.units && status.renewals >= goal.renewals;
+}
+
 /** Şehirde yaratılan değer (holding aktarımı hariç; zaferin ölçüsü). */
 function createdValue(state: GameState): number {
   const player = state.companies[state.playerCompanyId];
@@ -257,6 +354,38 @@ export function scenarioProgress(state: GameState): ScenarioProgress | null {
       }),
       daysLeft,
       ahead: won === cities.length,
+    };
+  }
+  if (goal.kind === 'freight') {
+    const status = freightGoalStatus(state, goal.rivals, goal.outlets);
+    return {
+      progress: clamp((clamp(status.served / goal.rivals) + clamp(status.outlets / goal.outlets)) / 2),
+      detail: tc('core.scenario.progressFreight', { served: status.served, rivals: goal.rivals, outlets: status.outlets, target: goal.outlets }),
+      daysLeft,
+      ahead: status.met,
+    };
+  }
+  if (goal.kind === 'power') {
+    const sold = run.powerSold ?? 0;
+    return {
+      progress: clamp(sold / goal.target),
+      detail: tc('core.scenario.progressPower', { value: formatMoney(sold), target: formatMoney(goal.target) }),
+      daysLeft,
+    };
+  }
+  if (goal.kind === 'rental') {
+    const status = rentalGoalStatus(state);
+    return {
+      progress: clamp((clamp(status.occupied / goal.units) * 3 + clamp(status.renewals / goal.renewals)) / 4),
+      detail: tc(status.building > 0 ? 'core.scenario.progressRentalBuilding' : 'core.scenario.progressRental', {
+        occupied: formatNumber(status.occupied),
+        target: formatNumber(goal.units),
+        building: formatNumber(status.building),
+        renewals: status.renewals,
+        renewalTarget: goal.renewals,
+      }),
+      daysLeft,
+      ahead: rentalMet(status, goal),
     };
   }
   if (goal.kind === 'sponsor') {
@@ -433,6 +562,24 @@ export function runScenarioTick(state: GameState): void {
       if (cities.some((city) => city.lost)) finish(state, run, def, false, cities.filter((city) => city.won).length, 'city');
       else if (cities.every((city) => city.won)) finish(state, run, def, true, day - run.startDay);
       else if (day >= run.endDay) finish(state, run, def, false, cities.filter((city) => city.won).length);
+      return;
+    }
+    case 'freight': {
+      const status = freightGoalStatus(state, goal.rivals, goal.outlets);
+      if (status.met) finish(state, run, def, true, day - run.startDay);
+      else if (day >= run.endDay) finish(state, run, def, false, status.outlets / goal.outlets);
+      return;
+    }
+    case 'power': {
+      run.powerSold = Math.round((run.powerSold ?? 0) + powerSoldToday(state));
+      if (run.powerSold >= goal.target) finish(state, run, def, true, day - run.startDay);
+      else if (day >= run.endDay) finish(state, run, def, false, run.powerSold / goal.target);
+      return;
+    }
+    case 'rental': {
+      const status = rentalGoalStatus(state);
+      if (rentalMet(status, goal)) finish(state, run, def, true, day - run.startDay);
+      else if (day >= run.endDay) finish(state, run, def, false, status.occupied / goal.units);
       return;
     }
     case 'leadAtEnd': {

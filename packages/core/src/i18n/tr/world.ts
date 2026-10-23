@@ -101,6 +101,7 @@ export const world = {
   'core.realestate.openedRenewalBody': '{name} {units} kiralık birimle açıldı, %{share} dolu. Hak sahipleri {rightHolders} daireye taşındı: kira ödemiyorlar.',
   'core.freight.noOffer': 'Bu taşıma teklifi artık masada değil.',
   'core.freight.noTerminal': 'Teklifin terminali yok.',
+  'core.freight.hostile': '{company} sana kinli: teklifini geri çekti.',
   'core.freight.stale': 'Teklifteki mağazaların hiçbirine artık taşınamıyor.',
   'core.freight.fleetFull': 'Terminalin filosu dolu.',
   'core.freight.noContract': 'Böyle bir taşıma sözleşmesi yok.',
@@ -174,6 +175,10 @@ export const world = {
   'core.scenario.progressMonopoly': 'devralınan {taken}/{total} · {left} rakip kaldı',
   'core.scenario.progressHolding': '{won}/{total} şehirde zafer · bu şehir {value} / {target}',
   'core.scenario.progressHoldingWon': '{won}/{total} şehirde zafer · bu şehirde zafer var',
+  'core.scenario.progressFreight': '{served}/{rivals} rakip · {outlets}/{target} mağaza taşınıyor',
+  'core.scenario.progressPower': 'rakiplere {value} / {target} elektrik',
+  'core.scenario.progressRental': '{occupied} / {target} dolu birim · dönüşüm {renewals}/{renewalTarget}',
+  'core.scenario.progressRentalBuilding': '{occupied} / {target} dolu birim · dönüşüm {renewals}/{renewalTarget} · {building} birim inşaatta',
 
   // events.ts — olay ve dönem kapanışı
   'core.events.endedTitle': '{title} sona erdi',

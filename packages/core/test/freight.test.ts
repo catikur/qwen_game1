@@ -7,7 +7,7 @@ import { build, buyTile, demolish, purchaseBlocker } from '../src/actions';
 import { supplyRoutes } from '../src/routes';
 import { collectEventModifiers } from '../src/systems/events';
 import { boostMultiplier } from '../src/systems/cards';
-import { FREIGHT, fleetUsed, freightFeeEstimate, freightPenalty, freightProspects, runFreightTick } from '../src/systems/freight';
+import { FREIGHT, acceptFreight, fleetUsed, freightFeeEstimate, freightPenalty, freightPotential, freightProspects, runFreightTick } from '../src/systems/freight';
 import { FREIGHT_SHARE, distributionRelief, ownDepotRelief, resetDailyLedgers, runProductionTick, unitCogsFor } from '../src/systems/supply';
 import { runMarketTick } from '../src/systems/market';
 import { isPurchasable } from '../src/systems/city';
@@ -625,5 +625,70 @@ describe('nakliye terminali ve taşıma sözleşmeleri (Tur 56)', () => {
     marketDay(state);
     marketDay(copy);
     assert.equal(copy.freight!.earnedTotal, state.freight!.earnedTotal);
+  });
+  test('kinli rakip taşıma teklifi getirmiyor (Tur 60); husumet bitince yeniden getiriyor', () => {
+    const state = fresh().getState();
+    placeTerminal(state);
+    // Kuralsız ilk teklif kimden gelirdi: kopyada bak.
+    const probe = JSON.parse(JSON.stringify(state)) as GameState;
+    awaitOffer(probe);
+    const first = probe.freight!.offers[0]!.companyId;
+    const hostile = (companyId: string) => {
+      state.companies[companyId]!.relation = { score: -60, stance: 'hostile', since: state.time.day, memory: [] };
+    };
+    // Bütün rakipler kinli: masaya hiç teklif gelmiyor.
+    const rivals = Object.values(state.companies).filter((company) => !company.isPlayer);
+    for (const company of rivals) hostile(company.id);
+    const tick = (days: number) => {
+      for (let i = 0; i < days; i++) {
+        state.time.day += 1;
+        runFreightTick(state);
+      }
+    };
+    tick(80);
+    assert.equal(state.freight?.offers.length ?? 0, 0, 'kinli rakipler teklif getirdi');
+    // Yalnız ilk teklifi getirecek olan kinli: gelen teklifler ondan değil.
+    for (const company of rivals) if (company.id !== first) delete company.relation;
+    tick(80);
+    assert.ok((state.freight?.offers ?? []).every((offer) => offer.companyId !== first), 'kinli rakip teklif getirdi');
+    // Husumet bitti: teklif yine ondan gelebiliyor.
+    delete state.companies[first]!.relation;
+    state.freight!.offers = [];
+    state.freight!.lastOfferDay = -FREIGHT.offerCooldownDays;
+    awaitOffer(state);
+    assert.ok(FREIGHT.hostileOffers === false);
+  });
+  test('kinli rakibin mağazası menzilde ve yapı menüsünün tahmininde sayılmıyor (Codex #90)', () => {
+    const state = fresh().getState();
+    const terminal = placeTerminal(state);
+    const tile = state.map.tiles[terminal.tileId]!;
+    const before = freightPotential(state, state.playerCompanyId, TERMINAL, tile.id);
+    assert.ok(before.outlets > 0 && freightProspects(state, terminal).length > 0);
+    for (const company of Object.values(state.companies)) {
+      if (!company.isPlayer) company.relation = { score: -60, stance: 'hostile', since: state.time.day, memory: [] };
+    }
+    const after = freightPotential(state, state.playerCompanyId, TERMINAL, tile.id);
+    assert.deepEqual(after, { outlets: 0, fee: 0 }, `kinli rakipler tahminde: ${JSON.stringify(after)}`);
+    assert.equal(freightProspects(state, terminal).length, 0, 'kinli rakipler menzilde sayılıyor');
+  });
+  test('masadaki teklifin sahibi kinli olursa teklif düşüyor, kabul edilemiyor (Codex #90)', () => {
+    const state = fresh().getState();
+    placeTerminal(state);
+    awaitOffer(state);
+    const offer = state.freight!.offers[0]!;
+    const hostile = () => {
+      state.companies[offer.companyId]!.relation = { score: -60, stance: 'hostile', since: state.time.day, memory: [] };
+    };
+    // Kabul: husumet sürerken teklif kabul edilmiyor.
+    const copy = JSON.parse(JSON.stringify(state)) as GameState;
+    copy.companies[offer.companyId]!.relation = { score: -60, stance: 'hostile', since: copy.time.day, memory: [] };
+    const accepted = acceptFreight(copy, offer.id);
+    assert.equal(accepted.ok, false, 'kinli rakibin teklifi kabul edildi');
+    assert.equal(copy.freight!.contracts.length, 0);
+    // Gün sonu: teklif masadan kalkıyor.
+    hostile();
+    state.time.day += 1;
+    runFreightTick(state);
+    assert.ok(state.freight!.offers.every((item) => item.id !== offer.id), 'kinli rakibin teklifi masada kaldı');
   });
 });

@@ -5325,6 +5325,184 @@ section('Rakipler 2.0: husumet, ittifak ve tepkiler', () => {
   );
 });
 
+section('Senaryolar IV: nakliye, enerji ve dönüşüm', () => {
+  /*
+   * Tur 60: Faz 3'ün sektörleriyle üç senaryo, her biri bir ek kuralla.
+   * Yöntem Senaryolar I–III'ün: el sürmeyen ve sektöre girmeyen kaybediyor,
+   * oyunun tavsiyesine uyan kazanıyor, üç yıldız vekilin en keskin
+   * oyunundan iyisini istiyor. Her senaryoda sektör vekili temel vekilin
+   * üstüne her gün çağrılıyor (Tur 56–59'un vekilleri). Ek kural ön
+   * tarihte de geçerli; kuralın etkisi kural kapalı bir ön tarihle ölçülüyor.
+   */
+  interface Plan {
+    /** Temel vekilin kaç günde bir kurduğu (0: hiç). */
+    every: number;
+    /** Baskına karşı geri alım: kaç günde bir (0: hiç). */
+    defend: number;
+    /** Sektör vekili, her gün (gün senaryonun başından). */
+    extra?: (engine: Engine, day: number) => void;
+    /** Devir günü vadeli kredi: limitin tamamı, 360 gün. */
+    borrow?: boolean;
+  }
+  const bases = new Map<string, string>();
+  function base(id: string, rules: boolean): GameState {
+    const key = `${id}:${rules}`;
+    if (!bases.has(key)) {
+      const def = SCENARIO_BY_ID[id]!;
+      const saved = def.modifiers;
+      // Kural kapalı kol: aynı senaryo, ön tarih kuralsız.
+      if (!rules) delete (def as { modifiers?: unknown }).modifiers;
+      try {
+        bases.set(key, JSON.stringify(createScenarioGame(id, { companyName: 'Senaryo AŞ' })));
+      } finally {
+        if (saved) (def as { modifiers?: unknown }).modifiers = saved;
+      }
+    }
+    return JSON.parse(bases.get(key)!) as GameState;
+  }
+  function play(id: string, plan: Plan, rules = true) {
+    const state = base(id, rules);
+    const engine = new GameEngine(state);
+    engine.dispatch({ type: 'DISMISS_SCENARIO', screen: 'brief' });
+    const start = state.time.day;
+    let loan = '';
+    if (plan.borrow) {
+      const quote = loanQuote(state, state.playerCompanyId, 'term', 360);
+      if (quote.ok && engine.dispatch({ type: 'TAKE_LOAN', kind: 'term', amount: quote.max, termDays: 360 }).ok) {
+        loan = `${formatMoney(quote.max)} %${(quote.rate * 100).toFixed(1)}`;
+      }
+    }
+    while (state.scenario!.finishedDay === undefined) {
+      const day = state.time.day - start;
+      if (plan.every > 0 && day % plan.every === 0) playerStrategy(engine);
+      if (plan.defend > 0 && day % plan.defend === 0) defendAgainstRaids(engine);
+      plan.extra?.(engine, day);
+      engine.runDay();
+    }
+    const run = state.scenario!;
+    return {
+      won: run.outcome === 'won',
+      stars: run.stars ?? 0,
+      score: run.score ?? 0,
+      taken: state.gameOver !== undefined,
+      day: run.finishedDay! - start,
+      loan,
+      modifiers: state.modifiers ?? [],
+    };
+  }
+  type Result = ReturnType<typeof play>;
+  const show = (result: Result) =>
+    `${result.won ? `kazandı ${result.stars}★` : result.taken ? 'devralındı' : 'süre doldu'} · ${result.day}. gün · skor ${result.score}${result.loan ? ` · kredi ${result.loan}` : ''}`;
+  const log = (title: string, results: Record<string, Result>) => {
+    for (const [name, result] of Object.entries(results)) console.log(`  ${title} · ${name.padEnd(10)} ${show(result)}`);
+  };
+
+  // Herkesin nakliyecisi: kinli rakip teklif getirmiyor; kırk mağaza ancak barışınca.
+  const hauler = (amends: boolean, terminals = 3) => (engine: Engine) => {
+    freightStrategy(engine, terminals);
+    if (amends) rivalryStrategy(engine, { amends: true });
+  };
+  const haulage = SCENARIO_BY_ID.haulage!;
+  const h = {
+    passive: play('haulage', { every: 0, defend: 0 }),
+    base: play('haulage', { every: 5, defend: 3 }),
+    unforgiven: play('haulage', { every: 5, defend: 3, extra: hauler(false) }),
+    informed: play('haulage', { every: 5, defend: 3, extra: hauler(true) }),
+    sharp: play('haulage', { every: 3, defend: 1, extra: hauler(true, 4) }),
+    slow: play('haulage', { every: 15, defend: 3, extra: (engine, day) => day % 15 === 0 && hauler(true)(engine) }),
+    calm: play('haulage', { every: 5, defend: 3, extra: hauler(true) }, false),
+  };
+  log('Nakliyeci', h);
+  expect('Nakliyeci: taşımayan süreyi dolduruyor', !h.passive.won && !h.base.won, `${show(h.passive)} | ${show(h.base)}`);
+  expect('Nakliyeci: kinli rakip teklif getirmiyor; uzlaşmayan yetişemiyor', !h.unforgiven.won, show(h.unforgiven));
+  expect('Nakliyeci: terminal kurup uzlaşan kazanıyor (en az iki yıldız)', h.informed.won && h.informed.stars >= 2, show(h.informed));
+  expect(
+    'Nakliyeci: üç yıldız vekilin en keskin oyunundan iyisini istiyor',
+    h.sharp.won && Math.min(h.sharp.day, h.informed.day) > haulage.stars.three,
+    `${show(h.sharp)} > ${haulage.stars.three}`,
+  );
+  expect(
+    'Nakliyeci: aç gözlü rakipler taşınacak işi büyütüyor (kural kapalıyken aynı oyun daha geç)',
+    h.calm.won && h.calm.day > h.informed.day,
+    `kural ${h.informed.day}. gün < kuralsız ${h.calm.day}. gün`,
+  );
+
+  // Karanlık kış: santral rakibe satıyor; sıkı banka krediyi pahalılaştırıyor.
+  const blackout = SCENARIO_BY_ID.blackout!;
+  const power = (plants: number, payback: number) => (engine: Engine) => energyStrategy(engine, plants, payback);
+  const b = {
+    passive: play('blackout', { every: 0, defend: 0 }),
+    base: play('blackout', { every: 5, defend: 3 }),
+    four: play('blackout', { every: 5, defend: 3, extra: power(4, 300) }),
+    informed: play('blackout', { every: 5, defend: 3, extra: power(8, 400) }),
+    focused: play('blackout', { every: 10, defend: 3, extra: power(12, 600) }),
+    sharp: play('blackout', { every: 3, defend: 1, extra: power(10, 500) }),
+    slow: play('blackout', { every: 15, defend: 3, extra: (engine, day) => day % 15 === 0 && power(4, 300)(engine) }),
+    credit: play('blackout', { every: 5, defend: 3, extra: power(8, 400), borrow: true }),
+    easyCredit: play('blackout', { every: 5, defend: 3, extra: power(8, 400), borrow: true }, false),
+  };
+  log('Karanlık kış', b);
+  expect(
+    'Karanlık kış: santral kurmayan, dört santralle yetinen ve on beş günde bir oynayan süreyi dolduruyor',
+    [b.passive, b.base, b.four, b.slow].every((result) => !result.won),
+    [b.passive, b.base, b.four, b.slow].map(show).join(' | '),
+  );
+  expect('Karanlık kış: sekiz santralli kazanıyor', b.informed.won, show(b.informed));
+  expect(
+    'Karanlık kış: üç yıldız vekilin en keskin oyunundan iyisini istiyor',
+    b.sharp.won && b.focused.won && Math.min(b.sharp.day, b.focused.day, b.informed.day) > blackout.stars.three,
+    `${show(b.sharp)} · ${show(b.focused)} > ${blackout.stars.three}`,
+  );
+  // Sıkı banka yalnız kredi çekene dokunuyor: devir günü teklif kuralla küçük ve pahalı.
+  const quote = (rules: boolean) => {
+    const state = base('blackout', rules);
+    return loanQuote(state, state.playerCompanyId, 'term', 360);
+  };
+  const tight = quote(true);
+  const easy = quote(false);
+  expect(
+    'Karanlık kış: sıkı banka krediyi küçültüp pahalılaştırıyor (kredi çeken iki kol da kazanıyor)',
+    tight.max < easy.max && tight.rate > easy.rate && b.credit.won && b.easyCredit.won,
+    `kural ${formatMoney(tight.max)} %${(tight.rate * 100).toFixed(1)} · kuralsız ${formatMoney(easy.max)} %${(easy.rate * 100).toFixed(1)}; ${show(b.credit)} · ${show(b.easyCredit)}`,
+  );
+
+  // Kentsel dönüşüm: dolu birim ve açılmış iki dönüşüm projesi.
+  const renewal = SCENARIO_BY_ID.renewal!;
+  const develop = (options: Parameters<typeof developerStrategy>[1]) => (engine: Engine) => developerStrategy(engine, options);
+  const r = {
+    passive: play('renewal', { every: 0, defend: 0 }),
+    base: play('renewal', { every: 5, defend: 3 }),
+    four: play('renewal', { every: 5, defend: 3, extra: develop({}) }),
+    noRenewal: play('renewal', { every: 5, defend: 3, extra: develop({ maxProjects: 8, maxPayback: 450, renewal: false }) }),
+    informed: play('renewal', { every: 5, defend: 3, extra: develop({ maxProjects: 8, maxPayback: 450 }) }),
+    bidder: play('renewal', { every: 5, defend: 3, extra: develop({ maxProjects: 8, maxPayback: 450, bidCeiling: 6 }) }),
+    slow: play('renewal', { every: 15, defend: 3, extra: (engine, day) => day % 15 === 0 && develop({ maxProjects: 8, maxPayback: 450 })(engine) }),
+    plenty: play('renewal', { every: 5, defend: 3, extra: develop({ maxProjects: 8, maxPayback: 450 }) }, false),
+  };
+  log('Kentsel dönüşüm', r);
+  expect(
+    'Kentsel dönüşüm: proje kurmayan, dört projeyle yetinen, dönüşüme girmeyen ve on beş günde bir oynayan kazanamıyor',
+    [r.passive, r.base, r.four, r.noRenewal, r.slow].every((result) => !result.won),
+    [r.passive, r.base, r.four, r.noRenewal, r.slow].map(show).join(' | '),
+  );
+  expect('Kentsel dönüşüm: sekiz projeli geliştirici dönüşümle kazanıyor', r.informed.won, show(r.informed));
+  expect(
+    'Kentsel dönüşüm: üç yıldız vekilin en keskin oyunundan iyisini istiyor',
+    r.bidder.won && Math.min(r.bidder.day, r.informed.day) > renewal.stars.three,
+    `${show(r.bidder)} > ${renewal.stars.three}`,
+  );
+  console.log(`  Kentsel dönüşüm · kıt arsa: kural ${show(r.informed)} · kuralsız ${show(r.plenty)}`);
+
+  expect(
+    'Ek kural ön tarihte de: şehir senaryonun kuralıyla kurulmuş',
+    [h.informed, b.informed, r.informed].every((result, i) => {
+      const def = [haulage, blackout, renewal][i]!;
+      return JSON.stringify(result.modifiers) === JSON.stringify(def.modifiers ?? []);
+    }) && h.calm.modifiers.length === 0,
+    `${haulage.title}: ${h.informed.modifiers.join(',')} · ${blackout.title}: ${b.informed.modifiers.join(',')} · ${renewal.title}: ${r.informed.modifiers.join(',')}`,
+  );
+});
+
 if (timings.length === 0) {
   console.log(`\nSüzgeçle eşleşen bölüm yok: ${ONLY.join(', ')}`);
   process.exit(1);

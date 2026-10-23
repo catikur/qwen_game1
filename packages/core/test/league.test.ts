@@ -490,6 +490,25 @@ describe('haftanın kuralı ve günün koşusu (Tur 53)', () => {
     assert.equal(computeSimFingerprint(), base);
   });
 
+  test('iz Tur 60\'ın kurallarını da taşıyor: kinli rakibin teklifi ya da devralınan husumet değişince iz değişiyor', () => {
+    const base = computeSimFingerprint();
+    const freight = FREIGHT as { hostileOffers: boolean };
+    const events = RELATION.events as { feud: number };
+    const { hostileOffers } = freight;
+    const { feud } = events;
+    try {
+      freight.hostileOffers = !hostileOffers;
+      assert.notEqual(computeSimFingerprint(), base, 'kinli rakibin teklif kuralı izi değiştirmiyor');
+      freight.hostileOffers = hostileOffers;
+      events.feud = feud - 1;
+      assert.notEqual(computeSimFingerprint(), base, 'devralınan husumet izi değiştirmiyor');
+    } finally {
+      freight.hostileOffers = hostileOffers;
+      events.feud = feud;
+    }
+    assert.equal(computeSimFingerprint(), base);
+  });
+
   test('iz enerjiyi de işletiyor: santral, tarife, yakıt ve kriz tablosu değişince iz değişiyor (Tur 57)', () => {
     const base = computeSimFingerprint();
     const parts = simFingerprintParts();

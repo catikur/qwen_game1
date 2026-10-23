@@ -8,9 +8,9 @@ import type { DifficultyDef, DifficultyId } from './difficulty';
  * Zorluk kademesi gibi açıkça yazılı birkaç ayar; kurulum ekranında
  * hepsinin etkisi söyleniyor. Kademeye eklenir, onun yerine geçmez:
  * Dengeli + Fırtınalı yıllar, Dengeli'nin bütün ayarları ve iki kat sık
- * kriz demek. Senaryolarda yok: yıldızları kendi kurulumlarıyla ölçüldü.
- * Tohum Ligi'nde oyuncu seçmiyor: her hafta biri, herkese aynı (haftanın
- * kuralı, Tur 53, `leagueRule`).
+ * kriz demek. Senaryoda oyuncu seçmiyor: senaryo kuralıyla geliyor (Tur 60,
+ * `ScenarioDef.modifiers`; yıldızları kuralla ölçüldü). Tohum Ligi'nde de
+ * seçmiyor: her hafta biri, herkese aynı (haftanın kuralı, Tur 53, `leagueRule`).
  *
  * `weight` kuralın zorluk çarpanına katkısı (zafer ekranı ve kariyer):
  * çarpan 1 + ağırlıkların toplamı. Ağırlıklar ölçümden (Dengeli, 8 tohum,

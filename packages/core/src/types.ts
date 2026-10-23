@@ -1208,6 +1208,8 @@ export interface ScenarioState {
   outOfRankDay?: number;
   /** Büyük şehir fethi: devirdeki rakip sayısı (ilerleme "devralınan / başta"). */
   rivalsAtStart?: number;
+  /** Karanlık kış (Tur 60): senaryo boyunca santrallerin rakiplere sattığı elektrik (₺). */
+  powerSold?: number;
   /** Sonuç ekranı görüldü mü. */
   resultSeen?: boolean;
 }

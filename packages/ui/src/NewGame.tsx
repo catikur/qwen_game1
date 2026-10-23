@@ -308,6 +308,11 @@ export function NewGameScreen({
                     >
                       <span className="scenario-card-title">{option.title}</span>
                       <span className="scenario-card-tagline">{option.tagline}</span>
+                      {option.modifiers && option.modifiers.length > 0 && (
+                        <span className="scenario-card-rules" data-scenario-rules={option.modifiers.join(',')}>
+                          {option.modifiers.map((id) => MODIFIER_BY_ID[id].name).join(' · ')}
+                        </span>
+                      )}
                       <span className="scenario-card-status" data-scenario-status>
                         {scenarioStatus(option)}
                       </span>
@@ -325,6 +330,12 @@ export function NewGameScreen({
                     <li key={fact}>{fact}</li>
                   ))}
                 </ul>
+                {scenario.modifiers && scenario.modifiers.length > 0 && (
+                  <p className="scenario-rules" data-scenario-rules-detail>
+                    <span className="tag warn">{t('hud.scenario.rules')}</span>{' '}
+                    {scenario.modifiers.map((id) => `${MODIFIER_BY_ID[id].name}: ${MODIFIER_BY_ID[id].blurb}`).join(' ')}
+                  </p>
+                )}
                 <p className="muted scenario-setup">{scenarioSetupLine(scenario)}</p>
                 <p className="muted scenario-stars">{starThresholds(scenario)}</p>
               </div>
