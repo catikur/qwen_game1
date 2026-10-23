@@ -6585,6 +6585,157 @@ async function finish(browser, consoleErrors) {
     await vContext.close();
   }
 
+  section('Senaryo paketi II: nakliye, enerji ve dönüşüm');
+  {
+    const xContext = await browser.newContext({ viewport: { width: 1280, height: 860 } });
+    await xContext.addInitScript(veteran, TUTORIAL_KEY);
+    const xp = await xContext.newPage();
+    const xErrors = [];
+    xp.on('pageerror', (e) => xErrors.push(e.message));
+    xp.on('console', (m) => { if (m.type() === 'error') xErrors.push(m.text()); });
+    await xp.goto('http://127.0.0.1:8811/');
+    await xp.waitForSelector('.newgame', { timeout: 20000 });
+    await xp.locator('.mode-picker [data-mode="scenario"]').click();
+    const cards = await xp.locator('[data-scenario]').count();
+    const rules = await xp.evaluate(() => Object.fromEntries([...document.querySelectorAll('[data-scenario-rules]')].map((el) => [el.closest('[data-scenario]')?.getAttribute('data-scenario'), el.textContent])));
+    check('Listede on senaryo; yeni üçünün kartında ek kuralı',
+      cards === 10 && /Aç gözlü/.test(rules.haulage ?? '') && /Sıkı banka/.test(rules.blackout ?? '') && /Kıt arsa/.test(rules.renewal ?? '') && Object.keys(rules).length === 3,
+      `${cards} kart · ${JSON.stringify(rules)}`);
+    await xp.locator('[data-scenario="haulage"]').click();
+    const detail = ((await xp.locator('[data-detail="scenario"] .scenario-detail').textContent()) ?? '').trim();
+    check('Seçilen senaryoda hedef ve ek kuralın açıklaması',
+      /en az 2 rakibin toplam 40 mağazasını/.test(detail) && /Ek kural/.test(detail) && /baskına daha erken/.test(detail), detail.slice(0, 140));
+
+    const open = async (id) => {
+      await xp.evaluate(() => window.__capital?.engine.dispatch({ type: 'SET_SPEED', speed: 0 }));
+      if ((await xp.locator('.newgame').count()) === 0) {
+        if ((await xp.locator('[data-scenario-result]').count()) > 0) {
+          await xp.locator('[data-scenario-result] .gameover-actions button').last().click();
+        } else {
+          await xp.locator('.topbar-actions [data-panel="saves"]').click();
+          await xp.waitForTimeout(300);
+          await xp.locator('button:has-text("Yeni oyun")').first().click();
+        }
+        await xp.waitForSelector('.newgame', { timeout: 10000 });
+      }
+      await xp.locator(`[data-scenario="${id}"]`).click();
+      await xp.locator('[data-newgame-start]').click();
+      await xp.waitForSelector(`[data-scenario-brief="${id}"]`, { timeout: 90000 });
+    };
+
+    // Herkesin nakliyecisi: iki büyük rakip kinli başlıyor; açılış yazıyor.
+    await open('haulage');
+    const hBrief = ((await xp.locator('[data-scenario-brief="haulage"]').textContent()) ?? '').trim();
+    const hState = await xp.evaluate(() => {
+      const s = window.__capital.getState();
+      const hostile = Object.values(s.companies).filter((c) => !c.isPlayer && c.relation?.stance === 'hostile');
+      return { day: s.time.day, modifiers: s.modifiers ?? [], hostile: hostile.map((c) => c.name), memory: hostile.map((c) => c.relation.memory[0]?.kind) };
+    });
+    check('Nakliyeci: 240. gün, aç gözlü rakipler; iki rakip kinli, hafızada önceki yönetimin fiyat savaşı; açılış ikisini ve kuralı yazıyor',
+      hState.day === 240 && hState.modifiers.join() === 'hungry_rivals' && hState.hostile.length === 2 && hState.memory.every((k) => k === 'feud')
+        && hState.hostile.every((name) => hBrief.includes(name)) && /Ek kural: Aç gözlü rakipler/.test(hBrief),
+      `${JSON.stringify(hState)} · ${hBrief.slice(-120)}`);
+    await xp.screenshot({ path: `${OUT}/scenario-haulage-brief.png` });
+    await xp.locator('[data-scenario-begin]').click();
+    await xp.waitForTimeout(300);
+    await xp.evaluate(() => window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 }));
+    await xp.locator('.agenda [data-agenda="scenario"] button').click();
+    await xp.waitForTimeout(300);
+    const freightRows = await xp.evaluate(() => [...document.querySelectorAll('.modal [data-freight-rival]')].map((el) => ({ hostile: el.getAttribute('data-hostile'), text: el.textContent })));
+    check('Hedef panelinde rakip rakip taşınan mağaza; kinli rakip "teklif getirmiyor"',
+      freightRows.length >= 3 && freightRows.filter((row) => row.hostile === '1').length === 2 && freightRows.filter((row) => row.hostile === '1').every((row) => /kinli, teklif getirmiyor/.test(row.text)),
+      JSON.stringify(freightRows).slice(0, 200));
+    await xp.keyboard.press('Escape');
+    // Sözleşmeler panele işleniyor: iki rakibin kırk mağazası (kazanma kuralı birim testinde).
+    await xp.evaluate(() => {
+      const c = window.__capital;
+      const s = c.getState();
+      const byCompany = {};
+      for (const b of Object.values(s.buildings)) {
+        if (b.companyId === s.playerCompanyId || c.buildingRole(b.defId) !== 'outlet') continue;
+        (byCompany[b.companyId] ??= []).push(b.id);
+      }
+      const [a, b] = Object.entries(byCompany).sort((x, y) => y[1].length - x[1].length);
+      const first = Math.min(a[1].length, 40);
+      const deal = (companyId, ids, n) => ({ id: `fr-${companyId}`, companyId, terminalId: 'yok', outletIds: ids.slice(0, n), durationDays: 120, offeredDay: s.time.day, estimate: 100, rate: 0.2 });
+      s.freight = { offers: [], contracts: [deal(a[0], a[1], first), deal(b[0], b[1], 40 - first)], nextId: 3, lastOfferDay: s.time.day, declined: {}, earnedTotal: 0 };
+      c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+    });
+    await xp.locator('.agenda [data-agenda="scenario"] button').click();
+    await xp.waitForTimeout(300);
+    const served = await xp.evaluate(() => ({
+      done: document.querySelectorAll('.modal [data-freight-rival][data-done="1"]').length,
+      detail: document.querySelector('.modal [data-scenario-goals="haulage"] .goal-detail')?.textContent ?? '',
+    }));
+    check('Hedef panelinde taşınan mağazalar rakip rakip sayılıyor: iki rakip, kırk mağaza',
+      served.done === 2 && /2\/2 rakip · 40\/40 mağaza/.test(served.detail), JSON.stringify(served));
+    await xp.keyboard.press('Escape');
+
+    // Karanlık kış: kriz uyarıda, sıkı banka; santral rakiplere satıyor.
+    await open('blackout');
+    const bBrief = ((await xp.locator('[data-scenario-brief="blackout"]').textContent()) ?? '').trim();
+    await xp.locator('[data-scenario-begin]').click();
+    await xp.waitForTimeout(200);
+    const bState = await xp.evaluate(() => {
+      const c = window.__capital;
+      c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+      const s = c.getState();
+      const me = s.companies[s.playerCompanyId];
+      // Santral: rakip binalarının en yoğun olduğu boş sanayi ya da liman parseli.
+      const rivals = Object.values(s.buildings).filter((b) => b.companyId !== me.id);
+      let best = null;
+      for (const t of s.map.tiles) {
+        if (t.kind !== 'plot' || t.ownerId || t.buildingId || t.structureId) continue;
+        const d = s.districts[t.districtId];
+        if (!['industrial', 'port'].includes(d.archetype) || (d.opensOnDay ?? 0) > s.time.day) continue;
+        const n = rivals.filter((b) => { const at = s.map.tiles[b.tileId]; return Math.abs(at.x - t.x) + Math.abs(at.y - t.y) <= 12; }).length;
+        if (!best || n > best.n) best = { id: t.id, n };
+      }
+      const bought = c.engine.dispatch({ type: 'BUY_TILE', tileId: best.id }).ok;
+      const built = c.engine.dispatch({ type: 'BUILD', tileId: best.id, defId: 'gas_plant' });
+      for (let i = 0; i < 40; i++) c.engine.runDay();
+      c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+      return { day: s.time.day - s.scenario.startDay, modifiers: s.modifiers ?? [], crisis: s.crisis?.phase, bought, built: built.ok, sold: s.scenario.powerSold ?? 0 };
+    });
+    check('Karanlık kış: sıkı banka, kriz bir ay sonra; santral rakiplere satıyor, satış birikiyor',
+      bState.modifiers.join() === 'tight_credit' && /Ek kural: Sıkı banka/.test(bBrief) && bState.crisis === 'active' && bState.built && bState.sold > 0,
+      `${JSON.stringify(bState)} · ${bBrief.slice(-80)}`);
+    await xp.locator('.agenda [data-agenda="scenario"] button').click();
+    await xp.waitForTimeout(300);
+    const bDetail = ((await xp.locator('.modal [data-scenario-goals="blackout"] .goal-detail').textContent().catch(() => '')) ?? '').trim();
+    check('Hedef panelinde rakiplere satılan elektrik / hedef', /^rakiplere .+ \/ 4,00 M ₺ elektrik$/.test(bDetail), bDetail);
+    await xp.keyboard.press('Escape');
+
+    // Kentsel dönüşüm: kıt arsa; panelde dolu birim ve dönüşüm; süre dolunca kayıp.
+    await open('renewal');
+    const rBrief = ((await xp.locator('[data-scenario-brief="renewal"]').textContent()) ?? '').trim();
+    await xp.locator('[data-scenario-begin]').click();
+    await xp.waitForTimeout(200);
+    await xp.evaluate(() => window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 }));
+    await xp.locator('.agenda [data-agenda="scenario"] button').click();
+    await xp.waitForTimeout(300);
+    const rItems = await xp.evaluate(() => Object.fromEntries([...document.querySelectorAll('.modal [data-rental-item]')].map((el) => [el.getAttribute('data-rental-item'), { done: el.getAttribute('data-done'), text: el.textContent }])));
+    check('Kentsel dönüşüm: kıt arsa; hedef panelinde dolu birim ve açılmış dönüşüm projesi, ikisi de eksik',
+      /Ek kural: Kıt arsa/.test(rBrief) && rItems.units?.done === '0' && /\/ 1\.500/.test(rItems.units?.text ?? '') && rItems.renewals?.done === '0' && /0 \/ 2/.test(rItems.renewals?.text ?? ''),
+      `${JSON.stringify(rItems)} · ${rBrief.slice(-60)}`);
+    await xp.screenshot({ path: `${OUT}/scenario-renewal-goals.png` });
+    await xp.keyboard.press('Escape');
+    const rLost = await xp.evaluate(() => {
+      const c = window.__capital;
+      const s = c.getState();
+      s.time.day = s.scenario.endDay - 1;
+      c.engine.runDay();
+      c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+      return { outcome: s.scenario.outcome, reason: s.scenario.lostReason };
+    });
+    await xp.waitForSelector('[data-scenario-result="lost"]', { timeout: 5000 }).catch(() => null);
+    const reason = ((await xp.locator('[data-scenario-reason]').textContent().catch(() => '')) ?? '').trim();
+    check('Süre dolunca kayıp: sonuç dolu birimin hedefe oranını yazıyor', rLost.outcome === 'lost' && rLost.reason === 'time' && /dolu birim hedefin %\d+ kadarında kaldı/.test(reason), `${JSON.stringify(rLost)} · ${reason}`);
+
+    check('Senaryo paketi II akışında konsol temiz', xErrors.length === 0, xErrors.slice(0, 2).join(' | '));
+    await xContext.close();
+  }
+
   section('Mobil');
   for (const deviceName of ['iPhone 13', 'Pixel 7']) {
     const mobileContext = await browser.newContext({ ...devices[deviceName] });

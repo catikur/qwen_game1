@@ -740,6 +740,38 @@ export const contentEn: Record<string, string> = {
     'The remote city makes no new investments: it stands still while its rivals grow. Leave a city alone for too long and it loses its place.',
   'content.scenario.holding.facts.2':
     'Victory is measured by value created in the city: money sent to it does not count, and profit flowing to the treasury comes off its value.',
+  'content.scenario.haulage.title': "Everyone's Hauler",
+  'content.scenario.haulage.tagline': "Haul your rivals' goods; but two of them hold a grudge and all of them are hungry.",
+  'content.scenario.haulage.brief':
+    "The city's companies are growing fast, with stores in every district. The previous management started a price war with the two biggest rivals, and they still hold a grudge. You have a few stores and cash. Build a truck fleet and take over your rivals' distribution: you earn from it and make peace along the way.",
+  'content.scenario.haulage.goalText': 'Within {days|# day|# days}, haul a total of {outlets|# store|# stores} for at least {rivals|# rival|# rivals} on the same day.',
+  'content.scenario.haulage.facts.0':
+    'Freight offers come from rivals; a rival holding a grudge brings none. Making amends (Rivals panel) and every freight contract improve the relationship.',
+  'content.scenario.haulage.facts.1': 'The Freight Terminal unlocks at ₺1.5M company value: a fleet for 16 stores, a range of 10 plots.',
+  'content.scenario.haulage.facts.2': 'Hungry rivals: they invest more boldly (plenty of stores to haul) and start raiding early.',
+  'content.scenario.blackout.title': 'Dark Winter',
+  'content.scenario.blackout.tagline': 'An energy crisis is coming; whoever owns power plants wins, but the bank is tight with you.',
+  'content.scenario.blackout.brief':
+    "A gas supply squeeze is expected: in a month the grid price will double and the crisis will last all winter. The company has eight stores but thin cash, and the bank is cautious. Your rivals' buildings are on the grid: every rival building within your plant's range pays its bill to you during the crisis.",
+  'content.scenario.blackout.goalText': 'Within {days|# day|# days}, sell a total of {target} worth of power to rivals from your plants.',
+  'content.scenario.blackout.facts.0':
+    "A plant powers its owner's buildings first and sells what is left to rival buildings in range; rivals pay 5% below the grid price.",
+  'content.scenario.blackout.facts.1':
+    'The Gas Power Plant unlocks at ₺2.5M company value and is built in the industrial zone and the port. Lock in its fuel and the crisis price turns into plant profit.',
+  'content.scenario.blackout.facts.2': "Your own buildings take a plant's power first: build plants among your rivals' buildings.",
+  'content.scenario.blackout.facts.3': 'Tight bank: loan and overdraft rates are 4 points higher, credit limits 40% lower.',
+  'content.scenario.renewal.title': 'Urban Renewal',
+  'content.scenario.renewal.tagline': 'Land is scarce and expensive: renew old buildings and fill your projects with tenants.',
+  'content.scenario.renewal.brief':
+    'Empty land is scarce and expensive; locked districts open late. The city auctions old buildings for urban renewal: the winner builds a large project with a density bonus. The company has cash and two rental buildings.',
+  'content.scenario.renewal.goalText':
+    'Within {days|# day|# days}, reach {units} occupied units in your rentals, with at least {renewals} renewal projects open.',
+  'content.scenario.renewal.facts.0':
+    'The Housing Estate and the Office Campus fit the most units on a plot; construction takes 75–100 days and tenants arrive over time.',
+  'content.scenario.renewal.facts.1':
+    "Renewal request (in a city building's panel): the next auction is that plot. A project on a renewal plot has 1.6× the units; right holders do not count toward the goal.",
+  'content.scenario.renewal.facts.2': 'Rent: high rent lowers occupancy, low rent fills units.',
+  'content.scenario.renewal.facts.3': 'Scarce land: land prices 70% higher, auction reserves too; locked districts open 50% later.',
   'content.achievement.public_company.title': 'Going public',
   'content.achievement.public_company.hint': 'Take your company public with an IPO.',
   'content.achievement.quarter_billion.title': 'Quarter billion',

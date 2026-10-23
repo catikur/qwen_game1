@@ -300,6 +300,7 @@ export const panels: Record<keyof typeof trPanels, string> = {
   'panels.rival.memory.campaignHeld': 'You repelled their campaign',
   'panels.rival.memory.settled': 'They won the revenge; score settled',
   'panels.rival.memory.amends': 'You made amends',
+  'panels.rival.memory.feud': "The previous management's price war",
   'panels.rival.amends': 'Offer amends · {cost} (+{points} points)',
   'panels.rival.amendsTitle': "A donation to the CEO's foundation: the relationship improves and the money goes to no one. Once per rival every 90 days.",
   'panels.rivals.you': ' (you)',

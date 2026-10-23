@@ -100,7 +100,9 @@ export type RelationEventKind =
   | 'undercut'
   | 'campaignHeld'
   | 'settled'
-  | 'amends';
+  | 'amends'
+  /** Devralınan husumet (Tur 60, senaryo kurulumu): önceki yönetimin fiyat savaşı. */
+  | 'feud';
 
 export const RELATION = {
   min: -100,
@@ -125,7 +127,9 @@ export const RELATION = {
    *     (fiyat çarpanın en çok ×0,90); haftada bir;
    *   - kampanya: açtığı fiyat savaşını geri püskürttün; rövanşını
    *     kazandıysa "hesap görüldü" (oyuncunun hamlesi değil, ama husumet
-   *     bir yere varıyor: kazanan rövanş kini yumuşatıyor).
+   *     bir yere varıyor: kazanan rövanş kini yumuşatıyor);
+   *   - devralınan husumet (Tur 60): senaryonun kurulumu, önceki yönetimin
+   *     fiyat savaşı (Herkesin nakliyecisi).
    */
   events: {
     shares: -4,
@@ -139,6 +143,7 @@ export const RELATION = {
     campaignHeld: -8,
     settled: 15,
     amends: 25,
+    feud: -60,
   } satisfies Record<RelationEventKind, number>,
   /** Fiyat kırma sayılan çarpan: oyuncunun mağazası en çok bu. */
   undercutPrice: 0.9,

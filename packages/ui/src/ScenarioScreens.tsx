@@ -1,11 +1,14 @@
 import { useEffect, useState } from 'react';
 import type { ReactElement } from 'react';
-import { CATEGORIES, GOOD_BY_ID, formatDecimal, formatPercent } from '@capital/content';
+import { CATEGORIES, GOOD_BY_ID, MODIFIER_BY_ID, formatDecimal, formatNumber, formatPercent } from '@capital/content';
 import type { ScenarioDef } from '@capital/content';
 import {
   chainGoalStatus,
   formatMoney,
+  freightGoalStatus,
   holdingCities,
+  hostileRivals,
+  rentalGoalStatus,
   getPlayer,
   scenarioDefOf,
   scenarioGoalText,
@@ -76,6 +79,15 @@ function resultBody(def: ScenarioDef, scenario: ScenarioState): string {
       return t('hud.scenario.lostTimeHolding', { won: score });
     case 'leadAtEnd':
       return t('hud.scenario.lostTimeLead', { score: scenarioScoreText(def, score) });
+    case 'freight':
+      // Skor taşınan mağazanın hedefe oranı; yettiyse eksik olan ayrı rakip.
+      return score >= 1
+        ? t('hud.scenario.lostTimeFreightRivals', { rivals: goal.rivals })
+        : t('hud.scenario.lostTimeFreight', { percent: formatPercent(Math.floor(score * 100)) });
+    case 'power':
+      return t('hud.scenario.lostTimePower', { percent: formatPercent(Math.floor(score * 100)) });
+    case 'rental':
+      return t('hud.scenario.lostTimeRental', { percent: formatPercent(Math.floor(score * 100)) });
   }
 }
 
@@ -104,6 +116,14 @@ function briefExtras(state: GameState, def: ScenarioDef, scenario: ScenarioState
     for (const city of holdingCities(state).filter((entry) => !entry.active)) {
       lines.push(t('hud.scenario.briefFounding', { city: city.name, value: formatMoney(Math.max(0, city.value)), rank: city.rank }));
     }
+  }
+  // Tur 60: devralınan husumet ve senaryonun ek kuralı.
+  if (def.setup.feud) {
+    const foes = hostileRivals(state).map((company) => company.name);
+    if (foes.length > 0) lines.push(t('hud.scenario.briefFeud', { names: foes.join(', ') }));
+  }
+  if (def.modifiers && def.modifiers.length > 0) {
+    lines.push(t('hud.scenario.briefRules', { rules: def.modifiers.map((id) => MODIFIER_BY_ID[id].name).join(', ') }));
   }
   return lines;
 }
@@ -253,6 +273,8 @@ export function ScenarioGoalSection(): ReactElement | null {
       </p>
       {!finished && def.goal.kind === 'chain' && <ChainChecklist state={state} goodId={def.goal.goodId} target={def.goal.share} />}
       {!finished && def.goal.kind === 'holding' && <HoldingChecklist state={state} />}
+      {!finished && def.goal.kind === 'freight' && <FreightChecklist state={state} rivals={def.goal.rivals} outlets={def.goal.outlets} />}
+      {!finished && def.goal.kind === 'rental' && <RentalChecklist state={state} units={def.goal.units} renewals={def.goal.renewals} />}
       <p className="muted scenario-stars">{starThresholds(def)}</p>
     </section>
   );
@@ -319,6 +341,57 @@ function HoldingChecklist({ state }: { state: GameState }): ReactElement {
             target: formatMoney(city.target),
             rank: city.rank,
           })}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/**
+ * Herkesin nakliyecisi (Tur 60): rakip rakip bugün taşınan mağaza; kinli
+ * rakip teklif getirmiyor, satırında yazıyor.
+ */
+function FreightChecklist({ state, rivals, outlets }: { state: GameState; rivals: number; outlets: number }): ReactElement {
+  const status = freightGoalStatus(state, rivals, outlets);
+  return (
+    <ul className="scenario-checklist" aria-label={t('hud.scenario.freightLabel')}>
+      {status.rivals.map((rival) => (
+        <li
+          key={rival.companyId}
+          className={rival.outlets > 0 ? 'done' : undefined}
+          data-freight-rival={rival.companyId}
+          data-hostile={rival.hostile ? '1' : '0'}
+          data-done={rival.outlets > 0 ? '1' : '0'}
+        >
+          <span aria-hidden="true">{rival.outlets > 0 ? '✓' : rival.hostile ? '✗' : '○'}</span>{' '}
+          {t(rival.hostile ? 'hud.scenario.freightRivalHostile' : 'hud.scenario.freightRival', { name: rival.name, outlets: rival.outlets })}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/** Kentsel dönüşüm (Tur 60): dolu birim, inşaattaki birim ve açılmış dönüşüm projeleri. */
+function RentalChecklist({ state, units, renewals }: { state: GameState; units: number; renewals: number }): ReactElement {
+  const status = rentalGoalStatus(state);
+  const items: Array<{ key: string; done: boolean; label: string }> = [
+    {
+      key: 'units',
+      done: status.occupied >= units,
+      label: t('hud.scenario.rentalUnits', { occupied: formatNumber(status.occupied), target: formatNumber(units), total: formatNumber(status.units) }),
+    },
+    {
+      key: 'renewals',
+      done: status.renewals >= renewals,
+      label: t('hud.scenario.rentalRenewals', { done: status.renewals, target: renewals, building: status.renewalsBuilding }),
+    },
+  ];
+  if (status.building > 0) items.push({ key: 'building', done: false, label: t('hud.scenario.rentalBuilding', { units: formatNumber(status.building) }) });
+  return (
+    <ul className="scenario-checklist" aria-label={t('hud.scenario.rentalLabel')}>
+      {items.map((item) => (
+        <li key={item.key} className={item.done ? 'done' : undefined} data-rental-item={item.key} data-done={item.done ? '1' : '0'}>
+          <span aria-hidden="true">{item.done ? '✓' : '○'}</span> {item.label}
         </li>
       ))}
     </ul>

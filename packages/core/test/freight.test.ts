@@ -626,4 +626,36 @@ describe('nakliye terminali ve taşıma sözleşmeleri (Tur 56)', () => {
     marketDay(copy);
     assert.equal(copy.freight!.earnedTotal, state.freight!.earnedTotal);
   });
+  test('kinli rakip taşıma teklifi getirmiyor (Tur 60); husumet bitince yeniden getiriyor', () => {
+    const state = fresh().getState();
+    placeTerminal(state);
+    // Kuralsız ilk teklif kimden gelirdi: kopyada bak.
+    const probe = JSON.parse(JSON.stringify(state)) as GameState;
+    awaitOffer(probe);
+    const first = probe.freight!.offers[0]!.companyId;
+    const hostile = (companyId: string) => {
+      state.companies[companyId]!.relation = { score: -60, stance: 'hostile', since: state.time.day, memory: [] };
+    };
+    // Bütün rakipler kinli: masaya hiç teklif gelmiyor.
+    const rivals = Object.values(state.companies).filter((company) => !company.isPlayer);
+    for (const company of rivals) hostile(company.id);
+    const tick = (days: number) => {
+      for (let i = 0; i < days; i++) {
+        state.time.day += 1;
+        runFreightTick(state);
+      }
+    };
+    tick(80);
+    assert.equal(state.freight?.offers.length ?? 0, 0, 'kinli rakipler teklif getirdi');
+    // Yalnız ilk teklifi getirecek olan kinli: gelen teklifler ondan değil.
+    for (const company of rivals) if (company.id !== first) delete company.relation;
+    tick(80);
+    assert.ok((state.freight?.offers ?? []).every((offer) => offer.companyId !== first), 'kinli rakip teklif getirdi');
+    // Husumet bitti: teklif yine ondan gelebiliyor.
+    delete state.companies[first]!.relation;
+    state.freight!.offers = [];
+    state.freight!.lastOfferDay = -FREIGHT.offerCooldownDays;
+    awaitOffer(state);
+    assert.ok(FREIGHT.hostileOffers === false);
+  });
 });

@@ -36,7 +36,9 @@ export * from './scenario';
 export * from './career';
 export {
   chainGoalStatus,
+  freightGoalStatus,
   holdingCities,
+  rentalGoalStatus,
   rivalsLeft,
   leadRatio,
   playerRank,
@@ -48,7 +50,7 @@ export {
   scenarioScoreText,
   starsFor,
 } from './systems/scenario';
-export type { ChainGoalStatus, HoldingCityStatus, ScenarioProgress } from './systems/scenario';
+export type { ChainGoalStatus, FreightGoalRival, FreightGoalStatus, HoldingCityStatus, RentalGoalStatus, ScenarioProgress } from './systems/scenario';
 export {
   tilePrice,
   isPurchasable,

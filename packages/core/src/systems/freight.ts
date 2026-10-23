@@ -3,7 +3,7 @@ import { formatMoney } from '../format';
 import { tc } from '../i18n';
 import { nextFloat } from '../rng';
 import { pushNews } from '../news';
-import { noteRelation } from './relations';
+import { noteRelation, stanceOf } from './relations';
 import { FREIGHT_SHARE, ownDepotRelief, reliefOf } from './supply';
 import type { BuildingInstance, CommandResult, FreightDeal, FreightState, GameState } from '../types';
 
@@ -33,7 +33,7 @@ import type { BuildingInstance, CommandResult, FreightDeal, FreightState, GameSt
  * - TEKLİF RAKİPTEN GELİYOR. Oyuncu rakibin mağazasını seçip "sana
  *   taşıyorum" diyemiyor; teklif masaya gelir, kabul ya da ret. Reddedilen
  *   rakip bir süre yeniden teklif getirmiyor. Belediye sözleşmesindeki gibi
- *   reddin bedeli yok.
+ *   reddin bedeli yok. Kinli rakip (Rakipler 2.0) hiç getirmiyor (Tur 60).
  *
  * - CAYMA BEDELİ. Kabul edilen sözleşmeyi bitirmek (ya da terminali yıkmak)
  *   rakibe günlük ücret tahmininin 20 katını ödetiyor. Rakibin mağazası
@@ -59,6 +59,11 @@ export const FREIGHT = {
   declineCooldownDays: 60,
   /** Cayma bedeli: günlük ücret tahmininin bu katı. */
   cancelPenaltyDays: 20,
+  /**
+   * Kinli rakip (Rakipler 2.0) dağıtımını sana vermiyor: husumet sürdükçe
+   * teklif getirmiyor (Tur 60). Süren sözleşmesi bitene kadar sürüyor.
+   */
+  hostileOffers: false,
 } as const;
 
 /** Oyuncunun terminalleri (filosu olan lojistik binaları), kimlik sırasıyla. */
@@ -192,6 +197,7 @@ function generateOffer(state: GameState): FreightDeal | null {
     for (const outlet of freightProspects(state, terminal)) {
       const declined = freight.declined[outlet.companyId];
       if (declined !== undefined && day - declined < FREIGHT.declineCooldownDays) continue;
+      if (!FREIGHT.hostileOffers && stanceOf(state, outlet.companyId) === 'hostile') continue;
       const list = byCompany.get(outlet.companyId);
       if (list) list.push(outlet);
       else byCompany.set(outlet.companyId, [outlet]);

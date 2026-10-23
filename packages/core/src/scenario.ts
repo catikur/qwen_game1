@@ -1,4 +1,4 @@
-import { BUILDING_BY_ID, CRISIS_BY_ID, SCENARIO_BY_ID, getCeoModifiers } from '@capital/content';
+import { BUILDING_BY_ID, CRISIS_BY_ID, MODIFIER_RULES, SCENARIO_BY_ID, getCeoModifiers, hasModifier } from '@capital/content';
 import type { ScenarioDef, ScenarioSetup } from '@capital/content';
 import { build, buyTile, purchaseBlocker, zoningBlocker } from './actions';
 import { GameEngine } from './engine';
@@ -9,6 +9,7 @@ import { recomputeNetWorth } from './systems/city';
 import { annuityPayment, loanRate } from './systems/credit';
 import { formConsortium } from './systems/consortium';
 import { TOTAL_SHARES } from './systems/equity';
+import { noteRelation } from './systems/relations';
 import { createNewGame, makeCompany } from './worldgen';
 import type { BuildingInstance, GameState } from './types';
 
@@ -51,7 +52,13 @@ export interface ScenarioBuilder {
 export function startScenario(id: string, options: ScenarioOptions = {}): ScenarioBuilder {
   const def = SCENARIO_BY_ID[id];
   if (!def) throw new Error(`unknown scenario: ${id}`);
-  const state = createNewGame({ seed: def.seed, citySize: def.citySize, difficulty: def.difficulty });
+  // Ek kurallar (Tur 60) ön tarihle birlikte: şehir onlarla büyüdü.
+  const state = createNewGame({
+    seed: def.seed,
+    citySize: def.citySize,
+    difficulty: def.difficulty,
+    ...(def.modifiers ? { modifiers: def.modifiers } : {}),
+  });
   // Oyuncu sahnede değil: hissesi ön tarih boyunca alınamıyor.
   state.companies[state.playerCompanyId]!.lockedUntilDay = def.preludeDays + 1;
   const engine = new GameEngine(state);
@@ -139,7 +146,9 @@ function handOver(state: GameState, def: ScenarioDef, options: ScenarioOptions):
   fresh.cash = setup.cash;
   if (setup.loan) {
     // Şubeler krediyle kurulmuş: vadeli kredi, not C (kredili hesap pahalı).
-    const rate = loanRate('C', 'term', setup.loan.termDays);
+    // Sıkı bankada (Tur 60, Karanlık kış) kuralın faiz farkıyla.
+    const tight = hasModifier(state.modifiers, 'tight_credit') ? MODIFIER_RULES.tightCredit.rateDelta : 0;
+    const rate = loanRate('C', 'term', setup.loan.termDays) + tight;
     fresh.debt = setup.loan.amount;
     fresh.credit = {
       loans: [
@@ -182,6 +191,18 @@ function handOver(state: GameState, def: ScenarioDef, options: ScenarioOptions):
         ),
       );
     }
+  }
+  if (setup.feud) {
+    // Devralınan husumet (Tur 60): şehrin en değerli rakipleri önceki
+    // yönetimin fiyat savaşlarını unutmadı. Duruşun haberi açılıştan sonra.
+    const count = setup.feud;
+    const foes = Object.values(state.companies)
+      .filter((company) => !company.isPlayer)
+      .sort((a, b) => b.netWorth - a.netWorth || a.id.localeCompare(b.id))
+      .slice(0, count);
+    afterBrief.push(() => {
+      for (const foe of foes) noteRelation(state, foe.id, 'feud');
+    });
   }
   if (setup.crisis) {
     const crisis = CRISIS_BY_ID[setup.crisis.id];

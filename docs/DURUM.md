@@ -4,7 +4,7 @@
 > `pnpm bench` çıktısından; iddialar `pnpm balance` ve `pnpm playtest`
 > tarafından her koşuda doğrulanıyor.
 >
-> Son güncelleme: şema **v6**, 59 tur (Tur 33 denendi ve geri alındı; Tur 34 eski görünüme canlılık ekledi; Tur 35 arayüzü Lite'ın "Cam & Bulut" diline taşıdı; Tur 36 şehre ayrıntı kattı; Tur 37a geç oyuna yönetim yükü, servet vergisi ve kriz dönemleri getirdi; Tur 37b karar kartlarını ve rakip hikâyelerini ekledi; Tur 37c fırsat balonlarını ve aylık görev panosunu getirdi; Tur 37d canlı pazarı, şehir projesi ihalesini ve rakip konsorsiyumunu getirdi; Tur 38 değerlendirme turuydu: geç oyun hızı, gündem ve haber akışı, zorluk eğrisi; Tur 39a senaryo modunu getirdi: Kurtarma ve Krizin ortasında; Tur 39b Konsorsiyuma karşı, Zincir ustası ve Şehrin sponsoru senaryolarını ekledi; Tur 39c Büyük şehir fethi ve Holding: iki şehir ile listeyi yediye tamamladı; Tur 40 cila ve performans; Tur 41 başarımlar ve kariyer; Tur 42 açılışta gölgelendirici derlemesi; Tur 43 oyun içi akıcılık; Tur 44 değerlendirme turuydu: Türkçe sayı biçimi, yardımın kapsamı, haber akışı; Tur 45 dört ek kural getirdi: Fırtınalı yıllar, Aç gözlü rakipler, Sıkı banka, Kıt arsa; Tur 46 açılış paketini böldü: kurulum ekranı telefonda yarı sürede; Tur 47 tek Ayarlar paneli ve erişilebilirlik getirdi: metin boyutu, renk körlüğüne uygun palet, hareket, ses düzeyleri, pencerelerde klavye; Tur 48 oyunu kurulabilir ve çevrimdışı açılır yaptı, yayından sonra "yeni sürüm hazır" diyor; Tur 49 müziği getirdi: gündüz, gece ve kriz, şehirle birlikte dönüyor; Tur 50 Faz 1'i değerlendirdi ve tanıtım paketini hazırladı; Tur 51 Faz 2'yi açtı: Lite'ın lig sunucusu ana oyunun Tohum Ligi koşularını da alıyor, tablo herkese açık; Tur 52'de sunucu her koşuyu gönderimde yeniden oynatıyor, tabloya yalnız doğrulanmış skor giriyor; Tur 53 ligin her haftasına bir ek kural ve 90 günlük günün koşusunu getirdi; Tur 54 liderlerin eğrisini senin koşunun üstüne koydu ve liderin o günlerde ne yaptığını koşu kodundan anlatıyor; Tur 55 davet kodlu arkadaş liglerini getirdi ve Faz 2'yi kapattı; Tur 56 Faz 3'ü açtı: nakliye terminali rakip mağazalarına taşıma sözleşmesiyle taşıyor; Tur 57 enerjiyi getirdi: şebeke fiyatı, santraller, enerji krizi; Tur 58 gayrimenkul geliştiricisini getirdi: konut ve ofis projeleri, kira ve doluluk, kentsel dönüşüm hakkı ve başvurusu; Tur 59 rakiplere hafıza verdi: CEO'nun mizacı, husumet ve ittifak, fiyat savaşı ve lobiyle tepki, uzlaşma). Önümüzdeki işin sırası `docs/YOL-HARITASI.md`'de.
+> Son güncelleme: şema **v6**, 60 tur (Tur 33 denendi ve geri alındı; Tur 34 eski görünüme canlılık ekledi; Tur 35 arayüzü Lite'ın "Cam & Bulut" diline taşıdı; Tur 36 şehre ayrıntı kattı; Tur 37a geç oyuna yönetim yükü, servet vergisi ve kriz dönemleri getirdi; Tur 37b karar kartlarını ve rakip hikâyelerini ekledi; Tur 37c fırsat balonlarını ve aylık görev panosunu getirdi; Tur 37d canlı pazarı, şehir projesi ihalesini ve rakip konsorsiyumunu getirdi; Tur 38 değerlendirme turuydu: geç oyun hızı, gündem ve haber akışı, zorluk eğrisi; Tur 39a senaryo modunu getirdi: Kurtarma ve Krizin ortasında; Tur 39b Konsorsiyuma karşı, Zincir ustası ve Şehrin sponsoru senaryolarını ekledi; Tur 39c Büyük şehir fethi ve Holding: iki şehir ile listeyi yediye tamamladı; Tur 40 cila ve performans; Tur 41 başarımlar ve kariyer; Tur 42 açılışta gölgelendirici derlemesi; Tur 43 oyun içi akıcılık; Tur 44 değerlendirme turuydu: Türkçe sayı biçimi, yardımın kapsamı, haber akışı; Tur 45 dört ek kural getirdi: Fırtınalı yıllar, Aç gözlü rakipler, Sıkı banka, Kıt arsa; Tur 46 açılış paketini böldü: kurulum ekranı telefonda yarı sürede; Tur 47 tek Ayarlar paneli ve erişilebilirlik getirdi: metin boyutu, renk körlüğüne uygun palet, hareket, ses düzeyleri, pencerelerde klavye; Tur 48 oyunu kurulabilir ve çevrimdışı açılır yaptı, yayından sonra "yeni sürüm hazır" diyor; Tur 49 müziği getirdi: gündüz, gece ve kriz, şehirle birlikte dönüyor; Tur 50 Faz 1'i değerlendirdi ve tanıtım paketini hazırladı; Tur 51 Faz 2'yi açtı: Lite'ın lig sunucusu ana oyunun Tohum Ligi koşularını da alıyor, tablo herkese açık; Tur 52'de sunucu her koşuyu gönderimde yeniden oynatıyor, tabloya yalnız doğrulanmış skor giriyor; Tur 53 ligin her haftasına bir ek kural ve 90 günlük günün koşusunu getirdi; Tur 54 liderlerin eğrisini senin koşunun üstüne koydu ve liderin o günlerde ne yaptığını koşu kodundan anlatıyor; Tur 55 davet kodlu arkadaş liglerini getirdi ve Faz 2'yi kapattı; Tur 56 Faz 3'ü açtı: nakliye terminali rakip mağazalarına taşıma sözleşmesiyle taşıyor; Tur 57 enerjiyi getirdi: şebeke fiyatı, santraller, enerji krizi; Tur 58 gayrimenkul geliştiricisini getirdi: konut ve ofis projeleri, kira ve doluluk, kentsel dönüşüm hakkı ve başvurusu; Tur 59 rakiplere hafıza verdi: CEO'nun mizacı, husumet ve ittifak, fiyat savaşı ve lobiyle tepki, uzlaşma; Tur 60 Faz 3'ün sektörleriyle üç senaryo ekledi: Herkesin nakliyecisi, Karanlık kış, Kentsel dönüşüm, her biri bir ek kuralla). Önümüzdeki işin sırası `docs/YOL-HARITASI.md`'de.
 
 ---
 
@@ -6414,6 +6414,129 @@ sınavı 358/358 (30 bölüm); paket bütçesi tamam (ana parça 68,7 KB, 67,1'd
 **Canlıya geçiş.** Şema aynı, simülasyon değişti: birleşmeden sonra Worker
 yeniden dağıtılıyor. Lite etkilenmiyor.
 
+### Tur 60 — Senaryo paketi II: nakliye, enerji ve dönüşüm
+
+Faz 3'ün beşinci turu. Tur 56–59'un sektörleri serbest oyunda vardı ama
+hiçbir senaryo onları istemiyordu. Üç yeni senaryo, her biri bir sektörü
+hedef yapıyor ve bir ek kuralla (Tur 45) oynanıyor; senaryo sayısı 10.
+
+| Senaryo | Şehir | Ek kural | Hedef | Süre | ★★ / ★★★ |
+|---|---|---|---|---|---|
+| Herkesin nakliyecisi | seed 1, 240. gün | Aç gözlü rakipler | aynı gün en az 2 rakibin toplam 40 mağazasını taşı | 240 gün | 160 / 110 gün |
+| Karanlık kış | seed 5, 200. gün | Sıkı banka | santrallerinden rakiplere 4 M ₺ elektrik sat | 180 gün | 155 / 140 gün |
+| Kentsel dönüşüm | seed 7, 250. gün | Kıt arsa | kiralıklarında 1.500 dolu birim ve açılmış 2 dönüşüm projesi | 360 gün | 250 / 200 gün |
+
+**Kurulum (`content/src/scenarios.ts`, `core/src/scenario.ts`).**
+- *Ek kural ön tarihle birlikte* (`ScenarioDef.modifiers`): şehir kuralla
+  kuruldu ve büyüdü. Kurulumda kartta ve açılış ekranında yazıyor; oyuncu
+  seçmiyor. Sıkı banka devirdeki krediye de faiz farkını ekliyor.
+- *Devralınan husumet* (`setup.feud`): net değeri en yüksek iki rakip kinli
+  başlıyor. Rakipler 2.0'ın yeni olayı `feud` (−60 × mizaç): dosyada
+  "Önceki yönetimin fiyat savaşı". Husumetin haberi açılıştan sonra.
+- *Karanlık kış:* enerji krizi 30 gün sonra başlıyor, senaryonun son günü
+  bitiyor (Krizin ortasındaki gibi).
+
+**Yeni kural: kinli rakip taşıma teklifi getirmiyor** (`FREIGHT.hostileOffers`).
+Husumet sürdükçe rakip dağıtımını sana vermiyor; süren sözleşmesi bitene
+kadar sürüyor. Serbest oyunda da geçerli: husumet ancak oyuncunun hamlesiyle
+doğuyor, temel vekilin şehirlerinde sayı değişmiyor (aşağıda).
+
+**Üç hedef türü (`core/src/systems/scenario.ts`).**
+- `freight`: bugün sözleşmedeki mağazalar, rakip rakip; el değiştiren ya
+  da kapanan mağaza sayılmıyor. Hedef panelinde rakip başına taşınan mağaza,
+  kinli rakip "teklif getirmiyor".
+- `power`: oyuncunun santrallerinin rakiplere sattığı elektrik gün gün
+  birikiyor (`ScenarioState.powerSold`); kendi binasına verdiği sayılmıyor.
+- `rental`: kiralıkların dolu birimi (hak sahipleri ve inşaattaki proje
+  hariç) ve dönüşüm parselinde açılmış proje sayısı. Hedef panelinde iki
+  satır ve inşaattaki birim.
+
+**Ölçüm (`pnpm balance "senaryolar iv"`).** Yöntem Senaryolar I–III'ün: el
+sürmeyen ve sektöre girmeyen kaybediyor, oyunun tavsiyesine uyan kazanıyor,
+üç yıldız vekilin en keskin oyunundan iyisini istiyor. Sektör vekili temel
+vekilin üstüne her gün (Tur 56–59'un vekilleri).
+
+| | Kaybeden kollar | Kazananlar |
+|---|---|---|
+| Herkesin nakliyecisi | el sürmeyen, temel vekil; terminal kurup her teklifi kabul eden ama uzlaşmayan (240. günde hedefin %70'i) | uzlaşan 121. gün (2★), keskin 121. gün (2★), 15 günde bir oynayan 181. gün (1★) |
+| Karanlık kış | santral kurmayan; dört santralle yetinen (%87); 15 günde bir oynayan (%96) | sekiz santralli 158. gün (1★), az mağaza kurup on iki santrale izin veren 151. gün (2★), keskin 148. gün (2★) |
+| Kentsel dönüşüm | proje kurmayan; dört projeyle yetinen, dönüşüme girmeyen ve yalnız dönüşümle büyüyen (devralınıyor); 15 günde bir oynayan (%67) | sekiz projeli geliştirici 243. gün (2★), ihalede tabanın altı katına çıkan 215. gün (2★) |
+
+- *Herkesin nakliyecisi:* şehrin mağazalarının çoğu kinli iki rakipte;
+  küçük rakiplerin mağazası kırka yetmiyor. Pragmatiğin kini kendi kendine
+  ancak 150 günde söner: uzlaşmayan nakliyeci yetişemiyor.
+- *Karanlık kış:* kendi binası santralin gücünü önce alıyor; santralin
+  yanına mağaza kuran rakibe daha az satıyor (az mağaza kuran vekil daha
+  erken).
+- *Kentsel dönüşüm:* bağlayan koşul dönüşüm: birim hedefi 205. gün dolayında
+  tutuyor, ikinci dönüşüm projesi ancak 215–243. günde açılıyor. Proje
+  nakdi yiyor, geri alım kasası kalmıyor: dört projeyle yavaş büyüyen
+  devralınıyor.
+
+**Ek kuralların etkisi** (kural kapalı ön tarihle aynı vekil):
+- *Aç gözlü rakipler* taşınacak işi büyütüyor: uzlaşan nakliyeci kuralla
+  121., kuralsız 145. günde.
+- *Sıkı banka* yalnız kredi çekene dokunuyor: devirde limit 492 B ₺ %13,5
+  (kuralsız 821 B ₺ %9,5). Kredisiz vekillerin sonucu kuralla aynı; kredi
+  çeken vekil kuralla 154., kuralsız 156. günde (gürültüde).
+- *Kıt arsa* geliştiricinin gününü değiştirmiyor (243. gün, dönüşüm
+  bağlıyor); rakiplerin arsa toplamasını da yavaşlatıyor.
+
+**Kalibrasyon.**
+- *Nakliye:* ilk hedef "3 ayrı rakip, 16 mağaza" idi. Standart şehirde dört
+  rakibin ikisi küçük (biri hiç mağazasız); üçüncü rakip şansa kalıyordu,
+  15 günde bir oynayan 3★ alıyordu. Hedef kırk mağaza, en az iki rakip.
+- *Enerji:* seed 42'de 200. günde sanayi doluydu, hiçbir vekil santral
+  kuramadı; seed 5'te liman 160. günde açılmış. İlk hedef 1,5 M ₺'de bütün
+  santral vekilleri 90. günde 3★ alıyordu; 4 M ₺. Kıt arsa da denendi:
+  vekiller birbirine yaklaşıyordu (dört santralli 15 günde bir oynayan
+  sekiz santralliyle aynı yerde), senaryo ayırt etmiyordu.
+- *Dönüşüm:* yalnız birim hedefiyle (1.200) dönüşüme girmeyen vekil de
+  aynı günde kazanıyordu; hedefe iki dönüşüm projesi eklendi. 420 günlük ön
+  tarih de denendi: şehir doluyor ama rakipler 27–33 M ₺ oluyor, her vekil
+  190. gün dolayında devralınıyordu.
+
+**Kariyer.** "Kusursuz" rozetinin hedefi senaryo sayısının üç katı (21 →
+30); kazanılmış rozet kayıtta kalıyor. "Senaryo turu" on senaryoyu istiyor.
+
+**Lig.** Senaryolar ligde yok. Parmak izinde `FREIGHT.hostileOffers` ve
+`RELATION.events.feud`: ikisi değişince iz değişiyor.
+
+**Arayüz.**
+- Kurulumda senaryo kartında ek kuralın adı; seçilen senaryonun ayrıntısında
+  "Ek kural" ve açıklaması.
+- Açılış ekranında kinli rakipler ve ek kural.
+- Hedef panelinde nakliye ve kiralık listeleri; sonuç ekranında süre dolunca
+  hedefin ne kadarına varıldığı.
+- Rakip dosyasında devralınan husumetin satırı. İki dilde.
+
+**Eski denge bölümleri.** ESKI_BOLUMLER
+
+**Testler.** `pnpm test` 706/706 (698'den); tip denetimi temiz; denge
+sınavı DENGE_SAYISI (31 bölüm); paket bütçesi tamam (ana parça 70,3 KB, 68,7'den).
+- Çekirdek (`scenario.test.ts`, 6 yeni; `freight.test.ts`, 1 yeni):
+  - ek kural ön tarihte; Sıkı bankanın devirdeki kredisi;
+  - hedef cümleleri sayılarla;
+  - devralınan husumet: en değerli iki rakip kinli, hafızada, haberi
+    açılıştan sonra;
+  - nakliye hedefi: tek rakip yetmiyor, iki rakibin kırk mağazası kazanıyor,
+    el değiştiren mağaza sayılmıyor;
+  - enerji hedefi: kriz takvimi, satış santralin günlük cirosuyla birikiyor,
+    eşikte kazanıyor;
+  - kiralık hedefi: inşaat ve hak sahipleri sayılmıyor, birim yetse de tek
+    dönüşüm projesi yetmiyor;
+  - kinli rakip teklif getirmiyor, husumet bitince getiriyor (kural
+    kapalıyken test kırılıyor).
+- Lig (`league.test.ts`, 1 yeni): kinli rakibin teklif kuralı ya da
+  devralınan husumet değişince iz değişiyor.
+- Tarayıcı testi "Senaryo paketi II" 10/10, konsol temiz: on kart ve
+  kuralları, nakliyecinin açılışı (kinli iki rakip, kural), hedef panelinde
+  rakip rakip taşınan mağaza, santralin satışı ve paneli, dönüşümün listesi,
+  süre dolunca kayıp.
+
+**Canlıya geçiş.** Şema aynı, simülasyon değişti (kinli rakibin teklifi):
+birleşmeden sonra Worker yeniden dağıtılıyor. Lite etkilenmiyor.
+
 ---
 
 ## 3. Ölçülen durum
@@ -6520,7 +6643,7 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 | Denge testi | **358 kontrol, hepsi geçiyor** (30 bölüm, süreleriyle; ~17 dk) |
 | Tarayıcı testi | **546 kontrol, hepsi geçiyor**, 0 konsol hatası (~40 dk); duman koşusu 132 (~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + paket bütçesi (Tur 46; Tur 48'den beri hizmet çalışanı ve manifest de) + duman oynanışı |
-| Kapsam | 40 bina · 25 ürün · 7 kategori · 8 rakip profili · 10 CEO · 22 olay (11 şehir + 11 sektör) · 3 kriz · 12 karar kartı · 70 rakip sözü · 4 mizaç · 48 ilişki sözü · 5 fırsat balonu · 8 görev türü · 4 mevsim · 9 moda ürünü · 17 şehir yapısı (6 siluet) · 6 şehir projesi · 7 senaryo · 4 ek kural · 28 rozet |
+| Kapsam | 40 bina · 25 ürün · 7 kategori · 8 rakip profili · 10 CEO · 22 olay (11 şehir + 11 sektör) · 3 kriz · 12 karar kartı · 70 rakip sözü · 4 mizaç · 48 ilişki sözü · 5 fırsat balonu · 8 görev türü · 4 mevsim · 9 moda ürünü · 17 şehir yapısı (6 siluet) · 6 şehir projesi · 10 senaryo · 4 ek kural · 28 rozet |
 
 ### Render (Tur 6 sonrası)
 

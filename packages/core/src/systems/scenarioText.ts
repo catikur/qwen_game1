@@ -1,4 +1,4 @@
-import { fillTemplate, formatDecimal } from '@capital/content';
+import { fillTemplate, formatDecimal, formatNumber } from '@capital/content';
 import type { ScenarioDef } from '@capital/content';
 import { tc } from '../i18n';
 import { formatMoney } from '../format';
@@ -18,10 +18,15 @@ export function starsFor(def: ScenarioDef, score: number): number {
 
 /** Hedef cümlesi, sayılar doldurulmuş. */
 export function scenarioGoalText(def: ScenarioDef): string {
+  const goal = def.goal;
   return fillTemplate(def.goalText, {
     days: def.days,
-    target: def.goal.kind === 'netWorth' ? formatMoney(def.goal.target) : '',
-    share: def.goal.kind === 'chain' ? Math.round(def.goal.share * 100) : '',
+    target: goal.kind === 'netWorth' || goal.kind === 'power' ? formatMoney(goal.target) : '',
+    share: goal.kind === 'chain' ? Math.round(goal.share * 100) : '',
+    rivals: goal.kind === 'freight' ? goal.rivals : '',
+    outlets: goal.kind === 'freight' ? goal.outlets : '',
+    units: goal.kind === 'rental' ? formatNumber(goal.units) : '',
+    renewals: goal.kind === 'rental' ? goal.renewals : '',
   });
 }
 

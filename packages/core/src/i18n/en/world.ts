@@ -180,6 +180,10 @@ export const world: Record<keyof typeof trWorld, string> = {
   'core.scenario.progressMonopoly': 'taken over {taken}/{total} · {left|# rival|# rivals} left',
   'core.scenario.progressHolding': 'victory in {won}/{total|# city|# cities} · this city {value} / {target}',
   'core.scenario.progressHoldingWon': 'victory in {won}/{total|# city|# cities} · this city has won',
+  'core.scenario.progressFreight': 'rivals {served}/{rivals} · stores hauled {outlets}/{target}',
+  'core.scenario.progressPower': '{value} / {target} of power sold to rivals',
+  'core.scenario.progressRental': '{occupied} / {target} occupied units · renewal {renewals}/{renewalTarget}',
+  'core.scenario.progressRentalBuilding': '{occupied} / {target} occupied units · renewal {renewals}/{renewalTarget} · {building} units under construction',
 
   // events.ts — event and era endings
   'core.events.endedTitle': '{title} has ended',

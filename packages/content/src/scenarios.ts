@@ -1,6 +1,7 @@
 import { localizeList } from './localize';
 import type { CitySizeId } from './districts';
 import type { DifficultyId } from './difficulty';
+import type { ModifierId } from './modifiers';
 import type { CategoryId } from './types';
 
 /**
@@ -20,8 +21,22 @@ import type { CategoryId } from './types';
  * Yıldızlar ya hedefe ulaşma gününden (`days`: az iyi) ya bitişteki
  * öndelikten (`lead`: oyuncunun net değeri / en güçlü rakibinki) geliyor.
  * Eşikler vekil ölçümünden (`packages/core/test/balance.ts`, "Senaryolar").
+ *
+ * Senaryo paketi II (Tur 60): Faz 3'ün sektörleriyle üç senaryo —
+ * nakliye, enerji ve kentsel dönüşüm. Her biri bir ek kuralla (Tur 45)
+ * oynanıyor: kural ön tarihte de geçerli, şehir onunla büyüdü.
  */
-export type ScenarioId = 'rescue' | 'crisis' | 'consortium' | 'chain' | 'sponsor' | 'conquest' | 'holding';
+export type ScenarioId =
+  | 'rescue'
+  | 'crisis'
+  | 'consortium'
+  | 'chain'
+  | 'sponsor'
+  | 'conquest'
+  | 'holding'
+  | 'haulage'
+  | 'blackout'
+  | 'renewal';
 
 /**
  * Devirde oyuncunun şirketi. Parçalar birleşebiliyor: her senaryo
@@ -76,6 +91,12 @@ export interface ScenarioSetup {
    * sermaye ondan düşülmüyor ve kurucu şehrin zafer ölçüsüne eklenmiyor.
    */
   secondCity?: { capital: number; citySize: CitySizeId };
+  /**
+   * Devralınan husumet (Tur 60): net değeri en yüksek bu kadar rakip
+   * oyuncuya kinli başlıyor (Rakipler 2.0'ın `feud` olayı, mizaçla).
+   * Önceki yönetimin fiyat savaşları; kinli rakip taşıma teklifi getirmiyor.
+   */
+  feud?: number;
 }
 
 export type ScenarioGoal =
@@ -99,7 +120,20 @@ export type ScenarioGoal =
   /** Bütün rakipleri devral (tekel). */
   | { kind: 'monopoly' }
   /** Holding'in bütün şehirlerinde zafer; hiçbir şehir kaybedilmeden. */
-  | { kind: 'holding' };
+  | { kind: 'holding' }
+  /**
+   * Nakliye (Tur 60): aynı gün en az `rivals` ayrı rakibin toplam en az
+   * `outlets` mağazası terminallerinin taşıma sözleşmesinde.
+   */
+  | { kind: 'freight'; rivals: number; outlets: number }
+  /** Enerji (Tur 60): senaryo boyunca santrallerinden rakiplere toplam `target` ₺ elektrik sat. */
+  | { kind: 'power'; target: number }
+  /**
+   * Gayrimenkul (Tur 60): kiralıklarında aynı gün en az `units` dolu birim
+   * (hak sahipleri sayılmıyor) ve dönüşüm parselinde açılmış en az
+   * `renewals` proje.
+   */
+  | { kind: 'rental'; units: number; renewals: number };
 
 export interface ScenarioStars {
   /** `days`: hedefe kaç günde ulaşıldı (az iyi) · `lead`: bitişte en güçlü rakibe oran (çok iyi). */
@@ -124,6 +158,12 @@ export interface ScenarioDef {
   citySize: CitySizeId;
   difficulty: DifficultyId;
   preludeDays: number;
+  /**
+   * Ek kurallar (Tur 45) ön tarihle birlikte: şehir onlarla kuruldu ve
+   * büyüdü. Kurulum ekranında ve açılışta yazıyor; zorluk çarpanına
+   * girmiyor (yıldızlar kuralla ölçüldü).
+   */
+  modifiers?: readonly ModifierId[];
   /** Süre: senaryonun başladığı günden. */
   days: number;
   goal: ScenarioGoal;
@@ -412,6 +452,137 @@ export const SCENARIOS: ScenarioDef[] = [
       outlets: ['supermarket', 'supermarket', 'restaurant', 'restaurant', 'department_store', 'cafe', 'cafe', 'boutique', 'electronics_store', 'gym'],
       builtDaysAgo: 120,
       secondCity: { capital: 4_000_000, citySize: 'standard' },
+    },
+  },
+  /*
+   * HERKESİN NAKLİYECİSİ (Tur 60; seed 1, 240 gün ön tarih, Aç gözlü
+   * rakipler). Lojistik ve Rakipler 2.0: taşıma teklifi rakipten geliyor,
+   * kinli rakip getirmiyor. Şehrin mağazalarının çoğu en büyük iki rakipte
+   * ve ikisi kinli başlıyor (gururlu −72, pragmatik −60); küçük rakiplerin
+   * mağazası hedefe yetmiyor. Kırk mağaza ancak kinli biriyle barışınca.
+   *
+   * Vekil (beş günde bir kuran, üç günde bir savunan): taşımayan süreyi
+   * dolduruyor; her teklifi kabul edip terminal kuran ama uzlaşmayan da
+   * (pragmatiğin kini ancak 150 günde söner; 240. günde hedefin %70'i).
+   * Uzlaşan 121. günde, 15 günde bir oynayan 181. günde hedefte. Aç gözlü
+   * rakipler işi kolaylaştırıyor: kural kapalıyken uzlaşan 145. günde.
+   */
+  {
+    id: 'haulage',
+    title: 'Herkesin nakliyecisi',
+    tagline: 'Rakiplerin mallarını sen taşı; ama ikisi sana kinli ve hepsi aç gözlü.',
+    brief:
+      'Şehrin şirketleri hızla büyüyor, mağazaları her bölgede. Önceki yönetim en büyük iki rakiple fiyat savaşına girdi; onlar hâlâ kin besliyor. Elinde birkaç mağaza ve nakit var. Kamyon filosu kurup rakiplerin dağıtımını üstlenirsen hem kazanırsın hem barışırsın.',
+    goalText: '{days} gün içinde aynı gün en az {rivals} rakibin toplam {outlets} mağazasını taşı.',
+    facts: [
+      'Taşıma teklifi rakipten gelir; kinli rakip teklif getirmez. Uzlaşma (Rakipler paneli) ve her taşıma sözleşmesi ilişkiyi düzeltir.',
+      'Nakliye Terminali 1,5 M ₺ şirket değeriyle açılıyor: filosu 16 mağaza, menzili 10 parsel.',
+      'Aç gözlü rakipler: daha cesur yatırıyor (taşınacak mağaza çok) ve baskına erken başlıyor.',
+    ],
+    seed: 1,
+    citySize: 'standard',
+    difficulty: 'normal',
+    preludeDays: 240,
+    modifiers: ['hungry_rivals'],
+    days: 240,
+    goal: { kind: 'freight', rivals: 2, outlets: 40 },
+    stars: { metric: 'days', two: 160, three: 110 },
+    setup: {
+      cash: 2_500_000,
+      outlets: ['supermarket', 'restaurant', 'cafe', 'boutique'],
+      builtDaysAgo: 120,
+      feud: 2,
+    },
+  },
+  /*
+   * KARANLIK KIŞ (Tur 60; seed 5, 200 gün ön tarih, Sıkı banka). Enerji
+   * krizi bir ay sonra başlıyor ve senaryonun son günü bitiyor: şebeke
+   * fiyatı iki katı. Santralin menzilindeki rakip binası santrale fatura
+   * ödüyor. Seed 5: liman 160. günde açılmış, sanayi ve limanda boş parsel
+   * var (seed 42'de 200. günde sanayi doluydu, santral kurulamıyordu).
+   * Doğalgaz santrali 2,5 M ₺ şirket değeriyle açılıyor; devirde değer
+   * onun biraz üstünde.
+   *
+   * Vekil: santral kurmayan, dört santralle yetinen ve 15 günde bir oynayan
+   * süreyi dolduruyor (%92–96). Sekiz santralli 157., en keskinler (daha
+   * az mağaza kuran ya da on iki santrale izin veren) 152. günde. Kendi
+   * mağazası santralin gücünü önce alıyor: santralin yanına mağaza kurmak
+   * rakibe satılacak elektriği azaltıyor.
+   *
+   * Sıkı banka yalnız kredi çekene dokunuyor: devirde limit 492 B ₺ %13,5
+   * (kuralsız 821 B ₺ %9,5). Vekillerin kredisiz sonucu kuralla aynı;
+   * kredi çeken vekilin günü kuralla kuralsız arasında gürültüde (±5 gün).
+   * Kıt arsa da denendi: santral parseli kıtlaşıyor ama vekiller birbirine
+   * yaklaşıyor (dört santralli 15 günde bir oynayan sekiz santralliyle
+   * aynı yerde); senaryo ayırt etmiyordu.
+   */
+  {
+    id: 'blackout',
+    title: 'Karanlık kış',
+    tagline: 'Enerji krizi geliyor; santrali olan kazanır, ama banka sana sıkı.',
+    brief:
+      'Doğalgaz arzında tıkanma bekleniyor: bir ay sonra şebeke fiyatı ikiye katlanacak ve kriz kış boyu sürecek. Şirketin sekiz mağazası var ama kasası ince ve banka temkinli. Rakiplerin binaları şebekeye bağlı: santralinin menzilindeki her rakip binası krizde faturasını sana öder.',
+    goalText: '{days} gün içinde santrallerinden rakiplere toplam {target} değerinde elektrik sat.',
+    facts: [
+      'Santral önce kendi binalarına, artan gücü menzilindeki rakip binalarına veriyor; rakip şebeke fiyatının %5 altından ödüyor.',
+      'Doğalgaz Santrali 2,5 M ₺ şirket değeriyle açılıyor, sanayi bölgesine ve limana kuruluyor. Yakıtını sabitlersen kriz fiyatı santralinin kârına döner.',
+      'Kendi binaların santralin gücünü önce alır: santrali rakiplerin binalarının arasına kur.',
+      'Sıkı banka: kredi ve kredili hesap faizi 4 puan yüksek, kredi limitleri %40 düşük.',
+    ],
+    seed: 5,
+    citySize: 'standard',
+    difficulty: 'normal',
+    preludeDays: 200,
+    modifiers: ['tight_credit'],
+    days: 180,
+    goal: { kind: 'power', target: 4_000_000 },
+    stars: { metric: 'days', two: 155, three: 140 },
+    setup: {
+      cash: 1_400_000,
+      outlets: ['supermarket', 'supermarket', 'restaurant', 'restaurant', 'cafe', 'boutique', 'electronics_store', 'gym'],
+      builtDaysAgo: 120,
+      crisis: { id: 'energy_shock', warningDays: 30 },
+    },
+  },
+  /*
+   * KENTSEL DÖNÜŞÜM (Tur 60; seed 7, 250 gün ön tarih, Kıt arsa).
+   * Gayrimenkul: arsa pahalı, dönüşüm ihalesinin parseli imar artışıyla
+   * büyük proje veriyor. Hedef iki koşul: dolu birim ve açılmış iki
+   * dönüşüm projesi. Yalnız birimle hiçbir vekil dönüşüme girmeden
+   * kazanıyordu (ihale yavaş, boş parsel yetiyordu).
+   *
+   * Vekil: proje kurmayan, dört projeyle yetinen, dönüşüme girmeyen ve
+   * yalnız dönüşümle büyüyen ya devralınıyor ya süreyi dolduruyor (proje
+   * nakdi yiyor, geri alım kasası kalmıyor). Sekiz projeli geliştirici
+   * 243., ihalede tabanın altı katına çıkan 215. günde hedefte. 420 günlük
+   * ön tarih denendi: şehir doluyor ama rakipler 27–33 M ₺ oluyor, her
+   * vekil 190. gün dolayında devralınıyordu.
+   */
+  {
+    id: 'renewal',
+    title: 'Kentsel dönüşüm',
+    tagline: 'Arsa kıt ve pahalı: eski yapıları dönüştür, projeleri kiracıyla doldur.',
+    brief:
+      'Şehirde boş arsa az ve pahalı; kilitli bölgeler geç açılıyor. Belediye eski yapıların yerine kentsel dönüşüm ihalesine çıkıyor: kazanan, imar artışıyla büyük bir proje kurar. Şirketin elinde nakit ve iki kiralık bina var.',
+    goalText: '{days} gün içinde kiralıklarında {units} dolu birime ulaş; en az {renewals} dönüşüm projesi açılmış olsun.',
+    facts: [
+      'Konut Sitesi ve Ofis Kampüsü bir parsele en çok birimi sığdırıyor; inşaatı 75–100 gün sürüyor, kiracı zamanla geliyor.',
+      'Dönüşüm başvurusu (şehir yapısının panelinde): sıradaki ihale o parsel. Dönüşüm parselindeki proje 1,6 kat birimle; hak sahipleri hedefe sayılmıyor.',
+      'Kira: pahalı kira doluluğu düşürür, ucuz kira doldurur.',
+      'Kıt arsa: arsa fiyatları %70 yüksek, ihale taban fiyatı da; kilitli bölgeler %50 geç açılır.',
+    ],
+    seed: 7,
+    citySize: 'standard',
+    difficulty: 'normal',
+    preludeDays: 250,
+    modifiers: ['scarce_land'],
+    days: 360,
+    goal: { kind: 'rental', units: 1_500, renewals: 2 },
+    stars: { metric: 'days', two: 250, three: 200 },
+    setup: {
+      cash: 6_000_000,
+      outlets: ['residence', 'office_tower'],
+      builtDaysAgo: 120,
     },
   },
 ];

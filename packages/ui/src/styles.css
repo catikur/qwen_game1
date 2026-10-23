@@ -2191,6 +2191,9 @@ button.icon {
 .tag.bad {
   color: var(--bad);
 }
+.tag.warn {
+  color: var(--warn);
+}
 
 .newgame-actions {
   display: flex;
@@ -5968,6 +5971,14 @@ button.icon {
   font-size: calc(12.5px * var(--text-scale));
   line-height: 1.4;
   color: var(--muted);
+}
+
+/* Tur 60: senaryonun ek kuralı kartta (kuralı olan senaryo). */
+.scenario-card-rules {
+  font-size: calc(11.5px * var(--text-scale));
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--warn);
 }
 
 .scenario-card-status {

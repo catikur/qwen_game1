@@ -296,6 +296,7 @@ export const panels = {
   'panels.rival.memory.campaignHeld': 'Kampanyasını geri püskürttün',
   'panels.rival.memory.settled': 'Rövanşı kazandı, hesap görüldü',
   'panels.rival.memory.amends': 'Uzlaşma bağışı yaptın',
+  'panels.rival.memory.feud': 'Önceki yönetimin fiyat savaşı',
   'panels.rival.amends': 'Uzlaşma teklif et · {cost} (+{points} puan)',
   'panels.rival.amendsTitle': 'CEO\'nun vakfına bağış: ilişki düzelir, para kimseye geçmez. Rakip başına 90 günde bir.',
   'panels.rivals.you': ' (sen)',

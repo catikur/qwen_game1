@@ -398,6 +398,11 @@ simülasyon değişti (ilişki puanı, rakiplerin tepkileri, uzlaşma komutu).
 Yine yalnız 3. adım: `pnpm lite:league-bundle`, paketi yapıştır, Deploy.
 Sağlık ucu değişmiyor, Lite etkilenmiyor.
 
+**Tur 60 (senaryo paketi II):** şema değişmedi, simülasyon değişti (kinli
+rakip taşıma teklifi getirmiyor; senaryolar ligde yok). Yine yalnız 3.
+adım: `pnpm lite:league-bundle`, paketi yapıştır, Deploy. Sağlık ucu
+değişmiyor, Lite etkilenmiyor.
+
 **Sürüm uyumu.** Sunucu koşuyu yalnız kendi simülasyon sürümüyle
 yargılayabiliyor. Pages'teki oyun her `main` birleşmesinde kendiliğinden
 güncelleniyor, Worker elle. Oyunun simülasyonunu değiştiren bir birleşmeden

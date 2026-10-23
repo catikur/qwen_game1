@@ -1,3 +1,4 @@
+import { SCENARIOS } from './scenarios';
 import { localizeList } from './localize';
 import type { CitySizeId } from './districts';
 import type { DifficultyId } from './difficulty';
@@ -335,7 +336,8 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     title: 'Kusursuz',
     hint: 'Senaryoların bütün yıldızlarını topla.',
     kind: 'scenarioStars',
-    target: 21,
+    // Her senaryonun üç yıldızı (Tur 60: on senaryo). Kazanılmış rozet kayıtta kalıyor.
+    target: SCENARIOS.length * 3,
   },
   {
     id: 'league_player',

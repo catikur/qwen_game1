@@ -28,6 +28,7 @@ const MEMORY_LABEL: Record<RelationEventKind, MessageKey> = {
   campaignHeld: 'panels.rival.memory.campaignHeld',
   settled: 'panels.rival.memory.settled',
   amends: 'panels.rival.memory.amends',
+  feud: 'panels.rival.memory.feud',
 };
 
 /** Rakiplerin satırındaki ilişki çipi. */
