@@ -91,6 +91,7 @@ export const app: Record<keyof typeof trApp, string> = {
   'app.league.move.fuel': 'Locked fuel',
   'app.league.move.rent': 'Set rent',
   'app.league.move.renewal': 'Applied for renewal',
+  'app.league.move.amends': 'Made amends with a rival',
   'app.league.move.price': 'Adjusted prices',
   'app.league.move.shelf': 'Changed shelves or focus',
   'app.league.move.staff': 'Made a wage or union call',

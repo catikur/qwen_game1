@@ -160,7 +160,17 @@ export {
   projectTable,
   projectsEnabled,
 } from './systems/projects';
-export { campaignPriceFactor, campaignsLive, effectivePriceMultiplier, rivalQuote, storiesEnabled } from './systems/rivalry';
+export { campaignPriceFactor, campaignsLive, effectivePriceMultiplier, revengeDay, rivalQuote, storiesEnabled } from './systems/rivalry';
+export {
+  amendsBlocker,
+  amendsCost,
+  hostileRivals,
+  relationScore,
+  relationsEnabled,
+  stanceOf,
+  temperamentOf,
+  undercutRivals,
+} from './systems/relations';
 export { activeContract, contractProgress, OFFER_LIFETIME_DAYS } from './systems/contracts';
 export { FREIGHT, fleetUsed, freightFeeEstimate, freightPenalty, freightProspects, freightTerminals } from './systems/freight';
 export {

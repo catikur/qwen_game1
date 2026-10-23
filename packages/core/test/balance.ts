@@ -22,6 +22,7 @@ import {
   GOODS_BY_CATEGORY,
   ISSUANCE,
   NPC_PROFILES,
+  TEMPERAMENTS,
   getCeoModifiers,
   rootStructureOf,
 } from '@capital/content';
@@ -94,7 +95,9 @@ import {
   energyStrategy,
   freightStrategy,
   playerStrategy,
+  rivalryStrategy,
 } from './proxy';
+import { stanceOf, temperamentOf } from '../src/systems/relations';
 
 // Oyuncu vekili ve aktif rakip listesi tek kopya: `./proxy`.
 
@@ -5201,6 +5204,124 @@ section('Gayrimenkul: proje, kira ve kentsel dönüşüm', () => {
     'Kentsel dönüşüm işliyor: vekil en az bir şehirde dönüşüm ihalesini kazanıp proje kuruyor; projesi imar artışıyla daha çok kiralık birim',
     runs.some((r) => r.dev.renewals > 0) && units.units > estate.capacity,
     `${runs.map((r) => `${r.dev.renewals} dönüşüm`).join(' · ')}; Konut Sitesi ${estate.capacity} → ${units.units} kiralık + ${units.rightHolders} hak sahibi`,
+  );
+});
+
+section('Rakipler 2.0: husumet, ittifak ve tepkiler', () => {
+  /*
+   * Tur 59. Rakipler oyuncunun hamlelerini hatırlıyor: hisselerini
+   * toplayan, ondan ucuz satan, ihalede geçen oyuncuya husumet; mağazasını
+   * taşıyana, mecliste yanında durana dostluk. Husumetli rakip fiyat
+   * savaşını sana açıyor (rövanş: senin en ucuz rafının altına iniyor),
+   * mecliste çıkarına karşı bağış yapıyor, yeni mağazasını senin rafına
+   * açıyor, ihalede inadına artırıyor.
+   *
+   * Beş kol, aynı şehirler, aynı temel vekil:
+   *   - temel: rakiplere hiçbir şey yapmıyor;
+   *   - saldırgan: rakibin rafı olan yerde ×0,90 fiyat (fiyat kırma eşiği),
+   *     otuz günde bir en küçük rakipten %2 hisse;
+   *   - kör: saldırganın aynısı, rakiplerin hafızası kapalı (tepkinin
+   *     bedeli bu ikisinin farkı);
+   *   - tövbekâr: 270. güne kadar saldırgan, sonra temel (kim ne kadar
+   *     sürede unutuyor: mizaç);
+   *   - uzlaşan: tövbekâr + 270. günden sonra husumetli rakiple uzlaşma.
+   */
+  const LONG = 540;
+  const STOP = 270;
+  const m = (v: number) => `${(v / 1_000_000).toFixed(1)} M`;
+  const pct = (v: number) => `${v >= 0 ? '+' : ''}${Math.round(v * 100)}%`;
+  type Arm = 'base' | 'hostile' | 'blind' | 'reformed' | 'reconciled';
+  const play = (seed: number, arm: Arm) => {
+    const engine = new GameEngine(createNewGame({ seed, companyName: 'Hafıza AŞ' }));
+    const state = engine.getState();
+    if (arm === 'blind') state.flags.rivalRelations = false;
+    let hostileDays = 0;
+    let lateHostileDays = 0;
+    let revenges = 0;
+    let amends = 0;
+    let firstHostile: number | null = null;
+    const reform = arm === 'reformed' || arm === 'reconciled';
+    // Tövbekâr: duruş gününde husumetli olan rakiplerin unutma süresi (mizaca göre).
+    const forgiving = new Map<string, { temperament: string; ended: number | null }>();
+    for (let day = 1; day <= LONG; day++) {
+      if (day % 5 === 0) playerStrategy(engine);
+      const before = new Map(Object.values(state.companies).map((c) => [c.id, c.relation?.amendsDay]));
+      if (arm !== 'base' && (!reform || day <= STOP)) rivalryStrategy(engine, { undercut: 0.9, raidEvery: 30, raidShare: 0.02 });
+      if (arm === 'reconciled' && day > STOP) rivalryStrategy(engine, { amends: true });
+      if (reform && day === STOP + 1) {
+        // Tövbe: fiyatlar piyasaya döner.
+        for (const b of Object.values(state.buildings)) {
+          if (b.companyId === state.playerCompanyId && b.priceMultiplier !== 1) engine.dispatch({ type: 'SET_PRICE_MULTIPLIER', buildingId: b.id, multiplier: 1 });
+        }
+        for (const c of Object.values(state.companies)) {
+          if (stanceOf(state, c.id) === 'hostile') forgiving.set(c.id, { temperament: temperamentOf(state, c.id)!.id, ended: null });
+        }
+      }
+      engine.runDay();
+      for (const c of Object.values(state.companies)) {
+        if (c.relation?.amendsDay !== undefined && c.relation.amendsDay !== before.get(c.id)) amends++;
+        const hostile = stanceOf(state, c.id) === 'hostile';
+        if (hostile) {
+          hostileDays++;
+          if (day > STOP) lateHostileDays++;
+          firstHostile ??= day;
+        }
+        const f = forgiving.get(c.id);
+        if (f && f.ended === null && !hostile) f.ended = day - STOP;
+      }
+      if (state.campaign?.revenge && state.campaign.startDay === state.time.day) revenges++;
+    }
+    return { net: getPlayer(state).netWorth, hostileDays, lateHostileDays, revenges, amends, firstHostile, forgiving };
+  };
+  const runs = [1, 7, 42].map((seed) => ({
+    seed,
+    base: play(seed, 'base'),
+    hostile: play(seed, 'hostile'),
+    blind: play(seed, 'blind'),
+    reformed: play(seed, 'reformed'),
+    reconciled: play(seed, 'reconciled'),
+  }));
+  for (const r of runs) {
+    const forgive = [...r.reformed.forgiving.values()].map((f) => `${f.temperament} ${f.ended ?? `>${LONG - STOP}`}`).join(', ');
+    console.log(
+      `  seed ${r.seed}: ${LONG}. gün temel ${m(r.base.net)} · kör ${m(r.blind.net)} · saldırgan ${m(r.hostile.net)} (hafızanın bedeli ${pct(r.hostile.net / r.blind.net - 1)}) · ilk husumet ${r.hostile.firstHostile ?? '-'}. gün, ${r.hostile.revenges} rövanş · tövbekâr ${m(r.reformed.net)}, ${STOP}. günden sonra ${r.reformed.lateHostileDays} husumet günü (unutma: ${forgive || '-'}) · uzlaşan ${m(r.reconciled.net)} (${pct(r.reconciled.net / r.reformed.net - 1)}), ${r.reconciled.lateHostileDays} husumet günü, ${r.reconciled.amends} uzlaşma`,
+    );
+  }
+  expect(
+    'Husumet doğuyor: saldırgan vekil her şehirde en az bir rakibi husumete düşürüyor',
+    runs.every((r) => r.hostile.firstHostile !== null),
+    runs.map((r) => `${r.hostile.firstHostile ?? '-'}. gün`).join(' · '),
+  );
+  expect(
+    'Tepki gerçek: husumetli rakip her şehirde rövanş fiyat savaşı açıyor',
+    runs.every((r) => r.hostile.revenges > 0),
+    runs.map((r) => `${r.hostile.revenges} rövanş`).join(' · '),
+  );
+  const cost = runs.reduce((sum, r) => sum + (r.hostile.net / r.blind.net - 1), 0) / runs.length;
+  expect(
+    `Hafızanın bedeli var ama ölümcül değil: aynı hamlelerle ${LONG}. günde ortalama %2–20 geride`,
+    cost <= -0.02 && cost >= -0.2,
+    `${runs.map((r) => pct(r.hostile.net / r.blind.net - 1)).join(' · ')} (ortalama ${pct(cost)})`,
+  );
+  const gain = runs.reduce((sum, r) => sum + (r.reconciled.net / r.reformed.net - 1), 0) / runs.length;
+  expect(
+    'Uzlaşma işe yarıyor: saldırmayı bırakıp uzlaşan, yalnız bırakandan daha az husumet günü görüyor ve ortalamada geride değil',
+    runs.every((r) => r.reconciled.amends > 0 && r.reconciled.lateHostileDays < r.reformed.lateHostileDays) && gain >= 0,
+    `${runs.map((r) => `${r.reformed.lateHostileDays} → ${r.reconciled.lateHostileDays} gün (${r.reconciled.amends} uzlaşma)`).join(' · ')}; değer ${pct(gain)}`,
+  );
+  // Mizaç: tövbeden sonra unutma süresi; sonuna kadar unutmayan sınır (270 gün) sayılıyor.
+  const forget = (kind: string) => {
+    const all = runs.flatMap((r) => [...r.reformed.forgiving.values()].filter((f) => f.temperament === kind));
+    return all.length ? all.reduce((sum, f) => sum + (f.ended ?? LONG - STOP), 0) / all.length : null;
+  };
+  const kinds = (Object.keys(TEMPERAMENTS) as (keyof typeof TEMPERAMENTS)[]).filter((k) => forget(k) !== null);
+  // Kini yavaş sönen geç unutuyor: sönüme göre sıralı mizaçların unutma süreleri de sıralı.
+  const ordered = [...kinds].sort((a, b) => TEMPERAMENTS[a].fadeHostile - TEMPERAMENTS[b].fadeHostile);
+  const times = ordered.map((k) => forget(k)!);
+  expect(
+    'Mizaç fark yaratıyor: kini yavaş sönen rakip tövbeden sonra geç unutuyor (en az iki mizaç)',
+    kinds.length >= 2 && times.every((t, i) => i === 0 || t <= times[i - 1]!),
+    ordered.map((k) => `${TEMPERAMENTS[k].name} (günde ${TEMPERAMENTS[k].fadeHostile}) ${Math.round(forget(k)!)} gün`).join(' · '),
   );
 });
 

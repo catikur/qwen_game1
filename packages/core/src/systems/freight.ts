@@ -3,6 +3,7 @@ import { formatMoney } from '../format';
 import { tc } from '../i18n';
 import { nextFloat } from '../rng';
 import { pushNews } from '../news';
+import { noteRelation } from './relations';
 import { FREIGHT_SHARE, ownDepotRelief, reliefOf } from './supply';
 import type { BuildingInstance, CommandResult, FreightDeal, FreightState, GameState } from '../types';
 
@@ -260,6 +261,8 @@ function payPenalty(state: GameState, deal: FreightDeal): number {
   const client = state.companies[deal.companyId];
   if (player) player.cash -= penalty;
   if (client) client.cash += penalty;
+  // Sözünü bozan oyuncuyu müşteri hatırlıyor (Tur 59).
+  noteRelation(state, deal.companyId, 'freightCancel');
   return penalty;
 }
 
@@ -293,6 +296,8 @@ export function acceptFreight(state: GameState, offerId: string): CommandResult 
     earned: 0,
   });
   freight.lastOfferDay = state.time.day;
+  // Mağazalarını taşıyan oyuncuyu müşteri hatırlıyor (Tur 59).
+  noteRelation(state, offer.companyId, 'freight');
   return { ok: true };
 }
 

@@ -3,6 +3,7 @@ import { tc } from '../i18n';
 import { pushNews } from '../news';
 import { rivalProfile } from '../profiles';
 import { noteFeat } from './feats';
+import { stanceOf } from './relations';
 import { buyShares, controlReachable, freeFloat, sharePrice, sharesHeld, sharesOutstanding, TOTAL_SHARES } from './equity';
 import type { CompanyState, ConsortiumState, GameState } from '../types';
 import { difficultyOf } from './rules';
@@ -64,7 +65,8 @@ export function consortiumPressure(state: GameState): ConsortiumPressure {
 /** Üyeler: en büyük rakipler, alıma katkı verebilecek kasası olanlar. */
 function pickMembers(state: GameState): CompanyState[] {
   return rivals(state)
-    .filter((company) => company.cash > CONSORTIUM.memberReserve)
+    // Müttefik oyuncuya karşı birliğe girmiyor (Tur 59).
+    .filter((company) => company.cash > CONSORTIUM.memberReserve && stanceOf(state, company.id) !== 'allied')
     .sort((a, b) => b.netWorth - a.netWorth || (a.id < b.id ? -1 : 1))
     .slice(0, CONSORTIUM.maxMembers);
 }

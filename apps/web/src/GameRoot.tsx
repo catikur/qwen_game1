@@ -292,6 +292,8 @@ export function GameRoot({
       basePrice: (goodId: string) => GOOD_BY_ID[goodId]?.basePrice ?? null,
       // Bina tanımının rolü: test, dumanın yalnızca üretim yapan tesisten çıktığını sayabilsin diye (Tur 34).
       buildingRole: (defId: string) => BUILDING_BY_ID[defId]?.role ?? null,
+      // Bina tanımının kategorisi: test, rakibin oyuncuyla ortak rafını bulabilsin diye (Tur 59).
+      buildingCategory: (defId: string) => BUILDING_BY_ID[defId]?.category ?? null,
     };
     return () => {
       delete globals['__capital'];

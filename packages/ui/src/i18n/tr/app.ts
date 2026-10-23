@@ -89,6 +89,7 @@ export const app = {
   'app.league.move.fuel': 'Yakıtı sabitledi',
   'app.league.move.rent': 'Kirayı ayarladı',
   'app.league.move.renewal': 'Dönüşüm başvurusu yaptı',
+  'app.league.move.amends': 'Rakiple uzlaştı',
   'app.league.move.price': 'Fiyat ayarladı',
   'app.league.move.shelf': 'Raf ya da odak değiştirdi',
   'app.league.move.staff': 'Ücret ya da sendika kararı verdi',

@@ -1,4 +1,4 @@
-import { CATEGORIES, COUNCIL, CONSUMER_CATEGORIES, MOTION_BIAS, MOTION_TEXT } from '@capital/content';
+import { CATEGORIES, COUNCIL, CONSUMER_CATEGORIES, MOTION_BIAS, MOTION_TEXT, RELATION } from '@capital/content';
 import type { CategoryId, MotionKind, NpcProfileDef } from '@capital/content';
 import { createRng, nextInt, nextRange } from '../rng';
 import { pushNews } from '../news';
@@ -6,6 +6,7 @@ import { rivalProfiles } from '../profiles';
 import { formatMoney } from '../selectors';
 import { tc } from '../i18n';
 import { noteFeat } from './feats';
+import { noteRelation, relationQuote, stanceOf } from './relations';
 import type { CommandResult, CompanyState, GameState, MotionState, PolicyState } from '../types';
 
 /**
@@ -177,18 +178,118 @@ function rivalLobbyBudget(company: CompanyState, profile: NpcProfileDef): number
 }
 
 function rivalsLobby(state: GameState, motions: MotionState[]): void {
+  const player = state.companies[state.playerCompanyId];
   rivalProfiles(state).forEach((profile) => {
     const company = state.companies[profile.id];
     if (!company) return;
+    // Oyuncuya karşı duruş (Tur 59): oyuncunun çıkarı rakibin çıkarına giriyor.
+    const stance = stanceOf(state, company.id);
+    let spoke = false;
     for (const motion of motions) {
       if (motion.lobby[company.id] !== undefined) continue;
-      const interest = interestOf(state, company, motion, profile);
-      const amount = Math.round(rivalLobbyBudget(company, profile) * interest);
-      if (Math.abs(amount) < 10_000 || Math.abs(amount) > company.cash) continue;
-      company.cash -= Math.abs(amount);
-      motion.lobby[company.id] = amount;
+      const own = interestOf(state, company, motion, profile);
+      const amount = Math.round(rivalLobbyBudget(company, profile) * own);
+      let total = amount;
+      if (stance && player) {
+        const theirs = interestOf(state, player, motion);
+        const weight = stance === 'hostile' ? -RELATION.spiteInterest : RELATION.allyInterest;
+        const budget = rivalLobbyBudget(company, profile) * (stance === 'hostile' ? RELATION.lobbyBudgetMultiple : 1);
+        total = Math.round(budget * Math.max(-1, Math.min(1, own + weight * theirs)));
+      }
+      if (Math.abs(total) < 10_000 || Math.abs(total) > company.cash) continue;
+      company.cash -= Math.abs(total);
+      motion.lobby[company.id] = total;
+      // Duruşun eklediği pay tepki sayılıyor: oylamada hafızaya girmiyor.
+      const added = Math.sign(total) === Math.sign(amount) ? Math.abs(total) - Math.abs(amount) : Math.abs(total);
+      if (stance && added >= 1) {
+        (motion.reactions ??= {})[company.id] = added;
+        if (!spoke) {
+          spoke = true;
+          const hostile = stance === 'hostile';
+          pushNews(
+            state,
+            hostile ? 'rival' : 'good',
+            tc(hostile ? 'core.relations.counterLobbyTitle' : 'core.relations.allyLobbyTitle', { name: company.name }),
+            [
+              tc(hostile ? 'core.relations.spiteLobbyBody' : 'core.relations.allyInterestBody', { title: motion.title, spent: formatMoney(Math.abs(total)) }),
+              relationQuote(state, company, hostile ? 'counterLobby' : 'allyLobby'),
+            ]
+              .filter(Boolean)
+              .join(' '),
+            company.id,
+          );
+        }
+      }
     }
   });
+}
+
+/**
+ * Oyuncuya özel lobi (Tur 59): husumetli rakip oyuncunun bağışına karşı,
+ * müttefik yanında bağış yapıyor — oyuncunun bağışının bir payı kadar,
+ * kendi lobi bütçesinin iki katına kadar. Kendi çıkarı aksini söylüyorsa
+ * (önergede öbür tarafa bağışı varsa) yapmıyor.
+ *
+ * Her gün, oylama gününde de oylamadan önce: oyuncu son gün bağış yapsa
+ * da tepki oylamaya yetişiyor, oyuncu da gördüğüne yanıt verebiliyor.
+ */
+function rivalsRespond(state: GameState, motions: MotionState[]): void {
+  const playerId = state.playerCompanyId;
+  rivalProfiles(state).forEach((profile) => {
+    const company = state.companies[profile.id];
+    if (!company) return;
+    const stance = stanceOf(state, company.id);
+    if (!stance) return;
+    let spoke = false;
+    for (const motion of motions) {
+      const player = motion.lobby[playerId] ?? 0;
+      if (player === 0) continue;
+      const side = stance === 'hostile' ? -Math.sign(player) : Math.sign(player);
+      const own = motion.lobby[company.id] ?? 0;
+      if (own !== 0 && Math.sign(own) !== side) continue;
+      const share = stance === 'hostile' ? RELATION.counterLobby : RELATION.allyLobby;
+      const target = Math.min(Math.abs(player) * share, rivalLobbyBudget(company, profile) * RELATION.lobbyBudgetMultiple);
+      const done = motion.reactions?.[company.id] ?? 0;
+      const add = Math.round(target - done);
+      if (add < 10_000 || add > company.cash) continue;
+      company.cash -= add;
+      motion.lobby[company.id] = own + side * add;
+      (motion.reactions ??= {})[company.id] = done + add;
+      if (done === 0 && !spoke) {
+        spoke = true;
+        const hostile = stance === 'hostile';
+        pushNews(
+          state,
+          hostile ? 'rival' : 'good',
+          tc(hostile ? 'core.relations.counterLobbyTitle' : 'core.relations.allyLobbyTitle', { name: company.name }),
+          [
+            tc(hostile ? 'core.relations.counterLobbyBody' : 'core.relations.allyLobbyBody', { title: motion.title, spent: formatMoney(add) }),
+            relationQuote(state, company, hostile ? 'counterLobby' : 'allyLobby'),
+          ]
+            .filter(Boolean)
+            .join(' '),
+          company.id,
+        );
+      }
+    }
+  });
+}
+
+/**
+ * Oylamada hafıza (Tur 59): oyuncunun bağış yaptığı önergede kendi
+ * çıkarıyla bağış yapmış rakip aynı ya da karşı tarafta. Tepki bağışı
+ * sayılmıyor: husumet kendi kendini beslemesin.
+ */
+function rememberVote(state: GameState, motion: MotionState): void {
+  const player = motion.lobby[state.playerCompanyId] ?? 0;
+  if (player === 0) return;
+  for (const [companyId, amount] of Object.entries(motion.lobby)) {
+    if (companyId === state.playerCompanyId) continue;
+    const reaction = motion.reactions?.[companyId] ?? 0;
+    const own = amount - Math.sign(amount) * reaction;
+    if (Math.abs(own) < 1) continue;
+    noteRelation(state, companyId, Math.sign(own) === Math.sign(player) ? 'lobbyWith' : 'lobbyAgainst');
+  }
 }
 
 // ------------------------------------------------------------- etkiler
@@ -295,9 +396,11 @@ export function runCouncilTick(state: GameState): void {
     // görüp kimin hangi tarafta olduğunu izleyebilsin, ama son güne kadar
     // beklemesin — lobi kamuya açık ve tepki verilebilir olmalı.
     if (day === session.openedDay + 3) rivalsLobby(state, session.motions);
+    if (day >= session.openedDay + 3 && state.flags.npcCompetition !== false) rivalsRespond(state, session.motions);
 
     if (day >= session.voteDay) {
       for (const motion of session.motions) {
+        rememberVote(state, motion);
         const breakdown = motionSupport(motion);
         const passed = breakdown.support >= 0.5;
         motion.result = { passed, support: breakdown.support, day };

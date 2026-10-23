@@ -151,6 +151,8 @@ export const commands = {
   'core.agenda.council': 'Meclis · {count} önerge',
   'core.agenda.crisisWarning': 'Kriz yaklaşıyor: {title}',
   'core.agenda.campaign': '{name}: {category} saldırısı',
+  'core.agenda.revenge': '{name}: {category} rövanşı',
+  'core.agenda.hostile': 'Husumet: {name}',
   'core.agenda.quests': '{month} görevleri {done}/{total}',
   'core.agenda.questsReady': 'Ödül hazır: {count} görev',
   'core.agenda.freightOffer': '{company} · {count} mağaza · günde ~{fee}',

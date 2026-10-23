@@ -91,16 +91,13 @@ tur ayrı PR, Codex temiz ve CI yeşilse birleşiyor.
 |---|---|---|
 | **56 · Lojistik** | Nakliye terminali (filolu lojistik binası), rakip mağazalarına taşıma sözleşmeleri, ücret rakibin tasarrufundan; kamyonlar rakibin vitrinine gidiyor. | bitti (#86) |
 | **57 · Enerji** | Şebeke fiyatı (bakımın enerji payı), doğalgaz santrali ve güneş tarlası, yeni kriz: enerji krizi; yakıt sabitleme. Santral önce kendi binalarına, sonra rakiplere. | bitti (#87) |
-| **58 · Gayrimenkul geliştiricisi** | Konut Sitesi ve Ofis Kampüsü (inşaatı süren, kiracısı zamanla gelen projeler), kira ayarı ve doluluk, kentsel dönüşüm hakkı (imar artışı, hak sahipleri) ve dönüşüm başvurusu. | bu PR |
+| **58 · Gayrimenkul geliştiricisi** | Konut Sitesi ve Ofis Kampüsü (inşaatı süren, kiracısı zamanla gelen projeler), kira ayarı ve doluluk, kentsel dönüşüm hakkı (imar artışı, hak sahipleri) ve dönüşüm başvurusu. | bitti (#88) |
+| **59 · Rakipler 2.0** | CEO'nun mizacı ve geçmişi; oyuncuya karşı ilişki puanı ve hafıza (hisse, ihale, meclis, nakliye, fiyat kırma, kampanya); husumette rövanş fiyat savaşı, mecliste karşı bağış, rafına mağaza, inadına teklif; ittifakta tersi; uzlaşma. | bu PR |
 
 Faz 3 simülasyonu değiştiriyor: her birleşmeden sonra Worker yeniden
 dağıtılıyor (`ios-lite/README.md`, "Sürüm uyumu"); o zamana kadar yeni
 koşular bekliyor.
 
-- **59 · Rakipler 2.0.** Gelecekler:
-  - CEO kimlikleri;
-  - ittifak ve husumet hafızası;
-  - oyuncuya özel tepkiler (fiyat savaşı, lobi).
 - **60 · Senaryo paketi II.** Yeni sektörlerle ve ek kurallarla üç senaryo.
 - **61 · Değerlendirme.** Strateji çeşitliliği ölçülüyor; her yol için
   ayrı bir vekil.

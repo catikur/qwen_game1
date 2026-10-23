@@ -2,6 +2,7 @@ import { BUILDING_BY_ID } from '@capital/content';
 import { BUILDING_BOOK_RATIO } from './city';
 import { scopedAssets } from './buildingIndex';
 import { tc } from '../i18n';
+import { noteRelation, sharePercent } from './relations';
 import type { CompanyState, GameState } from '../types';
 
 /**
@@ -228,6 +229,10 @@ export function buyShares(
   const cost = wanted * sharePrice(state, issuerId);
   if (cost > buyer.cash) return { ok: false, reason: tc('core.equity.noCash') };
 
+  // Rakibin hafızası (Tur 59): oyuncu hisselerini topluyor.
+  if (buyerId === state.playerCompanyId && issuerId !== buyerId) {
+    noteRelation(state, issuerId, 'shares', sharePercent(wanted, sharesOutstanding(state, issuerId)));
+  }
   buyer.cash -= cost;
   buyer.shares[issuerId] = (buyer.shares[issuerId] ?? 0) + wanted;
   return { ok: true };
@@ -251,6 +256,9 @@ export function sellShares(
   seller.cash += wanted * sharePrice(state, issuerId);
   seller.shares[issuerId] = held - wanted;
   if (seller.shares[issuerId] === 0) delete seller.shares[issuerId];
+  if (sellerId === state.playerCompanyId && issuerId !== sellerId) {
+    noteRelation(state, issuerId, 'sold', sharePercent(wanted, sharesOutstanding(state, issuerId)));
+  }
   return { ok: true };
 }
 

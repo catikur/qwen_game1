@@ -11,7 +11,8 @@ import { dailyBuyCap, sharesToControl } from './systems/orders';
 import { laborEnabled } from './systems/labor';
 import { crisesEnabled } from './systems/economy';
 import { cardParams, cardsEnabled } from './systems/cards';
-import { campaignsLive } from './systems/rivalry';
+import { campaignsLive, revengeDay } from './systems/rivalry';
+import { hostileRivals } from './systems/relations';
 import { questsEnabled, questsReady } from './systems/opportunities';
 import { activeFad } from './systems/living';
 import { projectStandings, projectsEnabled } from './systems/projects';
@@ -54,6 +55,7 @@ export type AgendaKind =
   | 'crisis'
   | 'card'
   | 'campaign'
+  | 'rival'
   | 'quests'
   | 'fad'
   | 'project'
@@ -467,7 +469,20 @@ export function agenda(state: GameState): AgendaItem[] {
       key: `campaign:${campaign.companyId}:${campaign.startDay}`,
       urgency: 1,
       daysLeft: Math.max(0, campaign.endDay - day),
-      label: tc('core.agenda.campaign', { name: attacker.name, category: CATEGORIES[campaign.category].name }),
+      label: tc(campaign.revenge ? 'core.agenda.revenge' : 'core.agenda.campaign', { name: attacker.name, category: CATEGORIES[campaign.category].name }),
+      tone: 'bad',
+    });
+  }
+
+  // Husumet (Tur 59): kim, ve kampanya yoksa rövanşa kaç gün.
+  const revenge = campaign || !campaignsLive(state) ? null : revengeDay(state);
+  for (const rival of hostileRivals(state)) {
+    items.push({
+      kind: 'rival',
+      key: `rival:${rival.id}`,
+      urgency: 1,
+      daysLeft: revenge !== null && Number.isFinite(revenge) ? Math.max(0, revenge - day) : null,
+      label: tc('core.agenda.hostile', { name: rival.name }),
       tone: 'bad',
     });
   }

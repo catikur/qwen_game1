@@ -4,7 +4,7 @@
 > `pnpm bench` çıktısından; iddialar `pnpm balance` ve `pnpm playtest`
 > tarafından her koşuda doğrulanıyor.
 >
-> Son güncelleme: şema **v6**, 58 tur (Tur 33 denendi ve geri alındı; Tur 34 eski görünüme canlılık ekledi; Tur 35 arayüzü Lite'ın "Cam & Bulut" diline taşıdı; Tur 36 şehre ayrıntı kattı; Tur 37a geç oyuna yönetim yükü, servet vergisi ve kriz dönemleri getirdi; Tur 37b karar kartlarını ve rakip hikâyelerini ekledi; Tur 37c fırsat balonlarını ve aylık görev panosunu getirdi; Tur 37d canlı pazarı, şehir projesi ihalesini ve rakip konsorsiyumunu getirdi; Tur 38 değerlendirme turuydu: geç oyun hızı, gündem ve haber akışı, zorluk eğrisi; Tur 39a senaryo modunu getirdi: Kurtarma ve Krizin ortasında; Tur 39b Konsorsiyuma karşı, Zincir ustası ve Şehrin sponsoru senaryolarını ekledi; Tur 39c Büyük şehir fethi ve Holding: iki şehir ile listeyi yediye tamamladı; Tur 40 cila ve performans; Tur 41 başarımlar ve kariyer; Tur 42 açılışta gölgelendirici derlemesi; Tur 43 oyun içi akıcılık; Tur 44 değerlendirme turuydu: Türkçe sayı biçimi, yardımın kapsamı, haber akışı; Tur 45 dört ek kural getirdi: Fırtınalı yıllar, Aç gözlü rakipler, Sıkı banka, Kıt arsa; Tur 46 açılış paketini böldü: kurulum ekranı telefonda yarı sürede; Tur 47 tek Ayarlar paneli ve erişilebilirlik getirdi: metin boyutu, renk körlüğüne uygun palet, hareket, ses düzeyleri, pencerelerde klavye; Tur 48 oyunu kurulabilir ve çevrimdışı açılır yaptı, yayından sonra "yeni sürüm hazır" diyor; Tur 49 müziği getirdi: gündüz, gece ve kriz, şehirle birlikte dönüyor; Tur 50 Faz 1'i değerlendirdi ve tanıtım paketini hazırladı; Tur 51 Faz 2'yi açtı: Lite'ın lig sunucusu ana oyunun Tohum Ligi koşularını da alıyor, tablo herkese açık; Tur 52'de sunucu her koşuyu gönderimde yeniden oynatıyor, tabloya yalnız doğrulanmış skor giriyor; Tur 53 ligin her haftasına bir ek kural ve 90 günlük günün koşusunu getirdi; Tur 54 liderlerin eğrisini senin koşunun üstüne koydu ve liderin o günlerde ne yaptığını koşu kodundan anlatıyor; Tur 55 davet kodlu arkadaş liglerini getirdi ve Faz 2'yi kapattı; Tur 56 Faz 3'ü açtı: nakliye terminali rakip mağazalarına taşıma sözleşmesiyle taşıyor; Tur 57 enerjiyi getirdi: şebeke fiyatı, santraller, enerji krizi; Tur 58 gayrimenkul geliştiricisini getirdi: konut ve ofis projeleri, kira ve doluluk, kentsel dönüşüm hakkı ve başvurusu). Önümüzdeki işin sırası `docs/YOL-HARITASI.md`'de.
+> Son güncelleme: şema **v6**, 59 tur (Tur 33 denendi ve geri alındı; Tur 34 eski görünüme canlılık ekledi; Tur 35 arayüzü Lite'ın "Cam & Bulut" diline taşıdı; Tur 36 şehre ayrıntı kattı; Tur 37a geç oyuna yönetim yükü, servet vergisi ve kriz dönemleri getirdi; Tur 37b karar kartlarını ve rakip hikâyelerini ekledi; Tur 37c fırsat balonlarını ve aylık görev panosunu getirdi; Tur 37d canlı pazarı, şehir projesi ihalesini ve rakip konsorsiyumunu getirdi; Tur 38 değerlendirme turuydu: geç oyun hızı, gündem ve haber akışı, zorluk eğrisi; Tur 39a senaryo modunu getirdi: Kurtarma ve Krizin ortasında; Tur 39b Konsorsiyuma karşı, Zincir ustası ve Şehrin sponsoru senaryolarını ekledi; Tur 39c Büyük şehir fethi ve Holding: iki şehir ile listeyi yediye tamamladı; Tur 40 cila ve performans; Tur 41 başarımlar ve kariyer; Tur 42 açılışta gölgelendirici derlemesi; Tur 43 oyun içi akıcılık; Tur 44 değerlendirme turuydu: Türkçe sayı biçimi, yardımın kapsamı, haber akışı; Tur 45 dört ek kural getirdi: Fırtınalı yıllar, Aç gözlü rakipler, Sıkı banka, Kıt arsa; Tur 46 açılış paketini böldü: kurulum ekranı telefonda yarı sürede; Tur 47 tek Ayarlar paneli ve erişilebilirlik getirdi: metin boyutu, renk körlüğüne uygun palet, hareket, ses düzeyleri, pencerelerde klavye; Tur 48 oyunu kurulabilir ve çevrimdışı açılır yaptı, yayından sonra "yeni sürüm hazır" diyor; Tur 49 müziği getirdi: gündüz, gece ve kriz, şehirle birlikte dönüyor; Tur 50 Faz 1'i değerlendirdi ve tanıtım paketini hazırladı; Tur 51 Faz 2'yi açtı: Lite'ın lig sunucusu ana oyunun Tohum Ligi koşularını da alıyor, tablo herkese açık; Tur 52'de sunucu her koşuyu gönderimde yeniden oynatıyor, tabloya yalnız doğrulanmış skor giriyor; Tur 53 ligin her haftasına bir ek kural ve 90 günlük günün koşusunu getirdi; Tur 54 liderlerin eğrisini senin koşunun üstüne koydu ve liderin o günlerde ne yaptığını koşu kodundan anlatıyor; Tur 55 davet kodlu arkadaş liglerini getirdi ve Faz 2'yi kapattı; Tur 56 Faz 3'ü açtı: nakliye terminali rakip mağazalarına taşıma sözleşmesiyle taşıyor; Tur 57 enerjiyi getirdi: şebeke fiyatı, santraller, enerji krizi; Tur 58 gayrimenkul geliştiricisini getirdi: konut ve ofis projeleri, kira ve doluluk, kentsel dönüşüm hakkı ve başvurusu; Tur 59 rakiplere hafıza verdi: CEO'nun mizacı, husumet ve ittifak, fiyat savaşı ve lobiyle tepki, uzlaşma). Önümüzdeki işin sırası `docs/YOL-HARITASI.md`'de.
 
 ---
 
@@ -6233,6 +6233,187 @@ sınavı 353/353; paket bütçesi tamam (ana parça 67,1 KB, 65,6'dan).
 **Canlıya geçiş.** Şema aynı, simülasyon değişti: birleşmeden sonra Worker
 yeniden dağıtılıyor. Lite etkilenmiyor.
 
+### Tur 59 — Rakipler 2.0: CEO kimlikleri, husumet ve ittifak, tepkiler
+
+Faz 3'ün dördüncü turu. Rakiplerin bir doktrini vardı (ne yaptıkları), ama
+oyuncunun ne yaptığını hatırlamıyorlardı: hisselerini toplayan, ihalede
+onları geçen oyuncu ile mağazalarını taşıyan oyuncu aynı muameleyi
+görüyordu. Şimdi her rakibin oyuncuya karşı bir ilişkisi var.
+
+**CEO kimliği (`content/src/rivals.ts`).** Her CEO'nun bir mizacı ve bir
+satırlık geçmişi var. Mizaç, olayın puana ne kadar dokunduğunu ve puanın ne
+hızla söndüğünü belirliyor:
+
+| Mizaç | Düşmanca | Dostça | Kin söner (günde) | Dostluk söner | Ayrıca |
+|---|---|---|---|---|---|
+| Kindar | ×1,5 | ×0,75 | 0,05 | 0,2 | |
+| Pragmatik | ×1 | ×1 | 0,2 | 0,2 | |
+| Vefalı | ×0,8 | ×1,5 | 0,15 | 0,05 | |
+| Gururlu | ×1,2 | ×1 | 0,1 | 0,1 | ihalede geçilmek, kampanyasının geri püskürtülmesi ×2 |
+
+- Katalogdaki sekiz CEO'da dört mizacın her biri iki kez: Nova ve Firuze
+  gururlu, Kilit ve Kule kindar, Meridyen ve Veri pragmatik, Atlas ve
+  Anadolu vefalı.
+- Üretilen rakibin mizacı kurulurken zarla; adı ve yüzü için çekilen
+  zarlar eskisiyle aynı. Geçmişi doktrinin şablonundan.
+
+**Hafıza (`core/src/systems/relations.ts`).** İlişki puanı −100..100. Oyuncunun
+hamleleri puanı kaydırıyor (ham değer, mizaçtan önce):
+
+| Olay | Puan |
+|---|---|
+| Hisselerini toplamak | aldığın her %1 için −4 (sattığın her %1 +2) |
+| Teklif verdiği ihaleyi kazanmak | −10 |
+| Mecliste aynı önergede karşı / aynı tarafta olmak | −8 / +6 |
+| Mağazalarını taşımak / taşıma sözleşmesinden caymak | +12 / −15 |
+| Aynı bölgede, aynı kategoride ondan ucuz satmak (×0,90 ve altı) | haftada −3 |
+| Kampanyasını geri püskürtmek | −8 |
+| Rövanşını kazanması ("hesap görüldü") | +15 |
+| Uzlaşma | +25 |
+
+- Puan her gün mizacın hızıyla sıfıra dönüyor.
+- −40 ve altı husumet, +40 ve üstü ittifak. Bitişte 10 puanlık tampon var
+  (husumet −30'un üstünde, ittifak +30'un altında bitiyor). Duruşun
+  başlangıcı ve bitişi haberde, rakibin sözüyle.
+- Son altı olay dosyada; aynı türden olaylar bir hafta içinde tek satır.
+
+**Husumetin tepkileri.**
+- *Rövanş (fiyat savaşı):* husumet başladıktan en geç 20 gün sonra,
+  oyuncuyla ortak rafı olan en büyük kategoride 45 günlük kampanya. Senin
+  en ucuz rafının %5 altına iniyor, kendi fiyatının ×0,70'inden aşağı
+  değil (kin pahalı: marjından veriyor). Husumet sürüyorsa sıradaki rövanş
+  bitişten en az 90 gün sonra.
+- *Meclis:* oyuncunun çıkarına karşı kendiliğinden bağış yapıyor (en güçlü
+  kategorine vergi gibi), bütçesi iki kat. Oyuncunun bağışına da yarısı
+  kadar karşılık veriyor. Kendi çıkarı aksini söylüyorsa yapmıyor.
+- *Genişleme:* yeni mağazasını oyuncunun mağazası olan bölge ve
+  kategoriye yöneltiyor (fırsat puanı ×1,6).
+- *İhale:* öndeki sensen değerlemesinin %20 üstüne kadar inadına artırıyor.
+
+**İttifakın karşılığı.** Müttefik sana kampanya açmıyor, konsorsiyuma
+girmiyor. Mecliste çıkarın yönünde yarım ağırlıkla bağış yapıyor, senin
+bağışının üçte biri kadar da yanına. Senin rafından kaçınıyor (×0,6).
+İhalede öndeysen teklifinin üstüne çıkmıyor.
+
+**Uzlaşma (`MAKE_AMENDS`).** Rakibin CEO'sunun vakfına bağış:
+- bedel net değerinin %1'i, en az 50 B ₺; para kimseye geçmiyor;
+- +25 puan × mizaç (kindara 19, vefalıya 37);
+- rakip başına 90 günde bir; müttefikle yapılmıyor.
+
+Tepki bağışları ve uzlaşma meclis oylamasında hafızaya girmiyor: husumet
+kendi kendini beslemesin.
+
+**Lig.**
+- `MAKE_AMENDS` koşu günlüğünde; hayalet kartında "Rakiple uzlaştı".
+- *Parmak izi:* kopyada ilk rakip %10 hisseyle husumete, ikincisi dört
+  taşıma sözleşmesi ve iki ortak lobiyle ittifaka. On gün sönüm, rövanşın
+  günü, iki tepki (yapay oturumda karşı ve yanında bağış, yapay ihalede
+  inadına artırma), uzlaşma. Ayarlarda `RELATION`, mizaçların sayıları ve
+  CEO'ların mizacı. Mizacın adı dile bağlı, izde değil.
+
+**Arayüz.**
+- *Rakipler paneli:* tabloda "Sana karşı" sütunu (husumet, tarafsız,
+  ittifak ve puan). Satıra tıklayınca dosya:
+  - CEO'nun yüzü, geçmişi, mizacı;
+  - ilişki çubuğu ve eşikleri, sönüm hızı;
+  - bugün sana karşı ne yaptığı;
+  - hatırladıkları (gün, olay, puan);
+  - uzlaşma düğmesi (bedel ve kazanılacak puan, olmuyorsa nedeni).
+- *Gündem:* husumetli her rakip için "Rakip" çipi, rövanşa geri sayım;
+  süren rövanş "rövanşı" diye.
+- *Meclis paneli:* tepki bağışının yanında "sana tepki" çipi.
+- *İhale paneli:* husumetliler ve müttefikler, ne yapacakları.
+- İki dilde.
+
+**Denge (`pnpm balance "rakipler 2.0"`).** Beş kol, aynı şehirler, aynı temel
+vekil, 540 gün. Saldırgan vekil (`test/proxy.ts`, `rivalryStrategy`):
+rakibin rafı olan yerde ×0,90 fiyat, otuz günde bir en küçük rakipten %2
+hisse. Kör kol aynı hamlelerle, hafıza kapalı. Tövbekâr 270. günde
+bırakıyor; uzlaşan, bıraktıktan sonra husumetli rakiple uzlaşıyor.
+
+| Tohum | Kör | Saldırgan | Hafızanın bedeli | Tövbekâr, 270'ten sonra husumet | Uzlaşan |
+|---|---|---|---|---|---|
+| 1 | 56,2 M ₺ | 51,1 M ₺ | −%9 | 387 gün | 90 gün, +%0 |
+| 7 | 54,8 M ₺ | 50,1 M ₺ | −%9 | 347 gün | 90 gün, +%2 |
+| 42 | 52,6 M ₺ | 52,9 M ₺ | +%0 | 387 gün | 90 gün, %0 |
+
+- Saldırgan her şehirde 133. günde ilk husumeti görüyor; her şehirde üç
+  rövanş.
+- *Hafızanın bedeli ortalama −%6* (sınır %2–20): görülür ama ölümcül
+  değil.
+- *Uzlaşma:* husumet günleri 347–387'den 90'a iniyor, değer ortalama +%1
+  (bedelini çıkarıyor).
+- *Mizaç:* tövbeden sonra gururlu (kini günde 0,1 söner) 270 günde
+  unutmuyor, pragmatik (0,2) ortalama 105 günde unutuyor.
+- *İlk ölçümler:*
+  - Rövanş olağan indirimdeydi (×0,93). Zaten ucuz satan oyuncuya bir şey
+    yapmıyordu; oyuncu kampanyayı "geri püskürtüp" marka kazanıyordu.
+    Hafızanın bedeli +%0 / +%9 / −%2 çıktı. Rövanş artık oyuncunun en ucuz
+    rafının altına iniyor.
+  - Meclis tepkisi yalnız oyuncunun bağışına karşılıktı; bağış yapmayan
+    oyuncuya mecliste hiçbir şey olmuyordu. Artık husumetli oyuncunun
+    çıkarına karşı kendiliğinden bağış yapıyor.
+  - Bu ikisiyle de bedel ortalama +%0'dı. Genişleme yönelimiyle −%6.
+  - Diplomat kolu saldırmaya devam edip uzlaşıyordu: bedeli ödüyor,
+    husumet geri geliyordu. Uzlaşma, saldırıyı bırakan oyuncuyla ölçülüyor.
+
+**Eski denge bölümleri.** Rakiplerin hafızası yalnız oyuncunun
+hamlelerinden doluyor. Temel vekil rakiplere bir şey yapmıyor; hamle yoksa
+hafıza açık ve kapalı iki koşu bit bit aynı (birim testi). Tur 58'in tam
+koşusuyla bölüm bölüm karşılaştırıldı:
+- 23 bölüm birebir aynı.
+- Değişen 7 bölüm, oyuncunun rakiple bir şey yaptığı bölümler. Hepsinin
+  kontrolleri geçiyor.
+  - *Borsa, Devralma emri, Rakip koltukları:* oyuncu rakip hissesi alıyor.
+    Sayılar küçük kaydı: azınlık hissedar 1,05 → 1,03 M ₺; emirde 5 → 6
+    devralma; büyük şehirde 800. günde 8/8 → 7/8 koltuk.
+  - *Senaryolar III:* fetihte hisse toplanan hedef direniyor. Avcı 316 →
+    302 gün, sinsi 237 → 260 gün (2★ → 1★), keskin 248 → 335 gün
+    (2★ → 1★). Fetih senaryosu hisseyle avlanana artık daha zor.
+  - *Lojistik:* taşınan rakip dostlaşıyor; nakliyeci 40,2 → 40,9 M ₺
+    (tohum 1).
+  - *Banka:* fiyat savaşı satırında 3 B ₺.
+  - *Gayrimenkul:* ihalede geçilen rakip hatırlıyor; sayılar Tur 58'in
+    son tablosundan küçük kaydı.
+
+**Testler.** `pnpm test` 698/698 (681'den); tip denetimi temiz; denge
+sınavı 358/358 (30 bölüm); paket bütçesi tamam (ana parça 68,7 KB, 67,1'den).
+- Çekirdek (`relations.test.ts`, 15 yeni):
+  - kimlik: katalog CEO'sunun mizacı ve geçmişi, dört mizacın hepsi;
+    üretilen rakibin mizacı kararlı;
+  - hisse: −4 × mizaç, bir haftalık birleştirme, eşikte husumet ve haber,
+    satış dostça;
+  - sönüm ve tampon; pragmatik kindardan hızlı unutuyor;
+  - fiyat kırma: ×0,90 ve altı haftada bir, ×0,95 sayılmıyor;
+  - rövanş: 20 gün sonra ortak rafta, kategori seçimi; müttefik kampanya
+    açmıyor;
+  - kampanya sonu: geri püskürtme ağır (gururlu ×2), kazanılan rövanş
+    hesap görüyor;
+  - meclis: karşı ve yanında bağış, tavan, tepki hafızaya girmiyor;
+    kendiliğinden: vergiyi husumetli istiyor, müttefik karşı çıkıyor;
+  - ihale: müttefik artırmıyor, husumetli inadına geçiyor (%20 tavan),
+    geçilen rakip hatırlıyor;
+  - konsorsiyum: müttefik girmiyor;
+  - nakliye: kabul dostça, cayma düşmanca;
+  - uzlaşma: bedel, puan, bekleme, müttefikle ve kasasız yok, rakibe para
+    geçmiyor;
+  - kapalı: olay, duruş, rövanş yok;
+  - hamle yoksa eski oyun: hafıza açık ve kapalı 240 gün bit bit aynı;
+  - kayıt.
+- Lig (`league.test.ts`, 2 yeni): olay değeri, husumet eşiği, karşı lobi,
+  inadına teklif, uzlaşma bedeli ya da mizacın sönümü değişince iz
+  değişiyor. Fiyat kıran, hisse toplayan, uzlaşan lig koşusu tekrarda aynı
+  skoru veriyor.
+- Tarayıcı testi "Rakipler 2.0" 9/9, konsol temiz:
+  - hisse toplama husumet getiriyor, gündemde çip;
+  - tabloda ilişki, dosyada CEO, mizaç, hafıza ve tepkiler;
+  - rövanş ortak rafta, gündemde;
+  - uzlaşma kasadan, puan yükseliyor, düğme 90 gün kapalı;
+  - müttefikin dosyası, ihale panelinde iki not.
+
+**Canlıya geçiş.** Şema aynı, simülasyon değişti: birleşmeden sonra Worker
+yeniden dağıtılıyor. Lite etkilenmiyor.
+
 ---
 
 ## 3. Ölçülen durum
@@ -6335,11 +6516,11 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi). Senaryo şehirlerinde gün 3–17 ms (`pnpm dayperf`, Tur 43) |
-| Birim testi | **681 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de, Tur 52'de sunucuda tekrar, Tur 53'te haftanın kuralı ve günün koşusu, Tur 54'te hayalet eğri, Tur 55'te davetli ligler, Tur 56'da taşıma sözleşmeleri, Tur 57'de enerji, Tur 58'de gayrimenkul) |
-| Denge testi | **353 kontrol, hepsi geçiyor** (29 bölüm, süreleriyle; ~16 dk) |
-| Tarayıcı testi | **537 kontrol, hepsi geçiyor**, 0 konsol hatası (~40 dk); duman koşusu 132 (~5 dk, rehber dahil) |
+| Birim testi | **698 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de, Tur 52'de sunucuda tekrar, Tur 53'te haftanın kuralı ve günün koşusu, Tur 54'te hayalet eğri, Tur 55'te davetli ligler, Tur 56'da taşıma sözleşmeleri, Tur 57'de enerji, Tur 58'de gayrimenkul, Tur 59'da rakiplerin hafızası) |
+| Denge testi | **358 kontrol, hepsi geçiyor** (30 bölüm, süreleriyle; ~17 dk) |
+| Tarayıcı testi | **546 kontrol, hepsi geçiyor**, 0 konsol hatası (~40 dk); duman koşusu 132 (~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + paket bütçesi (Tur 46; Tur 48'den beri hizmet çalışanı ve manifest de) + duman oynanışı |
-| Kapsam | 40 bina · 25 ürün · 7 kategori · 8 rakip profili · 10 CEO · 22 olay (11 şehir + 11 sektör) · 3 kriz · 12 karar kartı · 70 rakip sözü · 5 fırsat balonu · 8 görev türü · 4 mevsim · 9 moda ürünü · 17 şehir yapısı (6 siluet) · 6 şehir projesi · 7 senaryo · 4 ek kural · 28 rozet |
+| Kapsam | 40 bina · 25 ürün · 7 kategori · 8 rakip profili · 10 CEO · 22 olay (11 şehir + 11 sektör) · 3 kriz · 12 karar kartı · 70 rakip sözü · 4 mizaç · 48 ilişki sözü · 5 fırsat balonu · 8 görev türü · 4 mevsim · 9 moda ürünü · 17 şehir yapısı (6 siluet) · 6 şehir projesi · 7 senaryo · 4 ek kural · 28 rozet |
 
 ### Render (Tur 6 sonrası)
 

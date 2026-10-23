@@ -1,4 +1,4 @@
-import { BUILDINGS, BUILDING_BY_ID, CEO_BY_ID, CONSORTIUM, CRISES, CRISIS_TIMING, ENERGY, ERAS, EVENTS, SECTOR_EVENTS, CONSUMER_CATEGORIES, FAD, GOOD_BY_ID, GOODS_BY_CATEGORY, MODIFIER_RULES, PROJECTS, PROJECT_TIMING, REAL_ESTATE, SEASONS, TREND } from '@capital/content';
+import { BUILDINGS, BUILDING_BY_ID, CEO_BY_ID, CONSORTIUM, CRISES, CRISIS_TIMING, ENERGY, ERAS, EVENTS, SECTOR_EVENTS, CONSUMER_CATEGORIES, FAD, GOOD_BY_ID, GOODS_BY_CATEGORY, MODIFIER_RULES, PROJECTS, PROJECT_TIMING, REAL_ESTATE, RELATION, RIVAL_CEOS, SEASONS, TEMPERAMENTS, TREND } from '@capital/content';
 import type { CategoryId } from '@capital/content';
 import { GameEngine } from './engine';
 import { formatMoney } from './selectors';
@@ -12,6 +12,11 @@ import { runMarketTick } from './systems/market';
 import { FREIGHT, acceptFreight, runFreightTick } from './systems/freight';
 import { energyPrice, lockFuel } from './systems/energy';
 import { runRealEstateTick, setRent } from './systems/realestate';
+import { makeAmends, noteRelation, runRelationsTick, temperamentOf } from './systems/relations';
+import { revengeDay } from './systems/rivalry';
+import { runCouncilTick } from './systems/council';
+import { runAuctionTick } from './systems/auction';
+import { rivalProfiles } from './profiles';
 import { DISTRIBUTION_RELIEF } from './systems/buildingIndex';
 import { FREIGHT_SHARE, resetDailyLedgers } from './systems/supply';
 import { contributeToProject, projectAttraction, projectDistrictDemand, projectSite, projectUpkeep, runProjectTick } from './systems/projects';
@@ -87,6 +92,7 @@ const LOGGABLE: ReadonlySet<string> = new Set<GameCommand['type']>([
   'ISSUE_SHARES',
   'LOBBY',
   'LOCK_FUEL',
+  'MAKE_AMENDS',
   'OPEN_CITY',
   'PLACE_BID',
   'PLACE_TAKEOVER_ORDER',
@@ -395,6 +401,7 @@ function lateGameProbe(state: GameState): string[] {
   parts.push(...freightProbe(clone()));
   parts.push(...energyProbe(clone()));
   parts.push(...realEstateProbe(clone()));
+  parts.push(...relationsProbe(clone()));
 
   const seed = state.meta.seed;
   for (const day of [120, 240, 360]) {
@@ -588,6 +595,70 @@ function realEstateProbe(world: GameState): string[] {
   world.time.day += 1;
   day();
   parts.push(`probe-realestate-rent:${rented}:${ledger()}`);
+  return parts;
+}
+
+/**
+ * Rakip hafızasının izi (Tur 59). Ayarlar: `RELATION`, mizaçlar ve
+ * rakiplerin mizacı. Kopyada ilk rakip oyuncunun %10 hisse alımıyla
+ * husumete düşüyor, ikincisi dört taşıma sözleşmesi ve iki ortak lobiyle
+ * müttefik oluyor; on gün sönüm. Sonra rövanşın günü, iki tepki: senin
+ * bağışına karşı ve yanında bağış (yapay oturum), öndeki teklifine
+ * inadına artırma (yapay ihale); en sonda uzlaşma.
+ */
+function relationsProbe(world: GameState): string[] {
+  const rivals = rivalProfiles(world).filter((profile) => world.companies[profile.id]);
+  const parts = [
+    `relations-settings:${JSON.stringify({
+      RELATION,
+      // Mizacın sayıları; adı ve tarifi dile bağlı, izde değil.
+      temperaments: Object.values(TEMPERAMENTS).map(({ id, hostile, friendly, fadeHostile, fadeFriendly, pride }) => ({ id, hostile, friendly, fadeHostile, fadeFriendly, pride })),
+      ceos: Object.fromEntries(Object.entries(RIVAL_CEOS).map(([id, ceo]) => [id, ceo.temperament])),
+      rivals: rivals.map((profile) => `${profile.id}=${temperamentOf(world, profile.id)?.id ?? '-'}`),
+    })}`,
+  ];
+  const foe = rivals[0];
+  const friend = rivals[1];
+  if (!foe || !friend) return [...parts, 'probe-relations:-'];
+  const me = world.companies[world.playerCompanyId]!;
+  me.cash += 10_000_000;
+  noteRelation(world, foe.id, 'shares', 10);
+  noteRelation(world, friend.id, 'freight', 4);
+  noteRelation(world, friend.id, 'lobbyWith', 2);
+  const relation = (id: string): string => {
+    const x = world.companies[id]?.relation;
+    return x ? `${x.score.toFixed(2)}:${x.stance ?? '-'}:${x.since ?? '-'}:${x.memory.map((m) => `${m.kind}${m.delta.toFixed(2)}@${m.day}`).join('/')}` : '-';
+  };
+  for (let i = 0; i < 10; i++) {
+    world.time.day += 1;
+    runRelationsTick(world);
+  }
+  parts.push(`probe-relations-memory:${relation(foe.id)}:${relation(friend.id)}:${revengeDay(world)}`);
+
+  const day = world.time.day;
+  world.flags.council = true;
+  world.council = {
+    nextSessionDay: day + 90,
+    session: {
+      openedDay: day - 2,
+      voteDay: day + 10,
+      motions: [{ id: 'probe', kind: 'permit_relief', title: '', summary: '', baseSupport: 0.5, lobby: { [me.id]: 400_000 } }],
+    },
+    history: [],
+  };
+  world.time.day += 1;
+  runCouncilTick(world);
+  const motion = world.council.session?.motions[0];
+  parts.push(`probe-relations-lobby:${JSON.stringify(motion?.lobby ?? {})}:${JSON.stringify(motion?.reactions ?? {})}`);
+
+  const tile = world.map.tiles.find((candidate) => isPurchasable(candidate) && !candidate.structureId && !candidate.buildingId && isDistrictOpen(world, candidate.districtId));
+  if (tile) {
+    world.auction = { tileId: tile.id, endsOnDay: world.time.day + 3, reserve: 1, bid: 1_000, bidderId: me.id, rounds: 1 };
+    runAuctionTick(world);
+    parts.push(`probe-relations-auction:${world.auction?.bidderId ?? '-'}:${(world.auction?.bid ?? 0).toFixed(2)}:${(world.auction?.bidders ?? []).join(',')}`);
+  }
+  const amends = makeAmends(world, foe.id);
+  parts.push(`probe-relations-amends:${amends.ok}:${relation(foe.id)}:${me.cash.toFixed(2)}`);
   return parts;
 }
 

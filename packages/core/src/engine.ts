@@ -22,6 +22,7 @@ import { acceptContract, declineContract } from './systems/contracts';
 import { acceptFreight, cancelFreight, declineFreight } from './systems/freight';
 import { lockFuel } from './systems/energy';
 import { requestRenewal, setRent } from './systems/realestate';
+import { makeAmends } from './systems/relations';
 import { placeBid } from './systems/auction';
 import { noteCompanyPeak, notePeakWorth, noteRaidStage } from './systems/feats';
 import { sellShares } from './systems/equity';
@@ -280,6 +281,9 @@ export class GameEngine {
 
       case 'REQUEST_RENEWAL':
         return requestRenewal(state, command.tileId);
+
+      case 'MAKE_AMENDS':
+        return makeAmends(state, command.companyId);
 
       case 'LOCK_FUEL':
         return lockFuel(state);

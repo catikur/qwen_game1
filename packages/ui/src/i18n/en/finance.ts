@@ -155,6 +155,8 @@ export const finance: Record<keyof typeof trFinance, string> = {
   'finance.auction.occupied':
     "Urban renewal: this plot has {structure} on it. The winner has the structure torn down and gets the plot empty; the reserve price is the owner's buyout price.",
   'finance.auction.occupied.someStructure': 'a structure',
+  'finance.auction.spite': 'Feuding: {names}. If you lead, they outbid you out of spite up to {spite} above their valuation.',
+  'finance.auction.allies': "Allied: {names}. If you lead, they won't outbid you.",
   'finance.auction.renewalRight': "The winner also gets the renewal right: a project built here is {bonus} larger with the zoning bonus, rights holders in flats equal to {holders} of its size. Rivals don't build projects, so their bids leave this value out.",
   'finance.auction.leading': "You're leading",
   'finance.auction.bidMinimum': 'Bid the minimum · {amount}',
@@ -176,6 +178,7 @@ export const finance: Record<keyof typeof trFinance, string> = {
   'finance.council.lobby.for': 'for',
   'finance.council.lobby.against': 'against',
   'finance.council.lobby.entry': '{side} {spent} · {sign}{points} pts',
+  'finance.council.lobby.reaction': 'reacting to you: {spent}',
   'finance.council.session.open':
     "Vote in {days|# day|# days}. A motion with more than 50% support passes; donations aren't refunded and everyone sees them.",
   'finance.council.session.closed':

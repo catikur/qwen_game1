@@ -6410,6 +6410,181 @@ async function finish(browser, consoleErrors) {
     await rContext.close();
   }
 
+  section('Rakipler 2.0: husumet, ittifak ve tepkiler');
+  {
+    const vContext = await browser.newContext({ viewport: { width: 1280, height: 860 } });
+    await vContext.addInitScript(veteran, TUTORIAL_KEY);
+    const vp = await vContext.newPage();
+    const vErrors = [];
+    vp.on('pageerror', (e) => vErrors.push(e.message));
+    vp.on('console', (m) => { if (m.type() === 'error') vErrors.push(m.text()); });
+    await vp.goto('http://127.0.0.1:8811/');
+    await vp.waitForSelector('.newgame', { timeout: 20000 });
+    await vp.fill('.newgame-field input[type="text"]', 'Hafıza AŞ');
+    await vp.locator('button:has-text("Şirketi kur")').click();
+    await vp.waitForSelector('.topbar', { timeout: 30000 });
+
+    // Şehir 150 gün büyüsün; oyuncunun güçlü kategorisinde rafı olan rakip hedef.
+    const setup = await vp.evaluate(() => {
+      const api = window.__capital;
+      api.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+      for (let i = 0; i < 150; i++) api.engine.runDay();
+      const state = api.getState();
+      delete state.crisis;
+      state.activeEvents = [];
+      delete state.era;
+      delete state.campaign;
+      delete state.campaignEndedDay;
+      state.nextCampaignDay = state.time.day + 400;
+      const me = state.companies[state.playerCompanyId];
+      me.cash += 40_000_000;
+      me.netWorth += 20_000_000;
+      for (const c of Object.values(state.companies)) {
+        delete c.lockedUntilDay;
+        delete c.playerLockedUntilDay;
+      }
+      // Rövanş ortak rafta: oyuncu, mağazası en çok olan rakibin kategorisinde onun bölgelerine üç mağaza açıyor.
+      const rivals = Object.values(state.companies).filter((c) => !c.isPlayer && c.profileId);
+      const outletsOf = (c) => Object.values(state.buildings).filter((b) => b.companyId === c.id && api.buildingRole(b.defId) === 'outlet');
+      const foe = rivals.slice().sort((a, b) => outletsOf(b).length - outletsOf(a).length)[0];
+      const friend = rivals.find((c) => c.id !== foe.id);
+      // Rakibin payının en büyük olduğu raflardan, oyuncunun altı mağaza açabildiği ilki: az satıcı, pay eşiğin üstünde.
+      const ranked = [...new Set(outletsOf(foe).map((b) => api.buildingCategory(b.defId)))].sort((a, b) => (foe.marketShare[b] ?? 0) - (foe.marketShare[a] ?? 0));
+      let category = ranked[0];
+      let opened = 0;
+      for (const candidate of ranked) {
+        const defId = outletsOf(foe).find((b) => api.buildingCategory(b.defId) === candidate).defId;
+        opened = 0;
+        for (const plot of state.map.tiles) {
+          if (opened >= 6) break;
+          if (plot.kind !== 'plot' || plot.ownerId || plot.buildingId || plot.structureId || (state.districts[plot.districtId].opensOnDay ?? 0) > state.time.day) continue;
+          if (!api.engine.dispatch({ type: 'BUY_TILE', tileId: plot.id }).ok) continue;
+          if (api.engine.dispatch({ type: 'BUILD', tileId: plot.id, defId }).ok) opened++;
+          else api.engine.dispatch({ type: 'SELL_TILE', tileId: plot.id });
+        }
+        category = candidate;
+        if (opened >= 3) break;
+      }
+      for (let i = 0; i < 10; i++) api.engine.runDay();
+      // Dört gün, günde %4 hisse (günlük alım tavanının altı): her mizaçta husumet eşiğinin altına.
+      const outstanding = foe.shareCount ?? 10_000;
+      const seq = state.newsSeq ?? 0;
+      let bought = true;
+      for (let i = 0; i < 4; i++) {
+        bought = api.engine.dispatch({ type: 'BUY_SHARES', companyId: foe.id, count: Math.floor(outstanding * 0.04) }).ok && bought;
+        api.engine.runDay();
+      }
+      const news = state.news.filter((n) => n.id > seq).map((n) => n.title);
+      return { foe: foe.id, foeName: foe.name, friend: friend.id, friendName: friend.name, bought, stance: foe.relation?.stance ?? null, score: foe.relation?.score ?? 0, news, opened, category, share: me.marketShare[category] ?? 0 };
+    });
+    check(
+      'Hisse toplamak husumet getiriyor: haber ve duruş',
+      setup.bought && setup.stance === 'hostile' && setup.news.some((t) => t.includes('husumet')),
+      `${setup.foeName}: ${setup.score} puan · ${setup.opened} mağaza, ${setup.category} payı ${setup.share.toFixed(2)} · ${setup.news.slice(0, 2).join(' | ')}`,
+    );
+    await vp.evaluate(() => window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 }));
+    await vp.waitForTimeout(300);
+    check('Gündemde husumet çipi', (await vp.locator(`[data-agenda-rival="rival:${setup.foe}"]`).count()) === 1);
+
+    // Rakipler paneli: ilişki sütunu ve husumetlinin dosyası.
+    await vp.locator('[data-panel="rivals"]').click();
+    await vp.waitForTimeout(300);
+    const chip = await vp.locator(`[data-relation-chip="${setup.foe}"]`).first().getAttribute('data-stance').catch(() => null);
+    check('Rakipler tablosunda ilişki: husumet', chip === 'hostile', String(chip));
+    const dossier = vp.locator(`[data-rival-dossier="${setup.foe}"]`);
+    const temperament = await dossier.locator('[data-temperament]').getAttribute('data-temperament').catch(() => null);
+    const memory = await dossier.locator('[data-memory-kind]').first().getAttribute('data-memory-kind').catch(() => null);
+    const effects = await dossier.locator('[data-relation-effects]').getAttribute('data-relation-effects').catch(() => null);
+    const dossierText = ((await dossier.textContent().catch(() => '')) ?? '').replace(/\s+/g, ' ');
+    check(
+      'Dosya: CEO, mizaç, hatırladıkları ve sana karşı tepkiler',
+      Boolean(temperament) && memory === 'shares' && effects === 'hostile' && dossierText.includes('Hisselerini topladın') && dossierText.includes('Fiyat savaşını'),
+      `${temperament} · ${memory} · ${dossierText.slice(0, 120)}`,
+    );
+    await vp.screenshot({ path: `${OUT}/rivals-dossier.png` });
+
+    // Rövanş: husumetin başlamasından 20 gün sonra fiyat savaşı; gündemde "rövanşı".
+    const revenge = await vp.evaluate(() => {
+      const api = window.__capital;
+      const state = api.getState();
+      for (let i = 0; i < 21 && !state.campaign; i++) api.engine.runDay();
+      api.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+      const foe = Object.values(state.companies).find((c) => c.relation?.stance === 'hostile');
+      const me = state.companies[state.playerCompanyId];
+      const shelves = foe
+        ? [...new Set(Object.values(state.buildings).filter((b) => b.companyId === foe.id && api.buildingRole(b.defId) === 'outlet').map((b) => api.buildingCategory(b.defId)))]
+            .map((c) => `${c}:${(me.marketShare[c] ?? 0).toFixed(2)}/${(foe.marketShare[c] ?? 0).toFixed(2)}`)
+            .join(' ')
+        : '-';
+      const why = `gün ${state.time.day}, husumet ${foe?.relation?.since}, son kampanya ${state.campaignEndedDay}, sıradaki ${state.nextCampaignDay}, raflar ${shelves}, bayraklar ${JSON.stringify({ s: state.flags.rivalStories, n: state.flags.npcCompetition })}`;
+      return state.campaign ? { by: state.campaign.companyId, revenge: state.campaign.revenge === true, cut: state.campaign.cut ?? null, category: state.campaign.category, why } : { why };
+    });
+    await vp.waitForTimeout(300);
+    const agendaText = ((await vp.locator('.topbar').textContent().catch(() => '')) ?? '') + ((await vp.locator('body').textContent().catch(() => '')) ?? '');
+    check(
+      'Rövanş: husumetli rakip ortak rafta fiyat savaşı açıyor, gündemde',
+      revenge.by === setup.foe && revenge.revenge && agendaText.includes('rövanşı'),
+      revenge.by ? `${revenge.category} ×${revenge.cut}` : `kampanya yok (${revenge.why})`,
+    );
+
+    // Uzlaşma: bedel kasadan, puan yükseliyor, hafızada, düğme bekleme süresinde.
+    if ((await vp.locator(`[data-rival-dossier="${setup.foe}"]`).count()) === 0) {
+      await vp.keyboard.press('Escape');
+      await vp.locator('[data-panel="rivals"]').click();
+    }
+    await vp.waitForTimeout(300);
+    const amendsButton = vp.locator(`[data-amends="${setup.foe}"]`);
+    const cost = Number(await amendsButton.getAttribute('data-amends-cost').catch(() => NaN));
+    const before = await vp.evaluate((id) => {
+      const state = window.__capital.getState();
+      return { cash: state.companies[state.playerCompanyId].cash, score: state.companies[id].relation.score };
+    }, setup.foe);
+    await amendsButton.click();
+    await vp.waitForTimeout(300);
+    const after = await vp.evaluate((id) => {
+      const state = window.__capital.getState();
+      const r = state.companies[id].relation;
+      return { cash: state.companies[state.playerCompanyId].cash, score: r.score, first: r.memory[0]?.kind };
+    }, setup.foe);
+    const disabled = await amendsButton.isDisabled().catch(() => false);
+    check(
+      'Uzlaşma: bedel kasadan, puan yükseliyor, hafızada; düğme 90 gün kapalı',
+      Math.abs(before.cash - after.cash - cost) < 1 && after.score > before.score && after.first === 'amends' && disabled,
+      `bedel ${cost}, puan ${before.score.toFixed(1)} → ${after.score.toFixed(1)}, düğme ${disabled ? 'kapalı' : 'açık'}`,
+    );
+
+    // İttifak: müttefikin dosyası ve ihale panelinde iki not (husumetli inadına, müttefik çekiliyor).
+    await vp.evaluate(({ friend, foe }) => {
+      const api = window.__capital;
+      const state = api.getState();
+      state.companies[friend].relation = { score: 60, stance: 'allied', since: state.time.day, memory: [{ day: state.time.day, kind: 'freight', delta: 60 }] };
+      const f = state.companies[foe].relation;
+      f.score = -80;
+      f.stance = 'hostile';
+      const tile = state.map.tiles.find((t) => t.kind === 'plot' && !t.ownerId && !t.buildingId && !t.structureId && (state.districts[t.districtId].opensOnDay ?? 0) <= state.time.day);
+      state.auction = { tileId: tile.id, endsOnDay: state.time.day + 3, reserve: 1000, bid: 0, bidderId: null, rounds: 0 };
+      api.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+    }, { friend: setup.friend, foe: setup.foe });
+    await vp.waitForTimeout(300);
+    await vp.locator(`[data-rival-row="${setup.friend}"] button`).click().catch(() => {});
+    await vp.waitForTimeout(300);
+    const ally = vp.locator(`[data-rival-dossier="${setup.friend}"]`);
+    const allyEffects = await ally.locator('[data-relation-effects]').getAttribute('data-relation-effects').catch(() => null);
+    const allyBlocked = await ally.locator('[data-amends-blocker]').textContent().catch(() => '');
+    check('Müttefikin dosyası: ittifak tepkileri, uzlaşma gereksiz', allyEffects === 'allied' && /müttefik/i.test(allyBlocked ?? ''), `${allyEffects} · ${allyBlocked}`);
+    // Rakipler paneli (pencere) kapansın; ihale çipi ihale panelini açıyor.
+    await vp.keyboard.press('Escape');
+    await vp.waitForTimeout(200);
+    await vp.locator('.auction-chip').first().click({ timeout: 5000 }).catch(() => {});
+    await vp.waitForTimeout(300);
+    const spite = (await vp.locator('[data-auction-spite]').textContent().catch(() => '')) ?? '';
+    const allies = (await vp.locator('[data-auction-allies]').textContent().catch(() => '')) ?? '';
+    check('İhale panelinde husumetli ve müttefik notu', spite.includes(setup.foeName) && allies.includes(setup.friendName), `${spite.slice(0, 60)} | ${allies.slice(0, 60)}`);
+
+    check('Rakipler akışında konsol temiz', vErrors.length === 0, vErrors.slice(0, 2).join(' | '));
+    await vContext.close();
+  }
+
   section('Mobil');
   for (const deviceName of ['iPhone 13', 'Pixel 7']) {
     const mobileContext = await browser.newContext({ ...devices[deviceName] });

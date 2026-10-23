@@ -1,4 +1,4 @@
-import { BUILDINGS, STRUCTURE_BY_ID, numberLocale } from '@capital/content';
+import { BUILDINGS, RELATION, STRUCTURE_BY_ID, numberLocale } from '@capital/content';
 import { pushNews } from '../news';
 import { tc } from '../i18n';
 import { rivalProfiles } from '../profiles';
@@ -9,6 +9,7 @@ import { withBuildingIndex } from './buildingIndex';
 import { noteFeat } from './feats';
 import { isProject, takeRenewalRequest } from './realestate';
 import { zoningBlocker } from '../actions';
+import { noteRelation, stanceOf } from './relations';
 
 /**
  * Parsel ihalesi.
@@ -253,7 +254,11 @@ function bidRound(state: GameState): void {
       // üstüne çıkar (arsa onun asıl işi), ucuzcu altında kalır.
       const appetite =
         profile.trait === 'landlord' ? 1.5 : profile.trait === 'price_cutter' ? 0.7 : 1;
-      const ceiling = valuation * appetite;
+      // Oyuncuya karşı duruş (Tur 59): öndeki oyuncuysa müttefik artırmıyor,
+      // husumetli değerlemesinin üstüne inadına çıkıyor.
+      const stance = auction.bidderId === state.playerCompanyId ? stanceOf(state, profile.id) : null;
+      if (stance === 'allied') continue;
+      const ceiling = valuation * appetite * (stance === 'hostile' ? RELATION.spite : 1);
 
       const next = minimumBid(auction);
       if (next > ceiling) continue;
@@ -262,6 +267,7 @@ function bidRound(state: GameState): void {
       auction.bid = next;
       auction.bidderId = profile.id;
       auction.rounds += 1;
+      if (!auction.bidders?.includes(profile.id)) (auction.bidders ??= []).push(profile.id);
       raises += 1;
       active = true;
     }
@@ -307,7 +313,11 @@ function settle(state: GameState): void {
 
   winner.cash -= auction.bid;
   tile.ownerId = winner.id;
-  if (winner.id === state.playerCompanyId) noteFeat(state, 'auctionsWon');
+  if (winner.id === state.playerCompanyId) {
+    noteFeat(state, 'auctionsWon');
+    // Teklif verip geçilen rakipler hatırlıyor (Tur 59).
+    for (const bidder of auction.bidders ?? []) noteRelation(state, bidder, 'outbid');
+  }
   // Kentsel dönüşüm: yapı yıkılır, parsel boş olarak el değiştirir. Parsel
   // dönüşüm hakkını taşıyor (Tur 58): üstüne kurulan proje imar artışıyla.
   const razed = tile.structureId ? STRUCTURE_BY_ID[tile.structureId]?.name ?? tc('core.auction.structure') : null;
