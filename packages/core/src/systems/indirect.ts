@@ -1,5 +1,5 @@
 import { BUILDING_BY_ID, CONSUMER_CATEGORIES, currentLocale, getCeoModifiers } from '@capital/content';
-import type { CategoryId } from '@capital/content';
+import type { BuildingDef, CategoryId } from '@capital/content';
 import { tc } from '../i18n';
 import { MARKETING_CAP, RESEARCH_CAP, defaultFocus, marketingLeverage, researchCeiling } from './focus';
 import { estimateInvestment, runMarketTick } from './market';
@@ -126,20 +126,7 @@ function centralPlot(state: GameState, districtId: number): number | null {
  * kopyada sekizer pazar günü demek. Hafta değişince ya da şehirdeki bina
  * sayısı değişince (oyuncu ya da rakip kurdu, yıktı) yeniden hesaplanır.
  */
-const cache = new Map<string, { day: number; version: string; value: IndirectEstimate | null }>();
-
-/**
- * Terminalin taşıma potansiyeli (Tur 56) masadaki tekliflere ve süren
- * sözleşmelere bağlı: teklif gelince ya da sözleşme bitince bina sayısı
- * değişmeden tahmin değişiyor (Codex #86). Filosu olan bina için sürüm
- * bunları da taşıyor.
- */
-function freightVersion(state: GameState): string {
-  const freight = state.freight;
-  if (!freight) return '';
-  const deal = (d: { id: string; outletIds: string[] }) => `${d.id}:${d.outletIds.join('.')}`;
-  return `${freight.offers.map(deal).join(',')}|${freight.contracts.map(deal).join(',')}`;
-}
+const cache = new Map<string, { day: number; version: number; value: IndirectEstimate | null }>();
 let cacheState: GameState | null = null;
 
 export function indirectEstimate(
@@ -158,15 +145,37 @@ export function indirectEstimate(
     cache.clear();
     cacheState = state;
   }
-  const buildings = `${Object.keys(state.buildings).length}${def.fleet ? `|${freightVersion(state)}` : ''}`;
+  const buildings = Object.keys(state.buildings).length;
   // Sonuç bir metin de taşıyor (`none`): dil değişince önbellek eski dilde kalmasın.
   const key = `${companyId}|${defId}|${districtId}|${tileId ?? ''}|${currentLocale()}`;
   const hit = cache.get(key);
   const week = Math.floor(state.time.day / 7);
-  if (hit && hit.day === week && hit.version === buildings) return hit.value;
-  const value = compute(state, companyId, defId, districtId, tileId);
-  cache.set(key, { day: week, version: buildings, value });
-  return value;
+  let value: IndirectEstimate | null;
+  if (hit && hit.day === week && hit.version === buildings) value = hit.value;
+  else {
+    value = compute(state, companyId, defId, districtId, tileId);
+    cache.set(key, { day: week, version: buildings, value });
+  }
+  return withFreight(state, companyId, def, districtId, tileId, value);
+}
+
+/**
+ * Terminalin taşıma potansiyeli (Tur 56) haftalık önbellekte değil: teklif,
+ * sözleşme, devralma ve her günün satışı onu değiştiriyor, hesabı da tek
+ * bina taraması (Codex #86). Önbellekten gelen tahminin üstüne her seferinde.
+ */
+function withFreight(
+  state: GameState,
+  companyId: string,
+  def: BuildingDef,
+  districtId: number,
+  tileId: number | undefined,
+  value: IndirectEstimate | null,
+): IndirectEstimate | null {
+  if (!value || !def.fleet) return value;
+  const at = tileId !== undefined && state.map.tiles[tileId]?.districtId === districtId ? tileId : centralPlot(state, districtId);
+  if (at === null) return value;
+  return { ...value, freight: freightPotential(state, companyId, def.id, at) };
 }
 
 function compute(
@@ -207,11 +216,9 @@ function compute(
       if (!other || distributionRelief(state, b) >= reliefOf(def)) return false;
       return Math.abs(other.x - tile.x) + Math.abs(other.y - tile.y) <= def.radius;
     }).length;
-    const freight = def.fleet ? freightPotential(state, companyId, defId, at) : undefined;
     if (covered === 0) {
       return result(0, 0, {
         covered,
-        freight,
         none: hasOutlets ? tc('core.indirect.noUncovered') : tc('core.indirect.noOutlets'),
       });
     }
@@ -219,7 +226,7 @@ function compute(
     const treated = structuredClone(state);
     const probe = phantom(treated, companyId, defId, at, null);
     treated.buildings[probe.id] = probe;
-    return result(settledGross(treated, companyId) - base, 0, { covered, freight });
+    return result(settledGross(treated, companyId) - base, 0, { covered });
   }
 
   const focus = defaultFocus(state, companyId, defId);

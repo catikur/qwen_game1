@@ -516,6 +516,26 @@ describe('nakliye terminali ve taşıma sözleşmeleri (Tur 56)', () => {
     assert.equal(after.outlets, before.outlets - held.length, 'teklifteki mağazalar hâlâ potansiyelde');
   });
 
+  test('taşıma potansiyeli devralma ve satışla da güncel: haftalık önbellekte değil (Codex #86)', () => {
+    const state = fresh().getState();
+    const terminal = placeTerminal(state);
+    const at = state.map.tiles[terminal.tileId]!;
+    const site = state.map.tiles.find((t) => t.kind === 'plot' && !t.structureId && !t.buildingId && Math.abs(t.x - at.x) + Math.abs(t.y - at.y) <= 2)!;
+    const before = indirectEstimate(state, state.playerCompanyId, TERMINAL, site.districtId, site.id)!.freight!;
+    // Aynı hafta, bina sayısı aynı: menzildeki bir rakip mağazası oyuncuya geçiyor (devralma gibi).
+    const prospect = freightProspects(state, terminal).find((o) => {
+      const t = state.map.tiles[o.tileId]!;
+      return Math.abs(t.x - site.x) + Math.abs(t.y - site.y) <= BUILDING_BY_ID[TERMINAL]!.radius;
+    })!;
+    prospect.companyId = state.playerCompanyId;
+    const taken = indirectEstimate(state, state.playerCompanyId, TERMINAL, site.districtId, site.id)!.freight!;
+    assert.equal(taken.outlets, before.outlets - 1, 'devralınan mağaza hâlâ potansiyelde');
+    // Satış değişince ücret tahmini de.
+    for (const o of freightProspects(state, terminal)) o.soldByGood = {};
+    const quiet = indirectEstimate(state, state.playerCompanyId, TERMINAL, site.districtId, site.id)!.freight!;
+    assert.ok(quiet.fee < taken.fee, `ücret ${quiet.fee} / ${taken.fee}`);
+  });
+
   test('komutlar oyunun komutu: tanınmayan teklif ve sözleşme reddediliyor', () => {
     const engine = fresh();
     assert.equal(engine.dispatch({ type: 'ACCEPT_FREIGHT', offerId: 'fr99' }).ok, false);
