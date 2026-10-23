@@ -6939,6 +6939,162 @@ async function finish(browser, consoleErrors) {
     await yPhone.close();
   }
 
+  // ---------- Mevsim ve hava (Tur 62) ----------
+  section('Mevsim ve hava');
+  {
+    const wContext = await browser.newContext({ viewport: { width: 1280, height: 860 } });
+    await wContext.addInitScript(veteran, TUTORIAL_KEY);
+    const wp = await wContext.newPage();
+    const wErrors = [];
+    wp.on('pageerror', (e) => wErrors.push(e.message));
+    wp.on('console', (m) => { if (m.type() === 'error') wErrors.push(m.text()); });
+    await wp.goto('http://127.0.0.1:8811/');
+    await wp.waitForSelector('.newgame', { timeout: 20000 });
+    await wp.locator('button:has-text("Şirketi kur")').click();
+    await wp.waitForSelector('.topbar', { timeout: 30000 });
+    await wp.waitForFunction(() => (window.__capital?.renderInfo()?.frameCount ?? 0) >= 4, null, { timeout: 60000 });
+    await wp.evaluate(() => {
+      const c = window.__capital;
+      c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+      c.setTimeOfDay(0.3);
+      const s = c.getState();
+      c.setView({ x: s.map.width / 2, z: s.map.height / 2, distance: 26 });
+    });
+
+    // İstenen mevsimde, iki gün üst üste istenen havanın günü; şehir o güne atlıyor.
+    const goTo = (season, weather, events = []) => wp.evaluate(({ season, weather, events }) => {
+      const c = window.__capital;
+      const s = c.getState();
+      const months = { winter: [11, 0, 1], spring: [2, 3, 4], summer: [5, 6, 7], autumn: [8, 9, 10] }[season];
+      let day = -1;
+      for (let d = s.time.day + 1; d < s.time.day + 3000; d++) {
+        const month = new Date(Date.UTC(2026, 0, 1) + d * 86_400_000).getUTCMonth();
+        if (months.includes(month) && c.weatherOn(s.meta.seed, d) === weather && c.weatherOn(s.meta.seed, d - 1) === weather) { day = d; break; }
+      }
+      s.time.day = day;
+      s.activeEvents = events.map((defId) => ({ defId, startedDay: day, remainingDays: 5 }));
+      c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+      return day;
+    }, { season, weather, events });
+    const look = async (frames = 3) => {
+      const start = await wp.evaluate(() => window.__capital.renderInfo().frameCount);
+      await wp.waitForFunction((n) => window.__capital.renderInfo().frameCount >= n, start + frames, { timeout: 30000 });
+      return wp.evaluate(() => {
+        const chip = document.querySelector('.brand-weather');
+        return {
+          ...window.__capital.renderInfo().weather,
+          programs: window.__capital.renderInfo().programs,
+          chip: chip?.textContent ?? '',
+          chipSeason: chip?.getAttribute('data-season'),
+          chipWeather: chip?.getAttribute('data-weather'),
+          chipTitle: chip?.getAttribute('title') ?? '',
+          chipEvent: chip?.getAttribute('data-weather-event') ?? null,
+        };
+      });
+    };
+    const hue = (hex) => {
+      const n = parseInt(hex.slice(1), 16);
+      const [r, g, b] = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((v) => v / 255);
+      const max = Math.max(r, g, b);
+      const min = Math.min(r, g, b);
+      if (max === min) return 0;
+      const d = max - min;
+      const h = max === r ? ((g - b) / d) % 6 : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
+      return ((h * 60) + 360) % 360;
+    };
+
+    const opening = await look();
+    check('Üst barda mevsim ve hava tarihin yanında; şehirle aynı mevsim', opening.chipSeason === opening.season && opening.chipWeather === opening.id && /^(Kış|İlkbahar|Yaz|Sonbahar) · /.test(opening.chip),
+      `${opening.chip} · ${opening.season}/${opening.id}`);
+
+    await goTo('summer', 'clear');
+    const summer = await look();
+    await goTo('autumn', 'clear');
+    const autumn = await look();
+    await wp.screenshot({ path: `${OUT}/season-autumn.png` });
+    check('Sonbaharda ağaçlar turuncu-kızıl, yazın yeşil; üst bar "Sonbahar · Açık"',
+      summer.season === 'summer' && hue(summer.countrysideTree) > 70 && hue(summer.countrysideTree) < 160 && autumn.season === 'autumn' && hue(autumn.countrysideTree) < 50 && autumn.chip === 'Sonbahar · Açık',
+      `yaz ${summer.countrysideTree} · sonbahar ${autumn.countrysideTree} · ${autumn.chip}`);
+
+    await goTo('winter', 'snow');
+    const snow1 = await look();
+    const snow2 = await look(6);
+    await wp.screenshot({ path: `${OUT}/season-winter-snow.png` });
+    check('Karlı kış: kar yağıyor, taneler iniyor, yer ve ağaçlar beyaz',
+      snow1.id === 'snow' && snow1.snow > 0 && snow1.rain === 0 && snow1.snowCover === 1 && snow2.fallSum !== snow1.fallSum && snow1.chip === 'Kış · Karlı',
+      `${snow1.snow} tane · örtü ${snow1.snowCover} · ağaç ${snow1.countrysideTree} · ${snow1.chip}`);
+    check('Yağış programları açılışta derlendi: ilk karda yeni program yok', snow1.programs === opening.programs, `${opening.programs} → ${snow1.programs}`);
+
+    await goTo('autumn', 'rain');
+    const rain = await look();
+    check('Yağmurlu gün: damlalar, bulut güneşi kısıyor, sis yaklaşıyor', rain.id === 'rain' && rain.rain > 0 && rain.snow === 0 && rain.sunScale < 0.9 && rain.fogFar < 195,
+      `${rain.rain} damla · güneş ×${rain.sunScale.toFixed(2)} · sis ${Math.round(rain.fogFar)}`);
+
+    // Olayın havası: sahilde fırtına sürerken şehirde fırtına, ipucu olayı söylüyor.
+    await goTo('spring', 'clear', ['coastal_storm']);
+    const storm = await look();
+    await wp.screenshot({ path: `${OUT}/weather-storm.png` });
+    check('Sahilde fırtına sürerken şehirde fırtına; üst bar olayı söylüyor',
+      storm.id === 'storm' && storm.eventId === 'coastal_storm' && storm.rain > rain.rain && storm.chipEvent === 'coastal_storm' && /Sahilde Fırtına/.test(storm.chipTitle),
+      `${storm.id} · ${storm.rain} damla · ${storm.chipTitle}`);
+
+    // Ayar: yağmur ve kar kapalıyken damla yok, bulut ve mevsim yerinde.
+    await wp.locator('.speeds [data-panel="settings"]').click();
+    await wp.waitForSelector('[data-settings-weather]', { timeout: 5000 });
+    await wp.locator('[data-settings-weather]').uncheck();
+    await wp.keyboard.press('Escape');
+    const off = await look();
+    check('Ayarlarda "Yağmur ve kar" kapalı: damla yok, fırtınanın göğü ve mevsim duruyor', off.rain === 0 && off.effects === false && off.id === 'storm' && off.sunScale < 0.7,
+      `${off.rain} damla · güneş ×${off.sunScale.toFixed(2)}`);
+    await wp.locator('.speeds [data-panel="settings"]').click();
+    await wp.locator('[data-settings-weather]').check();
+    // Azaltılmış hareket de yağışı durduruyor.
+    await wp.locator('[data-setting="motion"][data-choice="reduced"]').click();
+    await wp.keyboard.press('Escape');
+    const reduced = await look();
+    const reducedScene = await wp.evaluate(() => window.__capital.renderInfo().reducedMotion);
+    check('Azaltılmış harekette yağış çizilmiyor', reduced.rain === 0 && reducedScene === true && reduced.effects === true, `${reduced.rain} damla`);
+    await wp.locator('.speeds [data-panel="settings"]').click();
+    await wp.locator('[data-setting="motion"][data-choice="full"]').click();
+    await wp.keyboard.press('Escape');
+
+    // Veri lensinde yağış susuyor.
+    await wp.evaluate(() => window.__capital.setLens('opportunity'));
+    const lens = await look();
+    await wp.evaluate(() => window.__capital.setLens('none'));
+    const back = await look();
+    check('Veri lensinde yağış susuyor, lens kapanınca dönüyor', lens.rain === 0 && back.rain > 0, `lens ${lens.rain} · şehir ${back.rain}`);
+    check('Mevsim ve hava akışında konsol temiz', wErrors.length === 0, wErrors.slice(0, 2).join(' | '));
+    await wContext.close();
+
+    // Telefonda İngilizce: ikon kalıyor, ad ipucunda ve ekran okuyucuda.
+    const wPhone = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+    await wPhone.addInitScript(veteran, TUTORIAL_KEY);
+    await wPhone.addInitScript(() => localStorage.setItem('capitalforge.locale', 'en'));
+    const wm = await wPhone.newPage();
+    const wmErrors = [];
+    wm.on('pageerror', (e) => wmErrors.push(e.message));
+    await wm.goto('http://127.0.0.1:8811/');
+    await wm.waitForSelector('.newgame', { timeout: 20000 });
+    await wm.locator('[data-newgame-start]').click();
+    await wm.waitForSelector('.topbar .brand-weather', { timeout: 30000 });
+    const phone = await wm.evaluate(() => {
+      const chip = document.querySelector('.brand-weather');
+      const label = chip.querySelector('.brand-weather-label');
+      return {
+        title: chip.getAttribute('title') ?? '',
+        text: label?.textContent ?? '',
+        labelWidth: Math.round(label.getBoundingClientRect().width),
+        icon: Boolean(chip.querySelector('svg')),
+        page: document.documentElement.scrollWidth > window.innerWidth + 1,
+      };
+    });
+    check('Telefonda İngilizce: hava ikonu, adı ipucunda ("Winter · …"), sayfa taşmıyor',
+      phone.icon && /^(Winter|Spring|Summer|Autumn) · (Clear|Cloudy|Rainy|Stormy|Snowy|Foggy)$/.test(phone.title) && phone.text === phone.title && phone.labelWidth <= 1 && !phone.page && wmErrors.length === 0,
+      JSON.stringify(phone));
+    await wPhone.close();
+  }
+
   section('Mobil');
   for (const deviceName of ['iPhone 13', 'Pixel 7']) {
     const mobileContext = await browser.newContext({ ...devices[deviceName] });

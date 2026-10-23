@@ -178,6 +178,8 @@ export { FREIGHT, FREIGHT_CHALLENGER_SHARE, fleetUsed, freightFeeEstimate, freig
 export type { FreightStanding } from './systems/freight';
 export { companyPath, notePathSources, sourceOf } from './systems/paths';
 export type { CompanyPath } from './systems/paths';
+export { cityWeather, weatherOn } from './systems/weather';
+export type { CityWeather } from './systems/weather';
 export {
   energyNeed,
   energyPotential,

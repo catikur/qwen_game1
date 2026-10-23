@@ -29,6 +29,8 @@ export interface Settings {
   /** 0..1; 1 Tur 46'ya kadarki sabit düzey. */
   volume: Record<VolumeChannel, number>;
   muted: boolean;
+  /** Şehirde yağmur ve kar taneleri (Tur 62); mevsimin rengi ve bulutun ışığı her durumda. */
+  weather: boolean;
 }
 
 export const TEXT_SIZES: readonly TextSize[] = ['small', 'normal', 'large', 'xlarge'];
@@ -45,6 +47,7 @@ export const DEFAULT_SETTINGS: Settings = {
   // Müzik (Tur 49) biraz geride başlıyor: şehrin sesi ve olaylar önde kalsın.
   volume: { master: 1, music: 0.7, ambience: 1, effects: 1 },
   muted: false,
+  weather: true,
 };
 
 const STORAGE_KEY = 'capitalforge.settings.v1';
@@ -72,6 +75,7 @@ export function sanitizeSettings(raw: unknown, legacyMuted = false): Settings {
       effects: level(volume['effects'], DEFAULT_SETTINGS.volume.effects),
     },
     muted: typeof source['muted'] === 'boolean' ? source['muted'] : legacyMuted,
+    weather: typeof source['weather'] === 'boolean' ? source['weather'] : DEFAULT_SETTINGS.weather,
   };
 }
 

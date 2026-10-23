@@ -471,6 +471,21 @@ button.icon {
   font-size: calc(12px * var(--text-scale));
 }
 
+/* Tur 62: tarihin yanında mevsim ve hava. */
+.brand-weather {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-left: 6px;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.brand-weather .weather-icon {
+  display: block;
+  opacity: 0.85;
+}
+
 .metrics {
   display: flex;
   gap: 8px 22px;
@@ -1572,6 +1587,20 @@ button.icon {
   .brand-name,
   .brand-ceo-name {
     display: none;
+  }
+
+  /* Dar ekranda havanın adı görünmüyor ama okunuyor (ipucu ve ekran okuyucu). */
+  .brand-weather-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .brand-weather {
+    margin-left: 4px;
   }
 
   .brand-sub {

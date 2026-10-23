@@ -359,7 +359,7 @@ export const panels = {
     ' Mağazalarının çatısında ara sıra bir fırsat balonu belirir: toplu sipariş, VIP müşteri, kapıda kuyruk, yatırımcı ya da indirimli arsa. Birkaç gün içinde dokunursan ödül senin; duraklatınca balon bekler. Her ay başında görev panosuna üç kısa görev gelir (gündemde "Görevler"). Bitirdiğin görevin ödülünü ay bitmeden panodan al.',
   'panels.help.step.living.title': 'Pazar yaşıyor.',
   'panels.help.step.living.body':
-    ' Kategorilerin talebi aylar içinde yükselip düşüyor, mevsimle değişiyor; ara sıra tek bir ürün moda oluyor. Rekabet panelindeki "Pazar nabzı" her kategorinin bugününü ve eğilimin nereye gittiğini gösteriyor. Modayı yakalamak için rafına o ürünü koy.',
+    ' Kategorilerin talebi aylar içinde yükselip düşüyor, mevsimle değişiyor; ara sıra tek bir ürün moda oluyor. Rekabet panelindeki "Pazar nabzı" her kategorinin bugününü ve eğilimin nereye gittiğini gösteriyor. Mevsim üst barda tarihin yanında yazıyor; şehirde ağaçların renginden ve havadan da okunuyor. Modayı yakalamak için rafına o ürünü koy.',
   'panels.help.step.projects.title': 'Belediye proje açıyor.',
   'panels.help.step.projects.body':
     ' Ara sıra belediye bir şehir projesi açar: metro, stadyum, AVM… 90 gün boyunca şirketler katkı verir; tablo açık, kimin ne verdiğini görürsün. Katkı geri dönmez. En çok veren projeye adını verir ve o bölgedeki binalarında kalıcı bakım indirimi, mağazalarında çekicilik ve marka kazanır. Proje kimin olursa olsun bitince bölgenin ve komşularının talebi artar, arsası değerlenir.',
@@ -425,6 +425,9 @@ export const panels = {
   'panels.settings.motion.full': 'Tam',
   'panels.settings.motion.hint':
     'Azaltılmış harekette arayüz geçişleri kapanır, kamera bir yere giderken kaymadan atlar. Otomatik, cihazın tercihine uyar.',
+  'panels.settings.weather': 'Yağmur ve kar',
+  'panels.settings.weather.hint':
+    'Şehre yağan damla ve taneler. Kapalıyken ve azaltılmış harekette çizilmez; mevsimin rengi ve bulutlu gök yine görünür.',
   'panels.settings.sound': 'Ses',
   'panels.settings.sound.on': 'Ses açık',
   'panels.settings.volume.master': 'Genel',

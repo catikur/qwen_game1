@@ -4,10 +4,10 @@ import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { SharedKernelBloomPass, postProcessingMaterials } from './bloom';
 import { isSoftwareRenderer } from './gpu';
-import { BUILDING_BY_ID, DISTRICT_ARCHETYPES, STRUCTURE_BY_ID } from '@capital/content';
+import { BUILDING_BY_ID, DISTRICT_ARCHETYPES, STRUCTURE_BY_ID, WEATHER_BY_ID } from '@capital/content';
 import type { BuildingDef, MassForm, StructureDef } from '@capital/content';
-import { BLOCK_SIZE, customerFlows, headquarters, lensValue, supplyRoutes } from '@capital/core';
-import type { GameState, LensId } from '@capital/core';
+import { BLOCK_SIZE, cityWeather, customerFlows, headquarters, lensValue, supplyRoutes } from '@capital/core';
+import type { CityWeather, GameState, LensId } from '@capital/core';
 import { RtsCameraController } from './camera';
 import { TrafficSystem } from './traffic';
 import { StreetLife, type SmokeEmitter } from './street';
@@ -20,6 +20,9 @@ import { decorateBuilding, decorateSite, decorateStructure, placeStreetTrees, st
 /** İnşaattaki projenin beton iskeleti (Tur 58). */
 const SITE_CONCRETE = '#bdb8ae';
 import { LampLight } from './lamplight';
+import { Precipitation } from './precipitation';
+import { mixWeather, seasonLook, weatherLook } from './season';
+import type { SeasonLook, WeatherLook } from './season';
 import { FACADE, buildingSurface, setWindowLateNight, windowLateNight } from './surface';
 import type { FacadeStyle } from './surface';
 import {
@@ -116,6 +119,12 @@ const QUALITY_LEVELS: QualityLevel[] = [
 const BLOOM_STRENGTH = 0.62;
 const BLOOM_RADIUS = 0.45;
 const BLOOM_THRESHOLD = 0.82;
+
+/** Sisin olağan uzaklığı; hava çarpanıyla yaklaşıyor (Tur 62). */
+const FOG_NEAR = 78;
+const FOG_FAR = 195;
+/** Yeni havanın ışığa ve göğe yerleşme süresi (sn). */
+const WEATHER_FADE_SECONDS = 4;
 
 /** Ölçüm penceresi: bu kadar saniye ve bu kadar kare toplanmadan karar yok. */
 const QUALITY_WINDOW_SECONDS = 2.5;
@@ -260,6 +269,23 @@ export class CityRenderer {
   /** Erişilebilirlik (Tur 47): renk körlüğüne uygun palet, azaltılmış hareket. */
   private safePalette = false;
   private reducedMotion = false;
+  /**
+   * Mevsim ve hava (Tur 62). Hava durumdan okunuyor (`cityWeather`), ışığa
+   * ve göğe geçişle yansıyor; mevsim ağaçları ve çimeni boyuyor.
+   */
+  private precipitation = new Precipitation();
+  private weather: CityWeather | null = null;
+  private weatherKey = '';
+  private seasonKey = '';
+  private season: SeasonLook = seasonLook('summer', 0);
+  private weatherFrom: WeatherLook = weatherLook(WEATHER_BY_ID.clear);
+  private weatherTo: WeatherLook = weatherLook(WEATHER_BY_ID.clear);
+  private weatherNow: WeatherLook = weatherLook(WEATHER_BY_ID.clear);
+  private weatherBlend = 1;
+  /** Havanın son okunduğu gün: gün atlayınca (kayıt, şehir değişimi) geçiş yok. */
+  private weatherDay = -1;
+  /** Ayarlardaki "yağmur ve kar" (Tur 62); kapalıyken mevsim yine görünüyor. */
+  private weatherEffects = true;
   /** `screenOfTile` için tekrar kullanılan vektör (her karede çağrılıyor). */
   private readonly projected = new THREE.Vector3();
   private view: ViewOptions = {
@@ -351,7 +377,7 @@ export class CityRenderer {
      * sisin işi değişti ve aralık dışarı taşındı: şehir tamamen berrak,
      * uzak kırsal gökyüzüne karışıyor.
      */
-    this.scene.fog = new THREE.Fog('#bcd0dc', 78, 195);
+    this.scene.fog = new THREE.Fog('#bcd0dc', FOG_NEAR, FOG_FAR);
 
     this.controller = new RtsCameraController(canvas.clientWidth / canvas.clientHeight, {
       width: mapWidth,
@@ -462,6 +488,7 @@ export class CityRenderer {
     this.fabricDecor = new DecorLayer(this.decorKit, perTile(3, 7, 2, 0, 1, 2, 7, 0));
     this.streetDecor = new DecorLayer(this.decorKit, perTile(0, 0.5, 0, 0, 0, 0, 1, 0.5));
     this.scene.add(this.buildingDecor.group, this.fabricDecor.group, this.streetDecor.group);
+    this.scene.add(this.precipitation.group);
     // Gece lambaların altına düşen ışık (Tur 36); yer yollar yerleşince geliyor.
     this.lampLight = new LampLight(Math.ceil(tileCount * 0.5));
     this.scene.add(this.lampLight.mesh);
@@ -870,6 +897,7 @@ export class CityRenderer {
     this.state = state;
     this.view = view;
     this.applyLensMode(view.lens);
+    this.syncWeather(state);
 
     const { width, tiles } = state.map;
 
@@ -1338,11 +1366,17 @@ export class CityRenderer {
     // değerlerde döngünün gece yarısında sahne fiilen görünmez oluyordu ve
     // sadece binaların amber emissive'i kalıyordu — oyun oynanamaz hale
     // geliyordu. Artık en karanlık anda bile şehir okunuyor.
-    this.sun.intensity = 1.1 + daylight * 1.35;
+    // Hava (Tur 62): yeni hava birkaç saniyede geliyor, bulut güneşi kısıyor.
+    if (this.weatherBlend < 1) {
+      this.weatherBlend = Math.min(1, this.weatherBlend + dt / WEATHER_FADE_SECONDS);
+      mixWeather(this.weatherFrom, this.weatherTo, this.weatherBlend, this.weatherNow);
+    }
+    const weather = this.weatherNow;
+    this.sun.intensity = (1.1 + daylight * 1.35) * weather.sun;
     // Renk iki sabit ton arasında geçer: gece soğuk ay ışığı, gündüz ılık
     // güneş. Ton (hue) üzerinden geçmek yeşilden geçirirdi.
     this.sun.color.copy(MOONLIGHT).lerp(SUNLIGHT, daylight);
-    this.hemisphere.intensity = 1.0 + daylight * 0.4;
+    this.hemisphere.intensity = (1.0 + daylight * 0.4) * weather.hemisphere;
     this.hemisphere.color.copy(NIGHT_SKY_LIGHT).lerp(DAY_SKY_LIGHT, daylight);
 
     /*
@@ -1354,9 +1388,15 @@ export class CityRenderer {
      * pencere ışıkları oyunun en iyi göründüğü an ve o korundu — ama
      * gündüz artık gerçekten gündüz.
      */
-    this.skyColor.setHSL(0.57, 0.4 - daylight * 0.17, 0.2 + daylight * 0.38);
+    this.skyColor.setHSL(0.57, (0.4 - daylight * 0.17) * weather.skySaturation, 0.2 + daylight * (0.38 + weather.skyLightness));
     (this.scene.background as THREE.Color).copy(this.skyColor);
     this.scene.fog?.color.copy(this.skyColor);
+    // Sis havayla yaklaşıyor: sisli günde ufuk şehrin kenarında.
+    const fog = this.scene.fog as THREE.Fog | null;
+    if (fog) {
+      fog.near = FOG_NEAR * weather.fogDistance;
+      fog.far = FOG_FAR * weather.fogDistance;
+    }
 
     // Ortam yansıması da günle birlikte kısılıyor: gece gökyüzü karanlık,
     // dolayısıyla camların yansıttığı şey de karanlık olmalı.
@@ -1381,6 +1421,43 @@ export class CityRenderer {
     this.lampLight.setGlow(glow);
     this.traffic.setNightGlow(this.dataLensActive ? 0 : glow);
     this.street.setDaylight(daylight);
+
+    // Yerdeki kar (Tur 62): zemin, kırsal ve çatılar beyaza çekiliyor; gece sönük.
+    const snowGlow = this.dataLensActive ? 0 : this.season.snow * (0.06 + daylight * 0.2);
+    // Parseller bölge rengini taşıyor: kar onları örtmesin, yalnız açsın.
+    this.groundLit.emissive.setRGB(0.86, 0.9, 0.95).multiplyScalar(snowGlow * 0.7);
+    this.world.setSnowGlow(snowGlow * 1.5);
+    this.decorKit.setSnowGlow(snowGlow * 1.8);
+  }
+
+  /**
+   * Şehrin havası ve mevsimi (Tur 62). Her durum eşitlemesinde okunuyor
+   * (birkaç zar, durum değişmiyor); değişen bir şey varsa uygulanıyor.
+   * Hava günden güne birkaç saniyelik bir geçişle değişiyor; ilk
+   * eşitlemede, azaltılmış harekette ve takvim atlayınca (kayıt açıldı,
+   * başka şehre geçildi) geçişsiz geliyor.
+   */
+  private syncWeather(state: GameState): void {
+    const city = cityWeather(state);
+    this.weather = city;
+    const jumped = Math.abs(state.time.day - this.weatherDay) > 1;
+    this.weatherDay = state.time.day;
+    if (city.weather.id !== this.weatherKey) {
+      const instant = this.weatherKey === '' || this.reducedMotion || jumped;
+      this.weatherKey = city.weather.id;
+      this.weatherFrom = { ...this.weatherNow };
+      this.weatherTo = weatherLook(city.weather);
+      this.weatherBlend = instant ? 1 : 0;
+      if (instant) Object.assign(this.weatherNow, this.weatherTo);
+    }
+    // Kar örtüsü yirmide bir adımla: eriyen kar her gün ağaçları yeniden boyamasın.
+    const snow = Math.round(city.snowCover * 20) / 20;
+    const key = `${city.season.id}|${snow}`;
+    if (key === this.seasonKey) return;
+    this.seasonKey = key;
+    this.season = seasonLook(city.season.id, snow);
+    this.world.setSeason(this.season);
+    for (const layer of [this.buildingDecor, this.fabricDecor, this.streetDecor]) layer.setFoliage(this.season);
   }
 
   /**
@@ -1441,6 +1518,16 @@ export class CityRenderer {
     this.updateShadowVolume();
     this.traffic.update(dt);
     this.street.update(dt);
+    // Yağış kameranın baktığı yerin çevresinde; kutu yakınlaştıkça daralıyor.
+    this.precipitation.update(
+      dt,
+      this.controller.targetPoint,
+      Math.max(10, Math.min(42, this.controller.targetDistance * 0.75)),
+      this.weatherNow.rain,
+      this.weatherNow.snowfall,
+      this.daylight(),
+      this.weatherEffects && !this.reducedMotion && !this.dataLensActive,
+    );
 
     // İnşaat animasyonu sürerken binalar her karede yeniden yerleşiyor;
     // şehrin geri kalanı yalnızca state değişince.
@@ -1493,6 +1580,15 @@ export class CityRenderer {
         // genel merkez işareti, veri merceğinin düz malzemeleri) eskisi gibi
         // ilk kullanıldıklarında derleniyor; açılışı uzatmıyorlar.
         const camera = this.controller.camera;
+        // Yağış (Tur 62) ilk karede görünmüyor olabilir; ilk yağmurda kare
+        // takılmasın diye iki programı da şimdi derleniyor.
+        this.precipitation.group.traverse((object) => {
+          const drawable = object as THREE.Line | THREE.Points;
+          const visible = drawable.visible;
+          drawable.visible = true;
+          if ((drawable as THREE.Line).isLine || (drawable as THREE.Points).isPoints) this.renderer.compile(drawable, camera, this.scene);
+          drawable.visible = visible;
+        });
         this.scene.traverseVisible((object) => {
           const drawable = object as THREE.Mesh & { isLine?: boolean; isPoints?: boolean };
           if ((drawable.isMesh || drawable.isLine || drawable.isPoints) && drawable.material) {
@@ -1619,6 +1715,7 @@ export class CityRenderer {
     // Kırsal ağaçları da kademeyle seyreliyor (Tur 34): aynı bütçe.
     this.world.setTreeBudget(level.carBudget);
     this.street.setBudget(level.carBudget);
+    this.precipitation.setBudget(level.carBudget);
     this.setPostProcessing(level.postProcessing);
     this.scene.environment = level.environment ? this.envTexture : null;
 
@@ -1730,6 +1827,24 @@ export class CityRenderer {
     /** Erişilebilirlik ayarları (Tur 47). */
     palette: 'standard' | 'safe';
     reducedMotion: boolean;
+    /**
+     * Mevsim ve hava (Tur 62): şehrin havası, yerdeki kar, ekrandaki
+     * yağmur damlası ve kar tanesi, ağaçların rengi, ışığın bulut payı.
+     */
+    weather: {
+      id: string;
+      season: string;
+      snowCover: number;
+      eventId: string | null;
+      rain: number;
+      snow: number;
+      fallSum: number;
+      effects: boolean;
+      sunScale: number;
+      fogFar: number;
+      countrysideTree: string;
+      streetTree: string | null;
+    };
     /** Kameranın şu an baktığı nokta; azaltılmış harekette odaklanınca hedefle aynı. */
     cameraCurrent: { x: number; z: number };
     /** Genel merkez işareti görünür mü ve nerede duruyor. */
@@ -1827,6 +1942,19 @@ export class CityRenderer {
       shopperColors: this.traffic.shopperColors,
       palette: this.safePalette ? 'safe' : 'standard',
       reducedMotion: this.reducedMotion,
+      weather: {
+        id: this.weather?.weather.id ?? 'clear',
+        season: this.season.season,
+        snowCover: this.season.snow,
+        eventId: this.weather?.eventId ?? null,
+        ...this.precipitation.stats(),
+        fallSum: this.precipitation.heightSum(),
+        effects: this.weatherEffects,
+        sunScale: this.weatherNow.sun,
+        fogFar: (this.scene.fog as THREE.Fog | null)?.far ?? 0,
+        countrysideTree: this.world.foliageSample,
+        streetTree: this.streetDecor.treeColorSample() ?? this.buildingDecor.treeColorSample(),
+      },
       cameraCurrent: this.controller.currentPoint,
       hqVisible: this.hqMarker.visible,
       hqPosition: this.hqMarker.visible
@@ -1918,6 +2046,11 @@ export class CityRenderer {
    * oyuncunun rengi, azaltılmış harekette kameranın atlaması. Palet
    * değişince şehir bir sonraki karede yeni renkle boyanıyor.
    */
+  /** Ayarlardaki yağmur ve kar (Tur 62); mevsimin rengi ve bulutun ışığı her durumda kalıyor. */
+  setWeatherEffects(enabled: boolean): void {
+    this.weatherEffects = enabled;
+  }
+
   setAccessibility(options: { safePalette: boolean; reducedMotion: boolean }): void {
     this.reducedMotion = options.reducedMotion;
     if (options.safePalette === this.safePalette) return;
@@ -1968,6 +2101,7 @@ export class CityRenderer {
 
   dispose(): void {
     this.disposed = true;
+    this.precipitation.dispose();
     this.groundLit.map?.dispose();
     this.groundLit.dispose();
     this.groundFlat.dispose();

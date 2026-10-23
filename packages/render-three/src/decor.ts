@@ -2,6 +2,8 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { makeAwningTexture, makeContactShadowTexture, makeRoofTileTexture } from './textures';
 import { uploadDrawn } from './instances';
+import { foliageColor, toneOf } from './season';
+import type { SeasonLook } from './season';
 
 /**
  * Temas gölgeleri (Tur 24).
@@ -233,6 +235,11 @@ export class DecorKit {
     };
   }
 
+  /** Yerdeki kar (Tur 62): çatılar beyaza çekiliyor. */
+  setSnowGlow(value: number): void {
+    (this.material.roof as THREE.MeshStandardMaterial).emissive.setRGB(0.86, 0.9, 0.95).multiplyScalar(value);
+  }
+
   /** Gece camların içi yanıyor (sera, atrium, çatı feneri). */
   setNightGlow(glow: number): void {
     this.glassMaterial.emissiveIntensity = glow * 0.45;
@@ -255,9 +262,18 @@ export class DecorLayer {
   readonly group = new THREE.Group();
   private counts: Record<DecorPart, number>;
   private dummy = new THREE.Object3D();
+  /**
+   * Ağaçların reçetedeki (yaz) rengi (Tur 62). Mevsim rengi bundan
+   * hesaplanıyor: katman yeniden kurulunca da, mevsim değişince de.
+   */
+  private treeBase: Float32Array;
+  private foliage: SeasonLook | null = null;
+  private summer = new THREE.Color();
+  private seasonal = new THREE.Color();
 
   constructor(kit: DecorKit, capacity: Record<DecorPart, number>) {
     this.counts = { roof: 0, box: 0, cylinder: 0, glass: 0, awning: 0, sign: 0, tree: 0, lamp: 0 };
+    this.treeBase = new Float32Array(Math.max(1, capacity.tree) * 3);
     this.meshes = {} as Record<DecorPart, THREE.InstancedMesh>;
     for (const part of PARTS) {
       const mesh = new THREE.InstancedMesh(kit.geometry[part], kit.material[part], Math.max(1, capacity[part]));
@@ -304,8 +320,32 @@ export class DecorLayer {
     this.dummy.scale.set(sx, sy, sz);
     this.dummy.updateMatrix();
     mesh.setMatrixAt(index, this.dummy.matrix);
-    mesh.setColorAt(index, color);
+    if (part === 'tree') {
+      this.treeBase.set([color.r, color.g, color.b], index * 3);
+      mesh.setColorAt(index, this.foliage ? foliageColor(color, toneOf(color, index), 'broadleaf', this.foliage, this.seasonal) : color);
+    } else {
+      mesh.setColorAt(index, color);
+    }
     this.counts[part] = index + 1;
+  }
+
+  /** Mevsim (Tur 62): çizili ağaçlar yeniden boyanıyor, sonra eklenenler de mevsimin renginde. */
+  setFoliage(look: SeasonLook): void {
+    this.foliage = look;
+    const mesh = this.meshes.tree;
+    const count = this.counts.tree;
+    for (let i = 0; i < count; i++) {
+      this.summer.fromArray(this.treeBase, i * 3);
+      mesh.setColorAt(i, foliageColor(this.summer, toneOf(this.summer, i), 'broadleaf', look, this.seasonal));
+    }
+    if (mesh.instanceColor) uploadDrawn(mesh.instanceColor, count);
+  }
+
+  /** Testler için: ilk ağacın çizilen rengi. */
+  treeColorSample(): string | null {
+    if (this.counts.tree === 0) return null;
+    this.meshes.tree.getColorAt(0, this.seasonal);
+    return `#${this.seasonal.getHexString()}`;
   }
 
   end(): void {

@@ -146,6 +146,11 @@ export function SettingsPanel(): ReactElement {
         <h3 id="settings-motion">{t('panels.settings.motion')}</h3>
         <Choices name="motion" options={MOTION_CHOICES} value={settings.motion} labels={MOTION_LABELS} onPick={(motion) => updateSettings({ motion })} />
         <p className="muted">{t('panels.settings.motion.hint')}</p>
+        <label className="settings-check">
+          <input type="checkbox" checked={settings.weather} data-settings-weather onChange={(e) => updateSettings({ weather: e.target.checked })} />
+          {t('panels.settings.weather')}
+        </label>
+        <p className="muted">{t('panels.settings.weather.hint')}</p>
       </section>
       <section className="settings-group">
         <h3 id="settings-sound">{t('panels.settings.sound')}</h3>

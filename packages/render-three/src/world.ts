@@ -1,5 +1,7 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { foliageColor, seasonLook } from './season';
+import type { FoliageKind, SeasonLook } from './season';
 
 /**
  * Şehrin dışındaki dünya.
@@ -204,6 +206,11 @@ export class World {
   private treeMaterial: THREE.MeshStandardMaterial;
   private broadleafTotal = 0;
   private coniferTotal = 0;
+  /** Ağaçların yaz rengi ve tonu (Tur 62): mevsim rengi bunlardan hesaplanıyor. */
+  private treeBases = new Map<THREE.InstancedMesh, { kind: FoliageKind; colors: THREE.Color[]; tones: number[] }>();
+  /** Mevsimin kırsal tonu ve gün ışığı; ikisi birlikte çimeni boyuyor. */
+  private season: SeasonLook = seasonLook('summer', 0);
+  private daylight = 1;
 
   constructor(mapWidth: number, mapHeight: number) {
     const cx = (mapWidth - 1) / 2;
@@ -414,11 +421,12 @@ export class World {
     this.treeMaterial = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9, metalness: 0 });
     const broadSpots = spots.filter((spot) => !spot.conifer);
     const pineSpots = spots.filter((spot) => spot.conifer);
-    const place = (geometry: THREE.BufferGeometry, list: TreeSpot[], greens: string[]): THREE.InstancedMesh => {
+    const place = (geometry: THREE.BufferGeometry, list: TreeSpot[], greens: string[], kind: FoliageKind): THREE.InstancedMesh => {
       const mesh = new THREE.InstancedMesh(geometry, this.treeMaterial, Math.max(1, list.length));
       mesh.frustumCulled = false;
       mesh.castShadow = false;
       mesh.receiveShadow = false;
+      const base = { kind, colors: [] as THREE.Color[], tones: [] as number[] };
       list.forEach((spot, i) => {
         dummy.position.set(spot.x, heightAt(spot.x, spot.z) - 0.04, spot.z);
         dummy.scale.setScalar(spot.scale);
@@ -427,15 +435,19 @@ export class World {
         mesh.setMatrixAt(i, dummy.matrix);
         tint.set(greens[Math.floor(spot.tone * greens.length)]!);
         mesh.setColorAt(i, tint);
+        base.colors.push(tint.clone());
+        // Rengi seçen tondan ayrı bir ton: sonbaharda aynı yeşil aynı renge dönmesin.
+        base.tones.push(hash(spot.x * 3.7 + spot.z * 1.9));
       });
+      this.treeBases.set(mesh, base);
       mesh.count = list.length;
       mesh.instanceMatrix.needsUpdate = true;
       if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
       this.group.add(mesh);
       return mesh;
     };
-    this.broadleaf = place(broadleafGeometry(), broadSpots, BROADLEAF_GREENS);
-    this.conifers = place(coniferGeometry(), pineSpots, CONIFER_GREENS);
+    this.broadleaf = place(broadleafGeometry(), broadSpots, BROADLEAF_GREENS, 'broadleaf');
+    this.conifers = place(coniferGeometry(), pineSpots, CONIFER_GREENS, 'conifer');
     this.broadleafTotal = broadSpots.length;
     this.coniferTotal = pineSpots.length;
   }
@@ -456,12 +468,42 @@ export class World {
    * tutuyor.
    */
   setDaylight(daylight: number): void {
+    this.daylight = daylight;
     const level = 0.34 + daylight * 0.66;
-    this.terrainMaterial.color.setRGB(level, level, level);
+    const [r, g, b] = this.season.terrain;
+    this.terrainMaterial.color.setRGB(level * r, level * g, level * b);
     // Duvar ve çatı rengi köşe/örnek renginde; malzeme yalnızca günle kararıyor.
     // Kırsaldan biraz koyu: sisin içinde şehirden parlak durmasınlar.
     this.settlementMaterial.color.setScalar(level * 0.86);
     this.treeMaterial.color.setRGB(level, level, level);
+  }
+
+  /**
+   * Mevsim (Tur 62): ağaçlar mevsimin rengine dönüyor, çimen tonu
+   * değişiyor. Mevsim ve kar örtüsü değişince bir kez çağrılıyor; renk
+   * her ağacın yaz renginden hesaplanıyor, yani geçişler birikmiyor.
+   */
+  setSeason(look: SeasonLook): void {
+    this.season = look;
+    const color = new THREE.Color();
+    for (const [mesh, base] of this.treeBases) {
+      base.colors.forEach((summer, i) => mesh.setColorAt(i, foliageColor(summer, base.tones[i]!, base.kind, look, color)));
+      if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+    }
+    this.setDaylight(this.daylight);
+  }
+
+  /** Yerdeki karın parıltısı (Tur 62): kırsal beyaza çekiliyor. */
+  setSnowGlow(value: number): void {
+    this.terrainMaterial.emissive.setRGB(0.86, 0.9, 0.95).multiplyScalar(value);
+    this.settlementMaterial.emissive.setRGB(0.86, 0.9, 0.95).multiplyScalar(value * 0.8);
+  }
+
+  /** Testler için: ilk yaprak döken ağacın rengi. */
+  get foliageSample(): string {
+    const color = new THREE.Color();
+    this.broadleaf.getColorAt(0, color);
+    return `#${color.getHexString()}`;
   }
 
   /** Veri lensinde kırsal susuyor: lens bir harita, manzara gürültü. */
