@@ -90,6 +90,7 @@ export const world: Record<keyof typeof trWorld, string> = {
   'core.realestate.noAuctions': 'Land auctions are off in this game, so there are no renewal applications.',
   'core.realestate.notRenewable': 'Renewal applications are only for an unowned plot holding a city structure that can be sold.',
   'core.realestate.districtLocked': 'This district is not open for development yet.',
+  'core.realestate.noProjectZone': 'No project can be built in this district: renewal applications are for districts zoned for a Housing Estate or an Office Campus.',
   'core.realestate.inAuction': 'This plot is already up for auction.',
   'core.realestate.requestPending': 'You already have an application with the council; you can file another once its auction opens.',
   'core.realestate.noCash': 'The application fee is {fee}; not enough cash.',

@@ -1,10 +1,11 @@
-import { BUILDING_BY_ID, CATEGORIES, REAL_ESTATE, STRUCTURE_BY_ID } from '@capital/content';
+import { BUILDINGS, BUILDING_BY_ID, CATEGORIES, REAL_ESTATE, STRUCTURE_BY_ID } from '@capital/content';
 import type { BuildingDef, CategoryId } from '@capital/content';
 import { formatMoney } from '../format';
 import { tc } from '../i18n';
 import { pushNews } from '../news';
 import type { BuildingInstance, CommandResult, DistrictState, GameState } from '../types';
 import { isDistrictOpen, tilePrice } from './city';
+import { zoningBlocker } from '../actions';
 
 /**
  * Gayrimenkul geliştiricisi (Tur 58): proje, kira, doluluk, kentsel dönüşüm.
@@ -197,6 +198,10 @@ export function renewalBlocker(state: GameState, tileId: number): string | null 
   const structure = tile.structureId ? STRUCTURE_BY_ID[tile.structureId] : undefined;
   if (!structure || structure.buyoutMultiplier === null) return tc('core.realestate.notRenewable');
   if (tile.ownerId || tile.buildingId) return tc('core.realestate.notRenewable');
+  // İmar artışı ve hak sahipleri yalnız projede: bölgeye proje kurulamıyorsa başvuru bedelsiz bir vaat olurdu (Codex #88).
+  if (!BUILDINGS.some((def) => isProject(def) && zoningBlocker(state, tile.districtId, def.id) === null)) {
+    return tc('core.realestate.noProjectZone');
+  }
   if (!isDistrictOpen(state, tile.districtId)) return tc('core.realestate.districtLocked');
   if (state.auction?.tileId === tileId) return tc('core.realestate.inAuction');
   if (state.renewalRequest) return tc('core.realestate.requestPending');

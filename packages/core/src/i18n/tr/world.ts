@@ -86,6 +86,7 @@ export const world = {
   'core.realestate.noAuctions': 'Bu oyunda parsel ihalesi kapalı: dönüşüm başvurusu yapılamıyor.',
   'core.realestate.notRenewable': 'Dönüşüm başvurusu yalnız şehrin satılabilir bir yapısı olan boş parsel için.',
   'core.realestate.districtLocked': 'Bölge henüz imara açılmadı.',
+  'core.realestate.noProjectZone': 'Bu bölgeye proje kurulamıyor: dönüşüm başvurusu Konut Sitesi ya da Ofis Kampüsü kurulabilen bölgelerde.',
   'core.realestate.inAuction': 'Bu parsel zaten ihalede.',
   'core.realestate.requestPending': 'Belediyede bekleyen bir başvurun var; ihalesi açılınca yenisini yapabilirsin.',
   'core.realestate.noCash': 'Başvuru bedeli {fee}; kasada yetmiyor.',

@@ -6114,6 +6114,8 @@ Rakipler kira ayarlamıyor. Kira 1'ken hesap eskisiyle bit bit aynı.
     ölçümde rakipler parseli ihaleden önce devralıyor, başvuru düşüyordu.
   - Bir anda tek başvuru. Parsel ihaleleri kapatılırsa bekleyen başvuru
     düşüyor (parsel yeniden satılık).
+  - Yalnız projeye imarı olan bölgede (sanayi ve limanda yok): imar artışı
+    ve hak sahipleri yalnız projede.
 - *Rakipler:* proje kurmuyor ve ihale değerlemelerine projeyi katmıyor.
   Dönüşüm hakkının değeri yalnız oyuncuda; ihale panelinde de yazıyor.
 
@@ -6135,6 +6137,9 @@ Rakipler kira ayarlamıyor. Kira 1'ken hesap eskisiyle bit bit aynı.
   Kiralıkta işlemeyen fiyat çarpanı satırı kalktı.
 - *Yapı menüsü:* proje kartında inşaat süresi ve dolmuş projenin tahmini;
   geri ödeme inşaatı ve doluşu sayıyor. Dönüşüm hakkı olan parselde not.
+- *İhale ipucu* ("burada en iyi hamlen") yalnız o parsele kurulabilen
+  binalardan; imar kuralı inşaatınki. Zengin bir limanda Ofis Kampüsü
+  gösteriyordu.
 - *Şehir yapısının panelinde* "Dönüşüm başvurusu yap" ve bekleyen
   başvurunun kalan günü. İhale panelinde dönüşüm hakkı notu.
 - *Gündem:* bekleyen başvuru ve proje bekleyen dönüşüm parseli
@@ -6193,13 +6198,15 @@ aynı. Tur 57'nin tam koşusuyla bölüm bölüm karşılaştırıldı: 28 eski 
 bütün sayıları aynı; değişen tek şey katalogdaki bina sayısı (38 → 40,
 "her bina kurulabiliyor" ve yapı menüsü sırası).
 
-**Testler.** `pnpm test` 679/679 (668'den); tip denetimi temiz; denge
+**Testler.** `pnpm test` 680/680 (668'den); tip denetimi temiz; denge
 sınavı 353/353; paket bütçesi tamam (ana parça 67,1 KB, 65,6'dan).
-- Çekirdek (`realestate.test.ts`, 9 yeni):
+- Çekirdek (`realestate.test.ts`, 10 yeni):
   - kira: esneklik kadar kaydırıyor, geliri çarpıyor, adım ve sınır;
   - şantiye: kira yok, bakımın %30'u, ücret yok, pazarda yok;
   - şantiyenin kadrosu yok: çalışan sayısı, ücret endeksi ve nüfus artışı
     proje yokmuş gibi, açılınca sayılıyor;
+  - projeye imarı olmayan bölgede başvuru yok, ihale ipucu orada
+    kurulamayan binayı göstermiyor;
   - açılış: ön kiralama, günde en çok kiracı gelişi kadar, hedefte duruyor;
   - başvuru: kurallar, bedel, parsel satılmıyor, sıradaki ihale o parsel,
     el değiştiren parselde düşüyor, ihalesiz oyunda yok, ihale sonradan
@@ -6326,7 +6333,7 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi). Senaryo şehirlerinde gün 3–17 ms (`pnpm dayperf`, Tur 43) |
-| Birim testi | **679 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de, Tur 52'de sunucuda tekrar, Tur 53'te haftanın kuralı ve günün koşusu, Tur 54'te hayalet eğri, Tur 55'te davetli ligler, Tur 56'da taşıma sözleşmeleri, Tur 57'de enerji, Tur 58'de gayrimenkul) |
+| Birim testi | **680 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de, Tur 52'de sunucuda tekrar, Tur 53'te haftanın kuralı ve günün koşusu, Tur 54'te hayalet eğri, Tur 55'te davetli ligler, Tur 56'da taşıma sözleşmeleri, Tur 57'de enerji, Tur 58'de gayrimenkul) |
 | Denge testi | **353 kontrol, hepsi geçiyor** (29 bölüm, süreleriyle; ~16 dk) |
 | Tarayıcı testi | **537 kontrol, hepsi geçiyor**, 0 konsol hatası (~40 dk); duman koşusu 132 (~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + paket bütçesi (Tur 46; Tur 48'den beri hizmet çalışanı ve manifest de) + duman oynanışı |

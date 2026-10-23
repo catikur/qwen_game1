@@ -1,13 +1,13 @@
 import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
-import { BUILDING_BY_ID, CATEGORIES, REAL_ESTATE, STRUCTURE_BY_ID } from '@capital/content';
+import { BUILDINGS, BUILDING_BY_ID, CATEGORIES, REAL_ESTATE, STRUCTURE_BY_ID } from '@capital/content';
 import { GameEngine } from '../src/engine';
 import { createNewGame } from '../src/worldgen';
-import { build, buyTile, buyoutTile } from '../src/actions';
+import { build, buyTile, buyoutTile, zoningBlocker } from '../src/actions';
 import { agenda } from '../src/agenda';
 import { isPurchasable, isDistrictOpen, runPopulationTick } from '../src/systems/city';
 import { runLaborTick, workforce } from '../src/systems/labor';
-import { runAuctionTick } from '../src/systems/auction';
+import { auctionHint, runAuctionTick } from '../src/systems/auction';
 import { estimateInvestment, runMarketTick } from '../src/systems/market';
 import {
   projectUnits,
@@ -321,6 +321,29 @@ describe('gayrimenkul: proje, kira, doluluk ve kentsel dönüşüm (Tur 58)', ()
     // Bölgenin nüfusu 80 günde biraz kaydı: tahmin defterden %5'ten fazla şaşmıyor.
     const revenue = project.last.revenue;
     assert.ok(Math.abs(revenue - estimate.revenue) / estimate.revenue < 0.05, `tahmin ${estimate.revenue}, defter ${revenue}`);
+  });
+
+  test('projeye imarı olmayan bölge: dönüşüm başvurusu yok, ihale ipucu projeyi göstermiyor', () => {
+    const state = fresh();
+    const projects = new Set([ESTATE, CAMPUS]);
+    const unzoned = (tileId: number) => [...projects].every((id) => zoningBlocker(state, state.map.tiles[tileId]!.districtId, id) !== null);
+    // Sanayi ya da limandaki satılabilir şehir yapısı: başvuru kuralının geri kalanı tutuyor.
+    const tile = state.map.tiles.find((t) => {
+      if (!unzoned(t.id) || t.kind !== 'plot' || t.ownerId || t.buildingId || !isDistrictOpen(state, t.districtId)) return false;
+      const structure = t.structureId ? STRUCTURE_BY_ID[t.structureId] : undefined;
+      return Boolean(structure && structure.buyoutMultiplier !== null);
+    });
+    assert.ok(tile, 'imarsız bölgede yapı yok');
+    assert.ok(renewalBlocker(state, tile.id), 'projeye imarı olmayan parsele başvuru kabul edildi');
+    // Aynı parselde ihale: ipucundaki bina orada kurulabilmeli. Zengin bölgede
+    // projenin tahmini (kiracısı geliri izliyor) mağazaları geçiyor.
+    state.districts[tile.districtId]!.incomeLevel = 1;
+    state.auction = { tileId: tile.id, endsOnDay: state.time.day + 5, reserve: 1, bid: 0, bidderId: null, rounds: 0 };
+    const hint = auctionHint(state, state.playerCompanyId);
+    for (const def of BUILDINGS) {
+      if (zoningBlocker(state, tile.districtId, def.id) === null) continue;
+      assert.ok(!hint?.includes(def.name), `ipucu imarsız ${def.name} gösteriyor: ${hint}`);
+    }
   });
 
   test('kayıt: proje, kira, başvuru ve dönüşüm hakkı kaydedilip açılıyor', () => {

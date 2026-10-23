@@ -8,6 +8,7 @@ import type { AuctionState, GameState } from '../types';
 import { withBuildingIndex } from './buildingIndex';
 import { noteFeat } from './feats';
 import { isProject, takeRenewalRequest } from './realestate';
+import { zoningBlocker } from '../actions';
 
 /**
  * Parsel ihalesi.
@@ -396,6 +397,8 @@ export function auctionHint(state: GameState, companyId: string): string | null 
     if (def.role !== 'outlet' && def.role !== 'rental') continue;
     const company = state.companies[companyId];
     if (!company || company.netWorth < def.unlockNetWorth) continue;
+    // İnşaatın imar kuralı: kurulamayacak bina teklifin gerekçesi olmasın (Codex #88).
+    if (zoningBlocker(state, tile.districtId, def.id)) continue;
     const estimate = estimateInvestment(state, tile.districtId, def.id, companyId, auction.tileId);
     if (!estimate?.direct) continue;
     if (estimate.dailyProfit > bestProfit) {
