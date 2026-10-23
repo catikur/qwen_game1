@@ -25,7 +25,6 @@ import { requestRenewal, setRent } from './systems/realestate';
 import { makeAmends } from './systems/relations';
 import { placeBid } from './systems/auction';
 import { noteCompanyPeak, notePeakWorth, noteRaidStage } from './systems/feats';
-import { notePathSources } from './systems/paths';
 import { sellShares } from './systems/equity';
 import {
   checkHoldingComplete,
@@ -474,9 +473,6 @@ export class GameEngine {
       notePeakWorth(state, holdingNetWorth(state));
       noteCompanyPeak(state);
       for (const city of state.holding?.dormant ?? []) noteCompanyPeak(city.state);
-      // Şirketin yolu (Tur 61): kârın kaynağı; bekleyen şehirler de kendi defterinde.
-      notePathSources(state);
-      for (const city of state.holding?.dormant ?? []) notePathSources(city.state);
     }
     // Senaryo günün son net değeri ve devralmasıyla (Tur 39).
     runScenarioTick(state);

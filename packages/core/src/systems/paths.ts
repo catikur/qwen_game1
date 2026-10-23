@@ -5,7 +5,8 @@ import type { BuildingInstance, GameState } from '../types';
 /**
  * Şirketin yolu (Tur 61): kârın kaynağı ve zafere giden iş kolu.
  *
- * Gün sonunda oyuncunun binalarının günlük kârı kaynağına göre toplanıyor
+ * Şehrin gününün sonunda (`simulateCityDay`, hedef adımından önce)
+ * oyuncunun binalarının günlük kârı kaynağına göre toplanıyor
  * (`state.sources`). Kendi santralinden enerji alan binanın tasarrufu o
  * binanın kârında duruyor (faturası yok); tasarruf santralin işi olduğu
  * için enerjiye yazılıyor, binanın kaynağından düşülüyor. Terminal kendi
@@ -58,7 +59,7 @@ export function notePathSources(state: GameState): void {
 
 export interface CompanyPath {
   path: PathDef;
-  /** Kaynakların toplam kârdaki payı (0..1); toplam artıda değilse hepsi 0. */
+  /** Kaynakların kâr eden kaynaklar içindeki payı (0..1, toplamı 1); toplam kâr artıda değilse hepsi 0. */
   shares: Record<PathSource, number>;
   /** Kaynakların koşu boyunca topladığı kâr. */
   totals: Record<PathSource, number>;
@@ -75,8 +76,11 @@ export function pathReached(def: PathDef, shares: Record<PathSource, number>, ac
 /** Şirketin bugüne kadarki yolu: eşiğini geçen ilk yol (listenin sırası), hiçbiri değilse perakende. */
 export function companyPath(state: GameState): CompanyPath {
   const totals = Object.fromEntries(PATH_SOURCES.map((source) => [source, state.sources?.[source] ?? 0])) as Record<PathSource, number>;
+  // Pay, kâr eden kaynakların toplamından: zarar eden kaynak varken de 0..1,
+  // toplamı 1 (Codex #91). Toplam kâr eksideyse henüz yol yok, paylar sıfır.
   const sum = PATH_SOURCES.reduce((total, source) => total + totals[source], 0);
-  const shares = Object.fromEntries(PATH_SOURCES.map((source) => [source, sum > 0 ? Math.max(0, totals[source]) / sum : 0])) as Record<PathSource, number>;
+  const gains = PATH_SOURCES.reduce((total, source) => total + Math.max(0, totals[source]), 0);
+  const shares = Object.fromEntries(PATH_SOURCES.map((source) => [source, sum > 0 ? Math.max(0, totals[source]) / gains : 0])) as Record<PathSource, number>;
   const acquisitions = state.companies[state.playerCompanyId]?.acquisitions ?? 0;
   const id: PathId = PATHS.find((def) => pathReached(def, shares, acquisitions))?.id ?? 'retail';
   return { path: PATH_BY_ID[id], shares, totals, acquisitions };

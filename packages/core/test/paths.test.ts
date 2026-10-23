@@ -8,6 +8,7 @@ import { companyPath, notePathSources, sourceOf } from '../src/systems/paths';
 import { FREIGHT_CHALLENGER_SHARE, freightStanding } from '../src/systems/freight';
 import { FREIGHT_SHARE } from '../src/systems/supply';
 import { runGoalTick } from '../src/systems/goals';
+import { simulateCityDay } from '../src/day';
 import { playerStrategy } from './proxy';
 import type { BuildingInstance, BuildingLedger, GameState } from '../src/types';
 
@@ -121,6 +122,38 @@ describe('şirketin yolu: kârın kaynağı (Tur 61)', () => {
     assert.equal(path({ retail: 100 }, rule('takeover').acquisitions! - 1), 'retail');
     const shares = companyPath(state).shares;
     assert.deepEqual(shares, { retail: 1, realestate: 0, energy: 0, freight: 0 });
+    // Zarar eden kaynak varken paylar 0..1 kalıyor ve toplamı 1 (Codex #91).
+    state.sources = { retail: -100, realestate: 200 };
+    assert.deepEqual(companyPath(state).shares, { retail: 0, realestate: 1, energy: 0, freight: 0 });
+  });
+
+  test('defter şehrin gününde yazılıyor: hedef adımından önce, bekleyen şehirde de (Codex #91)', () => {
+    const state = fresh();
+    state.sources = undefined;
+    simulateCityDay(state);
+    const sources = (): GameState['sources'] => state.sources;
+    assert.ok(sources() && Object.keys(sources()!).length > 0, 'şehrin günü defteri yazmadı');
+  });
+
+  test('zaferin yolu zafer gününün kârını da sayıyor (Codex #91)', () => {
+    const state = fresh();
+    const me = state.companies[state.playerCompanyId]!;
+    const rival = Object.values(state.companies).find((company) => !company.isPlayer)!;
+    // Oyuncunun tek binası kârlı bir kiralık: bugünkü kâr kiradan gelsin.
+    const rental = Object.values(state.buildings).find((b) => BUILDING_BY_ID[b.defId]?.role === 'rental' && b.last.profit > 0)!;
+    assert.ok(rental, 'kârlı kiralık yok');
+    for (const building of Object.values(state.buildings)) {
+      if (building.companyId === me.id && building.id !== rental.id) building.companyId = rival.id;
+    }
+    rental.companyId = me.id;
+    state.sources = undefined;
+    delete state.victory;
+    me.cash += 2_000_000_000;
+    const engine = new GameEngine(state);
+    engine.runDay();
+    const victory = (): GameState['victory'] => engine.getState().victory;
+    assert.equal(victory()?.kind, 'tycoon');
+    assert.equal(victory()?.path, 'realestate', 'zafer günü defterden önce dondu');
   });
 
   test('zafer günü yolu donduruyor', () => {
