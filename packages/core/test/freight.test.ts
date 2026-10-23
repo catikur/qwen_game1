@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { BUILDING_BY_ID, GOOD_BY_ID } from '@capital/content';
 import { GameEngine } from '../src/engine';
 import { createNewGame } from '../src/worldgen';
-import { build, buyTile, demolish } from '../src/actions';
+import { build, buyTile, demolish, purchaseBlocker } from '../src/actions';
 import { supplyRoutes } from '../src/routes';
 import { collectEventModifiers } from '../src/systems/events';
 import { boostMultiplier } from '../src/systems/cards';
@@ -403,6 +403,47 @@ describe('nakliye terminali ve taşıma sözleşmeleri (Tur 56)', () => {
     const legs = supplyRoutes(state, state.playerCompanyId).filter((leg) => leg.fromTileId === terminal.tileId);
     const targets = new Set(legs.filter((leg) => leg.companyId === state.playerCompanyId).map((leg) => leg.toTileId));
     for (const id of deal.outletIds) assert.ok(targets.has(state.buildings[id]!.tileId), `${id} için kamyon yok`);
+  });
+
+  test('kamyon indirimi veren depodan çıkıyor: yakın depo ve uzak terminal menzildeyse terminal (Codex #86)', () => {
+    const state = fresh().getState();
+    const me = state.playerCompanyId;
+    const company = state.companies[me]!;
+    company.cash += 5_000_000;
+    company.netWorth += 5_000_000;
+    const dist = (a: { x: number; y: number }, b: { x: number; y: number }) => Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
+    const free = state.map.tiles.filter((t) => t.kind === 'plot' && !t.structureId && !t.buildingId && !purchaseBlocker(state, t.id));
+    // Kamyonu gelen kendi mağazası; 5–10 karede terminal, ondan yakın (8 kare içinde) depo.
+    const served = new Set(
+      supplyRoutes(state, me)
+        .filter((leg) => leg.companyId === me && leg.kind === 'delivery')
+        .map((leg) => leg.toTileId),
+    );
+    let pick: { outlet: BuildingInstance; terminal: number; depot: number } | null = null;
+    for (const outlet of Object.values(state.buildings)) {
+      if (pick) break;
+      if (outlet.companyId !== me || BUILDING_BY_ID[outlet.defId]?.role !== 'outlet' || !served.has(outlet.tileId)) continue;
+      const o = state.map.tiles[outlet.tileId]!;
+      for (const far of free) {
+        const d = dist(far, o);
+        if (d < 5 || d > BUILDING_BY_ID[TERMINAL]!.radius) continue;
+        const near = free.find((t) => t.id !== far.id && dist(t, o) < d && dist(t, o) <= 8);
+        if (near) {
+          pick = { outlet, terminal: far.id, depot: near.id };
+          break;
+        }
+      }
+    }
+    assert.ok(pick, 'uygun mağaza ve parsel yok');
+    assert.ok(buyTile(state, me, pick.terminal).ok && build(state, me, pick.terminal, TERMINAL).ok);
+    assert.ok(buyTile(state, me, pick.depot).ok && build(state, me, pick.depot, 'warehouse').ok);
+    assert.equal(ownDepotRelief(state, pick.outlet), 0.35, 'indirim terminalden');
+    const legs = supplyRoutes(state, me).filter((leg) => leg.kind === 'delivery' && leg.toTileId === pick!.outlet.tileId);
+    assert.ok(legs.length > 0);
+    assert.ok(
+      legs.every((leg) => leg.fromTileId === pick!.terminal),
+      `kamyon ${legs.map((leg) => leg.fromTileId).join(',')} · terminal ${pick.terminal} · depo ${pick.depot}`,
+    );
   });
 
   test('komutlar oyunun komutu: tanınmayan teklif ve sözleşme reddediliyor', () => {

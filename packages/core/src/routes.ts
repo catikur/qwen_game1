@@ -1,4 +1,5 @@
 import { BUILDING_BY_ID, GOOD_BY_ID } from '@capital/content';
+import { DISTRIBUTION_RELIEF } from './systems/buildingIndex';
 import type { BuildingInstance, GameState } from './types';
 
 /**
@@ -119,7 +120,7 @@ export function supplyRoutes(state: GameState, playerCompanyId = 'player'): Supp
     const servedByPlant = new Map<string, number>();
 
     for (const outlet of outlets) {
-      const depot = nearestInRange(state, outlet, depots);
+      const depot = depotInRange(state, outlet, depots);
 
       for (const goodId of outlet.stocked) {
         const input = GOOD_BY_ID[goodId]?.inputGoodId;
@@ -233,19 +234,27 @@ function nearest(
   return best;
 }
 
-/** Menzili içinde kalan en yakın depo — dağıtım indirimiyle aynı kural. */
-function nearestInRange(
+/**
+ * Mağazanın malı hangi depodan geliyor — dağıtım indirimiyle aynı kural:
+ * menzildeki en cömert depo, eşitse en yakını. Yakın bir depo ve uzak bir
+ * terminal (Tur 56) birlikte menzildeyse indirimi terminal veriyor; kamyon
+ * da oradan çıkıyor (Codex #86).
+ */
+function depotInRange(
   state: GameState,
   outlet: BuildingInstance,
   depots: BuildingInstance[],
 ): BuildingInstance | null {
   let best: BuildingInstance | null = null;
+  let bestRelief = -1;
   let bestDistance = Number.POSITIVE_INFINITY;
   for (const depot of depots) {
-    const radius = BUILDING_BY_ID[depot.defId]?.radius ?? 0;
+    const def = BUILDING_BY_ID[depot.defId];
     const distance = manhattan(state, outlet.tileId, depot.tileId);
-    if (distance > radius) continue;
-    if (distance < bestDistance) {
+    if (!def || distance > def.radius) continue;
+    const relief = def.relief ?? DISTRIBUTION_RELIEF;
+    if (relief > bestRelief || (relief === bestRelief && distance < bestDistance)) {
+      bestRelief = relief;
       bestDistance = distance;
       best = depot;
     }
