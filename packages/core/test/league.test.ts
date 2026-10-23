@@ -16,11 +16,12 @@ import {
   verifyRun,
 } from '../src/league';
 import type { LeagueRun, RunVerdict } from '../src/league';
-import { BUBBLE_TIMING, CONSORTIUM, FAD, MODIFIER_RULES, PROJECTS, PROJECT_BY_ID, PROJECT_TIMING, loadLocale, setLocale } from '@capital/content';
+import { BUBBLE_TIMING, BUILDING_BY_ID, CONSORTIUM, FAD, MODIFIER_RULES, PROJECTS, PROJECT_BY_ID, PROJECT_TIMING, loadLocale, setLocale } from '@capital/content';
+import { FREIGHT } from '../src/systems/freight';
 import { LEAGUE_DAILY_DAYS, LEAGUE_DAYS, LEAGUE_RULE_ROTATION, leagueBoardKind, leagueDayId, leagueLength, leagueRule, leagueSeed, leagueWeekId } from '../src/systems/league';
 import { createNewGame } from '../src/worldgen';
 import type { GameState } from '../src/types';
-import { playerStrategy } from './proxy';
+import { freightStrategy, playerStrategy } from './proxy';
 
 /** Vekil oyuncuyla bir lig koşusu; isteğe bağlı olarak ortada "yeniden yükleme". */
 function playLeague(options: { reloadAt?: number; cheatAt?: number; board?: string } = {}): GameState {
@@ -465,5 +466,47 @@ describe('haftanın kuralı ve günün koşusu (Tur 53)', () => {
       credit.rateDelta = rateDelta;
     }
     assert.equal(computeSimFingerprint(), base);
+  });
+
+  test('iz taşımayı da işletiyor: terminalin payı ya da teklifin boyu değişince iz değişiyor (Tur 56)', () => {
+    const base = computeSimFingerprint();
+    const probe = simFingerprintParts().find((part) => part.startsWith('probe-freight:'))!;
+    assert.ok(probe.includes(':true:'), `yoklama sözleşme kurmadı: ${probe}`);
+    const terminal = BUILDING_BY_ID.freight_terminal as { relief: number };
+    const freight = FREIGHT as { maxOutlets: number };
+    const { relief } = terminal;
+    const { maxOutlets } = freight;
+    try {
+      terminal.relief = relief + 0.01;
+      assert.notEqual(computeSimFingerprint(), base, 'terminalin payı izi değiştirmiyor');
+      terminal.relief = relief;
+      freight.maxOutlets = maxOutlets - 1;
+      assert.notEqual(computeSimFingerprint(), base, 'teklifin boyu izi değiştirmiyor');
+    } finally {
+      terminal.relief = relief;
+      freight.maxOutlets = maxOutlets;
+    }
+    assert.equal(computeSimFingerprint(), base);
+  });
+});
+
+describe('taşıma sözleşmeli lig koşusu (Tur 56)', () => {
+  test('terminal kuran, teklif kabul eden koşu tekrarda tutuyor', async () => {
+    const engine = new GameEngine(createLeagueGame('2026-W40', 'Nakliye AŞ', null));
+    while (engine.getState().league!.finishedDay === undefined) {
+      const day = engine.getState().time.day;
+      if (day % 5 === 0) {
+        playerStrategy(engine);
+        freightStrategy(engine);
+      }
+      engine.runDay();
+    }
+    const state = engine.getState();
+    assert.ok((state.freight?.earnedTotal ?? 0) > 0, 'koşuda taşıma ücreti yok');
+    assert.ok((state.commandLog ?? []).some(([, command]) => command.type === 'ACCEPT_FREIGHT'), 'kabul günlükte yok');
+    const run = runFromState(state)!;
+    const result = await replayRun(decodeRun(encodeRun(run))!);
+    assert.ok(result.ok, result.reason);
+    assert.equal(result.score, run.score);
   });
 });

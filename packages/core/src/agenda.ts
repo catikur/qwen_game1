@@ -2,6 +2,7 @@ import { CARD_BY_ID, CATEGORIES, CREDIT, CRISIS_BY_ID, ERA_BY_ID, EVENT_BY_ID, G
 import { nextGoal } from './systems/goals';
 import { leagueBoardKind } from './systems/leagueWeek';
 import { OFFER_LIFETIME_DAYS, contractProgress } from './systems/contracts';
+import { FREIGHT } from './systems/freight';
 import { sharesHeld, sharesOutstanding } from './systems/equity';
 import { creditEnabled, overdraftLimit, overdraftOf } from './systems/credit';
 import { dailyBuyCap, sharesToControl } from './systems/orders';
@@ -38,6 +39,7 @@ export type AgendaKind =
   | 'union'
   | 'contractOffer'
   | 'contract'
+  | 'freightOffer'
   | 'auction'
   | 'unlock'
   | 'council'
@@ -248,6 +250,24 @@ export function agenda(state: GameState): AgendaItem[] {
       label: state.contract.title,
       tone: 'neutral',
       progress,
+    });
+  }
+
+  // Taşıma teklifleri (Tur 56): karar terminalin panelinde, çip oraya götürüyor.
+  for (const offer of state.freight?.offers ?? []) {
+    const left = Math.max(0, offer.offeredDay + FREIGHT.offerLifetimeDays - day);
+    items.push({
+      kind: 'freightOffer',
+      key: `freight:${offer.id}`,
+      urgency: left <= 5 ? 2 : 1,
+      daysLeft: left,
+      label: tc('core.agenda.freightOffer', {
+        company: state.companies[offer.companyId]?.name ?? offer.companyId,
+        count: offer.outletIds.length,
+        fee: formatMoney(offer.estimate),
+      }),
+      tone: 'neutral',
+      tileId: state.buildings[offer.terminalId]?.tileId,
     });
   }
 

@@ -168,6 +168,28 @@ export function supplyRoutes(state: GameState, playerCompanyId = 'player'): Supp
     }
   }
 
+  // --- Taşıma sözleşmeleri (Tur 56): oyuncunun terminalinden rakibin
+  // mağazasına, oyuncunun renginde. Rakibin zincirine hizmet etmek
+  // şehirde görünüyor: kendi kamyonların rakibin vitrinine gidiyor.
+  for (const deal of state.freight?.contracts ?? []) {
+    const terminal = state.buildings[deal.terminalId];
+    if (!terminal || terminal.companyId !== playerCompanyId) continue;
+    for (const outletId of deal.outletIds) {
+      const outlet = state.buildings[outletId];
+      if (!outlet || outlet.companyId !== deal.companyId) continue;
+      const goodId = outlet.stocked[0];
+      if (!goodId) continue;
+      push({
+        companyId: playerCompanyId,
+        kind: 'delivery',
+        goodId,
+        fromTileId: terminal.tileId,
+        toTileId: outlet.tileId,
+        distance: manhattan(state, terminal.tileId, outlet.tileId),
+      });
+    }
+  }
+
   legs.sort((a, b) => {
     // Oyuncu önce: tavan bağladığında kırpılan taraf rakip olsun.
     const playerA = a.companyId === playerCompanyId ? 0 : 1;

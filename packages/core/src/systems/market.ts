@@ -25,7 +25,8 @@ import { activeFad } from './living';
 import { projectAttraction, projectUpkeep } from './projects';
 import { buildingStrikeFactor, serviceFactor, wageFor } from './labor';
 import { marketingLeverage } from './focus';
-import { SURPLUS_HAIRCUT, distributionRelief, unitCogsFor } from './supply';
+import { SURPLUS_HAIRCUT, outletRelief, unitCogsFor } from './supply';
+import type { FreightClient } from './supply';
 import type { BuildingInstance, CompanyState, DistrictState, GameState } from '../types';
 import { scopedMemo, scopedOutlets, withBuildingIndex } from './buildingIndex';
 
@@ -574,8 +575,10 @@ interface OutletDay {
   def: BuildingDef;
   /** Şirketi yoksa mağaza satış yapmıyor (eskiden de aday olmuyordu). */
   company: CompanyState | undefined;
-  /** Deponun perakende maliyetinden sildiği pay. */
+  /** Deponun perakende maliyetinden sildiği pay (sözleşmede ücret düşülmüş). */
   relief: number;
+  /** Taşıma sözleşmesi (Tur 56): satılan her birimden terminale ücret. */
+  freight: FreightClient | null;
   price: number;
   appeal: number;
   service: number;
@@ -593,6 +596,21 @@ interface OutletDay {
   companySold: Record<CategoryId, number>;
 }
 
+/**
+ * Taşıma ücretini oyuncuya yazar: terminalin defteri ve şirketin cirosu.
+ * Kasaya günün sonundaki şirket toplamıyla giriyor, müşterininki gibi.
+ */
+function collectFreight(state: GameState, client: FreightClient, fee: number): void {
+  if (fee <= 0) return;
+  const player = state.companies[state.playerCompanyId];
+  const terminal = state.buildings[client.deal.terminalId];
+  if (!player || !terminal) return;
+  client.deal.lastFee = (client.deal.lastFee ?? 0) + fee;
+  terminal.last.revenue += fee;
+  terminal.last.profit += fee;
+  player.today.revenue += fee;
+}
+
 function outletDay(
   state: GameState,
   building: BuildingInstance,
@@ -601,11 +619,13 @@ function outletDay(
 ): OutletDay {
   const company = state.companies[building.companyId];
   const category = CATEGORIES[def.category];
+  const { relief, freight } = outletRelief(state, building);
   const outlet: OutletDay = {
     building,
     def,
     company,
-    relief: distributionRelief(state, building),
+    relief,
+    freight,
     price: 0,
     appeal: 0,
     service: 1,
@@ -636,6 +656,8 @@ function outletDay(
 
 function marketStep(state: GameState): void {
   applyAutoPricing(state);
+  // Taşıma ücretleri (Tur 56) bugünün satışından; dünkü sayı silinsin.
+  for (const deal of state.freight?.contracts ?? []) deal.lastFee = 0;
 
   const mods = collectEventModifiers(state);
   // Moda olan ürün (Tur 37d): kategori içinde talep ona kayıyor.
@@ -897,6 +919,9 @@ function marketStep(state: GameState): void {
             outlet.unitCogs.set(good.id, unitCogs);
           }
           const cogs = units * unitCogs * outlet.cogsBoost;
+          // Taşıma sözleşmesi (Tur 56): müşterinin maliyetinde ücret zaten
+          // var (indirimi ücret düşülmüş); o kısım oyuncunun terminaline.
+          if (outlet.freight) collectFreight(state, outlet.freight, units * good.retailCost * outlet.freight.rate * mods.costMultiplier * outlet.cogsBoost);
 
           building.last.unitsSold += units;
           outlet.soldGoods[good.id] = (outlet.soldGoods[good.id] ?? 0) + units;

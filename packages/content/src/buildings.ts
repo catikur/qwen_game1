@@ -334,6 +334,28 @@ export const BUILDINGS: BuildingDef[] = [
     unlockNetWorth: 800_000,
     description: 'Menzilindeki kendi mağazalarının dağıtım maliyetini düşürür.',
   },
+  // Tur 56: lojistiğin ikinci kademesi. Depodan geniş menzil ve büyük
+  // indirim; asıl farkı filo. Kamyonları menzilindeki rakip mağazalarına
+  // taşıma sözleşmesiyle çalışıyor, ücret rakibin tasarrufundan.
+  {
+    id: 'freight_terminal',
+    name: 'Nakliye Terminali',
+    role: 'logistics',
+    category: 'grocery',
+    tier: 2,
+    cost: 150_000,
+    upkeepPerDay: 520,
+    capacity: 0,
+    quality: 0,
+    jobs: 14,
+    radius: 10,
+    relief: 0.35,
+    fleet: 16,
+    color: '#5b6472',
+    height: 1.0,
+    unlockNetWorth: 1_500_000,
+    description: 'Kamyon filosu: menzilindeki kendi mağazalarına depodan ucuz dağıtım, rakiplerin mağazalarına taşıma sözleşmesi.',
+  },
 
   // ---- Rekabet kolları ----
   //

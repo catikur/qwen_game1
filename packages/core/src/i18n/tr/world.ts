@@ -72,6 +72,22 @@ export const world = {
   'core.contracts.millions': '{value} M ₺',
   'core.contracts.thousands': '{value} B ₺',
 
+  // freight.ts — taşıma sözleşmeleri (Tur 56)
+  'core.freight.noOffer': 'Bu taşıma teklifi artık masada değil.',
+  'core.freight.noTerminal': 'Teklifin terminali yok.',
+  'core.freight.stale': 'Teklifteki mağazaların hiçbirine artık taşınamıyor.',
+  'core.freight.fleetFull': 'Terminalin filosu dolu.',
+  'core.freight.noContract': 'Böyle bir taşıma sözleşmesi yok.',
+  'core.freight.offerTitle': '{company} taşıma teklifi getirdi',
+  'core.freight.offerBody': '{company} {count} mağazasına senin kamyonlarını istiyor: günde ~{fee}, {days} gün. Teklif ~{lifetime} gün masada.',
+  'core.freight.cancelledTitle': 'Taşıma sözleşmesi bitirildi',
+  'core.freight.cancelledBody': '{company} ile sözleşmeyi bitirdin. Cayma bedeli: {penalty}.',
+  'core.freight.brokenTitle': 'Taşıma sözleşmesi bozuldu',
+  'core.freight.brokenBody': '{company} mağazalarına taşıyan terminal yok. Cayma bedeli: {penalty}.',
+  'core.freight.endedTitle': 'Taşıma sözleşmesi bitti',
+  'core.freight.endedBody': '{company} ile {days} günlük sözleşme bitti: {earned} ücret.',
+  'core.freight.lostBody': '{company} için sözleşmede mağaza kalmadı: {earned} ücret.',
+
   // indirect.ts — dolaylı bina tahmininde etkinin neden sıfır olduğu
   'core.indirect.noUncovered': 'Menzilde deposuz mağazan yok.',
   'core.indirect.noOutlets': 'Henüz mağazan yok.',

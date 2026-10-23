@@ -50,6 +50,7 @@ import {
   collectEventModifiers,
   controllerOf,
   freeFloat,
+  freightTerminals,
   marketCap,
   portfolioValue,
   sharePrice,
@@ -85,6 +86,7 @@ import {
   defendAgainstRaids,
   expandOutletsVacantOnly,
   followChainAdvice,
+  freightStrategy,
   playerStrategy,
 } from './proxy';
 
@@ -4944,6 +4946,62 @@ section('Tohum Ligi: haftanın kuralı ve günün koşusu', () => {
     new Set(days.map((d) => d.informed.score)).size === days.length,
     days.map((d) => m(d.informed.score)).join(' · '),
   );
+});
+
+section('Lojistik: nakliye terminali ve taşıma sözleşmeleri', () => {
+  /*
+   * Tur 56. Terminal rakip mağazalarına taşıyor, ücret rakibin
+   * tasarrufundan. Sınanan: nakliyeci vekil her şehirde sözleşme alıyor,
+   * iş kolu tuzak değil (temel vekilin gerisine düşmüyor) ama baskın da
+   * değil, terminal kendi bedelini çıkarıyor, ve rakibe hizmet etmenin
+   * bedeli görünüyor: müşteri rakipler güçleniyor.
+   */
+  const m = (v: number) => `${(v / 1_000_000).toFixed(1)} M`;
+  const play = (seed: number, freight: boolean) => {
+    const engine = new GameEngine(createNewGame({ seed, companyName: 'Nakliye AŞ' }));
+    const state = engine.getState();
+    const deals = new Set<string>();
+    for (let day = 1; day <= DAYS; day++) {
+      if (day % 5 === 0) {
+        playerStrategy(engine);
+        if (freight) freightStrategy(engine);
+        for (const deal of state.freight?.contracts ?? []) deals.add(deal.id);
+      }
+      engine.runDay();
+    }
+    const rivals = Object.values(state.companies).filter((c) => !c.isPlayer);
+    const terminals = freightTerminals(state);
+    return {
+      net: getPlayer(state).netWorth,
+      rivals: rivals.reduce((sum, c) => sum + c.netWorth, 0),
+      earned: state.freight?.earnedTotal ?? 0,
+      deals: deals.size,
+      terminals: terminals.length,
+      trend: terminals.reduce((sum, t) => sum + (t.profitTrend ?? 0), 0) / Math.max(1, terminals.length),
+      cost: terminals.reduce((sum, t) => sum + (BUILDING_BY_ID[t.defId]?.cost ?? 0), 0),
+    };
+  };
+  const runs = [1, 7, 42].map((seed) => ({ seed, base: play(seed, false), freight: play(seed, true) }));
+  for (const r of runs) {
+    console.log(
+      `  seed ${r.seed}: temel ${m(r.base.net)} · nakliyeci ${m(r.freight.net)} (${r.freight.terminals} terminal, ${r.freight.deals} sözleşme, ücret ${m(r.freight.earned)}, terminal kâr eğilimi ${Math.round(r.freight.trend)}/gün) · rakipler ${m(r.base.rivals)} → ${m(r.freight.rivals)}`,
+    );
+  }
+  const gain = (r: (typeof runs)[number]) => r.freight.net / r.base.net - 1;
+  const average = runs.reduce((sum, r) => sum + gain(r), 0) / runs.length;
+  const pct = (v: number) => `${v >= 0 ? '+' : ''}${Math.round(v * 100)}%`;
+  expect('Nakliyeci vekil her şehirde sözleşme alıp ücret topluyor', runs.every((r) => r.freight.deals >= 2 && r.freight.earned > 0), runs.map((r) => `${r.freight.deals} sözleşme`).join(' · '));
+  expect('Tuzak değil: her şehirde temel vekilin en az %98\'i, ortalama en az +%3', runs.every((r) => gain(r) >= -0.02) && average >= 0.03, `${runs.map((r) => pct(gain(r))).join(' · ')} (ortalama ${pct(average)})`);
+  expect('Baskın değil: ortalama kazanç +%30\'un altında', average < 0.3, pct(average));
+  expect(
+    'Terminal kendi bedelini çıkarıyor: kâr eğilimi artıda, toplam ücret terminallerin bedelinin en az iki katı',
+    runs.every((r) => r.freight.trend > 0 && r.freight.earned >= 2 * r.freight.cost),
+    runs.map((r) => `×${(r.freight.earned / Math.max(1, r.freight.cost)).toFixed(1)}`).join(' · '),
+  );
+  // Rakibin kazancı aynı gün A/B'de ölçülüyor (`freight.test.ts`); burada
+  // 360 günün sonunda rakiplerin değeri oyuncuyla yarışın da sonucu.
+  const rivalGain = runs.reduce((sum, r) => sum + r.freight.rivals / r.base.rivals - 1, 0) / runs.length;
+  console.log(`  NOT: rakiplerin toplam değeri nakliyeci koşuda ortalama ${pct(rivalGain)} (müşteri ucuzluyor, oyuncu da büyüyor).`);
 });
 
 if (timings.length === 0) {

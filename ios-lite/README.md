@@ -377,6 +377,12 @@ veriye dokunmadığını denetliyor.
 tabloları ve verisi yerinde (3 oyuncu, kayıt, haftalık puanlar). Worker kodu
 aynı gün dağıtıldı.
 
+**Tur 56 (lojistik: nakliye terminali ve taşıma sözleşmeleri):** şema
+değişmedi, simülasyon değişti (yeni bina, taşıma ücreti). Yalnız 3. adım
+(kod): `pnpm lite:league-bundle`, paketi yapıştır, Deploy. Sağlık ucu
+değişmiyor. Paket yapıştırılana kadar Tur 56'dan sonra oynanan koşular
+"sunucu bu sürümü henüz tanımıyor" diye bekliyor (aşağıda), Lite etkilenmiyor.
+
 **Sürüm uyumu.** Sunucu koşuyu yalnız kendi simülasyon sürümüyle
 yargılayabiliyor. Pages'teki oyun her `main` birleşmesinde kendiliğinden
 güncelleniyor, Worker elle. Oyunun simülasyonunu değiştiren bir birleşmeden

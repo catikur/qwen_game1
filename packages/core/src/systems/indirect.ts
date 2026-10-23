@@ -3,7 +3,8 @@ import type { CategoryId } from '@capital/content';
 import { tc } from '../i18n';
 import { MARKETING_CAP, RESEARCH_CAP, defaultFocus, marketingLeverage, researchCeiling } from './focus';
 import { estimateInvestment, runMarketTick } from './market';
-import { distributionRelief, resetDailyLedgers, runProductionTick } from './supply';
+import { distributionRelief, reliefOf, resetDailyLedgers, runProductionTick } from './supply';
+import { freightPotential } from './freight';
 import type { BuildingInstance, GameState } from '../types';
 
 /**
@@ -46,6 +47,12 @@ export interface IndirectEstimate {
   focus?: CategoryId;
   /** Depoda menzile girecek, şimdiye kadar depolu olmayan mağaza sayısı. */
   covered?: number;
+  /**
+   * Terminalde (Tur 56): menzilde taşınabilecek rakip mağazaları ve filo
+   * kadarının günlük taşıma ücreti tahmini. Katkıya girmiyor: teklif gelir
+   * ve kabul edilirse.
+   */
+  freight?: { outlets: number; fee: number };
   /** Etki neden sıfır (mağaza yok, menzil boş, tavan dolu). */
   none?: string;
 }
@@ -179,16 +186,19 @@ function compute(
     const at = tileId !== undefined && state.map.tiles[tileId]?.districtId === districtId ? tileId : centralPlot(state, districtId);
     if (at === null) return null;
     const tile = state.map.tiles[at]!;
-    // Menzile girecek ve henüz depolu olmayan mağazalar.
+    // Menzile girecek ve indirimi artacak mağazalar: depolu olmayan ya da
+    // terminalden (Tur 56) daha az indirim alan.
     const covered = Object.values(state.buildings).filter((b) => {
       if (b.companyId !== companyId || BUILDING_BY_ID[b.defId]?.role !== 'outlet') return false;
       const other = state.map.tiles[b.tileId];
-      if (!other || distributionRelief(state, b) > 0) return false;
+      if (!other || distributionRelief(state, b) >= reliefOf(def)) return false;
       return Math.abs(other.x - tile.x) + Math.abs(other.y - tile.y) <= def.radius;
     }).length;
+    const freight = def.fleet ? freightPotential(state, companyId, defId, at) : undefined;
     if (covered === 0) {
       return result(0, 0, {
         covered,
+        freight,
         none: hasOutlets ? tc('core.indirect.noUncovered') : tc('core.indirect.noOutlets'),
       });
     }
@@ -196,7 +206,7 @@ function compute(
     const treated = structuredClone(state);
     const probe = phantom(treated, companyId, defId, at, null);
     treated.buildings[probe.id] = probe;
-    return result(settledGross(treated, companyId) - base, 0, { covered });
+    return result(settledGross(treated, companyId) - base, 0, { covered, freight });
   }
 
   const focus = defaultFocus(state, companyId, defId);

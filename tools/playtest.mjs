@@ -5929,6 +5929,117 @@ async function finish(browser, consoleErrors) {
     check('Değerlendirme akışında konsol temiz', eErrors.length === 0, eErrors.slice(0, 2).join(' | '));
   }
 
+  // ---------- Lojistik (Tur 56) ----------
+  // Nakliye terminali rakip mağazalarına taşıma sözleşmesiyle taşıyor. Sınanan
+  // akış oyuncunun yolu: terminal kurulur, teklif gündemde çıkar, çip
+  // terminalin paneline götürür, kabul sözleşmeyi açar, ücret deftere düşer,
+  // kamyonlar rakibin vitrinine gider, iki adımda bitirmek cayma bedelini keser.
+  section('Lojistik: nakliye terminali ve taşıma sözleşmeleri');
+  {
+    const fContext = await browser.newContext({ viewport: { width: 1280, height: 860 } });
+    await fContext.addInitScript(veteran, TUTORIAL_KEY);
+    const fp = await fContext.newPage();
+    const fErrors = [];
+    fp.on('pageerror', (e) => fErrors.push(e.message));
+    fp.on('console', (m) => { if (m.type() === 'error') fErrors.push(m.text()); });
+    await fp.goto('http://127.0.0.1:8811/');
+    await fp.waitForSelector('.newgame', { timeout: 20000 });
+    await fp.fill('.newgame-field input[type="text"]', 'Nakliye AŞ');
+    await fp.locator('button:has-text("Şirketi kur")').click();
+    await fp.waitForSelector('.topbar', { timeout: 30000 });
+
+    // Rakipler 150 gün büyüsün; sonra oyuncuya terminali açacak değer ve nakit.
+    const site = await fp.evaluate(() => {
+      const api = window.__capital;
+      api.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+      for (let i = 0; i < 150; i++) api.engine.runDay();
+      const state = api.getState();
+      const me = state.companies[state.playerCompanyId];
+      me.cash += 5_000_000;
+      me.netWorth += 5_000_000;
+      const rivals = Object.values(state.buildings).filter((b) => b.companyId !== me.id && api.buildingRole(b.defId) === 'outlet');
+      let best = null;
+      for (const tile of state.map.tiles) {
+        if (tile.kind !== 'plot' || tile.ownerId || tile.buildingId || tile.structureId) continue;
+        const count = rivals.filter((o) => {
+          const at = state.map.tiles[o.tileId];
+          return Math.abs(at.x - tile.x) + Math.abs(at.y - tile.y) <= 10;
+        }).length;
+        if (!best || count > best.count) best = { id: tile.id, count };
+      }
+      const bought = api.engine.dispatch({ type: 'BUY_TILE', tileId: best.id }).ok;
+      const built = bought && api.engine.dispatch({ type: 'BUILD', tileId: best.id, defId: 'freight_terminal' }).ok;
+      return { ...best, built, day: state.time.day };
+    });
+    check('Terminal rakip mağazalarının yoğun olduğu parsele kuruluyor', site.built && site.count >= 4, `${site.count} rakip mağazası menzilde, ${site.day}. gün`);
+
+    const offer = await fp.evaluate(() => {
+      const api = window.__capital;
+      for (let i = 0; i < 80 && !api.getState().freight?.offers.length; i++) api.engine.runDay();
+      // `runDay` arayüze haber vermiyor; bir komut veriyor.
+      api.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+      const o = api.getState().freight?.offers[0];
+      return o ? { id: o.id, company: api.getState().companies[o.companyId].name, outlets: o.outletIds.length, estimate: o.estimate } : null;
+    });
+    check('Taşıma teklifi geliyor', offer !== null, offer ? `${offer.company}: ${offer.outlets} mağaza, günde ~${offer.estimate}` : 'teklif yok');
+
+    if (offer) {
+      const chip = fp.locator(`[data-agenda-freight="freight:${offer.id}"]`);
+      await chip.waitFor({ timeout: 5000 }).catch(() => {});
+      const chipText = await chip.textContent().catch(() => '');
+      check('Teklif gündemde, şirketin adıyla', chipText.includes(offer.company), chipText);
+      await chip.click().catch(() => {});
+      const desk = fp.locator('[data-freight-desk]');
+      await desk.waitFor({ timeout: 5000 }).catch(() => {});
+      check('Çip terminalin paneline götürüyor: masada teklif', (await fp.locator(`[data-freight-offer="${offer.id}"]`).count()) === 1);
+      await fp.screenshot({ path: `${OUT}/freight-offer.png` });
+
+      await fp.locator(`[data-freight-accept="${offer.id}"]`).click();
+      await fp.waitForSelector('[data-freight-contract]', { timeout: 5000 }).catch(() => {});
+      const fleet = await fp.locator('[data-freight-fleet]').getAttribute('data-freight-fleet').catch(() => null);
+      check('Kabul sözleşmeyi açıyor, filo doluyor', (await fp.locator('[data-freight-contract]').count()) === 1 && fleet === `${offer.outlets}/16`, `filo ${fleet}`);
+
+      const after = await fp.evaluate(() => {
+        const api = window.__capital;
+        api.engine.runDay();
+        api.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+        const state = api.getState();
+        const deal = state.freight.contracts[0];
+        const terminal = state.buildings[deal.terminalId];
+        const legs = api.routeSignature().split('|');
+        const reach = deal.outletIds.filter((id) => legs.includes(`player:${terminal.tileId}>${state.buildings[id].tileId}`)).length;
+        return { fee: deal.lastFee, revenue: terminal.last.revenue, reach, outlets: deal.outletIds.length, first: state.buildings[deal.outletIds[0]].tileId };
+      });
+      check('Ücret terminalin defterine düşüyor', after.fee > 0 && Math.abs(after.revenue - after.fee) < 1e-6, `bugün ${Math.round(after.fee)} ₺`);
+      check('Kamyonlar terminalden rakibin mağazalarına gidiyor', after.reach === after.outlets, `${after.reach}/${after.outlets} mağaza`);
+      await fp.waitForTimeout(300);
+      const ledgerText = await fp.locator('.building .ledger').first().textContent();
+      check('Terminalin defteri taşıma ücretini yazıyor', ledgerText.includes('Taşıma ücreti'), ledgerText.slice(0, 80));
+      await fp.screenshot({ path: `${OUT}/freight-desk.png` });
+
+      // Rakip mağazasının paneli: dağıtımını senin terminalin yapıyor.
+      await fp.evaluate((tile) => window.__capital.selectTile(tile), after.first);
+      await fp.waitForTimeout(200);
+      check('Rakip mağazasının panelinde taşıma notu', (await fp.locator('[data-freight-client]').count()) === 1);
+
+      // İki adımda bitir: ilk tık bedeli gösteriyor, ikincisi kesiyor.
+      const terminalTile = site.id;
+      await fp.evaluate((tile) => window.__capital.selectTile(tile), terminalTile);
+      await fp.waitForSelector('[data-freight-cancel="ask"]', { timeout: 5000 });
+      check('Yıkma düğmesinin üstünde cayma uyarısı', (await fp.locator('[data-freight-demolish]').count()) === 1);
+      await fp.locator('[data-freight-cancel="ask"]').click();
+      const confirmText = await fp.locator('[data-freight-cancel="confirm"]').textContent();
+      const before = await fp.evaluate(() => window.__capital.getState().companies.player.cash);
+      await fp.locator('[data-freight-cancel="confirm"]').click();
+      await fp.waitForTimeout(200);
+      const ended = await fp.evaluate(() => ({ cash: window.__capital.getState().companies.player.cash, contracts: window.__capital.getState().freight.contracts.length }));
+      check('Bitirmek iki adımda; cayma bedeli düğmede yazıyor ve kesiliyor', confirmText.includes('cayma bedeli') && ended.contracts === 0 && ended.cash < before, `${confirmText.trim()} · ${Math.round(before - ended.cash)} ₺`);
+      check('Sözleşme kalmayınca masa menzili söylüyor', (await fp.locator('[data-freight-prospects]').count()) === 1);
+    }
+    check('Lojistik akışında konsol temiz', fErrors.length === 0, fErrors.slice(0, 2).join(' | '));
+    await fContext.close();
+  }
+
   section('Mobil');
   for (const deviceName of ['iPhone 13', 'Pixel 7']) {
     const mobileContext = await browser.newContext({ ...devices[deviceName] });

@@ -435,6 +435,44 @@ export interface ContractState {
   deadlineDay: number;
 }
 
+/**
+ * Taşıma sözleşmesi (Tur 56): bir rakip, mağazalarının dağıtımını oyuncunun
+ * terminaline veriyor. Teklif ve sözleşme aynı biçim; kabul `acceptedDay`
+ * ile `endDay`i doldurur.
+ */
+export interface FreightDeal {
+  id: string;
+  /** Müşteri: mağazaları taşınan rakip. */
+  companyId: string;
+  /** Oyuncunun terminali (bina kimliği). */
+  terminalId: string;
+  /** Taşınan mağazalar; her biri filodan bir kamyon. */
+  outletIds: string[];
+  durationDays: number;
+  offeredDay: number;
+  /** Teklifteki günlük ücret tahmini (dünkü satıştan). Cayma bedeli de bundan. */
+  estimate: number;
+  acceptedDay?: number;
+  endDay?: number;
+  /** Bugünkü ücret: pazar adımı yazıyor. */
+  lastFee?: number;
+  /** Kabulden beri toplanan ücret. */
+  earned?: number;
+}
+
+export interface FreightState {
+  offers: FreightDeal[];
+  contracts: FreightDeal[];
+  /** Teklif kimliği sayacı (`state.nextId`e dokunmasın: bina kimlikleri kaymasın). */
+  nextId: number;
+  /** Son teklifin geldiği ya da kabul edildiği gün; soğuma buradan. */
+  lastOfferDay: number;
+  /** Teklifi reddeden rakip ve günü: bir süre yeniden teklif getirmiyor. */
+  declined: Record<string, number>;
+  /** Bütün sözleşmelerden toplanan ücret (koşunun özeti için). */
+  earnedTotal: number;
+}
+
 /** Sistemleri kademeli açmak için — plandaki feature flag katmanı. */
 export interface FeatureFlags {
   npcCompetition: boolean;
@@ -799,6 +837,12 @@ export interface GameState {
   contract?: ContractState;
   /** Son teklifin kapandığı gün — soğuma süresi buradan sayılır. */
   lastContractDay?: number;
+  /**
+   * Taşıma sözleşmeleri (Tur 56): oyuncunun terminallerinin rakip
+   * mağazalarına yaptığı dağıtım. Seçime bağlı: eski kayıtta yokluğu
+   * "terminal yok, teklif yok" demek, şema sürümü sabit.
+   */
+  freight?: FreightState;
   flags: FeatureFlags;
   /** Açık ihale; yoksa null. */
   auction: AuctionState | null;
@@ -1084,6 +1128,12 @@ export type GameCommand =
   | { type: 'RENAME_COMPANY'; name: string }
   | { type: 'ACCEPT_CONTRACT' }
   | { type: 'DECLINE_CONTRACT' }
+  /** Masadaki taşıma teklifini kabul eder (Tur 56). */
+  | { type: 'ACCEPT_FREIGHT'; offerId: string }
+  /** Masadaki taşıma teklifini reddeder. */
+  | { type: 'DECLINE_FREIGHT'; offerId: string }
+  /** Süren taşıma sözleşmesini cayma bedeliyle bitirir. */
+  | { type: 'CANCEL_FREIGHT'; contractId: string }
   | { type: 'SET_FLAG'; flag: keyof FeatureFlags; value: boolean }
   /** Zafer ekranını kapatıp serbest oyuna devam eder. */
   | { type: 'DISMISS_VICTORY' }

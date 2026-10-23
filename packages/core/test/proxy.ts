@@ -12,7 +12,7 @@
  * iki ölçüm aynı soruya farklı cevap verdi. Artık vekil bir tane; deney
  * yalnızca seçeneklerle (tavan, günlük) ayrışıyor.
  */
-import { BUILDING_BY_ID, NPC_PROFILES } from '@capital/content';
+import { BUILDINGS, BUILDING_BY_ID, NPC_PROFILES } from '@capital/content';
 import {
   GameEngine,
   buildOptions,
@@ -20,7 +20,9 @@ import {
   chainCards,
   districtOpportunity,
   estimateInvestment,
+  fleetUsed,
   freeFloat,
+  freightTerminals,
   getPlayer,
   isDistrictOpen,
   sharePrice,
@@ -243,4 +245,45 @@ export function defendAgainstRaids(engine: GameEngine): void {
   // Günlük tavan (Tur 20): rakibin geri alımıyla aynı kural.
   const count = Math.min(capRemaining(state, player.id, player.id), freeFloat(state, player.id), Math.floor((player.cash * 0.4) / price));
   if (count > 0) engine.dispatch({ type: 'BUY_SHARES', companyId: player.id, count });
+}
+
+/**
+ * Nakliyeci vekil (Tur 56): oyunun önerdiği oynanışa lojistik iş kolu.
+ *
+ * Masadaki her taşıma teklifini kabul ediyor; terminallerinin filosunun
+ * %60'ı dolunca, terminali açacak değeri ve maliyetinin üç katı nakdi
+ * varsa, henüz taşınmayan rakip mağazalarının en yoğun olduğu boş parsele
+ * bir terminal daha (en az altı mağaza menzildeyse). Yalnızca komutla
+ * oynuyor: lig koşusunda da tekrar tutuyor.
+ */
+export function freightStrategy(engine: GameEngine, maxTerminals = 3): void {
+  const state = engine.getState();
+  const player = getPlayer(state);
+  for (const offer of [...(state.freight?.offers ?? [])]) engine.dispatch({ type: 'ACCEPT_FREIGHT', offerId: offer.id });
+
+  const def = BUILDINGS.find((candidate) => (candidate.fleet ?? 0) > 0);
+  if (!def) return;
+  const terminals = freightTerminals(state);
+  if (terminals.length >= maxTerminals) return;
+  if (!terminals.every((terminal) => fleetUsed(state, terminal.id) >= def.fleet! * 0.6)) return;
+  if (player.netWorth < def.unlockNetWorth || player.cash < def.cost * 3) return;
+
+  const served = new Set<string>();
+  for (const deal of state.freight?.contracts ?? []) for (const id of deal.outletIds) served.add(id);
+  const rivals = Object.values(state.buildings).filter(
+    (b) => b.companyId !== player.id && BUILDING_BY_ID[b.defId]?.role === 'outlet' && !served.has(b.id),
+  );
+  let best: { tileId: number; count: number } | null = null;
+  for (const tile of state.map.tiles) {
+    if (tile.kind !== 'plot' || tile.ownerId || tile.buildingId || tile.structureId || !isDistrictOpen(state, tile.districtId)) continue;
+    let count = 0;
+    for (const outlet of rivals) {
+      const at = state.map.tiles[outlet.tileId]!;
+      if (Math.abs(at.x - tile.x) + Math.abs(at.y - tile.y) <= def.radius) count++;
+    }
+    if (!best || count > best.count) best = { tileId: tile.id, count };
+  }
+  if (!best || best.count < 6) return;
+  if (!engine.dispatch({ type: 'BUY_TILE', tileId: best.tileId }).ok) return;
+  engine.dispatch({ type: 'BUILD', tileId: best.tileId, defId: def.id });
 }

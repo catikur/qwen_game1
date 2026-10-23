@@ -68,6 +68,8 @@ export const hud: Record<keyof typeof trHud, string> = {
   'hud.contract.decline': 'Pass',
   'hud.contract.activeTitle': 'Reward {reward} · exit penalty {penalty}',
   'hud.contract.active': 'Contract',
+  'hud.freight.offer': 'Haulage',
+  'hud.freight.offerTitle': "Accept or pass in the terminal's panel",
 
   // Agenda strip
   'hud.agenda.label': 'Agenda',

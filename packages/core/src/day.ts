@@ -16,6 +16,7 @@ import { runDistrictUnlockTick, runLandValueTick, runPopulationTick } from './sy
 import { runCityGrowthTick } from './systems/citygrowth';
 import { collectEventModifiers, runEraTick, runEventTick } from './systems/events';
 import { runContractTick } from './systems/contracts';
+import { runFreightTick } from './systems/freight';
 import { runAuctionTick } from './systems/auction';
 import { runDividendTick, runTakeoverTick } from './systems/equity';
 import { runResearchTick } from './systems/focus';
@@ -71,6 +72,9 @@ export function simulateCityDay(state: GameState): void {
   runMarketTick(state);
   runSpotPriceTick(state);
   runProfitTrendTick(state);
+  // Taşıma sözleşmeleri (Tur 56) pazardan SONRA: bugünkü ücret pazarın
+  // defterinde; biten ve bozulan sözleşmeler, yeni teklif.
+  runFreightTick(state);
 
   const mods = collectEventModifiers(state);
   runLandValueTick(state, mods.landValueDrift);

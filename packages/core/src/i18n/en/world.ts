@@ -76,6 +76,23 @@ export const world: Record<keyof typeof trWorld, string> = {
   'core.contracts.millions': '₺{value}M',
   'core.contracts.thousands': '₺{value}K',
 
+  // freight.ts — haulage contracts (Tur 56)
+  'core.freight.noOffer': 'That haulage offer is no longer on the table.',
+  'core.freight.noTerminal': 'The terminal for this offer is gone.',
+  'core.freight.stale': "None of the offer's stores can be served any more.",
+  'core.freight.fleetFull': "The terminal's fleet is full.",
+  'core.freight.noContract': 'No such haulage contract.',
+  'core.freight.offerTitle': 'Haulage offer from {company}',
+  'core.freight.offerBody':
+    '{company} wants your trucks for {count|# store|# stores}: about {fee} a day for {days|# day|# days}. The offer stays on the table for ~{lifetime|# day|# days}.',
+  'core.freight.cancelledTitle': 'Haulage contract cancelled',
+  'core.freight.cancelledBody': 'You ended the contract with {company}. Exit penalty: {penalty}.',
+  'core.freight.brokenTitle': 'Haulage contract broken',
+  'core.freight.brokenBody': 'The terminal serving {company} is gone. Exit penalty: {penalty}.',
+  'core.freight.endedTitle': 'Haulage contract over',
+  'core.freight.endedBody': 'The contract with {company} is done after {days|# day|# days}: {earned} in fees.',
+  'core.freight.lostBody': '{company} has no stores left on the contract: {earned} in fees.',
+
   // indirect.ts — why the effect is zero in an indirect building estimate
   'core.indirect.noUncovered': 'No stores without a warehouse in range.',
   'core.indirect.noOutlets': "You don't have any stores yet.",

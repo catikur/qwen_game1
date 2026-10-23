@@ -19,6 +19,7 @@ import { cancelTakeoverOrder, placeTakeoverOrder, playerBuy } from './systems/or
 import { recomputeNetWorth } from './systems/city';
 import { runConsortiumTick } from './systems/consortium';
 import { acceptContract, declineContract } from './systems/contracts';
+import { acceptFreight, cancelFreight, declineFreight } from './systems/freight';
 import { placeBid } from './systems/auction';
 import { noteCompanyPeak, notePeakWorth, noteRaidStage } from './systems/feats';
 import { sellShares } from './systems/equity';
@@ -271,6 +272,15 @@ export class GameEngine {
 
       case 'DECLINE_CONTRACT':
         return declineContract(state);
+
+      case 'ACCEPT_FREIGHT':
+        return acceptFreight(state, command.offerId);
+
+      case 'DECLINE_FREIGHT':
+        return declineFreight(state, command.offerId);
+
+      case 'CANCEL_FREIGHT':
+        return cancelFreight(state, command.contractId);
 
       case 'BUY_SHARES':
         return playerBuy(state, playerId, command.companyId, command.count);

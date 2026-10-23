@@ -4,7 +4,7 @@
 > `pnpm bench` çıktısından; iddialar `pnpm balance` ve `pnpm playtest`
 > tarafından her koşuda doğrulanıyor.
 >
-> Son güncelleme: şema **v6**, 55 tur (Tur 33 denendi ve geri alındı; Tur 34 eski görünüme canlılık ekledi; Tur 35 arayüzü Lite'ın "Cam & Bulut" diline taşıdı; Tur 36 şehre ayrıntı kattı; Tur 37a geç oyuna yönetim yükü, servet vergisi ve kriz dönemleri getirdi; Tur 37b karar kartlarını ve rakip hikâyelerini ekledi; Tur 37c fırsat balonlarını ve aylık görev panosunu getirdi; Tur 37d canlı pazarı, şehir projesi ihalesini ve rakip konsorsiyumunu getirdi; Tur 38 değerlendirme turuydu: geç oyun hızı, gündem ve haber akışı, zorluk eğrisi; Tur 39a senaryo modunu getirdi: Kurtarma ve Krizin ortasında; Tur 39b Konsorsiyuma karşı, Zincir ustası ve Şehrin sponsoru senaryolarını ekledi; Tur 39c Büyük şehir fethi ve Holding: iki şehir ile listeyi yediye tamamladı; Tur 40 cila ve performans; Tur 41 başarımlar ve kariyer; Tur 42 açılışta gölgelendirici derlemesi; Tur 43 oyun içi akıcılık; Tur 44 değerlendirme turuydu: Türkçe sayı biçimi, yardımın kapsamı, haber akışı; Tur 45 dört ek kural getirdi: Fırtınalı yıllar, Aç gözlü rakipler, Sıkı banka, Kıt arsa; Tur 46 açılış paketini böldü: kurulum ekranı telefonda yarı sürede; Tur 47 tek Ayarlar paneli ve erişilebilirlik getirdi: metin boyutu, renk körlüğüne uygun palet, hareket, ses düzeyleri, pencerelerde klavye; Tur 48 oyunu kurulabilir ve çevrimdışı açılır yaptı, yayından sonra "yeni sürüm hazır" diyor; Tur 49 müziği getirdi: gündüz, gece ve kriz, şehirle birlikte dönüyor; Tur 50 Faz 1'i değerlendirdi ve tanıtım paketini hazırladı; Tur 51 Faz 2'yi açtı: Lite'ın lig sunucusu ana oyunun Tohum Ligi koşularını da alıyor, tablo herkese açık; Tur 52'de sunucu her koşuyu gönderimde yeniden oynatıyor, tabloya yalnız doğrulanmış skor giriyor; Tur 53 ligin her haftasına bir ek kural ve 90 günlük günün koşusunu getirdi; Tur 54 liderlerin eğrisini senin koşunun üstüne koydu ve liderin o günlerde ne yaptığını koşu kodundan anlatıyor; Tur 55 davet kodlu arkadaş liglerini getirdi ve Faz 2'yi kapattı). Önümüzdeki işin sırası `docs/YOL-HARITASI.md`'de.
+> Son güncelleme: şema **v6**, 56 tur (Tur 33 denendi ve geri alındı; Tur 34 eski görünüme canlılık ekledi; Tur 35 arayüzü Lite'ın "Cam & Bulut" diline taşıdı; Tur 36 şehre ayrıntı kattı; Tur 37a geç oyuna yönetim yükü, servet vergisi ve kriz dönemleri getirdi; Tur 37b karar kartlarını ve rakip hikâyelerini ekledi; Tur 37c fırsat balonlarını ve aylık görev panosunu getirdi; Tur 37d canlı pazarı, şehir projesi ihalesini ve rakip konsorsiyumunu getirdi; Tur 38 değerlendirme turuydu: geç oyun hızı, gündem ve haber akışı, zorluk eğrisi; Tur 39a senaryo modunu getirdi: Kurtarma ve Krizin ortasında; Tur 39b Konsorsiyuma karşı, Zincir ustası ve Şehrin sponsoru senaryolarını ekledi; Tur 39c Büyük şehir fethi ve Holding: iki şehir ile listeyi yediye tamamladı; Tur 40 cila ve performans; Tur 41 başarımlar ve kariyer; Tur 42 açılışta gölgelendirici derlemesi; Tur 43 oyun içi akıcılık; Tur 44 değerlendirme turuydu: Türkçe sayı biçimi, yardımın kapsamı, haber akışı; Tur 45 dört ek kural getirdi: Fırtınalı yıllar, Aç gözlü rakipler, Sıkı banka, Kıt arsa; Tur 46 açılış paketini böldü: kurulum ekranı telefonda yarı sürede; Tur 47 tek Ayarlar paneli ve erişilebilirlik getirdi: metin boyutu, renk körlüğüne uygun palet, hareket, ses düzeyleri, pencerelerde klavye; Tur 48 oyunu kurulabilir ve çevrimdışı açılır yaptı, yayından sonra "yeni sürüm hazır" diyor; Tur 49 müziği getirdi: gündüz, gece ve kriz, şehirle birlikte dönüyor; Tur 50 Faz 1'i değerlendirdi ve tanıtım paketini hazırladı; Tur 51 Faz 2'yi açtı: Lite'ın lig sunucusu ana oyunun Tohum Ligi koşularını da alıyor, tablo herkese açık; Tur 52'de sunucu her koşuyu gönderimde yeniden oynatıyor, tabloya yalnız doğrulanmış skor giriyor; Tur 53 ligin her haftasına bir ek kural ve 90 günlük günün koşusunu getirdi; Tur 54 liderlerin eğrisini senin koşunun üstüne koydu ve liderin o günlerde ne yaptığını koşu kodundan anlatıyor; Tur 55 davet kodlu arkadaş liglerini getirdi ve Faz 2'yi kapattı; Tur 56 Faz 3'ü açtı: nakliye terminali rakip mağazalarına taşıma sözleşmesiyle taşıyor). Önümüzdeki işin sırası `docs/YOL-HARITASI.md`'de.
 
 ---
 
@@ -5780,6 +5780,107 @@ oyun hep yerel tabloyla açıldı, bir şey bozulmadı. Tur 51–54'te Codex'in
 her bulgusu düzeltildi; her bulgunun testi düzeltmeden önce kaldı. Birim
 testi fazın başında 520'ydi (Tur 50), şimdi 625.
 
+### Tur 56 — Lojistik: nakliye terminali ve taşıma sözleşmeleri
+
+Faz 3'ün ilk turu. Kamyonlar şehirde hep kendi zincirini taşıyordu, depo
+yalnız kendi mağazanın maliyetini düşürüyordu. Ölçüm (3 tohum, 360 gün):
+rakiplerin hiçbir mağazası depo menzilinde değil; mağaza başına dağıtım
+tasarrufu günde 150–450 ₺. Bu tur o boşluğu bir iş koluna çeviriyor.
+
+**Nakliye terminali (`content/src/buildings.ts`).** Lojistiğin ikinci
+kademesi: 150 B ₺, günde 520 ₺ gider ve 14 kişi, menzil 10, mağazanın
+perakende maliyetinden %35 (depo %25), 1,5 M ₺ değerde açılıyor. Asıl farkı
+16 kamyonluk filo. Bina tanımına iki alan geldi: `relief` (payı) ve `fleet`.
+Kendi mağazasına depo gibi, daha cömert çalışıyor; birden çok depo
+menzildeyse en cömert olanı sayılıyor (depolarda sonuç aynı).
+
+**Taşıma sözleşmeleri (`core/src/systems/freight.ts`).**
+- *Teklif rakipten.* Terminal menzilindeki, kendi deposu olmayan, başka
+  sözleşmede ya da teklifte olmayan rakip mağazaları şirket şirket
+  toplanıyor; günlük ücreti en büyük (rakip, terminal) çifti masaya geliyor.
+  Bir teklifte 2–8 mağaza, terminale yakından uzağa, boştaki kamyon kadar.
+  Soğuma 12 gün, sonra günde %20 olasılık; masada en çok iki teklif, 20 gün.
+- *Ücret satıştan.* Sözleşmedeki mağazanın sattığı her birimden perakende
+  maliyetinin %35 × %60'ı terminale (`FREIGHT_SHARE`): rakibe indirimin
+  %40'ı kalıyor. Ücret rakibin mal maliyetinde, oyuncunun cirosunda ve
+  terminalin defterinde; para yaratılmıyor, el değiştiriyor. Rakip büyüdükçe
+  ücret de büyüyor, ama rakip senin kamyonunla ucuzluyor.
+- *Kurallar.* Süre 120 gün. Reddedilen rakip 60 gün teklif getirmiyor.
+  Sözleşmeyi bitirmek ya da terminali yıkmak cayma bedeli (günlük tahminin
+  20 katı, rakibe). Mağaza kapanır, el değiştirir ya da rakip kendi deposunu
+  kurarsa mağaza bedelsiz çıkıyor; mağaza kalmayınca sözleşme bitiyor.
+- *Terminali olmayan oyunda zar atılmıyor:* taşıma, terminal kurmayan bir
+  koşunun hiçbir sayısını değiştirmiyor; denge sınavının eski bölümleri
+  aynı sayıları veriyor.
+- Kayıt şeması değişmedi: `state.freight` seçime bağlı.
+
+**Lig.** Üç komut (`ACCEPT_FREIGHT`, `DECLINE_FREIGHT`, `CANCEL_FREIGHT`)
+koşu günlüğünde; hayalet kartında "Taşıma sözleşmesi aldı". Parmak izinin
+60 günlük dünyasında terminal yok; izde bir taşıma yoklaması var: kopyada
+rakip mağazalarının en yoğun olduğu parsele terminal, teklif gelene kadar
+taşıma adımı, kabul, bir pazar günü. Teklifin seçimi, ücret ve terminalin
+payı izde; ayarlar da (metin değil sayı).
+
+**Arayüz.**
+- Terminalin panelinde "Taşıma" masası: filo (8/16), bugünkü ücret,
+  toplanan; masadaki teklif (kabul et / geç; filo yetmezse düğme söylüyor),
+  süren sözleşmeler (rakip, mağaza, bugünkü ücret, kalan gün), sözleşmeyi
+  bitirmek iki adımda ve cayma bedeli düğmede. Sözleşme yoksa menzildeki
+  rakip mağazası sayısı. Defter taşıma ücretini, gideri ve kârı yazıyor.
+- Yıkma düğmesinin üstünde, sözleşme varsa, bozulacak sözleşme ve bedel.
+- Gündemde "Taşıma" çipi (rakip, mağaza, günlük ücret, kalan gün); çip
+  terminale götürüp paneli açıyor.
+- Sözleşmedeki rakip mağazasının panelinde "dağıtımını senin terminalin
+  yapıyor".
+- Kamyonlar: terminalden sözleşmedeki rakip mağazalarına, oyuncunun
+  renginde. Şehirde terminal üç kapılı, çatısında şirketin tabelası.
+- Yapı menüsü terminal için menzildeki rakip mağazalarını ve filo kadarının
+  günlük ücret tahminini ayrıca yazıyor (katkıya girmiyor: teklif gelirse).
+- İki dilde.
+
+**Denge (`pnpm balance lojistik`).** Nakliyeci vekil (`test/proxy.ts`,
+`freightStrategy`): masadaki her teklifi kabul ediyor; terminallerinin
+filosu %60 dolunca, değeri ve maliyetinin üç katı nakdi varsa, taşınmayan
+rakip mağazalarının en yoğun olduğu boş parsele bir terminal daha (en çok
+üç). Temel vekille aynı şehirlerde, 360 gün:
+
+| Tohum | Temel | Nakliyeci | Sözleşme | Ücret | Terminal kâr eğilimi |
+|---|---|---|---|---|---|
+| 1 | 35,0 M ₺ | 40,3 M ₺ (+%15) | 15 | 1,7 M ₺ | 1.325 ₺/gün |
+| 7 | 31,9 M ₺ | 37,2 M ₺ (+%16) | 13 | 1,5 M ₺ | 1.183 ₺/gün |
+| 42 | 41,4 M ₺ | 44,7 M ₺ (+%8) | 15 | 1,8 M ₺ | 1.680 ₺/gün |
+
+- Tuzak değil (her şehirde temel vekilin en az %98'i, ortalama en az +%3),
+  baskın da değil (ortalama +%30'un altında): ortalama +%13.
+- Terminaller bedellerinin 3,3–4,1 katı ücret topluyor.
+- Rakiplerin toplam değeri ortalama +%1 (müşteri ucuzluyor, oyuncu da
+  büyüyor; aynı günün A/B'si `freight.test.ts`'te).
+- İlk ayarla (filo 12, 18 kişi, günde 600 ₺) terminal başına kâr günde
+  550–1.780 ₺ ve geri ödeme 85–270 gündü; filo büyüyüp gider düşünce
+  kalibrasyondaki 3 terminalli vekil %2–13 önde.
+
+**Doğrulama.** `pnpm test` 642/642 (625'ten); tip denetimi temiz.
+- Çekirdek (`freight.test.ts`, 15 yeni): terminalin indirimi; terminalsiz
+  oyunda taşıma adımı hiçbir şeye dokunmuyor (zar da); teklifin mağazaları,
+  menzili ve haberi; kabulde ücret = satış × perakende maliyeti × pay
+  (kuruşuna), terminalin defteri; aynı günün sözleşmeli ve sözleşmesiz
+  kopyasında rakibin birim maliyeti düşüyor; dolu filoya teklif yok; ret ve
+  soğuma; teklifin süresi; iptal ve terminal yıkımında cayma bedeli; mağaza
+  çıkınca bedelsiz, mağaza kalmayınca bitiş; süre sonu; kamyonlar; kayıt.
+  Ücret toplama kapatılınca üç test kalıyor.
+- Lig (`league.test.ts`, 2 yeni): terminal kuran, teklif kabul eden lig
+  koşusu tekrarda aynı skoru veriyor; terminalin payı ya da teklifin boyu
+  değişince iz değişiyor.
+- Tarayıcı testi "Lojistik" 13/13, konsol temiz: terminal, gündemdeki
+  teklif, çipten panele, kabul ve filo, ücret ve defter, kamyonlar, rakip
+  mağazasının notu, yıkma uyarısı, iki adımda bitirme ve bedel.
+- Paket bütçesi tamam: ana parça 64,5 KB (63,7'den).
+
+**Canlıya geçiş.** Şema aynı, simülasyon değişti: birleşmeden sonra Worker
+yeniden dağıtılıyor (`pnpm lite:league-bundle`, yapıştır, Deploy). O zamana
+kadar yeni koşular "sunucu bu sürümü henüz tanımıyor" diye bekliyor; Lite
+etkilenmiyor.
+
 ---
 
 ## 3. Ölçülen durum
@@ -5882,7 +5983,7 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi). Senaryo şehirlerinde gün 3–17 ms (`pnpm dayperf`, Tur 43) |
-| Birim testi | **625 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de, Tur 52'de sunucuda tekrar, Tur 53'te haftanın kuralı ve günün koşusu, Tur 54'te hayalet eğri, Tur 55'te davetli ligler) |
+| Birim testi | **642 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de, Tur 52'de sunucuda tekrar, Tur 53'te haftanın kuralı ve günün koşusu, Tur 54'te hayalet eğri, Tur 55'te davetli ligler, Tur 56'da taşıma sözleşmeleri) |
 | Denge testi | **331 kontrol, hepsi geçiyor** (25 bölüm, süreleriyle; ~13 dk) |
 | Tarayıcı testi | **521 kontrol, hepsi geçiyor**, 0 konsol hatası (~40 dk); duman koşusu 132 (~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + paket bütçesi (Tur 46; Tur 48'den beri hizmet çalışanı ve manifest de) + duman oynanışı |
