@@ -7,7 +7,7 @@ import { build, buyTile, demolish, purchaseBlocker } from '../src/actions';
 import { supplyRoutes } from '../src/routes';
 import { collectEventModifiers } from '../src/systems/events';
 import { boostMultiplier } from '../src/systems/cards';
-import { FREIGHT, fleetUsed, freightFeeEstimate, freightPenalty, freightProspects, runFreightTick } from '../src/systems/freight';
+import { FREIGHT, fleetUsed, freightFeeEstimate, freightPenalty, freightPotential, freightProspects, runFreightTick } from '../src/systems/freight';
 import { FREIGHT_SHARE, distributionRelief, ownDepotRelief, resetDailyLedgers, runProductionTick, unitCogsFor } from '../src/systems/supply';
 import { runMarketTick } from '../src/systems/market';
 import { isPurchasable } from '../src/systems/city';
@@ -657,5 +657,18 @@ describe('nakliye terminali ve taşıma sözleşmeleri (Tur 56)', () => {
     state.freight!.lastOfferDay = -FREIGHT.offerCooldownDays;
     awaitOffer(state);
     assert.ok(FREIGHT.hostileOffers === false);
+  });
+  test('kinli rakibin mağazası menzilde ve yapı menüsünün tahmininde sayılmıyor (Codex #90)', () => {
+    const state = fresh().getState();
+    const terminal = placeTerminal(state);
+    const tile = state.map.tiles[terminal.tileId]!;
+    const before = freightPotential(state, state.playerCompanyId, TERMINAL, tile.id);
+    assert.ok(before.outlets > 0 && freightProspects(state, terminal).length > 0);
+    for (const company of Object.values(state.companies)) {
+      if (!company.isPlayer) company.relation = { score: -60, stance: 'hostile', since: state.time.day, memory: [] };
+    }
+    const after = freightPotential(state, state.playerCompanyId, TERMINAL, tile.id);
+    assert.deepEqual(after, { outlets: 0, fee: 0 }, `kinli rakipler tahminde: ${JSON.stringify(after)}`);
+    assert.equal(freightProspects(state, terminal).length, 0, 'kinli rakipler menzilde sayılıyor');
   });
 });

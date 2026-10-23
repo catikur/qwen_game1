@@ -134,8 +134,17 @@ function heldOutlets(state: GameState): Set<string> {
 }
 
 /**
+ * Kinli rakip (Rakipler 2.0) taşıma teklifi getirmiyor (Tur 60): mağazası
+ * ne teklife ne menzildeki işe ne de yapı menüsünün tahminine sayılıyor
+ * (Codex #90).
+ */
+function refusesFreight(state: GameState, companyId: string): boolean {
+  return !FREIGHT.hostileOffers && stanceOf(state, companyId) === 'hostile';
+}
+
+/**
  * Terminalin menzilindeki, taşınabilecek rakip mağazaları: kendi deposu
- * yok, başka sözleşmede ya da teklifte değil. Yakından uzağa.
+ * yok, başka sözleşmede ya da teklifte değil, sahibi kinli değil. Yakından uzağa.
  */
 export function freightProspects(state: GameState, terminal: BuildingInstance): BuildingInstance[] {
   const def = BUILDING_BY_ID[terminal.defId];
@@ -145,6 +154,7 @@ export function freightProspects(state: GameState, terminal: BuildingInstance): 
     .filter((outlet) => {
       if (outlet.companyId === state.playerCompanyId || held.has(outlet.id)) return false;
       if (BUILDING_BY_ID[outlet.defId]?.role !== 'outlet' || !state.companies[outlet.companyId]) return false;
+      if (refusesFreight(state, outlet.companyId)) return false;
       if (distance(state, terminal, outlet) > def.radius) return false;
       return ownDepotRelief(state, outlet) === 0;
     })
@@ -165,6 +175,7 @@ export function freightPotential(state: GameState, companyId: string, defId: str
   for (const outlet of Object.values(state.buildings)) {
     if (outlet.companyId === companyId || held.has(outlet.id)) continue;
     if (BUILDING_BY_ID[outlet.defId]?.role !== 'outlet' || !state.companies[outlet.companyId]) continue;
+    if (refusesFreight(state, outlet.companyId)) continue;
     const at = state.map.tiles[outlet.tileId];
     if (!at || Math.abs(at.x - tile.x) + Math.abs(at.y - tile.y) > def.radius) continue;
     if (ownDepotRelief(state, outlet) > 0) continue;
@@ -197,7 +208,6 @@ function generateOffer(state: GameState): FreightDeal | null {
     for (const outlet of freightProspects(state, terminal)) {
       const declined = freight.declined[outlet.companyId];
       if (declined !== undefined && day - declined < FREIGHT.declineCooldownDays) continue;
-      if (!FREIGHT.hostileOffers && stanceOf(state, outlet.companyId) === 'hostile') continue;
       const list = byCompany.get(outlet.companyId);
       if (list) list.push(outlet);
       else byCompany.set(outlet.companyId, [outlet]);

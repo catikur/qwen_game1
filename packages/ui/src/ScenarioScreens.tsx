@@ -32,7 +32,7 @@ import { starRow, starThresholds } from './stars';
 export { starRow, starThresholds } from './stars';
 
 /** Sonuç ekranının cümlesi: kazanılan skor ya da kaybın nedeni. */
-function resultBody(def: ScenarioDef, scenario: ScenarioState): string {
+export function scenarioResultText(def: ScenarioDef, scenario: ScenarioState): string {
   const used = (scenario.finishedDay ?? scenario.startDay) - scenario.startDay;
   const score = scenario.score ?? 0;
   if (scenario.outcome === 'won') {
@@ -87,7 +87,10 @@ function resultBody(def: ScenarioDef, scenario: ScenarioState): string {
     case 'power':
       return t('hud.scenario.lostTimePower', { percent: formatPercent(Math.floor(score * 100)) });
     case 'rental':
-      return t('hud.scenario.lostTimeRental', { percent: formatPercent(Math.floor(score * 100)) });
+      // Skor dolu birimin hedefe oranı; yettiyse eksik olan dönüşüm projesi (Codex #90).
+      return score >= 1
+        ? t('hud.scenario.lostTimeRentalRenewals', { renewals: goal.renewals })
+        : t('hud.scenario.lostTimeRental', { percent: formatPercent(Math.floor(score * 100)) });
   }
 }
 
@@ -198,7 +201,7 @@ export function ScenarioResultScreen({ onNewGame, onReplay }: { onNewGame: () =>
         <p className="scenario-result-stars" aria-label={t('hud.scenario.starsLabel', { stars: scenario.stars ?? 0 })} data-stars={scenario.stars ?? 0}>
           {starRow(scenario.stars ?? 0)}
         </p>
-        <p data-scenario-reason={won ? 'won' : (scenario.lostReason ?? 'time')}>{resultBody(def, scenario)}</p>
+        <p data-scenario-reason={won ? 'won' : (scenario.lostReason ?? 'time')}>{scenarioResultText(def, scenario)}</p>
         <p className="muted" data-scenario-best>
           {best
             ? t('hud.scenario.newBest')

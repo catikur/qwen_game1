@@ -6515,7 +6515,7 @@ vekilin üstüne her gün (Tur 56–59'un vekilleri).
 yalnız husumette işliyor; eski bölümlerde taşıma vekili rakiplerle kavga
 etmiyor, hisse toplayan ve fiyat kıran vekiller nakliye yapmıyor.
 
-**Testler.** `pnpm test` 706/706 (698'den); tip denetimi temiz; denge
+**Testler.** `pnpm test` 709/709 (698'den); tip denetimi temiz; denge
 sınavı 371/371 (31 bölüm); paket bütçesi tamam (ana parça 70,3 KB, 68,7'den).
 - Çekirdek (`scenario.test.ts`, 6 yeni; `freight.test.ts`, 1 yeni):
   - ek kural ön tarihte; Sıkı bankanın devirdeki kredisi;
@@ -6529,13 +6529,27 @@ sınavı 371/371 (31 bölüm); paket bütçesi tamam (ana parça 70,3 KB, 68,7'd
   - kiralık hedefi: inşaat ve hak sahipleri sayılmıyor, birim yetse de tek
     dönüşüm projesi yetmiyor;
   - kinli rakip teklif getirmiyor, husumet bitince getiriyor (kural
-    kapalıyken test kırılıyor).
+    kapalıyken test kırılıyor);
+  - kinli rakibin mağazası terminalin menzilinde ve yapı menüsünün
+    tahmininde sayılmıyor (Codex).
+- Arayüz (`scenarioResult.test.ts`, 2 yeni): süre dolunca sonuç eksik koşulu
+  söylüyor (birim yetip dönüşüm projesi eksik; mağaza yetip rakip eksik).
 - Lig (`league.test.ts`, 1 yeni): kinli rakibin teklif kuralı ya da
   devralınan husumet değişince iz değişiyor.
 - Tarayıcı testi "Senaryo paketi II" 10/10, konsol temiz: on kart ve
   kuralları, nakliyecinin açılışı (kinli iki rakip, kural), hedef panelinde
   rakip rakip taşınan mağaza, santralin satışı ve paneli, dönüşümün listesi,
   süre dolunca kayıp.
+
+**Codex incelemesi.**
+- *Terminalin tahmini:* kinli rakip teklif getirmiyordu ama mağazaları yapı
+  menüsünün terminal tahmininde ve terminal panelinin "menzilde" sayısında
+  duruyordu; oyuncu gelmeyecek işe terminal kurabilirdi. Kural tek kapıda
+  (`refusesFreight`): teklif, menzil ve tahmin. Test düzeltmeden önce
+  kırılıyordu; Lojistik ve Senaryolar IV bölümlerinin çıktısı birebir aynı.
+- *Dönüşümün sonucu:* birim hedefi tutup dönüşüm projesi eksik kalan koşu
+  "dolu birim hedefin %105 kadarında kaldı" diyordu. Sonuç artık eksik
+  dönüşüm projesini söylüyor. Test düzeltmeden önce kırılıyordu.
 
 **Canlıya geçiş.** Şema aynı, simülasyon değişti (kinli rakibin teklifi):
 birleşmeden sonra Worker yeniden dağıtılıyor. Lite etkilenmiyor.
@@ -6642,7 +6656,7 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi). Senaryo şehirlerinde gün 3–17 ms (`pnpm dayperf`, Tur 43) |
-| Birim testi | **706 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de, Tur 52'de sunucuda tekrar, Tur 53'te haftanın kuralı ve günün koşusu, Tur 54'te hayalet eğri, Tur 55'te davetli ligler, Tur 56'da taşıma sözleşmeleri, Tur 57'de enerji, Tur 58'de gayrimenkul, Tur 59'da rakiplerin hafızası, Tur 60'ta senaryo paketi II) |
+| Birim testi | **709 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de, Tur 52'de sunucuda tekrar, Tur 53'te haftanın kuralı ve günün koşusu, Tur 54'te hayalet eğri, Tur 55'te davetli ligler, Tur 56'da taşıma sözleşmeleri, Tur 57'de enerji, Tur 58'de gayrimenkul, Tur 59'da rakiplerin hafızası, Tur 60'ta senaryo paketi II) |
 | Denge testi | **371 kontrol, hepsi geçiyor** (31 bölüm, süreleriyle; ~15–18 dk) |
 | Tarayıcı testi | **556 kontrol, hepsi geçiyor**, 0 konsol hatası (~40 dk); duman koşusu 132 (~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + paket bütçesi (Tur 46; Tur 48'den beri hizmet çalışanı ve manifest de) + duman oynanışı |

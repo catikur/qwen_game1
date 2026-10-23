@@ -181,6 +181,7 @@ export const hud: Record<keyof typeof trHud, string> = {
   'hud.scenario.lostTimeFreightRivals': 'Time ran out; you had enough stores but never hauled for {rivals} different rivals on the same day.',
   'hud.scenario.lostTimePower': 'Time ran out; power sold to rivals reached {percent} of the goal.',
   'hud.scenario.lostTimeRental': 'Time ran out; occupied units reached {percent} of the goal.',
+  'hud.scenario.lostTimeRentalRenewals': 'Time ran out; you had enough occupied units but fewer than {renewals} renewal projects opened.',
   'hud.scenario.briefFeud': 'Holding a grudge: {names}; they bring no freight offers.',
   'hud.scenario.briefRules': 'Extra rule: {rules}.',
   'hud.scenario.freightLabel': 'Rival stores you haul',
