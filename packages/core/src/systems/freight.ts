@@ -96,7 +96,10 @@ function distance(state: GameState, a: BuildingInstance, b: BuildingInstance): n
 export function freightFeeEstimate(outlet: BuildingInstance, terminalDefId: string): number {
   const def = BUILDING_BY_ID[terminalDefId];
   if (!def) return 0;
-  const rate = reliefOf(def) * FREIGHT_SHARE;
+  return feeAt(outlet, reliefOf(def) * FREIGHT_SHARE);
+}
+
+function feeAt(outlet: BuildingInstance, rate: number): number {
   let fee = 0;
   for (const [goodId, units] of Object.entries(outlet.soldByGood ?? {})) fee += units * (GOOD_BY_ID[goodId]?.retailCost ?? 0) * rate;
   return fee;
@@ -107,11 +110,11 @@ export function freightFeeEstimate(outlet: BuildingInstance, terminalDefId: stri
  * mağazalardan yeniden: satışları farklı, sayıyla orantı cayma bedelini
  * şaşırtıyordu (Codex #86).
  */
-function estimateFor(state: GameState, outletIds: readonly string[], terminalDefId: string): number {
+function estimateFor(state: GameState, outletIds: readonly string[], rate: number): number {
   let total = 0;
   for (const id of outletIds) {
     const outlet = state.buildings[id];
-    if (outlet) total += freightFeeEstimate(outlet, terminalDefId);
+    if (outlet) total += feeAt(outlet, rate);
   }
   return Math.round(total);
 }
@@ -210,6 +213,7 @@ function generateOffer(state: GameState): FreightDeal | null {
     durationDays: FREIGHT.durationDays,
     offeredDay: day,
     estimate: Math.round(best.estimate),
+    rate: reliefOf(BUILDING_BY_ID[best.terminal.defId]!) * FREIGHT_SHARE,
   };
 }
 
@@ -228,13 +232,30 @@ function companyName(state: GameState, companyId: string): string {
   return state.companies[companyId]?.name ?? companyId;
 }
 
-/** Cayma bedeli: oyuncudan müşteriye. */
-export function freightPenalty(deal: FreightDeal): number {
-  return Math.round(deal.estimate * FREIGHT.cancelPenaltyDays);
+/**
+ * Sözleşmenin bugün hâlâ geçerli mağazaları. Terminal oyuncunun değilse
+ * (yıkıldı) menzil sorulmuyor: müşterinin hâlâ elindeki mağazalar.
+ */
+function survivingOutlets(state: GameState, deal: FreightDeal): string[] {
+  const terminal = state.buildings[deal.terminalId];
+  if (terminal?.companyId === state.playerCompanyId) return liveOutlets(state, deal, terminal);
+  return deal.outletIds.filter((id) => state.buildings[id]?.companyId === deal.companyId);
+}
+
+/**
+ * Cayma bedeli: oyuncudan müşteriye, günlük tahminin `cancelPenaltyDays`
+ * katı. Bugünkü mağazalardan: taşıma adımından sonra kapanan ya da el
+ * değiştiren mağaza sayılmıyor; panelin yazdığı ve kesilen aynı (Codex #86).
+ */
+export function freightPenalty(state: GameState, deal: FreightDeal): number {
+  const outlets = survivingOutlets(state, deal);
+  if (outlets.length === 0) return 0;
+  const estimate = outlets.length === deal.outletIds.length ? deal.estimate : estimateFor(state, outlets, deal.rate);
+  return Math.round(estimate * FREIGHT.cancelPenaltyDays);
 }
 
 function payPenalty(state: GameState, deal: FreightDeal): number {
-  const penalty = freightPenalty(deal);
+  const penalty = freightPenalty(state, deal);
   const player = state.companies[state.playerCompanyId];
   const client = state.companies[deal.companyId];
   if (player) player.cash -= penalty;
@@ -265,7 +286,7 @@ export function acceptFreight(state: GameState, offerId: string): CommandResult 
   freight.contracts.push({
     ...offer,
     outletIds: outlets,
-    estimate: outlets.length === offer.outletIds.length ? offer.estimate : estimateFor(state, outlets, terminal.defId),
+    estimate: outlets.length === offer.outletIds.length ? offer.estimate : estimateFor(state, outlets, offer.rate),
     acceptedDay: state.time.day,
     endDay: state.time.day + offer.durationDays,
     lastFee: 0,
@@ -354,7 +375,7 @@ export function runFreightTick(state: GameState): void {
         continue;
       }
       if (outlets.length < deal.outletIds.length) {
-        deal.estimate = estimateFor(state, outlets, terminal.defId);
+        deal.estimate = estimateFor(state, outlets, deal.rate);
         deal.outletIds = outlets;
       }
       if (day >= (deal.endDay ?? day)) {
@@ -371,10 +392,19 @@ export function runFreightTick(state: GameState): void {
     }
     freight.contracts = kept;
 
-    // Masadaki teklifler sessizce düşüyor; terminali gidenler de.
+    // Masadaki teklifler sessizce düşüyor; terminali gidenler de. Müşterisi
+    // devralınan ya da mağazası kalmayan teklif de: filoyu ve gündemi
+    // tutmasın. Mağazası azalan teklif kalanlarla (Codex #86).
     freight.offers = freight.offers.filter((offer) => {
       const terminal = state.buildings[offer.terminalId];
-      return day < offer.offeredDay + FREIGHT.offerLifetimeDays && terminal?.companyId === state.playerCompanyId;
+      if (day >= offer.offeredDay + FREIGHT.offerLifetimeDays || terminal?.companyId !== state.playerCompanyId) return false;
+      const outlets = state.companies[offer.companyId] ? liveOutlets(state, offer, terminal) : [];
+      if (outlets.length === 0) return false;
+      if (outlets.length < offer.outletIds.length) {
+        offer.outletIds = outlets;
+        offer.estimate = estimateFor(state, outlets, offer.rate);
+      }
+      return true;
     });
   }
 

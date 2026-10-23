@@ -756,7 +756,7 @@ function BuildingDetail({ buildingId }: { buildingId: string }): ReactElement | 
         // Terminali yıkmak sözleşmelerini bozar: bedel düğmeden önce yazsın.
         const deals = (state.freight?.contracts ?? []).filter((deal) => deal.terminalId === building.id);
         if (deals.length === 0) return null;
-        const penalty = deals.reduce((sum, deal) => sum + freightPenalty(deal), 0);
+        const penalty = deals.reduce((sum, deal) => sum + freightPenalty(state, deal), 0);
         return <p className="muted" data-freight-demolish>{t('panels.freight.demolishWarning', { count: deals.length, penalty: formatMoney(penalty) })}</p>;
       })()}
 

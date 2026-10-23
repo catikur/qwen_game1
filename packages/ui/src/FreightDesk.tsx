@@ -107,7 +107,7 @@ export function FreightDesk({ buildingId }: { buildingId: string }): ReactElemen
                       onClick={() => run({ type: 'CANCEL_FREIGHT', contractId: deal.id }) && setEnding(null)}
                       data-freight-cancel="confirm"
                     >
-                      {t('panels.freight.cancelConfirm', { penalty: formatMoney(freightPenalty(deal)) })}
+                      {t('panels.freight.cancelConfirm', { penalty: formatMoney(freightPenalty(state, deal)) })}
                     </button>
                     <button type="button" className="ghost" onClick={() => setEnding(null)}>
                       {t('panels.freight.keep')}

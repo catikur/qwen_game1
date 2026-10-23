@@ -459,6 +459,12 @@ export interface FreightDeal {
   offeredDay: number;
   /** Teklifteki günlük ücret tahmini (dünkü satıştan). Cayma bedeli de bundan. */
   estimate: number;
+  /**
+   * Ücretin perakende maliyetine oranı (terminalin payı × `FREIGHT_SHARE`).
+   * Mağaza düşünce tahmin kalanlardan bununla yeniden; terminal yıkılmış
+   * olsa da (Codex #86).
+   */
+  rate: number;
   acceptedDay?: number;
   endDay?: number;
   /** Bugünkü ücret: pazar adımı yazıyor. */
