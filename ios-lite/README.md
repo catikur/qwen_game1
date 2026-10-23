@@ -294,7 +294,7 @@ parametreler `lang=tr|en`, `theme=day|night`, `sheet=settings|league|map`,
 
 **Sunucuyu güncellerken (L10):** yeni tablolar (`tokens`, `saves`, `profiles`,
 `links`) `schema.sql`'de; uzak veritabanına bir kez uygulanmalı (CI'nin
-dağıtım işi ya da D1 konsolunda `schema.sql`'in L10 bölümü). `TURNSTILE_SECRET`
+dağıtım işi ya da D1 konsolunda `d1-console.sql`, aşağıda). `TURNSTILE_SECRET`
 sırrını şimdilik **tanımlama**: sunucu tarafı hazır ama web ve Android
 istemcisinde doğrulama kutusu henüz yok; sır tanımlanırsa yeni web ve Android
 hesapları açılamaz (bot sorunu çıkarsa istemci tarafı eklenecek).
@@ -313,10 +313,17 @@ Açmak için (sıra önemli):
    takılır (oyun bunu geçici hata sayıp koşuyu bekletiyor); Lite etkilenmiyor.
    Ücretli planın varsayılan sınırı (istek başına 30 sn) yetiyor, ayar gerekmiyor.
 2. Şema. **Storage & Databases → D1 → capitalforge-lite-league →
-   Console**: `schema.sql`'in tamamını çalıştır. Her tablo `IF NOT EXISTS`;
-   var olanlar değişmiyor, eski kod yeni tablolarla sorunsuz çalışıyor.
-   Doğrulanmış koşular `seed_verified`'da. Konsol toplu ifade almazsa son
-   bölümler (`seed_verified`, `seed_gaps` ve `seed_limits`) tek tek.
+   Console**: `packages/lite-league/d1-console.sql`'in satırlarını yapıştır,
+   çalıştır. `schema.sql`'i olduğu gibi yapıştırma: açıklamalarındaki `;` ve
+   kesme işaretleri ("Lite'ın") konsolun ifadeleri ayırmasını bozuyor, şema
+   hata veriyor. Konsol dosyası aynı ifadeler, açıklamasız ve her ifade tek
+   satırda. Toplu yapıştırma hata verirse satır satır. Her tablo `IF NOT
+   EXISTS`: var olanlar ve içlerindeki veri (Lite'ın oyuncuları, kayıtları)
+   değişmiyor, tekrar çalıştırmak zarar vermiyor. Doğrulanmış koşular
+   `seed_verified`'da. Kontrol: `SELECT name FROM sqlite_master WHERE type =
+   'table' AND name LIKE 'seed_%' ORDER BY name;` beş tablo
+   (`seed_gaps`, `seed_league_members`, `seed_leagues`, `seed_limits`,
+   `seed_verified`).
 3. Kod. `pnpm lite:league-bundle` → paketi paneldeki Worker kodunun yerine
    yapıştır, **Deploy** (A'nın 1. ve 3. adımı). Paket ana oyunun motorunu da
    taşıyor (~700 KB, sıkıştırılmış ~185 KB; ücretli sınır 10 MB). Yeni kod
@@ -343,8 +350,8 @@ eski sayıp yerel tabloyla açılıyor; yeni kod gelince sunucuya dönüyor.
 (`seed_leagues`, `seed_league_members`, `schema.sql`'in son bölümü). Sıra yine
 şema, kod:
 
-1. D1 konsolunda yalnız Tur 55 bölümü (ya da `schema.sql`'in tamamı; her
-   tablo `IF NOT EXISTS`, var olanlar değişmiyor):
+1. D1 konsolunda `d1-console.sql` (yukarıdaki 2. adım), ya da yalnız bu üç
+   satır (her tablo `IF NOT EXISTS`, var olanlar değişmiyor):
 
    ```sql
    CREATE TABLE IF NOT EXISTS seed_leagues (code TEXT PRIMARY KEY, name TEXT NOT NULL, created_at INTEGER NOT NULL);
@@ -358,6 +365,17 @@ eski sayıp yerel tabloyla açılıyor; yeni kod gelince sunucuya dönüyor.
 Kod şemadan önce giderse bir şey bozulmuyor: sağlık ucu `"friends":0` diyor,
 oyun arkadaş liglerini göstermiyor, genel tablo ve Lite eskisi gibi; hesap
 silme ve haftalık temizlik yeni tabloları yoksa atlıyor.
+
+**Şema değişince:** `schema.sql`'i düzenle, sonra `pnpm lite:d1-sql` konsol
+dosyasını yeniden üretiyor. `test/consoleSql.test.ts` ikisinin eşit olduğunu,
+konsol dosyasının açıklamasız ve ASCII olduğunu, satır satır (iki kez de)
+çalıştırılınca şemanın aynısını kurduğunu ve Lite'ın eski veritabanındaki
+veriye dokunmadığını denetliyor.
+
+**Canlı durum (2026-10-23):** şema uygulandı. Veritabanından okundu (yalnız
+`SELECT`): beş `seed_*` tablosu ve üç dizin şemayla birebir, Lite'ın
+tabloları ve verisi yerinde (3 oyuncu, kayıt, haftalık puanlar). Worker kodu
+aynı gün dağıtıldı.
 
 **Sürüm uyumu.** Sunucu koşuyu yalnız kendi simülasyon sürümüyle
 yargılayabiliyor. Pages'teki oyun her `main` birleşmesinde kendiliğinden

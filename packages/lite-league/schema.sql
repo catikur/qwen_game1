@@ -1,5 +1,7 @@
 -- CapitalForge Lite lig sunucusu (Cloudflare D1, SQLite).
 -- Kurulum: .github/workflows/lite-league.yml bunu uzak veritabanına uyguluyor.
+-- D1 konsolu bu dosyayı olduğu gibi almıyor (açıklamalardaki ; ve kesme işareti): konsola
+-- d1-console.sql yapıştırılır; bu dosya değişince `pnpm lite:d1-sql` onu yeniden üretir.
 
 CREATE TABLE IF NOT EXISTS players (
   id TEXT PRIMARY KEY,
