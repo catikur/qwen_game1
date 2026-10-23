@@ -19,6 +19,7 @@ import {
   getPlayer,
   goodShares,
   headquarters,
+  hostileRivals,
   isProject,
   lateCostsEnabled,
   overheadRate,
@@ -37,6 +38,7 @@ import { ChainPanel } from './ChainPanel';
 import { FreightDesk } from './FreightDesk';
 import { PowerDesk } from './PowerDesk';
 import { RentDesk } from './RentDesk';
+import { RelationChip, RivalDossier } from './RivalDossier';
 import { useCollapsible } from './collapse';
 import { CompetitionPanel } from './CompetitionPanel';
 import { AuctionPanel } from './AuctionPanel';
@@ -1265,8 +1267,14 @@ function Sparkline({ values }: { values: number[] }): ReactElement | null {
 function RivalsPanel(): ReactElement {
   const state = useGameState();
   const rows = companyRanking(state);
+  // Dosya (Tur 59): seçilen rakip; seçilmediyse en husumetlisi, yoksa sıralamadaki ilk rakip.
+  const [picked, setPicked] = useState<string | null>(null);
+  const firstRival = rows.find((row) => !row.company.isPlayer)?.company.id ?? null;
+  const hostile = hostileRivals(state)[0]?.id ?? null;
+  const selected = picked && state.companies[picked] ? picked : hostile ?? firstRival;
 
   return (
+    <div className="rivals-panel">
     <table className="table">
       <thead>
         <tr>
@@ -1276,16 +1284,30 @@ function RivalsPanel(): ReactElement {
           <th>{t('panels.rivals.col.buildings')}</th>
           <th>{t('panels.rivals.col.tiles')}</th>
           <th>{t('panels.rivals.col.strongest')}</th>
+          <th>{t('panels.rivals.col.relation')}</th>
         </tr>
       </thead>
       <tbody>
         {rows.map((row) => {
           const best = Object.entries(row.company.marketShare).sort((a, b) => b[1] - a[1])[0];
+          const pickable = !row.company.isPlayer;
           return (
-            <tr key={row.company.id} className={row.company.isPlayer ? 'me' : undefined}>
+            <tr
+              key={row.company.id}
+              className={[row.company.isPlayer ? 'me' : '', pickable ? 'pickable' : '', row.company.id === selected ? 'picked' : ''].filter(Boolean).join(' ') || undefined}
+              onClick={pickable ? () => setPicked(row.company.id) : undefined}
+              data-rival-row={pickable ? row.company.id : undefined}
+            >
               <td>{row.rank}</td>
               <td>
-                <span className="dot" style={{ background: row.company.color }} /> {row.company.name}
+                <span className="dot" style={{ background: row.company.color }} />{' '}
+                {pickable ? (
+                  <button type="button" className="linklike" onClick={() => setPicked(row.company.id)} aria-pressed={row.company.id === selected}>
+                    {row.company.name}
+                  </button>
+                ) : (
+                  row.company.name
+                )}
                 {row.company.isPlayer && t('panels.rivals.you')}
               </td>
               <td>{formatMoney(row.company.netWorth)}</td>
@@ -1296,11 +1318,14 @@ function RivalsPanel(): ReactElement {
                   ? `${CATEGORIES[best[0] as keyof typeof CATEGORIES].name} ${formatPercent(Math.round(best[1] * 100))}`
                   : '—'}
               </td>
+              <td>{pickable ? <RelationChip companyId={row.company.id} /> : null}</td>
             </tr>
           );
         })}
       </tbody>
     </table>
+    {selected && <RivalDossier companyId={selected} />}
+    </div>
   );
 }
 

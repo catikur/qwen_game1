@@ -3,6 +3,7 @@ import {
   BUILDING_BY_ID,
   CATEGORIES,
   CONSUMER_CATEGORIES,
+  RELATION,
 } from '@capital/content';
 import type { BuildingDef, CategoryId, NpcProfileDef } from '@capital/content';
 import { build, buyTile, buyoutTile, demolish, sellTile } from '../actions';
@@ -14,6 +15,7 @@ import { pushNews, takeNews } from '../news';
 import { rivalProfiles } from '../profiles';
 import { nextFloat } from '../rng';
 import { estimateInvestment } from './market';
+import { stanceOf } from './relations';
 import { isDistrictOpen, tilePrice } from './city';
 import {
   blockTrade,
@@ -285,6 +287,15 @@ function traitDistrictFit(profile: NpcProfileDef, incomeLevel: number): number {
 function findOpportunities(state: GameState, profile: NpcProfileDef): Opportunity[] {
   const player = state.companies[state.playerCompanyId];
   const opportunities: Opportunity[] = [];
+  // Oyuncuya karşı duruş (Tur 59): husumetli oyuncunun rafına yöneliyor, müttefik kaçınıyor.
+  const stance = stanceOf(state, profile.id);
+  const turf = new Set<string>();
+  if (stance) {
+    for (const building of Object.values(state.buildings)) {
+      const def = BUILDING_BY_ID[building.defId];
+      if (building.companyId === state.playerCompanyId && def?.role === 'outlet') turf.add(`${building.districtId}|${def.category}`);
+    }
+  }
 
   for (const district of state.districts) {
     // Kilitli bölge fırsat değil: köyün %100 boş talebi puanı şişirir,
@@ -310,6 +321,9 @@ function findOpportunities(state: GameState, profile: NpcProfileDef): Opportunit
       // Oyuncu bir kategoriyi domine ediyorsa rakip oraya baskı yapar.
       if (player && (player.marketShare[category] ?? 0) > PLAYER_THREAT_SHARE) {
         score *= 1.4;
+      }
+      if (stance && turf.has(`${district.id}|${category}`)) {
+        score *= stance === 'hostile' ? RELATION.spiteExpansion : RELATION.allyExpansion;
       }
 
       opportunities.push({ districtId: district.id, category, score });

@@ -41,6 +41,9 @@ import {
   sharesHeld,
   tilePrice,
   sharesOutstanding,
+  amendsBlocker,
+  amendsCost,
+  hostileRivals,
 } from '../src/index';
 import type { ChainMove } from '../src/index';
 import type { GameState } from '../src/types';
@@ -464,4 +467,63 @@ function bestProject(state: GameState, projects: typeof BUILDINGS, districtId: n
     if (!best || estimate.dailyProfit > best.profit) best = { defId: def.id, profit: estimate.dailyProfit };
   }
   return best?.defId ?? null;
+}
+
+export interface RivalryOptions {
+  /** Rakiple aynı bölgede, aynı kategoride satan mağazaların fiyat çarpanı (haftada bir). */
+  undercut?: number;
+  /** Bu kadar günde bir en küçük rakipten hisse (payın `raidShare`'i). */
+  raidEvery?: number;
+  raidShare?: number;
+  /** Husumetli rakiple uzlaşma: bedelin beş katı nakit varsa. */
+  amends?: boolean;
+}
+
+/**
+ * Rakiplerle ilişkisini yöneten vekil (Tur 59). Temel vekilin üstüne her
+ * gün çağrılıyor; yalnızca komutla oynuyor (lig koşusunda da tekrar tutuyor).
+ *   - fiyat kıran: rakibin rafı olan bölgede ve kategoride mağazasını ucuza
+ *     çekiyor (oyuncunun açık seçimi: rakip bunu hatırlıyor);
+ *   - hisse toplayan: en küçük rakipten düzenli alım;
+ *   - diplomat: husumete düşen rakiple uzlaşıyor.
+ */
+export function rivalryStrategy(engine: GameEngine, options: RivalryOptions = {}): void {
+  const state = engine.getState();
+  const player = getPlayer(state);
+  const day = state.time.day;
+  if (options.undercut !== undefined && day % 7 === 0) {
+    const shelves = new Set<string>();
+    for (const building of Object.values(state.buildings)) {
+      const def = BUILDING_BY_ID[building.defId];
+      if (building.companyId !== player.id && def?.role === 'outlet') shelves.add(`${building.districtId}|${def.category}`);
+    }
+    for (const building of Object.values(state.buildings)) {
+      const def = BUILDING_BY_ID[building.defId];
+      if (building.companyId !== player.id || def?.role !== 'outlet' || !shelves.has(`${building.districtId}|${def.category}`)) continue;
+      if (Math.abs(building.priceMultiplier - options.undercut) > 1e-9) {
+        engine.dispatch({ type: 'SET_PRICE_MULTIPLIER', buildingId: building.id, multiplier: options.undercut });
+      }
+    }
+  }
+  if (options.raidEvery && day % options.raidEvery === 0) {
+    const target = Object.values(state.companies)
+      .filter((company) => !company.isPlayer && freeFloat(state, company.id) > 0)
+      .sort((a, b) => a.netWorth - b.netWorth || (a.id < b.id ? -1 : 1))[0];
+    if (target) {
+      const price = sharePrice(state, target.id);
+      const count = Math.min(
+        freeFloat(state, target.id),
+        Math.floor(sharesOutstanding(state, target.id) * (options.raidShare ?? 0.02)),
+        price > 0 ? Math.floor((player.cash * 0.2) / price) : 0,
+      );
+      if (count > 0) engine.dispatch({ type: 'BUY_SHARES', companyId: target.id, count });
+    }
+  }
+  if (options.amends) {
+    for (const rival of hostileRivals(state)) {
+      if (amendsBlocker(state, rival.id) === null && player.cash >= amendsCost(state, rival.id) * 5) {
+        engine.dispatch({ type: 'MAKE_AMENDS', companyId: rival.id });
+      }
+    }
+  }
 }

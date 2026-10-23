@@ -12,6 +12,7 @@ import type {
   NpcProfileDef,
   ProjectId,
   QuestKind,
+  RelationEventKind,
   UnionResponse,
   WagePolicy,
 } from '@capital/content';
@@ -316,6 +317,8 @@ export interface CompanyState {
   issues?: number;
   /** İşgücü: ücret politikası, sendika baskısı, sözleşme, grev. Yokluğu "piyasa ücreti, sendika sessiz". */
   labor?: LaborState;
+  /** Rakip: oyuncuya karşı ilişki ve hafıza (Tur 59). Yokluğu "tarafsız, hatırladığı bir şey yok". */
+  relation?: RelationState;
   /** Karar kartlarından gelen süreli çarpanlar (Tur 37b; yalnızca oyuncu). */
   boosts?: CardBoost[];
   /**
@@ -621,6 +624,11 @@ export interface FeatureFlags {
    * kampanya yok; süren kampanya süresini dolduruyor.
    */
   rivalStories?: boolean;
+  /**
+   * Rakiplerin oyuncuya karşı hafızası ve tepkileri (Tur 59). Yokluğu AÇIK.
+   * Kapalıyken olay kaydedilmiyor, husumet ve ittifak yok.
+   */
+  rivalRelations?: boolean;
   /** Fırsat balonları (Tur 37c). Aynı sözleşme: yokluğu AÇIK. */
   bubbles?: boolean;
   /** Görev panosu (Tur 37c). Aynı sözleşme: yokluğu AÇIK. */
@@ -776,6 +784,30 @@ export interface CampaignState {
   endDay: number;
   /** Başlangıçta oyuncunun kategori payı — sonuç buna göre. */
   playerShare: number;
+  /** Husumetli rakibin rövanşı (Tur 59): oyuncuya hesap soruyor. */
+  revenge?: boolean;
+  /** Rövanşın fiyat çarpanı: oyuncunun en ucuz mağazasının altında (başlangıçta sabitleniyor). */
+  cut?: number;
+}
+
+/** Rakibin hafızasındaki bir olay (Tur 59): ne, ne zaman, puana etkisi. */
+export interface RelationMemory {
+  day: number;
+  kind: RelationEventKind;
+  delta: number;
+}
+
+/** Rakibin oyuncuya karşı ilişkisi (Tur 59). */
+export interface RelationState {
+  /** −100..100: eksi husumet, artı ittifak. */
+  score: number;
+  /** Süren duruş ve başladığı gün; eşiklerin arasında yok. */
+  stance?: 'hostile' | 'allied';
+  since?: number;
+  /** Son olaylar, en yeni başta. */
+  memory: RelationMemory[];
+  /** Son uzlaşma günü. */
+  amendsDay?: number;
 }
 
 /** Kriz (Tur 37a): önce uyarı, sonra kriz. */
@@ -811,6 +843,8 @@ export interface AuctionState {
   bidderId: string | null;
   /** Kaç kez artırıldı — oyuncuya çekişmenin sertliğini gösterir. */
   rounds: number;
+  /** Teklif veren rakipler (Tur 59): oyuncu kazanırsa geçtiği rakipler. */
+  bidders?: string[];
 }
 
 export interface GameMeta {
@@ -882,6 +916,8 @@ export interface GameState {
   campaign?: CampaignState;
   /** Bir sonraki kampanyanın günü. */
   nextCampaignDay?: number;
+  /** Son kampanyanın bittiği gün (Tur 59): husumetli rakibin rövanşı bundan en az 90 gün sonra. */
+  campaignEndedDay?: number;
   /** Rakip sözlerinin son günü (`şirket|an`) — sık anlarda aynı söz tekrar etmesin. */
   quoteDays?: Record<string, number>;
   /** Şehrin üstündeki fırsat balonu (Tur 37c). */
@@ -1104,6 +1140,12 @@ export interface MotionState {
   baseSupport: number;
   /** Şirket → imzalı lobi harcaması (+ lehte, − aleyhte). */
   lobby: Record<string, number>;
+  /**
+   * Rakip → oyuncunun bağışına tepkiyle yaptığı bağış (Tur 59; işaretsiz,
+   * `lobby` içinde de sayılı). Oylamadaki hafıza olayı bunu saymıyor: tepki
+   * kendi kendini besleyip husumeti derinleştirmesin.
+   */
+  reactions?: Record<string, number>;
   /** Oylandıysa: sonuç ve destek. */
   result?: { passed: boolean; support: number; day: number };
 }
@@ -1214,6 +1256,8 @@ export type GameCommand =
   | { type: 'SET_RENT'; buildingId: string; rent: number }
   /** Belediyeye bir şehir yapısı için kentsel dönüşüm başvurusu (Tur 58). */
   | { type: 'REQUEST_RENEWAL'; tileId: number }
+  /** Rakibin CEO'suna uzlaşma jesti: vakfına bağış (Tur 59). */
+  | { type: 'MAKE_AMENDS'; companyId: string }
   /** Masadaki taşıma teklifini kabul eder (Tur 56). */
   | { type: 'ACCEPT_FREIGHT'; offerId: string }
   /** Masadaki taşıma teklifini reddeder. */

@@ -22,6 +22,7 @@ export * from './economy';
 export * from './energy';
 export * from './realestate';
 export * from './stories';
+export * from './rivals';
 export * from './opportunities';
 export * from './living';
 export * from './projects';

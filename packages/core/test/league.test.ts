@@ -16,13 +16,13 @@ import {
   verifyRun,
 } from '../src/league';
 import type { LeagueRun, RunVerdict } from '../src/league';
-import { BUBBLE_TIMING, BUILDING_BY_ID, CONSORTIUM, CRISES, ENERGY, FAD, MODIFIER_RULES, PROJECTS, PROJECT_BY_ID, PROJECT_TIMING, REAL_ESTATE, loadLocale, setLocale } from '@capital/content';
+import { BUBBLE_TIMING, BUILDING_BY_ID, CONSORTIUM, CRISES, ENERGY, FAD, MODIFIER_RULES, PROJECTS, PROJECT_BY_ID, PROJECT_TIMING, REAL_ESTATE, RELATION, TEMPERAMENTS, loadLocale, setLocale } from '@capital/content';
 import { FREIGHT } from '../src/systems/freight';
 import { hasFuelPlant } from '../src/systems/energy';
 import { LEAGUE_DAILY_DAYS, LEAGUE_DAYS, LEAGUE_RULE_ROTATION, leagueBoardKind, leagueDayId, leagueLength, leagueRule, leagueSeed, leagueWeekId } from '../src/systems/league';
 import { createNewGame } from '../src/worldgen';
 import type { GameState } from '../src/types';
-import { developerStrategy, energyStrategy, freightStrategy, playerStrategy } from './proxy';
+import { developerStrategy, energyStrategy, freightStrategy, playerStrategy, rivalryStrategy } from './proxy';
 
 /** Vekil oyuncuyla bir lig koşusu; isteğe bağlı olarak ortada "yeniden yükleme". */
 function playLeague(options: { reloadAt?: number; cheatAt?: number; board?: string } = {}): GameState {
@@ -557,6 +557,72 @@ describe('gayrimenkul izi (Tur 58)', () => {
       real.renewal.capacityBonus = bonus;
     }
     assert.equal(computeSimFingerprint(), base);
+  });
+});
+
+describe('rakip hafızası izi (Tur 59)', () => {
+  test('iz rakiplerin hafızasını da işletiyor: olay, sönüm, eşik, tepki ve uzlaşma ayarları değişince iz değişiyor', () => {
+    const base = computeSimFingerprint();
+    const parts = simFingerprintParts();
+    const memory = parts.find((part) => part.startsWith('probe-relations-memory:'))!;
+    assert.ok(memory && memory.includes(':hostile:') && memory.includes(':allied:'), `yoklama duruş üretmedi: ${memory?.slice(0, 160)}`);
+    const lobby = parts.find((part) => part.startsWith('probe-relations-lobby:'))!;
+    assert.ok(/"[a-z_0-9]+":-\d/.test(lobby), `karşı bağış yok: ${lobby}`);
+    assert.ok(parts.some((part) => part.startsWith('probe-relations-amends:true:')), 'uzlaşma yoklaması yok');
+    const real = RELATION as unknown as { events: { shares: number }; hostileAt: number; counterLobby: number; spite: number; amends: { share: number } };
+    const kind = TEMPERAMENTS.vindictive as { fadeHostile: number };
+    const { shares } = real.events;
+    const { hostileAt, counterLobby, spite } = real;
+    const amends = real.amends.share;
+    const fade = kind.fadeHostile;
+    try {
+      real.events.shares = shares - 1;
+      assert.notEqual(computeSimFingerprint(), base, 'hisse olayının değeri izi değiştirmiyor');
+      real.events.shares = shares;
+      real.hostileAt = hostileAt - 5;
+      assert.notEqual(computeSimFingerprint(), base, 'husumet eşiği izi değiştirmiyor');
+      real.hostileAt = hostileAt;
+      real.counterLobby = counterLobby + 0.1;
+      assert.notEqual(computeSimFingerprint(), base, 'karşı lobi izi değiştirmiyor');
+      real.counterLobby = counterLobby;
+      real.spite = spite + 0.1;
+      assert.notEqual(computeSimFingerprint(), base, 'inadına teklif izi değiştirmiyor');
+      real.spite = spite;
+      real.amends.share = amends * 2;
+      assert.notEqual(computeSimFingerprint(), base, 'uzlaşma bedeli izi değiştirmiyor');
+      real.amends.share = amends;
+      kind.fadeHostile = fade + 0.05;
+      assert.notEqual(computeSimFingerprint(), base, 'mizacın sönümü izi değiştirmiyor');
+    } finally {
+      real.events.shares = shares;
+      real.hostileAt = hostileAt;
+      real.counterLobby = counterLobby;
+      real.spite = spite;
+      real.amends.share = amends;
+      kind.fadeHostile = fade;
+    }
+    assert.equal(computeSimFingerprint(), base);
+  });
+});
+
+describe('rakip hafızalı lig koşusu (Tur 59)', () => {
+  test('fiyat kıran, hisse toplayan, uzlaşan koşu tekrarda tutuyor', async () => {
+    const engine = new GameEngine(createLeagueGame('2026-W43', 'Hafıza AŞ', null));
+    while (engine.getState().league!.finishedDay === undefined) {
+      const state = engine.getState();
+      if (state.time.day % 5 === 0) playerStrategy(engine);
+      rivalryStrategy(engine, { undercut: 0.85, raidEvery: 15, raidShare: 0.03, amends: true });
+      engine.runDay();
+    }
+    const state = engine.getState();
+    const remembered = Object.values(state.companies).filter((c) => (c.relation?.memory.length ?? 0) > 0);
+    assert.ok(remembered.length > 0, 'koşuda hafıza yok');
+    const log = (state.commandLog ?? []).map(([, command]) => command.type);
+    assert.ok(log.includes('MAKE_AMENDS'), 'uzlaşma günlükte yok');
+    const run = runFromState(state)!;
+    const result = await replayRun(decodeRun(encodeRun(run))!);
+    assert.ok(result.ok, result.reason);
+    assert.equal(result.score, run.score);
   });
 });
 

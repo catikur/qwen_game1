@@ -1,6 +1,6 @@
 import type { ReactElement } from 'react';
 import { COUNCIL } from '@capital/content';
-import { formatMoney, getPlayer, motionSupport } from '@capital/core';
+import { formatMoney, getPlayer, motionSupport, stanceOf } from '@capital/core';
 import type { MotionState } from '@capital/core';
 import { t } from './i18n';
 import { useGame, useGameState } from './useGame';
@@ -70,6 +70,12 @@ function LobbyList({ motion }: { motion: MotionState }): ReactElement | null {
                 points: Math.abs(Math.round(entry.delta * 100)),
               })}
             </span>
+            {/* Oyuncuya tepki (Tur 59): husumetli karşı, müttefik yanında bağış. */}
+            {(motion.reactions?.[entry.companyId] ?? 0) > 0 && (
+              <span className={`relation-chip stance-${stanceOf(state, entry.companyId) ?? 'neutral'}`} data-lobby-reaction={entry.companyId}>
+                {t('finance.council.lobby.reaction', { spent: formatMoney(motion.reactions![entry.companyId]!) })}
+              </span>
+            )}
           </li>
         );
       })}

@@ -7,6 +7,7 @@
 
 /** Tüketici talebinin toplandığı sektörler. */
 import type { CeoPortrait } from './ceos';
+import type { TemperamentId } from './rivals';
 
 export type CategoryId =
   | 'grocery'
@@ -246,4 +247,9 @@ export interface NpcProfileDef {
    */
   ceoName: string;
   portrait: CeoPortrait;
+  /**
+   * CEO'nun mizacı (Tur 59): oyuncunun hamlelerini nasıl hatırladığı.
+   * Katalog rakiplerinde `RIVAL_CEOS`'tan, üretilenlerde kurulurken zarla.
+   */
+  temperament?: TemperamentId;
 }

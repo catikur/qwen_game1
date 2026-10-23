@@ -296,6 +296,8 @@ export const hud = {
   'hud.agenda.card': 'Karar',
   'hud.agenda.cardTitle': 'Masada bekleyen karar — dokun, kartı aç',
   'hud.agenda.campaign': 'Kampanya',
+  'hud.agenda.hostile': 'Rakip',
+  'hud.agenda.hostileTitle': 'Bu rakip sana husumet besliyor: fiyat savaşı, karşı lobi ve inadına teklif. Geri sayım rövanşa. Dosyası rakipler panelinde; uzlaşma orada.',
   'hud.agenda.campaignTitle': 'Rakip kampanyası — rekabet kollarıyla karşılık ver',
 
   // Fırsat balonu ve görev panosu (Tur 37c)

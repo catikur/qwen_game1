@@ -29,6 +29,7 @@ export type GhostMoveKind =
   | 'fuel'
   | 'rent'
   | 'renewal'
+  | 'amends'
   | 'price'
   | 'shelf'
   | 'staff'
@@ -55,6 +56,7 @@ const KIND: Partial<Record<GameCommand['type'], GhostMoveKind>> = {
   LOCK_FUEL: 'fuel',
   SET_RENT: 'rent',
   REQUEST_RENEWAL: 'renewal',
+  MAKE_AMENDS: 'amends',
   SET_PRICE_MULTIPLIER: 'price',
   SET_AUTO_PRICE: 'price',
   SET_STOCK: 'shelf',

@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { REAL_ESTATE, STRUCTURE_BY_ID, formatNumber, formatPercent, withCurrency } from '@capital/content';
+import { REAL_ESTATE, RELATION, STRUCTURE_BY_ID, formatNumber, formatPercent, withCurrency } from '@capital/content';
 import type { ReactElement } from 'react';
-import { auctionHint, getPlayer, minimumBid } from '@capital/core';
+import { auctionHint, getPlayer, hostileRivals, minimumBid, rivalProfiles, stanceOf } from '@capital/core';
 import { t } from './i18n';
 import { useGame, useGameState } from './useGame';
 
@@ -133,6 +133,9 @@ export function AuctionPanel(): ReactElement {
         </p>
       )}
 
+      {/* Rakiplerin duruşu (Tur 59): öndeysen müttefik artırmıyor, husumetli inadına geçiyor. */}
+      <AuctionStances />
+
       <div className="auction-actions">
         <button
           type="button"
@@ -184,6 +187,29 @@ function Cell({
     <div className="stat">
       <span className="stat-label">{label}</span>
       <span className={tone ? `stat-value ${tone}` : 'stat-value'}>{value}</span>
+    </div>
+  );
+}
+
+function AuctionStances(): ReactElement | null {
+  const state = useGameState();
+  const hostile = hostileRivals(state).map((company) => company.name);
+  const allied = rivalProfiles(state)
+    .filter((profile) => state.companies[profile.id] && stanceOf(state, profile.id) === 'allied')
+    .map((profile) => state.companies[profile.id]!.name);
+  if (hostile.length === 0 && allied.length === 0) return null;
+  return (
+    <div className="auction-stances">
+      {hostile.length > 0 && (
+        <p className="relation-note stance-hostile" data-auction-spite>
+          {t('finance.auction.spite', { names: hostile.join(', '), spite: formatPercent(Math.round((RELATION.spite - 1) * 100)) })}
+        </p>
+      )}
+      {allied.length > 0 && (
+        <p className="relation-note stance-allied" data-auction-allies>
+          {t('finance.auction.allies', { names: allied.join(', ') })}
+        </p>
+      )}
     </div>
   );
 }

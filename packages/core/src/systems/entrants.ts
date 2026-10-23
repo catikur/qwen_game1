@@ -6,6 +6,7 @@ import {
   RIVAL_NAME_STEMS,
   RIVAL_NAME_SUFFIXES,
   RIVAL_PORTRAIT_PARTS,
+  TEMPERAMENT_IDS,
 } from '@capital/content';
 import type { NpcProfileDef, NpcTrait } from '@capital/content';
 import { tc } from '../i18n';
@@ -148,6 +149,8 @@ export function generateProfile(state: GameState, rivals: CompanyState[]): NpcPr
       facialHair: nextFloat(dice) < 0.3,
       background: shade(color, 0.22),
     },
+    // Mizaç (Tur 59) en son zarda: önceki zarlar (ad, yüz) eskisiyle aynı.
+    temperament: TEMPERAMENT_IDS[Math.floor(nextFloat(dice) * TEMPERAMENT_IDS.length)]!,
   };
 }
 

@@ -393,6 +393,11 @@ simülasyon değişti (iki proje, kira ve doluluk, dönüşüm hakkı, iki yeni
 komut). Yine yalnız 3. adım: `pnpm lite:league-bundle`, paketi yapıştır,
 Deploy. Sağlık ucu değişmiyor, Lite etkilenmiyor.
 
+**Tur 59 (Rakipler 2.0: hafıza, husumet ve ittifak):** şema değişmedi,
+simülasyon değişti (ilişki puanı, rakiplerin tepkileri, uzlaşma komutu).
+Yine yalnız 3. adım: `pnpm lite:league-bundle`, paketi yapıştır, Deploy.
+Sağlık ucu değişmiyor, Lite etkilenmiyor.
+
 **Sürüm uyumu.** Sunucu koşuyu yalnız kendi simülasyon sürümüyle
 yargılayabiliyor. Pages'teki oyun her `main` birleşmesinde kendiliğinden
 güncelleniyor, Worker elle. Oyunun simülasyonunu değiştiren bir birleşmeden

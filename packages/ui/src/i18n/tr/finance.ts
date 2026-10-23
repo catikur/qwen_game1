@@ -153,6 +153,8 @@ export const finance = {
   'finance.auction.occupied':
     'Kentsel dönüşüm: parselde {structure} var. Kazanan yapıyı yıktırıp parseli boş alır; taban fiyat sahibinden devralma bedeli.',
   'finance.auction.occupied.someStructure': 'bir yapı',
+  'finance.auction.spite': 'Husumetli: {names}. Öndeysen teklifini değerlemesinin {spite} üstüne kadar inadına geçer.',
+  'finance.auction.allies': 'Müttefik: {names}. Öndeysen teklifinin üstüne çıkmaz.',
   'finance.auction.renewalRight': 'Kazanan dönüşüm hakkını da alır: üstüne kurduğu proje imar artışıyla {bonus} büyük, hak sahipleri tanımın {holders} kadar dairesinde. Rakipler proje kurmadığı için bu değeri teklife katmıyor.',
   'finance.auction.leading': 'Öndesin',
   'finance.auction.bidMinimum': 'En az teklifi ver · {amount}',
@@ -174,6 +176,7 @@ export const finance = {
   'finance.council.lobby.for': 'lehte',
   'finance.council.lobby.against': 'aleyhte',
   'finance.council.lobby.entry': '{side} {spent} · {sign}{points} puan',
+  'finance.council.lobby.reaction': 'sana tepki: {spent}',
   'finance.council.session.open':
     "Oylama {days} gün sonra. Destek %50'yi geçen önerge kabul edilir; bağış geri alınmaz ve herkes görür.",
   'finance.council.session.closed':

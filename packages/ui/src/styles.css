@@ -6426,3 +6426,235 @@ button.icon {
   display: block;
   margin-top: 2px;
 }
+
+/* Tur 59: rakibin dosyası — CEO, mizaç, ilişki, hafıza, uzlaşma. */
+.rivals-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.rivals-panel tr.pickable {
+  cursor: pointer;
+}
+
+.rivals-panel tr.picked td {
+  background: var(--accent-soft);
+}
+
+.linklike {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.relation-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: calc(11.5px * var(--text-scale));
+  white-space: nowrap;
+  background: var(--tint-2);
+  color: var(--muted);
+}
+
+.relation-chip.stance-hostile {
+  background: color-mix(in srgb, var(--bad) 14%, transparent);
+  color: var(--bad);
+}
+
+.relation-chip.stance-allied {
+  background: color-mix(in srgb, var(--good) 14%, transparent);
+  color: var(--good);
+}
+
+.relation-score {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.rival-dossier {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--tint-1);
+}
+
+.rival-dossier p {
+  margin: 0;
+}
+
+.dossier-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.dossier-who {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.temperament-chip {
+  align-self: flex-start;
+  margin-top: 2px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: calc(11.5px * var(--text-scale));
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.dossier-bio {
+  font-style: italic;
+}
+
+.relation-meter {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.relation-meter-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.relation-bar {
+  position: relative;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--tint-3);
+}
+
+.relation-bar::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: -2px;
+  bottom: -2px;
+  width: 1px;
+  background: var(--line-strong);
+}
+
+.relation-fill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: 999px;
+}
+
+.relation-fill.neg {
+  background: var(--bad);
+}
+
+.relation-fill.pos {
+  background: var(--good);
+}
+
+.relation-mark {
+  position: absolute;
+  top: -3px;
+  bottom: -3px;
+  width: 2px;
+  border-radius: 1px;
+}
+
+.relation-mark.hostile {
+  background: color-mix(in srgb, var(--bad) 60%, transparent);
+}
+
+.relation-mark.allied {
+  background: color-mix(in srgb, var(--good) 60%, transparent);
+}
+
+.relation-scale {
+  font-size: calc(12px * var(--text-scale));
+}
+
+.relation-effects {
+  margin: 0;
+  padding: 8px 10px 8px 26px;
+  border-radius: var(--radius-sm);
+  font-size: calc(12.5px * var(--text-scale));
+}
+
+.relation-effects.stance-hostile {
+  background: color-mix(in srgb, var(--bad) 9%, transparent);
+}
+
+.relation-effects.stance-allied {
+  background: color-mix(in srgb, var(--good) 9%, transparent);
+}
+
+.dossier-memory h4 {
+  margin: 0 0 4px;
+  font-size: calc(12.5px * var(--text-scale));
+}
+
+.dossier-memory ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.dossier-memory li {
+  display: grid;
+  grid-template-columns: 72px 1fr auto;
+  gap: 8px;
+  font-size: calc(12.5px * var(--text-scale));
+  font-variant-numeric: tabular-nums;
+}
+
+.dossier-amends {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.dossier-amends p {
+  font-size: calc(12px * var(--text-scale));
+}
+
+.auction-stances {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.relation-note {
+  margin: 0;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  font-size: calc(12px * var(--text-scale));
+}
+
+.relation-note.stance-hostile {
+  border-left: 3px solid var(--bad);
+  background: color-mix(in srgb, var(--bad) 8%, transparent);
+}
+
+.relation-note.stance-allied {
+  border-left: 3px solid var(--good);
+  background: color-mix(in srgb, var(--good) 8%, transparent);
+}
+
+.council-lobby .relation-chip {
+  margin-left: 6px;
+}

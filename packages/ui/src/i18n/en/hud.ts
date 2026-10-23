@@ -299,6 +299,8 @@ export const hud: Record<keyof typeof trHud, string> = {
   'hud.agenda.card': 'Decision',
   'hud.agenda.cardTitle': 'A decision is waiting — tap to open the card',
   'hud.agenda.campaign': 'Campaign',
+  'hud.agenda.hostile': 'Rival',
+  'hud.agenda.hostileTitle': "This rival holds a grudge: price war, counter-lobbying and spite bids. The countdown is to their revenge. Their file is in the rivals panel; you can make amends there.",
   'hud.agenda.campaignTitle': 'Rival campaign — answer with your competitive arms',
 
   // Opportunity bubble and quest board (Tur 37c)

@@ -1024,6 +1024,22 @@ export function ActiveEvents(): ReactElement | null {
           </button>
         );
         break;
+      case 'rival':
+        // Husumet (Tur 59): rakibin dosyası rakipler panelinde; geri sayım rövanşa.
+        chip = (
+          <button
+            type="button"
+            className={`event-chip campaign-chip tone-bad urgency-${item.urgency}`}
+            onClick={() => togglePanel('rivals')}
+            title={t('hud.agenda.hostileTitle')}
+            data-agenda-rival={item.key}
+          >
+            <span className="agenda-label">{t('hud.agenda.hostile')}</span>
+            {item.label}
+            {days}
+          </button>
+        );
+        break;
       case 'campaign':
         // Rakip kampanyası (Tur 37b): cevap rekabet kollarında (pazarlama, Ar-Ge).
         chip = (
