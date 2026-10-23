@@ -6899,6 +6899,42 @@ async function finish(browser, consoleErrors) {
     await ym.screenshot({ path: `${OUT}/path-phone-en.png` });
     check('Telefonda İngilizce: "Your company\'s path: Energy", kutu ve sayfa taşmıyor', phone.path === 'energy' && /Your company's path: Energy/.test(phone.head) && !phone.overflow && !phone.page,
       JSON.stringify(phone));
+    // Rakipler tablosu 320 px'te İngilizce de sığıyor: bina, arsa ve sektör adın altında (Tur 61).
+    await ym.keyboard.press('Escape');
+    await ym.setViewportSize({ width: 320, height: 568 });
+    await ym.waitForTimeout(300);
+    await ym.locator('[data-panel="rivals"]').first().click();
+    await ym.waitForSelector('.rivals-table', { timeout: 5000 }).catch(() => {});
+    const rivalsFit = await ym.evaluate(() => {
+      const body = document.querySelector('.modal-body');
+      const table = document.querySelector('.rivals-table');
+      if (!body || !table) return null;
+      const visible = (el) => el.getClientRects().length > 0;
+      return {
+        columns: [...table.querySelectorAll('thead th')].filter(visible).length,
+        facts: [...table.querySelectorAll('.rival-facts')].filter(visible).length,
+        rows: table.querySelectorAll('tbody tr').length,
+        sample: table.querySelector('tbody .rival-facts')?.textContent ?? '',
+        hidden: [...body.querySelectorAll('*')].filter((el) => el.scrollWidth - el.clientWidth > 2).map((el) => String(el.className).split(' ')[0] || el.tagName),
+        page: document.documentElement.scrollWidth > window.innerWidth + 1,
+      };
+    });
+    check('320 px\'te İngilizce rakipler tablosu sığıyor: dört sütun, bina ve arsa adın altında, gizli kaydırıcı yok',
+      Boolean(rivalsFit && rivalsFit.columns === 4 && rivalsFit.facts === rivalsFit.rows && /^Buildings \d+ · Lots \d+/.test(rivalsFit.sample) && rivalsFit.hidden.length === 0 && !rivalsFit.page),
+      JSON.stringify(rivalsFit));
+    await ym.screenshot({ path: `${OUT}/rivals-phone-en.png` });
+    await ym.setViewportSize({ width: 1280, height: 860 });
+    await ym.waitForTimeout(300);
+    const rivalsWide = await ym.evaluate(() => {
+      const table = document.querySelector('.rivals-table');
+      const visible = (el) => el.getClientRects().length > 0;
+      return table ? {
+        columns: [...table.querySelectorAll('thead th')].filter(visible).length,
+        facts: [...table.querySelectorAll('.rival-facts')].filter(visible).length,
+      } : null;
+    });
+    check('Geniş ekranda rakipler tablosunun yedi sütunu yerinde, adın altındaki satır gizli',
+      Boolean(rivalsWide && rivalsWide.columns === 7 && rivalsWide.facts === 0), JSON.stringify(rivalsWide));
     check('Telefonda konsol temiz', ymErrors.length === 0, ymErrors.slice(0, 2).join(' | '));
     await yPhone.close();
   }

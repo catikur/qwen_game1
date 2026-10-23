@@ -6658,8 +6658,17 @@ ve değeri tutuyordu.
   main'de de kalıyordu.
 - Sebep: telefonda pencere bir ızgara öğesi; `min-width: auto` onu
   içeriğin en küçük genişliğine uzatıyordu.
-- Düzeltme: pencere ekran genişliğinde kalıyor (`min-width: 0`), tablo
-  kendi kutusunda yana kayıyor. Kontrol düzeltmeden sonra geçiyor.
+- Pencere ekran genişliğine inince tablo sığmıyordu: yedi sütunun en dar
+  hâli Türkçe 402, İngilizce 440 px; 320 px'lik ekranda tabloya 286 px
+  kalıyor.
+- Düzeltme: pencere ekran genişliğinde kalıyor (`min-width: 0`). Telefonda
+  (≤560 px) bina, arsa ve güçlü sektör sütunları şirketin adının altına,
+  soluk bir satıra iniyor ("Bina 9 · Arsa 9 · Perakende %100"); tablo dört
+  sütun, 320 px'te iki dilde de sığıyor. Bilgi kaybolmuyor. Büyük yazıda yine
+  sığmazsa tablo kendi kutusunda kayıyor, dosyanın düğmeleri ekranda kalıyor.
+- iPhone SE'nin sekiz panel kontrolü ve 390 px'te "gizli yatay kaydırıcı yok"
+  kontrolü ikisi birden geçiyor (ilk düzeltme, tabloyu kaydırma kutusuna
+  koymak, ikincisini kırmıştı).
 
 **Yapılanlar.**
 
@@ -6724,12 +6733,14 @@ yeni; eski bölümlerin vekillerine dokunulmadı.
   gününün paylarını çiziyor (Codex).
 - Denge sınavı 375/375 (32 bölüm; yeni "Yollar" bölümünün 4
   kontrolüyle, ~75 sn).
-- Tarayıcı testi "Değerlendirme: şirketin yolu" 9/9, konsol temiz:
+- Tarayıcı testi "Değerlendirme: şirketin yolu" 11/11, konsol temiz:
   - Hedefler panelinde yol ve çubuklar;
   - zafer ekranı ve kariyer;
   - teklifin müşterisi (en yakın rakip ve küçük rakip);
-  - telefonda İngilizce, taşma yok.
-- Paket bütçesi tamam: ana parça 71,2 KB (70,3'ten).
+  - telefonda İngilizce, taşma yok;
+  - 320 px'te İngilizce rakipler tablosu dört sütun, bina ve arsa adın
+    altında, gizli kaydırıcı yok; geniş ekranda yedi sütun.
+- Paket bütçesi tamam: ana parça 71,4 KB (70,3'ten).
 
 **Codex incelemesi.**
 - *Zaferin yolu bir gün geriden:* defter `runDay`'in sonunda yazılıyordu,

@@ -1067,7 +1067,7 @@ button.icon {
   /*
    * Izgara öğesi: `min-width: auto` içeriğin en küçük genişliğine uzatıyordu.
    * Telefonda rakipler tablosu paneli 422 px'e çıkarıyor, 320 px'lik ekranda
-   * uzlaşma düğmesi kenardan taşıyordu (Tur 61). Tablo kendi kutusunda kayıyor.
+   * uzlaşma düğmesi kenardan taşıyordu (Tur 61). Tablo telefonda daralıyor.
    */
   min-width: 0;
   max-height: 82vh;
@@ -6507,6 +6507,33 @@ button.icon {
 
 .rivals-panel tr.picked td {
   background: var(--accent-soft);
+}
+
+/* Geniş ekranda kendi sütunlarında; telefonda şirketin adının altında (Tur 61). */
+.rival-facts {
+  display: none;
+}
+
+.rivals-table .rival-value {
+  white-space: nowrap;
+}
+
+@media (max-width: 560px) {
+  .rivals-table .rival-minor {
+    display: none;
+  }
+
+  .rivals-table th,
+  .rivals-table td {
+    padding: 7px 5px;
+  }
+
+  .rival-facts {
+    display: block;
+    margin-top: 2px;
+    font-size: calc(11.5px * var(--text-scale));
+    font-weight: 600;
+  }
 }
 
 .linklike {
