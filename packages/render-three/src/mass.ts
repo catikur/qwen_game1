@@ -167,6 +167,13 @@ export class BuildingMass {
       mesh.count = 0;
       mesh.castShadow = true;
       mesh.receiveShadow = true;
+      // Görüş ayıklaması kapalı (Tur 58), detay katmanı ve trafik gibi.
+      // three örnekli mesh'in sınır küresini ilk karede bir kez hesaplayıp
+      // saklıyor; oyunun başında bina azken küre küçük kalıyordu ve kamera
+      // sonradan kurulan binaya (kenardaki santrale, yeni parsele)
+      // yaklaşınca bütün gövdeler ayıklanıyor, yalnız tenteler ve tabelalar
+      // kalıyordu.
+      mesh.frustumCulled = false;
     }
   }
 

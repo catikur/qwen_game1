@@ -16,13 +16,13 @@ import {
   verifyRun,
 } from '../src/league';
 import type { LeagueRun, RunVerdict } from '../src/league';
-import { BUBBLE_TIMING, BUILDING_BY_ID, CONSORTIUM, CRISES, ENERGY, FAD, MODIFIER_RULES, PROJECTS, PROJECT_BY_ID, PROJECT_TIMING, loadLocale, setLocale } from '@capital/content';
+import { BUBBLE_TIMING, BUILDING_BY_ID, CONSORTIUM, CRISES, ENERGY, FAD, MODIFIER_RULES, PROJECTS, PROJECT_BY_ID, PROJECT_TIMING, REAL_ESTATE, loadLocale, setLocale } from '@capital/content';
 import { FREIGHT } from '../src/systems/freight';
 import { hasFuelPlant } from '../src/systems/energy';
 import { LEAGUE_DAILY_DAYS, LEAGUE_DAYS, LEAGUE_RULE_ROTATION, leagueBoardKind, leagueDayId, leagueLength, leagueRule, leagueSeed, leagueWeekId } from '../src/systems/league';
 import { createNewGame } from '../src/worldgen';
 import type { GameState } from '../src/types';
-import { energyStrategy, freightStrategy, playerStrategy } from './proxy';
+import { developerStrategy, energyStrategy, freightStrategy, playerStrategy } from './proxy';
 
 /** Vekil oyuncuyla bir lig koşusu; isteğe bağlı olarak ortada "yeniden yükleme". */
 function playLeague(options: { reloadAt?: number; cheatAt?: number; board?: string } = {}): GameState {
@@ -519,6 +519,66 @@ describe('haftanın kuralı ve günün koşusu (Tur 53)', () => {
       crisis.weight = weight;
     }
     assert.equal(computeSimFingerprint(), base);
+  });
+});
+
+describe('gayrimenkul izi (Tur 58)', () => {
+  test('iz gayrimenkulü de işletiyor: proje, kira ve dönüşüm ayarları değişince iz değişiyor', () => {
+    const base = computeSimFingerprint();
+    const parts = simFingerprintParts();
+    const site = parts.find((part) => part.startsWith('probe-realestate-site:'))!;
+    assert.ok(site && !/:-:/.test(site.slice(0, 40)), `yoklama proje kurmadı: ${site?.slice(0, 80)}`);
+    const open = parts.find((part) => part.startsWith('probe-realestate-open:'))!;
+    assert.ok(open.includes('"renewal":true'), `dönüşüm projesi yok: ${open.slice(0, 120)}`);
+    assert.ok(/"occupancy":0\.\d+/.test(open), `projeler açılmadı: ${open.slice(0, 120)}`);
+    assert.ok(parts.some((part) => part.startsWith('probe-realestate-rent:true:')), 'kira yoklaması yok');
+    const estate = BUILDING_BY_ID.housing_estate as { capacity: number };
+    const real = REAL_ESTATE as unknown as { siteUpkeep: number; elasticity: Record<string, number>; renewal: { capacityBonus: number } };
+    const { capacity } = estate;
+    const { siteUpkeep } = real;
+    const elasticity = real.elasticity.housing!;
+    const bonus = real.renewal.capacityBonus;
+    try {
+      estate.capacity = capacity + 10;
+      assert.notEqual(computeSimFingerprint(), base, 'projenin kapasitesi izi değiştirmiyor');
+      estate.capacity = capacity;
+      real.siteUpkeep = siteUpkeep + 0.05;
+      assert.notEqual(computeSimFingerprint(), base, 'şantiye gideri izi değiştirmiyor');
+      real.siteUpkeep = siteUpkeep;
+      real.elasticity.housing = elasticity + 0.1;
+      assert.notEqual(computeSimFingerprint(), base, 'kira esnekliği izi değiştirmiyor');
+      real.elasticity.housing = elasticity;
+      real.renewal.capacityBonus = bonus + 0.1;
+      assert.notEqual(computeSimFingerprint(), base, 'imar artışı izi değiştirmiyor');
+    } finally {
+      estate.capacity = capacity;
+      real.siteUpkeep = siteUpkeep;
+      real.elasticity.housing = elasticity;
+      real.renewal.capacityBonus = bonus;
+    }
+    assert.equal(computeSimFingerprint(), base);
+  });
+});
+
+describe('gayrimenkullü lig koşusu (Tur 58)', () => {
+  test('proje kuran, kira ayarlayan, dönüşüm başvurusu yapan koşu tekrarda tutuyor', async () => {
+    const engine = new GameEngine(createLeagueGame('2026-W42', 'Gayrimenkul AŞ', null));
+    while (engine.getState().league!.finishedDay === undefined) {
+      const state = engine.getState();
+      if (state.time.day % 5 === 0) playerStrategy(engine);
+      developerStrategy(engine);
+      engine.runDay();
+    }
+    const state = engine.getState();
+    const projects = Object.values(state.buildings).filter((b) => b.companyId === state.playerCompanyId && b.development);
+    assert.ok(projects.length > 0, 'koşuda proje yok');
+    const log = (state.commandLog ?? []).map(([, command]) => command.type);
+    assert.ok(log.includes('SET_RENT'), 'kira günlükte yok');
+    assert.ok(log.includes('REQUEST_RENEWAL'), 'dönüşüm başvurusu günlükte yok');
+    const run = runFromState(state)!;
+    const result = await replayRun(decodeRun(encodeRun(run))!);
+    assert.ok(result.ok, result.reason);
+    assert.equal(result.score, run.score);
   });
 });
 

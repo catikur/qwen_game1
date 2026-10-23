@@ -2,6 +2,7 @@ import {
   BUILDING_BY_ID,
   GOODS,
   GOOD_BY_ID,
+  REAL_ESTATE,
   TRADED_GOODS,
   getCeoModifiers,
 } from '@capital/content';
@@ -14,6 +15,7 @@ import { projectUpkeep } from './projects';
 import { DISTRIBUTION_RELIEF, scopedDepots } from './buildingIndex';
 import { estimateBaselineDemand, goodShares } from './demand';
 import { energyPrice, gridUpkeep, powerGrid, servedUpkeep, settlePlants } from './energy';
+import { underConstruction } from './realestate';
 import type { BuildingDef } from '@capital/content';
 import type { BuildingInstance, DistrictState, FreightDeal, GameState } from '../types';
 
@@ -98,6 +100,8 @@ export function referenceVolumes(districts: DistrictState[]): Record<string, num
 function wagesFor(state: GameState, building: BuildingInstance): number {
   const def = BUILDING_BY_ID[building.defId];
   if (!def) return 0;
+  // İnşaattaki proje (Tur 58): kadrosu açılışta işe başlıyor.
+  if (underConstruction(building)) return 0;
   // Grevdeki işçi ücret almaz: grev binası çalıştığı oranda öder.
   // Yönetim yükü (Tur 37a): büyük şirketin her işi biraz daha pahalı.
   return (
@@ -119,13 +123,14 @@ function upkeepFor(state: GameState, building: BuildingInstance): number {
   const def = BUILDING_BY_ID[building.defId];
   if (!def) return 0;
   const ceo = getCeoModifiers(state.companies[building.companyId]?.ceoId ?? null);
-  return (
+  const upkeep =
     def.upkeepPerDay *
     ceo.upkeep *
     overheadMultiplier(state, building.companyId) *
     boostMultiplier(state, building.companyId, 'upkeep') *
-    projectUpkeep(state, building.companyId, building.districtId)
-  );
+    projectUpkeep(state, building.companyId, building.districtId);
+  // İnşaattaki proje (Tur 58): bakımın şantiye payı.
+  return underConstruction(building) ? upkeep * REAL_ESTATE.siteUpkeep : upkeep;
 }
 
 /** Bir lojistik binasının perakende maliyetinden sildiği pay. */

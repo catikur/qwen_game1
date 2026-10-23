@@ -62,6 +62,13 @@ export interface Tile {
   structureHeight: number;
   /** Arsanın güncel değeri. Satış fiyatı bunun üzerinden hesaplanır. */
   landValue: number;
+  /**
+   * Dönüşüm hakkı (Tur 58): parsel belediyenin kentsel dönüşüm ihalesinden
+   * alındı, eski yapısı yıkıldı. Üstüne kurulan proje imar artışıyla büyük,
+   * hak sahipleri yeni binada. İlk kurulan bina hakkı kullanıyor (proje
+   * değilse hak düşüyor); parsel satılınca da düşüyor. Eski kayıtta yok.
+   */
+  renewal?: { day: number; structureId: string };
 }
 
 export interface DistrictState {
@@ -181,6 +188,33 @@ export interface BuildingInstance {
   freightEarned?: number;
   /** Santral (Tur 57): kurulduğundan beri rakiplere satış, kendi binalarına kazanç, yakıt. */
   energyTotals?: { sold: number; saved: number; fuel: number };
+  /**
+   * Kiralık (Tur 58): kira seviyesi, piyasa kirasının katı. Yokluğu 1
+   * (piyasa); yalnız oyuncu ayarlıyor.
+   */
+  rent?: number;
+  /**
+   * Proje (Tur 58): açılış günü, dönüşüm parselinde mi ve açıldıysa bugünkü
+   * doluluk (kiralık birimlerin dolu payı). Doluluk yoksa inşaat sürüyor.
+   */
+  development?: Development;
+}
+
+/** Geliştiricinin projesi (Tur 58). */
+export interface Development {
+  opensOnDay: number;
+  /** Kentsel dönüşüm parselinde: imar artışı ve hak sahipleri. */
+  renewal?: boolean;
+  /** Kiralık birimlerin dolu payı; inşaat sürerken yok. */
+  occupancy?: number;
+}
+
+/** Oyuncunun belediyeye dönüşüm başvurusu (Tur 58): sıradaki ihale bu parsel. */
+export interface RenewalRequest {
+  tileId: number;
+  day: number;
+  /** Ödenen başvuru bedeli; geri dönmüyor. */
+  fee: number;
 }
 
 export interface CompanyLedger {
@@ -887,6 +921,8 @@ export interface GameState {
   freight?: FreightState;
   /** Enerji (Tur 57): yakıt sabitlemeleri. Seçime bağlı; eski kayıtta yok. */
   energy?: EnergyState;
+  /** Oyuncunun bekleyen dönüşüm başvurusu (Tur 58). Seçime bağlı; eski kayıtta yok. */
+  renewalRequest?: RenewalRequest;
   flags: FeatureFlags;
   /** Açık ihale; yoksa null. */
   auction: AuctionState | null;
@@ -1174,6 +1210,10 @@ export type GameCommand =
   | { type: 'DECLINE_CONTRACT' }
   /** Doğalgaz santrallerinin yakıtını sabitler (Tur 57). */
   | { type: 'LOCK_FUEL' }
+  /** Kiralığın kira seviyesi, piyasa kirasının katı (Tur 58). */
+  | { type: 'SET_RENT'; buildingId: string; rent: number }
+  /** Belediyeye bir şehir yapısı için kentsel dönüşüm başvurusu (Tur 58). */
+  | { type: 'REQUEST_RENEWAL'; tileId: number }
   /** Masadaki taşıma teklifini kabul eder (Tur 56). */
   | { type: 'ACCEPT_FREIGHT'; offerId: string }
   /** Masadaki taşıma teklifini reddeder. */

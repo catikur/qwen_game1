@@ -72,13 +72,32 @@ export const world = {
   'core.contracts.millions': '{value} M ₺',
   'core.contracts.thousands': '{value} B ₺',
 
-  // freight.ts — taşıma sözleşmeleri (Tur 56)
+  // energy.ts — enerji (Tur 57)
   'core.energy.noFuelPlant': 'Yakıtı sabitlemek için önce bir doğalgaz santrali kur.',
   'core.energy.alreadyLocked': 'Yakıt zaten sabit; süre bitince yeniden sabitleyebilirsin.',
   'core.energy.lockedTitle': 'Yakıt fiyatı sabitlendi',
   'core.energy.lockedBody': 'Doğalgaz santrallerinin yakıtı {days} gün MWh başına {price}. Şebeke fiyatı ne olursa olsun.',
   'core.energy.unlockedTitle': 'Yakıt sabitlemesi bitti',
   'core.energy.unlockedBody': 'Doğalgaz santrallerin yakıtı yeniden piyasa fiyatıyla alıyor.',
+
+  // realestate.ts — gayrimenkul geliştiricisi (Tur 58)
+  'core.realestate.notRental': 'Kira yalnız kiralık binada ayarlanır.',
+  'core.realestate.badRent': 'Geçersiz kira.',
+  'core.realestate.noAuctions': 'Bu oyunda parsel ihalesi kapalı: dönüşüm başvurusu yapılamıyor.',
+  'core.realestate.notRenewable': 'Dönüşüm başvurusu yalnız şehrin satılabilir bir yapısı olan boş parsel için.',
+  'core.realestate.districtLocked': 'Bölge henüz imara açılmadı.',
+  'core.realestate.inAuction': 'Bu parsel zaten ihalede.',
+  'core.realestate.requestPending': 'Belediyede bekleyen bir başvurun var; ihalesi açılınca yenisini yapabilirsin.',
+  'core.realestate.noCash': 'Başvuru bedeli {fee}; kasada yetmiyor.',
+  'core.realestate.requestedTitle': 'Kentsel dönüşüm başvurusu yapıldı',
+  'core.realestate.requestedBody': '{district} bölgesindeki {structure} için belediyeye başvurdun ({fee}, geri dönmüyor). Sıradaki ihale bu parsel; rakipler de teklif verecek.',
+  'core.realestate.requestOpened': 'İhaleyi senin başvurun açtı.',
+  'core.realestate.droppedTitle': 'Dönüşüm başvurusu düştü',
+  'core.realestate.droppedBody': 'Başvurduğun parsel ihale gününe kadar el değiştirdi; belediye ihaleyi açmadı.',
+  'core.realestate.droppedOffBody': 'Parsel ihaleleri kapatıldı; belediye dönüşüm başvurunu açmayacak. Parsel yeniden satılık.',
+  'core.realestate.openedTitle': '{name} açıldı',
+  'core.realestate.openedBody': '{name} {units} birimle açıldı, %{share} dolu. Kiracılar gün gün geliyor.',
+  'core.realestate.openedRenewalBody': '{name} {units} kiralık birimle açıldı, %{share} dolu. Hak sahipleri {rightHolders} daireye taşındı: kira ödemiyorlar.',
   'core.freight.noOffer': 'Bu taşıma teklifi artık masada değil.',
   'core.freight.noTerminal': 'Teklifin terminali yok.',
   'core.freight.stale': 'Teklifteki mağazaların hiçbirine artık taşınamıyor.',

@@ -153,6 +153,7 @@ export const finance = {
   'finance.auction.occupied':
     'Kentsel dönüşüm: parselde {structure} var. Kazanan yapıyı yıktırıp parseli boş alır; taban fiyat sahibinden devralma bedeli.',
   'finance.auction.occupied.someStructure': 'bir yapı',
+  'finance.auction.renewalRight': 'Kazanan dönüşüm hakkını da alır: üstüne kurduğu proje imar artışıyla {bonus} büyük, hak sahipleri tanımın {holders} kadar dairesinde. Rakipler proje kurmadığı için bu değeri teklife katmıyor.',
   'finance.auction.leading': 'Öndesin',
   'finance.auction.bidMinimum': 'En az teklifi ver · {amount}',
   'finance.auction.customBid': 'Kendi teklifin',

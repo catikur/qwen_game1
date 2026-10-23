@@ -71,6 +71,8 @@ export const hud: Record<keyof typeof trHud, string> = {
   'hud.freight.offer': 'Haulage',
   'hud.fuel.lock': 'Fuel',
   'hud.fuel.lockTitle': 'Lock fuel on your plant’s panel',
+  'hud.renewal.label': 'Renewal',
+  'hud.renewal.title': 'Go to the urban renewal plot',
   'hud.freight.offerTitle': "Accept or pass in the terminal's panel",
 
   // Agenda strip

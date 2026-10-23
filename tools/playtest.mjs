@@ -6212,6 +6212,204 @@ async function finish(browser, consoleErrors) {
     await eContext.close();
   }
 
+  section('Gayrimenkul: proje, kira ve kentsel dönüşüm');
+  {
+    const rContext = await browser.newContext({ viewport: { width: 1280, height: 860 } });
+    await rContext.addInitScript(veteran, TUTORIAL_KEY);
+    const rp = await rContext.newPage();
+    const rErrors = [];
+    rp.on('pageerror', (e) => rErrors.push(e.message));
+    rp.on('console', (m) => { if (m.type() === 'error') rErrors.push(m.text()); });
+    await rp.goto('http://127.0.0.1:8811/');
+    await rp.waitForSelector('.newgame', { timeout: 20000 });
+    await rp.fill('.newgame-field input[type="text"]', 'Gayrimenkul AŞ');
+    await rp.locator('button:has-text("Şirketi kur")').click();
+    await rp.waitForSelector('.topbar', { timeout: 30000 });
+
+    // Şehir 150 gün büyüsün; projeyi açacak değer ve nakit, en kalabalık konut bölgesinde boş parsel.
+    const ESTATE_ZONES = ['downtown', 'retail_strip', 'lux_residential', 'mid_residential', 'student', 'tourism'];
+    const site = await rp.evaluate((zones) => {
+      const api = window.__capital;
+      api.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+      for (let i = 0; i < 150; i++) api.engine.runDay();
+      const state = api.getState();
+      delete state.crisis;
+      state.activeEvents = [];
+      delete state.era;
+      const me = state.companies[state.playerCompanyId];
+      me.cash += 60_000_000;
+      me.netWorth += 20_000_000;
+      let best = null;
+      for (const tile of state.map.tiles) {
+        if (tile.kind !== 'plot' || tile.ownerId || tile.buildingId || tile.structureId) continue;
+        const district = state.districts[tile.districtId];
+        if (!zones.includes(district.archetype) || (district.opensOnDay ?? 0) > state.time.day) continue;
+        if (!best || district.population > best.population) best = { id: tile.id, population: district.population };
+      }
+      const bought = api.engine.dispatch({ type: 'BUY_TILE', tileId: best.id }).ok;
+      return { ...best, bought, day: state.time.day };
+    }, ESTATE_ZONES);
+    check('Konut bölgesinde boş parsel alınıyor', site.bought, `${Math.round(site.population)} nüfus, ${site.day}. gün`);
+
+    // Yapı menüsü: proje kartı inşaat süresini ve dolmuş projenin tahminini söylüyor.
+    await rp.evaluate((tile) => window.__capital.selectTile(tile), site.id);
+    await rp.waitForTimeout(300);
+    const card = rp.locator('.buildcard:has(.buildcard-name:text-is("Konut Sitesi"))');
+    const cardText = (await card.textContent().catch(() => '')) ?? '';
+    const projected = Number(await card.locator('[data-project-estimate]').getAttribute('data-project-estimate').catch(() => NaN));
+    check('Yapı menüsünde proje: inşaat süresi ve dolunca tahmin', cardText.includes('inşaat 75 gün') && projected > 0, cardText.replace(/\s+/g, ' ').slice(0, 150));
+    await card.click();
+    await rp.waitForTimeout(200);
+    await rp.locator('button:has-text("Seçili arsaya inşa et")').click();
+    await rp.waitForTimeout(300);
+    const projectId = await rp.evaluate((tile) => window.__capital.getState().map.tiles[tile].buildingId, site.id);
+    check('Konut Sitesi kuruluyor', Boolean(projectId), projectId ?? 'yok');
+
+    // Şantiye: bir gün; kira yok, ücret yok, masa açılışa kalan günü yazıyor.
+    const siteDay = await rp.evaluate((id) => {
+      const api = window.__capital;
+      api.engine.runDay();
+      api.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+      const b = api.getState().buildings[id];
+      return { revenue: b.last.revenue, wages: b.last.wages, upkeep: b.last.upkeep, opens: b.development.opensOnDay };
+    }, projectId);
+    await rp.waitForTimeout(300);
+    const opensIn = Number(await rp.locator('[data-opens-in]').getAttribute('data-opens-in').catch(() => NaN));
+    check('Şantiye: kira ve ücret yok, bakımın payı; masa açılışa kalan günü yazıyor', siteDay.revenue === 0 && siteDay.wages === 0 && siteDay.upkeep > 0 && opensIn === 74, `açılışa ${opensIn} gün, gider ${Math.round(siteDay.upkeep)} ₺`);
+    // Yakın plan: inşaatın ortasında iskelet ve vinç (görsel kayıt).
+    await rp.evaluate((tile) => {
+      const api = window.__capital;
+      const state = api.getState();
+      const at = state.map.tiles[tile];
+      state.time.day += 38;
+      api.engine.runDay();
+      api.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+      api.selectTile(null);
+      api.setTimeOfDay(0.3);
+      api.setView({ x: at.x, z: at.y, distance: 8 });
+    }, site.id);
+    await rp.waitForTimeout(1500);
+    await rp.screenshot({ path: `${OUT}/realestate-site.png` });
+
+    // Açılış: ön kiralamayla, kiracılar gün gün geliyor.
+    const opened = await rp.evaluate((id) => {
+      const api = window.__capital;
+      const state = api.getState();
+      const b = state.buildings[id];
+      const seq = state.newsSeq ?? 0;
+      state.time.day = b.development.opensOnDay - 1;
+      api.engine.runDay();
+      api.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+      return { occupancy: b.development.occupancy, news: state.news.some((n) => n.id > seq && n.title.includes('Konut Sitesi')) };
+    }, projectId);
+    await rp.evaluate((tile) => window.__capital.selectTile(tile), site.id);
+    await rp.waitForTimeout(300);
+    const occ = Number(await rp.locator('[data-occupancy]').getAttribute('data-occupancy').catch(() => NaN));
+    const target = Number(await rp.locator('[data-occupancy-target]').getAttribute('data-occupancy-target').catch(() => NaN));
+    check('Proje açılıyor: haber, ön kiralamayla doluluk, hedef üstte', opened.news && occ === Math.round(opened.occupancy * 100) && target > occ && (await rp.locator('[data-lease-days]').count()) === 1, `%${occ} → hedef %${target}`);
+    await rp.screenshot({ path: `${OUT}/realestate-desk.png` });
+
+    // Kira: yukarı hedefi düşürüyor, aşağı yükseltiyor.
+    await rp.locator('[data-rent-up]').click();
+    await rp.waitForTimeout(200);
+    const upLevel = await rp.locator('[data-rent-level]').getAttribute('data-rent-level').catch(() => null);
+    const upTarget = Number(await rp.locator('[data-occupancy-target]').getAttribute('data-occupancy-target').catch(() => NaN));
+    await rp.locator('[data-rent-down]').click();
+    await rp.waitForTimeout(150);
+    await rp.locator('[data-rent-down]').click();
+    await rp.waitForTimeout(200);
+    const downLevel = await rp.locator('[data-rent-level]').getAttribute('data-rent-level').catch(() => null);
+    const downTarget = Number(await rp.locator('[data-occupancy-target]').getAttribute('data-occupancy-target').catch(() => NaN));
+    check('Kira düğmeleri: ×1,05 hedefi düşürüyor, ×0,95 yükseltiyor', upLevel === '1.05' && downLevel === '0.95' && upTarget < target && downTarget > target, `×1,05 %${upTarget} · ×0,95 %${downTarget} (piyasa %${target})`);
+    const filled = await rp.evaluate((id) => {
+      const api = window.__capital;
+      for (let i = 0; i < 30; i++) api.engine.runDay();
+      api.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+      const b = api.getState().buildings[id];
+      return { occupancy: b.development.occupancy, rent: b.rent, revenue: b.last.revenue };
+    }, projectId);
+    check('Kiracılar geliyor: 30 günde doluluk artıyor, kira ×0,95 defterde', filled.occupancy > opened.occupancy + 0.2 && filled.rent === 0.95 && filled.revenue > 0, `%${Math.round(opened.occupancy * 100)} → %${Math.round(filled.occupancy * 100)}`);
+
+    // Kentsel dönüşüm: şehrin konut yapısına başvuru, sıradaki ihale o parsel.
+    const plot = await rp.evaluate((zones) => {
+      const state = window.__capital.getState();
+      const residential = ['row_houses', 'apartment_block', 'tower_block'];
+      const tile = state.map.tiles.find((t) => t.kind === 'plot' && !t.ownerId && !t.buildingId && residential.includes(t.structureId) && zones.includes(state.districts[t.districtId].archetype) && (state.districts[t.districtId].opensOnDay ?? 0) <= state.time.day && state.auction?.tileId !== t.id);
+      return tile?.id ?? null;
+    }, ESTATE_ZONES);
+    await rp.evaluate((tile) => window.__capital.selectTile(tile), plot);
+    await rp.waitForTimeout(300);
+    const requestButton = rp.locator('[data-renewal-request]');
+    check('Şehir yapısının panelinde dönüşüm başvurusu düğmesi', (await requestButton.count()) === 1, (await requestButton.textContent().catch(() => '')) ?? '');
+    await requestButton.click().catch(() => {});
+    await rp.waitForTimeout(300);
+    const pending = (await rp.locator('[data-renewal-pending]').count()) === 1;
+    const chip = (await rp.locator('[data-agenda-renewal="renewal:request"]').count()) === 1;
+    const blocked = await rp.evaluate((tile) => !window.__capital.engine.dispatch({ type: 'BUYOUT_TILE', tileId: tile }).ok, plot);
+    check('Başvuru belediyede: panelde bekliyor, gündemde çip, parsel satılmıyor', pending && chip && blocked, `panel ${pending} · çip ${chip} · satış kapalı ${blocked}`);
+
+    // İhale günü: açılan ihale başvurunun parseli; panelde dönüşüm hakkı notu; oyuncu kazanıyor.
+    const auction = await rp.evaluate((tile) => {
+      const api = window.__capital;
+      const state = api.getState();
+      state.auction = null;
+      while (state.time.day % 30 !== 29) api.engine.runDay();
+      api.engine.runDay();
+      api.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+      return { tileId: state.auction?.tileId ?? null, reserve: state.auction?.reserve ?? 0 };
+    }, plot);
+    check('Sıradaki ihale başvurunun parseli', auction.tileId === plot, `parsel ${auction.tileId} (başvuru ${plot})`);
+    await rp.evaluate(() => window.__capital.selectTile(null));
+    await rp.locator('.auction-chip').click().catch(() => {});
+    await rp.waitForTimeout(300);
+    check('İhale panelinde dönüşüm hakkı notu', (await rp.locator('[data-auction-renewal]').count()) === 1);
+    const won = await rp.evaluate((tile) => {
+      const api = window.__capital;
+      const state = api.getState();
+      api.engine.dispatch({ type: 'PLACE_BID', amount: Math.ceil(state.auction.reserve * 40) });
+      for (let i = 0; i < 4 && state.auction; i++) api.engine.runDay();
+      api.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+      const t = state.map.tiles[tile];
+      return { owner: t.ownerId === state.playerCompanyId, renewal: Boolean(t.renewal), structure: t.structureId };
+    }, plot);
+    check('Dönüşüm ihalesini kazanan parseli hakla alıyor, yapı yıkılıyor', won.owner && won.renewal && won.structure === null, JSON.stringify(won));
+    await rp.keyboard.press('Escape').catch(() => {});
+    await rp.waitForTimeout(200);
+    check('Gündemde boş dönüşüm parseli çipi', (await rp.locator(`[data-agenda-renewal="renewal:${plot}"]`).count()) === 1);
+    await rp.evaluate((tile) => window.__capital.selectTile(tile), plot);
+    await rp.waitForTimeout(300);
+    check('Parselin panelinde dönüşüm hakkı notu', (await rp.locator(`[data-renewal-right="${plot}"]`).count()) >= 1);
+
+    // Dönüşüm projesi: imar artışıyla, hak sahipleri kirasız.
+    const renewed = await rp.evaluate((tile) => {
+      const api = window.__capital;
+      const state = api.getState();
+      const ok = api.engine.dispatch({ type: 'BUILD', tileId: tile, defId: 'housing_estate' }).ok;
+      const b = state.buildings[state.map.tiles[tile].buildingId];
+      state.time.day = b.development.opensOnDay - 1;
+      api.engine.runDay();
+      api.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+      return { ok, renewal: b.development.renewal === true, occupancy: b.development.occupancy };
+    }, plot);
+    await rp.evaluate(() => window.__capital.selectTile(null));
+    await rp.evaluate((tile) => window.__capital.selectTile(tile), plot);
+    await rp.waitForTimeout(300);
+    const holders = Number(await rp.locator('[data-right-holders]').getAttribute('data-right-holders').catch(() => NaN));
+    const units = Number(await rp.locator('[data-rent-units]').getAttribute('data-rent-units').catch(() => NaN));
+    check('Dönüşüm projesi: imar artışıyla daha çok birim, hak sahipleri kirasız', renewed.ok && renewed.renewal && units > 400 && holders > 0, `${units} kiralık + ${holders} hak sahibi`);
+    await rp.evaluate((tile) => {
+      const api = window.__capital;
+      const at = api.getState().map.tiles[tile];
+      api.selectTile(null);
+      api.setTimeOfDay(0.3);
+      api.setView({ x: at.x, z: at.y, distance: 9 });
+    }, plot);
+    await rp.waitForTimeout(1500);
+    await rp.screenshot({ path: `${OUT}/realestate-estate.png` });
+    check('Gayrimenkul akışında konsol temiz', rErrors.length === 0, rErrors.slice(0, 2).join(' | '));
+    await rContext.close();
+  }
+
   section('Mobil');
   for (const deviceName of ['iPhone 13', 'Pixel 7']) {
     const mobileContext = await browser.newContext({ ...devices[deviceName] });

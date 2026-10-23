@@ -155,6 +155,7 @@ export const finance: Record<keyof typeof trFinance, string> = {
   'finance.auction.occupied':
     "Urban renewal: this plot has {structure} on it. The winner has the structure torn down and gets the plot empty; the reserve price is the owner's buyout price.",
   'finance.auction.occupied.someStructure': 'a structure',
+  'finance.auction.renewalRight': "The winner also gets the renewal right: a project built here is {bonus} larger with the zoning bonus, rights holders in flats equal to {holders} of its size. Rivals don't build projects, so their bids leave this value out.",
   'finance.auction.leading': "You're leading",
   'finance.auction.bidMinimum': 'Bid the minimum · {amount}',
   'finance.auction.customBid': 'Your bid',

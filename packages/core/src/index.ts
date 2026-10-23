@@ -67,7 +67,7 @@ export {
   MARKETING_CAP,
   RESEARCH_CAP,
 } from './systems/focus';
-export { auctionHint, minimumBid, valuationFor } from './systems/auction';
+export { AUCTION_PERIOD_DAYS, auctionHint, minimumBid, valuationFor } from './systems/auction';
 export {
   bookValue,
   confidence,
@@ -177,6 +177,18 @@ export {
   powerPlants,
 } from './systems/energy';
 export type { EnergyPotential } from './systems/energy';
+export {
+  isProject,
+  leaseUpDays,
+  projectUnits,
+  renewalBlocker,
+  renewalFee,
+  renewalRight,
+  rentOf,
+  rentalOutlook,
+  underConstruction,
+} from './systems/realestate';
+export type { RentalOutlook } from './systems/realestate';
 export type { EventModifiers } from './systems/events';
 export {
   FREIGHT_SHARE,

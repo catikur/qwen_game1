@@ -2,6 +2,7 @@ import { pushNews } from './news';
 import { runMarketTick } from './systems/market';
 import { runCrisisTick } from './systems/economy';
 import { runEnergyTick } from './systems/energy';
+import { runRealEstateTick } from './systems/realestate';
 import { runCardTick } from './systems/cards';
 import { runRivalryTick } from './systems/rivalry';
 import { runBubbleTick } from './systems/opportunities';
@@ -49,6 +50,8 @@ export function simulateCityDay(state: GameState): void {
   runCrisisTick(state);
   // Enerji (Tur 57): süresi biten yakıt sabitlemesi bugünkü defterden önce kalksın.
   runEnergyTick(state);
+  // Proje (Tur 58): açılış günü gelen proje bugünkü defterden önce açılsın.
+  runRealEstateTick(state);
   // İmar takvimi sözleşmeden ÖNCE: açılış günü gelen bir inşaat
   // teklifi yeni bölgeyi hedefleyebilmeli.
   runDistrictUnlockTick(state);

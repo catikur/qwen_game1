@@ -273,6 +273,30 @@ export function decorateBuilding(
         onFace(layer, 'box', x, z, side, w / 2, y, w * 0.8, 0.02, 0.07, c('#e6e2da'));
       }
       return;
+    case 'housing_estate': {
+      // Tur 58: konut sitesi — ana bloğun iki yanında alçak kanatlar, avluda ağaç.
+      roofGear(layer, x, z, footprint, 'residential');
+      const wing = (footprint.bodyTop - footprint.bodyBottom) * 0.55;
+      for (const k of [-1, 1]) {
+        const ox = side.nz !== 0 ? k * w * 0.36 : -side.nx * w * 0.3;
+        const oz = side.nx !== 0 ? k * w * 0.36 : -side.nz * w * 0.3;
+        layer.add('box', x + ox, footprint.bodyBottom, z + oz, w * 0.3, wing, w * 0.3, c('#e4ddd2'));
+        layer.add('box', x + ox, footprint.bodyBottom + wing, z + oz, w * 0.32, 0.03, w * 0.32, roofColor);
+      }
+      for (const f of [0.3, 0.55, 0.8]) {
+        const y = footprint.bodyBottom + (footprint.bodyTop - footprint.bodyBottom) * f;
+        onFace(layer, 'box', x, z, side, w / 2, y, w * 0.8, 0.02, 0.07, c('#e6e2da'));
+      }
+      layer.add('tree', x + side.nx * (w / 2 + 0.05), 0.07, z + side.nz * (w / 2 + 0.05), 0.32, 0.32, 0.32, c(GREEN_ROOF));
+      return;
+    }
+    case 'office_campus':
+      // Tur 58: ofis kampüsü — cam podyum, yanında ikinci ince kule, çatıda tabela.
+      roofGear(layer, x, z, footprint, 'office');
+      onFace(layer, 'glass', x, z, side, w / 2, footprint.bodyBottom, w * 0.95, 0.3, 0.16, c('#ffffff'));
+      layer.add('glass', x - side.nz * w * 0.32 - side.nx * w * 0.22, footprint.bodyBottom, z - side.nx * w * 0.32 - side.nz * w * 0.22, w * 0.26, (footprint.roofY - footprint.bodyBottom) * 0.7, w * 0.26, c('#bcd7ee'));
+      layer.add('sign', x, footprint.roofY, z, footprint.roofWidth * 0.55, 0.12, 0.025, ownerSign, side.yaw);
+      return;
     case 'office_tower':
       roofGear(layer, x, z, footprint, 'office');
       // Anten direği ve tepe feneri.
@@ -439,6 +463,28 @@ function frontYard(
     side.nz !== 0 ? length : 0.09,
     c(PATH),
   );
+}
+
+/**
+ * İnşaattaki proje (Tur 58): yükselen beton iskelet, köşede kule vinci, sokak
+ * yüzünde şantiye çiti. Sahibin tabelası açılışta.
+ */
+export function decorateSite(
+  layer: DecorLayer,
+  footprint: MassFootprint,
+  x: number,
+  z: number,
+  side: { yaw: number; nx: number; nz: number },
+  height: number,
+): void {
+  const w = footprint.bodyWidth;
+  const cx = x - side.nz * w * 0.42 - side.nx * w * 0.42;
+  const cz = z - side.nx * w * 0.42 - side.nz * w * 0.42;
+  const mast = Math.max(0.9, height + 0.35);
+  layer.add('box', cx, footprint.bodyBottom, cz, 0.05, mast, 0.05, c('#e0b23c'));
+  layer.add('box', cx, footprint.bodyBottom + mast, cz, side.nz !== 0 ? w * 0.9 : 0.035, 0.035, side.nx !== 0 ? w * 0.9 : 0.035, c('#e0b23c'));
+  layer.add('box', cx, footprint.bodyBottom + mast - 0.06, cz, 0.09, 0.06, 0.09, c(DARK_METAL));
+  onFace(layer, 'box', x, z, side, w / 2 + 0.04, footprint.bodyBottom, w * 1.02, 0.09, 0.012, c('#d7d2c7'));
 }
 
 export function decorateStructure(

@@ -1,4 +1,4 @@
-import { BUILDINGS, BUILDING_BY_ID, CEO_BY_ID, CONSORTIUM, CRISES, CRISIS_TIMING, ENERGY, ERAS, EVENTS, SECTOR_EVENTS, CONSUMER_CATEGORIES, FAD, GOOD_BY_ID, GOODS_BY_CATEGORY, MODIFIER_RULES, PROJECTS, PROJECT_TIMING, SEASONS, TREND } from '@capital/content';
+import { BUILDINGS, BUILDING_BY_ID, CEO_BY_ID, CONSORTIUM, CRISES, CRISIS_TIMING, ENERGY, ERAS, EVENTS, SECTOR_EVENTS, CONSUMER_CATEGORIES, FAD, GOOD_BY_ID, GOODS_BY_CATEGORY, MODIFIER_RULES, PROJECTS, PROJECT_TIMING, REAL_ESTATE, SEASONS, TREND } from '@capital/content';
 import type { CategoryId } from '@capital/content';
 import { GameEngine } from './engine';
 import { formatMoney } from './selectors';
@@ -11,6 +11,7 @@ import { goodShares } from './systems/demand';
 import { runMarketTick } from './systems/market';
 import { FREIGHT, acceptFreight, runFreightTick } from './systems/freight';
 import { energyPrice, lockFuel } from './systems/energy';
+import { runRealEstateTick, setRent } from './systems/realestate';
 import { DISTRIBUTION_RELIEF } from './systems/buildingIndex';
 import { FREIGHT_SHARE, resetDailyLedgers } from './systems/supply';
 import { contributeToProject, projectAttraction, projectDistrictDemand, projectSite, projectUpkeep, runProjectTick } from './systems/projects';
@@ -91,6 +92,7 @@ const LOGGABLE: ReadonlySet<string> = new Set<GameCommand['type']>([
   'PLACE_TAKEOVER_ORDER',
   'RENAME_COMPANY',
   'REPAY_LOAN',
+  'REQUEST_RENEWAL',
   'RESPOND_UNION',
   'SELL_SHARES',
   'SELL_TILE',
@@ -98,6 +100,7 @@ const LOGGABLE: ReadonlySet<string> = new Set<GameCommand['type']>([
   'SET_FLAG',
   'SET_FOCUS',
   'SET_PRICE_MULTIPLIER',
+  'SET_RENT',
   'SET_STOCK',
   'SET_WAGE_POLICY',
   'SWITCH_CITY',
@@ -391,6 +394,7 @@ function lateGameProbe(state: GameState): string[] {
 
   parts.push(...freightProbe(clone()));
   parts.push(...energyProbe(clone()));
+  parts.push(...realEstateProbe(clone()));
 
   const seed = state.meta.seed;
   for (const day of [120, 240, 360]) {
@@ -516,6 +520,74 @@ function energyProbe(world: GameState): string[] {
   world.crisis = { defId: shock.id, phase: 'active', activeDay: world.time.day, endDay: world.time.day + shock.durationDays[0] };
   resetDailyLedgers(world);
   parts.push(`probe-energy-shock:${locked}:${energyPrice(world).toFixed(6)}:${ledger()}:${Math.round(me.today.revenue)}:${Math.round(me.today.cogs)}`);
+  return parts;
+}
+
+/**
+ * Gayrimenkul (Tur 58) yoklaması. Kopyada en kalabalık izinli parsele Konut
+ * Sitesi, dönüşüm hakkı verilmiş bir parsele Ofis Kampüsü. Bir gün şantiye,
+ * sonra ikisinin açılış günü ve bir gün defter (doluluk, kira, hak
+ * sahipleri); sonra sitenin kirası artıyor, bir gün daha. Bütün kiralıkların
+ * cirosu izde: projenin baskısı rakiplerin doluluğunu da değiştiriyor.
+ */
+function realEstateProbe(world: GameState): string[] {
+  const projects = BUILDINGS.filter((def) => (def.buildDays ?? 0) > 0);
+  const parts = [
+    `realestate-settings:${JSON.stringify({
+      REAL_ESTATE,
+      projects: projects.map(({ id, category, cost, upkeepPerDay, capacity, jobs, buildDays, unlockNetWorth, zones }) => ({ id, category, cost, upkeepPerDay, capacity, jobs, buildDays, unlockNetWorth, zones })),
+    })}`,
+  ];
+  const me = world.companies[world.playerCompanyId]!;
+  me.cash += 10_000_000;
+  me.netWorth += 10_000_000;
+  const estate = projects.find((def) => def.category === 'housing');
+  const campus = projects.find((def) => def.category === 'office');
+  if (!estate || !campus) return parts;
+  const site = (defZones: readonly string[] | undefined, avoid: number): number | null => {
+    let best: { id: number; population: number } | null = null;
+    for (const tile of world.map.tiles) {
+      if (!isPurchasable(tile) || tile.structureId || tile.buildingId || tile.id === avoid) continue;
+      if (!isDistrictOpen(world, tile.districtId)) continue;
+      const district = world.districts[tile.districtId]!;
+      if (defZones && !defZones.includes(district.archetype)) continue;
+      if (!best || district.population > best.population) best = { id: tile.id, population: district.population };
+    }
+    return best?.id ?? null;
+  };
+  const a = site(estate.zones, -1);
+  if (a === null || !buyTile(world, me.id, a).ok || !build(world, me.id, a, estate.id).ok) return [...parts, 'probe-realestate:-'];
+  const b = site(campus.zones, a);
+  if (b !== null) {
+    const tile = world.map.tiles[b]!;
+    tile.ownerId = me.id;
+    tile.renewal = { day: world.time.day, structureId: 'row_houses' };
+    build(world, me.id, b, campus.id);
+  }
+  const ids = [a, b].map((id) => (id === null ? null : world.map.tiles[id]?.buildingId ?? null)).filter((id): id is string => id !== null);
+  const day = (): void => {
+    runRealEstateTick(world);
+    resetDailyLedgers(world);
+    runMarketTick(world);
+  };
+  const ledger = (): string => {
+    const own = ids.map((id) => {
+      const x = world.buildings[id]!;
+      return `${x.defId}:${JSON.stringify(x.development)}:${x.rent ?? 1}:${x.last.revenue.toFixed(4)}:${x.last.upkeep.toFixed(4)}:${x.last.wages.toFixed(4)}`;
+    });
+    const rentals = Object.values(world.buildings).reduce((sum, x) => sum + (BUILDING_BY_ID[x.defId]?.role === 'rental' ? x.last.revenue : 0), 0);
+    return `${own.join(',')}:${rentals.toFixed(4)}`;
+  };
+  world.time.day += 1;
+  day();
+  parts.push(`probe-realestate-site:${a}:${b ?? '-'}:${ledger()}`);
+  world.time.day = Math.max(...ids.map((id) => world.buildings[id]!.development?.opensOnDay ?? world.time.day));
+  day();
+  parts.push(`probe-realestate-open:${world.time.day}:${ledger()}`);
+  const rented = setRent(world, me.id, ids[0]!, 1.15).ok;
+  world.time.day += 1;
+  day();
+  parts.push(`probe-realestate-rent:${rented}:${ledger()}`);
   return parts;
 }
 

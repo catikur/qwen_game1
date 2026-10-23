@@ -911,6 +911,22 @@ export function ActiveEvents(): ReactElement | null {
           </button>
         );
         break;
+      case 'renewal':
+        // Kentsel dönüşüm (Tur 58): bekleyen başvuru ya da proje bekleyen dönüşüm parseli.
+        chip = (
+          <button
+            type="button"
+            className={`event-chip contract-chip urgency-${item.urgency}`}
+            onClick={() => item.tileId !== undefined && focusOn({ tileId: item.tileId })}
+            title={t('hud.renewal.title')}
+            data-agenda-renewal={item.key}
+          >
+            <span className="contract-label">{t('hud.renewal.label')}</span>
+            {item.label}
+            {days}
+          </button>
+        );
+        break;
       case 'crisis': {
         // Kriz (Tur 37a): uyarıda ne yapılacağını, krizde etkisini söylüyor.
         const def = CRISIS_BY_ID[state.crisis?.defId ?? ''];

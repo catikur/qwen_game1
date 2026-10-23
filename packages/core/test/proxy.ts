@@ -12,7 +12,7 @@
  * iki ölçüm aynı soruya farklı cevap verdi. Artık vekil bir tane; deney
  * yalnızca seçeneklerle (tavan, günlük) ayrışıyor.
  */
-import { BUILDINGS, BUILDING_BY_ID, CRISIS_BY_ID, ENERGY, NPC_PROFILES } from '@capital/content';
+import { BUILDINGS, BUILDING_BY_ID, CRISIS_BY_ID, ENERGY, NPC_PROFILES, REAL_ESTATE } from '@capital/content';
 import {
   GameEngine,
   buildOptions,
@@ -26,7 +26,14 @@ import {
   fuelLock,
   hasFuelPlant,
   indirectEstimate,
+  isProject,
+  minimumBid,
   plantCapacity,
+  renewalBlocker,
+  renewalFee,
+  rentOf,
+  rentalOutlook,
+  underConstruction,
   powerPlants,
   getPlayer,
   isDistrictOpen,
@@ -132,6 +139,8 @@ export function expandOutlets(engine: GameEngine): void {
     for (const option of buildOptions(state)) {
       if (!option.unlocked) continue;
       if (option.def.role !== 'outlet' && option.def.role !== 'rental') continue;
+      // Temel vekil proje kurmuyor (Tur 58): geliştirici yolu ayrı vekilde.
+      if (isProject(option.def)) continue;
       if (tilePrice(state, tile.id) + option.def.cost > budget) continue;
 
       const estimate = estimateInvestment(state, district.id, option.def.id, player.id);
@@ -197,6 +206,7 @@ export function expandOutletsVacantOnly(engine: GameEngine): void {
     for (const option of buildOptions(state)) {
       if (!option.unlocked) continue;
       if (option.def.role !== 'outlet' && option.def.role !== 'rental') continue;
+      if (isProject(option.def)) continue;
       if (tilePrice(state, tile.id) + option.def.cost > budget) continue;
 
       const estimate = estimateInvestment(state, district.id, option.def.id, player.id);
@@ -335,4 +345,123 @@ export function energyStrategy(engine: GameEngine, maxPlants = 4, maxPayback = 3
   if (!best || best.payback > maxPayback) return;
   if (!engine.dispatch({ type: 'BUY_TILE', tileId: best.tileId }).ok) return;
   engine.dispatch({ type: 'BUILD', tileId: best.tileId, defId: best.defId });
+}
+
+/**
+ * Geliştirici vekil (Tur 58): oyunun önerdiği oynanışa gayrimenkul.
+ *
+ * Her gün çağrılıyor (ihale üç gün açık); geri kalanı haftada bir:
+ *   - Kira: her kiralıkta bir adım aşağı ya da yukarı, hedef dolulukta
+ *     kira geliri artıyorsa (maliyet cironun payı: ciro en yüksekse kâr da).
+ *   - Dönüşüm: bekleyen başvuru ve boş dönüşüm parseli yoksa, projesi en
+ *     çok kazandıracak bölgede şehrin en ucuz satılabilir yapısı için
+ *     başvuru. Dönüşüm ihalelerinde taban fiyatın `bidCeiling` katına kadar
+ *     artırıyor; kazandığı parsele ilk iş proje.
+ *   - Proje: en çok `maxProjects`, maliyetin iki katı nakit varsa yapı
+ *     menüsünün tahminiyle günlük kârı en yüksek boş parsel, geri ödemesi
+ *     (inşaat ve doluş dahil) `maxPayback` günün altındaysa.
+ * Yalnızca komutla oynuyor: lig koşusunda da tekrar tutuyor.
+ */
+export function developerStrategy(
+  engine: GameEngine,
+  options: { maxProjects?: number; maxPayback?: number; bidCeiling?: number; rent?: boolean; renewal?: boolean } = {},
+): void {
+  const { maxProjects = 4, maxPayback = 330, bidCeiling = 4, rent = true, renewal = true } = options;
+  const state = engine.getState();
+  const player = getPlayer(state);
+  const projects = BUILDINGS.filter((def) => isProject(def) && player.netWorth >= def.unlockNetWorth);
+
+  // İhale: dönüşüm ihaleleri (parselde şehir yapısı var), proje açılmışsa.
+  const auction = state.auction;
+  if (renewal && auction && auction.bidderId !== player.id && state.map.tiles[auction.tileId]?.structureId) {
+    const bid = minimumBid(auction);
+    if (bid <= auction.reserve * bidCeiling && player.cash >= bid + Math.min(...projects.map((def) => def.cost), Infinity)) {
+      engine.dispatch({ type: 'PLACE_BID', amount: bid });
+    }
+  }
+  if (state.time.day % 7 !== 1) return;
+
+  if (rent) {
+    const { min, max, step } = REAL_ESTATE.rent;
+    for (const building of Object.values(state.buildings)) {
+      if (building.companyId !== player.id || BUILDING_BY_ID[building.defId]?.role !== 'rental' || underConstruction(building)) continue;
+      const now = rentOf(building);
+      let best = now;
+      let value = rentalOutlook(state, building.id, now)?.rentAtTarget ?? 0;
+      for (const next of [now - step, now + step]) {
+        if (next < min - 1e-9 || next > max + 1e-9) continue;
+        const outlook = rentalOutlook(state, building.id, next);
+        if (outlook && outlook.rentAtTarget > value + 1) {
+          best = next;
+          value = outlook.rentAtTarget;
+        }
+      }
+      if (best !== now) engine.dispatch({ type: 'SET_RENT', buildingId: building.id, rent: best });
+    }
+  }
+  if (projects.length === 0) return;
+
+  // Dönüşüm hakkı olan boş parsel: ilk iş proje (başka bina hakkı düşürür).
+  const own = Object.values(state.buildings).filter((b) => b.companyId === player.id && b.development).length;
+  for (const tile of state.map.tiles) {
+    if (!tile.renewal || tile.ownerId !== player.id || tile.buildingId) continue;
+    const pick = bestProject(state, projects, tile.districtId, tile.id);
+    if (pick && player.cash >= BUILDING_BY_ID[pick]!.cost) engine.dispatch({ type: 'BUILD', tileId: tile.id, defId: pick });
+    return;
+  }
+  if (renewal && !state.renewalRequest && state.auction?.tileId === undefined) {
+    let target: { tileId: number; profit: number; price: number } | null = null;
+    for (const tile of state.map.tiles) {
+      if (renewalBlocker(state, tile.id) !== null) continue;
+      const pick = bestProject(state, projects, tile.districtId);
+      if (!pick) continue;
+      const profit = estimateInvestment(state, tile.districtId, pick, player.id)!.dailyProfit;
+      const price = tilePrice(state, tile.id, player.id);
+      if (!target || profit > target.profit || (profit === target.profit && price < target.price)) target = { tileId: tile.id, profit, price };
+    }
+    const cost = Math.max(...projects.map((def) => def.cost));
+    if (target && player.cash >= renewalFee(state, target.tileId) + target.price * bidCeiling + cost) {
+      engine.dispatch({ type: 'REQUEST_RENEWAL', tileId: target.tileId });
+    }
+  }
+  // Dönüşüm projeleri sınırın dışında: sınır boş parsele kurulanlar.
+  if (own - renewals(state) >= maxProjects) return;
+
+  let best: { tileId: number; defId: string; profit: number } | null = null;
+  for (const district of state.districts) {
+    if (!isDistrictOpen(state, district.id)) continue;
+    const tile = state.map.tiles
+      .filter((t) => t.districtId === district.id && t.kind === 'plot' && !t.ownerId && !t.buildingId && !t.structureId && state.auction?.tileId !== t.id)
+      .sort((a, b) => a.landValue - b.landValue || a.id - b.id)[0];
+    if (!tile) continue;
+    for (const def of projects) {
+      if (def.zones && !def.zones.includes(district.archetype)) continue;
+      if (player.cash < (def.cost + tilePrice(state, tile.id, player.id)) * 2) continue;
+      const estimate = estimateInvestment(state, district.id, def.id, player.id, tile.id);
+      if (!estimate || estimate.paybackDays > maxPayback) continue;
+      if (!best || estimate.dailyProfit > best.profit) best = { tileId: tile.id, defId: def.id, profit: estimate.dailyProfit };
+    }
+  }
+  if (!best) return;
+  if (!engine.dispatch({ type: 'BUY_TILE', tileId: best.tileId }).ok) return;
+  engine.dispatch({ type: 'BUILD', tileId: best.tileId, defId: best.defId });
+}
+
+/** Oyuncunun dönüşüm parselindeki projeleri. */
+function renewals(state: GameState): number {
+  return Object.values(state.buildings).filter((b) => b.companyId === state.playerCompanyId && b.development?.renewal).length;
+}
+
+/** Bu bölgede (parselde) günlük kârı en yüksek proje; geri ödemesi sonsuzsa yok. */
+function bestProject(state: GameState, projects: typeof BUILDINGS, districtId: number, tileId?: number): string | null {
+  const district = state.districts[districtId];
+  if (!district) return null;
+  let best: { defId: string; profit: number } | null = null;
+  for (const def of projects) {
+    if (def.zones && !def.zones.includes(district.archetype)) continue;
+    const estimate = estimateInvestment(state, districtId, def.id, state.playerCompanyId, tileId);
+    if (!estimate || !Number.isFinite(estimate.paybackDays)) continue;
+    if (!best || estimate.dailyProfit > best.profit) best = { defId: def.id, profit: estimate.dailyProfit };
+  }
+  return best?.defId ?? null;
 }

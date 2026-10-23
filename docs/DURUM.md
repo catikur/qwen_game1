@@ -4,7 +4,7 @@
 > `pnpm bench` çıktısından; iddialar `pnpm balance` ve `pnpm playtest`
 > tarafından her koşuda doğrulanıyor.
 >
-> Son güncelleme: şema **v6**, 57 tur (Tur 33 denendi ve geri alındı; Tur 34 eski görünüme canlılık ekledi; Tur 35 arayüzü Lite'ın "Cam & Bulut" diline taşıdı; Tur 36 şehre ayrıntı kattı; Tur 37a geç oyuna yönetim yükü, servet vergisi ve kriz dönemleri getirdi; Tur 37b karar kartlarını ve rakip hikâyelerini ekledi; Tur 37c fırsat balonlarını ve aylık görev panosunu getirdi; Tur 37d canlı pazarı, şehir projesi ihalesini ve rakip konsorsiyumunu getirdi; Tur 38 değerlendirme turuydu: geç oyun hızı, gündem ve haber akışı, zorluk eğrisi; Tur 39a senaryo modunu getirdi: Kurtarma ve Krizin ortasında; Tur 39b Konsorsiyuma karşı, Zincir ustası ve Şehrin sponsoru senaryolarını ekledi; Tur 39c Büyük şehir fethi ve Holding: iki şehir ile listeyi yediye tamamladı; Tur 40 cila ve performans; Tur 41 başarımlar ve kariyer; Tur 42 açılışta gölgelendirici derlemesi; Tur 43 oyun içi akıcılık; Tur 44 değerlendirme turuydu: Türkçe sayı biçimi, yardımın kapsamı, haber akışı; Tur 45 dört ek kural getirdi: Fırtınalı yıllar, Aç gözlü rakipler, Sıkı banka, Kıt arsa; Tur 46 açılış paketini böldü: kurulum ekranı telefonda yarı sürede; Tur 47 tek Ayarlar paneli ve erişilebilirlik getirdi: metin boyutu, renk körlüğüne uygun palet, hareket, ses düzeyleri, pencerelerde klavye; Tur 48 oyunu kurulabilir ve çevrimdışı açılır yaptı, yayından sonra "yeni sürüm hazır" diyor; Tur 49 müziği getirdi: gündüz, gece ve kriz, şehirle birlikte dönüyor; Tur 50 Faz 1'i değerlendirdi ve tanıtım paketini hazırladı; Tur 51 Faz 2'yi açtı: Lite'ın lig sunucusu ana oyunun Tohum Ligi koşularını da alıyor, tablo herkese açık; Tur 52'de sunucu her koşuyu gönderimde yeniden oynatıyor, tabloya yalnız doğrulanmış skor giriyor; Tur 53 ligin her haftasına bir ek kural ve 90 günlük günün koşusunu getirdi; Tur 54 liderlerin eğrisini senin koşunun üstüne koydu ve liderin o günlerde ne yaptığını koşu kodundan anlatıyor; Tur 55 davet kodlu arkadaş liglerini getirdi ve Faz 2'yi kapattı; Tur 56 Faz 3'ü açtı: nakliye terminali rakip mağazalarına taşıma sözleşmesiyle taşıyor; Tur 57 enerjiyi getirdi: şebeke fiyatı, santraller, enerji krizi). Önümüzdeki işin sırası `docs/YOL-HARITASI.md`'de.
+> Son güncelleme: şema **v6**, 58 tur (Tur 33 denendi ve geri alındı; Tur 34 eski görünüme canlılık ekledi; Tur 35 arayüzü Lite'ın "Cam & Bulut" diline taşıdı; Tur 36 şehre ayrıntı kattı; Tur 37a geç oyuna yönetim yükü, servet vergisi ve kriz dönemleri getirdi; Tur 37b karar kartlarını ve rakip hikâyelerini ekledi; Tur 37c fırsat balonlarını ve aylık görev panosunu getirdi; Tur 37d canlı pazarı, şehir projesi ihalesini ve rakip konsorsiyumunu getirdi; Tur 38 değerlendirme turuydu: geç oyun hızı, gündem ve haber akışı, zorluk eğrisi; Tur 39a senaryo modunu getirdi: Kurtarma ve Krizin ortasında; Tur 39b Konsorsiyuma karşı, Zincir ustası ve Şehrin sponsoru senaryolarını ekledi; Tur 39c Büyük şehir fethi ve Holding: iki şehir ile listeyi yediye tamamladı; Tur 40 cila ve performans; Tur 41 başarımlar ve kariyer; Tur 42 açılışta gölgelendirici derlemesi; Tur 43 oyun içi akıcılık; Tur 44 değerlendirme turuydu: Türkçe sayı biçimi, yardımın kapsamı, haber akışı; Tur 45 dört ek kural getirdi: Fırtınalı yıllar, Aç gözlü rakipler, Sıkı banka, Kıt arsa; Tur 46 açılış paketini böldü: kurulum ekranı telefonda yarı sürede; Tur 47 tek Ayarlar paneli ve erişilebilirlik getirdi: metin boyutu, renk körlüğüne uygun palet, hareket, ses düzeyleri, pencerelerde klavye; Tur 48 oyunu kurulabilir ve çevrimdışı açılır yaptı, yayından sonra "yeni sürüm hazır" diyor; Tur 49 müziği getirdi: gündüz, gece ve kriz, şehirle birlikte dönüyor; Tur 50 Faz 1'i değerlendirdi ve tanıtım paketini hazırladı; Tur 51 Faz 2'yi açtı: Lite'ın lig sunucusu ana oyunun Tohum Ligi koşularını da alıyor, tablo herkese açık; Tur 52'de sunucu her koşuyu gönderimde yeniden oynatıyor, tabloya yalnız doğrulanmış skor giriyor; Tur 53 ligin her haftasına bir ek kural ve 90 günlük günün koşusunu getirdi; Tur 54 liderlerin eğrisini senin koşunun üstüne koydu ve liderin o günlerde ne yaptığını koşu kodundan anlatıyor; Tur 55 davet kodlu arkadaş liglerini getirdi ve Faz 2'yi kapattı; Tur 56 Faz 3'ü açtı: nakliye terminali rakip mağazalarına taşıma sözleşmesiyle taşıyor; Tur 57 enerjiyi getirdi: şebeke fiyatı, santraller, enerji krizi; Tur 58 gayrimenkul geliştiricisini getirdi: konut ve ofis projeleri, kira ve doluluk, kentsel dönüşüm hakkı ve başvurusu). Önümüzdeki işin sırası `docs/YOL-HARITASI.md`'de.
 
 ---
 
@@ -6061,6 +6061,165 @@ sayıları satır satır aynı.
 **Canlıya geçiş.** Şema aynı, simülasyon değişti: birleşmeden sonra Worker
 yeniden dağıtılıyor. Lite etkilenmiyor.
 
+### Tur 58 — Gayrimenkul geliştiricisi: proje, kira ve kentsel dönüşüm
+
+Faz 3'ün üçüncü turu. Kiralık binalar (Apartman, Rezidans, İş Merkezi,
+Plaza) kurulduğu gün dolu açılıyordu, kirası sabitti ve kentsel dönüşüm
+ihalesi yalnız yapıyı yıkıp parseli boş veriyordu. Geliştirici yolu üç şey
+ekliyor.
+
+**Proje (`content/src/buildings.ts`, `core/src/systems/realestate.ts`).**
+Bina tanımına `buildDays` (inşaat süresi). İki proje, ikisi de `rental`:
+- *Konut Sitesi:* 620 B ₺, günde 1.300 ₺ gider ve 8 kişi, 400 daire, inşaat
+  75 gün. 2 M ₺ değerde açılıyor; konut, merkez ve çarşı bölgelerine.
+- *Ofis Kampüsü:* 840 B ₺, günde 1.900 ₺ ve 16 kişi, 360 ofis, inşaat 100
+  gün. 4 M ₺ değerde açılıyor; merkez, çarşı ve teknoparka.
+
+Bir parsele en çok kiralık birim bu yoldan sığıyor (Rezidans 240, Plaza
+210), ama:
+- *Şantiye:* bina inşaat süresince pazarda yok. Kirası yok, kadrosu
+  açılışta işe başlıyor, bakımın %30'u şantiyeye gidiyor.
+- *Doluş:* açılış günü konutun %15'i, ofisin %25'i (çapa kiracı) dolu.
+  Doluluk projede bir durum: hedefe günde en çok konutta 2,5, ofiste 1,2
+  puan yaklaşıyor. Hedef düşerse konutta 1,2, ofiste 0,5 puan boşalıyor
+  (ofisin sözleşmesi uzun).
+- *Hedef:* eski formül; bölgenin nüfusu, geliri ve o kategorideki bütün
+  kiralık birimler. İnşaattaki proje baskıda yok.
+
+**Kira.** Oyuncu her kiralığın kirasını piyasanın ×0,80–×1,30'una (adım
+0,05) çekebiliyor (`SET_RENT`). Kira hedef doluluğu kaydırıyor; %10 pahalı
+kira konutta 6, ofiste 4,5 puan eksik. Gelir kira × doluluk. Gelirin en
+yüksek olduğu kira piyasanın sıcaklığına bağlı:
+- kiralığı bol bölgede piyasanın altı;
+- kiralığı kıt, geliri yüksek bölgede üstü.
+
+Rakipler kira ayarlamıyor. Kira 1'ken hesap eskisiyle bit bit aynı.
+
+**Kentsel dönüşüm.**
+- *Dönüşüm hakkı:* belediyenin dönüşüm ihalesini kazanan, yapısı yıkılmış
+  parseli "dönüşüm hakkıyla" alıyor. Üstüne kurulan projeye imar artışı:
+  tanımın 1,6 katı birim. Eski yapının hak sahipleri tanımın %25'i kadar
+  dairede kirasız oturuyor. Konut Sitesi 400 yerine 540 kiralık ve 100 hak
+  sahibi daire. Hak sahiplerinin daireleri pazara çıkmıyor (zaten
+  oradaydılar): baskıda yok, nüfus artışında var. Parselde ilk kurulan
+  bina hakkı kullanıyor; proje değilse hak düşüyor, parsel satılınca da.
+- *Dönüşüm başvurusu (`REQUEST_RENEWAL`):* oyuncu şehrin satılabilir bir
+  yapısı için belediyeye başvuruyor. Belediye sıradaki ihalesini (en geç
+  30 gün) o parsele açıyor.
+  - Bedel parselin fiyatının %5'i, en az 20 B ₺; geri dönmüyor. Arsa ucuz:
+    taban olmasa başvuru parseli 30 gün bedavaya kapatırdı.
+  - Bekleyen başvurunun parseli ihale gününe kadar satılmıyor. İlk
+    ölçümde rakipler parseli ihaleden önce devralıyor, başvuru düşüyordu.
+  - Bir anda tek başvuru. Parsel ihaleleri kapatılırsa bekleyen başvuru
+    düşüyor (parsel yeniden satılık).
+- *Rakipler:* proje kurmuyor ve ihale değerlemelerine projeyi katmıyor.
+  Dönüşüm hakkının değeri yalnız oyuncuda; ihale panelinde de yazıyor.
+
+**Lig.**
+- `SET_RENT` ve `REQUEST_RENEWAL` koşu günlüğünde; hayalet kartında "Kirayı
+  ayarladı", "Dönüşüm başvurusu yaptı".
+- *Parmak izi:* kopyada en kalabalık izinli parsele Konut Sitesi, dönüşüm
+  hakkı verilmiş bir parsele Ofis Kampüsü. Bir gün şantiye, sonra ikisinin
+  açılış günü ve bir gün defter, sonra sitenin kirası ×1,15 ve bir gün
+  daha. Bütün kiralıkların cirosu izde. Ayarlarda `REAL_ESTATE` ve
+  projelerin tanımı.
+
+**Arayüz.**
+- *Kiralığın panelinde "Kira" masası* (projede "Proje"):
+  - kiralık birim, bugünkü doluluk, bu kirayla hedef;
+  - projede hedefe kaç gün, dönüşüm projesinde hak sahipleri;
+  - kira düğmeleri ve bir adım aşağı/yukarı neye varacağı;
+  - inşaatta açılışa kalan gün ve ilerleme çubuğu.
+  Kiralıkta işlemeyen fiyat çarpanı satırı kalktı.
+- *Yapı menüsü:* proje kartında inşaat süresi ve dolmuş projenin tahmini;
+  geri ödeme inşaatı ve doluşu sayıyor. Dönüşüm hakkı olan parselde not.
+- *Şehir yapısının panelinde* "Dönüşüm başvurusu yap" ve bekleyen
+  başvurunun kalan günü. İhale panelinde dönüşüm hakkı notu.
+- *Gündem:* bekleyen başvuru ve proje bekleyen dönüşüm parseli
+  ("Dönüşüm" çipi, parsele götürüyor).
+- *Şehirde:* inşaattaki proje gün gün yükselen beton iskelet, başında kule
+  vinci, sokak yüzünde şantiye çiti; sahibin rengi açılışta. Konut Sitesi
+  iki alçak kanatlı orta blok, Ofis Kampüsü cam podyumlu kule ve yanında
+  ikinci ince kule. İki dilde.
+
+**Görsel düzeltme: binaların gövdesi kayboluyordu.** Bina kütlesinin üç
+örnekli mesh'inde (taban, gövde, çatı) görüş ayıklaması açıktı. three
+örnekli mesh'in sınır küresini ilk karede bir kez hesaplayıp saklıyor.
+Oyunun başında bina az olduğu için küre küçük kalıyordu. Kamera sonradan
+kurulan bir binaya (kenardaki santral, yeni parsel) yaklaşınca bütün
+gövdeler ayıklanıyor, yalnız tenteler, tabelalar ve kuleler kalıyordu.
+- Tur 57'nin santral karesinde de, Tur 56'nın kodunda da aynı.
+- Detay katmanı ve trafik gibi gövdelerde de ayıklama kapalı.
+
+**Denge (`pnpm balance gayrimenkul`).** Geliştirici vekil (`test/proxy.ts`,
+`developerStrategy`) temel vekilin üstüne her gün çağrılıyor:
+- *Kira:* haftada bir, her kiralıkta bir adım aşağı ya da yukarı, hedefte
+  kira geliri artıyorsa.
+- *Dönüşüm:* bekleyen başvuru yoksa, projesi en çok kazandıracak bölgede
+  en ucuz satılabilir yapıya başvuru. Dönüşüm ihalelerinde tabanın dört
+  katına kadar artırıyor; kazandığı parsele ilk iş proje.
+- *Proje:* en çok dört (dönüşüm projeleri hariç). Maliyetin iki katı nakit
+  varsa, yapı menüsünün tahminiyle günlük kârı en yüksek boş parsel,
+  geri ödemesi 330 günün altındaysa.
+
+Temel vekil proje kurmuyor (açıkça dışarıda); eski bölümlerin sayıları bu
+yüzden değişmedi.
+
+| Tohum | 360. gün | 540. gün | Proje | Açıldığından beri kâr / bedel | Kira |
+|---|---|---|---|---|---|
+| 1 | 35,4 → 34,6 M ₺ (−%2) | 75,9 → 78,9 M ₺ (+%4) | 4 | 4,4 / 2,5 M ₺ | 3 binada, hedefte +%6 |
+| 7 | 31,9 → 33,4 M ₺ (+%4) | 61,0 → 67,0 M ₺ (+%10) | 6 (2 dönüşüm, 5 açık) | 5,0 / 3,3 M ₺ | 4 binada, +%3 |
+| 42 | 41,4 → 40,1 M ₺ (−%3) | 75,3 → 87,0 M ₺ (+%15) | 4 | 4,8 / 2,5 M ₺ | 1 binada, +%11 |
+
+- İlk yıl bedel ödeniyor: proje 75–100 gün kira getirmiyor, bedeli
+  mağazalardan çekilen nakit (mağaza 20–60 günde dönüyor). 360. günde
+  ortalama başa baş.
+- 540. günde ortalama +%10: tuzak değil, baskın değil (sınır +%25).
+- Kira ayarı hedefteki kira gelirine +%3–11 ekliyor. Konutta en iyi kira
+  çoğu bölgede ×1,00–1,05; iş merkezi ve apartmanda ×1,10–1,30.
+- İlk ayar: esneklik konutta 1,1 idi; vekil her projede kirayı en alta
+  (×0,80) çekiyordu, kira bir karar değildi. 0,6'da en iyi kira piyasaya
+  göre değişiyor.
+- Dönüşüm tohum 7'de iki kez kazanıldı. Diğer iki tohumda rakip (arsa
+  spekülatörü değerlemesinin 1,5 katına çıkıyor) ihaleyi aldı. İlk
+  ayarlarda imar artışı +%50 / hak sahibi %30'du: kiralık birim yalnız
+  %20 artıyordu ve vekil tabanın 1,6 katıyla hiç kazanamıyordu.
+
+**Eski denge bölümleri.** Temel vekil proje kurmuyor, rakipler proje
+kurmuyor ve kira ayarlamıyor; kira 1 ve proje yokken pazar adımı bit bit
+aynı. Tur 57'nin tam koşusuyla bölüm bölüm karşılaştırıldı: 28 eski bölümün
+bütün sayıları aynı; değişen tek şey katalogdaki bina sayısı (38 → 40,
+"her bina kurulabiliyor" ve yapı menüsü sırası).
+
+**Testler.** `pnpm test` 678/678 (668'den); tip denetimi temiz; denge
+sınavı 353/353; paket bütçesi tamam (ana parça 67,1 KB, 65,6'dan).
+- Çekirdek (`realestate.test.ts`, 8 yeni):
+  - kira: esneklik kadar kaydırıyor, geliri çarpıyor, adım ve sınır;
+  - şantiye: kira yok, bakımın %30'u, ücret yok, pazarda yok;
+  - açılış: ön kiralama, günde en çok kiracı gelişi kadar, hedefte duruyor;
+  - başvuru: kurallar, bedel, parsel satılmıyor, sıradaki ihale o parsel,
+    el değiştiren parselde düşüyor, ihalesiz oyunda yok, ihale sonradan
+    kapatılınca düşüyor;
+  - dönüşüm hakkı: kazanana geçiyor, proje imar artışıyla, hak sahipleri
+    kirasız, başka bina hakkı düşürüyor;
+  - rakipler proje kurmuyor ve kira ayarlamıyor;
+  - yapı menüsünün tahmini dolmuş projenin defterine %5 içinde, geri ödeme
+    inşaatı sayıyor;
+  - kayıt.
+- Lig (`league.test.ts`, 2 yeni): projenin kapasitesi, şantiye gideri, kira
+  esnekliği ya da imar artışı değişince iz değişiyor. Proje kuran, kira
+  ayarlayan, dönüşüm başvurusu yapan lig koşusu tekrarda aynı skoru
+  veriyor.
+- Tarayıcı testi "Gayrimenkul" 16/16, konsol temiz:
+  - yapı menüsünde proje, şantiye ve masası, açılış;
+  - kira düğmeleri ve hedef, kiracıların gelişi;
+  - başvuru düğmesi, bekleyen başvuru, gündem çipi, satılmayan parsel;
+  - sıradaki ihale, ihale panelinde not, kazanan hakla alıyor;
+  - boş dönüşüm parseli çipi ve notu, dönüşüm projesi.
+
+**Canlıya geçiş.** Şema aynı, simülasyon değişti: birleşmeden sonra Worker
+yeniden dağıtılıyor. Lite etkilenmiyor.
+
 ---
 
 ## 3. Ölçülen durum
@@ -6163,11 +6322,11 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi). Senaryo şehirlerinde gün 3–17 ms (`pnpm dayperf`, Tur 43) |
-| Birim testi | **668 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de, Tur 52'de sunucuda tekrar, Tur 53'te haftanın kuralı ve günün koşusu, Tur 54'te hayalet eğri, Tur 55'te davetli ligler, Tur 56'da taşıma sözleşmeleri, Tur 57'de enerji) |
-| Denge testi | **347 kontrol, hepsi geçiyor** (28 bölüm, süreleriyle; ~16 dk) |
-| Tarayıcı testi | **521 kontrol, hepsi geçiyor**, 0 konsol hatası (~40 dk); duman koşusu 132 (~5 dk, rehber dahil) |
+| Birim testi | **678 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de, Tur 52'de sunucuda tekrar, Tur 53'te haftanın kuralı ve günün koşusu, Tur 54'te hayalet eğri, Tur 55'te davetli ligler, Tur 56'da taşıma sözleşmeleri, Tur 57'de enerji, Tur 58'de gayrimenkul) |
+| Denge testi | **353 kontrol, hepsi geçiyor** (29 bölüm, süreleriyle; ~16 dk) |
+| Tarayıcı testi | **537 kontrol, hepsi geçiyor**, 0 konsol hatası (~40 dk); duman koşusu 132 (~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + paket bütçesi (Tur 46; Tur 48'den beri hizmet çalışanı ve manifest de) + duman oynanışı |
-| Kapsam | 38 bina · 25 ürün · 7 kategori · 8 rakip profili · 10 CEO · 22 olay (11 şehir + 11 sektör) · 3 kriz · 12 karar kartı · 70 rakip sözü · 5 fırsat balonu · 8 görev türü · 4 mevsim · 9 moda ürünü · 17 şehir yapısı (6 siluet) · 6 şehir projesi · 7 senaryo · 4 ek kural · 28 rozet |
+| Kapsam | 40 bina · 25 ürün · 7 kategori · 8 rakip profili · 10 CEO · 22 olay (11 şehir + 11 sektör) · 3 kriz · 12 karar kartı · 70 rakip sözü · 5 fırsat balonu · 8 görev türü · 4 mevsim · 9 moda ürünü · 17 şehir yapısı (6 siluet) · 6 şehir projesi · 7 senaryo · 4 ek kural · 28 rozet |
 
 ### Render (Tur 6 sonrası)
 
