@@ -109,10 +109,15 @@ export function modifierMultiplier(modifiers: readonly ModifierId[] | undefined)
  * Kademenin kurallarla düzeltilmiş hâli. Kural yoksa kademenin kendisi
  * (aynı nesne): değiştiricisiz oyunda hiçbir sayı değişmiyor.
  */
-export function difficultyWith(id: DifficultyId | undefined, modifiers: readonly ModifierId[] | undefined): DifficultyDef {
+export function difficultyWith(
+  id: DifficultyId | undefined,
+  modifiers: readonly ModifierId[] | undefined,
+  hungryRivals: { budgetMultiplier: number; raidWarmupMultiplier: number } = MODIFIER_RULES.hungryRivals,
+): DifficultyDef {
   const base = getDifficulty(id);
   if (!hasModifier(modifiers, 'hungry_rivals')) return base;
-  const rules = MODIFIER_RULES.hungryRivals;
+  // Paketin kuralı (Tur 67) kendi değerleriyle; yoksa hazır değerler.
+  const rules = hungryRivals;
   return {
     ...base,
     rivalBudgetMultiplier: base.rivalBudgetMultiplier * rules.budgetMultiplier,

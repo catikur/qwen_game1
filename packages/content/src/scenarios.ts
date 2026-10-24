@@ -2,6 +2,7 @@ import { localizeList } from './localize';
 import type { CitySizeId } from './districts';
 import type { DifficultyId } from './difficulty';
 import type { ModifierId } from './modifiers';
+import type { PackScenarioSource, RuleOverrides } from './packs';
 import type { CategoryId } from './types';
 
 /**
@@ -144,7 +145,8 @@ export interface ScenarioStars {
 }
 
 export interface ScenarioDef {
-  id: ScenarioId;
+  /** Hazır senaryoda `ScenarioId`; paketten gelende `paket/senaryo` (Tur 67). */
+  id: string;
   title: string;
   /** Listede başlığın altındaki tek cümle. */
   tagline: string;
@@ -164,6 +166,12 @@ export interface ScenarioDef {
    * girmiyor (yıldızlar kuralla ölçüldü).
    */
   modifiers?: readonly ModifierId[];
+  /** Paketin kurallarının ayarları (Tur 67): hazır kuralın değerleri değişmiş. */
+  ruleOverrides?: RuleOverrides;
+  /** Paketin kendi adlı kuralları: kurulumda hazır kuralın adı yerine bunlar yazıyor. */
+  customRules?: ReadonlyArray<{ base: ModifierId; name: string; blurb: string }>;
+  /** Paketten gelen senaryonun kökü (Tur 67); hazır senaryoda yok. */
+  source?: PackScenarioSource;
   /** Süre: senaryonun başladığı günden. */
   days: number;
   goal: ScenarioGoal;

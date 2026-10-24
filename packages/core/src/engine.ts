@@ -1,4 +1,4 @@
-import { BUILDING_BY_ID, CONSUMER_CATEGORIES, GOODS_BY_CATEGORY, formatDecimal, formatPercent } from '@capital/content';
+import { BUILDING_BY_ID, CONSUMER_CATEGORIES, GOODS_BY_CATEGORY, formatDecimal, formatPercent, registerPack, validatePack } from '@capital/content';
 import { build, buyTile, buyoutTile, demolish, sellTile } from './actions';
 import { pushNews } from './news';
 import { stepLeadership } from './leadership';
@@ -49,6 +49,18 @@ const MAX_TICKS_PER_FRAME = 4;
 const MILESTONES = [500_000, 1_000_000, 5_000_000, 25_000_000];
 
 /**
+ * Paketten gelen senaryonun tanımı kayıtta (Tur 67): kayıt açılınca o
+ * tanım oyuna tanıtılıyor. Paket bu cihazda yüklü olmasa da, yüklü olan
+ * başka bir sürüm olsa da koşu kendi tanımıyla sürüyor.
+ */
+function adoptScenarioPack(state: GameState): void {
+  const pack = state.scenario?.pack;
+  if (!pack) return;
+  const checked = validatePack(pack);
+  if (checked.ok) registerPack(checked.pack);
+}
+
+/**
  * Oyun motoru.
  *
  * UI state'i doğrudan değiştirmez; sadece komut gönderir. Motor state'i
@@ -81,6 +93,7 @@ export class GameEngine {
   private leadership: LeadershipMemory | null = null;
 
   constructor(state: GameState) {
+    adoptScenarioPack(state);
     this.state = state;
     // Lig koşusu kayıttan açılınca net değer olduğu gibi kalır (replaceState'teki not).
     if (!state.league) recomputeNetWorth(this.state);
@@ -104,6 +117,7 @@ export class GameEngine {
 
   /** Motoru yeni bir state ile değiştirir (save yükleme). */
   replaceState(state: GameState): void {
+    adoptScenarioPack(state);
     this.state = state;
     this.reachedMilestones.clear();
     this.leadership = null;
