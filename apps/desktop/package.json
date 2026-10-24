@@ -1,0 +1,14 @@
+{
+  "name": "@capital/desktop",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tauri dev",
+    "build": "tauri build",
+    "icons": "tauri icon src-tauri/icons/source-1024.png --output src-tauri/icons && node -e \"const fs=require('fs');for(const f of fs.readdirSync('src-tauri/icons'))if(/^(Square|StoreLogo|android$|ios$)/.test(f))fs.rmSync('src-tauri/icons/'+f,{recursive:true})\""
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "2.12.1"
+  }
+}

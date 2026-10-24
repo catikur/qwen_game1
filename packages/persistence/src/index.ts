@@ -276,6 +276,36 @@ export function buildMeta(state: GameState, slot: number, name: string): SaveMet
   };
 }
 
+// ------------------------------------------------------------- Depolar
+
+/**
+ * Kaydın yazıldığı yer (Tur 66).
+ *
+ * Tarayıcıda IndexedDB, olmazsa yerel depolama, o da olmazsa bellek.
+ * Masaüstü sürümü (`apps/desktop`) açılışta kendi deposunu veriyor: her
+ * slot bir dosya, oyuncu kaydını görüp yedekleyebiliyor, Steam Cloud
+ * eşitleyebiliyor. Kaydın biçimi ve göçler iki yerde de aynı; depo yalnız
+ * kaydı taşıyor.
+ */
+export interface SaveBackend {
+  put(record: SaveRecord): Promise<void>;
+  get(slot: number): Promise<SaveRecord | undefined>;
+  /** Yalnız künyeler: listeyi açmak bütün şehirleri okumasın. */
+  list(): Promise<SaveMeta[]>;
+  remove(slot: number): Promise<void>;
+}
+
+let installed: SaveBackend | null = null;
+
+/** Masaüstü kabuğu açılışta çağırıyor; `null` tarayıcının deposuna döner. */
+export function setSaveBackend(backend: SaveBackend | null): void {
+  installed = backend;
+}
+
+function backend(): SaveBackend {
+  return installed ?? browserBackend;
+}
+
 // ---------------------------------------------------------------- IndexedDB
 
 let dbPromise: Promise<IDBDatabase | null> | null = null;
@@ -371,56 +401,65 @@ function tx<T>(db: IDBDatabase, mode: IDBTransactionMode, run: (store: IDBObject
   });
 }
 
+// ----------------------------------------------------- Tarayıcının deposu
+
+const browserBackend: SaveBackend = {
+  async put(record) {
+    const db = await openDb();
+    if (db) await tx(db, 'readwrite', (store) => store.put(record));
+    else storeWrite(LS_PREFIX + record.meta.slot, JSON.stringify(record));
+  },
+
+  async get(slot) {
+    const db = await openDb();
+    if (db) return tx<SaveRecord | undefined>(db, 'readonly', (store) => store.get(slot) as IDBRequest<SaveRecord | undefined>);
+    const raw = storeRead(LS_PREFIX + slot);
+    return raw ? (JSON.parse(raw) as SaveRecord) : undefined;
+  },
+
+  async list() {
+    const db = await openDb();
+    let records: SaveRecord[] = [];
+    if (db) {
+      records = await tx<SaveRecord[]>(db, 'readonly', (store) => store.getAll() as IDBRequest<SaveRecord[]>);
+    } else {
+      for (let slot = 0; slot < MAX_SLOTS; slot++) {
+        const raw = storeRead(LS_PREFIX + slot);
+        if (!raw) continue;
+        try {
+          records.push(JSON.parse(raw) as SaveRecord);
+        } catch {
+          /* bozuk kaydı listeye alma */
+        }
+      }
+    }
+    return records.map((record) => record.meta);
+  },
+
+  async remove(slot) {
+    const db = await openDb();
+    if (db) await tx(db, 'readwrite', (store) => store.delete(slot));
+    else storeRemove(LS_PREFIX + slot);
+  },
+};
+
 // ------------------------------------------------------------- Genel API
 
 export async function saveGame(state: GameState, slot: number, name?: string): Promise<SaveMeta> {
   const meta = buildMeta(state, slot, name ?? (slot === AUTOSAVE_SLOT ? 'Otomatik kayıt' : `Kayıt ${slot}`));
-  const record: SaveRecord = { meta, state };
-
-  const db = await openDb();
-  if (db) {
-    await tx(db, 'readwrite', (store) => store.put(record));
-  } else {
-    storeWrite(LS_PREFIX + slot, JSON.stringify(record));
-  }
+  await backend().put({ meta, state });
   return meta;
 }
 
 export async function listSaves(): Promise<SaveMeta[]> {
-  const db = await openDb();
-  let records: SaveRecord[] = [];
-
-  if (db) {
-    records = await tx<SaveRecord[]>(db, 'readonly', (store) => store.getAll() as IDBRequest<SaveRecord[]>);
-  } else {
-    for (let slot = 0; slot < MAX_SLOTS; slot++) {
-      const raw = storeRead(LS_PREFIX + slot);
-      if (!raw) continue;
-      try {
-        records.push(JSON.parse(raw) as SaveRecord);
-      } catch {
-        /* bozuk kaydı listeye alma */
-      }
-    }
-  }
-
-  return records
-    .map((record) => record.meta)
-    .filter(Boolean)
-    .sort((a, b) => a.slot - b.slot);
+  const metas = await backend().list();
+  return metas.filter(Boolean).sort((a, b) => a.slot - b.slot);
 }
 
 export async function loadGame(slot: number): Promise<LoadOutcome> {
-  const db = await openDb();
   let record: SaveRecord | undefined;
-
   try {
-    if (db) {
-      record = await tx<SaveRecord>(db, 'readonly', (store) => store.get(slot) as IDBRequest<SaveRecord>);
-    } else {
-      const raw = storeRead(LS_PREFIX + slot);
-      if (raw) record = JSON.parse(raw) as SaveRecord;
-    }
+    record = await backend().get(slot);
   } catch (error) {
     return { ok: false, reason: `Kayıt okunamadı: ${(error as Error).message}` };
   }
@@ -430,9 +469,7 @@ export async function loadGame(slot: number): Promise<LoadOutcome> {
 }
 
 export async function deleteSave(slot: number): Promise<void> {
-  const db = await openDb();
-  if (db) await tx(db, 'readwrite', (store) => store.delete(slot));
-  else storeRemove(LS_PREFIX + slot);
+  await backend().remove(slot);
 }
 
 export function exportToJson(state: GameState): string {

@@ -1,0 +1,21 @@
+[package]
+name = "capitalforge"
+version = "0.2.0"
+description = "CapitalForge: şehir ve şirket kurma oyunu, masaüstü sürümü"
+authors = ["Conforcus <info@conforcus.com>"]
+edition = "2021"
+rust-version = "1.80"
+publish = false
+
+[build-dependencies]
+tauri-build = { version = "=2.7.1", features = [] }
+
+[dependencies]
+tauri = { version = "=2.12.1", features = [] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[profile.release]
+codegen-units = 1
+lto = true
+strip = true

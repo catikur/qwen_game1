@@ -13,6 +13,7 @@ export const app: Record<keyof typeof trApp, string> = {
   'app.load.migrated': 'Loaded (v{version} → current schema).',
   'app.load.loaded': 'Game loaded.',
   'app.export.saved': 'Save file saved.',
+  'app.export.downloads': 'Save file saved to your Downloads folder.',
   'app.export.started': 'Download started.',
   'app.export.copied': 'No downloads in this view — the save was copied to the clipboard. Paste it into a text file to keep it.',
   'app.export.declined': 'Saving canceled.',

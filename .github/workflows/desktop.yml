@@ -1,0 +1,118 @@
+# Masaüstü sürümü (Tur 66, `apps/desktop`): Tauri kabuğu.
+#
+# Kabuğa ya da onun kullandığı web paketine dokunan her PR'da ve main'de:
+# Rust birim testleri, sürüm derlemesi ve derlenmiş oyunun gerçek
+# penceresinde uçtan uca test (Linux, WebKitGTK, tools/desktop-e2e.mjs).
+#
+# Elle (Actions → Masaüstü → Run workflow): üç işletim sisteminin kurulum
+# paketleri (Windows: MSI ve NSIS, macOS: .app ve DMG, Linux: deb, rpm,
+# AppImage). İmzasız; imza ve Steam'e yükleme docs/MASAUSTU.md'de.
+name: Masaüstü
+
+on:
+  pull_request:
+    paths:
+      - 'apps/desktop/**'
+      - 'apps/web/**'
+      - 'packages/**'
+      - 'tools/desktop-e2e.mjs'
+      - 'pnpm-lock.yaml'
+      - '.github/workflows/desktop.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'apps/desktop/**'
+      - 'apps/web/**'
+      - 'packages/**'
+      - 'tools/desktop-e2e.mjs'
+      - 'pnpm-lock.yaml'
+      - '.github/workflows/desktop.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: desktop-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  linux:
+    name: Masaüstü · Linux derleme ve uçtan uca
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: WebKitGTK, WebDriver ve sanal ekran
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev librsvg2-dev libayatana-appindicator3-dev webkit2gtk-driver xvfb
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: apps/desktop/src-tauri
+      - name: Rust birim testleri
+        working-directory: apps/desktop/src-tauri
+        run: cargo test --locked
+      - name: Sürüm derlemesi
+        run: pnpm --filter @capital/desktop exec tauri build --no-bundle
+      - name: tauri-driver
+        run: cargo install tauri-driver --version 2.0.6 --locked
+      - name: Uçtan uca (gerçek pencere)
+        env:
+          SHOTS: ${{ runner.temp }}/desktop-shots
+        run: xvfb-run -a -s "-screen 0 1440x900x24" node tools/desktop-e2e.mjs
+      - if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: desktop-shots
+          path: ${{ runner.temp }}/desktop-shots
+          retention-days: 7
+
+  bundles:
+    name: Masaüstü paketi · ${{ matrix.name }}
+    if: github.event_name == 'workflow_dispatch'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Windows
+            os: windows-latest
+          - name: macOS
+            os: macos-latest
+          - name: Linux
+            os: ubuntu-22.04
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev librsvg2-dev libayatana-appindicator3-dev
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: apps/desktop/src-tauri
+      # Lig sunucusu Pages'teki oyunla aynı (Lite'ın adresi, ios-lite/App/project.yml).
+      - name: Kurulum paketleri
+        shell: bash
+        run: |
+          export VITE_LEAGUE_URL=$(sed -n 's/^ *LiteLeagueURL: *"\(.*\)"/\1/p' ios-lite/App/project.yml)
+          echo "Lig sunucusu: ${VITE_LEAGUE_URL:-yok}"
+          pnpm --filter @capital/desktop exec tauri build
+      - uses: actions/upload-artifact@v5
+        with:
+          name: capitalforge-${{ matrix.name }}
+          path: apps/desktop/src-tauri/target/release/bundle
+          retention-days: 14

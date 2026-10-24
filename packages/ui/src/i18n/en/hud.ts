@@ -422,6 +422,7 @@ export const hud: Record<keyof typeof trHud, string> = {
   'hud.card.share': 'Share',
   'hud.card.close': 'Close',
   'hud.card.saved': 'Card saved.',
+  'hud.card.downloads': 'Card saved to your Downloads folder.',
   'hud.card.started': 'Card download started.',
   'hud.card.declined': 'Card not saved.',
   'hud.card.blocked': 'Download blocked: long-press or right-click the image to save it.',

@@ -46,10 +46,22 @@ export async function hostCapability<T>(name: string): Promise<T | null> {
  * Ayrım bilinçli olarak ince: "indirildi" yalnızca barındırıcı viewer'ın
  * kabul ettiğini doğruladığında söyleniyor. Sıradan tarayıcıda indirmenin
  * sonucunu gözlemleyemiyoruz; orada dürüst cümle "başlatıldı".
+ * Masaüstü sürümü (Tur 66) dosyayı kendisi İndirilenler klasörüne yazıyor:
+ * "downloads".
  */
-export type DeliveryOutcome = 'saved' | 'started' | 'copied' | 'declined' | 'blocked';
+export type DeliveryOutcome = 'saved' | 'downloads' | 'started' | 'copied' | 'declined' | 'blocked';
+
+type FileSink = (filename: string, data: string | Blob) => Promise<DeliveryOutcome>;
+
+let fileSink: FileSink | null = null;
+
+/** Masaüstü kabuğu (`desktop/index.ts`) açılışta veriyor; tarayıcıda yok. */
+export function setFileSink(sink: FileSink | null): void {
+  fileSink = sink;
+}
 
 export async function deliverTextFile(filename: string, text: string): Promise<DeliveryOutcome> {
+  if (fileSink) return fileSink(filename, text);
   const claude = hostClaude();
 
   if (claude) {
@@ -77,6 +89,7 @@ export async function deliverTextFile(filename: string, text: string): Promise<D
  * basıp kaydetmeyi öneriyor.
  */
 export async function deliverImageFile(filename: string, blob: Blob): Promise<DeliveryOutcome> {
+  if (fileSink) return fileSink(filename, blob);
   if (hostClaude()) {
     const downloads = await hostCapability<DownloadsNamespace>('downloads');
     if (!downloads) return 'blocked';

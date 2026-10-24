@@ -14,6 +14,11 @@ oyuncu verir.
 (telefonda da). main'e her girişte `.github/workflows/pages.yml` derleyip
 yeniden yayınlıyor.
 
+**Masaüstü (Windows, macOS, Linux).** Aynı oyun bir Tauri penceresinde;
+kayıtlar ve ayarlar dosyada, dışa aktarma İndirilenler'e, pencere
+kapanırken otomatik kayıt. Derleme, veri yolları ve Steam'e hazırlık:
+[`docs/MASAUSTU.md`](docs/MASAUSTU.md).
+
 **iOS: CapitalForge Lite.** Aynı felsefenin idle mobil sürümü (SwiftUI). Mac'te
 `./ios-lite/xcode.sh` ile Xcode projesini oluştur, iPhone'da çalıştır:
 [`ios-lite/README.md`](ios-lite/README.md).
@@ -74,11 +79,12 @@ oyun kurallarını bilmez.**
 
 ```
 apps/web              Vite + React kabuğu; motoru, sahneyi ve arayüzü bağlar
+apps/desktop          Masaüstü kabuğu (Tauri 2): pencere, kayıt ve ayar dosyaları
 packages/core         Simülasyon: ekonomi, şirketler, rakipler, olaylar, komutlar
 packages/content      Saf veri: kategoriler, binalar, bölgeler, NPC profilleri, olaylar
 packages/render-three Three.js sahnesi ve RTS kamerası
 packages/ui           React HUD, paneller, lensler
-packages/persistence  IndexedDB kayıt, şema sürümleme, göç, JSON dışa/içe aktarma
+packages/persistence  Kayıt (tarayıcıda IndexedDB, masaüstünde dosya), şema sürümleme, göç, JSON dışa/içe aktarma
 tools/                Geliştirici araçları (tarayıcı testi)
 ```
 

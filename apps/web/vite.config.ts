@@ -14,6 +14,12 @@ import { serviceWorker } from './pwa/plugin.mjs';
  * SINGLE_FILE=1: tek parça, `dist-single/` — paylaşılan sayfa için
  * `tools/build-single-file.mjs` bunu tek bir HTML'e gömüyor. Gömülü
  * sayfada parçalar arası içe aktarma çözülemez; orada bölmek kırmak olur.
+ *
+ * `--mode desktop` (Tur 66): masaüstü sürümünün paketi, `dist-desktop/`
+ * (`apps/desktop`). Bölünmüş, ama hizmet çalışanı, manifest ve kaynak
+ * haritası yok: dosyalar zaten diskte, güncellemeyi kurulum getiriyor.
+ * Kabuğun köprüsü (`src/desktop/`) yalnız bu pakette. Ortam değişkeni
+ * değil kip: Windows'ta da aynı komut.
  */
 // @types/node bilinçli olarak yok; yapılandırmanın tek ihtiyacı ortam değişkeni.
 declare const process: { env: Record<string, string | undefined> };
@@ -83,30 +89,35 @@ function vendorChunk(id: string): string | undefined {
   return undefined;
 }
 
-export default defineConfig({
-  plugins: [react(), preloadFonts(), ...(single ? [] : [appLinks(), serviceWorker()])],
-  // Simgeler ve manifest `public/`'te; tek dosyalık pakete girmiyorlar.
-  publicDir: single ? false : 'public',
-  // Hizmet çalışanı yalnız bölünmüş pakette kaydediliyor (apps/web/src/pwa.ts).
-  // Lig sunucusu (Tur 51): yalnız verilince (Pages, `.github/workflows/pages.yml`).
-  // Varsayılan boş: yerel derleme ve testler canlı sunucuya gitmiyor.
-  define: {
-    __CF_SERVICE_WORKER__: JSON.stringify(!single),
-    __LEAGUE_URL__: JSON.stringify(single ? '' : (process.env.VITE_LEAGUE_URL ?? '')),
-  },
-  server: { port: 5173, host: '127.0.0.1' },
-  build: {
-    target: 'es2022',
-    sourcemap: !single,
-    outDir: single ? 'dist-single' : 'dist',
-    // three tek başına ~540 KB; bölünemeyen bir kütüphane için uyarı
-    // gürültü. Tek parçalık paket bilinçli olarak büyük.
-    chunkSizeWarningLimit: single ? 1500 : 600,
-    // Tek dosyalık sayfada her şey gömülü (yazı tipleri dahil); bölünmüş
-    // pakette yazı tipleri ayrı dosya (Tur 46), varsayılan sınır yeter.
-    ...(single ? { assetsInlineLimit: 1024 * 1024 } : {}),
-    rollupOptions: {
-      output: single ? { inlineDynamicImports: true } : { manualChunks: vendorChunk },
+export default defineConfig(({ mode }) => {
+  const desktop = !single && mode === 'desktop';
+  const web = !single && !desktop;
+  return {
+    plugins: [react(), preloadFonts(), ...(web ? [appLinks(), serviceWorker()] : [])],
+    // Simgeler ve manifest `public/`'te; tek dosyalık ve masaüstü paketine girmiyorlar.
+    publicDir: web ? 'public' : false,
+    // Hizmet çalışanı yalnız bölünmüş pakette kaydediliyor (apps/web/src/pwa.ts).
+    // Lig sunucusu (Tur 51): yalnız verilince (Pages, `.github/workflows/pages.yml`).
+    // Varsayılan boş: yerel derleme ve testler canlı sunucuya gitmiyor.
+    define: {
+      __CF_SERVICE_WORKER__: JSON.stringify(web),
+      __CF_DESKTOP__: JSON.stringify(desktop),
+      __LEAGUE_URL__: JSON.stringify(single ? '' : (process.env.VITE_LEAGUE_URL ?? '')),
     },
-  },
+    server: { port: 5173, host: '127.0.0.1' },
+    build: {
+      target: 'es2022',
+      sourcemap: web,
+      outDir: single ? 'dist-single' : desktop ? 'dist-desktop' : 'dist',
+      // three tek başına ~540 KB; bölünemeyen bir kütüphane için uyarı
+      // gürültü. Tek parçalık paket bilinçli olarak büyük.
+      chunkSizeWarningLimit: single ? 1500 : 600,
+      // Tek dosyalık sayfada her şey gömülü (yazı tipleri dahil); bölünmüş
+      // pakette yazı tipleri ayrı dosya (Tur 46), varsayılan sınır yeter.
+      ...(single ? { assetsInlineLimit: 1024 * 1024 } : {}),
+      rollupOptions: {
+        output: single ? { inlineDynamicImports: true } : { manualChunks: vendorChunk },
+      },
+    },
+  };
 });

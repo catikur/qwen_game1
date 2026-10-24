@@ -58,6 +58,10 @@ htmlcov/
 # Vite / pnpm
 apps/*/dist/
 apps/*/dist-single/
+apps/*/dist-desktop/
+# Masaüstü sürümü (Tur 66): Rust derlemesi
+apps/desktop/src-tauri/target/
+apps/desktop/src-tauri/gen/
 .pnpm-store/
 
 # TypeScript artıkları — `tsc -b` her pakete bunlardan bırakıyor
