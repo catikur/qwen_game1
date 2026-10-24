@@ -176,7 +176,7 @@ export function ScenarioBriefScreen(): ReactElement | null {
 
 export function ScenarioResultScreen({ onNewGame, onReplay }: { onNewGame: () => void; onReplay: (id: string) => void }): ReactElement | null {
   const state = useGameState();
-  const { run } = useGame();
+  const { run, view } = useGame();
   const scenario = state.scenario;
   const def = scenarioDefOf(state);
   const pending = scenarioResultPending(state);
@@ -186,8 +186,9 @@ export function ScenarioResultScreen({ onNewGame, onReplay }: { onNewGame: () =>
   const [best, setBest] = useState(false);
   // Önemli an (Tur 63): kazanılan senaryoda da havai fişek önce, sonuç ekranı
   // zafer ekranı gibi biraz sonra; yoksa kutlama sonucun perdesinin altında
-  // başlıyordu (Codex #93). Kayıttan açılan sonuç ve azaltılmış hareket beklemiyor.
-  const ready = useMomentDelay(pending && scenario?.outcome === 'won' ? `scenario:${scenario.finishedDay}` : null, VICTORY_DELAY_MS, state);
+  // başlıyordu (Codex #93). Kayıttan açılan sonuç, azaltılmış hareket ve veri
+  // lensi (şehir gizli) beklemiyor.
+  const ready = useMomentDelay(pending && scenario?.outcome === 'won' ? `scenario:${scenario.finishedDay}` : null, VICTORY_DELAY_MS, state, view.lens !== 'none');
 
   // Sonuç cihazda bir kez sayılıyor (sonuç ekranı yeniden açılsa da).
   useEffect(() => {

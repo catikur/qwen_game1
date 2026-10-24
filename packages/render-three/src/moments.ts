@@ -170,8 +170,14 @@ export class RingPulses {
     ring.mesh.visible = false;
   }
 
+  /**
+   * Halkanın saati oyunun saatiyle aynı sınırda (kare başına en çok 0,5 sn):
+   * yavaş makinede de dalganın gecikmesi duvar saatiyle doluyor, halka
+   * bantla ve çatının renk geçişiyle (duvar saati) eş. 0,1 sn sınırında
+   * 2,5 karede en geç halka bant kalktıktan sonra açılıyordu (Codex #93).
+   */
   update(dt: number): void {
-    this.clock += Math.min(dt, 0.1);
+    this.clock += Math.min(dt, 0.5);
     for (const ring of this.rings) {
       if (!ring.active) continue;
       const age = (this.clock - ring.start) / MOMENT.ringLife;

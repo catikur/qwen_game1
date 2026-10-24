@@ -235,11 +235,12 @@ export function GoalsPanel(): ReactElement {
  * imparatorluk. Kaybetmek bir SON'du; kazanmak bir dönemeç.
  */
 export function VictoryScreen({ onNewGame }: { onNewGame: () => void }): ReactElement | null {
-  const { run, setView } = useGame();
+  const { run, setView, view } = useGame();
   const state = useGameState();
   const victory = state.victory;
-  // Önemli an (Tur 63): canlı gelen zaferde ekran havai fişeklerden sonra açılıyor.
-  const ready = useMomentDelay(victory && !victory.dismissed ? `${victory.kind}:${victory.day}` : null, VICTORY_DELAY_MS, state);
+  // Önemli an (Tur 63): canlı gelen zaferde ekran havai fişeklerden sonra açılıyor;
+  // veri lensi şehri (ve havai fişeği) gizlerken beklenecek bir şey yok.
+  const ready = useMomentDelay(victory && !victory.dismissed ? `${victory.kind}:${victory.day}` : null, VICTORY_DELAY_MS, state, view.lens !== 'none');
   if (!victory || victory.dismissed || state.gameOver || scenarioResultPending(state) || !ready) return null;
 
   const player = getPlayer(state);

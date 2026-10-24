@@ -299,9 +299,10 @@ export function MomentBanner(): ReactElement | null {
  * `source` durumun kendisi: oyun içinde kayıt açılınca (aynı ekran,
  * başka durum) kayıttaki an da beklemiyor. Bekleme sürerken azaltılmış
  * harekete geçilirse (seçim ya da cihazın tercihi) an hemen geliyor:
- * havai fişek de o an duruyor (Codex #93).
+ * havai fişek de o an duruyor (Codex #93). `immediate`: beklenecek bir
+ * gösteri görünmüyor (veri lensi şehri gizliyor), an hemen.
  */
-export function useMomentDelay(key: string | null, ms: number, source: object): boolean {
+export function useMomentDelay(key: string | null, ms: number, source: object, immediate = false): boolean {
   const [ready, setReady] = useState<string | null>(key);
   const reduced = useReducedMotion();
   const seen = useRef(source);
@@ -313,12 +314,12 @@ export function useMomentDelay(key: string | null, ms: number, source: object): 
       return;
     }
     if (!key || key === ready) return;
-    if (reduced) {
+    if (reduced || immediate) {
       setReady(key);
       return;
     }
     const timer = window.setTimeout(() => setReady(key), ms);
     return () => window.clearTimeout(timer);
-  }, [key, ready, ms, source, reduced]);
-  return key !== null && (key === ready || replaced || reduced);
+  }, [key, ready, ms, source, reduced, immediate]);
+  return key !== null && (key === ready || replaced || reduced || immediate);
 }

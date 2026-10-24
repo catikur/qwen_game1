@@ -61,6 +61,17 @@ describe('halka', () => {
   });
 });
 
+describe('halkanın saati', () => {
+  test('saniyede iki kareye dek halka duvar saatiyle: en geç dalga gecikmesi (1,6 sn) bant sürerken (Codex #93)', () => {
+    const rings = new RingPulses();
+    rings.pulse(0, 0, '#ffffff', MOMENT.waveMax);
+    // Yavaş makine: kare 0,4 sn; 2 sn'de beş kare.
+    for (let i = 0; i < 5; i++) rings.update(0.4);
+    assert.deepEqual(rings.stats(), { rings: 1, visible: 1 }, 'gecikme doldu, halka açılıyor');
+    rings.dispose();
+  });
+});
+
 describe('havai fişek', () => {
   test('takvimi atıyor, kıvılcımlar yükselip yere inmeden sönüyor, sonra duruyor', () => {
     const fireworks = new Fireworks();

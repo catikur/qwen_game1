@@ -7509,8 +7509,14 @@ async function finish(browser, consoleErrors) {
     });
     await settle(() => window.__capital.renderInfo().dataLens === true, 5000);
     const lensMoments = await moments();
+    // Lens şehri (ve havai fişeği) gizlerken zafer ekranı beklemiyor (Codex #93).
+    await declare('monopoly', 4);
+    await settle(() => window.__momentTrace.screen !== null, 8000);
+    const lensVictory = (await trace()).screen;
+    await mp.locator('.gameover.victory .gameover-actions button.primary').click();
     await mp.evaluate(() => window.__capital.setLens('none'));
     check('Veri lensinde halka ve havai fişek katmanı gizli', lensMoments.visible === false, JSON.stringify(lensMoments));
+    check('Veri lensindeyken zafer ekranı beklemeden iniyor (Codex #93)', lensVictory !== null && lensVictory < 1200, `${lensVictory} ms`);
 
     // Kayıt açılınca (aynı şehir, aynı sahne kalıyor): kayıttaki zafer kutlanmıyor, ekranı beklemeden
     // iniyor; kayıtla bugün arasındaki fark (sahibi başka bina, kalkmış yapı) bir an değil (Codex #93).
