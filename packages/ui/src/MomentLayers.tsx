@@ -32,6 +32,10 @@ const CASH_DELTA_MS = 2200;
 /** Fark rozeti en sık bu aralıkla yeniden "zıplıyor"; hızlı oyunda yazı değişiyor, rozet titremiyor. */
 const CASH_DELTA_POP_MS = 700;
 
+/** İki etiketin çakıştığı sayılan uzaklık (px): yazının yarı eni ve satır yüksekliği. */
+const TAG_GAP_X = 84;
+const TAG_GAP_Y = 27;
+
 interface LiveTag extends MoneyTag {
   key: string;
   born: number;
@@ -83,11 +87,14 @@ export function MoneyTags(): ReactElement | null {
   }, [tags]);
 
   // Konum her karede sahneden: kamera kayarken etiket çatıda kalıyor.
+  // Yan yana binaların etiketleri üst üste binmesin: çakışan bir üst sıraya.
   useEffect(() => {
     if (tags.length === 0 || !projectTile) return;
     let frame = 0;
+    const placed: Array<{ x: number; y: number }> = [];
     const place = (): void => {
       const root = layer.current;
+      placed.length = 0;
       if (root) {
         for (const el of Array.from(root.children) as HTMLElement[]) {
           const at = projectTile(Number(el.dataset['tile']));
@@ -95,8 +102,15 @@ export function MoneyTags(): ReactElement | null {
             el.style.visibility = 'hidden';
             continue;
           }
+          let y = at.y;
+          for (let tries = 0; tries < tags.length; tries++) {
+            const clash = placed.find((p) => Math.abs(p.x - at.x) < TAG_GAP_X && Math.abs(p.y - y) < TAG_GAP_Y);
+            if (!clash) break;
+            y = clash.y - TAG_GAP_Y;
+          }
+          placed.push({ x: at.x, y });
           el.style.visibility = '';
-          el.style.transform = `translate(${Math.round(at.x)}px, ${Math.round(at.y)}px)`;
+          el.style.transform = `translate(${Math.round(at.x)}px, ${Math.round(y)}px)`;
         }
       }
       frame = requestAnimationFrame(place);

@@ -1,6 +1,6 @@
 # Capital — Yol Haritası
 
-> Tur 47'de yazıldı, her turda güncelleniyor (son: Tur 62). Biten işin ayrıntısı
+> Tur 47'de yazıldı, her turda güncelleniyor (son: Tur 63). Biten işin ayrıntısı
 > `docs/DURUM.md`'de; bu dosya önümüzdeki işin sırasını ve gerekçesini
 > tutuyor.
 
@@ -38,7 +38,7 @@ Bir bağlantıyla açılan, istenirse kurulan ve çevrimdışı da oynanan bir
 | **1 · Ürün temeli** | Oyun bir ürün gibi davransın | 47–50 | Kuruluyor, çevrimdışı açılıyor, tek Ayarlar paneli var, müzik var | **bitti** (Tur 50) |
 | **2 · Çevrimiçi rekabet** | Herkes aynı şehirde | 51–55 | Pages'te paylaşılan tablo var, skor sunucuda doğrulanıyor | **bitti** (Tur 55) |
 | **3 · Yeni yollar** | Her koşu farklı bir şirket | 56–61 | Zafere en az üç farklı yol var, her birini kazanan bir vekil var | **bitti** (Tur 61) |
-| **4 · Şehrin hissi** | Oynaması keyifli | 62–65 | Mevsim ve hava görünüyor, önemli anlar hissediliyor | sürüyor (Tur 62) |
+| **4 · Şehrin hissi** | Oynaması keyifli | 62–65 | Mevsim ve hava görünüyor, önemli anlar hissediliyor | sürüyor (Tur 63) |
 | **5 · Platform ve topluluk** | Oyunun evi büyüsün | 66+ | Masaüstü sürümü ve paylaşılabilir senaryolar var | |
 
 ### Faz 1 · Ürün temeli
@@ -109,8 +109,14 @@ bölümünün sonunda.
   (sahilde fırtına, kuraklık) şehrin havasını belirliyor. Ağaçlar ve çimen
   mevsimin renginde, kar zemini ve çatıları beyazlatıyor, yağmur ve kar
   yağıyor, bulut ışığı kısıyor. Üst barda "Kış · Karlı", Ayarlar'da "Yağmur
-  ve kar". Hava görünüm: simülasyona dokunmuyor, lig izi aynı. — bu PR
-- **63 · Önemli anlar.** İnşaat animasyonu, para akışı, devralma ve zafer anları.
+  ve kar". Hava görünüm: simülasyona dokunmuyor, lig izi aynı. — bitti (#92)
+- **63 · Önemli anlar.** İnşaatta toz ve yerde halka; şantiye açılış günü
+  iskeletin boyundan yükseliyor; yıkımda toz. Devralınan binaların çatısı
+  yeni sahibin merkezinden dışa doğru bir dalgayla onun rengine dönüyor,
+  ekranın üstünde "… artık senin". Her gün en çok kazandıran üç binanın
+  çatısından dünkü kâr yükseliyor, kasa sayarak değişiyor. Zaferde şehrin
+  üstünde havai fişek, zafer ekranı ardından. Azaltılmış harekette hiçbiri
+  çizilmiyor. Görünüm: lig izi aynı. — bu PR
 - **64 · Paylaşılabilir şehir kartı.** Koşunun özeti tek bir görselde.
 - **65 · Değerlendirme ve telefon performansı.**
 

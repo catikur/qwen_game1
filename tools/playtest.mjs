@@ -2021,8 +2021,9 @@ async function finish(browser, consoleErrors) {
   // Yukarıdaki sondaj oyuncuya 900M ₺ nakit verdi: bu gerçek bir zafer
   // koşulu. Ekran inmeli ve "devam" ile serbest oyuna dönülebilmeli —
   // yoksa sonraki her tıklama zafer kartına çarpar.
+  // Zafer ekranı havai fişeklerden ~2,4 sn sonra iniyor (Tur 63).
   const organicVictory = await page
-    .waitForFunction(() => document.querySelector('.gameover.victory') !== null, null, { timeout: 4000 })
+    .waitForFunction(() => document.querySelector('.gameover.victory') !== null, null, { timeout: 8000 })
     .then(() => true)
     .catch(() => false);
   check('Hedef değeri aşan bir numara için zafer ilan ediliyor', organicVictory,
@@ -2985,7 +2986,7 @@ async function finish(browser, consoleErrors) {
     window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
   });
   const victoryShown = await page
-    .waitForFunction(() => document.querySelector('.gameover.victory') !== null, null, { timeout: 5000 })
+    .waitForFunction(() => document.querySelector('.gameover.victory') !== null, null, { timeout: 8000 })
     .then(() => true)
     .catch(() => false);
   check('Zafer ekranı iniyor', victoryShown);
@@ -4361,7 +4362,7 @@ async function finish(browser, consoleErrors) {
       c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
     });
     const runLine = await cp
-      .waitForSelector('.gameover.victory [data-career-run-line]', { timeout: 5000 })
+      .waitForSelector('.gameover.victory [data-career-run-line]', { timeout: 8000 })
       .then((el) => el.textContent())
       .catch(() => '');
     check('Zafer ekranı bu koşunun rozetlerini yazıyor', (runLine ?? '').includes('Şehrin sahibi') && (runLine ?? '').includes('İlk devralma'), runLine ?? '');
@@ -5065,7 +5066,8 @@ async function finish(browser, consoleErrors) {
       live.victory = { day: live.time.day, kind: 'tycoon' };
       c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
     });
-    await hp.waitForTimeout(500);
+    // Zafer ekranı havai fişeklerden sonra (Tur 63).
+    await hp.waitForSelector('[data-victory-open-city]', { timeout: 8000 }).catch(() => {});
     check('Zafer ekranında "Yeni şehre açıl"', (await hp.locator('[data-victory-open-city]').count()) === 1);
     await hp.evaluate(() => document.querySelector('[data-victory-open-city]').click());
     await hp.waitForTimeout(300);
@@ -7154,6 +7156,32 @@ async function finish(browser, consoleErrors) {
     }, 4000);
     check('Toz dağılıyor, halka sönüyor: takılı kalmıyor', calm, JSON.stringify(await moments()));
 
+    // Proje açılışı: şantiyenin beton iskeleti açılış günü binanın boyuna yükseliyor, tozuyla.
+    await mp.evaluate((tileId) => {
+      const c = window.__capital;
+      const s = c.getState();
+      const b = s.buildings[s.map.tiles[tileId].buildingId];
+      b.development = { opensOnDay: s.time.day + 10 };
+      c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+    }, built);
+    await mp.waitForTimeout(200);
+    await mp.evaluate((tileId) => {
+      const c = window.__capital;
+      const s = c.getState();
+      s.buildings[s.map.tiles[tileId].buildingId].development.occupancy = 0.4;
+      c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+    }, built);
+    await mp.waitForTimeout(120);
+    const opening = await moments();
+    check('Proje açılınca bina iskeletin boyundan yükseliyor, toz kalkıyor', opening.rising >= 1 && opening.dust >= 1, JSON.stringify(opening));
+    await mp.evaluate((tileId) => {
+      const c = window.__capital;
+      const s = c.getState();
+      delete s.buildings[s.map.tiles[tileId].buildingId].development;
+      c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+    }, built);
+    await settle(() => window.__capital.renderInfo().buildingsGrowing === false);
+
     // Yıkım: yapısı olan parseli satın alıp boşaltınca toz.
     const razed = await mp.evaluate(() => {
       const c = window.__capital;
@@ -7191,11 +7219,11 @@ async function finish(browser, consoleErrors) {
       const shown = getComputedStyle(el.parentElement).visibility !== 'hidden';
       return { id: el.getAttribute('data-money-tag'), text: el.textContent, loss: el.classList.contains('money-tag-loss'), shown, inside: !shown || (r.width > 0 && r.top >= 0 && r.bottom <= innerHeight && r.left >= 0 && r.right <= innerWidth) };
     }));
-    await mp.screenshot({ path: `${OUT}/moment-money.png` });
     const delta = await mp.evaluate(() => {
       const el = document.querySelector('.metric-delta');
       return el ? { sign: el.getAttribute('data-delta-sign'), text: el.textContent } : null;
     });
+    await mp.screenshot({ path: `${OUT}/moment-money.png` });
     check('Para akışı: en çok kazandıran üç bina çatısından kârını yükseltiyor, çok zarar eden kırmızı',
       tags.length === 4 && tags.filter((t) => !t.loss).map((t) => t.id).join() === [owned[0], owned[1], owned[3]].join() && tags.find((t) => t.loss)?.id === owned[2] && tags.some((t) => t.shown) && tags.every((t) => t.inside) && /^\+/.test(tags[0].text),
       JSON.stringify(tags));
@@ -7267,24 +7295,43 @@ async function finish(browser, consoleErrors) {
       c.setView({ x: s.map.width / 2, z: s.map.height / 2, distance: 40 });
     });
     await mp.waitForTimeout(400);
-    const declared = Date.now();
-    await mp.evaluate(() => {
+    // Zafer ilan ediliyor; bandın ve ekranın ne zaman geldiği sayfanın içinden ölçülüyor
+    // (yavaş makinede test adımlarının kendisi yüzlerce ms sürüyor).
+    const declare = (kind, dayShift) => mp.evaluate(({ kind, dayShift }) => {
       const c = window.__capital;
       const s = c.getState();
-      s.victory = { day: s.time.day, kind: 'tycoon', path: 'retail', shares: { retail: 1, realestate: 0, energy: 0, freight: 0 }, acquisitions: 1 };
+      const trace = { set: performance.now(), banner: null, bannerText: '', screen: null };
+      window.__momentTrace = trace;
+      const watch = () => {
+        const now = performance.now();
+        const banner = document.querySelector('.moment-banner[data-moment="victory"]');
+        if (trace.banner === null && banner) {
+          trace.banner = Math.round(now - trace.set);
+          trace.bannerText = banner.textContent ?? '';
+        }
+        if (trace.screen === null && document.querySelector('.gameover.victory')) trace.screen = Math.round(now - trace.set);
+        if ((trace.screen === null || trace.banner === null) && now - trace.set < 10000) requestAnimationFrame(watch);
+      };
+      s.victory = { day: s.time.day + dayShift, kind, path: 'retail', shares: { retail: 1, realestate: 0, energy: 0, freight: 0 }, acquisitions: 1 };
       c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
-    });
-    await mp.waitForTimeout(1300);
-    const party = await mp.evaluate(() => ({
-      fireworks: window.__capital.renderInfo().moments.fireworks,
-      banner: document.querySelector('.moment-banner[data-moment="victory"]')?.textContent ?? null,
-      screen: document.querySelector('.gameover.victory') !== null,
-    }));
+      requestAnimationFrame(watch);
+    }, { kind, dayShift });
+    const trace = () => mp.evaluate(() => window.__momentTrace);
+    await declare('tycoon', 0);
+    await mp.waitForTimeout(900);
     await mp.screenshot({ path: `${OUT}/moment-victory.png` });
-    check('Zafer: şehrin üstünde havai fişek ve zafer bandı; zafer ekranı hemen inmiyor',
-      party.fireworks.active && party.fireworks.shells >= 1 && party.fireworks.height > 0 && (party.banner ?? '').includes('Şehrin sahibi') && !party.screen, JSON.stringify(party));
-    const landed = await mp.waitForSelector('.gameover.victory', { timeout: 6000 }).then(() => Date.now() - declared).catch(() => null);
-    check('Zafer ekranı havai fişeklerden sonra iniyor (~2,4 sn)', landed !== null && landed >= 2000 && landed < 5000, `${landed} ms`);
+    const party = await mp.evaluate(() => {
+      const m = window.__capital.renderInfo().moments;
+      return { fireworks: m.fireworks, bursts: m.fireworkScreen, trace: window.__momentTrace };
+    });
+    check('Zafer: şehrin üstünde havai fişek, hemen zafer bandı',
+      party.fireworks.active && party.fireworks.shells >= 1 && party.fireworks.height > 0 && party.trace.banner !== null && party.trace.banner < 800 && party.trace.bannerText.includes('Şehrin sahibi'),
+      JSON.stringify({ ...party, bursts: undefined }));
+    check('Patlamalar ekranın içinde, üst üçte ikide', party.bursts.length >= 1 && party.bursts.every((b) => b.visible && b.y < 860 * 0.66),
+      JSON.stringify(party.bursts));
+    await settle(() => window.__momentTrace.screen !== null, 8000);
+    const landed = (await trace()).screen;
+    check('Zafer ekranı havai fişeklerden sonra iniyor (~2,4 sn)', landed !== null && landed >= 2200 && landed < 4500, `${landed} ms`);
     const programsAfter = await mp.evaluate(() => window.__capital.renderInfo().programs);
     check('Halka ve havai fişek açılışta derlenmiş: anlarda yeni program yok', programsAfter === programsBefore, `${programsBefore} → ${programsAfter}`);
     await mp.locator('.gameover.victory .gameover-actions button.primary').click();
@@ -7310,15 +7357,11 @@ async function finish(browser, consoleErrors) {
       still.info.buildingsGrowing === false && still.info.moments.dust === 0 && still.info.moments.rising === 0, JSON.stringify(still.info.moments));
     check('Azaltılmış harekette devralmada dalga ve halka yok, bant yine geliyor',
       second !== null && quiet.shifting === 0 && quiet.rings === 0 && quietBanner, `${JSON.stringify(quiet)} · bant ${quietBanner}`);
-    await mp.evaluate(() => {
-      const c = window.__capital;
-      const s = c.getState();
-      s.victory = { day: s.time.day + 1, kind: 'monopoly', path: 'retail', shares: { retail: 1, realestate: 0, energy: 0, freight: 0 }, acquisitions: 2 };
-      c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
-    });
-    const quick = await mp.waitForSelector('.gameover.victory', { timeout: 1500 }).then(() => true).catch(() => false);
+    await declare('monopoly', 1);
+    await settle(() => window.__momentTrace.screen !== null, 5000);
+    const quick = (await trace()).screen;
     const noFire = await moments();
-    check('Azaltılmış harekette zafer ekranı beklemeden iniyor, havai fişek yok', quick && noFire.fireworks.active === false, `ekran ${quick} · ${JSON.stringify(noFire.fireworks)}`);
+    check('Azaltılmış harekette zafer ekranı beklemeden iniyor, havai fişek yok', quick !== null && quick < 800 && noFire.fireworks.active === false, `ekran ${quick} ms · ${JSON.stringify(noFire.fireworks)}`);
     await mp.locator('.gameover.victory .gameover-actions button.primary').click();
     await mp.locator('.speeds [data-panel="settings"]').click();
     await mp.locator('[data-setting="motion"][data-choice="full"]').click();

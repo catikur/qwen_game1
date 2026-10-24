@@ -21,6 +21,9 @@ import { decorateBuilding, decorateSite, decorateStructure, placeStreetTrees, st
 const SITE_CONCRETE = '#bdb8ae';
 /** Şantiyenin açılış günündeki boyu, binanın tam boyuna oranla (Tur 63: açılış buradan yükseliyor). */
 const SITE_TOP = 0.8;
+const AIM_RIGHT = new THREE.Vector3();
+const AIM_FORWARD = new THREE.Vector3();
+const AIM_POINT = new THREE.Vector3();
 import { LampLight } from './lamplight';
 import { Precipitation } from './precipitation';
 import { Fireworks, MOMENT, RingPulses, smooth, waveDelay } from './moments';
@@ -512,6 +515,7 @@ export class CityRenderer {
     this.scene.add(this.buildingDecor.group, this.fabricDecor.group, this.streetDecor.group);
     this.scene.add(this.precipitation.group);
     this.scene.add(this.rings.group, this.fireworks.group);
+    this.fireworks.aim = (burst, out) => this.aimFirework(burst, out);
     // Gece lambaların altına düşen ışık (Tur 36); yer yollar yerleşince geliyor.
     this.lampLight = new LampLight(Math.ceil(tileCount * 0.5));
     this.scene.add(this.lampLight.mesh);
@@ -1261,6 +1265,37 @@ export class CityRenderer {
     }
   }
 
+  /**
+   * Havai fişeğin yeri (Tur 63): kameranın baktığı yerin iki yanına, ekranın
+   * sağına soluna yayılmış; yüksekliği patlama ekranın üst yarısında kalacak
+   * kadar. Takvimin yüksekliği (5..8,5) ekranda bir sıraya dönüşüyor: kimi
+   * patlama ufka yakın, kimi şehrin hemen üstünde.
+   */
+  private aimFirework(burst: { dx: number; dz: number; height: number }, out: { x: number; y: number; z: number }): void {
+    const camera = this.controller.camera;
+    const target = this.controller.targetPoint;
+    const extent = Math.max(8, Math.min(30, this.controller.targetDistance * 0.5));
+    const right = AIM_RIGHT.set(1, 0, 0).applyQuaternion(camera.quaternion);
+    right.y = 0;
+    right.normalize();
+    const forward = AIM_FORWARD.set(0, 0, -1).applyQuaternion(camera.quaternion);
+    forward.y = 0;
+    forward.normalize();
+    out.x = target.x + right.x * burst.dx * extent * 0.75 + forward.x * burst.dz * extent * 0.3;
+    out.z = target.z + right.z * burst.dx * extent * 0.75 + forward.z * burst.dz * extent * 0.3;
+    // Ekranda hedeflenen yükseklik (NDC y): yüksek patlama daha yukarıda.
+    const goal = 0.08 + ((burst.height - 5) / 3.5) * 0.42;
+    let low = 0.5;
+    let high = 80;
+    for (let i = 0; i < 14; i++) {
+      const mid = (low + high) / 2;
+      AIM_POINT.set(out.x, mid, out.z).project(camera);
+      if (AIM_POINT.y > goal) high = mid;
+      else low = mid;
+    }
+    out.y = low;
+  }
+
   /** Anlar çiziliyor mu: azaltılmış harekette hiçbiri (toz, halka, dalga, havai fişek). */
   private momentsOn(): boolean {
     return !this.reducedMotion;
@@ -1664,7 +1699,8 @@ export class CityRenderer {
 
     // Anlar (Tur 63): halkalar ve zafer gecesi; veri lensinde ikisi de susuyor.
     this.rings.update(dt);
-    this.fireworks.update(dt, this.controller.targetPoint, Math.max(8, Math.min(30, this.controller.targetDistance * 0.5)));
+    const distance = this.controller.targetDistance;
+    this.fireworks.update(dt, this.controller.targetPoint, Math.max(8, Math.min(30, distance * 0.5)), Math.max(0.7, Math.min(2.4, distance / 20)));
 
     // İnşaat animasyonu ve devralma dalgası sürerken binalar her karede
     // yeniden yerleşiyor; şehrin geri kalanı yalnızca state değişince.
@@ -1972,6 +2008,8 @@ export class CityRenderer {
       shifting: number;
       rising: number;
       fireworks: ReturnType<Fireworks['stats']>;
+      /** Havadaki patlamaların ekrandaki yeri (sayfa pikseli). */
+      fireworkScreen: Array<{ x: number; y: number; visible: boolean }>;
     };
     /** Mağazalara akan müşteri aracı sayısı. */
     shopperCount: number;
@@ -2099,6 +2137,7 @@ export class CityRenderer {
         shifting: this.ownerShifts.size,
         rising: this.risingIds.size,
         fireworks: this.fireworks.stats(),
+        fireworkScreen: this.fireworks.centers().map((at) => this.screenOfWorld(at.x, at.y, at.z)),
       },
       shopperCount: this.traffic.shopperCount,
       shopperPositionSum: this.traffic.shopperPositionSum,
@@ -2184,11 +2223,16 @@ export class CityRenderer {
     const building = tile.buildingId ? this.state.buildings[tile.buildingId] : undefined;
     const def = building ? BUILDING_BY_ID[building.defId] : undefined;
     const height = building && def ? Math.max(0.3, def.height) * 1.5 * this.growthOf(building.id) : 0.2;
-    const point = this.projected.set(tile.x, height + 0.12, tile.y).project(this.controller.camera);
+    return this.screenOfWorld(tile.x, height + 0.12, tile.y);
+  }
+
+  /** Bir dünya noktasının ekrandaki yeri, sayfa pikseliyle. */
+  private screenOfWorld(x: number, y: number, z: number): { x: number; y: number; visible: boolean } {
+    const point = this.projected.set(x, y, z).project(this.controller.camera);
     const rect = this.canvas.getBoundingClientRect();
     return {
-      x: rect.left + ((point.x + 1) / 2) * rect.width,
-      y: rect.top + ((1 - point.y) / 2) * rect.height,
+      x: Math.round(rect.left + ((point.x + 1) / 2) * rect.width),
+      y: Math.round(rect.top + ((1 - point.y) / 2) * rect.height),
       visible: point.z < 1 && Math.abs(point.x) <= 1 && Math.abs(point.y) <= 1,
     };
   }

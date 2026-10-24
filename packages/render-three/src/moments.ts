@@ -184,7 +184,7 @@ export function fireworkSchedule(seed: number, count: number = MOMENT.fireworkBu
   return bursts;
 }
 
-const PARTICLES = 120;
+const PARTICLES = 140;
 const ROCKET_SECONDS = 0.6;
 const SPARK_SECONDS = 1.7;
 const GRAVITY = 2.4;
@@ -199,12 +199,22 @@ interface Shell {
   x: number;
   z: number;
   launched: number;
+  /** Patlama yüksekliği (dünya). */
+  height: number;
+  /** Kameranın uzaklığına göre boy: uzaktan bakınca da patlama görünsün. */
+  scale: number;
 }
+
+/**
+ * Patlamanın dünyadaki yeri. Sahne bunu kameradan veriyor: patlama ekranın
+ * üst yarısına düşsün, kameranın arkasına ya da ekranın üstüne değil.
+ */
+export type FireworkAim = (burst: FireworkBurst, out: { x: number; y: number; z: number }) => void;
 
 /**
  * Zafer gecesinin havai fişekleri.
  *
- * Her patlama bir `Points` (120 kıvılcım), havuzda altı tane; renk
+ * Her patlama bir `Points` (140 kıvılcım), havuzda altı tane; renk
  * malzemenin rengi. Kar noktalarıyla aynı malzeme ayarı (boy kameraya
  * göre, saydam, derinlik yazmıyor): program paylaşılıyor, ilk zaferde
  * derleme takılması yok. Kıvılcımın yolu kapalı biçimde hesaplanıyor
@@ -220,6 +230,10 @@ export class Fireworks {
   private running = false;
   private extent = 12;
   private center = { x: 0, z: 0 };
+  private scale = 1;
+  private aimed = { x: 0, y: 0, z: 0 };
+  /** Patlamanın yerini seçen (sahne); yoksa merkezin çevresinde, takvimin yüksekliğinde. */
+  aim: FireworkAim | null = null;
   private accent = new THREE.Color(FIREWORK_COLORS[0]);
 
   constructor() {
@@ -243,7 +257,7 @@ export class Fireworks {
       points.visible = false;
       points.renderOrder = 3;
       this.group.add(points);
-      this.shells.push({ points, material, positions, burst: null, x: 0, z: 0, launched: 0 });
+      this.shells.push({ points, material, positions, burst: null, x: 0, z: 0, launched: 0, height: 0, scale: 1 });
     }
   }
 
@@ -272,11 +286,16 @@ export class Fireworks {
     return this.running;
   }
 
-  /** Bir kare: patlamalar kameranın baktığı yerin çevresinde (`extent` yarı kenar). */
-  update(dt: number, center: { x: number; z: number }, extent: number): void {
+  /**
+   * Bir kare: patlamalar kameranın baktığı yerin çevresinde (`extent` yarı
+   * kenar); `scale` patlamanın boyu (kamera uzaklaştıkça büyüyor, yoksa
+   * şehri uzaktan seyreden oyuncu bir iki benek görüyordu).
+   */
+  update(dt: number, center: { x: number; z: number }, extent: number, scale = 1): void {
     if (!this.running) return;
     this.center = center;
     this.extent = extent;
+    this.scale = scale;
     this.elapsed += Math.min(dt, 0.1);
     while (this.fired < this.schedule.length && this.schedule[this.fired]!.at <= this.elapsed) {
       this.launch(this.schedule[this.fired]!);
@@ -303,42 +322,58 @@ export class Fireworks {
     if (!shell) shell = this.shells.reduce((oldest, candidate) => (candidate.launched < oldest.launched ? candidate : oldest));
     shell.burst = burst;
     shell.launched = this.elapsed;
-    shell.x = this.center.x + burst.dx * this.extent * 0.55;
-    shell.z = this.center.z + burst.dz * this.extent * 0.55;
+    shell.scale = this.scale;
+    if (this.aim) {
+      this.aim(burst, this.aimed);
+      shell.x = this.aimed.x;
+      shell.z = this.aimed.z;
+      shell.height = this.aimed.y;
+    } else {
+      shell.x = this.center.x + burst.dx * this.extent * 0.55;
+      shell.z = this.center.z + burst.dz * this.extent * 0.55;
+      shell.height = burst.height * this.scale;
+    }
     shell.material.color.set(burst.color === 0 ? this.accent : FIREWORK_COLORS[burst.color]!);
     shell.points.visible = true;
   }
 
   private place(shell: Shell, age: number): void {
-    const burst = shell.burst!;
     const p = shell.positions;
+    const scale = shell.scale;
+    const height = shell.height;
     if (age < ROCKET_SECONDS) {
       // Fırlatma: kıvılcımlar tek bir izde, yerden patlama yüksekliğine.
       const k = age / ROCKET_SECONDS;
-      const top = burst.height * (1 - (1 - k) * (1 - k));
+      const top = height * (1 - (1 - k) * (1 - k));
       for (let i = 0; i < PARTICLES; i++) {
         const trail = (i % 12) / 12;
         p[i * 3] = shell.x;
-        p[i * 3 + 1] = Math.max(0, top - trail * 0.9);
+        p[i * 3 + 1] = Math.max(0, top - trail * 0.9 * scale);
         p[i * 3 + 2] = shell.z;
       }
       shell.material.opacity = 0.9;
-      shell.material.size = 0.16;
+      shell.material.size = 0.16 * scale;
     } else {
       // Patlama: yönüne fırlıyor, havada yavaşlıyor, yerçekimiyle düşüyor.
       const t = age - ROCKET_SECONDS;
-      const drag = (1 - Math.exp(-2.2 * t)) / 2.2;
+      const drag = ((1 - Math.exp(-2.2 * t)) / 2.2) * scale;
+      const fall = 0.5 * GRAVITY * scale * t * t;
       for (let i = 0; i < PARTICLES; i++) {
         p[i * 3] = shell.x + this.directions[i * 3]! * drag;
-        p[i * 3 + 1] = Math.max(0.05, burst.height + this.directions[i * 3 + 1]! * drag - 0.5 * GRAVITY * t * t);
+        p[i * 3 + 1] = Math.max(0.05, height + this.directions[i * 3 + 1]! * drag - fall);
         p[i * 3 + 2] = shell.z + this.directions[i * 3 + 2]! * drag;
       }
       const fade = t / SPARK_SECONDS;
       shell.material.opacity = Math.max(0, 1 - fade * fade);
-      shell.material.size = 0.24 * (1 - fade * 0.4);
+      shell.material.size = 0.3 * scale * (1 - fade * 0.4);
     }
     const attribute = shell.points.geometry.attributes['position'] as THREE.BufferAttribute;
     attribute.needsUpdate = true;
+  }
+
+  /** Testler için: havadaki patlamaların merkezi (dünya). */
+  centers(): Array<{ x: number; y: number; z: number }> {
+    return this.shells.filter((shell) => shell.points.visible).map((shell) => ({ x: shell.x, y: shell.height, z: shell.z }));
   }
 
   /** Testler için: kaç patlama havada, kaç kıvılcım çiziliyor, takvimin ne kadarı atıldı. */

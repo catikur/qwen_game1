@@ -4,7 +4,7 @@
 > `pnpm bench` çıktısından; iddialar `pnpm balance` ve `pnpm playtest`
 > tarafından her koşuda doğrulanıyor.
 >
-> Son güncelleme: şema **v6**, 62 tur (Tur 33 denendi ve geri alındı; Tur 34 eski görünüme canlılık ekledi; Tur 35 arayüzü Lite'ın "Cam & Bulut" diline taşıdı; Tur 36 şehre ayrıntı kattı; Tur 37a geç oyuna yönetim yükü, servet vergisi ve kriz dönemleri getirdi; Tur 37b karar kartlarını ve rakip hikâyelerini ekledi; Tur 37c fırsat balonlarını ve aylık görev panosunu getirdi; Tur 37d canlı pazarı, şehir projesi ihalesini ve rakip konsorsiyumunu getirdi; Tur 38 değerlendirme turuydu: geç oyun hızı, gündem ve haber akışı, zorluk eğrisi; Tur 39a senaryo modunu getirdi: Kurtarma ve Krizin ortasında; Tur 39b Konsorsiyuma karşı, Zincir ustası ve Şehrin sponsoru senaryolarını ekledi; Tur 39c Büyük şehir fethi ve Holding: iki şehir ile listeyi yediye tamamladı; Tur 40 cila ve performans; Tur 41 başarımlar ve kariyer; Tur 42 açılışta gölgelendirici derlemesi; Tur 43 oyun içi akıcılık; Tur 44 değerlendirme turuydu: Türkçe sayı biçimi, yardımın kapsamı, haber akışı; Tur 45 dört ek kural getirdi: Fırtınalı yıllar, Aç gözlü rakipler, Sıkı banka, Kıt arsa; Tur 46 açılış paketini böldü: kurulum ekranı telefonda yarı sürede; Tur 47 tek Ayarlar paneli ve erişilebilirlik getirdi: metin boyutu, renk körlüğüne uygun palet, hareket, ses düzeyleri, pencerelerde klavye; Tur 48 oyunu kurulabilir ve çevrimdışı açılır yaptı, yayından sonra "yeni sürüm hazır" diyor; Tur 49 müziği getirdi: gündüz, gece ve kriz, şehirle birlikte dönüyor; Tur 50 Faz 1'i değerlendirdi ve tanıtım paketini hazırladı; Tur 51 Faz 2'yi açtı: Lite'ın lig sunucusu ana oyunun Tohum Ligi koşularını da alıyor, tablo herkese açık; Tur 52'de sunucu her koşuyu gönderimde yeniden oynatıyor, tabloya yalnız doğrulanmış skor giriyor; Tur 53 ligin her haftasına bir ek kural ve 90 günlük günün koşusunu getirdi; Tur 54 liderlerin eğrisini senin koşunun üstüne koydu ve liderin o günlerde ne yaptığını koşu kodundan anlatıyor; Tur 55 davet kodlu arkadaş liglerini getirdi ve Faz 2'yi kapattı; Tur 56 Faz 3'ü açtı: nakliye terminali rakip mağazalarına taşıma sözleşmesiyle taşıyor; Tur 57 enerjiyi getirdi: şebeke fiyatı, santraller, enerji krizi; Tur 58 gayrimenkul geliştiricisini getirdi: konut ve ofis projeleri, kira ve doluluk, kentsel dönüşüm hakkı ve başvurusu; Tur 59 rakiplere hafıza verdi: CEO'nun mizacı, husumet ve ittifak, fiyat savaşı ve lobiyle tepki, uzlaşma; Tur 60 Faz 3'ün sektörleriyle üç senaryo ekledi: Herkesin nakliyecisi, Karanlık kış, Kentsel dönüşüm, her biri bir ek kuralla; Tur 61 Faz 3'ü değerlendirdi ve kapattı: zafere üç gerçek yol var, şirketin yolu kârın kaynağından okunuyor; Tur 62 Faz 4'ü açtı: mevsim ve hava şehirde görünüyor, ağaçlar mevsimin renginde, yağmur ve kar yağıyor). Önümüzdeki işin sırası `docs/YOL-HARITASI.md`'de.
+> Son güncelleme: şema **v6**, 63 tur (Tur 33 denendi ve geri alındı; Tur 34 eski görünüme canlılık ekledi; Tur 35 arayüzü Lite'ın "Cam & Bulut" diline taşıdı; Tur 36 şehre ayrıntı kattı; Tur 37a geç oyuna yönetim yükü, servet vergisi ve kriz dönemleri getirdi; Tur 37b karar kartlarını ve rakip hikâyelerini ekledi; Tur 37c fırsat balonlarını ve aylık görev panosunu getirdi; Tur 37d canlı pazarı, şehir projesi ihalesini ve rakip konsorsiyumunu getirdi; Tur 38 değerlendirme turuydu: geç oyun hızı, gündem ve haber akışı, zorluk eğrisi; Tur 39a senaryo modunu getirdi: Kurtarma ve Krizin ortasında; Tur 39b Konsorsiyuma karşı, Zincir ustası ve Şehrin sponsoru senaryolarını ekledi; Tur 39c Büyük şehir fethi ve Holding: iki şehir ile listeyi yediye tamamladı; Tur 40 cila ve performans; Tur 41 başarımlar ve kariyer; Tur 42 açılışta gölgelendirici derlemesi; Tur 43 oyun içi akıcılık; Tur 44 değerlendirme turuydu: Türkçe sayı biçimi, yardımın kapsamı, haber akışı; Tur 45 dört ek kural getirdi: Fırtınalı yıllar, Aç gözlü rakipler, Sıkı banka, Kıt arsa; Tur 46 açılış paketini böldü: kurulum ekranı telefonda yarı sürede; Tur 47 tek Ayarlar paneli ve erişilebilirlik getirdi: metin boyutu, renk körlüğüne uygun palet, hareket, ses düzeyleri, pencerelerde klavye; Tur 48 oyunu kurulabilir ve çevrimdışı açılır yaptı, yayından sonra "yeni sürüm hazır" diyor; Tur 49 müziği getirdi: gündüz, gece ve kriz, şehirle birlikte dönüyor; Tur 50 Faz 1'i değerlendirdi ve tanıtım paketini hazırladı; Tur 51 Faz 2'yi açtı: Lite'ın lig sunucusu ana oyunun Tohum Ligi koşularını da alıyor, tablo herkese açık; Tur 52'de sunucu her koşuyu gönderimde yeniden oynatıyor, tabloya yalnız doğrulanmış skor giriyor; Tur 53 ligin her haftasına bir ek kural ve 90 günlük günün koşusunu getirdi; Tur 54 liderlerin eğrisini senin koşunun üstüne koydu ve liderin o günlerde ne yaptığını koşu kodundan anlatıyor; Tur 55 davet kodlu arkadaş liglerini getirdi ve Faz 2'yi kapattı; Tur 56 Faz 3'ü açtı: nakliye terminali rakip mağazalarına taşıma sözleşmesiyle taşıyor; Tur 57 enerjiyi getirdi: şebeke fiyatı, santraller, enerji krizi; Tur 58 gayrimenkul geliştiricisini getirdi: konut ve ofis projeleri, kira ve doluluk, kentsel dönüşüm hakkı ve başvurusu; Tur 59 rakiplere hafıza verdi: CEO'nun mizacı, husumet ve ittifak, fiyat savaşı ve lobiyle tepki, uzlaşma; Tur 60 Faz 3'ün sektörleriyle üç senaryo ekledi: Herkesin nakliyecisi, Karanlık kış, Kentsel dönüşüm, her biri bir ek kuralla; Tur 61 Faz 3'ü değerlendirdi ve kapattı: zafere üç gerçek yol var, şirketin yolu kârın kaynağından okunuyor; Tur 62 Faz 4'ü açtı: mevsim ve hava şehirde görünüyor, ağaçlar mevsimin renginde, yağmur ve kar yağıyor; Tur 63 önemli anları getirdi: inşaatın tozu, devralmanın renk dalgası, çatılardan yükselen kâr, zafer gecesinin havai fişekleri). Önümüzdeki işin sırası `docs/YOL-HARITASI.md`'de.
 
 ---
 
@@ -6915,6 +6915,114 @@ Hava görünüm, simülasyon değil:
 **Kareler** (tarayıcı testinin çıktısında): `season-autumn.png`,
 `season-winter-snow.png`, `weather-storm.png`.
 
+### Tur 63 — Önemli anlar: şehir büyük günleri gösteriyor
+
+Faz 4'ün ikinci turu (`docs/YOL-HARITASI.md`). Fazın "bitti" ölçüsünün
+ikinci yarısı: önemli anlar hissediliyor.
+
+**Başlangıç.** Oyunun büyük günleri yalnız sayılarda yaşıyordu:
+- bina yerden yükseliyordu (Tur 6), ama tozu, bitişi yoktu; şantiye
+  bitince beton iskelet bir karede bitmiş binaya dönüyordu;
+- rakibi yutan oyuncunun gördüğü bir haber satırıydı; çatıların rengi
+  bir karede dönüyordu;
+- para nereden geliyor sorusunun cevabı defterdeydi, şehirde değil; üst
+  bardaki kasa bir sayıdan ötekine atlıyordu;
+- zafer ekranı ilan edildiği karede boş bir şehrin üstüne açılıyordu;
+- azaltılmış harekette bile yeni bina yerden yükseliyordu.
+
+**Yapılanlar.** Hepsi görünüm: simülasyon okumuyor, kayda alan girmiyor.
+Lig izi Tur 62'yle birebir (`a5ded51fb01e62a5`); Worker'a dokunmak
+gerekmiyor.
+
+*Şehirde* (`render-three`: `moments.ts`, `street.ts`, `scene.ts`):
+- **İnşaat.** Temel atılırken binanın dibinde toz kalkıyor; yükseliş
+  bitince yerde sahibin renginde bir halka açılıp sönüyor.
+- **Proje açılışı.** Şantiyenin beton iskeleti açılış günü kendi boyundan
+  binanın tam boyuna yükseliyor, tozuyla; bir karede dönmüyor.
+- **Yıkım.** Satın alınıp boşaltılan parselde (ya da dönüşümde kalkan
+  yapıda) toz kalkıyor.
+- **Devralma.** Sahibi değişen her binanın çatısı eski renkten yenisine
+  dönüyor. Dönüş yeni sahibin genel merkezinden dışa doğru bir dalga
+  (birim uzaklık başına 50 ms, en çok 1,6 sn); her binada yerde bir
+  halka. Rakip rakibi yutunca da aynı dalga, kendi renginde.
+- **Zafer gecesi.** Motor zaferi ilan edince (ya da senaryo kazanılınca)
+  şehrin üstünde 6,5 saniyelik havai fişek: dokuz patlama, ikişer ikişer.
+  İlk renk oyuncunun rengi. Patlamaların yeri kameradan seçiliyor:
+  baktığın yerin iki yanına, ekranın üst yarısına; boyları kamera
+  uzaklığıyla büyüyor. Kayıt açılırken zaten kazanılmış zafer kutlanmıyor.
+
+*Arayüz* (iki dilde):
+- **Kazanç etiketleri.** Her gün oyuncunun en çok kazandıran üç binasının
+  çatısından dünkü kâr yükseliyor. Çok zarar eden bir bina varsa o da
+  kırmızıyla görünüyor; zararı en iyi kazancın dörtte birinden küçükse
+  gürültü sayılıyor. Etiket kalın camdan küçük bir hap: şehrin her
+  renginin üstünde okunuyor. Yan yana binaların etiketleri üst üste
+  binmiyor, bir üst sıraya çıkıyor. Hızlı oyunda her gün değil, en sık
+  1,2 sn'de bir. Pencere açıkken, veri lensinde ve oyun bitince yok.
+- **Kasa.** Üst bardaki değer yeni tutara sayarak gidiyor (0,65 sn),
+  altında son değişim yeşil ya da kırmızı. Fark akışın dışında:
+  telefonda üst bar yine iki satır, 72 px. Kayıt açılınca ve şehir
+  değişince saymadan.
+- **An bandı.** Rakip devralınınca ekranın üstünde "Nova Holding artık
+  senin": iki renk ve kaç binanın döndüğü. Zaferde "Zafer · Şehrin
+  sahibi". Ekran okuyucuya da söyleniyor.
+- **Zafer ekranı** havai fişekler başladıktan 2,4 sn sonra iniyor; kayıt
+  açılırken orada olan zaferde ve azaltılmış harekette beklemeden.
+- **Ayarlar:** "Şehirde kazanç etiketleri" (açık geliyor). Hareket
+  ipucu azaltılmış harekette neyin çizilmediğini de söylüyor.
+
+*Azaltılmış hareket:* toz, halka, renk dalgası ve havai fişek yok; bina
+yükselmeden yerinde beliriyor (eskiden bu ayara bakmıyordu); kazanç
+etiketi yok, kasa saymadan değişiyor. Bant ve kasanın farkı kalıyor:
+bilgi taşıyorlar, hareket değil.
+
+**Bütçe.**
+- Açılışta derlenen program 18 (17'den; sınır 20). Halka seçim
+  işaretinin, havai fişek kar noktalarının, toz duman puflarının
+  programını paylaşıyor. Halka ve havai fişek açılışta derleniyor: ilk
+  devralmada, zafer gecesinde yeni program yok.
+- Ana parça 71,9 KB (71,6'dan).
+
+**Doğrulama.** `pnpm test` 753/753 (742'den); tip denetimi temiz.
+- `moments.test.ts` (çizim, 6 yeni):
+  - dalga uzaklıkla gecikiyor, bir sınırı aşmıyor;
+  - havai fişek takvimi tohumlu, süreye sığıyor;
+  - halka gecikmesini bekliyor, açılıp sönüyor, havuz taşmıyor;
+  - kıvılcımlar havada patlayıp sönüyor, takvim bitince duruyor;
+  - ilk renk oyuncunun, durdurulunca hiçbir şey çizilmiyor;
+  - toz bulutu dokuz puf, dağılıyor, en çok on dört bulut.
+- `moments.test.ts` (arayüz, 5 yeni):
+  - en çok kazandıran üç bina, rakibin binası yok;
+  - çok zarar eden kırmızı, küçük zarar gürültü;
+  - oyuncunun devralması: ad, renk, dönen binalar; an bir kez;
+  - rakibin devralması oyuncunun anı değil;
+  - zafer bir kez, kapatılmış zafer an değil.
+- `settings.test.ts`: eski kayıtta "Şehirde kazanç etiketleri" açık.
+- Denge sınavı: simülasyon aynı, bölüm eklenmedi.
+- Tarayıcı testi "Önemli anlar" 23/23, konsol temiz:
+  - inşaat: toz, yükseliş, halka; söndükten sonra takılı kalmıyor;
+  - proje açılışı: iskeletin boyundan yükseliş, toz;
+  - yıkım tozu;
+  - kazanç etiketleri: üç kazanç ve bir zarar, doğru binalarda, ekranın
+    içinde; kasanın farkı ve sayımı; ayar kapalıyken etiket yok;
+  - devralma: dalga, halkalar, bant, dalga bitince her çatı oyuncunun
+    renginde;
+  - zafer: havai fişek ekranın içinde, bant hemen, ekran ~2,4 sn sonra;
+    anlarda yeni program yok;
+  - azaltılmış hareket: yükselmeyen bina, dalgasız devralma (bant
+    geliyor), beklemeyen zafer ekranı;
+  - veri lensi;
+  - telefonda İngilizce: kasanın farkı üst barı büyütmüyor, bant ekrana
+    sığıyor.
+- Eski bölümlerde zafer ekranını bekleyen beş kontrol artık 2,4 sn'lik
+  gecikmeye göre bekliyor (en çok 8 sn).
+- Tam tarayıcı koşusu sürüyor.
+- Paket bütçesi tamam: ana parça 71,9 KB.
+
+**Kareler** (tarayıcı testinin çıktısında): `moment-build.png`,
+`moment-money.png`, `moment-takeover.png`, `moment-victory.png`,
+`moment-phone.png`.
+
 ---
 
 ## 3. Ölçülen durum
@@ -7017,7 +7125,7 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi). Senaryo şehirlerinde gün 3–17 ms (`pnpm dayperf`, Tur 43) |
-| Birim testi | **742 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de, Tur 52'de sunucuda tekrar, Tur 53'te haftanın kuralı ve günün koşusu, Tur 54'te hayalet eğri, Tur 55'te davetli ligler, Tur 56'da taşıma sözleşmeleri, Tur 57'de enerji, Tur 58'de gayrimenkul, Tur 59'da rakiplerin hafızası, Tur 60'ta senaryo paketi II, Tur 61'de şirketin yolu, Tur 62'de hava ve mevsimin görünümü) |
+| Birim testi | **753 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de, Tur 52'de sunucuda tekrar, Tur 53'te haftanın kuralı ve günün koşusu, Tur 54'te hayalet eğri, Tur 55'te davetli ligler, Tur 56'da taşıma sözleşmeleri, Tur 57'de enerji, Tur 58'de gayrimenkul, Tur 59'da rakiplerin hafızası, Tur 60'ta senaryo paketi II, Tur 61'de şirketin yolu, Tur 62'de hava ve mevsimin görünümü, Tur 63'te önemli anlar) |
 | Denge testi | **379 kontrol, hepsi geçiyor** (33 bölüm, süreleriyle; ~16 dk) |
 | Tarayıcı testi | **629 kontrol, hepsi geçiyor**, 0 konsol hatası (~41 dk); duman koşusu 132 (~8 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + paket bütçesi (Tur 46; Tur 48'den beri hizmet çalışanı ve manifest de) + duman oynanışı |

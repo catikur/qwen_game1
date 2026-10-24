@@ -6831,17 +6831,27 @@ button.icon {
 }
 
 .money-tag {
-  display: block;
-  translate: -50% -100%;
+  /*
+   * Kalın camdan küçük bir hap: şehrin her renginin üstünde okunuyor
+   * (yalnız gölgeli yazı karışık bir mahallede kayboluyordu). Çapanın eni
+   * sıfır; hap kendi eninde, ortası çatının üstünde.
+   */
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: max-content;
+  translate: -50% 0;
+  padding: 2px 9px 3px;
+  border-radius: 999px;
+  background: var(--panel-thick);
+  border: 1px solid var(--panel-edge);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
   font-family: var(--font-display);
-  font-size: calc(15px * var(--text-scale));
+  font-size: calc(14px * var(--text-scale));
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
   color: var(--good);
-  text-shadow:
-    0 1px 0 var(--panel-solid),
-    0 0 10px var(--panel-solid);
   opacity: 0;
   animation: money-tag 1.6s ease-out both;
 }
@@ -6921,7 +6931,8 @@ button.icon {
 .moment-banner {
   position: fixed;
   left: 50%;
-  top: 18vh;
+  /* Üst barın ve hedef çipinin altında. */
+  top: max(190px, 22vh);
   z-index: 55;
   translate: -50% 0;
   width: max-content;
