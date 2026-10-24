@@ -1,7 +1,6 @@
 import { useSyncExternalStore } from 'react';
-import { packScenarioId, registerPack, unregisterPack, validatePack } from '@capital/content';
-import type { Pack, PackScenario, ScenarioDef } from '@capital/content';
-import { forgetScenarioRecord } from './scenarioBest';
+import { registerPack, unregisterPack, validatePack } from '@capital/content';
+import type { Pack, ScenarioDef } from '@capital/content';
 
 /*
  * Yüklü içerik paketleri (Tur 67), bu tarayıcıda. Paket doğrulanmış
@@ -60,29 +59,6 @@ export function installedPacks(): InstalledPack[] {
 
 export type AddOutcome = { status: 'added' | 'updated'; entry: InstalledPack } | { status: 'full' };
 
-/** Anahtarları sıralı JSON: aynı içerik, alanların sırası farklı da olsa aynı metin. */
-function stable(value: unknown): string {
-  if (Array.isArray(value)) return `[${value.map(stable).join(',')}]`;
-  if (value && typeof value === 'object') {
-    const record = value as Record<string, unknown>;
-    return `{${Object.keys(record).sort().map((key) => `${JSON.stringify(key)}:${stable(record[key])}`).join(',')}}`;
-  }
-  return JSON.stringify(value);
-}
-
-/**
- * Senaryonun oynanışı: metinler dışında her şey, kurallar ayarlarıyla. Yeni
- * sürümde bu değiştiyse cihazdaki skor eski oyunun skoru.
- */
-function playKey(pack: Pack, scenario: PackScenario): string {
-  const { title: _title, tagline: _tagline, brief: _brief, goalText: _goalText, facts: _facts, rules, ...play } = scenario;
-  const resolved = (rules ?? []).map((ref) => {
-    const rule = (pack.rules ?? []).find((entry) => entry.id === ref);
-    return rule ? { base: rule.base, params: rule.params ?? {} } : ref;
-  });
-  return stable({ ...play, rules: resolved });
-}
-
 /**
  * Doğrulanmış paketi yükler; aynı kimlikli paket varsa yerine geçiyor
  * (yeni sürüm). Eski sürümde olup yenisinde olmayan senaryo oyundan çıkıyor.
@@ -91,14 +67,7 @@ export function addPack(pack: Pack): AddOutcome {
   const current = read();
   const index = current.findIndex((entry) => entry.pack.id === pack.id);
   if (index < 0 && current.length >= MAX_PACKS) return { status: 'full' };
-  if (index >= 0) {
-    const old = current[index]!.pack;
-    for (const scenario of pack.scenarios) {
-      const previous = old.scenarios.find((entry) => entry.id === scenario.id);
-      if (previous && playKey(old, previous) !== playKey(pack, scenario)) forgetScenarioRecord(packScenarioId(pack.id, scenario.id));
-    }
-    unregisterPack(pack.id);
-  }
+  if (index >= 0) unregisterPack(pack.id);
   const entry: InstalledPack = { pack, scenarios: registerPack(pack) };
   const next = index >= 0 ? current.map((item, i) => (i === index ? entry : item)) : [...current, entry];
   write(next);

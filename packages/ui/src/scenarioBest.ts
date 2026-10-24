@@ -1,4 +1,5 @@
 import { SCENARIO_BY_ID } from '@capital/content';
+import type { ScenarioDef } from '@capital/content';
 
 /**
  * Senaryoların bu cihazdaki en iyi sonuçları (Tur 39).
@@ -17,6 +18,13 @@ export interface ScenarioRecord {
   attempts: number;
   /** Sayılmış son koşunun kimliği (`scenarioRunKey`) — sonuç ekranı yeniden açılınca iki kez sayılmasın. */
   last?: string;
+  /**
+   * Paketten gelen senaryoda (Tur 67) kaydın ait olduğu sürümün oynanışı
+   * (`playKey`). Paketin başka bir sürümü (güncelleme ya da kaldırıp başka
+   * sürümü yükleme) oyunu değiştirdiyse eski skor yeni ölçüyle okunmuyor:
+   * kayıt o sürüm için boş (Codex #97). Hazır senaryoda yok.
+   */
+  play?: string;
 }
 
 let memory: Record<string, ScenarioRecord> = {};
@@ -45,14 +53,39 @@ function write(next: Record<string, ScenarioRecord>): void {
   }
 }
 
-export function scenarioRecord(id: string): ScenarioRecord {
-  return read()[id] ?? { attempts: 0 };
+/** Anahtarları sıralı JSON: aynı içerik, alanların sırası farklı da olsa aynı metin. */
+function stable(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(stable).join(',')}]`;
+  if (value && typeof value === 'object') {
+    const record = value as Record<string, unknown>;
+    return `{${Object.keys(record).sort().map((key) => `${JSON.stringify(key)}:${stable(record[key])}`).join(',')}}`;
+  }
+  return JSON.stringify(value);
+}
+
+/**
+ * Paket senaryosunun oynanışı: metinler dışında tanımın her şeyi. Kurallar
+ * katalog sırasında (`modifiers`), ayarları kural anahtarıyla: sırası
+ * değişen ama aynı oyun aynı anahtar. Hazır senaryoda yok.
+ */
+export function playKey(def: ScenarioDef | undefined): string | undefined {
+  if (!def?.source) return undefined;
+  const { seed, citySize, difficulty, preludeDays, modifiers, ruleOverrides, days, goal, stars, setup } = def;
+  return stable({ seed, citySize, difficulty, preludeDays, modifiers: modifiers ?? [], ruleOverrides: ruleOverrides ?? {}, days, goal, stars, setup });
+}
+
+/** Senaryonun kaydı; paket senaryosunda yalnız aynı oynanışın kaydı (başka sürümünki boş). */
+export function scenarioRecord(id: string, def: ScenarioDef | undefined = SCENARIO_BY_ID[id]): ScenarioRecord {
+  const record = read()[id];
+  if (!record) return { attempts: 0 };
+  const play = playKey(def);
+  return play !== undefined && record.play !== play ? { attempts: 0 } : record;
 }
 
 /** `a` sonucu `b`den iyi mi? */
-function better(id: string, a: { stars: number; score: number }, b: { stars: number; score: number }): boolean {
+function better(def: ScenarioDef | undefined, a: { stars: number; score: number }, b: { stars: number; score: number }): boolean {
   if (a.stars !== b.stars) return a.stars > b.stars;
-  const metric = SCENARIO_BY_ID[id]?.stars.metric ?? 'days';
+  const metric = def?.stars.metric ?? 'days';
   return metric === 'days' ? a.score < b.score : a.score > b.score;
 }
 
@@ -61,27 +94,24 @@ function better(id: string, a: { stars: number; score: number }, b: { stars: num
  * sonuç ekranı yeniden açılınca aynı koşu ikinci kez sayılmıyor. Dönen
  * değer: bu koşu cihazdaki en iyi sonuç mu.
  */
-export function recordScenarioResult(id: string, runKey: string, stars: number, score: number): boolean {
+export function recordScenarioResult(
+  id: string,
+  runKey: string,
+  stars: number,
+  score: number,
+  /** Koşunun kendi tanımı (kayda gömülü sürüm); yoksa kayıt defterindeki. */
+  def: ScenarioDef | undefined = SCENARIO_BY_ID[id],
+): boolean {
   const all = read();
-  const record = all[id] ?? { attempts: 0 };
+  // Başka sürümün kaydı bu koşunun ölçüsüyle karşılaştırılmıyor: yerine geçiyor.
+  const record = scenarioRecord(id, def);
+  const play = playKey(def);
   if (record.last !== runKey) {
-    const improved = stars > 0 && (!record.best || better(id, { stars, score }, record.best));
+    const improved = stars > 0 && (!record.best || better(def, { stars, score }, record.best));
     const best = improved ? { stars, score, run: runKey } : record.best;
-    write({ ...all, [id]: { attempts: record.attempts + 1, last: runKey, ...(best ? { best } : {}) } });
+    write({ ...all, [id]: { attempts: record.attempts + 1, last: runKey, ...(best ? { best } : {}), ...(play !== undefined ? { play } : {}) } });
   }
-  return scenarioRecord(id).best?.run === runKey;
-}
-
-/**
- * Senaryonun kaydını siler (Tur 67): paketin yeni sürümü oyunu değiştirdiyse
- * (hedef, yıldız ölçüsü, kurulum) eski skor yeni tanımla ölçülemez (Codex #97).
- */
-export function forgetScenarioRecord(id: string): void {
-  const all = read();
-  if (!(id in all)) return;
-  const next = { ...all };
-  delete next[id];
-  write(next);
+  return scenarioRecord(id, def).best?.run === runKey;
 }
 
 /**

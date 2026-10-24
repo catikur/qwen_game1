@@ -197,13 +197,13 @@ export function ScenarioResultScreen({ onNewGame, onReplay }: { onNewGame: () =>
   // Sonuç cihazda bir kez sayılıyor (sonuç ekranı yeniden açılsa da).
   useEffect(() => {
     if (!pending || !scenario || !def) return;
-    setBest(recordScenarioResult(def.id, runKey, scenario.stars ?? 0, scenario.score ?? 0));
+    setBest(recordScenarioResult(def.id, runKey, scenario.stars ?? 0, scenario.score ?? 0, def));
   }, [pending, runKey]);
 
   if (!pending || !scenario || !def) return null;
   const won = scenario.outcome === 'won';
   if (celebrating && !ready) return null;
-  const record = scenarioRecord(def.id);
+  const record = scenarioRecord(def.id, def);
 
   return (
     <div className="gameover scenario-result" role="alertdialog" aria-label={t('hud.scenario.resultLabel')} data-scenario-result={scenario.outcome}>

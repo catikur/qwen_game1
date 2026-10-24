@@ -8,7 +8,7 @@ import { starRow } from './stars';
 
 /** Listede senaryonun cihazdaki durumu. */
 function scenarioStatus(def: ScenarioDef): string {
-  const record = scenarioRecord(def.id);
+  const record = scenarioRecord(def.id, def);
   if (record.best) return `${starRow(record.best.stars)} · ${scenarioScoreText(def, record.best.score)}`;
   if (record.attempts > 0) return t('hud.scenario.statusTried', { count: record.attempts });
   return t('hud.scenario.statusNew');

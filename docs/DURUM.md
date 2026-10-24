@@ -7577,7 +7577,7 @@ senaryo, 200 ve 60 gün).
   elinde olan koşu sayılmamalı). Ayrıntıda yazıyor. Kariyerin "senaryo
   yıldızı" sayısı hazır senaryolardan (paketler yüklenince büyüyordu).
 - **Paket bütçesi.** Doğrulayıcı, paylaşım kodu ve raf geç inen iki parçada
-  (raf 4,8 KB, paket modülü 6,1 KB, gzip); ana parça 72,4 → 73,2 KB (kart
+  (raf 4,8 KB, paket modülü 6,1 KB, gzip); ana parça 72,4 → 73,3 KB (kart
   bileşeni, iki satır metin, kayda gömülü tanımın okunuşu). Kural adının
   okunuşu doğrulayıcıdan ayrı modülde: aynı modülde olsaydı doğrulayıcı
   ana parçaya taşınacaktı.
@@ -7591,7 +7591,8 @@ senaryo, 200 ve 60 gün).
     yeni sürüm süren koşuyu değiştirmiyor; dönüşüm istemeyen kiralık
     hedefinin ilerlemesi; dil başına metin; kod ve bozuk kod; çözücünün
     sınırını aşan kodun üretilmemesi.
-  - `ui/test/packs.test.ts` (7): raf, yeni sürümde skorun sıfırlanması,
+  - `ui/test/packs.test.ts` (7): raf, skorun sürüme bağlı olması (metin,
+    kural sırası, oyun, kaldırıp yeniden kurma),
     sorun metinleri, kural adı, kariyer.
   - Rafın sözlüğü iki dilde eksiksiz, arayüzün anahtarlarıyla çakışmıyor.
 - Tarayıcı, "İçerik paketleri" 17/17: boş raf; örnekle doldur; hatalı
@@ -7612,8 +7613,13 @@ senaryo, 200 ve 60 gün).
   "kopyalandı" denip kullanılamayan kod veriliyordu; kodlayıcı artık
   sınırı uyguluyor, raf o senaryoda paketin JSON'unu kopyalıyor. Paketin
   yeni sürümü oyunu değiştirdiyse (hedef, yıldız, kurulum, kuralın ayarı)
-  cihazdaki skor eski tanımla ölçülüyordu; o senaryonun kaydı siliniyor,
-  yalnız metin değiştiyse kalıyor.
+  cihazdaki skor eski tanımla ölçülüyordu. İlk düzeltme (güncellemede
+  sil) üçüncü incelemede iki açık verdi: kaldırıp yeniden kurmak kontrolü
+  atlıyordu, kuralların yalnız sırası değişse de siliyordu. Kök çözüm:
+  paket senaryosunun kaydı sürümünün oynanış parmak izini taşıyor (metinler
+  dışında tanım, kurallar katalog sırasında); okuma ve yazma onu
+  karşılaştırıyor, başka sürümün kaydı boş sayılıyor. Pano kapalıyken
+  gösterilen kod da aynı kimlikli yeni sürümde yenileniyor.
 - Tam tarayıcı koşusu: sürüyor (sonuç PR'a ve buraya).
 
 ---

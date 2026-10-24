@@ -99,11 +99,12 @@ export function PackActions({ def, onRemoved }: { def: ScenarioDef; onRemoved: (
   const [fallback, setFallback] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
   const source = def.source;
+  // Tanım değişince (başka senaryo ya da aynı kimlikle yeni sürüm) eski sürümün kodu kutuda kalmasın (Codex #97).
   useEffect(() => {
     setNotice(null);
     setFallback(null);
     setConfirming(false);
-  }, [def.id]);
+  }, [def]);
   if (!source) return null;
   // Kayıttan açılan ama bu cihazda yüklü olmayan paket: paylaşılabilir, kaldırılacak bir şey yok.
   const installed = packs.find((entry) => entry.pack.id === source.packId);

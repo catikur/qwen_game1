@@ -30,9 +30,10 @@ okumuyor; paket var olan parçaları bir araya getiriyor.
   kod ekleme kutusunda; eklemek onun kararı. Masaüstü sürümünde bağlantı
   düğmesi yok (adresi başkasında açılmıyor), kod var.
 - **Yeni sürüm.** Aynı kimlikli paket eklenince eskisinin yerine geçiyor.
-  Bir senaryonun oyunu değiştiyse (hedef, yıldızlar, kurulum, kuralın
-  ayarları) o senaryonun cihazdaki skoru siliniyor; yalnız metni değiştiyse
-  kalıyor.
+  Cihazdaki skor sürümün oynanışına bağlı (metinler dışında her şey;
+  kuralların sırası sayılmıyor): oyunu değiştiren sürümde skor boş, yalnız
+  metni değişen sürümde yerinde. Paketi kaldırıp başka bir sürümü kurmak da
+  eski skoru getirmiyor; ilk sürüm geri gelince skoru da geliyor.
 - **Kaldırma.** Onayla; yıldızlar cihazda kalıyor.
 - Paketler tarayıcıda kalıcı (`capitalforge.packs.v1`; masaüstünde
   `profile/` altında dosya, Steam Cloud'la eşitleniyor). En fazla 20 paket.

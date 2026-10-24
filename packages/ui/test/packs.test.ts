@@ -39,22 +39,38 @@ describe('yüklü paketler', () => {
     assert.equal(installedPacks().some((entry) => entry.pack.id === 'raf'), false);
   });
 
-  test('yeni sürüm oyunu değiştirdiyse cihazdaki skor siliniyor; yalnız metin değiştiyse kalıyor (Codex #97)', () => {
+  test('skor sürümünün oynanışına bağlı: metin ya da kural sırası değişse kalıyor, oyun değişince (kaldırıp yeniden kursa da) boş (Codex #97)', () => {
     const id = packScenarioId('skor', 'kurtarma');
-    addPack(sample('skor'));
+    const version = (change: (scenario: Pack['scenarios'][number]) => Pack['scenarios'][number]): Pack => {
+      const doc = sample('skor');
+      doc.scenarios = [change({ ...doc.scenarios[0]!, rules: ['storms', 'tight_credit'] })];
+      return doc;
+    };
+    const first = version((scenario) => scenario);
+    addPack(first);
     recordScenarioResult(id, 'kosu-1', 2, 300);
     assert.equal(scenarioRecord(id).best?.score, 300);
 
-    const retitled = sample('skor');
-    retitled.scenarios = [{ ...retitled.scenarios[0]!, title: 'Yeni başlık', brief: 'Yeni açıklama' }];
-    addPack(retitled);
+    addPack(version((scenario) => ({ ...scenario, title: 'Yeni başlık', brief: 'Yeni açıklama' })));
     assert.equal(scenarioRecord(id).best?.score, 300, 'metin değişti, oyun aynı');
+    addPack(version((scenario) => ({ ...scenario, rules: ['tight_credit', 'storms'] })));
+    assert.equal(scenarioRecord(id).best?.score, 300, 'kuralların yalnız sırası değişti');
 
-    const harder = sample('skor');
-    harder.scenarios = [{ ...harder.scenarios[0]!, stars: { metric: 'days', two: 250, three: 200 } }];
+    const harder = version((scenario) => ({ ...scenario, stars: { metric: 'days', two: 250, three: 200 } }));
     addPack(harder);
-    assert.equal(scenarioRecord(id).best, undefined, 'yıldız eşikleri değişti');
-    assert.equal(scenarioRecord(id).attempts, 0);
+    assert.deepEqual(scenarioRecord(id), { attempts: 0 }, 'yıldız eşikleri değişti');
+
+    // Kaldırıp başka sürümü kurmak da eski skoru getirmiyor; ilk sürüm geri gelince skoru da geliyor.
+    removePack('skor');
+    addPack(harder);
+    assert.deepEqual(scenarioRecord(id), { attempts: 0 });
+    addPack(first);
+    assert.equal(scenarioRecord(id).best?.score, 300);
+    // Yeni sürümün ilk sonucu eski sürümün skoruyla karşılaştırılmıyor: yerine geçiyor.
+    addPack(harder);
+    recordScenarioResult(id, 'kosu-2', 1, 380);
+    assert.equal(scenarioRecord(id).best?.score, 380);
+    assert.equal(scenarioRecord(id).attempts, 1);
     removePack('skor');
   });
 
