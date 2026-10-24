@@ -3454,8 +3454,10 @@ async function finish(browser, consoleErrors) {
       // B'nin bugünü 0 ya da 1 (takvim durdurulana kadar bir gün geçebiliyor): liderin ilk günleri için kart 0. güne sabitleniyor.
       const todayB = await b.p.evaluate(() => window.__capital.getState().time.day);
       await b.p.locator('.league-sparks').focus();
+      // Klavye ve fare sonrası 8 sn bekleniyor: yazılımsal GPU'da bir kare bir saniyeye yaklaşıyor,
+      // tepki birkaç kare sürüyor (3 sn yetmiyordu).
       await b.p.keyboard.press('Home');
-      await b.p.waitForSelector('[data-league-moves-day="0"][data-league-moves="ready"]', { timeout: 5000 }).catch(() => null);
+      await b.p.waitForSelector('[data-league-moves-day="0"][data-league-moves="ready"]', { timeout: 8000 }).catch(() => null);
       const curves = await b.p.evaluate(() => ({
         lines: [...document.querySelectorAll('[data-league-line]')].map((el) => el.getAttribute('data-league-line')),
         title: document.querySelector('.league-moves h4')?.textContent ?? '',
@@ -3469,11 +3471,11 @@ async function finish(browser, consoleErrors) {
       const chartBox = await b.p.locator('.league-sparks').boundingBox();
       const middle = { x: chartBox.x + chartBox.width * 0.5, y: chartBox.y + chartBox.height * 0.5 };
       await b.p.mouse.move(middle.x, middle.y);
-      const tip = await b.p.waitForSelector('[data-league-tip]', { timeout: 3000 }).then((h) => h.textContent()).catch(() => '');
+      const tip = await b.p.waitForSelector('[data-league-tip]', { timeout: 8000 }).then((h) => h.textContent()).catch(() => '');
       check('Grafiğin üzerine gelince o günün değerleri: liderin 180. günü', /Gün 180/.test(tip ?? '') && (tip ?? '').includes('Sunucu Holding'), tip ?? '');
       await b.p.mouse.click(middle.x, middle.y);
       const pinned = await b.p
-        .waitForSelector('[data-league-moves-day="180"]', { timeout: 3000 })
+        .waitForSelector('[data-league-moves-day="180"]', { timeout: 8000 })
         .then(() => b.p.evaluate(() => ({
           title: document.querySelector('.league-moves h4')?.textContent ?? '',
           body: document.querySelector('.league-moves')?.textContent ?? '',
@@ -3487,12 +3489,12 @@ async function finish(browser, consoleErrors) {
       await b.p.locator('[data-league-focus-reset]').click();
       await b.p.locator('.league-sparks').focus();
       await b.p.keyboard.press('ArrowRight');
-      const byKey = await b.p.waitForSelector('[data-league-moves-day="10"]', { timeout: 3000 }).then(() => true).catch(() => false);
+      const byKey = await b.p.waitForSelector('[data-league-moves-day="10"]', { timeout: 8000 }).then(() => true).catch(() => false);
       // Gün seçiliyken Escape bugüne dönüyor, pencere açık kalıyor; ikinci Escape pencereyi kapatıyor.
       await b.p.keyboard.press('Escape');
-      const back = await b.p.waitForSelector(`[data-league-moves-day="${todayB}"]`, { timeout: 3000 }).then(() => true).catch(() => false);
+      const back = await b.p.waitForSelector(`[data-league-moves-day="${todayB}"]`, { timeout: 8000 }).then(() => true).catch(() => false);
       await b.p.keyboard.press('Escape');
-      const closed = await b.p.waitForSelector('.league-moves', { state: 'detached', timeout: 3000 }).then(() => true).catch(() => false);
+      const closed = await b.p.waitForSelector('.league-moves', { state: 'detached', timeout: 8000 }).then(() => true).catch(() => false);
       const codesB = codeRequests.filter((label) => label === 'B').length;
       check('Klavyeyle gün değişiyor; Escape önce bugüne dönüyor, sonra pencereyi kapatıyor; liderin kodu bir kez indi',
         byKey && back && closed && codesB === 1, `ok ${byKey}/${back}/${closed} · ${codesB} kod indi`);
@@ -3571,7 +3573,9 @@ async function finish(browser, consoleErrors) {
       if ((await a.p.locator('.newgame').count()) > 0) await startLeague(a.p, 'Sunucu Holding');
       await a.p.waitForSelector('.agenda [data-agenda="league"]', { timeout: 30000 });
       await a.p.evaluate(() => window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 }));
-      await a.p.locator('.agenda [data-agenda="league"] button').first().click();
+      // Geri yüklenen bitmiş koşu (360. gün, ~175 bina): yazılımsal GPU'da bir kare bir saniyeye
+      // yaklaşıyor, bu tıklama 9–10 sn sürebiliyor (ana dalda da).
+      await a.p.locator('.agenda [data-agenda="league"] button').first().click({ timeout: 60000 });
       await serverBoard(a.p);
       // Tur 55: A'nın arkadaş ligi panelde (B de üyesi).
       const friendsBefore = await a.p.waitForSelector('[data-league-friend-table]', { timeout: 15000 }).then(() => true).catch(() => false);
