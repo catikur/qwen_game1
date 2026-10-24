@@ -7173,7 +7173,19 @@ eski derlemede camgöbeği, çatı nane yeşili).
   zafer gelen kaybın sonucu havai fişekten sonra (~2,4 sn) iniyor. Kazanılan sonucu bekleyen eski adımlar (senaryo
   açan iki yardımcı, üç kontrol) bekleyen sonucu bekliyor; senaryo
   bölümleri 36/36 ve 47/47.
-- Tam tarayıcı koşusu sürüyor.
+- Tam tarayıcı koşusu 655/656, konsol temiz (bu yavaş makinede ~60 dk).
+  Kalan tek kontrol lig bölümündeydi: geri yüklenen bitmiş koşuda
+  (360. gün, ~175 bina) gündemdeki lig düğmesinin tıklaması 30 sn'yi aştı.
+  Lig bölümleri ayrı koşuda ana dalda 4/4 geçti; bu dalda koşudan koşuya
+  başka bir adımda düşüyordu (tıklama, hayalet eğrinin klavye ve fare
+  tepkisi, arkadaş liginin sunucu yanıtı). Kare süresi ölçüldü, gerileme
+  yok: kalabalık şehirde (kalite sabit) ortanca kare ana dalda 796–808 ms,
+  bu dalda 659–743 ms; 360 günlük atlamadan sonraki kareler de aynı ya da
+  kısa, dalga yok. Bu adımlar artık daha uzun bekliyor (tıklama 60 sn,
+  hayalet eğri 8 sn, arkadaş ligi 30 sn); lig bölümleri dört koşunun üçünde
+  44/44, dördüncüsünde arkadaş liginin sunucu yanıtı 15 sn'yi aşmıştı (o
+  bekleme sonradan 30 sn). Ana dalla aradaki fark tam açıklanamadı; Tur 65
+  (telefon performansı) bu akışı yeniden ölçecek.
 - Paket bütçesi tamam: ana parça 71,9 KB.
 
 **Kareler** (tarayıcı testinin çıktısında): `moment-build.png`,
@@ -7284,7 +7296,7 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi). Senaryo şehirlerinde gün 3–17 ms (`pnpm dayperf`, Tur 43) |
 | Birim testi | **761 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de, Tur 52'de sunucuda tekrar, Tur 53'te haftanın kuralı ve günün koşusu, Tur 54'te hayalet eğri, Tur 55'te davetli ligler, Tur 56'da taşıma sözleşmeleri, Tur 57'de enerji, Tur 58'de gayrimenkul, Tur 59'da rakiplerin hafızası, Tur 60'ta senaryo paketi II, Tur 61'de şirketin yolu, Tur 62'de hava ve mevsimin görünümü, Tur 63'te önemli anlar) |
 | Denge testi | **379 kontrol, hepsi geçiyor** (33 bölüm, süreleriyle; ~16 dk) |
-| Tarayıcı testi | **629 kontrol, hepsi geçiyor**, 0 konsol hatası (~41 dk); duman koşusu 132 (~8 dk, rehber dahil) |
+| Tarayıcı testi | **656 kontrol**; son tam koşu 655/656 (lig bölümünde bir tıklama yavaş makinede takıldı, Tur 63'e bak), 0 konsol hatası (bu makinede ~60 dk, önce ~41 dk); duman koşusu 132 (~8 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + paket bütçesi (Tur 46; Tur 48'den beri hizmet çalışanı ve manifest de) + duman oynanışı |
 | Kapsam | 40 bina · 25 ürün · 7 kategori · 8 rakip profili · 10 CEO · 22 olay (11 şehir + 11 sektör) · 3 kriz · 12 karar kartı · 70 rakip sözü · 4 mizaç · 48 ilişki sözü · 5 fırsat balonu · 8 görev türü · 4 mevsim · 6 hava · 9 moda ürünü · 17 şehir yapısı (6 siluet) · 6 şehir projesi · 10 senaryo · 4 ek kural · 5 yol · 29 rozet |
 

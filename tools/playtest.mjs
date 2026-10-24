@@ -3407,8 +3407,9 @@ async function finish(browser, consoleErrors) {
       // Tur 55: arkadaş ligi. A lig kuruyor; ligin tablosunda kendi koşusu, kodu ekranda.
       await a.p.fill('[data-league-friend-form="create"] input', 'Kuzey Ligi');
       await a.p.locator('[data-league-friend-form="create"] button').click();
+      // Sunucu yanıtı ve ligin tablosu: yük altında (dört tarayıcı, yerel sunucu, yazılımsal GPU) 15 sn yetmeyebiliyor.
       const friendA = await a.p
-        .waitForSelector('[data-league-row="friend"]', { timeout: 15000 })
+        .waitForSelector('[data-league-row="friend"]', { timeout: 30000 })
         .then(() => a.p.evaluate(() => ({
           code: document.querySelector('.league-friend-code code')?.textContent ?? '',
           tab: document.querySelector('[data-league-friend][aria-selected="true"]')?.textContent ?? '',
