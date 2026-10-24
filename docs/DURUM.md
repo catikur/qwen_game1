@@ -6987,7 +6987,7 @@ bandının süresi dolmadan hemen önce (sayfanın içinden ölçülen 4,56. sn)
 ilan ediyor: yarış her koşuda sınanıyor. Eski derlemede bu kontrol düşüyor,
 yenisinde geçiyor.
 
-**Codex'in bulduğu beş şey.**
+**Codex'in bulduğu yedi şey.**
 - *Kayıt açılınca zafer ekranı 2,4 sn gecikiyordu.* Oyun içinde bekleyen
   zaferli bir kayıt açılınca ekran canlı zafer gibi bekletiliyordu. Gecikme
   artık durumun kendisini de biliyor: durum değiştiyse kayıttaki zafer
@@ -7009,7 +7009,17 @@ yenisinde geçiyor.
   yeşiline (renk körlüğüne uygun palette limona) dönüyordu. İki renk artık
   tek yerde (`content/src/palette.ts`); sahne ve bant aynısını okuyor.
 
-Beşi de düzeltmeden önce kırılan bir kontrolle: arayüz birim testi ve
+- *Azaltılmış harekete geçilince süren toz 1,5 sn daha görünüyordu*
+  (halka ve havai fişek hemen duruyordu). Toz da hemen kalkıyor.
+- *Aynı gün senaryo ve zafer gelince, zafer kapatıldığında havai fişek
+  ikinci kez atılıyordu.* Kutlama tek bir anahtar tutuyordu; zafer
+  kapanınca senaryonun anahtarı yeni sanılıyordu. Kutlanan her zafer ve
+  senaryo artık bir kayıtta (`CelebrationLog`): bir kez görülen bir daha
+  kutlanmıyor, kapatılmış gelen zafer kutlanmıyor.
+
+Son ikisi düzeltmeden önce kırılan birim testleriyle (tarayıcıda tozun 1,5
+sn'lik penceresi yazılımsal GPU'nun birkaç karesine sığıyor, orada
+yakalanamıyor). İlk beşi de düzeltmeden önce kırılan bir kontrolle: arayüz birim testi ve
 tarayıcı testinin üç kontrolü (kayıt açılınca: eski derlemede ekran 1,5
 sn'de inmiyor, havai fişek ve halka var, önceki bant kalıyor; bandın rengi:
 eski derlemede camgöbeği, çatı nane yeşili).
@@ -7021,14 +7031,17 @@ eski derlemede camgöbeği, çatı nane yeşili).
   devralmada, zafer gecesinde yeni program yok.
 - Ana parça 71,9 KB (71,6'dan).
 
-**Doğrulama.** `pnpm test` 754/754 (742'den); tip denetimi temiz.
-- `moments.test.ts` (çizim, 6 yeni):
+**Doğrulama.** `pnpm test` 756/756 (742'den); tip denetimi temiz.
+- `moments.test.ts` (çizim, 8 yeni):
   - dalga uzaklıkla gecikiyor, bir sınırı aşmıyor;
   - havai fişek takvimi tohumlu, süreye sığıyor;
   - halka gecikmesini bekliyor, açılıp sönüyor, havuz taşmıyor;
   - kıvılcımlar havada patlayıp sönüyor, takvim bitince duruyor;
   - ilk renk oyuncunun, durdurulunca hiçbir şey çizilmiyor;
-  - toz bulutu dokuz puf, dağılıyor, en çok on dört bulut.
+  - toz bulutu dokuz puf, dağılıyor, en çok on dört bulut;
+  - kutlama kaydı: kayıttaki zafer kutlanmıyor, aynı gün senaryo ve zafer
+    tek kutlama, zafer kapatılınca ikinci kez yok;
+  - azaltılmış harekete geçince süren toz kalkıyor.
 - `moments.test.ts` (arayüz, 6 yeni):
   - en çok kazandıran üç bina, rakibin binası yok;
   - çok zarar eden kırmızı, küçük zarar gürültü;
@@ -7038,7 +7051,7 @@ eski derlemede camgöbeği, çatı nane yeşili).
   - zafer bir kez, kapatılmış zafer an değil.
 - `settings.test.ts`: eski kayıtta "Şehirde kazanç etiketleri" açık.
 - Denge sınavı: simülasyon aynı, bölüm eklenmedi.
-- Tarayıcı testi "Önemli anlar" 25/25, konsol temiz:
+- Tarayıcı testi "Önemli anlar" 26/26, konsol temiz:
   - inşaat: toz, yükseliş, halka; söndükten sonra takılı kalmıyor;
   - proje açılışı: iskeletin boyundan yükseliş, toz;
   - yıkım tozu;
@@ -7048,8 +7061,8 @@ eski derlemede camgöbeği, çatı nane yeşili).
     bitince her çatı oyuncunun renginde;
   - zafer: havai fişek ekranın içinde, bant hemen (devralma bandı tam o
     an kalkarken bile), ekran ~2,4 sn sonra; anlarda yeni program yok;
-  - azaltılmış hareket: yükselmeyen bina, dalgasız devralma (bant
-    geliyor), beklemeyen zafer ekranı;
+  - azaltılmış hareket: süren toz kalkıyor, yükselmeyen bina, dalgasız
+    devralma (bant geliyor), beklemeyen zafer ekranı;
   - veri lensi;
   - aynı şehrin kaydı aynı sahnede açılınca: kayıttaki zafer kutlanmıyor,
     ekranı beklemeden iniyor; kaydın farkı dalga, toz ya da yükseliş değil;
@@ -7167,7 +7180,7 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi). Senaryo şehirlerinde gün 3–17 ms (`pnpm dayperf`, Tur 43) |
-| Birim testi | **754 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de, Tur 52'de sunucuda tekrar, Tur 53'te haftanın kuralı ve günün koşusu, Tur 54'te hayalet eğri, Tur 55'te davetli ligler, Tur 56'da taşıma sözleşmeleri, Tur 57'de enerji, Tur 58'de gayrimenkul, Tur 59'da rakiplerin hafızası, Tur 60'ta senaryo paketi II, Tur 61'de şirketin yolu, Tur 62'de hava ve mevsimin görünümü, Tur 63'te önemli anlar) |
+| Birim testi | **756 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de, Tur 52'de sunucuda tekrar, Tur 53'te haftanın kuralı ve günün koşusu, Tur 54'te hayalet eğri, Tur 55'te davetli ligler, Tur 56'da taşıma sözleşmeleri, Tur 57'de enerji, Tur 58'de gayrimenkul, Tur 59'da rakiplerin hafızası, Tur 60'ta senaryo paketi II, Tur 61'de şirketin yolu, Tur 62'de hava ve mevsimin görünümü, Tur 63'te önemli anlar) |
 | Denge testi | **379 kontrol, hepsi geçiyor** (33 bölüm, süreleriyle; ~16 dk) |
 | Tarayıcı testi | **629 kontrol, hepsi geçiyor**, 0 konsol hatası (~41 dk); duman koşusu 132 (~8 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + paket bütçesi (Tur 46; Tur 48'den beri hizmet çalışanı ve manifest de) + duman oynanışı |

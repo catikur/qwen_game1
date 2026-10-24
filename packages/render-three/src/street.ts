@@ -208,6 +208,11 @@ export class StreetLife {
     this.dust.push({ x, z, size, start: this.clock });
   }
 
+  /** Süren toz bulutlarını kaldırır (azaltılmış harekete geçilince). */
+  clearDust(): void {
+    this.dust.length = 0;
+  }
+
   /** Kalite kademesi: yayalar ve tüten bacalar aynı oranda seyreliyor. */
   setBudget(ratio: number): void {
     this.budget = Math.max(0, Math.min(1, ratio));

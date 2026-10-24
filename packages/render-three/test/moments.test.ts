@@ -1,7 +1,7 @@
 import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
-import { FIREWORK_COLORS, Fireworks, MOMENT, RingPulses, fireworkSchedule, smooth, waveDelay } from '../src/moments';
+import { CelebrationLog, FIREWORK_COLORS, Fireworks, MOMENT, RingPulses, fireworkSchedule, smooth, waveDelay } from '../src/moments';
 import { StreetLife } from '../src/street';
 
 /**
@@ -117,6 +117,42 @@ describe('toz', () => {
     for (let i = 0; i < 30; i++) street.burst(i, i, 1);
     street.update(0.016);
     assert.equal(street.stats.dust, 14);
+    street.dispose();
+  });
+});
+
+describe('kutlama kaydı', () => {
+  test('açılıştaki zafer kutlanmıyor; yeni zafer bir kez; aynı gün senaryo ve zafer, zafer kapatılınca ikinci kez değil (Codex #93)', () => {
+    const log = new CelebrationLog();
+    const day = (n: number) => ({ time: { day: n } });
+    assert.equal(log.note({ ...day(5), victory: { day: 3 } }), false, 'kayıttaki zafer');
+    assert.equal(log.note({ ...day(6), victory: { day: 3 } }), false);
+    const fresh = new CelebrationLog();
+    assert.equal(fresh.note(day(1)), false, 'ilk senkron');
+    // Aynı gün: senaryo kazanıldı ve zafer geldi.
+    const both = { ...day(40), victory: { day: 40 }, scenario: { outcome: 'won' as const, finishedDay: 40 } };
+    assert.equal(fresh.note(both), true, 'bir kutlama');
+    assert.equal(fresh.note(both), false);
+    // Zafer kapatıldı: senaryonun kutlaması yeni değil.
+    assert.equal(fresh.note({ ...both, victory: { day: 40, dismissed: true } }), false, 'havai fişek ikinci kez yok');
+    assert.equal(fresh.note({ ...day(41), scenario: { outcome: 'won' as const, finishedDay: 40 } }), false);
+    // Başka gün yeni bir zafer (yeni koşu aynı sahnede): yeniden.
+    assert.equal(fresh.note({ ...day(90), victory: { day: 90 } }), true);
+    assert.equal(fresh.note({ ...day(92), victory: { day: 92, dismissed: true } }), false, 'kapatılmış gelen zafer kutlanmıyor');
+    fresh.reset();
+    assert.equal(fresh.note({ ...day(95), victory: { day: 95 } }), false, 'sıfırlanınca ilk senkron gibi');
+  });
+});
+
+describe('toz temizliği', () => {
+  test('azaltılmış harekete geçince süren toz hemen kalkıyor (Codex #93)', () => {
+    const street = new StreetLife(24, 24, 6, 0);
+    street.burst(5, 5, 1);
+    street.update(0.016);
+    assert.equal(street.stats.dust, 1);
+    street.clearDust();
+    street.update(0.016);
+    assert.equal(street.stats.dust, 0);
     street.dispose();
   });
 });

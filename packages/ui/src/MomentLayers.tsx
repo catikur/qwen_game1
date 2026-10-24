@@ -92,7 +92,8 @@ export function MoneyTags(): ReactElement | null {
 
   // Konum her karede sahneden: kamera kayarken etiket çatıda kalıyor.
   // Yan yana binaların etiketleri üst üste binmesin: çakışan bir üst sıraya.
-  useEffect(() => {
+  // İlk konum boyamadan önce (yerleşim efekti): etiket bir kare sol üst köşede görünmesin.
+  useLayoutEffect(() => {
     if (tags.length === 0 || !projectTile) return;
     let frame = 0;
     const placed: Array<{ x: number; y: number }> = [];

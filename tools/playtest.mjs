@@ -7213,11 +7213,18 @@ async function finish(browser, consoleErrors) {
       return own.map((b) => b.id);
     }, profits);
     const owned = await dayOf([4200, 1800, -2600, 900]);
-    await mp.waitForTimeout(450);
+    // Etiketler çatıya yerleşene dek (kamera o binaya kayıyor; yavaş karede birkaç yüz ms).
+    await settle(() => {
+      const tags = [...document.querySelectorAll('.money-tag')];
+      return tags.length === 4 && tags.every((el) => {
+        const r = el.getBoundingClientRect();
+        return r.top >= 0 && r.bottom <= innerHeight && r.left >= 0 && r.right <= innerWidth;
+      });
+    }, 1500);
     const tags = await mp.evaluate(() => [...document.querySelectorAll('.money-tag')].map((el) => {
       const r = el.getBoundingClientRect();
       const shown = getComputedStyle(el.parentElement).visibility !== 'hidden';
-      return { id: el.getAttribute('data-money-tag'), text: el.textContent, loss: el.classList.contains('money-tag-loss'), shown, inside: !shown || (r.width > 0 && r.top >= 0 && r.bottom <= innerHeight && r.left >= 0 && r.right <= innerWidth) };
+      return { id: el.getAttribute('data-money-tag'), text: el.textContent, loss: el.classList.contains('money-tag-loss'), shown, at: [Math.round(r.left), Math.round(r.top), Math.round(r.width)], inside: !shown || (r.width > 0 && r.top >= 0 && r.bottom <= innerHeight && r.left >= 0 && r.right <= innerWidth) };
     }));
     const delta = await mp.evaluate(() => {
       const el = document.querySelector('.metric-delta');
@@ -7364,9 +7371,20 @@ async function finish(browser, consoleErrors) {
     });
 
     // Azaltılmış hareket: bina yerinde beliriyor, toz ve halka yok, dalga yok; bant ve zafer ekranı hemen.
+    // Toz sürerken açılınca süren toz da hemen kalkıyor (Codex #93).
+    // Kurma, tıklama ve ölçme sayfanın içinde tek adımda: toz 1,5 sn sürüyor, test adımları ondan yavaş.
     await mp.locator('.speeds [data-panel="settings"]').click();
-    await mp.locator('[data-setting="motion"][data-choice="reduced"]').click();
+    await mp.waitForSelector('[data-setting="motion"][data-choice="reduced"]', { timeout: 5000 });
+    await buildShop();
+    const dustSwitch = await mp.evaluate(async () => {
+      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      const before = window.__capital.renderInfo().moments.dust;
+      document.querySelector('[data-setting="motion"][data-choice="reduced"]').click();
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+      return { before, after: window.__capital.renderInfo().moments.dust, reduced: window.__capital.renderInfo().reducedMotion };
+    });
     await mp.keyboard.press('Escape');
+    check('Azaltılmış harekete geçince süren toz hemen kalkıyor', dustSwitch.before >= 1 && dustSwitch.after === 0 && dustSwitch.reduced, JSON.stringify(dustSwitch));
     await settle(() => window.__capital.renderInfo().moments.fireworks.active === false, 8000);
     await buildShop();
     await mp.waitForTimeout(120);

@@ -26,7 +26,7 @@ const AIM_FORWARD = new THREE.Vector3();
 const AIM_POINT = new THREE.Vector3();
 import { LampLight } from './lamplight';
 import { Precipitation } from './precipitation';
-import { Fireworks, MOMENT, RingPulses, smooth, waveDelay } from './moments';
+import { CelebrationLog, Fireworks, MOMENT, RingPulses, smooth, waveDelay } from './moments';
 import { mixWeather, seasonLook, weatherLook } from './season';
 import type { SeasonLook, WeatherLook } from './season';
 import { FACADE, buildingSurface, setWindowLateNight, windowLateNight } from './surface';
@@ -289,8 +289,8 @@ export class CityRenderer {
   private siteIds = new Set<string>();
   /** Bina kimliği → yükselişin başladığı oran (proje açılışı 0 değil). */
   private growFrom = new Map<string, number>();
-  /** Kutlanan zafer; `undefined` ilk senkrondan önce (kayıttaki zafer kutlanmıyor). */
-  private celebrationKey: string | null | undefined = undefined;
+  /** Kutlanmış zaferler ve senaryolar: zafer gecesi bir kez (kayıttaki zafer kutlanmıyor). */
+  private celebrations = new CelebrationLog();
   /** Bu senkronda yapısı kalkan dokunun kareleri: yıkım tozu. */
   private fabricRemoved: number[] = [];
   private shiftTo = new THREE.Color();
@@ -1252,13 +1252,7 @@ export class CityRenderer {
    * kazanılmış olan zafer kutlanmıyor; kutlama bir kez.
    */
   private syncCelebration(state: GameState): void {
-    const victory = state.victory && !state.victory.dismissed ? `victory:${state.victory.day}` : null;
-    const scenario = state.scenario?.outcome === 'won' ? `scenario:${state.scenario.finishedDay ?? state.time.day}` : null;
-    const key = victory ?? scenario;
-    if (key === this.celebrationKey) return;
-    const first = this.celebrationKey === undefined;
-    this.celebrationKey = key;
-    if (key && !first && this.momentsOn()) {
+    if (this.celebrations.note(state) && this.momentsOn()) {
       this.fireworks.start((state.meta.seed ^ Math.imul(state.time.day + 1, 0x9e3779b1)) >>> 0, this.playerAccent());
     }
   }
@@ -1308,7 +1302,7 @@ export class CityRenderer {
     this.risingIds.clear();
     this.siteIds.clear();
     this.growFrom.clear();
-    this.celebrationKey = undefined;
+    this.celebrations.reset();
     this.fabricStructures = [];
     this.fabricRemoved.length = 0;
     this.rings.clear();
@@ -2296,6 +2290,7 @@ export class CityRenderer {
     if (this.reducedMotion) {
       this.rings.clear();
       this.fireworks.stop();
+      this.street.clearDust();
     }
     if (options.safePalette === this.safePalette) return;
     this.safePalette = options.safePalette;

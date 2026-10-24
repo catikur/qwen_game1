@@ -46,6 +46,51 @@ export function waveDelay(distance: number): number {
   return Math.min(MOMENT.waveMax, Math.max(0, distance) * MOMENT.wavePerUnit);
 }
 
+/** Kutlanacak durumun okunan kısmı: zafer ve senaryonun sonucu. */
+export interface CelebrationSource {
+  time: { day: number };
+  victory?: { day: number; dismissed?: boolean };
+  scenario?: { outcome?: 'won' | 'lost'; finishedDay?: number };
+}
+
+/**
+ * Kutlanmış anların kaydı (Tur 63): zafer gecesi bir kez.
+ *
+ * Her zafer (ve kazanılan senaryo) bir kimlikle yazılıyor; kimlik bir kez
+ * görülünce bir daha kutlanmıyor. Aynı gün senaryo da zafer de gelirse tek
+ * kutlama; zafer kapatılınca senaryonun kimliği "yeni" sanılmıyor (Codex
+ * #93). İlk senkronda görülenler (kayıttaki zafer) kutlanmadan yazılıyor.
+ */
+export class CelebrationLog {
+  private seen: Set<string> | null = null;
+
+  /**
+   * Durumu kaydeder; yeni bir kutlama varsa (ilk senkron değilse) true.
+   * Kapatılmış zafer kutlanmıyor ama kaydediliyor.
+   */
+  note(state: CelebrationSource): boolean {
+    const entries: Array<[key: string, celebrate: boolean]> = [];
+    if (state.victory) entries.push([`victory:${state.victory.day}`, !state.victory.dismissed]);
+    if (state.scenario?.outcome === 'won') entries.push([`scenario:${state.scenario.finishedDay ?? state.time.day}`, true]);
+    if (this.seen === null) {
+      this.seen = new Set(entries.map(([key]) => key));
+      return false;
+    }
+    let fresh = false;
+    for (const [key, celebrate] of entries) {
+      if (this.seen.has(key)) continue;
+      this.seen.add(key);
+      if (celebrate) fresh = true;
+    }
+    return fresh;
+  }
+
+  /** Başka bir durum geldi (kayıt açıldı): bir sonraki not ilk senkron. */
+  reset(): void {
+    this.seen = null;
+  }
+}
+
 const RING_POOL = 24;
 
 interface Ring {
