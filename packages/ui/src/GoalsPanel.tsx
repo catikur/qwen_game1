@@ -239,7 +239,7 @@ export function VictoryScreen({ onNewGame }: { onNewGame: () => void }): ReactEl
   const state = useGameState();
   const victory = state.victory;
   // Önemli an (Tur 63): canlı gelen zaferde ekran havai fişeklerden sonra açılıyor.
-  const ready = useMomentDelay(victory && !victory.dismissed ? `${victory.kind}:${victory.day}` : null, VICTORY_DELAY_MS);
+  const ready = useMomentDelay(victory && !victory.dismissed ? `${victory.kind}:${victory.day}` : null, VICTORY_DELAY_MS, state);
   if (!victory || victory.dismissed || state.gameOver || scenarioResultPending(state) || !ready) return null;
 
   const player = getPlayer(state);

@@ -1,4 +1,4 @@
-import { getPlayer } from '@capital/core';
+import { getPlayer, sharesOutstanding } from '@capital/core';
 import type { GameState } from '@capital/core';
 
 /**
@@ -49,11 +49,13 @@ export function moneyTagsOf(state: GameState, gains: number = MONEY_TAGS.gains):
   return worst && -worst.amount >= floor ? [...best, worst] : best;
 }
 
-/** Bir anın karşılaştırıldığı önceki hâl: şirketler, oyuncunun devralmaları, binaların sahibi, zafer. */
+/** Bir anın karşılaştırıldığı önceki hâl: şirketler, oyuncunun devralmaları ve payları, binaların sahibi, zafer. */
 export interface MomentSnapshot {
   companies: Record<string, { name: string; color: string }>;
   playerId: string;
   acquisitions: number;
+  /** Oyuncunun her şirketteki payı (0..1): devralınanı binası olmasa da tanıtıyor. */
+  stakes: Record<string, number>;
   owners: Record<string, string>;
   victory: string | null;
 }
@@ -72,7 +74,11 @@ export function snapshotOf(state: GameState): MomentSnapshot {
   for (const company of Object.values(state.companies)) companies[company.id] = { name: company.name, color: company.color };
   const owners: Record<string, string> = {};
   for (const building of Object.values(state.buildings)) owners[building.id] = building.companyId;
-  return { companies, playerId: player.id, acquisitions: player.acquisitions ?? 0, owners, victory: victoryKey(state) };
+  const stakes: Record<string, number> = {};
+  for (const [id, count] of Object.entries(player.shares)) {
+    if (count > 0) stakes[id] = count / Math.max(1, sharesOutstanding(state, id));
+  }
+  return { companies, playerId: player.id, acquisitions: player.acquisitions ?? 0, stakes, owners, victory: victoryKey(state) };
 }
 
 /**
@@ -80,20 +86,23 @@ export function snapshotOf(state: GameState): MomentSnapshot {
  *
  * Devralma: oyuncunun devralma sayısı arttı ve bir şirket listeden
  * düştü. Aynı gün iki şirket düştüyse (rakip de birini yuttu) oyuncunun
- * olanı, binaları oyuncuya geçen. Zafer: motor zaferi ilan etti.
+ * olanı: önce oyuncunun en büyük payı olan (devralan çoğunluğu tutuyor;
+ * binası olmayan şirkette de), eşitse binaları oyuncuya geçen (Codex #93).
+ * Zafer: motor zaferi ilan etti.
  */
 export function momentsBetween(before: MomentSnapshot, state: GameState): Moment[] {
   const moments: Moment[] = [];
   const player = getPlayer(state);
   if (player.id === before.playerId && (player.acquisitions ?? 0) > before.acquisitions) {
     const gone = Object.keys(before.companies).filter((id) => id !== player.id && !state.companies[id]);
-    let pick: { id: string; buildings: number } | null = null;
+    let pick: { id: string; stake: number; buildings: number } | null = null;
     for (const id of gone) {
       let buildings = 0;
       for (const [buildingId, owner] of Object.entries(before.owners)) {
         if (owner === id && state.buildings[buildingId]?.companyId === player.id) buildings++;
       }
-      if (!pick || buildings > pick.buildings) pick = { id, buildings };
+      const stake = before.stakes[id] ?? 0;
+      if (!pick || stake > pick.stake || (stake === pick.stake && buildings > pick.buildings)) pick = { id, stake, buildings };
     }
     if (pick) {
       const company = before.companies[pick.id]!;

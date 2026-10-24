@@ -6987,6 +6987,25 @@ bandının süresi dolmadan hemen önce (sayfanın içinden ölçülen 4,56. sn)
 ilan ediyor: yarış her koşuda sınanıyor. Eski derlemede bu kontrol düşüyor,
 yenisinde geçiyor.
 
+**Codex'in bulduğu üç şey.**
+- *Kayıt açılınca zafer ekranı 2,4 sn gecikiyordu.* Oyun içinde bekleyen
+  zaferli bir kayıt açılınca ekran canlı zafer gibi bekletiliyordu. Gecikme
+  artık durumun kendisini de biliyor: durum değiştiyse kayıttaki zafer
+  beklemiyor.
+- *Aynı şehrin kaydı aynı sahnede açılınca havai fişek atılıyordu.* Tohum
+  ve boyut aynıysa sahne kalıyor; kayıttaki zafer yeni sanılıyordu. Aynı
+  kök kaydın farkını da an sanıyordu: sahibi kayıtta başka olan binada
+  dalga, kayıtta kalkmış yapıda toz, yeni kimlikli binalarda yükseliş. Sahne
+  artık başka bir durum gelince anların hafızasını siliyor: sonraki senkron
+  ilk senkron gibi.
+- *Aynı gün iki binasız şirket düşünce bant yanlış şirketi söyleyebiliyordu.*
+  Seçim önce oyuncunun en büyük payına bakıyor (devralan çoğunluğu tutuyor),
+  eşitse oyuncuya geçen binalara.
+
+Üçü de düzeltmeden önce kırılan bir kontrolle: arayüz birim testi ve
+tarayıcı testinin "kayıt açılınca" kontrolü (eski derlemede ekran 1,5
+sn'de inmiyor, havai fişek ve halka var).
+
 **Bütçe.**
 - Açılışta derlenen program 18 (17'den; sınır 20). Halka seçim
   işaretinin, havai fişek kar noktalarının, toz duman puflarının
@@ -6994,7 +7013,7 @@ yenisinde geçiyor.
   devralmada, zafer gecesinde yeni program yok.
 - Ana parça 71,9 KB (71,6'dan).
 
-**Doğrulama.** `pnpm test` 753/753 (742'den); tip denetimi temiz.
+**Doğrulama.** `pnpm test` 754/754 (742'den); tip denetimi temiz.
 - `moments.test.ts` (çizim, 6 yeni):
   - dalga uzaklıkla gecikiyor, bir sınırı aşmıyor;
   - havai fişek takvimi tohumlu, süreye sığıyor;
@@ -7002,15 +7021,16 @@ yenisinde geçiyor.
   - kıvılcımlar havada patlayıp sönüyor, takvim bitince duruyor;
   - ilk renk oyuncunun, durdurulunca hiçbir şey çizilmiyor;
   - toz bulutu dokuz puf, dağılıyor, en çok on dört bulut.
-- `moments.test.ts` (arayüz, 5 yeni):
+- `moments.test.ts` (arayüz, 6 yeni):
   - en çok kazandıran üç bina, rakibin binası yok;
   - çok zarar eden kırmızı, küçük zarar gürültü;
   - oyuncunun devralması: ad, renk, dönen binalar; an bir kez;
+  - aynı gün iki binasız şirket düşünce bant oyuncunun payı olanı söylüyor;
   - rakibin devralması oyuncunun anı değil;
   - zafer bir kez, kapatılmış zafer an değil.
 - `settings.test.ts`: eski kayıtta "Şehirde kazanç etiketleri" açık.
 - Denge sınavı: simülasyon aynı, bölüm eklenmedi.
-- Tarayıcı testi "Önemli anlar" 23/23, konsol temiz:
+- Tarayıcı testi "Önemli anlar" 24/24, konsol temiz:
   - inşaat: toz, yükseliş, halka; söndükten sonra takılı kalmıyor;
   - proje açılışı: iskeletin boyundan yükseliş, toz;
   - yıkım tozu;
@@ -7023,6 +7043,8 @@ yenisinde geçiyor.
   - azaltılmış hareket: yükselmeyen bina, dalgasız devralma (bant
     geliyor), beklemeyen zafer ekranı;
   - veri lensi;
+  - aynı şehrin kaydı aynı sahnede açılınca: kayıttaki zafer kutlanmıyor,
+    ekranı beklemeden iniyor; kaydın farkı dalga, toz ya da yükseliş değil;
   - telefonda İngilizce: kasanın farkı üst barı büyütmüyor, bant ekrana
     sığıyor.
 - Eski bölümlerde zafer ekranını bekleyen beş kontrol artık 2,4 sn'lik
@@ -7136,7 +7158,7 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi). Senaryo şehirlerinde gün 3–17 ms (`pnpm dayperf`, Tur 43) |
-| Birim testi | **753 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de, Tur 52'de sunucuda tekrar, Tur 53'te haftanın kuralı ve günün koşusu, Tur 54'te hayalet eğri, Tur 55'te davetli ligler, Tur 56'da taşıma sözleşmeleri, Tur 57'de enerji, Tur 58'de gayrimenkul, Tur 59'da rakiplerin hafızası, Tur 60'ta senaryo paketi II, Tur 61'de şirketin yolu, Tur 62'de hava ve mevsimin görünümü, Tur 63'te önemli anlar) |
+| Birim testi | **754 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de, Tur 52'de sunucuda tekrar, Tur 53'te haftanın kuralı ve günün koşusu, Tur 54'te hayalet eğri, Tur 55'te davetli ligler, Tur 56'da taşıma sözleşmeleri, Tur 57'de enerji, Tur 58'de gayrimenkul, Tur 59'da rakiplerin hafızası, Tur 60'ta senaryo paketi II, Tur 61'de şirketin yolu, Tur 62'de hava ve mevsimin görünümü, Tur 63'te önemli anlar) |
 | Denge testi | **379 kontrol, hepsi geçiyor** (33 bölüm, süreleriyle; ~16 dk) |
 | Tarayıcı testi | **629 kontrol, hepsi geçiyor**, 0 konsol hatası (~41 dk); duman koşusu 132 (~8 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + paket bütçesi (Tur 46; Tur 48'den beri hizmet çalışanı ve manifest de) + duman oynanışı |

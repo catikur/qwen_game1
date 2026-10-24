@@ -285,10 +285,19 @@ export function MomentBanner(): ReactElement | null {
 /**
  * Canlı gelen bir anın ekranı biraz beklesin (zafer: havai fişek önce).
  * Kayıt açılırken zaten orada olan an ve azaltılmış hareket beklemiyor.
+ * `source` durumun kendisi: oyun içinde kayıt açılınca (aynı ekran,
+ * başka durum) kayıttaki an da beklemiyor (Codex #93).
  */
-export function useMomentDelay(key: string | null, ms: number): boolean {
+export function useMomentDelay(key: string | null, ms: number, source: object): boolean {
   const [ready, setReady] = useState<string | null>(key);
+  const seen = useRef(source);
+  const replaced = seen.current !== source;
   useEffect(() => {
+    if (seen.current !== source) {
+      seen.current = source;
+      setReady(key);
+      return;
+    }
     if (!key || key === ready) return;
     if (reducedMotion()) {
       setReady(key);
@@ -296,6 +305,6 @@ export function useMomentDelay(key: string | null, ms: number): boolean {
     }
     const timer = window.setTimeout(() => setReady(key), ms);
     return () => window.clearTimeout(timer);
-  }, [key, ready, ms]);
-  return key !== null && key === ready;
+  }, [key, ready, ms, source]);
+  return key !== null && (key === ready || replaced);
 }

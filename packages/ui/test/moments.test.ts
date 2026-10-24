@@ -63,6 +63,28 @@ describe('büyük anlar', () => {
     assert.deepEqual(momentsBetween(snapshotOf(state), state), [], 'an bir kez');
   });
 
+  test('aynı gün iki şirket düşer, ikisinin de binası yoksa: bant oyuncunun hissesi olanı söylüyor (Codex #93)', () => {
+    const state = grownCity();
+    const player = getPlayer(state);
+    const rivals = Object.values(state.companies).filter((c) => !c.isPlayer);
+    const [first, second] = [rivals[0]!, rivals[1]!];
+    // İkisinin de binası yok; oyuncu ikincinin çoğunluğunu, birincinin küçük bir payını tutuyor.
+    for (const building of Object.values(state.buildings)) {
+      if (building.companyId === first.id || building.companyId === second.id) delete state.buildings[building.id];
+    }
+    player.shares[first.id] = Math.round((first.shareCount ?? 1000) * 0.1);
+    player.shares[second.id] = Math.round((second.shareCount ?? 1000) * 0.6);
+    const before = snapshotOf(state);
+    delete state.companies[first.id];
+    delete state.companies[second.id];
+    delete player.shares[first.id];
+    delete player.shares[second.id];
+    player.acquisitions = (player.acquisitions ?? 0) + 1;
+    const [moment] = momentsBetween(before, state);
+    assert.equal(moment?.kind, 'takeover');
+    assert.equal(moment?.kind === 'takeover' ? moment.companyId : null, second.id);
+  });
+
   test('rakip rakibi yutunca oyuncunun anı yok', () => {
     const state = createNewGame({ seed: 3, companyName: 'An AŞ' });
     const rivals = Object.values(state.companies).filter((c) => !c.isPlayer);

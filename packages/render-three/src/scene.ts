@@ -924,6 +924,9 @@ export class CityRenderer {
   /** State veya görünüm değiştiğinde çağrılır; her karede değil. */
   syncState(state: GameState, view: ViewOptions): void {
     this.stateSyncs++;
+    // Aynı sahnede başka bir durum (aynı şehrin kaydı açıldı ya da içe
+    // aktarıldı): kayıtla bugün arasındaki fark bir an değil (Codex #93).
+    if (this.state && this.state !== state) this.forgetMoments();
     this.state = state;
     this.view = view;
     this.applyLensMode(view.lens);
@@ -1294,6 +1297,27 @@ export class CityRenderer {
       else low = mid;
     }
     out.y = low;
+  }
+
+  /**
+   * Anların hafızasını siler: bir sonraki senkron ilk senkron gibi. Kayıt
+   * açılınca binalar yerden bitmiyor, sahibi kayıtta başka olan binada
+   * dalga, kalkmış yapıda toz yok; kayıtta zaten kazanılmış zafer
+   * kutlanmıyor. Doku yeniden yerleşiyor (kaydın şehri başka olabilir).
+   */
+  private forgetMoments(): void {
+    this.buildStart.clear();
+    this.sawBuildings = false;
+    this.buildingOwners.clear();
+    this.ownerShifts.clear();
+    this.risingIds.clear();
+    this.siteIds.clear();
+    this.growFrom.clear();
+    this.celebrationKey = undefined;
+    this.fabricStructures = [];
+    this.fabricRemoved.length = 0;
+    this.rings.clear();
+    this.fireworks.stop();
   }
 
   /** Anlar çiziliyor mu: azaltılmış harekette hiçbiri (toz, halka, dalga, havai fişek). */

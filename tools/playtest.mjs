@@ -7392,6 +7392,31 @@ async function finish(browser, consoleErrors) {
     const lensMoments = await moments();
     await mp.evaluate(() => window.__capital.setLens('none'));
     check('Veri lensinde halka ve havai fişek katmanı gizli', lensMoments.visible === false, JSON.stringify(lensMoments));
+
+    // Kayıt açılınca (aynı şehir, aynı sahne kalıyor): kayıttaki zafer kutlanmıyor, ekranı beklemeden
+    // iniyor; kayıtla bugün arasındaki fark (sahibi başka bina, kalkmış yapı) bir an değil (Codex #93).
+    await mp.waitForTimeout(400);
+    const restored = await mp.evaluate(async () => {
+      const c = window.__capital;
+      const copy = JSON.parse(JSON.stringify(c.getState()));
+      copy.victory = { day: copy.time.day + 2, kind: 'tycoon', path: 'retail', shares: { retail: 1, realestate: 0, energy: 0, freight: 0 }, acquisitions: 1 };
+      const rival = Object.values(copy.buildings).find((b) => b.companyId !== copy.playerCompanyId);
+      if (rival) rival.companyId = copy.playerCompanyId;
+      const razed = copy.map.tiles.find((t) => t.kind === 'plot' && t.structureId && !t.ownerId);
+      if (razed) razed.structureId = null;
+      const started = performance.now();
+      c.engine.replaceState(copy);
+      let screen = null;
+      while (performance.now() - started < 1500) {
+        await new Promise((resolve) => requestAnimationFrame(resolve));
+        if (screen === null && document.querySelector('.gameover.victory')) screen = Math.round(performance.now() - started);
+      }
+      const m = c.renderInfo().moments;
+      return { screen, fireworks: m.fireworks.active, shifting: m.shifting, rings: m.rings, dust: m.dust, rising: m.rising, rival: Boolean(rival), razed: Boolean(razed) };
+    });
+    check('Kayıt açılınca kayıttaki zafer kutlanmıyor, ekranı beklemeden iniyor; kaydın farkı dalga, toz ya da yükseliş değil',
+      restored.screen !== null && restored.screen < 1000 && !restored.fireworks && restored.shifting === 0 && restored.rings === 0 && restored.dust === 0 && restored.rising === 0 && restored.rival && restored.razed,
+      JSON.stringify(restored));
     check('Önemli anlar akışında konsol temiz', mErrors.length === 0, mErrors.slice(0, 2).join(' | '));
     await mContext.close();
 
