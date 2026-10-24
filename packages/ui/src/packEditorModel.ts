@@ -279,16 +279,26 @@ export function withNewRule(doc: Pack, base: ModifierId, name: string, blurb: st
   return { doc: { ...doc, rules: [...rules, rule].slice(0, PACK_LIMITS.rules) }, id };
 }
 
-/** Kuralın kimliğini değiştirir; onu seçen senaryolar yeni kimliği izliyor. */
-export function withRuleId(doc: Pack, index: number, id: string): Pack {
-  const rule = (doc.rules ?? [])[index];
-  if (!rule) return doc;
-  const old = rule.id;
-  const rules = (doc.rules ?? []).map((entry, i) => (i === index ? { ...entry, id } : entry));
+/**
+ * Kuralın kimliğini değiştirir; onu seçen senaryolar yeni kimliği izliyor.
+ * Yazılırken kimlik bir an başka bir kuralınkiyle (ya da hazır kuralınkiyle)
+ * çakışabiliyor: o an başvurular taşınmıyor, kuralın son tek kimliğinde
+ * (`anchor`) bekliyor; kimlik yeniden tekleşince oradan taşınıyor. Yoksa
+ * çakışılan kuralın başvuruları da bu kurala geçiyordu (Codex #98).
+ * Dönen `pending` bir sonraki yazmanın `anchor`'u (çakışma yoksa null).
+ */
+export function withRuleId(doc: Pack, index: number, id: string, anchor?: string): { doc: Pack; pending: string | null } {
+  const list = doc.rules ?? [];
+  const rule = list[index];
+  if (!rule) return { doc, pending: null };
+  const from = anchor ?? rule.id;
+  const rules = list.map((entry, i) => (i === index ? { ...entry, id } : entry));
+  const taken = list.some((entry, i) => i !== index && entry.id === id) || MODIFIERS.some((modifier) => modifier.id === id);
+  if (taken) return { doc: { ...doc, rules }, pending: from };
   const scenarios = (doc.scenarios ?? []).map((scenario) =>
-    scenario.rules?.includes(old) ? { ...scenario, rules: scenario.rules.map((ref) => (ref === old ? id : ref)) } : scenario,
+    scenario.rules?.includes(from) ? { ...scenario, rules: scenario.rules.map((ref) => (ref === from ? id : ref)) } : scenario,
   );
-  return { ...doc, rules, scenarios };
+  return { doc: { ...doc, rules, scenarios }, pending: null };
 }
 
 /** Kuralı siler; onu kullanan senaryolardan da çıkıyor. */

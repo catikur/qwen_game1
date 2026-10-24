@@ -870,6 +870,8 @@ function PackRules(): ReactElement {
 
 function RuleForm({ rule, index, onRemove }: { rule: PackRule; index: number; onRemove: () => void }): ReactElement {
   const { set, doc } = useEditor();
+  // Kimlik çakışırken başvuruların beklediği son tek kimlik (`withRuleId`).
+  const anchor = useRef<string | null>(null);
   const path: Path = ['rules', index];
   const defaults = MODIFIER_RULES[RULE_KEY[rule.base]] as Record<string, unknown>;
   const schema = RULE_PARAMS[rule.base] ?? {};
@@ -877,7 +879,16 @@ function RuleForm({ rule, index, onRemove }: { rule: PackRule; index: number; on
   return (
     <div className="editor-rule" data-editor-rule={rule.id}>
       <div className="editor-grid">
-        <PlainField path={[...path, 'id']} label={et('hud.editor.field.ruleId')} max={32} onWrite={(id) => set([], withRuleId(doc, index, id))} />
+        <PlainField
+          path={[...path, 'id']}
+          label={et('hud.editor.field.ruleId')}
+          max={32}
+          onWrite={(id) => {
+            const renamed = withRuleId(doc, index, id, anchor.current ?? undefined);
+            anchor.current = renamed.pending;
+            set([], renamed.doc);
+          }}
+        />
         <ChoiceField
           path={[...path, 'base']}
           label={et('hud.editor.field.ruleBase')}

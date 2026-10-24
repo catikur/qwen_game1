@@ -7730,6 +7730,11 @@ kapanırken (`pagehide`) hemen yazıyor.
   telefon (taşma yok, alt şerit ekranda); konsol temiz. "İçerik
   paketleri" 18/18.
 - Paket bütçesi tamam.
+- Codex (#98) bir bulgu: kuralın kimliği yazılırken bir an başka kuralın
+  kimliğinden geçerse (`kural-a` → `kural-b` → `kural-c`) o kimliği seçen
+  bütün senaryo başvuruları düzenlenen kurala geçiyor, öteki kuralın seçimi
+  kayboluyordu. Başvurular artık kimlik tekken taşınıyor; çakışma sürerken
+  kuralın son tek kimliğinde bekliyor (test).
 
 ---
 
