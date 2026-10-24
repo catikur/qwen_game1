@@ -51,6 +51,17 @@ const DATE_OPTIONS = {
   month: { month: 'long', timeZone: 'UTC' },
 } as const satisfies Record<string, Intl.DateTimeFormatOptions>;
 
+/**
+ * Geçersiz gün eskisi gibi "Invalid Date" (Codex #95): `toLocaleDateString`
+ * öyle dönüyordu, `Intl.DateTimeFormat.format` ise fırlatıyor. Elle
+ * düzenlenmiş bir kayıtta `time.day: 1e400` (JSON'da Infinity) doğrulamadan
+ * geçiyor; üst bar ilk çizimde oyunu çökertirdi.
+ */
+function formatDay(kind: keyof typeof DATE_OPTIONS, day: number): string {
+  const date = new Date(EPOCH + day * 86_400_000);
+  return Number.isNaN(date.getTime()) ? 'Invalid Date' : dateFormat(kind).format(date);
+}
+
 function dateFormat(kind: keyof typeof DATE_OPTIONS): Intl.DateTimeFormat {
   const locale = numberLocale();
   const key = `${kind}:${locale}`;
@@ -65,7 +76,7 @@ function dateFormat(kind: keyof typeof DATE_OPTIONS): Intl.DateTimeFormat {
 export function formatDate(day: number): string {
   // Takvim UTC'de: batı saat dilimlerinde tarih bir gün geride görünüyordu
   // ve ay başında dönen görev panosu (Tur 37c) çubuktaki aydan önce dönerdi.
-  return dateFormat('date').format(new Date(EPOCH + day * 86_400_000));
+  return formatDay('date', day);
 }
 
 /** Oyun gününün takvim ayı (0 = Ocak), UTC. */
@@ -86,7 +97,7 @@ export function nextMonthStart(day: number): number {
 
 /** Oyun gününün ay adı (etkin dilde, "Mart"). */
 export function monthName(day: number): string {
-  return dateFormat('month').format(new Date(EPOCH + day * 86_400_000));
+  return formatDay('month', day);
 }
 
 /** Haritada gösterilebilecek veri lensleri. */

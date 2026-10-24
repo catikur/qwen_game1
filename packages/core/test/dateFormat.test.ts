@@ -25,6 +25,14 @@ describe('takvimin yazısı', () => {
     setLocale('tr');
   });
 
+  test('geçersiz gün eskisi gibi "Invalid Date", fırlatmıyor (Codex #95)', () => {
+    // Elle düzenlenmiş kayıtta `time.day: 1e400` (JSON'da Infinity) doğrulamadan geçiyor; üst bar ilk çizimde yazıyor.
+    for (const day of [Infinity, -Infinity, Number.NaN, 1e20]) {
+      assert.equal(formatDate(day), reference(day, 'tr-TR', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' }), String(day));
+      assert.equal(monthName(day), reference(day, 'tr-TR', { month: 'long', timeZone: 'UTC' }), String(day));
+    }
+  });
+
   test('biçimleyici her çağrıda yeniden kurulmuyor: eskisinden çok daha hızlı', () => {
     // Göreli ölçüm, geniş payla: her çağrıda biçimleyici kurmak V8'de onlarca kat yavaş.
     const options = { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' } as const;
