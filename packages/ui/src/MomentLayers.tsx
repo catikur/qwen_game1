@@ -200,7 +200,8 @@ export function CashDelta({ value, source }: { value: number; source: GameState 
 
   useEffect(() => {
     if (!delta) return;
-    const timer = window.setTimeout(() => setDelta(null), CASH_DELTA_MS);
+    const at = delta.at;
+    const timer = window.setTimeout(() => setDelta((current) => (current?.at === at ? null : current)), CASH_DELTA_MS);
     return () => window.clearTimeout(timer);
   }, [delta]);
 
@@ -240,9 +241,16 @@ export function MomentBanner(): ReactElement | null {
     if (latest) setShown((current) => ({ id: (current?.id ?? 0) + 1, moment: latest }));
   });
 
+  // Zamanlayıcı yalnız kendi bandını kaldırıyor: devralma bandının süresi
+  // dolarken zafer gelirse, eski zamanlayıcı temizlenmeden tetiklenip zafer
+  // bandını silmesin (yavaş karede bu pencere yüzlerce ms).
   useEffect(() => {
     if (!shown) return;
-    const timer = window.setTimeout(() => setShown(null), shown.moment.kind === 'victory' ? VICTORY_BANNER_MS : TAKEOVER_BANNER_MS);
+    const id = shown.id;
+    const timer = window.setTimeout(
+      () => setShown((current) => (current?.id === id ? null : current)),
+      shown.moment.kind === 'victory' ? VICTORY_BANNER_MS : TAKEOVER_BANNER_MS,
+    );
     return () => window.clearTimeout(timer);
   }, [shown]);
 

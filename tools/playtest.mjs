@@ -7268,6 +7268,15 @@ async function finish(browser, consoleErrors) {
       c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
       return { name: target.name, ids };
     });
+    // Bandın geldiği an sayfanın içinden: zafer, bu bandın süresi dolmak üzereyken ilan edilecek.
+    await mp.evaluate(() => {
+      window.__takeoverBannerAt = null;
+      const watch = () => {
+        if (document.querySelector('.moment-banner[data-moment="takeover"]')) window.__takeoverBannerAt = performance.now();
+        else requestAnimationFrame(watch);
+      };
+      requestAnimationFrame(watch);
+    });
     const taken = await absorb();
     await mp.waitForTimeout(200);
     const wave = await moments();
@@ -7281,11 +7290,6 @@ async function finish(browser, consoleErrors) {
       taken !== null && wave.shifting >= 1 && wave.rings >= Math.min(taken.ids.length, 24) - 1, `${taken?.ids.length} bina · ${JSON.stringify(wave)}`);
     check('Devralma bandı: "… artık senin", kaç binanın döndüğü', banner !== null && banner.text.includes(`${taken?.name} artık senin`) && banner.text.includes(`${taken?.ids.length} bina`) && banner.role === 'status',
       banner?.text ?? 'bant yok');
-    await settle(() => window.__capital.renderInfo().moments.shifting === 0, 6000);
-    const accents = await mp.evaluate((ids) => ids.map((id) => window.__capital.buildingAccent(id)), [...(taken?.ids ?? []), owned[0]]);
-    const playerAccent = accents.at(-1)?.target;
-    check('Dalga bitince devralınan her bina oyuncunun renginde', accents.length > 1 && accents.every((a) => a && a.target === playerAccent && a.drawn === playerAccent),
-      `${playerAccent} · ${[...new Set(accents.map((a) => a?.drawn))].join(', ')}`);
 
     // Zafer: havai fişek ve bant önce, zafer ekranı sonra.
     await mp.evaluate(() => {
@@ -7297,10 +7301,16 @@ async function finish(browser, consoleErrors) {
     await mp.waitForTimeout(400);
     // Zafer ilan ediliyor; bandın ve ekranın ne zaman geldiği sayfanın içinden ölçülüyor
     // (yavaş makinede test adımlarının kendisi yüzlerce ms sürüyor).
-    const declare = (kind, dayShift) => mp.evaluate(({ kind, dayShift }) => {
+    //
+    // İlk zafer devralma bandının süresi (4,6 sn) dolmadan hemen önce geliyor:
+    // eski bandın zamanlayıcısı zafer bandını silmemeli (tam koşu bunu
+    // yakaladı). Adımlar o ana yetişemediyse zafer hemen ilan ediliyor.
+    const declare = (kind, dayShift, raceTakeover = false) => mp.evaluate(async ({ kind, dayShift, raceTakeover }) => {
       const c = window.__capital;
       const s = c.getState();
-      const trace = { set: performance.now(), banner: null, bannerText: '', screen: null };
+      const due = raceTakeover && window.__takeoverBannerAt !== null ? window.__takeoverBannerAt + 4560 - performance.now() : -1;
+      if (due > 0) await new Promise((resolve) => setTimeout(resolve, due));
+      const trace = { set: performance.now(), banner: null, bannerText: '', screen: null, raced: due > 0 };
       window.__momentTrace = trace;
       const watch = () => {
         const now = performance.now();
@@ -7315,23 +7325,29 @@ async function finish(browser, consoleErrors) {
       s.victory = { day: s.time.day + dayShift, kind, path: 'retail', shares: { retail: 1, realestate: 0, energy: 0, freight: 0 }, acquisitions: 1 };
       c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
       requestAnimationFrame(watch);
-    }, { kind, dayShift });
+    }, { kind, dayShift, raceTakeover });
     const trace = () => mp.evaluate(() => window.__momentTrace);
-    await declare('tycoon', 0);
+    await declare('tycoon', 0, true);
     await mp.waitForTimeout(900);
     await mp.screenshot({ path: `${OUT}/moment-victory.png` });
     const party = await mp.evaluate(() => {
       const m = window.__capital.renderInfo().moments;
       return { fireworks: m.fireworks, bursts: m.fireworkScreen, trace: window.__momentTrace };
     });
-    check('Zafer: şehrin üstünde havai fişek, hemen zafer bandı',
-      party.fireworks.active && party.fireworks.shells >= 1 && party.fireworks.height > 0 && party.trace.banner !== null && party.trace.banner < 800 && party.trace.bannerText.includes('Şehrin sahibi'),
+    check('Zafer: şehrin üstünde havai fişek, hemen zafer bandı (devralma bandı tam o an kalkarken bile)',
+      party.trace.raced && party.fireworks.active && party.fireworks.shells >= 1 && party.fireworks.height > 0 && party.trace.banner !== null && party.trace.banner < 800 && party.trace.bannerText.includes('Şehrin sahibi'),
       JSON.stringify({ ...party, bursts: undefined }));
     check('Patlamalar ekranın içinde, üst üçte ikide', party.bursts.length >= 1 && party.bursts.every((b) => b.visible && b.y < 860 * 0.66),
       JSON.stringify(party.bursts));
     await settle(() => window.__momentTrace.screen !== null, 8000);
     const landed = (await trace()).screen;
     check('Zafer ekranı havai fişeklerden sonra iniyor (~2,4 sn)', landed !== null && landed >= 2200 && landed < 4500, `${landed} ms`);
+    // Dalga zafer gelmeden çoktan bitti: devralınan her çatı oyuncunun renginde.
+    await settle(() => window.__capital.renderInfo().moments.shifting === 0, 6000);
+    const accents = await mp.evaluate((ids) => ids.map((id) => window.__capital.buildingAccent(id)), [...(taken?.ids ?? []), owned[0]]);
+    const playerAccent = accents.at(-1)?.target;
+    check('Dalga bitince devralınan her bina oyuncunun renginde', accents.length > 1 && accents.every((a) => a && a.target === playerAccent && a.drawn === playerAccent),
+      `${playerAccent} · ${[...new Set(accents.map((a) => a?.drawn))].join(', ')}`);
     const programsAfter = await mp.evaluate(() => window.__capital.renderInfo().programs);
     check('Halka ve havai fişek açılışta derlenmiş: anlarda yeni program yok', programsAfter === programsBefore, `${programsBefore} → ${programsAfter}`);
     await mp.locator('.gameover.victory .gameover-actions button.primary').click();

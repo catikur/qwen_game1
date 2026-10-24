@@ -6976,6 +6976,17 @@ yükselmeden yerinde beliriyor (eskiden bu ayara bakmıyordu); kazanç
 etiketi yok, kasa saymadan değişiyor. Bant ve kasanın farkı kalıyor:
 bilgi taşıyorlar, hareket değil.
 
+**Tam tarayıcı koşusunun bulduğu şey.** Zafer bandı bazen hiç
+görünmüyordu (651 kontrolün biri). Devralma bandı 4,6 sn sonra kendini
+siliyordu; zafer tam o sırada gelirse eski zamanlayıcı, temizlenmeden
+önce tetikleniyor ve yeni bandı da siliyordu. Yazılımsal GPU'da bir kare
+yüzlerce ms sürdüğü için bu pencere genişti; testte zafer devralmadan
+4–5 sn sonra ilan ediliyordu. Zamanlayıcı artık yalnız kendi bandını
+kaldırıyor; kasanın fark rozetinde de aynı. Test zaferi artık devralma
+bandının süresi dolmadan hemen önce (sayfanın içinden ölçülen 4,56. sn)
+ilan ediyor: yarış her koşuda sınanıyor. Eski derlemede bu kontrol düşüyor,
+yenisinde geçiyor.
+
 **Bütçe.**
 - Açılışta derlenen program 18 (17'den; sınır 20). Halka seçim
   işaretinin, havai fişek kar noktalarının, toz duman puflarının
@@ -7007,8 +7018,8 @@ bilgi taşıyorlar, hareket değil.
     içinde; kasanın farkı ve sayımı; ayar kapalıyken etiket yok;
   - devralma: dalga, halkalar, bant, dalga bitince her çatı oyuncunun
     renginde;
-  - zafer: havai fişek ekranın içinde, bant hemen, ekran ~2,4 sn sonra;
-    anlarda yeni program yok;
+  - zafer: havai fişek ekranın içinde, bant hemen (devralma bandı tam o
+    an kalkarken bile), ekran ~2,4 sn sonra; anlarda yeni program yok;
   - azaltılmış hareket: yükselmeyen bina, dalgasız devralma (bant
     geliyor), beklemeyen zafer ekranı;
   - veri lensi;
