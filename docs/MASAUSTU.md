@@ -90,10 +90,22 @@ tamamen ücretsiz.
 
 **Kullanıcının hesabında yapılacaklar** (Tur 70'ten önce):
 
-- Steamworks iş ortağı hesabı (yayıncı Conforcus) ve Steam Direct ücreti
-  (oyun başına 100 $, ücretsiz oyunda da). Uygulama kimliği (App ID) buradan.
-- macOS için Apple Developer hesabı (yıllık 99 $): imza ve noter onayı
-  olmadan Gatekeeper oyunu açtırmıyor.
+- **Steamworks** (partner.steamgames.com): Conforcus adına iş ortağı hesabı;
+  şirket bilgileri, vergi formu (ABD dışı şirket: W-8BEN-E), banka ve kimlik
+  doğrulaması. Steam Direct ücreti oyun başına 100 $ (ücretsiz oyunda da).
+  Uygulama kimliği (App ID) buradan; mağaza sayfasının onaya gönderilmesi ve
+  yayın tarihi de.
+- **Steam'e yükleme** (SteamPipe) iki yoldan biriyle: paketi CI hazırlar,
+  kullanıcı SteamPipe ile yükler; ya da yalnız yükleme izni olan ayrı bir
+  Steam hesabı açılır, bilgileri depoya sır olarak girer, yüklemeyi CI yapar.
+- **macOS: Apple Developer Program** (yıllık 99 $; şirket adına D-U-N-S
+  numarası gerekiyor): imza ve noter onayı olmadan Gatekeeper oyunu
+  açtırmıyor. "Developer ID Application" sertifikası `.p12` olarak, noter
+  onayı için uygulamaya özel parola (appleid.apple.com) ve Team ID. Depoya
+  sır olarak (Tauri bunları doğrudan okuyor): `APPLE_CERTIFICATE` (`.p12`'nin
+  base64'ü), `APPLE_CERTIFICATE_PASSWORD`, `APPLE_SIGNING_IDENTITY`
+  (`Developer ID Application: … (TEAMID)`), `APPLE_ID`, `APPLE_PASSWORD`,
+  `APPLE_TEAM_ID`. Sırlar gelince paket iş akışı imzalayıp onaylatıyor.
 - Windows imzası isteğe bağlı (SmartScreen uyarısı Steam'den kurulan
   oyunda çıkmıyor).
 
