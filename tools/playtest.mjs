@@ -958,7 +958,10 @@ async function finish(browser, consoleErrors) {
   // Ses manzarası: dokunuşlardan sonra bağlam açık, olaylar tetikleniyor,
   // sessize alma çalışıyor ve hatırlanıyor.
   await page.evaluate(() => window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 1 }));
-  await page.waitForTimeout(1200);
+  // Ses katmanları yarım saniyede bir şehirden okunuyor; yavaş makinede
+  // (saniyede ~2 kare) 1,2 sn'lik sabit bekleme o güncellemeyi kaçırıyordu.
+  // Güncellemenin kendisi bekleniyor.
+  await page.waitForFunction(() => (window.__capital.audio?.()?.levels.traffic ?? 0) > 0, null, { timeout: 15000 }).catch(() => {});
   const sound = await page.evaluate(() => window.__capital.audio?.() ?? null);
   await page.evaluate(() => window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 }));
   check('Ses manzarası ilk dokunuştan sonra başlıyor', sound !== null && sound.context !== 'none',
@@ -5874,8 +5877,9 @@ async function finish(browser, consoleErrors) {
       window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
     });
 
-    // Katmanlar sönene dek (yavaş makinede 2,5 sn'den uzun sürebiliyor).
-    const paused = await until((m) => m.layers.pad > 0.3 && m.layers.bass > 0.3 && m.layers.arp < 0.02 && m.layers.lead < 0.02 && m.layers.pulse < 0.02, 8000);
+    // Katmanlar sönene dek (yavaş makinede 2,5 sn'den uzun sürebiliyor; yük
+    // altında kalp atışı 8 sn'de %2,7'deydi, Tur 66'nın tam koşusu).
+    const paused = await until((m) => m.layers.pad > 0.3 && m.layers.bass > 0.3 && m.layers.arp < 0.02 && m.layers.lead < 0.02 && m.layers.pulse < 0.02, 20000);
     check('Duraklayınca yalnız pad ve bas kalıyor', paused.ok, paused.last ? JSON.stringify(paused.last.layers) : 'müzik yok');
 
     await mp.locator('.speeds [data-panel="settings"]').click();
@@ -7589,8 +7593,16 @@ async function finish(browser, consoleErrors) {
       const syncsBefore = c.renderInfo().stateSyncs;
       const copy = JSON.parse(JSON.stringify(c.getState()));
       copy.victory = { day: copy.time.day + 2, kind: 'tycoon', path: 'retail', shares: { retail: 1, realestate: 0, energy: 0, freight: 0 }, acquisitions: 1 };
-      const rival = Object.values(copy.buildings).find((b) => b.companyId !== copy.playerCompanyId);
+      let rival = Object.values(copy.buildings).find((b) => b.companyId !== copy.playerCompanyId);
       if (rival) rival.companyId = copy.playerCompanyId;
+      else {
+        // Bu ana kadar rakiplerin bütün binaları devralınmış olabiliyor (Tur 66'nın tam
+        // koşusu): sahibi değişen bina ters yönde kuruluyor, fark aynı.
+        const other = Object.keys(copy.companies).find((id) => id !== copy.playerCompanyId);
+        rival = Object.values(copy.buildings).find((b) => b.companyId === copy.playerCompanyId);
+        if (rival && other) rival.companyId = other;
+        else rival = undefined;
+      }
       const razed = copy.map.tiles.find((t) => t.kind === 'plot' && t.structureId && !t.ownerId);
       if (razed) razed.structureId = null;
       // Ekranın geldiği an DOM değişikliğinden (kareye bağlı değil); 1,5 sn ve en az iki kare beklenip anlara bakılıyor.

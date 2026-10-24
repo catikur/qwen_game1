@@ -67,14 +67,17 @@ export function shortCode(): string {
 }
 
 /**
- * Tarayıcıdan gelen istekler (web sürümü, Android kabuğu): yalnızca oyunun
- * kendi adresleri. iOS uygulaması tarayıcı değil, Origin göndermiyor.
+ * Tarayıcıdan gelen istekler (web sürümü, Android kabuğu, masaüstü sürümü):
+ * yalnızca oyunun kendi adresleri. iOS uygulaması tarayıcı değil, Origin
+ * göndermiyor.
  */
 export function allowedOrigin(origin: string | null): string | null {
   if (!origin) return null;
   if (origin === 'https://catikur.github.io') return origin;
   // Android kabuğu (Capacitor) ve yerel geliştirme.
   if (/^(https?|capacitor):\/\/localhost(:\d+)?$/.test(origin) || /^http:\/\/127\.0\.0\.1(:\d+)?$/.test(origin)) return origin;
+  // Masaüstü sürümü (Tauri, Tur 66): macOS ve Linux'ta `tauri://localhost`, Windows'ta `http(s)://tauri.localhost`.
+  if (origin === 'tauri://localhost' || /^https?:\/\/tauri\.localhost$/.test(origin)) return origin;
   return null;
 }
 

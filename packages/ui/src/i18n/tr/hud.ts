@@ -418,6 +418,7 @@ export const hud = {
   'hud.card.share': 'Paylaş',
   'hud.card.close': 'Kapat',
   'hud.card.saved': 'Kart kaydedildi.',
+  'hud.card.downloads': 'Kart İndirilenler klasörüne kaydedildi.',
   'hud.card.started': 'Kart indiriliyor.',
   'hud.card.declined': 'Kart kaydedilmedi.',
   'hud.card.blocked': 'İndirme engellendi: görsele uzun basıp ya da sağ tıklayıp kaydedebilirsin.',

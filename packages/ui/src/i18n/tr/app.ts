@@ -11,6 +11,7 @@ export const app = {
   'app.load.migrated': 'Yüklendi (v{version} → güncel şema).',
   'app.load.loaded': 'Oyun yüklendi.',
   'app.export.saved': 'Kayıt dosyası kaydedildi.',
+  'app.export.downloads': 'Kayıt dosyası İndirilenler klasörüne kaydedildi.',
   'app.export.started': 'İndirme başlatıldı.',
   'app.export.copied': 'Bu görünümde indirme yok — kayıt panoya kopyalandı. Bir metin dosyasına yapıştırıp sakla.',
   'app.export.declined': 'Kaydetme iptal edildi.',

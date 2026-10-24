@@ -49,7 +49,7 @@ export interface ToastMessage {
  * Dışa aktarmanın gerçekte ne olduğu. Arayüz oyuncuya bunun dışında bir
  * şey söylemez: "indirildi" yalnızca `saved` iken doğru bir cümle.
  */
-export type ExportOutcome = 'saved' | 'started' | 'copied' | 'declined' | 'blocked';
+export type ExportOutcome = 'saved' | 'downloads' | 'started' | 'copied' | 'declined' | 'blocked';
 
 export interface GameContextValue {
   engine: GameEngine;

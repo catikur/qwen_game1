@@ -35,6 +35,11 @@ export function setBeforeUpdate(save: () => Promise<unknown>): () => void {
   };
 }
 
+/** Masaüstü penceresi kapanırken de aynı kayıt (Tur 66); oyun ekranı açık değilse bir şey yok. */
+export async function saveBeforeLeaving(): Promise<void> {
+  await beforeUpdate?.();
+}
+
 /** "Yenile": kaydet, bekleyen sürüme geçmesini söyle; devralınca sayfa yenileniyor. */
 export async function applyUpdate(): Promise<void> {
   const registration = await navigator.serviceWorker.getRegistration();
