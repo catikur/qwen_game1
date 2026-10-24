@@ -1,8 +1,15 @@
 import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  GOAL_KINDS,
+  GOAL_PLACEHOLDERS,
+  GOAL_RANGES,
+  PACK_CHOICES,
   PACK_CODE_PREFIX,
   PACK_FORMAT,
+  RULE_PARAMS,
+  SCENARIO_RANGES,
+  SETUP_RANGES,
   PACK_VERSION,
   PackCodeError,
   SCENARIOS,
@@ -13,17 +20,20 @@ import {
   packScenarioId,
   registerMessages,
   registerPack,
+  scenarioFromPack,
   setLocale,
+  starMetric,
   unregisterPack,
   validatePack,
 } from '@capital/content';
-import type { Pack, PackScenario, ScenarioDef } from '@capital/content';
+import type { NumberRange, Pack, PackScenario, ScenarioDef } from '@capital/content';
 import { exportToJson, importFromJson } from '../../persistence/src/index';
 // Belgedeki örnek paket: test onu her koşuda doğruluyor (paketleyici JSON'u gömüyor).
 import samplePack from '../../../docs/ornek-paket.json';
 import { GameEngine } from '../src/engine';
 import { createScenarioGame } from '../src/scenario';
 import { scenarioDefOf, scenarioProgress } from '../src/systems/scenario';
+import { scenarioGoalText } from '../src/systems/scenarioText';
 import { tilePrice } from '../src/systems/city';
 import { ruleValues } from '../src/systems/rules';
 
@@ -264,6 +274,130 @@ async function rawCode(text: string): Promise<string> {
   for (const byte of bytes) binary += String.fromCharCode(byte);
   return PACK_CODE_PREFIX + btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
+
+describe('sınır tabloları (Tur 68: doğrulayıcı ve editör aynı kaynaktan)', () => {
+  /** Alanı değiştirip o yolda sorun var mı: tablodaki uçlar geçiyor, hemen dışı "range". */
+  function edges(label: string, base: () => Record<string, any>, at: string, write: (doc: Record<string, any>, value: number) => void, range: NumberRange): void {
+    const step = range.integer ? 1 : Math.max(1e-6, (range.max - range.min) / 1000);
+    for (const [value, code] of [[range.min, null], [range.max, null], [range.min - step, 'range'], [range.max + step, 'range']] as const) {
+      const doc = base();
+      write(doc, value);
+      const result = validatePack(doc);
+      const here = result.ok ? [] : result.issues.filter((issue) => issue.path === at);
+      if (code === null) assert.deepEqual(here, [], `${label} = ${value}`);
+      else assert.ok(here.some((issue) => issue.code === code), `${label} = ${value}: ${JSON.stringify(here)}`);
+    }
+  }
+  const doc = (scenario: PackScenario, extra: Partial<Pack> = {}) => () => JSON.parse(JSON.stringify(pack([scenario], extra))) as Record<string, any>;
+
+  test('senaryonun şehri ve süresi', () => {
+    for (const [key, range] of Object.entries(SCENARIO_RANGES)) {
+      // Süre yıldız eşiğinin üst sınırı: en kısa süreye eşikler de sığsın.
+      const scenario = { ...rescue(), stars: { metric: 'days' as const, two: 20, three: 10 } };
+      edges(key, doc(scenario), `scenarios[0].${key}`, (d, v) => (d.scenarios[0][key] = v), range);
+    }
+  });
+
+  test('her hedef türünün alanları; ölçü hedefe göre', () => {
+    for (const kind of GOAL_KINDS) {
+      const builtin = SCENARIOS.find((def) => def.goal.kind === kind)!;
+      assert.ok(builtin, kind);
+      const scenario = asPackScenario(builtin, 'hedef');
+      assert.equal(starMetric(kind), builtin.stars.metric, `${kind}: hazır senaryonun yıldız ölçüsü`);
+      for (const [key, range] of Object.entries(GOAL_RANGES[kind])) {
+        edges(`${kind}.${key}`, doc(scenario), `scenarios[0].goal.${key}`, (d, v) => (d.scenarios[0].goal[key] = v), range);
+      }
+    }
+  });
+
+  test('devrin alanları, iç içe parçalar dahil', () => {
+    const nested: Record<string, Record<string, unknown>> = {
+      loan: { amount: 1_000_000, termDays: 360 },
+      crisis: { id: PACK_CHOICES.crises[0], warningDays: 20 },
+      consortium: { warningDays: 30 },
+      projects: { firstInDays: 30, gapDays: 120 },
+      secondCity: { capital: 2_000_000, citySize: 'standard' },
+    };
+    for (const [key, spec] of Object.entries(SETUP_RANGES)) {
+      if ('min' in spec) {
+        edges(`setup.${key}`, doc(rescue()), `scenarios[0].setup.${key}`, (d, v) => (d.scenarios[0].setup[key] = v), spec as NumberRange);
+        continue;
+      }
+      for (const [field, range] of Object.entries(spec as Record<string, NumberRange>)) {
+        edges(`setup.${key}.${field}`, doc(rescue()), `scenarios[0].setup.${key}.${field}`, (d, v) => (d.scenarios[0].setup[key] = { ...nested[key], [field]: v }), range);
+      }
+    }
+  });
+
+  test('kuralların sayı ayarları', () => {
+    for (const [base, schema] of Object.entries(RULE_PARAMS)) {
+      for (const [key, spec] of Object.entries(schema)) {
+        if (typeof spec !== 'object') continue;
+        const rules = [{ id: 'ayar', base, name: 'Ayar', blurb: 'Ayar', params: {} as Record<string, number> }];
+        edges(`${base}.${key}`, doc({ ...rescue(), rules: ['ayar'] }, { rules: rules as Pack['rules'] }), `rules[0].params.${key}`, (d, v) => (d.rules[0].params[key] = v), spec);
+      }
+    }
+  });
+
+  test('hedef cümlesinin yer tutucuları: tablodakiler oyunda doluyor, başkası sorun', () => {
+    for (const kind of GOAL_KINDS) {
+      const builtin = SCENARIOS.find((def) => def.goal.kind === kind)!;
+      const all = GOAL_PLACEHOLDERS[kind].map((name) => `{${name}}`).join(' ');
+      const filled = scenarioGoalText({ ...builtin, goalText: all } as ScenarioDef);
+      assert.ok(!/[{}]/.test(filled), `${kind}: ${filled}`);
+      for (const name of GOAL_PLACEHOLDERS[kind]) assert.notEqual(filled.split(' ')[GOAL_PLACEHOLDERS[kind].indexOf(name)], '', `${kind}.${name} boş`);
+    }
+    const doc = JSON.parse(JSON.stringify(pack([{ ...rescue(), goal: { kind: 'leadAtEnd' }, stars: { metric: 'lead', two: 1.2, three: 1.5 }, goalText: { tr: '{days} günde {target}', en: 'In {days} days' } }])));
+    const result = validatePack(doc);
+    assert.ok(!result.ok);
+    if (!result.ok) assert.deepEqual(result.issues, [{ path: 'scenarios[0].goalText.tr', code: 'placeholder', params: { value: '{target}' } }]);
+    const plural = validatePack(JSON.parse(JSON.stringify(pack([{ ...rescue(), goalText: '{days|# günde|# günde} {target}' }]))));
+    assert.ok(plural.ok, 'tekil/çoğul biçimi de yer tutucu');
+  });
+
+  test('seçenek listeleri hazır senaryoların kullandıklarını kapsıyor, miras ad yok', () => {
+    for (const def of SCENARIOS) {
+      for (const id of def.setup.outlets ?? []) assert.ok(PACK_CHOICES.outlets.includes(id), `${def.id}: ${id}`);
+      for (const id of def.setup.idle?.defIds ?? []) assert.ok(PACK_CHOICES.idle.includes(id), `${def.id}: ${id}`);
+      if (def.setup.crisis) assert.ok(PACK_CHOICES.crises.includes(def.setup.crisis.id), def.id);
+      if (def.goal.kind === 'chain') assert.ok(PACK_CHOICES.chainGoods.includes(def.goal.goodId), def.id);
+    }
+    for (const list of Object.values(PACK_CHOICES)) {
+      assert.ok(list.length > 0);
+      assert.ok(!(list as readonly string[]).includes('toString'));
+    }
+  });
+});
+
+describe('taslaktan koşu (Tur 68, editörün "dene"si)', () => {
+  test('tanımla başlayan koşu o tanımla: yüklü başka sürüm araya girmiyor; tekrar oyna da', () => {
+    registerPack(pack([rescue()], { id: 'taslak' }));
+    const id = packScenarioId('taslak', 'kurtarma');
+    // Editördeki taslak: aynı kimlik, kısa süre (kaydedilmedi).
+    const draft = pack([{ ...rescue(), days: 120, stars: { metric: 'days', two: 100, three: 80 } }], { id: 'taslak' });
+    const def = scenarioFromPack(draft, draft.scenarios[0]!);
+    const state = createScenarioGame(def);
+    assert.equal(state.scenario?.id, id);
+    assert.equal(state.scenario!.endDay - state.scenario!.startDay, 120);
+    assert.equal(state.scenario?.pack?.scenarios[0]?.days, 120, 'kayıtta taslağın kendisi');
+    assert.equal(scenarioDefOf(state)?.days, 120, 'hedef paneli ve günlük değerlendirme taslakla');
+    assert.equal(SCENARIO_BY_ID[id]?.days, SCENARIO_BY_ID['rescue']!.days, 'raftaki sürüm değişmedi');
+    // "Tekrar oyna" koşunun tanımını veriyor: yine taslak.
+    const replay = createScenarioGame(scenarioDefOf(state)!);
+    assert.equal(replay.scenario!.endDay - replay.scenario!.startDay, 120);
+    // Kimlikle başlayan koşu raftakiyle.
+    const shelf = createScenarioGame(id);
+    assert.equal(shelf.scenario!.endDay - shelf.scenario!.startDay, SCENARIO_BY_ID['rescue']!.days);
+    unregisterPack('taslak');
+  });
+
+  test('hazır senaryo tanımla da kimlikle aynı koşu', () => {
+    const byDef = createScenarioGame(SCENARIO_BY_ID['rescue']!);
+    const byId = createScenarioGame('rescue');
+    assert.deepEqual(byDef.companies, byId.companies);
+    assert.deepEqual(byDef.scenario, byId.scenario);
+  });
+});
 
 describe('paylaşım kodu', () => {
   test('kod paketi aynen geri getiriyor; boşluk ve satır sonu sorun değil', async () => {

@@ -1,4 +1,4 @@
-import { BUILDING_BY_ID, CRISIS_BY_ID, getCeoModifiers, hasModifier, scenarioDefById } from '@capital/content';
+import { BUILDING_BY_ID, CRISIS_BY_ID, bindScenarioDef, getCeoModifiers, hasModifier, scenarioDefById } from '@capital/content';
 import type { ScenarioDef, ScenarioSetup } from '@capital/content';
 import { build, buyTile, purchaseBlocker, zoningBlocker } from './actions';
 import { GameEngine } from './engine';
@@ -50,10 +50,17 @@ export interface ScenarioBuilder {
   finish(): GameState;
 }
 
-export function startScenario(id: string, options: ScenarioOptions = {}): ScenarioBuilder {
+/**
+ * Senaryo kimlikle (hazır ya da yüklü) ya da tanımın kendisiyle: editörün
+ * "dene"si (Tur 68) ve "tekrar oyna" koşunun kendi tanımını veriyor; yüklü
+ * başka bir sürüm araya girmiyor.
+ */
+export function startScenario(scenario: string | ScenarioDef, options: ScenarioOptions = {}): ScenarioBuilder {
   // Paketi kaldırılmış süren koşunun "tekrar oyna"sı kayıttaki sürümle (Tur 67).
-  const def = scenarioDefById(id);
-  if (!def) throw new Error(`unknown scenario: ${id}`);
+  const def = typeof scenario === 'string' ? scenarioDefById(scenario) : scenario;
+  if (!def) throw new Error(`unknown scenario: ${String(scenario)}`);
+  // Paketten gelen tanım koşuya bağlı: kayıt defterindeki aynı kimlikli sürüm onun yerine geçmiyor.
+  if (def.source) bindScenarioDef(def.source.doc, def);
   // Ek kurallar (Tur 60) ön tarihle birlikte: şehir onlarla büyüdü.
   const state = createNewGame({
     seed: def.seed,
@@ -91,8 +98,8 @@ export function startScenario(id: string, options: ScenarioOptions = {}): Scenar
 }
 
 /** Ön tarih ve devir tek seferde. */
-export function createScenarioGame(id: string, options: ScenarioOptions = {}): GameState {
-  return startScenario(id, options).finish();
+export function createScenarioGame(scenario: string | ScenarioDef, options: ScenarioOptions = {}): GameState {
+  return startScenario(scenario, options).finish();
 }
 
 /**

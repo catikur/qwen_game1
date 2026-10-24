@@ -1,15 +1,15 @@
 import { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import type { ReactElement, ReactNode } from 'react';
-import { CEOS, CITY_SIZES, DEFAULT_CEO_ID, DEFAULT_CITY_SIZE, DEFAULT_DIFFICULTY, DIFFICULTIES, MODIFIERS, MODIFIER_BY_ID, SCENARIOS, SCENARIO_BY_ID, formatDecimal, getCitySize, getDifficulty, modifierMultiplier, normalizeModifiers, numberLocale, ruleBlurb, ruleName } from '@capital/content';
+import { CEOS, CITY_SIZES, DEFAULT_CEO_ID, DEFAULT_CITY_SIZE, DEFAULT_DIFFICULTY, DIFFICULTIES, MODIFIERS, MODIFIER_BY_ID, SCENARIOS, SCENARIO_BY_ID, formatDecimal, modifierMultiplier, normalizeModifiers, numberLocale } from '@capital/content';
 import type { CitySizeId, DifficultyId, ModifierId, ScenarioDef } from '@capital/content';
-import { LEAGUE_DAILY_DAYS, formatMoney, leagueDayId, leagueRule, leagueWeekId, scenarioGoalText } from '@capital/core';
+import { LEAGUE_DAILY_DAYS, leagueDayId, leagueRule, leagueWeekId } from '@capital/core';
 import type { LeagueBoardKind } from '@capital/core';
 import { CeoPortrait } from './CeoPortrait';
 import { LocalePicker } from './LocalePicker';
 import { t } from './i18n';
 import { tutorialSeen } from './tutorialStore';
-import { starThresholds } from './stars';
 import { ScenarioCard } from './ScenarioCard';
+import { ScenarioDetail } from './ScenarioDetail';
 import { packLinkCode } from './packLink';
 import { CareerPanel, useCareerRevision } from './CareerPanel';
 import { SettingsPanel } from './SettingsPanel';
@@ -26,32 +26,6 @@ function leagueDayLabel(dayId: string): string {
   }
 }
 
-/**
- * Kurulumun sayılarla özeti: şehir, zorluk, başlangıç günü, süre, kasa.
- * İkinci şehirle başlayan senaryoda oyuncu yeni şehrin ilk gününde,
- * sermayeyle; kurucu şehrin günü ve kasası ayrı.
- */
-function scenarioSetupLine(def: ScenarioDef): string {
-  const second = def.setup.secondCity;
-  if (second) {
-    return t('hud.scenario.setupLineHolding', {
-      size: getCitySize(second.citySize).name,
-      difficulty: getDifficulty(def.difficulty).name,
-      days: def.days,
-      capital: formatMoney(second.capital),
-      day: def.preludeDays,
-      cash: formatMoney(def.setup.cash),
-    });
-  }
-  return t('hud.scenario.setupLine', {
-    size: getCitySize(def.citySize).name,
-    difficulty: getDifficulty(def.difficulty).name,
-    day: def.preludeDays,
-    days: def.days,
-    cash: formatMoney(def.setup.cash),
-  });
-}
-
 /*
  * Paket rafı (Tur 67) geç iniyor: doğrulayıcı, paylaşım kodu ve rafın
  * metinleri yalnız senaryo sekmesi açılınca. Hazır senaryolar beklemiyor.
@@ -60,13 +34,7 @@ const shelf = () => import('./PackShelf');
 const PackList = lazy(() => shelf().then((m) => ({ default: m.PackList })));
 const PackActions = lazy(() => shelf().then((m) => ({ default: m.PackActions })));
 const PackAdd = lazy(() => shelf().then((m) => ({ default: m.PackAdd })));
-
-/** Paketten gelen senaryonun künyesi: paket, yazarı, kariyere sayılmadığı. */
-function scenarioSourceLine(def: ScenarioDef): string | null {
-  const source = def.source;
-  if (!source) return null;
-  return source.author ? t('hud.scenario.packSourceAuthor', { pack: source.packName, author: source.author }) : t('hud.scenario.packSource', { pack: source.packName });
-}
+const PackEditorHost = lazy(() => shelf().then((m) => ({ default: m.PackEditorHost })));
 
 /**
  * Açılış ekranı.
@@ -79,6 +47,7 @@ export function NewGameScreen({
   onStart,
   onCancel,
   initialScenario,
+  deliverFile,
 }: {
   onStart: (
     companyName: string,
@@ -88,12 +57,15 @@ export function NewGameScreen({
     league: LeagueBoardKind | null,
     citySize: CitySizeId,
     tutorial: boolean,
-    scenarioId: string | null,
+    /** Hazır ya da yüklü senaryonun kimliği; editörden denenen taslakta tanımın kendisi (Tur 68). */
+    scenario: string | ScenarioDef | null,
     modifiers: ModifierId[],
   ) => void;
   onCancel?: () => void;
   /** Senaryodan dönen oyuncu listeye düşsün (Tur 39). */
   initialScenario?: string;
+  /** Editörün "dosya olarak indir"i (kabuğun; masaüstünde İndirilenler). */
+  deliverFile?: (filename: string, text: string) => Promise<string>;
 }): ReactElement {
   const [name, setName] = useState('');
   const [ceoId, setCeoId] = useState(DEFAULT_CEO_ID);
@@ -153,6 +125,10 @@ export function NewGameScreen({
 
   // Lig herkese aynı şehri verir: zorluk Dengeli, şehir standart. Senaryonun
   // şehri ve zorluğu tanımından; rehber ilk oyun içindir, senaryoda kapalı.
+  // Editörün "dene"si (Tur 68): taslağın tanımıyla, kaydetmeden.
+  const tryScenario = (def: ScenarioDef) =>
+    onStart(name.trim() || t('hud.newGame.defaultName'), ceoId, def.difficulty, null, def.citySize, false, def, []);
+
   const submit = () =>
     onStart(
       name.trim() || t('hud.newGame.defaultName'),
@@ -324,36 +300,13 @@ export function NewGameScreen({
               </ul>
               <Suspense fallback={null}>
                 <PackList selectedId={scenario.id} onSelect={setScenarioId} onChange={refreshPacks} />
+                <PackEditorHost example={scenario.source ? SCENARIOS[0]! : scenario} onTry={tryScenario} onSaved={selectAdded} {...(deliverFile ? { deliverFile } : {})} />
               </Suspense>
-              <div className="difficulty-detail scenario-detail">
-                <p>{scenario.brief}</p>
-                <p className="scenario-goal">
-                  <span className="tag good">{t('hud.scenario.goal')}</span> {scenarioGoalText(scenario)}
-                </p>
-                <ul>
-                  {scenario.facts.map((fact) => (
-                    <li key={fact}>{fact}</li>
-                  ))}
-                </ul>
-                {scenario.modifiers && scenario.modifiers.length > 0 && (
-                  <p className="scenario-rules" data-scenario-rules-detail>
-                    <span className="tag warn">{t('hud.scenario.rules')}</span>{' '}
-                    {scenario.modifiers.map((id) => `${ruleName(scenario, id)}: ${ruleBlurb(scenario, id)}`).join(' ')}
-                  </p>
-                )}
-                <p className="muted scenario-setup">{scenarioSetupLine(scenario)}</p>
-                <p className="muted scenario-stars">{starThresholds(scenario)}</p>
-                {scenario.source && (
-                  <>
-                    <p className="muted scenario-source" data-scenario-source={scenario.source.packId}>
-                      {scenarioSourceLine(scenario)}
-                    </p>
-                    <Suspense fallback={null}>
-                      <PackActions def={scenario} onRemoved={() => setScenarioId(SCENARIOS[0]!.id)} />
-                    </Suspense>
-                  </>
-                )}
-              </div>
+              <ScenarioDetail def={scenario}>
+                <Suspense fallback={null}>
+                  <PackActions def={scenario} onRemoved={() => setScenarioId(SCENARIOS[0]!.id)} />
+                </Suspense>
+              </ScenarioDetail>
               <Suspense fallback={null}>
                 <PackAdd example={scenario.source ? null : scenario} onSelect={selectAdded} />
               </Suspense>

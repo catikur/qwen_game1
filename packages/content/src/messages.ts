@@ -29,6 +29,11 @@ export function registerMessages(locale: string, messages: Readonly<Record<strin
   else dictionaries.set(locale, { ...messages });
 }
 
+/** Bir dilin sözlüğündeki metin (etkin dilden bağımsız); yoksa ya da dil inmediyse yok. */
+export function messageIn(locale: string, key: string): string | undefined {
+  return dictionaries.get(locale)?.[key];
+}
+
 /*
  * Sonradan yüklenen diller (Tur 46). İngilizce sözlükler ilk açılışın
  * yolunda değil: her paket kendi sözlüğünü indiren bir işlev kaydediyor,

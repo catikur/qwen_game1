@@ -7228,3 +7228,488 @@ button.icon {
   gap: 8px;
   justify-content: flex-end;
 }
+
+/* --- senaryo editörü (Tur 68) --- */
+
+/*
+ * Kurulum ekranının üstünde, ekranı kaplayan geniş pencere: solda form,
+ * sağda ön izleme (kurulum ekranındaki kart ve ayrıntı). Telefonda tek
+ * sütun, ön izleme formun altında. Alt şerit sabit: durum ve düğmeler.
+ */
+.pack-editor-launch {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.modal-backdrop.editor-overlay {
+  position: fixed;
+  z-index: 75;
+}
+
+.modal.editor-modal {
+  width: min(1180px, 96vw);
+  max-height: 92vh;
+  /* Uzun formun arkasında kurulum ekranının yazısı okunmasın. */
+  background: var(--panel-solid);
+}
+
+.pack-editor {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 340px);
+  align-items: start;
+  gap: 16px;
+}
+
+.editor-main {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+
+.editor-lead {
+  margin: 0;
+  font-size: calc(13px * var(--text-scale));
+}
+
+.editor-side {
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.editor-side h3 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: calc(14px * var(--text-scale));
+}
+
+.editor-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.editor-preview.stale {
+  opacity: 0.6;
+}
+
+.editor-preview .scenario-card {
+  cursor: default;
+}
+
+.editor-section {
+  margin: 0;
+  padding: 12px 14px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--tint-1);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.editor-section > legend,
+.editor-section > summary {
+  padding: 0 6px;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: calc(14px * var(--text-scale));
+}
+
+.editor-section > summary {
+  cursor: pointer;
+}
+
+.editor-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px 14px;
+  align-items: start;
+}
+
+.editor-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.editor-field.wide {
+  grid-column: 1 / -1;
+}
+
+.editor-label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.editor-label-row label,
+.editor-label {
+  font-weight: 700;
+  font-size: calc(13px * var(--text-scale));
+}
+
+.editor-aside,
+.editor-count {
+  color: var(--muted);
+  font-size: calc(11.5px * var(--text-scale));
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.editor-count.over {
+  color: var(--bad);
+  font-weight: 700;
+}
+
+.editor-hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: calc(12px * var(--text-scale));
+  line-height: 1.4;
+}
+
+.editor-modal input[type='text'],
+.editor-modal textarea,
+.editor-modal select {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-xs);
+  background: var(--panel-solid);
+  color: var(--text);
+  box-shadow: none;
+  font: inherit;
+  font-size: calc(14px * var(--text-scale));
+  font-weight: 600;
+}
+
+.editor-modal textarea {
+  resize: vertical;
+  line-height: 1.45;
+}
+
+.editor-modal input[type='text']:focus,
+.editor-modal textarea:focus,
+.editor-modal select:focus {
+  border-color: var(--select-ring);
+  outline: 2px solid var(--select-ring);
+  outline-offset: 0;
+}
+
+.editor-modal [aria-invalid='true'] {
+  border-color: var(--bad);
+}
+
+.editor-locales {
+  display: grid;
+  gap: 6px;
+}
+
+.editor-locales.n2,
+.editor-locales.n3 {
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+}
+
+.editor-locale {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.editor-locale-name {
+  color: var(--muted);
+  font-size: calc(11.5px * var(--text-scale));
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.editor-locale .editor-count {
+  align-self: flex-end;
+}
+
+.editor-issues {
+  margin: 2px 0 0;
+  padding-left: 16px;
+  color: var(--bad);
+  font-size: calc(12px * var(--text-scale));
+  line-height: 1.4;
+}
+
+.editor-issues code {
+  overflow-wrap: anywhere;
+}
+
+.editor-checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+}
+
+.editor-toggle {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-weight: 700;
+  font-size: calc(13px * var(--text-scale));
+}
+
+.editor-toggle input {
+  margin-top: 3px;
+}
+
+.editor-toggle .editor-hint {
+  display: block;
+  font-weight: 400;
+}
+
+.editor-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.editor-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: calc(13px * var(--text-scale));
+  overflow-wrap: anywhere;
+}
+
+.editor-tab.selected {
+  background: var(--selected);
+  color: var(--on-selected);
+  box-shadow: var(--selected-shadow);
+}
+
+.editor-badge {
+  min-width: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--bad);
+  color: #fff;
+  font-size: calc(11px * var(--text-scale));
+  font-weight: 800;
+  text-align: center;
+}
+
+.editor-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.editor-list-row,
+.editor-with-button {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  min-width: 0;
+}
+
+.editor-list-row > .editor-field,
+.editor-with-button > .editor-field,
+.editor-with-button > select {
+  flex: 1;
+}
+
+.editor-part {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: var(--radius-xs);
+}
+
+.editor-part.on {
+  background: var(--tint-2);
+}
+
+.editor-part.invalid {
+  outline: 1px solid var(--bad);
+}
+
+.editor-idlist {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.editor-idlist ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.editor-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 4px 2px 10px;
+  border-radius: 999px;
+  background: var(--panel-solid);
+  border: 1px solid var(--line-strong);
+  font-size: calc(12.5px * var(--text-scale));
+  font-weight: 700;
+}
+
+.editor-chip button.icon {
+  width: 24px;
+  height: 24px;
+  min-width: 24px;
+  padding: 0;
+}
+
+.editor-rule {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius-xs);
+}
+
+.editor-rule > button {
+  align-self: flex-start;
+}
+
+.editor-pair {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.editor-json textarea {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: calc(12px * var(--text-scale));
+  font-weight: 400;
+}
+
+.editor-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px 16px;
+  padding: 10px 16px 12px;
+  border-top: 1px solid var(--line);
+}
+
+.editor-status {
+  flex: 1 1 320px;
+  min-width: 0;
+  max-height: 16vh;
+  overflow-y: auto;
+  font-size: calc(12.5px * var(--text-scale));
+}
+
+.editor-status p {
+  margin: 0;
+}
+
+.editor-status .good {
+  color: var(--good);
+  font-weight: 700;
+}
+
+.editor-status .bad {
+  color: var(--bad);
+  font-weight: 700;
+}
+
+.editor-issue-list {
+  margin: 4px 0;
+  padding-left: 18px;
+}
+
+.editor-issue-list button.link {
+  padding: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+  color: var(--accent);
+  text-decoration: underline;
+  cursor: pointer;
+  font: inherit;
+  min-height: 0;
+}
+
+.editor-issue-list code {
+  overflow-wrap: anywhere;
+}
+
+.editor-size {
+  font-size: calc(11.5px * var(--text-scale));
+}
+
+.editor-actions {
+  justify-content: flex-end;
+}
+
+.editor-try-hint {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: calc(11.5px * var(--text-scale));
+}
+
+button.small {
+  padding: 6px 10px;
+  font-size: calc(12.5px * var(--text-scale));
+}
+
+@media (max-width: 860px) {
+  .modal-backdrop.editor-overlay {
+    bottom: 0;
+    place-items: stretch;
+  }
+
+  /* Ekranın tamamı: alt şerit (durum, düğmeler) hep görünür, form arasında kayıyor. */
+  .modal.editor-modal {
+    width: 100%;
+    height: 100vh;
+    height: 100dvh;
+    max-height: none;
+    border-radius: 0;
+  }
+
+  .editor-try-hint {
+    display: none;
+  }
+
+  .pack-editor {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .editor-side {
+    position: static;
+  }
+
+  .editor-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .editor-status {
+    max-height: 18vh;
+  }
+}

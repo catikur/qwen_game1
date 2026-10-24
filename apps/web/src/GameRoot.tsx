@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactElement } from 'react';
-import { SCHEMA_VERSION, customerFlows, getPlayer, routeSignature, supplyRoutes, weatherOn } from '@capital/core';
+import { SCHEMA_VERSION, customerFlows, getPlayer, routeSignature, scenarioDefOf, supplyRoutes, weatherOn } from '@capital/core';
 import type { GameCommand, GameEngine, GameSpeed } from '@capital/core';
 import { BUILDING_BY_ID, GOOD_BY_ID } from '@capital/content';
+import type { ScenarioDef } from '@capital/content';
 import { CityRenderer } from '@capital/render-three';
 import { AUTOSAVE_SLOT, exportToJson, importFromJson, loadGame, saveGame } from '@capital/persistence';
 import {
@@ -63,7 +64,8 @@ export function GameRoot({
   engine: GameEngine;
   bootMessage: string | null;
   onRequestNewGame: () => void;
-  onReplayScenario: (id: string, companyName: string, ceoId: string | null) => void;
+  /** Koşunun kendi tanımıyla (Tur 68): editörden denenen taslak da, yüklü başka sürüm değil. */
+  onReplayScenario: (scenario: string | ScenarioDef, companyName: string, ceoId: string | null) => void;
 }): ReactElement {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rendererRef = useRef<CityRenderer | null>(null);
@@ -612,8 +614,9 @@ export function GameRoot({
         <ScenarioResultScreen
           onNewGame={newGame}
           onReplay={(id) => {
-            const player = getPlayer(engine.getState());
-            onReplayScenario(id, player.name, player.ceoId);
+            const state = engine.getState();
+            const player = getPlayer(state);
+            onReplayScenario(scenarioDefOf(state) ?? id, player.name, player.ceoId);
           }}
         />
       </div>

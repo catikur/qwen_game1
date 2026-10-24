@@ -145,10 +145,13 @@ oyun her yerde tamamen ücretsiz. Turlar Faz 4'teki gibi.
   dört kuralın ayarları sınırlar içinde. Kurulum ekranında "Kendi
   senaryoların": kod, JSON ya da dosyayla ekle; kodu ya da bağlantıyı
   (`?paket=`) paylaş. Senaryonun tanımı kayıtta; paketten gelen koşu
-  kariyere sayılmıyor. Biçim `docs/ICERIK-PAKETI.md`'de. — bu PR
-- **68 · Tarayıcıda senaryo editörü.** Paketi alan alan kuran bir ekran:
-  Tur 67'nin doğrulayıcısı ve sınırları hazır, editör onları formda
-  gösteriyor; ön izleme ve "dene" düğmesi.
+  kariyere sayılmıyor. Biçim `docs/ICERIK-PAKETI.md`'de. — bitti (#97)
+- **68 · Tarayıcıda senaryo editörü.** Kurulum ekranında paketi alan alan
+  kuran pencere: sınırlar doğrulayıcının kendi tablolarından, sorun alanın
+  altında, ön izleme kurulum ekranındaki kart. "Dene" taslağı kaydetmeden
+  oynatıyor, menüde editör kaldığı yerde; rafa kaydet, dosya olarak indir,
+  raftaki paketi düzenle. Taslak cihazda. Hedef cümlesinin yer tutucuları
+  doğrulanıyor. — bu PR
 - **69 · Üçüncü dil.**
 - **70 · Steam.** Başarımlar ve mağaza sayfası.
 
