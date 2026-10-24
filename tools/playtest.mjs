@@ -5877,8 +5877,9 @@ async function finish(browser, consoleErrors) {
       window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
     });
 
-    // Katmanlar sönene dek (yavaş makinede 2,5 sn'den uzun sürebiliyor).
-    const paused = await until((m) => m.layers.pad > 0.3 && m.layers.bass > 0.3 && m.layers.arp < 0.02 && m.layers.lead < 0.02 && m.layers.pulse < 0.02, 8000);
+    // Katmanlar sönene dek (yavaş makinede 2,5 sn'den uzun sürebiliyor; yük
+    // altında kalp atışı 8 sn'de %2,7'deydi, Tur 66'nın tam koşusu).
+    const paused = await until((m) => m.layers.pad > 0.3 && m.layers.bass > 0.3 && m.layers.arp < 0.02 && m.layers.lead < 0.02 && m.layers.pulse < 0.02, 20000);
     check('Duraklayınca yalnız pad ve bas kalıyor', paused.ok, paused.last ? JSON.stringify(paused.last.layers) : 'müzik yok');
 
     await mp.locator('.speeds [data-panel="settings"]').click();
