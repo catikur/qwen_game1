@@ -71,8 +71,20 @@ function NoticeLine({ notice }: { notice: Notice }): ReactElement {
 }
 
 /** Oyuncunun yüklediği paketlerin senaryoları, hazır senaryoların altında. */
-export function PackList({ selectedId, onSelect }: { selectedId: string; onSelect: (id: string) => void }): ReactElement {
+export function PackList({
+  selectedId,
+  onSelect,
+  onChange,
+}: {
+  selectedId: string;
+  onSelect: (id: string) => void;
+  /** Yüklü paketler değişti (ilk yükleme dahil): kayıt defteri yeni sürümle, ekran yeniden çizilsin. */
+  onChange: () => void;
+}): ReactElement {
   const packs = useInstalledPacks();
+  // Raf ilk açılışta depodaki sürümleri tanıtıyor; kayıttan gelen başka bir sürüm kayıt
+  // defterindeyse yerine geçiyor ve kurulum ekranı eski tanımı gösteriyordu (Codex #97).
+  useEffect(() => onChange(), [packs]);
   const scenarios = packs.flatMap((entry) => entry.scenarios.map((def) => ({ def, packName: packText(entry.pack.name) })));
   return (
     <section className="pack-shelf" data-pack-shelf={scenarios.length}>

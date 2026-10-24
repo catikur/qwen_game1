@@ -117,6 +117,7 @@ export function NewGameScreen({
   // Raf yeni sürümü aynı kimlikle eklediğinde kimlik değişmiyor: sayaç ayrıntıyı yeniden çizdiriyor (Codex #97).
   const scenario = SCENARIO_BY_ID[scenarioId] ?? SCENARIOS[0]!;
   const [, setPackRevision] = useState(0);
+  const refreshPacks = () => setPackRevision((revision) => revision + 1);
   const selectAdded = (id: string) => {
     setScenarioId(id);
     setPackRevision((revision) => revision + 1);
@@ -322,7 +323,7 @@ export function NewGameScreen({
                 ))}
               </ul>
               <Suspense fallback={null}>
-                <PackList selectedId={scenario.id} onSelect={setScenarioId} />
+                <PackList selectedId={scenario.id} onSelect={setScenarioId} onChange={refreshPacks} />
               </Suspense>
               <div className="difficulty-detail scenario-detail">
                 <p>{scenario.brief}</p>

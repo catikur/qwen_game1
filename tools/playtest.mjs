@@ -8143,6 +8143,21 @@ async function finish(browser, consoleErrors) {
     check('Paket silinmiş cihazda kayıt açılıyor, koşu kendi tanımıyla (kuralın adı yerinde); kariyerde değil',
       resumed.id === packId && resumed.briefSeen === true && /Sert kış/.test(resumedLine) && resumed.inCareer === false,
       `${JSON.stringify(resumed)} · ${resumedLine}`);
+    // Kayıtta bir sürüm, tarayıcıda başka bir sürüm (aynı kimlik): açılışta motor kayıttakini
+    // tanıtıyor, raf sonra yüklü sürümü; ayrıntı yüklü sürümü göstermeli (Codex #97).
+    const installedVersion = JSON.parse(JSON.stringify(custom));
+    installedVersion.scenarios[0].goal.target = 7_000_000;
+    await pp.evaluate((doc) => localStorage.setItem('capitalforge.packs.v1', JSON.stringify([doc])), installedVersion);
+    await pp.reload();
+    await pp.waitForSelector('.topbar', { timeout: 30000 });
+    await pp.evaluate(() => window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 }));
+    await pp.locator('.topbar-actions [data-panel="saves"]').click();
+    await pp.waitForTimeout(300);
+    await pp.locator('button:has-text("Yeni oyun")').first().click();
+    await pp.waitForSelector('[data-pack-shelf]', { timeout: 10000 });
+    await pp.waitForFunction(() => /7,00 M ₺/.test(document.querySelector('[data-detail="scenario"] .scenario-goal')?.textContent ?? ''), null, { timeout: 5000 }).catch(() => null);
+    const shownGoal = await pp.evaluate(() => document.querySelector('[data-detail="scenario"] .scenario-goal')?.textContent ?? '');
+    check('Kayıtta başka sürüm varken raf açılınca ayrıntı yüklü sürümün hedefiyle', /7,00 M ₺/.test(shownGoal), shownGoal);
     check('Paket akışında konsol temiz', pErrors.length === 0, pErrors.slice(0, 2).join(' | '));
     await pContext.close();
 
