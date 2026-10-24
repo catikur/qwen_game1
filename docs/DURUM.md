@@ -6987,7 +6987,7 @@ bandının süresi dolmadan hemen önce (sayfanın içinden ölçülen 4,56. sn)
 ilan ediyor: yarış her koşuda sınanıyor. Eski derlemede bu kontrol düşüyor,
 yenisinde geçiyor.
 
-**Codex'in bulduğu üç şey.**
+**Codex'in bulduğu beş şey.**
 - *Kayıt açılınca zafer ekranı 2,4 sn gecikiyordu.* Oyun içinde bekleyen
   zaferli bir kayıt açılınca ekran canlı zafer gibi bekletiliyordu. Gecikme
   artık durumun kendisini de biliyor: durum değiştiyse kayıttaki zafer
@@ -7001,10 +7001,18 @@ yenisinde geçiyor.
 - *Aynı gün iki binasız şirket düşünce bant yanlış şirketi söyleyebiliyordu.*
   Seçim önce oyuncunun en büyük payına bakıyor (devralan çoğunluğu tutuyor),
   eşitse oyuncuya geçen binalara.
+- *Kayıt açılınca önceki durumun bandı yeni durumun üstünde kalıyordu* (4,6
+  sn'ye dek); kazanç etiketleri de eski şehrin karelerine bağlı kalıyordu.
+  Durum değişince ikisi de temizleniyor.
+- *Bandın oyuncu rengi çatıların döndüğü renk değildi.* Bant şirketin
+  kurulumdaki rengini (camgöbeği) gösteriyordu; çatılar sahnenin nane
+  yeşiline (renk körlüğüne uygun palette limona) dönüyordu. İki renk artık
+  tek yerde (`content/src/palette.ts`); sahne ve bant aynısını okuyor.
 
-Üçü de düzeltmeden önce kırılan bir kontrolle: arayüz birim testi ve
-tarayıcı testinin "kayıt açılınca" kontrolü (eski derlemede ekran 1,5
-sn'de inmiyor, havai fişek ve halka var).
+Beşi de düzeltmeden önce kırılan bir kontrolle: arayüz birim testi ve
+tarayıcı testinin üç kontrolü (kayıt açılınca: eski derlemede ekran 1,5
+sn'de inmiyor, havai fişek ve halka var, önceki bant kalıyor; bandın rengi:
+eski derlemede camgöbeği, çatı nane yeşili).
 
 **Bütçe.**
 - Açılışta derlenen program 18 (17'den; sınır 20). Halka seçim
@@ -7030,14 +7038,14 @@ sn'de inmiyor, havai fişek ve halka var).
   - zafer bir kez, kapatılmış zafer an değil.
 - `settings.test.ts`: eski kayıtta "Şehirde kazanç etiketleri" açık.
 - Denge sınavı: simülasyon aynı, bölüm eklenmedi.
-- Tarayıcı testi "Önemli anlar" 24/24, konsol temiz:
+- Tarayıcı testi "Önemli anlar" 25/25, konsol temiz:
   - inşaat: toz, yükseliş, halka; söndükten sonra takılı kalmıyor;
   - proje açılışı: iskeletin boyundan yükseliş, toz;
   - yıkım tozu;
   - kazanç etiketleri: üç kazanç ve bir zarar, doğru binalarda, ekranın
     içinde; kasanın farkı ve sayımı; ayar kapalıyken etiket yok;
-  - devralma: dalga, halkalar, bant, dalga bitince her çatı oyuncunun
-    renginde;
+  - devralma: dalga, halkalar, bant (rengi çatıların döndüğü renk), dalga
+    bitince her çatı oyuncunun renginde;
   - zafer: havai fişek ekranın içinde, bant hemen (devralma bandı tam o
     an kalkarken bile), ekran ~2,4 sn sonra; anlarda yeni program yok;
   - azaltılmış hareket: yükselmeyen bina, dalgasız devralma (bant
@@ -7045,6 +7053,7 @@ sn'de inmiyor, havai fişek ve halka var).
   - veri lensi;
   - aynı şehrin kaydı aynı sahnede açılınca: kayıttaki zafer kutlanmıyor,
     ekranı beklemeden iniyor; kaydın farkı dalga, toz ya da yükseliş değil;
+    önceki durumun bandı kalkıyor;
   - telefonda İngilizce: kasanın farkı üst barı büyütmüyor, bant ekrana
     sığıyor.
 - Eski bölümlerde zafer ekranını bekleyen beş kontrol artık 2,4 sn'lik

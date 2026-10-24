@@ -7280,16 +7280,22 @@ async function finish(browser, consoleErrors) {
     const taken = await absorb();
     await mp.waitForTimeout(200);
     const wave = await moments();
-    const banner = await mp.evaluate(() => {
+    const banner = await mp.evaluate((ids) => {
       const el = document.querySelector('.moment-banner[data-moment="takeover"]');
-      return el ? { text: el.textContent ?? '', role: el.getAttribute('role') } : null;
-    });
+      if (!el) return null;
+      const swatches = [...el.querySelectorAll('.moment-swatch')].map((sw) => getComputedStyle(sw).backgroundColor);
+      const hex = window.__capital.buildingAccent(ids[0])?.target ?? '';
+      const n = parseInt(hex.slice(1), 16);
+      const roof = `rgb(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255})`;
+      return { text: el.textContent ?? '', role: el.getAttribute('role'), swatch: swatches[1] ?? '', roof };
+    }, taken?.ids ?? []);
     await mp.waitForTimeout(500);
     await mp.screenshot({ path: `${OUT}/moment-takeover.png` });
     check('Devralma: çatılar dalga hâlinde oyuncunun rengine dönüyor, her binada yerde halka',
       taken !== null && wave.shifting >= 1 && wave.rings >= Math.min(taken.ids.length, 24) - 1, `${taken?.ids.length} bina · ${JSON.stringify(wave)}`);
-    check('Devralma bandı: "… artık senin", kaç binanın döndüğü', banner !== null && banner.text.includes(`${taken?.name} artık senin`) && banner.text.includes(`${taken?.ids.length} bina`) && banner.role === 'status',
-      banner?.text ?? 'bant yok');
+    check('Devralma bandı: "… artık senin", kaç binanın döndüğü; bandın rengi çatıların döndüğü renk (Codex #93)',
+      banner !== null && banner.text.includes(`${taken?.name} artık senin`) && banner.text.includes(`${taken?.ids.length} bina`) && banner.role === 'status' && banner.swatch === banner.roof,
+      banner ? `${banner.text} · bant ${banner.swatch} · çatı ${banner.roof}` : 'bant yok');
 
     // Zafer: havai fişek ve bant önce, zafer ekranı sonra.
     await mp.evaluate(() => {
@@ -7396,8 +7402,12 @@ async function finish(browser, consoleErrors) {
     // Kayıt açılınca (aynı şehir, aynı sahne kalıyor): kayıttaki zafer kutlanmıyor, ekranı beklemeden
     // iniyor; kayıtla bugün arasındaki fark (sahibi başka bina, kalkmış yapı) bir an değil (Codex #93).
     await mp.waitForTimeout(400);
+    // Kayıttan hemen önce bir devralma: bandı yeni durumun üstünde kalmamalı.
+    const lastTaken = await absorb();
+    await mp.waitForTimeout(300);
     const restored = await mp.evaluate(async () => {
       const c = window.__capital;
+      const bannerBefore = document.querySelector('.moment-banner[data-moment="takeover"]') !== null;
       const copy = JSON.parse(JSON.stringify(c.getState()));
       copy.victory = { day: copy.time.day + 2, kind: 'tycoon', path: 'retail', shares: { retail: 1, realestate: 0, energy: 0, freight: 0 }, acquisitions: 1 };
       const rival = Object.values(copy.buildings).find((b) => b.companyId !== copy.playerCompanyId);
@@ -7412,11 +7422,14 @@ async function finish(browser, consoleErrors) {
         if (screen === null && document.querySelector('.gameover.victory')) screen = Math.round(performance.now() - started);
       }
       const m = c.renderInfo().moments;
-      return { screen, fireworks: m.fireworks.active, shifting: m.shifting, rings: m.rings, dust: m.dust, rising: m.rising, rival: Boolean(rival), razed: Boolean(razed) };
+      const bannerAfter = document.querySelector('.moment-banner[data-moment="takeover"]') !== null;
+      return { screen, fireworks: m.fireworks.active, shifting: m.shifting, rings: m.rings, dust: m.dust, rising: m.rising, rival: Boolean(rival), razed: Boolean(razed), bannerBefore, bannerAfter };
     });
     check('Kayıt açılınca kayıttaki zafer kutlanmıyor, ekranı beklemeden iniyor; kaydın farkı dalga, toz ya da yükseliş değil',
       restored.screen !== null && restored.screen < 1000 && !restored.fireworks && restored.shifting === 0 && restored.rings === 0 && restored.dust === 0 && restored.rising === 0 && restored.rival && restored.razed,
       JSON.stringify(restored));
+    check('Kayıt açılınca önceki durumun devralma bandı kalkıyor (Codex #93)', lastTaken !== null && restored.bannerBefore && !restored.bannerAfter,
+      `${lastTaken?.name ?? 'devralınacak rakip yok'} · önce ${restored.bannerBefore} · sonra ${restored.bannerAfter}`);
     check('Önemli anlar akışında konsol temiz', mErrors.length === 0, mErrors.slice(0, 2).join(' | '));
     await mContext.close();
 

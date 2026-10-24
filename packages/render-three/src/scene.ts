@@ -4,7 +4,7 @@ import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { SharedKernelBloomPass, postProcessingMaterials } from './bloom';
 import { isSoftwareRenderer } from './gpu';
-import { BUILDING_BY_ID, DISTRICT_ARCHETYPES, STRUCTURE_BY_ID, WEATHER_BY_ID } from '@capital/content';
+import { BUILDING_BY_ID, DISTRICT_ARCHETYPES, PLAYER_ACCENT as PLAYER_COLORS, STRUCTURE_BY_ID, WEATHER_BY_ID } from '@capital/content';
 import type { BuildingDef, MassForm, StructureDef } from '@capital/content';
 import { BLOCK_SIZE, cityWeather, customerFlows, headquarters, lensValue, supplyRoutes } from '@capital/core';
 import type { CityWeather, GameState, LensId } from '@capital/core';
@@ -201,13 +201,8 @@ const DAY_SKY_LIGHT = new THREE.Color('#8fb6d9');
 const LENS_COLD = new THREE.Color('#1d3b57');
 const LENS_HOT = new THREE.Color('#f0654a');
 const OWN_COLOR = new THREE.Color('#3ba55d');
-/*
- * Renk körlüğüne uygun palette oyuncunun rengi (Tur 47). Nane yeşili on
- * altı rakip rengine karşı döteranopide OKLab ΔE 7,6'ya, sahiplik lensinde
- * (×0,7) normal görüşte bile 7,5'e iniyordu (Atlas'ın camgöbeği). Limon en
- * kötü renk körlüğünde 17,1; lenste parlak kaldığı için (×0,9) 28,3.
- */
-const SAFE_PLAYER_ACCENT = '#fff36b';
+/* Renk körlüğüne uygun palette oyuncunun rengi (Tur 47); gerekçesi `content/src/palette.ts`'de. */
+const SAFE_PLAYER_ACCENT = PLAYER_COLORS.safe;
 const SAFE_OWN_COLOR = new THREE.Color('#e6db60');
 const FREE_COLOR = new THREE.Color('#2a3446');
 
@@ -2401,9 +2396,10 @@ export class CityRenderer {
  */
 /**
  * Oyuncunun çatı rengi: kamyon ve müşteri araçlarındaki nane yeşiliyle aynı
- * (`syncRoutes`). Sokakta tek bir "benim" rengi var.
+ * (`syncRoutes`). Sokakta tek bir "benim" rengi var; arayüz de aynı rengi
+ * kullanıyor (`content/src/palette.ts`).
  */
-const PLAYER_ACCENT = '#3fd39a';
+const PLAYER_ACCENT = PLAYER_COLORS.standard;
 
 /** Cephe türüne göre doğal malzeme: sıva ve tuğla, cam ve çelik, sanayi paneli. */
 const NATURAL_WALLS: Record<'plaster' | 'glass' | 'panel', readonly string[]> = {

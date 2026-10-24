@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { ReactElement } from 'react';
-import { formatMoney, getPlayer } from '@capital/core';
+import { PLAYER_ACCENT } from '@capital/content';
+import { formatMoney } from '@capital/core';
 import type { GameState } from '@capital/core';
 import { useGame, useGameState } from './useGame';
 import { reducedMotion, useSettings } from './settings';
@@ -59,9 +60,12 @@ export function MoneyTags(): ReactElement | null {
   useEffect(() => {
     const previous = lastDay.current;
     lastDay.current = day;
-    // Kayıt açıldı ya da şehir değişti: gün farkı bir kazanç değil.
+    // Kayıt açıldı ya da şehir değişti: gün farkı bir kazanç değil; eski
+    // şehrin etiketleri de yeni şehrin karelerine taşınmasın.
     if (source.current !== state) {
+      const first = source.current === null;
       source.current = state;
+      if (!first) setTags([]);
       return;
     }
     if (previous === null || day <= previous || !enabled) return;
@@ -225,12 +229,16 @@ export function CashDelta({ value, source }: { value: number; source: GameState 
  */
 export function MomentBanner(): ReactElement | null {
   const state = useGameState();
+  // Oyuncunun rengi çatıların döndüğü renk: palete göre (renk körlüğüne uygun palette limon).
+  const settings = useSettings();
   const snapshot = useRef<MomentSnapshot | null>(null);
   const source = useRef<GameState | null>(null);
   const [shown, setShown] = useState<{ id: number; moment: Moment } | null>(null);
 
   useEffect(() => {
     if (source.current !== state || !snapshot.current) {
+      // Kayıt açıldı ya da şehir değişti: eski durumun bandı yeninin üstünde kalmasın (Codex #93).
+      if (source.current !== null) setShown(null);
       source.current = state;
       snapshot.current = snapshotOf(state);
       return;
@@ -256,7 +264,6 @@ export function MomentBanner(): ReactElement | null {
 
   if (!shown || state.gameOver) return null;
   const { moment } = shown;
-  const player = getPlayer(state);
   if (moment.kind === 'takeover') {
     return (
       <div key={shown.id} className="moment-banner moment-takeover" role="status" aria-live="polite" data-moment="takeover" data-moment-company={moment.companyId}>
@@ -266,7 +273,7 @@ export function MomentBanner(): ReactElement | null {
           <span className="moment-swatches" aria-hidden="true">
             <span className="moment-swatch" style={{ background: moment.color }} />
             <span className="moment-arrow">→</span>
-            <span className="moment-swatch" style={{ background: player.color }} />
+            <span className="moment-swatch" style={{ background: PLAYER_ACCENT[settings.palette] }} />
           </span>
           {moment.buildings === 0 ? t('hud.moment.takeoverEmpty') : t('hud.moment.takeoverDetail', { buildings: moment.buildings })}
         </span>

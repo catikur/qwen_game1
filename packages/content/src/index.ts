@@ -14,6 +14,7 @@ export * from './difficulty';
 export * from './modifiers';
 export * from './paths';
 export * from './weather';
+export * from './palette';
 export * from './goals';
 export * from './council';
 export * from './labor';
