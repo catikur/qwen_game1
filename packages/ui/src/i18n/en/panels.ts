@@ -363,7 +363,7 @@ export const panels: Record<keyof typeof trPanels, string> = {
     ' Now and then an opportunity bubble appears on one of your roofs: a bulk order, a VIP customer, a queue at the door, an investor or a discount plot. Tap it within a few days and the reward is yours; pausing keeps it waiting. At the start of each month the quest board gets three short quests ("Quests" in the agenda). Claim a finished quest\'s reward from the board before the month ends.',
   'panels.help.step.living.title': 'The market is alive.',
   'panels.help.step.living.body':
-    ' Category demand rises and falls over months and shifts with the seasons; now and then a single good becomes a fad. The "Market pulse" in the rivalry panel shows each category today and where its trend is heading. Stock the fad good to ride it.',
+    ' Category demand rises and falls over months and shifts with the seasons; now and then a single good becomes a fad. The "Market pulse" in the rivalry panel shows each category today and where its trend is heading. The season is shown next to the date in the top bar, and you can read it in the city too, from the trees and the weather. Stock the fad good to ride it.',
   'panels.help.step.projects.title': 'The council opens projects.',
   'panels.help.step.projects.body':
     ' Now and then the council opens a city project: a metro, a stadium, a mall… For 90 days companies contribute; the board is open, so you see who gave what. Contributions are not refunded. The biggest contributor names the project and gets a lasting upkeep discount on its buildings in that district, appeal for its stores there, plus brand. Whoever wins, the finished project lifts demand in the district and its neighbors and raises land value.',
@@ -429,6 +429,9 @@ export const panels: Record<keyof typeof trPanels, string> = {
   'panels.settings.motion.full': 'Full',
   'panels.settings.motion.hint':
     'Reduced motion turns off interface transitions and makes the camera jump instead of glide. Auto follows your device setting.',
+  'panels.settings.weather': 'Rain and snow',
+  'panels.settings.weather.hint':
+    'Drops and flakes falling on the city. Off, or with reduced motion, they are not drawn; season colours and cloudy skies still show.',
   'panels.settings.sound': 'Sound',
   'panels.settings.sound.on': 'Sound on',
   'panels.settings.volume.master': 'Overall',

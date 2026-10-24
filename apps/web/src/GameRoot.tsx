@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactElement } from 'react';
-import { SCHEMA_VERSION, customerFlows, getPlayer, routeSignature, supplyRoutes } from '@capital/core';
+import { SCHEMA_VERSION, customerFlows, getPlayer, routeSignature, supplyRoutes, weatherOn } from '@capital/core';
 import type { GameCommand, GameEngine, GameSpeed } from '@capital/core';
 import { BUILDING_BY_ID, GOOD_BY_ID } from '@capital/content';
 import { CityRenderer } from '@capital/render-three';
@@ -158,6 +158,7 @@ export function GameRoot({
     const applyAccessibility = () => {
       const settings = getSettings();
       renderer.setAccessibility({ safePalette: settings.palette === 'safe', reducedMotion: reducedMotion(settings) });
+      renderer.setWeatherEffects(settings.weather);
     };
     applyAccessibility();
     const stopAccessibility = subscribeSettings(applyAccessibility);
@@ -294,6 +295,8 @@ export function GameRoot({
       buildingRole: (defId: string) => BUILDING_BY_ID[defId]?.role ?? null,
       // Bina tanımının kategorisi: test, rakibin oyuncuyla ortak rafını bulabilsin diye (Tur 59).
       buildingCategory: (defId: string) => BUILDING_BY_ID[defId]?.category ?? null,
+      // Takvimin havası: test, istediği havanın gününü bulabilsin diye (Tur 62).
+      weatherOn: (seed: number, day: number) => weatherOn(seed, day).id,
     };
     return () => {
       delete globals['__capital'];

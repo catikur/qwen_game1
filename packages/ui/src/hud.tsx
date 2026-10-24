@@ -26,6 +26,7 @@ import { t } from './i18n';
 import { useLocale } from './i18n/locale';
 import { useSettings } from './settings';
 import { CareerRunLine } from './CareerPanel';
+import { WeatherChip } from './WeatherChip';
 import type { MessageKey } from './i18n';
 
 /**
@@ -138,6 +139,7 @@ export function TopBar(): ReactElement {
             <CityChip />
             {ceo && <span className="brand-ceo-name">{ceo.name} · </span>}
             <span className="brand-date">{formatDate(state.time.day)}</span>
+            <WeatherChip state={state} />
           </div>
         </div>
       </div>

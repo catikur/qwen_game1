@@ -341,6 +341,14 @@ export const contentEn: Record<string, string> = {
   'content.path.freight.name': 'Freight',
   'content.path.freight.blurb': "Your terminals hauled for your rivals' stores.",
 
+  // ---- Weather (weather.ts, Tur 62) ----
+  'content.weather.clear.name': 'Clear',
+  'content.weather.cloudy.name': 'Cloudy',
+  'content.weather.rain.name': 'Rainy',
+  'content.weather.storm.name': 'Stormy',
+  'content.weather.snow.name': 'Snowy',
+  'content.weather.fog.name': 'Foggy',
+
   // ---- Council motions (council.ts) — {district} / {category} are filled in by the game ----
   'content.motion.zoning_rush.title': 'Fast-track zoning in {district}',
   'content.motion.zoning_rush.summary': 'If passed, {district} opens to zoning 60 days early.',

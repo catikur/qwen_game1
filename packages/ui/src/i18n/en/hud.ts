@@ -8,6 +8,8 @@ export const hud: Record<keyof typeof trHud, string> = {
   'hud.topbar.netWorth': 'Company value',
   'hud.topbar.debt': 'Debt',
   'hud.topbar.rank': 'Rank',
+  'hud.topbar.weather': '{season} · {weather}',
+  'hud.topbar.weatherEvent': '{label} — {event}',
   'hud.topbar.rankValue': '#{rank}',
 
   // Top bar — speed and sound

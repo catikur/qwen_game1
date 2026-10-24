@@ -26,7 +26,7 @@ import {
   getCeoModifiers,
   rootStructureOf,
 } from '@capital/content';
-import type { CategoryId, ModifierId } from '@capital/content';
+import type { CategoryId, ModifierId, SeasonId, WeatherId } from '@capital/content';
 import {
   GameEngine,
   buildOptions,
@@ -49,6 +49,9 @@ import {
   shelfReach,
   bookValue,
   companyPath,
+  cityWeather,
+  seasonOf,
+  weatherOn,
   confidence,
   collectEventModifiers,
   controllerOf,
@@ -5584,6 +5587,84 @@ section('Yollar: zafere farklı yollar', () => {
   );
   console.log(
     `  NOT: yan iş kolları kazanıyor ama şirketi taşımıyor: enerji ${of('energy').map((r) => pc(r.shares.energy)).join(', ')}, nakliye ücreti ${of('freight').map((r) => pc(r.shares.freight)).join(', ')} (DURUM Tur 61, açık kalan).`,
+  );
+});
+
+/**
+ * Hava (Tur 62): mevsimin takvimi.
+ *
+ * Hava görünüm, simülasyon değil; ölçülen şey takvimin oyuncuya nasıl
+ * göründüğü. Beş şehir, beşer yıl: mevsimin havaları, kar yalnız kışta,
+ * yaz çoğunlukla açık, hava dönemlerle değişiyor ama tekdüze değil. Son
+ * kontrol havanın simülasyona sızmadığını ölçüyor: her gün havası okunan
+ * koşu, okunmayanla birebir aynı.
+ */
+section('Hava: mevsimin takvimi', () => {
+  const pc = (v: number) => `%${Math.round(v * 100)}`;
+  const SEEDS = [1, 7, 42, 101, 202];
+  const DAYS = 365 * 5;
+  const count: Record<SeasonId, Partial<Record<WeatherId, number>>> = { winter: {}, spring: {}, summer: {}, autumn: {} };
+  const totals: Record<SeasonId, number> = { winter: 0, spring: 0, summer: 0, autumn: 0 };
+  const runs: number[] = [];
+  for (const seed of SEEDS) {
+    let run = 1;
+    for (let day = 0; day < DAYS; day++) {
+      const season = seasonOf(day).id;
+      const weather = weatherOn(seed, day).id;
+      count[season][weather] = (count[season][weather] ?? 0) + 1;
+      totals[season]++;
+      if (day > 0 && weather === weatherOn(seed, day - 1).id) run++;
+      else if (day > 0) {
+        runs.push(run);
+        run = 1;
+      }
+    }
+  }
+  const share = (season: SeasonId, weather: WeatherId) => (count[season][weather] ?? 0) / totals[season];
+  const table = (season: SeasonId) =>
+    Object.entries(count[season]).sort((a, b) => b[1] - a[1]).map(([id, n]) => `${id} ${pc(n / totals[season])}`).join(', ');
+  for (const season of ['winter', 'spring', 'summer', 'autumn'] as SeasonId[]) console.log(`  ${season}: ${table(season)}`);
+  expect(
+    'Kar yalnız kışta; her mevsimde en az üç ayrı hava',
+    (['spring', 'summer', 'autumn'] as SeasonId[]).every((season) => !count[season].snow) &&
+      (['winter', 'spring', 'summer', 'autumn'] as SeasonId[]).every((season) => Object.keys(count[season]).length >= 3),
+    `kışın kar ${pc(share('winter', 'snow'))}`,
+  );
+  expect(
+    'Yaz çoğunlukla açık (%50+), kışın günlerin dörtte biri ve fazlası karlı',
+    share('summer', 'clear') >= 0.5 && share('winter', 'snow') >= 0.25,
+    `yazın açık ${pc(share('summer', 'clear'))} · kışın kar ${pc(share('winter', 'snow'))}`,
+  );
+  const mean = runs.reduce((sum, n) => sum + n, 0) / runs.length;
+  const longest = Math.max(...runs);
+  expect(
+    'Hava dönemlerle değişiyor ama tekdüze değil: aynı hava ortalama 3–6 gün, hiçbiri bir mevsim boyu sürmüyor',
+    mean >= 3 && mean <= 6 && longest < 90,
+    `ortalama ${mean.toFixed(1)} gün · en uzun ${longest} gün`,
+  );
+
+  // Hava simülasyona sızmıyor: her gün havası okunan koşu okunmayanla aynı.
+  // Aynı başlangıçtan iki kopya: kuruluş anı (`createdAtIso`) iki koşuda aynı olsun.
+  const start = JSON.stringify(createNewGame({ seed: 7 }));
+  const play = (read: boolean) => {
+    const engine = new GameEngine(JSON.parse(start));
+    let storms = 0;
+    for (let day = 0; day < 300; day++) {
+      if (day % 5 === 0) playerStrategy(engine);
+      engine.runDay();
+      if (read) {
+        const city = cityWeather(engine.getState());
+        if (city.eventId === 'coastal_storm' && city.weather.id === 'storm') storms++;
+      }
+    }
+    return { json: JSON.stringify(engine.getState()), storms };
+  };
+  const quiet = play(false);
+  const watched = play(true);
+  expect(
+    'Hava simülasyona sızmıyor: her gün havası okunan 300 günlük koşu okunmayanla birebir aynı',
+    quiet.json === watched.json,
+    `${watched.storms} gün sahilde fırtına, şehirde fırtına`,
   );
 });
 

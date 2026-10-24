@@ -36,6 +36,12 @@ describe('ayarlar', () => {
     assert.equal(sanitizeSettings({ muted: true }, false).muted, true);
   });
 
+  test('yağmur ve kar (Tur 62): eski kayıtta açık, kapatılınca kapalı, bozuk değer açık', () => {
+    assert.equal(sanitizeSettings({ textSize: 'large' }).weather, true, 'Tur 62 öncesi depoda alan yok');
+    assert.equal(sanitizeSettings({ weather: false }).weather, false);
+    assert.equal(sanitizeSettings({ weather: 'hayır' }).weather, true);
+  });
+
   test('değişiklik uygulanıyor, abonelere duyuruluyor; ses düzeyi tek tek değişiyor', () => {
     let calls = 0;
     const stop = subscribeSettings(() => calls++);

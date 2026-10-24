@@ -4,7 +4,7 @@
 > `pnpm bench` çıktısından; iddialar `pnpm balance` ve `pnpm playtest`
 > tarafından her koşuda doğrulanıyor.
 >
-> Son güncelleme: şema **v6**, 61 tur (Tur 33 denendi ve geri alındı; Tur 34 eski görünüme canlılık ekledi; Tur 35 arayüzü Lite'ın "Cam & Bulut" diline taşıdı; Tur 36 şehre ayrıntı kattı; Tur 37a geç oyuna yönetim yükü, servet vergisi ve kriz dönemleri getirdi; Tur 37b karar kartlarını ve rakip hikâyelerini ekledi; Tur 37c fırsat balonlarını ve aylık görev panosunu getirdi; Tur 37d canlı pazarı, şehir projesi ihalesini ve rakip konsorsiyumunu getirdi; Tur 38 değerlendirme turuydu: geç oyun hızı, gündem ve haber akışı, zorluk eğrisi; Tur 39a senaryo modunu getirdi: Kurtarma ve Krizin ortasında; Tur 39b Konsorsiyuma karşı, Zincir ustası ve Şehrin sponsoru senaryolarını ekledi; Tur 39c Büyük şehir fethi ve Holding: iki şehir ile listeyi yediye tamamladı; Tur 40 cila ve performans; Tur 41 başarımlar ve kariyer; Tur 42 açılışta gölgelendirici derlemesi; Tur 43 oyun içi akıcılık; Tur 44 değerlendirme turuydu: Türkçe sayı biçimi, yardımın kapsamı, haber akışı; Tur 45 dört ek kural getirdi: Fırtınalı yıllar, Aç gözlü rakipler, Sıkı banka, Kıt arsa; Tur 46 açılış paketini böldü: kurulum ekranı telefonda yarı sürede; Tur 47 tek Ayarlar paneli ve erişilebilirlik getirdi: metin boyutu, renk körlüğüne uygun palet, hareket, ses düzeyleri, pencerelerde klavye; Tur 48 oyunu kurulabilir ve çevrimdışı açılır yaptı, yayından sonra "yeni sürüm hazır" diyor; Tur 49 müziği getirdi: gündüz, gece ve kriz, şehirle birlikte dönüyor; Tur 50 Faz 1'i değerlendirdi ve tanıtım paketini hazırladı; Tur 51 Faz 2'yi açtı: Lite'ın lig sunucusu ana oyunun Tohum Ligi koşularını da alıyor, tablo herkese açık; Tur 52'de sunucu her koşuyu gönderimde yeniden oynatıyor, tabloya yalnız doğrulanmış skor giriyor; Tur 53 ligin her haftasına bir ek kural ve 90 günlük günün koşusunu getirdi; Tur 54 liderlerin eğrisini senin koşunun üstüne koydu ve liderin o günlerde ne yaptığını koşu kodundan anlatıyor; Tur 55 davet kodlu arkadaş liglerini getirdi ve Faz 2'yi kapattı; Tur 56 Faz 3'ü açtı: nakliye terminali rakip mağazalarına taşıma sözleşmesiyle taşıyor; Tur 57 enerjiyi getirdi: şebeke fiyatı, santraller, enerji krizi; Tur 58 gayrimenkul geliştiricisini getirdi: konut ve ofis projeleri, kira ve doluluk, kentsel dönüşüm hakkı ve başvurusu; Tur 59 rakiplere hafıza verdi: CEO'nun mizacı, husumet ve ittifak, fiyat savaşı ve lobiyle tepki, uzlaşma; Tur 60 Faz 3'ün sektörleriyle üç senaryo ekledi: Herkesin nakliyecisi, Karanlık kış, Kentsel dönüşüm, her biri bir ek kuralla; Tur 61 Faz 3'ü değerlendirdi ve kapattı: zafere üç gerçek yol var, şirketin yolu kârın kaynağından okunuyor). Önümüzdeki işin sırası `docs/YOL-HARITASI.md`'de.
+> Son güncelleme: şema **v6**, 62 tur (Tur 33 denendi ve geri alındı; Tur 34 eski görünüme canlılık ekledi; Tur 35 arayüzü Lite'ın "Cam & Bulut" diline taşıdı; Tur 36 şehre ayrıntı kattı; Tur 37a geç oyuna yönetim yükü, servet vergisi ve kriz dönemleri getirdi; Tur 37b karar kartlarını ve rakip hikâyelerini ekledi; Tur 37c fırsat balonlarını ve aylık görev panosunu getirdi; Tur 37d canlı pazarı, şehir projesi ihalesini ve rakip konsorsiyumunu getirdi; Tur 38 değerlendirme turuydu: geç oyun hızı, gündem ve haber akışı, zorluk eğrisi; Tur 39a senaryo modunu getirdi: Kurtarma ve Krizin ortasında; Tur 39b Konsorsiyuma karşı, Zincir ustası ve Şehrin sponsoru senaryolarını ekledi; Tur 39c Büyük şehir fethi ve Holding: iki şehir ile listeyi yediye tamamladı; Tur 40 cila ve performans; Tur 41 başarımlar ve kariyer; Tur 42 açılışta gölgelendirici derlemesi; Tur 43 oyun içi akıcılık; Tur 44 değerlendirme turuydu: Türkçe sayı biçimi, yardımın kapsamı, haber akışı; Tur 45 dört ek kural getirdi: Fırtınalı yıllar, Aç gözlü rakipler, Sıkı banka, Kıt arsa; Tur 46 açılış paketini böldü: kurulum ekranı telefonda yarı sürede; Tur 47 tek Ayarlar paneli ve erişilebilirlik getirdi: metin boyutu, renk körlüğüne uygun palet, hareket, ses düzeyleri, pencerelerde klavye; Tur 48 oyunu kurulabilir ve çevrimdışı açılır yaptı, yayından sonra "yeni sürüm hazır" diyor; Tur 49 müziği getirdi: gündüz, gece ve kriz, şehirle birlikte dönüyor; Tur 50 Faz 1'i değerlendirdi ve tanıtım paketini hazırladı; Tur 51 Faz 2'yi açtı: Lite'ın lig sunucusu ana oyunun Tohum Ligi koşularını da alıyor, tablo herkese açık; Tur 52'de sunucu her koşuyu gönderimde yeniden oynatıyor, tabloya yalnız doğrulanmış skor giriyor; Tur 53 ligin her haftasına bir ek kural ve 90 günlük günün koşusunu getirdi; Tur 54 liderlerin eğrisini senin koşunun üstüne koydu ve liderin o günlerde ne yaptığını koşu kodundan anlatıyor; Tur 55 davet kodlu arkadaş liglerini getirdi ve Faz 2'yi kapattı; Tur 56 Faz 3'ü açtı: nakliye terminali rakip mağazalarına taşıma sözleşmesiyle taşıyor; Tur 57 enerjiyi getirdi: şebeke fiyatı, santraller, enerji krizi; Tur 58 gayrimenkul geliştiricisini getirdi: konut ve ofis projeleri, kira ve doluluk, kentsel dönüşüm hakkı ve başvurusu; Tur 59 rakiplere hafıza verdi: CEO'nun mizacı, husumet ve ittifak, fiyat savaşı ve lobiyle tepki, uzlaşma; Tur 60 Faz 3'ün sektörleriyle üç senaryo ekledi: Herkesin nakliyecisi, Karanlık kış, Kentsel dönüşüm, her biri bir ek kuralla; Tur 61 Faz 3'ü değerlendirdi ve kapattı: zafere üç gerçek yol var, şirketin yolu kârın kaynağından okunuyor; Tur 62 Faz 4'ü açtı: mevsim ve hava şehirde görünüyor, ağaçlar mevsimin renginde, yağmur ve kar yağıyor). Önümüzdeki işin sırası `docs/YOL-HARITASI.md`'de.
 
 ---
 
@@ -6798,6 +6798,123 @@ hesabında bekliyor. Codex'in her bulgusu düzeltildi ya da kanıtla yanıtland�
 düzeltilenlerin testi düzeltmeden önce kaldı. Birim testi fazın başında
 625'ti (Tur 55), şimdi 728; denge sınavı 331 kontrolden 375'e.
 
+### Tur 62 — Mevsim ve hava: şehir mevsimi gösteriyor
+
+Faz 4'ün ilk turu (`docs/YOL-HARITASI.md`): şehrin hissi. Fazın "bitti"
+ölçüsü: mevsim ve hava görünüyor, önemli anlar hissediliyor. Bu tur ilk
+yarısı.
+
+**Başlangıç.** Mevsim simülasyonda Tur 37d'den beri vardı: kategorilerin
+talebini ay ay kaydırıyor (kışın giyim ve elektronik %5–6 fazla, yazın
+kafeler %7). Şehirde hiçbir izi yoktu:
+- ocakta da ağustosta da aynı yeşil çimen, aynı ağaçlar, aynı gök;
+- mevsimin adı yalnız Rekabet panelinin nabzında bir satırdı;
+- "Sahilde Fırtına" haberi çıkarken şehrin göğü açıktı.
+
+**Yapılanlar.**
+
+*Hava* (`content/src/weather.ts`, `core/src/systems/weather.ts`):
+- altı hava: açık, bulutlu, yağmurlu, fırtınalı, karlı, sisli;
+- takvim üç günlük dönemler, her dönem mevsimin ağırlıklarıyla: kar yalnız
+  kışta, fırtına yaz ve sonbaharda, yaz çoğunlukla açık;
+- havası olan olay sürerken şehrin havası olaydan: sahilde fırtına →
+  fırtına, kuraklık → açık (yerdeki karı da siliyor), grip mevsimi açık
+  havayı bulutluya çeviriyor;
+- yerdeki kar, kar yağarken tam; yağış bitince dört günde eriyor.
+
+Hava görünüm, simülasyon değil:
+- durumsuz ve yalnız okuyan: tohumdan, günden ve süren olaylardan;
+- kayda alan girmiyor, `state.rng` çekilmiyor, simülasyon havayı okumuyor;
+- talebe dokunmuyor: mevsimin talep çarpanı zaten var, havanın ayrıca
+  oynatması aynı şeyi iki kez saymak olurdu;
+- lig izi Tur 61'le birebir (`a5ded51fb01e62a5`); Worker'a dokunmak
+  gerekmiyor.
+
+*Şehirde* (`render-three`: `season.ts`, `precipitation.ts`):
+- **Ağaçlar mevsimin renginde.** İlkbahar taze yeşil ve birkaç çiçekli
+  ağaç, yaz yeşili, sonbahar turuncu-kızıl-sarı, kış çıplak gri-kahve;
+  iğne yapraklılar kışın da yeşil. Kırsal ve sokak ağaçları birlikte. Her
+  ağacın rengi kendi yaz renginden ve tonundan: aynı ağaç her yıl aynı
+  renge dönüyor, orman tek renk değil.
+- **Çimen** mevsim tonunda: yaz sıcak, sonbahar sararmış, kış soğuk.
+- **Kar** zemini, kırsalı ve çatıları beyaza çekiyor, ağaçlar karlı.
+  Parseller bölge rengini taşıyor: kar onları örtmüyor, yalnız açıyor.
+- **Bulut** gün ışığını kısıyor (fırtınada yarıya), göğü griye çekiyor;
+  gecenin taban ışığına dokunmuyor, fırtınalı gece de okunuyor. Sis ufku
+  yaklaştırıyor.
+- **Yağmur ve kar** kameranın baktığı yerin çevresinde düşüyor (en çok
+  1.600 damla, 1.800 tane); kutu kamerayla geziyor, bütün şehre
+  yağdırmanın maliyeti yok. Bütçe kalite kademesiyle kısılıyor.
+- Yeni hava dört saniyede geliyor; kayıt açılınca ya da başka şehre
+  geçilince geçişsiz.
+
+*Arayüz* (iki dilde):
+- **Üst bar:** tarihin yanında mevsim ve hava, "Kış · Karlı". Havayı bir
+  olay belirliyorsa ipucu olayı da söylüyor. Telefonda CEO portresinin
+  köşesinde bir rozet; ad ipucunda ve ekran okuyucuda.
+- **Ayarlar:** "Yağmur ve kar" (açık geliyor). Kapalıyken, azaltılmış
+  harekette ve veri lensinde taneler çizilmiyor; mevsimin rengi ve bulutlu
+  gök yine görünüyor.
+- **Yardım:** "Pazar yaşıyor" maddesi mevsimin üst barda ve şehirde
+  (ağaçlar, hava) okunduğunu da söylüyor.
+
+**Tam tarayıcı koşularının bulduğu üç şey.**
+- *Telefonda üst bar üçe bölündü.* İkon tarihin yanında ~19 px yer
+  alıyordu; iPhone 13'te (390 px) ikinci satırda marka (112 px) ve hız
+  düğmeleri (232 px) yan yana sığmadı, bar 100 px'e çıktı. Telefonda ikon
+  artık portrenin köşesinde bir rozet, satırda yer kaplamıyor: bar yine iki
+  satır, 72 px.
+- *Veri lensinin iki kontrolü bir kare erken bakıyordu.* Lens arayüzün
+  eşitlemesiyle sahneye iniyor; yazılımsal GPU'da bu 0,3–1,1 sn sürüyor ve
+  main'de de aynı (iki derlemeyle ölçüldü). Kontroller sabit 300 ms
+  bekliyordu; artık durumu bekliyor (en çok 5 sn).
+- *Fırtınalı gecede güneş sönüyordu.* Bulut çarpanı güneşin bütününe
+  uygulanıyordu; gecenin taban ışığı (1,1) bulutla 0,56'ya iniyor, "gecenin
+  en karanlık anında güneş sönmüyor" kontrolü (≥ 0,6) kalıyordu. Bulut artık
+  yalnız gün ışığı payını kısıyor.
+
+**Bütçe.**
+- Açılışta derlenen program 17 (16'dan; sınır 20). Kar noktaları tek yeni
+  program; yağmur çizgileri tedarik rotalarının programını paylaşıyor.
+  İkisi de açılışta derleniyor: ilk yağmurda kare takılmıyor.
+- Ana parça 71,6 KB (71,4'ten).
+- Tarayıcı testinin akıcılık ve gölgelendirici bölümleri değişmeden
+  geçiyor.
+
+**Doğrulama.** `pnpm test` 742/742 (728'den); tip denetimi temiz.
+- `weather.test.ts` (7 yeni):
+  - aynı tohum aynı havayı, başka tohum başka takvimi yaşıyor;
+  - her mevsimin havaları, kar yalnız kışta;
+  - üç günlük dönemler, yazın çoğunlukla açık;
+  - şehrin havası durumu değiştirmiyor;
+  - olayın havası, grip yalnız açık havayı çeviriyor;
+  - kar örtüsü eriyor, kuraklık karı siliyor;
+  - havaların tanımı.
+- `season.test.ts` (çizim, 6 yeni): mevsimin ağaç rengi; ilkbaharın
+  çiçekleri; kar; bulutun ışığı ve sis; yağışın bütçesi ve kapanması;
+  tanelerin düşmesi ve kutuda kalması.
+- `settings.test.ts` (1 yeni): eski kayıtta "Yağmur ve kar" açık.
+- Denge sınavı 379/379 (33 bölüm; ~16 dk); yeni "Hava: mevsimin takvimi" bölümü 4
+  kontrol:
+  - kar yalnız kışta, her mevsimde en az üç hava;
+  - yazın açık gün %69, kışın karlı gün %30 (beş şehir, beş yıl);
+  - aynı hava ortalama 4,3 gün, en uzun dönem 48 gün (yazın açık);
+  - her gün havası okunan 300 günlük koşu okunmayanla birebir aynı.
+- Tarayıcı testi "Mevsim ve hava" 11/11, konsol temiz:
+  - üst barda mevsim ve hava;
+  - sonbaharda turuncu-kızıl ağaçlar;
+  - karlı kış: taneler iniyor, yer beyaz;
+  - yağış programları açılışta derlenmiş;
+  - yağmur: bulut ve sis;
+  - sahilde fırtına sürerken şehirde fırtına, üst bar olayı söylüyor;
+  - "Yağmur ve kar" kapalı, azaltılmış hareket, veri lensi;
+  - telefonda İngilizce.
+- Tam tarayıcı koşusu 629/629, konsol temiz (~41 dk).
+- Paket bütçesi tamam: ana parça 71,6 KB.
+
+**Kareler** (tarayıcı testinin çıktısında): `season-autumn.png`,
+`season-winter-snow.png`, `weather-storm.png`.
+
 ---
 
 ## 3. Ölçülen durum
@@ -6900,11 +7017,11 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi). Senaryo şehirlerinde gün 3–17 ms (`pnpm dayperf`, Tur 43) |
-| Birim testi | **728 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de, Tur 52'de sunucuda tekrar, Tur 53'te haftanın kuralı ve günün koşusu, Tur 54'te hayalet eğri, Tur 55'te davetli ligler, Tur 56'da taşıma sözleşmeleri, Tur 57'de enerji, Tur 58'de gayrimenkul, Tur 59'da rakiplerin hafızası, Tur 60'ta senaryo paketi II, Tur 61'de şirketin yolu) |
-| Denge testi | **375 kontrol, hepsi geçiyor** (32 bölüm, süreleriyle; ~17 dk) |
-| Tarayıcı testi | **618 kontrol, hepsi geçiyor**, 0 konsol hatası (~43 dk); duman koşusu 132 (~8 dk, rehber dahil) |
+| Birim testi | **742 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de, Tur 52'de sunucuda tekrar, Tur 53'te haftanın kuralı ve günün koşusu, Tur 54'te hayalet eğri, Tur 55'te davetli ligler, Tur 56'da taşıma sözleşmeleri, Tur 57'de enerji, Tur 58'de gayrimenkul, Tur 59'da rakiplerin hafızası, Tur 60'ta senaryo paketi II, Tur 61'de şirketin yolu, Tur 62'de hava ve mevsimin görünümü) |
+| Denge testi | **379 kontrol, hepsi geçiyor** (33 bölüm, süreleriyle; ~16 dk) |
+| Tarayıcı testi | **629 kontrol, hepsi geçiyor**, 0 konsol hatası (~41 dk); duman koşusu 132 (~8 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + paket bütçesi (Tur 46; Tur 48'den beri hizmet çalışanı ve manifest de) + duman oynanışı |
-| Kapsam | 40 bina · 25 ürün · 7 kategori · 8 rakip profili · 10 CEO · 22 olay (11 şehir + 11 sektör) · 3 kriz · 12 karar kartı · 70 rakip sözü · 4 mizaç · 48 ilişki sözü · 5 fırsat balonu · 8 görev türü · 4 mevsim · 9 moda ürünü · 17 şehir yapısı (6 siluet) · 6 şehir projesi · 10 senaryo · 4 ek kural · 5 yol · 29 rozet |
+| Kapsam | 40 bina · 25 ürün · 7 kategori · 8 rakip profili · 10 CEO · 22 olay (11 şehir + 11 sektör) · 3 kriz · 12 karar kartı · 70 rakip sözü · 4 mizaç · 48 ilişki sözü · 5 fırsat balonu · 8 görev türü · 4 mevsim · 6 hava · 9 moda ürünü · 17 şehir yapısı (6 siluet) · 6 şehir projesi · 10 senaryo · 4 ek kural · 5 yol · 29 rozet |
 
 ### Render (Tur 6 sonrası)
 

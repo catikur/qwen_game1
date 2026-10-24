@@ -6,6 +6,8 @@ export const hud = {
   'hud.topbar.netWorth': 'Şirket değeri',
   'hud.topbar.debt': 'Borç',
   'hud.topbar.rank': 'Sıralama',
+  'hud.topbar.weather': '{season} · {weather}',
+  'hud.topbar.weatherEvent': '{label} — {event}',
   'hud.topbar.rankValue': '{rank}.',
 
   // Üst bar — hız ve ses
