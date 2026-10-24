@@ -7011,6 +7011,12 @@ doğruladıkları şey aynı:
 - ihale çipi 15 sn içinde tıklanıyor, panel bekleniyor;
 - arkadaş ligleri panelinin boşalması 15 sn bekleniyor.
 
+"Önemli anlar" bölümünün kendi zamanlamaları da kareye bağlı değil: zaferin
+devralma bandıyla yarışı sayfanın zamanlayıcısıyla kuruluyor (bant gelince
+4,56 sn); bandın ve ekranın geldiği an DOM gözlemcisiyle ölçülüyor; toz
+için dükkân sayfanın içinde kurulup toz bekleniyor. Bu makinede eski
+düzenle yarış kurulamıyordu (test adımları bandın süresini aşıyordu).
+
 **Codex'in bulduğu dokuz şey.**
 - *Kayıt açılınca zafer ekranı 2,4 sn gecikiyordu.* Oyun içinde bekleyen
   zaferli bir kayıt açılınca ekran canlı zafer gibi bekletiliyordu. Gecikme
@@ -7050,7 +7056,10 @@ doğruladıkları şey aynı:
   Bekleme artık azaltılmış harekete abone (`useReducedMotion`): seçim de
   cihazın tercihi de değişince ekran hemen iniyor. `useSettings` cihazın
   tercihini görmüyordu (tercih değişince seçimler nesnesi aynı kalıyor);
-  kazanç etiketleri de artık aynı aboneliği okuyor.
+  kazanç etiketleri de artık aynı aboneliği okuyor. Tarayıcı testinin
+  kontrolü (zafer beklerken cihaz azaltılmış harekete geçiyor) eski
+  derlemede kırılıyor: geçiş 0,7. sn'de, ekran yine 3,2. sn'de; yenisinde
+  ekran geçişle birlikte iniyor.
 
 Son üçü düzeltmeden önce kırılan birim testleriyle (tarayıcıda tozun 1,5
 sn'lik penceresi yazılımsal GPU'nun birkaç karesine sığıyor, orada
@@ -7089,7 +7098,7 @@ eski derlemede camgöbeği, çatı nane yeşili).
   - zafer bir kez, kapatılmış zafer an değil.
 - `settings.test.ts`: eski kayıtta "Şehirde kazanç etiketleri" açık.
 - Denge sınavı: simülasyon aynı, bölüm eklenmedi.
-- Tarayıcı testi "Önemli anlar" 26/26, konsol temiz:
+- Tarayıcı testi "Önemli anlar" 27/27, konsol temiz:
   - inşaat: toz, yükseliş, halka; söndükten sonra takılı kalmıyor;
   - proje açılışı: iskeletin boyundan yükseliş, toz;
   - yıkım tozu;
@@ -7100,7 +7109,8 @@ eski derlemede camgöbeği, çatı nane yeşili).
   - zafer: havai fişek ekranın içinde, bant hemen (devralma bandı tam o
     an kalkarken bile), ekran ~2,4 sn sonra; anlarda yeni program yok;
   - azaltılmış hareket: süren toz kalkıyor, yükselmeyen bina, dalgasız
-    devralma (bant geliyor), beklemeyen zafer ekranı;
+    devralma (bant geliyor), beklemeyen zafer ekranı; zafer beklerken
+    cihaz azaltılmış harekete geçince ekran hemen;
   - veri lensi;
   - aynı şehrin kaydı aynı sahnede açılınca: kayıttaki zafer kutlanmıyor,
     ekranı beklemeden iniyor; kaydın farkı dalga, toz ya da yükseliş değil;
