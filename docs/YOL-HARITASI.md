@@ -1,6 +1,6 @@
 # Capital — Yol Haritası
 
-> Tur 47'de yazıldı, her turda güncelleniyor (son: Tur 65). Biten işin ayrıntısı
+> Tur 47'de yazıldı, her turda güncelleniyor (son: Tur 66). Biten işin ayrıntısı
 > `docs/DURUM.md`'de; bu dosya önümüzdeki işin sırasını ve gerekçesini
 > tutuyor.
 
@@ -39,7 +39,7 @@ Bir bağlantıyla açılan, istenirse kurulan ve çevrimdışı da oynanan bir
 | **2 · Çevrimiçi rekabet** | Herkes aynı şehirde | 51–55 | Pages'te paylaşılan tablo var, skor sunucuda doğrulanıyor | **bitti** (Tur 55) |
 | **3 · Yeni yollar** | Her koşu farklı bir şirket | 56–61 | Zafere en az üç farklı yol var, her birini kazanan bir vekil var | **bitti** (Tur 61) |
 | **4 · Şehrin hissi** | Oynaması keyifli | 62–65 | Mevsim ve hava görünüyor, önemli anlar hissediliyor | **bitti** (Tur 65) |
-| **5 · Platform ve topluluk** | Oyunun evi büyüsün | 66+ | Masaüstü sürümü ve paylaşılabilir senaryolar var | |
+| **5 · Platform ve topluluk** | Oyunun evi büyüsün | 66–70 | Masaüstü sürümü ve paylaşılabilir senaryolar var | sürüyor (Tur 66) |
 
 ### Faz 1 · Ürün temeli
 
@@ -126,11 +126,20 @@ bölümünün sonunda.
   yavaş) yeni özelliklerin yükü gürültünün içinde; günün JS'inden üç kalem
   çıktı: tuvalin yeri her karede okunmuyor, tarih biçimleyicisi ve renkler
   bir kez kuruluyor. Kaydın dosya adı ASCII. Faz 4 raporu `docs/DURUM.md`'de,
-  Tur 65'in sonunda. — bu PR
+  Tur 65'in sonunda. — bitti (#95)
 
 ### Faz 5 · Platform ve topluluk
 
-- **66 · Masaüstü sürümü.** Tauri ile, kayıt dosyada; Steam'e hazırlık.
+Kullanıcı fazın kapsamını Tur 66'dan önce seçti: web, masaüstü ve Steam;
+oyun her yerde tamamen ücretsiz. Turlar Faz 4'teki gibi.
+
+- **66 · Masaüstü sürümü.** Tauri 2 kabuğu (`apps/desktop`), oyun aynı web
+  paketi (`--mode desktop`). Kayıt slotları ve ayarlar uygulamanın veri
+  dizininde dosya; dışa aktarma ve şehir kartı İndirilenler'e; pencere
+  kapanırken otomatik kayıt. Derlenmiş oyun gerçek penceresinde sınanıyor
+  (Linux, WebKitGTK). Steam'e hazırlık `docs/MASAUSTU.md`'de: depolar, Steam
+  Cloud yolları, kullanıcının hesabında yapılacaklar. Lig sunucusu
+  masaüstünün kökenlerini kabul ediyor (Worker dağıtımıyla canlıya). — bu PR
 - **67 · İçerik paketleri.** Senaryo ve kurallar dosyadan tanımlanıyor,
   senaryolar kodla paylaşılıyor.
 - **68 · Tarayıcıda senaryo editörü.**
@@ -151,9 +160,9 @@ yazılan.
 
 | Karar | Etkilediği | Varsayılan |
 |---|---|---|
-| **Platform:** yalnız web mi, masaüstü ve Steam de mi? | Faz 5'in kapsamı | yalnız web |
+| **Platform:** yalnız web mi, masaüstü ve Steam de mi? | Faz 5'in kapsamı | **web, masaüstü ve Steam** (kullanıcı, Tur 66'dan önce) |
 | **Sunucu:** Lite'ın lig sunucusu ana oyuna açılsın mı? Yayın ve maliyet kullanıcının hesabında. | Faz 2 | **evet** (Tur 51'den önce kullanıcı açtı) |
 | **Canlı güncelleme:** Tur 51'in sunucusu canlıya ne zaman? Tablo doğrulanmamış beyanla kesiliyor (Codex #80). | Faz 2 | **Tur 52 birleşince** (kullanıcı, Tur 51) |
 | **Sunucuda doğrulama planı:** tekrar koşu başına 0,7–1,8 sn CPU; Workers'ın ücretsiz katmanı istek başına 10 ms. | Tur 52 | **Workers Paid, aylık 5 $** (kullanıcı, Tur 51) |
-| **Gelir modeli:** tamamen ücretsiz mi, ücretsiz web + ücretli masaüstü mü? | Faz 5 | ücretsiz |
+| **Gelir modeli:** tamamen ücretsiz mi, ücretsiz web + ücretli masaüstü mü? | Faz 5 | **tamamen ücretsiz** (kullanıcı, Tur 66'dan önce) |
 | **Lite:** App Store yayını ve canlı işletim bu haritanın neresinde? | sıra | ayrı hat, bu haritanın dışında |

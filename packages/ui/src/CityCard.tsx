@@ -38,6 +38,7 @@ type CardState = { status: 'making' } | { status: 'failed' } | { status: 'ready'
 
 const OUTCOME_TEXT: Record<ExportOutcome, MessageKey> = {
   saved: 'hud.card.saved',
+  downloads: 'hud.card.downloads',
   started: 'hud.card.started',
   copied: 'hud.card.saved',
   declined: 'hud.card.declined',

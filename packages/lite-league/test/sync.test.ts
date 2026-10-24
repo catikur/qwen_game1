@@ -467,6 +467,15 @@ test('tarayıcı: yalnızca oyunun adresleri (CORS); ön uçuş', async () => {
   assert.equal(evil.status, 403);
   const health = await call(db, THURSDAY, 'GET', '/v1/health', undefined, undefined, { origin: 'https://localhost' });
   assert.equal(health.headers.get('access-control-allow-origin'), 'https://localhost');
+  // Masaüstü sürümü (Tur 66): Tauri'nin üç kökeni; benzerleri değil.
+  for (const origin of ['tauri://localhost', 'http://tauri.localhost', 'https://tauri.localhost']) {
+    const desktop = await call(db, THURSDAY, 'GET', '/v1/health', undefined, undefined, { origin });
+    assert.equal(desktop.headers.get('access-control-allow-origin'), origin);
+  }
+  for (const origin of ['tauri://evil.example', 'http://tauri.localhost.evil.example', 'https://x.tauri.localhost']) {
+    const other = await handle(new Request('https://lig.test/v1/sync', { method: 'OPTIONS', headers: { origin } }), db, THURSDAY, OPTIONS);
+    assert.equal(other.status, 403, origin);
+  }
   const plain = await call(db, THURSDAY, 'GET', '/v1/health');
   assert.equal(plain.headers.get('access-control-allow-origin'), null);
 });

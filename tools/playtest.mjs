@@ -958,7 +958,10 @@ async function finish(browser, consoleErrors) {
   // Ses manzarası: dokunuşlardan sonra bağlam açık, olaylar tetikleniyor,
   // sessize alma çalışıyor ve hatırlanıyor.
   await page.evaluate(() => window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 1 }));
-  await page.waitForTimeout(1200);
+  // Ses katmanları yarım saniyede bir şehirden okunuyor; yavaş makinede
+  // (saniyede ~2 kare) 1,2 sn'lik sabit bekleme o güncellemeyi kaçırıyordu.
+  // Güncellemenin kendisi bekleniyor.
+  await page.waitForFunction(() => (window.__capital.audio?.()?.levels.traffic ?? 0) > 0, null, { timeout: 15000 }).catch(() => {});
   const sound = await page.evaluate(() => window.__capital.audio?.() ?? null);
   await page.evaluate(() => window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 }));
   check('Ses manzarası ilk dokunuştan sonra başlıyor', sound !== null && sound.context !== 'none',

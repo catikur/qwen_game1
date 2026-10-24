@@ -310,6 +310,8 @@ test('Tohum Ligi: başka sitelerden hesap açılmıyor; IP kotası da harcanmıy
   // Oyunun kendi adresi ve Origin göndermeyen istemci (uygulama, denetim) açıyor; kota yerinde.
   assert.equal((await call(db, THURSDAY, 'POST', '/v1/seed/players', undefined, undefined, { ...ip, origin: 'https://catikur.github.io' })).status, 201);
   assert.equal((await call(db, THURSDAY, 'POST', '/v1/seed/players', undefined, undefined, ip)).status, 201);
+  // Masaüstü sürümü (Tur 66) de oyunun kendisi.
+  assert.equal((await call(db, THURSDAY, 'POST', '/v1/seed/players', undefined, undefined, { ...ip, origin: 'tauri://localhost' })).status, 201);
 });
 
 test('Tohum Ligi: IP başına saatlik sınır; IP saklanmıyor, eski sayaç siliniyor', async () => {

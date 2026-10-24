@@ -12,7 +12,12 @@
 // güvenli dairenin içinde (512 px'te yarıçap 205); en uçtaki nokta, kulenin
 // sağ üst köşesi, merkezden 199 px.
 //
-// Çalıştırma: node tools/make-app-icons.mjs  (Playwright ve Chromium gerekir)
+// Masaüstü sürümünün simgeleri (Tur 66) aynı çizimden: 1024 px'lik kaynak
+// `apps/desktop/src-tauri/icons/source-1024.png`, platform dosyaları ondan
+// (`pnpm --filter @capital/desktop icons`).
+//
+// Çalıştırma: node tools/make-app-icons.mjs [--desktop]  (Playwright ve Chromium gerekir;
+// --desktop yalnız masaüstü kaynağını yazar)
 import { createRequire } from 'node:module';
 import { writeFileSync } from 'node:fs';
 
@@ -78,18 +83,20 @@ const ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
  * gösterilen "any" simgesi). Maskelenebilir ve Apple simgesi tam kare: kesimi
  * sistem yapıyor, iOS saydamlığı siyaha boyardı.
  */
+const WEB = new URL('../apps/web/public/', import.meta.url);
+const DESKTOP = new URL('../apps/desktop/src-tauri/icons/', import.meta.url);
 const OUTPUTS = [
-  { file: 'icon-192.png', size: 192, round: true },
-  { file: 'icon-512.png', size: 512, round: true },
-  { file: 'icon-maskable-512.png', size: 512, round: false },
-  { file: 'apple-touch-icon.png', size: 180, round: false },
-];
+  { file: 'icon-192.png', size: 192, round: true, target: WEB },
+  { file: 'icon-512.png', size: 512, round: true, target: WEB },
+  { file: 'icon-maskable-512.png', size: 512, round: false, target: WEB },
+  { file: 'apple-touch-icon.png', size: 180, round: false, target: WEB },
+  { file: 'source-1024.png', size: 1024, round: true, target: DESKTOP },
+].filter((output) => !process.argv.includes('--desktop') || output.target === DESKTOP);
 
-const target = new URL('../apps/web/public/', import.meta.url);
 const browser = await chromium.launch(CHROMIUM ? { executablePath: CHROMIUM } : {});
 try {
   const uri = `data:image/svg+xml;base64,${Buffer.from(ICON_SVG).toString('base64')}`;
-  for (const { file, size, round } of OUTPUTS) {
+  for (const { file, size, round, target } of OUTPUTS) {
     const page = await browser.newPage({ viewport: { width: size, height: size } });
     await page.setContent(
       `<body style="margin:0;background:transparent"><img src="${uri}" width="${size}" height="${size}" style="display:block;${round ? 'border-radius:22%;' : ''}"></body>`,

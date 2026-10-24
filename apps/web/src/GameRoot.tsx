@@ -365,6 +365,7 @@ export function GameRoot({
      */
     const messages: Record<ExportOutcome, [string, ToastMessage['tone']]> = {
       saved: [t('app.export.saved'), 'good'],
+      downloads: [t('app.export.downloads'), 'good'],
       started: [t('app.export.started'), 'good'],
       copied: [t('app.export.copied'), 'info'],
       declined: [t('app.export.declined'), 'info'],
