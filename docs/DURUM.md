@@ -7017,7 +7017,7 @@ devralma bandıyla yarışı sayfanın zamanlayıcısıyla kuruluyor (bant gelin
 için dükkân sayfanın içinde kurulup toz bekleniyor. Bu makinede eski
 düzenle yarış kurulamıyordu (test adımları bandın süresini aşıyordu).
 
-**Codex'in bulduğu on altı şey.**
+**Codex'in bulduğu on yedi şey.**
 - *Kayıt açılınca zafer ekranı 2,4 sn gecikiyordu.* Oyun içinde bekleyen
   zaferli bir kayıt açılınca ekran canlı zafer gibi bekletiliyordu. Gecikme
   artık durumun kendisini de biliyor: durum değiştiyse kayıttaki zafer
@@ -7094,6 +7094,12 @@ düzenle yarış kurulamıyordu (test adımları bandın süresini aşıyordu).
   (halka ve havai fişek siliniyordu). Anların hafızası silinirken toz da
   kalkıyor. Tarayıcı testinin kontrolü tozu ve kaydı kareler arasında,
   sayfanın içinde kuruyor; eski derlemede toz kayıttan sonra da var.
+- *Senaryo, normal bir zaferin geldiği gün kaybedilince kayıp ekranı
+  havai fişeği hemen örtüyordu*; zafer ekranının beklemesi de o ekranın
+  arkasında doluyordu. O gün zafer de geldiyse kayıp ekranı da bekliyor.
+  "Senaryo modu"ndaki kontrol (kaybedilen gün zafer de ilan ediliyor)
+  bitişten ekrana süreyi ve havai fişeği ölçüyor; eski derlemede ekran
+  hemen iniyor.
 
 Aynı turda bir şey de inceleme beklemeden: veri lensi şehri (ve havai
 fişeği) gizlerken zafer ve senaryo ekranı beklemiyor; beklenecek bir
@@ -7163,8 +7169,8 @@ eski derlemede camgöbeği, çatı nane yeşili).
     sığıyor.
 - Eski bölümlerde zafer ekranını bekleyen beş kontrol artık 2,4 sn'lik
   gecikmeye göre bekliyor (en çok 8 sn).
-- "Senaryo modu"na bir kontrol: kazanılan senaryonun sonucu havai fişekten
-  sonra (~2,4 sn) iniyor. Kazanılan sonucu bekleyen eski adımlar (senaryo
+- "Senaryo modu"na iki kontrol: kazanılan senaryonun sonucu, aynı gün
+  zafer gelen kaybın sonucu havai fişekten sonra (~2,4 sn) iniyor. Kazanılan sonucu bekleyen eski adımlar (senaryo
   açan iki yardımcı, üç kontrol) bekleyen sonucu bekliyor; senaryo
   bölümleri 36/36 ve 47/47.
 - Tam tarayıcı koşusu sürüyor.

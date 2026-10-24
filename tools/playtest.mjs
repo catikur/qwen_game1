@@ -4013,14 +4013,36 @@ async function finish(browser, consoleErrors) {
     check('İlk ikiden düşünce senaryo sürüyor; hedef paneli geri dönüş süresini yazıyor',
       dropped.out && dropped.finished === null && /ilk 2 arasına dönmek için 20 gün/.test(sponsorDetail), `${JSON.stringify(dropped)} · ${sponsorDetail}`);
     await sp.keyboard.press('Escape');
+    // Kaybedildiği gün normal bir zafer de geliyor (Codex #93): kutlama zaferin, kayıp ekranı
+    // da havai fişeklerden sonra; bitişten ekrana süre ve o sırada havai fişek sayfanın içinden.
     await sp.evaluate(() => {
       const c = window.__capital;
       const s = c.getState();
+      const trace = { finished: null, shown: null, fireworks: null };
+      window.__scenarioTrace = trace;
+      const observer = new MutationObserver(() => {
+        if (trace.finished === null || !document.querySelector('[data-scenario-result="lost"]')) return;
+        trace.shown = Math.round(performance.now() - trace.finished);
+        trace.fireworks = c.renderInfo().moments.fireworks.active;
+        observer.disconnect();
+      });
+      observer.observe(document.body, { childList: true, subtree: true });
       let guard = 0;
       while (s.scenario.finishedDay === undefined && guard++ < 40) c.engine.runDay();
+      s.victory = { day: s.time.day, kind: 'tycoon', path: 'retail', shares: { retail: 1, realestate: 0, energy: 0, freight: 0 }, acquisitions: 0 };
+      trace.finished = performance.now();
       c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
     });
-    await sp.waitForSelector('[data-scenario-result="lost"]', { timeout: 5000 }).catch(() => null);
+    await sp.waitForSelector('[data-scenario-result="lost"]', { timeout: 12000 }).catch(() => null);
+    const lostTrace = await sp.evaluate(() => window.__scenarioTrace);
+    check('Aynı gün zafer gelen kayıpta sonuç ekranı havai fişeklerden sonra iniyor (Codex #93)',
+      lostTrace.shown !== null && lostTrace.shown >= 2200 && lostTrace.fireworks === true, JSON.stringify(lostTrace));
+    // Denemenin zaferi kapanıyor: sonraki senaryoyu açarken zafer ekranı araya girmesin.
+    await sp.evaluate(() => {
+      const s = window.__capital.getState();
+      if (s.victory) s.victory.dismissed = true;
+      window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+    });
     const sponsorReason = await sp.locator('[data-scenario-reason]').getAttribute('data-scenario-reason').catch(() => null);
     const sponsorText = ((await sp.locator('[data-scenario-reason]').textContent().catch(() => '')) ?? '').trim();
     check('20 gün içinde dönmeyen kaybediyor; sonuç ekranı nedeni yazıyor',

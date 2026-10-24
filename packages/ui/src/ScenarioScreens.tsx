@@ -188,7 +188,10 @@ export function ScenarioResultScreen({ onNewGame, onReplay }: { onNewGame: () =>
   // zafer ekranı gibi biraz sonra; yoksa kutlama sonucun perdesinin altında
   // başlıyordu (Codex #93). Kayıttan açılan sonuç, azaltılmış hareket ve veri
   // lensi (şehir gizli) beklemiyor.
-  const ready = useMomentDelay(pending && scenario?.outcome === 'won' ? `scenario:${scenario.finishedDay}` : null, VICTORY_DELAY_MS, state, view.lens !== 'none');
+  // Kaybedilen senaryoda da, aynı gün normal bir zafer geldiyse: kutlama o zaferin (Codex #93).
+  const celebrating =
+    scenario?.outcome === 'won' || (state.victory !== undefined && !state.victory.dismissed && state.victory.day === scenario?.finishedDay);
+  const ready = useMomentDelay(pending && celebrating ? `scenario:${scenario?.finishedDay}` : null, VICTORY_DELAY_MS, state, view.lens !== 'none');
 
   // Sonuç cihazda bir kez sayılıyor (sonuç ekranı yeniden açılsa da).
   useEffect(() => {
@@ -198,7 +201,7 @@ export function ScenarioResultScreen({ onNewGame, onReplay }: { onNewGame: () =>
 
   if (!pending || !scenario || !def) return null;
   const won = scenario.outcome === 'won';
-  if (won && !ready) return null;
+  if (celebrating && !ready) return null;
   const record = scenarioRecord(def.id);
 
   return (
