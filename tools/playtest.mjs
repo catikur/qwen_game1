@@ -7593,8 +7593,16 @@ async function finish(browser, consoleErrors) {
       const syncsBefore = c.renderInfo().stateSyncs;
       const copy = JSON.parse(JSON.stringify(c.getState()));
       copy.victory = { day: copy.time.day + 2, kind: 'tycoon', path: 'retail', shares: { retail: 1, realestate: 0, energy: 0, freight: 0 }, acquisitions: 1 };
-      const rival = Object.values(copy.buildings).find((b) => b.companyId !== copy.playerCompanyId);
+      let rival = Object.values(copy.buildings).find((b) => b.companyId !== copy.playerCompanyId);
       if (rival) rival.companyId = copy.playerCompanyId;
+      else {
+        // Bu ana kadar rakiplerin bütün binaları devralınmış olabiliyor (Tur 66'nın tam
+        // koşusu): sahibi değişen bina ters yönde kuruluyor, fark aynı.
+        const other = Object.keys(copy.companies).find((id) => id !== copy.playerCompanyId);
+        rival = Object.values(copy.buildings).find((b) => b.companyId === copy.playerCompanyId);
+        if (rival && other) rival.companyId = other;
+        else rival = undefined;
+      }
       const razed = copy.map.tiles.find((t) => t.kind === 'plot' && t.structureId && !t.ownerId);
       if (razed) razed.structureId = null;
       // Ekranın geldiği an DOM değişikliğinden (kareye bağlı değil); 1,5 sn ve en az iki kare beklenip anlara bakılıyor.
