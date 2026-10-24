@@ -7277,14 +7277,45 @@ async function finish(browser, consoleErrors) {
       c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
       return { name: target.name, ids };
     });
-    // Bandın geldiği an sayfanın içinden: zafer, bu bandın süresi dolmak üzereyken ilan edilecek.
+    // Zaferi ilan eden ve bandın, ekranın ne zaman geldiğini sayfanın içinden ölçen işlev.
+    // Ölçüm DOM değişikliğinde (gözlemci), kareye bağlı değil: yavaş makinede bir kare bir
+    // saniyeyi aşabiliyor, test adımları da yüzlerce ms sürüyor.
     await mp.evaluate(() => {
-      window.__takeoverBannerAt = null;
-      const watch = () => {
-        if (document.querySelector('.moment-banner[data-moment="takeover"]')) window.__takeoverBannerAt = performance.now();
-        else requestAnimationFrame(watch);
+      window.__declareVictory = (kind, dayShift) => {
+        const c = window.__capital;
+        const s = c.getState();
+        const trace = { set: performance.now(), banner: null, bannerText: '', screen: null, raced: false };
+        window.__momentTrace = trace;
+        const observer = new MutationObserver(() => {
+          const now = performance.now();
+          const banner = document.querySelector('.moment-banner[data-moment="victory"]');
+          if (trace.banner === null && banner) {
+            trace.banner = Math.round(now - trace.set);
+            trace.bannerText = banner.textContent ?? '';
+          }
+          if (trace.screen === null && document.querySelector('.gameover.victory')) trace.screen = Math.round(now - trace.set);
+          if (trace.screen !== null && trace.banner !== null) observer.disconnect();
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
+        setTimeout(() => observer.disconnect(), 15000);
+        s.victory = { day: s.time.day + dayShift, kind, path: 'retail', shares: { retail: 1, realestate: 0, energy: 0, freight: 0 }, acquisitions: 1 };
+        c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+        return trace;
       };
-      requestAnimationFrame(watch);
+      // İlk zafer devralma bandının süresi (4,6 sn) dolmadan hemen önce, 4,56. sn'de ilan
+      // ediliyor: eski bandın zamanlayıcısı zafer bandını silmemeli (tam koşu bunu yakaladı).
+      // Zamanlayıcı bandın geldiği an sayfanın içinde kuruluyor; test adımları ne kadar
+      // yavaş olursa olsun yarış her koşuda sınanıyor.
+      window.__takeoverBannerAt = null;
+      const seen = new MutationObserver(() => {
+        if (!document.querySelector('.moment-banner[data-moment="takeover"]')) return;
+        seen.disconnect();
+        window.__takeoverBannerAt = performance.now();
+        setTimeout(() => {
+          window.__declareVictory('tycoon', 0).raced = true;
+        }, 4560);
+      });
+      seen.observe(document.body, { childList: true, subtree: true });
     });
     const taken = await absorb();
     await mp.waitForTimeout(200);
@@ -7314,35 +7345,12 @@ async function finish(browser, consoleErrors) {
       c.setView({ x: s.map.width / 2, z: s.map.height / 2, distance: 40 });
     });
     await mp.waitForTimeout(400);
-    // Zafer ilan ediliyor; bandın ve ekranın ne zaman geldiği sayfanın içinden ölçülüyor
-    // (yavaş makinede test adımlarının kendisi yüzlerce ms sürüyor).
-    //
-    // İlk zafer devralma bandının süresi (4,6 sn) dolmadan hemen önce geliyor:
-    // eski bandın zamanlayıcısı zafer bandını silmemeli (tam koşu bunu
-    // yakaladı). Adımlar o ana yetişemediyse zafer hemen ilan ediliyor.
-    const declare = (kind, dayShift, raceTakeover = false) => mp.evaluate(async ({ kind, dayShift, raceTakeover }) => {
-      const c = window.__capital;
-      const s = c.getState();
-      const due = raceTakeover && window.__takeoverBannerAt !== null ? window.__takeoverBannerAt + 4560 - performance.now() : -1;
-      if (due > 0) await new Promise((resolve) => setTimeout(resolve, due));
-      const trace = { set: performance.now(), banner: null, bannerText: '', screen: null, raced: due > 0 };
-      window.__momentTrace = trace;
-      const watch = () => {
-        const now = performance.now();
-        const banner = document.querySelector('.moment-banner[data-moment="victory"]');
-        if (trace.banner === null && banner) {
-          trace.banner = Math.round(now - trace.set);
-          trace.bannerText = banner.textContent ?? '';
-        }
-        if (trace.screen === null && document.querySelector('.gameover.victory')) trace.screen = Math.round(now - trace.set);
-        if ((trace.screen === null || trace.banner === null) && now - trace.set < 10000) requestAnimationFrame(watch);
-      };
-      s.victory = { day: s.time.day + dayShift, kind, path: 'retail', shares: { retail: 1, realestate: 0, energy: 0, freight: 0 }, acquisitions: 1 };
-      c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
-      requestAnimationFrame(watch);
-    }, { kind, dayShift, raceTakeover });
+    const declare = (kind, dayShift) => mp.evaluate(({ kind, dayShift }) => {
+      window.__declareVictory(kind, dayShift);
+    }, { kind, dayShift });
     const trace = () => mp.evaluate(() => window.__momentTrace);
-    await declare('tycoon', 0, true);
+    // İlk zafer sayfanın zamanlayıcısıyla, devralma bandı kalkmak üzereyken (yukarıda).
+    await settle(() => window.__momentTrace?.raced === true, 15000);
     await mp.waitForTimeout(900);
     await mp.screenshot({ path: `${OUT}/moment-victory.png` });
     const party = await mp.evaluate(() => {
@@ -7356,7 +7364,8 @@ async function finish(browser, consoleErrors) {
       JSON.stringify(party.bursts));
     await settle(() => window.__momentTrace.screen !== null, 8000);
     const landed = (await trace()).screen;
-    check('Zafer ekranı havai fişeklerden sonra iniyor (~2,4 sn)', landed !== null && landed >= 2200 && landed < 4500, `${landed} ms`);
+    // Üst sınır geniş: yavaş makinede zamanlayıcı bir karenin (1–1,7 sn) bitmesini bekleyebiliyor.
+    check('Zafer ekranı havai fişeklerden sonra iniyor (~2,4 sn)', landed !== null && landed >= 2200 && landed < 6500, `${landed} ms`);
     // Dalga zafer gelmeden çoktan bitti: devralınan her çatı oyuncunun renginde.
     await settle(() => window.__capital.renderInfo().moments.shifting === 0, 6000);
     const accents = await mp.evaluate((ids) => ids.map((id) => window.__capital.buildingAccent(id)), [...(taken?.ids ?? []), owned[0]]);
@@ -7376,11 +7385,22 @@ async function finish(browser, consoleErrors) {
     // Toz sürerken açılınca süren toz da hemen kalkıyor (Codex #93).
     // Kurma, tıklama ve ölçme sayfanın içinde tek adımda: toz 1,5 sn sürüyor, test adımları ondan yavaş.
     await mp.locator('.speeds [data-panel="settings"]').click();
-    await mp.waitForSelector('[data-setting="motion"][data-choice="reduced"]', { timeout: 5000 });
-    await buildShop();
+    await mp.waitForSelector('[data-setting="motion"][data-choice="reduced"]', { timeout: 15000 });
     const dustSwitch = await mp.evaluate(async () => {
-      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-      const before = window.__capital.renderInfo().moments.dust;
+      // Dükkân sayfanın içinde kuruluyor ve toz bekleniyor (toz 1,5 sn; yavaş makinede iki kare bunu aşıyor).
+      const c = window.__capital;
+      const engine = c.engine;
+      for (const tile of engine.getState().map.tiles) {
+        if (tile.kind !== 'plot' || tile.structureId || tile.ownerId) continue;
+        if (!engine.dispatch({ type: 'BUY_TILE', tileId: tile.id }).ok) continue;
+        if (engine.dispatch({ type: 'BUILD', tileId: tile.id, defId: 'corner_shop' }).ok) {
+          c.setView({ x: tile.x, z: tile.y, distance: 22 });
+          break;
+        }
+      }
+      const waited = performance.now();
+      while (c.renderInfo().moments.dust < 1 && performance.now() - waited < 4000) await new Promise((resolve) => requestAnimationFrame(resolve));
+      const before = c.renderInfo().moments.dust;
       document.querySelector('[data-setting="motion"][data-choice="reduced"]').click();
       await new Promise((resolve) => requestAnimationFrame(resolve));
       return { before, after: window.__capital.renderInfo().moments.dust, reduced: window.__capital.renderInfo().reducedMotion };
@@ -7411,18 +7431,17 @@ async function finish(browser, consoleErrors) {
 
     // Zafer ekranı beklerken cihaz azaltılmış harekete geçiyor (hareket seçimi
     // "cihaza göre"): bekleme kesiliyor, ekran hemen; havai fişek de duruyor (Codex #93).
+    // Geçiş ilan edilir edilmez: eski derlemede ekran yine 2,4 sn'yi bekliyor; yenisinde
+    // tercihin geldiği karede iniyor.
     await settle(() => document.querySelector('.gameover.victory') === null, 5000);
-    await declare('tycoon', 2);
-    await mp.waitForTimeout(500);
+    // (Gün kaydın zaferinden ayrı: kayıt kontrolü kendi anahtarıyla sınansın.)
+    await declare('tycoon', 3);
     await mp.emulateMedia({ reducedMotion: 'reduce' });
-    const switched = await mp.evaluate(() => performance.now());
-    await settle(() => window.__momentTrace.screen !== null, 5000);
-    const midway = await mp.evaluate((at) => {
-      const trace = window.__momentTrace;
-      return { afterSwitch: trace.screen === null ? null : Math.round(trace.set + trace.screen - at), screen: trace.screen, fireworks: window.__capital.renderInfo().moments.fireworks.active };
-    }, switched);
+    const switched = await mp.evaluate(() => Math.round(performance.now() - window.__momentTrace.set));
+    await settle(() => window.__momentTrace.screen !== null, 8000);
+    const midway = await mp.evaluate((at) => ({ switched: at, screen: window.__momentTrace.screen, fireworks: window.__capital.renderInfo().moments.fireworks.active }), switched);
     check('Zafer beklerken cihaz azaltılmış harekete geçince ekran beklemeden iniyor, havai fişek duruyor (Codex #93)',
-      midway.afterSwitch !== null && midway.afterSwitch < 700 && midway.screen < 2200 && midway.fireworks === false, JSON.stringify(midway));
+      midway.switched < 1500 && midway.screen !== null && midway.screen < 2300 && midway.fireworks === false, JSON.stringify(midway));
     await mp.locator('.gameover.victory .gameover-actions button.primary').click();
     await mp.emulateMedia({ reducedMotion: 'no-preference' });
 
@@ -7451,13 +7470,18 @@ async function finish(browser, consoleErrors) {
       if (rival) rival.companyId = copy.playerCompanyId;
       const razed = copy.map.tiles.find((t) => t.kind === 'plot' && t.structureId && !t.ownerId);
       if (razed) razed.structureId = null;
+      // Ekranın geldiği an DOM değişikliğinden (kareye bağlı değil); 1,5 sn ve en az iki kare beklenip anlara bakılıyor.
       const started = performance.now();
-      c.engine.replaceState(copy);
       let screen = null;
-      while (performance.now() - started < 1500) {
-        await new Promise((resolve) => requestAnimationFrame(resolve));
+      const observer = new MutationObserver(() => {
         if (screen === null && document.querySelector('.gameover.victory')) screen = Math.round(performance.now() - started);
-      }
+      });
+      observer.observe(document.body, { childList: true, subtree: true });
+      c.engine.replaceState(copy);
+      if (screen === null && document.querySelector('.gameover.victory')) screen = Math.round(performance.now() - started);
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+      for (let i = 0; i < 2; i++) await new Promise((resolve) => requestAnimationFrame(resolve));
+      observer.disconnect();
       const m = c.renderInfo().moments;
       const bannerAfter = document.querySelector('.moment-banner[data-moment="takeover"]') !== null;
       return { screen, fireworks: m.fireworks.active, shifting: m.shifting, rings: m.rings, dust: m.dust, rising: m.rising, rival: Boolean(rival), razed: Boolean(razed), bannerBefore, bannerAfter };
