@@ -1,4 +1,4 @@
-import { BUILDING_BY_ID, CRISIS_BY_ID, SCENARIO_BY_ID, getCeoModifiers, hasModifier } from '@capital/content';
+import { BUILDING_BY_ID, CRISIS_BY_ID, getCeoModifiers, hasModifier, scenarioDefById } from '@capital/content';
 import type { ScenarioDef, ScenarioSetup } from '@capital/content';
 import { build, buyTile, purchaseBlocker, zoningBlocker } from './actions';
 import { GameEngine } from './engine';
@@ -51,7 +51,8 @@ export interface ScenarioBuilder {
 }
 
 export function startScenario(id: string, options: ScenarioOptions = {}): ScenarioBuilder {
-  const def = SCENARIO_BY_ID[id];
+  // Paketi kaldırılmış süren koşunun "tekrar oyna"sı kayıttaki sürümle (Tur 67).
+  const def = scenarioDefById(id);
   if (!def) throw new Error(`unknown scenario: ${id}`);
   // Ek kurallar (Tur 60) ön tarihle birlikte: şehir onlarla büyüdü.
   const state = createNewGame({

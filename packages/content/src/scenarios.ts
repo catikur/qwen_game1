@@ -603,13 +603,21 @@ export const SCENARIO_BY_ID: Record<string, ScenarioDef> = Object.fromEntries(SC
  * işlev: kurulum ekranının yolunda doğrulayıcı yok.
  */
 const embedded = new WeakMap<object, ScenarioDef>();
+/** Kayıttan benimsenen son tanım, kimliğiyle: paket kaldırılsa da süren koşu "tekrar oyna"yabiliyor (Codex #97). */
+const adopted = new Map<string, ScenarioDef>();
 
 export function bindScenarioDef(pack: object, def: ScenarioDef): void {
   embedded.set(pack, def);
+  adopted.set(def.id, def);
 }
 
 export function embeddedScenarioDef(pack: object): ScenarioDef | undefined {
   return embedded.get(pack);
+}
+
+/** Kimliğin tanımı: kayıt defterindeki (yüklü sürüm), yoksa kayıttan benimsenen son sürüm. */
+export function scenarioDefById(id: string): ScenarioDef | undefined {
+  return SCENARIO_BY_ID[id] ?? adopted.get(id);
 }
 
 /** Koşunun senaryo tanımı: kayda gömülü paket varsa onunki, yoksa kayıt defterindeki. */

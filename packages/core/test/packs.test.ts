@@ -224,6 +224,17 @@ describe('paketin senaryosu oyunda', () => {
     assert.equal((scenarioDefOf(engine.getState())!.goal as { target: number }).target, target, 'paket silinse de');
   });
 
+  test('paketi kaldırılan süren koşu yeniden başlatılabiliyor: kayıttaki sürümle (Codex #97)', () => {
+    registerPack(pack([rescue()], { id: 'kaldirilan' }));
+    const id = packScenarioId('kaldirilan', 'kurtarma');
+    new GameEngine(createScenarioGame(id));
+    unregisterPack('kaldirilan');
+    assert.equal(SCENARIO_BY_ID[id], undefined);
+    const replay = createScenarioGame(id);
+    assert.equal(replay.scenario?.id, id);
+    assert.equal(replay.scenario?.pack?.id, 'kaldirilan');
+  });
+
   test('metinler dil başına: etkin dil, yoksa Türkçe', () => {
     const scenario = { ...rescue(), title: { tr: 'Kurtarma operasyonu', en: 'Rescue mission' }, tagline: { en: 'Only English' } };
     const [def] = registerPack(pack([scenario], { id: 'iki-dil', name: { tr: 'İki dil', en: 'Two languages' } }));
