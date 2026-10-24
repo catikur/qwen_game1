@@ -7403,7 +7403,9 @@ ikisinin arasında; zorla stil hesabı her karede kalktı.
   - konsol temiz.
 - "Kayıt sistemi"ne bir kontrol: dışa aktarmanın dosya adı ASCII (eski
   derlemede `capitalforge-Karaca Holding-gun2.json`).
-- Tam tarayıcı koşusu sürüyor.
+- Tam tarayıcı koşusu 678/678, konsol temiz (~53 dk). Koşu Codex
+  düzeltmesinden önceki derlemede (c8ca4c8); düzeltmeyi birim testi sınıyor,
+  tarayıcının gördüğü yolda bir şey değişmedi.
 
 **Codex'in bulduğu şey.** Önbellekli biçimleyicinin `format`'ı geçersiz bir
 tarihte fırlatıyor; `toLocaleDateString` "Invalid Date" dönüyordu. Elle
@@ -7429,10 +7431,11 @@ harekette hiçbiri çizilmiyor, ekranlar beklemiyor. Telefonda bunların
 Faz boyunca şema da simülasyon da değişmedi: lig izi Tur 61'le aynı
 (`a5ded51fb01e62a5`), Worker'a dokunmak gerekmedi. Tur 56–60 için tek
 dağıtım hâlâ kullanıcının hesabında bekliyor. Codex Tur 63'te on yedi, Tur
-64'te ve Tur 65'te birer şey buldu; hepsinin testi düzeltmeden önce kırılıyordu. Birim testi
-fazın başında 728'di (Tur 61), şimdi 780; tarayıcı testi 618 kontrolden 678'e.
-Konteyner Tur 63'te yeniden başladı; makine o günden beri yavaş (tam koşu ~41
-dk yerine ~75 dk); sabit süre bekleyen testler aradıkları durumu bekliyor.
+64'te ve Tur 65'te birer şey buldu; hepsinin testi düzeltmeden önce
+kırılıyordu. Birim testi fazın başında 728'di (Tur 61), şimdi 780; tarayıcı
+testi 618 kontrolden 678'e, son tam koşu 678/678. Konteyner Tur 63'te yeniden
+başladı; makine o günden beri yavaş (tam koşu ~41 dk yerine ~53–75 dk); sabit
+süre bekleyen testler aradıkları durumu bekliyor.
 
 ---
 
@@ -7538,7 +7541,7 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi). Senaryo şehirlerinde gün 3–17 ms (`pnpm dayperf`, Tur 43) |
 | Birim testi | **780 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de, Tur 52'de sunucuda tekrar, Tur 53'te haftanın kuralı ve günün koşusu, Tur 54'te hayalet eğri, Tur 55'te davetli ligler, Tur 56'da taşıma sözleşmeleri, Tur 57'de enerji, Tur 58'de gayrimenkul, Tur 59'da rakiplerin hafızası, Tur 60'ta senaryo paketi II, Tur 61'de şirketin yolu, Tur 62'de hava ve mevsimin görünümü, Tur 63'te önemli anlar, Tur 64'te şehir kartı, Tur 65'te telefon performansı) |
 | Denge testi | **379 kontrol, hepsi geçiyor** (33 bölüm, süreleriyle; ~16 dk) |
-| Tarayıcı testi | **678 kontrol** (Tur 65'te 4 yeni; Tur 64'ün son tam koşusu 674/674), 0 konsol hatası (bu yavaş makinede ~75 dk, önce ~41 dk); duman koşusu 132 (~8 dk, rehber dahil) |
+| Tarayıcı testi | **678 kontrol** (Tur 65'te 4 yeni), son tam koşu 678/678, 0 konsol hatası (bu yavaş makinede ~53–75 dk, önce ~41 dk); duman koşusu 132 (~8 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + paket bütçesi (Tur 46; Tur 48'den beri hizmet çalışanı ve manifest de) + duman oynanışı |
 | Kapsam | 40 bina · 25 ürün · 7 kategori · 8 rakip profili · 10 CEO · 22 olay (11 şehir + 11 sektör) · 3 kriz · 12 karar kartı · 70 rakip sözü · 4 mizaç · 48 ilişki sözü · 5 fırsat balonu · 8 görev türü · 4 mevsim · 6 hava · 9 moda ürünü · 17 şehir yapısı (6 siluet) · 6 şehir projesi · 10 senaryo · 4 ek kural · 5 yol · 29 rozet |
 
