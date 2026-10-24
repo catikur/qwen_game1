@@ -7803,6 +7803,20 @@ async function finish(browser, consoleErrors) {
     await kp.locator('[data-city-card-close]').click();
     await kp.evaluate(() => window.__capital.setLens('none'));
 
+    // Gölgelendiriciler derlenirken (açılışta, kalite değişince) sahne çizilmiyor: o an açılan
+    // kart şehri bekliyor, şehirsiz bir gökle "hazır" olmuyor (Codex #94). Kademe aynı: yeni
+    // program yok, yalnız yeniden derleme; düğme aynı görevde tıklanıyor.
+    await kp.evaluate(() => {
+      const c = window.__capital;
+      c.setQuality(c.renderInfo().qualityTier);
+      document.querySelector('.goals [data-city-card-open]').click();
+    });
+    await kp.waitForSelector('[data-city-card="ready"], [data-city-card="failed"]', { timeout: 60000 });
+    const rewarmed = await cardPixels();
+    check('Gölgelendiriciler derlenirken açılan kart şehri bekliyor, boş gök değil (Codex #94)',
+      rewarmed !== null && rewarmed.city.dark > 5000 && rewarmed.city.sd > 12, JSON.stringify(rewarmed?.city ?? 'görsel yok'));
+    await kp.locator('[data-city-card-close]').click();
+
     // Zafer ekranında.
     await kp.evaluate(() => {
       const c = window.__capital;

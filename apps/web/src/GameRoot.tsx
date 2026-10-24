@@ -513,14 +513,20 @@ export function GameRoot({
 
   // Şehir kartı (Tur 64). Veri lensi şehri boyuyor: kart şehrin kendisini
   // gösteriyor, lens bir anlığına kapanıp geri geliyor (sahne iki karede
-  // yeni görünüme geçiyor).
+  // yeni görünüme geçiyor). Gölgelendiriciler derlenirken (açılışta, kalite
+  // değişince) sahne çizilmiyor: kart onları bekliyor, şehirsiz bir gök
+  // çizmiyor (Codex #94). Yarım dakikada da hazır değilse kart çizilemedi.
   const snapshotCity = useCallback(async (width: number, height: number) => {
+    const frame = () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
     const lens = viewRef.current.lens;
     if (lens !== 'none') {
       setViewState((current) => ({ ...current, lens: 'none' }));
-      await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+      await frame();
+      await frame();
     }
     try {
+      const started = performance.now();
+      while (rendererRef.current && !rendererRef.current.shadersWarm() && performance.now() - started < 30_000) await frame();
       return rendererRef.current?.snapshot(width, height) ?? null;
     } finally {
       if (lens !== 'none') setViewState((current) => ({ ...current, lens }));

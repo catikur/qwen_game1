@@ -60,6 +60,8 @@ function CityCardDialog({ onClose }: { onClose: () => void }): ReactElement {
     void (async () => {
       const facts = cityCardFacts(engine.getState(), getSettings().palette === 'safe');
       const city = snapshotCity ? await snapshotCity(CARD.width, CARD.height) : null;
+      // Sahne varken karesi gelmediyse kart şehirsiz çizilmiyor: yeniden denenebilir bir hata (Codex #94).
+      if (snapshotCity && !city) throw new Error('şehrin karesi yok');
       const blob = await renderCityCard(facts, city);
       if (cancelled) return;
       url = URL.createObjectURL(blob);
