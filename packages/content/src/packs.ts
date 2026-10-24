@@ -7,7 +7,7 @@ import type { CitySizeId } from './districts';
 import { CRISIS_BY_ID } from './economy';
 import { GOOD_BY_ID } from './goods';
 import { currentLocale } from './messages';
-import { MODIFIERS, MODIFIER_RULES } from './modifiers';
+import { MODIFIERS, RULE_KEY } from './modifiers';
 import type { ModifierId } from './modifiers';
 import { SCENARIOS, SCENARIO_BY_ID, bindScenarioDef, embeddedScenarioDef } from './scenarios';
 import type { ScenarioDef, ScenarioGoal, ScenarioSetup, ScenarioStars } from './scenarios';
@@ -45,13 +45,6 @@ export interface RuleOverrides {
   scarceLand?: { priceMultiplier?: number; unlockDelay?: number };
 }
 
-/** Kural kimliğinden ayar adına (`hungry_rivals` → `hungryRivals`). */
-export const RULE_KEY: Record<ModifierId, keyof RuleOverrides> = {
-  storms: 'storms',
-  hungry_rivals: 'hungryRivals',
-  tight_credit: 'tightCredit',
-  scarce_land: 'scarceLand',
-};
 
 export interface PackRule {
   id: string;
@@ -737,16 +730,6 @@ export function adoptPack(pack: Pack, scenarioId: string): ScenarioDef | null {
   return def;
 }
 
-/** Hazır kural değerleri, senaryonun ayarlarıyla (ayar yoksa hazır değerlerin kendisi). */
-export function rulesWith(overrides: RuleOverrides | undefined): typeof MODIFIER_RULES {
-  if (!overrides) return MODIFIER_RULES;
-  return {
-    storms: { ...MODIFIER_RULES.storms, ...overrides.storms },
-    hungryRivals: { ...MODIFIER_RULES.hungryRivals, ...overrides.hungryRivals },
-    tightCredit: { ...MODIFIER_RULES.tightCredit, ...overrides.tightCredit },
-    scarceLand: { ...MODIFIER_RULES.scarceLand, ...overrides.scarceLand },
-  } as typeof MODIFIER_RULES;
-}
 
 // ------------------------------------------------------ Paylaşım kodu
 

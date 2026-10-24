@@ -1,4 +1,4 @@
-import { SCENARIO_BY_ID } from '@capital/content';
+import { RULE_KEY, SCENARIO_BY_ID, rulesWith } from '@capital/content';
 import type { ScenarioDef } from '@capital/content';
 
 /**
@@ -63,15 +63,38 @@ function stable(value: unknown): string {
   return JSON.stringify(value);
 }
 
+/** Devrin varsayılanı 0 olan sayıları: devir onları doğruluk değeriyle okuyor (0, yazılmamış demek). */
+const ZERO_DEFAULT = new Set(['builtDaysAgo', 'raiderStake', 'feud']);
+
+/** Devrin etkisiz yazımları düşülüyor: `false`, boş liste ya da nesne, varsayılanı 0 olan alanda 0. */
+function compactSetup(setup: ScenarioDef['setup']): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(setup)) {
+    if (value === undefined || value === false || (ZERO_DEFAULT.has(key) && value === 0)) continue;
+    if (Array.isArray(value) && value.length === 0) continue;
+    if (key === 'freeze' && value && typeof value === 'object') {
+      const flags = Object.fromEntries(Object.entries(value).filter(([, flag]) => flag === true));
+      if (Object.keys(flags).length > 0) out[key] = flags;
+      continue;
+    }
+    out[key] = value;
+  }
+  return out;
+}
+
 /**
- * Paket senaryosunun oynanışı: metinler dışında tanımın her şeyi. Kurallar
- * katalog sırasında (`modifiers`), ayarları kural anahtarıyla: sırası
- * değişen ama aynı oyun aynı anahtar. Hazır senaryoda yok.
+ * Paket senaryosunun oynanışı: metinler dışında tanımın her şeyi, çözülmüş
+ * değerleriyle. Kurallar katalog sırasında ve tam değerleriyle (yazılmayan
+ * ayar hazır değerinde: `firstDay: 160` yazmak yazmamakla aynı), devir
+ * etkisiz yazımları düşülmüş: aynı oyunun farklı yazılışı aynı anahtar
+ * (Codex #97). Hazır senaryoda yok.
  */
 export function playKey(def: ScenarioDef | undefined): string | undefined {
   if (!def?.source) return undefined;
   const { seed, citySize, difficulty, preludeDays, modifiers, ruleOverrides, days, goal, stars, setup } = def;
-  return stable({ seed, citySize, difficulty, preludeDays, modifiers: modifiers ?? [], ruleOverrides: ruleOverrides ?? {}, days, goal, stars, setup });
+  const values = rulesWith(ruleOverrides);
+  const rules = Object.fromEntries((modifiers ?? []).map((id) => [id, values[RULE_KEY[id]]]));
+  return stable({ seed, citySize, difficulty, preludeDays, rules, days, goal, stars, setup: compactSetup(setup) });
 }
 
 /** Senaryonun kaydı; paket senaryosunda yalnız aynı oynanışın kaydı (başka sürümünki boş). */

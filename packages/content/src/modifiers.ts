@@ -1,6 +1,7 @@
 import { localizeList } from './localize';
 import { getDifficulty } from './difficulty';
 import type { DifficultyDef, DifficultyId } from './difficulty';
+import type { RuleOverrides } from './packs';
 import type { ScenarioDef } from './scenarios';
 
 /**
@@ -140,4 +141,23 @@ export function ruleName(def: ScenarioDef | null | undefined, id: ModifierId): s
 
 export function ruleBlurb(def: ScenarioDef | null | undefined, id: ModifierId): string {
   return def?.customRules?.find((rule) => rule.base === id)?.blurb ?? MODIFIER_BY_ID[id]?.blurb ?? '';
+}
+
+/** Kural kimliğinden ayar adına (`hungry_rivals` → `hungryRivals`). */
+export const RULE_KEY: Record<ModifierId, keyof RuleOverrides> = {
+  storms: 'storms',
+  hungry_rivals: 'hungryRivals',
+  tight_credit: 'tightCredit',
+  scarce_land: 'scarceLand',
+};
+
+/** Hazır kural değerleri, senaryonun ayarlarıyla (ayar yoksa hazır değerlerin kendisi). */
+export function rulesWith(overrides: RuleOverrides | undefined): typeof MODIFIER_RULES {
+  if (!overrides) return MODIFIER_RULES;
+  return {
+    storms: { ...MODIFIER_RULES.storms, ...overrides.storms },
+    hungryRivals: { ...MODIFIER_RULES.hungryRivals, ...overrides.hungryRivals },
+    tightCredit: { ...MODIFIER_RULES.tightCredit, ...overrides.tightCredit },
+    scarceLand: { ...MODIFIER_RULES.scarceLand, ...overrides.scarceLand },
+  } as typeof MODIFIER_RULES;
 }

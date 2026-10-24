@@ -7577,7 +7577,7 @@ senaryo, 200 ve 60 gün).
   elinde olan koşu sayılmamalı). Ayrıntıda yazıyor. Kariyerin "senaryo
   yıldızı" sayısı hazır senaryolardan (paketler yüklenince büyüyordu).
 - **Paket bütçesi.** Doğrulayıcı, paylaşım kodu ve raf geç inen iki parçada
-  (raf 4,8 KB, paket modülü 6,1 KB, gzip); ana parça 72,4 → 73,3 KB (kart
+  (raf 4,8 KB, paket modülü 6,1 KB, gzip); ana parça 72,4 → 73,6 KB (kart
   bileşeni, iki satır metin, kayda gömülü tanımın okunuşu). Kural adının
   okunuşu doğrulayıcıdan ayrı modülde: aynı modülde olsaydı doğrulayıcı
   ana parçaya taşınacaktı.
@@ -7624,7 +7624,12 @@ senaryo, 200 ve 60 gün).
   metinler gibi etkin dilden okunuyor); Sıkı bankanın kuruluş kredisi
   ayarları (`startingLoanShare`, `startingLoanDays`) kabul edilip etkisiz
   kalıyordu: senaryoda şirket devirle başlıyor, kredisi `setup.loan`.
-  Doğrulayıcı ikisini artık bilinmeyen alan sayıyor.
+  Doğrulayıcı ikisini artık bilinmeyen alan sayıyor. Beşinci incelemede:
+  parmak izi ham alanlardan kuruluyordu, varsayılanı açıkça yazmak
+  (`firstDay: 160`, `freeze: { entrants: false }`) aynı oyunda skoru
+  gizliyordu; iz artık çözülmüş değerlerden (kuralın tam değerleri,
+  devrin etkisiz yazımları düşülmüş). Kural değerlerinin okunuşu
+  (`rulesWith`) ana parçadaki modüle taşındı: 73,3 → 73,6 KB.
 - Tam tarayıcı koşusu 693/694, konsol temiz (66 dk). Koşu ilk inceleme
   düzeltmelerinden önceki paketle; düzeltmelerin dokunduğu bölüm
   ("İçerik paketleri") sonra 17/17. Kalan kontrol "Düşük kare hızında oyun

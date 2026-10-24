@@ -55,6 +55,15 @@ describe('yüklü paketler', () => {
     assert.equal(scenarioRecord(id).best?.score, 300, 'metin değişti, oyun aynı');
     addPack(version((scenario) => ({ ...scenario, rules: ['tight_credit', 'storms'] })));
     assert.equal(scenarioRecord(id).best?.score, 300, 'kuralların yalnız sırası değişti');
+    // Varsayılanın açıkça yazılması oyunu değiştirmiyor: hazır değerle aynı ayar, etkisiz devir yazımı.
+    const explicit = version((scenario) => ({
+      ...scenario,
+      rules: ['kis', 'tight_credit'],
+      setup: { ...scenario.setup, freeze: { entrants: false }, feud: 0 },
+    }));
+    explicit.rules = [{ id: 'kis', base: 'storms', name: 'Kış', blurb: 'Hazır değerler', params: { firstDay: 160, gapDays: [150, 240] } }];
+    addPack(explicit);
+    assert.equal(scenarioRecord(id).best?.score, 300, 'varsayılan açıkça yazıldı');
 
     const harder = version((scenario) => ({ ...scenario, stars: { metric: 'days', two: 250, three: 200 } }));
     addPack(harder);
