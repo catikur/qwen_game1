@@ -4,6 +4,7 @@ import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { SharedKernelBloomPass, postProcessingMaterials } from './bloom';
 import { cardBounds, cardView, placeCardCamera } from './cardView';
+import { paint } from './paint';
 import { isSoftwareRenderer } from './gpu';
 import { BUILDING_BY_ID, DISTRICT_ARCHETYPES, PLAYER_ACCENT as PLAYER_COLORS, STRUCTURE_BY_ID, WEATHER_BY_ID } from '@capital/content';
 import type { BuildingDef, MassForm, StructureDef } from '@capital/content';
@@ -336,8 +337,12 @@ export class CityRenderer {
   private dummy = new THREE.Object3D();
   private color = new THREE.Color();
   private ownerColor = new THREE.Color();
+  /** Karenin sahibinin rengi, karenin tonuna karışırken (her karede yeni renk kurulmasın). */
+  private tileOwnerColor = new THREE.Color();
   private categoryColor = new THREE.Color();
   private disposed = false;
+  /** Tuvalin sayfadaki yeri; boyut değişince siliniyor (bkz. `screenOfWorld`). */
+  private canvasRect: DOMRect | null = null;
   private cleanups: Array<() => void> = [];
   private frameSamples = 0;
   private frameTimeSum = 0;
@@ -836,6 +841,15 @@ export class CityRenderer {
       window.removeEventListener('keyup', onKeyUp);
       window.removeEventListener('blur', onBlur);
     });
+
+    // Tuvalin boyutu pencereden bağımsız da değişebilir (yerleşim): izdüşümün önbelleği silinsin.
+    if (typeof ResizeObserver === 'function') {
+      const observer = new ResizeObserver(() => {
+        this.canvasRect = null;
+      });
+      observer.observe(this.canvas);
+      this.cleanups.push(() => observer.disconnect());
+    }
   }
 
   private updateHover(): void {
@@ -1053,7 +1067,7 @@ export class CityRenderer {
       // Aynı yapı tipinden sıkıcı bir tekrar çıkmasın diye kareye göre
       // deterministik küçük bir renk sapması veriyoruz.
       const jitter = ((tile.id * 37) % 17) / 17 - 0.5;
-      this.color.set(structure.color).offsetHSL(jitter * 0.02, 0, jitter * 0.07);
+      paint(this.color, structure.color).offsetHSL(jitter * 0.02, 0, jitter * 0.07);
 
       // Müstakil ev parselin ortasında, bahçesiyle (Tur 36): 0,8 genişlikte
       // parseli kaplıyor, çim ve çit evin altında kalıyordu.
@@ -1128,8 +1142,8 @@ export class CityRenderer {
        * yüzey zaten çatı. Kullanıcı A/B karelerinden B'yi seçti.
        */
       const company = state.companies[building.companyId];
-      naturalColor(this.color, buildingFacade(def), tile.x, tile.y).lerp(this.categoryColor.set(def.color), 0.18);
-      this.ownerColor.set(company && !company.isPlayer ? company.color : this.playerAccent());
+      naturalColor(this.color, buildingFacade(def), tile.x, tile.y).lerp(paint(this.categoryColor, def.color), 0.18);
+      paint(this.ownerColor, company && !company.isPlayer ? company.color : this.playerAccent());
 
       /*
        * DEVRALMA (Tur 63): sahibi değişen binanın çatısı bir karede dönmüyor.
@@ -1181,7 +1195,7 @@ export class CityRenderer {
       } else if (this.risingIds.delete(building.id) && moments) {
         this.rings.pulse(tile.x, tile.y, accent);
       }
-      if (site !== null) this.color.set(SITE_CONCRETE);
+      if (site !== null) paint(this.color, SITE_CONCRETE);
       const form = site !== null ? 'block' : massFormOf(def);
       const height = Math.max(0.3, def.height) * 1.5 * (site !== null ? 0.2 + (SITE_TOP - 0.2) * site : 1);
       const footprint = this.buildings.place({
@@ -1431,7 +1445,7 @@ export class CityRenderer {
 
     // Sokaklar her lenste sokak kalır — şehrin okunabilirliği lensin
     // altında kaybolmamalı.
-    if (tile.kind === 'road') return this.color.set('#12171f');
+    if (tile.kind === 'road') return paint(this.color, '#12171f');
 
     // Kilitli bölge HER lenste kırsal yeşil: oradaki veri henüz karar
     // verisi değil, lens orayı boyasaydı "oynanabilir alan" gibi
@@ -1439,27 +1453,27 @@ export class CityRenderer {
     // hafif kırpma — düz tek renk halı gibi durmasın.
     if (district?.opensOnDay !== undefined && state.time.day < district.opensOnDay) {
       const jitter = ((tile.x * 73 + tile.y * 151) % 7) - 3;
-      return this.color.set('#7f9468').offsetHSL(jitter * 0.004, 0, jitter * 0.012);
+      return paint(this.color, '#7f9468').offsetHSL(jitter * 0.004, 0, jitter * 0.012);
     }
 
     if (view.lens === 'ownership') {
       if (!tile.ownerId) return this.color.copy(FREE_COLOR);
       const owner = state.companies[tile.ownerId];
-      if (owner?.isPlayer && this.safePalette) return this.color.set(SAFE_PLAYER_ACCENT).multiplyScalar(0.9);
-      return this.color.set(owner?.color ?? '#888888').multiplyScalar(0.7);
+      if (owner?.isPlayer && this.safePalette) return paint(this.color, SAFE_PLAYER_ACCENT).multiplyScalar(0.9);
+      return paint(this.color, owner?.color ?? '#888888').multiplyScalar(0.7);
     }
 
     if (view.lens === 'none') {
-      if (tile.kind === 'civic') return this.color.set('#25382c');
+      if (tile.kind === 'civic') return paint(this.color, '#25382c');
       const base = district ? DISTRICT_ARCHETYPES[district.archetype].color : '#2a3446';
-      this.color.set(base);
+      paint(this.color, base);
       // Boş parsel biraz daha aydınlık: "burası alınabilir" sinyali.
       if (!tile.structureId && !tile.ownerId) this.color.offsetHSL(0, 0.02, 0.07);
       // Kendi arsan hafif yeşile çalsın; sahiplik lens açmadan da okunsun.
       if (tile.ownerId === view.playerCompanyId) this.color.lerp(this.safePalette ? SAFE_OWN_COLOR : OWN_COLOR, 0.35);
       else if (tile.ownerId) {
         const owner = state.companies[tile.ownerId];
-        if (owner) this.color.lerp(new THREE.Color(owner.color), 0.28);
+        if (owner) this.color.lerp(paint(this.tileOwnerColor, owner.color), 0.28);
       }
       return this.color;
     }
@@ -1471,6 +1485,8 @@ export class CityRenderer {
   // ------------------------------------------------------------- döngü
 
   resize(): void {
+    // Tuvalin sayfadaki yeri de değişmiş olabilir: bir sonraki izdüşüm yeniden okusun.
+    this.canvasRect = null;
     const width = this.canvas.clientWidth || 1;
     const height = this.canvas.clientHeight || 1;
     this.renderer.setSize(width, height, false);
@@ -2265,10 +2281,19 @@ export class CityRenderer {
     return this.screenOfWorld(tile.x, height + 0.12, tile.y);
   }
 
-  /** Bir dünya noktasının ekrandaki yeri, sayfa pikseliyle. */
+  /**
+   * Bir dünya noktasının ekrandaki yeri, sayfa pikseliyle.
+   *
+   * Tuvalin sayfadaki yeri önbellekte (Tur 65): kazanç etiketleri ve fırsat
+   * balonu her karede her etiket için buraya geliyor ve araya stil yazıyor;
+   * her `getBoundingClientRect` tarayıcıyı stili yeniden hesaplamaya
+   * zorluyordu. Telefonda (CPU 4× yavaş) günün JS'inin ~%10'u buydu. Tuval
+   * tam ekran ve sabit: yeri yalnız boyutla değişiyor, `resize` ve boyut
+   * gözlemcisi önbelleği siliyor.
+   */
   private screenOfWorld(x: number, y: number, z: number): { x: number; y: number; visible: boolean } {
     const point = this.projected.set(x, y, z).project(this.controller.camera);
-    const rect = this.canvas.getBoundingClientRect();
+    const rect = (this.canvasRect ??= this.canvas.getBoundingClientRect());
     return {
       x: Math.round(rect.left + ((point.x + 1) / 2) * rect.width),
       y: Math.round(rect.top + ((1 - point.y) / 2) * rect.height),

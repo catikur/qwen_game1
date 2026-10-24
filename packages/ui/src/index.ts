@@ -67,3 +67,4 @@ export {
 } from './appearance';
 export type { Appearance, AppearanceChoice } from './appearance';
 export type { MessageKey } from './i18n';
+export { fileSlug } from './fileName';

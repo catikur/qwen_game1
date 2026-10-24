@@ -4,6 +4,7 @@ import { PLAYER_ACCENT, SCENARIO_BY_ID, getDifficulty, setLocale } from '@capita
 import { GameEngine, companyRanking, createLeagueGame, createNewGame, createScenarioGame, formatMoney, getPlayer } from '@capital/core';
 import type { GameState } from '@capital/core';
 import { cardFilename, cityCardFacts } from '../src/cardFacts';
+import { fileSlug } from '../src/fileName';
 import { fitText } from '../src/cardDraw';
 import { chooseLocale } from '../src/i18n/locale';
 
@@ -104,6 +105,15 @@ describe('şehir kartının özeti', () => {
     facts = cityCardFacts(state);
     assert.equal(facts.tone, 'loss');
     assert.equal(stat(facts, 'score'), formatMoney(0), 'devralınan lig koşusunun skoru sıfır');
+  });
+
+  test('dosya adına giren metin: kaydın dışa aktarması da aynı yardımcıyı kullanıyor (Tur 65)', () => {
+    assert.equal(fileSlug('Karaca Holding'), 'Karaca-Holding');
+    assert.equal(fileSlug('Yeni Girişim'), 'Yeni-Girisim');
+    assert.equal(fileSlug('  ÇĞİÖŞÜ çğıöşü  '), 'CGIOSU-cgiosu');
+    assert.equal(fileSlug('???'), 'capitalforge');
+    assert.equal(fileSlug('???', 'kayit'), 'kayit');
+    assert.ok(/^[A-Za-z0-9._-]+$/.test(fileSlug('Şen & Oğlu: "Yapı" <AŞ> 🏙️')));
   });
 
   test('dosya adı ASCII: Türkçe harfler eşine, sorunlu karakterler düşüyor', () => {

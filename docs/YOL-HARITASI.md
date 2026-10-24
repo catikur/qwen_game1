@@ -1,6 +1,6 @@
 # Capital — Yol Haritası
 
-> Tur 47'de yazıldı, her turda güncelleniyor (son: Tur 64). Biten işin ayrıntısı
+> Tur 47'de yazıldı, her turda güncelleniyor (son: Tur 65). Biten işin ayrıntısı
 > `docs/DURUM.md`'de; bu dosya önümüzdeki işin sırasını ve gerekçesini
 > tutuyor.
 
@@ -38,7 +38,7 @@ Bir bağlantıyla açılan, istenirse kurulan ve çevrimdışı da oynanan bir
 | **1 · Ürün temeli** | Oyun bir ürün gibi davransın | 47–50 | Kuruluyor, çevrimdışı açılıyor, tek Ayarlar paneli var, müzik var | **bitti** (Tur 50) |
 | **2 · Çevrimiçi rekabet** | Herkes aynı şehirde | 51–55 | Pages'te paylaşılan tablo var, skor sunucuda doğrulanıyor | **bitti** (Tur 55) |
 | **3 · Yeni yollar** | Her koşu farklı bir şirket | 56–61 | Zafere en az üç farklı yol var, her birini kazanan bir vekil var | **bitti** (Tur 61) |
-| **4 · Şehrin hissi** | Oynaması keyifli | 62–65 | Mevsim ve hava görünüyor, önemli anlar hissediliyor | sürüyor (Tur 64) |
+| **4 · Şehrin hissi** | Oynaması keyifli | 62–65 | Mevsim ve hava görünüyor, önemli anlar hissediliyor | **bitti** (Tur 65) |
 | **5 · Platform ve topluluk** | Oyunun evi büyüsün | 66+ | Masaüstü sürümü ve paylaşılabilir senaryolar var | |
 
 ### Faz 1 · Ürün temeli
@@ -121,8 +121,12 @@ bölümünün sonunda.
   1200 × 630 PNG, solda şirket, sonuç, gün, dört sayı ve şirketin yolu,
   sağda şehrin kuşbakışı (şirketin binalarını sığdıran sabit bir bakış).
   Zafer, senaryo ve lig sonucu, oyun sonu ekranlarında ve Hedefler'de;
-  indir ya da paylaş. Görünüm: lig izi aynı. — bu PR
-- **65 · Değerlendirme ve telefon performansı.**
+  indir ya da paylaş. Görünüm: lig izi aynı. — bitti (#94)
+- **65 · Değerlendirme ve telefon performansı.** Telefon görünümünde (CPU 4×
+  yavaş) yeni özelliklerin yükü gürültünün içinde; günün JS'inden üç kalem
+  çıktı: tuvalin yeri her karede okunmuyor, tarih biçimleyicisi ve renkler
+  bir kez kuruluyor. Kaydın dosya adı ASCII. Faz 4 raporu `docs/DURUM.md`'de,
+  Tur 65'in sonunda. — bu PR
 
 ### Faz 5 · Platform ve topluluk
 

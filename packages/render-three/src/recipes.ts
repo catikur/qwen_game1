@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { paint } from './paint';
 import type { BuildingDef, StructureDef } from '@capital/content';
 import type { DecorLayer } from './decor';
 import type { MassFootprint } from './mass';
@@ -19,7 +20,8 @@ function dice(x: number, z: number, slot: number): number {
 }
 
 const tmp = new THREE.Color();
-const c = (hex: string) => tmp.set(hex);
+// Ayrıştırılmış renkten kopya (Tur 65): süsler her bina yerleşiminde aynı dizgileri istiyor.
+const c = (hex: string) => paint(tmp, hex);
 
 const TERRACOTTA = ['#b5583c', '#a64c35', '#c46a43', '#93503d', '#ad6148'];
 const SLATE = '#6d7480';

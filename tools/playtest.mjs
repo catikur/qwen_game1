@@ -2471,6 +2471,9 @@ async function finish(browser, consoleErrors) {
   const downloaded = await download;
   check('Dışa aktarma tarayıcıda gerçek bir indirme başlatıyor', downloaded !== null,
     downloaded ? downloaded.suggestedFilename() : 'indirme olayı yok');
+  // Dosya adı ASCII (Tur 65): şirketin adındaki boşluk ve harf, UTF-8 olmayan sistemlerde adı "download" yapıyordu.
+  check('Dışa aktarmanın dosya adı ASCII: capitalforge-Şirket-Adı-gun….json', /^capitalforge-[A-Za-z0-9._-]+-gun\d+\.json$/.test(downloaded?.suggestedFilename() ?? ''),
+    downloaded?.suggestedFilename() ?? 'indirme yok');
   check('İndirme sonucu dürüstçe bildiriliyor', (await lastToast()).includes('başlatıldı'), await lastToast());
 
   await page.evaluate(() => {
@@ -7895,6 +7898,91 @@ async function finish(browser, consoleErrors) {
         && phone.alt.includes('Run in progress') && phone.download === 'Download image' && pkErrors.length === 0,
       JSON.stringify(phone));
     await kPhone.close();
+  }
+
+  section('Değerlendirme: Faz 4 sonu');
+  {
+    const eContext = await browser.newContext({ viewport: { width: 1280, height: 860 } });
+    await eContext.addInitScript(veteran, TUTORIAL_KEY);
+    // Tuvalin yerinin kaç kez okunduğu: sahnenin tuvalinde `getBoundingClientRect` sayacı.
+    await eContext.addInitScript(() => {
+      const original = HTMLCanvasElement.prototype.getBoundingClientRect;
+      window.__rectReads = 0;
+      HTMLCanvasElement.prototype.getBoundingClientRect = function () {
+        if (this.classList.contains('scene')) window.__rectReads++;
+        return original.call(this);
+      };
+    });
+    const ep = await eContext.newPage();
+    const eErrors = [];
+    ep.on('pageerror', (e) => eErrors.push(e.message));
+    ep.on('console', (m) => { if (m.type() === 'error') eErrors.push(m.text()); });
+    await ep.goto('http://127.0.0.1:8811/');
+    await ep.waitForSelector('.newgame', { timeout: 20000 });
+    await ep.locator('button:has-text("Şirketi kur")').click();
+    await ep.waitForSelector('.topbar', { timeout: 30000 });
+    await ep.waitForFunction(() => (window.__capital?.renderInfo()?.frameCount ?? 0) >= 4, null, { timeout: 60000 });
+    // Kazanç etiketleri için kâr eden dükkânlar; şehir 1. hızda yürüyor.
+    await ep.evaluate(() => {
+      const c = window.__capital;
+      for (let d = 0; d < 20; d++) c.engine.runDay();
+      const s = c.getState();
+      s.companies[s.playerCompanyId].cash += 20_000_000;
+      let built = 0;
+      for (const tile of s.map.tiles) {
+        if (built >= 6) break;
+        if (tile.kind !== 'plot' || tile.structureId || tile.ownerId) continue;
+        if (!c.engine.dispatch({ type: 'BUY_TILE', tileId: tile.id }).ok) continue;
+        if (c.engine.dispatch({ type: 'BUILD', tileId: tile.id, defId: 'corner_shop' }).ok) built++;
+      }
+      for (let d = 0; d < 6; d++) c.engine.runDay();
+      c.engine.dispatch({ type: 'SET_SPEED', speed: 1 });
+    });
+    const tagged = await ep.waitForFunction(() => document.querySelectorAll('.money-tags > *').length >= 1, null, { timeout: 30000 }).then(() => true).catch(() => false);
+    // Etiketler çatıdayken on kare boyunca tuvalin yeri kaç kez okunuyor (kare sayacı sayfanın içinde).
+    const reads = await ep.evaluate(async () => {
+      const startFrames = window.__capital.renderInfo().frameCount;
+      const start = window.__rectReads;
+      const tags = document.querySelectorAll('.money-tags > *').length;
+      while (window.__capital.renderInfo().frameCount - startFrames < 10) await new Promise((resolve) => requestAnimationFrame(resolve));
+      return { reads: window.__rectReads - start, frames: window.__capital.renderInfo().frameCount - startFrames, tags };
+    });
+    check('Kazanç etiketleri her karede tuvalin yerini okumuyor (Tur 65)', tagged && reads.tags >= 1 && reads.reads <= 1,
+      `${reads.frames} karede ${reads.reads} okuma, ${reads.tags} etiket`);
+
+    // Pencere boyutu değişince izdüşüm yeni yeri okuyor: kameranın baktığı nokta ekranın ortasında.
+    await ep.evaluate(() => window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 }));
+    // Kamera ortadaki bir sokak karesine (binasız: izdüşüm yerin hemen üstü).
+    const road = await ep.evaluate(() => {
+      const s = window.__capital.getState();
+      const mid = { x: s.map.width / 2, y: s.map.height / 2 };
+      const roads = s.map.tiles.filter((t) => t.kind === 'road');
+      roads.sort((a, b) => Math.hypot(a.x - mid.x, a.y - mid.y) - Math.hypot(b.x - mid.x, b.y - mid.y));
+      const tile = roads[0];
+      window.__capital.setView({ x: tile.x, z: tile.y, distance: 30 });
+      return { id: tile.id, x: tile.x, z: tile.y };
+    });
+    const settled = () => ep.waitForFunction((r) => {
+      const at = window.__capital.renderInfo().cameraCurrent;
+      return Math.abs(at.x - r.x) < 0.05 && Math.abs(at.z - r.z) < 0.05;
+    }, road, { timeout: 20000 }).catch(() => null);
+    const centre = async () => ep.evaluate((id) => {
+      const at = window.__capital.screenOfTile(id);
+      return at && { dx: Math.abs(at.x - innerWidth / 2), dy: Math.abs(at.y - innerHeight / 2), w: innerWidth, h: innerHeight };
+    }, road.id);
+    await settled();
+    const before = await centre();
+    await ep.setViewportSize({ width: 900, height: 700 });
+    await ep.waitForFunction(() => innerWidth === 900, null, { timeout: 5000 });
+    // Boyut değişimi sahneye bir karede iniyor (pencerenin `resize`'ı ve tuvalin boyut gözlemcisi).
+    await ep.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    await settled();
+    const after = await centre();
+    check('Pencere boyutu değişince ekrandaki yer yeni boyuttan (önbellek bayatlamıyor)',
+      before !== null && after !== null && before.dx < 20 && before.dy < 20 && after.w === 900 && after.dx < 20 && after.dy < 20,
+      JSON.stringify({ before, after }));
+    check('Değerlendirme akışında konsol temiz', eErrors.length === 0, eErrors.slice(0, 2).join(' | '));
+    await eContext.close();
   }
 
   section('Mobil');

@@ -16,6 +16,7 @@ import {
   LeagueResultScreen,
   VictoryScreen,
   LensBar,
+  fileSlug,
   ModalHost,
   NewsFeed,
   OpportunityBubble,
@@ -301,6 +302,8 @@ export function GameRoot({
       weatherOn: (seed: number, day: number) => weatherOn(seed, day).id,
       // Binanın çatı rengi: test, devralma dalgasının yeni sahibin rengine vardığını görsün (Tur 63).
       buildingAccent: (id: string) => rendererRef.current?.buildingAccent(id) ?? null,
+      // Karenin ekrandaki yeri: test, tuval boyut değiştirince izdüşümün yeni yeri okuduğunu görsün (Tur 65).
+      screenOfTile: (tileId: number) => rendererRef.current?.screenOfTile(tileId) ?? null,
     };
     return () => {
       delete globals['__capital'];
@@ -348,7 +351,8 @@ export function GameRoot({
 
   const exportSave = useCallback(async (): Promise<ExportOutcome> => {
     const state = engine.getState();
-    const filename = `capitalforge-${getPlayer(state).name}-gun${state.time.day}.json`;
+    // Dosya adı ASCII (Tur 65): harfli ad bazı sistemlerde indirmede "download"a dönüyordu.
+    const filename = `capitalforge-${fileSlug(getPlayer(state).name)}-gun${state.time.day}.json`;
     const outcome = await deliverTextFile(filename, exportToJson(state));
     /*
      * OYUN OYUNCUYA YALAN SÖYLEMEZ — dışa aktarmada da.
