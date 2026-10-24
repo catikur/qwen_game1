@@ -3584,7 +3584,7 @@ async function finish(browser, consoleErrors) {
       });
       const accountGone = await a.p.waitForFunction(() => document.querySelector('[data-league-account]') === null || null, null, { timeout: 5000 }).then(() => true).catch(() => false);
       // Hesap gidince arkadaş ligleri bölümü baştan: eski lig listesi kalmıyor; sunucuda lig B ile duruyor.
-      const friendsAfter = await a.p.waitForSelector('[data-league-friends="0"]', { timeout: 5000 }).then(() => true).catch(() => false);
+      const friendsAfter = await a.p.waitForSelector('[data-league-friends="0"]', { timeout: 15000 }).then(() => true).catch(() => false);
       check('Hesap silinince arkadaş ligleri panelden gidiyor (Tur 55)', friendsBefore && friendsAfter, `önce ${friendsBefore} · sonra ${friendsAfter}`);
       check('Lig hesabı siliniyor: koşusu sunucudan gidiyor, anahtar tarayıcıdan', left?.entries[0]?.companyName === 'Bekleyen Holding' && accountGone,
         `${left?.total ?? '?'} koşu kaldı`);
@@ -4740,7 +4740,10 @@ async function finish(browser, consoleErrors) {
       window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 3 });
       return { day: window.__capital.getState().time.day, stateSyncs: info.stateSyncs, fabricSyncs: info.fabricSyncs };
     });
-    await fp.waitForFunction((day) => window.__capital.getState().time.day >= day + 20, before.day, { timeout: 120000 });
+    // Yirmi eşitleme bekleniyor, yirmi gün değil: yavaş makinede React iki
+    // günü tek çizimde birleştirince 20 günde 19 eşitleme kalıyor (o zaman
+    // ana dalda da düşüyordu). Ölçülen şey eşitleme başına doku.
+    await fp.waitForFunction((count) => (window.__capital.renderInfo().stateSyncs ?? 0) >= count + 20, before.stateSyncs ?? 0, { timeout: 120000 });
     const after = await fp.evaluate(() => {
       window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
       return { ...window.__capital.renderInfo(), day: window.__capital.getState().time.day };
@@ -5817,11 +5820,9 @@ async function finish(browser, consoleErrors) {
       window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
     });
 
-    await mp.waitForTimeout(2500);
-    const paused = await music();
-    check('Duraklayınca yalnız pad ve bas kalıyor',
-      paused !== null && paused.layers.pad > 0.3 && paused.layers.bass > 0.3 && paused.layers.arp < 0.02 && paused.layers.lead < 0.02 && paused.layers.pulse < 0.02,
-      paused ? JSON.stringify(paused.layers) : 'müzik yok');
+    // Katmanlar sönene dek (yavaş makinede 2,5 sn'den uzun sürebiliyor).
+    const paused = await until((m) => m.layers.pad > 0.3 && m.layers.bass > 0.3 && m.layers.arp < 0.02 && m.layers.lead < 0.02 && m.layers.pulse < 0.02, 8000);
+    check('Duraklayınca yalnız pad ve bas kalıyor', paused.ok, paused.last ? JSON.stringify(paused.last.layers) : 'müzik yok');
 
     await mp.locator('.speeds [data-panel="settings"]').click();
     await mp.locator('[data-volume="music"]').focus();
@@ -6581,8 +6582,9 @@ async function finish(browser, consoleErrors) {
     // Rakipler paneli (pencere) kapansın; ihale çipi ihale panelini açıyor.
     await vp.keyboard.press('Escape');
     await vp.waitForTimeout(200);
-    await vp.locator('.auction-chip').first().click({ timeout: 5000 }).catch(() => {});
-    await vp.waitForTimeout(300);
+    // Yazılımsal GPU'da bir kare yarım saniyeyi aşabiliyor: tıklama ve panel bekleniyor.
+    await vp.locator('.auction-chip').first().click({ timeout: 15000 }).catch(() => {});
+    await vp.waitForSelector('[data-auction-allies]', { timeout: 10000 }).catch(() => null);
     const spite = (await vp.locator('[data-auction-spite]').textContent().catch(() => '')) ?? '';
     const allies = (await vp.locator('[data-auction-allies]').textContent().catch(() => '')) ?? '';
     check('İhale panelinde husumetli ve müttefik notu', spite.includes(setup.foeName) && allies.includes(setup.friendName), `${spite.slice(0, 60)} | ${allies.slice(0, 60)}`);
@@ -7404,8 +7406,25 @@ async function finish(browser, consoleErrors) {
     check('Azaltılmış harekette zafer ekranı beklemeden iniyor, havai fişek yok', quick !== null && quick < 800 && noFire.fireworks.active === false, `ekran ${quick} ms · ${JSON.stringify(noFire.fireworks)}`);
     await mp.locator('.gameover.victory .gameover-actions button.primary').click();
     await mp.locator('.speeds [data-panel="settings"]').click();
-    await mp.locator('[data-setting="motion"][data-choice="full"]').click();
+    await mp.locator('[data-setting="motion"][data-choice="auto"]').click();
     await mp.keyboard.press('Escape');
+
+    // Zafer ekranı beklerken cihaz azaltılmış harekete geçiyor (hareket seçimi
+    // "cihaza göre"): bekleme kesiliyor, ekran hemen; havai fişek de duruyor (Codex #93).
+    await settle(() => document.querySelector('.gameover.victory') === null, 5000);
+    await declare('tycoon', 2);
+    await mp.waitForTimeout(500);
+    await mp.emulateMedia({ reducedMotion: 'reduce' });
+    const switched = await mp.evaluate(() => performance.now());
+    await settle(() => window.__momentTrace.screen !== null, 5000);
+    const midway = await mp.evaluate((at) => {
+      const trace = window.__momentTrace;
+      return { afterSwitch: trace.screen === null ? null : Math.round(trace.set + trace.screen - at), screen: trace.screen, fireworks: window.__capital.renderInfo().moments.fireworks.active };
+    }, switched);
+    check('Zafer beklerken cihaz azaltılmış harekete geçince ekran beklemeden iniyor, havai fişek duruyor (Codex #93)',
+      midway.afterSwitch !== null && midway.afterSwitch < 700 && midway.screen < 2200 && midway.fireworks === false, JSON.stringify(midway));
+    await mp.locator('.gameover.victory .gameover-actions button.primary').click();
+    await mp.emulateMedia({ reducedMotion: 'no-preference' });
 
     // Veri lensinde anlar çizilmiyor.
     await mp.evaluate(() => {

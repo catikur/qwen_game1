@@ -173,3 +173,14 @@ export function subscribeSettings(listener: () => void): () => void {
 export function useSettings(): Settings {
   return useSyncExternalStore(subscribeSettings, getSettings, getSettings);
 }
+
+const reducedNow = (): boolean => reducedMotion();
+
+/**
+ * Azaltılmış hareket etkin mi; seçim de cihazın tercihi de değişince
+ * bileşeni yeniden çizer. (`useSettings` cihazın tercihini görmüyor:
+ * tercih değişince seçimler nesnesi aynı kalıyor.)
+ */
+export function useReducedMotion(): boolean {
+  return useSyncExternalStore(subscribeSettings, reducedNow, reducedNow);
+}

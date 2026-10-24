@@ -6987,7 +6987,31 @@ bandının süresi dolmadan hemen önce (sayfanın içinden ölçülen 4,56. sn)
 ilan ediyor: yarış her koşuda sınanıyor. Eski derlemede bu kontrol düşüyor,
 yenisinde geçiyor.
 
-**Codex'in bulduğu sekiz şey.**
+**Yavaş makinede ikinci tam koşu.** Konteyner yeniden başlayınca makine
+yavaşladı: koşu ~40 dk yerine ~60 dk sürdü, eski bölümlerden dört kontrol
+düştü (önceki bütün tam koşularda geçiyorlardı):
+- arkadaş ligleri hesap silinince panelden gidiyor (Tur 55);
+- şehir dokusu yalnız değiştiği günlerde yeniden yerleşiyor (20 günde 19
+  eşitleme);
+- duraklayınca müzikte yalnız pad ve bas kalıyor;
+- ihale panelinde husumetli ve müttefik notu.
+
+Bu turun bir gerilemesi mi diye aynı makinede ana dalın derlemesiyle yan
+yana ölçüldü. Kalite kademesi sabitlenince kare süresi aynı, hatta biraz kısa
+(en düşük kademede 389–422 ms, ana dalda 431–475 ms). İlk denemedeki fark
+kalitenin kendiliğinden inip çıkmasındandı. Şehir dokusu kontrolü ana
+dalda da düşüyordu; ihale panelini açan tıklama iki derlemede de
+2,5–6,6 sn sürüyordu (her kare yarım saniyeyi aşıyor).
+
+Dördü artık sabit bir süre beklemiyor; aradıkları durumu bekliyor,
+doğruladıkları şey aynı:
+- doku kontrolü 20 gün değil 20 eşitleme bekliyor (React iki günü tek
+  çizimde birleştirebiliyor);
+- müzik katmanların sönmesini bekliyor (en çok 8 sn);
+- ihale çipi 15 sn içinde tıklanıyor, panel bekleniyor;
+- arkadaş ligleri panelinin boşalması 15 sn bekleniyor.
+
+**Codex'in bulduğu dokuz şey.**
 - *Kayıt açılınca zafer ekranı 2,4 sn gecikiyordu.* Oyun içinde bekleyen
   zaferli bir kayıt açılınca ekran canlı zafer gibi bekletiliyordu. Gecikme
   artık durumun kendisini de biliyor: durum değiştiyse kayıttaki zafer
@@ -7021,6 +7045,12 @@ yenisinde geçiyor.
   80'e gidiyordu. Arama artık kameranın önündeki dilimde (`aimHeight`):
   patlama kameranın en az 4 birim önünde, hedefe varamıyorsa önünde
   varabildiği en yüksek yerde.
+- *Zafer ekranı beklerken azaltılmış harekete geçilince ekran beklemeyi
+  sürdürüyordu* (havai fişek o an duruyordu, ekran 2,4 sn'yi dolduruyordu).
+  Bekleme artık azaltılmış harekete abone (`useReducedMotion`): seçim de
+  cihazın tercihi de değişince ekran hemen iniyor. `useSettings` cihazın
+  tercihini görmüyordu (tercih değişince seçimler nesnesi aynı kalıyor);
+  kazanç etiketleri de artık aynı aboneliği okuyor.
 
 Son üçü düzeltmeden önce kırılan birim testleriyle (tarayıcıda tozun 1,5
 sn'lik penceresi yazılımsal GPU'nun birkaç karesine sığıyor, orada

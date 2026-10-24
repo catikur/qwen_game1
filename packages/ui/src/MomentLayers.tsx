@@ -4,7 +4,7 @@ import { PLAYER_ACCENT } from '@capital/content';
 import { formatMoney } from '@capital/core';
 import type { GameState } from '@capital/core';
 import { useGame, useGameState } from './useGame';
-import { reducedMotion, useSettings } from './settings';
+import { reducedMotion, useReducedMotion, useSettings } from './settings';
 import { MONEY_TAGS, momentsBetween, moneyTagsOf, snapshotOf } from './moments';
 import type { Moment, MomentSnapshot, MoneyTag } from './moments';
 import { t } from './i18n';
@@ -48,13 +48,14 @@ export function MoneyTags(): ReactElement | null {
   const state = useGameState();
   const { view, projectTile } = useGame();
   const settings = useSettings();
+  const reduced = useReducedMotion();
   const [tags, setTags] = useState<LiveTag[]>([]);
   const layer = useRef<HTMLDivElement>(null);
   const lastDay = useRef<number | null>(null);
   const lastWave = useRef(-Infinity);
   const source = useRef<GameState | null>(null);
   // Pencere açıkken, veri lensinde ve oyun bitince etiket yok: şehre bakılmıyor.
-  const enabled = settings.moneyTags && !reducedMotion(settings) && view.openPanel === 'none' && view.lens === 'none' && !state.gameOver;
+  const enabled = settings.moneyTags && !reduced && view.openPanel === 'none' && view.lens === 'none' && !state.gameOver;
   const day = state.time.day;
 
   useEffect(() => {
@@ -294,10 +295,13 @@ export function MomentBanner(): ReactElement | null {
  * Canlı gelen bir anın ekranı biraz beklesin (zafer: havai fişek önce).
  * Kayıt açılırken zaten orada olan an ve azaltılmış hareket beklemiyor.
  * `source` durumun kendisi: oyun içinde kayıt açılınca (aynı ekran,
- * başka durum) kayıttaki an da beklemiyor (Codex #93).
+ * başka durum) kayıttaki an da beklemiyor. Bekleme sürerken azaltılmış
+ * harekete geçilirse (seçim ya da cihazın tercihi) an hemen geliyor:
+ * havai fişek de o an duruyor (Codex #93).
  */
 export function useMomentDelay(key: string | null, ms: number, source: object): boolean {
   const [ready, setReady] = useState<string | null>(key);
+  const reduced = useReducedMotion();
   const seen = useRef(source);
   const replaced = seen.current !== source;
   useEffect(() => {
@@ -307,12 +311,12 @@ export function useMomentDelay(key: string | null, ms: number, source: object): 
       return;
     }
     if (!key || key === ready) return;
-    if (reducedMotion()) {
+    if (reduced) {
       setReady(key);
       return;
     }
     const timer = window.setTimeout(() => setReady(key), ms);
     return () => window.clearTimeout(timer);
-  }, [key, ready, ms, source]);
-  return key !== null && (key === ready || replaced);
+  }, [key, ready, ms, source, reduced]);
+  return key !== null && (key === ready || replaced || reduced);
 }
