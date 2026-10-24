@@ -1,7 +1,5 @@
 import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
-import { existsSync, readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
 import {
   PACK_CODE_PREFIX,
   PACK_FORMAT,
@@ -21,6 +19,8 @@ import {
 } from '@capital/content';
 import type { Pack, PackScenario, ScenarioDef } from '@capital/content';
 import { exportToJson, importFromJson } from '../../persistence/src/index';
+// Belgedeki örnek paket: test onu her koşuda doğruluyor (paketleyici JSON'u gömüyor).
+import samplePack from '../../../docs/ornek-paket.json';
 import { GameEngine } from '../src/engine';
 import { createScenarioGame } from '../src/scenario';
 import { scenarioDefOf } from '../src/systems/scenario';
@@ -82,10 +82,7 @@ describe('paketin biçimi', () => {
   });
 
   test('belgedeki örnek paket (docs/ornek-paket.json) geçerli ve oynanıyor', () => {
-    let root = process.cwd();
-    while (!existsSync(join(root, 'pnpm-workspace.yaml')) && dirname(root) !== root) root = dirname(root);
-    const doc = JSON.parse(readFileSync(join(root, 'docs/ornek-paket.json'), 'utf8')) as unknown;
-    const result = validatePack(doc);
+    const result = validatePack(JSON.parse(JSON.stringify(samplePack)));
     assert.ok(result.ok, JSON.stringify(!result.ok && result.issues));
     if (!result.ok) return;
     const defs = registerPack(result.pack);
