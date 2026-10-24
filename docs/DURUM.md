@@ -7577,20 +7577,22 @@ senaryo, 200 ve 60 gün).
   elinde olan koşu sayılmamalı). Ayrıntıda yazıyor. Kariyerin "senaryo
   yıldızı" sayısı hazır senaryolardan (paketler yüklenince büyüyordu).
 - **Paket bütçesi.** Doğrulayıcı, paylaşım kodu ve raf geç inen iki parçada
-  (raf 4,8 KB, paket modülü 6,1 KB, gzip); ana parça 72,4 → 73,1 KB (kart
+  (raf 4,8 KB, paket modülü 6,1 KB, gzip); ana parça 72,4 → 73,2 KB (kart
   bileşeni, iki satır metin, kayda gömülü tanımın okunuşu). Kural adının
   okunuşu doğrulayıcıdan ayrı modülde: aynı modülde olsaydı doğrulayıcı
   ana parçaya taşınacaktı.
 
 **Doğrulama.**
-- `pnpm test` 806/806 (788'den); tip denetimi temiz.
-  - `core/test/packs.test.ts` (12): hazır senaryolar paket olarak; örnek
+- `pnpm test` 808/808 (788'den); tip denetimi temiz.
+  - `core/test/packs.test.ts` (13): hazır senaryolar paket olarak; örnek
     paket (belgedeki) geçerli ve oynanıyor; örnekle doldurulan paket hazır
     senaryoyla aynı şehri kuruyor; her sorun yeriyle; kural ayarı
     simülasyonda (kıt arsa ×3 ile ×1,7'nin oranı); kayıt paketsiz cihazda;
     yeni sürüm süren koşuyu değiştirmiyor; dönüşüm istemeyen kiralık
-    hedefinin ilerlemesi; dil başına metin; kod ve bozuk kod.
-  - `ui/test/packs.test.ts` (6): raf, sorun metinleri, kural adı, kariyer.
+    hedefinin ilerlemesi; dil başına metin; kod ve bozuk kod; çözücünün
+    sınırını aşan kodun üretilmemesi.
+  - `ui/test/packs.test.ts` (7): raf, yeni sürümde skorun sıfırlanması,
+    sorun metinleri, kural adı, kariyer.
   - Rafın sözlüğü iki dilde eksiksiz, arayüzün anahtarlarıyla çakışmıyor.
 - Tarayıcı, "İçerik paketleri" 17/17: boş raf; örnekle doldur; hatalı
   paketin iki sorunu; geçerli paket rafta ve seçili, kuralın kendi adı,
@@ -7605,6 +7607,13 @@ senaryo, 200 ve 60 gün).
   tam ve hedef panelinde madde yok; seçili paketin yeni sürümü aynı
   kimlikle eklenince kurulum ekranı yeniden çizilmiyor, ayrıntı eski
   hedefi gösteriyordu. İkisinin de testi var (birim ve tarayıcı).
+  İkinci incelemede iki bulgu daha: çok dilli uzun metinli geçerli bir
+  senaryonun kodu çözücünün sınırını (24 bin karakter) aşabiliyordu ve
+  "kopyalandı" denip kullanılamayan kod veriliyordu; kodlayıcı artık
+  sınırı uyguluyor, raf o senaryoda paketin JSON'unu kopyalıyor. Paketin
+  yeni sürümü oyunu değiştirdiyse (hedef, yıldız, kurulum, kuralın ayarı)
+  cihazdaki skor eski tanımla ölçülüyordu; o senaryonun kaydı siliniyor,
+  yalnız metin değiştiyse kalıyor.
 - Tam tarayıcı koşusu: sürüyor (sonuç PR'a ve buraya).
 
 ---
@@ -7709,7 +7718,7 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi). Senaryo şehirlerinde gün 3–17 ms (`pnpm dayperf`, Tur 43) |
-| Birim testi | **806 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de, Tur 52'de sunucuda tekrar, Tur 53'te haftanın kuralı ve günün koşusu, Tur 54'te hayalet eğri, Tur 55'te davetli ligler, Tur 56'da taşıma sözleşmeleri, Tur 57'de enerji, Tur 58'de gayrimenkul, Tur 59'da rakiplerin hafızası, Tur 60'ta senaryo paketi II, Tur 61'de şirketin yolu, Tur 62'de hava ve mevsimin görünümü, Tur 63'te önemli anlar, Tur 64'te şehir kartı, Tur 65'te telefon performansı, Tur 66'da masaüstü sürümü, Tur 67'de içerik paketleri); Rust tarafı 6 test (`cargo test`, `apps/desktop/src-tauri`) |
+| Birim testi | **808 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de, Tur 52'de sunucuda tekrar, Tur 53'te haftanın kuralı ve günün koşusu, Tur 54'te hayalet eğri, Tur 55'te davetli ligler, Tur 56'da taşıma sözleşmeleri, Tur 57'de enerji, Tur 58'de gayrimenkul, Tur 59'da rakiplerin hafızası, Tur 60'ta senaryo paketi II, Tur 61'de şirketin yolu, Tur 62'de hava ve mevsimin görünümü, Tur 63'te önemli anlar, Tur 64'te şehir kartı, Tur 65'te telefon performansı, Tur 66'da masaüstü sürümü, Tur 67'de içerik paketleri); Rust tarafı 6 test (`cargo test`, `apps/desktop/src-tauri`) |
 | Denge testi | **379 kontrol, hepsi geçiyor** (33 bölüm, süreleriyle; ~16 dk) |
 | Tarayıcı testi | **695 kontrol** (Tur 67'de 17 yeni), son tam koşu 675/678 (Tur 66; Tur 67'nin koşusu sürüyor), 0 konsol hatası (bu yavaş makinede ~51–75 dk, önce ~41 dk); duman koşusu 132 (~8 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + paket bütçesi (Tur 46; Tur 48'den beri hizmet çalışanı ve manifest de) + duman oynanışı; masaüstüne dokunan PR'da Rust testleri, sürüm derlemesi ve gerçek pencerede 17 kontrol (Tur 66) |

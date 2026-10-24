@@ -758,11 +758,18 @@ export class PackCodeError extends Error {
   }
 }
 
-/** Paketin paylaşım kodu: JSON, deflate, base64url. */
+/**
+ * Paketin paylaşım kodu: JSON, deflate, base64url. Çözücünün sınırlarını
+ * aşan kod üretilmiyor (Codex #97): çok dilli uzun metinli geçerli bir
+ * senaryo 24 bin karakteri geçebiliyor; o zaman `PackCodeError('length')`.
+ */
 export async function encodePackCode(pack: Pack): Promise<string> {
   const json = new TextEncoder().encode(JSON.stringify(pack));
+  if (json.length > MAX_JSON_BYTES) throw new PackCodeError('length');
   const packed = await pipe(json, new CompressionStream('deflate-raw'));
-  return PACK_CODE_PREFIX + toBase64Url(packed);
+  const code = PACK_CODE_PREFIX + toBase64Url(packed);
+  if (code.length > MAX_CODE_LENGTH) throw new PackCodeError('length');
+  return code;
 }
 
 /**

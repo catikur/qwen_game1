@@ -9,6 +9,7 @@ import { ModifierLine } from '../src/ModifierLine';
 import { observeCareer, resetCareerForTests } from '../src/career';
 import { issueText, packEn, packTr } from '../src/packMessages';
 import { MAX_PACKS, addPack, installedPacks, removePack } from '../src/packStore';
+import { recordScenarioResult, scenarioRecord } from '../src/scenarioBest';
 
 /**
  * Paket rafı (Tur 67): yüklü paketler, sorunların metni, paketteki kuralın
@@ -36,6 +37,25 @@ describe('yüklü paketler', () => {
     removePack('raf');
     assert.equal(SCENARIO_BY_ID[packScenarioId('raf', 'a')], undefined);
     assert.equal(installedPacks().some((entry) => entry.pack.id === 'raf'), false);
+  });
+
+  test('yeni sürüm oyunu değiştirdiyse cihazdaki skor siliniyor; yalnız metin değiştiyse kalıyor (Codex #97)', () => {
+    const id = packScenarioId('skor', 'kurtarma');
+    addPack(sample('skor'));
+    recordScenarioResult(id, 'kosu-1', 2, 300);
+    assert.equal(scenarioRecord(id).best?.score, 300);
+
+    const retitled = sample('skor');
+    retitled.scenarios = [{ ...retitled.scenarios[0]!, title: 'Yeni başlık', brief: 'Yeni açıklama' }];
+    addPack(retitled);
+    assert.equal(scenarioRecord(id).best?.score, 300, 'metin değişti, oyun aynı');
+
+    const harder = sample('skor');
+    harder.scenarios = [{ ...harder.scenarios[0]!, stars: { metric: 'days', two: 250, three: 200 } }];
+    addPack(harder);
+    assert.equal(scenarioRecord(id).best, undefined, 'yıldız eşikleri değişti');
+    assert.equal(scenarioRecord(id).attempts, 0);
+    removePack('skor');
   });
 
   test('raf dolunca yeni paket eklenmiyor, var olanın sürümü yine güncelleniyor', () => {

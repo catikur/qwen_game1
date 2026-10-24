@@ -73,6 +73,18 @@ export function recordScenarioResult(id: string, runKey: string, stars: number, 
 }
 
 /**
+ * Senaryonun kaydını siler (Tur 67): paketin yeni sürümü oyunu değiştirdiyse
+ * (hedef, yıldız ölçüsü, kurulum) eski skor yeni tanımla ölçülemez (Codex #97).
+ */
+export function forgetScenarioRecord(id: string): void {
+  const all = read();
+  if (!(id in all)) return;
+  const next = { ...all };
+  delete next[id];
+  write(next);
+}
+
+/**
  * Koşunun kimliği: kuruluş anı, bitiş günü ve sonuç (Codex #66). Kuruluş
  * anı ve gün tek başına yetmiyordu: kayıttan dönüp aynı gün başka bir
  * sonuçla biten koşu (Krizin ortasında hep son gün bitiyor) aynı kimliği

@@ -30,6 +30,9 @@ okumuyor; paket var olan parçaları bir araya getiriyor.
   kod ekleme kutusunda; eklemek onun kararı. Masaüstü sürümünde bağlantı
   düğmesi yok (adresi başkasında açılmıyor), kod var.
 - **Yeni sürüm.** Aynı kimlikli paket eklenince eskisinin yerine geçiyor.
+  Bir senaryonun oyunu değiştiyse (hedef, yıldızlar, kurulum, kuralın
+  ayarları) o senaryonun cihazdaki skoru siliniyor; yalnız metni değiştiyse
+  kalıyor.
 - **Kaldırma.** Onayla; yıldızlar cihazda kalıyor.
 - Paketler tarayıcıda kalıcı (`capitalforge.packs.v1`; masaüstünde
   `profile/` altında dosya, Steam Cloud'la eşitleniyor). En fazla 20 paket.
@@ -190,7 +193,9 @@ Senaryo hazır kuralı ayarsız da kullanabilir: `"rules": ["storms"]`.
 senaryoyu ve kullandığı kuralları taşıyor (paketin tamamını değil). Sohbete
 yapıştırılırken bölünen kodun boşlukları ve satır sonları yok sayılıyor.
 Sınırlar: kod ≤ 24 000 karakter, açılmış hâli ≤ 64 KB (küçük kodun açılınca
-devleşmesine karşı). Yapıştırılan ya da seçilen JSON da ≤ 64 KB.
+devleşmesine karşı). Sınırı aşan kod üretilmiyor: çok dilli uzun metinli bir
+senaryoda raf kodun yerine paketin JSON'unu kopyalıyor; ekleme kutusu onu da
+alıyor. Yapıştırılan ya da seçilen JSON da ≤ 64 KB.
 
 ## Sorunlar
 

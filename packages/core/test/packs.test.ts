@@ -234,6 +234,15 @@ describe('paketin senaryosu oyunda', () => {
   });
 });
 
+/** Kodlayıcının sınırları olmadan sıkıştırılmış kod (çözücünün kendi savunmasını sınamak için). */
+async function rawCode(text: string): Promise<string> {
+  const stream = new Blob([text]).stream().pipeThrough(new CompressionStream('deflate-raw'));
+  const bytes = new Uint8Array(await new Response(stream).arrayBuffer());
+  let binary = '';
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return PACK_CODE_PREFIX + btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
 describe('paylaşım kodu', () => {
   test('kod paketi aynen geri getiriyor; boşluk ve satır sonu sorun değil', async () => {
     const doc = pack([rescue()], { id: 'kodlu', author: 'Conforcus' });
@@ -244,6 +253,27 @@ describe('paylaşım kodu', () => {
     assert.deepEqual(await decodePackCode(code), JSON.parse(JSON.stringify(doc)));
     const wrapped = `${code.slice(0, 40)}\n  ${code.slice(40)} `;
     assert.deepEqual(await decodePackCode(wrapped), JSON.parse(JSON.stringify(doc)));
+  });
+
+  test('çözücünün kabul etmeyeceği kod üretilmiyor: uzun çok dilli senaryo "length" (Codex #97)', async () => {
+    // Geçerli ama sıkışmayan uzun metinler: 80 dilde 690 harflik açıklama (~55 KB).
+    let seed = 12345;
+    const letter = () => {
+      // Park–Miller: çarpım 2^53'ün altında kalıyor (büyük çarpanla sayı kesinliğini yitirip dizi tekrara düşüyordu).
+      seed = (seed * 48271) % 2147483647;
+      return String.fromCharCode(97 + (seed % 26));
+    };
+    const locales = Array.from({ length: 80 }, (_, i) => String.fromCharCode(97 + Math.floor(i / 26), 97 + (i % 26)));
+    const brief = Object.fromEntries(locales.map((locale) => [locale, Array.from({ length: 690 }, letter).join('')]));
+    const doc = pack([{ ...rescue(), brief }], { id: 'uzun' });
+    assert.ok(validatePack(JSON.parse(JSON.stringify(doc))).ok, 'paket geçerli');
+    let reason = 'ok';
+    try {
+      await encodePackCode(doc);
+    } catch (error) {
+      reason = error instanceof PackCodeError ? error.code : String(error);
+    }
+    assert.equal(reason, 'length');
   });
 
   test('bozuk kod açık bir hatayla reddediliyor; büyük açılan kod da', async () => {
@@ -259,8 +289,9 @@ describe('paylaşım kodu', () => {
     assert.equal(await reason('CF1.@@@'), 'decode');
     const code = await encodePackCode(pack([rescue()]));
     assert.equal(await reason(code.slice(0, code.length - 12)), 'decode');
-    // Sıkıştırma bombası: küçük kod, açılınca 64 KB'tan büyük.
-    const bomb = await encodePackCode({ ...pack([rescue()]), name: 'a'.repeat(200_000) } as Pack);
+    // Sıkıştırma bombası: küçük kod, açılınca 64 KB'tan büyük. Kodlayıcı böyle kod
+    // üretmiyor (Codex #97); başka bir araçla üretilmiş gibi elle sıkıştırılıyor.
+    const bomb = await rawCode(JSON.stringify({ ...pack([rescue()]), name: 'a'.repeat(200_000) }));
     assert.ok(bomb.length < 2000, `bomba kodu ${bomb.length}`);
     assert.equal(await reason(bomb), 'length');
   });

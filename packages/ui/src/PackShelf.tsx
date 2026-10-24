@@ -109,12 +109,22 @@ export function PackActions({ def, onRemoved }: { def: ScenarioDef; onRemoved: (
   const installed = packs.find((entry) => entry.pack.id === source.packId);
 
   const copy = async (link: boolean) => {
-    const code = await encodePackCode(source.doc);
-    const text = link ? packLink(code) : code;
+    // Kod için fazla uzun senaryo (çok dilli uzun metinler): paketin JSON'u, ekleme kutusu onu da alıyor.
+    let text: string;
+    let done: PackMessageKey;
+    try {
+      const code = await encodePackCode(source.doc);
+      text = link ? packLink(code) : code;
+      done = link ? 'hud.pack.linkCopied' : 'hud.pack.copied';
+    } catch (error) {
+      if (!(error instanceof PackCodeError)) throw error;
+      text = JSON.stringify(source.doc);
+      done = 'hud.pack.copiedJson';
+    }
     try {
       await navigator.clipboard.writeText(text);
       setFallback(null);
-      setNotice({ tone: 'good', text: pt(link ? 'hud.pack.linkCopied' : 'hud.pack.copied') });
+      setNotice({ tone: 'good', text: pt(done) });
     } catch {
       // Pano kapalı (izin yok, gömülü görünüm): kod seçilebilir metin olarak.
       setFallback(text);
