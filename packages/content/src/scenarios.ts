@@ -2,6 +2,7 @@ import { localizeList } from './localize';
 import type { CitySizeId } from './districts';
 import type { DifficultyId } from './difficulty';
 import type { ModifierId } from './modifiers';
+import type { PackScenarioSource, RuleOverrides } from './packs';
 import type { CategoryId } from './types';
 
 /**
@@ -144,7 +145,8 @@ export interface ScenarioStars {
 }
 
 export interface ScenarioDef {
-  id: ScenarioId;
+  /** Hazır senaryoda `ScenarioId`; paketten gelende `paket/senaryo` (Tur 67). */
+  id: string;
   title: string;
   /** Listede başlığın altındaki tek cümle. */
   tagline: string;
@@ -164,6 +166,12 @@ export interface ScenarioDef {
    * girmiyor (yıldızlar kuralla ölçüldü).
    */
   modifiers?: readonly ModifierId[];
+  /** Paketin kurallarının ayarları (Tur 67): hazır kuralın değerleri değişmiş. */
+  ruleOverrides?: RuleOverrides;
+  /** Paketin kendi adlı kuralları: kurulumda hazır kuralın adı yerine bunlar yazıyor. */
+  customRules?: ReadonlyArray<{ base: ModifierId; name: string; blurb: string }>;
+  /** Paketten gelen senaryonun kökü (Tur 67); hazır senaryoda yok. */
+  source?: PackScenarioSource;
   /** Süre: senaryonun başladığı günden. */
   days: number;
   goal: ScenarioGoal;
@@ -588,5 +596,33 @@ export const SCENARIOS: ScenarioDef[] = [
 ];
 
 export const SCENARIO_BY_ID: Record<string, ScenarioDef> = Object.fromEntries(SCENARIOS.map((scenario) => [scenario.id, scenario]));
+
+/*
+ * Kayda gömülü paketlerin tanımı (Tur 67), paket nesnesine bağlı. Bağlayan
+ * `adoptPack` (doğrulayıcıyla birlikte `packs.ts`'te); okuyan buradaki küçük
+ * işlev: kurulum ekranının yolunda doğrulayıcı yok.
+ */
+const embedded = new WeakMap<object, ScenarioDef>();
+/** Kayıttan benimsenen son tanım, kimliğiyle: paket kaldırılsa da süren koşu "tekrar oyna"yabiliyor (Codex #97). */
+const adopted = new Map<string, ScenarioDef>();
+
+export function bindScenarioDef(pack: object, def: ScenarioDef): void {
+  embedded.set(pack, def);
+  adopted.set(def.id, def);
+}
+
+export function embeddedScenarioDef(pack: object): ScenarioDef | undefined {
+  return embedded.get(pack);
+}
+
+/** Kimliğin tanımı: kayıt defterindeki (yüklü sürüm), yoksa kayıttan benimsenen son sürüm. */
+export function scenarioDefById(id: string): ScenarioDef | undefined {
+  return SCENARIO_BY_ID[id] ?? adopted.get(id);
+}
+
+/** Koşunun senaryo tanımı: kayda gömülü paket varsa onunki, yoksa kayıt defterindeki. */
+export function scenarioDefFor(run: { id: string; pack?: object }): ScenarioDef | undefined {
+  return (run.pack ? embedded.get(run.pack) : undefined) ?? SCENARIO_BY_ID[run.id];
+}
 
 localizeList(SCENARIOS, 'scenario', ['title', 'tagline', 'brief', 'goalText', 'facts']);

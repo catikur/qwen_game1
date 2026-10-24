@@ -9,15 +9,15 @@ import {
   NPC_PROFILES,
   STRUCTURE_BY_ID,
   getCeoModifiers,
-  MODIFIER_RULES,
   difficultyWith,
+  rulesWith,
   getCitySize,
   getDifficulty,
   hasModifier,
   normalizeModifiers,
   rootStructureOf,
 } from '@capital/content';
-import type { CategoryId, CitySizeId, DifficultyId, DistrictArchetypeId, ModifierId } from '@capital/content';
+import type { CategoryId, CitySizeId, DifficultyId, DistrictArchetypeId, ModifierId, RuleOverrides } from '@capital/content';
 import { tc } from './i18n';
 import { createRng, nextRange, pickWeighted } from './rng';
 import { leagueLength, leagueRule, leagueSeed } from './systems/league';
@@ -193,6 +193,8 @@ export interface NewGameOptions {
    * bu seçeneği hiç vermiyor.
    */
   modifiers?: readonly ModifierId[];
+  /** Kuralların ayarları (Tur 67): yalnız paketten gelen senaryonun kurulumu veriyor. */
+  ruleOverrides?: RuleOverrides;
   /**
    * Tohum Ligi koşusu: tohum haftadan türer, zorluk Dengeli'ye sabitlenir
    * ve oyuncunun komutları günlüğe yazılır. Verilen `seed`/`difficulty`/
@@ -227,9 +229,12 @@ export function createNewGame(input: NewGameOptions = {}): GameState {
     ? { ...input, seed: leagueSeed(input.league.weekId), difficulty: 'normal', modifiers: leagueModifiers(input.league.weekId) }
     : input;
   const modifiers = normalizeModifiers(options.modifiers);
-  const rules = difficultyWith(options.difficulty, modifiers);
+  // Lig koşusunda ayar yok: herkes hazır kurallarla (Tur 67).
+  const ruleOverrides = input.league ? undefined : options.ruleOverrides;
+  const values = rulesWith(ruleOverrides);
+  const rules = difficultyWith(options.difficulty, modifiers, values.hungryRivals);
   // Kıt arsa (Tur 45): kilitli bölgeler daha geç imara açılıyor.
-  const unlockScale = hasModifier(modifiers, 'scarce_land') ? MODIFIER_RULES.scarceLand.unlockDelay : 1;
+  const unlockScale = hasModifier(modifiers, 'scarce_land') ? values.scarceLand.unlockDelay : 1;
   const unlockDay = (day: number): number => Math.round(day * unlockScale);
   const seed = options.seed ?? Math.floor(Math.random() * 2 ** 31);
   const rng = createRng(seed);
@@ -521,6 +526,7 @@ export function createNewGame(input: NewGameOptions = {}): GameState {
     // Dengeli kayıt alanı taşımaz: yokluğu zaten Dengeli demek.
     ...(options.difficulty && options.difficulty !== 'normal' ? { difficulty: options.difficulty } : {}),
     ...(modifiers.length > 0 ? { modifiers } : {}),
+    ...(ruleOverrides ? { ruleOverrides } : {}),
   };
   // Sıkı banka (Tur 45): sermayenin yarısı bankadan, yalnız kurucu şehirde.
   if (!options.startingCash) grantStartingLoan(state);

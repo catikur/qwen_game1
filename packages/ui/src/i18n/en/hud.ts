@@ -153,6 +153,8 @@ export const hud: Record<keyof typeof trHud, string> = {
   'hud.scenario.thresholdsLeadGoal': 'One star: the goal · two stars: ×{two} · three stars: ×{three} (ratio to the strongest rival when the goal is reached)',
   'hud.scenario.statusNew': 'Not tried',
   'hud.scenario.statusTried': '{count} tries · no stars yet',
+  'hud.scenario.packSource': 'Pack: {pack} · does not count toward the career or achievements.',
+  'hud.scenario.packSourceAuthor': 'Pack: {pack}, by {author} · does not count toward the career or achievements.',
   'hud.scenario.briefLabel': 'Scenario briefing',
   'hud.scenario.eyebrow': 'Scenario · day {day}',
   'hud.scenario.eyebrowCity': 'Scenario · new city {city}',

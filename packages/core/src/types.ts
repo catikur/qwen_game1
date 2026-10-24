@@ -1,23 +1,4 @@
-import type {
-  BubbleKind,
-  CardBoostTarget,
-  CategoryId,
-  CitySizeId,
-  CreditRating,
-  DifficultyId,
-  DistrictArchetypeId,
-  LoanKind,
-  ModifierId,
-  MotionKind,
-  NpcProfileDef,
-  PathId,
-  PathSource,
-  ProjectId,
-  QuestKind,
-  RelationEventKind,
-  UnionResponse,
-  WagePolicy,
-} from '@capital/content';
+import type { BubbleKind, CardBoostTarget, CategoryId, CitySizeId, CreditRating, DifficultyId, DistrictArchetypeId, LoanKind, ModifierId, MotionKind, NpcProfileDef, Pack, PathId, PathSource, ProjectId, QuestKind, RelationEventKind, RuleOverrides, UnionResponse, WagePolicy } from '@capital/content';
 import type { RngState } from './rng';
 
 /**
@@ -975,6 +956,11 @@ export interface GameState {
    * sürümü sabit.
    */
   modifiers?: ModifierId[];
+  /**
+   * Kuralların ayarları (Tur 67): paketten gelen senaryonun kuralı hazır
+   * kuralın değerlerini değiştiriyor. Yokluğu hazır değerler demek.
+   */
+  ruleOverrides?: RuleOverrides;
   /** Hedef merdiveni: hedef kimliği → tamamlandığı gün. */
   goals?: Record<string, number>;
   /** Sahneye çıkmış bütün rakip kimlikleri (devralınanlar dahil). */
@@ -1207,6 +1193,11 @@ export interface LeagueState {
  */
 export interface ScenarioState {
   id: string;
+  /**
+   * Paketten gelen senaryonun tek senaryoluk paketi (Tur 67): kayıt paket
+   * yüklü olmayan cihazda da açılsın. Hazır senaryoda yok.
+   */
+  pack?: Pack;
   /** Oyuncunun sahneye çıktığı gün (ön tarihin sonu). */
   startDay: number;
   /** Süre bu günün sonunda doluyor. */

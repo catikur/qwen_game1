@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { ReactElement } from 'react';
-import { CATEGORIES, GOOD_BY_ID, MODIFIER_BY_ID, formatDecimal, formatNumber, formatPercent } from '@capital/content';
+import { CATEGORIES, GOOD_BY_ID, formatDecimal, formatNumber, formatPercent, ruleName } from '@capital/content';
 import type { ScenarioDef } from '@capital/content';
 import {
   chainGoalStatus,
@@ -128,7 +128,7 @@ function briefExtras(state: GameState, def: ScenarioDef, scenario: ScenarioState
     if (foes.length > 0) lines.push(t('hud.scenario.briefFeud', { names: foes.join(', ') }));
   }
   if (def.modifiers && def.modifiers.length > 0) {
-    lines.push(t('hud.scenario.briefRules', { rules: def.modifiers.map((id) => MODIFIER_BY_ID[id].name).join(', ') }));
+    lines.push(t('hud.scenario.briefRules', { rules: def.modifiers.map((id) => ruleName(def, id)).join(', ') }));
   }
   return lines;
 }
@@ -197,13 +197,13 @@ export function ScenarioResultScreen({ onNewGame, onReplay }: { onNewGame: () =>
   // Sonuç cihazda bir kez sayılıyor (sonuç ekranı yeniden açılsa da).
   useEffect(() => {
     if (!pending || !scenario || !def) return;
-    setBest(recordScenarioResult(def.id, runKey, scenario.stars ?? 0, scenario.score ?? 0));
+    setBest(recordScenarioResult(def.id, runKey, scenario.stars ?? 0, scenario.score ?? 0, def));
   }, [pending, runKey]);
 
   if (!pending || !scenario || !def) return null;
   const won = scenario.outcome === 'won';
   if (celebrating && !ready) return null;
-  const record = scenarioRecord(def.id);
+  const record = scenarioRecord(def.id, def);
 
   return (
     <div className="gameover scenario-result" role="alertdialog" aria-label={t('hud.scenario.resultLabel')} data-scenario-result={scenario.outcome}>
@@ -395,12 +395,15 @@ function RentalChecklist({ state, units, renewals }: { state: GameState; units: 
       done: status.occupied >= units,
       label: t('hud.scenario.rentalUnits', { occupied: formatNumber(status.occupied), target: formatNumber(units), total: formatNumber(status.units) }),
     },
-    {
+  ];
+  // Dönüşüm istemeyen hedefte (paketten, `renewals: 0`) o madde yok.
+  if (renewals > 0) {
+    items.push({
       key: 'renewals',
       done: status.renewals >= renewals,
       label: t('hud.scenario.rentalRenewals', { done: status.renewals, target: renewals, building: status.renewalsBuilding }),
-    },
-  ];
+    });
+  }
   if (status.building > 0) items.push({ key: 'building', done: false, label: t('hud.scenario.rentalBuilding', { units: formatNumber(status.building) }) });
   return (
     <ul className="scenario-checklist" aria-label={t('hud.scenario.rentalLabel')}>

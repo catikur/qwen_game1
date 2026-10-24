@@ -31,6 +31,7 @@ export * from './living';
 export * from './projects';
 export * from './consortium';
 export * from './scenarios';
+export * from './packs';
 export * from './achievements';
 
 /** İçerik sürümü — save migration'ında denge değişikliklerini izlemek için. */

@@ -1,4 +1,4 @@
-import { BUILDING_BY_ID, CREDIT, CREDIT_RATINGS, MODIFIER_RULES, NPC_CREDIT, formatDecimal } from '@capital/content';
+import { BUILDING_BY_ID, CREDIT, CREDIT_RATINGS, NPC_CREDIT, formatDecimal } from '@capital/content';
 import type { CreditRating, LoanKind, NpcProfileDef } from '@capital/content';
 import { pushNews } from '../news';
 import { formatMoney } from '../selectors';
@@ -6,7 +6,7 @@ import { tc } from '../i18n';
 import { LAND_SELL_RATIO } from './city';
 import { companyValue, sellShares, sharePrice } from './equity';
 import { macroRateDelta } from './economy';
-import { hasRule } from './rules';
+import { hasRule, ruleValues } from './rules';
 import type { CommandResult, CompanyState, CreditState, GameState, LoanState } from '../types';
 
 /**
@@ -64,7 +64,7 @@ function tightFor(state: GameState, companyId: string): boolean {
 
 /** Kredili hesabın yıllık faizi. */
 export function overdraftRate(state: GameState, company: CompanyState): number {
-  const penalty = tightFor(state, company.id) ? MODIFIER_RULES.tightCredit.rateDelta : 0;
+  const penalty = tightFor(state, company.id) ? ruleValues(state).tightCredit.rateDelta : 0;
   if (!creditEnabled(state)) return CREDIT.baseRate + macroRateDelta(state) + penalty;
   // Kredili hesap DEĞİŞKEN faizli: kriz taban faizi oynatınca hemen yansıyor (Tur 37a).
   return CREDIT.baseRate + macroRateDelta(state) + CREDIT.overdraftPremium + CREDIT_RATINGS[ratingOf(company)].spread + penalty;
@@ -98,7 +98,7 @@ export function grantStartingLoan(state: GameState): void {
   if (!tightFor(state, state.playerCompanyId)) return;
   const company = state.companies[state.playerCompanyId];
   if (!company) return;
-  const rules = MODIFIER_RULES.tightCredit;
+  const rules = ruleValues(state).tightCredit;
   const amount = Math.round(company.cash * rules.startingLoanShare);
   const rate = loanRate(ratingOf(company), 'term', rules.startingLoanDays) + rules.rateDelta;
   const credit = ensureCredit(company);
@@ -176,7 +176,7 @@ export function loanQuote(state: GameState, companyId: string, kind: LoanKind, t
   const rating = company ? ratingOf(company) : 'D';
   // Yeni kredi o günün taban faiziyle; vadeli kredi faizi sabit kalıyor (Tur 37a).
   const tight = tightFor(state, companyId);
-  const rate = loanRate(rating, kind, termDays) + macroRateDelta(state) + (tight ? MODIFIER_RULES.tightCredit.rateDelta : 0);
+  const rate = loanRate(rating, kind, termDays) + macroRateDelta(state) + (tight ? ruleValues(state).tightCredit.rateDelta : 0);
   const closed = (reason: string): LoanQuote => ({ ok: false, reason, rate, max: 0, rating });
   if (!creditEnabled(state)) return closed(tc('core.credit.bankClosed'));
   if (!company) return closed(tc('core.credit.companyNotFound'));
@@ -205,7 +205,7 @@ export function loanQuote(state: GameState, companyId: string, kind: LoanKind, t
     const limit = Math.max(CREDIT.baseLimit, CREDIT_RATINGS[rating].limitRatio * gross);
     max = Math.min(limit - company.debt, hard);
   }
-  if (tight) max *= MODIFIER_RULES.tightCredit.limitMultiplier;
+  if (tight) max *= ruleValues(state).tightCredit.limitMultiplier;
   max = Math.max(0, Math.floor(max / 1000) * 1000);
   const floor = kind === 'bond' ? CREDIT.bond.minAmount : CREDIT.minLoan;
   if (max < floor) {

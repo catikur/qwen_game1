@@ -1,6 +1,6 @@
 # Capital — Yol Haritası
 
-> Tur 47'de yazıldı, her turda güncelleniyor (son: Tur 66). Biten işin ayrıntısı
+> Tur 47'de yazıldı, her turda güncelleniyor (son: Tur 67). Biten işin ayrıntısı
 > `docs/DURUM.md`'de; bu dosya önümüzdeki işin sırasını ve gerekçesini
 > tutuyor.
 
@@ -39,7 +39,7 @@ Bir bağlantıyla açılan, istenirse kurulan ve çevrimdışı da oynanan bir
 | **2 · Çevrimiçi rekabet** | Herkes aynı şehirde | 51–55 | Pages'te paylaşılan tablo var, skor sunucuda doğrulanıyor | **bitti** (Tur 55) |
 | **3 · Yeni yollar** | Her koşu farklı bir şirket | 56–61 | Zafere en az üç farklı yol var, her birini kazanan bir vekil var | **bitti** (Tur 61) |
 | **4 · Şehrin hissi** | Oynaması keyifli | 62–65 | Mevsim ve hava görünüyor, önemli anlar hissediliyor | **bitti** (Tur 65) |
-| **5 · Platform ve topluluk** | Oyunun evi büyüsün | 66–70 | Masaüstü sürümü ve paylaşılabilir senaryolar var | sürüyor (Tur 66) |
+| **5 · Platform ve topluluk** | Oyunun evi büyüsün | 66–70 | Masaüstü sürümü ve paylaşılabilir senaryolar var | sürüyor (Tur 67) |
 
 ### Faz 1 · Ürün temeli
 
@@ -139,10 +139,16 @@ oyun her yerde tamamen ücretsiz. Turlar Faz 4'teki gibi.
   kapanırken otomatik kayıt. Derlenmiş oyun gerçek penceresinde sınanıyor
   (Linux, WebKitGTK). Steam'e hazırlık `docs/MASAUSTU.md`'de: depolar, Steam
   Cloud yolları, kullanıcının hesabında yapılacaklar. Lig sunucusu
-  masaüstünün kökenlerini kabul ediyor (Worker dağıtımıyla canlıya). — bu PR
-- **67 · İçerik paketleri.** Senaryo ve kurallar dosyadan tanımlanıyor,
-  senaryolar kodla paylaşılıyor.
-- **68 · Tarayıcıda senaryo editörü.**
+  masaüstünün kökenlerini kabul ediyor (Worker dağıtımıyla canlıya). — bitti (#96)
+- **67 · İçerik paketleri.** Senaryo ve kurallar dosyadan: JSON paket
+  (`capitalforge-pack` 1), her sorunu yeriyle söyleyen doğrulayıcı, hazır
+  dört kuralın ayarları sınırlar içinde. Kurulum ekranında "Kendi
+  senaryoların": kod, JSON ya da dosyayla ekle; kodu ya da bağlantıyı
+  (`?paket=`) paylaş. Senaryonun tanımı kayıtta; paketten gelen koşu
+  kariyere sayılmıyor. Biçim `docs/ICERIK-PAKETI.md`'de. — bu PR
+- **68 · Tarayıcıda senaryo editörü.** Paketi alan alan kuran bir ekran:
+  Tur 67'nin doğrulayıcısı ve sınırları hazır, editör onları formda
+  gösteriyor; ön izleme ve "dene" düğmesi.
 - **69 · Üçüncü dil.**
 - **70 · Steam.** Başarımlar ve mağaza sayfası.
 

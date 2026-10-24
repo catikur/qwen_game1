@@ -1,6 +1,6 @@
 import { useEffect, useSyncExternalStore } from 'react';
 import type { ReactElement } from 'react';
-import { ACHIEVEMENT_GROUPS, CEO_BY_ID, PATH_BY_ID, SCENARIO_BY_ID, formatDecimal, getCitySize, getDifficulty, modifierMultiplier, moneyUnits, numberLocale, withCurrency } from '@capital/content';
+import { ACHIEVEMENT_GROUPS, CEO_BY_ID, PATH_BY_ID, SCENARIOS, SCENARIO_BY_ID, formatDecimal, getCitySize, getDifficulty, modifierMultiplier, moneyUnits, numberLocale, withCurrency } from '@capital/content';
 import type { AchievementGroup } from '@capital/content';
 import { formatMoney, runPaths } from '@capital/core';
 import type { AchievementStatus, GameState } from '@capital/core';
@@ -154,7 +154,7 @@ export function CareerPanel(): ReactElement {
         </div>
         <div className="stat">
           <span className="stat-label">{t('hud.career.stat.stars')}</span>
-          <span className="stat-value">{summary.scenarioStars}/{Object.keys(SCENARIO_BY_ID).length * 3}</span>
+          <span className="stat-value">{summary.scenarioStars}/{SCENARIOS.length * 3}</span>
         </div>
         <div className="stat">
           <span className="stat-label">{t('hud.career.stat.victories')}</span>

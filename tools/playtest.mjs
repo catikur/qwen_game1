@@ -7997,6 +7997,232 @@ async function finish(browser, consoleErrors) {
     await eContext.close();
   }
 
+  section('İçerik paketleri');
+  {
+    const pContext = await browser.newContext({ viewport: { width: 1280, height: 860 } });
+    await pContext.grantPermissions(['clipboard-read', 'clipboard-write'], { origin: 'http://127.0.0.1:8811' });
+    await pContext.addInitScript(veteran, TUTORIAL_KEY);
+    const pp = await pContext.newPage();
+    const pErrors = [];
+    pp.on('pageerror', (e) => pErrors.push(e.message));
+    pp.on('console', (m) => { if (m.type() === 'error') pErrors.push(m.text()); });
+    await pp.goto('http://127.0.0.1:8811/');
+    await pp.waitForSelector('.newgame', { timeout: 20000 });
+    await pp.locator('.mode-picker [data-mode="scenario"]').click();
+    await pp.waitForSelector('[data-pack-shelf]', { timeout: 10000 });
+    const empty = await pp.evaluate(() => ({
+      shelf: document.querySelector('[data-pack-shelf]')?.getAttribute('data-pack-shelf'),
+      text: document.querySelector('.pack-empty')?.textContent ?? '',
+      builtin: document.querySelectorAll('.scenario-list [data-scenario]').length,
+    }));
+    check('Senaryo sekmesinde "Kendi senaryoların" rafı: boş, nasıl ekleneceği yazıyor; hazır on senaryo yerinde',
+      empty.shelf === '0' && /paylaştığı kodu/.test(empty.text) && empty.builtin === 10, JSON.stringify(empty));
+
+    // Seçili hazır senaryo (Kurtarma) örnek paket olarak kutuya; oyuncu onu değiştiriyor.
+    await pp.locator('[data-pack-add] summary').click();
+    await pp.locator('[data-pack-example]').click();
+    const example = await pp.locator('[data-pack-input]').inputValue();
+    const exampleDoc = JSON.parse(example);
+    check('Örnekle doldur: seçili hazır senaryo paket biçiminde kutuda',
+      exampleDoc.format === 'capitalforge-pack' && exampleDoc.version === 1 && exampleDoc.scenarios[0].id === 'rescue', example.slice(0, 80));
+    const custom = {
+      ...exampleDoc,
+      id: 'deneme',
+      name: { tr: 'Deneme paketi', en: 'Test pack' },
+      author: 'Conforcus',
+      rules: [{ id: 'sert-kis', base: 'storms', name: { tr: 'Sert kış', en: 'Hard winter' }, blurb: 'Krizler erken ve sık geliyor.', params: { firstDay: 40, gapDays: [60, 90] } }],
+      scenarios: [{ ...exampleDoc.scenarios[0], id: 'sert-kurtarma', title: { tr: 'Sert kurtarma', en: 'Hard rescue' }, rules: ['sert-kis'] }],
+    };
+    const broken = JSON.parse(JSON.stringify(custom));
+    broken.scenarios[0].goal.target = 10;
+    broken.scenarios[0].stars.three = broken.scenarios[0].stars.two + 10;
+    await pp.fill('[data-pack-input]', JSON.stringify(broken, null, 2));
+    await pp.locator('[data-pack-submit]').click();
+    await pp.waitForSelector('[data-pack-notice="bad"]', { timeout: 10000 });
+    const rejected = await pp.evaluate(() => ({
+      text: document.querySelector('[data-pack-notice="bad"]')?.textContent ?? '',
+      issues: [...document.querySelectorAll('[data-pack-issue]')].map((el) => el.getAttribute('data-pack-issue')),
+      shelf: document.querySelector('[data-pack-shelf]')?.getAttribute('data-pack-shelf'),
+    }));
+    check('Hatalı paket eklenmiyor; her sorun yeriyle ve nedeniyle',
+      rejected.shelf === '0' && /eklenmedi; 2 sorun/.test(rejected.text) && /scenarios\[0\]\.goal\.target/.test(rejected.text) && /arasında olmalı/.test(rejected.text)
+        && rejected.issues.includes('range') && rejected.issues.includes('starsOrder'),
+      `${rejected.text.slice(0, 160)} · ${rejected.issues.join(',')}`);
+
+    await pp.fill('[data-pack-input]', JSON.stringify(custom, null, 2));
+    await pp.locator('[data-pack-submit]').click();
+    await pp.waitForSelector('[data-pack-notice="good"]', { timeout: 10000 });
+    const packId = 'deneme/sert-kurtarma';
+    const added = await pp.evaluate((id) => {
+      const card = document.querySelector(`[data-scenario="${id}"]`);
+      return {
+        notice: document.querySelector('[data-pack-notice="good"]')?.textContent ?? '',
+        selected: card?.getAttribute('aria-checked'),
+        card: card?.textContent ?? '',
+        detail: document.querySelector('[data-detail="scenario"] .scenario-detail')?.textContent ?? '',
+        source: document.querySelector('[data-scenario-source]')?.textContent ?? '',
+        stored: JSON.parse(localStorage.getItem('capitalforge.packs.v1') ?? '[]').map((pack) => pack.id),
+        box: document.querySelector('[data-pack-input]')?.value,
+      };
+    }, packId);
+    check('Geçerli paket eklendi: kartı rafta ve seçili; kutu boşaldı; tarayıcıda kalıcı',
+      /"Deneme paketi" eklendi: 1 senaryo/.test(added.notice) && added.selected === 'true' && /Sert kurtarma/.test(added.card) && /Paket: Deneme paketi/.test(added.card)
+        && added.box === '' && added.stored.join() === 'deneme',
+      `${added.notice} · ${added.card.slice(0, 80)} · ${added.stored}`);
+    check('Ayrıntıda paketin kendi kuralı kendi adıyla; künye: paket, yazar, kariyere sayılmadığı',
+      /Sert kış: Krizler erken ve sık geliyor\./.test(added.detail) && /Sert kış/.test(added.card)
+        && /Paket: Deneme paketi, yazan Conforcus · kariyere ve başarımlara sayılmıyor/.test(added.source),
+      `${added.source} · ${added.detail.slice(0, 120)}`);
+    // Yeni sürüm aynı kimlikle: ayrıntı yeni hedefi gösteriyor (Codex #97: kimlik değişmeyince çizilmiyordu).
+    const updated = JSON.parse(JSON.stringify(custom));
+    updated.scenarios[0].goal.target = 9_000_000;
+    await pp.fill('[data-pack-input]', JSON.stringify(updated));
+    await pp.locator('[data-pack-submit]').click();
+    await pp.waitForFunction(() => /güncellendi/.test(document.querySelector('[data-pack-add] [data-pack-notice]')?.textContent ?? ''), null, { timeout: 10000 }).catch(() => null);
+    const refreshed = await pp.evaluate(() => ({
+      notice: document.querySelector('[data-pack-add] [data-pack-notice]')?.textContent ?? '',
+      goal: document.querySelector('[data-detail="scenario"] .scenario-goal')?.textContent ?? '',
+      shelf: document.querySelector('[data-pack-shelf]')?.getAttribute('data-pack-shelf'),
+    }));
+    check('Aynı paketin yeni sürümü yerine geçiyor; seçili senaryonun ayrıntısı yeni hedefle',
+      /"Deneme paketi" güncellendi: 1 senaryo/.test(refreshed.notice) && /9,00 M ₺/.test(refreshed.goal) && refreshed.shelf === '1',
+      JSON.stringify(refreshed));
+    await pp.waitForSelector('[data-pack-actions] [data-pack-copy="code"]', { timeout: 5000 }).catch(() => null);
+    const actionsAt = await pp.evaluate(() => document.querySelector('[data-pack-actions]')?.getBoundingClientRect().height ?? 0);
+    check('Seçili paket senaryosunda paylaş ve kaldır düğmeleri', actionsAt > 20, `${actionsAt} px`);
+    await pp.screenshot({ path: `${OUT}/packs-shelf.png` });
+
+    // Paylaşım kodu ve bağlantısı panoya.
+    await pp.locator('[data-pack-copy="code"]').click();
+    await pp.waitForFunction(() => /Kopyalandı/.test(document.querySelector('[data-pack-actions] [data-pack-notice]')?.textContent ?? ''), null, { timeout: 5000 }).catch(() => null);
+    const code = await pp.evaluate(() => navigator.clipboard.readText());
+    await pp.locator('[data-pack-copy="link"]').click();
+    await pp.waitForFunction(() => /Bağlantı kopyalandı/.test(document.querySelector('[data-pack-actions] [data-pack-notice]')?.textContent ?? ''), null, { timeout: 5000 }).catch(() => null);
+    const link = await pp.evaluate(() => navigator.clipboard.readText());
+    check('Kodu kopyala: CF1. ile başlayan kısa kod; bağlantı ?paket= ile',
+      /^CF1\.[A-Za-z0-9_-]+$/.test(code) && code.length < example.length && link === `http://127.0.0.1:8811/?paket=${code}`,
+      `kod ${code.length} karakter (JSON ${example.length}) · ${link.slice(0, 60)}`);
+
+    // Paketin senaryosu oynanıyor: ön tarih, açılış, kural ayarı.
+    await pp.locator('[data-newgame-start]').click();
+    await pp.waitForSelector(`[data-scenario-brief="${packId}"]`, { timeout: 90000 });
+    const brief = ((await pp.locator(`[data-scenario-brief="${packId}"]`).textContent()) ?? '').trim();
+    const run = await pp.evaluate(() => {
+      const s = window.__capital.getState();
+      return { id: s.scenario?.id, pack: s.scenario?.pack?.id, modifiers: s.modifiers ?? [], storms: s.ruleOverrides?.storms ?? null };
+    });
+    check('Paketin senaryosu açılıyor: açılışta adı ve kuralı; kayıtta paket ve kural ayarı',
+      /Sert kurtarma/.test(brief) && /Ek kural: Sert kış/.test(brief) && run.id === packId && run.pack === 'deneme'
+        && run.modifiers.join() === 'storms' && run.storms?.firstDay === 40 && run.storms?.gapDays?.join() === '60,90',
+      `${JSON.stringify(run)} · ${brief.slice(-80)}`);
+    await pp.locator('[data-scenario-begin]').click();
+    await pp.waitForTimeout(300);
+    await pp.evaluate(() => window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 }));
+    const goalsLine = async () => {
+      await pp.locator('.agenda [data-agenda="scenario"] button').click();
+      await pp.waitForSelector('.modal [data-modifier-line]', { timeout: 5000 }).catch(() => null);
+      const text = (await pp.locator('.modal [data-modifier-line]').first().textContent().catch(() => '')) ?? '';
+      await pp.keyboard.press('Escape');
+      return text;
+    };
+    const line = await goalsLine();
+    check('Hedef panelinin kural satırında paketin adlı kuralı', /Sert kış/.test(line), line);
+
+    // Başka cihaz: paket yüklü değil. Kayıt kendi tanımıyla açılıyor; koşu kariyere girmemiş.
+    await pp.waitForTimeout(1500);
+    await pp.evaluate(() => localStorage.removeItem('capitalforge.packs.v1'));
+    await pp.reload();
+    await pp.waitForSelector('.topbar', { timeout: 30000 });
+    await pp.evaluate(() => window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 }));
+    const resumed = await pp.evaluate(() => {
+      const s = window.__capital.getState();
+      const career = JSON.parse(localStorage.getItem('capitalforge.career.v1') ?? '{"runs":[]}');
+      return { id: s.scenario?.id, briefSeen: s.scenario?.briefSeen, inCareer: (career.runs ?? []).some((r) => r.scenarioId === s.scenario?.id) };
+    });
+    const resumedLine = await goalsLine();
+    check('Paket silinmiş cihazda kayıt açılıyor, koşu kendi tanımıyla (kuralın adı yerinde); kariyerde değil',
+      resumed.id === packId && resumed.briefSeen === true && /Sert kış/.test(resumedLine) && resumed.inCareer === false,
+      `${JSON.stringify(resumed)} · ${resumedLine}`);
+    // Kayıtta bir sürüm, tarayıcıda başka bir sürüm (aynı kimlik): açılışta motor kayıttakini
+    // tanıtıyor, raf sonra yüklü sürümü; ayrıntı yüklü sürümü göstermeli (Codex #97).
+    const installedVersion = JSON.parse(JSON.stringify(custom));
+    installedVersion.scenarios[0].goal.target = 7_000_000;
+    await pp.evaluate((doc) => localStorage.setItem('capitalforge.packs.v1', JSON.stringify([doc])), installedVersion);
+    await pp.reload();
+    await pp.waitForSelector('.topbar', { timeout: 30000 });
+    await pp.evaluate(() => window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 }));
+    await pp.locator('.topbar-actions [data-panel="saves"]').click();
+    await pp.waitForTimeout(300);
+    await pp.locator('button:has-text("Yeni oyun")').first().click();
+    await pp.waitForSelector('[data-pack-shelf]', { timeout: 10000 });
+    await pp.waitForFunction(() => /7,00 M ₺/.test(document.querySelector('[data-detail="scenario"] .scenario-goal')?.textContent ?? ''), null, { timeout: 5000 }).catch(() => null);
+    const shownGoal = await pp.evaluate(() => document.querySelector('[data-detail="scenario"] .scenario-goal')?.textContent ?? '');
+    check('Kayıtta başka sürüm varken raf açılınca ayrıntı yüklü sürümün hedefiyle', /7,00 M ₺/.test(shownGoal), shownGoal);
+    check('Paket akışında konsol temiz', pErrors.length === 0, pErrors.slice(0, 2).join(' | '));
+    await pContext.close();
+
+    // Bağlantıyla gelen arkadaş: senaryo sekmesi açık, kod kutuda; ekliyor, sonra kaldırıyor.
+    const lContext = await browser.newContext({ viewport: { width: 1280, height: 860 } });
+    await lContext.addInitScript(veteran, TUTORIAL_KEY);
+    const lp = await lContext.newPage();
+    const lErrors = [];
+    lp.on('pageerror', (e) => lErrors.push(e.message));
+    lp.on('console', (m) => { if (m.type() === 'error') lErrors.push(m.text()); });
+    await lp.goto(link);
+    await lp.waitForSelector('[data-pack-add][open]', { timeout: 20000 });
+    const arrived = await lp.evaluate(() => ({
+      mode: document.querySelector('.mode-picker [data-mode="scenario"]')?.getAttribute('aria-checked'),
+      box: document.querySelector('[data-pack-input]')?.value ?? '',
+      notice: document.querySelector('[data-pack-add] [data-pack-notice]')?.textContent ?? '',
+      search: location.search,
+    }));
+    check('Bağlantı senaryo sekmesini açıyor, kod ekleme kutusunda; adresten kalkıyor',
+      arrived.mode === 'true' && arrived.box === code && /Bağlantıyla gelen/.test(arrived.notice) && arrived.search === '',
+      JSON.stringify({ ...arrived, box: arrived.box.slice(0, 20) }));
+    await lp.locator('[data-pack-submit]').click();
+    await lp.waitForSelector(`[data-scenario="${packId}"][aria-checked="true"]`, { timeout: 10000 });
+    // Dosyadan: ikinci paket.
+    const second = { ...custom, id: 'dosyadan', name: 'Dosyadan gelen', scenarios: [{ ...custom.scenarios[0], id: 'ikinci', title: 'Dosyadaki senaryo' }] };
+    await lp.locator('[data-pack-file-input]').setInputFiles({ name: 'paket.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(second)) });
+    await lp.waitForSelector('[data-scenario="dosyadan/ikinci"][aria-checked="true"]', { timeout: 10000 });
+    const shelfCount = await lp.locator('[data-pack-shelf]').getAttribute('data-pack-shelf');
+    // Kaldır: onay, sonra raf bir eksik, seçim ilk hazır senaryoya.
+    await lp.locator('[data-pack-remove]').click();
+    await lp.locator('[data-pack-remove-yes]').click();
+    await lp.waitForFunction(() => document.querySelector('[data-scenario="dosyadan/ikinci"]') === null, null, { timeout: 5000 }).catch(() => null);
+    const removed = await lp.evaluate(() => ({
+      shelf: document.querySelector('[data-pack-shelf]')?.getAttribute('data-pack-shelf'),
+      selected: document.querySelector('[data-scenario][aria-checked="true"]')?.getAttribute('data-scenario'),
+      stored: JSON.parse(localStorage.getItem('capitalforge.packs.v1') ?? '[]').map((pack) => pack.id),
+    }));
+    check('Bağlantıdan ve dosyadan eklendi; kaldırılan paket raftan ve depodan çıktı, seçim ilk hazır senaryoda',
+      shelfCount === '2' && removed.shelf === '1' && removed.selected === 'rescue' && removed.stored.join() === 'deneme',
+      `${shelfCount} → ${JSON.stringify(removed)}`);
+
+    // İngilizce: rafın metinleri ve paketin dil başına adları.
+    await lp.locator('.newgame-locale [data-locale="en"]').click();
+    await lp.waitForFunction(() => document.documentElement.lang === 'en', null, { timeout: 10000 }).catch(() => null);
+    const english = await lp.evaluate((id) => ({
+      title: document.querySelector('.pack-shelf-title')?.textContent ?? '',
+      card: document.querySelector(`[data-scenario="${id}"]`)?.textContent ?? '',
+      add: document.querySelector('[data-pack-add] summary')?.textContent ?? '',
+    }), packId);
+    check('İngilizcede raf ve paketin İngilizce adları', english.title === 'Your scenarios' && /Hard rescue/.test(english.card) && /Pack: Test pack/.test(english.card) && english.add === 'Add a scenario',
+      JSON.stringify(english));
+    await lp.locator('.newgame-locale [data-locale="tr"]').click();
+    await lp.waitForFunction(() => document.documentElement.lang === 'tr', null, { timeout: 10000 }).catch(() => null);
+
+    // Telefon: raf ve ekleme kutusu taşmıyor.
+    await lp.setViewportSize({ width: 390, height: 844 });
+    await lp.waitForTimeout(300);
+    const narrow = await lp.evaluate(() => ({ scroll: document.scrollingElement.scrollWidth, width: innerWidth }));
+    await lp.locator('[data-pack-shelf]').scrollIntoViewIfNeeded();
+    await lp.screenshot({ path: `${OUT}/packs-phone.png` });
+    check('Telefonda raf yatay taşmıyor', narrow.scroll <= narrow.width + 1, JSON.stringify(narrow));
+    check('Bağlantı akışında konsol temiz', lErrors.length === 0, lErrors.slice(0, 2).join(' | '));
+    await lContext.close();
+  }
+
   section('Mobil');
   for (const deviceName of ['iPhone 13', 'Pixel 7']) {
     const mobileContext = await browser.newContext({ ...devices[deviceName] });

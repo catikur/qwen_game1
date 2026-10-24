@@ -1,4 +1,4 @@
-import { CRISES, CRISIS_BY_ID, CRISIS_TIMING, LATE_COSTS, MODIFIER_RULES } from '@capital/content';
+import { CRISES, CRISIS_BY_ID, CRISIS_TIMING, LATE_COSTS } from '@capital/content';
 import type { CrisisDef } from '@capital/content';
 import { pushNews } from '../news';
 import { createRng, nextFloat, pickWeighted } from '../rng';
@@ -6,7 +6,7 @@ import type { CompanyState, GameState } from '../types';
 import { ownerFraction } from './equity';
 import { noteFeat } from './feats';
 import { rivalCrisisReaction } from './rivalry';
-import { hasRule } from './rules';
+import { hasRule, ruleValues } from './rules';
 
 /**
  * Geç oyun giderleri ve krizler (Tur 37a) — gerekçe ve ölçüm
@@ -111,7 +111,7 @@ export function macroRateDelta(state: GameState): number {
 /** İnşaat maliyetine kriz çarpanı. Fırtınalı yıllar kuralında indirim yok (Tur 45). */
 export function crisisBuildMultiplier(state: GameState): number {
   const multiplier = activeCrisis(state)?.effects.buildCost ?? 1;
-  return multiplier < 1 && hasRule(state, 'storms') && !MODIFIER_RULES.storms.buildDiscount ? 1 : multiplier;
+  return multiplier < 1 && hasRule(state, 'storms') && !ruleValues(state).storms.buildDiscount ? 1 : multiplier;
 }
 
 /**
@@ -125,7 +125,7 @@ function crisisDice(state: GameState, salt: number): ReturnType<typeof createRng
 
 /** Kriz takvimi; Fırtınalı yıllar kuralında yarısı (Tur 45). */
 function crisisTiming(state: GameState): { firstDay: number; firstSpread: number; gapDays: readonly [number, number] } {
-  return hasRule(state, 'storms') ? MODIFIER_RULES.storms : CRISIS_TIMING;
+  return hasRule(state, 'storms') ? ruleValues(state).storms : CRISIS_TIMING;
 }
 
 function rangeFrom(dice: ReturnType<typeof createRng>, [min, max]: readonly [number, number]): number {

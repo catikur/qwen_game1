@@ -69,7 +69,8 @@ Kök, uygulamanın veri dizini (`com.conforcus.capitalforge`):
   Biçim oyunun kendi kaydı (`{ meta, state }`); şema göçleri web'deki gibi.
 - `profile/<anahtar>`: arayüzün küçük kayıtları, anahtar başına bir dosya:
   ayarlar (`capitalforge.settings.v1`), kariyer, senaryo yıldızları,
-  rehber, dil, görünüm, lig hesabı.
+  rehber, dil, görünüm, lig hesabı, yüklü senaryo paketleri (Tur 67,
+  `capitalforge.packs.v1`).
 
 Her yazma önce yanına bir geçici dosyaya, sonra yerine taşınarak: yazma
 sırasında kapanan oyun eski kaydı bozmuyor. Bozuk ya da yarım bir istek

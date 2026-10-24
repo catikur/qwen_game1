@@ -263,6 +263,9 @@ function unlock(file: CareerFile, statuses: AchievementStatus[], nowIso: string,
  * `WRITE_EVERY_MS` arayla yazılıyor; arada bellekte.
  */
 export function observeCareer(state: GameState, nowIso = new Date().toISOString()): AchievementDef[] {
+  // Paketten gelen senaryo (Tur 67) kariyere girmiyor: kuralı ve kurulumu
+  // oyuncunun elinde, rozet (ve Steam başarımı) orada kazanılmış sayılmaz.
+  if (state.scenario?.pack) return [];
   const file = read();
   const facts = runFacts(state);
   const index = file.runs.findIndex((run) => run.key === facts.key);

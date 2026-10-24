@@ -1,0 +1,191 @@
+{
+  "format": "capitalforge-pack",
+  "version": 1,
+  "id": "zor-kis",
+  "name": {
+    "tr": "Zor kış",
+    "en": "Hard winter"
+  },
+  "author": "Conforcus",
+  "rules": [
+    {
+      "id": "sert-kis",
+      "base": "storms",
+      "name": {
+        "tr": "Sert kış",
+        "en": "Hard winter"
+      },
+      "blurb": {
+        "tr": "İlk kriz erken geliyor, sonrakiler sık.",
+        "en": "The first crisis comes early, the next ones often."
+      },
+      "params": {
+        "firstDay": 60,
+        "firstSpread": 30,
+        "gapDays": [
+          90,
+          150
+        ]
+      }
+    },
+    {
+      "id": "pahali-kredi",
+      "base": "tight_credit",
+      "name": {
+        "tr": "Pahalı kredi",
+        "en": "Costly credit"
+      },
+      "blurb": {
+        "tr": "Faiz altı puan yüksek, kredi limiti yarıda.",
+        "en": "Interest six points higher, credit limit halved."
+      },
+      "params": {
+        "rateDelta": 0.06,
+        "limitMultiplier": 0.5
+      }
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "kista-kurtarma",
+      "title": {
+        "tr": "Kışta kurtarma",
+        "en": "Winter rescue"
+      },
+      "tagline": {
+        "tr": "Kurtarma, ama kriz erken ve sık geliyor.",
+        "en": "The rescue, but crises come early and often."
+      },
+      "brief": {
+        "tr": "Önceki yönetim şirketin hiç mağazası olmayan elektronik için iki Ar-Ge merkezi ve iki pazarlama ofisi kurdu; parasını krediyle buldu. Dört küçük şubenin kârı bu yükü taşımıyor ve şehrin en güçlü rakibi hisselerin %30'unu toplamış.",
+        "en": "The previous management built two research centres and two marketing offices for electronics, a category the company has no shops in, and paid for them with a loan. The profit of four small shops cannot carry that weight, and the strongest rival in the city has bought up 30% of the shares."
+      },
+      "goalText": {
+        "tr": "{days} gün içinde net değerini {target} değerine çıkar; devralınma.",
+        "en": "Raise your net worth to {target} within {days} days; do not get taken over."
+      },
+      "facts": [
+        {
+          "tr": "Kurtarma ile aynı şehir ve aynı şirket; hedef biraz düşük.",
+          "en": "Same city and company as Rescue; the target is a little lower."
+        },
+        {
+          "tr": "Krizde inşaat ucuz: borcu kapatınca kur.",
+          "en": "Building is cheap in a crisis: build once the debt is under control."
+        }
+      ],
+      "seed": 7,
+      "citySize": "standard",
+      "difficulty": "normal",
+      "preludeDays": 150,
+      "days": 400,
+      "goal": {
+        "kind": "netWorth",
+        "target": 10000000
+      },
+      "stars": {
+        "metric": "days",
+        "two": 320,
+        "three": 260
+      },
+      "setup": {
+        "cash": 300000,
+        "outlets": [
+          "cafe",
+          "boutique",
+          "corner_shop",
+          "barber_shop"
+        ],
+        "idle": {
+          "defIds": [
+            "research_center",
+            "research_center",
+            "marketing_office",
+            "marketing_office"
+          ],
+          "focus": "electronics"
+        },
+        "loan": {
+          "amount": 450000,
+          "termDays": 180
+        },
+        "raiderStake": 0.3
+      },
+      "rules": [
+        "sert-kis"
+      ]
+    },
+    {
+      "id": "karanlik-ve-pahali",
+      "title": {
+        "tr": "Karanlık ve pahalı",
+        "en": "Dark and costly"
+      },
+      "tagline": {
+        "tr": "Enerji krizi, üstüne pahalı kredi.",
+        "en": "An energy crisis, and costly credit on top."
+      },
+      "brief": {
+        "tr": "Doğalgaz arzında tıkanma bekleniyor: bir ay sonra şebeke fiyatı ikiye katlanacak ve kriz kış boyu sürecek. Şirketin sekiz mağazası var ama kasası ince ve banka temkinli. Rakiplerin binaları şebekeye bağlı: santralinin menzilindeki her rakip binası krizde faturasını sana öder.",
+        "en": "A gas supply squeeze is expected: in a month the grid price will double and the crisis will last all winter. The company has eight stores but thin cash, and the bank is cautious. Your rivals' buildings are on the grid: every rival building within your plant's range pays its bill to you during the crisis."
+      },
+      "goalText": {
+        "tr": "{days} gün içinde santrallerinden rakiplere toplam {target} değerinde elektrik sat.",
+        "en": "Within {days|# day|# days}, sell a total of {target} worth of power to rivals from your plants."
+      },
+      "facts": [
+        {
+          "tr": "Santral önce kendi binalarına, artan gücü menzilindeki rakip binalarına veriyor; rakip şebeke fiyatının %5 altından ödüyor.",
+          "en": "A plant powers its owner's buildings first and sells what is left to rival buildings in range; rivals pay 5% below the grid price."
+        },
+        {
+          "tr": "Doğalgaz Santrali 2,5 M ₺ şirket değeriyle açılıyor, sanayi bölgesine ve limana kuruluyor. Yakıtını sabitlersen kriz fiyatı santralinin kârına döner.",
+          "en": "The Gas Power Plant unlocks at ₺2.5M company value and is built in the industrial zone and the port. Lock in its fuel and the crisis price turns into plant profit."
+        },
+        {
+          "tr": "Kendi binaların santralin gücünü önce alır: santrali rakiplerin binalarının arasına kur.",
+          "en": "Your own buildings take a plant's power first: build plants among your rivals' buildings."
+        },
+        {
+          "tr": "Sıkı banka: kredi ve kredili hesap faizi 4 puan yüksek, kredi limitleri %40 düşük.",
+          "en": "Tight bank: loan and overdraft rates are 4 points higher, credit limits 40% lower."
+        }
+      ],
+      "seed": 5,
+      "citySize": "standard",
+      "difficulty": "normal",
+      "preludeDays": 200,
+      "rules": [
+        "pahali-kredi"
+      ],
+      "days": 180,
+      "goal": {
+        "kind": "power",
+        "target": 4000000
+      },
+      "stars": {
+        "metric": "days",
+        "two": 155,
+        "three": 140
+      },
+      "setup": {
+        "cash": 1400000,
+        "outlets": [
+          "supermarket",
+          "supermarket",
+          "restaurant",
+          "restaurant",
+          "cafe",
+          "boutique",
+          "electronics_store",
+          "gym"
+        ],
+        "builtDaysAgo": 120,
+        "crisis": {
+          "id": "energy_shock",
+          "warningDays": 30
+        }
+      }
+    }
+  ]
+}
