@@ -108,6 +108,10 @@ describe('paketin biçimi', () => {
       ['holding', (d) => (d.scenarios[0].goal = { kind: 'holding' }), 'scenarios[0].setup.secondCity', 'needsSetup'],
       ['kural', (d) => (d.scenarios[0].rules = ['yok']), 'scenarios[0].rules[0]', 'unknownRef'],
       ['şube', (d) => (d.scenarios[0].setup.outlets = ['research_center']), 'scenarios[0].setup.outlets[0]', 'unknownRef'],
+      // Miras adlar katalogda yok (Codex #97): `toString` krizi doğrulamadan geçiyordu.
+      ['miras kriz', (d) => (d.scenarios[0].setup.crisis = { id: 'toString', warningDays: 10 }), 'scenarios[0].setup.crisis.id', 'unknownRef'],
+      ['miras bina', (d) => (d.scenarios[0].setup.outlets = ['constructor']), 'scenarios[0].setup.outlets[0]', 'unknownRef'],
+      ['miras ürün', (d) => (d.scenarios[0].goal = { kind: 'chain', goodId: 'hasOwnProperty', share: 0.4 }), 'scenarios[0].goal.goodId', 'unknownRef'],
       ['metin', (d) => (d.scenarios[0].title = 'x'.repeat(80)), 'scenarios[0].title', 'length'],
       ['dil', (d) => (d.scenarios[0].title = { türkçe: 'Kurtarma' }), 'scenarios[0].title.türkçe', 'format'],
       ['çok senaryo', (d) => (d.scenarios = Array.from({ length: 13 }, (_, i) => ({ ...d.scenarios[0], id: `s${i}` }))), 'scenarios', 'count'],

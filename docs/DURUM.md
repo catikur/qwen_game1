@@ -7639,6 +7639,10 @@ senaryo, 200 ve 60 gün).
   ekranı yeniden çizilmiyordu (ayrıntı eskisini, Başla yenisini açıyordu);
   raf yüklü paketler her değiştiğinde (ilk yükleme dahil) ekrana haber
   veriyor. Tarayıcı kontrolü düzeltmesiz 9 M ₺ (eski), düzeltmeyle 7 M ₺.
+  Sekizinci incelemede: doğrulayıcı kriz kimliğini kataloğun doğruluk
+  değeriyle denetliyordu, `toString` gibi miras bir ad geçip hayalet bir
+  kriz kuruyordu; katalog aramaları (kriz, bina, ürün) yalnız kendi
+  alanlarına bakıyor.
 - Tam tarayıcı koşusu 693/694, konsol temiz (66 dk). Koşu ilk inceleme
   düzeltmelerinden önceki paketle; düzeltmelerin dokunduğu bölüm
   ("İçerik paketleri") sonra 18/18. Kalan kontrol "Düşük kare hızında oyun

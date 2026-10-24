@@ -277,6 +277,14 @@ class Checker {
   }
 }
 
+/**
+ * Kimlikle katalog araması, yalnız kendi alanları: `toString` gibi miras adlar
+ * (`Object.prototype`) katalogda varmış gibi geçmesin (Codex #97: hayalet kriz).
+ */
+function lookup<T>(catalog: Readonly<Record<string, T>>, id: unknown): T | undefined {
+  return typeof id === 'string' && Object.prototype.hasOwnProperty.call(catalog, id) ? catalog[id] : undefined;
+}
+
 function join(path: string, key: string | number): string {
   if (typeof key === 'number') return `${path}[${key}]`;
   return path ? `${path}.${key}` : key;
@@ -434,7 +442,7 @@ function checkGoal(check: Checker, value: unknown, path: string): ScenarioGoal['
       break;
     case 'chain': {
       const goodId = record['goodId'];
-      const good = typeof goodId === 'string' ? GOOD_BY_ID[goodId] : undefined;
+      const good = lookup(GOOD_BY_ID, goodId);
       // Zinciri olan bir tüketici ürünü: hammadde → ara mal → raf.
       if (!good || good.tier !== 'consumer' || !good.inputGoodId) check.add(join(path, 'goodId'), 'unknownRef', { value: String(goodId) });
       check.number(record, 'share', path, 0.05, 1);
@@ -494,7 +502,7 @@ function checkSetup(check: Checker, value: unknown, path: string, goalKind: Scen
     else {
       if (outlets.length > 12) check.add(join(path, 'outlets'), 'count', { max: 12 });
       outlets.slice(0, 12).forEach((defId, index) => {
-        const def = typeof defId === 'string' ? BUILDING_BY_ID[defId] : undefined;
+        const def = lookup(BUILDING_BY_ID, defId);
         // Devralınan şube: mağaza ya da kiralık (hazır senaryolardaki gibi).
         if (!def || (def.role !== 'outlet' && def.role !== 'rental')) check.add(join(join(path, 'outlets'), index), 'unknownRef', { value: String(defId) });
       });
@@ -508,7 +516,7 @@ function checkSetup(check: Checker, value: unknown, path: string, goalKind: Scen
       if (!Array.isArray(defIds) || defIds.length === 0 || defIds.length > 8) check.add(join(idlePath, 'defIds'), 'count', { max: 8 });
       else {
         defIds.forEach((defId, index) => {
-          const def = typeof defId === 'string' ? BUILDING_BY_ID[defId] : undefined;
+          const def = lookup(BUILDING_BY_ID, defId);
           if (!def || (def.role !== 'research' && def.role !== 'marketing')) check.add(join(join(idlePath, 'defIds'), index), 'unknownRef', { value: String(defId) });
         });
       }
@@ -529,7 +537,7 @@ function checkSetup(check: Checker, value: unknown, path: string, goalKind: Scen
     const crisisPath = join(path, 'crisis');
     const crisis = check.object(record['crisis'], crisisPath, ['id', 'warningDays']);
     if (crisis) {
-      if (typeof crisis['id'] !== 'string' || !CRISIS_BY_ID[crisis['id']]) check.add(join(crisisPath, 'id'), 'unknownRef', { value: String(crisis['id']) });
+      if (!lookup(CRISIS_BY_ID, crisis['id'])) check.add(join(crisisPath, 'id'), 'unknownRef', { value: String(crisis['id']) });
       check.number(crisis, 'warningDays', crisisPath, 0, 120, { integer: true });
     }
   }
