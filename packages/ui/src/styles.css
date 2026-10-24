@@ -7030,3 +7030,72 @@ button.icon {
   animation: none;
   opacity: 1;
 }
+
+/* --- şehir kartı (Tur 64) --- */
+
+/* Hedefler'in başında kariyer ve şehir kartı yan yana. */
+.goals-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/*
+ * Kartın penceresi bitiş ekranlarının (60) üstünde, kurulumun kariyer ve
+ * ayarlar katmanının (70) altında.
+ */
+.card-dialog {
+  position: fixed;
+  inset: 0;
+  z-index: 65;
+  display: grid;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 16px 12px;
+  background: var(--scrim);
+  pointer-events: auto;
+}
+
+.card-dialog-body {
+  margin: auto;
+  width: min(760px, calc(100vw - 24px));
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px;
+  background: var(--panel-thick);
+  color: var(--text);
+  border: 1px solid var(--panel-edge);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  outline: none;
+}
+
+.card-dialog-body h3 {
+  font-family: var(--font-display);
+  font-size: calc(20px * var(--text-scale));
+  font-weight: 700;
+}
+
+/* Görsel gelene dek yer tutuluyor: pencere çizim bitince zıplamıyor. */
+.card-frame {
+  width: 100%;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: var(--radius-sm);
+  background: var(--tint-2);
+}
+
+.card-frame img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}

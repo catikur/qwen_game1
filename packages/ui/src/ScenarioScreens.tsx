@@ -23,6 +23,7 @@ import { t } from './i18n';
 import { CareerRunLine } from './CareerPanel';
 import { starRow, starThresholds } from './stars';
 import { VICTORY_DELAY_MS, useMomentDelay } from './MomentLayers';
+import { CityCardButton } from './CityCard';
 
 /**
  * Senaryo ekranları (Tur 39): açılış (durum, hedef, süre — oyun duraklamış
@@ -239,6 +240,7 @@ export function ScenarioResultScreen({ onNewGame, onReplay }: { onNewGame: () =>
               {t('hud.scenario.continue')}
             </button>
           )}
+          <CityCardButton />
           <button type="button" className="ghost-invert" onClick={onNewGame}>
             {t('hud.scenario.list')}
           </button>

@@ -28,6 +28,7 @@ import { useSettings } from './settings';
 import { CareerRunLine } from './CareerPanel';
 import { WeatherChip } from './WeatherChip';
 import { CashDelta, TweenMoney } from './MomentLayers';
+import { CityCardButton } from './CityCard';
 import type { MessageKey } from './i18n';
 
 /**
@@ -692,6 +693,7 @@ export function GameOverScreen({ onNewGame }: { onNewGame: () => void }): ReactE
               {t('hud.gameOver.otherCity', { city: city.name })}
             </button>
           ))}
+          <CityCardButton />
           <button type="button" className={alive.length > 0 ? 'ghost-invert' : 'primary'} onClick={onNewGame}>
             {t('hud.gameOver.newEmpire')}
           </button>

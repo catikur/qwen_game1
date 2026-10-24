@@ -78,6 +78,10 @@ export interface GameContextValue {
    * sahne yoksa null. Fırsat balonu (Tur 37c) her karede buna bağlanıyor.
    */
   projectTile?: (tileId: number) => { x: number; y: number; visible: boolean } | null;
+  /** Şehrin kart için kuşbakışı karesi (Tur 64); sahne hazır değilse null. */
+  snapshotCity?: (width: number, height: number) => Promise<HTMLCanvasElement | null>;
+  /** Görseli dosya olarak verir (Tur 64); sonucu dürüstçe bildirir. */
+  saveImage?: (filename: string, blob: Blob) => Promise<ExportOutcome>;
   /** Tohum Ligi tablosu — barındırıcıda paylaşılan, değilse bu tarayıcıya ait. */
   league: LeagueBoard;
   /** Ses manzarası: ilk dokunuşta başlar; sessize alma hatırlanır. */

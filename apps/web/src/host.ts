@@ -67,11 +67,36 @@ export async function deliverTextFile(filename: string, text: string): Promise<D
     return (await copyToClipboard(text)) ? 'copied' : 'blocked';
   }
 
+  downloadBlob(filename, new Blob([text], { type: 'application/json' }));
+  return 'started';
+}
+
+/**
+ * Görsel dosya (Tur 64, şehir kartı). Metindeki gibi, ama panoya düşüş yok:
+ * barındırıcı dosyayı veremezse sonuç "engellendi" ve pencere görsele uzun
+ * basıp kaydetmeyi öneriyor.
+ */
+export async function deliverImageFile(filename: string, blob: Blob): Promise<DeliveryOutcome> {
+  if (hostClaude()) {
+    const downloads = await hostCapability<DownloadsNamespace>('downloads');
+    if (!downloads) return 'blocked';
+    try {
+      const result = await downloads.save({ filename, data: blob });
+      return result.status === 'saved' || result.status === 'delivered' ? 'saved' : 'blocked';
+    } catch (error) {
+      return (error as HostError).code === 'declined' ? 'declined' : 'blocked';
+    }
+  }
+  downloadBlob(filename, blob);
+  return 'started';
+}
+
+function downloadBlob(filename: string, blob: Blob): void {
   // Kendi sunucusunda: tarayıcının kendi indirmesi. Bağlantı nesnesi
   // tıklamadan HEMEN SONRA iptal edilmiyor — bazı tarayıcılar indirmeyi
   // bir sonraki görev döngüsünde başlatıyor ve erken iptal onu sessizce
   // düşürüyordu. Yarım dakika, en yavaş tarayıcıya da yetiyor.
-  const url = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
+  const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
   link.download = filename;
@@ -79,7 +104,6 @@ export async function deliverTextFile(filename: string, text: string): Promise<D
   link.click();
   link.remove();
   setTimeout(() => URL.revokeObjectURL(url), 30_000);
-  return 'started';
 }
 
 async function copyToClipboard(text: string): Promise<boolean> {
