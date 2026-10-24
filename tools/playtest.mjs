@@ -2021,8 +2021,9 @@ async function finish(browser, consoleErrors) {
   // Yukarıdaki sondaj oyuncuya 900M ₺ nakit verdi: bu gerçek bir zafer
   // koşulu. Ekran inmeli ve "devam" ile serbest oyuna dönülebilmeli —
   // yoksa sonraki her tıklama zafer kartına çarpar.
+  // Zafer ekranı havai fişeklerden ~2,4 sn sonra iniyor (Tur 63).
   const organicVictory = await page
-    .waitForFunction(() => document.querySelector('.gameover.victory') !== null, null, { timeout: 4000 })
+    .waitForFunction(() => document.querySelector('.gameover.victory') !== null, null, { timeout: 8000 })
     .then(() => true)
     .catch(() => false);
   check('Hedef değeri aşan bir numara için zafer ilan ediliyor', organicVictory,
@@ -2985,7 +2986,7 @@ async function finish(browser, consoleErrors) {
     window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
   });
   const victoryShown = await page
-    .waitForFunction(() => document.querySelector('.gameover.victory') !== null, null, { timeout: 5000 })
+    .waitForFunction(() => document.querySelector('.gameover.victory') !== null, null, { timeout: 8000 })
     .then(() => true)
     .catch(() => false);
   check('Zafer ekranı iniyor', victoryShown);
@@ -3406,8 +3407,9 @@ async function finish(browser, consoleErrors) {
       // Tur 55: arkadaş ligi. A lig kuruyor; ligin tablosunda kendi koşusu, kodu ekranda.
       await a.p.fill('[data-league-friend-form="create"] input', 'Kuzey Ligi');
       await a.p.locator('[data-league-friend-form="create"] button').click();
+      // Sunucu yanıtı ve ligin tablosu: yük altında (dört tarayıcı, yerel sunucu, yazılımsal GPU) 15 sn yetmeyebiliyor.
       const friendA = await a.p
-        .waitForSelector('[data-league-row="friend"]', { timeout: 15000 })
+        .waitForSelector('[data-league-row="friend"]', { timeout: 30000 })
         .then(() => a.p.evaluate(() => ({
           code: document.querySelector('.league-friend-code code')?.textContent ?? '',
           tab: document.querySelector('[data-league-friend][aria-selected="true"]')?.textContent ?? '',
@@ -3453,8 +3455,10 @@ async function finish(browser, consoleErrors) {
       // B'nin bugünü 0 ya da 1 (takvim durdurulana kadar bir gün geçebiliyor): liderin ilk günleri için kart 0. güne sabitleniyor.
       const todayB = await b.p.evaluate(() => window.__capital.getState().time.day);
       await b.p.locator('.league-sparks').focus();
+      // Klavye ve fare sonrası 8 sn bekleniyor: yazılımsal GPU'da bir kare bir saniyeye yaklaşıyor,
+      // tepki birkaç kare sürüyor (3 sn yetmiyordu).
       await b.p.keyboard.press('Home');
-      await b.p.waitForSelector('[data-league-moves-day="0"][data-league-moves="ready"]', { timeout: 5000 }).catch(() => null);
+      await b.p.waitForSelector('[data-league-moves-day="0"][data-league-moves="ready"]', { timeout: 8000 }).catch(() => null);
       const curves = await b.p.evaluate(() => ({
         lines: [...document.querySelectorAll('[data-league-line]')].map((el) => el.getAttribute('data-league-line')),
         title: document.querySelector('.league-moves h4')?.textContent ?? '',
@@ -3468,11 +3472,11 @@ async function finish(browser, consoleErrors) {
       const chartBox = await b.p.locator('.league-sparks').boundingBox();
       const middle = { x: chartBox.x + chartBox.width * 0.5, y: chartBox.y + chartBox.height * 0.5 };
       await b.p.mouse.move(middle.x, middle.y);
-      const tip = await b.p.waitForSelector('[data-league-tip]', { timeout: 3000 }).then((h) => h.textContent()).catch(() => '');
+      const tip = await b.p.waitForSelector('[data-league-tip]', { timeout: 8000 }).then((h) => h.textContent()).catch(() => '');
       check('Grafiğin üzerine gelince o günün değerleri: liderin 180. günü', /Gün 180/.test(tip ?? '') && (tip ?? '').includes('Sunucu Holding'), tip ?? '');
       await b.p.mouse.click(middle.x, middle.y);
       const pinned = await b.p
-        .waitForSelector('[data-league-moves-day="180"]', { timeout: 3000 })
+        .waitForSelector('[data-league-moves-day="180"]', { timeout: 8000 })
         .then(() => b.p.evaluate(() => ({
           title: document.querySelector('.league-moves h4')?.textContent ?? '',
           body: document.querySelector('.league-moves')?.textContent ?? '',
@@ -3486,12 +3490,12 @@ async function finish(browser, consoleErrors) {
       await b.p.locator('[data-league-focus-reset]').click();
       await b.p.locator('.league-sparks').focus();
       await b.p.keyboard.press('ArrowRight');
-      const byKey = await b.p.waitForSelector('[data-league-moves-day="10"]', { timeout: 3000 }).then(() => true).catch(() => false);
+      const byKey = await b.p.waitForSelector('[data-league-moves-day="10"]', { timeout: 8000 }).then(() => true).catch(() => false);
       // Gün seçiliyken Escape bugüne dönüyor, pencere açık kalıyor; ikinci Escape pencereyi kapatıyor.
       await b.p.keyboard.press('Escape');
-      const back = await b.p.waitForSelector(`[data-league-moves-day="${todayB}"]`, { timeout: 3000 }).then(() => true).catch(() => false);
+      const back = await b.p.waitForSelector(`[data-league-moves-day="${todayB}"]`, { timeout: 8000 }).then(() => true).catch(() => false);
       await b.p.keyboard.press('Escape');
-      const closed = await b.p.waitForSelector('.league-moves', { state: 'detached', timeout: 3000 }).then(() => true).catch(() => false);
+      const closed = await b.p.waitForSelector('.league-moves', { state: 'detached', timeout: 8000 }).then(() => true).catch(() => false);
       const codesB = codeRequests.filter((label) => label === 'B').length;
       check('Klavyeyle gün değişiyor; Escape önce bugüne dönüyor, sonra pencereyi kapatıyor; liderin kodu bir kez indi',
         byKey && back && closed && codesB === 1, `ok ${byKey}/${back}/${closed} · ${codesB} kod indi`);
@@ -3570,7 +3574,9 @@ async function finish(browser, consoleErrors) {
       if ((await a.p.locator('.newgame').count()) > 0) await startLeague(a.p, 'Sunucu Holding');
       await a.p.waitForSelector('.agenda [data-agenda="league"]', { timeout: 30000 });
       await a.p.evaluate(() => window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 }));
-      await a.p.locator('.agenda [data-agenda="league"] button').first().click();
+      // Geri yüklenen bitmiş koşu (360. gün, ~175 bina): yazılımsal GPU'da bir kare bir saniyeye
+      // yaklaşıyor, bu tıklama 9–10 sn sürebiliyor (ana dalda da).
+      await a.p.locator('.agenda [data-agenda="league"] button').first().click({ timeout: 60000 });
       await serverBoard(a.p);
       // Tur 55: A'nın arkadaş ligi panelde (B de üyesi).
       const friendsBefore = await a.p.waitForSelector('[data-league-friend-table]', { timeout: 15000 }).then(() => true).catch(() => false);
@@ -3583,7 +3589,7 @@ async function finish(browser, consoleErrors) {
       });
       const accountGone = await a.p.waitForFunction(() => document.querySelector('[data-league-account]') === null || null, null, { timeout: 5000 }).then(() => true).catch(() => false);
       // Hesap gidince arkadaş ligleri bölümü baştan: eski lig listesi kalmıyor; sunucuda lig B ile duruyor.
-      const friendsAfter = await a.p.waitForSelector('[data-league-friends="0"]', { timeout: 5000 }).then(() => true).catch(() => false);
+      const friendsAfter = await a.p.waitForSelector('[data-league-friends="0"]', { timeout: 15000 }).then(() => true).catch(() => false);
       check('Hesap silinince arkadaş ligleri panelden gidiyor (Tur 55)', friendsBefore && friendsAfter, `önce ${friendsBefore} · sonra ${friendsAfter}`);
       check('Lig hesabı siliniyor: koşusu sunucudan gidiyor, anahtar tarayıcıdan', left?.entries[0]?.companyName === 'Bekleyen Holding' && accountGone,
         `${left?.total ?? '?'} koşu kaldı`);
@@ -3823,18 +3829,33 @@ async function finish(browser, consoleErrors) {
     await sp.keyboard.press('Escape');
 
     // Bitiş: kriz bitiminde en değerli şirket — test parayı değil akışı ölçüyor.
+    // Kazanılan senaryoda sonuç ekranı havai fişeklerden sonra (Tur 63, Codex #93):
+    // bitişten ekrana geçen süre ve o sırada havai fişek sayfanın içinden ölçülüyor.
     const won = await sp.evaluate(() => {
       const c = window.__capital;
       const s = c.getState();
+      const trace = { finished: null, shown: null, fireworks: null };
+      window.__scenarioTrace = trace;
+      const observer = new MutationObserver(() => {
+        if (trace.finished === null || !document.querySelector('[data-scenario-result="won"]')) return;
+        trace.shown = Math.round(performance.now() - trace.finished);
+        trace.fireworks = c.renderInfo().moments.fireworks.active;
+        observer.disconnect();
+      });
+      observer.observe(document.body, { childList: true, subtree: true });
       // Üç yıldızın üstü ama zafer eşiğinin altı: zafer ekranı araya girmesin.
       s.companies[s.playerCompanyId].cash += 40_000_000;
       let guard = 0;
       while (s.scenario.finishedDay === undefined && guard++ < 200) c.engine.runDay();
+      trace.finished = performance.now();
       c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
       return { day: s.scenario.finishedDay, outcome: s.scenario.outcome, stars: s.scenario.stars, crisis: s.crisis?.phase ?? 'bitti' };
     });
     check('Kriz bittiği gün senaryo bitiyor', won.day === 350 && won.crisis === 'bitti', JSON.stringify(won));
-    await sp.waitForSelector('[data-scenario-result="won"]', { timeout: 5000 }).catch(() => null);
+    await sp.waitForSelector('[data-scenario-result="won"]', { timeout: 12000 }).catch(() => null);
+    const scenarioTrace = await sp.evaluate(() => window.__scenarioTrace);
+    check('Kazanılan senaryoda sonuç ekranı havai fişeklerden sonra (~2,4 sn) iniyor (Codex #93)',
+      scenarioTrace.shown !== null && scenarioTrace.shown >= 2200 && scenarioTrace.fireworks === true, JSON.stringify(scenarioTrace));
     const stars = await sp.locator('[data-scenario-result] [data-stars]').getAttribute('data-stars').catch(() => null);
     check('Sonuç ekranı: kazanıldı, üç yıldız, cihazdaki en iyi', stars === '3'
       && /en iyi sonucun/.test((await sp.locator('[data-scenario-best]').textContent().catch(() => '')) ?? ''), `yıldız ${stars}`);
@@ -3908,8 +3929,15 @@ async function finish(browser, consoleErrors) {
     check('"Baştan oyna" aynı senaryoyu aynı ad ve CEO ile yeniden kuruyor',
       replay.day === 150 && !replay.over && replay.name === lostAs.name && replay.ceo === lostAs.ceo, JSON.stringify(replay));
     // Tur 39b: Konsorsiyuma karşı, Zincir ustası, Şehrin sponsoru.
+    // Bekleyen bir sonuç (kazanılan senaryoda havai fişekten sonra) ekrana gelsin.
+    const pendingResult = (pg) => pg.waitForFunction(() => {
+      const run = window.__capital?.getState()?.scenario;
+      const pending = run !== undefined && run.finishedDay !== undefined && !run.resultSeen;
+      return !pending || document.querySelector('[data-scenario-result]') !== null;
+    }, null, { timeout: 12000 }).catch(() => null);
     const openScenario = async (id) => {
       await sp.evaluate(() => window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 }));
+      await pendingResult(sp);
       if ((await sp.locator('[data-scenario-result]').count()) > 0) {
         // Sonuç ekranı açıksa listeye onun "Senaryolar" düğmesiyle.
         await sp.locator('[data-scenario-result] .gameover-actions button').last().click();
@@ -3949,7 +3977,7 @@ async function finish(browser, consoleErrors) {
       c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
       return { outcome: s.scenario.outcome, stars: s.scenario.stars, victory: s.victory !== undefined, dismissed: s.victory?.dismissed === true };
     });
-    await sp.waitForSelector('[data-scenario-result="won"]', { timeout: 5000 }).catch(() => null);
+    await sp.waitForSelector('[data-scenario-result="won"]', { timeout: 12000 }).catch(() => null);
     check('Zafer hedefi: zafer günü senaryo kazanılıyor, zafer ekranı ayrıca çıkmıyor',
       consortiumWon.outcome === 'won' && consortiumWon.stars === 3 && consortiumWon.victory && consortiumWon.dismissed
         && (await sp.locator('.gameover:not(.scenario-result)').count()) === 0, JSON.stringify(consortiumWon));
@@ -3990,14 +4018,36 @@ async function finish(browser, consoleErrors) {
     check('İlk ikiden düşünce senaryo sürüyor; hedef paneli geri dönüş süresini yazıyor',
       dropped.out && dropped.finished === null && /ilk 2 arasına dönmek için 20 gün/.test(sponsorDetail), `${JSON.stringify(dropped)} · ${sponsorDetail}`);
     await sp.keyboard.press('Escape');
+    // Kaybedildiği gün normal bir zafer de geliyor (Codex #93): kutlama zaferin, kayıp ekranı
+    // da havai fişeklerden sonra; bitişten ekrana süre ve o sırada havai fişek sayfanın içinden.
     await sp.evaluate(() => {
       const c = window.__capital;
       const s = c.getState();
+      const trace = { finished: null, shown: null, fireworks: null };
+      window.__scenarioTrace = trace;
+      const observer = new MutationObserver(() => {
+        if (trace.finished === null || !document.querySelector('[data-scenario-result="lost"]')) return;
+        trace.shown = Math.round(performance.now() - trace.finished);
+        trace.fireworks = c.renderInfo().moments.fireworks.active;
+        observer.disconnect();
+      });
+      observer.observe(document.body, { childList: true, subtree: true });
       let guard = 0;
       while (s.scenario.finishedDay === undefined && guard++ < 40) c.engine.runDay();
+      s.victory = { day: s.time.day, kind: 'tycoon', path: 'retail', shares: { retail: 1, realestate: 0, energy: 0, freight: 0 }, acquisitions: 0 };
+      trace.finished = performance.now();
       c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
     });
-    await sp.waitForSelector('[data-scenario-result="lost"]', { timeout: 5000 }).catch(() => null);
+    await sp.waitForSelector('[data-scenario-result="lost"]', { timeout: 12000 }).catch(() => null);
+    const lostTrace = await sp.evaluate(() => window.__scenarioTrace);
+    check('Aynı gün zafer gelen kayıpta sonuç ekranı havai fişeklerden sonra iniyor (Codex #93)',
+      lostTrace.shown !== null && lostTrace.shown >= 2200 && lostTrace.fireworks === true, JSON.stringify(lostTrace));
+    // Denemenin zaferi kapanıyor: sonraki senaryoyu açarken zafer ekranı araya girmesin.
+    await sp.evaluate(() => {
+      const s = window.__capital.getState();
+      if (s.victory) s.victory.dismissed = true;
+      window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+    });
     const sponsorReason = await sp.locator('[data-scenario-reason]').getAttribute('data-scenario-reason').catch(() => null);
     const sponsorText = ((await sp.locator('[data-scenario-reason]').textContent().catch(() => '')) ?? '').trim();
     check('20 gün içinde dönmeyen kaybediyor; sonuç ekranı nedeni yazıyor',
@@ -4094,7 +4144,7 @@ async function finish(browser, consoleErrors) {
       c.engine.runDay();
       c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
     });
-    await sp.waitForSelector('[data-scenario-result="won"]', { timeout: 5000 }).catch(() => null);
+    await sp.waitForSelector('[data-scenario-result="won"]', { timeout: 12000 }).catch(() => null);
     check('İki şehirde de zafer: senaryo kazanılıyor, zafer ekranı araya girmiyor',
       (await sp.locator('[data-scenario-result="won"]').count()) === 1 && (await sp.locator('.gameover:not(.scenario-result)').count()) === 0);
     // Tur 39c: uzun açılış telefonda ekrana sığmıyordu; katman kaymıyor, "Başla" düğmesine ulaşılamıyordu.
@@ -4206,7 +4256,8 @@ async function finish(browser, consoleErrors) {
       // Komut arayüzü yeniden çizdiriyor (durumu elle değiştirmek çizdirmiyor).
       c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
     });
-    await pp.waitForTimeout(400);
+    // Zafer ekranı havai fişeklerden sonra açılıyor (Tur 63).
+    await pp.waitForSelector('.gameover.victory', { timeout: 6000 }).catch(() => {});
     const victory = await reachable(pp, '.gameover.victory');
     await pp.evaluate(() => {
       const c = window.__capital;
@@ -4360,7 +4411,7 @@ async function finish(browser, consoleErrors) {
       c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
     });
     const runLine = await cp
-      .waitForSelector('.gameover.victory [data-career-run-line]', { timeout: 5000 })
+      .waitForSelector('.gameover.victory [data-career-run-line]', { timeout: 8000 })
       .then((el) => el.textContent())
       .catch(() => '');
     check('Zafer ekranı bu koşunun rozetlerini yazıyor', (runLine ?? '').includes('Şehrin sahibi') && (runLine ?? '').includes('İlk devralma'), runLine ?? '');
@@ -4738,7 +4789,10 @@ async function finish(browser, consoleErrors) {
       window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 3 });
       return { day: window.__capital.getState().time.day, stateSyncs: info.stateSyncs, fabricSyncs: info.fabricSyncs };
     });
-    await fp.waitForFunction((day) => window.__capital.getState().time.day >= day + 20, before.day, { timeout: 120000 });
+    // Yirmi eşitleme bekleniyor, yirmi gün değil: yavaş makinede React iki
+    // günü tek çizimde birleştirince 20 günde 19 eşitleme kalıyor (o zaman
+    // ana dalda da düşüyordu). Ölçülen şey eşitleme başına doku.
+    await fp.waitForFunction((count) => (window.__capital.renderInfo().stateSyncs ?? 0) >= count + 20, before.stateSyncs ?? 0, { timeout: 120000 });
     const after = await fp.evaluate(() => {
       window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
       return { ...window.__capital.renderInfo(), day: window.__capital.getState().time.day };
@@ -5064,7 +5118,8 @@ async function finish(browser, consoleErrors) {
       live.victory = { day: live.time.day, kind: 'tycoon' };
       c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
     });
-    await hp.waitForTimeout(500);
+    // Zafer ekranı havai fişeklerden sonra (Tur 63).
+    await hp.waitForSelector('[data-victory-open-city]', { timeout: 8000 }).catch(() => {});
     check('Zafer ekranında "Yeni şehre açıl"', (await hp.locator('[data-victory-open-city]').count()) === 1);
     await hp.evaluate(() => document.querySelector('[data-victory-open-city]').click());
     await hp.waitForTimeout(300);
@@ -5814,11 +5869,9 @@ async function finish(browser, consoleErrors) {
       window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
     });
 
-    await mp.waitForTimeout(2500);
-    const paused = await music();
-    check('Duraklayınca yalnız pad ve bas kalıyor',
-      paused !== null && paused.layers.pad > 0.3 && paused.layers.bass > 0.3 && paused.layers.arp < 0.02 && paused.layers.lead < 0.02 && paused.layers.pulse < 0.02,
-      paused ? JSON.stringify(paused.layers) : 'müzik yok');
+    // Katmanlar sönene dek (yavaş makinede 2,5 sn'den uzun sürebiliyor).
+    const paused = await until((m) => m.layers.pad > 0.3 && m.layers.bass > 0.3 && m.layers.arp < 0.02 && m.layers.lead < 0.02 && m.layers.pulse < 0.02, 8000);
+    check('Duraklayınca yalnız pad ve bas kalıyor', paused.ok, paused.last ? JSON.stringify(paused.last.layers) : 'müzik yok');
 
     await mp.locator('.speeds [data-panel="settings"]').click();
     await mp.locator('[data-volume="music"]').focus();
@@ -6578,8 +6631,9 @@ async function finish(browser, consoleErrors) {
     // Rakipler paneli (pencere) kapansın; ihale çipi ihale panelini açıyor.
     await vp.keyboard.press('Escape');
     await vp.waitForTimeout(200);
-    await vp.locator('.auction-chip').first().click({ timeout: 5000 }).catch(() => {});
-    await vp.waitForTimeout(300);
+    // Yazılımsal GPU'da bir kare yarım saniyeyi aşabiliyor: tıklama ve panel bekleniyor.
+    await vp.locator('.auction-chip').first().click({ timeout: 15000 }).catch(() => {});
+    await vp.waitForSelector('[data-auction-allies]', { timeout: 10000 }).catch(() => null);
     const spite = (await vp.locator('[data-auction-spite]').textContent().catch(() => '')) ?? '';
     const allies = (await vp.locator('[data-auction-allies]').textContent().catch(() => '')) ?? '';
     check('İhale panelinde husumetli ve müttefik notu', spite.includes(setup.foeName) && allies.includes(setup.friendName), `${spite.slice(0, 60)} | ${allies.slice(0, 60)}`);
@@ -6611,6 +6665,12 @@ async function finish(browser, consoleErrors) {
 
     const open = async (id) => {
       await xp.evaluate(() => window.__capital?.engine.dispatch({ type: 'SET_SPEED', speed: 0 }));
+      // Bekleyen bir sonuç (kazanılan senaryoda havai fişekten sonra) ekrana gelsin.
+      await xp.waitForFunction(() => {
+        const run = window.__capital?.getState()?.scenario;
+        const pending = run !== undefined && run.finishedDay !== undefined && !run.resultSeen;
+        return !pending || document.querySelector('[data-scenario-result]') !== null;
+      }, null, { timeout: 12000 }).catch(() => null);
       if ((await xp.locator('.newgame').count()) === 0) {
         if ((await xp.locator('[data-scenario-result]').count()) > 0) {
           await xp.locator('[data-scenario-result] .gameover-actions button').last().click();
@@ -7096,6 +7156,516 @@ async function finish(browser, consoleErrors) {
       phone.icon && /^(Winter|Spring|Summer|Autumn) · (Clear|Cloudy|Rainy|Stormy|Snowy|Foggy)$/.test(phone.title) && phone.text === phone.title && phone.labelWidth <= 1 && !phone.page && wmErrors.length === 0,
       JSON.stringify(phone));
     await wPhone.close();
+  }
+
+  section('Önemli anlar');
+  {
+    const mContext = await browser.newContext({ viewport: { width: 1280, height: 860 } });
+    await mContext.addInitScript(veteran, TUTORIAL_KEY);
+    const mp = await mContext.newPage();
+    const mErrors = [];
+    mp.on('pageerror', (e) => mErrors.push(e.message));
+    mp.on('console', (m) => { if (m.type() === 'error') mErrors.push(m.text()); });
+    await mp.goto('http://127.0.0.1:8811/');
+    await mp.waitForSelector('.newgame', { timeout: 20000 });
+    await mp.locator('button:has-text("Şirketi kur")').click();
+    await mp.waitForSelector('.topbar', { timeout: 30000 });
+    await mp.waitForFunction(() => (window.__capital?.renderInfo()?.frameCount ?? 0) >= 4, null, { timeout: 60000 });
+    // Rakipler birkaç gün kursun; sonra şehir durur, anları test sürüyor.
+    await mp.evaluate(() => {
+      const c = window.__capital;
+      for (let d = 0; d < 12; d++) c.engine.runDay();
+      const s = c.getState();
+      s.companies[s.playerCompanyId].cash += 8_000_000;
+      c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+      c.setTimeOfDay(0.45);
+    });
+    const moments = () => mp.evaluate(() => window.__capital.renderInfo().moments);
+    const settle = (fn, timeout = 6000) => mp.waitForFunction(fn, null, { timeout }).then(() => true).catch(() => false);
+    // Oyuncuya bir dükkân: boş parsel, al ve kur; kamera oraya.
+    const buildShop = () => mp.evaluate(() => {
+      const c = window.__capital;
+      const engine = c.engine;
+      for (const tile of engine.getState().map.tiles) {
+        if (tile.kind !== 'plot' || tile.structureId || tile.ownerId) continue;
+        if (!engine.dispatch({ type: 'BUY_TILE', tileId: tile.id }).ok) continue;
+        if (engine.dispatch({ type: 'BUILD', tileId: tile.id, defId: 'corner_shop' }).ok) {
+          c.setView({ x: tile.x, z: tile.y, distance: 22 });
+          return tile.id;
+        }
+      }
+      return null;
+    });
+
+    // İnşaat: temel atılırken toz, yükseliş bitince halka. Halka her karede sayfanın
+    // içinden izleniyor: yavaş makinede 1,15 sn'lik halka iki üç karede bitiyor.
+    await mp.evaluate(() => {
+      const watch = { grew: false, ringAfterRise: false };
+      window.__buildWatch = watch;
+      const started = performance.now();
+      const tick = () => {
+        const m = window.__capital.renderInfo().moments;
+        if (m.rising >= 1) watch.grew = true;
+        if (watch.grew && m.rising === 0 && m.rings >= 1) watch.ringAfterRise = true;
+        if (!watch.ringAfterRise && performance.now() - started < 20000) requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    });
+    const built = await buildShop();
+    await mp.waitForTimeout(160);
+    const rising = await moments();
+    await mp.waitForTimeout(220);
+    await mp.screenshot({ path: `${OUT}/moment-build.png` });
+    check('İnşaat: temel atılırken toz kalkıyor, bina yerden yükseliyor', built !== null && rising.dust >= 1 && rising.rising >= 1, JSON.stringify(rising));
+    await settle(() => window.__capital.renderInfo().buildingsGrowing === false);
+    await settle(() => window.__buildWatch.ringAfterRise === true, 6000);
+    const finished = { ...(await moments()), watch: await mp.evaluate(() => window.__buildWatch) };
+    check('Yükseliş bitince yerde halka açılıyor', finished.watch.ringAfterRise && finished.rising === 0, JSON.stringify(finished));
+    const calm = await settle(() => {
+      const m = window.__capital.renderInfo().moments;
+      return m.dust === 0 && m.rings === 0;
+    }, 4000);
+    check('Toz dağılıyor, halka sönüyor: takılı kalmıyor', calm, JSON.stringify(await moments()));
+
+    // Proje açılışı: şantiyenin beton iskeleti açılış günü binanın boyuna yükseliyor, tozuyla.
+    await mp.evaluate((tileId) => {
+      const c = window.__capital;
+      const s = c.getState();
+      const b = s.buildings[s.map.tiles[tileId].buildingId];
+      b.development = { opensOnDay: s.time.day + 10 };
+      c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+    }, built);
+    await mp.waitForTimeout(200);
+    await mp.evaluate((tileId) => {
+      const c = window.__capital;
+      const s = c.getState();
+      s.buildings[s.map.tiles[tileId].buildingId].development.occupancy = 0.4;
+      c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+    }, built);
+    await mp.waitForTimeout(120);
+    const opening = await moments();
+    check('Proje açılınca bina iskeletin boyundan yükseliyor, toz kalkıyor', opening.rising >= 1 && opening.dust >= 1, JSON.stringify(opening));
+    await mp.evaluate((tileId) => {
+      const c = window.__capital;
+      const s = c.getState();
+      delete s.buildings[s.map.tiles[tileId].buildingId].development;
+      c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+    }, built);
+    await settle(() => window.__capital.renderInfo().buildingsGrowing === false);
+
+    // Yıkım: yapısı olan parseli satın alıp boşaltınca toz.
+    const razed = await mp.evaluate(() => {
+      const c = window.__capital;
+      const engine = c.engine;
+      for (const tile of engine.getState().map.tiles) {
+        if (tile.kind !== 'plot' || !tile.structureId || tile.ownerId) continue;
+        if (engine.dispatch({ type: 'BUYOUT_TILE', tileId: tile.id }).ok) return tile.id;
+      }
+      return null;
+    });
+    await mp.waitForTimeout(120);
+    const dust = await moments();
+    check('Yıkım: satın alınıp boşaltılan arsada toz kalkıyor', razed !== null && dust.dust >= 1, `${razed} · ${dust.dust} bulut`);
+
+    // Para akışı: üç dükkân daha; günün defteri sabitleniyor (üçü kazanmış, biri çok kaybetmiş).
+    await buildShop();
+    await buildShop();
+    await buildShop();
+    await settle(() => window.__capital.renderInfo().buildingsGrowing === false);
+    const dayOf = (profits) => mp.evaluate((profits) => {
+      const c = window.__capital;
+      c.engine.runDay();
+      const s = c.getState();
+      const own = Object.values(s.buildings).filter((b) => b.companyId === s.playerCompanyId);
+      own.forEach((b, i) => { b.last.profit = profits[i] ?? 0; });
+      const first = s.map.tiles[own[0].tileId];
+      c.setView({ x: first.x, z: first.y, distance: 30 });
+      c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+      return own.map((b) => b.id);
+    }, profits);
+    const owned = await dayOf([4200, 1800, -2600, 900]);
+    // Etiketler çatıya yerleşene dek (kamera o binaya kayıyor; yavaş karede birkaç yüz ms).
+    await settle(() => {
+      const tags = [...document.querySelectorAll('.money-tag')];
+      return tags.length === 4 && tags.every((el) => {
+        const r = el.getBoundingClientRect();
+        return r.top >= 0 && r.bottom <= innerHeight && r.left >= 0 && r.right <= innerWidth;
+      });
+    }, 1500);
+    const tags = await mp.evaluate(() => [...document.querySelectorAll('.money-tag')].map((el) => {
+      const r = el.getBoundingClientRect();
+      const shown = getComputedStyle(el.parentElement).visibility !== 'hidden';
+      return { id: el.getAttribute('data-money-tag'), text: el.textContent, loss: el.classList.contains('money-tag-loss'), shown, at: [Math.round(r.left), Math.round(r.top), Math.round(r.width)], inside: !shown || (r.width > 0 && r.top >= 0 && r.bottom <= innerHeight && r.left >= 0 && r.right <= innerWidth) };
+    }));
+    const delta = await mp.evaluate(() => {
+      const el = document.querySelector('.metric-delta');
+      return el ? { sign: el.getAttribute('data-delta-sign'), text: el.textContent } : null;
+    });
+    await mp.screenshot({ path: `${OUT}/moment-money.png` });
+    check('Para akışı: en çok kazandıran üç bina çatısından kârını yükseltiyor, çok zarar eden kırmızı',
+      tags.length === 4 && tags.filter((t) => !t.loss).map((t) => t.id).join() === [owned[0], owned[1], owned[3]].join() && tags.find((t) => t.loss)?.id === owned[2] && tags.some((t) => t.shown) && tags.every((t) => t.inside) && /^\+/.test(tags[0].text),
+      JSON.stringify(tags));
+    check('Kasanın altında son değişim', delta !== null && /^(gain|loss)$/.test(delta.sign ?? '') && /\d/.test(delta.text ?? ''), JSON.stringify(delta));
+    await mp.waitForTimeout(900);
+    const cash = await mp.evaluate(() => {
+      const el = document.querySelector('.metric-accent .metric-value');
+      return { text: el?.textContent ?? '', label: el?.getAttribute('aria-label') ?? '' };
+    });
+    check('Kasa sayarak yeni tutara varıyor', cash.label.endsWith(cash.text) && cash.text.length > 0, JSON.stringify(cash));
+
+    // Ayar kapalıyken etiket yok.
+    await mp.waitForTimeout(1400);
+    await mp.locator('.speeds [data-panel="settings"]').click();
+    await mp.waitForSelector('[data-settings-money-tags]', { timeout: 5000 });
+    await mp.locator('[data-settings-money-tags]').uncheck();
+    await mp.keyboard.press('Escape');
+    await dayOf([4200, 1800, -2600, 900]);
+    await mp.waitForTimeout(450);
+    const hidden = await mp.evaluate(() => document.querySelectorAll('.money-tag').length);
+    check('Ayarlarda "Şehirde kazanç etiketleri" kapalı: etiket yok', hidden === 0, `${hidden} etiket`);
+    await mp.locator('.speeds [data-panel="settings"]').click();
+    await mp.locator('[data-settings-money-tags]').check();
+    await mp.keyboard.press('Escape');
+
+    // Devralma: bir rakip yutuluyor (motorun devralmasıyla aynı iz: binalar ve parseller oyuncuya, şirket listeden düşüyor).
+    const programsBefore = (await mp.evaluate(() => window.__capital.renderInfo().programs));
+    const absorb = () => mp.evaluate(() => {
+      const c = window.__capital;
+      const s = c.getState();
+      const player = s.companies[s.playerCompanyId];
+      const counts = (id) => Object.values(s.buildings).filter((b) => b.companyId === id).length;
+      const target = Object.values(s.companies).filter((co) => !co.isPlayer).sort((a, b) => counts(b.id) - counts(a.id))[0];
+      if (!target || counts(target.id) === 0) return null;
+      const ids = Object.values(s.buildings).filter((b) => b.companyId === target.id).map((b) => b.id);
+      for (const id of ids) s.buildings[id].companyId = player.id;
+      for (const tile of s.map.tiles) if (tile.ownerId === target.id) tile.ownerId = player.id;
+      delete s.companies[target.id];
+      player.acquisitions = (player.acquisitions ?? 0) + 1;
+      const at = s.map.tiles[s.buildings[ids[0]].tileId];
+      c.setView({ x: at.x, z: at.y, distance: 34 });
+      c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+      return { name: target.name, ids };
+    });
+    // Zaferi ilan eden ve bandın, ekranın ne zaman geldiğini sayfanın içinden ölçen işlev.
+    // Ölçüm DOM değişikliğinde (gözlemci), kareye bağlı değil: yavaş makinede bir kare bir
+    // saniyeyi aşabiliyor, test adımları da yüzlerce ms sürüyor.
+    await mp.evaluate(() => {
+      window.__declareVictory = (kind, dayShift) => {
+        const c = window.__capital;
+        const s = c.getState();
+        const trace = { set: performance.now(), banner: null, bannerText: '', screen: null, raced: false };
+        window.__momentTrace = trace;
+        const observer = new MutationObserver(() => {
+          const now = performance.now();
+          const banner = document.querySelector('.moment-banner[data-moment="victory"]');
+          if (trace.banner === null && banner) {
+            trace.banner = Math.round(now - trace.set);
+            trace.bannerText = banner.textContent ?? '';
+          }
+          if (trace.screen === null && document.querySelector('.gameover.victory')) trace.screen = Math.round(now - trace.set);
+          if (trace.screen !== null && trace.banner !== null) observer.disconnect();
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
+        setTimeout(() => observer.disconnect(), 15000);
+        s.victory = { day: s.time.day + dayShift, kind, path: 'retail', shares: { retail: 1, realestate: 0, energy: 0, freight: 0 }, acquisitions: 1 };
+        c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+        return trace;
+      };
+      // İlk zafer devralma bandının süresi (4,6 sn) dolmadan hemen önce, 4,56. sn'de ilan
+      // ediliyor: eski bandın zamanlayıcısı zafer bandını silmemeli (tam koşu bunu yakaladı).
+      // Zamanlayıcı bandın geldiği an sayfanın içinde kuruluyor; test adımları ne kadar
+      // yavaş olursa olsun yarış her koşuda sınanıyor.
+      window.__takeoverBannerAt = null;
+      const seen = new MutationObserver(() => {
+        if (!document.querySelector('.moment-banner[data-moment="takeover"]')) return;
+        seen.disconnect();
+        window.__takeoverBannerAt = performance.now();
+        setTimeout(() => {
+          window.__declareVictory('tycoon', 0).raced = true;
+        }, 4560);
+      });
+      seen.observe(document.body, { childList: true, subtree: true });
+    });
+    const taken = await absorb();
+    await mp.waitForTimeout(200);
+    const wave = await moments();
+    const banner = await mp.evaluate((ids) => {
+      const el = document.querySelector('.moment-banner[data-moment="takeover"]');
+      if (!el) return null;
+      const swatches = [...el.querySelectorAll('.moment-swatch')].map((sw) => getComputedStyle(sw).backgroundColor);
+      const hex = window.__capital.buildingAccent(ids[0])?.target ?? '';
+      const n = parseInt(hex.slice(1), 16);
+      const roof = `rgb(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255})`;
+      return { text: el.textContent ?? '', role: el.getAttribute('role'), swatch: swatches[1] ?? '', roof };
+    }, taken?.ids ?? []);
+    await mp.waitForTimeout(500);
+    await mp.screenshot({ path: `${OUT}/moment-takeover.png` });
+    check('Devralma: çatılar dalga hâlinde oyuncunun rengine dönüyor, her binada yerde halka',
+      taken !== null && wave.shifting >= 1 && wave.rings >= Math.min(taken.ids.length, 24) - 1, `${taken?.ids.length} bina · ${JSON.stringify(wave)}`);
+    check('Devralma bandı: "… artık senin", kaç binanın döndüğü; bandın rengi çatıların döndüğü renk (Codex #93)',
+      banner !== null && banner.text.includes(`${taken?.name} artık senin`) && banner.text.includes(`${taken?.ids.length} bina`) && banner.role === 'status' && banner.swatch === banner.roof,
+      banner ? `${banner.text} · bant ${banner.swatch} · çatı ${banner.roof}` : 'bant yok');
+
+    // Zafer: havai fişek ve bant önce, zafer ekranı sonra.
+    await mp.evaluate(() => {
+      const c = window.__capital;
+      c.setTimeOfDay(0.93);
+      const s = c.getState();
+      c.setView({ x: s.map.width / 2, z: s.map.height / 2, distance: 40 });
+    });
+    await mp.waitForTimeout(400);
+    const declare = (kind, dayShift) => mp.evaluate(({ kind, dayShift }) => {
+      window.__declareVictory(kind, dayShift);
+    }, { kind, dayShift });
+    const trace = () => mp.evaluate(() => window.__momentTrace);
+    // İlk zafer sayfanın zamanlayıcısıyla, devralma bandı kalkmak üzereyken (yukarıda).
+    await settle(() => window.__momentTrace?.raced === true, 15000);
+    await mp.waitForTimeout(900);
+    await mp.screenshot({ path: `${OUT}/moment-victory.png` });
+    const party = await mp.evaluate(() => {
+      const m = window.__capital.renderInfo().moments;
+      return { fireworks: m.fireworks, bursts: m.fireworkScreen, trace: window.__momentTrace };
+    });
+    check('Zafer: şehrin üstünde havai fişek, hemen zafer bandı (devralma bandı tam o an kalkarken bile)',
+      party.trace.raced && party.fireworks.active && party.fireworks.shells >= 1 && party.fireworks.height > 0 && party.trace.banner !== null && party.trace.banner < 1500 && party.trace.bannerText.includes('Şehrin sahibi'),
+      JSON.stringify({ ...party, bursts: undefined }));
+    check('Patlamalar ekranın içinde, üst üçte ikide', party.bursts.length >= 1 && party.bursts.every((b) => b.visible && b.y < 860 * 0.66),
+      JSON.stringify(party.bursts));
+    await settle(() => window.__momentTrace.screen !== null, 8000);
+    const landed = (await trace()).screen;
+    // Üst sınır geniş: yavaş makinede zamanlayıcı bir karenin (1–1,7 sn) bitmesini bekleyebiliyor.
+    check('Zafer ekranı havai fişeklerden sonra iniyor (~2,4 sn)', landed !== null && landed >= 2200 && landed < 6500, `${landed} ms`);
+    // Dalga zafer gelmeden çoktan bitti: devralınan her çatı oyuncunun renginde.
+    await settle(() => window.__capital.renderInfo().moments.shifting === 0, 6000);
+    const accents = await mp.evaluate((ids) => ids.map((id) => window.__capital.buildingAccent(id)), [...(taken?.ids ?? []), owned[0]]);
+    const playerAccent = accents.at(-1)?.target;
+    check('Dalga bitince devralınan her bina oyuncunun renginde', accents.length > 1 && accents.every((a) => a && a.target === playerAccent && a.drawn === playerAccent),
+      `${playerAccent} · ${[...new Set(accents.map((a) => a?.drawn))].join(', ')}`);
+    const programsAfter = await mp.evaluate(() => window.__capital.renderInfo().programs);
+    check('Halka ve havai fişek açılışta derlenmiş: anlarda yeni program yok', programsAfter === programsBefore, `${programsBefore} → ${programsAfter}`);
+    await mp.locator('.gameover.victory .gameover-actions button.primary').click();
+    await mp.evaluate(() => {
+      const c = window.__capital;
+      c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+      c.setTimeOfDay(0.45);
+    });
+
+    // Azaltılmış hareket: bina yerinde beliriyor, toz ve halka yok, dalga yok; bant ve zafer ekranı hemen.
+    // Toz sürerken açılınca süren toz da hemen kalkıyor (Codex #93).
+    // Kurma, tıklama ve ölçme sayfanın içinde tek adımda: toz 1,5 sn sürüyor, test adımları ondan yavaş.
+    await mp.locator('.speeds [data-panel="settings"]').click();
+    await mp.waitForSelector('[data-setting="motion"][data-choice="reduced"]', { timeout: 15000 });
+    const dustSwitch = await mp.evaluate(async () => {
+      // Dükkân sayfanın içinde kuruluyor ve toz bekleniyor (toz 1,5 sn; yavaş makinede iki kare bunu aşıyor).
+      const c = window.__capital;
+      const engine = c.engine;
+      for (const tile of engine.getState().map.tiles) {
+        if (tile.kind !== 'plot' || tile.structureId || tile.ownerId) continue;
+        if (!engine.dispatch({ type: 'BUY_TILE', tileId: tile.id }).ok) continue;
+        if (engine.dispatch({ type: 'BUILD', tileId: tile.id, defId: 'corner_shop' }).ok) {
+          c.setView({ x: tile.x, z: tile.y, distance: 22 });
+          break;
+        }
+      }
+      const waited = performance.now();
+      while (c.renderInfo().moments.dust < 1 && performance.now() - waited < 4000) await new Promise((resolve) => requestAnimationFrame(resolve));
+      const before = c.renderInfo().moments.dust;
+      // Kasa da tam o an sayıyor (Codex #93): büyük bir giriş. Kasanın etiketi yeni tutara
+      // geçtiği an (React çizdi, sayım başladı; gözlemci araya kare girmeden çalışıyor)
+      // azaltılmış harekete geçiliyor; tutar da yine araya kare girmeden okunuyor.
+      const metric = () => [...document.querySelectorAll('.metric-value')].find((el) => el.querySelector('.tween-money'));
+      const label = () => metric()?.getAttribute('aria-label') ?? '';
+      const tween = () => metric()?.querySelector('.tween-money')?.textContent ?? '';
+      const labelBefore = label();
+      const microtask = () => new Promise((resolve) => queueMicrotask(resolve));
+      const cash = await new Promise((resolve) => {
+        const timeout = setTimeout(() => {
+          observer.disconnect();
+          resolve({ counting: false, target: '', shown: 'etiket değişmedi' });
+        }, 8000);
+        const observer = new MutationObserver(async () => {
+          if (label() === labelBefore) return;
+          observer.disconnect();
+          clearTimeout(timeout);
+          const target = label().slice(label().lastIndexOf(': ') + 2);
+          const counting = tween() !== target;
+          document.querySelector('[data-setting="motion"][data-choice="reduced"]').click();
+          for (let i = 0; i < 4; i++) await microtask();
+          resolve({ counting, target, shown: tween() });
+        });
+        observer.observe(document.body, { subtree: true, attributes: true, attributeFilter: ['aria-label'] });
+        const s = c.getState();
+        s.companies[s.playerCompanyId].cash += 7654321;
+        engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+      });
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+      return { before, after: window.__capital.renderInfo().moments.dust, reduced: window.__capital.renderInfo().reducedMotion, cash };
+    });
+    await mp.keyboard.press('Escape');
+    check('Azaltılmış harekete geçince süren toz hemen kalkıyor', dustSwitch.before >= 1 && dustSwitch.after === 0 && dustSwitch.reduced, JSON.stringify({ ...dustSwitch, cash: undefined }));
+    check('Kasa sayarken azaltılmış harekete geçince sayım kesiliyor, tutar hemen (Codex #93)',
+      dustSwitch.cash.counting && dustSwitch.cash.shown === dustSwitch.cash.target, JSON.stringify(dustSwitch.cash));
+    await settle(() => window.__capital.renderInfo().moments.fireworks.active === false, 8000);
+    await buildShop();
+    await mp.waitForTimeout(120);
+    const still = { info: await mp.evaluate(() => window.__capital.renderInfo()) };
+    const second = await absorb();
+    await mp.waitForTimeout(200);
+    const quiet = await moments();
+    const quietBanner = await mp.evaluate(() => document.querySelector('.moment-banner[data-moment="takeover"]') !== null);
+    check('Azaltılmış harekette bina yükselmeden beliriyor, toz yok',
+      still.info.buildingsGrowing === false && still.info.moments.dust === 0 && still.info.moments.rising === 0, JSON.stringify(still.info.moments));
+    check('Azaltılmış harekette devralmada dalga ve halka yok, bant yine geliyor',
+      second !== null && quiet.shifting === 0 && quiet.rings === 0 && quietBanner, `${JSON.stringify(quiet)} · bant ${quietBanner}`);
+    await declare('monopoly', 1);
+    await settle(() => window.__momentTrace.screen !== null, 5000);
+    const quick = (await trace()).screen;
+    const noFire = await moments();
+    check('Azaltılmış harekette zafer ekranı beklemeden iniyor, havai fişek yok', quick !== null && quick < 800 && noFire.fireworks.active === false, `ekran ${quick} ms · ${JSON.stringify(noFire.fireworks)}`);
+    await mp.locator('.gameover.victory .gameover-actions button.primary').click();
+    await mp.locator('.speeds [data-panel="settings"]').click();
+    await mp.locator('[data-setting="motion"][data-choice="auto"]').click();
+    await mp.keyboard.press('Escape');
+
+    // Zafer ekranı beklerken cihaz azaltılmış harekete geçiyor (hareket seçimi
+    // "cihaza göre"): bekleme kesiliyor, ekran hemen; havai fişek de duruyor (Codex #93).
+    // Geçiş ilan edilir edilmez: eski derlemede ekran yine 2,4 sn'yi bekliyor; yenisinde
+    // tercihin geldiği karede iniyor.
+    await settle(() => document.querySelector('.gameover.victory') === null, 5000);
+    // (Gün kaydın zaferinden ayrı: kayıt kontrolü kendi anahtarıyla sınansın.)
+    await declare('tycoon', 3);
+    await mp.emulateMedia({ reducedMotion: 'reduce' });
+    const switched = await mp.evaluate(() => Math.round(performance.now() - window.__momentTrace.set));
+    await settle(() => window.__momentTrace.screen !== null, 8000);
+    const midway = await mp.evaluate((at) => ({ switched: at, screen: window.__momentTrace.screen, fireworks: window.__capital.renderInfo().moments.fireworks.active }), switched);
+    check('Zafer beklerken cihaz azaltılmış harekete geçince ekran beklemeden iniyor, havai fişek duruyor (Codex #93)',
+      midway.switched < 1500 && midway.screen !== null && midway.screen < 2300 && midway.fireworks === false, JSON.stringify(midway));
+    await mp.locator('.gameover.victory .gameover-actions button.primary').click();
+    await mp.emulateMedia({ reducedMotion: 'no-preference' });
+    // Tercih değişikliği bir sonraki karede bildiriliyor (yavaş makinede bir saniyeyi aşabiliyor).
+    await settle(() => window.__capital.renderInfo().reducedMotion === false, 8000);
+
+    // Veri lensinde anlar çizilmiyor.
+    await mp.evaluate(() => {
+      window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+      window.__capital.setLens('opportunity');
+    });
+    await settle(() => window.__capital.renderInfo().dataLens === true, 5000);
+    const lensMoments = await moments();
+    // Lens şehri (ve havai fişeği) gizlerken zafer ekranı beklemiyor (Codex #93).
+    await declare('monopoly', 4);
+    await settle(() => window.__momentTrace.screen !== null, 8000);
+    const lensVictory = (await trace()).screen;
+    await mp.locator('.gameover.victory .gameover-actions button.primary').click();
+    await mp.evaluate(() => window.__capital.setLens('none'));
+    check('Veri lensinde halka ve havai fişek katmanı gizli', lensMoments.visible === false, JSON.stringify(lensMoments));
+    check('Veri lensindeyken zafer ekranı beklemeden iniyor (Codex #93)', lensVictory !== null && lensVictory < 1200, `${lensVictory} ms`);
+
+    // Kayıt açılınca (aynı şehir, aynı sahne kalıyor): kayıttaki zafer kutlanmıyor, ekranı beklemeden
+    // iniyor; kayıtla bugün arasındaki fark (sahibi başka bina, kalkmış yapı) bir an değil (Codex #93).
+    await mp.waitForTimeout(400);
+    // Kayıttan hemen önce bir devralma: bandı yeni durumun üstünde kalmamalı.
+    const lastTaken = await absorb();
+    await mp.waitForTimeout(300);
+    const restored = await mp.evaluate(async () => {
+      const c = window.__capital;
+      const bannerBefore = document.querySelector('.moment-banner[data-moment="takeover"]') !== null;
+      // Toz sürerken kayıt açılıyor: eski şehrin tozu yeni durumun üstünde kalmamalı (Codex #93).
+      // Toz karede yaşlanıyor (en çok 0,5 sn/kare); sayım ve kayıt kareler arasında, sayfanın içinde.
+      const engine = c.engine;
+      for (const tile of engine.getState().map.tiles) {
+        if (tile.kind !== 'plot' || tile.structureId || tile.ownerId) continue;
+        if (!engine.dispatch({ type: 'BUY_TILE', tileId: tile.id }).ok) continue;
+        if (engine.dispatch({ type: 'BUILD', tileId: tile.id, defId: 'corner_shop' }).ok) break;
+      }
+      const tick = () => new Promise((resolve) => setTimeout(resolve, 5));
+      for (let i = 0; i < 800 && c.renderInfo().moments.dust < 1; i++) await tick();
+      const dustBefore = c.renderInfo().moments.dust;
+      const syncsBefore = c.renderInfo().stateSyncs;
+      const copy = JSON.parse(JSON.stringify(c.getState()));
+      copy.victory = { day: copy.time.day + 2, kind: 'tycoon', path: 'retail', shares: { retail: 1, realestate: 0, energy: 0, freight: 0 }, acquisitions: 1 };
+      const rival = Object.values(copy.buildings).find((b) => b.companyId !== copy.playerCompanyId);
+      if (rival) rival.companyId = copy.playerCompanyId;
+      const razed = copy.map.tiles.find((t) => t.kind === 'plot' && t.structureId && !t.ownerId);
+      if (razed) razed.structureId = null;
+      // Ekranın geldiği an DOM değişikliğinden (kareye bağlı değil); 1,5 sn ve en az iki kare beklenip anlara bakılıyor.
+      const started = performance.now();
+      let screen = null;
+      const observer = new MutationObserver(() => {
+        if (screen === null && document.querySelector('.gameover.victory')) screen = Math.round(performance.now() - started);
+      });
+      observer.observe(document.body, { childList: true, subtree: true });
+      c.engine.replaceState(copy);
+      if (screen === null && document.querySelector('.gameover.victory')) screen = Math.round(performance.now() - started);
+      for (let i = 0; i < 800 && c.renderInfo().stateSyncs === syncsBefore; i++) await tick();
+      const dustOnReplace = c.renderInfo().moments.dust;
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+      for (let i = 0; i < 2; i++) await new Promise((resolve) => requestAnimationFrame(resolve));
+      observer.disconnect();
+      const m = c.renderInfo().moments;
+      const bannerAfter = document.querySelector('.moment-banner[data-moment="takeover"]') !== null;
+      return { screen, fireworks: m.fireworks.active, shifting: m.shifting, rings: m.rings, dust: m.dust, rising: m.rising, rival: Boolean(rival), razed: Boolean(razed), bannerBefore, bannerAfter, dustBefore, dustOnReplace };
+    });
+    check('Kayıt açılınca kayıttaki zafer kutlanmıyor, ekranı beklemeden iniyor; kaydın farkı dalga, toz ya da yükseliş değil',
+      restored.screen !== null && restored.screen < 1000 && !restored.fireworks && restored.shifting === 0 && restored.rings === 0 && restored.dust === 0 && restored.rising === 0 && restored.rival && restored.razed,
+      JSON.stringify(restored));
+    check('Toz sürerken kayıt açılınca eski şehrin tozu kalkıyor (Codex #93)', restored.dustBefore >= 1 && restored.dustOnReplace === 0,
+      `önce ${restored.dustBefore} · kayıt açılınca ${restored.dustOnReplace}`);
+    check('Kayıt açılınca önceki durumun devralma bandı kalkıyor (Codex #93)', lastTaken !== null && restored.bannerBefore && !restored.bannerAfter,
+      `${lastTaken?.name ?? 'devralınacak rakip yok'} · önce ${restored.bannerBefore} · sonra ${restored.bannerAfter}`);
+    check('Önemli anlar akışında konsol temiz', mErrors.length === 0, mErrors.slice(0, 2).join(' | '));
+    await mContext.close();
+
+    // Telefon: kasa farkı üst barı büyütmüyor; bant ekrana sığıyor.
+    const mPhone = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+    await mPhone.addInitScript(veteran, TUTORIAL_KEY);
+    await mPhone.addInitScript(() => localStorage.setItem('capitalforge.locale', 'en'));
+    const pm = await mPhone.newPage();
+    const pmErrors = [];
+    pm.on('pageerror', (e) => pmErrors.push(e.message));
+    await pm.goto('http://127.0.0.1:8811/');
+    await pm.waitForSelector('.newgame', { timeout: 20000 });
+    await pm.locator('[data-newgame-start]').click();
+    await pm.waitForSelector('.topbar', { timeout: 30000 });
+    await pm.waitForFunction(() => (window.__capital?.renderInfo()?.frameCount ?? 0) >= 4, null, { timeout: 60000 });
+    const barBefore = await pm.evaluate(() => Math.round(document.querySelector('.topbar').getBoundingClientRect().height));
+    await pm.evaluate(() => {
+      const c = window.__capital;
+      for (let d = 0; d < 10; d++) c.engine.runDay();
+      const s = c.getState();
+      s.companies[s.playerCompanyId].cash += 50_000;
+      c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+    });
+    await pm.waitForTimeout(200);
+    const barDelta = await pm.evaluate(() => ({
+      height: Math.round(document.querySelector('.topbar').getBoundingClientRect().height),
+      delta: document.querySelector('.metric-delta')?.textContent ?? null,
+    }));
+    const pmTaken = await pm.evaluate(() => {
+      const c = window.__capital;
+      const s = c.getState();
+      const player = s.companies[s.playerCompanyId];
+      const target = Object.values(s.companies).find((co) => !co.isPlayer);
+      for (const b of Object.values(s.buildings)) if (b.companyId === target.id) b.companyId = player.id;
+      delete s.companies[target.id];
+      player.acquisitions = (player.acquisitions ?? 0) + 1;
+      c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+      return target.name;
+    });
+    await pm.waitForTimeout(500);
+    const pmBanner = await pm.evaluate(() => {
+      const el = document.querySelector('.moment-banner');
+      const bar = document.querySelector('.topbar').getBoundingClientRect();
+      if (!el) return null;
+      const r = el.getBoundingClientRect();
+      return { text: el.textContent ?? '', left: Math.round(r.left), right: Math.round(r.right), top: Math.round(r.top), barBottom: Math.round(bar.bottom), page: document.documentElement.scrollWidth > innerWidth + 1 };
+    });
+    await pm.screenshot({ path: `${OUT}/moment-phone.png` });
+    check('Telefonda kasa farkı üst barı büyütmüyor', barDelta.delta !== null && barDelta.height === barBefore, `${barBefore} → ${barDelta.height} px · ${barDelta.delta}`);
+    check('Telefonda İngilizce bant ekrana sığıyor, üst barın altında',
+      pmBanner !== null && pmBanner.text.includes(`${pmTaken} is yours now`) && pmBanner.left >= 16 && pmBanner.right <= 374 && pmBanner.top >= pmBanner.barBottom && !pmBanner.page && pmErrors.length === 0,
+      JSON.stringify(pmBanner));
+    await mPhone.close();
   }
 
   section('Mobil');

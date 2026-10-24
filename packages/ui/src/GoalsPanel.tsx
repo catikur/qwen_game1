@@ -25,6 +25,7 @@ import { CareerRunLine, useCareerRevision } from './CareerPanel';
 import { careerSummary } from './career';
 import { ModifierLine } from './ModifierLine';
 import { PathSummary } from './PathSummary';
+import { VICTORY_DELAY_MS, useMomentDelay } from './MomentLayers';
 
 /** Görevin "şu an / hedef" satırı, görevin kendi biriminde. */
 function questNumbers(state: GameState, board: QuestBoard, quest: QuestState): string {
@@ -234,10 +235,13 @@ export function GoalsPanel(): ReactElement {
  * imparatorluk. Kaybetmek bir SON'du; kazanmak bir dönemeç.
  */
 export function VictoryScreen({ onNewGame }: { onNewGame: () => void }): ReactElement | null {
-  const { run, setView } = useGame();
+  const { run, setView, view } = useGame();
   const state = useGameState();
   const victory = state.victory;
-  if (!victory || victory.dismissed || state.gameOver || scenarioResultPending(state)) return null;
+  // Önemli an (Tur 63): canlı gelen zaferde ekran havai fişeklerden sonra açılıyor;
+  // veri lensi şehri (ve havai fişeği) gizlerken beklenecek bir şey yok.
+  const ready = useMomentDelay(victory && !victory.dismissed ? `${victory.kind}:${victory.day}` : null, VICTORY_DELAY_MS, state, view.lens !== 'none');
+  if (!victory || victory.dismissed || state.gameOver || scenarioResultPending(state) || !ready) return null;
 
   const player = getPlayer(state);
   const ranking = companyRanking(state);

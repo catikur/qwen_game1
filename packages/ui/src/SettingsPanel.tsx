@@ -151,6 +151,11 @@ export function SettingsPanel(): ReactElement {
           {t('panels.settings.weather')}
         </label>
         <p className="muted">{t('panels.settings.weather.hint')}</p>
+        <label className="settings-check">
+          <input type="checkbox" checked={settings.moneyTags} data-settings-money-tags onChange={(e) => updateSettings({ moneyTags: e.target.checked })} />
+          {t('panels.settings.moneyTags')}
+        </label>
+        <p className="muted">{t('panels.settings.moneyTags.hint')}</p>
       </section>
       <section className="settings-group">
         <h3 id="settings-sound">{t('panels.settings.sound')}</h3>

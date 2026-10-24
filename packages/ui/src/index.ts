@@ -33,6 +33,8 @@ export { useCareerWatch } from './useCareerWatch';
 export { Coach } from './Coach';
 export { DecisionCard, reopenDecisionCard } from './DecisionCard';
 export { OpportunityBubble, bubbleReward } from './OpportunityBubble';
+export { MomentBanner, MoneyTags } from './MomentLayers';
+export { moneyTagsOf, momentsBetween, snapshotOf } from './moments';
 export { ProjectPanel, ProjectSiteNote } from './ProjectPanel';
 export { startTutorial, tutorialSeen, tutorialStepOf } from './tutorial';
 export type { TutorialStepId } from './tutorial';

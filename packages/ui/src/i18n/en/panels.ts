@@ -428,10 +428,13 @@ export const panels: Record<keyof typeof trPanels, string> = {
   'panels.settings.motion.reduced': 'Reduced',
   'panels.settings.motion.full': 'Full',
   'panels.settings.motion.hint':
-    'Reduced motion turns off interface transitions and makes the camera jump instead of glide. Auto follows your device setting.',
+    'Reduced motion turns off interface transitions and makes the camera jump instead of glide; buildings appear without rising and city moments (dust, rings, fireworks) are not drawn. Auto follows your device setting.',
   'panels.settings.weather': 'Rain and snow',
   'panels.settings.weather.hint':
     'Drops and flakes falling on the city. Off, or with reduced motion, they are not drawn; season colours and cloudy skies still show.',
+  'panels.settings.moneyTags': 'Earnings tags in the city',
+  'panels.settings.moneyTags.hint':
+    "Each day yesterday's profit rises above your three best-earning buildings; a building losing a lot shows in red too. Off, or with reduced motion, they are hidden; the change next to your cash always shows.",
   'panels.settings.sound': 'Sound',
   'panels.settings.sound.on': 'Sound on',
   'panels.settings.volume.master': 'Overall',

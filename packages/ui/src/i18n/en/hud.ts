@@ -234,6 +234,14 @@ export const hud: Record<keyof typeof trHud, string> = {
   'hud.victory.continue': 'Continue in free play',
   'hud.victory.newEmpire': 'Start a new empire',
   'hud.victory.openCity': 'Expand to a new city',
+  // Key moments (Tur 63): takeover and victory banner, cash change.
+  'hud.moment.takeoverEyebrow': 'Takeover',
+  'hud.moment.takeover': '{name} is yours now',
+  'hud.moment.takeoverDetail': '{buildings|# building is|# buildings are} turning your colour',
+  'hud.moment.takeoverEmpty': 'Its shares and plots are yours',
+  'hud.moment.victoryEyebrow': 'Victory',
+  'hud.moment.victoryDetail': 'The city is celebrating you',
+  'hud.moment.cashDelta': 'Change in cash: {delta}',
   'hud.gameOver.otherCity': 'Switch to {city}',
   'hud.gameOver.holdingNote': 'The holding stands: your other cities keep living.',
 

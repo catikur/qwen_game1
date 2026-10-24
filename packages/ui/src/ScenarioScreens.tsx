@@ -22,6 +22,7 @@ import { recordScenarioResult, scenarioRecord, scenarioRunKey } from './scenario
 import { t } from './i18n';
 import { CareerRunLine } from './CareerPanel';
 import { starRow, starThresholds } from './stars';
+import { VICTORY_DELAY_MS, useMomentDelay } from './MomentLayers';
 
 /**
  * Senaryo ekranları (Tur 39): açılış (durum, hedef, süre — oyun duraklamış
@@ -175,7 +176,7 @@ export function ScenarioBriefScreen(): ReactElement | null {
 
 export function ScenarioResultScreen({ onNewGame, onReplay }: { onNewGame: () => void; onReplay: (id: string) => void }): ReactElement | null {
   const state = useGameState();
-  const { run } = useGame();
+  const { run, view } = useGame();
   const scenario = state.scenario;
   const def = scenarioDefOf(state);
   const pending = scenarioResultPending(state);
@@ -183,6 +184,14 @@ export function ScenarioResultScreen({ onNewGame, onReplay }: { onNewGame: () =>
     ? scenarioRunKey({ createdAtIso: state.meta.createdAtIso, finishedDay: scenario.finishedDay, outcome: scenario.outcome, score: scenario.score })
     : '';
   const [best, setBest] = useState(false);
+  // Önemli an (Tur 63): kazanılan senaryoda da havai fişek önce, sonuç ekranı
+  // zafer ekranı gibi biraz sonra; yoksa kutlama sonucun perdesinin altında
+  // başlıyordu (Codex #93). Kayıttan açılan sonuç, azaltılmış hareket ve veri
+  // lensi (şehir gizli) beklemiyor.
+  // Kaybedilen senaryoda da, aynı gün normal bir zafer geldiyse: kutlama o zaferin (Codex #93).
+  const celebrating =
+    scenario?.outcome === 'won' || (state.victory !== undefined && !state.victory.dismissed && state.victory.day === scenario?.finishedDay);
+  const ready = useMomentDelay(pending && celebrating ? `scenario:${scenario?.finishedDay}` : null, VICTORY_DELAY_MS, state, view.lens !== 'none');
 
   // Sonuç cihazda bir kez sayılıyor (sonuç ekranı yeniden açılsa da).
   useEffect(() => {
@@ -192,6 +201,7 @@ export function ScenarioResultScreen({ onNewGame, onReplay }: { onNewGame: () =>
 
   if (!pending || !scenario || !def) return null;
   const won = scenario.outcome === 'won';
+  if (celebrating && !ready) return null;
   const record = scenarioRecord(def.id);
 
   return (

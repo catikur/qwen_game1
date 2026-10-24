@@ -19,6 +19,8 @@ import {
   ModalHost,
   NewsFeed,
   OpportunityBubble,
+  MomentBanner,
+  MoneyTags,
   ScenarioBriefScreen,
   ScenarioResultScreen,
   Toasts,
@@ -297,6 +299,8 @@ export function GameRoot({
       buildingCategory: (defId: string) => BUILDING_BY_ID[defId]?.category ?? null,
       // Takvimin havası: test, istediği havanın gününü bulabilsin diye (Tur 62).
       weatherOn: (seed: number, day: number) => weatherOn(seed, day).id,
+      // Binanın çatı rengi: test, devralma dalgasının yeni sahibin rengine vardığını görsün (Tur 63).
+      buildingAccent: (id: string) => rendererRef.current?.buildingAccent(id) ?? null,
     };
     return () => {
       delete globals['__capital'];
@@ -562,11 +566,13 @@ export function GameRoot({
           <NewsFeed />
           <Inspector />
         </div>
+        <MoneyTags />
         <OpportunityBubble />
         <ModalHost />
         <DecisionCard />
         <Coach />
         <Toasts />
+        <MomentBanner />
         <GameOverScreen onNewGame={newGame} />
         <VictoryScreen onNewGame={newGame} />
         <LeagueResultScreen onNewGame={newGame} />

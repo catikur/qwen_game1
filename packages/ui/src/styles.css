@@ -6805,3 +6805,228 @@ button.icon {
 .council-lobby .relation-chip {
   margin-left: 6px;
 }
+
+/* ---------- Önemli anlar (Tur 63) ---------- */
+
+/*
+ * Kazanç etiketleri: binanın çatısından yükselen dünkü kâr. Katman
+ * sahnenin hemen üstünde, arayüzün altında: bir panel binayı örtüyorsa
+ * etiketi de örtüyor, panelin üstüne sayı yazılmıyor. Konum her karede
+ * çapadan (`transform`), yükseliş içteki yazıdan.
+ */
+.money-tags {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.money-tag-anchor {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+}
+
+.money-tag {
+  /*
+   * Kalın camdan küçük bir hap: şehrin her renginin üstünde okunuyor
+   * (yalnız gölgeli yazı karışık bir mahallede kayboluyordu). Çapanın eni
+   * sıfır; hap kendi eninde, ortası çatının üstünde.
+   */
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: max-content;
+  translate: -50% 0;
+  padding: 2px 9px 3px;
+  border-radius: 999px;
+  background: var(--panel-thick);
+  border: 1px solid var(--panel-edge);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+  font-family: var(--font-display);
+  font-size: calc(14px * var(--text-scale));
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--good);
+  opacity: 0;
+  animation: money-tag 1.6s ease-out both;
+}
+
+.money-tag-loss {
+  color: var(--bad);
+}
+
+@keyframes money-tag {
+  0% {
+    opacity: 0;
+    transform: translateY(8px) scale(0.85);
+  }
+  14% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  72% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-34px);
+  }
+}
+
+/*
+ * Kasanın son değişimi: değerin hemen altında küçük bir rakam. Akışın
+ * dışında (mutlak): üst bar telefonda iki satırda kalıyor, rozet bir
+ * satır daha açmıyor.
+ */
+.metric:has(.metric-delta) {
+  position: relative;
+}
+
+.metric-delta {
+  position: absolute;
+  left: 0;
+  top: calc(100% - 2px);
+  font-size: calc(11px * var(--text-scale));
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  pointer-events: none;
+  animation: metric-delta 2.2s ease-out both;
+}
+
+.metric-delta-gain {
+  color: var(--good);
+}
+
+.metric-delta-loss {
+  color: var(--bad);
+}
+
+@keyframes metric-delta {
+  0% {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  10% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  75% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/*
+ * Büyük anın bandı: devralma ve zafer. Ekranın üst üçte birinde,
+ * ortada; zafer ekranının altında (zafer ekranı açılınca örtülüyor).
+ */
+.moment-banner {
+  position: fixed;
+  left: 50%;
+  /* Üst barın ve hedef çipinin altında. */
+  top: max(190px, 22vh);
+  z-index: 55;
+  translate: -50% 0;
+  width: max-content;
+  max-width: min(420px, calc(100vw - 32px));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 12px 22px 13px;
+  text-align: center;
+  background: var(--panel-thick);
+  backdrop-filter: var(--glass);
+  -webkit-backdrop-filter: var(--glass);
+  border: 1px solid var(--panel-edge);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  color: var(--text);
+  pointer-events: none;
+  animation: moment-in 0.42s cubic-bezier(0.2, 0.9, 0.3, 1.25) both;
+}
+
+.moment-eyebrow {
+  font-size: calc(11px * var(--text-scale));
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+.moment-title {
+  font-family: var(--font-display);
+  font-size: calc(21px * var(--text-scale));
+  font-weight: 700;
+  line-height: 1.2;
+  text-wrap: balance;
+}
+
+.moment-detail {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: calc(13px * var(--text-scale));
+}
+
+.moment-swatches {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.moment-swatch {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1.5px var(--panel-solid), 0 0 0 2.5px var(--panel-edge);
+}
+
+.moment-arrow {
+  font-size: calc(12px * var(--text-scale));
+  color: var(--muted);
+}
+
+/* Zafer: zafer kartının yeşil parlak yüzü, beyaz yazı. */
+.moment-victory {
+  background: var(--gloss-green);
+  border-color: transparent;
+  color: #ffffff;
+  box-shadow: 0 4px 0 var(--edge-green), var(--shadow);
+}
+
+.moment-victory .moment-eyebrow {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+@keyframes moment-in {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.94);
+  }
+}
+
+@media (max-width: 860px) {
+  .moment-banner {
+    top: 132px;
+    padding: 10px 16px 11px;
+  }
+  .moment-title {
+    font-size: calc(18px * var(--text-scale));
+  }
+}
+
+:root[data-motion='reduced'] .money-tag,
+:root[data-motion='reduced'] .metric-delta,
+:root[data-motion='reduced'] .moment-banner {
+  animation: none;
+  opacity: 1;
+}

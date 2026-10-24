@@ -424,10 +424,13 @@ export const panels = {
   'panels.settings.motion.reduced': 'Azaltılmış',
   'panels.settings.motion.full': 'Tam',
   'panels.settings.motion.hint':
-    'Azaltılmış harekette arayüz geçişleri kapanır, kamera bir yere giderken kaymadan atlar. Otomatik, cihazın tercihine uyar.',
+    'Azaltılmış harekette arayüz geçişleri kapanır, kamera bir yere giderken kaymadan atlar; bina yükselmeden belirir, şehirdeki anlar (toz, halka, havai fişek) çizilmez. Otomatik, cihazın tercihine uyar.',
   'panels.settings.weather': 'Yağmur ve kar',
   'panels.settings.weather.hint':
     'Şehre yağan damla ve taneler. Kapalıyken ve azaltılmış harekette çizilmez; mevsimin rengi ve bulutlu gök yine görünür.',
+  'panels.settings.moneyTags': 'Şehirde kazanç etiketleri',
+  'panels.settings.moneyTags.hint':
+    'Her gün en çok kazandıran üç binanın üstünde dünkü kâr yükselir; çok zarar eden bir bina varsa o da kırmızıyla. Kapalıyken ve azaltılmış harekette görünmez; kasanın yanındaki fark her durumda.',
   'panels.settings.sound': 'Ses',
   'panels.settings.sound.on': 'Ses açık',
   'panels.settings.volume.master': 'Genel',

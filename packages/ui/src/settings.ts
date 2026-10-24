@@ -31,6 +31,8 @@ export interface Settings {
   muted: boolean;
   /** Şehirde yağmur ve kar taneleri (Tur 62); mevsimin rengi ve bulutun ışığı her durumda. */
   weather: boolean;
+  /** Şehirde kazanç etiketleri (Tur 63): dünün en çok kazandıran binalarının üstünde kâr. */
+  moneyTags: boolean;
 }
 
 export const TEXT_SIZES: readonly TextSize[] = ['small', 'normal', 'large', 'xlarge'];
@@ -48,6 +50,7 @@ export const DEFAULT_SETTINGS: Settings = {
   volume: { master: 1, music: 0.7, ambience: 1, effects: 1 },
   muted: false,
   weather: true,
+  moneyTags: true,
 };
 
 const STORAGE_KEY = 'capitalforge.settings.v1';
@@ -76,6 +79,7 @@ export function sanitizeSettings(raw: unknown, legacyMuted = false): Settings {
     },
     muted: typeof source['muted'] === 'boolean' ? source['muted'] : legacyMuted,
     weather: typeof source['weather'] === 'boolean' ? source['weather'] : DEFAULT_SETTINGS.weather,
+    moneyTags: typeof source['moneyTags'] === 'boolean' ? source['moneyTags'] : DEFAULT_SETTINGS.moneyTags,
   };
 }
 
@@ -168,4 +172,15 @@ export function subscribeSettings(listener: () => void): () => void {
 /** Seçimler; değişince bileşeni yeniden çizer. */
 export function useSettings(): Settings {
   return useSyncExternalStore(subscribeSettings, getSettings, getSettings);
+}
+
+const reducedNow = (): boolean => reducedMotion();
+
+/**
+ * Azaltılmış hareket etkin mi; seçim de cihazın tercihi de değişince
+ * bileşeni yeniden çizer. (`useSettings` cihazın tercihini görmüyor:
+ * tercih değişince seçimler nesnesi aynı kalıyor.)
+ */
+export function useReducedMotion(): boolean {
+  return useSyncExternalStore(subscribeSettings, reducedNow, reducedNow);
 }
