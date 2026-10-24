@@ -13,7 +13,7 @@ import {
   rivalProfile,
   scenarioResultPending,
 } from '@capital/core';
-import type { GameSpeed } from '@capital/core';
+import type { GameSpeed, GameState } from '@capital/core';
 import { CeoPortrait } from './CeoPortrait';
 import { CityChip, aliveDormant } from './HoldingPanel';
 import { AuctionChip } from './AuctionPanel';
@@ -27,6 +27,7 @@ import { useLocale } from './i18n/locale';
 import { useSettings } from './settings';
 import { CareerRunLine } from './CareerPanel';
 import { WeatherChip } from './WeatherChip';
+import { CashDelta, TweenMoney } from './MomentLayers';
 import type { MessageKey } from './i18n';
 
 /**
@@ -156,7 +157,7 @@ export function TopBar(): ReactElement {
        * ipucu bir şey kaybetmiyor.
        */}
       <div className="metrics">
-        <Metric icon="cash" label={t('hud.topbar.cash')} value={formatMoney(player.cash)} tone="accent" />
+        <Metric icon="cash" label={t('hud.topbar.cash')} value={formatMoney(player.cash)} tone="accent" live={{ value: player.cash, source: state }} />
         <Metric
           icon="profit"
           label={t('hud.topbar.dailyProfit')}
@@ -380,19 +381,23 @@ function Metric({
   label,
   value,
   tone = 'plain',
+  live,
 }: {
   icon: string;
   label: string;
   value: string;
   tone?: 'plain' | 'accent' | 'good' | 'bad';
+  /** Kasa (Tur 63): değer sayarak değişiyor, altında son değişim. */
+  live?: { value: number; source: GameState };
 }): ReactElement {
   return (
     <div className={`metric metric-${tone}`} title={label}>
       <MetricIcon name={icon} />
       <span className="metric-label">{label}</span>
       <span className="metric-value" aria-label={`${label}: ${value}`}>
-        {value}
+        {live ? <TweenMoney value={live.value} source={live.source} /> : value}
       </span>
+      {live && <CashDelta value={live.value} source={live.source} />}
     </div>
   );
 }

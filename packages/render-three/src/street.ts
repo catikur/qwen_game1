@@ -99,6 +99,21 @@ const PUFF_RISE = 1.1;
 const WALKER_SCALE = 1.3;
 /** Rüzgâr: duman hep aynı yana yatıyor, şehir tek bir hava altında. */
 const WIND = new THREE.Vector2(0.34, -0.14);
+/**
+ * Tek seferlik toz (Tur 63): inşaatın başladığı, projenin açıldığı, bir
+ * yapının yıkıldığı an. Bacanın pufuyla aynı örnek dizisinde (aynı
+ * program), yerde halka gibi açılıp sönüyor.
+ */
+const DUST_PUFFS = 9;
+const MAX_DUST = 14;
+const DUST_LIFE = 1.5;
+
+interface Dust {
+  x: number;
+  z: number;
+  size: number;
+  start: number;
+}
 
 export class StreetLife {
   readonly group = new THREE.Group();
@@ -112,6 +127,9 @@ export class StreetLife {
   private scratch = new THREE.Color();
   private young = new THREE.Color('#8f918f');
   private old = new THREE.Color('#e9e9e5');
+  private dustNew = new THREE.Color('#b9ab92');
+  private dustOld = new THREE.Color('#e4dccd');
+  private dust: Dust[] = [];
   private clock = 0;
   private budget = 1;
   private night = 0;
@@ -134,7 +152,7 @@ export class StreetLife {
       // Işıklı ve yarı saydam: duman gün ışığıyla aynı tonda kalsın, gece
       // kararsın. Derinlik yazmıyor ki puflar birbirini kesip delik açmasın.
       new THREE.MeshStandardMaterial({ roughness: 1, flatShading: true, transparent: true, opacity: 0.78, depthWrite: false }),
-      MAX_STACKS * PUFFS_PER_STACK,
+      MAX_STACKS * PUFFS_PER_STACK + MAX_DUST * DUST_PUFFS,
     );
 
     for (const mesh of [this.bodies, this.heads, this.smoke]) {
@@ -179,6 +197,15 @@ export class StreetLife {
   /** Bacalar: şehir dokusu ve şirket tesisleri ayrı ayrı yazıyor (ayrı anlarda senkronlanıyorlar). */
   setEmitters(group: 'fabric' | 'buildings', emitters: SmokeEmitter[]): void {
     this.emitters[group] = emitters;
+  }
+
+  /**
+   * Bir toz bulutu (Tur 63): `x, z`de, binanın boyuna göre `size`. Aynı
+   * anda en çok `MAX_DUST`; fazlası en eskisini siliyor.
+   */
+  burst(x: number, z: number, size = 1): void {
+    if (this.dust.length >= MAX_DUST) this.dust.shift();
+    this.dust.push({ x, z, size, start: this.clock });
   }
 
   /** Kalite kademesi: yayalar ve tüten bacalar aynı oranda seyreliyor. */
@@ -275,21 +302,51 @@ export class StreetLife {
         index++;
       }
     }
+    index = this.placeDust(index);
     this.smoke.count = index;
     uploadDrawn(this.smoke.instanceMatrix, index);
     if (this.smoke.instanceColor) uploadDrawn(this.smoke.instanceColor, index);
   }
 
+  /** Toz bulutları: yerde dışa açılan, biraz yükselip dağılan puflar. */
+  private placeDust(start: number): number {
+    let index = start;
+    this.dust = this.dust.filter((dust) => this.clock - dust.start < DUST_LIFE);
+    for (const dust of this.dust) {
+      const age = (this.clock - dust.start) / DUST_LIFE;
+      const grow = Math.min(1, age / 0.1);
+      const fade = age > 0.55 ? Math.max(0, (1 - age) / 0.45) : 1;
+      const spread = 1 - (1 - age) * (1 - age);
+      for (let p = 0; p < DUST_PUFFS; p++) {
+        const angle = (p / DUST_PUFFS) * Math.PI * 2 + dust.x * 0.7 + dust.z * 0.3;
+        const radius = (0.28 + spread * 0.5) * dust.size;
+        this.dummy.position.set(
+          dust.x + Math.cos(angle) * radius + WIND.x * age * 0.4,
+          0.1 + spread * 0.22 * dust.size,
+          dust.z + Math.sin(angle) * radius + WIND.y * age * 0.4,
+        );
+        this.dummy.rotation.set(age * 1.7, angle, 0);
+        this.dummy.scale.setScalar(Math.max(0.0001, (0.06 + spread * 0.12) * dust.size * grow * fade));
+        this.dummy.updateMatrix();
+        this.smoke.setMatrixAt(index, this.dummy.matrix);
+        this.smoke.setColorAt(index, this.scratch.copy(this.dustNew).lerp(this.dustOld, age));
+        index++;
+      }
+    }
+    return index;
+  }
+
   /**
    * Testler için: çizilen yaya, tüten baca (toplam ve yalnızca üretim
-   * yapan şirket tesisleri) ve puf sayısı.
+   * yapan şirket tesisleri), puf ve süren toz bulutu sayısı.
    */
-  get stats(): { walkers: number; stacks: number; producing: number; puffs: number; visible: boolean } {
+  get stats(): { walkers: number; stacks: number; producing: number; puffs: number; dust: number; visible: boolean } {
     return {
       walkers: this.bodies.count,
       stacks: this.emitters.buildings.length + this.emitters.fabric.length,
       producing: this.emitters.buildings.length,
       puffs: this.smoke.count,
+      dust: this.dust.length,
       visible: this.group.visible,
     };
   }

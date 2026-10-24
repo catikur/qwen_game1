@@ -19,8 +19,11 @@ import { decorateBuilding, decorateSite, decorateStructure, placeStreetTrees, st
 
 /** İnşaattaki projenin beton iskeleti (Tur 58). */
 const SITE_CONCRETE = '#bdb8ae';
+/** Şantiyenin açılış günündeki boyu, binanın tam boyuna oranla (Tur 63: açılış buradan yükseliyor). */
+const SITE_TOP = 0.8;
 import { LampLight } from './lamplight';
 import { Precipitation } from './precipitation';
+import { Fireworks, MOMENT, RingPulses, smooth, waveDelay } from './moments';
 import { mixWeather, seasonLook, weatherLook } from './season';
 import type { SeasonLook, WeatherLook } from './season';
 import { FACADE, buildingSurface, setWindowLateNight, windowLateNight } from './surface';
@@ -274,6 +277,25 @@ export class CityRenderer {
    * ve göğe geçişle yansıyor; mevsim ağaçları ve çimeni boyuyor.
    */
   private precipitation = new Precipitation();
+  /** Önemli anlar (Tur 63): yerde halka, zafer gecesi havai fişek. */
+  private rings = new RingPulses();
+  private fireworks = new Fireworks();
+  /** Bina kimliği → son çizildiği sahip ve çatı rengi; sahibi değişince renk dalgası. */
+  private buildingOwners = new Map<string, { companyId: string; accent: number }>();
+  /** Bina kimliği → çatının dönmeye başladığı an (ms) ve eski renk. */
+  private ownerShifts = new Map<string, { start: number; from: number }>();
+  private buildingsShifting = false;
+  /** Yükselen binalar: yükseliş bitince yerde halka. */
+  private risingIds = new Set<string>();
+  /** Şantiyesi süren projeler (Tur 58): açılınca şantiyenin boyundan yükseliyor. */
+  private siteIds = new Set<string>();
+  /** Bina kimliği → yükselişin başladığı oran (proje açılışı 0 değil). */
+  private growFrom = new Map<string, number>();
+  /** Kutlanan zafer; `undefined` ilk senkrondan önce (kayıttaki zafer kutlanmıyor). */
+  private celebrationKey: string | null | undefined = undefined;
+  /** Bu senkronda yapısı kalkan dokunun kareleri: yıkım tozu. */
+  private fabricRemoved: number[] = [];
+  private shiftTo = new THREE.Color();
   private weather: CityWeather | null = null;
   private weatherKey = '';
   private seasonKey = '';
@@ -489,6 +511,7 @@ export class CityRenderer {
     this.streetDecor = new DecorLayer(this.decorKit, perTile(0, 0.5, 0, 0, 0, 0, 1, 0.5));
     this.scene.add(this.buildingDecor.group, this.fabricDecor.group, this.streetDecor.group);
     this.scene.add(this.precipitation.group);
+    this.scene.add(this.rings.group, this.fireworks.group);
     // Gece lambaların altına düşen ışık (Tur 36); yer yollar yerleşince geliyor.
     this.lampLight = new LampLight(Math.ceil(tileCount * 0.5));
     this.scene.add(this.lampLight.mesh);
@@ -875,6 +898,9 @@ export class CityRenderer {
     this.traffic.setDataLens(dataLens);
     this.street.setDataLens(dataLens);
     this.world.setDataLens(dataLens);
+    // Anlar (Tur 63) şehrin manzarası: veri haritasında halka da havai fişek de yok.
+    this.rings.group.visible = !dataLens;
+    this.fireworks.group.visible = !dataLens;
     // Veri lensi zemini düz renkli bir haritaya çeviriyor; leke o rengi kirletirdi.
     this.buildingShadows.setVisible(!dataLens);
     this.fabricShadows.setVisible(!dataLens);
@@ -961,8 +987,17 @@ export class CityRenderer {
 
     // Şehrin mevcut dokusu: oyuncuya ait olmayan yapılar. Değişmediyse dünkü yerleşim duruyor.
     if (this.fabricChanged(tiles)) this.syncFabric(tiles);
+    // Yıkım (Tur 63): yapısı kalkan karede toz; satın alınıp boşaltılan arsa görünür bir an.
+    if (this.momentsOn() && this.sawBuildings) {
+      for (const index of this.fabricRemoved) {
+        const tile = tiles[index];
+        if (tile) this.street.burst(tile.x, tile.y, 1.1);
+      }
+    }
+    this.fabricRemoved.length = 0;
 
     this.syncBuildings(state);
+    this.syncCelebration(state);
 
     if (view.selectedTileId !== null) {
       const tile = tiles[view.selectedTileId];
@@ -984,7 +1019,8 @@ export class CityRenderer {
    * ve cephe karenin kimliğinden), yani bu ikisi aynıysa çıktı da aynı.
    */
   private fabricChanged(tiles: GameState['map']['tiles']): boolean {
-    let changed = this.fabricStructures.length !== tiles.length;
+    const fresh = this.fabricStructures.length !== tiles.length;
+    let changed = fresh;
     if (changed) {
       this.fabricStructures = new Array<string | null>(tiles.length).fill(null);
       this.fabricHeights = new Float64Array(tiles.length);
@@ -994,6 +1030,7 @@ export class CityRenderer {
       const structure = tile.structureId ?? null;
       const height = structure ? tile.structureHeight : 0;
       if (this.fabricStructures[i] === structure && this.fabricHeights[i] === height) continue;
+      if (!fresh && structure === null && this.fabricStructures[i] !== null) this.fabricRemoved.push(i);
       this.fabricStructures[i] = structure;
       this.fabricHeights[i] = height;
       changed = true;
@@ -1056,6 +1093,19 @@ export class CityRenderer {
   private syncBuildings(state: GameState): void {
     const tiles = state.map.tiles;
     let growing = false;
+    let shifting = false;
+    const now = performance.now();
+    const moments = this.momentsOn() && this.sawBuildings;
+    // Devralma dalgasının çıkış noktası: yeni sahibin genel merkezi (şirket başına bir kez).
+    const origins = new Map<string, { x: number; y: number } | null>();
+    const originOf = (companyId: string): { x: number; y: number } | null => {
+      if (!origins.has(companyId)) {
+        const hq = headquarters(state, companyId);
+        const at = hq ? tiles[hq.tileId] : undefined;
+        origins.set(companyId, at ? { x: at.x, y: at.y } : null);
+      }
+      return origins.get(companyId)!;
+    };
 
     this.buildings.begin();
     this.buildingShadows.begin();
@@ -1081,8 +1131,30 @@ export class CityRenderer {
       naturalColor(this.color, buildingFacade(def), tile.x, tile.y).lerp(this.categoryColor.set(def.color), 0.18);
       this.ownerColor.set(company && !company.isPlayer ? company.color : this.playerAccent());
 
-      const growth = this.growthOf(building.id);
-      if (growth < 1) growing = true;
+      /*
+       * DEVRALMA (Tur 63): sahibi değişen binanın çatısı bir karede dönmüyor.
+       * Eski renkten yenisine geçiyor; geçiş yeni sahibin genel merkezinden
+       * dışa doğru bir dalga, her binada yerde bir halka. Rakibi yutan
+       * oyuncu şehrin kendi rengine boyandığını görüyor.
+       */
+      const accent = this.ownerColor.getHex();
+      const owner = this.buildingOwners.get(building.id);
+      if (moments && owner && owner.companyId !== building.companyId) {
+        const origin = originOf(building.companyId);
+        const delay = origin ? waveDelay(Math.hypot(tile.x - origin.x, tile.y - origin.y)) : 0;
+        this.ownerShifts.set(building.id, { start: now + delay * 1000, from: owner.accent });
+        this.rings.pulse(tile.x, tile.y, accent, delay);
+      }
+      this.buildingOwners.set(building.id, { companyId: building.companyId, accent });
+      const shift = this.ownerShifts.get(building.id);
+      if (shift) {
+        const k = (now - shift.start) / (MOMENT.shiftSeconds * 1000);
+        if (k >= 1 || !this.momentsOn()) this.ownerShifts.delete(building.id);
+        else {
+          shifting = true;
+          this.ownerColor.setHex(shift.from).lerp(this.shiftTo.setHex(accent), smooth(k));
+        }
+      }
 
       // İnşaattaki proje (Tur 58): beton iskelet gün gün yükseliyor, vinç başında.
       const development = building.development;
@@ -1090,9 +1162,28 @@ export class CityRenderer {
         development && development.occupancy === undefined
           ? Math.min(1, Math.max(0, (state.time.day - building.builtDay) / Math.max(1, development.opensOnDay - building.builtDay)))
           : null;
+
+      // Proje açılışı (Tur 63): şantiye bitince bina iskeletin boyundan tam boyuna yükseliyor, tozuyla.
+      if (site !== null) this.siteIds.add(building.id);
+      else if (this.siteIds.delete(building.id) && moments) {
+        this.growFrom.set(building.id, SITE_TOP);
+        this.buildStart.set(building.id, now);
+        this.street.burst(tile.x, tile.y, 1.25);
+      }
+
+      // İnşaat (Tur 63): temel atılırken toz, yükseliş bitince yerde halka.
+      const fresh = !this.buildStart.has(building.id);
+      const growth = this.growthOf(building.id);
+      if (growth < 1) {
+        growing = true;
+        if (fresh) this.street.burst(tile.x, tile.y, 0.9 + Math.min(0.5, def.height * 0.25));
+        this.risingIds.add(building.id);
+      } else if (this.risingIds.delete(building.id) && moments) {
+        this.rings.pulse(tile.x, tile.y, accent);
+      }
       if (site !== null) this.color.set(SITE_CONCRETE);
       const form = site !== null ? 'block' : massFormOf(def);
-      const height = Math.max(0.3, def.height) * 1.5 * (site !== null ? 0.2 + 0.6 * site : 1);
+      const height = Math.max(0.3, def.height) * 1.5 * (site !== null ? 0.2 + (SITE_TOP - 0.2) * site : 1);
       const footprint = this.buildings.place({
         x: tile.x,
         z: tile.y,
@@ -1132,6 +1223,7 @@ export class CityRenderer {
     this.buildingDecor.end();
 
     this.buildingsGrowing = growing;
+    this.buildingsShifting = shifting;
     this.sawBuildings = true;
 
     // Yıkılan binaların kaydı birikmesin.
@@ -1140,6 +1232,38 @@ export class CityRenderer {
         if (!state.buildings[id]) this.buildStart.delete(id);
       }
     }
+    if (this.buildingOwners.size > Object.keys(state.buildings).length * 2 + 16) {
+      for (const id of this.buildingOwners.keys()) {
+        if (!state.buildings[id]) {
+          this.buildingOwners.delete(id);
+          this.siteIds.delete(id);
+          this.risingIds.delete(id);
+          this.growFrom.delete(id);
+        }
+      }
+    }
+  }
+
+  /**
+   * Zafer gecesi (Tur 63): motor zaferi ilan edince (ya da senaryo
+   * kazanılınca) şehrin üstünde havai fişek. Kayıt açılırken zaten
+   * kazanılmış olan zafer kutlanmıyor; kutlama bir kez.
+   */
+  private syncCelebration(state: GameState): void {
+    const victory = state.victory && !state.victory.dismissed ? `victory:${state.victory.day}` : null;
+    const scenario = state.scenario?.outcome === 'won' ? `scenario:${state.scenario.finishedDay ?? state.time.day}` : null;
+    const key = victory ?? scenario;
+    if (key === this.celebrationKey) return;
+    const first = this.celebrationKey === undefined;
+    this.celebrationKey = key;
+    if (key && !first && this.momentsOn()) {
+      this.fireworks.start((state.meta.seed ^ Math.imul(state.time.day + 1, 0x9e3779b1)) >>> 0, this.playerAccent());
+    }
+  }
+
+  /** Anlar çiziliyor mu: azaltılmış harekette hiçbiri (toz, halka, dalga, havai fişek). */
+  private momentsOn(): boolean {
+    return !this.reducedMotion;
   }
 
   /**
@@ -1155,13 +1279,20 @@ export class CityRenderer {
   private growthOf(id: string): number {
     let start = this.buildStart.get(id);
     if (start === undefined) {
-      start = this.sawBuildings ? performance.now() : 0;
+      // Azaltılmış harekette (Tur 63) yeni bina da yerinde beliriyor.
+      start = this.sawBuildings && this.momentsOn() ? performance.now() : 0;
       this.buildStart.set(id, start);
     }
     if (start === 0) return 1;
-    const t = Math.min(1, (performance.now() - start) / BUILD_ANIM_MS);
+    const t = (performance.now() - start) / BUILD_ANIM_MS;
+    if (t >= 1 || !this.momentsOn()) {
+      this.buildStart.set(id, 0);
+      this.growFrom.delete(id);
+      return 1;
+    }
     // Yumuşak giriş-çıkış: sert bir doğrusal yükseliş mekanik duruyor.
-    return t * t * (3 - 2 * t);
+    const from = this.growFrom.get(id) ?? 0;
+    return from + (1 - from) * smooth(t);
   }
 
   /**
@@ -1531,9 +1662,13 @@ export class CityRenderer {
       this.weatherEffects && !this.reducedMotion && !this.dataLensActive,
     );
 
-    // İnşaat animasyonu sürerken binalar her karede yeniden yerleşiyor;
-    // şehrin geri kalanı yalnızca state değişince.
-    if (this.buildingsGrowing && this.state) this.syncBuildings(this.state);
+    // Anlar (Tur 63): halkalar ve zafer gecesi; veri lensinde ikisi de susuyor.
+    this.rings.update(dt);
+    this.fireworks.update(dt, this.controller.targetPoint, Math.max(8, Math.min(30, this.controller.targetDistance * 0.5)));
+
+    // İnşaat animasyonu ve devralma dalgası sürerken binalar her karede
+    // yeniden yerleşiyor; şehrin geri kalanı yalnızca state değişince.
+    if ((this.buildingsGrowing || this.buildingsShifting) && this.state) this.syncBuildings(this.state);
 
     if (this.hoveredTile !== null && this.state) {
       const tile = this.state.map.tiles[this.hoveredTile];
@@ -1582,15 +1717,23 @@ export class CityRenderer {
         // genel merkez işareti, veri merceğinin düz malzemeleri) eskisi gibi
         // ilk kullanıldıklarında derleniyor; açılışı uzatmıyorlar.
         const camera = this.controller.camera;
-        // Yağış (Tur 62) ilk karede görünmüyor olabilir; ilk yağmurda kare
-        // takılmasın diye iki programı da şimdi derleniyor.
-        this.precipitation.group.traverse((object) => {
-          const drawable = object as THREE.Line | THREE.Points;
+        // Yağış (Tur 62) ve anlar (Tur 63) ilk karede görünmüyor; ilk
+        // yağmurda, ilk devralmada, zafer gecesinde kare takılmasın diye
+        // programları şimdi derleniyor. Halka seçim işaretiyle, havai fişek
+        // kar noktalarıyla aynı program: birer örnek yetiyor.
+        const hidden = [
+          ...this.precipitation.group.children,
+          this.rings.group.children[0],
+          this.fireworks.group.children[0],
+        ];
+        for (const object of hidden) {
+          const drawable = object as (THREE.Mesh | THREE.Line | THREE.Points) | undefined;
+          if (!drawable) continue;
           const visible = drawable.visible;
           drawable.visible = true;
-          if ((drawable as THREE.Line).isLine || (drawable as THREE.Points).isPoints) this.renderer.compile(drawable, camera, this.scene);
+          this.renderer.compile(drawable, camera, this.scene);
           drawable.visible = visible;
-        });
+        }
         this.scene.traverseVisible((object) => {
           const drawable = object as THREE.Mesh & { isLine?: boolean; isPoints?: boolean };
           if ((drawable.isMesh || drawable.isLine || drawable.isPoints) && drawable.material) {
@@ -1819,7 +1962,17 @@ export class CityRenderer {
     /** Fon araçları türlere göre ve gece ışıkları (Tur 34). */
     vehicles: { car: number; van: number; bus: number; lights: boolean };
     /** Yayalar ve tüten bacalar (Tur 34). */
-    street: { walkers: number; stacks: number; producing: number; puffs: number; visible: boolean };
+    street: { walkers: number; stacks: number; producing: number; puffs: number; dust: number; visible: boolean };
+    /** Önemli anlar (Tur 63): toz bulutu, halka, renk dalgası, yükselen bina, havai fişek. */
+    moments: {
+      dust: number;
+      rings: number;
+      /** Halka ve havai fişek katmanı görünür mü (veri lensinde değil). */
+      visible: boolean;
+      shifting: number;
+      rising: number;
+      fireworks: ReturnType<Fireworks['stats']>;
+    };
     /** Mağazalara akan müşteri aracı sayısı. */
     shopperCount: number;
     /** Müşteri konumlarının toplamı; hareket ettiklerini ölçmek için. */
@@ -1939,6 +2092,14 @@ export class CityRenderer {
       carsVisible: this.traffic.carsVisible,
       vehicles: this.traffic.vehicleStats,
       street: this.street.stats,
+      moments: {
+        dust: this.street.stats.dust,
+        rings: this.rings.stats().rings,
+        visible: this.rings.group.visible,
+        shifting: this.ownerShifts.size,
+        rising: this.risingIds.size,
+        fireworks: this.fireworks.stats(),
+      },
       shopperCount: this.traffic.shopperCount,
       shopperPositionSum: this.traffic.shopperPositionSum,
       shopperColors: this.traffic.shopperColors,
@@ -2049,12 +2210,30 @@ export class CityRenderer {
    * değişince şehir bir sonraki karede yeni renkle boyanıyor.
    */
   /** Ayarlardaki yağmur ve kar (Tur 62); mevsimin rengi ve bulutun ışığı her durumda kalıyor. */
+  /**
+   * Testler için (Tur 63): binanın çatısının hedef rengi ve dalga sürüyorsa
+   * o an çizilen renk.
+   */
+  buildingAccent(id: string): { target: string; drawn: string } | null {
+    const owner = this.buildingOwners.get(id);
+    if (!owner) return null;
+    const target = `#${owner.accent.toString(16).padStart(6, '0')}`;
+    const shift = this.ownerShifts.get(id);
+    if (!shift) return { target, drawn: target };
+    const k = smooth((performance.now() - shift.start) / (MOMENT.shiftSeconds * 1000));
+    return { target, drawn: `#${this.shiftTo.setHex(shift.from).lerp(new THREE.Color(owner.accent), k).getHexString()}` };
+  }
+
   setWeatherEffects(enabled: boolean): void {
     this.weatherEffects = enabled;
   }
 
   setAccessibility(options: { safePalette: boolean; reducedMotion: boolean }): void {
     this.reducedMotion = options.reducedMotion;
+    if (this.reducedMotion) {
+      this.rings.clear();
+      this.fireworks.stop();
+    }
     if (options.safePalette === this.safePalette) return;
     this.safePalette = options.safePalette;
     this.traffic.invalidateColors();
@@ -2104,6 +2283,8 @@ export class CityRenderer {
   dispose(): void {
     this.disposed = true;
     this.precipitation.dispose();
+    this.rings.dispose();
+    this.fireworks.dispose();
     this.groundLit.map?.dispose();
     this.groundLit.dispose();
     this.groundFlat.dispose();

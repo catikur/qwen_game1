@@ -1,0 +1,362 @@
+import * as THREE from 'three';
+
+/**
+ * Önemli anlar (Tur 63): şehrin kendi başına anlattığı kısa sahneler.
+ *
+ * Simülasyon binayı kurduğu, rakibi yuttuğu, zaferi ilan ettiği gün yalnız
+ * sayıları değiştiriyordu; şehirde bir kutu beliriyor, çatıların rengi bir
+ * karede dönüyor, zafer ekranı boş bir şehrin üstüne açılıyordu. Bu modül
+ * o anların görünümünü veriyor:
+ *
+ *   - halka: yerde genişleyip sönen ince bir çember (inşaat bitince,
+ *     proje açılınca, devralınan her binada);
+ *   - havai fişek: zafer gecesi kameranın baktığı yerin üstünde;
+ *   - zamanlama: devralmada renk dalgasının binaya varma anı, havai
+ *     fişeğin takvimi.
+ *
+ * Toz (inşaat, açılış, yıkım) sokak hayatının duman pufları (`street.ts`).
+ *
+ * Programlar: halka seçim işaretiyle, havai fişek kar noktalarıyla aynı
+ * malzeme ayarında; yeni gölgelendirici programı yok. Hepsi görünüm:
+ * simülasyon bunları okumuyor, azaltılmış harekette hiçbiri çizilmiyor.
+ */
+
+export const MOMENT = {
+  /** Halkanın genişleyip sönmesi (sn). */
+  ringLife: 1.15,
+  /** Devralmada çatının eski renkten yenisine dönmesi (sn). */
+  shiftSeconds: 0.9,
+  /** Dalga: devralanın merkezinden birim uzaklık başına gecikme (sn). */
+  wavePerUnit: 0.05,
+  /** Dalganın en uzak binaya varması en fazla bu kadar sürüyor (sn). */
+  waveMax: 1.6,
+  /** Zafer gecesi havai fişekleri (sn). */
+  fireworkSeconds: 6.5,
+  fireworkBursts: 9,
+} as const;
+
+/** Yumuşak giriş-çıkış. */
+export function smooth(t: number): number {
+  const k = Math.max(0, Math.min(1, t));
+  return k * k * (3 - 2 * k);
+}
+
+/** Devralmada renk dalgasının binaya varma gecikmesi (sn): merkezden uzaklaştıkça geç. */
+export function waveDelay(distance: number): number {
+  return Math.min(MOMENT.waveMax, Math.max(0, distance) * MOMENT.wavePerUnit);
+}
+
+const RING_POOL = 24;
+
+interface Ring {
+  mesh: THREE.Mesh;
+  material: THREE.MeshBasicMaterial;
+  /** Halkanın başlayacağı an (sn, `clock`), bitene dek dolu. */
+  start: number;
+  active: boolean;
+  size: number;
+}
+
+/**
+ * Yerde genişleyip sönen halkalar. Havuz sabit: aynı anda en çok
+ * `RING_POOL` halka; dolunca en eskisi yeniden kullanılıyor (büyük bir
+ * devralmada dalganın sonu ilk halkaları siliyor, sahne şişmiyor).
+ */
+export class RingPulses {
+  readonly group = new THREE.Group();
+  private rings: Ring[] = [];
+  private clock = 0;
+  private next = 0;
+
+  constructor() {
+    const geometry = new THREE.RingGeometry(0.42, 0.52, 32);
+    for (let i = 0; i < RING_POOL; i++) {
+      // Seçim işaretiyle aynı ayar: program paylaşılıyor.
+      const material = new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0, depthWrite: false });
+      const mesh = new THREE.Mesh(geometry, material);
+      mesh.rotation.x = -Math.PI / 2;
+      mesh.visible = false;
+      mesh.renderOrder = 1;
+      this.group.add(mesh);
+      this.rings.push({ mesh, material, start: 0, active: false, size: 1 });
+    }
+  }
+
+  /** Bir halka: `delay` sn sonra `x, z`de, `color` renginde. */
+  pulse(x: number, z: number, color: THREE.ColorRepresentation, delay = 0, size = 1): void {
+    const ring = this.rings[this.next]!;
+    this.next = (this.next + 1) % RING_POOL;
+    ring.mesh.position.set(x, 0.11, z);
+    ring.material.color.set(color);
+    ring.start = this.clock + Math.max(0, delay);
+    ring.size = size;
+    ring.active = true;
+    ring.mesh.visible = false;
+  }
+
+  update(dt: number): void {
+    this.clock += Math.min(dt, 0.1);
+    for (const ring of this.rings) {
+      if (!ring.active) continue;
+      const age = (this.clock - ring.start) / MOMENT.ringLife;
+      if (age < 0) {
+        ring.mesh.visible = false;
+        continue;
+      }
+      if (age >= 1) {
+        ring.active = false;
+        ring.mesh.visible = false;
+        continue;
+      }
+      // Hızlı açılıyor, yavaş sönüyor: çember yere çarpan bir dalga gibi.
+      const spread = 1 - (1 - age) * (1 - age);
+      ring.mesh.scale.setScalar(ring.size * (0.7 + spread * 1.5));
+      ring.material.opacity = 0.85 * (1 - age);
+      ring.mesh.visible = true;
+    }
+  }
+
+  /** Hepsini söndür (veri lensi, azaltılmış hareket). */
+  clear(): void {
+    for (const ring of this.rings) {
+      ring.active = false;
+      ring.mesh.visible = false;
+    }
+  }
+
+  /** Testler için: süren (bekleyen dahil) halka sayısı. */
+  stats(): { rings: number; visible: number } {
+    let rings = 0;
+    let visible = 0;
+    for (const ring of this.rings) {
+      if (ring.active) rings++;
+      if (ring.mesh.visible) visible++;
+    }
+    return { rings, visible };
+  }
+
+  dispose(): void {
+    this.rings[0]?.mesh.geometry.dispose();
+    for (const ring of this.rings) ring.material.dispose();
+  }
+}
+
+/** Havai fişeğin bir patlaması: takvimden. */
+export interface FireworkBurst {
+  /** Başlangıçtan sonra fırlatıldığı an (sn). */
+  at: number;
+  /** Merkeze göre konum, kutunun yarı kenarı cinsinden (-1..1). */
+  dx: number;
+  dz: number;
+  /** Patladığı yükseklik. */
+  height: number;
+  /** Renk sırası (`FIREWORK_COLORS`). */
+  color: number;
+}
+
+/** Zaferin renkleri; ilki oyuncunun rengiyle değiştiriliyor. */
+export const FIREWORK_COLORS = ['#ffd166', '#ffffff', '#7ee0a4', '#ff8fa3', '#8fd3ff'];
+
+/**
+ * Havai fişeğin takvimi: tohumlu, her zaferde aynı ritim. Patlamalar
+ * `fireworkSeconds`ın ilk dörtte üçüne yayılıyor; son patlama da sönecek
+ * vakit buluyor. İkişer ikişer geliyor, arada nefes.
+ */
+export function fireworkSchedule(seed: number, count: number = MOMENT.fireworkBursts): FireworkBurst[] {
+  let s = (seed >>> 0) || 1;
+  const random = (): number => {
+    s = (Math.imul(s, 1664525) + 1013904223) >>> 0;
+    return s / 0x1_0000_0000;
+  };
+  const span = MOMENT.fireworkSeconds * 0.72;
+  const bursts: FireworkBurst[] = [];
+  for (let i = 0; i < count; i++) {
+    const pair = Math.floor(i / 2);
+    const pairs = Math.ceil(count / 2);
+    bursts.push({
+      at: (pair / Math.max(1, pairs - 1)) * span + (i % 2) * 0.28 + random() * 0.12,
+      dx: random() * 2 - 1,
+      dz: random() * 2 - 1,
+      height: 5 + random() * 3.5,
+      color: i % FIREWORK_COLORS.length,
+    });
+  }
+  return bursts;
+}
+
+const PARTICLES = 120;
+const ROCKET_SECONDS = 0.6;
+const SPARK_SECONDS = 1.7;
+const GRAVITY = 2.4;
+const POOL = 6;
+
+interface Shell {
+  points: THREE.Points;
+  material: THREE.PointsMaterial;
+  positions: Float32Array;
+  burst: FireworkBurst | null;
+  /** Fırlatma noktası (dünya). */
+  x: number;
+  z: number;
+  launched: number;
+}
+
+/**
+ * Zafer gecesinin havai fişekleri.
+ *
+ * Her patlama bir `Points` (120 kıvılcım), havuzda altı tane; renk
+ * malzemenin rengi. Kar noktalarıyla aynı malzeme ayarı (boy kameraya
+ * göre, saydam, derinlik yazmıyor): program paylaşılıyor, ilk zaferde
+ * derleme takılması yok. Kıvılcımın yolu kapalı biçimde hesaplanıyor
+ * (fırlatmadan beri geçen süreden), karede biriken hata yok.
+ */
+export class Fireworks {
+  readonly group = new THREE.Group();
+  private shells: Shell[] = [];
+  private directions = new Float32Array(PARTICLES * 3);
+  private schedule: FireworkBurst[] = [];
+  private fired = 0;
+  private elapsed = 0;
+  private running = false;
+  private extent = 12;
+  private center = { x: 0, z: 0 };
+  private accent = new THREE.Color(FIREWORK_COLORS[0]);
+
+  constructor() {
+    // Küre üstüne eşit dağılmış yönler (Fibonacci), her kıvılcımın kendi hızıyla.
+    for (let i = 0; i < PARTICLES; i++) {
+      const y = 1 - ((i + 0.5) / PARTICLES) * 2;
+      const r = Math.sqrt(1 - y * y);
+      const a = i * 2.399963;
+      const speed = 2.1 + ((i * 7) % 5) * 0.16;
+      this.directions[i * 3] = Math.cos(a) * r * speed;
+      this.directions[i * 3 + 1] = y * speed;
+      this.directions[i * 3 + 2] = Math.sin(a) * r * speed;
+    }
+    for (let i = 0; i < POOL; i++) {
+      const positions = new Float32Array(PARTICLES * 3);
+      const geometry = new THREE.BufferGeometry();
+      geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3).setUsage(THREE.DynamicDrawUsage));
+      const material = new THREE.PointsMaterial({ color: '#ffffff', size: 0.22, sizeAttenuation: true, transparent: true, opacity: 1, depthWrite: false });
+      const points = new THREE.Points(geometry, material);
+      points.frustumCulled = false;
+      points.visible = false;
+      points.renderOrder = 3;
+      this.group.add(points);
+      this.shells.push({ points, material, positions, burst: null, x: 0, z: 0, launched: 0 });
+    }
+  }
+
+  /** Zafer: `seed` takvimi seçiyor, `accent` ilk rengin yerini alıyor (oyuncunun rengi). */
+  start(seed: number, accent: THREE.ColorRepresentation): void {
+    this.schedule = fireworkSchedule(seed);
+    this.fired = 0;
+    this.elapsed = 0;
+    this.running = true;
+    this.accent.set(accent);
+    for (const shell of this.shells) {
+      shell.burst = null;
+      shell.points.visible = false;
+    }
+  }
+
+  stop(): void {
+    this.running = false;
+    for (const shell of this.shells) {
+      shell.burst = null;
+      shell.points.visible = false;
+    }
+  }
+
+  get active(): boolean {
+    return this.running;
+  }
+
+  /** Bir kare: patlamalar kameranın baktığı yerin çevresinde (`extent` yarı kenar). */
+  update(dt: number, center: { x: number; z: number }, extent: number): void {
+    if (!this.running) return;
+    this.center = center;
+    this.extent = extent;
+    this.elapsed += Math.min(dt, 0.1);
+    while (this.fired < this.schedule.length && this.schedule[this.fired]!.at <= this.elapsed) {
+      this.launch(this.schedule[this.fired]!);
+      this.fired++;
+    }
+    let live = 0;
+    for (const shell of this.shells) {
+      if (!shell.burst) continue;
+      const age = this.elapsed - shell.launched;
+      if (age >= ROCKET_SECONDS + SPARK_SECONDS) {
+        shell.burst = null;
+        shell.points.visible = false;
+        continue;
+      }
+      live++;
+      this.place(shell, age);
+    }
+    if (live === 0 && this.fired >= this.schedule.length) this.running = false;
+  }
+
+  private launch(burst: FireworkBurst): void {
+    // Boş kabuk yoksa en eskisi: takvim havuzdan büyük olsa da sahne şişmiyor.
+    let shell = this.shells.find((candidate) => !candidate.burst);
+    if (!shell) shell = this.shells.reduce((oldest, candidate) => (candidate.launched < oldest.launched ? candidate : oldest));
+    shell.burst = burst;
+    shell.launched = this.elapsed;
+    shell.x = this.center.x + burst.dx * this.extent * 0.55;
+    shell.z = this.center.z + burst.dz * this.extent * 0.55;
+    shell.material.color.set(burst.color === 0 ? this.accent : FIREWORK_COLORS[burst.color]!);
+    shell.points.visible = true;
+  }
+
+  private place(shell: Shell, age: number): void {
+    const burst = shell.burst!;
+    const p = shell.positions;
+    if (age < ROCKET_SECONDS) {
+      // Fırlatma: kıvılcımlar tek bir izde, yerden patlama yüksekliğine.
+      const k = age / ROCKET_SECONDS;
+      const top = burst.height * (1 - (1 - k) * (1 - k));
+      for (let i = 0; i < PARTICLES; i++) {
+        const trail = (i % 12) / 12;
+        p[i * 3] = shell.x;
+        p[i * 3 + 1] = Math.max(0, top - trail * 0.9);
+        p[i * 3 + 2] = shell.z;
+      }
+      shell.material.opacity = 0.9;
+      shell.material.size = 0.16;
+    } else {
+      // Patlama: yönüne fırlıyor, havada yavaşlıyor, yerçekimiyle düşüyor.
+      const t = age - ROCKET_SECONDS;
+      const drag = (1 - Math.exp(-2.2 * t)) / 2.2;
+      for (let i = 0; i < PARTICLES; i++) {
+        p[i * 3] = shell.x + this.directions[i * 3]! * drag;
+        p[i * 3 + 1] = Math.max(0.05, burst.height + this.directions[i * 3 + 1]! * drag - 0.5 * GRAVITY * t * t);
+        p[i * 3 + 2] = shell.z + this.directions[i * 3 + 2]! * drag;
+      }
+      const fade = t / SPARK_SECONDS;
+      shell.material.opacity = Math.max(0, 1 - fade * fade);
+      shell.material.size = 0.24 * (1 - fade * 0.4);
+    }
+    const attribute = shell.points.geometry.attributes['position'] as THREE.BufferAttribute;
+    attribute.needsUpdate = true;
+  }
+
+  /** Testler için: kaç patlama havada, kaç kıvılcım çiziliyor, takvimin ne kadarı atıldı. */
+  stats(): { active: boolean; shells: number; sparks: number; fired: number; scheduled: number; height: number } {
+    let shells = 0;
+    let height = 0;
+    for (const shell of this.shells) {
+      if (!shell.points.visible) continue;
+      shells++;
+      for (let i = 0; i < PARTICLES; i++) height += shell.positions[i * 3 + 1]!;
+    }
+    return { active: this.running, shells, sparks: shells * PARTICLES, fired: this.fired, scheduled: this.schedule.length, height };
+  }
+
+  dispose(): void {
+    for (const shell of this.shells) {
+      shell.points.geometry.dispose();
+      shell.material.dispose();
+    }
+  }
+}

@@ -231,6 +231,14 @@ export const hud = {
   'hud.victory.continue': 'Serbest oyuna devam',
   'hud.victory.newEmpire': 'Yeni imparatorluk kur',
   'hud.victory.openCity': 'Yeni şehre açıl',
+  // Önemli anlar (Tur 63): devralma ve zafer bandı, kasanın farkı.
+  'hud.moment.takeoverEyebrow': 'Devralma',
+  'hud.moment.takeover': '{name} artık senin',
+  'hud.moment.takeoverDetail': '{buildings} bina senin rengine dönüyor',
+  'hud.moment.takeoverEmpty': 'Hisseleri ve arsaları senin',
+  'hud.moment.victoryEyebrow': 'Zafer',
+  'hud.moment.victoryDetail': 'Şehir senin için kutluyor',
+  'hud.moment.cashDelta': 'Kasadaki değişim: {delta}',
   'hud.gameOver.otherCity': "{city}'e geç",
   'hud.gameOver.holdingNote': 'Holding ayakta: diğer şehirlerin yaşamaya devam ediyor.',
 

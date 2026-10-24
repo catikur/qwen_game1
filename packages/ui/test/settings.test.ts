@@ -40,6 +40,8 @@ describe('ayarlar', () => {
     assert.equal(sanitizeSettings({ textSize: 'large' }).weather, true, 'Tur 62 öncesi depoda alan yok');
     assert.equal(sanitizeSettings({ weather: false }).weather, false);
     assert.equal(sanitizeSettings({ weather: 'hayır' }).weather, true);
+    assert.equal(sanitizeSettings({ textSize: 'large' }).moneyTags, true, 'Tur 63 öncesi depoda alan yok');
+    assert.equal(sanitizeSettings({ moneyTags: false }).moneyTags, false);
   });
 
   test('değişiklik uygulanıyor, abonelere duyuruluyor; ses düzeyi tek tek değişiyor', () => {
