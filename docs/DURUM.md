@@ -7017,7 +7017,7 @@ devralma bandıyla yarışı sayfanın zamanlayıcısıyla kuruluyor (bant gelin
 için dükkân sayfanın içinde kurulup toz bekleniyor. Bu makinede eski
 düzenle yarış kurulamıyordu (test adımları bandın süresini aşıyordu).
 
-**Codex'in bulduğu on beş şey.**
+**Codex'in bulduğu on altı şey.**
 - *Kayıt açılınca zafer ekranı 2,4 sn gecikiyordu.* Oyun içinde bekleyen
   zaferli bir kayıt açılınca ekran canlı zafer gibi bekletiliyordu. Gecikme
   artık durumun kendisini de biliyor: durum değiştiyse kayıttaki zafer
@@ -7090,6 +7090,10 @@ düzenle yarış kurulamıyordu (test adımları bandın süresini aşıyordu).
   hedef uzakta: her patlama ekranda) düzeltmeden önce kırılıyordu;
   tarayıcıda bu yazılımsal GPU'da kamera bir iki karede varıyor, orada
   sınanamıyor.
+- *Toz sürerken aynı şehrin kaydı açılınca eski tozu 1,5 sn kalıyordu*
+  (halka ve havai fişek siliniyordu). Anların hafızası silinirken toz da
+  kalkıyor. Tarayıcı testinin kontrolü tozu ve kaydı kareler arasında,
+  sayfanın içinde kuruyor; eski derlemede toz kayıttan sonra da var.
 
 Aynı turda bir şey de inceleme beklemeden: veri lensi şehri (ve havai
 fişeği) gizlerken zafer ve senaryo ekranı beklemiyor; beklenecek bir
@@ -7137,7 +7141,7 @@ eski derlemede camgöbeği, çatı nane yeşili).
   - zafer bir kez, kapatılmış zafer an değil.
 - `settings.test.ts`: eski kayıtta "Şehirde kazanç etiketleri" açık.
 - Denge sınavı: simülasyon aynı, bölüm eklenmedi.
-- Tarayıcı testi "Önemli anlar" 29/29, konsol temiz:
+- Tarayıcı testi "Önemli anlar" 30/30, konsol temiz:
   - inşaat: toz, yükseliş, halka; söndükten sonra takılı kalmıyor;
   - proje açılışı: iskeletin boyundan yükseliş, toz;
   - yıkım tozu;
@@ -7154,7 +7158,7 @@ eski derlemede camgöbeği, çatı nane yeşili).
   - veri lensi: halka ve havai fişek gizli, zafer ekranı beklemiyor;
   - aynı şehrin kaydı aynı sahnede açılınca: kayıttaki zafer kutlanmıyor,
     ekranı beklemeden iniyor; kaydın farkı dalga, toz ya da yükseliş değil;
-    önceki durumun bandı kalkıyor;
+    süren toz ve önceki durumun bandı kalkıyor;
   - telefonda İngilizce: kasanın farkı üst barı büyütmüyor, bant ekrana
     sığıyor.
 - Eski bölümlerde zafer ekranını bekleyen beş kontrol artık 2,4 sn'lik

@@ -1273,6 +1273,9 @@ export class CityRenderer {
     this.fabricRemoved.length = 0;
     this.rings.clear();
     this.fireworks.stop();
+    // Süren inşaat ya da yıkım tozu da: eski şehrin tozu kaydın şehrinde,
+    // belki ilgisiz bir karede, 1,5 sn daha görünüyordu (Codex #93).
+    this.street.clearDust();
   }
 
   /** Anlar çiziliyor mu: azaltılmış harekette hiçbiri (toz, halka, dalga, havai fişek). */

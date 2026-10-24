@@ -7543,6 +7543,18 @@ async function finish(browser, consoleErrors) {
     const restored = await mp.evaluate(async () => {
       const c = window.__capital;
       const bannerBefore = document.querySelector('.moment-banner[data-moment="takeover"]') !== null;
+      // Toz sürerken kayıt açılıyor: eski şehrin tozu yeni durumun üstünde kalmamalı (Codex #93).
+      // Toz karede yaşlanıyor (en çok 0,5 sn/kare); sayım ve kayıt kareler arasında, sayfanın içinde.
+      const engine = c.engine;
+      for (const tile of engine.getState().map.tiles) {
+        if (tile.kind !== 'plot' || tile.structureId || tile.ownerId) continue;
+        if (!engine.dispatch({ type: 'BUY_TILE', tileId: tile.id }).ok) continue;
+        if (engine.dispatch({ type: 'BUILD', tileId: tile.id, defId: 'corner_shop' }).ok) break;
+      }
+      const tick = () => new Promise((resolve) => setTimeout(resolve, 5));
+      for (let i = 0; i < 800 && c.renderInfo().moments.dust < 1; i++) await tick();
+      const dustBefore = c.renderInfo().moments.dust;
+      const syncsBefore = c.renderInfo().stateSyncs;
       const copy = JSON.parse(JSON.stringify(c.getState()));
       copy.victory = { day: copy.time.day + 2, kind: 'tycoon', path: 'retail', shares: { retail: 1, realestate: 0, energy: 0, freight: 0 }, acquisitions: 1 };
       const rival = Object.values(copy.buildings).find((b) => b.companyId !== copy.playerCompanyId);
@@ -7558,16 +7570,20 @@ async function finish(browser, consoleErrors) {
       observer.observe(document.body, { childList: true, subtree: true });
       c.engine.replaceState(copy);
       if (screen === null && document.querySelector('.gameover.victory')) screen = Math.round(performance.now() - started);
+      for (let i = 0; i < 800 && c.renderInfo().stateSyncs === syncsBefore; i++) await tick();
+      const dustOnReplace = c.renderInfo().moments.dust;
       await new Promise((resolve) => setTimeout(resolve, 1500));
       for (let i = 0; i < 2; i++) await new Promise((resolve) => requestAnimationFrame(resolve));
       observer.disconnect();
       const m = c.renderInfo().moments;
       const bannerAfter = document.querySelector('.moment-banner[data-moment="takeover"]') !== null;
-      return { screen, fireworks: m.fireworks.active, shifting: m.shifting, rings: m.rings, dust: m.dust, rising: m.rising, rival: Boolean(rival), razed: Boolean(razed), bannerBefore, bannerAfter };
+      return { screen, fireworks: m.fireworks.active, shifting: m.shifting, rings: m.rings, dust: m.dust, rising: m.rising, rival: Boolean(rival), razed: Boolean(razed), bannerBefore, bannerAfter, dustBefore, dustOnReplace };
     });
     check('Kayıt açılınca kayıttaki zafer kutlanmıyor, ekranı beklemeden iniyor; kaydın farkı dalga, toz ya da yükseliş değil',
       restored.screen !== null && restored.screen < 1000 && !restored.fireworks && restored.shifting === 0 && restored.rings === 0 && restored.dust === 0 && restored.rising === 0 && restored.rival && restored.razed,
       JSON.stringify(restored));
+    check('Toz sürerken kayıt açılınca eski şehrin tozu kalkıyor (Codex #93)', restored.dustBefore >= 1 && restored.dustOnReplace === 0,
+      `önce ${restored.dustBefore} · kayıt açılınca ${restored.dustOnReplace}`);
     check('Kayıt açılınca önceki durumun devralma bandı kalkıyor (Codex #93)', lastTaken !== null && restored.bannerBefore && !restored.bannerAfter,
       `${lastTaken?.name ?? 'devralınacak rakip yok'} · önce ${restored.bannerBefore} · sonra ${restored.bannerAfter}`);
     check('Önemli anlar akışında konsol temiz', mErrors.length === 0, mErrors.slice(0, 2).join(' | '));
