@@ -1,7 +1,7 @@
 import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
-import { CelebrationLog, FIREWORK_COLORS, Fireworks, MOMENT, RingPulses, fireworkSchedule, smooth, waveDelay } from '../src/moments';
+import { CelebrationLog, FIREWORK_COLORS, Fireworks, MOMENT, RingPulses, aimHeight, fireworkSchedule, smooth, waveDelay } from '../src/moments';
 import { StreetLife } from '../src/street';
 
 /**
@@ -154,5 +154,38 @@ describe('toz temizliği', () => {
     street.update(0.016);
     assert.equal(street.stats.dust, 0);
     street.dispose();
+  });
+});
+
+describe('havai fişeğin yüksekliği', () => {
+  /** Kameranın baktığı yer (0, 0, 0); `distance` uzaklıkta, `polar` eğimle. */
+  function cameraAt(distance: number, polar: number): THREE.PerspectiveCamera {
+    const camera = new THREE.PerspectiveCamera(46, 16 / 10, 0.5, 400);
+    camera.position.set(0, Math.cos(polar) * distance, Math.sin(polar) * distance);
+    camera.lookAt(0, 0, 0);
+    camera.updateMatrixWorld();
+    return camera;
+  }
+
+  test('patlama kameranın önünde ve ekranda istenen yükseklikte; en yakın zoomda da (Codex #93)', () => {
+    for (const distance of [8, 12, 40, 90]) {
+      for (const polar of [0.45, 0.75, 1.05]) {
+        const camera = cameraAt(distance, polar);
+        for (const goal of [0.08, 0.3, 0.5]) {
+          const where = `uzaklık ${distance}, eğim ${polar}, hedef ${goal}`;
+          const height = aimHeight(camera, 1.5, -2, goal);
+          const depth = -new THREE.Vector3(1.5, height, -2).applyMatrix4(camera.matrixWorldInverse).z;
+          assert.ok(depth >= 4 - 1e-6, `kameranın önünde, kıvılcımlar da (${where}, yükseklik ${height.toFixed(2)}, derinlik ${depth.toFixed(2)})`);
+          const screen = new THREE.Vector3(1.5, height, -2).project(camera);
+          assert.ok(Math.abs(screen.y) <= 1, `ekranda (${where}, y ${screen.y.toFixed(3)})`);
+          const lowest = new THREE.Vector3(1.5, 0.5, -2).project(camera).y;
+          if (lowest > goal) assert.equal(height, 0.5, `yerin hemen üstü bile hedeften yukarıda: en alçakta (${where})`);
+          else {
+            const capped = depth < 4.01;
+            assert.ok(screen.y <= goal + 0.01 && (capped || screen.y >= goal - 0.01), `hedefte ya da kameranın önündeki en yüksek yerde (${where}, y ${screen.y.toFixed(3)})`);
+          }
+        }
+      }
+    }
   });
 });

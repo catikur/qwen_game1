@@ -23,10 +23,9 @@ const SITE_CONCRETE = '#bdb8ae';
 const SITE_TOP = 0.8;
 const AIM_RIGHT = new THREE.Vector3();
 const AIM_FORWARD = new THREE.Vector3();
-const AIM_POINT = new THREE.Vector3();
 import { LampLight } from './lamplight';
 import { Precipitation } from './precipitation';
-import { CelebrationLog, Fireworks, MOMENT, RingPulses, smooth, waveDelay } from './moments';
+import { CelebrationLog, Fireworks, MOMENT, RingPulses, aimHeight, smooth, waveDelay } from './moments';
 import { mixWeather, seasonLook, weatherLook } from './season';
 import type { SeasonLook, WeatherLook } from './season';
 import { FACADE, buildingSurface, setWindowLateNight, windowLateNight } from './surface';
@@ -1276,16 +1275,7 @@ export class CityRenderer {
     out.x = target.x + right.x * burst.dx * extent * 0.75 + forward.x * burst.dz * extent * 0.3;
     out.z = target.z + right.z * burst.dx * extent * 0.75 + forward.z * burst.dz * extent * 0.3;
     // Ekranda hedeflenen yükseklik (NDC y): yüksek patlama daha yukarıda.
-    const goal = 0.08 + ((burst.height - 5) / 3.5) * 0.42;
-    let low = 0.5;
-    let high = 80;
-    for (let i = 0; i < 14; i++) {
-      const mid = (low + high) / 2;
-      AIM_POINT.set(out.x, mid, out.z).project(camera);
-      if (AIM_POINT.y > goal) high = mid;
-      else low = mid;
-    }
-    out.y = low;
+    out.y = aimHeight(camera, out.x, out.z, 0.08 + ((burst.height - 5) / 3.5) * 0.42);
   }
 
   /**

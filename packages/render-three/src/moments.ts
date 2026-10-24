@@ -91,6 +91,37 @@ export class CelebrationLog {
   }
 }
 
+/** Patlamanın kameranın önünde en az kalacağı uzaklık: kıvılcımlar açıldığında da önünde. */
+const AIM_DEPTH = 4;
+const AIM_POINT = new THREE.Vector3();
+
+/**
+ * Havai fişeğin yüksekliği (Tur 63): (x, z) üstündeki patlama ekranda `goal`
+ * (NDC y) yüksekliğine gelsin; varamıyorsa kameranın önünde varabildiği en
+ * yüksek yer. Noktanın kameraya derinliği yükseklikle doğrusal değişiyor:
+ * önce noktanın kameranın en az `AIM_DEPTH` önünde kaldığı en yüksek yer
+ * bulunuyor, arama o dilimde (orada ekrandaki y yükseklikle tekdüze). Sabit
+ * 0,5..80 araması en yakın zoomda kameranın arkasına geçiyordu: iz düşüm
+ * ters dönüyor, patlama kameranın arkasında kalıyordu (Codex #93).
+ */
+export function aimHeight(camera: THREE.Camera, x: number, z: number, goal: number): number {
+  const depthAt = (y: number): number => -AIM_POINT.set(x, y, z).applyMatrix4(camera.matrixWorldInverse).z;
+  let low = 0.5;
+  let high = 80;
+  const ground = depthAt(0);
+  const slope = depthAt(1) - ground;
+  if (slope < 0) high = Math.min(high, (AIM_DEPTH - ground) / slope);
+  else if (slope > 0) low = Math.max(low, (AIM_DEPTH - ground) / slope);
+  if (high <= low) return Math.max(0, high);
+  for (let i = 0; i < 16; i++) {
+    const mid = (low + high) / 2;
+    AIM_POINT.set(x, mid, z).project(camera);
+    if (AIM_POINT.y > goal) high = mid;
+    else low = mid;
+  }
+  return low;
+}
+
 const RING_POOL = 24;
 
 interface Ring {
