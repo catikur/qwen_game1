@@ -597,4 +597,24 @@ export const SCENARIOS: ScenarioDef[] = [
 
 export const SCENARIO_BY_ID: Record<string, ScenarioDef> = Object.fromEntries(SCENARIOS.map((scenario) => [scenario.id, scenario]));
 
+/*
+ * Kayda gömülü paketlerin tanımı (Tur 67), paket nesnesine bağlı. Bağlayan
+ * `adoptPack` (doğrulayıcıyla birlikte `packs.ts`'te); okuyan buradaki küçük
+ * işlev: kurulum ekranının yolunda doğrulayıcı yok.
+ */
+const embedded = new WeakMap<object, ScenarioDef>();
+
+export function bindScenarioDef(pack: object, def: ScenarioDef): void {
+  embedded.set(pack, def);
+}
+
+export function embeddedScenarioDef(pack: object): ScenarioDef | undefined {
+  return embedded.get(pack);
+}
+
+/** Koşunun senaryo tanımı: kayda gömülü paket varsa onunki, yoksa kayıt defterindeki. */
+export function scenarioDefFor(run: { id: string; pack?: object }): ScenarioDef | undefined {
+  return (run.pack ? embedded.get(run.pack) : undefined) ?? SCENARIO_BY_ID[run.id];
+}
+
 localizeList(SCENARIOS, 'scenario', ['title', 'tagline', 'brief', 'goalText', 'facts']);

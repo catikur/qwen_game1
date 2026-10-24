@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { ReactElement } from 'react';
-import { CATEGORIES, GOOD_BY_ID, MODIFIER_BY_ID, formatDecimal, formatNumber, formatPercent } from '@capital/content';
+import { CATEGORIES, GOOD_BY_ID, formatDecimal, formatNumber, formatPercent, ruleName } from '@capital/content';
 import type { ScenarioDef } from '@capital/content';
 import {
   chainGoalStatus,
@@ -128,7 +128,7 @@ function briefExtras(state: GameState, def: ScenarioDef, scenario: ScenarioState
     if (foes.length > 0) lines.push(t('hud.scenario.briefFeud', { names: foes.join(', ') }));
   }
   if (def.modifiers && def.modifiers.length > 0) {
-    lines.push(t('hud.scenario.briefRules', { rules: def.modifiers.map((id) => MODIFIER_BY_ID[id].name).join(', ') }));
+    lines.push(t('hud.scenario.briefRules', { rules: def.modifiers.map((id) => ruleName(def, id)).join(', ') }));
   }
   return lines;
 }

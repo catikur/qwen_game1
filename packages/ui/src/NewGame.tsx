@@ -1,15 +1,16 @@
-import { useEffect, useRef, useState } from 'react';
+import { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import type { ReactElement, ReactNode } from 'react';
-import { CEOS, CITY_SIZES, DEFAULT_CEO_ID, DEFAULT_CITY_SIZE, DEFAULT_DIFFICULTY, DIFFICULTIES, MODIFIERS, MODIFIER_BY_ID, SCENARIOS, formatDecimal, getCitySize, getDifficulty, modifierMultiplier, normalizeModifiers, numberLocale } from '@capital/content';
+import { CEOS, CITY_SIZES, DEFAULT_CEO_ID, DEFAULT_CITY_SIZE, DEFAULT_DIFFICULTY, DIFFICULTIES, MODIFIERS, MODIFIER_BY_ID, SCENARIOS, SCENARIO_BY_ID, formatDecimal, getCitySize, getDifficulty, modifierMultiplier, normalizeModifiers, numberLocale, ruleBlurb, ruleName } from '@capital/content';
 import type { CitySizeId, DifficultyId, ModifierId, ScenarioDef } from '@capital/content';
-import { LEAGUE_DAILY_DAYS, formatMoney, leagueDayId, leagueRule, leagueWeekId, scenarioGoalText, scenarioScoreText } from '@capital/core';
+import { LEAGUE_DAILY_DAYS, formatMoney, leagueDayId, leagueRule, leagueWeekId, scenarioGoalText } from '@capital/core';
 import type { LeagueBoardKind } from '@capital/core';
 import { CeoPortrait } from './CeoPortrait';
 import { LocalePicker } from './LocalePicker';
 import { t } from './i18n';
 import { tutorialSeen } from './tutorialStore';
-import { scenarioRecord } from './scenarioBest';
-import { starRow, starThresholds } from './stars';
+import { starThresholds } from './stars';
+import { ScenarioCard } from './ScenarioCard';
+import { packLinkCode } from './packLink';
 import { CareerPanel, useCareerRevision } from './CareerPanel';
 import { SettingsPanel } from './SettingsPanel';
 import { useDialogFocus } from './dialog';
@@ -51,12 +52,20 @@ function scenarioSetupLine(def: ScenarioDef): string {
   });
 }
 
-/** Listede senaryonun cihazdaki durumu. */
-function scenarioStatus(def: ScenarioDef): string {
-  const record = scenarioRecord(def.id);
-  if (record.best) return `${starRow(record.best.stars)} · ${scenarioScoreText(def, record.best.score)}`;
-  if (record.attempts > 0) return t('hud.scenario.statusTried', { count: record.attempts });
-  return t('hud.scenario.statusNew');
+/*
+ * Paket rafı (Tur 67) geç iniyor: doğrulayıcı, paylaşım kodu ve rafın
+ * metinleri yalnız senaryo sekmesi açılınca. Hazır senaryolar beklemiyor.
+ */
+const shelf = () => import('./PackShelf');
+const PackList = lazy(() => shelf().then((m) => ({ default: m.PackList })));
+const PackActions = lazy(() => shelf().then((m) => ({ default: m.PackActions })));
+const PackAdd = lazy(() => shelf().then((m) => ({ default: m.PackAdd })));
+
+/** Paketten gelen senaryonun künyesi: paket, yazarı, kariyere sayılmadığı. */
+function scenarioSourceLine(def: ScenarioDef): string | null {
+  const source = def.source;
+  if (!source) return null;
+  return source.author ? t('hud.scenario.packSourceAuthor', { pack: source.packName, author: source.author }) : t('hud.scenario.packSource', { pack: source.packName });
 }
 
 /**
@@ -95,13 +104,17 @@ export function NewGameScreen({
     setModifiers((current) => normalizeModifiers(current.includes(id) ? current.filter((m) => m !== id) : [...current, id]));
   // Oyun türü: serbest şehir, haftanın tohumu, günün koşusu (Tur 53) ya da senaryo (Tur 39).
   // Davet bağlantısıyla gelen (Tur 55) Tohum Ligi'yle başlıyor: arkadaşının ligine lig panelinden katılıyor.
+  // Senaryo bağlantısıyla gelen (Tur 67, `?paket=`) senaryo sekmesinde, kod ekleme kutusunda.
   const invite = inviteCode();
-  const [mode, setMode] = useState<'free' | 'league' | 'daily' | 'scenario'>(initialScenario ? 'scenario' : invite ? 'league' : 'free');
+  const [mode, setMode] = useState<'free' | 'league' | 'daily' | 'scenario'>(
+    initialScenario || packLinkCode() ? 'scenario' : invite ? 'league' : 'free',
+  );
   const league = mode === 'league';
   const daily = mode === 'daily';
   const leagueKind: LeagueBoardKind | null = league ? 'week' : daily ? 'day' : null;
   const [scenarioId, setScenarioId] = useState<string>(initialScenario ?? SCENARIOS[0]!.id);
-  const scenario = SCENARIOS.find((s) => s.id === scenarioId) ?? SCENARIOS[0]!;
+  // Paketten gelen senaryolar da kayıt defterinde (`registerPack`); silinen senaryo ilk hazıra düşüyor.
+  const scenario = SCENARIO_BY_ID[scenarioId] ?? SCENARIOS[0]!;
   const free = mode === 'free';
   const [citySize, setCitySize] = useState<CitySizeId>(DEFAULT_CITY_SIZE);
   // Rehber ilk oyunda açık gelir; bu tarayıcıda bir kez bitirilen ya da
@@ -298,28 +311,13 @@ export function NewGameScreen({
               <ul className="scenario-list" role="radiogroup" aria-label={t('hud.scenario.listLabel')}>
                 {SCENARIOS.map((option) => (
                   <li key={option.id}>
-                    <button
-                      type="button"
-                      role="radio"
-                      aria-checked={option.id === scenario.id}
-                      className={`scenario-card${option.id === scenario.id ? ' selected' : ''}`}
-                      data-scenario={option.id}
-                      onClick={() => setScenarioId(option.id)}
-                    >
-                      <span className="scenario-card-title">{option.title}</span>
-                      <span className="scenario-card-tagline">{option.tagline}</span>
-                      {option.modifiers && option.modifiers.length > 0 && (
-                        <span className="scenario-card-rules" data-scenario-rules={option.modifiers.join(',')}>
-                          {option.modifiers.map((id) => MODIFIER_BY_ID[id].name).join(' · ')}
-                        </span>
-                      )}
-                      <span className="scenario-card-status" data-scenario-status>
-                        {scenarioStatus(option)}
-                      </span>
-                    </button>
+                    <ScenarioCard def={option} selected={option.id === scenario.id} onSelect={setScenarioId} />
                   </li>
                 ))}
               </ul>
+              <Suspense fallback={null}>
+                <PackList selectedId={scenario.id} onSelect={setScenarioId} />
+              </Suspense>
               <div className="difficulty-detail scenario-detail">
                 <p>{scenario.brief}</p>
                 <p className="scenario-goal">
@@ -333,12 +331,25 @@ export function NewGameScreen({
                 {scenario.modifiers && scenario.modifiers.length > 0 && (
                   <p className="scenario-rules" data-scenario-rules-detail>
                     <span className="tag warn">{t('hud.scenario.rules')}</span>{' '}
-                    {scenario.modifiers.map((id) => `${MODIFIER_BY_ID[id].name}: ${MODIFIER_BY_ID[id].blurb}`).join(' ')}
+                    {scenario.modifiers.map((id) => `${ruleName(scenario, id)}: ${ruleBlurb(scenario, id)}`).join(' ')}
                   </p>
                 )}
                 <p className="muted scenario-setup">{scenarioSetupLine(scenario)}</p>
                 <p className="muted scenario-stars">{starThresholds(scenario)}</p>
+                {scenario.source && (
+                  <>
+                    <p className="muted scenario-source" data-scenario-source={scenario.source.packId}>
+                      {scenarioSourceLine(scenario)}
+                    </p>
+                    <Suspense fallback={null}>
+                      <PackActions def={scenario} onRemoved={() => setScenarioId(SCENARIOS[0]!.id)} />
+                    </Suspense>
+                  </>
+                )}
               </div>
+              <Suspense fallback={null}>
+                <PackAdd example={scenario.source ? null : scenario} onSelect={setScenarioId} />
+              </Suspense>
             </div>
           )}
         </div>

@@ -6094,6 +6094,135 @@ button.icon {
   font-weight: 600;
 }
 
+/* Tur 67: paketten gelen senaryolar — raf, künye, paylaş/kaldır, ekleme kutusu. */
+.scenario-card-source {
+  font-size: calc(11.5px * var(--text-scale));
+  color: var(--muted);
+}
+
+.pack-shelf {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pack-shelf .scenario-list {
+  /* Tek kart da hazır kartlar kadar geniş (auto-fit tek kartı satıra yayıyordu). */
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+}
+
+.pack-shelf-title {
+  margin: 4px 0 0;
+  font-family: var(--font-display);
+  font-size: calc(14px * var(--text-scale));
+}
+
+.pack-empty {
+  margin: 0;
+  font-size: calc(12.5px * var(--text-scale));
+}
+
+.scenario-source {
+  font-size: calc(12px * var(--text-scale));
+}
+
+.pack-actions,
+.pack-confirm {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pack-confirm p {
+  margin: 0;
+}
+
+.pack-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.pack-buttons button.danger {
+  border-color: var(--bad);
+  color: var(--bad);
+}
+
+.pack-add {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--tile-edge);
+  border-radius: var(--radius-sm);
+  background: var(--tile);
+}
+
+.pack-add summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.pack-add[open] summary {
+  margin-bottom: 8px;
+}
+
+.pack-add > p {
+  margin: 0 0 8px;
+  font-size: calc(12.5px * var(--text-scale));
+}
+
+.pack-input,
+.pack-code {
+  width: 100%;
+  box-sizing: border-box;
+  margin-bottom: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--tile-edge);
+  border-radius: var(--radius-sm);
+  background: var(--tile);
+  color: var(--text);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: calc(12px * var(--text-scale));
+  line-height: 1.45;
+  resize: vertical;
+}
+
+.pack-input:focus,
+.pack-code:focus {
+  border-color: var(--select-ring);
+  outline: none;
+}
+
+.pack-notice {
+  margin-top: 8px;
+  font-size: calc(12.5px * var(--text-scale));
+  line-height: 1.45;
+}
+
+.pack-notice p {
+  margin: 0;
+  font-weight: 700;
+}
+
+.pack-notice.good p {
+  color: var(--good);
+}
+
+.pack-notice.bad p {
+  color: var(--bad);
+}
+
+.pack-issues {
+  margin: 6px 0 0;
+  padding-left: 18px;
+}
+
+.pack-issues code {
+  font-size: 0.95em;
+  overflow-wrap: anywhere;
+}
+
 .scenario-setup,
 .scenario-stars {
   font-size: calc(12px * var(--text-scale));

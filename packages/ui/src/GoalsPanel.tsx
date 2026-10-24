@@ -14,6 +14,7 @@ import {
   questTitle,
   questValue,
   questsEnabled,
+  scenarioDefOf,
   scenarioResultPending,
   victoryNetWorth,
 } from '@capital/core';
@@ -181,7 +182,7 @@ export function GoalsPanel(): ReactElement {
           target: formatMoney(victoryNetWorth(state)),
         })}
       </p>
-      <ModifierLine modifiers={state.modifiers} scenario={state.scenario !== undefined} />
+      <ModifierLine modifiers={state.modifiers} scenario={state.scenario !== undefined} def={scenarioDefOf(state)} />
       {/* Şirketin yolu (Tur 61): kârın kaynağı, zafere giden iş kolu. */}
       <PathSummary state={state} />
       <ol className="goal-list">
@@ -273,7 +274,7 @@ export function VictoryScreen({ onNewGame }: { onNewGame: () => void }): ReactEl
               : t('hud.victory.alone'),
           })}
         </p>
-        <ModifierLine modifiers={state.modifiers} scenario={state.scenario !== undefined} />
+        <ModifierLine modifiers={state.modifiers} scenario={state.scenario !== undefined} def={scenarioDefOf(state)} />
         <PathSummary state={state} victory={victory} />
         <p className="muted">{t('hud.victory.note')}</p>
         <CareerRunLine state={state} />

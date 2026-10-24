@@ -9,7 +9,7 @@ import { GOOD_BY_ID } from './goods';
 import { currentLocale } from './messages';
 import { MODIFIERS, MODIFIER_RULES } from './modifiers';
 import type { ModifierId } from './modifiers';
-import { SCENARIOS, SCENARIO_BY_ID } from './scenarios';
+import { SCENARIOS, SCENARIO_BY_ID, bindScenarioDef, embeddedScenarioDef } from './scenarios';
 import type { ScenarioDef, ScenarioGoal, ScenarioSetup, ScenarioStars } from './scenarios';
 import type { CategoryId } from './types';
 
@@ -608,6 +608,39 @@ export function packForScenario(pack: Pack, scenarioId: string): Pack {
   };
 }
 
+/**
+ * Hazır bir senaryonun paketteki hâli: kurulum ekranının "örnek" düğmesi
+ * (yazmaya başlamak için) ve testler. Metinler etkin dilde.
+ */
+export function packFromScenario(def: ScenarioDef, packId = 'ornek'): Pack {
+  const copy = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
+  return {
+    format: PACK_FORMAT,
+    version: PACK_VERSION,
+    id: packId,
+    name: def.title,
+    scenarios: [
+      {
+        id: def.id,
+        title: def.title,
+        tagline: def.tagline,
+        brief: def.brief,
+        goalText: def.goalText,
+        facts: [...def.facts],
+        seed: def.seed,
+        citySize: def.citySize,
+        difficulty: def.difficulty,
+        preludeDays: def.preludeDays,
+        ...(def.modifiers ? { rules: [...def.modifiers] } : {}),
+        days: def.days,
+        goal: copy(def.goal),
+        stars: { ...def.stars },
+        setup: copy(def.setup),
+      },
+    ],
+  };
+}
+
 /** Doğrulanmış paketin bir senaryosu oyunun senaryo tanımı olarak. */
 export function scenarioFromPack(pack: Pack, scenario: PackScenario): ScenarioDef {
   const modifiers: ModifierId[] = [];
@@ -681,6 +714,24 @@ export function unregisterPack(packId: string): void {
   for (const id of Object.keys(SCENARIO_BY_ID)) {
     if (id.startsWith(`${packId}/`)) delete SCENARIO_BY_ID[id];
   }
+}
+
+/**
+ * Kayda gömülü paketi doğrulayıp koşunun tanımını çıkarır; geçersizse null.
+ * Kayıt defterine yalnız boşsa giriyor: oyuncunun yüklediği sürüm menülerde
+ * kalıyor, koşu ise kendi tanımıyla sürüyor (`scenarioDefFor`).
+ */
+export function adoptPack(pack: Pack, scenarioId: string): ScenarioDef | null {
+  const known = embeddedScenarioDef(pack);
+  if (known) return known;
+  const checked = validatePack(pack);
+  if (!checked.ok) return null;
+  const scenario = checked.pack.scenarios.find((entry) => packScenarioId(checked.pack.id, entry.id) === scenarioId);
+  if (!scenario) return null;
+  const def = scenarioFromPack(checked.pack, scenario);
+  bindScenarioDef(pack, def);
+  if (!SCENARIO_BY_ID[def.id]) SCENARIO_BY_ID[def.id] = def;
+  return def;
 }
 
 /** Hazır kural değerleri, senaryonun ayarlarıyla (ayar yoksa hazır değerlerin kendisi). */

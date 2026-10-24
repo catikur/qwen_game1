@@ -1,4 +1,4 @@
-import { BUILDING_BY_ID, GOOD_BY_ID, SCENARIO_BY_ID, formatDecimal, formatNumber } from '@capital/content';
+import { BUILDING_BY_ID, GOOD_BY_ID, formatDecimal, formatNumber, scenarioDefFor } from '@capital/content';
 import type { ScenarioDef } from '@capital/content';
 import { tc } from '../i18n';
 import { pushNews } from '../news';
@@ -41,7 +41,7 @@ export function scenarioScreenPending(state: GameState): boolean {
 }
 
 export function scenarioDefOf(state: GameState): ScenarioDef | null {
-  return state.scenario ? (SCENARIO_BY_ID[state.scenario.id] ?? null) : null;
+  return state.scenario ? (scenarioDefFor(state.scenario) ?? null) : null;
 }
 
 /**
@@ -509,7 +509,7 @@ export function scenarioProjectGap(state: GameState): readonly [number, number] 
 export function runScenarioTick(state: GameState): void {
   const run = state.scenario;
   if (!run || run.finishedDay !== undefined) return;
-  const def = SCENARIO_BY_ID[run.id];
+  const def = scenarioDefFor(run);
   const player = state.companies[state.playerCompanyId];
   if (!def || !player) return;
   const day = state.time.day;

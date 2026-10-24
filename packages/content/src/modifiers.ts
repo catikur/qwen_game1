@@ -1,6 +1,7 @@
 import { localizeList } from './localize';
 import { getDifficulty } from './difficulty';
 import type { DifficultyDef, DifficultyId } from './difficulty';
+import type { ScenarioDef } from './scenarios';
 
 /**
  * Zorluk değiştiricileri (Tur 45): serbest oyunda isteğe bağlı kurallar.
@@ -127,3 +128,16 @@ export function difficultyWith(
 
 // Metin alanları etkin dile bağlı (Tur 23); Türkçe yedek nesnenin kendi metni.
 localizeList(MODIFIERS, 'modifier', ['name', 'blurb', 'facts']);
+
+/*
+ * Kuralın adı ve tek cümlesi (Tur 67): paketten gelen senaryonun kendi adlı
+ * kuralı ("Sert kış") varsa onunki, yoksa hazır kuralınki. Doğrulayıcıdan
+ * ayrı burada: kurulum ekranı paket modülünü açılışta indirmiyor.
+ */
+export function ruleName(def: ScenarioDef | null | undefined, id: ModifierId): string {
+  return def?.customRules?.find((rule) => rule.base === id)?.name ?? MODIFIER_BY_ID[id]?.name ?? id;
+}
+
+export function ruleBlurb(def: ScenarioDef | null | undefined, id: ModifierId): string {
+  return def?.customRules?.find((rule) => rule.base === id)?.blurb ?? MODIFIER_BY_ID[id]?.blurb ?? '';
+}

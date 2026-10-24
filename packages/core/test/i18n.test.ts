@@ -48,6 +48,7 @@ import {
 import { contentEn } from '../../content/src/i18n/en';
 import { tr as uiTr } from '../../ui/src/i18n/tr';
 import { en as uiEn } from '../../ui/src/i18n/en';
+import { packEn, packTr } from '../../ui/src/packMessages';
 import { coreTr } from '../src/i18n';
 import { coreEn } from '../src/i18n/en';
 import { GameEngine } from '../src/engine';
@@ -235,7 +236,7 @@ describe('İngilizce sözlükler', () => {
     // ("{month|# quest|# quests}" Mart görevlerini sayı sanıyordu; Codex #79).
     const words = /\{(month|district|category|name|good|place|title|company|player|ceo|city|members|leader)\|/;
     const found: string[] = [];
-    for (const [name, dictionary] of [['arayüz', uiEn], ['çekirdek', coreEn], ['içerik', contentEn]] as const) {
+    for (const [name, dictionary] of [['arayüz', uiEn], ['paket rafı', packEn], ['çekirdek', coreEn], ['içerik', contentEn]] as const) {
       for (const [key, text] of Object.entries(dictionary as Record<string, string>)) {
         if (bare.test(text) || words.test(text)) found.push(`${name} ${key}: ${text}`);
       }
@@ -248,7 +249,7 @@ describe('İngilizce sözlükler', () => {
     // tekil/çoğul metni bütün sayıları 1 vererek doldur, isimden sonra
     // çoğul fiil arama.
     const found: string[] = [];
-    for (const [name, dictionary] of [['arayüz', uiEn], ['çekirdek', coreEn], ['içerik', contentEn]] as const) {
+    for (const [name, dictionary] of [['arayüz', uiEn], ['paket rafı', packEn], ['çekirdek', coreEn], ['içerik', contentEn]] as const) {
       for (const [key, text] of Object.entries(dictionary as Record<string, string>)) {
         const plural = [...text.matchAll(/\{(\w+)\|[^|{}]*\|[^|{}]*\}/g)].map((m) => m[1]!);
         if (plural.length === 0) continue;
@@ -272,6 +273,9 @@ describe('İngilizce sözlükler', () => {
 
   test('arayüz metinlerinin hepsi İngilizcede var', () => {
     assertComplete('arayüz', uiTr, uiEn);
+    // Paket rafının sözlüğü geç inen parçada (Tur 67); anahtarları arayüzünkilerle çakışmıyor.
+    assertComplete('paket rafı', packTr, packEn);
+    assert.deepEqual(Object.keys(packTr).filter((key) => key in uiTr), []);
   });
 
   test('her içerik metninin İngilizcesi var, fazlası yok', () => {

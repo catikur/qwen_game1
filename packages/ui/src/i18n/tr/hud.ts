@@ -150,6 +150,8 @@ export const hud = {
   'hud.scenario.thresholdsLeadGoal': 'Bir yıldız: hedef · iki yıldız: ×{two} · üç yıldız: ×{three} (hedefe ulaşıldığında en güçlü rakibe oran)',
   'hud.scenario.statusNew': 'Denenmedi',
   'hud.scenario.statusTried': '{count} deneme · henüz yıldız yok',
+  'hud.scenario.packSource': 'Paket: {pack} · kariyere ve başarımlara sayılmıyor.',
+  'hud.scenario.packSourceAuthor': 'Paket: {pack}, yazan {author} · kariyere ve başarımlara sayılmıyor.',
   'hud.scenario.briefLabel': 'Senaryo açılışı',
   'hud.scenario.eyebrow': 'Senaryo · {day}. gün',
   'hud.scenario.eyebrowCity': 'Senaryo · yeni şehir {city}',

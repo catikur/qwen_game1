@@ -1,4 +1,4 @@
-import { BUILDING_BY_ID, CONSUMER_CATEGORIES, GOODS_BY_CATEGORY, formatDecimal, formatPercent, registerPack, validatePack } from '@capital/content';
+import { BUILDING_BY_ID, CONSUMER_CATEGORIES, GOODS_BY_CATEGORY, formatDecimal, adoptPack, formatPercent } from '@capital/content';
 import { build, buyTile, buyoutTile, demolish, sellTile } from './actions';
 import { pushNews } from './news';
 import { stepLeadership } from './leadership';
@@ -50,14 +50,13 @@ const MILESTONES = [500_000, 1_000_000, 5_000_000, 25_000_000];
 
 /**
  * Paketten gelen senaryonun tanımı kayıtta (Tur 67): kayıt açılınca o
- * tanım oyuna tanıtılıyor. Paket bu cihazda yüklü olmasa da, yüklü olan
- * başka bir sürüm olsa da koşu kendi tanımıyla sürüyor.
+ * tanım doğrulanıp koşuya bağlanıyor (`scenarioDefFor`). Paket bu cihazda
+ * yüklü olmasa da, yüklü olan başka bir sürüm olsa da koşu kendi tanımıyla
+ * sürüyor.
  */
 function adoptScenarioPack(state: GameState): void {
-  const pack = state.scenario?.pack;
-  if (!pack) return;
-  const checked = validatePack(pack);
-  if (checked.ok) registerPack(checked.pack);
+  const run = state.scenario;
+  if (run?.pack) adoptPack(run.pack, run.id);
 }
 
 /**

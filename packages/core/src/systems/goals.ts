@@ -1,4 +1,4 @@
-import { BUILDING_BY_ID, GOALS, SCENARIO_BY_ID, getCitySize } from '@capital/content';
+import { BUILDING_BY_ID, GOALS, getCitySize, scenarioDefFor } from '@capital/content';
 import type { GoalDef } from '@capital/content';
 import { tc } from '../i18n';
 import { pushNews } from '../news';
@@ -173,7 +173,7 @@ export function goalLadder(state: GameState): GoalStatus[] {
 function victoryDeferred(state: GameState): boolean {
   const run = state.scenario;
   if (!run || run.finishedDay !== undefined) return false;
-  const kind = SCENARIO_BY_ID[run.id]?.goal.kind;
+  const kind = scenarioDefFor(run)?.goal.kind;
   return kind === 'monopoly' || kind === 'holding';
 }
 

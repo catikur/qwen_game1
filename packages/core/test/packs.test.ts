@@ -9,6 +9,7 @@ import {
   SCENARIO_BY_ID,
   decodePackCode,
   encodePackCode,
+  packFromScenario,
   packScenarioId,
   registerMessages,
   registerPack,
@@ -20,6 +21,7 @@ import type { Pack, PackScenario, ScenarioDef } from '@capital/content';
 import { exportToJson, importFromJson } from '../../persistence/src/index';
 import { GameEngine } from '../src/engine';
 import { createScenarioGame } from '../src/scenario';
+import { scenarioDefOf } from '../src/systems/scenario';
 import { tilePrice } from '../src/systems/city';
 import { ruleValues } from '../src/systems/rules';
 
@@ -61,6 +63,20 @@ describe('paketin biçimi', () => {
     const all = pack(SCENARIOS.map((def) => asPackScenario(def)));
     const result = validatePack(JSON.parse(JSON.stringify(all)));
     assert.ok(result.ok, JSON.stringify(!result.ok && result.issues));
+  });
+
+  test('hazır senaryonun örnek paketi doğrulanıyor ve aynı şehri kuruyor', () => {
+    for (const def of SCENARIOS) {
+      const result = validatePack(JSON.parse(JSON.stringify(packFromScenario(def))));
+      assert.ok(result.ok, `${def.id}: ${JSON.stringify(!result.ok && result.issues)}`);
+    }
+    const [def] = registerPack(packFromScenario(SCENARIO_BY_ID['rescue']!));
+    assert.equal(def!.id, 'ornek/rescue');
+    const copy = createScenarioGame(def!.id);
+    const builtin = createScenarioGame('rescue');
+    assert.deepEqual(copy.map, builtin.map);
+    assert.deepEqual(copy.companies, builtin.companies);
+    unregisterPack('ornek');
   });
 
   test('her sorun yeriyle ve nedeniyle söyleniyor', () => {
@@ -161,6 +177,22 @@ describe('paketin senaryosu oyunda', () => {
     for (let i = 0; i < 10; i++) engine.runDay();
     assert.equal(engine.getState().scenario?.id, id);
     unregisterPack('tasinan');
+  });
+
+  test('aynı paketin yeni sürümü yüklense de süren koşu kendi tanımıyla (kayıttaki)', () => {
+    const v1 = pack([rescue()], { id: 'surum' });
+    registerPack(v1);
+    const id = packScenarioId('surum', 'kurtarma');
+    const engine = new GameEngine(createScenarioGame(id));
+    const target = (engine.getState().scenario?.pack?.scenarios[0]?.goal as { target: number }).target;
+    // Oyuncu raftan yeni sürümü yükledi: kayıt defterinde artık o.
+    const v2 = pack([{ ...rescue(), goal: { kind: 'netWorth', target: target * 2 } }], { id: 'surum' });
+    unregisterPack('surum');
+    registerPack(v2);
+    assert.equal((SCENARIO_BY_ID[id]!.goal as { target: number }).target, target * 2);
+    assert.equal((scenarioDefOf(engine.getState())!.goal as { target: number }).target, target, 'koşu ilk sürümün hedefiyle');
+    unregisterPack('surum');
+    assert.equal((scenarioDefOf(engine.getState())!.goal as { target: number }).target, target, 'paket silinse de');
   });
 
   test('metinler dil başına: etkin dil, yoksa Türkçe', () => {
