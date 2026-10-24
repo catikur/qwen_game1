@@ -114,7 +114,13 @@ export function NewGameScreen({
   const leagueKind: LeagueBoardKind | null = league ? 'week' : daily ? 'day' : null;
   const [scenarioId, setScenarioId] = useState<string>(initialScenario ?? SCENARIOS[0]!.id);
   // Paketten gelen senaryolar da kayıt defterinde (`registerPack`); silinen senaryo ilk hazıra düşüyor.
+  // Raf yeni sürümü aynı kimlikle eklediğinde kimlik değişmiyor: sayaç ayrıntıyı yeniden çizdiriyor (Codex #97).
   const scenario = SCENARIO_BY_ID[scenarioId] ?? SCENARIOS[0]!;
+  const [, setPackRevision] = useState(0);
+  const selectAdded = (id: string) => {
+    setScenarioId(id);
+    setPackRevision((revision) => revision + 1);
+  };
   const free = mode === 'free';
   const [citySize, setCitySize] = useState<CitySizeId>(DEFAULT_CITY_SIZE);
   // Rehber ilk oyunda açık gelir; bu tarayıcıda bir kez bitirilen ya da
@@ -348,7 +354,7 @@ export function NewGameScreen({
                 )}
               </div>
               <Suspense fallback={null}>
-                <PackAdd example={scenario.source ? null : scenario} onSelect={setScenarioId} />
+                <PackAdd example={scenario.source ? null : scenario} onSelect={selectAdded} />
               </Suspense>
             </div>
           )}

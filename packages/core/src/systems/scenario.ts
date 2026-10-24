@@ -375,8 +375,10 @@ export function scenarioProgress(state: GameState): ScenarioProgress | null {
   }
   if (goal.kind === 'rental') {
     const status = rentalGoalStatus(state);
+    // Paketin hedefi dönüşüm istemeyebilir (`renewals: 0`, Tur 67): o pay baştan tam (0/0 NaN'dı).
+    const renewalShare = goal.renewals > 0 ? clamp(status.renewals / goal.renewals) : 1;
     return {
-      progress: clamp((clamp(status.occupied / goal.units) * 3 + clamp(status.renewals / goal.renewals)) / 4),
+      progress: clamp((clamp(status.occupied / goal.units) * 3 + renewalShare) / 4),
       detail: tc(status.building > 0 ? 'core.scenario.progressRentalBuilding' : 'core.scenario.progressRental', {
         occupied: formatNumber(status.occupied),
         target: formatNumber(goal.units),

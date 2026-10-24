@@ -8073,6 +8073,20 @@ async function finish(browser, consoleErrors) {
       /Sert kış: Krizler erken ve sık geliyor\./.test(added.detail) && /Sert kış/.test(added.card)
         && /Paket: Deneme paketi, yazan Conforcus · kariyere ve başarımlara sayılmıyor/.test(added.source),
       `${added.source} · ${added.detail.slice(0, 120)}`);
+    // Yeni sürüm aynı kimlikle: ayrıntı yeni hedefi gösteriyor (Codex #97: kimlik değişmeyince çizilmiyordu).
+    const updated = JSON.parse(JSON.stringify(custom));
+    updated.scenarios[0].goal.target = 9_000_000;
+    await pp.fill('[data-pack-input]', JSON.stringify(updated));
+    await pp.locator('[data-pack-submit]').click();
+    await pp.waitForFunction(() => /güncellendi/.test(document.querySelector('[data-pack-add] [data-pack-notice]')?.textContent ?? ''), null, { timeout: 10000 }).catch(() => null);
+    const refreshed = await pp.evaluate(() => ({
+      notice: document.querySelector('[data-pack-add] [data-pack-notice]')?.textContent ?? '',
+      goal: document.querySelector('[data-detail="scenario"] .scenario-goal')?.textContent ?? '',
+      shelf: document.querySelector('[data-pack-shelf]')?.getAttribute('data-pack-shelf'),
+    }));
+    check('Aynı paketin yeni sürümü yerine geçiyor; seçili senaryonun ayrıntısı yeni hedefle',
+      /"Deneme paketi" güncellendi: 1 senaryo/.test(refreshed.notice) && /9,00 M ₺/.test(refreshed.goal) && refreshed.shelf === '1',
+      JSON.stringify(refreshed));
     await pp.waitForSelector('[data-pack-actions] [data-pack-copy="code"]', { timeout: 5000 }).catch(() => null);
     const actionsAt = await pp.evaluate(() => document.querySelector('[data-pack-actions]')?.getBoundingClientRect().height ?? 0);
     check('Seçili paket senaryosunda paylaş ve kaldır düğmeleri', actionsAt > 20, `${actionsAt} px`);

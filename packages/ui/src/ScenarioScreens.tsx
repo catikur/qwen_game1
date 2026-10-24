@@ -395,12 +395,15 @@ function RentalChecklist({ state, units, renewals }: { state: GameState; units: 
       done: status.occupied >= units,
       label: t('hud.scenario.rentalUnits', { occupied: formatNumber(status.occupied), target: formatNumber(units), total: formatNumber(status.units) }),
     },
-    {
+  ];
+  // Dönüşüm istemeyen hedefte (paketten, `renewals: 0`) o madde yok.
+  if (renewals > 0) {
+    items.push({
       key: 'renewals',
       done: status.renewals >= renewals,
       label: t('hud.scenario.rentalRenewals', { done: status.renewals, target: renewals, building: status.renewalsBuilding }),
-    },
-  ];
+    });
+  }
   if (status.building > 0) items.push({ key: 'building', done: false, label: t('hud.scenario.rentalBuilding', { units: formatNumber(status.building) }) });
   return (
     <ul className="scenario-checklist" aria-label={t('hud.scenario.rentalLabel')}>

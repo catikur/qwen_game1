@@ -23,7 +23,7 @@ import { exportToJson, importFromJson } from '../../persistence/src/index';
 import samplePack from '../../../docs/ornek-paket.json';
 import { GameEngine } from '../src/engine';
 import { createScenarioGame } from '../src/scenario';
-import { scenarioDefOf } from '../src/systems/scenario';
+import { scenarioDefOf, scenarioProgress } from '../src/systems/scenario';
 import { tilePrice } from '../src/systems/city';
 import { ruleValues } from '../src/systems/rules';
 
@@ -192,6 +192,15 @@ describe('paketin senaryosu oyunda', () => {
     for (let i = 0; i < 10; i++) engine.runDay();
     assert.equal(engine.getState().scenario?.id, id);
     unregisterPack('tasinan');
+  });
+
+  test('dönüşüm istemeyen kiralık hedefi: ilerleme sayı, NaN değil (Codex #97)', () => {
+    const base = asPackScenario(SCENARIO_BY_ID['renewal']!, 'yalniz-kira');
+    const [def] = registerPack(pack([{ ...base, goal: { kind: 'rental', units: 400, renewals: 0 } }], { id: 'kira' }));
+    const engine = new GameEngine(createScenarioGame(def!.id));
+    const progress = scenarioProgress(engine.getState());
+    assert.ok(progress && Number.isFinite(progress.progress) && progress.progress >= 0.25, JSON.stringify(progress));
+    unregisterPack('kira');
   });
 
   test('aynı paketin yeni sürümü yüklense de süren koşu kendi tanımıyla (kayıttaki)', () => {
