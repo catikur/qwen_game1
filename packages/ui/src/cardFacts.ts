@@ -4,6 +4,7 @@ import type { GameState } from '@capital/core';
 import { t } from './i18n';
 import type { MessageKey } from './i18n';
 import { starRow } from './stars';
+import { fileSlug } from './fileName';
 
 /**
  * Şehir kartı (Tur 64): koşunun özeti tek bir görselde.
@@ -42,23 +43,9 @@ export interface CityCardFacts {
   filename: string;
 }
 
-/**
- * Dosya adı ASCII: Türkçe harfler eşine (Ş → S, ı → i), gerisi düşüyor.
- * Harfli ad bazı sistemlerde (yerel ayarı UTF-8 olmayan) indirmede
- * "download"a dönüyordu; paylaşılan dosya her uygulamada aynı adla gitsin.
- */
+/** Kartın dosya adı: şirketin adı ASCII (bkz. `fileSlug`) ve gün. */
 export function cardFilename(company: string, day: number): string {
-  const slug = company
-    .replace(/ı/g, 'i')
-    .replace(/İ/g, 'I')
-    .normalize('NFKD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^A-Za-z0-9 _.-]+/g, '')
-    .trim()
-    .replace(/\s+/g, '-')
-    .slice(0, 40)
-    .replace(/-+$/g, '');
-  return t('hud.card.filename', { company: slug || 'capitalforge', day });
+  return t('hud.card.filename', { company: fileSlug(company), day });
 }
 
 function modeOf(state: GameState): string {

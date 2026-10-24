@@ -39,11 +39,44 @@ export function getBuildingDef(building: BuildingInstance): BuildingDef | undefi
   return BUILDING_BY_ID[building.defId];
 }
 
-export function formatDate(day: number): string {
+/**
+ * Tarih biçimleyicileri dil başına bir kez (Tur 65). `toLocaleDateString`
+ * her çağrıda yeni bir `Intl.DateTimeFormat` kuruyordu: üst barın tarihi ve
+ * gündemin ay adları her gün, telefonda (CPU 4× yavaş) günün JS'inin ~%4'ü.
+ * Çıktı aynı: tanım gereği ikisi aynı biçimleyiciyle yazıyor.
+ */
+const DATE_FORMATS = new Map<string, Intl.DateTimeFormat>();
+const DATE_OPTIONS = {
+  date: { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' },
+  month: { month: 'long', timeZone: 'UTC' },
+} as const satisfies Record<string, Intl.DateTimeFormatOptions>;
+
+/**
+ * Geçersiz gün eskisi gibi "Invalid Date" (Codex #95): `toLocaleDateString`
+ * öyle dönüyordu, `Intl.DateTimeFormat.format` ise fırlatıyor. Elle
+ * düzenlenmiş bir kayıtta `time.day: 1e400` (JSON'da Infinity) doğrulamadan
+ * geçiyor; üst bar ilk çizimde oyunu çökertirdi.
+ */
+function formatDay(kind: keyof typeof DATE_OPTIONS, day: number): string {
   const date = new Date(EPOCH + day * 86_400_000);
+  return Number.isNaN(date.getTime()) ? 'Invalid Date' : dateFormat(kind).format(date);
+}
+
+function dateFormat(kind: keyof typeof DATE_OPTIONS): Intl.DateTimeFormat {
+  const locale = numberLocale();
+  const key = `${kind}:${locale}`;
+  let format = DATE_FORMATS.get(key);
+  if (!format) {
+    format = new Intl.DateTimeFormat(locale, DATE_OPTIONS[kind]);
+    DATE_FORMATS.set(key, format);
+  }
+  return format;
+}
+
+export function formatDate(day: number): string {
   // Takvim UTC'de: batı saat dilimlerinde tarih bir gün geride görünüyordu
   // ve ay başında dönen görev panosu (Tur 37c) çubuktaki aydan önce dönerdi.
-  return date.toLocaleDateString(numberLocale(), { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' });
+  return formatDay('date', day);
 }
 
 /** Oyun gününün takvim ayı (0 = Ocak), UTC. */
@@ -64,8 +97,7 @@ export function nextMonthStart(day: number): number {
 
 /** Oyun gününün ay adı (etkin dilde, "Mart"). */
 export function monthName(day: number): string {
-  const date = new Date(EPOCH + day * 86_400_000);
-  return date.toLocaleDateString(numberLocale(), { month: 'long', timeZone: 'UTC' });
+  return formatDay('month', day);
 }
 
 /** Haritada gösterilebilecek veri lensleri. */
