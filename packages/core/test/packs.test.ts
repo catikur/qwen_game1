@@ -1,5 +1,7 @@
 import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
+import { existsSync, readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
 import {
   PACK_CODE_PREFIX,
   PACK_FORMAT,
@@ -77,6 +79,22 @@ describe('paketin biçimi', () => {
     assert.deepEqual(copy.map, builtin.map);
     assert.deepEqual(copy.companies, builtin.companies);
     unregisterPack('ornek');
+  });
+
+  test('belgedeki örnek paket (docs/ornek-paket.json) geçerli ve oynanıyor', () => {
+    let root = process.cwd();
+    while (!existsSync(join(root, 'pnpm-workspace.yaml')) && dirname(root) !== root) root = dirname(root);
+    const doc = JSON.parse(readFileSync(join(root, 'docs/ornek-paket.json'), 'utf8')) as unknown;
+    const result = validatePack(doc);
+    assert.ok(result.ok, JSON.stringify(!result.ok && result.issues));
+    if (!result.ok) return;
+    const defs = registerPack(result.pack);
+    assert.deepEqual(defs.map((def) => def.id), ['zor-kis/kista-kurtarma', 'zor-kis/karanlik-ve-pahali']);
+    const winter = createScenarioGame(defs[0]!.id);
+    assert.equal(ruleValues(winter).storms.firstDay, 60);
+    const dark = createScenarioGame(defs[1]!.id);
+    assert.equal(ruleValues(dark).tightCredit.rateDelta, 0.06);
+    unregisterPack('zor-kis');
   });
 
   test('her sorun yeriyle ve nedeniyle söyleniyor', () => {
