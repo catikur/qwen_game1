@@ -122,6 +122,48 @@ export function aimHeight(camera: THREE.Camera, x: number, z: number, goal: numb
   return low;
 }
 
+/** Havai fişeğin yerleştirildiği kamera duruşu (`RtsCameraController`). */
+export interface FireworkPose {
+  camera: THREE.Camera;
+  currentPoint: { x: number; z: number };
+  currentDistance: number;
+}
+
+/**
+ * Gösterinin sahnesi: merkez, yayılım (yarı kenar), patlamanın boyu
+ * (kamera uzaklaştıkça büyüyor). Kameranın o anki duruşundan: odak ya da
+ * zoom yumuşarken hedef, kameranın şu an baktığı yer değil; uzak bir odakta
+ * ilk patlamalar ekranın dışına düşüyordu (Codex #93).
+ */
+export function fireworkStage(pose: FireworkPose): { center: { x: number; z: number }; extent: number; scale: number } {
+  const distance = pose.currentDistance;
+  return { center: pose.currentPoint, extent: Math.max(8, Math.min(30, distance * 0.5)), scale: Math.max(0.7, Math.min(2.4, distance / 20)) };
+}
+
+const AIM_RIGHT = new THREE.Vector3();
+const AIM_FORWARD = new THREE.Vector3();
+
+/**
+ * Bir patlamanın yeri (Tur 63): kameranın baktığı yerin iki yanına, ekranın
+ * sağına soluna yayılmış; yüksekliği patlama ekranın üst yarısında kalacak
+ * kadar. Takvimin yüksekliği (5..8,5) ekranda bir sıraya dönüşüyor: kimi
+ * patlama ufka yakın, kimi şehrin hemen üstünde.
+ */
+export function aimLaunch(pose: FireworkPose, burst: { dx: number; dz: number; height: number }, out: { x: number; y: number; z: number }): void {
+  const camera = pose.camera;
+  const { center, extent } = fireworkStage(pose);
+  const right = AIM_RIGHT.set(1, 0, 0).applyQuaternion(camera.quaternion);
+  right.y = 0;
+  right.normalize();
+  const forward = AIM_FORWARD.set(0, 0, -1).applyQuaternion(camera.quaternion);
+  forward.y = 0;
+  forward.normalize();
+  out.x = center.x + right.x * burst.dx * extent * 0.75 + forward.x * burst.dz * extent * 0.3;
+  out.z = center.z + right.z * burst.dx * extent * 0.75 + forward.z * burst.dz * extent * 0.3;
+  // Ekranda hedeflenen yükseklik (NDC y): yüksek patlama daha yukarıda.
+  out.y = aimHeight(camera, out.x, out.z, 0.08 + ((burst.height - 5) / 3.5) * 0.42);
+}
+
 const RING_POOL = 24;
 
 interface Ring {

@@ -21,11 +21,9 @@ import { decorateBuilding, decorateSite, decorateStructure, placeStreetTrees, st
 const SITE_CONCRETE = '#bdb8ae';
 /** Şantiyenin açılış günündeki boyu, binanın tam boyuna oranla (Tur 63: açılış buradan yükseliyor). */
 const SITE_TOP = 0.8;
-const AIM_RIGHT = new THREE.Vector3();
-const AIM_FORWARD = new THREE.Vector3();
 import { LampLight } from './lamplight';
 import { Precipitation } from './precipitation';
-import { CelebrationLog, Fireworks, MOMENT, RingPulses, aimHeight, smooth, waveDelay } from './moments';
+import { CelebrationLog, Fireworks, MOMENT, RingPulses, aimLaunch, fireworkStage, smooth, waveDelay } from './moments';
 import { mixWeather, seasonLook, weatherLook } from './season';
 import type { SeasonLook, WeatherLook } from './season';
 import { FACADE, buildingSurface, setWindowLateNight, windowLateNight } from './surface';
@@ -509,7 +507,7 @@ export class CityRenderer {
     this.scene.add(this.buildingDecor.group, this.fabricDecor.group, this.streetDecor.group);
     this.scene.add(this.precipitation.group);
     this.scene.add(this.rings.group, this.fireworks.group);
-    this.fireworks.aim = (burst, out) => this.aimFirework(burst, out);
+    this.fireworks.aim = (burst, out) => aimLaunch(this.controller, burst, out);
     // Gece lambaların altına düşen ışık (Tur 36); yer yollar yerleşince geliyor.
     this.lampLight = new LampLight(Math.ceil(tileCount * 0.5));
     this.scene.add(this.lampLight.mesh);
@@ -1257,28 +1255,6 @@ export class CityRenderer {
   }
 
   /**
-   * Havai fişeğin yeri (Tur 63): kameranın baktığı yerin iki yanına, ekranın
-   * sağına soluna yayılmış; yüksekliği patlama ekranın üst yarısında kalacak
-   * kadar. Takvimin yüksekliği (5..8,5) ekranda bir sıraya dönüşüyor: kimi
-   * patlama ufka yakın, kimi şehrin hemen üstünde.
-   */
-  private aimFirework(burst: { dx: number; dz: number; height: number }, out: { x: number; y: number; z: number }): void {
-    const camera = this.controller.camera;
-    const target = this.controller.targetPoint;
-    const extent = Math.max(8, Math.min(30, this.controller.targetDistance * 0.5));
-    const right = AIM_RIGHT.set(1, 0, 0).applyQuaternion(camera.quaternion);
-    right.y = 0;
-    right.normalize();
-    const forward = AIM_FORWARD.set(0, 0, -1).applyQuaternion(camera.quaternion);
-    forward.y = 0;
-    forward.normalize();
-    out.x = target.x + right.x * burst.dx * extent * 0.75 + forward.x * burst.dz * extent * 0.3;
-    out.z = target.z + right.z * burst.dx * extent * 0.75 + forward.z * burst.dz * extent * 0.3;
-    // Ekranda hedeflenen yükseklik (NDC y): yüksek patlama daha yukarıda.
-    out.y = aimHeight(camera, out.x, out.z, 0.08 + ((burst.height - 5) / 3.5) * 0.42);
-  }
-
-  /**
    * Anların hafızasını siler: bir sonraki senkron ilk senkron gibi. Kayıt
    * açılınca binalar yerden bitmiyor, sahibi kayıtta başka olan binada
    * dalga, kalkmış yapıda toz yok; kayıtta zaten kazanılmış zafer
@@ -1702,8 +1678,8 @@ export class CityRenderer {
 
     // Anlar (Tur 63): halkalar ve zafer gecesi; veri lensinde ikisi de susuyor.
     this.rings.update(dt);
-    const distance = this.controller.targetDistance;
-    this.fireworks.update(dt, this.controller.targetPoint, Math.max(8, Math.min(30, distance * 0.5)), Math.max(0.7, Math.min(2.4, distance / 20)));
+    const stage = fireworkStage(this.controller);
+    this.fireworks.update(dt, stage.center, stage.extent, stage.scale);
 
     // İnşaat animasyonu ve devralma dalgası sürerken binalar her karede
     // yeniden yerleşiyor; şehrin geri kalanı yalnızca state değişince.

@@ -7017,7 +7017,7 @@ devralma bandıyla yarışı sayfanın zamanlayıcısıyla kuruluyor (bant gelin
 için dükkân sayfanın içinde kurulup toz bekleniyor. Bu makinede eski
 düzenle yarış kurulamıyordu (test adımları bandın süresini aşıyordu).
 
-**Codex'in bulduğu on dört şey.**
+**Codex'in bulduğu on beş şey.**
 - *Kayıt açılınca zafer ekranı 2,4 sn gecikiyordu.* Oyun içinde bekleyen
   zaferli bir kayıt açılınca ekran canlı zafer gibi bekletiliyordu. Gecikme
   artık durumun kendisini de biliyor: durum değiştiyse kayıttaki zafer
@@ -7082,6 +7082,14 @@ düzenle yarış kurulamıyordu (test adımları bandın süresini aşıyordu).
   gerisinde kalıyordu* (aynı 0,1 sn sınırı; 2,5 karede en geç halka bant
   kalktıktan sonra). Halkanın saati de 0,5 sn sınırında. Birim testi
   düzeltmeden önce kırılıyordu.
+- *Odak ya da zoom yumuşarken gelen zaferde havai fişek kameranın gittiği
+  yere göre yerleşiyordu*, kameranın şu an baktığı yere göre değil: uzak
+  bir odakta ilk patlamalar ekranın dışına düşüyordu. Gösterinin sahnesi
+  (merkez, yayılım, boy) ve her patlamanın yeri artık kameranın o anki
+  duruşundan (`fireworkStage`, `aimLaunch`). Birim testi (kamera yolda,
+  hedef uzakta: her patlama ekranda) düzeltmeden önce kırılıyordu;
+  tarayıcıda bu yazılımsal GPU'da kamera bir iki karede varıyor, orada
+  sınanamıyor.
 
 Aynı turda bir şey de inceleme beklemeden: veri lensi şehri (ve havai
 fişeği) gizlerken zafer ve senaryo ekranı beklemiyor; beklenecek bir
@@ -7102,8 +7110,8 @@ eski derlemede camgöbeği, çatı nane yeşili).
   devralmada, zafer gecesinde yeni program yok.
 - Ana parça 71,9 KB (71,6'dan).
 
-**Doğrulama.** `pnpm test` 760/760 (742'den); tip denetimi temiz.
-- `moments.test.ts` (çizim, 12 yeni):
+**Doğrulama.** `pnpm test` 761/761 (742'den); tip denetimi temiz.
+- `moments.test.ts` (çizim, 13 yeni):
   - dalga uzaklıkla gecikiyor, bir sınırı aşmıyor;
   - havai fişek takvimi tohumlu, süreye sığıyor;
   - halka gecikmesini bekliyor, açılıp sönüyor, havuz taşmıyor;
@@ -7117,7 +7125,9 @@ eski derlemede camgöbeği, çatı nane yeşili).
     zoomda da;
   - veri lensi açılınca süren toz bitiyor, lensin ardından eski toz yok;
   - saniyede iki kareye dek havai fişeğin takvimi ve halkanın gecikmesi
-    duvar saatiyle gidiyor.
+    duvar saatiyle gidiyor;
+  - kamera yolda iken gösteri kameranın o anki duruşunda, her patlama
+    ekranda.
 - `moments.test.ts` (arayüz, 6 yeni):
   - en çok kazandıran üç bina, rakibin binası yok;
   - çok zarar eden kırmızı, küçük zarar gürültü;
@@ -7262,7 +7272,7 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi). Senaryo şehirlerinde gün 3–17 ms (`pnpm dayperf`, Tur 43) |
-| Birim testi | **760 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de, Tur 52'de sunucuda tekrar, Tur 53'te haftanın kuralı ve günün koşusu, Tur 54'te hayalet eğri, Tur 55'te davetli ligler, Tur 56'da taşıma sözleşmeleri, Tur 57'de enerji, Tur 58'de gayrimenkul, Tur 59'da rakiplerin hafızası, Tur 60'ta senaryo paketi II, Tur 61'de şirketin yolu, Tur 62'de hava ve mevsimin görünümü, Tur 63'te önemli anlar) |
+| Birim testi | **761 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de, Tur 52'de sunucuda tekrar, Tur 53'te haftanın kuralı ve günün koşusu, Tur 54'te hayalet eğri, Tur 55'te davetli ligler, Tur 56'da taşıma sözleşmeleri, Tur 57'de enerji, Tur 58'de gayrimenkul, Tur 59'da rakiplerin hafızası, Tur 60'ta senaryo paketi II, Tur 61'de şirketin yolu, Tur 62'de hava ve mevsimin görünümü, Tur 63'te önemli anlar) |
 | Denge testi | **379 kontrol, hepsi geçiyor** (33 bölüm, süreleriyle; ~16 dk) |
 | Tarayıcı testi | **629 kontrol, hepsi geçiyor**, 0 konsol hatası (~41 dk); duman koşusu 132 (~8 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + paket bütçesi (Tur 46; Tur 48'den beri hizmet çalışanı ve manifest de) + duman oynanışı |

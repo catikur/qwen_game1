@@ -1,7 +1,7 @@
 import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
-import { CelebrationLog, FIREWORK_COLORS, Fireworks, MOMENT, RingPulses, aimHeight, fireworkSchedule, smooth, waveDelay } from '../src/moments';
+import { CelebrationLog, FIREWORK_COLORS, Fireworks, MOMENT, RingPulses, aimHeight, aimLaunch, fireworkSchedule, fireworkStage, smooth, waveDelay } from '../src/moments';
 import { StreetLife } from '../src/street';
 
 /**
@@ -197,6 +197,25 @@ describe('toz ve veri lensi', () => {
     street.update(0.016);
     assert.equal(street.stats.dust, 1, 'lens kapanınca toz yine kalkıyor');
     street.dispose();
+  });
+});
+
+describe('havai fişeğin sahnesi', () => {
+  test('kamera yumuşarken (odak ve zoom yolda) gösteri kameranın o anki duruşunda: patlama ekranda (Codex #93)', () => {
+    // Kamera şu an (0, 0)'a 20 birimden bakıyor; hedefi uzakta: (90, 70), 90 birim.
+    const camera = new THREE.PerspectiveCamera(46, 16 / 10, 0.5, 400);
+    camera.position.set(0, Math.cos(0.82) * 20, Math.sin(0.82) * 20);
+    camera.lookAt(0, 0, 0);
+    camera.updateMatrixWorld();
+    const pose = { camera, currentPoint: { x: 0, z: 0 }, currentDistance: 20, targetPoint: { x: 90, z: 70 }, targetDistance: 90 };
+    const stage = fireworkStage(pose);
+    assert.deepEqual(stage, { center: { x: 0, z: 0 }, extent: 10, scale: 1 });
+    const out = { x: 0, y: 0, z: 0 };
+    for (const burst of fireworkSchedule(5)) {
+      aimLaunch(pose, burst, out);
+      const screen = new THREE.Vector3(out.x, out.y, out.z).project(camera);
+      assert.ok(Math.abs(screen.x) <= 1 && Math.abs(screen.y) <= 1 && screen.z < 1, `ekranda (${screen.x.toFixed(2)}, ${screen.y.toFixed(2)})`);
+    }
   });
 });
 
