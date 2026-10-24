@@ -102,6 +102,19 @@ describe('havai fişek', () => {
   });
 });
 
+describe('havai fişeğin saati', () => {
+  test('saniyede iki kareye dek takvim duvar saatiyle gidiyor: zafer ekranının 2,4 sn\'si takvimin 2,4 sn\'si (Codex #93)', () => {
+    const fireworks = new Fireworks();
+    fireworks.start(11, '#22aa66');
+    // Yavaş makine: kare 0,4 sn; 2,4 sn'de altı kare.
+    for (let i = 0; i < 6; i++) fireworks.update(0.4, { x: 0, z: 0 }, 10);
+    const due = fireworkSchedule(11).filter((burst) => burst.at <= 2.4 + 1e-9).length;
+    assert.ok(due >= 2, `takvimde 2,4 sn'ye dek ${due} patlama`);
+    assert.equal(fireworks.stats().fired, due);
+    fireworks.dispose();
+  });
+});
+
 describe('toz', () => {
   test('bir buluta dokuz puf; dağılınca kayboluyor; en çok on dört bulut', () => {
     const street = new StreetLife(24, 24, 6, 0);

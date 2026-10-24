@@ -22,6 +22,7 @@ import { recordScenarioResult, scenarioRecord, scenarioRunKey } from './scenario
 import { t } from './i18n';
 import { CareerRunLine } from './CareerPanel';
 import { starRow, starThresholds } from './stars';
+import { VICTORY_DELAY_MS, useMomentDelay } from './MomentLayers';
 
 /**
  * Senaryo ekranları (Tur 39): açılış (durum, hedef, süre — oyun duraklamış
@@ -183,6 +184,10 @@ export function ScenarioResultScreen({ onNewGame, onReplay }: { onNewGame: () =>
     ? scenarioRunKey({ createdAtIso: state.meta.createdAtIso, finishedDay: scenario.finishedDay, outcome: scenario.outcome, score: scenario.score })
     : '';
   const [best, setBest] = useState(false);
+  // Önemli an (Tur 63): kazanılan senaryoda da havai fişek önce, sonuç ekranı
+  // zafer ekranı gibi biraz sonra; yoksa kutlama sonucun perdesinin altında
+  // başlıyordu (Codex #93). Kayıttan açılan sonuç ve azaltılmış hareket beklemiyor.
+  const ready = useMomentDelay(pending && scenario?.outcome === 'won' ? `scenario:${scenario.finishedDay}` : null, VICTORY_DELAY_MS, state);
 
   // Sonuç cihazda bir kez sayılıyor (sonuç ekranı yeniden açılsa da).
   useEffect(() => {
@@ -192,6 +197,7 @@ export function ScenarioResultScreen({ onNewGame, onReplay }: { onNewGame: () =>
 
   if (!pending || !scenario || !def) return null;
   const won = scenario.outcome === 'won';
+  if (won && !ready) return null;
   const record = scenarioRecord(def.id);
 
   return (

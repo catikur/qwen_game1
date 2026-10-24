@@ -366,13 +366,19 @@ export class Fireworks {
    * Bir kare: patlamalar kameranın baktığı yerin çevresinde (`extent` yarı
    * kenar); `scale` patlamanın boyu (kamera uzaklaştıkça büyüyor, yoksa
    * şehri uzaktan seyreden oyuncu bir iki benek görüyordu).
+   *
+   * Takvimin saati oyunun saatiyle aynı sınırda (kare başına en çok 0,5 sn,
+   * yalnız sekmeden dönüşün sıçraması kesiliyor): yavaş makinede de
+   * patlamalar duvar saatiyle gidiyor, zafer ekranının 2,4 sn'lik
+   * beklemesiyle eş. 0,1 sn sınırında 10 karenin altında takvim geride
+   * kalıyor, ekran gösterinin başında iniyordu (Codex #93).
    */
   update(dt: number, center: { x: number; z: number }, extent: number, scale = 1): void {
     if (!this.running) return;
     this.center = center;
     this.extent = extent;
     this.scale = scale;
-    this.elapsed += Math.min(dt, 0.1);
+    this.elapsed += Math.min(dt, 0.5);
     while (this.fired < this.schedule.length && this.schedule[this.fired]!.at <= this.elapsed) {
       this.launch(this.schedule[this.fired]!);
       this.fired++;

@@ -3824,18 +3824,33 @@ async function finish(browser, consoleErrors) {
     await sp.keyboard.press('Escape');
 
     // Bitiş: kriz bitiminde en değerli şirket — test parayı değil akışı ölçüyor.
+    // Kazanılan senaryoda sonuç ekranı havai fişeklerden sonra (Tur 63, Codex #93):
+    // bitişten ekrana geçen süre ve o sırada havai fişek sayfanın içinden ölçülüyor.
     const won = await sp.evaluate(() => {
       const c = window.__capital;
       const s = c.getState();
+      const trace = { finished: null, shown: null, fireworks: null };
+      window.__scenarioTrace = trace;
+      const observer = new MutationObserver(() => {
+        if (trace.finished === null || !document.querySelector('[data-scenario-result="won"]')) return;
+        trace.shown = Math.round(performance.now() - trace.finished);
+        trace.fireworks = c.renderInfo().moments.fireworks.active;
+        observer.disconnect();
+      });
+      observer.observe(document.body, { childList: true, subtree: true });
       // Üç yıldızın üstü ama zafer eşiğinin altı: zafer ekranı araya girmesin.
       s.companies[s.playerCompanyId].cash += 40_000_000;
       let guard = 0;
       while (s.scenario.finishedDay === undefined && guard++ < 200) c.engine.runDay();
+      trace.finished = performance.now();
       c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
       return { day: s.scenario.finishedDay, outcome: s.scenario.outcome, stars: s.scenario.stars, crisis: s.crisis?.phase ?? 'bitti' };
     });
     check('Kriz bittiği gün senaryo bitiyor', won.day === 350 && won.crisis === 'bitti', JSON.stringify(won));
-    await sp.waitForSelector('[data-scenario-result="won"]', { timeout: 5000 }).catch(() => null);
+    await sp.waitForSelector('[data-scenario-result="won"]', { timeout: 12000 }).catch(() => null);
+    const scenarioTrace = await sp.evaluate(() => window.__scenarioTrace);
+    check('Kazanılan senaryoda sonuç ekranı havai fişeklerden sonra (~2,4 sn) iniyor (Codex #93)',
+      scenarioTrace.shown !== null && scenarioTrace.shown >= 2200 && scenarioTrace.fireworks === true, JSON.stringify(scenarioTrace));
     const stars = await sp.locator('[data-scenario-result] [data-stars]').getAttribute('data-stars').catch(() => null);
     check('Sonuç ekranı: kazanıldı, üç yıldız, cihazdaki en iyi', stars === '3'
       && /en iyi sonucun/.test((await sp.locator('[data-scenario-best]').textContent().catch(() => '')) ?? ''), `yıldız ${stars}`);
@@ -3909,8 +3924,15 @@ async function finish(browser, consoleErrors) {
     check('"Baştan oyna" aynı senaryoyu aynı ad ve CEO ile yeniden kuruyor',
       replay.day === 150 && !replay.over && replay.name === lostAs.name && replay.ceo === lostAs.ceo, JSON.stringify(replay));
     // Tur 39b: Konsorsiyuma karşı, Zincir ustası, Şehrin sponsoru.
+    // Bekleyen bir sonuç (kazanılan senaryoda havai fişekten sonra) ekrana gelsin.
+    const pendingResult = (pg) => pg.waitForFunction(() => {
+      const run = window.__capital?.getState()?.scenario;
+      const pending = run !== undefined && run.finishedDay !== undefined && !run.resultSeen;
+      return !pending || document.querySelector('[data-scenario-result]') !== null;
+    }, null, { timeout: 12000 }).catch(() => null);
     const openScenario = async (id) => {
       await sp.evaluate(() => window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 }));
+      await pendingResult(sp);
       if ((await sp.locator('[data-scenario-result]').count()) > 0) {
         // Sonuç ekranı açıksa listeye onun "Senaryolar" düğmesiyle.
         await sp.locator('[data-scenario-result] .gameover-actions button').last().click();
@@ -3950,7 +3972,7 @@ async function finish(browser, consoleErrors) {
       c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
       return { outcome: s.scenario.outcome, stars: s.scenario.stars, victory: s.victory !== undefined, dismissed: s.victory?.dismissed === true };
     });
-    await sp.waitForSelector('[data-scenario-result="won"]', { timeout: 5000 }).catch(() => null);
+    await sp.waitForSelector('[data-scenario-result="won"]', { timeout: 12000 }).catch(() => null);
     check('Zafer hedefi: zafer günü senaryo kazanılıyor, zafer ekranı ayrıca çıkmıyor',
       consortiumWon.outcome === 'won' && consortiumWon.stars === 3 && consortiumWon.victory && consortiumWon.dismissed
         && (await sp.locator('.gameover:not(.scenario-result)').count()) === 0, JSON.stringify(consortiumWon));
@@ -4095,7 +4117,7 @@ async function finish(browser, consoleErrors) {
       c.engine.runDay();
       c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
     });
-    await sp.waitForSelector('[data-scenario-result="won"]', { timeout: 5000 }).catch(() => null);
+    await sp.waitForSelector('[data-scenario-result="won"]', { timeout: 12000 }).catch(() => null);
     check('İki şehirde de zafer: senaryo kazanılıyor, zafer ekranı araya girmiyor',
       (await sp.locator('[data-scenario-result="won"]').count()) === 1 && (await sp.locator('.gameover:not(.scenario-result)').count()) === 0);
     // Tur 39c: uzun açılış telefonda ekrana sığmıyordu; katman kaymıyor, "Başla" düğmesine ulaşılamıyordu.
@@ -6616,6 +6638,12 @@ async function finish(browser, consoleErrors) {
 
     const open = async (id) => {
       await xp.evaluate(() => window.__capital?.engine.dispatch({ type: 'SET_SPEED', speed: 0 }));
+      // Bekleyen bir sonuç (kazanılan senaryoda havai fişekten sonra) ekrana gelsin.
+      await xp.waitForFunction(() => {
+        const run = window.__capital?.getState()?.scenario;
+        const pending = run !== undefined && run.finishedDay !== undefined && !run.resultSeen;
+        return !pending || document.querySelector('[data-scenario-result]') !== null;
+      }, null, { timeout: 12000 }).catch(() => null);
       if ((await xp.locator('.newgame').count()) === 0) {
         if ((await xp.locator('[data-scenario-result]').count()) > 0) {
           await xp.locator('[data-scenario-result] .gameover-actions button').last().click();
