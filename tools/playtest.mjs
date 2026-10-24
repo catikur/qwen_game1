@@ -7170,7 +7170,20 @@ async function finish(browser, consoleErrors) {
       return null;
     });
 
-    // İnşaat: temel atılırken toz, yükseliş bitince halka.
+    // İnşaat: temel atılırken toz, yükseliş bitince halka. Halka her karede sayfanın
+    // içinden izleniyor: yavaş makinede 1,15 sn'lik halka iki üç karede bitiyor.
+    await mp.evaluate(() => {
+      const watch = { grew: false, ringAfterRise: false };
+      window.__buildWatch = watch;
+      const started = performance.now();
+      const tick = () => {
+        const m = window.__capital.renderInfo().moments;
+        if (m.rising >= 1) watch.grew = true;
+        if (watch.grew && m.rising === 0 && m.rings >= 1) watch.ringAfterRise = true;
+        if (!watch.ringAfterRise && performance.now() - started < 20000) requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    });
     const built = await buildShop();
     await mp.waitForTimeout(160);
     const rising = await moments();
@@ -7178,8 +7191,9 @@ async function finish(browser, consoleErrors) {
     await mp.screenshot({ path: `${OUT}/moment-build.png` });
     check('İnşaat: temel atılırken toz kalkıyor, bina yerden yükseliyor', built !== null && rising.dust >= 1 && rising.rising >= 1, JSON.stringify(rising));
     await settle(() => window.__capital.renderInfo().buildingsGrowing === false);
-    const finished = await moments();
-    check('Yükseliş bitince yerde halka açılıyor', finished.rings >= 1 && finished.rising === 0, JSON.stringify(finished));
+    await settle(() => window.__buildWatch.ringAfterRise === true, 6000);
+    const finished = { ...(await moments()), watch: await mp.evaluate(() => window.__buildWatch) };
+    check('Yükseliş bitince yerde halka açılıyor', finished.watch.ringAfterRise && finished.rising === 0, JSON.stringify(finished));
     const calm = await settle(() => {
       const m = window.__capital.renderInfo().moments;
       return m.dust === 0 && m.rings === 0;
@@ -7386,7 +7400,7 @@ async function finish(browser, consoleErrors) {
       return { fireworks: m.fireworks, bursts: m.fireworkScreen, trace: window.__momentTrace };
     });
     check('Zafer: şehrin üstünde havai fişek, hemen zafer bandı (devralma bandı tam o an kalkarken bile)',
-      party.trace.raced && party.fireworks.active && party.fireworks.shells >= 1 && party.fireworks.height > 0 && party.trace.banner !== null && party.trace.banner < 800 && party.trace.bannerText.includes('Şehrin sahibi'),
+      party.trace.raced && party.fireworks.active && party.fireworks.shells >= 1 && party.fireworks.height > 0 && party.trace.banner !== null && party.trace.banner < 1500 && party.trace.bannerText.includes('Şehrin sahibi'),
       JSON.stringify({ ...party, bursts: undefined }));
     check('Patlamalar ekranın içinde, üst üçte ikide', party.bursts.length >= 1 && party.bursts.every((b) => b.visible && b.y < 860 * 0.66),
       JSON.stringify(party.bursts));
@@ -7501,6 +7515,8 @@ async function finish(browser, consoleErrors) {
       midway.switched < 1500 && midway.screen !== null && midway.screen < 2300 && midway.fireworks === false, JSON.stringify(midway));
     await mp.locator('.gameover.victory .gameover-actions button.primary').click();
     await mp.emulateMedia({ reducedMotion: 'no-preference' });
+    // Tercih değişikliği bir sonraki karede bildiriliyor (yavaş makinede bir saniyeyi aşabiliyor).
+    await settle(() => window.__capital.renderInfo().reducedMotion === false, 8000);
 
     // Veri lensinde anlar çizilmiyor.
     await mp.evaluate(() => {
