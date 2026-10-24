@@ -181,12 +181,14 @@ panelinde hazır kuralın adının yerine yazıyor.
 | | `raidWarmupMultiplier` | 0,65 | 0,2–1 |
 | `tight_credit` (Sıkı banka) | `rateDelta` | 0,04 | 0–0,12 |
 | | `limitMultiplier` | 0,6 | 0,1–1 |
-| | `startingLoanShare` | 0,5 | 0–0,9 |
-| | `startingLoanDays` | 360 | 60–900 tam sayı |
 | `scarce_land` (Kıt arsa) | `priceMultiplier` | 1,7 | 1–4 |
 | | `unlockDelay` | 1,5 | 1–3 |
 
 Senaryo hazır kuralı ayarsız da kullanabilir: `"rules": ["storms"]`.
+
+Sıkı bankanın serbest oyundaki kuruluş kredisi (payı ve vadesi) pakette
+ayar değil: senaryoda şirket devirle başlıyor, kredisi devrin
+`setup.loan`'u (faizine kuralın `rateDelta`'sı ekleniyor).
 
 ## Paylaşım kodu
 

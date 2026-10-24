@@ -137,6 +137,11 @@ describe('paketin biçimi', () => {
     assert.ok(!reversed.ok && reversed.issues.some((i) => i.path === 'rules[0].params.gapDays' && i.code === 'range'));
     const unknown = bad({ hiz: 2 });
     assert.ok(!unknown.ok && unknown.issues.some((i) => i.path === 'rules[0].params.hiz' && i.code === 'unknownField'));
+    // Senaryoda etkisiz kalan ayar kabul edilmiyor (Codex #97): kuruluş kredisi devirde yenisiyle değişiyor.
+    const loanRule = validatePack(JSON.parse(JSON.stringify(pack([{ ...rescue(), rules: ['pahali'] }], {
+      rules: [{ id: 'pahali', base: 'tight_credit', name: 'Pahalı', blurb: 'Faiz yüksek', params: { startingLoanShare: 0.8 } }],
+    }))));
+    assert.ok(!loanRule.ok && loanRule.issues.some((i) => i.path === 'rules[0].params.startingLoanShare' && i.code === 'unknownField'));
     const twice = bad({ firstDay: 60 }, ['sert-kis', 'storms']);
     assert.ok(!twice.ok && twice.issues.some((i) => i.path === 'scenarios[0].rules[1]' && i.code === 'conflict'));
     const shadow = validatePack(pack([rescue()], { rules: [{ ...rules[0]!, id: 'storms' }] as Pack['rules'] }));
@@ -221,12 +226,14 @@ describe('paketin senaryosu oyunda', () => {
 
   test('metinler dil başına: etkin dil, yoksa Türkçe', () => {
     const scenario = { ...rescue(), title: { tr: 'Kurtarma operasyonu', en: 'Rescue mission' }, tagline: { en: 'Only English' } };
-    const [def] = registerPack(pack([scenario], { id: 'iki-dil' }));
+    const [def] = registerPack(pack([scenario], { id: 'iki-dil', name: { tr: 'İki dil', en: 'Two languages' } }));
     assert.equal(def!.title, 'Kurtarma operasyonu');
     assert.equal(def!.tagline, 'Only English');
+    assert.equal(def!.source?.packName, 'İki dil');
     setLocale('en');
     try {
       assert.equal(def!.title, 'Rescue mission');
+      assert.equal(def!.source?.packName, 'Two languages', 'paketin adı da dil değişince (Codex #97)');
     } finally {
       setLocale('tr');
       unregisterPack('iki-dil');

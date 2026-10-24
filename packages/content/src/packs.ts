@@ -153,11 +153,12 @@ const RULE_PARAMS: Record<ModifierId, Record<string, { min: number; max: number;
     budgetMultiplier: { min: 1, max: 2.5 },
     raidWarmupMultiplier: { min: 0.2, max: 1 },
   },
+  // Kuruluş kredisinin payı ve vadesi (`startingLoanShare`, `startingLoanDays`) yok:
+  // senaryoda ön tarihin şirketi devirde yenisiyle değişiyor, kredi devrin kendi
+  // `setup.loan`'undan (Codex #97: ayar kabul edilip etkisiz kalıyordu).
   tight_credit: {
     rateDelta: { min: 0, max: 0.12 },
     limitMultiplier: { min: 0.1, max: 1 },
-    startingLoanShare: { min: 0, max: 0.9 },
-    startingLoanDays: { min: 60, max: 900, integer: true },
   },
   scarce_land: {
     priceMultiplier: { min: 1, max: 4 },
@@ -681,11 +682,13 @@ export function scenarioFromPack(pack: Pack, scenario: PackScenario): ScenarioDe
     setup: scenario.setup,
     source: {
       packId: pack.id,
-      packName: packText(pack.name),
+      packName: '',
       ...(pack.author ? { author: pack.author } : {}),
       doc: packForScenario(pack, scenario.id),
     },
   } as ScenarioDef;
+  // Paketin adı da etkin dilde (öteki metinler gibi; Codex #97).
+  defineText(def.source!, 'packName', () => packText(pack.name));
   defineText(def, 'title', () => packText(scenario.title));
   defineText(def, 'tagline', () => packText(scenario.tagline));
   defineText(def, 'brief', () => packText(scenario.brief));
