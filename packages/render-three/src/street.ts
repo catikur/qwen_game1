@@ -201,9 +201,11 @@ export class StreetLife {
 
   /**
    * Bir toz bulutu (Tur 63): `x, z`de, binanın boyuna göre `size`. Aynı
-   * anda en çok `MAX_DUST`; fazlası en eskisini siliyor.
+   * anda en çok `MAX_DUST`; fazlası en eskisini siliyor. Veri lensindeyken
+   * toz yok: saat duruyor, lens kapanınca eski bir an oynamasın (Codex #93).
    */
   burst(x: number, z: number, size = 1): void {
+    if (this.lens) return;
     if (this.dust.length >= MAX_DUST) this.dust.shift();
     this.dust.push({ x, z, size, start: this.clock });
   }
@@ -227,8 +229,13 @@ export class StreetLife {
     this.applyWalkerCount();
   }
 
-  /** Veri lensinde manzara susuyor: yaya da duman da. */
+  /**
+   * Veri lensinde manzara susuyor: yaya da duman da. Süren toz bitiyor:
+   * lensteyken saat ilerlemiyor, yoksa lens kapanınca dakikalar önceki
+   * inşaatın tozu yeniden kalkıyordu (Codex #93).
+   */
   setDataLens(active: boolean): void {
+    if (active) this.dust.length = 0;
     this.lens = active;
     this.group.visible = !active;
   }

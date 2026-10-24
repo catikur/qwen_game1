@@ -157,6 +157,25 @@ describe('toz temizliği', () => {
   });
 });
 
+describe('toz ve veri lensi', () => {
+  test('lens açılınca süren toz bitiyor, lensteyken toz kalkmıyor; lens kapanınca eski toz dönmüyor (Codex #93)', () => {
+    const street = new StreetLife(24, 24, 6, 0);
+    street.burst(5, 5, 1);
+    street.update(0.016);
+    assert.equal(street.stats.dust, 1);
+    street.setDataLens(true);
+    street.burst(8, 8, 1);
+    for (let i = 0; i < 600; i++) street.update(0.1);
+    street.setDataLens(false);
+    street.update(0.016);
+    assert.equal(street.stats.dust, 0, 'lensin ardından eski toz yok');
+    street.burst(9, 9, 1);
+    street.update(0.016);
+    assert.equal(street.stats.dust, 1, 'lens kapanınca toz yine kalkıyor');
+    street.dispose();
+  });
+});
+
 describe('havai fişeğin yüksekliği', () => {
   /** Kameranın baktığı yer (0, 0, 0); `distance` uzaklıkta, `polar` eğimle. */
   function cameraAt(distance: number, polar: number): THREE.PerspectiveCamera {

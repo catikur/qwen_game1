@@ -7401,12 +7401,28 @@ async function finish(browser, consoleErrors) {
       const waited = performance.now();
       while (c.renderInfo().moments.dust < 1 && performance.now() - waited < 4000) await new Promise((resolve) => requestAnimationFrame(resolve));
       const before = c.renderInfo().moments.dust;
+      // Kasa da tam o an sayıyor (Codex #93): büyük bir giriş; kasanın etiketi yeni tutara
+      // geçince (React çizdi, sayım başladı) hemen azaltılmış harekete geçiliyor.
+      const metric = () => [...document.querySelectorAll('.metric-value')].find((el) => el.querySelector('.tween-money'));
+      const label = () => metric()?.getAttribute('aria-label') ?? '';
+      const tween = () => metric()?.querySelector('.tween-money')?.textContent ?? '';
+      const labelBefore = label();
+      const s = c.getState();
+      s.companies[s.playerCompanyId].cash += 7654321;
+      engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+      for (let i = 0; i < 400 && label() === labelBefore; i++) await new Promise((resolve) => setTimeout(resolve, 5));
+      const target = label().slice(label().lastIndexOf(': ') + 2);
+      const counting = tween() !== target;
       document.querySelector('[data-setting="motion"][data-choice="reduced"]').click();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      const cash = { counting, target, shown: tween() };
       await new Promise((resolve) => requestAnimationFrame(resolve));
-      return { before, after: window.__capital.renderInfo().moments.dust, reduced: window.__capital.renderInfo().reducedMotion };
+      return { before, after: window.__capital.renderInfo().moments.dust, reduced: window.__capital.renderInfo().reducedMotion, cash };
     });
     await mp.keyboard.press('Escape');
-    check('Azaltılmış harekete geçince süren toz hemen kalkıyor', dustSwitch.before >= 1 && dustSwitch.after === 0 && dustSwitch.reduced, JSON.stringify(dustSwitch));
+    check('Azaltılmış harekete geçince süren toz hemen kalkıyor', dustSwitch.before >= 1 && dustSwitch.after === 0 && dustSwitch.reduced, JSON.stringify({ ...dustSwitch, cash: undefined }));
+    check('Kasa sayarken azaltılmış harekete geçince sayım kesiliyor, tutar hemen (Codex #93)',
+      dustSwitch.cash.counting && dustSwitch.cash.shown === dustSwitch.cash.target, JSON.stringify(dustSwitch.cash));
     await settle(() => window.__capital.renderInfo().moments.fireworks.active === false, 8000);
     await buildShop();
     await mp.waitForTimeout(120);

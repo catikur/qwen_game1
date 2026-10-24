@@ -4,7 +4,7 @@ import { PLAYER_ACCENT } from '@capital/content';
 import { formatMoney } from '@capital/core';
 import type { GameState } from '@capital/core';
 import { useGame, useGameState } from './useGame';
-import { reducedMotion, useReducedMotion, useSettings } from './settings';
+import { useReducedMotion, useSettings } from './settings';
 import { MONEY_TAGS, momentsBetween, moneyTagsOf, snapshotOf } from './moments';
 import type { Moment, MomentSnapshot, MoneyTag } from './moments';
 import { t } from './i18n';
@@ -150,6 +150,8 @@ export function MoneyTags(): ReactElement | null {
  */
 export function TweenMoney({ value, source }: { value: number; source: GameState }): ReactElement {
   const ref = useRef<HTMLSpanElement>(null);
+  // Sayım sürerken azaltılmış harekete geçilirse sayım kesiliyor, tutar hemen (Codex #93).
+  const reduced = useReducedMotion();
   const shown = useRef(value);
   const from = useRef<GameState>(source);
 
@@ -157,7 +159,7 @@ export function TweenMoney({ value, source }: { value: number; source: GameState
     const el = ref.current;
     if (!el) return;
     const start = shown.current;
-    const jump = from.current !== source || reducedMotion() || Math.abs(value - start) < 1;
+    const jump = from.current !== source || reduced || Math.abs(value - start) < 1;
     from.current = source;
     if (jump) {
       shown.current = value;
@@ -177,7 +179,7 @@ export function TweenMoney({ value, source }: { value: number; source: GameState
     return () => {
       cancelAnimationFrame(frame);
     };
-  }, [value, source]);
+  }, [value, source, reduced]);
 
   return <span ref={ref} className="tween-money" />;
 }
