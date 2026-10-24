@@ -244,7 +244,14 @@ try {
 } finally {
   if (win) await win.close();
   driver.kill();
-  rmSync(DATA, { recursive: true, force: true });
+  if (driver.exitCode === null) await new Promise((resolve) => driver.once('exit', resolve));
+  // Pencerenin süreçleri (WebKit, mesa'nın gölgelendirici önbelleği) kapanırken
+  // hâlâ yazıyor olabiliyor: silme yeniden deneniyor, temizlik testi düşürmüyor.
+  try {
+    rmSync(DATA, { recursive: true, force: true, maxRetries: 10, retryDelay: 300 });
+  } catch (error) {
+    console.warn(`Geçici dizin silinemedi: ${error.message}`);
+  }
 }
 
 console.log(`\n================================\nTOPLAM: ${passed} geçti, ${failed} kaldı`);
