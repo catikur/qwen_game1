@@ -1372,7 +1372,9 @@ export class CityRenderer {
       mixWeather(this.weatherFrom, this.weatherTo, this.weatherBlend, this.weatherNow);
     }
     const weather = this.weatherNow;
-    this.sun.intensity = (1.1 + daylight * 1.35) * weather.sun;
+    // Bulut yalnız gün ışığını kısıyor; gecenin tabanı (1,1) olduğu gibi:
+    // fırtınalı gece de okunur kalmalı (tarayıcı testi, "güneş sönmüyor").
+    this.sun.intensity = 1.1 + daylight * 1.35 * weather.sun;
     // Renk iki sabit ton arasında geçer: gece soğuk ay ışığı, gündüz ılık
     // güneş. Ton (hue) üzerinden geçmek yeşilden geçirirdi.
     this.sun.color.copy(MOONLIGHT).lerp(SUNLIGHT, daylight);

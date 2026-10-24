@@ -6839,8 +6839,9 @@ Hava görünüm, simülasyon değil:
 - **Çimen** mevsim tonunda: yaz sıcak, sonbahar sararmış, kış soğuk.
 - **Kar** zemini, kırsalı ve çatıları beyaza çekiyor, ağaçlar karlı.
   Parseller bölge rengini taşıyor: kar onları örtmüyor, yalnız açıyor.
-- **Bulut** güneşi kısıyor (fırtınada yarıya), göğü griye çekiyor; sis
-  ufku yaklaştırıyor.
+- **Bulut** gün ışığını kısıyor (fırtınada yarıya), göğü griye çekiyor;
+  gecenin taban ışığına dokunmuyor, fırtınalı gece de okunuyor. Sis ufku
+  yaklaştırıyor.
 - **Yağmur ve kar** kameranın baktığı yerin çevresinde düşüyor (en çok
   1.600 damla, 1.800 tane); kutu kamerayla geziyor, bütün şehre
   yağdırmanın maliyeti yok. Bütçe kalite kademesiyle kısılıyor.
@@ -6857,7 +6858,7 @@ Hava görünüm, simülasyon değil:
 - **Yardım:** "Pazar yaşıyor" maddesi mevsimin üst barda ve şehirde
   (ağaçlar, hava) okunduğunu da söylüyor.
 
-**Tam tarayıcı koşusunun bulduğu iki şey.**
+**Tam tarayıcı koşularının bulduğu üç şey.**
 - *Telefonda üst bar üçe bölündü.* İkon tarihin yanında ~19 px yer
   alıyordu; iPhone 13'te (390 px) ikinci satırda marka (112 px) ve hız
   düğmeleri (232 px) yan yana sığmadı, bar 100 px'e çıktı. Telefonda ikon
@@ -6867,6 +6868,10 @@ Hava görünüm, simülasyon değil:
   eşitlemesiyle sahneye iniyor; yazılımsal GPU'da bu 0,3–1,1 sn sürüyor ve
   main'de de aynı (iki derlemeyle ölçüldü). Kontroller sabit 300 ms
   bekliyordu; artık durumu bekliyor (en çok 5 sn).
+- *Fırtınalı gecede güneş sönüyordu.* Bulut çarpanı güneşin bütününe
+  uygulanıyordu; gecenin taban ışığı (1,1) bulutla 0,56'ya iniyor, "gecenin
+  en karanlık anında güneş sönmüyor" kontrolü (≥ 0,6) kalıyordu. Bulut artık
+  yalnız gün ışığı payını kısıyor.
 
 **Bütçe.**
 - Açılışta derlenen program 17 (16'dan; sınır 20). Kar noktaları tek yeni
