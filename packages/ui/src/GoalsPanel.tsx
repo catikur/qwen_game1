@@ -26,6 +26,7 @@ import { careerSummary } from './career';
 import { ModifierLine } from './ModifierLine';
 import { PathSummary } from './PathSummary';
 import { VICTORY_DELAY_MS, useMomentDelay } from './MomentLayers';
+import { CityCardButton } from './CityCard';
 
 /** Görevin "şu an / hedef" satırı, görevin kendi biriminde. */
 function questNumbers(state: GameState, board: QuestBoard, quest: QuestState): string {
@@ -159,12 +160,16 @@ export function GoalsPanel(): ReactElement {
   return (
     <div className="goals">
       {/* Kariyer (Tur 41): rozetler ve koşu geçmişi; oyun içinde buradan. */}
-      <button type="button" className="ghost career-open" data-career-open onClick={() => setView({ openPanel: 'career' })}>
-        {t('hud.career.open', {
-          done: career.statuses.filter((status) => career.unlocked[status.def.id]).length,
-          total: career.statuses.length,
-        })}
-      </button>
+      <div className="goals-actions">
+        <button type="button" className="ghost career-open" data-career-open onClick={() => setView({ openPanel: 'career' })}>
+          {t('hud.career.open', {
+            done: career.statuses.filter((status) => career.unlocked[status.def.id]).length,
+            total: career.statuses.length,
+          })}
+        </button>
+        {/* Şehir kartı (Tur 64): koşunun o anki özeti, oyun sürerken de. */}
+        <CityCardButton className="ghost career-open" />
+      </div>
       <ScenarioGoalSection />
       <QuestBoardView />
       <h3 className="goals-ladder-title">{t('hud.quests.ladder')}</h3>
@@ -300,6 +305,7 @@ export function VictoryScreen({ onNewGame }: { onNewGame: () => void }): ReactEl
               {t('hud.victory.openCity')}
             </button>
           )}
+          <CityCardButton />
           <button type="button" className="ghost-invert" onClick={onNewGame}>
             {t('hud.victory.newEmpire')}
           </button>

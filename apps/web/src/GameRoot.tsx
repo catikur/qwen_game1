@@ -36,7 +36,7 @@ import {
 } from '@capital/ui';
 import type { ExportOutcome, FocusTarget, GameContextValue, LeagueBoard, ToastMessage, ViewState } from '@capital/ui';
 import { setBeforeUpdate } from './pwa';
-import { deliverTextFile } from './host';
+import { deliverImageFile, deliverTextFile } from './host';
 import { createLeagueBoard, fallbackLeagueBoard, leagueServerConfigured } from './league-board';
 import { Soundscape } from './audio';
 
@@ -511,6 +511,23 @@ export function GameRoot({
 
   const projectTile = useCallback((tileId: number) => rendererRef.current?.screenOfTile(tileId) ?? null, []);
 
+  // Şehir kartı (Tur 64). Veri lensi şehri boyuyor: kart şehrin kendisini
+  // gösteriyor, lens bir anlığına kapanıp geri geliyor (sahne iki karede
+  // yeni görünüme geçiyor).
+  const snapshotCity = useCallback(async (width: number, height: number) => {
+    const lens = viewRef.current.lens;
+    if (lens !== 'none') {
+      setViewState((current) => ({ ...current, lens: 'none' }));
+      await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+    }
+    try {
+      return rendererRef.current?.snapshot(width, height) ?? null;
+    } finally {
+      if (lens !== 'none') setViewState((current) => ({ ...current, lens }));
+    }
+  }, []);
+  const saveImage = useCallback((filename: string, blob: Blob) => deliverImageFile(filename, blob), []);
+
   const context = useMemo<GameContextValue>(
     () => ({
       engine,
@@ -528,6 +545,8 @@ export function GameRoot({
       importSaveText,
       focusOn,
       projectTile,
+      snapshotCity,
+      saveImage,
       league,
       audio,
     }),
@@ -547,6 +566,8 @@ export function GameRoot({
       importSaveText,
       focusOn,
       projectTile,
+      snapshotCity,
+      saveImage,
       league,
       audio,
     ],

@@ -3,6 +3,7 @@ import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { SharedKernelBloomPass, postProcessingMaterials } from './bloom';
+import { cardBounds, cardView, placeCardCamera } from './cardView';
 import { isSoftwareRenderer } from './gpu';
 import { BUILDING_BY_ID, DISTRICT_ARCHETYPES, PLAYER_ACCENT as PLAYER_COLORS, STRUCTURE_BY_ID, WEATHER_BY_ID } from '@capital/content';
 import type { BuildingDef, MassForm, StructureDef } from '@capital/content';
@@ -1623,9 +1624,7 @@ export class CityRenderer {
    * Harita boyutundan bağımsız olması bu yüzden önemli: Tur 8 şehri
    * 24×24'ten 30×30'a çıkardı ve gölge kalitesi hiç etkilenmedi.
    */
-  private updateShadowVolume(): void {
-    const target = this.controller.targetPoint;
-    const distance = this.controller.currentDistance;
+  private updateShadowVolume(target = this.controller.targetPoint, distance = this.controller.currentDistance): void {
     // Görüş alanı uzaklıkla büyüyor; pay ekliyoruz ki kadraja giren ama
     // merkezden uzak binalar gölgesiz kalmasın.
     const extent = Math.max(10, distance * 0.85);
@@ -1697,9 +1696,67 @@ export class CityRenderer {
     }
 
     if (this.state) this.syncGhost(this.state.map.width);
+    this.draw();
+    this.adaptQuality(dt);
+  }
+
+  private draw(): void {
     if (this.composer) this.composer.render();
     else this.renderer.render(this.scene, this.controller.camera);
-    this.adaptQuality(dt);
+  }
+
+  /**
+   * Şehir kartının görseli (Tur 64): şehrin sabit bir kuşbakışı, verilen
+   * boyutta; gölgelendiriciler hazır değilse ya da şehir yoksa `null`.
+   *
+   * Ayrı bir hedefe değil, tuvalin kendisine ve canlı karenin yoluyla
+   * (bloom zinciri açıksa onunla) çiziliyor: ara hedefe çizmek programın
+   * anahtarını değiştirir, kart yeni programlar derletirdi. Tuval bir anlığına
+   * kartın boyutuna geçiyor, kare 2B bir tuvale kopyalanıyor, sonra boyut,
+   * kamera ve gölge hacmi geri geliyor ve canlı kare yeniden çiziliyor; hepsi
+   * aynı görevde, tarayıcı ekrana ara kareyi hiç basmıyor. Seçim, hayalet,
+   * yağış, halka ve havai fişek kartta yok.
+   */
+  snapshot(width: number, height: number): HTMLCanvasElement | null {
+    if (this.disposed || !this.state || this.shaderWarmup !== 'done') return null;
+    const pose = cardView(cardBounds(this.state, this.view.playerCompanyId), width / height);
+    const camera = this.controller.camera;
+    const position = camera.position.clone();
+    const quaternion = camera.quaternion.clone();
+    const ratio = this.renderer.getPixelRatio();
+    const hidden = [this.hover, this.selection, this.ghost, this.precipitation.group, this.rings.group, this.fireworks.group].filter(
+      (object) => object.visible,
+    );
+    for (const object of hidden) object.visible = false;
+    try {
+      this.renderer.setPixelRatio(1);
+      this.renderer.setSize(width, height, false);
+      if (this.composer) {
+        this.composer.setPixelRatio(1);
+        this.composer.setSize(width, height);
+      }
+      camera.aspect = width / height;
+      camera.updateProjectionMatrix();
+      placeCardCamera(camera, pose);
+      this.updateShadowVolume(pose, pose.distance);
+      this.draw();
+      const card = document.createElement('canvas');
+      card.width = width;
+      card.height = height;
+      card.getContext('2d')?.drawImage(this.canvas, 0, 0, width, height);
+      return card;
+    } finally {
+      for (const object of hidden) object.visible = true;
+      camera.position.copy(position);
+      camera.quaternion.copy(quaternion);
+      camera.updateMatrixWorld();
+      this.renderer.setPixelRatio(ratio);
+      this.resize();
+      this.updateShadowVolume();
+      this.draw();
+      // Kartın uzun karesi kalite ölçümüne girmesin: kademe bunun için inmesin.
+      this.qualityWarmup = Math.max(this.qualityWarmup, 2);
+    }
   }
 
   /**

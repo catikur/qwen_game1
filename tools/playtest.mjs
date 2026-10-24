@@ -3094,6 +3094,7 @@ async function finish(browser, consoleErrors) {
       .catch(() => false);
     check('Lig sonucu ekranı iniyor', resultShown);
     if (resultShown) {
+      check('Lig sonucu ekranında şehir kartı düğmesi (Tur 64)', (await lp.locator('.league-result [data-city-card-open]').count()) === 1);
       await lp.locator('.league-result button:has-text("Tabloya")').click();
       await lp.waitForTimeout(300);
       await lp.locator('.league-result button:has-text("Tabloyu aç")').click();
@@ -3860,6 +3861,7 @@ async function finish(browser, consoleErrors) {
     check('Sonuç ekranı: kazanıldı, üç yıldız, cihazdaki en iyi', stars === '3'
       && /en iyi sonucun/.test((await sp.locator('[data-scenario-best]').textContent().catch(() => '')) ?? ''), `yıldız ${stars}`);
     check('Sonuç beklerken zafer ve oyun sonu ekranı çıkmıyor', (await sp.locator('.gameover:not(.scenario-result)').count()) === 0);
+    check('Senaryo sonucu ekranında şehir kartı düğmesi (Tur 64)', (await sp.locator('[data-scenario-result] [data-city-card-open]').count()) === 1);
     await sp.keyboard.press('Space');
     await sp.waitForTimeout(400);
     const resultHeld = await sp.evaluate(() => ({ speed: window.__capital.getState().time.speed, day: window.__capital.getState().time.day }));
@@ -7666,6 +7668,219 @@ async function finish(browser, consoleErrors) {
       pmBanner !== null && pmBanner.text.includes(`${pmTaken} is yours now`) && pmBanner.left >= 16 && pmBanner.right <= 374 && pmBanner.top >= pmBanner.barBottom && !pmBanner.page && pmErrors.length === 0,
       JSON.stringify(pmBanner));
     await mPhone.close();
+  }
+
+  section('Şehir kartı');
+  {
+    const kContext = await browser.newContext({ viewport: { width: 1280, height: 860 }, acceptDownloads: true });
+    await kContext.addInitScript(veteran, TUTORIAL_KEY);
+    const kp = await kContext.newPage();
+    const kErrors = [];
+    kp.on('pageerror', (e) => kErrors.push(e.message));
+    kp.on('console', (m) => { if (m.type() === 'error') kErrors.push(m.text()); });
+    await kp.goto('http://127.0.0.1:8811/');
+    await kp.waitForSelector('.newgame', { timeout: 20000 });
+    await kp.fill('.newgame-field input[type="text"]', 'Kart AŞ');
+    await kp.locator('button:has-text("Şirketi kur")').click();
+    await kp.waitForSelector('.topbar', { timeout: 30000 });
+    await kp.waitForFunction(() => (window.__capital?.renderInfo()?.frameCount ?? 0) >= 4, null, { timeout: 60000 });
+    // Rakipler kursun, oyuncunun da birkaç dükkânı olsun; sonra şehir durur.
+    await kp.evaluate(() => {
+      const c = window.__capital;
+      for (let d = 0; d < 25; d++) c.engine.runDay();
+      const s = c.getState();
+      s.companies[s.playerCompanyId].cash += 20_000_000;
+      let built = 0;
+      for (const tile of s.map.tiles) {
+        if (built >= 7) break;
+        if (tile.kind !== 'plot' || tile.structureId || tile.ownerId) continue;
+        if (!c.engine.dispatch({ type: 'BUY_TILE', tileId: tile.id }).ok) continue;
+        if (c.engine.dispatch({ type: 'BUILD', tileId: tile.id, defId: 'corner_shop' }).ok) built++;
+      }
+      for (let d = 0; d < 12; d++) c.engine.runDay();
+      c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+      c.setTimeOfDay(0.3);
+    });
+    await kp.waitForFunction(() => window.__capital.renderInfo().buildingsGrowing === false, null, { timeout: 30000 }).catch(() => {});
+
+    // Kartın görselini sayfanın içinde ölçen işlev: panel açık renk, şirketin adı koyu, şehir düz değil.
+    const cardPixels = () => kp.evaluate(async () => {
+      const img = document.querySelector('[data-city-card-image]');
+      if (!img) return null;
+      await img.decode().catch(() => {});
+      const canvas = document.createElement('canvas');
+      canvas.width = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0);
+      const region = (x0, y0, x1, y1) => {
+        const data = ctx.getImageData(x0, y0, x1 - x0, y1 - y0).data;
+        let sum = 0;
+        let sq = 0;
+        let dark = 0;
+        const n = data.length / 4;
+        for (let i = 0; i < data.length; i += 4) {
+          const l = 0.2126 * data[i] + 0.7152 * data[i + 1] + 0.0722 * data[i + 2];
+          sum += l;
+          sq += l * l;
+          if (l < 90) dark++;
+        }
+        const mean = sum / n;
+        return { mean: Math.round(mean), sd: Math.round(Math.sqrt(Math.max(0, sq / n - mean * mean))), dark };
+      };
+      return {
+        width: img.naturalWidth,
+        height: img.naturalHeight,
+        alt: img.alt,
+        panel: region(60, 60, 560, 580),
+        name: region(110, 110, 560, 180),
+        city: region(640, 60, 1160, 560),
+      };
+    });
+    const sceneNow = () => kp.evaluate(() => {
+      const canvas = document.querySelector('canvas.scene');
+      const info = window.__capital.renderInfo();
+      return { programs: info.programs, width: canvas.width, height: canvas.height, target: window.__capital.cameraTarget(), frames: info.frameCount, lens: info.activeLens };
+    });
+
+    // Oyun sürerken Hedefler'den.
+    const day = await kp.evaluate(() => window.__capital.getState().time.day);
+    const before = await sceneNow();
+    await kp.locator('.goal-chip').first().click();
+    await kp.locator('.goals [data-city-card-open]').click();
+    await kp.waitForSelector('[data-city-card="ready"]', { timeout: 60000 });
+    const live = await cardPixels();
+    const after = await sceneNow();
+    await kp.screenshot({ path: `${OUT}/city-card-dialog.png` });
+    check('Şehir kartı 1200 × 630: panel açık, şirketin adı koyu, şehir düz bir renk değil',
+      live !== null && live.width === 1200 && live.height === 630 && live.panel.mean > 200 && live.name.dark > 300 && live.city.sd > 12,
+      JSON.stringify(live && { panel: live.panel, name: live.name, city: live.city }));
+    check('Kartın metni koşuyu söylüyor (ekran okuyucu ve paylaşım)', live !== null && live.alt.includes('Kart AŞ') && live.alt.includes('Koşu sürüyor') && live.alt.includes(`${day}. gün`),
+      live?.alt ?? 'görsel yok');
+    check('Kart yeni program derletmiyor; tuval, kamera geri geliyor, şehir çizilmeye devam ediyor',
+      after.programs === before.programs && after.width === before.width && after.height === before.height
+        && after.target.x === before.target.x && after.target.z === before.target.z && after.frames > before.frames,
+      `program ${before.programs} → ${after.programs} · tuval ${before.width}×${before.height} → ${after.width}×${after.height} · kare ${before.frames} → ${after.frames}`);
+
+    // İndirme: dosya adı ASCII, içi 1200 × 630 PNG.
+    const download = kp.waitForEvent('download', { timeout: 20000 }).catch(() => null);
+    await kp.locator('[data-city-card-download]').click();
+    const file = await download;
+    let png = null;
+    if (file) {
+      const bytes = fs.readFileSync(await file.path());
+      png = { signature: bytes.subarray(0, 8).toString('hex'), width: bytes.readUInt32BE(16), height: bytes.readUInt32BE(20), size: bytes.length };
+    }
+    const note = await kp.locator('[data-city-card-note]').textContent({ timeout: 5000 }).catch(() => '');
+    check('Kart indiriliyor: adı capitalforge-Kart-AS-gun….png, içi 1200 × 630 PNG; pencere sonucu söylüyor',
+      file !== null && file.suggestedFilename() === `capitalforge-Kart-AS-gun${day}.png` && png?.signature === '89504e470d0a1a0a' && png.width === 1200 && png.height === 630 && note.includes('indiriliyor'),
+      `${file?.suggestedFilename() ?? 'indirme yok'} · ${JSON.stringify(png)} · ${note}`);
+    await kp.keyboard.press('Escape');
+    const closed = await kp.waitForSelector('[data-city-card]', { state: 'detached', timeout: 5000 }).then(() => true).catch(() => false);
+    const goalsKept = (await kp.locator('.goals').count()) === 1;
+    check('Escape yalnız kartı kapatıyor, Hedefler açık kalıyor', closed && goalsKept, `kart kapandı ${closed} · Hedefler ${goalsKept}`);
+    await kp.keyboard.press('Escape');
+
+    // Veri lensinde: kart şehrin kendisini çekiyor, lens sonra geri geliyor.
+    await kp.evaluate(() => window.__capital.setLens('ownership'));
+    await kp.waitForFunction(() => window.__capital.renderInfo().activeLens === 'ownership', null, { timeout: 15000 });
+    await kp.evaluate(() => {
+      const seen = [];
+      window.__lensWatch = seen;
+      const tick = () => {
+        const lens = window.__capital.renderInfo().activeLens;
+        if (seen[seen.length - 1] !== lens) seen.push(lens);
+        if (seen.length < 4 && document.querySelector('[data-city-card="ready"]') === null) requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    });
+    await kp.locator('.goal-chip').first().click();
+    await kp.locator('.goals [data-city-card-open]').click();
+    await kp.waitForSelector('[data-city-card="ready"]', { timeout: 60000 });
+    await kp.waitForFunction(() => window.__capital.renderInfo().activeLens === 'ownership', null, { timeout: 15000 }).catch(() => {});
+    const lensSeen = await kp.evaluate(() => [...window.__lensWatch, window.__capital.renderInfo().activeLens]);
+    check('Veri lensi açıkken kart şehrin kendisini çekiyor, lens sonra geri geliyor', lensSeen.includes('none') && lensSeen[lensSeen.length - 1] === 'ownership', lensSeen.join(' → '));
+    await kp.locator('[data-city-card-close]').click();
+    await kp.evaluate(() => window.__capital.setLens('none'));
+
+    // Zafer ekranında.
+    await kp.evaluate(() => {
+      const c = window.__capital;
+      const s = c.getState();
+      s.victory = { day: s.time.day, kind: 'monopoly', path: 'retail', shares: { retail: 0.8, realestate: 0.2, energy: 0, freight: 0 }, acquisitions: 0 };
+      c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+    });
+    await kp.waitForSelector('.gameover.victory [data-city-card-open]', { timeout: 15000 });
+    await kp.locator('.gameover.victory [data-city-card-open]').click();
+    await kp.waitForSelector('[data-city-card="ready"]', { timeout: 60000 });
+    const won = await cardPixels();
+    // Pencere zafer ekranının üstünde: ortasındaki öğe pencerenin.
+    const onTop = await kp.evaluate(() => {
+      const body = document.querySelector('.card-dialog-body');
+      const r = body.getBoundingClientRect();
+      return body.contains(document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2));
+    });
+    await kp.screenshot({ path: `${OUT}/city-card-victory.png` });
+    check('Zafer ekranından kart: "Tekel kuruldu" ve zaferin yolu; pencere zafer ekranının üstünde',
+      won !== null && won.alt.includes('Tekel kuruldu') && won.alt.includes('Perakende ve zincir') && onTop, `${won?.alt ?? 'görsel yok'} · üstte ${onTop}`);
+    await kp.locator('[data-city-card-close]').click();
+
+    // Oyun sonunda.
+    await kp.evaluate(() => {
+      const c = window.__capital;
+      const s = c.getState();
+      s.victory.dismissed = true;
+      s.gameOver = { day: s.time.day, byCompanyId: Object.keys(s.companies).find((id) => id !== s.playerCompanyId) };
+      c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+    });
+    await kp.waitForSelector('.gameover:not(.victory) [data-city-card-open]', { timeout: 15000 });
+    await kp.locator('.gameover:not(.victory) [data-city-card-open]').click();
+    await kp.waitForSelector('[data-city-card="ready"]', { timeout: 60000 });
+    const lost = await cardPixels();
+    check('Oyun sonundan kart: devralınan koşu', lost !== null && lost.alt.includes('İmparatorluk el değiştirdi'), lost?.alt ?? 'görsel yok');
+    check('Şehir kartı akışında konsol temiz', kErrors.length === 0, kErrors.slice(0, 2).join(' | '));
+    await kContext.close();
+
+    // Telefonda İngilizce: pencere ekrana sığıyor, kart İngilizce.
+    const kPhone = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+    await kPhone.addInitScript(veteran, TUTORIAL_KEY);
+    await kPhone.addInitScript(() => localStorage.setItem('capitalforge.locale', 'en'));
+    const pk = await kPhone.newPage();
+    const pkErrors = [];
+    pk.on('pageerror', (e) => pkErrors.push(e.message));
+    await pk.goto('http://127.0.0.1:8811/');
+    await pk.waitForSelector('.newgame', { timeout: 20000 });
+    await pk.locator('[data-newgame-start]').click();
+    await pk.waitForSelector('.topbar', { timeout: 30000 });
+    await pk.waitForFunction(() => (window.__capital?.renderInfo()?.frameCount ?? 0) >= 4, null, { timeout: 60000 });
+    await pk.evaluate(() => {
+      const c = window.__capital;
+      for (let d = 0; d < 8; d++) c.engine.runDay();
+      c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+    });
+    await pk.locator('.goal-chip').first().click();
+    await pk.locator('.goals [data-city-card-open]').click();
+    await pk.waitForSelector('[data-city-card="ready"]', { timeout: 60000 });
+    const phone = await pk.evaluate(() => {
+      const body = document.querySelector('.card-dialog-body').getBoundingClientRect();
+      const img = document.querySelector('[data-city-card-image]');
+      const shown = img.getBoundingClientRect();
+      return {
+        left: Math.round(body.left),
+        right: Math.round(body.right),
+        imgWidth: Math.round(shown.width),
+        ratio: Math.round((shown.width / shown.height) * 100) / 100,
+        alt: img.alt,
+        download: document.querySelector('[data-city-card-download]')?.textContent ?? '',
+        page: document.documentElement.scrollWidth > innerWidth + 1,
+      };
+    });
+    await pk.screenshot({ path: `${OUT}/city-card-phone.png` });
+    check('Telefonda İngilizce kart: pencere ekrana sığıyor, görsel oranını koruyor',
+      phone.left >= 0 && phone.right <= 390 && phone.imgWidth <= 366 && Math.abs(phone.ratio - 1.9) < 0.05 && !phone.page
+        && phone.alt.includes('Run in progress') && phone.download === 'Download image' && pkErrors.length === 0,
+      JSON.stringify(phone));
+    await kPhone.close();
   }
 
   section('Mobil');

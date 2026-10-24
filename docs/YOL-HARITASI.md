@@ -116,8 +116,12 @@ bölümünün sonunda.
   ekranın üstünde "… artık senin". Her gün en çok kazandıran üç binanın
   çatısından dünkü kâr yükseliyor, kasa sayarak değişiyor. Zaferde şehrin
   üstünde havai fişek, zafer ekranı ardından. Azaltılmış harekette hiçbiri
-  çizilmiyor. Görünüm: lig izi aynı. — bu PR
-- **64 · Paylaşılabilir şehir kartı.** Koşunun özeti tek bir görselde.
+  çizilmiyor. Görünüm: lig izi aynı. — bitti (#93)
+- **64 · Paylaşılabilir şehir kartı.** Koşunun özeti tek bir görselde:
+  1200 × 630 PNG, solda şirket, sonuç, gün, dört sayı ve şirketin yolu,
+  sağda şehrin kuşbakışı (şirketin binalarını sığdıran sabit bir bakış).
+  Zafer, senaryo ve lig sonucu, oyun sonu ekranlarında ve Hedefler'de;
+  indir ya da paylaş. Görünüm: lig izi aynı. — bu PR
 - **65 · Değerlendirme ve telefon performansı.**
 
 ### Faz 5 · Platform ve topluluk

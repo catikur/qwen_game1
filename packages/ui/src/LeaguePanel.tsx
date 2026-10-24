@@ -10,6 +10,7 @@ import { t } from './i18n';
 import { CareerRunLine } from './CareerPanel';
 import { GhostChart, GhostMoves } from './LeagueGhosts';
 import { LeagueFriends } from './LeagueFriends';
+import { CityCardButton } from './CityCard';
 import type { CurveSeries } from './LeagueGhosts';
 import type { MessageKey } from './i18n';
 
@@ -587,6 +588,7 @@ export function LeagueResultScreen({ onNewGame }: { onNewGame: () => void }): Re
           >
             {t('app.league.result.openTable')}
           </button>
+          <CityCardButton />
           <button type="button" className="ghost-invert" onClick={onNewGame}>
             {t('app.league.result.newRun')}
           </button>
