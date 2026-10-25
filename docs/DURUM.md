@@ -7878,7 +7878,8 @@ birebir (simülasyon `a5ded51fb01e62a5`, lig `104a3ce17d31216b`).
   (`apps/desktop/src-tauri/src/steam.rs`) Steamworks'e `steamworks`
   paketiyle bağlanıyor; Steamworks oyuncunun istatistiklerini açılıştan
   biraz sonra indirdiği için açma istekleri kuyrukta bekliyor, arka planda
-  100 ms'de bir deneniyor, açılan olunca `StoreStats`; Steamworks'te
+  100 ms'de bir deneniyor, açılan olunca `StoreStats` (yazılamazsa ~10 sn'de
+  bir yeniden); Steamworks'te
   tanımsız ad ~60 sn sonra düşüyor. Bağlantı `steam` özelliğiyle
   derleniyor; özellik kapalı, istemci kapalı ya da oyun Steam'den
   açılmamışsa oyun aynı (sayfanın konsolunda bir satır). Paket senaryoları
@@ -7933,6 +7934,14 @@ birebir (simülasyon `a5ded51fb01e62a5`, lig `104a3ce17d31216b`).
 - Steam'siz derlemede kuyruğun kodu kullanılmıyordu (derleyici uyarısı);
   kuyruk yalnız `steam` özelliğinde ve testte derleniyor.
 
+**Codex'in bulduğu şey.** `StoreStats` başarısız olunca (Steam çevrimdışı,
+yazma sınırı) sonucu atılıyordu; başarım kuyruktan çıkmış, sayfa da
+bildirdi saydığı için oturum boyunca yeniden denenmiyordu. Kuyruk artık
+yazılmamış açılışı tutuyor ve ~10 sn'de bir (`STORE_RETRY`) yeniden
+yazıyor; Steamworks de başarılı olana kadar denemeyi öneriyor. Birim testi
+iki başarısız yazmadan sonra üçüncüde yazıldığını, arada ve sonrasında
+fazladan yazma olmadığını sınıyor.
+
 **Doğrulama.**
 - `pnpm test` 849/849 (844'ten); tip denetimi temiz.
   - `apps/web/test/desktop.test.ts` → "Steam başarımları (Tur 70)" (5
@@ -7940,10 +7949,11 @@ birebir (simülasyon `a5ded51fb01e62a5`, lig `104a3ce17d31216b`).
     açılışta ve her değişiklikte bildirim, bilinmeyen rozet atlanıyor;
     Steam yokken hiçbir şey gitmiyor, abone de olunmuyor; düşen istek
     sonraki değişiklikte yeniden; kabuğun iki komutu kayıtlı.
-- `cargo test` 10/10, `cargo test --features steam` 9/9: kuyruk
+- `cargo test` 11/11, `cargo test --features steam` 10/10: kuyruk
   istatistikler inene kadar bekliyor ve sonra yazıyor, açılan ad yeniden
-  girmiyor, tanımsız ad sınırda düşüyor; Steam'siz derlemede durum
-  "kapalı". İki derlemede de uyarı yok.
+  girmiyor, tanımsız ad sınırda düşüyor, yazılamayan başarım aralıkla
+  yeniden yazılıyor; Steam'siz derlemede durum "kapalı". İki derlemede de
+  uyarı yok.
 - Gerçek pencerede uçtan uca 19/19 (17'den), yeni "Steam ve tek pencere":
   Steam komutları derlenmiş oyunda yanıt veriyor; ikinci kopya kendiliğinden
   kapanıyor, ilk pencere yerinde.

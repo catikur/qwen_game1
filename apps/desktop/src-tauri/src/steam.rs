@@ -10,8 +10,10 @@
 //! açılıştan kısa süre sonra indiriyor (SDK 1.61'den beri kendiliğinden) ve o
 //! zamana kadar `SetAchievement` başarısız. Arka plandaki iş parçacığı geri
 //! çağrıları çalıştırıp kuyruktakileri yeniden deniyor; bir başarım açılınca
-//! `StoreStats` (Steam'in bildirimi ve sunucuya yazma). Steamworks'te
-//! tanımlanmamış ad bir süre sonra kuyruktan düşüyor.
+//! `StoreStats` (Steam'in bildirimi ve sunucuya yazma). Yazma başarısız
+//! olursa (Steam çevrimdışı, sınır) ~10 sn'de bir yeniden deneniyor;
+//! Steamworks de bunu öneriyor. Steamworks'te tanımlanmamış ad bir süre
+//! sonra kuyruktan düşüyor.
 
 #[cfg(any(feature = "steam", test))]
 use std::collections::{BTreeMap, BTreeSet};
@@ -26,6 +28,10 @@ use serde::Serialize;
 /// Kuyruktaki bir ad en çok bu kadar denenir (≈ 60 sn, `TICK` arayla).
 #[cfg(any(feature = "steam", test))]
 const MAX_ATTEMPTS: u32 = 600;
+/// Başarısız `StoreStats` bu kadar tur sonra yeniden (≈ 10 sn): Steam
+/// yazmayı sınırlıyor, her turda denemek boşa.
+#[cfg(any(feature = "steam", test))]
+const STORE_RETRY: u32 = 100;
 #[cfg(feature = "steam")]
 const TICK: Duration = Duration::from_millis(100);
 
@@ -40,8 +46,8 @@ pub struct Status {
 pub trait Backend {
     /// Başarımı bellekte açar; istatistikler inmediyse ya da ad bilinmiyorsa `false`.
     fn set(&self, name: &str) -> bool;
-    /// Açılanları Steam'e yazar.
-    fn store(&self);
+    /// Açılanları Steam'e yazar; yazılamadıysa `false`.
+    fn store(&self) -> bool;
 }
 
 /// Açılmayı bekleyen başarımlar ve deneme sayıları.
@@ -50,6 +56,10 @@ pub trait Backend {
 pub struct Queue {
     pending: BTreeMap<String, u32>,
     done: BTreeSet<String>,
+    /// Açılmış ama Steam'e yazılamamış başarım var.
+    unstored: bool,
+    /// Yeniden yazmaya kalan tur.
+    store_wait: u32,
 }
 
 #[cfg(any(feature = "steam", test))]
@@ -63,7 +73,8 @@ impl Queue {
         }
     }
 
-    /// Kuyruktakileri dener; açılanlar döner. Bir tanesi açılırsa `store`.
+    /// Kuyruktakileri dener; açılanlar döner. Bir tanesi açılırsa `store`;
+    /// yazılamazsa `STORE_RETRY` tur sonra yeniden.
     pub fn process(&mut self, backend: &impl Backend) -> Vec<String> {
         let mut opened = Vec::new();
         let mut dropped = Vec::new();
@@ -86,7 +97,17 @@ impl Queue {
             eprintln!("Steam başarımı açılamadı (Steamworks'te tanımlı mı?): {name}");
         }
         if !opened.is_empty() {
-            backend.store();
+            self.unstored = true;
+            self.store_wait = 0;
+        }
+        if self.unstored {
+            if self.store_wait > 0 {
+                self.store_wait -= 1;
+            } else if backend.store() {
+                self.unstored = false;
+            } else {
+                self.store_wait = STORE_RETRY;
+            }
         }
         opened
     }
@@ -142,8 +163,8 @@ impl Backend for Steam {
         self.0.user_stats().achievement(name).set().is_ok()
     }
 
-    fn store(&self) {
-        let _ = self.0.user_stats().store_stats();
+    fn store(&self) -> bool {
+        self.0.user_stats().store_stats().is_ok()
     }
 }
 
@@ -180,18 +201,27 @@ mod tests {
     use super::*;
     use std::cell::{Cell, RefCell};
 
-    /// İstatistikler `ready` denemeden sonra iniyor; `known` dışındaki ad hiç açılmıyor.
+    /// İstatistikler `ready` denemeden sonra iniyor; `known` dışındaki ad hiç
+    /// açılmıyor; ilk `store_failures` yazma başarısız.
     struct Fake {
         known: Vec<&'static str>,
         ready: u32,
         calls: Cell<u32>,
         opened: RefCell<Vec<String>>,
         stores: Cell<u32>,
+        store_failures: Cell<u32>,
     }
 
     impl Fake {
         fn new(known: Vec<&'static str>, ready: u32) -> Self {
-            Fake { known, ready, calls: Cell::new(0), opened: RefCell::new(Vec::new()), stores: Cell::new(0) }
+            Fake {
+                known,
+                ready,
+                calls: Cell::new(0),
+                opened: RefCell::new(Vec::new()),
+                stores: Cell::new(0),
+                store_failures: Cell::new(0),
+            }
         }
     }
 
@@ -205,8 +235,13 @@ mod tests {
             true
         }
 
-        fn store(&self) {
+        fn store(&self) -> bool {
             self.stores.set(self.stores.get() + 1);
+            if self.store_failures.get() > 0 {
+                self.store_failures.set(self.store_failures.get() - 1);
+                return false;
+            }
+            true
         }
     }
 
@@ -250,6 +285,30 @@ mod tests {
             queue.process(&fake);
         }
         assert_eq!(queue.pending(), 0, "bilinmeyen ad düştü");
+    }
+
+    #[test]
+    fn yazilamayan_basarim_aralikla_yeniden_yaziliyor() {
+        let fake = Fake::new(vec!["CF_SHIELD"], 0);
+        fake.store_failures.set(2);
+        let mut queue = Queue::default();
+        queue.push(names(&["CF_SHIELD"]));
+        assert_eq!(queue.process(&fake).len(), 1);
+        assert_eq!(fake.stores.get(), 1, "ilk yazma hemen, başarısız");
+        for _ in 0..STORE_RETRY {
+            queue.process(&fake);
+        }
+        assert_eq!(fake.stores.get(), 1, "arada yeniden denenmiyor");
+        queue.process(&fake);
+        assert_eq!(fake.stores.get(), 2, "aralık dolunca yeniden, yine başarısız");
+        for _ in 0..=STORE_RETRY {
+            queue.process(&fake);
+        }
+        assert_eq!(fake.stores.get(), 3, "üçüncüde yazıldı");
+        for _ in 0..(STORE_RETRY * 2) {
+            queue.process(&fake);
+        }
+        assert_eq!(fake.stores.get(), 3, "yazıldıktan sonra yeniden yazma yok");
     }
 
     #[cfg(not(feature = "steam"))]

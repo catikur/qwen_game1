@@ -20,7 +20,8 @@
   Steam istemcisi açık değilse ya da oyun Steam'den açılmadıysa oyun aynı;
   yalnız başarım gitmiyor (günlükte bir satır). Steamworks oyuncunun
   istatistiklerini açılıştan biraz sonra indiriyor; o zamana kadar açma
-  istekleri kuyrukta bekliyor (`Queue`, birim testli).
+  istekleri kuyrukta bekliyor (`Queue`, birim testli). Steam'e yazma
+  (`StoreStats`) başarısız olursa ~10 sn'de bir yeniden deneniyor.
 - **Tek pencere.** İkinci kopya açılmıyor, açık pencere öne geliyor
   (`tauri-plugin-single-instance`); iki pencere aynı kayda yazamıyor.
 - **Kayıtlar Steam Cloud'a hazır.** Dosyada, kökleri sabit; Auto-Cloud
@@ -194,7 +195,8 @@ API adını değiştirme.
   kayıtlı.
 - `cargo test` ve `cargo test --features steam`: kuyruk istatistikler
   inene kadar bekliyor, açılan ad yeniden girmiyor, tanımsız ad sınırda
-  düşüyor; Steam'siz derlemede durum "kapalı".
+  düşüyor, yazılamayan başarım aralıkla yeniden yazılıyor; Steam'siz
+  derlemede durum "kapalı".
 - `tools/desktop-e2e.mjs` → "Steam ve tek pencere": derlenmiş oyunda
   Steam komutları yanıt veriyor; ikinci kopya açılmıyor, ilk pencere
   yerinde.
