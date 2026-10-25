@@ -7730,6 +7730,10 @@ kapanırken (`pagehide`) hemen yazıyor.
   raftakiyle değil); menüden editöre dönüş; Düzenle'nin sorusu; İngilizce;
   telefon (taşma yok, alt şerit ekranda); konsol temiz. "İçerik
   paketleri" 18/18.
+- Tam tarayıcı koşusu 710/710, konsol temiz (53 dk). Koşu Codex
+  düzeltmelerinden önceki paketle; düzeltmelerin dokunduğu bölüm ("Senaryo
+  editörü") sonra 15/15. Tur 67'de yük altında kalan "düşük kare hızında
+  oyun saati" kontrolü bu kez geçti.
 - Paket bütçesi tamam.
 - Codex (#98) iki bulgu, aynı kökten: kuralın kimliği yazılırken bir an
   başka kuralın kimliğinden geçerse (`kural-a` → `kural-b` → `kural-c`) o
@@ -7849,7 +7853,7 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi). Senaryo şehirlerinde gün 3–17 ms (`pnpm dayperf`, Tur 43) |
 | Birim testi | **831 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de, Tur 52'de sunucuda tekrar, Tur 53'te haftanın kuralı ve günün koşusu, Tur 54'te hayalet eğri, Tur 55'te davetli ligler, Tur 56'da taşıma sözleşmeleri, Tur 57'de enerji, Tur 58'de gayrimenkul, Tur 59'da rakiplerin hafızası, Tur 60'ta senaryo paketi II, Tur 61'de şirketin yolu, Tur 62'de hava ve mevsimin görünümü, Tur 63'te önemli anlar, Tur 64'te şehir kartı, Tur 65'te telefon performansı, Tur 66'da masaüstü sürümü, Tur 67'de içerik paketleri, Tur 68'de senaryo editörü); Rust tarafı 6 test (`cargo test`, `apps/desktop/src-tauri`) |
 | Denge testi | **379 kontrol, hepsi geçiyor** (33 bölüm, süreleriyle; ~16 dk) |
-| Tarayıcı testi | **711 kontrol** (Tur 68'de 15 yeni), son tam koşu 693/694 (Tur 67: kalan kontrol yük altında oyun saatinin hızı; tek başına üç kez geçti; Tur 66'da 675/678), 0 konsol hatası (bu yavaş makinede ~51–75 dk, önce ~41 dk); duman koşusu 132 (~8 dk, rehber dahil) |
+| Tarayıcı testi | **711 kontrol** (Tur 68'de 15 yeni), son tam koşu 710/710 (Tur 68; Tur 67'de 693/694: yük altında oyun saatinin hızı, tek başına üç kez geçti), 0 konsol hatası (bu yavaş makinede ~51–75 dk, önce ~41 dk); duman koşusu 132 (~8 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + paket bütçesi (Tur 46; Tur 48'den beri hizmet çalışanı ve manifest de) + duman oynanışı; masaüstüne dokunan PR'da Rust testleri, sürüm derlemesi ve gerçek pencerede 17 kontrol (Tur 66) |
 | Kapsam | 40 bina · 25 ürün · 7 kategori · 8 rakip profili · 10 CEO · 22 olay (11 şehir + 11 sektör) · 3 kriz · 12 karar kartı · 70 rakip sözü · 4 mizaç · 48 ilişki sözü · 5 fırsat balonu · 8 görev türü · 4 mevsim · 6 hava · 9 moda ürünü · 17 şehir yapısı (6 siluet) · 6 şehir projesi · 10 senaryo · 4 ek kural · 5 yol · 29 rozet |
 
