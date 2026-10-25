@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { ReactElement } from 'react';
 import type { GameEngine, GameState, LeagueBoardKind } from '@capital/core';
-import type { CitySizeId, DifficultyId, ModifierId } from '@capital/content';
+import type { CitySizeId, DifficultyId, ModifierId, ScenarioDef } from '@capital/content';
 import { AUTOSAVE_SLOT, loadGame } from '@capital/persistence';
 import { NewGameScreen, t, useLocale } from '@capital/ui';
 
@@ -97,8 +97,8 @@ export function App(): ReactElement {
     setPhase('playing');
   };
 
-  const launchScenario = (id: string, companyName: string, ceoId: string | null) => withGame((loaded) => {
-    const builder = loaded.startScenario(id, { companyName, ceoId });
+  const launchScenario = (scenario: string | ScenarioDef, companyName: string, ceoId: string | null) => withGame((loaded) => {
+    const builder = loaded.startScenario(scenario, { companyName, ceoId });
     setPreparing({ title: builder.def.title, done: 0, total: builder.totalDays });
     setPhase('preparing');
     const tick = () => {
@@ -117,11 +117,11 @@ export function App(): ReactElement {
     league: LeagueBoardKind | null,
     citySize: CitySizeId,
     tutorial: boolean,
-    scenarioId: string | null,
+    scenario: string | ScenarioDef | null,
     modifiers: ModifierId[],
   ) => {
-    if (scenarioId) {
-      launchScenario(scenarioId, companyName, ceoId);
+    if (scenario) {
+      launchScenario(scenario, companyName, ceoId);
       return;
     }
     withGame((loaded) => {
@@ -168,6 +168,7 @@ export function App(): ReactElement {
     return (
       <NewGameScreen
         onStart={start}
+        deliverFile={(filename, text) => import('./host').then((host) => host.deliverTextFile(filename, text))}
         {...(engine?.getState().scenario ? { initialScenario: engine.getState().scenario!.id } : {})}
         {...(engine ? { onCancel: () => setPhase('playing') } : {})}
       />

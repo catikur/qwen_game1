@@ -1,7 +1,9 @@
 # İçerik paketleri
 
-> Tur 67'de yazıldı. Kod `packages/content/src/packs.ts` (biçim, doğrulayıcı,
-> paylaşım kodu) ve `packages/ui/src/PackShelf.tsx` (kurulum ekranındaki raf).
+> Tur 67'de yazıldı, Tur 68'de editörle. Kod `packages/content/src/packs.ts`
+> (biçim, doğrulayıcı, sınır tabloları, paylaşım kodu),
+> `packages/ui/src/PackShelf.tsx` (kurulum ekranındaki raf) ve
+> `packages/ui/src/PackEditor.tsx` (senaryo editörü).
 > Örnek paket: [`docs/ornek-paket.json`](ornek-paket.json) (testler her
 > koşuda doğruluyor).
 
@@ -37,6 +39,42 @@ okumuyor; paket var olan parçaları bir araya getiriyor.
 - **Kaldırma.** Onayla; yıldızlar cihazda kalıyor.
 - Paketler tarayıcıda kalıcı (`capitalforge.packs.v1`; masaüstünde
   `profile/` altında dosya, Steam Cloud'la eşitleniyor). En fazla 20 paket.
+
+**Senaryo editörü (Tur 68).** Rafın altında **Senaryo yaz** (taslak varsa
+**Taslağa devam et**); paketten gelen senaryo seçiliyken **Düzenle**.
+Paketin bütün alanları formda: paket (kimlik, ad, yazar, diller),
+senaryolar (sekmeler; çoğalt, sil), tanıtım metinleri, şehir ve süre, hedef
+ve yıldızlar, ek kurallar, devir, paketin kuralları. JSON yazmak gerekmiyor.
+
+- **Sınırlar ve sorunlar.** Her sayı alanının yanında aralığı yazıyor; aralık
+  doğrulayıcının kendi tablosundan (`SCENARIO_RANGES`, `GOAL_RANGES`,
+  `SETUP_RANGES`, `RULE_PARAMS`, `PACK_LIMITS`): formda yazan, paketin kabul
+  ettiği. Doğrulayıcı her değişiklikte koşuyor; sorun alanın altında,
+  hepsi alt şeritte alan adıyla ("Kurtarma · Hedef tutar: …"), tıklayınca
+  alana gidiyor. Sorun varken Dene ve Rafa kaydet kapalı.
+- **Sayılar** etkin dilin ondalık işaretiyle; Türkçede "1,5" de "1.5" de
+  1,5. Nokta yalnız üçlü grupları ayırıyorsa binlik ("1.500.000"). Pay ve
+  oranlar yüzde yazılıyor (%40 → 0,4).
+- **Diller.** Birden çok dil seçilince her metnin her dilde girdisi var;
+  yeni dilin boş metinleri sorun olarak çıkıyor. Tek dile dönünce metinler
+  yeniden düz.
+- **Hedef türü** değişince yıldız ölçüsü hedefe göre (öndelik ya da gün) ve
+  hedefin başlangıç değerleri o türü kullanan hazır senaryodan. Hedef
+  cümlesi yeni türün doldurmadığı bir yer tutucu taşıyorsa (`{target}`
+  öndelik hedefinde) o türdeki hazır senaryonun cümlesine geçiyor; holding
+  ikinci şehri kuruyor.
+- **Ön izleme** kurulum ekranındaki kart ve ayrıntının kendisi; sorun
+  varken son geçerli hâli soluk.
+- **Dene.** Taslak kaydedilmeden oynanıyor; koşu taslağın tanımıyla (rafta
+  aynı kimlikli başka sürüm olsa da), kayıtta da o. Menüye dönünce editör
+  kaldığı yerden açılıyor. Deneme kariyere sayılmıyor (paketten gelen her
+  koşu gibi).
+- **Rafa kaydet** paketi yüklüyor; aynı kimlik yeni sürüm. **Dosya olarak
+  indir** paketin JSON'u (`<kimlik>.capitalforge.json`; masaüstünde
+  İndirilenler). Paket 64 KB'ı geçerse kaydetme kapalı.
+- **Taslak** bu cihazda kendiliğinden saklanıyor (`capitalforge.pack-draft.v1`;
+  masaüstünde `profile/` altında dosya). Tek taslak: kaydedilmemiş
+  değişiklik varken **Düzenle** önce soruyor.
 
 **Kayıt.** Oynanan senaryonun paketi kayda giriyor (`state.scenario.pack`).
 Kayıt, paketi yüklü olmayan bir cihazda da açılıyor. Aynı paketin başka bir
@@ -106,8 +144,10 @@ sayılmıyor.
 | `setup` | devir (aşağıda) |
 
 `goalText`'in yer tutucuları oyunda doluyor: `{days}` (süre), `{target}`
-(para hedefi, biçimli), `{share}` (zincirde pay, yüzde), `{rivals}` ve
-`{outlets}` (nakliye), `{units}` ve `{renewals}` (kiralık).
+(para hedefi, biçimli; net değer ve enerji), `{share}` (zincirde pay,
+yüzde), `{rivals}` ve `{outlets}` (nakliye), `{units}` ve `{renewals}`
+(kiralık). Hedefin doldurmadığı yer tutucu sorun (`placeholder`, Tur 68):
+metinde süslü parantezle kalırdı. Tablo `GOAL_PLACEHOLDERS`.
 
 ### Hedef
 
@@ -224,6 +264,7 @@ Doğrulayıcı ilk 40 sorunu döndürüyor (`{ path, code, params }`); raf ilk
 | `starsOrder` | üç yıldız ikiden zor değil |
 | `metric` | bu hedefte yıldız ölçüsü başka |
 | `needsSetup` | hedefin gerektirdiği kurulum yok (holding → `secondCity`) |
+| `placeholder` | hedef cümlesinde bu hedefin doldurmadığı yer tutucu (`value`) |
 
 ## Testler
 
@@ -234,4 +275,10 @@ Doğrulayıcı ilk 40 sorunu döndürüyor (`{ path, code, params }`); raf ilk
   dil başına metin; paylaşım kodu ve bozuk kod.
 - `packages/ui/test/packs.test.ts`: raf (ekle, yeni sürüm, kaldır, dolu),
   sorunların iki dilde metni, paketin kural adı, kariyere girmemesi.
-- Tarayıcı: `tools/playtest.mjs` → "İçerik paketleri".
+- `packages/core/test/packs.test.ts` (Tur 68): sınır tablolarının her ucu
+  doğrulayıcıda (en küçük ve en büyük geçiyor, hemen dışı `range`); yer
+  tutucular; taslaktan koşu ve tekrar oyna.
+- `packages/ui/test/packEditor.test.ts`: taslağın yolları, diller, her
+  hedef türü ve devrin her parçası geçerli bir senaryo veriyor, kurallar,
+  sorunun yeri, sayıların okunuşu, taslak deposu, editörün kendisi.
+- Tarayıcı: `tools/playtest.mjs` → "İçerik paketleri" ve "Senaryo editörü".

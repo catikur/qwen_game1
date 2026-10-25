@@ -97,7 +97,7 @@ describe('sorunların metni', () => {
   // Kayıt türü her kodu istiyor: doğrulayıcıya yeni kod eklenip metni unutulursa derleme kırılıyor.
   const CODES: Record<PackIssueCode, true> = {
     type: true, missing: true, unknownField: true, range: true, integer: true, enum: true, id: true, length: true, duplicate: true,
-    unknownRef: true, conflict: true, count: true, format: true, version: true, starsOrder: true, metric: true, needsSetup: true,
+    unknownRef: true, conflict: true, count: true, format: true, version: true, starsOrder: true, metric: true, needsSetup: true, placeholder: true,
   };
 
   test('her sorun kodunun iki dilde metni var', () => {

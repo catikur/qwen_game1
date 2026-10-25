@@ -1,11 +1,11 @@
-import { BUILDING_BY_ID } from './buildings';
+import { BUILDINGS } from './buildings';
 import { CATEGORIES } from './categories';
 import { DIFFICULTIES } from './difficulty';
 import type { DifficultyId } from './difficulty';
 import { CITY_SIZES } from './districts';
 import type { CitySizeId } from './districts';
-import { CRISIS_BY_ID } from './economy';
-import { GOOD_BY_ID } from './goods';
+import { CRISES } from './economy';
+import { GOODS } from './goods';
 import { currentLocale } from './messages';
 import { MODIFIERS, RULE_KEY } from './modifiers';
 import type { ModifierId } from './modifiers';
@@ -111,7 +111,8 @@ export type PackIssueCode =
   | 'version'
   | 'starsOrder'
   | 'metric'
-  | 'needsSetup';
+  | 'needsSetup'
+  | 'placeholder';
 
 export interface PackIssue {
   path: string;
@@ -121,7 +122,8 @@ export interface PackIssue {
 
 export type PackResult = { ok: true; pack: Pack } | { ok: false; issues: PackIssue[] };
 
-const LIMITS = {
+/** Metin uzunlukları ve liste sayıları (Tur 68'de editör de bunlardan). */
+export const PACK_LIMITS = {
   scenarios: 12,
   rules: 8,
   facts: 6,
@@ -132,10 +134,98 @@ const LIMITS = {
   fact: 220,
   name: 60,
   author: 60,
+  /** Devralınan şube sayısı. */
+  outlets: 12,
+  /** Boş duran (araştırma, pazarlama) bina sayısı. */
+  idle: 8,
+} as const;
+const LIMITS = PACK_LIMITS;
+
+/**
+ * Bir sayı alanının sınırı. Doğrulayıcı ve editör (Tur 68) aynı tablolardan
+ * okuyor: formda yazan aralık paketin kabul ettiği aralık.
+ */
+export interface NumberRange {
+  min: number;
+  max: number;
+  integer?: boolean;
+}
+
+export type ScenarioGoalKind = ScenarioGoal['kind'];
+
+export const GOAL_KINDS: readonly ScenarioGoalKind[] = ['netWorth', 'leadAtEnd', 'victory', 'chain', 'sponsor', 'monopoly', 'holding', 'freight', 'power', 'rental'];
+
+/** Senaryonun şehri ve süresi. */
+export const SCENARIO_RANGES = {
+  seed: { min: 1, max: 2_147_483_647, integer: true },
+  preludeDays: { min: 0, max: 400, integer: true },
+  days: { min: 30, max: 1000, integer: true },
+} as const satisfies Record<string, NumberRange>;
+
+/** Hedefin sayı alanları, türe göre (zincir hedefinin ürünü ayrıca: `PACK_CHOICES.chainGoods`). */
+export const GOAL_RANGES: Readonly<Record<ScenarioGoalKind, Readonly<Record<string, NumberRange>>>> = {
+  netWorth: { target: { min: 100_000, max: 100_000_000_000 } },
+  leadAtEnd: {},
+  victory: {},
+  chain: { share: { min: 0.05, max: 1 } },
+  sponsor: {
+    projects: { min: 1, max: 5, integer: true },
+    maxRank: { min: 1, max: 5, integer: true },
+    graceDays: { min: 0, max: 120, integer: true },
+  },
+  monopoly: {},
+  holding: {},
+  freight: { rivals: { min: 1, max: 6, integer: true }, outlets: { min: 1, max: 60, integer: true } },
+  power: { target: { min: 100_000, max: 10_000_000_000 } },
+  rental: { units: { min: 1, max: 20_000, integer: true }, renewals: { min: 0, max: 5, integer: true } },
+};
+
+/**
+ * Hedef cümlesinin (`goalText`) oyunda dolan yer tutucuları, hedefe göre
+ * (`scenarioGoalText`). Başkası metinde süslü parantezle kalırdı: Tur 68'de
+ * editörde hedef türü değişince eski türün `{target}`'ı boş görünüyordu.
+ */
+export const GOAL_PLACEHOLDERS: Readonly<Record<ScenarioGoalKind, readonly string[]>> = {
+  netWorth: ['days', 'target'],
+  leadAtEnd: ['days'],
+  victory: ['days'],
+  chain: ['days', 'share'],
+  sponsor: ['days'],
+  monopoly: ['days'],
+  holding: ['days'],
+  freight: ['days', 'rivals', 'outlets'],
+  power: ['days', 'target'],
+  rental: ['days', 'units', 'renewals'],
+};
+
+/**
+ * Yıldızın ölçüsü hedefin skoru (`systems/scenario.ts`): "bitişte en değerli
+ * ol" ve sponsorluk bitişteki öndelikle, diğerleri hedefe ulaşma günüyle.
+ */
+export function starMetric(kind: ScenarioGoalKind): ScenarioStars['metric'] {
+  return kind === 'leadAtEnd' || kind === 'sponsor' ? 'lead' : 'days';
+}
+
+/** Yıldız eşikleri: gün ölçüsünde üst sınır senaryonun süresi. */
+export function starRange(metric: ScenarioStars['metric'], days: number | undefined): NumberRange {
+  return metric === 'days' ? { min: 1, max: days ?? SCENARIO_RANGES.days.max, integer: true } : { min: 1, max: 10 };
+}
+
+/** Devrin sayı alanları; iç içe olanlar parçanın adıyla. */
+export const SETUP_RANGES = {
+  cash: { min: 0, max: 1_000_000_000 },
+  builtDaysAgo: { min: 0, max: 400, integer: true },
+  raiderStake: { min: 0, max: 0.45 },
+  feud: { min: 0, max: 4, integer: true },
+  loan: { amount: { min: 1_000, max: 1_000_000_000 }, termDays: { min: 30, max: 720, integer: true } },
+  crisis: { warningDays: { min: 0, max: 120, integer: true } },
+  consortium: { warningDays: { min: 5, max: 120, integer: true } },
+  projects: { firstInDays: { min: 0, max: 400, integer: true }, gapDays: { min: 30, max: 400, integer: true } },
+  secondCity: { capital: { min: 100_000, max: 1_000_000_000 } },
 } as const;
 
 /** Kuralların ayar sınırları: oyunu kırmayan, ölçülmüş aralıklar. */
-const RULE_PARAMS: Record<ModifierId, Record<string, { min: number; max: number; integer?: boolean } | 'boolean' | 'range'>> = {
+export const RULE_PARAMS: Readonly<Record<ModifierId, Readonly<Record<string, NumberRange | 'boolean' | 'range'>>>> = {
   storms: {
     firstDay: { min: 30, max: 600, integer: true },
     firstSpread: { min: 0, max: 300, integer: true },
@@ -158,14 +248,35 @@ const RULE_PARAMS: Record<ModifierId, Record<string, { min: number; max: number;
     unlockDelay: { min: 1, max: 3 },
   },
 };
-const GAP_RANGE = { min: 30, max: 900 };
+/** Kriz arası (`storms.gapDays`): `[en kısa, en uzun]` gün. */
+export const GAP_RANGE: NumberRange = { min: 30, max: 900, integer: true };
 
-const ID = /^[a-z0-9][a-z0-9-]{0,31}$/;
-const MODIFIER_IDS = MODIFIERS.map((modifier) => modifier.id);
-const CITY_SIZE_IDS = CITY_SIZES.map((size) => size.id);
-const DIFFICULTY_IDS = DIFFICULTIES.map((difficulty) => difficulty.id);
-const CATEGORY_IDS = Object.keys(CATEGORIES);
-const GOAL_KINDS = ['netWorth', 'leadAtEnd', 'victory', 'chain', 'sponsor', 'monopoly', 'holding', 'freight', 'power', 'rental'] as const;
+/**
+ * Kimlik alanlarının seçenekleri: doğrulayıcının kabul ettikleri, editörün
+ * listeledikleri. Katalogların yalnız kendi kayıtları (`toString` gibi miras
+ * adlar geçmiyor; Codex #97: hayalet kriz).
+ */
+export const PACK_CHOICES = {
+  /** Zinciri olan tüketici ürünü: hammadde → ara mal → raf. */
+  chainGoods: GOODS.filter((good) => good.tier === 'consumer' && good.inputGoodId).map((good) => good.id),
+  /** Devralınan şube: mağaza ya da kiralık (hazır senaryolardaki gibi). */
+  outlets: BUILDINGS.filter((def) => def.role === 'outlet' || def.role === 'rental').map((def) => def.id),
+  /** Boş duran bina: araştırma ya da pazarlama. */
+  idle: BUILDINGS.filter((def) => def.role === 'research' || def.role === 'marketing').map((def) => def.id),
+  crises: CRISES.map((crisis) => crisis.id),
+  categories: Object.keys(CATEGORIES) as CategoryId[],
+  modifiers: MODIFIERS.map((modifier) => modifier.id),
+  citySizes: CITY_SIZES.map((size) => size.id),
+  difficulties: DIFFICULTIES.map((difficulty) => difficulty.id),
+} as const;
+
+/** Paketin, kuralın ve senaryonun kimliği: küçük harf, rakam, tire; en fazla 32. */
+export const PACK_ID = /^[a-z0-9][a-z0-9-]{0,31}$/;
+const ID = PACK_ID;
+const MODIFIER_IDS = PACK_CHOICES.modifiers;
+const CITY_SIZE_IDS = PACK_CHOICES.citySizes;
+const DIFFICULTY_IDS = PACK_CHOICES.difficulties;
+const CATEGORY_IDS = PACK_CHOICES.categories;
 
 // ------------------------------------------------------------ Doğrulama
 
@@ -209,6 +320,10 @@ class Checker {
       return undefined;
     }
     return value;
+  }
+
+  range(record: Record<string, unknown>, key: string, path: string, spec: NumberRange, optional = false): number | undefined {
+    return this.number(record, key, path, spec.min, spec.max, { integer: spec.integer, optional });
   }
 
   boolean(record: Record<string, unknown>, key: string, path: string): boolean | undefined {
@@ -277,12 +392,9 @@ class Checker {
   }
 }
 
-/**
- * Kimlikle katalog araması, yalnız kendi alanları: `toString` gibi miras adlar
- * (`Object.prototype`) katalogda varmış gibi geçmesin (Codex #97: hayalet kriz).
- */
-function lookup<T>(catalog: Readonly<Record<string, T>>, id: unknown): T | undefined {
-  return typeof id === 'string' && Object.prototype.hasOwnProperty.call(catalog, id) ? catalog[id] : undefined;
+/** Seçenek listesinde mi: liste, katalog nesnesi değil (miras adlar geçmiyor). */
+function listed(choices: readonly string[], value: unknown): boolean {
+  return typeof value === 'string' && choices.includes(value);
 }
 
 function join(path: string, key: string | number): string {
@@ -363,7 +475,7 @@ function checkRuleParams(check: Checker, value: unknown, path: string, base: Mod
       } else if (pair[0] < GAP_RANGE.min || pair[1] > GAP_RANGE.max || pair[0] > pair[1]) {
         check.add(at, 'range', { min: GAP_RANGE.min, max: GAP_RANGE.max });
       }
-    } else check.number(record, key, path, spec.min, spec.max, { integer: spec.integer, optional: true });
+    } else check.range(record, key, path, spec, true);
   }
 }
 
@@ -385,11 +497,11 @@ function checkScenario(check: Checker, value: unknown, path: string, ruleBase: M
       facts.slice(0, LIMITS.facts).forEach((fact, index) => check.textValue(fact, join(join(path, 'facts'), index), LIMITS.fact));
     }
   }
-  check.number(record, 'seed', path, 1, 2_147_483_647, { integer: true });
+  check.range(record, 'seed', path, SCENARIO_RANGES.seed);
   check.choice(record, 'citySize', path, CITY_SIZE_IDS);
   check.choice(record, 'difficulty', path, DIFFICULTY_IDS);
-  check.number(record, 'preludeDays', path, 0, 400, { integer: true });
-  const days = check.number(record, 'days', path, 30, 1000, { integer: true });
+  check.range(record, 'preludeDays', path, SCENARIO_RANGES.preludeDays);
+  const days = check.range(record, 'days', path, SCENARIO_RANGES.days);
 
   // Kurallar: aynı hazır kural iki kez (biri paketin ayarıyla) seçilemez.
   const rules = record['rules'];
@@ -408,103 +520,76 @@ function checkScenario(check: Checker, value: unknown, path: string, ruleBase: M
   }
 
   const goalKind = checkGoal(check, record['goal'], join(path, 'goal'));
+  if (goalKind) checkPlaceholders(check, record['goalText'], join(path, 'goalText'), GOAL_PLACEHOLDERS[goalKind]);
   checkStars(check, record['stars'], join(path, 'stars'), goalKind, days);
   checkSetup(check, record['setup'], join(path, 'setup'), goalKind);
   return id;
 }
 
-function checkGoal(check: Checker, value: unknown, path: string): ScenarioGoal['kind'] | undefined {
+/** Metindeki `{ad}` ve `{ad|tekil|çoğul}` yer tutucuları hedefin doldurduklarından mı. */
+function checkPlaceholders(check: Checker, value: unknown, path: string, allowed: readonly string[]): void {
+  const scan = (text: unknown, at: string) => {
+    if (typeof text !== 'string') return;
+    for (const match of text.matchAll(/\{(\w+)(?:\|[^|{}]*\|[^|{}]*)?\}/g)) {
+      if (!allowed.includes(match[1]!)) {
+        check.add(at, 'placeholder', { value: `{${match[1]}}` });
+        return;
+      }
+    }
+  };
+  if (typeof value === 'string') scan(value, path);
+  else if (value && typeof value === 'object' && !Array.isArray(value)) for (const [locale, text] of Object.entries(value)) scan(text, join(path, locale));
+}
+
+function checkGoal(check: Checker, value: unknown, path: string): ScenarioGoalKind | undefined {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     check.add(path, value === undefined ? 'missing' : 'type', value === undefined ? undefined : { expected: 'object' });
     return undefined;
   }
   const kind = (value as Record<string, unknown>)['kind'];
-  if (typeof kind !== 'string' || !(GOAL_KINDS as readonly string[]).includes(kind)) {
+  if (!listed(GOAL_KINDS, kind)) {
     check.add(join(path, 'kind'), 'enum', { options: GOAL_KINDS.join(', ') });
     return undefined;
   }
-  const fields: Record<ScenarioGoal['kind'], string[]> = {
-    netWorth: ['target'],
-    leadAtEnd: [],
-    victory: [],
-    chain: ['goodId', 'share'],
-    sponsor: ['projects', 'maxRank', 'graceDays'],
-    monopoly: [],
-    holding: [],
-    freight: ['rivals', 'outlets'],
-    power: ['target'],
-    rental: ['units', 'renewals'],
-  };
-  const record = check.object(value, path, ['kind', ...fields[kind as ScenarioGoal['kind']]])!;
-  switch (kind) {
-    case 'netWorth':
-      check.number(record, 'target', path, 100_000, 100_000_000_000);
-      break;
-    case 'chain': {
-      const goodId = record['goodId'];
-      const good = lookup(GOOD_BY_ID, goodId);
-      // Zinciri olan bir tüketici ürünü: hammadde → ara mal → raf.
-      if (!good || good.tier !== 'consumer' || !good.inputGoodId) check.add(join(path, 'goodId'), 'unknownRef', { value: String(goodId) });
-      check.number(record, 'share', path, 0.05, 1);
-      break;
-    }
-    case 'sponsor':
-      check.number(record, 'projects', path, 1, 5, { integer: true });
-      check.number(record, 'maxRank', path, 1, 5, { integer: true });
-      check.number(record, 'graceDays', path, 0, 120, { integer: true });
-      break;
-    case 'freight':
-      check.number(record, 'rivals', path, 1, 6, { integer: true });
-      check.number(record, 'outlets', path, 1, 60, { integer: true });
-      break;
-    case 'power':
-      check.number(record, 'target', path, 100_000, 10_000_000_000);
-      break;
-    case 'rental':
-      check.number(record, 'units', path, 1, 20_000, { integer: true });
-      check.number(record, 'renewals', path, 0, 5, { integer: true });
-      break;
+  const ranges = GOAL_RANGES[kind as ScenarioGoalKind];
+  const fields = kind === 'chain' ? ['goodId', ...Object.keys(ranges)] : Object.keys(ranges);
+  const record = check.object(value, path, ['kind', ...fields])!;
+  if (kind === 'chain' && !listed(PACK_CHOICES.chainGoods, record['goodId'])) {
+    check.add(join(path, 'goodId'), 'unknownRef', { value: String(record['goodId']) });
   }
-  return kind as ScenarioGoal['kind'];
+  for (const [key, spec] of Object.entries(ranges)) check.range(record, key, path, spec);
+  return kind as ScenarioGoalKind;
 }
 
-function checkStars(check: Checker, value: unknown, path: string, goalKind: ScenarioGoal['kind'] | undefined, days: number | undefined): void {
+function checkStars(check: Checker, value: unknown, path: string, goalKind: ScenarioGoalKind | undefined, days: number | undefined): void {
   const record = check.object(value, path, ['metric', 'two', 'three']);
   if (!record) return;
   const metric = check.choice(record, 'metric', path, ['days', 'lead'] as const);
-  // Yıldızın ölçüsü hedefin skoru (`systems/scenario.ts`): "bitişte en değerli ol" ve
-  // sponsorluk bitişteki öndelikle, diğerleri hedefe ulaşma günüyle.
   if (metric && goalKind) {
-    const expected = goalKind === 'leadAtEnd' || goalKind === 'sponsor' ? 'lead' : 'days';
+    const expected = starMetric(goalKind);
     if (metric !== expected) check.add(join(path, 'metric'), 'metric', { expected });
   }
-  if (metric === 'days') {
-    const max = days ?? 1000;
-    const two = check.number(record, 'two', path, 1, max, { integer: true });
-    const three = check.number(record, 'three', path, 1, max, { integer: true });
-    if (two !== undefined && three !== undefined && three >= two) check.add(join(path, 'three'), 'starsOrder');
-  } else if (metric === 'lead') {
-    const two = check.number(record, 'two', path, 1, 10);
-    const three = check.number(record, 'three', path, 1, 10);
-    if (two !== undefined && three !== undefined && three <= two) check.add(join(path, 'three'), 'starsOrder');
-  }
+  if (!metric) return;
+  const spec = starRange(metric, days);
+  const two = check.range(record, 'two', path, spec);
+  const three = check.range(record, 'three', path, spec);
+  // Günde üç yıldız daha erken, öndelikte daha geniş fark.
+  if (two !== undefined && three !== undefined && (metric === 'days' ? three >= two : three <= two)) check.add(join(path, 'three'), 'starsOrder');
 }
 
-function checkSetup(check: Checker, value: unknown, path: string, goalKind: ScenarioGoal['kind'] | undefined): void {
+function checkSetup(check: Checker, value: unknown, path: string, goalKind: ScenarioGoalKind | undefined): void {
   const record = check.object(value, path, [
     'cash', 'outlets', 'idle', 'builtDaysAgo', 'loan', 'raiderStake', 'crisis', 'consortium', 'projects', 'freeze', 'secondCity', 'feud',
   ]);
   if (!record) return;
-  check.number(record, 'cash', path, 0, 1_000_000_000);
+  check.range(record, 'cash', path, SETUP_RANGES.cash);
   const outlets = record['outlets'];
   if (outlets !== undefined) {
     if (!Array.isArray(outlets)) check.add(join(path, 'outlets'), 'type', { expected: 'array' });
     else {
-      if (outlets.length > 12) check.add(join(path, 'outlets'), 'count', { max: 12 });
-      outlets.slice(0, 12).forEach((defId, index) => {
-        const def = lookup(BUILDING_BY_ID, defId);
-        // Devralınan şube: mağaza ya da kiralık (hazır senaryolardaki gibi).
-        if (!def || (def.role !== 'outlet' && def.role !== 'rental')) check.add(join(join(path, 'outlets'), index), 'unknownRef', { value: String(defId) });
+      if (outlets.length > LIMITS.outlets) check.add(join(path, 'outlets'), 'count', { max: LIMITS.outlets });
+      outlets.slice(0, LIMITS.outlets).forEach((defId, index) => {
+        if (!listed(PACK_CHOICES.outlets, defId)) check.add(join(join(path, 'outlets'), index), 'unknownRef', { value: String(defId) });
       });
     }
   }
@@ -513,47 +598,36 @@ function checkSetup(check: Checker, value: unknown, path: string, goalKind: Scen
     const idle = check.object(record['idle'], idlePath, ['defIds', 'focus']);
     if (idle) {
       const defIds = idle['defIds'];
-      if (!Array.isArray(defIds) || defIds.length === 0 || defIds.length > 8) check.add(join(idlePath, 'defIds'), 'count', { max: 8 });
+      if (!Array.isArray(defIds) || defIds.length === 0 || defIds.length > LIMITS.idle) check.add(join(idlePath, 'defIds'), 'count', { max: LIMITS.idle });
       else {
         defIds.forEach((defId, index) => {
-          const def = lookup(BUILDING_BY_ID, defId);
-          if (!def || (def.role !== 'research' && def.role !== 'marketing')) check.add(join(join(idlePath, 'defIds'), index), 'unknownRef', { value: String(defId) });
+          if (!listed(PACK_CHOICES.idle, defId)) check.add(join(join(idlePath, 'defIds'), index), 'unknownRef', { value: String(defId) });
         });
       }
-      check.choice(idle, 'focus', idlePath, CATEGORY_IDS as CategoryId[]);
+      check.choice(idle, 'focus', idlePath, CATEGORY_IDS);
     }
   }
-  check.number(record, 'builtDaysAgo', path, 0, 400, { integer: true, optional: true });
-  if (record['loan'] !== undefined) {
-    const loanPath = join(path, 'loan');
-    const loan = check.object(record['loan'], loanPath, ['amount', 'termDays']);
-    if (loan) {
-      check.number(loan, 'amount', loanPath, 1_000, 1_000_000_000);
-      check.number(loan, 'termDays', loanPath, 30, 720, { integer: true });
-    }
-  }
-  check.number(record, 'raiderStake', path, 0, 0.45, { optional: true });
+  check.range(record, 'builtDaysAgo', path, SETUP_RANGES.builtDaysAgo, true);
+  // İç içe parçalar: varsa her alanı gerekli.
+  const part = (key: 'loan' | 'consortium' | 'projects' | 'secondCity', ranges: Readonly<Record<string, NumberRange>>, extra: readonly string[] = []) => {
+    if (record[key] === undefined) return null;
+    const at = join(path, key);
+    const nested = check.object(record[key], at, [...extra, ...Object.keys(ranges)]);
+    if (nested) for (const [field, spec] of Object.entries(ranges)) check.range(nested, field, at, spec);
+    return nested;
+  };
+  part('loan', SETUP_RANGES.loan);
+  check.range(record, 'raiderStake', path, SETUP_RANGES.raiderStake, true);
   if (record['crisis'] !== undefined) {
     const crisisPath = join(path, 'crisis');
     const crisis = check.object(record['crisis'], crisisPath, ['id', 'warningDays']);
     if (crisis) {
-      if (!lookup(CRISIS_BY_ID, crisis['id'])) check.add(join(crisisPath, 'id'), 'unknownRef', { value: String(crisis['id']) });
-      check.number(crisis, 'warningDays', crisisPath, 0, 120, { integer: true });
+      if (!listed(PACK_CHOICES.crises, crisis['id'])) check.add(join(crisisPath, 'id'), 'unknownRef', { value: String(crisis['id']) });
+      check.range(crisis, 'warningDays', crisisPath, SETUP_RANGES.crisis.warningDays);
     }
   }
-  if (record['consortium'] !== undefined) {
-    const consortiumPath = join(path, 'consortium');
-    const consortium = check.object(record['consortium'], consortiumPath, ['warningDays']);
-    if (consortium) check.number(consortium, 'warningDays', consortiumPath, 5, 120, { integer: true });
-  }
-  if (record['projects'] !== undefined) {
-    const projectsPath = join(path, 'projects');
-    const projects = check.object(record['projects'], projectsPath, ['firstInDays', 'gapDays']);
-    if (projects) {
-      check.number(projects, 'firstInDays', projectsPath, 0, 400, { integer: true });
-      check.number(projects, 'gapDays', projectsPath, 30, 400, { integer: true });
-    }
-  }
+  part('consortium', SETUP_RANGES.consortium);
+  part('projects', SETUP_RANGES.projects);
   if (record['freeze'] !== undefined) {
     const freezePath = join(path, 'freeze');
     const freeze = check.object(record['freeze'], freezePath, ['entrants', 'issuance']);
@@ -562,18 +636,13 @@ function checkSetup(check: Checker, value: unknown, path: string, goalKind: Scen
       check.boolean(freeze, 'issuance', freezePath);
     }
   }
-  if (record['secondCity'] !== undefined) {
-    const cityPath = join(path, 'secondCity');
-    const city = check.object(record['secondCity'], cityPath, ['capital', 'citySize']);
-    if (city) {
-      check.number(city, 'capital', cityPath, 100_000, 1_000_000_000);
-      check.choice(city, 'citySize', cityPath, CITY_SIZE_IDS);
-    }
-  } else if (goalKind === 'holding') {
+  const city = part('secondCity', SETUP_RANGES.secondCity, ['citySize']);
+  if (city) check.choice(city, 'citySize', join(path, 'secondCity'), CITY_SIZE_IDS);
+  else if (record['secondCity'] === undefined && goalKind === 'holding') {
     // Holding'in hedefi iki şehir: ikinci şehir kurulmadan ölçü yok.
     check.add(join(path, 'secondCity'), 'needsSetup');
   }
-  check.number(record, 'feud', path, 0, 4, { integer: true, optional: true });
+  check.range(record, 'feud', path, SETUP_RANGES.feud, true);
 }
 
 // --------------------------------------------------- Senaryoya çevirme

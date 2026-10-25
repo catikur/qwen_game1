@@ -1,12 +1,13 @@
-import { useEffect, useRef, useState } from 'react';
+import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactElement } from 'react';
-import { PACK_CODE_PREFIX, PackCodeError, SCENARIOS, decodePackCode, encodePackCode, packFromScenario, packText, validatePack } from '@capital/content';
+import { PACK_CODE_PREFIX, PackCodeError, SCENARIOS, decodePackCode, encodePackCode, packFromScenario, packScenarioId, packText, validatePack } from '@capital/content';
 import type { PackIssue, ScenarioDef } from '@capital/content';
 import { ScenarioCard } from './ScenarioCard';
 import { canLinkPacks, clearPackLink, packLink, packLinkCode } from './packLink';
 import { issueText, pt } from './packMessages';
 import type { PackMessageKey } from './packMessages';
 import { MAX_PACKS, addPack, removePack, useInstalledPacks } from './packStore';
+import { closeEditor, draftDirty, draftFrom, freshDraft, loadDraft, normalizedDraft, openEditor, takeTrial, useOpenDraft } from './packDraft';
 
 /*
  * Paket rafı (Tur 67): kurulum ekranının senaryo sekmesinde, geç inen
@@ -110,16 +111,30 @@ export function PackActions({ def, onRemoved }: { def: ScenarioDef; onRemoved: (
   const [notice, setNotice] = useState<Notice | null>(null);
   const [fallback, setFallback] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
+  const [replacing, setReplacing] = useState(false);
   const source = def.source;
   // Tanım değişince (başka senaryo ya da aynı kimlikle yeni sürüm) eski sürümün kodu kutuda kalmasın (Codex #97).
   useEffect(() => {
     setNotice(null);
     setFallback(null);
     setConfirming(false);
+    setReplacing(false);
   }, [def]);
   if (!source) return null;
   // Kayıttan açılan ama bu cihazda yüklü olmayan paket: paylaşılabilir, kaldırılacak bir şey yok.
   const installed = packs.find((entry) => entry.pack.id === source.packId);
+
+  // Editörde (Tur 68): yüklü paketin bütünü, yoksa kayıttaki tek senaryoluk paket. Kaydedilmemiş taslak soruluyor.
+  const edit = (confirmed: boolean) => {
+    const doc = installed?.pack ?? source.doc;
+    if (!confirmed && draftDirty(loadDraft())) {
+      setReplacing(true);
+      return;
+    }
+    setReplacing(false);
+    const index = Math.max(0, doc.scenarios.findIndex((entry) => packScenarioId(doc.id, entry.id) === def.id));
+    openEditor(freshDraft(JSON.parse(JSON.stringify(doc)), index));
+  };
 
   const copy = async (link: boolean) => {
     // Kod için fazla uzun senaryo (çok dilli uzun metinler): paketin JSON'u, ekleme kutusu onu da alıyor.
@@ -165,6 +180,9 @@ export function PackActions({ def, onRemoved }: { def: ScenarioDef; onRemoved: (
             {pt('hud.pack.copyLink')}
           </button>
         )}
+        <button type="button" className="ghost" data-pack-edit onClick={() => edit(false)}>
+          {pt('hud.pack.edit')}
+        </button>
         {installed && !confirming && (
           <button type="button" className="ghost danger" data-pack-remove onClick={() => setConfirming(true)}>
             {pt('hud.pack.remove')}
@@ -179,6 +197,19 @@ export function PackActions({ def, onRemoved }: { def: ScenarioDef; onRemoved: (
               {pt('hud.pack.removeYes')}
             </button>
             <button type="button" className="ghost" onClick={() => setConfirming(false)}>
+              {pt('hud.pack.removeNo')}
+            </button>
+          </div>
+        </div>
+      )}
+      {replacing && (
+        <div className="pack-confirm" role="group" aria-label={pt('hud.pack.edit')}>
+          <p>{pt('hud.pack.replaceConfirm', { name: packText((installed?.pack ?? source.doc).name) })}</p>
+          <div className="pack-buttons">
+            <button type="button" className="primary" data-pack-edit-yes onClick={() => edit(true)}>
+              {pt('hud.pack.replaceYes')}
+            </button>
+            <button type="button" className="ghost" onClick={() => setReplacing(false)}>
               {pt('hud.pack.removeNo')}
             </button>
           </div>
@@ -303,5 +334,59 @@ export function PackAdd({ example, onSelect }: { example: ScenarioDef | null; on
       </div>
       {notice && <NoticeLine notice={notice} />}
     </details>
+  );
+}
+
+const Editor = lazy(() => import('./PackEditor'));
+
+/**
+ * Senaryo editörü (Tur 68): açan düğme ve açıkken editörün kendisi (geç
+ * iniyor). "Dene"den dönen oyuncu editörü kaldığı yerden buluyor.
+ */
+export function PackEditorHost({
+  example,
+  onTry,
+  onSaved,
+  deliverFile,
+}: {
+  example: ScenarioDef;
+  onTry: (def: ScenarioDef) => void;
+  onSaved: (scenarioId: string) => void;
+  deliverFile?: (filename: string, text: string) => Promise<string>;
+}): ReactElement {
+  const open = useOpenDraft();
+  useEffect(() => {
+    if (!takeTrial()) return;
+    const stored = loadDraft();
+    if (stored) openEditor(stored);
+  }, []);
+  // Düğmenin adı: taslak varsa "devam et".
+  const stored = useMemo(() => (open ? null : loadDraft()), [open]);
+  const start = () => {
+    const current = loadDraft();
+    openEditor(current ? { ...current, doc: normalizedDraft(current.doc, () => draftFrom(example)) } : freshDraft(draftFrom(example)));
+  };
+  return (
+    <div className="pack-editor-launch">
+      <button type="button" className="ghost" data-editor-open onClick={start}>
+        {pt(stored ? 'hud.pack.editorResume' : 'hud.pack.editorOpen')}
+      </button>
+      {open && (
+        <Suspense fallback={null}>
+          <Editor
+            key={open.revision}
+            draft={open.draft}
+            example={example}
+            onClose={closeEditor}
+            onTry={(def) => {
+              closeEditor();
+              onTry(def);
+            }}
+            onSaved={onSaved}
+            {...(deliverFile ? { deliverFile } : {})}
+          />
+        </Suspense>
+      )}
+    </div>
   );
 }

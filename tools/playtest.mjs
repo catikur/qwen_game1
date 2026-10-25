@@ -8223,6 +8223,241 @@ async function finish(browser, consoleErrors) {
     await lContext.close();
   }
 
+  section('Senaryo editörü');
+  {
+    const eContext = await browser.newContext({ viewport: { width: 1280, height: 860 }, acceptDownloads: true });
+    await eContext.addInitScript(veteran, TUTORIAL_KEY);
+    const ep = await eContext.newPage();
+    const eErrors = [];
+    ep.on('pageerror', (e) => eErrors.push(e.message));
+    ep.on('console', (m) => { if (m.type() === 'error') eErrors.push(m.text()); });
+    await ep.goto('http://127.0.0.1:8811/');
+    await ep.waitForSelector('.newgame', { timeout: 20000 });
+    await ep.locator('.mode-picker [data-mode="scenario"]').click();
+    await ep.waitForSelector('[data-editor-open]', { timeout: 10000 });
+    const launcher = (await ep.locator('[data-editor-open]').textContent()) ?? '';
+    await ep.locator('[data-editor-open]').click();
+    await ep.waitForSelector('[data-pack-editor]', { timeout: 10000 });
+    const opened = await ep.evaluate(() => ({
+      sections: [...document.querySelectorAll('[data-editor-section]')].map((el) => el.getAttribute('data-editor-section')),
+      status: document.querySelector('[data-editor-status]')?.getAttribute('data-editor-status'),
+      preview: document.querySelector('[data-editor-preview]')?.getAttribute('data-editor-preview'),
+      card: document.querySelector('[data-editor-preview] .scenario-card-title')?.textContent ?? '',
+      title: document.querySelector('[data-edit-path="scenarios[0].title"]')?.value,
+      target: document.querySelector('[data-edit-path="scenarios[0].goal.target"]')?.closest('.editor-field')?.querySelector('.editor-aside')?.textContent ?? '',
+      days: document.querySelector('[data-edit-path="scenarios[0].days"]')?.closest('.editor-field')?.querySelector('.editor-aside')?.textContent ?? '',
+    }));
+    check('"Senaryo yaz" editörü seçili hazır senaryoyla açıyor: bütün bölümler, sınırlar alanın yanında, ön izleme, durum hazır',
+      launcher === 'Senaryo yaz' && opened.sections.join() === 'pack,scenarios,texts,city,goal,rules,setup,packRules' && opened.status === 'ok'
+        && opened.preview === 'live' && opened.card === 'Kurtarma' && opened.title === 'Kurtarma'
+        && opened.target === '100 B ₺ – 100,00 Mr ₺' && /^30 – 1000 gün$/.test(opened.days),
+      JSON.stringify(opened));
+    await ep.screenshot({ path: `${OUT}/editor.png` });
+
+    // Aralık dışı hedef: sorun alanın altında ve listede; dene ve kaydet kapalı; ön izleme son geçerli hâlde.
+    await ep.fill('[data-edit-path="scenarios[0].goal.target"]', '10');
+    await ep.waitForSelector('[data-editor-status="1"]', { timeout: 5000 }).catch(() => null);
+    const broken = await ep.evaluate(() => ({
+      field: document.querySelector('[data-edit-path="scenarios[0].goal.target"]')?.closest('.editor-field')?.querySelector('.editor-issue')?.textContent ?? '',
+      list: document.querySelector('.editor-issue-list')?.textContent ?? '',
+      tryOff: document.querySelector('[data-editor-try]')?.disabled,
+      saveOff: document.querySelector('[data-editor-save]')?.disabled,
+      preview: document.querySelector('[data-editor-preview]')?.getAttribute('data-editor-preview'),
+      badge: document.querySelector('[data-editor-tab="0"] .editor-badge')?.textContent,
+    }));
+    check('Aralık dışı değer: sorun alanın altında ve listede (alan adıyla); dene ve kaydet kapalı; sekmede sayı; ön izleme son geçerli hâli',
+      /arasında olmalı/.test(broken.field) && /Kurtarma · Hedef tutar: .*arasında olmalı/.test(broken.list) && broken.tryOff === true && broken.saveOff === true
+        && broken.preview === 'stale' && broken.badge === '1',
+      JSON.stringify(broken));
+    // "Alana git": odak alanda.
+    await ep.fill('[data-edit-path="scenarios[0].seed"]', '5');
+    await ep.locator('[data-editor-goto="scenarios[0].goal.target"]').click();
+    await ep.waitForTimeout(200);
+    const focused = await ep.evaluate(() => document.activeElement?.getAttribute('data-edit-path'));
+    check('Sorun listesinden "alana git" o alana odaklanıyor', focused === 'scenarios[0].goal.target', String(focused));
+    await ep.fill('[data-edit-path="scenarios[0].goal.target"]', '12000000');
+
+    // İkinci dil: her metin iki dilde; eksik İngilizceler sorun; doldurulunca hazır.
+    await ep.locator('[data-edit-toggle="locale-en"]').check();
+    await ep.waitForTimeout(200);
+    const twoLang = await ep.evaluate(() => ({
+      status: Number(document.querySelector('[data-editor-status]')?.getAttribute('data-editor-status')),
+      inputs: document.querySelectorAll('[data-edit-path="scenarios[0].title.en"]').length,
+    }));
+    for (const [path, text] of [['name.en', 'Editor pack'], ['scenarios[0].title.en', 'Editor rescue'], ['scenarios[0].tagline.en', 'A short one.'], ['scenarios[0].brief.en', 'A brief.'], ['scenarios[0].goalText.en', 'Reach the target.']]) {
+      await ep.fill(`[data-edit-path="${path}"]`, text);
+    }
+    for (let j = 0; j < 6; j++) {
+      const fact = ep.locator(`[data-edit-path="scenarios[0].facts[${j}].en"]`);
+      if ((await fact.count()) === 0) break;
+      await fact.fill(`Fact ${j + 1}`);
+    }
+    await ep.fill('[data-edit-path="scenarios[0].title.tr"]', 'Editör kurtarma');
+    await ep.waitForTimeout(200);
+    const filled = await ep.evaluate(() => document.querySelector('[data-editor-status]')?.getAttribute('data-editor-status'));
+    check('İkinci dil: her metnin İngilizcesi ayrı girdi, boşlar sorun; doldurulunca hazır',
+      twoLang.status >= 5 && twoLang.inputs === 1 && filled === 'ok', `${JSON.stringify(twoLang)} → ${filled}`);
+
+    // Hedef türü: bitişte en değerli → yıldız ölçüsü öndelik; devirde kriz; paketin kuralı.
+    await ep.selectOption('[data-edit-path="scenarios[0].goal.kind"]', 'leadAtEnd');
+    await ep.locator('[data-edit-toggle="part-crisis"]').check();
+    await ep.locator('[data-editor-rule-add]').click();
+    await ep.fill('[data-edit-path="rules[0].id"]', 'sert-kis');
+    await ep.fill('[data-edit-path="rules[0].name.tr"]', 'Sert kış');
+    await ep.fill('[data-edit-path="rules[0].name.en"]', 'Hard winter');
+    await ep.fill('[data-edit-path="rules[0].params.firstDay"]', '40');
+    await ep.selectOption('[data-edit-rule="storms"]', 'sert-kis');
+    // İkinci kural, ilkinin kimliğiyle: belgeye gitmiyor, alan söylüyor; alandan çıkınca gerçek kimlik.
+    await ep.locator('[data-editor-rule-add]').click();
+    await ep.fill('[data-edit-path="rules[1].id"]', 'sert-kis');
+    await ep.waitForTimeout(700);
+    const clash = await ep.evaluate(() => ({
+      note: !!document.querySelector('[data-editor-rule="storms-ayar"] [data-edit-issue="ruleIdTaken"]'),
+      stored: JSON.parse(localStorage.getItem('capitalforge.pack-draft.v1') ?? 'null')?.doc?.rules?.map((rule) => rule.id) ?? [],
+    }));
+    await ep.locator('[data-edit-path="rules[1].name.en"]').focus();
+    const reverted = await ep.locator('[data-edit-path="rules[1].id"]').inputValue();
+    check('Başka kuralın kimliği yazılmıyor: alan söylüyor, kural eski kimliğiyle; alandan çıkınca gerçek kimlik',
+      clash.note && clash.stored.join() === 'sert-kis,storms-ayar' && reverted === 'storms-ayar', `${JSON.stringify(clash)} · ${reverted}`);
+    // Kural silinince yerine kayan kuralın kriz arası kendi değeri (Codex #98: alan silinenin değerini gösteriyordu).
+    const gap = (id) => ep.locator(`[data-editor-rule="${id}"] .editor-pair input`);
+    await gap('storms-ayar').nth(0).fill('100');
+    await gap('storms-ayar').nth(1).fill('200');
+    await ep.locator('[data-editor-rule-add]').click();
+    await gap('storms-ayar-2').nth(0).fill('300');
+    await gap('storms-ayar-2').nth(1).fill('400');
+    await ep.locator('[data-editor-rule-remove="storms-ayar"]').click();
+    await ep.waitForTimeout(700);
+    const shifted = {
+      shown: [await gap('storms-ayar-2').nth(0).inputValue(), await gap('storms-ayar-2').nth(1).inputValue()],
+      stored: await ep.evaluate(() => JSON.parse(localStorage.getItem('capitalforge.pack-draft.v1') ?? 'null')?.doc?.rules?.[1]?.params?.gapDays ?? null),
+    };
+    check('Kural silinince yerine kayan kuralın alanları kendi değerini gösteriyor', shifted.shown.join() === '300,400' && shifted.stored?.join() === '300,400', JSON.stringify(shifted));
+    await ep.locator('[data-editor-rule-remove="storms-ayar-2"]').click();
+    await ep.fill('[data-edit-path="scenarios[0].days"]', '200');
+    await ep.fill('[data-edit-path="scenarios[0].stars.two"]', '1.2');
+    await ep.fill('[data-edit-path="scenarios[0].stars.three"]', '1,6');
+    await ep.fill('[data-edit-path="id"]', 'editor-paket');
+    await ep.waitForTimeout(700);
+    const shaped = await ep.evaluate(() => ({
+      status: document.querySelector('[data-editor-status]')?.getAttribute('data-editor-status'),
+      stars: document.querySelector('[data-editor-stars]')?.getAttribute('data-editor-stars'),
+      crisis: !!document.querySelector('[data-edit-path="scenarios[0].setup.crisis.id"]'),
+      card: document.querySelector('[data-editor-preview] .scenario-card')?.textContent ?? '',
+      goal: document.querySelector('[data-editor-preview] .scenario-goal')?.textContent ?? '',
+      issues: document.querySelector('.editor-issue-list')?.textContent ?? '',
+      draft: JSON.parse(localStorage.getItem('capitalforge.pack-draft.v1') ?? 'null')?.doc?.scenarios?.[0]?.stars ?? null,
+    }));
+    check('Hedef türü değişince yıldız ölçüsü ve hedef cümlesi hedefe göre; kriz parçası, paketin ayarlı kuralı; ön izlemede kuralın adı; taslak saklanıyor',
+      shaped.status === 'ok' && shaped.stars === 'lead' && shaped.crisis && /Sert kış/.test(shaped.card) && /en değerli şirketi ol/.test(shaped.goal) && !/[{}]/.test(shaped.goal)
+        && shaped.draft?.metric === 'lead' && shaped.draft?.three === 1.6,
+      JSON.stringify(shaped));
+
+    // Taslak sayfa yenilense de: "Taslağa devam et".
+    await ep.reload();
+    await ep.waitForSelector('.newgame', { timeout: 20000 });
+    await ep.locator('.mode-picker [data-mode="scenario"]').click();
+    await ep.waitForSelector('[data-editor-open]', { timeout: 10000 });
+    const resume = (await ep.locator('[data-editor-open]').textContent()) ?? '';
+    await ep.locator('[data-editor-open]').click();
+    await ep.waitForSelector('[data-pack-editor]', { timeout: 10000 });
+    const kept = await ep.evaluate(() => ({
+      id: document.querySelector('[data-edit-path="id"]')?.value,
+      title: document.querySelector('[data-edit-path="scenarios[0].title.en"]')?.value,
+      rule: document.querySelector('[data-edit-rule="storms"]')?.value,
+    }));
+    check('Taslak bu cihazda: sayfa yenilense de "Taslağa devam et" kaldığı yerden açıyor',
+      resume === 'Taslağa devam et' && kept.id === 'editor-paket' && kept.title === 'Editor rescue' && kept.rule === 'sert-kis', `${resume} · ${JSON.stringify(kept)}`);
+
+    // Dosya olarak indir.
+    const [download] = await Promise.all([ep.waitForEvent('download', { timeout: 10000 }), ep.locator('[data-editor-download]').click()]);
+    const downloadPath = await download.path();
+    const downloaded = JSON.parse(fs.readFileSync(downloadPath, 'utf8'));
+    check('Dosya olarak indir: paketin JSON\'u, kimliğiyle adlanmış',
+      download.suggestedFilename() === 'editor-paket.capitalforge.json' && downloaded.format === 'capitalforge-pack' && downloaded.rules?.[0]?.id === 'sert-kis',
+      download.suggestedFilename());
+
+    // Rafa kaydet: rafta ve seçili.
+    await ep.locator('[data-editor-save]').click();
+    await ep.waitForSelector('[data-editor-notice="good"]', { timeout: 5000 });
+    const savedNotice = (await ep.locator('[data-editor-notice]').textContent()) ?? '';
+    await ep.locator('[data-editor-close]').click();
+    await ep.waitForTimeout(300);
+    const shelf = await ep.evaluate(() => ({
+      selected: document.querySelector('[data-pack-shelf] [data-scenario][aria-checked="true"]')?.getAttribute('data-scenario'),
+      stored: JSON.parse(localStorage.getItem('capitalforge.packs.v1') ?? '[]').map((pack) => pack.id),
+      launcher: document.querySelector('[data-editor-open]')?.textContent,
+    }));
+    check('Rafa kaydet: paket rafta ve seçili; taslak kaydedilmiş sayılıyor',
+      /rafa kaydedildi/.test(savedNotice) && shelf.selected === 'editor-paket/rescue' && shelf.stored.join() === 'editor-paket',
+      `${savedNotice} · ${JSON.stringify(shelf)}`);
+
+    // Dene: taslak kaydedilmeden başlıyor (raftaki sürüm değil); menüye dönünce editör açık.
+    await ep.locator('[data-editor-open]').click();
+    await ep.waitForSelector('[data-pack-editor]', { timeout: 10000 });
+    await ep.fill('[data-edit-path="scenarios[0].days"]', '150');
+    await ep.waitForSelector('[data-editor-status="ok"]', { timeout: 5000 });
+    await ep.locator('[data-editor-try]').click();
+    await ep.waitForSelector('[data-scenario-brief="editor-paket/rescue"]', { timeout: 90000 });
+    const trial = await ep.evaluate(() => {
+      const s = window.__capital.getState();
+      return { length: s.scenario.endDay - s.scenario.startDay, pack: s.scenario.pack?.id, storms: s.ruleOverrides?.storms?.firstDay, shelfDays: JSON.parse(localStorage.getItem('capitalforge.packs.v1'))[0].scenarios[0].days };
+    });
+    check('Dene: taslak kaydetmeden oynanıyor (süre taslağınki, raftaki değil), paket ve kural ayarı kayıtta',
+      trial.length === 150 && trial.shelfDays === 200 && trial.pack === 'editor-paket' && trial.storms === 40, JSON.stringify(trial));
+    await ep.locator('[data-scenario-begin]').click();
+    await ep.waitForTimeout(300);
+    await ep.evaluate(() => window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 }));
+    await ep.locator('.topbar-actions [data-panel="saves"]').click();
+    await ep.waitForTimeout(300);
+    await ep.locator('.modal button:has-text("Yeni oyun")').first().click();
+    await ep.waitForSelector('[data-pack-editor]', { timeout: 10000 }).catch(() => null);
+    const back = await ep.evaluate(() => ({ editor: !!document.querySelector('[data-pack-editor]'), days: document.querySelector('[data-edit-path="scenarios[0].days"]')?.value }));
+    check('Denemeden menüye dönen oyuncu editörü kaldığı yerde buluyor', back.editor && back.days === '150', JSON.stringify(back));
+
+    // Düzenle: kaydedilmemiş taslak varken önce soruyor, sonra raftaki sürümü açıyor.
+    await ep.locator('[data-editor-close]').click();
+    await ep.locator('[data-scenario="editor-paket/rescue"]').click();
+    await ep.locator('[data-pack-edit]').click();
+    const asked = await ep.locator('[data-pack-edit-yes]').count();
+    await ep.locator('[data-pack-edit-yes]').click();
+    await ep.waitForSelector('[data-pack-editor]', { timeout: 10000 });
+    const editing = await ep.locator('[data-edit-path="scenarios[0].days"]').inputValue();
+    check('Düzenle: kaydedilmemiş taslak varken soruyor; raftaki sürüm açılıyor', asked === 1 && editing === '200', `${asked} · ${editing}`);
+
+    // İngilizce.
+    await ep.locator('[data-editor-close]').click();
+    await ep.locator('.newgame-locale [data-locale="en"]').click();
+    await ep.waitForFunction(() => document.documentElement.lang === 'en', null, { timeout: 10000 }).catch(() => null);
+    await ep.locator('[data-editor-open]').click();
+    await ep.waitForSelector('[data-pack-editor]', { timeout: 10000 });
+    const english = await ep.evaluate(() => ({
+      title: document.querySelector('#pack-editor-title')?.textContent,
+      goal: document.querySelector('[data-editor-section="goal"] legend')?.textContent,
+      save: document.querySelector('[data-editor-save]')?.textContent,
+    }));
+    check('İngilizcede editör', english.title === 'Scenario editor' && english.goal === 'Goal and stars' && english.save === 'Save to shelf', JSON.stringify(english));
+    await ep.locator('[data-editor-close]').click();
+    await ep.locator('.newgame-locale [data-locale="tr"]').click();
+    await ep.waitForFunction(() => document.documentElement.lang === 'tr', null, { timeout: 10000 }).catch(() => null);
+
+    // Telefon: tek sütun, yatay taşma yok, alt şerit görünür.
+    await ep.setViewportSize({ width: 390, height: 844 });
+    await ep.locator('[data-editor-open]').click();
+    await ep.waitForSelector('[data-pack-editor]', { timeout: 10000 });
+    await ep.waitForTimeout(300);
+    const phone = await ep.evaluate(() => {
+      const modal = document.querySelector('.editor-modal');
+      const footer = document.querySelector('.editor-footer')?.getBoundingClientRect();
+      return { scroll: modal.scrollWidth, width: modal.clientWidth, footerBottom: Math.round(footer?.bottom ?? 0), height: innerHeight };
+    });
+    await ep.screenshot({ path: `${OUT}/editor-phone.png` });
+    check('Telefonda editör: yatay taşma yok, durum ve düğmeler ekranda', phone.scroll <= phone.width + 1 && phone.footerBottom <= phone.height + 1 && phone.footerBottom > phone.height - 40,
+      JSON.stringify(phone));
+    check('Editör akışında konsol temiz', eErrors.length === 0, eErrors.slice(0, 2).join(' | '));
+    await eContext.close();
+  }
+
   section('Mobil');
   for (const deviceName of ['iPhone 13', 'Pixel 7']) {
     const mobileContext = await browser.newContext({ ...devices[deviceName] });
