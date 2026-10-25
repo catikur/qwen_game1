@@ -23,6 +23,7 @@ export type CoreKey = keyof typeof coreTr;
 
 registerMessages(BASE_LOCALE, coreTr);
 registerLocaleLoader('en', () => import('./en').then((m) => registerMessages('en', m.coreEn)));
+registerLocaleLoader('de', () => import('./de').then((m) => registerMessages('de', m.coreDe)));
 
 /** Çekirdek metni: etkin dilde, yoksa Türkçe. */
 export function tc(key: CoreKey, params?: MessageParams): string {

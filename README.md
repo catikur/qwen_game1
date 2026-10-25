@@ -23,8 +23,10 @@ kapanırken otomatik kayıt. Derleme, veri yolları ve Steam'e hazırlık:
 `./ios-lite/xcode.sh` ile Xcode projesini oluştur, iPhone'da çalıştır:
 [`ios-lite/README.md`](ios-lite/README.md).
 
-Türkçe ve İngilizce: dil seçici yeni oyun ekranında ve Yardım panelinde;
-bir bağlantıyı İngilizce paylaşmak için adresin sonuna `?lang=en`.
+Türkçe, İngilizce ve Almanca: dil seçici yeni oyun ekranında ve
+Ayarlar'da; bir bağlantıyı başka dilde paylaşmak için adresin sonuna
+`?lang=en` ya da `?lang=de`. Yeni bir dil eklemek:
+[`docs/CEVIRI.md`](docs/CEVIRI.md).
 
 Kayıtlar tarayıcıda, açtığın adrese bağlı tutuluyor. Başka bir adrese ya da
 cihaza taşımak için Kayıtlar panelinde "JSON dışa aktar", yeni yerde "JSON

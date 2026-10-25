@@ -36,8 +36,12 @@ import type { MessageKey } from './i18n';
  * metin boyutuyla büyüyor; en uzunu sütununa sığmazsa hepsi aynı oranla
  * küçülüyor (`--dock-fit`, styles.css). Tek tek küçülselerdi yan yana
  * etiketlerin boyu karışırdı. Masaüstünde etiket kesilmiyor, oran 1.
+ *
+ * Lens düğmeleri de aynı yolla (`--lens-fit`, Tur 69): masaüstünde üç
+ * sütunun her biri ~85 px; Almancanın "Wettbewerb"i, İngilizcenin
+ * "Competition"ı, Türkçenin "Arsa Değeri" de birkaç piksel taşıyordu.
  */
-function useDockFit(ref: RefObject<HTMLElement | null>): void {
+function useLabelFit(ref: RefObject<HTMLElement | null>, selector: string, property: string): void {
   const { textSize } = useSettings();
   const locale = useLocale();
   useLayoutEffect(() => {
@@ -47,18 +51,19 @@ function useDockFit(ref: RefObject<HTMLElement | null>): void {
     /** En uzun etiketin sığması için gereken oran; 1 = hepsi sığıyor. */
     const shortfall = () => {
       let ratio = 1;
-      for (const label of nav.querySelectorAll<HTMLElement>('.dock-label')) {
+      for (const label of nav.querySelectorAll<HTMLElement>(selector)) {
         // Kesirli genişlik: `scrollWidth` yuvarlıyor, 40,3 px'lik yazı 40 px'e
         // "sığıyor" görünürken tarayıcı üç nokta koyuyordu.
         range.selectNodeContents(label);
         const need = range.getBoundingClientRect().width;
         const room = label.getBoundingClientRect().width;
-        if (need > room) ratio = Math.min(ratio, room / need);
+        // Gizli etiket (katlanmış lens çubuğu) ölçülmüyor.
+        if (room > 0 && need > room) ratio = Math.min(ratio, room / need);
       }
       return ratio;
     };
     const fit = () => {
-      nav.style.removeProperty('--dock-fit');
+      nav.style.removeProperty(property);
       // Yazı küçülünce genişliği tam orantılı küçülmüyor; bazı tarayıcılarda
       // (CI'nin başsız Chromium'u) harf genişlikleri piksele yuvarlanıyor ve
       // genişlik basamak basamak iniyor. Sığana kadar, her geçişte en az %1.
@@ -67,7 +72,7 @@ function useDockFit(ref: RefObject<HTMLElement | null>): void {
         const ratio = shortfall();
         if (ratio >= 1) break;
         scale = Math.min(scale - 0.01, Math.floor(scale * ratio * 100) / 100);
-        nav.style.setProperty('--dock-fit', String(scale));
+        nav.style.setProperty(property, String(scale));
       }
     };
     fit();
@@ -95,14 +100,14 @@ function useDockFit(ref: RefObject<HTMLElement | null>): void {
       document.fonts?.removeEventListener?.('loadingdone', fit);
       cancelAnimationFrame(frame);
     };
-  }, [ref, textSize, locale]);
+  }, [ref, selector, property, textSize, locale]);
 }
 
 /** Üst bar: oyuncunun her an görmesi gereken beş sayı ve zaman kontrolü. */
 export function TopBar(): ReactElement {
   const { run, view, setView, audio } = useGame();
   const dock = useRef<HTMLElement>(null);
-  useDockFit(dock);
+  useLabelFit(dock, '.dock-label', '--dock-fit');
   const state = useGameState();
   const player = getPlayer(state);
   const ceo = player.ceoId ? CEO_BY_ID[player.ceoId] : undefined;
@@ -471,6 +476,8 @@ export function LensBar(): ReactElement {
   const { view, setView } = useGame();
   const active = LENSES.find((lens) => lens.id === view.lens);
   const { open, toggle, setOpen } = useCollapsible();
+  const buttons = useRef<HTMLDivElement>(null);
+  useLabelFit(buttons, '.lens-name', '--lens-fit');
 
   return (
     <div className={open ? 'lensbar' : 'lensbar closed'}>
@@ -495,7 +502,7 @@ export function LensBar(): ReactElement {
       </button>
 
       <div className="lens-body">
-        <div className="lens-buttons">
+        <div className="lens-buttons" ref={buttons}>
           {LENSES.map((lens) => (
             <button
               key={lens.id}

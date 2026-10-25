@@ -85,7 +85,9 @@ function vendorChunk(id: string): string | undefined {
   if (id.includes('/node_modules/three/')) return 'three';
   if (/\/node_modules\/(react|react-dom|scheduler)\//.test(id)) return 'react';
   // Üç paketin İngilizce sözlüğü tek parça (Tur 46): dil seçilince bir istek.
-  if (/\/src\/i18n\/en(\.ts$|\/)/.test(id)) return 'locale-en';
+  // Almanca da öyle (Tur 69).
+  const locale = /\/src\/i18n\/(en|de)(\.ts$|\/)/.exec(id)?.[1];
+  if (locale) return `locale-${locale}`;
   return undefined;
 }
 

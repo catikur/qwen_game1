@@ -1,10 +1,12 @@
 import { numberLocale, registerMessages, translate } from '@capital/content';
 import type { PackIssue } from '@capital/content';
+import { packDe } from './packMessages.de';
 
 /*
  * Paket rafının metinleri (Tur 67). Raf kurulum ekranında geç inen bir
  * parça (`PackShelf`): doğrulayıcı da, bu sözlük de açılışın yolunda yok.
- * İki dil birlikte geliyor; ikisi de küçük. Anahtarlar arayüzün `hud.`
+ * Diller birlikte geliyor, hepsi küçük (Almanca Tur 69'dan beri ayrı
+ * dosyada, `packMessages.de.ts`). Anahtarlar arayüzün `hud.`
  * önekinde, çakışmasın diye `hud.pack.` altında.
  */
 export const packTr = {
@@ -149,6 +151,7 @@ export const packEn: Record<PackMessageKey, string> = {
 
 registerMessages('tr', packTr);
 registerMessages('en', packEn);
+registerMessages('de', packDe);
 
 export function pt(key: PackMessageKey, params?: Record<string, string | number>): string {
   return translate(key, params);

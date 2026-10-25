@@ -4,7 +4,7 @@
 > `pnpm bench` çıktısından; iddialar `pnpm balance` ve `pnpm playtest`
 > tarafından her koşuda doğrulanıyor.
 >
-> Son güncelleme: şema **v6**, 68 tur (Tur 33 denendi ve geri alındı; Tur 34 eski görünüme canlılık ekledi; Tur 35 arayüzü Lite'ın "Cam & Bulut" diline taşıdı; Tur 36 şehre ayrıntı kattı; Tur 37a geç oyuna yönetim yükü, servet vergisi ve kriz dönemleri getirdi; Tur 37b karar kartlarını ve rakip hikâyelerini ekledi; Tur 37c fırsat balonlarını ve aylık görev panosunu getirdi; Tur 37d canlı pazarı, şehir projesi ihalesini ve rakip konsorsiyumunu getirdi; Tur 38 değerlendirme turuydu: geç oyun hızı, gündem ve haber akışı, zorluk eğrisi; Tur 39a senaryo modunu getirdi: Kurtarma ve Krizin ortasında; Tur 39b Konsorsiyuma karşı, Zincir ustası ve Şehrin sponsoru senaryolarını ekledi; Tur 39c Büyük şehir fethi ve Holding: iki şehir ile listeyi yediye tamamladı; Tur 40 cila ve performans; Tur 41 başarımlar ve kariyer; Tur 42 açılışta gölgelendirici derlemesi; Tur 43 oyun içi akıcılık; Tur 44 değerlendirme turuydu: Türkçe sayı biçimi, yardımın kapsamı, haber akışı; Tur 45 dört ek kural getirdi: Fırtınalı yıllar, Aç gözlü rakipler, Sıkı banka, Kıt arsa; Tur 46 açılış paketini böldü: kurulum ekranı telefonda yarı sürede; Tur 47 tek Ayarlar paneli ve erişilebilirlik getirdi: metin boyutu, renk körlüğüne uygun palet, hareket, ses düzeyleri, pencerelerde klavye; Tur 48 oyunu kurulabilir ve çevrimdışı açılır yaptı, yayından sonra "yeni sürüm hazır" diyor; Tur 49 müziği getirdi: gündüz, gece ve kriz, şehirle birlikte dönüyor; Tur 50 Faz 1'i değerlendirdi ve tanıtım paketini hazırladı; Tur 51 Faz 2'yi açtı: Lite'ın lig sunucusu ana oyunun Tohum Ligi koşularını da alıyor, tablo herkese açık; Tur 52'de sunucu her koşuyu gönderimde yeniden oynatıyor, tabloya yalnız doğrulanmış skor giriyor; Tur 53 ligin her haftasına bir ek kural ve 90 günlük günün koşusunu getirdi; Tur 54 liderlerin eğrisini senin koşunun üstüne koydu ve liderin o günlerde ne yaptığını koşu kodundan anlatıyor; Tur 55 davet kodlu arkadaş liglerini getirdi ve Faz 2'yi kapattı; Tur 56 Faz 3'ü açtı: nakliye terminali rakip mağazalarına taşıma sözleşmesiyle taşıyor; Tur 57 enerjiyi getirdi: şebeke fiyatı, santraller, enerji krizi; Tur 58 gayrimenkul geliştiricisini getirdi: konut ve ofis projeleri, kira ve doluluk, kentsel dönüşüm hakkı ve başvurusu; Tur 59 rakiplere hafıza verdi: CEO'nun mizacı, husumet ve ittifak, fiyat savaşı ve lobiyle tepki, uzlaşma; Tur 60 Faz 3'ün sektörleriyle üç senaryo ekledi: Herkesin nakliyecisi, Karanlık kış, Kentsel dönüşüm, her biri bir ek kuralla; Tur 61 Faz 3'ü değerlendirdi ve kapattı: zafere üç gerçek yol var, şirketin yolu kârın kaynağından okunuyor; Tur 62 Faz 4'ü açtı: mevsim ve hava şehirde görünüyor, ağaçlar mevsimin renginde, yağmur ve kar yağıyor; Tur 63 önemli anları getirdi: inşaatın tozu, devralmanın renk dalgası, çatılardan yükselen kâr, zafer gecesinin havai fişekleri; Tur 64 şehir kartını getirdi: koşunun özeti ve şehrin kuşbakışı tek bir görselde, indirilip paylaşılıyor; Tur 65 Faz 4'ü değerlendirdi ve kapattı: telefonda günün JS'i kısaldı, tuvalin yeri her karede okunmuyor; Tur 66 Faz 5'i açtı: masaüstü sürümü, kayıtlar ve ayarlar dosyada, Steam'e hazırlık; Tur 67 içerik paketlerini getirdi: senaryo ve kurallar dosyadan, senaryolar kodla ve bağlantıyla paylaşılıyor; Tur 68 senaryo editörünü getirdi: paket tarayıcıda alan alan kuruluyor, sınırlar formda, taslak kaydetmeden deneniyor). Önümüzdeki işin sırası `docs/YOL-HARITASI.md`'de.
+> Son güncelleme: şema **v6**, 69 tur (Tur 33 denendi ve geri alındı; Tur 34 eski görünüme canlılık ekledi; Tur 35 arayüzü Lite'ın "Cam & Bulut" diline taşıdı; Tur 36 şehre ayrıntı kattı; Tur 37a geç oyuna yönetim yükü, servet vergisi ve kriz dönemleri getirdi; Tur 37b karar kartlarını ve rakip hikâyelerini ekledi; Tur 37c fırsat balonlarını ve aylık görev panosunu getirdi; Tur 37d canlı pazarı, şehir projesi ihalesini ve rakip konsorsiyumunu getirdi; Tur 38 değerlendirme turuydu: geç oyun hızı, gündem ve haber akışı, zorluk eğrisi; Tur 39a senaryo modunu getirdi: Kurtarma ve Krizin ortasında; Tur 39b Konsorsiyuma karşı, Zincir ustası ve Şehrin sponsoru senaryolarını ekledi; Tur 39c Büyük şehir fethi ve Holding: iki şehir ile listeyi yediye tamamladı; Tur 40 cila ve performans; Tur 41 başarımlar ve kariyer; Tur 42 açılışta gölgelendirici derlemesi; Tur 43 oyun içi akıcılık; Tur 44 değerlendirme turuydu: Türkçe sayı biçimi, yardımın kapsamı, haber akışı; Tur 45 dört ek kural getirdi: Fırtınalı yıllar, Aç gözlü rakipler, Sıkı banka, Kıt arsa; Tur 46 açılış paketini böldü: kurulum ekranı telefonda yarı sürede; Tur 47 tek Ayarlar paneli ve erişilebilirlik getirdi: metin boyutu, renk körlüğüne uygun palet, hareket, ses düzeyleri, pencerelerde klavye; Tur 48 oyunu kurulabilir ve çevrimdışı açılır yaptı, yayından sonra "yeni sürüm hazır" diyor; Tur 49 müziği getirdi: gündüz, gece ve kriz, şehirle birlikte dönüyor; Tur 50 Faz 1'i değerlendirdi ve tanıtım paketini hazırladı; Tur 51 Faz 2'yi açtı: Lite'ın lig sunucusu ana oyunun Tohum Ligi koşularını da alıyor, tablo herkese açık; Tur 52'de sunucu her koşuyu gönderimde yeniden oynatıyor, tabloya yalnız doğrulanmış skor giriyor; Tur 53 ligin her haftasına bir ek kural ve 90 günlük günün koşusunu getirdi; Tur 54 liderlerin eğrisini senin koşunun üstüne koydu ve liderin o günlerde ne yaptığını koşu kodundan anlatıyor; Tur 55 davet kodlu arkadaş liglerini getirdi ve Faz 2'yi kapattı; Tur 56 Faz 3'ü açtı: nakliye terminali rakip mağazalarına taşıma sözleşmesiyle taşıyor; Tur 57 enerjiyi getirdi: şebeke fiyatı, santraller, enerji krizi; Tur 58 gayrimenkul geliştiricisini getirdi: konut ve ofis projeleri, kira ve doluluk, kentsel dönüşüm hakkı ve başvurusu; Tur 59 rakiplere hafıza verdi: CEO'nun mizacı, husumet ve ittifak, fiyat savaşı ve lobiyle tepki, uzlaşma; Tur 60 Faz 3'ün sektörleriyle üç senaryo ekledi: Herkesin nakliyecisi, Karanlık kış, Kentsel dönüşüm, her biri bir ek kuralla; Tur 61 Faz 3'ü değerlendirdi ve kapattı: zafere üç gerçek yol var, şirketin yolu kârın kaynağından okunuyor; Tur 62 Faz 4'ü açtı: mevsim ve hava şehirde görünüyor, ağaçlar mevsimin renginde, yağmur ve kar yağıyor; Tur 63 önemli anları getirdi: inşaatın tozu, devralmanın renk dalgası, çatılardan yükselen kâr, zafer gecesinin havai fişekleri; Tur 64 şehir kartını getirdi: koşunun özeti ve şehrin kuşbakışı tek bir görselde, indirilip paylaşılıyor; Tur 65 Faz 4'ü değerlendirdi ve kapattı: telefonda günün JS'i kısaldı, tuvalin yeri her karede okunmuyor; Tur 66 Faz 5'i açtı: masaüstü sürümü, kayıtlar ve ayarlar dosyada, Steam'e hazırlık; Tur 67 içerik paketlerini getirdi: senaryo ve kurallar dosyadan, senaryolar kodla ve bağlantıyla paylaşılıyor; Tur 68 senaryo editörünü getirdi: paket tarayıcıda alan alan kuruluyor, sınırlar formda, taslak kaydetmeden deneniyor; Tur 69 üçüncü dili getirdi: oyunun her metni Almancada, sayı ve para dil başına biçimde). Önümüzdeki işin sırası `docs/YOL-HARITASI.md`'de.
 
 ---
 
@@ -7759,6 +7759,100 @@ kapanırken (`pagehide`) hemen yazıyor.
   paketin dosyası ekleme kutusunun 64 KB'ını aşıp geri yüklenemiyordu.
   Dosya ve JSON bölümü sığarsa girintili, sığmazsa sıkışık (test).
 
+### Tur 69 — Üçüncü dil: Almanca
+
+Faz 5'in dördüncü turu. Kılavuz `docs/CEVIRI.md`.
+
+**Başlangıç.** İki dil varken biçimleyicilerin her biri "İngilizce mi?"
+diye soruyordu (`messages.ts`): yüzde işaretinin yeri, ondalık ayırıcı,
+para işaretinin yeri, kısaltmalar. Paket metninde etkin dil yoksa Türkçe
+görünüyordu. Hangi dilin geleceğini kullanıcı seçmemişti; varsayılan
+Almanca (karar tablosu, `docs/YOL-HARITASI.md`): Steam'de ekonomi
+oyunlarının güçlü pazarı, Latin alfabesi (Fredoka ve Nunito'nun alt
+kümesinde ä, ö, ü, ß var; Kiril yok), sayı biçimi Türkçeyle aynı. Çeviri
+katmanı dilden bağımsız; başka bir dil aynı yoldan giriyor.
+
+**Yapılanlar.** Simülasyon ve şema aynı; hazır oyunların parmak izi
+birebir (simülasyon `a5ded51fb01e62a5`, lig `104a3ce17d31216b`, serbest,
+dört kurallı serbest, kurallı üç senaryo).
+
+- **Dil biçimi tablosu** (`LocaleFormat`, `messages.ts`): `Intl` etiketi,
+  yüzde, ondalık ayırıcı, para işaretinin yeri, kısaltmalar (`formatMoney`
+  ve kısa biçim ayrı), dil başına metnin yedek dilleri. Türkçe ve İngilizce
+  çıktı birebir aynı (eski testler değişmeden geçiyor). Almanca "1.234 ₺",
+  "46 Tsd. ₺", "1,23 Mio. ₺", "2,50 Mrd. ₺", "45 %" (bölünmeyen boşluk:
+  satır sayı ile işaret arasında kırılmıyor). Kaydı olmayan dil Türkçe
+  biçimle yazıyor; `registerLocaleFormat` yeni dil ve test için.
+- **Sözlükler:** içerik 797, çekirdek 568, arayüz 1.190, paket rafı 66,
+  editör 153 anahtar, ~20 bin sözcük. Sekiz parçaya bölündü, her parça
+  aynı terim sözlüğü ve üslup kılavuzuyla (oyuncuya "du", tırnak „…“,
+  metindeki sayılar Almanca biçimde; cinsiyeti bilinmeyen ad artikel
+  istemeyecek yerde: "{category}-Filialen"). Parçalar sonra birbirine
+  karşı eşitlendi: aynı şeyin iki adı olan dört terim tek ada indi (vadeli
+  kredi "Ratenkredit", sözleşme cezası "Vertragsstrafe", uzlaşma
+  "Versöhnung", kentsel dönüşümün hak sahipleri "Alteigentümer"). Metinlerin
+  içinde „…“ ile anılan her etiket gerçek etiketle karşılaştırıldı; dördü
+  tutmuyordu: senaryo ekranının düğmesi („Beginnen“, metin „Starten“
+  diyordu), lensin adı („Gelegenheit“ / „Chancen“), yapı menüsünün „ideal
+  für dieses Grundstück“u, gündemin „Angriff“ çipi.
+- **Geç yükleme:** Almanca sözlük tek parça (`locale-de-*.js`, gzip 64 KB),
+  dil seçilince iniyor; Türkçe oynayanın açılışında yok. Paket rafı ve
+  editör Almancasını kendi geç inen parçalarında taşıyor (raf 6,1 → 7,1 KB,
+  editör 16 → 18,5 KB).
+- **Paket metinleri:** etkin dil yoksa dilin yedeği (Almancada İngilizce),
+  sonra Türkçe (`textLocales`, `packText`): Almanca oynayan, İngilizcesi olan
+  paketi İngilizce görüyor.
+- **Dil seçici:** üç dil, kendi dillerinde; sıra kayıt sırası (Türkçe,
+  English, Deutsch). Eskiden sözlüğü inen dil öne geçiyordu: Almanca
+  açılınca "Türkçe · Deutsch · English", İngilizcede başka sıra (tarayıcıda
+  görüldü; test eski kodda kırılıyor).
+- **Lens düğmeleri iki sütun.** Masaüstünde üç sütunda simgeden sonra ada
+  ~51 px kalıyordu: Almancanın "Wettbewerb"i kadar İngilizcenin
+  "Competition"ı ve Türkçenin "Arsa Değeri" de birkaç piksel taşıyor, en
+  büyük metin boyunda üç dilde on bir ad kesiliyordu (ölçüm). İki sütunda
+  ~98 px; üç dilde dört boyda da tam. Rıhtımın ortak küçülme kancası
+  genelleşti (`useLabelFit`), lenslerde güvenlik ağı. Lens çubuğu bir sıra
+  (38 px) uzun.
+- **Denetim betiği** `tools/i18n-check.mjs de`: dosya dosya eksik, fazla,
+  yer tutucu, Türkçe harf; uyarı olarak İngilizceyle aynı kalan metin,
+  uzayan kısa etiket, kaybolan tekil/çoğul biçimi.
+- **Paket bütçesi.** Ana parça 73,8 → 74,1 KB (bütçe 75): biçim tablosu,
+  dil sırası, yükleyiciler.
+- Masaüstü (Tauri) aynı paketi kullanıyor; Steam mağazasında dil listesi
+  Tur 70'te.
+
+**Bulunanlar.**
+- Testin tekil/çoğul fiil kalıbı "kann höchstens 1 Stadt haben"ı hata
+  sayıyordu: Almancada mastar çoğul çekimle aynı. Kalıp yalnız ayrı çekimli
+  fiillerde (sind, waren, seien).
+- Arkadaş liginin "{played} von {members|…}" metni sayıdan sonra isim
+  istiyordu; `members` sözcük listesi de olabildiğinden (Codex #79) testin
+  yasağına takıldı. Metin sayıdan sonra isimsiz.
+- Tarayıcı testinin Türkçe kalıntı kalıbı Almanca "Kredit"in içindeki
+  "Kredi"yi buluyordu (harf sınırı eklendi); panel metni `textContent` ile
+  birleşince "100 %" ile ardından gelen sayı "%3" gibi okunuyordu (metin
+  düğüm düğüm okunuyor).
+
+**Doğrulama.**
+- `pnpm test` 844/844 (833'ten); tip denetimi temiz.
+  - `core/test/i18n.test.ts`: İngilizce ve Almanca aynı denetimlerden
+    geçiyor (`FOREIGN` tablosu): eksiksiz sözlük ve aynı yer tutucular
+    (içerik, çekirdek, arayüz, raf, editör), kalmış Türkçe harf yok, sayıdan
+    sonra gelen isim tekil/çoğul biçiminde, tekil biçimde çoğul fiil yok,
+    içerik alanı etkin dili okuyor; aynı tohum üç dilde aynı oyunu
+    oynuyor; Almanca haberlerde ham anahtar ya da yer tutucu, Almanca
+    metinlerde noktalı ondalık yok. Almanca biçim, biçimi kayıtlı olmayan
+    dil, yedek diller, dil sırası.
+- Belirlenimcilik: parmak izi main ile aynı.
+- Tarayıcı, yeni "Üçüncü dil: Almanca" 7/7: `?lang=de` ile açılış ve
+  seçicinin sırası, üst bar ve para biçimi, haberler, sekiz panel (Türkçe ve
+  İngilizce kalıntı, kesik etiket, yüzde biçimi), lens adları normal ve en
+  büyük metinde, telefonda yana taşma, konsol. "Dil" 14/14 (seçici üç dil).
+- Telefonun rıhtım etiketleri üç dilde ölçülüyor: 320–412 px, dört metin
+  boyu, ekran daralınca, yuvarlanan yazıda — 78 durum, hiçbiri kesik değil.
+- Tam tarayıcı koşusu: PR'dan sonra (aşağıya yazılacak).
+- Paket bütçesi tamam.
+
 ---
 
 ## 3. Ölçülen durum
@@ -7861,9 +7955,9 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi). Senaryo şehirlerinde gün 3–17 ms (`pnpm dayperf`, Tur 43) |
-| Birim testi | **833 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de, Tur 52'de sunucuda tekrar, Tur 53'te haftanın kuralı ve günün koşusu, Tur 54'te hayalet eğri, Tur 55'te davetli ligler, Tur 56'da taşıma sözleşmeleri, Tur 57'de enerji, Tur 58'de gayrimenkul, Tur 59'da rakiplerin hafızası, Tur 60'ta senaryo paketi II, Tur 61'de şirketin yolu, Tur 62'de hava ve mevsimin görünümü, Tur 63'te önemli anlar, Tur 64'te şehir kartı, Tur 65'te telefon performansı, Tur 66'da masaüstü sürümü, Tur 67'de içerik paketleri, Tur 68'de senaryo editörü); Rust tarafı 6 test (`cargo test`, `apps/desktop/src-tauri`) |
+| Birim testi | **844 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de, Tur 52'de sunucuda tekrar, Tur 53'te haftanın kuralı ve günün koşusu, Tur 54'te hayalet eğri, Tur 55'te davetli ligler, Tur 56'da taşıma sözleşmeleri, Tur 57'de enerji, Tur 58'de gayrimenkul, Tur 59'da rakiplerin hafızası, Tur 60'ta senaryo paketi II, Tur 61'de şirketin yolu, Tur 62'de hava ve mevsimin görünümü, Tur 63'te önemli anlar, Tur 64'te şehir kartı, Tur 65'te telefon performansı, Tur 66'da masaüstü sürümü, Tur 67'de içerik paketleri, Tur 68'de senaryo editörü, Tur 69'da üçüncü dil); Rust tarafı 6 test (`cargo test`, `apps/desktop/src-tauri`) |
 | Denge testi | **379 kontrol, hepsi geçiyor** (33 bölüm, süreleriyle; ~16 dk) |
-| Tarayıcı testi | **712 kontrol** (Tur 68'de 16 yeni), son tam koşu 710/710 (Tur 68; Tur 67'de 693/694: yük altında oyun saatinin hızı, tek başına üç kez geçti), 0 konsol hatası (bu yavaş makinede ~51–75 dk, önce ~41 dk); duman koşusu 132 (~8 dk, rehber dahil) |
+| Tarayıcı testi | **719 kontrol** (Tur 69'da 7 yeni), son tam koşu 710/710 (Tur 68; Tur 67'de 693/694: yük altında oyun saatinin hızı, tek başına üç kez geçti), 0 konsol hatası (bu yavaş makinede ~51–75 dk, önce ~41 dk); duman koşusu 132 (~8 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + paket bütçesi (Tur 46; Tur 48'den beri hizmet çalışanı ve manifest de) + duman oynanışı; masaüstüne dokunan PR'da Rust testleri, sürüm derlemesi ve gerçek pencerede 17 kontrol (Tur 66) |
 | Kapsam | 40 bina · 25 ürün · 7 kategori · 8 rakip profili · 10 CEO · 22 olay (11 şehir + 11 sektör) · 3 kriz · 12 karar kartı · 70 rakip sözü · 4 mizaç · 48 ilişki sözü · 5 fırsat balonu · 8 görev türü · 4 mevsim · 6 hava · 9 moda ürünü · 17 şehir yapısı (6 siluet) · 6 şehir projesi · 10 senaryo · 4 ek kural · 5 yol · 29 rozet |
 

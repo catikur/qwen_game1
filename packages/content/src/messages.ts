@@ -19,11 +19,22 @@ export type MessageParams = Record<string, string | number>;
 export const BASE_LOCALE = 'tr';
 
 const dictionaries = new Map<string, Record<string, string>>([[BASE_LOCALE, {}]]);
+/**
+ * Dillerin ilk duyulduğu sıra (Tur 69): seçici her zaman aynı sırada.
+ * Sözlüğü inen dil eskiden listede önlere geçiyordu ("Türkçe · Deutsch ·
+ * English", İngilizce seçilince başka sıra).
+ */
+const order: string[] = [BASE_LOCALE];
+
+function remember(locale: string): void {
+  if (!order.includes(locale)) order.push(locale);
+}
 let active = BASE_LOCALE;
 const listeners = new Set<(locale: string) => void>();
 
 /** Bir dile anahtar ekler; aynı dile birden çok modül kendi anahtarlarını kaydeder. */
 export function registerMessages(locale: string, messages: Readonly<Record<string, string>>): void {
+  remember(locale);
   const current = dictionaries.get(locale);
   if (current) Object.assign(current, messages);
   else dictionaries.set(locale, { ...messages });
@@ -44,6 +55,7 @@ const loading = new Map<string, Promise<boolean>>();
 
 /** Bir dilin sözlüğünü sonradan kaydeden işlev; `loadLocale` çağırır. */
 export function registerLocaleLoader(locale: string, loader: () => Promise<void>): void {
+  remember(locale);
   const list = loaders.get(locale);
   if (list) list.push(loader);
   else loaders.set(locale, [loader]);
@@ -86,9 +98,9 @@ export function currentLocale(): string {
   return active;
 }
 
-/** Seçilebilen diller: yüklü olanlar ve sonradan yüklenebilenler. */
+/** Seçilebilen diller: yüklü olanlar ve sonradan yüklenebilenler, kayıt sırasıyla. */
 export function availableLocales(): string[] {
-  return [...new Set([...dictionaries.keys(), ...loaders.keys()])];
+  return order.filter((locale) => dictionaries.has(locale) || loaders.has(locale));
 }
 
 export function onLocaleChange(listener: (locale: string) => void): () => void {
@@ -128,22 +140,104 @@ export function hasMessage(key: string, locale: string = active): boolean {
   return dictionaries.get(locale)?.[key] !== undefined;
 }
 
+/**
+ * Bir dilin sayı ve para yazımı (Tur 69). İki dil varken her biçimleyici
+ * "İngilizce mi?" diye soruyordu; Almanca ondalıkta Türkçeye, yüzdede
+ * ikisinden başkasına benziyor ("45 %", "1,2 Mio. ₺"). Dil kendi biçimini
+ * kaydediyor; kaydı olmayan dil Türkçe biçimle yazıyor.
+ */
+export interface LocaleFormat {
+  /** `Intl` için BCP 47 etiketi. */
+  tag: string;
+  /** Yüzdenin yazımı; `value` hazır sayı metni. */
+  percent: (value: string) => string;
+  /** Ondalık ayırıcı. */
+  decimal: ',' | '.';
+  /** Para işareti tutarın önünde ("₺45K") mı, arkasında ("45 B ₺") mı. */
+  currency: 'before' | 'after';
+  /** `formatMoney`'nin kısaltmaları, sayıyla arasındaki boşluk dahil. */
+  units: { thousand: string; million: string; billion: string };
+  /** `formatShortMoney`'nin kısaltmaları (kart ve ipucu metinleri). */
+  shortUnits: { thousand: string; million: string };
+  /**
+   * Dil başına metinlerde (paketlerin `{ "tr": …, "en": … }` metinleri) bu
+   * dil yoksa sırayla bakılan diller; en sonda hep Türkçe. Almanca oynayan
+   * İngilizcesi olan paketi İngilizce görüyor, Türkçe değil.
+   */
+  fallbacks: readonly string[];
+}
+
+const TURKISH_FORMAT: LocaleFormat = {
+  tag: 'tr-TR',
+  percent: (value) => `%${value}`,
+  decimal: ',',
+  currency: 'after',
+  units: { thousand: ' B', million: ' M', billion: ' Mr' },
+  shortUnits: { thousand: 'B', million: 'M' },
+  fallbacks: [],
+};
+
+const formats = new Map<string, LocaleFormat>([
+  [BASE_LOCALE, TURKISH_FORMAT],
+  [
+    'en',
+    {
+      tag: 'en-US',
+      percent: (value) => `${value}%`,
+      decimal: '.',
+      currency: 'before',
+      units: { thousand: 'K', million: 'M', billion: 'B' },
+      shortUnits: { thousand: 'K', million: 'M' },
+      fallbacks: [],
+    },
+  ],
+  [
+    'de',
+    {
+      tag: 'de-DE',
+      // Sayıyla işaret arasında bölünmeyen boşluk: satır "45" ile "%" arasında kırılmasın.
+      percent: (value) => `${value}\u00a0%`,
+      decimal: ',',
+      currency: 'after',
+      units: { thousand: ' Tsd.', million: ' Mio.', billion: ' Mrd.' },
+      shortUnits: { thousand: ' Tsd.', million: ' Mio.' },
+      fallbacks: ['en'],
+    },
+  ],
+]);
+
+/** Bir dilin biçimini kaydeder (yeni dil ya da test). */
+export function registerLocaleFormat(locale: string, format: LocaleFormat): void {
+  formats.set(locale, format);
+}
+
+/** Dilin biçimi; kaydı yoksa Türkçe biçim. */
+export function localeFormat(locale: string = active): LocaleFormat {
+  return formats.get(locale) ?? TURKISH_FORMAT;
+}
+
+/** Dil başına metinde bakılacak diller: etkin dil, onun yedekleri, Türkçe. */
+export function textLocales(locale: string = active): string[] {
+  return [...new Set([locale, ...localeFormat(locale).fallbacks, BASE_LOCALE])];
+}
+
 /** Sayı biçimi için BCP 47 dil etiketi. */
 export function numberLocale(): string {
-  return active === 'en' ? 'en-US' : 'tr-TR';
+  return localeFormat().tag;
 }
 
 /**
- * Yüzde: Türkçede işaret önde ("%45"), İngilizcede arkada ("45%").
- * `value` hazır sayı ya da metin (yuvarlama çağıranda).
+ * Yüzde: Türkçede işaret önde ("%45"), İngilizcede arkada ("45%"),
+ * Almancada boşlukla arkada ("45 %"). `value` hazır sayı ya da metin
+ * (yuvarlama çağıranda).
  */
 export function formatPercent(value: number | string): string {
-  return active === 'en' ? `${value}%` : `%${value}`;
+  return localeFormat().percent(String(value));
 }
 
-/** Ondalık ayırıcı: Türkçede virgül, İngilizcede nokta. `text` noktalı sayı metni. */
+/** Ondalık ayırıcı: Türkçede ve Almancada virgül, İngilizcede nokta. `text` noktalı sayı metni. */
 export function localizeDecimal(text: string): string {
-  return active === 'en' ? text : text.replace('.', ',');
+  return localeFormat().decimal === '.' ? text : text.replace('.', ',');
 }
 
 /** Ondalık sayı: Türkçede virgül ("5,0"), İngilizcede nokta ("5.0"). */
@@ -158,15 +252,16 @@ export function formatNumber(value: number, options?: Intl.NumberFormatOptions):
 
 /** Para işareti: Türkçede tutarın arkasında ("45 B ₺"), İngilizcede önünde ("₺45K"). */
 export function withCurrency(amount: string): string {
-  return active === 'en' ? `₺${amount}` : `${amount} ₺`;
+  return localeFormat().currency === 'before' ? `₺${amount}` : `${amount} ₺`;
 }
 
 /**
  * Para birimi kısaltmaları. Türkçe: B (bin), M (milyon), Mr (milyar) ve
- * sayıyla arasında boşluk; İngilizce: K, M, B bitişik.
+ * sayıyla arasında boşluk; İngilizce: K, M, B bitişik; Almanca: Tsd.,
+ * Mio., Mrd. boşlukla.
  */
 export function moneyUnits(): { thousand: string; million: string; billion: string } {
-  return active === 'en' ? { thousand: 'K', million: 'M', billion: 'B' } : { thousand: ' B', million: ' M', billion: ' Mr' };
+  return localeFormat().units;
 }
 
 /**
@@ -180,11 +275,12 @@ export function formatUnitMoney(value: number): string {
 
 /**
  * Kısa para biçimi (kart ve ipucu metinleri): "1,2M ₺", "45B ₺", "500 ₺";
- * İngilizcede "₺1.2M", "₺45K", "₺500". Türkçede ondalık virgül (Tur 44).
+ * İngilizcede "₺1.2M", "₺45K", "₺500"; Almancada "1,2 Mio. ₺", "45 Tsd. ₺".
+ * Türkçede ondalık virgül (Tur 44).
  */
 export function formatShortMoney(value: number): string {
-  const thousand = active === 'en' ? 'K' : 'B';
-  if (value >= 1_000_000) return withCurrency(`${formatDecimal(value / 1_000_000, 1)}M`);
-  if (value >= 1_000) return withCurrency(`${Math.round(value / 1_000)}${thousand}`);
+  const units = localeFormat().shortUnits;
+  if (value >= 1_000_000) return withCurrency(`${formatDecimal(value / 1_000_000, 1)}${units.million}`);
+  if (value >= 1_000) return withCurrency(`${Math.round(value / 1_000)}${units.thousand}`);
   return withCurrency(`${Math.round(value)}`);
 }

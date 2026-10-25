@@ -5373,8 +5373,9 @@ async function finish(browser, consoleErrors) {
     const leftovers = (text) => [RAW_KEY, PLACEHOLDER, TURKISH_WORDS].map((re) => text.match(re)?.[0]).filter(Boolean);
     await lp.goto('http://127.0.0.1:8811/');
     await lp.waitForSelector('.newgame', { timeout: 20000 });
+    // Üç dil (Tur 69): Türkçe, English, Deutsch.
     check('Kurulumda dil seçici var, Türkçe seçili',
-      (await lp.locator('.newgame .locale-option').count()) === 2 &&
+      (await lp.locator('.newgame .locale-option').count()) === 3 &&
         (await lp.locator('.newgame [data-locale="tr"][aria-pressed="true"]').count()) === 1);
     await lp.locator('.newgame [data-locale="en"]').click();
     // İngilizce sözlük seçilince iniyor (Tur 46): dil değişene kadar bekle.
@@ -5413,7 +5414,7 @@ async function finish(browser, consoleErrors) {
     // Tur 47'den beri dil Ayarlar'da; Yardım oraya yönlendiriyor.
     await lp.locator('.speeds [data-panel="settings"]').click();
     await lp.waitForTimeout(300);
-    check('Ayarlar panelinde dil seçici', (await lp.locator('.settings .locale-option').count()) === 2);
+    check('Ayarlar panelinde dil seçici', (await lp.locator('.settings .locale-option').count()) === 3);
     await lp.locator('.settings [data-locale="tr"]').click();
     await lp.waitForFunction(() => document.documentElement.lang === 'tr', null, { timeout: 10000 });
     await lp.waitForTimeout(300);
@@ -5438,6 +5439,125 @@ async function finish(browser, consoleErrors) {
       `${viaLink.slice(0, 24)} | ${remembered.slice(0, 24)} · yenileme ${linkSeconds.toFixed(1)} / ${rememberSeconds.toFixed(1)} sn`);
     check('Dil akışında konsol temiz', lErrors.length === 0, lErrors.slice(0, 2).join(' | '));
     await lContext.close();
+  }
+
+  // ---------- Üçüncü dil: Almanca (Tur 69) ----------
+  // Bağlantıyla açılış, kurulum, üst bar, haberler, paneller, lens adları,
+  // sayı biçimi ve telefon. Kalıntı: ham anahtar, doldurulmamış yer tutucu,
+  // Türkçe ya da İngilizce arayüz sözcüğü.
+  section('Üçüncü dil: Almanca');
+  {
+    const gContext = await browser.newContext({ viewport: { width: 1280, height: 860 } });
+    await gContext.addInitScript(veteran, TUTORIAL_KEY);
+    const gp = await gContext.newPage();
+    const gErrors = [];
+    gp.on('pageerror', (e) => gErrors.push(e.message));
+    gp.on('console', (m) => { if (m.type() === 'error') gErrors.push(m.text()); });
+    const RAW_KEY = /\b(core|content|panels|hud|finance|app)\.[a-z]+\.[a-zA-Z]/;
+    const PLACEHOLDER = /\{[a-zA-Z]+\}/;
+    // Harf sınırıyla: Almanca "Kredit"in içindeki "Kredi" Türkçe değil.
+    const TURKISH_WORDS = /(?<!\p{L})(Şirket|Nakit|Borç|Kapat|bölge|Mağaza|Rakip|Hisse|Kredi|günlük|Kâr|İşgücü|Meclis)(?!\p{L})/u;
+    const ENGLISH_WORDS = /\b(Found the company|Company name|Difficulty|Free play|Cash|Debt|Close|Settings|Rivals|Shares|Loan|Council|daily|Store)\b/;
+    // Dil adları kendi dillerinde yazıyor; seçicinin "Türkçe" ve "English"i kalıntı değil.
+    const leftovers = (text) =>
+      [RAW_KEY, PLACEHOLDER, TURKISH_WORDS, ENGLISH_WORDS].map((re) => text.replace(/Türkçe|English/g, '').match(re)?.[0]).filter(Boolean);
+    await gp.goto('http://127.0.0.1:8811/?lang=de');
+    await gp.waitForSelector('.newgame', { timeout: 20000 });
+    await gp.waitForFunction(() => document.documentElement.lang === 'de', null, { timeout: 10000 });
+    const setupText = ((await gp.locator('.newgame').textContent()) ?? '').trim();
+    const order = await gp.evaluate(() => [...document.querySelectorAll('.newgame .locale-option')].map((el) => `${el.dataset.locale}${el.getAttribute('aria-pressed') === 'true' ? '*' : ''}`).join(','));
+    check('?lang=de kurulumu Almanca açıyor; seçici üç dil, sıra sabit, Deutsch seçili',
+      setupText.includes('Unternehmen gründen') && leftovers(setupText).length === 0 && order === 'tr,en,de*',
+      `${order} · ${leftovers(setupText).join(', ') || setupText.slice(0, 50)}`);
+    await gp.fill('.newgame-field input[type="text"]', 'Sprachwerk GmbH');
+    await gp.locator('button:has-text("Unternehmen gründen")').click();
+    await gp.waitForSelector('.topbar', { timeout: 20000 });
+    await gp.evaluate(() => {
+      const c = window.__capital;
+      for (let i = 0; i < 120; i++) c.engine.runDay();
+      c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+    });
+    await gp.waitForTimeout(400);
+    const topbar = ((await gp.locator('.topbar').textContent()) ?? '').trim();
+    check('Üst bar Almanca, para tutarın arkasında: „Tsd. ₺“, „Mio. ₺“',
+      topbar.includes('Kasse') && /\d (Tsd\.|Mio\.) ₺/.test(topbar) && !/₺\d/.test(topbar) && leftovers(topbar).length === 0,
+      leftovers(topbar).join(', ') || topbar.slice(0, 90));
+    const news = await gp.evaluate(() => window.__capital.getState().news.slice(0, 40).map((n) => `${n.title} ${n.body}`).join(' \n '));
+    check('Haberler Almanca üretiliyor', news.length > 0 && leftovers(news).length === 0, leftovers(news).join(', ') || news.slice(0, 80));
+    // Panellerde kalıntı yok; kırpılmış düğme ya da etiket yok.
+    const clipped = () =>
+      gp.evaluate(() => {
+        const out = [];
+        for (const el of document.querySelectorAll('.modal button, .modal th, .modal .chip, .modal label')) {
+          const r = el.getBoundingClientRect();
+          if (r.width === 0 || r.height === 0) continue;
+          const cs = getComputedStyle(el);
+          const clips = cs.overflow !== 'visible' || cs.textOverflow === 'ellipsis';
+          if (clips && el.scrollWidth - el.clientWidth > 1) out.push(el.textContent.trim().slice(0, 30));
+        }
+        return out;
+      });
+    const panelIssues = [];
+    let percentSeen = false;
+    for (const panel of ['chain', 'rivalry', 'bourse', 'council', 'company', 'rivals', 'saves', 'help']) {
+      await gp.locator(`.topbar-actions [data-panel="${panel}"]`).click();
+      await gp.waitForTimeout(300);
+      // Metin düğüm düğüm: `textContent` yan yana öğeleri boşluksuz birleştiriyor ("100 %" + "3" = "%3").
+      const texts = await gp.evaluate(() => {
+        const out = [];
+        const walker = document.createTreeWalker(document.querySelector('.modal'), NodeFilter.SHOW_TEXT);
+        while (walker.nextNode()) out.push(walker.currentNode.textContent);
+        return out;
+      });
+      const body = texts.join(' ').trim();
+      const found = leftovers(body);
+      const cut = await clipped();
+      if (body.length < 20 || found.length || cut.length) panelIssues.push(`${panel}: ${[...found, ...cut.map((c) => `kesik „${c}“`)].join(', ') || 'boş'}`);
+      // Yüzde Almancada bölünmeyen boşlukla arkada ("45 %"); Türkçe biçim ("%45") yok.
+      if (texts.some((text) => /\d\u00a0%/.test(text))) percentSeen = true;
+      const turkishPercent = texts.find((text) => /%\d/.test(text));
+      if (turkishPercent) panelIssues.push(`${panel}: Türkçe yüzde „${turkishPercent.trim().slice(0, 30)}“`);
+      await gp.keyboard.press('Escape');
+      await gp.waitForTimeout(150);
+    }
+    check('Sekiz panelde Türkçe/İngilizce kalıntı ve kesik etiket yok; yüzde „45 %“', panelIssues.length === 0 && percentSeen,
+      panelIssues.slice(0, 3).join(' | ') || (percentSeen ? '8 panel temiz' : 'yüzde görülmedi'));
+    // Lens adları: masaüstünde iki sütun (Tur 69), en büyük metin boyunda da kesilmiyor.
+    const lensCut = [];
+    for (const size of ['normal', 'xlarge']) {
+      await gp.locator('.topbar [data-panel="settings"]').click();
+      await gp.locator(`[data-setting="text"][data-choice="${size}"]`).click();
+      await gp.keyboard.press('Escape');
+      await gp.waitForTimeout(300);
+      const cut = await gp.evaluate(() => {
+        const range = document.createRange();
+        return [...document.querySelectorAll('.lens-name')]
+          .filter((el) => {
+            range.selectNodeContents(el);
+            return range.getBoundingClientRect().width > el.getBoundingClientRect().width + 0.01;
+          })
+          .map((el) => el.textContent);
+      });
+      if (cut.length) lensCut.push(`${size}: ${cut.join(', ')}`);
+    }
+    check('Lens adları kesilmiyor (Almanca, normal ve en büyük metin)', lensCut.length === 0, lensCut.join(' | ') || '6 lens');
+    await gp.locator('.topbar [data-panel="settings"]').click();
+    await gp.locator('[data-setting="text"][data-choice="normal"]').click();
+    await gp.keyboard.press('Escape');
+    await gp.screenshot({ path: `${OUT}/locale-de.png` });
+    // Telefon: kurulum ve oyun ekranı yana taşmıyor.
+    await gp.setViewportSize({ width: 390, height: 844 });
+    await gp.waitForTimeout(500);
+    const phoneWide = await gp.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+    const offscreen = await gp.evaluate(() =>
+      [...document.querySelectorAll('.topbar button, .topbar-actions button, .agenda button')]
+        .filter((el) => { const r = el.getBoundingClientRect(); return r.width > 0 && (r.right > window.innerWidth + 1 || r.left < -1); })
+        .map((el) => el.textContent.trim().slice(0, 20)));
+    await gp.screenshot({ path: `${OUT}/locale-de-phone.png` });
+    check('Telefonda Almanca oyun ekranı yana taşmıyor, düğmeler ekranda', phoneWide <= 0 && offscreen.length === 0,
+      `taşma ${phoneWide} px${offscreen.length ? ` · dışarıda: ${offscreen.join(', ')}` : ''}`);
+    check('Almanca akışta konsol temiz', gErrors.length === 0, gErrors.slice(0, 2).join(' | '));
+    await gContext.close();
   }
 
   // ---------- Görünüm (Tur 35) ----------
@@ -5914,7 +6034,7 @@ async function finish(browser, consoleErrors) {
   }
 
   // ---------- Değerlendirme: Faz 1 sonu (Tur 50) ----------
-  // Yeni oyuncunun gözünden telefon: dört genişlik, iki dil, dört metin boyutu.
+  // Yeni oyuncunun gözünden telefon: dört genişlik, üç dil (Tur 69), dört metin boyutu.
   section('Değerlendirme: Faz 1 sonu');
   {
     const cut = [];
@@ -5933,8 +6053,9 @@ async function finish(browser, consoleErrors) {
       .launch({ args: hintedArgs })
       .catch(() => chromium.launch({ ...(CHROMIUM ? { executablePath: CHROMIUM } : {}), args: hintedArgs }));
     const runs = [
-      ...['tr', 'en'].flatMap((locale) => [320, 360, 390, 412].map((width) => ({ locale, width, on: browser, tag: '' }))),
-      ...['tr', 'en'].map((locale) => ({ locale, width: 320, on: hinted, tag: ' (yuvarlanan yazı)' })),
+      // Almanca (Tur 69): etiketler en uzun onda.
+      ...['tr', 'en', 'de'].flatMap((locale) => [320, 360, 390, 412].map((width) => ({ locale, width, on: browser, tag: '' }))),
+      ...['tr', 'en', 'de'].map((locale) => ({ locale, width: 320, on: hinted, tag: ' (yuvarlanan yazı)' })),
     ];
     for (const { locale, width: viewportWidth, on, tag } of runs) {
       {
@@ -5989,8 +6110,8 @@ async function finish(browser, consoleErrors) {
       }
     }
     await hinted.close();
-    check('Telefonda rıhtım etiketleri kesilmiyor ve tek boyda: 320–412 px, Türkçe ve İngilizce, açılışta, dört metin boyutunda, ekran daralınca, yuvarlanan yazıda da',
-      cut.length === 0, cut.length ? `${cut.length} durumda — ${cut.slice(0, 3).join(' | ')}` : '52 durum');
+    check('Telefonda rıhtım etiketleri kesilmiyor ve tek boyda: 320–412 px, Türkçe, İngilizce ve Almanca, açılışta, dört metin boyutunda, ekran daralınca, yuvarlanan yazıda da',
+      cut.length === 0, cut.length ? `${cut.length} durumda — ${cut.slice(0, 3).join(' | ')}` : '78 durum');
     check('Değerlendirme akışında konsol temiz', eErrors.length === 0, eErrors.slice(0, 2).join(' | '));
   }
 
