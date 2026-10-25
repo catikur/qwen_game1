@@ -1,10 +1,13 @@
-// Tanıtım kareleri (Tur 50): gerçek oyundan, iki dilde, masaüstü ve telefon.
+// Tanıtım kareleri (Tur 50): gerçek oyundan, üç dilde (Almanca Tur 70'te),
+// masaüstü ve telefon.
 //
 //   pnpm build
 //   node tools/run-node-script.mjs tools/tanitim/sehir.ts <durumlar>
-//   node tools/tanitim/kareler.mjs <durumlar> docs/tanitim/kareler
+//   node tools/tanitim/kareler.mjs <durumlar> docs/tanitim/kareler [diller]
 //
-// Şehir `sehir.ts`ten: oyunun denge vekili 420 gün oynamış. Kare oyunun
+// `diller` virgülle (varsayılan `tr,en,de`); tek dili yeniden çekmek için.
+//
+// Şehir `sehir.ts`ten: oyunun denge vekili 516 gün oynamış. Kare oyunun
 // kendi yolundan geliyor: kurulum, `engine.replaceState` (kayıt yüklemenin
 // yaptığı), kamera ve gün saati geliştirici kancasından (`window.__capital`).
 // Çıktı JPEG (q≈85): masaüstü 1920×1080, telefon 1170×2532 (390×844 @3).
@@ -16,7 +19,7 @@ import { extname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('../..', import.meta.url));
-const [states, output] = process.argv.slice(2);
+const [states, output, languages = 'tr,en,de'] = process.argv.slice(2);
 if (!states || !output) {
   console.error('kullanım: node tools/tanitim/kareler.mjs <durumlar dizini> <çıktı dizini>');
   process.exit(2);
@@ -112,8 +115,8 @@ async function close(page) {
 }
 
 /**
- * Karar kartı: 420. günden birkaç gün sonra "Sabit fiyatlı enerji" geliyor.
- * Kart pencere açıkken bekliyor; oyun sürerken en çok 20 sn.
+ * Karar kartı: oyun sürerken birkaç gün içinde geliyor. Kart pencere
+ * açıkken bekliyor; oyun sürerken en çok 20 sn.
  */
 async function decision(page) {
   const card = page.locator('.decision-card');
@@ -122,7 +125,7 @@ async function decision(page) {
 }
 
 const problems = [];
-for (const locale of ['tr', 'en']) {
+for (const locale of languages.split(',')) {
   // Masaüstü: kurulum, gündüz, gece, zincir, borsa, karar kartı.
   {
     const { context, page, errors } = await open('masaustu', locale, null);

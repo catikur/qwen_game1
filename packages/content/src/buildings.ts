@@ -42,7 +42,7 @@ export const BUILDINGS: BuildingDef[] = [
     color: '#4e8f55',
     height: 0.9,
     unlockNetWorth: 500_000,
-    description: 'Yüksek kapasite. Nüfusu kalabalık district\'lerde bakkalı ezer.',
+    description: 'Yüksek kapasite. Nüfusu kalabalık mahallelerde bakkalı ezer.',
     slots: 3,
   },
   // ---- Yeme-içme ----
@@ -261,7 +261,7 @@ export const BUILDINGS: BuildingDef[] = [
     color: '#7488ab',
     height: 1.6,
     unlockNetWorth: 250_000,
-    description: 'Kira geliri verir ve district nüfusunu artırır — kendi müşterini üretir.',
+    description: 'Kira geliri verir ve mahallenin nüfusunu artırır — kendi müşterini üretir.',
   },
   // Tur 25: konutta ve ofiste tek seçenek vardı. Rezidans konutun büyük
   // basamağı; iş merkezi plazadan önce gelen orta boy ofis.

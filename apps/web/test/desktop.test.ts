@@ -5,9 +5,11 @@ import { dirname, join } from 'node:path';
 import { GameEngine } from '../../../packages/core/src/engine';
 import { GAME_VERSION, createNewGame } from '../../../packages/core/src/worldgen';
 import { listSaves, loadGame, saveGame, setSaveBackend } from '../../../packages/persistence/src/index';
-import type { InvokeOptions } from '../src/desktop/bridge';
+import { ACHIEVEMENTS, STEAM_ACHIEVEMENTS } from '../../../packages/content/src/index';
+import type { Invoke, InvokeOptions } from '../src/desktop/bridge';
 import { hydrate, isProfileKey, mirror } from '../src/desktop/profile';
 import { fileSaves } from '../src/desktop/saves';
+import { initSteam } from '../src/desktop/steam';
 
 /**
  * Masaüstü sürümü (Tur 66), sayfa tarafı: küçük kayıtların dosya aynası ve
@@ -224,6 +226,101 @@ describe('kayıt slotları dosyada', () => {
     await deleteSave(3);
     assert.deepEqual(await listSaves(), []);
     assert.deepEqual(shell.calls, ['save_read', 'save_write', 'save_remove', 'save_list']);
+  });
+});
+
+/** Kariyer deposunun sahtesi: açılmış rozetler ve değişiklik haberi. */
+function fakeCareer(initial: string[]) {
+  const unlocked = [...initial];
+  const listeners = new Set<() => void>();
+  return {
+    unlocked,
+    source: {
+      unlockedIds: () => [...unlocked],
+      subscribe(listener: () => void) {
+        listeners.add(listener);
+        return () => listeners.delete(listener);
+      },
+    },
+    open(id: string) {
+      unlocked.push(id);
+      for (const listener of listeners) listener();
+    },
+    touch() {
+      for (const listener of listeners) listener();
+    },
+    listeners,
+  };
+}
+
+/** Kabuğun Steam komutlarının sahtesi; `failUnlocks` kadar ilk bildirim reddediliyor. */
+function fakeSteam(available: boolean, failUnlocks = 0) {
+  const unlocks: string[][] = [];
+  let failures = failUnlocks;
+  const invoke = (async (command: string, args?: unknown) => {
+    if (command === 'steam_status') return { available, detail: available ? "Steam'e bağlı" : 'Steam açık değil' };
+    if (command === 'steam_unlock') {
+      if (failures-- > 0) throw new Error('kabuk meşgul');
+      unlocks.push((args as { names: string[] }).names);
+      return null;
+    }
+    throw new Error(`beklenmeyen komut ${command}`);
+  }) as Invoke;
+  return { invoke, unlocks };
+}
+
+const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+describe('Steam başarımları (Tur 70)', () => {
+  test('her rozetin Steam adı var: tekil, Steamworks biçiminde, fazlası yok', () => {
+    const ids = ACHIEVEMENTS.map((def) => def.id).sort();
+    assert.deepEqual(Object.keys(STEAM_ACHIEVEMENTS).sort(), ids);
+    const names = Object.values(STEAM_ACHIEVEMENTS);
+    assert.equal(new Set(names).size, names.length, 'iki rozet aynı adı taşıyor');
+    for (const name of names) assert.match(name, /^CF_[A-Z0-9_]{1,124}$/);
+  });
+
+  test('açılışta açılmış rozetler gidiyor, sonra yalnız yeni açılanlar', async () => {
+    const career = fakeCareer(['first_victory', 'blitz', 'bilinmeyen_rozet']);
+    const steam = fakeSteam(true);
+    const status = await initSteam(steam.invoke, career.source);
+    assert.equal(status.available, true);
+    await settle();
+    assert.deepEqual(steam.unlocks, [['CF_FIRST_VICTORY', 'CF_BLITZ']], 'tabloda olmayan rozet atlanıyor');
+    career.touch();
+    await settle();
+    assert.equal(steam.unlocks.length, 1, 'değişmeyen liste yeniden gitmiyor');
+    career.open('empire');
+    await settle();
+    assert.deepEqual(steam.unlocks[1], ['CF_EMPIRE']);
+  });
+
+  test('Steam yoksa hiçbir şey gönderilmiyor, kariyer dinlenmiyor', async () => {
+    const career = fakeCareer(['first_victory']);
+    const steam = fakeSteam(false);
+    const status = await initSteam(steam.invoke, career.source);
+    assert.equal(status.available, false);
+    career.open('empire');
+    await settle();
+    assert.deepEqual(steam.unlocks, []);
+    assert.equal(career.listeners.size, 0);
+  });
+
+  test('gidemeyen bildirim bir sonraki değişiklikte yeniden deneniyor', async () => {
+    const career = fakeCareer(['shield']);
+    const steam = fakeSteam(true, 1);
+    await initSteam(steam.invoke, career.source);
+    await settle();
+    assert.deepEqual(steam.unlocks, []);
+    career.touch();
+    await settle();
+    assert.deepEqual(steam.unlocks, [['CF_SHIELD']]);
+  });
+
+  test("kabuğun komut listesinde Steam'in iki komutu var", () => {
+    const main = readFileSync(join(repoRoot(), 'apps/desktop/src-tauri/src/main.rs'), 'utf8');
+    const handler = /generate_handler!\[([^\]]*)\]/.exec(main)?.[1] ?? '';
+    for (const command of ['steam_status', 'steam_unlock']) assert.ok(handler.includes(command), command);
   });
 });
 

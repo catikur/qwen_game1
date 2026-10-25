@@ -8,8 +8,12 @@
  *
  *   node tools/run-node-script.mjs tools/tanitim/sehir.ts <çıktı dizini>
  *
- * Çıktı: <dil>-orta.json (420. gün). `tools/tanitim/kareler.mjs` bunu oyuna
+ * Çıktı: <dil>-orta.json (516. gün). `tools/tanitim/kareler.mjs` bunu oyuna
  * yüklüyor (`engine.replaceState`).
+ *
+ * Gün Tur 70'te 420'den 516'ya geçti: mevsimlerden (Tur 62) beri 420. gün
+ * kışın sonu, yerde kar. 516–527 bu tohumda on iki gün açık hava, yaz başı;
+ * kareler ve Steam görselleri (`tools/steam/gorseller.mjs`) o pencerede.
  */
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -24,11 +28,12 @@ if (!out) {
 }
 mkdirSync(out, { recursive: true });
 
-const NAMES: Record<string, string> = { tr: 'Deniz Ticaret', en: 'Harbor Trading' };
+// Almanca Tur 70'te (Steam'in Almanca sayfası).
+const NAMES: Record<string, string> = { tr: 'Deniz Ticaret', en: 'Harbor Trading', de: 'Hafenhandel' };
 const SEED = 42;
-const MID_DAY = 420;
+const MID_DAY = 516;
 
-for (const locale of ['tr', 'en']) {
+for (const locale of Object.keys(NAMES)) {
   await loadLocale(locale);
   setLocale(locale);
   const engine = new GameEngine(createNewGame({ seed: SEED, companyName: NAMES[locale]! }));

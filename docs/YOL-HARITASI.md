@@ -1,6 +1,6 @@
 # Capital — Yol Haritası
 
-> Tur 47'de yazıldı, her turda güncelleniyor (son: Tur 67). Biten işin ayrıntısı
+> Tur 47'de yazıldı, her turda güncelleniyor (son: Tur 70). Biten işin ayrıntısı
 > `docs/DURUM.md`'de; bu dosya önümüzdeki işin sırasını ve gerekçesini
 > tutuyor.
 
@@ -39,7 +39,7 @@ Bir bağlantıyla açılan, istenirse kurulan ve çevrimdışı da oynanan bir
 | **2 · Çevrimiçi rekabet** | Herkes aynı şehirde | 51–55 | Pages'te paylaşılan tablo var, skor sunucuda doğrulanıyor | **bitti** (Tur 55) |
 | **3 · Yeni yollar** | Her koşu farklı bir şirket | 56–61 | Zafere en az üç farklı yol var, her birini kazanan bir vekil var | **bitti** (Tur 61) |
 | **4 · Şehrin hissi** | Oynaması keyifli | 62–65 | Mevsim ve hava görünüyor, önemli anlar hissediliyor | **bitti** (Tur 65) |
-| **5 · Platform ve topluluk** | Oyunun evi büyüsün | 66–70 | Masaüstü sürümü ve paylaşılabilir senaryolar var | sürüyor (Tur 69) |
+| **5 · Platform ve topluluk** | Oyunun evi büyüsün | 66–70 | Masaüstü sürümü ve paylaşılabilir senaryolar var | **bitti** (Tur 70) |
 
 ### Faz 1 · Ürün temeli
 
@@ -157,8 +157,17 @@ oyun her yerde tamamen ücretsiz. Turlar Faz 4'teki gibi.
   dil başına bir biçim tablosunda ("45 %", "1,2 Mio. ₺"); paket metninde
   Almanca yoksa İngilizcesi. Seçicide dil sırası sabit; lens düğmeleri iki
   sütun (üç dilde de kesilmiyor). Yeni dil eklemenin kılavuzu ve denetim
-  betiği `docs/CEVIRI.md`'de. — bu PR
-- **70 · Steam.** Başarımlar ve mağaza sayfası.
+  betiği `docs/CEVIRI.md`'de. — bitti (#99)
+- **70 · Steam.** Kariyerin 29 rozeti Steam başarımı: masaüstü kabuğu
+  `steam` özelliğiyle Steamworks'e bağlanıyor, Steam yoksa oyun aynı. Tek
+  pencere (ikinci kopya açılmıyor). CI'da üç işletim sisteminin Steam deposu
+  (macOS evrensel, Windows'ta WebView2 kurulum betiği). Mağaza sayfası üç
+  dilde; başarım simgeleri, kapsüller, kütüphane görselleri ve logo gerçek
+  oyundan bir araçla; ekran görüntüleri üç dilde. Steamworks'te yapılacaklar
+  adım adım `docs/STEAM.md`'de. — bu PR
+
+Faz 5 Tur 70'le bitiyor. Harita burada bitiyor; sonraki faz kullanıcıyla
+birlikte yazılacak (Faz 5 raporu `docs/DURUM.md`'de, Tur 70'in sonunda).
 
 ## Her fazda sürecek işler
 

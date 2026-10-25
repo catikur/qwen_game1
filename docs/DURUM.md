@@ -4,7 +4,7 @@
 > `pnpm bench` çıktısından; iddialar `pnpm balance` ve `pnpm playtest`
 > tarafından her koşuda doğrulanıyor.
 >
-> Son güncelleme: şema **v6**, 69 tur (Tur 33 denendi ve geri alındı; Tur 34 eski görünüme canlılık ekledi; Tur 35 arayüzü Lite'ın "Cam & Bulut" diline taşıdı; Tur 36 şehre ayrıntı kattı; Tur 37a geç oyuna yönetim yükü, servet vergisi ve kriz dönemleri getirdi; Tur 37b karar kartlarını ve rakip hikâyelerini ekledi; Tur 37c fırsat balonlarını ve aylık görev panosunu getirdi; Tur 37d canlı pazarı, şehir projesi ihalesini ve rakip konsorsiyumunu getirdi; Tur 38 değerlendirme turuydu: geç oyun hızı, gündem ve haber akışı, zorluk eğrisi; Tur 39a senaryo modunu getirdi: Kurtarma ve Krizin ortasında; Tur 39b Konsorsiyuma karşı, Zincir ustası ve Şehrin sponsoru senaryolarını ekledi; Tur 39c Büyük şehir fethi ve Holding: iki şehir ile listeyi yediye tamamladı; Tur 40 cila ve performans; Tur 41 başarımlar ve kariyer; Tur 42 açılışta gölgelendirici derlemesi; Tur 43 oyun içi akıcılık; Tur 44 değerlendirme turuydu: Türkçe sayı biçimi, yardımın kapsamı, haber akışı; Tur 45 dört ek kural getirdi: Fırtınalı yıllar, Aç gözlü rakipler, Sıkı banka, Kıt arsa; Tur 46 açılış paketini böldü: kurulum ekranı telefonda yarı sürede; Tur 47 tek Ayarlar paneli ve erişilebilirlik getirdi: metin boyutu, renk körlüğüne uygun palet, hareket, ses düzeyleri, pencerelerde klavye; Tur 48 oyunu kurulabilir ve çevrimdışı açılır yaptı, yayından sonra "yeni sürüm hazır" diyor; Tur 49 müziği getirdi: gündüz, gece ve kriz, şehirle birlikte dönüyor; Tur 50 Faz 1'i değerlendirdi ve tanıtım paketini hazırladı; Tur 51 Faz 2'yi açtı: Lite'ın lig sunucusu ana oyunun Tohum Ligi koşularını da alıyor, tablo herkese açık; Tur 52'de sunucu her koşuyu gönderimde yeniden oynatıyor, tabloya yalnız doğrulanmış skor giriyor; Tur 53 ligin her haftasına bir ek kural ve 90 günlük günün koşusunu getirdi; Tur 54 liderlerin eğrisini senin koşunun üstüne koydu ve liderin o günlerde ne yaptığını koşu kodundan anlatıyor; Tur 55 davet kodlu arkadaş liglerini getirdi ve Faz 2'yi kapattı; Tur 56 Faz 3'ü açtı: nakliye terminali rakip mağazalarına taşıma sözleşmesiyle taşıyor; Tur 57 enerjiyi getirdi: şebeke fiyatı, santraller, enerji krizi; Tur 58 gayrimenkul geliştiricisini getirdi: konut ve ofis projeleri, kira ve doluluk, kentsel dönüşüm hakkı ve başvurusu; Tur 59 rakiplere hafıza verdi: CEO'nun mizacı, husumet ve ittifak, fiyat savaşı ve lobiyle tepki, uzlaşma; Tur 60 Faz 3'ün sektörleriyle üç senaryo ekledi: Herkesin nakliyecisi, Karanlık kış, Kentsel dönüşüm, her biri bir ek kuralla; Tur 61 Faz 3'ü değerlendirdi ve kapattı: zafere üç gerçek yol var, şirketin yolu kârın kaynağından okunuyor; Tur 62 Faz 4'ü açtı: mevsim ve hava şehirde görünüyor, ağaçlar mevsimin renginde, yağmur ve kar yağıyor; Tur 63 önemli anları getirdi: inşaatın tozu, devralmanın renk dalgası, çatılardan yükselen kâr, zafer gecesinin havai fişekleri; Tur 64 şehir kartını getirdi: koşunun özeti ve şehrin kuşbakışı tek bir görselde, indirilip paylaşılıyor; Tur 65 Faz 4'ü değerlendirdi ve kapattı: telefonda günün JS'i kısaldı, tuvalin yeri her karede okunmuyor; Tur 66 Faz 5'i açtı: masaüstü sürümü, kayıtlar ve ayarlar dosyada, Steam'e hazırlık; Tur 67 içerik paketlerini getirdi: senaryo ve kurallar dosyadan, senaryolar kodla ve bağlantıyla paylaşılıyor; Tur 68 senaryo editörünü getirdi: paket tarayıcıda alan alan kuruluyor, sınırlar formda, taslak kaydetmeden deneniyor; Tur 69 üçüncü dili getirdi: oyunun her metni Almancada, sayı ve para dil başına biçimde). Önümüzdeki işin sırası `docs/YOL-HARITASI.md`'de.
+> Son güncelleme: şema **v6**, 70 tur (Tur 33 denendi ve geri alındı; Tur 34 eski görünüme canlılık ekledi; Tur 35 arayüzü Lite'ın "Cam & Bulut" diline taşıdı; Tur 36 şehre ayrıntı kattı; Tur 37a geç oyuna yönetim yükü, servet vergisi ve kriz dönemleri getirdi; Tur 37b karar kartlarını ve rakip hikâyelerini ekledi; Tur 37c fırsat balonlarını ve aylık görev panosunu getirdi; Tur 37d canlı pazarı, şehir projesi ihalesini ve rakip konsorsiyumunu getirdi; Tur 38 değerlendirme turuydu: geç oyun hızı, gündem ve haber akışı, zorluk eğrisi; Tur 39a senaryo modunu getirdi: Kurtarma ve Krizin ortasında; Tur 39b Konsorsiyuma karşı, Zincir ustası ve Şehrin sponsoru senaryolarını ekledi; Tur 39c Büyük şehir fethi ve Holding: iki şehir ile listeyi yediye tamamladı; Tur 40 cila ve performans; Tur 41 başarımlar ve kariyer; Tur 42 açılışta gölgelendirici derlemesi; Tur 43 oyun içi akıcılık; Tur 44 değerlendirme turuydu: Türkçe sayı biçimi, yardımın kapsamı, haber akışı; Tur 45 dört ek kural getirdi: Fırtınalı yıllar, Aç gözlü rakipler, Sıkı banka, Kıt arsa; Tur 46 açılış paketini böldü: kurulum ekranı telefonda yarı sürede; Tur 47 tek Ayarlar paneli ve erişilebilirlik getirdi: metin boyutu, renk körlüğüne uygun palet, hareket, ses düzeyleri, pencerelerde klavye; Tur 48 oyunu kurulabilir ve çevrimdışı açılır yaptı, yayından sonra "yeni sürüm hazır" diyor; Tur 49 müziği getirdi: gündüz, gece ve kriz, şehirle birlikte dönüyor; Tur 50 Faz 1'i değerlendirdi ve tanıtım paketini hazırladı; Tur 51 Faz 2'yi açtı: Lite'ın lig sunucusu ana oyunun Tohum Ligi koşularını da alıyor, tablo herkese açık; Tur 52'de sunucu her koşuyu gönderimde yeniden oynatıyor, tabloya yalnız doğrulanmış skor giriyor; Tur 53 ligin her haftasına bir ek kural ve 90 günlük günün koşusunu getirdi; Tur 54 liderlerin eğrisini senin koşunun üstüne koydu ve liderin o günlerde ne yaptığını koşu kodundan anlatıyor; Tur 55 davet kodlu arkadaş liglerini getirdi ve Faz 2'yi kapattı; Tur 56 Faz 3'ü açtı: nakliye terminali rakip mağazalarına taşıma sözleşmesiyle taşıyor; Tur 57 enerjiyi getirdi: şebeke fiyatı, santraller, enerji krizi; Tur 58 gayrimenkul geliştiricisini getirdi: konut ve ofis projeleri, kira ve doluluk, kentsel dönüşüm hakkı ve başvurusu; Tur 59 rakiplere hafıza verdi: CEO'nun mizacı, husumet ve ittifak, fiyat savaşı ve lobiyle tepki, uzlaşma; Tur 60 Faz 3'ün sektörleriyle üç senaryo ekledi: Herkesin nakliyecisi, Karanlık kış, Kentsel dönüşüm, her biri bir ek kuralla; Tur 61 Faz 3'ü değerlendirdi ve kapattı: zafere üç gerçek yol var, şirketin yolu kârın kaynağından okunuyor; Tur 62 Faz 4'ü açtı: mevsim ve hava şehirde görünüyor, ağaçlar mevsimin renginde, yağmur ve kar yağıyor; Tur 63 önemli anları getirdi: inşaatın tozu, devralmanın renk dalgası, çatılardan yükselen kâr, zafer gecesinin havai fişekleri; Tur 64 şehir kartını getirdi: koşunun özeti ve şehrin kuşbakışı tek bir görselde, indirilip paylaşılıyor; Tur 65 Faz 4'ü değerlendirdi ve kapattı: telefonda günün JS'i kısaldı, tuvalin yeri her karede okunmuyor; Tur 66 Faz 5'i açtı: masaüstü sürümü, kayıtlar ve ayarlar dosyada, Steam'e hazırlık; Tur 67 içerik paketlerini getirdi: senaryo ve kurallar dosyadan, senaryolar kodla ve bağlantıyla paylaşılıyor; Tur 68 senaryo editörünü getirdi: paket tarayıcıda alan alan kuruluyor, sınırlar formda, taslak kaydetmeden deneniyor; Tur 69 üçüncü dili getirdi: oyunun her metni Almancada, sayı ve para dil başına biçimde; Tur 70 Steam'i getirdi ve Faz 5'i kapattı: 29 rozet Steam başarımı, tek pencere, üç işletim sisteminin Steam deposu, üç dilde mağaza sayfası). Önümüzdeki işin sırası `docs/YOL-HARITASI.md`'de.
 
 ---
 
@@ -7853,6 +7853,131 @@ dört kurallı serbest, kurallı üç senaryo).
 - Tam tarayıcı koşusu 719/719, konsol temiz (53 dk). Lens çubuğunun bir
   sıra uzaması öteki bölümlerin hiçbirini bozmadı.
 - Paket bütçesi tamam.
+
+### Tur 70 — Steam: başarımlar ve mağaza sayfası, Faz 5'in sonu
+
+Faz 5'in son turu. Belge `docs/STEAM.md`; mağaza metinleri
+`docs/steam/MAGAZA.md`.
+
+**Başlangıç.** Tur 66 masaüstü sürümünü getirmiş, Steam'e kalanları
+yazmıştı (`docs/MASAUSTU.md`): Steamworks ve başarımlar, mağaza sayfası,
+tek pencere, Linux deposunun Steam Deck'te denenmesi. Steamworks hesabı ve
+uygulama kimliği kullanıcının hesabında; bu tur hesap olmadan yapılabilecek
+her şeyi yapıyor ve hesabın açılmasından yayına kadar yolu adım adım
+yazıyor.
+
+**Yapılanlar.** Simülasyon ve şema aynı; hazır oyunların parmak izi
+birebir (simülasyon `a5ded51fb01e62a5`, lig `104a3ce17d31216b`).
+
+- **Başarımlar.** Kariyerin 29 rozeti Steam başarımı. Ad tablosu
+  `STEAM_ACHIEVEMENTS` (`packages/content/src/steam.ts`) açık yazılı,
+  rozet kimliğinden türetilmiyor: Steamworks'teki ad değişirse oyuncunun
+  açtığı başarım kaybolur. Sayfa tarafı (`apps/web/src/desktop/steam.ts`)
+  açılışta bütün açık rozetleri, sonra her yeni rozeti kabuğa bildiriyor;
+  giden istek düşerse sonraki değişiklikte yeniden. Kabuk
+  (`apps/desktop/src-tauri/src/steam.rs`) Steamworks'e `steamworks`
+  paketiyle bağlanıyor; Steamworks oyuncunun istatistiklerini açılıştan
+  biraz sonra indirdiği için açma istekleri kuyrukta bekliyor, arka planda
+  100 ms'de bir deneniyor, açılan olunca `StoreStats`; Steamworks'te
+  tanımsız ad ~60 sn sonra düşüyor. Bağlantı `steam` özelliğiyle
+  derleniyor; özellik kapalı, istemci kapalı ya da oyun Steam'den
+  açılmamışsa oyun aynı (sayfanın konsolunda bir satır). Paket senaryoları
+  kariyere sayılmadığı için başarıma da sayılmıyor.
+- **Tek pencere** (`tauri-plugin-single-instance`): ikinci kopya açılmıyor,
+  açık pencere öne geliyor; iki pencere aynı kayda yazamıyor.
+- **Steam depoları CI'da.** Elle çalıştırılan paket işinde, kurulum
+  paketlerinden sonra üç işletim sisteminde `steam` özelliğiyle derleme ve
+  `tools/steam-depot.mjs`: oyun ve Steamworks kütüphanesi yan yana (Linux
+  rpath `$ORIGIN`, macOS `@executable_path`, `build.rs`). macOS deposu
+  evrensel (Apple Silicon ve Intel; SDK'nın dylib'i iki mimariyi
+  taşıyor). Windows'ta WebView2 için Tur 66'nın açık bıraktığı seçim:
+  Steam'in kurulum betiği Microsoft'un önyükleyicisini (~2 MB) ilk
+  açılıştan önce bir kez çalıştırıyor; sabit sürümlü WebView2 (~180 MB)
+  gerekmedi. SteamPipe şablonu `docs/steam/steampipe/`.
+- **Mağaza malzemesi** (`tools/steam/`):
+  - `basarimlar.ts` → `docs/steam/basarimlar.csv`: API adı, grup, üç dilde
+    ad ve açıklama, oyunun kendi sözlüklerinden; çevrilmemiş ya da boş alan
+    varsa duruyor.
+  - `gorseller.mjs`: 29 başarım simgesi ve kilitli halleri (256 × 256;
+    grubun rengi, her rozetin kendi çizimi), dört mağaza kapsülü,
+    kütüphane kapsülü ve kahramanı, saydam logo, topluluk ve kısayol
+    simgesi. Şehir gerçek oyundan (tanıtım karelerinin şehri, arayüz gizli,
+    takvim duruk); logo uygulama simgesi ve kurulum ekranının Fredoka'sı.
+    Uygulama simgesinin çizimi ortak dosyada (`tools/app-icon.mjs`).
+  - `docs/steam/MAGAZA.md`: kısa ve uzun açıklama üç dilde (Steam'in
+    biçimiyle, yapıştırmaya hazır; sayılar bugünkü oyundan: 40 bina, 10
+    senaryo), etiketler, sistem gereksinimleri, yapay zekâ beyanı için
+    önerilen metin.
+  - Ekran görüntüleri üç dilde: tanıtım kareleri (`tools/tanitim/`)
+    Almancayı da çekiyor, 30 kare.
+- `docs/STEAM.md`: kullanıcının Steamworks'te yapacakları sırasıyla
+  (hesap, ücret, başarımlar, mağaza, beyan, depolar, yükleme, inceleme,
+  macOS imzası), depoların içeriği, geliştirirken bağlanmak, malzemeyi
+  yeniden üretmek.
+
+**Bulunanlar.**
+- *Tanıtım şehrinin 420. günü kışın sonu.* Kareler Tur 50'de mevsimsiz bir
+  oyundan alınmıştı; Tur 62'den beri 420. gün bu tohumda yerde kar, kareler
+  soluk. Şehir 516. güne kadar büyüyor (378 bina): on iki gün açık hava, yaz
+  başı. Karar kartı karesi o günlerde de geliyor.
+- *Türkçe metinde İngilizce sözcük.* Süpermarket ve Apartman'ın
+  açıklamasında "district'lerde", "district nüfusunu" kalmıştı; yapı
+  menüsünde, ekran görüntüsünün ortasında görünüyordu. "mahallelerde",
+  "mahallenin nüfusunu".
+- *Almanca gündem çipi kendini tekrarlıyordu:* "MODETREND Modetrend:
+  Bekleidung". Değer "Bekleidung im Trend" (Türkçede "MODA Giyim modası").
+- *Tek pencere Linux'ta D-Bus istiyor.* Eklenti ikinci kopyayı oturum
+  veri yoluyla buluyor; veri yolu yoksa ikinci kopya açılıyor. Masaüstü
+  oturumunda (Steam Deck dahil) hep var; CI'ın xvfb'sinde yoktu, uçtan uca
+  test `dbus-run-session` içinde koşuyor.
+- Steam'siz derlemede kuyruğun kodu kullanılmıyordu (derleyici uyarısı);
+  kuyruk yalnız `steam` özelliğinde ve testte derleniyor.
+
+**Doğrulama.**
+- `pnpm test` 849/849 (844'ten); tip denetimi temiz.
+  - `apps/web/test/desktop.test.ts` → "Steam başarımları (Tur 70)" (5
+    yeni): tablo tam, adlar tekil ve Steamworks'ün biçiminde (`CF_…`);
+    açılışta ve her değişiklikte bildirim, bilinmeyen rozet atlanıyor;
+    Steam yokken hiçbir şey gitmiyor, abone de olunmuyor; düşen istek
+    sonraki değişiklikte yeniden; kabuğun iki komutu kayıtlı.
+- `cargo test` 10/10, `cargo test --features steam` 9/9: kuyruk
+  istatistikler inene kadar bekliyor ve sonra yazıyor, açılan ad yeniden
+  girmiyor, tanımsız ad sınırda düşüyor; Steam'siz derlemede durum
+  "kapalı". İki derlemede de uyarı yok.
+- Gerçek pencerede uçtan uca 19/19 (17'den), yeni "Steam ve tek pencere":
+  Steam komutları derlenmiş oyunda yanıt veriyor; ikinci kopya kendiliğinden
+  kapanıyor, ilk pencere yerinde.
+- Steam'li sürüm derlemesi Linux'ta: depo klasörü kuruluyor, oyun
+  `libsteam_api.so`'yu kendi yanından buluyor (RUNPATH `$ORIGIN`); Steam
+  istemcisi yokken Steamworks'ün hatasını günlüğe yazıp açılıyor.
+- Üç işletim sisteminin Steam deposu CI'da: elle çalıştırılan paket işi
+  bu dalda koşuluyor (sonuç birleşmeden önce burada).
+- Tam tarayıcı koşusu: koşuyor (sonuç birleşmeden önce burada).
+- Parmak izi main ile aynı; paket bütçesi tamam (ana parça 74,1 KB,
+  değişmedi: Steam tablosu yalnız masaüstü paketinde).
+
+**Faz 5'in özeti (Tur 66–70).** Platform ve topluluk:
+- Tur 66: masaüstü sürümü (Tauri 2); kayıtlar ve ayarlar dosyada, dışa
+  aktarma İndirilenler'e, kapanırken kayıt (#96).
+- Tur 67: içerik paketleri; senaryo ve kurallar dosyadan, kodla ve
+  bağlantıyla paylaşılıyor (#97).
+- Tur 68: tarayıcıda senaryo editörü; paket alan alan, sınırlar formda,
+  taslak kaydetmeden deneniyor (#98).
+- Tur 69: üçüncü dil Almanca; sayı ve para dil başına biçimde (#99).
+- Tur 70: Steam; başarımlar, tek pencere, depolar, mağaza sayfası (bu tur).
+
+Ölçü tuttu: masaüstü sürümü var ve Steam'e hazır; senaryolar paylaşılıyor
+ve tarayıcıda yazılıyor. Faz boyunca şema da simülasyon da değişmedi: lig
+izi Tur 61'le aynı (`a5ded51fb01e62a5`). Birim testi fazın başında 780'di
+(Tur 65), şimdi 849; tarayıcı testi 678 kontrolden 719'a; masaüstünde
+cargo testleri ve gerçek pencerede 19 kontrol yeni.
+
+Kullanıcının hesabında bekleyenler: Tur 56–60'ın ve masaüstü kökenlerinin
+Worker dağıtımı (Cloudflare panelinden ya da depoya iki sır:
+`CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`); Steamworks hesabı,
+uygulama kimliği ve `docs/STEAM.md`'nin adımları; isteğe bağlı Apple
+Developer (macOS imzası). Steam Deck'te Linux deposunun denenmesi bir Deck
+istiyor. Yol haritası Faz 5'le bitiyor; sonraki faz kullanıcıyla.
 
 ---
 

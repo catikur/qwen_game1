@@ -1,4 +1,5 @@
 import { setSaveBackend } from '@capital/persistence';
+import { careerUnlockedIds, subscribeCareer } from '@capital/ui';
 import { setFileSink } from '../host';
 import type { DeliveryOutcome } from '../host';
 import { saveBeforeLeaving } from '../pwa';
@@ -7,6 +8,7 @@ import type { Invoke } from './bridge';
 import { hydrate, mirror } from './profile';
 import type { Mirror } from './profile';
 import { fileSaves } from './saves';
+import { initSteam } from './steam';
 
 /** Kapanışta kayıt en çok bu kadar bekleniyor; kabuk da 5 sn sonra kendisi kapanıyor. */
 const CLOSE_SAVE_MS = 4000;
@@ -42,6 +44,8 @@ export async function initDesktop(): Promise<boolean> {
 
   setSaveBackend(fileSaves(invoke));
   setFileSink((filename, data) => exportFile(invoke, filename, data));
+  // Steam başarımları (Tur 70): kariyer dosyadan okunduktan sonra; açılışı beklemiyor.
+  void initSteam(invoke, { unlockedIds: careerUnlockedIds, subscribe: subscribeCareer });
 
   // Pencere kapanırken: kabuk kapanışı tutup haber veriyor; oyun otomatik
   // kayıt slotuna yazıyor, ayar dosyaları bitiyor, sonra kapanıyor.

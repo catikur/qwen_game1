@@ -1,8 +1,8 @@
 # Masaüstü sürümü
 
 > Tur 66'da yazıldı. Kod `apps/desktop` (Tauri 2 kabuğu) ve
-> `apps/web/src/desktop/` (sayfa tarafı). Steam'e yükleme Tur 70'in işi;
-> bu belge oraya kadar gerekenleri tutuyor.
+> `apps/web/src/desktop/` (sayfa tarafı). Steam (başarımlar, depolar,
+> mağaza sayfası, yükleme) Tur 70'te: `docs/STEAM.md`.
 
 ## Ne
 
@@ -90,7 +90,8 @@ Testler ve taşınabilir kurulum için: `CAPITALFORGE_DATA_DIR` (kök),
 Kullanıcının kararı (Tur 66'dan önce): web, masaüstü ve Steam; oyun
 tamamen ücretsiz.
 
-**Kullanıcının hesabında yapılacaklar** (Tur 70'ten önce):
+**Kullanıcının hesabında yapılacaklar** (adım adım sırası `docs/STEAM.md`
+→ "Senin yapacakların"):
 
 - **Steamworks** (partner.steamgames.com): Conforcus adına iş ortağı hesabı;
   şirket bilgileri, vergi formu (ABD dışı şirket: W-8BEN-E), banka ve kimlik
@@ -113,15 +114,16 @@ tamamen ücretsiz.
 
 **Depolar.** Steam kurulum paketi istemiyor, klasör istiyor:
 
-- Windows: `capitalforge.exe` (`tauri build --no-bundle`). WebView2 Windows
-  11'de ve güncel Windows 10'da kurulu; olmayan makine için iki yol var:
-  Steamworks'ün kurulum betiğinde Microsoft'un WebView2 kurucusu, ya da
-  sabit sürümlü WebView2'yi depoya koymak (`webviewInstallMode:
-  fixedRuntime`, ~180 MB). Tur 70'te seçilecek.
-- macOS: `CapitalForge.app` (imzalı ve noter onaylı).
-- Linux: Steam'in Linux çalışma ortamında (Steam Runtime) WebKitGTK yok.
-  AppImage (WebKitGTK'yi içinde taşıyor) ya da sistem kütüphaneleri; Steam
-  Deck'te denenecek.
+- Windows: `capitalforge.exe` (`tauri build --features steam --no-bundle`).
+  WebView2 Windows 11'de ve güncel Windows 10'da kurulu; olmayan makine
+  için Tur 70'te seçilen yol Steam'in kurulum betiği: depoda Microsoft'un
+  önyükleyicisi, Steam onu ilk açılıştan önce bir kez çalıştırıyor
+  (`docs/STEAM.md` → "Depolar"). Sabit sürümlü WebView2 (~180 MB) gerekmedi.
+- macOS: `CapitalForge.app`, evrensel (Apple Silicon ve Intel); imza
+  isteğe bağlı ama önerilir.
+- Linux: Steam'in Linux çalışma ortamında (Steam Runtime) WebKitGTK yok;
+  depo sistemin WebKitGTK 4.1'ini kullanıyor. Steam Deck'te denenmedi
+  (`docs/STEAM.md` → "Linux ve Steam Deck").
 
 **Steam Cloud.** Kayıtlar ve ayarlar zaten dosyada, kökleri sabit;
 Steamworks → Steam Cloud → Auto-Cloud:
@@ -137,19 +139,15 @@ Geçici dosyalar noktayla başlıyor (`.slot-0.json.tmp`): desene girmiyor,
 yarım yazma eşitlenmiyor. Açılışta
 dosya yerel depoyu ezdiği için başka makineden gelen ayar kazanıyor.
 
-**Tur 70'e kalanlar:**
-
-- Steamworks SDK ve başarımlar: kariyerin 29 rozeti Steam başarımlarına
-  (Rust tarafında `steamworks` paketi; SDK'nın kütüphaneleri depoda).
-- Mağaza sayfası: kapsül görselleri, ekran görüntüleri, tanıtım metni
-  (Tur 50'nin tanıtım paketi, `tools/tanitim`).
-- Tek örnek: iki pencere aynı kayda yazmasın (Steam oyunu bir kez açıyor;
-  elle açılan ikinci kopya için `tauri-plugin-single-instance`).
-- Linux deposunun Steam Deck'te denenmesi.
+**Tur 70'te yapıldı** (`docs/STEAM.md`): başarımlar (`steam` özelliği,
+`steamworks` paketi), tek pencere (`tauri-plugin-single-instance`), Steam
+depoları CI'da, mağaza sayfasının metinleri ve görselleri. Kalan: Linux
+deposunun Steam Deck'te denenmesi; o bir Deck istiyor.
 
 ## Testler
 
-- `cargo test` (`apps/desktop/src-tauri`): dosya deposu: kayıt yazma,
+- `cargo test` ve `cargo test --features steam` (`apps/desktop/src-tauri`):
+  Steam başarım kuyruğu (`docs/STEAM.md`); dosya deposu: kayıt yazma,
   okuma, listede yalnız künyeler, bozuk isteğin sağlam kaydı ezmemesi,
   ayar anahtarının dizinden çıkamaması, dışa aktarmanın üstüne yazmaması.
 - `pnpm test` → `apps/web/test/desktop.test.ts`: ayar aynası (dosya kazanır,
@@ -159,9 +157,10 @@ dosya yerel depoyu ezdiği için başka makineden gelen ayar kazanıyor.
 - `tools/desktop-e2e.mjs`: derlenmiş oyun gerçek penceresinde (Linux,
   WebKitGTK, tauri-driver ve WebDriver): slota kayıt dosyada, dışa aktarma
   ve şehir kartı İndirilenler'de, ayar dosyada, kapanırken kayıt, yeniden
-  açılınca kaldığı gün ve dil. CI: `.github/workflows/desktop.yml`.
+  açılınca kaldığı gün ve dil; Steam komutları ve tek pencere (Tur 70).
+  CI: `.github/workflows/desktop.yml`.
 
 ```sh
 cargo install tauri-driver --version 2.0.6 --locked   # bir kez
-xvfb-run -a node tools/desktop-e2e.mjs                 # Linux; ekran varsa xvfb-run gerekmez
+xvfb-run -a dbus-run-session -- node tools/desktop-e2e.mjs   # Linux; ekran varsa xvfb-run gerekmez
 ```
