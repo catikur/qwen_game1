@@ -222,22 +222,8 @@ export function TextField({
   );
 }
 
-/** Kimlik ya da düz metin (dile bağlı değil). `onWrite` yazmayı çağırana bırakıyor (kuralın kimliği, başvurularıyla). */
-export function PlainField({
-  path,
-  label,
-  hint,
-  max,
-  optional,
-  onWrite,
-}: {
-  path: Path;
-  label: string;
-  hint?: string;
-  max: number;
-  optional?: boolean;
-  onWrite?: (value: string) => void;
-}): ReactElement {
+/** Kimlik ya da düz metin (dile bağlı değil). */
+export function PlainField({ path, label, hint, max, optional }: { path: Path; label: string; hint?: string; max: number; optional?: boolean }): ReactElement {
   const { doc, issues, set } = useEditor();
   const id = useId();
   const key = pathKey(path);
@@ -253,7 +239,7 @@ export function PlainField({
         autoCapitalize="off"
         aria-invalid={own.length > 0}
         data-edit-path={key}
-        onChange={(e) => (onWrite ? onWrite(e.target.value) : set(path, optional && e.target.value === '' ? undefined : e.target.value))}
+        onChange={(e) => set(path, optional && e.target.value === '' ? undefined : e.target.value)}
       />
     </Field>
   );

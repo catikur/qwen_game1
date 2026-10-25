@@ -279,26 +279,29 @@ export function withNewRule(doc: Pack, base: ModifierId, name: string, blurb: st
   return { doc: { ...doc, rules: [...rules, rule].slice(0, PACK_LIMITS.rules) }, id };
 }
 
+/** Kimlik başka bir kuralda ya da hazır kurallardan birinde mi (paketin kural kimlikleri tek kalmalı). */
+export function ruleIdTaken(doc: Pack, index: number, id: string): boolean {
+  return (doc.rules ?? []).some((entry, i) => i !== index && entry.id === id) || MODIFIERS.some((modifier) => modifier.id === id);
+}
+
 /**
  * Kuralın kimliğini değiştirir; onu seçen senaryolar yeni kimliği izliyor.
- * Yazılırken kimlik bir an başka bir kuralınkiyle (ya da hazır kuralınkiyle)
- * çakışabiliyor: o an başvurular taşınmıyor, kuralın son tek kimliğinde
- * (`anchor`) bekliyor; kimlik yeniden tekleşince oradan taşınıyor. Yoksa
- * çakışılan kuralın başvuruları da bu kurala geçiyordu (Codex #98).
- * Dönen `pending` bir sonraki yazmanın `anchor`'u (çakışma yoksa null).
+ * Başka bir kuralın (ya da hazır kuralın) kimliği yazılmıyor: belge
+ * değişmeden dönüyor, editör alanın altında söylüyor. Böylece taslakta iki
+ * kural aynı kimliği hiç taşımıyor, her başvuru tek bir kuralın (Codex #98:
+ * kimlik yazılırken bir an çakışınca öteki kuralın başvuruları da
+ * taşınıyor, çakışma sürerken kural silinince ötekinin seçimi gidiyordu).
  */
-export function withRuleId(doc: Pack, index: number, id: string, anchor?: string): { doc: Pack; pending: string | null } {
+export function withRuleId(doc: Pack, index: number, id: string): Pack {
   const list = doc.rules ?? [];
   const rule = list[index];
-  if (!rule) return { doc, pending: null };
-  const from = anchor ?? rule.id;
+  if (!rule || ruleIdTaken(doc, index, id)) return doc;
+  const old = rule.id;
   const rules = list.map((entry, i) => (i === index ? { ...entry, id } : entry));
-  const taken = list.some((entry, i) => i !== index && entry.id === id) || MODIFIERS.some((modifier) => modifier.id === id);
-  if (taken) return { doc: { ...doc, rules }, pending: from };
   const scenarios = (doc.scenarios ?? []).map((scenario) =>
-    scenario.rules?.includes(from) ? { ...scenario, rules: scenario.rules.map((ref) => (ref === from ? id : ref)) } : scenario,
+    scenario.rules?.includes(old) ? { ...scenario, rules: scenario.rules.map((ref) => (ref === old ? id : ref)) } : scenario,
   );
-  return { doc: { ...doc, rules, scenarios }, pending: null };
+  return { ...doc, rules, scenarios };
 }
 
 /** Kuralı siler; onu kullanan senaryolardan da çıkıyor. */

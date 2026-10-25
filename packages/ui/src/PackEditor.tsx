@@ -39,7 +39,7 @@ import { et } from './packEditorMessages';
 import type { EditorMessageKey } from './packEditorMessages';
 import { issueText } from './packMessages';
 import { MAX_PACKS, addPack } from './packStore';
-import { draftBytes, draftLocales, getAt, issuesAt, MAX_DRAFT_BYTES, pathKey, randomSeed, ruleChoice, setAt, starsRange, textIn, withGoalKind, withLocales, withNewRule, withRuleChoice, withScenarioCopy, withSetupPart, withRuleId, withoutRule, withoutScenario } from './packEditorModel';
+import { draftBytes, draftLocales, getAt, issuesAt, MAX_DRAFT_BYTES, pathKey, randomSeed, ruleChoice, setAt, starsRange, textIn, withGoalKind, withLocales, withNewRule, withRuleChoice, withScenarioCopy, withSetupPart, ruleIdTaken, withRuleId, withoutRule, withoutScenario } from './packEditorModel';
 import type { Path, SetupPart } from './packEditorModel';
 import { draftFrom, freshDraft, markTrial, storeDraft } from './packDraft';
 import type { Draft } from './packDraft';
@@ -870,8 +870,6 @@ function PackRules(): ReactElement {
 
 function RuleForm({ rule, index, onRemove }: { rule: PackRule; index: number; onRemove: () => void }): ReactElement {
   const { set, doc } = useEditor();
-  // Kimlik çakışırken başvuruların beklediği son tek kimlik (`withRuleId`).
-  const anchor = useRef<string | null>(null);
   const path: Path = ['rules', index];
   const defaults = MODIFIER_RULES[RULE_KEY[rule.base]] as Record<string, unknown>;
   const schema = RULE_PARAMS[rule.base] ?? {};
@@ -879,16 +877,7 @@ function RuleForm({ rule, index, onRemove }: { rule: PackRule; index: number; on
   return (
     <div className="editor-rule" data-editor-rule={rule.id}>
       <div className="editor-grid">
-        <PlainField
-          path={[...path, 'id']}
-          label={et('hud.editor.field.ruleId')}
-          max={32}
-          onWrite={(id) => {
-            const renamed = withRuleId(doc, index, id, anchor.current ?? undefined);
-            anchor.current = renamed.pending;
-            set([], renamed.doc);
-          }}
-        />
+        <RuleIdField rule={rule} index={index} />
         <ChoiceField
           path={[...path, 'base']}
           label={et('hud.editor.field.ruleBase')}
@@ -937,6 +926,47 @@ function RuleForm({ rule, index, onRemove }: { rule: PackRule; index: number; on
         {et('hud.editor.ruleRemove')}
       </button>
     </div>
+  );
+}
+
+/**
+ * Kuralın kimliği. Yazılan başka bir kuralın ya da hazır kuralın kimliğiyse
+ * belgeye gitmiyor (kural eski kimliğiyle kalıyor, başvurular karışmıyor);
+ * alanın altında söyleniyor.
+ */
+function RuleIdField({ rule, index }: { rule: PackRule; index: number }): ReactElement {
+  const { doc, set, issues } = useEditor();
+  const [text, setText] = useState(rule.id);
+  useEffect(() => {
+    if (!ruleIdTaken(doc, index, text)) setText(rule.id);
+  }, [rule.id]);
+  const key = pathKey(['rules', index, 'id']);
+  const taken = text !== rule.id && ruleIdTaken(doc, index, text);
+  const own = issuesAt(issues, key);
+  const id = `editor-rule-id-${index}`;
+  return (
+    <Field label={et('hud.editor.field.ruleId')} aside={et('hud.editor.chars', { count: text.length, max: 32 })} issues={own} id={id}>
+      <input
+        id={id}
+        type="text"
+        value={text}
+        spellCheck={false}
+        autoCapitalize="off"
+        aria-invalid={taken || own.length > 0}
+        data-edit-path={key}
+        onChange={(e) => {
+          setText(e.target.value);
+          set([], withRuleId(doc, index, e.target.value));
+        }}
+      />
+      {taken && (
+        <ul className="editor-issues">
+          <li className="editor-issue" data-edit-issue="ruleIdTaken">
+            {et('hud.editor.ruleIdTaken', { id: text })}
+          </li>
+        </ul>
+      )}
+    </Field>
   );
 }
 

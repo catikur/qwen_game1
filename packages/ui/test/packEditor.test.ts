@@ -18,6 +18,7 @@ import {
   withGoalKind,
   withLocales,
   withNewRule,
+  ruleIdTaken,
   withRuleChoice,
   withRuleId,
   withScenarioCopy,
@@ -127,9 +128,8 @@ describe('hedef, devir, kurallar', () => {
     valid(doc);
     // Kimliği değişen kural: senaryo yeni kimliği izliyor.
     const renamed = withRuleId(doc, 0, 'sert-kis');
-    assert.deepEqual(renamed.doc.scenarios[0]!.rules, ['sert-kis']);
-    assert.equal(renamed.pending, null);
-    valid(renamed.doc);
+    assert.deepEqual(renamed.scenarios[0]!.rules, ['sert-kis']);
+    valid(renamed);
     const removed = withoutRule(doc, 0);
     assert.equal(removed.rules, undefined);
     assert.equal(removed.scenarios[0]!.rules, undefined);
@@ -137,24 +137,27 @@ describe('hedef, devir, kurallar', () => {
     assert.equal(withNewRule(withNewRule(base(), 'storms', 'a', 'b').doc, 'storms', 'a', 'b').id, 'storms-ayar-2');
   });
 
-  test('kimlik yazılırken başka kuralınkiyle çakışınca başvurular karışmıyor (Codex #98)', () => {
+  test('başka kuralın kimliği yazılmıyor: başvurular karışmıyor, kural silinince ötekinin seçimi yerinde (Codex #98)', () => {
     // İki kural, iki ayrı hazır kurala bağlı; senaryo ikisini de seçmiş.
     let doc = withNewRule(base(), 'storms', 'A', 'a').doc;
     doc = withNewRule(doc, 'tight_credit', 'B', 'b').doc;
-    doc = setAt(doc, ['rules', 0, 'id'], 'kural-a');
-    doc = setAt(doc, ['rules', 1, 'id'], 'kural-b');
+    doc = withRuleId(doc, 0, 'kural-a');
+    doc = withRuleId(doc, 1, 'kural-b');
     doc = setAt(doc, ['scenarios', 0, 'rules'], ['kural-a', 'kural-b']);
     valid(doc);
-    // A önce B'nin kimliğinden geçiyor (çakışma), sonra tek bir kimliğe varıyor.
-    const clash = withRuleId(doc, 0, 'kural-b');
-    assert.deepEqual(clash.doc.scenarios[0]!.rules, ['kural-a', 'kural-b'], 'çakışırken başvuru taşınmıyor');
-    assert.equal(clash.pending, 'kural-a');
-    const done = withRuleId(clash.doc, 0, 'kural-c', clash.pending!);
-    assert.deepEqual(done.doc.scenarios[0]!.rules, ['kural-c', 'kural-b'], "B'nin seçimi yerinde");
-    assert.equal(done.pending, null);
-    valid(done.doc);
-    // Hazır kuralın kimliği de çakışma.
-    assert.equal(withRuleId(doc, 0, 'storms').pending, 'kural-a');
+    // A yazılırken B'nin kimliğinden geçiyor: belge değişmiyor; sonra tek bir kimlik.
+    assert.equal(ruleIdTaken(doc, 0, 'kural-b'), true);
+    assert.equal(withRuleId(doc, 0, 'kural-b'), doc);
+    const done = withRuleId(withRuleId(doc, 0, 'kural-b'), 0, 'kural-c');
+    assert.deepEqual(done.scenarios[0]!.rules, ['kural-c', 'kural-b'], "B'nin seçimi yerinde");
+    valid(done);
+    // Taslakta iki kural aynı kimliği hiç taşımıyor: silinen kuralın yalnız kendi başvuruları gidiyor.
+    const removed = withoutRule(done, 0);
+    assert.deepEqual(removed.scenarios[0]!.rules, ['kural-b']);
+    valid(removed);
+    // Hazır kuralın kimliği de yazılmıyor.
+    assert.equal(ruleIdTaken(doc, 0, 'storms'), true);
+    assert.equal(withRuleId(doc, 0, 'storms'), doc);
   });
 
   test('senaryo çoğaltma yeni kimlikle, en fazla 12; son senaryo silinmiyor', () => {
