@@ -932,14 +932,14 @@ function RuleForm({ rule, index, onRemove }: { rule: PackRule; index: number; on
 /**
  * Kuralın kimliği. Yazılan başka bir kuralın ya da hazır kuralın kimliğiyse
  * belgeye gitmiyor (kural eski kimliğiyle kalıyor, başvurular karışmıyor);
- * alanın altında söyleniyor.
+ * alanın altında söyleniyor. Alandan çıkınca kuralın gerçek kimliğine
+ * dönüyor: başka kuralı düzenlemek ya da silmek odağı aldığından, alan
+ * belgede olmayan bir kimliği hiç göstermiyor (Codex #98).
  */
 function RuleIdField({ rule, index }: { rule: PackRule; index: number }): ReactElement {
   const { doc, set, issues } = useEditor();
   const [text, setText] = useState(rule.id);
-  useEffect(() => {
-    if (!ruleIdTaken(doc, index, text)) setText(rule.id);
-  }, [rule.id]);
+  useEffect(() => setText(rule.id), [rule.id]);
   const key = pathKey(['rules', index, 'id']);
   const taken = text !== rule.id && ruleIdTaken(doc, index, text);
   const own = issuesAt(issues, key);
@@ -958,6 +958,7 @@ function RuleIdField({ rule, index }: { rule: PackRule; index: number }): ReactE
           setText(e.target.value);
           set([], withRuleId(doc, index, e.target.value));
         }}
+        onBlur={() => setText(rule.id)}
       />
       {taken && (
         <ul className="editor-issues">

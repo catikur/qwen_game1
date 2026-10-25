@@ -8307,6 +8307,19 @@ async function finish(browser, consoleErrors) {
     await ep.fill('[data-edit-path="rules[0].name.en"]', 'Hard winter');
     await ep.fill('[data-edit-path="rules[0].params.firstDay"]', '40');
     await ep.selectOption('[data-edit-rule="storms"]', 'sert-kis');
+    // İkinci kural, ilkinin kimliğiyle: belgeye gitmiyor, alan söylüyor; alandan çıkınca gerçek kimlik.
+    await ep.locator('[data-editor-rule-add]').click();
+    await ep.fill('[data-edit-path="rules[1].id"]', 'sert-kis');
+    await ep.waitForTimeout(700);
+    const clash = await ep.evaluate(() => ({
+      note: !!document.querySelector('[data-editor-rule="storms-ayar"] [data-edit-issue="ruleIdTaken"]'),
+      stored: JSON.parse(localStorage.getItem('capitalforge.pack-draft.v1') ?? 'null')?.doc?.rules?.map((rule) => rule.id) ?? [],
+    }));
+    await ep.locator('[data-edit-path="rules[1].name.en"]').focus();
+    const reverted = await ep.locator('[data-edit-path="rules[1].id"]').inputValue();
+    check('Başka kuralın kimliği yazılmıyor: alan söylüyor, kural eski kimliğiyle; alandan çıkınca gerçek kimlik',
+      clash.note && clash.stored.join() === 'sert-kis,storms-ayar' && reverted === 'storms-ayar', `${JSON.stringify(clash)} · ${reverted}`);
+    await ep.locator('[data-editor-rule-remove="storms-ayar"]').click();
     await ep.fill('[data-edit-path="scenarios[0].days"]', '200');
     await ep.fill('[data-edit-path="scenarios[0].stars.two"]', '1.2');
     await ep.fill('[data-edit-path="scenarios[0].stars.three"]', '1,6');
