@@ -183,7 +183,8 @@ export default function PackEditor({ draft, example, onClose, onTry, onSaved, de
   const [locales, setLocales] = useState(() => draftLocales(draft.doc, currentLocale()));
   const [notice, setNotice] = useState<Notice | null>(null);
   const [confirm, setConfirm] = useState<'reset' | 'removeScenario' | null>(null);
-  const [manual, setManual] = useState<string | null>(null);
+  // JSON bölümü açık mı (indirme verilemeyince açılıyor); metin hep belgenin şimdiki hâli.
+  const [jsonOpen, setJsonOpen] = useState(false);
   const frame = useRef<HTMLDivElement>(null);
   const lastGood = useRef<Map<string, ScenarioDef>>(new Map());
   useDialogFocus(frame);
@@ -301,7 +302,7 @@ export default function PackEditor({ draft, example, onClose, onTry, onSaved, de
     const outcome = await deliverFile(`${fileSlug(doc.id || packText(doc.name), 'paket')}.capitalforge.json`, text);
     if (outcome === 'copied') setNotice({ tone: 'info', text: et('hud.editor.downloadCopied') });
     else if (outcome === 'blocked' || outcome === 'declined') {
-      setManual(text);
+      setJsonOpen(true);
       setNotice({ tone: 'info', text: et('hud.editor.downloadBlocked') });
     } else setNotice({ tone: 'good', text: et('hud.editor.downloaded') });
   };
@@ -430,9 +431,9 @@ export default function PackEditor({ draft, example, onClose, onTry, onSaved, de
               <ScenarioForm key={index} scenario={scenario} at={at} setScenario={setScenario} />
               <PackRules />
 
-              <details className="editor-section editor-json" open={manual !== null} data-editor-json>
+              <details className="editor-section editor-json" open={jsonOpen} onToggle={(e) => setJsonOpen(e.currentTarget.open)} data-editor-json>
                 <summary>{et('hud.editor.section.json')}</summary>
-                <textarea readOnly rows={12} value={manual ?? JSON.stringify(doc, null, 2)} onFocus={(e) => e.currentTarget.select()} aria-label={et('hud.editor.section.json')} />
+                <textarea readOnly rows={12} value={jsonOpen ? JSON.stringify(doc, null, 2) : ''} onFocus={(e) => e.currentTarget.select()} aria-label={et('hud.editor.section.json')} />
               </details>
             </div>
 
@@ -976,7 +977,13 @@ function GapField({ path, label, hint }: { path: Path; label: string; hint: stri
   const { doc, set, issues } = useEditor();
   const value = getAt(doc, path);
   const pair = Array.isArray(value) ? value : [];
-  const [texts, setTexts] = useState<[string, string]>([pair[0] !== undefined ? String(pair[0]) : '', pair[1] !== undefined ? String(pair[1]) : '']);
+  const fromDoc = (): [string, string] => [pair[0] !== undefined ? String(pair[0]) : '', pair[1] !== undefined ? String(pair[1]) : ''];
+  const [texts, setTexts] = useState<[string, string]>(fromDoc);
+  // Belge dışarıdan değişti (kural silinince yerine kayan kural, baştan başla): yazılanı belgeyle eşitle (Codex #98).
+  useEffect(() => {
+    const typed = texts.map((text) => (text.trim() === '' ? undefined : parseNumber(text) ?? text));
+    if (typed[0] !== pair[0] || typed[1] !== pair[1]) setTexts(fromDoc());
+  }, [pair[0], pair[1]]);
   const key = pathKey(path);
   const own = issuesAt(issues, key);
   const write = (next: [string, string]) => {

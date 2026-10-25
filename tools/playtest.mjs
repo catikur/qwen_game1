@@ -8319,7 +8319,21 @@ async function finish(browser, consoleErrors) {
     const reverted = await ep.locator('[data-edit-path="rules[1].id"]').inputValue();
     check('Başka kuralın kimliği yazılmıyor: alan söylüyor, kural eski kimliğiyle; alandan çıkınca gerçek kimlik',
       clash.note && clash.stored.join() === 'sert-kis,storms-ayar' && reverted === 'storms-ayar', `${JSON.stringify(clash)} · ${reverted}`);
+    // Kural silinince yerine kayan kuralın kriz arası kendi değeri (Codex #98: alan silinenin değerini gösteriyordu).
+    const gap = (id) => ep.locator(`[data-editor-rule="${id}"] .editor-pair input`);
+    await gap('storms-ayar').nth(0).fill('100');
+    await gap('storms-ayar').nth(1).fill('200');
+    await ep.locator('[data-editor-rule-add]').click();
+    await gap('storms-ayar-2').nth(0).fill('300');
+    await gap('storms-ayar-2').nth(1).fill('400');
     await ep.locator('[data-editor-rule-remove="storms-ayar"]').click();
+    await ep.waitForTimeout(700);
+    const shifted = {
+      shown: [await gap('storms-ayar-2').nth(0).inputValue(), await gap('storms-ayar-2').nth(1).inputValue()],
+      stored: await ep.evaluate(() => JSON.parse(localStorage.getItem('capitalforge.pack-draft.v1') ?? 'null')?.doc?.rules?.[1]?.params?.gapDays ?? null),
+    };
+    check('Kural silinince yerine kayan kuralın alanları kendi değerini gösteriyor', shifted.shown.join() === '300,400' && shifted.stored?.join() === '300,400', JSON.stringify(shifted));
+    await ep.locator('[data-editor-rule-remove="storms-ayar-2"]').click();
     await ep.fill('[data-edit-path="scenarios[0].days"]', '200');
     await ep.fill('[data-edit-path="scenarios[0].stars.two"]', '1.2');
     await ep.fill('[data-edit-path="scenarios[0].stars.three"]', '1,6');
