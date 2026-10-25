@@ -7714,11 +7714,11 @@ editör, sayfa o arada yenilenirse son değişikliği kaybediyordu: sayfa
 kapanırken (`pagehide`) hemen yazıyor.
 
 **Doğrulama.**
-- `pnpm test` 832/832 (809'dan); tip denetimi temiz.
+- `pnpm test` 833/833 (809'dan); tip denetimi temiz.
   - `core/test/packs.test.ts` (+7): tabloların uçları (şehir ve süre, her
     hedef türü, devir, kural ayarları), seçenek listeleri, yer tutucular,
     taslaktan koşu ve tekrar oyna, hazır senaryo tanımla da kimlikle aynı.
-  - `ui/test/packEditor.test.ts` (15): yollar, diller, her hedef türüne
+  - `ui/test/packEditor.test.ts` (16): yollar, diller, her hedef türüne
     geçiş ve devrin her parçası geçerli senaryo, kurallar (kimlik
     çakışması dahil), çoğaltma,
     sorunun yeri, sayıların okunuşu, taslak deposu, editörün kendisi.
@@ -7754,7 +7754,10 @@ kapanırken (`pagehide`) hemen yazıyor.
   yazılıyordu (alan artık belgeyle eşitleniyor; tarayıcı testi düzeltmesiz
   kalıyor, düzeltmeyle geçiyor); indirme verilemeyince açılan JSON metni o
   anın kopyasıydı, sonraki değişiklikleri göstermiyordu (bölüm hep
-  belgenin şimdiki hâlini gösteriyor).
+  belgenin şimdiki hâlini gösteriyor). Beşinci incelemede: kaydetme sınırı
+  sıkışık JSON'u ölçüyordu, indirilen dosya girintiliydi; sınıra yakın bir
+  paketin dosyası ekleme kutusunun 64 KB'ını aşıp geri yüklenemiyordu.
+  Dosya ve JSON bölümü sığarsa girintili, sığmazsa sıkışık (test).
 
 ---
 
@@ -7858,7 +7861,7 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi). Senaryo şehirlerinde gün 3–17 ms (`pnpm dayperf`, Tur 43) |
-| Birim testi | **832 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de, Tur 52'de sunucuda tekrar, Tur 53'te haftanın kuralı ve günün koşusu, Tur 54'te hayalet eğri, Tur 55'te davetli ligler, Tur 56'da taşıma sözleşmeleri, Tur 57'de enerji, Tur 58'de gayrimenkul, Tur 59'da rakiplerin hafızası, Tur 60'ta senaryo paketi II, Tur 61'de şirketin yolu, Tur 62'de hava ve mevsimin görünümü, Tur 63'te önemli anlar, Tur 64'te şehir kartı, Tur 65'te telefon performansı, Tur 66'da masaüstü sürümü, Tur 67'de içerik paketleri, Tur 68'de senaryo editörü); Rust tarafı 6 test (`cargo test`, `apps/desktop/src-tauri`) |
+| Birim testi | **833 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de, Tur 52'de sunucuda tekrar, Tur 53'te haftanın kuralı ve günün koşusu, Tur 54'te hayalet eğri, Tur 55'te davetli ligler, Tur 56'da taşıma sözleşmeleri, Tur 57'de enerji, Tur 58'de gayrimenkul, Tur 59'da rakiplerin hafızası, Tur 60'ta senaryo paketi II, Tur 61'de şirketin yolu, Tur 62'de hava ve mevsimin görünümü, Tur 63'te önemli anlar, Tur 64'te şehir kartı, Tur 65'te telefon performansı, Tur 66'da masaüstü sürümü, Tur 67'de içerik paketleri, Tur 68'de senaryo editörü); Rust tarafı 6 test (`cargo test`, `apps/desktop/src-tauri`) |
 | Denge testi | **379 kontrol, hepsi geçiyor** (33 bölüm, süreleriyle; ~16 dk) |
 | Tarayıcı testi | **712 kontrol** (Tur 68'de 16 yeni), son tam koşu 710/710 (Tur 68; Tur 67'de 693/694: yük altında oyun saatinin hızı, tek başına üç kez geçti), 0 konsol hatası (bu yavaş makinede ~51–75 dk, önce ~41 dk); duman koşusu 132 (~8 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + paket bütçesi (Tur 46; Tur 48'den beri hizmet çalışanı ve manifest de) + duman oynanışı; masaüstüne dokunan PR'da Rust testleri, sürüm derlemesi ve gerçek pencerede 17 kontrol (Tur 66) |

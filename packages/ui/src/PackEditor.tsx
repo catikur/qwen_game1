@@ -39,7 +39,7 @@ import { et } from './packEditorMessages';
 import type { EditorMessageKey } from './packEditorMessages';
 import { issueText } from './packMessages';
 import { MAX_PACKS, addPack } from './packStore';
-import { draftBytes, draftLocales, getAt, issuesAt, MAX_DRAFT_BYTES, pathKey, randomSeed, ruleChoice, setAt, starsRange, textIn, withGoalKind, withLocales, withNewRule, withRuleChoice, withScenarioCopy, withSetupPart, ruleIdTaken, withRuleId, withoutRule, withoutScenario } from './packEditorModel';
+import { draftBytes, draftJson, draftLocales, getAt, issuesAt, MAX_DRAFT_BYTES, pathKey, randomSeed, ruleChoice, setAt, starsRange, textIn, withGoalKind, withLocales, withNewRule, withRuleChoice, withScenarioCopy, withSetupPart, ruleIdTaken, withRuleId, withoutRule, withoutScenario } from './packEditorModel';
 import type { Path, SetupPart } from './packEditorModel';
 import { draftFrom, freshDraft, markTrial, storeDraft } from './packDraft';
 import type { Draft } from './packDraft';
@@ -298,7 +298,7 @@ export default function PackEditor({ draft, example, onClose, onTry, onSaved, de
 
   const download = async () => {
     if (!deliverFile) return;
-    const text = JSON.stringify(doc, null, 2);
+    const text = draftJson(doc);
     const outcome = await deliverFile(`${fileSlug(doc.id || packText(doc.name), 'paket')}.capitalforge.json`, text);
     if (outcome === 'copied') setNotice({ tone: 'info', text: et('hud.editor.downloadCopied') });
     else if (outcome === 'blocked' || outcome === 'declined') {
@@ -433,7 +433,7 @@ export default function PackEditor({ draft, example, onClose, onTry, onSaved, de
 
               <details className="editor-section editor-json" open={jsonOpen} onToggle={(e) => setJsonOpen(e.currentTarget.open)} data-editor-json>
                 <summary>{et('hud.editor.section.json')}</summary>
-                <textarea readOnly rows={12} value={jsonOpen ? JSON.stringify(doc, null, 2) : ''} onFocus={(e) => e.currentTarget.select()} aria-label={et('hud.editor.section.json')} />
+                <textarea readOnly rows={12} value={jsonOpen ? draftJson(doc) : ''} onFocus={(e) => e.currentTarget.select()} aria-label={et('hud.editor.section.json')} />
               </details>
             </div>
 

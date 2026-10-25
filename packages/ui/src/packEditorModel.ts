@@ -331,6 +331,16 @@ export function draftBytes(doc: Pack): number {
   return new TextEncoder().encode(JSON.stringify(doc)).length;
 }
 
+/**
+ * Paketin dosyaya ve JSON bölümüne giden metni: sığarsa girintili (okunur),
+ * sığmazsa sıkışık. Sınır ekleme kutusunun sınırı; girintili metin sınırı
+ * aşıp geri yüklenemez olmasın (Codex #98).
+ */
+export function draftJson(doc: Pack, limit = MAX_DRAFT_BYTES): string {
+  const pretty = JSON.stringify(doc, null, 2);
+  return new TextEncoder().encode(pretty).length <= limit ? pretty : JSON.stringify(doc);
+}
+
 /** Yıldız eşiklerinin aralığı: gün ölçüsünde senaryonun süresi üst sınır. */
 export function starsRange(scenario: PackScenario) {
   return starRange(scenario.stars?.metric ?? starMetric(scenario.goal.kind), typeof scenario.days === 'number' ? scenario.days : undefined);

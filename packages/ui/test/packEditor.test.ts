@@ -8,6 +8,7 @@ import PackEditor, { issuePlace } from '../src/PackEditor';
 import { parseNumber } from '../src/packEditorFields';
 import { draftDirty, draftFrom, freshDraft, loadDraft, normalizedDraft, storeDraft } from '../src/packDraft';
 import {
+  draftJson,
   draftLocales,
   getAt,
   issuesAt,
@@ -204,6 +205,19 @@ describe('sorunun yeri ve sayılar', () => {
 });
 
 describe('taslak', () => {
+  test('dosyanın metni ekleme kutusunun sınırına sığıyor: sığmazsa girintisiz (Codex #98)', () => {
+    const doc = base();
+    const pretty = JSON.stringify(doc, null, 2);
+    const compact = JSON.stringify(doc);
+    assert.equal(draftJson(doc), pretty, 'sığan paket okunur, girintili');
+    // Sıkışık hâli sınırın altında, girintili hâli üstünde olan bir sınır.
+    const bytes = (text: string) => new TextEncoder().encode(text).length;
+    const limit = Math.floor((bytes(pretty) + bytes(compact)) / 2);
+    assert.equal(draftJson(doc, limit), compact);
+    assert.ok(bytes(draftJson(doc, limit)) <= limit);
+    assert.deepEqual(JSON.parse(draftJson(doc, limit)), doc);
+  });
+
   test('raftan ya da örnekten açılan taslak kaydedilmiş sayılıyor; değişince değil', () => {
     const draft = freshDraft(base());
     assert.equal(draftDirty(draft), false);
