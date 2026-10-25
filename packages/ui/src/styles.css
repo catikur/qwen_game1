@@ -624,17 +624,23 @@ button.icon {
  * Eskiden sarmalı bir flex satırıydı ve altı düğme üç düzensiz sıraya
  * bölünüyordu; her sıranın sağında farklı bir boşluk kalıyor, blok
  * kırık görünüyordu. Eşit sütunlu ızgarada böyle bir artık yok.
+ *
+ * İki sütun (Tur 69): üç sütunda simgeden sonra ada ~51 px kalıyordu;
+ * "Arsa Değeri", "Competition", "Wettbewerb" taşıyor, büyük metin boyunda
+ * hepsi kesiliyordu. İki sütunda ~98 px; bir sıra (38 px) uzun.
  */
 .lens-buttons {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 6px;
 }
 
 /*
  * Hücreler eşit boyda: biri satır kırarsa ızgaranın o satırı büyüyor ve
- * blok basamaklı görünüyor. Yazı sarmıyor; Nunito Kalın geniş olduğu için
- * punto ve iç boşluk "Arsa Değeri" sığacak kadar.
+ * blok basamaklı görünüyor. Yazı sarmıyor; en uzun ad sütununa sığmazsa
+ * altısı birlikte küçülüyor (`--lens-fit`, hud.tsx, Tur 69). Eskiden punto
+ * "Arsa Değeri" sığacak kadar seçilmişti; İngilizce ve Almanca adlar ve
+ * büyük metin boyu taşıyordu.
  */
 .lens {
   display: inline-flex;
@@ -644,7 +650,14 @@ button.icon {
   white-space: nowrap;
   min-height: 32px;
   padding: 0 6px;
-  font-size: calc(11.5px * var(--text-scale));
+  font-size: calc(11.5px * var(--text-scale) * var(--lens-fit, 1));
+}
+
+/* Ad kalan yere sığıyor; ölçüm onun kutusuyla yapılıyor. */
+.lens-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .lens-icon {
@@ -1871,7 +1884,7 @@ button.icon {
     gap: 3px;
     min-height: 52px;
     padding: 6px 4px;
-    font-size: calc(11px * var(--text-scale));
+    font-size: calc(11px * var(--text-scale) * var(--lens-fit, 1));
     text-align: center;
   }
 

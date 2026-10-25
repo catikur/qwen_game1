@@ -4,12 +4,12 @@ import { LOCALE_NAMES, chooseLocale, useLocale } from './i18n/locale';
 
 /**
  * Dil seçici (Tur 23). Dil adları kendi dillerinde yazıyor ("English",
- * "Türkçe"): dili bilmeyen biri de kendi dilini bulabilmeli.
+ * "Türkçe", "Deutsch"): dili bilmeyen biri de kendi dilini bulabilmeli.
  */
 export function LocalePicker(): ReactElement {
   const locale = useLocale();
   return (
-    <div className="locale-picker" role="group" aria-label="Dil · Language">
+    <div className="locale-picker" role="group" aria-label="Dil · Language · Sprache">
       {availableLocales().map((id) => (
         <button
           key={id}

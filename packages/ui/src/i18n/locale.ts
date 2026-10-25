@@ -14,7 +14,7 @@ import { availableLocales, currentLocale, loadLocale, onLocaleChange, setLocale 
  */
 const STORAGE_KEY = 'capitalforge.locale';
 
-export const LOCALE_NAMES: Record<string, string> = { tr: 'Türkçe', en: 'English' };
+export const LOCALE_NAMES: Record<string, string> = { tr: 'Türkçe', en: 'English', de: 'Deutsch' };
 
 function readStored(): string | null {
   try {

@@ -6,7 +6,7 @@ import { CITY_SIZES } from './districts';
 import type { CitySizeId } from './districts';
 import { CRISES } from './economy';
 import { GOODS } from './goods';
-import { currentLocale } from './messages';
+import { textLocales } from './messages';
 import { MODIFIERS, RULE_KEY } from './modifiers';
 import type { ModifierId } from './modifiers';
 import { SCENARIOS, SCENARIO_BY_ID, bindScenarioDef, embeddedScenarioDef } from './scenarios';
@@ -652,10 +652,17 @@ export function packScenarioId(packId: string, scenarioId: string): string {
   return `${packId}/${scenarioId}`;
 }
 
-/** Etkin dildeki metin; yoksa Türkçe, o da yoksa ilki. */
+/**
+ * Etkin dildeki metin; yoksa dilin yedekleri (Almancada İngilizce, Tur 69),
+ * sonra Türkçe, o da yoksa ilki.
+ */
 export function packText(text: PackText): string {
   if (typeof text === 'string') return text;
-  return text[currentLocale()] ?? text['tr'] ?? Object.values(text)[0] ?? '';
+  for (const locale of textLocales()) {
+    const value = text[locale];
+    if (value !== undefined) return value;
+  }
+  return Object.values(text)[0] ?? '';
 }
 
 function defineText(target: object, field: string, text: () => string): void {

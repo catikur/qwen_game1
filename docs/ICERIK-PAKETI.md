@@ -117,8 +117,9 @@ herkese aynı.
 `paket/senaryo` (`zor-kis/kista-kurtarma`); hazır senaryolarla çakışmıyor.
 
 **Metin:** tek dilde düz yazı ya da dil başına
-(`{ "tr": "…", "en": "…" }`). Oyun etkin dildekini, yoksa Türkçeyi, o da
-yoksa ilkini gösteriyor.
+(`{ "tr": "…", "en": "…", "de": "…" }`). Oyun etkin dildekini gösteriyor;
+yoksa dilin yedeğini (Almancada İngilizce), sonra Türkçeyi, o da yoksa
+ilkini.
 
 **Bilinmeyen alan** hata: yazım yanlışı (`"tagLine"`) sessizce yok
 sayılmıyor.

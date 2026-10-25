@@ -1,8 +1,10 @@
 import { registerMessages, translate } from '@capital/content';
+import { editorDe } from './packEditorMessages.de';
 
 /*
  * Senaryo editörünün metinleri (Tur 68). Editör geç inen bir parça; bu
- * sözlük de onunla iniyor. Anahtarlar `hud.editor.` altında.
+ * sözlük de onunla iniyor; Almancası `packEditorMessages.de.ts`'te (Tur 69).
+ * Anahtarlar `hud.editor.` altında.
  */
 export const editorTr = {
   'hud.editor.title': 'Senaryo editörü',
@@ -340,6 +342,7 @@ export const editorEn: Record<EditorMessageKey, string> = {
 
 registerMessages('tr', editorTr);
 registerMessages('en', editorEn);
+registerMessages('de', editorDe);
 
 export function et(key: EditorMessageKey, params?: Record<string, string | number>): string {
   return translate(key, params);

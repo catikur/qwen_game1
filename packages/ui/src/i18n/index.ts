@@ -25,6 +25,8 @@ export type Messages = Record<MessageKey, string>;
 registerMessages(BASE_LOCALE, tr);
 // İngilizce dil seçilince iniyor (Tur 46): Türkçe oynayanın açılışında yok.
 registerLocaleLoader('en', () => import('./en').then((m) => registerMessages('en', m.en)));
+// Almanca (Tur 69) de öyle.
+registerLocaleLoader('de', () => import('./de').then((m) => registerMessages('de', m.de)));
 
 /** Yeni bir dil sözlüğü kaydeder (eksik anahtarlar Türkçeye düşer). */
 export function registerLocale(locale: string, messages: Partial<Messages>): void {

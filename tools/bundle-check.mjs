@@ -18,7 +18,7 @@ const CRITICAL_BUDGET_KB = 160;
 /** Ana parçanın kendisi, gzip (KB). Tur 46 sonunda ~58 KB; öncesinde 246 KB. */
 const ENTRY_BUDGET_KB = 75;
 /** Kurulumun yolunda olmaması gerekenler. */
-const LATE = [/^three-/, /^GameRoot-/, /^locale-en-/];
+const LATE = [/^three-/, /^GameRoot-/, /^locale-en-/, /^locale-de-/];
 
 let failed = 0;
 function check(name, ok, detail = '') {
@@ -57,7 +57,7 @@ for (const [file, kb] of rows) console.log(`  ${kb.toFixed(1).padStart(7)} KB  $
 console.log(`  ${total.toFixed(1).padStart(7)} KB  toplam\n`);
 
 const late = [...critical].filter((file) => LATE.some((re) => re.test(file)));
-check('Şehir sahnesi, oyun ekranı ve İngilizce sözlük kurulumun yolunda değil', late.length === 0, late.join(', '));
+check('Şehir sahnesi, oyun ekranı ve dil sözlükleri kurulumun yolunda değil', late.length === 0, late.join(', '));
 check(`Kurulumun yolu ${CRITICAL_BUDGET_KB} KB'ın altında`, total <= CRITICAL_BUDGET_KB, `${total.toFixed(1)} KB`);
 const entryKb = gzipKb(assetOf(entry));
 check(`Ana parça ${ENTRY_BUDGET_KB} KB'ın altında`, entryKb <= ENTRY_BUDGET_KB, `${entryKb.toFixed(1)} KB`);
@@ -73,7 +73,7 @@ check('Yazı tipleri CSS\'te gömülü değil, her biri önden yükleniyor',
   `${fonts.length} yazı tipi · ${preloadedFonts.length} önden${embedded.length ? ` · gömülü: ${embedded.join(', ')}` : ''}`);
 const game = files.find((file) => /^GameRoot-.*\.js$/.test(file));
 check('Oyun ekranı ayrı parça ve şehir sahnesini o getiriyor', Boolean(game) && staticImports(read(game)).some((dep) => /^three-/.test(dep)), game ?? 'yok');
-check('İngilizce sözlük ayrı parça', files.some((file) => /^locale-en-.*\.js$/.test(file)));
+check('İngilizce ve Almanca sözlük ayrı parça', ['en', 'de'].every((locale) => files.some((file) => new RegExp(`^locale-${locale}-.*\\.js$`).test(file))));
 
 // Kurulabilir oyun (Tur 48): hizmet çalışanı paketin her parçasını önbelleğe
 // alıyor; biri listede yoksa çevrimdışı açılış o parçada kırılır.

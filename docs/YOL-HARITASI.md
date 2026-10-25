@@ -39,7 +39,7 @@ Bir bağlantıyla açılan, istenirse kurulan ve çevrimdışı da oynanan bir
 | **2 · Çevrimiçi rekabet** | Herkes aynı şehirde | 51–55 | Pages'te paylaşılan tablo var, skor sunucuda doğrulanıyor | **bitti** (Tur 55) |
 | **3 · Yeni yollar** | Her koşu farklı bir şirket | 56–61 | Zafere en az üç farklı yol var, her birini kazanan bir vekil var | **bitti** (Tur 61) |
 | **4 · Şehrin hissi** | Oynaması keyifli | 62–65 | Mevsim ve hava görünüyor, önemli anlar hissediliyor | **bitti** (Tur 65) |
-| **5 · Platform ve topluluk** | Oyunun evi büyüsün | 66–70 | Masaüstü sürümü ve paylaşılabilir senaryolar var | sürüyor (Tur 67) |
+| **5 · Platform ve topluluk** | Oyunun evi büyüsün | 66–70 | Masaüstü sürümü ve paylaşılabilir senaryolar var | sürüyor (Tur 69) |
 
 ### Faz 1 · Ürün temeli
 
@@ -151,8 +151,13 @@ oyun her yerde tamamen ücretsiz. Turlar Faz 4'teki gibi.
   altında, ön izleme kurulum ekranındaki kart. "Dene" taslağı kaydetmeden
   oynatıyor, menüde editör kaldığı yerde; rafa kaydet, dosya olarak indir,
   raftaki paketi düzenle. Taslak cihazda. Hedef cümlesinin yer tutucuları
-  doğrulanıyor. — bu PR
-- **69 · Üçüncü dil.**
+  doğrulanıyor. — bitti (#98)
+- **69 · Üçüncü dil: Almanca.** İçerik, çekirdek ve arayüzün her metni
+  Almancada; sözlük ayrı parçada, dil seçilince iniyor. Sayı, yüzde ve para
+  dil başına bir biçim tablosunda ("45 %", "1,2 Mio. ₺"); paket metninde
+  Almanca yoksa İngilizcesi. Seçicide dil sırası sabit; lens düğmeleri iki
+  sütun (üç dilde de kesilmiyor). Yeni dil eklemenin kılavuzu ve denetim
+  betiği `docs/CEVIRI.md`'de. — bu PR
 - **70 · Steam.** Başarımlar ve mağaza sayfası.
 
 ## Her fazda sürecek işler
@@ -174,4 +179,5 @@ yazılan.
 | **Canlı güncelleme:** Tur 51'in sunucusu canlıya ne zaman? Tablo doğrulanmamış beyanla kesiliyor (Codex #80). | Faz 2 | **Tur 52 birleşince** (kullanıcı, Tur 51) |
 | **Sunucuda doğrulama planı:** tekrar koşu başına 0,7–1,8 sn CPU; Workers'ın ücretsiz katmanı istek başına 10 ms. | Tur 52 | **Workers Paid, aylık 5 $** (kullanıcı, Tur 51) |
 | **Gelir modeli:** tamamen ücretsiz mi, ücretsiz web + ücretli masaüstü mü? | Faz 5 | **tamamen ücretsiz** (kullanıcı, Tur 66'dan önce) |
+| **Üçüncü dil:** hangisi? | Tur 69 | **Almanca** (varsayılan: Steam'de ekonomi oyunlarının güçlü pazarı, Latin alfabesi, sayı biçimi Türkçeyle aynı; kullanıcı değiştirebilir — çeviri katmanı dilden bağımsız, `docs/CEVIRI.md`) |
 | **Lite:** App Store yayını ve canlı işletim bu haritanın neresinde? | sıra | ayrı hat, bu haritanın dışında |
