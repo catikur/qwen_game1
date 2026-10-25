@@ -7965,7 +7965,8 @@ fazladan yazma olmadığını sınıyor.
   betiği ve WebView2 önyükleyicisi; macOS'ta evrensel derleme
   (`universal-apple-darwin`) ve içinde dylib'iyle `CapitalForge.app`;
   Linux'ta ikili ve `libsteam_api.so`. Depolar 3,6–6,1 MB.
-- Tam tarayıcı koşusu: koşuyor (sonuç birleşmeden önce burada).
+- Tam tarayıcı koşusu 719/719, konsol temiz (53 dk); Türkçe ve Almanca
+  metin düzeltmelerinin derlemesinde.
 - Parmak izi main ile aynı; paket bütçesi tamam (ana parça 74,1 KB,
   değişmedi: Steam tablosu yalnız masaüstü paketinde).
 
