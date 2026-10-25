@@ -7960,8 +7960,11 @@ fazladan yazma olmadığını sınıyor.
 - Steam'li sürüm derlemesi Linux'ta: depo klasörü kuruluyor, oyun
   `libsteam_api.so`'yu kendi yanından buluyor (RUNPATH `$ORIGIN`); Steam
   istemcisi yokken Steamworks'ün hatasını günlüğe yazıp açılıyor.
-- Üç işletim sisteminin Steam deposu CI'da: elle çalıştırılan paket işi
-  bu dalda koşuluyor (sonuç birleşmeden önce burada).
+- Üç işletim sisteminin Steam deposu CI'da (paket işi bu dalda elle, dört
+  iş de yeşil): Windows'ta `capitalforge.exe`, `steam_api64.dll`, kurulum
+  betiği ve WebView2 önyükleyicisi; macOS'ta evrensel derleme
+  (`universal-apple-darwin`) ve içinde dylib'iyle `CapitalForge.app`;
+  Linux'ta ikili ve `libsteam_api.so`. Depolar 3,6–6,1 MB.
 - Tam tarayıcı koşusu: koşuyor (sonuç birleşmeden önce burada).
 - Parmak izi main ile aynı; paket bütçesi tamam (ana parça 74,1 KB,
   değişmedi: Steam tablosu yalnız masaüstü paketinde).
