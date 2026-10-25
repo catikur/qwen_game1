@@ -8,11 +8,13 @@
 // - slota kayıt `saves/slot-N.json`'a gidiyor, liste dosyadan geliyor;
 // - dışa aktarılan kayıt ve şehir kartı İndirilenler'e (PNG 1200 × 630);
 // - ayar dosyaya gidiyor; pencere kapanırken oyun otomatik kayda yazıyor;
-// - yeniden açılınca oyun kaldığı günden, seçilen dilde açılıyor.
+// - yeniden açılınca oyun kaldığı günden, seçilen dilde açılıyor;
+// - Steam komutları kabukta (Steam'siz derlemede "kapalı"), ikinci kopya
+//   açılmıyor, var olan pencere öne geliyor (Tur 70; D-Bus oturumu varsa).
 //
 // Gerekenler: tauri-driver (`cargo install tauri-driver --locked`),
 // WebKitWebDriver (Debian/Ubuntu: webkit2gtk-driver), ekran (xvfb-run).
-// Çalıştırma: xvfb-run -a node tools/desktop-e2e.mjs [ikili]
+// Çalıştırma: xvfb-run -a dbus-run-session -- node tools/desktop-e2e.mjs [ikili]
 import { spawn } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -153,6 +155,29 @@ try {
   check('Kabuğun köprüsü açık (sayfa masaüstünde)', shell.shell === 'desktop', JSON.stringify(shell));
   check('Hizmet çalışanı ve manifest yok', !shell.manifest && !shell.worker);
   await win.screenshot('desktop-setup');
+
+  section('Steam ve tek pencere');
+  // Steam'siz derleme (CI): komutlar kabukta, durum "kapalı", açma isteği hata vermiyor.
+  const steam = await win.run(`return window.__TAURI__.core.invoke('steam_status').then(async (status) => {
+    await window.__TAURI__.core.invoke('steam_unlock', { names: ['CF_FIRST_VICTORY'] });
+    return status;
+  });`);
+  check("Steam komutları kabukta: Steam'siz derlemede kapalı, açma isteği hata vermiyor",
+    steam?.available === false && /Steam'siz/.test(steam.detail), JSON.stringify(steam));
+  // İkinci kopya D-Bus'tan birinciyi buluyor, ona haber verip çıkıyor. Oturum
+  // otobüsü yoksa eklenti tek pencereyi bilemiyor (normal açılış): denetlenemez.
+  if (process.env.DBUS_SESSION_BUS_ADDRESS) {
+    const second = spawn(BIN, [], { env: { ...process.env, CAPITALFORGE_DATA_DIR: DATA, CAPITALFORGE_EXPORT_DIR: OUT }, stdio: 'ignore' });
+    const exit = await Promise.race([
+      new Promise((resolve) => second.once('exit', (code) => resolve(code))),
+      sleep(20_000).then(() => 'açık kaldı'),
+    ]);
+    if (exit === 'açık kaldı') second.kill();
+    const alive = await win.run('return !!document.querySelector(".newgame");').catch(() => false);
+    check('İkinci kopya açılmıyor, ilk pencere yerinde', exit === 0 && alive === true, `ikinci kopya: ${exit}`);
+  } else {
+    console.log('  ATLANDI  Tek pencere: D-Bus oturumu yok (dbus-run-session ile çalıştır)');
+  }
 
   await win.click('[data-newgame-start]');
   await win.until(`document.querySelector('.topbar')`, 180_000, 'oyun ekranı');

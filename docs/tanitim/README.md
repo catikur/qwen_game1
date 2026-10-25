@@ -2,6 +2,8 @@
 
 Oyunun bir mağazaya, bir oyun sitesine ya da bir duyuruya gireceği her şey
 burada (Tur 50). Metinler iki dilde; karakter sayıları parantez içinde.
+Steam'in mağaza sayfası (üç dil, Almanca dahil) `docs/steam/MAGAZA.md`de
+(Tur 70); sayılar ve kareler orada da aynı.
 Kareler gerçek oyundan, `tools/tanitim/` ile yeniden üretiliyor (aşağıda).
 
 ## Künye
@@ -12,7 +14,7 @@ Kareler gerçek oyundan, `tools/tanitim/` ile yeniden üretiliyor (aşağıda).
 | Uzun ad | CapitalForge — Şehir Ekonomisi · CapitalForge — City Economy |
 | Tür | Şehir ekonomisi, işletme ve strateji · City economy, management and strategy |
 | Oynanış | Tarayıcıda açılıyor; cihaza kurulabiliyor, bağlantı olmadan da oynanıyor |
-| Diller | Türkçe, English |
+| Diller | Türkçe, English, Deutsch |
 | Adres | https://catikur.github.io/qwen_game1/ |
 | Yayıncı | Conforcus |
 | Destek | info@conforcus.com |
@@ -45,7 +47,7 @@ Boş parseli bul, ilk dükkânını aç, zincirini kendin kur. Rakipler de büy�
 • Her yatırımın tahmini önünde: kaça mal olur, ne kazandırır, kaç günde geri döner.
 
 ZİNCİRİNİ KUR
-• 35 bina, 25 ürün. Kahve bahçesinden kafeye, pamuk tarlasından butiğe.
+• 40 bina, 25 ürün. Kahve bahçesinden kafeye, pamuk tarlasından butiğe.
 • Zincir kartı darboğazı gösteriyor: hangi halka sende, hangisini pazardan alıyorsun, marjını en çok ne yükseltir.
 • Ar-Ge, pazarlama ve fiyatla kendi kategorinde öne geç.
 
@@ -61,13 +63,13 @@ RAKİBİNİ GEÇ
 
 KENDİ YOLUNU SEÇ
 • Serbest şehir: Rahat, Dengeli ya da Acımasız; dört ek kuralla daha da zor.
-• Yedi senaryo: Kurtarma'dan Holding: iki şehir'e, üç yıldızla.
+• On senaryo: Kurtarma'dan Kentsel dönüşüm'e, üç yıldızla.
 • Haftalık Tohum Ligi: herkes aynı şehirde, aynı kurallarla.
 • 29 rozetli kariyer: her koşu bir öncekinin üstüne.
 
 HER YERDE
 • Tarayıcıda açılıyor; telefona ve bilgisayara kurulabiliyor, bağlantı olmadan da oynanıyor.
-• Türkçe ve İngilizce.
+• Türkçe, İngilizce ve Almanca.
 • Metin boyutu, renk körlüğüne uygun palet, hareketi azaltma, ayrı ses düzeyleri ve klavyeyle tam kullanım.
 ```
 
@@ -102,7 +104,7 @@ READ THE CITY
 • Every investment shows its estimate up front: what it costs, what it earns, how many days until it pays back.
 
 BUILD YOUR CHAIN
-• 35 buildings, 25 goods. From coffee plantation to cafe, from cotton field to boutique.
+• 40 buildings, 25 goods. From coffee plantation to cafe, from cotton field to boutique.
 • The chain card shows the bottleneck: which link you own, which you buy from the market, what lifts your margin most.
 • Pull ahead in your category with R&D, marketing and price.
 
@@ -118,13 +120,13 @@ A CITY THAT LIVES
 
 CHOOSE YOUR WAY
 • Free city: Relaxed, Balanced or Ruthless; four extra rules make it harder still.
-• Seven scenarios, from Rescue to Holding: Two Cities, with three stars each.
+• Ten scenarios, from Rescue to Urban Renewal, with three stars each.
 • The weekly Seed League: everyone in the same city, under the same rules.
 • A career with 29 badges: every run builds on the last.
 
 PLAY ANYWHERE
 • Opens in the browser; installs on phone and computer, and plays without a connection.
-• English and Turkish.
+• English, Turkish and German.
 • Text size, a colour-blind friendly palette, reduced motion, separate volume levels and full keyboard use.
 ```
 
@@ -136,37 +138,40 @@ city, economy, business, tycoon, strategy, stock market, holding, supply chain, 
 
 ## Kareler
 
-`kareler/` altında, iki dilde aynı sahneler. Masaüstü 1920×1080, telefon
-1170×2532 (390×844 noktada, 3× yoğunluk). JPEG.
+`kareler/` altında, üç dilde aynı sahneler (`tr`, `en`, `de`; Almanca Tur
+70'te). Masaüstü 1920×1080, telefon 1170×2532 (390×844 noktada, 3×
+yoğunluk). JPEG.
 
-| Dosya | Türkçe başlık | English caption |
-|---|---|---|
-| `<dil>-masaustu-1-kurulum` | Şirketini kur, CEO'nu seç | Found your company, pick your CEO |
-| `<dil>-masaustu-2-sehir` | Şehrin 420. günü: 300'den fazla bina | Day 420: more than 300 buildings |
-| `<dil>-masaustu-3-gece` | Gece pencereler yanıyor | At night the windows light up |
-| `<dil>-masaustu-4-zincir` | Zincirini kur, darboğazı bul | Build your chain, find the bottleneck |
-| `<dil>-masaustu-5-borsa` | Hisse topla, rakibini devral | Gather shares, take over a rival |
-| `<dil>-masaustu-6-karar` | Her karar bir bahis | Every decision is a bet |
-| `<dil>-telefon-1-sehir` | Cebindeki şehir | A city in your pocket |
-| `<dil>-telefon-2-gece` | Gece de büyüyor | It grows at night too |
-| `<dil>-telefon-3-zincir` | Zincir tek dokunuşta | Your chain, one tap away |
-| `<dil>-telefon-4-karar` | Karar senin | Your call |
+| Dosya | Türkçe başlık | English caption | Deutsche Bildunterschrift |
+|---|---|---|---|
+| `<dil>-masaustu-1-kurulum` | Şirketini kur, CEO'nu seç | Found your company, pick your CEO | Gründe dein Unternehmen, wähle deinen CEO |
+| `<dil>-masaustu-2-sehir` | Şehrin 516. günü: 370'ten fazla bina | Day 516: more than 370 buildings | Tag 516: mehr als 370 Gebäude |
+| `<dil>-masaustu-3-gece` | Gece pencereler yanıyor | At night the windows light up | Nachts gehen die Fenster an |
+| `<dil>-masaustu-4-zincir` | Zincirini kur, darboğazı bul | Build your chain, find the bottleneck | Bau deine Kette, finde den Engpass |
+| `<dil>-masaustu-5-borsa` | Hisse topla, rakibini devral | Gather shares, take over a rival | Sammle Aktien, übernimm einen Rivalen |
+| `<dil>-masaustu-6-karar` | Her karar bir bahis | Every decision is a bet | Jede Entscheidung ist eine Wette |
+| `<dil>-telefon-1-sehir` | Cebindeki şehir | A city in your pocket | Eine Stadt für die Hosentasche |
+| `<dil>-telefon-2-gece` | Gece de büyüyor | It grows at night too | Sie wächst auch nachts |
+| `<dil>-telefon-3-zincir` | Zincir tek dokunuşta | Your chain, one tap away | Deine Kette, nur einen Tipp entfernt |
+| `<dil>-telefon-4-karar` | Karar senin | Your call | Du entscheidest |
 
 Mağazaya göre seçim:
 - Oyun siteleri (itch.io ve benzeri): masaüstü 2, 4, 3, 5, 6.
 - Telefon mağazası ya da sosyal medya: telefon 1, 3, 4, 2.
 - Kapak: masaüstü 3 (gece) ya da 2.
+- Steam: masaüstü 2–6 (en az beş oynanış karesi; `docs/STEAM.md`).
 
 ## Yeniden üretmek
 
 ```
 pnpm build
 node tools/run-node-script.mjs tools/tanitim/sehir.ts /tmp/sehir
-node tools/tanitim/kareler.mjs /tmp/sehir docs/tanitim/kareler
+node tools/tanitim/kareler.mjs /tmp/sehir docs/tanitim/kareler   # tek dil: … docs/tanitim/kareler de
 ```
 
-`sehir.ts` oyunun denge vekiliyle (`packages/core/test/proxy.ts`) 420 gün
-oynuyor: zincir kartının önerdiği hamle, fırsat merceğinin gösterdiği
+`sehir.ts` oyunun denge vekiliyle (`packages/core/test/proxy.ts`) 516 gün
+oynuyor (Tur 70'e kadar 420; mevsimlerle o gün kışın sonuna düştü, 516.
+gün bu tohumda açık bir yaz başı): zincir kartının önerdiği hamle, fırsat merceğinin gösterdiği
 mağaza, baskına karşı savunma. Sabit tohum, şehir hep aynı. `kareler.mjs`
 bu durumu oyuna kayıt yükler gibi veriyor (`engine.replaceState`), gün
 saatini ve pencereleri ayarlayıp kareyi alıyor. Arayüz değiştikçe yeniden

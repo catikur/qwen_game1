@@ -12,8 +12,14 @@ tauri-build = { version = "=2.7.1", features = [] }
 
 [dependencies]
 tauri = { version = "=2.12.1", features = [] }
+tauri-plugin-single-instance = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+# Steam başarımları (Tur 70): yalnız `--features steam` derlemesinde.
+steamworks = { version = "=0.13.1", optional = true }
+
+[features]
+steam = ["dep:steamworks"]
 
 [profile.release]
 codegen-units = 1

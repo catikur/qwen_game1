@@ -16,8 +16,9 @@ yeniden yayınlıyor.
 
 **Masaüstü (Windows, macOS, Linux).** Aynı oyun bir Tauri penceresinde;
 kayıtlar ve ayarlar dosyada, dışa aktarma İndirilenler'e, pencere
-kapanırken otomatik kayıt. Derleme, veri yolları ve Steam'e hazırlık:
-[`docs/MASAUSTU.md`](docs/MASAUSTU.md).
+kapanırken otomatik kayıt. Derleme ve veri yolları:
+[`docs/MASAUSTU.md`](docs/MASAUSTU.md). Steam (başarımlar, depolar, mağaza
+sayfası, yükleme adımları): [`docs/STEAM.md`](docs/STEAM.md).
 
 **iOS: CapitalForge Lite.** Aynı felsefenin idle mobil sürümü (SwiftUI). Mac'te
 `./ios-lite/xcode.sh` ile Xcode projesini oluştur, iPhone'da çalıştır:

@@ -28,7 +28,7 @@ export { NewGameScreen } from './NewGame';
 export { ScenarioBriefScreen, ScenarioResultScreen } from './ScenarioScreens';
 export { recordScenarioResult, scenarioRecord } from './scenarioBest';
 export { CareerPanel, CareerRunLine } from './CareerPanel';
-export { careerSummary, observeCareer, syncCareer } from './career';
+export { careerSummary, careerUnlockedIds, observeCareer, subscribeCareer, syncCareer } from './career';
 export { useCareerWatch } from './useCareerWatch';
 export { Coach } from './Coach';
 export { DecisionCard, reopenDecisionCard } from './DecisionCard';

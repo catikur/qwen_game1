@@ -3,11 +3,13 @@
 //! Oyunun kendisi web paketi (`apps/web`, `--mode desktop`); kabuk onu bir
 //! pencerede açıyor ve sayfaya dosya komutları veriyor: kayıt slotları,
 //! küçük ayar dosyaları, dışa aktarma. Sayfa tarafı `apps/web/src/desktop/`.
-//! Dosya işleri `store` modülünde; burada yalnız komutların kapısı.
+//! Dosya işleri `store` modülünde, Steam başarımları `steam` modülünde
+//! (Tur 70); burada yalnız komutların kapısı.
 
 // Windows'ta sürüm paketinde oyunun yanında bir konsol penceresi açılmasın.
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod steam;
 mod store;
 
 use std::collections::BTreeMap;
@@ -126,6 +128,18 @@ async fn export_file(app: AppHandle, request: Request<'_>) -> Result<String, Str
     Ok(path.to_string_lossy().into_owned())
 }
 
+/// Steam'e bağlı mı; değilse neden (Steam'siz derleme, istemci kapalı).
+#[tauri::command]
+fn steam_status() -> steam::Status {
+    steam::status()
+}
+
+/// Açılan kariyer rozetlerinin Steam başarımları (API adları); kuyruğa giriyor.
+#[tauri::command]
+fn steam_unlock(names: Vec<String>) {
+    steam::unlock(names);
+}
+
 /// Sayfa kaydını bitirdi: kapan.
 #[tauri::command]
 fn quit(app: AppHandle) {
@@ -133,7 +147,17 @@ fn quit(app: AppHandle) {
 }
 
 fn main() {
+    // Steam pencereden önce: istemci oyunu açılışta tanısın.
+    steam::start();
     tauri::Builder::default()
+        // Tek pencere (Tur 70): ikinci kopya açılırsa yeni pencere değil, var
+        // olan öne geliyor. İki pencere aynı kayıt dosyasına yazmasın.
+        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = window.unminimize();
+                let _ = window.set_focus();
+            }
+        }))
         // Kapatma düğmesi: önce sayfa otomatik kayda yazsın. İkinci tıklama
         // ya da süre dolması beklemeden kapatıyor.
         .on_window_event(|window, event| {
@@ -162,6 +186,8 @@ fn main() {
             profile_set,
             profile_remove,
             export_file,
+            steam_status,
+            steam_unlock,
             quit,
         ])
         .run(tauri::generate_context!())

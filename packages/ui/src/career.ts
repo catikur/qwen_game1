@@ -322,6 +322,11 @@ export function careerSummary(): CareerSummary {
   };
 }
 
+/** Açılmış rozetlerin kimlikleri (Tur 70: masaüstü sürümü bunları Steam'e bildiriyor). */
+export function careerUnlockedIds(): string[] {
+  return Object.keys(read().unlocked);
+}
+
 /** Bu koşuda açılan rozetler (sonuç ekranları). */
 export function unlockedInRun(state: GameState): AchievementDef[] {
   const key = runKeyOf(state);

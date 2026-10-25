@@ -33,6 +33,7 @@ export * from './consortium';
 export * from './scenarios';
 export * from './packs';
 export * from './achievements';
+export * from './steam';
 
 /** İçerik sürümü — save migration'ında denge değişikliklerini izlemek için. */
 export const CONTENT_VERSION = 6;

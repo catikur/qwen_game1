@@ -6,7 +6,8 @@
 #
 # Elle (Actions → Masaüstü → Run workflow): üç işletim sisteminin kurulum
 # paketleri (Windows: MSI ve NSIS, macOS: .app ve DMG, Linux: deb, rpm,
-# AppImage). İmzasız; imza ve Steam'e yükleme docs/MASAUSTU.md'de.
+# AppImage) ve Steam depoları (Tur 70). İmzasız; imza docs/MASAUSTU.md'de,
+# Steam'e yükleme docs/STEAM.md'de.
 name: Masaüstü
 
 on:
@@ -16,6 +17,8 @@ on:
       - 'apps/web/**'
       - 'packages/**'
       - 'tools/desktop-e2e.mjs'
+      - 'tools/steam-depot.mjs'
+      - 'docs/steam/steampipe/**'
       - 'pnpm-lock.yaml'
       - '.github/workflows/desktop.yml'
   push:
@@ -25,6 +28,8 @@ on:
       - 'apps/web/**'
       - 'packages/**'
       - 'tools/desktop-e2e.mjs'
+      - 'tools/steam-depot.mjs'
+      - 'docs/steam/steampipe/**'
       - 'pnpm-lock.yaml'
       - '.github/workflows/desktop.yml'
   workflow_dispatch:
@@ -59,6 +64,10 @@ jobs:
       - name: Rust birim testleri
         working-directory: apps/desktop/src-tauri
         run: cargo test --locked
+      # Steam derlemesi (Tur 70): steamworks paketiyle derleniyor, bağlanıyor, testler geçiyor.
+      - name: Rust birim testleri (steam özelliğiyle)
+        working-directory: apps/desktop/src-tauri
+        run: cargo test --locked --features steam
       - name: Sürüm derlemesi
         run: pnpm --filter @capital/desktop exec tauri build --no-bundle
       - name: tauri-driver
@@ -66,7 +75,8 @@ jobs:
       - name: Uçtan uca (gerçek pencere)
         env:
           SHOTS: ${{ runner.temp }}/desktop-shots
-        run: xvfb-run -a -s "-screen 0 1440x900x24" node tools/desktop-e2e.mjs
+        # D-Bus oturumu: tek pencere eklentisi ikinci kopyayı onunla buluyor (Tur 70).
+        run: xvfb-run -a -s "-screen 0 1440x900x24" dbus-run-session -- node tools/desktop-e2e.mjs
       - if: always()
         uses: actions/upload-artifact@v5
         with:
@@ -115,4 +125,29 @@ jobs:
         with:
           name: capitalforge-${{ matrix.name }}
           path: apps/desktop/src-tauri/target/release/bundle
+          retention-days: 14
+      # Steam deposu (Tur 70, docs/STEAM.md): steam özelliğiyle derleme ve
+      # Steamworks kütüphanesi yanında; SteamPipe bu klasörü yüklüyor. macOS
+      # deposu evrensel (Apple Silicon ve Intel tek .app'te).
+      - name: Steam deposu
+        shell: bash
+        run: |
+          export VITE_LEAGUE_URL=$(sed -n 's/^ *LiteLeagueURL: *"\(.*\)"/\1/p' ios-lite/App/project.yml)
+          if [ "$RUNNER_OS" = "macOS" ]; then
+            rustup target add aarch64-apple-darwin x86_64-apple-darwin
+            pnpm --filter @capital/desktop exec tauri build --features steam --bundles app --target universal-apple-darwin
+          else
+            pnpm --filter @capital/desktop exec tauri build --features steam --no-bundle
+          fi
+          node tools/steam-depot.mjs "$RUNNER_TEMP/steam-depot"
+          # WebView2'nin önyükleyicisi (~2 MB): kurulum betiği ilk açılıştan önce çalıştırıyor.
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            mkdir -p "$RUNNER_TEMP/steam-depot/_CommonRedist/WebView2"
+            curl -fsSL -o "$RUNNER_TEMP/steam-depot/_CommonRedist/WebView2/MicrosoftEdgeWebview2Setup.exe" \
+              "https://go.microsoft.com/fwlink/p/?LinkId=2124703"
+          fi
+      - uses: actions/upload-artifact@v5
+        with:
+          name: steam-depot-${{ matrix.name }}
+          path: ${{ runner.temp }}/steam-depot
           retention-days: 14

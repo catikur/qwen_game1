@@ -164,7 +164,7 @@ export const commands: Record<keyof typeof trCommands, string> = {
   'core.agenda.fuelLock': 'Energiekrise droht: Brennstoffpreis sichern',
   'core.agenda.renewalRequest': 'Erneuerungsantrag: Der Stadtrat eröffnet die Auktion',
   'core.agenda.renewalPlot': 'Dein Erneuerungsgrundstück ist leer: Bau dort ein Projekt',
-  'core.agenda.fad': 'Modetrend: {good}',
+  'core.agenda.fad': '{good} im Trend',
   'core.agenda.projectRank': '{project}: du bist auf Rang {rank}',
   'core.agenda.projectOpen': '{project}: Beiträge möglich',
   'core.agenda.projectBuilding': '{project} im Bau',

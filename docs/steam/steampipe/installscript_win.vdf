@@ -1,0 +1,19 @@
+// Windows deposunun kurulum betiği (Tur 70, docs/STEAM.md): oyun ilk
+// açılmadan önce Microsoft'un WebView2 kurucusunu bir kez çalıştırıyor.
+// WebView2 Windows 11'de ve güncel Windows 10'da zaten kurulu; kurucu o
+// zaman bir şey yapmadan çıkıyor. Steamworks → Installation → General →
+// "Install Script": installscript_win.vdf. UYGULAMA'yı uygulama
+// kimliğiyle değiştir.
+"InstallScript"
+{
+	"Run Process"
+	{
+		"WebView2"
+		{
+			"HasRunKey"	"HKEY_LOCAL_MACHINE\\Software\\Valve\\Steam\\Apps\\UYGULAMA"
+			"process 1"	"%INSTALLDIR%\\_CommonRedist\\WebView2\\MicrosoftEdgeWebview2Setup.exe"
+			"command 1"	"/silent /install"
+			"NoCleanUp"	"1"
+		}
+	}
+}

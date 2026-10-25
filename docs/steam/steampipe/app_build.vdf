@@ -1,0 +1,52 @@
+// CapitalForge: SteamPipe yükleme betiği (Tur 70, docs/STEAM.md).
+//
+// UYGULAMA ve DEPO kimliklerini Steamworks'teki sayılarla değiştir
+// (Steamworks → SteamPipe → Depots). İçerik `content/` altında, her
+// işletim sisteminin klasörü CI'ın `steam-depot-<OS>` paketinden:
+//
+//   content/windows/  capitalforge.exe, steam_api64.dll, installscript_win.vdf,
+//                     _CommonRedist/WebView2/MicrosoftEdgeWebview2Setup.exe
+//   content/macos/    CapitalForge.app
+//   content/linux/    capitalforge, libsteam_api.so
+//
+// Yükleme: steamcmd +login <hesap> +run_app_build <bu dosyanın tam yolu> +quit
+"AppBuild"
+{
+	"AppID"		"UYGULAMA"
+	"Desc"		"CapitalForge 0.2.0"
+	"ContentRoot"	"../content/"
+	"BuildOutput"	"../output/"
+	// Boş: yükleme bir dala çıkmıyor; Steamworks → Builds'ten elle canlıya.
+	"SetLive"	""
+	"Depots"
+	{
+		// Windows deposu (Steamworks'ün varsayılanı: uygulama kimliği + 1).
+		"DEPO_WINDOWS"
+		{
+			"FileMapping"
+			{
+				"LocalPath"	"windows/*"
+				"DepotPath"	"."
+				"Recursive"	"1"
+			}
+		}
+		"DEPO_MACOS"
+		{
+			"FileMapping"
+			{
+				"LocalPath"	"macos/*"
+				"DepotPath"	"."
+				"Recursive"	"1"
+			}
+		}
+		"DEPO_LINUX"
+		{
+			"FileMapping"
+			{
+				"LocalPath"	"linux/*"
+				"DepotPath"	"."
+				"Recursive"	"1"
+			}
+		}
+	}
+}
