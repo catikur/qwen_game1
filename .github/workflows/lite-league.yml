@@ -20,10 +20,15 @@ on:
       - 'packages/content/src/**'
       - 'ios-lite/App/project.yml'
       - '.github/workflows/lite-league.yml'
+  # PR'da da aynı yollar (Tur 71, Codex): simülasyonu değiştiren PR (çekirdek,
+  # içerik) canlı denetimin "sunucu bu sürümü tanımıyor" uyarısını birleşmeden
+  # önce görsün; yoksa fark ancak main'de kırmızıyla çıkıyordu.
   pull_request:
     paths:
       - 'packages/lite-league/**'
       - 'packages/lite-model/src/**'
+      - 'packages/core/src/**'
+      - 'packages/content/src/**'
       - 'ios-lite/App/project.yml'
       - '.github/workflows/lite-league.yml'
 
@@ -36,11 +41,15 @@ concurrency:
 
 jobs:
   # Uygulamanın bağlandığı canlı sunucu (project.yml → LiteLeagueURL) ayakta mı,
-  # veritabanı bağlı mı: hesap aç, ligi oku. Sır gerekmiyor.
+  # veritabanı bağlı mı: hesap aç, ligi oku. Sır gerekmiyor. Dağıtımdan sonra
+  # koşuyor (Tur 71): aynı koşuda dağıtılan sunucu denetleniyor; PR'da dağıtım
+  # atlanınca da koşuyor.
   smoke:
     name: Canlı sunucu denetimi
+    needs: deploy
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v5
       - name: Sağlık, kayıt, lig
@@ -107,12 +116,32 @@ jobs:
             echo "::warning::Canlı sunucu eski sürüm (ana oyunun Tohum Ligi yok); yeni paketi yapıştır ve şemayı uygula (ios-lite/README.md). O zamana kadar oyun yerel tabloyla açılıyor."
           fi
           echo "Canlı sunucu ve veritabanı çalışıyor."
+      # Tur 71: sunucunun simülasyonu depodakiyle aynı mı. Sağlık denetimi Tur
+      # 56–70 boyunca "çalışıyor" dedi, sunucu Tur 55'te kalmıştı: yeni koşular
+      # 409 alıp cihazda bekledi. main'de (birleşme, elle koşu) fark hata, PR'da
+      # uyarı (packages/lite-league/scripts/simCheck.ts).
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Simülasyon sürümü
+        env:
+          STRICT: ${{ github.event_name != 'pull_request' && '--strict' || '' }}
+          WAIT: ${{ needs.deploy.outputs.deployed == 'true' && '--wait' || '' }}
+        run: |
+          URL=$(sed -n 's/^ *LiteLeagueURL: *"\(.*\)"/\1/p' ios-lite/App/project.yml)
+          if [ -z "$URL" ]; then echo "::notice::LiteLeagueURL boş; denetim atlandı."; exit 0; fi
+          node tools/run-node-script.mjs packages/lite-league/scripts/sim-check.ts "$URL" $STRICT $WAIT
 
   deploy:
     name: Cloudflare'a dağıt
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    outputs:
+      deployed: ${{ steps.deploy.outputs.deployed }}
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -139,10 +168,19 @@ jobs:
           fi
       - uses: actions/checkout@v5
         if: steps.secrets.outputs.ready == 'true'
+      - uses: pnpm/action-setup@v4
+        if: steps.secrets.outputs.ready == 'true'
       - uses: actions/setup-node@v5
         if: steps.secrets.outputs.ready == 'true'
         with:
           node-version: 22
+          cache: pnpm
+      # Worker çekirdeği ve içeriği paket adıyla alıyor (`@capital/content`):
+      # wrangler'ın paketleyicisi onu node_modules'taki çalışma alanı
+      # bağlantısında buluyor. Kurulumsuz paketleme çözemiyordu (Tur 71).
+      - name: Bağımlılıklar
+        if: steps.secrets.outputs.ready == 'true'
+        run: pnpm install --frozen-lockfile
       - name: D1 veritabanı ve şema
         if: steps.secrets.outputs.ready == 'true'
         working-directory: packages/lite-league
@@ -164,11 +202,13 @@ jobs:
           sed -i "s/^database_id = .*/database_id = \"$ID\"/" wrangler.toml
           npx --yes wrangler@4 d1 execute "$DB_NAME" --remote --file schema.sql
       - name: Worker'ı dağıt
+        id: deploy
         if: steps.secrets.outputs.ready == 'true'
         working-directory: packages/lite-league
         run: |
           set -euo pipefail
           npx --yes wrangler@4 deploy | tee deploy.log
+          echo "deployed=true" >> "$GITHUB_OUTPUT"
           URL=$(grep -o 'https://[^ ]*\.workers\.dev' deploy.log | head -1 || true)
           echo "::notice::Lig sunucusu: ${URL:-adres bulunamadı (wrangler çıktısına bak)}"
           if [ -n "$URL" ]; then curl -fsS "$URL/v1/health"; fi

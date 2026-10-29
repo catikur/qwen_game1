@@ -4,7 +4,7 @@
 > `pnpm bench` çıktısından; iddialar `pnpm balance` ve `pnpm playtest`
 > tarafından her koşuda doğrulanıyor.
 >
-> Son güncelleme: şema **v6**, 70 tur (Tur 33 denendi ve geri alındı; Tur 34 eski görünüme canlılık ekledi; Tur 35 arayüzü Lite'ın "Cam & Bulut" diline taşıdı; Tur 36 şehre ayrıntı kattı; Tur 37a geç oyuna yönetim yükü, servet vergisi ve kriz dönemleri getirdi; Tur 37b karar kartlarını ve rakip hikâyelerini ekledi; Tur 37c fırsat balonlarını ve aylık görev panosunu getirdi; Tur 37d canlı pazarı, şehir projesi ihalesini ve rakip konsorsiyumunu getirdi; Tur 38 değerlendirme turuydu: geç oyun hızı, gündem ve haber akışı, zorluk eğrisi; Tur 39a senaryo modunu getirdi: Kurtarma ve Krizin ortasında; Tur 39b Konsorsiyuma karşı, Zincir ustası ve Şehrin sponsoru senaryolarını ekledi; Tur 39c Büyük şehir fethi ve Holding: iki şehir ile listeyi yediye tamamladı; Tur 40 cila ve performans; Tur 41 başarımlar ve kariyer; Tur 42 açılışta gölgelendirici derlemesi; Tur 43 oyun içi akıcılık; Tur 44 değerlendirme turuydu: Türkçe sayı biçimi, yardımın kapsamı, haber akışı; Tur 45 dört ek kural getirdi: Fırtınalı yıllar, Aç gözlü rakipler, Sıkı banka, Kıt arsa; Tur 46 açılış paketini böldü: kurulum ekranı telefonda yarı sürede; Tur 47 tek Ayarlar paneli ve erişilebilirlik getirdi: metin boyutu, renk körlüğüne uygun palet, hareket, ses düzeyleri, pencerelerde klavye; Tur 48 oyunu kurulabilir ve çevrimdışı açılır yaptı, yayından sonra "yeni sürüm hazır" diyor; Tur 49 müziği getirdi: gündüz, gece ve kriz, şehirle birlikte dönüyor; Tur 50 Faz 1'i değerlendirdi ve tanıtım paketini hazırladı; Tur 51 Faz 2'yi açtı: Lite'ın lig sunucusu ana oyunun Tohum Ligi koşularını da alıyor, tablo herkese açık; Tur 52'de sunucu her koşuyu gönderimde yeniden oynatıyor, tabloya yalnız doğrulanmış skor giriyor; Tur 53 ligin her haftasına bir ek kural ve 90 günlük günün koşusunu getirdi; Tur 54 liderlerin eğrisini senin koşunun üstüne koydu ve liderin o günlerde ne yaptığını koşu kodundan anlatıyor; Tur 55 davet kodlu arkadaş liglerini getirdi ve Faz 2'yi kapattı; Tur 56 Faz 3'ü açtı: nakliye terminali rakip mağazalarına taşıma sözleşmesiyle taşıyor; Tur 57 enerjiyi getirdi: şebeke fiyatı, santraller, enerji krizi; Tur 58 gayrimenkul geliştiricisini getirdi: konut ve ofis projeleri, kira ve doluluk, kentsel dönüşüm hakkı ve başvurusu; Tur 59 rakiplere hafıza verdi: CEO'nun mizacı, husumet ve ittifak, fiyat savaşı ve lobiyle tepki, uzlaşma; Tur 60 Faz 3'ün sektörleriyle üç senaryo ekledi: Herkesin nakliyecisi, Karanlık kış, Kentsel dönüşüm, her biri bir ek kuralla; Tur 61 Faz 3'ü değerlendirdi ve kapattı: zafere üç gerçek yol var, şirketin yolu kârın kaynağından okunuyor; Tur 62 Faz 4'ü açtı: mevsim ve hava şehirde görünüyor, ağaçlar mevsimin renginde, yağmur ve kar yağıyor; Tur 63 önemli anları getirdi: inşaatın tozu, devralmanın renk dalgası, çatılardan yükselen kâr, zafer gecesinin havai fişekleri; Tur 64 şehir kartını getirdi: koşunun özeti ve şehrin kuşbakışı tek bir görselde, indirilip paylaşılıyor; Tur 65 Faz 4'ü değerlendirdi ve kapattı: telefonda günün JS'i kısaldı, tuvalin yeri her karede okunmuyor; Tur 66 Faz 5'i açtı: masaüstü sürümü, kayıtlar ve ayarlar dosyada, Steam'e hazırlık; Tur 67 içerik paketlerini getirdi: senaryo ve kurallar dosyadan, senaryolar kodla ve bağlantıyla paylaşılıyor; Tur 68 senaryo editörünü getirdi: paket tarayıcıda alan alan kuruluyor, sınırlar formda, taslak kaydetmeden deneniyor; Tur 69 üçüncü dili getirdi: oyunun her metni Almancada, sayı ve para dil başına biçimde; Tur 70 Steam'i getirdi ve Faz 5'i kapattı: 29 rozet Steam başarımı, tek pencere, üç işletim sisteminin Steam deposu, üç dilde mağaza sayfası). Önümüzdeki işin sırası `docs/YOL-HARITASI.md`'de.
+> Son güncelleme: şema **v6**, 71 tur (Tur 33 denendi ve geri alındı; Tur 34 eski görünüme canlılık ekledi; Tur 35 arayüzü Lite'ın "Cam & Bulut" diline taşıdı; Tur 36 şehre ayrıntı kattı; Tur 37a geç oyuna yönetim yükü, servet vergisi ve kriz dönemleri getirdi; Tur 37b karar kartlarını ve rakip hikâyelerini ekledi; Tur 37c fırsat balonlarını ve aylık görev panosunu getirdi; Tur 37d canlı pazarı, şehir projesi ihalesini ve rakip konsorsiyumunu getirdi; Tur 38 değerlendirme turuydu: geç oyun hızı, gündem ve haber akışı, zorluk eğrisi; Tur 39a senaryo modunu getirdi: Kurtarma ve Krizin ortasında; Tur 39b Konsorsiyuma karşı, Zincir ustası ve Şehrin sponsoru senaryolarını ekledi; Tur 39c Büyük şehir fethi ve Holding: iki şehir ile listeyi yediye tamamladı; Tur 40 cila ve performans; Tur 41 başarımlar ve kariyer; Tur 42 açılışta gölgelendirici derlemesi; Tur 43 oyun içi akıcılık; Tur 44 değerlendirme turuydu: Türkçe sayı biçimi, yardımın kapsamı, haber akışı; Tur 45 dört ek kural getirdi: Fırtınalı yıllar, Aç gözlü rakipler, Sıkı banka, Kıt arsa; Tur 46 açılış paketini böldü: kurulum ekranı telefonda yarı sürede; Tur 47 tek Ayarlar paneli ve erişilebilirlik getirdi: metin boyutu, renk körlüğüne uygun palet, hareket, ses düzeyleri, pencerelerde klavye; Tur 48 oyunu kurulabilir ve çevrimdışı açılır yaptı, yayından sonra "yeni sürüm hazır" diyor; Tur 49 müziği getirdi: gündüz, gece ve kriz, şehirle birlikte dönüyor; Tur 50 Faz 1'i değerlendirdi ve tanıtım paketini hazırladı; Tur 51 Faz 2'yi açtı: Lite'ın lig sunucusu ana oyunun Tohum Ligi koşularını da alıyor, tablo herkese açık; Tur 52'de sunucu her koşuyu gönderimde yeniden oynatıyor, tabloya yalnız doğrulanmış skor giriyor; Tur 53 ligin her haftasına bir ek kural ve 90 günlük günün koşusunu getirdi; Tur 54 liderlerin eğrisini senin koşunun üstüne koydu ve liderin o günlerde ne yaptığını koşu kodundan anlatıyor; Tur 55 davet kodlu arkadaş liglerini getirdi ve Faz 2'yi kapattı; Tur 56 Faz 3'ü açtı: nakliye terminali rakip mağazalarına taşıma sözleşmesiyle taşıyor; Tur 57 enerjiyi getirdi: şebeke fiyatı, santraller, enerji krizi; Tur 58 gayrimenkul geliştiricisini getirdi: konut ve ofis projeleri, kira ve doluluk, kentsel dönüşüm hakkı ve başvurusu; Tur 59 rakiplere hafıza verdi: CEO'nun mizacı, husumet ve ittifak, fiyat savaşı ve lobiyle tepki, uzlaşma; Tur 60 Faz 3'ün sektörleriyle üç senaryo ekledi: Herkesin nakliyecisi, Karanlık kış, Kentsel dönüşüm, her biri bir ek kuralla; Tur 61 Faz 3'ü değerlendirdi ve kapattı: zafere üç gerçek yol var, şirketin yolu kârın kaynağından okunuyor; Tur 62 Faz 4'ü açtı: mevsim ve hava şehirde görünüyor, ağaçlar mevsimin renginde, yağmur ve kar yağıyor; Tur 63 önemli anları getirdi: inşaatın tozu, devralmanın renk dalgası, çatılardan yükselen kâr, zafer gecesinin havai fişekleri; Tur 64 şehir kartını getirdi: koşunun özeti ve şehrin kuşbakışı tek bir görselde, indirilip paylaşılıyor; Tur 65 Faz 4'ü değerlendirdi ve kapattı: telefonda günün JS'i kısaldı, tuvalin yeri her karede okunmuyor; Tur 66 Faz 5'i açtı: masaüstü sürümü, kayıtlar ve ayarlar dosyada, Steam'e hazırlık; Tur 67 içerik paketlerini getirdi: senaryo ve kurallar dosyadan, senaryolar kodla ve bağlantıyla paylaşılıyor; Tur 68 senaryo editörünü getirdi: paket tarayıcıda alan alan kuruluyor, sınırlar formda, taslak kaydetmeden deneniyor; Tur 69 üçüncü dili getirdi: oyunun her metni Almancada, sayı ve para dil başına biçimde; Tur 70 Steam'i getirdi ve Faz 5'i kapattı: 29 rozet Steam başarımı, tek pencere, üç işletim sisteminin Steam deposu, üç dilde mağaza sayfası; Tur 71 Faz 6'yı açtı: masaüstü bir uygulama gibi davranıyor, dar pencerede paneller üst üste binmiyor, Steam Deck'te metin büyük, lig sunucusunun eski simülasyonu canlı denetimde görünüyor). Önümüzdeki işin sırası `docs/YOL-HARITASI.md`'de.
 
 ---
 
@@ -7995,6 +7995,265 @@ istiyor. Yol haritası Faz 5'le bitiyor; sonraki faz kullanıcıyla.
 
 ---
 
+### Tur 71 — Değerlendirme: masaüstünün ilk saati, Faz 6'nın açılışı
+
+Faz 6'nın (yayına hazırlık) ilk turu. Kullanıcı sırayı Tur 71'den önce
+seçti: önce yayına hazırlık, sonra ikinci şehir ve ticaret, sonra Lite
+(`docs/YOL-HARITASI.md`). Simülasyon ve şema aynı; hazır oyunların parmak
+izi birebir (simülasyon `a5ded51fb01e62a5`, lig `104a3ce17d31216b`).
+
+**Lig sunucusu canlıda Tur 55'te kalmış.** Kullanıcı Cloudflare tarafını
+kurduğunu söyledi; denetim şunu buldu:
+- Worker en son 23 Ekim'de güncellenmiş (Tur 55). Tur 56–70'in simülasyonu
+  ve masaüstünün kökenleri canlıda yok. Pages'teki oyunun koşuları 409
+  `sim` alıp cihazda bekliyor; haftası kapananlar tabloya giremiyor.
+- Canlı denetim bunu görmüyordu: hiçbir uç simülasyon sürümünü
+  söylemiyordu, sağlık ucu "çalışıyor" diyordu.
+- Elle başlatılan dağıtım "Cloudflare sırları yok" dedi: depo sırları
+  Actions'a görünmüyor (Variables ya da bir Environment'a girilmiş
+  olabilir).
+- Sırlar girilse de dağıtım çalışmayacaktı. Wrangler paketlerken
+  çekirdeğin `@capital/content` içe aktarmasını çözemiyordu, çünkü
+  bağımlılıklar kurulmuyordu (temiz bir kopyada sınandı). İş Tur 51'den
+  beri hiç dağıtmadı; sunucu hep panelden yapıştırıldı.
+
+Yapılanlar:
+- Yeni uç `GET /v1/seed/sim`: sunucunun simülasyon izi, koşuları yargılayan
+  izin aynısı. Sağlık ucunda değil: iz ilk ihtiyaçta ~0,5 sn CPU, oyun her
+  açılışta sağlık ucuna soruyor.
+- Canlı denetim dağıtımdan sonra koşuyor ve izi depodakiyle karşılaştırıyor
+  (`packages/lite-league/scripts/simCheck.ts`). `main`'de fark ya da ucu
+  olmayan eski sunucu iş akışını kırmızıya çeviriyor, PR'da uyarı; aynı
+  koşuda dağıtıldıysa yeni sürümü bir dakikaya kadar bekliyor.
+- Dağıtım işi wrangler'dan önce `pnpm install` koşuyor.
+- `ios-lite/README.md`: sırlar Repository secrets'e; Tur 62–71'in sunucu
+  notları.
+
+**Masaüstünün ilk saati.** Derlenmiş oyun gerçek penceresinde (WebKitGTK)
+ve tarayıcıda dört pencere boyunda (960 × 600, 1280 × 800, 1920 × 1080,
+2560 × 1440), üç dilde. Bulunanlar ve yapılanlar:
+- *Oyun bir web sayfası gibi davranıyordu.*
+  - WebView2 (Windows) F5 ve Ctrl+R ile sayfayı yeniden yüklüyor; son
+    otomatik kayıttan sonrası gidiyordu. Ctrl+P yazdırıyor, Ctrl+F arıyor,
+    Alt+← geri gidiyordu.
+  - Şehrin dışında sağ tık "Geri, Yeniden yükle" menüsünü açıyordu.
+  - Çift tıklanan sayı maviye boyanıyordu.
+  - Masaüstünde (`apps/web/src/desktop/native.ts`) tarayıcının kısayolları
+    yutuluyor. Oyunun ve yazının kısayolları yerinde (Boşluk, 1–3, WASD,
+    Ctrl+C ve V); macOS menüsünün kısayolları da (Cmd+H, Cmd+M, Cmd+W,
+    Cmd+Q).
+  - Sağ tık menüsü yalnız yazı alanında ve seçili kodda açılıyor. Metin
+    seçilmiyor (yazı alanı ve kod hariç), sürükle-bırak yok, kaydırma
+    çubukları ince ve temanın renginde. Web sürümü aynı.
+- *Tam ekran yoktu.* F11 ve Alt+Enter; Ayarlar'ın kısayol listesinde,
+  yalnız masaüstünde.
+- *Pencere her açılışta 1280 × 760'tı.* İlk açılışta büyütülmüş, sonra
+  kapandığı boyda, yerde, büyütülmüş ya da tam ekran (kabuğun
+  `src/window.rs` modülü; aşağıda Codex'in dördüncü bulgusu).
+- *1100 pikselin altında paneller üst üste biniyordu.*
+  - Orta genişlik tek sütuna iniyordu. Esnek satır 30 piksele sıkışıyor,
+    içindeki panel alttakinin üstüne taşıyordu; gündem çipi de görünmeyen
+    ikinci bir sütun açıp üst barı daraltıyordu.
+  - Masaüstünün en küçük penceresi (960 × 600) ve %125 ölçekli 1366 × 768
+    dizüstü (1093 × 614) tam bu aralıkta. Tarayıcı testi 900 ile 1280
+    arasını hiç ölçmüyordu.
+  - Üç sütun kalıyor (300 px, esnek, 280 px); şehir ortada görünür ve
+    tıklanabilir. Telefon düzeni aynı.
+- *Steam Deck'te yazı küçüktü.*
+  - Valve'ın okunabilirlik ölçüsü: 1280 × 800'de en küçük yazı en az 9
+    piksel, önerisi 12.
+  - Arayüzün en küçük yazısı 10 piksel: gündemin "Hedef" etiketi, yatırım
+    kartının "en iyi" rozeti, haber çipleri.
+  - Steam, Deck'te `SteamDeck=1` veriyor; kabuk bunu söylüyor ve metin ilk
+    açılışta "çok büyük" oluyor. En küçük yazı 13 piksel, bütün paneller
+    açıkken de; taşma yok. Oyuncunun seçimi önde.
+- Dış bağlantı yok: oyunun hiçbir yeri tarayıcı açmıyor ya da sayfadan
+  çıkmıyor. Tur 74'ün hata bildirimi ilk dış bağlantı olacak ve sistemin
+  tarayıcısında açılmalı.
+
+**Yalnız klavye.** Kamera (WASD, oklar), hız (Boşluk, 1–3) ve paneller
+(Tab, Esc) klavyeyle çalışıyor, ama parsel seçmenin klavyeden yolu yok. Bu
+iş Tur 72'ye (oyun kumandası) kaldı: kameranın ortasındaki parsel imleç
+oluyor, bir düğme seçiyor, menüler arasında gezinme ekleniyor. Klavye ve
+kumanda aynı imleci kullanıyor.
+
+**Açık kalan işler.** 4.4 (kapasitenin mekânsal dağılımı) bilerek böyle,
+kapandı. 4.10 (enerji ve nakliye şirketi taşımıyor) Faz 7'ye taşındı:
+şehirler arası mal ticareti nakliyeye perakendeden büyük bir pazar açıyor.
+
+**Codex'in bulduğu şey.** Kayıt bütün ayarları birlikte yazıyor: PC'de
+yalnız sesi değiştiren oyuncunun kaydında da `textSize: "normal"` var.
+Steam Cloud o kaydı Deck'e getirince "normal" oyuncunun seçimi sayılıyor,
+Deck'in büyük metni hiç uygulanmıyordu. Ayarlar artık metin boyunun
+gerçekten seçildiğini ayrı bir işaretle tutuyor (`textSizeChosen`):
+Ayarlar'dan seçilen boy işaretleniyor, başka bir ayar işaretlemiyor.
+Seçilmemiş boy her cihazda o cihazın varsayılanı; Deck'in "çok büyük"ü
+PC'ye geçince normale dönüyor. İşaretsiz eski kayıtta varsayılandan farklı
+boy seçilmiş sayılıyor.
+
+Codex ikinci incelemede yeni ucu buldu: kimliksiz ve sınırsızdı, iz soğuk
+kopyada ~0,5 sn CPU. Uç artık öbür pahalı uçlar gibi IP başına saatlik
+sınırın arkasında (30; canlı denetim birkaç kez soruyor). Üçüncüde: canlı
+denetimin PR tetikleyicisinde çekirdek ve içerik yoktu; simülasyonu
+değiştiren PR uyarıyı görmeden birleşiyor, fark ancak `main`'de kırmızıyla
+çıkıyordu. PR'ın yolları birleşmeninkilerle aynı (test sınıyor).
+
+Dördüncüde pencerenin hafızası. İlk sürüm `tauri-plugin-window-state`
+kullanıyordu. Eklenti boyu ve yeri büyütülmüş ve küçültülmüş pencerede
+kaydetmiyor, tam ekranda ise kaydediyor: tam ekranda kapanan oyunun boyu
+olarak ekranın boyu yazılıyordu. Sonraki açılışta tam ekrandan çıkan pencere
+ekran boyunda kalıyordu (eklentinin açık hatası). Eklentinin kaynağında ikinci
+bir açık da vardı: büyütülmemiş kapanan pencereyi açılışta küçültmüyor,
+yapılandırmadaki "ilk açılışta büyütülmüş" bayrağı da her açılışta
+uygulanıyordu. Eklenti çıktı. Kabuğun kendi modülü (`src/window.rs`) boyu ve
+yeri yalnız pencere kipindeyken hatırlıyor. Ekranı tümüyle kaplayan boy da
+sayılmıyor, çünkü tam ekrana geçerken boy haberi kip haberinden önce
+gelebiliyor. Büyütme ve tam ekran ayrı işaretler. İlk açılışın büyütülmesi
+de bu modülde: hafıza yoksa büyütülmüş.
+
+Beşincide yine pencere: ekran düzeni değişince (ikinci ekran çıkarılmış)
+bir piksellik kesişim de "ekranda" sayılıyordu. Çoğu ikinci ekranda kalan
+pencere başlık çubuğuyla birlikte ekranın dışında açılırdı. Artık pencere
+ekranlarda tümüyle görünüyorsa olduğu gibi açılıyor; iki ekrana yayılmış
+olsa da. Görünmüyorsa en çok kesiştiği ekrana sığdırılıyor. Hiç
+kesişmiyorsa birincil ekranın ortasında açılıyor, ekrandan büyük boy ekrana
+iniyor.
+
+**Cursor Bugbot'un üçüncü bulgusu** da pencerede. Büyütme ve tam ekran
+geçişinde boy haberi kip haberinden önce gelebiliyor; açılıştaki uygulamada
+da öyle. O an pencere "büyütülmüş değil" görünüyor, boyu ekranın boyuna çok
+yakın oluyor ve pencere boyu diye kaydediliyordu. Artık taşıma ve boy
+haberleri doğrudan kaydedilmiyor. Tek bir arka plan iş parçacığı haberler
+400 ms kesilene kadar bekliyor, sonra pencerenin durulmuş hâline bakıyor.
+
+Dördüncü bulgusu bu beklemenin kendisinde: oyuncu boyu değiştirip 400 ms
+dolmadan büyütünce ya da tam ekrana geçince durulan hâl büyütülmüş oluyor,
+yeni boy hiç kaydedilmiyordu. Artık her haber pencerenin o anki hâlini de
+getiriyor. Pencere durulduğunda pencere kipindeyse o hâl hatırlanıyor.
+Büyütülmüş, tam ekran ya da küçültülmüşse geçişten önceki son durgun
+pencere hâli hatırlanıyor. Geçişin kendi haberleri sayılmıyor:
+- ardından 100 ms içinde başka haber gelen hâl (animasyonun kareleri, kip
+  haberinden hemen önceki boy haberi);
+- büyütülmüş boydan 32 pikselden az küçük olan hâl (kip haberi gecikince
+  son boy haberi);
+- en küçük pencereden küçük boy (küçültülürken gelen haber).
+
+Beşinci bulgusu bunun bir açığı: büyütmede ve tam ekranda son haberin
+ardından haber gelmiyor, son haber hep durgun sayılıyordu. Yalnız bir
+yönde 32 pikselden fazla küçük bir geçiş karesi pencere boyu diye
+kaydedilebiliyordu. Artık son haber yalnız küçültmede durgun sayılıyor,
+çünkü Linux'ta küçültmenin haberi yok. Büyütme ve tam ekranda geçişten
+önceki haber, ardından geçişin haberi geldiği için zaten durgun.
+
+**Codex'in altıncı bulgusu** da aynı yerde: ekranı kaplayan pencere hep
+"pencere kipinde değil" sayılıyordu. İki ekrana yayılmış, dizüstünün
+ekranından büyük bir pencere unutuluyordu. Artık yalnız ekranın kendisi
+olan pencere sayılmıyor: yeri ekranın köşesinde, boyu ekranın boyunda
+(2 piksel pay). Tam ekran geçişinin karesi böyle; ekrandan büyük ama başka
+yerde duran pencere hatırlanıyor.
+
+**Cursor Bugbot'un bulduğu şey.** Kısayol süzgeci yazı alanında harf
+yutuyordu. Windows'ta AltGr, Ctrl+Alt olarak geliyor: Almanca "}" (AltGr+0)
+"yakınlığı sıfırla", Lehçe "ś", "ó", "ń" (AltGr+S, O, N) "kaydet, aç, yeni
+pencere" sayılıyordu. macOS'ta yazı alanında sözcük sözcük gezinme
+(Option + ok) "geri" sayılıyordu. Artık Ctrl+Alt hiçbir zaman tarayıcının
+kısayolu değil (tarayıcınınkiler Alt'sız), Alt + ok yazı alanında yerinde;
+F5, Ctrl+R, Ctrl+P yazı alanında da yutuluyor. İkinci incelemede: "yazı
+alanı" her `input`'u sayıyordu, Ayarlar'ın ses kaydırıcısında ve onay
+kutularında Alt + ← geçiyordu; artık yalnız metin yazılan türler.
+
+**CI'ın bulduğu şey.** Uçtan uca testin Steam Deck bölümü CI'da düştü:
+önceki pencere kapanırken otomatik kayda yazıyordu (5 sn'ye kadar), tek
+pencere eklentisi o sırada açılan yeni kopyayı açtırmadı. Bölüm artık
+önceki oyunun süreci kapanana kadar bekliyor (20 sn'de kapanmazsa
+kapatıyor). Yerelde yüklü makinede bir yarış daha çıktı, Tur 66'dan beri
+duruyordu: test dışa aktarılan kaydı adı görünür görünmez okuyor, dosyayı
+256 KB'ta yarım buluyordu. Okuma da tamamı gelene kadar bekleniyor.
+
+**Doğrulama.**
+- `pnpm test` 867/867 (849'dan); tip denetimi temiz.
+  - `packages/lite-league/test/simCheck.test.ts` (5 yeni): uç sunucunun
+    izini veriyor, IP başına saatte 30; denetim aynı, farklı, eski sunucu (401) ve okunamayan
+    durumunu ayırıyor; az önce dağıtılan sunucuyu bekliyor; `main`'de hata,
+    PR'da uyarı.
+  - `deploy.test.ts` (3 yeni): bağımlılıklar wrangler'dan önce kuruluyor;
+    canlı denetim dağıtımdan sonra koşuyor, `main`'de katı; PR'da da
+    birleşmeyle aynı dosyalarda.
+  - `apps/web/test/desktop.test.ts` → "uygulama gibi (Tur 71)" (7 yeni):
+    hangi tuş tarayıcının, hangisi oyunun ve macOS menüsünün; yutulan tuş
+    oyunun dinleyicisine gitmiyor, basılı tutulan F11 titretmiyor; sağ tık
+    ve sürükleme; çok büyük metinde arayüzün en küçük yazısı 12 pikseli
+    geçiyor (stil dosyasından); kabuğun komutları, pencere eklentisi, en
+    küçük pencere; AltGr harfleri ve Option + ok yazı alanında geçiyor,
+    kaydırıcıda ve onay kutusunda Alt + ← yutuluyor (Cursor Bugbot).
+  - `packages/ui/test/deviceDefaults.test.ts` (3 yeni): Deck'in varsayılanı
+    yalnız seçilmemiş metin boyunda; PC'den gelen, metin boyu seçilmemiş
+    kayıtta da (Codex); Deck'te seçilmemiş boy PC'de normal, eski kayıttaki
+    seçim yerinde.
+- `cargo test` 21/21, `cargo test --features steam` 20/20; `SteamDeck`
+  ortam değişkeni (1, 0, boş, yok). Pencerenin hafızası (9 yeni):
+  - boy ve yer yalnız pencere kipinde; ekranın kendisi olan pencere ve en
+    küçük pencereden küçük boy sayılmıyor, iki ekrana yayılmış büyük
+    pencere sayılıyor (Codex'in örneği);
+  - tam ekranda kapanan pencere tam ekran ama eski boyuyla açılıyor
+    (Codex'in senaryosu);
+  - ilk açılış büyütülmüş, küçültülmüş kapanış önceki kipte;
+  - ekranlarda tümüyle görünen pencere olduğu gibi açılıyor, iki ekrana
+    yayılmış da; bozuk boy kullanılmıyor;
+  - ekran çıkarılınca pencere kalan ekrana sığdırılıyor (Codex'in örneği:
+    x = 1900), kesişmeyen pencere birincil ekranın ortasında açılıyor,
+    büyük boy ekrana iniyor;
+  - boyu değiştirip hemen büyüten oyuncunun boyu unutulmuyor; tam ekrana
+    geçen ve küçülten oyuncunun da. 100 ms'den kısa arayla büyütülürse
+    önceki boy kalıyor (Cursor Bugbot'un senaryosu);
+  - geçişin kendi haberleri pencere boyu sayılmıyor: kip haberinden önce
+    gelen boy haberi (tek yönde küçük olsa da, Cursor Bugbot), animasyonun
+    kareleri. Küçültmede son haber oyuncunun boyu. Pencere kipine hiç
+    geçilmediyse hatırlanacak bir şey yok;
+  - haberler kesilince son 64 haber veriliyor, kanal kapanınca iş
+    parçacığı bitiyor;
+  - bozuk dosya ilk açılış sayılıyor.
+- Gerçek pencerede uçtan uca 28/28 (19'dan). Yeni "Uygulama gibi": tarayıcı
+  kısayolları yutuluyor, yazı alanının kısayolları yerinde, sağ tık ve
+  seçim, Deck değilken metin normal, F11 tam ekranı açıyor, Alt+Enter
+  kapatıyor. Oyun tam ekranda kapanıyor: dosyada tam ekran ve pencere
+  kipinin boyu var. Yeniden açılışta oyun tam ekran; çıkınca pencere eski
+  boyunda. Pencere yöneticisi olmayan xvfb'de tam ekran pencerenin boyunu
+  değiştirmiyor; boy farkını (Codex'in senaryosu) Rust testleri sınıyor,
+  uçtan uca test işaretin ve açılışın yolunu. Ayrı bir sürücüyle
+  `SteamDeck=1`: metin ilk açılışta çok büyük.
+- Tarayıcıda yeni "Pencere boyları ve Steam Deck": 960 × 600 (Almanca),
+  1093 × 614, 1280 × 800 (İngilizce, çok büyük metin) ve 1920 × 1080'de
+  paneller üst üste binmiyor, sol sütun taşmıyor, şehir ortada
+  tıklanabilir; Deck'in boyunda kurulumda, oyunda, parselde ve rıhtımın
+  dokuz panelinde en küçük yazı ≥ 12 piksel. Tam koşuda 9/9.
+- Tam tarayıcı koşusu 714/717, konsol temiz (80 dk). Koşu, ayarların ve
+  kısayol süzgecinin inceleme düzeltmelerinden önceki paketle yapıldı; o
+  düzeltmeleri birim testleri ve CI'ın masaüstü uçtan uca koşusu sınıyor.
+  Kalan üç kontrolün hiçbiri oyunun hatası değil:
+  - "Düşük kare hızında oyun saati gerçek zamanla uyumlu": 1 FPS'te 5/8 gün
+    (%59, eşik %75). Koşu sırasında masaüstü derlemesi ve testler de aynı
+    makinedeydi (Tur 67'deki gibi). Aynı adımlarla boş makinede üç kez
+    ölçüldü: 2 FPS'te %96, %90, %95.
+  - Lojistik bölümünün iki kontrolü aynı kökten, testin kendisinden.
+    Rakip mağazalarının en yoğun olduğu parsel o an ihaledeydi ve oyun
+    ihaledeki parseli satmıyor. Terminal kurulamayınca teklif de gelmedi.
+    Aynı seçim motorda denendi: 12 rastgele şehrin birinde ihaledeki
+    parsele düşüyor. Bu kalıbı kullanan dört bölüm (lojistik, enerji,
+    gayrimenkul, "Karanlık kış") artık satın alınabilen en yoğun parseli
+    alıyor. Düzeltilmiş paketle, Lojistik'ten Senaryo paketi II'ye beş
+    bölüm yeniden koşuldu: 63/63.
+- Lig sunucusunun izi yerel sunucuya karşı uçtan uca (`sim-check.ts`):
+  `a5ded51fb01e62a5`, aynı; ulaşılamayan sunucu hata.
+- Paket bütçesi tamam (ana parça 74,2 KB; masaüstünün kodu ayrı parçada).
+
+Kullanıcının hesabında bekleyenler: Worker'ın dağıtımı (panelden yapıştır
+ya da sırlar Repository secrets'e, sonra Run workflow). Bu birleşmeden
+sonra "Lite lig sunucusu" iş akışı sunucu güncellenene kadar `main`'de
+kırmızı; bilerek.
+
+---
+
 ## 3. Ölçülen durum
 
 `pnpm bench` çıktısından (360 gün, 3 tohum):
@@ -8160,11 +8419,18 @@ düşük kaliteli mağazasına göre ve farkın yarısı kadar. Alt kademe
 mağazaların ekonomisi birebir aynı kaldı; Tur 1'in kalibrasyonu yeniden
 yapılmadı, bantlar ölçüldü (Tur 21 bölümü).
 
-### 4.4 Kapasitenin mekânsal dağılımı
+### 4.4 ~~Kapasitenin mekânsal dağılımı~~ — Tur 71'de kapandı (tasarım)
 
 Bir outlet kendi bölgesine tam, komşulara kısmi (0,30 / 0,14) erişiyor;
 uzak bölgenin talebine kimse ulaşamıyor. Bu bir arıza değil coğrafya,
 ama "boş talep" sayısını okurken akılda tutulmalı.
+
+Tur 71'in değerlendirmesi: bilerek böyle, kalıyor. Yer seçmenin bir anlamı
+olmasının sebebi bu; Fırsat lensi ve yatırım listesi zaten karşılanmamış
+talebi bölge bölge gösteriyor. "Boş talep" sayısı uzak bölgenin
+karşılanamayan talebini de taşıyor (denge testinin abonman bandı bunu
+hesaba katıyor). Faz 7'nin şehirler arası ticareti aynı ilkeyle kuruluyor:
+mesafe bir bedel.
 
 ### 4.5 Daha büyük şehrin önkoşulu: rakip sayısı — ölçekleme Tur 13'te geldi
 
@@ -8312,6 +8578,13 @@ Seçenekler:
 
 (a) ve (b) bütün denge bölümlerini oynatıyor; bir tasarım kararı. Bu turda
 (c): ölçü (üç gerçek yol) tutuyor.
+
+**Tur 71: Faz 7'ye.** (c) bugün de tutuyor; Faz 6 yayına hazırlık ve
+simülasyona dokunmuyor. Kalem Faz 7'ye (ikinci şehir ve ticaret) taşındı.
+Şehirler arası mal ticareti nakliyeye perakende maliyetinden büyük bir
+pazar açıyor; bu, (b)'nin genişlemiş hâli. (a) enerji için aynı fazda
+ölçülecek: ikinci şehrin şebekesi santralin boşta kalan gücüne bir alıcı
+olabilir.
 
 ## 5. Nasıl koşulur
 

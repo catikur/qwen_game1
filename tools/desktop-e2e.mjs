@@ -10,15 +10,19 @@
 // - ayar dosyaya gidiyor; pencere kapanırken oyun otomatik kayda yazıyor;
 // - yeniden açılınca oyun kaldığı günden, seçilen dilde açılıyor;
 // - Steam komutları kabukta (Steam'siz derlemede "kapalı"), ikinci kopya
-//   açılmıyor, var olan pencere öne geliyor (Tur 70; D-Bus oturumu varsa).
+//   açılmıyor, var olan pencere öne geliyor (Tur 70; D-Bus oturumu varsa);
+// - oyun bir web sayfası gibi davranmıyor (Tur 71): tarayıcı kısayolları ve
+//   sağ tık menüsü kapalı, metin seçilmiyor (yazı alanı hariç), F11 tam ekran,
+//   pencerenin durumu kapanışta dosyaya; Steam Deck'te (`SteamDeck=1`) metin
+//   ilk açılışta "çok büyük".
 //
 // Gerekenler: tauri-driver (`cargo install tauri-driver --locked`),
 // WebKitWebDriver (Debian/Ubuntu: webkit2gtk-driver), ekran (xvfb-run).
 // Çalıştırma: xvfb-run -a dbus-run-session -- node tools/desktop-e2e.mjs [ikili]
-import { spawn } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { execFileSync, spawn } from 'node:child_process';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, readlinkSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 
 const ROOT = new URL('..', import.meta.url).pathname;
 const BIN = process.argv[2] ?? join(ROOT, 'apps/desktop/src-tauri/target/release/capitalforge');
@@ -38,8 +42,11 @@ function check(name, ok, detail = '') {
 const section = (name) => console.log(`\n=== ${name} ===`);
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+/** Sürücünün kapısı; Steam Deck bölümü kendi sürücüsünü başka kapıda açıyor. */
+let port = PORT;
+
 async function wd(method, path, body) {
-  const response = await fetch(`http://127.0.0.1:${PORT}${path}`, {
+  const response = await fetch(`http://127.0.0.1:${port}${path}`, {
     method,
     headers: { 'content-type': 'application/json' },
     body: body === undefined ? undefined : JSON.stringify(body),
@@ -120,6 +127,44 @@ async function untilFile(read, timeoutMs, label) {
   throw new Error(`${label}: ${timeoutMs / 1000} sn içinde dosya yok`);
 }
 
+/**
+ * Oyunun süreçleri kapanana kadar bekle; kalan olursa öldür. Kapanış
+ * otomatik kayıt için 5 sn'ye kadar sürüyor ve tek pencere eklentisi o
+ * sırada açılan yeni kopyayı açtırmıyor (CI'da Steam Deck bölümü öyle
+ * düştü). Kalan süreçlerin sayısını döndürüyor.
+ */
+async function untilGameGone(timeoutMs) {
+  // Yalnız bu ikilinin süreçleri: adıyla bul, çalıştırılabilir dosyasıyla doğrula
+  // (komut satırında yolu taşıyan test sürecinin kendisi değil).
+  const binary = realpathSync(BIN);
+  const alive = () => {
+    let pids = [];
+    try {
+      pids = execFileSync('pgrep', ['-x', basename(BIN).slice(0, 15)], { encoding: 'utf8' }).split('\n').filter(Boolean);
+    } catch {
+      return [];
+    }
+    return pids.filter((pid) => {
+      try {
+        return readlinkSync(`/proc/${pid}/exe`) === binary;
+      } catch {
+        return false;
+      }
+    });
+  };
+  const start = Date.now();
+  while (alive().length > 0 && Date.now() - start < timeoutMs) await sleep(250);
+  const left = alive();
+  for (const pid of left) {
+    try {
+      process.kill(Number(pid), 'SIGKILL');
+    } catch {
+      /* bu arada kapandı */
+    }
+  }
+  return left.length;
+}
+
 const readSave = (slot) => JSON.parse(readFileSync(join(DATA, 'saves', `slot-${slot}.json`), 'utf8'));
 const exported = (ext) => (existsSync(OUT) ? readdirSync(OUT).filter((name) => name.endsWith(ext)) : []);
 
@@ -179,6 +224,59 @@ try {
     console.log('  ATLANDI  Tek pencere: D-Bus oturumu yok (dbus-run-session ile çalıştır)');
   }
 
+  section('Uygulama gibi');
+  const feel = await win.run(`
+    const fire = (init, target = window) => {
+      const event = new KeyboardEvent('keydown', { bubbles: true, cancelable: true, ...init });
+      target.dispatchEvent(event);
+      return event.defaultPrevented;
+    };
+    const menu = (target) => {
+      const event = new MouseEvent('contextmenu', { bubbles: true, cancelable: true });
+      target.dispatchEvent(event);
+      return event.defaultPrevented;
+    };
+    const input = document.querySelector('.newgame-field input[type="text"]');
+    const select = (el) => { const cs = getComputedStyle(el); return cs.userSelect || cs.webkitUserSelect; };
+    return {
+      f5: fire({ key: 'F5', code: 'F5' }),
+      reload: fire({ key: 'r', code: 'KeyR', ctrlKey: true }),
+      print: fire({ key: 'p', code: 'KeyP', ctrlKey: true }),
+      find: fire({ key: 'f', code: 'KeyF', ctrlKey: true }),
+      back: fire({ key: 'ArrowLeft', code: 'ArrowLeft', altKey: true }),
+      copy: fire({ key: 'c', code: 'KeyC', ctrlKey: true }, input),
+      typing: fire({ key: 'a', code: 'KeyA' }, input),
+      menu: menu(document.querySelector('.newgame')),
+      inputMenu: menu(input),
+      body: select(document.body),
+      field: select(input),
+    };`);
+  check('Tarayıcı kısayolları yutuluyor: F5, Ctrl+R, Ctrl+P, Ctrl+F, Alt+←', feel.f5 && feel.reload && feel.print && feel.find && feel.back, JSON.stringify(feel));
+  check('Yazı alanının kısayolları yerinde: Ctrl+C, harf', feel.copy === false && feel.typing === false);
+  check('Sağ tık menüsü oyunda kapalı, yazı alanında açık', feel.menu === true && feel.inputMenu === false);
+  check('Oyunun metni seçilmiyor, yazı alanı seçiliyor', feel.body === 'none' && feel.field === 'text', `${feel.body} / ${feel.field}`);
+  const shellInfo = await win.run(`return window.__TAURI__.core.invoke('shell_info');`);
+  const textSize = await win.run(`return document.documentElement.dataset.textSize;`);
+  check('Steam Deck değil: metin varsayılan boyda', shellInfo?.deck === false && textSize === 'normal', `${JSON.stringify(shellInfo)} · ${textSize}`);
+  // F11 kabuğun komutuyla tam ekranı açıyor, Alt+Enter kapatıyor (pencere
+  // yöneticisi olmayan xvfb'de de GTK durumu söylüyor).
+  const full = await win.run(`
+    const w = window.__TAURI__.window.getCurrentWindow();
+    const wait = () => new Promise((resolve) => setTimeout(resolve, 1500));
+    const before = await w.isFullscreen();
+    const errors = [];
+    const original = console.warn;
+    console.warn = (...args) => { errors.push(args.map(String).join(' ')); original(...args); };
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'F11', code: 'F11', bubbles: true, cancelable: true }));
+    await wait();
+    const on = await w.isFullscreen();
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', altKey: true, bubbles: true, cancelable: true }));
+    await wait();
+    const off = await w.isFullscreen();
+    console.warn = original;
+    return { before, on, off, errors };`);
+  check('F11 tam ekranı açıyor, Alt+Enter kapatıyor', full.errors.length === 0 && full.before === false && full.on === true && full.off === false, JSON.stringify(full));
+
   await win.click('[data-newgame-start]');
   await win.until(`document.querySelector('.topbar')`, 180_000, 'oyun ekranı');
   const frames = await win.until(`(window.__capital?.renderInfo()?.frameCount ?? 0) >= 3 && window.__capital.renderInfo().frameCount`, 180_000, 'şehrin kareleri');
@@ -204,7 +302,9 @@ try {
   // İkinci düğme "JSON dışa aktar".
   await win.click('.saverow-actions button:nth-child(2)');
   const json = await untilFile(() => exported('.json')[0], 20_000, 'dışa aktarılan kayıt');
-  const record = JSON.parse(readFileSync(join(OUT, json), 'utf8'));
+  // Dosya yazılırken de görünüyor: tamamı okunana kadar (yarım dosya JSON değil;
+  // yüklü makinede 256 KB'ta kesik okunmuştu).
+  const record = await untilFile(() => JSON.parse(readFileSync(join(OUT, json), 'utf8')), 20_000, 'dışa aktarılan kaydın tamamı');
   check('Kayıt dosyası İndirilenler klasöründe, adı ASCII', /^capitalforge-[A-Za-z0-9._-]+-gun\d+\.json$/.test(json) && record.state.time.day === day, json);
   const toast = await win.until(`[...document.querySelectorAll('.toasts .toast')].map((t) => t.textContent).find((t) => t.includes('İndirilenler'))`, 10_000, 'bildirim');
   check('Oyuncuya dosyanın nereye gittiği söyleniyor', toast.includes('İndirilenler'), toast);
@@ -242,6 +342,18 @@ try {
     for (let i = 0; i < 4; i++) c.engine.runDay();
     return c.getState().time.day;`);
   const before = existsSync(join(DATA, 'saves', 'slot-0.json')) ? readSave(0).state.time.day : null;
+  // Oyun tam ekranda kapanıyor (Codex): pencere kipinin boyu hatırlanmalı,
+  // tam ekranın (ekranın) boyu değil. Pencere yöneticisi olmayan xvfb'de tam
+  // ekran pencerenin boyunu değiştirmiyor, GTK yalnız durumu söylüyor; boy
+  // farkını Rust testleri sınıyor (`src/window.rs`), burada işaretin ve
+  // açılışın yolu.
+  const windowed = await win.run(`
+    const w = window.__TAURI__.window.getCurrentWindow();
+    const size = await w.innerSize();
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'F11', code: 'F11', bubbles: true, cancelable: true }));
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+    const full = await w.innerSize();
+    return { width: size.width, height: size.height, full: await w.isFullscreen(), fullWidth: full.width, fullHeight: full.height };`);
   // Kapatma düğmesinin kabuktan gelen haberi; sayfa kaydedip `quit` diyor.
   await win.run(`window.__TAURI__.event.emit('capitalforge://close-requested'); return true;`).catch(() => undefined);
   const autosave = await untilFile(() => readSave(0).state.time.day === lastDay && readSave(0), 15_000, 'otomatik kayıt');
@@ -256,11 +368,26 @@ try {
   check('Kayıttan sonra pencere kapanıyor', gone);
   await win.close();
   win = null;
+  // Pencerenin boyu, yeri ve tam ekranı (Tur 71): kapanışta uygulamanın ayar dizinine.
+  const windowState = await untilFile(() => JSON.parse(readFileSync(join(DATA, 'xdg-config', 'com.conforcus.capitalforge', 'window.json'), 'utf8')), 10_000, 'pencere durumu');
+  check('Tam ekranda kapanan pencere: tam ekran hatırlanıyor, boy pencere kipindeki',
+    windowed.full === true && windowState.fullscreen === true && windowState.width === windowed.width && windowState.height === windowed.height,
+    `${JSON.stringify(windowState)} · pencere ${windowed.width}×${windowed.height}, tam ekran ${windowed.fullWidth}×${windowed.fullHeight}`);
 
   section('Yeniden açılış');
   win = await Window.open();
   const resumed = await win.until(`document.querySelector('.topbar') && window.__capital?.getState().time.day`, 180_000, 'kaldığı yer');
   check('Oyun kaldığı günden açılıyor (dosyadaki otomatik kayıt)', resumed === lastDay, `${resumed}. gün`);
+  const reopened = await win.run(`
+    const w = window.__TAURI__.window.getCurrentWindow();
+    const full = await w.isFullscreen();
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', altKey: true, bubbles: true, cancelable: true }));
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+    const size = await w.innerSize();
+    return { full, after: await w.isFullscreen(), width: size.width, height: size.height };`);
+  check('Yeniden açılışta tam ekran; çıkınca pencere eski boyunda, ekranın boyunda değil',
+    reopened.full === true && reopened.after === false && reopened.width === windowed.width && reopened.height === windowed.height,
+    `${JSON.stringify(reopened)} · beklenen ${windowed.width}×${windowed.height}`);
   const lang = await win.run(`return document.documentElement.lang;`);
   check('Dil dosyadan geliyor', lang === 'en', lang);
   await win.screenshot('desktop-resumed');
@@ -274,6 +401,54 @@ try {
   // hâlâ yazıyor olabiliyor: silme yeniden deneniyor, temizlik testi düşürmüyor.
   try {
     rmSync(DATA, { recursive: true, force: true, maxRetries: 10, retryDelay: 300 });
+  } catch (error) {
+    console.warn(`Geçici dizin silinemedi: ${error.message}`);
+  }
+}
+
+// Steam, Deck'te başlattığı her sürece `SteamDeck=1` veriyor (Tur 71): ilk
+// açılışta metin "çok büyük". Ayrı bir sürücü, ayrı ve boş bir veri dizini.
+section('Steam Deck');
+const lingering = await untilGameGone(20_000);
+if (lingering > 0) console.log(`  (önceki pencereden ${lingering} süreç 20 sn'de kapanmadı, kapatıldı)`);
+const DECK = mkdtempSync(join(tmpdir(), 'capitalforge-deck-'));
+port = PORT + 10;
+const deckDriver = spawn('tauri-driver', ['--port', String(port), '--native-port', String(port + 1)], {
+  env: {
+    ...process.env,
+    SteamDeck: '1',
+    CAPITALFORGE_DATA_DIR: DECK,
+    CAPITALFORGE_EXPORT_DIR: join(DECK, 'Downloads'),
+    XDG_DATA_HOME: join(DECK, 'xdg-data'),
+    XDG_CONFIG_HOME: join(DECK, 'xdg-config'),
+    XDG_CACHE_HOME: join(DECK, 'xdg-cache'),
+  },
+  stdio: ['ignore', 'inherit', 'inherit'],
+});
+let deck = null;
+try {
+  for (let i = 0; i < 50; i++) {
+    if (await fetch(`http://127.0.0.1:${port}/status`).then(() => true, () => false)) break;
+    await sleep(200);
+  }
+  deck = await Window.open();
+  await deck.until(`document.querySelector('.newgame')`, 120_000, 'kurulum ekranı');
+  const text = await deck.run(`return {
+    info: null,
+    size: document.documentElement.dataset.textSize,
+    scale: getComputedStyle(document.documentElement).getPropertyValue('--text-scale').trim(),
+  };`);
+  text.info = await deck.run(`return window.__TAURI__.core.invoke('shell_info');`);
+  check("Steam Deck'te metin ilk açılışta çok büyük", text.info?.deck === true && text.size === 'xlarge' && text.scale === '1.3', JSON.stringify(text));
+  await deck.screenshot('desktop-deck');
+} catch (error) {
+  check('Steam Deck açılışı', false, String(error?.stack ?? error).slice(0, 600));
+} finally {
+  if (deck) await deck.close();
+  deckDriver.kill();
+  if (deckDriver.exitCode === null) await new Promise((resolve) => deckDriver.once('exit', resolve));
+  try {
+    rmSync(DECK, { recursive: true, force: true, maxRetries: 10, retryDelay: 300 });
   } catch (error) {
     console.warn(`Geçici dizin silinemedi: ${error.message}`);
   }

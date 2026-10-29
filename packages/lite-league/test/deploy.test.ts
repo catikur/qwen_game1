@@ -25,11 +25,13 @@ function repoRoot(): string {
   return dir;
 }
 
-/** İş akışının `push` tetikleyicisindeki yollar (main'e birleşince dağıtım). */
-function pushPaths(workflow: string): string[] {
-  const block = workflow.split(/^  push:\s*$/m)[1]?.split(/^  \S/m)[0] ?? '';
+/** İş akışının bir tetikleyicisindeki yollar: `push` (main'e birleşince dağıtım) ya da `pull_request`. */
+function triggerPaths(workflow: string, trigger: 'push' | 'pull_request'): string[] {
+  const block = workflow.split(new RegExp(`^  ${trigger}:\\s*$`, 'm'))[1]?.split(/^  \S/m)[0] ?? '';
   return [...block.matchAll(/^\s+- '([^']+)'/gm)].map((match) => match[1]);
 }
+
+const pushPaths = (workflow: string) => triggerPaths(workflow, 'push');
 
 function globToRegExp(glob: string): RegExp {
   const source = glob
@@ -112,4 +114,35 @@ test('dağıtım: main\'e birleşmek canlıya kendiliğinden dağıtmıyor; elle
   } finally {
     rmSync(out, { recursive: true, force: true });
   }
+});
+
+/** İş akışının bir işi (`  <ad>:` satırından bir sonraki işe kadar). */
+function job(workflow: string, name: string): string {
+  return workflow.split(new RegExp(`^  ${name}:\\s*$`, 'm'))[1]?.split(/^  \S/m)[0] ?? '';
+}
+
+test('dağıtım: wrangler paketlemeden önce bağımlılıklar kuruluyor (Tur 71)', () => {
+  // Çekirdek içeriği paket adıyla alıyor (`@capital/content`); kurulumsuz paketleme çözemiyordu.
+  const deploy = job(readFileSync(join(repoRoot(), '.github/workflows/lite-league.yml'), 'utf8'), 'deploy');
+  const install = deploy.indexOf('pnpm install --frozen-lockfile');
+  const wrangler = deploy.indexOf('wrangler@4 deploy');
+  assert.ok(wrangler > 0, 'dağıtım adımı bulundu');
+  assert.ok(install > 0 && install < wrangler, 'bağımlılıklar dağıtımdan önce kuruluyor');
+  assert.match(deploy, /deployed=true/, 'dağıtım yapıldığını canlı denetime söylüyor');
+});
+
+test('canlı denetim: dağıtımdan sonra koşuyor, simülasyonu depodakiyle karşılaştırıyor; main\'de katı (Tur 71)', () => {
+  const smoke = job(readFileSync(join(repoRoot(), '.github/workflows/lite-league.yml'), 'utf8'), 'smoke');
+  assert.match(smoke, /^    needs: deploy$/m, 'dağıtımı bekliyor');
+  assert.match(smoke, /^    if: \$\{\{ !cancelled\(\) \}\}$/m, 'PR\'da dağıtım atlanınca da koşuyor');
+  assert.match(smoke, /packages\/lite-league\/scripts\/sim-check\.ts "\$URL" \$STRICT \$WAIT/);
+  assert.match(smoke, /STRICT: \$\{\{ github\.event_name != 'pull_request' && '--strict' \|\| '' \}\}/, 'PR dışında katı');
+  assert.match(smoke, /WAIT: \$\{\{ needs\.deploy\.outputs\.deployed == 'true' && '--wait' \|\| '' \}\}/, 'az önce dağıtıldıysa bekliyor');
+});
+
+test('canlı denetim PR\'da da aynı dosyalarda koşuyor: simülasyonu değiştiren PR uyarıyı birleşmeden önce görüyor (Tur 71, Codex)', () => {
+  const workflow = readFileSync(join(repoRoot(), '.github/workflows/lite-league.yml'), 'utf8');
+  const push = pushPaths(workflow);
+  assert.ok(push.includes('packages/core/src/**') && push.includes('packages/content/src/**'), 'birleşme tetikleyicisi simülasyonun dosyalarında');
+  assert.deepEqual(triggerPaths(workflow, 'pull_request'), push);
 });

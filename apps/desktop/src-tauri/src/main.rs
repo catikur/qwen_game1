@@ -11,6 +11,7 @@
 
 mod steam;
 mod store;
+mod window;
 
 use std::collections::BTreeMap;
 use std::path::PathBuf;
@@ -146,6 +147,35 @@ fn quit(app: AppHandle) {
     app.exit(0);
 }
 
+/// Kabuğun bildiği ortam (Tur 71).
+#[derive(serde::Serialize)]
+struct ShellInfo {
+    /// Steam Deck: oyun ilk açılışta metni büyük gösteriyor (Valve'ın
+    /// okunabilirlik ölçüsü 1280 × 800'de en küçük yazı 12 piksel).
+    deck: bool,
+}
+
+/// Steam, Steam Deck'te başlattığı her sürece `SteamDeck=1` veriyor (oyun
+/// kipinde de masaüstü kipinde de); oyuncu başlatma seçeneğinde
+/// `SteamDeck=0` ile kapatabiliyor.
+fn is_deck(value: Option<std::ffi::OsString>) -> bool {
+    value.is_some_and(|value| value == "1")
+}
+
+#[tauri::command]
+fn shell_info() -> ShellInfo {
+    ShellInfo { deck: is_deck(std::env::var_os("SteamDeck")) }
+}
+
+/// F11 ve Alt+Enter (Tur 71): tam ekranı aç ya da kapat; yeni durum döner.
+/// Pencerenin boyu, yeri ve tam ekranı kapanışta hatırlanıyor (`window`).
+#[tauri::command]
+fn fullscreen_toggle(window: tauri::WebviewWindow) -> Result<bool, String> {
+    let on = !window.is_fullscreen().map_err(|error| error.to_string())?;
+    window.set_fullscreen(on).map_err(|error| error.to_string())?;
+    Ok(on)
+}
+
 fn main() {
     // Steam pencereden önce: istemci oyunu açılışta tanısın.
     steam::start();
@@ -158,10 +188,20 @@ fn main() {
                 let _ = window.set_focus();
             }
         }))
-        // Kapatma düğmesi: önce sayfa otomatik kayda yazsın. İkinci tıklama
-        // ya da süre dolması beklemeden kapatıyor.
-        .on_window_event(|window, event| {
-            if let WindowEvent::CloseRequested { api, .. } = event {
+        // Pencerenin boyu, yeri, büyütülmüşlüğü ve tam ekranı (Tur 71): oyun
+        // kapandığı gibi açılıyor, ilk açılışta büyütülmüş (`window`).
+        .setup(|app| {
+            if let Some(main) = app.get_webview_window("main") {
+                window::restore(app.handle(), &main.as_ref().window());
+            }
+            Ok(())
+        })
+        .on_window_event(|window, event| match event {
+            WindowEvent::Moved(_) | WindowEvent::Resized(_) => window::track(window),
+            // Kapatma düğmesi: önce sayfa otomatik kayda yazsın. İkinci tıklama
+            // ya da süre dolması beklemeden kapatıyor.
+            WindowEvent::CloseRequested { api, .. } => {
+                window::closing(window);
                 if CLOSING.swap(true, Ordering::SeqCst) {
                     return;
                 }
@@ -176,6 +216,7 @@ fn main() {
                     app.exit(0);
                 });
             }
+            _ => {}
         })
         .invoke_handler(tauri::generate_handler![
             save_write,
@@ -189,7 +230,27 @@ fn main() {
             steam_status,
             steam_unlock,
             quit,
+            shell_info,
+            fullscreen_toggle,
         ])
-        .run(tauri::generate_context!())
-        .expect("CapitalForge açılamadı");
+        .build(tauri::generate_context!())
+        .expect("CapitalForge açılamadı")
+        .run(|app, event| {
+            if let tauri::RunEvent::Exit = event {
+                window::persist(app);
+            }
+        });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::is_deck;
+
+    #[test]
+    fn steam_deck_ortam_degiskeninden() {
+        assert!(is_deck(Some("1".into())));
+        assert!(!is_deck(Some("0".into())), "başlatma seçeneğinde kapatılmış");
+        assert!(!is_deck(Some("".into())));
+        assert!(!is_deck(None));
+    }
 }

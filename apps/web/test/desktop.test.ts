@@ -10,6 +10,8 @@ import type { Invoke, InvokeOptions } from '../src/desktop/bridge';
 import { hydrate, isProfileKey, mirror } from '../src/desktop/profile';
 import { fileSaves } from '../src/desktop/saves';
 import { initSteam } from '../src/desktop/steam';
+import { keyVerdict, nativeFeel } from '../src/desktop/native';
+import { TEXT_SCALE } from '../../../packages/ui/src/settings';
 
 /**
  * Masaüstü sürümü (Tur 66), sayfa tarafı: küçük kayıtların dosya aynası ve
@@ -321,6 +323,160 @@ describe('Steam başarımları (Tur 70)', () => {
     const main = readFileSync(join(repoRoot(), 'apps/desktop/src-tauri/src/main.rs'), 'utf8');
     const handler = /generate_handler!\[([^\]]*)\]/.exec(main)?.[1] ?? '';
     for (const command of ['steam_status', 'steam_unlock']) assert.ok(handler.includes(command), command);
+  });
+});
+
+describe('uygulama gibi (Tur 71)', () => {
+  const key = (code: string, mods: Partial<Record<'ctrlKey' | 'metaKey' | 'altKey' | 'shiftKey', boolean>> = {}) => ({
+    code,
+    ctrlKey: false,
+    metaKey: false,
+    altKey: false,
+    shiftKey: false,
+    ...mods,
+  });
+
+  test('tarayıcının kısayolları yutuluyor; oyunun, yazının ve macOS menüsünün kısayolları yerinde', () => {
+    for (const code of ['F5', 'F3', 'F7', 'BrowserBack', 'BrowserRefresh']) assert.equal(keyVerdict(key(code)), 'browser', code);
+    for (const code of ['KeyR', 'KeyP', 'KeyF', 'KeyG', 'KeyU', 'KeyS', 'KeyO', 'KeyJ', 'KeyH', 'KeyN', 'Equal', 'Minus', 'Digit0']) {
+      assert.equal(keyVerdict(key(code, { ctrlKey: true })), 'browser', `Ctrl+${code}`);
+    }
+    assert.equal(keyVerdict(key('KeyR', { ctrlKey: true, shiftKey: true })), 'browser', 'Ctrl+Shift+R');
+    for (const code of ['KeyR', 'KeyP', 'KeyF', 'Equal']) assert.equal(keyVerdict(key(code, { metaKey: true })), 'browser', `Cmd+${code}`);
+    // macOS uygulama menüsü: sayfa yutarsa menü de çalışmıyor.
+    for (const code of ['KeyH', 'KeyM', 'KeyW', 'KeyQ', 'KeyN']) assert.equal(keyVerdict(key(code, { metaKey: true })), null, `Cmd+${code}`);
+    assert.equal(keyVerdict(key('ArrowLeft', { altKey: true })), 'browser', 'Alt+← geri');
+    // Oyunun ve yazının tuşları.
+    for (const code of ['Space', 'Digit1', 'Digit2', 'KeyW', 'KeyA', 'ArrowLeft', 'Escape', 'Tab', 'Enter', 'F12']) assert.equal(keyVerdict(key(code)), null, code);
+    for (const code of ['KeyC', 'KeyV', 'KeyX', 'KeyZ', 'KeyY', 'KeyA']) assert.equal(keyVerdict(key(code, { ctrlKey: true })), null, `Ctrl+${code}`);
+    assert.equal(keyVerdict(key('F11')), 'fullscreen');
+    assert.equal(keyVerdict(key('Enter', { altKey: true })), 'fullscreen');
+    assert.equal(keyVerdict(key('NumpadEnter', { altKey: true })), 'fullscreen');
+  });
+
+  test('AltGr ile yazılan harf ve macOS\'un sözcük gezinmesi yazı alanında yerinde (Cursor Bugbot)', () => {
+    // Windows'ta AltGr = Ctrl+Alt: Almanca "}" (0), "\\" (ß), "@" (Q); Lehçe "ś", "ó", "ń".
+    for (const code of ['Digit0', 'Minus', 'KeyQ', 'KeyS', 'KeyO', 'KeyN', 'KeyE']) {
+      assert.equal(keyVerdict(key(code, { ctrlKey: true, altKey: true })), null, `AltGr+${code}`);
+      assert.equal(keyVerdict(key(code, { ctrlKey: true, altKey: true }), true), null, `yazı alanında AltGr+${code}`);
+    }
+    assert.equal(keyVerdict(key('Enter', { ctrlKey: true, altKey: true })), null, 'AltGr+Enter tam ekran değil');
+    // Option + ok macOS'ta sözcük sözcük gezinme; yazı alanının dışında tarayıcının geri tuşu.
+    assert.equal(keyVerdict(key('ArrowLeft', { altKey: true }), true), null);
+    assert.equal(keyVerdict(key('ArrowRight', { altKey: true }), true), null);
+    assert.equal(keyVerdict(key('ArrowLeft', { altKey: true }), false), 'browser');
+    // Yazı alanında da tarayıcının işi olanlar yutuluyor: yeniden yükle, yazdır, ara.
+    for (const [code, mods] of [['F5', {}], ['KeyR', { ctrlKey: true }], ['KeyP', { ctrlKey: true }], ['KeyF', { metaKey: true }]] as const) {
+      assert.equal(keyVerdict(key(code, mods), true), 'browser', code);
+    }
+  });
+
+  /** Pencere yerine bir olay hedefi: `closest` yazı alanı mı diye, `getSelection` seçili metin. */
+  class FakeWindow extends EventTarget {
+    field = false;
+    /** Alan bir `input` ise türü (yoksa yazı kutusu gibi `textarea`). */
+    inputType: string | null = null;
+    selection = '';
+    closest(): unknown {
+      if (!this.field) return null;
+      return this.inputType === null ? { tagName: 'TEXTAREA' } : { tagName: 'INPUT', type: this.inputType };
+    }
+    getSelection() {
+      return { toString: () => this.selection };
+    }
+  }
+  const press = (target: EventTarget, code: string, extra: Record<string, unknown> = {}) => {
+    const event = Object.assign(new Event('keydown', { cancelable: true }), { code, ctrlKey: false, metaKey: false, altKey: false, shiftKey: false, repeat: false, ...extra });
+    target.dispatchEvent(event);
+    return event.defaultPrevented;
+  };
+  const fire = (target: EventTarget, type: string) => {
+    const event = new Event(type, { cancelable: true });
+    target.dispatchEvent(event);
+    return event.defaultPrevented;
+  };
+
+  test('kısayol yutuluyor, oyunun dinleyicisine gitmiyor; F11 tam ekranı bir kez çeviriyor', () => {
+    const target = new FakeWindow();
+    let toggles = 0;
+    const release = nativeFeel(target as unknown as Window, { toggleFullscreen: () => toggles++ });
+    const game: string[] = [];
+    target.addEventListener('keydown', (event) => game.push((event as KeyboardEvent).code));
+    assert.equal(press(target, 'F5'), true);
+    assert.equal(press(target, 'KeyR', { ctrlKey: true }), true);
+    assert.equal(press(target, 'Space'), false, 'oyunun tuşu');
+    assert.deepEqual(game, ['Space'], 'yutulan tuş oyunun dinleyicisine gitmiyor');
+    assert.equal(press(target, 'F11'), true);
+    assert.equal(press(target, 'F11', { repeat: true }), true, 'basılı tutulan F11 de yutuluyor');
+    assert.equal(toggles, 1, 'basılı tutmak tam ekranı titretmiyor');
+    assert.equal(press(target, 'Enter', { altKey: true }), true);
+    assert.equal(toggles, 2);
+    release();
+    assert.equal(press(target, 'F5'), false, 'bırakılınca dinlemiyor');
+  });
+
+  test('yazı alanında AltGr ve Option + ok geçiyor, F5 yine yutuluyor; kaydırıcıda ve onay kutusunda Alt + ok yutuluyor', () => {
+    const target = new FakeWindow();
+    target.field = true;
+    const release = nativeFeel(target as unknown as Window, { toggleFullscreen: () => undefined });
+    for (const type of [null, 'text', 'search', 'number']) {
+      target.inputType = type;
+      assert.equal(press(target, 'Digit0', { ctrlKey: true, altKey: true }), false, `Almanca "}" (${type ?? 'textarea'})`);
+      assert.equal(press(target, 'ArrowLeft', { altKey: true }), false, `Option + ← (${type ?? 'textarea'})`);
+      assert.equal(press(target, 'F5'), true);
+    }
+    // Ayarlar'ın ses kaydırıcısı ve onay kutuları yazı alanı değil (Cursor Bugbot).
+    for (const type of ['range', 'checkbox', 'radio', 'button']) {
+      target.inputType = type;
+      assert.equal(press(target, 'ArrowLeft', { altKey: true }), true, `Alt + ← (${type})`);
+      assert.equal(fire(target, 'contextmenu'), true, `sağ tık (${type})`);
+    }
+    release();
+  });
+
+  test('sağ tık menüsü oyunda kapalı; yazı alanında ve seçili kodda açık; sürükleme kapalı', () => {
+    const target = new FakeWindow();
+    const release = nativeFeel(target as unknown as Window, { toggleFullscreen: () => undefined });
+    assert.equal(fire(target, 'contextmenu'), true, 'oyunun üstünde');
+    target.selection = 'ABC123';
+    assert.equal(fire(target, 'contextmenu'), false, 'seçili davet kodu: kopyala menüsü');
+    target.selection = '';
+    target.field = true;
+    assert.equal(fire(target, 'contextmenu'), false, 'yazı alanı: kes, kopyala, yapıştır');
+    assert.equal(fire(target, 'dragstart'), false, 'yazı alanında metin sürüklenebiliyor');
+    target.field = false;
+    assert.equal(fire(target, 'dragstart'), true, 'görsel ya da metin pencereden dışarı sürüklenmiyor');
+    release();
+  });
+
+  test("Steam Deck'in metni (çok büyük): arayüzün en küçük yazısı 12 pikseli geçiyor (Valve'ın okunabilirlik önerisi)", () => {
+    // Bütün yazı boyları `calc(Npx * var(--text-scale))`; en küçük N burada. Tarayıcı
+    // testi ("Pencere boyları ve Steam Deck") görünen metni de ölçüyor.
+    const css = readFileSync(join(repoRoot(), 'packages/ui/src/styles.css'), 'utf8');
+    const sizes = [...css.matchAll(/font-size:\s*calc\(([\d.]+)px \* var\(--text-scale\)/g)].map((match) => Number(match[1]));
+    assert.ok(sizes.length > 100, `${sizes.length} yazı boyu`);
+    const smallest = Math.min(...sizes);
+    assert.ok(smallest * TEXT_SCALE.xlarge >= 12, `en küçük ${smallest} px × ${TEXT_SCALE.xlarge} = ${smallest * TEXT_SCALE.xlarge} px`);
+  });
+
+  test('kabuğun komut listesinde ortam bilgisi ve tam ekran var; pencerenin durumu hatırlanıyor', () => {
+    const root = repoRoot();
+    const main = readFileSync(join(root, 'apps/desktop/src-tauri/src/main.rs'), 'utf8');
+    const handler = /generate_handler!\[([^\]]*)\]/.exec(main)?.[1] ?? '';
+    for (const command of ['shell_info', 'fullscreen_toggle']) assert.ok(handler.includes(command), command);
+    // Pencerenin hafızası kabuğun kendi modülünde (Codex): açılışta uygulanıyor,
+    // taşıma ve boy değişimi izleniyor, çıkışta yazılıyor. Kararları Rust testleri sınıyor.
+    for (const call of ['window::restore(', 'window::track(window)', 'window::closing(window)', 'window::persist(app)']) assert.ok(main.includes(call), call);
+    assert.doesNotMatch(main, /tauri_plugin_window_state/, 'eklenti tam ekranda ekranın boyunu yazıyordu');
+    const conf = JSON.parse(readFileSync(join(root, 'apps/desktop/src-tauri/tauri.conf.json'), 'utf8')) as {
+      app: { windows: Array<{ minWidth: number; minHeight: number; maximized?: boolean }> };
+    };
+    const [window] = conf.app.windows;
+    // İlk açılışın büyütülmesi kabuğun kararı (hafıza yoksa); yapılandırmadaki
+    // bayrak hatırlanan pencere kipini her açılışta ezerdi.
+    assert.equal(window?.maximized, undefined);
+    // En küçük pencere tarayıcı testinin ölçtüğü en küçük boy (playtest: "Pencere boyları").
+    assert.deepEqual([window?.minWidth, window?.minHeight], [960, 600]);
   });
 });
 

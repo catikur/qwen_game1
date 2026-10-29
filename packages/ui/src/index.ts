@@ -52,6 +52,7 @@ export {
   initSettings,
   reducedMotion,
   sanitizeSettings,
+  setDeviceDefaults,
   subscribeSettings,
   updateSettings,
   useSettings,

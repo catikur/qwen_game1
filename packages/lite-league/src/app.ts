@@ -49,7 +49,7 @@ import type { Db, Statement } from './db';
 import { HttpError, base64, json, preflight, randomToken, readBody, readJson, sha256, shortCode, withCors } from './http';
 import { cleanName, offensiveName } from './names';
 import { MAX_SYNC_BODY, PLATFORMS, createSave, loadSave, saveWithScore, sync, touchProfile, uploadSave, type Platform } from './saves';
-import { boardTable, registerSeed, runCode, seedPurge, submitRun, type SeedReplay } from './seed';
+import { boardTable, registerSeed, runCode, seedPurge, simReply, submitRun, type SeedReplay } from './seed';
 import {
   createSeedLeague,
   joinSeedLeague,
@@ -174,6 +174,7 @@ async function route(request: Request, db: Db, now: number, options: Options): P
     }
     const code = /^GET \/v1\/seed\/codes\/([^/]+)$/.exec(route);
     if (code) return await runCode(db, code[1]!);
+    if (route === 'GET /v1/seed/sim') return await simReply(request, db, now, options.seed);
     const session = await authenticate(request, db);
     if (!session) throw new HttpError(401, 'auth');
     // Geçen haftanın bölüm değişimi henüz yapılmadıysa şimdi (cron kaçarsa da doğru kalsın).

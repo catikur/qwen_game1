@@ -28,6 +28,7 @@
  * - `GET  /v1/seed/weeks/:week`    → haftanın tablosu, herkese açık (kimlikle gelince `mine`)
  * - `GET  /v1/seed/days/:day`      → günün koşusunun tablosu (Tur 53), aynı biçim
  * - `GET  /v1/seed/codes/:key`     → bir satırın koşu kodu (tabloda yalnız özeti var)
+ * - `GET  /v1/seed/sim`            → sunucunun simülasyon izi (Tur 71, canlı denetim)
  * - `DELETE /v1/players/me`        → hesabı ve koşularını sil (Lite ile aynı uç)
  * - `…/v1/seed/leagues…`           → davetli ligler (Tur 55, `seedLeagues.ts`)
  */
@@ -55,6 +56,11 @@ export const SEED = {
   /** IP başına saatlik sınırlar (IP'nin kendisi değil, saatle birlikte özeti). */
   accountsPerHour: 10,
   runsPerHour: 30,
+  /**
+   * Simülasyon izi (Tur 71, Codex): canlı denetim birkaç kez soruyor. İz soğuk
+   * kopyada ~0,5 sn CPU; kimliksiz ve sınırsız uç bedava yük olurdu.
+   */
+  simPerHour: 30,
 } as const;
 
 /**
@@ -143,7 +149,7 @@ export function publicCompanyName(name: string): boolean {
  * kimseyi izlemiyor, bir saatten eskisi her yazımda siliniyor. Cloudflare
  * her isteğe `cf-connecting-ip` koyuyor; başlık yoksa (yerel sunucu) sınır yok.
  */
-export async function limit(db: Db, request: Request, kind: 'account' | 'run' | 'league', cap: number, now: number): Promise<void> {
+export async function limit(db: Db, request: Request, kind: 'account' | 'run' | 'league' | 'sim', cap: number, now: number): Promise<void> {
   const ip = request.headers.get('cf-connecting-ip');
   if (!ip) return;
   const hour = Math.floor(now / HOUR);
@@ -196,6 +202,20 @@ function toEntry(row: SeedRow, week: string, me: string | null): SeedEntry {
 }
 
 const ROW_COLUMNS = 'id, player_id, company, ceo, score, curve, code_key, length(code) AS size, idle, at';
+
+/**
+ * Sunucunun simülasyon izi (Tur 71). Canlı denetim bunu deponun iziyle
+ * karşılaştırıyor (`scripts/simCheck.ts`). Tur 56–70 boyunca canlı sunucu
+ * Tur 55'te kaldı ve denetim fark etmedi: hiçbir uç sürümü söylemiyordu.
+ * İz sağlık ucunda değil, çünkü ilk ihtiyaçta ~0,5 sn CPU tutuyor ve oyun
+ * her açılışta sağlık ucuna soruyor; aynı sebeple IP başına saatlik sınır.
+ */
+export async function simReply(request: Request, db: Db, now: number, verifier: SeedReplay = SERVER_REPLAY): Promise<Response> {
+  await limit(db, request, 'sim', SEED.simPerHour, now);
+  const response = json({ sim: verifier.sim() });
+  response.headers.set('cache-control', 'no-store');
+  return response;
+}
 
 /**
  * Koşu gönder. Kod oyunun kendi çözücüsünden geçiyor (sınırlar, komut

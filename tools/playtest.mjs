@@ -6144,20 +6144,24 @@ async function finish(browser, consoleErrors) {
       me.cash += 5_000_000;
       me.netWorth += 5_000_000;
       const rivals = Object.values(state.buildings).filter((b) => b.companyId !== me.id && api.buildingRole(b.defId) === 'outlet');
-      let best = null;
+      const sites = [];
       for (const tile of state.map.tiles) {
         if (tile.kind !== 'plot' || tile.ownerId || tile.buildingId || tile.structureId) continue;
         const count = rivals.filter((o) => {
           const at = state.map.tiles[o.tileId];
           return Math.abs(at.x - tile.x) + Math.abs(at.y - tile.y) <= 10;
         }).length;
-        if (!best || count > best.count) best = { id: tile.id, count };
+        sites.push({ id: tile.id, count });
       }
-      const bought = api.engine.dispatch({ type: 'BUY_TILE', tileId: best.id }).ok;
-      const built = bought && api.engine.dispatch({ type: 'BUILD', tileId: best.id, defId: 'freight_terminal' }).ok;
-      return { ...best, built, day: state.time.day };
+      // En yoğun parsel o an ihalede olabiliyor ve oyun ihaledeki parseli
+      // satmıyor (Tur 71'in tam koşusu: 12 şehrin birinde). Satın alınabilen
+      // en yoğun parsel; sıralama kararlı, eşitlikte haritadaki ilk parsel.
+      sites.sort((a, b) => b.count - a.count);
+      const best = sites.find((site) => api.engine.dispatch({ type: 'BUY_TILE', tileId: site.id }).ok);
+      const built = best !== undefined && api.engine.dispatch({ type: 'BUILD', tileId: best.id, defId: 'freight_terminal' }).ok;
+      return { ...best, built, skipped: best ? sites.indexOf(best) : sites.length, day: state.time.day };
     });
-    check('Terminal rakip mağazalarının yoğun olduğu parsele kuruluyor', site.built && site.count >= 4, `${site.count} rakip mağazası menzilde, ${site.day}. gün`);
+    check('Terminal rakip mağazalarının yoğun olduğu parsele kuruluyor', site.built && site.count >= 4, `${site.count} rakip mağazası menzilde, ${site.day}. gün${site.skipped ? ` · daha yoğun ${site.skipped} parsel satılmıyordu` : ''}`);
 
     const offer = await fp.evaluate(() => {
       const api = window.__capital;
@@ -6258,7 +6262,7 @@ async function finish(browser, consoleErrors) {
       const me = state.companies[state.playerCompanyId];
       me.cash += 5_000_000;
       me.netWorth += 5_000_000;
-      let best = null;
+      const sites = [];
       for (const tile of state.map.tiles) {
         if (tile.kind !== 'plot' || tile.ownerId || tile.buildingId || tile.structureId) continue;
         const archetype = state.districts[tile.districtId].archetype;
@@ -6268,10 +6272,12 @@ async function finish(browser, consoleErrors) {
           const at = state.map.tiles[b.tileId];
           if (Math.abs(at.x - tile.x) + Math.abs(at.y - tile.y) <= 12) count++;
         }
-        if (!best || count > best.count) best = { id: tile.id, count };
+        sites.push({ id: tile.id, count });
       }
-      const bought = api.engine.dispatch({ type: 'BUY_TILE', tileId: best.id }).ok;
-      return { ...best, bought, day: state.time.day };
+      // Lojistikteki gibi: satın alınabilen en yoğun parsel (ihaledeki satılmıyor).
+      sites.sort((a, b) => b.count - a.count);
+      const best = sites.find((site) => api.engine.dispatch({ type: 'BUY_TILE', tileId: site.id }).ok);
+      return { ...best, bought: best !== undefined, day: state.time.day };
     });
     check('Sanayide menziline bina giren boş parsel alınıyor', site.bought && site.count >= 4, `${site.count} bina menzilde, ${site.day}. gün`);
 
@@ -6425,15 +6431,17 @@ async function finish(browser, consoleErrors) {
       const me = state.companies[state.playerCompanyId];
       me.cash += 60_000_000;
       me.netWorth += 20_000_000;
-      let best = null;
+      const sites = [];
       for (const tile of state.map.tiles) {
         if (tile.kind !== 'plot' || tile.ownerId || tile.buildingId || tile.structureId) continue;
         const district = state.districts[tile.districtId];
         if (!zones.includes(district.archetype) || (district.opensOnDay ?? 0) > state.time.day) continue;
-        if (!best || district.population > best.population) best = { id: tile.id, population: district.population };
+        sites.push({ id: tile.id, population: district.population });
       }
-      const bought = api.engine.dispatch({ type: 'BUY_TILE', tileId: best.id }).ok;
-      return { ...best, bought, day: state.time.day };
+      // Lojistikteki gibi: satın alınabilen en kalabalık parsel (ihaledeki satılmıyor).
+      sites.sort((a, b) => b.population - a.population);
+      const best = sites.find((site) => api.engine.dispatch({ type: 'BUY_TILE', tileId: site.id }).ok);
+      return { ...best, bought: best !== undefined, day: state.time.day };
     }, ESTATE_ZONES);
     check('Konut bölgesinde boş parsel alınıyor', site.bought, `${Math.round(site.population)} nüfus, ${site.day}. gün`);
 
@@ -6876,16 +6884,19 @@ async function finish(browser, consoleErrors) {
       const me = s.companies[s.playerCompanyId];
       // Santral: rakip binalarının en yoğun olduğu boş sanayi ya da liman parseli.
       const rivals = Object.values(s.buildings).filter((b) => b.companyId !== me.id);
-      let best = null;
+      const sites = [];
       for (const t of s.map.tiles) {
         if (t.kind !== 'plot' || t.ownerId || t.buildingId || t.structureId) continue;
         const d = s.districts[t.districtId];
         if (!['industrial', 'port'].includes(d.archetype) || (d.opensOnDay ?? 0) > s.time.day) continue;
         const n = rivals.filter((b) => { const at = s.map.tiles[b.tileId]; return Math.abs(at.x - t.x) + Math.abs(at.y - t.y) <= 12; }).length;
-        if (!best || n > best.n) best = { id: t.id, n };
+        sites.push({ id: t.id, n });
       }
-      const bought = c.engine.dispatch({ type: 'BUY_TILE', tileId: best.id }).ok;
-      const built = c.engine.dispatch({ type: 'BUILD', tileId: best.id, defId: 'gas_plant' });
+      // Lojistikteki gibi: satın alınabilen en yoğun parsel (ihaledeki satılmıyor).
+      sites.sort((a, b) => b.n - a.n);
+      const best = sites.find((site) => c.engine.dispatch({ type: 'BUY_TILE', tileId: site.id }).ok);
+      const bought = best !== undefined;
+      const built = bought ? c.engine.dispatch({ type: 'BUILD', tileId: best.id, defId: 'gas_plant' }) : { ok: false };
       for (let i = 0; i < 40; i++) c.engine.runDay();
       c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
       return { day: s.time.day - s.scenario.startDay, modifiers: s.modifiers ?? [], crisis: s.crisis?.phase, bought, built: built.ok, sold: s.scenario.powerSold ?? 0 };
@@ -8577,6 +8588,135 @@ async function finish(browser, consoleErrors) {
       JSON.stringify(phone));
     check('Editör akışında konsol temiz', eErrors.length === 0, eErrors.slice(0, 2).join(' | '));
     await eContext.close();
+  }
+
+  section('Pencere boyları ve Steam Deck');
+  {
+    /*
+     * Masaüstünün pencereleri (Tur 71). 1100 pikselin altında paneller tek
+     * sütuna iniyor ve üst üste biniyordu: masaüstünün en küçük penceresi
+     * (960 × 600) ve 125 % ölçekli 1366 × 768 dizüstü (1093 × 614) o
+     * aralıkta. Steam Deck 1280 × 800'de metin "çok büyük" açılıyor: Valve'ın
+     * okunabilirlik ölçüsü en küçük yazı 12 piksel, bütün paneller açıkken.
+     */
+    const SIZES = [
+      { width: 960, height: 600, lang: 'de' },
+      { width: 1093, height: 614, lang: 'tr' },
+      { width: 1280, height: 800, lang: 'en', textSize: 'xlarge' },
+      { width: 1920, height: 1080, lang: 'tr' },
+    ];
+    // Görünen (örtülmemiş) metnin en küçük yazı boyu; örnek olarak en küçük üçü.
+    const smallestText = (page) => page.evaluate(() => {
+      const rows = [];
+      const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+      for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+        const el = node.parentElement;
+        if (!el || !node.textContent.trim()) continue;
+        const range = document.createRange();
+        range.selectNodeContents(node);
+        const r = range.getBoundingClientRect();
+        if (r.width < 1 || r.height < 1 || r.bottom < 0 || r.top > innerHeight || r.right < 0 || r.left > innerWidth) continue;
+        const cs = getComputedStyle(el);
+        if (cs.visibility === 'hidden') continue;
+        let opacity = 1;
+        for (let a = el; a; a = a.parentElement) opacity *= Number(getComputedStyle(a).opacity);
+        if (opacity < 0.05) continue;
+        const top = document.elementFromPoint(Math.min(innerWidth - 1, Math.max(0, r.left + r.width / 2)), Math.min(innerHeight - 1, Math.max(0, r.top + r.height / 2)));
+        if (top && !(top === el || el.contains(top) || top.contains(el))) continue;
+        rows.push({ size: parseFloat(cs.fontSize), text: node.textContent.trim().slice(0, 24) });
+      }
+      rows.sort((a, b) => a.size - b.size);
+      return { min: rows[0]?.size ?? 0, count: rows.length, smallest: rows.slice(0, 3) };
+    });
+    for (const size of SIZES) {
+      const label = `${size.width} × ${size.height} (${size.lang}${size.textSize ? ', metin çok büyük' : ''})`;
+      const wContext = await browser.newContext({ viewport: { width: size.width, height: size.height } });
+      await wContext.addInitScript(veteran, TUTORIAL_KEY);
+      if (size.textSize) {
+        await wContext.addInitScript((textSize) => {
+          try {
+            localStorage.setItem('capitalforge.settings.v1', JSON.stringify({ textSize }));
+          } catch {
+            /* depo kapalı */
+          }
+        }, size.textSize);
+      }
+      const wp = await wContext.newPage();
+      const wErrors = [];
+      wp.on('pageerror', (e) => wErrors.push(e.message));
+      wp.on('console', (m) => { if (m.type() === 'error') wErrors.push(m.text()); });
+      await wp.goto(`http://127.0.0.1:8811/?lang=${size.lang}`);
+      await wp.waitForSelector('.newgame', { timeout: 20000 });
+      const setupText = size.textSize ? await smallestText(wp) : null;
+      await wp.locator('[data-newgame-start]').click();
+      await wp.waitForSelector('.topbar', { timeout: 30000 });
+      await wp.waitForFunction(() => (window.__capital?.renderInfo()?.frameCount ?? 0) >= 3, null, { timeout: 60000 });
+      await wp.evaluate(() => {
+        const c = window.__capital;
+        c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+        for (let i = 0; i < 20; i++) c.engine.runDay();
+      });
+      const vacant = await findTile(wp, 'vacant');
+      await wp.evaluate((id) => window.__capital.selectTile(id), vacant);
+      await wp.waitForTimeout(600);
+      const layout = await wp.evaluate(() => {
+        const box = (sel) => document.querySelector(sel)?.getBoundingClientRect() ?? null;
+        const panels = ['.topbar', '.leftcol', '.inspector', '.news', '.active-events']
+          .map((sel) => [sel, box(sel)])
+          .filter(([, r]) => r && r.width > 0 && r.height > 0);
+        const overlaps = [];
+        for (let i = 0; i < panels.length; i++) {
+          for (let j = i + 1; j < panels.length; j++) {
+            const [a, ra] = panels[i];
+            const [b, rb] = panels[j];
+            const x = Math.min(ra.right, rb.right) - Math.max(ra.left, rb.left);
+            const y = Math.min(ra.bottom, rb.bottom) - Math.max(ra.top, rb.top);
+            if (x > 1 && y > 1) overlaps.push(`${a} × ${b}`);
+          }
+        }
+        // Sol sütunun panelleri sütundan taşmıyor (taşan, alttakinin üstüne biniyordu).
+        const column = box('.leftcol');
+        const spill = [...document.querySelector('.leftcol').children]
+          .filter((child) => child.getBoundingClientRect().bottom > column.bottom + 1)
+          .map((child) => child.className.split(' ')[0]);
+        // Şehir ortada açık ve tıklanabilir: sol sütunla parsel kartı arasının ortası tuval.
+        const left = box('.leftcol');
+        const right = box('.inspector');
+        const top = box('.topbar');
+        const x = (left.right + right.left) / 2;
+        const y = top.bottom + (innerHeight - top.bottom) * 0.35;
+        const hit = document.elementFromPoint(x, y);
+        const doc = document.documentElement;
+        return {
+          overlaps,
+          spill,
+          city: hit?.tagName === 'CANVAS',
+          cityWidth: Math.round(right.left - left.right),
+          scroll: doc.scrollWidth > doc.clientWidth + 1 || doc.scrollHeight > doc.clientHeight + 1,
+        };
+      });
+      check(`${label}: paneller üst üste binmiyor, sol sütun taşmıyor, şehir ortada tıklanabilir`,
+        layout.overlaps.length === 0 && layout.spill.length === 0 && layout.city && !layout.scroll, JSON.stringify(layout));
+      await wp.screenshot({ path: `${OUT}/window-${size.width}x${size.height}.png` });
+      if (size.textSize) {
+        // Steam Deck: kurulum, oyun ve parsel, sonra rıhtımın her paneli ve Ayarlar.
+        const seen = [['kurulum', setupText], ['parsel', await smallestText(wp)]];
+        await wp.evaluate(() => window.__capital.selectTile(null));
+        for (const panel of ['chain', 'rivalry', 'bourse', 'council', 'company', 'rivals', 'saves', 'help', 'settings']) {
+          await wp.locator(`[data-panel="${panel}"]`).first().click();
+          await wp.waitForTimeout(500);
+          seen.push([panel, await smallestText(wp)]);
+          await wp.keyboard.press('Escape');
+          await wp.waitForTimeout(200);
+        }
+        const min = Math.min(...seen.map(([, text]) => text.min));
+        const worst = seen.find(([, text]) => text.min === min);
+        check("Steam Deck (1280 × 800, metin çok büyük): her ekranda en küçük yazı en az 12 piksel",
+          min >= 12 && seen.every(([, text]) => text.count > 0), `en küçük ${min} px (${worst[0]}: ${JSON.stringify(worst[1].smallest)})`);
+      }
+      check(`${label}: konsol temiz`, wErrors.length === 0, wErrors.slice(0, 2).join(' | '));
+      await wContext.close();
+    }
   }
 
   section('Mobil');

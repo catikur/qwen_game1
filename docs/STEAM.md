@@ -143,6 +143,14 @@ Deck'i Windows sürümüyle Proton'a bırakmak (WebView2 Proton'da sorunlu
 olabilir). "Steam Deck Verified" için Valve'ın kendi testi var; ondan önce
 Deck'te denemek gerekiyor.
 
+Verified ölçüsünden bugün hazır olanlar (Tur 71): varsayılan çözünürlük
+Deck'in ekranı (1280 × 800, oyun pencereye uyuyor, taşma yok); okunabilirlik
+(Steam `SteamDeck=1` verince metin ilk açılışta "çok büyük", en küçük yazı
+13 piksel; Valve'ın alt sınırı 9, önerisi 12); başlatıcı yok, oyun doğrudan
+açılıyor. Eksik olanlar Tur 72'de: oyunun bütün işlerinin kumandayla
+yapılması, kumandanın düğme ipuçları ve yazı alanında ekran klavyesi (şirket
+adı).
+
 ## Geliştirirken
 
 Steam istemcisi açıkken, Steam'den açmadan denemek için:

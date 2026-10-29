@@ -24,6 +24,13 @@ export type VolumeChannel = 'master' | 'music' | 'ambience' | 'effects';
 
 export interface Settings {
   textSize: TextSize;
+  /**
+   * Metin boyunu oyuncu kendisi seçti mi (Tur 71, Codex). Kayıt bütün
+   * ayarları birlikte yazıyor; başka bir ayarı değiştiren oyuncunun kaydında
+   * da `textSize` var. İşaret olmadan Steam Cloud'la gelen PC kaydının
+   * "normal"i Steam Deck'in varsayılanını hiç uygulatmazdı.
+   */
+  textSizeChosen: boolean;
   palette: Palette;
   motion: MotionChoice;
   /** 0..1; 1 Tur 46'ya kadarki sabit düzey. */
@@ -44,6 +51,7 @@ export const VOLUME_CHANNELS: readonly VolumeChannel[] = ['master', 'music', 'am
 
 export const DEFAULT_SETTINGS: Settings = {
   textSize: 'normal',
+  textSizeChosen: false,
   palette: 'standard',
   motion: 'auto',
   // Müzik (Tur 49) biraz geride başlıyor: şehrin sesi ve olaylar önde kalsın.
@@ -52,6 +60,19 @@ export const DEFAULT_SETTINGS: Settings = {
   weather: true,
   moneyTags: true,
 };
+
+/**
+ * Cihazın varsayılanları (Tur 71): oyuncunun hiç seçmediği değerin yerine.
+ * Steam Deck'te metin "çok büyük" (masaüstü kabuğu söylüyor): Valve'ın
+ * okunabilirlik ölçüsü 1280 × 800'de en küçük yazı 12 piksel; normal boyda
+ * arayüzün en küçük yazısı 10, çok büyükte 13 piksel.
+ */
+let deviceDefaults: Partial<Pick<Settings, 'textSize'>> = {};
+
+/** İlk okumadan önce çağrılmalı (masaüstü açılışı `initSettings`'ten önce koşuyor). */
+export function setDeviceDefaults(defaults: Partial<Pick<Settings, 'textSize'>>): void {
+  deviceDefaults = { ...deviceDefaults, ...defaults };
+}
 
 const STORAGE_KEY = 'capitalforge.settings.v1';
 /** Tur 47'den önceki sessize alma anahtarı: ilk açılışta okunup ayarlara taşınıyor. */
@@ -67,8 +88,14 @@ const level = (value: unknown, fallback: number): number =>
 export function sanitizeSettings(raw: unknown, legacyMuted = false): Settings {
   const source = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
   const volume = source['volume'] && typeof source['volume'] === 'object' ? (source['volume'] as Record<string, unknown>) : {};
+  const stored = pick(source['textSize'], TEXT_SIZES, DEFAULT_SETTINGS.textSize);
+  // Tur 71'den önceki kayıtta işaret yok: varsayılandan farklı bir boy seçilmiş sayılıyor.
+  const flag = source['textSizeChosen'];
+  const chosen = typeof flag === 'boolean' ? flag : stored !== DEFAULT_SETTINGS.textSize;
   return {
-    textSize: pick(source['textSize'], TEXT_SIZES, DEFAULT_SETTINGS.textSize),
+    // Seçilmemiş boy bu cihazın varsayılanı: Deck'in "çok büyük"ü PC'ye geçince normale dönüyor.
+    textSize: chosen ? stored : (deviceDefaults.textSize ?? DEFAULT_SETTINGS.textSize),
+    textSizeChosen: chosen,
     palette: pick(source['palette'], PALETTES, DEFAULT_SETTINGS.palette),
     motion: pick(source['motion'], MOTION_CHOICES, DEFAULT_SETTINGS.motion),
     volume: {
@@ -115,7 +142,8 @@ const listeners = new Set<() => void>();
 function ensureLoaded(): void {
   if (loaded) return;
   loaded = true;
-  if (typeof window !== 'undefined') current = readStored();
+  // Depo yoksa (sunucuda, testte) da cihazın varsayılanları geçerli.
+  current = typeof window !== 'undefined' ? readStored() : sanitizeSettings(null);
 }
 
 /** Seçilen hareket ve cihazın tercihi birlikte: azaltılmış hareket etkin mi. */
@@ -156,7 +184,12 @@ export function getSettings(): Settings {
 /** Bir ya da birkaç seçimi değiştirir: hemen uygulanır, hatırlanır, abonelere duyurulur. */
 export function updateSettings(change: Partial<Omit<Settings, 'volume'>> & { volume?: Partial<Settings['volume']> }): void {
   ensureLoaded();
-  current = sanitizeSettings({ ...current, ...change, volume: { ...current.volume, ...change.volume } });
+  current = sanitizeSettings({
+    ...current,
+    ...change,
+    textSizeChosen: change.textSize !== undefined || current.textSizeChosen,
+    volume: { ...current.volume, ...change.volume },
+  });
   writeStored(current);
   apply();
   for (const listener of listeners) listener();
