@@ -174,7 +174,7 @@ async function route(request: Request, db: Db, now: number, options: Options): P
     }
     const code = /^GET \/v1\/seed\/codes\/([^/]+)$/.exec(route);
     if (code) return await runCode(db, code[1]!);
-    if (route === 'GET /v1/seed/sim') return simReply(options.seed);
+    if (route === 'GET /v1/seed/sim') return await simReply(request, db, now, options.seed);
     const session = await authenticate(request, db);
     if (!session) throw new HttpError(401, 'auth');
     // Geçen haftanın bölüm değişimi henüz yapılmadıysa şimdi (cron kaçarsa da doğru kalsın).

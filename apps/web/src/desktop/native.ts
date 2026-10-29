@@ -59,11 +59,16 @@ export function keyVerdict(event: KeyLike, editable = false): KeyVerdict {
   return null;
 }
 
-/** Yazı alanı mı: orada sağ tık kopyala ve yapıştır menüsü. */
+/** Metin yazılan `input` türleri; kaydırıcı, onay kutusu ve düğme değil (Cursor Bugbot). */
+const TEXT_INPUTS = new Set(['text', 'search', 'email', 'url', 'tel', 'password', 'number']);
+
+/** Yazı alanı mı: orada sağ tık kopyala ve yapıştır menüsü, Option + ok sözcük sözcük gezinme. */
 function editable(target: EventTarget | null): boolean {
   const element = target as HTMLElement | null;
   if (!element || typeof element.closest !== 'function') return false;
-  return element.closest('input, textarea, [contenteditable]:not([contenteditable="false"])') !== null;
+  const field = element.closest('input, textarea, [contenteditable]:not([contenteditable="false"])');
+  if (!field) return false;
+  return field.tagName !== 'INPUT' || TEXT_INPUTS.has((field as HTMLInputElement).type);
 }
 
 export interface NativeOptions {

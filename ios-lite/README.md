@@ -418,7 +418,8 @@ tek dağıtım Tur 61'i de kapsıyor. Lite etkilenmiyor.
 Worker güncellenince bağlanıyor.
 
 **Tur 71 (canlı denetimde simülasyon sürümü):** şema ve simülasyon
-değişmedi. Yeni uç `GET /v1/seed/sim`, sunucunun simülasyon izi. "Canlı
+değişmedi. Yeni uç `GET /v1/seed/sim`, sunucunun simülasyon izi (IP başına
+saatte 30; iz soğuk kopyada ~0,5 sn CPU). "Canlı
 sunucu denetimi" artık dağıtımdan sonra koşuyor ve bu izi depodakiyle
 karşılaştırıyor: `main`'de fark ya da ucu olmayan eski sunucu iş akışını
 kırmızıya çeviriyor, PR'da uyarı. Tur 56–70 boyunca canlı sunucu Tur 55'te

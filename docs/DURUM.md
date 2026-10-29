@@ -8090,13 +8090,19 @@ Seçilmemiş boy her cihazda o cihazın varsayılanı; Deck'in "çok büyük"ü
 PC'ye geçince normale dönüyor. İşaretsiz eski kayıtta varsayılandan farklı
 boy seçilmiş sayılıyor.
 
+Codex ikinci incelemede yeni ucu buldu: kimliksiz ve sınırsızdı, iz soğuk
+kopyada ~0,5 sn CPU. Uç artık öbür pahalı uçlar gibi IP başına saatlik
+sınırın arkasında (30; canlı denetim birkaç kez soruyor).
+
 **Cursor Bugbot'un bulduğu şey.** Kısayol süzgeci yazı alanında harf
 yutuyordu. Windows'ta AltGr, Ctrl+Alt olarak geliyor: Almanca "}" (AltGr+0)
 "yakınlığı sıfırla", Lehçe "ś", "ó", "ń" (AltGr+S, O, N) "kaydet, aç, yeni
 pencere" sayılıyordu. macOS'ta yazı alanında sözcük sözcük gezinme
 (Option + ok) "geri" sayılıyordu. Artık Ctrl+Alt hiçbir zaman tarayıcının
 kısayolu değil (tarayıcınınkiler Alt'sız), Alt + ok yazı alanında yerinde;
-F5, Ctrl+R, Ctrl+P yazı alanında da yutuluyor.
+F5, Ctrl+R, Ctrl+P yazı alanında da yutuluyor. İkinci incelemede: "yazı
+alanı" her `input`'u sayıyordu, Ayarlar'ın ses kaydırıcısında ve onay
+kutularında Alt + ← geçiyordu; artık yalnız metin yazılan türler.
 
 **CI'ın bulduğu şey.** Uçtan uca testin Steam Deck bölümü CI'da düştü:
 önceki pencere kapanırken otomatik kayda yazıyordu (5 sn'ye kadar), tek
@@ -8107,9 +8113,9 @@ duruyordu: test dışa aktarılan kaydı adı görünür görünmez okuyor, dosy
 256 KB'ta yarım buluyordu. Okuma da tamamı gelene kadar bekleniyor.
 
 **Doğrulama.**
-- `pnpm test` 865/865 (849'dan); tip denetimi temiz.
-  - `packages/lite-league/test/simCheck.test.ts` (4 yeni): uç sunucunun
-    izini veriyor; denetim aynı, farklı, eski sunucu (401) ve okunamayan
+- `pnpm test` 866/866 (849'dan); tip denetimi temiz.
+  - `packages/lite-league/test/simCheck.test.ts` (5 yeni): uç sunucunun
+    izini veriyor, IP başına saatte 30; denetim aynı, farklı, eski sunucu (401) ve okunamayan
     durumunu ayırıyor; az önce dağıtılan sunucuyu bekliyor; `main`'de hata,
     PR'da uyarı.
   - `deploy.test.ts` (2 yeni): bağımlılıklar wrangler'dan önce kuruluyor;
@@ -8119,8 +8125,8 @@ duruyordu: test dışa aktarılan kaydı adı görünür görünmez okuyor, dosy
     oyunun dinleyicisine gitmiyor, basılı tutulan F11 titretmiyor; sağ tık
     ve sürükleme; çok büyük metinde arayüzün en küçük yazısı 12 pikseli
     geçiyor (stil dosyasından); kabuğun komutları, pencere eklentisi, en
-    küçük pencere; AltGr harfleri ve Option + ok yazı alanında geçiyor
-    (Cursor Bugbot).
+    küçük pencere; AltGr harfleri ve Option + ok yazı alanında geçiyor,
+    kaydırıcıda ve onay kutusunda Alt + ← yutuluyor (Cursor Bugbot).
   - `packages/ui/test/deviceDefaults.test.ts` (3 yeni): Deck'in varsayılanı
     yalnız seçilmemiş metin boyunda; PC'den gelen, metin boyu seçilmemiş
     kayıtta da (Codex); Deck'te seçilmemiş boy PC'de normal, eski kayıttaki

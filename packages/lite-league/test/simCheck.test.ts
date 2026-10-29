@@ -34,6 +34,16 @@ test('sim ucu: sunucunun izi herkese açık ve önbelleksiz; sahte iz yokken oyu
   assert.deepEqual(await real.json(), { sim: simFingerprint() });
 });
 
+test('sim ucu: IP başına saatte 30 (Codex); iz soğuk kopyada pahalı', async () => {
+  const db = memoryDb();
+  const ask = (ip: string) => handle(new Request('https://lig.test/v1/seed/sim', { headers: { 'cf-connecting-ip': ip } }), db, THURSDAY, TRUSTING);
+  for (let i = 0; i < 30; i++) assert.equal((await ask('203.0.113.7')).status, 200, `${i + 1}. istek`);
+  const busy = await ask('203.0.113.7');
+  assert.equal(busy.status, 429);
+  assert.ok(Number((await busy.json()).retryAfter) > 0, 'ne zaman yeniden deneneceği söyleniyor');
+  assert.equal((await ask('198.51.100.4')).status, 200, 'başka IP etkilenmiyor');
+});
+
 test('simülasyon denetimi: aynı, farklı, eski sunucu, okunamayan', async () => {
   assert.deepEqual(await simCheck('https://lig.test', TEST_SIM, server()), { status: 'same', live: TEST_SIM });
   assert.deepEqual(await simCheck('https://lig.test/', OTHER_SIM, server()), { status: 'different', live: TEST_SIM });

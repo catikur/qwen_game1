@@ -374,9 +374,12 @@ describe('uygulama gibi (Tur 71)', () => {
   /** Pencere yerine bir olay hedefi: `closest` yazı alanı mı diye, `getSelection` seçili metin. */
   class FakeWindow extends EventTarget {
     field = false;
+    /** Alan bir `input` ise türü (yoksa yazı kutusu gibi `textarea`). */
+    inputType: string | null = null;
     selection = '';
     closest(): unknown {
-      return this.field ? this : null;
+      if (!this.field) return null;
+      return this.inputType === null ? { tagName: 'TEXTAREA' } : { tagName: 'INPUT', type: this.inputType };
     }
     getSelection() {
       return { toString: () => this.selection };
@@ -412,13 +415,22 @@ describe('uygulama gibi (Tur 71)', () => {
     assert.equal(press(target, 'F5'), false, 'bırakılınca dinlemiyor');
   });
 
-  test('yazı alanında AltGr ve Option + ok geçiyor, F5 yine yutuluyor', () => {
+  test('yazı alanında AltGr ve Option + ok geçiyor, F5 yine yutuluyor; kaydırıcıda ve onay kutusunda Alt + ok yutuluyor', () => {
     const target = new FakeWindow();
     target.field = true;
     const release = nativeFeel(target as unknown as Window, { toggleFullscreen: () => undefined });
-    assert.equal(press(target, 'Digit0', { ctrlKey: true, altKey: true }), false, 'Almanca "}"');
-    assert.equal(press(target, 'ArrowLeft', { altKey: true }), false, 'Option + ←');
-    assert.equal(press(target, 'F5'), true);
+    for (const type of [null, 'text', 'search', 'number']) {
+      target.inputType = type;
+      assert.equal(press(target, 'Digit0', { ctrlKey: true, altKey: true }), false, `Almanca "}" (${type ?? 'textarea'})`);
+      assert.equal(press(target, 'ArrowLeft', { altKey: true }), false, `Option + ← (${type ?? 'textarea'})`);
+      assert.equal(press(target, 'F5'), true);
+    }
+    // Ayarlar'ın ses kaydırıcısı ve onay kutuları yazı alanı değil (Cursor Bugbot).
+    for (const type of ['range', 'checkbox', 'radio', 'button']) {
+      target.inputType = type;
+      assert.equal(press(target, 'ArrowLeft', { altKey: true }), true, `Alt + ← (${type})`);
+      assert.equal(fire(target, 'contextmenu'), true, `sağ tık (${type})`);
+    }
     release();
   });
 
