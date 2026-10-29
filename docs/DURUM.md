@@ -8801,14 +8801,13 @@ birebir (`a5ded51fb01e62a5`).
   taşıyabiliyor. Eski sürüm kaydı açamıyor, kurulum ekranına düşüyordu.
   Oyuncu yeni oyuna başlayınca 30 saniye sonra otomatik kayıt yeni
   sürümün kaydının üstüne yazıyordu: beta ilerlemesi gidiyordu.
-  - Artık bir slota oturumda ilk kez yazmadan önce oradaki kayıt okunuyor.
-    Daha yeni bir biçimin kaydıysa yazılmıyor (`NewerSaveError`).
+  - Artık her yazıştan önce slottaki kayıt okunuyor. Daha yeni bir
+    biçimin kaydıysa yazılmıyor (`NewerSaveError`).
   - Otomatik kayıt duruyor, oyuncuya bir kez söyleniyor: "Bu oyunu
     saklamak için Kayıtlar'dan başka bir slota kaydet." Elle kayıt da o
     slota yazmıyor, nedenini söylüyor.
-  - Bu sürümün açtığı ya da yazdığı slot yeniden okunmuyor. Silinen slota
-    yazılıyor. Okunamayan kaydın üstüne yazmak eskisi gibi: kurtarılacak
-    bir şey yok. O slot sonraki yazışta yine okunuyor.
+  - Silinen slota yazılıyor. Okunamayan kaydın üstüne yazmak eskisi gibi:
+    kurtarılacak bir şey yok.
   - Kurulum ekranındaki not: "Otomatik kayıt oyunun daha yeni bir
     sürümünden (kayıt biçimi v7). Bu sürüm onu açamıyor, üstüne de
     yazmıyor. Oyunu güncelle."
@@ -8844,6 +8843,15 @@ birebir (`a5ded51fb01e62a5`).
   görünmüyordu. Bu turun bölümü gerçek tuş ve dosya seçici isteyince
   ortaya çıktı.
 
+**İncelemede bulunanlar (Codex).**
+- *Slot oturumda bir kez okunuyordu.* İlk sürüm slotu oturumda yalnız ilk
+  yazıştan önce okuyor, sonra okumuyordu. Tarayıcıda yeni sürüm başka bir
+  sekmede açılıp aynı slota yazarken eski sürümün sekmesi açık
+  kalabiliyor; eski sekme sonraki otomatik kayıtta yeni sürümün kaydının
+  üstüne yazıyordu. Artık her yazıştan önce okunuyor (otomatik kayıtta 30
+  saniyede bir okuma). Test bunu iki sekmeyle sınıyor; önceki sürümde
+  kırmızı.
+
 **Doğru çıkanlar.**
 - Sürüm aracı yedi dosyayı birlikte değiştiriyor, geri alınca fark
   kalmıyor; günlüğe girdi yazılmazsa test kırmızı.
@@ -8859,15 +8867,15 @@ birebir (`a5ded51fb01e62a5`).
   yazıyor.
 
 **Doğrulama.**
-- `pnpm test` 920/920 (913'ten); tip denetimi temiz; Almanca denetimi 0
+- `pnpm test` 921/921 (913'ten); tip denetimi temiz; Almanca denetimi 0
   hata.
-  - `packages/core/test/persistence.test.ts` (6 yeni): neden kodları (JSON
+  - `packages/core/test/persistence.test.ts` (7 yeni): neden kodları (JSON
     `null` ve dizi de); raporun içe aktarılması ve kayıtsız rapor; göçü
     düşüren bozuk kayıt (içe aktarma ve açılış); yeni sürümün kaydının
     üstüne yazılmaması, kaydın yerinde kalması, silince yazılması; slotun
-    oturumda bir kez okunması, depo değişince yeniden, açılan slotun
-    okunmaması; okunamayan slotun üstüne yazılması ve sonraki yazışta
-    yeniden okunması.
+    her yazıştan önce okunması; başka sekme yeni sürümle yazınca açık
+    sekmenin üstüne yazmaması; okunamayan slotun üstüne yazılması ve
+    sonraki yazışta yeniden okunması.
   - `packages/ui/test/release.test.ts` (1 yeni): her neden üç dilde kendi
     metniyle; açılışın notu (kayıt yoksa yok, yeni sürümde "üstüne
     yazmıyor").
@@ -8921,7 +8929,7 @@ birebir (`a5ded51fb01e62a5`).
 
 | Ölçü | Tur 70 | Tur 75 |
 |---|---|---|
-| Birim testi | 849 | 920 |
+| Birim testi | 849 | 921 |
 | Tarayıcı testi (kontrol) | 719 | 801 |
 | Rust testi (Steam'siz / Steam'li) | 11 / 10 | 32 / 29 |
 | Gerçek pencerede uçtan uca | 19 | 38 |
@@ -9046,7 +9054,7 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi). Senaryo şehirlerinde gün 3–17 ms (`pnpm dayperf`, Tur 43) |
-| Birim testi | **920 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de, Tur 52'de sunucuda tekrar, Tur 53'te haftanın kuralı ve günün koşusu, Tur 54'te hayalet eğri, Tur 55'te davetli ligler, Tur 56'da taşıma sözleşmeleri, Tur 57'de enerji, Tur 58'de gayrimenkul, Tur 59'da rakiplerin hafızası, Tur 60'ta senaryo paketi II, Tur 61'de şirketin yolu, Tur 62'de hava ve mevsimin görünümü, Tur 63'te önemli anlar, Tur 64'te şehir kartı, Tur 65'te telefon performansı, Tur 66'da masaüstü sürümü, Tur 67'de içerik paketleri, Tur 68'de senaryo editörü, Tur 69'da üçüncü dil, Tur 70'te Steam başarımları, Tur 71'de canlı sunucunun simülasyon izi ve Steam Deck'in varsayılanları, Tur 72'de kumanda, Tur 73'te Workshop ve skor tabloları, Tur 74'te sürüm, yenilikler ve hata raporu, Tur 75'te kaydın açılmama nedeni ve yeni sürümün kaydı); Rust tarafı 32 test (`cargo test`, `apps/desktop/src-tauri`; Steam'li derlemede 29) |
+| Birim testi | **921 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de, Tur 52'de sunucuda tekrar, Tur 53'te haftanın kuralı ve günün koşusu, Tur 54'te hayalet eğri, Tur 55'te davetli ligler, Tur 56'da taşıma sözleşmeleri, Tur 57'de enerji, Tur 58'de gayrimenkul, Tur 59'da rakiplerin hafızası, Tur 60'ta senaryo paketi II, Tur 61'de şirketin yolu, Tur 62'de hava ve mevsimin görünümü, Tur 63'te önemli anlar, Tur 64'te şehir kartı, Tur 65'te telefon performansı, Tur 66'da masaüstü sürümü, Tur 67'de içerik paketleri, Tur 68'de senaryo editörü, Tur 69'da üçüncü dil, Tur 70'te Steam başarımları, Tur 71'de canlı sunucunun simülasyon izi ve Steam Deck'in varsayılanları, Tur 72'de kumanda, Tur 73'te Workshop ve skor tabloları, Tur 74'te sürüm, yenilikler ve hata raporu, Tur 75'te kaydın açılmama nedeni ve yeni sürümün kaydı); Rust tarafı 32 test (`cargo test`, `apps/desktop/src-tauri`; Steam'li derlemede 29) |
 | Denge testi | **379 kontrol, hepsi geçiyor** (33 bölüm, süreleriyle; ~16 dk) |
 | Tarayıcı testi | **790 kontrol** (Tur 74'te 18 yeni), son tam koşu 781/783 (Tur 74, Tur 73'ün son iki düzeltmesinden önceki tabanda; yük altında düşen iki kontrol tek başına geçti; Tur 69'da 719/719), 0 konsol hatası (bu yavaş makinede ~76 dk, CI'da `main`'de ~64 dk); duman koşusu 132 (CI'da ~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + paket bütçesi (Tur 46; Tur 48'den beri hizmet çalışanı ve manifest de) + duman oynanışı; `main`'de tam oynanış (Tur 72'den beri 120 dk sınırı); masaüstüne dokunan PR'da Rust testleri, sürüm derlemesi ve gerçek pencerede 38 kontrol (Tur 66'da 17) |

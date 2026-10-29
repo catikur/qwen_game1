@@ -232,7 +232,7 @@ describe('kayıt slotları dosyada', () => {
     const { deleteSave } = await import('../../../packages/persistence/src/index');
     await deleteSave(3);
     assert.deepEqual(await listSaves(), []);
-    // Slot ilk yazılıştan önce bir kez okunuyor: yeni sürümün kaydı ezilmesin (Tur 75).
+    // Slot her yazıştan önce okunuyor: yeni sürümün kaydı ezilmesin (Tur 75).
     assert.deepEqual(shell.calls, ['save_read', 'save_read', 'save_write', 'save_remove', 'save_list']);
   });
 });

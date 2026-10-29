@@ -193,7 +193,7 @@ describe('yeni sürümün kaydı ezilmiyor (Tur 75)', () => {
     }
   });
 
-  test('aynı ya da eski sürümün kaydı ezilir; slot oturumda yalnız ilk yazılışta okunuyor, depo değişince yeniden', async () => {
+  test('aynı ya da eski sürümün kaydı ezilir; slot her yazıştan önce okunuyor', async () => {
     const store = memoryBackend([recordOf(playedState(5), 1), recordOf(playedState(5), 2, SCHEMA_VERSION - 1)]);
     setSaveBackend(store.backend);
     try {
@@ -203,13 +203,23 @@ describe('yeni sürümün kaydı ezilmiyor (Tur 75)', () => {
       await saveGame(ours, 2);
       await saveGame(ours, 3);
       assert.deepEqual([1, 2, 3].map((slot) => store.records.get(slot)?.state.time.day), [8, 8, 8]);
-      assert.deepEqual(store.reads, [1, 2, 3], 'her slot bir kez');
-      // Açılan slot zaten bu sürümün: yazmadan önce okunmuyor.
-      const other = memoryBackend([recordOf(playedState(4), 1)]);
-      setSaveBackend(other.backend);
-      assert.ok((await loadGame(1)).ok);
-      await saveGame(ours, 1);
-      assert.deepEqual(other.reads, [1], 'yükleme okudu, yazma okumadı');
+      assert.deepEqual(store.reads, [1, 1, 2, 3], 'her yazıştan önce bir okuma');
+    } finally {
+      setSaveBackend(null);
+    }
+  });
+
+  test('açılıp yazılan slota başka sekme yeni sürümle yazınca bu sekme üstüne yazmıyor (Codex #105)', async () => {
+    const store = memoryBackend([recordOf(playedState(4), 0)]);
+    setSaveBackend(store.backend);
+    try {
+      // Eski sürümün sekmesi kaydı açmış ve yazmış.
+      assert.ok((await loadGame(0)).ok);
+      await saveGame(playedState(6), 0);
+      // Yeni sürüm başka bir sekmede açılıp otomatik kaydı kendi biçimiyle yazıyor.
+      store.records.set(0, recordOf(playedState(40), 0, SCHEMA_VERSION + 1));
+      await assert.rejects(saveGame(playedState(7), 0), NewerSaveError);
+      assert.equal(store.records.get(0)?.state.time.day, 40, 'yeni sürümün kaydı yerinde');
     } finally {
       setSaveBackend(null);
     }
@@ -231,7 +241,7 @@ describe('yeni sürümün kaydı ezilmiyor (Tur 75)', () => {
       // İlk okuma düştü: kayıt kurtarılamıyor sayılıp yazılıyor (eskisi gibi).
       await saveGame(playedState(8), 1);
       assert.equal(store.records.get(1)?.state.time.day, 8);
-      // Slot "yazılabilir" diye işaretlenmedi: sonraki yazış yine okuyor.
+      // Sonraki yazış yine okuyor.
       store.records.set(1, recordOf(playedState(9), 1, SCHEMA_VERSION + 1));
       await assert.rejects(saveGame(playedState(10), 1), NewerSaveError);
       assert.equal(store.records.get(1)?.state.time.day, 9);

@@ -318,7 +318,6 @@ let installed: SaveBackend | null = null;
 /** Masaüstü kabuğu açılışta çağırıyor; `null` tarayıcının deposuna döner. */
 export function setSaveBackend(backend: SaveBackend | null): void {
   installed = backend;
-  writable.clear();
 }
 
 function backend(): SaveBackend {
@@ -470,7 +469,8 @@ const browserBackend: SaveBackend = {
  * Steam Cloud kaydı cihazlar arasında taşıyor. Steam'in beta dalındaki ya da
  * güncellenmiş öbür cihazdaki oyunun kaydı bu sürüme gelince bu sürüm onu
  * açamıyor (`newer`). Yeni oyunun otomatik kaydı onun üstüne yazıyordu;
- * eşitlenince ilerleme iki cihazda birden gidiyordu.
+ * eşitlenince ilerleme iki cihazda birden gidiyordu. Tarayıcıda da: yeni
+ * sürüm başka bir sekmede açılıp yazarken eski sürümün sekmesi açık kalabiliyor.
  */
 export class NewerSaveError extends Error {
   constructor(
@@ -482,28 +482,20 @@ export class NewerSaveError extends Error {
   }
 }
 
-/** Bu oturumda üstüne yazılabildiği bilinen slotlar: slot ilk yazılışta bir kez okunuyor. */
-const writable = new Set<number>();
-
 function savedSchemaVersion(record: SaveRecord | undefined): number | undefined {
   const version = record?.state?.meta?.schemaVersion ?? record?.meta?.schemaVersion;
   return typeof version === 'number' ? version : undefined;
 }
 
 export async function saveGame(state: GameState, slot: number, name?: string): Promise<SaveMeta> {
-  if (!writable.has(slot)) {
-    let existing: SaveRecord | undefined;
-    let read = true;
-    try {
-      existing = await backend().get(slot);
-    } catch {
-      read = false;
-    }
-    const version = savedSchemaVersion(existing);
-    if (version !== undefined && version > SCHEMA_VERSION) throw new NewerSaveError(slot, version);
-    // Okunamayan kayıt kurtarılamıyor, üstüne yazılıyor (eskisi gibi); slot sonraki yazışta yine okunuyor.
-    if (read) writable.add(slot);
-  }
+  // Slot her yazıştan önce okunuyor (Codex #105): yeni sürümün sekmesi ya da Steam
+  // Cloud oturum sürerken yazmış olabilir. Okunamayan kayıt kurtarılamıyor, üstüne
+  // yazılıyor (eskisi gibi).
+  const existing = await backend()
+    .get(slot)
+    .catch(() => undefined);
+  const version = savedSchemaVersion(existing);
+  if (version !== undefined && version > SCHEMA_VERSION) throw new NewerSaveError(slot, version);
   const meta = buildMeta(state, slot, name ?? (slot === AUTOSAVE_SLOT ? 'Otomatik kayıt' : `Kayıt ${slot}`));
   await backend().put({ meta, state });
   return meta;
@@ -523,15 +515,11 @@ export async function loadGame(slot: number): Promise<LoadOutcome> {
   }
 
   if (!record?.state) return { ok: false, problem: 'empty', reason: 'Bu slotta kayıt yok.' };
-  const outcome = migrate(record.state as unknown as Record<string, unknown>);
-  // Bu sürümün açtığı kayıt bu sürümün yazabileceği kayıt.
-  if (outcome.ok) writable.add(slot);
-  return outcome;
+  return migrate(record.state as unknown as Record<string, unknown>);
 }
 
 export async function deleteSave(slot: number): Promise<void> {
   await backend().remove(slot);
-  writable.add(slot);
 }
 
 export function exportToJson(state: GameState): string {
