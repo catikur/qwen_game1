@@ -174,7 +174,9 @@ Developer üyeliği gelene kadar kapalı; oyun etkilenmiyor.
 (D1, Doğu Avrupa; kimlik `wrangler.toml`'de). Uygulama bu adrese bağlı
 (`project.yml` → `LiteLeagueURL`). Her PR'da ve `main`'de "Canlı sunucu
 denetimi" işi hesap açıyor, ligi okuyor ve hesabı siliyor. Sunucu eski
-sürümdeyse uyarı veriyor: o zaman aşağıdaki A'nın 1. ve 3. adımı.
+sürümdeyse uyarı veriyor. Tur 71'den beri sunucunun simülasyon izini
+(`/v1/seed/sim`) de depodakiyle karşılaştırıyor: `main`'de fark varsa iş
+kırmızı. O zaman aşağıdaki A'nın 1. ve 3. adımı ya da B'nin 3. adımı.
 
 Kod değişince sunucuyu güncellemek için aşağıdaki A ya da B.
 
@@ -203,7 +205,9 @@ Kod değiştikçe 1 ve 3 tekrarlanıyor.
 1. **My Profile → API Tokens → Create Token** aç:
    - **Edit Cloudflare Workers** şablonunu seç;
    - **Account → D1 → Edit** iznini ekle.
-2. Depoya iki sır ekle (**Settings → Secrets and variables → Actions**):
+2. Depoya iki sır ekle (**Settings → Secrets and variables → Actions →
+   Secrets → Repository secrets → New repository secret**; Variables sekmesi
+   ya da bir Environment değil, iş akışı oradakileri görmüyor):
    - `CLOUDFLARE_API_TOKEN`: 1. adımdaki anahtar;
    - `CLOUDFLARE_ACCOUNT_ID`: Workers & Pages sayfasının sağındaki **Account ID**.
 3. **Actions → Lite lig sunucusu → Run workflow**. İş, var olan veritabanını adından
@@ -408,6 +412,21 @@ Kârın kaynağını sayan defter yalnız okuyor; lig izi Tur 60'la aynı
 (`a5ded51fb01e62a5`). Worker'a dokunmak gerekmiyor: Tur 56–60 için yapılacak
 tek dağıtım Tur 61'i de kapsıyor. Lite etkilenmiyor.
 
+**Tur 62–70:** şema da simülasyon da değişmedi (iz Tur 60'tan beri
+`a5ded51fb01e62a5`). Tur 66 masaüstü sürümünün kökenlerini ekledi
+(`tauri://localhost`, `http(s)://tauri.localhost`): masaüstü oyun lige ancak
+Worker güncellenince bağlanıyor.
+
+**Tur 71 (canlı denetimde simülasyon sürümü):** şema ve simülasyon
+değişmedi. Yeni uç `GET /v1/seed/sim`, sunucunun simülasyon izi. "Canlı
+sunucu denetimi" artık dağıtımdan sonra koşuyor ve bu izi depodakiyle
+karşılaştırıyor: `main`'de fark ya da ucu olmayan eski sunucu iş akışını
+kırmızıya çeviriyor, PR'da uyarı. Tur 56–70 boyunca canlı sunucu Tur 55'te
+kaldı ve denetim fark etmedi; bu yüzden. B'nin dağıtım işi de düzeldi:
+wrangler'dan önce bağımlılıklar kuruluyor. Çekirdek içeriği paket adıyla
+alıyor, kurulumsuz paketleme onu çözemiyordu; B bugüne kadar hiç dağıtmadı.
+Tur 56–71 için tek dağıtım yetiyor.
+
 **Sürüm uyumu.** Sunucu koşuyu yalnız kendi simülasyon sürümüyle
 yargılayabiliyor. Pages'teki oyun her `main` birleşmesinde kendiliğinden
 güncelleniyor, Worker elle. Oyunun simülasyonunu değiştiren bir birleşmeden
@@ -417,4 +436,6 @@ henüz tanımıyor" diye bekliyor, dağıtılınca kendiliğinden gidiyor.
 
 B kuruluysa 2. ve 3. adımı **Run workflow** ile CI yapıyor; `main`'e
 birleşmek kendiliğinden dağıtmıyor (B'nin 4. adımındaki değişken açılmadıkça).
+Unutulursa canlı denetim söylüyor (Tur 71): simülasyonu değiştiren
+birleşmeden sonra "Lite lig sunucusu" iş akışı kırmızı.
 

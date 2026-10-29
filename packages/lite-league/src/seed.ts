@@ -28,6 +28,7 @@
  * - `GET  /v1/seed/weeks/:week`    → haftanın tablosu, herkese açık (kimlikle gelince `mine`)
  * - `GET  /v1/seed/days/:day`      → günün koşusunun tablosu (Tur 53), aynı biçim
  * - `GET  /v1/seed/codes/:key`     → bir satırın koşu kodu (tabloda yalnız özeti var)
+ * - `GET  /v1/seed/sim`            → sunucunun simülasyon izi (Tur 71, canlı denetim)
  * - `DELETE /v1/players/me`        → hesabı ve koşularını sil (Lite ile aynı uç)
  * - `…/v1/seed/leagues…`           → davetli ligler (Tur 55, `seedLeagues.ts`)
  */
@@ -196,6 +197,19 @@ function toEntry(row: SeedRow, week: string, me: string | null): SeedEntry {
 }
 
 const ROW_COLUMNS = 'id, player_id, company, ceo, score, curve, code_key, length(code) AS size, idle, at';
+
+/**
+ * Sunucunun simülasyon izi (Tur 71). Canlı denetim bunu deponun iziyle
+ * karşılaştırıyor (`scripts/simCheck.ts`). Tur 56–70 boyunca canlı sunucu
+ * Tur 55'te kaldı ve denetim fark etmedi: hiçbir uç sürümü söylemiyordu.
+ * İz sağlık ucunda değil, çünkü ilk ihtiyaçta ~0,5 sn CPU tutuyor ve oyun
+ * her açılışta sağlık ucuna soruyor.
+ */
+export function simReply(verifier: SeedReplay = SERVER_REPLAY): Response {
+  const response = json({ sim: verifier.sim() });
+  response.headers.set('cache-control', 'no-store');
+  return response;
+}
 
 /**
  * Koşu gönder. Kod oyunun kendi çözücüsünden geçiyor (sınırlar, komut
