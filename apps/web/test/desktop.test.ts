@@ -5,8 +5,9 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { GameEngine } from '../../../packages/core/src/engine';
 import { GAME_VERSION, createNewGame } from '../../../packages/core/src/worldgen';
-import { listSaves, loadGame, saveGame, setSaveBackend } from '../../../packages/persistence/src/index';
+import { NewerSaveError, listSaves, loadGame, saveGame, setSaveBackend } from '../../../packages/persistence/src/index';
 import { ACHIEVEMENTS, STEAM_ACHIEVEMENTS } from '../../../packages/content/src/index';
+import { beforeQuit } from '../src/desktop/bridge';
 import type { Invoke, InvokeOptions } from '../src/desktop/bridge';
 import { hydrate, isProfileKey, mirror } from '../src/desktop/profile';
 import { fileSaves } from '../src/desktop/saves';
@@ -226,13 +227,49 @@ describe('kayıt slotları dosyada', () => {
     const shell = fakeShell();
     setSaveBackend(fileSaves(shell.invoke));
     const empty = await loadGame(4);
-    assert.deepEqual(empty, { ok: false, reason: 'Bu slotta kayıt yok.' });
+    assert.deepEqual(empty, { ok: false, problem: 'empty', reason: 'Bu slotta kayıt yok.' });
 
     await saveGame(new GameEngine(createNewGame({ seed: 7 })).getState(), 3);
     const { deleteSave } = await import('../../../packages/persistence/src/index');
     await deleteSave(3);
     assert.deepEqual(await listSaves(), []);
-    assert.deepEqual(shell.calls, ['save_read', 'save_write', 'save_remove', 'save_list']);
+    // Slot her yazışta, yazmadan hemen önce okunuyor: yeni sürümün kaydı ezilmesin (Tur 75).
+    assert.deepEqual(shell.calls, ['save_read', 'save_read', 'save_write', 'save_remove', 'save_list']);
+  });
+
+  test('yeni sürümün dosyası ezilmiyor; okunamayan dosyanın üstüne yazılıyor (Tur 75)', async () => {
+    const shell = fakeShell();
+    setSaveBackend(fileSaves(shell.invoke));
+    const state = new GameEngine(createNewGame({ seed: 9 })).getState();
+    const newer = { meta: { slot: 0, schemaVersion: state.meta.schemaVersion + 1 }, state: { ...state, meta: { ...state.meta, schemaVersion: state.meta.schemaVersion + 1 } } };
+    shell.files.set(0, new TextEncoder().encode(JSON.stringify(newer)));
+    await assert.rejects(saveGame(state, 0), NewerSaveError);
+    assert.deepEqual(shell.calls, ['save_read'], 'okundu, yazılmadı');
+    assert.equal(JSON.parse(new TextDecoder().decode(shell.files.get(0))).state.meta.schemaVersion, state.meta.schemaVersion + 1);
+    // Yarım dosya kurtarılamıyor: üstüne yazılıyor (eskisi gibi).
+    shell.files.set(1, new TextEncoder().encode('{ "meta": '));
+    await saveGame(state, 1);
+    assert.equal(JSON.parse(new TextDecoder().decode(shell.files.get(1))).meta.slot, 1);
+  });
+
+  test('kapanırken kayıt reddedilse de ayar dosyaları yazılıyor (Codex #105)', async () => {
+    const order: string[] = [];
+    const warn = console.warn;
+    console.warn = () => undefined;
+    try {
+      // Slotta yeni sürümün kaydı: kapanıştaki kayıt reddediliyor, ayarların yazılması yine bekleniyor.
+      await beforeQuit(
+        async () => {
+          order.push('kayıt');
+          throw new NewerSaveError(0, 99);
+        },
+        async () => void order.push('ayarlar'),
+      );
+      await beforeQuit(async () => void order.push('kayıt'), async () => void order.push('ayarlar'));
+    } finally {
+      console.warn = warn;
+    }
+    assert.deepEqual(order, ['kayıt', 'ayarlar', 'kayıt', 'ayarlar']);
   });
 });
 

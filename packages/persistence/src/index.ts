@@ -40,9 +40,19 @@ export interface SaveRecord {
   state: GameState;
 }
 
+/**
+ * Kaydın neden açılmadığı (Tur 75). Arayüz bunu oyuncunun dilinde söylüyor
+ * (`app.load.problem.*`); `reason` geliştiricinin Türkçe açıklaması (günlük,
+ * testler). İngilizce ve Almanca oyunda da Türkçe gerekçe görünüyordu.
+ */
+export type LoadProblem = 'notJson' | 'noVersion' | 'newer' | 'noMigration' | 'broken' | 'unreadable' | 'empty' | 'reportWithoutSave';
+
 export type LoadOutcome =
   | { ok: true; state: GameState; migratedFrom?: number }
-  | { ok: false; reason: string };
+  | { ok: false; problem: LoadProblem; reason: string; version?: number };
+
+/** Hata raporunun türü (`packages/ui/src/bugReport.ts`): içe aktarma raporun içindeki kaydı açıyor. */
+export const BUG_REPORT_KIND = 'capitalforge-bug-report';
 
 /**
  * Şema göçleri. Anahtar = kaynağın sürümü, değer = bir üst sürüme taşıyan
@@ -214,11 +224,13 @@ function migrate(raw: Record<string, unknown>): LoadOutcome {
   let version = meta?.schemaVersion;
 
   if (typeof version !== 'number') {
-    return { ok: false, reason: 'Kayıt sürümü okunamadı — dosya bozuk görünüyor.' };
+    return { ok: false, problem: 'noVersion', reason: 'Kayıt sürümü okunamadı — dosya bozuk görünüyor.' };
   }
   if (version > SCHEMA_VERSION) {
     return {
       ok: false,
+      problem: 'newer',
+      version,
       reason: `Bu kayıt oyunun daha yeni bir sürümünden (v${version}). Oyunu güncelleyin.`,
     };
   }
@@ -228,9 +240,15 @@ function migrate(raw: Record<string, unknown>): LoadOutcome {
   while (version < SCHEMA_VERSION) {
     const step = MIGRATIONS[version];
     if (!step) {
-      return { ok: false, reason: `v${version} kaydını taşıyacak bir göç adımı yok.` };
+      return { ok: false, problem: 'noMigration', version, reason: `v${version} kaydını taşıyacak bir göç adımı yok.` };
     }
-    current = step(current);
+    // Bozuk eski kayıt adımı düşürebiliyor (şirketin yerinde null gibi): açılış
+    // ve içe aktarma hata fırlatmasın, kaydın bozuk olduğunu söylesin (Tur 75).
+    try {
+      current = step(current);
+    } catch (error) {
+      return { ok: false, problem: 'broken', reason: `Kayıt eksik veya bozuk: v${version} göçü düştü (${(error as Error).message}).` };
+    }
     version += 1;
     (current['meta'] as { schemaVersion: number }).schemaVersion = version;
   }
@@ -256,7 +274,7 @@ function validate(raw: Record<string, unknown>): LoadOutcome {
   if (!state.buildings || typeof state.buildings !== 'object') problems.push('binalar');
 
   if (problems.length > 0) {
-    return { ok: false, reason: `Kayıt eksik veya bozuk: ${problems.join(', ')}.` };
+    return { ok: false, problem: 'broken', reason: `Kayıt eksik veya bozuk: ${problems.join(', ')}.` };
   }
   return { ok: true, state };
 }
@@ -287,8 +305,19 @@ export function buildMeta(state: GameState, slot: number, name: string): SaveMet
  * eşitleyebiliyor. Kaydın biçimi ve göçler iki yerde de aynı; depo yalnız
  * kaydı taşıyor.
  */
+/**
+ * Yazmadan hemen önce slotta duran kayda bakan denetim; hata atarsa depo
+ * yazmıyor (Tur 75). Okunamayan kayıt `undefined`: kurtarılacak bir şey yok.
+ */
+export type SaveGuard = (existing: SaveRecord | undefined) => void;
+
 export interface SaveBackend {
-  put(record: SaveRecord): Promise<void>;
+  /**
+   * `guard` varsa depo onu slotta duran kayıtla, yazmadan hemen önce
+   * çağırıyor. Tarayıcıda okuma, denetim ve yazma tek IndexedDB işleminde:
+   * başka sekme arada yazamıyor (Codex #105).
+   */
+  put(record: SaveRecord, guard?: SaveGuard): Promise<void>;
   get(slot: number): Promise<SaveRecord | undefined>;
   /** Yalnız künyeler: listeyi açmak bütün şehirleri okumasın. */
   list(): Promise<SaveMeta[]>;
@@ -404,10 +433,51 @@ function tx<T>(db: IDBDatabase, mode: IDBTransactionMode, run: (store: IDBObject
 // ----------------------------------------------------- Tarayıcının deposu
 
 const browserBackend: SaveBackend = {
-  async put(record) {
+  async put(record, guard) {
     const db = await openDb();
-    if (db) await tx(db, 'readwrite', (store) => store.put(record));
-    else storeWrite(LS_PREFIX + record.meta.slot, JSON.stringify(record));
+    if (db) {
+      await new Promise<void>((resolve, reject) => {
+        const transaction = db.transaction(STORE, 'readwrite');
+        const store = transaction.objectStore(STORE);
+        let refused: unknown = null;
+        transaction.oncomplete = () => resolve();
+        transaction.onabort = () => reject(refused ?? transaction.error);
+        if (!guard) {
+          store.put(record);
+          return;
+        }
+        const read = store.get(record.meta.slot);
+        read.onsuccess = () => {
+          try {
+            guard(read.result as SaveRecord | undefined);
+          } catch (error) {
+            refused = error;
+            transaction.abort();
+            return;
+          }
+          store.put(record);
+        };
+        // Okunamayan kayıt: işlem düşmesin, üstüne yazılsın.
+        read.onerror = (event) => {
+          event.preventDefault();
+          guard(undefined);
+          store.put(record);
+        };
+      });
+      return;
+    }
+    const key = LS_PREFIX + record.meta.slot;
+    if (guard) {
+      let existing: SaveRecord | undefined;
+      try {
+        const raw = storeRead(key);
+        existing = raw ? (JSON.parse(raw) as SaveRecord) : undefined;
+      } catch {
+        existing = undefined;
+      }
+      guard(existing);
+    }
+    storeWrite(key, JSON.stringify(record));
   },
 
   async get(slot) {
@@ -445,9 +515,38 @@ const browserBackend: SaveBackend = {
 
 // ------------------------------------------------------------- Genel API
 
+/**
+ * Slotta oyunun daha yeni bir sürümünün kaydı var; üstüne yazılmadı (Tur 75).
+ *
+ * Steam Cloud kaydı cihazlar arasında taşıyor. Steam'in beta dalındaki ya da
+ * güncellenmiş öbür cihazdaki oyunun kaydı bu sürüme gelince bu sürüm onu
+ * açamıyor (`newer`). Yeni oyunun otomatik kaydı onun üstüne yazıyordu;
+ * eşitlenince ilerleme iki cihazda birden gidiyordu. Tarayıcıda da: yeni
+ * sürüm başka bir sekmede açılıp yazarken eski sürümün sekmesi açık kalabiliyor.
+ */
+export class NewerSaveError extends Error {
+  constructor(
+    readonly slot: number,
+    readonly schemaVersion: number,
+  ) {
+    super(`Slot ${slot}: oyunun daha yeni bir sürümünün kaydı var (v${schemaVersion}), üstüne yazılmadı.`);
+    this.name = 'NewerSaveError';
+  }
+}
+
+function savedSchemaVersion(record: SaveRecord | undefined): number | undefined {
+  const version = record?.state?.meta?.schemaVersion ?? record?.meta?.schemaVersion;
+  return typeof version === 'number' ? version : undefined;
+}
+
 export async function saveGame(state: GameState, slot: number, name?: string): Promise<SaveMeta> {
   const meta = buildMeta(state, slot, name ?? (slot === AUTOSAVE_SLOT ? 'Otomatik kayıt' : `Kayıt ${slot}`));
-  await backend().put({ meta, state });
+  // Her yazışta, yazmanın içinde (Codex #105): yeni sürümün sekmesi ya da Steam
+  // Cloud oturum sürerken yazmış olabilir.
+  await backend().put({ meta, state }, (existing) => {
+    const version = savedSchemaVersion(existing);
+    if (version !== undefined && version > SCHEMA_VERSION) throw new NewerSaveError(slot, version);
+  });
   return meta;
 }
 
@@ -461,10 +560,10 @@ export async function loadGame(slot: number): Promise<LoadOutcome> {
   try {
     record = await backend().get(slot);
   } catch (error) {
-    return { ok: false, reason: `Kayıt okunamadı: ${(error as Error).message}` };
+    return { ok: false, problem: 'unreadable', reason: `Kayıt okunamadı: ${(error as Error).message}` };
   }
 
-  if (!record?.state) return { ok: false, reason: 'Bu slotta kayıt yok.' };
+  if (!record?.state) return { ok: false, problem: 'empty', reason: 'Bu slotta kayıt yok.' };
   return migrate(record.state as unknown as Record<string, unknown>);
 }
 
@@ -481,10 +580,18 @@ export function importFromJson(text: string): LoadOutcome {
   try {
     parsed = JSON.parse(text);
   } catch {
-    return { ok: false, reason: 'Dosya geçerli JSON değil.' };
+    return { ok: false, problem: 'notJson', reason: 'Dosya geçerli JSON değil.' };
   }
 
-  const record = parsed as { state?: unknown };
-  const candidate = (record.state ?? parsed) as Record<string, unknown>;
+  let record = (parsed && typeof parsed === 'object' ? parsed : {}) as { state?: unknown; kind?: unknown; save?: unknown };
+  // Hata raporu da içe aktarılıyor (Tur 75): raporun kaydı dışa aktarılanla aynı
+  // biçimde. Raporun kendisi "dosya bozuk" diye reddediliyordu.
+  if (record.kind === BUG_REPORT_KIND) {
+    if (!record.save || typeof record.save !== 'object') {
+      return { ok: false, problem: 'reportWithoutSave', reason: 'Bu hata raporunda kayıt yok.' };
+    }
+    record = record.save as { state?: unknown };
+  }
+  const candidate = (record.state ?? record) as Record<string, unknown>;
   return migrate(candidate);
 }

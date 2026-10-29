@@ -5,7 +5,7 @@ import type { GameCommand, GameEngine, GameSpeed } from '@capital/core';
 import { BUILDING_BY_ID, GOOD_BY_ID } from '@capital/content';
 import type { ScenarioDef } from '@capital/content';
 import { CityRenderer } from '@capital/render-three';
-import { AUTOSAVE_SLOT, exportToJson, importFromJson, loadGame, saveGame } from '@capital/persistence';
+import { AUTOSAVE_SLOT, NewerSaveError, exportToJson, importFromJson, loadGame, saveGame } from '@capital/persistence';
 import {
   ActiveEvents,
   BuildPanel,
@@ -30,6 +30,7 @@ import {
   TopBar,
   getSettings,
   inputMode,
+  loadProblemText,
   onInputMode,
   reducedMotion,
   setCityDaylight,
@@ -224,14 +225,22 @@ export function GameRoot({
   }, [engine, version, view.lens, view.selectedTileId, view.ghostDefId]);
 
   // ---- Otomatik kayıt ----
+  // Slotta yeni sürümün kaydı varsa yazılmıyor (Tur 75, `NewerSaveError`): oyuncuya bir kez söyleniyor.
+  const autosaveBlocked = useRef(false);
+  const autosave = useCallback(() => {
+    void saveGame(engine.getState(), AUTOSAVE_SLOT).catch((error) => {
+      if (error instanceof NewerSaveError) {
+        if (!autosaveBlocked.current) toast(t('app.save.newerAutosave'), 'info');
+        autosaveBlocked.current = true;
+        return;
+      }
+      console.warn('Otomatik kayıt başarısız:', error);
+    });
+  }, [engine, toast]);
   useEffect(() => {
-    const timer = setInterval(() => {
-      void saveGame(engine.getState(), AUTOSAVE_SLOT).catch((error) => {
-        console.warn('Otomatik kayıt başarısız:', error);
-      });
-    }, AUTOSAVE_INTERVAL_MS);
+    const timer = setInterval(autosave, AUTOSAVE_INTERVAL_MS);
     return () => clearInterval(timer);
-  }, [engine]);
+  }, [autosave]);
   // Yeni sürüme geçmeden önce (Tur 48): yenilenen oyun kaldığı günden açılsın.
   useEffect(() => setBeforeUpdate(() => saveGame(engine.getState(), AUTOSAVE_SLOT)), [engine]);
   // Hata raporunun kaydı (Tur 74): oyun açıkken o anki durum.
@@ -246,11 +255,8 @@ export function GameRoot({
   const scenarioRun = engine.getState().scenario;
   const scenarioMark = scenarioRun ? `${scenarioRun.briefSeen ?? false}:${scenarioRun.finishedDay ?? ''}:${scenarioRun.resultSeen ?? false}` : null;
   useEffect(() => {
-    if (scenarioMark === null) return;
-    void saveGame(engine.getState(), AUTOSAVE_SLOT).catch((error) => {
-      console.warn('Otomatik kayıt başarısız:', error);
-    });
-  }, [engine, scenarioMark]);
+    if (scenarioMark !== null) autosave();
+  }, [autosave, scenarioMark]);
 
   // ---- Haritada imleç (Tur 72): klavye ve kumanda ----
   /** Haritada mı: kipli bir katman yok, odak bir denetimde değil. */
@@ -417,7 +423,8 @@ export function GameRoot({
         await saveGame(engine.getState(), slot, name);
         toast(t('app.save.saved', { slot }), 'good');
       } catch (error) {
-        toast(t('app.save.failed', { message: (error as Error).message }), 'bad');
+        if (error instanceof NewerSaveError) toast(t('app.save.newerSlot', { slot }), 'bad');
+        else toast(t('app.save.failed', { message: (error as Error).message }), 'bad');
       }
     },
     [engine, toast],
@@ -427,7 +434,7 @@ export function GameRoot({
     async (slot: number) => {
       const outcome = await loadGame(slot);
       if (!outcome.ok) {
-        toast(outcome.reason, 'bad');
+        toast(loadProblemText(outcome), 'bad');
         return;
       }
       engine.replaceState(outcome.state);
@@ -480,7 +487,7 @@ export function GameRoot({
     (raw: string, label: string) => {
       const outcome = importFromJson(raw);
       if (!outcome.ok) {
-        toast(outcome.reason, 'bad');
+        toast(loadProblemText(outcome), 'bad');
         return;
       }
       engine.replaceState(outcome.state);

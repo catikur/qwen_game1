@@ -1,6 +1,16 @@
 import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
-import { exportToJson, importFromJson } from '../../persistence/src/index';
+import {
+  BUG_REPORT_KIND,
+  NewerSaveError,
+  deleteSave,
+  exportToJson,
+  importFromJson,
+  loadGame,
+  saveGame,
+  setSaveBackend,
+} from '../../persistence/src/index';
+import type { SaveBackend, SaveRecord } from '../../persistence/src/index';
 import { GameEngine } from '../src/engine';
 import { createNewGame } from '../src/worldgen';
 import { SCHEMA_VERSION } from '../src/types';
@@ -95,5 +105,136 @@ describe('kayıt', () => {
     const broken = importFromJson(JSON.stringify({ meta: { schemaVersion: SCHEMA_VERSION }, map: null }));
     assert.equal(broken.ok, false);
     if (!broken.ok) assert.match(broken.reason, /bozuk|eksik/);
+  });
+
+  test('neden kodlu, arayüz oyuncunun dilinde söylüyor (Tur 75); JSON "null" da çökmüyor', () => {
+    const problem = (text: string) => {
+      const outcome = importFromJson(text);
+      return outcome.ok ? 'ok' : [outcome.problem, outcome.version];
+    };
+    assert.deepEqual(problem('{ yarım'), ['notJson', undefined]);
+    assert.deepEqual(problem('null'), ['noVersion', undefined]);
+    assert.deepEqual(problem('[1, 2]'), ['noVersion', undefined]);
+    assert.deepEqual(problem(JSON.stringify({ meta: { schemaVersion: SCHEMA_VERSION }, map: null })), ['broken', undefined]);
+    const newer = JSON.parse(exportToJson(playedState(1)));
+    newer.state.meta.schemaVersion = SCHEMA_VERSION + 2;
+    assert.deepEqual(problem(JSON.stringify(newer)), ['newer', SCHEMA_VERSION + 2]);
+  });
+
+  test('göç adımını düşüren eski kayıt bozuk sayılıyor, hata fırlatmıyor (Tur 75)', async () => {
+    // v1 → v2 adımı her şirkete CEO alanı ekliyor; şirketin yerinde null var.
+    const damaged = JSON.stringify({ meta: { schemaVersion: 1 }, companies: { p1: null } });
+    const outcome = importFromJson(damaged);
+    assert.equal(outcome.ok, false);
+    if (!outcome.ok) assert.equal(outcome.problem, 'broken');
+    // Açılıştaki otomatik kayıt da aynı yoldan: açılış menüye nedeniyle düşüyor.
+    const store = memoryBackend([{ meta: { slot: 0 } as SaveRecord['meta'], state: JSON.parse(damaged) as SaveRecord['state'] }]);
+    setSaveBackend(store.backend);
+    const boot = await loadGame(0);
+    assert.equal(boot.ok, false);
+    if (!boot.ok) assert.equal(boot.problem, 'broken');
+  });
+
+  test('hata raporu içe aktarılıyor: içindeki kayıt açılıyor; kaydı çıkarılmış rapor nedeniyle (Tur 75)', () => {
+    const state = playedState(12);
+    // Raporun biçimi `packages/ui/src/bugReport.ts`: kayıt en sonda, dışa aktarılanla aynı.
+    const report = { kind: BUG_REPORT_KIND, format: 1, app: { version: '1.0.0', edition: 'web' }, note: 'not', log: [], save: JSON.parse(exportToJson(state)) };
+    const outcome = importFromJson(JSON.stringify(report));
+    assert.ok(outcome.ok, outcome.ok ? '' : outcome.reason);
+    if (outcome.ok) assert.equal(JSON.stringify(outcome.state), JSON.stringify(state));
+    const bare = importFromJson(JSON.stringify({ ...report, save: null }));
+    assert.equal(bare.ok, false);
+    if (!bare.ok) assert.equal(bare.problem, 'reportWithoutSave');
+  });
+});
+
+/**
+ * Bellekte sahte depo. Yazmadan önceki denetim yazmanın içinde, araya
+ * bekleme girmeden (tarayıcının IndexedDB işlemi gibi). Okunan ve
+ * denetlenen slotlar sayılıyor.
+ */
+function memoryBackend(initial: SaveRecord[] = []) {
+  const records = new Map(initial.map((record) => [record.meta.slot, record] as const));
+  const reads: number[] = [];
+  const guarded: number[] = [];
+  const backend: SaveBackend = {
+    put: async (record, guard) => {
+      if (guard) {
+        guarded.push(record.meta.slot);
+        guard(records.get(record.meta.slot));
+      }
+      records.set(record.meta.slot, JSON.parse(JSON.stringify(record)) as SaveRecord);
+    },
+    get: async (slot) => {
+      reads.push(slot);
+      return records.get(slot);
+    },
+    list: async () => [...records.values()].map((record) => record.meta),
+    remove: async (slot) => void records.delete(slot),
+  };
+  return { records, reads, guarded, backend };
+}
+
+function recordOf(state: ReturnType<typeof playedState>, slot: number, schemaVersion = SCHEMA_VERSION): SaveRecord {
+  const copy = JSON.parse(JSON.stringify(state)) as ReturnType<typeof playedState>;
+  copy.meta.schemaVersion = schemaVersion;
+  const raw = JSON.parse(exportToJson(copy)) as SaveRecord;
+  return { meta: { ...raw.meta, slot, schemaVersion }, state: copy };
+}
+
+describe('yeni sürümün kaydı ezilmiyor (Tur 75)', () => {
+  test('otomatik kayıt slotundaki yeni sürüm kaydının üstüne yazılmıyor; açılmıyor, nedeni ve sürümü söyleniyor', async () => {
+    const theirs = recordOf(playedState(30), 0, SCHEMA_VERSION + 1);
+    const store = memoryBackend([theirs]);
+    setSaveBackend(store.backend);
+    try {
+      const loaded = await loadGame(0);
+      assert.equal(loaded.ok, false);
+      if (!loaded.ok) assert.deepEqual([loaded.problem, loaded.version], ['newer', SCHEMA_VERSION + 1]);
+      const ours = playedState(2);
+      await assert.rejects(saveGame(ours, 0), (error: unknown) => error instanceof NewerSaveError && error.slot === 0 && error.schemaVersion === SCHEMA_VERSION + 1);
+      await assert.rejects(saveGame(ours, 0), NewerSaveError);
+      assert.equal(store.records.get(0)?.state.time.day, 30, 'yeni sürümün kaydı yerinde');
+      // Oyuncu slotu silerse yazılıyor.
+      await deleteSave(0);
+      await saveGame(ours, 0);
+      assert.equal(store.records.get(0)?.state.time.day, 2);
+    } finally {
+      setSaveBackend(null);
+    }
+  });
+
+  test('aynı ya da eski sürümün kaydı ezilir; denetim her yazışta, yazmanın içinde (ayrı okuma yok)', async () => {
+    const store = memoryBackend([recordOf(playedState(5), 1), recordOf(playedState(5), 2, SCHEMA_VERSION - 1)]);
+    setSaveBackend(store.backend);
+    try {
+      const ours = playedState(8);
+      await saveGame(ours, 1);
+      await saveGame(ours, 1);
+      await saveGame(ours, 2);
+      await saveGame(ours, 3);
+      assert.deepEqual([1, 2, 3].map((slot) => store.records.get(slot)?.state.time.day), [8, 8, 8]);
+      assert.deepEqual(store.guarded, [1, 1, 2, 3], 'her yazışta denetim');
+      // Okuma ile yazma arasında başka sekme yazamasın: ayrı bir ön okuma yok (Codex #105).
+      assert.deepEqual(store.reads, [], 'yazmadan önce ayrı okuma yok');
+    } finally {
+      setSaveBackend(null);
+    }
+  });
+
+  test('açılıp yazılan slota başka sekme yeni sürümle yazınca bu sekme üstüne yazmıyor (Codex #105)', async () => {
+    const store = memoryBackend([recordOf(playedState(4), 0)]);
+    setSaveBackend(store.backend);
+    try {
+      // Eski sürümün sekmesi kaydı açmış ve yazmış.
+      assert.ok((await loadGame(0)).ok);
+      await saveGame(playedState(6), 0);
+      // Yeni sürüm başka bir sekmede açılıp otomatik kaydı kendi biçimiyle yazıyor.
+      store.records.set(0, recordOf(playedState(40), 0, SCHEMA_VERSION + 1));
+      await assert.rejects(saveGame(playedState(7), 0), NewerSaveError);
+      assert.equal(store.records.get(0)?.state.time.day, 40, 'yeni sürümün kaydı yerinde');
+    } finally {
+      setSaveBackend(null);
+    }
   });
 });

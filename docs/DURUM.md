@@ -4,7 +4,7 @@
 > `pnpm bench` çıktısından; iddialar `pnpm balance` ve `pnpm playtest`
 > tarafından her koşuda doğrulanıyor.
 >
-> Son güncelleme: şema **v6**, 71 tur (Tur 33 denendi ve geri alındı; Tur 34 eski görünüme canlılık ekledi; Tur 35 arayüzü Lite'ın "Cam & Bulut" diline taşıdı; Tur 36 şehre ayrıntı kattı; Tur 37a geç oyuna yönetim yükü, servet vergisi ve kriz dönemleri getirdi; Tur 37b karar kartlarını ve rakip hikâyelerini ekledi; Tur 37c fırsat balonlarını ve aylık görev panosunu getirdi; Tur 37d canlı pazarı, şehir projesi ihalesini ve rakip konsorsiyumunu getirdi; Tur 38 değerlendirme turuydu: geç oyun hızı, gündem ve haber akışı, zorluk eğrisi; Tur 39a senaryo modunu getirdi: Kurtarma ve Krizin ortasında; Tur 39b Konsorsiyuma karşı, Zincir ustası ve Şehrin sponsoru senaryolarını ekledi; Tur 39c Büyük şehir fethi ve Holding: iki şehir ile listeyi yediye tamamladı; Tur 40 cila ve performans; Tur 41 başarımlar ve kariyer; Tur 42 açılışta gölgelendirici derlemesi; Tur 43 oyun içi akıcılık; Tur 44 değerlendirme turuydu: Türkçe sayı biçimi, yardımın kapsamı, haber akışı; Tur 45 dört ek kural getirdi: Fırtınalı yıllar, Aç gözlü rakipler, Sıkı banka, Kıt arsa; Tur 46 açılış paketini böldü: kurulum ekranı telefonda yarı sürede; Tur 47 tek Ayarlar paneli ve erişilebilirlik getirdi: metin boyutu, renk körlüğüne uygun palet, hareket, ses düzeyleri, pencerelerde klavye; Tur 48 oyunu kurulabilir ve çevrimdışı açılır yaptı, yayından sonra "yeni sürüm hazır" diyor; Tur 49 müziği getirdi: gündüz, gece ve kriz, şehirle birlikte dönüyor; Tur 50 Faz 1'i değerlendirdi ve tanıtım paketini hazırladı; Tur 51 Faz 2'yi açtı: Lite'ın lig sunucusu ana oyunun Tohum Ligi koşularını da alıyor, tablo herkese açık; Tur 52'de sunucu her koşuyu gönderimde yeniden oynatıyor, tabloya yalnız doğrulanmış skor giriyor; Tur 53 ligin her haftasına bir ek kural ve 90 günlük günün koşusunu getirdi; Tur 54 liderlerin eğrisini senin koşunun üstüne koydu ve liderin o günlerde ne yaptığını koşu kodundan anlatıyor; Tur 55 davet kodlu arkadaş liglerini getirdi ve Faz 2'yi kapattı; Tur 56 Faz 3'ü açtı: nakliye terminali rakip mağazalarına taşıma sözleşmesiyle taşıyor; Tur 57 enerjiyi getirdi: şebeke fiyatı, santraller, enerji krizi; Tur 58 gayrimenkul geliştiricisini getirdi: konut ve ofis projeleri, kira ve doluluk, kentsel dönüşüm hakkı ve başvurusu; Tur 59 rakiplere hafıza verdi: CEO'nun mizacı, husumet ve ittifak, fiyat savaşı ve lobiyle tepki, uzlaşma; Tur 60 Faz 3'ün sektörleriyle üç senaryo ekledi: Herkesin nakliyecisi, Karanlık kış, Kentsel dönüşüm, her biri bir ek kuralla; Tur 61 Faz 3'ü değerlendirdi ve kapattı: zafere üç gerçek yol var, şirketin yolu kârın kaynağından okunuyor; Tur 62 Faz 4'ü açtı: mevsim ve hava şehirde görünüyor, ağaçlar mevsimin renginde, yağmur ve kar yağıyor; Tur 63 önemli anları getirdi: inşaatın tozu, devralmanın renk dalgası, çatılardan yükselen kâr, zafer gecesinin havai fişekleri; Tur 64 şehir kartını getirdi: koşunun özeti ve şehrin kuşbakışı tek bir görselde, indirilip paylaşılıyor; Tur 65 Faz 4'ü değerlendirdi ve kapattı: telefonda günün JS'i kısaldı, tuvalin yeri her karede okunmuyor; Tur 66 Faz 5'i açtı: masaüstü sürümü, kayıtlar ve ayarlar dosyada, Steam'e hazırlık; Tur 67 içerik paketlerini getirdi: senaryo ve kurallar dosyadan, senaryolar kodla ve bağlantıyla paylaşılıyor; Tur 68 senaryo editörünü getirdi: paket tarayıcıda alan alan kuruluyor, sınırlar formda, taslak kaydetmeden deneniyor; Tur 69 üçüncü dili getirdi: oyunun her metni Almancada, sayı ve para dil başına biçimde; Tur 70 Steam'i getirdi ve Faz 5'i kapattı: 29 rozet Steam başarımı, tek pencere, üç işletim sisteminin Steam deposu, üç dilde mağaza sayfası; Tur 71 Faz 6'yı açtı: masaüstü bir uygulama gibi davranıyor, dar pencerede paneller üst üste binmiyor, Steam Deck'te metin büyük, lig sunucusunun eski simülasyonu canlı denetimde görünüyor). Önümüzdeki işin sırası `docs/YOL-HARITASI.md`'de.
+> Son güncelleme: şema **v6**, 75 tur (Tur 33 denendi ve geri alındı; Tur 34 eski görünüme canlılık ekledi; Tur 35 arayüzü Lite'ın "Cam & Bulut" diline taşıdı; Tur 36 şehre ayrıntı kattı; Tur 37a geç oyuna yönetim yükü, servet vergisi ve kriz dönemleri getirdi; Tur 37b karar kartlarını ve rakip hikâyelerini ekledi; Tur 37c fırsat balonlarını ve aylık görev panosunu getirdi; Tur 37d canlı pazarı, şehir projesi ihalesini ve rakip konsorsiyumunu getirdi; Tur 38 değerlendirme turuydu: geç oyun hızı, gündem ve haber akışı, zorluk eğrisi; Tur 39a senaryo modunu getirdi: Kurtarma ve Krizin ortasında; Tur 39b Konsorsiyuma karşı, Zincir ustası ve Şehrin sponsoru senaryolarını ekledi; Tur 39c Büyük şehir fethi ve Holding: iki şehir ile listeyi yediye tamamladı; Tur 40 cila ve performans; Tur 41 başarımlar ve kariyer; Tur 42 açılışta gölgelendirici derlemesi; Tur 43 oyun içi akıcılık; Tur 44 değerlendirme turuydu: Türkçe sayı biçimi, yardımın kapsamı, haber akışı; Tur 45 dört ek kural getirdi: Fırtınalı yıllar, Aç gözlü rakipler, Sıkı banka, Kıt arsa; Tur 46 açılış paketini böldü: kurulum ekranı telefonda yarı sürede; Tur 47 tek Ayarlar paneli ve erişilebilirlik getirdi: metin boyutu, renk körlüğüne uygun palet, hareket, ses düzeyleri, pencerelerde klavye; Tur 48 oyunu kurulabilir ve çevrimdışı açılır yaptı, yayından sonra "yeni sürüm hazır" diyor; Tur 49 müziği getirdi: gündüz, gece ve kriz, şehirle birlikte dönüyor; Tur 50 Faz 1'i değerlendirdi ve tanıtım paketini hazırladı; Tur 51 Faz 2'yi açtı: Lite'ın lig sunucusu ana oyunun Tohum Ligi koşularını da alıyor, tablo herkese açık; Tur 52'de sunucu her koşuyu gönderimde yeniden oynatıyor, tabloya yalnız doğrulanmış skor giriyor; Tur 53 ligin her haftasına bir ek kural ve 90 günlük günün koşusunu getirdi; Tur 54 liderlerin eğrisini senin koşunun üstüne koydu ve liderin o günlerde ne yaptığını koşu kodundan anlatıyor; Tur 55 davet kodlu arkadaş liglerini getirdi ve Faz 2'yi kapattı; Tur 56 Faz 3'ü açtı: nakliye terminali rakip mağazalarına taşıma sözleşmesiyle taşıyor; Tur 57 enerjiyi getirdi: şebeke fiyatı, santraller, enerji krizi; Tur 58 gayrimenkul geliştiricisini getirdi: konut ve ofis projeleri, kira ve doluluk, kentsel dönüşüm hakkı ve başvurusu; Tur 59 rakiplere hafıza verdi: CEO'nun mizacı, husumet ve ittifak, fiyat savaşı ve lobiyle tepki, uzlaşma; Tur 60 Faz 3'ün sektörleriyle üç senaryo ekledi: Herkesin nakliyecisi, Karanlık kış, Kentsel dönüşüm, her biri bir ek kuralla; Tur 61 Faz 3'ü değerlendirdi ve kapattı: zafere üç gerçek yol var, şirketin yolu kârın kaynağından okunuyor; Tur 62 Faz 4'ü açtı: mevsim ve hava şehirde görünüyor, ağaçlar mevsimin renginde, yağmur ve kar yağıyor; Tur 63 önemli anları getirdi: inşaatın tozu, devralmanın renk dalgası, çatılardan yükselen kâr, zafer gecesinin havai fişekleri; Tur 64 şehir kartını getirdi: koşunun özeti ve şehrin kuşbakışı tek bir görselde, indirilip paylaşılıyor; Tur 65 Faz 4'ü değerlendirdi ve kapattı: telefonda günün JS'i kısaldı, tuvalin yeri her karede okunmuyor; Tur 66 Faz 5'i açtı: masaüstü sürümü, kayıtlar ve ayarlar dosyada, Steam'e hazırlık; Tur 67 içerik paketlerini getirdi: senaryo ve kurallar dosyadan, senaryolar kodla ve bağlantıyla paylaşılıyor; Tur 68 senaryo editörünü getirdi: paket tarayıcıda alan alan kuruluyor, sınırlar formda, taslak kaydetmeden deneniyor; Tur 69 üçüncü dili getirdi: oyunun her metni Almancada, sayı ve para dil başına biçimde; Tur 70 Steam'i getirdi ve Faz 5'i kapattı: 29 rozet Steam başarımı, tek pencere, üç işletim sisteminin Steam deposu, üç dilde mağaza sayfası; Tur 71 Faz 6'yı açtı: masaüstü bir uygulama gibi davranıyor, dar pencerede paneller üst üste binmiyor, Steam Deck'te metin büyük, lig sunucusunun eski simülasyonu canlı denetimde görünüyor; Tur 72 oyunu kumandayla ve yalnız klavyeyle oynanır yaptı: haritada nişangâh, düğme ipuçları, Deck'in ekran klavyesi; Tur 73 Steam Workshop'u ve skor tablolarını getirdi: paketler Workshop'tan rafa, Tohum Ligi'nin puanı Steam'e; Tur 74 sürüm 1.0'ı getirdi: Yenilikler, oyunun içinden hata bildirme, yayın listesi; Tur 75 Faz 6'yı değerlendirdi ve kapattı: hata raporu oyunda açılıyor, kaydın neden açılmadığı oyuncunun dilinde, yeni sürümün otomatik kaydı ezilmiyor). Önümüzdeki işin sırası `docs/YOL-HARITASI.md`'de.
 
 ---
 
@@ -8762,6 +8762,219 @@ isteğe bağlı Apple Developer.
 
 ---
 
+### Tur 75 — Değerlendirme: Faz 6'nın sonu
+
+Faz 6'nın son turu. Simülasyon ve şema aynı (v6); lig izi Tur 61'den beri
+birebir (`a5ded51fb01e62a5`).
+
+**Ne denendi.**
+- Yayın listesi (`docs/YAYIN.md`) baştan sona, kuru: sürüm aracı (1.0.1'e
+  ve geri), denetimlerin komutları, iş akışları, gelen hata raporundan
+  kayda giden yol.
+- Tur 73–74'ün ekranları (Workshop rafı, Steam tablosu, Yenilikler, Hata
+  bildir) kumandayla, yalnız klavyeyle, Steam Deck boyunda (1280 × 800,
+  metin çok büyük) ve üç dilde.
+- 1.0 gerçek pencerede (WebKitGTK): sürüm satırı, Yenilikler, hata raporu
+  İndirilenler'e ve oradan oyuna. Üç işletim sisteminin 1.0.0 paketleri
+  ve Steam depoları (Masaüstü iş akışı, dört iş de yeşil).
+
+**Bulunanlar ve yapılanlar.**
+- *Hata raporu oyunda açılmıyordu.* Belge raporun kaydını `jq`'yla ayırmayı
+  söylüyordu. Rapor doğrudan Kayıtlar → "JSON içe aktar"a verilince oyun
+  "Kayıt sürümü okunamadı — dosya bozuk görünüyor" diyordu; dosya bozuk
+  değildi. Artık içe aktarma raporu türünden tanıyor, içindeki kaydı
+  açıyor. Kaydı çıkarılmış rapor nedeniyle reddediliyor.
+- *Kaydın neden açılmadığı hep Türkçeydi.* Kalıcılık katmanı nedeni Türkçe
+  bir cümle olarak döndürüyordu; İngilizce ve Almanca oyunda bildirim
+  Türkçe çıkıyordu. Artık neden bir kod (`LoadProblem`: geçersiz dosya,
+  sürümsüz, yeni sürüm, taşınamıyor, bozuk, okunamadı, boş, kayıtsız
+  rapor). Arayüz onu oyuncunun dilinde söylüyor (`loadProblem.ts`,
+  `app.load.problem.*`, üç dil). Türkçe cümle günlük ve testler için kaldı.
+- *Açılış açamadığı otomatik kaydı sessizce bırakıyordu.* Bozuk ya da daha
+  yeni bir sürümün otomatik kaydı kurulum ekranına düşüyordu; oyuncu
+  nedenini bilmiyordu. Artık kurulum ekranında bir not var: "Otomatik
+  kayıt açılmadı. Kayıt eksik ya da bozuk." Not çizimde yazılıyor:
+  oyuncu dili değiştirince o dilde.
+- *Yeni sürümün otomatik kaydı eski sürümde eziliyordu.* Örnek: Steam'in
+  beta dalı kayıt biçimini yükseltiyor, oyuncu `default`'a dönüyor. Steam
+  Cloud da o kaydı eski sürümün kurulu olduğu başka bir bilgisayara
+  taşıyabiliyor. Eski sürüm kaydı açamıyor, kurulum ekranına düşüyordu.
+  Oyuncu yeni oyuna başlayınca 30 saniye sonra otomatik kayıt yeni
+  sürümün kaydının üstüne yazıyordu: beta ilerlemesi gidiyordu.
+  - Artık her yazışta, yazmanın içinde slottaki kayda bakılıyor. Daha
+    yeni bir biçimin kaydıysa yazılmıyor (`NewerSaveError`).
+  - Otomatik kayıt duruyor, oyuncuya bir kez söyleniyor: "Bu oyunu
+    saklamak için Kayıtlar'dan başka bir slota kaydet." Elle kayıt da o
+    slota yazmıyor, nedenini söylüyor.
+  - Silinen slota yazılıyor. Okunamayan kaydın üstüne yazmak eskisi gibi:
+    kurtarılacak bir şey yok.
+  - Kurulum ekranındaki not: "Otomatik kayıt oyunun daha yeni bir
+    sürümünden (kayıt biçimi v7). Bu sürüm onu açamıyor, üstüne de
+    yazmıyor. Oyunu güncelle."
+- *Bozuk eski kayıt göçü düşürüyordu.* Bir göç adımı bozuk alanda hata
+  fırlatıyordu (ör. şirketin yerinde `null`). İçe aktarmada oyuncuya bir
+  şey söylenmiyordu, hata yakalanmadan kalıyordu; açılışta da sessizce
+  kurulum ekranına düşülüyordu. Artık göç adımının hatası "kayıt bozuk"
+  sayılıyor.
+- *Ayarlar'ın alt sayfasında Escape ve B bütün pencereyi kapatıyordu.*
+  Yenilikler'de ya da Hata bildir'de Escape (kumandada B) Ayarlar'ı
+  kapatıyordu; ipucu da "Kapat" diyordu. Hata raporunun notunu yazarken
+  Escape'e basan oyuncunun notu gidiyordu. Artık alt sayfada Escape ve B
+  Ayarlar'a dönüyor, odak sayfayı açan düğmede; ipucu "Geri". Yazı
+  alanındaysa önce alandan çıkıyor, not kalıyor. Ayarlar'da ikinci basış
+  pencereyi kapatıyor.
+- *Yayın listesinde yanlışlar.*
+  - Denge denetimi `pnpm bench` yazıyordu. CI'ın sınavı `pnpm balance`;
+    `bench` yalnız ölçüyor.
+  - Lig sunucusu için "iki sır varsa `main`'de dağıtıyor" yazıyordu.
+    Dağıtım elle (Run workflow) ya da `LITE_LEAGUE_AUTODEPLOY=true`'yla.
+    Sırlar Repository secrets'e girilmeli.
+  - Simülasyon izi "sağlık ucunda" deniyordu; `GET /v1/seed/sim`'de.
+  - Komutlar paket betikleri oldu (`pnpm bundle:check`, `pnpm playtest`).
+  - Yeni: kayıt biçimi değişen derleme betadayken ne olduğu, raporun
+    kaydının doğrudan açılması.
+- *Sürüm 1.0.1.* Düzeltmeler oyuncunun gözünde, bir yama: yayın
+  listesinin ilk gerçek koşusu. `set-version` yedi dosyayı 1.0.1'e
+  taşıdı; Yenilikler'in dört maddesi üç dilde. 1.0.0'ı görmüş oyuncuya
+  Ayarlar düğmesinde nokta çıkıyor. Lig izi aynı: sürüm numarası ligi
+  etkilemiyor.
+- *Gerçek pencere testinin öğe anahtarı yanlıştı.* `desktop-e2e.mjs`'teki
+  W3C öğe anahtarı sabiti yanlış yazılmıştı. Kullanılmadığı için
+  görünmüyordu. Bu turun bölümü gerçek tuş ve dosya seçici isteyince
+  ortaya çıktı.
+
+**İncelemede bulunanlar (Codex).**
+- *Slot oturumda bir kez okunuyordu.* İlk sürüm slotu oturumda yalnız ilk
+  yazıştan önce okuyor, sonra okumuyordu. Tarayıcıda yeni sürüm başka bir
+  sekmede açılıp aynı slota yazarken eski sürümün sekmesi açık
+  kalabiliyor; eski sekme sonraki otomatik kayıtta yeni sürümün kaydının
+  üstüne yazıyordu. Test bunu iki sekmeyle sınıyor; önceki sürümde
+  kırmızı.
+- *Denetim ile yazma ayrıydı.* Her yazıştan önce okumak da yetmiyordu:
+  okuma ile yazma iki ayrı işlemdi, öbür sekme araya girebiliyordu.
+  Artık denetim deponun yazmasının içinde (`SaveBackend.put` → `guard`):
+  tarayıcıda okuma, denetim ve yazma tek bir IndexedDB işleminde, başka
+  sekme arada yazamıyor; yerel depolamada araya bekleme girmiyor. Masaüstü
+  deposu dosyayı okuyup yazıyor (iki komut): oyun tek pencere, Steam
+  Cloud da oyun açıkken eşitlemiyor. Test ayrı bir ön okuma olmadığını
+  sınıyor (önceki sürümde kırmızı); masaüstü deposunun testi yeni sürümün
+  dosyasını yazmadığını, yarım dosyanın üstüne yazdığını.
+- *Kapanışta reddedilen kayıt ayarları da bırakıyordu.* Masaüstünde pencere
+  kapanırken oyun önce kaydı, sonra ayar dosyalarının yazılmasını
+  bekliyordu. Kayıt reddedilince (slotta yeni sürümün kaydı) ayarlar
+  beklenmeden pencere kapanıyordu; kapanmadan hemen önce değişen ayar
+  gidebiliyordu. Artık kayıt düşse de ayarlar bekleniyor (`beforeQuit`,
+  `apps/web/src/desktop/bridge.ts`).
+
+**Doğru çıkanlar.**
+- Sürüm aracı yedi dosyayı birlikte değiştiriyor, geri alınca fark
+  kalmıyor; günlüğe girdi yazılmazsa test kırmızı.
+- Tur 73–74'ün ekranlarında (raf, lig paneli, Ayarlar'ın Sürüm bölümü,
+  iki sayfa) Deck boyunda en küçük yazı 13 piksel (lig grafiğinin ekseni);
+  İngilizce ve Almancada taşma yok. Ayarlar ve iki sayfa yön tuşuyla
+  baştan sona geziliyor. İlk denemede odak takılmış görünüyordu: sahte
+  kumandanın iki karelik basışı bu makinenin yavaş karelerinde tekrar
+  sayılıyordu. Tek okumalık basışla gezinti doğru.
+- 1.0.0'ın paketleri üç işletim sisteminde çıkıyor: Windows MSI ve NSIS,
+  macOS `.app` ve DMG, Linux deb, rpm ve AppImage, üç Steam deposu. macOS
+  imzasız: Apple sırları yok. Bu beklenen; günlük eksik sırların adını
+  yazıyor.
+
+**Doğrulama.**
+- `pnpm test` 922/922 (913'ten); tip denetimi temiz; Almanca denetimi 0
+  hata.
+  - `packages/core/test/persistence.test.ts` (6 yeni): neden kodları (JSON
+    `null` ve dizi de); raporun içe aktarılması ve kayıtsız rapor; göçü
+    düşüren bozuk kayıt (içe aktarma ve açılış); yeni sürümün kaydının
+    üstüne yazılmaması, kaydın yerinde kalması, silince yazılması;
+    denetimin her yazışta yazmanın içinde olması (ayrı ön okuma yok);
+    başka sekme yeni sürümle yazınca açık sekmenin üstüne yazmaması.
+  - `packages/ui/test/release.test.ts` (1 yeni): her neden üç dilde kendi
+    metniyle; açılışın notu (kayıt yoksa yok, yeni sürümde "üstüne
+    yazmıyor").
+  - `apps/web/test/desktop.test.ts` (2 yeni): masaüstü deposu yeni
+    sürümün dosyasını yazmıyor, yarım dosyanın üstüne yazıyor; kapanırken
+    kayıt reddedilse de ayarlar yazılıyor; okuma sırası ve boş slotun
+    nedeni.
+- Gerçek pencerede uçtan uca 38/38 (30'dan). Yeni "Sürüm 1.0" bölümü, 8
+  kontrol, tuşlar gerçek (WebDriver'ın eylemleri):
+  - sürüm satırı "CapitalForge 1.0.1 · masaüstü", Yenilikler'in ilk
+    girdisi oyunun sürümü;
+  - alt sayfada Escape Ayarlar'a dönüyor, odak açan düğmede; notta Escape
+    notu silmiyor;
+  - hata raporu İndirilenler'de: sürüm, masaüstü, not, o günün kaydı;
+    oyuncuya yeri söyleniyor; ikinci Escape Ayarlar'ı kapatıyor;
+  - rapor Kayıtlar → "JSON içe aktar"la (WebDriver dosya seçiciye dosyayı
+    veriyor) açılıyor: oyun iki gün geriye, raporun gününe.
+- Tarayıcı testinin yeni bölümü "Değerlendirme: Faz 6 sonu" 11/11:
+  - alt sayfada Escape bir adım geri, ikincisi kapatıyor; notta Escape
+    notu silmiyor;
+  - hata raporu "JSON içe aktar"la açılıyor; kayıtsız rapor nedeniyle;
+  - kumandada B alt sayfada geri, ipucu "Geri"; notta önce alandan çıkıyor;
+    Ayarlar'da ipucu "Kapat";
+  - İngilizce oyunda içe aktarmanın reddi İngilizce (geçersiz dosya, yeni
+    sürüm v7);
+  - yeni sürümün otomatik kaydı: kurulum ekranında not, dil değişince o
+    dilde; yeni oyun üstüne yazmıyor, uyarı bir kez; başka slota kayıt
+    yazılıyor, yeni sürümün kaydı olan slota elle kayıt yazmıyor;
+  - konsol temiz.
+
+  "Bozuk kayıt dayanıklılığı" artık nedeni de sınıyor. Düzeltmeden önceki
+  pakette bu 13 kontrolün 11'i kırmızı; yalnız konsol ve bozuk kaydın
+  çökmemesi geçiyor. Otomatik kayıt yeni sürümün kaydını v7'den v6'ya
+  eziyordu, slot 2'yi de.
+- "Steam: Workshop ve skor tabloları" 19/19: alt sayfada Escape artık iki
+  adım.
+- İnceleme düzeltmelerinden sonra (denetim tek IndexedDB işleminde)
+  yeniden derlenen pakette "Değerlendirme: Faz 6 sonu" ve "Bozuk kayıt
+  dayanıklılığı" 13/13, "Steam" 19/19.
+- Tam tarayıcı koşusu 805/806, konsol temiz (~59 dk). Kalan tek kontrol
+  müziğin duraklama kontrolü: yük altında kalp atışı %2'de kaldı, sınır
+  %2'nin altı. Bölüm tek başına 8/8 (kalp atışı %1,1).
+- Paket bütçesi tamam: ana parça 67,2 KB (bütçe 70), kurulumun yolu
+  144,1 KB (bütçe 150). Nedenlerin üç dildeki metni ana parçada.
+
+**Faz 6'nın özeti (Tur 71–75).** Yayına hazırlık:
+- Tur 71: masaüstü bir uygulama gibi davranıyor; tam ekran, pencerenin
+  boyu ve yeri; Steam Deck'te metin büyük; dar pencerede paneller; lig
+  sunucusunun canlı denetimi simülasyonun izini karşılaştırıyor (#101).
+- Tur 72: oyun kumandayla ve yalnız klavyeyle oynanıyor; haritada
+  nişangâh, düğme ipuçları, Deck'in ekran klavyesi (#102).
+- Tur 73: Steam Workshop ve skor tabloları; paketler Workshop'tan rafa,
+  Tohum Ligi'nin puanı Steam'e, arkadaş tablosu (#103).
+- Tur 74: sürüm 1.0; Yenilikler, oyunun içinden hata bildirme, yayın
+  listesi, macOS imzası iş akışında (#104).
+- Tur 75: değerlendirme ve sürüm 1.0.1; hata raporu oyuna açılıyor,
+  kaydın neden açılmadığı oyuncunun dilinde, yeni sürümün otomatik kaydı
+  ezilmiyor (bu tur).
+
+| Ölçü | Tur 70 | Tur 75 |
+|---|---|---|
+| Birim testi | 849 | 922 |
+| Tarayıcı testi (kontrol) | 719 | 806 |
+| Rust testi (Steam'siz / Steam'li) | 11 / 10 | 32 / 29 |
+| Gerçek pencerede uçtan uca | 19 | 38 |
+| Ana parça | 74,1 KB | 67,2 KB |
+
+Ölçü tuttu: masaüstü uygulama gibi, oyun kumandayla oynanıyor, Workshop
+ve skor tabloları Steam'in komutlarında, 1.0 çıktı. Faz boyunca şema da
+simülasyon da değişmedi.
+
+Gerçek Steam'de sınanmayan ne varsa kullanıcının hesabını bekliyor:
+- Steamworks uygulama kimliği ve `docs/STEAM.md`'nin adımları: başarımlar,
+  Workshop, skor tabloları, Steam Input ve Steam Cloud ancak orada
+  denenebiliyor.
+- Steam Deck'te Linux deposu: bir Deck istiyor.
+- Lig sunucusunun dağıtımı: sırlar Repository secrets'e, sonra Run
+  workflow. Canlı sunucu Tur 71'den eski; `main`'deki canlı denetim
+  dağıtılana kadar kırmızı.
+- İsteğe bağlı Apple Developer: macOS imzası ve noter onayı.
+
+**Kalan.** Faz 7: ikinci şehir ve ticaret. Taslak turlar
+`docs/YOL-HARITASI.md`'de; kullanıcı Tur 76'dan önce değiştirebilir.
+
+---
+
 ## 3. Ölçülen durum
 
 `pnpm bench` çıktısından (360 gün, 3 tohum):
@@ -8862,10 +9075,10 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi). Senaryo şehirlerinde gün 3–17 ms (`pnpm dayperf`, Tur 43) |
-| Birim testi | **913 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de, Tur 52'de sunucuda tekrar, Tur 53'te haftanın kuralı ve günün koşusu, Tur 54'te hayalet eğri, Tur 55'te davetli ligler, Tur 56'da taşıma sözleşmeleri, Tur 57'de enerji, Tur 58'de gayrimenkul, Tur 59'da rakiplerin hafızası, Tur 60'ta senaryo paketi II, Tur 61'de şirketin yolu, Tur 62'de hava ve mevsimin görünümü, Tur 63'te önemli anlar, Tur 64'te şehir kartı, Tur 65'te telefon performansı, Tur 66'da masaüstü sürümü, Tur 67'de içerik paketleri, Tur 68'de senaryo editörü, Tur 69'da üçüncü dil, Tur 70'te Steam başarımları, Tur 71'de canlı sunucunun simülasyon izi ve Steam Deck'in varsayılanları, Tur 72'de kumanda, Tur 73'te Workshop ve skor tabloları, Tur 74'te sürüm, yenilikler ve hata raporu); Rust tarafı 32 test (`cargo test`, `apps/desktop/src-tauri`; Steam'li derlemede 29) |
+| Birim testi | **922 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de, Tur 52'de sunucuda tekrar, Tur 53'te haftanın kuralı ve günün koşusu, Tur 54'te hayalet eğri, Tur 55'te davetli ligler, Tur 56'da taşıma sözleşmeleri, Tur 57'de enerji, Tur 58'de gayrimenkul, Tur 59'da rakiplerin hafızası, Tur 60'ta senaryo paketi II, Tur 61'de şirketin yolu, Tur 62'de hava ve mevsimin görünümü, Tur 63'te önemli anlar, Tur 64'te şehir kartı, Tur 65'te telefon performansı, Tur 66'da masaüstü sürümü, Tur 67'de içerik paketleri, Tur 68'de senaryo editörü, Tur 69'da üçüncü dil, Tur 70'te Steam başarımları, Tur 71'de canlı sunucunun simülasyon izi ve Steam Deck'in varsayılanları, Tur 72'de kumanda, Tur 73'te Workshop ve skor tabloları, Tur 74'te sürüm, yenilikler ve hata raporu, Tur 75'te kaydın açılmama nedeni ve yeni sürümün kaydı); Rust tarafı 32 test (`cargo test`, `apps/desktop/src-tauri`; Steam'li derlemede 29) |
 | Denge testi | **379 kontrol, hepsi geçiyor** (33 bölüm, süreleriyle; ~16 dk) |
-| Tarayıcı testi | **790 kontrol** (Tur 74'te 18 yeni), son tam koşu 781/783 (Tur 74, Tur 73'ün son iki düzeltmesinden önceki tabanda; yük altında düşen iki kontrol tek başına geçti; Tur 69'da 719/719), 0 konsol hatası (bu yavaş makinede ~76 dk, CI'da `main`'de ~64 dk); duman koşusu 132 (CI'da ~5 dk, rehber dahil) |
-| CI | her PR'da tip + test + denge + paket + paket bütçesi (Tur 46; Tur 48'den beri hizmet çalışanı ve manifest de) + duman oynanışı; `main`'de tam oynanış (Tur 72'den beri 120 dk sınırı); masaüstüne dokunan PR'da Rust testleri, sürüm derlemesi ve gerçek pencerede 30 kontrol (Tur 66'da 17) |
+| Tarayıcı testi | **806 kontrol** (Tur 75'te 11 yeni; Tur 74'teki 790 lig sunucusu bölümünün yarıda kalan bir koşusundan sayılmıştı, bölüm 24 kontrol), son tam koşu 805/806 (Tur 75; yük altında düşen müzik kontrolü tek başına geçti; Tur 69'da 719/719), 0 konsol hatası (bu yavaş makinede ~59 dk, CI'da `main`'de ~64 dk); duman koşusu 132 (CI'da ~5 dk, rehber dahil) |
+| CI | her PR'da tip + test + denge + paket + paket bütçesi (Tur 46; Tur 48'den beri hizmet çalışanı ve manifest de) + duman oynanışı; `main`'de tam oynanış (Tur 72'den beri 120 dk sınırı); masaüstüne dokunan PR'da Rust testleri, sürüm derlemesi ve gerçek pencerede 38 kontrol (Tur 66'da 17) |
 | Kapsam | 40 bina · 25 ürün · 7 kategori · 8 rakip profili · 10 CEO · 22 olay (11 şehir + 11 sektör) · 3 kriz · 12 karar kartı · 70 rakip sözü · 4 mizaç · 48 ilişki sözü · 5 fırsat balonu · 8 görev türü · 4 mevsim · 6 hava · 9 moda ürünü · 17 şehir yapısı (6 siluet) · 6 şehir projesi · 10 senaryo · 4 ek kural · 5 yol · 29 rozet |
 
 ### Render (Tur 6 sonrası)

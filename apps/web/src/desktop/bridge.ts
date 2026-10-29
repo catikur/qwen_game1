@@ -25,6 +25,20 @@ interface TauriGlobal {
 /** Kabuğun "pencere kapanıyor" haberi (`main.rs` → `CLOSE_EVENT`). */
 export const CLOSE_EVENT = 'capitalforge://close-requested';
 
+/**
+ * Kapanmadan önce: oyunun kaydı, sonra ayar dosyaları. Kayıt düşse de
+ * (slotta yeni sürümün kaydı, disk) ayarlar yazılıyor: kapanmadan hemen
+ * önce değişen ayar gitmesin (Codex #105).
+ */
+export async function beforeQuit(save: () => Promise<void>, flush: () => Promise<void>): Promise<void> {
+  try {
+    await save();
+  } catch (error) {
+    console.warn('Kapanırken kayıt başarısız:', error);
+  }
+  await flush();
+}
+
 function tauri(): TauriGlobal | undefined {
   return (window as unknown as { __TAURI__?: TauriGlobal }).__TAURI__;
 }

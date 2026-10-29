@@ -51,6 +51,8 @@ export { initWhatsNew } from './whatsNew';
 export { installErrorLog } from './errorLog';
 export { setReportHost } from './reportHost';
 export type { ReportHost } from './reportHost';
+// Kaydın neden açılmadığı, oyuncunun dilinde (Tur 75).
+export { bootLoadNotice, loadProblemText } from './loadProblem';
 export { applyUpdate, getAppShell, installApp, setAppShell, setAppShellActions, subscribeAppShell, useAppShell } from './appShell';
 export type { AppShellActions, AppShellState } from './appShell';
 export {

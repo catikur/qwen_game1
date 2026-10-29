@@ -20,6 +20,18 @@ export const app: Record<keyof typeof trApp, string> = {
   'app.export.blocked': 'Downloads are blocked in this view — copy the save from the text box below.',
   'app.import.file': 'Save imported.',
   'app.import.text': 'Save loaded from text.',
+  'app.load.problem.notJson': 'The file is not valid JSON.',
+  'app.load.problem.noVersion': 'This file is not a CapitalForge save, or it is damaged.',
+  'app.load.problem.newer': 'This save is from a newer version of the game (save format v{version}). Update the game.',
+  'app.load.problem.noMigration': 'This save (save format v{version}) can’t be brought into this version.',
+  'app.load.problem.broken': 'The save is incomplete or damaged.',
+  'app.load.problem.unreadable': 'The save couldn’t be read.',
+  'app.load.problem.empty': 'This slot is empty.',
+  'app.load.problem.reportWithoutSave': 'This bug report has no save: it was left out when the report was saved.',
+  'app.boot.notLoaded': 'The autosave didn’t open. {reason}',
+  'app.boot.newer': 'The autosave is from a newer version of the game (save format v{version}). This version can’t open it and won’t write over it. Update the game.',
+  'app.save.newerSlot': 'Slot {slot} holds a save from a newer version of the game; it wasn’t overwritten. Pick another slot.',
+  'app.save.newerAutosave': 'Autosave is off: the slot holds a save from a newer version of the game. To keep this game, save it to another slot in Saves.',
 
   // LeaguePanel.tsx: Seed League panel and result screen.
   // Tur 55: arkadaş ligleri — davet kodu, ligin tablosu.

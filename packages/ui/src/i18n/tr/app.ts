@@ -18,6 +18,19 @@ export const app = {
   'app.export.blocked': 'İndirme bu görünümde engelli — kaydı aşağıdaki metin kutusundan kopyala.',
   'app.import.file': 'Kayıt içe aktarıldı.',
   'app.import.text': 'Kayıt metinden yüklendi.',
+  // Tur 75: kaydın neden açılmadığı oyuncunun dilinde (persistence → LoadProblem).
+  'app.load.problem.notJson': 'Dosya geçerli JSON değil.',
+  'app.load.problem.noVersion': 'Bu dosya bir CapitalForge kaydı değil ya da bozuk.',
+  'app.load.problem.newer': 'Bu kayıt oyunun daha yeni bir sürümünden (kayıt biçimi v{version}). Oyunu güncelle.',
+  'app.load.problem.noMigration': 'Bu kayıt (kayıt biçimi v{version}) bu sürüme taşınamıyor.',
+  'app.load.problem.broken': 'Kayıt eksik ya da bozuk.',
+  'app.load.problem.unreadable': 'Kayıt okunamadı.',
+  'app.load.problem.empty': 'Bu slotta kayıt yok.',
+  'app.load.problem.reportWithoutSave': 'Bu hata raporunda kayıt yok: rapor kaydedilirken çıkarılmış.',
+  'app.boot.notLoaded': 'Otomatik kayıt açılmadı. {reason}',
+  'app.boot.newer': 'Otomatik kayıt oyunun daha yeni bir sürümünden (kayıt biçimi v{version}). Bu sürüm onu açamıyor, üstüne de yazmıyor. Oyunu güncelle.',
+  'app.save.newerSlot': 'Slot {slot}: oyunun daha yeni bir sürümünün kaydı var, üstüne yazılmadı. Başka bir slot seç.',
+  'app.save.newerAutosave': 'Otomatik kayıt yapılmıyor: slotta oyunun daha yeni bir sürümünün kaydı var. Bu oyunu saklamak için Kayıtlar\'dan başka bir slota kaydet.',
 
   // LeaguePanel.tsx: Tohum Ligi paneli ve sonuç ekranı.
   // Tur 55: arkadaş ligleri — davet kodu, ligin tablosu.

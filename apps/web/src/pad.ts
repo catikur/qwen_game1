@@ -227,10 +227,16 @@ function run(action: PadAction): void {
 
 type HintButton = 'a' | 'b' | 'x' | 'y' | 'lb' | 'rb' | 'menu' | 'view' | 'dpad';
 
+/** Ayarlar'ın alt sayfası (Yenilikler, Hata bildir): B pencereyi kapatmıyor, Ayarlar'a döndürüyor (Tur 75). */
+const SUBPAGE = '[data-settings-page]';
+
 function hintsFor(layer: PadLayer): Array<[HintButton, PadMessageKey]> {
   const map = mapHandler();
   if (layer === 'decision') return [['a', 'hud.pad.select'], ['dpad', 'hud.pad.move']];
-  if (layer === 'modal') return [['a', 'hud.pad.select'], ['b', 'hud.pad.close'], ['dpad', 'hud.pad.move'], ...(map ? ([['lb', 'hud.pad.panels']] as Array<[HintButton, PadMessageKey]>) : [])];
+  if (layer === 'modal') {
+    const back: PadMessageKey = topModal()?.querySelector(SUBPAGE) ? 'hud.pad.back' : 'hud.pad.close';
+    return [['a', 'hud.pad.select'], ['b', back], ['dpad', 'hud.pad.move'], ...(map ? ([['lb', 'hud.pad.panels']] as Array<[HintButton, PadMessageKey]>) : [])];
+  }
   if (layer === 'hud') return [['a', 'hud.pad.select'], ['b', 'hud.pad.toMap'], ['dpad', 'hud.pad.move']];
   if (!map) return [['a', 'hud.pad.select'], ['dpad', 'hud.pad.move'], ['b', 'hud.pad.back']];
   if (map.placing()) return [['a', 'hud.pad.place'], ['b', 'hud.pad.cancel']];

@@ -15,6 +15,10 @@ import WhatsNewPage from '../src/WhatsNewPage';
 import BugReportPage from '../src/BugReportPage';
 import { CHANGELOG } from '../src/changelog';
 import { appEdition, setAppEdition, subscribeAppEdition } from '../src/version';
+import { bootLoadNotice, loadProblemText } from '../src/loadProblem';
+import { registerLocale } from '../src/i18n';
+import { en as enMessages } from '../src/i18n/en';
+import { de as deMessages } from '../src/i18n/de';
 
 /**
  * Sürüm 1.0 (Tur 74): hata raporunun biçimi, uyarı günlüğü, yeni sürüm
@@ -216,7 +220,9 @@ describe('Ayarlar: sürüm', () => {
     setLocale('en');
     const en = renderToStaticMarkup(createElement(WhatsNewPage));
     assert.match(en, /Version 1\.0\.0<span class="muted"> · October 29, 2026<\/span>/);
-    assert.ok(en.includes(CHANGELOG[0]!.notes.en[0]!.replace(/'/g, '&#x27;')));
+    // Maddenin metni, React'in kaçışıyla (tırnaklar da: 1.0.1'in ilk maddesi "Import JSON" diyor).
+    const escaped = CHANGELOG[0]!.notes.en[0]!.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#x27;');
+    assert.ok(en.includes(escaped), escaped);
   });
 
   test('Hata bildir: not, kayıt ve günlük seçimi, ön izleme, adres; kabuk yoksa kaydetme kapalı, e-posta bağlantısı tarayıcıda', () => {
@@ -246,6 +252,35 @@ describe('Ayarlar: sürüm', () => {
     for (const key of keys) {
       assert.equal(holes(releaseEn[key]), holes(releaseTr[key]), `İngilizce ${key}`);
       assert.equal(holes(releaseDe[key]), holes(releaseTr[key]), `Almanca ${key}`);
+    }
+  });
+});
+
+describe('kaydın neden açılmadığı, oyuncunun dilinde (Tur 75)', () => {
+  test('her neden üç dilde kendi metniyle; açılışın notu: kayıt yoksa yok, yeni sürümde "üstüne yazmıyor"', () => {
+    registerLocale('en', enMessages);
+    registerLocale('de', deMessages);
+    const problems = ['notJson', 'noVersion', 'newer', 'noMigration', 'broken', 'unreadable', 'empty', 'reportWithoutSave'] as const;
+    try {
+      const seen: string[] = [];
+      for (const locale of ['tr', 'en', 'de']) {
+        setLocale(locale);
+        const texts = problems.map((problem) => loadProblemText({ problem, version: 9 }));
+        assert.equal(new Set(texts).size, problems.length, `${locale}: her nedenin kendi metni`);
+        assert.ok(texts.every((text) => !text.startsWith('app.')), `${locale}: ham anahtar yok`);
+        assert.match(texts[2]!, /v9/);
+        seen.push(texts[0]!);
+      }
+      assert.equal(new Set(seen).size, 3, 'üç dilin metni farklı (Türkçeye düşmüyor)');
+      setLocale('en');
+      assert.equal(loadProblemText({ problem: 'notJson' }), 'The file is not valid JSON.');
+      assert.equal(bootLoadNotice({ problem: 'empty' }), null);
+      assert.equal(bootLoadNotice({ problem: 'broken' }), 'The autosave didn’t open. The save is incomplete or damaged.');
+      assert.match(bootLoadNotice({ problem: 'newer', version: 9 }) ?? '', /v9\). This version can’t open it and won’t write over it/);
+      setLocale('tr');
+      assert.match(bootLoadNotice({ problem: 'newer', version: 9 }) ?? '', /üstüne de yazmıyor/);
+    } finally {
+      setLocale('tr');
     }
   });
 });

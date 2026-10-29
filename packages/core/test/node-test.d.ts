@@ -25,6 +25,8 @@ declare module 'node:assert/strict' {
     notDeepEqual(actual: unknown, expected: unknown, message?: string): void;
     match(value: string, pattern: RegExp, message?: string): void;
     rejects(promise: Promise<unknown>, message?: string): Promise<void>;
+    /** Beklenen hata: sınıfı ya da doğrulayan işlev (Tur 75). */
+    rejects(promise: Promise<unknown>, expected: (new (...args: never[]) => Error) | ((error: unknown) => boolean), message?: string): Promise<void>;
     fail(message?: string): never;
   }
   const assert: Assert;

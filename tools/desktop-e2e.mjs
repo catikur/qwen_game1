@@ -14,7 +14,10 @@
 // - oyun bir web sayfası gibi davranmıyor (Tur 71): tarayıcı kısayolları ve
 //   sağ tık menüsü kapalı, metin seçilmiyor (yazı alanı hariç), F11 tam ekran,
 //   pencerenin durumu kapanışta dosyaya; Steam Deck'te (`SteamDeck=1`) metin
-//   ilk açılışta "çok büyük".
+//   ilk açılışta "çok büyük";
+// - sürüm 1.0 (Tur 74–75): Ayarlar'da sürüm satırı ve Yenilikler, hata raporu
+//   İndirilenler'e ve oradan Kayıtlar'a geri (içindeki kayıt açılıyor); alt
+//   sayfada Escape yalnız Ayarlar'a dönüyor, notu silmiyor (gerçek tuşlar).
 //
 // Gerekenler: tauri-driver (`cargo install tauri-driver --locked`),
 // WebKitWebDriver (Debian/Ubuntu: webkit2gtk-driver), ekran (xvfb-run).
@@ -28,7 +31,10 @@ const ROOT = new URL('..', import.meta.url).pathname;
 const BIN = process.argv[2] ?? join(ROOT, 'apps/desktop/src-tauri/target/release/capitalforge');
 const SHOTS = process.env.SHOTS ?? '';
 const PORT = 4444;
-const ELEMENT = 'element-6066-11e4-a52e-4f735a0b8a07';
+// W3C WebDriver'ın öğe anahtarı (öğe bulmanın yanıtında).
+const ELEMENT = 'element-6066-11e4-a52e-4f735466cecf';
+// WebDriver'ın Escape tuşu.
+const ESCAPE = '\uE00C';
 const DATA = mkdtempSync(join(tmpdir(), 'capitalforge-desktop-'));
 const OUT = join(DATA, 'Downloads');
 
@@ -84,6 +90,19 @@ class Window {
       await sleep(300);
     }
     throw new Error(`${label}: ${timeoutMs / 1000} sn içinde olmadı (${JSON.stringify(last)})`);
+  }
+
+  /** WebDriver'ın öğeye yazması: alana gerçek tuşlar, dosya seçicisine dosyanın yolu. */
+  async type(css, text) {
+    const element = await wd('POST', `/session/${this.id}/element`, { using: 'css selector', value: css });
+    await wd('POST', `/session/${this.id}/element/${element[ELEMENT]}/value`, { text });
+  }
+
+  /** Gerçek bir tuş (WebDriver eylemleri): odaktaki öğeye gidiyor. */
+  async key(value) {
+    await wd('POST', `/session/${this.id}/actions`, {
+      actions: [{ type: 'key', id: 'klavye', actions: [{ type: 'keyDown', value }, { type: 'keyUp', value }] }],
+    });
   }
 
   /** Tıklama sayfanın içinden: WebDriver'ın "tıklanabilir mi" beklemesi saniyede birkaç karede uzuyor. */
@@ -357,6 +376,58 @@ try {
   check('Şehir kartı İndirilenler\'de: PNG, 1200 × 630', bytes.subarray(1, 4).toString() === 'PNG' && size[0] === 1200 && size[1] === 630, `${png} · ${size.join(' × ')} · ${Math.round(bytes.length / 1024)} KB`);
   if (SHOTS) writeFileSync(join(SHOTS, 'desktop-card-file.png'), bytes);
   await win.click('[data-city-card-close]');
+
+  section('Sürüm 1.0');
+  // Tur 74–75: Ayarlar'da sürüm satırı ve Yenilikler; hata raporu kabuğun
+  // dosya yolundan İndirilenler'e, oradan Kayıtlar → "JSON içe aktar" ile
+  // geri (içindeki kayıt açılıyor). Alt sayfada Escape yalnız Ayarlar'a
+  // dönüyor, nota yazarken önce alandan çıkıyor. Tuşlar gerçek.
+  const appVersion = JSON.parse(readFileSync(join(ROOT, 'apps/web/package.json'), 'utf8')).version;
+  await win.click('[data-panel="settings"]');
+  const line = await win.until(`document.querySelector('[data-app-version]')?.textContent`, 20_000, 'sürüm satırı');
+  check(`Ayarlar'da sürüm satırı: CapitalForge ${appVersion} · masaüstü`, line.trim() === `CapitalForge ${appVersion} · masaüstü`, line);
+  await win.click('[data-settings-page-open="whatsNew"]');
+  const release = await win.until(`document.querySelector('[data-release]')?.dataset.release`, 20_000, 'Yenilikler');
+  check('Yenilikler açılıyor, en üstteki girdi oyunun sürümü', release === appVersion, release);
+  await win.key(ESCAPE);
+  const backed = await win.until(`!document.querySelector('[data-settings-page]') && document.querySelector('[data-settings]') && { focus: document.activeElement?.dataset.settingsPageOpen ?? document.activeElement?.tagName }`, 10_000, "Ayarlar'a dönüş");
+  check("Alt sayfada Escape Ayarlar'a dönüyor, odak sayfayı açan düğmede", backed.focus === 'whatsNew', JSON.stringify(backed));
+  await win.click('[data-settings-page-open="report"]');
+  await win.until(`document.querySelector('[data-report-save-state="ready"]')`, 20_000, 'raporun kaydı');
+  const note = 'Masaüstünde deneme notu';
+  await win.type('[data-report-note]', note);
+  await win.key(ESCAPE);
+  const kept = await win.run(`return {
+    page: document.querySelector('[data-settings-page]')?.dataset.settingsPage ?? null,
+    note: document.querySelector('[data-report-note]')?.value ?? null,
+    focus: document.activeElement?.tagName ?? null,
+  };`);
+  check('Notta Escape notu silmiyor: alandan çıkıyor, sayfa yerinde', kept.page === 'report' && kept.note === note && kept.focus !== 'TEXTAREA', JSON.stringify(kept));
+  await win.click('[data-report-download]');
+  const reportName = await untilFile(() => exported('.json').find((name) => name.startsWith('capitalforge-hata-raporu-')), 20_000, 'hata raporu');
+  const report = await untilFile(() => JSON.parse(readFileSync(join(OUT, reportName), 'utf8')), 20_000, 'raporun tamamı');
+  check("Hata raporu İndirilenler'de: sürüm, masaüstü, not ve o anki kayıt",
+    report.kind === 'capitalforge-bug-report' && report.app?.version === appVersion && report.app?.edition === 'desktop'
+      && report.note === note && report.save?.state?.time?.day === day,
+    `${reportName} · ${report.app?.version} ${report.app?.edition} · ${report.save?.state?.time?.day}. gün`);
+  const reportNotice = await win.until(`document.querySelector('[data-report-notice]')?.textContent.includes('İndirilenler') && document.querySelector('[data-report-notice]').textContent`, 10_000, 'raporun bildirimi');
+  check('Oyuncuya raporun nerede olduğu söyleniyor', reportNotice.includes(reportName), reportNotice);
+  await win.key(ESCAPE);
+  await win.until(`!document.querySelector('[data-settings-page]') && document.querySelector('[data-settings]')`, 10_000, "Ayarlar'a dönüş");
+  await win.key(ESCAPE);
+  const settingsClosed = await win.until(`!document.querySelector('[data-settings]')`, 10_000, 'Ayarlar kapanıyor');
+  check("İkinci Escape Ayarlar'ı kapatıyor", settingsClosed === true);
+  // Oyun iki gün ilerliyor: raporu açınca kaydın günü geri gelmeli.
+  const later = await win.run(`
+    const c = window.__capital;
+    for (let i = 0; i < 2; i++) c.engine.runDay();
+    return c.getState().time.day;`);
+  await win.click('[data-panel="saves"]');
+  await win.until(`document.querySelector('.saverow-actions input[type="file"]')`, 20_000, 'kayıt paneli');
+  await win.type('.saverow-actions input[type="file"]', join(OUT, reportName));
+  const fromReport = await win.until(`window.__capital.getState().time.day === ${day} && [...document.querySelectorAll('.toasts .toast')].map((t) => t.textContent).join(' | ')`, 20_000, 'raporun kaydı');
+  check('Hata raporu Kayıtlar → JSON içe aktar ile açılıyor: içindeki kayıt yükleniyor',
+    later === day + 2 && fromReport.includes('Kayıt içe aktarıldı'), `${later}. gün → ${day}. gün · ${fromReport}`);
 
   section('Ayarlar ve kapanış');
   await win.run(`localStorage.setItem('capitalforge.locale', 'en'); return true;`);
