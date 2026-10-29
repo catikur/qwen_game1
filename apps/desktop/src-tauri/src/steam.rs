@@ -152,17 +152,22 @@ pub fn unlock(_names: Vec<String>) {}
 /// Steam'in ekran klavyesi (Tur 72): kumandayla bir yazı alanı seçildi.
 /// Alanın yeri pencerenin içinde, fiziksel piksel; Steam klavyeyi alanı
 /// örtmeyecek yerde açıyor ve tuşları pencereye gönderiyor. Steam Deck'te ve
-/// Büyük Resim kipinde açılıyor; başka yerde Steam `false` diyor.
+/// Büyük Resim kipinde açılıyor; başka yerde Steam `false` diyor. Çok
+/// satırlı alanda (senaryo editörü, kod kutuları) klavyenin Enter'ı satır başı.
 #[cfg(feature = "steam")]
-pub fn keyboard(x: i32, y: i32, width: i32, height: i32) -> bool {
+pub fn keyboard(x: i32, y: i32, width: i32, height: i32, multiline: bool) -> bool {
     let Some(client) = &STATE.get_or_init(connect).client else { return false };
-    let mode = steamworks::FloatingGamepadTextInputMode::SingleLine;
+    let mode = if multiline {
+        steamworks::FloatingGamepadTextInputMode::MultipleLines
+    } else {
+        steamworks::FloatingGamepadTextInputMode::SingleLine
+    };
     client.utils().show_floating_gamepad_text_input(mode, x, y, width, height, || {})
 }
 
 /// Steam'siz derlemede klavye yok; oyuncu kendi klavyesiyle yazıyor.
 #[cfg(not(feature = "steam"))]
-pub fn keyboard(_x: i32, _y: i32, _width: i32, _height: i32) -> bool {
+pub fn keyboard(_x: i32, _y: i32, _width: i32, _height: i32, _multiline: bool) -> bool {
     false
 }
 
@@ -337,6 +342,7 @@ mod tests {
         let status = status();
         assert!(!status.available);
         unlock(names(&["CF_EMPIRE"]));
-        assert!(!keyboard(0, 0, 320, 40), "ekran klavyesi yok");
+        assert!(!keyboard(0, 0, 320, 40, false), "ekran klavyesi yok");
+        assert!(!keyboard(0, 0, 320, 120, true), "çok satırlısı da");
     }
 }

@@ -175,7 +175,7 @@ function press(element: HTMLElement): void {
   if (isTextField(element)) {
     // Ekran klavyesi (Steam Deck): masaüstü kabuğu dinliyor.
     const rect = element.getBoundingClientRect();
-    const field: TextField = { x: rect.left, y: rect.top, width: rect.width, height: rect.height };
+    const field: TextField = { x: rect.left, y: rect.top, width: rect.width, height: rect.height, multiline: !(element instanceof HTMLInputElement) };
     window.dispatchEvent(new CustomEvent(TEXT_INPUT_EVENT, { detail: field }));
     return;
   }

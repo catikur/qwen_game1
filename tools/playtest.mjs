@@ -8814,7 +8814,8 @@ async function finish(browser, consoleErrors) {
     // Kurulum: şirket adı alanı açılışta odakta; A ekran klavyesini istiyor (Steam Deck).
     await tap(pp, 'a');
     const field = await pp.evaluate(() => window.__textInput ?? null);
-    check('Yazı alanında A ekran klavyesini istiyor: alanın yeri masaüstü kabuğuna gidiyor', field !== null && field.width > 0 && field.height > 0, JSON.stringify(field));
+    check('Yazı alanında A ekran klavyesini istiyor: alanın yeri ve tek satırlı olduğu masaüstü kabuğuna gidiyor',
+      field !== null && field.width > 0 && field.height > 0 && field.multiline === false, JSON.stringify(field));
     let reached = false;
     for (let i = 0; i < 30 && !reached; i++) {
       await tap(pp, 'down');

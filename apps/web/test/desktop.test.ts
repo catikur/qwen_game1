@@ -281,7 +281,7 @@ function fakeSteam(available: boolean, failUnlocks = 0) {
 function fakeHost(devicePixelRatio: number) {
   const host = new EventTarget() as EventTarget & { devicePixelRatio: number };
   host.devicePixelRatio = devicePixelRatio;
-  const field = (detail: { x: number; y: number; width: number; height: number }) =>
+  const field = (detail: { x: number; y: number; width: number; height: number; multiline: boolean }) =>
     host.dispatchEvent(new CustomEvent(TEXT_INPUT_EVENT, { detail }));
   return { host, field };
 }
@@ -338,14 +338,19 @@ describe('Steam başarımları (Tur 70)', () => {
     const steam = fakeSteam(true);
     const deck = fakeHost(1.5);
     await initSteam(steam.invoke, fakeCareer([]).source, deck.host);
-    deck.field({ x: 100.4, y: 40, width: 320, height: 36.2 });
+    deck.field({ x: 100.4, y: 40, width: 320, height: 36.2, multiline: false });
+    // Senaryo editörünün yazı kutusu: Steam'in klavyesi de çok satırlı (Codex #102).
+    deck.field({ x: 0, y: 100, width: 400, height: 120, multiline: true });
     await settle();
-    assert.deepEqual(steam.keyboards, [{ x: 151, y: 60, width: 480, height: 54 }]);
+    assert.deepEqual(steam.keyboards, [
+      { x: 151, y: 60, width: 480, height: 54, multiline: false },
+      { x: 0, y: 150, width: 600, height: 180, multiline: true },
+    ]);
     // Steam yoksa klavye de istenmiyor.
     const off = fakeSteam(false);
     const pc = fakeHost(1);
     await initSteam(off.invoke, fakeCareer([]).source, pc.host);
-    pc.field({ x: 0, y: 0, width: 320, height: 36 });
+    pc.field({ x: 0, y: 0, width: 320, height: 36, multiline: false });
     await settle();
     assert.deepEqual(off.keyboards, []);
   });

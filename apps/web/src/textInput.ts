@@ -11,4 +11,6 @@ export interface TextField {
   readonly y: number;
   readonly width: number;
   readonly height: number;
+  /** Çok satırlı alan (yazı kutusu, düzenlenebilir içerik): klavyenin Enter'ı satır başı (Codex #102). */
+  readonly multiline: boolean;
 }

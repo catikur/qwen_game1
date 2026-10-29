@@ -8297,8 +8297,10 @@ yazı alanında ekran klavyesi.
     kanca girdi.
 - *Steam Deck'in ekran klavyesi.* Kumandayla bir yazı alanı seçilince
   (şirket adı, davet kodu) Steam'in klavyesi alanı örtmeden açılıyor
-  (`ShowFloatingGamepadTextInput`, kabuğun `steam_keyboard` komutu). Steam
-  Input'un önerilen düzeni `docs/STEAM.md`'de (adım 7).
+  (`ShowFloatingGamepadTextInput`, kabuğun `steam_keyboard` komutu). Çok
+  satırlı alanda (senaryo editörü, kod kutuları) klavye de çok satırlı,
+  Enter satır başı (Codex #102). Steam Input'un önerilen düzeni
+  `docs/STEAM.md`'de (adım 7).
 
 **Tarayıcıda bulunanlar.** Hepsi sahte kumandayla oynanırken çıktı.
 - *Haritadan sola basınca odak yanlış yere gidiyordu.* Sol sütundaki yapı

@@ -67,7 +67,7 @@ export async function initSteam(
     const field = (event as CustomEvent<TextField>).detail;
     const scale = host.devicePixelRatio || 1;
     const [x, y, width, height] = [field.x, field.y, field.width, field.height].map((value) => Math.round(value * scale));
-    invoke<boolean>('steam_keyboard', { x, y, width, height }).catch((error: unknown) => {
+    invoke<boolean>('steam_keyboard', { x, y, width, height, multiline: field.multiline === true }).catch((error: unknown) => {
       console.warn('Ekran klavyesi açılamadı:', error);
     });
   });

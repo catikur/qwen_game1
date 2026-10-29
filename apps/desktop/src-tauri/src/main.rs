@@ -142,10 +142,10 @@ fn steam_unlock(names: Vec<String>) {
 }
 
 /// Steam Deck'in ekran klavyesi (Tur 72): yazı alanının yeri, pencerenin
-/// içinde fiziksel piksel. Açıldıysa `true`.
+/// içinde fiziksel piksel; çok satırlı alanda klavye de çok satırlı. Açıldıysa `true`.
 #[tauri::command]
-fn steam_keyboard(x: i32, y: i32, width: i32, height: i32) -> bool {
-    steam::keyboard(x, y, width, height)
+fn steam_keyboard(x: i32, y: i32, width: i32, height: i32, multiline: bool) -> bool {
+    steam::keyboard(x, y, width, height, multiline)
 }
 
 /// Sayfa kaydını bitirdi: kapan.
