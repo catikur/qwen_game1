@@ -9233,9 +9233,15 @@ async function finish(browser, consoleErrors) {
         steam_workshop_list: () => (window.__workshopReady
           ? { items: [{ id: '7001', packs: [pack, '{bozuk'] }, { id: '7002', packs: [second] }], downloading: 0 }
           : { items: [{ id: '7001', packs: [pack, '{bozuk'] }], downloading: 1 }),
-        // İlk yükleme yeni öğe; oyuncu sözleşmeyi henüz kabul etmemiş.
-        steam_workshop_publish: ({ request }) => ({ id: request.item ?? '9001', agreement: !request.item }),
-        steam_workshop_open: () => true,
+        // Yeni öğe açılıyor ama paket gitmiyor (Codex #103): kimlik yine dönüyor.
+        // Oyuncu sözleşmeyi Steam'de açana kadar kabul etmemiş.
+        steam_workshop_publish: ({ request }) => (request.item
+          ? { id: request.item, agreement: !window.__workshopAgreed }
+          : { id: '9001', agreement: true, failed: 'yüklenemedi: Steam yanıt vermedi' }),
+        steam_workshop_open: ({ target }) => {
+          if (target === 'agreement') window.__workshopAgreed = true;
+          return true;
+        },
         steam_leaderboard_upload: ({ score }) => ({ score: Math.round(score), changed: true, rank: 7 }),
         steam_leaderboard_friends: () => [
           { name: 'Ada', score: 1, rank: 9, me: false },
@@ -9310,7 +9316,8 @@ async function finish(browser, consoleErrors) {
     const opened = (await calls('steam_workshop_open')).map(([, args]) => args.target);
     check('Steam\'de açılan sayfalar: oyunun Workshop\'u, sonra öğenin kendisi', opened.join() === 'workshop,7001', opened.join());
 
-    // Oyuncunun kendi paketi: Workshop'a yükleme, onay, sözleşme, sonra aynı öğenin güncellenmesi.
+    // Oyuncunun kendi paketi: Workshop'a yükleme ve onay. İlk deneme yarıda kalıyor (öğe açıldı,
+    // paket gitmedi): kimlik saklanıyor, yeniden deneme aynı öğeyi güncelliyor (Codex #103). Sonra sözleşme.
     await sp.locator('[data-pack-add] summary').click();
     await sp.locator('[data-pack-example]').click();
     await sp.locator('[data-pack-submit]').click();
@@ -9320,30 +9327,44 @@ async function finish(browser, consoleErrors) {
     const confirm = (await sp.locator('[data-pack-actions] .pack-confirm').textContent().catch(() => '')) ?? '';
     check('Yüklemeden önce onay: herkese açık, yazar Steam adı', /herkese açık yayımlansın mı/.test(confirm) && /Steam'deki adın/.test(confirm), confirm.slice(0, 120));
     await sp.locator('[data-pack-publish-yes]').click();
-    await sp.waitForFunction(() => /yayımlandı/.test(document.querySelector('[data-pack-actions] [data-pack-notice]')?.textContent ?? ''), null, { timeout: 10000 }).catch(() => null);
-    const published = await sp.evaluate(() => ({
+    /** n. yüklemenin yanıtı gelip duyuru kalıba uyana kadar. */
+    const settled = (n, pattern) => sp.waitForFunction(({ n, source }) =>
+      window.__steamCalls.filter(([command]) => command === 'steam_workshop_publish').length === n
+        && new RegExp(source).test(document.querySelector('[data-pack-actions] [data-pack-notice]')?.textContent ?? ''), { n, source: pattern.source }, { timeout: 10000 }).catch(() => null);
+    const shelfState = () => sp.evaluate(() => ({
       notice: document.querySelector('[data-pack-actions] [data-pack-notice]')?.textContent ?? '',
       agreement: document.querySelectorAll('[data-pack-workshop-agreement]').length,
       update: document.querySelectorAll('[data-pack-publish="update"]').length,
       stored: localStorage.getItem('capitalforge.workshop.v1'),
     }));
+    await settled(1, /paket yüklenemedi/);
+    const half = await shelfState();
     const [first] = (await calls('steam_workshop_publish')).map(([, args]) => args.request);
     const firstPack = first ? JSON.parse(first.pack) : null;
-    check('Yüklendi: paketin kendisi, adı ve senaryolarının listesi; öğe hatırlanıyor; sözleşme uyarısı ve düğmesi',
+    check('İlk yükleme yarıda kalınca öğenin kimliği saklanıyor: düğme "güncelle", oyuncuya söyleniyor; istekte paketin kendisi, adı ve senaryo listesi',
       first && first.item === undefined && first.title === ownName && firstPack?.id === 'ornek' && first.description.startsWith(`• ${ownName} — `)
-        && /yayımlandı/.test(published.notice) && /sözleşmesini kabul edene kadar/.test(published.notice) && published.agreement === 1
-        && published.update === 1 && published.stored === '{"ornek":"9001"}',
-      `${JSON.stringify({ ...first, pack: firstPack?.id })} · ${JSON.stringify(published)}`);
+        && /açıldı ama paket yüklenemedi/.test(half.notice) && half.update === 1 && half.agreement === 0 && half.stored === '{"ornek":"9001"}',
+      `${JSON.stringify({ ...first, pack: firstPack?.id })} · ${JSON.stringify(half)}`);
+    await sp.locator('[data-pack-actions] [data-pack-publish="update"]').click();
+    await sp.locator('[data-pack-publish-yes]').click();
+    await settled(2, /güncellendi/);
+    const retried = await shelfState();
+    const second = (await calls('steam_workshop_publish')).map(([, args]) => args.request)[1];
+    check('Yeniden deneyince aynı öğe güncelleniyor, yeni öğe açılmıyor; sözleşme uyarısı ve düğmesi',
+      second?.item === '9001' && /güncellendi/.test(retried.notice) && /sözleşmesini kabul edene kadar/.test(retried.notice)
+        && retried.agreement === 1 && retried.stored === '{"ornek":"9001"}',
+      `${second?.item ?? 'yeni'} · ${JSON.stringify(retried)}`);
     await sp.locator('[data-pack-workshop-agreement]').click();
     await sp.locator('[data-pack-actions] [data-pack-publish="update"]').click();
     await sp.locator('[data-pack-publish-yes]').click();
-    await sp.waitForFunction(() => /güncellendi/.test(document.querySelector('[data-pack-actions] [data-pack-notice]')?.textContent ?? ''), null, { timeout: 10000 }).catch(() => null);
+    await settled(3, /güncellendi/);
     const requests = (await calls('steam_workshop_publish')).map(([, args]) => args.request);
     const targets = (await calls('steam_workshop_open')).map(([, args]) => args.target);
-    check('İkinci yükleme aynı öğeyi güncelliyor; sözleşme Steam\'de açılıyor',
-      requests.length === 2 && requests[1].item === '9001' && targets.at(-1) === 'agreement'
-        && /güncellendi/.test((await sp.locator('[data-pack-actions] [data-pack-notice]').textContent()) ?? ''),
-      `${requests.map((r) => r.item ?? 'yeni').join(',')} · ${targets.join(',')}`);
+    const agreed = await shelfState();
+    check('Sözleşme Steam\'de açılıyor; sonraki yükleme de aynı öğe, uyarı kalkmış',
+      requests.length === 3 && requests[2].item === '9001' && targets.at(-1) === 'agreement'
+        && /güncellendi/.test(agreed.notice) && !/sözleşmesini/.test(agreed.notice) && agreed.agreement === 0,
+      `${requests.map((r) => r.item ?? 'yeni').join(',')} · ${targets.join(',')} · ${agreed.notice}`);
     await sp.screenshot({ path: `${OUT}/steam-workshop.png` });
 
     // Tohum Ligi: panelde Steam arkadaşları, bitince puan Steam'in tablosuna da.

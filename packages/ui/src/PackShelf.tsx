@@ -241,8 +241,14 @@ export function PackActions({ def, onRemoved }: { def: ScenarioDef; onRemoved: (
         description: workshopDescription(own),
         pack: JSON.stringify(own.pack),
       });
-      // Öğe Steam'de silinmişse kabuk yenisini açtı: kimlik değişebiliyor.
+      // Öğe Steam'de silinmişse kabuk yenisini açtı: kimlik değişebiliyor. Öğe açılıp
+      // paket gitmediyse de kimlik saklanıyor: yeniden deneyince aynı öğe güncelleniyor.
       rememberPublished(own.pack.id, result.id);
+      if (result.failed) {
+        console.warn('Workshop öğesi açıldı, paket yüklenemedi:', result.failed);
+        setNotice({ tone: 'bad', text: pt('hud.pack.workshop.incomplete') });
+        return;
+      }
       setPublished(result);
       const done = pt(ownItem ? 'hud.pack.workshop.updated' : 'hud.pack.workshop.published', { name });
       setNotice({ tone: 'good', text: result.agreement ? `${done} ${pt('hud.pack.workshop.agreement')}` : done });

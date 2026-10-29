@@ -42,7 +42,8 @@
     (`packages/ui/src/packStore.ts`): "Workshop: <paket>" künyesiyle, salt
     okunur, en çok 40 paket. Bozuk dosya atlanıyor. Aynı kimlikte
     oyuncunun kendi paketi varsa o geçiyor. İnmekte olan öğeler rafta
-    sayılıyor; raf açılınca, pencereye dönünce ve inen öğe varken beş
+    sayılıyor; güncellemesi inen öğe de (Steam bitirene kadar klasörüne
+    dokunulmuyor). Raf açılınca, pencereye dönünce ve inen öğe varken beş
     saniyede bir liste tazeleniyor. Abonelik Steam'de bırakılınca paket
     raftan gidiyor.
   - *Yükleme.* Oyuncu kendi paketini rafın "Workshop'a yükle" düğmesiyle
@@ -51,7 +52,8 @@
     açıklama Steamworks'ün bayt sınırlarına kısaltılıyor (UTF-8; başlık
     128, açıklama 7999 bayt, sondaki sıfırın yeri ayrı). Öğenin kimliği
     cihazda saklanıyor (`capitalforge.workshop.v1`): sonraki yükleme aynı
-    öğeyi güncelliyor; öğe Steam'de silindiyse yenisi açılıyor.
+    öğeyi güncelliyor; öğe Steam'de silindiyse yenisi açılıyor. Öğe açılıp
+    paket gidemezse de kimlik saklanıyor, yeniden deneme o öğeye gidiyor.
     Workshop sözleşmesini kabul etmemiş oyuncunun öğesini Steam gizli
     tutuyor; oyun bunu söylüyor ve sözleşmeyi açıyor.
   - *Steam'de açmak.* Öğenin sayfası, oyunun Workshop'u ve sözleşme

@@ -63,6 +63,11 @@ export interface WorkshopPublished {
   id: string;
   /** Oyuncu Workshop sözleşmesini kabul etmemiş: Steam öğeyi o zamana kadar gizli tutuyor. */
   agreement: boolean;
+  /**
+   * Yeni öğe açıldı ama paket gitmedi (kabuğun nedeni). Kimlik yine saklanıyor:
+   * sonraki yükleme bu öğeyi güncelliyor, Workshop'ta boş öğe birikmiyor (Codex #103).
+   */
+  failed?: string;
 }
 
 export interface WorkshopBridge {

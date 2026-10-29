@@ -64,6 +64,7 @@ export const packDe: Record<PackMessageKey, string> = {
   'hud.pack.workshop.agreement': 'Steam hält den Eintrag verborgen, bis du die Workshop-Vereinbarung akzeptierst.',
   'hud.pack.workshop.openAgreement': 'Vereinbarung öffnen',
   'hud.pack.workshop.failed': 'Hochladen in den Workshop fehlgeschlagen. Prüfe die Verbindung von Steam und versuch es noch mal.',
+  'hud.pack.workshop.incomplete': 'Der Eintrag wurde im Workshop angelegt, das Paket aber nicht hochgeladen. Beim nächsten Versuch wird derselbe Eintrag aktualisiert.',
   'hud.pack.issue.type': 'muss {expected} sein',
   'hud.pack.issue.missing': 'fehlt',
   'hud.pack.issue.unknownField': 'unbekanntes Feld',

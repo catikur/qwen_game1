@@ -8422,8 +8422,9 @@ sunucusundaydı; Steam'deki arkadaşlarla kıyas yoktu.
   - Aynı kimlikte oyuncunun kendi paketi varsa o geçiyor; onu kaldırınca
     Workshop sürümü geri geliyor. İki öğede aynı kimlik varsa ilki.
   - Liste raf açılınca, pencereye dönünce ve inen öğe varken beş saniyede
-    bir tazeleniyor. Değişmeyen öğenin tanımı aynı nesne kalıyor: seçili
-    senaryonun ayrıntısı sıfırlanmıyor.
+    bir tazeleniyor. Güncellemesi inen öğe de inmekte sayılıyor; Steam
+    bitirene kadar klasörüne dokunulmuyor. Değişmeyen öğenin tanımı aynı
+    nesne kalıyor: seçili senaryonun ayrıntısı sıfırlanmıyor.
   - Rafın başında "Workshop'a göz at"; inen öğeler rafın üstünde sayılıyor.
     Workshop paketinde "Steam'de aç" ve abonelik notu var, kaldırma yok.
 - *Workshop'a yükleme.* Kendi paketinde "Workshop'a yükle", onaydan sonra
@@ -8432,6 +8433,8 @@ sunucusundaydı; Steam'deki arkadaşlarla kıyas yoktu.
   - Öğenin kimliği cihazda (`capitalforge.workshop.v1`); sonraki yükleme
     "Workshop'ta güncelle" ile aynı öğeye gidiyor.
   - Öğe Steam'de silindiyse kabuk yeni öğe açıyor; kimlik boşta kalmıyor.
+  - Öğe açılıp paket gidemezse kimlik yine saklanıyor; yeniden deneyince
+    aynı öğe güncelleniyor.
   - Workshop sözleşmesini kabul etmemiş oyuncunun öğesini Steam gizli
     tutuyor. Oyun bunu söylüyor, "Sözleşmeyi aç" düğmesi koyuyor.
 - *Steam'de açmak.* Sayfalar Steam katmanında. Katman oyuna tutunmadıysa
@@ -8478,6 +8481,18 @@ elle açmak gerekmiyor, "trusted" yapılmamalı).
   256 bayta varabiliyordu. Kabuk artık baytı sınıyor (başlık 128, metinler
   7999). Sayfa da başlığı ve açıklamayı karakter bölmeden o sınırlara
   kısaltıyor (`fitUtf8`, `workshop.ts`); uzun adlı paket reddedilmiyor.
+- *Güncellenen öğe eski klasörden okunuyordu.* Kurulu bir öğenin yeni
+  sürümü çıkınca kabuk indirmeyi başlatıyor ama eski klasörü okumaya devam
+  ediyordu ve öğeyi inmekte saymıyordu. Raf da yoklamayı başlatmıyor, eski
+  paket oyun yeniden açılana kadar kalıyordu. Steam de indirme bitmeden
+  klasöre dokunulmamasını istiyor. Artık güncellenen, inen ve indirmesi
+  istenmiş öğe bekliyor ve sayılıyor (`plan`, `workshop.rs`).
+- *Yarıda kalan yükleme Workshop'ta boş öğe bırakıyordu.* Yeni paketin
+  yüklemesi iki adım: öğeyi açmak ve içeriği göndermek. İkincisi başarısız
+  olunca kabuk yalnız hatayı dönüyordu, açılan öğenin kimliği kayboluyordu.
+  Her yeniden deneme yeni bir öğe açıyordu. Artık kimlik yanıtta
+  (`failed` alanıyla); sayfa onu saklıyor, oyuncuya "öğe açıldı ama paket
+  yüklenemedi" diyor, yeniden deneme aynı öğeyi güncelliyor.
 
 **Doğrulama.**
 - `pnpm test` 886/886 (876'dan); tip denetimi temiz; Almanca denetimi 0
@@ -8490,25 +8505,29 @@ elle açmak gerekmiyor, "trusted" yapılmamalı).
     komutlarına kabuğun adlarıyla gidiyor, Steam yoksa köprü yok; ligin
     hangi sonucu Steam'e gidiyor. Komut listesi sekiz Steam komutunu
     arıyor.
-- `cargo test` 28/28 (21'den), `cargo test --features steam` 25/25
+- `cargo test` 30/30 (21'den), `cargo test --features steam` 27/27
   (20'den), clippy iki derlemede de temiz.
   - Klasördeki paketler: sırayla, büyük ve başka dosya atlanıyor.
   - Yükleme isteği Steamworks'ün sınırlarında: başlık, açıklama ve not
     (UTF-8 bayt), paket boyu, öğe kimliği.
+  - Abone olunan öğenin durumu: güncel öğe rafta; inmemiş, güncellenen,
+    inen ve indirmesi istenmiş öğe bekliyor, indirme bir kez isteniyor.
+  - Yarıda kalan yüklemenin yanıtı kimliği taşıyor; tamamlananda alan yok.
   - Açılan sayfa yalnız Workshop, sözleşme ya da öğe.
   - Tablo adı yalnız ligin hafta ve gün kimliğinden; net değer tablonun
     puanına kırpılıyor (eksi, sayı olmayan, 32 biti aşan).
   - Steam'siz derlemede Workshop ve tablo yok.
-- Tarayıcı testinin yeni bölümü "Steam: Workshop ve skor tabloları" (11
-  kontrol) 11/11. Masaüstü paketi tarayıcıda sahte bir kabukla, Steam
+- Tarayıcı testinin yeni bölümü "Steam: Workshop ve skor tabloları" (12
+  kontrol) 12/12. Masaüstü paketi tarayıcıda sahte bir kabukla, Steam
   açık:
   - Workshop paketi rafta, bozuk dosyası atlanmış, inen öğe sayılıyor.
   - İnen öğe bitince raf odak olayı olmadan yenileniyor, sonra liste
     istemek duruyor. Düzeltmeden önceki pakette bu kontrol kırmızı.
   - "Steam'de aç" doğru sayfaları istiyor.
   - Yükleme onaylı. İstek paketin kendisini, adını ve senaryo listesini
-    taşıyor; sözleşme uyarısı çıkıyor; ikinci yükleme aynı öğeyi
-    güncelliyor.
+    taşıyor. İlk deneme yarıda kalıyor: kimlik saklanıyor, yeniden deneme
+    aynı öğeyi güncelliyor (düzeltmeden önceki pakette kırmızı). Sözleşme
+    uyarısı çıkıyor, sözleşme açılınca kalkıyor.
   - Lig panelinde Steam arkadaşları sırayla.
   - Bitirilip gönderilen koşunun puanı Steam'in o haftaki tablosunda,
     sonuç ekranında sırası. Konsol temiz.

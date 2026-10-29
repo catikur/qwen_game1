@@ -63,6 +63,31 @@ pub struct Published {
     pub id: String,
     /// Oyuncu Workshop sözleşmesini kabul etmemiş: Steam öğeyi o zamana kadar gizli tutuyor.
     pub agreement: bool,
+    /// Yeni öğe açıldı ama içerik gitmedi: kimlik yine sayfaya dönüyor, sonraki
+    /// yükleme bu öğeyi güncelliyor. Yoksa her deneme Workshop'ta yeni bir boş
+    /// öğe bırakıyordu (Codex #103).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub failed: Option<String>,
+}
+
+/// Abone olunan öğe için ne yapılacak: içeriği rafa okunur mu, indirme istenir mi.
+#[cfg(any(feature = "steam", test))]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Plan {
+    pub ready: bool,
+    pub download: bool,
+}
+
+/// Steam'in öğe durumundan (`EItemState`) plan. Kurulu ama güncellemesi olan öğe
+/// de bekliyor: Steam, `DownloadItem`'dan sonra `DownloadItemResult_t` gelene
+/// kadar klasöre dokunulmamasını istiyor. Bekleyen öğe "iniyor" sayılıyor, raf
+/// onu bitene kadar yokluyor (Codex #103). Zaten inen öğeye indirme yeniden
+/// istenmiyor.
+#[cfg(any(feature = "steam", test))]
+pub fn plan(installed: bool, needs_update: bool, downloading: bool, pending: bool) -> Plan {
+    let busy = downloading || pending;
+    let stale = !installed || needs_update;
+    Plan { ready: installed && !stale && !busy, download: stale && !busy }
 }
 
 /// Klasördeki paket dosyaları: `.json`, ad sırasıyla, en çok `MAX_FILES`.
@@ -115,7 +140,7 @@ mod live {
     use std::sync::mpsc;
     use std::time::Duration;
 
-    use super::{check, page, read_packs, Item, Listing, Publish, Published};
+    use super::{check, page, plan, read_packs, Item, Listing, Publish, Published};
 
     /// Öğe açma kısa; içerik yükleme bağlantıya göre uzun sürebiliyor.
     const CREATE_WAIT: Duration = Duration::from_secs(30);
@@ -133,15 +158,18 @@ mod live {
         let mut listing = Listing::default();
         for id in ugc.subscribed_items(false) {
             let state = ugc.item_state(id);
-            // İnmemiş ya da eskimiş öğe: Steam indiriyor; eskimişin eski sürümü rafta.
-            if !state.contains(steamworks::ItemState::INSTALLED) || state.contains(steamworks::ItemState::NEEDS_UPDATE) {
+            let plan = plan(
+                state.contains(steamworks::ItemState::INSTALLED),
+                state.contains(steamworks::ItemState::NEEDS_UPDATE),
+                state.contains(steamworks::ItemState::DOWNLOADING),
+                state.contains(steamworks::ItemState::DOWNLOAD_PENDING),
+            );
+            if plan.download {
                 ugc.download_item(id, false);
             }
-            match ugc.item_install_info(id) {
-                Some(info) if state.contains(steamworks::ItemState::INSTALLED) => {
-                    listing.items.push(Item { id: id.0.to_string(), packs: read_packs(Path::new(&info.folder)) });
-                }
-                _ => listing.downloading += 1,
+            match ugc.item_install_info(id).filter(|_| plan.ready) {
+                Some(info) => listing.items.push(Item { id: id.0.to_string(), packs: read_packs(Path::new(&info.folder)) }),
+                None => listing.downloading += 1,
             }
         }
         listing
@@ -170,7 +198,7 @@ mod live {
     fn submit(client: &steamworks::Client, request: &Publish, item: Option<&str>) -> Result<Published, Failure> {
         let ugc = client.ugc();
         let app = client.utils().app_id();
-        let (id, mut agreement) = match item {
+        let (id, agreement) = match item {
             Some(item) => (steamworks::PublishedFileId(item.parse().map_err(|_| Failure::Other("öğenin kimliği bozuk".into()))?), false),
             None => {
                 let (tx, rx) = mpsc::channel();
@@ -180,6 +208,16 @@ mod live {
                 wait(&rx, CREATE_WAIT).map_err(Failure::Other)?.map_err(|error| Failure::Other(format!("öğe açılamadı: {error}")))?
             }
         };
+        match upload(&ugc, app, id, request, item.is_some()) {
+            Ok(needs) => Ok(Published { id: id.0.to_string(), agreement: agreement || needs, failed: None }),
+            // Öğe bu çağrıda açıldı, içerik gitmedi: kimlik kaybolmasın (`Published::failed`).
+            Err(Failure::Other(text)) if item.is_none() => Ok(Published { id: id.0.to_string(), agreement, failed: Some(text) }),
+            Err(failure) => Err(failure),
+        }
+    }
+
+    /// Öğenin içeriğini ve künyesini gönderir; Steam'in sözleşme uyarısını döner.
+    fn upload(ugc: &steamworks::UGC, app: steamworks::AppId, id: steamworks::PublishedFileId, request: &Publish, existing: bool) -> Result<bool, Failure> {
         // İçerik bir klasör: paket `pack.json` olarak geçici dizinde.
         let dir = std::env::temp_dir().join("capitalforge-workshop").join(id.0.to_string());
         let write = std::fs::create_dir_all(&dir).and_then(|()| std::fs::write(dir.join("pack.json"), &request.pack));
@@ -198,11 +236,10 @@ mod live {
         let submitted = wait(&rx, SUBMIT_WAIT);
         let _ = std::fs::remove_dir_all(&dir);
         let (_, needs) = submitted.map_err(Failure::Other)?.map_err(|error| match error {
-            steamworks::SteamError::FileNotFound if item.is_some() => Failure::Gone,
+            steamworks::SteamError::FileNotFound if existing => Failure::Gone,
             error => Failure::Other(format!("yüklenemedi: {error}")),
         })?;
-        agreement |= needs;
-        Ok(Published { id: id.0.to_string(), agreement })
+        Ok(needs)
     }
 
     /// Sayfa Steam katmanında; katman oyuna tutunmadıysa (pencere bir WebView,
@@ -308,6 +345,26 @@ mod tests {
         for bad in ["", "../x", "https://example.com", "42/../1", "-1"] {
             assert_eq!(page(bad, 480), None, "{bad}");
         }
+    }
+
+    #[test]
+    fn guncellenen_ya_da_inen_oge_bekliyor_klasorune_dokunulmuyor() {
+        // (kurulu, güncellemesi var, iniyor, indirme istendi)
+        assert_eq!(plan(true, false, false, false), Plan { ready: true, download: false }, "güncel öğe rafta");
+        assert_eq!(plan(false, false, false, false), Plan { ready: false, download: true }, "inmemiş öğe isteniyor");
+        // Codex #103: kurulu ama güncellemesi olan öğe eski klasörden okunuyordu ve sayılmıyordu.
+        assert_eq!(plan(true, true, false, false), Plan { ready: false, download: true }, "güncellemesi olan öğe bekliyor");
+        assert_eq!(plan(true, true, true, false), Plan { ready: false, download: false }, "inen öğeye indirme yeniden istenmiyor");
+        assert_eq!(plan(true, false, false, true), Plan { ready: false, download: false }, "istenmiş indirme bitene kadar bekliyor");
+        assert_eq!(plan(false, true, false, true), Plan { ready: false, download: false });
+    }
+
+    #[test]
+    fn yuklemenin_yarida_kalisi_kimligi_tasiyor_yoksa_alan_yok() {
+        let done = Published { id: "9001".into(), agreement: false, failed: None };
+        assert_eq!(serde_json::to_value(&done).unwrap(), serde_json::json!({ "id": "9001", "agreement": false }));
+        let half = Published { id: "9001".into(), agreement: true, failed: Some("yüklenemedi: zaman aşımı".into()) };
+        assert_eq!(serde_json::to_value(&half).unwrap()["failed"], "yüklenemedi: zaman aşımı");
     }
 
     #[cfg(not(feature = "steam"))]
