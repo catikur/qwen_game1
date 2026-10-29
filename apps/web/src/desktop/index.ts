@@ -3,7 +3,7 @@ import { careerUnlockedIds, setAppEdition, setDeviceDefaults, subscribeCareer } 
 import { setFileSink } from '../host';
 import type { DeliveryOutcome } from '../host';
 import { saveBeforeLeaving } from '../pwa';
-import { CLOSE_EVENT, desktopEvents, desktopInvoke } from './bridge';
+import { CLOSE_EVENT, beforeQuit, desktopEvents, desktopInvoke } from './bridge';
 import type { Invoke } from './bridge';
 import { nativeFeel } from './native';
 import { hydrate, mirror } from './profile';
@@ -77,10 +77,9 @@ export async function initDesktop(): Promise<boolean> {
     await desktopEvents()?.listen(CLOSE_EVENT, async () => {
       try {
         await Promise.race([
-          (async () => {
-            await saveBeforeLeaving();
+          beforeQuit(saveBeforeLeaving, async () => {
             await profile?.idle();
-          })(),
+          }),
           new Promise((resolve) => setTimeout(resolve, CLOSE_SAVE_MS)),
         ]);
       } catch (error) {

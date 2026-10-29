@@ -7,6 +7,7 @@ import { GameEngine } from '../../../packages/core/src/engine';
 import { GAME_VERSION, createNewGame } from '../../../packages/core/src/worldgen';
 import { NewerSaveError, listSaves, loadGame, saveGame, setSaveBackend } from '../../../packages/persistence/src/index';
 import { ACHIEVEMENTS, STEAM_ACHIEVEMENTS } from '../../../packages/content/src/index';
+import { beforeQuit } from '../src/desktop/bridge';
 import type { Invoke, InvokeOptions } from '../src/desktop/bridge';
 import { hydrate, isProfileKey, mirror } from '../src/desktop/profile';
 import { fileSaves } from '../src/desktop/saves';
@@ -249,6 +250,26 @@ describe('kayıt slotları dosyada', () => {
     shell.files.set(1, new TextEncoder().encode('{ "meta": '));
     await saveGame(state, 1);
     assert.equal(JSON.parse(new TextDecoder().decode(shell.files.get(1))).meta.slot, 1);
+  });
+
+  test('kapanırken kayıt reddedilse de ayar dosyaları yazılıyor (Codex #105)', async () => {
+    const order: string[] = [];
+    const warn = console.warn;
+    console.warn = () => undefined;
+    try {
+      // Slotta yeni sürümün kaydı: kapanıştaki kayıt reddediliyor, ayarların yazılması yine bekleniyor.
+      await beforeQuit(
+        async () => {
+          order.push('kayıt');
+          throw new NewerSaveError(0, 99);
+        },
+        async () => void order.push('ayarlar'),
+      );
+      await beforeQuit(async () => void order.push('kayıt'), async () => void order.push('ayarlar'));
+    } finally {
+      console.warn = warn;
+    }
+    assert.deepEqual(order, ['kayıt', 'ayarlar', 'kayıt', 'ayarlar']);
   });
 });
 
