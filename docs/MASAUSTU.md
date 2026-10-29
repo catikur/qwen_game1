@@ -43,7 +43,8 @@ Web sürümünden farkı:
   kapandığı boyda, yerde, büyütülmüş ya da tam ekran açılıyor (kabuğun
   `src/window.rs` modülü). Boy ve yer yalnız pencere kipindeyken
   hatırlanıyor: tam ekranda kapanan oyun tam ekran açılıyor, çıkınca pencere
-  eski boyunda. En küçük pencere 960 × 600.
+  eski boyunda. Ekran düzeni değiştiyse (ikinci ekran çıkarılmış) pencere
+  kalan ekrana sığdırılıyor. En küçük pencere 960 × 600.
 - **Steam Deck (Tur 71).** Steam, Deck'te başlattığı sürece `SteamDeck=1`
   veriyor; kabuk bunu `shell_info` ile söylüyor ve metin ilk açılışta "çok
   büyük" oluyor (Valve'ın okunabilirlik ölçüsü 1280 × 800'de en küçük yazı 12

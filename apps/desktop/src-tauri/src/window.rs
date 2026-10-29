@@ -89,27 +89,57 @@ pub struct Plan {
     pub fullscreen: bool,
 }
 
-/// `screens`: ekranların yeri ve boyu (x, y, genişlik, yükseklik).
-pub fn plan(memory: Option<Memory>, screens: &[(i32, i32, u32, u32)]) -> Plan {
+/// Bir ekran: yer ve boy (x, y, genişlik, yükseklik).
+pub type Screen = (i32, i32, u32, u32);
+
+/// Pencerenin ekranla kesişen alanı (piksel²).
+fn overlap(memory: &Memory, &(x, y, width, height): &Screen) -> i64 {
+    let left = i64::from(memory.x).max(i64::from(x));
+    let right = (i64::from(memory.x) + i64::from(memory.width)).min(i64::from(x) + i64::from(width));
+    let top = i64::from(memory.y).max(i64::from(y));
+    let bottom = (i64::from(memory.y) + i64::from(memory.height)).min(i64::from(y) + i64::from(height));
+    (right - left).max(0) * (bottom - top).max(0)
+}
+
+/// `screens`: ilki birincil ekran. Pencere ekranlarda tümüyle görünüyorsa
+/// (iki ekrana yayılmış olsa da) olduğu gibi açılıyor. Ekran düzeni
+/// değiştiyse (ikinci ekran çıkarılmış) en çok kesiştiği ekrana sığdırılıyor:
+/// bir piksellik kesişim yetmiyordu, ikinci ekranda kalan pencere başlık
+/// çubuğuyla birlikte ekranın dışında açılıyordu (Codex). Hiç kesişmiyorsa
+/// birincil ekranın ortasında; ekrandan büyük boy ekrana iniyor.
+pub fn plan(memory: Option<Memory>, screens: &[Screen]) -> Plan {
     let Some(memory) = memory else {
         return Plan { size: None, position: None, maximize: true, fullscreen: false };
     };
-    let size = memory.sized().then_some((memory.width, memory.height));
-    // Ekranı artık yoksa (ikinci ekran çıkarılmış) yeri işletim sistemi seçiyor.
-    let on_screen = size.is_some()
-        && screens.iter().any(|&(x, y, width, height)| {
-            i64::from(memory.x) < i64::from(x) + i64::from(width)
-                && i64::from(memory.x) + i64::from(memory.width) > i64::from(x)
-                && i64::from(memory.y) < i64::from(y) + i64::from(height)
-                && i64::from(memory.y) + i64::from(memory.height) > i64::from(y)
-        });
-    Plan {
-        size,
-        position: on_screen.then_some((memory.x, memory.y)),
-        // Pencere kipinde hiç boy olmadıysa oyuncunun gördüğü tek pencere büyütülmüştü.
-        maximize: memory.maximized || size.is_none(),
-        fullscreen: memory.fullscreen,
+    // Pencere kipinde hiç boy olmadıysa oyuncunun gördüğü tek pencere büyütülmüştü.
+    let maximize = memory.maximized || !memory.sized();
+    let fullscreen = memory.fullscreen;
+    if !memory.sized() {
+        return Plan { size: None, position: None, maximize, fullscreen };
     }
+    let visible: i64 = screens.iter().map(|screen| overlap(&memory, screen)).sum();
+    let whole = i64::from(memory.width) * i64::from(memory.height);
+    if visible >= whole {
+        return Plan { size: Some((memory.width, memory.height)), position: Some((memory.x, memory.y)), maximize, fullscreen };
+    }
+    // Ekranlar okunamadıysa boy hatırlandığı gibi, yeri işletim sistemi seçiyor.
+    let Some(best) = screens.iter().max_by_key(|screen| overlap(&memory, screen)) else {
+        return Plan { size: Some((memory.width, memory.height)), position: None, maximize, fullscreen };
+    };
+    let touching = overlap(&memory, best) > 0;
+    let &(sx, sy, sw, sh) = if touching { best } else { &screens[0] };
+    let (width, height) = (memory.width.min(sw), memory.height.min(sh));
+    let (free_x, free_y) = (i64::from(sw - width), i64::from(sh - height));
+    let (x, y) = if touching {
+        (
+            i64::from(memory.x).clamp(i64::from(sx), i64::from(sx) + free_x),
+            i64::from(memory.y).clamp(i64::from(sy), i64::from(sy) + free_y),
+        )
+    } else {
+        (i64::from(sx) + free_x / 2, i64::from(sy) + free_y / 2)
+    };
+    // Kırpılan değerler ekranın içinde: i32'ye sığıyor.
+    Plan { size: Some((width, height)), position: Some((x as i32, y as i32)), maximize, fullscreen }
 }
 
 pub fn load(dir: &Path) -> Option<Memory> {
@@ -150,12 +180,15 @@ pub fn restore<R: Runtime>(app: &AppHandle<R>, window: &Window<R>) {
     let memory = config_dir(app).and_then(|dir| load(&dir));
     // Önce yönetime: uygulamanın yol açtığı boyut haberleri `track`'e düşüyor.
     app.manage(Remembered(Mutex::new(memory.unwrap_or_default())));
-    let screens: Vec<_> = window
-        .available_monitors()
-        .unwrap_or_default()
-        .iter()
-        .map(|monitor| (monitor.position().x, monitor.position().y, monitor.size().width, monitor.size().height))
-        .collect();
+    let screen = |monitor: &tauri::Monitor| -> Screen {
+        (monitor.position().x, monitor.position().y, monitor.size().width, monitor.size().height)
+    };
+    let mut screens: Vec<Screen> = window.available_monitors().unwrap_or_default().iter().map(screen).collect();
+    // `plan` birincil ekranı başta bekliyor.
+    if let Some(primary) = window.primary_monitor().ok().flatten().as_ref().map(screen) {
+        screens.retain(|other| *other != primary);
+        screens.insert(0, primary);
+    }
     let plan = plan(memory, &screens);
     if let Some((width, height)) = plan.size {
         let _ = window.set_size(PhysicalSize::new(width, height));
@@ -243,14 +276,35 @@ mod tests {
         assert_eq!(plan(Some(never), &[(0, 0, 1920, 1080)]), Plan { size: None, position: None, maximize: true, fullscreen: true });
     }
 
+    const PRIMARY: Screen = (0, 0, 1920, 1080);
+    const SECOND: Screen = (1920, 0, 2560, 1440);
+
     #[test]
-    fn ekrani_olmayan_yer_ve_bozuk_boy_kullanilmiyor() {
+    fn ekranlarda_tumuyle_gorunen_pencere_oldugu_gibi() {
         let memory = Memory { x: 2200, y: 100, width: 1280, height: 760, maximized: false, fullscreen: false };
-        // İkinci ekran çıkarılmış: boy kalıyor, yeri işletim sistemi seçiyor.
-        assert_eq!(plan(Some(memory), &[(0, 0, 1920, 1080)]).position, None);
-        assert_eq!(plan(Some(memory), &[(0, 0, 1920, 1080), (1920, 0, 2560, 1440)]).position, Some((2200, 100)));
+        assert_eq!(plan(Some(memory), &[PRIMARY, SECOND]).position, Some((2200, 100)));
+        // İki ekrana yayılmış pencere de: yayılmayı oyuncu seçti.
+        let spread = Memory { x: 1500, ..memory };
+        assert_eq!(plan(Some(spread), &[PRIMARY, SECOND]).position, Some((1500, 100)));
         let small = Memory { width: 400, height: 300, ..memory };
-        assert_eq!(plan(Some(small), &[(0, 0, 1920, 1080)]), Plan { size: None, position: None, maximize: true, fullscreen: false });
+        assert_eq!(plan(Some(small), &[PRIMARY]), Plan { size: None, position: None, maximize: true, fullscreen: false });
+    }
+
+    #[test]
+    fn ekran_cikarilinca_pencere_kalan_ekrana_sigdiriliyor() {
+        // Codex'in örneği: çoğu ikinci ekranda (x = 1900), birincilde yalnız 20 piksel.
+        let mostly_second = Memory { x: 1900, y: 100, width: 1280, height: 760, maximized: false, fullscreen: false };
+        let plan_one = plan(Some(mostly_second), &[PRIMARY]);
+        assert_eq!(plan_one.size, Some((1280, 760)));
+        assert_eq!(plan_one.position, Some((640, 100)), "birincil ekrana tümüyle giriyor");
+        // Hiç kesişmeyen, ekrandan büyük pencere: boy ekrana iniyor, birincilin ortasında.
+        let big = Memory { x: 2000, y: 50, width: 2400, height: 1300, maximized: false, fullscreen: false };
+        let plan_big = plan(Some(big), &[PRIMARY]);
+        assert_eq!((plan_big.size, plan_big.position), (Some((1920, 1080)), Some((0, 0))));
+        let away = Memory { x: 5000, y: 3000, ..mostly_second };
+        assert_eq!(plan(Some(away), &[PRIMARY]).position, Some((320, 160)));
+        // Ekranlar okunamadı: boy hatırlandığı gibi, yer işletim sisteminin.
+        assert_eq!(plan(Some(away), &[]), Plan { size: Some((1280, 760)), position: None, maximize: false, fullscreen: false });
     }
 
     #[test]

@@ -8111,6 +8111,14 @@ sayılmıyor, çünkü tam ekrana geçerken boy haberi kip haberinden önce
 gelebiliyor. Büyütme ve tam ekran ayrı işaretler. İlk açılışın büyütülmesi
 de bu modülde: hafıza yoksa büyütülmüş.
 
+Beşincide yine pencere: ekran düzeni değişince (ikinci ekran çıkarılmış)
+bir piksellik kesişim de "ekranda" sayılıyordu. Çoğu ikinci ekranda kalan
+pencere başlık çubuğuyla birlikte ekranın dışında açılırdı. Artık pencere
+ekranlarda tümüyle görünüyorsa olduğu gibi açılıyor; iki ekrana yayılmış
+olsa da. Görünmüyorsa en çok kesiştiği ekrana sığdırılıyor. Hiç
+kesişmiyorsa birincil ekranın ortasında açılıyor, ekrandan büyük boy ekrana
+iniyor.
+
 **Cursor Bugbot'un bulduğu şey.** Kısayol süzgeci yazı alanında harf
 yutuyordu. Windows'ta AltGr, Ctrl+Alt olarak geliyor: Almanca "}" (AltGr+0)
 "yakınlığı sıfırla", Lehçe "ś", "ó", "ń" (AltGr+S, O, N) "kaydet, aç, yeni
@@ -8149,12 +8157,18 @@ duruyordu: test dışa aktarılan kaydı adı görünür görünmez okuyor, dosy
     yalnız seçilmemiş metin boyunda; PC'den gelen, metin boyu seçilmemiş
     kayıtta da (Codex); Deck'te seçilmemiş boy PC'de normal, eski kayıttaki
     seçim yerinde.
-- `cargo test` 17/17, `cargo test --features steam` 16/16; `SteamDeck`
-  ortam değişkeni (1, 0, boş, yok). Pencerenin hafızası (5 yeni): boy ve yer
-  yalnız pencere kipinde, ekranı kaplayan boy sayılmıyor; tam ekranda kapanan
-  pencere tam ekran ama eski boyuyla açılıyor (Codex'in senaryosu); ilk açılış
-  büyütülmüş, küçültülmüş kapanış önceki kipte; çıkarılmış ekranın yeri ve
-  bozuk boy kullanılmıyor; bozuk dosya ilk açılış sayılıyor.
+- `cargo test` 18/18, `cargo test --features steam` 17/17; `SteamDeck`
+  ortam değişkeni (1, 0, boş, yok). Pencerenin hafızası (6 yeni):
+  - boy ve yer yalnız pencere kipinde, ekranı kaplayan boy sayılmıyor;
+  - tam ekranda kapanan pencere tam ekran ama eski boyuyla açılıyor
+    (Codex'in senaryosu);
+  - ilk açılış büyütülmüş, küçültülmüş kapanış önceki kipte;
+  - ekranlarda tümüyle görünen pencere olduğu gibi açılıyor, iki ekrana
+    yayılmış da; bozuk boy kullanılmıyor;
+  - ekran çıkarılınca pencere kalan ekrana sığdırılıyor (Codex'in örneği:
+    x = 1900), kesişmeyen pencere birincil ekranın ortasında açılıyor,
+    büyük boy ekrana iniyor;
+  - bozuk dosya ilk açılış sayılıyor.
 - Gerçek pencerede uçtan uca 28/28 (19'dan). Yeni "Uygulama gibi": tarayıcı
   kısayolları yutuluyor, yazı alanının kısayolları yerinde, sağ tık ve
   seçim, Deck değilken metin normal, F11 tam ekranı açıyor, Alt+Enter
