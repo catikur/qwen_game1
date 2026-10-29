@@ -38,6 +38,7 @@ const PAIRS = [
   ['arayüz · paneller', 'packages/ui/src/i18n/en/panels.ts', 'panels', `packages/ui/src/i18n/${locale}/panels.ts`, 'panels'],
   ['paket rafı', 'packages/ui/src/packMessages.ts', 'packEn', `packages/ui/src/packMessages.${locale}.ts`, `pack${cap(locale)}`],
   ['editör', 'packages/ui/src/packEditorMessages.ts', 'editorEn', `packages/ui/src/packEditorMessages.${locale}.ts`, `editor${cap(locale)}`],
+  ['kumanda', 'packages/ui/src/padMessages.ts', 'padEn', `packages/ui/src/padMessages.${locale}.ts`, `pad${cap(locale)}`],
 ];
 
 function cap(text) {

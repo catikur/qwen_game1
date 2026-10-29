@@ -74,6 +74,18 @@ check('Yazı tipleri CSS\'te gömülü değil, her biri önden yükleniyor',
 const game = files.find((file) => /^GameRoot-.*\.js$/.test(file));
 check('Oyun ekranı ayrı parça ve şehir sahnesini o getiriyor', Boolean(game) && staticImports(read(game)).some((dep) => /^three-/.test(dep)), game ?? 'yok');
 check('İngilizce ve Almanca sözlük ayrı parça', ['en', 'de'].every((locale) => files.some((file) => new RegExp(`^locale-${locale}-.*\\.js$`).test(file))));
+// Kumanda (Tur 72): modülü kumanda bağlanınca iniyor. Oyun ekranı onu durağan
+// içe aktarsa ekranla birlikte inerdi (Codex #102): ortak uç `padBridge.ts`'te.
+const pad = files.find((file) => /^pad-.*\.js$/.test(file));
+const gameGraph = new Set();
+for (const queue = game ? [game] : []; queue.length; ) {
+  const file = queue.shift();
+  if (gameGraph.has(file)) continue;
+  gameGraph.add(file);
+  queue.push(...staticImports(read(file)));
+}
+check('Kumandanın modülü ayrı parça: ne kurulumun yolunda ne oyun ekranının durağan içe aktarmalarında',
+  Boolean(pad) && !critical.has(pad) && !gameGraph.has(pad), pad ?? 'yok');
 
 // Kurulabilir oyun (Tur 48): hizmet çalışanı paketin her parçasını önbelleğe
 // alıyor; biri listede yoksa çevrimdışı açılış o parçada kırılır.

@@ -26,6 +26,10 @@ void (async () => {
   // seçim. Türkçede beklenecek bir şey yok; İngilizce sözlüğü ayrı parçada
   // (Tur 46), çizim onu bekliyor.
   await initLocale();
+  // Kumanda (Tur 72): bağlanınca işi ayrı parçadan iniyor; giriş paketinde yalnız bu kanca.
+  const pad = () => void import('./pad').then((module) => module.startPad());
+  window.addEventListener('gamepadconnected', pad, { once: true });
+  if (navigator.getGamepads?.().some(Boolean)) pad();
   createRoot(container).render(
     <StrictMode>
       <App />

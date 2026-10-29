@@ -186,11 +186,17 @@ açılıyor.
   düzeldi (masaüstünün en küçük penceresi ve ölçekli dizüstüleri o
   aralıkta). Lig sunucusunun canlı denetimi simülasyon sürümünü
   karşılaştırıyor; CI dağıtımının hiç çalışmayan derlemesi düzeldi. Açık
-  kalan 4.4 ve 4.10 yeniden değerlendirildi. — bu PR
-- **72 · Oyun kumandası ve yalnız klavye.** Bugün fare olmadan parsel
-  seçilemiyor. Haritada imleç (kamera ortasındaki parsel), seçim,
-  paneller ve menüler arasında gezinme; kumandanın düğme ipuçları; Steam
-  Deck'te şirket adı için ekran klavyesi; Steam Input'un varsayılan düzeni.
+  kalan 4.4 ve 4.10 yeniden değerlendirildi. — bitti (#101)
+- **72 · Oyun kumandası ve yalnız klavye.** Fare olmadan parsel
+  seçilemiyordu. Klavye ya da kumanda kullanılınca imleç kameranın
+  ortasındaki parsel (nişangâh); Enter ve A seçiyor, kuruyor. Q/E ve +/−
+  ile, kumandada çubuklarla ve tetiklerle kamera dönüyor ve yakınlaşıyor.
+  Kumandada yön tuşu düğmeler arasında geziyor; LB/RB paneller, Y
+  duraklat, X hız. Ekranın altında kumandanın düğme ipuçları var
+  (PlayStation'da ✕ ○ □ △, Nintendo'da B A Y X). Steam Deck'te yazı
+  alanı için Steam'in ekran klavyesi açılıyor; Steam Input'un önerilen
+  düzeni `docs/STEAM.md`'de.
+  — bu PR
 - **73 · Steam Workshop ve skor tabloları.** İçerik paketleri (Tur 67)
   Workshop'tan iniyor ve oraya yükleniyor; Tohum Ligi'nin haftalık tablosu
   Steam skor tablosunda da. Steamworks uygulama kimliği gerekiyor

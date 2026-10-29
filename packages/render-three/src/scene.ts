@@ -315,6 +315,11 @@ export class CityRenderer {
   };
 
   private hoveredTile: number | null = null;
+  /**
+   * Klavye ve kumanda (Tur 72): imleç kameranın ortasındaki parsel. Fare
+   * olmadan parsel seçilemiyordu; kamera kayınca imleç de kayıyor.
+   */
+  private centerCursor = false;
   private groundPlaced = false;
   /** Kare kimliğinden zemin örnek yuvasına eşleme; sokaklarda -1. */
   private groundSlotOfTile = new Int32Array(0);
@@ -811,12 +816,30 @@ export class CityRenderer {
       this.callbacks.onHover(null);
     };
     const onContextMenu = (e: Event) => e.preventDefault();
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (isTypingTarget(e.target)) return;
-      this.controller.onKey(e.code, true);
+    // Kameranın tuşları (Tur 72): harfler ve oklar konuma göre (WASD, Q/E),
+    // +/− yazdığı karaktere göre; Türkçe Q'da "−" başka bir tuşta. Bırakılan
+    // tuş basılırkenki adıyla bırakılıyor.
+    const held = new Map<string, string>();
+    const cameraKey = (e: KeyboardEvent): string => {
+      if (e.key === '+' || e.key === '=' || e.code === 'NumpadAdd') return 'ZoomIn';
+      if (e.key === '-' || e.code === 'NumpadSubtract') return 'ZoomOut';
+      return e.code;
     };
-    const onKeyUp = (e: KeyboardEvent) => this.controller.onKey(e.code, false);
-    const onBlur = () => this.controller.clearKeys();
+    const onKeyDown = (e: KeyboardEvent) => {
+      // Ctrl/Cmd/Alt'lı tuşlar oyunun değil (kopyala, tarayıcı yakınlaşması).
+      if (isTypingTarget(e.target) || e.ctrlKey || e.metaKey || e.altKey) return;
+      const name = cameraKey(e);
+      held.set(e.code, name);
+      this.controller.onKey(name, true);
+    };
+    const onKeyUp = (e: KeyboardEvent) => {
+      this.controller.onKey(held.get(e.code) ?? e.code, false);
+      held.delete(e.code);
+    };
+    const onBlur = () => {
+      held.clear();
+      this.controller.clearKeys();
+    };
 
     this.canvas.addEventListener('pointerdown', onPointerDown);
     this.canvas.addEventListener('pointermove', onPointerMove);
@@ -1703,6 +1726,11 @@ export class CityRenderer {
     // yeniden yerleşiyor; şehrin geri kalanı yalnızca state değişince.
     if ((this.buildingsGrowing || this.buildingsShifting) && this.state) this.syncBuildings(this.state);
 
+    // Kamera bu karede kaydıysa ortadaki parsel de değişti.
+    if (this.centerCursor) {
+      this.pointer.set(0, 0);
+      this.updateHover();
+    }
     if (this.hoveredTile !== null && this.state) {
       const tile = this.state.map.tiles[this.hoveredTile];
       this.hover.visible = Boolean(tile);
@@ -2260,6 +2288,34 @@ export class CityRenderer {
    * tuttuğu dünya noktası, sürükleme boyunca parmağın altında kalmalı.
    * Kameranın ne kadar hareket ettiğine bakmak yönü doğrulamaz.
    */
+  /** İmleç kameranın ortasında (klavye, kumanda) ya da farede (Tur 72). */
+  setCenterCursor(on: boolean): void {
+    if (this.centerCursor === on) return;
+    this.centerCursor = on;
+    if (on) return;
+    // Fareye dönüş: fare bir sonraki hareketinde parseli yeniden buluyor.
+    this.hoveredTile = null;
+    this.callbacks.onHover(null);
+  }
+
+  /** Ortadaki parseli seç (Enter, A): fareyle tıklamanın aynısı; seçilen parsel döner. */
+  selectCenter(): number | null {
+    this.pointer.set(0, 0);
+    this.updateHover();
+    if (this.hoveredTile !== null) this.callbacks.onSelect(this.hoveredTile);
+    return this.hoveredTile;
+  }
+
+  /** Kumandanın sürüşü, her karede (`RtsCameraController.drive`). */
+  drive(pan: { x: number; y: number }, orbit: { x: number; y: number }, zoom: number): void {
+    this.controller.drive(pan, orbit, zoom);
+  }
+
+  /** Kameranın açısı ve uzaklığı: testler Q/E ve yakınlaşmayı ölçsün diye. */
+  cameraPose(): { azimuth: number; distance: number } {
+    return { azimuth: this.controller.targetAzimuth, distance: this.controller.targetDistance };
+  }
+
   groundAt(ndcX: number, ndcY: number): { x: number; z: number } | null {
     const point = new THREE.Vector3();
     if (!this.controller.screenToGround(ndcX, ndcY, point)) return null;

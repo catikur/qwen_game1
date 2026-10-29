@@ -8252,6 +8252,155 @@ ya da sırlar Repository secrets'e, sonra Run workflow). Bu birleşmeden
 sonra "Lite lig sunucusu" iş akışı sunucu güncellenene kadar `main`'de
 kırmızı; bilerek.
 
+### Tur 72 — Oyun kumandası ve yalnız klavye
+
+Faz 6'nın ikinci turu. Simülasyon ve şema aynı; hazır oyunların parmak izi
+birebir (simülasyon `a5ded51fb01e62a5`, lig `104a3ce17d31216b`).
+
+**Fare olmadan parsel seçilemiyordu.** Klavye kamerayı kaydırıyordu (WASD,
+oklar) ama parsel seçmenin, döndürmenin ve yakınlaştırmanın tek yolu fareydi.
+Kumanda hiç okunmuyordu. Steam Deck'te ve kumandayla oynayan PC oyuncusunda
+oyun oynanamıyordu. Valve'ın "Steam Deck Verified" ölçüsü de bunu istiyor:
+oyunun bütün işleri fiziksel düğmelerle, ekranda kumandanın düğme yazıları,
+yazı alanında ekran klavyesi.
+
+**Yapılanlar.**
+- *Haritada imleç.* Klavye ya da kumanda kullanılınca imleç kameranın
+  ortasındaki parsel: ekranın ortasında nişangâh, altındaki parsel
+  vurgulu. Fare oynayınca imleç yine farede, nişangâh kalkıyor. Son
+  kullanılan girdi kökte `data-input` (`packages/ui/src/inputMode.ts`);
+  kumandanın B'sinin gönderdiği Escape ve yerinde duran farenin olayları
+  kipi değiştirmiyor.
+- *Klavye.*
+  - Enter ortadaki parseli seçiyor; odak detayda, Tab düğmelerine giriyor.
+  - Q/E döndürüyor, + ve − yakınlaştırıyor. +/− yazdığı karaktere göre
+    okunuyor, Türkçe Q klavyede de çalışıyor.
+  - Escape sırayla pencereyi ya da yerleştirmeyi kapatıyor, odağı haritaya
+    veriyor, seçimi bırakıyor.
+  - Ayarlar'ın kısayol listesinde Enter, Q/E ve +/− de var.
+- *Kumanda.* İşi `apps/web/src/pad.ts`'te, kararlar saf işlevlerde
+  (`packages/ui/src/padInput.ts`, `spatialNav.ts`):
+  - Sol çubuk kaydırıyor, sağ çubuk döndürüp eğiyor; RT yakınlaştırıyor, LT
+    uzaklaştırıyor.
+  - A ortadaki parseli seçiyor ya da odaktaki düğmeye basıyor. B geri:
+    pencereyi kapatıyor, haritaya dönüyor, seçimi bırakıyor.
+  - Yön tuşu ekranda o yöndeki en yakın düğmeye gidiyor; kaydırıcıda ve
+    seçim kutusunda değeri değiştiriyor. Pencerede sol çubuk da geziyor,
+    sağ çubuk içeriği kaydırıyor.
+  - LB/RB önceki/sonraki panel, Y duraklat, X hız, ☰ Ayarlar, ⧉ sonraki
+    görünüm (lens).
+  - Ekranın altında düğme ipuçları; katmana göre değişiyor (harita,
+    düğmeler, pencere, yerleştirme). Xbox ve Steam Deck'te A B X Y,
+    PlayStation'da ✕ ○ □ △, Nintendo kumandasında konumuna göre B A Y X.
+    HUD şeride altta yer ayırıyor.
+  - Ayarlar'da "Kumanda" listesi (kumanda kullanıldıysa).
+  - Modül kumanda bağlanınca iniyor (4,2 KB); giriş paketine yalnız bir
+    kanca girdi. Oyun ekranıyla ortak uç (harita işleyicisi, ilk odak)
+    ayrı küçük modülde (`padBridge.ts`). İlk hâlinde oyun ekranı modülü
+    doğrudan içe aktarıyordu ve kumandanın kodu kumanda bağlanmadan da
+    oyun ekranıyla iniyordu (Codex #102).
+- *Steam Deck'in ekran klavyesi.* Kumandayla bir yazı alanı seçilince
+  (şirket adı, davet kodu) Steam'in klavyesi alanı örtmeden açılıyor
+  (`ShowFloatingGamepadTextInput`, kabuğun `steam_keyboard` komutu). Çok
+  satırlı alanda (senaryo editörü, kod kutuları) klavye de çok satırlı,
+  Enter satır başı (Codex #102). Steam Input'un önerilen düzeni
+  `docs/STEAM.md`'de (adım 7).
+
+**Tarayıcıda bulunanlar.** Hepsi sahte kumandayla oynanırken çıktı.
+- *Haritadan sola basınca odak yanlış yere gidiyordu.* Sol sütundaki yapı
+  kartları yerine üst bardaki "Rakip" sekmesine gidiyordu, çünkü ana
+  eksenin ağırlığı çapraz uzaktaki sekmeyi öne alıyordu. Yön bulucu artık
+  Android'in odak bulucusunun kurallarıyla aynı: kaynağın hizasındaki
+  aday, hizanın dışındakini yeniyor.
+- *Satın alınca odak "Parseli sat" düğmesine geçiyordu.* A'ya bir kez daha
+  basan oyuncu parseli hemen satıyordu. Artık basılan düğme kaybolunca odak
+  detayın kendisinde; içine A ya da yön tuşu sokuyor.
+- *İpucu şeridi panelleri örtüyordu.* Haberlerin ve sütunların son satırı
+  şeridin altında kalıyordu; HUD artık altta şeride yer ayırıyor.
+- *Kısa basış kaçabiliyor.* Bu makinede oyun saniyede ~5 kare çiziyor ve
+  kumandanın döngüsü karede bir okuyor; 70 ms'lik basış iki kare arasında
+  kaçıyordu. Gerçek basış ~100 ms, 60 karede altı kare; test basışları iki
+  kare sürüyor.
+
+**İncelemede bulunanlar (Codex).**
+- *Çok satırlı alanda tek satırlık klavye.* Senaryo editörünün yazı
+  kutularında Steam'in klavyesi satır başı aldırmıyordu; alanın türü artık
+  kabuğa gidiyor.
+- *Kumandanın kodu oyun ekranıyla iniyordu.* Oyun ekranı harita
+  işleyicisini kumanda modülünden alıyordu; ortak uç `padBridge.ts`'e
+  ayrıldı, paket denetimi bunu sınıyor.
+- *Karar ekranında B "Kapat"tı ama kapatmıyordu.* Zafer, senaryonun açılışı
+  ve sonucu, lig sonucu ve iflas ekranı kapatılmıyor, oyuncu bir düğme
+  seçiyor; şerit orada B'yi göstermiyor.
+- *Karar ekranının altında panel açılıyordu.* Omuzlar ve ☰ karar
+  ekranının altında panel açıyordu; karar verilince panel ortaya çıkıyordu.
+  Y ve X arkadaki oyunu yürütüyordu, ⧉ görünümü değiştiriyordu. Karar
+  ekranı artık kumandanın ayrı bir katmanı: orada yalnız A ve yön tuşu.
+- *Girdi kipinin dinleyicisi ilk isteyenin elindeydi.* Oyun ekranı
+  kapanınca kaldırılabilirdi (bugün kaldıran yoktu); artık pencerenin
+  ömrü boyunca, kaldırma işlevi yok.
+- *Kumanda çıkarılınca ipuçları ekranda kalıyordu.* Kumanda kipi de;
+  artık kumanda yoksa kip fareye dönüyor.
+- *Standart düzende olmayan kumanda da okunuyordu.* Düğme ve eksen sırası
+  yalnız standart düzende belli; başka düzendeki kumandada rastgele bir
+  düğme A ya da B olurdu. O kumanda artık okunmuyor.
+- *Nintendo kumandasında yazılar tersti.* Steam Input'suz bağlanan Pro
+  Controller ve Joy-Con Xbox sayılıyordu; şerit alttaki düğmeye "A"
+  diyordu, oysa üstünde B yazıyor. Eylemler bütün kumandalarda konuma
+  göre (tarayıcının standart düzeni): alttaki seçiyor, sağdaki geri.
+  Nintendo kumandası artık tanınıyor (üretici 057e); yazılar konumun
+  Nintendo'daki adı: alttaki B, sağdaki A, soldaki Y, üstteki X; L/R,
+  ZL/ZR, + ve −. Xbox'ın renkleri yok.
+- *Açılır bölümlere kumandayla girilmiyordu.* Senaryo kurulumundaki
+  "Senaryo ekle" ve editörün JSON bölümü `<details>`; başlıkları
+  (`<summary>`) kumandanın gezdiği denetimler arasında değildi, bölüm
+  kapalı kalıyordu. Başlık artık denetim: yön tuşu ona gidiyor, A açıyor.
+- *Ayarlar açıkken kumandanın listesi gelmiyordu.* Liste kökteki işarete
+  bakıyordu, işaret değişince Ayarlar yeniden çizilmiyordu. Kumandaya
+  uzanan oyuncu listeyi ancak Ayarlar'ı kapatıp açınca görüyordu; başka
+  kumandaya geçince düğme yazıları eski kalıyordu. Kullanılan kumanda artık
+  küçük bir depoda (`padInUse.ts`), liste ona abone. Depo ayrı modülde:
+  Ayarlar giriş paketinde, girdi kipinin dinleyicileri oraya girmiyor
+  (ilk hâlinde ana parça 74,9 KB'a çıkmıştı).
+
+**Doğrulama.**
+- `pnpm test` 876/876 (867'den); tip denetimi temiz; Almanca denetimi 0
+  hata (kumanda 27/27).
+  - `packages/ui/test/padInput.test.ts` (8 yeni): kumandanın okunması (ölü
+    bölge, tetikler), basış ve tekrar, katmana göre eylemler, kamera
+    sürüşü, düğme yazıları (Nintendo'nunkiler de), kullanılan kumandanın
+    haberi ve Ayarlar'daki listesi, yönle odak (hizadaki aday, kap aday
+    değil).
+  - `apps/web/test/desktop.test.ts` (1 yeni): yazı alanı seçilince ekran
+    klavyesi alanın yerinde, fiziksel pikselde isteniyor; Steam yokken
+    istenmiyor.
+- `cargo test` 21/21, `cargo test --features steam` 20/20, clippy temiz;
+  Steam'siz derlemede ekran klavyesi yok.
+- Tarayıcı testinin yeni bölümü "Kumanda ve yalnız klavye" (36 kontrol)
+  36/36. Kumandanın modülü kumanda bağlanmadan inmiyor. Kurulum yalnız
+  kumandayla ve yalnız klavyeyle bitiyor. Ardından
+  ortadaki parsel seçiliyor, satın alınıyor, yapı seçilip parsele
+  kuruluyor. Kamera çubuklarla ve Q/E, +/−, WASD ile dönüyor, yakınlaşıyor,
+  kayıyor. LB/RB, Y, X, ☰ ve ⧉ işini yapıyor, kaydırıcı yön tuşuyla
+  değişiyor. Şerit panellerin üstüne binmiyor; DualSense'te ✕ ○ □ △,
+  Nintendo kumandasında konumuna göre B A Y X; fare
+  oynayınca ipuçları ve nişangâh kalkıyor; karar ekranında şerit B'yi
+  "Kapat" diye göstermiyor, A ve yön tuşundan başka düğme bir şey
+  yapmıyor; standart düzende olmayan kumanda okunmuyor;
+  kumanda çıkarılınca ipuçları kalkıyor. Ayarlar kumandadan önce açıksa
+  kumandanın listesi kapatıp açmadan geliyor, kumanda değişince yazıları
+  da. "Senaryo ekle" bölümü yön tuşu ve A ile açılıyor; konsol temiz.
+- Gerçek pencerede uçtan uca 29/29 (28'den): WebKitGTK'de Gamepad API var
+  (libmanette), ekran klavyesinin komutu kabukta.
+- Paket bütçesi tamam (ana parça 74,6 KB; kumandanın modülü, Ayarlar'daki
+  listesi ve yazıları ayrı parçalarda). Paket denetiminin yeni kontrolü:
+  kumandanın modülü ne kurulumun yolunda ne oyun ekranının durağan içe
+  aktarmalarında.
+
+**Kalan.** Steam Deck'in kendisinde denemek. Valve'ın Verified testinden
+önce, Deck'te Linux deposuyla ya da Proton'la (`docs/STEAM.md` → "Linux ve
+Steam Deck").
+
 ---
 
 ## 3. Ölçülen durum

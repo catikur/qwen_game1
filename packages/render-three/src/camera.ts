@@ -31,6 +31,12 @@ const MIN_POLAR = 0.32;
 const MAX_POLAR = 1.3;
 const DAMPING = 9;
 const KEY_PAN_SPEED = 14;
+/** Q/E ve sağ çubuk (Tur 72): tam itişte saniyede ~90°. */
+const TURN_SPEED = 1.6;
+/** Sağ çubuğun eğişi, saniyede radyan. */
+const TILT_SPEED = 0.9;
+/** +/− ve tetikler: tam basışta saniyede uzaklık ~e^1,1 kat. */
+const ZOOM_SPEED = 1.1;
 
 /** `panFromGround` için yeniden kullanılan tamponlar. */
 const PAN_FROM = new THREE.Vector3();
@@ -54,6 +60,10 @@ export class RtsCameraController {
   private desiredPolar = 0.82;
 
   private keys = new Set<string>();
+  /** Kumanda (Tur 72): sol çubuk kaydırıyor, sağ çubuk döndürüp eğiyor, tetikler yakınlaştırıyor. */
+  private padPan = { x: 0, y: 0 };
+  private padOrbit = { x: 0, y: 0 };
+  private padZoom = 0;
   private bounds: CameraBounds;
 
   constructor(aspect: number, bounds: CameraBounds) {
@@ -181,6 +191,18 @@ export class RtsCameraController {
     this.keys.clear();
   }
 
+  /**
+   * Kumandanın sürüşü, her karede (bırakılınca sıfır): kaydır ve döndür/eğ
+   * −1…1 (çubuk), yakınlaş −1…1 (RT − LT). Tuşlarla aynı hızlar, itiş kadar.
+   */
+  drive(pan: { x: number; y: number }, orbit: { x: number; y: number }, zoom: number): void {
+    this.padPan.x = pan.x;
+    this.padPan.y = pan.y;
+    this.padOrbit.x = orbit.x;
+    this.padOrbit.y = orbit.y;
+    this.padZoom = zoom;
+  }
+
   update(dt: number): void {
     const step = Math.min(1, dt * KEY_PAN_SPEED);
     let kx = 0;
@@ -189,6 +211,23 @@ export class RtsCameraController {
     if (this.keys.has('KeyS') || this.keys.has('ArrowDown')) kz += 1;
     if (this.keys.has('KeyA') || this.keys.has('ArrowLeft')) kx -= 1;
     if (this.keys.has('KeyD') || this.keys.has('ArrowRight')) kx += 1;
+    kx = clamp(kx + this.padPan.x, -1, 1);
+    kz = clamp(kz + this.padPan.y, -1, 1);
+
+    // Döndür ve yakınlaş (Tur 72): Q/E ve +/− basılı durdukça, sağ çubuk ve
+    // tetikler itildikçe. Yalnız fareyle yapılabiliyordu (sağ tuşla sürükle,
+    // tekerlek); klavyeyle ve kumandayla oynayan da çevirebilsin.
+    let turn = this.padOrbit.x;
+    if (this.keys.has('KeyQ')) turn -= 1;
+    if (this.keys.has('KeyE')) turn += 1;
+    let zoom = this.padZoom;
+    if (this.keys.has('ZoomIn')) zoom += 1;
+    if (this.keys.has('ZoomOut')) zoom -= 1;
+    if (turn !== 0) this.desiredAzimuth -= clamp(turn, -1, 1) * TURN_SPEED * dt;
+    if (this.padOrbit.y !== 0) this.desiredPolar = clamp(this.desiredPolar - this.padOrbit.y * TILT_SPEED * dt, MIN_POLAR, MAX_POLAR);
+    if (zoom !== 0) {
+      this.desiredDistance = clamp(this.desiredDistance * Math.exp(-clamp(zoom, -1, 1) * ZOOM_SPEED * dt), MIN_DISTANCE, MAX_DISTANCE);
+    }
 
     if (kx !== 0 || kz !== 0) {
       const sin = Math.sin(this.azimuth);

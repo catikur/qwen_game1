@@ -22,6 +22,16 @@
   istatistiklerini açılıştan biraz sonra indiriyor; o zamana kadar açma
   istekleri kuyrukta bekliyor (`Queue`, birim testli). Steam'e yazma
   (`StoreStats`) başarısız olursa ~10 sn'de bir yeniden deneniyor.
+- **Kumanda ve ekran klavyesi (Tur 72).** Oyun kumandayı kendisi okuyor
+  (tarayıcının Gamepad API'si, standart düzen); Steam Input'un sanal
+  kumandası da bir Xbox kumandası gibi geliyor. Düğme yazıları kumandaya
+  göre: Xbox ve Steam Deck'te A B X Y, PlayStation'da ✕ ○ □ △; Steam
+  Input'suz bağlanan Nintendo kumandasında konumuna göre B A Y X (eylemler
+  bütün kumandalarda konuma göre: alttaki seçiyor, sağdaki geri). Kumandayla
+  bir yazı alanı seçilince (şirket adı, davet kodu) Steam'in ekran klavyesi
+  alanı örtmeden açılıyor (`ShowFloatingGamepadTextInput`; Steam Deck'te ve
+  Büyük Resim kipinde). Steam yoksa oyuncu kendi klavyesiyle yazıyor.
+  Düğmelerin işi `docs/MASAUSTU.md` → "Kumanda ve yalnız klavye".
 - **Tek pencere.** İkinci kopya açılmıyor, açık pencere öne geliyor
   (`tauri-plugin-single-instance`); iki pencere aynı kayda yazamıyor.
 - **Kayıtlar Steam Cloud'a hazır.** Dosyada, kökleri sabit; Auto-Cloud
@@ -83,11 +93,18 @@ Sırası önemli; ilk ikisi olmadan gerisi açılmıyor.
    - Windows: Installation → General → Install Script:
      `installscript_win.vdf` (WebView2, aşağıda).
    - Steam Cloud: `docs/MASAUSTU.md` → "Steam Cloud" tablosu.
-7. **Yükleme hesabı**: SteamPipe'ı çalıştıracak bir Steam hesabı. Ya
-   kendi hesabınla yüklersin (adım 8), ya da yalnız yükleme izni olan ayrı
+7. **Steam Input** (Steamworks → Application → Steam Input):
+   - Steam Input Default Configuration: "Gamepad" şablonu. Steam Deck için
+     "Gamepad with Mouse Trackpad": sağ dokunmatik yüzey fare oluyor.
+   - PlayStation kumandaları: "oyun kendisi destekliyor" (Steam Input
+     kapalı). Steam Input açıkken Steam oyuna Xbox kumandası veriyor, oyun
+     DualSense'i tanıyamıyor ve düğme yazıları A B X Y kalıyor.
+   - Xbox ve öbür kumandalar: varsayılan.
+8. **Yükleme hesabı**: SteamPipe'ı çalıştıracak bir Steam hesabı. Ya
+   kendi hesabınla yüklersin (adım 9), ya da yalnız yükleme izni olan ayrı
    bir hesap açarsın, bilgileri depoya sır olarak girer, yüklemeyi CI'a
    eklerim.
-8. **Yükleme**: GitHub → Actions → Masaüstü → Run workflow. Bitince üç
+9. **Yükleme**: GitHub → Actions → Masaüstü → Run workflow. Bitince üç
    paket: `steam-depot-Windows`, `steam-depot-macOS`, `steam-depot-Linux`.
    Steamworks SDK'sının `tools/ContentBuilder/` klasöründe:
    - `content/windows`, `content/macos`, `content/linux` klasörlerine
@@ -97,10 +114,10 @@ Sırası önemli; ilk ikisi olmadan gerisi açılmıyor.
    - `steamcmd +login <hesap> +run_app_build <app_build.vdf'nin tam yolu> +quit`.
    - Steamworks → SteamPipe → Builds: yüklenen derlemeyi `default` dalına
      al.
-9. **İnceleme**: Steam hem mağaza sayfasını hem derlemeyi inceliyor (birkaç
+10. **İnceleme**: Steam hem mağaza sayfasını hem derlemeyi inceliyor (birkaç
    iş günü). Mağaza sayfası "Coming Soon" olarak en az iki hafta açık
    kalmadan oyun yayımlanamıyor; yayın tarihini buna göre seç.
-10. **macOS imzası** (isteğe bağlı, önerilir): Apple Developer Program
+11. **macOS imzası** (isteğe bağlı, önerilir): Apple Developer Program
     (yıllık 99 $). Sırlar ve ayrıntı `docs/MASAUSTU.md` → "Steam'e
     hazırlık". Steam'den inen dosyalarda karantina işareti olmadığı için
     Gatekeeper imzasız uygulamayı genellikle durdurmuyor; yine de imzasız
@@ -147,9 +164,10 @@ Verified ölçüsünden bugün hazır olanlar (Tur 71): varsayılan çözünürl
 Deck'in ekranı (1280 × 800, oyun pencereye uyuyor, taşma yok); okunabilirlik
 (Steam `SteamDeck=1` verince metin ilk açılışta "çok büyük", en küçük yazı
 13 piksel; Valve'ın alt sınırı 9, önerisi 12); başlatıcı yok, oyun doğrudan
-açılıyor. Eksik olanlar Tur 72'de: oyunun bütün işlerinin kumandayla
-yapılması, kumandanın düğme ipuçları ve yazı alanında ekran klavyesi (şirket
-adı).
+açılıyor. Tur 72'de girdi ölçüleri de: oyunun bütün işleri kumandayla
+yapılıyor, ekranda kumandanın düğme ipuçları var (Deck'te A B X Y), yazı
+alanında Steam'in ekran klavyesi açılıyor. Kalan: Deck'in kendisinde
+denemek.
 
 ## Geliştirirken
 
@@ -199,12 +217,13 @@ API adını değiştirme.
 - `apps/web/test/desktop.test.ts` → "Steam başarımları (Tur 70)": tablo
   tam, adlar tekil ve Steamworks'ün biçiminde; açılışta ve her değişiklikte
   bildirim, bilinmeyen rozet atlanıyor; Steam yokken hiçbir şey gitmiyor;
-  giden istek düşerse sonraki değişiklikte yeniden; kabuğun iki komutu
-  kayıtlı.
+  giden istek düşerse sonraki değişiklikte yeniden; kumanda yazı alanını
+  seçince ekran klavyesi alanın yerinde, fiziksel pikselde isteniyor
+  (Tur 72), Steam yokken istenmiyor; kabuğun üç komutu kayıtlı.
 - `cargo test` ve `cargo test --features steam`: kuyruk istatistikler
   inene kadar bekliyor, açılan ad yeniden girmiyor, tanımsız ad sınırda
   düşüyor, yazılamayan başarım aralıkla yeniden yazılıyor; Steam'siz
-  derlemede durum "kapalı".
+  derlemede durum "kapalı", ekran klavyesi yok.
 - `tools/desktop-e2e.mjs` → "Steam ve tek pencere": derlenmiş oyunda
   Steam komutları yanıt veriyor; ikinci kopya açılmıyor, ilk pencere
   yerinde.

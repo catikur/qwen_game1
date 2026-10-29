@@ -1,9 +1,11 @@
+import { Suspense, lazy } from 'react';
 import type { ReactElement } from 'react';
 import { AppearancePicker } from './AppearancePicker';
 import { installApp, useAppShell } from './appShell';
 import type { AppShellState } from './appShell';
 import { LocalePicker } from './LocalePicker';
 import { t, type MessageKey } from './i18n';
+import { usePadGlyphs } from './padInUse';
 import {
   MOTION_CHOICES,
   PALETTES,
@@ -39,6 +41,7 @@ const VOLUME_LABELS: Record<VolumeChannel, MessageKey> = {
 /** Kısayollar: tuş ve ne yaptığı. Tuş adları da sözlükte (İngilizcede "Space"). */
 const SHORTCUTS: Array<[MessageKey, MessageKey]> = [
   ['panels.settings.keys.pan.key', 'panels.settings.keys.pan'],
+  ['panels.settings.keys.select.key', 'panels.settings.keys.select'],
   ['panels.settings.keys.drag.key', 'panels.settings.keys.drag'],
   ['panels.settings.keys.rotate.key', 'panels.settings.keys.rotate'],
   ['panels.settings.keys.zoom.key', 'panels.settings.keys.zoom'],
@@ -49,6 +52,13 @@ const SHORTCUTS: Array<[MessageKey, MessageKey]> = [
 ];
 /** Yalnız masaüstü sürümünde (Tur 71): kabuk kökü `data-shell="desktop"` diye işaretliyor. */
 const DESKTOP_SHORTCUTS: Array<[MessageKey, MessageKey]> = [['panels.settings.keys.fullscreen.key', 'panels.settings.keys.fullscreen']];
+
+/**
+ * Kumandanın düğmeleri (Tur 72): ayrı parça, kumanda kullanılınca iniyor
+ * (`usePadGlyphs`; kumanda modülü haber veriyor). Listenin yazıları da
+ * onunla (`padMessages.ts`); giriş paketine girmiyorlar.
+ */
+const PadControls = lazy(() => import('./PadControls'));
 
 function Choices<T extends string>({
   name,
@@ -119,6 +129,7 @@ function AppSection({ shell }: { shell: AppShellState }): ReactElement {
 export function SettingsPanel(): ReactElement {
   const settings = useSettings();
   const shell = useAppShell();
+  const padGlyphs = usePadGlyphs();
   return (
     <div className="settings" data-settings>
       <section className="settings-group">
@@ -200,6 +211,11 @@ export function SettingsPanel(): ReactElement {
           ))}
         </dl>
       </section>
+      {padGlyphs !== null && (
+        <Suspense fallback={null}>
+          <PadControls glyphs={padGlyphs} />
+        </Suspense>
+      )}
     </div>
   );
 }

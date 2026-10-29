@@ -8719,6 +8719,462 @@ async function finish(browser, consoleErrors) {
     }
   }
 
+  section('Kumanda ve yalnız klavye');
+  {
+    /*
+     * Steam Deck ve kumanda (Tur 72). Oyun fare olmadan oynanıyor: kumandada
+     * yön tuşu arayüzde geziyor, A basıyor, B geri dönüyor; haritada
+     * imleç kameranın ortasındaki parsel. Klavyede Enter ortadaki parseli
+     * seçiyor, Q/E döndürüyor, +/− yakınlaştırıyor. Kumanda sahte
+     * (`navigator.getGamepads`, standart düzen); kumandanın döngüsü karede
+     * bir okuyor, bu makinede kare yavaş, basış iki kare sürüyor.
+     */
+    const XBOX = 'Xbox 360 Controller (XInput STANDARD GAMEPAD)';
+    const SONY = 'DualSense Wireless Controller (STANDARD GAMEPAD Vendor: 054c Product: 0ce6)';
+    const NINTENDO = 'Pro Controller (STANDARD GAMEPAD Vendor: 057e Product: 2009)';
+    const BUTTON = { a: 0, b: 1, x: 2, y: 3, lb: 4, rb: 5, lt: 6, rt: 7, view: 8, menu: 9, up: 12, down: 13, left: 14, right: 15 };
+    const frames = (page, n) => page.evaluate((count) => new Promise((resolve) => {
+      const step = (left) => (left <= 0 ? resolve() : requestAnimationFrame(() => step(left - 1)));
+      step(count);
+    }), n);
+    const tap = async (page, name) => {
+      await page.evaluate((index) => window.__fakePad.set(index, true), BUTTON[name]);
+      await frames(page, 2);
+      await page.evaluate((index) => window.__fakePad.set(index, false), BUTTON[name]);
+      await frames(page, 3);
+    };
+    const active = (page) => page.evaluate(() => {
+      const el = document.activeElement;
+      return {
+        tag: el?.tagName.toLowerCase() ?? '',
+        cls: typeof el?.className === 'string' ? el.className : '',
+        text: (el?.textContent ?? '').trim().slice(0, 40),
+        start: el?.hasAttribute('data-newgame-start') ?? false,
+        inInspector: !!el?.closest('.inspector'),
+        inLeftcol: !!el?.closest('.leftcol'),
+        inModal: !!el?.closest('[aria-modal="true"]'),
+      };
+    });
+    const hints = (page) => page.evaluate(() => {
+      const bar = document.querySelector('.pad-hints');
+      return bar ? { layer: bar.dataset.layer, text: bar.textContent, shown: getComputedStyle(bar).display !== 'none', glyphs: [...bar.querySelectorAll('.pad-glyph')].map((g) => g.textContent) } : null;
+    });
+    // Kuşbakışı ve parselin ortası: binalar ortadaki parseli örtmesin; parsel tam sayıda ortalanıyor.
+    const centerOn = async (page, tileId) => {
+      for (let i = 0; i < 3; i++) {
+        await page.evaluate((id) => {
+          const cap = window.__capital;
+          const tile = cap.getState().map.tiles[id];
+          const target = cap.cameraTarget();
+          const ground = cap.groundAt(0, 0);
+          const at = ground ? { x: target.x - (ground.x - tile.x), z: target.z - (ground.z - tile.y) } : { x: tile.x, z: tile.y };
+          cap.setView({ ...at, distance: 14, polar: 0.12 });
+        }, tileId);
+        await frames(page, 6);
+      }
+    };
+    const buyable = (page) => page.evaluate(() => {
+      const s = window.__capital.getState();
+      const open = (t) => { const d = s.districts[t.districtId]; return !d || d.opensOnDay === undefined || s.time.day >= d.opensOnDay; };
+      return s.map.tiles.find((t) => t.kind === 'plot' && !t.structureId && !t.ownerId && !t.buildingId && open(t) && s.auction?.tileId !== t.id)?.id ?? null;
+    });
+    const start = async (page) => {
+      await page.waitForSelector('.topbar', { timeout: 30000 });
+      await page.waitForFunction(() => (window.__capital?.renderInfo()?.frameCount ?? 0) >= 3, null, { timeout: 60000 });
+      await page.evaluate(() => window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 }));
+    };
+
+    // ---------------------------------------------------------- kumanda
+    const fakePad = (id) => {
+      const state = { id, buttons: Array.from({ length: 17 }, () => ({ pressed: false, touched: false, value: 0 })), axes: [0, 0, 0, 0], timestamp: 0 };
+      const pad = { index: 0, connected: true, mapping: 'standard', get id() { return state.id; }, get buttons() { return state.buttons; }, get axes() { return state.axes; }, get timestamp() { return state.timestamp; } };
+      window.__fakePad = {
+        connected: false,
+        set(index, down) { state.buttons[index] = { pressed: down, touched: down, value: down ? 1 : 0 }; state.timestamp = performance.now(); },
+        axis(index, value) { state.axes[index] = value; state.timestamp = performance.now(); },
+        rename(next) { state.id = next; },
+        remap(next) { pad.mapping = next; },
+      };
+      navigator.getGamepads = () => (window.__fakePad.connected ? [pad, null, null, null] : [null, null, null, null]);
+      // Başsız tarayıcıda sayfa odakta sayılmıyor; kumanda odaksız pencerede susuyor.
+      document.hasFocus = () => true;
+      window.addEventListener('capitalforge:text-input', (event) => { window.__textInput = event.detail; });
+    };
+    const pContext = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+    await pContext.addInitScript(veteran, TUTORIAL_KEY);
+    await pContext.addInitScript(fakePad, XBOX);
+    const pp = await pContext.newPage();
+    const pErrors = [];
+    pp.on('pageerror', (e) => pErrors.push(e.message));
+    pp.on('console', (m) => { if (m.type() === 'error') pErrors.push(m.text()); });
+    await pp.goto('http://127.0.0.1:8811/?lang=tr');
+    await pp.waitForSelector('.newgame', { timeout: 20000 });
+    // Kumandanın modülü ayrı parça (giriş paketinde yok; bütçeyi `bundle-check` sınıyor). Oyun ekranının
+    // parçası arka planda iniyor ama kumandanınkini getirmiyor: kumanda bağlanınca iniyor (Codex #102).
+    await pp.waitForFunction(() => performance.getEntriesByType('resource').some((r) => /\/GameRoot-[\w-]+\.js/.test(r.name)), null, { timeout: 20000 }).catch(() => {});
+    const early = await pp.evaluate(() => performance.getEntriesByType('resource').map((r) => r.name.split('/').pop()).filter((name) => /^(GameRoot|pad)-/.test(name)));
+    check('Kumandanın modülü kumanda bağlanmadan inmiyor; oyun ekranının parçası onu getirmiyor',
+      early.some((name) => name.startsWith('GameRoot-')) && !early.some((name) => name.startsWith('pad-')), early.join(', '));
+    await pp.evaluate(() => { window.__fakePad.connected = true; window.dispatchEvent(new Event('gamepadconnected')); });
+    await pp.waitForFunction(() => performance.getEntriesByType('resource').some((r) => /\/pad-[\w-]+\.js/.test(r.name)), null, { timeout: 10000 }).catch(() => {});
+    await frames(pp, 3);
+
+    // Kurulum: şirket adı alanı açılışta odakta; A ekran klavyesini istiyor (Steam Deck).
+    await tap(pp, 'a');
+    const field = await pp.evaluate(() => window.__textInput ?? null);
+    check('Yazı alanında A ekran klavyesini istiyor: alanın yeri ve tek satırlı olduğu masaüstü kabuğuna gidiyor',
+      field !== null && field.width > 0 && field.height > 0 && field.multiline === false, JSON.stringify(field));
+    let reached = false;
+    for (let i = 0; i < 30 && !reached; i++) {
+      await tap(pp, 'down');
+      reached = (await active(pp)).start;
+    }
+    const setupHints = await hints(pp);
+    check('Kurulumda yön tuşu odağı gezdiriyor, "Şirketi kur"a varılıyor; ipucu şeridi açık',
+      reached && setupHints?.shown && setupHints.glyphs.includes('A') && setupHints.glyphs.includes('B'), JSON.stringify({ reached, setupHints }));
+    await tap(pp, 'a');
+    await start(pp);
+    check('Kurulum yalnız kumandayla bitiyor: A "Şirketi kur"a basıyor', (await pp.locator('.topbar').count()) === 1);
+
+    const mapState = await pp.evaluate(() => ({ input: document.documentElement.dataset.input, reticle: getComputedStyle(document.querySelector('.map-reticle')).display }));
+    const mapHints = await hints(pp);
+    check('Haritada nişangâh ve ipuçları: A parseli seç, yön tuşu düğmeler, LB RB paneller, Y durdur, X hız, ☰ Ayarlar',
+      mapState.input === 'pad' && mapState.reticle !== 'none' && mapHints?.layer === 'map' && ['A', 'LB RB', 'Y', 'X', '☰'].every((g) => mapHints.glyphs.includes(g)),
+      JSON.stringify({ mapState, mapHints }));
+
+    // A ortadaki parseli seçiyor, ikinci A satın alıyor.
+    const plot = await buyable(pp);
+    await centerOn(pp, plot);
+    await tap(pp, 'a');
+    await frames(pp, 4);
+    const picked = await pp.evaluate(() => window.__capital.selectedTile());
+    const onBuy = await active(pp);
+    check('A ortadaki parseli seçiyor; odak detayın ilk eyleminde (satın al)', picked === plot && onBuy.inInspector && onBuy.tag === 'button', `${picked} / ${plot} · ${onBuy.text}`);
+    await tap(pp, 'a');
+    await frames(pp, 4);
+    const bought = await pp.evaluate((id) => { const s = window.__capital.getState(); return s.map.tiles[id].ownerId === s.playerCompanyId; }, plot);
+    const afterBuy = await active(pp);
+    check('A satın alıyor; odak detayın kendisinde, yerine gelen "Parseli sat" düğmesinde değil',
+      bought && afterBuy.tag === 'aside' && afterBuy.inInspector, JSON.stringify(afterBuy));
+    await tap(pp, 'b');
+    const back = await active(pp);
+    check('B haritaya döndürüyor, seçim duruyor', back.tag === 'body' && (await pp.evaluate(() => window.__capital.selectedTile())) === plot, JSON.stringify(back));
+
+    // Haritadan sola: sol sütundaki yapı kartı (hizadaki kart üst bardaki sekmeden önce).
+    await tap(pp, 'left');
+    const card = await active(pp);
+    check('Haritadan sola: sol sütundaki yapı kartı, üst bardaki sekme değil', card.inLeftcol && card.cls.includes('buildcard'), JSON.stringify(card));
+    await tap(pp, 'a');
+    await frames(pp, 3);
+    const placing = await hints(pp);
+    check('A yapıyı seçiyor: yerleştirme kipi, odak haritada, ipucu "Buraya kur"',
+      (await active(pp)).tag === 'body' && placing?.text.includes('Buraya kur'), JSON.stringify(placing));
+    await centerOn(pp, plot);
+    await tap(pp, 'a');
+    await frames(pp, 6);
+    const built = await pp.evaluate((id) => window.__capital.getState().map.tiles[id].buildingId ?? null, plot);
+    check('A ortadaki parsele kuruyor', built !== null, String(built));
+    await tap(pp, 'b');
+    await tap(pp, 'b');
+
+    // Çubuklar ve tetikler: kamera.
+    const camera = () => pp.evaluate(() => ({ ...window.__capital.cameraPose(), ...window.__capital.cameraTarget() }));
+    const c0 = await camera();
+    await pp.evaluate(() => window.__fakePad.axis(0, 1));
+    await frames(pp, 6);
+    await pp.evaluate(() => { window.__fakePad.axis(0, 0); window.__fakePad.axis(2, 1); });
+    await frames(pp, 6);
+    await pp.evaluate(() => { window.__fakePad.axis(2, 0); window.__fakePad.set(7, true); });
+    await frames(pp, 6);
+    await pp.evaluate(() => window.__fakePad.set(7, false));
+    await frames(pp, 3);
+    const c1 = await camera();
+    check('Çubuklar kamerayı sürüyor: sol kaydırıyor, sağ döndürüyor, RT yakınlaştırıyor',
+      Math.hypot(c1.x - c0.x, c1.z - c0.z) > 0.5 && Math.abs(c1.azimuth - c0.azimuth) > 0.2 && c1.distance < c0.distance, `${JSON.stringify(c0)} → ${JSON.stringify(c1)}`);
+
+    // Y durdur, X hız.
+    const speed = () => pp.evaluate(() => window.__capital.getState().time.speed);
+    const speeds = [await speed()];
+    await tap(pp, 'y');
+    speeds.push(await speed());
+    await tap(pp, 'y');
+    speeds.push(await speed());
+    await tap(pp, 'x');
+    speeds.push(await speed());
+    check('Y duraklatıyor ve sürdürüyor, X hızı değiştiriyor', speeds[1] === (speeds[0] === 0 ? 1 : 0) && speeds[2] === speeds[0] && speeds[3] !== speeds[2], speeds.join(' → '));
+    await pp.evaluate(() => window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 }));
+
+    // LB / RB paneller arasında, B kapatıyor.
+    const openPanel = () => pp.evaluate(() => document.querySelector('[aria-modal="true"] #modal-title')?.textContent ?? null);
+    await tap(pp, 'rb');
+    const first = await openPanel();
+    await tap(pp, 'rb');
+    const second = await openPanel();
+    await tap(pp, 'lb');
+    const again = await openPanel();
+    const panelHints = await hints(pp);
+    await tap(pp, 'b');
+    check('RB sonraki, LB önceki panel; pencerede ipuçları "Kapat"; B kapatıyor',
+      first && second && first !== second && again === first && panelHints?.layer === 'modal' && (await openPanel()) === null,
+      `${first} → ${second} → ${again} · ${panelHints?.text}`);
+
+    // Menü: Ayarlar ve kumandanın listesi; kaydırıcı yönle değişiyor.
+    await tap(pp, 'menu');
+    await frames(pp, 4);
+    const list = await pp.evaluate(() => document.querySelector('[data-pad-controls]')?.innerText ?? '');
+    check('☰ Ayarlar\'ı açıyor; kumandanın düğmeleri listede (A, B, LB · RB, LT · RT, Y, X)',
+      ['A', 'B', 'LB · RB', 'LT · RT', 'Y', 'X', 'Sol çubuk', 'Sağ çubuk'].every((label) => list.includes(label)), list.replace(/\n/g, ' · ').slice(0, 160));
+    const slider = await pp.evaluate(() => {
+      const range = [...document.querySelectorAll('[aria-modal="true"] input[type="range"]')].find((el) => el.getClientRects().length > 0 && Number(el.value) < Number(el.max));
+      if (!range) return null;
+      range.focus();
+      return Number(range.value);
+    });
+    await tap(pp, 'right');
+    const moved = await pp.evaluate(() => Number(document.activeElement?.value));
+    check('Kaydırıcıda yön tuşu değeri değiştiriyor', slider !== null && moved > slider, `${slider} → ${moved}`);
+    await tap(pp, 'b');
+    check('B Ayarlar\'ı kapatıyor', (await openPanel()) === null);
+
+    // Karar ekranı (zafer, senaryo sonucu, iflas) kapatılmıyor, B'nin Escape'ini dinlemiyor:
+    // şerit orada B'yi "Kapat" diye göstermiyor. Kumandanın öbür düğmeleri de susuyor:
+    // omuzlar ve ☰ altta panel açıp karar verilince ortaya çıkarıyordu (Codex #102).
+    await pp.evaluate(() => {
+      const screen = document.createElement('div');
+      screen.setAttribute('role', 'alertdialog');
+      screen.dataset.fakeDecision = '';
+      screen.innerHTML = '<button type="button">Yeni oyun</button>';
+      document.body.append(screen);
+    });
+    await frames(pp, 3);
+    const decision = await hints(pp);
+    const beneath = () => pp.evaluate(() => ({
+      panel: document.querySelector('[aria-modal="true"] #modal-title') !== null,
+      speed: window.__capital.getState().time.speed,
+      lens: document.querySelector('[data-lens][aria-pressed="true"]')?.getAttribute('data-lens') ?? null,
+      onScreen: document.activeElement?.closest('[data-fake-decision]') !== null,
+    }));
+    await tap(pp, 'a');
+    const calm = await beneath();
+    const pressedOnDecision = [];
+    for (const name of ['rb', 'lb', 'menu', 'y', 'x', 'view', 'b']) {
+      await tap(pp, name);
+      pressedOnDecision.push({ name, ...(await beneath()) });
+    }
+    await pp.evaluate(() => document.querySelector('[data-fake-decision]')?.remove());
+    await frames(pp, 2);
+    check('Karar ekranında şerit B\'yi "Kapat" diye göstermiyor; A ve yön tuşu yerinde',
+      decision?.layer === 'decision' && !decision.glyphs.includes('B') && decision.glyphs.includes('A') && decision.glyphs.includes('✚'), JSON.stringify(decision));
+    const stirred = pressedOnDecision.filter((after) => after.panel || after.speed !== calm.speed || after.lens !== calm.lens || !after.onScreen);
+    check('Karar ekranında LB/RB, ☰, Y, X, ⧉ ve B bir şey yapmıyor: altta panel açılmıyor, oyun ve görünüm aynı, odak ekranda',
+      calm.onScreen && !calm.panel && stirred.length === 0, JSON.stringify({ calm, stirred }));
+
+    // Görünüm: sonraki lens.
+    const lens = () => pp.evaluate(() => document.querySelector('[data-lens][aria-pressed="true"]')?.getAttribute('data-lens') ?? null);
+    const lens0 = await lens();
+    await tap(pp, 'view');
+    check('Görünüm düğmesi sonraki lense geçiyor', (await lens()) !== lens0, `${lens0} → ${await lens()}`);
+
+    // İpucu şeridi panellerin üstüne binmiyor (HUD altta ona yer ayırıyor).
+    const overlap = await pp.evaluate(() => {
+      const bar = document.querySelector('.pad-hints').getBoundingClientRect();
+      return ['.news', '.leftcol', '.inspector', '.topbar'].filter((sel) => {
+        const r = document.querySelector(sel)?.getBoundingClientRect();
+        return r && r.width > 0 && Math.min(r.right, bar.right) - Math.max(r.left, bar.left) > 1 && Math.min(r.bottom, bar.bottom) - Math.max(r.top, bar.top) > 1;
+      });
+    });
+    check('İpucu şeridi panellerin üstüne binmiyor', overlap.length === 0, overlap.join(', ') || 'boş');
+    await pp.screenshot({ path: `${OUT}/pad-1280x800.png` });
+
+    // Sony kumandası: düğme yazıları şekil.
+    await pp.evaluate((id) => window.__fakePad.rename(id), SONY);
+    await tap(pp, 'up');
+    await tap(pp, 'b');
+    const sony = await hints(pp);
+    check('DualSense\'te düğme yazıları ✕ ○ □ △', sony?.glyphs.includes('✕') && !sony.glyphs.includes('A'), sony?.glyphs.join(' '));
+
+    // Nintendo kumandası (Steam Input'suz): eylemler bütün kumandalarda konuma göre; yazılar
+    // Nintendo'nun, alttaki B, sağdaki A. Xbox'ın renkleri yok (Codex #102).
+    await pp.evaluate((id) => window.__fakePad.rename(id), NINTENDO);
+    await tap(pp, 'up');
+    await tap(pp, 'b');
+    const nintendo = await hints(pp);
+    const pickColor = await pp.evaluate(() => getComputedStyle(document.querySelector('.pad-hints .pad-glyph[data-button="a"]')).backgroundColor);
+    await pp.evaluate((id) => window.__fakePad.rename(id), XBOX);
+    check('Nintendo kumandasında yazılar konuma göre: seç alttaki B, paneller L R, Ayarlar +; Xbox renkleri yok',
+      nintendo?.layer === 'map' && nintendo.glyphs[0] === 'B' && nintendo.glyphs.includes('L R') && nintendo.glyphs.includes('+') && pickColor !== 'rgb(31, 143, 58)',
+      `${nintendo?.glyphs.join(' ')} · ${pickColor}`);
+
+    // Fare oynayınca ipuçları ve nişangâh kalkıyor.
+    await pp.mouse.move(400, 300);
+    await pp.mouse.move(420, 320);
+    const pointer = await pp.evaluate(() => ({ input: document.documentElement.dataset.input, hints: getComputedStyle(document.querySelector('.pad-hints')).display, reticle: getComputedStyle(document.querySelector('.map-reticle')).display }));
+    check('Fare oynayınca kip fareye dönüyor: ipuçları ve nişangâh kalkıyor', pointer.input === 'pointer' && pointer.hints === 'none' && pointer.reticle === 'none', JSON.stringify(pointer));
+
+    // Standart düzende olmayan kumanda okunmuyor (düğme sırası belli değil); kumanda
+    // çıkarılınca ipuçları ve kumanda kipi kalkıyor (Codex #102).
+    const lensNow = () => pp.evaluate(() => document.querySelector('[data-lens][aria-pressed="true"]')?.getAttribute('data-lens') ?? null);
+    const inputNow = () => pp.evaluate(() => ({ input: document.documentElement.dataset.input, hints: getComputedStyle(document.querySelector('.pad-hints')).display }));
+    await tap(pp, 'up');
+    const padBefore = (await inputNow()).input;
+    await pp.evaluate(() => window.__fakePad.remap(''));
+    const lensBefore = await lensNow();
+    await tap(pp, 'view');
+    const odd = { lens: await lensNow(), ...(await inputNow()) };
+    check('Standart düzende olmayan kumanda okunmuyor: düğmesi bir şey yapmıyor, kumanda kipi kalkıyor',
+      padBefore === 'pad' && odd.lens === lensBefore && odd.input === 'pointer' && odd.hints === 'none', JSON.stringify({ padBefore, lensBefore, ...odd }));
+    await pp.evaluate(() => window.__fakePad.remap('standard'));
+    await tap(pp, 'up');
+    const replugged = await inputNow();
+    await pp.evaluate(() => { window.__fakePad.connected = false; });
+    await frames(pp, 3);
+    const unplugged = await inputNow();
+    check('Kumanda çıkarılınca ipuçları ve kumanda kipi kalkıyor', replugged.input === 'pad' && unplugged.input === 'pointer' && unplugged.hints === 'none', JSON.stringify({ replugged, unplugged }));
+    await pContext.close();
+
+    // Ayarlar kumandadan önce açıktı: kumandaya uzanınca liste kapatıp açmadan geliyor,
+    // başka kumandaya geçince düğme yazıları da değişiyor (Codex #102). Ayrı bağlam: kayıt yok, kurulum ekranı.
+    const sContext = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+    await sContext.addInitScript(veteran, TUTORIAL_KEY);
+    await sContext.addInitScript(fakePad, XBOX);
+    const sp2 = await sContext.newPage();
+    sp2.on('pageerror', (e) => pErrors.push(e.message));
+    sp2.on('console', (m) => { if (m.type() === 'error') pErrors.push(m.text()); });
+    await sp2.goto('http://127.0.0.1:8811/?lang=tr');
+    await sp2.waitForSelector('.newgame', { timeout: 20000 });
+    await sp2.locator('[data-settings-open]').click();
+    await sp2.waitForSelector('.settings', { timeout: 5000 });
+    const listBefore = await sp2.locator('[data-pad-controls]').count();
+    await sp2.evaluate(() => { window.__fakePad.connected = true; window.dispatchEvent(new Event('gamepadconnected')); });
+    await sp2.waitForFunction(() => performance.getEntriesByType('resource').some((r) => /\/pad-[\w-]+\.js/.test(r.name)), null, { timeout: 10000 }).catch(() => {});
+    await frames(sp2, 3);
+    const padKeys = (glyph) => sp2.waitForFunction((g) => [...document.querySelectorAll('[data-pad-controls] kbd')].some((k) => k.textContent === g), glyph, { timeout: 10000 })
+      .catch(() => {})
+      .then(() => sp2.evaluate(() => [...document.querySelectorAll('[data-pad-controls] kbd')].map((k) => k.textContent)));
+    await tap(sp2, 'down');
+    const xboxKeys = await padKeys('A');
+    await sp2.evaluate((id) => window.__fakePad.rename(id), SONY);
+    await tap(sp2, 'down');
+    const sonyKeys = await padKeys('✕');
+    check('Ayarlar kumandadan önce açıktı: kumanda kullanılınca listesi kapatıp açmadan geliyor, kumanda değişince yazıları da',
+      listBefore === 0 && xboxKeys.includes('A') && sonyKeys.includes('✕') && !sonyKeys.includes('A'), JSON.stringify({ listBefore, xboxKeys, sonyKeys }));
+    await sContext.close();
+
+    // Açılır bölüm (`<details>`): yön tuşu başlığına gidiyor, A açıyor, içine iniliyor. Senaryo
+    // kurulumundaki "Senaryo ekle" böyle, editörün JSON bölümü de (Codex #102).
+    const dContext = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+    await dContext.addInitScript(veteran, TUTORIAL_KEY);
+    await dContext.addInitScript(fakePad, XBOX);
+    const dp = await dContext.newPage();
+    dp.on('pageerror', (e) => pErrors.push(e.message));
+    dp.on('console', (m) => { if (m.type() === 'error') pErrors.push(m.text()); });
+    await dp.goto('http://127.0.0.1:8811/?lang=tr');
+    await dp.waitForSelector('.newgame', { timeout: 20000 });
+    await dp.locator('[data-mode="scenario"]').click();
+    await dp.waitForSelector('[data-pack-add] > summary', { timeout: 20000 });
+    await dp.evaluate(() => { window.__fakePad.connected = true; window.dispatchEvent(new Event('gamepadconnected')); });
+    await dp.waitForFunction(() => performance.getEntriesByType('resource').some((r) => /\/pad-[\w-]+\.js/.test(r.name)), null, { timeout: 10000 }).catch(() => {});
+    await frames(dp, 3);
+    await dp.evaluate(() => document.querySelector('[data-newgame-start]')?.focus());
+    const onSummary = () => dp.evaluate(() => document.activeElement?.matches('[data-pack-add] > summary') ?? false);
+    const climb = [];
+    for (let i = 0; i < 8 && !(await onSummary()); i++) {
+      await tap(dp, 'up');
+      climb.push(await dp.evaluate(() => (document.activeElement?.textContent ?? '').trim().slice(0, 24)));
+    }
+    const reachedSummary = await onSummary();
+    await tap(dp, 'a');
+    const opened = await dp.evaluate(() => document.querySelector('[data-pack-add]')?.open ?? false);
+    await tap(dp, 'down');
+    const inside = await dp.evaluate(() => document.activeElement?.hasAttribute('data-pack-input') ?? false);
+    check('Açılır bölümün başlığına yön tuşuyla gidiliyor, A açıyor, içine iniliyor ("Senaryo ekle")',
+      reachedSummary && opened && inside, JSON.stringify({ climb, reachedSummary, opened, inside }));
+    await dContext.close();
+    check('Kumandayla oyun: konsol temiz', pErrors.length === 0, pErrors.slice(0, 2).join(' | '));
+
+    // ---------------------------------------------------------- klavye
+    const kContext = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+    await kContext.addInitScript(veteran, TUTORIAL_KEY);
+    const kp = await kContext.newPage();
+    const kErrors = [];
+    kp.on('pageerror', (e) => kErrors.push(e.message));
+    kp.on('console', (m) => { if (m.type() === 'error') kErrors.push(m.text()); });
+    await kp.goto('http://127.0.0.1:8811/?lang=tr');
+    await kp.waitForSelector('.newgame', { timeout: 20000 });
+    let tabs = 0;
+    while (tabs < 60 && !(await active(kp)).start) {
+      await kp.keyboard.press('Tab');
+      tabs++;
+    }
+    await kp.keyboard.press('Enter');
+    await start(kp);
+    check('Kurulum yalnız klavyeyle bitiyor (Tab ile "Şirketi kur", Enter)', (await kp.locator('.topbar').count()) === 1, `${tabs} Tab`);
+
+    const kPlot = await buyable(kp);
+    await centerOn(kp, kPlot);
+    await kp.keyboard.press('Enter');
+    await frames(kp, 4);
+    const kPicked = await kp.evaluate(() => window.__capital.selectedTile());
+    const kFocus = await active(kp);
+    const kMode = await kp.evaluate(() => ({ input: document.documentElement.dataset.input, reticle: getComputedStyle(document.querySelector('.map-reticle')).display }));
+    check('Enter ortadaki parseli seçiyor; odak detayda, nişangâh görünüyor', kPicked === kPlot && kFocus.tag === 'aside' && kMode.input === 'keyboard' && kMode.reticle !== 'none',
+      `${kPicked} / ${kPlot} · ${JSON.stringify({ kFocus, kMode })}`);
+    // Tab detayın içine: kapat, sonra satın al.
+    let buy = false;
+    for (let i = 0; i < 4 && !buy; i++) {
+      await kp.keyboard.press('Tab');
+      buy = (await active(kp)).text.startsWith('Parseli satın al');
+    }
+    await kp.keyboard.press('Enter');
+    await frames(kp, 4);
+    const kBought = await kp.evaluate((id) => { const s = window.__capital.getState(); return s.map.tiles[id].ownerId === s.playerCompanyId; }, kPlot);
+    check('Tab detayın düğmelerine giriyor, Enter satın alıyor', buy && kBought);
+    await kp.keyboard.press('Escape');
+    const kBlur = await active(kp);
+    await kp.keyboard.press('Escape');
+    const kDeselect = await kp.evaluate(() => window.__capital.selectedTile());
+    check('Escape önce odağı haritaya veriyor, sonra seçimi bırakıyor', kBlur.tag === 'body' && kDeselect === null, `${kBlur.tag} · ${kDeselect}`);
+
+    // Yerleştirme: yapı kartında Enter, haritada Enter.
+    await kp.evaluate((id) => window.__capital.selectTile(id), kPlot);
+    await frames(kp, 3);
+    await kp.evaluate(() => document.querySelector('.leftcol .buildcard:not([disabled]):not(.locked)')?.focus());
+    await kp.keyboard.press('Enter');
+    await frames(kp, 3);
+    const kPlacing = await active(kp);
+    await centerOn(kp, kPlot);
+    await kp.keyboard.press('Enter');
+    await frames(kp, 6);
+    const kBuilt = await kp.evaluate((id) => window.__capital.getState().map.tiles[id].buildingId ?? null, kPlot);
+    check('Yapı kartında Enter yerleştirmeyi açıyor (odak haritaya), haritada Enter ortadaki parsele kuruyor', kPlacing.tag === 'body' && kBuilt !== null, `${kPlacing.tag} · ${kBuilt}`);
+    await kp.keyboard.press('Escape');
+    await kp.keyboard.press('Escape');
+
+    // Kamera: Q/E döndür, +/− yakınlaş, WASD kaydır.
+    const kCamera = () => kp.evaluate(() => ({ ...window.__capital.cameraPose(), ...window.__capital.cameraTarget() }));
+    const hold = async (code) => {
+      await kp.keyboard.down(code);
+      await frames(kp, 5);
+      await kp.keyboard.up(code);
+      await frames(kp, 2);
+    };
+    const k0 = await kCamera();
+    await hold('KeyQ');
+    const k1 = await kCamera();
+    await hold('Minus');
+    const k2 = await kCamera();
+    await hold('Equal');
+    await hold('Equal');
+    const k3 = await kCamera();
+    await hold('KeyD');
+    const k4 = await kCamera();
+    check('Q/E döndürüyor, +/− yakınlaştırıyor, WASD kaydırıyor',
+      Math.abs(k1.azimuth - k0.azimuth) > 0.2 && k2.distance > k1.distance && k3.distance < k2.distance && Math.hypot(k4.x - k3.x, k4.z - k3.z) > 0.3,
+      [k0, k1, k2, k3, k4].map((k) => `${k.azimuth.toFixed(2)}/${k.distance.toFixed(1)}/${k.x.toFixed(1)},${k.z.toFixed(1)}`).join(' → '));
+    check('Klavyeyle oyun: konsol temiz', kErrors.length === 0, kErrors.slice(0, 2).join(' | '));
+    await kContext.close();
+  }
+
   section('Mobil');
   for (const deviceName of ['iPhone 13', 'Pixel 7']) {
     const mobileContext = await browser.newContext({ ...devices[deviceName] });
