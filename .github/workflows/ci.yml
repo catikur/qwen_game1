@@ -48,9 +48,10 @@ jobs:
     name: Tarayıcıda oynanış
     needs: check
     runs-on: ubuntu-latest
-    # Tam koşu Tur 50'de 27 dk; Tur 51 lig sunucusu bölümünü (~4 dk) ve
-    # rıhtımın yuvarlanan yazıda denemesini ekledi.
-    timeout-minutes: 45
+    # Tam koşu Tur 50'de 27 dk; sonra her tur bölüm ekledi. Tur 68'den beri
+    # 45 dk'yı aşıp iptal oluyordu: main'de son bölümler hiç koşmuyordu
+    # (iptal edilen koşu kırmızı değil gri görünüyor). PR'da duman koşusu.
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@v5
       # Tur 51: tarayıcı testi yerel lig sunucusunu açıyor (TypeScript,
