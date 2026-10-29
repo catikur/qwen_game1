@@ -8331,6 +8331,10 @@ yazı alanında ekran klavyesi.
 - *Karar ekranında B "Kapat"tı ama kapatmıyordu.* Zafer, senaryonun açılışı
   ve sonucu, lig sonucu ve iflas ekranı kapatılmıyor, oyuncu bir düğme
   seçiyor; şerit orada B'yi göstermiyor.
+- *Karar ekranının altında panel açılıyordu.* Omuzlar ve ☰ karar
+  ekranının altında panel açıyordu; karar verilince panel ortaya çıkıyordu.
+  Y ve X arkadaki oyunu yürütüyordu, ⧉ görünümü değiştiriyordu. Karar
+  ekranı artık kumandanın ayrı bir katmanı: orada yalnız A ve yön tuşu.
 - *Girdi kipinin dinleyicisi ilk isteyenin elindeydi.* Oyun ekranı
   kapanınca kaldırılabilirdi (bugün kaldıran yoktu); artık pencerenin
   ömrü boyunca, kaldırma işlevi yok.
@@ -8359,15 +8363,16 @@ yazı alanında ekran klavyesi.
     istenmiyor.
 - `cargo test` 21/21, `cargo test --features steam` 20/20, clippy temiz;
   Steam'siz derlemede ekran klavyesi yok.
-- Tarayıcı testinin yeni bölümü "Kumanda ve yalnız klavye" (33 kontrol)
-  33/33. Kumandanın modülü kumanda bağlanmadan inmiyor. Kurulum yalnız
+- Tarayıcı testinin yeni bölümü "Kumanda ve yalnız klavye" (34 kontrol)
+  34/34. Kumandanın modülü kumanda bağlanmadan inmiyor. Kurulum yalnız
   kumandayla ve yalnız klavyeyle bitiyor. Ardından
   ortadaki parsel seçiliyor, satın alınıyor, yapı seçilip parsele
   kuruluyor. Kamera çubuklarla ve Q/E, +/−, WASD ile dönüyor, yakınlaşıyor,
   kayıyor. LB/RB, Y, X, ☰ ve ⧉ işini yapıyor, kaydırıcı yön tuşuyla
   değişiyor. Şerit panellerin üstüne binmiyor; DualSense'te ✕ ○ □ △; fare
   oynayınca ipuçları ve nişangâh kalkıyor; karar ekranında şerit B'yi
-  "Kapat" diye göstermiyor; standart düzende olmayan kumanda okunmuyor;
+  "Kapat" diye göstermiyor, A ve yön tuşundan başka düğme bir şey
+  yapmıyor; standart düzende olmayan kumanda okunmuyor;
   kumanda çıkarılınca ipuçları kalkıyor. Ayarlar kumandadan önce açıksa
   kumandanın listesi kapatıp açmadan geliyor, kumanda değişince yazıları
   da; konsol temiz.

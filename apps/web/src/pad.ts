@@ -35,8 +35,8 @@ import type { TextField } from './textInput';
 const MODAL = '[aria-modal="true"], [role="alertdialog"]';
 /**
  * Karar ekranları (zafer, senaryonun açılışı ve sonucu, lig sonucu, iflas):
- * kapatılmıyor, oyuncu bir düğme seçiyor. B'nin Escape'ini dinlemiyorlar;
- * şerit orada B'yi "Kapat" diye göstermiyor (Codex #102).
+ * kapatılmıyor, oyuncu bir düğme seçiyor. Kumandanın orada yalnız A'sı ve
+ * yön tuşu var (`padActions`); şerit de yalnız onları gösteriyor (Codex #102).
  */
 const DECISION = '[role="alertdialog"]';
 const TEXT_INPUTS = new Set(['text', 'search', 'email', 'url', 'tel', 'password', 'number']);
@@ -61,7 +61,8 @@ function isTextField(element: HTMLElement): boolean {
 }
 
 export function padLayer(): PadLayer {
-  if (topModal()) return 'modal';
+  const modal = topModal();
+  if (modal) return modal.matches(DECISION) ? 'decision' : 'modal';
   return focused(document.activeElement) ? 'hud' : 'map';
 }
 
@@ -228,7 +229,7 @@ type HintButton = 'a' | 'b' | 'x' | 'y' | 'lb' | 'rb' | 'menu' | 'view' | 'dpad'
 
 function hintsFor(layer: PadLayer): Array<[HintButton, PadMessageKey]> {
   const map = mapHandler();
-  if (layer === 'modal' && topModal()?.matches(DECISION)) return [['a', 'hud.pad.select'], ['dpad', 'hud.pad.move']];
+  if (layer === 'decision') return [['a', 'hud.pad.select'], ['dpad', 'hud.pad.move']];
   if (layer === 'modal') return [['a', 'hud.pad.select'], ['b', 'hud.pad.close'], ['dpad', 'hud.pad.move'], ...(map ? ([['lb', 'hud.pad.panels']] as Array<[HintButton, PadMessageKey]>) : [])];
   if (layer === 'hud') return [['a', 'hud.pad.select'], ['b', 'hud.pad.toMap'], ['dpad', 'hud.pad.move']];
   if (!map) return [['a', 'hud.pad.select'], ['dpad', 'hud.pad.move'], ['b', 'hud.pad.back']];

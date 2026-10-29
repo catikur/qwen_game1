@@ -8936,7 +8936,8 @@ async function finish(browser, consoleErrors) {
     check('B Ayarlar\'ı kapatıyor', (await openPanel()) === null);
 
     // Karar ekranı (zafer, senaryo sonucu, iflas) kapatılmıyor, B'nin Escape'ini dinlemiyor:
-    // şerit orada B'yi "Kapat" diye göstermiyor (Codex #102).
+    // şerit orada B'yi "Kapat" diye göstermiyor. Kumandanın öbür düğmeleri de susuyor:
+    // omuzlar ve ☰ altta panel açıp karar verilince ortaya çıkarıyordu (Codex #102).
     await pp.evaluate(() => {
       const screen = document.createElement('div');
       screen.setAttribute('role', 'alertdialog');
@@ -8946,10 +8947,26 @@ async function finish(browser, consoleErrors) {
     });
     await frames(pp, 3);
     const decision = await hints(pp);
+    const beneath = () => pp.evaluate(() => ({
+      panel: document.querySelector('[aria-modal="true"] #modal-title') !== null,
+      speed: window.__capital.getState().time.speed,
+      lens: document.querySelector('[data-lens][aria-pressed="true"]')?.getAttribute('data-lens') ?? null,
+      onScreen: document.activeElement?.closest('[data-fake-decision]') !== null,
+    }));
+    await tap(pp, 'a');
+    const calm = await beneath();
+    const pressedOnDecision = [];
+    for (const name of ['rb', 'lb', 'menu', 'y', 'x', 'view', 'b']) {
+      await tap(pp, name);
+      pressedOnDecision.push({ name, ...(await beneath()) });
+    }
     await pp.evaluate(() => document.querySelector('[data-fake-decision]')?.remove());
     await frames(pp, 2);
     check('Karar ekranında şerit B\'yi "Kapat" diye göstermiyor; A ve yön tuşu yerinde',
-      decision?.layer === 'modal' && !decision.glyphs.includes('B') && decision.glyphs.includes('A') && decision.glyphs.includes('✚'), JSON.stringify(decision));
+      decision?.layer === 'decision' && !decision.glyphs.includes('B') && decision.glyphs.includes('A') && decision.glyphs.includes('✚'), JSON.stringify(decision));
+    const stirred = pressedOnDecision.filter((after) => after.panel || after.speed !== calm.speed || after.lens !== calm.lens || !after.onScreen);
+    check('Karar ekranında LB/RB, ☰, Y, X, ⧉ ve B bir şey yapmıyor: altta panel açılmıyor, oyun ve görünüm aynı, odak ekranda',
+      calm.onScreen && !calm.panel && stirred.length === 0, JSON.stringify({ calm, stirred }));
 
     // Görünüm: sonraki lens.
     const lens = () => pp.evaluate(() => document.querySelector('[data-lens][aria-pressed="true"]')?.getAttribute('data-lens') ?? null);

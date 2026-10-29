@@ -80,6 +80,11 @@ test('eylemler: yön tuşu her katmanda gezer; sol çubuk yalnız pencerede; omu
   ]);
   assert.deepEqual(padActions(['stickLeft'], 'modal'), [{ type: 'move', dir: 'left' }]);
   assert.deepEqual(padActions(['stickLeft'], 'hud'), [], 'arayüzde sol çubuk kamerayı sürüyor');
+  assert.deepEqual(
+    padActions([...pressed, 'stickDown'], 'decision'),
+    [{ type: 'move', dir: 'up' }, { type: 'move', dir: 'left' }, { type: 'activate' }, { type: 'move', dir: 'down' }],
+    'karar ekranında yalnız gezmek ve basmak: altta panel, Ayarlar, hız, görünüm yok (Codex #102)',
+  );
 });
 
 test('sürekli girdiler: haritada kamera (kaydır, döndür, yakınlaş), pencerede kaydırma', () => {
@@ -89,6 +94,7 @@ test('sürekli girdiler: haritada kamera (kaydır, döndür, yakınlaş), pencer
   assert.ok(Math.hypot(map.orbit.x, map.orbit.y) <= 1 + 1e-9, 'çapraz itiş 1’i aşmıyor');
   assert.ok(Math.abs(map.zoom - 0.7) < 1e-9, 'RT yakınlaştırıyor, LT uzaklaştırıyor');
   assert.equal(map.scroll, 0);
+  assert.deepEqual(padDrive(frame, 'decision'), padDrive(frame, 'modal'), 'karar ekranında da kamera duruyor, sağ çubuk kaydırıyor');
   const modal = padDrive(frame, 'modal');
   assert.deepEqual([modal.pan, modal.orbit, modal.zoom], [{ x: 0, y: 0 }, { x: 0, y: 0 }, 0], 'pencere açıkken kamera duruyor');
   assert.ok(modal.scroll > 0, 'sağ çubuk aşağı: içerik aşağı');

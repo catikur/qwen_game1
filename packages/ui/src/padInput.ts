@@ -132,10 +132,12 @@ export class PadPresses {
 
 /**
  * Kumandanın o an konuştuğu katman. Harita: odak hiçbir düğmede değil, A
- * ortadaki parseli seçiyor. Arayüz: odak bir düğmede. Pencere: panel, kurulum
- * penceresi, zafer ekranı gibi kipli bir katman açık; kamera duruyor.
+ * ortadaki parseli seçiyor. Arayüz: odak bir düğmede. Pencere: panel ya da
+ * kurulum penceresi gibi kipli bir katman açık; kamera duruyor. Karar:
+ * kapatılmayan, bir seçim isteyen ekran (zafer, senaryonun açılışı ve
+ * sonucu, lig sonucu, iflas); orada yalnız A ve yön tuşu.
  */
-export type PadLayer = 'map' | 'hud' | 'modal';
+export type PadLayer = 'map' | 'hud' | 'modal' | 'decision';
 
 export type PadAction =
   | { readonly type: 'move'; readonly dir: Direction }
@@ -154,7 +156,12 @@ const STICK_DIRECTION: Record<StickStep, Direction> = {
   stickRight: 'right',
 };
 
-/** Basılan düğmelerin eylemleri. Sol çubuk haritada kamerayı sürüyor, pencerede geziyor. */
+/**
+ * Basılan düğmelerin eylemleri. Sol çubuk haritada kamerayı sürüyor, pencerede
+ * geziyor. Karar ekranında yalnız gezmek ve basmak: omuzlar ve ☰ ekranın
+ * altında panel açıyordu, karar verilince ortaya çıkıyordu; Y ve X arkadaki
+ * oyunu yürütüyordu; B'nin Escape'ini de dinleyen yok (Codex #102).
+ */
 export function padActions(pressed: readonly PadPress[], layer: PadLayer): PadAction[] {
   const actions: PadAction[] = [];
   for (const name of pressed) {
@@ -169,7 +176,7 @@ export function padActions(pressed: readonly PadPress[], layer: PadLayer): PadAc
       case 'stickDown':
       case 'stickLeft':
       case 'stickRight':
-        if (layer === 'modal') actions.push({ type: 'move', dir: STICK_DIRECTION[name] });
+        if (layer === 'modal' || layer === 'decision') actions.push({ type: 'move', dir: STICK_DIRECTION[name] });
         break;
       case 'a':
         actions.push({ type: 'activate' });
@@ -200,7 +207,7 @@ export function padActions(pressed: readonly PadPress[], layer: PadLayer): PadAc
         break;
     }
   }
-  return actions;
+  return layer === 'decision' ? actions.filter((action) => action.type === 'move' || action.type === 'activate') : actions;
 }
 
 /** Kare başına sürekli girdiler. */
@@ -216,7 +223,7 @@ export interface PadDrive {
 }
 
 export function padDrive(frame: PadFrame, layer: PadLayer): PadDrive {
-  if (layer === 'modal') return { pan: STILL, orbit: STILL, zoom: 0, scroll: frame.right.y };
+  if (layer === 'modal' || layer === 'decision') return { pan: STILL, orbit: STILL, zoom: 0, scroll: frame.right.y };
   return { pan: frame.left, orbit: frame.right, zoom: frame.rt - frame.lt, scroll: 0 };
 }
 
