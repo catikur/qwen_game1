@@ -163,6 +163,7 @@ export const contentDe: Record<string, string> = {
   'content.cityType.port.facts.1': 'Kaffeebohnen 20 % und Baumwolle 15 % günstiger; Weizen und Gemüse 10 % teurer',
   'content.cityType.port.facts.2': 'Frachtterminals und Lagerhäuser 25 % günstiger; 70 % der Frachtgebühr gehören dir',
   'content.cityType.port.facts.3': 'Die Rivalen sind pragmatische, treue Händler',
+  'content.cityType.port.facts.4': 'Eine kleine Stadt: Siegschwelle ×0,9',
   'content.cityType.industrial.name': 'Industriestadt',
   'content.cityType.industrial.blurb': 'Eine Stadt der Schlote. Rohstoffe gibt es reichlich, Werke sind günstig im Unterhalt – aber die Taschen der Arbeiter sind leer und die Gewerkschaft ist stark.',
   'content.cityType.industrial.facts.0': 'Zwei Industriegebiete, ein Hafen; Arbeiterviertel',
@@ -170,12 +171,14 @@ export const contentDe: Record<string, string> = {
   'content.cityType.industrial.facts.2': 'Höfe und Werke 20 % günstiger im Unterhalt; die Gewerkschaft organisiert sich schneller',
   'content.cityType.industrial.facts.3': 'Niedrige Einkommen',
   'content.cityType.industrial.facts.4': 'Die Rivalen sind alte Industriefamilien, zwei nachtragend, eine stolz – dazu eine Genossenschaft',
+  'content.cityType.industrial.facts.5': 'Günstige Produktion: Siegschwelle ×1,1',
   'content.cityType.capital.name': 'Hauptstadt',
   'content.cityType.capital.blurb': 'Ministerien, Botschaften, teure Viertel. Die Einkommen sind hoch, Grund ist teuer. Für Fabriken bleibt ein einziges Industriegebiet; Rohstoffe kommen von außen.',
   'content.cityType.capital.facts.0': 'Zwei Innenstädte, zwei Villenviertel; ein Industriegebiet, kein Hafen',
   'content.cityType.capital.facts.1': 'Hohe Einkommen, Grund 25 % teurer',
   'content.cityType.capital.facts.2': 'Alle Rohstoffe 10 % teurer',
   'content.cityType.capital.facts.3': 'Die Rivalen sind die Elite der Stadt: ein Luxushändler, zwei Projektentwickler und ein Technologieunternehmen',
+  'content.cityType.capital.facts.4': 'Eine große Wirtschaft: Siegschwelle ×1,3',
 
   // ---- Events (events.ts) ----
   'content.event.consumer_boom.title': 'Konsumboom',

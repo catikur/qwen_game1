@@ -8,7 +8,7 @@ import { localizeList } from './localize';
  *
  * Holding üç şehre kadar çıkıyordu ama şehirler aynı kalıptandı: aynı
  * dokuz bölge, aynı fiyatlar, aynı dört rakip. Artık her şehrin bir türü
- * var. Tür dört şeyi değiştiriyor:
+ * var. Tür beş şeyi değiştiriyor:
  *
  * - BÖLGE DİZİLİŞİ. Çiftlik, tesis ve santral yalnız sanayi ve liman
  *   bölgesine kuruluyor (`buildings.ts`, `zones`). Dengeli şehirde dokuz
@@ -29,6 +29,13 @@ import { localizeList } from './localize';
  *   oyuncunun neredeyse iki katına çıkıyordu; başkentte yok.
  * - KURAL. Her türün bir kuralı: limanda nakliye, sanayide üretimin
  *   bakımı ve sendika, başkentte arsa ve gelir.
+ * - ZAFER EŞİĞİ. Türlerin ekonomisi aynı büyüklükte değil: liman kentinin
+ *   nüfusu ve geliri düşük, sanayide üretim ucuz, başkentin geliri yüksek
+ *   ve nüfusu hızlı büyüyor. Eşik boyutunkinin üstüne türün katıyla
+ *   (liman 0,9, sanayi 1,1, başkent 1,3). Katsız ölçümde beş yol
+ *   vekilinin ortalama zafer günü başkentte 544, sanayide 592, limanda
+ *   652'ydi (dengeli 622); katlarla 615–622 (`pnpm balance`, "Şehir
+ *   türleri").
  *
  * DENGELİ bugünkü şehrin kendisi: eski kayıtların şehirleri, Tohum Ligi ve
  * senaryolar dengeli. Bütün çarpanları 1; dengeli şehir Tur 75'teki şehirle
@@ -92,6 +99,7 @@ export const CITY_TYPES: CityTypeDef[] = [
       'Kahve çekirdeği %20, pamuk %15 ucuz; buğday ve sebze %10 pahalı',
       'Nakliye terminali ve depo %25 ucuz; taşıma ücretinin %70’i senin',
       'Rakipler pragmatik ve vefalı tüccarlar',
+      'Şehir küçük: zafer eşiği 0,9 katı',
     ],
     layouts: {
       standard: [
@@ -109,7 +117,7 @@ export const CITY_TYPES: CityTypeDef[] = [
     },
     goods: { coffee_bean: 0.8, cotton: 0.85, wheat: 1.1, vegetable: 1.1 },
     rivals: ['meridyen', 'anadolu_gida', 'veri_sanayi', 'atlas_yapi'],
-    victoryScale: 1,
+    victoryScale: 0.9,
     rule: { freightShare: 0.7, buildCost: { freight_terminal: 0.75, warehouse: 0.75 } },
     color: '#5fa8c9',
   },
@@ -123,6 +131,7 @@ export const CITY_TYPES: CityTypeDef[] = [
       'Çiftlik ve tesislerin bakımı %20 az; sendika daha hızlı örgütleniyor',
       'Gelir düşük',
       'Rakipler eski sanayi aileleri, ikisi kindar, biri gururlu; bir de kooperatif',
+      'Üretim ucuz: zafer eşiği 1,1 katı',
     ],
     layouts: {
       // İki sanayi bölgesi köşede değil: kuruluşta ikisi de açık.
@@ -141,7 +150,7 @@ export const CITY_TYPES: CityTypeDef[] = [
     },
     goods: { silicon: 0.8, hide: 0.8, wheat: 0.9, coffee_bean: 1.15 },
     rivals: ['kilit_market', 'kule_gayrimenkul', 'nova_holding', 'anadolu_gida'],
-    victoryScale: 1,
+    victoryScale: 1.1,
     rule: { productionUpkeep: 0.8, unionPressure: 1.3, income: -0.05 },
     color: '#c99a5f',
   },
@@ -154,6 +163,7 @@ export const CITY_TYPES: CityTypeDef[] = [
       'Gelir yüksek, arsa %25 pahalı',
       'Hammaddelerin hepsi %10 pahalı',
       'Rakipler şehrin seçkinleri: lüks mağazacı, iki emlakçı, bir teknoloji şirketi',
+      'Ekonomi büyük: zafer eşiği 1,3 katı',
     ],
     layouts: {
       standard: [
@@ -171,7 +181,7 @@ export const CITY_TYPES: CityTypeDef[] = [
     },
     goods: { wheat: 1.1, coffee_bean: 1.1, vegetable: 1.1, cotton: 1.1, hide: 1.1, silicon: 1.1 },
     rivals: ['meridyen', 'kule_gayrimenkul', 'atlas_yapi', 'veri_sanayi'],
-    victoryScale: 1,
+    victoryScale: 1.3,
     rule: { landValue: 1.25, income: 0.06 },
     color: '#b48ad6',
   },

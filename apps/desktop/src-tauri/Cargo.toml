@@ -1,6 +1,6 @@
 [package]
 name = "capitalforge"
-version = "1.0.1"
+version = "1.1.0"
 description = "CapitalForge: şehir ve şirket kurma oyunu, masaüstü sürümü"
 authors = ["Conforcus <info@conforcus.com>"]
 edition = "2021"

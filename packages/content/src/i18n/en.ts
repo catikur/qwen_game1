@@ -163,6 +163,7 @@ export const contentEn: Record<string, string> = {
   'content.cityType.port.facts.1': 'Coffee beans 20% and cotton 15% cheaper; wheat and vegetables 10% dearer',
   'content.cityType.port.facts.2': 'Freight terminals and warehouses 25% cheaper; you keep 70% of the freight fee',
   'content.cityType.port.facts.3': 'Rivals are pragmatic, loyal traders',
+  'content.cityType.port.facts.4': 'A small city: 0.9× victory threshold',
   'content.cityType.industrial.name': 'Industrial city',
   'content.cityType.industrial.blurb': 'A city of smokestacks. Raw materials are plentiful and plants are cheap to run, but workers’ pockets are thin and the union is strong.',
   'content.cityType.industrial.facts.0': 'Two industrial zones, one harbor; working-class neighborhoods',
@@ -170,12 +171,14 @@ export const contentEn: Record<string, string> = {
   'content.cityType.industrial.facts.2': 'Farms and plants cost 20% less to run; the union organizes faster',
   'content.cityType.industrial.facts.3': 'Low incomes',
   'content.cityType.industrial.facts.4': 'Rivals are old industrial families, two vindictive and one proud, plus a cooperative',
+  'content.cityType.industrial.facts.5': 'Cheap production: 1.1× victory threshold',
   'content.cityType.capital.name': 'Capital',
   'content.cityType.capital.blurb': 'Ministries, embassies, expensive neighborhoods. Incomes are high and land is dear. Factories get a single industrial zone; raw materials come from outside.',
   'content.cityType.capital.facts.0': 'Two downtowns, two luxury districts; one industrial zone, no harbor',
   'content.cityType.capital.facts.1': 'High incomes, land 25% dearer',
   'content.cityType.capital.facts.2': 'Every raw material 10% dearer',
   'content.cityType.capital.facts.3': 'Rivals are the city’s elite: a luxury retailer, two developers and a tech firm',
+  'content.cityType.capital.facts.4': 'A big economy: 1.3× victory threshold',
 
   // ---- Events (events.ts) ----
   'content.event.consumer_boom.title': 'Consumer Boom',

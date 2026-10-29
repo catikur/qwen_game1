@@ -30,7 +30,7 @@ import { rivalRoster, scaleSpotPrices } from './systems/cityType';
 import { SCHEMA_VERSION } from './types';
 import type { CompanyState, DistrictState, GameState, MarketState, Tile, TileKind } from './types';
 
-export const GAME_VERSION = '1.0.1';
+export const GAME_VERSION = '1.1.0';
 
 /**
  * Bir bölgenin kenar uzunluğu (kare).
