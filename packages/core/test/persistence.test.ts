@@ -148,12 +148,23 @@ describe('kayıt', () => {
   });
 });
 
-/** Bellekte sahte depo: okunan slotlar sayılıyor. */
+/**
+ * Bellekte sahte depo. Yazmadan önceki denetim yazmanın içinde, araya
+ * bekleme girmeden (tarayıcının IndexedDB işlemi gibi). Okunan ve
+ * denetlenen slotlar sayılıyor.
+ */
 function memoryBackend(initial: SaveRecord[] = []) {
   const records = new Map(initial.map((record) => [record.meta.slot, record] as const));
   const reads: number[] = [];
+  const guarded: number[] = [];
   const backend: SaveBackend = {
-    put: async (record) => void records.set(record.meta.slot, JSON.parse(JSON.stringify(record)) as SaveRecord),
+    put: async (record, guard) => {
+      if (guard) {
+        guarded.push(record.meta.slot);
+        guard(records.get(record.meta.slot));
+      }
+      records.set(record.meta.slot, JSON.parse(JSON.stringify(record)) as SaveRecord);
+    },
     get: async (slot) => {
       reads.push(slot);
       return records.get(slot);
@@ -161,7 +172,7 @@ function memoryBackend(initial: SaveRecord[] = []) {
     list: async () => [...records.values()].map((record) => record.meta),
     remove: async (slot) => void records.delete(slot),
   };
-  return { records, reads, backend };
+  return { records, reads, guarded, backend };
 }
 
 function recordOf(state: ReturnType<typeof playedState>, slot: number, schemaVersion = SCHEMA_VERSION): SaveRecord {
@@ -193,7 +204,7 @@ describe('yeni sürümün kaydı ezilmiyor (Tur 75)', () => {
     }
   });
 
-  test('aynı ya da eski sürümün kaydı ezilir; slot her yazıştan önce okunuyor', async () => {
+  test('aynı ya da eski sürümün kaydı ezilir; denetim her yazışta, yazmanın içinde (ayrı okuma yok)', async () => {
     const store = memoryBackend([recordOf(playedState(5), 1), recordOf(playedState(5), 2, SCHEMA_VERSION - 1)]);
     setSaveBackend(store.backend);
     try {
@@ -203,7 +214,9 @@ describe('yeni sürümün kaydı ezilmiyor (Tur 75)', () => {
       await saveGame(ours, 2);
       await saveGame(ours, 3);
       assert.deepEqual([1, 2, 3].map((slot) => store.records.get(slot)?.state.time.day), [8, 8, 8]);
-      assert.deepEqual(store.reads, [1, 1, 2, 3], 'her yazıştan önce bir okuma');
+      assert.deepEqual(store.guarded, [1, 1, 2, 3], 'her yazışta denetim');
+      // Okuma ile yazma arasında başka sekme yazamasın: ayrı bir ön okuma yok (Codex #105).
+      assert.deepEqual(store.reads, [], 'yazmadan önce ayrı okuma yok');
     } finally {
       setSaveBackend(null);
     }
@@ -220,31 +233,6 @@ describe('yeni sürümün kaydı ezilmiyor (Tur 75)', () => {
       store.records.set(0, recordOf(playedState(40), 0, SCHEMA_VERSION + 1));
       await assert.rejects(saveGame(playedState(7), 0), NewerSaveError);
       assert.equal(store.records.get(0)?.state.time.day, 40, 'yeni sürümün kaydı yerinde');
-    } finally {
-      setSaveBackend(null);
-    }
-  });
-
-  test('okunamayan slotun üstüne yazılıyor, slot sonraki yazışta yine okunuyor', async () => {
-    const store = memoryBackend([recordOf(playedState(5), 1, SCHEMA_VERSION + 1)]);
-    const get = store.backend.get;
-    let failing = true;
-    store.backend.get = async (slot) => {
-      if (failing) {
-        failing = false;
-        throw new Error('disk meşgul');
-      }
-      return get(slot);
-    };
-    setSaveBackend(store.backend);
-    try {
-      // İlk okuma düştü: kayıt kurtarılamıyor sayılıp yazılıyor (eskisi gibi).
-      await saveGame(playedState(8), 1);
-      assert.equal(store.records.get(1)?.state.time.day, 8);
-      // Sonraki yazış yine okuyor.
-      store.records.set(1, recordOf(playedState(9), 1, SCHEMA_VERSION + 1));
-      await assert.rejects(saveGame(playedState(10), 1), NewerSaveError);
-      assert.equal(store.records.get(1)?.state.time.day, 9);
     } finally {
       setSaveBackend(null);
     }

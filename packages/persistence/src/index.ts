@@ -305,8 +305,19 @@ export function buildMeta(state: GameState, slot: number, name: string): SaveMet
  * eşitleyebiliyor. Kaydın biçimi ve göçler iki yerde de aynı; depo yalnız
  * kaydı taşıyor.
  */
+/**
+ * Yazmadan hemen önce slotta duran kayda bakan denetim; hata atarsa depo
+ * yazmıyor (Tur 75). Okunamayan kayıt `undefined`: kurtarılacak bir şey yok.
+ */
+export type SaveGuard = (existing: SaveRecord | undefined) => void;
+
 export interface SaveBackend {
-  put(record: SaveRecord): Promise<void>;
+  /**
+   * `guard` varsa depo onu slotta duran kayıtla, yazmadan hemen önce
+   * çağırıyor. Tarayıcıda okuma, denetim ve yazma tek IndexedDB işleminde:
+   * başka sekme arada yazamıyor (Codex #105).
+   */
+  put(record: SaveRecord, guard?: SaveGuard): Promise<void>;
   get(slot: number): Promise<SaveRecord | undefined>;
   /** Yalnız künyeler: listeyi açmak bütün şehirleri okumasın. */
   list(): Promise<SaveMeta[]>;
@@ -422,10 +433,51 @@ function tx<T>(db: IDBDatabase, mode: IDBTransactionMode, run: (store: IDBObject
 // ----------------------------------------------------- Tarayıcının deposu
 
 const browserBackend: SaveBackend = {
-  async put(record) {
+  async put(record, guard) {
     const db = await openDb();
-    if (db) await tx(db, 'readwrite', (store) => store.put(record));
-    else storeWrite(LS_PREFIX + record.meta.slot, JSON.stringify(record));
+    if (db) {
+      await new Promise<void>((resolve, reject) => {
+        const transaction = db.transaction(STORE, 'readwrite');
+        const store = transaction.objectStore(STORE);
+        let refused: unknown = null;
+        transaction.oncomplete = () => resolve();
+        transaction.onabort = () => reject(refused ?? transaction.error);
+        if (!guard) {
+          store.put(record);
+          return;
+        }
+        const read = store.get(record.meta.slot);
+        read.onsuccess = () => {
+          try {
+            guard(read.result as SaveRecord | undefined);
+          } catch (error) {
+            refused = error;
+            transaction.abort();
+            return;
+          }
+          store.put(record);
+        };
+        // Okunamayan kayıt: işlem düşmesin, üstüne yazılsın.
+        read.onerror = (event) => {
+          event.preventDefault();
+          guard(undefined);
+          store.put(record);
+        };
+      });
+      return;
+    }
+    const key = LS_PREFIX + record.meta.slot;
+    if (guard) {
+      let existing: SaveRecord | undefined;
+      try {
+        const raw = storeRead(key);
+        existing = raw ? (JSON.parse(raw) as SaveRecord) : undefined;
+      } catch {
+        existing = undefined;
+      }
+      guard(existing);
+    }
+    storeWrite(key, JSON.stringify(record));
   },
 
   async get(slot) {
@@ -488,16 +540,13 @@ function savedSchemaVersion(record: SaveRecord | undefined): number | undefined 
 }
 
 export async function saveGame(state: GameState, slot: number, name?: string): Promise<SaveMeta> {
-  // Slot her yazıştan önce okunuyor (Codex #105): yeni sürümün sekmesi ya da Steam
-  // Cloud oturum sürerken yazmış olabilir. Okunamayan kayıt kurtarılamıyor, üstüne
-  // yazılıyor (eskisi gibi).
-  const existing = await backend()
-    .get(slot)
-    .catch(() => undefined);
-  const version = savedSchemaVersion(existing);
-  if (version !== undefined && version > SCHEMA_VERSION) throw new NewerSaveError(slot, version);
   const meta = buildMeta(state, slot, name ?? (slot === AUTOSAVE_SLOT ? 'Otomatik kayıt' : `Kayıt ${slot}`));
-  await backend().put({ meta, state });
+  // Her yazışta, yazmanın içinde (Codex #105): yeni sürümün sekmesi ya da Steam
+  // Cloud oturum sürerken yazmış olabilir.
+  await backend().put({ meta, state }, (existing) => {
+    const version = savedSchemaVersion(existing);
+    if (version !== undefined && version > SCHEMA_VERSION) throw new NewerSaveError(slot, version);
+  });
   return meta;
 }
 

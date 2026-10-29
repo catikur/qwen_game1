@@ -8801,8 +8801,8 @@ birebir (`a5ded51fb01e62a5`).
   taşıyabiliyor. Eski sürüm kaydı açamıyor, kurulum ekranına düşüyordu.
   Oyuncu yeni oyuna başlayınca 30 saniye sonra otomatik kayıt yeni
   sürümün kaydının üstüne yazıyordu: beta ilerlemesi gidiyordu.
-  - Artık her yazıştan önce slottaki kayıt okunuyor. Daha yeni bir
-    biçimin kaydıysa yazılmıyor (`NewerSaveError`).
+  - Artık her yazışta, yazmanın içinde slottaki kayda bakılıyor. Daha
+    yeni bir biçimin kaydıysa yazılmıyor (`NewerSaveError`).
   - Otomatik kayıt duruyor, oyuncuya bir kez söyleniyor: "Bu oyunu
     saklamak için Kayıtlar'dan başka bir slota kaydet." Elle kayıt da o
     slota yazmıyor, nedenini söylüyor.
@@ -8848,9 +8848,17 @@ birebir (`a5ded51fb01e62a5`).
   yazıştan önce okuyor, sonra okumuyordu. Tarayıcıda yeni sürüm başka bir
   sekmede açılıp aynı slota yazarken eski sürümün sekmesi açık
   kalabiliyor; eski sekme sonraki otomatik kayıtta yeni sürümün kaydının
-  üstüne yazıyordu. Artık her yazıştan önce okunuyor (otomatik kayıtta 30
-  saniyede bir okuma). Test bunu iki sekmeyle sınıyor; önceki sürümde
+  üstüne yazıyordu. Test bunu iki sekmeyle sınıyor; önceki sürümde
   kırmızı.
+- *Denetim ile yazma ayrıydı.* Her yazıştan önce okumak da yetmiyordu:
+  okuma ile yazma iki ayrı işlemdi, öbür sekme araya girebiliyordu.
+  Artık denetim deponun yazmasının içinde (`SaveBackend.put` → `guard`):
+  tarayıcıda okuma, denetim ve yazma tek bir IndexedDB işleminde, başka
+  sekme arada yazamıyor; yerel depolamada araya bekleme girmiyor. Masaüstü
+  deposu dosyayı okuyup yazıyor (iki komut): oyun tek pencere, Steam
+  Cloud da oyun açıkken eşitlemiyor. Test ayrı bir ön okuma olmadığını
+  sınıyor (önceki sürümde kırmızı); masaüstü deposunun testi yeni sürümün
+  dosyasını yazmadığını, yarım dosyanın üstüne yazdığını.
 
 **Doğru çıkanlar.**
 - Sürüm aracı yedi dosyayı birlikte değiştiriyor, geri alınca fark
@@ -8869,18 +8877,18 @@ birebir (`a5ded51fb01e62a5`).
 **Doğrulama.**
 - `pnpm test` 921/921 (913'ten); tip denetimi temiz; Almanca denetimi 0
   hata.
-  - `packages/core/test/persistence.test.ts` (7 yeni): neden kodları (JSON
+  - `packages/core/test/persistence.test.ts` (6 yeni): neden kodları (JSON
     `null` ve dizi de); raporun içe aktarılması ve kayıtsız rapor; göçü
     düşüren bozuk kayıt (içe aktarma ve açılış); yeni sürümün kaydının
-    üstüne yazılmaması, kaydın yerinde kalması, silince yazılması; slotun
-    her yazıştan önce okunması; başka sekme yeni sürümle yazınca açık
-    sekmenin üstüne yazmaması; okunamayan slotun üstüne yazılması ve
-    sonraki yazışta yeniden okunması.
+    üstüne yazılmaması, kaydın yerinde kalması, silince yazılması;
+    denetimin her yazışta yazmanın içinde olması (ayrı ön okuma yok);
+    başka sekme yeni sürümle yazınca açık sekmenin üstüne yazmaması.
   - `packages/ui/test/release.test.ts` (1 yeni): her neden üç dilde kendi
     metniyle; açılışın notu (kayıt yoksa yok, yeni sürümde "üstüne
     yazmıyor").
-  - `apps/web/test/desktop.test.ts`: masaüstü deposunun okuma sırası (ilk
-    yazıştan önce okuma) ve boş slotun nedeni.
+  - `apps/web/test/desktop.test.ts` (1 yeni): masaüstü deposu yeni
+    sürümün dosyasını yazmıyor, yarım dosyanın üstüne yazıyor; okuma sırası
+    ve boş slotun nedeni.
 - Gerçek pencerede uçtan uca 38/38 (30'dan). Yeni "Sürüm 1.0" bölümü, 8
   kontrol, tuşlar gerçek (WebDriver'ın eylemleri):
   - sürüm satırı "CapitalForge 1.0.1 · masaüstü", Yenilikler'in ilk
