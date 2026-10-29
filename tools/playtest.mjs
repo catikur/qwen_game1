@@ -8806,7 +8806,12 @@ async function finish(browser, consoleErrors) {
     pp.on('console', (m) => { if (m.type() === 'error') pErrors.push(m.text()); });
     await pp.goto('http://127.0.0.1:8811/?lang=tr');
     await pp.waitForSelector('.newgame', { timeout: 20000 });
-    // Kumandanın modülü ayrı parça (giriş paketinde yok; bütçeyi `bundle-check` sınıyor).
+    // Kumandanın modülü ayrı parça (giriş paketinde yok; bütçeyi `bundle-check` sınıyor). Oyun ekranının
+    // parçası arka planda iniyor ama kumandanınkini getirmiyor: kumanda bağlanınca iniyor (Codex #102).
+    await pp.waitForFunction(() => performance.getEntriesByType('resource').some((r) => /\/GameRoot-[\w-]+\.js/.test(r.name)), null, { timeout: 20000 }).catch(() => {});
+    const early = await pp.evaluate(() => performance.getEntriesByType('resource').map((r) => r.name.split('/').pop()).filter((name) => /^(GameRoot|pad)-/.test(name)));
+    check('Kumandanın modülü kumanda bağlanmadan inmiyor; oyun ekranının parçası onu getirmiyor',
+      early.some((name) => name.startsWith('GameRoot-')) && !early.some((name) => name.startsWith('pad-')), early.join(', '));
     await pp.evaluate(() => { window.__fakePad.connected = true; window.dispatchEvent(new Event('gamepadconnected')); });
     await pp.waitForFunction(() => performance.getEntriesByType('resource').some((r) => /\/pad-[\w-]+\.js/.test(r.name)), null, { timeout: 10000 }).catch(() => {});
     await frames(pp, 3);

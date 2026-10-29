@@ -45,7 +45,7 @@ import { setBeforeUpdate } from './pwa';
 import { deliverImageFile, deliverTextFile } from './host';
 import { createLeagueBoard, fallbackLeagueBoard, leagueServerConfigured } from './league-board';
 import { Soundscape } from './audio';
-import { focusFirst, setMapHandler } from './pad';
+import { focusFirst, setMapHandler } from './padBridge';
 
 /**
  * Oyun ekranı: şehir sahnesi, HUD ve paneller (Tur 46).

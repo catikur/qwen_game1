@@ -8294,7 +8294,10 @@ yazı alanında ekran klavyesi.
     PlayStation'da ✕ ○ □ △. HUD şeride altta yer ayırıyor.
   - Ayarlar'da "Kumanda" listesi (kumanda kullanıldıysa).
   - Modül kumanda bağlanınca iniyor (4,2 KB); giriş paketine yalnız bir
-    kanca girdi.
+    kanca girdi. Oyun ekranıyla ortak uç (harita işleyicisi, ilk odak)
+    ayrı küçük modülde (`padBridge.ts`). İlk hâlinde oyun ekranı modülü
+    doğrudan içe aktarıyordu ve kumandanın kodu kumanda bağlanmadan da
+    oyun ekranıyla iniyordu (Codex #102).
 - *Steam Deck'in ekran klavyesi.* Kumandayla bir yazı alanı seçilince
   (şirket adı, davet kodu) Steam'in klavyesi alanı örtmeden açılıyor
   (`ShowFloatingGamepadTextInput`, kabuğun `steam_keyboard` komutu). Çok
@@ -8329,8 +8332,9 @@ yazı alanında ekran klavyesi.
     istenmiyor.
 - `cargo test` 21/21, `cargo test --features steam` 20/20, clippy temiz;
   Steam'siz derlemede ekran klavyesi yok.
-- Tarayıcı testinin yeni bölümü "Kumanda ve yalnız klavye" (28 kontrol)
-  28/28. Kurulum yalnız kumandayla ve yalnız klavyeyle bitiyor. Ardından
+- Tarayıcı testinin yeni bölümü "Kumanda ve yalnız klavye" (29 kontrol)
+  29/29. Kumandanın modülü kumanda bağlanmadan inmiyor. Kurulum yalnız
+  kumandayla ve yalnız klavyeyle bitiyor. Ardından
   ortadaki parsel seçiliyor, satın alınıyor, yapı seçilip parsele
   kuruluyor. Kamera çubuklarla ve Q/E, +/−, WASD ile dönüyor, yakınlaşıyor,
   kayıyor. LB/RB, Y, X, ☰ ve ⧉ işini yapıyor, kaydırıcı yön tuşuyla
@@ -8339,7 +8343,9 @@ yazı alanında ekran klavyesi.
 - Gerçek pencerede uçtan uca 29/29 (28'den): WebKitGTK'de Gamepad API var
   (libmanette), ekran klavyesinin komutu kabukta.
 - Paket bütçesi tamam (ana parça 74,5 KB; kumandanın modülü, Ayarlar'daki
-  listesi ve yazıları ayrı parçalarda).
+  listesi ve yazıları ayrı parçalarda). Paket denetiminin yeni kontrolü:
+  kumandanın modülü ne kurulumun yolunda ne oyun ekranının durağan içe
+  aktarmalarında.
 
 **Kalan.** Steam Deck'in kendisinde denemek. Valve'ın Verified testinden
 önce, Deck'te Linux deposuyla ya da Proton'la (`docs/STEAM.md` → "Linux ve

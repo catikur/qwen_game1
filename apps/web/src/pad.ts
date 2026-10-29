@@ -5,7 +5,8 @@
  * modül iniyor. Kare başına kumandayı okuyor; arayüzde odağı yönle
  * gezdiriyor, A ile basıyor, B ile geri dönüyor, düğme ipuçlarını
  * gösteriyor. Haritanın işleri (kamera, ortadaki parsel, paneller, hız)
- * oyun ekranının: `GameRoot` bir harita işleyicisi kaydediyor. Kurulum
+ * oyun ekranının: `GameRoot` bir harita işleyicisi kaydediyor
+ * (`padBridge.ts`; oyun ekranı bu modülü içe aktarmıyor). Kurulum
  * ekranında yalnız arayüzde gezinme var. Kararlar `@capital/ui`'daki saf
  * işlevlerde (`padInput`, `spatialNav`).
  */
@@ -24,33 +25,11 @@ import {
   setPadGlyphsInUse,
   watchInputMode,
 } from '@capital/ui';
-import type { Box, Direction, PadAction, PadLayer, PadMessageKey, Stick } from '@capital/ui';
+import type { Box, Direction, PadAction, PadLayer, PadMessageKey } from '@capital/ui';
+import { focusFirst, focusOn, focusables, mapHandler } from './padBridge';
 import { TEXT_INPUT_EVENT } from './textInput';
 import type { TextField } from './textInput';
 
-/** Oyun ekranının kumandaya açtığı işler. */
-export interface MapHandler {
-  /** Her karede: sol çubuk kaydır, sağ çubuk döndür ve eğ, RT − LT yakınlaş. */
-  drive(pan: Stick, orbit: Stick, zoom: number): void;
-  /** A haritada: ortadaki parseli seç; yerleştirmedeyse oraya kur. */
-  select(): void;
-  panel(step: 1 | -1): void;
-  pause(): void;
-  speed(): void;
-  lens(): void;
-  settings(): void;
-  /** Yerleştirme kipinde mi: ipucu şeridi A'yı "kur" diye yazıyor. */
-  placing(): boolean;
-}
-
-let handler: MapHandler | null = null;
-
-export function setMapHandler(next: MapHandler | null): void {
-  handler = next;
-}
-
-const FOCUSABLE =
-  'a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 /** Kipli katmanlar: panel, kurulum penceresi, editör, zafer ve sonuç ekranları. */
 const MODAL = '[aria-modal="true"], [role="alertdialog"]';
 const TEXT_INPUTS = new Set(['text', 'search', 'email', 'url', 'tel', 'password', 'number']);
@@ -58,30 +37,6 @@ const TEXT_INPUTS = new Set(['text', 'search', 'email', 'url', 'tel', 'password'
 const CONTROL = 'a[href], button, input, select, textarea, [tabindex]:not([tabindex="-1"])';
 /** Kaba girerken atlanan: başlıktaki kapatma düğmesi (B zaten kapatıyor). */
 const CLOSE = '.inspector-head button, .modal-head button';
-
-function shown(element: HTMLElement): boolean {
-  const rect = element.getBoundingClientRect();
-  return rect.width > 0 && rect.height > 0 && getComputedStyle(element).visibility !== 'hidden';
-}
-
-/** Kapsamdaki odaklanabilir, görünen denetimler (belge sırasıyla). */
-export function focusables(scope: ParentNode): HTMLElement[] {
-  return [...scope.querySelectorAll<HTMLElement>(FOCUSABLE)].filter((element) => !element.closest('[inert], [aria-hidden="true"]') && shown(element));
-}
-
-function focusOn(element: HTMLElement): void {
-  element.focus({ preventScroll: true });
-  element.scrollIntoView({ block: 'nearest', inline: 'nearest' });
-}
-
-/** Kapsamın ilk denetimine odaklan; `skip` eşleşenler atlanıyor (detayın kapatma düğmesi). */
-export function focusFirst(scope: Element | null, skip?: string): boolean {
-  if (!scope) return false;
-  const first = focusables(scope).find((element) => !skip || !element.matches(skip));
-  if (!first) return false;
-  focusOn(first);
-  return true;
-}
 
 function topModal(): HTMLElement | null {
   const open = [...document.querySelectorAll<HTMLElement>(MODAL)].filter((element) => element.getClientRects().length > 0);
@@ -200,7 +155,8 @@ function activate(): void {
     if (!focusFirst(modal, CLOSE)) focusFirst(modal);
     return;
   }
-  if (handler) handler.select();
+  const map = mapHandler();
+  if (map) map.select();
   else focusFirst(document.body);
 }
 
@@ -242,19 +198,19 @@ function run(action: PadAction): void {
       back();
       break;
     case 'panel':
-      handler?.panel(action.step);
+      mapHandler()?.panel(action.step);
       break;
     case 'pause':
-      handler?.pause();
+      mapHandler()?.pause();
       break;
     case 'speed':
-      handler?.speed();
+      mapHandler()?.speed();
       break;
     case 'lens':
-      handler?.lens();
+      mapHandler()?.lens();
       break;
     case 'settings':
-      handler?.settings();
+      mapHandler()?.settings();
       break;
   }
 }
@@ -264,10 +220,11 @@ function run(action: PadAction): void {
 type HintButton = 'a' | 'b' | 'x' | 'y' | 'lb' | 'rb' | 'menu' | 'view' | 'dpad';
 
 function hintsFor(layer: PadLayer): Array<[HintButton, PadMessageKey]> {
-  if (layer === 'modal') return [['a', 'hud.pad.select'], ['b', 'hud.pad.close'], ['dpad', 'hud.pad.move'], ...(handler ? ([['lb', 'hud.pad.panels']] as Array<[HintButton, PadMessageKey]>) : [])];
+  const map = mapHandler();
+  if (layer === 'modal') return [['a', 'hud.pad.select'], ['b', 'hud.pad.close'], ['dpad', 'hud.pad.move'], ...(map ? ([['lb', 'hud.pad.panels']] as Array<[HintButton, PadMessageKey]>) : [])];
   if (layer === 'hud') return [['a', 'hud.pad.select'], ['b', 'hud.pad.toMap'], ['dpad', 'hud.pad.move']];
-  if (!handler) return [['a', 'hud.pad.select'], ['dpad', 'hud.pad.move'], ['b', 'hud.pad.back']];
-  if (handler.placing()) return [['a', 'hud.pad.place'], ['b', 'hud.pad.cancel']];
+  if (!map) return [['a', 'hud.pad.select'], ['dpad', 'hud.pad.move'], ['b', 'hud.pad.back']];
+  if (map.placing()) return [['a', 'hud.pad.place'], ['b', 'hud.pad.cancel']];
   return [['a', 'hud.pad.pick'], ['dpad', 'hud.pad.toHud'], ['lb', 'hud.pad.panels'], ['y', 'hud.pad.pause'], ['x', 'hud.pad.speed'], ['menu', 'hud.pad.settings']];
 }
 
@@ -336,12 +293,12 @@ export function startPad(): void {
       for (const action of padActions(pressed, padLayer())) run(action);
       const layer = padLayer();
       const drive = padDrive(frame, layer);
-      handler?.drive(drive.pan, drive.orbit, drive.zoom);
+      mapHandler()?.drive(drive.pan, drive.orbit, drive.zoom);
       if (drive.scroll !== 0) scroll(drive.scroll, dt);
       renderHints(layer);
     } else {
       presses.reset();
-      handler?.drive({ x: 0, y: 0 }, { x: 0, y: 0 }, 0);
+      mapHandler()?.drive({ x: 0, y: 0 }, { x: 0, y: 0 }, 0);
     }
     requestAnimationFrame(tick);
   };
