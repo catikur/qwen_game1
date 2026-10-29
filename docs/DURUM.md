@@ -8146,7 +8146,23 @@ duruyordu: test dışa aktarılan kaydı adı görünür görünmez okuyor, dosy
   1093 × 614, 1280 × 800 (İngilizce, çok büyük metin) ve 1920 × 1080'de
   paneller üst üste binmiyor, sol sütun taşmıyor, şehir ortada
   tıklanabilir; Deck'in boyunda kurulumda, oyunda, parselde ve rıhtımın
-  dokuz panelinde en küçük yazı ≥ 12 piksel. Tam koşu: sürüyor.
+  dokuz panelinde en küçük yazı ≥ 12 piksel. Tam koşuda 9/9.
+- Tam tarayıcı koşusu 714/717, konsol temiz (80 dk). Koşu, ayarların ve
+  kısayol süzgecinin inceleme düzeltmelerinden önceki paketle yapıldı; o
+  düzeltmeleri birim testleri ve CI'ın masaüstü uçtan uca koşusu sınıyor.
+  Kalan üç kontrolün hiçbiri oyunun hatası değil:
+  - "Düşük kare hızında oyun saati gerçek zamanla uyumlu": 1 FPS'te 5/8 gün
+    (%59, eşik %75). Koşu sırasında masaüstü derlemesi ve testler de aynı
+    makinedeydi (Tur 67'deki gibi). Aynı adımlarla boş makinede üç kez
+    ölçüldü: 2 FPS'te %96, %90, %95.
+  - Lojistik bölümünün iki kontrolü aynı kökten, testin kendisinden.
+    Rakip mağazalarının en yoğun olduğu parsel o an ihaledeydi ve oyun
+    ihaledeki parseli satmıyor. Terminal kurulamayınca teklif de gelmedi.
+    Aynı seçim motorda denendi: 12 rastgele şehrin birinde ihaledeki
+    parsele düşüyor. Bu kalıbı kullanan dört bölüm (lojistik, enerji,
+    gayrimenkul, "Karanlık kış") artık satın alınabilen en yoğun parseli
+    alıyor. Düzeltilmiş paketle, Lojistik'ten Senaryo paketi II'ye beş
+    bölüm yeniden koşuldu: 63/63.
 - Lig sunucusunun izi yerel sunucuya karşı uçtan uca (`sim-check.ts`):
   `a5ded51fb01e62a5`, aynı; ulaşılamayan sunucu hata.
 - Paket bütçesi tamam (ana parça 74,2 KB; masaüstünün kodu ayrı parçada).

@@ -6144,20 +6144,24 @@ async function finish(browser, consoleErrors) {
       me.cash += 5_000_000;
       me.netWorth += 5_000_000;
       const rivals = Object.values(state.buildings).filter((b) => b.companyId !== me.id && api.buildingRole(b.defId) === 'outlet');
-      let best = null;
+      const sites = [];
       for (const tile of state.map.tiles) {
         if (tile.kind !== 'plot' || tile.ownerId || tile.buildingId || tile.structureId) continue;
         const count = rivals.filter((o) => {
           const at = state.map.tiles[o.tileId];
           return Math.abs(at.x - tile.x) + Math.abs(at.y - tile.y) <= 10;
         }).length;
-        if (!best || count > best.count) best = { id: tile.id, count };
+        sites.push({ id: tile.id, count });
       }
-      const bought = api.engine.dispatch({ type: 'BUY_TILE', tileId: best.id }).ok;
-      const built = bought && api.engine.dispatch({ type: 'BUILD', tileId: best.id, defId: 'freight_terminal' }).ok;
-      return { ...best, built, day: state.time.day };
+      // En yoğun parsel o an ihalede olabiliyor ve oyun ihaledeki parseli
+      // satmıyor (Tur 71'in tam koşusu: 12 şehrin birinde). Satın alınabilen
+      // en yoğun parsel; sıralama kararlı, eşitlikte haritadaki ilk parsel.
+      sites.sort((a, b) => b.count - a.count);
+      const best = sites.find((site) => api.engine.dispatch({ type: 'BUY_TILE', tileId: site.id }).ok);
+      const built = best !== undefined && api.engine.dispatch({ type: 'BUILD', tileId: best.id, defId: 'freight_terminal' }).ok;
+      return { ...best, built, skipped: best ? sites.indexOf(best) : sites.length, day: state.time.day };
     });
-    check('Terminal rakip mağazalarının yoğun olduğu parsele kuruluyor', site.built && site.count >= 4, `${site.count} rakip mağazası menzilde, ${site.day}. gün`);
+    check('Terminal rakip mağazalarının yoğun olduğu parsele kuruluyor', site.built && site.count >= 4, `${site.count} rakip mağazası menzilde, ${site.day}. gün${site.skipped ? ` · daha yoğun ${site.skipped} parsel satılmıyordu` : ''}`);
 
     const offer = await fp.evaluate(() => {
       const api = window.__capital;
@@ -6258,7 +6262,7 @@ async function finish(browser, consoleErrors) {
       const me = state.companies[state.playerCompanyId];
       me.cash += 5_000_000;
       me.netWorth += 5_000_000;
-      let best = null;
+      const sites = [];
       for (const tile of state.map.tiles) {
         if (tile.kind !== 'plot' || tile.ownerId || tile.buildingId || tile.structureId) continue;
         const archetype = state.districts[tile.districtId].archetype;
@@ -6268,10 +6272,12 @@ async function finish(browser, consoleErrors) {
           const at = state.map.tiles[b.tileId];
           if (Math.abs(at.x - tile.x) + Math.abs(at.y - tile.y) <= 12) count++;
         }
-        if (!best || count > best.count) best = { id: tile.id, count };
+        sites.push({ id: tile.id, count });
       }
-      const bought = api.engine.dispatch({ type: 'BUY_TILE', tileId: best.id }).ok;
-      return { ...best, bought, day: state.time.day };
+      // Lojistikteki gibi: satın alınabilen en yoğun parsel (ihaledeki satılmıyor).
+      sites.sort((a, b) => b.count - a.count);
+      const best = sites.find((site) => api.engine.dispatch({ type: 'BUY_TILE', tileId: site.id }).ok);
+      return { ...best, bought: best !== undefined, day: state.time.day };
     });
     check('Sanayide menziline bina giren boş parsel alınıyor', site.bought && site.count >= 4, `${site.count} bina menzilde, ${site.day}. gün`);
 
@@ -6425,15 +6431,17 @@ async function finish(browser, consoleErrors) {
       const me = state.companies[state.playerCompanyId];
       me.cash += 60_000_000;
       me.netWorth += 20_000_000;
-      let best = null;
+      const sites = [];
       for (const tile of state.map.tiles) {
         if (tile.kind !== 'plot' || tile.ownerId || tile.buildingId || tile.structureId) continue;
         const district = state.districts[tile.districtId];
         if (!zones.includes(district.archetype) || (district.opensOnDay ?? 0) > state.time.day) continue;
-        if (!best || district.population > best.population) best = { id: tile.id, population: district.population };
+        sites.push({ id: tile.id, population: district.population });
       }
-      const bought = api.engine.dispatch({ type: 'BUY_TILE', tileId: best.id }).ok;
-      return { ...best, bought, day: state.time.day };
+      // Lojistikteki gibi: satın alınabilen en kalabalık parsel (ihaledeki satılmıyor).
+      sites.sort((a, b) => b.population - a.population);
+      const best = sites.find((site) => api.engine.dispatch({ type: 'BUY_TILE', tileId: site.id }).ok);
+      return { ...best, bought: best !== undefined, day: state.time.day };
     }, ESTATE_ZONES);
     check('Konut bölgesinde boş parsel alınıyor', site.bought, `${Math.round(site.population)} nüfus, ${site.day}. gün`);
 
@@ -6876,16 +6884,19 @@ async function finish(browser, consoleErrors) {
       const me = s.companies[s.playerCompanyId];
       // Santral: rakip binalarının en yoğun olduğu boş sanayi ya da liman parseli.
       const rivals = Object.values(s.buildings).filter((b) => b.companyId !== me.id);
-      let best = null;
+      const sites = [];
       for (const t of s.map.tiles) {
         if (t.kind !== 'plot' || t.ownerId || t.buildingId || t.structureId) continue;
         const d = s.districts[t.districtId];
         if (!['industrial', 'port'].includes(d.archetype) || (d.opensOnDay ?? 0) > s.time.day) continue;
         const n = rivals.filter((b) => { const at = s.map.tiles[b.tileId]; return Math.abs(at.x - t.x) + Math.abs(at.y - t.y) <= 12; }).length;
-        if (!best || n > best.n) best = { id: t.id, n };
+        sites.push({ id: t.id, n });
       }
-      const bought = c.engine.dispatch({ type: 'BUY_TILE', tileId: best.id }).ok;
-      const built = c.engine.dispatch({ type: 'BUILD', tileId: best.id, defId: 'gas_plant' });
+      // Lojistikteki gibi: satın alınabilen en yoğun parsel (ihaledeki satılmıyor).
+      sites.sort((a, b) => b.n - a.n);
+      const best = sites.find((site) => c.engine.dispatch({ type: 'BUY_TILE', tileId: site.id }).ok);
+      const bought = best !== undefined;
+      const built = bought ? c.engine.dispatch({ type: 'BUILD', tileId: best.id, defId: 'gas_plant' }) : { ok: false };
       for (let i = 0; i < 40; i++) c.engine.runDay();
       c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
       return { day: s.time.day - s.scenario.startDay, modifiers: s.modifiers ?? [], crisis: s.crisis?.phase, bought, built: built.ok, sold: s.scenario.powerSold ?? 0 };
