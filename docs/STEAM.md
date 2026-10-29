@@ -1,8 +1,9 @@
 # Steam
 
-> Tur 70'te yazıldı. Masaüstü sürümünün kendisi `docs/MASAUSTU.md`de; bu
-> belge onun Steam'e çıkışı: oyunun içindeki Steam bağlantısı, Steamworks'e
-> girilecek her şey ve yükleme.
+> Tur 70'te yazıldı, Tur 73'te Workshop ve skor tabloları eklendi.
+> Masaüstü sürümünün kendisi `docs/MASAUSTU.md`de; bu belge onun Steam'e
+> çıkışı: oyunun içindeki Steam bağlantısı, Steamworks'e girilecek her şey
+> ve yükleme.
 
 ## Oyunda ne var
 
@@ -32,6 +33,48 @@
   alanı örtmeden açılıyor (`ShowFloatingGamepadTextInput`; Steam Deck'te ve
   Büyük Resim kipinde). Steam yoksa oyuncu kendi klavyesiyle yazıyor.
   Düğmelerin işi `docs/MASAUSTU.md` → "Kumanda ve yalnız klavye".
+- **Workshop (Tur 73).** Senaryo paketleri (`docs/ICERIK-PAKETI.md`)
+  Workshop'ta paylaşılıyor.
+  - *Abone olunan paket.* Öğeyi Steam indiriyor; kabuk kurulu öğelerin
+    klasöründeki `*.json` dosyalarını okuyor (öğe başına en çok 4, her
+    biri en çok 64 KB; `apps/desktop/src-tauri/src/workshop.rs`). Sayfa
+    her paketi doğrulayıp "Kendi senaryoların" rafına koyuyor
+    (`packages/ui/src/packStore.ts`): "Workshop: <paket>" künyesiyle, salt
+    okunur, en çok 40 paket. Bozuk dosya atlanıyor. Aynı kimlikte
+    oyuncunun kendi paketi varsa o geçiyor. İnmekte olan öğeler rafta
+    sayılıyor; güncellemesi inen öğe de (Steam bitirene kadar klasörüne
+    dokunulmuyor). Raf açılınca, pencereye dönünce ve inen öğe varken beş
+    saniyede bir liste tazeleniyor. Abonelik Steam'de bırakılınca paket
+    raftan gidiyor.
+  - *Yükleme.* Oyuncu kendi paketini rafın "Workshop'a yükle" düğmesiyle
+    yayımlıyor (onaylı). Öğe herkese açık, "Scenario" etiketli, içeriği
+    tek bir `pack.json`; açıklaması paketin senaryoları. Başlık ve
+    açıklama Steamworks'ün bayt sınırlarına kısaltılıyor (UTF-8; başlık
+    128, açıklama 7999 bayt, sondaki sıfırın yeri ayrı); NUL karakteri
+    atılıyor, kabuk NUL'lu isteği öğe açmadan reddediyor. Öğenin kimliği
+    cihazda, Steam hesabına göre saklanıyor (`capitalforge.workshop.v1`):
+    sonraki yükleme aynı öğeyi güncelliyor; aynı bilgisayardaki başka bir
+    hesap kendi öğesini açıyor. Öğe Steam'de silindiyse yenisi açılıyor. Öğe açılıp
+    paket gidemezse de kimlik saklanıyor, yeniden deneme o öğeye gidiyor.
+    Workshop sözleşmesini kabul etmemiş oyuncunun öğesini Steam gizli
+    tutuyor; oyun bunu söylüyor ve sözleşmeyi açıyor.
+  - *Steam'de açmak.* Öğenin sayfası, oyunun Workshop'u ve sözleşme
+    Steam katmanında açılıyor. Katman oyuna tutunmadıysa (pencere bir
+    WebView, katman her sistemde tutunamıyor) Steam'in kendi tarayıcısında
+    (`steam://openurl/…`).
+- **Skor tabloları (Tur 73).** Tohum Ligi'nin her haftasının ve gününün
+  Steam'de bir tablosu var: `CF_SEED_2026-W44`, `CF_DAILY_2026-10-29`
+  (`leaderboard.rs`). Tabloyu ilk gönderen açıyor (`FindOrCreateLeaderboard`;
+  azalan, sayı).
+  - Lig koşusu gönderilince puan Steam'in tablosuna da gidiyor. Puan
+    şirketin net değeri; 32 bite sığmayan kırpılıyor. Tabloda en iyisi
+    kalıyor (`KeepBest`); sonuç ekranında Steam'deki sırası yazıyor.
+  - Lig panelinde "Steam arkadaşların": o tablodaki Steam arkadaşları,
+    dakikada bir tazeleniyor.
+  - Steam'in tablosu koşuyu doğrulamıyor, puanı istemci yazıyor. Asıl
+    sıralama lig sunucusunun doğrulanmış tablosu; Steam'inki yanında
+    arkadaş kıyası. Kapanmış lig, tekrarı tutmayan ve kopya koşu Steam'e
+    gitmiyor.
 - **Tek pencere.** İkinci kopya açılmıyor, açık pencere öne geliyor
   (`tauri-plugin-single-instance`); iki pencere aynı kayda yazamıyor.
 - **Kayıtlar Steam Cloud'a hazır.** Dosyada, kökleri sabit; Auto-Cloud
@@ -100,11 +143,21 @@ Sırası önemli; ilk ikisi olmadan gerisi açılmıyor.
      kapalı). Steam Input açıkken Steam oyuna Xbox kumandası veriyor, oyun
      DualSense'i tanıyamıyor ve düğme yazıları A B X Y kalıyor.
    - Xbox ve öbür kumandalar: varsayılan.
-8. **Yükleme hesabı**: SteamPipe'ı çalıştıracak bir Steam hesabı. Ya
-   kendi hesabınla yüklersin (adım 9), ya da yalnız yükleme izni olan ayrı
+8. **Workshop** (Steamworks → Workshop):
+   - General: "Enable ISteamUGC for file transfer" açık.
+   - Tags: `Scenario` etiketi; oyun her öğeye onu koyuyor.
+   - Visibility: yayından önce Workshop'u yalnız geliştiriciler ve test
+     hesapları görüyor; yayında herkese açık.
+   - Sonunda "Publish".
+9. **Skor tabloları**: elle tablo açmak gerekmiyor, oyun her haftanın ve
+   günün tablosunu kendisi açıyor. Steamworks → Stats & Achievements →
+   Leaderboards'ta görünüyorlar. Bir tabloyu "trusted" yapma: o zaman
+   yalnız sunucudan yazılabiliyor, oyunun puanı gitmiyor.
+10. **Yükleme hesabı**: SteamPipe'ı çalıştıracak bir Steam hesabı. Ya
+   kendi hesabınla yüklersin (adım 11), ya da yalnız yükleme izni olan ayrı
    bir hesap açarsın, bilgileri depoya sır olarak girer, yüklemeyi CI'a
    eklerim.
-9. **Yükleme**: GitHub → Actions → Masaüstü → Run workflow. Bitince üç
+11. **Yükleme**: GitHub → Actions → Masaüstü → Run workflow. Bitince üç
    paket: `steam-depot-Windows`, `steam-depot-macOS`, `steam-depot-Linux`.
    Steamworks SDK'sının `tools/ContentBuilder/` klasöründe:
    - `content/windows`, `content/macos`, `content/linux` klasörlerine
@@ -114,10 +167,10 @@ Sırası önemli; ilk ikisi olmadan gerisi açılmıyor.
    - `steamcmd +login <hesap> +run_app_build <app_build.vdf'nin tam yolu> +quit`.
    - Steamworks → SteamPipe → Builds: yüklenen derlemeyi `default` dalına
      al.
-10. **İnceleme**: Steam hem mağaza sayfasını hem derlemeyi inceliyor (birkaç
+12. **İnceleme**: Steam hem mağaza sayfasını hem derlemeyi inceliyor (birkaç
    iş günü). Mağaza sayfası "Coming Soon" olarak en az iki hafta açık
    kalmadan oyun yayımlanamıyor; yayın tarihini buna göre seç.
-11. **macOS imzası** (isteğe bağlı, önerilir): Apple Developer Program
+13. **macOS imzası** (isteğe bağlı, önerilir): Apple Developer Program
     (yıllık 99 $). Sırlar ve ayrıntı `docs/MASAUSTU.md` → "Steam'e
     hazırlık". Steam'den inen dosyalarda karantina işareti olmadığı için
     Gatekeeper imzasız uygulamayı genellikle durdurmuyor; yine de imzasız
@@ -187,6 +240,19 @@ tanımlı mı?)"); Steamworks'e girilen adlar tabloyla aynı olmalı.
 Başarımı sıfırlamak: Steam istemcisinin konsolunda (`steam://open/console`)
 `reset_all_stats <uygulama kimliği>`.
 
+Workshop'u denemek (Tur 73): yayından önce Workshop'u yalnız geliştirici
+hesapları görüyor, bu yüzden bir geliştirici hesabıyla:
+
+1. Kendi senaryolarından birini rafta seç, "Workshop'a yükle".
+2. Sözleşme uyarısı çıkarsa "Sözleşmeyi aç", kabul et.
+3. "Steam'de aç" ile öğenin sayfasına git, abone ol.
+4. Pencereye dön: öğe inince rafta "Workshop: <paket>" künyesiyle.
+   Kendi paketinle aynı kimlikte olduğu için önce kendi paketini kaldır.
+5. Bir lig koşusunu bitirip gönder. Puan Steam'in tablosunda; lig
+   panelinde "Steam arkadaşların".
+
+Tabloyu sıfırlamak: Steamworks → Leaderboards → tablonun satırları.
+
 ## Malzemeyi yeniden üretmek
 
 ```sh
@@ -219,11 +285,29 @@ API adını değiştirme.
   bildirim, bilinmeyen rozet atlanıyor; Steam yokken hiçbir şey gitmiyor;
   giden istek düşerse sonraki değişiklikte yeniden; kumanda yazı alanını
   seçince ekran klavyesi alanın yerinde, fiziksel pikselde isteniyor
-  (Tur 72), Steam yokken istenmiyor; kabuğun üç komutu kayıtlı.
+  (Tur 72), çok satırlı alanda çok satırlı klavye; Steam yokken istenmiyor.
+  Workshop ve skor tablosunun köprüleri kabuğun komutlarına, kabuğun
+  adlarıyla bağlı (Tur 73); ligin hangi sonucu Steam'e gidiyor; kabuğun
+  sekiz Steam komutu kayıtlı.
+- `packages/ui/test/packs.test.ts` → "Workshop paketleri (Tur 73)": raf
+  abone olunan paketleri gösteriyor, bozuk dosya ve sınırı aşan atlanıyor;
+  aynı liste bir şey değiştirmiyor, değişmeyen öğe aynı nesne; aynı
+  kimlikte oyuncunun paketi geçiyor ve kaldırınca Workshop sürümü geri
+  geliyor; eski liste yenisini ezmiyor; Workshop paketinde kaldırma ve
+  yükleme yok, kendi paketinde yükleme yalnız Steam açıkken.
 - `cargo test` ve `cargo test --features steam`: kuyruk istatistikler
   inene kadar bekliyor, açılan ad yeniden girmiyor, tanımsız ad sınırda
   düşüyor, yazılamayan başarım aralıkla yeniden yazılıyor; Steam'siz
-  derlemede durum "kapalı", ekran klavyesi yok.
+  derlemede durum "kapalı", ekran klavyesi yok. Tur 73: klasördeki
+  paketler sırayla, büyük ve başka dosya atlanıyor; yükleme isteği
+  Steamworks'ün sınırlarında; açılan sayfa yalnız Workshop, sözleşme ya da
+  öğe; tablo adı yalnız ligin hafta ve gün kimliğinden; net değer tablonun
+  puanına kırpılıyor; Steam'siz derlemede Workshop ve tablo yok.
 - `tools/desktop-e2e.mjs` → "Steam ve tek pencere": derlenmiş oyunda
-  Steam komutları yanıt veriyor; ikinci kopya açılmıyor, ilk pencere
-  yerinde.
+  Steam komutları yanıt veriyor (Workshop ve tablo komutları da); ikinci
+  kopya açılmıyor, ilk pencere yerinde.
+- `tools/playtest.mjs` → "Steam: Workshop ve skor tabloları": masaüstü
+  paketi sahte bir kabukla (Steam açık) tarayıcıda. Workshop paketi rafta,
+  "Steam'de aç", yükleme ve güncelleme, sözleşme; lig panelinde Steam
+  arkadaşları; gönderilen koşunun puanı Steam'in tablosunda, sonuç
+  ekranında sırası.

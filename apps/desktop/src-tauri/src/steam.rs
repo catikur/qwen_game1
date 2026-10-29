@@ -39,6 +39,12 @@ const TICK: Duration = Duration::from_millis(100);
 pub struct Status {
     pub available: bool,
     pub detail: String,
+    /// Oturumdaki Steam hesabı (SteamID64; JavaScript'in sayısında bozulmasın
+    /// diye metin). Sayfa Workshop öğelerinin kimliklerini hesaba göre
+    /// saklıyor: aynı bilgisayarda başka bir hesap öbürünün öğesini güncellemeye
+    /// kalkmıyor (Codex #103).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub account: Option<String>,
 }
 
 /// Steam'in başarım arayüzü; testte sahtesi. Steam'siz derlemede yalnız testte.
@@ -137,6 +143,12 @@ pub fn status() -> Status {
     STATE.get_or_init(connect).status.clone()
 }
 
+/// Bağlı Steam istemcisi; Workshop ve skor tabloları kullanıyor (Tur 73).
+#[cfg(feature = "steam")]
+pub(crate) fn client() -> Option<steamworks::Client> {
+    STATE.get_or_init(connect).client.clone()
+}
+
 /// Açılacak başarımlar kuyruğa.
 #[cfg(feature = "steam")]
 pub fn unlock(names: Vec<String>) {
@@ -174,7 +186,7 @@ pub fn keyboard(_x: i32, _y: i32, _width: i32, _height: i32, _multiline: bool) -
 #[cfg(not(feature = "steam"))]
 fn connect() -> State {
     State {
-        status: Status { available: false, detail: "bu derleme Steam'siz (`steam` özelliği kapalı)".into() },
+        status: Status { available: false, detail: "bu derleme Steam'siz (`steam` özelliği kapalı)".into(), account: None },
     }
 }
 
@@ -211,10 +223,11 @@ fn connect() -> State {
                 worker.lock().unwrap_or_else(|poisoned| poisoned.into_inner()).process(&steam);
                 std::thread::sleep(TICK);
             });
-            State { status: Status { available: true, detail: "Steam'e bağlı".into() }, queue: Some(queue), client: Some(client) }
+            let account = Some(client.user().steam_id().raw().to_string());
+            State { status: Status { available: true, detail: "Steam'e bağlı".into(), account }, queue: Some(queue), client: Some(client) }
         }
         Err(error) => State {
-            status: Status { available: false, detail: format!("Steam'e bağlanılamadı: {error} ({error:?})") },
+            status: Status { available: false, detail: format!("Steam'e bağlanılamadı: {error} ({error:?})"), account: None },
             queue: None,
             client: None,
         },
@@ -336,11 +349,20 @@ mod tests {
         assert_eq!(fake.stores.get(), 3, "yazıldıktan sonra yeniden yazma yok");
     }
 
+    #[test]
+    fn durumda_hesap_yalniz_steam_acikken() {
+        let off = Status { available: false, detail: "yok".into(), account: None };
+        assert_eq!(serde_json::to_value(&off).unwrap(), serde_json::json!({ "available": false, "detail": "yok" }));
+        let on = Status { available: true, detail: "bağlı".into(), account: Some("76561198000000001".into()) };
+        assert_eq!(serde_json::to_value(&on).unwrap()["account"], "76561198000000001");
+    }
+
     #[cfg(not(feature = "steam"))]
     #[test]
     fn steamsiz_derlemede_durum_kapali() {
         let status = status();
         assert!(!status.available);
+        assert_eq!(status.account, None, "hesap yok");
         unlock(names(&["CF_EMPIRE"]));
         assert!(!keyboard(0, 0, 320, 40, false), "ekran klavyesi yok");
         assert!(!keyboard(0, 0, 320, 120, true), "çok satırlısı da");

@@ -13,6 +13,9 @@ import { initSteam } from '../src/desktop/steam';
 import { TEXT_INPUT_EVENT } from '../src/textInput';
 import { keyVerdict, nativeFeel } from '../src/desktop/native';
 import { TEXT_SCALE } from '../../../packages/ui/src/settings';
+import { setWorkshopBridge, workshopBridge } from '../../../packages/ui/src/workshop';
+import { mirrorsToSteam, setSteamLeague, steamLeague } from '../../../packages/ui/src/steamLeague';
+import type { LeagueSubmitOutcome } from '../../../packages/ui/src/useGame';
 
 /**
  * Masaüstü sürümü (Tur 66), sayfa tarafı: küçük kayıtların dosya aynası ve
@@ -260,9 +263,19 @@ function fakeCareer(initial: string[]) {
 function fakeSteam(available: boolean, failUnlocks = 0) {
   const unlocks: string[][] = [];
   const keyboards: unknown[] = [];
+  /** Workshop ve skor tablosu komutları (Tur 73), geldiği sırayla. */
+  const calls: Array<[string, unknown]> = [];
   let failures = failUnlocks;
   const invoke = (async (command: string, args?: unknown) => {
-    if (command === 'steam_status') return { available, detail: available ? "Steam'e bağlı" : 'Steam açık değil' };
+    if (command === 'steam_status') return available ? { available, detail: "Steam'e bağlı", account: '76561198000000001' } : { available, detail: 'Steam açık değil' };
+    if (command.startsWith('steam_workshop_') || command.startsWith('steam_leaderboard_')) {
+      calls.push([command, args]);
+      if (command === 'steam_workshop_list') return { items: [{ id: '7', packs: ['{}'] }], downloading: 1 };
+      if (command === 'steam_workshop_publish') return { id: '8', agreement: true };
+      if (command === 'steam_workshop_open') return true;
+      if (command === 'steam_leaderboard_upload') return { score: 1234, changed: true, rank: 3 };
+      return [{ name: 'Ada', score: 900, rank: 5, me: false }];
+    }
     if (command === 'steam_unlock') {
       if (failures-- > 0) throw new Error('kabuk meşgul');
       unlocks.push((args as { names: string[] }).names);
@@ -274,7 +287,7 @@ function fakeSteam(available: boolean, failUnlocks = 0) {
     }
     throw new Error(`beklenmeyen komut ${command}`);
   }) as Invoke;
-  return { invoke, unlocks, keyboards };
+  return { invoke, unlocks, keyboards, calls };
 }
 
 /** Sayfanın penceresi yerine: yazı alanı haberi buradan geliyor. */
@@ -355,10 +368,69 @@ describe('Steam başarımları (Tur 70)', () => {
     assert.deepEqual(off.keyboards, []);
   });
 
-  test("kabuğun komut listesinde Steam'in üç komutu var", () => {
+  test('Workshop ve skor tablosunun köprüleri kabuğun komutlarına, kabuğun adlarıyla (Tur 73)', async () => {
+    setWorkshopBridge(null);
+    setSteamLeague(null);
+    // Steam yoksa köprü yok: raf ve lig paneli Steam'siz.
+    await initSteam(fakeSteam(false).invoke, fakeCareer([]).source, fakeHost(1).host);
+    assert.equal(workshopBridge(), null);
+    assert.equal(steamLeague(), null);
+
+    const steam = fakeSteam(true);
+    await initSteam(steam.invoke, fakeCareer([]).source, fakeHost(1).host);
+    const workshop = workshopBridge()!;
+    const league = steamLeague()!;
+    assert.equal(workshop.account, '76561198000000001', 'öğe kimlikleri bu hesaba göre saklanıyor (Codex #103)');
+    assert.deepEqual(await workshop.list(), { items: [{ id: '7', packs: ['{}'] }], downloading: 1 });
+    assert.deepEqual(await workshop.publish({ item: '8', title: 'Kriz', description: '• Kurtarma', pack: '{}' }), { id: '8', agreement: true });
+    assert.equal(await workshop.open({ item: '8' }), true);
+    await workshop.open('agreement');
+    await workshop.open('workshop');
+    assert.equal((await league.upload('2026-W44', 1234)).rank, 3);
+    assert.deepEqual(await league.friends('2026-10-29'), [{ name: 'Ada', score: 900, rank: 5, me: false }]);
+    assert.deepEqual(steam.calls, [
+      ['steam_workshop_list', undefined],
+      ['steam_workshop_publish', { request: { item: '8', title: 'Kriz', description: '• Kurtarma', pack: '{}' } }],
+      ['steam_workshop_open', { target: '8' }],
+      ['steam_workshop_open', { target: 'agreement' }],
+      ['steam_workshop_open', { target: 'workshop' }],
+      ['steam_leaderboard_upload', { weekId: '2026-W44', score: 1234 }],
+      ['steam_leaderboard_friends', { weekId: '2026-10-29' }],
+    ]);
+    setWorkshopBridge(null);
+    setSteamLeague(null);
+  });
+
+  test("ligin hangi sonucu Steam'in tablosuna gidiyor: geçerli koşu evet; kapanmış lig, tutmayan tekrar, kopya hayır", () => {
+    const all: Record<LeagueSubmitOutcome, boolean> = {
+      saved: true,
+      'kept-better': true,
+      queued: true,
+      busy: true,
+      'name-blocked': true,
+      version: true,
+      closed: false,
+      rejected: false,
+      copy: false,
+      error: false,
+    };
+    for (const [outcome, expected] of Object.entries(all)) assert.equal(mirrorsToSteam(outcome as LeagueSubmitOutcome), expected, outcome);
+  });
+
+  test("kabuğun komut listesinde Steam'in komutları var", () => {
     const main = readFileSync(join(repoRoot(), 'apps/desktop/src-tauri/src/main.rs'), 'utf8');
     const handler = /generate_handler!\[([^\]]*)\]/.exec(main)?.[1] ?? '';
-    for (const command of ['steam_status', 'steam_unlock', 'steam_keyboard']) assert.ok(handler.includes(command), command);
+    const commands = [
+      'steam_status',
+      'steam_unlock',
+      'steam_keyboard',
+      'steam_workshop_list',
+      'steam_workshop_publish',
+      'steam_workshop_open',
+      'steam_leaderboard_upload',
+      'steam_leaderboard_friends',
+    ];
+    for (const command of commands) assert.ok(handler.includes(command), command);
   });
 });
 

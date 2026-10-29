@@ -8401,6 +8401,166 @@ yazı alanında ekran klavyesi.
 önce, Deck'te Linux deposuyla ya da Proton'la (`docs/STEAM.md` → "Linux ve
 Steam Deck").
 
+### Tur 73 — Steam Workshop ve skor tabloları
+
+Faz 6'nın üçüncü turu. Simülasyon ve şema aynı; hazır oyunların parmak izi
+birebir.
+
+**Paketler cihazdan çıkmıyordu.** İçerik paketleri (Tur 67) yalnız
+paylaşım koduyla ya da dosyayla geziyordu. Steam oyuncusu için doğal yer
+Workshop: abone ol, oyunda bul. Tohum Ligi'nin tablosu da yalnız lig
+sunucusundaydı; Steam'deki arkadaşlarla kıyas yoktu.
+
+**Yapılanlar.**
+- *Workshop'tan rafa.* Abone olunan öğeyi Steam indiriyor. Kabuk kurulu
+  öğelerin klasöründeki paket dosyalarını okuyor (`src/workshop.rs`; öğe
+  başına en çok dört `*.json`, her biri en çok 64 KB) ve inmekte olanları
+  sayıyor. Sayfa her paketi ekleme kutusunun doğrulamasından geçirip
+  "Kendi senaryoların" rafına koyuyor (`packStore.ts`):
+  - Kartta "Workshop: <paket>" künyesi; salt okunur, en çok 40 paket.
+  - Bozuk dosya atlanıyor, oyun kırılmıyor.
+  - Aynı kimlikte oyuncunun kendi paketi varsa o geçiyor; onu kaldırınca
+    Workshop sürümü geri geliyor. İki öğede aynı kimlik varsa ilki.
+  - Liste raf açılınca, pencereye dönünce ve inen öğe varken beş saniyede
+    bir tazeleniyor. Güncellemesi inen öğe de inmekte sayılıyor; Steam
+    bitirene kadar klasörüne dokunulmuyor. Değişmeyen öğenin tanımı aynı
+    nesne kalıyor: seçili senaryonun ayrıntısı sıfırlanmıyor.
+  - Rafın başında "Workshop'a göz at"; inen öğeler rafın üstünde sayılıyor.
+    Workshop paketinde "Steam'de aç" ve abonelik notu var, kaldırma yok.
+- *Workshop'a yükleme.* Kendi paketinde "Workshop'a yükle", onaydan sonra
+  herkese açık bir öğe: içeriği tek `pack.json`, başlığı paketin adı,
+  açıklaması senaryoların listesi, "Scenario" etiketi.
+  - Öğenin kimliği cihazda, Steam hesabına göre
+    (`capitalforge.workshop.v1`); sonraki yükleme "Workshop'ta güncelle"
+    ile aynı öğeye gidiyor.
+  - Öğe Steam'de silindiyse kabuk yeni öğe açıyor; kimlik boşta kalmıyor.
+  - Öğe açılıp paket gidemezse kimlik yine saklanıyor; yeniden deneyince
+    aynı öğe güncelleniyor.
+  - Workshop sözleşmesini kabul etmemiş oyuncunun öğesini Steam gizli
+    tutuyor. Oyun bunu söylüyor, "Sözleşmeyi aç" düğmesi koyuyor.
+- *Steam'de açmak.* Sayfalar Steam katmanında. Katman oyuna tutunmadıysa
+  (pencere bir WebView; katman her sistemde tutunamıyor) Steam'in kendi
+  tarayıcısında (`steam://openurl/…`). Açılacak adres yalnız oyunun
+  Workshop'u, sözleşme ya da sayı kimlikli bir öğe.
+- *Skor tabloları.* Tohum Ligi'nin her haftasının ve gününün Steam'de bir
+  tablosu var (`CF_SEED_2026-W44`, `CF_DAILY_2026-10-29`; `src/leaderboard.rs`).
+  İlk gönderen açıyor; başka ad kabul edilmiyor.
+  - Lig koşusu gönderilince puan oraya da gidiyor, en iyisi kalıyor;
+    sonuç ekranında Steam'deki sırası yazıyor.
+  - Gönderilenler: kaydedilen, daha iyisi tutulan, bekleyen (bağlantı yok
+    ya da sunucu sürümü henüz tanımıyor), sunucusu yoğun ve adı herkese açık
+    tabloya giremeyen koşu (Steam'in tablosu ad göstermiyor). Kapanmış lig,
+    tekrarı tutmayan ve kopya koşu gitmiyor.
+  - Lig panelinde "Steam arkadaşların": o tablodaki arkadaşlar, puan
+    sırasıyla, oyuncu vurgulu; dakikada bir tazeleniyor.
+  - Steam'in tablosu koşuyu doğrulamıyor (puanı istemci yazıyor). Asıl
+    sıralama lig sunucusunun doğrulanmış tablosu; Steam'inki yanında
+    arkadaş kıyası. Bölümün notu da bunu söylüyor.
+- *Kabuk.* Beş yeni komut. Uzun süren Steam çağrıları ayrı bir iş
+  parçacığında bekleniyor, pencere donmuyor. Steam'siz derlemede liste
+  boş, yükleme ve tablo hata veriyor, raf ve lig paneli web sürümündeki
+  gibi. Arayüzün köprüleri `packages/ui/src/workshop.ts` ve
+  `steamLeague.ts`; masaüstü onları Steam açıkken kuruyor.
+- *Paket.* Workshop rafı paket rafının geç inen parçasında. Lig panelinin
+  Steam yazıları ayrı küçük sözlükte (`steamMessages.ts`), oyun ekranıyla
+  iniyor. İlk hâlinde Türkçe yazılar giriş paketine girip ana parçayı
+  0,2 KB büyütmüştü (bütçe 75 KB); ayrılınca yine Tur 72'deki gibi 74,6.
+
+**Steamworks'te yapılacaklar.** `docs/STEAM.md` → adım 8 (Workshop: dosya
+aktarımı açık, "Scenario" etiketi, görünürlük) ve adım 9 (skor tabloları:
+elle açmak gerekmiyor, "trusted" yapılmamalı).
+
+**İncelemede bulunanlar (Codex).**
+- *İnen öğe rafa gelmiyordu.* Liste yalnız raf açılınca ve pencereye
+  dönünce isteniyordu. Oyuncu Steam'de abone olup oyuna dönünce öğe çoğu
+  zaman daha iniyordu; inince raf, pencere odakta kaldıkça "1 öğe iniyor"
+  diyordu. Artık inen öğe varken liste beş saniyede bir isteniyor, inen
+  kalmayınca duruyor.
+- *Steam'in sınırları bayt, kabuk karakter sayıyordu.* Steamworks başlığa
+  129, açıklamaya ve değişiklik notuna 8000 baytlık yer ayırıyor, sondaki
+  sıfır dahil. Kabuk karakter sayıyordu: 128 karakterlik Türkçe bir başlık
+  256 bayta varabiliyordu. Kabuk artık baytı sınıyor (başlık 128, metinler
+  7999). Sayfa da başlığı ve açıklamayı karakter bölmeden o sınırlara
+  kısaltıyor (`fitUtf8`, `workshop.ts`); uzun adlı paket reddedilmiyor.
+- *Güncellenen öğe eski klasörden okunuyordu.* Kurulu bir öğenin yeni
+  sürümü çıkınca kabuk indirmeyi başlatıyor ama eski klasörü okumaya devam
+  ediyordu ve öğeyi inmekte saymıyordu. Raf da yoklamayı başlatmıyor, eski
+  paket oyun yeniden açılana kadar kalıyordu. Steam de indirme bitmeden
+  klasöre dokunulmamasını istiyor. Artık güncellenen, inen ve indirmesi
+  istenmiş öğe bekliyor ve sayılıyor (`plan`, `workshop.rs`).
+- *Yarıda kalan yükleme Workshop'ta boş öğe bırakıyordu.* Yeni paketin
+  yüklemesi iki adım: öğeyi açmak ve içeriği göndermek. İkincisi başarısız
+  olunca kabuk yalnız hatayı dönüyordu, açılan öğenin kimliği kayboluyordu.
+  Her yeniden deneme yeni bir öğe açıyordu. Artık kimlik yanıtta
+  (`failed` alanıyla); sayfa onu saklıyor, oyuncuya "öğe açıldı ama paket
+  yüklenemedi" diyor, yeniden deneme aynı öğeyi güncelliyor.
+- *Adında NUL olan paket kabuğu çökertiyordu.* Doğrulayıcı paketin adında
+  ve senaryonun başlığında kaçışlı bir NUL'u (`\u0000`) geçiriyor.
+  Steamworks'ün alanları C metni; `steamworks` NUL'lu başlıkta ve
+  açıklamada çöküyor, üstelik öğe açıldıktan sonra. Kimlik sayfaya
+  dönmüyordu, her deneme yeni bir boş öğe açıyordu. Kabuk artık NUL'lu
+  isteği öğe açmadan reddediyor; sayfa da NUL'u başlıktan ve açıklamadan
+  atıyor (`fitUtf8`).
+- *Öğe kimlikleri Steam hesabını tanımıyordu.* Sayfa öğenin kimliğini
+  yalnız paketin kimliğiyle saklıyordu. Aynı bilgisayarda ikinci bir Steam
+  hesabı oynayınca birincinin öğesini güncellemeye kalkıyordu; Steam bunu
+  reddediyor, kabuk yalnız silinmiş öğeye yenisini açıyor, her deneme
+  başarısız kalıyordu. Artık kabuk Steam'in durumunda oturumdaki hesabı da
+  veriyor (SteamID64); kimlikler hesap başına saklanıyor, ikinci hesap
+  kendi öğesini açıyor.
+
+**Doğrulama.**
+- `pnpm test` 888/888 (876'dan); tip denetimi temiz; Almanca denetimi 0
+  hata (Steam 8/8).
+  - `packages/ui/test/packs.test.ts` (10 yeni): rafın Workshop kaynağı;
+    oyuncunun paketinin önceliği; değişmeyen öğenin aynı kalması; sınır;
+    eski listenin yenisini ezmemesi; Steam'in bayt sınırlarına kısaltma;
+    paketin adındaki NUL'un atılması; öğe kimliklerinin hesap başına
+    saklanması; raf ve düğmeler; üç dilde metin.
+  - `apps/web/test/desktop.test.ts` (2 yeni): köprüler kabuğun
+    komutlarına kabuğun adlarıyla gidiyor, Steam yoksa köprü yok,
+    Workshop köprüsü kabuğun verdiği hesapla; ligin hangi sonucu Steam'e
+    gidiyor. Komut listesi sekiz Steam komutunu arıyor.
+- `cargo test` 32/32 (21'den), `cargo test --features steam` 29/29
+  (20'den), clippy iki derlemede de temiz.
+  - Klasördeki paketler: sırayla, büyük ve başka dosya atlanıyor.
+  - Yükleme isteği Steamworks'ün sınırlarında: başlık, açıklama ve not
+    (UTF-8 bayt), paket boyu, öğe kimliği.
+  - NUL'lu başlık, açıklama ve not öğe açılmadan reddediliyor.
+  - Abone olunan öğenin durumu: güncel öğe rafta; inmemiş, güncellenen,
+    inen ve indirmesi istenmiş öğe bekliyor, indirme bir kez isteniyor.
+  - Yarıda kalan yüklemenin yanıtı kimliği taşıyor; tamamlananda alan yok.
+  - Açılan sayfa yalnız Workshop, sözleşme ya da öğe.
+  - Tablo adı yalnız ligin hafta ve gün kimliğinden; net değer tablonun
+    puanına kırpılıyor (eksi, sayı olmayan, 32 biti aşan).
+  - Steam'in durumunda hesap yalnız Steam açıkken.
+  - Steam'siz derlemede Workshop ve tablo yok.
+- Tarayıcı testinin yeni bölümü "Steam: Workshop ve skor tabloları" (13
+  kontrol) 13/13. Masaüstü paketi tarayıcıda sahte bir kabukla, Steam
+  açık:
+  - Workshop paketi rafta, bozuk dosyası atlanmış, inen öğe sayılıyor.
+  - İnen öğe bitince raf odak olayı olmadan yenileniyor, sonra liste
+    istemek duruyor. Düzeltmeden önceki pakette bu kontrol kırmızı.
+  - "Steam'de aç" doğru sayfaları istiyor.
+  - Yükleme onaylı. İstek paketin kendisini, adını ve senaryo listesini
+    taşıyor. İlk deneme yarıda kalıyor: kimlik saklanıyor, yeniden deneme
+    aynı öğeyi güncelliyor (düzeltmeden önceki pakette kırmızı). Sözleşme
+    uyarısı çıkıyor, sözleşme açılınca kalkıyor.
+  - Aynı bilgisayarda ikinci bir Steam hesabı birincinin öğesini
+    güncellemeye kalkmıyor, kendi öğesini açıyor; iki hesabın kaydı ayrı
+    (düzeltmeden önceki pakette kırmızı).
+  - Lig panelinde Steam arkadaşları sırayla.
+  - Bitirilip gönderilen koşunun puanı Steam'in o haftaki tablosunda,
+    sonuç ekranında sırası. Konsol temiz.
+- Gerçek pencerede uçtan uca 30/30 (29'dan): Workshop ve tablo komutları
+  kabukta, istek sınırlardan geçiyor.
+- Paket bütçesi tamam (ana parça 74,6 KB).
+
+**Kalan.** Gerçek Steam'le denemek: Steamworks uygulama kimliği ve
+Workshop'un açılması gerekiyor (`docs/STEAM.md` → "Geliştirirken"). Steam
+katmanının WebView penceresine tutunup tutunmadığı da orada görülecek;
+tutunmazsa sayfalar Steam'in tarayıcısında açılıyor.
+
 ---
 
 ## 3. Ölçülen durum

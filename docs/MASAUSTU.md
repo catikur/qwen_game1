@@ -75,6 +75,15 @@ Web sürümünden farkı:
   Ayarlar'da kumandanın listesi duruyor. Steam Deck'te kumandayla bir yazı
   alanı seçilince Steam'in ekran klavyesi açılıyor (`steam_keyboard`).
   Steam Input'un önerilen düzeni `docs/STEAM.md`'de.
+- **Workshop ve Steam'in skor tabloları (Tur 73).** Steam açıkken
+  senaryo paketleri Workshop'tan rafa iniyor, oyuncunun paketi Workshop'a
+  yükleniyor; lig puanı Steam'in o hafta ya da günkü tablosuna da gidiyor,
+  lig panelinde Steam arkadaşları. Kabuğun komutları:
+  `steam_workshop_list`, `steam_workshop_publish`, `steam_workshop_open`,
+  `steam_leaderboard_upload`, `steam_leaderboard_friends`
+  (`src/workshop.rs`, `src/leaderboard.rs`); uzun süren Steam çağrıları
+  ayrı bir iş parçacığında bekleniyor, pencere donmuyor. Steam'siz
+  derlemede raf ve lig paneli web sürümündeki gibi. Ayrıntı `docs/STEAM.md`.
 
 ## Derleme ve çalıştırma
 
@@ -206,7 +215,8 @@ deposunun Steam Deck'te denenmesi; o bir Deck istiyor.
   pencerenin hafızası: boy ve yer yalnız pencere kipinde, büyütme ve tam
   ekran geçişinin haberleri pencere boyu sayılmıyor, boyu değiştirip hemen
   büyüten oyuncunun boyu unutulmuyor, ekran düzeni değişince pencere kalan
-  ekrana sığdırılıyor; Steam'siz derlemede ekran klavyesi yok.
+  ekrana sığdırılıyor; Steam'siz derlemede ekran klavyesi yok; Workshop ve
+  skor tablosunun saf yardımcıları (Tur 73, `docs/STEAM.md` → "Testler").
 - `pnpm test` → `apps/web/test/desktop.test.ts`: ayar aynası (dosya kazanır,
   sıra, oturum deposu hariç, düşen yazma), slotların dosya deposuyla
   kaydet-listele-yükle, oyunun her yerel depo anahtarının dosyaya
@@ -217,13 +227,18 @@ deposunun Steam Deck'te denenmesi; o bir Deck istiyor.
   açılınca kaldığı gün ve dil; Steam komutları ve tek pencere (Tur 70);
   tarayıcı kısayolları, sağ tık ve seçim, F11, pencerenin durumu, ayrı bir
   sürücüyle Steam Deck'in metni (Tur 71); WebKitGTK'de Gamepad API ve ekran
-  klavyesinin komutu (Tur 72). CI: `.github/workflows/desktop.yml`.
+  klavyesinin komutu (Tur 72); Workshop ve skor tablosu komutları (Tur 73).
+  CI: `.github/workflows/desktop.yml`.
 - `pnpm playtest` → "Pencere boyları ve Steam Deck" (Tur 71): 960 × 600,
   1093 × 614, 1280 × 800 ve 1920 × 1080'de paneller üst üste binmiyor, şehir
   ortada tıklanabilir; Deck'in boyunda her panelde en küçük yazı ≥ 12 piksel.
 - `pnpm playtest` → "Kumanda ve yalnız klavye" (Tur 72): sahte kumandayla
   ve yalnız klavyeyle kurulum, ortadaki parseli seçip satın alma, yapıyı
   kurma, kamera, paneller, Ayarlar, ipucu şeridi ve düğme yazıları.
+- `pnpm playtest` → "Steam: Workshop ve skor tabloları" (Tur 73): masaüstü
+  paketi (`dist-desktop`, bölüm kendisi derliyor) tarayıcıda sahte bir
+  kabukla, Steam açık. Workshop rafı, yükleme, Steam arkadaşları ve
+  Steam'e giden lig puanı.
 
 ```sh
 cargo install tauri-driver --version 2.0.6 --locked   # bir kez
