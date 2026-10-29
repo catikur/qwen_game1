@@ -12,7 +12,7 @@ import { packDe } from '../src/packMessages.de';
 import { MAX_PACKS, MAX_WORKSHOP_PACKS, addPack, installedPacks, refreshWorkshop, removePack, setWorkshopPacks, workshopDownloading } from '../src/packStore';
 import { recordScenarioResult, scenarioRecord } from '../src/scenarioBest';
 import { PackActions, PackList } from '../src/PackShelf';
-import { setWorkshopBridge } from '../src/workshop';
+import { WORKSHOP_TEXT_BYTES, WORKSHOP_TITLE_BYTES, fitUtf8, setWorkshopBridge } from '../src/workshop';
 import type { WorkshopBridge, WorkshopListing } from '../src/workshop';
 
 /**
@@ -245,6 +245,19 @@ describe('Workshop paketleri (Tur 73)', () => {
     assert.equal(workshopDownloading(), 2);
     setWorkshopBridge(null);
     setWorkshopPacks([]);
+  });
+
+  test("Steam'in sınırları UTF-8 bayt: başlık ve açıklama karakter bölünmeden kısalıyor (Codex #103)", () => {
+    const bytes = (text: string) => new TextEncoder().encode(text).length;
+    assert.equal(fitUtf8('Kısa ad', WORKSHOP_TITLE_BYTES), 'Kısa ad');
+    // 64 Türkçe harf 128 bayt; karakter sayınca 80'i de geçiyordu.
+    assert.equal(fitUtf8('ş'.repeat(80), WORKSHOP_TITLE_BYTES), 'ş'.repeat(64));
+    assert.equal(fitUtf8('漢'.repeat(50), WORKSHOP_TITLE_BYTES), '漢'.repeat(42));
+    // Vekil çiftler bölünmüyor: 1 + 31 × 4 bayt, bir sonraki sığmıyor.
+    assert.equal(fitUtf8(`a${'😀'.repeat(40)}`, WORKSHOP_TITLE_BYTES), `a${'😀'.repeat(31)}`);
+    const description = fitUtf8('ü'.repeat(5000), WORKSHOP_TEXT_BYTES);
+    assert.equal(bytes(description), 7998);
+    assert.equal(fitUtf8('a'.repeat(WORKSHOP_TEXT_BYTES), WORKSHOP_TEXT_BYTES).length, WORKSHOP_TEXT_BYTES);
   });
 
   test('rafta Workshop künyesi ve "göz at"; Workshop paketinde Steam sayfası, kaldırma ve yükleme yok; kendi paketinde yükleme yalnız Steam açıkken', () => {

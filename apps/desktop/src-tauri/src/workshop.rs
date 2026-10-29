@@ -21,9 +21,12 @@ const MAX_FILE_BYTES: u64 = 64 * 1024;
 /// Bir öğeden en çok bu kadar paket dosyası.
 #[cfg(any(feature = "steam", test))]
 const MAX_FILES: usize = 4;
-/// Steamworks'ün sınırları: başlık 128, açıklama 8000 karakter.
+/// Steamworks'ün sınırları UTF-8 bayt, sondaki sıfır dahil
+/// (`k_cchPublishedDocumentTitleMax` 129, `…DescriptionMax` ve
+/// `…ChangeDescriptionMax` 8000). Karakter saymak Türkçe ve başka
+/// alfabelerde sınırı aşan bir başlığı geçirirdi (Codex #103).
 const MAX_TITLE: usize = 128;
-const MAX_DESCRIPTION: usize = 8000;
+const MAX_DESCRIPTION: usize = 7999;
 
 /// Kurulu bir Workshop öğesi ve klasöründeki paketler.
 #[derive(Clone, Debug, Serialize, PartialEq, Eq)]
@@ -79,12 +82,12 @@ pub fn read_packs(folder: &Path) -> Vec<String> {
 /// İstek Steamworks'ün sınırlarında mı; değilse oyuncuya söylenecek neden.
 pub fn check(request: &Publish) -> Result<(), String> {
     let title = request.title.trim();
-    if title.is_empty() || title.chars().count() > MAX_TITLE {
-        return Err(format!("başlık 1–{MAX_TITLE} karakter olmalı"));
+    if title.is_empty() || title.len() > MAX_TITLE {
+        return Err(format!("başlık 1–{MAX_TITLE} bayt olmalı"));
     }
-    let long = |text: &str| text.chars().count() > MAX_DESCRIPTION;
+    let long = |text: &str| text.len() > MAX_DESCRIPTION;
     if long(&request.description) || request.note.as_deref().is_some_and(long) {
-        return Err(format!("açıklama ve değişiklik notu en çok {MAX_DESCRIPTION} karakter"));
+        return Err(format!("açıklama ve değişiklik notu en çok {MAX_DESCRIPTION} bayt"));
     }
     if request.pack.is_empty() || request.pack.len() as u64 > MAX_FILE_BYTES {
         return Err("paket boş ya da 64 KB'tan büyük".into());
@@ -280,15 +283,20 @@ mod tests {
         assert!(check(&request("Kriz paketi", "{}", None)).is_ok());
         assert!(check(&request("Kriz paketi", "{}", Some("1234567890123"))).is_ok());
         assert!(check(&request("   ", "{}", None)).is_err(), "boş başlık");
-        assert!(check(&request(&"ş".repeat(129), "{}", None)).is_err(), "128 karakterden uzun başlık");
+        assert!(check(&request(&"ş".repeat(64), "{}", None)).is_ok(), "64 × 2 bayt: tam sınır");
+        assert!(check(&request(&"ş".repeat(65), "{}", None)).is_err(), "128 bayttan uzun başlık");
+        assert!(check(&request(&"漢".repeat(44), "{}", None)).is_err(), "44 karakter ama 132 bayt");
         assert!(check(&request("Paket", "", None)).is_err(), "boş paket");
         assert!(check(&request("Paket", &"x".repeat(64 * 1024 + 1), None)).is_err(), "64 KB'tan büyük paket");
         assert!(check(&request("Paket", "{}", Some("12a"))).is_err(), "bozuk öğe kimliği");
+        let mut fits = request("Paket", "{}", None);
+        fits.description = "a".repeat(7999);
+        assert!(check(&fits).is_ok(), "sondaki sıfırla 8000 bayt");
         let mut long = request("Paket", "{}", None);
-        long.description = "a".repeat(8001);
-        assert!(check(&long).is_err());
+        long.description = "ş".repeat(4000);
+        assert!(check(&long).is_err(), "4000 karakter ama 8000 bayt");
         let mut noted = request("Paket", "{}", None);
-        noted.note = Some("b".repeat(8001));
+        noted.note = Some("b".repeat(8000));
         assert!(check(&noted).is_err(), "uzun değişiklik notu");
     }
 

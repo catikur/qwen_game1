@@ -8421,8 +8421,9 @@ sunucusundaydı; Steam'deki arkadaşlarla kıyas yoktu.
   - Bozuk dosya atlanıyor, oyun kırılmıyor.
   - Aynı kimlikte oyuncunun kendi paketi varsa o geçiyor; onu kaldırınca
     Workshop sürümü geri geliyor. İki öğede aynı kimlik varsa ilki.
-  - Liste raf açılınca ve pencereye dönünce tazeleniyor. Değişmeyen öğenin
-    tanımı aynı nesne kalıyor: seçili senaryonun ayrıntısı sıfırlanmıyor.
+  - Liste raf açılınca, pencereye dönünce ve inen öğe varken beş saniyede
+    bir tazeleniyor. Değişmeyen öğenin tanımı aynı nesne kalıyor: seçili
+    senaryonun ayrıntısı sıfırlanmıyor.
   - Rafın başında "Workshop'a göz at"; inen öğeler rafın üstünde sayılıyor.
     Workshop paketinde "Steam'de aç" ve abonelik notu var, kaldırma yok.
 - *Workshop'a yükleme.* Kendi paketinde "Workshop'a yükle", onaydan sonra
@@ -8465,12 +8466,26 @@ sunucusundaydı; Steam'deki arkadaşlarla kıyas yoktu.
 aktarımı açık, "Scenario" etiketi, görünürlük) ve adım 9 (skor tabloları:
 elle açmak gerekmiyor, "trusted" yapılmamalı).
 
+**İncelemede bulunanlar (Codex).**
+- *İnen öğe rafa gelmiyordu.* Liste yalnız raf açılınca ve pencereye
+  dönünce isteniyordu. Oyuncu Steam'de abone olup oyuna dönünce öğe çoğu
+  zaman daha iniyordu; inince raf, pencere odakta kaldıkça "1 öğe iniyor"
+  diyordu. Artık inen öğe varken liste beş saniyede bir isteniyor, inen
+  kalmayınca duruyor.
+- *Steam'in sınırları bayt, kabuk karakter sayıyordu.* Steamworks başlığa
+  129, açıklamaya ve değişiklik notuna 8000 baytlık yer ayırıyor, sondaki
+  sıfır dahil. Kabuk karakter sayıyordu: 128 karakterlik Türkçe bir başlık
+  256 bayta varabiliyordu. Kabuk artık baytı sınıyor (başlık 128, metinler
+  7999). Sayfa da başlığı ve açıklamayı karakter bölmeden o sınırlara
+  kısaltıyor (`fitUtf8`, `workshop.ts`); uzun adlı paket reddedilmiyor.
+
 **Doğrulama.**
-- `pnpm test` 885/885 (876'dan); tip denetimi temiz; Almanca denetimi 0
+- `pnpm test` 886/886 (876'dan); tip denetimi temiz; Almanca denetimi 0
   hata (Steam 8/8).
-  - `packages/ui/test/packs.test.ts` (7 yeni): rafın Workshop kaynağı;
+  - `packages/ui/test/packs.test.ts` (8 yeni): rafın Workshop kaynağı;
     oyuncunun paketinin önceliği; değişmeyen öğenin aynı kalması; sınır;
-    eski listenin yenisini ezmemesi; raf ve düğmeler; üç dilde metin.
+    eski listenin yenisini ezmemesi; Steam'in bayt sınırlarına kısaltma;
+    raf ve düğmeler; üç dilde metin.
   - `apps/web/test/desktop.test.ts` (2 yeni): köprüler kabuğun
     komutlarına kabuğun adlarıyla gidiyor, Steam yoksa köprü yok; ligin
     hangi sonucu Steam'e gidiyor. Komut listesi sekiz Steam komutunu
@@ -8478,16 +8493,18 @@ elle açmak gerekmiyor, "trusted" yapılmamalı).
 - `cargo test` 28/28 (21'den), `cargo test --features steam` 25/25
   (20'den), clippy iki derlemede de temiz.
   - Klasördeki paketler: sırayla, büyük ve başka dosya atlanıyor.
-  - Yükleme isteği Steamworks'ün sınırlarında: başlık, açıklama, not,
-    paket boyu, öğe kimliği.
+  - Yükleme isteği Steamworks'ün sınırlarında: başlık, açıklama ve not
+    (UTF-8 bayt), paket boyu, öğe kimliği.
   - Açılan sayfa yalnız Workshop, sözleşme ya da öğe.
   - Tablo adı yalnız ligin hafta ve gün kimliğinden; net değer tablonun
     puanına kırpılıyor (eksi, sayı olmayan, 32 biti aşan).
   - Steam'siz derlemede Workshop ve tablo yok.
-- Tarayıcı testinin yeni bölümü "Steam: Workshop ve skor tabloları" (10
-  kontrol) 10/10. Masaüstü paketi tarayıcıda sahte bir kabukla, Steam
+- Tarayıcı testinin yeni bölümü "Steam: Workshop ve skor tabloları" (11
+  kontrol) 11/11. Masaüstü paketi tarayıcıda sahte bir kabukla, Steam
   açık:
   - Workshop paketi rafta, bozuk dosyası atlanmış, inen öğe sayılıyor.
+  - İnen öğe bitince raf odak olayı olmadan yenileniyor, sonra liste
+    istemek duruyor. Düzeltmeden önceki pakette bu kontrol kırmızı.
   - "Steam'de aç" doğru sayfaları istiyor.
   - Yükleme onaylı. İstek paketin kendisini, adını ve senaryo listesini
     taşıyor; sözleşme uyarısı çıkıyor; ikinci yükleme aynı öğeyi

@@ -8,7 +8,7 @@ import { issueText, pt } from './packMessages';
 import type { PackMessageKey } from './packMessages';
 import { MAX_PACKS, addPack, refreshWorkshop, removePack, useInstalledPacks, useWorkshopDownloading } from './packStore';
 import type { InstalledPack } from './packStore';
-import { openWorkshopPage, publishedItem, rememberPublished, useWorkshopBridge } from './workshop';
+import { WORKSHOP_TEXT_BYTES, WORKSHOP_TITLE_BYTES, fitUtf8, openWorkshopPage, publishedItem, rememberPublished, useWorkshopBridge } from './workshop';
 import type { WorkshopPage, WorkshopPublished } from './workshop';
 import { closeEditor, draftDirty, draftFrom, freshDraft, loadDraft, normalizedDraft, openEditor, takeTrial, useOpenDraft } from './packDraft';
 
@@ -26,6 +26,8 @@ import { closeEditor, draftDirty, draftFrom, freshDraft, loadDraft, normalizedDr
 const MAX_INPUT_BYTES = 64 * 1024;
 /** Sorun listesinde kaç satır; kalanı tek satırda sayılıyor. */
 const SHOWN_ISSUES = 8;
+/** Steam öğe indirirken listenin yenilenme aralığı, ms. */
+const WORKSHOP_POLL_MS = 5000;
 
 class InputError extends Error {}
 
@@ -79,10 +81,7 @@ function NoticeLine({ notice }: { notice: Notice }): ReactElement {
 
 /** Workshop'taki açıklama: paketin senaryoları, adı ve kısa tanımıyla. */
 function workshopDescription(entry: InstalledPack): string {
-  return entry.scenarios
-    .map((def) => `• ${def.title} — ${def.tagline}`)
-    .join('\n')
-    .slice(0, 8000);
+  return fitUtf8(entry.scenarios.map((def) => `• ${def.title} — ${def.tagline}`).join('\n'), WORKSHOP_TEXT_BYTES);
 }
 
 /** Oyuncunun yüklediği paketlerin senaryoları, hazır senaryoların altında. */
@@ -110,6 +109,13 @@ export function PackList({
     window.addEventListener('focus', onFocus);
     return () => window.removeEventListener('focus', onFocus);
   }, [bridge]);
+  // İnen öğe varken liste birkaç saniyede bir: inen paket pencere odakta kalsa da rafa gelsin (Codex #103).
+  const pending = bridge !== null && downloading > 0;
+  useEffect(() => {
+    if (!pending) return;
+    const timer = window.setInterval(() => void refreshWorkshop(), WORKSHOP_POLL_MS);
+    return () => window.clearInterval(timer);
+  }, [pending]);
   const browse = async () => {
     if (bridge && !(await openWorkshopPage(bridge, 'workshop'))) setNotice({ tone: 'info', text: pt('hud.pack.workshop.openFailed') });
   };
@@ -231,7 +237,7 @@ export function PackActions({ def, onRemoved }: { def: ScenarioDef; onRemoved: (
     try {
       const result = await bridge.publish({
         ...(ownItem ? { item: ownItem } : {}),
-        title: name.slice(0, 128),
+        title: fitUtf8(name, WORKSHOP_TITLE_BYTES),
         description: workshopDescription(own),
         pack: JSON.stringify(own.pack),
       });

@@ -9213,6 +9213,7 @@ async function finish(browser, consoleErrors) {
     await sContext.addInitScript(({ pack }) => {
       const calls = [];
       window.__steamCalls = calls;
+      const second = JSON.stringify({ ...JSON.parse(pack), id: 'ikinci-kis', name: { tr: 'İkinci kış', en: 'Second winter' } });
       const handlers = {
         profile_read_all: () => ({}),
         profile_set: () => null,
@@ -9228,8 +9229,10 @@ async function finish(browser, consoleErrors) {
         steam_status: () => ({ available: true, detail: 'sahte Steam' }),
         steam_unlock: () => null,
         steam_keyboard: () => false,
-        // Bir öğe kurulu (iki dosyası var, biri bozuk), biri iniyor.
-        steam_workshop_list: () => ({ items: [{ id: '7001', packs: [pack, '{bozuk'] }], downloading: 1 }),
+        // Bir öğe kurulu (iki dosyası var, biri bozuk), biri iniyor; `__workshopReady` olunca o da kurulu.
+        steam_workshop_list: () => (window.__workshopReady
+          ? { items: [{ id: '7001', packs: [pack, '{bozuk'] }, { id: '7002', packs: [second] }], downloading: 0 }
+          : { items: [{ id: '7001', packs: [pack, '{bozuk'] }], downloading: 1 }),
         // İlk yükleme yeni öğe; oyuncu sözleşmeyi henüz kabul etmemiş.
         steam_workshop_publish: ({ request }) => ({ id: request.item ?? '9001', agreement: !request.item }),
         steam_workshop_open: () => true,
@@ -9277,6 +9280,20 @@ async function finish(browser, consoleErrors) {
       shelf.cards.join() === 'zor-kis/kista-kurtarma,zor-kis/karanlik-ve-pahali' && shelf.note === 'Workshop: Zor kış' && shelf.count === '2'
         && /1 öğe iniyor/.test(shelf.downloading) && /göz at/.test(shelf.browse),
       JSON.stringify(shelf));
+    // Steam inen öğeyi bitirince raf kendiliğinden yenileniyor; pencere odakta kalıyor, odak olayı yok (Codex #103).
+    await sp.evaluate(() => { window.__workshopReady = true; });
+    await sp.waitForSelector('[data-pack-workshop="7002"]', { timeout: 12000 }).catch(() => null);
+    const polled = await sp.evaluate(() => ({
+      cards: document.querySelectorAll('[data-pack-workshop="7002"] [data-scenario]').length,
+      note: document.querySelector('[data-pack-workshop="7002"] .scenario-card-source')?.textContent ?? '',
+      downloading: document.querySelectorAll('[data-pack-downloading]').length,
+    }));
+    const listed = (await calls('steam_workshop_list')).length;
+    await sp.waitForTimeout(5600);
+    const listedLater = (await calls('steam_workshop_list')).length;
+    check('İnen öğe bitince raf kendiliğinden yenileniyor (odak olayı olmadan); "iniyor" notu kalkıyor, liste istemek de duruyor',
+      polled.cards === 2 && polled.note === 'Workshop: İkinci kış' && polled.downloading === 0 && listedLater === listed,
+      `${JSON.stringify(polled)} · liste ${listed} → ${listedLater}`);
     await sp.locator('[data-pack-workshop-browse]').click();
     await sp.locator('[data-pack-workshop="7001"] [data-scenario]').first().click();
     await sp.waitForSelector('[data-pack-actions] [data-pack-workshop-open]', { timeout: 5000 }).catch(() => null);

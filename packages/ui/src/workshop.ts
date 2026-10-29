@@ -37,6 +37,28 @@ export interface WorkshopPublish {
   note?: string;
 }
 
+/**
+ * Steamworks'ün sınırları UTF-8 bayt, sondaki sıfır hariç: başlık 128,
+ * açıklama ve değişiklik notu 7999 (kabuk da sınıyor, `workshop.rs`).
+ * Karakter sayılınca Türkçe ya da Çince bir başlık sınırı aşıyordu (Codex #103).
+ */
+export const WORKSHOP_TITLE_BYTES = 128;
+export const WORKSHOP_TEXT_BYTES = 7999;
+
+/** Metnin UTF-8'de en çok `limit` bayta sığan başı; karakter ortadan bölünmüyor. */
+export function fitUtf8(text: string, limit: number): string {
+  const encoder = new TextEncoder();
+  if (encoder.encode(text).length <= limit) return text;
+  let used = 0;
+  let fitted = '';
+  for (const char of text) {
+    used += encoder.encode(char).length;
+    if (used > limit) break;
+    fitted += char;
+  }
+  return fitted;
+}
+
 export interface WorkshopPublished {
   id: string;
   /** Oyuncu Workshop sözleşmesini kabul etmemiş: Steam öğeyi o zamana kadar gizli tutuyor. */
