@@ -40,6 +40,7 @@ const PAIRS = [
   ['editör', 'packages/ui/src/packEditorMessages.ts', 'editorEn', `packages/ui/src/packEditorMessages.${locale}.ts`, `editor${cap(locale)}`],
   ['kumanda', 'packages/ui/src/padMessages.ts', 'padEn', `packages/ui/src/padMessages.${locale}.ts`, `pad${cap(locale)}`],
   ['Steam', 'packages/ui/src/steamMessages.ts', 'steamEn', `packages/ui/src/steamMessages.${locale}.ts`, `steam${cap(locale)}`],
+  ['sürüm', 'packages/ui/src/releaseMessages.ts', 'releaseEn', `packages/ui/src/releaseMessages.${locale}.ts`, `release${cap(locale)}`],
 ];
 
 function cap(text) {

@@ -1,14 +1,27 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import '@capital/ui/styles.css';
-import { UpdateNotice, initAppearance, initLocale, initSettings } from '@capital/ui';
+import { UpdateNotice, initAppearance, initLocale, initSettings, initWhatsNew, installErrorLog } from '@capital/ui';
 import { App } from './App';
 import { initAppShell } from './pwa';
+import { initReport } from './report';
 
 declare const __CF_DESKTOP__: boolean;
 
+// Hata günlüğü (Tur 74) her şeyden önce: açılışın uyarıları da hata raporuna girsin.
+installErrorLog(window);
+
 const container = document.getElementById('root');
 if (!container) throw new Error('#root bulunamadı');
+
+/** Yerel depo; gizli pencerede ya da izin yoksa erişmek de hata atabiliyor. */
+function storage(): Storage | null {
+  try {
+    return window.localStorage;
+  } catch {
+    return null;
+  }
+}
 
 void (async () => {
   // Masaüstü sürümü (Tur 66): ayarlar ve kayıtlar dosyada; ilk çizimden
@@ -21,6 +34,10 @@ void (async () => {
   initSettings();
   // Kurulabilir ve çevrimdışı oyun (Tur 48): hizmet çalışanı sayfa yüklenince kaydediliyor.
   initAppShell();
+  // Yeni sürüm işareti ve hata raporu (Tur 74). Masaüstünde dosyalar yerel depoya
+  // yukarıda yazıldı: dönen oyuncu yeni gelen sanılmıyor.
+  initWhatsNew(storage());
+  initReport();
 
   // Dil de ilk çizimden önce: adres parametresi (?lang=en) ya da hatırlanan
   // seçim. Türkçede beklenecek bir şey yok; İngilizce sözlüğü ayrı parçada

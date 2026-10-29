@@ -39,6 +39,7 @@ import {
 } from './holding';
 import { simulateCityDay } from './day';
 import { tc } from './i18n';
+import './i18n/gameTr';
 import { SPEED_MS } from './types';
 import type { CommandResult, GameCommand, GameState } from './types';
 

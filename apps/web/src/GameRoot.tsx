@@ -42,6 +42,7 @@ import {
 } from '@capital/ui';
 import type { ExportOutcome, FocusTarget, GameContextValue, LeagueBoard, ToastMessage, ViewState } from '@capital/ui';
 import { setBeforeUpdate } from './pwa';
+import { setLiveGame } from './report';
 import { deliverImageFile, deliverTextFile } from './host';
 import { createLeagueBoard, fallbackLeagueBoard, leagueServerConfigured } from './league-board';
 import { Soundscape } from './audio';
@@ -233,6 +234,11 @@ export function GameRoot({
   }, [engine]);
   // Yeni sürüme geçmeden önce (Tur 48): yenilenen oyun kaldığı günden açılsın.
   useEffect(() => setBeforeUpdate(() => saveGame(engine.getState(), AUTOSAVE_SLOT)), [engine]);
+  // Hata raporunun kaydı (Tur 74): oyun açıkken o anki durum.
+  useEffect(() => {
+    setLiveGame(() => engine.getState());
+    return () => setLiveGame(null);
+  }, [engine]);
 
   // ---- Senaryonun dönüm noktalarında hemen kayıt (Tur 39) ----
   // Başla, bitiş ve sonuç ekranının kapanışı otomatik kaydın 30 saniyesini

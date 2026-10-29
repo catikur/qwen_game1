@@ -25,6 +25,7 @@ import type { ViewState } from './useGame';
 import { t } from './i18n';
 import { useLocale } from './i18n/locale';
 import { useSettings } from './settings';
+import { useWhatsNewUnseen } from './whatsNew';
 import { CareerRunLine } from './CareerPanel';
 import { WeatherChip } from './WeatherChip';
 import { CashDelta, TweenMoney } from './MomentLayers';
@@ -106,6 +107,7 @@ function useLabelFit(ref: RefObject<HTMLElement | null>, selector: string, prope
 /** Üst bar: oyuncunun her an görmesi gereken beş sayı ve zaman kontrolü. */
 export function TopBar(): ReactElement {
   const { run, view, setView, audio } = useGame();
+  const whatsNew = useWhatsNewUnseen();
   const dock = useRef<HTMLElement>(null);
   useLabelFit(dock, '.dock-label', '--dock-fit');
   const state = useGameState();
@@ -225,15 +227,18 @@ export function TopBar(): ReactElement {
           type="button"
           className={view.openPanel === 'settings' ? 'speed settings-toggle active' : 'speed settings-toggle'}
           data-panel="settings"
+          data-whats-new={whatsNew || undefined}
           aria-pressed={view.openPanel === 'settings'}
-          aria-label={t('hud.settings.open')}
-          title={t('hud.settings.open')}
+          aria-label={t(whatsNew ? 'hud.settings.openNew' : 'hud.settings.open')}
+          title={t(whatsNew ? 'hud.settings.openNew' : 'hud.settings.open')}
           onClick={() => setView({ openPanel: view.openPanel === 'settings' ? 'none' : 'settings' })}
         >
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
             <circle cx="12" cy="12" r="3" />
             <path d="M12 2.8v2.4M12 18.8v2.4M2.8 12h2.4M18.8 12h2.4M5.5 5.5l1.7 1.7M16.8 16.8l1.7 1.7M5.5 18.5l1.7-1.7M16.8 7.2l1.7-1.7" />
           </svg>
+          {/* Yeni sürüm (Tur 74): "Yenilikler" açılana kadar nokta. */}
+          {whatsNew && <span className="whats-new-dot" aria-hidden="true" />}
         </button>
       </div>
 

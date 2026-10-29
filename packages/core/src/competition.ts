@@ -15,6 +15,7 @@ import { MARKETING_CAP, RESEARCH_CAP, marketingLeverage, researchCeiling } from 
 import { tilePrice } from './systems/city';
 import { effectivePriceMultiplier } from './systems/rivalry';
 import { tc } from './i18n';
+import './i18n/gameTr';
 import type { GameState } from './types';
 
 /**

@@ -1,6 +1,7 @@
 import { BUILDINGS, RELATION, STRUCTURE_BY_ID, numberLocale } from '@capital/content';
 import { pushNews } from '../news';
 import { tc } from '../i18n';
+import '../i18n/gameTr';
 import { rivalProfiles } from '../profiles';
 import { estimateInvestment } from './market';
 import { isDistrictOpen, tilePrice } from './city';

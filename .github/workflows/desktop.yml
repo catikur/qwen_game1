@@ -6,8 +6,9 @@
 #
 # Elle (Actions → Masaüstü → Run workflow): üç işletim sisteminin kurulum
 # paketleri (Windows: MSI ve NSIS, macOS: .app ve DMG, Linux: deb, rpm,
-# AppImage) ve Steam depoları (Tur 70). İmzasız; imza docs/MASAUSTU.md'de,
-# Steam'e yükleme docs/STEAM.md'de.
+# AppImage) ve Steam depoları (Tur 70). macOS paketi Apple sırları depoda
+# varsa imzalı ve noter onaylı (Tur 74, tools/apple-signing.sh), yoksa
+# imzasız; yayın listesi docs/YAYIN.md'de, Steam'e yükleme docs/STEAM.md'de.
 name: Masaüstü
 
 on:
@@ -117,9 +118,20 @@ jobs:
       # Lig sunucusu Pages'teki oyunla aynı (Lite'ın adresi, ios-lite/App/project.yml).
       - name: Kurulum paketleri
         shell: bash
+        # Apple sırları yalnız bu adımda ve yalnız macOS'ta (Codex #104): bağımlılıkların
+        # kurulum betikleri, önbellek ve yükleme eylemleri onları görmüyor. Boşsa paket
+        # imzasız (tools/apple-signing.sh).
+        env:
+          SIGN_APPLE_CERTIFICATE: ${{ runner.os == 'macOS' && secrets.APPLE_CERTIFICATE || '' }}
+          SIGN_APPLE_CERTIFICATE_PASSWORD: ${{ runner.os == 'macOS' && secrets.APPLE_CERTIFICATE_PASSWORD || '' }}
+          SIGN_APPLE_SIGNING_IDENTITY: ${{ runner.os == 'macOS' && secrets.APPLE_SIGNING_IDENTITY || '' }}
+          SIGN_APPLE_ID: ${{ runner.os == 'macOS' && secrets.APPLE_ID || '' }}
+          SIGN_APPLE_PASSWORD: ${{ runner.os == 'macOS' && secrets.APPLE_PASSWORD || '' }}
+          SIGN_APPLE_TEAM_ID: ${{ runner.os == 'macOS' && secrets.APPLE_TEAM_ID || '' }}
         run: |
           export VITE_LEAGUE_URL=$(sed -n 's/^ *LiteLeagueURL: *"\(.*\)"/\1/p' ios-lite/App/project.yml)
           echo "Lig sunucusu: ${VITE_LEAGUE_URL:-yok}"
+          source tools/apple-signing.sh
           pnpm --filter @capital/desktop exec tauri build
       - uses: actions/upload-artifact@v5
         with:
@@ -131,8 +143,19 @@ jobs:
       # deposu evrensel (Apple Silicon ve Intel tek .app'te).
       - name: Steam deposu
         shell: bash
+        # Apple sırları yalnız bu adımda ve yalnız macOS'ta (Codex #104): bağımlılıkların
+        # kurulum betikleri, önbellek ve yükleme eylemleri onları görmüyor. Boşsa paket
+        # imzasız (tools/apple-signing.sh).
+        env:
+          SIGN_APPLE_CERTIFICATE: ${{ runner.os == 'macOS' && secrets.APPLE_CERTIFICATE || '' }}
+          SIGN_APPLE_CERTIFICATE_PASSWORD: ${{ runner.os == 'macOS' && secrets.APPLE_CERTIFICATE_PASSWORD || '' }}
+          SIGN_APPLE_SIGNING_IDENTITY: ${{ runner.os == 'macOS' && secrets.APPLE_SIGNING_IDENTITY || '' }}
+          SIGN_APPLE_ID: ${{ runner.os == 'macOS' && secrets.APPLE_ID || '' }}
+          SIGN_APPLE_PASSWORD: ${{ runner.os == 'macOS' && secrets.APPLE_PASSWORD || '' }}
+          SIGN_APPLE_TEAM_ID: ${{ runner.os == 'macOS' && secrets.APPLE_TEAM_ID || '' }}
         run: |
           export VITE_LEAGUE_URL=$(sed -n 's/^ *LiteLeagueURL: *"\(.*\)"/\1/p' ios-lite/App/project.yml)
+          source tools/apple-signing.sh
           if [ "$RUNNER_OS" = "macOS" ]; then
             rustup target add aarch64-apple-darwin x86_64-apple-darwin
             pnpm --filter @capital/desktop exec tauri build --features steam --bundles app --target universal-apple-darwin

@@ -6618,6 +6618,178 @@ button.icon {
   margin: 0;
 }
 
+/* ------------------------------------------------------------ sürüm (Tur 74) */
+
+/* Yeni sürüm işareti: Ayarlar düğmelerinde ve "Yenilikler"de, sayfa açılana kadar. */
+.whats-new-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-left: 6px;
+  border-radius: 999px;
+  background: var(--warn);
+  box-shadow: 0 0 0 2px var(--panel-solid);
+  vertical-align: middle;
+}
+
+.settings-toggle {
+  position: relative;
+}
+
+.settings-toggle .whats-new-dot {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  margin: 0;
+}
+
+.settings-new {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: var(--radius-xs);
+  background: var(--accent-soft);
+  border: 1px solid color-mix(in srgb, var(--accent) 28%, transparent);
+  font-weight: 700;
+}
+
+.settings-back {
+  align-self: flex-start;
+}
+
+.whats-new,
+.bug-report {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.whats-new h3,
+.bug-report h3 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: calc(17px * var(--text-scale));
+}
+
+.whats-new-entry h4 {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+  margin: 0 0 6px;
+  font-family: var(--font-display);
+  font-size: calc(14px * var(--text-scale));
+}
+
+.whats-new-current {
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-family: var(--font-sans);
+  font-size: calc(11.5px * var(--text-scale));
+  font-weight: 800;
+}
+
+.whats-new-entry ul {
+  display: grid;
+  gap: 5px;
+  max-width: 64ch;
+  margin: 0;
+  padding-left: 1.2em;
+  line-height: 1.45;
+}
+
+.bug-report p {
+  margin: 0;
+  max-width: 64ch;
+}
+
+.bug-report-note {
+  display: grid;
+  gap: 6px;
+  font-weight: 700;
+}
+
+.bug-report textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-xs);
+  background: var(--panel-solid);
+  color: var(--text);
+  font: inherit;
+  font-size: calc(14px * var(--text-scale));
+  font-weight: 600;
+  line-height: 1.45;
+  resize: vertical;
+}
+
+.bug-report textarea:focus {
+  border-color: var(--select-ring);
+  outline: 2px solid var(--select-ring);
+  outline-offset: 0;
+}
+
+.bug-report-preview summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.bug-report-preview pre {
+  max-height: 18em;
+  margin: 8px 0 0;
+  padding: 10px;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xs);
+  background: var(--tint-2);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: calc(11.5px * var(--text-scale));
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* Düğme gibi görünen bağlantı (e-posta yaz): `button` kuralının aynısı. */
+a.link-button {
+  display: inline-flex;
+  align-items: center;
+  padding: 7px 12px;
+  border: 1px solid var(--tile-edge);
+  border-radius: var(--radius-sm);
+  background: var(--tile);
+  color: var(--text);
+  font-weight: 700;
+  text-decoration: none;
+  box-shadow: var(--button-shadow);
+}
+
+a.link-button:hover {
+  background: var(--tile-hover);
+}
+
+a.link-button:active {
+  transform: translateY(2px);
+  box-shadow: none;
+}
+
+.bug-report-notice {
+  font-weight: 700;
+}
+
+.bug-report-notice.good {
+  color: var(--good);
+}
+
+.bug-report-notice.bad {
+  color: var(--bad);
+}
+
 
 /* Tur 56: terminalin taşıma masası — filo, masadaki teklifler, süren sözleşmeler. */
 .freight-desk,

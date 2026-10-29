@@ -170,7 +170,10 @@ tamamen ücretsiz.
   sır olarak (Tauri bunları doğrudan okuyor): `APPLE_CERTIFICATE` (`.p12`'nin
   base64'ü), `APPLE_CERTIFICATE_PASSWORD`, `APPLE_SIGNING_IDENTITY`
   (`Developer ID Application: … (TEAMID)`), `APPLE_ID`, `APPLE_PASSWORD`,
-  `APPLE_TEAM_ID`. Sırlar gelince paket iş akışı imzalayıp onaylatıyor.
+  `APPLE_TEAM_ID`. Sırlar gelince paket iş akışı imzalayıp onaylatıyor
+  (Tur 74: `tools/apple-signing.sh` sırları takım takım aktarıyor, imza
+  için ilk üçü, noter onayı için son üçü; eksik takım hiç aktarılmıyor,
+  paket imzasız ya da onaysız çıkıyor). Yayının sırası `docs/YAYIN.md`'de.
 - Windows imzası isteğe bağlı (SmartScreen uyarısı Steam'den kurulan
   oyunda çıkmıyor).
 

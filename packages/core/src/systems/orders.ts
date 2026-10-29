@@ -2,6 +2,7 @@ import { numberLocale } from '@capital/content';
 import { pushNews } from '../news';
 import { formatMoney } from '../selectors';
 import { tc } from '../i18n';
+import '../i18n/gameTr';
 import {
   CONTROL_THRESHOLD,
   TOTAL_SHARES,

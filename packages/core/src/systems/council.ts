@@ -5,6 +5,7 @@ import { pushNews } from '../news';
 import { rivalProfiles } from '../profiles';
 import { formatMoney } from '../selectors';
 import { tc } from '../i18n';
+import '../i18n/gameTr';
 import { noteFeat } from './feats';
 import { noteRelation, relationQuote, stanceOf } from './relations';
 import type { CommandResult, CompanyState, GameState, MotionState, PolicyState } from '../types';

@@ -2,6 +2,7 @@ import { BUILDINGS, BUILDING_BY_ID, CATEGORIES, REAL_ESTATE, STRUCTURE_BY_ID } f
 import type { BuildingDef, CategoryId } from '@capital/content';
 import { formatMoney } from '../format';
 import { tc } from '../i18n';
+import '../i18n/gameTr';
 import { pushNews } from '../news';
 import type { BuildingInstance, CommandResult, DistrictState, GameState } from '../types';
 import { isDistrictOpen, tilePrice } from './city';

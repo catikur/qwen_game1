@@ -9,7 +9,8 @@
     ".": "./src/index.ts"
   },
   "sideEffects": [
-    "./src/i18n/index.ts"
+    "./src/i18n/index.ts",
+    "./src/i18n/gameTr.ts"
   ],
   "dependencies": {
     "@capital/content": "workspace:*"

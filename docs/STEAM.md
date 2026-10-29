@@ -44,8 +44,10 @@
     oyuncunun kendi paketi varsa o geçiyor. İnmekte olan öğeler rafta
     sayılıyor; güncellemesi inen öğe de (Steam bitirene kadar klasörüne
     dokunulmuyor). Raf açılınca, pencereye dönünce ve inen öğe varken beş
-    saniyede bir liste tazeleniyor. Abonelik Steam'de bırakılınca paket
-    raftan gidiyor.
+    saniyede bir liste tazeleniyor. Steam'de bir Workshop sayfası
+    açıldıktan sonra da üç dakika: Steam katmanı pencerenin odağını çoğu
+    zaman almıyor, katmanda abone olunan öğe yoklamayla geliyor. Abonelik
+    Steam'de bırakılınca paket raftan gidiyor.
   - *Yükleme.* Oyuncu kendi paketini rafın "Workshop'a yükle" düğmesiyle
     yayımlıyor (onaylı). Öğe herkese açık, "Scenario" etiketli, içeriği
     tek bir `pack.json`; açıklaması paketin senaryoları. Başlık ve

@@ -18,6 +18,7 @@ import { scopedMemo, withBuildingIndex } from './systems/buildingIndex';
 import { wageFor } from './systems/labor';
 import { overheadMultiplier } from './systems/economy';
 import { tc } from './i18n';
+import './i18n/gameTr';
 import type { BuildingInstance, GameState } from './types';
 
 /**

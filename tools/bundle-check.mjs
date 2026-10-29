@@ -13,10 +13,14 @@ import path from 'node:path';
 import zlib from 'node:zlib';
 
 const DIST = path.resolve(process.argv[2] ?? 'apps/web/dist');
-/** Kurulum ekranının yolu, gzip (KB); yazı tipleri hariç. Tur 46 öncesi 517 KB, sonunda ~128 KB. */
-const CRITICAL_BUDGET_KB = 160;
-/** Ana parçanın kendisi, gzip (KB). Tur 46 sonunda ~58 KB; öncesinde 246 KB. */
-const ENTRY_BUDGET_KB = 75;
+/**
+ * Kurulum ekranının yolu, gzip (KB); yazı tipleri hariç. Tur 46 öncesi 517 KB,
+ * sonunda ~128 KB; Tur 73'te 151 KB. Tur 74'te oyunun Türkçe sözlükleri oyun
+ * ekranına geçti (~141 KB), bütçe 160'tan 150'ye indi.
+ */
+const CRITICAL_BUDGET_KB = 150;
+/** Ana parçanın kendisi, gzip (KB). Tur 46 sonunda ~58 KB; Tur 73'te 74,6 KB, Tur 74'te ~65 KB (bütçe 75'ten 70'e). */
+const ENTRY_BUDGET_KB = 70;
 /** Kurulumun yolunda olmaması gerekenler. */
 const LATE = [/^three-/, /^GameRoot-/, /^locale-en-/, /^locale-de-/];
 
@@ -86,6 +90,19 @@ for (const queue = game ? [game] : []; queue.length; ) {
 }
 check('Kumandanın modülü ayrı parça: ne kurulumun yolunda ne oyun ekranının durağan içe aktarmalarında',
   Boolean(pad) && !critical.has(pad) && !gameGraph.has(pad), pad ?? 'yok');
+
+// Oyunun Türkçe sözlükleri (Tur 74): komut ve piyasa metinleri, finans
+// panelleri kurulumun yolunda değil, oyun ekranıyla iniyorlar. Her sözlükten
+// kaçışsız ilk metin aranıyor; biri giriş sözlüğüne geri dönerse kırmızı.
+const firstText = (file) => {
+  const source = fs.readFileSync(path.resolve(new URL('..', import.meta.url).pathname, file), 'utf8');
+  return [...source.matchAll(/^\s*'[^']+':\s*'([^'\\{}]{12,})',?$/gm)][0]?.[1] ?? null;
+};
+const gameTexts = ['packages/core/src/i18n/tr/commands.ts', 'packages/core/src/i18n/tr/markets.ts', 'packages/ui/src/i18n/tr/finance.ts'].map((file) => [file, firstText(file)]);
+const misplaced = gameTexts.filter(([, text]) => text !== null && [...critical].some((file) => file.endsWith('.js') && read(file).includes(text)));
+check('Oyunun Türkçe sözlükleri (komutlar, piyasalar, finans) kurulumun yolunda değil, oyun ekranıyla iniyor',
+  gameTexts.every(([, text]) => text !== null) && misplaced.length === 0 && gameTexts.every(([, text]) => [...gameGraph].some((file) => read(file).includes(text))),
+  misplaced.map(([file]) => path.basename(file)).join(', ') || gameTexts.map(([file]) => path.basename(file, '.ts')).join(', '));
 
 // Kurulabilir oyun (Tur 48): hizmet çalışanı paketin her parçasını önbelleğe
 // alıyor; biri listede yoksa çevrimdışı açılış o parçada kırılır.

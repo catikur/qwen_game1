@@ -22,6 +22,7 @@ import {
 } from '@capital/core';
 import type { LaborState } from '@capital/core';
 import { t } from './i18n';
+import './i18n/financeTr';
 import { useGame, useGameState } from './useGame';
 
 /**

@@ -8,7 +8,7 @@ import { issueText, pt } from './packMessages';
 import type { PackMessageKey } from './packMessages';
 import { MAX_PACKS, addPack, refreshWorkshop, removePack, useInstalledPacks, useWorkshopDownloading } from './packStore';
 import type { InstalledPack } from './packStore';
-import { WORKSHOP_TEXT_BYTES, WORKSHOP_TITLE_BYTES, fitUtf8, openWorkshopPage, publishedItem, rememberPublished, useWorkshopBridge } from './workshop';
+import { WORKSHOP_TEXT_BYTES, WORKSHOP_TITLE_BYTES, fitUtf8, openWorkshopPage, publishedItem, rememberPublished, useWorkshopBridge, useWorkshopWatching } from './workshop';
 import type { WorkshopPage, WorkshopPublished } from './workshop';
 import { closeEditor, draftDirty, draftFrom, freshDraft, loadDraft, normalizedDraft, openEditor, takeTrial, useOpenDraft } from './packDraft';
 
@@ -110,7 +110,9 @@ export function PackList({
     return () => window.removeEventListener('focus', onFocus);
   }, [bridge]);
   // İnen öğe varken liste birkaç saniyede bir: inen paket pencere odakta kalsa da rafa gelsin (Codex #103).
-  const pending = bridge !== null && downloading > 0;
+  // Steam'de Workshop sayfası açıldıktan sonra da bir süre: katmandan dönüşte odak olayı gelmiyor (Bugbot #103).
+  const watching = useWorkshopWatching();
+  const pending = bridge !== null && (downloading > 0 || watching);
   useEffect(() => {
     if (!pending) return;
     const timer = window.setInterval(() => void refreshWorkshop(), WORKSHOP_POLL_MS);
@@ -171,8 +173,11 @@ export function PackActions({ def, onRemoved }: { def: ScenarioDef; onRemoved: (
   const [publishing, setPublishing] = useState<'confirm' | 'busy' | null>(null);
   const [published, setPublished] = useState<WorkshopPublished | null>(null);
   const source = def.source;
+  // Yükleme sürerken başka senaryo seçilirse sonuç eskisinin; yenisinin ekranına yazılmıyor (Codex #103).
+  const shown = useRef(def);
   // Tanım değişince (başka senaryo ya da aynı kimlikle yeni sürüm) eski sürümün kodu kutuda kalmasın (Codex #97).
   useEffect(() => {
+    shown.current = def;
     setNotice(null);
     setFallback(null);
     setConfirming(false);
@@ -231,6 +236,8 @@ export function PackActions({ def, onRemoved }: { def: ScenarioDef; onRemoved: (
   const publish = async () => {
     if (!bridge || !own) return;
     const name = packText(own.pack.name);
+    const at = def;
+    const still = () => shown.current === at;
     setPublishing('busy');
     setPublished(null);
     setNotice({ tone: 'info', text: pt('hud.pack.workshop.uploading') });
@@ -243,7 +250,9 @@ export function PackActions({ def, onRemoved }: { def: ScenarioDef; onRemoved: (
       });
       // Öğe Steam'de silinmişse kabuk yenisini açtı: kimlik değişebiliyor. Öğe açılıp
       // paket gitmediyse de kimlik saklanıyor: yeniden deneyince aynı öğe güncelleniyor.
+      // Oyuncu bu arada başka senaryoya geçtiyse de: kimlik paketin.
       rememberPublished(bridge.account, own.pack.id, result.id);
+      if (!still()) return;
       if (result.failed) {
         console.warn('Workshop öğesi açıldı, paket yüklenemedi:', result.failed);
         setNotice({ tone: 'bad', text: pt('hud.pack.workshop.incomplete') });
@@ -254,9 +263,9 @@ export function PackActions({ def, onRemoved }: { def: ScenarioDef; onRemoved: (
       setNotice({ tone: 'good', text: result.agreement ? `${done} ${pt('hud.pack.workshop.agreement')}` : done });
     } catch (error) {
       console.warn('Workshop yüklemesi başarısız:', error);
-      setNotice({ tone: 'bad', text: pt('hud.pack.workshop.failed') });
+      if (still()) setNotice({ tone: 'bad', text: pt('hud.pack.workshop.failed') });
     } finally {
-      setPublishing(null);
+      if (still()) setPublishing(null);
     }
   };
 

@@ -20,6 +20,7 @@ import { consortiumEnabled, consortiumStake } from './systems/consortium';
 import { scenarioDefOf, scenarioProgress } from './systems/scenario';
 import { formatMoney, monthName } from './selectors';
 import { tc } from './i18n';
+import './i18n/gameTr';
 import type { GameState } from './types';
 
 /**

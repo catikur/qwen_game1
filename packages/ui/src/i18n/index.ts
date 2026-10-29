@@ -1,5 +1,8 @@
 import { BASE_LOCALE, registerLocaleLoader, registerMessages, translate } from '@capital/content';
-import { tr } from './tr';
+import type { tr } from './tr';
+import { app } from './tr/app';
+import { hud } from './tr/hud';
+import { panels } from './tr/panels';
 
 /**
  * Arayüz metinleri (Tur 21, §4.9 "yerelleştirme").
@@ -22,7 +25,9 @@ export type Messages = Record<MessageKey, string>;
  * içerik de aynı etkin dili okuyor. Arayüzün sözlüğü motora burada
  * kaydediliyor; `t` anahtar türünü koruyan ince bir sarmalayıcı.
  */
-registerMessages(BASE_LOCALE, tr);
+registerMessages(BASE_LOCALE, { ...panels, ...hud, ...app });
+// Finans metinleri (banka, borsa, meclis, ihale) yalnız oyunda: onları
+// yazan paneller `financeTr.ts`'i içe aktarıyor, sözlük onlarla iniyor (Tur 74).
 // İngilizce dil seçilince iniyor (Tur 46): Türkçe oynayanın açılışında yok.
 registerLocaleLoader('en', () => import('./en').then((m) => registerMessages('en', m.en)));
 // Almanca (Tur 69) de öyle.

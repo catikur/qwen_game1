@@ -109,13 +109,56 @@ export function useWorkshopBridge(): WorkshopBridge | null {
   return useSyncExternalStore(subscribeWorkshop, workshopBridge, workshopBridge);
 }
 
-/** Sayfayı Steam'de açar; köprü hata verirse de açılmadı sayılıyor. */
+/** Sayfayı Steam'de açar; köprü hata verirse de açılmadı sayılıyor. Açıldıysa raf listeyi bir süre yokluyor. */
 export async function openWorkshopPage(bridge: WorkshopBridge, page: WorkshopPage): Promise<boolean> {
   try {
-    return await bridge.open(page);
+    const opened = await bridge.open(page);
+    if (opened) watchWorkshop();
+    return opened;
   } catch {
     return false;
   }
+}
+
+/**
+ * Steam'de bir Workshop sayfası açıldıktan sonra raf listeyi bir süre yokluyor
+ * (Bugbot #103). Steam katmanı pencerenin odağını çoğu zaman almıyor, dönüşte
+ * odak olayı gelmiyor: oyuncunun orada abone olduğu ya da bıraktığı öğe
+ * yoklamayla rafa geliyor. İnen öğe ayrıca, bitene kadar yoklanıyor.
+ */
+export const WORKSHOP_WATCH_MS = 3 * 60_000;
+
+let watching = false;
+let watchTimer: ReturnType<typeof setTimeout> | undefined;
+const watchListeners = new Set<() => void>();
+
+function setWatching(next: boolean): void {
+  if (watching === next) return;
+  watching = next;
+  for (const listener of watchListeners) listener();
+}
+
+/** Raf listeyi `WORKSHOP_WATCH_MS` boyunca yoklasın; yeniden çağrılınca süre baştan. */
+export function watchWorkshop(): void {
+  if (watchTimer !== undefined) clearTimeout(watchTimer);
+  watchTimer = setTimeout(() => {
+    watchTimer = undefined;
+    setWatching(false);
+  }, WORKSHOP_WATCH_MS);
+  setWatching(true);
+}
+
+export function workshopWatching(): boolean {
+  return watching;
+}
+
+function subscribeWatching(listener: () => void): () => void {
+  watchListeners.add(listener);
+  return () => watchListeners.delete(listener);
+}
+
+export function useWorkshopWatching(): boolean {
+  return useSyncExternalStore(subscribeWatching, workshopWatching, () => false);
 }
 
 const PUBLISHED_KEY = 'capitalforge.workshop.v1';

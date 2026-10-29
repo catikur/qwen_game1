@@ -13,6 +13,7 @@ import { ScenarioDetail } from './ScenarioDetail';
 import { packLinkCode } from './packLink';
 import { CareerPanel, useCareerRevision } from './CareerPanel';
 import { SettingsPanel } from './SettingsPanel';
+import { useWhatsNewUnseen } from './whatsNew';
 import { useDialogFocus } from './dialog';
 import { careerSummary } from './career';
 import { inviteCode } from './invite';
@@ -110,6 +111,7 @@ export function NewGameScreen({
   // Kariyer (Tur 41): oyun dışında da açılabilsin, koşular arasında bakılan yer burası.
   // Ayarlar (Tur 47) da: metin boyutu ve renkler kurulumda da gerekiyor.
   const [overlay, setOverlay] = useState<'none' | 'career' | 'settings'>('none');
+  const whatsNew = useWhatsNewUnseen();
   // Oyun içindeki paneller gibi Escape kapatıyor (Tur 44).
   useEffect(() => {
     if (overlay === 'none') return;
@@ -148,8 +150,16 @@ export function NewGameScreen({
           <button type="button" className="ghost newgame-career" data-career-open onClick={() => setOverlay('career')}>
             {t('hud.career.open', { done: badges, total: career.statuses.length })}
           </button>
-          <button type="button" className="ghost newgame-settings" data-settings-open onClick={() => setOverlay('settings')}>
+          <button
+            type="button"
+            className="ghost newgame-settings"
+            data-settings-open
+            data-whats-new={whatsNew || undefined}
+            aria-label={whatsNew ? t('hud.settings.openNew') : undefined}
+            onClick={() => setOverlay('settings')}
+          >
             {t('hud.settings.open')}
+            {whatsNew && <span className="whats-new-dot" aria-hidden="true" />}
           </button>
           <LocalePicker />
         </div>

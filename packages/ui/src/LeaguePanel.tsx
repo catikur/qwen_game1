@@ -577,6 +577,17 @@ export function LeagueResultScreen({ onNewGame }: { onNewGame: () => void }): Re
     setSent(null);
     setSending(false);
   }, [board]);
+  // Oyunun içinden başka bir kayıt açılınca ekran yerinde kalıyor (`replaceState`). Gönderim, kod
+  // ve Steam'deki sıra o koşunun: yeni koşuda baştan, eskisinin geç gelen yanıtı yazılmıyor (Codex #103).
+  const runKey = `${state.meta.createdAtIso}|${state.league?.weekId ?? ''}`;
+  const shownRun = useRef(runKey);
+  useEffect(() => {
+    shownRun.current = runKey;
+    setSent(null);
+    setSending(false);
+    setCode(null);
+    setSteamRank(null);
+  }, [runKey]);
   const league = state.league;
   if (!league || league.finishedDay === undefined || league.resultSeen) return null;
 
@@ -587,6 +598,7 @@ export function LeagueResultScreen({ onNewGame }: { onNewGame: () => void }): Re
     if (!leagueRun) return;
     setSending(true);
     const target = board;
+    const runAt = shownRun.current;
     const outcome = await target.submit({
       weekId: leagueRun.weekId,
       companyName: leagueRun.companyName,
@@ -596,19 +608,23 @@ export function LeagueResultScreen({ onNewGame }: { onNewGame: () => void }): Re
       code: encodeRun(leagueRun),
       submittedAt: new Date().toISOString(),
     });
-    // Gönderim sürerken tablo değiştiyse sonucu eski tablonun: yeni tablonun düğmesi açık kalıyor.
-    if (current.current !== target) return;
+    // Puan Steam'in tablosuna da (Tur 73); gönderim sürerken tablo değişse de: koşu geçerli,
+    // Steam en iyisini tutuyor (Bugbot #103). Sıra yalnız aynı koşu ekrandaysa yazılıyor.
+    const steam = steamLeague();
+    if (steam && mirrorsToSteam(outcome)) {
+      steam.upload(leagueRun.weekId, leagueRun.score).then(
+        (uploaded) => {
+          if (shownRun.current === runAt) setSteamRank(uploaded.rank > 0 ? uploaded.rank : null);
+        },
+        (error: unknown) => console.warn('Puan Steam tablosuna gitmedi:', error),
+      );
+    }
+    // Gönderim sürerken tablo ya da koşu değiştiyse sonuç eskisinin: yeni tablonun düğmesi açık kalıyor.
+    if (current.current !== target || shownRun.current !== runAt) return;
     setSending(false);
     const text = submitText(outcome, target.kind, leagueBoardKind(leagueRun.weekId) === 'day');
     setSent({ text, final: !RETRYABLE.has(outcome) });
     toast(text, outcome === 'saved' || outcome === 'kept-better' || outcome === 'queued' ? 'good' : 'bad');
-    const steam = steamLeague();
-    if (steam && mirrorsToSteam(outcome)) {
-      steam.upload(leagueRun.weekId, leagueRun.score).then(
-        (uploaded) => setSteamRank(uploaded.rank > 0 ? uploaded.rank : null),
-        (error: unknown) => console.warn('Puan Steam tablosuna gitmedi:', error),
-      );
-    }
   };
 
   const copy = async () => {

@@ -3,6 +3,7 @@ import { REAL_ESTATE, RELATION, STRUCTURE_BY_ID, formatNumber, formatPercent, wi
 import type { ReactElement } from 'react';
 import { auctionHint, getPlayer, hostileRivals, minimumBid, rivalProfiles, stanceOf } from '@capital/core';
 import { t } from './i18n';
+import './i18n/financeTr';
 import { useGame, useGameState } from './useGame';
 
 /**

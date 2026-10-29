@@ -2,6 +2,7 @@ import { BUILDING_BY_ID } from '@capital/content';
 import { BUILDING_BOOK_RATIO } from './city';
 import { scopedAssets } from './buildingIndex';
 import { tc } from '../i18n';
+import '../i18n/gameTr';
 import { noteRelation, sharePercent } from './relations';
 import type { CompanyState, GameState } from '../types';
 
