@@ -11,7 +11,9 @@
 //! pencereyle konuşan kısım ince.
 
 use std::path::Path;
-use std::sync::Mutex;
+use std::sync::mpsc::{self, Receiver, RecvTimeoutError, Sender};
+use std::sync::{Mutex, MutexGuard};
+use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Manager, PhysicalPosition, PhysicalSize, Runtime, Window};
@@ -22,6 +24,11 @@ const MIN_HEIGHT: u32 = 600;
 /// Uygulamanın ayar dizininde. Kayıtların dizininde değil: Steam Cloud
 /// kayıtları PC ile Deck arasında taşıyor, ekranın boyu taşınmamalı.
 const FILE: &str = "window.json";
+/// Taşıma ve boy haberleri durulunca pencerenin hâline bakılıyor. Büyütme ve
+/// tam ekran geçişinde (açılıştaki `restore`'da da) boy haberi kip haberinden
+/// önce gelebiliyor; o an ekran boyuna yakın boy pencere boyu sanılıyordu
+/// (Cursor Bugbot).
+const SETTLE: Duration = Duration::from_millis(400);
 
 /// Kapanışta yazılan, açılışta okunan hâl. Yer ve boy fiziksel piksel.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -152,8 +159,28 @@ pub fn save(dir: &Path, memory: &Memory) -> std::io::Result<()> {
     crate::store::write_atomic(&dir.join(FILE), &bytes)
 }
 
-/// Uygulamanın tuttuğu hâl.
-pub struct Remembered(Mutex<Memory>);
+/// Haberler `wait` boyunca kesilene kadar bekler; kanal kapandıysa false.
+fn quiet(pokes: &Receiver<()>, wait: Duration) -> bool {
+    loop {
+        match pokes.recv_timeout(wait) {
+            Ok(()) => continue,
+            Err(RecvTimeoutError::Timeout) => return true,
+            Err(RecvTimeoutError::Disconnected) => return false,
+        }
+    }
+}
+
+/// Uygulamanın tuttuğu hâl ve durulmayı bekleyen iş parçacığının kanalı.
+pub struct Remembered {
+    memory: Mutex<Memory>,
+    pokes: Mutex<Sender<()>>,
+}
+
+impl Remembered {
+    fn memory(&self) -> MutexGuard<'_, Memory> {
+        self.memory.lock().unwrap_or_else(|poisoned| poisoned.into_inner())
+    }
+}
 
 fn now<R: Runtime>(window: &Window<R>) -> Option<Now> {
     let position = window.outer_position().ok()?;
@@ -178,8 +205,20 @@ fn config_dir<R: Runtime>(app: &AppHandle<R>) -> Option<std::path::PathBuf> {
 /// Açılışta: hafızayı oku, pencereye uygula.
 pub fn restore<R: Runtime>(app: &AppHandle<R>, window: &Window<R>) {
     let memory = config_dir(app).and_then(|dir| load(&dir));
-    // Önce yönetime: uygulamanın yol açtığı boyut haberleri `track`'e düşüyor.
-    app.manage(Remembered(Mutex::new(memory.unwrap_or_default())));
+    // Önce yönetime: aşağıdaki boy ve kip değişimlerinin haberleri `track`'e düşüyor.
+    let (pokes, settled) = mpsc::channel();
+    app.manage(Remembered { memory: Mutex::new(memory.unwrap_or_default()), pokes: Mutex::new(pokes) });
+    let watched = window.clone();
+    std::thread::spawn(move || {
+        // Bir haber gelince durulmasını bekle, sonra pencerenin o anki hâline bak.
+        while settled.recv().is_ok() {
+            if !quiet(&settled, SETTLE) {
+                return;
+            }
+            let (Some(remembered), Some(now)) = (watched.try_state::<Remembered>(), now(&watched)) else { continue };
+            remembered.memory().track(&now);
+        }
+    });
     let screen = |monitor: &tauri::Monitor| -> Screen {
         (monitor.position().x, monitor.position().y, monitor.size().width, monitor.size().height)
     };
@@ -204,23 +243,24 @@ pub fn restore<R: Runtime>(app: &AppHandle<R>, window: &Window<R>) {
     }
 }
 
-/// Pencere taşındı ya da boyu değişti.
+/// Pencere taşındı ya da boyu değişti: durulunca bakılacak.
 pub fn track<R: Runtime>(window: &Window<R>) {
-    let (Some(remembered), Some(now)) = (window.try_state::<Remembered>(), now(window)) else { return };
-    remembered.0.lock().unwrap_or_else(|poisoned| poisoned.into_inner()).track(&now);
+    if let Some(remembered) = window.try_state::<Remembered>() {
+        let _ = remembered.pokes.lock().unwrap_or_else(|poisoned| poisoned.into_inner()).send(());
+    }
 }
 
 /// Kapanış istendi: kipler şimdiki hâlden. Çıkışta pencere artık
 /// sorgulanamayabiliyor; bu yüzden burada da.
 pub fn closing<R: Runtime>(window: &Window<R>) {
     let (Some(remembered), Some(now)) = (window.try_state::<Remembered>(), now(window)) else { return };
-    remembered.0.lock().unwrap_or_else(|poisoned| poisoned.into_inner()).close(&now);
+    remembered.memory().close(&now);
 }
 
 /// Çıkış: pencere hâlâ sorgulanabiliyorsa son hâl, sonra dosyaya.
 pub fn persist<R: Runtime>(app: &AppHandle<R>) {
     let Some(remembered) = app.try_state::<Remembered>() else { return };
-    let mut memory = remembered.0.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+    let mut memory = remembered.memory();
     if let Some(now) = app.get_webview_window("main").and_then(|window| now(&window.as_ref().window())) {
         memory.close(&now);
     }
@@ -305,6 +345,20 @@ mod tests {
         assert_eq!(plan(Some(away), &[PRIMARY]).position, Some((320, 160)));
         // Ekranlar okunamadı: boy hatırlandığı gibi, yer işletim sisteminin.
         assert_eq!(plan(Some(away), &[]), Plan { size: Some((1280, 760)), position: None, maximize: false, fullscreen: false });
+    }
+
+    #[test]
+    fn haberler_kesilince_durulmus_sayiliyor() {
+        let (pokes, settled) = mpsc::channel();
+        for _ in 0..5 {
+            pokes.send(()).unwrap();
+        }
+        let start = std::time::Instant::now();
+        assert!(quiet(&settled, Duration::from_millis(40)), "biriken haberler tükenip süre doluyor");
+        assert!(start.elapsed() >= Duration::from_millis(40));
+        assert!(settled.try_recv().is_err(), "bütün haberler okundu");
+        drop(pokes);
+        assert!(!quiet(&settled, Duration::from_millis(40)), "kanal kapandı: iş parçacığı bitiyor");
     }
 
     #[test]
