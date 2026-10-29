@@ -12,7 +12,7 @@ import { packDe } from '../src/packMessages.de';
 import { MAX_PACKS, MAX_WORKSHOP_PACKS, addPack, installedPacks, refreshWorkshop, removePack, setWorkshopPacks, workshopDownloading } from '../src/packStore';
 import { recordScenarioResult, scenarioRecord } from '../src/scenarioBest';
 import { PackActions, PackList } from '../src/PackShelf';
-import { WORKSHOP_TEXT_BYTES, WORKSHOP_TITLE_BYTES, fitUtf8, publishedItem, rememberPublished, setWorkshopBridge } from '../src/workshop';
+import { WORKSHOP_TEXT_BYTES, WORKSHOP_TITLE_BYTES, WORKSHOP_WATCH_MS, fitUtf8, openWorkshopPage, publishedItem, rememberPublished, setWorkshopBridge, workshopWatching } from '../src/workshop';
 import type { WorkshopBridge, WorkshopListing } from '../src/workshop';
 
 /**
@@ -269,6 +269,29 @@ describe('Workshop paketleri (Tur 73)', () => {
     assert.equal(fitUtf8('• Kurtarma — Batan\u0000 şirket', WORKSHOP_TEXT_BYTES), '• Kurtarma — Batan şirket');
     // Sınır NUL'lar atıldıktan sonra ölçülüyor.
     assert.equal(fitUtf8(`${'\u0000'.repeat(8)}${'a'.repeat(130)}`, WORKSHOP_TITLE_BYTES), 'a'.repeat(WORKSHOP_TITLE_BYTES));
+  });
+
+  test("Steam'de sayfa açılınca raf listeyi bir süre yokluyor: katmandan dönüşte odak olayı gelmiyor (Bugbot #103)", async (t) => {
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    const opener = (opened: boolean | Error): WorkshopBridge => ({
+      ...bridge(),
+      open: async () => {
+        if (opened instanceof Error) throw opened;
+        return opened;
+      },
+    });
+    assert.equal(workshopWatching(), false);
+    assert.equal(await openWorkshopPage(opener(false), 'workshop'), false);
+    assert.equal(await openWorkshopPage(opener(new Error('kabuk meşgul')), 'workshop'), false);
+    assert.equal(workshopWatching(), false, 'açılmayan sayfa yoklatmıyor');
+    assert.equal(await openWorkshopPage(opener(true), 'workshop'), true);
+    assert.equal(workshopWatching(), true);
+    t.mock.timers.tick(WORKSHOP_WATCH_MS - 1);
+    assert.equal(await openWorkshopPage(opener(true), { item: '7' }), true);
+    t.mock.timers.tick(WORKSHOP_WATCH_MS - 1);
+    assert.equal(workshopWatching(), true, 'yeni sayfa süreyi baştan başlatıyor');
+    t.mock.timers.tick(1);
+    assert.equal(workshopWatching(), false);
   });
 
   test('öğenin kimliği Steam hesabına göre: aynı cihazda başka bir hesap öbürünün öğesini güncellemeye kalkmıyor (Codex #103)', () => {

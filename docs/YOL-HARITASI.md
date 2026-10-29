@@ -203,9 +203,15 @@ açılıyor.
   Ligi'nin her haftasının ve gününün Steam'de bir tablosu: gönderilen
   koşunun puanı oraya da gidiyor, lig panelinde Steam arkadaşları. Gerçek
   Steam'de denemek için Steamworks uygulama kimliği gerekiyor (kullanıcı;
-  `docs/STEAM.md` adım 8–9). — bu PR
-- **74 · Sürüm 1.0.** Oyun içinde "Yenilikler" (değişiklik günlüğü), hata
-  bildirme (kayıt ve günlükle), yayın listesi, sürüm 1.0.0.
+  `docs/STEAM.md` adım 8–9). — bitti (#103)
+- **74 · Sürüm 1.0.** Sürüm tek bir sayı, 1.0.0 (`tools/set-version.mjs`
+  yedi dosyayı birlikte değiştiriyor). Ayarlar'da Sürüm bölümü:
+  "Yenilikler" (değişiklik günlüğü, üç dilde; eski sürümden gelen
+  oyuncuya Ayarlar düğmesinde nokta) ve "Hata bildir" (not, kayıt ve uyarı
+  günlüğüyle tek dosya; oyuncu info@conforcus.com'a yolluyor). Yayın
+  listesi `docs/YAYIN.md`; macOS imzası sırlar gelince iş akışında. Oyunun
+  Türkçe metinlerinin çoğu oyun ekranıyla iniyor: ana parça 74,6 KB'tan
+  66 KB'a. — bu PR
 - **75 · Değerlendirme ve Faz 6 raporu.**
 
 ### Faz 7 · İkinci şehir ve ticaret (taslak)

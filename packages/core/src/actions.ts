@@ -12,6 +12,7 @@ import { permitMultiplier } from './systems/council';
 import { crisisBuildMultiplier } from './systems/economy';
 import { isPledged } from './systems/credit';
 import { tc } from './i18n';
+import './i18n/gameTr';
 import type { CommandResult, GameState } from './types';
 
 /**

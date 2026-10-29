@@ -1,7 +1,7 @@
 import { BASE_LOCALE, registerLocaleLoader, registerMessages, translate } from '@capital/content';
 import type { MessageParams } from '@capital/content';
-import { commands } from './tr/commands';
-import { markets } from './tr/markets';
+import type { commands } from './tr/commands';
+import type { markets } from './tr/markets';
 import { world } from './tr/world';
 
 /**
@@ -18,10 +18,16 @@ import { world } from './tr/world';
  * `en/` altında, aynı anahtar kümesiyle (tip denetimi eksik anahtarı yakalıyor);
  * dil seçilince iniyor (Tur 46).
  */
-export const coreTr = { ...commands, ...markets, ...world } as const;
-export type CoreKey = keyof typeof coreTr;
+export type CoreKey = keyof typeof commands | keyof typeof markets | keyof typeof world;
 
-registerMessages(BASE_LOCALE, coreTr);
+/*
+ * Burada yalnız 'world' grubu kayıtlı: kurulum ekranının da okuduğu metinler
+ * (senaryo puanı, lig sonucu) onda. Komut ve piyasa grupları oyunun içinde
+ * üretiliyor; onları yazan modüller `gameTr.ts`'i içe aktarıyor, sözlük
+ * simülasyonla birlikte geç inen parçada (Tur 74). Bütün Türkçe sözlük
+ * testler için `tr/index.ts`'te.
+ */
+registerMessages(BASE_LOCALE, world);
 registerLocaleLoader('en', () => import('./en').then((m) => registerMessages('en', m.coreEn)));
 registerLocaleLoader('de', () => import('./de').then((m) => registerMessages('de', m.coreDe)));
 

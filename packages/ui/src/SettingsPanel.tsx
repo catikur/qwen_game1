@@ -1,4 +1,4 @@
-import { Suspense, lazy } from 'react';
+import { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import type { ReactElement } from 'react';
 import { AppearancePicker } from './AppearancePicker';
 import { installApp, useAppShell } from './appShell';
@@ -16,6 +16,9 @@ import {
   useSettings,
 } from './settings';
 import type { MotionChoice, Palette, TextSize, VolumeChannel } from './settings';
+import { APP_VERSION, appEdition } from './version';
+import type { Edition } from './version';
+import { useWhatsNewUnseen } from './whatsNew';
 
 const TEXT_LABELS: Record<TextSize, MessageKey> = {
   small: 'panels.settings.text.small',
@@ -59,6 +62,20 @@ const DESKTOP_SHORTCUTS: Array<[MessageKey, MessageKey]> = [['panels.settings.ke
  * onunla (`padMessages.ts`); giriş paketine girmiyorlar.
  */
 const PadControls = lazy(() => import('./PadControls'));
+
+/*
+ * Sürüm (Tur 74): "Yenilikler" ve "Hata bildir" Ayarlar'ın içinde açılan
+ * sayfalar, ikisi de geç inen parça; metinleri de onlarla (`releaseMessages.ts`).
+ */
+const WhatsNewPage = lazy(() => import('./WhatsNewPage'));
+const BugReportPage = lazy(() => import('./BugReportPage'));
+type SettingsPage = 'main' | 'whatsNew' | 'report';
+
+const EDITION_LABELS: Record<Edition, MessageKey> = {
+  web: 'panels.settings.version.web',
+  desktop: 'panels.settings.version.desktop',
+  steam: 'panels.settings.version.steam',
+};
 
 function Choices<T extends string>({
   name,
@@ -130,8 +147,40 @@ export function SettingsPanel(): ReactElement {
   const settings = useSettings();
   const shell = useAppShell();
   const padGlyphs = usePadGlyphs();
+  const unseen = useWhatsNewUnseen();
+  const [page, setPage] = useState<SettingsPage>('main');
+  // Sayfa açılınca odak geri düğmesinde, dönünce sayfayı açan düğmede (klavye ve kumanda).
+  const opener = useRef<SettingsPage>('main');
+  const back = useRef<HTMLButtonElement>(null);
+  const main = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (page !== 'main') back.current?.focus();
+    else if (opener.current !== 'main') main.current?.querySelector<HTMLElement>(`[data-settings-page-open="${opener.current}"]`)?.focus();
+  }, [page]);
+  const open = (next: SettingsPage) => {
+    opener.current = next;
+    setPage(next);
+  };
+  if (page !== 'main') {
+    return (
+      <div className="settings settings-page" data-settings data-settings-page={page}>
+        <button type="button" ref={back} className="settings-back" data-settings-back onClick={() => setPage('main')}>
+          {t('panels.settings.version.back')}
+        </button>
+        <Suspense fallback={<p className="muted">…</p>}>{page === 'whatsNew' ? <WhatsNewPage /> : <BugReportPage />}</Suspense>
+      </div>
+    );
+  }
   return (
-    <div className="settings" data-settings>
+    <div className="settings" data-settings ref={main}>
+      {unseen && (
+        <p className="settings-new" data-whats-new-banner role="status">
+          <span>{t('panels.settings.version.new', { version: APP_VERSION })}</span>
+          <button type="button" className="primary" data-settings-page-open="whatsNew" onClick={() => open('whatsNew')}>
+            {t('panels.settings.version.whatsNew')}
+          </button>
+        </p>
+      )}
       <section className="settings-group">
         <h3 id="settings-language">{t('panels.settings.language')}</h3>
         <LocalePicker />
@@ -201,7 +250,7 @@ export function SettingsPanel(): ReactElement {
       <section className="settings-group">
         <h3 id="settings-keys">{t('panels.settings.keys')}</h3>
         <dl className="settings-keys">
-          {[...SHORTCUTS, ...(document.documentElement.dataset['shell'] === 'desktop' ? DESKTOP_SHORTCUTS : [])].map(([key, what]) => (
+          {[...SHORTCUTS, ...(appEdition() !== 'web' ? DESKTOP_SHORTCUTS : [])].map(([key, what]) => (
             <div key={what}>
               <dt>
                 <kbd>{t(key)}</kbd>
@@ -216,6 +265,19 @@ export function SettingsPanel(): ReactElement {
           <PadControls glyphs={padGlyphs} />
         </Suspense>
       )}
+      <section className="settings-group" data-settings-version>
+        <h3 id="settings-version">{t('panels.settings.version')}</h3>
+        <p data-app-version={APP_VERSION}>{t('panels.settings.version.line', { version: APP_VERSION, edition: t(EDITION_LABELS[appEdition()]) })}</p>
+        <div className="settings-choices">
+          <button type="button" className="settings-option" data-settings-page-open="whatsNew" onClick={() => open('whatsNew')}>
+            {t('panels.settings.version.whatsNew')}
+            {unseen && <span className="whats-new-dot" aria-hidden="true" />}
+          </button>
+          <button type="button" className="settings-option" data-settings-page-open="report" onClick={() => open('report')}>
+            {t('panels.settings.version.report')}
+          </button>
+        </div>
+      </section>
     </div>
   );
 }

@@ -5,6 +5,7 @@ import type { InvestmentEstimate } from './systems/market';
 import { indirectEstimate } from './systems/indirect';
 import type { IndirectEstimate } from './systems/indirect';
 import { tc } from './i18n';
+import './i18n/gameTr';
 import { formatMoney } from './format';
 import type { BuildingInstance, CompanyState, DistrictState, GameState, Tile } from './types';
 

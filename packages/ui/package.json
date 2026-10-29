@@ -11,7 +11,8 @@
   },
   "sideEffects": [
     "*.css",
-    "./src/i18n/index.ts"
+    "./src/i18n/index.ts",
+    "./src/i18n/financeTr.ts"
   ],
   "dependencies": {
     "@capital/core": "workspace:*",

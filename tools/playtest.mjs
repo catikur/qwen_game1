@@ -177,6 +177,8 @@ const TUTORIAL_KEY = 'capitalforge.tutorial.v1';
 function veteran(key) {
   try {
     if (!localStorage.getItem(key)) localStorage.setItem(key, JSON.stringify({ seen: true, games: {} }));
+    // Yenilikleri de görmüş (Tur 74): bölümler yeni sürüm duyurusuyla oynamıyor; duyurunun kendisi "Sürüm 1.0" bölümünde.
+    if (!localStorage.getItem('capitalforge.whatsnew.v1')) localStorage.setItem('capitalforge.whatsnew.v1', '999.0.0');
   } catch {
     /* depo kapalı: rehber zaten hatırlanmaz */
   }
@@ -5689,11 +5691,12 @@ async function finish(browser, consoleErrors) {
     }));
     await sp.keyboard.press('Tab');
     await sp.keyboard.press('Shift+Tab');
-    const wrappedBack = await sp.evaluate(() => document.activeElement?.getAttribute('data-volume') ?? document.activeElement?.className ?? '');
+    const wrappedBack = await sp.evaluate(() => document.activeElement?.getAttribute('data-settings-page-open') ?? document.activeElement?.getAttribute('data-volume') ?? document.activeElement?.className ?? '');
     await sp.keyboard.press('Tab');
     const wrappedForward = await sp.evaluate(() => Boolean(document.activeElement?.closest('.modal-head')));
-    check('Ayarlar penceresi: yedi bölüm, odak içeride, Tab ve Shift+Tab pencerede dönüyor',
-      opened.inside && opened.groups === 7 && opened.title === 'Ayarlar' && wrappedBack === 'effects' && wrappedForward,
+    // Sekizinci bölüm Sürüm (Tur 74), pencerenin sonunda: son düğmesi "Hata bildir".
+    check('Ayarlar penceresi: sekiz bölüm, odak içeride, Tab ve Shift+Tab pencerede dönüyor',
+      opened.inside && opened.groups === 8 && opened.title === 'Ayarlar' && wrappedBack === 'report' && wrappedForward,
       `${JSON.stringify(opened)} · geri ${wrappedBack} · ileri ${wrappedForward}`);
 
     const headSize = () => sp.evaluate(() => parseFloat(getComputedStyle(document.querySelector('.settings-group h3')).fontSize));
@@ -9215,7 +9218,11 @@ async function finish(browser, consoleErrors) {
       window.__steamCalls = calls;
       // Oturumdaki Steam hesabı; aynı bilgisayarda ikinci hesap bu anahtarla (Codex #103).
       const account = localStorage.getItem('__fakeSteamAccount') ?? '76561198000000001';
+      // İndirilenler klasörüne yazılan dosyalar (Tur 74, hata raporu).
+      const exports = [];
+      window.__exports = exports;
       const second = JSON.stringify({ ...JSON.parse(pack), id: 'ikinci-kis', name: { tr: 'İkinci kış', en: 'Second winter' } });
+      const third = JSON.stringify({ ...JSON.parse(pack), id: 'ucuncu-kis', name: { tr: 'Üçüncü kış', en: 'Third winter' } });
       const handlers = {
         profile_read_all: () => ({}),
         profile_set: () => null,
@@ -9232,17 +9239,25 @@ async function finish(browser, consoleErrors) {
         steam_unlock: () => null,
         steam_keyboard: () => false,
         // Bir öğe kurulu (iki dosyası var, biri bozuk), biri iniyor; `__workshopReady` olunca o da kurulu.
-        steam_workshop_list: () => (window.__workshopReady
-          ? { items: [{ id: '7001', packs: [pack, '{bozuk'] }, { id: '7002', packs: [second] }], downloading: 0 }
-          : { items: [{ id: '7001', packs: [pack, '{bozuk'] }], downloading: 1 }),
+        // Steam katmanında abone olunan öğe (`__workshopSubscribed`) hemen kurulu, inen yok (Bugbot #103).
+        steam_workshop_list: () => {
+          if (!window.__workshopReady) return { items: [{ id: '7001', packs: [pack, '{bozuk'] }], downloading: 1 };
+          const items = [{ id: '7001', packs: [pack, '{bozuk'] }, { id: '7002', packs: [second] }];
+          if (window.__workshopSubscribed) items.push({ id: '7003', packs: [third] });
+          return { items, downloading: 0 };
+        },
         // Birinci hesapta yeni öğe açılıyor ama paket gitmiyor (Codex #103): kimlik yine
         // dönüyor. Oyuncu sözleşmeyi Steam'de açana kadar kabul etmemiş. İkinci hesabın
         // ilk yüklemesi tamam.
         steam_workshop_publish: ({ request }) => {
-          if (request.item) return { id: request.item, agreement: !window.__workshopAgreed };
-          return account === '76561198000000001'
-            ? { id: '9001', agreement: true, failed: 'yüklenemedi: Steam yanıt vermedi' }
-            : { id: '9002', agreement: false };
+          const reply = () => {
+            if (request.item) return { id: request.item, agreement: !window.__workshopAgreed };
+            return account === '76561198000000001'
+              ? { id: '9001', agreement: true, failed: 'yüklenemedi: Steam yanıt vermedi' }
+              : { id: '9002', agreement: false };
+          };
+          // Yavaş yükleme (`__workshopSlow`, Codex #103): yanıt 1,5 sn sonra.
+          return window.__workshopSlow ? new Promise((resolve) => setTimeout(() => resolve(reply()), 1500)) : reply();
         },
         steam_workshop_open: ({ target }) => {
           if (target === 'agreement') window.__workshopAgreed = true;
@@ -9257,8 +9272,9 @@ async function finish(browser, consoleErrors) {
       };
       window.__TAURI__ = {
         core: {
-          invoke: async (command, args) => {
+          invoke: async (command, args, options) => {
             if (command.startsWith('steam_')) calls.push([command, args ?? null]);
+            if (command === 'export_file') exports.push({ filename: options?.headers?.filename ?? '', text: new TextDecoder().decode(args) });
             const handler = handlers[command];
             if (!handler) throw new Error(`sahte kabukta yok: ${command}`);
             return handler(args ?? {});
@@ -9277,6 +9293,30 @@ async function finish(browser, consoleErrors) {
     await sp.waitForSelector('.newgame', { timeout: 30000 });
     check('Masaüstü paketi sahte kabukla açılıyor; Steam açık', (await sp.evaluate(() => document.documentElement.dataset.shell)) === 'desktop'
       && (await calls('steam_status')).length === 1);
+
+    // Sürüm (Tur 74): Ayarlar'da "masaüstü, Steam"; hata raporu İndirilenler'e, e-posta bağlantısı yok (pencere açamıyor), adres kopyalanıyor.
+    await sp.locator('[data-settings-open]').click();
+    await sp.waitForSelector('.settings-overlay [data-app-version]', { timeout: 5000 });
+    const versionLine = ((await sp.locator('.settings-overlay [data-app-version]').textContent()) ?? '').trim();
+    await sp.locator('.settings-overlay [data-settings-page-open="report"]').click();
+    await sp.waitForSelector('[data-bug-report] [data-report-save-state="none"]', { timeout: 10000 }).catch(() => null);
+    await sp.locator('[data-report-download]').click();
+    await sp.waitForFunction(() => /İndirilenler/.test(document.querySelector('[data-report-notice]')?.textContent ?? ''), null, { timeout: 10000 }).catch(() => null);
+    const desk = await sp.evaluate(() => ({
+      email: document.querySelectorAll('[data-report-email]').length,
+      copy: document.querySelectorAll('[data-report-copy-address]').length,
+      notice: document.querySelector('[data-report-notice]')?.textContent ?? '',
+      exports: window.__exports.map((file) => ({ filename: file.filename, report: (() => { try { return JSON.parse(file.text); } catch { return null; } })() })),
+    }));
+    const deskReport = desk.exports[0]?.report;
+    check('Masaüstünde sürüm "masaüstü, Steam"; hata raporu İndirilenler klasörüne, raporda Steam; e-posta bağlantısı yok, adres kopyalanıyor',
+      /^CapitalForge \d+\.\d+\.\d+ · masaüstü, Steam$/.test(versionLine) && desk.email === 0 && desk.copy === 1
+        && /^Rapor İndirilenler klasöründe: capitalforge-hata-raporu-[\d-]+\.json\./.test(desk.notice)
+        && desk.exports.length === 1 && /^capitalforge-hata-raporu-[\d-]+\.json$/.test(desk.exports[0].filename)
+        && deskReport?.app?.edition === 'steam' && deskReport?.save === null,
+      `${versionLine} · ${JSON.stringify({ ...desk, exports: desk.exports.map((file) => `${file.filename}:${file.report?.app?.edition}`) })}`);
+    await sp.keyboard.press('Escape');
+    await sp.waitForSelector('.settings-overlay', { state: 'detached', timeout: 5000 }).catch(() => null);
 
     // Raf: abone olunan öğenin paketi Workshop künyesiyle; bozuk dosya atlandı, inen öğe yazıyor.
     await sp.locator('.mode-picker [data-mode="scenario"]').click();
@@ -9307,6 +9347,12 @@ async function finish(browser, consoleErrors) {
       polled.cards === 2 && polled.note === 'Workshop: İkinci kış' && polled.downloading === 0 && listedLater === listed,
       `${JSON.stringify(polled)} · liste ${listed} → ${listedLater}`);
     await sp.locator('[data-pack-workshop-browse]').click();
+    // Oyuncu Steam katmanında bir öğeye abone oluyor (Bugbot #103): Steam onu hemen kuruyor, inen öğe
+    // yok; katman pencerenin odağını almadığı için odak olayı da yok. Raf, sayfa açıldığından yokluyor.
+    await sp.evaluate(() => { window.__workshopSubscribed = true; });
+    const subscribed = await sp.waitForSelector('[data-pack-workshop="7003"]', { timeout: 12000 }).then(() => true).catch(() => false);
+    check('Steam katmanında abone olunan öğe rafa geliyor: inen öğe ve odak olayı yok, Workshop sayfası açıldıktan sonra',
+      subscribed, `${(await calls('steam_workshop_list')).length} liste`);
     await sp.locator('[data-pack-workshop="7001"] [data-scenario]').first().click();
     await sp.waitForSelector('[data-pack-actions] [data-pack-workshop-open]', { timeout: 5000 }).catch(() => null);
     const shop = await sp.evaluate(() => ({
@@ -9373,6 +9419,25 @@ async function finish(browser, consoleErrors) {
       `${requests.map((r) => r.item ?? 'yeni').join(',')} · ${targets.join(',')} · ${agreed.notice}`);
     await sp.screenshot({ path: `${OUT}/steam-workshop.png` });
 
+    // Yükleme sürerken oyuncu başka bir senaryoya geçiyor (Codex #103): yanıt yükleyen paketin.
+    // Yeni seçilen Workshop paketinin ekranına "güncellendi" ya da ikinci bir "Steam'de aç" yazılmıyor.
+    await sp.evaluate(() => { window.__workshopSlow = true; });
+    await sp.locator('[data-pack-actions] [data-pack-publish="update"]').click();
+    await sp.locator('[data-pack-publish-yes]').click();
+    await sp.locator('[data-pack-workshop="7002"] [data-scenario]').first().click();
+    await sp.waitForFunction(() => window.__steamCalls.filter(([command]) => command === 'steam_workshop_publish').length === 4, null, { timeout: 5000 }).catch(() => null);
+    await sp.waitForTimeout(2500);
+    const switched = await sp.evaluate(() => ({
+      notice: document.querySelector('[data-pack-actions] [data-pack-notice]')?.textContent ?? '',
+      open: document.querySelectorAll('[data-pack-actions] [data-pack-workshop-open]').length,
+      agreement: document.querySelectorAll('[data-pack-workshop-agreement]').length,
+      stored: localStorage.getItem('capitalforge.workshop.v1'),
+    }));
+    await sp.evaluate(() => { window.__workshopSlow = false; });
+    check('Yükleme sürerken başka senaryoya geçilince sonuç yeni seçilenin ekranına yazılmıyor; öğenin kimliği yine paketin',
+      switched.notice === '' && switched.open === 1 && switched.agreement === 0 && switched.stored === '{"76561198000000001":{"ornek":"9001"}}',
+      JSON.stringify(switched));
+
     // Aynı bilgisayarda başka bir Steam hesabı (Codex #103): paket aynı cihazda, öğesi
     // birincinin. Steam o öğenin güncellemesini reddederdi; ikinci hesap kendi öğesini açıyor.
     await sp.evaluate(() => localStorage.setItem('__fakeSteamAccount', '76561198000000002'));
@@ -9436,9 +9501,225 @@ async function finish(browser, consoleErrors) {
     check('Lig koşusu gönderilince puan Steam\'in o haftaki tablosuna da gidiyor; sonuç ekranında Steam\'deki sırası',
       uploads.length === 1 && uploads[0].weekId === weekId && uploads[0].score === score && /7\. sıradasın/.test(rankLine),
       `${JSON.stringify(uploads)} · skor ${score} · ${rankLine}`);
+    // Oyunun içinden başka bir koşu açılıyor (Codex #103): ekran yerinde kalıyor (`replaceState`).
+    // Önceki koşunun Steam sırası ve gönderimi yok, bu koşu tabloya yeniden gönderilebiliyor.
+    await sp.evaluate(() => {
+      const cap = window.__capital;
+      const next = structuredClone(cap.getState());
+      next.meta.createdAtIso = new Date(Date.parse(next.meta.createdAtIso) + 60_000).toISOString();
+      cap.engine.replaceState(next);
+    });
+    await sp.waitForTimeout(500);
+    const otherRun = await sp.evaluate(() => {
+      const button = document.querySelector('.league-result .primary');
+      return {
+        result: document.querySelectorAll('.league-result').length,
+        rank: document.querySelectorAll('[data-league-steam-rank]').length,
+        sent: document.querySelectorAll('[data-league-sent]').length,
+        button: button ? { text: button.textContent, disabled: button.disabled } : null,
+      };
+    });
+    check('Oyunun içinden başka bir koşu açılınca sonuç ekranı o koşunun: önceki Steam sırası ve gönderim yok, tabloya gönderilebiliyor',
+      otherRun.result === 1 && otherRun.rank === 0 && otherRun.sent === 0 && otherRun.button?.disabled === false, JSON.stringify(otherRun));
     check('Steam bölümünde konsol temiz', sErrors.length === 0, sErrors.slice(0, 3).join(' | '));
     await sContext.close();
     desktopServer.close();
+  }
+
+  // ---------- Sürüm 1.0 (Tur 74) ----------
+  // Yeni oyuncuya duyuru yok; eski sürümden gelende Ayarlar düğmesinde nokta,
+  // Ayarlar'ın başında duyuru, "Yenilikler" açılınca kalkıyor. Hata raporu:
+  // not, kayıt ve günlük; ön izleme, dosya, adres. Oyunun Türkçe sözlükleri
+  // (komutlar, piyasalar, finans) oyun ekranıyla iniyor: panellerde ham anahtar yok.
+  section('Sürüm 1.0: yenilikler, hata bildirme, sözlükler');
+  {
+    const appVersion = JSON.parse(fs.readFileSync(new URL('../apps/web/package.json', import.meta.url), 'utf8')).version;
+    const WHATS_NEW_KEY = 'capitalforge.whatsnew.v1';
+    const vErrors = [];
+    const watch = (page) => {
+      page.on('pageerror', (e) => vErrors.push(e.message));
+      page.on('console', (m) => { if (m.type() === 'error') vErrors.push(m.text()); });
+    };
+
+    // Yeni oyuncu: depoda hiçbir şey yok.
+    const nContext = await browser.newContext({ viewport: { width: 1280, height: 860 } });
+    const np = await nContext.newPage();
+    watch(np);
+    await np.goto('http://127.0.0.1:8811/');
+    await np.waitForSelector('.newgame', { timeout: 20000 });
+    const fresh = await np.evaluate((key) => ({
+      marked: document.querySelector('[data-settings-open]')?.hasAttribute('data-whats-new') ?? null,
+      stored: localStorage.getItem(key),
+    }), WHATS_NEW_KEY);
+    await np.locator('[data-settings-open]').click();
+    await np.waitForSelector('.settings-overlay [data-settings-version]', { timeout: 5000 });
+    const freshSettings = await np.evaluate(() => ({
+      banner: document.querySelectorAll('[data-whats-new-banner]').length,
+      line: (document.querySelector('[data-app-version]')?.textContent ?? '').trim(),
+    }));
+    check(`Yeni oyuncuya duyuru yok: Ayarlar'da nokta yok, sürüm görülmüş sayılıyor; sürüm bölümü "CapitalForge ${appVersion} · tarayıcı"`,
+      fresh.marked === false && fresh.stored === appVersion && freshSettings.banner === 0 && freshSettings.line === `CapitalForge ${appVersion} · tarayıcı`,
+      `${JSON.stringify(fresh)} · ${JSON.stringify(freshSettings)}`);
+    await nContext.close();
+
+    // Eski sürümden gelen oyuncu: rehberi görmüş, "Yenilikler" işareti hiç yok (işaret 1.0'la geldi).
+    const rContext = await browser.newContext({ viewport: { width: 1280, height: 860 }, acceptDownloads: true });
+    await rContext.grantPermissions(['clipboard-read', 'clipboard-write'], { origin: 'http://127.0.0.1:8811' });
+    await rContext.addInitScript((key) => {
+      if (!localStorage.getItem(key)) localStorage.setItem(key, JSON.stringify({ seen: true, games: {} }));
+    }, TUTORIAL_KEY);
+    const rp = await rContext.newPage();
+    watch(rp);
+    await rp.goto('http://127.0.0.1:8811/');
+    await rp.waitForSelector('.newgame', { timeout: 20000 });
+    const marked = await rp.evaluate(() => {
+      const button = document.querySelector('[data-settings-open]');
+      return { dots: button?.querySelectorAll('.whats-new-dot').length ?? 0, label: button?.getAttribute('aria-label') ?? '' };
+    });
+    await rp.locator('[data-settings-open]').click();
+    await rp.waitForSelector('.settings-overlay [data-whats-new-banner]', { timeout: 5000 }).catch(() => null);
+    const banner = await rp.evaluate(() => ({
+      text: document.querySelector('[data-whats-new-banner] span')?.textContent ?? '',
+      dots: document.querySelectorAll('.settings-overlay .whats-new-dot').length,
+    }));
+    check("Eski sürümden gelen oyuncu: Ayarlar düğmesinde nokta (\"yeni sürüm\"), Ayarlar'ın başında duyuru, \"Yenilikler\"de nokta",
+      marked.dots === 1 && marked.label === 'Ayarlar (yeni sürüm)' && banner.text === `Oyun ${appVersion} sürümüne güncellendi.` && banner.dots === 1,
+      `${JSON.stringify(marked)} · ${JSON.stringify(banner)}`);
+    await rp.locator('[data-whats-new-banner] button').click();
+    await rp.waitForSelector('[data-whats-new] [data-release]', { timeout: 10000 }).catch(() => null);
+    const notes = await rp.evaluate(() => ({
+      releases: [...document.querySelectorAll('[data-whats-new] [data-release]')].map((el) => el.getAttribute('data-release')),
+      items: document.querySelector('[data-whats-new] [data-release]')?.querySelectorAll('li').length ?? 0,
+      current: document.querySelector('[data-whats-new] .whats-new-current')?.textContent ?? '',
+      heading: document.querySelector('[data-whats-new] h4')?.textContent ?? '',
+      focus: document.activeElement?.hasAttribute('data-settings-back') ?? false,
+    }));
+    await rp.screenshot({ path: `${OUT}/surum-yenilikler.png` });
+    check('"Yenilikler": en yeni sürüm başta, günüyle ve maddeleriyle; "oynadığın sürüm"; odak geri düğmesinde',
+      notes.releases[0] === appVersion && notes.items >= 5 && notes.current === 'oynadığın sürüm'
+        && notes.heading.startsWith(`Sürüm ${appVersion} · `) && /\d{4}/.test(notes.heading) && notes.focus,
+      JSON.stringify(notes));
+    await rp.locator('[data-settings-back]').click();
+    await rp.waitForSelector('.settings-overlay [data-settings-version]', { timeout: 5000 });
+    const seen = await rp.evaluate((key) => ({
+      banner: document.querySelectorAll('[data-whats-new-banner]').length,
+      dots: document.querySelectorAll('.whats-new-dot').length,
+      focus: document.activeElement?.getAttribute('data-settings-page-open') ?? '',
+      stored: localStorage.getItem(key),
+    }), WHATS_NEW_KEY);
+    check('Geri dönünce duyuru ve noktalar kalkmış, odak "Yenilikler" düğmesinde; görülen sürüm cihazda',
+      seen.banner === 0 && seen.dots === 0 && seen.focus === 'whatsNew' && seen.stored === appVersion, JSON.stringify(seen));
+    await rp.keyboard.press('Escape');
+    await rp.reload();
+    await rp.waitForSelector('.newgame', { timeout: 20000 });
+    check('Sayfa yenilenince nokta yok', (await rp.locator('[data-settings-open] .whats-new-dot').count()) === 0);
+
+    // Hata bildir, oyunun içinden: kayıt o anki durum, günlükte oyunun uyarısı.
+    await rp.fill('.newgame-field input[type="text"]', 'Rapor Holding');
+    await rp.locator('button:has-text("Şirketi kur")').click();
+    await rp.waitForSelector('.topbar', { timeout: 30000 });
+    const day = await rp.evaluate(() => {
+      const c = window.__capital;
+      c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+      for (let i = 0; i < 120; i++) c.engine.runDay();
+      c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+      console.warn('oyun testinin uyarısı', { gün: c.getState().time.day });
+      return c.getState().time.day;
+    });
+    await rp.waitForTimeout(300);
+    await rp.locator('.speeds [data-panel="settings"]').click();
+    await rp.waitForSelector('.modal [data-settings-version]', { timeout: 5000 });
+    await rp.locator('.modal [data-settings-page-open="report"]').click();
+    await rp.waitForSelector('[data-bug-report] [data-report-save-state="ready"]', { timeout: 10000 }).catch(() => null);
+    const form = await rp.evaluate(() => ({
+      save: document.querySelector('[data-report-save-state]')?.getAttribute('data-report-save-state') ?? '',
+      saveChecked: document.querySelector('[data-report-save]')?.checked ?? null,
+      log: document.querySelector('[data-report-log]')?.parentElement?.textContent ?? '',
+      preview: document.querySelector('[data-report-preview] pre')?.textContent ?? '',
+      email: document.querySelector('[data-report-email]')?.getAttribute('href') ?? '',
+      focus: document.activeElement?.hasAttribute('data-settings-back') ?? false,
+    }));
+    check('Hata bildir: açık oyunun kaydı hazır ve seçili; uyarı günlüğü sayılıyor; ön izlemede sürüm, uyarı ve kaydın boyu; e-posta destek adresine',
+      form.save === 'ready' && form.saveChecked === true && /Uyarı günlüğünü ekle \(\d+ satır\)/.test(form.log)
+        && form.preview.includes('"kind": "capitalforge-bug-report"') && form.preview.includes(`"version": "${appVersion}"`)
+        && form.preview.includes('oyun testinin uyarısı') && /"save": "\(kayıt, [\d.,]+ KB\)"/.test(form.preview)
+        && form.email.startsWith('mailto:info@conforcus.com?subject=') && form.focus,
+      JSON.stringify({ ...form, preview: `${form.preview.length} karakter` }));
+    await rp.fill('[data-report-note]', 'Kasa ekranında bir tuhaflık var.');
+    await rp.screenshot({ path: `${OUT}/surum-hata-raporu.png` });
+    const [reportFile] = await Promise.all([rp.waitForEvent('download', { timeout: 15000 }), rp.locator('[data-report-download]').click()]);
+    const report = JSON.parse(fs.readFileSync(await reportFile.path(), 'utf8'));
+    const notice = ((await rp.locator('[data-report-notice]').textContent().catch(() => '')) ?? '').trim();
+    check('Rapor indiriliyor: sürüm, tarayıcı, not, günlükteki uyarı, oyunun o anki kaydı; dosya adı tarihli; oyuncuya ne yapacağı yazıyor',
+      /^capitalforge-hata-raporu-\d{4}-\d{2}-\d{2}-\d{4}\.json$/.test(reportFile.suggestedFilename())
+        && report.kind === 'capitalforge-bug-report' && report.app?.version === appVersion && report.app?.edition === 'web'
+        && report.note === 'Kasa ekranında bir tuhaflık var.' && (report.log ?? []).some((line) => line.text.includes('oyun testinin uyarısı'))
+        && report.save?.state?.time?.day === day && JSON.stringify(report.save).includes('Rapor Holding')
+        && Object.keys(report).at(-1) === 'save' && /^İndirme başladı: capitalforge-hata-raporu-/.test(notice),
+      `${reportFile.suggestedFilename()} · ${notice} · gün ${report.save?.state?.time?.day}/${day}`);
+    await rp.locator('[data-report-save]').uncheck();
+    await rp.locator('[data-report-log]').uncheck();
+    const [bareFile] = await Promise.all([rp.waitForEvent('download', { timeout: 15000 }), rp.locator('[data-report-download]').click()]);
+    const bare = JSON.parse(fs.readFileSync(await bareFile.path(), 'utf8'));
+    check('Kayıt ve günlük çıkarılınca raporda yoklar; not duruyor',
+      bare.save === null && bare.log === null && bare.note === 'Kasa ekranında bir tuhaflık var.', JSON.stringify({ save: bare.save, log: bare.log }));
+    await rp.locator('[data-report-copy-address]').click();
+    await rp.waitForFunction(() => /panoya kopyalandı/.test(document.querySelector('[data-report-notice]')?.textContent ?? ''), null, { timeout: 5000 }).catch(() => null);
+    const clip = await rp.evaluate(() => navigator.clipboard.readText().catch(() => ''));
+    check('"Adresi kopyala" destek adresini panoya koyuyor', clip === 'info@conforcus.com', clip);
+    await rp.locator('[data-settings-back]').click();
+    await rp.keyboard.press('Escape');
+
+    // Komut, piyasa ve finans metinleri oyun ekranıyla iniyor (Tur 74): Türkçe oyunda yerindeler.
+    const RAW_KEY = /\b(core|finance|panels|hud|app)\.[a-z]+\.[a-zA-Z]/;
+    const rawIn = [];
+    for (const panel of ['bourse', 'council', 'company', 'chain', 'rivalry']) {
+      await rp.locator(`.topbar-actions [data-panel="${panel}"]`).click();
+      await rp.waitForTimeout(300);
+      const text = ((await rp.locator('.modal').textContent().catch(() => '')) ?? '').trim();
+      if (text.length < 20 || RAW_KEY.test(text)) rawIn.push(`${panel}: ${text.match(RAW_KEY)?.[0] ?? (text.slice(0, 30) || 'boş')}`);
+      await rp.keyboard.press('Escape');
+    }
+    const refusal = await rp.evaluate(() => {
+      const c = window.__capital;
+      const s = c.getState();
+      const tile = s.map.tiles.find((x) => x.kind === 'plot' && !x.ownerId && !x.structureId);
+      return c.engine.dispatch({ type: 'BUILD', tileId: tile.id, defId: 'corner_shop' });
+    });
+    const topbar = ((await rp.locator('.topbar').textContent()) ?? '').trim();
+    check('Türkçe oyunda komut, piyasa ve finans metinleri yerinde: panellerde ham anahtar yok, komutun reddi Türkçe',
+      rawIn.length === 0 && refusal.ok === false && typeof refusal.reason === 'string' && !RAW_KEY.test(refusal.reason)
+        && /[çğıöşü]/i.test(refusal.reason) && !RAW_KEY.test(topbar),
+      `${rawIn.join(' | ') || 'paneller temiz'} · ret: ${refusal.reason}`);
+    await rContext.close();
+
+    // Telefonda iki sayfa da ekrana sığıyor (kutular görüntü alanına karşı ölçülüyor).
+    const vPhone = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+    await vPhone.addInitScript(veteran, TUTORIAL_KEY);
+    const vp = await vPhone.newPage();
+    watch(vp);
+    await vp.goto('http://127.0.0.1:8811/');
+    await vp.waitForSelector('.newgame', { timeout: 20000 });
+    await vp.locator('[data-settings-open]').click();
+    const spill = () => vp.evaluate(() => [...document.querySelectorAll('.settings-overlay .settings *')]
+      .filter((el) => {
+        const r = el.getBoundingClientRect();
+        return r.width > 0 && r.height > 0 && (r.right > window.innerWidth + 1 || r.left < -1);
+      })
+      .map((el) => `${el.tagName.toLowerCase()}.${el.className}`).slice(0, 4));
+    await vp.locator('.settings-overlay [data-settings-page-open="whatsNew"]').click();
+    await vp.waitForSelector('[data-whats-new] [data-release]', { timeout: 10000 }).catch(() => null);
+    const whatsNewSpill = await spill();
+    await vp.locator('[data-settings-back]').click();
+    await vp.locator('.settings-overlay [data-settings-page-open="report"]').click();
+    await vp.waitForSelector('[data-bug-report]', { timeout: 10000 }).catch(() => null);
+    await vp.locator('[data-report-preview] summary').click();
+    const reportSpill = await spill();
+    check('Telefonda (390 px) "Yenilikler" ve "Hata bildir" ekrana sığıyor, ön izleme açıkken de',
+      (await vp.locator('[data-bug-report]').count()) === 1 && whatsNewSpill.length === 0 && reportSpill.length === 0,
+      `${whatsNewSpill.join(', ')} · ${reportSpill.join(', ')}`);
+    await vPhone.close();
+    check('Sürüm bölümünde konsol temiz', vErrors.length === 0, vErrors.slice(0, 3).join(' | '));
   }
 
   section('Mobil');

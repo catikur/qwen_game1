@@ -356,6 +356,7 @@ export const hud = {
   'hud.career.open': 'Kariyer · {done}/{total} rozet',
   'hud.career.openShort': 'Kariyer',
   'hud.settings.open': 'Ayarlar',
+  'hud.settings.openNew': 'Ayarlar (yeni sürüm)',
   // Yeni sürüm (Tur 48)
   'hud.update.ready': 'Oyunun yeni sürümü hazır. Yenileyince oyunun kaydedilip yeni sürümle açılır.',
   'hud.update.apply': 'Yenile',

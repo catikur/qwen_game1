@@ -2,6 +2,7 @@ import { BUILDING_BY_ID, LABOR, NPC_LABOR, WAGE_POLICIES, formatPercent, localiz
 import type { BuildingDef, UnionResponse, WagePolicy } from '@capital/content';
 import { pushNews } from '../news';
 import { tc } from '../i18n';
+import '../i18n/gameTr';
 import { rivalProfile } from '../profiles';
 import { underConstruction } from './realestate';
 import { createRng, nextFloat, nextRange } from '../rng';

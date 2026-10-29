@@ -61,7 +61,10 @@ export async function initDesktop(): Promise<boolean> {
   setSaveBackend(fileSaves(invoke));
   setFileSink((filename, data) => exportFile(invoke, filename, data));
   // Steam başarımları (Tur 70): kariyer dosyadan okunduktan sonra; açılışı beklemiyor.
-  void initSteam(invoke, { unlockedIds: careerUnlockedIds, subscribe: subscribeCareer });
+  // Ayarlar'daki sürüm satırı ve hata raporu Steam'le açıldığını biliyor (Tur 74).
+  void initSteam(invoke, { unlockedIds: careerUnlockedIds, subscribe: subscribeCareer }).then((status) => {
+    if (status.available) document.documentElement.dataset.steam = 'on';
+  });
 
   // Pencere kapanırken: kabuk kapanışı tutup haber veriyor; oyun otomatik
   // kayıt slotuna yazıyor, ayar dosyaları bitiyor, sonra kapanıyor.

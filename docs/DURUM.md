@@ -8561,6 +8561,175 @@ Workshop'un açılması gerekiyor (`docs/STEAM.md` → "Geliştirirken"). Steam
 katmanının WebView penceresine tutunup tutunmadığı da orada görülecek;
 tutunmazsa sayfalar Steam'in tarayıcısında açılıyor.
 
+### Tur 74 — Sürüm 1.0
+
+Faz 6'nın dördüncü turu. Simülasyon ve şema aynı; hazır oyunların parmak
+izi birebir.
+
+**Oyunun sürümü belirsizdi.** Sürüm yedi dosyada duruyordu ve ikiye
+ayrılmıştı: depo kökü ve web paketi `0.1.0`; çekirdeğin `GAME_VERSION`'ı,
+masaüstü paketi, Tauri ve Cargo `0.2.0`. Oyuncu hangi sürümü oynadığını
+göremiyordu. Yeni sürümde neyin değiştiğini
+söyleyen bir yer yoktu. Bir hata görünce bildirmenin yolu da yoktu; bize
+ulaşan bir hatanın sürümü, cihazı ve kaydı bilinmiyordu.
+
+**Yapılanlar.**
+- *Sürüm 1.0.0, tek sayı.* `node tools/set-version.mjs X.Y.Z` yedi dosyayı
+  birlikte değiştiriyor: depo kökü, web ve masaüstü paketleri, çekirdeğin
+  `GAME_VERSION`'ı, Tauri, Cargo ve kilit dosyası. Oyundaki sürüm web
+  paketinden derlemeye giriyor (`__CF_VERSION__`, `packages/ui/src/version.ts`).
+  `apps/web/test/version.test.ts` yedisinin aynı olduğunu sınıyor.
+  Sürüm numarası kayıtları da ligi de etkilemiyor: kaydın şeması ayrı,
+  ligin parmak izi sürüme bakmıyor.
+- *Ayarlar → Sürüm.* Ayarlar'ın sonunda yeni bir bölüm:
+  - "CapitalForge 1.0.0 · tarayıcı", masaüstünde "masaüstü", Steam açıkken
+    "masaüstü, Steam";
+  - "Yenilikler" ve "Hata bildir" düğmeleri. İkisi de Ayarlar'ın içinde
+    açılan bir sayfa, başında "Ayarlar'a dön". Sayfa açılınca odak geri
+    düğmesinde, dönünce sayfayı açan düğmede (klavye ve kumanda).
+- *Yenilikler.* Değişiklik günlüğü `packages/ui/src/changelog.ts`'te, en
+  yeni sürüm başta.
+  - 1.0.0'ın dokuz maddesi üç dilde, aynı sırada.
+  - Test günlüğün en yeni girdisinin oyunun sürümü olduğunu, dillerin
+    madde sayısının eşit olduğunu sınıyor.
+  - Eski sürümden gelen oyuncuya Ayarlar düğmesinde nokta, Ayarlar'ın
+    başında "Oyun 1.0.0 sürümüne güncellendi." ve "Yenilikler" düğmesi.
+    Sayfa açılınca işaret kalkıyor. Görülen sürüm cihazda
+    (`capitalforge.whatsnew.v1`; masaüstünde dosyada).
+  - Yeni oyuncuya işaret yok: ilk açılışta oyunun sürümü görülmüş
+    sayılıyor. Cihazda başka bir kaydı varsa (ayar, rehber, kariyer) oyuncu
+    işaretin olmadığı eski bir sürümden geliyor; ona işaret var.
+- *Hata bildir.* Rapor tek bir JSON dosyası (`packages/ui/src/bugReport.ts`):
+  - künye okunaklı: sürüm ve türü, dil, tarayıcı, ekran ve pencere, ekran
+    kartı, ayarlar, oyuncunun notu;
+  - son 60 uyarı ve hata. Konsolun hata ve uyarısı ile yakalanmamış hatalar
+    açılışta kurulan bir halkada (`errorLog.ts`), yalnız bellekte;
+  - kayıt sıkışık ve en sonda: oyun açıksa o anki durum, değilse son
+    otomatik kayıt.
+
+  Oyuncu kaydı ve günlüğü çıkarabiliyor, gidecek olanı "Raporda ne var?"
+  altında görüyor (kayıt yerine boyu). "Raporu kaydet" dosyayı indiriyor;
+  masaüstünde İndirilenler klasörüne. Oyun raporu hiçbir yere göndermiyor:
+  oyuncu dosyayı e-postayla info@conforcus.com'a yolluyor. "E-posta yaz"
+  konu ve kısa bir gövdeyle e-posta programını açıyor (tarayıcıda;
+  masaüstü penceresi `mailto:` açamıyor). "Adresi kopyala" adresi panoya
+  koyuyor.
+- *Yayın listesi.* `docs/YAYIN.md`: sürüm numarası ve günlük, denetimler,
+  Pages, lig sunucusu, masaüstü paketleri ve imza, Steam'de yayın, yayın
+  günü, gelen hata raporunu açmak.
+- *macOS imzası iş akışında.* `docs/MASAUSTU.md` "sırlar gelince paket iş
+  akışı imzalayıp onaylatıyor" diyordu, ama iş akışı Apple sırlarını hiç
+  okumuyordu. Şimdi paket adımları sırları `tools/apple-signing.sh`'la
+  Tauri'ye aktarıyor; yalnız dolu olanları, çünkü boş bir değişken Tauri'yi
+  boş sertifikayla imzalamaya zorlardı. Sırlar yokken paket imzasız ve
+  günlük bunu yazıyor. Windows imzası isteğe bağlı kaldı (`docs/YAYIN.md`).
+- *Ana parçada yer.* Ana parça 74,6 KB'tı, bütçe 75; bu turun parçaları
+  sığmıyordu. Ölçünce giriş paketinin üçte biri kurulum ekranının hiç
+  okumadığı Türkçe metinlerdi. Komut ret sebepleri, gündem, holding,
+  zincir, rekabet, banka, işgücü, meclis, ihale, emir ve hisse metinleri
+  (çekirdek, 8 KB) ile finans panellerininki (3,7 KB) artık oyun ekranıyla
+  iniyor:
+  - kaydı, anahtarlarını yazan modüller içe aktarıyor (`core/src/i18n/gameTr.ts`,
+    `ui/src/i18n/financeTr.ts`);
+  - anahtar türleri aynı kaldı, İngilizce ve Almanca sözlükler değişmedi;
+  - `apps/web/test/catalogs.test.ts` bu gruplardan anahtar yazıp kaydı
+    içe aktarmayan modülü yakalıyor (bir içe aktarma silinince kırmızı);
+  - paket denetimi bu metinlerin kurulumun yolunda olmadığını, oyun
+    ekranıyla geldiğini sınıyor (düzeltmeden önceki pakette kırmızı).
+
+  Ana parça 66,2 KB, kurulumun yolu 151,2 KB'tan 143,1 KB'a indi. Bütçeler
+  de indi: ana parça 75'ten 70'e, yol 160'tan 150'ye.
+
+**Geliştirirken bulunanlar.**
+- *Adı yalnız büyük harfle ayrılan dosyalar.* Sayfalar önce `WhatsNew.tsx`
+  ve `BugReport.tsx`'ti; yanlarında `whatsNew.ts` ve `bugReport.ts` var.
+  Linux'ta derleniyordu, esbuild ise uyardı: macOS ve Windows'un dosya
+  sistemi ikisini aynı dosya sayıyor. Sayfalar `WhatsNewPage.tsx` ve
+  `BugReportPage.tsx` oldu.
+- *Tarayıcı testinin oyuncuları "eski sürümden" geliyordu.* Bölümlerin
+  çoğu rehberi görmüş bir oyuncuyla açılıyor (cihazda rehber kaydı var).
+  Bu oyuncu işaretin mantığına göre eski sürümden geliyor; her bölümde
+  duyuru çıkıyordu. Rehberi görmüş oyuncu artık Yenilikler'i de görmüş
+  sayılıyor; duyuru kendi bölümünde sınanıyor. Ayarlar bölümünün
+  denetimi sekiz bölüm saymaya ve Shift+Tab'ın "Hata bildir"e dönmesine
+  güncellendi.
+
+**Tur 73'ün birleşmeden sonra gelen incelemesi.** #103 taslaktan çıkınca
+Codex ve Cursor Bugbot dört sorun daha buldu; kod `main`'deydi, düzeltmeler
+bu turda.
+- *Steam'deki sıra eski koşunun kalıyordu (Codex).* Oyunun içinden başka
+  bir kayıt açılınca sonuç ekranı yerinde kalıyor (`replaceState`).
+  Önceki koşunun Steam'deki sırası, gönderim yazısı ve kilitli düğmesi
+  yeni koşuda da duruyordu; geç gelen bir yanıt yeni koşunun ekranına
+  yazılabiliyordu. Artık bunlar koşuya bağlı (`meta.createdAtIso`): yeni
+  koşuda baştan, eskisinin yanıtı yazılmıyor.
+- *Tablo değişince puan Steam'e gitmiyordu (Bugbot).* Gönderim sürerken
+  tablo değişirse (yerelden sunucuya) sonuç bırakılıyordu, Steam'e yükleme
+  de onunla. Koşu geçerliyse puan artık yine Steam'e gidiyor; Steam en
+  iyisini tutuyor.
+- *Yükleme sonucu yanlış pakete yazılıyordu (Codex).* Yükleme sürerken
+  oyuncu başka bir senaryo seçerse sonuç ("güncellendi", "Steam'de aç")
+  yeni seçilenin ekranına çıkıyordu. Artık sonuç yalnız yükleyen paket
+  seçiliyken yazılıyor; öğenin kimliği her durumda paketine saklanıyor.
+- *Steam katmanından dönen raf tazelenmiyordu (Bugbot).* Liste raf
+  açılınca, pencereye dönünce ve inen öğe varken isteniyordu. Steam katmanı
+  pencerenin odağını çoğu zaman almıyor: oyuncu "Workshop'a göz at"la
+  katmanda abone olunca odak olayı gelmiyordu, öğe hemen kurulduysa inen
+  öğe de yoktu. Artık Steam'de bir Workshop sayfası açılınca raf listeyi üç
+  dakika yokluyor (`watchWorkshop`, `workshop.ts`).
+
+**Doğrulama.**
+- `pnpm test` 911/911 (888'den); tip denetimi temiz; Almanca denetimi 0
+  hata (sürüm 28/28).
+  - `packages/ui/test/release.test.ts` (13 yeni): raporun biçimi ve
+    sırası; notun ve kaydın sınırları; dosya adı ve e-posta bağlantısı;
+    günlüğün kırpması, sınırı ve konsolu sarması; yeni sürüm işaretinin
+    dört durumu; Ayarlar'ın sürüm bölümü; iki sayfa; üç dilde metin.
+  - `apps/web/test/version.test.ts` (6 yeni): yedi dosyada aynı sürüm,
+    derleme sürümü, sürüm karşılaştırması, günlüğün sırası ve dilleri.
+  - `apps/web/test/catalogs.test.ts` (3 yeni): geç inen sözlükler.
+  - `packages/ui/test/packs.test.ts` (1 yeni): Steam'de sayfa açılınca
+    rafın yoklaması başlıyor, açılmayan sayfada başlamıyor, süre doluyor.
+- `cargo test --locked` 32/32, `--features steam` 29/29 (sürüm 1.0.0 ve
+  kilit dosyası tutarlı); clippy iki derlemede de temiz.
+- Tarayıcı testinin yeni bölümü "Sürüm 1.0: yenilikler, hata bildirme,
+  sözlükler" (12 kontrol) 12/12:
+  - yeni oyuncuya duyuru yok, sürüm satırı;
+  - eski sürümden gelen oyuncuya nokta ve duyuru; Yenilikler; dönünce
+    işaret kalkmış, yenileyince de yok;
+  - oyunun içinden hata raporu: kayıt hazır, ön izleme, indirilen dosyada
+    sürüm, not, uyarı ve o günün kaydı; kayıt ve günlük çıkarılabiliyor;
+    adres panoya;
+  - Türkçe oyunda panellerde ham anahtar yok, komutun reddi Türkçe;
+  - telefonda iki sayfa da ekrana sığıyor; konsol temiz.
+- "Steam: Workshop ve skor tabloları" 17/17 (dört yeni):
+  - masaüstünde sürüm "masaüstü, Steam", rapor İndirilenler'e, raporda
+    `steam`, e-posta bağlantısı yok;
+  - katmanda abone olunan öğe rafa geliyor (inen öğe ve odak olayı yok);
+  - yükleme sürerken başka senaryoya geçilince sonuç yeni seçilenin
+    ekranına yazılmıyor;
+  - oyunun içinden başka bir koşu açılınca sonuç ekranında önceki Steam
+    sırası ve gönderim yok.
+
+  Son üçü düzeltmeden önceki pakette kırmızı. "Ayarlar ve erişilebilirlik"
+  15/15.
+- Tam tarayıcı testi 781/783, konsolda hata yok (76 dk; Tur 73'ün son iki
+  düzeltmesinden ve geç gelen bulgulardan önceki tabanda). Düşen iki
+  kontrol makine başka işlerle yüklüyken düştü:
+  - düşük kare hızında oyun saatinin hızı (2 FPS'te %63, eşik %75);
+  - lig sunucusu bölümünde 60 saniyelik bir tıklama.
+
+  İkisi de tek başına koşunca geçti: baştan "Performans ve görünüm"e 226/226
+  (oyun saati %114), iki lig bölümü 45/45.
+- Tur 72'nin `main`'deki tam koşusu (#102) yeşil: tarayıcı testi 64 dakika,
+  sınır 120 dakika.
+- Paket bütçesi tamam: ana parça 66,2 KB (bütçe 70), kurulumun yolu
+  143,1 KB (bütçe 150).
+
+**Kalan.** Tur 75: değerlendirme ve Faz 6 raporu. Kullanıcının hesabında
+bekleyenler `docs/YAYIN.md`'de toplu: lig sunucusunun sırları, Steamworks,
+isteğe bağlı Apple Developer.
+
 ---
 
 ## 3. Ölçülen durum
@@ -8663,10 +8832,10 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi). Senaryo şehirlerinde gün 3–17 ms (`pnpm dayperf`, Tur 43) |
-| Birim testi | **844 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de, Tur 52'de sunucuda tekrar, Tur 53'te haftanın kuralı ve günün koşusu, Tur 54'te hayalet eğri, Tur 55'te davetli ligler, Tur 56'da taşıma sözleşmeleri, Tur 57'de enerji, Tur 58'de gayrimenkul, Tur 59'da rakiplerin hafızası, Tur 60'ta senaryo paketi II, Tur 61'de şirketin yolu, Tur 62'de hava ve mevsimin görünümü, Tur 63'te önemli anlar, Tur 64'te şehir kartı, Tur 65'te telefon performansı, Tur 66'da masaüstü sürümü, Tur 67'de içerik paketleri, Tur 68'de senaryo editörü, Tur 69'da üçüncü dil); Rust tarafı 6 test (`cargo test`, `apps/desktop/src-tauri`) |
+| Birim testi | **911 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de, Tur 52'de sunucuda tekrar, Tur 53'te haftanın kuralı ve günün koşusu, Tur 54'te hayalet eğri, Tur 55'te davetli ligler, Tur 56'da taşıma sözleşmeleri, Tur 57'de enerji, Tur 58'de gayrimenkul, Tur 59'da rakiplerin hafızası, Tur 60'ta senaryo paketi II, Tur 61'de şirketin yolu, Tur 62'de hava ve mevsimin görünümü, Tur 63'te önemli anlar, Tur 64'te şehir kartı, Tur 65'te telefon performansı, Tur 66'da masaüstü sürümü, Tur 67'de içerik paketleri, Tur 68'de senaryo editörü, Tur 69'da üçüncü dil, Tur 70'te Steam başarımları, Tur 71'de canlı sunucunun simülasyon izi ve Steam Deck'in varsayılanları, Tur 72'de kumanda, Tur 73'te Workshop ve skor tabloları, Tur 74'te sürüm, yenilikler ve hata raporu); Rust tarafı 32 test (`cargo test`, `apps/desktop/src-tauri`; Steam'li derlemede 29) |
 | Denge testi | **379 kontrol, hepsi geçiyor** (33 bölüm, süreleriyle; ~16 dk) |
-| Tarayıcı testi | **719 kontrol** (Tur 69'da 7 yeni), son tam koşu 719/719 (Tur 69; Tur 68'de 710/710, Tur 67'de 693/694: yük altında oyun saatinin hızı, tek başına üç kez geçti), 0 konsol hatası (bu yavaş makinede ~51–75 dk, önce ~41 dk); duman koşusu 132 (~8 dk, rehber dahil) |
-| CI | her PR'da tip + test + denge + paket + paket bütçesi (Tur 46; Tur 48'den beri hizmet çalışanı ve manifest de) + duman oynanışı; masaüstüne dokunan PR'da Rust testleri, sürüm derlemesi ve gerçek pencerede 17 kontrol (Tur 66) |
+| Tarayıcı testi | **788 kontrol** (Tur 74'te 16 yeni), son tam koşu 781/783 (Tur 74, Tur 73'ün son iki düzeltmesinden önceki tabanda; yük altında düşen iki kontrol tek başına geçti; Tur 69'da 719/719), 0 konsol hatası (bu yavaş makinede ~76 dk, CI'da `main`'de ~64 dk); duman koşusu 132 (CI'da ~5 dk, rehber dahil) |
+| CI | her PR'da tip + test + denge + paket + paket bütçesi (Tur 46; Tur 48'den beri hizmet çalışanı ve manifest de) + duman oynanışı; `main`'de tam oynanış (Tur 72'den beri 120 dk sınırı); masaüstüne dokunan PR'da Rust testleri, sürüm derlemesi ve gerçek pencerede 30 kontrol (Tur 66'da 17) |
 | Kapsam | 40 bina · 25 ürün · 7 kategori · 8 rakip profili · 10 CEO · 22 olay (11 şehir + 11 sektör) · 3 kriz · 12 karar kartı · 70 rakip sözü · 4 mizaç · 48 ilişki sözü · 5 fırsat balonu · 8 görev türü · 4 mevsim · 6 hava · 9 moda ürünü · 17 şehir yapısı (6 siluet) · 6 şehir projesi · 10 senaryo · 4 ek kural · 5 yol · 29 rozet |
 
 ### Render (Tur 6 sonrası)

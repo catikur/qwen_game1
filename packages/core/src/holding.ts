@@ -2,6 +2,7 @@ import { CITY_NAMES, CONSUMER_CATEGORIES, HOLDING } from '@capital/content';
 import type { CitySizeId } from '@capital/content';
 import { simulateCityDay } from './day';
 import { tc } from './i18n';
+import './i18n/gameTr';
 import { pushNews } from './news';
 import { formatMoney } from './format';
 import { holdingFoundedAt, holdingFounderSize, holdingNetWorth } from './holdingFacts';

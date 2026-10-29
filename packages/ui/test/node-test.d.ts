@@ -7,7 +7,15 @@
  * sokmaktan daha dürüst.
  */
 declare module 'node:test' {
-  type TestFn = () => void | Promise<void>;
+  /** Zamanlayıcıların sahtesi (`t.mock.timers`); test bitince kendiliğinden kalkıyor. */
+  interface MockTimers {
+    enable(options?: { apis?: Array<'setTimeout' | 'setInterval' | 'Date'>; now?: number }): void;
+    tick(milliseconds: number): void;
+  }
+  interface TestContext {
+    mock: { timers: MockTimers };
+  }
+  type TestFn = (t: TestContext) => void | Promise<void>;
   export function test(name: string, fn: TestFn): void;
   export function describe(name: string, fn: () => void): void;
   export function afterEach(fn: TestFn): void;

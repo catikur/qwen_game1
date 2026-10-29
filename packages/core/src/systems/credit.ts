@@ -3,6 +3,7 @@ import type { CreditRating, LoanKind, NpcProfileDef } from '@capital/content';
 import { pushNews } from '../news';
 import { formatMoney } from '../selectors';
 import { tc } from '../i18n';
+import '../i18n/gameTr';
 import { LAND_SELL_RATIO } from './city';
 import { companyValue, sellShares, sharePrice } from './equity';
 import { macroRateDelta } from './economy';

@@ -2,6 +2,7 @@ import { defineConfig } from 'vite';
 import type { Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 import { serviceWorker } from './pwa/plugin.mjs';
+import appPackage from './package.json';
 
 /**
  * İki paket biçimi.
@@ -105,6 +106,9 @@ export default defineConfig(({ mode }) => {
       __CF_SERVICE_WORKER__: JSON.stringify(web),
       __CF_DESKTOP__: JSON.stringify(desktop),
       __LEAGUE_URL__: JSON.stringify(single ? '' : (process.env.VITE_LEAGUE_URL ?? '')),
+      // Oyunun sürümü (Tur 74): tek kaynak bu paketin `version`'ı; öbür dosyalar
+      // `tools/set-version.mjs` ile birlikte değişiyor.
+      __CF_VERSION__: JSON.stringify(appPackage.version),
     },
     server: { port: 5173, host: '127.0.0.1' },
     build: {

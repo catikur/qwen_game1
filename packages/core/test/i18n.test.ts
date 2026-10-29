@@ -56,7 +56,7 @@ import { packEn, packTr } from '../../ui/src/packMessages';
 import { packDe } from '../../ui/src/packMessages.de';
 import { editorEn, editorTr } from '../../ui/src/packEditorMessages';
 import { editorDe } from '../../ui/src/packEditorMessages.de';
-import { coreTr } from '../src/i18n';
+import { coreTr } from '../src/i18n/tr';
 import { coreEn } from '../src/i18n/en';
 import { coreDe } from '../src/i18n/de';
 import { GameEngine } from '../src/engine';
@@ -500,3 +500,4 @@ describe('dil ve simülasyon', () => {
     });
   }
 });
+

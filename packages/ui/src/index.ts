@@ -44,6 +44,13 @@ export { LocalePicker } from './LocalePicker';
 export { AppearancePicker } from './AppearancePicker';
 export { SettingsPanel } from './SettingsPanel';
 export { UpdateNotice } from './UpdateNotice';
+// Sürüm 1.0 (Tur 74): sürüm, yeni sürüm işareti, hata günlüğü ve raporun kabuğu.
+export { APP_VERSION, appEdition } from './version';
+export type { Edition } from './version';
+export { initWhatsNew } from './whatsNew';
+export { installErrorLog } from './errorLog';
+export { setReportHost } from './reportHost';
+export type { ReportHost } from './reportHost';
 export { applyUpdate, getAppShell, installApp, setAppShell, setAppShellActions, subscribeAppShell, useAppShell } from './appShell';
 export type { AppShellActions, AppShellState } from './appShell';
 export {

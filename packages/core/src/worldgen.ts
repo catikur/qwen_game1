@@ -19,6 +19,7 @@ import {
 } from '@capital/content';
 import type { CategoryId, CitySizeId, DifficultyId, DistrictArchetypeId, ModifierId, RuleOverrides } from '@capital/content';
 import { tc } from './i18n';
+import './i18n/gameTr';
 import { createRng, nextRange, pickWeighted } from './rng';
 import { leagueLength, leagueRule, leagueSeed } from './systems/league';
 import { referenceVolumes, seedSpotPrices, zeroByGood } from './systems/supply';
@@ -27,7 +28,7 @@ import { grantStartingLoan } from './systems/credit';
 import { SCHEMA_VERSION } from './types';
 import type { CompanyState, DistrictState, GameState, MarketState, Tile, TileKind } from './types';
 
-export const GAME_VERSION = '0.2.0';
+export const GAME_VERSION = '1.0.0';
 
 /**
  * Bir bölgenin kenar uzunluğu (kare).

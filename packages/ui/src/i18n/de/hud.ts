@@ -360,6 +360,7 @@ export const hud: Record<keyof typeof trHud, string> = {
   'hud.career.open': 'Karriere · {done}/{total} Abzeichen',
   'hud.career.openShort': 'Karriere',
   'hud.settings.open': 'Einstellungen',
+  'hud.settings.openNew': 'Einstellungen (neue Version)',
   // New version (Tur 48)
   'hud.update.ready': 'Eine neue Version des Spiels ist bereit. Neu laden, um dein Spiel zu speichern und in der neuen Version zu öffnen.',
   'hud.update.apply': 'Neu laden',
