@@ -6,7 +6,10 @@ import { ScenarioCard } from './ScenarioCard';
 import { canLinkPacks, clearPackLink, packLink, packLinkCode } from './packLink';
 import { issueText, pt } from './packMessages';
 import type { PackMessageKey } from './packMessages';
-import { MAX_PACKS, addPack, removePack, useInstalledPacks } from './packStore';
+import { MAX_PACKS, addPack, refreshWorkshop, removePack, useInstalledPacks, useWorkshopDownloading } from './packStore';
+import type { InstalledPack } from './packStore';
+import { openWorkshopPage, publishedItem, rememberPublished, useWorkshopBridge } from './workshop';
+import type { WorkshopPage, WorkshopPublished } from './workshop';
 import { closeEditor, draftDirty, draftFrom, freshDraft, loadDraft, normalizedDraft, openEditor, takeTrial, useOpenDraft } from './packDraft';
 
 /*
@@ -14,6 +17,9 @@ import { closeEditor, draftDirty, draftFrom, freshDraft, loadDraft, normalizedDr
  * parça. Üç parçası var: oyuncunun yüklediği senaryoların listesi, seçili
  * paket senaryosunun paylaş/kaldır düğmeleri ve ekleme kutusu. Doğrulayıcı,
  * paylaşım kodu ve bu metinler yalnız sekme açılınca iniyor.
+ *
+ * Steam açıkken (Tur 73) rafta Workshop'un paketleri de var, salt okunur;
+ * oyuncunun kendi paketi Workshop'a yükleniyor.
  */
 
 /** Yapıştırılan JSON'un sınırı; paylaşım kodunun açılmış hâliyle aynı. */
@@ -71,6 +77,14 @@ function NoticeLine({ notice }: { notice: Notice }): ReactElement {
   );
 }
 
+/** Workshop'taki açıklama: paketin senaryoları, adı ve kısa tanımıyla. */
+function workshopDescription(entry: InstalledPack): string {
+  return entry.scenarios
+    .map((def) => `• ${def.title} — ${def.tagline}`)
+    .join('\n')
+    .slice(0, 8000);
+}
+
 /** Oyuncunun yüklediği paketlerin senaryoları, hazır senaryoların altında. */
 export function PackList({
   selectedId,
@@ -83,35 +97,73 @@ export function PackList({
   onChange: () => void;
 }): ReactElement {
   const packs = useInstalledPacks();
+  const bridge = useWorkshopBridge();
+  const downloading = useWorkshopDownloading();
+  const [notice, setNotice] = useState<Notice | null>(null);
   // Raf ilk açılışta depodaki sürümleri tanıtıyor; kayıttan gelen başka bir sürüm kayıt
   // defterindeyse yerine geçiyor ve kurulum ekranı eski tanımı gösteriyordu (Codex #97).
   useEffect(() => onChange(), [packs]);
-  const scenarios = packs.flatMap((entry) => entry.scenarios.map((def) => ({ def, packName: packText(entry.pack.name) })));
+  // Workshop'un listesi raf açılınca ve pencereye dönünce: Steam'de abone olup gelen oyuncu paketi bulsun.
+  useEffect(() => {
+    void refreshWorkshop();
+    const onFocus = () => void refreshWorkshop();
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+  }, [bridge]);
+  const browse = async () => {
+    if (bridge && !(await openWorkshopPage(bridge, 'workshop'))) setNotice({ tone: 'info', text: pt('hud.pack.workshop.openFailed') });
+  };
+  const scenarios = packs.flatMap((entry) => entry.scenarios.map((def) => ({ def, packName: packText(entry.pack.name), workshop: entry.workshop })));
   return (
     <section className="pack-shelf" data-pack-shelf={scenarios.length}>
-      <h3 className="pack-shelf-title">{pt('hud.pack.title')}</h3>
+      <div className="pack-shelf-head">
+        <h3 className="pack-shelf-title">{pt('hud.pack.title')}</h3>
+        {bridge && (
+          <button type="button" className="ghost" data-pack-workshop-browse onClick={() => void browse()}>
+            {pt('hud.pack.workshop.browse')}
+          </button>
+        )}
+      </div>
+      {bridge && downloading > 0 && (
+        <p className="muted pack-empty" data-pack-downloading={downloading}>
+          {pt('hud.pack.workshop.downloading', { count: downloading })}
+        </p>
+      )}
       {scenarios.length === 0 ? (
-        <p className="muted pack-empty">{pt('hud.pack.empty')}</p>
+        <p className="muted pack-empty">{pt(bridge ? 'hud.pack.emptyWorkshop' : 'hud.pack.empty')}</p>
       ) : (
         <ul className="scenario-list" role="radiogroup" aria-label={pt('hud.pack.title')}>
-          {scenarios.map(({ def, packName }) => (
-            <li key={def.id}>
-              <ScenarioCard def={def} selected={def.id === selectedId} onSelect={onSelect} note={pt('hud.pack.from', { pack: packName })} />
+          {scenarios.map(({ def, packName, workshop }) => (
+            <li key={def.id} data-pack-workshop={workshop}>
+              <ScenarioCard
+                def={def}
+                selected={def.id === selectedId}
+                onSelect={onSelect}
+                note={pt(workshop ? 'hud.pack.fromWorkshop' : 'hud.pack.from', { pack: packName })}
+              />
             </li>
           ))}
         </ul>
       )}
+      {notice && <NoticeLine notice={notice} />}
     </section>
   );
 }
 
-/** Seçili paket senaryosunun paylaşım kodu ve paketin kaldırılması. */
+/**
+ * Seçili paket senaryosunun paylaşım kodu ve paketin kaldırılması. Steam
+ * açıkken (Tur 73) oyuncunun paketi Workshop'a yükleniyor; Workshop'tan
+ * gelen paket kaldırılmıyor, Steam'deki sayfası açılıyor.
+ */
 export function PackActions({ def, onRemoved }: { def: ScenarioDef; onRemoved: () => void }): ReactElement | null {
   const packs = useInstalledPacks();
+  const bridge = useWorkshopBridge();
   const [notice, setNotice] = useState<Notice | null>(null);
   const [fallback, setFallback] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
   const [replacing, setReplacing] = useState(false);
+  const [publishing, setPublishing] = useState<'confirm' | 'busy' | null>(null);
+  const [published, setPublished] = useState<WorkshopPublished | null>(null);
   const source = def.source;
   // Tanım değişince (başka senaryo ya da aynı kimlikle yeni sürüm) eski sürümün kodu kutuda kalmasın (Codex #97).
   useEffect(() => {
@@ -119,10 +171,16 @@ export function PackActions({ def, onRemoved }: { def: ScenarioDef; onRemoved: (
     setFallback(null);
     setConfirming(false);
     setReplacing(false);
+    setPublishing(null);
+    setPublished(null);
   }, [def]);
   if (!source) return null;
   // Kayıttan açılan ama bu cihazda yüklü olmayan paket: paylaşılabilir, kaldırılacak bir şey yok.
   const installed = packs.find((entry) => entry.pack.id === source.packId);
+  // Oyuncunun kendi paketi Workshop'a yüklendiyse öğesi: sonraki yükleme onu güncelliyor.
+  const own = installed && !installed.workshop ? installed : undefined;
+  const ownItem = own ? publishedItem(own.pack.id) : undefined;
+  const workshopItem = installed?.workshop;
 
   // Editörde (Tur 68): yüklü paketin bütünü, yoksa kayıttaki tek senaryoluk paket. Kaydedilmemiş taslak soruluyor.
   const edit = (confirmed: boolean) => {
@@ -160,10 +218,40 @@ export function PackActions({ def, onRemoved }: { def: ScenarioDef; onRemoved: (
     }
   };
 
+  const openPage = async (page: WorkshopPage) => {
+    if (bridge && !(await openWorkshopPage(bridge, page))) setNotice({ tone: 'info', text: pt('hud.pack.workshop.openFailed') });
+  };
+
+  const publish = async () => {
+    if (!bridge || !own) return;
+    const name = packText(own.pack.name);
+    setPublishing('busy');
+    setPublished(null);
+    setNotice({ tone: 'info', text: pt('hud.pack.workshop.uploading') });
+    try {
+      const result = await bridge.publish({
+        ...(ownItem ? { item: ownItem } : {}),
+        title: name.slice(0, 128),
+        description: workshopDescription(own),
+        pack: JSON.stringify(own.pack),
+      });
+      // Öğe Steam'de silinmişse kabuk yenisini açtı: kimlik değişebiliyor.
+      rememberPublished(own.pack.id, result.id);
+      setPublished(result);
+      const done = pt(ownItem ? 'hud.pack.workshop.updated' : 'hud.pack.workshop.published', { name });
+      setNotice({ tone: 'good', text: result.agreement ? `${done} ${pt('hud.pack.workshop.agreement')}` : done });
+    } catch (error) {
+      console.warn('Workshop yüklemesi başarısız:', error);
+      setNotice({ tone: 'bad', text: pt('hud.pack.workshop.failed') });
+    } finally {
+      setPublishing(null);
+    }
+  };
+
   const remove = () => {
-    if (!installed) return;
-    const name = packText(installed.pack.name);
-    removePack(installed.pack.id);
+    if (!own) return;
+    const name = packText(own.pack.name);
+    removePack(own.pack.id);
     setConfirming(false);
     setNotice({ tone: 'good', text: pt('hud.pack.removed', { name }) });
     onRemoved();
@@ -183,15 +271,43 @@ export function PackActions({ def, onRemoved }: { def: ScenarioDef; onRemoved: (
         <button type="button" className="ghost" data-pack-edit onClick={() => edit(false)}>
           {pt('hud.pack.edit')}
         </button>
-        {installed && !confirming && (
+        {workshopItem && (
+          <button type="button" className="ghost" data-pack-workshop-open onClick={() => void openPage({ item: workshopItem })}>
+            {pt('hud.pack.workshop.open')}
+          </button>
+        )}
+        {own && bridge && !publishing && (
+          <button type="button" className="ghost" data-pack-publish={ownItem ? 'update' : 'new'} onClick={() => setPublishing('confirm')}>
+            {pt(ownItem ? 'hud.pack.workshop.update' : 'hud.pack.workshop.publish')}
+          </button>
+        )}
+        {own && !confirming && (
           <button type="button" className="ghost danger" data-pack-remove onClick={() => setConfirming(true)}>
             {pt('hud.pack.remove')}
           </button>
         )}
       </div>
-      {installed && confirming && (
+      {workshopItem && (
+        <p className="muted" data-pack-workshop-note>
+          {pt('hud.pack.workshop.note')}
+        </p>
+      )}
+      {own && publishing === 'confirm' && (
+        <div className="pack-confirm" role="group" aria-label={pt(ownItem ? 'hud.pack.workshop.update' : 'hud.pack.workshop.publish')}>
+          <p>{pt(ownItem ? 'hud.pack.workshop.updateConfirm' : 'hud.pack.workshop.publishConfirm', { name: packText(own.pack.name) })}</p>
+          <div className="pack-buttons">
+            <button type="button" className="primary" data-pack-publish-yes onClick={() => void publish()}>
+              {pt(ownItem ? 'hud.pack.workshop.updateYes' : 'hud.pack.workshop.publishYes')}
+            </button>
+            <button type="button" className="ghost" onClick={() => setPublishing(null)}>
+              {pt('hud.pack.removeNo')}
+            </button>
+          </div>
+        </div>
+      )}
+      {own && confirming && (
         <div className="pack-confirm" role="group" aria-label={pt('hud.pack.remove')}>
-          <p>{pt('hud.pack.removeConfirm', { name: packText(installed.pack.name) })}</p>
+          <p>{pt('hud.pack.removeConfirm', { name: packText(own.pack.name) })}</p>
           <div className="pack-buttons">
             <button type="button" className="danger" data-pack-remove-yes onClick={remove}>
               {pt('hud.pack.removeYes')}
@@ -216,6 +332,18 @@ export function PackActions({ def, onRemoved }: { def: ScenarioDef; onRemoved: (
         </div>
       )}
       {notice && <NoticeLine notice={notice} />}
+      {published && (
+        <div className="pack-buttons">
+          <button type="button" className="ghost" data-pack-workshop-open onClick={() => void openPage({ item: published.id })}>
+            {pt('hud.pack.workshop.open')}
+          </button>
+          {published.agreement && (
+            <button type="button" className="ghost" data-pack-workshop-agreement onClick={() => void openPage('agreement')}>
+              {pt('hud.pack.workshop.openAgreement')}
+            </button>
+          )}
+        </div>
+      )}
       {fallback && (
         <textarea className="pack-code" readOnly value={fallback} rows={3} data-pack-code onFocus={(e) => e.currentTarget.select()} aria-label={pt('hud.pack.copyCode')} />
       )}

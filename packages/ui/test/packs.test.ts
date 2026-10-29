@@ -8,8 +8,12 @@ import { createScenarioGame } from '@capital/core';
 import { ModifierLine } from '../src/ModifierLine';
 import { observeCareer, resetCareerForTests } from '../src/career';
 import { issueText, packEn, packTr } from '../src/packMessages';
-import { MAX_PACKS, addPack, installedPacks, removePack } from '../src/packStore';
+import { packDe } from '../src/packMessages.de';
+import { MAX_PACKS, MAX_WORKSHOP_PACKS, addPack, installedPacks, refreshWorkshop, removePack, setWorkshopPacks, workshopDownloading } from '../src/packStore';
 import { recordScenarioResult, scenarioRecord } from '../src/scenarioBest';
+import { PackActions, PackList } from '../src/PackShelf';
+import { setWorkshopBridge } from '../src/workshop';
+import type { WorkshopBridge, WorkshopListing } from '../src/workshop';
 
 /**
  * Paket rafı (Tur 67): yüklü paketler, sorunların metni, paketteki kuralın
@@ -147,3 +151,139 @@ describe('paketin senaryosu arayüzde', () => {
     resetCareerForTests();
   });
 });
+
+describe('Workshop paketleri (Tur 73)', () => {
+  /** Kabuğun verdiği öğe: paket dosyalarının içi. */
+  const item = (id: string, ...packs: Array<Pack | string>) => ({ id, packs: packs.map((pack) => (typeof pack === 'string' ? pack : JSON.stringify(pack))) });
+  /** Liste hiç dönmüyor: köprüyü kurmak rafı tazelese de testin kurduğu raf değişmesin. */
+  const bridge = (list: () => Promise<WorkshopListing> = () => new Promise(() => undefined)): WorkshopBridge => ({
+    list,
+    publish: async () => ({ id: '1', agreement: false }),
+    open: async () => true,
+  });
+
+  test('abone olunan paketler rafta; bozuk dosya atlanıyor, aynı liste bir şey değiştirmiyor, abonelik bırakılınca gidiyor', () => {
+    const items = [item('111', sample('atolye', ['a', 'b']), '{bozuk'), item('222', { ...sample('gecersiz'), version: 99 })];
+    assert.deepEqual(setWorkshopPacks(items), { shown: 1, skipped: 2 });
+    const shelf = installedPacks();
+    assert.deepEqual(
+      shelf.map((entry) => [entry.pack.id, entry.workshop]),
+      [['atolye', '111']],
+    );
+    assert.ok(SCENARIO_BY_ID[packScenarioId('atolye', 'a')]);
+    setWorkshopPacks(items.map((entry) => ({ ...entry, packs: [...entry.packs] })));
+    assert.equal(installedPacks(), shelf, 'aynı liste: raf aynı dizi');
+
+    removePack('atolye');
+    assert.ok(SCENARIO_BY_ID[packScenarioId('atolye', 'a')], 'Workshop paketi raftan kaldırılamıyor');
+    setWorkshopPacks([]);
+    assert.equal(SCENARIO_BY_ID[packScenarioId('atolye', 'a')], undefined, 'abonelik bırakılınca oyundan da çıkıyor');
+    assert.equal(installedPacks().length, 0);
+  });
+
+  test('aynı kimlikte oyuncunun kendi paketi geçiyor; onu kaldırınca Workshop sürümü geri geliyor', () => {
+    setWorkshopPacks([item('333', sample('ortak', ['w1', 'w2']))]);
+    addPack(sample('ortak', ['w1']));
+    const own = installedPacks().filter((entry) => entry.pack.id === 'ortak');
+    assert.equal(own.length, 1);
+    assert.equal(own[0]!.workshop, undefined);
+    assert.equal(SCENARIO_BY_ID[packScenarioId('ortak', 'w1')], own[0]!.scenarios[0], 'oyundaki tanım oyuncunun');
+    assert.equal(SCENARIO_BY_ID[packScenarioId('ortak', 'w2')], undefined, 'Workshop sürümünün fazla senaryosu çıktı');
+
+    removePack('ortak');
+    assert.equal(installedPacks().find((entry) => entry.pack.id === 'ortak')?.workshop, '333');
+    assert.ok(SCENARIO_BY_ID[packScenarioId('ortak', 'w2')]);
+    setWorkshopPacks([]);
+  });
+
+  test('öğe güncellenince yeni sürüm, değişmeyen öğe aynı nesne; iki öğede aynı kimlik varsa ilki', () => {
+    setWorkshopPacks([item('1', sample('bir', ['x', 'y'])), item('2', sample('iki')), item('3', sample('bir', ['z']))]);
+    const before = installedPacks();
+    assert.deepEqual(
+      before.map((entry) => [entry.pack.id, entry.workshop]),
+      [
+        ['bir', '1'],
+        ['iki', '2'],
+      ],
+    );
+    assert.equal(SCENARIO_BY_ID[packScenarioId('bir', 'z')], undefined);
+
+    setWorkshopPacks([item('1', sample('bir', ['x'])), item('2', sample('iki'))]);
+    const after = installedPacks();
+    assert.equal(
+      after.find((entry) => entry.pack.id === 'iki'),
+      before.find((entry) => entry.pack.id === 'iki'),
+      'seçili senaryonun tanımı değişmiyor',
+    );
+    assert.ok(SCENARIO_BY_ID[packScenarioId('bir', 'x')]);
+    assert.equal(SCENARIO_BY_ID[packScenarioId('bir', 'y')], undefined, 'yeni sürümde olmayan senaryo çıktı');
+    setWorkshopPacks([]);
+  });
+
+  test(`Workshop'tan en çok ${MAX_WORKSHOP_PACKS} paket; oyuncunun rafını doldurmuyor`, () => {
+    const items = Array.from({ length: MAX_WORKSHOP_PACKS + 2 }, (_, i) => item(String(i + 1), sample(`ws-${i}`)));
+    assert.deepEqual(setWorkshopPacks(items), { shown: MAX_WORKSHOP_PACKS, skipped: 2 });
+    assert.equal(addPack(sample('yine-sigar')).status, 'added');
+    removePack('yine-sigar');
+    setWorkshopPacks([]);
+  });
+
+  test('kabuğun listesi rafa; inmekte olanlar sayılıyor; eski liste yenisini ezmiyor', async () => {
+    let calls = 0;
+    setWorkshopBridge(
+      bridge(async () => {
+        calls++;
+        return calls === 1 ? new Promise<WorkshopListing>((resolve) => setTimeout(() => resolve({ items: [item('9', sample('eski'))], downloading: 5 }), 20)) : { items: [item('10', sample('yeni'))], downloading: 2 };
+      }),
+    );
+    await refreshWorkshop();
+    await new Promise((resolve) => setTimeout(resolve, 40));
+    assert.deepEqual(
+      installedPacks().map((entry) => entry.pack.id),
+      ['yeni'],
+    );
+    assert.equal(workshopDownloading(), 2);
+    setWorkshopBridge(null);
+    setWorkshopPacks([]);
+  });
+
+  test('rafta Workshop künyesi ve "göz at"; Workshop paketinde Steam sayfası, kaldırma ve yükleme yok; kendi paketinde yükleme yalnız Steam açıkken', () => {
+    setWorkshopPacks([item('444', sample('vitrin'))]);
+    addPack(sample('benim'));
+    setWorkshopBridge(bridge());
+    const noop = () => undefined;
+    const list = renderToStaticMarkup(createElement(PackList, { selectedId: '', onSelect: noop, onChange: noop }));
+    assert.match(list, /data-pack-workshop="444"/);
+    assert.match(list, /Workshop: Paket vitrin/);
+    assert.match(list, /Paket: Paket benim/);
+    assert.match(list, /data-pack-workshop-browse/);
+
+    const of = (id: string) => installedPacks().find((entry) => entry.pack.id === id)!.scenarios[0]!;
+    const shop = renderToStaticMarkup(createElement(PackActions, { def: of('vitrin'), onRemoved: noop }));
+    assert.match(shop, /data-pack-workshop-open/);
+    assert.match(shop, /data-pack-workshop-note/);
+    assert.ok(!shop.includes('data-pack-remove') && !shop.includes('data-pack-publish'), shop);
+
+    const own = renderToStaticMarkup(createElement(PackActions, { def: of('benim'), onRemoved: noop }));
+    assert.match(own, /data-pack-publish="new"/);
+    assert.match(own, /data-pack-remove/);
+    assert.ok(!own.includes('data-pack-workshop-open'));
+
+    setWorkshopBridge(null);
+    const offline = renderToStaticMarkup(createElement(PackActions, { def: of('benim'), onRemoved: noop }));
+    assert.ok(!offline.includes('data-pack-publish'), 'Steam yoksa yükleme yok');
+    assert.ok(!renderToStaticMarkup(createElement(PackList, { selectedId: '', onSelect: noop, onChange: noop })).includes('data-pack-workshop-browse'));
+    removePack('benim');
+    setWorkshopPacks([]);
+  });
+
+  test('Workshop metinleri üç dilde', () => {
+    const keys = Object.keys(packTr).filter((key) => key.startsWith('hud.pack.workshop.') || key.endsWith('Workshop'));
+    assert.ok(keys.length >= 19, String(keys.length));
+    for (const key of keys) {
+      assert.ok(packEn[key as keyof typeof packEn], `İngilizce: ${key}`);
+      assert.ok(packDe[key as keyof typeof packDe], `Almanca: ${key}`);
+    }
+  });
+});
+

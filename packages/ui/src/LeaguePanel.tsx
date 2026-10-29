@@ -10,6 +10,9 @@ import { t } from './i18n';
 import { CareerRunLine } from './CareerPanel';
 import { GhostChart, GhostMoves } from './LeagueGhosts';
 import { LeagueFriends } from './LeagueFriends';
+import { mirrorsToSteam, steamLeague, useSteamLeague } from './steamLeague';
+import type { SteamFriendScore, SteamLeague } from './steamLeague';
+import { st } from './steamMessages';
 import { CityCardButton } from './CityCard';
 import type { CurveSeries } from './LeagueGhosts';
 import type { MessageKey } from './i18n';
@@ -227,6 +230,59 @@ function LeagueAccount({ board, onDeleted }: { board: LeagueBoard; onDeleted?: (
   );
 }
 
+/**
+ * Steam arkadaşlarının bu hafta ya da bugünkü puanları (Tur 73): Steam'in
+ * tablosundan, dakikada bir tazeleniyor. Steam doğrulamıyor; sıra arkadaşlar
+ * arasında.
+ */
+function SteamFriends({ steam, boardId, daily }: { steam: SteamLeague; boardId: string; daily: boolean }): ReactElement {
+  // Tablonun kimliğiyle: hafta değişince eski haftanın satırları görünmesin.
+  const [rows, setRows] = useState<{ boardId: string; value: SteamFriendScore[] | 'error' } | null>(null);
+  useEffect(() => {
+    let alive = true;
+    const load = () =>
+      steam.friends(boardId).then(
+        (list) => {
+          if (alive) setRows({ boardId, value: [...list].sort((a, b) => b.score - a.score) });
+        },
+        (error: unknown) => {
+          console.warn('Steam arkadaş tablosu alınamadı:', error);
+          if (alive) setRows({ boardId, value: 'error' });
+        },
+      );
+    void load();
+    const timer = setInterval(() => void load(), 60_000);
+    return () => {
+      alive = false;
+      clearInterval(timer);
+    };
+  }, [steam, boardId]);
+  const value = rows?.boardId === boardId ? rows.value : null;
+  return (
+    <section className="league-steam" data-league-steam={value === null ? 'loading' : value === 'error' ? 'error' : value.length}>
+      <h3>{st('hud.steam.title')}</h3>
+      <p className="muted">{st('hud.steam.note')}</p>
+      {value === null ? (
+        <p className="muted">{st('hud.steam.loading')}</p>
+      ) : value === 'error' ? (
+        <p className="muted">{st('hud.steam.error')}</p>
+      ) : value.length === 0 ? (
+        <p className="muted">{st(daily ? 'hud.steam.emptyDay' : 'hud.steam.empty')}</p>
+      ) : (
+        <ol className="league-table" data-league-table="steam">
+          {value.map((row, index) => (
+            <li key={`${row.rank}:${row.name}`} className={row.me ? 'mine' : undefined} data-league-row="steam" data-steam-rank={row.rank}>
+              <span className="league-rank">{index + 1}</span>
+              <span className="league-who">{row.me ? st('hud.steam.you', { name: row.name }) : row.name}</span>
+              <span className="league-score">{formatMoney(row.score)}</span>
+            </li>
+          ))}
+        </ol>
+      )}
+    </section>
+  );
+}
+
 function EntryWho({ entry, name, ceoId }: { entry: LeagueEntry; name: string; ceoId: string | null }): ReactElement {
   return (
     <span className="league-who">
@@ -242,6 +298,7 @@ function EntryWho({ entry, name, ceoId }: { entry: LeagueEntry; name: string; ce
 export function LeaguePanel(): ReactElement {
   const state = useGameState();
   const { league: board } = useGame();
+  const steam = useSteamLeague();
   const weekId = state.league?.weekId ?? null;
   const { entries, info } = useLeagueFeed(weekId);
   // Panel açıkken bu tarayıcı her satırı yeniden oynatıyor.
@@ -436,6 +493,9 @@ export function LeaguePanel(): ReactElement {
         <LeagueFriends key={accountDeletions} friends={board.friends} boardId={weekId} daily={daily} onAccount={accountChanged} />
       )}
 
+      {/* Steam arkadaşları (Tur 73): masaüstünde Steam açıkken. */}
+      {steam && weekId && <SteamFriends steam={steam} boardId={weekId} daily={daily} />}
+
       {board.account?.exists() && <LeagueAccount board={board} onDeleted={accountDeleted} />}
 
       <section className="league-paste">
@@ -508,6 +568,8 @@ export function LeagueResultScreen({ onNewGame }: { onNewGame: () => void }): Re
   const [sent, setSent] = useState<{ text: string; final: boolean } | null>(null);
   const [sending, setSending] = useState(false);
   const [code, setCode] = useState<string | null>(null);
+  // Puan Steam'in tablosuna da gittiyse (Tur 73) oradaki sırası.
+  const [steamRank, setSteamRank] = useState<number | null>(null);
   // Tablo değişince (ör. yerel tablodan sunucuya geçildi) gönderim yeniden açık: koşu yeni tabloya da gidebilsin (Codex #80).
   const current = useRef(board);
   useEffect(() => {
@@ -540,6 +602,13 @@ export function LeagueResultScreen({ onNewGame }: { onNewGame: () => void }): Re
     const text = submitText(outcome, target.kind, leagueBoardKind(leagueRun.weekId) === 'day');
     setSent({ text, final: !RETRYABLE.has(outcome) });
     toast(text, outcome === 'saved' || outcome === 'kept-better' || outcome === 'queued' ? 'good' : 'bad');
+    const steam = steamLeague();
+    if (steam && mirrorsToSteam(outcome)) {
+      steam.upload(leagueRun.weekId, leagueRun.score).then(
+        (uploaded) => setSteamRank(uploaded.rank > 0 ? uploaded.rank : null),
+        (error: unknown) => console.warn('Puan Steam tablosuna gitmedi:', error),
+      );
+    }
   };
 
   const copy = async () => {
@@ -566,6 +635,11 @@ export function LeagueResultScreen({ onNewGame }: { onNewGame: () => void }): Re
           })}
         </p>
         {sent && <p data-league-sent>{sent.text}</p>}
+        {steamRank !== null && (
+          <p className="muted" data-league-steam-rank={steamRank}>
+            {st('hud.steam.rank', { rank: steamRank })}
+          </p>
+        )}
         {board.kind === 'server' && !lost && !sent?.final && <p className="muted league-server-note">{t('app.league.result.serverNote')}</p>}
         {code && <textarea className="manual-text" readOnly value={code} onFocus={(e) => e.target.select()} aria-label={t('app.league.codeLabel')} />}
         <CareerRunLine state={state} />

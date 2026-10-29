@@ -76,6 +76,26 @@ ve yıldızlar, ek kurallar, devir, paketin kuralları. JSON yazmak gerekmiyor.
   masaüstünde `profile/` altında dosya). Tek taslak: kaydedilmemiş
   değişiklik varken **Düzenle** önce soruyor.
 
+**Steam Workshop (Tur 73).** Masaüstünde Steam açıkken paketler
+Workshop'ta da paylaşılıyor (kurulum ve ayrıntı `docs/STEAM.md`).
+
+- **Abone olmak.** Rafın başındaki **Workshop'a göz at** oyunun Workshop'unu
+  Steam'de açıyor. Abone olunan öğe inince rafta: kartında "Workshop:
+  <paket>". İnmekte olan öğeler rafın üstünde sayılıyor.
+- **Salt okunur.** Workshop'tan gelen paket kaldırılmıyor ve yüklenmiyor;
+  **Steam'de aç** öğenin sayfasına götürüyor, abonelik orada bırakılınca
+  paket raftan gidiyor. Kodu kopyalamak ve **Düzenle** yerinde: editörde
+  kaydedilen sürüm oyuncunun kendi paketi olur.
+- **Yüklemek.** Kendi paketinde **Workshop'a yükle**: onaydan sonra paket
+  herkese açık bir öğe. Öğede tek dosya var, `pack.json` (bu biçim);
+  başlığı paketin adı, açıklaması senaryoların listesi. Aynı paket sonra
+  **Workshop'ta güncelle** ile aynı öğeye yükleniyor.
+- **Sınırlar.** Bir öğeden en çok dört paket dosyası (`*.json`, ad sırasıyla,
+  her biri en çok 64 KB), Workshop'tan rafa en çok 40 paket. Her dosya
+  ekleme kutusundaki doğrulamadan geçiyor; geçmeyen atlanıyor. Aynı
+  kimlikte oyuncunun kendi paketi varsa o geçiyor, iki öğede aynı kimlik
+  varsa ilki.
+
 **Kayıt.** Oynanan senaryonun paketi kayda giriyor (`state.scenario.pack`).
 Kayıt, paketi yüklü olmayan bir cihazda da açılıyor. Aynı paketin başka bir
 sürümü yüklü olsa da koşu kendi tanımıyla sürüyor.
@@ -276,6 +296,9 @@ Doğrulayıcı ilk 40 sorunu döndürüyor (`{ path, code, params }`); raf ilk
   dil başına metin; paylaşım kodu ve bozuk kod.
 - `packages/ui/test/packs.test.ts`: raf (ekle, yeni sürüm, kaldır, dolu),
   sorunların iki dilde metni, paketin kural adı, kariyere girmemesi.
+  Tur 73: Workshop paketleri rafta salt okunur, bozuk dosya ve sınırı aşan
+  atlanıyor, aynı kimlikte oyuncunun paketi geçiyor, yükleme düğmesi yalnız
+  Steam açıkken (`docs/STEAM.md` → "Testler").
 - `packages/core/test/packs.test.ts` (Tur 68): sınır tablolarının her ucu
   doğrulayıcıda (en küçük ve en büyük geçiyor, hemen dışı `range`); yer
   tutucular; taslaktan koşu ve tekrar oyna.

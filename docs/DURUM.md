@@ -8401,6 +8401,109 @@ yazı alanında ekran klavyesi.
 önce, Deck'te Linux deposuyla ya da Proton'la (`docs/STEAM.md` → "Linux ve
 Steam Deck").
 
+### Tur 73 — Steam Workshop ve skor tabloları
+
+Faz 6'nın üçüncü turu. Simülasyon ve şema aynı; hazır oyunların parmak izi
+birebir.
+
+**Paketler cihazdan çıkmıyordu.** İçerik paketleri (Tur 67) yalnız
+paylaşım koduyla ya da dosyayla geziyordu. Steam oyuncusu için doğal yer
+Workshop: abone ol, oyunda bul. Tohum Ligi'nin tablosu da yalnız lig
+sunucusundaydı; Steam'deki arkadaşlarla kıyas yoktu.
+
+**Yapılanlar.**
+- *Workshop'tan rafa.* Abone olunan öğeyi Steam indiriyor. Kabuk kurulu
+  öğelerin klasöründeki paket dosyalarını okuyor (`src/workshop.rs`; öğe
+  başına en çok dört `*.json`, her biri en çok 64 KB) ve inmekte olanları
+  sayıyor. Sayfa her paketi ekleme kutusunun doğrulamasından geçirip
+  "Kendi senaryoların" rafına koyuyor (`packStore.ts`):
+  - Kartta "Workshop: <paket>" künyesi; salt okunur, en çok 40 paket.
+  - Bozuk dosya atlanıyor, oyun kırılmıyor.
+  - Aynı kimlikte oyuncunun kendi paketi varsa o geçiyor; onu kaldırınca
+    Workshop sürümü geri geliyor. İki öğede aynı kimlik varsa ilki.
+  - Liste raf açılınca ve pencereye dönünce tazeleniyor. Değişmeyen öğenin
+    tanımı aynı nesne kalıyor: seçili senaryonun ayrıntısı sıfırlanmıyor.
+  - Rafın başında "Workshop'a göz at"; inen öğeler rafın üstünde sayılıyor.
+    Workshop paketinde "Steam'de aç" ve abonelik notu var, kaldırma yok.
+- *Workshop'a yükleme.* Kendi paketinde "Workshop'a yükle", onaydan sonra
+  herkese açık bir öğe: içeriği tek `pack.json`, başlığı paketin adı,
+  açıklaması senaryoların listesi, "Scenario" etiketi.
+  - Öğenin kimliği cihazda (`capitalforge.workshop.v1`); sonraki yükleme
+    "Workshop'ta güncelle" ile aynı öğeye gidiyor.
+  - Öğe Steam'de silindiyse kabuk yeni öğe açıyor; kimlik boşta kalmıyor.
+  - Workshop sözleşmesini kabul etmemiş oyuncunun öğesini Steam gizli
+    tutuyor. Oyun bunu söylüyor, "Sözleşmeyi aç" düğmesi koyuyor.
+- *Steam'de açmak.* Sayfalar Steam katmanında. Katman oyuna tutunmadıysa
+  (pencere bir WebView; katman her sistemde tutunamıyor) Steam'in kendi
+  tarayıcısında (`steam://openurl/…`). Açılacak adres yalnız oyunun
+  Workshop'u, sözleşme ya da sayı kimlikli bir öğe.
+- *Skor tabloları.* Tohum Ligi'nin her haftasının ve gününün Steam'de bir
+  tablosu var (`CF_SEED_2026-W44`, `CF_DAILY_2026-10-29`; `src/leaderboard.rs`).
+  İlk gönderen açıyor; başka ad kabul edilmiyor.
+  - Lig koşusu gönderilince puan oraya da gidiyor, en iyisi kalıyor;
+    sonuç ekranında Steam'deki sırası yazıyor.
+  - Gönderilenler: kaydedilen, daha iyisi tutulan, bekleyen (bağlantı yok
+    ya da sunucu sürümü henüz tanımıyor), sunucusu yoğun ve adı herkese açık
+    tabloya giremeyen koşu (Steam'in tablosu ad göstermiyor). Kapanmış lig,
+    tekrarı tutmayan ve kopya koşu gitmiyor.
+  - Lig panelinde "Steam arkadaşların": o tablodaki arkadaşlar, puan
+    sırasıyla, oyuncu vurgulu; dakikada bir tazeleniyor.
+  - Steam'in tablosu koşuyu doğrulamıyor (puanı istemci yazıyor). Asıl
+    sıralama lig sunucusunun doğrulanmış tablosu; Steam'inki yanında
+    arkadaş kıyası. Bölümün notu da bunu söylüyor.
+- *Kabuk.* Beş yeni komut. Uzun süren Steam çağrıları ayrı bir iş
+  parçacığında bekleniyor, pencere donmuyor. Steam'siz derlemede liste
+  boş, yükleme ve tablo hata veriyor, raf ve lig paneli web sürümündeki
+  gibi. Arayüzün köprüleri `packages/ui/src/workshop.ts` ve
+  `steamLeague.ts`; masaüstü onları Steam açıkken kuruyor.
+- *Paket.* Workshop rafı paket rafının geç inen parçasında. Lig panelinin
+  Steam yazıları ayrı küçük sözlükte (`steamMessages.ts`), oyun ekranıyla
+  iniyor. İlk hâlinde Türkçe yazılar giriş paketine girip ana parçayı
+  0,2 KB büyütmüştü (bütçe 75 KB); ayrılınca yine Tur 72'deki gibi 74,6.
+
+**Steamworks'te yapılacaklar.** `docs/STEAM.md` → adım 8 (Workshop: dosya
+aktarımı açık, "Scenario" etiketi, görünürlük) ve adım 9 (skor tabloları:
+elle açmak gerekmiyor, "trusted" yapılmamalı).
+
+**Doğrulama.**
+- `pnpm test` 885/885 (876'dan); tip denetimi temiz; Almanca denetimi 0
+  hata (Steam 8/8).
+  - `packages/ui/test/packs.test.ts` (7 yeni): rafın Workshop kaynağı;
+    oyuncunun paketinin önceliği; değişmeyen öğenin aynı kalması; sınır;
+    eski listenin yenisini ezmemesi; raf ve düğmeler; üç dilde metin.
+  - `apps/web/test/desktop.test.ts` (2 yeni): köprüler kabuğun
+    komutlarına kabuğun adlarıyla gidiyor, Steam yoksa köprü yok; ligin
+    hangi sonucu Steam'e gidiyor. Komut listesi sekiz Steam komutunu
+    arıyor.
+- `cargo test` 28/28 (21'den), `cargo test --features steam` 25/25
+  (20'den), clippy iki derlemede de temiz.
+  - Klasördeki paketler: sırayla, büyük ve başka dosya atlanıyor.
+  - Yükleme isteği Steamworks'ün sınırlarında: başlık, açıklama, not,
+    paket boyu, öğe kimliği.
+  - Açılan sayfa yalnız Workshop, sözleşme ya da öğe.
+  - Tablo adı yalnız ligin hafta ve gün kimliğinden; net değer tablonun
+    puanına kırpılıyor (eksi, sayı olmayan, 32 biti aşan).
+  - Steam'siz derlemede Workshop ve tablo yok.
+- Tarayıcı testinin yeni bölümü "Steam: Workshop ve skor tabloları" (10
+  kontrol) 10/10. Masaüstü paketi tarayıcıda sahte bir kabukla, Steam
+  açık:
+  - Workshop paketi rafta, bozuk dosyası atlanmış, inen öğe sayılıyor.
+  - "Steam'de aç" doğru sayfaları istiyor.
+  - Yükleme onaylı. İstek paketin kendisini, adını ve senaryo listesini
+    taşıyor; sözleşme uyarısı çıkıyor; ikinci yükleme aynı öğeyi
+    güncelliyor.
+  - Lig panelinde Steam arkadaşları sırayla.
+  - Bitirilip gönderilen koşunun puanı Steam'in o haftaki tablosunda,
+    sonuç ekranında sırası. Konsol temiz.
+- Gerçek pencerede uçtan uca 30/30 (29'dan): Workshop ve tablo komutları
+  kabukta, istek sınırlardan geçiyor.
+- Paket bütçesi tamam (ana parça 74,6 KB).
+
+**Kalan.** Gerçek Steam'le denemek: Steamworks uygulama kimliği ve
+Workshop'un açılması gerekiyor (`docs/STEAM.md` → "Geliştirirken"). Steam
+katmanının WebView penceresine tutunup tutunmadığı da orada görülecek;
+tutunmazsa sayfalar Steam'in tarayıcısında açılıyor.
+
 ---
 
 ## 3. Ölçülen durum

@@ -9,9 +9,11 @@
 // Windows'ta sürüm paketinde oyunun yanında bir konsol penceresi açılmasın.
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod leaderboard;
 mod steam;
 mod store;
 mod window;
+mod workshop;
 
 use std::collections::BTreeMap;
 use std::path::PathBuf;
@@ -148,6 +150,41 @@ fn steam_keyboard(x: i32, y: i32, width: i32, height: i32, multiline: bool) -> b
     steam::keyboard(x, y, width, height, multiline)
 }
 
+/// Steamworks'ün geri çağrılı işleri bekliyor: pencerenin iş parçacığında değil.
+async fn blocking<T: Send + 'static>(work: impl FnOnce() -> Result<T, String> + Send + 'static) -> Result<T, String> {
+    tauri::async_runtime::spawn_blocking(work).await.map_err(|error| error.to_string())?
+}
+
+/// Abone olunan Workshop öğeleri: kurulu olanların paketleri, inenlerin sayısı (Tur 73); Steam yoksa boş.
+#[tauri::command]
+async fn steam_workshop_list() -> Result<workshop::Listing, String> {
+    blocking(|| Ok(workshop::listing())).await
+}
+
+/// Paketi Workshop'a yükle; `item` verildiyse o öğeyi güncelle.
+#[tauri::command]
+async fn steam_workshop_publish(request: workshop::Publish) -> Result<workshop::Published, String> {
+    blocking(move || workshop::publish(request)).await
+}
+
+/// Oyunun Workshop'u, Workshop sözleşmesi ya da bir öğenin sayfası Steam'de (`workshop::page`).
+#[tauri::command]
+fn steam_workshop_open(target: String) -> bool {
+    workshop::open(&target)
+}
+
+/// Lig koşusunun puanı Steam'in o hafta ya da günkü tablosuna (Tur 73).
+#[tauri::command]
+async fn steam_leaderboard_upload(week_id: String, score: f64) -> Result<leaderboard::Uploaded, String> {
+    blocking(move || leaderboard::upload(&week_id, score)).await
+}
+
+/// O tablodaki Steam arkadaşları.
+#[tauri::command]
+async fn steam_leaderboard_friends(week_id: String) -> Result<Vec<leaderboard::Entry>, String> {
+    blocking(move || leaderboard::friends(&week_id)).await
+}
+
 /// Sayfa kaydını bitirdi: kapan.
 #[tauri::command]
 fn quit(app: AppHandle) {
@@ -237,6 +274,11 @@ fn main() {
             steam_status,
             steam_unlock,
             steam_keyboard,
+            steam_workshop_list,
+            steam_workshop_publish,
+            steam_workshop_open,
+            steam_leaderboard_upload,
+            steam_leaderboard_friends,
             quit,
             shell_info,
             fullscreen_toggle,

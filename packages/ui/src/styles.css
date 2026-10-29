@@ -5107,14 +5107,16 @@ button.icon {
   font-size: calc(12px * var(--text-scale));
 }
 
-/* Tur 55: arkadaş ligleri — sekmeler, ligin kodu ve tablosu, kur ve katıl. */
-.league-friends {
+/* Tur 55: arkadaş ligleri — sekmeler, ligin kodu ve tablosu, kur ve katıl. Tur 73: Steam arkadaşları da. */
+.league-friends,
+.league-steam {
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
-.league-friends p {
+.league-friends p,
+.league-steam p {
   margin: 0;
 }
 
@@ -6161,6 +6163,20 @@ button.icon {
   margin: 4px 0 0;
   font-family: var(--font-display);
   font-size: calc(14px * var(--text-scale));
+}
+
+/* Tur 73: Workshop — rafın başında "göz at", Workshop'tan gelen kartın künyesi vurgulu. */
+.pack-shelf-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 8px;
+}
+
+.pack-shelf li[data-pack-workshop] .scenario-card-source {
+  color: var(--accent);
+  font-weight: 600;
 }
 
 .pack-empty {

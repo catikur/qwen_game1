@@ -218,6 +218,25 @@ try {
   }));`);
   check("Kumanda: WebKitGTK'de Gamepad API var; ekran klavyesi komutu kabukta, Steam'siz derlemede açılmıyor",
     pad?.api === true && pad.shown === false, JSON.stringify(pad));
+  // Workshop ve skor tabloları (Tur 73): komutlar kabukta. Steam'siz derlemede
+  // liste boş, sayfa açılmıyor, yükleme ve tablo hata veriyor; istek yine
+  // Steamworks'ün sınırlarından, puan tablonun kimliğinden geçiyor.
+  const workshop = await win.run(`const invoke = window.__TAURI__.core.invoke;
+    const fail = (promise) => promise.then(() => 'geçti', (error) => String(error));
+    return Promise.all([
+      invoke('steam_workshop_list'),
+      invoke('steam_workshop_open', { target: 'workshop' }),
+      fail(invoke('steam_workshop_publish', { request: { title: 'Paket', description: '', pack: '{}' } })),
+      fail(invoke('steam_workshop_publish', { request: { title: ' ', description: '', pack: '{}' } })),
+      fail(invoke('steam_leaderboard_upload', { weekId: '2026-W44', score: 1000 })),
+      fail(invoke('steam_leaderboard_upload', { weekId: '../x', score: 1000 })),
+      fail(invoke('steam_leaderboard_friends', { weekId: '2026-10-29' })),
+    ]).then(([list, opened, publish, untitled, upload, board, friends]) => ({ list, opened, publish, untitled, upload, board, friends }));`);
+  check("Workshop ve skor tablosu komutları kabukta: Steam'siz derlemede liste boş, sayfa açılmıyor, yükleme ve tablo hata veriyor; istek sınırlardan geçiyor",
+    workshop?.list?.items?.length === 0 && workshop.list.downloading === 0 && workshop.opened === false
+      && /Steam'siz/.test(workshop.publish) && /başlık/.test(workshop.untitled)
+      && /Steam'siz/.test(workshop.upload) && /tanınmıyor/.test(workshop.board) && /Steam'siz/.test(workshop.friends),
+    JSON.stringify(workshop));
   // İkinci kopya D-Bus'tan birinciyi buluyor, ona haber verip çıkıyor. Oturum
   // otobüsü yoksa eklenti tek pencereyi bilemiyor (normal açılış): denetlenemez.
   if (process.env.DBUS_SESSION_BUS_ADDRESS) {

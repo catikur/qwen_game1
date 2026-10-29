@@ -87,3 +87,7 @@ export { padGlyphsInUse, setPadGlyphsInUse } from './padInUse';
 export { pt } from './padMessages';
 export type { PadMessageKey } from './padMessages';
 export type { InputMode } from './inputMode';
+export { setWorkshopBridge } from './workshop';
+export type { WorkshopBridge, WorkshopItem, WorkshopListing, WorkshopPage, WorkshopPublish, WorkshopPublished } from './workshop';
+export { setSteamLeague } from './steamLeague';
+export type { SteamFriendScore, SteamLeague, SteamScore } from './steamLeague';

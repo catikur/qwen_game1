@@ -1,0 +1,108 @@
+import { useSyncExternalStore } from 'react';
+
+/*
+ * Steam Workshop'un sayfadaki ucu (Tur 73). Masaüstü kabuğu Steam açıkken
+ * kuruyor (`apps/web/src/desktop/steam.ts`); web sürümünde ve Steam'siz
+ * derlemede yok, raf yalnız oyuncunun paketleri. Paket rafı geç iniyor
+ * (`packStore.ts`); bu modül küçük: kabuk köprüyü raf inmeden kuruyor.
+ *
+ * Oyuncunun yüklediği paketin öğesi bu cihazda saklanıyor: aynı paketin
+ * sonraki yüklemesi yeni öğe açmıyor, o öğeyi güncelliyor.
+ */
+
+/** Kurulu bir Workshop öğesi ve klasöründeki paket dosyalarının içi. */
+export interface WorkshopItem {
+  /** Öğenin kimliği; 64 bit, sayıda bozulmasın diye metin. */
+  id: string;
+  packs: string[];
+}
+
+/** Abone olunan öğeler: kurulu olanlar ve Steam'in henüz indirdikleri. */
+export interface WorkshopListing {
+  items: WorkshopItem[];
+  downloading: number;
+}
+
+/** Steam'de açılacak sayfa: oyunun Workshop'u, Workshop sözleşmesi ya da bir öğe. */
+export type WorkshopPage = 'workshop' | 'agreement' | { item: string };
+
+export interface WorkshopPublish {
+  /** Paket daha önce yüklendiyse öğesi: güncelleniyor. */
+  item?: string;
+  title: string;
+  description: string;
+  /** Paketin JSON'u. */
+  pack: string;
+  /** Değişiklik notu (öğenin geçmişinde). */
+  note?: string;
+}
+
+export interface WorkshopPublished {
+  id: string;
+  /** Oyuncu Workshop sözleşmesini kabul etmemiş: Steam öğeyi o zamana kadar gizli tutuyor. */
+  agreement: boolean;
+}
+
+export interface WorkshopBridge {
+  list(): Promise<WorkshopListing>;
+  publish(request: WorkshopPublish): Promise<WorkshopPublished>;
+  /** Sayfa Steam katmanında ya da Steam'in tarayıcısında; açılamadıysa yanlış. */
+  open(page: WorkshopPage): Promise<boolean>;
+}
+
+let bridge: WorkshopBridge | null = null;
+const listeners = new Set<() => void>();
+
+export function setWorkshopBridge(next: WorkshopBridge | null): void {
+  bridge = next;
+  for (const listener of listeners) listener();
+}
+
+export function workshopBridge(): WorkshopBridge | null {
+  return bridge;
+}
+
+export function subscribeWorkshop(listener: () => void): () => void {
+  listeners.add(listener);
+  return () => listeners.delete(listener);
+}
+
+export function useWorkshopBridge(): WorkshopBridge | null {
+  return useSyncExternalStore(subscribeWorkshop, workshopBridge, workshopBridge);
+}
+
+/** Sayfayı Steam'de açar; köprü hata verirse de açılmadı sayılıyor. */
+export async function openWorkshopPage(bridge: WorkshopBridge, page: WorkshopPage): Promise<boolean> {
+  try {
+    return await bridge.open(page);
+  } catch {
+    return false;
+  }
+}
+
+const PUBLISHED_KEY = 'capitalforge.workshop.v1';
+/** Öğesinin kimliği sayı; bozuk kayıt yok sayılıyor. */
+const ITEM_ID = /^\d{1,20}$/;
+
+function readPublished(): Record<string, string> {
+  try {
+    const parsed: unknown = JSON.parse(window.localStorage.getItem(PUBLISHED_KEY) ?? '{}');
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {};
+    return Object.fromEntries(Object.entries(parsed).filter((pair): pair is [string, string] => typeof pair[1] === 'string' && ITEM_ID.test(pair[1])));
+  } catch {
+    return {};
+  }
+}
+
+/** Oyuncunun paketi Workshop'ta hangi öğe; yüklenmediyse yok. */
+export function publishedItem(packId: string): string | undefined {
+  return readPublished()[packId];
+}
+
+export function rememberPublished(packId: string, item: string): void {
+  try {
+    window.localStorage.setItem(PUBLISHED_KEY, JSON.stringify({ ...readPublished(), [packId]: item }));
+  } catch {
+    // Depo kapalı: sonraki yükleme yeni öğe açıyor.
+  }
+}

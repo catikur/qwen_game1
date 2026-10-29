@@ -137,6 +137,12 @@ pub fn status() -> Status {
     STATE.get_or_init(connect).status.clone()
 }
 
+/// Bağlı Steam istemcisi; Workshop ve skor tabloları kullanıyor (Tur 73).
+#[cfg(feature = "steam")]
+pub(crate) fn client() -> Option<steamworks::Client> {
+    STATE.get_or_init(connect).client.clone()
+}
+
 /// Açılacak başarımlar kuyruğa.
 #[cfg(feature = "steam")]
 pub fn unlock(names: Vec<String>) {

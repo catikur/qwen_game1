@@ -196,11 +196,14 @@ açılıyor.
   (PlayStation'da ✕ ○ □ △, Nintendo'da B A Y X). Steam Deck'te yazı
   alanı için Steam'in ekran klavyesi açılıyor; Steam Input'un önerilen
   düzeni `docs/STEAM.md`'de.
-  — bu PR
+  — bitti (#102)
 - **73 · Steam Workshop ve skor tabloları.** İçerik paketleri (Tur 67)
-  Workshop'tan iniyor ve oraya yükleniyor; Tohum Ligi'nin haftalık tablosu
-  Steam skor tablosunda da. Steamworks uygulama kimliği gerekiyor
-  (kullanıcı).
+  Workshop'tan rafa iniyor, salt okunur; oyuncunun paketi rafın düğmesiyle
+  Workshop'a yükleniyor, sonraki yükleme aynı öğeyi güncelliyor. Tohum
+  Ligi'nin her haftasının ve gününün Steam'de bir tablosu: gönderilen
+  koşunun puanı oraya da gidiyor, lig panelinde Steam arkadaşları. Gerçek
+  Steam'de denemek için Steamworks uygulama kimliği gerekiyor (kullanıcı;
+  `docs/STEAM.md` adım 8–9). — bu PR
 - **74 · Sürüm 1.0.** Oyun içinde "Yenilikler" (değişiklik günlüğü), hata
   bildirme (kayıt ve günlükle), yayın listesi, sürüm 1.0.0.
 - **75 · Değerlendirme ve Faz 6 raporu.**
