@@ -642,6 +642,14 @@ describe('macOS imzası (Tur 74)', () => {
     assert.ok(!full.log.includes('abcd-efgh') && !full.log.includes('MIIK'), 'günlükte sırların değeri yok');
     assert.equal(full.leaked, false, 'betiğin yardımcıları adımda kalmıyor');
   });
+
+  test("Apple sırları yalnız macOS'un iki paket adımına gidiyor: iş düzeyinde değil, başka adımda değil (Codex #104)", () => {
+    const workflow = readFileSync(join(repoRoot(), '.github/workflows/desktop.yml'), 'utf8');
+    const lines = workflow.split('\n').filter((line) => line.includes('secrets.APPLE_'));
+    assert.equal(lines.length, 12, 'iki paket adımı × altı sır');
+    // Adımın `env`i (10 boşluk; işinki 6 olurdu) ve yalnız macOS'ta dolu.
+    for (const line of lines) assert.match(line, /^ {10}SIGN_APPLE_[A-Z_]+: \$\{\{ runner\.os == 'macOS' && secrets\.APPLE_[A-Z_]+ \|\| '' \}\}$/, line);
+  });
 });
 
 /** Testler geçici dizine paketlenip koşuyor: depo kökünü çalışma dizininden bul. */

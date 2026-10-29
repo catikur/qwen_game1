@@ -100,14 +100,6 @@ jobs:
             os: ubuntu-22.04
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
-    # Yalnız macOS'ta okunuyor; boşsa paket imzasız (tools/apple-signing.sh).
-    env:
-      SIGN_APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
-      SIGN_APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-      SIGN_APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
-      SIGN_APPLE_ID: ${{ secrets.APPLE_ID }}
-      SIGN_APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
-      SIGN_APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
     steps:
       - uses: actions/checkout@v5
       - uses: pnpm/action-setup@v4
@@ -126,6 +118,16 @@ jobs:
       # Lig sunucusu Pages'teki oyunla aynı (Lite'ın adresi, ios-lite/App/project.yml).
       - name: Kurulum paketleri
         shell: bash
+        # Apple sırları yalnız bu adımda ve yalnız macOS'ta (Codex #104): bağımlılıkların
+        # kurulum betikleri, önbellek ve yükleme eylemleri onları görmüyor. Boşsa paket
+        # imzasız (tools/apple-signing.sh).
+        env:
+          SIGN_APPLE_CERTIFICATE: ${{ runner.os == 'macOS' && secrets.APPLE_CERTIFICATE || '' }}
+          SIGN_APPLE_CERTIFICATE_PASSWORD: ${{ runner.os == 'macOS' && secrets.APPLE_CERTIFICATE_PASSWORD || '' }}
+          SIGN_APPLE_SIGNING_IDENTITY: ${{ runner.os == 'macOS' && secrets.APPLE_SIGNING_IDENTITY || '' }}
+          SIGN_APPLE_ID: ${{ runner.os == 'macOS' && secrets.APPLE_ID || '' }}
+          SIGN_APPLE_PASSWORD: ${{ runner.os == 'macOS' && secrets.APPLE_PASSWORD || '' }}
+          SIGN_APPLE_TEAM_ID: ${{ runner.os == 'macOS' && secrets.APPLE_TEAM_ID || '' }}
         run: |
           export VITE_LEAGUE_URL=$(sed -n 's/^ *LiteLeagueURL: *"\(.*\)"/\1/p' ios-lite/App/project.yml)
           echo "Lig sunucusu: ${VITE_LEAGUE_URL:-yok}"
@@ -141,6 +143,16 @@ jobs:
       # deposu evrensel (Apple Silicon ve Intel tek .app'te).
       - name: Steam deposu
         shell: bash
+        # Apple sırları yalnız bu adımda ve yalnız macOS'ta (Codex #104): bağımlılıkların
+        # kurulum betikleri, önbellek ve yükleme eylemleri onları görmüyor. Boşsa paket
+        # imzasız (tools/apple-signing.sh).
+        env:
+          SIGN_APPLE_CERTIFICATE: ${{ runner.os == 'macOS' && secrets.APPLE_CERTIFICATE || '' }}
+          SIGN_APPLE_CERTIFICATE_PASSWORD: ${{ runner.os == 'macOS' && secrets.APPLE_CERTIFICATE_PASSWORD || '' }}
+          SIGN_APPLE_SIGNING_IDENTITY: ${{ runner.os == 'macOS' && secrets.APPLE_SIGNING_IDENTITY || '' }}
+          SIGN_APPLE_ID: ${{ runner.os == 'macOS' && secrets.APPLE_ID || '' }}
+          SIGN_APPLE_PASSWORD: ${{ runner.os == 'macOS' && secrets.APPLE_PASSWORD || '' }}
+          SIGN_APPLE_TEAM_ID: ${{ runner.os == 'macOS' && secrets.APPLE_TEAM_ID || '' }}
         run: |
           export VITE_LEAGUE_URL=$(sed -n 's/^ *LiteLeagueURL: *"\(.*\)"/\1/p' ios-lite/App/project.yml)
           source tools/apple-signing.sh

@@ -125,7 +125,8 @@ kısa hâli (`--smoke`).
     için (yalnız imza tamsa). Eksik bir takım hiç aktarılmıyor; yarım
     takım paketi düşürürdü. Sırlar yokken ya da eksikken paket imzasız
     (ya da imzalı ama onaysız) çıkıyor; iş akışının günlüğü eksiklerin
-    adını yazıyor.
+    adını yazıyor. Sırlar iş akışında yalnız macOS'un iki paket adımına
+    veriliyor; bağımlılıkların kurulum betikleri onları görmüyor.
   - *Windows*: isteğe bağlı. Steam'den kurulan oyunda SmartScreen
     uyarısı çıkmıyor. Kurulum paketi Steam dışında da dağıtılacaksa
     kod imzalama sertifikası gerekiyor: OV ya da EV sertifika, ya da Azure
