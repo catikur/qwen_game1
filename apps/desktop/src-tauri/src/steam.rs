@@ -122,6 +122,8 @@ struct State {
     status: Status,
     #[cfg(feature = "steam")]
     queue: Option<Arc<Mutex<Queue>>>,
+    #[cfg(feature = "steam")]
+    client: Option<steamworks::Client>,
 }
 
 static STATE: OnceLock<State> = OnceLock::new();
@@ -146,6 +148,23 @@ pub fn unlock(names: Vec<String>) {
 /// Steam'siz derlemede yok sayılıyor.
 #[cfg(not(feature = "steam"))]
 pub fn unlock(_names: Vec<String>) {}
+
+/// Steam'in ekran klavyesi (Tur 72): kumandayla bir yazı alanı seçildi.
+/// Alanın yeri pencerenin içinde, fiziksel piksel; Steam klavyeyi alanı
+/// örtmeyecek yerde açıyor ve tuşları pencereye gönderiyor. Steam Deck'te ve
+/// Büyük Resim kipinde açılıyor; başka yerde Steam `false` diyor.
+#[cfg(feature = "steam")]
+pub fn keyboard(x: i32, y: i32, width: i32, height: i32) -> bool {
+    let Some(client) = &STATE.get_or_init(connect).client else { return false };
+    let mode = steamworks::FloatingGamepadTextInputMode::SingleLine;
+    client.utils().show_floating_gamepad_text_input(mode, x, y, width, height, || {})
+}
+
+/// Steam'siz derlemede klavye yok; oyuncu kendi klavyesiyle yazıyor.
+#[cfg(not(feature = "steam"))]
+pub fn keyboard(_x: i32, _y: i32, _width: i32, _height: i32) -> bool {
+    false
+}
 
 #[cfg(not(feature = "steam"))]
 fn connect() -> State {
@@ -181,17 +200,18 @@ fn connect() -> State {
         Ok(client) => {
             let queue = Arc::new(Mutex::new(Queue::default()));
             let worker = Arc::clone(&queue);
-            let steam = Steam(client);
+            let steam = Steam(client.clone());
             std::thread::spawn(move || loop {
                 steam.0.run_callbacks();
                 worker.lock().unwrap_or_else(|poisoned| poisoned.into_inner()).process(&steam);
                 std::thread::sleep(TICK);
             });
-            State { status: Status { available: true, detail: "Steam'e bağlı".into() }, queue: Some(queue) }
+            State { status: Status { available: true, detail: "Steam'e bağlı".into() }, queue: Some(queue), client: Some(client) }
         }
         Err(error) => State {
             status: Status { available: false, detail: format!("Steam'e bağlanılamadı: {error} ({error:?})") },
             queue: None,
+            client: None,
         },
     }
 }
@@ -317,5 +337,6 @@ mod tests {
         let status = status();
         assert!(!status.available);
         unlock(names(&["CF_EMPIRE"]));
+        assert!(!keyboard(0, 0, 320, 40), "ekran klavyesi yok");
     }
 }

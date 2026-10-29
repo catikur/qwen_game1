@@ -141,6 +141,13 @@ fn steam_unlock(names: Vec<String>) {
     steam::unlock(names);
 }
 
+/// Steam Deck'in ekran klavyesi (Tur 72): yazı alanının yeri, pencerenin
+/// içinde fiziksel piksel. Açıldıysa `true`.
+#[tauri::command]
+fn steam_keyboard(x: i32, y: i32, width: i32, height: i32) -> bool {
+    steam::keyboard(x, y, width, height)
+}
+
 /// Sayfa kaydını bitirdi: kapan.
 #[tauri::command]
 fn quit(app: AppHandle) {
@@ -229,6 +236,7 @@ fn main() {
             export_file,
             steam_status,
             steam_unlock,
+            steam_keyboard,
             quit,
             shell_info,
             fullscreen_toggle,

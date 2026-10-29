@@ -1,4 +1,6 @@
 import { steamAchievementNames } from '@capital/content';
+import { TEXT_INPUT_EVENT } from '../textInput';
+import type { TextField } from '../textInput';
 import type { Invoke } from './bridge';
 
 /**
@@ -12,6 +14,10 @@ import type { Invoke } from './bridge';
  *
  * Steam yoksa (Steam'siz derleme, istemci kapalı, oyun Steam'den
  * açılmamış) bir kez söylenip bırakılıyor; oyun aynı.
+ *
+ * Ekran klavyesi (Tur 72): kumanda bir yazı alanını seçince Steam'in
+ * klavyesi alanın yanında açılıyor. Steam yeri pencerenin fiziksel
+ * pikselinde istiyor; sayfanınki CSS pikseli.
  */
 export interface SteamStatus {
   available: boolean;
@@ -23,7 +29,17 @@ export interface CareerSource {
   subscribe(listener: () => void): () => void;
 }
 
-export async function initSteam(invoke: Invoke, career: CareerSource): Promise<SteamStatus> {
+/** Yazı alanı haberinin geldiği yer: sayfanın penceresi; testte sahtesi. */
+export interface KeyboardHost {
+  addEventListener(type: string, listener: (event: Event) => void): void;
+  readonly devicePixelRatio?: number;
+}
+
+export async function initSteam(
+  invoke: Invoke,
+  career: CareerSource,
+  host: KeyboardHost | undefined = globalThis.window,
+): Promise<SteamStatus> {
   let status: SteamStatus;
   try {
     status = await invoke<SteamStatus>('steam_status');
@@ -47,5 +63,13 @@ export async function initSteam(invoke: Invoke, career: CareerSource): Promise<S
   };
   sync();
   career.subscribe(sync);
+  host?.addEventListener(TEXT_INPUT_EVENT, (event) => {
+    const field = (event as CustomEvent<TextField>).detail;
+    const scale = host.devicePixelRatio || 1;
+    const [x, y, width, height] = [field.x, field.y, field.width, field.height].map((value) => Math.round(value * scale));
+    invoke<boolean>('steam_keyboard', { x, y, width, height }).catch((error: unknown) => {
+      console.warn('Ekran klavyesi açılamadı:', error);
+    });
+  });
   return status;
 }

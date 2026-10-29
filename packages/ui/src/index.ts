@@ -14,7 +14,7 @@ export type {
   ToastMessage,
   ViewState,
 } from './useGame';
-export { ActiveEvents, GameOverScreen, LensBar, NewsFeed, Toasts, TopBar } from './hud';
+export { ActiveEvents, DOCK_PANELS, GameOverScreen, LensBar, NewsFeed, Toasts, TopBar } from './hud';
 export { GoalsPanel, VictoryScreen } from './GoalsPanel';
 export { CouncilPanel } from './CouncilPanel';
 export { LeaguePanel, LeagueResultScreen } from './LeaguePanel';
@@ -69,3 +69,20 @@ export {
 export type { Appearance, AppearanceChoice } from './appearance';
 export type { MessageKey } from './i18n';
 export { fileSlug } from './fileName';
+export {
+  PadPresses,
+  deadZone,
+  glyphOf,
+  padActions,
+  padDrive,
+  padGlyphs,
+  padTouched,
+  readPad,
+} from './padInput';
+export type { Direction, PadAction, PadButton, PadFrame, PadGlyphs, PadLayer, PadLike, PadPress, Stick } from './padInput';
+export { nearestBox } from './spatialNav';
+export type { Box } from './spatialNav';
+export { inputMode, onInputMode, padGlyphsInUse, setInputMode, setPadGlyphsInUse, watchInputMode } from './inputMode';
+export { pt } from './padMessages';
+export type { PadMessageKey } from './padMessages';
+export type { InputMode } from './inputMode';

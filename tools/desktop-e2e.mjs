@@ -209,6 +209,15 @@ try {
   });`);
   check("Steam komutları kabukta: Steam'siz derlemede kapalı, açma isteği hata vermiyor",
     steam?.available === false && /Steam'siz/.test(steam.detail), JSON.stringify(steam));
+  // Kumanda (Tur 72): WebKitGTK'nin Gamepad API'si (libmanette) sayfada; ekran
+  // klavyesinin komutu kabukta, Steam'siz derlemede klavye açılmıyor.
+  const pad = await win.run(`return window.__TAURI__.core.invoke('steam_keyboard', { x: 10, y: 20, width: 300, height: 40 }).then((shown) => ({
+    api: typeof navigator.getGamepads === 'function',
+    slots: typeof navigator.getGamepads === 'function' ? navigator.getGamepads().length : null,
+    shown,
+  }));`);
+  check("Kumanda: WebKitGTK'de Gamepad API var; ekran klavyesi komutu kabukta, Steam'siz derlemede açılmıyor",
+    pad?.api === true && pad.shown === false, JSON.stringify(pad));
   // İkinci kopya D-Bus'tan birinciyi buluyor, ona haber verip çıkıyor. Oturum
   // otobüsü yoksa eklenti tek pencereyi bilemiyor (normal açılış): denetlenemez.
   if (process.env.DBUS_SESSION_BUS_ADDRESS) {

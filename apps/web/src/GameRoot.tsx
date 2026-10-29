@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactElement } from 'react';
-import { SCHEMA_VERSION, customerFlows, getPlayer, routeSignature, scenarioDefOf, supplyRoutes, weatherOn } from '@capital/core';
+import { LENSES, SCHEMA_VERSION, customerFlows, getPlayer, routeSignature, scenarioDefOf, supplyRoutes, weatherOn } from '@capital/core';
 import type { GameCommand, GameEngine, GameSpeed } from '@capital/core';
 import { BUILDING_BY_ID, GOOD_BY_ID } from '@capital/content';
 import type { ScenarioDef } from '@capital/content';
@@ -10,6 +10,7 @@ import {
   ActiveEvents,
   BuildPanel,
   Coach,
+  DOCK_PANELS,
   DecisionCard,
   GameContext,
   GameOverScreen,
@@ -28,6 +29,8 @@ import {
   Toasts,
   TopBar,
   getSettings,
+  inputMode,
+  onInputMode,
   reducedMotion,
   setCityDaylight,
   subscribeSettings,
@@ -35,12 +38,14 @@ import {
   tutorialStepOf,
   useCareerWatch,
   useGameVersion,
+  watchInputMode,
 } from '@capital/ui';
 import type { ExportOutcome, FocusTarget, GameContextValue, LeagueBoard, ToastMessage, ViewState } from '@capital/ui';
 import { setBeforeUpdate } from './pwa';
 import { deliverImageFile, deliverTextFile } from './host';
 import { createLeagueBoard, fallbackLeagueBoard, leagueServerConfigured } from './league-board';
 import { Soundscape } from './audio';
+import { focusFirst, setMapHandler } from './pad';
 
 /**
  * Oyun ekranı: şehir sahnesi, HUD ve paneller (Tur 46).
@@ -167,6 +172,11 @@ export function GameRoot({
     };
     applyAccessibility();
     const stopAccessibility = subscribeSettings(applyAccessibility);
+    // Klavye ve kumanda (Tur 72): imleç kameranın ortasındaki parsel; fare oynayınca farede.
+    watchInputMode(window);
+    const syncCursor = () => renderer.setCenterCursor(inputMode() !== 'pointer');
+    syncCursor();
+    const stopCursor = onInputMode(syncCursor);
 
     let frame = 0;
     let last = performance.now();
@@ -196,6 +206,7 @@ export function GameRoot({
       cancelAnimationFrame(frame);
       window.removeEventListener('resize', onResize);
       stopAccessibility();
+      stopCursor();
       renderer.dispose();
       rendererRef.current = null;
     };
@@ -235,17 +246,94 @@ export function GameRoot({
     });
   }, [engine, scenarioMark]);
 
+  // ---- Haritada imleç (Tur 72): klavye ve kumanda ----
+  /** Haritada mı: kipli bir katman yok, odak bir denetimde değil. */
+  const onMap = useCallback(() => {
+    if (document.querySelector('[aria-modal="true"], [role="alertdialog"]')) return false;
+    const active = document.activeElement;
+    return !(active instanceof HTMLElement) || active === document.body || active === canvasRef.current;
+  }, []);
+
+  /**
+   * Ortadaki parsel (Enter, A): fareyle tıklamanın aynısı; yerleştirmedeyse
+   * oraya kuruyor. Sonra odak detayda: kumandayla ilk eyleminde (A yine
+   * basınca satın al), klavyeyle detayın kendisinde (Tab içine giriyor;
+   * ikinci Enter bir şey satın almıyor). B ve Escape haritaya döndürüyor.
+   */
+  const selectCenter = useCallback((device: 'keyboard' | 'pad') => {
+    if (rendererRef.current?.selectCenter() == null) return;
+    requestAnimationFrame(() =>
+      requestAnimationFrame(() => {
+        const inspector = document.querySelector<HTMLElement>('.inspector.has-selection');
+        if (!inspector) return;
+        if (device === 'pad') focusFirst(inspector, '.inspector-head button');
+        else inspector.focus({ preventScroll: true });
+      }),
+    );
+  }, []);
+
+  // Yerleştirmeye geçince odak haritaya: A ve Enter ortadaki parsele kuruyor.
+  useEffect(() => {
+    if (!view.ghostDefId || inputMode() === 'pointer') return;
+    const active = document.activeElement;
+    if (active instanceof HTMLElement && active !== document.body) active.blur();
+  }, [view.ghostDefId]);
+
+  // Kumandanın harita işleri; kurulum ekranında yalnız arayüzde gezinme var.
+  useEffect(() => {
+    setMapHandler({
+      drive: (pan, orbit, zoom) => rendererRef.current?.drive(pan, orbit, zoom),
+      select: () => selectCenter('pad'),
+      panel: (step) =>
+        setViewState((current) => {
+          const index = DOCK_PANELS.indexOf(current.openPanel as (typeof DOCK_PANELS)[number]);
+          const next = index < 0 ? (step > 0 ? 0 : DOCK_PANELS.length - 1) : (index + step + DOCK_PANELS.length) % DOCK_PANELS.length;
+          return { ...current, openPanel: DOCK_PANELS[next]! };
+        }),
+      pause: () => engine.dispatch({ type: 'TOGGLE_PAUSE' }),
+      // Duraklatılmışsa 1; sonra 1 → 2 → 3 → 1.
+      speed: () => engine.dispatch({ type: 'SET_SPEED', speed: ((engine.getState().time.speed % 3) + 1) as GameSpeed }),
+      lens: () =>
+        setViewState((current) => {
+          const index = LENSES.findIndex((lens) => lens.id === current.lens);
+          return { ...current, lens: LENSES[(index + 1) % LENSES.length]!.id };
+        }),
+      settings: () => setViewState((current) => ({ ...current, openPanel: current.openPanel === 'settings' ? 'none' : 'settings' })),
+      placing: () => viewRef.current.ghostDefId !== null,
+    });
+    return () => setMapHandler(null);
+  }, [engine, selectCenter]);
+
   // ---- Klavye kısayolları ----
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       // Escape her yerden pencereyi kapatıyor: Ayarlar'da odak çoğu zaman bir
-      // kaydırıcıda ya da onay kutusunda (Tur 47). Diğer tuşlar alanın kendisinin.
+      // kaydırıcıda ya da onay kutusunda (Tur 47). Kapatacak bir şey yoksa
+      // (Tur 72) sırayla: odağı arayüzden haritaya ver, seçimi bırak.
+      // Kumandanın B'si de buraya geliyor.
       if (e.code === 'Escape') {
-        setViewState((current) => ({ ...current, ghostDefId: null, openPanel: 'none' }));
+        const current = viewRef.current;
+        if (current.openPanel !== 'none' || current.ghostDefId) {
+          setViewState((latest) => ({ ...latest, ghostDefId: null, openPanel: 'none' }));
+          return;
+        }
+        const active = document.activeElement;
+        if (active instanceof HTMLElement && active !== document.body && active !== canvasRef.current) {
+          active.blur();
+          return;
+        }
+        if (current.selectedTileId !== null) setViewState((latest) => ({ ...latest, selectedTileId: null }));
         return;
       }
       const target = e.target as HTMLElement | null;
       if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) return;
+
+      // Enter (Tur 72): haritada ortadaki parseli seç; odak bir düğmedeyse düğmenin.
+      if ((e.code === 'Enter' || e.code === 'NumpadEnter') && !e.repeat && onMap()) {
+        e.preventDefault();
+        selectCenter('keyboard');
+        return;
+      }
 
       const digit = /^(?:Digit|Numpad)([123])$/.exec(e.code);
       if (e.code === 'Space') {
@@ -258,7 +346,7 @@ export function GameRoot({
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [engine]);
+  }, [engine, onMap, selectCenter]);
 
   useEffect(() => {
     if (bootMessage) toast(bootMessage, 'info');
@@ -278,6 +366,8 @@ export function GameRoot({
       getState: () => engine.getState(),
       selectTile: (tileId: number | null) =>
         setViewState((current) => ({ ...current, selectedTileId: tileId })),
+      // Seçili parsel: test, Enter'ın ve A'nın ortadaki parseli seçtiğini görsün (Tur 72).
+      selectedTile: () => viewRef.current.selectedTileId,
       setLens: (lens: ViewState['lens']) =>
         setViewState((current) => ({ ...current, lens })),
       renderInfo: () => rendererRef.current?.getDebugInfo() ?? null,
@@ -306,6 +396,8 @@ export function GameRoot({
       buildingAccent: (id: string) => rendererRef.current?.buildingAccent(id) ?? null,
       // Karenin ekrandaki yeri: test, tuval boyut değiştirince izdüşümün yeni yeri okuduğunu görsün (Tur 65).
       screenOfTile: (tileId: number) => rendererRef.current?.screenOfTile(tileId) ?? null,
+      // Kameranın açısı ve uzaklığı: test Q/E'yi, +/−'yi ve kumandanın çubuklarını ölçsün (Tur 72).
+      cameraPose: () => rendererRef.current?.cameraPose() ?? null,
     };
     return () => {
       delete globals['__capital'];
@@ -590,6 +682,8 @@ export function GameRoot({
     <GameContext.Provider value={context}>
       <div className="app">
         <canvas ref={canvasRef} className="scene" />
+        {/* Klavye ve kumanda (Tur 72): imleç kameranın ortasındaki parsel. */}
+        <div className="map-reticle" aria-hidden="true" />
         <div className="hud">
           <TopBar />
           <div className="leftcol">

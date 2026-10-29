@@ -3,7 +3,8 @@
 > Tur 66'da yazıldı. Kod `apps/desktop` (Tauri 2 kabuğu) ve
 > `apps/web/src/desktop/` (sayfa tarafı). Steam (başarımlar, depolar,
 > mağaza sayfası, yükleme) Tur 70'te: `docs/STEAM.md`. Uygulama gibi
-> davranması, pencere ve Steam Deck Tur 71'de.
+> davranması, pencere ve Steam Deck Tur 71'de; kumanda ve yalnız klavye
+> Tur 72'de.
 
 ## Ne
 
@@ -51,8 +52,28 @@ Web sürümünden farkı:
   piksel; çok büyükte arayüzün en küçük yazısı 13). Oyuncunun seçimi önde:
   Ayarlar'dan seçilen boy işaretleniyor (`textSizeChosen`), başka bir ayarı
   değiştirmek seçim sayılmıyor; Steam Cloud'la PC'den gelen kayıt da Deck'te
-  büyük açılıyor. Başlatma seçeneğinde `SteamDeck=0` ile kapanıyor. Kumanda
-  Tur 72'de.
+  büyük açılıyor. Başlatma seçeneğinde `SteamDeck=0` ile kapanıyor.
+- **Kumanda ve yalnız klavye (Tur 72).** Oyun fare olmadan oynanıyor.
+  Klavye ya da kumanda kullanılınca imleç kameranın ortasındaki parsel
+  (ekranın ortasında nişangâh); fare oynayınca yine farede. Web sürümünde
+  de aynı.
+
+  | | Klavye | Kumanda |
+  |---|---|---|
+  | Ortadaki parseli seç, düğmeye bas | Enter | A |
+  | Geri: pencereyi kapat, haritaya dön, seçimi bırak | Escape | B |
+  | Kamerayı kaydır | WASD, oklar | sol çubuk |
+  | Döndür, eğ | Q / E | sağ çubuk |
+  | Yakınlaş, uzaklaş | + / − | RT / LT |
+  | Düğmeler arasında gezin | Tab | yön tuşu (pencerede sol çubuk da) |
+  | Önceki, sonraki panel | — | LB / RB |
+  | Duraklat, hız | Boşluk, 1–3 | Y, X |
+  | Ayarlar, sonraki görünüm | — | ☰, ⧉ |
+
+  Ekranın altında kumandanın düğme ipuçları var (PlayStation'da ✕ ○ □ △).
+  Ayarlar'da kumandanın listesi duruyor. Steam Deck'te kumandayla bir yazı
+  alanı seçilince Steam'in ekran klavyesi açılıyor (`steam_keyboard`).
+  Steam Input'un önerilen düzeni `docs/STEAM.md`'de.
 
 ## Derleme ve çalıştırma
 
@@ -184,7 +205,7 @@ deposunun Steam Deck'te denenmesi; o bir Deck istiyor.
   pencerenin hafızası: boy ve yer yalnız pencere kipinde, büyütme ve tam
   ekran geçişinin haberleri pencere boyu sayılmıyor, boyu değiştirip hemen
   büyüten oyuncunun boyu unutulmuyor, ekran düzeni değişince pencere kalan
-  ekrana sığdırılıyor.
+  ekrana sığdırılıyor; Steam'siz derlemede ekran klavyesi yok.
 - `pnpm test` → `apps/web/test/desktop.test.ts`: ayar aynası (dosya kazanır,
   sıra, oturum deposu hariç, düşen yazma), slotların dosya deposuyla
   kaydet-listele-yükle, oyunun her yerel depo anahtarının dosyaya
@@ -194,10 +215,14 @@ deposunun Steam Deck'te denenmesi; o bir Deck istiyor.
   ve şehir kartı İndirilenler'de, ayar dosyada, kapanırken kayıt, yeniden
   açılınca kaldığı gün ve dil; Steam komutları ve tek pencere (Tur 70);
   tarayıcı kısayolları, sağ tık ve seçim, F11, pencerenin durumu, ayrı bir
-  sürücüyle Steam Deck'in metni (Tur 71). CI: `.github/workflows/desktop.yml`.
+  sürücüyle Steam Deck'in metni (Tur 71); WebKitGTK'de Gamepad API ve ekran
+  klavyesinin komutu (Tur 72). CI: `.github/workflows/desktop.yml`.
 - `pnpm playtest` → "Pencere boyları ve Steam Deck" (Tur 71): 960 × 600,
   1093 × 614, 1280 × 800 ve 1920 × 1080'de paneller üst üste binmiyor, şehir
   ortada tıklanabilir; Deck'in boyunda her panelde en küçük yazı ≥ 12 piksel.
+- `pnpm playtest` → "Kumanda ve yalnız klavye" (Tur 72): sahte kumandayla
+  ve yalnız klavyeyle kurulum, ortadaki parseli seçip satın alma, yapıyı
+  kurma, kamera, paneller, Ayarlar, ipucu şeridi ve düğme yazıları.
 
 ```sh
 cargo install tauri-driver --version 2.0.6 --locked   # bir kez

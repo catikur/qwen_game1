@@ -446,7 +446,8 @@ export function Inspector(): ReactElement | null {
     // `has-selection`: dar ekranda bu panel haritanın HEMEN ALTINA
     // taşınıyor. Bir kareye dokunmak doğrudan bir eylem; detayının ve
     // satın alma butonunun kaydırma gerektirmeden görünmesi gerekiyor.
-    <aside className={compactTile === tile.id ? 'inspector has-selection compact' : 'inspector has-selection'}>
+    // `tabIndex`: Enter ve A ile seçilen parselde odak buraya geliyor (Tur 72).
+    <aside className={compactTile === tile.id ? 'inspector has-selection compact' : 'inspector has-selection'} tabIndex={-1}>
       <header className="inspector-head">
         <div>
           <h2>{district.name}</h2>

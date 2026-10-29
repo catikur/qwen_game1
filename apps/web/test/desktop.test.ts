@@ -10,6 +10,7 @@ import type { Invoke, InvokeOptions } from '../src/desktop/bridge';
 import { hydrate, isProfileKey, mirror } from '../src/desktop/profile';
 import { fileSaves } from '../src/desktop/saves';
 import { initSteam } from '../src/desktop/steam';
+import { TEXT_INPUT_EVENT } from '../src/textInput';
 import { keyVerdict, nativeFeel } from '../src/desktop/native';
 import { TEXT_SCALE } from '../../../packages/ui/src/settings';
 
@@ -258,6 +259,7 @@ function fakeCareer(initial: string[]) {
 /** Kabuğun Steam komutlarının sahtesi; `failUnlocks` kadar ilk bildirim reddediliyor. */
 function fakeSteam(available: boolean, failUnlocks = 0) {
   const unlocks: string[][] = [];
+  const keyboards: unknown[] = [];
   let failures = failUnlocks;
   const invoke = (async (command: string, args?: unknown) => {
     if (command === 'steam_status') return { available, detail: available ? "Steam'e bağlı" : 'Steam açık değil' };
@@ -266,9 +268,22 @@ function fakeSteam(available: boolean, failUnlocks = 0) {
       unlocks.push((args as { names: string[] }).names);
       return null;
     }
+    if (command === 'steam_keyboard') {
+      keyboards.push(args);
+      return true;
+    }
     throw new Error(`beklenmeyen komut ${command}`);
   }) as Invoke;
-  return { invoke, unlocks };
+  return { invoke, unlocks, keyboards };
+}
+
+/** Sayfanın penceresi yerine: yazı alanı haberi buradan geliyor. */
+function fakeHost(devicePixelRatio: number) {
+  const host = new EventTarget() as EventTarget & { devicePixelRatio: number };
+  host.devicePixelRatio = devicePixelRatio;
+  const field = (detail: { x: number; y: number; width: number; height: number }) =>
+    host.dispatchEvent(new CustomEvent(TEXT_INPUT_EVENT, { detail }));
+  return { host, field };
 }
 
 const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
@@ -319,10 +334,26 @@ describe('Steam başarımları (Tur 70)', () => {
     assert.deepEqual(steam.unlocks, [['CF_SHIELD']]);
   });
 
-  test("kabuğun komut listesinde Steam'in iki komutu var", () => {
+  test('kumanda yazı alanını seçince Steam’in ekran klavyesi alanın yanında, fiziksel pikselde (Tur 72)', async () => {
+    const steam = fakeSteam(true);
+    const deck = fakeHost(1.5);
+    await initSteam(steam.invoke, fakeCareer([]).source, deck.host);
+    deck.field({ x: 100.4, y: 40, width: 320, height: 36.2 });
+    await settle();
+    assert.deepEqual(steam.keyboards, [{ x: 151, y: 60, width: 480, height: 54 }]);
+    // Steam yoksa klavye de istenmiyor.
+    const off = fakeSteam(false);
+    const pc = fakeHost(1);
+    await initSteam(off.invoke, fakeCareer([]).source, pc.host);
+    pc.field({ x: 0, y: 0, width: 320, height: 36 });
+    await settle();
+    assert.deepEqual(off.keyboards, []);
+  });
+
+  test("kabuğun komut listesinde Steam'in üç komutu var", () => {
     const main = readFileSync(join(repoRoot(), 'apps/desktop/src-tauri/src/main.rs'), 'utf8');
     const handler = /generate_handler!\[([^\]]*)\]/.exec(main)?.[1] ?? '';
-    for (const command of ['steam_status', 'steam_unlock']) assert.ok(handler.includes(command), command);
+    for (const command of ['steam_status', 'steam_unlock', 'steam_keyboard']) assert.ok(handler.includes(command), command);
   });
 });
 

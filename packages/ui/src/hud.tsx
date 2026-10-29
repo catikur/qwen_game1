@@ -302,6 +302,9 @@ const PANEL_TABS: Array<{
   { id: 'help', label: 'hud.dock.help.label', title: 'hud.dock.help.title' },
 ];
 
+/** Rıhtımın panelleri sırayla (Tur 72): kumandanın LB/RB'si bu sırada geziyor. */
+export const DOCK_PANELS: ReadonlyArray<(typeof PANEL_TABS)[number]['id']> = PANEL_TABS.map((tab) => tab.id);
+
 /** Rıhtım ikonları — `currentColor` ile çizilir, iki temada da çalışır. */
 function PanelIcon({ name }: { name: string }): ReactElement {
   const paths: Record<string, ReactElement> = {

@@ -8252,6 +8252,97 @@ ya da sırlar Repository secrets'e, sonra Run workflow). Bu birleşmeden
 sonra "Lite lig sunucusu" iş akışı sunucu güncellenene kadar `main`'de
 kırmızı; bilerek.
 
+### Tur 72 — Oyun kumandası ve yalnız klavye
+
+Faz 6'nın ikinci turu. Simülasyon ve şema aynı; hazır oyunların parmak izi
+birebir (simülasyon `a5ded51fb01e62a5`, lig `104a3ce17d31216b`).
+
+**Fare olmadan parsel seçilemiyordu.** Klavye kamerayı kaydırıyordu (WASD,
+oklar) ama parsel seçmenin, döndürmenin ve yakınlaştırmanın tek yolu fareydi.
+Kumanda hiç okunmuyordu. Steam Deck'te ve kumandayla oynayan PC oyuncusunda
+oyun oynanamıyordu. Valve'ın "Steam Deck Verified" ölçüsü de bunu istiyor:
+oyunun bütün işleri fiziksel düğmelerle, ekranda kumandanın düğme yazıları,
+yazı alanında ekran klavyesi.
+
+**Yapılanlar.**
+- *Haritada imleç.* Klavye ya da kumanda kullanılınca imleç kameranın
+  ortasındaki parsel: ekranın ortasında nişangâh, altındaki parsel
+  vurgulu. Fare oynayınca imleç yine farede, nişangâh kalkıyor. Son
+  kullanılan girdi kökte `data-input` (`packages/ui/src/inputMode.ts`);
+  kumandanın B'sinin gönderdiği Escape ve yerinde duran farenin olayları
+  kipi değiştirmiyor.
+- *Klavye.*
+  - Enter ortadaki parseli seçiyor; odak detayda, Tab düğmelerine giriyor.
+  - Q/E döndürüyor, + ve − yakınlaştırıyor. +/− yazdığı karaktere göre
+    okunuyor, Türkçe Q klavyede de çalışıyor.
+  - Escape sırayla pencereyi ya da yerleştirmeyi kapatıyor, odağı haritaya
+    veriyor, seçimi bırakıyor.
+  - Ayarlar'ın kısayol listesinde Enter, Q/E ve +/− de var.
+- *Kumanda.* İşi `apps/web/src/pad.ts`'te, kararlar saf işlevlerde
+  (`packages/ui/src/padInput.ts`, `spatialNav.ts`):
+  - Sol çubuk kaydırıyor, sağ çubuk döndürüp eğiyor; RT yakınlaştırıyor, LT
+    uzaklaştırıyor.
+  - A ortadaki parseli seçiyor ya da odaktaki düğmeye basıyor. B geri:
+    pencereyi kapatıyor, haritaya dönüyor, seçimi bırakıyor.
+  - Yön tuşu ekranda o yöndeki en yakın düğmeye gidiyor; kaydırıcıda ve
+    seçim kutusunda değeri değiştiriyor. Pencerede sol çubuk da geziyor,
+    sağ çubuk içeriği kaydırıyor.
+  - LB/RB önceki/sonraki panel, Y duraklat, X hız, ☰ Ayarlar, ⧉ sonraki
+    görünüm (lens).
+  - Ekranın altında düğme ipuçları; katmana göre değişiyor (harita,
+    düğmeler, pencere, yerleştirme). Xbox ve Steam Deck'te A B X Y,
+    PlayStation'da ✕ ○ □ △. HUD şeride altta yer ayırıyor.
+  - Ayarlar'da "Kumanda" listesi (kumanda kullanıldıysa).
+  - Modül kumanda bağlanınca iniyor (4,2 KB); giriş paketine yalnız bir
+    kanca girdi.
+- *Steam Deck'in ekran klavyesi.* Kumandayla bir yazı alanı seçilince
+  (şirket adı, davet kodu) Steam'in klavyesi alanı örtmeden açılıyor
+  (`ShowFloatingGamepadTextInput`, kabuğun `steam_keyboard` komutu). Steam
+  Input'un önerilen düzeni `docs/STEAM.md`'de (adım 7).
+
+**Tarayıcıda bulunanlar.** Hepsi sahte kumandayla oynanırken çıktı.
+- *Haritadan sola basınca odak yanlış yere gidiyordu.* Sol sütundaki yapı
+  kartları yerine üst bardaki "Rakip" sekmesine gidiyordu, çünkü ana
+  eksenin ağırlığı çapraz uzaktaki sekmeyi öne alıyordu. Yön bulucu artık
+  Android'in odak bulucusunun kurallarıyla aynı: kaynağın hizasındaki
+  aday, hizanın dışındakini yeniyor.
+- *Satın alınca odak "Parseli sat" düğmesine geçiyordu.* A'ya bir kez daha
+  basan oyuncu parseli hemen satıyordu. Artık basılan düğme kaybolunca odak
+  detayın kendisinde; içine A ya da yön tuşu sokuyor.
+- *İpucu şeridi panelleri örtüyordu.* Haberlerin ve sütunların son satırı
+  şeridin altında kalıyordu; HUD artık altta şeride yer ayırıyor.
+- *Kısa basış kaçabiliyor.* Bu makinede oyun saniyede ~5 kare çiziyor ve
+  kumandanın döngüsü karede bir okuyor; 70 ms'lik basış iki kare arasında
+  kaçıyordu. Gerçek basış ~100 ms, 60 karede altı kare; test basışları iki
+  kare sürüyor.
+
+**Doğrulama.**
+- `pnpm test` 874/874 (867'den); tip denetimi temiz; Almanca denetimi 0
+  hata (kumanda 27/27).
+  - `packages/ui/test/padInput.test.ts` (6 yeni): kumandanın okunması (ölü
+    bölge, tetikler), basış ve tekrar, katmana göre eylemler, kamera
+    sürüşü, düğme yazıları, yönle odak (hizadaki aday, kap aday değil).
+  - `apps/web/test/desktop.test.ts` (1 yeni): yazı alanı seçilince ekran
+    klavyesi alanın yerinde, fiziksel pikselde isteniyor; Steam yokken
+    istenmiyor.
+- `cargo test` 21/21, `cargo test --features steam` 20/20, clippy temiz;
+  Steam'siz derlemede ekran klavyesi yok.
+- Tarayıcı testinin yeni bölümü "Kumanda ve yalnız klavye" (28 kontrol)
+  28/28. Kurulum yalnız kumandayla ve yalnız klavyeyle bitiyor. Ardından
+  ortadaki parsel seçiliyor, satın alınıyor, yapı seçilip parsele
+  kuruluyor. Kamera çubuklarla ve Q/E, +/−, WASD ile dönüyor, yakınlaşıyor,
+  kayıyor. LB/RB, Y, X, ☰ ve ⧉ işini yapıyor, kaydırıcı yön tuşuyla
+  değişiyor. Şerit panellerin üstüne binmiyor; DualSense'te ✕ ○ □ △; fare
+  oynayınca ipuçları ve nişangâh kalkıyor; konsol temiz.
+- Gerçek pencerede uçtan uca 29/29 (28'den): WebKitGTK'de Gamepad API var
+  (libmanette), ekran klavyesinin komutu kabukta.
+- Paket bütçesi tamam (ana parça 74,5 KB; kumandanın modülü, Ayarlar'daki
+  listesi ve yazıları ayrı parçalarda).
+
+**Kalan.** Steam Deck'in kendisinde denemek. Valve'ın Verified testinden
+önce, Deck'te Linux deposuyla ya da Proton'la (`docs/STEAM.md` → "Linux ve
+Steam Deck").
+
 ---
 
 ## 3. Ölçülen durum

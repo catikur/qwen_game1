@@ -1,3 +1,4 @@
+import { Suspense, lazy } from 'react';
 import type { ReactElement } from 'react';
 import { AppearancePicker } from './AppearancePicker';
 import { installApp, useAppShell } from './appShell';
@@ -39,6 +40,7 @@ const VOLUME_LABELS: Record<VolumeChannel, MessageKey> = {
 /** Kısayollar: tuş ve ne yaptığı. Tuş adları da sözlükte (İngilizcede "Space"). */
 const SHORTCUTS: Array<[MessageKey, MessageKey]> = [
   ['panels.settings.keys.pan.key', 'panels.settings.keys.pan'],
+  ['panels.settings.keys.select.key', 'panels.settings.keys.select'],
   ['panels.settings.keys.drag.key', 'panels.settings.keys.drag'],
   ['panels.settings.keys.rotate.key', 'panels.settings.keys.rotate'],
   ['panels.settings.keys.zoom.key', 'panels.settings.keys.zoom'],
@@ -49,6 +51,13 @@ const SHORTCUTS: Array<[MessageKey, MessageKey]> = [
 ];
 /** Yalnız masaüstü sürümünde (Tur 71): kabuk kökü `data-shell="desktop"` diye işaretliyor. */
 const DESKTOP_SHORTCUTS: Array<[MessageKey, MessageKey]> = [['panels.settings.keys.fullscreen.key', 'panels.settings.keys.fullscreen']];
+
+/**
+ * Kumandanın düğmeleri (Tur 72): ayrı parça, kumanda kullanılınca iniyor
+ * (kök `data-pad-glyphs` işaretini kumanda modülü koyuyor). Listenin
+ * yazıları da onunla (`padMessages.ts`); giriş paketine girmiyorlar.
+ */
+const PadControls = lazy(() => import('./PadControls'));
 
 function Choices<T extends string>({
   name,
@@ -200,6 +209,11 @@ export function SettingsPanel(): ReactElement {
           ))}
         </dl>
       </section>
+      {document.documentElement.dataset['padGlyphs'] !== undefined && (
+        <Suspense fallback={null}>
+          <PadControls />
+        </Suspense>
+      )}
     </div>
   );
 }
