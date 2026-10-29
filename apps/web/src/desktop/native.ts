@@ -42,13 +42,20 @@ export type KeyVerdict = 'browser' | 'fullscreen' | null;
 
 type KeyLike = Pick<KeyboardEvent, 'code' | 'ctrlKey' | 'metaKey' | 'altKey' | 'shiftKey'>;
 
-/** Bir tuş basışı kimin: tarayıcının (yutulur), tam ekranın ya da oyunun (`null`). */
-export function keyVerdict(event: KeyLike): KeyVerdict {
-  if (event.code === 'F11' || (event.altKey && (event.code === 'Enter' || event.code === 'NumpadEnter'))) return 'fullscreen';
+/**
+ * Bir tuş basışı kimin: tarayıcının (yutulur), tam ekranın ya da oyunun
+ * (`null`). `editable`: odak yazı alanında.
+ */
+export function keyVerdict(event: KeyLike, editable = false): KeyVerdict {
+  // AltGr Windows'ta Ctrl+Alt olarak geliyor ve bir harf yazıyor (Almanca
+  // "}" AltGr+0, Lehçe "ś" AltGr+S); tarayıcının kısayolları Alt'sız (Cursor Bugbot).
+  const altGr = event.ctrlKey && event.altKey;
+  if (event.code === 'F11' || (event.altKey && !altGr && (event.code === 'Enter' || event.code === 'NumpadEnter'))) return 'fullscreen';
   if (BROWSER_KEYS.has(event.code)) return 'browser';
+  if (altGr) return null;
   if ((event.ctrlKey && CTRL_CHORDS.has(event.code)) || (event.metaKey && META_CHORDS.has(event.code))) return 'browser';
-  // Alt + ok: geri ve ileri.
-  if (event.altKey && (event.code === 'ArrowLeft' || event.code === 'ArrowRight')) return 'browser';
+  // Alt + ok: geri ve ileri. Yazı alanında macOS'ta sözcük sözcük gezinme (Option + ok).
+  if (!editable && event.altKey && (event.code === 'ArrowLeft' || event.code === 'ArrowRight')) return 'browser';
   return null;
 }
 
@@ -67,7 +74,7 @@ export interface NativeOptions {
 /** Sayfaya bağla; bırakma işlevini döndürüyor (testler için). */
 export function nativeFeel(target: Window, options: NativeOptions): () => void {
   const onKeyDown = (event: KeyboardEvent) => {
-    const verdict = keyVerdict(event);
+    const verdict = keyVerdict(event, editable(event.target));
     if (!verdict) return;
     event.preventDefault();
     // Oyunun kendi dinleyicileri (kamera, hız) bu tuşları görmesin; pencereye

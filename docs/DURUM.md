@@ -8090,20 +8090,29 @@ Seçilmemiş boy her cihazda o cihazın varsayılanı; Deck'in "çok büyük"ü
 PC'ye geçince normale dönüyor. İşaretsiz eski kayıtta varsayılandan farklı
 boy seçilmiş sayılıyor.
 
+**Cursor Bugbot'un bulduğu şey.** Kısayol süzgeci yazı alanında harf
+yutuyordu. Windows'ta AltGr, Ctrl+Alt olarak geliyor: Almanca "}" (AltGr+0)
+"yakınlığı sıfırla", Lehçe "ś", "ó", "ń" (AltGr+S, O, N) "kaydet, aç, yeni
+pencere" sayılıyordu. macOS'ta yazı alanında sözcük sözcük gezinme
+(Option + ok) "geri" sayılıyordu. Artık Ctrl+Alt hiçbir zaman tarayıcının
+kısayolu değil (tarayıcınınkiler Alt'sız), Alt + ok yazı alanında yerinde;
+F5, Ctrl+R, Ctrl+P yazı alanında da yutuluyor.
+
 **Doğrulama.**
-- `pnpm test` 863/863 (849'dan); tip denetimi temiz.
+- `pnpm test` 865/865 (849'dan); tip denetimi temiz.
   - `packages/lite-league/test/simCheck.test.ts` (4 yeni): uç sunucunun
     izini veriyor; denetim aynı, farklı, eski sunucu (401) ve okunamayan
     durumunu ayırıyor; az önce dağıtılan sunucuyu bekliyor; `main`'de hata,
     PR'da uyarı.
   - `deploy.test.ts` (2 yeni): bağımlılıklar wrangler'dan önce kuruluyor;
     canlı denetim dağıtımdan sonra koşuyor, `main`'de katı.
-  - `apps/web/test/desktop.test.ts` → "uygulama gibi (Tur 71)" (5 yeni):
+  - `apps/web/test/desktop.test.ts` → "uygulama gibi (Tur 71)" (7 yeni):
     hangi tuş tarayıcının, hangisi oyunun ve macOS menüsünün; yutulan tuş
     oyunun dinleyicisine gitmiyor, basılı tutulan F11 titretmiyor; sağ tık
     ve sürükleme; çok büyük metinde arayüzün en küçük yazısı 12 pikseli
     geçiyor (stil dosyasından); kabuğun komutları, pencere eklentisi, en
-    küçük pencere.
+    küçük pencere; AltGr harfleri ve Option + ok yazı alanında geçiyor
+    (Cursor Bugbot).
   - `packages/ui/test/deviceDefaults.test.ts` (3 yeni): Deck'in varsayılanı
     yalnız seçilmemiş metin boyunda; PC'den gelen, metin boyu seçilmemiş
     kayıtta da (Codex); Deck'te seçilmemiş boy PC'de normal, eski kayıttaki

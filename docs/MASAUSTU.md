@@ -33,7 +33,9 @@ Web sürümünden farkı:
   kısayolları yutuluyor: F5, Ctrl+R (yeniden yükle; WebView2'de son otomatik
   kayıttan sonrası giderdi), Ctrl+P, Ctrl+F, Ctrl+U, Ctrl+S, Ctrl+J, Ctrl+H,
   Ctrl+N, yakınlaştırma, Alt+← ve →, F3, F7. macOS'ta Cmd'li karşılıkları;
-  uygulama menüsünün kısayolları (Cmd+H, Cmd+M, Cmd+W, Cmd+Q) yerinde. Sağ
+  uygulama menüsünün kısayolları (Cmd+H, Cmd+M, Cmd+W, Cmd+Q) yerinde.
+  Ctrl+Alt (Windows'ta AltGr: "}", "@", "ś") hiç yutulmuyor; yazı alanında
+  Alt + ok da (macOS'ta sözcük sözcük gezinme). Sağ
   tık menüsü yalnız yazı alanında ve seçili kodda; oyunun metni seçilmiyor
   (yazı alanı ve kod seçiliyor), sürükle-bırak yok, kaydırma çubukları ince.
 - **Tam ekran ve pencere (Tur 71).** F11 ya da Alt+Enter (kabuğun

@@ -354,6 +354,23 @@ describe('uygulama gibi (Tur 71)', () => {
     assert.equal(keyVerdict(key('NumpadEnter', { altKey: true })), 'fullscreen');
   });
 
+  test('AltGr ile yazılan harf ve macOS\'un sözcük gezinmesi yazı alanında yerinde (Cursor Bugbot)', () => {
+    // Windows'ta AltGr = Ctrl+Alt: Almanca "}" (0), "\\" (ß), "@" (Q); Lehçe "ś", "ó", "ń".
+    for (const code of ['Digit0', 'Minus', 'KeyQ', 'KeyS', 'KeyO', 'KeyN', 'KeyE']) {
+      assert.equal(keyVerdict(key(code, { ctrlKey: true, altKey: true })), null, `AltGr+${code}`);
+      assert.equal(keyVerdict(key(code, { ctrlKey: true, altKey: true }), true), null, `yazı alanında AltGr+${code}`);
+    }
+    assert.equal(keyVerdict(key('Enter', { ctrlKey: true, altKey: true })), null, 'AltGr+Enter tam ekran değil');
+    // Option + ok macOS'ta sözcük sözcük gezinme; yazı alanının dışında tarayıcının geri tuşu.
+    assert.equal(keyVerdict(key('ArrowLeft', { altKey: true }), true), null);
+    assert.equal(keyVerdict(key('ArrowRight', { altKey: true }), true), null);
+    assert.equal(keyVerdict(key('ArrowLeft', { altKey: true }), false), 'browser');
+    // Yazı alanında da tarayıcının işi olanlar yutuluyor: yeniden yükle, yazdır, ara.
+    for (const [code, mods] of [['F5', {}], ['KeyR', { ctrlKey: true }], ['KeyP', { ctrlKey: true }], ['KeyF', { metaKey: true }]] as const) {
+      assert.equal(keyVerdict(key(code, mods), true), 'browser', code);
+    }
+  });
+
   /** Pencere yerine bir olay hedefi: `closest` yazı alanı mı diye, `getSelection` seçili metin. */
   class FakeWindow extends EventTarget {
     field = false;
@@ -393,6 +410,16 @@ describe('uygulama gibi (Tur 71)', () => {
     assert.equal(toggles, 2);
     release();
     assert.equal(press(target, 'F5'), false, 'bırakılınca dinlemiyor');
+  });
+
+  test('yazı alanında AltGr ve Option + ok geçiyor, F5 yine yutuluyor', () => {
+    const target = new FakeWindow();
+    target.field = true;
+    const release = nativeFeel(target as unknown as Window, { toggleFullscreen: () => undefined });
+    assert.equal(press(target, 'Digit0', { ctrlKey: true, altKey: true }), false, 'Almanca "}"');
+    assert.equal(press(target, 'ArrowLeft', { altKey: true }), false, 'Option + ←');
+    assert.equal(press(target, 'F5'), true);
+    release();
   });
 
   test('sağ tık menüsü oyunda kapalı; yazı alanında ve seçili kodda açık; sürükleme kapalı', () => {
