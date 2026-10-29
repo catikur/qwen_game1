@@ -13,8 +13,6 @@ tauri-build = { version = "=2.7.1", features = [] }
 [dependencies]
 tauri = { version = "=2.12.1", features = [] }
 tauri-plugin-single-instance = "2"
-# Pencerenin boyu, yeri ve tam ekranı (Tur 71).
-tauri-plugin-window-state = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 # Steam başarımları (Tur 70): yalnız `--features steam` derlemesinde.

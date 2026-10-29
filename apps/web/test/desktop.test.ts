@@ -464,12 +464,17 @@ describe('uygulama gibi (Tur 71)', () => {
     const main = readFileSync(join(root, 'apps/desktop/src-tauri/src/main.rs'), 'utf8');
     const handler = /generate_handler!\[([^\]]*)\]/.exec(main)?.[1] ?? '';
     for (const command of ['shell_info', 'fullscreen_toggle']) assert.ok(handler.includes(command), command);
-    assert.match(main, /tauri_plugin_window_state::Builder::default\(\)\.build\(\)/, 'pencere durumu eklentisi');
+    // Pencerenin hafızası kabuğun kendi modülünde (Codex): açılışta uygulanıyor,
+    // taşıma ve boy değişimi izleniyor, çıkışta yazılıyor. Kararları Rust testleri sınıyor.
+    for (const call of ['window::restore(', 'window::track(window)', 'window::closing(window)', 'window::persist(app)']) assert.ok(main.includes(call), call);
+    assert.doesNotMatch(main, /tauri_plugin_window_state/, 'eklenti tam ekranda ekranın boyunu yazıyordu');
     const conf = JSON.parse(readFileSync(join(root, 'apps/desktop/src-tauri/tauri.conf.json'), 'utf8')) as {
       app: { windows: Array<{ minWidth: number; minHeight: number; maximized?: boolean }> };
     };
     const [window] = conf.app.windows;
-    assert.equal(window?.maximized, true, 'ilk açılışta büyütülmüş');
+    // İlk açılışın büyütülmesi kabuğun kararı (hafıza yoksa); yapılandırmadaki
+    // bayrak hatırlanan pencere kipini her açılışta ezerdi.
+    assert.equal(window?.maximized, undefined);
     // En küçük pencere tarayıcı testinin ölçtüğü en küçük boy (playtest: "Pencere boyları").
     assert.deepEqual([window?.minWidth, window?.minHeight], [960, 600]);
   });

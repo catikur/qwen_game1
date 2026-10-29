@@ -11,6 +11,7 @@
 
 mod steam;
 mod store;
+mod window;
 
 use std::collections::BTreeMap;
 use std::path::PathBuf;
@@ -167,7 +168,7 @@ fn shell_info() -> ShellInfo {
 }
 
 /// F11 ve Alt+Enter (Tur 71): tam ekranı aç ya da kapat; yeni durum döner.
-/// Pencerenin boyu, yeri ve tam ekranı kapanışta hatırlanıyor (window-state).
+/// Pencerenin boyu, yeri ve tam ekranı kapanışta hatırlanıyor (`window`).
 #[tauri::command]
 fn fullscreen_toggle(window: tauri::WebviewWindow) -> Result<bool, String> {
     let on = !window.is_fullscreen().map_err(|error| error.to_string())?;
@@ -188,12 +189,19 @@ fn main() {
             }
         }))
         // Pencerenin boyu, yeri, büyütülmüşlüğü ve tam ekranı (Tur 71): oyun
-        // kapandığı gibi açılıyor. İlk açılışta büyütülmüş (tauri.conf.json).
-        .plugin(tauri_plugin_window_state::Builder::default().build())
-        // Kapatma düğmesi: önce sayfa otomatik kayda yazsın. İkinci tıklama
-        // ya da süre dolması beklemeden kapatıyor.
-        .on_window_event(|window, event| {
-            if let WindowEvent::CloseRequested { api, .. } = event {
+        // kapandığı gibi açılıyor, ilk açılışta büyütülmüş (`window`).
+        .setup(|app| {
+            if let Some(main) = app.get_webview_window("main") {
+                window::restore(app.handle(), &main.as_ref().window());
+            }
+            Ok(())
+        })
+        .on_window_event(|window, event| match event {
+            WindowEvent::Moved(_) | WindowEvent::Resized(_) => window::track(window),
+            // Kapatma düğmesi: önce sayfa otomatik kayda yazsın. İkinci tıklama
+            // ya da süre dolması beklemeden kapatıyor.
+            WindowEvent::CloseRequested { api, .. } => {
+                window::closing(window);
                 if CLOSING.swap(true, Ordering::SeqCst) {
                     return;
                 }
@@ -208,6 +216,7 @@ fn main() {
                     app.exit(0);
                 });
             }
+            _ => {}
         })
         .invoke_handler(tauri::generate_handler![
             save_write,
@@ -224,8 +233,13 @@ fn main() {
             shell_info,
             fullscreen_toggle,
         ])
-        .run(tauri::generate_context!())
-        .expect("CapitalForge açılamadı");
+        .build(tauri::generate_context!())
+        .expect("CapitalForge açılamadı")
+        .run(|app, event| {
+            if let tauri::RunEvent::Exit = event {
+                window::persist(app);
+            }
+        });
 }
 
 #[cfg(test)]

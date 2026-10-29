@@ -40,8 +40,10 @@ Web sürümünden farkı:
   (yazı alanı ve kod seçiliyor), sürükle-bırak yok, kaydırma çubukları ince.
 - **Tam ekran ve pencere (Tur 71).** F11 ya da Alt+Enter (kabuğun
   `fullscreen_toggle` komutu). İlk açılışta pencere büyütülmüş; sonra
-  kapandığı boyda, yerde ve tam ekranda açılıyor (`tauri-plugin-window-state`).
-  En küçük pencere 960 × 600.
+  kapandığı boyda, yerde, büyütülmüş ya da tam ekran açılıyor (kabuğun
+  `src/window.rs` modülü). Boy ve yer yalnız pencere kipindeyken
+  hatırlanıyor: tam ekranda kapanan oyun tam ekran açılıyor, çıkınca pencere
+  eski boyunda. En küçük pencere 960 × 600.
 - **Steam Deck (Tur 71).** Steam, Deck'te başlattığı sürece `SteamDeck=1`
   veriyor; kabuk bunu `shell_info` ile söylüyor ve metin ilk açılışta "çok
   büyük" oluyor (Valve'ın okunabilirlik ölçüsü 1280 × 800'de en küçük yazı 12
@@ -107,8 +109,8 @@ dosyaya yazılıyor.
 Testler ve taşınabilir kurulum için: `CAPITALFORGE_DATA_DIR` (kök),
 `CAPITALFORGE_EXPORT_DIR` (dışa aktarma).
 
-Pencerenin boyu, yeri ve tam ekranı (Tur 71) uygulamanın ayar dizininde,
-`.window-state.json` (Linux `~/.config/com.conforcus.capitalforge/`,
+Pencerenin boyu, yeri, büyütülmüşlüğü ve tam ekranı (Tur 71) uygulamanın
+ayar dizininde, `window.json` (Linux `~/.config/com.conforcus.capitalforge/`,
 Windows `%APPDATA%\com.conforcus.capitalforge\`, macOS
 `~/Library/Application Support/com.conforcus.capitalforge/`). Makineye ait:
 Steam Cloud'a girmiyor.

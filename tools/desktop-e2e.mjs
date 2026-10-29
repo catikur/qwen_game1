@@ -342,6 +342,18 @@ try {
     for (let i = 0; i < 4; i++) c.engine.runDay();
     return c.getState().time.day;`);
   const before = existsSync(join(DATA, 'saves', 'slot-0.json')) ? readSave(0).state.time.day : null;
+  // Oyun tam ekranda kapanıyor (Codex): pencere kipinin boyu hatırlanmalı,
+  // tam ekranın (ekranın) boyu değil. Pencere yöneticisi olmayan xvfb'de tam
+  // ekran pencerenin boyunu değiştirmiyor, GTK yalnız durumu söylüyor; boy
+  // farkını Rust testleri sınıyor (`src/window.rs`), burada işaretin ve
+  // açılışın yolu.
+  const windowed = await win.run(`
+    const w = window.__TAURI__.window.getCurrentWindow();
+    const size = await w.innerSize();
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'F11', code: 'F11', bubbles: true, cancelable: true }));
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+    const full = await w.innerSize();
+    return { width: size.width, height: size.height, full: await w.isFullscreen(), fullWidth: full.width, fullHeight: full.height };`);
   // Kapatma düğmesinin kabuktan gelen haberi; sayfa kaydedip `quit` diyor.
   await win.run(`window.__TAURI__.event.emit('capitalforge://close-requested'); return true;`).catch(() => undefined);
   const autosave = await untilFile(() => readSave(0).state.time.day === lastDay && readSave(0), 15_000, 'otomatik kayıt');
@@ -357,13 +369,25 @@ try {
   await win.close();
   win = null;
   // Pencerenin boyu, yeri ve tam ekranı (Tur 71): kapanışta uygulamanın ayar dizinine.
-  const windowState = await untilFile(() => JSON.parse(readFileSync(join(DATA, 'xdg-config', 'com.conforcus.capitalforge', '.window-state.json'), 'utf8')), 10_000, 'pencere durumu');
-  check('Pencerenin durumu kapanışta dosyaya yazılıyor', windowState.main?.width > 0 && windowState.main?.height > 0, JSON.stringify(windowState.main ?? windowState));
+  const windowState = await untilFile(() => JSON.parse(readFileSync(join(DATA, 'xdg-config', 'com.conforcus.capitalforge', 'window.json'), 'utf8')), 10_000, 'pencere durumu');
+  check('Tam ekranda kapanan pencere: tam ekran hatırlanıyor, boy pencere kipindeki',
+    windowed.full === true && windowState.fullscreen === true && windowState.width === windowed.width && windowState.height === windowed.height,
+    `${JSON.stringify(windowState)} · pencere ${windowed.width}×${windowed.height}, tam ekran ${windowed.fullWidth}×${windowed.fullHeight}`);
 
   section('Yeniden açılış');
   win = await Window.open();
   const resumed = await win.until(`document.querySelector('.topbar') && window.__capital?.getState().time.day`, 180_000, 'kaldığı yer');
   check('Oyun kaldığı günden açılıyor (dosyadaki otomatik kayıt)', resumed === lastDay, `${resumed}. gün`);
+  const reopened = await win.run(`
+    const w = window.__TAURI__.window.getCurrentWindow();
+    const full = await w.isFullscreen();
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', altKey: true, bubbles: true, cancelable: true }));
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+    const size = await w.innerSize();
+    return { full, after: await w.isFullscreen(), width: size.width, height: size.height };`);
+  check('Yeniden açılışta tam ekran; çıkınca pencere eski boyunda, ekranın boyunda değil',
+    reopened.full === true && reopened.after === false && reopened.width === windowed.width && reopened.height === windowed.height,
+    `${JSON.stringify(reopened)} · beklenen ${windowed.width}×${windowed.height}`);
   const lang = await win.run(`return document.documentElement.lang;`);
   check('Dil dosyadan geliyor', lang === 'en', lang);
   await win.screenshot('desktop-resumed');

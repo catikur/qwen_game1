@@ -8048,7 +8048,8 @@ ve tarayıcıda dört pencere boyunda (960 × 600, 1280 × 800, 1920 × 1080,
 - *Tam ekran yoktu.* F11 ve Alt+Enter; Ayarlar'ın kısayol listesinde,
   yalnız masaüstünde.
 - *Pencere her açılışta 1280 × 760'tı.* İlk açılışta büyütülmüş, sonra
-  kapandığı boyda, yerde ve tam ekranda (`tauri-plugin-window-state`).
+  kapandığı boyda, yerde, büyütülmüş ya da tam ekran (kabuğun
+  `src/window.rs` modülü; aşağıda Codex'in dördüncü bulgusu).
 - *1100 pikselin altında paneller üst üste biniyordu.*
   - Orta genişlik tek sütuna iniyordu. Esnek satır 30 piksele sıkışıyor,
     içindeki panel alttakinin üstüne taşıyordu; gündem çipi de görünmeyen
@@ -8097,6 +8098,19 @@ denetimin PR tetikleyicisinde çekirdek ve içerik yoktu; simülasyonu
 değiştiren PR uyarıyı görmeden birleşiyor, fark ancak `main`'de kırmızıyla
 çıkıyordu. PR'ın yolları birleşmeninkilerle aynı (test sınıyor).
 
+Dördüncüde pencerenin hafızası. İlk sürüm `tauri-plugin-window-state`
+kullanıyordu. Eklenti boyu ve yeri büyütülmüş ve küçültülmüş pencerede
+kaydetmiyor, tam ekranda ise kaydediyor: tam ekranda kapanan oyunun boyu
+olarak ekranın boyu yazılıyordu. Sonraki açılışta tam ekrandan çıkan pencere
+ekran boyunda kalıyordu (eklentinin açık hatası). Eklentinin kaynağında ikinci
+bir açık da vardı: büyütülmemiş kapanan pencereyi açılışta küçültmüyor,
+yapılandırmadaki "ilk açılışta büyütülmüş" bayrağı da her açılışta
+uygulanıyordu. Eklenti çıktı. Kabuğun kendi modülü (`src/window.rs`) boyu ve
+yeri yalnız pencere kipindeyken hatırlıyor. Ekranı tümüyle kaplayan boy da
+sayılmıyor, çünkü tam ekrana geçerken boy haberi kip haberinden önce
+gelebiliyor. Büyütme ve tam ekran ayrı işaretler. İlk açılışın büyütülmesi
+de bu modülde: hafıza yoksa büyütülmüş.
+
 **Cursor Bugbot'un bulduğu şey.** Kısayol süzgeci yazı alanında harf
 yutuyordu. Windows'ta AltGr, Ctrl+Alt olarak geliyor: Almanca "}" (AltGr+0)
 "yakınlığı sıfırla", Lehçe "ś", "ó", "ń" (AltGr+S, O, N) "kaydet, aç, yeni
@@ -8135,13 +8149,21 @@ duruyordu: test dışa aktarılan kaydı adı görünür görünmez okuyor, dosy
     yalnız seçilmemiş metin boyunda; PC'den gelen, metin boyu seçilmemiş
     kayıtta da (Codex); Deck'te seçilmemiş boy PC'de normal, eski kayıttaki
     seçim yerinde.
-- `cargo test` 12/12, `cargo test --features steam` 11/11; `SteamDeck`
-  ortam değişkeni (1, 0, boş, yok).
-- Gerçek pencerede uçtan uca 27/27 (19'dan). Yeni "Uygulama gibi": tarayıcı
+- `cargo test` 17/17, `cargo test --features steam` 16/16; `SteamDeck`
+  ortam değişkeni (1, 0, boş, yok). Pencerenin hafızası (5 yeni): boy ve yer
+  yalnız pencere kipinde, ekranı kaplayan boy sayılmıyor; tam ekranda kapanan
+  pencere tam ekran ama eski boyuyla açılıyor (Codex'in senaryosu); ilk açılış
+  büyütülmüş, küçültülmüş kapanış önceki kipte; çıkarılmış ekranın yeri ve
+  bozuk boy kullanılmıyor; bozuk dosya ilk açılış sayılıyor.
+- Gerçek pencerede uçtan uca 28/28 (19'dan). Yeni "Uygulama gibi": tarayıcı
   kısayolları yutuluyor, yazı alanının kısayolları yerinde, sağ tık ve
   seçim, Deck değilken metin normal, F11 tam ekranı açıyor, Alt+Enter
-  kapatıyor. Kapanışta pencerenin durumu dosyaya yazılıyor. Ayrı bir
-  sürücüyle `SteamDeck=1`: metin ilk açılışta çok büyük.
+  kapatıyor. Oyun tam ekranda kapanıyor: dosyada tam ekran ve pencere
+  kipinin boyu var. Yeniden açılışta oyun tam ekran; çıkınca pencere eski
+  boyunda. Pencere yöneticisi olmayan xvfb'de tam ekran pencerenin boyunu
+  değiştirmiyor; boy farkını (Codex'in senaryosu) Rust testleri sınıyor,
+  uçtan uca test işaretin ve açılışın yolunu. Ayrı bir sürücüyle
+  `SteamDeck=1`: metin ilk açılışta çok büyük.
 - Tarayıcıda yeni "Pencere boyları ve Steam Deck": 960 × 600 (Almanca),
   1093 × 614, 1280 × 800 (İngilizce, çok büyük metin) ve 1920 × 1080'de
   paneller üst üste binmiyor, sol sütun taşmıyor, şehir ortada

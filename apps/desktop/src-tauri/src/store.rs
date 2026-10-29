@@ -65,7 +65,7 @@ pub type Result<T> = std::result::Result<T, StoreError>;
 /// Önce yanına, sonra yerine: yarım yazılmış dosya hiçbir zaman asıl adı
 /// taşımıyor. Geçici dosya noktayla başlıyor: Steam Cloud'un desenlerine
 /// (`*.json`, `capitalforge.*`) girmiyor.
-fn write_atomic(path: &Path, bytes: &[u8]) -> io::Result<()> {
+pub(crate) fn write_atomic(path: &Path, bytes: &[u8]) -> io::Result<()> {
     let dir = path.parent().expect("dosyanın bir dizini var");
     fs::create_dir_all(dir)?;
     let name = path.file_name().expect("dosyanın bir adı var").to_string_lossy();
