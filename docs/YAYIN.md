@@ -121,8 +121,11 @@ kısa hâli (`--smoke`).
 
     Sırlar girince paket iş akışı macOS'ta imzalıyor ve noter onayına
     gönderiyor (`tools/apple-signing.sh` bunları Tauri'ye aktarıyor).
-    İlk üçü imza için, son üçü noter onayı için. Sırlar yokken paket
-    imzasız; iş akışının günlüğü hangisinin olduğunu yazıyor.
+    Sırlar takım takım gidiyor: ilk üçü imza için, son üçü noter onayı
+    için (yalnız imza tamsa). Eksik bir takım hiç aktarılmıyor; yarım
+    takım paketi düşürürdü. Sırlar yokken ya da eksikken paket imzasız
+    (ya da imzalı ama onaysız) çıkıyor; iş akışının günlüğü eksiklerin
+    adını yazıyor.
   - *Windows*: isteğe bağlı. Steam'den kurulan oyunda SmartScreen
     uyarısı çıkmıyor. Kurulum paketi Steam dışında da dağıtılacaksa
     kod imzalama sertifikası gerekiyor: OV ya da EV sertifika, ya da Azure

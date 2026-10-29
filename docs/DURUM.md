@@ -8620,9 +8620,12 @@ ulaşan bir hatanın sürümü, cihazı ve kaydı bilinmiyordu.
 - *macOS imzası iş akışında.* `docs/MASAUSTU.md` "sırlar gelince paket iş
   akışı imzalayıp onaylatıyor" diyordu, ama iş akışı Apple sırlarını hiç
   okumuyordu. Şimdi paket adımları sırları `tools/apple-signing.sh`'la
-  Tauri'ye aktarıyor; yalnız dolu olanları, çünkü boş bir değişken Tauri'yi
-  boş sertifikayla imzalamaya zorlardı. Sırlar yokken paket imzasız ve
-  günlük bunu yazıyor. Windows imzası isteğe bağlı kaldı (`docs/YAYIN.md`).
+  Tauri'ye aktarıyor, takım takım: imza (sertifika, parolası, kimlik) ve
+  noter onayı (Apple kimliği, uygulama parolası, takım; yalnız imza tamsa).
+  Eksik takım hiç aktarılmıyor: boş ya da yarım bir takım Tauri'yi imzaya
+  sokup paketi düşürürdü. Sırlar yokken ya da eksikken paket imzasız ve
+  günlük eksiklerin adını yazıyor. Windows imzası isteğe bağlı kaldı
+  (`docs/YAYIN.md`).
 - *Ana parçada yer.* Ana parça 74,6 KB'tı, bütçe 75; bu turun parçaları
   sığmıyordu. Ölçünce giriş paketinin üçte biri kurulum ekranının hiç
   okumadığı Türkçe metinlerdi. Komut ret sebepleri, gündem, holding,
@@ -8678,8 +8681,15 @@ bu turda.
   öğe de yoktu. Artık Steam'de bir Workshop sayfası açılınca raf listeyi üç
   dakika yokluyor (`watchWorkshop`, `workshop.ts`).
 
+**İncelemede bulunanlar (Codex).**
+- *Yarım Apple sırları imzayı açıyordu.* Betik dolu olan her sırrı ayrı
+  ayrı aktarıyordu. Sertifika girilmiş ama parolası ya da kimliği henüz
+  yoksa (sırlar girilirken ya da yenilenirken) Tauri imzaya giriyor, paket
+  iş akışı düşüyordu; belgedeki "imzasız paket" çıkmıyordu. Artık takımlar
+  birlikte aktarılıyor, eksik takım hiç.
+
 **Doğrulama.**
-- `pnpm test` 911/911 (888'den); tip denetimi temiz; Almanca denetimi 0
+- `pnpm test` 912/912 (888'den); tip denetimi temiz; Almanca denetimi 0
   hata (sürüm 28/28).
   - `packages/ui/test/release.test.ts` (13 yeni): raporun biçimi ve
     sırası; notun ve kaydın sınırları; dosya adı ve e-posta bağlantısı;
@@ -8690,6 +8700,10 @@ bu turda.
   - `apps/web/test/catalogs.test.ts` (3 yeni): geç inen sözlükler.
   - `packages/ui/test/packs.test.ts` (1 yeni): Steam'de sayfa açılınca
     rafın yoklaması başlıyor, açılmayan sayfada başlamıyor, süre doluyor.
+  - `apps/web/test/desktop.test.ts` (1 yeni): imza betiği bash'te; macOS
+    dışında hiçbir şey, sırsız ve yarım takımla imzasız, imza tam ama
+    onay yarımsa imzalı ve onaysız, hepsiyle onaylı; günlükte değer yok.
+    Düzeltmeden önceki betikte kırmızı.
 - `cargo test --locked` 32/32, `--features steam` 29/29 (sürüm 1.0.0 ve
   kilit dosyası tutarlı); clippy iki derlemede de temiz.
 - Tarayıcı testinin yeni bölümü "Sürüm 1.0: yenilikler, hata bildirme,
@@ -8832,7 +8846,7 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi). Senaryo şehirlerinde gün 3–17 ms (`pnpm dayperf`, Tur 43) |
-| Birim testi | **911 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de, Tur 52'de sunucuda tekrar, Tur 53'te haftanın kuralı ve günün koşusu, Tur 54'te hayalet eğri, Tur 55'te davetli ligler, Tur 56'da taşıma sözleşmeleri, Tur 57'de enerji, Tur 58'de gayrimenkul, Tur 59'da rakiplerin hafızası, Tur 60'ta senaryo paketi II, Tur 61'de şirketin yolu, Tur 62'de hava ve mevsimin görünümü, Tur 63'te önemli anlar, Tur 64'te şehir kartı, Tur 65'te telefon performansı, Tur 66'da masaüstü sürümü, Tur 67'de içerik paketleri, Tur 68'de senaryo editörü, Tur 69'da üçüncü dil, Tur 70'te Steam başarımları, Tur 71'de canlı sunucunun simülasyon izi ve Steam Deck'in varsayılanları, Tur 72'de kumanda, Tur 73'te Workshop ve skor tabloları, Tur 74'te sürüm, yenilikler ve hata raporu); Rust tarafı 32 test (`cargo test`, `apps/desktop/src-tauri`; Steam'li derlemede 29) |
+| Birim testi | **912 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de, Tur 52'de sunucuda tekrar, Tur 53'te haftanın kuralı ve günün koşusu, Tur 54'te hayalet eğri, Tur 55'te davetli ligler, Tur 56'da taşıma sözleşmeleri, Tur 57'de enerji, Tur 58'de gayrimenkul, Tur 59'da rakiplerin hafızası, Tur 60'ta senaryo paketi II, Tur 61'de şirketin yolu, Tur 62'de hava ve mevsimin görünümü, Tur 63'te önemli anlar, Tur 64'te şehir kartı, Tur 65'te telefon performansı, Tur 66'da masaüstü sürümü, Tur 67'de içerik paketleri, Tur 68'de senaryo editörü, Tur 69'da üçüncü dil, Tur 70'te Steam başarımları, Tur 71'de canlı sunucunun simülasyon izi ve Steam Deck'in varsayılanları, Tur 72'de kumanda, Tur 73'te Workshop ve skor tabloları, Tur 74'te sürüm, yenilikler ve hata raporu); Rust tarafı 32 test (`cargo test`, `apps/desktop/src-tauri`; Steam'li derlemede 29) |
 | Denge testi | **379 kontrol, hepsi geçiyor** (33 bölüm, süreleriyle; ~16 dk) |
 | Tarayıcı testi | **788 kontrol** (Tur 74'te 16 yeni), son tam koşu 781/783 (Tur 74, Tur 73'ün son iki düzeltmesinden önceki tabanda; yük altında düşen iki kontrol tek başına geçti; Tur 69'da 719/719), 0 konsol hatası (bu yavaş makinede ~76 dk, CI'da `main`'de ~64 dk); duman koşusu 132 (CI'da ~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + paket bütçesi (Tur 46; Tur 48'den beri hizmet çalışanı ve manifest de) + duman oynanışı; `main`'de tam oynanış (Tur 72'den beri 120 dk sınırı); masaüstüne dokunan PR'da Rust testleri, sürüm derlemesi ve gerçek pencerede 30 kontrol (Tur 66'da 17) |

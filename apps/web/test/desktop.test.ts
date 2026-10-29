@@ -1,5 +1,6 @@
 import { afterEach, describe, test } from 'node:test';
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { GameEngine } from '../../../packages/core/src/engine';
@@ -597,6 +598,49 @@ describe('sürüm', () => {
     assert.equal(conf.version, GAME_VERSION);
     assert.equal(pkg.version, GAME_VERSION);
     assert.equal(cargo, GAME_VERSION);
+  });
+});
+
+describe('macOS imzası (Tur 74)', () => {
+  /**
+   * Paket adımı gibi: betik bash'te `source`la okunuyor. Tauri'ye giden APPLE_*
+   * adları (değerleri değil) ve günlüğün satırı; betiğin yardımcıları adımda kalmıyor.
+   */
+  const sign = (os: string, secrets: Record<string, string>) => {
+    const script = join(repoRoot(), 'tools/apple-signing.sh');
+    const run = spawnSync('bash', ['-c', `source "${script}"; declare -F apple_group_export >/dev/null && echo SIZINTI; env | grep '^APPLE_' | cut -d= -f1; true`], {
+      env: { PATH: process.env['PATH'] ?? '/usr/bin:/bin', RUNNER_OS: os, ...secrets },
+      encoding: 'utf8',
+    });
+    assert.equal(run.status, 0, run.stderr);
+    const lines = run.stdout.trim().split('\n').filter(Boolean);
+    return {
+      log: lines.filter((line) => line.startsWith('macOS')).join(' | '),
+      exported: lines.filter((line) => line.startsWith('APPLE_')).sort(),
+      leaked: lines.includes('SIZINTI'),
+    };
+  };
+  const signing = { SIGN_APPLE_CERTIFICATE: 'MIIK', SIGN_APPLE_CERTIFICATE_PASSWORD: 'p12', SIGN_APPLE_SIGNING_IDENTITY: 'Developer ID Application: Conforcus (TEAM123456)' };
+  const notary = { SIGN_APPLE_ID: 'dev@example.com', SIGN_APPLE_PASSWORD: 'abcd-efgh', SIGN_APPLE_TEAM_ID: 'TEAM123456' };
+
+  test('yalnız tam takımlar aktarılıyor: yarım imza ya da noter takımı paketi düşürmüyor (Codex #104)', () => {
+    assert.deepEqual(sign('Linux', { ...signing, ...notary }), { log: '', exported: [], leaked: false }, 'macOS dışında hiçbir şey');
+    const none = sign('macOS', {});
+    assert.deepEqual(none.exported, []);
+    assert.match(none.log, /imzasız \(eksik: APPLE_CERTIFICATE APPLE_CERTIFICATE_PASSWORD APPLE_SIGNING_IDENTITY\)/);
+    // Sertifika girildi, parolası ve kimliği henüz yok: imzaya girilmiyor.
+    const half = sign('macOS', { SIGN_APPLE_CERTIFICATE: 'MIIK', SIGN_APPLE_ID: 'dev@example.com' });
+    assert.deepEqual(half.exported, [], 'yarım imza takımı aktarılmıyor');
+    assert.match(half.log, /imzasız \(eksik: APPLE_CERTIFICATE_PASSWORD APPLE_SIGNING_IDENTITY\)/);
+    // İmza tam, noter onayının yalnız bir sırrı var: imzalı ama onaysız.
+    const signed = sign('macOS', { ...signing, SIGN_APPLE_ID: 'dev@example.com' });
+    assert.deepEqual(signed.exported, ['APPLE_CERTIFICATE', 'APPLE_CERTIFICATE_PASSWORD', 'APPLE_SIGNING_IDENTITY']);
+    assert.match(signed.log, /imzalı, noter onayı yok \(eksik: APPLE_PASSWORD APPLE_TEAM_ID\)/);
+    const full = sign('macOS', { ...signing, ...notary });
+    assert.deepEqual(full.exported, ['APPLE_CERTIFICATE', 'APPLE_CERTIFICATE_PASSWORD', 'APPLE_ID', 'APPLE_PASSWORD', 'APPLE_SIGNING_IDENTITY', 'APPLE_TEAM_ID']);
+    assert.match(full.log, /imzalı, noter onayına gidiyor/);
+    assert.ok(!full.log.includes('abcd-efgh') && !full.log.includes('MIIK'), 'günlükte sırların değeri yok');
+    assert.equal(full.leaked, false, 'betiğin yardımcıları adımda kalmıyor');
   });
 });
 
