@@ -12,7 +12,7 @@ import type { ReleaseMessageKey } from './releaseMessages';
 import { reportHost } from './reportHost';
 import { useSettings } from './settings';
 import type { ExportOutcome } from './useGame';
-import { APP_VERSION, appEdition } from './version';
+import { APP_VERSION, useAppEdition } from './version';
 import type { Edition } from './version';
 
 const EDITION_LABELS: Record<Edition, MessageKey> = {
@@ -77,7 +77,7 @@ export default function BugReportPage(): ReactElement {
   const settings = useSettings();
   const appearanceChoice = useAppearanceChoice();
   const host = reportHost();
-  const edition = appEdition();
+  const edition = useAppEdition();
   const gpu = useMemo(gpuName, []);
   const [lines] = useState(() => [...logLines()]);
   const [note, setNote] = useState('');

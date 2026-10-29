@@ -16,7 +16,7 @@ import {
   useSettings,
 } from './settings';
 import type { MotionChoice, Palette, TextSize, VolumeChannel } from './settings';
-import { APP_VERSION, appEdition } from './version';
+import { APP_VERSION, useAppEdition } from './version';
 import type { Edition } from './version';
 import { useWhatsNewUnseen } from './whatsNew';
 
@@ -148,6 +148,7 @@ export function SettingsPanel(): ReactElement {
   const shell = useAppShell();
   const padGlyphs = usePadGlyphs();
   const unseen = useWhatsNewUnseen();
+  const edition = useAppEdition();
   const [page, setPage] = useState<SettingsPage>('main');
   // Sayfa açılınca odak geri düğmesinde, dönünce sayfayı açan düğmede (klavye ve kumanda).
   const opener = useRef<SettingsPage>('main');
@@ -250,7 +251,7 @@ export function SettingsPanel(): ReactElement {
       <section className="settings-group">
         <h3 id="settings-keys">{t('panels.settings.keys')}</h3>
         <dl className="settings-keys">
-          {[...SHORTCUTS, ...(appEdition() !== 'web' ? DESKTOP_SHORTCUTS : [])].map(([key, what]) => (
+          {[...SHORTCUTS, ...(edition !== 'web' ? DESKTOP_SHORTCUTS : [])].map(([key, what]) => (
             <div key={what}>
               <dt>
                 <kbd>{t(key)}</kbd>
@@ -267,7 +268,7 @@ export function SettingsPanel(): ReactElement {
       )}
       <section className="settings-group" data-settings-version>
         <h3 id="settings-version">{t('panels.settings.version')}</h3>
-        <p data-app-version={APP_VERSION}>{t('panels.settings.version.line', { version: APP_VERSION, edition: t(EDITION_LABELS[appEdition()]) })}</p>
+        <p data-app-version={APP_VERSION}>{t('panels.settings.version.line', { version: APP_VERSION, edition: t(EDITION_LABELS[edition]) })}</p>
         <div className="settings-choices">
           <button type="button" className="settings-option" data-settings-page-open="whatsNew" onClick={() => open('whatsNew')}>
             {t('panels.settings.version.whatsNew')}

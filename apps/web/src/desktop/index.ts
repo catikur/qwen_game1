@@ -1,5 +1,5 @@
 import { setSaveBackend } from '@capital/persistence';
-import { careerUnlockedIds, setDeviceDefaults, subscribeCareer } from '@capital/ui';
+import { careerUnlockedIds, setAppEdition, setDeviceDefaults, subscribeCareer } from '@capital/ui';
 import { setFileSink } from '../host';
 import type { DeliveryOutcome } from '../host';
 import { saveBeforeLeaving } from '../pwa';
@@ -60,10 +60,14 @@ export async function initDesktop(): Promise<boolean> {
 
   setSaveBackend(fileSaves(invoke));
   setFileSink((filename, data) => exportFile(invoke, filename, data));
+  // Ayarlar'daki sürüm satırı ve hata raporu masaüstünde ve Steam'le açıldığını
+  // biliyor (Tur 74); kök de işaretli (`data-shell`, masaüstünün stilleri).
+  // Steam'den önce: geç bağlanan Steam "masaüstü"nü ezmesin.
+  setAppEdition('desktop');
   // Steam başarımları (Tur 70): kariyer dosyadan okunduktan sonra; açılışı beklemiyor.
-  // Ayarlar'daki sürüm satırı ve hata raporu Steam'le açıldığını biliyor (Tur 74).
+  // Geç bağlanırsa açık Ayarlar da yenileniyor (Codex #104).
   void initSteam(invoke, { unlockedIds: careerUnlockedIds, subscribe: subscribeCareer }).then((status) => {
-    if (status.available) document.documentElement.dataset.steam = 'on';
+    if (status.available) setAppEdition('steam');
   });
 
   // Pencere kapanırken: kabuk kapanışı tutup haber veriyor; oyun otomatik
@@ -89,7 +93,6 @@ export async function initDesktop(): Promise<boolean> {
     console.warn('Kapanış haberi dinlenemiyor:', error);
   }
 
-  document.documentElement.dataset.shell = 'desktop';
   return true;
 }
 

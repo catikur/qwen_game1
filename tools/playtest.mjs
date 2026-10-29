@@ -9235,7 +9235,12 @@ async function finish(browser, consoleErrors) {
         save_remove: () => null,
         export_file: () => 'x',
         quit: () => null,
-        steam_status: () => ({ available: true, detail: 'sahte Steam', account }),
+        // Geç bağlanan Steam (`__fakeSteamLate`, Codex #104): yanıt `__steamConnect()` çağrılınca.
+        steam_status: () => {
+          const status = { available: true, detail: 'sahte Steam', account };
+          if (localStorage.getItem('__fakeSteamLate') !== '1') return status;
+          return new Promise((resolve) => { window.__steamConnect = () => resolve(status); });
+        },
         steam_unlock: () => null,
         steam_keyboard: () => false,
         // Bir öğe kurulu (iki dosyası var, biri bozuk), biri iniyor; `__workshopReady` olunca o da kurulu.
@@ -9317,6 +9322,46 @@ async function finish(browser, consoleErrors) {
       `${versionLine} · ${JSON.stringify({ ...desk, exports: desk.exports.map((file) => `${file.filename}:${file.report?.app?.edition}`) })}`);
     await sp.keyboard.press('Escape');
     await sp.waitForSelector('.settings-overlay', { state: 'detached', timeout: 5000 }).catch(() => null);
+
+    // Steam geç bağlanıyor (Codex #104): açılış onu beklemiyor. Ayarlar ya da hata raporu
+    // açıkken bağlanınca sürüm satırı ve rapor Steam'i biliyor, panel kapanıp açılmadan.
+    // Ayrı sekmede; yerel depo ortak, bayrak sonunda kalkıyor.
+    await sp.evaluate(() => localStorage.setItem('__fakeSteamLate', '1'));
+    const lp = await sContext.newPage();
+    lp.on('pageerror', (e) => sErrors.push(e.message));
+    lp.on('console', (m) => { if (m.type() === 'error') sErrors.push(m.text()); });
+    const lateSettings = async () => {
+      await lp.waitForSelector('.newgame', { timeout: 30000 });
+      await lp.waitForFunction(() => typeof window.__steamConnect === 'function', null, { timeout: 10000 });
+      await lp.locator('[data-settings-open]').click();
+      await lp.waitForSelector('.settings-overlay [data-app-version]', { timeout: 5000 });
+    };
+    const lateLine = () => lp.evaluate(() => (document.querySelector('.settings-overlay [data-app-version]')?.textContent ?? '').trim());
+    await lp.goto('http://127.0.0.1:8812/');
+    await lateSettings();
+    const lineBefore = await lateLine();
+    await lp.evaluate(() => window.__steamConnect());
+    await lp.waitForFunction(() => /, Steam$/.test((document.querySelector('.settings-overlay [data-app-version]')?.textContent ?? '').trim()), null, { timeout: 5000 }).catch(() => null);
+    const lineAfter = await lateLine();
+    check('Steam Ayarlar açıkken bağlanınca sürüm satırı "masaüstü"nden "masaüstü, Steam"e geçiyor (Codex #104)',
+      /^CapitalForge \d+\.\d+\.\d+ · masaüstü$/.test(lineBefore) && /^CapitalForge \d+\.\d+\.\d+ · masaüstü, Steam$/.test(lineAfter),
+      `${lineBefore} → ${lineAfter}`);
+    await lp.reload();
+    await lateSettings();
+    await lp.locator('.settings-overlay [data-settings-page-open="report"]').click();
+    await lp.waitForSelector('[data-bug-report] [data-report-save-state="none"]', { timeout: 10000 }).catch(() => null);
+    const previewEdition = () => lp.evaluate(() => /"edition": "(\w+)"/.exec(document.querySelector('[data-report-preview] pre')?.textContent ?? '')?.[1] ?? null);
+    const editionBefore = await previewEdition();
+    await lp.evaluate(() => window.__steamConnect());
+    await lp.waitForFunction(() => /"edition": "steam"/.test(document.querySelector('[data-report-preview] pre')?.textContent ?? ''), null, { timeout: 5000 }).catch(() => null);
+    await lp.locator('[data-report-download]').click();
+    await lp.waitForFunction(() => window.__exports.length > 0, null, { timeout: 10000 }).catch(() => null);
+    const lateReport = await lp.evaluate(() => { try { return JSON.parse(window.__exports[0]?.text ?? 'null'); } catch { return null; } });
+    check('Hata raporu açıkken Steam bağlanınca rapor "steam" diyor (Codex #104)',
+      editionBefore === 'desktop' && lateReport?.app?.edition === 'steam',
+      `${editionBefore} → ${lateReport?.app?.edition}`);
+    await lp.close();
+    await sp.evaluate(() => localStorage.removeItem('__fakeSteamLate'));
 
     // Raf: abone olunan öğenin paketi Workshop künyesiyle; bozuk dosya atlandı, inen öğe yazıyor.
     await sp.locator('.mode-picker [data-mode="scenario"]').click();

@@ -8691,6 +8691,13 @@ bu turda.
   işletim sisteminin her adımı, `pnpm install`'ın kurulum betikleri ve
   başka eylemler de görüyordu. Artık yalnız iki paket adımında ve yalnız
   macOS'ta veriliyor; test bunu iş akışının kendisinde sınıyor.
+- *Steam geç bağlanınca açık Ayarlar eski türü yazıyordu.* Açılış Steam'i
+  beklemiyor. Oyuncu Ayarlar'ı ya da hata raporunu Steam bağlanmadan
+  açtıysa sürüm satırı "masaüstü" kalıyordu, rapor da `desktop` diyordu:
+  tür kökün işaretinden okunuyordu, işaret değişince çizim yenilenmiyordu.
+  Artık tür abone olunan bir depoda (`setAppEdition`, `useAppEdition`,
+  `version.ts`); kökün işaretini de o koyuyor. Kabuk "masaüstü"nü Steam'den
+  önce yazıyor, geç gelen Steam onu ezmiyor.
 
 **Doğrulama.**
 - `pnpm test` 913/913 (888'den); tip denetimi temiz; Almanca denetimi 0
@@ -8698,7 +8705,8 @@ bu turda.
   - `packages/ui/test/release.test.ts` (13 yeni): raporun biçimi ve
     sırası; notun ve kaydın sınırları; dosya adı ve e-posta bağlantısı;
     günlüğün kırpması, sınırı ve konsolu sarması; yeni sürüm işaretinin
-    dört durumu; Ayarlar'ın sürüm bölümü; iki sayfa; üç dilde metin.
+    dört durumu; Ayarlar'ın sürüm bölümü; sürümün türü (masaüstü, sonra
+    Steam; kökün işareti, abonenin haberi); iki sayfa; üç dilde metin.
   - `apps/web/test/version.test.ts` (6 yeni): yedi dosyada aynı sürüm,
     derleme sürümü, sürüm karşılaştırması, günlüğün sırası ve dilleri.
   - `apps/web/test/catalogs.test.ts` (3 yeni): geç inen sözlükler.
@@ -8721,17 +8729,20 @@ bu turda.
     adres panoya;
   - Türkçe oyunda panellerde ham anahtar yok, komutun reddi Türkçe;
   - telefonda iki sayfa da ekrana sığıyor; konsol temiz.
-- "Steam: Workshop ve skor tabloları" 17/17 (dört yeni):
+- "Steam: Workshop ve skor tabloları" 19/19 (altı yeni):
   - masaüstünde sürüm "masaüstü, Steam", rapor İndirilenler'e, raporda
     `steam`, e-posta bağlantısı yok;
+  - Steam Ayarlar açıkken bağlanınca sürüm satırı "masaüstü"nden
+    "masaüstü, Steam"e geçiyor; hata raporu açıkken bağlanınca rapor
+    `steam` diyor;
   - katmanda abone olunan öğe rafa geliyor (inen öğe ve odak olayı yok);
   - yükleme sürerken başka senaryoya geçilince sonuç yeni seçilenin
     ekranına yazılmıyor;
   - oyunun içinden başka bir koşu açılınca sonuç ekranında önceki Steam
     sırası ve gönderim yok.
 
-  Son üçü düzeltmeden önceki pakette kırmızı. "Ayarlar ve erişilebilirlik"
-  15/15.
+  Sonraki beşi düzeltmelerinden önceki pakette kırmızı. "Ayarlar ve
+  erişilebilirlik" 15/15.
 - Tam tarayıcı testi 781/783, konsolda hata yok (76 dk; Tur 73'ün son iki
   düzeltmesinden ve geç gelen bulgulardan önceki tabanda). Düşen iki
   kontrol makine başka işlerle yüklüyken düştü:
@@ -8853,7 +8864,7 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi). Senaryo şehirlerinde gün 3–17 ms (`pnpm dayperf`, Tur 43) |
 | Birim testi | **913 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de, Tur 52'de sunucuda tekrar, Tur 53'te haftanın kuralı ve günün koşusu, Tur 54'te hayalet eğri, Tur 55'te davetli ligler, Tur 56'da taşıma sözleşmeleri, Tur 57'de enerji, Tur 58'de gayrimenkul, Tur 59'da rakiplerin hafızası, Tur 60'ta senaryo paketi II, Tur 61'de şirketin yolu, Tur 62'de hava ve mevsimin görünümü, Tur 63'te önemli anlar, Tur 64'te şehir kartı, Tur 65'te telefon performansı, Tur 66'da masaüstü sürümü, Tur 67'de içerik paketleri, Tur 68'de senaryo editörü, Tur 69'da üçüncü dil, Tur 70'te Steam başarımları, Tur 71'de canlı sunucunun simülasyon izi ve Steam Deck'in varsayılanları, Tur 72'de kumanda, Tur 73'te Workshop ve skor tabloları, Tur 74'te sürüm, yenilikler ve hata raporu); Rust tarafı 32 test (`cargo test`, `apps/desktop/src-tauri`; Steam'li derlemede 29) |
 | Denge testi | **379 kontrol, hepsi geçiyor** (33 bölüm, süreleriyle; ~16 dk) |
-| Tarayıcı testi | **788 kontrol** (Tur 74'te 16 yeni), son tam koşu 781/783 (Tur 74, Tur 73'ün son iki düzeltmesinden önceki tabanda; yük altında düşen iki kontrol tek başına geçti; Tur 69'da 719/719), 0 konsol hatası (bu yavaş makinede ~76 dk, CI'da `main`'de ~64 dk); duman koşusu 132 (CI'da ~5 dk, rehber dahil) |
+| Tarayıcı testi | **790 kontrol** (Tur 74'te 18 yeni), son tam koşu 781/783 (Tur 74, Tur 73'ün son iki düzeltmesinden önceki tabanda; yük altında düşen iki kontrol tek başına geçti; Tur 69'da 719/719), 0 konsol hatası (bu yavaş makinede ~76 dk, CI'da `main`'de ~64 dk); duman koşusu 132 (CI'da ~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + paket bütçesi (Tur 46; Tur 48'den beri hizmet çalışanı ve manifest de) + duman oynanışı; `main`'de tam oynanış (Tur 72'den beri 120 dk sınırı); masaüstüne dokunan PR'da Rust testleri, sürüm derlemesi ve gerçek pencerede 30 kontrol (Tur 66'da 17) |
 | Kapsam | 40 bina · 25 ürün · 7 kategori · 8 rakip profili · 10 CEO · 22 olay (11 şehir + 11 sektör) · 3 kriz · 12 karar kartı · 70 rakip sözü · 4 mizaç · 48 ilişki sözü · 5 fırsat balonu · 8 görev türü · 4 mevsim · 6 hava · 9 moda ürünü · 17 şehir yapısı (6 siluet) · 6 şehir projesi · 10 senaryo · 4 ek kural · 5 yol · 29 rozet |
 

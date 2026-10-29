@@ -14,7 +14,7 @@ import { SettingsPanel } from '../src/SettingsPanel';
 import WhatsNewPage from '../src/WhatsNewPage';
 import BugReportPage from '../src/BugReportPage';
 import { CHANGELOG } from '../src/changelog';
-import { appEdition } from '../src/version';
+import { appEdition, setAppEdition, subscribeAppEdition } from '../src/version';
 
 /**
  * Sürüm 1.0 (Tur 74): hata raporunun biçimi, uyarı günlüğü, yeni sürüm
@@ -179,12 +179,33 @@ describe('Ayarlar: sürüm', () => {
     assert.equal(fresh.match(/whats-new-dot/g)?.length, 1);
   });
 
-  test('sürümün türü kökten: masaüstü, Steam\'le masaüstü', () => {
-    assert.equal(appEdition({ dataset: {} }), 'web');
-    assert.equal(appEdition({ dataset: { shell: 'desktop' } }), 'desktop');
-    assert.equal(appEdition({ dataset: { shell: 'desktop', steam: 'on' } }), 'steam');
-    assert.equal(appEdition({ dataset: { steam: 'on' } }), 'web');
-    assert.equal(appEdition(undefined), 'web');
+  test('sürümün türü: masaüstü, sonra geç gelen Steam; kök işaretli, abone olan haber alıyor (Codex #104)', () => {
+    assert.equal(appEdition(), 'web');
+    const root = { dataset: {} as Record<string, string> };
+    (globalThis as { document?: unknown }).document = { documentElement: root };
+    let heard = 0;
+    const stop = subscribeAppEdition(() => heard++);
+    try {
+      setAppEdition('desktop');
+      assert.equal(appEdition(), 'desktop');
+      assert.deepEqual({ ...root.dataset }, { shell: 'desktop' });
+      setAppEdition('steam');
+      assert.equal(appEdition(), 'steam');
+      assert.deepEqual({ ...root.dataset }, { shell: 'desktop', steam: 'on' });
+      setAppEdition('steam');
+      assert.equal(heard, 2, 'aynı tür yeniden haber vermiyor');
+    } finally {
+      stop();
+      delete (globalThis as { document?: unknown }).document;
+    }
+    try {
+      const panel = renderToStaticMarkup(createElement(SettingsPanel));
+      assert.match(panel, /CapitalForge 0\.0\.0 · masaüstü, Steam/);
+      assert.match(panel, /F11/);
+    } finally {
+      setAppEdition('web');
+    }
+    assert.equal(heard, 2, 'abonelik bırakıldı');
   });
 
   test('Yenilikler: her sürüm başlığıyla, günüyle ve maddeleriyle; İngilizcesi İngilizce', () => {

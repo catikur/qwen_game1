@@ -45,7 +45,7 @@ export { AppearancePicker } from './AppearancePicker';
 export { SettingsPanel } from './SettingsPanel';
 export { UpdateNotice } from './UpdateNotice';
 // Sürüm 1.0 (Tur 74): sürüm, yeni sürüm işareti, hata günlüğü ve raporun kabuğu.
-export { APP_VERSION, appEdition } from './version';
+export { APP_VERSION, appEdition, setAppEdition } from './version';
 export type { Edition } from './version';
 export { initWhatsNew } from './whatsNew';
 export { installErrorLog } from './errorLog';

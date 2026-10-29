@@ -1,3 +1,5 @@
+import { useSyncExternalStore } from 'react';
+
 declare const __CF_VERSION__: string | undefined;
 
 /**
@@ -23,11 +25,40 @@ export function compareVersions(a: string, b: string): number {
 /** Oyunun hangi sürümü: tarayıcı, masaüstü ya da Steam'le açılmış masaüstü. */
 export type Edition = 'web' | 'desktop' | 'steam';
 
+let edition: Edition = 'web';
+const listeners = new Set<() => void>();
+
 /**
- * Masaüstü kabuğu kökü `data-shell="desktop"` diye işaretliyor
- * (`apps/web/src/desktop/index.ts`), Steam açıksa `data-steam="on"`.
+ * Masaüstü kabuğu açılışta "desktop", Steam'e bağlanınca "steam" diyor
+ * (`apps/web/src/desktop/index.ts`). Kök de işaretleniyor: `data-shell="desktop"`
+ * (masaüstünün stilleri), Steam açıksa `data-steam="on"`. Açılış Steam'i
+ * beklemiyor; Ayarlar ya da hata raporu açıkken bağlanırsa onlar da
+ * yenileniyor (Codex #104).
  */
-export function appEdition(root: { dataset: DOMStringMap } | undefined = typeof document === 'undefined' ? undefined : document.documentElement): Edition {
-  if (root?.dataset['shell'] !== 'desktop') return 'web';
-  return root.dataset['steam'] === 'on' ? 'steam' : 'desktop';
+export function setAppEdition(next: Edition): void {
+  if (typeof document !== 'undefined') {
+    const root = document.documentElement;
+    if (next === 'web') delete root.dataset['shell'];
+    else root.dataset['shell'] = 'desktop';
+    if (next === 'steam') root.dataset['steam'] = 'on';
+    else delete root.dataset['steam'];
+  }
+  if (next === edition) return;
+  edition = next;
+  for (const listener of listeners) listener();
+}
+
+export function appEdition(): Edition {
+  return edition;
+}
+
+export function subscribeAppEdition(listener: () => void): () => void {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
+}
+
+export function useAppEdition(): Edition {
+  return useSyncExternalStore(subscribeAppEdition, appEdition, appEdition);
 }
