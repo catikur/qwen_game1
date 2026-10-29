@@ -45,13 +45,18 @@ export interface WorkshopPublish {
 export const WORKSHOP_TITLE_BYTES = 128;
 export const WORKSHOP_TEXT_BYTES = 7999;
 
-/** Metnin UTF-8'de en çok `limit` bayta sığan başı; karakter ortadan bölünmüyor. */
+/**
+ * Metnin UTF-8'de en çok `limit` bayta sığan başı; karakter ortadan bölünmüyor.
+ * NUL'lar atılıyor: Steamworks'ün alanları C metni, kabuk NUL'lu isteği
+ * reddediyor. Paketin adında kaçışlı bir NUL olabiliyor (Codex #103).
+ */
 export function fitUtf8(text: string, limit: number): string {
+  const clean = text.replaceAll('\0', '');
   const encoder = new TextEncoder();
-  if (encoder.encode(text).length <= limit) return text;
+  if (encoder.encode(clean).length <= limit) return clean;
   let used = 0;
   let fitted = '';
-  for (const char of text) {
+  for (const char of clean) {
     used += encoder.encode(char).length;
     if (used > limit) break;
     fitted += char;

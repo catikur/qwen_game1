@@ -50,7 +50,8 @@
     yayımlıyor (onaylı). Öğe herkese açık, "Scenario" etiketli, içeriği
     tek bir `pack.json`; açıklaması paketin senaryoları. Başlık ve
     açıklama Steamworks'ün bayt sınırlarına kısaltılıyor (UTF-8; başlık
-    128, açıklama 7999 bayt, sondaki sıfırın yeri ayrı). Öğenin kimliği
+    128, açıklama 7999 bayt, sondaki sıfırın yeri ayrı); NUL karakteri
+    atılıyor, kabuk NUL'lu isteği öğe açmadan reddediyor. Öğenin kimliği
     cihazda saklanıyor (`capitalforge.workshop.v1`): sonraki yükleme aynı
     öğeyi güncelliyor; öğe Steam'de silindiyse yenisi açılıyor. Öğe açılıp
     paket gidemezse de kimlik saklanıyor, yeniden deneme o öğeye gidiyor.

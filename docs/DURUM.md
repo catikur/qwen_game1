@@ -8493,23 +8493,31 @@ elle açmak gerekmiyor, "trusted" yapılmamalı).
   Her yeniden deneme yeni bir öğe açıyordu. Artık kimlik yanıtta
   (`failed` alanıyla); sayfa onu saklıyor, oyuncuya "öğe açıldı ama paket
   yüklenemedi" diyor, yeniden deneme aynı öğeyi güncelliyor.
+- *Adında NUL olan paket kabuğu çökertiyordu.* Doğrulayıcı paketin adında
+  ve senaryonun başlığında kaçışlı bir NUL'u (`\u0000`) geçiriyor.
+  Steamworks'ün alanları C metni; `steamworks` NUL'lu başlıkta ve
+  açıklamada çöküyor, üstelik öğe açıldıktan sonra. Kimlik sayfaya
+  dönmüyordu, her deneme yeni bir boş öğe açıyordu. Kabuk artık NUL'lu
+  isteği öğe açmadan reddediyor; sayfa da NUL'u başlıktan ve açıklamadan
+  atıyor (`fitUtf8`).
 
 **Doğrulama.**
-- `pnpm test` 886/886 (876'dan); tip denetimi temiz; Almanca denetimi 0
+- `pnpm test` 887/887 (876'dan); tip denetimi temiz; Almanca denetimi 0
   hata (Steam 8/8).
-  - `packages/ui/test/packs.test.ts` (8 yeni): rafın Workshop kaynağı;
+  - `packages/ui/test/packs.test.ts` (9 yeni): rafın Workshop kaynağı;
     oyuncunun paketinin önceliği; değişmeyen öğenin aynı kalması; sınır;
     eski listenin yenisini ezmemesi; Steam'in bayt sınırlarına kısaltma;
-    raf ve düğmeler; üç dilde metin.
+    paketin adındaki NUL'un atılması; raf ve düğmeler; üç dilde metin.
   - `apps/web/test/desktop.test.ts` (2 yeni): köprüler kabuğun
     komutlarına kabuğun adlarıyla gidiyor, Steam yoksa köprü yok; ligin
     hangi sonucu Steam'e gidiyor. Komut listesi sekiz Steam komutunu
     arıyor.
-- `cargo test` 30/30 (21'den), `cargo test --features steam` 27/27
+- `cargo test` 31/31 (21'den), `cargo test --features steam` 28/28
   (20'den), clippy iki derlemede de temiz.
   - Klasördeki paketler: sırayla, büyük ve başka dosya atlanıyor.
   - Yükleme isteği Steamworks'ün sınırlarında: başlık, açıklama ve not
     (UTF-8 bayt), paket boyu, öğe kimliği.
+  - NUL'lu başlık, açıklama ve not öğe açılmadan reddediliyor.
   - Abone olunan öğenin durumu: güncel öğe rafta; inmemiş, güncellenen,
     inen ve indirmesi istenmiş öğe bekliyor, indirme bir kez isteniyor.
   - Yarıda kalan yüklemenin yanıtı kimliği taşıyor; tamamlananda alan yok.

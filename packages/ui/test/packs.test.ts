@@ -260,6 +260,16 @@ describe('Workshop paketleri (Tur 73)', () => {
     assert.equal(fitUtf8('a'.repeat(WORKSHOP_TEXT_BYTES), WORKSHOP_TEXT_BYTES).length, WORKSHOP_TEXT_BYTES);
   });
 
+  test("paketin adındaki NUL Steam'in alanına gitmiyor; kabuk NUL'lu isteği reddediyor (Codex #103)", () => {
+    // Doğrulayıcı geçiriyor: paylaşım kodunda ve dosyada NUL kaçışlı (`\u0000`).
+    const raw = JSON.parse(JSON.stringify({ ...sample('nul'), name: 'Kriz\u0000 paketi' }));
+    assert.equal(validatePack(raw).ok, true);
+    assert.equal(fitUtf8(raw.name, WORKSHOP_TITLE_BYTES), 'Kriz paketi');
+    assert.equal(fitUtf8('• Kurtarma — Batan\u0000 şirket', WORKSHOP_TEXT_BYTES), '• Kurtarma — Batan şirket');
+    // Sınır NUL'lar atıldıktan sonra ölçülüyor.
+    assert.equal(fitUtf8(`${'\u0000'.repeat(8)}${'a'.repeat(130)}`, WORKSHOP_TITLE_BYTES), 'a'.repeat(WORKSHOP_TITLE_BYTES));
+  });
+
   test('rafta Workshop künyesi ve "göz at"; Workshop paketinde Steam sayfası, kaldırma ve yükleme yok; kendi paketinde yükleme yalnız Steam açıkken', () => {
     setWorkshopPacks([item('444', sample('vitrin'))]);
     addPack(sample('benim'));

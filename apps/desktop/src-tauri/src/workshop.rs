@@ -114,6 +114,13 @@ pub fn check(request: &Publish) -> Result<(), String> {
     if long(&request.description) || request.note.as_deref().is_some_and(long) {
         return Err(format!("açıklama ve değişiklik notu en çok {MAX_DESCRIPTION} bayt"));
     }
+    // Steamworks'ün alanları C metni. `steamworks` NUL'lu başlıkta ve açıklamada
+    // çöküyor, üstelik öğe açıldıktan sonra: kimlik sayfaya dönmüyor, her deneme
+    // yeni bir boş öğe açıyordu. İstek öğe açılmadan reddediliyor (Codex #103).
+    let texts = [title, request.description.as_str(), request.note.as_deref().unwrap_or("")];
+    if texts.iter().any(|text| text.contains('\0')) {
+        return Err("başlık, açıklama ve değişiklik notunda NUL karakteri olamaz".into());
+    }
     if request.pack.is_empty() || request.pack.len() as u64 > MAX_FILE_BYTES {
         return Err("paket boş ya da 64 KB'tan büyük".into());
     }
@@ -335,6 +342,20 @@ mod tests {
         let mut noted = request("Paket", "{}", None);
         noted.note = Some("b".repeat(8000));
         assert!(check(&noted).is_err(), "uzun değişiklik notu");
+    }
+
+    #[test]
+    fn nul_karakterli_metin_oge_acilmadan_reddediliyor() {
+        // Codex #103: `steamworks` NUL'u görünce öğe açıldıktan sonra çöküyordu.
+        assert!(check(&request("Kriz\0paketi", "{}", None)).is_err(), "başlıkta NUL");
+        let mut described = request("Paket", "{}", None);
+        described.description = "• Kurtarma — \0".into();
+        assert!(check(&described).is_err(), "açıklamada NUL");
+        let mut noted = request("Paket", "{}", None);
+        noted.note = Some("not\0".into());
+        assert!(check(&noted).is_err(), "notta NUL");
+        // Paket bir dosya, C metni değil; JSON'da NUL zaten kaçışlı (`\u0000`).
+        assert!(check(&request("Paket", r#"{"name":"a\u0000b"}"#, None)).is_ok());
     }
 
     #[test]
