@@ -20,10 +20,15 @@ on:
       - 'packages/content/src/**'
       - 'ios-lite/App/project.yml'
       - '.github/workflows/lite-league.yml'
+  # PR'da da aynı yollar (Tur 71, Codex): simülasyonu değiştiren PR (çekirdek,
+  # içerik) canlı denetimin "sunucu bu sürümü tanımıyor" uyarısını birleşmeden
+  # önce görsün; yoksa fark ancak main'de kırmızıyla çıkıyordu.
   pull_request:
     paths:
       - 'packages/lite-league/**'
       - 'packages/lite-model/src/**'
+      - 'packages/core/src/**'
+      - 'packages/content/src/**'
       - 'ios-lite/App/project.yml'
       - '.github/workflows/lite-league.yml'
 

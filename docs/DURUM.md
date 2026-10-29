@@ -8092,7 +8092,10 @@ boy seçilmiş sayılıyor.
 
 Codex ikinci incelemede yeni ucu buldu: kimliksiz ve sınırsızdı, iz soğuk
 kopyada ~0,5 sn CPU. Uç artık öbür pahalı uçlar gibi IP başına saatlik
-sınırın arkasında (30; canlı denetim birkaç kez soruyor).
+sınırın arkasında (30; canlı denetim birkaç kez soruyor). Üçüncüde: canlı
+denetimin PR tetikleyicisinde çekirdek ve içerik yoktu; simülasyonu
+değiştiren PR uyarıyı görmeden birleşiyor, fark ancak `main`'de kırmızıyla
+çıkıyordu. PR'ın yolları birleşmeninkilerle aynı (test sınıyor).
 
 **Cursor Bugbot'un bulduğu şey.** Kısayol süzgeci yazı alanında harf
 yutuyordu. Windows'ta AltGr, Ctrl+Alt olarak geliyor: Almanca "}" (AltGr+0)
@@ -8113,13 +8116,14 @@ duruyordu: test dışa aktarılan kaydı adı görünür görünmez okuyor, dosy
 256 KB'ta yarım buluyordu. Okuma da tamamı gelene kadar bekleniyor.
 
 **Doğrulama.**
-- `pnpm test` 866/866 (849'dan); tip denetimi temiz.
+- `pnpm test` 867/867 (849'dan); tip denetimi temiz.
   - `packages/lite-league/test/simCheck.test.ts` (5 yeni): uç sunucunun
     izini veriyor, IP başına saatte 30; denetim aynı, farklı, eski sunucu (401) ve okunamayan
     durumunu ayırıyor; az önce dağıtılan sunucuyu bekliyor; `main`'de hata,
     PR'da uyarı.
-  - `deploy.test.ts` (2 yeni): bağımlılıklar wrangler'dan önce kuruluyor;
-    canlı denetim dağıtımdan sonra koşuyor, `main`'de katı.
+  - `deploy.test.ts` (3 yeni): bağımlılıklar wrangler'dan önce kuruluyor;
+    canlı denetim dağıtımdan sonra koşuyor, `main`'de katı; PR'da da
+    birleşmeyle aynı dosyalarda.
   - `apps/web/test/desktop.test.ts` → "uygulama gibi (Tur 71)" (7 yeni):
     hangi tuş tarayıcının, hangisi oyunun ve macOS menüsünün; yutulan tuş
     oyunun dinleyicisine gitmiyor, basılı tutulan F11 titretmiyor; sağ tık
