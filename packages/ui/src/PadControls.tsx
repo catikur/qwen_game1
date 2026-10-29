@@ -8,7 +8,7 @@ import type { PadMessageKey } from './padMessages';
  * Ayarlar'daki kumanda listesi (Tur 72). Ayrı parça: Ayarlar kurulum
  * ekranında da açılıyor ve kurulum ekranının paketi dolu; liste yalnız
  * kumanda kullanılınca iniyor. Düğme yazısı kumandaya göre (Xbox ABXY,
- * Sony ✕ ○ □ △); kökteki işareti kumanda modülü koyuyor (`inputMode.ts`).
+ * Sony ✕ ○ □ △); hangisi olduğunu kumanda modülü söylüyor (`padInUse.ts`).
  */
 const CONTROLS: Array<[id: string, ...buttons: GlyphButton[]]> = [
   ['pan'],
@@ -24,8 +24,7 @@ const CONTROLS: Array<[id: string, ...buttons: GlyphButton[]]> = [
   ['lens', 'view'],
 ];
 
-export default function PadControls(): ReactElement {
-  const glyphs: PadGlyphs = document.documentElement.dataset['padGlyphs'] === 'playstation' ? 'playstation' : 'xbox';
+export default function PadControls({ glyphs }: { glyphs: PadGlyphs }): ReactElement {
   const label = (id: string, buttons: GlyphButton[]) =>
     buttons.length > 0 ? buttons.map((button) => glyphOf(button, glyphs)).join(' · ') : id === 'move' ? '✚' : pt(`hud.pad.key.${id}` as PadMessageKey);
   return (

@@ -1,5 +1,3 @@
-import type { PadGlyphs } from './padGlyphs';
-
 /**
  * Oyuncunun son kullandığı girdi (Tur 72): fare ya da dokunuş, klavye,
  * kumanda. Kökte `data-input` olarak duruyor; haritanın nişangâhı ve
@@ -9,7 +7,6 @@ import type { PadGlyphs } from './padGlyphs';
 export type InputMode = 'pointer' | 'keyboard' | 'pad';
 
 let mode: InputMode = 'pointer';
-let glyphs: PadGlyphs = 'xbox';
 const listeners = new Set<(mode: InputMode) => void>();
 
 export function inputMode(): InputMode {
@@ -28,15 +25,6 @@ export function onInputMode(listener: (mode: InputMode) => void): () => void {
   return () => {
     listeners.delete(listener);
   };
-}
-
-export function padGlyphsInUse(): PadGlyphs {
-  return glyphs;
-}
-
-export function setPadGlyphsInUse(next: PadGlyphs): void {
-  glyphs = next;
-  if (typeof document !== 'undefined') document.documentElement.dataset['padGlyphs'] = next;
 }
 
 const MODIFIERS = new Set(['Shift', 'Control', 'Alt', 'AltGraph', 'Meta', 'CapsLock', 'Fn', 'OS']);

@@ -8784,9 +8784,7 @@ async function finish(browser, consoleErrors) {
     };
 
     // ---------------------------------------------------------- kumanda
-    const pContext = await browser.newContext({ viewport: { width: 1280, height: 800 } });
-    await pContext.addInitScript(veteran, TUTORIAL_KEY);
-    await pContext.addInitScript((id) => {
+    const fakePad = (id) => {
       const state = { id, buttons: Array.from({ length: 17 }, () => ({ pressed: false, touched: false, value: 0 })), axes: [0, 0, 0, 0], timestamp: 0 };
       const pad = { index: 0, connected: true, mapping: 'standard', get id() { return state.id; }, get buttons() { return state.buttons; }, get axes() { return state.axes; }, get timestamp() { return state.timestamp; } };
       window.__fakePad = {
@@ -8800,7 +8798,10 @@ async function finish(browser, consoleErrors) {
       // Başsız tarayıcıda sayfa odakta sayılmıyor; kumanda odaksız pencerede susuyor.
       document.hasFocus = () => true;
       window.addEventListener('capitalforge:text-input', (event) => { window.__textInput = event.detail; });
-    }, XBOX);
+    };
+    const pContext = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+    await pContext.addInitScript(veteran, TUTORIAL_KEY);
+    await pContext.addInitScript(fakePad, XBOX);
     const pp = await pContext.newPage();
     const pErrors = [];
     pp.on('pageerror', (e) => pErrors.push(e.message));
@@ -8999,8 +9000,36 @@ async function finish(browser, consoleErrors) {
     await frames(pp, 3);
     const unplugged = await inputNow();
     check('Kumanda çıkarılınca ipuçları ve kumanda kipi kalkıyor', replugged.input === 'pad' && unplugged.input === 'pointer' && unplugged.hints === 'none', JSON.stringify({ replugged, unplugged }));
-    check('Kumandayla oyun: konsol temiz', pErrors.length === 0, pErrors.slice(0, 2).join(' | '));
     await pContext.close();
+
+    // Ayarlar kumandadan önce açıktı: kumandaya uzanınca liste kapatıp açmadan geliyor,
+    // başka kumandaya geçince düğme yazıları da değişiyor (Codex #102). Ayrı bağlam: kayıt yok, kurulum ekranı.
+    const sContext = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+    await sContext.addInitScript(veteran, TUTORIAL_KEY);
+    await sContext.addInitScript(fakePad, XBOX);
+    const sp2 = await sContext.newPage();
+    sp2.on('pageerror', (e) => pErrors.push(e.message));
+    sp2.on('console', (m) => { if (m.type() === 'error') pErrors.push(m.text()); });
+    await sp2.goto('http://127.0.0.1:8811/?lang=tr');
+    await sp2.waitForSelector('.newgame', { timeout: 20000 });
+    await sp2.locator('[data-settings-open]').click();
+    await sp2.waitForSelector('.settings', { timeout: 5000 });
+    const listBefore = await sp2.locator('[data-pad-controls]').count();
+    await sp2.evaluate(() => { window.__fakePad.connected = true; window.dispatchEvent(new Event('gamepadconnected')); });
+    await sp2.waitForFunction(() => performance.getEntriesByType('resource').some((r) => /\/pad-[\w-]+\.js/.test(r.name)), null, { timeout: 10000 }).catch(() => {});
+    await frames(sp2, 3);
+    const padKeys = (glyph) => sp2.waitForFunction((g) => [...document.querySelectorAll('[data-pad-controls] kbd')].some((k) => k.textContent === g), glyph, { timeout: 10000 })
+      .catch(() => {})
+      .then(() => sp2.evaluate(() => [...document.querySelectorAll('[data-pad-controls] kbd')].map((k) => k.textContent)));
+    await tap(sp2, 'down');
+    const xboxKeys = await padKeys('A');
+    await sp2.evaluate((id) => window.__fakePad.rename(id), SONY);
+    await tap(sp2, 'down');
+    const sonyKeys = await padKeys('✕');
+    check('Ayarlar kumandadan önce açıktı: kumanda kullanılınca listesi kapatıp açmadan geliyor, kumanda değişince yazıları da',
+      listBefore === 0 && xboxKeys.includes('A') && sonyKeys.includes('✕') && !sonyKeys.includes('A'), JSON.stringify({ listBefore, xboxKeys, sonyKeys }));
+    await sContext.close();
+    check('Kumandayla oyun: konsol temiz', pErrors.length === 0, pErrors.slice(0, 2).join(' | '));
 
     // ---------------------------------------------------------- klavye
     const kContext = await browser.newContext({ viewport: { width: 1280, height: 800 } });

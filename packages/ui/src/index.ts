@@ -82,7 +82,8 @@ export {
 export type { Direction, PadAction, PadButton, PadFrame, PadGlyphs, PadLayer, PadLike, PadPress, Stick } from './padInput';
 export { nearestBox } from './spatialNav';
 export type { Box } from './spatialNav';
-export { inputMode, onInputMode, padGlyphsInUse, setInputMode, setPadGlyphsInUse, watchInputMode } from './inputMode';
+export { inputMode, onInputMode, setInputMode, watchInputMode } from './inputMode';
+export { padGlyphsInUse, setPadGlyphsInUse } from './padInUse';
 export { pt } from './padMessages';
 export type { PadMessageKey } from './padMessages';
 export type { InputMode } from './inputMode';

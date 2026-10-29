@@ -1,5 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { createElement } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server.edge';
+import { onPadGlyphs, padGlyphsInUse, setPadGlyphsInUse, usePadGlyphs } from '../src/padInUse';
+import PadControls from '../src/PadControls';
 import {
   PadPresses,
   REPEAT_DELAY_MS,
@@ -98,6 +102,26 @@ test('düğme yazıları: Steam Input ve Xbox ABXY, Sony kumandası ✕ ○ □ 
   assert.equal(padGlyphs(undefined), 'xbox');
   assert.deepEqual(['a', 'b', 'y'].map((button) => glyphOf(button as 'a' | 'b' | 'y', 'playstation')), ['✕', '○', '△']);
   assert.equal(glyphOf('a', 'xbox'), 'A');
+});
+
+test('kullanılan kumanda: ilk kullanışta ve kumanda değişince haber; Ayarlar listesi ona göre (Codex #102)', () => {
+  const Probe = () => createElement('i', null, usePadGlyphs() ?? 'yok');
+  assert.equal(renderToStaticMarkup(createElement(Probe)), '<i>yok</i>', 'kumanda kullanılmadan liste yok');
+  assert.equal(padGlyphsInUse(), 'xbox', 'şeridin varsayılanı Xbox yazıları');
+  const heard: string[] = [];
+  const stop = onPadGlyphs(() => heard.push(padGlyphsInUse()));
+  setPadGlyphsInUse('xbox');
+  setPadGlyphsInUse('xbox');
+  setPadGlyphsInUse('playstation');
+  assert.deepEqual(heard, ['xbox', 'playstation'], 'her karede aynı kumanda haber vermiyor');
+  assert.equal(renderToStaticMarkup(createElement(Probe)), '<i>playstation</i>');
+  stop();
+  setPadGlyphsInUse('xbox');
+  assert.equal(heard.length, 2, 'aboneliği bırakan duymuyor');
+  const keys = (glyphs: 'xbox' | 'playstation') =>
+    [...renderToStaticMarkup(createElement(PadControls, { glyphs })).matchAll(/<kbd>([^<]*)<\/kbd>/g)].map((m) => m[1]);
+  assert.deepEqual(keys('xbox').slice(2, 7), ['LT · RT', 'A', 'B', '✚', 'LB · RB']);
+  assert.deepEqual(keys('playstation').slice(2, 7), ['L2 · R2', '✕', '○', '✚', 'L1 · R1'], 'liste yazılarını kökten değil verilen kumandadan alıyor');
 });
 
 const box = (left: number, top: number, width: number, height: number): Box => ({ left, top, right: left + width, bottom: top + height });

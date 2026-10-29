@@ -8339,20 +8339,28 @@ yazı alanında ekran klavyesi.
 - *Standart düzende olmayan kumanda da okunuyordu.* Düğme ve eksen sırası
   yalnız standart düzende belli; başka düzendeki kumandada rastgele bir
   düğme A ya da B olurdu. O kumanda artık okunmuyor.
+- *Ayarlar açıkken kumandanın listesi gelmiyordu.* Liste kökteki işarete
+  bakıyordu, işaret değişince Ayarlar yeniden çizilmiyordu. Kumandaya
+  uzanan oyuncu listeyi ancak Ayarlar'ı kapatıp açınca görüyordu; başka
+  kumandaya geçince düğme yazıları eski kalıyordu. Kullanılan kumanda artık
+  küçük bir depoda (`padInUse.ts`), liste ona abone. Depo ayrı modülde:
+  Ayarlar giriş paketinde, girdi kipinin dinleyicileri oraya girmiyor
+  (ilk hâlinde ana parça 74,9 KB'a çıkmıştı).
 
 **Doğrulama.**
-- `pnpm test` 874/874 (867'den); tip denetimi temiz; Almanca denetimi 0
+- `pnpm test` 875/875 (867'den); tip denetimi temiz; Almanca denetimi 0
   hata (kumanda 27/27).
-  - `packages/ui/test/padInput.test.ts` (6 yeni): kumandanın okunması (ölü
+  - `packages/ui/test/padInput.test.ts` (7 yeni): kumandanın okunması (ölü
     bölge, tetikler), basış ve tekrar, katmana göre eylemler, kamera
-    sürüşü, düğme yazıları, yönle odak (hizadaki aday, kap aday değil).
+    sürüşü, düğme yazıları, kullanılan kumandanın haberi ve Ayarlar'daki
+    listesi, yönle odak (hizadaki aday, kap aday değil).
   - `apps/web/test/desktop.test.ts` (1 yeni): yazı alanı seçilince ekran
     klavyesi alanın yerinde, fiziksel pikselde isteniyor; Steam yokken
     istenmiyor.
 - `cargo test` 21/21, `cargo test --features steam` 20/20, clippy temiz;
   Steam'siz derlemede ekran klavyesi yok.
-- Tarayıcı testinin yeni bölümü "Kumanda ve yalnız klavye" (32 kontrol)
-  32/32. Kumandanın modülü kumanda bağlanmadan inmiyor. Kurulum yalnız
+- Tarayıcı testinin yeni bölümü "Kumanda ve yalnız klavye" (33 kontrol)
+  33/33. Kumandanın modülü kumanda bağlanmadan inmiyor. Kurulum yalnız
   kumandayla ve yalnız klavyeyle bitiyor. Ardından
   ortadaki parsel seçiliyor, satın alınıyor, yapı seçilip parsele
   kuruluyor. Kamera çubuklarla ve Q/E, +/−, WASD ile dönüyor, yakınlaşıyor,
@@ -8360,10 +8368,12 @@ yazı alanında ekran klavyesi.
   değişiyor. Şerit panellerin üstüne binmiyor; DualSense'te ✕ ○ □ △; fare
   oynayınca ipuçları ve nişangâh kalkıyor; karar ekranında şerit B'yi
   "Kapat" diye göstermiyor; standart düzende olmayan kumanda okunmuyor;
-  kumanda çıkarılınca ipuçları kalkıyor; konsol temiz.
+  kumanda çıkarılınca ipuçları kalkıyor. Ayarlar kumandadan önce açıksa
+  kumandanın listesi kapatıp açmadan geliyor, kumanda değişince yazıları
+  da; konsol temiz.
 - Gerçek pencerede uçtan uca 29/29 (28'den): WebKitGTK'de Gamepad API var
   (libmanette), ekran klavyesinin komutu kabukta.
-- Paket bütçesi tamam (ana parça 74,5 KB; kumandanın modülü, Ayarlar'daki
+- Paket bütçesi tamam (ana parça 74,6 KB; kumandanın modülü, Ayarlar'daki
   listesi ve yazıları ayrı parçalarda). Paket denetiminin yeni kontrolü:
   kumandanın modülü ne kurulumun yolunda ne oyun ekranının durağan içe
   aktarmalarında.
