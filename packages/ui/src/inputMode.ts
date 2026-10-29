@@ -48,10 +48,14 @@ const watched = new WeakSet<Window>();
  * B'si Escape olayı gönderiyor, o olay kipi klavyeye çevirmemeli. Fare
  * yerinde dururken de (yerleşim değişince) olay gelebiliyor; konumu
  * değişmeyen hareket sayılmıyor.
+ *
+ * Pencerenin ömrü boyunca, bir kez: oyun ekranı da kumanda modülü de
+ * istiyor ve ekranlar gelip gidiyor. Kaldırma yok; ilk isteyen kaldırsaydı
+ * oyun ekranı kapanınca kumanda kurulum ekranında dinleyicisiz kalırdı ve
+ * fare kipi geri çeviremezdi (Codex #102).
  */
-export function watchInputMode(target: Window): () => void {
-  // Oyun ekranı da kumanda modülü de istiyor; bir pencereye bir kez.
-  if (watched.has(target)) return () => undefined;
+export function watchInputMode(target: Window): void {
+  if (watched.has(target)) return;
   watched.add(target);
   let lastX = Number.NaN;
   let lastY = Number.NaN;
@@ -69,10 +73,4 @@ export function watchInputMode(target: Window): () => void {
   target.addEventListener('pointermove', onPointer, true);
   target.addEventListener('pointerdown', onPointer, true);
   target.addEventListener('keydown', onKey, true);
-  return () => {
-    watched.delete(target);
-    target.removeEventListener('pointermove', onPointer, true);
-    target.removeEventListener('pointerdown', onPointer, true);
-    target.removeEventListener('keydown', onKey, true);
-  };
 }

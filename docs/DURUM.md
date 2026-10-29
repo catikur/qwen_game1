@@ -8321,6 +8321,20 @@ yazı alanında ekran klavyesi.
   kaçıyordu. Gerçek basış ~100 ms, 60 karede altı kare; test basışları iki
   kare sürüyor.
 
+**İncelemede bulunanlar (Codex).**
+- *Çok satırlı alanda tek satırlık klavye.* Senaryo editörünün yazı
+  kutularında Steam'in klavyesi satır başı aldırmıyordu; alanın türü artık
+  kabuğa gidiyor.
+- *Kumandanın kodu oyun ekranıyla iniyordu.* Oyun ekranı harita
+  işleyicisini kumanda modülünden alıyordu; ortak uç `padBridge.ts`'e
+  ayrıldı, paket denetimi bunu sınıyor.
+- *Karar ekranında B "Kapat"tı ama kapatmıyordu.* Zafer, senaryonun açılışı
+  ve sonucu, lig sonucu ve iflas ekranı kapatılmıyor, oyuncu bir düğme
+  seçiyor; şerit orada B'yi göstermiyor.
+- *Girdi kipinin dinleyicisi ilk isteyenin elindeydi.* Oyun ekranı
+  kapanınca kaldırılabilirdi (bugün kaldıran yoktu); artık pencerenin
+  ömrü boyunca, kaldırma işlevi yok.
+
 **Doğrulama.**
 - `pnpm test` 874/874 (867'den); tip denetimi temiz; Almanca denetimi 0
   hata (kumanda 27/27).
@@ -8332,14 +8346,15 @@ yazı alanında ekran klavyesi.
     istenmiyor.
 - `cargo test` 21/21, `cargo test --features steam` 20/20, clippy temiz;
   Steam'siz derlemede ekran klavyesi yok.
-- Tarayıcı testinin yeni bölümü "Kumanda ve yalnız klavye" (29 kontrol)
-  29/29. Kumandanın modülü kumanda bağlanmadan inmiyor. Kurulum yalnız
+- Tarayıcı testinin yeni bölümü "Kumanda ve yalnız klavye" (30 kontrol)
+  30/30. Kumandanın modülü kumanda bağlanmadan inmiyor. Kurulum yalnız
   kumandayla ve yalnız klavyeyle bitiyor. Ardından
   ortadaki parsel seçiliyor, satın alınıyor, yapı seçilip parsele
   kuruluyor. Kamera çubuklarla ve Q/E, +/−, WASD ile dönüyor, yakınlaşıyor,
   kayıyor. LB/RB, Y, X, ☰ ve ⧉ işini yapıyor, kaydırıcı yön tuşuyla
   değişiyor. Şerit panellerin üstüne binmiyor; DualSense'te ✕ ○ □ △; fare
-  oynayınca ipuçları ve nişangâh kalkıyor; konsol temiz.
+  oynayınca ipuçları ve nişangâh kalkıyor; karar ekranında şerit B'yi
+  "Kapat" diye göstermiyor; konsol temiz.
 - Gerçek pencerede uçtan uca 29/29 (28'den): WebKitGTK'de Gamepad API var
   (libmanette), ekran klavyesinin komutu kabukta.
 - Paket bütçesi tamam (ana parça 74,5 KB; kumandanın modülü, Ayarlar'daki

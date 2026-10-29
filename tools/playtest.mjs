@@ -8933,6 +8933,22 @@ async function finish(browser, consoleErrors) {
     await tap(pp, 'b');
     check('B Ayarlar\'ı kapatıyor', (await openPanel()) === null);
 
+    // Karar ekranı (zafer, senaryo sonucu, iflas) kapatılmıyor, B'nin Escape'ini dinlemiyor:
+    // şerit orada B'yi "Kapat" diye göstermiyor (Codex #102).
+    await pp.evaluate(() => {
+      const screen = document.createElement('div');
+      screen.setAttribute('role', 'alertdialog');
+      screen.dataset.fakeDecision = '';
+      screen.innerHTML = '<button type="button">Yeni oyun</button>';
+      document.body.append(screen);
+    });
+    await frames(pp, 3);
+    const decision = await hints(pp);
+    await pp.evaluate(() => document.querySelector('[data-fake-decision]')?.remove());
+    await frames(pp, 2);
+    check('Karar ekranında şerit B\'yi "Kapat" diye göstermiyor; A ve yön tuşu yerinde',
+      decision?.layer === 'modal' && !decision.glyphs.includes('B') && decision.glyphs.includes('A') && decision.glyphs.includes('✚'), JSON.stringify(decision));
+
     // Görünüm: sonraki lens.
     const lens = () => pp.evaluate(() => document.querySelector('[data-lens][aria-pressed="true"]')?.getAttribute('data-lens') ?? null);
     const lens0 = await lens();
