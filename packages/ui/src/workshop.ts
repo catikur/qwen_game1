@@ -76,6 +76,12 @@ export interface WorkshopPublished {
 }
 
 export interface WorkshopBridge {
+  /**
+   * Oturumdaki Steam hesabı (SteamID64). Öğe kimlikleri hesaba göre
+   * saklanıyor: aynı bilgisayarda oynayan başka bir hesap öbürünün öğesini
+   * güncellemeye kalkmıyor; Steam onu reddederdi (Codex #103).
+   */
+  readonly account: string;
   list(): Promise<WorkshopListing>;
   publish(request: WorkshopPublish): Promise<WorkshopPublished>;
   /** Sayfa Steam katmanında ya da Steam'in tarayıcısında; açılamadıysa yanlış. */
@@ -116,24 +122,35 @@ const PUBLISHED_KEY = 'capitalforge.workshop.v1';
 /** Öğesinin kimliği sayı; bozuk kayıt yok sayılıyor. */
 const ITEM_ID = /^\d{1,20}$/;
 
-function readPublished(): Record<string, string> {
+const isRecord = (value: unknown): value is Record<string, unknown> => Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+
+/** Steam hesabı → paket → öğe. */
+function readPublished(): Record<string, Record<string, string>> {
   try {
     const parsed: unknown = JSON.parse(window.localStorage.getItem(PUBLISHED_KEY) ?? '{}');
-    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {};
-    return Object.fromEntries(Object.entries(parsed).filter((pair): pair is [string, string] => typeof pair[1] === 'string' && ITEM_ID.test(pair[1])));
+    if (!isRecord(parsed)) return {};
+    return Object.fromEntries(
+      Object.entries(parsed)
+        .filter((pair): pair is [string, Record<string, unknown>] => isRecord(pair[1]))
+        .map(([account, items]) => [
+          account,
+          Object.fromEntries(Object.entries(items).filter((pair): pair is [string, string] => typeof pair[1] === 'string' && ITEM_ID.test(pair[1]))),
+        ]),
+    );
   } catch {
     return {};
   }
 }
 
-/** Oyuncunun paketi Workshop'ta hangi öğe; yüklenmediyse yok. */
-export function publishedItem(packId: string): string | undefined {
-  return readPublished()[packId];
+/** Oyuncunun paketi bu Steam hesabında Workshop'ta hangi öğe; yüklenmediyse yok. */
+export function publishedItem(account: string, packId: string): string | undefined {
+  return readPublished()[account]?.[packId];
 }
 
-export function rememberPublished(packId: string, item: string): void {
+export function rememberPublished(account: string, packId: string, item: string): void {
   try {
-    window.localStorage.setItem(PUBLISHED_KEY, JSON.stringify({ ...readPublished(), [packId]: item }));
+    const all = readPublished();
+    window.localStorage.setItem(PUBLISHED_KEY, JSON.stringify({ ...all, [account]: { ...all[account], [packId]: item } }));
   } catch {
     // Depo kapalı: sonraki yükleme yeni öğe açıyor.
   }

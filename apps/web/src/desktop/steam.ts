@@ -28,6 +28,8 @@ import type { Invoke } from './bridge';
 export interface SteamStatus {
   available: boolean;
   detail: string;
+  /** Oturumdaki Steam hesabı (SteamID64, metin); Steam açıkken. */
+  account?: string;
 }
 
 export interface CareerSource {
@@ -69,11 +71,16 @@ export async function initSteam(
   };
   sync();
   career.subscribe(sync);
-  setWorkshopBridge({
-    list: () => invoke<WorkshopListing>('steam_workshop_list'),
-    publish: (request) => invoke<WorkshopPublished>('steam_workshop_publish', { request }),
-    open: (page) => invoke<boolean>('steam_workshop_open', { target: typeof page === 'string' ? page : page.item }),
-  });
+  // Workshop'un öğe kimlikleri hesaba göre saklanıyor (Codex #103). Kabuk
+  // Steam açıkken hesabı hep veriyor; vermezse Workshop yok.
+  if (status.account) {
+    setWorkshopBridge({
+      account: status.account,
+      list: () => invoke<WorkshopListing>('steam_workshop_list'),
+      publish: (request) => invoke<WorkshopPublished>('steam_workshop_publish', { request }),
+      open: (page) => invoke<boolean>('steam_workshop_open', { target: typeof page === 'string' ? page : page.item }),
+    });
+  }
   setSteamLeague({
     upload: (boardId, score) => invoke<SteamScore>('steam_leaderboard_upload', { weekId: boardId, score }),
     friends: (boardId) => invoke<SteamFriendScore[]>('steam_leaderboard_friends', { weekId: boardId }),

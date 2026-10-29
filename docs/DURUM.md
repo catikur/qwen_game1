@@ -8430,8 +8430,9 @@ sunucusundaydı; Steam'deki arkadaşlarla kıyas yoktu.
 - *Workshop'a yükleme.* Kendi paketinde "Workshop'a yükle", onaydan sonra
   herkese açık bir öğe: içeriği tek `pack.json`, başlığı paketin adı,
   açıklaması senaryoların listesi, "Scenario" etiketi.
-  - Öğenin kimliği cihazda (`capitalforge.workshop.v1`); sonraki yükleme
-    "Workshop'ta güncelle" ile aynı öğeye gidiyor.
+  - Öğenin kimliği cihazda, Steam hesabına göre
+    (`capitalforge.workshop.v1`); sonraki yükleme "Workshop'ta güncelle"
+    ile aynı öğeye gidiyor.
   - Öğe Steam'de silindiyse kabuk yeni öğe açıyor; kimlik boşta kalmıyor.
   - Öğe açılıp paket gidemezse kimlik yine saklanıyor; yeniden deneyince
     aynı öğe güncelleniyor.
@@ -8500,19 +8501,27 @@ elle açmak gerekmiyor, "trusted" yapılmamalı).
   dönmüyordu, her deneme yeni bir boş öğe açıyordu. Kabuk artık NUL'lu
   isteği öğe açmadan reddediyor; sayfa da NUL'u başlıktan ve açıklamadan
   atıyor (`fitUtf8`).
+- *Öğe kimlikleri Steam hesabını tanımıyordu.* Sayfa öğenin kimliğini
+  yalnız paketin kimliğiyle saklıyordu. Aynı bilgisayarda ikinci bir Steam
+  hesabı oynayınca birincinin öğesini güncellemeye kalkıyordu; Steam bunu
+  reddediyor, kabuk yalnız silinmiş öğeye yenisini açıyor, her deneme
+  başarısız kalıyordu. Artık kabuk Steam'in durumunda oturumdaki hesabı da
+  veriyor (SteamID64); kimlikler hesap başına saklanıyor, ikinci hesap
+  kendi öğesini açıyor.
 
 **Doğrulama.**
-- `pnpm test` 887/887 (876'dan); tip denetimi temiz; Almanca denetimi 0
+- `pnpm test` 888/888 (876'dan); tip denetimi temiz; Almanca denetimi 0
   hata (Steam 8/8).
-  - `packages/ui/test/packs.test.ts` (9 yeni): rafın Workshop kaynağı;
+  - `packages/ui/test/packs.test.ts` (10 yeni): rafın Workshop kaynağı;
     oyuncunun paketinin önceliği; değişmeyen öğenin aynı kalması; sınır;
     eski listenin yenisini ezmemesi; Steam'in bayt sınırlarına kısaltma;
-    paketin adındaki NUL'un atılması; raf ve düğmeler; üç dilde metin.
+    paketin adındaki NUL'un atılması; öğe kimliklerinin hesap başına
+    saklanması; raf ve düğmeler; üç dilde metin.
   - `apps/web/test/desktop.test.ts` (2 yeni): köprüler kabuğun
-    komutlarına kabuğun adlarıyla gidiyor, Steam yoksa köprü yok; ligin
-    hangi sonucu Steam'e gidiyor. Komut listesi sekiz Steam komutunu
-    arıyor.
-- `cargo test` 31/31 (21'den), `cargo test --features steam` 28/28
+    komutlarına kabuğun adlarıyla gidiyor, Steam yoksa köprü yok,
+    Workshop köprüsü kabuğun verdiği hesapla; ligin hangi sonucu Steam'e
+    gidiyor. Komut listesi sekiz Steam komutunu arıyor.
+- `cargo test` 32/32 (21'den), `cargo test --features steam` 29/29
   (20'den), clippy iki derlemede de temiz.
   - Klasördeki paketler: sırayla, büyük ve başka dosya atlanıyor.
   - Yükleme isteği Steamworks'ün sınırlarında: başlık, açıklama ve not
@@ -8524,9 +8533,10 @@ elle açmak gerekmiyor, "trusted" yapılmamalı).
   - Açılan sayfa yalnız Workshop, sözleşme ya da öğe.
   - Tablo adı yalnız ligin hafta ve gün kimliğinden; net değer tablonun
     puanına kırpılıyor (eksi, sayı olmayan, 32 biti aşan).
+  - Steam'in durumunda hesap yalnız Steam açıkken.
   - Steam'siz derlemede Workshop ve tablo yok.
-- Tarayıcı testinin yeni bölümü "Steam: Workshop ve skor tabloları" (12
-  kontrol) 12/12. Masaüstü paketi tarayıcıda sahte bir kabukla, Steam
+- Tarayıcı testinin yeni bölümü "Steam: Workshop ve skor tabloları" (13
+  kontrol) 13/13. Masaüstü paketi tarayıcıda sahte bir kabukla, Steam
   açık:
   - Workshop paketi rafta, bozuk dosyası atlanmış, inen öğe sayılıyor.
   - İnen öğe bitince raf odak olayı olmadan yenileniyor, sonra liste
@@ -8536,6 +8546,9 @@ elle açmak gerekmiyor, "trusted" yapılmamalı).
     taşıyor. İlk deneme yarıda kalıyor: kimlik saklanıyor, yeniden deneme
     aynı öğeyi güncelliyor (düzeltmeden önceki pakette kırmızı). Sözleşme
     uyarısı çıkıyor, sözleşme açılınca kalkıyor.
+  - Aynı bilgisayarda ikinci bir Steam hesabı birincinin öğesini
+    güncellemeye kalkmıyor, kendi öğesini açıyor; iki hesabın kaydı ayrı
+    (düzeltmeden önceki pakette kırmızı).
   - Lig panelinde Steam arkadaşları sırayla.
   - Bitirilip gönderilen koşunun puanı Steam'in o haftaki tablosunda,
     sonuç ekranında sırası. Konsol temiz.

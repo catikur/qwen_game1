@@ -183,9 +183,9 @@ export function PackActions({ def, onRemoved }: { def: ScenarioDef; onRemoved: (
   if (!source) return null;
   // Kayıttan açılan ama bu cihazda yüklü olmayan paket: paylaşılabilir, kaldırılacak bir şey yok.
   const installed = packs.find((entry) => entry.pack.id === source.packId);
-  // Oyuncunun kendi paketi Workshop'a yüklendiyse öğesi: sonraki yükleme onu güncelliyor.
+  // Oyuncunun kendi paketi bu Steam hesabıyla Workshop'a yüklendiyse öğesi: sonraki yükleme onu güncelliyor.
   const own = installed && !installed.workshop ? installed : undefined;
-  const ownItem = own ? publishedItem(own.pack.id) : undefined;
+  const ownItem = own && bridge ? publishedItem(bridge.account, own.pack.id) : undefined;
   const workshopItem = installed?.workshop;
 
   // Editörde (Tur 68): yüklü paketin bütünü, yoksa kayıttaki tek senaryoluk paket. Kaydedilmemiş taslak soruluyor.
@@ -243,7 +243,7 @@ export function PackActions({ def, onRemoved }: { def: ScenarioDef; onRemoved: (
       });
       // Öğe Steam'de silinmişse kabuk yenisini açtı: kimlik değişebiliyor. Öğe açılıp
       // paket gitmediyse de kimlik saklanıyor: yeniden deneyince aynı öğe güncelleniyor.
-      rememberPublished(own.pack.id, result.id);
+      rememberPublished(bridge.account, own.pack.id, result.id);
       if (result.failed) {
         console.warn('Workshop öğesi açıldı, paket yüklenemedi:', result.failed);
         setNotice({ tone: 'bad', text: pt('hud.pack.workshop.incomplete') });

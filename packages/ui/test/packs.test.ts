@@ -12,7 +12,7 @@ import { packDe } from '../src/packMessages.de';
 import { MAX_PACKS, MAX_WORKSHOP_PACKS, addPack, installedPacks, refreshWorkshop, removePack, setWorkshopPacks, workshopDownloading } from '../src/packStore';
 import { recordScenarioResult, scenarioRecord } from '../src/scenarioBest';
 import { PackActions, PackList } from '../src/PackShelf';
-import { WORKSHOP_TEXT_BYTES, WORKSHOP_TITLE_BYTES, fitUtf8, setWorkshopBridge } from '../src/workshop';
+import { WORKSHOP_TEXT_BYTES, WORKSHOP_TITLE_BYTES, fitUtf8, publishedItem, rememberPublished, setWorkshopBridge } from '../src/workshop';
 import type { WorkshopBridge, WorkshopListing } from '../src/workshop';
 
 /**
@@ -156,7 +156,8 @@ describe('Workshop paketleri (Tur 73)', () => {
   /** Kabuğun verdiği öğe: paket dosyalarının içi. */
   const item = (id: string, ...packs: Array<Pack | string>) => ({ id, packs: packs.map((pack) => (typeof pack === 'string' ? pack : JSON.stringify(pack))) });
   /** Liste hiç dönmüyor: köprüyü kurmak rafı tazelese de testin kurduğu raf değişmesin. */
-  const bridge = (list: () => Promise<WorkshopListing> = () => new Promise(() => undefined)): WorkshopBridge => ({
+  const bridge = (list: () => Promise<WorkshopListing> = () => new Promise(() => undefined), account = '76561198000000001'): WorkshopBridge => ({
+    account,
     list,
     publish: async () => ({ id: '1', agreement: false }),
     open: async () => true,
@@ -268,6 +269,38 @@ describe('Workshop paketleri (Tur 73)', () => {
     assert.equal(fitUtf8('• Kurtarma — Batan\u0000 şirket', WORKSHOP_TEXT_BYTES), '• Kurtarma — Batan şirket');
     // Sınır NUL'lar atıldıktan sonra ölçülüyor.
     assert.equal(fitUtf8(`${'\u0000'.repeat(8)}${'a'.repeat(130)}`, WORKSHOP_TITLE_BYTES), 'a'.repeat(WORKSHOP_TITLE_BYTES));
+  });
+
+  test('öğenin kimliği Steam hesabına göre: aynı cihazda başka bir hesap öbürünün öğesini güncellemeye kalkmıyor (Codex #103)', () => {
+    const [first, second] = ['76561198000000001', '76561198000000002'];
+    addPack(sample('benim'));
+    const def = installedPacks().find((entry) => entry.pack.id === 'benim')!.scenarios[0]!;
+    const actions = (account: string) => {
+      setWorkshopBridge(bridge(undefined, account));
+      return renderToStaticMarkup(createElement(PackActions, { def, onRemoved: () => undefined }));
+    };
+    const memory = new Map<string, string>();
+    (globalThis as { window?: unknown }).window = {
+      localStorage: { getItem: (k: string) => memory.get(k) ?? null, setItem: (k: string, v: string) => memory.set(k, v), removeItem: (k: string) => memory.delete(k) },
+      location: { protocol: 'tauri:', hostname: 'localhost' },
+    };
+    try {
+      rememberPublished(first, 'benim', '9001');
+      assert.equal(publishedItem(first, 'benim'), '9001');
+      assert.equal(publishedItem(second, 'benim'), undefined);
+      assert.match(actions(first), /data-pack-publish="update"/);
+      assert.match(actions(second), /data-pack-publish="new"/, 'ikinci hesap kendi öğesini açıyor');
+      rememberPublished(second, 'benim', '9002');
+      assert.deepEqual(JSON.parse(memory.get('capitalforge.workshop.v1')!), { [first]: { benim: '9001' }, [second]: { benim: '9002' } });
+      // Bozuk kayıt yok sayılıyor: hesapsız düz kayıt, sayı olmayan kimlik.
+      memory.set('capitalforge.workshop.v1', JSON.stringify({ benim: '9001', [first]: { benim: 'x', baska: '12' } }));
+      assert.equal(publishedItem(first, 'benim'), undefined);
+      assert.equal(publishedItem(first, 'baska'), '12');
+    } finally {
+      delete (globalThis as { window?: unknown }).window;
+      setWorkshopBridge(null);
+      removePack('benim');
+    }
   });
 
   test('rafta Workshop künyesi ve "göz at"; Workshop paketinde Steam sayfası, kaldırma ve yükleme yok; kendi paketinde yükleme yalnız Steam açıkken', () => {

@@ -9213,6 +9213,8 @@ async function finish(browser, consoleErrors) {
     await sContext.addInitScript(({ pack }) => {
       const calls = [];
       window.__steamCalls = calls;
+      // Oturumdaki Steam hesabı; aynı bilgisayarda ikinci hesap bu anahtarla (Codex #103).
+      const account = localStorage.getItem('__fakeSteamAccount') ?? '76561198000000001';
       const second = JSON.stringify({ ...JSON.parse(pack), id: 'ikinci-kis', name: { tr: 'İkinci kış', en: 'Second winter' } });
       const handlers = {
         profile_read_all: () => ({}),
@@ -9226,18 +9228,22 @@ async function finish(browser, consoleErrors) {
         save_remove: () => null,
         export_file: () => 'x',
         quit: () => null,
-        steam_status: () => ({ available: true, detail: 'sahte Steam' }),
+        steam_status: () => ({ available: true, detail: 'sahte Steam', account }),
         steam_unlock: () => null,
         steam_keyboard: () => false,
         // Bir öğe kurulu (iki dosyası var, biri bozuk), biri iniyor; `__workshopReady` olunca o da kurulu.
         steam_workshop_list: () => (window.__workshopReady
           ? { items: [{ id: '7001', packs: [pack, '{bozuk'] }, { id: '7002', packs: [second] }], downloading: 0 }
           : { items: [{ id: '7001', packs: [pack, '{bozuk'] }], downloading: 1 }),
-        // Yeni öğe açılıyor ama paket gitmiyor (Codex #103): kimlik yine dönüyor.
-        // Oyuncu sözleşmeyi Steam'de açana kadar kabul etmemiş.
-        steam_workshop_publish: ({ request }) => (request.item
-          ? { id: request.item, agreement: !window.__workshopAgreed }
-          : { id: '9001', agreement: true, failed: 'yüklenemedi: Steam yanıt vermedi' }),
+        // Birinci hesapta yeni öğe açılıyor ama paket gitmiyor (Codex #103): kimlik yine
+        // dönüyor. Oyuncu sözleşmeyi Steam'de açana kadar kabul etmemiş. İkinci hesabın
+        // ilk yüklemesi tamam.
+        steam_workshop_publish: ({ request }) => {
+          if (request.item) return { id: request.item, agreement: !window.__workshopAgreed };
+          return account === '76561198000000001'
+            ? { id: '9001', agreement: true, failed: 'yüklenemedi: Steam yanıt vermedi' }
+            : { id: '9002', agreement: false };
+        },
         steam_workshop_open: ({ target }) => {
           if (target === 'agreement') window.__workshopAgreed = true;
           return true;
@@ -9343,7 +9349,7 @@ async function finish(browser, consoleErrors) {
     const firstPack = first ? JSON.parse(first.pack) : null;
     check('İlk yükleme yarıda kalınca öğenin kimliği saklanıyor: düğme "güncelle", oyuncuya söyleniyor; istekte paketin kendisi, adı ve senaryo listesi',
       first && first.item === undefined && first.title === ownName && firstPack?.id === 'ornek' && first.description.startsWith(`• ${ownName} — `)
-        && /açıldı ama paket yüklenemedi/.test(half.notice) && half.update === 1 && half.agreement === 0 && half.stored === '{"ornek":"9001"}',
+        && /açıldı ama paket yüklenemedi/.test(half.notice) && half.update === 1 && half.agreement === 0 && half.stored === '{"76561198000000001":{"ornek":"9001"}}',
       `${JSON.stringify({ ...first, pack: firstPack?.id })} · ${JSON.stringify(half)}`);
     await sp.locator('[data-pack-actions] [data-pack-publish="update"]').click();
     await sp.locator('[data-pack-publish-yes]').click();
@@ -9352,7 +9358,7 @@ async function finish(browser, consoleErrors) {
     const second = (await calls('steam_workshop_publish')).map(([, args]) => args.request)[1];
     check('Yeniden deneyince aynı öğe güncelleniyor, yeni öğe açılmıyor; sözleşme uyarısı ve düğmesi',
       second?.item === '9001' && /güncellendi/.test(retried.notice) && /sözleşmesini kabul edene kadar/.test(retried.notice)
-        && retried.agreement === 1 && retried.stored === '{"ornek":"9001"}',
+        && retried.agreement === 1 && retried.stored === '{"76561198000000001":{"ornek":"9001"}}',
       `${second?.item ?? 'yeni'} · ${JSON.stringify(retried)}`);
     await sp.locator('[data-pack-workshop-agreement]').click();
     await sp.locator('[data-pack-actions] [data-pack-publish="update"]').click();
@@ -9366,6 +9372,25 @@ async function finish(browser, consoleErrors) {
         && /güncellendi/.test(agreed.notice) && !/sözleşmesini/.test(agreed.notice) && agreed.agreement === 0,
       `${requests.map((r) => r.item ?? 'yeni').join(',')} · ${targets.join(',')} · ${agreed.notice}`);
     await sp.screenshot({ path: `${OUT}/steam-workshop.png` });
+
+    // Aynı bilgisayarda başka bir Steam hesabı (Codex #103): paket aynı cihazda, öğesi
+    // birincinin. Steam o öğenin güncellemesini reddederdi; ikinci hesap kendi öğesini açıyor.
+    await sp.evaluate(() => localStorage.setItem('__fakeSteamAccount', '76561198000000002'));
+    await sp.reload();
+    await sp.waitForSelector('.newgame', { timeout: 30000 });
+    await sp.locator('.mode-picker [data-mode="scenario"]').click();
+    await sp.locator('[data-scenario^="ornek/"]').first().click();
+    await sp.waitForSelector('[data-pack-actions] [data-pack-publish]', { timeout: 10000 }).catch(() => null);
+    const otherButton = await sp.locator('[data-pack-actions] [data-pack-publish]').getAttribute('data-pack-publish').catch(() => null);
+    await sp.locator('[data-pack-actions] [data-pack-publish]').click();
+    await sp.locator('[data-pack-publish-yes]').click();
+    await settled(1, /yayımlandı/);
+    const other = await shelfState();
+    const [otherRequest] = (await calls('steam_workshop_publish')).map(([, args]) => args.request);
+    check('Aynı bilgisayarda başka bir Steam hesabı birincinin öğesini güncellemeye kalkmıyor: kendi öğesini açıyor, iki hesabın kaydı ayrı',
+      otherButton === 'new' && otherRequest !== undefined && otherRequest.item === undefined && /yayımlandı/.test(other.notice) && other.update === 1
+        && other.stored === '{"76561198000000001":{"ornek":"9001"},"76561198000000002":{"ornek":"9002"}}',
+      `${otherButton} · ${otherRequest ? (otherRequest.item ?? 'yeni') : 'istek yok'} · ${JSON.stringify(other)}`);
 
     // Tohum Ligi: panelde Steam arkadaşları, bitince puan Steam'in tablosuna da.
     await sp.locator('.mode-picker [data-mode="league"]').click();

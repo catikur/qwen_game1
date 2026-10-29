@@ -267,7 +267,7 @@ function fakeSteam(available: boolean, failUnlocks = 0) {
   const calls: Array<[string, unknown]> = [];
   let failures = failUnlocks;
   const invoke = (async (command: string, args?: unknown) => {
-    if (command === 'steam_status') return { available, detail: available ? "Steam'e bağlı" : 'Steam açık değil' };
+    if (command === 'steam_status') return available ? { available, detail: "Steam'e bağlı", account: '76561198000000001' } : { available, detail: 'Steam açık değil' };
     if (command.startsWith('steam_workshop_') || command.startsWith('steam_leaderboard_')) {
       calls.push([command, args]);
       if (command === 'steam_workshop_list') return { items: [{ id: '7', packs: ['{}'] }], downloading: 1 };
@@ -380,6 +380,7 @@ describe('Steam başarımları (Tur 70)', () => {
     await initSteam(steam.invoke, fakeCareer([]).source, fakeHost(1).host);
     const workshop = workshopBridge()!;
     const league = steamLeague()!;
+    assert.equal(workshop.account, '76561198000000001', 'öğe kimlikleri bu hesaba göre saklanıyor (Codex #103)');
     assert.deepEqual(await workshop.list(), { items: [{ id: '7', packs: ['{}'] }], downloading: 1 });
     assert.deepEqual(await workshop.publish({ item: '8', title: 'Kriz', description: '• Kurtarma', pack: '{}' }), { id: '8', agreement: true });
     assert.equal(await workshop.open({ item: '8' }), true);

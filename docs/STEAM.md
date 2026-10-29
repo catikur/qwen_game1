@@ -52,8 +52,9 @@
     açıklama Steamworks'ün bayt sınırlarına kısaltılıyor (UTF-8; başlık
     128, açıklama 7999 bayt, sondaki sıfırın yeri ayrı); NUL karakteri
     atılıyor, kabuk NUL'lu isteği öğe açmadan reddediyor. Öğenin kimliği
-    cihazda saklanıyor (`capitalforge.workshop.v1`): sonraki yükleme aynı
-    öğeyi güncelliyor; öğe Steam'de silindiyse yenisi açılıyor. Öğe açılıp
+    cihazda, Steam hesabına göre saklanıyor (`capitalforge.workshop.v1`):
+    sonraki yükleme aynı öğeyi güncelliyor; aynı bilgisayardaki başka bir
+    hesap kendi öğesini açıyor. Öğe Steam'de silindiyse yenisi açılıyor. Öğe açılıp
     paket gidemezse de kimlik saklanıyor, yeniden deneme o öğeye gidiyor.
     Workshop sözleşmesini kabul etmemiş oyuncunun öğesini Steam gizli
     tutuyor; oyun bunu söylüyor ve sözleşmeyi açıyor.
