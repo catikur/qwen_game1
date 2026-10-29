@@ -110,6 +110,17 @@ test('düğme yazıları: Steam Input ve Xbox ABXY, Sony kumandası ✕ ○ □ 
   assert.equal(glyphOf('a', 'xbox'), 'A');
 });
 
+test('Nintendo kumandası: yazılar konuma göre, alttaki B, sağdaki A (Codex #102)', () => {
+  assert.equal(padGlyphs('Pro Controller (STANDARD GAMEPAD Vendor: 057e Product: 2009)'), 'nintendo');
+  assert.equal(padGlyphs('057e-2009-Pro Controller'), 'nintendo');
+  assert.equal(padGlyphs('Joy-Con (L/R) (STANDARD GAMEPAD Vendor: 057e Product: 200e)'), 'nintendo');
+  assert.deepEqual(
+    (['a', 'b', 'x', 'y', 'lb', 'rt', 'menu'] as const).map((button) => glyphOf(button, 'nintendo')),
+    ['B', 'A', 'Y', 'X', 'L', 'ZR', '+'],
+    'seç alttaki düğme (B), geri sağdaki (A); eylemler bütün kumandalarda konuma göre',
+  );
+});
+
 test('kullanılan kumanda: ilk kullanışta ve kumanda değişince haber; Ayarlar listesi ona göre (Codex #102)', () => {
   const Probe = () => createElement('i', null, usePadGlyphs() ?? 'yok');
   assert.equal(renderToStaticMarkup(createElement(Probe)), '<i>yok</i>', 'kumanda kullanılmadan liste yok');
@@ -124,10 +135,11 @@ test('kullanılan kumanda: ilk kullanışta ve kumanda değişince haber; Ayarla
   stop();
   setPadGlyphsInUse('xbox');
   assert.equal(heard.length, 2, 'aboneliği bırakan duymuyor');
-  const keys = (glyphs: 'xbox' | 'playstation') =>
+  const keys = (glyphs: 'xbox' | 'playstation' | 'nintendo') =>
     [...renderToStaticMarkup(createElement(PadControls, { glyphs })).matchAll(/<kbd>([^<]*)<\/kbd>/g)].map((m) => m[1]);
   assert.deepEqual(keys('xbox').slice(2, 7), ['LT · RT', 'A', 'B', '✚', 'LB · RB']);
   assert.deepEqual(keys('playstation').slice(2, 7), ['L2 · R2', '✕', '○', '✚', 'L1 · R1'], 'liste yazılarını kökten değil verilen kumandadan alıyor');
+  assert.deepEqual(keys('nintendo').slice(2, 7), ['ZL · ZR', 'B', 'A', '✚', 'L · R']);
 });
 
 const box = (left: number, top: number, width: number, height: number): Box => ({ left, top, right: left + width, bottom: top + height });

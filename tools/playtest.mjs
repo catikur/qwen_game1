@@ -8731,6 +8731,7 @@ async function finish(browser, consoleErrors) {
      */
     const XBOX = 'Xbox 360 Controller (XInput STANDARD GAMEPAD)';
     const SONY = 'DualSense Wireless Controller (STANDARD GAMEPAD Vendor: 054c Product: 0ce6)';
+    const NINTENDO = 'Pro Controller (STANDARD GAMEPAD Vendor: 057e Product: 2009)';
     const BUTTON = { a: 0, b: 1, x: 2, y: 3, lb: 4, rb: 5, lt: 6, rt: 7, view: 8, menu: 9, up: 12, down: 13, left: 14, right: 15 };
     const frames = (page, n) => page.evaluate((count) => new Promise((resolve) => {
       const step = (left) => (left <= 0 ? resolve() : requestAnimationFrame(() => step(left - 1)));
@@ -8991,6 +8992,18 @@ async function finish(browser, consoleErrors) {
     await tap(pp, 'b');
     const sony = await hints(pp);
     check('DualSense\'te düğme yazıları ✕ ○ □ △', sony?.glyphs.includes('✕') && !sony.glyphs.includes('A'), sony?.glyphs.join(' '));
+
+    // Nintendo kumandası (Steam Input'suz): eylemler bütün kumandalarda konuma göre; yazılar
+    // Nintendo'nun, alttaki B, sağdaki A. Xbox'ın renkleri yok (Codex #102).
+    await pp.evaluate((id) => window.__fakePad.rename(id), NINTENDO);
+    await tap(pp, 'up');
+    await tap(pp, 'b');
+    const nintendo = await hints(pp);
+    const pickColor = await pp.evaluate(() => getComputedStyle(document.querySelector('.pad-hints .pad-glyph[data-button="a"]')).backgroundColor);
+    await pp.evaluate((id) => window.__fakePad.rename(id), XBOX);
+    check('Nintendo kumandasında yazılar konuma göre: seç alttaki B, paneller L R, Ayarlar +; Xbox renkleri yok',
+      nintendo?.layer === 'map' && nintendo.glyphs[0] === 'B' && nintendo.glyphs.includes('L R') && nintendo.glyphs.includes('+') && pickColor !== 'rgb(31, 143, 58)',
+      `${nintendo?.glyphs.join(' ')} · ${pickColor}`);
 
     // Fare oynayınca ipuçları ve nişangâh kalkıyor.
     await pp.mouse.move(400, 300);

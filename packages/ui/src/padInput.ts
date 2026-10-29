@@ -227,8 +227,13 @@ export function padDrive(frame: PadFrame, layer: PadLayer): PadDrive {
   return { pan: frame.left, orbit: frame.right, zoom: frame.rt - frame.lt, scroll: 0 };
 }
 
-/** Hangi kumanda: düğme yazıları ona göre (`padGlyphs.ts`). */
+/**
+ * Hangi kumanda: düğme yazıları ona göre (`padGlyphs.ts`). Nintendo'nun
+ * üretici kimliği 057e: Pro Controller ve Joy-Con, Steam Input'suz bağlanınca
+ * tarayıcıya kendi adıyla geliyor. Sony'ninki 054c; DualShock 4'ün adı
+ * "Wireless Controller".
+ */
 export function padGlyphs(id: string | undefined): PadGlyphs {
-  // Sony'nin üretici kimliği 054c; DualShock 4'ün adı "Wireless Controller".
+  if (/057e|nintendo|pro controller|joy-?con/i.test(id ?? '')) return 'nintendo';
   return /054c|dualsense|dualshock|playstation|wireless controller/i.test(id ?? '') ? 'playstation' : 'xbox';
 }

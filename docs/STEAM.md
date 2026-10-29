@@ -25,7 +25,9 @@
 - **Kumanda ve ekran klavyesi (Tur 72).** Oyun kumandayı kendisi okuyor
   (tarayıcının Gamepad API'si, standart düzen); Steam Input'un sanal
   kumandası da bir Xbox kumandası gibi geliyor. Düğme yazıları kumandaya
-  göre: Xbox ve Steam Deck'te A B X Y, PlayStation'da ✕ ○ □ △. Kumandayla
+  göre: Xbox ve Steam Deck'te A B X Y, PlayStation'da ✕ ○ □ △; Steam
+  Input'suz bağlanan Nintendo kumandasında konumuna göre B A Y X (eylemler
+  bütün kumandalarda konuma göre: alttaki seçiyor, sağdaki geri). Kumandayla
   bir yazı alanı seçilince (şirket adı, davet kodu) Steam'in ekran klavyesi
   alanı örtmeden açılıyor (`ShowFloatingGamepadTextInput`; Steam Deck'te ve
   Büyük Resim kipinde). Steam yoksa oyuncu kendi klavyesiyle yazıyor.

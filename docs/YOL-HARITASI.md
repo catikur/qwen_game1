@@ -193,8 +193,9 @@ açılıyor.
   ile, kumandada çubuklarla ve tetiklerle kamera dönüyor ve yakınlaşıyor.
   Kumandada yön tuşu düğmeler arasında geziyor; LB/RB paneller, Y
   duraklat, X hız. Ekranın altında kumandanın düğme ipuçları var
-  (PlayStation'da ✕ ○ □ △). Steam Deck'te yazı alanı için Steam'in ekran
-  klavyesi açılıyor; Steam Input'un önerilen düzeni `docs/STEAM.md`'de.
+  (PlayStation'da ✕ ○ □ △, Nintendo'da B A Y X). Steam Deck'te yazı
+  alanı için Steam'in ekran klavyesi açılıyor; Steam Input'un önerilen
+  düzeni `docs/STEAM.md`'de.
   — bu PR
 - **73 · Steam Workshop ve skor tabloları.** İçerik paketleri (Tur 67)
   Workshop'tan iniyor ve oraya yükleniyor; Tohum Ligi'nin haftalık tablosu

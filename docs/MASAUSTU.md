@@ -70,7 +70,8 @@ Web sürümünden farkı:
   | Duraklat, hız | Boşluk, 1–3 | Y, X |
   | Ayarlar, sonraki görünüm | — | ☰, ⧉ |
 
-  Ekranın altında kumandanın düğme ipuçları var (PlayStation'da ✕ ○ □ △).
+  Ekranın altında kumandanın düğme ipuçları var (PlayStation'da ✕ ○ □ △,
+  Nintendo'da konumuna göre B A Y X).
   Ayarlar'da kumandanın listesi duruyor. Steam Deck'te kumandayla bir yazı
   alanı seçilince Steam'in ekran klavyesi açılıyor (`steam_keyboard`).
   Steam Input'un önerilen düzeni `docs/STEAM.md`'de.

@@ -8291,7 +8291,8 @@ yazı alanında ekran klavyesi.
     görünüm (lens).
   - Ekranın altında düğme ipuçları; katmana göre değişiyor (harita,
     düğmeler, pencere, yerleştirme). Xbox ve Steam Deck'te A B X Y,
-    PlayStation'da ✕ ○ □ △. HUD şeride altta yer ayırıyor.
+    PlayStation'da ✕ ○ □ △, Nintendo kumandasında konumuna göre B A Y X.
+    HUD şeride altta yer ayırıyor.
   - Ayarlar'da "Kumanda" listesi (kumanda kullanıldıysa).
   - Modül kumanda bağlanınca iniyor (4,2 KB); giriş paketine yalnız bir
     kanca girdi. Oyun ekranıyla ortak uç (harita işleyicisi, ilk odak)
@@ -8343,6 +8344,13 @@ yazı alanında ekran klavyesi.
 - *Standart düzende olmayan kumanda da okunuyordu.* Düğme ve eksen sırası
   yalnız standart düzende belli; başka düzendeki kumandada rastgele bir
   düğme A ya da B olurdu. O kumanda artık okunmuyor.
+- *Nintendo kumandasında yazılar tersti.* Steam Input'suz bağlanan Pro
+  Controller ve Joy-Con Xbox sayılıyordu; şerit alttaki düğmeye "A"
+  diyordu, oysa üstünde B yazıyor. Eylemler bütün kumandalarda konuma
+  göre (tarayıcının standart düzeni): alttaki seçiyor, sağdaki geri.
+  Nintendo kumandası artık tanınıyor (üretici 057e); yazılar konumun
+  Nintendo'daki adı: alttaki B, sağdaki A, soldaki Y, üstteki X; L/R,
+  ZL/ZR, + ve −. Xbox'ın renkleri yok.
 - *Açılır bölümlere kumandayla girilmiyordu.* Senaryo kurulumundaki
   "Senaryo ekle" ve editörün JSON bölümü `<details>`; başlıkları
   (`<summary>`) kumandanın gezdiği denetimler arasında değildi, bölüm
@@ -8356,24 +8364,26 @@ yazı alanında ekran klavyesi.
   (ilk hâlinde ana parça 74,9 KB'a çıkmıştı).
 
 **Doğrulama.**
-- `pnpm test` 875/875 (867'den); tip denetimi temiz; Almanca denetimi 0
+- `pnpm test` 876/876 (867'den); tip denetimi temiz; Almanca denetimi 0
   hata (kumanda 27/27).
-  - `packages/ui/test/padInput.test.ts` (7 yeni): kumandanın okunması (ölü
+  - `packages/ui/test/padInput.test.ts` (8 yeni): kumandanın okunması (ölü
     bölge, tetikler), basış ve tekrar, katmana göre eylemler, kamera
-    sürüşü, düğme yazıları, kullanılan kumandanın haberi ve Ayarlar'daki
-    listesi, yönle odak (hizadaki aday, kap aday değil).
+    sürüşü, düğme yazıları (Nintendo'nunkiler de), kullanılan kumandanın
+    haberi ve Ayarlar'daki listesi, yönle odak (hizadaki aday, kap aday
+    değil).
   - `apps/web/test/desktop.test.ts` (1 yeni): yazı alanı seçilince ekran
     klavyesi alanın yerinde, fiziksel pikselde isteniyor; Steam yokken
     istenmiyor.
 - `cargo test` 21/21, `cargo test --features steam` 20/20, clippy temiz;
   Steam'siz derlemede ekran klavyesi yok.
-- Tarayıcı testinin yeni bölümü "Kumanda ve yalnız klavye" (35 kontrol)
-  35/35. Kumandanın modülü kumanda bağlanmadan inmiyor. Kurulum yalnız
+- Tarayıcı testinin yeni bölümü "Kumanda ve yalnız klavye" (36 kontrol)
+  36/36. Kumandanın modülü kumanda bağlanmadan inmiyor. Kurulum yalnız
   kumandayla ve yalnız klavyeyle bitiyor. Ardından
   ortadaki parsel seçiliyor, satın alınıyor, yapı seçilip parsele
   kuruluyor. Kamera çubuklarla ve Q/E, +/−, WASD ile dönüyor, yakınlaşıyor,
   kayıyor. LB/RB, Y, X, ☰ ve ⧉ işini yapıyor, kaydırıcı yön tuşuyla
-  değişiyor. Şerit panellerin üstüne binmiyor; DualSense'te ✕ ○ □ △; fare
+  değişiyor. Şerit panellerin üstüne binmiyor; DualSense'te ✕ ○ □ △,
+  Nintendo kumandasında konumuna göre B A Y X; fare
   oynayınca ipuçları ve nişangâh kalkıyor; karar ekranında şerit B'yi
   "Kapat" diye göstermiyor, A ve yön tuşundan başka düğme bir şey
   yapmıyor; standart düzende olmayan kumanda okunmuyor;
