@@ -8080,8 +8080,18 @@ kumanda aynı imleci kullanıyor.
 kapandı. 4.10 (enerji ve nakliye şirketi taşımıyor) Faz 7'ye taşındı:
 şehirler arası mal ticareti nakliyeye perakendeden büyük bir pazar açıyor.
 
+**Codex'in bulduğu şey.** Kayıt bütün ayarları birlikte yazıyor: PC'de
+yalnız sesi değiştiren oyuncunun kaydında da `textSize: "normal"` var.
+Steam Cloud o kaydı Deck'e getirince "normal" oyuncunun seçimi sayılıyor,
+Deck'in büyük metni hiç uygulanmıyordu. Ayarlar artık metin boyunun
+gerçekten seçildiğini ayrı bir işaretle tutuyor (`textSizeChosen`):
+Ayarlar'dan seçilen boy işaretleniyor, başka bir ayar işaretlemiyor.
+Seçilmemiş boy her cihazda o cihazın varsayılanı; Deck'in "çok büyük"ü
+PC'ye geçince normale dönüyor. İşaretsiz eski kayıtta varsayılandan farklı
+boy seçilmiş sayılıyor.
+
 **Doğrulama.**
-- `pnpm test` 861/861 (849'dan); tip denetimi temiz.
+- `pnpm test` 863/863 (849'dan); tip denetimi temiz.
   - `packages/lite-league/test/simCheck.test.ts` (4 yeni): uç sunucunun
     izini veriyor; denetim aynı, farklı, eski sunucu (401) ve okunamayan
     durumunu ayırıyor; az önce dağıtılan sunucuyu bekliyor; `main`'de hata,
@@ -8094,8 +8104,10 @@ kapandı. 4.10 (enerji ve nakliye şirketi taşımıyor) Faz 7'ye taşındı:
     ve sürükleme; çok büyük metinde arayüzün en küçük yazısı 12 pikseli
     geçiyor (stil dosyasından); kabuğun komutları, pencere eklentisi, en
     küçük pencere.
-  - `packages/ui/test/deviceDefaults.test.ts` (1 yeni): Deck'in varsayılanı
-    yalnız seçilmemiş metin boyunda.
+  - `packages/ui/test/deviceDefaults.test.ts` (3 yeni): Deck'in varsayılanı
+    yalnız seçilmemiş metin boyunda; PC'den gelen, metin boyu seçilmemiş
+    kayıtta da (Codex); Deck'te seçilmemiş boy PC'de normal, eski kayıttaki
+    seçim yerinde.
 - `cargo test` 12/12, `cargo test --features steam` 11/11; `SteamDeck`
   ortam değişkeni (1, 0, boş, yok).
 - Gerçek pencerede uçtan uca 27/27 (19'dan). Yeni "Uygulama gibi": tarayıcı

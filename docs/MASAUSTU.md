@@ -43,8 +43,11 @@ Web sürümünden farkı:
 - **Steam Deck (Tur 71).** Steam, Deck'te başlattığı sürece `SteamDeck=1`
   veriyor; kabuk bunu `shell_info` ile söylüyor ve metin ilk açılışta "çok
   büyük" oluyor (Valve'ın okunabilirlik ölçüsü 1280 × 800'de en küçük yazı 12
-  piksel; çok büyükte arayüzün en küçük yazısı 13). Oyuncunun seçimi önde;
-  başlatma seçeneğinde `SteamDeck=0` ile kapanıyor. Kumanda Tur 72'de.
+  piksel; çok büyükte arayüzün en küçük yazısı 13). Oyuncunun seçimi önde:
+  Ayarlar'dan seçilen boy işaretleniyor (`textSizeChosen`), başka bir ayarı
+  değiştirmek seçim sayılmıyor; Steam Cloud'la PC'den gelen kayıt da Deck'te
+  büyük açılıyor. Başlatma seçeneğinde `SteamDeck=0` ile kapanıyor. Kumanda
+  Tur 72'de.
 
 ## Derleme ve çalıştırma
 
