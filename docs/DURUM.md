@@ -8343,6 +8343,10 @@ yazı alanında ekran klavyesi.
 - *Standart düzende olmayan kumanda da okunuyordu.* Düğme ve eksen sırası
   yalnız standart düzende belli; başka düzendeki kumandada rastgele bir
   düğme A ya da B olurdu. O kumanda artık okunmuyor.
+- *Açılır bölümlere kumandayla girilmiyordu.* Senaryo kurulumundaki
+  "Senaryo ekle" ve editörün JSON bölümü `<details>`; başlıkları
+  (`<summary>`) kumandanın gezdiği denetimler arasında değildi, bölüm
+  kapalı kalıyordu. Başlık artık denetim: yön tuşu ona gidiyor, A açıyor.
 - *Ayarlar açıkken kumandanın listesi gelmiyordu.* Liste kökteki işarete
   bakıyordu, işaret değişince Ayarlar yeniden çizilmiyordu. Kumandaya
   uzanan oyuncu listeyi ancak Ayarlar'ı kapatıp açınca görüyordu; başka
@@ -8363,8 +8367,8 @@ yazı alanında ekran klavyesi.
     istenmiyor.
 - `cargo test` 21/21, `cargo test --features steam` 20/20, clippy temiz;
   Steam'siz derlemede ekran klavyesi yok.
-- Tarayıcı testinin yeni bölümü "Kumanda ve yalnız klavye" (34 kontrol)
-  34/34. Kumandanın modülü kumanda bağlanmadan inmiyor. Kurulum yalnız
+- Tarayıcı testinin yeni bölümü "Kumanda ve yalnız klavye" (35 kontrol)
+  35/35. Kumandanın modülü kumanda bağlanmadan inmiyor. Kurulum yalnız
   kumandayla ve yalnız klavyeyle bitiyor. Ardından
   ortadaki parsel seçiliyor, satın alınıyor, yapı seçilip parsele
   kuruluyor. Kamera çubuklarla ve Q/E, +/−, WASD ile dönüyor, yakınlaşıyor,
@@ -8375,7 +8379,7 @@ yazı alanında ekran klavyesi.
   yapmıyor; standart düzende olmayan kumanda okunmuyor;
   kumanda çıkarılınca ipuçları kalkıyor. Ayarlar kumandadan önce açıksa
   kumandanın listesi kapatıp açmadan geliyor, kumanda değişince yazıları
-  da; konsol temiz.
+  da. "Senaryo ekle" bölümü yön tuşu ve A ile açılıyor; konsol temiz.
 - Gerçek pencerede uçtan uca 29/29 (28'den): WebKitGTK'de Gamepad API var
   (libmanette), ekran klavyesinin komutu kabukta.
 - Paket bütçesi tamam (ana parça 74,6 KB; kumandanın modülü, Ayarlar'daki

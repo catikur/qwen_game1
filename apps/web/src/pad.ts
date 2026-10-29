@@ -40,8 +40,8 @@ const MODAL = '[aria-modal="true"], [role="alertdialog"]';
  */
 const DECISION = '[role="alertdialog"]';
 const TEXT_INPUTS = new Set(['text', 'search', 'email', 'url', 'tel', 'password', 'number']);
-/** Denetim sayılanlar: odak bunların dışındaysa bir kapta (detay, pencere). */
-const CONTROL = 'a[href], button, input, select, textarea, [tabindex]:not([tabindex="-1"])';
+/** Denetim sayılanlar: odak bunların dışındaysa bir kapta (detay, pencere). A açılır bölümün başlığına basıyor, bölüm açılıp kapanıyor. */
+const CONTROL = 'a[href], button, input, select, textarea, details > summary, [tabindex]:not([tabindex="-1"])';
 /** Kaba girerken atlanan: başlıktaki kapatma düğmesi (B zaten kapatıyor). */
 const CLOSE = '.inspector-head button, .modal-head button';
 

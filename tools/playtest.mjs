@@ -9046,6 +9046,37 @@ async function finish(browser, consoleErrors) {
     check('Ayarlar kumandadan önce açıktı: kumanda kullanılınca listesi kapatıp açmadan geliyor, kumanda değişince yazıları da',
       listBefore === 0 && xboxKeys.includes('A') && sonyKeys.includes('✕') && !sonyKeys.includes('A'), JSON.stringify({ listBefore, xboxKeys, sonyKeys }));
     await sContext.close();
+
+    // Açılır bölüm (`<details>`): yön tuşu başlığına gidiyor, A açıyor, içine iniliyor. Senaryo
+    // kurulumundaki "Senaryo ekle" böyle, editörün JSON bölümü de (Codex #102).
+    const dContext = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+    await dContext.addInitScript(veteran, TUTORIAL_KEY);
+    await dContext.addInitScript(fakePad, XBOX);
+    const dp = await dContext.newPage();
+    dp.on('pageerror', (e) => pErrors.push(e.message));
+    dp.on('console', (m) => { if (m.type() === 'error') pErrors.push(m.text()); });
+    await dp.goto('http://127.0.0.1:8811/?lang=tr');
+    await dp.waitForSelector('.newgame', { timeout: 20000 });
+    await dp.locator('[data-mode="scenario"]').click();
+    await dp.waitForSelector('[data-pack-add] > summary', { timeout: 20000 });
+    await dp.evaluate(() => { window.__fakePad.connected = true; window.dispatchEvent(new Event('gamepadconnected')); });
+    await dp.waitForFunction(() => performance.getEntriesByType('resource').some((r) => /\/pad-[\w-]+\.js/.test(r.name)), null, { timeout: 10000 }).catch(() => {});
+    await frames(dp, 3);
+    await dp.evaluate(() => document.querySelector('[data-newgame-start]')?.focus());
+    const onSummary = () => dp.evaluate(() => document.activeElement?.matches('[data-pack-add] > summary') ?? false);
+    const climb = [];
+    for (let i = 0; i < 8 && !(await onSummary()); i++) {
+      await tap(dp, 'up');
+      climb.push(await dp.evaluate(() => (document.activeElement?.textContent ?? '').trim().slice(0, 24)));
+    }
+    const reachedSummary = await onSummary();
+    await tap(dp, 'a');
+    const opened = await dp.evaluate(() => document.querySelector('[data-pack-add]')?.open ?? false);
+    await tap(dp, 'down');
+    const inside = await dp.evaluate(() => document.activeElement?.hasAttribute('data-pack-input') ?? false);
+    check('Açılır bölümün başlığına yön tuşuyla gidiliyor, A açıyor, içine iniliyor ("Senaryo ekle")',
+      reachedSummary && opened && inside, JSON.stringify({ climb, reachedSummary, opened, inside }));
+    await dContext.close();
     check('Kumandayla oyun: konsol temiz', pErrors.length === 0, pErrors.slice(0, 2).join(' | '));
 
     // ---------------------------------------------------------- klavye
