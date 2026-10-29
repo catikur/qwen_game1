@@ -162,6 +162,26 @@ export function SettingsPanel(): ReactElement {
     opener.current = next;
     setPage(next);
   };
+  // Escape ve kumandanın B'si yalnız alt sayfayı kapatıyor (Tur 75): Ayarlar'a
+  // dönülüyor, odak sayfayı açan düğmede. Pencereyi kapatan Escape (oyun
+  // ekranı, kurulum) aynı olayla sonra çalışıyor; yakalama evresinde
+  // durduruluyor (şehir kartı gibi). Yazı alanındaysa önce alandan çıkıyor:
+  // hata raporunun notu bir tuşla gitmesin (B de öyle, `pad.ts`).
+  useEffect(() => {
+    if (page === 'main') return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      e.stopImmediatePropagation();
+      const active = document.activeElement;
+      if (active instanceof HTMLTextAreaElement || (active instanceof HTMLInputElement && active.type === 'text')) {
+        active.blur();
+        return;
+      }
+      setPage('main');
+    };
+    window.addEventListener('keydown', onKeyDown, true);
+    return () => window.removeEventListener('keydown', onKeyDown, true);
+  }, [page]);
   if (page !== 'main') {
     return (
       <div className="settings settings-page" data-settings data-settings-page={page}>

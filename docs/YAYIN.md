@@ -10,7 +10,7 @@ CapitalForge üç yerde yayımlanıyor, üçü de ücretsiz:
 
 Bu sayfa bir sürümü yayına çıkarmanın sırası. Ayrıntılar başka
 belgelerde, bağlantıları adımlarda: masaüstü `docs/MASAUSTU.md`, Steam
-`docs/STEAM.md`. İlk tam sürüm 1.0.0 (Tur 74).
+`docs/STEAM.md`. İlk tam sürüm 1.0.0 (Tur 74), ilk yaması 1.0.1 (Tur 75).
 
 ## 1. Sürüm numarası
 
@@ -59,14 +59,16 @@ olmalı.
 | Tip denetimi | `pnpm -s typecheck` |
 | Birim testleri | `pnpm test` |
 | Almanca sözlük | `node tools/i18n-check.mjs de` (0 hata) |
-| Paket bütçesi | `pnpm build && node tools/bundle-check.mjs` |
-| Denge | `pnpm bench` (bantlar `docs/DURUM.md` → "Kalibrasyon bantları") |
-| Tarayıcıda oynanış | `node tools/playtest.mjs` (bütün bölümler) |
+| Paket bütçesi | `pnpm bundle:check` (derleyip bütçeyi sınıyor) |
+| Denge | `pnpm balance` (bantlar `docs/DURUM.md` → "Kalibrasyon bantları") |
+| Tarayıcıda oynanış | `pnpm playtest` (derleyip bütün bölümler) |
 | Masaüstü kabuğu | `apps/desktop/src-tauri`'da `cargo test --locked`, `cargo test --locked --features steam`, iki derlemede `cargo clippy --all-targets` |
 | Gerçek pencerede | `node tools/desktop-e2e.mjs` (Linux, WebKitGTK) |
 
 Tarayıcı testinin bütünü `main`'de koşuyor (120 dakika sınırı); PR'larda
-kısa hâli (`--smoke`).
+kısa hâli (`pnpm playtest:smoke`). Denge sınavı `pnpm balance`: bantların
+dışına çıkan koşu CI'ı kırmızıya çeviriyor. `pnpm bench` yalnız ölçüyor,
+sınamıyor.
 
 ## 3. Tarayıcı (GitHub Pages)
 
@@ -78,16 +80,24 @@ kısa hâli (`--smoke`).
 
 ## 4. Lig sunucusu (Cloudflare)
 
-- `.github/workflows/lite-league.yml`, depoda iki sır varsa `main`'de
-  dağıtıyor:
+- `.github/workflows/lite-league.yml` dağıtıyor. İki sır gerekiyor,
+  Settings → Secrets and variables → Actions → **Repository secrets**'e
+  (Variables'a ya da bir Environment'a girilen sırrı iş görmüyor):
   - `CLOUDFLARE_API_TOKEN`: Workers ve D1'e yazma izni olan bir anahtar.
   - `CLOUDFLARE_ACCOUNT_ID`.
-
-  D1 veritabanını yoksa açıyor ve şemayı uyguluyor. Sırlar yokken
-  dağıtım adımı atlanıyor, testler yine koşuyor.
-- Dağıtımdan sonra sunucunun sağlık ucundaki simülasyon izi oyununkiyle
-  aynı olmalı (Tur 71). Değilse sunucu eski kodla koşuyor ve yeni
-  sürümün koşularını reddediyor.
+- `main`'e birleşmek kendiliğinden dağıtmıyor. Dağıtım elle: Actions →
+  Lite lig sunucusu → Run workflow. Her birleşmede dağıtsın istenirse depo
+  değişkeni `LITE_LEAGUE_AUTODEPLOY=true` (Variables'a). Sırlar yokken ya da
+  kapı kapalıyken dağıtım adımı atlanıyor, testler yine koşuyor.
+- Dağıtım D1 veritabanını yoksa açıyor, şemayı her seferinde uyguluyor
+  (`IF NOT EXISTS`: var olan tablolara dokunmuyor), sonra Worker'ı
+  yüklüyor.
+- Sunucunun simülasyon izi `GET /v1/seed/sim`'de (Tur 71). Oyununkiyle
+  aynı olmalı; değilse sunucu eski kodla koşuyor ve yeni sürümün
+  koşularını reddediyor. İş akışı dağıtımdan sonra izi depodakiyle
+  karşılaştırıyor (`packages/lite-league/scripts/simCheck.ts`): `main`'de
+  fark iş akışını kırmızıya çeviriyor. Sunucu dağıtılmadıkça bu kırmızı
+  kalıyor; düzeltmesi dağıtmak.
 - Sunucu tarayıcı isteklerini yalnız oyunun kökenlerinden kabul ediyor:
   Pages adresi ve masaüstü penceresinin kökeni
   (`packages/lite-league/src/http.ts`). Oyun başka bir adrese taşınırsa
@@ -136,6 +146,13 @@ kısa hâli (`--smoke`).
 - **Steam'e yükleme**: `docs/STEAM.md` → "Senin yapacakların", adım 10–11.
   Derlemeyi önce bir test dalına (`beta`) al, Steam'den kurup dene,
   sonra `default`'a.
+- **Kayıt biçimi değişen sürüm betadayken**: betayı deneyen oyuncunun
+  otomatik kaydı yeni biçime geçiyor ve Steam Cloud onu öteki
+  bilgisayarlarına da taşıyor. Eski sürüm o kaydı açamıyor (Tur 75):
+  açılışta kurulum ekranında söylüyor, üstüne yazmıyor; oyuncu yeni
+  oyununu başka bir slota kaydedebiliyor. Kayıt biçimini (`SCHEMA_VERSION`) değiştiren
+  derlemeyi betada kısa tut, `default`'a geçince eski sürümdekiler de
+  güncelleniyor.
 
 ## 6. Steam'de yayın
 
@@ -177,6 +194,8 @@ Raporda (`packages/ui/src/bugReport.ts`):
 - Kayıt, en sonda: oyun açıksa o anki durum, değilse son otomatik kayıt.
   Oyuncu bunu da çıkarabiliyor.
 
-Kaydı oyunda açmak için `save` alanını ayrı bir dosyaya al
-(`jq '.save' rapor.json > kayit.json`), sonra oyunda Kayıtlar → "JSON içe
-aktar". Kaydın biçimi dışa aktarılan kayıtla aynı.
+Kaydı açmak için oyunda Kayıtlar → "JSON içe aktar" → rapor dosyası:
+oyun raporun içindeki kaydı açıyor (Tur 75). Kaydı çıkarılmış rapor
+açılmıyor, oyun nedenini söylüyor. Kaydın biçimi dışa aktarılan kayıtla
+aynı; ayrı dosya olarak da alınabiliyor:
+`jq '.save' rapor.json > kayit.json`.

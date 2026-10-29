@@ -3,7 +3,8 @@ import type { ReactElement } from 'react';
 import type { GameEngine, GameState, LeagueBoardKind } from '@capital/core';
 import type { CitySizeId, DifficultyId, ModifierId, ScenarioDef } from '@capital/content';
 import { AUTOSAVE_SLOT, loadGame } from '@capital/persistence';
-import { NewGameScreen, t, useLocale } from '@capital/ui';
+import type { LoadProblem } from '@capital/persistence';
+import { NewGameScreen, bootLoadNotice, t, useLocale } from '@capital/ui';
 
 type GameModule = typeof import('./GameRoot');
 
@@ -39,6 +40,8 @@ export function App(): ReactElement {
   const [engine, setEngine] = useState<GameEngine | null>(null);
   const [game, setGame] = useState<GameModule | null>(null);
   const [bootMessage, setBootMessage] = useState<string | null>(null);
+  // Otomatik kayıt açılmadıysa neden (Tur 75): metin çizimde, oyuncu dili değiştirirse o dilde.
+  const [bootProblem, setBootProblem] = useState<{ problem: LoadProblem; version?: number } | null>(null);
   const [failed, setFailed] = useState(false);
 
   useEffect(() => {
@@ -50,6 +53,7 @@ export function App(): ReactElement {
     void loadGame(AUTOSAVE_SLOT).then(async (outcome) => {
       if (cancelled) return;
       if (!outcome.ok) {
+        setBootProblem({ problem: outcome.problem, ...(outcome.version !== undefined ? { version: outcome.version } : {}) });
         setPhase('menu');
         return;
       }
@@ -93,6 +97,7 @@ export function App(): ReactElement {
     if (engine) engine.replaceState(next);
     else setEngine(new loaded.GameEngine(next));
     setBootMessage(null);
+    setBootProblem(null);
     setPreparing(null);
     setPhase('playing');
   };
@@ -165,9 +170,11 @@ export function App(): ReactElement {
   }
 
   if (phase === 'menu' || !engine) {
+    const notice = bootProblem ? bootLoadNotice(bootProblem) : null;
     return (
       <NewGameScreen
         onStart={start}
+        {...(notice ? { notice } : {})}
         deliverFile={(filename, text) => import('./host').then((host) => host.deliverTextFile(filename, text))}
         {...(engine?.getState().scenario ? { initialScenario: engine.getState().scenario!.id } : {})}
         {...(engine ? { onCancel: () => setPhase('playing') } : {})}

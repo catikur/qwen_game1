@@ -25,6 +25,30 @@ export function changelogNotes(entry: ChangelogEntry, locale: string): string[] 
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.0.1',
+    date: '2026-10-29',
+    notes: {
+      tr: [
+        'Hata raporu Kayıtlar → "JSON içe aktar"la açılıyor: içindeki kayıt yükleniyor.',
+        'Kayıt açılmayınca nedeni seçtiğin dilde yazıyor. Açılmayan otomatik kayıt kurulum ekranında söyleniyor.',
+        "Oyunun daha yeni bir sürümünün otomatik kaydının (Steam'in beta dalı gibi) artık üstüne yazılmıyor.",
+        "Yenilikler ve Hata bildir sayfalarında Escape ve kumandanın B'si bir adım geri götürüyor; hata raporunun notu silinmiyor.",
+      ],
+      en: [
+        'Bug reports open from Saves → "Import JSON": the save inside is loaded.',
+        'When a save doesn’t open, the reason is given in your language. An autosave that can’t be opened is mentioned on the setup screen.',
+        'An autosave from a newer version of the game (a Steam beta branch, say) is no longer overwritten.',
+        'On the What’s new and Report a bug pages, Escape and the controller’s B go back one step; the bug report’s note is kept.',
+      ],
+      de: [
+        'Fehlerberichte lassen sich über Spielstände → „JSON importieren“ öffnen: Der Spielstand darin wird geladen.',
+        'Öffnet sich ein Spielstand nicht, steht der Grund in deiner Sprache. Lässt sich die Autospeicherung nicht öffnen, steht das auf dem Startbildschirm.',
+        'Eine Autospeicherung aus einer neueren Version des Spiels (etwa aus einem Steam-Beta-Zweig) wird nicht mehr überschrieben.',
+        'Auf den Seiten „Neuigkeiten“ und „Fehler melden“ führen Escape und die B-Taste des Controllers einen Schritt zurück; die Notiz im Fehlerbericht bleibt erhalten.',
+      ],
+    },
+  },
+  {
     version: '1.0.0',
     date: '2026-10-29',
     notes: {

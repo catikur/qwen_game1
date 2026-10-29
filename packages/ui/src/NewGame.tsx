@@ -49,6 +49,7 @@ export function NewGameScreen({
   onCancel,
   initialScenario,
   deliverFile,
+  notice,
 }: {
   onStart: (
     companyName: string,
@@ -67,6 +68,8 @@ export function NewGameScreen({
   initialScenario?: string;
   /** Editörün "dosya olarak indir"i (kabuğun; masaüstünde İndirilenler). */
   deliverFile?: (filename: string, text: string) => Promise<string>;
+  /** Açılışta otomatik kayıt açılmadıysa nedeni (Tur 75): oyuncu sessizce yeni oyuna düşmesin. */
+  notice?: string;
 }): ReactElement {
   const [name, setName] = useState('');
   const [ceoId, setCeoId] = useState(DEFAULT_CEO_ID);
@@ -168,6 +171,11 @@ export function NewGameScreen({
           <h1>{t('hud.newGame.title')}</h1>
           <p className="newgame-lead">{t('hud.newGame.lead')}</p>
         </header>
+        {notice && (
+          <p className="newgame-notice" role="status" data-boot-notice>
+            {notice}
+          </p>
+        )}
 
         <label className="newgame-field">
           <span>{t('hud.newGame.nameLabel')}</span>

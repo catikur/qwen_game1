@@ -28,7 +28,7 @@ import { grantStartingLoan } from './systems/credit';
 import { SCHEMA_VERSION } from './types';
 import type { CompanyState, DistrictState, GameState, MarketState, Tile, TileKind } from './types';
 
-export const GAME_VERSION = '1.0.0';
+export const GAME_VERSION = '1.0.1';
 
 /**
  * Bir bölgenin kenar uzunluğu (kare).

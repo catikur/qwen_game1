@@ -2608,7 +2608,9 @@ async function finish(browser, consoleErrors) {
   consoleErrors.length = 0;
   await page.reload();
   await page.waitForSelector('.newgame', { timeout: 20000 });
-  check('Bozuk kayıtta kurulum ekranına düşüyor', true);
+  // Açılış kaydı neden açamadığını söylüyor (Tur 75): sessizce yeni oyuna düşüyordu.
+  const brokenNotice = ((await page.waitForSelector('[data-boot-notice]', { timeout: 5000 }).then((el) => el.textContent(), () => '')) ?? '').trim();
+  check('Bozuk kayıtta kurulum ekranına düşüyor, nedeni söyleniyor', brokenNotice === 'Otomatik kayıt açılmadı. Kayıt eksik ya da bozuk.', brokenNotice);
   check('Bozuk kayıt sessizce çökmüyor', consoleErrors.length === 0, consoleErrors.slice(0, 3).join(' | '));
 
   // ---------- Performans ve görsel ----------
@@ -9320,6 +9322,9 @@ async function finish(browser, consoleErrors) {
         && desk.exports.length === 1 && /^capitalforge-hata-raporu-[\d-]+\.json$/.test(desk.exports[0].filename)
         && deskReport?.app?.edition === 'steam' && deskReport?.save === null,
       `${versionLine} · ${JSON.stringify({ ...desk, exports: desk.exports.map((file) => `${file.filename}:${file.report?.app?.edition}`) })}`);
+    // Alt sayfada Escape önce Ayarlar'a dönüyor (Tur 75), ikincisi pencereyi kapatıyor.
+    await sp.keyboard.press('Escape');
+    await sp.waitForSelector('.settings-overlay [data-settings-page]', { state: 'detached', timeout: 5000 }).catch(() => null);
     await sp.keyboard.press('Escape');
     await sp.waitForSelector('.settings-overlay', { state: 'detached', timeout: 5000 }).catch(() => null);
 
@@ -9640,8 +9645,9 @@ async function finish(browser, consoleErrors) {
       focus: document.activeElement?.hasAttribute('data-settings-back') ?? false,
     }));
     await rp.screenshot({ path: `${OUT}/surum-yenilikler.png` });
-    check('"Yenilikler": en yeni sürüm başta, günüyle ve maddeleriyle; "oynadığın sürüm"; odak geri düğmesinde',
-      notes.releases[0] === appVersion && notes.items >= 5 && notes.current === 'oynadığın sürüm'
+    // Eski sürümler de listede, en yenisi başta (1.0.1, Tur 75: ilk yama).
+    check('"Yenilikler": en yeni sürüm başta, günüyle ve maddeleriyle, eskiler altında; "oynadığın sürüm"; odak geri düğmesinde',
+      notes.releases[0] === appVersion && notes.releases.includes('1.0.0') && notes.items >= 1 && notes.current === 'oynadığın sürüm'
         && notes.heading.startsWith(`Sürüm ${appVersion} · `) && /\d{4}/.test(notes.heading) && notes.focus,
       JSON.stringify(notes));
     await rp.locator('[data-settings-back]').click();
@@ -9765,6 +9771,263 @@ async function finish(browser, consoleErrors) {
       `${whatsNewSpill.join(', ')} · ${reportSpill.join(', ')}`);
     await vPhone.close();
     check('Sürüm bölümünde konsol temiz', vErrors.length === 0, vErrors.slice(0, 3).join(' | '));
+  }
+
+  section('Değerlendirme: Faz 6 sonu');
+  {
+    /*
+     * Tur 75. Faz 6'nın ekranları klavyeyle ve kumandayla: Ayarlar'ın alt
+     * sayfasında Escape ve B bir adım geri (bütün pencere kapanıyordu, hata
+     * raporunun notu da gidiyordu), ipucu "Geri" diyor. Hata raporu
+     * Kayıtlar'dan oyuna geri açılıyor. Kaydın neden açılmadığı oyuncunun
+     * dilinde. Oyunun daha yeni bir sürümünün otomatik kaydı (Steam'in beta
+     * dalı, Steam Cloud) açılışta söyleniyor, üstüne yazılmıyor.
+     */
+    const fErrors = [];
+    const watch = (page) => {
+      page.on('pageerror', (e) => fErrors.push(e.message));
+      page.on('console', (m) => { if (m.type() === 'error') fErrors.push(m.text()); });
+    };
+    const toasts = (page) => page.evaluate(() => [...document.querySelectorAll('.toasts .toast')].map((el) => (el.textContent ?? '').trim()));
+    const untilToast = (page, text) => page.waitForFunction(
+      (wanted) => [...document.querySelectorAll('.toasts .toast')].some((el) => (el.textContent ?? '').includes(wanted)),
+      text, { timeout: 10000 }).then(() => true, () => false);
+    const BUTTON = { a: 0, b: 1, menu: 9 };
+    const frames = (page, n) => page.evaluate((count) => new Promise((resolve) => {
+      const step = (left) => (left <= 0 ? resolve() : requestAnimationFrame(() => step(left - 1)));
+      step(count);
+    }), n);
+    // Basış tek okumalık: kumandanın döngüsü onu bir kez basılı, sonraki okumada bırakılmış
+    // görüyor. Bu makinede kareler yavaş; iki karelik basış tekrar eşiğini geçip iki basış sayılabiliyor.
+    const fakePad = () => {
+      const buttons = Array.from({ length: 17 }, () => ({ pressed: false, touched: false, value: 0 }));
+      let timestamp = 0;
+      const pad = { index: 0, connected: true, mapping: 'standard', id: 'Xbox 360 Controller (XInput STANDARD GAMEPAD)', axes: [0, 0, 0, 0], get buttons() { return buttons; }, get timestamp() { return timestamp; } };
+      const pending = new Set();
+      let shown = new Set();
+      const set = (index, down) => { buttons[index] = { pressed: down, touched: down, value: down ? 1 : 0 }; timestamp = performance.now(); };
+      window.__fakePad = { connected: false, pulse: (index) => pending.add(index), get waiting() { return pending.size; } };
+      navigator.getGamepads = () => {
+        if (!window.__fakePad.connected) return [null, null, null, null];
+        for (const index of shown) set(index, false);
+        shown = new Set(pending);
+        for (const index of pending) set(index, true);
+        pending.clear();
+        return [pad, null, null, null];
+      };
+      document.hasFocus = () => true;
+    };
+    const tap = async (page, name) => {
+      await page.evaluate((index) => window.__fakePad.pulse(index), BUTTON[name]);
+      await page.waitForFunction(() => window.__fakePad.waiting === 0, null, { timeout: 10000 });
+      await frames(page, 3);
+    };
+
+    const fContext = await browser.newContext({ viewport: { width: 1280, height: 800 }, acceptDownloads: true });
+    await fContext.addInitScript(veteran, TUTORIAL_KEY);
+    await fContext.addInitScript(fakePad);
+    const fp = await fContext.newPage();
+    watch(fp);
+    await fp.goto('http://127.0.0.1:8811/?lang=tr');
+    await fp.waitForSelector('.newgame', { timeout: 20000 });
+    await fp.fill('.newgame-field input[type="text"]', 'Faz Altı');
+    await fp.locator('button:has-text("Şirketi kur")').click();
+    await fp.waitForSelector('.topbar', { timeout: 30000 });
+    await fp.waitForFunction(() => (window.__capital?.renderInfo()?.frameCount ?? 0) >= 3, null, { timeout: 60000 });
+    const day = await fp.evaluate(() => {
+      const c = window.__capital;
+      c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+      for (let i = 0; i < 30; i++) c.engine.runDay();
+      return c.getState().time.day;
+    });
+
+    // Klavye: alt sayfada Escape bir adım geri.
+    const settings = () => fp.evaluate(() => ({
+      open: !!document.querySelector('.modal [data-settings]'),
+      page: document.querySelector('.modal [data-settings-page]')?.getAttribute('data-settings-page') ?? null,
+      focus: document.activeElement?.getAttribute('data-settings-page-open') ?? document.activeElement?.tagName.toLowerCase() ?? '',
+      note: document.querySelector('[data-report-note]')?.value ?? null,
+    }));
+    const openSettings = async () => {
+      await fp.locator('.speeds [data-panel="settings"]').click();
+      await fp.waitForSelector('.modal [data-settings-version]', { timeout: 5000 });
+    };
+    const settled = (open) => fp.waitForFunction((wanted) => !!document.querySelector('.modal [data-settings]') === wanted, open, { timeout: 3000 }).catch(() => null);
+    const onMain = () => fp.waitForFunction(() => !!document.querySelector('.modal [data-settings]') && !document.querySelector('.modal [data-settings-page]'), null, { timeout: 3000 }).catch(() => null);
+    await openSettings();
+    await fp.locator('.modal [data-settings-page-open="whatsNew"]').first().click();
+    await fp.waitForSelector('[data-whats-new] [data-release]', { timeout: 10000 });
+    await fp.keyboard.press('Escape');
+    await onMain();
+    const firstEscape = await settings();
+    await fp.keyboard.press('Escape');
+    await settled(false);
+    const secondEscape = await settings();
+    check("Ayarlar'ın alt sayfasında Escape bir adım geri: Ayarlar'a dönüyor, odak sayfayı açan düğmede; ikinci Escape pencereyi kapatıyor",
+      firstEscape.open && firstEscape.page === null && firstEscape.focus === 'whatsNew' && !secondEscape.open,
+      `${JSON.stringify(firstEscape)} → ${JSON.stringify(secondEscape)}`);
+
+    await openSettings();
+    await fp.locator('.modal [data-settings-page-open="report"]').click();
+    await fp.waitForSelector('[data-bug-report] [data-report-save-state="ready"]', { timeout: 10000 }).catch(() => null);
+    const NOTE = 'Kasa ekranında bir tuhaflık var.';
+    await fp.locator('[data-report-note]').fill(NOTE);
+    await fp.keyboard.press('Escape');
+    await frames(fp, 2);
+    const inNote = await settings();
+    check('Hata raporunun notunda Escape notu silmiyor: yalnız alandan çıkıyor, sayfa açık kalıyor',
+      inNote.open && inNote.page === 'report' && inNote.note === NOTE && inNote.focus !== 'textarea', JSON.stringify(inNote));
+    const [reportFile] = await Promise.all([fp.waitForEvent('download', { timeout: 15000 }), fp.locator('[data-report-download]').click()]);
+    const reportText = fs.readFileSync(await reportFile.path(), 'utf8');
+    await fp.keyboard.press('Escape');
+    await onMain();
+    await fp.keyboard.press('Escape');
+    await settled(false);
+
+    // Hata raporu oyuna geri: Kayıtlar → "JSON içe aktar". Önce oyun ilerliyor ki kaydın günü geri gelsin.
+    const later = await fp.evaluate(() => {
+      const c = window.__capital;
+      for (let i = 0; i < 5; i++) c.engine.runDay();
+      return c.getState().time.day;
+    });
+    const importFile = async (name, text) => {
+      if ((await fp.locator('.saverow-actions input[type="file"]').count()) === 0) await fp.locator('.topbar-actions [data-panel="saves"]').click();
+      await fp.waitForSelector('.saverow-actions input[type="file"]', { state: 'attached', timeout: 5000 });
+      await fp.locator('.saverow-actions input[type="file"]').setInputFiles({ name, mimeType: 'application/json', buffer: Buffer.from(text) });
+    };
+    await importFile(reportFile.suggestedFilename(), reportText);
+    const reopened = await untilToast(fp, 'Kayıt içe aktarıldı');
+    const back = await fp.evaluate(() => {
+      const s = window.__capital.getState();
+      return { day: s.time.day, company: s.companies[s.playerCompanyId].name };
+    });
+    check('Hata raporu Kayıtlar → "JSON içe aktar" ile açılıyor: içindeki kayıt yükleniyor ("dosya bozuk" deniyordu)',
+      reopened && later === day + 5 && back.day === day && back.company === 'Faz Altı', `${later}. gün → ${back.day}. gün · ${back.company}`);
+    await importFile('rapor.json', JSON.stringify({ kind: 'capitalforge-bug-report', format: 1, note: '', save: null }));
+    const bare = await untilToast(fp, 'Bu hata raporunda kayıt yok');
+    check('Kaydı çıkarılmış rapor nedeniyle reddediliyor, oyun yerinde',
+      bare && (await fp.evaluate(() => window.__capital.getState().time.day)) === day, (await toasts(fp)).join(' | '));
+    await fp.keyboard.press('Escape');
+
+    // Kumanda: B alt sayfada bir adım geri, ipucu "Geri"; yazı alanında önce alandan çıkıyor.
+    await fp.evaluate(() => {
+      window.__fakePad.connected = true;
+      window.dispatchEvent(new Event('gamepadconnected'));
+      document.activeElement?.blur?.();
+    });
+    await fp.waitForFunction(() => performance.getEntriesByType('resource').some((r) => /\/pad-[\w-]+\.js/.test(r.name)), null, { timeout: 10000 }).catch(() => {});
+    await frames(fp, 3);
+    const padHint = () => fp.evaluate(() => {
+      const bar = document.querySelector('.pad-hints');
+      return { layer: bar?.dataset.layer ?? null, b: bar?.querySelector('.pad-glyph[data-button="b"]')?.parentElement?.textContent ?? null };
+    });
+    await tap(fp, 'menu');
+    await fp.waitForSelector('.modal [data-settings-version]', { timeout: 5000 }).catch(() => null);
+    await fp.evaluate(() => document.querySelector('.modal [data-settings-page-open="report"]')?.focus());
+    await tap(fp, 'a');
+    await fp.waitForSelector('[data-bug-report]', { timeout: 10000 }).catch(() => null);
+    await frames(fp, 2);
+    const onPage = { ...(await settings()), hint: await padHint() };
+    await fp.locator('[data-report-note]').fill('Kumandayla not.');
+    await tap(fp, 'b');
+    const padNote = await settings();
+    await tap(fp, 'b');
+    await onMain();
+    await frames(fp, 2);
+    const padBack = { ...(await settings()), hint: await padHint() };
+    await tap(fp, 'b');
+    await settled(false);
+    const padClosed = await settings();
+    check('Kumandada B alt sayfada bir adım geri, ipucu "Geri"; notta önce alandan çıkıyor; Ayarlar\'da ipucu "Kapat", sonraki B pencereyi kapatıyor',
+      onPage.page === 'report' && onPage.hint.layer === 'modal' && /Geri$/.test(onPage.hint.b ?? '')
+        && padNote.page === 'report' && padNote.note === 'Kumandayla not.' && padNote.focus !== 'textarea'
+        && padBack.open && padBack.page === null && padBack.focus === 'report' && /Kapat$/.test(padBack.hint.b ?? '') && !padClosed.open,
+      JSON.stringify({ onPage, padNote, padBack, padClosed }));
+
+    // İngilizce oyunda kaydın neden açılmadığı İngilizce (Türkçe gerekçe görünüyordu).
+    const saved = JSON.parse(reportText).save;
+    const NEWER = saved.state.meta.schemaVersion + 1;
+    const future = { meta: { ...saved.meta, slot: 0, name: 'Otomatik kayıt', schemaVersion: NEWER }, state: { ...saved.state, meta: { ...saved.state.meta, schemaVersion: NEWER } } };
+    await openSettings();
+    await fp.locator('.settings [data-locale="en"]').click();
+    await fp.keyboard.press('Escape');
+    await settled(false);
+    await importFile('half.json', '{ "meta": ');
+    const enBroken = await untilToast(fp, 'The file is not valid JSON.');
+    await importFile('future.json', JSON.stringify({ meta: future.meta, state: future.state }));
+    const enNewer = await untilToast(fp, `This save is from a newer version of the game (save format v${NEWER}). Update the game.`);
+    check('İngilizce oyunda içe aktarmanın reddi İngilizce: geçersiz dosya, yeni sürümün kaydı (kayıt biçimiyle)', enBroken && enNewer, (await toasts(fp)).join(' | '));
+    await fContext.close();
+
+    // Yeni sürümün otomatik kaydı: açılışta söyleniyor, yeni oyun üstüne yazmıyor.
+    // Otomatik kaydın 30 sn'si bu sekmede 1,5 sn; bildirimler sayılıyor (kısa ömürlüler).
+    const nContext = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+    await nContext.addInitScript(veteran, TUTORIAL_KEY);
+    await nContext.addInitScript(() => {
+      const interval = window.setInterval;
+      window.setInterval = (fn, ms, ...rest) => interval(fn, ms === 30_000 ? 1500 : ms, ...rest);
+      window.__toastLog = [];
+      new MutationObserver((records) => {
+        for (const record of records) {
+          for (const node of record.addedNodes) {
+            if (node instanceof HTMLElement && node.classList.contains('toast')) window.__toastLog.push(node.textContent ?? '');
+          }
+        }
+      }).observe(document, { childList: true, subtree: true });
+    });
+    const idb = (page, op, value) => page.evaluate(([kind, arg]) => new Promise((resolve) => {
+      const req = indexedDB.open('capital-game', 1);
+      req.onsuccess = () => {
+        const store = req.result.transaction('saves', kind === 'put' ? 'readwrite' : 'readonly').objectStore('saves');
+        const action = kind === 'put' ? store.put(arg) : store.get(arg);
+        action.onsuccess = () => {
+          const r = action.result;
+          resolve(kind === 'put' ? true : r ? { slot: r.meta?.slot, company: r.meta?.companyName, schema: r.state?.meta?.schemaVersion, day: r.state?.time?.day } : null);
+        };
+        action.onerror = () => resolve(null);
+      };
+      req.onerror = () => resolve(null);
+    }), [op, value]);
+    const np = await nContext.newPage();
+    watch(np);
+    await np.goto('http://127.0.0.1:8811/?lang=tr');
+    await np.waitForSelector('.newgame', { timeout: 20000 });
+    await idb(np, 'put', future);
+    await np.reload();
+    await np.waitForSelector('.newgame', { timeout: 20000 });
+    const bootNotice = ((await np.waitForSelector('[data-boot-notice]', { timeout: 10000 }).then((el) => el.textContent(), () => '')) ?? '').trim();
+    check(`Daha yeni sürümün otomatik kaydı açılışta söyleniyor: menüde neden ve kayıt biçimi (v${NEWER}); oyun açılmıyor`,
+      bootNotice === `Otomatik kayıt oyunun daha yeni bir sürümünden (kayıt biçimi v${NEWER}). Bu sürüm onu açamıyor, üstüne de yazmıyor. Oyunu güncelle.`
+        && (await np.locator('.topbar').count()) === 0, bootNotice);
+    await np.locator('.newgame [data-locale="en"]').click();
+    await np.waitForFunction(() => /newer version/.test(document.querySelector('[data-boot-notice]')?.textContent ?? ''), null, { timeout: 5000 }).catch(() => null);
+    const bootNoticeEn = ((await np.locator('[data-boot-notice]').textContent().catch(() => '')) ?? '').trim();
+    check('Dil değişince açılışın uyarısı da o dilde',
+      bootNoticeEn === `The autosave is from a newer version of the game (save format v${NEWER}). This version can’t open it and won’t write over it. Update the game.`, bootNoticeEn);
+    await np.locator('.newgame [data-locale="tr"]').click();
+    await np.fill('.newgame-field input[type="text"]', 'Eski Sürüm');
+    await np.locator('button:has-text("Şirketi kur")').click();
+    await np.waitForSelector('.topbar', { timeout: 30000 });
+    const told = await untilToast(np, 'Otomatik kayıt yapılmıyor');
+    // Üç aralık daha: kayıt hâlâ yeni sürümün, uyarı bir kez.
+    await np.waitForTimeout(4500);
+    const kept = await idb(np, 'get', 0);
+    const warned = await np.evaluate(() => window.__toastLog.filter((text) => text.includes('Otomatik kayıt yapılmıyor')).length);
+    check('Yeni oyun o kaydın üstüne yazmıyor: otomatik kayıt duruyor, oyuncuya bir kez söyleniyor',
+      told && warned === 1 && kept?.schema === NEWER && kept.day === saved.state.time.day && kept.company === 'Faz Altı', `${warned} uyarı · ${JSON.stringify(kept)}`);
+    await np.locator('.topbar-actions [data-panel="saves"]').click();
+    await np.locator('.slot').nth(1).locator('button:has-text("Kaydet")').click();
+    await np.waitForFunction(() => [...document.querySelectorAll('.toasts .toast')].some((el) => /kaydedildi/i.test(el.textContent ?? '')), null, { timeout: 5000 }).catch(() => null);
+    const other = await idb(np, 'get', 1);
+    await idb(np, 'put', { meta: { ...future.meta, slot: 2, name: 'Kayıt 2' }, state: future.state });
+    await np.locator('.slot').nth(2).locator('button:has-text("Kaydet")').click();
+    const refused = await untilToast(np, 'Slot 2: oyunun daha yeni bir sürümünün kaydı var');
+    const slotTwo = await idb(np, 'get', 2);
+    check("Kayıtlar'dan başka slota kayıt yazılıyor; yeni sürümün kaydı olan slota elle kayıt da yazmıyor, nedenini söylüyor",
+      other?.schema === saved.state.meta.schemaVersion && other.company === 'Eski Sürüm' && refused && slotTwo?.schema === NEWER,
+      `${JSON.stringify(other)} · ${JSON.stringify(slotTwo)} · ${(await toasts(np)).join(' | ')}`);
+    await nContext.close();
+    check('Faz 6 değerlendirme bölümünde konsol temiz', fErrors.length === 0, fErrors.slice(0, 3).join(' | '));
   }
 
   section('Mobil');

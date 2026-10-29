@@ -2166,6 +2166,16 @@ button.icon {
   line-height: 1.55;
 }
 
+/* Tur 75: açılışta otomatik kayıt açılmadıysa nedeni. */
+.newgame-notice {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: var(--radius-xs);
+  border: 1px solid color-mix(in srgb, var(--warn) 45%, transparent);
+  background: color-mix(in srgb, var(--warn) 12%, transparent);
+  line-height: 1.45;
+}
+
 .newgame-field {
   display: flex;
   flex-direction: column;

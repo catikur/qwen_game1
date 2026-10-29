@@ -20,6 +20,18 @@ export const app: Record<keyof typeof trApp, string> = {
   'app.export.blocked': 'Downloads sind in dieser Ansicht gesperrt — kopiere den Spielstand aus dem Textfeld unten.',
   'app.import.file': 'Spielstand importiert.',
   'app.import.text': 'Spielstand aus Text geladen.',
+  'app.load.problem.notJson': 'Die Datei ist kein gültiges JSON.',
+  'app.load.problem.noVersion': 'Diese Datei ist kein CapitalForge-Spielstand oder sie ist beschädigt.',
+  'app.load.problem.newer': 'Dieser Spielstand stammt aus einer neueren Version des Spiels (Speicherformat v{version}). Aktualisiere das Spiel.',
+  'app.load.problem.noMigration': 'Dieser Spielstand (Speicherformat v{version}) lässt sich nicht in diese Version übernehmen.',
+  'app.load.problem.broken': 'Der Spielstand ist unvollständig oder beschädigt.',
+  'app.load.problem.unreadable': 'Der Spielstand konnte nicht gelesen werden.',
+  'app.load.problem.empty': 'Dieser Speicherplatz ist leer.',
+  'app.load.problem.reportWithoutSave': 'Dieser Fehlerbericht enthält keinen Spielstand: Er wurde beim Speichern weggelassen.',
+  'app.boot.notLoaded': 'Die Autospeicherung wurde nicht geöffnet. {reason}',
+  'app.boot.newer': 'Die Autospeicherung stammt aus einer neueren Version des Spiels (Speicherformat v{version}). Diese Version kann sie nicht öffnen und überschreibt sie nicht. Aktualisiere das Spiel.',
+  'app.save.newerSlot': 'Speicherplatz {slot} enthält einen Spielstand aus einer neueren Version des Spiels; er wurde nicht überschrieben. Wähle einen anderen Platz.',
+  'app.save.newerAutosave': 'Autospeicherung ist aus: Der Speicherplatz enthält einen Spielstand aus einer neueren Version des Spiels. Um dieses Spiel zu behalten, speichere es unter „Spielstände“ auf einem anderen Speicherplatz.',
 
   // LeaguePanel.tsx: Seed League panel and result screen.
   // Tur 55: friend leagues — invite code, the league's table.

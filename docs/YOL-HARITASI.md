@@ -1,6 +1,6 @@
 # Capital — Yol Haritası
 
-> Tur 47'de yazıldı, her turda güncelleniyor (son: Tur 71). Biten işin ayrıntısı
+> Tur 47'de yazıldı, her turda güncelleniyor (son: Tur 75). Biten işin ayrıntısı
 > `docs/DURUM.md`'de; bu dosya önümüzdeki işin sırasını ve gerekçesini
 > tutuyor.
 
@@ -40,8 +40,8 @@ Bir bağlantıyla açılan, istenirse kurulan ve çevrimdışı da oynanan bir
 | **3 · Yeni yollar** | Her koşu farklı bir şirket | 56–61 | Zafere en az üç farklı yol var, her birini kazanan bir vekil var | **bitti** (Tur 61) |
 | **4 · Şehrin hissi** | Oynaması keyifli | 62–65 | Mevsim ve hava görünüyor, önemli anlar hissediliyor | **bitti** (Tur 65) |
 | **5 · Platform ve topluluk** | Oyunun evi büyüsün | 66–70 | Masaüstü sürümü ve paylaşılabilir senaryolar var | **bitti** (Tur 70) |
-| **6 · Yayına hazırlık** | Steam'de 1.0 | 71–75 | Masaüstü bir uygulama gibi davranıyor, oyun kumandayla oynanıyor, Workshop ve skor tabloları Steam'de, 1.0 çıktı | **sürüyor** (Tur 71) |
-| **7 · İkinci şehir ve ticaret** | Şehirler birbirine bağlansın | 76–80 (taslak) | İkinci şehrin kendi kimliği var, şehirler arasında mal akıyor, ticaret bir yol | sırada |
+| **6 · Yayına hazırlık** | Steam'de 1.0 | 71–75 | Masaüstü bir uygulama gibi davranıyor, oyun kumandayla oynanıyor, Workshop ve skor tabloları Steam'de, 1.0 çıktı | **bitti** (Tur 75) |
+| **7 · İkinci şehir ve ticaret** | Şehirler birbirine bağlansın | 76–80 (taslak) | İkinci şehrin kendi kimliği var, şehirler arasında mal akıyor, ticaret bir yol | **sıradaki** (taslak turlar Tur 75'te) |
 | **8 · Lite'ı güncelleme** | Lite ana oyunun çizgisine gelsin | 81–85 (taslak) | Lite'ın eksikleri ölçülmüş ve kapanmış, aynı sunucunun bugünkü sürümüyle çalışıyor | sırada |
 
 ### Faz 1 · Ürün temeli
@@ -211,8 +211,18 @@ açılıyor.
   günlüğüyle tek dosya; oyuncu info@conforcus.com'a yolluyor). Yayın
   listesi `docs/YAYIN.md`; macOS imzası sırlar gelince iş akışında. Oyunun
   Türkçe metinlerinin çoğu oyun ekranıyla iniyor: ana parça 74,6 KB'tan
-  66 KB'a. — bu PR
-- **75 · Değerlendirme ve Faz 6 raporu.**
+  66 KB'a. — bitti (#104)
+- **75 · Değerlendirme ve Faz 6 raporu.** Yayın listesi baştan sona kuru
+  koşuldu, Tur 73–74'ün ekranları kumandayla ve Deck boyunda, 1.0 gerçek
+  pencerede ve üç işletim sisteminin paketlerinde denendi. Hata raporu
+  Kayıtlar'dan doğrudan açılıyor (önce "dosya bozuk" deniyordu). Kaydın
+  neden açılmadığı oyuncunun dilinde; açılamayan otomatik kayıt kurulum
+  ekranında söyleniyor. Oyunun daha yeni bir sürümünün otomatik kaydı
+  (Steam'in beta dalı, Steam Cloud) artık ezilmiyor. Ayarlar'ın alt
+  sayfasında Escape ve B bir adım geri, notu silmiyor. Yayın listesinin
+  yanlışları düzeldi (`pnpm balance`, lig sunucusunun dağıtım kapısı,
+  `/v1/seed/sim`). Düzeltmeler sürüm 1.0.1 olarak çıkıyor; Faz 6 raporu
+  `docs/DURUM.md`'de. — bu PR
 
 ### Faz 7 · İkinci şehir ve ticaret (taslak)
 
@@ -228,7 +238,30 @@ başka bir şey kastettiyse Tur 76'dan önce düzeltilir):
   taşıma bedeli kâr ediyor. Açık iş 4.10'un (b) seçeneği (nakliye
   perakendenin dışında daha büyük bir mal akışına) burada büyüyor.
 
-Turlar Faz 6 bitince kullanıcıyla yazılacak.
+Taslak turlar (Tur 75'te yazıldı). Haritanın varsayılan okumasına göre;
+kullanıcı Tur 76'dan önce değiştirebilir. Kayıt biçimi bu fazda değişecek
+(şema v7): Tur 75'ten beri eski sürüm yeni biçimin kaydını açamıyor ama
+üstüne de yazmıyor. Sürüm numarası 1.1.0 (yeni içerik, eski kayıtlar
+açılıyor). Simülasyon da değişiyor: lig izi Tur 61'den beri ilk kez
+değişecek, lig sunucusu her böyle turla dağıtılmalı (`docs/YAYIN.md` §4).
+
+- **76 · Şehrin kimliği.** Şehir türleri: liman, sanayi ve başkent gibi.
+  Her türün kendi talep karışımı, hammaddesi, rakip mizaçları ve kuralı
+  var. Holding'in her şehri bir tür; eski kayıtların şehirleri bugünkü
+  "dengeli" tür. Şehrin türü kurulumda ve holding'in şehir seçiminde
+  seçiliyor, şehirde görünüyor.
+- **77 · Şehirler arası hat.** Nakliye terminali (Tur 56) iki şehri
+  bağlıyor. Mal bir şehirde üretilip öbüründe rafa giriyor. Hattın
+  kapasitesi, taşıma süresi (gün) ve bedeli var; yolda kalan mal
+  bilançoda.
+- **78 · Ticaretin fiyatı.** Şehirlerin pazar fiyatları ayrışıyor: bir
+  şehrin bol hammaddesi öbüründe kıt. Fiyat farkı ve taşıma bedeli kâr
+  ediyor. Rakipler de hat açıyor, fark daralıyor. Denge testinde yeni
+  bölüm; ticaret tek başına bir yol mu, ölçülüyor.
+- **79 · Ticaretle zafer.** Yeni hedef türü ("şehirler arası satış") ve
+  iki senaryo. Ticaret zafere bir yol: onu kazanan bir vekil (Tur 61'in
+  yöntemiyle).
+- **80 · Değerlendirme ve Faz 7 raporu.**
 
 ### Faz 8 · Lite'ı güncelleme (taslak)
 
@@ -261,4 +294,5 @@ yazılan.
 | **Lite:** App Store yayını ve canlı işletim bu haritanın neresinde? | sıra | **Faz 8: Lite'ı güncelleme** (kullanıcı, Tur 71'den önce; Tur 70'e kadar ayrı hattı) |
 | **Faz 6–8'in sırası** | sıra | **yayına hazırlık → ikinci şehir ve ticaret → Lite** (kullanıcı, Tur 71'den önce) |
 | **"İkinci şehir ve ticaret" nedir?** | Faz 7 | **ikinci şehrin kendi kimliği ve şehirler arası mal ticareti** (varsayılan: holding zaten üç şehre çıkıyor; kullanıcı Tur 76'dan önce değiştirebilir) |
+| **Faz 7'nin turları** | Faz 7 | **76 şehrin kimliği · 77 şehirler arası hat · 78 ticaretin fiyatı · 79 ticaretle zafer · 80 değerlendirme** (taslak, Tur 75; kullanıcı Tur 76'dan önce değiştirebilir) |
 | **Lig sunucusu her birleşmede kendiliğinden mi dağıtılsın?** | sunucu | **elle** (Tur 51, Codex #80). Tur 71'den beri canlı denetim eski simülasyonlu sunucuyu `main`'de kırmızıyla söylüyor; `LITE_LEAGUE_AUTODEPLOY=true` önerilir (`ios-lite/README.md`) |

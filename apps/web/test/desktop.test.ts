@@ -226,13 +226,14 @@ describe('kayıt slotları dosyada', () => {
     const shell = fakeShell();
     setSaveBackend(fileSaves(shell.invoke));
     const empty = await loadGame(4);
-    assert.deepEqual(empty, { ok: false, reason: 'Bu slotta kayıt yok.' });
+    assert.deepEqual(empty, { ok: false, problem: 'empty', reason: 'Bu slotta kayıt yok.' });
 
     await saveGame(new GameEngine(createNewGame({ seed: 7 })).getState(), 3);
     const { deleteSave } = await import('../../../packages/persistence/src/index');
     await deleteSave(3);
     assert.deepEqual(await listSaves(), []);
-    assert.deepEqual(shell.calls, ['save_read', 'save_write', 'save_remove', 'save_list']);
+    // Slot ilk yazılıştan önce bir kez okunuyor: yeni sürümün kaydı ezilmesin (Tur 75).
+    assert.deepEqual(shell.calls, ['save_read', 'save_read', 'save_write', 'save_remove', 'save_list']);
   });
 });
 

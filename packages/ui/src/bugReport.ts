@@ -1,3 +1,4 @@
+import { BUG_REPORT_KIND } from '@capital/persistence';
 import type { LogLine } from './errorLog';
 import type { Edition } from './version';
 
@@ -5,9 +6,10 @@ import type { Edition } from './version';
  * Hata raporu (Tur 74): oyuncunun kaydedip destek adresine yolladığı tek
  * bir JSON dosyası. Baştaki künye okunaklı (oyuncu açıp neyin gittiğini
  * görebilsin), kayıt sıkışık ve en sonda. Saf işlev: sayfadan bağımsız,
- * birim testli (`packages/ui/test/report.test.ts`).
+ * birim testli (`packages/ui/test/report.test.ts`). Kayıtlar → "JSON içe
+ * aktar" raporu da açıyor, içindeki kaydı yüklüyor (Tur 75): tür kalıcılıkta.
  */
-export const REPORT_KIND = 'capitalforge-bug-report';
+export const REPORT_KIND = BUG_REPORT_KIND;
 export const REPORT_FORMAT = 1;
 export const SUPPORT_EMAIL = 'info@conforcus.com';
 export const NOTE_LIMIT = 4000;
