@@ -8126,6 +8126,18 @@ yakın oluyor ve pencere boyu diye kaydediliyordu. Artık taşıma ve boy
 haberleri doğrudan kaydedilmiyor. Tek bir arka plan iş parçacığı haberler
 400 ms kesilene kadar bekliyor, sonra pencerenin durulmuş hâline bakıyor.
 
+Dördüncü bulgusu bu beklemenin kendisinde: oyuncu boyu değiştirip 400 ms
+dolmadan büyütünce ya da tam ekrana geçince durulan hâl büyütülmüş oluyor,
+yeni boy hiç kaydedilmiyordu. Artık her haber pencerenin o anki hâlini de
+getiriyor. Pencere durulduğunda pencere kipindeyse o hâl hatırlanıyor.
+Büyütülmüş, tam ekran ya da küçültülmüşse geçişten önceki son durgun
+pencere hâli hatırlanıyor. Geçişin kendi haberleri sayılmıyor:
+- ardından 100 ms içinde başka haber gelen hâl (animasyonun kareleri, kip
+  haberinden hemen önceki boy haberi);
+- büyütülmüş boydan 32 pikselden az küçük olan hâl (kip haberi gecikince
+  son boy haberi);
+- en küçük pencereden küçük boy (küçültülürken gelen haber).
+
 **Cursor Bugbot'un bulduğu şey.** Kısayol süzgeci yazı alanında harf
 yutuyordu. Windows'ta AltGr, Ctrl+Alt olarak geliyor: Almanca "}" (AltGr+0)
 "yakınlığı sıfırla", Lehçe "ś", "ó", "ń" (AltGr+S, O, N) "kaydet, aç, yeni
@@ -8164,9 +8176,10 @@ duruyordu: test dışa aktarılan kaydı adı görünür görünmez okuyor, dosy
     yalnız seçilmemiş metin boyunda; PC'den gelen, metin boyu seçilmemiş
     kayıtta da (Codex); Deck'te seçilmemiş boy PC'de normal, eski kayıttaki
     seçim yerinde.
-- `cargo test` 19/19, `cargo test --features steam` 18/18; `SteamDeck`
-  ortam değişkeni (1, 0, boş, yok). Pencerenin hafızası (7 yeni):
-  - boy ve yer yalnız pencere kipinde, ekranı kaplayan boy sayılmıyor;
+- `cargo test` 21/21, `cargo test --features steam` 20/20; `SteamDeck`
+  ortam değişkeni (1, 0, boş, yok). Pencerenin hafızası (9 yeni):
+  - boy ve yer yalnız pencere kipinde; ekranı kaplayan boy ve en küçük
+    pencereden küçük boy sayılmıyor;
   - tam ekranda kapanan pencere tam ekran ama eski boyuyla açılıyor
     (Codex'in senaryosu);
   - ilk açılış büyütülmüş, küçültülmüş kapanış önceki kipte;
@@ -8175,8 +8188,14 @@ duruyordu: test dışa aktarılan kaydı adı görünür görünmez okuyor, dosy
   - ekran çıkarılınca pencere kalan ekrana sığdırılıyor (Codex'in örneği:
     x = 1900), kesişmeyen pencere birincil ekranın ortasında açılıyor,
     büyük boy ekrana iniyor;
-  - haberler kesilince durulmuş sayılıyor, kanal kapanınca iş parçacığı
-    bitiyor (Cursor Bugbot);
+  - boyu değiştirip hemen büyüten oyuncunun boyu unutulmuyor; tam ekrana
+    geçen ve küçülten oyuncunun da. 100 ms'den kısa arayla büyütülürse
+    önceki boy kalıyor (Cursor Bugbot'un senaryosu);
+  - geçişin kendi haberleri pencere boyu sayılmıyor: kip haberinden önce
+    gelen boy haberi, animasyonun kareleri. Pencere kipine hiç
+    geçilmediyse hatırlanacak bir şey yok;
+  - haberler kesilince son 64 haber veriliyor, kanal kapanınca iş
+    parçacığı bitiyor;
   - bozuk dosya ilk açılış sayılıyor.
 - Gerçek pencerede uçtan uca 28/28 (19'dan). Yeni "Uygulama gibi": tarayıcı
   kısayolları yutuluyor, yazı alanının kısayolları yerinde, sağ tık ve

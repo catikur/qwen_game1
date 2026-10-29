@@ -180,7 +180,11 @@ deposunun Steam Deck'te denenmesi; o bir Deck istiyor.
 - `cargo test` ve `cargo test --features steam` (`apps/desktop/src-tauri`):
   Steam başarım kuyruğu (`docs/STEAM.md`); dosya deposu: kayıt yazma,
   okuma, listede yalnız künyeler, bozuk isteğin sağlam kaydı ezmemesi,
-  ayar anahtarının dizinden çıkamaması, dışa aktarmanın üstüne yazmaması.
+  ayar anahtarının dizinden çıkamaması, dışa aktarmanın üstüne yazmaması;
+  pencerenin hafızası: boy ve yer yalnız pencere kipinde, büyütme ve tam
+  ekran geçişinin haberleri pencere boyu sayılmıyor, boyu değiştirip hemen
+  büyüten oyuncunun boyu unutulmuyor, ekran düzeni değişince pencere kalan
+  ekrana sığdırılıyor.
 - `pnpm test` → `apps/web/test/desktop.test.ts`: ayar aynası (dosya kazanır,
   sıra, oturum deposu hariç, düşen yazma), slotların dosya deposuyla
   kaydet-listele-yükle, oyunun her yerel depo anahtarının dosyaya

@@ -13,7 +13,7 @@
 use std::path::Path;
 use std::sync::mpsc::{self, Receiver, RecvTimeoutError, Sender};
 use std::sync::{Mutex, MutexGuard};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Manager, PhysicalPosition, PhysicalSize, Runtime, Window};
@@ -29,6 +29,15 @@ const FILE: &str = "window.json";
 /// önce gelebiliyor; o an ekran boyuna yakın boy pencere boyu sanılıyordu
 /// (Cursor Bugbot).
 const SETTLE: Duration = Duration::from_millis(400);
+/// Ardından bu kadar sessizlik gelen haberin hâli durgun sayılıyor. Geçişin
+/// haberleri art arda geliyor (animasyonun kareleri, kip haberinden hemen
+/// önceki boy haberi); oyuncunun boyu bırakıp büyütmesi daha uzun sürüyor.
+const STEADY: Duration = Duration::from_millis(100);
+/// Büyütülmüş ya da tam ekran boydan bu kadar küçük olmayan hâl geçişin
+/// kendisi sayılıyor: kip haberi gecikince son boy haberi o boyda geliyor.
+const MARGIN: u32 = 32;
+/// Haberlerin son bu kadarı tutuluyor; uzun bir sürüklemenin başı gereksiz.
+const KEEP: usize = 64;
 
 /// Kapanışta yazılan, açılışta okunan hâl. Yer ve boy fiziksel piksel.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -43,7 +52,7 @@ pub struct Memory {
 }
 
 /// Pencerenin bir andaki hâli.
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct Now {
     pub x: i32,
     pub y: i32,
@@ -56,13 +65,21 @@ pub struct Now {
     pub screen: Option<(u32, u32)>,
 }
 
+impl Now {
+    /// Pencere kipinde mi. Ekranı tümüyle kaplayan pencere sayılmıyor: tam
+    /// ekrana geçerken boy haberi kip haberinden önce gelebiliyor. En küçük
+    /// pencereden küçük boy da sayılmıyor (küçültülürken gelen haber);
+    /// açılışta zaten kullanılmazdı.
+    pub fn windowed(&self) -> bool {
+        let covers = self.screen.is_some_and(|(width, height)| self.width >= width && self.height >= height);
+        !(self.maximized || self.minimized || self.fullscreen || covers) && self.width >= MIN_WIDTH && self.height >= MIN_HEIGHT
+    }
+}
+
 impl Memory {
-    /// Yer ve boy yalnız pencere kipinde. Ekranı tümüyle kaplayan pencere de
-    /// sayılmıyor: tam ekrana geçerken boy haberi kip haberinden önce
-    /// gelebiliyor.
+    /// Yer ve boy yalnız pencere kipinde.
     pub fn track(&mut self, now: &Now) {
-        let covers = now.screen.is_some_and(|(width, height)| now.width >= width && now.height >= height);
-        if now.maximized || now.minimized || now.fullscreen || covers || now.width == 0 || now.height == 0 {
+        if !now.windowed() {
             return;
         }
         self.x = now.x;
@@ -159,13 +176,44 @@ pub fn save(dir: &Path, memory: &Memory) -> std::io::Result<()> {
     crate::store::write_atomic(&dir.join(FILE), &bytes)
 }
 
-/// Haberler `wait` boyunca kesilene kadar bekler; kanal kapandıysa false.
-fn quiet(pokes: &Receiver<()>, wait: Duration) -> bool {
+/// Bir taşıma ya da boy haberi: geldiği an ve pencerenin o anki hâli.
+#[derive(Clone, Copy, Debug)]
+pub struct Seen {
+    pub at: Instant,
+    pub now: Now,
+}
+
+/// Haberler durulunca hatırlanacak hâl. Durulan pencere pencere kipindeyse o.
+/// Büyütülmüş, tam ekran ya da küçültülmüşse geçişten önceki son durgun
+/// pencere hâli: oyuncu boyu değiştirip 400 ms dolmadan büyütünce yeni boy
+/// kayboluyordu (Cursor Bugbot). Geçişin kendi haberleri sayılmıyor: ardından
+/// hemen haber gelen hâl ve büyütülmüş boydan belirgin küçük olmayan hâl.
+pub fn settle(seen: &[Seen], settled: &Now) -> Option<Now> {
+    if settled.windowed() {
+        return Some(*settled);
+    }
+    let steady = |index: usize| seen.get(index + 1).map_or(true, |next| next.at.duration_since(seen[index].at) >= STEADY);
+    // Küçültülmüş pencerenin boyu karşılaştırılacak bir boy değil.
+    let before = |now: &Now| {
+        settled.minimized || now.width.saturating_add(MARGIN) <= settled.width || now.height.saturating_add(MARGIN) <= settled.height
+    };
+    (0..seen.len()).rev().find(|&index| seen[index].now.windowed() && steady(index) && before(&seen[index].now)).map(|index| seen[index].now)
+}
+
+/// İlk haberden sonra haberleri `wait` boyunca kesilene kadar toplar, son
+/// `KEEP` tanesini; kanal kapandıysa None.
+fn gather(first: Seen, news: &Receiver<Seen>, wait: Duration) -> Option<Vec<Seen>> {
+    let mut seen = vec![first];
     loop {
-        match pokes.recv_timeout(wait) {
-            Ok(()) => continue,
-            Err(RecvTimeoutError::Timeout) => return true,
-            Err(RecvTimeoutError::Disconnected) => return false,
+        match news.recv_timeout(wait) {
+            Ok(next) => {
+                if seen.len() == KEEP {
+                    seen.remove(0);
+                }
+                seen.push(next);
+            }
+            Err(RecvTimeoutError::Timeout) => return Some(seen),
+            Err(RecvTimeoutError::Disconnected) => return None,
         }
     }
 }
@@ -173,7 +221,7 @@ fn quiet(pokes: &Receiver<()>, wait: Duration) -> bool {
 /// Uygulamanın tuttuğu hâl ve durulmayı bekleyen iş parçacığının kanalı.
 pub struct Remembered {
     memory: Mutex<Memory>,
-    pokes: Mutex<Sender<()>>,
+    news: Mutex<Sender<Seen>>,
 }
 
 impl Remembered {
@@ -206,17 +254,17 @@ fn config_dir<R: Runtime>(app: &AppHandle<R>) -> Option<std::path::PathBuf> {
 pub fn restore<R: Runtime>(app: &AppHandle<R>, window: &Window<R>) {
     let memory = config_dir(app).and_then(|dir| load(&dir));
     // Önce yönetime: aşağıdaki boy ve kip değişimlerinin haberleri `track`'e düşüyor.
-    let (pokes, settled) = mpsc::channel();
-    app.manage(Remembered { memory: Mutex::new(memory.unwrap_or_default()), pokes: Mutex::new(pokes) });
+    let (news, heard) = mpsc::channel();
+    app.manage(Remembered { memory: Mutex::new(memory.unwrap_or_default()), news: Mutex::new(news) });
     let watched = window.clone();
     std::thread::spawn(move || {
-        // Bir haber gelince durulmasını bekle, sonra pencerenin o anki hâline bak.
-        while settled.recv().is_ok() {
-            if !quiet(&settled, SETTLE) {
-                return;
+        // Bir haber gelince durulmasını bekle; hatırlanacak hâli haberlerden ve durulan hâlden seç.
+        while let Ok(first) = heard.recv() {
+            let Some(seen) = gather(first, &heard, SETTLE) else { return };
+            let (Some(remembered), Some(settled)) = (watched.try_state::<Remembered>(), now(&watched)) else { continue };
+            if let Some(now) = settle(&seen, &settled) {
+                remembered.memory().track(&now);
             }
-            let (Some(remembered), Some(now)) = (watched.try_state::<Remembered>(), now(&watched)) else { continue };
-            remembered.memory().track(&now);
         }
     });
     let screen = |monitor: &tauri::Monitor| -> Screen {
@@ -243,11 +291,10 @@ pub fn restore<R: Runtime>(app: &AppHandle<R>, window: &Window<R>) {
     }
 }
 
-/// Pencere taşındı ya da boyu değişti: durulunca bakılacak.
+/// Pencere taşındı ya da boyu değişti: o anki hâli, durulunca seçilecek.
 pub fn track<R: Runtime>(window: &Window<R>) {
-    if let Some(remembered) = window.try_state::<Remembered>() {
-        let _ = remembered.pokes.lock().unwrap_or_else(|poisoned| poisoned.into_inner()).send(());
-    }
+    let (Some(remembered), Some(now)) = (window.try_state::<Remembered>(), now(window)) else { return };
+    let _ = remembered.news.lock().unwrap_or_else(|poisoned| poisoned.into_inner()).send(Seen { at: Instant::now(), now });
 }
 
 /// Kapanış istendi: kipler şimdiki hâlden. Çıkışta pencere artık
@@ -289,8 +336,10 @@ mod tests {
         memory.track(&Now { maximized: true, ..windowed(0, 0, 1920, 1040) });
         memory.track(&Now { minimized: true, ..windowed(-32000, -32000, 160, 28) });
         assert_eq!((memory.x, memory.y, memory.width, memory.height), (100, 80, 1280, 760));
-        // Kip haberi gecikse de ekranı kaplayan boy pencere boyu sayılmıyor.
+        // Kip haberi gecikse de ekranı kaplayan boy pencere boyu sayılmıyor;
+        // en küçük pencereden küçük boy da.
         memory.track(&windowed(0, 0, 1920, 1080));
+        memory.track(&windowed(0, 0, 400, 300));
         assert_eq!((memory.width, memory.height), (1280, 760));
     }
 
@@ -347,18 +396,65 @@ mod tests {
         assert_eq!(plan(Some(away), &[]), Plan { size: Some((1280, 760)), position: None, maximize: false, fullscreen: false });
     }
 
+    /// Haberler: geliş anı (ms) ve hâl.
+    fn news(list: &[(u64, Now)]) -> Vec<Seen> {
+        let start = Instant::now();
+        list.iter().map(|&(ms, now)| Seen { at: start + Duration::from_millis(ms), now }).collect()
+    }
+
     #[test]
-    fn haberler_kesilince_durulmus_sayiliyor() {
-        let (pokes, settled) = mpsc::channel();
-        for _ in 0..5 {
-            pokes.send(()).unwrap();
+    fn boy_degistirip_hemen_buyuten_oyuncunun_boyu_unutulmuyor() {
+        // Cursor Bugbot'un senaryosu: sürükleyerek 1280 × 760, 250 ms sonra
+        // büyüt; 400 ms dolmadı. Windows'ta taşıma haberi büyütülmüş işaretinden önce.
+        let user = windowed(100, 80, 1280, 760);
+        let maximized = Now { maximized: true, ..windowed(-8, -8, 1920, 1017) };
+        let mut list: Vec<(u64, Now)> = (0..9).map(|step| (step * 16, windowed(100, 80, 1200 + step as u32 * 8, 700))).collect();
+        list.extend([(144, user), (400, windowed(-8, -8, 1920, 1017)), (400, maximized)]);
+        assert_eq!(settle(&news(&list), &maximized), Some(user));
+        // Tam ekran ve küçültme de.
+        let fullscreen = Now { fullscreen: true, ..windowed(0, 0, 1920, 1080) };
+        assert_eq!(settle(&news(&[(0, user), (250, fullscreen)]), &fullscreen), Some(user));
+        let minimized = Now { minimized: true, ..windowed(-32000, -32000, 160, 28) };
+        assert_eq!(settle(&news(&[(0, user), (250, minimized)]), &minimized), Some(user));
+        // Boy bırakılır bırakılmaz (100 ms'den kısa) büyütülürse öncekinde kalıyor.
+        let quick = windowed(100, 80, 1300, 780);
+        assert_eq!(settle(&news(&[(0, user), (300, quick), (350, maximized)]), &maximized), Some(user));
+    }
+
+    #[test]
+    fn gecisin_kendi_haberleri_pencere_boyu_sayilmiyor() {
+        let user = windowed(100, 80, 1280, 760);
+        let maximized = Now { maximized: true, ..windowed(0, 0, 1920, 1040) };
+        // Durulan pencere pencere kipindeyse o.
+        assert_eq!(settle(&news(&[(0, user)]), &windowed(60, 40, 1400, 820)), Some(windowed(60, 40, 1400, 820)));
+        // Linux'ta boy haberi kip haberinden önce, ardından haber yok: büyütülmüş boyda.
+        assert_eq!(settle(&news(&[(0, user), (300, windowed(0, 0, 1920, 1040))]), &maximized), Some(user));
+        // Büyütme animasyonunun kareleri art arda.
+        let frames = [(300, windowed(60, 40, 1400, 820)), (316, windowed(30, 20, 1660, 930)), (332, windowed(8, 4, 1880, 1020))];
+        let mut list = vec![(0, user)];
+        list.extend(frames);
+        list.push((348, maximized));
+        assert_eq!(settle(&news(&list), &maximized), Some(user));
+        // Pencere kipine hiç geçilmediyse hatırlanacak bir şey yok.
+        let fullscreen = Now { fullscreen: true, ..windowed(0, 0, 1920, 1080) };
+        assert_eq!(settle(&news(&[(0, fullscreen)]), &fullscreen), None);
+    }
+
+    #[test]
+    fn haberler_kesilince_son_haberler_veriliyor() {
+        let (sender, heard) = mpsc::channel();
+        let start = Instant::now();
+        for step in 0..KEEP as u32 + 6 {
+            sender.send(Seen { at: start, now: windowed(0, 0, 1000 + step, 700) }).unwrap();
         }
-        let start = std::time::Instant::now();
-        assert!(quiet(&settled, Duration::from_millis(40)), "biriken haberler tükenip süre doluyor");
-        assert!(start.elapsed() >= Duration::from_millis(40));
-        assert!(settled.try_recv().is_err(), "bütün haberler okundu");
-        drop(pokes);
-        assert!(!quiet(&settled, Duration::from_millis(40)), "kanal kapandı: iş parçacığı bitiyor");
+        let first = heard.recv().unwrap();
+        let seen = gather(first, &heard, Duration::from_millis(40)).expect("kanal açık");
+        assert!(start.elapsed() >= Duration::from_millis(40), "biriken haberler tükenip süre doluyor");
+        assert_eq!(seen.len(), KEEP);
+        assert_eq!(seen.last().map(|seen| seen.now.width), Some(1000 + KEEP as u32 + 5), "en yenisi sonda");
+        assert!(heard.try_recv().is_err(), "bütün haberler okundu");
+        drop(sender);
+        assert!(gather(first, &heard, Duration::from_millis(40)).is_none(), "kanal kapandı: iş parçacığı bitiyor");
     }
 
     #[test]
