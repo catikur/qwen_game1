@@ -8098,6 +8098,14 @@ pencere" sayılıyordu. macOS'ta yazı alanında sözcük sözcük gezinme
 kısayolu değil (tarayıcınınkiler Alt'sız), Alt + ok yazı alanında yerinde;
 F5, Ctrl+R, Ctrl+P yazı alanında da yutuluyor.
 
+**CI'ın bulduğu şey.** Uçtan uca testin Steam Deck bölümü CI'da düştü:
+önceki pencere kapanırken otomatik kayda yazıyordu (5 sn'ye kadar), tek
+pencere eklentisi o sırada açılan yeni kopyayı açtırmadı. Bölüm artık
+önceki oyunun süreci kapanana kadar bekliyor (20 sn'de kapanmazsa
+kapatıyor). Yerelde yüklü makinede bir yarış daha çıktı, Tur 66'dan beri
+duruyordu: test dışa aktarılan kaydı adı görünür görünmez okuyor, dosyayı
+256 KB'ta yarım buluyordu. Okuma da tamamı gelene kadar bekleniyor.
+
 **Doğrulama.**
 - `pnpm test` 865/865 (849'dan); tip denetimi temiz.
   - `packages/lite-league/test/simCheck.test.ts` (4 yeni): uç sunucunun

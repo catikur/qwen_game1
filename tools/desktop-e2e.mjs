@@ -19,10 +19,10 @@
 // Gerekenler: tauri-driver (`cargo install tauri-driver --locked`),
 // WebKitWebDriver (Debian/Ubuntu: webkit2gtk-driver), ekran (xvfb-run).
 // Çalıştırma: xvfb-run -a dbus-run-session -- node tools/desktop-e2e.mjs [ikili]
-import { spawn } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { execFileSync, spawn } from 'node:child_process';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, readlinkSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 
 const ROOT = new URL('..', import.meta.url).pathname;
 const BIN = process.argv[2] ?? join(ROOT, 'apps/desktop/src-tauri/target/release/capitalforge');
@@ -125,6 +125,44 @@ async function untilFile(read, timeoutMs, label) {
     await sleep(200);
   }
   throw new Error(`${label}: ${timeoutMs / 1000} sn içinde dosya yok`);
+}
+
+/**
+ * Oyunun süreçleri kapanana kadar bekle; kalan olursa öldür. Kapanış
+ * otomatik kayıt için 5 sn'ye kadar sürüyor ve tek pencere eklentisi o
+ * sırada açılan yeni kopyayı açtırmıyor (CI'da Steam Deck bölümü öyle
+ * düştü). Kalan süreçlerin sayısını döndürüyor.
+ */
+async function untilGameGone(timeoutMs) {
+  // Yalnız bu ikilinin süreçleri: adıyla bul, çalıştırılabilir dosyasıyla doğrula
+  // (komut satırında yolu taşıyan test sürecinin kendisi değil).
+  const binary = realpathSync(BIN);
+  const alive = () => {
+    let pids = [];
+    try {
+      pids = execFileSync('pgrep', ['-x', basename(BIN).slice(0, 15)], { encoding: 'utf8' }).split('\n').filter(Boolean);
+    } catch {
+      return [];
+    }
+    return pids.filter((pid) => {
+      try {
+        return readlinkSync(`/proc/${pid}/exe`) === binary;
+      } catch {
+        return false;
+      }
+    });
+  };
+  const start = Date.now();
+  while (alive().length > 0 && Date.now() - start < timeoutMs) await sleep(250);
+  const left = alive();
+  for (const pid of left) {
+    try {
+      process.kill(Number(pid), 'SIGKILL');
+    } catch {
+      /* bu arada kapandı */
+    }
+  }
+  return left.length;
 }
 
 const readSave = (slot) => JSON.parse(readFileSync(join(DATA, 'saves', `slot-${slot}.json`), 'utf8'));
@@ -264,7 +302,9 @@ try {
   // İkinci düğme "JSON dışa aktar".
   await win.click('.saverow-actions button:nth-child(2)');
   const json = await untilFile(() => exported('.json')[0], 20_000, 'dışa aktarılan kayıt');
-  const record = JSON.parse(readFileSync(join(OUT, json), 'utf8'));
+  // Dosya yazılırken de görünüyor: tamamı okunana kadar (yarım dosya JSON değil;
+  // yüklü makinede 256 KB'ta kesik okunmuştu).
+  const record = await untilFile(() => JSON.parse(readFileSync(join(OUT, json), 'utf8')), 20_000, 'dışa aktarılan kaydın tamamı');
   check('Kayıt dosyası İndirilenler klasöründe, adı ASCII', /^capitalforge-[A-Za-z0-9._-]+-gun\d+\.json$/.test(json) && record.state.time.day === day, json);
   const toast = await win.until(`[...document.querySelectorAll('.toasts .toast')].map((t) => t.textContent).find((t) => t.includes('İndirilenler'))`, 10_000, 'bildirim');
   check('Oyuncuya dosyanın nereye gittiği söyleniyor', toast.includes('İndirilenler'), toast);
@@ -345,6 +385,8 @@ try {
 // Steam, Deck'te başlattığı her sürece `SteamDeck=1` veriyor (Tur 71): ilk
 // açılışta metin "çok büyük". Ayrı bir sürücü, ayrı ve boş bir veri dizini.
 section('Steam Deck');
+const lingering = await untilGameGone(20_000);
+if (lingering > 0) console.log(`  (önceki pencereden ${lingering} süreç 20 sn'de kapanmadı, kapatıldı)`);
 const DECK = mkdtempSync(join(tmpdir(), 'capitalforge-deck-'));
 port = PORT + 10;
 const deckDriver = spawn('tauri-driver', ['--port', String(port), '--native-port', String(port + 1)], {
