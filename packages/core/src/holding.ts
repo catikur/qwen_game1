@@ -1,11 +1,11 @@
 import { CITY_NAMES, CONSUMER_CATEGORIES, HOLDING } from '@capital/content';
-import type { CitySizeId } from '@capital/content';
+import type { CitySizeId, CityTypeId } from '@capital/content';
 import { simulateCityDay } from './day';
 import { tc } from './i18n';
 import './i18n/gameTr';
 import { pushNews } from './news';
 import { formatMoney } from './format';
-import { holdingFoundedAt, holdingFounderSize, holdingNetWorth } from './holdingFacts';
+import { holdingFoundedAt, holdingFounderSize, holdingFounderType, holdingNetWorth } from './holdingFacts';
 import { recomputeNetWorth } from './systems/city';
 import { buybackToLock, freeFloat, sharePrice, sharesHeld, sharesOutstanding } from './systems/equity';
 import { runGoalTick } from './systems/goals';
@@ -118,7 +118,7 @@ export function raidStatus(state: GameState): { stage: number; fraction: number;
 }
 
 // Kariyer özeti de okuyor (kurulum ekranı); bağımlılıksız modülde (Tur 46).
-export { holdingFoundedAt, holdingFounderSize, holdingNetWorth } from './holdingFacts';
+export { holdingFoundedAt, holdingFounderSize, holdingFounderType, holdingNetWorth } from './holdingFacts';
 
 export function cityCount(state: GameState): number {
   return 1 + (state.holding?.dormant.length ?? 0);
@@ -182,20 +182,21 @@ export function openCity(
   state: GameState,
   citySize: CitySizeId,
   capital: number,
+  cityType?: CityTypeId,
 ): CommandResult & { next?: GameState } {
   const quote = openCityQuote(state);
   if (!quote.ok) return { ok: false, reason: quote.reason };
   const amount = Math.floor(capital);
   if (!(amount >= HOLDING.minCapital)) return { ok: false, reason: tc('core.holding.minCapital', { min: formatMoney(HOLDING.minCapital) }) };
   if (amount > quote.maxCapital) return { ok: false, reason: tc('core.holding.notEnoughCash') };
-  return { ok: true, next: foundCity(state, citySize, amount) };
+  return { ok: true, next: foundCity(state, citySize, amount, cityType) };
 }
 
 /**
  * Yeni şehri kurar; koşulları (zafer, sermaye, şehir sınırı) çağıran
  * tarttı. `openCity` ve senaryonun kurulumu (Holding: iki şehir) aynı yol.
  */
-export function foundCity(state: GameState, citySize: CitySizeId, amount: number): GameState {
+export function foundCity(state: GameState, citySize: CitySizeId, amount: number, cityType?: CityTypeId): GameState {
   const player = state.companies[state.playerCompanyId]!;
   const seed = foundingSeed(state);
   const opened = state.holding?.opened ?? 1;
@@ -220,7 +221,14 @@ export function foundCity(state: GameState, citySize: CitySizeId, amount: number
     ceoId: player.ceoId,
     startingCash: amount,
     startingBrand: brand,
-    rivalOffset: opened * 4,
+    /*
+     * Rakip kadrosu katalogda kayıyor: ikinci şehir aynı dört rakiple
+     * başlamasın. Türlü şehrin kadrosu türden (Tur 76); başka türden bir
+     * şehirden açılınca zaten başka rakiplerle başlıyor, kaydırmak türün
+     * rakiplerini atlatırdı. Aynı türün ikinci şehri kayıyor.
+     */
+    ...(cityType && cityType !== 'balanced' ? { cityType } : {}),
+    rivalOffset: (cityType ?? 'balanced') === (state.cityType ?? 'balanced') ? opened * 4 : 0,
   });
   next.flags = { ...state.flags };
   next.cityName = name;
@@ -339,6 +347,7 @@ export function closeCity(state: GameState, index: number): CommandResult {
   // kurucu şehir kapanmadan yazılmazsa koşunun kimliği değişirdi (Codex #70).
   holding.foundedAtIso ??= holdingFoundedAt(state);
   holding.foundedCitySize ??= holdingFounderSize(state);
+  holding.foundedCityType ??= holdingFounderType(state);
   // Şehrin sayaçları da: kapatılan şehirden sonraki ilerleme üstüne eklensin (Codex #70).
   holding.closedTally = addTally(holding.closedTally ?? {}, cityTally(city.state));
   holding.dormant = holding.dormant.filter((_, i) => i !== index);

@@ -4,7 +4,7 @@ import { tc } from '../i18n';
 import { nextFloat } from '../rng';
 import { pushNews } from '../news';
 import { noteRelation, stanceOf } from './relations';
-import { FREIGHT_SHARE, ownDepotRelief, reliefOf } from './supply';
+import { FREIGHT_SHARE, freightShareOf, ownDepotRelief, reliefOf } from './supply';
 import type { BuildingInstance, CommandResult, FreightDeal, FreightState, GameState } from '../types';
 
 /**
@@ -98,7 +98,7 @@ export function freightStanding(state: GameState, deal: Pick<FreightDeal, 'compa
   return {
     rank: companies.indexOf(client) + 1,
     ratio,
-    saving: Math.round((deal.estimate * (1 - FREIGHT_SHARE)) / FREIGHT_SHARE),
+    saving: Math.round((deal.estimate * (1 - freightShareOf(state))) / freightShareOf(state)),
     challenger: strongest?.id === client.id && ratio >= FREIGHT_CHALLENGER_SHARE,
   };
 }
@@ -136,10 +136,10 @@ function distance(state: GameState, a: BuildingInstance, b: BuildingInstance): n
  * Bir rakip mağazasının terminale günlük ücreti: dünkü satışından, terminalin
  * payıyla. Teklif bu tahminle geliyor; gerçek ücret her gün o günün satışı.
  */
-export function freightFeeEstimate(outlet: BuildingInstance, terminalDefId: string): number {
+export function freightFeeEstimate(outlet: BuildingInstance, terminalDefId: string, share = FREIGHT_SHARE): number {
   const def = BUILDING_BY_ID[terminalDefId];
   if (!def) return 0;
-  return feeAt(outlet, reliefOf(def) * FREIGHT_SHARE);
+  return feeAt(outlet, reliefOf(def) * share);
 }
 
 function feeAt(outlet: BuildingInstance, rate: number): number {
@@ -216,7 +216,7 @@ export function freightPotential(state: GameState, companyId: string, defId: str
     const at = state.map.tiles[outlet.tileId];
     if (!at || Math.abs(at.x - tile.x) + Math.abs(at.y - tile.y) > def.radius) continue;
     if (ownDepotRelief(state, outlet) > 0) continue;
-    fees.push(freightFeeEstimate(outlet, defId));
+    fees.push(freightFeeEstimate(outlet, defId, freightShareOf(state)));
   }
   fees.sort((a, b) => b - a);
   return { outlets: fees.length, fee: fees.slice(0, def.fleet).reduce((sum, fee) => sum + fee, 0) };
@@ -252,7 +252,7 @@ function generateOffer(state: GameState): FreightDeal | null {
     for (const companyId of [...byCompany.keys()].sort()) {
       const outlets = byCompany.get(companyId)!.slice(0, free);
       if (outlets.length < FREIGHT.minOutlets) continue;
-      const estimate = outlets.reduce((sum, outlet) => sum + freightFeeEstimate(outlet, terminal.defId), 0);
+      const estimate = outlets.reduce((sum, outlet) => sum + freightFeeEstimate(outlet, terminal.defId, freightShareOf(state)), 0);
       if (estimate <= 0) continue;
       if (!best || estimate > best.estimate) best = { companyId, terminal, outlets, estimate };
     }
@@ -267,7 +267,7 @@ function generateOffer(state: GameState): FreightDeal | null {
     durationDays: FREIGHT.durationDays,
     offeredDay: day,
     estimate: Math.round(best.estimate),
-    rate: reliefOf(BUILDING_BY_ID[best.terminal.defId]!) * FREIGHT_SHARE,
+    rate: reliefOf(BUILDING_BY_ID[best.terminal.defId]!) * freightShareOf(state),
   };
 }
 

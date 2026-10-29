@@ -1,6 +1,6 @@
 import { ACHIEVEMENTS, SCENARIOS } from '@capital/content';
-import type { AchievementDef, AchievementFeat, AchievementTotal, CitySizeId, DifficultyId, ModifierId, PathId } from '@capital/content';
-import { holdingFoundedAt, holdingFounderSize, holdingNetWorth } from './holdingFacts';
+import type { AchievementDef, AchievementFeat, AchievementTotal, CitySizeId, CityTypeId, DifficultyId, ModifierId, PathId } from '@capital/content';
+import { holdingFoundedAt, holdingFounderSize, holdingFounderType, holdingNetWorth } from './holdingFacts';
 import { FEAT_COUNTERS, addTally, cityTally } from './systems/feats';
 import { leagueBoardKind } from './systems/leagueWeek';
 import type { CityTally, GameState } from './types';
@@ -42,6 +42,8 @@ export interface RunFacts {
   modifiers?: ModifierId[];
   /** Kurucu şehrin boyutu. */
   citySize: CitySizeId;
+  /** Kurucu şehrin türü (Tur 76); dengeli şehirde ve eski koşularda yok. */
+  cityType?: CityTypeId;
   /** Oynanan şehrin günü. */
   day: number;
   /** Holding'in en yüksek toplam değeri (tek şehirde şirketin net değeri). */
@@ -110,6 +112,7 @@ export function runFacts(state: GameState): RunFacts {
     ...(state.modifiers?.length ? { modifiers: [...state.modifiers] } : {}),
     // Kurucu şehir kapatıldıysa boyutu holding'de (Codex #70).
     citySize: holdingFounderSize(state),
+    ...(holdingFounderType(state) !== 'balanced' ? { cityType: holdingFounderType(state) } : {}),
     day: state.time.day,
     // Bir karede birkaç gün geçebiliyor: arada kalan tepe günün sayacından (Codex #70).
     worth: Math.max(holdingNetWorth(state), peak),

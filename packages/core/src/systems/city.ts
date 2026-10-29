@@ -11,6 +11,7 @@ import { tc } from '../i18n';
 import { pushNews } from '../news';
 import { ownerFraction, portfolioValue } from './equity';
 import { staffedJobs } from './labor';
+import { cityLandScale } from './cityType';
 import type { GameState } from '../types';
 
 /**
@@ -79,6 +80,7 @@ export function runLandValueTick(state: GameState, eventDrift: number): void {
   if (!state.flags.landValueDrift) return;
 
   const { width, height, tiles } = state.map;
+  const landScale = cityLandScale(state);
 
   for (const tile of tiles) {
     const district = state.districts[tile.districtId];
@@ -111,10 +113,12 @@ export function runLandValueTick(state: GameState, eventDrift: number): void {
     // Meclisin metro hattı hedefi kalıcı olarak yükseltiyor; tek seferlik
     // artış hedefe yazılmasaydı sürüklenme onu birkaç ayda silerdi.
     const metro = 1 + COUNCIL.infrastructureLandBoost * (district.infrastructure ?? 0);
+    // Başkentte arsa pahalı kalıyor (Tur 76): hedef de türün çarpanıyla.
     const target =
       archetype.baseLandValue *
       metro *
-      (0.7 + 0.55 * developmentRatio + amenityBonus + 0.35 * (populationFactor - 1));
+      (0.7 + 0.55 * developmentRatio + amenityBonus + 0.35 * (populationFactor - 1)) *
+      landScale;
 
     // Hedefe yavaş yaklaş, üstüne olayların sürüklemesini ekle.
     tile.landValue += (target - tile.landValue) * 0.004 + tile.landValue * eventDrift;

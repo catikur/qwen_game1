@@ -6,6 +6,7 @@ export * from './categories';
 export * from './goods';
 export * from './buildings';
 export * from './districts';
+export * from './cityTypes';
 export * from './npc';
 export * from './events';
 export * from './ceos';

@@ -11,6 +11,7 @@ import { LAND_SELL_RATIO, tilePrice } from './systems/city';
 import { permitMultiplier } from './systems/council';
 import { crisisBuildMultiplier } from './systems/economy';
 import { isPledged } from './systems/credit';
+import { cityBuildCostScale } from './systems/cityType';
 import { tc } from './i18n';
 import './i18n/gameTr';
 import type { CommandResult, GameState } from './types';
@@ -83,7 +84,8 @@ export function buildCost(state: GameState, companyId: string, defId: string): n
   if (!def) return 0;
   const company = state.companies[companyId];
   // Meclisin ruhsat kolaylığı herkese aynı: oyuncu da rakip de ucuz kurar.
-  return Math.round(def.cost * getCeoModifiers(company?.ceoId ?? null).buildCost * constructionMultiplier(state));
+  // Şehrin türü (Tur 76): limanda terminal ve depo ucuz.
+  return Math.round(def.cost * cityBuildCostScale(state, defId) * getCeoModifiers(company?.ceoId ?? null).buildCost * constructionMultiplier(state));
 }
 
 /** Parselin neden alınamadığını açıklar; alınabiliyorsa null döner. */

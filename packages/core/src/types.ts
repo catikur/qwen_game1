@@ -1,4 +1,4 @@
-import type { BubbleKind, CardBoostTarget, CategoryId, CitySizeId, CreditRating, DifficultyId, DistrictArchetypeId, LoanKind, ModifierId, MotionKind, NpcProfileDef, Pack, PathId, PathSource, ProjectId, QuestKind, RelationEventKind, RuleOverrides, UnionResponse, WagePolicy } from '@capital/content';
+import type { BubbleKind, CardBoostTarget, CategoryId, CitySizeId, CityTypeId, CreditRating, DifficultyId, DistrictArchetypeId, LoanKind, ModifierId, MotionKind, NpcProfileDef, Pack, PathId, PathSource, ProjectId, QuestKind, RelationEventKind, RuleOverrides, UnionResponse, WagePolicy } from '@capital/content';
 import type { RngState } from './rng';
 
 /**
@@ -10,7 +10,7 @@ import type { RngState } from './rng';
  * state'te sadece kimlik ve sayı taşınır.
  */
 
-export const SCHEMA_VERSION = 6;
+export const SCHEMA_VERSION = 7;
 
 /**
  * Bir karenin şehirdeki rolü.
@@ -980,6 +980,11 @@ export interface GameState {
   rivalTempo?: number;
   /** Şehir boyutu (Tur 21). Yokluğu standart 3×3. */
   citySize?: CitySizeId;
+  /**
+   * Şehrin türü (Tur 76): liman, sanayi ya da başkent. Yokluğu dengeli:
+   * eski kayıtların şehirleri, Tohum Ligi ve senaryolar.
+   */
+  cityType?: CityTypeId;
   /** Son yeni rakip girişinin günü. */
   lastEntryDay?: number;
   /** Rakip koltuğunun boşaldığı gün (giriş bu günden 45 gün sonra). */
@@ -1117,6 +1122,8 @@ export interface HoldingState {
   foundedAtIso?: string;
   /** Kurucu şehrin boyutu (Tur 41): kurucu şehir kapatılınca yazılıyor; yokluğu kurucu şehrinki. */
   foundedCitySize?: CitySizeId;
+  /** Kurucu şehrin türü (Tur 76): boyutu gibi, kurucu şehir kapatılınca yazılıyor. */
+  foundedCityType?: CityTypeId;
   /** Kapatılan şehirlerin kariyer payı (Tur 41): şehir listeden çıkınca sayaçları kaybolmasın. */
   closedTally?: CityTally;
   /** Kapatılan şehirlerdeki zaferlerin yolları (Tur 61): "Üç yol" kayıttan okunuyor (Codex #91). */
@@ -1312,7 +1319,7 @@ export type GameCommand =
   /** Süren devralma emrini iptal eder. */
   | { type: 'CANCEL_TAKEOVER_ORDER'; companyId: string }
   /** Zafer kazanılan şehirden yeni bir şehre açılır (Tur 22). */
-  | { type: 'OPEN_CITY'; citySize: CitySizeId; capital: number }
+  | { type: 'OPEN_CITY'; citySize: CitySizeId; capital: number; cityType?: CityTypeId }
   /** Bekleyen bir şehre geçer; bu şehir bekler. */
   | { type: 'SWITCH_CITY'; index: number }
   /**

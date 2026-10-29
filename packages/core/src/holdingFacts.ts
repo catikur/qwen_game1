@@ -1,4 +1,4 @@
-import type { CitySizeId } from '@capital/content';
+import type { CitySizeId, CityTypeId } from '@capital/content';
 import type { GameState } from './types';
 
 /*
@@ -25,10 +25,19 @@ export function holdingFoundedAt(state: GameState): string {
   return first;
 }
 
+function founderOf(state: GameState): GameState {
+  const founded = holdingFoundedAt(state);
+  return [state, ...(state.holding?.dormant ?? []).map((city) => city.state)].find((city) => city.meta.createdAtIso === founded) ?? state;
+}
+
 /** Kurucu şehrin boyutu (Tur 41); kurucu şehir kapatıldıysa holding'de saklanan. */
 export function holdingFounderSize(state: GameState): CitySizeId {
   if (state.holding?.foundedCitySize) return state.holding.foundedCitySize;
-  const founded = holdingFoundedAt(state);
-  const founder = [state, ...(state.holding?.dormant ?? []).map((city) => city.state)].find((city) => city.meta.createdAtIso === founded);
-  return (founder ?? state).citySize ?? 'standard';
+  return founderOf(state).citySize ?? 'standard';
+}
+
+/** Kurucu şehrin türü (Tur 76); kurucu şehir kapatıldıysa holding'de saklanan. */
+export function holdingFounderType(state: GameState): CityTypeId {
+  if (state.holding?.foundedCityType) return state.holding.foundedCityType;
+  return founderOf(state).cityType ?? 'balanced';
 }

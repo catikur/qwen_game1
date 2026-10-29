@@ -1,7 +1,7 @@
 import { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import type { ReactElement, ReactNode } from 'react';
-import { CEOS, CITY_SIZES, DEFAULT_CEO_ID, DEFAULT_CITY_SIZE, DEFAULT_DIFFICULTY, DIFFICULTIES, MODIFIERS, MODIFIER_BY_ID, SCENARIOS, SCENARIO_BY_ID, formatDecimal, modifierMultiplier, normalizeModifiers, numberLocale } from '@capital/content';
-import type { CitySizeId, DifficultyId, ModifierId, ScenarioDef } from '@capital/content';
+import { CEOS, CITY_SIZES, CITY_TYPES, DEFAULT_CEO_ID, DEFAULT_CITY_SIZE, DEFAULT_CITY_TYPE, DEFAULT_DIFFICULTY, DIFFICULTIES, MODIFIERS, MODIFIER_BY_ID, SCENARIOS, SCENARIO_BY_ID, formatDecimal, modifierMultiplier, normalizeModifiers, numberLocale } from '@capital/content';
+import type { CitySizeId, CityTypeId, DifficultyId, ModifierId, ScenarioDef } from '@capital/content';
 import { LEAGUE_DAILY_DAYS, leagueDayId, leagueRule, leagueWeekId } from '@capital/core';
 import type { LeagueBoardKind } from '@capital/core';
 import { CeoPortrait } from './CeoPortrait';
@@ -62,6 +62,8 @@ export function NewGameScreen({
     /** Hazır ya da yüklü senaryonun kimliği; editörden denenen taslakta tanımın kendisi (Tur 68). */
     scenario: string | ScenarioDef | null,
     modifiers: ModifierId[],
+    /** Şehrin türü (Tur 76): yalnız serbest şehirde; lig ve senaryo dengeli. */
+    cityType: CityTypeId,
   ) => void;
   onCancel?: () => void;
   /** Senaryodan dönen oyuncu listeye düşsün (Tur 39). */
@@ -100,6 +102,9 @@ export function NewGameScreen({
   };
   const free = mode === 'free';
   const [citySize, setCitySize] = useState<CitySizeId>(DEFAULT_CITY_SIZE);
+  // Şehrin türü (Tur 76): liman, sanayi, başkent ya da dengeli.
+  const [cityType, setCityType] = useState<CityTypeId>(DEFAULT_CITY_TYPE);
+  const kind = CITY_TYPES.find((c) => c.id === cityType) ?? CITY_TYPES[0]!;
   // Rehber ilk oyunda açık gelir; bu tarayıcıda bir kez bitirilen ya da
   // kapatılan rehber bir daha kendiliğinden açılmaz (Tur 26).
   const [tutorial, setTutorialOption] = useState(() => !tutorialSeen());
@@ -132,7 +137,7 @@ export function NewGameScreen({
   // şehri ve zorluğu tanımından; rehber ilk oyun içindir, senaryoda kapalı.
   // Editörün "dene"si (Tur 68): taslağın tanımıyla, kaydetmeden.
   const tryScenario = (def: ScenarioDef) =>
-    onStart(name.trim() || t('hud.newGame.defaultName'), ceoId, def.difficulty, null, def.citySize, false, def, []);
+    onStart(name.trim() || t('hud.newGame.defaultName'), ceoId, def.difficulty, null, def.citySize, false, def, [], DEFAULT_CITY_TYPE);
 
   const submit = () =>
     onStart(
@@ -144,6 +149,7 @@ export function NewGameScreen({
       mode === 'scenario' ? false : tutorial,
       mode === 'scenario' ? scenario.id : null,
       free ? modifiers : [],
+      free ? cityType : DEFAULT_CITY_TYPE,
     );
 
   return (
@@ -404,6 +410,36 @@ export function NewGameScreen({
                 </p>
               </>
             )}
+          </div>
+        </div>
+        )}
+
+        {free && (
+        <div className="newgame-field">
+          <span>{t('hud.newGame.typeQuestion')}</span>
+          <div className="difficulty-picker mode-picker city-type-picker" role="radiogroup" aria-label={t('hud.newGame.typeGroup')}>
+            {CITY_TYPES.map((option) => (
+              <button
+                key={option.id}
+                type="button"
+                role="radio"
+                aria-checked={option.id === cityType}
+                className={`difficulty-option${option.id === cityType ? ' selected' : ''}`}
+                data-city-type={option.id}
+                style={{ ['--city-type' as string]: option.color }}
+                onClick={() => setCityType(option.id)}
+              >
+                {option.name}
+              </button>
+            ))}
+          </div>
+          <div className="difficulty-detail" data-detail="city-type">
+            <p>{kind.blurb}</p>
+            <ul>
+              {kind.facts.map((fact) => (
+                <li key={fact}>{fact}</li>
+              ))}
+            </ul>
           </div>
         </div>
         )}

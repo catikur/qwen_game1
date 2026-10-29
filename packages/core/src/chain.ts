@@ -14,6 +14,7 @@ import { buildCost } from './actions';
 import { isDistrictOpen, tilePrice } from './systems/city';
 import { estimateInvestment } from './systems/market';
 import { distributionRelief } from './systems/supply';
+import { cityUpkeepScale, referencePrice } from './systems/cityType';
 import { scopedMemo, withBuildingIndex } from './systems/buildingIndex';
 import { wageFor } from './systems/labor';
 import { overheadMultiplier } from './systems/economy';
@@ -267,7 +268,7 @@ function projectedUnitCost(
   const district = state.districts[districtId];
   if (!district || def.capacity <= 0) return inputCost;
   const wages = wageFor(state, companyId, def.id, districtId);
-  return inputCost + ((def.upkeepPerDay + wages) * overheadMultiplier(state, companyId)) / def.capacity;
+  return inputCost + ((def.upkeepPerDay * cityUpkeepScale(state, def) + wages) * overheadMultiplier(state, companyId)) / def.capacity;
 }
 
 /**
@@ -442,9 +443,9 @@ function bestMove(
       // sık hâli girdinin krizi: hammadde pahalanınca ara mal ünitesi zarar
       // eder ve kart eskiden hiçbir şey söylemeden "hamle yok"a düşüyordu.
       const input = link.inputGoodId ? GOOD_BY_ID[link.inputGoodId] : undefined;
-      const inputSpot = input ? (state.market.spot[input.id] ?? input.basePrice) : 0;
+      const inputSpot = input ? (state.market.spot[input.id] ?? referencePrice(state, input.id)) : 0;
       blocked ??=
-        input && inputSpot >= input.basePrice * CRISIS_THRESHOLD
+        input && inputSpot >= referencePrice(state, input.id) * CRISIS_THRESHOLD
           ? tc('core.chain.blockedInputCrisis', { name: def.name, input: input.name, spot: money(inputSpot) })
           : tc('core.chain.blockedUnprofitable', { name: def.name });
       continue;
@@ -589,7 +590,7 @@ function chainCardsFor(state: GameState, companyId: string, brake: boolean): Cha
       const blended = company.unitCost[link.id] ?? spot;
       const inputCost = link.inputGoodId ? (company.unitCost[link.inputGoodId] ?? 0) : 0;
       const def = unitDefFor(link.id);
-      const state_ = slotState(flow.produced, flow.consumed, spot, link.basePrice);
+      const state_ = slotState(flow.produced, flow.consumed, spot, referencePrice(state, link.id));
       const ratio = flow.consumed > 0 ? Math.min(1, flow.produced / flow.consumed) : flow.produced > 0 ? 1 : 0;
 
       slots.push({

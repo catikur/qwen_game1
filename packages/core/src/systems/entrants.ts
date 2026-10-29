@@ -15,6 +15,7 @@ import { rivalProfile, rivalProfiles } from '../profiles';
 import { createRng, nextFloat, pick } from '../rng';
 import { formatMoney } from '../selectors';
 import { makeCompany, rivalSlotsFor } from '../worldgen';
+import { rivalRoster } from './cityType';
 import type { CompanyState, GameState } from '../types';
 
 /**
@@ -188,7 +189,8 @@ export function runEntrantTick(state: GameState): void {
 
   // Eski kayıtlarda geçmiş yok: elde olan en iyi bilgi bugünkü kadro.
   const history = new Set(state.rivalHistory ?? rivals.map((company) => company.id));
-  const fromCatalog = NPC_PROFILES.find((candidate) => !history.has(candidate.id) && !state.companies[candidate.id]);
+  // Kadro türün sırasıyla (Tur 76); dengeli şehirde katalog sırası.
+  const fromCatalog = rivalRoster(state.cityType).find((candidate) => !history.has(candidate.id) && !state.companies[candidate.id]);
 
   if (state.rivalVacancyDay === undefined) {
     state.rivalVacancyDay = day;

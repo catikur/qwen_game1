@@ -189,6 +189,17 @@ const MIGRATIONS: Record<number, (raw: Record<string, unknown>) => Record<string
     }
     return raw;
   },
+
+  /**
+   * v6 → v7: şehrin türü (Tur 76).
+   *
+   * Eski kaydın şehri dengeli: alan yok, yokluğu dengeli demek; taşınacak
+   * bir şey yok. Sürüm yine de artıyor: türlü şehrin kaydını (limanın
+   * fiyatları, sanayinin kuralı) tür bilmeyen eski sürüm dengeli diye
+   * oynamasın. Tur 75'ten beri eski sürüm yeni biçimi açmıyor, üstüne de
+   * yazmıyor.
+   */
+  6: (raw) => raw,
 };
 
 /**

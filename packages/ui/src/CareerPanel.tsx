@@ -1,6 +1,6 @@
 import { useEffect, useSyncExternalStore } from 'react';
 import type { ReactElement } from 'react';
-import { ACHIEVEMENT_GROUPS, CEO_BY_ID, PATH_BY_ID, SCENARIOS, SCENARIO_BY_ID, formatDecimal, getCitySize, getDifficulty, modifierMultiplier, moneyUnits, numberLocale, withCurrency } from '@capital/content';
+import { ACHIEVEMENT_GROUPS, CEO_BY_ID, PATH_BY_ID, SCENARIOS, SCENARIO_BY_ID, formatDecimal, getCitySize, getCityType, getDifficulty, modifierMultiplier, moneyUnits, numberLocale, withCurrency } from '@capital/content';
 import type { AchievementGroup } from '@capital/content';
 import { formatMoney, runPaths } from '@capital/core';
 import type { AchievementStatus, GameState } from '@capital/core';
@@ -104,6 +104,8 @@ function RunRow({ run }: { run: CareerRun }): ReactElement {
     ceo ? ceo.name : t('hud.career.noCeo'),
     getDifficulty(run.difficulty).name,
     getCitySize(run.citySize).name,
+    // Şehrin türü (Tur 76): dengeli şehirde yazılmıyor.
+    ...(run.cityType && run.cityType !== 'balanced' ? [getCityType(run.cityType).name] : []),
     // Ek kurallar (Tur 45): sayısı ve zorluk çarpanı; senaryonun kuralı çarpansız (Tur 60).
     ...(run.modifiers?.length
       ? [

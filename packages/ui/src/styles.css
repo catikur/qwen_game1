@@ -5708,6 +5708,40 @@ button.icon {
   white-space: pre;
 }
 
+/* Üst barda şehrin türü (Tur 76): noktanın rengi türden. */
+.brand-city-type {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.brand-city-type::before {
+  content: '';
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--city-type, currentColor);
+}
+
+.brand-city-type::after {
+  content: ' · ';
+  white-space: pre;
+}
+
+/* Tür seçicisi: üst bardaki gibi türün rengi bir nokta (seçili düğmenin gölgesine dokunmuyor). */
+.city-type-picker .difficulty-option::before {
+  content: '';
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 6px;
+  border-radius: 50%;
+  background: var(--city-type, currentColor);
+  vertical-align: middle;
+}
+
 .goals-holding {
   margin: 0;
   font-size: calc(12.5px * var(--text-scale));

@@ -27,6 +27,7 @@ import { buildingStrikeFactor, serviceFactor, wageFor } from './labor';
 import { marketingLeverage } from './focus';
 import { SURPLUS_HAIRCUT, buildingUpkeep, outletRelief, unitCogsFor } from './supply';
 import { energyPrice, gridUpkeep, prospectiveUpkeep } from './energy';
+import { cityUpkeepScale } from './cityType';
 import {
   isProject,
   leaseStep,
@@ -91,7 +92,7 @@ function upkeepFor(state: GameState, companyId: string, defId: string): number {
   if (!def) return 0;
   // Enerji (Tur 57): tahmin bugünkü şebeke fiyatıyla; fiyat 1'ken eskisiyle aynı.
   return gridUpkeep(
-    def.upkeepPerDay * getCeoModifiers(state.companies[companyId]?.ceoId ?? null).upkeep * overheadMultiplier(state, companyId),
+    def.upkeepPerDay * cityUpkeepScale(state, def) * getCeoModifiers(state.companies[companyId]?.ceoId ?? null).upkeep * overheadMultiplier(state, companyId),
     def,
     energyPrice(state),
   );
@@ -289,6 +290,7 @@ export function estimateInvestment(
           def,
           tileId,
           def.upkeepPerDay *
+            cityUpkeepScale(state, def) *
             getCeoModifiers(company.ceoId).upkeep *
             overheadMultiplier(state, companyId) *
             boostMultiplier(state, companyId, 'upkeep') *

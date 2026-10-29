@@ -136,6 +136,10 @@ export const hud: Record<keyof typeof trHud, string> = {
   'hud.modifiers.line': 'Zusatzregeln: {list} · Schwierigkeit ×{value}',
   'hud.modifiers.scenarioLine': 'Zusatzregel des Szenarios: {list} (ohne Schwierigkeitsfaktor)',
   'hud.newGame.sizeGroup': 'Stadtgröße',
+  // Stadttyp (Tur 76)
+  'hud.newGame.typeQuestion': 'Was für eine Stadt?',
+  'hud.newGame.typeGroup': 'Stadttyp',
+  'hud.cityType.chipTitle': '{type}: {blurb}',
   'hud.newGame.cancel': 'Abbrechen',
   'hud.newGame.start': 'Unternehmen gründen',
   'hud.newGame.startScenario': 'Szenario starten',
@@ -274,6 +278,7 @@ export const hud: Record<keyof typeof trHud, string> = {
   'hud.holding.open.blurb':
     'Das Kapital kommt aus der Kasse dieser Stadt und wird zum Siegziel der neuen Stadt addiert. Die Hälfte deiner Markenbekanntheit und dein CEO kommen mit; die Rivalen sind andere. Diese Stadt lebt weiter; welcher Anteil ihres Gewinns in die Kasse fließt, legt ihre Anweisung hier fest (anfangs die Hälfte).',
   'hud.holding.open.size': 'Stadtgröße',
+  'hud.holding.open.type': 'Stadttyp',
   'hud.holding.open.capital': 'Kapital',
   'hud.holding.open.terms': 'Übernommene Markenbekanntheit {brand}\u00a0% · in dieser Stadt verbleibendes Bargeld {left}',
   'hud.holding.open.go': '{name} gründen',

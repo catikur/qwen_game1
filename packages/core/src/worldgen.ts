@@ -12,12 +12,13 @@ import {
   difficultyWith,
   rulesWith,
   getCitySize,
+  getCityType,
   getDifficulty,
   hasModifier,
   normalizeModifiers,
   rootStructureOf,
 } from '@capital/content';
-import type { CategoryId, CitySizeId, DifficultyId, DistrictArchetypeId, ModifierId, RuleOverrides } from '@capital/content';
+import type { CategoryId, CitySizeId, CityTypeId, DifficultyId, DistrictArchetypeId, ModifierId, RuleOverrides } from '@capital/content';
 import { tc } from './i18n';
 import './i18n/gameTr';
 import { createRng, nextRange, pickWeighted } from './rng';
@@ -25,6 +26,7 @@ import { leagueLength, leagueRule, leagueSeed } from './systems/league';
 import { referenceVolumes, seedSpotPrices, zeroByGood } from './systems/supply';
 import { zeroByCategory } from './systems/demand';
 import { grantStartingLoan } from './systems/credit';
+import { rivalRoster, scaleSpotPrices } from './systems/cityType';
 import { SCHEMA_VERSION } from './types';
 import type { CompanyState, DistrictState, GameState, MarketState, Tile, TileKind } from './types';
 
@@ -142,9 +144,9 @@ export function makeCompany(
   };
 }
 
-function makeMarket(districts: DistrictState[]): MarketState {
+function makeMarket(districts: DistrictState[], cityType: CityTypeId | undefined): MarketState {
   return {
-    spot: seedSpotPrices(),
+    spot: scaleSpotPrices(seedSpotPrices(), cityType),
     produced: zeroByGood(),
     consumed: zeroByGood(),
     reference: referenceVolumes(districts),
@@ -175,6 +177,12 @@ export interface NewGameOptions {
    * düzenekleri). Varsayılan standart 3×3; lig koşusu her zaman standart.
    */
   citySize?: CitySizeId;
+  /**
+   * Şehrin türü (Tur 76): bölge dizilişi, hammadde fiyatları, rakip kadrosu
+   * ve kural. `layout` verilmişse dizilişte o kazanır. Lig koşusu her zaman
+   * dengeli; dengeli kayda alan yazılmıyor.
+   */
+  cityType?: CityTypeId;
   /**
    * Kademeli imar takvimi. Varsayılan AÇIK (oyunun kendisi).
    *
@@ -242,7 +250,12 @@ export function createNewGame(input: NewGameOptions = {}): GameState {
   const ceoId = options.ceoId ?? null;
   const ceo = getCeoModifiers(ceoId);
 
-  const layout = options.layout ?? (input.league ? DISTRICT_LAYOUT : getCitySize(options.citySize).layout);
+  // Şehrin türü (Tur 76): ligde yok sayılıyor, herkes dengeli şehirde.
+  const cityType = !input.league && options.cityType && options.cityType !== 'balanced' ? options.cityType : undefined;
+  const typeDef = getCityType(cityType);
+  const rule = typeDef.rule;
+  const layout =
+    options.layout ?? (input.league ? DISTRICT_LAYOUT : cityType ? typeDef.layouts[getCitySize(options.citySize).id] : getCitySize(options.citySize).layout);
   const cols = layout[0]!.length;
   const rows = layout.length;
   const mapWidth = cols * DISTRICT_SIZE;
@@ -265,7 +278,8 @@ export function createNewGame(input: NewGameOptions = {}): GameState {
         x1: dx * DISTRICT_SIZE + DISTRICT_SIZE - 1,
         y1: dy * DISTRICT_SIZE + DISTRICT_SIZE - 1,
         population: Math.round(archetype.population * nextRange(rng, 0.9, 1.1)),
-        incomeLevel: archetype.incomeLevel,
+        // Türün geliri (Tur 76): başkent varlıklı, sanayi kenti işçi şehri.
+        incomeLevel: rule.income === undefined ? archetype.incomeLevel : Math.min(1, Math.max(0.05, archetype.incomeLevel + rule.income)),
         demand: zeroByCategory(),
         unmet: zeroByCategory(),
         priceIndex: zeroByCategory(),
@@ -387,7 +401,8 @@ export function createNewGame(input: NewGameOptions = {}): GameState {
         archetype.baseLandValue *
         (0.72 + 0.55 * centrality) *
         nextRange(rng, 0.88, 1.12) *
-        (lockedDistricts.has(districtId) ? LOCKED_LAND_DISCOUNT : 1);
+        (lockedDistricts.has(districtId) ? LOCKED_LAND_DISCOUNT : 1) *
+        (rule.landValue ?? 1);
 
       tiles.push({
         id: y * mapWidth + x,
@@ -408,7 +423,7 @@ export function createNewGame(input: NewGameOptions = {}): GameState {
   // açılıp büyüyecek. Referans köy nüfusundan hesaplansaydı geç oyunda
   // spot fiyat arz fazlasına aşırı duyarlı hale gelirdi — bu yüzden
   // nüfus indirimi referanstan SONRA uygulanıyor.
-  const market = makeMarket(districts);
+  const market = makeMarket(districts, cityType);
   for (const districtId of lockedDistricts) {
     const district = districts[districtId]!;
     district.population = Math.round(district.population * LOCKED_POPULATION_RATIO);
@@ -445,8 +460,10 @@ export function createNewGame(input: NewGameOptions = {}): GameState {
   const plotCapacity = tiles.filter((tile) => tile.kind === 'plot').length;
   const npcCount = Math.min(options.npcCount ?? rivalSlotsFor(plotCapacity), NPC_PROFILES.length);
   const offset = options.rivalOffset ?? 0;
+  // Kadro türden (Tur 76): önce türün rakipleri; dengeli şehirde katalog sırası.
+  const roster = rivalRoster(cityType);
   for (let i = 0; i < npcCount; i++) {
-    const profile = NPC_PROFILES[(i + offset) % NPC_PROFILES.length]!;
+    const profile = roster[(i + offset) % roster.length]!;
     companies[profile.id] = makeCompany(
       profile.id,
       profile.name,
@@ -474,6 +491,9 @@ export function createNewGame(input: NewGameOptions = {}): GameState {
     const playerLock = getDifficulty(options.difficulty).raidWarmupDays;
     if (playerLock > rules.raidWarmupDays) founder.playerLockedUntilDay = playerLock;
   }
+
+  // Şirketlerin ilk birim maliyeti de şehrin fiyatından (Tur 76).
+  if (cityType) for (const company of Object.values(companies)) scaleSpotPrices(company.unitCost, cityType);
 
   const state: GameState = {
     meta: {
@@ -518,6 +538,8 @@ export function createNewGame(input: NewGameOptions = {}): GameState {
     rivalSlots: npcCount,
     ...(rows >= 5 && cols >= 5 ? { rivalTempo: 2 } : {}),
     ...(!options.layout && !input.league && options.citySize && options.citySize !== 'standard' ? { citySize: options.citySize } : {}),
+    // Dengeli şehir alan taşımaz (Tur 76): yokluğu dengeli demek.
+    ...(cityType ? { cityType } : {}),
     ...(options.league
       ? {
           league: { weekId: options.league.weekId, endDay: leagueLength(options.league.weekId), curve: [Math.round(companies[PLAYER_COMPANY_ID]!.cash)] },

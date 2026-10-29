@@ -5,6 +5,7 @@ import { tc } from '../i18n';
 import '../i18n/gameTr';
 import { rivalProfile } from '../profiles';
 import { underConstruction } from './realestate';
+import { cityUnionPressure } from './cityType';
 import { createRng, nextFloat, nextRange } from '../rng';
 import type { BuildingInstance, CommandResult, CompanyState, GameState, LaborState } from '../types';
 
@@ -326,7 +327,9 @@ export function runLaborTick(state: GameState): void {
         LABOR.pressurePerDay *
           Math.min(1, employees / LABOR.pressureFullAt) *
           WAGE_POLICIES[labor.policy].pressure *
-          (1 + LABOR.tightnessPressure * Math.max(0, index - 1)),
+          (1 + LABOR.tightnessPressure * Math.max(0, index - 1)) *
+          // Sanayi kentinde işçi daha örgütlü (Tur 76).
+          cityUnionPressure(state),
     );
     if (company.isPlayer && before < 0.75 && labor.pressure >= 0.75) {
       pushNews(

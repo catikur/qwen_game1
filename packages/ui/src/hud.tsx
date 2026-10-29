@@ -15,7 +15,7 @@ import {
 } from '@capital/core';
 import type { GameSpeed, GameState } from '@capital/core';
 import { CeoPortrait } from './CeoPortrait';
-import { CityChip, aliveDormant } from './HoldingPanel';
+import { CityChip, CityTypeChip, aliveDormant } from './HoldingPanel';
 import { AuctionChip } from './AuctionPanel';
 import { ghostValueAt, useGhost } from './LeaguePanel';
 import { useCollapsible } from './collapse';
@@ -146,6 +146,7 @@ export function TopBar(): ReactElement {
           <div className="brand-name">{player.name}</div>
           <div className="brand-sub">
             <CityChip />
+            <CityTypeChip />
             {ceo && <span className="brand-ceo-name">{ceo.name} · </span>}
             <span className="brand-date">{formatDate(state.time.day)}</span>
             <WeatherChip state={state} />
