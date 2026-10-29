@@ -8138,6 +8138,20 @@ pencere hâli hatırlanıyor. Geçişin kendi haberleri sayılmıyor:
   son boy haberi);
 - en küçük pencereden küçük boy (küçültülürken gelen haber).
 
+Beşinci bulgusu bunun bir açığı: büyütmede ve tam ekranda son haberin
+ardından haber gelmiyor, son haber hep durgun sayılıyordu. Yalnız bir
+yönde 32 pikselden fazla küçük bir geçiş karesi pencere boyu diye
+kaydedilebiliyordu. Artık son haber yalnız küçültmede durgun sayılıyor,
+çünkü Linux'ta küçültmenin haberi yok. Büyütme ve tam ekranda geçişten
+önceki haber, ardından geçişin haberi geldiği için zaten durgun.
+
+**Codex'in altıncı bulgusu** da aynı yerde: ekranı kaplayan pencere hep
+"pencere kipinde değil" sayılıyordu. İki ekrana yayılmış, dizüstünün
+ekranından büyük bir pencere unutuluyordu. Artık yalnız ekranın kendisi
+olan pencere sayılmıyor: yeri ekranın köşesinde, boyu ekranın boyunda
+(2 piksel pay). Tam ekran geçişinin karesi böyle; ekrandan büyük ama başka
+yerde duran pencere hatırlanıyor.
+
 **Cursor Bugbot'un bulduğu şey.** Kısayol süzgeci yazı alanında harf
 yutuyordu. Windows'ta AltGr, Ctrl+Alt olarak geliyor: Almanca "}" (AltGr+0)
 "yakınlığı sıfırla", Lehçe "ś", "ó", "ń" (AltGr+S, O, N) "kaydet, aç, yeni
@@ -8178,8 +8192,9 @@ duruyordu: test dışa aktarılan kaydı adı görünür görünmez okuyor, dosy
     seçim yerinde.
 - `cargo test` 21/21, `cargo test --features steam` 20/20; `SteamDeck`
   ortam değişkeni (1, 0, boş, yok). Pencerenin hafızası (9 yeni):
-  - boy ve yer yalnız pencere kipinde; ekranı kaplayan boy ve en küçük
-    pencereden küçük boy sayılmıyor;
+  - boy ve yer yalnız pencere kipinde; ekranın kendisi olan pencere ve en
+    küçük pencereden küçük boy sayılmıyor, iki ekrana yayılmış büyük
+    pencere sayılıyor (Codex'in örneği);
   - tam ekranda kapanan pencere tam ekran ama eski boyuyla açılıyor
     (Codex'in senaryosu);
   - ilk açılış büyütülmüş, küçültülmüş kapanış önceki kipte;
@@ -8192,7 +8207,8 @@ duruyordu: test dışa aktarılan kaydı adı görünür görünmez okuyor, dosy
     geçen ve küçülten oyuncunun da. 100 ms'den kısa arayla büyütülürse
     önceki boy kalıyor (Cursor Bugbot'un senaryosu);
   - geçişin kendi haberleri pencere boyu sayılmıyor: kip haberinden önce
-    gelen boy haberi, animasyonun kareleri. Pencere kipine hiç
+    gelen boy haberi (tek yönde küçük olsa da, Cursor Bugbot), animasyonun
+    kareleri. Küçültmede son haber oyuncunun boyu. Pencere kipine hiç
     geçilmediyse hatırlanacak bir şey yok;
   - haberler kesilince son 64 haber veriliyor, kanal kapanınca iş
     parçacığı bitiyor;

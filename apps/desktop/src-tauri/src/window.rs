@@ -38,6 +38,8 @@ const STEADY: Duration = Duration::from_millis(100);
 const MARGIN: u32 = 32;
 /// Haberlerin son bu kadarı tutuluyor; uzun bir sürüklemenin başı gereksiz.
 const KEEP: usize = 64;
+/// Ekranın kendisi sayılan pencerede yer ve boy farkı (piksel).
+const EDGE: u32 = 2;
 
 /// Kapanışta yazılan, açılışta okunan hâl. Yer ve boy fiziksel piksel.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -61,18 +63,22 @@ pub struct Now {
     pub maximized: bool,
     pub minimized: bool,
     pub fullscreen: bool,
-    /// Pencerenin bulunduğu ekranın boyu.
-    pub screen: Option<(u32, u32)>,
+    /// Pencerenin bulunduğu ekran.
+    pub screen: Option<Screen>,
 }
 
 impl Now {
-    /// Pencere kipinde mi. Ekranı tümüyle kaplayan pencere sayılmıyor: tam
-    /// ekrana geçerken boy haberi kip haberinden önce gelebiliyor. En küçük
-    /// pencereden küçük boy da sayılmıyor (küçültülürken gelen haber);
-    /// açılışta zaten kullanılmazdı.
+    /// Pencere kipinde mi. Ekranın kendisi olan pencere (yeri ekranın köşesi,
+    /// boyu ekranın boyu) sayılmıyor: tam ekrana geçerken boy haberi kip
+    /// haberinden önce gelebiliyor. Ekrandan büyük ama ekranın kendisi
+    /// olmayan pencere sayılıyor: iki ekrana yayılmış büyük pencere
+    /// unutuluyordu (Codex). En küçük pencereden küçük boy da sayılmıyor
+    /// (küçültülürken gelen haber); açılışta zaten kullanılmazdı.
     pub fn windowed(&self) -> bool {
-        let covers = self.screen.is_some_and(|(width, height)| self.width >= width && self.height >= height);
-        !(self.maximized || self.minimized || self.fullscreen || covers) && self.width >= MIN_WIDTH && self.height >= MIN_HEIGHT
+        let screen_itself = self.screen.is_some_and(|(x, y, width, height)| {
+            self.x.abs_diff(x) <= EDGE && self.y.abs_diff(y) <= EDGE && self.width.abs_diff(width) <= EDGE && self.height.abs_diff(height) <= EDGE
+        });
+        !(self.maximized || self.minimized || self.fullscreen || screen_itself) && self.width >= MIN_WIDTH && self.height >= MIN_HEIGHT
     }
 }
 
@@ -192,7 +198,14 @@ pub fn settle(seen: &[Seen], settled: &Now) -> Option<Now> {
     if settled.windowed() {
         return Some(*settled);
     }
-    let steady = |index: usize| seen.get(index + 1).map_or(true, |next| next.at.duration_since(seen[index].at) >= STEADY);
+    // Durgun: ardından en az `STEADY` sonra haber gelmiş. Son haberin ardından
+    // haber yok; büyütmede ve tam ekranda o geçişin kendisi (kip haberinden
+    // önce gelen boy haberi), boyu büyütülmüş boydan tek yönde küçük olsa da
+    // (Cursor Bugbot). Küçültmenin geçişi pencere boyunda değil.
+    let steady = |index: usize| match seen.get(index + 1) {
+        Some(next) => next.at.duration_since(seen[index].at) >= STEADY,
+        None => settled.minimized,
+    };
     // Küçültülmüş pencerenin boyu karşılaştırılacak bir boy değil.
     let before = |now: &Now| {
         settled.minimized || now.width.saturating_add(MARGIN) <= settled.width || now.height.saturating_add(MARGIN) <= settled.height
@@ -233,7 +246,7 @@ impl Remembered {
 fn now<R: Runtime>(window: &Window<R>) -> Option<Now> {
     let position = window.outer_position().ok()?;
     let size = window.inner_size().ok()?;
-    let screen = window.current_monitor().ok().flatten().map(|monitor| (monitor.size().width, monitor.size().height));
+    let screen = window.current_monitor().ok().flatten().map(|monitor| screen(&monitor));
     Some(Now {
         x: position.x,
         y: position.y,
@@ -244,6 +257,10 @@ fn now<R: Runtime>(window: &Window<R>) -> Option<Now> {
         fullscreen: window.is_fullscreen().unwrap_or(false),
         screen,
     })
+}
+
+fn screen(monitor: &tauri::Monitor) -> Screen {
+    (monitor.position().x, monitor.position().y, monitor.size().width, monitor.size().height)
 }
 
 fn config_dir<R: Runtime>(app: &AppHandle<R>) -> Option<std::path::PathBuf> {
@@ -267,9 +284,6 @@ pub fn restore<R: Runtime>(app: &AppHandle<R>, window: &Window<R>) {
             }
         }
     });
-    let screen = |monitor: &tauri::Monitor| -> Screen {
-        (monitor.position().x, monitor.position().y, monitor.size().width, monitor.size().height)
-    };
     let mut screens: Vec<Screen> = window.available_monitors().unwrap_or_default().iter().map(screen).collect();
     // `plan` birincil ekranı başta bekliyor.
     if let Some(primary) = window.primary_monitor().ok().flatten().as_ref().map(screen) {
@@ -320,7 +334,7 @@ pub fn persist<R: Runtime>(app: &AppHandle<R>) {
 mod tests {
     use super::*;
 
-    const SCREEN: (u32, u32) = (1920, 1080);
+    const SCREEN: Screen = (0, 0, 1920, 1080);
 
     fn windowed(x: i32, y: i32, width: u32, height: u32) -> Now {
         Now { x, y, width, height, screen: Some(SCREEN), ..Now::default() }
@@ -336,11 +350,14 @@ mod tests {
         memory.track(&Now { maximized: true, ..windowed(0, 0, 1920, 1040) });
         memory.track(&Now { minimized: true, ..windowed(-32000, -32000, 160, 28) });
         assert_eq!((memory.x, memory.y, memory.width, memory.height), (100, 80, 1280, 760));
-        // Kip haberi gecikse de ekranı kaplayan boy pencere boyu sayılmıyor;
-        // en küçük pencereden küçük boy da.
+        // Kip haberi gecikse de ekranın kendisi olan pencere sayılmıyor; en
+        // küçük pencereden küçük boy da.
         memory.track(&windowed(0, 0, 1920, 1080));
         memory.track(&windowed(0, 0, 400, 300));
         assert_eq!((memory.width, memory.height), (1280, 760));
+        // Codex'in örneği: dizüstünün ekranından büyük, dış ekrana uzanan pencere.
+        memory.track(&windowed(-240, 40, 2400, 1100));
+        assert_eq!((memory.x, memory.y, memory.width, memory.height), (-240, 40, 2400, 1100));
     }
 
     #[test]
@@ -416,6 +433,8 @@ mod tests {
         assert_eq!(settle(&news(&[(0, user), (250, fullscreen)]), &fullscreen), Some(user));
         let minimized = Now { minimized: true, ..windowed(-32000, -32000, 160, 28) };
         assert_eq!(settle(&news(&[(0, user), (250, minimized)]), &minimized), Some(user));
+        // Linux'ta küçültmenin haberi yok: son haber oyuncunun boyu.
+        assert_eq!(settle(&news(&[(0, user)]), &minimized), Some(user));
         // Boy bırakılır bırakılmaz (100 ms'den kısa) büyütülürse öncekinde kalıyor.
         let quick = windowed(100, 80, 1300, 780);
         assert_eq!(settle(&news(&[(0, user), (300, quick), (350, maximized)]), &maximized), Some(user));
@@ -427,8 +446,11 @@ mod tests {
         let maximized = Now { maximized: true, ..windowed(0, 0, 1920, 1040) };
         // Durulan pencere pencere kipindeyse o.
         assert_eq!(settle(&news(&[(0, user)]), &windowed(60, 40, 1400, 820)), Some(windowed(60, 40, 1400, 820)));
-        // Linux'ta boy haberi kip haberinden önce, ardından haber yok: büyütülmüş boyda.
+        // Linux'ta boy haberi kip haberinden önce, ardından haber yok: büyütülmüş
+        // boyda ya da tek yönde küçük (Cursor Bugbot).
         assert_eq!(settle(&news(&[(0, user), (300, windowed(0, 0, 1920, 1040))]), &maximized), Some(user));
+        assert_eq!(settle(&news(&[(0, user), (300, windowed(0, 0, 1920, 980))]), &maximized), Some(user));
+        assert_eq!(settle(&news(&[(0, windowed(0, 0, 1920, 980))]), &maximized), None);
         // Büyütme animasyonunun kareleri art arda.
         let frames = [(300, windowed(60, 40, 1400, 820)), (316, windowed(30, 20, 1660, 930)), (332, windowed(8, 4, 1880, 1020))];
         let mut list = vec![(0, user)];
