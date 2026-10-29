@@ -467,4 +467,7 @@ export const panels: Record<keyof typeof trPanels, string> = {
   'panels.settings.keys.close': 'Close the panel, cancel placement',
   'panels.settings.keys.tab.key': 'Tab · Shift + Tab',
   'panels.settings.keys.tab': 'Move between buttons',
+  // Tur 71: full screen on desktop.
+  'panels.settings.keys.fullscreen.key': 'F11 · Alt + Enter',
+  'panels.settings.keys.fullscreen': 'Full screen',
 };

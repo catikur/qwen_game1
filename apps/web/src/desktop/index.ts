@@ -1,10 +1,11 @@
 import { setSaveBackend } from '@capital/persistence';
-import { careerUnlockedIds, subscribeCareer } from '@capital/ui';
+import { careerUnlockedIds, setDeviceDefaults, subscribeCareer } from '@capital/ui';
 import { setFileSink } from '../host';
 import type { DeliveryOutcome } from '../host';
 import { saveBeforeLeaving } from '../pwa';
 import { CLOSE_EVENT, desktopEvents, desktopInvoke } from './bridge';
 import type { Invoke } from './bridge';
+import { nativeFeel } from './native';
 import { hydrate, mirror } from './profile';
 import type { Mirror } from './profile';
 import { fileSaves } from './saves';
@@ -41,6 +42,21 @@ export async function initDesktop(): Promise<boolean> {
   } catch (error) {
     console.warn('Ayar dosyaları okunamadı; bu oturum yalnız yerel depoyla sürüyor.', error);
   }
+
+  // Steam Deck (Tur 71): oyuncu metin boyunu seçmediyse "çok büyük".
+  try {
+    const shell = await invoke<{ deck?: boolean }>('shell_info');
+    if (shell?.deck) setDeviceDefaults({ textSize: 'xlarge' });
+  } catch (error) {
+    console.warn('Kabuğun ortam bilgisi okunamadı.', error);
+  }
+  // Uygulama gibi (Tur 71): tarayıcının kısayolları ve sağ tık menüsü
+  // kapalı, F11 ve Alt+Enter tam ekran.
+  nativeFeel(window, {
+    toggleFullscreen: () => {
+      invoke<boolean>('fullscreen_toggle').catch((error) => console.warn('Tam ekran değişmedi:', error));
+    },
+  });
 
   setSaveBackend(fileSaves(invoke));
   setFileSink((filename, data) => exportFile(invoke, filename, data));

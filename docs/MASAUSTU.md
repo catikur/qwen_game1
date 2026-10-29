@@ -2,7 +2,8 @@
 
 > Tur 66'da yazıldı. Kod `apps/desktop` (Tauri 2 kabuğu) ve
 > `apps/web/src/desktop/` (sayfa tarafı). Steam (başarımlar, depolar,
-> mağaza sayfası, yükleme) Tur 70'te: `docs/STEAM.md`.
+> mağaza sayfası, yükleme) Tur 70'te: `docs/STEAM.md`. Uygulama gibi
+> davranması, pencere ve Steam Deck Tur 71'de.
 
 ## Ne
 
@@ -28,6 +29,22 @@ Web sürümünden farkı:
   (`tauri://localhost`, Windows'ta `http(s)://tauri.localhost`); bu değişiklik
   Worker dağıtılınca canlıya çıkıyor. O zamana kadar lig masaüstünde
   "sunucuya ulaşılamıyor" gibi davranıyor, koşular bekliyor.
+- **Web sayfası gibi davranmıyor (Tur 71, `native.ts`).** Tarayıcının
+  kısayolları yutuluyor: F5, Ctrl+R (yeniden yükle; WebView2'de son otomatik
+  kayıttan sonrası giderdi), Ctrl+P, Ctrl+F, Ctrl+U, Ctrl+S, Ctrl+J, Ctrl+H,
+  Ctrl+N, yakınlaştırma, Alt+← ve →, F3, F7. macOS'ta Cmd'li karşılıkları;
+  uygulama menüsünün kısayolları (Cmd+H, Cmd+M, Cmd+W, Cmd+Q) yerinde. Sağ
+  tık menüsü yalnız yazı alanında ve seçili kodda; oyunun metni seçilmiyor
+  (yazı alanı ve kod seçiliyor), sürükle-bırak yok, kaydırma çubukları ince.
+- **Tam ekran ve pencere (Tur 71).** F11 ya da Alt+Enter (kabuğun
+  `fullscreen_toggle` komutu). İlk açılışta pencere büyütülmüş; sonra
+  kapandığı boyda, yerde ve tam ekranda açılıyor (`tauri-plugin-window-state`).
+  En küçük pencere 960 × 600.
+- **Steam Deck (Tur 71).** Steam, Deck'te başlattığı sürece `SteamDeck=1`
+  veriyor; kabuk bunu `shell_info` ile söylüyor ve metin ilk açılışta "çok
+  büyük" oluyor (Valve'ın okunabilirlik ölçüsü 1280 × 800'de en küçük yazı 12
+  piksel; çok büyükte arayüzün en küçük yazısı 13). Oyuncunun seçimi önde;
+  başlatma seçeneğinde `SteamDeck=0` ile kapanıyor. Kumanda Tur 72'de.
 
 ## Derleme ve çalıştırma
 
@@ -84,6 +101,12 @@ dosyaya yazılıyor.
 
 Testler ve taşınabilir kurulum için: `CAPITALFORGE_DATA_DIR` (kök),
 `CAPITALFORGE_EXPORT_DIR` (dışa aktarma).
+
+Pencerenin boyu, yeri ve tam ekranı (Tur 71) uygulamanın ayar dizininde,
+`.window-state.json` (Linux `~/.config/com.conforcus.capitalforge/`,
+Windows `%APPDATA%\com.conforcus.capitalforge\`, macOS
+`~/Library/Application Support/com.conforcus.capitalforge/`). Makineye ait:
+Steam Cloud'a girmiyor.
 
 ## Steam'e hazırlık
 
@@ -157,8 +180,12 @@ deposunun Steam Deck'te denenmesi; o bir Deck istiyor.
 - `tools/desktop-e2e.mjs`: derlenmiş oyun gerçek penceresinde (Linux,
   WebKitGTK, tauri-driver ve WebDriver): slota kayıt dosyada, dışa aktarma
   ve şehir kartı İndirilenler'de, ayar dosyada, kapanırken kayıt, yeniden
-  açılınca kaldığı gün ve dil; Steam komutları ve tek pencere (Tur 70).
-  CI: `.github/workflows/desktop.yml`.
+  açılınca kaldığı gün ve dil; Steam komutları ve tek pencere (Tur 70);
+  tarayıcı kısayolları, sağ tık ve seçim, F11, pencerenin durumu, ayrı bir
+  sürücüyle Steam Deck'in metni (Tur 71). CI: `.github/workflows/desktop.yml`.
+- `pnpm playtest` → "Pencere boyları ve Steam Deck" (Tur 71): 960 × 600,
+  1093 × 614, 1280 × 800 ve 1920 × 1080'de paneller üst üste binmiyor, şehir
+  ortada tıklanabilir; Deck'in boyunda her panelde en küçük yazı ≥ 12 piksel.
 
 ```sh
 cargo install tauri-driver --version 2.0.6 --locked   # bir kez

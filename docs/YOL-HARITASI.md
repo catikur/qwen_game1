@@ -1,6 +1,6 @@
 # Capital — Yol Haritası
 
-> Tur 47'de yazıldı, her turda güncelleniyor (son: Tur 70). Biten işin ayrıntısı
+> Tur 47'de yazıldı, her turda güncelleniyor (son: Tur 71). Biten işin ayrıntısı
 > `docs/DURUM.md`'de; bu dosya önümüzdeki işin sırasını ve gerekçesini
 > tutuyor.
 
@@ -40,6 +40,9 @@ Bir bağlantıyla açılan, istenirse kurulan ve çevrimdışı da oynanan bir
 | **3 · Yeni yollar** | Her koşu farklı bir şirket | 56–61 | Zafere en az üç farklı yol var, her birini kazanan bir vekil var | **bitti** (Tur 61) |
 | **4 · Şehrin hissi** | Oynaması keyifli | 62–65 | Mevsim ve hava görünüyor, önemli anlar hissediliyor | **bitti** (Tur 65) |
 | **5 · Platform ve topluluk** | Oyunun evi büyüsün | 66–70 | Masaüstü sürümü ve paylaşılabilir senaryolar var | **bitti** (Tur 70) |
+| **6 · Yayına hazırlık** | Steam'de 1.0 | 71–75 | Masaüstü bir uygulama gibi davranıyor, oyun kumandayla oynanıyor, Workshop ve skor tabloları Steam'de, 1.0 çıktı | **sürüyor** (Tur 71) |
+| **7 · İkinci şehir ve ticaret** | Şehirler birbirine bağlansın | 76–80 (taslak) | İkinci şehrin kendi kimliği var, şehirler arasında mal akıyor, ticaret bir yol | sırada |
+| **8 · Lite'ı güncelleme** | Lite ana oyunun çizgisine gelsin | 81–85 (taslak) | Lite'ın eksikleri ölçülmüş ve kapanmış, aynı sunucunun bugünkü sürümüyle çalışıyor | sırada |
 
 ### Faz 1 · Ürün temeli
 
@@ -164,10 +167,61 @@ oyun her yerde tamamen ücretsiz. Turlar Faz 4'teki gibi.
   (macOS evrensel, Windows'ta WebView2 kurulum betiği). Mağaza sayfası üç
   dilde; başarım simgeleri, kapsüller, kütüphane görselleri ve logo gerçek
   oyundan bir araçla; ekran görüntüleri üç dilde. Steamworks'te yapılacaklar
-  adım adım `docs/STEAM.md`'de. — bu PR
+  adım adım `docs/STEAM.md`'de. — bitti (#100)
 
-Faz 5 Tur 70'le bitiyor. Harita burada bitiyor; sonraki faz kullanıcıyla
-birlikte yazılacak (Faz 5 raporu `docs/DURUM.md`'de, Tur 70'in sonunda).
+Faz 5 Tur 70'le bitti (rapor `docs/DURUM.md`'de, Tur 70'in sonunda).
+
+### Faz 6 · Yayına hazırlık
+
+Kullanıcı sırayı Tur 71'den önce seçti: önce yayına hazırlık, sonra ikinci
+şehir ve ticaret, sonra Lite. Steam hesabı kullanıcıda, bu fazla paralel
+açılıyor.
+
+- **71 · Değerlendirme: masaüstünün ilk saati.** Oyun masaüstünde bir web
+  sayfası gibi davranmıyor: tarayıcı kısayolları (F5, Ctrl+R, Ctrl+P,
+  Ctrl+F, Alt+←) ve sağ tık menüsü kapalı, metin seçilmiyor; F11 ve
+  Alt+Enter tam ekran; pencere kaldığı boyda ve yerde açılıyor, ilk açılışta
+  büyütülmüş. Steam Deck'te metin ilk açılışta "çok büyük" (Valve'ın
+  okunabilirlik ölçüsü). 1100 pikselin altında üst üste binen paneller
+  düzeldi (masaüstünün en küçük penceresi ve ölçekli dizüstüleri o
+  aralıkta). Lig sunucusunun canlı denetimi simülasyon sürümünü
+  karşılaştırıyor; CI dağıtımının hiç çalışmayan derlemesi düzeldi. Açık
+  kalan 4.4 ve 4.10 yeniden değerlendirildi. — bu PR
+- **72 · Oyun kumandası ve yalnız klavye.** Bugün fare olmadan parsel
+  seçilemiyor. Haritada imleç (kamera ortasındaki parsel), seçim,
+  paneller ve menüler arasında gezinme; kumandanın düğme ipuçları; Steam
+  Deck'te şirket adı için ekran klavyesi; Steam Input'un varsayılan düzeni.
+- **73 · Steam Workshop ve skor tabloları.** İçerik paketleri (Tur 67)
+  Workshop'tan iniyor ve oraya yükleniyor; Tohum Ligi'nin haftalık tablosu
+  Steam skor tablosunda da. Steamworks uygulama kimliği gerekiyor
+  (kullanıcı).
+- **74 · Sürüm 1.0.** Oyun içinde "Yenilikler" (değişiklik günlüğü), hata
+  bildirme (kayıt ve günlükle), yayın listesi, sürüm 1.0.0.
+- **75 · Değerlendirme ve Faz 6 raporu.**
+
+### Faz 7 · İkinci şehir ve ticaret (taslak)
+
+Kullanıcının isteği "ikinci şehrin eklenmesi ve ticareti". Holding bugün
+üç şehre kadar çıkıyor (Tur 22, 30, 32), ama şehirler aynı kalıptan ve
+aralarında yalnız para akıyor. Harita isteği iki parça okuyor (kullanıcı
+başka bir şey kastettiyse Tur 76'dan önce düzeltilir):
+
+- **İkinci şehrin kendi kimliği:** liman ya da sanayi kenti gibi; farklı
+  talep, hammadde, rakipler ve kurallar.
+- **Şehirler arası ticaret:** mal bir şehirde üretilip öbüründe satılıyor;
+  nakliye terminali (Tur 56) şehirler arası hat işletiyor, fiyat farkı ve
+  taşıma bedeli kâr ediyor. Açık iş 4.10'un (b) seçeneği (nakliye
+  perakendenin dışında daha büyük bir mal akışına) burada büyüyor.
+
+Turlar Faz 6 bitince kullanıcıyla yazılacak.
+
+### Faz 8 · Lite'ı güncelleme (taslak)
+
+Lite (iOS, web, Android) L12'den beri değişmedi; ana oyun bu arada Faz
+1–5'i yaşadı (ayarlar ve erişilebilirlik, müzik, mevsim ve hava, önemli
+anlar, Almanca). Faz bir değerlendirmeyle açılıyor: Lite'ın hangi eksiği
+oyuncunun gözünde, hangisi ortak sunucunun sözleşmesinde. Turlar o
+ölçümden sonra.
 
 ## Her fazda sürecek işler
 
@@ -189,4 +243,7 @@ yazılan.
 | **Sunucuda doğrulama planı:** tekrar koşu başına 0,7–1,8 sn CPU; Workers'ın ücretsiz katmanı istek başına 10 ms. | Tur 52 | **Workers Paid, aylık 5 $** (kullanıcı, Tur 51) |
 | **Gelir modeli:** tamamen ücretsiz mi, ücretsiz web + ücretli masaüstü mü? | Faz 5 | **tamamen ücretsiz** (kullanıcı, Tur 66'dan önce) |
 | **Üçüncü dil:** hangisi? | Tur 69 | **Almanca** (varsayılan: Steam'de ekonomi oyunlarının güçlü pazarı, Latin alfabesi, sayı biçimi Türkçeyle aynı; kullanıcı değiştirebilir — çeviri katmanı dilden bağımsız, `docs/CEVIRI.md`) |
-| **Lite:** App Store yayını ve canlı işletim bu haritanın neresinde? | sıra | ayrı hat, bu haritanın dışında |
+| **Lite:** App Store yayını ve canlı işletim bu haritanın neresinde? | sıra | **Faz 8: Lite'ı güncelleme** (kullanıcı, Tur 71'den önce; Tur 70'e kadar ayrı hattı) |
+| **Faz 6–8'in sırası** | sıra | **yayına hazırlık → ikinci şehir ve ticaret → Lite** (kullanıcı, Tur 71'den önce) |
+| **"İkinci şehir ve ticaret" nedir?** | Faz 7 | **ikinci şehrin kendi kimliği ve şehirler arası mal ticareti** (varsayılan: holding zaten üç şehre çıkıyor; kullanıcı Tur 76'dan önce değiştirebilir) |
+| **Lig sunucusu her birleşmede kendiliğinden mi dağıtılsın?** | sunucu | **elle** (Tur 51, Codex #80). Tur 71'den beri canlı denetim eski simülasyonlu sunucuyu `main`'de kırmızıyla söylüyor; `LITE_LEAGUE_AUTODEPLOY=true` önerilir (`ios-lite/README.md`) |

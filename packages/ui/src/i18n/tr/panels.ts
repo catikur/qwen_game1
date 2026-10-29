@@ -463,4 +463,7 @@ export const panels = {
   'panels.settings.keys.close': 'Paneli kapat, yerleştirmeyi bırak',
   'panels.settings.keys.tab.key': 'Tab · Shift + Tab',
   'panels.settings.keys.tab': 'Düğmeler arasında gezin',
+  // Tur 71: masaüstünde tam ekran.
+  'panels.settings.keys.fullscreen.key': 'F11 · Alt + Enter',
+  'panels.settings.keys.fullscreen': 'Tam ekran',
 } as const;

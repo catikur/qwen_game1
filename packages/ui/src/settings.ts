@@ -53,6 +53,19 @@ export const DEFAULT_SETTINGS: Settings = {
   moneyTags: true,
 };
 
+/**
+ * Cihazın varsayılanları (Tur 71): oyuncunun hiç seçmediği değerin yerine.
+ * Steam Deck'te metin "çok büyük" (masaüstü kabuğu söylüyor): Valve'ın
+ * okunabilirlik ölçüsü 1280 × 800'de en küçük yazı 12 piksel; normal boyda
+ * arayüzün en küçük yazısı 10, çok büyükte 13 piksel.
+ */
+let deviceDefaults: Partial<Pick<Settings, 'textSize'>> = {};
+
+/** İlk okumadan önce çağrılmalı (masaüstü açılışı `initSettings`'ten önce koşuyor). */
+export function setDeviceDefaults(defaults: Partial<Pick<Settings, 'textSize'>>): void {
+  deviceDefaults = { ...deviceDefaults, ...defaults };
+}
+
 const STORAGE_KEY = 'capitalforge.settings.v1';
 /** Tur 47'den önceki sessize alma anahtarı: ilk açılışta okunup ayarlara taşınıyor. */
 const LEGACY_MUTE_KEY = 'capitalforge.audio.muted';
@@ -68,7 +81,7 @@ export function sanitizeSettings(raw: unknown, legacyMuted = false): Settings {
   const source = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
   const volume = source['volume'] && typeof source['volume'] === 'object' ? (source['volume'] as Record<string, unknown>) : {};
   return {
-    textSize: pick(source['textSize'], TEXT_SIZES, DEFAULT_SETTINGS.textSize),
+    textSize: pick(source['textSize'], TEXT_SIZES, deviceDefaults.textSize ?? DEFAULT_SETTINGS.textSize),
     palette: pick(source['palette'], PALETTES, DEFAULT_SETTINGS.palette),
     motion: pick(source['motion'], MOTION_CHOICES, DEFAULT_SETTINGS.motion),
     volume: {
@@ -115,7 +128,8 @@ const listeners = new Set<() => void>();
 function ensureLoaded(): void {
   if (loaded) return;
   loaded = true;
-  if (typeof window !== 'undefined') current = readStored();
+  // Depo yoksa (sunucuda, testte) da cihazın varsayılanları geçerli.
+  current = typeof window !== 'undefined' ? readStored() : sanitizeSettings(null);
 }
 
 /** Seçilen hareket ve cihazın tercihi birlikte: azaltılmış hareket etkin mi. */

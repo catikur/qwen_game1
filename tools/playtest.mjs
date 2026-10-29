@@ -8579,6 +8579,135 @@ async function finish(browser, consoleErrors) {
     await eContext.close();
   }
 
+  section('Pencere boyları ve Steam Deck');
+  {
+    /*
+     * Masaüstünün pencereleri (Tur 71). 1100 pikselin altında paneller tek
+     * sütuna iniyor ve üst üste biniyordu: masaüstünün en küçük penceresi
+     * (960 × 600) ve 125 % ölçekli 1366 × 768 dizüstü (1093 × 614) o
+     * aralıkta. Steam Deck 1280 × 800'de metin "çok büyük" açılıyor: Valve'ın
+     * okunabilirlik ölçüsü en küçük yazı 12 piksel, bütün paneller açıkken.
+     */
+    const SIZES = [
+      { width: 960, height: 600, lang: 'de' },
+      { width: 1093, height: 614, lang: 'tr' },
+      { width: 1280, height: 800, lang: 'en', textSize: 'xlarge' },
+      { width: 1920, height: 1080, lang: 'tr' },
+    ];
+    // Görünen (örtülmemiş) metnin en küçük yazı boyu; örnek olarak en küçük üçü.
+    const smallestText = (page) => page.evaluate(() => {
+      const rows = [];
+      const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+      for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+        const el = node.parentElement;
+        if (!el || !node.textContent.trim()) continue;
+        const range = document.createRange();
+        range.selectNodeContents(node);
+        const r = range.getBoundingClientRect();
+        if (r.width < 1 || r.height < 1 || r.bottom < 0 || r.top > innerHeight || r.right < 0 || r.left > innerWidth) continue;
+        const cs = getComputedStyle(el);
+        if (cs.visibility === 'hidden') continue;
+        let opacity = 1;
+        for (let a = el; a; a = a.parentElement) opacity *= Number(getComputedStyle(a).opacity);
+        if (opacity < 0.05) continue;
+        const top = document.elementFromPoint(Math.min(innerWidth - 1, Math.max(0, r.left + r.width / 2)), Math.min(innerHeight - 1, Math.max(0, r.top + r.height / 2)));
+        if (top && !(top === el || el.contains(top) || top.contains(el))) continue;
+        rows.push({ size: parseFloat(cs.fontSize), text: node.textContent.trim().slice(0, 24) });
+      }
+      rows.sort((a, b) => a.size - b.size);
+      return { min: rows[0]?.size ?? 0, count: rows.length, smallest: rows.slice(0, 3) };
+    });
+    for (const size of SIZES) {
+      const label = `${size.width} × ${size.height} (${size.lang}${size.textSize ? ', metin çok büyük' : ''})`;
+      const wContext = await browser.newContext({ viewport: { width: size.width, height: size.height } });
+      await wContext.addInitScript(veteran, TUTORIAL_KEY);
+      if (size.textSize) {
+        await wContext.addInitScript((textSize) => {
+          try {
+            localStorage.setItem('capitalforge.settings.v1', JSON.stringify({ textSize }));
+          } catch {
+            /* depo kapalı */
+          }
+        }, size.textSize);
+      }
+      const wp = await wContext.newPage();
+      const wErrors = [];
+      wp.on('pageerror', (e) => wErrors.push(e.message));
+      wp.on('console', (m) => { if (m.type() === 'error') wErrors.push(m.text()); });
+      await wp.goto(`http://127.0.0.1:8811/?lang=${size.lang}`);
+      await wp.waitForSelector('.newgame', { timeout: 20000 });
+      const setupText = size.textSize ? await smallestText(wp) : null;
+      await wp.locator('[data-newgame-start]').click();
+      await wp.waitForSelector('.topbar', { timeout: 30000 });
+      await wp.waitForFunction(() => (window.__capital?.renderInfo()?.frameCount ?? 0) >= 3, null, { timeout: 60000 });
+      await wp.evaluate(() => {
+        const c = window.__capital;
+        c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+        for (let i = 0; i < 20; i++) c.engine.runDay();
+      });
+      const vacant = await findTile(wp, 'vacant');
+      await wp.evaluate((id) => window.__capital.selectTile(id), vacant);
+      await wp.waitForTimeout(600);
+      const layout = await wp.evaluate(() => {
+        const box = (sel) => document.querySelector(sel)?.getBoundingClientRect() ?? null;
+        const panels = ['.topbar', '.leftcol', '.inspector', '.news', '.active-events']
+          .map((sel) => [sel, box(sel)])
+          .filter(([, r]) => r && r.width > 0 && r.height > 0);
+        const overlaps = [];
+        for (let i = 0; i < panels.length; i++) {
+          for (let j = i + 1; j < panels.length; j++) {
+            const [a, ra] = panels[i];
+            const [b, rb] = panels[j];
+            const x = Math.min(ra.right, rb.right) - Math.max(ra.left, rb.left);
+            const y = Math.min(ra.bottom, rb.bottom) - Math.max(ra.top, rb.top);
+            if (x > 1 && y > 1) overlaps.push(`${a} × ${b}`);
+          }
+        }
+        // Sol sütunun panelleri sütundan taşmıyor (taşan, alttakinin üstüne biniyordu).
+        const column = box('.leftcol');
+        const spill = [...document.querySelector('.leftcol').children]
+          .filter((child) => child.getBoundingClientRect().bottom > column.bottom + 1)
+          .map((child) => child.className.split(' ')[0]);
+        // Şehir ortada açık ve tıklanabilir: sol sütunla parsel kartı arasının ortası tuval.
+        const left = box('.leftcol');
+        const right = box('.inspector');
+        const top = box('.topbar');
+        const x = (left.right + right.left) / 2;
+        const y = top.bottom + (innerHeight - top.bottom) * 0.35;
+        const hit = document.elementFromPoint(x, y);
+        const doc = document.documentElement;
+        return {
+          overlaps,
+          spill,
+          city: hit?.tagName === 'CANVAS',
+          cityWidth: Math.round(right.left - left.right),
+          scroll: doc.scrollWidth > doc.clientWidth + 1 || doc.scrollHeight > doc.clientHeight + 1,
+        };
+      });
+      check(`${label}: paneller üst üste binmiyor, sol sütun taşmıyor, şehir ortada tıklanabilir`,
+        layout.overlaps.length === 0 && layout.spill.length === 0 && layout.city && !layout.scroll, JSON.stringify(layout));
+      await wp.screenshot({ path: `${OUT}/window-${size.width}x${size.height}.png` });
+      if (size.textSize) {
+        // Steam Deck: kurulum, oyun ve parsel, sonra rıhtımın her paneli ve Ayarlar.
+        const seen = [['kurulum', setupText], ['parsel', await smallestText(wp)]];
+        await wp.evaluate(() => window.__capital.selectTile(null));
+        for (const panel of ['chain', 'rivalry', 'bourse', 'council', 'company', 'rivals', 'saves', 'help', 'settings']) {
+          await wp.locator(`[data-panel="${panel}"]`).first().click();
+          await wp.waitForTimeout(500);
+          seen.push([panel, await smallestText(wp)]);
+          await wp.keyboard.press('Escape');
+          await wp.waitForTimeout(200);
+        }
+        const min = Math.min(...seen.map(([, text]) => text.min));
+        const worst = seen.find(([, text]) => text.min === min);
+        check("Steam Deck (1280 × 800, metin çok büyük): her ekranda en küçük yazı en az 12 piksel",
+          min >= 12 && seen.every(([, text]) => text.count > 0), `en küçük ${min} px (${worst[0]}: ${JSON.stringify(worst[1].smallest)})`);
+      }
+      check(`${label}: konsol temiz`, wErrors.length === 0, wErrors.slice(0, 2).join(' | '));
+      await wContext.close();
+    }
+  }
+
   section('Mobil');
   for (const deviceName of ['iPhone 13', 'Pixel 7']) {
     const mobileContext = await browser.newContext({ ...devices[deviceName] });

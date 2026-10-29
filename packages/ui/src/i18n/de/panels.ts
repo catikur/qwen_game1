@@ -467,4 +467,7 @@ export const panels: Record<keyof typeof trPanels, string> = {
   'panels.settings.keys.close': 'Fenster schließen, Platzieren abbrechen',
   'panels.settings.keys.tab.key': 'Tab · Umschalt + Tab',
   'panels.settings.keys.tab': 'Zwischen Schaltflächen wechseln',
+  // Tur 71: Vollbild am Desktop.
+  'panels.settings.keys.fullscreen.key': 'F11 · Alt + Eingabe',
+  'panels.settings.keys.fullscreen': 'Vollbild',
 };

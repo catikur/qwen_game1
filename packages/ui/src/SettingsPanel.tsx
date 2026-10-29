@@ -47,6 +47,8 @@ const SHORTCUTS: Array<[MessageKey, MessageKey]> = [
   ['panels.settings.keys.close.key', 'panels.settings.keys.close'],
   ['panels.settings.keys.tab.key', 'panels.settings.keys.tab'],
 ];
+/** Yalnız masaüstü sürümünde (Tur 71): kabuk kökü `data-shell="desktop"` diye işaretliyor. */
+const DESKTOP_SHORTCUTS: Array<[MessageKey, MessageKey]> = [['panels.settings.keys.fullscreen.key', 'panels.settings.keys.fullscreen']];
 
 function Choices<T extends string>({
   name,
@@ -188,7 +190,7 @@ export function SettingsPanel(): ReactElement {
       <section className="settings-group">
         <h3 id="settings-keys">{t('panels.settings.keys')}</h3>
         <dl className="settings-keys">
-          {SHORTCUTS.map(([key, what]) => (
+          {[...SHORTCUTS, ...(document.documentElement.dataset['shell'] === 'desktop' ? DESKTOP_SHORTCUTS : [])].map(([key, what]) => (
             <div key={what}>
               <dt>
                 <kbd>{t(key)}</kbd>

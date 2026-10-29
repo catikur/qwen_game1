@@ -220,6 +220,46 @@ body,
   margin: 0;
 }
 
+/*
+ * Masaüstünde (Tur 71) oyunun metni seçilmiyor: çift tıklanan sayı ya da
+ * sürüklenen panel maviye boyanmasın, oyun bir web sayfası gibi durmasın.
+ * Yazı alanları ve kodlar (davet kodu, paket yolu) seçilip kopyalanabiliyor.
+ * Kısayollar ve sağ tık `apps/web/src/desktop/native.ts`'te.
+ */
+:root[data-shell='desktop'] body {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+:root[data-shell='desktop'] :is(input, textarea, code, [contenteditable]) {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+:root[data-shell='desktop'] img {
+  -webkit-user-drag: none;
+}
+
+/* Kaydırma çubukları ince ve temanın renginde: Windows ve Linux'un web görünümü panellerde tarayıcının gri çubuğunu çiziyordu. */
+:root[data-shell='desktop'] * {
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-strong) transparent;
+}
+
+:root[data-shell='desktop'] ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+:root[data-shell='desktop'] ::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+:root[data-shell='desktop'] ::-webkit-scrollbar-thumb {
+  background: var(--line-strong);
+  border-radius: 4px;
+}
+
 body {
   background: var(--bg);
   color: var(--text);
@@ -1345,25 +1385,18 @@ button.icon {
   transition: none !important;
 }
 
-/* Orta genişlik: üç sütun tek sütuna iner, sahne arkada kalır. */
+/*
+ * Orta genişlik (Tur 71): üç sütun kalıyor, sağ sütun daralıyor; şehir
+ * ortada görünür. Eskiden tek sütuna iniyordu ve paneller üst üste
+ * biniyordu: esnek satır 30 piksele sıkışıyor, içindeki panel alttakinin
+ * üstüne taşıyordu; gündem çipi de görünmeyen bir ikinci sütun açıp üst
+ * barı daraltıyordu. Masaüstünün en küçük penceresi (960 × 600) ve 125 %
+ * ölçekli 1366 × 768 dizüstü (1093 × 614) tam bu aralıkta. Sol sütun 300
+ * piksel kalıyor: lens adları iki sütunda sığsın (Tur 69).
+ */
 @media (max-width: 1100px) {
   .hud {
-    grid-template-columns: 1fr;
-    grid-template-rows: auto 1fr auto;
-    overflow-y: auto;
-  }
-
-  .leftcol,
-  .inspector,
-  .news {
-    grid-column: 1;
-    grid-row: auto;
-    width: auto;
-    justify-self: stretch;
-  }
-
-  .inspector {
-    max-height: 45vh;
+    grid-template-columns: 300px minmax(0, 1fr) 280px;
   }
 
   .metrics {
