@@ -92,6 +92,7 @@ export const commands = {
   'core.holding.openedTitle': '{city}: holding yeni şehirde',
   'core.holding.openedBody':
     '{capital} sermaye ve %{brand} marka bilinirliğiyle geldin. Rakipler: {rivals}. {previous} yaşamaya devam ediyor; kârının yarısı her gün holding kasasına akacak.',
+  'core.holding.openedType': 'Şehrin türü: {type}.',
   'core.holding.remoteRaidTitle': "{city}: {name} payının %{percent}'ini topladı",
   'core.holding.remoteRaidBody':
     'Uzaktaki şehrinde baskın ilerliyor ve savunma talimatı kapalı. Şehirler panelinden yerel müdüre savunma talimatı verebilir, kasadan şehre para gönderebilir ya da şehre geçebilirsin.',

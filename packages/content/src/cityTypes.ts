@@ -24,7 +24,9 @@ import { localizeList } from './localize';
  *   vefalı, sanayinin eski aileleri kindar ve gururlu, başkentin seçkinleri
  *   lüks mağazacı ve emlakçı. Firuze Grup (lüks, fiyatı ×1,35) hiçbir türün
  *   ilk dördünde değil: ölçümde sanayi kentinde ve başkentte 720. günde
- *   oyuncuyu geçiyor, zaferi kilitliyordu (dengeli şehirde de ilk dörtte yok).
+ *   oyuncuyu geçiyor, zaferi kilitliyordu (dengeli şehirde de ilk dörtte
+ *   yok). Nova Holding (yayılmacı) başkentin büyük pazarında 1080. günde
+ *   oyuncunun neredeyse iki katına çıkıyordu; başkentte yok.
  * - KURAL. Her türün bir kuralı: limanda nakliye, sanayide üretimin
  *   bakımı ve sendika, başkentte arsa ve gelir.
  *
@@ -151,7 +153,7 @@ export const CITY_TYPES: CityTypeDef[] = [
       'İki merkez, iki lüks konut; tek sanayi bölgesi, liman yok',
       'Gelir yüksek, arsa %25 pahalı',
       'Hammaddelerin hepsi %10 pahalı',
-      'Rakipler şehrin seçkinleri: lüks mağazacı, iki emlakçı, bir holding',
+      'Rakipler şehrin seçkinleri: lüks mağazacı, iki emlakçı, bir teknoloji şirketi',
     ],
     layouts: {
       standard: [
@@ -168,7 +170,7 @@ export const CITY_TYPES: CityTypeDef[] = [
       ],
     },
     goods: { wheat: 1.1, coffee_bean: 1.1, vegetable: 1.1, cotton: 1.1, hide: 1.1, silicon: 1.1 },
-    rivals: ['meridyen', 'kule_gayrimenkul', 'atlas_yapi', 'nova_holding'],
+    rivals: ['meridyen', 'kule_gayrimenkul', 'atlas_yapi', 'veri_sanayi'],
     victoryScale: 1,
     rule: { landValue: 1.25, income: 0.06 },
     color: '#b48ad6',

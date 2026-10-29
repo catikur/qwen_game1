@@ -175,7 +175,7 @@ export const contentDe: Record<string, string> = {
   'content.cityType.capital.facts.0': 'Zwei Innenstädte, zwei Villenviertel; ein Industriegebiet, kein Hafen',
   'content.cityType.capital.facts.1': 'Hohe Einkommen, Grund 25 % teurer',
   'content.cityType.capital.facts.2': 'Alle Rohstoffe 10 % teurer',
-  'content.cityType.capital.facts.3': 'Die Rivalen sind die Elite der Stadt: ein Luxushändler, zwei Projektentwickler und eine Holding',
+  'content.cityType.capital.facts.3': 'Die Rivalen sind die Elite der Stadt: ein Luxushändler, zwei Projektentwickler und ein Technologieunternehmen',
 
   // ---- Events (events.ts) ----
   'content.event.consumer_boom.title': 'Konsumboom',

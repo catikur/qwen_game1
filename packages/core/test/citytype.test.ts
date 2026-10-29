@@ -84,7 +84,7 @@ describe('şehrin türü (Tur 76)', () => {
     const industrial = rivalsOf(createNewGame({ seed: 8, cityType: 'industrial' }));
     assert.deepEqual(industrial, ['kilit_market', 'kule_gayrimenkul', 'nova_holding', 'anadolu_gida']);
     assert.deepEqual(industrial.map((id) => RIVAL_CEOS[id]!.temperament), ['vindictive', 'vindictive', 'proud', 'loyal']);
-    assert.deepEqual(rivalsOf(createNewGame({ seed: 8, cityType: 'capital' })), ['meridyen', 'kule_gayrimenkul', 'atlas_yapi', 'nova_holding']);
+    assert.deepEqual(rivalsOf(createNewGame({ seed: 8, cityType: 'capital' })), ['meridyen', 'kule_gayrimenkul', 'atlas_yapi', 'veri_sanayi']);
     for (const type of CITY_TYPES) assert.ok(!type.rivals.includes('firuze_grup'), type.id);
     // Büyük şehirde sekiz koltuk: kataloğun hepsi, türünkiler önde.
     const large = rivalsOf(createNewGame({ seed: 8, cityType: 'port', citySize: 'large' }));

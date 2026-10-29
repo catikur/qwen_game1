@@ -94,6 +94,7 @@ export const commands: Record<keyof typeof trCommands, string> = {
   'core.holding.openedTitle': '{city}: your holding expands to a new city',
   'core.holding.openedBody':
     'You arrived with {capital} in capital and {brand}% brand awareness. Rivals: {rivals}. {previous} keeps living; half of its profit will flow into the holding treasury every day.',
+  'core.holding.openedType': 'City type: {type}.',
   'core.holding.remoteRaidTitle': '{city}: {name} has collected {percent}% of your shares',
   'core.holding.remoteRaidBody':
     'A raid is advancing in your remote city and its defense order is off. From the Cities panel you can order the local manager to defend, send money from the treasury to the city, or switch to it.',

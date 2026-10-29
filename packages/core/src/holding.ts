@@ -1,4 +1,4 @@
-import { CITY_NAMES, CONSUMER_CATEGORIES, HOLDING } from '@capital/content';
+import { CITY_NAMES, CONSUMER_CATEGORIES, HOLDING, getCityType } from '@capital/content';
 import type { CitySizeId, CityTypeId } from '@capital/content';
 import { simulateCityDay } from './day';
 import { tc } from './i18n';
@@ -253,12 +253,16 @@ export function foundCity(state: GameState, citySize: CitySizeId, amount: number
     next,
     'good',
     tc('core.holding.openedTitle', { city: name }),
-    tc('core.holding.openedBody', {
-      capital: formatMoney(amount),
-      brand: Math.round(brand * 100),
-      rivals,
-      previous: state.cityName,
-    }),
+    [
+      tc('core.holding.openedBody', {
+        capital: formatMoney(amount),
+        brand: Math.round(brand * 100),
+        rivals,
+        previous: state.cityName,
+      }),
+      // Şehrin türü (Tur 76): dengeli şehirde söylenmiyor.
+      ...(next.cityType ? [tc('core.holding.openedType', { type: getCityType(next.cityType).name })] : []),
+    ].join(' '),
   );
   return next;
 }

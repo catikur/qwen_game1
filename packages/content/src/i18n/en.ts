@@ -175,7 +175,7 @@ export const contentEn: Record<string, string> = {
   'content.cityType.capital.facts.0': 'Two downtowns, two luxury districts; one industrial zone, no harbor',
   'content.cityType.capital.facts.1': 'High incomes, land 25% dearer',
   'content.cityType.capital.facts.2': 'Every raw material 10% dearer',
-  'content.cityType.capital.facts.3': 'Rivals are the city’s elite: a luxury retailer, two developers and a holding company',
+  'content.cityType.capital.facts.3': 'Rivals are the city’s elite: a luxury retailer, two developers and a tech firm',
 
   // ---- Events (events.ts) ----
   'content.event.consumer_boom.title': 'Consumer Boom',
