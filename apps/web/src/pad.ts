@@ -13,6 +13,7 @@
 import {
   PadPresses,
   glyphOf,
+  inputMode,
   nearestBox,
   padActions,
   padDrive,
@@ -269,10 +270,15 @@ function renderHints(layer: PadLayer): void {
 // ------------------------------------------------------------ döngü
 
 /** Bağlı kumandalardan en son kullanılan. */
+/**
+ * En son kullanılan, standart düzendeki kumanda. Düğme ve eksen sırası
+ * yalnız standart düzende belli (`readPad`); başka düzendeki kumandada
+ * rastgele bir düğme A ya da B olurdu, o kumanda okunmuyor (Codex #102).
+ */
 function activePad(): Gamepad | null {
   let best: Gamepad | null = null;
   for (const pad of navigator.getGamepads()) {
-    if (pad?.connected && (!best || pad.timestamp > best.timestamp)) best = pad;
+    if (pad?.connected && pad.mapping === 'standard' && (!best || pad.timestamp > best.timestamp)) best = pad;
   }
   return best;
 }
@@ -289,7 +295,10 @@ export function startPad(): void {
   const tick = (now: number) => {
     const dt = Math.min(0.1, (now - last) / 1000);
     last = now;
-    const pad = document.visibilityState === 'visible' && document.hasFocus() ? activePad() : null;
+    const connected = activePad();
+    // Kumanda çıkarıldı: ipuçları, nişangâh ve odak görünümü kumandada kalmasın (Codex #102).
+    if (!connected && inputMode() === 'pad') setInputMode('pointer');
+    const pad = document.visibilityState === 'visible' && document.hasFocus() ? connected : null;
     if (pad) {
       const frame = readPad(pad);
       const pressed = presses.update(frame, now);

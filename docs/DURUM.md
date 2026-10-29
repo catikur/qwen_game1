@@ -8334,6 +8334,11 @@ yazı alanında ekran klavyesi.
 - *Girdi kipinin dinleyicisi ilk isteyenin elindeydi.* Oyun ekranı
   kapanınca kaldırılabilirdi (bugün kaldıran yoktu); artık pencerenin
   ömrü boyunca, kaldırma işlevi yok.
+- *Kumanda çıkarılınca ipuçları ekranda kalıyordu.* Kumanda kipi de;
+  artık kumanda yoksa kip fareye dönüyor.
+- *Standart düzende olmayan kumanda da okunuyordu.* Düğme ve eksen sırası
+  yalnız standart düzende belli; başka düzendeki kumandada rastgele bir
+  düğme A ya da B olurdu. O kumanda artık okunmuyor.
 
 **Doğrulama.**
 - `pnpm test` 874/874 (867'den); tip denetimi temiz; Almanca denetimi 0
@@ -8346,15 +8351,16 @@ yazı alanında ekran klavyesi.
     istenmiyor.
 - `cargo test` 21/21, `cargo test --features steam` 20/20, clippy temiz;
   Steam'siz derlemede ekran klavyesi yok.
-- Tarayıcı testinin yeni bölümü "Kumanda ve yalnız klavye" (30 kontrol)
-  30/30. Kumandanın modülü kumanda bağlanmadan inmiyor. Kurulum yalnız
+- Tarayıcı testinin yeni bölümü "Kumanda ve yalnız klavye" (32 kontrol)
+  32/32. Kumandanın modülü kumanda bağlanmadan inmiyor. Kurulum yalnız
   kumandayla ve yalnız klavyeyle bitiyor. Ardından
   ortadaki parsel seçiliyor, satın alınıyor, yapı seçilip parsele
   kuruluyor. Kamera çubuklarla ve Q/E, +/−, WASD ile dönüyor, yakınlaşıyor,
   kayıyor. LB/RB, Y, X, ☰ ve ⧉ işini yapıyor, kaydırıcı yön tuşuyla
   değişiyor. Şerit panellerin üstüne binmiyor; DualSense'te ✕ ○ □ △; fare
   oynayınca ipuçları ve nişangâh kalkıyor; karar ekranında şerit B'yi
-  "Kapat" diye göstermiyor; konsol temiz.
+  "Kapat" diye göstermiyor; standart düzende olmayan kumanda okunmuyor;
+  kumanda çıkarılınca ipuçları kalkıyor; konsol temiz.
 - Gerçek pencerede uçtan uca 29/29 (28'den): WebKitGTK'de Gamepad API var
   (libmanette), ekran klavyesinin komutu kabukta.
 - Paket bütçesi tamam (ana parça 74,5 KB; kumandanın modülü, Ayarlar'daki

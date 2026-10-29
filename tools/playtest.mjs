@@ -8794,6 +8794,7 @@ async function finish(browser, consoleErrors) {
         set(index, down) { state.buttons[index] = { pressed: down, touched: down, value: down ? 1 : 0 }; state.timestamp = performance.now(); },
         axis(index, value) { state.axes[index] = value; state.timestamp = performance.now(); },
         rename(next) { state.id = next; },
+        remap(next) { pad.mapping = next; },
       };
       navigator.getGamepads = () => (window.__fakePad.connected ? [pad, null, null, null] : [null, null, null, null]);
       // Başsız tarayıcıda sayfa odakta sayılmıyor; kumanda odaksız pencerede susuyor.
@@ -8978,6 +8979,26 @@ async function finish(browser, consoleErrors) {
     await pp.mouse.move(420, 320);
     const pointer = await pp.evaluate(() => ({ input: document.documentElement.dataset.input, hints: getComputedStyle(document.querySelector('.pad-hints')).display, reticle: getComputedStyle(document.querySelector('.map-reticle')).display }));
     check('Fare oynayınca kip fareye dönüyor: ipuçları ve nişangâh kalkıyor', pointer.input === 'pointer' && pointer.hints === 'none' && pointer.reticle === 'none', JSON.stringify(pointer));
+
+    // Standart düzende olmayan kumanda okunmuyor (düğme sırası belli değil); kumanda
+    // çıkarılınca ipuçları ve kumanda kipi kalkıyor (Codex #102).
+    const lensNow = () => pp.evaluate(() => document.querySelector('[data-lens][aria-pressed="true"]')?.getAttribute('data-lens') ?? null);
+    const inputNow = () => pp.evaluate(() => ({ input: document.documentElement.dataset.input, hints: getComputedStyle(document.querySelector('.pad-hints')).display }));
+    await tap(pp, 'up');
+    const padBefore = (await inputNow()).input;
+    await pp.evaluate(() => window.__fakePad.remap(''));
+    const lensBefore = await lensNow();
+    await tap(pp, 'view');
+    const odd = { lens: await lensNow(), ...(await inputNow()) };
+    check('Standart düzende olmayan kumanda okunmuyor: düğmesi bir şey yapmıyor, kumanda kipi kalkıyor',
+      padBefore === 'pad' && odd.lens === lensBefore && odd.input === 'pointer' && odd.hints === 'none', JSON.stringify({ padBefore, lensBefore, ...odd }));
+    await pp.evaluate(() => window.__fakePad.remap('standard'));
+    await tap(pp, 'up');
+    const replugged = await inputNow();
+    await pp.evaluate(() => { window.__fakePad.connected = false; });
+    await frames(pp, 3);
+    const unplugged = await inputNow();
+    check('Kumanda çıkarılınca ipuçları ve kumanda kipi kalkıyor', replugged.input === 'pad' && unplugged.input === 'pointer' && unplugged.hints === 'none', JSON.stringify({ replugged, unplugged }));
     check('Kumandayla oyun: konsol temiz', pErrors.length === 0, pErrors.slice(0, 2).join(' | '));
     await pContext.close();
 
