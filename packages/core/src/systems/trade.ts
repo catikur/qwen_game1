@@ -190,6 +190,19 @@ export function rivalLineOn(root: GameState, from: number, to: number, goodId: s
   return rivalLines(root).find((line) => line.from === from && line.to === to && line.goodId === goodId);
 }
 
+/**
+ * Oyuncunun yolunu rakibin kopyalamasına kalan (Tur 78), hattın satırı
+ * için: yol kaç gündür kârlı, eşiğe kaç gün var. Yol kârlı değilse, yolu
+ * bir rakip zaten taşıyorsa ya da varışta rakip rekabeti kapalıysa yok.
+ * Eşiğe varan yolda `left` sıfır: kopya her sabah yeniden deneniyor, nakdi
+ * yeten ilk rakip giriyor (Bugbot #108).
+ */
+export function rivalCopyCountdown(root: GameState, line: TradeLine): { days: number; left: number } | undefined {
+  const days = line.profitableDays ?? 0;
+  if (days <= 0 || !cityBySeed(root, line.to)?.flags.npcCompetition || rivalLineOn(root, line.from, line.to, line.goodId)) return undefined;
+  return { days, left: Math.max(0, TRADE_RIVAL.entryDays - days) };
+}
+
 /** Terminalin hatlara verebileceği kamyon: filo eksi sözleşmeler ve öbür hatlar. */
 function freeTrucks(city: GameState, terminal: BuildingInstance, line?: TradeLine): number {
   const fleet = BUILDING_BY_ID[terminal.defId]?.fleet ?? 0;

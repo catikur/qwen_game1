@@ -188,6 +188,7 @@ export {
   lineQuote,
   marketBuyPrice,
   priceBoard,
+  rivalCopyCountdown,
   rivalLineOn,
   rivalLines,
   tradeCities,

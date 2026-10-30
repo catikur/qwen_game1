@@ -40,6 +40,7 @@ export const trade = {
   'trade.lines.buy.disable': 'Yalnız fazlayı taşı',
   'trade.lines.rival': 'Rakip hattı: {name}, {trucks} kamyon. Malı varışın pazarına giriyor; fiyat düşüyor, fark daralıyor.',
   'trade.lines.rivalSoon': 'Yol {days} gündür kârlı; {left} gün daha sürerse rakipler kopyalayacak.',
+  'trade.lines.rivalReady': 'Yol {days} gündür kârlı; rakipler yolu gördü, nakdi yeten ilk rakip kopyalayacak.',
   'trade.lines.open.buy': 'Fazla yetmezse eksiği çıkışın pazarından al',
   'trade.lines.open.margins': 'Bugün birim kâr: pazara satışta {market} · kendi ihtiyacına {need} (nakliye birim başına {freight})',
   'trade.prices.title': 'Şehirlerin fiyatları',

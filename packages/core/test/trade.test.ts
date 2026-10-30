@@ -17,6 +17,7 @@ import {
   marketBuyPrice,
   prepareTradeDay,
   priceBoard,
+  rivalCopyCountdown,
   rivalLineOn,
   rivalLines,
   transitDaysBetween,
@@ -506,6 +507,30 @@ describe('ticaretin fiyatı (Tur 78)', () => {
     p.engine.runDay();
     assert.equal(rivalLines(p.root).length, 0);
     assert.ok(p.root.news.some((item) => item.title.includes(p.root.companies[rival.companyId]!.name) && item.title.includes('kapattı')));
+  });
+
+  test('kopyaya kalan gün: eşikte sıfır, rakip giremezse orada bekliyor; rakip ya da rekabet yoksa sayaç yok (Bugbot #108)', () => {
+    const p = coffeeRoute();
+    assert.ok(openCoffee(p, 1).ok);
+    const line = p.root.holding!.lines![0]!;
+    assert.equal(rivalCopyCountdown(p.root, line), undefined, 'henüz kârlı gün yok');
+    for (let day = 0; day < 10; day++) p.engine.runDay();
+    assert.deepEqual(rivalCopyCountdown(p.root, line), { days: 10, left: TRADE_RIVAL.entryDays - 10 });
+    // Eşik geçti, nakdi yeten rakip henüz yok: kopya her sabah yeniden deneniyor; sayaç "bir gün daha" demiyor.
+    line.profitableDays = TRADE_RIVAL.entryDays + 3;
+    assert.deepEqual(rivalCopyCountdown(p.root, line), { days: TRADE_RIVAL.entryDays + 3, left: 0 });
+    // Ertesi sabah rakip kopyalıyor: satır rakibi gösteriyor, sayaç yok.
+    p.engine.runDay();
+    assert.ok(rivalLineOn(p.root, line.from, line.to, line.goodId));
+    assert.equal(rivalCopyCountdown(p.root, line), undefined);
+
+    // Rakip rekabeti kapalı şehirde yol kârlı kalsa da kimse kopyalamıyor: sayaç hiç yok.
+    const calm = coffeeRoute(21, false);
+    assert.ok(openCoffee(calm, 1).ok);
+    for (let day = 0; day < TRADE_RIVAL.entryDays + 2; day++) calm.engine.runDay();
+    const quiet = calm.root.holding!.lines![0]!;
+    assert.ok((quiet.profitableDays ?? 0) > TRADE_RIVAL.entryDays, `kârlı gün ${quiet.profitableDays}`);
+    assert.equal(rivalCopyCountdown(calm.root, quiet), undefined);
   });
 
   test('SET_LINE_BUY ayarı değiştiriyor; birim hesabı ve fiyat tablosu', () => {

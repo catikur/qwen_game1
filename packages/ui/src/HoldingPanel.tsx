@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { ReactElement } from 'react';
-import { BUILDING_BY_ID, CITY_SIZES, CITY_TYPES, DEFAULT_CITY_TYPE, GOOD_BY_ID, HOLDING, TRADED_GOODS, TRADE_LINE, TRADE_RIVAL, formatNumber, formatUnitMoney, getCityType } from '@capital/content';
+import { BUILDING_BY_ID, CITY_SIZES, CITY_TYPES, DEFAULT_CITY_TYPE, GOOD_BY_ID, HOLDING, TRADED_GOODS, TRADE_LINE, formatNumber, formatUnitMoney, getCityType } from '@capital/content';
 import type { CitySizeId, CityTypeId } from '@capital/content';
 import {
   buybackToLock,
@@ -23,6 +23,7 @@ import {
   lineQuote,
   openCityQuote,
   priceBoard,
+  rivalCopyCountdown,
   rivalLineOn,
   raidStatus,
   remoteIncome,
@@ -387,7 +388,7 @@ function LineRow({ state, line }: { state: GameState; line: TradeLine }): ReactE
   const goods = (line.goodsPaid ?? 0) + (line.freightPaid ?? 0);
   const margins = lineMargins(state, line.from, line.to, line.goodId);
   const rival = rivalLineOn(state, line.from, line.to, line.goodId);
-  const watched = line.profitableDays ?? 0;
+  const countdown = rivalCopyCountdown(state, line);
   return (
     <li className="line-row" data-line={line.id} data-line-short={line.last?.short ?? 'none'} data-line-buy={line.buy ? 'on' : 'off'}>
       <div className="city-head">
@@ -420,9 +421,11 @@ function LineRow({ state, line }: { state: GameState; line: TradeLine }): ReactE
           {t('trade.lines.rival', { name: target?.companies[rival.companyId]?.name ?? '', trucks: rival.trucks })}
         </span>
       ) : (
-        watched > 0 && (
-          <span className="muted" data-line-rival-soon={watched}>
-            {t('trade.lines.rivalSoon', { days: watched, left: Math.max(1, TRADE_RIVAL.entryDays - watched) })}
+        countdown && (
+          <span className="muted" data-line-rival-soon={countdown.left}>
+            {countdown.left > 0
+              ? t('trade.lines.rivalSoon', { days: countdown.days, left: countdown.left })
+              : t('trade.lines.rivalReady', { days: countdown.days })}
           </span>
         )
       )}

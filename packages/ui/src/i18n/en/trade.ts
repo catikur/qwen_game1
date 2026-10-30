@@ -42,6 +42,7 @@ export const trade: Record<keyof typeof tr, string> = {
   'trade.lines.buy.disable': 'Carry surplus only',
   'trade.lines.rival': 'Rival line: {name}, {trucks|# truck|# trucks}. Its goods go onto the destination market; the price falls and the gap narrows.',
   'trade.lines.rivalSoon': 'The route has paid for {days|# day|# days}; {left|# more day|# more days} and rivals will copy it.',
+  'trade.lines.rivalReady': 'The route has paid for {days|# day|# days}; rivals have noticed it, and the first one with the cash will copy it.',
   'trade.lines.open.buy': 'If the surplus falls short, buy the rest on the origin market',
   'trade.lines.open.margins': 'Margin per unit today: selling on the market {market} · for your own needs {need} (freight {freight} per unit)',
   'trade.prices.title': 'Prices in your cities',

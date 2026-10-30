@@ -42,6 +42,7 @@ export const trade: Record<keyof typeof tr, string> = {
   'trade.lines.buy.disable': 'Nur Überschuss fahren',
   'trade.lines.rival': 'Rivalenlinie: {name}, {trucks|# Lkw|# Lkw}. Seine Ware geht auf den Markt der Zielstadt; der Preis fällt, die Spanne schrumpft.',
   'trade.lines.rivalSoon': 'Die Route lohnt sich seit {days|# Tag|# Tagen}; noch {left|# Tag|# Tage}, dann kopieren die Rivalen sie.',
+  'trade.lines.rivalReady': 'Die Route lohnt sich seit {days|# Tag|# Tagen}; die Rivalen haben sie bemerkt, der erste mit genug Geld kopiert sie.',
   'trade.lines.open.buy': 'Reicht der Überschuss nicht, den Rest am Markt der Ausgangsstadt kaufen',
   'trade.lines.open.margins': 'Spanne je Einheit heute: Verkauf am Markt {market} · eigener Bedarf {need} (Fracht {freight} je Einheit)',
   'trade.prices.title': 'Preise in deinen Städten',
