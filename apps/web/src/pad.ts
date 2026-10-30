@@ -87,9 +87,9 @@ function adjust(element: HTMLElement, step: 1 | -1): boolean {
       if (step > 0) element.stepUp();
       else element.stepDown();
     } catch {
-      return false;
+      // Eski motorlar (WebKit) sınırda hata fırlatıyor, yenileri değeri sınırda tutuyor (Bugbot #110).
     }
-    // Sınırdaki sayı kutusu değişmiyor: olay yollanmasın.
+    // Sınırdaki denetim değişmiyor: odak yerinde kalsın, olay yollanmasın.
     if (element.value === before) return true;
   } else if (element instanceof HTMLSelectElement && element.options.length > 0) {
     element.selectedIndex = (element.selectedIndex + step + element.options.length) % element.options.length;

@@ -10840,6 +10840,32 @@ async function finish(browser, consoleErrors) {
         && (pad.best === pad.count || pad.text.includes(`En kârlısı ${pad.best} kamyon`)),
       pad.text.slice(0, 160));
 
+    // Sınırdaki sayı kutusu (Bugbot #110): sağ değeri değiştirmiyor, odak kutuda kalıyor. Eski
+    // motorlar (WebKit) sınırda `stepUp`'ta hata fırlatıyor: sahte bir `stepUp` onu da deniyor.
+    const countMax = await zp.evaluate(() => Number(document.querySelector('[data-line-count]')?.max ?? 'NaN'));
+    await zp.locator('[data-line-count]').fill(String(countMax));
+    await zp.locator('[data-line-count]').focus();
+    await tap(zp, 'right');
+    const boundState = () => zp.evaluate(() => ({
+      value: Number(document.querySelector('[data-line-count]')?.value ?? 'NaN'),
+      focus: document.activeElement?.hasAttribute('data-line-count') ?? false,
+    }));
+    const atMax = await boundState();
+    await zp.evaluate(() => {
+      const proto = HTMLInputElement.prototype;
+      window.__stepUp = proto.stepUp;
+      proto.stepUp = function (...args) {
+        if (this.type === 'number' && this.max !== '' && Number(this.value) >= Number(this.max)) throw new DOMException('Bounds', 'InvalidStateError');
+        return window.__stepUp.apply(this, args);
+      };
+    });
+    await tap(zp, 'right');
+    const atMaxOld = await boundState();
+    await zp.evaluate(() => { HTMLInputElement.prototype.stepUp = window.__stepUp; });
+    check('Kumandada sınırdaki sayı kutusu: sağ değeri değiştirmiyor, odak kutuda kalıyor; sınırda hata fırlatan motorda da (Bugbot #110)',
+      countMax >= 4 && atMax.value === countMax && atMax.focus && atMaxOld.value === countMax && atMaxOld.focus,
+      `en çok ${countMax} · ${atMax.value}/${atMax.focus} · eski motor ${atMaxOld.value}/${atMaxOld.focus}`);
+
     // Varışın kasası (Codex #110): kasa yükü kısıyorsa tahmin sabah planının yükleyeceğiyle, form söylüyor.
     const cashSaved = await zp.evaluate(({ from, to }) => {
       const s = window.__capital.getState();
