@@ -826,8 +826,16 @@ export function runSpotPriceTick(state: GameState): void {
 }
 
 /** Fiyatın yöneldiği değer: şehrin referans fiyatı, olayın çarpanı, fazla kırığı, ihracat baskısı. */
-function spotTarget(state: GameState, goodId: string, produced: number, consumed: number, out: number, eventMultiplier: number): number {
-  const reference = Math.max(1, state.market.reference[goodId] ?? 1);
+function spotTarget(
+  state: GameState,
+  goodId: string,
+  produced: number,
+  consumed: number,
+  out: number,
+  eventMultiplier: number,
+  referenceVolume = state.market.reference[goodId] ?? 1,
+): number {
+  const reference = Math.max(1, referenceVolume);
   const glut = Math.min(1, Math.max(0, produced - consumed) / reference);
   // Şehrin referans fiyatı (Tur 76): türün bol ya da kıt hammaddesi; dengeli şehirde katalogdaki.
   let target = referencePrice(state, goodId) * eventMultiplier * (1 - GLUT_DEPTH * glut);
@@ -866,7 +874,11 @@ export function spotOutlook(
 ): number {
   const produced = (state.market.produced[goodId] ?? 0) + (extra.produced ?? 0);
   const consumed = (state.market.consumed[goodId] ?? 0) + (extra.consumed ?? 0);
-  const target = spotTarget(state, goodId, produced, consumed, extra.out ?? 0, collectEventModifiers(state).goodPrice[goodId] ?? 1);
+  // Eski kayıtta sonradan eklenen malın referansı ilk fiyat adımına dek yok
+  // (`backfillMarket` günün sonunda dolduruyor): tahmin aynı değeri yan
+  // etkisiz hesaplıyor (Codex #110).
+  const reference = state.market.reference[goodId] ?? referenceVolumes(state.districts)[goodId] ?? 0;
+  const target = spotTarget(state, goodId, produced, consumed, extra.out ?? 0, collectEventModifiers(state).goodPrice[goodId] ?? 1, reference);
   let spot = state.market.spot[goodId] ?? referencePrice(state, goodId);
   for (let day = 0; day < days; day++) spot = nextSpot(state, goodId, spot, target);
   return spot;

@@ -307,13 +307,34 @@ export interface LineOutlook {
 const OUTLOOK_DAYS = TRADE_RIVAL.entryDays;
 
 /**
- * Yeni hattın yarın sabah varışın kasasından alabileceği (Codex #110): plan
- * hatları sırayla işliyor, yeni hat sonda. Aynı şehre giden açık hatların
- * yarınki payı sabah planının kendisiyle, bugünkü kasa ve fiyatlarla
- * (dünkü seferleri kasa kısıtlıyken eksik kalmış olabilir).
+ * Açık hatların pazara henüz yansımayan akışı (Codex #110). Varışın pazarı
+ * (`market.produced`) yalnız varan malı sayıyor: dün malı varmamış hattın
+ * yükü orada yok, yarınki yükü sabah planından. İlk seferi yoldaki rakip
+ * hattı iki şehirde de henüz alıp satmıyor. Tahminin ufku (30 gün) yolu
+ * (3–6 gün) aşıyor: bu akışlar o güne pazarda.
  */
-function destinationBudget(root: GameState, target: GameState): number {
-  return planTradeDay(root).budget.get(target.meta.seed) ?? target.companies[target.playerCompanyId]?.cash ?? 0;
+function pendingFlows(
+  root: GameState,
+  plan: PlannedLoad[],
+  source: GameState,
+  target: GameState,
+  goodId: string,
+): { originOut: number; destinationIn: number } {
+  let originOut = 0;
+  let destinationIn = 0;
+  const arrived = target.trade?.arrived ?? {};
+  for (const load of plan) {
+    if (load.line.goodId === goodId && load.line.to === target.meta.seed && !((arrived[load.line.id] ?? 0) > 0)) destinationIn += load.own + load.bought;
+  }
+  // Dünkü plan (`runRivalLines`) bugünün takvimiyle bir gün önce koştu: ilk seferi yoldaysa yükü sıfırdı.
+  const lastPlan = root.time.day - 1;
+  for (const rival of rivalLines(root)) {
+    if (rival.goodId !== goodId || (rival.last?.units ?? 0) > 0 || lastPlan >= rival.openedDay + rival.transitDays) continue;
+    const units = lineCapacity(rival.trucks);
+    if (rival.to === target.meta.seed) destinationIn += units;
+    if (rival.from === source.meta.seed) originOut += units;
+  }
+  return { originOut, destinationIn };
 }
 
 /** `trucks` kamyonluk hattın `OUTLOOK_DAYS` sonraki fiyatları ve birim kârı; yük varışın kasasının yettiği kadar. */
@@ -326,6 +347,7 @@ function outlookFor(
   buy: boolean,
   surplus: number,
   budget: number,
+  pending: { originOut: number; destinationIn: number },
 ): Omit<LineOutlook, 'bestTrucks' | 'bestDaily'> | undefined {
   const capacity = lineCapacity(trucks);
   const fromSurplus = Math.min(capacity, surplus);
@@ -343,8 +365,8 @@ function outlookFor(
   let out = bought;
   for (const line of tradeLines(root)) if (line.from === source.meta.seed && line.goodId === goodId) out += line.last?.bought ?? 0;
   for (const rival of rivalLines(root)) if (rival.from === source.meta.seed && rival.goodId === goodId) out += rival.last?.units ?? 0;
-  const originSpot = spotOutlook(source, goodId, { consumed: units, out }, OUTLOOK_DAYS);
-  const destinationSpot = spotOutlook(target, goodId, { produced: units }, OUTLOOK_DAYS);
+  const originSpot = spotOutlook(source, goodId, { consumed: units + pending.originOut, out: out + pending.originOut }, OUTLOOK_DAYS);
+  const destinationSpot = spotOutlook(target, goodId, { produced: units + pending.destinationIn }, OUTLOOK_DAYS);
   // Kamyonların bedeline yetmeyen kasa: hat yola çıkmıyor, kâr da zarar da yok.
   if (units <= 0) return { days: OUTLOOK_DAYS, originSpot, destinationSpot, margin: 0, daily: 0, units: 0, ...short };
   const cost = own * originSpot * SURPLUS_HAIRCUT + bought * originSpot + fixed;
@@ -363,13 +385,18 @@ function lineOutlook(
   surplus: number,
   free: number,
 ): LineOutlook | undefined {
-  const budget = destinationBudget(root, target);
-  const outlook = outlookFor(root, source, target, goodId, trucks, buy, surplus, budget);
+  // Yeni hat yarın sabah listenin sonunda (Codex #110): aynı şehre giden açık
+  // hatlar kasadan paylarını sabah planının kendisiyle, bugünkü kasa ve
+  // fiyatlarla alıyor (dünkü seferleri kasa kısıtlıyken eksik kalmış olabilir).
+  const plan = planTradeDay(root);
+  const budget = plan.budget.get(target.meta.seed) ?? target.companies[target.playerCompanyId]?.cash ?? 0;
+  const pending = pendingFlows(root, plan.loads, source, target, goodId);
+  const outlook = outlookFor(root, source, target, goodId, trucks, buy, surplus, budget, pending);
   if (!outlook) return undefined;
   let bestTrucks = 0;
   let bestDaily = 0;
   for (let count = 1; count <= free; count++) {
-    const daily = outlookFor(root, source, target, goodId, count, buy, surplus, budget)?.daily ?? 0;
+    const daily = outlookFor(root, source, target, goodId, count, buy, surplus, budget, pending)?.daily ?? 0;
     // Birim kâr eksiye düşünce fazlası da düşüyor: aramayı bitir.
     if (daily <= 0) break;
     if (daily > bestDaily) {

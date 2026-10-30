@@ -8,7 +8,7 @@ import { build, buyTile, demolish } from '../src/actions';
 import { simulateCityDay } from '../src/day';
 import { inTransitValue, isPurchasable, netWorthNow } from '../src/systems/city';
 import { fleetUsed } from '../src/systems/freight';
-import { SURPLUS_HAIRCUT, exportableSurplus, runSpotPriceTick, spotOutlook } from '../src/systems/supply';
+import { SURPLUS_HAIRCUT, exportableSurplus, referenceVolumes, runSpotPriceTick, spotOutlook } from '../src/systems/supply';
 import {
   cityBySeed,
   lineCapacity,
@@ -424,6 +424,26 @@ function coffeeRoute(seed = 21, rivals = true): Pair {
   return { engine, root: state, away, farm: '', awayTerminal, rootTerminal, mill: '' };
 }
 
+/**
+ * Üç şehirli holding (Codex #110): iki çıkış (liman ve sanayi kenti) aynı
+ * varışa (oynanan şehir) aynı malı taşıyabiliyor; üçünde de terminal.
+ */
+function threeCities() {
+  const first = createNewGame({ seed: 21, companyName: 'Tüccar AŞ', cityType: 'port' });
+  first.companies[first.playerCompanyId]!.cash += 12_000_000;
+  const second = foundCity(first, 'standard', 6_000_000, 'industrial');
+  const third = foundCity(second, 'standard', 3_000_000);
+  const engine = new GameEngine(third);
+  const root = engine.getState();
+  const origins = root.holding!.dormant.map((city) => city.state);
+  for (const city of [root, ...origins]) {
+    city.flags.randomEvents = false;
+    city.flags.npcCompetition = false;
+    place(city, 'freight_terminal');
+  }
+  return { engine, root, origins };
+}
+
 function openCoffee(p: Pair, trucks = 1, buy = true) {
   return p.engine.dispatch({ type: 'OPEN_LINE', from: p.away.meta.seed, to: p.root.meta.seed, goodId: 'coffee_bean', trucks, buy });
 }
@@ -824,5 +844,58 @@ describe('hattın kendi etkisi (Tur 80)', () => {
     const [coffeeLine, wheatLine] = p.root.holding!.lines!;
     assert.equal(coffeeLine!.last!.units, lineCapacity(2));
     assert.equal(wheatLine!.last!.units, outlook.units);
+  });
+
+  test('aynı varışa aynı malı taşıyan ve malı henüz varmamış hat tahminde: varışın fiyatı onun yüküyle (Codex #110)', () => {
+    const t = threeCities();
+    const to = t.root.meta.seed;
+    const [a, b] = t.origins.map((city) => city.meta.seed);
+    assert.equal(t.origins.length, 2);
+    const open = (from: number) => t.engine.dispatch({ type: 'OPEN_LINE', from, to, goodId: 'coffee_bean', trucks: 2, buy: true });
+    const alone = lineQuote(t.root, b!, to, 'coffee_bean', 2, true).outlook!;
+    assert.ok(open(a!).ok);
+    // İlk hattın malı yolda, varışın pazarında yok: tahmin onu sabah planının yüküyle sayıyor.
+    const outlook = lineQuote(t.root, b!, to, 'coffee_bean', 2, true).outlook!;
+    const expected = spotOutlook(t.root, 'coffee_bean', { produced: lineCapacity(2) * 2 }, outlook.days);
+    assert.ok(Math.abs(outlook.destinationSpot - expected) < 1e-9, `${outlook.destinationSpot} · ${expected}`);
+    assert.ok(outlook.destinationSpot < alone.destinationSpot, `${outlook.destinationSpot} < ${alone.destinationSpot}`);
+    // 30 gün sonra varışın fiyatı tahmine, ilk hattı saymayan tahminden yakın.
+    assert.ok(open(b!).ok);
+    for (let day = 0; day < outlook.days; day++) t.engine.runDay();
+    const actual = t.root.market.spot['coffee_bean']!;
+    assert.ok(Math.abs(outlook.destinationSpot / actual - 1) < Math.abs(alone.destinationSpot / actual - 1), `${outlook.destinationSpot} · ${alone.destinationSpot} · ${actual}`);
+    assert.ok(Math.abs(outlook.destinationSpot / actual - 1) < 0.03, `${outlook.destinationSpot} · ${actual}`);
+  });
+
+  test('ilk seferi yoldaki rakip hattı da tahminde: çıkışta alımı, varışta satışı (Codex #110)', () => {
+    const p = coffeeRoute(21, false);
+    const [from, to] = route(p);
+    const before = lineQuote(p.root, from, to, 'coffee_bean', 2, true).outlook!;
+    const companyId = Object.keys(p.root.companies).find((id) => id !== p.root.playerCompanyId)!;
+    const day = p.root.time.day;
+    (p.root.holding!.rivalLines ??= []).push({ id: 'rival-line-1', from, to, goodId: 'coffee_bean', companyId, trucks: 2, transitDays: transitDaysBetween(from, to), openedDay: day, reviewDay: day + 60 });
+    const after = lineQuote(p.root, from, to, 'coffee_bean', 2, true).outlook!;
+    const expected = spotOutlook(p.root, 'coffee_bean', { produced: lineCapacity(2) * 2 }, after.days);
+    assert.ok(Math.abs(after.destinationSpot - expected) < 1e-9, `${after.destinationSpot} · ${expected}`);
+    assert.ok(after.destinationSpot < before.destinationSpot);
+    assert.ok(after.originSpot > before.originSpot, `${after.originSpot} > ${before.originSpot}`);
+  });
+
+  test('eski kayıtta eksik pazar referansı: tahmin günün sonundaki dolgunun değeriyle (Codex #110)', () => {
+    const p = coffeeRoute(21, false);
+    const [from, to] = route(p);
+    // Kahve bu şehirlerin pazarına sonradan eklenmiş gibi: referans hacmi yok, ilk fiyat adımı dolduracak.
+    delete p.root.market.reference['coffee_bean'];
+    delete p.away.market.reference['coffee_bean'];
+    const legacy = lineQuote(p.root, from, to, 'coffee_bean', 2, true).outlook!;
+    // Dolgunun yazacağı değer (`backfillMarket`): şehrin bölgelerinden.
+    for (const city of [p.root, p.away]) city.market.reference['coffee_bean'] = referenceVolumes(city.districts)['coffee_bean'] ?? 0;
+    const filled = lineQuote(p.root, from, to, 'coffee_bean', 2, true).outlook!;
+    assert.ok(Math.abs(legacy.destinationSpot - filled.destinationSpot) < 1e-9, `${legacy.destinationSpot} · ${filled.destinationSpot}`);
+    assert.ok(Math.abs(legacy.originSpot - filled.originSpot) < 1e-9, `${legacy.originSpot} · ${filled.originSpot}`);
+    // Dolgu bir günde de aynı: günün sonundaki fiyat adımı aynı değeri yazıyor.
+    delete p.root.market.reference['coffee_bean'];
+    runSpotPriceTick(p.root);
+    assert.equal(p.root.market.reference['coffee_bean'], referenceVolumes(p.root.districts)['coffee_bean'] ?? 0);
   });
 });
