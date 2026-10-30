@@ -8,6 +8,7 @@ import { useReducedMotion, useSettings } from './settings';
 import { MONEY_TAGS, momentsBetween, moneyTagsOf, snapshotOf } from './moments';
 import type { Moment, MomentSnapshot, MoneyTag } from './moments';
 import { t } from './i18n';
+import './i18n/playTr';
 
 /**
  * Önemli anlar (Tur 63), arayüz: para akışı ve büyük anların bandı.

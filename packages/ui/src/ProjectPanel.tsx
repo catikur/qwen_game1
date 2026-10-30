@@ -15,6 +15,7 @@ import type { GameState, ProjectState } from '@capital/core';
 import { CeoPortrait } from './CeoPortrait';
 import { useGame, useGameState } from './useGame';
 import { t } from './i18n';
+import './i18n/playTr';
 
 /**
  * Şehir projesi paneli (Tur 37d).

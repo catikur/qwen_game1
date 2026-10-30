@@ -6,6 +6,7 @@ import { bubbleText, bubblesEnabled, formatMoney } from '@capital/core';
 import type { BubbleState } from '@capital/core';
 import { useGame, useGameState } from './useGame';
 import { t } from './i18n';
+import './i18n/playTr';
 
 /**
  * Fırsat balonu (Tur 37c).

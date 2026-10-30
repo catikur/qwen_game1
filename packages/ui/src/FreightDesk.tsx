@@ -5,6 +5,7 @@ import { FREIGHT, FREIGHT_SHARE, fleetUsed, formatMoney, freightPenalty, freight
 import type { FreightDeal } from '@capital/core';
 import { t } from './i18n';
 import './i18n/tradeTr';
+import './i18n/playTr';
 import { useGame, useGameState } from './useGame';
 
 /**

@@ -1,5 +1,6 @@
 import { DISTRICT_ARCHETYPES, DISTRICT_FABRIC, STRUCTURE_BY_ID, rootStructureOf } from '@capital/content';
 import { tc } from '../i18n';
+import '../i18n/gameTr';
 import { createRng, nextFloat } from '../rng';
 import { pushNews } from '../news';
 import { isDistrictOpen } from './city';

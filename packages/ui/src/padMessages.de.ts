@@ -24,7 +24,7 @@ export const padDe: Record<PadMessageKey, string> = {
   'hud.pad.what.zoom': 'Heraus-, hineinzoomen',
   'hud.pad.what.pick': 'Grundstück in der Mitte wählen; Schaltfläche drücken',
   'hud.pad.what.back': 'Zurück: Fenster schließen, zur Karte, Auswahl aufheben',
-  'hud.pad.what.move': 'Zwischen Schaltflächen wechseln; Schieberegler verstellen',
+  'hud.pad.what.move': 'Zwischen Schaltflächen wechseln; Schieberegler, Listen und Zahlenfelder verstellen',
   'hud.pad.what.panels': 'Vorheriges, nächstes Fenster',
   'hud.pad.what.pause': 'Anhalten, fortsetzen',
   'hud.pad.what.speed': 'Tempo',

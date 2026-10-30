@@ -4,7 +4,7 @@ import { tc } from '../i18n';
 import { pushNews } from '../news';
 import { rivalProfile } from '../profiles';
 import { fleetUsed, freightTerminals } from './freight';
-import { SURPLUS_HAIRCUT, exportableSurplus, ownGoodFlow } from './supply';
+import { SURPLUS_HAIRCUT, exportableSurplus, ownGoodFlow, spotOutlook } from './supply';
 import type { BuildingInstance, CityTrade, CommandResult, GameState, RivalLine, TradeLine } from '../types';
 
 /**
@@ -270,6 +270,166 @@ export interface LineQuote {
   freeTrucks: number;
   /** Birim hesabı (Tur 78): alış, satış, nakliye, pazara ve ihtiyaca birim kâr. */
   margins?: LineMargins;
+  /** Hattın kendi etkisi (Tur 80): bu kamyonlarla fiyatlar ve birim kâr, pazar oturunca. */
+  outlook?: LineOutlook;
+}
+
+/**
+ * Hattın kendi etkisinin tahmini (Tur 80). Bugünkü fark dar pazarda bir
+ * tuzak: dört kamyon silikonun alışını 30 günde %40 yükseltip varışını %39
+ * düşürüyordu (Tur 79). Tahmin iki şehrin son günkü akışına hattın yükünü
+ * ekleyip spot fiyat adımının formülünü (`spotOutlook`) `days` gün
+ * işletiyor. Olaylar bugünkü gibi; rakibin kopyası (aynı gün kadar sonra)
+ * sayılmıyor.
+ */
+export interface LineOutlook {
+  days: number;
+  /** Çıkışta ve varışta pazarın fiyatı `days` gün sonra. */
+  originSpot: number;
+  destinationSpot: number;
+  /** Hattın birim kârı o gün: varışta satış eksi yükün bedeli (fazla ×%85, alınan tam) ve nakliye. */
+  margin: number;
+  /** Günlük kârı o gün (birim kâr × yük). */
+  daily: number;
+  /**
+   * Tahminin günlük yükü: varışın kasasının yettiği kadar (Codex #110).
+   * Sıfırsa kasa kamyonların bedeline yetmiyor, hat yola çıkmaz.
+   */
+  units: number;
+  /** Varışın kasası yükü kısıyor. */
+  cashShort?: true;
+  /** Günlük kârı en yüksek kamyon (boştakiyle sınırlı) ve o günlük kâr; hiçbiri kârda değilse 0. */
+  bestTrucks: number;
+  bestDaily: number;
+}
+
+/** Tahminin ufku: kârlı yolu rakibin kopyaladığı gün (pazar o zamana oturuyor: fark her gün %15 kapanıyor). */
+const OUTLOOK_DAYS = TRADE_RIVAL.entryDays;
+
+/** Tahminin iki şehirdeki taban akışına eklenen (Codex #110): yarınki planla dünkü pazar arasındaki fark. */
+interface PlannedFlows {
+  /** Çıkışın tüketimine (hatlara yüklenen) ve ihracat baskısına (pazardan alınan). */
+  originConsumed: number;
+  originOut: number;
+  /** Varışın arzına (varan mal, rakibin satışı). */
+  destinationProduced: number;
+}
+
+/**
+ * Açık hatların yarınki akışı, dünkü pazara göre (Codex #110). Pazarın
+ * kaydı dünün: çıkışta hatların dünkü yükü tüketimde, varışta yalnız dün
+ * varan mal arzda. Tahmin yarının planından başlıyor:
+ * - aynı malı aynı şehirden taşıyan hat: yarınki yükü ile dünkü yükü
+ *   arasındaki fark tüketime, pazardan alacağı ihracat baskısına
+ *   (akışı kayıtta kalmıyor);
+ * - aynı malı aynı şehre taşıyan hat: yarınki yükü ile dün varan arasındaki
+ *   fark arza (yolu bitmemiş hattın dün varanı yok);
+ * - rakip hattı: sabahki kararıyla ve kasasıyla (Codex #110); ilk seferi
+ *   yoldaysa da yükü iki şehirde (henüz alıp satmıyor, ufkun içinde
+ *   başlıyor).
+ * Tahminin ufku (30 gün) yolu (3–6 gün) aşıyor: bu akışlar o güne pazarda.
+ */
+function plannedFlows(root: GameState, plan: PlannedLoad[], source: GameState, target: GameState, goodId: string): PlannedFlows {
+  const flows: PlannedFlows = { originConsumed: 0, originOut: 0, destinationProduced: 0 };
+  const arrived = target.trade?.arrived ?? {};
+  for (const { line, own, bought } of plan) {
+    if (line.goodId !== goodId) continue;
+    if (line.from === source.meta.seed) {
+      flows.originConsumed += own + bought - (line.last?.units ?? 0);
+      flows.originOut += bought;
+    }
+    if (line.to === target.meta.seed) flows.destinationProduced += own + bought - (arrived[line.id] ?? 0);
+  }
+  // Rakip hatları sabahki kararlarıyla (kamyonunu gözden geçirmesi dahil) ve
+  // kasalarıyla: yükünü karşılayabilen yolu sürüyor, ilk seferi yoldaysa da
+  // ufkun içinde başlıyor; karşılayamayan yüklemiyor. Fark dünkü yükten.
+  const budget = new Map<string, number>();
+  for (const rival of rivalLines(root)) {
+    const decision = rivalDecision(root, rival, root.time.day);
+    let units = 0;
+    if (decision && decision.trucks > 0) {
+      const wallet = rivalWallet(rival);
+      const cash = budget.get(wallet) ?? decision.company.cash;
+      if (cash >= decision.cost) {
+        budget.set(wallet, cash - decision.cost);
+        units = decision.units;
+      }
+    }
+    if (rival.goodId !== goodId) continue;
+    const change = units - (rival.last?.units ?? 0);
+    if (rival.from === source.meta.seed) {
+      flows.originOut += units;
+      flows.originConsumed += change;
+    }
+    if (rival.to === target.meta.seed) flows.destinationProduced += change;
+  }
+  return flows;
+}
+
+/** `trucks` kamyonluk hattın `OUTLOOK_DAYS` sonraki fiyatları ve birim kârı; yük varışın kasasının yettiği kadar. */
+function outlookFor(
+  source: GameState,
+  target: GameState,
+  goodId: string,
+  trucks: number,
+  buy: boolean,
+  surplus: number,
+  budget: number,
+  flows: PlannedFlows,
+): Omit<LineOutlook, 'bestTrucks' | 'bestDaily'> | undefined {
+  const capacity = lineCapacity(trucks);
+  const fromSurplus = Math.min(capacity, surplus);
+  const fromMarket = buy ? capacity - fromSurplus : 0;
+  // Yüksüz hat (fazla yok, pazardan almıyor) fiyatı oynatmıyor; formun öbür satırları söylüyor.
+  if (fromSurplus + fromMarket <= 0) return undefined;
+  const transitDays = transitDaysBetween(source.meta.seed, target.meta.seed);
+  const fixed = lineDailyCost({ trucks, transitDays });
+  const good = GOOD_BY_ID[goodId]!;
+  const unitPrice = (source.market.spot[goodId] ?? good.basePrice) * SURPLUS_HAIRCUT;
+  const { own, bought, cashShort } = fundLoad(budget, fixed, fromSurplus, fromMarket, unitPrice, buy ? marketBuyPrice(source, goodId) : 0);
+  const units = own + bought;
+  const short = cashShort ? { cashShort: true as const } : {};
+  const originSpot = spotOutlook(source, goodId, { consumed: units + flows.originConsumed, out: bought + flows.originOut }, OUTLOOK_DAYS);
+  const destinationSpot = spotOutlook(target, goodId, { produced: units + flows.destinationProduced }, OUTLOOK_DAYS);
+  // Kamyonların bedeline yetmeyen kasa: hat yola çıkmıyor, kâr da zarar da yok.
+  if (units <= 0) return { days: OUTLOOK_DAYS, originSpot, destinationSpot, margin: 0, daily: 0, units: 0, ...short };
+  const cost = own * originSpot * SURPLUS_HAIRCUT + bought * originSpot + fixed;
+  const margin = destinationSpot * TRADE_LINE.saleShare - cost / units;
+  return { days: OUTLOOK_DAYS, originSpot, destinationSpot, margin, daily: margin * units, units, ...short };
+}
+
+/** Tahmin ve günlük kârı en yüksek kamyon: birim kâr kamyonla azalıyor (varış doyuyor, çıkış pahalanıyor, boş kamyon). */
+function lineOutlook(
+  root: GameState,
+  source: GameState,
+  target: GameState,
+  goodId: string,
+  trucks: number,
+  buy: boolean,
+  free: number,
+): LineOutlook | undefined {
+  // Yeni hat yarın sabah listenin sonunda (Codex #110): açık hatlar kasadan
+  // ve fazladan paylarını sabah planının kendisiyle, bugünkü kasa ve
+  // fiyatlarla alıyor. Kasası dar hat fazlanın bir kısmını bırakıyor: yeni
+  // hat onu fazla fiyatıyla yüklüyor.
+  const plan = planTradeDay(root);
+  const budget = plan.budget.get(target.meta.seed) ?? target.companies[target.playerCompanyId]?.cash ?? 0;
+  const surplus = plan.surplus.get(`${source.meta.seed}|${goodId}`) ?? exportableSurplus(source, goodId);
+  const flows = plannedFlows(root, plan.loads, source, target, goodId);
+  const outlook = outlookFor(source, target, goodId, trucks, buy, surplus, budget, flows);
+  if (!outlook) return undefined;
+  let bestTrucks = 0;
+  let bestDaily = 0;
+  for (let count = 1; count <= free; count++) {
+    const daily = outlookFor(source, target, goodId, count, buy, surplus, budget, flows)?.daily ?? 0;
+    // Birim kâr eksiye düşünce fazlası da düşüyor: aramayı bitir.
+    if (daily <= 0) break;
+    if (daily > bestDaily) {
+      bestDaily = daily;
+      bestTrucks = count;
+    }
+  }
+  return { ...outlook, bestTrucks, bestDaily };
 }
 
 /**
@@ -302,6 +462,9 @@ export function lineQuote(root: GameState, from: number, to: number, goodId: str
   const flow = target && good ? ownGoodFlow(target, goodId) : { produced: 0, consumed: 0 };
   const need = Math.max(0, flow.consumed - flow.produced - delivered);
   const margins = lineMargins(root, from, to, goodId);
+  const outlook = source && target && good && from !== to && trucks >= 1
+    ? lineOutlook(root, source, target, goodId, Math.round(trucks), buy, free)
+    : undefined;
   const base = {
     transitDays,
     capacity: lineCapacity(trucks),
@@ -313,6 +476,7 @@ export function lineQuote(root: GameState, from: number, to: number, goodId: str
     destinationSpot: target && good ? (target.market.spot[goodId] ?? good.basePrice) : 0,
     freeTrucks: free,
     ...(margins ? { margins } : {}),
+    ...(outlook ? { outlook } : {}),
   };
   const refuse = (reason: string): LineQuote => ({ ok: false, reason, ...base });
 
@@ -436,6 +600,81 @@ function addMarketFlow(city: GameState, field: 'marketOut' | 'marketIn', goodId:
 }
 
 /**
+ * Varış şehrinin kasasının yettiği yük: önce kamyonların bedeli, sonra ucuz
+ * olan fazla, sonra pazardan alınan. Kamyonun bedeline yetmeyen hat yola
+ * çıkmıyor, bedel de ödenmiyor. Sabah planı ve formun tahmini aynı kuralla
+ * (Codex #110).
+ */
+function fundLoad(
+  cash: number,
+  fixed: number,
+  own: number,
+  bought: number,
+  unitPrice: number,
+  buyPrice: number,
+): { own: number; bought: number; freight: number; cashShort: boolean } {
+  if (cash < fixed) return { own: 0, bought: 0, freight: 0, cashShort: true };
+  if (own * unitPrice + bought * buyPrice <= cash - fixed) return { own, bought, freight: fixed, cashShort: false };
+  let left = cash - fixed;
+  const funded = Math.min(own, Math.max(0, Math.floor(left / unitPrice)));
+  left -= funded * unitPrice;
+  return { own: funded, bought: buyPrice > 0 ? Math.min(bought, Math.max(0, Math.floor(left / buyPrice))) : 0, freight: fixed, cashShort: true };
+}
+
+/** Sabah planında bir hattın bugünkü yükü ve bedelleri. */
+interface PlannedLoad {
+  line: TradeLine;
+  source: GameState;
+  target: GameState;
+  /** Fazladan ve pazardan yüklenen (birim). */
+  own: number;
+  bought: number;
+  /** Fazlanın birim bedeli (spot × %85). */
+  unitPrice: number;
+  freight: number;
+  goods: number;
+  short?: 'surplus' | 'cash';
+}
+
+/**
+ * Sabah planı, yan etkisiz (Codex #110). Hatlar sırayla: aynı malı aynı
+ * şehirden taşıyanlar fazlayı, aynı şehre gidenler kasayı paylaşıyor; kasa
+ * önce ucuz olana, fazlaya yetiyor (`fundLoad`). `budget` her varış
+ * şehrinin, `surplus` her çıkış şehri ve malın plandan sonra kalan kasası
+ * ve fazlası: formun tahmini yeni hattın (listede sonda) payını oradan
+ * okuyor. Plan bozuk hattı önce kapatıyor
+ * (`closeBrokenLines`); tahmin onu saymıyor.
+ */
+function planTradeDay(root: GameState): { loads: PlannedLoad[]; budget: Map<number, number>; surplus: Map<string, number> } {
+  const surplus = new Map<string, number>();
+  const budget = new Map<number, number>();
+  const loads: PlannedLoad[] = [];
+  for (const line of root.holding?.lines ?? []) {
+    const source = cityBySeed(root, line.from);
+    const target = cityBySeed(root, line.to);
+    if (!terminalAlive(source, line.fromTerminalId) || !terminalAlive(target, line.toTerminalId)) continue;
+    const good = GOOD_BY_ID[line.goodId]!;
+    const key = `${line.from}|${line.goodId}`;
+    const available = surplus.get(key) ?? exportableSurplus(source, line.goodId);
+    const cash = budget.get(line.to) ?? target.companies[target.playerCompanyId]?.cash ?? 0;
+    const unitPrice = (source.market.spot[line.goodId] ?? good.basePrice) * SURPLUS_HAIRCUT;
+    const buyPrice = line.buy ? marketBuyPrice(source, line.goodId) : 0;
+    const fixed = lineDailyCost(line);
+    const capacity = lineCapacity(line.trucks);
+
+    const fromSurplus = Math.min(capacity, available);
+    const fromMarket = line.buy ? capacity - fromSurplus : 0;
+    const { own, bought, freight, cashShort } = fundLoad(cash, fixed, fromSurplus, fromMarket, unitPrice, buyPrice);
+    const short = cashShort ? 'cash' : fromSurplus + fromMarket < capacity ? 'surplus' : undefined;
+    const goods = own * unitPrice + bought * buyPrice;
+    surplus.set(key, available - own);
+    budget.set(line.to, cash - freight - goods);
+    loads.push({ line, source, target, own, bought, unitPrice, freight, goods, ...(short ? { short } : {}) });
+  }
+  return { loads, budget, surplus };
+}
+
+/**
  * Hattın günü, şehirler yaşamadan önce (motorun `runDay`'i). Her hat için:
  * çıkış şehrinin bugünkü fazlası (aynı malı taşıyan öbür hatlardan kalanı),
  * pazardan alan hatta eksiği çıkış pazarından (Tur 78), kamyonların
@@ -462,42 +701,8 @@ export function prepareTradeDay(root: GameState): void {
   closeBrokenLines(root);
   syncLineTrucks(root);
 
-  const surplus = new Map<string, number>();
-  const budget = new Map<number, number>();
-  for (const line of holding.lines ?? []) {
-    const source = cityBySeed(root, line.from)!;
-    const target = cityBySeed(root, line.to)!;
-    const good = GOOD_BY_ID[line.goodId]!;
-    const key = `${line.from}|${line.goodId}`;
-    const available = surplus.get(key) ?? exportableSurplus(source, line.goodId);
-    const cash = budget.get(line.to) ?? target.companies[target.playerCompanyId]?.cash ?? 0;
-    const unitPrice = (source.market.spot[line.goodId] ?? good.basePrice) * SURPLUS_HAIRCUT;
-    const buyPrice = line.buy ? marketBuyPrice(source, line.goodId) : 0;
-    const fixed = lineDailyCost(line);
-    const capacity = lineCapacity(line.trucks);
-
-    let own = Math.min(capacity, available);
-    let bought = line.buy ? capacity - own : 0;
-    let short: 'surplus' | 'cash' | undefined = own + bought < capacity ? 'surplus' : undefined;
-    let freight = fixed;
-    if (cash < fixed) {
-      // Kamyonun bedelini ödeyemeyen hat bugün yola çıkmıyor.
-      own = 0;
-      bought = 0;
-      freight = 0;
-      short = 'cash';
-    } else if (own * unitPrice + bought * buyPrice > cash - fixed) {
-      let left = cash - fixed;
-      own = Math.min(own, Math.max(0, Math.floor(left / unitPrice)));
-      left -= own * unitPrice;
-      bought = buyPrice > 0 ? Math.min(bought, Math.max(0, Math.floor(left / buyPrice))) : 0;
-      short = 'cash';
-    }
+  for (const { line, source, target, own, bought, unitPrice, freight, goods, short } of planTradeDay(root).loads) {
     const units = own + bought;
-    const goods = own * unitPrice + bought * buyPrice;
-    surplus.set(key, available - own);
-    budget.set(line.to, cash - freight - goods);
-
     if (freight + goods > 0) {
       const trade = (target.trade ??= { inbound: [] });
       (trade.payments ??= []).push({ lineId: line.id, terminalId: line.toTerminalId, amount: freight + goods });
@@ -613,6 +818,36 @@ function copycat(target: GameState, margins: LineMargins): string | undefined {
  * giriyor. Kâr rakibin varış şehrindeki defterine. Rakip ya da şehri
  * yoksa hat sessizce düşüyor.
  */
+/** Rakibin kasası: varış şehrindeki şirketi; aynı şirketin yolları onu paylaşıyor. */
+function rivalWallet(rival: RivalLine): string {
+  return `${rival.to}:${rival.companyId}`;
+}
+
+/**
+ * Rakip hattının bu sabahki kararı, yan etkisiz: iki şehir ve şirket yerinde
+ * mi, kamyonunu gözden geçiriyor mu, yükü ve bedeli. Günün kendisi
+ * (`runRivalLines`) ve formun tahmini (Codex #110) aynı karardan.
+ */
+function rivalDecision(root: GameState, rival: RivalLine, day: number) {
+  const source = cityBySeed(root, rival.from);
+  const target = cityBySeed(root, rival.to);
+  const company = target?.companies[rival.companyId];
+  const margins = lineMargins(root, rival.from, rival.to, rival.goodId);
+  if (!source || !target || source.gameOver || target.gameOver || !company || !margins) return undefined;
+  let trucks = rival.trucks;
+  let reviewDay = rival.reviewDay;
+  // Rakip rekabeti kapalı şehirde rakip hamle yapmıyor (bina öngörüsünün
+  // kopyaları da onu kapatıyor): kamyonunu gözden geçirmiyor, yükü sürüyor (Codex #108).
+  if (target.flags.npcCompetition && day >= reviewDay) {
+    if (rivalWorthy(margins)) trucks = Math.min(TRADE_RIVAL.maxTrucks, trucks + 1);
+    else if (margins.market < 0) trucks -= 1;
+    reviewDay = day + TRADE_RIVAL.reviewDays;
+  }
+  const units = lineCapacity(trucks);
+  const cost = units * margins.buyPrice + lineDailyCost({ trucks, transitDays: rival.transitDays });
+  return { source, target, company, margins, trucks, reviewDay, units, cost };
+}
+
 function runRivalLines(root: GameState): void {
   const holding = root.holding!;
   const day = root.time.day;
@@ -648,27 +883,18 @@ function runRivalLines(root: GameState): void {
   // birincinin bedelini düşülmüş nakitle görüyor (Codex #108).
   const budget = new Map<string, number>();
   for (const rival of holding.rivalLines ?? []) {
-    const source = cityBySeed(root, rival.from);
-    const target = cityBySeed(root, rival.to);
-    const company = target?.companies[rival.companyId];
-    const margins = lineMargins(root, rival.from, rival.to, rival.goodId);
-    if (!source || !target || source.gameOver || target.gameOver || !company || !margins) continue;
-    // Rakip rekabeti kapalı şehirde rakip hamle yapmıyor (bina öngörüsünün
-    // kopyaları da onu kapatıyor): kamyonunu gözden geçirmiyor, yükü sürüyor (Codex #108).
-    if (target.flags.npcCompetition && day >= rival.reviewDay) {
-      if (rivalWorthy(margins)) rival.trucks = Math.min(TRADE_RIVAL.maxTrucks, rival.trucks + 1);
-      else if (margins.market < 0) rival.trucks -= 1;
-      rival.reviewDay = day + TRADE_RIVAL.reviewDays;
-    }
+    const decision = rivalDecision(root, rival, day);
+    if (!decision) continue;
+    const { source, target, company, margins, units, cost } = decision;
+    rival.trucks = decision.trucks;
+    rival.reviewDay = decision.reviewDay;
     if (rival.trucks <= 0) {
       const vars = { name: company.name, from: cityName(source), to: cityName(target), good: goodName(rival.goodId) };
       pushNews(root, 'good', tc('core.trade.rivalCloseTitle', vars), tc('core.trade.rivalCloseBody', vars));
       continue;
     }
     kept.push(rival);
-    const units = lineCapacity(rival.trucks);
-    const cost = units * margins.buyPrice + lineDailyCost(rival);
-    const wallet = `${rival.to}:${rival.companyId}`;
+    const wallet = rivalWallet(rival);
     const cash = budget.get(wallet) ?? company.cash;
     // İlk sefer yolda; nakdi yükün bedeline yetmeyen rakip bugün yüklemiyor.
     if (day < rival.openedDay + rival.transitDays || cash < cost) {

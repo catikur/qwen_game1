@@ -5,6 +5,7 @@ import { t } from './i18n';
 import type { MessageKey } from './i18n';
 import { starRow } from './stars';
 import { fileSlug } from './fileName';
+import './i18n/playTr';
 
 /**
  * Şehir kartı (Tur 64): koşunun özeti tek bir görselde.

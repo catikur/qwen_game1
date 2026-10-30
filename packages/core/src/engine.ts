@@ -38,6 +38,7 @@ import {
   switchCity,
 } from './holding';
 import { closeLine, openLine, prepareTradeDay, setLineBuy, setLineTrucks, settleTradeFallbacks } from './systems/trade';
+import { goodFlows } from './systems/supply';
 import { simulateCityDay } from './day';
 import { tc } from './i18n';
 import './i18n/gameTr';
@@ -59,6 +60,20 @@ const MILESTONES = [500_000, 1_000_000, 5_000_000, 25_000_000];
 function adoptScenarioPack(state: GameState): void {
   const run = state.scenario;
   if (run?.pack) adoptPack(run.pack, run.id);
+}
+
+/**
+ * Eski kayıtta (1.5 öncesi, şema aynı) binaların akış kaydı yok
+ * (`market.buildingFlows`, Codex #110): kayıt açılınca her şehirde bugünkü
+ * binalardan alınıyor. Yoksa ilk fiyat adımına dek kurulan ya da yıkılan
+ * bina hat formunun tahminine girmezdi. Kayıttan önce aynı gün değişen
+ * bina bilinmiyor: kayıttaki binalar dünkü pazarın binaları sayılıyor.
+ * Yeni şehir kaydıyla doğuyor (`makeMarket`).
+ */
+function backfillBuildingFlows(state: GameState): void {
+  for (const city of [state, ...(state.holding?.dormant ?? []).map((entry) => entry.state)]) {
+    city.market.buildingFlows ??= goodFlows(city);
+  }
 }
 
 /**
@@ -95,6 +110,7 @@ export class GameEngine {
 
   constructor(state: GameState) {
     adoptScenarioPack(state);
+    backfillBuildingFlows(state);
     this.state = state;
     // Lig koşusu kayıttan açılınca net değer olduğu gibi kalır (replaceState'teki not).
     if (!state.league) recomputeNetWorth(this.state);
@@ -119,6 +135,7 @@ export class GameEngine {
   /** Motoru yeni bir state ile değiştirir (save yükleme). */
   replaceState(state: GameState): void {
     adoptScenarioPack(state);
+    backfillBuildingFlows(state);
     this.state = state;
     this.reachedMilestones.clear();
     this.leadership = null;

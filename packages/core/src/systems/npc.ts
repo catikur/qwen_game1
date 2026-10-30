@@ -10,6 +10,7 @@ import { build, buyTile, buyoutTile, demolish, sellTile } from '../actions';
 import { chainCards } from '../chain';
 import { competitionCards } from '../competition';
 import { tc } from '../i18n';
+import '../i18n/gameTr';
 import { formatMoney } from '../selectors';
 import { pushNews, takeNews } from '../news';
 import { rivalProfiles } from '../profiles';

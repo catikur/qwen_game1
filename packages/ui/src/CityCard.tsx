@@ -10,6 +10,7 @@ import type { CityCardFacts } from './cardFacts';
 import { CARD, renderCityCard } from './cardDraw';
 import { getSettings } from './settings';
 import { useDialogFocus } from './dialog';
+import './i18n/playTr';
 
 /**
  * Şehir kartı (Tur 64): zafer, senaryo ve lig sonucu, oyun sonu ekranlarında

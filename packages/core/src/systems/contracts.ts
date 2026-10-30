@@ -1,6 +1,7 @@
 import { BUILDING_BY_ID, CATEGORIES, CONSUMER_CATEGORIES, formatDecimal } from '@capital/content';
 import type { CategoryId } from '@capital/content';
 import { tc } from '../i18n';
+import '../i18n/gameTr';
 import { nextFloat, nextInt, pick } from '../rng';
 import { pushNews } from '../news';
 import { isDistrictOpen } from './city';

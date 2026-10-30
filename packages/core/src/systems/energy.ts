@@ -2,6 +2,7 @@ import { BUILDING_BY_ID, ENERGY, ERA_BY_ID, EVENT_BY_ID } from '@capital/content
 import type { BuildingDef } from '@capital/content';
 import { formatMoney } from '../format';
 import { tc } from '../i18n';
+import '../i18n/gameTr';
 import { pushNews } from '../news';
 import type { BuildingInstance, CommandResult, EnergyState, FuelLock, GameState } from '../types';
 import { activeCrisis } from './economy';

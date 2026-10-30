@@ -8,6 +8,7 @@ import {
   getCeoModifiers,
 } from '@capital/content';
 import { tc } from '../i18n';
+import '../i18n/gameTr';
 import { pushNews } from '../news';
 import { ownerFraction, portfolioValue } from './equity';
 import { staffedJobs } from './labor';

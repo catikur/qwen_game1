@@ -25,6 +25,30 @@ export function changelogNotes(entry: ChangelogEntry, locale: string): string[] 
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.5.0',
+    date: '2026-10-30',
+    notes: {
+      tr: [
+        'Hat formu artık hattın kendi etkisini tahmin ediyor: seçtiğin kamyonlarla 30 gün sonra iki şehrin fiyatı, birim ve günlük kâr. Dar pazarda kâr eksiye düşüyorsa kırmızıyla söylüyor, en kârlı kamyon sayısını öneriyor.',
+        'Yardımda şehirler arası hatların adımı: terminal, fiyatlar, kâr, dar pazar ve rakipler. Holding\'in adımı yeni şehrin türünü anlatıyor.',
+        'Kumandada sayı kutuları sağ-solla değişiyor: hattın kamyon sayısı, hisse adedi ve ihale teklifi ekran klavyesi olmadan da ayarlanıyor.',
+        'Açılış daha hafif: kurulum ekranı oyunun panellerinin metinlerini artık indirmiyor, onlar oyunla geliyor.',
+      ],
+      en: [
+        'The line form now estimates the line\'s own effect: with the trucks you pick, both cities\' prices, the margin per unit and the daily profit in 30 days. If a thin market pushes the margin below zero, it warns in red and suggests the most profitable number of trucks.',
+        'The help has a step on lines between cities: terminals, prices, profit, thin markets and rivals. The holding step explains the new city\'s type.',
+        'On a gamepad, number boxes change with left and right: a line\'s trucks, the share amount and an auction bid can be set without the on-screen keyboard.',
+        'A lighter start: the setup screen no longer downloads the texts of the game\'s panels; they come with the game.',
+      ],
+      de: [
+        'Das Linienformular schätzt jetzt die eigene Wirkung der Linie: mit den gewählten Lkw die Preise beider Städte, die Spanne je Einheit und den Tagesgewinn in 30 Tagen. Drückt ein kleiner Markt die Spanne unter null, warnt es rot und schlägt die rentabelste Zahl an Lkw vor.',
+        'Die Hilfe hat einen Schritt zu Linien zwischen Städten: Terminals, Preise, Gewinn, kleine Märkte und Rivalen. Der Holding-Schritt erklärt den Typ der neuen Stadt.',
+        'Am Controller lassen sich Zahlenfelder mit Links und Rechts verstellen: die Lkw einer Linie, die Aktienzahl und ein Auktionsgebot, ohne Bildschirmtastatur.',
+        'Ein leichterer Start: Der Startbildschirm lädt die Texte der Spielfenster nicht mehr, sie kommen mit dem Spiel.',
+      ],
+    },
+  },
+  {
     version: '1.4.0',
     date: '2026-10-30',
     notes: {

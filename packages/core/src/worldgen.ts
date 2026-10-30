@@ -31,7 +31,7 @@ import { rivalRoster, scaleSpotPrices } from './systems/cityType';
 import { SCHEMA_VERSION } from './types';
 import type { CompanyState, DistrictState, GameState, MarketState, Tile, TileKind } from './types';
 
-export const GAME_VERSION = '1.4.0';
+export const GAME_VERSION = '1.5.0';
 
 /**
  * Bir bölgenin kenar uzunluğu (kare).
@@ -151,6 +151,9 @@ function makeMarket(districts: DistrictState[], cityType: CityTypeId | undefined
     produced: zeroByGood(),
     consumed: zeroByGood(),
     reference: referenceVolumes(districts),
+    // Pazarın kaydı boş, binalardan gelen kısmı da (Codex #110): ilk günden
+    // önce kurulan bina hat formunun tahminine fark olarak giriyor.
+    buildingFlows: { produced: {}, consumed: {} },
   };
 }
 

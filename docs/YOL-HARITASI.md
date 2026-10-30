@@ -1,6 +1,6 @@
 # Capital — Yol Haritası
 
-> Tur 47'de yazıldı, her turda güncelleniyor (son: Tur 75). Biten işin ayrıntısı
+> Tur 47'de yazıldı, her turda güncelleniyor (son: Tur 80). Biten işin ayrıntısı
 > `docs/DURUM.md`'de; bu dosya önümüzdeki işin sırasını ve gerekçesini
 > tutuyor.
 
@@ -41,8 +41,8 @@ Bir bağlantıyla açılan, istenirse kurulan ve çevrimdışı da oynanan bir
 | **4 · Şehrin hissi** | Oynaması keyifli | 62–65 | Mevsim ve hava görünüyor, önemli anlar hissediliyor | **bitti** (Tur 65) |
 | **5 · Platform ve topluluk** | Oyunun evi büyüsün | 66–70 | Masaüstü sürümü ve paylaşılabilir senaryolar var | **bitti** (Tur 70) |
 | **6 · Yayına hazırlık** | Steam'de 1.0 | 71–75 | Masaüstü bir uygulama gibi davranıyor, oyun kumandayla oynanıyor, Workshop ve skor tabloları Steam'de, 1.0 çıktı | **bitti** (Tur 75) |
-| **7 · İkinci şehir ve ticaret** | Şehirler birbirine bağlansın | 76–80 (taslak) | İkinci şehrin kendi kimliği var, şehirler arasında mal akıyor, ticaret bir yol | **sıradaki** (taslak turlar Tur 75'te) |
-| **8 · Lite'ı güncelleme** | Lite ana oyunun çizgisine gelsin | 81–85 (taslak) | Lite'ın eksikleri ölçülmüş ve kapanmış, aynı sunucunun bugünkü sürümüyle çalışıyor | sırada |
+| **7 · İkinci şehir ve ticaret** | Şehirler birbirine bağlansın | 76–80 | İkinci şehrin kendi kimliği var, şehirler arasında mal akıyor, ticaret bir yol | **bitti** (Tur 80) |
+| **8 · Lite'ı güncelleme** | Lite ana oyunun çizgisine gelsin | 81–85 (taslak) | Lite'ın eksikleri ölçülmüş ve kapanmış, aynı sunucunun bugünkü sürümüyle çalışıyor | **sıradaki** (Tur 81 değerlendirme; öbür turlar ondan sonra) |
 
 ### Faz 1 · Ürün temeli
 
@@ -224,7 +224,7 @@ açılıyor.
   `/v1/seed/sim`). Düzeltmeler sürüm 1.0.1 olarak çıkıyor; Faz 6 raporu
   `docs/DURUM.md`'de. — bitti (#105)
 
-### Faz 7 · İkinci şehir ve ticaret (taslak)
+### Faz 7 · İkinci şehir ve ticaret
 
 Kullanıcının isteği "ikinci şehrin eklenmesi ve ticareti". Holding bugün
 üç şehre kadar çıkıyor (Tur 22, 30, 32), ama şehirler aynı kalıptan ve
@@ -292,16 +292,41 @@ sunucusunun dağıtımını istiyor (`docs/YAYIN.md` §4).
   Kamyonunu kâra göre ayarlayan tüccar 232. ve 235. günde iki yıldızla,
   mağaza kurmayan tüccar da kazanıyor. Zarar eden hat gündemde; hedef
   panelinde terminal, hat ve bugünkü kâr. Sürüm 1.4.0; lig izi aynı.
-  — bu PR
-- **80 · Değerlendirme ve Faz 7 raporu.**
+  — bitti (#109)
+- **80 · Değerlendirme ve Faz 7 raporu.** Faz 7'nin ekranları kumandayla,
+  yalnız klavyeyle, Steam Deck boyunda ve üç dilde denendi. Tur 79'un üç
+  açık kalemi kapandı. Hat formu hattın kendi etkisini tahmin ediyor: iki
+  şehrin akışına hattın yükünü ekleyip spot fiyatın formülünü 30 gün
+  işletiyor. Çıkışın ve varışın fiyatını, birim ve günlük kârı ve en
+  kârlı kamyonu söylüyor; Kahve yolunun en kârlı dört yolunda tahmin %0,8
+  içinde. Yardımda şehirler arası hattın adımı var. Oyunun panelleri,
+  göstergesi ve dünya metinleri oyun ekranıyla iniyor: ana parça 69,7'den
+  52,7 KB'a (bütçe 60). Kumandada sayı kutusu sağ-solla değişiyor. Sürüm
+  1.5.0; lig izi aynı. Faz 7 raporu `docs/DURUM.md`'de. — bu PR
 
 ### Faz 8 · Lite'ı güncelleme (taslak)
 
 Lite (iOS, web, Android) L12'den beri değişmedi; ana oyun bu arada Faz
-1–5'i yaşadı (ayarlar ve erişilebilirlik, müzik, mevsim ve hava, önemli
-anlar, Almanca). Faz bir değerlendirmeyle açılıyor: Lite'ın hangi eksiği
-oyuncunun gözünde, hangisi ortak sunucunun sözleşmesinde. Turlar o
-ölçümden sonra.
+1–7'yi yaşadı (ayarlar ve erişilebilirlik, müzik, mevsim ve hava, önemli
+anlar, Almanca, kumanda, şehrin türü ve ticaret). Faz bir değerlendirmeyle
+açılıyor: Lite'ın hangi eksiği oyuncunun gözünde, hangisi ortak sunucunun
+sözleşmesinde. Turlar o ölçümden sonra.
+
+Taslak (Tur 80'de yazıldı; kullanıcı Tur 81'den önce değiştirebilir):
+
+- **81 · Değerlendirme: Lite'ın bugünü.**
+  - Üç sürüm bugünkü sunucuyla uçtan uca: hesap, haftalık ve davet kodlu
+    ligler, kayıt eşitlemesi, çevrimdışı pencere (L12).
+  - Ana oyunun Faz 1–7'de kazandıkları Lite'ın gözünden.
+  - Mağazaların bugünkü kuralları kuru: App Store ve Play Store'un hedef
+    SDK'sı, gizlilik beyanı.
+  - Her eksik iki listeden birine giriyor. Oyuncunun gözündekiler:
+    ekranlar, dil, his. Ortak sunucunun sözleşmesindekiler: uçlar, şema,
+    simülasyon izi.
+- **82–85 · Ölçümden sonra yazılıyor.** Varsayılan sıra:
+  - önce sunucunun sözleşmesinde bozuk olan;
+  - sonra oyuncunun gözündeki eksikler, önem sırasıyla;
+  - son tur değerlendirme ve Faz 8 raporu.
 
 ## Her fazda sürecek işler
 
@@ -327,4 +352,7 @@ yazılan.
 | **Faz 6–8'in sırası** | sıra | **yayına hazırlık → ikinci şehir ve ticaret → Lite** (kullanıcı, Tur 71'den önce) |
 | **"İkinci şehir ve ticaret" nedir?** | Faz 7 | **ikinci şehrin kendi kimliği ve şehirler arası mal ticareti** (varsayılan: holding zaten üç şehre çıkıyor; kullanıcı Tur 76'dan önce değiştirebilir) |
 | **Faz 7'nin turları** | Faz 7 | **76 şehrin kimliği · 77 şehirler arası hat · 78 ticaretin fiyatı · 79 ticaretle zafer · 80 değerlendirme** (taslak, Tur 75; kullanıcı Tur 76'dan önce değiştirebilir) |
+| **Lite'ın platformları** | Faz 8 | **iOS, web ve Android, üçü birlikte** (üçü de aynı ligde; kullanıcı Tur 81'den önce daraltabilir) |
+| **Lite'a ana oyundan ne gelsin?** | Faz 8'in turları | **Tur 81'in ölçümü seçiyor:** önce sunucunun sözleşmesi, sonra oyuncunun gözündeki eksikler (kullanıcı Tur 81'den sonra sırayı değiştirebilir) |
+| **Lite'ın mağazalara gönderimi** | Faz 8 | **kullanıcıda:** App Store Connect ve Play Console hesapları kullanıcının. Depo imzasız derlemeyi ve gönderim paketini hazırlıyor |
 | **Lig sunucusu her birleşmede kendiliğinden mi dağıtılsın?** | sunucu | **elle** (Tur 51, Codex #80). Tur 71'den beri canlı denetim eski simülasyonlu sunucuyu `main`'de kırmızıyla söylüyor; `LITE_LEAGUE_AUTODEPLOY=true` önerilir (`ios-lite/README.md`) |

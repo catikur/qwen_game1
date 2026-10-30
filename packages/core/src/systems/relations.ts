@@ -2,6 +2,7 @@ import { BUILDING_BY_ID, RELATION, RIVAL_CEOS, TEMPERAMENTS, TEMPERAMENT_IDS, fi
 import type { RelationBeat, RelationEventKind, TemperamentDef } from '@capital/content';
 import { formatMoney } from '../format';
 import { tc } from '../i18n';
+import '../i18n/gameTr';
 import { pushNews } from '../news';
 import { rivalProfile } from '../profiles';
 import { createRng, nextFloat } from '../rng';

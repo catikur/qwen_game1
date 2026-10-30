@@ -3,6 +3,7 @@ import type { MessageParams } from '@capital/content';
 import type { commands } from './tr/commands';
 import type { markets } from './tr/markets';
 import { world } from './tr/world';
+import type { worldPlay } from './tr/worldPlay';
 
 /**
  * Çekirdeğin ürettiği metinler (Tur 23): haberler, komut ret sebepleri,
@@ -18,11 +19,13 @@ import { world } from './tr/world';
  * `en/` altında, aynı anahtar kümesiyle (tip denetimi eksik anahtarı yakalıyor);
  * dil seçilince iniyor (Tur 46).
  */
-export type CoreKey = keyof typeof commands | keyof typeof markets | keyof typeof world;
+export type CoreKey = keyof typeof commands | keyof typeof markets | keyof typeof world | keyof typeof worldPlay;
 
 /*
  * Burada yalnız 'world' grubu kayıtlı: kurulum ekranının da okuduğu metinler
- * (senaryo puanı, lig sonucu) onda. Komut ve piyasa grupları oyunun içinde
+ * (senaryo puanı, lig sonucu) onda. Grubun oyunun içinde üretilen kısmı
+ * (haberler, ilişkiler, hedefler, kartlar) Tur 80'den beri `worldPlay`'de,
+ * komutlarla birlikte `gameTr.ts`'te kayıtlı. Komut ve piyasa grupları oyunun içinde
  * üretiliyor; onları yazan modüller `gameTr.ts`'i içe aktarıyor, sözlük
  * simülasyonla birlikte geç inen parçada (Tur 74). Bütün Türkçe sözlük
  * testler için `tr/index.ts`'te.

@@ -10684,6 +10684,373 @@ async function finish(browser, consoleErrors) {
     await tContext.close();
   }
 
+  // ---------- Değerlendirme: Faz 7 sonu (Tur 80) ----------
+  // Faz 7'nin ekranları kumandayla, yalnız klavyeyle, Steam Deck boyunda ve
+  // üç dilde: kurulumda şehrin türü, Şehirler panelinin hat formu (mal,
+  // kamyon, tahmin), Deck'te taşma ve en küçük yazı. Kamyon sayısı kumandayla
+  // değişmiyordu: sayı kutusu artık sağ-solla bir adım. Oyunun Türkçe
+  // metinleri oyun ekranıyla iniyor (Tur 80): panellerde, göstergede ve
+  // haberlerde ham anahtar yok. Yardımda hattın adımı.
+  section('Değerlendirme: Faz 7 sonu');
+  {
+    const zErrors = [];
+    const watch = (page) => {
+      page.on('pageerror', (e) => zErrors.push(e.message));
+      page.on('console', (m) => { if (m.type() === 'error') zErrors.push(m.text()); });
+    };
+    const BUTTON = { a: 0, b: 1, up: 12, down: 13, left: 14, right: 15 };
+    const frames = (page, n) => page.evaluate((count) => new Promise((resolve) => {
+      const step = (left) => (left <= 0 ? resolve() : requestAnimationFrame(() => step(left - 1)));
+      step(count);
+    }), n);
+    // Tur 75'in sahte kumandası: basış tek okumalık (yavaş karede iki basış sayılmasın).
+    const fakePad = () => {
+      const buttons = Array.from({ length: 17 }, () => ({ pressed: false, touched: false, value: 0 }));
+      let timestamp = 0;
+      const pad = { index: 0, connected: true, mapping: 'standard', id: 'Xbox 360 Controller (XInput STANDARD GAMEPAD)', axes: [0, 0, 0, 0], get buttons() { return buttons; }, get timestamp() { return timestamp; } };
+      const pending = new Set();
+      let shown = new Set();
+      const set = (index, down) => { buttons[index] = { pressed: down, touched: down, value: down ? 1 : 0 }; timestamp = performance.now(); };
+      window.__fakePad = { connected: false, pulse: (index) => pending.add(index), get waiting() { return pending.size; } };
+      navigator.getGamepads = () => {
+        if (!window.__fakePad.connected) return [null, null, null, null];
+        for (const index of shown) set(index, false);
+        shown = new Set(pending);
+        for (const index of pending) set(index, true);
+        pending.clear();
+        return [pad, null, null, null];
+      };
+      document.hasFocus = () => true;
+    };
+    const tap = async (page, name) => {
+      await page.evaluate((index) => window.__fakePad.pulse(index), BUTTON[name]);
+      await page.waitForFunction(() => window.__fakePad.waiting === 0, null, { timeout: 10000 });
+      await frames(page, 3);
+    };
+    const RAW_KEY = /\b(core|finance|panels|hud|app|trade)\.[a-z]+\.[a-zA-Z]/;
+
+    const zContext = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+    await zContext.addInitScript(veteran, TUTORIAL_KEY);
+    await zContext.addInitScript(fakePad);
+    const zp = await zContext.newPage();
+    watch(zp);
+    await zp.goto('http://127.0.0.1:8811/?lang=tr');
+    await zp.waitForSelector('.newgame', { timeout: 20000 });
+    await zp.evaluate(() => { window.__fakePad.connected = true; window.dispatchEvent(new Event('gamepadconnected')); });
+    await zp.waitForTimeout(500);
+
+    // Kurulumda şehrin türü kumandayla: yön tuşu sonraki türe, A seçiyor.
+    await zp.locator('[data-city-type="balanced"]').focus();
+    await tap(zp, 'right');
+    const movedTo = await zp.evaluate(() => document.activeElement?.getAttribute('data-city-type') ?? null);
+    await tap(zp, 'a');
+    const picked = await zp.evaluate(() => ({
+      checked: document.querySelector('[data-city-type][aria-checked="true"]')?.getAttribute('data-city-type') ?? null,
+      detail: (document.querySelector('[data-detail="city-type"]')?.textContent ?? '').trim(),
+    }));
+    check('Kurulumda şehrin türü kumandayla: yön tuşu sonraki türe geçiyor, A seçiyor, tanıtım o türün',
+      movedTo === 'port' && picked.checked === 'port' && picked.detail.length > 20, `${movedTo} · ${picked.checked} · ${picked.detail.slice(0, 40)}`);
+
+    // Kahve yolu: iki şehre terminal (Tur 79'un yolu), sonra Şehirler panelinin hat formu.
+    await zp.locator('.mode-picker [data-mode="scenario"]').click();
+    await zp.locator('[data-scenario="coffee"]').click();
+    await zp.locator('[data-newgame-start]').click();
+    await zp.waitForSelector('[data-scenario-brief="coffee"]', { timeout: 90000 });
+    await zp.locator('[data-scenario-begin]').click();
+    await zp.waitForTimeout(300);
+    const seeds = await zp.evaluate(() => {
+      const c = window.__capital;
+      c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+      const terminal = () => {
+        const s = c.getState();
+        for (const t of s.map.tiles) {
+          if (t.kind !== 'plot' || t.structureId || t.ownerId || t.buildingId) continue;
+          if ((s.districts[t.districtId].opensOnDay ?? 0) > s.time.day) continue;
+          if (!c.engine.dispatch({ type: 'BUY_TILE', tileId: t.id }).ok) continue;
+          if (c.engine.dispatch({ type: 'BUILD', tileId: t.id, defId: 'freight_terminal' }).ok) return true;
+        }
+        return false;
+      };
+      const here = terminal();
+      c.engine.dispatch({ type: 'SWITCH_CITY', index: 0 });
+      const port = c.getState().meta.seed;
+      const away = terminal();
+      c.engine.dispatch({ type: 'SWITCH_CITY', index: 0 });
+      c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+      return { here, away, port, home: c.getState().meta.seed };
+    });
+    await zp.waitForTimeout(300);
+    await zp.locator('[data-city-chip]').click();
+    await zp.waitForSelector('.modal [data-line-open]', { timeout: 10000 });
+    await zp.selectOption('[data-line-from]', String(seeds.port));
+    await zp.selectOption('[data-line-to]', String(seeds.home));
+    await zp.locator('[data-line-open-buy]').check();
+    const form = () => zp.evaluate(() => ({
+      good: document.querySelector('[data-line-good]')?.value ?? null,
+      count: Number(document.querySelector('[data-line-count]')?.value ?? 'NaN'),
+      outlook: document.querySelector('[data-line-outlook]')?.getAttribute('data-line-outlook') ?? null,
+      best: Number(document.querySelector('[data-line-outlook]')?.getAttribute('data-line-outlook-best') ?? 'NaN'),
+      loss: document.querySelector('[data-line-outlook]')?.classList.contains('line-loss') ?? null,
+      text: (document.querySelector('[data-line-outlook]')?.textContent ?? '').trim(),
+      focus: document.activeElement?.getAttribute('data-line-good') !== null ? 'good'
+        : document.activeElement?.hasAttribute('data-line-count') ? 'count' : document.activeElement?.tagName.toLowerCase() ?? '',
+    }));
+    const quoteOf = (state) => zp.evaluate(({ from, to, good, count }) => {
+      const q = window.__capital.lineQuote(from, to, good, count, true);
+      return q.outlook ? { margin: q.outlook.margin, best: q.outlook.bestTrucks } : null;
+    }, { from: seeds.port, to: seeds.home, good: state.good, count: state.count });
+
+    // Silikon dört kamyonla (Tur 79'un tuzağı): tahmin kırmızı, çekirdekle aynı, en kârlı kamyon önerisi.
+    await zp.selectOption('[data-line-good]', 'silicon');
+    await zp.locator('[data-line-count]').fill('4');
+    await zp.waitForTimeout(200);
+    const trap = await form();
+    const trapCore = await quoteOf(trap);
+    // Silikon bu senaryoda tek kamyonla da zararda (denge bölümü "Hattın kendi etkisi"): uyarı "kârsız".
+    check('Formun tahmini dar pazarda kırmızı: silikon dört kamyonla 30 gün sonra zararda, çekirdeğin hesabıyla aynı',
+      seeds.here && seeds.away && trap.loss === true && Number(trap.outlook) < 0 && trapCore !== null
+        && Math.abs(Number(trap.outlook) - trapCore.margin) < 0.01 && trap.best === trapCore.best
+        && (trap.best === 0 ? /30 gün içinde kârsız: birim kâr -.*tek kamyonla da/ : /30 gün sonra birim kâr -.*hat zararda/).test(trap.text),
+      `${trap.outlook} / ${trapCore?.margin.toFixed(2)} · en kârlı ${trap.best} · ${trap.text.slice(0, 90)}`);
+
+    // Kumanda: seçim kutusunda sağ sonraki mal, sayı kutusunda sağ bir kamyon; tahmin her adımda yenileniyor.
+    await zp.selectOption('[data-line-good]', 'coffee_bean');
+    await zp.locator('[data-line-count]').fill('1');
+    await zp.waitForTimeout(200);
+    const one = await form();
+    await zp.locator('[data-line-count]').focus();
+    await tap(zp, 'right');
+    await tap(zp, 'right');
+    await zp.waitForTimeout(150);
+    const three = await form();
+    const threeCore = await quoteOf(three);
+    await zp.locator('[data-line-good]').focus();
+    await tap(zp, 'right');
+    await zp.waitForTimeout(150);
+    const next = await form();
+    check('Kumandayla hat formu: sayı kutusunda sağ bir kamyon ekliyor (1 → 3), seçim kutusunda sağ sonraki mal; tahmin her adımda yenileniyor',
+      one.count === 1 && three.count === 3 && three.focus === 'count' && threeCore !== null && Math.abs(Number(three.outlook) - threeCore.margin) < 0.01
+        && Number(three.outlook) < Number(one.outlook) && next.good !== 'coffee_bean' && next.focus === 'good',
+      `${one.count}→${three.count} · ${one.outlook}→${three.outlook} · mal ${next.good}`);
+    await tap(zp, 'left');
+    await zp.waitForTimeout(150);
+    const pad = await form();
+    check('Kahvede tahmin artıda: çıkış ve varışın fiyatı, birim ve günlük kâr; en kârlı kamyon başkaysa söyleniyor',
+      pad.good === 'coffee_bean' && pad.loss === false && Number(pad.outlook) > 0 && /30 gün sonra bu kamyonlarla: çıkışın fiyatı .*varışın .*birim kâr .*günde ~/.test(pad.text)
+        && (pad.best === pad.count || pad.text.includes(`En kârlısı ${pad.best} kamyon`)),
+      pad.text.slice(0, 160));
+
+    // Sınırdaki sayı kutusu (Bugbot #110): sağ değeri değiştirmiyor, odak kutuda kalıyor. Eski
+    // motorlar (WebKit) sınırda `stepUp`'ta hata fırlatıyor: sahte bir `stepUp` onu da deniyor.
+    const countMax = await zp.evaluate(() => Number(document.querySelector('[data-line-count]')?.max ?? 'NaN'));
+    await zp.locator('[data-line-count]').fill(String(countMax));
+    await zp.locator('[data-line-count]').focus();
+    await tap(zp, 'right');
+    const boundState = () => zp.evaluate(() => ({
+      value: Number(document.querySelector('[data-line-count]')?.value ?? 'NaN'),
+      focus: document.activeElement?.hasAttribute('data-line-count') ?? false,
+    }));
+    const atMax = await boundState();
+    await zp.evaluate(() => {
+      const proto = HTMLInputElement.prototype;
+      window.__stepUp = proto.stepUp;
+      proto.stepUp = function (...args) {
+        if (this.type === 'number' && this.max !== '' && Number(this.value) >= Number(this.max)) throw new DOMException('Bounds', 'InvalidStateError');
+        return window.__stepUp.apply(this, args);
+      };
+    });
+    await tap(zp, 'right');
+    const atMaxOld = await boundState();
+    await zp.evaluate(() => { HTMLInputElement.prototype.stepUp = window.__stepUp; });
+    check('Kumandada sınırdaki sayı kutusu: sağ değeri değiştirmiyor, odak kutuda kalıyor; sınırda hata fırlatan motorda da (Bugbot #110)',
+      countMax >= 4 && atMax.value === countMax && atMax.focus && atMaxOld.value === countMax && atMaxOld.focus,
+      `en çok ${countMax} · ${atMax.value}/${atMax.focus} · eski motor ${atMaxOld.value}/${atMaxOld.focus}`);
+
+    // Varışın kasası (Codex #110): kasa yükü kısıyorsa tahmin sabah planının yükleyeceğiyle, form söylüyor.
+    const cashSaved = await zp.evaluate(({ from, to }) => {
+      const s = window.__capital.getState();
+      const company = s.companies[s.playerCompanyId];
+      const before = company.cash;
+      const q = window.__capital.lineQuote(from, to, 'coffee_bean', 4, true);
+      company.cash = q.dailyCost + (q.capacity * q.margins.buyPrice) / 2;
+      return before;
+    }, { from: seeds.port, to: seeds.home });
+    await zp.locator('[data-line-count]').fill('4');
+    await zp.waitForTimeout(200);
+    const short = await zp.evaluate(() => ({
+      units: Number(document.querySelector('[data-line-outlook]')?.getAttribute('data-line-outlook-units') ?? 'NaN'),
+      text: (document.querySelector('[data-line-outlook]')?.textContent ?? '').trim(),
+    }));
+    const shortCore = await zp.evaluate(({ from, to }) => {
+      const q = window.__capital.lineQuote(from, to, 'coffee_bean', 4, true);
+      return { units: q.outlook?.units ?? null, capacity: q.capacity, cashShort: q.outlook?.cashShort ?? false };
+    }, { from: seeds.port, to: seeds.home });
+    await zp.evaluate((cash) => {
+      const s = window.__capital.getState();
+      s.companies[s.playerCompanyId].cash = cash;
+    }, cashSaved);
+    await zp.locator('[data-line-count]').fill(String(pad.count));
+    await zp.waitForTimeout(200);
+    check('Varışın kasası yükü kısıyorsa formun tahmini o yükle ve form söylüyor (Codex #110)',
+      shortCore.cashShort === true && short.units === Math.round(shortCore.units) && short.units > 0 && short.units < shortCore.capacity
+        && /Varışın kasası bugün yükün yalnız [\d.]+ birimine yetiyor/.test(short.text),
+      `${short.units} / ${shortCore.capacity} birim · ${short.text.slice(-90)}`);
+
+    // Yalnız klavye: formun denetimleri Tab'la sırayla geziliyor, Enter hattı açıyor.
+    await zp.locator('[data-line-from]').focus();
+    const order = [];
+    for (let i = 0; i < 6; i++) {
+      order.push(await zp.evaluate(() => {
+        const el = document.activeElement;
+        if (!el) return '';
+        return ['data-line-from', 'data-line-to', 'data-line-good', 'data-line-count', 'data-line-open-buy', 'data-line-go'].find((name) => el.hasAttribute(name)) ?? el.tagName.toLowerCase();
+      }));
+      await zp.keyboard.press('Tab');
+    }
+    await zp.locator('[data-line-go]').focus();
+    await zp.keyboard.press('Enter');
+    await zp.waitForTimeout(300);
+    const opened = await zp.evaluate(() => (window.__capital.getState().holding?.lines ?? []).map((line) => `${line.goodId}:${line.trucks}:${line.buy ? 'buy' : 'surplus'}`));
+    check('Yalnız klavye: hat formu Tab\'la sırayla geziliyor (çıkış, varış, mal, kamyon, pazardan al, aç), Enter hattı açıyor',
+      order.join(',') === 'data-line-from,data-line-to,data-line-good,data-line-count,data-line-open-buy,data-line-go' && opened.length === 1 && opened[0].startsWith(`coffee_bean:${pad.count}:buy`),
+      `${order.join(' → ')} · ${opened.join(', ')}`);
+    await zp.keyboard.press('Escape');
+
+    // Oyunun Türkçe metinleri (Tur 80): panellerde, göstergede ve haberlerde ham anahtar yok.
+    await zp.evaluate(() => {
+      const c = window.__capital;
+      for (let i = 0; i < 20; i++) c.engine.runDay();
+      c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+    });
+    await zp.waitForTimeout(400);
+    const rawIn = [];
+    const panels = await zp.evaluate(() => [...document.querySelectorAll('.topbar-actions [data-panel], .dock [data-panel]')].map((el) => el.getAttribute('data-panel')).filter(Boolean));
+    for (const panel of [...new Set(panels)].filter((id) => id !== 'settings')) {
+      const button = zp.locator(`.topbar-actions [data-panel="${panel}"], .dock [data-panel="${panel}"]`).first();
+      await button.click().catch(() => null);
+      await zp.waitForTimeout(250);
+      const text = ((await zp.locator('.modal').last().textContent().catch(() => '')) ?? '').trim();
+      if (RAW_KEY.test(text)) rawIn.push(`${panel}: ${text.match(RAW_KEY)?.[0]}`);
+      await zp.keyboard.press('Escape');
+      await zp.waitForTimeout(100);
+    }
+    await zp.locator('[data-city-chip]').click();
+    await zp.waitForTimeout(250);
+    const cities = ((await zp.locator('.modal').last().textContent().catch(() => '')) ?? '').trim();
+    if (RAW_KEY.test(cities)) rawIn.push(`cities: ${cities.match(RAW_KEY)?.[0]}`);
+    await zp.keyboard.press('Escape');
+    const page = await zp.evaluate(() => ({
+      hud: [...document.querySelectorAll('.topbar, .agenda, .news, .dock, .speeds')].map((el) => el.textContent ?? '').join(' '),
+      news: document.querySelectorAll('.news li, .news [data-news]').length,
+    }));
+    check('Türkçe oyunda panellerin, göstergenin ve haberlerin metni yerinde: ham anahtar yok (sözlükleri oyun ekranıyla iniyor)',
+      panels.length >= 8 && rawIn.length === 0 && !RAW_KEY.test(page.hud) && !RAW_KEY.test(cities) && cities.includes('Şehirler arası hatlar'),
+      `${panels.length} panel · ${rawIn.join(' | ') || 'temiz'} · ${page.news} haber`);
+
+    // Yardımda hattın adımı (Tur 80); holding'in adımı yeni şehrin türünü anlatıyor.
+    await zp.locator('.topbar-actions [data-panel="help"]').click();
+    await zp.waitForSelector('.help [data-help-step]', { timeout: 5000 });
+    const help = await zp.evaluate(() => {
+      const steps = [...document.querySelectorAll('.help [data-help-step]')].map((el) => el.getAttribute('data-help-step'));
+      return {
+        steps,
+        trade: document.querySelector('.help [data-help-step="trade"]')?.textContent ?? '',
+        holding: document.querySelector('.help [data-help-step="holding"]')?.textContent ?? '',
+      };
+    });
+    check('Yardımda şehirler arası hattın adımı holding\'den hemen sonra; holding\'in adımı yeni şehrin türünü anlatıyor',
+      help.steps.indexOf('trade') === help.steps.indexOf('holding') + 1 && help.trade.startsWith('İki şehir arasında hat') && help.trade.includes('30 gün sonra kopyalar')
+        && help.holding.includes('Yeni şehrin türünü sen seçersin'),
+      `${help.steps.length} madde · ${help.trade.slice(0, 60)}`);
+    await zp.keyboard.press('Escape');
+    await zContext.close();
+
+    // Steam Deck boyunda, metin çok büyük, üç dilde: Şehirler paneli taşmıyor, en küçük yazı 12 pikselin üstünde.
+    const decks = [];
+    for (const lang of ['tr', 'en', 'de']) {
+      const dContext = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+      await dContext.addInitScript(veteran, TUTORIAL_KEY);
+      await dContext.addInitScript(() => {
+        try {
+          localStorage.setItem('capitalforge.settings.v1', JSON.stringify({ textSize: 'xlarge' }));
+        } catch {
+          /* depo kapalı */
+        }
+      });
+      const dp = await dContext.newPage();
+      watch(dp);
+      await dp.goto(`http://127.0.0.1:8811/?lang=${lang}`);
+      await dp.waitForSelector('.newgame', { timeout: 20000 });
+      await dp.locator('.mode-picker [data-mode="scenario"]').click();
+      await dp.locator('[data-scenario="coffee"]').click();
+      await dp.locator('[data-newgame-start]').click();
+      await dp.waitForSelector('[data-scenario-brief="coffee"]', { timeout: 90000 });
+      await dp.locator('[data-scenario-begin]').click();
+      await dp.waitForTimeout(300);
+      await dp.evaluate(() => {
+        const c = window.__capital;
+        c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+        const terminal = () => {
+          const s = c.getState();
+          for (const t of s.map.tiles) {
+            if (t.kind !== 'plot' || t.structureId || t.ownerId || t.buildingId) continue;
+            if ((s.districts[t.districtId].opensOnDay ?? 0) > s.time.day) continue;
+            if (!c.engine.dispatch({ type: 'BUY_TILE', tileId: t.id }).ok) continue;
+            if (c.engine.dispatch({ type: 'BUILD', tileId: t.id, defId: 'freight_terminal' }).ok) return;
+          }
+        };
+        terminal();
+        c.engine.dispatch({ type: 'SWITCH_CITY', index: 0 });
+        const port = c.getState().meta.seed;
+        terminal();
+        c.engine.dispatch({ type: 'SWITCH_CITY', index: 0 });
+        const s = c.getState();
+        c.engine.dispatch({ type: 'OPEN_LINE', from: port, to: s.meta.seed, goodId: 'coffee_bean', trucks: 2, buy: true });
+        for (let i = 0; i < 3; i++) c.engine.runDay();
+        c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+      });
+      await dp.waitForTimeout(300);
+      await dp.locator('[data-city-chip]').click();
+      await dp.waitForSelector('.modal [data-line-open]', { timeout: 10000 });
+      await dp.locator('.modal [data-price-board] > summary').click().catch(() => null);
+      await dp.locator('[data-line-open-buy]').check();
+      await dp.waitForTimeout(300);
+      const layout = await dp.evaluate(() => {
+        const modal = [...document.querySelectorAll('.modal')].at(-1);
+        const wide = [...modal.querySelectorAll('*')].filter((el) => el.scrollWidth > el.clientWidth + 2 && getComputedStyle(el).overflowX === 'visible' && el.clientWidth > 0)
+          .map((el) => el.className || el.tagName).slice(0, 3);
+        let min = Infinity;
+        let smallest = '';
+        const walker = document.createTreeWalker(modal, NodeFilter.SHOW_TEXT);
+        for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+          const el = node.parentElement;
+          if (!el || !node.textContent.trim() || el.getClientRects().length === 0) continue;
+          const size = parseFloat(getComputedStyle(el).fontSize);
+          if (size < min) {
+            min = size;
+            smallest = node.textContent.trim().slice(0, 24);
+          }
+        }
+        return {
+          overflow: modal.scrollWidth > modal.clientWidth + 2,
+          wide,
+          min,
+          smallest,
+          outlook: !!modal.querySelector('[data-line-outlook]'),
+          raw: /\b(core|finance|panels|hud|app|trade)\.[a-z]+\.[a-zA-Z]/.test(modal.textContent ?? ''),
+        };
+      });
+      decks.push({ lang, ...layout });
+      await dp.screenshot({ path: `${OUT}/faz7-deck-${lang}.png` });
+      await dContext.close();
+    }
+    check('Steam Deck boyunda (1280 × 800, metin çok büyük) üç dilde Şehirler paneli: hat satırı, fiyat tablosu ve formun tahmini taşmıyor, en küçük yazı 12 piksel ve üstü, ham anahtar yok',
+      decks.length === 3 && decks.every((d) => !d.overflow && d.wide.length === 0 && d.min >= 12 && d.outlook && !d.raw),
+      decks.map((d) => `${d.lang}: ${d.min}px (${d.smallest})${d.overflow || d.wide.length ? ` taşma ${d.wide.join(',')}` : ''}${d.raw ? ' ham' : ''}`).join(' · '));
+
+    check('Değerlendirme: Faz 7 sonu konsolu kirletmiyor', zErrors.length === 0, zErrors.slice(0, 2).join(' | '));
+  }
+
   section('Mobil');
   for (const deviceName of ['iPhone 13', 'Pixel 7']) {
     const mobileContext = await browser.newContext({ ...devices[deviceName] });

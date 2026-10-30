@@ -10,6 +10,7 @@ import {
 } from '@capital/content';
 import type { NpcProfileDef, NpcTrait } from '@capital/content';
 import { tc } from '../i18n';
+import '../i18n/gameTr';
 import { pushNews } from '../news';
 import { rivalProfile, rivalProfiles } from '../profiles';
 import { createRng, nextFloat, pick } from '../rng';

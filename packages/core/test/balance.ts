@@ -78,7 +78,11 @@ import {
   LEAGUE_RULE_ROTATION,
   createLeagueGame,
   leagueRule,
+  cityBySeed,
+  lineCapacity,
   lineMargins,
+  lineProfitToday,
+  lineQuote,
   priceBoard,
   rivalLines,
   tradeLines,
@@ -6231,6 +6235,107 @@ section('Senaryolar V: ticaretle zafer', () => {
       `${def.title}: her şehirde hattını ayarlayan tüccar kârda ve en çok dört kamyonla yetinenden çok kazanıyor`,
       rows.every((row) => row.informed.profit > 0 && row.informed.profit > row.cautious.profit),
       rows.map((row) => `${row.seed}: ${formatMoney(row.informed.profit)} > ${formatMoney(row.cautious.profit)}`).join(' · '),
+    );
+  }
+});
+
+/**
+ * Hattın kendi etkisi (Tur 80): hat formunun tahmini.
+ *
+ * Tur 79'un bulgusu: fiyat tablosunun ilk günkü en iyi yolu dar pazarda bir
+ * tuzak, dört kamyon farkı birkaç günde kapatıp ters çeviriyor. Form artık
+ * hattın yükünü iki şehrin akışına ekleyip spot fiyat adımının formülünü 30
+ * gün işletiyor (`lineQuote(...).outlook`). Ölçülen iki şey: tahmin 30 gün
+ * sonra gerçekleşen fiyatı tutturuyor mu (Kahve yolunun en kârlı dört yolu,
+ * bir ve dört kamyon, pazardan alan hat), tahmine uyan tüccar ilk günün
+ * yolunda zarar etmiyor mu (bir kez en kârlı kamyonla açıp bırakan, Tur
+ * 79'un "ilk günün en kârlı yolu, dört kamyon" vekiline karşı).
+ */
+section('Hattın kendi etkisi: formun tahmini', () => {
+  const opened = (id: string) => {
+    const engine = new GameEngine(createScenarioGame(id, { companyName: 'Tüccar AŞ' }));
+    engine.dispatch({ type: 'DISMISS_SCENARIO', screen: 'brief' });
+    tradeTerminals(engine, 1);
+    return engine;
+  };
+  const pct = (value: number) => `${value >= 0 ? '+' : ''}${Math.round(value * 100)}%`;
+
+  const probe = opened('coffee');
+  const routes = priceBoard(probe.getState())
+    .filter((row) => row.best)
+    .sort((a, b) => b.best!.margin - a.best!.margin)
+    .slice(0, 4);
+  const cases: Array<{ label: string; srcErr: number; dstErr: number; estimate: number; actual: number }> = [];
+  for (const row of routes) {
+    const { from, to } = row.best!;
+    for (const trucks of [1, 4]) {
+      const engine = opened('coffee');
+      const start = engine.getState();
+      const quote = lineQuote(start, from, to, row.goodId, trucks, true);
+      const src0 = cityBySeed(start, from)!.market.spot[row.goodId]!;
+      const dst0 = cityBySeed(start, to)!.market.spot[row.goodId]!;
+      if (!quote.outlook || !engine.dispatch({ type: 'OPEN_LINE', from, to, goodId: row.goodId, trucks, buy: true }).ok) continue;
+      for (let day = 0; day < quote.outlook.days; day++) engine.runDay();
+      const root = engine.getState();
+      const line = tradeLines(root)[0]!;
+      const src = cityBySeed(root, from)!.market.spot[row.goodId]!;
+      const dst = cityBySeed(root, to)!.market.spot[row.goodId]!;
+      const actual = (lineProfitToday(root, line) ?? 0) / Math.max(1, line.last?.units ?? 0);
+      const label = `${GOOD_BY_ID[row.goodId]!.name}, ${trucks} kamyon`;
+      cases.push({ label, srcErr: Math.abs(quote.outlook.originSpot / src - 1), dstErr: Math.abs(quote.outlook.destinationSpot / dst - 1), estimate: quote.outlook.margin, actual });
+      console.log(
+        `  ${label.padEnd(26)} tahmin çıkış ${pct(quote.outlook.originSpot / src0 - 1)} varış ${pct(quote.outlook.destinationSpot / dst0 - 1)} birim ${quote.outlook.margin.toFixed(2)}`
+          + ` · gerçek çıkış ${pct(src / src0 - 1)} varış ${pct(dst / dst0 - 1)} birim ${actual.toFixed(2)}`,
+      );
+    }
+  }
+  const worst = cases.reduce((max, c) => Math.max(max, c.srcErr, c.dstErr), 0);
+  expect(
+    'Formun tahmini 30 gün sonraki fiyatı tutturuyor: Kahve yolunun en kârlı dört yolunda, bir ve dört kamyonla, iki şehirde de %3 içinde',
+    cases.length === 8 && worst <= 0.03,
+    `${cases.length} durum · en büyük sapma %${(worst * 100).toFixed(1)}`,
+  );
+  // Birim kârın işareti: belirgin olanlarda (≥ 0,1 ₺) tahmin ve gerçekleşen aynı yönde.
+  const clear = cases.filter((c) => Math.abs(c.actual) >= 0.1);
+  expect(
+    'Tahmin kârla zararı ayırıyor: belirgin birim kârın işareti gerçekleşenle aynı; ilk günün en iyi yolu tek kamyonla da zararda',
+    clear.length >= 6 && clear.every((c) => Math.sign(c.estimate) === Math.sign(c.actual)) && cases[0]!.estimate < 0 && cases[0]!.actual < 0,
+    clear.map((c) => `${c.label}: ${c.estimate.toFixed(2)} / ${c.actual.toFixed(2)}`).join(' · '),
+  );
+
+  for (const id of ['coffee', 'supplier']) {
+    const def = SCENARIO_BY_ID[id]!;
+    const run = (pick: 'naive' | 'outlook') => {
+      const engine = opened(id);
+      const root = engine.getState();
+      const start = root.time.day;
+      const rows = priceBoard(root).filter((row) => row.best);
+      let chosen: { from: number; to: number; goodId: string; trucks: number } | undefined;
+      if (pick === 'naive') {
+        const best = [...rows].sort((a, b) => b.best!.margin - a.best!.margin)[0];
+        if (best) chosen = { from: best.best!.from, to: best.best!.to, goodId: best.goodId, trucks: 4 };
+      } else {
+        let bestDaily = 0;
+        for (const row of rows) {
+          const outlook = lineQuote(root, row.best!.from, row.best!.to, row.goodId, 1, true).outlook;
+          if (outlook && outlook.bestTrucks > 0 && outlook.bestDaily > bestDaily) {
+            bestDaily = outlook.bestDaily;
+            chosen = { from: row.best!.from, to: row.best!.to, goodId: row.goodId, trucks: outlook.bestTrucks };
+          }
+        }
+      }
+      if (chosen) engine.dispatch({ type: 'OPEN_LINE', ...chosen, buy: true });
+      while (engine.getState().scenario!.finishedDay === undefined && engine.getState().time.day - start < def.days) engine.runDay();
+      return { profit: engine.getState().scenario!.tradeProfit ?? 0, chosen };
+    };
+    const naive = run('naive');
+    const informed = run('outlook');
+    const name = (r: ReturnType<typeof run>) => (r.chosen ? `${GOOD_BY_ID[r.chosen.goodId]!.name} ${r.chosen.trucks} kamyon` : 'hat yok');
+    console.log(`  ${def.title} · tablonun yolu: ${name(naive)} → ${formatMoney(naive.profit)} · formun tahmini: ${name(informed)} → ${formatMoney(informed.profit)}`);
+    expect(
+      `${def.title}: formun tahminine uyan tüccar hattını bir kez açıp bıraksa da kârda; tablonun en iyi yolunu dört kamyonla açan zararda`,
+      informed.profit > 0 && naive.profit < 0 && Boolean(informed.chosen) && lineCapacity(informed.chosen!.trucks) > 0,
+      `${formatMoney(informed.profit)} > 0 > ${formatMoney(naive.profit)}`,
     );
   }
 });

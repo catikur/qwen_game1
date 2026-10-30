@@ -4,6 +4,7 @@ import type { WeatherId } from '@capital/content';
 import { cityWeather } from '@capital/core';
 import type { GameState } from '@capital/core';
 import { t } from './i18n';
+import './i18n/playTr';
 
 /**
  * Üst barda mevsim ve hava (Tur 62), tarihin yanında.

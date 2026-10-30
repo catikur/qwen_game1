@@ -3,6 +3,7 @@ import { BUILDING_BY_ID, ENERGY, formatDecimal, formatPercent } from '@capital/c
 import { energyPrice, formatMoney, fuelCost, fuelLock, fuelLockQuote } from '@capital/core';
 import { t } from './i18n';
 import { useGame, useGameState } from './useGame';
+import './i18n/playTr';
 
 /**
  * Santralin masası (Tur 57): güç, kimlere verdiği, şebeke fiyatı, yakıt.

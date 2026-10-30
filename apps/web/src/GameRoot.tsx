@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactElement } from 'react';
-import { LENSES, SCHEMA_VERSION, customerFlows, getPlayer, routeSignature, scenarioDefOf, supplyRoutes, weatherOn } from '@capital/core';
+import { LENSES, SCHEMA_VERSION, customerFlows, getPlayer, lineQuote, routeSignature, scenarioDefOf, supplyRoutes, weatherOn } from '@capital/core';
 import type { GameCommand, GameEngine, GameSpeed } from '@capital/core';
 import { BUILDING_BY_ID, GOOD_BY_ID } from '@capital/content';
 import type { ScenarioDef } from '@capital/content';
@@ -410,6 +410,8 @@ export function GameRoot({
       screenOfTile: (tileId: number) => rendererRef.current?.screenOfTile(tileId) ?? null,
       // Kameranın açısı ve uzaklığı: test Q/E'yi, +/−'yi ve kumandanın çubuklarını ölçsün (Tur 72).
       cameraPose: () => rendererRef.current?.cameraPose() ?? null,
+      // Hattın teklifi: test, formun tahminini çekirdeğinkiyle karşılaştırsın (Tur 80).
+      lineQuote: (from: number, to: number, goodId: string, trucks: number, buy: boolean) => lineQuote(engine.getState(), from, to, goodId, trucks, buy),
     };
     return () => {
       delete globals['__capital'];

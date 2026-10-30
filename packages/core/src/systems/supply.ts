@@ -357,16 +357,34 @@ function addDemand(state: GameState, building: BuildingInstance, def: BuildingDe
  * dünkü satışı. Gelen hattın malı sayılmıyor.
  */
 export function ownGoodFlow(state: GameState, goodId: string): { produced: number; consumed: number } {
+  const flows = ownGoodFlows(state);
+  return { produced: flows.produced[goodId] ?? 0, consumed: flows.consumed[goodId] ?? 0 };
+}
+
+/** `ownGoodFlow` bütün mallarda: oyuncunun binalarının bugünkü üretimi ve ihtiyacı. */
+export function ownGoodFlows(state: GameState): { produced: Record<string, number>; consumed: Record<string, number> } {
+  return goodFlows(state, state.playerCompanyId);
+}
+
+/**
+ * Binaların bugünkü üretimi ve ihtiyacı, bütün mallarda, üretim adımının
+ * hesabıyla. Şirket verilirse yalnız onunki; verilmezse şehrin bütün
+ * şirketlerininki: pazarın kaydının binalardan gelen kısmı (Codex #110).
+ */
+export function goodFlows(state: GameState, companyId?: string): { produced: Record<string, number>; consumed: Record<string, number> } {
   const consumed: Record<string, number> = {};
-  let produced = 0;
+  const produced: Record<string, number> = {};
   for (const building of Object.values(state.buildings)) {
-    if (building.companyId !== state.playerCompanyId) continue;
+    // Üretim adımı şirketi olmayan binayı saymıyor.
+    if (companyId === undefined ? !state.companies[building.companyId] : building.companyId !== companyId) continue;
     const def = BUILDING_BY_ID[building.defId];
     if (!def) continue;
     addDemand(state, building, def, consumed);
-    if (def.outputGoodId === goodId && (def.role === 'extract' || def.role === 'process')) produced += outputOf(state, building);
+    if (def.outputGoodId && (def.role === 'extract' || def.role === 'process')) {
+      produced[def.outputGoodId] = (produced[def.outputGoodId] ?? 0) + outputOf(state, building);
+    }
   }
-  return { produced, consumed: consumed[goodId] ?? 0 };
+  return { produced, consumed };
 }
 
 /**
@@ -813,37 +831,94 @@ export function runSpotPriceTick(state: GameState): void {
   const exported = state.trade?.marketOut;
 
   for (const good of TRADED_GOODS) {
-    const reference = Math.max(1, state.market.reference[good.id] ?? 1);
     const produced = state.market.produced[good.id] ?? 0;
     const consumed = state.market.consumed[good.id] ?? 0;
-    const surplus = Math.max(0, produced - consumed);
-    const glut = Math.min(1, surplus / reference);
-
-    // Şehrin referans fiyatı (Tur 76): türün bol ya da kıt hammaddesi; dengeli şehirde katalogdaki.
-    const base = referencePrice(state, good.id);
-    const eventMultiplier = mods.goodPrice[good.id] ?? 1;
-    let target = base * eventMultiplier * (1 - GLUT_DEPTH * glut);
-    // İhracat baskısı (Tur 78): yalnız hatların pazardan aldığı, şehrin
-    // açığına düşen kısmı. Talep artışı fiyatı yükseltmiyor (yukarıdaki
-    // kısıt); dışarı giden mal ise şehrin pazarından eksiliyor. Pazardan
-    // alım yoksa çarpan hiç yok: hatsız şehir bitine kadar aynı.
-    const out = exported?.[good.id] ?? 0;
-    if (out > 0) {
-      const pull = Math.min(1, Math.min(out, Math.max(0, consumed - produced)) / reference);
-      if (pull > 0) target *= 1 + EXPORT_DEPTH * pull;
-    }
-
-    const current = state.market.spot[good.id] ?? base;
-    const next = current + (target - current) * SPOT_SMOOTHING;
-
-    state.market.spot[good.id] = Math.max(
-      base * SPOT_FLOOR,
-      Math.min(base * SPOT_CEILING, next),
-    );
+    const target = spotTarget(state, good.id, produced, consumed, exported?.[good.id] ?? 0, mods.goodPrice[good.id] ?? 1);
+    state.market.spot[good.id] = nextSpot(state, good.id, state.market.spot[good.id] ?? referencePrice(state, good.id), target);
   }
+  // Binaların akışı, günün sonunda (Codex #110): hat formunun tahmini gün
+  // arasında kurulan, yıkılan ya da sahibi değişen binanın farkını bununla
+  // buluyor. Rafların satışı pazar adımında yazılıyor; kayıt ondan sonra, yoksa
+  // tahmin bir günlük satış farkını bina değişmiş sanardı (Bugbot #110).
+  // Rakiplerin adımı ve devralmalar bundan sonra. Simülasyon okumuyor.
+  state.market.buildingFlows = goodFlows(state);
   // Günün hat akışları (Tur 78) burada bitiyor: kayıtta kalmasın.
   if (state.trade) {
     delete state.trade.marketOut;
     delete state.trade.marketIn;
   }
+}
+
+/** Fiyatın yöneldiği değer: şehrin referans fiyatı, olayın çarpanı, fazla kırığı, ihracat baskısı. */
+function spotTarget(
+  state: GameState,
+  goodId: string,
+  produced: number,
+  consumed: number,
+  out: number,
+  eventMultiplier: number,
+  referenceVolume = state.market.reference[goodId] ?? 1,
+): number {
+  const reference = Math.max(1, referenceVolume);
+  const glut = Math.min(1, Math.max(0, produced - consumed) / reference);
+  // Şehrin referans fiyatı (Tur 76): türün bol ya da kıt hammaddesi; dengeli şehirde katalogdaki.
+  let target = referencePrice(state, goodId) * eventMultiplier * (1 - GLUT_DEPTH * glut);
+  // İhracat baskısı (Tur 78): yalnız hatların pazardan aldığı, şehrin
+  // açığına düşen kısmı. Talep artışı fiyatı yükseltmiyor (yukarıdaki
+  // kısıt); dışarı giden mal ise şehrin pazarından eksiliyor. Pazardan
+  // alım yoksa çarpan hiç yok: hatsız şehir bitine kadar aynı.
+  if (out > 0) {
+    const pull = Math.min(1, Math.min(out, Math.max(0, consumed - produced)) / reference);
+    if (pull > 0) target *= 1 + EXPORT_DEPTH * pull;
+  }
+  return target;
+}
+
+/** Bir günde fiyat hedefe `SPOT_SMOOTHING` kadar yaklaşıyor; taban ve tavan referans fiyatın katı. */
+function nextSpot(state: GameState, goodId: string, current: number, target: number): number {
+  const base = referencePrice(state, goodId);
+  return Math.max(base * SPOT_FLOOR, Math.min(base * SPOT_CEILING, current + (target - current) * SPOT_SMOOTHING));
+}
+
+/** Binaların bugünkü akışı eksi pazarın kaydındaki (dünün sonunda); kayıt yoksa sıfır. */
+function buildingDrift(state: GameState, goodId: string): { produced: number; consumed: number } {
+  const recorded = state.market.buildingFlows;
+  if (!recorded) return { produced: 0, consumed: 0 };
+  const now = goodFlows(state);
+  return {
+    produced: (now.produced[goodId] ?? 0) - (recorded.produced[goodId] ?? 0),
+    consumed: (now.consumed[goodId] ?? 0) - (recorded.consumed[goodId] ?? 0),
+  };
+}
+
+/**
+ * Bir malın fiyatı `days` gün sonra, şehrin son günkü akışına bir hattın
+ * yükü eklenirse (Tur 80, hat formunun tahmini). Spot fiyat adımıyla aynı
+ * formül: fazla kırığı, ihracat baskısı, olayın çarpanı, yumuşatma, taban ve
+ * tavan. Akış ve olaylar bugünkü gibi sayılıyor; simülasyon bunu okumuyor.
+ *
+ * - `consumed`: şehrin pazarından eklenen çıkış (hattın yükü),
+ * - `out`: pazardan alınan kısmı, şehrin bugünkü öbür hat alımlarıyla,
+ * - `produced`: şehre eklenen varış (hattın getirdiği).
+ */
+export function spotOutlook(
+  state: GameState,
+  goodId: string,
+  extra: { produced?: number; consumed?: number; out?: number },
+  days: number,
+): number {
+  // Pazarın kaydı dünün: o günden beri kurulan, yıkılan ya da sahibi değişen
+  // binanın (oyuncunun, rakibin, devralmanın; Codex #110) farkı ekleniyor;
+  // yarınki gün de canlı binalardan sayıyor.
+  const drift = buildingDrift(state, goodId);
+  const produced = (state.market.produced[goodId] ?? 0) + drift.produced + (extra.produced ?? 0);
+  const consumed = (state.market.consumed[goodId] ?? 0) + drift.consumed + (extra.consumed ?? 0);
+  // Eski kayıtta sonradan eklenen malın referansı ilk fiyat adımına dek yok
+  // (`backfillMarket` günün sonunda dolduruyor): tahmin aynı değeri yan
+  // etkisiz hesaplıyor (Codex #110).
+  const reference = state.market.reference[goodId] ?? referenceVolumes(state.districts)[goodId] ?? 0;
+  const target = spotTarget(state, goodId, produced, consumed, extra.out ?? 0, collectEventModifiers(state).goodPrice[goodId] ?? 1, reference);
+  let spot = state.market.spot[goodId] ?? referencePrice(state, goodId);
+  for (let day = 0; day < days; day++) spot = nextSpot(state, goodId, spot, target);
+  return spot;
 }

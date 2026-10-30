@@ -24,6 +24,7 @@ import { useGame, useGameState } from './useGame';
 import type { ViewState } from './useGame';
 import { t } from './i18n';
 import './i18n/tradeTr';
+import './i18n/playTr';
 import { useLocale } from './i18n/locale';
 import { useSettings } from './settings';
 import { useWhatsNewUnseen } from './whatsNew';

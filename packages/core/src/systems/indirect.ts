@@ -1,6 +1,7 @@
 import { BUILDING_BY_ID, CONSUMER_CATEGORIES, currentLocale, getCeoModifiers } from '@capital/content';
 import type { BuildingDef, CategoryId } from '@capital/content';
 import { tc } from '../i18n';
+import '../i18n/gameTr';
 import { MARKETING_CAP, RESEARCH_CAP, defaultFocus, marketingLeverage, researchCeiling } from './focus';
 import { estimateInvestment, runMarketTick } from './market';
 import { buildingUpkeep, distributionRelief, reliefOf, resetDailyLedgers, runProductionTick } from './supply';

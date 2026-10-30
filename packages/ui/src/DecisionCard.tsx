@@ -8,6 +8,7 @@ import { CeoPortrait } from './CeoPortrait';
 import { useGame, useGameState } from './useGame';
 import { t } from './i18n';
 import type { MessageKey } from './i18n';
+import './i18n/playTr';
 
 /**
  * Karar kartı (Tur 37b).
