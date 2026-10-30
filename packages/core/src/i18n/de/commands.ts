@@ -119,6 +119,23 @@ export const commands: Record<keyof typeof trCommands, string> = {
   'core.holding.completeTitle': 'Holding komplett: Sieg in {count|# Stadt|# Städten}',
   'core.holding.completeBody': 'Holding-Wert: {worth}. Die Städte leben weiter; du spielst frei weiter.',
 
+  // systems/trade.ts — Linien zwischen Städten (Runde 77)
+  'core.trade.noHolding': 'Eine Linie verbindet zwei Städte: Erringe zuerst in einer Stadt den Sieg und eröffne eine zweite.',
+  'core.trade.sameCity': 'Eine Linie verbindet zwei verschiedene Städte.',
+  'core.trade.lostCity': 'Zu einer verlorenen Stadt kannst du keine Linie eröffnen.',
+  'core.trade.badGood': 'Linien befördern Rohstoffe und Zwischenprodukte, keine Ladenwaren.',
+  'core.trade.maxLines': 'Eine Holding kann höchstens {max|# Linie|# Linien} haben.',
+  'core.trade.duplicate': 'Zwischen diesen beiden Städten gibt es für diese Ware schon eine Linie.',
+  'core.trade.chain': 'Eine Stadt kann dieselbe Ware nicht zugleich empfangen und versenden.',
+  'core.trade.noTerminal': 'Du hast in {city} kein Frachtterminal.',
+  'core.trade.fleetFull': 'Die Flotte des Terminals hat keine freien Lkw.',
+  'core.trade.badTrucks': 'Die Zahl der Lkw muss zwischen 1 und {max} liegen.',
+  'core.trade.noSuchLine': 'Keine solche Linie.',
+  'core.trade.brokenTitle': 'Linie geschlossen: {from} → {to} ({good})',
+  'core.trade.brokenTargetLost': '{city} ist verloren; die Ware unterwegs ging mit.',
+  'core.trade.brokenSourceLost': '{city} ist verloren; die Ware unterwegs kommt trotzdem an.',
+  'core.trade.brokenTerminal': 'Dein Terminal in {city} ist weg; die Ware unterwegs kommt trotzdem an.',
+
   // selectors.ts — map lenses
   'core.selectors.lensNoneName': 'Stadt',
   'core.selectors.lensNoneHint': 'Gebäude und Viertelfarben so zeigen, wie sie sind.',

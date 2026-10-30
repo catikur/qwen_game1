@@ -10120,7 +10120,10 @@ async function finish(browser, consoleErrors) {
           req.onerror = () => resolve(null);
         }),
     );
-    check('Kayıt şehrin türünü taşıyor (kayıt biçimi v7)', savedType?.type === 'port' && savedType?.schema === 7, JSON.stringify(savedType));
+    // Tür v7'de geldi; kayıt güncel şemayla yazılıyor (Tur 77'de v8 oldu, bu kontrol 7 bekliyordu).
+    const typeSchema = await tp.evaluate(() => window.__capital.schemaVersion);
+    check('Kayıt şehrin türünü taşıyor (güncel kayıt biçimiyle, v7 ve sonrası)', savedType?.type === 'port' && savedType?.schema === typeSchema && typeSchema >= 7,
+      `${JSON.stringify(savedType)} · güncel v${typeSchema}`);
     await tp.keyboard.press('Escape');
 
     // Holding'in yeni şehri türüyle: zaferi ve kasayı elle ver (Holding bölümündeki gibi).
@@ -10181,6 +10184,169 @@ async function finish(browser, consoleErrors) {
     check('Dengeli şehirde rozet yok, kayıtta tür alanı yok', plain.chip === 0 && plain.type === null, JSON.stringify(plain));
     await bContext.close();
     check('Şehrin kimliği bölümünde konsol temiz', tErrors.length === 0, tErrors.slice(0, 3).join(' | '));
+  }
+
+  // ---------- Şehirler arası hat (Tur 77) ----------
+  // Kurucu şehirde buğday çiftliği ve terminal; zafer ve sermaye elle, yeni
+  // şehre açılış komutla. Yeni şehirde un değirmeni (buğdayı pazardan alıyor)
+  // ve terminal. Hat Şehirler panelinin formundan açılıyor.
+  section('Şehirler arası hat');
+  {
+    const lContext = await browser.newContext({ viewport: { width: 1280, height: 860 } });
+    await lContext.addInitScript(veteran, TUTORIAL_KEY);
+    const lp = await lContext.newPage();
+    const lErrors = [];
+    lp.on('pageerror', (e) => lErrors.push(e.message));
+    lp.on('console', (m) => { if (m.type() === 'error') lErrors.push(m.text()); });
+    await lp.goto('http://127.0.0.1:8811/');
+    await lp.waitForSelector('.newgame', { timeout: 20000 });
+    await lp.fill('.newgame-field input[type="text"]', 'Hat AŞ');
+    await lp.locator('button:has-text("Şirketi kur")').click();
+    await lp.waitForSelector('.topbar', { timeout: 30000 });
+    const setup = await lp.evaluate(() => {
+      const c = window.__capital;
+      c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+      const place = (defId, production) => {
+        const s = c.getState();
+        for (const t of s.map.tiles) {
+          if (t.kind !== 'plot' || t.structureId || t.ownerId || t.buildingId) continue;
+          const district = s.districts[t.districtId];
+          if (district.opensOnDay !== undefined) continue;
+          if (production && district.archetype !== 'industrial' && district.archetype !== 'port') continue;
+          if (!c.engine.dispatch({ type: 'BUY_TILE', tileId: t.id }).ok) continue;
+          if (c.engine.dispatch({ type: 'BUILD', tileId: t.id, defId }).ok) return c.getState().map.tiles[t.id].buildingId;
+        }
+        return null;
+      };
+      const first = c.getState();
+      // Binaların kilidi net değerde (çiftlik, terminal): nakitle birlikte o da.
+      first.companies.player.cash = 40_000_000;
+      first.companies.player.netWorth = 40_000_000;
+      const farm = place('wheat_farm', true);
+      const origin = place('freight_terminal', false);
+      const originTile = first.buildings[origin]?.tileId ?? null;
+      first.victory = { day: first.time.day, kind: 'tycoon', dismissed: true };
+      const from = first.meta.seed;
+      const opened = c.engine.dispatch({ type: 'OPEN_CITY', citySize: 'standard', capital: 10_000_000 }).ok;
+      const second = c.getState();
+      const mill = place('flour_mill', true);
+      const target = place('freight_terminal', false);
+      c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+      return { farm, origin, originTile, mill, target, opened, from, to: second.meta.seed, fromName: second.holding?.dormant[0]?.state.cityName ?? '', toName: second.cityName ?? '' };
+    });
+    check('Düzenek: kurucu şehirde çiftlik ve terminal, yeni şehirde değirmen ve terminal',
+      Boolean(setup.farm && setup.origin && setup.mill && setup.target && setup.opened), `${setup.fromName} → ${setup.toName}`);
+
+    await lp.locator('[data-city-chip]').click();
+    await lp.waitForTimeout(300);
+    const empty = await lp.evaluate(() => ({
+      lines: document.querySelector('[data-holding-lines]')?.getAttribute('data-holding-lines') ?? null,
+      text: document.querySelector('.holding-lines')?.textContent ?? '',
+      form: document.querySelectorAll('[data-line-open]').length,
+    }));
+    check('Şehirler panelinde hatlar bölümü: hat yok, yeni hat formu hazır', empty.lines === '0' && empty.form === 1 && empty.text.includes('Henüz hat yok'),
+      empty.text.slice(0, 90));
+    await lp.selectOption('[data-line-from]', String(setup.from));
+    await lp.selectOption('[data-line-to]', String(setup.to));
+    await lp.selectOption('[data-line-good]', 'wheat');
+    await lp.waitForTimeout(150);
+    const form = await lp.evaluate(() => ({
+      quote: document.querySelector('[data-line-quote]')?.textContent ?? '',
+      count: document.querySelector('[data-line-count]')?.value ?? '',
+      state: document.querySelector('[data-line-open]')?.getAttribute('data-line-open'),
+      refused: document.querySelector('[data-line-refused]')?.textContent ?? '',
+    }));
+    // Çiftlik günde 2.700 buğday, değirmen 1.800 istiyor: 1.800 / 300 = 6 kamyon.
+    check('Formun hesabı: çıkışta artan ve varışta açık, önerilen kamyon ikisinin küçüğünden',
+      form.quote.includes('2.700') && form.quote.includes('1.800') && form.count === '6' && form.state === 'ok', `${form.count} kamyon · ${form.quote} ${form.refused}`);
+    await lp.locator('[data-line-go]').click();
+    await lp.waitForTimeout(300);
+    const row = await lp.evaluate(() => {
+      const s = window.__capital.getState();
+      return {
+        lines: s.holding?.lines?.length ?? 0,
+        days: s.holding?.lines?.[0]?.transitDays ?? 0,
+        spec: document.querySelector('[data-line="line-1"] [data-line-spec]')?.textContent ?? '',
+        today: document.querySelector('[data-line="line-1"] [data-line-today]')?.textContent ?? '',
+      };
+    });
+    check('Hat açılıyor: satırda kapasite, yol ve bedel; ilk sefer yarın', row.lines === 1 && row.spec.includes('6 kamyon') && row.spec.includes('1.800 birim') &&
+      row.spec.includes(`${row.days} gün yol`) && row.today.includes('yarın'), `${row.spec} · ${row.today}`);
+
+    await lp.evaluate(() => { const c = window.__capital; c.engine.runDay(); c.engine.dispatch({ type: 'SET_SPEED', speed: 0 }); });
+    await lp.waitForTimeout(250);
+    const day1 = await lp.evaluate(() => ({
+      today: document.querySelector('[data-line="line-1"] [data-line-today]')?.textContent ?? '',
+      road: document.querySelector('[data-line="line-1"] [data-line-road]')?.getAttribute('data-line-road'),
+      roadText: document.querySelector('[data-line="line-1"] [data-line-road]')?.textContent ?? '',
+    }));
+    check('İlk sefer: 1.800 birim yüklendi, mal ve nakliye bedeli; yolda bir sefer', day1.today.includes('1.800 birim yüklendi') && day1.today.includes('nakliye') &&
+      day1.road === '1800' && day1.roadText.includes('1 sefer'), `${day1.today} · ${day1.roadText}`);
+    const arrival = await lp.evaluate((days) => {
+      const c = window.__capital;
+      for (let i = 0; i < days; i++) c.engine.runDay();
+      c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+      const s = c.getState();
+      return { ratio: s.companies.player.supplyRatio.wheat ?? 0, arrived: s.trade?.arrived?.['line-1'] ?? 0 };
+    }, row.days);
+    await lp.waitForTimeout(250);
+    const roadAfter = ((await lp.locator('[data-line="line-1"] [data-line-road]').textContent()) ?? '').trim();
+    check('Mal yol süresi kadar gün sonra varıyor: değirmenin buğdayı hattan, satırda "vardı"',
+      arrival.arrived === 1800 && arrival.ratio === 1 && roadAfter.includes('1.800 birim vardı'), `${arrival.arrived} birim · iç arz %${Math.round(arrival.ratio * 100)} · ${roadAfter}`);
+    await lp.screenshot({ path: `${OUT}/trade-lines.png` });
+
+    await lp.locator('[data-line="line-1"] [data-line-trucks="up"]').click();
+    await lp.waitForTimeout(150);
+    const more = await lp.evaluate(() => window.__capital.getState().holding.lines[0].trucks);
+    check('+1 kamyon düğmesi hattı büyütüyor', more === 7, `${more} kamyon`);
+
+    // Kamyonlar çıkış terminalinin filosundan: kurucu şehrin taşıma masası onları sayıyor.
+    await lp.locator('.city-switch').first().click();
+    await lp.waitForTimeout(900);
+    if ((await lp.locator('.modal-head button.icon').count()) > 0) await lp.locator('.modal-head button.icon').click();
+    await lp.waitForTimeout(200);
+    await lp.evaluate((tileId) => window.__capital.selectTile(tileId), setup.originTile);
+    await lp.waitForTimeout(300);
+    const desk = await lp.evaluate(() => ({
+      fleet: document.querySelector('[data-freight-fleet]')?.getAttribute('data-freight-fleet'),
+      lines: document.querySelector('[data-freight-lines]')?.getAttribute('data-freight-lines'),
+      text: document.querySelector('[data-freight-lines]')?.textContent ?? '',
+    }));
+    check('Çıkış terminalinin taşıma masası hattın kamyonlarını sayıyor', desk.fleet === '7/16' && desk.lines === '7' && desk.text.includes('Şehirler paneli'),
+      `${desk.fleet} · ${desk.text}`);
+
+    // Hat kapanınca yoldaki mal yine varıyor.
+    await lp.locator('[data-city-chip]').click();
+    await lp.waitForTimeout(300);
+    await lp.locator('[data-line="line-1"] [data-line-close]').click();
+    await lp.waitForTimeout(200);
+    const closed = await lp.evaluate((days) => {
+      const c = window.__capital;
+      const s = c.getState();
+      // Kurucu şehre geçildi: varış şehri artık uzakta.
+      const destination = s.holding.dormant[0].state;
+      const before = destination.trade?.inbound.length ?? 0;
+      let arrived = 0;
+      for (let i = 0; i < days + 1; i++) {
+        c.engine.runDay();
+        arrived += destination.trade?.arrived?.['line-1'] ?? 0;
+      }
+      c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+      return { lines: s.holding.lines.length, before, after: destination.trade?.inbound.length ?? 0, arrived, rows: document.querySelectorAll('[data-line]').length };
+    }, row.days);
+    check('Hat kapanınca satır gidiyor, yoldaki seferler yine varıyor', closed.lines === 0 && closed.before > 0 && closed.after === 0 && closed.arrived > 0,
+      `${closed.before} sefer yoldaydı, ${closed.arrived} birim vardı`);
+
+    // Telefon genişliğinde form taşmıyor.
+    await lp.setViewportSize({ width: 390, height: 844 });
+    await lp.waitForTimeout(300);
+    const narrow = await lp.evaluate(() => {
+      const section = document.querySelector('.holding-lines');
+      return section ? { scroll: section.scrollWidth, client: section.clientWidth } : null;
+    });
+    check('Telefon genişliğinde hatlar bölümü taşmıyor', narrow !== null && narrow.scroll <= narrow.client + 1, narrow ? `${narrow.scroll}/${narrow.client}` : 'bölüm yok');
+    check('Şehirler arası hat bölümünde konsol temiz', lErrors.length === 0, lErrors.slice(0, 3).join(' | '));
+    await lContext.close();
   }
 
   section('Mobil');

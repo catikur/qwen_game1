@@ -8119,3 +8119,82 @@ button.small {
   background: #f2b300;
   color: #1d1d1d;
 }
+
+/* Şehirler arası hatlar (Tur 77): şehir satırının kardeşi, yeni hat formu altta. */
+.line-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.line-row {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--tint-1);
+  font-size: calc(12.5px * var(--text-scale));
+}
+
+/* Kasası yetmeyen varış şehri: kırmızı kenar, sefer eksik. */
+.line-row[data-line-short='cash'] {
+  border-color: color-mix(in srgb, var(--bad) 55%, transparent);
+}
+
+.line-row .holding-actions {
+  margin-top: 4px;
+}
+
+.line-open {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+}
+
+.line-open h4 {
+  margin: 0;
+  font-size: calc(13px * var(--text-scale));
+}
+
+.line-open-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px 10px;
+}
+
+.line-open-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  font-size: calc(12px * var(--text-scale));
+  color: var(--muted);
+}
+
+.line-open-grid select,
+.line-open-grid input {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 32px;
+  padding: 4px 8px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-xs);
+  background: var(--panel-solid);
+  color: var(--text);
+  font-weight: 600;
+}
+
+.line-refused {
+  color: var(--bad);
+}
+
+.line-open .primary {
+  align-self: flex-start;
+}

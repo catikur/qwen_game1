@@ -17,6 +17,7 @@ import { addTally, cityTally, noteRaidStage } from './systems/feats';
 import { capRemaining, playerBuy } from './systems/orders';
 import { createNewGame } from './worldgen';
 import { scenarioActive, shiftScenario } from './systems/scenario';
+import { dropCityLines } from './systems/trade';
 import type { CityDirective, CommandResult, DormantCity, GameState, HoldingState, RemotePayout } from './types';
 
 /**
@@ -361,6 +362,8 @@ export function closeCity(state: GameState, index: number): CommandResult {
   holding.foundedCityType ??= holdingFounderType(state);
   // Şehrin sayaçları da: kapatılan şehirden sonraki ilerleme üstüne eklensin (Codex #70).
   holding.closedTally = addTally(holding.closedTally ?? {}, cityTally(city.state));
+  // Şehirler arası hatları da (Tur 77): kaybedilen şehre giden mal onunla gitti.
+  dropCityLines(state, city.state.meta.seed);
   holding.dormant = holding.dormant.filter((_, i) => i !== index);
   return { ok: true };
 }

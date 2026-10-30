@@ -18,7 +18,7 @@ import { energyPrice, gridUpkeep, powerGrid, servedUpkeep, settlePlants } from '
 import { underConstruction } from './realestate';
 import { cityRule, cityUpkeepScale, referencePrice } from './cityType';
 import type { BuildingDef } from '@capital/content';
-import type { BuildingInstance, DistrictState, FreightDeal, GameState } from '../types';
+import type { BuildingInstance, DistrictState, FreightDeal, GameState, Shipment, TradeLoad } from '../types';
 
 /**
  * Tedarik zinciri.
@@ -306,6 +306,196 @@ export function runProfitTrendTick(state: GameState): void {
   }
 }
 
+/**
+ * Binanın bugünkü girdi talebi, ürün başına: üretim ünitesinin girdisi ya da
+ * rafın çekişi. Üretim adımı ve hattın sabah tahmini (`exportableSurplus`)
+ * aynı hesabı kullanıyor.
+ */
+function addDemand(state: GameState, building: BuildingInstance, def: BuildingDef, consumed: Record<string, number>): void {
+  if (def.role === 'process' && def.outputGoodId) {
+    const input = GOOD_BY_ID[def.outputGoodId]?.inputGoodId;
+    if (input) consumed[input] = (consumed[input] ?? 0) + outputOf(state, building);
+  }
+
+  if (def.role === 'outlet') {
+    /*
+     * DÜNKÜ SATIŞ, ÜRÜN BAŞINA (Tur 21).
+     *
+     * Eskiden `expectedDraw` dünkü satışı okumak istiyordu ama defter bu
+     * adımdan ÖNCE sıfırlanıyor (`resetDailyLedgers`): okunan her zaman
+     * 0'dı ve tüketim KAPASİTEDEN sayılıyordu, üstelik raftaki ürünlere
+     * EŞİT bölünerek. "Yemek + kahve" satan restoran kahveyi çok, yemeği
+     * az satarken iki ürün de yarım kapasite tüketiyor sayılıyordu: iç
+     * arz oranı şişiyor, fazla üretim "tüketildi" diye pazara satılmıyor,
+     * tesis girdisini alıp ürününü boşa harcıyordu. Zincir A/B'si bunu
+     * gösterdi (Hazır Gıda Tesisi kartta +1.643 ₺/gün, gerçekte −5.371).
+     * Pazar adımı artık ürün başına satışı `soldByGood`'a yazıyor;
+     * alanı olmayan (eski kayıt, yeni mağaza) eski kurala düşer.
+     */
+    const draw = expectedDraw(building);
+    const shelf = building.stocked.length > 0 ? building.stocked : [];
+    for (const goodId of shelf) {
+      const input = GOOD_BY_ID[goodId]?.inputGoodId;
+      if (!input) continue;
+      const units = building.soldByGood ? (building.soldByGood[goodId] ?? 0) : draw / shelf.length;
+      consumed[input] = (consumed[input] ?? 0) + units;
+    }
+  }
+}
+
+/**
+ * Oyuncunun bu şehirde bir maldaki bugünkü üretimi ve kendi tüketimi
+ * (Tur 77), üretim adımının hesabıyla: bugünkü kapasite ve grev, rafların
+ * dünkü satışı. Gelen hattın malı sayılmıyor.
+ */
+export function ownGoodFlow(state: GameState, goodId: string): { produced: number; consumed: number } {
+  const consumed: Record<string, number> = {};
+  let produced = 0;
+  for (const building of Object.values(state.buildings)) {
+    if (building.companyId !== state.playerCompanyId) continue;
+    const def = BUILDING_BY_ID[building.defId];
+    if (!def) continue;
+    addDemand(state, building, def, consumed);
+    if (def.outputGoodId === goodId && (def.role === 'extract' || def.role === 'process')) produced += outputOf(state, building);
+  }
+  return { produced, consumed: consumed[goodId] ?? 0 };
+}
+
+/**
+ * Oyuncunun bu şehirde bugün kendi ihtiyacından artacak malı (Tur 77).
+ * Şehirler arası hat sabah bunu yüklüyor (aynı malı hem alan hem gönderen
+ * şehir yok: gelen hattın malı burada sayılmasa da olur).
+ */
+export function exportableSurplus(state: GameState, goodId: string): number {
+  const flow = ownGoodFlow(state, goodId);
+  return Math.max(0, flow.produced - flow.consumed);
+}
+
+/** Hattın bu şehirdeki günü (Tur 77): varan mal terminal başına, yükler ürün başına. */
+interface TradeDay {
+  /** Ürün → terminal → bugün varan birim. */
+  imported: Record<string, Record<string, number>>;
+  /** Ürün → bugünkü yükler. */
+  loads: Record<string, TradeLoad[]>;
+}
+
+/**
+ * Sabah planlanan günü defterlere geçirir (Tur 77, `prepareTradeDay`):
+ *
+ * - Varış şehrinin ödemesi (malın ve nakliyenin bedeli) terminalin mal
+ *   maliyetinde; nakit pazar adımının sonunda bugünkü kârla.
+ * - Yolu biten mal nakliye dahil maliyetiyle şirketin havuzuna giriyor:
+ *   kendi üretimi gibi, iç transferi defterlere yazılmıyor (bedeli ödendi).
+ * - Çıkış şehrinin yükleri fazladan düşmek üzere ürün başına toplanıyor.
+ *
+ * Günün yükleri ve ödemeleri siliniyor: bir gün iki kez yazılmasın.
+ */
+function takeTradeDay(state: GameState, flow: CompanyFlow | undefined): TradeDay | null {
+  const trade = state.trade;
+  const player = state.companies[state.playerCompanyId];
+  if (!trade || !flow || !player) return null;
+  const day: TradeDay = { imported: {}, loads: {} };
+
+  for (const payment of trade.payments ?? []) {
+    const terminal = state.buildings[payment.terminalId];
+    if (terminal) {
+      terminal.last.cogs += payment.amount;
+      terminal.last.profit -= payment.amount;
+    }
+    player.today.cogs += payment.amount;
+  }
+  delete trade.payments;
+
+  const arrived: Record<string, number> = {};
+  const onRoad: Shipment[] = [];
+  for (const shipment of trade.inbound) {
+    if (shipment.daysLeft > 0) {
+      shipment.daysLeft -= 1;
+      onRoad.push(shipment);
+      continue;
+    }
+    const before = flow.produced[shipment.goodId] ?? 0;
+    flow.produced[shipment.goodId] = before + shipment.units;
+    flow.ownCost[shipment.goodId] =
+      ((flow.ownCost[shipment.goodId] ?? 0) * before + shipment.unitCost * shipment.units) / Math.max(1, before + shipment.units);
+    const terminals = (day.imported[shipment.goodId] ??= {});
+    terminals[shipment.terminalId] = (terminals[shipment.terminalId] ?? 0) + shipment.units;
+    arrived[shipment.lineId] = (arrived[shipment.lineId] ?? 0) + shipment.units;
+  }
+  trade.inbound = onRoad;
+  if (Object.keys(arrived).length > 0) trade.arrived = arrived;
+  else delete trade.arrived;
+
+  for (const load of trade.loads ?? []) (day.loads[load.goodId] ??= []).push(load);
+  delete trade.loads;
+  return day;
+}
+
+/** Ürünün kendi ihtiyacından artanı, hattın yükü önce (Tur 77): yüklenen, pazara kalan, yükün birim bedeli. */
+function splitSurplus(
+  flow: CompanyFlow,
+  goodId: string,
+  trade: TradeDay | null,
+): { exported: number; surplus: number; unitPrice: number; load: number } {
+  const free = Math.max(0, (flow.produced[goodId] ?? 0) - (flow.consumed[goodId] ?? 0));
+  const loads = trade?.loads[goodId];
+  if (!loads) return { exported: 0, surplus: free, unitPrice: 0, load: 0 };
+  let load = 0;
+  let value = 0;
+  for (const entry of loads) {
+    load += entry.units;
+    value += entry.units * entry.unitPrice;
+  }
+  const exported = Math.min(load, free);
+  return { exported, surplus: free - exported, unitPrice: load > 0 ? value / load : 0, load };
+}
+
+/** Terminalin defterine hattın cirosu ya da gideri; terminal yoksa yalnız şirketin defteri. */
+function bookLine(state: GameState, terminalId: string, revenue: number, cogs: number): void {
+  const company = state.companies[state.playerCompanyId]!;
+  const terminal = state.buildings[terminalId];
+  if (terminal) {
+    terminal.last.revenue += revenue;
+    terminal.last.cogs += cogs;
+    terminal.last.profit += revenue - cogs;
+    terminal.last.lineRevenue = (terminal.last.lineRevenue ?? 0) + revenue;
+  }
+  company.today.revenue += revenue;
+  company.today.cogs += cogs;
+}
+
+/**
+ * Hattın terminaldeki payı (Tur 77), üreticilerin defterinden sonra:
+ *
+ * - Varan malın havuzdaki payı üretici gibi: fazla çıkarsa o payın
+ *   yükü ve pazara satılanı varış terminalinin cirosu.
+ * - Fazla yükü karşılamadıysa (sabahki tahmin tuttu ama grev başladı)
+ *   eksik çıkış şehrinin pazarından alınıyor: terminalin mal maliyetinde,
+ *   bedeli de cirosunda. Para yaratılmıyor; eksik fazla fiyatıyla satılıyor.
+ */
+function settleTradeGoods(state: GameState, trade: TradeDay, flow: CompanyFlow, costMultiplier: number): void {
+  const goods = new Set([...Object.keys(trade.imported), ...Object.keys(trade.loads)]);
+  for (const goodId of goods) {
+    const produced = flow.produced[goodId] ?? 0;
+    const spot = state.market.spot[goodId] ?? GOOD_BY_ID[goodId]?.basePrice ?? 0;
+    const split = splitSurplus(flow, goodId, trade);
+    if (produced > 0) {
+      const value = split.exported * split.unitPrice + split.surplus * spot * SURPLUS_HAIRCUT;
+      for (const [terminalId, units] of Object.entries(trade.imported[goodId] ?? {})) {
+        if (value > 0) bookLine(state, terminalId, value * (units / produced), 0);
+      }
+    }
+    // Sabahki tahmin üretim adımıyla aynı hesap; eksik yalnız gün içinde
+    // değişen kapasitede (grev). Kayan noktanın kırıntısı eksik sayılmıyor.
+    const short = split.load - split.exported;
+    if (short <= 1e-6) continue;
+    for (const load of trade.loads[goodId] ?? []) {
+      const units = load.units * (short / split.load);
+      bookLine(state, load.terminalId, units * load.unitPrice, units * spot * costMultiplier);
+    }
+  }
+}
+
 interface CompanyFlow {
   /** Ürün → bugün üretilen birim. */
   produced: Record<string, number>;
@@ -336,37 +526,11 @@ export function runProductionTick(state: GameState): void {
     const def = BUILDING_BY_ID[building.defId];
     const flow = flows[building.companyId];
     if (!def || !flow) continue;
-
-    if (def.role === 'process' && def.outputGoodId) {
-      const input = GOOD_BY_ID[def.outputGoodId]?.inputGoodId;
-      if (input) flow.consumed[input] = (flow.consumed[input] ?? 0) + outputOf(state, building);
-    }
-
-    if (def.role === 'outlet') {
-      /*
-       * DÜNKÜ SATIŞ, ÜRÜN BAŞINA (Tur 21).
-       *
-       * Eskiden `expectedDraw` dünkü satışı okumak istiyordu ama defter bu
-       * adımdan ÖNCE sıfırlanıyor (`resetDailyLedgers`): okunan her zaman
-       * 0'dı ve tüketim KAPASİTEDEN sayılıyordu, üstelik raftaki ürünlere
-       * EŞİT bölünerek. "Yemek + kahve" satan restoran kahveyi çok, yemeği
-       * az satarken iki ürün de yarım kapasite tüketiyor sayılıyordu: iç
-       * arz oranı şişiyor, fazla üretim "tüketildi" diye pazara satılmıyor,
-       * tesis girdisini alıp ürününü boşa harcıyordu. Zincir A/B'si bunu
-       * gösterdi (Hazır Gıda Tesisi kartta +1.643 ₺/gün, gerçekte −5.371).
-       * Pazar adımı artık ürün başına satışı `soldByGood`'a yazıyor;
-       * alanı olmayan (eski kayıt, yeni mağaza) eski kurala düşer.
-       */
-      const draw = expectedDraw(building);
-      const shelf = building.stocked.length > 0 ? building.stocked : [];
-      for (const goodId of shelf) {
-        const input = GOOD_BY_ID[goodId]?.inputGoodId;
-        if (!input) continue;
-        const units = building.soldByGood ? (building.soldByGood[goodId] ?? 0) : draw / shelf.length;
-        flow.consumed[input] = (flow.consumed[input] ?? 0) + units;
-      }
-    }
+    addDemand(state, building, def, flow.consumed);
   }
+
+  // Şehirler arası hat (Tur 77): varan mal havuza, günün yükü ve ödemesi.
+  const trade = takeTradeDay(state, flows[state.playerCompanyId]);
 
   // ---- 2. Üretim ve birim maliyet, kademe kademe ----
   // Sıra önemli: bir ara malın maliyeti girdisinin harmanlanmış
@@ -450,12 +614,20 @@ export function runProductionTick(state: GameState): void {
     }
 
     // Şirketin bu üründeki fazlası, üreticiler arasında kapasiteye göre.
+    // Hattın yükü (Tur 77) fazladan önce gidiyor, bedeli de fazlanın fiyatıyla.
     const produced = flow.produced[good.id] ?? 0;
-    const consumed = flow.consumed[good.id] ?? 0;
-    const surplus = Math.max(0, produced - consumed);
-    if (surplus > 0 && produced > 0) {
+    const split = splitSurplus(flow, good.id, building.companyId === state.playerCompanyId ? trade : null);
+    if (split.exported > 0 && produced > 0) {
+      const units = split.exported * (output / produced);
+      const revenue = units * split.unitPrice;
+      building.last.exported = units;
+      building.last.revenue += revenue;
+      building.last.profit += revenue;
+      company.today.revenue += revenue;
+    }
+    if (split.surplus > 0 && produced > 0) {
       const share = output / produced;
-      const units = surplus * share;
+      const units = split.surplus * share;
       const revenue = units * (state.market.spot[good.id] ?? good.basePrice) * SURPLUS_HAIRCUT;
       building.last.soldToMarket = units;
       building.last.revenue += revenue;
@@ -465,6 +637,7 @@ export function runProductionTick(state: GameState): void {
 
     building.last.capacityUsed = 1;
   }
+  if (trade) settleTradeGoods(state, trade, flows[state.playerCompanyId]!, mods.costMultiplier);
 
   // ---- 4. Tüketici ürünlerinin harmanlanmış maliyeti ----
   // Perakende işleme maliyeti outlet'e özeldir (depo menzili), bu yüzden
@@ -490,6 +663,10 @@ export function runProductionTick(state: GameState): void {
     for (const [goodId, units] of Object.entries(flow.consumed)) {
       consumed[goodId] = (consumed[goodId] ?? 0) + units;
     }
+  }
+  // Hatta yüklenen mal şehrin pazarından çıkıyor (Tur 77).
+  for (const [goodId, loads] of Object.entries(trade?.loads ?? {})) {
+    for (const load of loads) consumed[goodId] = (consumed[goodId] ?? 0) + load.units;
   }
   state.market.produced = produced;
   state.market.consumed = consumed;

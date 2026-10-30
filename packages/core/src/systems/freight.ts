@@ -110,9 +110,9 @@ export function freightTerminals(state: GameState, companyId = state.playerCompa
     .sort((a, b) => a.tileId - b.tileId);
 }
 
-/** Terminalin filosunda süren sözleşmelerin tuttuğu kamyon sayısı. */
+/** Terminalin filosunda süren sözleşmelerin ve şehirler arası hatların (Tur 77) tuttuğu kamyon sayısı. */
 export function fleetUsed(state: GameState, terminalId: string): number {
-  let used = 0;
+  let used = state.buildings[terminalId]?.lineTrucks ?? 0;
   for (const deal of state.freight?.contracts ?? []) if (deal.terminalId === terminalId) used += deal.outletIds.length;
   return used;
 }

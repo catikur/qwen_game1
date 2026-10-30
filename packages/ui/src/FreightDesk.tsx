@@ -4,6 +4,7 @@ import { BUILDING_BY_ID, formatPercent } from '@capital/content';
 import { FREIGHT, FREIGHT_SHARE, fleetUsed, formatMoney, freightPenalty, freightProspects, freightStanding, getPlayer, reliefOf } from '@capital/core';
 import type { FreightDeal } from '@capital/core';
 import { t } from './i18n';
+import './i18n/tradeTr';
 import { useGame, useGameState } from './useGame';
 
 /**
@@ -27,7 +28,8 @@ export function FreightDesk({ buildingId }: { buildingId: string }): ReactElemen
   const offers = (state.freight?.offers ?? []).filter((deal) => deal.terminalId === terminal.id);
   // Bugünkü ücret terminalin defterinden, toplanan terminalin kendi
   // toplamından: biten sözleşmenin ücreti de sayılıyor (Codex #86).
-  const today = terminal.last.revenue;
+  // Şehirler arası hattın cirosu (Tur 77) ücret değil.
+  const today = terminal.last.revenue - (terminal.last.lineRevenue ?? 0);
   const earned = terminal.freightEarned ?? 0;
   const name = (deal: FreightDeal): string => state.companies[deal.companyId]?.name ?? deal.companyId;
   const color = (deal: FreightDeal): string | undefined => state.companies[deal.companyId]?.color;
@@ -53,6 +55,11 @@ export function FreightDesk({ buildingId }: { buildingId: string }): ReactElemen
           </span>
         </div>
       </div>
+      {(terminal.lineTrucks ?? 0) > 0 && (
+        <p className="muted" data-freight-lines={terminal.lineTrucks}>
+          {t('trade.freightDesk', { trucks: terminal.lineTrucks ?? 0 })}
+        </p>
+      )}
 
       {offers.map((offer) => {
         const left = Math.max(0, offer.offeredDay + FREIGHT.offerLifetimeDays - state.time.day);

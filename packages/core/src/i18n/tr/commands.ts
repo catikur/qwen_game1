@@ -115,6 +115,23 @@ export const commands = {
   'core.holding.completeTitle': 'Holding tamamlandı: {count} şehirde zafer',
   'core.holding.completeBody': 'Holding değeri {worth}. Şehirler yaşamaya devam ediyor; oyun serbest sürüyor.',
 
+  // systems/trade.ts — şehirler arası hat (Tur 77)
+  'core.trade.noHolding': 'Hat iki şehri bağlıyor: önce bir şehirde zafere ulaşıp ikinci şehri aç.',
+  'core.trade.sameCity': 'Hat iki ayrı şehri bağlıyor.',
+  'core.trade.lostCity': 'Kaybedilen şehre hat açılmıyor.',
+  'core.trade.badGood': 'Hatla hammadde ve ara mal taşınıyor; mağaza ürünleri değil.',
+  'core.trade.maxLines': 'Holding en fazla {max} hat.',
+  'core.trade.duplicate': 'Bu iki şehir arasında bu malın hattı zaten var.',
+  'core.trade.chain': 'Bir şehir aynı malı hem alıp hem gönderemez.',
+  'core.trade.noTerminal': '{city} şehrinde nakliye terminalin yok.',
+  'core.trade.fleetFull': 'Terminalin filosunda boş kamyon yok.',
+  'core.trade.badTrucks': 'Kamyon sayısı 1 ile {max} arasında olmalı.',
+  'core.trade.noSuchLine': 'Böyle bir hat yok.',
+  'core.trade.brokenTitle': 'Hat kapandı: {from} → {to} ({good})',
+  'core.trade.brokenTargetLost': '{city} elden çıktı; yoldaki mal onunla gitti.',
+  'core.trade.brokenSourceLost': '{city} elden çıktı; yoldaki mal yine varıyor.',
+  'core.trade.brokenTerminal': '{city} şehrindeki terminal artık yok; yoldaki mal yine varıyor.',
+
   // selectors.ts — harita lensleri
   'core.selectors.lensNoneName': 'Şehir',
   'core.selectors.lensNoneHint': 'Binaları ve bölge renklerini olduğu gibi göster.',

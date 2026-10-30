@@ -26,6 +26,9 @@ import {
   getCeoModifiers,
   getCityType,
   rootStructureOf,
+  GOOD_BY_ID,
+  TRADED_GOODS,
+  TRADE_LINE,
 } from '@capital/content';
 import type { CategoryId, CityTypeId, ModifierId, SeasonId, WeatherId } from '@capital/content';
 import {
@@ -75,7 +78,8 @@ import {
   createLeagueGame,
   leagueRule,
 } from '../src/index';
-import { build, buyTile } from '../src/actions';
+import { build, buyTile, zoningBlocker } from '../src/actions';
+import { SURPLUS_HAIRCUT } from '../src/systems/supply';
 import { buyShares } from '../src/systems/equity';
 import { PRUNE_MEMORY_DAYS, isPrunable } from '../src/systems/npc';
 import { WAGE_PER_JOB } from '../src/systems/labor';
@@ -83,7 +87,7 @@ import { overheadMultiplier } from '../src/systems/economy';
 import { loanQuote } from '../src/systems/credit';
 import { issueQuote } from '../src/systems/issuance';
 import { capRemaining, dailyBuyCap, findOrder, orderEstimate } from '../src/systems/orders';
-import { cityTrend, holdingNetWorth, raidStatus } from '../src/holding';
+import { cityTrend, foundCity, holdingNetWorth, raidStatus } from '../src/holding';
 import { createScenarioGame } from '../src/scenario';
 import { PROJECT_TIMING, SCENARIO_BY_ID } from '@capital/content';
 import { projectStandings } from '../src/systems/projects';
@@ -5757,6 +5761,133 @@ section('Şehir türleri: liman, sanayi, başkent', () => {
       `boş talep %${Math.round(unmet360 * 100)} · rakip ${formatMoney(best)} / ${formatMoney(player.netWorth)} · zafer ${state.victory?.day ?? 'yok'} · ${(lateMs / 60).toFixed(0)} ms/gün`,
     );
   }
+});
+
+/**
+ * Şehirler arası hat (Tur 77): bir şehrin malı öbür şehrin havuzunda.
+ *
+ * Laboratuvar: rakipsiz, olaysız iki şehir. Çıkış şehrinde üretim ve
+ * terminal, varış şehrinde o malı tüketen bina ve terminal; yirmi günlük
+ * ısınmadan sonra aynı an iki motora bölünüyor, birinde hat açılıyor.
+ * Yol bitip seferler oturduktan sonraki 60 günün holding değeri ölçülüyor
+ * (iki şehrin değeri + kasa: uzaktaki şehrin kârının yarısı kasaya akıyor).
+ *
+ * Ölçülen (tohum 1/7/42, yol 6/4/3 gün; holding değeri farkı, ₺/gün):
+ *   buğday → değirmen, 6 kamyon:  658 · 827 · 1.428
+ *   pamuk → dokuma, 2 kamyon:   1.314 · 1.350 · 1.802
+ *   kumaş → butik, 1 kamyon:    2.320 · 2.319 · 2.943
+ * Kazancın iki kaynağı var: varış şehri pazardan tam fiyatla aldığını
+ * fazla fiyatıyla alıyor (%15 eksi nakliye) ve çıkış şehrinin fazlası
+ * artık kendi pazarında fiyatı kırmıyor. Çıkış şehri hatla her tohumda
+ * biraz kazanıyor (değeri 97–452 ₺/gün; kârının yarısı kasaya): pazara
+ * dökülen fazla spot fiyatı düşürüyordu. Türlü şehir çiftinde hammadde fiyatı da ayrışıyor: sanayi
+ * kentinden başkente buğday hattı aynı tohumda dengeli çiftin 2,6 katı
+ * (1.727 ₺/gün). Fiyat farkının kendisi Tur 78'in konusu.
+ */
+section('Şehirler arası hat: bir şehrin malı öbüründe', () => {
+  interface LineCase { label: string; good: string; origin: string[]; destination: string[]; trucks: number }
+  const CASES: LineCase[] = [
+    { label: 'buğday → değirmen', good: 'wheat', origin: ['wheat_farm'], destination: ['flour_mill'], trucks: 6 },
+    { label: 'pamuk → dokuma', good: 'cotton', origin: ['cotton_farm'], destination: ['textile_mill'], trucks: 2 },
+    { label: 'kumaş → butik', good: 'fabric', origin: ['cotton_farm', 'textile_mill'], destination: ['boutique', 'boutique', 'boutique', 'department_store', 'department_store'], trucks: 1 },
+  ];
+  const place = (state: ReturnType<GameEngine['getState']>, defId: string): void => {
+    const me = getPlayer(state);
+    for (const tile of state.map.tiles) {
+      if (tile.kind !== 'plot' || tile.ownerId || tile.structureId || tile.buildingId) continue;
+      if (zoningBlocker(state, tile.districtId, defId)) continue;
+      if (!buyTile(state, me.id, tile.id).ok) continue;
+      if (build(state, me.id, tile.id, defId).ok) return;
+    }
+    throw new Error(`${defId} için parsel yok`);
+  };
+  const pair = (seed: number, typeA?: CityTypeId, typeB?: CityTypeId): GameEngine => {
+    const first = createNewGame({ seed, companyName: 'Hat AŞ', districtUnlocks: false, ...(typeA ? { cityType: typeA } : {}) });
+    first.flags.npcCompetition = false;
+    first.flags.randomEvents = false;
+    first.flags.lateCosts = false;
+    getPlayer(first).cash = 500_000_000;
+    return new GameEngine(foundCity(first, 'standard', 200_000_000, typeB));
+  };
+  interface LineRun { days: number; gain: number; originGain: number; units: number; freight: number }
+  const measure = (seed: number, c: LineCase, typeA?: CityTypeId, typeB?: CityTypeId): LineRun => {
+    const engine = pair(seed, typeA, typeB);
+    const root = engine.getState();
+    const away = root.holding!.dormant[0]!.state;
+    for (const def of c.origin) place(away, def);
+    place(away, 'freight_terminal');
+    for (const def of c.destination) place(root, def);
+    place(root, 'freight_terminal');
+    for (let day = 0; day < 20; day++) engine.runDay();
+    const twin = new GameEngine(structuredClone(root));
+    const opened = engine.dispatch({ type: 'OPEN_LINE', from: away.meta.seed, to: root.meta.seed, goodId: c.good, trucks: c.trucks });
+    if (!opened.ok) throw new Error(opened.reason);
+    const both = (days: number) => {
+      for (let day = 0; day < days; day++) {
+        engine.runDay();
+        twin.runDay();
+      }
+    };
+    const worth = (e: GameEngine) => holdingNetWorth(e.getState());
+    const originWorth = (e: GameEngine) => getPlayer(e.getState().holding!.dormant[0]!.state).netWorth;
+    both(30);
+    const start = worth(engine) - worth(twin);
+    const originStart = originWorth(engine) - originWorth(twin);
+    both(60);
+    const line = root.holding!.lines![0]!;
+    return {
+      days: line.transitDays,
+      gain: (worth(engine) - worth(twin) - start) / 60,
+      originGain: (originWorth(engine) - originWorth(twin) - originStart) / 60,
+      units: line.last!.units,
+      freight: line.last!.freight,
+    };
+  };
+
+  const runs = CASES.map((c) => ({ c, bySeed: [1, 7, 42].map((seed) => measure(seed, c)) }));
+  for (const { c, bySeed } of runs) {
+    console.log(
+      `  ${c.label}, ${c.trucks} kamyon: ` +
+        bySeed.map((r) => `${r.days} gün yol · ${Math.round(r.units)} birim/gün · nakliye ${formatMoney(r.freight)} · holding +${formatMoney(r.gain)}/gün (çıkış ${r.originGain >= 0 ? '+' : ''}${formatMoney(r.originGain)})`).join(' | '),
+    );
+  }
+  expect(
+    'hat holding\'e kazandırıyor: üç malda, üç tohumda',
+    runs.every(({ bySeed }) => bySeed.every((r) => r.gain > 0)),
+    runs.map(({ c, bySeed }) => `${c.label}: ${bySeed.map((r) => formatMoney(r.gain)).join('/')}`).join(' · '),
+  );
+  expect(
+    'çıkış şehri kaybetmiyor: yük fazla fiyatıyla satılıyor, fazla pazarda fiyatı kırmıyor',
+    runs.every(({ bySeed }) => bySeed.every((r) => r.originGain >= 0)),
+    runs.map(({ c, bySeed }) => `${c.label}: ${bySeed.map((r) => formatMoney(r.originGain)).join('/')}`).join(' · '),
+  );
+  const perTruck = (label: string, seedIndex: number) => {
+    const run = runs.find((r) => r.c.label === label)!;
+    return run.bySeed[seedIndex]!.gain / run.c.trucks;
+  };
+  expect(
+    'kamyon başına değerli mal ucuz malı geçiyor: kumaş > pamuk > buğday, üç tohumda',
+    [0, 1, 2].every((i) => perTruck('kumaş → butik', i) > perTruck('pamuk → dokuma', i) && perTruck('pamuk → dokuma', i) > perTruck('buğday → değirmen', i)),
+    [0, 1, 2].map((i) => `${formatMoney(perTruck('kumaş → butik', i))} > ${formatMoney(perTruck('pamuk → dokuma', i))} > ${formatMoney(perTruck('buğday → değirmen', i))}`).join(' · '),
+  );
+  // Kamyonun bedeli yolun gününe göre: dört günlük hatta dolu kamyon malın değerinin ne kadarı (içerikteki not).
+  const share = (goodId: string) => (TRADE_LINE.truckCostPerTransitDay * 4) / (TRADE_LINE.truckUnits * GOOD_BY_ID[goodId]!.basePrice);
+  expect(
+    'nakliye ucuz malda hissediliyor, değerlide değil: dört günlük hatta buğday %4–8, kumaş %1\'in altı, çip binde 2\'nin altı',
+    share('wheat') >= 0.04 && share('wheat') <= 0.08 && share('fabric') < 0.01 && share('chip') < 0.002,
+    `buğday %${(share('wheat') * 100).toFixed(1)} · kumaş %${(share('fabric') * 100).toFixed(2)} · çip %${(share('chip') * 100).toFixed(2)}`,
+  );
+  expect(
+    'en pahalı yolda da her malın hattı %15\'lik fazla kırığından ucuz (dolu kamyon)',
+    Math.max(...[...TRADED_GOODS].map((good) => (TRADE_LINE.truckCostPerTransitDay * TRADE_LINE.maxTransitDays) / (TRADE_LINE.truckUnits * good.basePrice))) < 1 - SURPLUS_HAIRCUT,
+    `en ağırı buğday: %${(((TRADE_LINE.truckCostPerTransitDay * TRADE_LINE.maxTransitDays) / (TRADE_LINE.truckUnits * GOOD_BY_ID['wheat']!.basePrice)) * 100).toFixed(1)}`,
+  );
+  const typed = measure(1, CASES[0]!, 'industrial', 'capital');
+  const balanced = runs[0]!.bySeed[0]!;
+  console.log(
+    `  NOT: sanayi kentinden başkente buğday hattı (tohum 1): holding +${formatMoney(typed.gain)}/gün, dengeli çift +${formatMoney(balanced.gain)}/gün ` +
+      `(×${(typed.gain / balanced.gain).toFixed(1)}): sanayide buğday %10 ucuz, başkentte hammadde pahalı. Fiyat farkı Tur 78'in konusu.`,
+  );
 });
 
 /**

@@ -12,6 +12,7 @@ import { buildingUpkeep, freightShareOf, FREIGHT_SHARE } from '../src/systems/su
 import { referencePrice } from '../src/systems/cityType';
 import { foundCity } from '../src/holding';
 import { exportToJson, importFromJson } from '../../persistence/src/index';
+import { SCHEMA_VERSION } from '../src/types';
 import type { GameState } from '../src/types';
 
 const rivalsOf = (state: GameState) => Object.values(state.companies).filter((company) => !company.isPlayer).map((company) => company.id);
@@ -226,7 +227,7 @@ describe('şehrin türü (Tur 76)', () => {
     }
   });
 
-  test('kayıt: v6 holding kaydında bekleyen şehirler de v7; ona geçilince kayıt v7 yazılıyor (Codex #106)', () => {
+  test('kayıt: v6 holding kaydında bekleyen şehirler de güncel sürümde; ona geçilince kayıt güncel sürümle yazılıyor (Codex #106)', () => {
     // v6 holding: iki şehir, ikisinin künyesi de v6.
     const two = foundCity(createNewGame({ seed: 14 }), 'standard', 1_000_000);
     const legacy = JSON.parse(exportToJson(two));
@@ -235,13 +236,13 @@ describe('şehrin türü (Tur 76)', () => {
     const migrated = importFromJson(JSON.stringify(legacy));
     assert.ok(migrated.ok);
     if (!migrated.ok) return;
-    assert.equal(migrated.state.meta.schemaVersion, 7);
-    assert.equal(migrated.state.holding!.dormant[0]!.state.meta.schemaVersion, 7);
-    // Bekleyen şehre geçilince künye yine v7: eski sürüm bu kaydı kendi kaydı sanmıyor.
+    assert.equal(migrated.state.meta.schemaVersion, SCHEMA_VERSION);
+    assert.equal(migrated.state.holding!.dormant[0]!.state.meta.schemaVersion, SCHEMA_VERSION);
+    // Bekleyen şehre geçilince künye yine güncel: eski sürüm bu kaydı kendi kaydı sanmıyor.
     const engine = new GameEngine(migrated.state);
     assert.ok(engine.dispatch({ type: 'SWITCH_CITY', index: 0 }).ok);
-    assert.equal(engine.getState().meta.schemaVersion, 7);
-    assert.equal(JSON.parse(exportToJson(engine.getState())).meta.schemaVersion, 7);
+    assert.equal(engine.getState().meta.schemaVersion, SCHEMA_VERSION);
+    assert.equal(JSON.parse(exportToJson(engine.getState())).meta.schemaVersion, SCHEMA_VERSION);
     // Bekleyen şehirlerden biri daha yeni bir sürümdense kayıt açılmıyor (üstüne yazılmasın).
     const newer = JSON.parse(exportToJson(two));
     newer.state.holding.dormant[0].state.meta.schemaVersion = 99;

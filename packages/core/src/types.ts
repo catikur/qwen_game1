@@ -10,7 +10,7 @@ import type { RngState } from './rng';
  * state'te sadece kimlik ve sayı taşınır.
  */
 
-export const SCHEMA_VERSION = 7;
+export const SCHEMA_VERSION = 8;
 
 /**
  * Bir karenin şehirdeki rolü.
@@ -126,6 +126,14 @@ export interface BuildingLedger {
    * Rakiplere satış cirosunda, yakıt mal maliyetinde.
    */
   plant?: { capacity: number; ownMwh: number; rivalMwh: number; buildings: number; saved: number };
+  /** Üretim ünitesi (Tur 77): bugün şehirler arası hatta yüklenen birim (fazladan, cirosu fazla fiyatıyla). */
+  exported?: number;
+  /**
+   * Terminal (Tur 77): hattın bugünkü cirosu — varan malın pazara satılan
+   * fazlası ve fazlanın yetmediği yükün bedeli. Taşıma ücreti değil: kârın
+   * kaynağı zincir (`notePathSources`).
+   */
+  lineRevenue?: number;
 }
 
 export interface BuildingInstance {
@@ -170,6 +178,12 @@ export interface BuildingInstance {
   profitTrend?: number;
   /** Terminal (Tur 56): bütün sözleşmelerinden bugüne kadar topladığı ücret. */
   freightEarned?: number;
+  /**
+   * Terminal (Tur 77): bu terminalden çıkan şehirler arası hatların tuttuğu
+   * kamyon. Hatlar holding'de; uzaktaki şehrin taşıma adımı holding'i
+   * görmüyor, filonun dolu kısmını buradan okuyor (`fleetUsed`).
+   */
+  lineTrucks?: number;
   /** Santral (Tur 57): kurulduğundan beri rakiplere satış, kendi binalarına kazanç, yakıt. */
   energyTotals?: { sold: number; saved: number; fuel: number };
   /**
@@ -940,6 +954,11 @@ export interface GameState {
   freight?: FreightState;
   /** Enerji (Tur 57): yakıt sabitlemeleri. Seçime bağlı; eski kayıtta yok. */
   energy?: EnergyState;
+  /**
+   * Şehirler arası hat (Tur 77): yoldaki mal ve günün yükleri. Hatların
+   * kendisi holding'de; bu alan şehrin payı. Hattı olmayan şehirde yok.
+   */
+  trade?: CityTrade;
   /** Oyuncunun bekleyen dönüşüm başvurusu (Tur 58). Seçime bağlı; eski kayıtta yok. */
   renewalRequest?: RenewalRequest;
   flags: FeatureFlags;
@@ -1128,6 +1147,74 @@ export interface HoldingState {
   closedTally?: CityTally;
   /** Kapatılan şehirlerdeki zaferlerin yolları (Tur 61): "Üç yol" kayıttan okunuyor (Codex #91). */
   closedPaths?: PathId[];
+  /** Şehirler arası hatlar (Tur 77), açılış sırasıyla. Yokluğu "hat yok". */
+  lines?: TradeLine[];
+  /** Hat kimliği sayacı. */
+  nextLineId?: number;
+}
+
+/**
+ * Şehirler arası hat (Tur 77): bir şehrin terminalinden öbür şehrin
+ * terminaline, tek bir mal. Şehirler tohumlarıyla (`meta.seed`) anılıyor:
+ * oynanan şehir değişince dizinler kayıyor, tohum kaymıyor.
+ */
+export interface TradeLine {
+  id: string;
+  from: number;
+  to: number;
+  fromTerminalId: string;
+  toTerminalId: string;
+  goodId: string;
+  trucks: number;
+  /** İki şehrin arası (gün): şehir çiftinden, iki yönde aynı. */
+  transitDays: number;
+  /** Bugünkü sefer: yüklenen birim, malın ve nakliyenin bedeli; yük eksikse sebebi. */
+  last?: { units: number; goods: number; freight: number; short?: 'surplus' | 'cash' };
+  /** Açıldığından beri: yüklenen birim, malın ve nakliyenin bedeli. */
+  shipped?: number;
+  goodsPaid?: number;
+  freightPaid?: number;
+}
+
+/** Çıkış şehrinde bugünkü yük: havuzdan fazla olarak düşüyor, bedeli üreticilerin cirosu. */
+export interface TradeLoad {
+  lineId: string;
+  goodId: string;
+  units: number;
+  /** Birim bedeli: çıkış şehrinde fazlanın pazar fiyatı. */
+  unitPrice: number;
+  terminalId: string;
+}
+
+/** Varış şehrinin bugünkü ödemesi: malın ve nakliyenin bedeli, terminalin mal maliyetinde. */
+export interface TradePayment {
+  lineId: string;
+  terminalId: string;
+  amount: number;
+}
+
+/** Yoldaki mal: varış şehrinin bilançosunda, malın bedeliyle. */
+export interface Shipment {
+  lineId: string;
+  goodId: string;
+  units: number;
+  /** Malın birim bedeli (çıkışta fazlanın fiyatı): bilançodaki değeri. */
+  unitPrice: number;
+  /** Nakliye dahil birim maliyeti: varınca havuza bu maliyetle giriyor. */
+  unitCost: number;
+  /** Varışa kalan gün; 0 olan sefer bugün havuza giriyor. */
+  daysLeft: number;
+  terminalId: string;
+}
+
+export interface CityTrade {
+  /** Yoldaki mal (bu şehre gelen). */
+  inbound: Shipment[];
+  /** Günün yükleri ve ödemeleri: sabah planlanıyor, üretim adımı defterlere yazıp siliyor. */
+  loads?: TradeLoad[];
+  payments?: TradePayment[];
+  /** Bugün varan, hat başına (birim). */
+  arrived?: Record<string, number>;
 }
 
 /** Bir şehrin koşuya kattığı (Tur 41); hepsi seçime bağlı, yokluğu 0. */
@@ -1330,7 +1417,13 @@ export type GameCommand =
   /** Uzaktaki şehrin talimatı: kâr payı ve savunma (Tur 32). */
   | { type: 'SET_CITY_DIRECTIVE'; index: number; payout?: RemotePayout; defend?: boolean }
   /** Kaybedilmiş bir şehri holding'den çıkarır; yeri boşalıyor (Tur 32). */
-  | { type: 'CLOSE_CITY'; index: number };
+  | { type: 'CLOSE_CITY'; index: number }
+  /** İki şehrin terminallerini tek bir malla bağlar (Tur 77); şehirler tohumlarıyla. */
+  | { type: 'OPEN_LINE'; from: number; to: number; goodId: string; trucks: number }
+  /** Hattın kamyon sayısı. */
+  | { type: 'SET_LINE_TRUCKS'; lineId: string; trucks: number }
+  /** Hattı kapatır; yoldaki mal yine varıyor. */
+  | { type: 'CLOSE_LINE'; lineId: string };
 
 /** Komut reddedildiğinde UI'ye dönen açıklama. */
 export interface CommandResult {

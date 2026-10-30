@@ -25,6 +25,30 @@ export function changelogNotes(entry: ChangelogEntry, locale: string): string[] 
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.2.0',
+    date: '2026-10-30',
+    notes: {
+      tr: [
+        'Şehirler arası hat: holding\'in iki şehrindeki nakliye terminallerini bir malla bağla. Bir şehrin fazla ürettiği mal öbür şehirdeki tesislerine ve mağazalarına gider; orada pazardan alınmaz.',
+        'Hattın kapasitesi (kamyon başına günde 300 birim), yolu (iki şehir arası 3–6 gün) ve bedeli (kamyon başına, yolun her günü için) var. Kamyonlar terminalin filosundan, taşıma sözleşmeleriyle ortak.',
+        'Çıkış şehri malı fazlanın pazar fiyatıyla satar; varış şehri malın bedelini ve nakliyeyi öder. Yoldaki mal varış şehrinin bilançosunda; hat kapanınca yine varır.',
+        'Hatlar Şehirler panelinde: bugünkü sefer, yoldaki mal, kamyon sayısı. Bu sürümün kayıtları eski sürümde açılmıyor.',
+      ],
+      en: [
+        'Lines between cities: connect the freight terminals of two of your holding\'s cities with one good. What one city makes too much of goes to the other city\'s plants and stores instead of being bought on the market there.',
+        'A line has a capacity (300 units per truck a day), a route (3–6 days between two cities) and a cost (per truck, for every day of the route). Trucks come from the terminal\'s fleet, shared with freight contracts.',
+        'The origin sells the goods at its surplus price; the destination pays for the goods and the freight. Goods on the road are on the destination\'s balance sheet, and still arrive if the line closes.',
+        'Lines live in the Cities panel: today\'s shipment, goods on the road, the number of trucks. Saves from this version don\'t open in older versions.',
+      ],
+      de: [
+        'Linien zwischen Städten: Verbinde die Frachtterminals zweier Städte deiner Holding mit einer Ware. Was eine Stadt zu viel herstellt, geht an die Werke und Läden der anderen Stadt, statt dass sie es dort am Markt kauft.',
+        'Eine Linie hat eine Kapazität (300 Einheiten pro Lkw am Tag), eine Strecke (3–6 Tage zwischen zwei Städten) und Kosten (pro Lkw für jeden Tag der Strecke). Die Lkw kommen aus der Flotte des Terminals, geteilt mit den Transportverträgen.',
+        'Die Ausgangsstadt verkauft die Ware zum Überschusspreis; die Zielstadt bezahlt Ware und Fracht. Ware unterwegs steht in der Bilanz der Zielstadt und kommt auch an, wenn die Linie geschlossen wird.',
+        'Die Linien stehen im Fenster „Städte“: die heutige Fahrt, die Ware unterwegs, die Zahl der Lkw. Spielstände dieser Version lassen sich in älteren Versionen nicht öffnen.',
+      ],
+    },
+  },
+  {
     version: '1.1.0',
     date: '2026-10-29',
     notes: {

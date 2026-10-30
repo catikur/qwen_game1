@@ -243,6 +243,8 @@ kullanıcı Tur 76'dan önce değiştirmedi. Kayıt biçimi Tur 76'da değişti
 (şema v7): Tur 75'ten beri eski sürüm yeni biçimin kaydını açamıyor ama
 üstüne de yazmıyor. Sürüm numarası 1.1.0 (yeni içerik, eski kayıtlar
 açılıyor). Lig her zaman dengeli şehirde; Tur 76 lig izini değiştirmedi.
+Tur 77'de şema v8 (hatlar ve yoldaki mal), sürüm 1.2.0; hat yalnız
+holding'de, lig izi yine aynı.
 Lig izini değiştiren tur (hat ve ticaret dengeli şehre de dokunursa) lig
 sunucusunun dağıtımını istiyor (`docs/YAYIN.md` §4).
 
@@ -255,11 +257,18 @@ sunucusunun dağıtımını istiyor (`docs/YAYIN.md` §4).
   türün ilk dördünde değil (zaferi kilitliyordu). Tür kurulumda ve
   holding'in yeni şehrinde seçiliyor, üst barda yazıyor. Eski kayıtlar,
   Tohum Ligi ve senaryolar dengeli; lig izi aynı. Şema v7, sürüm 1.1.0.
-  — bu PR
+  — bitti (#106)
 - **77 · Şehirler arası hat.** Nakliye terminali (Tur 56) iki şehri
   bağlıyor. Mal bir şehirde üretilip öbüründe rafa giriyor. Hattın
   kapasitesi, taşıma süresi (gün) ve bedeli var; yolda kalan mal
-  bilançoda.
+  bilançoda. Yapıldı: hat bir mal taşıyor (hammadde ya da ara mal);
+  kapasite kamyon × 300 birim, kamyonlar çıkış terminalinin filosundan;
+  yol şehir çiftinden 3–6 gün; bedel kamyon başına, yolun her günü için.
+  Çıkış şehri fazlasını fazla fiyatıyla satıyor, varış şehri malı ve
+  nakliyeyi ödüyor, mal yolu bitince havuza giriyor. Holding'e günde
+  buğday hattında 660–1.430 ₺ (6 kamyon), kumaşta 2.300–2.900 ₺ (1
+  kamyon); türlü şehir çiftinde daha çok. Şema v8, sürüm 1.2.0; lig izi
+  aynı. — bu PR
 - **78 · Ticaretin fiyatı.** Şehirlerin pazar fiyatları ayrışıyor: bir
   şehrin bol hammaddesi öbüründe kıt. Fiyat farkı ve taşıma bedeli kâr
   ediyor. Rakipler de hat açıyor, fark daralıyor. Denge testinde yeni
