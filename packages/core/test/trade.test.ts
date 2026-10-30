@@ -267,6 +267,29 @@ describe('şehirler arası hat (Tur 77)', () => {
     assert.ok(p.away.market.consumed['wheat']! >= load.units);
   });
 
+  test('gün içinde eksik kalan yükün pazardan alınanı ihracat baskısına giriyor: sabah pazardan alanla aynı fiyat (Codex #108)', () => {
+    // Aynı 1.800 birim iki yoldan pazardan çıkıyor: sabah planında (çiftlik
+    // plandan önce yok, hat eksiği pazardan alıyor) ya da gün içinde (çiftlik
+    // plandan sonra yok, yalnız fazla taşıyan hattın yükü pazardan).
+    const morning = pair();
+    delete morning.away.buildings[morning.farm];
+    assert.ok(morning.engine.dispatch({ type: 'OPEN_LINE', from: morning.away.meta.seed, to: morning.root.meta.seed, goodId: 'wheat', trucks: 6, buy: true }).ok);
+    prepareTradeDay(morning.root);
+    assert.equal(morning.away.trade!.marketOut!['wheat'], lineCapacity(6));
+    simulateCityDay(morning.away);
+
+    const midday = pair();
+    assert.ok(openWheat(midday).ok);
+    prepareTradeDay(midday.root);
+    assert.equal(midday.away.trade!.loads![0]!.units, lineCapacity(6));
+    delete midday.away.buildings[midday.farm];
+    simulateCityDay(midday.away);
+
+    assert.ok(Math.abs(morning.away.market.consumed['wheat']! - midday.away.market.consumed['wheat']!) < 1e-6, 'tüketim aynı, iki kez sayılmıyor');
+    const [a, b] = [morning.away.market.spot['wheat']!, midday.away.market.spot['wheat']!];
+    assert.ok(Math.abs(a - b) < 1e-9, `sabah ${a} · gün içinde ${b}`);
+  });
+
   test('hat kapanınca yoldaki mal yine varıyor', () => {
     const p = pair();
     assert.ok(openWheat(p).ok);

@@ -495,8 +495,11 @@ function bookLine(state: GameState, terminalId: string, revenue: number, cogs: n
  *   bedeli de cirosunda. Para yaratılmıyor; eksik fazla fiyatıyla satılıyor.
  *   Hattın her alışı gibi spot fiyattan (Tur 78): olayın maliyet çarpanı
  *   şirketin işletmesine biniyor, mala değil.
+ *
+ * Döndürdüğü: ürün başına bu eksik, pazardan alınan birim.
  */
-function settleTradeGoods(state: GameState, trade: TradeDay, flow: CompanyFlow): void {
+function settleTradeGoods(state: GameState, trade: TradeDay, flow: CompanyFlow): Record<string, number> {
+  const bought: Record<string, number> = {};
   const goods = new Set([...Object.keys(trade.imported), ...Object.keys(trade.loads)]);
   for (const goodId of goods) {
     const produced = flow.produced[goodId] ?? 0;
@@ -513,11 +516,13 @@ function settleTradeGoods(state: GameState, trade: TradeDay, flow: CompanyFlow):
     // değişen kapasitede (grev). Kayan noktanın kırıntısı eksik sayılmıyor.
     const short = split.load - split.exported;
     if (short <= 1e-6) continue;
+    bought[goodId] = short;
     for (const load of trade.loads[goodId] ?? []) {
       const units = load.units * (short / split.load);
       bookLine(state, load.terminalId, units * load.unitPrice, units * spot);
     }
   }
+  return bought;
 }
 
 interface CompanyFlow {
@@ -662,7 +667,7 @@ export function runProductionTick(state: GameState): void {
 
     building.last.capacityUsed = 1;
   }
-  if (trade) settleTradeGoods(state, trade, flows[state.playerCompanyId]!);
+  const fallback = trade ? settleTradeGoods(state, trade, flows[state.playerCompanyId]!) : undefined;
 
   // ---- 4. Tüketici ürünlerinin harmanlanmış maliyeti ----
   // Perakende işleme maliyeti outlet'e özeldir (depo menzili), bu yüzden
@@ -700,6 +705,13 @@ export function runProductionTick(state: GameState): void {
   for (const [goodId, units] of Object.entries(state.trade?.marketIn ?? {})) produced[goodId] = (produced[goodId] ?? 0) + units;
   state.market.produced = produced;
   state.market.consumed = consumed;
+  // Gün içinde (grev) fazlası yetmeyen yükün eksiği pazardan alındı: o da
+  // ihracat baskısına (Codex #108). Tüketimde planlı yükle zaten sayıldı;
+  // akışa tüketim sayıldıktan sonra giriyor, iki kez sayılmasın.
+  for (const [goodId, units] of Object.entries(fallback ?? {})) {
+    const out = ((state.trade ??= { inbound: [] }).marketOut ??= {});
+    out[goodId] = (out[goodId] ?? 0) + units;
+  }
 }
 
 /**
