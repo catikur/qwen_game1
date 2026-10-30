@@ -881,6 +881,46 @@ describe('hattın kendi etkisi (Tur 80)', () => {
     assert.ok(outlook.originSpot > alone.originSpot, `${outlook.originSpot} > ${alone.originSpot}`);
   });
 
+  test('malı varan hattın kamyonu değişince tahmin farkı sayıyor: yarınki yük eksi dün varan (Codex #110)', () => {
+    const t = threeCities();
+    const to = t.root.meta.seed;
+    const [a, b] = t.origins.map((city) => city.meta.seed);
+    assert.ok(t.engine.dispatch({ type: 'OPEN_LINE', from: a!, to, goodId: 'coffee_bean', trucks: 2, buy: true }).ok);
+    const line = t.root.holding!.lines![0]!;
+    for (let day = 0; day <= line.transitDays; day++) t.engine.runDay();
+    assert.equal(t.root.trade?.arrived?.[line.id], lineCapacity(2), 'iki kamyonun yükü dün vardı');
+    assert.ok(t.engine.dispatch({ type: 'SET_LINE_TRUCKS', lineId: line.id, trucks: 4 }).ok);
+    // Yarın dört kamyonun yükü yola çıkıyor: varışın arzına fark (iki kamyonluk) ve yeni hattın yükü.
+    const outlook = lineQuote(t.root, b!, to, 'coffee_bean', 2, true).outlook!;
+    const expected = spotOutlook(t.root, 'coffee_bean', { produced: lineCapacity(4) - lineCapacity(2) + lineCapacity(2) }, outlook.days);
+    assert.ok(Math.abs(outlook.destinationSpot - expected) < 1e-9, `${outlook.destinationSpot} · ${expected}`);
+  });
+
+  test('kasası dar hattın bıraktığı fazla yeni hatta: tahmin onu fazla fiyatıyla yüklüyor (Codex #110)', () => {
+    const t = threeCities();
+    const [a, b] = t.origins;
+    const from = a!.meta.seed;
+    place(a!, 'wheat_farm');
+    const exportable = exportableSurplus(a!, 'wheat');
+    assert.ok(exportable > 0, `${exportable} birim fazla`);
+    // İlk hat fazlanın hepsini taşıyabilir, ama varışın kasası yarısına yetiyor.
+    const trucks = Math.ceil(exportable / TRADE_LINE.truckUnits);
+    assert.ok(t.engine.dispatch({ type: 'OPEN_LINE', from, to: t.root.meta.seed, goodId: 'wheat', trucks }).ok);
+    const first = t.root.holding!.lines![0]!;
+    const unitPrice = (a!.market.spot['wheat'] ?? GOOD_BY_ID['wheat']!.basePrice) * SURPLUS_HAIRCUT;
+    const half = Math.floor(exportable / 2);
+    t.root.companies[t.root.playerCompanyId]!.cash = lineDailyCost(first) + half * unitPrice + 1;
+    const outlook = lineQuote(t.root, from, b!.meta.seed, 'wheat', 1, false).outlook!;
+    assert.ok(outlook, 'ilk hattın bıraktığı fazla var: tahmin söyleniyor');
+    assert.equal(outlook.units, Math.min(lineCapacity(1), exportable - half));
+    // Ertesi sabah ilk hat yarısını, yeni hat kalanını yüklüyor.
+    assert.ok(t.engine.dispatch({ type: 'OPEN_LINE', from, to: b!.meta.seed, goodId: 'wheat', trucks: 1 }).ok);
+    t.engine.runDay();
+    const [firstLine, second] = t.root.holding!.lines!;
+    assert.equal(firstLine!.last!.units, half);
+    assert.equal(second!.last!.units, outlook.units);
+  });
+
   test('ilk seferi yoldaki rakip hattı da tahminde: çıkışta alımı, varışta satışı (Codex #110)', () => {
     const p = coffeeRoute(21, false);
     const [from, to] = route(p);

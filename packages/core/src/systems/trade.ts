@@ -394,14 +394,15 @@ function lineOutlook(
   goodId: string,
   trucks: number,
   buy: boolean,
-  surplus: number,
   free: number,
 ): LineOutlook | undefined {
-  // Yeni hat yarın sabah listenin sonunda (Codex #110): aynı şehre giden açık
-  // hatlar kasadan paylarını sabah planının kendisiyle, bugünkü kasa ve
-  // fiyatlarla alıyor (dünkü seferleri kasa kısıtlıyken eksik kalmış olabilir).
+  // Yeni hat yarın sabah listenin sonunda (Codex #110): açık hatlar kasadan
+  // ve fazladan paylarını sabah planının kendisiyle, bugünkü kasa ve
+  // fiyatlarla alıyor. Kasası dar hat fazlanın bir kısmını bırakıyor: yeni
+  // hat onu fazla fiyatıyla yüklüyor.
   const plan = planTradeDay(root);
   const budget = plan.budget.get(target.meta.seed) ?? target.companies[target.playerCompanyId]?.cash ?? 0;
+  const surplus = plan.surplus.get(`${source.meta.seed}|${goodId}`) ?? exportableSurplus(source, goodId);
   const flows = plannedFlows(root, plan.loads, source, target, goodId);
   const outlook = outlookFor(source, target, goodId, trucks, buy, surplus, budget, flows);
   if (!outlook) return undefined;
@@ -450,7 +451,7 @@ export function lineQuote(root: GameState, from: number, to: number, goodId: str
   const need = Math.max(0, flow.consumed - flow.produced - delivered);
   const margins = lineMargins(root, from, to, goodId);
   const outlook = source && target && good && from !== to && trucks >= 1
-    ? lineOutlook(root, source, target, goodId, Math.round(trucks), buy, surplus, free)
+    ? lineOutlook(root, source, target, goodId, Math.round(trucks), buy, free)
     : undefined;
   const base = {
     transitDays,
@@ -627,11 +628,12 @@ interface PlannedLoad {
  * Sabah planı, yan etkisiz (Codex #110). Hatlar sırayla: aynı malı aynı
  * şehirden taşıyanlar fazlayı, aynı şehre gidenler kasayı paylaşıyor; kasa
  * önce ucuz olana, fazlaya yetiyor (`fundLoad`). `budget` her varış
- * şehrinin plandan sonra kalan kasası: formun tahmini yeni hattın (listede
- * sonda) payını oradan okuyor. Plan bozuk hattı önce kapatıyor
+ * şehrinin, `surplus` her çıkış şehri ve malın plandan sonra kalan kasası
+ * ve fazlası: formun tahmini yeni hattın (listede sonda) payını oradan
+ * okuyor. Plan bozuk hattı önce kapatıyor
  * (`closeBrokenLines`); tahmin onu saymıyor.
  */
-function planTradeDay(root: GameState): { loads: PlannedLoad[]; budget: Map<number, number> } {
+function planTradeDay(root: GameState): { loads: PlannedLoad[]; budget: Map<number, number>; surplus: Map<string, number> } {
   const surplus = new Map<string, number>();
   const budget = new Map<number, number>();
   const loads: PlannedLoad[] = [];
@@ -657,7 +659,7 @@ function planTradeDay(root: GameState): { loads: PlannedLoad[]; budget: Map<numb
     budget.set(line.to, cash - freight - goods);
     loads.push({ line, source, target, own, bought, unitPrice, freight, goods, ...(short ? { short } : {}) });
   }
-  return { loads, budget };
+  return { loads, budget, surplus };
 }
 
 /**
