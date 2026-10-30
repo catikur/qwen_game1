@@ -57,6 +57,7 @@ export {
   isDistrictOpen,
   LAND_SELL_RATIO,
   BUILDING_BOOK_RATIO,
+  inTransitValue,
 } from './systems/city';
 export { estimateInvestment, qualityEdge } from './systems/market';
 export type { InvestmentEstimate } from './systems/market';
@@ -177,6 +178,17 @@ export {
 export { activeContract, contractProgress, OFFER_LIFETIME_DAYS } from './systems/contracts';
 export { FREIGHT, FREIGHT_CHALLENGER_SHARE, fleetUsed, freightFeeEstimate, freightPenalty, freightProspects, freightStanding, freightTerminals } from './systems/freight';
 export type { FreightStanding } from './systems/freight';
+export {
+  cityBySeed,
+  inboundByLine,
+  lineCapacity,
+  lineDailyCost,
+  lineQuote,
+  tradeCities,
+  tradeLines,
+  transitDaysBetween,
+} from './systems/trade';
+export type { LineQuote } from './systems/trade';
 export { companyPath, notePathSources, sourceOf } from './systems/paths';
 export type { CompanyPath } from './systems/paths';
 export { cityWeather, weatherOn } from './systems/weather';
@@ -220,4 +232,6 @@ export {
   unitCogsFor,
   zeroByGood,
   SURPLUS_HAIRCUT,
+  exportableSurplus,
+  ownGoodFlow,
 } from './systems/supply';

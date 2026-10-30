@@ -200,6 +200,17 @@ const MIGRATIONS: Record<number, (raw: Record<string, unknown>) => Record<string
    * yazmıyor.
    */
   6: (raw) => raw,
+
+  /**
+   * v7 → v8: şehirler arası hat (Tur 77).
+   *
+   * Eski kayıtta hat yok: holding'in `lines`ı, şehrin yoldaki malı
+   * (`trade`) ve terminalin hatlara ayırdığı kamyon (`lineTrucks`) yok,
+   * yoklukları "hat yok" demek. Sürüm yine de artıyor: hatlı kaydı hat
+   * bilmeyen eski sürüm açsaydı yoldaki mal (bedeli ödenmiş) ve hatlar
+   * sessizce kaybolurdu.
+   */
+  7: (raw) => raw,
 };
 
 /**

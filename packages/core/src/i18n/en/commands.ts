@@ -117,6 +117,23 @@ export const commands: Record<keyof typeof trCommands, string> = {
   'core.holding.completeTitle': 'Holding complete: victory in {count|# city|# cities}',
   'core.holding.completeBody': 'Holding value {worth}. The cities keep living; free play continues.',
 
+  // systems/trade.ts — inter-city lines (Turn 77)
+  'core.trade.noHolding': 'A line connects two cities: win in one city and open a second first.',
+  'core.trade.sameCity': 'A line connects two different cities.',
+  'core.trade.lostCity': "You can't open a line to a lost city.",
+  'core.trade.badGood': 'Lines carry raw materials and intermediate goods, not store products.',
+  'core.trade.maxLines': 'A holding can have at most {max|# line|# lines}.',
+  'core.trade.duplicate': 'These two cities already have a line for this good.',
+  'core.trade.chain': "A city can't both receive and send the same good.",
+  'core.trade.noTerminal': 'You have no freight terminal in {city}.',
+  'core.trade.fleetFull': "The terminal's fleet has no free trucks.",
+  'core.trade.badTrucks': 'Trucks must be between 1 and {max}.',
+  'core.trade.noSuchLine': 'No such line.',
+  'core.trade.brokenTitle': 'Line closed: {from} → {to} ({good})',
+  'core.trade.brokenTargetLost': '{city} was lost; the goods on the road went with it.',
+  'core.trade.brokenSourceLost': '{city} was lost; the goods on the road still arrive.',
+  'core.trade.brokenTerminal': 'Your terminal in {city} is gone; the goods on the road still arrive.',
+
   // selectors.ts — map lenses
   'core.selectors.lensNoneName': 'City',
   'core.selectors.lensNoneHint': 'Show buildings and district colors as they are.',

@@ -7,6 +7,7 @@ import '../../../packages/core/src/i18n/index';
 import { commands as trCommands } from '../../../packages/core/src/i18n/tr/commands';
 import { markets as trMarkets } from '../../../packages/core/src/i18n/tr/markets';
 import { finance as trFinance } from '../../../packages/ui/src/i18n/tr/finance';
+import { trade as trTrade } from '../../../packages/ui/src/i18n/tr/trade';
 /** Depo kökü: testler derlenip başka klasörden koşuyor, `pnpm-workspace.yaml`'a kadar çıkılıyor. */
 function repoRoot(): string {
   let dir = process.cwd();
@@ -57,11 +58,30 @@ describe('geç inen Türkçe sözlükler (Tur 74)', () => {
     assert.deepEqual(shell, []);
   });
 
+  test('hat anahtarı yazan her arayüz modülü sözlüğünü içe aktarıyor (Tur 77); uygulama hat anahtarı yazmıyor', () => {
+    const tradeUse = (text: string) => /['"`]trade\./.test(text);
+    assert.ok(Object.keys(trTrade).every((key) => key.startsWith('trade.')));
+    const users = sources('packages/ui/src').filter(([, text]) => tradeUse(text));
+    assert.ok(users.length >= 2, `${users.length} kullanan modül`);
+    const missing = users.filter(([, text]) => !/^import '\.\/i18n\/tradeTr';$/m.test(text)).map(([file]) => file);
+    assert.deepEqual(missing, [], 'tradeTr.ts içe aktarılmalı');
+    assert.deepEqual(sources('apps/web/src').filter(([, text]) => tradeUse(text)).map(([file]) => file), []);
+  });
+
+  test('geç inen sözlüklerin kaydı paketin yan etkileri arasında: yoksa paketleyici kaydı atıyor (Tur 77)', () => {
+    // `import './i18n/tradeTr'` yalnız yan etki; listede olmayan dosyayı Vite
+    // ağaç sallamada siliyor ve Türkçe oyunda ham anahtar görünüyor.
+    const pkg = JSON.parse(readFileSync(join(repoRoot(), 'packages/ui/package.json'), 'utf8')) as { sideEffects: string[] };
+    const registrations = readdirSync(join(repoRoot(), 'packages/ui/src/i18n')).filter((file) => /Tr\.ts$/.test(file));
+    assert.deepEqual(registrations.sort(), ['financeTr.ts', 'tradeTr.ts']);
+    assert.deepEqual(registrations.filter((file) => !pkg.sideEffects.includes(`./src/i18n/${file}`)), []);
+  });
+
   test('kurulumun okuduğu çekirdek metinleri girişte kayıtlı; oyunun metinleri değil', () => {
     const entry = readFileSync(join(repoRoot(), 'packages/core/src/i18n/index.ts'), 'utf8');
     assert.ok(!/^import \{[^}]*\} from '\.\/tr\/(commands|markets)';$/m.test(entry), 'giriş sözlüğü komut ve piyasa grubunu değer olarak içe aktarmamalı');
     const ui = readFileSync(join(repoRoot(), 'packages/ui/src/i18n/index.ts'), 'utf8');
-    assert.ok(!/^import \{[^}]*\} from '\.\/tr(\/finance)?';$/m.test(ui), 'arayüzün giriş sözlüğü finans grubunu değer olarak içe aktarmamalı');
+    assert.ok(!/^import \{[^}]*\} from '\.\/tr(\/finance|\/trade)?';$/m.test(ui), 'arayüzün giriş sözlüğü finans ve hat gruplarını değer olarak içe aktarmamalı');
     assert.equal(translate('core.scenario.scoreDays', { days: 3 }).includes('core.'), false);
   });
 });

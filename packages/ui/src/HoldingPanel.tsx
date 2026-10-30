@@ -1,27 +1,36 @@
 import { useState } from 'react';
 import type { ReactElement } from 'react';
-import { CITY_SIZES, CITY_TYPES, DEFAULT_CITY_TYPE, HOLDING, getCityType } from '@capital/content';
+import { BUILDING_BY_ID, CITY_SIZES, CITY_TYPES, DEFAULT_CITY_TYPE, GOOD_BY_ID, HOLDING, TRADED_GOODS, TRADE_LINE, formatNumber, formatUnitMoney, getCityType } from '@capital/content';
 import type { CitySizeId, CityTypeId } from '@capital/content';
 import {
   buybackToLock,
   carriedBrand,
+  cityBySeed,
   cityDirective,
   cityDividend,
   cityNameAt,
   cityTrend,
   cityValue,
+  fleetUsed,
   formatMoney,
   getPlayer,
   holdingLadder,
   holdingNetWorth,
+  inboundByLine,
+  lineCapacity,
+  lineDailyCost,
+  lineQuote,
   openCityQuote,
   raidStatus,
   remoteIncome,
   sharePrice,
+  tradeCities,
+  tradeLines,
 } from '@capital/core';
-import type { DormantCity, GameState, RemotePayout } from '@capital/core';
+import type { DormantCity, GameState, RemotePayout, TradeLine } from '@capital/core';
 import { useGame, useGameState } from './useGame';
 import { t } from './i18n';
+import './i18n/tradeTr';
 
 /**
  * Holding paneli (Tur 22): şehirler, kasa ve yeni şehir.
@@ -35,6 +44,8 @@ import { t } from './i18n';
  * Tur 32: uzaktaki her şehrin satırında yerel müdürün talimatı (kâr payı,
  * savunma) — geçiş yapmadan. Kasa uzaktaki şehre de aktarılıyor. Üstte
  * holding'in hedef merdiveni; kaybedilen şehir kapatılabiliyor.
+ *
+ * Tur 77: şehirlerin altında şehirler arası hatlar.
  */
 export function HoldingPanel(): ReactElement {
   const state = useGameState();
@@ -52,6 +63,7 @@ export function HoldingPanel(): ReactElement {
       )}
       <HoldingLadder state={state} />
       <CityList state={state} />
+      {holding && <LinesSection state={state} />}
       {holding && <TransferForm state={state} />}
       <OpenCityForm state={state} />
     </div>
@@ -239,6 +251,238 @@ function defenseLine(city: DormantCity): string {
     return t('hud.holding.defense.waiting', { percent: Math.round(HOLDING.defendAt * 100) });
   }
   return t('hud.holding.defense.noCash', { reserve: formatMoney(HOLDING.defenseReserve) }) + remaining;
+}
+
+/**
+ * Şehirler arası hatlar (Tur 77): iki şehrin terminalini bir malla bağlıyor.
+ *
+ * Satır hattın üç ölçüsünü (kapasite, yol, bedel), bugünkü seferi ve yoldaki
+ * malı yazıyor; yük eksikse sebebini (çıkışta fazla yok ya da varış şehrinin
+ * kasası yetmedi). Yeni hatta çıkış şehrinin fazlası ve varış şehrinin açığı
+ * yan yana: kamyon sayısı ikisinin küçüğünden öneriliyor.
+ */
+function LinesSection({ state }: { state: GameState }): ReactElement {
+  const lines = tradeLines(state);
+  return (
+    <section className="defense holding-lines" data-holding-lines={lines.length}>
+      <div className="defense-head">
+        <h3>{t('trade.lines.title')}</h3>
+        <span className="muted">{t('trade.lines.count', { count: lines.length, max: TRADE_LINE.maxLines })}</span>
+      </div>
+      <p className="muted">{t('trade.lines.blurb', { units: formatNumber(TRADE_LINE.truckUnits), cost: formatMoney(TRADE_LINE.truckCostPerTransitDay) })}</p>
+      {lines.length === 0 ? (
+        <p className="muted">{t('trade.lines.empty')}</p>
+      ) : (
+        <ul className="line-list">
+          {lines.map((line) => (
+            <LineRow key={line.id} state={state} line={line} />
+          ))}
+        </ul>
+      )}
+      {lines.length < TRADE_LINE.maxLines && <OpenLineForm state={state} />}
+    </section>
+  );
+}
+
+/** Hattın bugünkü seferi tek cümleyle: ne yüklendi, eksikse neden. */
+function lineToday(line: TradeLine): string {
+  const last = line.last;
+  if (!last) return t('trade.lines.waiting');
+  if (last.units <= 0) return t(last.short === 'cash' ? 'trade.lines.noCash' : 'trade.lines.idle', { freight: formatMoney(lineDailyCost(line)) });
+  const today = t('trade.lines.today', { units: formatNumber(Math.round(last.units)), goods: formatMoney(last.goods), freight: formatMoney(last.freight) });
+  if (last.short === 'cash') return `${today} ${t('trade.lines.shortCash')}`;
+  if (last.short === 'surplus') return `${today} ${t('trade.lines.shortSurplus')}`;
+  return today;
+}
+
+function LineRow({ state, line }: { state: GameState; line: TradeLine }): ReactElement {
+  const { run, toast } = useGame();
+  const source = cityBySeed(state, line.from);
+  const target = cityBySeed(state, line.to);
+  const road = target ? inboundByLine(target)[line.id] : undefined;
+  const arrived = target?.trade?.arrived?.[line.id] ?? 0;
+  const terminal = source?.buildings[line.fromTerminalId];
+  const fleet = terminal ? (BUILDING_BY_ID[terminal.defId]?.fleet ?? 0) : 0;
+  const spare = source && terminal ? fleet - fleetUsed(source, terminal.id) : 0;
+  const goods = (line.goodsPaid ?? 0) + (line.freightPaid ?? 0);
+  return (
+    <li className="line-row" data-line={line.id} data-line-short={line.last?.short ?? 'none'}>
+      <div className="city-head">
+        <strong>{t('trade.lines.route', { from: source?.cityName ?? '', to: target?.cityName ?? '' })}</strong>
+        <span className="city-tag">{GOOD_BY_ID[line.goodId]?.name ?? line.goodId}</span>
+      </div>
+      <span className="muted" data-line-spec>
+        {t('trade.lines.spec', {
+          trucks: line.trucks,
+          capacity: formatNumber(lineCapacity(line.trucks)),
+          days: line.transitDays,
+          cost: formatMoney(lineDailyCost(line)),
+        })}
+      </span>
+      <span data-line-today>{lineToday(line)}</span>
+      <span className="muted" data-line-road={Math.round(road?.units ?? 0)}>
+        {road
+          ? t('trade.lines.onRoad', { units: formatNumber(Math.round(road.units)), shipments: road.shipments, value: formatMoney(road.value) })
+          : t('trade.lines.noRoad')}
+        {arrived > 0 && ` · ${t('trade.lines.arrived', { units: formatNumber(Math.round(arrived)) })}`}
+      </span>
+      {(line.shipped ?? 0) > 0 && (
+        <span className="muted">{t('trade.lines.total', { units: formatNumber(Math.round(line.shipped ?? 0)), paid: formatMoney(goods) })}</span>
+      )}
+      <div className="holding-actions">
+        <button
+          type="button"
+          className="ghost"
+          disabled={line.trucks <= 1}
+          data-line-trucks="down"
+          onClick={() => run({ type: 'SET_LINE_TRUCKS', lineId: line.id, trucks: line.trucks - 1 })}
+        >
+          {t('trade.lines.fewer')}
+        </button>
+        <button
+          type="button"
+          className="ghost"
+          disabled={spare <= 0}
+          data-line-trucks="up"
+          onClick={() => run({ type: 'SET_LINE_TRUCKS', lineId: line.id, trucks: line.trucks + 1 })}
+        >
+          {t('trade.lines.more')}
+        </button>
+        <button
+          type="button"
+          className="ghost"
+          data-line-close
+          onClick={() => {
+            if (run({ type: 'CLOSE_LINE', lineId: line.id })) toast(t('trade.lines.closed'), 'good');
+          }}
+        >
+          {t('trade.lines.close')}
+        </button>
+      </div>
+    </li>
+  );
+}
+
+function OpenLineForm({ state }: { state: GameState }): ReactElement | null {
+  const { run, toast } = useGame();
+  const cities = tradeCities(state).filter((city) => !city.gameOver);
+  const [from, setFrom] = useState<number | null>(null);
+  const [to, setTo] = useState<number | null>(null);
+  const [goodId, setGoodId] = useState<string>(TRADED_GOODS[0]!.id);
+  const [trucks, setTrucks] = useState<number | null>(null);
+  if (cities.length < 2) return null;
+  const fromSeed = cities.find((city) => city.meta.seed === from)?.meta.seed ?? cities[0]!.meta.seed;
+  const targets = cities.filter((city) => city.meta.seed !== fromSeed);
+  const toSeed = targets.find((city) => city.meta.seed === to)?.meta.seed ?? targets[0]!.meta.seed;
+  const suggested = lineQuote(state, fromSeed, toSeed, goodId, 1).suggestedTrucks;
+  const count = trucks ?? suggested;
+  const quote = lineQuote(state, fromSeed, toSeed, goodId, count);
+  const nameOf = (seed: number) => cities.find((city) => city.meta.seed === seed)?.cityName ?? '';
+
+  return (
+    <div className="line-open" data-line-open={quote.ok ? 'ok' : 'refused'}>
+      <h4>{t('trade.lines.open.title')}</h4>
+      <div className="line-open-grid">
+        <label>
+          <span>{t('trade.lines.open.from')}</span>
+          <select
+            value={String(fromSeed)}
+            data-line-from
+            onChange={(e) => {
+              setFrom(Number(e.target.value));
+              setTrucks(null);
+            }}
+          >
+            {cities.map((city) => (
+              <option key={city.meta.seed} value={String(city.meta.seed)}>
+                {city.cityName}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          <span>{t('trade.lines.open.to')}</span>
+          <select
+            value={String(toSeed)}
+            data-line-to
+            onChange={(e) => {
+              setTo(Number(e.target.value));
+              setTrucks(null);
+            }}
+          >
+            {targets.map((city) => (
+              <option key={city.meta.seed} value={String(city.meta.seed)}>
+                {city.cityName}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          <span>{t('trade.lines.open.good')}</span>
+          <select
+            value={goodId}
+            data-line-good
+            onChange={(e) => {
+              setGoodId(e.target.value);
+              setTrucks(null);
+            }}
+          >
+            {TRADED_GOODS.map((good) => (
+              <option key={good.id} value={good.id}>
+                {good.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          <span>{t('trade.lines.open.trucks')}</span>
+          <input
+            type="number"
+            min={1}
+            max={Math.max(1, quote.freeTrucks)}
+            step={1}
+            value={count}
+            data-line-count
+            onChange={(e) => setTrucks(Math.max(1, Math.round(Number(e.target.value) || 1)))}
+          />
+        </label>
+      </div>
+      <p className="muted" data-line-quote>
+        {t('trade.lines.open.quote', {
+          surplus: formatNumber(Math.round(quote.surplus)),
+          need: formatNumber(Math.round(quote.need)),
+        })}
+      </p>
+      <p className="muted">
+        {t('trade.lines.open.terms', {
+          capacity: formatNumber(quote.capacity),
+          days: quote.transitDays,
+          cost: formatMoney(quote.dailyCost),
+          price: formatUnitMoney(quote.unitPrice),
+          spot: formatUnitMoney(quote.destinationSpot),
+        })}
+      </p>
+      {!quote.ok && (
+        <p className="muted line-refused" data-line-refused>
+          {quote.reason}
+        </p>
+      )}
+      <button
+        type="button"
+        className="primary"
+        disabled={!quote.ok}
+        data-line-go
+        onClick={() => {
+          if (run({ type: 'OPEN_LINE', from: fromSeed, to: toSeed, goodId, trucks: count })) {
+            toast(t('trade.lines.open.done', { from: nameOf(fromSeed), to: nameOf(toSeed), good: GOOD_BY_ID[goodId]?.name ?? goodId }), 'good');
+            setTrucks(null);
+          }
+        }}
+      >
+        {t('trade.lines.open.go')}
+      </button>
+    </div>
+  );
 }
 
 function TransferForm({ state }: { state: GameState }): ReactElement | null {

@@ -48,7 +48,8 @@ export function notePathSources(state: GameState): void {
     if (source === 'freight') {
       // Terminal kendi mağazalarına depo da: bakımı ve ücretleri zincirin.
       // Rakibe taşımanın ek gideri yok; nakliyenin kârı topladığı ücret.
-      const fees = building.last.revenue;
+      // Şehirler arası hattın cirosu ve ödemesi (Tur 77) ücret değil, zincirin.
+      const fees = building.last.revenue - (building.last.lineRevenue ?? 0);
       sources.freight = (sources.freight ?? 0) + fees;
       sources.retail = (sources.retail ?? 0) + profit - fees;
       continue;

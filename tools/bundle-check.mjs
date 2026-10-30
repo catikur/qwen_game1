@@ -98,9 +98,9 @@ const firstText = (file) => {
   const source = fs.readFileSync(path.resolve(new URL('..', import.meta.url).pathname, file), 'utf8');
   return [...source.matchAll(/^\s*'[^']+':\s*'([^'\\{}]{12,})',?$/gm)][0]?.[1] ?? null;
 };
-const gameTexts = ['packages/core/src/i18n/tr/commands.ts', 'packages/core/src/i18n/tr/markets.ts', 'packages/ui/src/i18n/tr/finance.ts'].map((file) => [file, firstText(file)]);
+const gameTexts = ['packages/core/src/i18n/tr/commands.ts', 'packages/core/src/i18n/tr/markets.ts', 'packages/ui/src/i18n/tr/finance.ts', 'packages/ui/src/i18n/tr/trade.ts'].map((file) => [file, firstText(file)]);
 const misplaced = gameTexts.filter(([, text]) => text !== null && [...critical].some((file) => file.endsWith('.js') && read(file).includes(text)));
-check('Oyunun Türkçe sözlükleri (komutlar, piyasalar, finans) kurulumun yolunda değil, oyun ekranıyla iniyor',
+check('Oyunun Türkçe sözlükleri (komutlar, piyasalar, finans, hatlar) kurulumun yolunda değil, oyun ekranıyla iniyor',
   gameTexts.every(([, text]) => text !== null) && misplaced.length === 0 && gameTexts.every(([, text]) => [...gameGraph].some((file) => read(file).includes(text))),
   misplaced.map(([file]) => path.basename(file)).join(', ') || gameTexts.map(([file]) => path.basename(file, '.ts')).join(', '));
 

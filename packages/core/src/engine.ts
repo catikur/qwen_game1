@@ -37,6 +37,7 @@ import {
   setCityDirective,
   switchCity,
 } from './holding';
+import { closeLine, openLine, prepareTradeDay, setLineTrucks } from './systems/trade';
 import { simulateCityDay } from './day';
 import { tc } from './i18n';
 import './i18n/gameTr';
@@ -413,6 +414,15 @@ export class GameEngine {
       case 'CLOSE_CITY':
         return closeCity(state, command.index);
 
+      case 'OPEN_LINE':
+        return openLine(state, command.from, command.to, command.goodId, command.trucks);
+
+      case 'SET_LINE_TRUCKS':
+        return setLineTrucks(state, command.lineId, command.trucks);
+
+      case 'CLOSE_LINE':
+        return closeLine(state, command.lineId);
+
       default:
         return { ok: false, reason: tc('core.engine.unknownCommand') };
     }
@@ -464,6 +474,9 @@ export class GameEngine {
     // Oyun bittiyse takvim durur. Şirket silinmediği için paneller hâlâ
     // okunabilir — oyuncu son durumuna bakabilmeli.
     if (state.gameOver) return;
+    // Şehirler arası hat (Tur 77): şehirler sırayla yaşıyor, hattın günü
+    // hepsinden önce planlanıyor; yük ve ödeme iki şehrin üretim adımında.
+    prepareTradeDay(state);
     // Şehrin kendi günü: takvim, olaylar, pazar, rakipler, banka (Tur 30'dan
     // beri `day.ts`'te — bekleyen şehirler de aynı adımlarla yaşıyor).
     simulateCityDay(state);

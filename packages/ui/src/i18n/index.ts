@@ -28,6 +28,7 @@ export type Messages = Record<MessageKey, string>;
 registerMessages(BASE_LOCALE, { ...panels, ...hud, ...app });
 // Finans metinleri (banka, borsa, meclis, ihale) yalnız oyunda: onları
 // yazan paneller `financeTr.ts`'i içe aktarıyor, sözlük onlarla iniyor (Tur 74).
+// Şehirler arası hatların metinleri de öyle (`tradeTr.ts`, Tur 77).
 // İngilizce dil seçilince iniyor (Tur 46): Türkçe oynayanın açılışında yok.
 registerLocaleLoader('en', () => import('./en').then((m) => registerMessages('en', m.en)));
 // Almanca (Tur 69) de öyle.

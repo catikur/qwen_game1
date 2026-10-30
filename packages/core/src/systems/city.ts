@@ -235,6 +235,16 @@ function worthOf(state: GameState, company: GameState['companies'][string], asse
 }
 
 /**
+ * Yoldaki mal (Tur 77): bu şehre gelen hatların seferleri, malın bedeliyle.
+ * Varış şehrinin varlığı — bedeli ödendi, havuza henüz girmedi; nakliye gider.
+ */
+export function inTransitValue(state: GameState): number {
+  let value = 0;
+  for (const shipment of state.trade?.inbound ?? []) value += shipment.units * shipment.unitPrice;
+  return value;
+}
+
+/**
  * Bir şirketin ŞU ANKİ net değeri, kayda yazmadan: kayıtlı değeri ve net
  * değer geçmişini değiştirmiyor. Gün arasında (komuttan sonra) güncel
  * değere bakmak için; kayıtlı değeri ertesi günün rakip kararları okuyor,
@@ -250,6 +260,7 @@ export function netWorthNow(state: GameState, companyId: string): number {
     const def = BUILDING_BY_ID[building.defId];
     if (def) assets += def.cost * BUILDING_BOOK_RATIO;
   }
+  if (companyId === state.playerCompanyId) assets += inTransitValue(state);
   return worthOf(state, company, assets);
 }
 
@@ -270,6 +281,7 @@ function netWorthStep(state: GameState): void {
       assets[building.companyId]! += def.cost * BUILDING_BOOK_RATIO;
     }
   }
+  if (state.trade && assets[state.playerCompanyId] !== undefined) assets[state.playerCompanyId]! += inTransitValue(state);
 
   for (const company of Object.values(state.companies)) {
     // Portföy değeri de net değere girer: başka bir şirketin %20'sine

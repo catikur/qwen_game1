@@ -22,6 +22,7 @@ export * from './labor';
 export * from './credit';
 export * from './capital';
 export * from './holding';
+export * from './trade';
 export * from './economy';
 export * from './energy';
 export * from './realestate';
