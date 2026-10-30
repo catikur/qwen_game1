@@ -1,6 +1,6 @@
 import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
-import { BUILDING_BY_ID, GOOD_BY_ID, TRADE_LINE, TRADE_RIVAL } from '@capital/content';
+import { BUILDING_BY_ID, GOOD_BY_ID, TRADED_GOODS, TRADE_LINE, TRADE_RIVAL } from '@capital/content';
 import { GameEngine } from '../src/engine';
 import { createNewGame } from '../src/worldgen';
 import { foundCity } from '../src/holding';
@@ -8,7 +8,7 @@ import { build, buyTile, demolish } from '../src/actions';
 import { simulateCityDay } from '../src/day';
 import { inTransitValue, isPurchasable, netWorthNow } from '../src/systems/city';
 import { fleetUsed } from '../src/systems/freight';
-import { SURPLUS_HAIRCUT, exportableSurplus } from '../src/systems/supply';
+import { SURPLUS_HAIRCUT, exportableSurplus, runSpotPriceTick, spotOutlook } from '../src/systems/supply';
 import {
   cityBySeed,
   lineCapacity,
@@ -706,5 +706,66 @@ describe('ticaretin fiyatı (Tur 78)', () => {
     p.away.gameOver = { day: p.away.time.day, byCompanyId: Object.keys(p.away.companies).find((id) => id !== p.away.playerCompanyId)! };
     assert.ok(p.engine.dispatch({ type: 'CLOSE_CITY', index: 0 }).ok);
     assert.equal(rivalLines(p.root).length, 0);
+  });
+});
+
+describe('hattın kendi etkisi (Tur 80)', () => {
+  const route = (p: Pair) => [p.away.meta.seed, p.root.meta.seed] as const;
+
+  test('tahminin formülü spot fiyat adımınınki: akış eklenmeden bir günlük tahmin yarınki fiyat', () => {
+    const p = coffeeRoute(21, false);
+    p.engine.runDay();
+    const tomorrow = structuredClone(p.away);
+    runSpotPriceTick(tomorrow);
+    for (const good of TRADED_GOODS) {
+      assert.ok(Math.abs(spotOutlook(p.away, good.id, {}, 1) - tomorrow.market.spot[good.id]!) < 1e-9, good.id);
+    }
+  });
+
+  test('kamyon arttıkça çıkış pahalanıyor, varış ucuzluyor, birim kâr düşüyor; en kârlı kamyon günlük kârı en yüksek olan', () => {
+    const p = coffeeRoute(21, false);
+    const [from, to] = route(p);
+    const quote = (trucks: number) => lineQuote(p.root, from, to, 'coffee_bean', trucks, true);
+    const free = quote(1).freeTrucks;
+    assert.ok(free >= 4, `${free} kamyon`);
+    const outlooks = Array.from({ length: free }, (_, i) => quote(i + 1).outlook!);
+    for (let i = 1; i < outlooks.length; i++) {
+      assert.ok(outlooks[i]!.originSpot >= outlooks[i - 1]!.originSpot, 'çıkış');
+      assert.ok(outlooks[i]!.destinationSpot <= outlooks[i - 1]!.destinationSpot, 'varış');
+      assert.ok(outlooks[i]!.margin < outlooks[i - 1]!.margin, 'birim kâr');
+    }
+    const { bestTrucks, bestDaily } = outlooks[0]!;
+    assert.ok(bestTrucks >= 1 && bestDaily > 0, `${bestTrucks} kamyon`);
+    // Her kamyon sayısında aynı öneri; günlük kâr hiçbir sayıda daha yüksek değil.
+    assert.ok(outlooks.every((outlook) => outlook.bestTrucks === bestTrucks && outlook.daily <= bestDaily + 1e-9));
+    assert.ok(Math.abs(outlooks[bestTrucks - 1]!.daily - bestDaily) < 1e-9);
+  });
+
+  test('tahmin 30 gün sonra gerçekleşen fiyata yakın (olaysız, rakipsiz)', () => {
+    const p = coffeeRoute(21, false);
+    const [from, to] = route(p);
+    const outlook = lineQuote(p.root, from, to, 'coffee_bean', 4, true).outlook!;
+    assert.equal(outlook.days, TRADE_RIVAL.entryDays);
+    assert.ok(openCoffee(p, 4).ok);
+    for (let day = 0; day < outlook.days; day++) p.engine.runDay();
+    const origin = p.away.market.spot['coffee_bean']!;
+    const destination = p.root.market.spot['coffee_bean']!;
+    assert.ok(Math.abs(outlook.originSpot / origin - 1) < 0.03, `çıkış ${outlook.originSpot} · ${origin}`);
+    assert.ok(Math.abs(outlook.destinationSpot / destination - 1) < 0.03, `varış ${outlook.destinationSpot} · ${destination}`);
+  });
+
+  test('yüksüz hattın tahmini yok; fazla taşıyan hat fazlanın fiyatıyla hesaplanıyor', () => {
+    const coffee = coffeeRoute(21, false);
+    const [from, to] = route(coffee);
+    // Çıkışta kahve fazlası yok: pazardan almayan hat boş gider, tahmin söylenmiyor.
+    assert.equal(lineQuote(coffee.root, from, to, 'coffee_bean', 1, false).outlook, undefined);
+    const p = pair();
+    const [wheatFrom, wheatTo] = route(p);
+    const outlook = lineQuote(p.root, wheatFrom, wheatTo, 'wheat', 2, false).outlook!;
+    // Fazlanın birim bedeli çıkışın fiyatının %85'i: kâr bunu ve nakliyeyi düşüyor.
+    const units = lineCapacity(2);
+    const freight = lineDailyCost({ trucks: 2, transitDays: transitDaysBetween(wheatFrom, wheatTo) });
+    const expected = outlook.destinationSpot * TRADE_LINE.saleShare - outlook.originSpot * SURPLUS_HAIRCUT - freight / units;
+    assert.ok(Math.abs(outlook.margin - expected) < 1e-9, `${outlook.margin} · ${expected}`);
   });
 });

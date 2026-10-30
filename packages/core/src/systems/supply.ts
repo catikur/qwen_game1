@@ -813,37 +813,61 @@ export function runSpotPriceTick(state: GameState): void {
   const exported = state.trade?.marketOut;
 
   for (const good of TRADED_GOODS) {
-    const reference = Math.max(1, state.market.reference[good.id] ?? 1);
     const produced = state.market.produced[good.id] ?? 0;
     const consumed = state.market.consumed[good.id] ?? 0;
-    const surplus = Math.max(0, produced - consumed);
-    const glut = Math.min(1, surplus / reference);
-
-    // Şehrin referans fiyatı (Tur 76): türün bol ya da kıt hammaddesi; dengeli şehirde katalogdaki.
-    const base = referencePrice(state, good.id);
-    const eventMultiplier = mods.goodPrice[good.id] ?? 1;
-    let target = base * eventMultiplier * (1 - GLUT_DEPTH * glut);
-    // İhracat baskısı (Tur 78): yalnız hatların pazardan aldığı, şehrin
-    // açığına düşen kısmı. Talep artışı fiyatı yükseltmiyor (yukarıdaki
-    // kısıt); dışarı giden mal ise şehrin pazarından eksiliyor. Pazardan
-    // alım yoksa çarpan hiç yok: hatsız şehir bitine kadar aynı.
-    const out = exported?.[good.id] ?? 0;
-    if (out > 0) {
-      const pull = Math.min(1, Math.min(out, Math.max(0, consumed - produced)) / reference);
-      if (pull > 0) target *= 1 + EXPORT_DEPTH * pull;
-    }
-
-    const current = state.market.spot[good.id] ?? base;
-    const next = current + (target - current) * SPOT_SMOOTHING;
-
-    state.market.spot[good.id] = Math.max(
-      base * SPOT_FLOOR,
-      Math.min(base * SPOT_CEILING, next),
-    );
+    const target = spotTarget(state, good.id, produced, consumed, exported?.[good.id] ?? 0, mods.goodPrice[good.id] ?? 1);
+    state.market.spot[good.id] = nextSpot(state, good.id, state.market.spot[good.id] ?? referencePrice(state, good.id), target);
   }
   // Günün hat akışları (Tur 78) burada bitiyor: kayıtta kalmasın.
   if (state.trade) {
     delete state.trade.marketOut;
     delete state.trade.marketIn;
   }
+}
+
+/** Fiyatın yöneldiği değer: şehrin referans fiyatı, olayın çarpanı, fazla kırığı, ihracat baskısı. */
+function spotTarget(state: GameState, goodId: string, produced: number, consumed: number, out: number, eventMultiplier: number): number {
+  const reference = Math.max(1, state.market.reference[goodId] ?? 1);
+  const glut = Math.min(1, Math.max(0, produced - consumed) / reference);
+  // Şehrin referans fiyatı (Tur 76): türün bol ya da kıt hammaddesi; dengeli şehirde katalogdaki.
+  let target = referencePrice(state, goodId) * eventMultiplier * (1 - GLUT_DEPTH * glut);
+  // İhracat baskısı (Tur 78): yalnız hatların pazardan aldığı, şehrin
+  // açığına düşen kısmı. Talep artışı fiyatı yükseltmiyor (yukarıdaki
+  // kısıt); dışarı giden mal ise şehrin pazarından eksiliyor. Pazardan
+  // alım yoksa çarpan hiç yok: hatsız şehir bitine kadar aynı.
+  if (out > 0) {
+    const pull = Math.min(1, Math.min(out, Math.max(0, consumed - produced)) / reference);
+    if (pull > 0) target *= 1 + EXPORT_DEPTH * pull;
+  }
+  return target;
+}
+
+/** Bir günde fiyat hedefe `SPOT_SMOOTHING` kadar yaklaşıyor; taban ve tavan referans fiyatın katı. */
+function nextSpot(state: GameState, goodId: string, current: number, target: number): number {
+  const base = referencePrice(state, goodId);
+  return Math.max(base * SPOT_FLOOR, Math.min(base * SPOT_CEILING, current + (target - current) * SPOT_SMOOTHING));
+}
+
+/**
+ * Bir malın fiyatı `days` gün sonra, şehrin son günkü akışına bir hattın
+ * yükü eklenirse (Tur 80, hat formunun tahmini). Spot fiyat adımıyla aynı
+ * formül: fazla kırığı, ihracat baskısı, olayın çarpanı, yumuşatma, taban ve
+ * tavan. Akış ve olaylar bugünkü gibi sayılıyor; simülasyon bunu okumuyor.
+ *
+ * - `consumed`: şehrin pazarından eklenen çıkış (hattın yükü),
+ * - `out`: pazardan alınan kısmı, şehrin bugünkü öbür hat alımlarıyla,
+ * - `produced`: şehre eklenen varış (hattın getirdiği).
+ */
+export function spotOutlook(
+  state: GameState,
+  goodId: string,
+  extra: { produced?: number; consumed?: number; out?: number },
+  days: number,
+): number {
+  const produced = (state.market.produced[goodId] ?? 0) + (extra.produced ?? 0);
+  const consumed = (state.market.consumed[goodId] ?? 0) + (extra.consumed ?? 0);
+  const target = spotTarget(state, goodId, produced, consumed, extra.out ?? 0, collectEventModifiers(state).goodPrice[goodId] ?? 1);
+  let spot = state.market.spot[goodId] ?? referencePrice(state, goodId);
+  for (let day = 0; day < days; day++) spot = nextSpot(state, goodId, spot, target);
+  return spot;
 }

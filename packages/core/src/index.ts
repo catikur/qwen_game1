@@ -197,7 +197,7 @@ export {
   tradeProfitToday,
   transitDaysBetween,
 } from './systems/trade';
-export type { LineMargins, LineQuote, PriceBoardRow } from './systems/trade';
+export type { LineMargins, LineOutlook, LineQuote, PriceBoardRow } from './systems/trade';
 export { companyPath, notePathSources, sourceOf } from './systems/paths';
 export type { CompanyPath } from './systems/paths';
 export { cityWeather, weatherOn } from './systems/weather';

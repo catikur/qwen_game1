@@ -32,7 +32,7 @@ import {
   tradeCities,
   tradeLines,
 } from '@capital/core';
-import type { DormantCity, GameState, RemotePayout, TradeLine } from '@capital/core';
+import type { DormantCity, GameState, LineOutlook, RemotePayout, TradeLine } from '@capital/core';
 import { useGame, useGameState } from './useGame';
 import { t } from './i18n';
 import './i18n/tradeTr';
@@ -360,6 +360,41 @@ function PriceBoard({ state }: { state: GameState }): ReactElement | null {
   );
 }
 
+/**
+ * Hattın kendi etkisi (Tur 80): bu kamyonlarla pazar oturunca fiyatlar,
+ * birim ve günlük kâr; günlük kârı en yüksek kamyon başkaysa o. Kâr eksiye
+ * düşüyorsa kırmızı.
+ */
+function LineOutlookNote({ outlook, trucks }: { outlook: LineOutlook; trucks: number }): ReactElement {
+  const best = outlook.bestTrucks > 0 && outlook.bestTrucks !== trucks
+    ? ` ${t('trade.lines.open.outlookBest', { trucks: outlook.bestTrucks, daily: formatMoney(outlook.bestDaily) })}`
+    : '';
+  const data = { 'data-line-outlook': outlook.margin.toFixed(2), 'data-line-outlook-best': outlook.bestTrucks };
+  if (outlook.margin > 0) {
+    return (
+      <p className="muted" {...data}>
+        {t('trade.lines.open.outlook', {
+          days: outlook.days,
+          buy: formatUnitMoney(outlook.originSpot),
+          spot: formatUnitMoney(outlook.destinationSpot),
+          margin: formatUnitMoney(outlook.margin),
+          daily: formatMoney(outlook.daily),
+        })}
+        {best}
+      </p>
+    );
+  }
+  return (
+    <p className="line-loss" {...data}>
+      {t(outlook.bestTrucks > 0 ? 'trade.lines.open.outlookLoss' : 'trade.lines.open.outlookNone', {
+        days: outlook.days,
+        margin: formatUnitMoney(outlook.margin),
+      })}
+      {best}
+    </p>
+  );
+}
+
 /** Hattın bugünkü seferi tek cümleyle: ne yüklendi (pazardan alınanı), eksikse neden. */
 function lineToday(line: TradeLine): string {
   const last = line.last;
@@ -600,6 +635,7 @@ function OpenLineForm({ state }: { state: GameState }): ReactElement | null {
           })}
         </p>
       )}
+      {quote.outlook && <LineOutlookNote outlook={quote.outlook} trucks={count} />}
       <p className="muted" data-line-terms>
         {t(buy && quote.margins ? 'trade.lines.open.termsBuy' : 'trade.lines.open.terms', {
           capacity: formatNumber(quote.capacity),

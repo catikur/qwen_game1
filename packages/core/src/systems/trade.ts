@@ -4,7 +4,7 @@ import { tc } from '../i18n';
 import { pushNews } from '../news';
 import { rivalProfile } from '../profiles';
 import { fleetUsed, freightTerminals } from './freight';
-import { SURPLUS_HAIRCUT, exportableSurplus, ownGoodFlow } from './supply';
+import { SURPLUS_HAIRCUT, exportableSurplus, ownGoodFlow, spotOutlook } from './supply';
 import type { BuildingInstance, CityTrade, CommandResult, GameState, RivalLine, TradeLine } from '../types';
 
 /**
@@ -270,6 +270,88 @@ export interface LineQuote {
   freeTrucks: number;
   /** Birim hesabı (Tur 78): alış, satış, nakliye, pazara ve ihtiyaca birim kâr. */
   margins?: LineMargins;
+  /** Hattın kendi etkisi (Tur 80): bu kamyonlarla fiyatlar ve birim kâr, pazar oturunca. */
+  outlook?: LineOutlook;
+}
+
+/**
+ * Hattın kendi etkisinin tahmini (Tur 80). Bugünkü fark dar pazarda bir
+ * tuzak: dört kamyon silikonun alışını 30 günde %40 yükseltip varışını %39
+ * düşürüyordu (Tur 79). Tahmin iki şehrin son günkü akışına hattın yükünü
+ * ekleyip spot fiyat adımının formülünü (`spotOutlook`) `days` gün
+ * işletiyor. Olaylar bugünkü gibi; rakibin kopyası (aynı gün kadar sonra)
+ * sayılmıyor.
+ */
+export interface LineOutlook {
+  days: number;
+  /** Çıkışta ve varışta pazarın fiyatı `days` gün sonra. */
+  originSpot: number;
+  destinationSpot: number;
+  /** Hattın birim kârı o gün: varışta satış eksi yükün bedeli (fazla ×%85, alınan tam) ve nakliye. */
+  margin: number;
+  /** Günlük kârı o gün (birim kâr × yük). */
+  daily: number;
+  /** Günlük kârı en yüksek kamyon (boştakiyle sınırlı) ve o günlük kâr; hiçbiri kârda değilse 0. */
+  bestTrucks: number;
+  bestDaily: number;
+}
+
+/** Tahminin ufku: kârlı yolu rakibin kopyaladığı gün (pazar o zamana oturuyor: fark her gün %15 kapanıyor). */
+const OUTLOOK_DAYS = TRADE_RIVAL.entryDays;
+
+/** `trucks` kamyonluk hattın `OUTLOOK_DAYS` sonraki fiyatları ve birim kârı. */
+function outlookFor(
+  root: GameState,
+  source: GameState,
+  target: GameState,
+  goodId: string,
+  trucks: number,
+  buy: boolean,
+  surplus: number,
+): Omit<LineOutlook, 'bestTrucks' | 'bestDaily'> | undefined {
+  const capacity = lineCapacity(trucks);
+  const own = Math.min(capacity, surplus);
+  const bought = buy ? capacity - own : 0;
+  const units = own + bought;
+  // Yüksüz hat (fazla yok, pazardan almıyor) fiyatı oynatmıyor; formun öbür satırları söylüyor.
+  if (units <= 0) return undefined;
+  // Çıkışın bugünkü hat alımları da ihracat baskısında (akışları kayıtta kalmıyor).
+  let out = bought;
+  for (const line of tradeLines(root)) if (line.from === source.meta.seed && line.goodId === goodId) out += line.last?.bought ?? 0;
+  for (const rival of rivalLines(root)) if (rival.from === source.meta.seed && rival.goodId === goodId) out += rival.last?.units ?? 0;
+  const originSpot = spotOutlook(source, goodId, { consumed: units, out }, OUTLOOK_DAYS);
+  const destinationSpot = spotOutlook(target, goodId, { produced: units }, OUTLOOK_DAYS);
+  const transitDays = transitDaysBetween(source.meta.seed, target.meta.seed);
+  const cost = own * originSpot * SURPLUS_HAIRCUT + bought * originSpot + lineDailyCost({ trucks, transitDays });
+  const margin = destinationSpot * TRADE_LINE.saleShare - cost / units;
+  return { days: OUTLOOK_DAYS, originSpot, destinationSpot, margin, daily: margin * units };
+}
+
+/** Tahmin ve günlük kârı en yüksek kamyon: birim kâr kamyonla azalıyor (varış doyuyor, çıkış pahalanıyor, boş kamyon). */
+function lineOutlook(
+  root: GameState,
+  source: GameState,
+  target: GameState,
+  goodId: string,
+  trucks: number,
+  buy: boolean,
+  surplus: number,
+  free: number,
+): LineOutlook | undefined {
+  const outlook = outlookFor(root, source, target, goodId, trucks, buy, surplus);
+  if (!outlook) return undefined;
+  let bestTrucks = 0;
+  let bestDaily = 0;
+  for (let count = 1; count <= free; count++) {
+    const daily = outlookFor(root, source, target, goodId, count, buy, surplus)?.daily ?? 0;
+    // Birim kâr eksiye düşünce fazlası da düşüyor: aramayı bitir.
+    if (daily <= 0) break;
+    if (daily > bestDaily) {
+      bestDaily = daily;
+      bestTrucks = count;
+    }
+  }
+  return { ...outlook, bestTrucks, bestDaily };
 }
 
 /**
@@ -302,6 +384,9 @@ export function lineQuote(root: GameState, from: number, to: number, goodId: str
   const flow = target && good ? ownGoodFlow(target, goodId) : { produced: 0, consumed: 0 };
   const need = Math.max(0, flow.consumed - flow.produced - delivered);
   const margins = lineMargins(root, from, to, goodId);
+  const outlook = source && target && good && from !== to && trucks >= 1
+    ? lineOutlook(root, source, target, goodId, Math.round(trucks), buy, surplus, free)
+    : undefined;
   const base = {
     transitDays,
     capacity: lineCapacity(trucks),
@@ -313,6 +398,7 @@ export function lineQuote(root: GameState, from: number, to: number, goodId: str
     destinationSpot: target && good ? (target.market.spot[goodId] ?? good.basePrice) : 0,
     freeTrucks: free,
     ...(margins ? { margins } : {}),
+    ...(outlook ? { outlook } : {}),
   };
   const refuse = (reason: string): LineQuote => ({ ok: false, reason, ...base });
 
