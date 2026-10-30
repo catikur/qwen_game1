@@ -10074,8 +10074,9 @@ dokunulmadı: uçtan uca deneme yerel sunucuyla (bellekte SQLite).
 - Web/Android uçtan uca 39/39 (yerel sunucu), 37 kare. Yeni kontrol
   düzeltmeden önce kırmızı: adsız hesapta silme düğmesi yoktu.
 - Lite birim testleri 181/181; tip denetimi temiz.
-- iOS'taki değişiklik (adsız hesabın satırı) CI'ın macOS işinde derleniyor,
-  sonucu bu turun PR'ında.
+- iOS'taki değişiklik (adsız hesabın satırı) CI'ın macOS işinde derlendi:
+  Swift testleri, simülatör kareleri ve imzasız App Store derlemesi yeşil
+  (#111).
 - Ana oyunun koduna dokunulmadı; lig izi aynı.
 
 **Kalan.** Tur 82: sunucunun sözleşmesi (1–6; 5'in yolu ve 7'nin kapsamı
