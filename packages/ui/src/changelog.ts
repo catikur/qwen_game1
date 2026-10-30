@@ -25,6 +25,30 @@ export function changelogNotes(entry: ChangelogEntry, locale: string): string[] 
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.3.0',
+    date: '2026-10-30',
+    notes: {
+      tr: [
+        'Ticaretin fiyatı: hat fazla yetmezse eksiğini çıkış şehrinin pazarından alabilir. Mal bir şehirde ucuz, öbüründe pahalıysa üretimsiz de kâr eder; varışta kendi tesislerine gider ya da pazara satılır.',
+        'Şehirlerin fiyatları Şehirler panelinde yan yana: her malın en ucuz ve en pahalı şehri, en kârlı yönü ve birim kârı. Hat satırı alışı, satışı, nakliyeyi ve birim kârı gösteriyor.',
+        'Fark daralıyor: pazardan alındıkça çıkış şehrinde fiyat yükselir, satıldıkça varışta düşer. Kârlı bir yolu rakipler de görür; bir ay sonra kopyalar, kâr sürdükçe kamyon ekler.',
+        'Hattın varışta pazara sattığı mal planlı satış: üretim fazlası gibi %15 değil %5 kırılır. Bu sürümün kayıtları eski sürümde açılmıyor.',
+      ],
+      en: [
+        'The price of trade: if the surplus falls short, a line can buy the rest on the origin city\'s market. When a good is cheap in one city and dear in the other, a line pays without any production; at the destination the goods feed your own plants or are sold on the market.',
+        'Prices side by side in the Cities panel: the cheapest and dearest city for each good, the best route and its margin per unit. A line\'s row shows the buying price, the selling price, the freight and the margin per unit.',
+        'The gap narrows: buying lifts the price at the origin, selling lowers it at the destination. Rivals see a profitable route too; after a month they copy it and add trucks while it still pays.',
+        'Goods a line sells on the destination market are a planned sale: they lose 5% of the price, not 15% like surplus production. Saves from this version don\'t open in older versions.',
+      ],
+      de: [
+        'Der Preis des Handels: Reicht der Überschuss nicht, kann eine Linie den Rest am Markt der Ausgangsstadt kaufen. Ist eine Ware in einer Stadt billig und in der anderen teuer, lohnt sich die Linie auch ohne Produktion; am Ziel beliefert sie deine eigenen Werke oder wird am Markt verkauft.',
+        'Die Preise stehen im Fenster „Städte“ nebeneinander: die günstigste und teuerste Stadt jeder Ware, die beste Route und ihre Spanne je Einheit. Die Zeile einer Linie zeigt Einkauf, Verkauf, Fracht und Spanne je Einheit.',
+        'Die Spanne schrumpft: Kaufen hebt den Preis am Start, Verkaufen senkt ihn am Ziel. Auch Rivalen sehen eine lohnende Route; nach einem Monat kopieren sie sie und stocken Lkw auf, solange sie sich lohnt.',
+        'Was eine Linie am Markt der Zielstadt verkauft, ist ein geplanter Verkauf: 5 % Abschlag statt 15 % wie bei Überschussproduktion. Spielstände dieser Version lassen sich in älteren Versionen nicht öffnen.',
+      ],
+    },
+  },
+  {
     version: '1.2.0',
     date: '2026-10-30',
     notes: {
