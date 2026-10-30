@@ -88,6 +88,9 @@ export function scenarioResultText(def: ScenarioDef, scenario: ScenarioState): s
         : t('hud.scenario.lostTimeFreight', { percent: formatPercent(Math.floor(score * 100)) });
     case 'power':
       return t('hud.scenario.lostTimePower', { percent: formatPercent(Math.floor(score * 100)) });
+    case 'trade':
+      // Skor ticaretin kârının hedefe oranı (zararda sıfır).
+      return t('hud.scenario.lostTimeTrade', { percent: formatPercent(Math.floor(score * 100)) });
     case 'rental':
       // Skor dolu birimin hedefe oranı; yettiyse eksik olan dönüşüm projesi (Codex #90).
       return score >= 1

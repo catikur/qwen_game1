@@ -65,6 +65,8 @@ export function startScenario(scenario: string | ScenarioDef, options: ScenarioO
   const state = createNewGame({
     seed: def.seed,
     citySize: def.citySize,
+    // Şehrin türü (Tur 79): ticaret senaryolarının fiyat farkı türlerden.
+    ...(def.cityType ? { cityType: def.cityType } : {}),
     difficulty: def.difficulty,
     ...(def.modifiers ? { modifiers: def.modifiers } : {}),
     // Paketin kuralları (Tur 67) kendi ayarlarıyla, ön tarihte de.
@@ -269,7 +271,7 @@ function openSecondCity(founding: GameState, def: ScenarioDef, city: NonNullable
   delete founding.scenario;
   const owner = founding.companies[founding.playerCompanyId]!;
   owner.cash += city.capital;
-  const next = foundCity(founding, city.citySize, city.capital);
+  const next = foundCity(founding, city.citySize, city.capital, city.cityType);
   const away = next.holding!.dormant[0]!.state;
   delete away.importedCapital;
   recomputeNetWorth(away);

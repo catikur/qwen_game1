@@ -18,7 +18,7 @@ okumuyor; paket var olan parçaları bir araya getiriyor.
 
 ## Oyunda
 
-**Yeni oyun → Senaryo → Kendi senaryoların.** Hazır on senaryonun altında.
+**Yeni oyun → Senaryo → Kendi senaryoların.** Hazır on iki senaryonun altında.
 
 - **Ekleme.** "Senaryo ekle" kutusuna paylaşım kodu (`CF1.…`) ya da paketin
   JSON metni yapıştırılıyor, ya da **Dosyadan seç**. Geçmeyen paket
@@ -289,7 +289,7 @@ Doğrulayıcı ilk 40 sorunu döndürüyor (`{ path, code, params }`); raf ilk
 
 ## Testler
 
-- `packages/core/test/packs.test.ts`: hazır on senaryonun hepsi paket olarak
+- `packages/core/test/packs.test.ts`: hazır on iki senaryonun hepsi paket olarak
   yazılıyor ve doğrulanıyor; örnek paket (bu belgedeki) geçerli ve
   oynanıyor; her sorun kodu yeriyle; kural ayarının simülasyona girmesi;
   kayıt, paket yüklü olmayan cihazda; yeni sürüm süren koşuyu değiştirmiyor;

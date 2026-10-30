@@ -201,9 +201,9 @@ function goalTextFor(value: PackText, kind: ScenarioGoalKind, locales: readonly 
 
 /**
  * Hedef türünü değiştirir. Yıldızın ölçüsü hedefe bağlı (`starMetric`):
- * ölçü değişince eşikler yeni ölçüye uygun başlıyor. Holding ikinci şehir
- * istiyor: yoksa kuruluyor. Hedef cümlesinin uymayan yer tutucusu da
- * (`goalTextFor`).
+ * ölçü değişince eşikler yeni ölçüye uygun başlıyor. Holding ve ticaret
+ * (Tur 79) ikinci şehir istiyor: yoksa kuruluyor. Hedef cümlesinin uymayan
+ * yer tutucusu da (`goalTextFor`).
  */
 export function withGoalKind(scenario: PackScenario, kind: ScenarioGoalKind, locales: readonly string[] = [BASE_LOCALE]): PackScenario {
   if (!GOAL_KINDS.includes(kind)) return scenario;
@@ -214,7 +214,7 @@ export function withGoalKind(scenario: PackScenario, kind: ScenarioGoalKind, loc
     : metric === 'days'
       ? { metric, two: Math.max(2, Math.round(days * 0.8)), three: Math.max(1, Math.round(days * 0.6)) }
       : { metric, two: 1.2, three: 1.5 };
-  const setup = kind === 'holding' && !scenario.setup?.secondCity ? { ...scenario.setup, secondCity: { ...PART_DEFAULTS.secondCity } } : scenario.setup;
+  const setup = (kind === 'holding' || kind === 'trade') && !scenario.setup?.secondCity ? { ...scenario.setup, secondCity: { ...PART_DEFAULTS.secondCity } } : scenario.setup;
   return { ...scenario, goal: goalDefaults(kind), stars, setup, goalText: goalTextFor(scenario.goalText, kind, locales) };
 }
 

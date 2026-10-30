@@ -7,6 +7,7 @@ import { floorTo, scenarioScoreText, starsFor } from './scenarioText';
 import { victoryNetWorth } from './goals';
 import { rentalOutlook } from './realestate';
 import { stanceOf } from './relations';
+import { tradeProfitToday } from './trade';
 import type { GameState, ScenarioLostReason, ScenarioState } from '../types';
 
 /**
@@ -373,6 +374,15 @@ export function scenarioProgress(state: GameState): ScenarioProgress | null {
       daysLeft,
     };
   }
+  if (goal.kind === 'trade') {
+    // Ticaretin kârı (Tur 79): zarar eden gün toplamı düşürüyor; ilerleme sıfırın altına inmiyor.
+    const profit = run.tradeProfit ?? 0;
+    return {
+      progress: clamp(profit / goal.target),
+      detail: tc('core.scenario.progressTrade', { value: formatMoney(profit), target: formatMoney(goal.target) }),
+      daysLeft,
+    };
+  }
   if (goal.kind === 'rental') {
     const status = rentalGoalStatus(state);
     // Paketin hedefi dönüşüm istemeyebilir (`renewals: 0`, Tur 67): o pay baştan tam (0/0 NaN'dı).
@@ -582,6 +592,12 @@ export function runScenarioTick(state: GameState): void {
       const status = rentalGoalStatus(state);
       if (rentalMet(status, goal)) finish(state, run, def, true, day - run.startDay);
       else if (day >= run.endDay) finish(state, run, def, false, status.occupied / goal.units);
+      return;
+    }
+    case 'trade': {
+      run.tradeProfit = Math.round((run.tradeProfit ?? 0) + tradeProfitToday(state));
+      if (run.tradeProfit >= goal.target) finish(state, run, def, true, day - run.startDay);
+      else if (day >= run.endDay) finish(state, run, def, false, Math.max(0, run.tradeProfit) / goal.target);
       return;
     }
     case 'leadAtEnd': {

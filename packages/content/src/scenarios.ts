@@ -1,4 +1,5 @@
 import { localizeList } from './localize';
+import type { CityTypeId } from './cityTypes';
 import type { CitySizeId } from './districts';
 import type { DifficultyId } from './difficulty';
 import type { ModifierId } from './modifiers';
@@ -26,6 +27,10 @@ import type { CategoryId } from './types';
  * Senaryo paketi II (Tur 60): Faz 3'ün sektörleriyle üç senaryo —
  * nakliye, enerji ve kentsel dönüşüm. Her biri bir ek kuralla (Tur 45)
  * oynanıyor: kural ön tarihte de geçerli, şehir onunla büyüdü.
+ *
+ * Ticaret (Tur 79): iki holding senaryosu, iki türlü şehir arasında
+ * hatlarla kâr. Senaryonun şehri ve ikinci şehri bir türle kuruluyor
+ * (`cityType`, Tur 76): fiyat farkı türlerden geliyor.
  */
 export type ScenarioId =
   | 'rescue'
@@ -37,7 +42,9 @@ export type ScenarioId =
   | 'holding'
   | 'haulage'
   | 'blackout'
-  | 'renewal';
+  | 'renewal'
+  | 'coffee'
+  | 'supplier';
 
 /**
  * Devirde oyuncunun şirketi. Parçalar birleşebiliyor: her senaryo
@@ -91,7 +98,7 @@ export interface ScenarioSetup {
    * sermayeyle açılan yeni şehirde başlıyor. Kurucu şehrin kasası `cash`;
    * sermaye ondan düşülmüyor ve kurucu şehrin zafer ölçüsüne eklenmiyor.
    */
-  secondCity?: { capital: number; citySize: CitySizeId };
+  secondCity?: { capital: number; citySize: CitySizeId; cityType?: CityTypeId };
   /**
    * Devralınan husumet (Tur 60): net değeri en yüksek bu kadar rakip
    * oyuncuya kinli başlıyor (Rakipler 2.0'ın `feud` olayı, mizaçla).
@@ -134,7 +141,16 @@ export type ScenarioGoal =
    * (hak sahipleri sayılmıyor) ve dönüşüm parselinde açılmış en az
    * `renewals` proje.
    */
-  | { kind: 'rental'; units: number; renewals: number };
+  | { kind: 'rental'; units: number; renewals: number }
+  /**
+   * Ticaret (Tur 79): senaryo boyunca şehirler arası hatlarla toplam
+   * `target` ₺ kâr. Hattın günlük kârı yüklediği malın varıştaki planlı
+   * satış değeri (spot × %95) eksi malın bedeli ve nakliye; boş giden
+   * kamyonun bedeli de düşüyor, zarar eden gün toplamı azaltıyor. Hacim
+   * değil kâr: hacim ölçülseydi zararına koşan değerli mal hattı hedefi
+   * en hızlı doldururdu.
+   */
+  | { kind: 'trade'; target: number };
 
 export interface ScenarioStars {
   /** `days`: hedefe kaç günde ulaşıldı (az iyi) · `lead`: bitişte en güçlü rakibe oran (çok iyi). */
@@ -158,6 +174,8 @@ export interface ScenarioDef {
   facts: string[];
   seed: number;
   citySize: CitySizeId;
+  /** Şehrin türü (Tur 79; türler Tur 76'dan): yoksa dengeli. */
+  cityType?: CityTypeId;
   difficulty: DifficultyId;
   preludeDays: number;
   /**
@@ -591,6 +609,74 @@ export const SCENARIOS: ScenarioDef[] = [
       cash: 6_000_000,
       outlets: ['residence', 'office_tower'],
       builtDaysAgo: 120,
+    },
+  },
+  /*
+   * KAHVE YOLU (Tur 79; liman kenti, ikinci şehir sanayi kenti). Kahve
+   * çekirdeği limanda %20 ucuz, sanayide %15 pahalı; buğday ters yönde.
+   * Terminal yok: oyuncu iki şehre de kuruyor (kurucu şehre Holding
+   * panelinden geçerek). Rakip kârlı yolu 30 gün sonra kopyalıyor.
+   */
+  {
+    id: 'coffee',
+    title: 'Kahve yolu',
+    tagline: 'Limanda ucuz, sanayide pahalı: iki şehri hatla bağla, rakipler yolunu kopyalamadan kâr et.',
+    brief:
+      'Holding liman kentinden sanayi kentine açılıyor. Limanda kahve çekirdeği gemiyle ucuz geliyor, sanayinin kavurma tesisleri onu pahalıya alıyor. Fark büyük ama kalıcı değil: kârlı bir yolu rakipler bir ay içinde görüp kopyalıyor.',
+    goalText: '{days} gün içinde şehirler arası hatlarınla {target} kâr et.',
+    facts: [
+      'İki şehre birer nakliye terminali kur. Kurucu şehre Holding panelinden geçiliyor; limanda terminal %25 ucuz.',
+      'Hatlar bölümündeki fiyat tablosu kârlı yönleri gösteriyor. "Eksiği pazardan al" ile hat üretim olmadan da çalışıyor.',
+      'Hattın günlük kârı: malın varıştaki satış değeri, eksi malın bedeli ve nakliye. Boş giden kamyon da kârdan düşüyor.',
+      'Rakip kârlı yolu 30 gün sonra kopyalıyor; fark daralınca yeni bir mal ya da yön bul.',
+    ],
+    seed: 21,
+    citySize: 'standard',
+    cityType: 'port',
+    difficulty: 'normal',
+    preludeDays: 120,
+    days: 300,
+    goal: { kind: 'trade', target: 400_000 },
+    stars: { metric: 'days', two: 240, three: 180 },
+    setup: {
+      cash: 2_000_000,
+      outlets: ['cafe', 'supermarket'],
+      builtDaysAgo: 90,
+      secondCity: { capital: 3_000_000, citySize: 'standard', cityType: 'industrial' },
+    },
+  },
+  /*
+   * BAŞKENTİN TEDARİKÇİSİ (Tur 79; sanayi kenti, ikinci şehir başkent,
+   * Sıkı banka). Sanayide silikon ve deri %20 ucuz, başkentte her
+   * hammadde %10 pahalı: değerli malın birim kârı büyük, pazarı dar.
+   */
+  {
+    id: 'supplier',
+    title: 'Başkentin tedarikçisi',
+    tagline: 'Başkent her hammaddeyi dışarıdan alıyor; sanayi kentinden sen getir. Ama banka sana sıkı.',
+    brief:
+      'Sanayi kentinde silikon ve deri bol; başkentte her hammadde pahalı, pazar büyük. Holding başkente açılıyor. Kasan sınırlı, banka sana temkinli: kamyonu ve terminali kendi kârınla büyüteceksin. Değerli malın birim kârı büyük ama pazarı dar.',
+    goalText: '{days} gün içinde şehirler arası hatlarınla {target} kâr et.',
+    facts: [
+      'İki şehre birer nakliye terminali kur. Kurucu şehre Holding panelinden geçiliyor.',
+      'Silikon ve ham deri sanayide %20 ucuz, başkentte her hammadde %10 pahalı. Değerli malın pazarı dar: çok kamyon farkı çabuk kapatıyor.',
+      'Sıkı banka: kredi pahalı ve limiti düşük.',
+      'Rakip kârlı yolu 30 gün sonra kopyalıyor; fark daralınca yeni bir mal ya da yön bul.',
+    ],
+    seed: 42,
+    citySize: 'standard',
+    cityType: 'industrial',
+    difficulty: 'normal',
+    preludeDays: 120,
+    modifiers: ['tight_credit'],
+    days: 360,
+    goal: { kind: 'trade', target: 800_000 },
+    stars: { metric: 'days', two: 300, three: 240 },
+    setup: {
+      cash: 1_500_000,
+      outlets: ['cafe', 'supermarket'],
+      builtDaysAgo: 90,
+      secondCity: { capital: 3_000_000, citySize: 'standard', cityType: 'capital' },
     },
   },
 ];

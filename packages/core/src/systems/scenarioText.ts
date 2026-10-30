@@ -21,7 +21,7 @@ export function scenarioGoalText(def: ScenarioDef): string {
   const goal = def.goal;
   return fillTemplate(def.goalText, {
     days: def.days,
-    target: goal.kind === 'netWorth' || goal.kind === 'power' ? formatMoney(goal.target) : '',
+    target: goal.kind === 'netWorth' || goal.kind === 'power' || goal.kind === 'trade' ? formatMoney(goal.target) : '',
     share: goal.kind === 'chain' ? Math.round(goal.share * 100) : '',
     rivals: goal.kind === 'freight' ? goal.rivals : '',
     outlets: goal.kind === 'freight' ? goal.outlets : '',

@@ -1001,7 +1001,8 @@ export interface GameState {
   citySize?: CitySizeId;
   /**
    * Şehrin türü (Tur 76): liman, sanayi ya da başkent. Yokluğu dengeli:
-   * eski kayıtların şehirleri, Tohum Ligi ve senaryolar.
+   * eski kayıtların şehirleri, Tohum Ligi ve ticaret senaryoları (Tur 79)
+   * dışındaki senaryolar.
    */
   cityType?: CityTypeId;
   /** Son yeni rakip girişinin günü. */
@@ -1372,6 +1373,8 @@ export interface ScenarioState {
   rivalsAtStart?: number;
   /** Karanlık kış (Tur 60): senaryo boyunca santrallerin rakiplere sattığı elektrik (₺). */
   powerSold?: number;
+  /** Ticaret (Tur 79): senaryo boyunca hatların kârı (₺); zarar eden gün düşürüyor. */
+  tradeProfit?: number;
   /** Sonuç ekranı görüldü mü. */
   resultSeen?: boolean;
 }

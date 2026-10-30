@@ -189,6 +189,7 @@ export const hud: Record<keyof typeof trHud, string> = {
   'hud.scenario.lostTimeFreight': 'Die Zeit ist um; die belieferten Läden erreichten {percent} des Ziels.',
   'hud.scenario.lostTimeFreightRivals': 'Die Zeit ist um; du hattest genug Läden, hast aber nie am selben Tag für {rivals|# Rivalen|# verschiedene Rivalen} transportiert.',
   'hud.scenario.lostTimePower': 'Die Zeit ist um; der an Rivalen verkaufte Strom erreichte {percent} des Ziels.',
+  'hud.scenario.lostTimeTrade': 'Die Zeit ist um; deine Handelslinien erreichten {percent} des Ziels.',
   'hud.scenario.lostTimeRental': 'Die Zeit ist um; die belegten Einheiten erreichten {percent} des Ziels.',
   'hud.scenario.lostTimeRentalRenewals': 'Die Zeit ist um; du hattest genug belegte Einheiten, aber es wurden weniger als {renewals|# Erneuerungsprojekt|# Erneuerungsprojekte} eröffnet.',
   'hud.scenario.briefFeud': 'Nachtragende Rivalen: {names}; sie machen dir keine Frachtangebote.',

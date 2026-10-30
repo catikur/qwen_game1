@@ -528,6 +528,25 @@ export function prepareTradeDay(root: GameState): void {
 }
 
 /**
+ * Oyuncunun hatlarının bugünkü kârı (Tur 79), ticaret hedefi için. Her
+ * hattın bugün yüklediği mal varış şehrinin pazar fiyatından planlı satışla
+ * (`saleShare`) değerleniyor; eksi malın bedeli ve nakliye. Boş giden
+ * kamyonun bedeli de düşüyor: zarar eden gün toplamı azaltıyor. Malı varışta
+ * kendi tesisine veren hat da pazara satmış gibi sayılıyor (alçak değer).
+ * Rakip hatları sayılmıyor.
+ */
+export function tradeProfitToday(root: GameState): number {
+  let profit = 0;
+  for (const line of tradeLines(root)) {
+    const last = line.last;
+    if (!last) continue;
+    const spot = cityBySeed(root, line.to)?.market.spot[line.goodId] ?? GOOD_BY_ID[line.goodId]?.basePrice ?? 0;
+    profit += last.units * spot * TRADE_LINE.saleShare - last.goods - last.freight;
+  }
+  return profit;
+}
+
+/**
  * Günün sonunda, bütün şehirler yaşadıktan sonra (motorun `runDay`'i):
  * gün içinde fazlası yetmeyen yükün pazardan alınanı hattın satırına
  * (Codex #108). Sabah planından sonra grev başlarsa yükün bir kısmı ya da

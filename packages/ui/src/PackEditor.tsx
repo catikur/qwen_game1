@@ -4,7 +4,9 @@ import {
   BUILDING_BY_ID,
   CATEGORIES,
   CITY_SIZES,
+  CITY_TYPES,
   CRISIS_BY_ID,
+  DEFAULT_CITY_TYPE,
   DIFFICULTIES,
   GOAL_KINDS,
   GOAL_PLACEHOLDERS,
@@ -22,6 +24,8 @@ import {
   GAP_RANGE,
   availableLocales,
   currentLocale,
+  getCityType,
+  isCityTypeId,
   packScenarioId,
   packText,
   scenarioFromPack,
@@ -116,6 +120,7 @@ const FIELD_LABELS: Record<string, EditorMessageKey> = {
   's.facts': 'hud.editor.field.facts',
   's.seed': 'hud.editor.field.seed',
   's.citySize': 'hud.editor.field.citySize',
+  's.cityType': 'hud.editor.field.cityType',
   's.difficulty': 'hud.editor.field.difficulty',
   's.preludeDays': 'hud.editor.field.preludeDays',
   's.days': 'hud.editor.field.days',
@@ -133,6 +138,7 @@ const FIELD_LABELS: Record<string, EditorMessageKey> = {
   's.setup.idle.focus': 'hud.editor.field.idleFocus',
   's.setup.crisis.id': 'hud.editor.field.crisisId',
   's.setup.secondCity.capital': 'hud.editor.field.capital',
+  's.setup.secondCity.cityType': 'hud.editor.field.cityType',
   'r.id': 'hud.editor.field.ruleId',
   'r.base': 'hud.editor.field.ruleBase',
   'r.name': 'hud.editor.field.ruleName',
@@ -573,6 +579,21 @@ function ScenarioTexts({ scenario, at }: { scenario: PackScenario; at: (...rest:
   );
 }
 
+/** Şehrin türü (Tur 79): seçilmemişse dengeli; ipucu seçili türün tanıtımı. */
+function CityTypeField({ path }: { path: Path }): ReactElement {
+  const { doc } = useEditor();
+  const value = getAt(doc, path);
+  return (
+    <ChoiceField
+      path={path}
+      label={et('hud.editor.field.cityType')}
+      hint={getCityType(isCityTypeId(value) ? value : undefined).blurb}
+      choices={CITY_TYPES.map((type) => ({ value: type.id, label: type.name }))}
+      fallback={DEFAULT_CITY_TYPE}
+    />
+  );
+}
+
 function ScenarioCity({ at }: { at: (...rest: (string | number)[]) => Path }): ReactElement {
   const { set } = useEditor();
   const days = et('hud.editor.unit.days');
@@ -587,6 +608,7 @@ function ScenarioCity({ at }: { at: (...rest: (string | number)[]) => Path }): R
           </button>
         </div>
         <ChoiceField path={at('citySize')} label={et('hud.editor.field.citySize')} choices={CITY_SIZES.map((size) => ({ value: size.id, label: size.name }))} />
+        <CityTypeField path={at('cityType')} />
         <ChoiceField path={at('difficulty')} label={et('hud.editor.field.difficulty')} choices={DIFFICULTIES.map((level) => ({ value: level.id, label: level.name }))} />
         <NumberField path={at('preludeDays')} label={et('hud.editor.field.preludeDays')} hint={et('hud.editor.hint.preludeDays')} range={SCENARIO_RANGES.preludeDays} unit={days} />
         <NumberField path={at('days')} label={et('hud.editor.field.days')} hint={et('hud.editor.hint.days')} range={SCENARIO_RANGES.days} unit={days} />
@@ -822,6 +844,7 @@ function SetupPartFields({ id, at, setup, set, days }: { id: SetupPart; at: (...
         <div className="editor-grid">
           <NumberField path={at('setup', 'secondCity', 'capital')} label={et('hud.editor.field.capital')} range={SETUP_RANGES.secondCity.capital} money />
           <ChoiceField path={at('setup', 'secondCity', 'citySize')} label={et('hud.editor.field.citySize')} choices={CITY_SIZES.map((size) => ({ value: size.id, label: size.name }))} />
+          <CityTypeField path={at('setup', 'secondCity', 'cityType')} />
         </div>
       );
     case 'feud':

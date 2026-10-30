@@ -1,6 +1,7 @@
 import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
-import { BUILDING_BY_ID, CEOS, SCENARIOS, SCENARIO_BY_ID } from '@capital/content';
+import { BUILDING_BY_ID, CEOS, SCENARIOS, SCENARIO_BY_ID, TRADE_LINE } from '@capital/content';
+import { formatMoney } from '../src/format';
 import type { ScenarioDef } from '@capital/content';
 import { GameEngine } from '../src/engine';
 import { agenda } from '../src/agenda';
@@ -25,7 +26,9 @@ import { floorTo, scenarioGoalText } from '../src/systems/scenarioText';
 import { loanQuote } from '../src/systems/credit';
 import { stanceOf } from '../src/systems/relations';
 import { rentalOutlook } from '../src/systems/realestate';
-import { isDistrictOpen } from '../src/systems/city';
+import { isDistrictOpen, isPurchasable } from '../src/systems/city';
+import { tradeProfitToday } from '../src/systems/trade';
+import { build, buyTile } from '../src/actions';
 import { createNewGame } from '../src/worldgen';
 import { TOTAL_SHARES, sharesHeld } from '../src/systems/equity';
 import type { GameState } from '../src/types';
@@ -761,5 +764,109 @@ describe('senaryo paketi II (Tur 60)', () => {
     open([renewalB]);
     assert.equal(run.outcome, 'won');
     assert.equal(run.score, state.time.day - run.startDay);
+  });
+});
+
+describe('ticaretle zafer (Tur 79)', () => {
+  /** Uzaktaki şehre bina (kurucu şehir motorun dışında). */
+  function placeAway(city: GameState, defId: string): string {
+    const me = city.companies[city.playerCompanyId]!;
+    for (const tile of city.map.tiles) {
+      if (!isPurchasable(tile) || tile.structureId || tile.buildingId) continue;
+      if (!buyTile(city, me.id, tile.id).ok) continue;
+      if (build(city, me.id, tile.id, defId).ok) return city.map.tiles[tile.id]!.buildingId!;
+    }
+    throw new Error(`${defId} için parsel yok`);
+  }
+
+  test('iki senaryo da iki türlü şehirde: kurucu şehir uzakta, senaryo yeni şehirde', () => {
+    for (const id of ['coffee', 'supplier']) {
+      const def = SCENARIO_BY_ID[id]!;
+      assert.equal(def.goal.kind, 'trade', id);
+      assert.ok(def.cityType && def.setup.secondCity?.cityType && def.cityType !== def.setup.secondCity.cityType, `${id}: iki ayrı tür`);
+      const state = scenario(id);
+      const founding = state.holding!.dormant[0]!.state;
+      assert.equal(founding.cityType, def.cityType, `${id}: kurucu şehrin türü`);
+      assert.equal(state.cityType, def.setup.secondCity.cityType, `${id}: yeni şehrin türü`);
+      assert.equal(founding.scenario, undefined);
+      assert.equal(state.scenario?.id, id);
+      assert.equal(getPlayer(state).cash, def.setup.secondCity.capital);
+      assert.equal(
+        Object.values(founding.buildings).filter((b) => b.companyId === founding.playerCompanyId).length,
+        def.setup.outlets!.length,
+      );
+    }
+    // Türsüz senaryolar dengeli kalıyor (eski kayıtlar ve rekorlar aynı şehirde).
+    assert.equal(scenario('rescue').cityType, undefined);
+  });
+
+  test('ticaret hedefi: hatların kârı gün gün birikiyor, zarar eden gün düşürüyor; hedefte kazanıyor', () => {
+    const engine = started('coffee');
+    const state = engine.getState();
+    const run = state.scenario!;
+    const goal = SCENARIO_BY_ID.coffee!.goal as { kind: 'trade'; target: number };
+    const away = state.holding!.dormant[0]!.state;
+    placeAway(away, 'freight_terminal');
+    buildOn(engine, 'freight_terminal');
+    const opened = engine.dispatch({ type: 'OPEN_LINE', from: away.meta.seed, to: state.meta.seed, goodId: 'coffee_bean', trucks: 2, buy: true });
+    assert.ok(opened.ok, opened.ok ? '' : opened.reason);
+    let total = 0;
+    for (let day = 0; day < 20; day++) {
+      engine.runDay();
+      total = Math.round(total + tradeProfitToday(state));
+      assert.equal(run.tradeProfit, total, `gün ${day}`);
+    }
+    assert.ok(total > 0, 'limandan sanayiye kahve kârlı');
+    // Günün kârı: yük varışın fiyatıyla planlı satış, eksi malın ve nakliyenin bedeli.
+    const line = state.holding!.lines![0]!;
+    const last = line.last!;
+    const spot = state.market.spot['coffee_bean']!;
+    assert.ok(Math.abs(tradeProfitToday(state) - (last.units * spot * TRADE_LINE.saleShare - last.goods - last.freight)) < 1e-6);
+    assert.ok(run.tradeProfit! / goal.target < 1);
+    assert.ok(scenarioProgress(state)!.detail.includes(`/ ${formatMoney(goal.target)}`), scenarioProgress(state)!.detail);
+    // Yükü olmayan gün yalnız gider: toplam düşüyor.
+    line.last = { ...last, units: 0 };
+    runScenarioTick(state);
+    assert.equal(run.tradeProfit, Math.round(total - last.goods - last.freight));
+    assert.equal(run.outcome, undefined);
+    // Eşiği geçen gün kazanıyor; skor gün sayısı.
+    run.tradeProfit = goal.target - 1;
+    engine.runDay();
+    assert.ok(tradeProfitToday(state) > 1);
+    assert.equal(run.outcome, 'won');
+    assert.equal(run.score, state.time.day - run.startDay);
+  });
+
+  test('süre dolunca kaybediyor: skor hedefin payı, zarar sıfır sayılıyor', () => {
+    const goal = SCENARIO_BY_ID.coffee!.goal as { kind: 'trade'; target: number };
+    const half = scenario('coffee');
+    half.scenario!.briefSeen = true;
+    half.scenario!.tradeProfit = goal.target / 4;
+    half.time.day = half.scenario!.endDay - 1;
+    runScenarioTick(half);
+    assert.equal(half.scenario!.outcome, undefined, 'son günden önce sürüyor');
+    half.time.day += 1;
+    runScenarioTick(half);
+    assert.equal(half.scenario!.outcome, 'lost');
+    assert.equal(half.scenario!.lostReason, 'time');
+    assert.equal(half.scenario!.score, 0.25);
+
+    const loss = scenario('coffee');
+    loss.scenario!.briefSeen = true;
+    loss.scenario!.tradeProfit = -5_000;
+    assert.equal(scenarioProgress(loss)!.progress, 0, 'ilerleme sıfırın altına inmiyor');
+    loss.time.day = loss.scenario!.endDay;
+    runScenarioTick(loss);
+    assert.equal(loss.scenario!.outcome, 'lost');
+    assert.equal(loss.scenario!.score, 0);
+  });
+
+  test('hedef cümlesi sayılarla dolu', () => {
+    for (const id of ['coffee', 'supplier']) {
+      const def = SCENARIO_BY_ID[id]!;
+      const goal = def.goal as { kind: 'trade'; target: number };
+      const text = scenarioGoalText(def);
+      assert.ok(text.includes(`${def.days} gün`) && text.includes(formatMoney(goal.target)), text);
+    }
   });
 });

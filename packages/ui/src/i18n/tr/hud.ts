@@ -186,6 +186,7 @@ export const hud = {
   'hud.scenario.lostTimeFreight': 'Süre doldu; taşınan mağazalar hedefin {percent} kadarında kaldı.',
   'hud.scenario.lostTimeFreightRivals': 'Süre doldu; mağaza sayısı yetti ama aynı gün {rivals} ayrı rakibin mağazası taşınmadı.',
   'hud.scenario.lostTimePower': 'Süre doldu; rakiplere satılan elektrik hedefin {percent} kadarında kaldı.',
+  'hud.scenario.lostTimeTrade': 'Süre doldu; hatların kârı hedefin {percent} kadarında kaldı.',
   'hud.scenario.lostTimeRental': 'Süre doldu; dolu birim hedefin {percent} kadarında kaldı.',
   'hud.scenario.lostTimeRentalRenewals': 'Süre doldu; dolu birim yetti ama en az {renewals} dönüşüm projesi açılmadı.',
   'hud.scenario.briefFeud': 'Kinli rakipler: {names}; taşıma teklifi getirmiyorlar.',

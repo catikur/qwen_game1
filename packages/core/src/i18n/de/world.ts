@@ -183,6 +183,7 @@ export const world: Record<keyof typeof trWorld, string> = {
   'core.scenario.progressHoldingWon': 'Sieg in {won}/{total|# Stadt|# Städten} · diese Stadt ist gewonnen',
   'core.scenario.progressFreight': 'Rivalen {served}/{rivals} · belieferte Läden {outlets}/{target}',
   'core.scenario.progressPower': '{value} / {target} Strom an Rivalen verkauft',
+  'core.scenario.progressTrade': '{value} / {target} Gewinn aus Handelslinien',
   'core.scenario.progressRental': '{occupied} / {target} belegte Einheiten · Erneuerung {renewals}/{renewalTarget}',
   'core.scenario.progressRentalBuilding': '{occupied} / {target} belegte Einheiten · Erneuerung {renewals}/{renewalTarget} · {building|# Einheit|# Einheiten} im Bau',
 
