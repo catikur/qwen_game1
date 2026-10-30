@@ -4,7 +4,7 @@
 > `pnpm bench` çıktısından; iddialar `pnpm balance` ve `pnpm playtest`
 > tarafından her koşuda doğrulanıyor.
 >
-> Son güncelleme: şema **v9**, 80 tur (Tur 33 denendi ve geri alındı; Tur 34 eski görünüme canlılık ekledi; Tur 35 arayüzü Lite'ın "Cam & Bulut" diline taşıdı; Tur 36 şehre ayrıntı kattı; Tur 37a geç oyuna yönetim yükü, servet vergisi ve kriz dönemleri getirdi; Tur 37b karar kartlarını ve rakip hikâyelerini ekledi; Tur 37c fırsat balonlarını ve aylık görev panosunu getirdi; Tur 37d canlı pazarı, şehir projesi ihalesini ve rakip konsorsiyumunu getirdi; Tur 38 değerlendirme turuydu: geç oyun hızı, gündem ve haber akışı, zorluk eğrisi; Tur 39a senaryo modunu getirdi: Kurtarma ve Krizin ortasında; Tur 39b Konsorsiyuma karşı, Zincir ustası ve Şehrin sponsoru senaryolarını ekledi; Tur 39c Büyük şehir fethi ve Holding: iki şehir ile listeyi yediye tamamladı; Tur 40 cila ve performans; Tur 41 başarımlar ve kariyer; Tur 42 açılışta gölgelendirici derlemesi; Tur 43 oyun içi akıcılık; Tur 44 değerlendirme turuydu: Türkçe sayı biçimi, yardımın kapsamı, haber akışı; Tur 45 dört ek kural getirdi: Fırtınalı yıllar, Aç gözlü rakipler, Sıkı banka, Kıt arsa; Tur 46 açılış paketini böldü: kurulum ekranı telefonda yarı sürede; Tur 47 tek Ayarlar paneli ve erişilebilirlik getirdi: metin boyutu, renk körlüğüne uygun palet, hareket, ses düzeyleri, pencerelerde klavye; Tur 48 oyunu kurulabilir ve çevrimdışı açılır yaptı, yayından sonra "yeni sürüm hazır" diyor; Tur 49 müziği getirdi: gündüz, gece ve kriz, şehirle birlikte dönüyor; Tur 50 Faz 1'i değerlendirdi ve tanıtım paketini hazırladı; Tur 51 Faz 2'yi açtı: Lite'ın lig sunucusu ana oyunun Tohum Ligi koşularını da alıyor, tablo herkese açık; Tur 52'de sunucu her koşuyu gönderimde yeniden oynatıyor, tabloya yalnız doğrulanmış skor giriyor; Tur 53 ligin her haftasına bir ek kural ve 90 günlük günün koşusunu getirdi; Tur 54 liderlerin eğrisini senin koşunun üstüne koydu ve liderin o günlerde ne yaptığını koşu kodundan anlatıyor; Tur 55 davet kodlu arkadaş liglerini getirdi ve Faz 2'yi kapattı; Tur 56 Faz 3'ü açtı: nakliye terminali rakip mağazalarına taşıma sözleşmesiyle taşıyor; Tur 57 enerjiyi getirdi: şebeke fiyatı, santraller, enerji krizi; Tur 58 gayrimenkul geliştiricisini getirdi: konut ve ofis projeleri, kira ve doluluk, kentsel dönüşüm hakkı ve başvurusu; Tur 59 rakiplere hafıza verdi: CEO'nun mizacı, husumet ve ittifak, fiyat savaşı ve lobiyle tepki, uzlaşma; Tur 60 Faz 3'ün sektörleriyle üç senaryo ekledi: Herkesin nakliyecisi, Karanlık kış, Kentsel dönüşüm, her biri bir ek kuralla; Tur 61 Faz 3'ü değerlendirdi ve kapattı: zafere üç gerçek yol var, şirketin yolu kârın kaynağından okunuyor; Tur 62 Faz 4'ü açtı: mevsim ve hava şehirde görünüyor, ağaçlar mevsimin renginde, yağmur ve kar yağıyor; Tur 63 önemli anları getirdi: inşaatın tozu, devralmanın renk dalgası, çatılardan yükselen kâr, zafer gecesinin havai fişekleri; Tur 64 şehir kartını getirdi: koşunun özeti ve şehrin kuşbakışı tek bir görselde, indirilip paylaşılıyor; Tur 65 Faz 4'ü değerlendirdi ve kapattı: telefonda günün JS'i kısaldı, tuvalin yeri her karede okunmuyor; Tur 66 Faz 5'i açtı: masaüstü sürümü, kayıtlar ve ayarlar dosyada, Steam'e hazırlık; Tur 67 içerik paketlerini getirdi: senaryo ve kurallar dosyadan, senaryolar kodla ve bağlantıyla paylaşılıyor; Tur 68 senaryo editörünü getirdi: paket tarayıcıda alan alan kuruluyor, sınırlar formda, taslak kaydetmeden deneniyor; Tur 69 üçüncü dili getirdi: oyunun her metni Almancada, sayı ve para dil başına biçimde; Tur 70 Steam'i getirdi ve Faz 5'i kapattı: 29 rozet Steam başarımı, tek pencere, üç işletim sisteminin Steam deposu, üç dilde mağaza sayfası; Tur 71 Faz 6'yı açtı: masaüstü bir uygulama gibi davranıyor, dar pencerede paneller üst üste binmiyor, Steam Deck'te metin büyük, lig sunucusunun eski simülasyonu canlı denetimde görünüyor; Tur 72 oyunu kumandayla ve yalnız klavyeyle oynanır yaptı: haritada nişangâh, düğme ipuçları, Deck'in ekran klavyesi; Tur 73 Steam Workshop'u ve skor tablolarını getirdi: paketler Workshop'tan rafa, Tohum Ligi'nin puanı Steam'e; Tur 74 sürüm 1.0'ı getirdi: Yenilikler, oyunun içinden hata bildirme, yayın listesi; Tur 75 Faz 6'yı değerlendirdi ve kapattı: hata raporu oyunda açılıyor, kaydın neden açılmadığı oyuncunun dilinde, yeni sürümün otomatik kaydı ezilmiyor; Tur 76 Faz 7'yi açtı: şehrin türü — liman kenti, sanayi kenti ve başkent, her birinin bölgeleri, hammadde fiyatları, rakipleri ve kuralı; sürüm 1.1.0; Tur 77 şehirler arası hattı getirdi: nakliye terminali iki şehri bir malla bağlıyor, bir şehrin fazlası öbürünün havuzuna giriyor, yoldaki mal bilançoda; sürüm 1.2.0; Tur 78 ticaretin fiyatını getirdi: hat malı çıkışın pazarından da alıyor, şehirlerin fiyatları yan yana, fark alımla ve satışla daralıyor, rakipler kârlı yolu kopyalıyor; sürüm 1.3.0; Tur 79 ticaretle zaferi getirdi: hatların kârıyla kazanılan iki senaryo, Kahve yolu ve Başkentin tedarikçisi, zarar eden hat gündemde; sürüm 1.4.0; Tur 80 Faz 7'yi değerlendirdi ve kapattı: hat formu hattın kendi etkisini 30 gün önceden tahmin ediyor, yardımda şehirler arası hattın adımı, kumandada sayı kutusu, açılışın ana parçası 69,7'den 52,7 KB'a; sürüm 1.5.0). Önümüzdeki işin sırası `docs/YOL-HARITASI.md`'de.
+> Son güncelleme: şema **v9**, 81 tur (Tur 33 denendi ve geri alındı; Tur 34 eski görünüme canlılık ekledi; Tur 35 arayüzü Lite'ın "Cam & Bulut" diline taşıdı; Tur 36 şehre ayrıntı kattı; Tur 37a geç oyuna yönetim yükü, servet vergisi ve kriz dönemleri getirdi; Tur 37b karar kartlarını ve rakip hikâyelerini ekledi; Tur 37c fırsat balonlarını ve aylık görev panosunu getirdi; Tur 37d canlı pazarı, şehir projesi ihalesini ve rakip konsorsiyumunu getirdi; Tur 38 değerlendirme turuydu: geç oyun hızı, gündem ve haber akışı, zorluk eğrisi; Tur 39a senaryo modunu getirdi: Kurtarma ve Krizin ortasında; Tur 39b Konsorsiyuma karşı, Zincir ustası ve Şehrin sponsoru senaryolarını ekledi; Tur 39c Büyük şehir fethi ve Holding: iki şehir ile listeyi yediye tamamladı; Tur 40 cila ve performans; Tur 41 başarımlar ve kariyer; Tur 42 açılışta gölgelendirici derlemesi; Tur 43 oyun içi akıcılık; Tur 44 değerlendirme turuydu: Türkçe sayı biçimi, yardımın kapsamı, haber akışı; Tur 45 dört ek kural getirdi: Fırtınalı yıllar, Aç gözlü rakipler, Sıkı banka, Kıt arsa; Tur 46 açılış paketini böldü: kurulum ekranı telefonda yarı sürede; Tur 47 tek Ayarlar paneli ve erişilebilirlik getirdi: metin boyutu, renk körlüğüne uygun palet, hareket, ses düzeyleri, pencerelerde klavye; Tur 48 oyunu kurulabilir ve çevrimdışı açılır yaptı, yayından sonra "yeni sürüm hazır" diyor; Tur 49 müziği getirdi: gündüz, gece ve kriz, şehirle birlikte dönüyor; Tur 50 Faz 1'i değerlendirdi ve tanıtım paketini hazırladı; Tur 51 Faz 2'yi açtı: Lite'ın lig sunucusu ana oyunun Tohum Ligi koşularını da alıyor, tablo herkese açık; Tur 52'de sunucu her koşuyu gönderimde yeniden oynatıyor, tabloya yalnız doğrulanmış skor giriyor; Tur 53 ligin her haftasına bir ek kural ve 90 günlük günün koşusunu getirdi; Tur 54 liderlerin eğrisini senin koşunun üstüne koydu ve liderin o günlerde ne yaptığını koşu kodundan anlatıyor; Tur 55 davet kodlu arkadaş liglerini getirdi ve Faz 2'yi kapattı; Tur 56 Faz 3'ü açtı: nakliye terminali rakip mağazalarına taşıma sözleşmesiyle taşıyor; Tur 57 enerjiyi getirdi: şebeke fiyatı, santraller, enerji krizi; Tur 58 gayrimenkul geliştiricisini getirdi: konut ve ofis projeleri, kira ve doluluk, kentsel dönüşüm hakkı ve başvurusu; Tur 59 rakiplere hafıza verdi: CEO'nun mizacı, husumet ve ittifak, fiyat savaşı ve lobiyle tepki, uzlaşma; Tur 60 Faz 3'ün sektörleriyle üç senaryo ekledi: Herkesin nakliyecisi, Karanlık kış, Kentsel dönüşüm, her biri bir ek kuralla; Tur 61 Faz 3'ü değerlendirdi ve kapattı: zafere üç gerçek yol var, şirketin yolu kârın kaynağından okunuyor; Tur 62 Faz 4'ü açtı: mevsim ve hava şehirde görünüyor, ağaçlar mevsimin renginde, yağmur ve kar yağıyor; Tur 63 önemli anları getirdi: inşaatın tozu, devralmanın renk dalgası, çatılardan yükselen kâr, zafer gecesinin havai fişekleri; Tur 64 şehir kartını getirdi: koşunun özeti ve şehrin kuşbakışı tek bir görselde, indirilip paylaşılıyor; Tur 65 Faz 4'ü değerlendirdi ve kapattı: telefonda günün JS'i kısaldı, tuvalin yeri her karede okunmuyor; Tur 66 Faz 5'i açtı: masaüstü sürümü, kayıtlar ve ayarlar dosyada, Steam'e hazırlık; Tur 67 içerik paketlerini getirdi: senaryo ve kurallar dosyadan, senaryolar kodla ve bağlantıyla paylaşılıyor; Tur 68 senaryo editörünü getirdi: paket tarayıcıda alan alan kuruluyor, sınırlar formda, taslak kaydetmeden deneniyor; Tur 69 üçüncü dili getirdi: oyunun her metni Almancada, sayı ve para dil başına biçimde; Tur 70 Steam'i getirdi ve Faz 5'i kapattı: 29 rozet Steam başarımı, tek pencere, üç işletim sisteminin Steam deposu, üç dilde mağaza sayfası; Tur 71 Faz 6'yı açtı: masaüstü bir uygulama gibi davranıyor, dar pencerede paneller üst üste binmiyor, Steam Deck'te metin büyük, lig sunucusunun eski simülasyonu canlı denetimde görünüyor; Tur 72 oyunu kumandayla ve yalnız klavyeyle oynanır yaptı: haritada nişangâh, düğme ipuçları, Deck'in ekran klavyesi; Tur 73 Steam Workshop'u ve skor tablolarını getirdi: paketler Workshop'tan rafa, Tohum Ligi'nin puanı Steam'e; Tur 74 sürüm 1.0'ı getirdi: Yenilikler, oyunun içinden hata bildirme, yayın listesi; Tur 75 Faz 6'yı değerlendirdi ve kapattı: hata raporu oyunda açılıyor, kaydın neden açılmadığı oyuncunun dilinde, yeni sürümün otomatik kaydı ezilmiyor; Tur 76 Faz 7'yi açtı: şehrin türü — liman kenti, sanayi kenti ve başkent, her birinin bölgeleri, hammadde fiyatları, rakipleri ve kuralı; sürüm 1.1.0; Tur 77 şehirler arası hattı getirdi: nakliye terminali iki şehri bir malla bağlıyor, bir şehrin fazlası öbürünün havuzuna giriyor, yoldaki mal bilançoda; sürüm 1.2.0; Tur 78 ticaretin fiyatını getirdi: hat malı çıkışın pazarından da alıyor, şehirlerin fiyatları yan yana, fark alımla ve satışla daralıyor, rakipler kârlı yolu kopyalıyor; sürüm 1.3.0; Tur 79 ticaretle zaferi getirdi: hatların kârıyla kazanılan iki senaryo, Kahve yolu ve Başkentin tedarikçisi, zarar eden hat gündemde; sürüm 1.4.0; Tur 80 Faz 7'yi değerlendirdi ve kapattı: hat formu hattın kendi etkisini 30 gün önceden tahmin ediyor, yardımda şehirler arası hattın adımı, kumandada sayı kutusu, açılışın ana parçası 69,7'den 52,7 KB'a; sürüm 1.5.0; Tur 81 Faz 8'i açtı: Lite'ın bugünü — sunucuyla sözleşmesi bozulmamış, adsız hesap da siliniyor, eksikler sunucunun sözleşmesi ve oyuncunun gözü diye iki listede). Önümüzdeki işin sırası `docs/YOL-HARITASI.md`'de.
 
 ---
 
@@ -9960,6 +9960,128 @@ Lite'ın hangi eksiği oyuncunun gözünde, hangisi ortak sunucunun
 sözleşmesinde. Öbür turlar o ölçümden sonra yazılıyor. Fazın kullanıcı
 kararları ve varsayılanları `docs/YOL-HARITASI.md`'de.
 
+### Tur 81 — Değerlendirme: Lite'ın bugünü
+
+Faz 8'in ilk turu. Lite (iOS, web, Android) L12'den (16 Ekim) beri
+değişmedi; ana oyun bu arada Faz 1–7'yi yaşadı, ortak lig sunucusu ana oyun
+için büyüdü. Bu tur Lite'ı bugünkü sunucuyla, mağazaların bugünkü
+kurallarıyla ve ana oyunun kazandıklarıyla karşılaştırdı. Canlı sunucuya
+dokunulmadı: uçtan uca deneme yerel sunucuyla (bellekte SQLite).
+
+**Ne denendi.**
+- Üç istemcinin sunucuyla sözleşmesi: sunucunun her ucu; iOS'un (Swift) ve
+  web/Android'in (TS) her isteği, gönderdiği ve okuduğu alanlar.
+- Web/Android uçtan uca, yerel sunucuyla (`tools/lite-web-e2e.mjs`): hesap,
+  eşitleme, kaybolan yanıt, çevrimdışı pencere, lig, cihaz taşıma, hile,
+  sekme devri, hesap silme, hizmet çalışanı.
+- iOS: CI'ın son koşusu (29 Ekim). Swift testleri, simülatör kareleri,
+  imzasız App Store derlemesi.
+- Swift ve TS modelinin eşitliği: içerik sabitleri tek tek, eşitlik
+  fikstürleri.
+- Mağazaların bugünkü kuralları. App Store: iOS 26 SDK'sı, gizlilik
+  beyanı, yaş derecelendirmesi, hesap silme. Google Play: hedef API 36,
+  Android 16'nın davranışları, hesap silme, veri güvenliği.
+- Ana oyunun Faz 1–7'de kazandıkları Lite'ın gözünden.
+
+**Doğru çıkanlar.**
+- Sözleşme bozulmamış. İstemcilerin her yolu, alanı ve zorunlu alanı
+  bugünkü sunucuyla uyuşuyor. Sunucunun L12'den sonraki değişiklikleri
+  (Tur 55, 66, 71) yalnız ana oyunun uçlarında.
+- Web/Android uçtan uca 39/39 (bu turun 2 kontrolüyle), 37 kare.
+- iOS'un CI'ı yeşil: Swift testleri, simülatör kareleri, imzasız App Store
+  derlemesi.
+  - Derleme Xcode 26.3 ile, yani App Store Connect'in 28 Nisan 2026'dan beri
+    istediği iOS 26 SDK'sıyla.
+  - Gizlilik beyanı (`PrivacyInfo.xcprivacy`) pakette, CI denetliyor.
+    Kullanılan tek gerekçeli API UserDefaults (CA92.1). Şifreleme bayrağı
+    `false`.
+- Android: hedef ve derleme SDK'sı 36, Play'in 31 Ağustos 2026 kuralı
+  karşılanıyor; Capacitor 8.5. Ekran yönü kilitli değil: Android 16'nın
+  büyük ekranda yön kilidini yok sayması bir şey değiştirmiyor.
+- Model eşitliği: içerik sabitleri iki dilde aynı. Eşitlik fikstürü güncel:
+  5 senaryo, 6.225 adım, 85 ara durum.
+
+**Bulunanlar ve yapılanlar.**
+- *Adsız hesap silinemiyordu.* Web ve Android oyunu bir dakika oynanınca
+  ya da lig açılınca sessiz, adsız bir hesap ve sunucuda kayıt açıyor.
+  "Hesabı sil" yalnız adı olan hesapta vardı. iOS'ta da adsız bir web
+  hesabını kodla alan cihaz hesabı silemiyordu. İki mağazanın kuralı:
+  hesabı açan uygulama onu silmeye de izin vermeli.
+  - Artık Lig penceresinde adsız hesabın da satırı var: "Hesabın adsız;
+    oyun kaydın sunucuda duruyor." ve Hesabı sil (iki dil, üç sürüm).
+  - Uçtan uca testte yeni adım: adsız hesap Lig penceresinden siliniyor,
+    sunucu eski anahtara 401 dönüyor. Düzeltmeden önce kırmızı.
+- *Gizlilik metni yanlıştı.* "Anahtar bize gönderilmiyor" diyordu. Anahtar
+  her istekte şifreli bağlantıyla gidiyor, sunucuda yalnızca özeti
+  tutuluyor. Metin düzeldi (iki dil).
+- *Eski belgeler.* README "Xcode 15 ya da daha yenisi" diyordu, artık
+  Xcode 26. Game Center "kapalı" yazıyordu, L9a'dan beri açık.
+
+**Ortak sunucunun sözleşmesindeki eksikler** (Tur 82):
+1. *Lite'ın sürüm izi yok.*
+   - Sunucu web/Android'in hamle günlüğünü kendi modeliyle yeniden
+     oynatıyor, iOS'un raporunu kendi modeliyle sınıyor. Ne istemci sürümünü
+     söylüyor ne sunucu modelininkini.
+   - Web her `main` birleşmesinde Pages'e çıkıyor, sunucu elle dağıtılıyor.
+     Modele dokunan ilk değişiklik, sunucu dağıtılana dek web/Android
+     oyuncusunun oyununu sessizce "düzeltir", güncellenmemiş iOS'un
+     raporunu reddeder.
+   - Gereken: modelin izi `/v1/health`'te ve isteklerde, uyuşmazlıkta açık
+     bir hata, dağıtım sırası (önce sunucu).
+2. *App Attest anahtarı oyuncu başına.* İkinci iPhone anahtar alınca ilki
+   siliniyor. Kodla aynı hesabı paylaşan iki iOS cihazı birbirinin anahtarını
+   düşürüyor; her gönderimde yeniden doğrulama. Gereken: cihaz başına anahtar.
+3. *Kayıt ucunda hız sınırı yok* (`POST /v1/players`). Turnstile sunucuda
+   var ama istemciler göndermiyor; `platform: 'ios'` diyen atlıyor.
+   Gereken: IP başına sınır (ana oyunun kayıt ucundaki gibi saatte 10).
+4. *Adsız hesabın saklama süresi yok.* Site verisi temizlenen cihazın adsız
+   hesabı sunucuda süresiz kalıyor; anahtarı kaybolduğu için kimse
+   silemiyor. Gereken: uzun süre girilmeyen adsız hesabın silinmesi ve
+   gizlilik metninde süresi.
+5. *Uygulamaya erişemeyenin silme yolu yok.* Play bir web bağlantısı
+   istiyor; bugün silme yalnız uygulamada. Seçenek: e-postayla talep
+   (Conforcus'un elle yürüteceği süreç) ya da sunucunun bir sayfası.
+6. *409 `unnamed`'ın mesajı yok.* Adsız hesap lig kurmak ya da katılmak
+   isterse iki istemci de "ağ hatası" gösteriyor; iOS düğmeyi de kapatmıyor.
+7. *Canlı denetim PR'larda da canlı veritabanına yazıyor.* CI'ın "Canlı
+   sunucu denetimi" işi bir denetim hesabı açıp siliyor; yerel aşaması yok.
+
+**Oyuncunun gözündeki eksikler** (Tur 83–84):
+1. *Metin boyu yok.* iOS'un yazıları sabit boyda, Dynamic Type'ı izlemiyor;
+   web'de piksel. Ayarı yok.
+2. *Renk körlüğüne uygun palet yok.* Zincir renkleri sabit.
+3. *Hareketi azalt kısmi.* iOS sistem ayarını yalnız fırsat balonunda
+   izliyor, şehir canlanmayı sürdürüyor; web'de şehrin tuvali saniyede 30
+   kare dönüyor.
+4. *Ses yalnız açık ya da kapalı.* Düzeyi yok, müzik yok.
+5. *Almanca yok.* İki dil (Türkçe, İngilizce); mağaza metinleri de iki dilde.
+6. *Android 15/16'nın kenardan kenara düzeni denenmedi.* CI'ın emülatörü
+   API 34; hedef API 36'da kenardan kenara zorunlu.
+7. *Ana oyunun öbür kazançları.* Mevsim ve önemli anlar Lite'ta kendi
+   biçiminde kısmen var: şehir temaları ve kar, titreşim ve fanfar. Şehir
+   türleri ve şehirler arası ticaret Lite'ın tasarımında yok; taşınmıyor.
+
+**Mağaza paketi** (Tur 85):
+- `ios-lite/store/` yalnız README; `apps/lite-android/store/` iki görsel.
+- Veri güvenliğinde şirket adı iki mağazada farklı sınıflanıyor: iOS'ta
+  kullanıcı kimliği, Android'de kullanıcı içeriği.
+- Android'in sürüm kodu 1 (0.6.0).
+- Apple'ın yeni yaş derecelendirmesi soruları 31 Ocak 2026'dan beri
+  yanıtsız uygulamanın güncellemesini durduruyor; yanıtlar App Store
+  Connect'te, kullanıcıda.
+
+**Doğrulama.**
+- Web/Android uçtan uca 39/39 (yerel sunucu), 37 kare. Yeni kontrol
+  düzeltmeden önce kırmızı: adsız hesapta silme düğmesi yoktu.
+- Lite birim testleri 181/181; tip denetimi temiz.
+- iOS'taki değişiklik (adsız hesabın satırı) CI'ın macOS işinde derleniyor,
+  sonucu bu turun PR'ında.
+- Ana oyunun koduna dokunulmadı; lig izi aynı.
+
+**Kalan.** Tur 82: sunucunun sözleşmesi (1–6; 5'in yolu ve 7'nin kapsamı
+kullanıcı kararı). Tur 83–84: oyuncunun gözü. Tur 85: değerlendirme,
+mağaza paketleri, Faz 8 raporu. Sıra `docs/YOL-HARITASI.md`'de.
+
 ---
 
 ## 3. Ölçülen durum
@@ -10065,6 +10187,7 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 | Birim testi | **993 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de, Tur 52'de sunucuda tekrar, Tur 53'te haftanın kuralı ve günün koşusu, Tur 54'te hayalet eğri, Tur 55'te davetli ligler, Tur 56'da taşıma sözleşmeleri, Tur 57'de enerji, Tur 58'de gayrimenkul, Tur 59'da rakiplerin hafızası, Tur 60'ta senaryo paketi II, Tur 61'de şirketin yolu, Tur 62'de hava ve mevsimin görünümü, Tur 63'te önemli anlar, Tur 64'te şehir kartı, Tur 65'te telefon performansı, Tur 66'da masaüstü sürümü, Tur 67'de içerik paketleri, Tur 68'de senaryo editörü, Tur 69'da üçüncü dil, Tur 70'te Steam başarımları, Tur 71'de canlı sunucunun simülasyon izi ve Steam Deck'in varsayılanları, Tur 72'de kumanda, Tur 73'te Workshop ve skor tabloları, Tur 74'te sürüm, yenilikler ve hata raporu, Tur 75'te kaydın açılmama nedeni ve yeni sürümün kaydı, Tur 76'da şehrin türü, Tur 77'de şehirler arası hat, Tur 78'de ticaretin fiyatı, Tur 79'da ticaret hedefi, Tur 80'de hattın kendi etkisi ve geç inen sözlüklerin kaydı); Rust tarafı 32 test (`cargo test`, `apps/desktop/src-tauri`; Steam'li derlemede 29) |
 | Denge testi | **415 kontrol, hepsi geçiyor** (38 bölüm, süreleriyle; ~23 dk; Tur 76'da "Şehir türleri", Tur 77'de "Şehirler arası hat", Tur 78'de "Ticaretin fiyatı", Tur 79'da "Senaryolar V: ticaretle zafer", Tur 80'de "Hattın kendi etkisi: formun tahmini") |
 | Tarayıcı testi | **860 kontrol** (Tur 80'de 11 yeni, Tur 79'da 10, Tur 78'de 11, Tur 77'de 11, Tur 76'da 11, Tur 75'te 11; Tur 74'teki 790 lig sunucusu bölümünün yarıda kalan bir koşusundan sayılmıştı, bölüm 24 kontrol), son tam koşu 858/858 (Tur 80, ~72 dk; incelemenin iki yeni kontrolü son derlemeyle Faz 7'nin beş bölümünde, 54/54; Tur 79'da 848/849, kalan kontrol ek kuralı olan tam üç senaryo kartı bekliyordu, düzeltildi, bölüm tek başına 10/10; Tur 78'de 839/839; Tur 77'de 827/828, kalan kontrol kayıt biçimini sabit 7 bekliyordu, düzeltildi; Tur 76'da 817/817; Tur 75'te 805/806, yük altında düşen müzik kontrolü tek başına geçti; Tur 69'da 719/719), 0 konsol hatası (bu yavaş makinede ~59 dk, CI'da `main`'de ~64 dk); duman koşusu 132 (CI'da ~5 dk, rehber dahil) |
+| Lite | web/Android uçtan uca **39 kontrol**, yerel sunucuyla (`tools/lite-web-e2e.mjs`, CI'da her PR'da), 37 kare; TS modeli ve lig sunucusu 181 birim testi (`pnpm test`'te); Swift 35 test ve 5 senaryoluk eşitlik fikstürü (CI'ın macOS işi, `ios-lite/**` ve `packages/lite-model/**` değişince); iOS'un App Store derlemesi Xcode 26.3; Android hedef API 36 (Tur 81) |
 | CI | her PR'da tip + test + denge + paket + paket bütçesi (Tur 46; Tur 48'den beri hizmet çalışanı ve manifest de) + duman oynanışı; `main`'de tam oynanış (Tur 72'den beri 120 dk sınırı); masaüstüne dokunan PR'da Rust testleri, sürüm derlemesi ve gerçek pencerede 38 kontrol (Tur 66'da 17) |
 | Kapsam | 40 bina · 25 ürün · 7 kategori · 8 rakip profili · 10 CEO · 22 olay (11 şehir + 11 sektör) · 3 kriz · 12 karar kartı · 70 rakip sözü · 4 mizaç · 48 ilişki sözü · 5 fırsat balonu · 8 görev türü · 4 mevsim · 6 hava · 9 moda ürünü · 17 şehir yapısı (6 siluet) · 6 şehir projesi · 12 senaryo · 4 ek kural · 5 yol · 4 şehir türü · şehirler arası hat (6'ya kadar; pazardan alan, rakipleri kopyalayan, formunda 30 günlük tahmin) · 29 rozet |
 

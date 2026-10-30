@@ -302,9 +302,9 @@ sunucusunun dağıtımını istiyor (`docs/YAYIN.md` §4).
   içinde. Yardımda şehirler arası hattın adımı var. Oyunun panelleri,
   göstergesi ve dünya metinleri oyun ekranıyla iniyor: ana parça 69,7'den
   52,7 KB'a (bütçe 60). Kumandada sayı kutusu sağ-solla değişiyor. Sürüm
-  1.5.0; lig izi aynı. Faz 7 raporu `docs/DURUM.md`'de. — bu PR
+  1.5.0; lig izi aynı. Faz 7 raporu `docs/DURUM.md`'de. — bitti (#110)
 
-### Faz 8 · Lite'ı güncelleme (taslak)
+### Faz 8 · Lite'ı güncelleme
 
 Lite (iOS, web, Android) L12'den beri değişmedi; ana oyun bu arada Faz
 1–7'yi yaşadı (ayarlar ve erişilebilirlik, müzik, mevsim ve hava, önemli
@@ -312,21 +312,43 @@ anlar, Almanca, kumanda, şehrin türü ve ticaret). Faz bir değerlendirmeyle
 açılıyor: Lite'ın hangi eksiği oyuncunun gözünde, hangisi ortak sunucunun
 sözleşmesinde. Turlar o ölçümden sonra.
 
-Taslak (Tur 80'de yazıldı; kullanıcı Tur 81'den önce değiştirebilir):
+Turlar (82–85 Tur 81'in ölçümünden; kullanıcı değiştirebilir):
 
-- **81 · Değerlendirme: Lite'ın bugünü.**
-  - Üç sürüm bugünkü sunucuyla uçtan uca: hesap, haftalık ve davet kodlu
-    ligler, kayıt eşitlemesi, çevrimdışı pencere (L12).
-  - Ana oyunun Faz 1–7'de kazandıkları Lite'ın gözünden.
-  - Mağazaların bugünkü kuralları kuru: App Store ve Play Store'un hedef
-    SDK'sı, gizlilik beyanı.
-  - Her eksik iki listeden birine giriyor. Oyuncunun gözündekiler:
-    ekranlar, dil, his. Ortak sunucunun sözleşmesindekiler: uçlar, şema,
-    simülasyon izi.
-- **82–85 · Ölçümden sonra yazılıyor.** Varsayılan sıra:
-  - önce sunucunun sözleşmesinde bozuk olan;
-  - sonra oyuncunun gözündeki eksikler, önem sırasıyla;
-  - son tur değerlendirme ve Faz 8 raporu.
+- **81 · Değerlendirme: Lite'ın bugünü.** Üç sürüm bugünkü sunucuyla
+  (yerel), mağazaların bugünkü kurallarıyla ve ana oyunun kazandıklarıyla
+  karşılaştırıldı.
+  - Sözleşme bozulmamış: istemcilerin her yolu ve alanı sunucuyla
+    uyuşuyor.
+  - Web/Android uçtan uca 39/39. iOS'un App Store derlemesi Xcode 26.3 ile.
+    Android hedef API 36.
+  - Adsız hesap da siliniyor (iki mağazanın kuralı); gizlilik metni ve eski
+    belgeler düzeldi.
+  - Eksikler iki listede (`docs/DURUM.md`): sunucunun sözleşmesinde 7,
+    oyuncunun gözünde 7.
+
+  — bu PR
+- **82 · Sunucunun sözleşmesi.**
+  - Lite modelinin izi `/v1/health`'te ve isteklerde; uyuşmazlıkta açık
+    hata. Dağıtım sırası: önce sunucu, sonra web.
+  - App Attest anahtarı cihaz başına.
+  - Kayıt ucunda IP başına sınır.
+  - Adsız hesabın saklama süresi.
+  - 409 `unnamed`'ın mesajı.
+  - Kullanıcı kararıyla: uygulamaya erişemeyenin silme yolu ve canlı
+    denetimin kapsamı.
+
+  Sunucunun dağıtılması gerekecek (kullanıcıda).
+- **83 · Erişilebilirlik.**
+  - Metin boyu (iOS'ta Dynamic Type, web'de ölçek), renk körlüğüne uygun
+    palet, hareketi azalt (şehrin canlanması da), ses düzeyleri.
+  - Android 15/16'nın kenardan kenara düzeni: CI'da API 36 emülatörü.
+- **84 · Üçüncü dil: Almanca.** iOS ve web/Android, mağaza metinleri üç
+  dilde.
+- **85 · Değerlendirme ve Faz 8 raporu.**
+  - Mağaza paketleri: ekran görüntüleri üç dilde; gizlilik ve veri güvenliği
+    yanıtları iki mağazada tutarlı.
+  - Sürüm (0.7.0, yapı numaraları).
+  - Üç sürüm uçtan uca.
 
 ## Her fazda sürecek işler
 
@@ -353,6 +375,9 @@ yazılan.
 | **"İkinci şehir ve ticaret" nedir?** | Faz 7 | **ikinci şehrin kendi kimliği ve şehirler arası mal ticareti** (varsayılan: holding zaten üç şehre çıkıyor; kullanıcı Tur 76'dan önce değiştirebilir) |
 | **Faz 7'nin turları** | Faz 7 | **76 şehrin kimliği · 77 şehirler arası hat · 78 ticaretin fiyatı · 79 ticaretle zafer · 80 değerlendirme** (taslak, Tur 75; kullanıcı Tur 76'dan önce değiştirebilir) |
 | **Lite'ın platformları** | Faz 8 | **iOS, web ve Android, üçü birlikte** (üçü de aynı ligde; kullanıcı Tur 81'den önce daraltabilir) |
-| **Lite'a ana oyundan ne gelsin?** | Faz 8'in turları | **Tur 81'in ölçümü seçiyor:** önce sunucunun sözleşmesi, sonra oyuncunun gözündeki eksikler (kullanıcı Tur 81'den sonra sırayı değiştirebilir) |
+| **Lite'a ana oyundan ne gelsin?** | Faz 8'in turları | **Tur 81 ölçtü:** önce sunucunun sözleşmesi (82), sonra erişilebilirlik (83) ve Almanca (84). Müzik, mevsim katmanı, şehir türleri ve ticaret taşınmıyor (kullanıcı değiştirebilir) |
+| **Lite'ta uygulamaya erişemeyenin silme yolu** (Play'in web bağlantısı kuralı) | Tur 82 | **e-postayla talep** (info@conforcus.com; Conforcus'un elle yürüteceği süreç). Seçenek: sunucuda bir silme sayfası. Kullanıcı Tur 82'den önce seçiyor |
+| **Lite'ta adsız hesabın saklama süresi** | Tur 82 | **180 gün girilmeyen adsız hesap siliniyor**; süre gizlilik metnine de giriyor. Kullanıcı değiştirebilir |
+| **Canlı sunucu denetimi PR'larda canlı veritabanına yazsın mı?** | CI | **bugünkü gibi** (denetim hesabı açıp siliyor). Seçenek: PR'da salt okunur, yazan adımlar yalnız `main`'de. Kullanıcı karar veriyor |
 | **Lite'ın mağazalara gönderimi** | Faz 8 | **kullanıcıda:** App Store Connect ve Play Console hesapları kullanıcının. Depo imzasız derlemeyi ve gönderim paketini hazırlıyor |
 | **Lig sunucusu her birleşmede kendiliğinden mi dağıtılsın?** | sunucu | **elle** (Tur 51, Codex #80). Tur 71'den beri canlı denetim eski simülasyonlu sunucuyu `main`'de kırmızıyla söylüyor; `LITE_LEAGUE_AUTODEPLOY=true` önerilir (`ios-lite/README.md`) |
