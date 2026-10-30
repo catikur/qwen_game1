@@ -5911,21 +5911,21 @@ section('Şehirler arası hat: bir şehrin malı öbüründe', () => {
  * rakipler ve olaylar açık.
  *
  * Ölçülen (tohum 1 · 7 · 42):
- *   kavurma tesisine 2 kamyon, rakipsiz:  +693 · +958 · +1.321 ₺/gün
- *   pazara satış, rakipsiz, tohum 1:      1 kamyon 273, 3 kamyon 179 ₺/gün
+ *   kavurma tesisine 2 kamyon, rakipsiz:  +897 · +958 · +1.321 ₺/gün
+ *   pazara satış, rakipsiz, tohum 1:      1 kamyon 305, 3 kamyon 212 ₺/gün
  *     kamyon başına; çıkış ×1,018 / ×1,054 pahalı, varış ×0,981 / ×0,943
  *   rakipler açık, 1 kamyon:              rakip 30. günde (Nova Holding,
- *     3–6 kamyona çıkıyor); birim kâr 1,23–1,37 → 0,18–0,23, kazanç
+ *     5–6 kamyona çıkıyor); birim kâr 1,23–1,37 → 0,18–0,23, kazanç
  *     230–342 → 55–68 ₺/gün
  * Holding, ikinci şehirde 360 gün (boş · tüccar · standart · ikisi):
- *   liman → sanayi:    71,6 · 72,6 · 127,7 · 128,2 M ₺ (×1,004)
- *   sanayi → başkent:  83,4 · 85,5 · 155,3 · 162,1 M ₺ (×1,044)
- *   liman → başkent:   74,2 · 76,4 · 141,4 · 149,4 M ₺ (×1,056)
+ *   liman → sanayi:    71,6 · 72,5 · 127,7 · 129,3 M ₺ (×1,012)
+ *   sanayi → başkent:  83,4 · 87,1 · 155,3 · 161,7 M ₺ (×1,041)
+ *   liman → başkent:   74,2 · 76,3 · 141,4 · 146,2 M ₺ (×1,034)
  * Ticaret tek başına bir yol değil: yalnız hatla oynayan ikinci şehir
- * holding'e 0,9–2,2 M ₺ katıyor, mağazalı oyun 56–72 M ₺ (%1,6–3,2). Ama
- * oyuna eklenince türlü çiftte holding'i %4–6 büyütüyor: hatlar ikinci
- * şehrin tesislerini ucuz hammaddeyle besliyor. Zafere ticaretle giden yol
- * Tur 79'un işi (yeni hedef türü ve onu kazanan vekil).
+ * holding'e 0,8–3,7 M ₺ katıyor, mağazalı oyun 56–72 M ₺ (%1,4–5,2). Ama
+ * oyuna eklenince başkente giden çiftlerde holding'i %3–4 büyütüyor:
+ * hatlar ikinci şehrin tesislerini ucuz hammaddeyle besliyor. Zafere
+ * ticaretle giden yol Tur 79'un işi (yeni hedef türü ve onu kazanan vekil).
  */
 section('Ticaretin fiyatı: fark, alım hattı ve rakipler', () => {
   const place = (state: ReturnType<GameEngine['getState']>, defId: string): void => {

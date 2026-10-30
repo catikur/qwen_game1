@@ -360,19 +360,33 @@ describe('ticaretin fiyatı (Tur 78)', () => {
     assert.equal(exportableSurplus(p.away, 'coffee_bean'), 0);
     assert.ok(openCoffee(p, 2).ok);
     const price = marketBuyPrice(p.away, 'coffee_bean');
+    assert.equal(price, p.away.market.spot['coffee_bean'], 'pazar fiyatı: spot');
     const awayTerminal = p.away.buildings[p.awayTerminal]!;
     p.engine.runDay();
     const line = p.root.holding!.lines![0]!;
     assert.equal(line.buy, true);
     assert.equal(line.last!.units, lineCapacity(2));
     assert.equal(line.last!.bought, lineCapacity(2));
-    assert.ok(Math.abs(line.last!.goods - lineCapacity(2) * price) < 1e-6, 'mal çıkışta şirketlerin girdi aldığı fiyattan');
+    assert.ok(Math.abs(line.last!.goods - lineCapacity(2) * price) < 1e-6, 'mal çıkışın pazar fiyatından');
     assert.equal(line.last!.freight, lineDailyCost(line));
     const terminal = p.root.buildings[p.rootTerminal]!;
     assert.ok(Math.abs(terminal.last.cogs - (line.last!.goods + line.last!.freight)) < 1e-6, 'bedel varış terminalinde');
     // Çıkış şehrinin şirketi bu malı ne satıyor ne alıyor: yalnız pazarı tüketiyor.
     assert.equal(awayTerminal.last.lineRevenue ?? 0, 0);
     assert.ok(p.away.market.consumed['coffee_bean']! >= lineCapacity(2) - 1e-6);
+  });
+
+  test('çıkışta maliyet olayı başlasa da bitse de hattın alışı spot fiyattan (Codex #108)', () => {
+    const p = coffeeRoute(21, false);
+    assert.ok(openCoffee(p, 1).ok);
+    // Enerji sıkışması (işletme maliyeti ×1,1) bugün bitiyor: sabah planı
+    // olaydan önce koşuyor; şirketler bugün çarpansız alıyor, hat da.
+    p.away.activeEvents.push({ defId: 'energy_crunch', startedDay: p.away.time.day - 19, remainingDays: 1 });
+    const spot = p.away.market.spot['coffee_bean']!;
+    p.engine.runDay();
+    const line = p.root.holding!.lines![0]!;
+    assert.ok(Math.abs(line.last!.goods - lineCapacity(1) * spot) < 1e-9, `mal ${line.last!.goods} · spot ${spot}`);
+    assert.equal(p.away.activeEvents.some((event) => event.defId === 'energy_crunch'), false, 'olay bitti');
   });
 
   test('pazardan alan hat önce fazlayı yüklüyor, eksiği pazardan; kasa önce ucuz olana yetiyor', () => {

@@ -9305,9 +9305,8 @@ için önce çıkış şehrinde üretim gerekiyordu.
 
 **Yapılanlar.**
 - *Pazardan alan hat* (`TradeLine.buy`). Fazla yetmezse hat eksiğini
-  çıkış şehrinin pazarından alıyor: şirketlerin girdi aldığı fiyattan
-  (spot × maliyet çarpanı), bedeli varış şehrinden. Kasa önce ucuz olana,
-  fazlaya yetiyor. Çıkış şehrinin defteri boş kalıyor: mal pazardan. Ayar
+  çıkış şehrinin pazarından alıyor: pazarın fiyatından (spot), bedeli
+  varış şehrinden. Kasa önce ucuz olana, fazlaya yetiyor. Çıkış şehrinin defteri boş kalıyor: mal pazardan. Ayar
   formda ve hattın satırında (`SET_LINE_BUY`).
 - *Planlı satış.* Hattın varışta pazara kalan malı spot × %95'le
   satılıyor (`TRADE_LINE.saleShare`); üretim fazlası eskisi gibi %15
@@ -9349,11 +9348,11 @@ hatlı ve hatsız ikiz.
 
 | Laboratuvar | Tohum 1 · 7 · 42 |
 |---|---|
-| Kavurma tesisine 2 kamyon, rakipsiz | +693 · +958 · +1.321 ₺/gün |
-| Pazara satış, rakipsiz, tohum 1 | kamyon başına 1 kamyonda 273, 3 kamyonda 179 ₺/gün |
+| Kavurma tesisine 2 kamyon, rakipsiz | +897 · +958 · +1.321 ₺/gün |
+| Pazara satış, rakipsiz, tohum 1 | kamyon başına 1 kamyonda 305, 3 kamyonda 212 ₺/gün |
 | ― çıkışın fiyatı, ikize göre | ×1,018 · ×1,054 |
 | ― varışın fiyatı | ×0,981 · ×0,943 |
-| Rakipler açık, 1 kamyon | rakip 30. günde (Nova Holding, 3–6 kamyona çıkıyor) |
+| Rakipler açık, 1 kamyon | rakip 30. günde (Nova Holding, 5–6 kamyona çıkıyor) |
 | ― birim kâr: ilk 20 gün → 90.–150. gün | 1,23–1,37 → 0,18–0,23 ₺ |
 | ― oyuncunun kazancı | 230–342 → 55–68 ₺/gün |
 
@@ -9364,19 +9363,19 @@ seçiyor.
 
 | İkinci şehir | Boş | Tüccar | Standart | Standart + tüccar |
 |---|---|---|---|---|
-| Liman → sanayi | 71,6 M | 72,6 M | 127,7 M | 128,2 M (×1,004) |
-| Sanayi → başkent | 83,4 M | 85,5 M | 155,3 M | 162,1 M (×1,044) |
-| Liman → başkent | 74,2 M | 76,4 M | 141,4 M | 149,4 M (×1,056) |
+| Liman → sanayi | 71,6 M | 72,5 M | 127,7 M | 129,3 M (×1,012) |
+| Sanayi → başkent | 83,4 M | 87,1 M | 155,3 M | 161,7 M (×1,041) |
+| Liman → başkent | 74,2 M | 76,3 M | 141,4 M | 146,2 M (×1,034) |
 
 - *Ticaret tek başına bir yol değil.* Yalnız hatla oynayan ikinci şehir
-  holding'e 0,9–2,2 M ₺ katıyor; mağazalı oyun 56–72 M ₺, ticaret onun
-  %1,6–3,2'si. Değerli malların pazarı dar: silikonda referans günde
+  holding'e 0,8–3,7 M ₺ katıyor; mağazalı oyun 56–72 M ₺, ticaret onun
+  %1,4–5,2'si. Değerli malların pazarı dar: silikonda referans günde
   800–1.300, çipte 400–650 birim, bir kamyon 300 birim taşıyor. İki
   terminalin bakımı (günde 1.040 ₺) ince pazarlarda kârın çoğunu yiyor.
 - *Ama oyuna eklenince kazandırıyor.* Başkente giden iki çiftte holding
-  %4–6 büyük: hatlar ikinci şehrin tesislerini ucuz hammaddeyle
+  %3–4 büyük: hatlar ikinci şehrin tesislerini ucuz hammaddeyle
   (pamuk, silikon, deri) besliyor. Liman–sanayi çiftinde katkı küçük
-  (×1,004): kahvenin farkı büyük ama rakip kopyalayınca daralıyor.
+  (×1,012): kahvenin farkı büyük ama rakip kopyalayınca daralıyor.
 - Zafere ticaretle giden yol Tur 79'un işi: yeni hedef türü ("şehirler
   arası satış") ve onu kazanan vekil. Tüccar vekil hazır.
 
@@ -9400,14 +9399,26 @@ seçiyor.
   ilk denemede Kule Gayrimenkul'dü: emlakçılar artık mal ticaretine
   girmiyor. Laboratuvarda rakip rekabeti kapalıyken de kopyalıyordu:
   rakip hattı artık `npcCompetition`'a uyuyor.
+- *Pazardan alışın fiyatı olayın değiştiği gün öbür alıcılarınkinden
+  farklıydı (Codex #108).* İlk sürüm alışı şirketlerin girdi fiyatıyla
+  (spot × maliyet çarpanı) ödüyordu. Ama sabah planı çıkış şehrinin
+  olaylarından önce koşuyor. Bir maliyet olayının başladığı gün hat
+  çarpansız, bittiği gün çarpanlı ödüyordu. Çarpan mala değil şirketin
+  işletmesine biniyor (girdiyle perakende işlemenin toplamına), hattın
+  fazlası ve satışı da zaten çarpansızdı. Artık hattın her fiyatı spot
+  fiyattan; Tur 77'nin "eksik pazardan" alışı da. Birim testi olayın
+  bittiği günü sınıyor. Kavurma tesisine giden hattın kazancı tohum 1'de
+  693'ten 897 ₺/güne çıktı: kurucu şehrin dönemi (×1,1) artık alışa
+  binmiyor.
 - *Almanca denetim hatların sözlüğünü okumuyordu.* `tools/i18n-check.mjs`
   arayüzün hat sözlüğünü (`ui/i18n/de/trade.ts`) listesinde tutmuyordu;
   Tur 77'nin metinleri denetimden geçmemişti. Liste tamamlandı: 50
   anahtar, uyarısız.
 
 **Doğrulama.**
-- Birim testi 959 (9 yeni, `packages/core/test/trade.test.ts`):
-  - pazardan alan hat üretimsiz, çıkışın defteri boş;
+- Birim testi 960 (10 yeni, `packages/core/test/trade.test.ts`):
+  - pazardan alan hat üretimsiz, çıkışın defteri boş; alış spot fiyattan,
+    maliyet olayının bittiği gün de;
   - fazla önce, kasa önce ucuz olana;
   - ihracat baskısı, hatsız mal ve şehir aynı;
   - planlı satış;
@@ -9416,7 +9427,7 @@ seçiyor.
   - rakibin akışı, defteri, büyümesi; fark kapanınca çekilmesi;
   - `SET_LINE_BUY`, birim hesabı, fiyat tablosu;
   - kayıt ve v8 göçü, kapatılan şehrin rakip hatları.
-- Denge testi 397 kontrol (36 bölüm). "Ticaretin fiyatı" 5/5, 52 sn;
+- Denge testi 397 kontrol (36 bölüm). "Ticaretin fiyatı" 5/5, 55 sn;
   "Şehirler arası hat" yine 5/5.
 - Tarayıcı testi "Ticaretin fiyatı" 11/11:
   - düzenek; tablo kapalı başlıyor, başlığı kârlı yönü sayıyor;
@@ -9535,7 +9546,7 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi). Senaryo şehirlerinde gün 3–17 ms (`pnpm dayperf`, Tur 43) |
-| Birim testi | **959 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de, Tur 52'de sunucuda tekrar, Tur 53'te haftanın kuralı ve günün koşusu, Tur 54'te hayalet eğri, Tur 55'te davetli ligler, Tur 56'da taşıma sözleşmeleri, Tur 57'de enerji, Tur 58'de gayrimenkul, Tur 59'da rakiplerin hafızası, Tur 60'ta senaryo paketi II, Tur 61'de şirketin yolu, Tur 62'de hava ve mevsimin görünümü, Tur 63'te önemli anlar, Tur 64'te şehir kartı, Tur 65'te telefon performansı, Tur 66'da masaüstü sürümü, Tur 67'de içerik paketleri, Tur 68'de senaryo editörü, Tur 69'da üçüncü dil, Tur 70'te Steam başarımları, Tur 71'de canlı sunucunun simülasyon izi ve Steam Deck'in varsayılanları, Tur 72'de kumanda, Tur 73'te Workshop ve skor tabloları, Tur 74'te sürüm, yenilikler ve hata raporu, Tur 75'te kaydın açılmama nedeni ve yeni sürümün kaydı, Tur 76'da şehrin türü, Tur 77'de şehirler arası hat, Tur 78'de ticaretin fiyatı); Rust tarafı 32 test (`cargo test`, `apps/desktop/src-tauri`; Steam'li derlemede 29) |
+| Birim testi | **960 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de, Tur 52'de sunucuda tekrar, Tur 53'te haftanın kuralı ve günün koşusu, Tur 54'te hayalet eğri, Tur 55'te davetli ligler, Tur 56'da taşıma sözleşmeleri, Tur 57'de enerji, Tur 58'de gayrimenkul, Tur 59'da rakiplerin hafızası, Tur 60'ta senaryo paketi II, Tur 61'de şirketin yolu, Tur 62'de hava ve mevsimin görünümü, Tur 63'te önemli anlar, Tur 64'te şehir kartı, Tur 65'te telefon performansı, Tur 66'da masaüstü sürümü, Tur 67'de içerik paketleri, Tur 68'de senaryo editörü, Tur 69'da üçüncü dil, Tur 70'te Steam başarımları, Tur 71'de canlı sunucunun simülasyon izi ve Steam Deck'in varsayılanları, Tur 72'de kumanda, Tur 73'te Workshop ve skor tabloları, Tur 74'te sürüm, yenilikler ve hata raporu, Tur 75'te kaydın açılmama nedeni ve yeni sürümün kaydı, Tur 76'da şehrin türü, Tur 77'de şehirler arası hat, Tur 78'de ticaretin fiyatı); Rust tarafı 32 test (`cargo test`, `apps/desktop/src-tauri`; Steam'li derlemede 29) |
 | Denge testi | **397 kontrol, hepsi geçiyor** (36 bölüm, süreleriyle; ~22 dk; Tur 76'da "Şehir türleri", Tur 77'de "Şehirler arası hat", Tur 78'de "Ticaretin fiyatı") |
 | Tarayıcı testi | **839 kontrol** (Tur 78'de 11 yeni, Tur 77'de 11, Tur 76'da 11, Tur 75'te 11; Tur 74'teki 790 lig sunucusu bölümünün yarıda kalan bir koşusundan sayılmıştı, bölüm 24 kontrol), son tam koşu 827/828 (Tur 77; kalan kontrol kayıt biçimini sabit 7 bekliyordu, düzeltildi, bölümü tek başına 11/11; Tur 76'da 817/817; Tur 75'te 805/806, yük altında düşen müzik kontrolü tek başına geçti; Tur 69'da 719/719), 0 konsol hatası (bu yavaş makinede ~59 dk, CI'da `main`'de ~64 dk); duman koşusu 132 (CI'da ~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + paket bütçesi (Tur 46; Tur 48'den beri hizmet çalışanı ve manifest de) + duman oynanışı; `main`'de tam oynanış (Tur 72'den beri 120 dk sınırı); masaüstüne dokunan PR'da Rust testleri, sürüm derlemesi ve gerçek pencerede 38 kontrol (Tur 66'da 17) |

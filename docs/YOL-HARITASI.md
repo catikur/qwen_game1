@@ -280,8 +280,8 @@ sunucusunun dağıtımını istiyor (`docs/YAYIN.md` §4).
   30 gün sonra kopyalıyor: birim kâr 1,23–1,37'den 0,18–0,23 ₺'ye iniyor.
   Şehirlerin fiyat tablosu ve hattın birim hesabı panelde. Ölçüm:
   ticaret tek başına bir yol değil (ikinci şehirde mağazalı oyunun
-  %1,6–3,2'si), standart oyuna eklenince başkente giden çiftlerde
-  holding'i %4–6 büyütüyor. Şema v9, sürüm 1.3.0; lig izi aynı. — bu PR
+  %1,4–5,2'si), standart oyuna eklenince başkente giden çiftlerde
+  holding'i %3–4 büyütüyor. Şema v9, sürüm 1.3.0; lig izi aynı. — bu PR
 - **79 · Ticaretle zafer.** Yeni hedef türü ("şehirler arası satış") ve
   iki senaryo. Ticaret zafere bir yol: onu kazanan bir vekil (Tur 61'in
   yöntemiyle).

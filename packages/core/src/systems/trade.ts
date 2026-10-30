@@ -3,7 +3,6 @@ import '../i18n/gameTr';
 import { tc } from '../i18n';
 import { pushNews } from '../news';
 import { rivalProfile } from '../profiles';
-import { collectEventModifiers } from './events';
 import { fleetUsed, freightTerminals } from './freight';
 import { SURPLUS_HAIRCUT, exportableSurplus, ownGoodFlow } from './supply';
 import type { BuildingInstance, CityTrade, CommandResult, GameState, RivalLine, TradeLine } from '../types';
@@ -42,8 +41,12 @@ import type { BuildingInstance, CityTrade, CommandResult, GameState, RivalLine, 
  * Lig koşusunda holding yok, hat da yok: simülasyon izi aynı.
  *
  * FİYAT (Tur 78). Hat fazla yetmezse eksiğini çıkış şehrinin pazarından
- * alabiliyor (`buy`): şirketlerin girdi aldığı fiyattan (spot × maliyet
- * çarpanı), bedeli varış şehrinden. Böylece hat üretimsiz de çalışıyor:
+ * alabiliyor (`buy`): pazarın fiyatından (spot), bedeli varış şehrinden.
+ * Hattın her fiyatı spot fiyattan: fazla × %85, pazardan alış × 1, varışta
+ * satış × %95. Olayların maliyet çarpanı mala değil şirketin işletmesine
+ * biniyor (girdiyle perakende işlemenin toplamına); sabah planı çıkış
+ * şehrinin olaylarından önce koştuğu için hat ona hiç bakmıyor: olayın
+ * başladığı ya da bittiği gün de fiyat aynı (Codex #108). Böylece hat üretimsiz de çalışıyor:
  * malı bir şehirde ucuza alıp öbüründe kendi ihtiyacına ya da pazara
  * veriyor; hattın pazara satışı planlı, kırığı üretim fazlasının %15'i
  * değil %5'i (`TRADE_LINE.saleShare`). Pazardan alınan çıkış şehrinin
@@ -97,10 +100,9 @@ export function freightPerUnit(transitDays: number): number {
   return (TRADE_LINE.truckCostPerTransitDay * transitDays) / TRADE_LINE.truckUnits;
 }
 
-/** Şehrin pazarından bir birimin bedeli: şirketlerin girdi aldığı fiyat (spot × maliyet çarpanı). */
+/** Hattın şehrin pazarından aldığı bir birimin bedeli: pazarın fiyatı (spot); olayın maliyet çarpanı işletmeye biniyor, mala değil. */
 export function marketBuyPrice(city: GameState, goodId: string): number {
-  const spot = city.market.spot[goodId] ?? GOOD_BY_ID[goodId]?.basePrice ?? 0;
-  return spot * collectEventModifiers(city).costMultiplier;
+  return city.market.spot[goodId] ?? GOOD_BY_ID[goodId]?.basePrice ?? 0;
 }
 
 /** İki şehir arasında bir malın bugünkü birim hesabı (Tur 78). */
@@ -109,7 +111,7 @@ export interface LineMargins {
   /** Çıkışta ve varışta pazarın fiyatı (spot). */
   originSpot: number;
   destinationSpot: number;
-  /** Çıkışta pazardan alışın birim bedeli (spot × maliyet çarpanı). */
+  /** Çıkışta pazardan alışın birim bedeli (spot). */
   buyPrice: number;
   /** Çıkışta fazlanın birim bedeli (spot × %85). */
   surplusPrice: number;

@@ -493,8 +493,10 @@ function bookLine(state: GameState, terminalId: string, revenue: number, cogs: n
  * - Fazla yükü karşılamadıysa (sabahki tahmin tuttu ama grev başladı)
  *   eksik çıkış şehrinin pazarından alınıyor: terminalin mal maliyetinde,
  *   bedeli de cirosunda. Para yaratılmıyor; eksik fazla fiyatıyla satılıyor.
+ *   Hattın her alışı gibi spot fiyattan (Tur 78): olayın maliyet çarpanı
+ *   şirketin işletmesine biniyor, mala değil.
  */
-function settleTradeGoods(state: GameState, trade: TradeDay, flow: CompanyFlow, costMultiplier: number): void {
+function settleTradeGoods(state: GameState, trade: TradeDay, flow: CompanyFlow): void {
   const goods = new Set([...Object.keys(trade.imported), ...Object.keys(trade.loads)]);
   for (const goodId of goods) {
     const produced = flow.produced[goodId] ?? 0;
@@ -513,7 +515,7 @@ function settleTradeGoods(state: GameState, trade: TradeDay, flow: CompanyFlow, 
     if (short <= 1e-6) continue;
     for (const load of trade.loads[goodId] ?? []) {
       const units = load.units * (short / split.load);
-      bookLine(state, load.terminalId, units * load.unitPrice, units * spot * costMultiplier);
+      bookLine(state, load.terminalId, units * load.unitPrice, units * spot);
     }
   }
 }
@@ -660,7 +662,7 @@ export function runProductionTick(state: GameState): void {
 
     building.last.capacityUsed = 1;
   }
-  if (trade) settleTradeGoods(state, trade, flows[state.playerCompanyId]!, mods.costMultiplier);
+  if (trade) settleTradeGoods(state, trade, flows[state.playerCompanyId]!);
 
   // ---- 4. Tüketici ürünlerinin harmanlanmış maliyeti ----
   // Perakende işleme maliyeti outlet'e özeldir (depo menzili), bu yüzden
