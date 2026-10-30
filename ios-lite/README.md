@@ -6,8 +6,10 @@ klasöründe (SwiftUI, iOS 17+). Tasarım ve denge: [`docs/LITE-TASARIMI.md`](..
 
 ## iPhone'da çalıştırmak (Mac + Xcode)
 
-1. **Xcode'u kur.** App Store'dan Xcode 15 ya da daha yenisini kur ve bir kez
-   açıp ek bileşenlerin kurulmasını bekle.
+1. **Xcode'u kur.** App Store'dan Xcode 26 ya da daha yenisini kur ve bir kez
+   açıp ek bileşenlerin kurulmasını bekle. App Store Connect 28 Nisan 2026'dan
+   beri yalnızca iOS 26 SDK'sıyla (Xcode 26) derlenen yüklemeyi kabul ediyor;
+   CI'ın cihaz derlemesi Xcode 26.3 ile.
 2. **Depoyu Mac'e indir.**
 
    ```sh
@@ -164,8 +166,9 @@ telefon düzenine dönüyor. Klavyede 1/2/3 toplu alım, K kampanya.
   Cloudflare Workers + D1).
 - **Genel tablo:** Game Center.
 
-Lig sunucusu kurulu ve uygulama ona bağlı. Game Center ücretli Apple
-Developer üyeliği gelene kadar kapalı; oyun etkilenmiyor.
+Lig sunucusu kurulu ve uygulama ona bağlı. Game Center L9a'dan beri açık
+(`LiteGameCenter: true` ve yetkisi `App/project.yml`'de); genel tablonun App
+Store Connect'te bir kez kurulması gerekiyor (aşağıda, "Game Center").
 
 ### Lig sunucusu (Cloudflare, ücretsiz katman)
 

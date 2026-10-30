@@ -412,6 +412,30 @@ async function e2e(browser) {
 }
 
 /**
+ * Adsız hesap da silinebiliyor (Tur 81). Web ve Android oyunu bir dakika
+ * oynanınca ya da lig açılınca sessiz, adsız bir hesap ve sunucuda kayıt
+ * açıyor; mağazaların kuralı hesabı açan her uygulamanın onu silmeye de izin
+ * vermesi. Önce silme düğmesi yalnız adı olan hesapta vardı.
+ */
+async function unnamedDelete(browser) {
+  const context = await browser.newContext({ viewport: { width: 430, height: 932 }, locale: 'tr-TR', serviceWorkers: 'block' });
+  const page = await context.newPage();
+  const errors = [];
+  page.on('pageerror', (error) => errors.push(String(error)));
+  await page.goto(WEB);
+  await page.click('[data-testid="league"]');
+  const account = await wait(() => accountOf(page), 'sessiz hesap');
+  await wait(async () => (await server('v1/save', account)).version >= 1, 'sunucuda kayıt');
+  await page.locator('[data-testid="league-delete"]').click({ timeout: 10_000 });
+  await page.click('[data-testid="league-delete-confirm"]');
+  await wait(async () => (await accountOf(page)) === null, 'adsız hesap bu cihazdan unutuldu');
+  const gone = await fetch(`${LEAGUE}/v1/save`, { headers: { authorization: `Bearer ${account.id}.${account.token}` } });
+  check(account.name === '' && gone.status === 401, `adsız hesap da Lig penceresinden siliniyor (sunucu ${gone.status})`);
+  check(errors.length === 0, `sayfada hata yok${errors.length ? ': ' + errors.join(' | ') : ''}`);
+  await context.close();
+}
+
+/**
  * Hizmet çalışanının güncellenmesi. Oyuncunun tarayıcısında Tur 40'tan önceki
  * çalışan (tools/fixtures/lite-sw-v1.js) ve onun önbelleği var. Yeni çalışan
  * gelince oyun yine çevrimdışı açılmalı ve adresi sabit olup içeriği değişen
@@ -556,6 +580,7 @@ try {
   browser = await chromium.launch();
   if (!shotsOnly) {
     await e2e(browser);
+    await unnamedDelete(browser);
     await workerUpdate(browser);
   }
   await shots(browser);

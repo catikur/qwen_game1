@@ -415,6 +415,18 @@ export function LeagueSheet({ onClose }: { onClose: () => void }) {
               )}
             </Glass>
           )}
+          {/* Adsız hesabın da sunucuda kaydı var: silinebilmeli (Tur 81, mağazaların kuralı). */}
+          {status === 'unnamed' && store.league.account && (
+            <Glass className="row" padding={10} style={{ gap: 8 }}>
+              <UserRound size={20} color="var(--muted)" />
+              <span className="grow muted" style={{ fontSize: 12.5 }}>
+                {t('league.unnamedAccount')}
+              </span>
+              <button type="button" className="link bad" onClick={() => setConfirmDelete(true)} disabled={store.busy} data-testid="league-delete">
+                {t('league.delete')}
+              </button>
+            </Glass>
+          )}
           {confirmDelete && (
             <Glass className="col" style={{ gap: 10 }}>
               <span className="display" style={{ fontSize: 16 }}>
@@ -424,7 +436,7 @@ export function LeagueSheet({ onClose }: { onClose: () => void }) {
                 {t('league.deleteBody')}
               </span>
               <div className="row" style={{ gap: 8 }}>
-                <Gloss gloss="red" radius={14} onClick={() => void store.deleteAccount().then(() => setConfirmDelete(false))} style={{ flex: 1, minHeight: 40, fontSize: 14 }}>
+                <Gloss gloss="red" radius={14} onClick={() => void store.deleteAccount().then(() => setConfirmDelete(false))} testId="league-delete-confirm" style={{ flex: 1, minHeight: 40, fontSize: 14 }}>
                   {t('league.deleteConfirm')}
                 </Gloss>
                 <Gloss gloss={null} radius={14} onClick={() => setConfirmDelete(false)} style={{ flex: 1, minHeight: 40, fontSize: 14 }}>
