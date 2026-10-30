@@ -589,12 +589,13 @@ function OpenLineForm({ state }: { state: GameState }): ReactElement | null {
           })}
         </p>
       )}
-      <p className="muted">
-        {t('trade.lines.open.terms', {
+      <p className="muted" data-line-terms>
+        {t(buy && quote.margins ? 'trade.lines.open.termsBuy' : 'trade.lines.open.terms', {
           capacity: formatNumber(quote.capacity),
           days: quote.transitDays,
           cost: formatMoney(quote.dailyCost),
           price: formatUnitMoney(quote.unitPrice),
+          buy: formatUnitMoney(quote.margins?.buyPrice ?? quote.unitPrice),
           spot: formatUnitMoney(quote.destinationSpot),
         })}
       </p>

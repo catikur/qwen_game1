@@ -31,6 +31,8 @@ export const trade: Record<keyof typeof tr, string> = {
   'trade.lines.open.quote': 'Left over at the origin today: {surplus} units · still short at the destination: {need} units (open lines for this good deducted)',
   'trade.lines.open.terms':
     'The line carries {capacity} units a day · {days|# day|# days} on the road · {cost} a day · unit price {price} (the origin surplus price; market at the destination {spot})',
+  'trade.lines.open.termsBuy':
+    'The line carries {capacity} units a day · {days|# day|# days} on the road · {cost} a day · unit price {price} from surplus, {buy} from the market (market at the destination {spot})',
   'trade.lines.open.go': 'Open line',
   'trade.lines.open.done': 'Line opened: {from} → {to}, {good}.',
   'trade.lines.todayBought': 'Loaded {units} units today ({bought} bought on the origin market): goods {goods}, freight {freight}.',

@@ -10349,6 +10349,175 @@ async function finish(browser, consoleErrors) {
     await lContext.close();
   }
 
+  // ---------- Ticaretin fiyatı (Tur 78) ----------
+  // Kurucu şehir liman kenti (kahve çekirdeği %20 ucuz), ikinci şehir sanayi
+  // kenti (%15 pahalı); iki şehirde yalnız terminal, üretim yok. Olaylar
+  // kapalı: fiyatı yalnız hat ve rakip oynatsın. Fiyat tablosu, pazardan alan
+  // hat, birim kâr, rakibin kopyası, ayarın kapanışı, telefon genişliği.
+  section('Ticaretin fiyatı');
+  {
+    const pContext = await browser.newContext({ viewport: { width: 1280, height: 860 } });
+    await pContext.addInitScript(veteran, TUTORIAL_KEY);
+    const pp = await pContext.newPage();
+    const pErrors = [];
+    pp.on('pageerror', (e) => pErrors.push(e.message));
+    pp.on('console', (m) => { if (m.type() === 'error') pErrors.push(m.text()); });
+    await pp.goto('http://127.0.0.1:8811/');
+    await pp.waitForSelector('.newgame', { timeout: 20000 });
+    await pp.fill('.newgame-field input[type="text"]', 'Tüccar AŞ');
+    await pp.locator('.newgame [data-city-type="port"]').click();
+    await pp.locator('button:has-text("Şirketi kur")').click();
+    await pp.waitForSelector('.topbar', { timeout: 30000 });
+    const setup = await pp.evaluate(() => {
+      const c = window.__capital;
+      c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+      const place = (defId) => {
+        const s = c.getState();
+        for (const t of s.map.tiles) {
+          if (t.kind !== 'plot' || t.structureId || t.ownerId || t.buildingId) continue;
+          if (s.districts[t.districtId].opensOnDay !== undefined) continue;
+          if (!c.engine.dispatch({ type: 'BUY_TILE', tileId: t.id }).ok) continue;
+          if (c.engine.dispatch({ type: 'BUILD', tileId: t.id, defId }).ok) return c.getState().map.tiles[t.id].buildingId;
+        }
+        return null;
+      };
+      const first = c.getState();
+      first.flags.randomEvents = false;
+      first.companies.player.cash = 40_000_000;
+      first.companies.player.netWorth = 40_000_000;
+      const origin = place('freight_terminal');
+      first.victory = { day: first.time.day, kind: 'tycoon', dismissed: true };
+      const from = first.meta.seed;
+      const opened = c.engine.dispatch({ type: 'OPEN_CITY', citySize: 'standard', capital: 10_000_000, cityType: 'industrial' }).ok;
+      const second = c.getState();
+      second.flags.randomEvents = false;
+      const target = place('freight_terminal');
+      c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+      return { origin, target, opened, from, to: second.meta.seed, type: second.cityType, founder: second.holding?.dormant[0]?.state.cityType, fromName: second.holding?.dormant[0]?.state.cityName ?? '', toName: second.cityName ?? '' };
+    });
+    check('Düzenek: liman kentinde ve sanayi kentinde yalnız terminal', Boolean(setup.origin && setup.target && setup.opened) && setup.founder === 'port' && setup.type === 'industrial',
+      `${setup.fromName} (${setup.founder}) → ${setup.toName} (${setup.type})`);
+
+    await pp.locator('[data-city-chip]').click();
+    await pp.waitForTimeout(300);
+    const boardClosed = await pp.evaluate(() => {
+      const board = document.querySelector('[data-price-board]');
+      return { count: board?.getAttribute('data-price-board') ?? null, open: board?.hasAttribute('open') ?? null, summary: board?.querySelector('summary')?.textContent ?? '' };
+    });
+    await pp.locator('[data-price-board] > summary').click();
+    await pp.waitForTimeout(200);
+    const board = await pp.evaluate((seeds) => {
+      const row = document.querySelector('[data-price-row="coffee_bean"]');
+      const marks = row ? [...row.querySelectorAll('td[data-price-mark]')].map((td) => td.getAttribute('data-price-mark')) : [];
+      return {
+        rows: document.querySelectorAll('[data-price-row]').length,
+        best: row?.getAttribute('data-price-best') ?? null,
+        expected: `${seeds.from}>${seeds.to}`,
+        marks,
+        text: row?.textContent ?? '',
+        heads: [...document.querySelectorAll('.price-board thead th')].map((th) => th.textContent.trim()),
+      };
+    }, { from: setup.from, to: setup.to });
+    // Oynanan şehir (sanayi) önce, kurucu (liman) sonra: kahve limanda ucuz, sanayide pahalı.
+    check('Şehirlerin fiyatları kapalı başlıyor; başlık kaç malda kârlı yön olduğunu söylüyor',
+      boardClosed.open === false && Number(boardClosed.count) >= 1 && boardClosed.summary.includes('malda kârlı yön'), `${boardClosed.count} · ${boardClosed.summary}`);
+    check('Fiyat tablosu: her mal bir satır, iki şehir; kahve limanda en ucuz, sanayide en pahalı, en kârlı yön limandan sanayiye',
+      board.rows === 15 && board.best === board.expected && board.marks.join(',') === 'dear,cheap' && board.heads.length === 4,
+      `${board.rows} satır · ${board.marks.join(',')} · ${board.text.slice(0, 80)}`);
+
+    await pp.selectOption('[data-line-from]', String(setup.from));
+    await pp.selectOption('[data-line-to]', String(setup.to));
+    await pp.selectOption('[data-line-good]', 'coffee_bean');
+    await pp.waitForTimeout(150);
+    const before = await pp.evaluate(() => ({
+      quote: document.querySelector('[data-line-quote]')?.textContent ?? '',
+      margin: Number(document.querySelector('[data-line-open-margin]')?.getAttribute('data-line-open-margin') ?? 'NaN'),
+      marginText: document.querySelector('[data-line-open-margin]')?.textContent ?? '',
+    }));
+    await pp.locator('[data-line-open-buy]').check();
+    await pp.locator('[data-line-count]').fill('1');
+    await pp.waitForTimeout(150);
+    check('Formda bugünkü birim kâr: pazara satışta artıda; çıkışta fazla yok', before.margin > 0 && before.quote.includes('artan 0 birim') && before.marginText.includes('pazara satışta'),
+      `${before.marginText} · ${before.quote}`);
+    const terms = ((await pp.locator('[data-line-terms]').textContent()) ?? '').trim();
+    check('"Eksiği pazardan al" işaretliyken koşullar iki birim bedelini yazıyor: fazladan ve pazardan', terms.includes('fazladan') && terms.includes('pazardan'), terms);
+    await pp.locator('[data-line-go]').click();
+    await pp.waitForTimeout(300);
+    await pp.evaluate(() => { const c = window.__capital; c.engine.runDay(); c.engine.dispatch({ type: 'SET_SPEED', speed: 0 }); });
+    await pp.waitForTimeout(250);
+    const row = await pp.evaluate(() => {
+      const s = window.__capital.getState();
+      const line = s.holding?.lines?.[0];
+      const el = document.querySelector(`[data-line="${line?.id}"]`);
+      return {
+        buy: line?.buy ?? false,
+        bought: line?.last?.bought ?? 0,
+        units: line?.last?.units ?? 0,
+        attr: el?.getAttribute('data-line-buy') ?? null,
+        today: el?.querySelector('[data-line-today]')?.textContent ?? '',
+        margin: el?.querySelector('[data-line-margin]')?.textContent ?? '',
+        toggle: el?.querySelector('[data-line-buy-toggle]')?.textContent ?? '',
+      };
+    });
+    check('Pazardan alan hat üretimsiz yüklüyor: satırda pazardan alınan, birim hesabı ve ayarın düğmesi',
+      row.buy && row.units === 300 && row.bought === 300 && row.attr === 'on' && row.today.includes('300 birimi çıkışın pazarından') &&
+        row.margin.includes('pazara satışta') && row.margin.includes('kendi ihtiyacına') && row.toggle.includes('Yalnız fazlayı taşı'),
+      `${row.today} · ${row.margin} · ${row.toggle}`);
+
+    // Rakip, yol pazara satışta kârlı kaldıkça bekliyor; otuzuncu günde kopyalıyor.
+    const watch = await pp.evaluate(() => {
+      const c = window.__capital;
+      for (let i = 0; i < 9; i++) c.engine.runDay();
+      c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+      return c.getState().holding.lines[0].profitableDays ?? 0;
+    });
+    await pp.waitForTimeout(250);
+    const soon = ((await pp.locator('[data-line-rival-soon]').textContent().catch(() => '')) ?? '').trim();
+    check('Yol kârlıyken satır rakibin kopyalamasına kaç gün kaldığını söylüyor', watch === 10 && soon.includes('10 gündür kârlı') && soon.includes('20 gün daha'),
+      `${watch} gün · ${soon}`);
+    const copied = await pp.evaluate(() => {
+      const c = window.__capital;
+      for (let i = 0; i < 25; i++) c.engine.runDay();
+      c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+      const s = c.getState();
+      const rival = s.holding.rivalLines?.[0];
+      return { rival: rival ? { trucks: rival.trucks, name: s.companies[rival.companyId]?.name ?? '' } : null, news: s.news.slice(0, 40).map((n) => n.title) };
+    });
+    await pp.waitForTimeout(250);
+    const rivalText = ((await pp.locator('[data-line-rival]').textContent().catch(() => '')) ?? '').trim();
+    check('Rakip yolu kopyalıyor: haberi geliyor, satırda adı ve kamyonu, fark daralıyor',
+      copied.rival !== null && rivalText.includes(copied.rival.name) && rivalText.includes('fark daralıyor') && copied.news.some((title) => title.startsWith('Rakip hattı') && title.includes(copied.rival.name)),
+      `${rivalText} · ${copied.news.find((title) => title.startsWith('Rakip hattı')) ?? 'haber yok'}`);
+    await pp.screenshot({ path: `${OUT}/trade-price.png` });
+
+    // Ayar kapanınca hat yalnız fazlayı taşıyor: çıkışta fazla yok, yük yok.
+    await pp.locator('[data-line-buy-toggle]').click();
+    await pp.waitForTimeout(150);
+    const off = await pp.evaluate(() => {
+      const c = window.__capital;
+      c.engine.runDay();
+      c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+      const line = c.getState().holding.lines[0];
+      return { buy: line.buy ?? false, units: line.last?.units ?? -1 };
+    });
+    await pp.waitForTimeout(250);
+    const offText = ((await pp.locator('[data-line-today]').first().textContent()) ?? '').trim();
+    check('"Yalnız fazlayı taşı": ertesi sabah yük yok, satır nedenini söylüyor', !off.buy && off.units === 0 && offText.includes('fazla kalmadı'), offText);
+
+    // Telefon genişliğinde tablo kendi içinde kayıyor, bölüm taşmıyor.
+    await pp.setViewportSize({ width: 390, height: 844 });
+    await pp.waitForTimeout(300);
+    const narrow = await pp.evaluate(() => {
+      const section = document.querySelector('.holding-lines');
+      const scroll = document.querySelector('.price-board-scroll');
+      return section && scroll ? { section: section.scrollWidth - section.clientWidth, overflow: getComputedStyle(scroll).overflowX } : null;
+    });
+    check('Telefon genişliğinde hatlar bölümü taşmıyor; fiyat tablosu kendi içinde kayıyor', narrow !== null && narrow.section <= 1 && narrow.overflow === 'auto',
+      narrow ? `${narrow.section} px · ${narrow.overflow}` : 'bölüm yok');
+    check('Ticaretin fiyatı bölümünde konsol temiz', pErrors.length === 0, pErrors.slice(0, 3).join(' | '));
+    await pContext.close();
+  }
+
   section('Mobil');
   for (const deviceName of ['iPhone 13', 'Pixel 7']) {
     const mobileContext = await browser.newContext({ ...devices[deviceName] });
