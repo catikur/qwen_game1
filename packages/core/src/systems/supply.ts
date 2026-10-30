@@ -870,6 +870,14 @@ function nextSpot(state: GameState, goodId: string, current: number, target: num
   return Math.max(base * SPOT_FLOOR, Math.min(base * SPOT_CEILING, current + (target - current) * SPOT_SMOOTHING));
 }
 
+/** Oyuncunun binalarının bugünkü akışı eksi pazarın kaydındaki (dünkü); kayıt yoksa sıfır. */
+function ownFlowDrift(state: GameState, goodId: string): { produced: number; consumed: number } {
+  const recorded = state.market.own;
+  if (!recorded) return { produced: 0, consumed: 0 };
+  const now = ownGoodFlow(state, goodId);
+  return { produced: now.produced - (recorded.produced[goodId] ?? 0), consumed: now.consumed - (recorded.consumed[goodId] ?? 0) };
+}
+
 /**
  * Bir malın fiyatı `days` gün sonra, şehrin son günkü akışına bir hattın
  * yükü eklenirse (Tur 80, hat formunun tahmini). Spot fiyat adımıyla aynı
@@ -880,14 +888,6 @@ function nextSpot(state: GameState, goodId: string, current: number, target: num
  * - `out`: pazardan alınan kısmı, şehrin bugünkü öbür hat alımlarıyla,
  * - `produced`: şehre eklenen varış (hattın getirdiği).
  */
-/** Oyuncunun binalarının bugünkü akışı eksi pazarın kaydındaki (dünkü); kayıt yoksa sıfır. */
-function ownFlowDrift(state: GameState, goodId: string): { produced: number; consumed: number } {
-  const recorded = state.market.own;
-  if (!recorded) return { produced: 0, consumed: 0 };
-  const now = ownGoodFlow(state, goodId);
-  return { produced: now.produced - (recorded.produced[goodId] ?? 0), consumed: now.consumed - (recorded.consumed[goodId] ?? 0) };
-}
-
 export function spotOutlook(
   state: GameState,
   goodId: string,

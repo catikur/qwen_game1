@@ -151,6 +151,9 @@ function makeMarket(districts: DistrictState[], cityType: CityTypeId | undefined
     produced: zeroByGood(),
     consumed: zeroByGood(),
     reference: referenceVolumes(districts),
+    // Pazarın kaydı boş, oyuncunun payı da (Codex #110): ilk günden önce
+    // kurulan bina hat formunun tahminine fark olarak giriyor.
+    own: { produced: {}, consumed: {} },
   };
 }
 

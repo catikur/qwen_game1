@@ -1012,4 +1012,47 @@ describe('hattın kendi etkisi (Tur 80)', () => {
     runSpotPriceTick(p.root);
     assert.equal(p.root.market.reference['coffee_bean'], referenceVolumes(p.root.districts)['coffee_bean'] ?? 0);
   });
+
+  test('eski kayıtta oyuncunun akış kaydı yok: kayıt açılınca her şehirde bugünkü binalardan, ilk günden önce yıkılan üretici tahminde (Codex #110)', () => {
+    const p = pair();
+    p.engine.runDay();
+    const [from, to] = route(p);
+    // 1.5 öncesi kayıt: şema aynı (v9), pazarlarda oyuncunun akış kaydı yok.
+    const saved = JSON.parse(exportToJson(p.root));
+    delete saved.state.market.own;
+    for (const city of saved.state.holding.dormant) delete city.state.market.own;
+    const loaded = importFromJson(JSON.stringify(saved));
+    if (!loaded.ok) throw new Error(loaded.reason);
+    const engine = new GameEngine(createNewGame({ seed: 3 }));
+    engine.replaceState(loaded.state);
+    const reopened = engine.getState();
+    // Kayıt açıldı, ilk gün daha geçmedi: iki holding'de de çıkışın çiftliği yıkılıyor.
+    for (const root of [p.root, reopened]) {
+      const away = cityBySeed(root, from)!;
+      assert.ok(demolish(away, away.playerCompanyId, away.buildings[p.farm]!.tileId).ok);
+    }
+    const expected = lineQuote(p.root, from, to, 'wheat', 1, true).outlook!;
+    const actual = lineQuote(reopened, from, to, 'wheat', 1, true).outlook!;
+    assert.ok(Math.abs(actual.originSpot - expected.originSpot) < 1e-9, `${actual.originSpot} · ${expected.originSpot}`);
+    assert.ok(Math.abs(actual.destinationSpot - expected.destinationSpot) < 1e-9, `${actual.destinationSpot} · ${expected.destinationSpot}`);
+  });
+
+  test('yeni şehirde pazarın kaydı boş, oyuncunun payı da: ilk günden önce kurulan bina tahminde (Codex #110)', () => {
+    // Çiftlik, değirmen ve terminaller ilk günden önce kuruldu; pazarın kaydı kuruluşun (boş).
+    const p = pair();
+    const [from, to] = route(p);
+    const outlook = lineQuote(p.root, from, to, 'wheat', 1, true).outlook!;
+    // Aynı tahmin, pazarın kaydı oyuncunun binalarını zaten sayıyormuş gibi.
+    const counted = structuredClone(p.root);
+    for (const city of [counted, ...counted.holding!.dormant.map((entry) => entry.state)]) {
+      const flows = ownGoodFlows(city);
+      for (const [goodId, units] of Object.entries(flows.produced)) city.market.produced[goodId] = (city.market.produced[goodId] ?? 0) + units;
+      for (const [goodId, units] of Object.entries(flows.consumed)) city.market.consumed[goodId] = (city.market.consumed[goodId] ?? 0) + units;
+      city.market.own = flows;
+    }
+    const expected = lineQuote(counted, from, to, 'wheat', 1, true).outlook!;
+    assert.ok(Math.abs(outlook.originSpot - expected.originSpot) < 1e-9, `${outlook.originSpot} · ${expected.originSpot}`);
+    assert.ok(Math.abs(outlook.destinationSpot - expected.destinationSpot) < 1e-9, `${outlook.destinationSpot} · ${expected.destinationSpot}`);
+    for (const city of [p.root, p.away]) assert.deepEqual(city.market.own, { produced: {}, consumed: {} });
+  });
 });

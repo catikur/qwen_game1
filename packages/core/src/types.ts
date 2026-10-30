@@ -438,8 +438,9 @@ export interface MarketState {
   /**
    * Oyuncunun binalarının akışı (`ownGoodFlows`), günün sonunda (Codex #110).
    * Hat formunun tahmini gün arasında kurulan ya da yıkılan binanın farkını
-   * bununla buluyor; simülasyon okumuyor. Eski kayıtta ilk günün sonuna
-   * kadar yok.
+   * bununla buluyor; simülasyon okumuyor. Yeni şehirde boş: pazarın
+   * kaydında oyuncunun payı yok. Eski kayıtta (1.5 öncesi) kayıt açılınca
+   * bugünkü binalardan (`GameEngine`).
    */
   own?: { produced: Record<string, number>; consumed: Record<string, number> };
 }
