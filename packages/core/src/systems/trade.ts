@@ -457,6 +457,7 @@ export function prepareTradeDay(root: GameState): void {
     delete trade.marketOut;
     delete trade.marketIn;
     delete trade.rivalBooks;
+    delete trade.fallback;
   }
   closeBrokenLines(root);
   syncLineTrucks(root);
@@ -524,6 +525,27 @@ export function prepareTradeDay(root: GameState): void {
     line.freightPaid = (line.freightPaid ?? 0) + freight;
   }
   runRivalLines(root);
+}
+
+/**
+ * Günün sonunda, bütün şehirler yaşadıktan sonra (motorun `runDay`'i):
+ * gün içinde fazlası yetmeyen yükün pazardan alınanı hattın satırına
+ * (Codex #108). Sabah planından sonra grev başlarsa yükün bir kısmı ya da
+ * hepsi çıkışın pazarından alınıyor; satır bunu pazardan alınan diye
+ * yazıyor. Şehirlerin kaydı siliniyor: kayda geçmesin.
+ */
+export function settleTradeFallbacks(root: GameState): void {
+  if (!root.holding) return;
+  const lines = new Map((root.holding.lines ?? []).map((line) => [line.id, line]));
+  for (const city of tradeCities(root)) {
+    const fallback = city.trade?.fallback;
+    if (!fallback) continue;
+    delete city.trade!.fallback;
+    for (const [lineId, units] of Object.entries(fallback)) {
+      const last = lines.get(lineId)?.last;
+      if (last) last.bought = (last.bought ?? 0) + units;
+    }
+  }
 }
 
 /** Yol rakibin gözünde kârlı: pazara satışta birim kâr, malın çıkıştaki alış fiyatının eşiğini geçiyor. */

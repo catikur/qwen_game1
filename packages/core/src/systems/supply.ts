@@ -496,7 +496,8 @@ function bookLine(state: GameState, terminalId: string, revenue: number, cogs: n
  *   Hattın her alışı gibi spot fiyattan (Tur 78): olayın maliyet çarpanı
  *   şirketin işletmesine biniyor, mala değil.
  *
- * Döndürdüğü: ürün başına bu eksik, pazardan alınan birim.
+ * Döndürdüğü: ürün başına bu eksik, pazardan alınan birim. Hat başına
+ * payı şehrin kaydında (`fallback`): gün bitince hattın satırına geçiyor.
  */
 function settleTradeGoods(state: GameState, trade: TradeDay, flow: CompanyFlow): Record<string, number> {
   const bought: Record<string, number> = {};
@@ -517,9 +518,11 @@ function settleTradeGoods(state: GameState, trade: TradeDay, flow: CompanyFlow):
     const short = split.load - split.exported;
     if (short <= 1e-6) continue;
     bought[goodId] = short;
+    const lines = ((state.trade ??= { inbound: [] }).fallback ??= {});
     for (const load of trade.loads[goodId] ?? []) {
       const units = load.units * (short / split.load);
       bookLine(state, load.terminalId, units * load.unitPrice, units * spot);
+      lines[load.lineId] = (lines[load.lineId] ?? 0) + units;
     }
   }
   return bought;

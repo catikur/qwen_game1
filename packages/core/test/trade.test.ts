@@ -290,6 +290,30 @@ describe('şehirler arası hat (Tur 77)', () => {
     assert.ok(Math.abs(a - b) < 1e-9, `sabah ${a} · gün içinde ${b}`);
   });
 
+  test('grev sabah planından sonra başlarsa yükün pazardan alınanı hattın satırında (Codex #108)', () => {
+    const p = pair();
+    assert.ok(openWheat(p).ok);
+    p.engine.runDay();
+    const line = p.root.holding!.lines![0]!;
+    assert.equal(line.last!.units, lineCapacity(6));
+    assert.equal(line.last!.bought, undefined, 'fazla yetiyor, pazardan alım yok');
+    // Grev yarın başlıyor: sabah planı bugünün takvimiyle görmüyor, çıkış
+    // şehrinin üretim adımı (takvim bir gün ilerlemiş) görüyor.
+    const labor = p.away.companies[p.away.playerCompanyId]!.labor!;
+    const day = p.away.time.day;
+    labor.strike = { startedDay: day + 1, endsOnDay: day + 3, raise: 0 };
+    p.engine.runDay();
+    const today = p.root.holding!.lines![0]!.last!;
+    assert.equal(today.units, lineCapacity(6), 'sabah planı tam yük');
+    assert.ok((today.bought ?? 0) > 0 && today.bought! <= lineCapacity(6), `pazardan ${today.bought}`);
+    assert.equal(p.away.trade?.fallback, undefined, 'şehrin günlük kaydı silindi');
+    // Ertesi gün grev planda da var: fazla az, hat eksik yüklüyor; pazardan alım yok (fazla taşıyan hat).
+    p.engine.runDay();
+    const next = p.root.holding!.lines![0]!.last!;
+    assert.equal(next.bought, undefined);
+    assert.equal(next.short, 'surplus');
+  });
+
   test('hat kapanınca yoldaki mal yine varıyor', () => {
     const p = pair();
     assert.ok(openWheat(p).ok);

@@ -1255,9 +1255,16 @@ export interface CityTrade {
   /**
    * Bugün bu şehrin pazarından hatlara alınan (Tur 78), mal başına birim:
    * oyuncunun pazardan alımı ve rakip hatlarının yükü. Şehrin tüketimine
-   * giriyor; sabah yazılıyor, üretim adımı siliyor.
+   * giriyor; sabah yazılıyor (gün içinde eksik kalan yükün alışını üretim
+   * adımı ekliyor), spot fiyat adımı siliyor.
    */
   marketOut?: Record<string, number>;
+  /**
+   * Gün içinde (grev) fazlası yetmeyen yükün pazardan alınanı, hat başına
+   * birim (Codex #108): üretim adımı yazıyor, bütün şehirler yaşadıktan
+   * sonra hattın satırına (`last.bought`) geçip siliniyor.
+   */
+  fallback?: Record<string, number>;
   /** Bugün rakip hatlarıyla bu şehrin pazarına giren, mal başına birim (şehrin üretimine). */
   marketIn?: Record<string, number>;
   /** Rakiplerin bugünkü hat defteri: ciro ve mal maliyeti, şirket başına. */
