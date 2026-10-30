@@ -435,6 +435,13 @@ export interface MarketState {
    * kırdığı buna göre ölçeklenir; harita büyüdükçe kendi kendine büyür.
    */
   reference: Record<string, number>;
+  /**
+   * Oyuncunun binalarının dünkü akışı (`ownGoodFlows`), `produced` ve
+   * `consumed` ile aynı anda (Codex #110). Hat formunun tahmini gün arasında
+   * kurulan ya da yıkılan binanın farkını bununla buluyor; simülasyon
+   * okumuyor. Eski kayıtta ilk günün sonuna kadar yok.
+   */
+  own?: { produced: Record<string, number>; consumed: Record<string, number> };
 }
 
 export interface ActiveEvent {

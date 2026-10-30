@@ -9796,6 +9796,13 @@ bir kez açıp bırakan iki senaryoda da hedefin (1 M ₺) çok altında.
   - İlk seferi yoldaki rakip hattı da: çıkışta alımı, varışta satışı.
   - Birim testi üç şehirli holding'de iki hatla: 30 gün sonra varışın
     fiyatı tahminin %3 içinde, ilk hattı saymayan tahminden yakın.
+- *Gün arasında yıkılan ya da kurulan bina tahmine girmiyordu (Codex).*
+  Pazarın kaydı dünün. Oyuncu oyunu durdurup bir üreticiyi yıkar ve
+  hemen hat tahmini isterse, tahmin artık olmayan üretime göre
+  hesaplanıyordu; ertesi gün pazar canlı binalardan sayılıyor. Artık
+  pazarın kaydıyla birlikte oyuncunun binalarının akışı da tutuluyor
+  (`market.own`, simülasyon okumuyor); tahmin aradaki farkı ekliyor.
+  Rakiplerin binaları sayılmıyor: onlar yarının pazarının parçası.
 - *Eski kayıtta eksik pazar referansı (Codex).* Sonradan eklenen bir malın
   referans hacmi eski kayıtta ilk fiyat adımına dek yok (adım onu günün
   sonunda dolduruyor). Tahmin o arada 1 birimlik referansla pazarı dolu
@@ -9824,8 +9831,8 @@ bir kez açıp bırakan iki senaryoda da hedefin (1 M ₺) çok altında.
   yok.
 
 **Doğrulama.**
-- Birim testi 986 (13 yeni); tip denetimi temiz; Almanca denetimi 0 hata.
-  - `packages/core/test/trade.test.ts` (12 yeni):
+- Birim testi 987 (14 yeni); tip denetimi temiz; Almanca denetimi 0 hata.
+  - `packages/core/test/trade.test.ts` (13 yeni):
     - tahminin bir günü günün spot fiyat adımıyla aynı;
     - kamyon arttıkça çıkış yükseliyor, varış düşüyor, birim kâr
       azalıyor; en kârlı kamyon günlük kârın tepesi;
@@ -9839,6 +9846,7 @@ bir kez açıp bırakan iki senaryoda da hedefin (1 M ₺) çok altında.
       şehirden aynı malı alan, bugün açılan hat; kamyonu değişen hat; ilk
       seferi yoldaki rakip hattı;
     - kasası dar hattın bıraktığı fazla yeni hatta, fazla fiyatıyla;
+    - gün arasında yıkılan üretici: dünkü pazar canlı binalarla düzeliyor;
     - eski kayıtta eksik pazar referansı: tahmin dolgunun değeriyle.
 
     İncelemenin her testi kendinden önceki sürümle denendi, kırmızı.
@@ -9883,7 +9891,7 @@ bir kez açıp bırakan iki senaryoda da hedefin (1 M ₺) çok altında.
 
 | Ölçü | Tur 75 | Tur 80 |
 |---|---|---|
-| Birim testi | 922 | 986 |
+| Birim testi | 922 | 987 |
 | Denge testi (kontrol / bölüm) | 379 / 33 | 415 / 38 |
 | Tarayıcı testi (kontrol) | 806 | 860 |
 | Ana parça | 67,2 KB | 52,7 KB |
@@ -10016,7 +10024,7 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi). Senaryo şehirlerinde gün 3–17 ms (`pnpm dayperf`, Tur 43) |
-| Birim testi | **986 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de, Tur 52'de sunucuda tekrar, Tur 53'te haftanın kuralı ve günün koşusu, Tur 54'te hayalet eğri, Tur 55'te davetli ligler, Tur 56'da taşıma sözleşmeleri, Tur 57'de enerji, Tur 58'de gayrimenkul, Tur 59'da rakiplerin hafızası, Tur 60'ta senaryo paketi II, Tur 61'de şirketin yolu, Tur 62'de hava ve mevsimin görünümü, Tur 63'te önemli anlar, Tur 64'te şehir kartı, Tur 65'te telefon performansı, Tur 66'da masaüstü sürümü, Tur 67'de içerik paketleri, Tur 68'de senaryo editörü, Tur 69'da üçüncü dil, Tur 70'te Steam başarımları, Tur 71'de canlı sunucunun simülasyon izi ve Steam Deck'in varsayılanları, Tur 72'de kumanda, Tur 73'te Workshop ve skor tabloları, Tur 74'te sürüm, yenilikler ve hata raporu, Tur 75'te kaydın açılmama nedeni ve yeni sürümün kaydı, Tur 76'da şehrin türü, Tur 77'de şehirler arası hat, Tur 78'de ticaretin fiyatı, Tur 79'da ticaret hedefi, Tur 80'de hattın kendi etkisi ve geç inen sözlüklerin kaydı); Rust tarafı 32 test (`cargo test`, `apps/desktop/src-tauri`; Steam'li derlemede 29) |
+| Birim testi | **987 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de, Tur 52'de sunucuda tekrar, Tur 53'te haftanın kuralı ve günün koşusu, Tur 54'te hayalet eğri, Tur 55'te davetli ligler, Tur 56'da taşıma sözleşmeleri, Tur 57'de enerji, Tur 58'de gayrimenkul, Tur 59'da rakiplerin hafızası, Tur 60'ta senaryo paketi II, Tur 61'de şirketin yolu, Tur 62'de hava ve mevsimin görünümü, Tur 63'te önemli anlar, Tur 64'te şehir kartı, Tur 65'te telefon performansı, Tur 66'da masaüstü sürümü, Tur 67'de içerik paketleri, Tur 68'de senaryo editörü, Tur 69'da üçüncü dil, Tur 70'te Steam başarımları, Tur 71'de canlı sunucunun simülasyon izi ve Steam Deck'in varsayılanları, Tur 72'de kumanda, Tur 73'te Workshop ve skor tabloları, Tur 74'te sürüm, yenilikler ve hata raporu, Tur 75'te kaydın açılmama nedeni ve yeni sürümün kaydı, Tur 76'da şehrin türü, Tur 77'de şehirler arası hat, Tur 78'de ticaretin fiyatı, Tur 79'da ticaret hedefi, Tur 80'de hattın kendi etkisi ve geç inen sözlüklerin kaydı); Rust tarafı 32 test (`cargo test`, `apps/desktop/src-tauri`; Steam'li derlemede 29) |
 | Denge testi | **415 kontrol, hepsi geçiyor** (38 bölüm, süreleriyle; ~23 dk; Tur 76'da "Şehir türleri", Tur 77'de "Şehirler arası hat", Tur 78'de "Ticaretin fiyatı", Tur 79'da "Senaryolar V: ticaretle zafer", Tur 80'de "Hattın kendi etkisi: formun tahmini") |
 | Tarayıcı testi | **860 kontrol** (Tur 80'de 11 yeni, Tur 79'da 10, Tur 78'de 11, Tur 77'de 11, Tur 76'da 11, Tur 75'te 11; Tur 74'teki 790 lig sunucusu bölümünün yarıda kalan bir koşusundan sayılmıştı, bölüm 24 kontrol), son tam koşu 848/849 (Tur 79, ~66 dk; kalan kontrol ek kuralı olan tam üç senaryo kartı bekliyordu, düzeltildi, bölüm tek başına 10/10; Tur 78'de 839/839; Tur 77'de 827/828, kalan kontrol kayıt biçimini sabit 7 bekliyordu, düzeltildi; Tur 76'da 817/817; Tur 75'te 805/806, yük altında düşen müzik kontrolü tek başına geçti; Tur 69'da 719/719), 0 konsol hatası (bu yavaş makinede ~59 dk, CI'da `main`'de ~64 dk); duman koşusu 132 (CI'da ~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + paket bütçesi (Tur 46; Tur 48'den beri hizmet çalışanı ve manifest de) + duman oynanışı; `main`'de tam oynanış (Tur 72'den beri 120 dk sınırı); masaüstüne dokunan PR'da Rust testleri, sürüm derlemesi ve gerçek pencerede 38 kontrol (Tur 66'da 17) |

@@ -357,16 +357,24 @@ function addDemand(state: GameState, building: BuildingInstance, def: BuildingDe
  * dünkü satışı. Gelen hattın malı sayılmıyor.
  */
 export function ownGoodFlow(state: GameState, goodId: string): { produced: number; consumed: number } {
+  const flows = ownGoodFlows(state);
+  return { produced: flows.produced[goodId] ?? 0, consumed: flows.consumed[goodId] ?? 0 };
+}
+
+/** `ownGoodFlow` bütün mallarda: oyuncunun binalarının bugünkü üretimi ve ihtiyacı. */
+export function ownGoodFlows(state: GameState): { produced: Record<string, number>; consumed: Record<string, number> } {
   const consumed: Record<string, number> = {};
-  let produced = 0;
+  const produced: Record<string, number> = {};
   for (const building of Object.values(state.buildings)) {
     if (building.companyId !== state.playerCompanyId) continue;
     const def = BUILDING_BY_ID[building.defId];
     if (!def) continue;
     addDemand(state, building, def, consumed);
-    if (def.outputGoodId === goodId && (def.role === 'extract' || def.role === 'process')) produced += outputOf(state, building);
+    if (def.outputGoodId && (def.role === 'extract' || def.role === 'process')) {
+      produced[def.outputGoodId] = (produced[def.outputGoodId] ?? 0) + outputOf(state, building);
+    }
   }
-  return { produced, consumed: consumed[goodId] ?? 0 };
+  return { produced, consumed };
 }
 
 /**
@@ -711,6 +719,10 @@ export function runProductionTick(state: GameState): void {
   for (const [goodId, units] of Object.entries(state.trade?.marketIn ?? {})) produced[goodId] = (produced[goodId] ?? 0) + units;
   state.market.produced = produced;
   state.market.consumed = consumed;
+  // Oyuncunun binalarının akışı, pazarın kaydıyla aynı anda (Codex #110): hat
+  // formunun tahmini gün arasında kurulan ya da yıkılan binanın farkını bununla
+  // buluyor. Simülasyon okumuyor.
+  state.market.own = ownGoodFlows(state);
   // Gün içinde (grev) fazlası yetmeyen yükün eksiği pazardan alındı: o da
   // ihracat baskısına (Codex #108). Tüketimde planlı yükle zaten sayıldı;
   // akışa tüketim sayıldıktan sonra giriyor, iki kez sayılmasın.
@@ -866,14 +878,25 @@ function nextSpot(state: GameState, goodId: string, current: number, target: num
  * - `out`: pazardan alınan kısmı, şehrin bugünkü öbür hat alımlarıyla,
  * - `produced`: şehre eklenen varış (hattın getirdiği).
  */
+/** Oyuncunun binalarının bugünkü akışı eksi pazarın kaydındaki (dünkü); kayıt yoksa sıfır. */
+function ownFlowDrift(state: GameState, goodId: string): { produced: number; consumed: number } {
+  const recorded = state.market.own;
+  if (!recorded) return { produced: 0, consumed: 0 };
+  const now = ownGoodFlow(state, goodId);
+  return { produced: now.produced - (recorded.produced[goodId] ?? 0), consumed: now.consumed - (recorded.consumed[goodId] ?? 0) };
+}
+
 export function spotOutlook(
   state: GameState,
   goodId: string,
   extra: { produced?: number; consumed?: number; out?: number },
   days: number,
 ): number {
-  const produced = (state.market.produced[goodId] ?? 0) + (extra.produced ?? 0);
-  const consumed = (state.market.consumed[goodId] ?? 0) + (extra.consumed ?? 0);
+  // Pazarın kaydı dünün: oyuncu o günden beri bina kurduysa ya da yıktıysa
+  // (Codex #110) kendi akışının farkı ekleniyor; yarınki gün de canlı binalardan sayıyor.
+  const drift = ownFlowDrift(state, goodId);
+  const produced = (state.market.produced[goodId] ?? 0) + drift.produced + (extra.produced ?? 0);
+  const consumed = (state.market.consumed[goodId] ?? 0) + drift.consumed + (extra.consumed ?? 0);
   // Eski kayıtta sonradan eklenen malın referansı ilk fiyat adımına dek yok
   // (`backfillMarket` günün sonunda dolduruyor): tahmin aynı değeri yan
   // etkisiz hesaplıyor (Codex #110).

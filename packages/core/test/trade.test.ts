@@ -8,7 +8,7 @@ import { build, buyTile, demolish } from '../src/actions';
 import { simulateCityDay } from '../src/day';
 import { inTransitValue, isPurchasable, netWorthNow } from '../src/systems/city';
 import { fleetUsed } from '../src/systems/freight';
-import { SURPLUS_HAIRCUT, exportableSurplus, referenceVolumes, runSpotPriceTick, spotOutlook } from '../src/systems/supply';
+import { SURPLUS_HAIRCUT, exportableSurplus, ownGoodFlow, ownGoodFlows, referenceVolumes, runSpotPriceTick, spotOutlook } from '../src/systems/supply';
 import {
   cityBySeed,
   lineCapacity,
@@ -932,6 +932,28 @@ describe('hattın kendi etkisi (Tur 80)', () => {
     const expected = spotOutlook(p.root, 'coffee_bean', { produced: lineCapacity(2) * 2 }, after.days);
     assert.ok(Math.abs(after.destinationSpot - expected) < 1e-9, `${after.destinationSpot} · ${expected}`);
     assert.ok(after.destinationSpot < before.destinationSpot);
+    assert.ok(after.originSpot > before.originSpot, `${after.originSpot} > ${before.originSpot}`);
+  });
+
+  test('gün arasında yıkılan üretici tahminde: dünkü pazar oyuncunun canlı binalarıyla düzeltiliyor (Codex #110)', () => {
+    const p = pair();
+    p.engine.runDay();
+    const [from, to] = route(p);
+    const quote = () => lineQuote(p.root, from, to, 'wheat', 1, true).outlook!;
+    const before = quote();
+    const farmOutput = ownGoodFlow(p.away, 'wheat').produced;
+    assert.ok(farmOutput > 0, `${farmOutput} birim`);
+    assert.deepEqual(p.away.market.own, ownGoodFlows(p.away), 'pazarın kaydıyla oyuncunun akışı');
+    assert.ok(demolish(p.away, p.away.playerCompanyId, p.away.buildings[p.farm]!.tileId).ok);
+    assert.equal(ownGoodFlow(p.away, 'wheat').produced, 0);
+    const after = quote();
+    // Aynı tahmin, pazarın kaydı yıkımdan sonra alınmış gibi: üretimden çiftliğin çıktısı düşülmüş.
+    const rebased = structuredClone(p.away);
+    rebased.market.produced['wheat'] = (rebased.market.produced['wheat'] ?? 0) - farmOutput;
+    rebased.market.own = ownGoodFlows(rebased);
+    const expected = spotOutlook(rebased, 'wheat', { consumed: lineCapacity(1), out: lineCapacity(1) }, after.days);
+    assert.ok(Math.abs(after.originSpot - expected) < 1e-9, `${after.originSpot} · ${expected}`);
+    // Fazlası kalmayan çıkışta fiyat yükseliyor: tahmin artık dünkü fazlaya güvenmiyor.
     assert.ok(after.originSpot > before.originSpot, `${after.originSpot} > ${before.originSpot}`);
   });
 
