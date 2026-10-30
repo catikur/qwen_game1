@@ -591,6 +591,10 @@ function runRivalLines(root: GameState): void {
   }
 
   const kept: RivalLine[] = [];
+  // Rakibin yolları tek kasadan yüklüyor: bedel varışın üretim adımında
+  // deftere giriyor, o güne dek kasa yerinde; aynı şirketin ikinci yolu
+  // birincinin bedelini düşülmüş nakitle görüyor (Codex #108).
+  const budget = new Map<string, number>();
   for (const rival of holding.rivalLines ?? []) {
     const source = cityBySeed(root, rival.from);
     const target = cityBySeed(root, rival.to);
@@ -610,11 +614,14 @@ function runRivalLines(root: GameState): void {
     kept.push(rival);
     const units = lineCapacity(rival.trucks);
     const cost = units * margins.buyPrice + lineDailyCost(rival);
+    const wallet = `${rival.to}:${rival.companyId}`;
+    const cash = budget.get(wallet) ?? company.cash;
     // İlk sefer yolda; nakdi yükün bedeline yetmeyen rakip bugün yüklemiyor.
-    if (day < rival.openedDay + rival.transitDays || company.cash < cost) {
+    if (day < rival.openedDay + rival.transitDays || cash < cost) {
       rival.last = { units: 0, margin: margins.market };
       continue;
     }
+    budget.set(wallet, cash - cost);
     addMarketFlow(source, 'marketOut', rival.goodId, units);
     addMarketFlow(target, 'marketIn', rival.goodId, units);
     ((target.trade ??= { inbound: [] }).rivalBooks ??= []).push({

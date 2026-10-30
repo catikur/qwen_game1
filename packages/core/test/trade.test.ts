@@ -24,7 +24,7 @@ import {
 } from '../src/systems/trade';
 import { exportToJson, importFromJson } from '../../persistence/src/index';
 import { SCHEMA_VERSION } from '../src/types';
-import type { GameState } from '../src/types';
+import type { GameState, RivalLine } from '../src/types';
 
 /** Boş bir parsele bina; kimliğini döndürür. */
 function place(state: GameState, defId: string): string {
@@ -507,6 +507,41 @@ describe('ticaretin fiyatı (Tur 78)', () => {
     p.engine.runDay();
     assert.equal(rivalLines(p.root).length, 0);
     assert.ok(p.root.news.some((item) => item.title.includes(p.root.companies[rival.companyId]!.name) && item.title.includes('kapattı')));
+  });
+
+  test('aynı rakibin yolları tek kasadan yüklüyor: nakdi ikisine yetmezse ikincisi bekliyor (Codex #108)', () => {
+    const p = coffeeRoute();
+    const from = p.away.meta.seed;
+    const to = p.root.meta.seed;
+    const company = Object.values(p.root.companies).find((c) => !c.isPlayer)!;
+    const day = p.root.time.day;
+    const route = (id: number, goodId: string): RivalLine => ({
+      id: `rival-line-${id}`,
+      from,
+      to,
+      goodId,
+      companyId: company.id,
+      trucks: 2,
+      transitDays: transitDaysBetween(from, to),
+      openedDay: day - 30,
+      reviewDay: day + 100,
+    });
+    const first = route(1, 'coffee_bean');
+    const second = route(2, 'wheat');
+    p.root.holding!.rivalLines = [first, second];
+    const cost = (line: RivalLine) => lineCapacity(line.trucks) * lineMargins(p.root, from, to, line.goodId)!.buyPrice + lineDailyCost(line);
+    // Nakit her yola ayrı ayrı yetiyor, ikisinin toplamına yetmiyor.
+    company.cash = cost(first) + cost(second) / 2;
+    assert.ok(company.cash >= cost(first) && company.cash >= cost(second) && company.cash < cost(first) + cost(second));
+    p.engine.runDay();
+    assert.equal(first.last!.units, lineCapacity(2), 'ilk yol yüklüyor');
+    assert.equal(second.last!.units, 0, 'kalan nakit ikinci yola yetmiyor');
+
+    // Nakit ikisine de yetince ikisi de yüklüyor.
+    company.cash = (cost(first) + cost(second)) * 1.2;
+    p.engine.runDay();
+    assert.equal(first.last!.units, lineCapacity(2));
+    assert.equal(second.last!.units, lineCapacity(2));
   });
 
   test('kopyaya kalan gün: eşikte sıfır, rakip giremezse orada bekliyor; rakip ya da rekabet yoksa sayaç yok (Bugbot #108)', () => {
