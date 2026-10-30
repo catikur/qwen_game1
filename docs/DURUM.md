@@ -4,7 +4,7 @@
 > `pnpm bench` çıktısından; iddialar `pnpm balance` ve `pnpm playtest`
 > tarafından her koşuda doğrulanıyor.
 >
-> Son güncelleme: şema **v8**, 77 tur (Tur 33 denendi ve geri alındı; Tur 34 eski görünüme canlılık ekledi; Tur 35 arayüzü Lite'ın "Cam & Bulut" diline taşıdı; Tur 36 şehre ayrıntı kattı; Tur 37a geç oyuna yönetim yükü, servet vergisi ve kriz dönemleri getirdi; Tur 37b karar kartlarını ve rakip hikâyelerini ekledi; Tur 37c fırsat balonlarını ve aylık görev panosunu getirdi; Tur 37d canlı pazarı, şehir projesi ihalesini ve rakip konsorsiyumunu getirdi; Tur 38 değerlendirme turuydu: geç oyun hızı, gündem ve haber akışı, zorluk eğrisi; Tur 39a senaryo modunu getirdi: Kurtarma ve Krizin ortasında; Tur 39b Konsorsiyuma karşı, Zincir ustası ve Şehrin sponsoru senaryolarını ekledi; Tur 39c Büyük şehir fethi ve Holding: iki şehir ile listeyi yediye tamamladı; Tur 40 cila ve performans; Tur 41 başarımlar ve kariyer; Tur 42 açılışta gölgelendirici derlemesi; Tur 43 oyun içi akıcılık; Tur 44 değerlendirme turuydu: Türkçe sayı biçimi, yardımın kapsamı, haber akışı; Tur 45 dört ek kural getirdi: Fırtınalı yıllar, Aç gözlü rakipler, Sıkı banka, Kıt arsa; Tur 46 açılış paketini böldü: kurulum ekranı telefonda yarı sürede; Tur 47 tek Ayarlar paneli ve erişilebilirlik getirdi: metin boyutu, renk körlüğüne uygun palet, hareket, ses düzeyleri, pencerelerde klavye; Tur 48 oyunu kurulabilir ve çevrimdışı açılır yaptı, yayından sonra "yeni sürüm hazır" diyor; Tur 49 müziği getirdi: gündüz, gece ve kriz, şehirle birlikte dönüyor; Tur 50 Faz 1'i değerlendirdi ve tanıtım paketini hazırladı; Tur 51 Faz 2'yi açtı: Lite'ın lig sunucusu ana oyunun Tohum Ligi koşularını da alıyor, tablo herkese açık; Tur 52'de sunucu her koşuyu gönderimde yeniden oynatıyor, tabloya yalnız doğrulanmış skor giriyor; Tur 53 ligin her haftasına bir ek kural ve 90 günlük günün koşusunu getirdi; Tur 54 liderlerin eğrisini senin koşunun üstüne koydu ve liderin o günlerde ne yaptığını koşu kodundan anlatıyor; Tur 55 davet kodlu arkadaş liglerini getirdi ve Faz 2'yi kapattı; Tur 56 Faz 3'ü açtı: nakliye terminali rakip mağazalarına taşıma sözleşmesiyle taşıyor; Tur 57 enerjiyi getirdi: şebeke fiyatı, santraller, enerji krizi; Tur 58 gayrimenkul geliştiricisini getirdi: konut ve ofis projeleri, kira ve doluluk, kentsel dönüşüm hakkı ve başvurusu; Tur 59 rakiplere hafıza verdi: CEO'nun mizacı, husumet ve ittifak, fiyat savaşı ve lobiyle tepki, uzlaşma; Tur 60 Faz 3'ün sektörleriyle üç senaryo ekledi: Herkesin nakliyecisi, Karanlık kış, Kentsel dönüşüm, her biri bir ek kuralla; Tur 61 Faz 3'ü değerlendirdi ve kapattı: zafere üç gerçek yol var, şirketin yolu kârın kaynağından okunuyor; Tur 62 Faz 4'ü açtı: mevsim ve hava şehirde görünüyor, ağaçlar mevsimin renginde, yağmur ve kar yağıyor; Tur 63 önemli anları getirdi: inşaatın tozu, devralmanın renk dalgası, çatılardan yükselen kâr, zafer gecesinin havai fişekleri; Tur 64 şehir kartını getirdi: koşunun özeti ve şehrin kuşbakışı tek bir görselde, indirilip paylaşılıyor; Tur 65 Faz 4'ü değerlendirdi ve kapattı: telefonda günün JS'i kısaldı, tuvalin yeri her karede okunmuyor; Tur 66 Faz 5'i açtı: masaüstü sürümü, kayıtlar ve ayarlar dosyada, Steam'e hazırlık; Tur 67 içerik paketlerini getirdi: senaryo ve kurallar dosyadan, senaryolar kodla ve bağlantıyla paylaşılıyor; Tur 68 senaryo editörünü getirdi: paket tarayıcıda alan alan kuruluyor, sınırlar formda, taslak kaydetmeden deneniyor; Tur 69 üçüncü dili getirdi: oyunun her metni Almancada, sayı ve para dil başına biçimde; Tur 70 Steam'i getirdi ve Faz 5'i kapattı: 29 rozet Steam başarımı, tek pencere, üç işletim sisteminin Steam deposu, üç dilde mağaza sayfası; Tur 71 Faz 6'yı açtı: masaüstü bir uygulama gibi davranıyor, dar pencerede paneller üst üste binmiyor, Steam Deck'te metin büyük, lig sunucusunun eski simülasyonu canlı denetimde görünüyor; Tur 72 oyunu kumandayla ve yalnız klavyeyle oynanır yaptı: haritada nişangâh, düğme ipuçları, Deck'in ekran klavyesi; Tur 73 Steam Workshop'u ve skor tablolarını getirdi: paketler Workshop'tan rafa, Tohum Ligi'nin puanı Steam'e; Tur 74 sürüm 1.0'ı getirdi: Yenilikler, oyunun içinden hata bildirme, yayın listesi; Tur 75 Faz 6'yı değerlendirdi ve kapattı: hata raporu oyunda açılıyor, kaydın neden açılmadığı oyuncunun dilinde, yeni sürümün otomatik kaydı ezilmiyor; Tur 76 Faz 7'yi açtı: şehrin türü — liman kenti, sanayi kenti ve başkent, her birinin bölgeleri, hammadde fiyatları, rakipleri ve kuralı; sürüm 1.1.0; Tur 77 şehirler arası hattı getirdi: nakliye terminali iki şehri bir malla bağlıyor, bir şehrin fazlası öbürünün havuzuna giriyor, yoldaki mal bilançoda; sürüm 1.2.0). Önümüzdeki işin sırası `docs/YOL-HARITASI.md`'de.
+> Son güncelleme: şema **v9**, 78 tur (Tur 33 denendi ve geri alındı; Tur 34 eski görünüme canlılık ekledi; Tur 35 arayüzü Lite'ın "Cam & Bulut" diline taşıdı; Tur 36 şehre ayrıntı kattı; Tur 37a geç oyuna yönetim yükü, servet vergisi ve kriz dönemleri getirdi; Tur 37b karar kartlarını ve rakip hikâyelerini ekledi; Tur 37c fırsat balonlarını ve aylık görev panosunu getirdi; Tur 37d canlı pazarı, şehir projesi ihalesini ve rakip konsorsiyumunu getirdi; Tur 38 değerlendirme turuydu: geç oyun hızı, gündem ve haber akışı, zorluk eğrisi; Tur 39a senaryo modunu getirdi: Kurtarma ve Krizin ortasında; Tur 39b Konsorsiyuma karşı, Zincir ustası ve Şehrin sponsoru senaryolarını ekledi; Tur 39c Büyük şehir fethi ve Holding: iki şehir ile listeyi yediye tamamladı; Tur 40 cila ve performans; Tur 41 başarımlar ve kariyer; Tur 42 açılışta gölgelendirici derlemesi; Tur 43 oyun içi akıcılık; Tur 44 değerlendirme turuydu: Türkçe sayı biçimi, yardımın kapsamı, haber akışı; Tur 45 dört ek kural getirdi: Fırtınalı yıllar, Aç gözlü rakipler, Sıkı banka, Kıt arsa; Tur 46 açılış paketini böldü: kurulum ekranı telefonda yarı sürede; Tur 47 tek Ayarlar paneli ve erişilebilirlik getirdi: metin boyutu, renk körlüğüne uygun palet, hareket, ses düzeyleri, pencerelerde klavye; Tur 48 oyunu kurulabilir ve çevrimdışı açılır yaptı, yayından sonra "yeni sürüm hazır" diyor; Tur 49 müziği getirdi: gündüz, gece ve kriz, şehirle birlikte dönüyor; Tur 50 Faz 1'i değerlendirdi ve tanıtım paketini hazırladı; Tur 51 Faz 2'yi açtı: Lite'ın lig sunucusu ana oyunun Tohum Ligi koşularını da alıyor, tablo herkese açık; Tur 52'de sunucu her koşuyu gönderimde yeniden oynatıyor, tabloya yalnız doğrulanmış skor giriyor; Tur 53 ligin her haftasına bir ek kural ve 90 günlük günün koşusunu getirdi; Tur 54 liderlerin eğrisini senin koşunun üstüne koydu ve liderin o günlerde ne yaptığını koşu kodundan anlatıyor; Tur 55 davet kodlu arkadaş liglerini getirdi ve Faz 2'yi kapattı; Tur 56 Faz 3'ü açtı: nakliye terminali rakip mağazalarına taşıma sözleşmesiyle taşıyor; Tur 57 enerjiyi getirdi: şebeke fiyatı, santraller, enerji krizi; Tur 58 gayrimenkul geliştiricisini getirdi: konut ve ofis projeleri, kira ve doluluk, kentsel dönüşüm hakkı ve başvurusu; Tur 59 rakiplere hafıza verdi: CEO'nun mizacı, husumet ve ittifak, fiyat savaşı ve lobiyle tepki, uzlaşma; Tur 60 Faz 3'ün sektörleriyle üç senaryo ekledi: Herkesin nakliyecisi, Karanlık kış, Kentsel dönüşüm, her biri bir ek kuralla; Tur 61 Faz 3'ü değerlendirdi ve kapattı: zafere üç gerçek yol var, şirketin yolu kârın kaynağından okunuyor; Tur 62 Faz 4'ü açtı: mevsim ve hava şehirde görünüyor, ağaçlar mevsimin renginde, yağmur ve kar yağıyor; Tur 63 önemli anları getirdi: inşaatın tozu, devralmanın renk dalgası, çatılardan yükselen kâr, zafer gecesinin havai fişekleri; Tur 64 şehir kartını getirdi: koşunun özeti ve şehrin kuşbakışı tek bir görselde, indirilip paylaşılıyor; Tur 65 Faz 4'ü değerlendirdi ve kapattı: telefonda günün JS'i kısaldı, tuvalin yeri her karede okunmuyor; Tur 66 Faz 5'i açtı: masaüstü sürümü, kayıtlar ve ayarlar dosyada, Steam'e hazırlık; Tur 67 içerik paketlerini getirdi: senaryo ve kurallar dosyadan, senaryolar kodla ve bağlantıyla paylaşılıyor; Tur 68 senaryo editörünü getirdi: paket tarayıcıda alan alan kuruluyor, sınırlar formda, taslak kaydetmeden deneniyor; Tur 69 üçüncü dili getirdi: oyunun her metni Almancada, sayı ve para dil başına biçimde; Tur 70 Steam'i getirdi ve Faz 5'i kapattı: 29 rozet Steam başarımı, tek pencere, üç işletim sisteminin Steam deposu, üç dilde mağaza sayfası; Tur 71 Faz 6'yı açtı: masaüstü bir uygulama gibi davranıyor, dar pencerede paneller üst üste binmiyor, Steam Deck'te metin büyük, lig sunucusunun eski simülasyonu canlı denetimde görünüyor; Tur 72 oyunu kumandayla ve yalnız klavyeyle oynanır yaptı: haritada nişangâh, düğme ipuçları, Deck'in ekran klavyesi; Tur 73 Steam Workshop'u ve skor tablolarını getirdi: paketler Workshop'tan rafa, Tohum Ligi'nin puanı Steam'e; Tur 74 sürüm 1.0'ı getirdi: Yenilikler, oyunun içinden hata bildirme, yayın listesi; Tur 75 Faz 6'yı değerlendirdi ve kapattı: hata raporu oyunda açılıyor, kaydın neden açılmadığı oyuncunun dilinde, yeni sürümün otomatik kaydı ezilmiyor; Tur 76 Faz 7'yi açtı: şehrin türü — liman kenti, sanayi kenti ve başkent, her birinin bölgeleri, hammadde fiyatları, rakipleri ve kuralı; sürüm 1.1.0; Tur 77 şehirler arası hattı getirdi: nakliye terminali iki şehri bir malla bağlıyor, bir şehrin fazlası öbürünün havuzuna giriyor, yoldaki mal bilançoda; sürüm 1.2.0; Tur 78 ticaretin fiyatını getirdi: hat malı çıkışın pazarından da alıyor, şehirlerin fiyatları yan yana, fark alımla ve satışla daralıyor, rakipler kârlı yolu kopyalıyor; sürüm 1.3.0). Önümüzdeki işin sırası `docs/YOL-HARITASI.md`'de.
 
 ---
 
@@ -9283,6 +9283,156 @@ sonraki 60 günün holding değeri ölçülüyor.
 **Kalan.** Tur 78: ticaretin fiyatı. Şehirlerin pazar fiyatları ayrışıyor,
 fiyat farkı ve taşıma bedeli kâr ediyor; rakipler de hat açıyor.
 
+### Tur 78 — Ticaretin fiyatı
+
+Faz 7'nin üçüncü turu. Şema v9, sürüm 1.3.0. Pazardan alan hat, ihracat
+baskısı ve rakip hatları yalnız hatlı holding'de; lig izi değişmedi
+(`a5ded51fb01e62a5`), lig sunucusunun dağıtılması gerekmiyor.
+
+**Fiyat farkı vardı, onu kullanan ticaret yoktu.** Tur 76'nın türleri
+hammaddenin fiyatını şehre göre ayırdı: limanda kahve %20 ucuz, sanayide
+%15 pahalı, başkentte her hammadde %10 pahalı. Her şehrin olayları da
+(kahve rekoltesi, çip krizi, kuraklık) fiyatı kendi şehrinde oynatıyor.
+Ölçüm (liman ve sanayi kenti, 360 gün, rakipler ve olaylar açık):
+
+- silikon sanayiden limana ortalama ×1,31;
+- deri sanayiden limana ×1,25;
+- kahve limandan sanayiye ×1,30;
+- çip krizinde birim fark 60–90 ₺.
+
+Ama Tur 77'nin hattı yalnız kendi fazlasını taşıyordu: farkı kullanmak
+için önce çıkış şehrinde üretim gerekiyordu.
+
+**Yapılanlar.**
+- *Pazardan alan hat* (`TradeLine.buy`). Fazla yetmezse hat eksiğini
+  çıkış şehrinin pazarından alıyor: şirketlerin girdi aldığı fiyattan
+  (spot × maliyet çarpanı), bedeli varış şehrinden. Kasa önce ucuz olana,
+  fazlaya yetiyor. Çıkış şehrinin defteri boş kalıyor: mal pazardan. Ayar
+  formda ve hattın satırında (`SET_LINE_BUY`).
+- *Planlı satış.* Hattın varışta pazara kalan malı spot × %95'le
+  satılıyor (`TRADE_LINE.saleShare`); üretim fazlası eskisi gibi %15
+  kırılıyor.
+- *Fark iki uçtan daralıyor.* Pazardan alınan, çıkış şehrinin tüketimine
+  giriyor. Şehrin fazlasını aşan kısmı fiyatı yükseltiyor: ihracat
+  baskısı, referans hacim kadar alım fiyatı %40 artırır (`EXPORT_DEPTH`,
+  fazla kırığının aynası). Varışta pazara kalan mal şehrin üretimine
+  giriyor ve fazla gibi fiyatı düşürüyor. Spot fiyat talep artışıyla
+  yükselmiyordu (denge kısıtı); tek istisna bu, yalnız hatlı holding'de.
+  Pazardan alım olmayan şehirde çarpan hiç devreye girmiyor.
+- *Rakipler de hat açıyor* (`TRADE_RIVAL`). Oyuncunun yolu pazara satışta
+  kârlıysa ve 30 gün öyle kalırsa varış şehrinin en zengin rakibi aynı
+  yolu bir kamyonla kopyalıyor; haberi geliyor. "Kârlı": birim kâr alış
+  fiyatının %8'ini geçiyor. Emlakçı (`landlord`) mal ticaretine girmiyor.
+  Rakip on günde bir kamyonunu gözden geçiriyor: kâr sürüyorsa bir
+  ekliyor (en çok 6), zarardaysa bir çekiyor, sıfırda hattı kapatıyor.
+  Malı çıkışın pazarından alıp varışın pazarına satıyor; kârı varış
+  şehrindeki defterine. Rakip rekabeti kapalı şehirde kopya yok.
+- *Arayüz.* Hatlar bölümünde açılır "Şehirlerin fiyatları" tablosu: her
+  malın şehirlerdeki fiyatı, en ucuz ve en pahalı şehir (renk ve sözle),
+  en kârlı yön ve birim kârı. Hattın satırında:
+  - birim hesabı: alış, varış fiyatı, nakliye, pazara ve ihtiyaca birim
+    kâr;
+  - pazardan alma ayarı;
+  - rakip: kopyaladıysa adı ve kamyonu, değilse yol kaç gündür kârlı ve
+    kopyaya kaç gün kaldı.
+
+  Formda "eksiği pazardan al" seçeneği, bugünkü birim kâr ve iki birim
+  bedeli (fazladan, pazardan). Üç dil; Türkçesi oyun ekranıyla iniyor.
+- *Kayıt.* Şema v9: hattın `buy`'ı ve `profitableDays`'i, holding'in
+  `rivalLines`'ı. v8 kaydı dönüştürülmeden açılıyor; yeni kayıt eski
+  sürümde açılmıyor.
+- *Sürüm 1.3.0.* Yenilikler'de dört madde, üç dilde.
+
+**Ölçüm** (`pnpm balance`, "Ticaretin fiyatı"). Laboratuvar: liman
+kentinden sanayi kentine kahve. Çıkışta yalnız terminal, olaylar kapalı;
+hatlı ve hatsız ikiz.
+
+| Laboratuvar | Tohum 1 · 7 · 42 |
+|---|---|
+| Kavurma tesisine 2 kamyon, rakipsiz | +693 · +958 · +1.321 ₺/gün |
+| Pazara satış, rakipsiz, tohum 1 | kamyon başına 1 kamyonda 273, 3 kamyonda 179 ₺/gün |
+| ― çıkışın fiyatı, ikize göre | ×1,018 · ×1,054 |
+| ― varışın fiyatı | ×0,981 · ×0,943 |
+| Rakipler açık, 1 kamyon | rakip 30. günde (Nova Holding, 3–6 kamyona çıkıyor) |
+| ― birim kâr: ilk 20 gün → 90.–150. gün | 1,23–1,37 → 0,18–0,23 ₺ |
+| ― oyuncunun kazancı | 230–342 → 55–68 ₺/gün |
+
+Holding: kurucu şehirde 250 gün vekil, ikinci şehirde 360 gün dört
+vekil, rakipler ve olaylar açık. Tüccar (`tradeStrategy`) yalnız
+terminal ve pazardan alan hatlarla oynuyor, yolu fiyat tablosundan
+seçiyor.
+
+| İkinci şehir | Boş | Tüccar | Standart | Standart + tüccar |
+|---|---|---|---|---|
+| Liman → sanayi | 71,6 M | 72,6 M | 127,7 M | 128,2 M (×1,004) |
+| Sanayi → başkent | 83,4 M | 85,5 M | 155,3 M | 162,1 M (×1,044) |
+| Liman → başkent | 74,2 M | 76,4 M | 141,4 M | 149,4 M (×1,056) |
+
+- *Ticaret tek başına bir yol değil.* Yalnız hatla oynayan ikinci şehir
+  holding'e 0,9–2,2 M ₺ katıyor; mağazalı oyun 56–72 M ₺, ticaret onun
+  %1,6–3,2'si. Değerli malların pazarı dar: silikonda referans günde
+  800–1.300, çipte 400–650 birim, bir kamyon 300 birim taşıyor. İki
+  terminalin bakımı (günde 1.040 ₺) ince pazarlarda kârın çoğunu yiyor.
+- *Ama oyuna eklenince kazandırıyor.* Başkente giden iki çiftte holding
+  %4–6 büyük: hatlar ikinci şehrin tesislerini ucuz hammaddeyle
+  (pamuk, silikon, deri) besliyor. Liman–sanayi çiftinde katkı küçük
+  (×1,004): kahvenin farkı büyük ama rakip kopyalayınca daralıyor.
+- Zafere ticaretle giden yol Tur 79'un işi: yeni hedef türü ("şehirler
+  arası satış") ve onu kazanan vekil. Tüccar vekil hazır.
+
+**Bulunanlar.**
+- *Pazara satış ilk tasarımda neredeyse hiç kâr etmiyordu.* Hattın
+  varışta pazara kalan malı üretim fazlası gibi %15 kırılıyordu: türlerin
+  %20–40'lık farkı nakliyeyle birlikte eriyordu. Rakip de malı pazara
+  sattığı için yolu hemen hiç kopyalamazdı. Hattın satışı planlı sayıldı,
+  kırığı %5. Fazlayı öbür şehre gönderip orada satmanın getirisi varış
+  pazarını doyurdukça kendiliğinden eriyor. Tur 77'nin pamuk hattının
+  kazancı bu yüzden biraz arttı (1.314 · 1.350 · 1.802 → 1.443 · 1.480 ·
+  1.931 ₺/gün); buğday ve kumaş hattı aynı.
+- *İhracat baskısı olmadan fark yalnız bir uçtan daralıyordu.* Kendi
+  ihtiyacına giden hat varış fiyatını düşürmüyor: mal, pazardan
+  alınacağın yerini tutuyor. Çıkışta da fiyat talep artışıyla
+  yükselmiyordu. Rakip kopyalasa da ucuz kaynak hiç daralmazdı. Artık
+  pazardan alınan, şehrin fazlasını aşınca fiyatı yükseltiyor: tek kamyon
+  silikon sanayi kentinde fiyatı %15 artırıyor (referans 812).
+- *Rakibin kopyası ilk sürümde 20. gündeydi, emlakçı da kopyalıyordu.*
+  20 günde ilk olanın kârlı penceresi kısaydı; 30 güne çıktı. Kopyalayan
+  ilk denemede Kule Gayrimenkul'dü: emlakçılar artık mal ticaretine
+  girmiyor. Laboratuvarda rakip rekabeti kapalıyken de kopyalıyordu:
+  rakip hattı artık `npcCompetition`'a uyuyor.
+- *Almanca denetim hatların sözlüğünü okumuyordu.* `tools/i18n-check.mjs`
+  arayüzün hat sözlüğünü (`ui/i18n/de/trade.ts`) listesinde tutmuyordu;
+  Tur 77'nin metinleri denetimden geçmemişti. Liste tamamlandı: 50
+  anahtar, uyarısız.
+
+**Doğrulama.**
+- Birim testi 959 (9 yeni, `packages/core/test/trade.test.ts`):
+  - pazardan alan hat üretimsiz, çıkışın defteri boş;
+  - fazla önce, kasa önce ucuz olana;
+  - ihracat baskısı, hatsız mal ve şehir aynı;
+  - planlı satış;
+  - rakibin kopyası: eşik, en zengin, emlakçı değil, haber; rakip
+    rekabeti kapalıyken yok;
+  - rakibin akışı, defteri, büyümesi; fark kapanınca çekilmesi;
+  - `SET_LINE_BUY`, birim hesabı, fiyat tablosu;
+  - kayıt ve v8 göçü, kapatılan şehrin rakip hatları.
+- Denge testi 397 kontrol (36 bölüm). "Ticaretin fiyatı" 5/5, 52 sn;
+  "Şehirler arası hat" yine 5/5.
+- Tarayıcı testi "Ticaretin fiyatı" 11/11:
+  - düzenek; tablo kapalı başlıyor, başlığı kârlı yönü sayıyor;
+  - tablo: 15 satır, en ucuz ve en pahalı, en kârlı yön;
+  - formda birim kâr ve iki birim bedeli;
+  - pazardan alan hattın satırı;
+  - kopyaya kalan gün; rakibin kopyası ve haberi;
+  - ayarın kapanışı; telefon genişliği; konsol temiz.
+- Lig izi `a5ded51fb01e62a5`, değişmedi.
+- Paket bütçesi tamam: ana parça 68,9 KB (bütçe 70), kurulumun yolu 146,2
+  KB (bütçe 150).
+
+**Kalan.** Tur 79: ticaretle zafer. Yeni hedef türü ("şehirler arası
+satış") ve iki senaryo; ticaret zafere bir yol, onu kazanan bir vekil
+(Tur 61'in yöntemiyle; tüccar vekil `tradeStrategy`).
+
 ---
 
 ## 3. Ölçülen durum
@@ -9385,11 +9535,11 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi). Senaryo şehirlerinde gün 3–17 ms (`pnpm dayperf`, Tur 43) |
-| Birim testi | **950 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de, Tur 52'de sunucuda tekrar, Tur 53'te haftanın kuralı ve günün koşusu, Tur 54'te hayalet eğri, Tur 55'te davetli ligler, Tur 56'da taşıma sözleşmeleri, Tur 57'de enerji, Tur 58'de gayrimenkul, Tur 59'da rakiplerin hafızası, Tur 60'ta senaryo paketi II, Tur 61'de şirketin yolu, Tur 62'de hava ve mevsimin görünümü, Tur 63'te önemli anlar, Tur 64'te şehir kartı, Tur 65'te telefon performansı, Tur 66'da masaüstü sürümü, Tur 67'de içerik paketleri, Tur 68'de senaryo editörü, Tur 69'da üçüncü dil, Tur 70'te Steam başarımları, Tur 71'de canlı sunucunun simülasyon izi ve Steam Deck'in varsayılanları, Tur 72'de kumanda, Tur 73'te Workshop ve skor tabloları, Tur 74'te sürüm, yenilikler ve hata raporu, Tur 75'te kaydın açılmama nedeni ve yeni sürümün kaydı, Tur 76'da şehrin türü, Tur 77'de şehirler arası hat); Rust tarafı 32 test (`cargo test`, `apps/desktop/src-tauri`; Steam'li derlemede 29) |
-| Denge testi | **392 kontrol, hepsi geçiyor** (35 bölüm, süreleriyle; ~21 dk; Tur 76'da "Şehir türleri", Tur 77'de "Şehirler arası hat") |
-| Tarayıcı testi | **828 kontrol** (Tur 77'de 11 yeni, Tur 76'da 11, Tur 75'te 11; Tur 74'teki 790 lig sunucusu bölümünün yarıda kalan bir koşusundan sayılmıştı, bölüm 24 kontrol), son tam koşu 827/828 (Tur 77; kalan kontrol kayıt biçimini sabit 7 bekliyordu, düzeltildi, bölümü tek başına 11/11; Tur 76'da 817/817; Tur 75'te 805/806, yük altında düşen müzik kontrolü tek başına geçti; Tur 69'da 719/719), 0 konsol hatası (bu yavaş makinede ~59 dk, CI'da `main`'de ~64 dk); duman koşusu 132 (CI'da ~5 dk, rehber dahil) |
+| Birim testi | **959 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de, Tur 52'de sunucuda tekrar, Tur 53'te haftanın kuralı ve günün koşusu, Tur 54'te hayalet eğri, Tur 55'te davetli ligler, Tur 56'da taşıma sözleşmeleri, Tur 57'de enerji, Tur 58'de gayrimenkul, Tur 59'da rakiplerin hafızası, Tur 60'ta senaryo paketi II, Tur 61'de şirketin yolu, Tur 62'de hava ve mevsimin görünümü, Tur 63'te önemli anlar, Tur 64'te şehir kartı, Tur 65'te telefon performansı, Tur 66'da masaüstü sürümü, Tur 67'de içerik paketleri, Tur 68'de senaryo editörü, Tur 69'da üçüncü dil, Tur 70'te Steam başarımları, Tur 71'de canlı sunucunun simülasyon izi ve Steam Deck'in varsayılanları, Tur 72'de kumanda, Tur 73'te Workshop ve skor tabloları, Tur 74'te sürüm, yenilikler ve hata raporu, Tur 75'te kaydın açılmama nedeni ve yeni sürümün kaydı, Tur 76'da şehrin türü, Tur 77'de şehirler arası hat, Tur 78'de ticaretin fiyatı); Rust tarafı 32 test (`cargo test`, `apps/desktop/src-tauri`; Steam'li derlemede 29) |
+| Denge testi | **397 kontrol, hepsi geçiyor** (36 bölüm, süreleriyle; ~22 dk; Tur 76'da "Şehir türleri", Tur 77'de "Şehirler arası hat", Tur 78'de "Ticaretin fiyatı") |
+| Tarayıcı testi | **839 kontrol** (Tur 78'de 11 yeni, Tur 77'de 11, Tur 76'da 11, Tur 75'te 11; Tur 74'teki 790 lig sunucusu bölümünün yarıda kalan bir koşusundan sayılmıştı, bölüm 24 kontrol), son tam koşu 827/828 (Tur 77; kalan kontrol kayıt biçimini sabit 7 bekliyordu, düzeltildi, bölümü tek başına 11/11; Tur 76'da 817/817; Tur 75'te 805/806, yük altında düşen müzik kontrolü tek başına geçti; Tur 69'da 719/719), 0 konsol hatası (bu yavaş makinede ~59 dk, CI'da `main`'de ~64 dk); duman koşusu 132 (CI'da ~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + paket bütçesi (Tur 46; Tur 48'den beri hizmet çalışanı ve manifest de) + duman oynanışı; `main`'de tam oynanış (Tur 72'den beri 120 dk sınırı); masaüstüne dokunan PR'da Rust testleri, sürüm derlemesi ve gerçek pencerede 38 kontrol (Tur 66'da 17) |
-| Kapsam | 40 bina · 25 ürün · 7 kategori · 8 rakip profili · 10 CEO · 22 olay (11 şehir + 11 sektör) · 3 kriz · 12 karar kartı · 70 rakip sözü · 4 mizaç · 48 ilişki sözü · 5 fırsat balonu · 8 görev türü · 4 mevsim · 6 hava · 9 moda ürünü · 17 şehir yapısı (6 siluet) · 6 şehir projesi · 10 senaryo · 4 ek kural · 5 yol · 4 şehir türü · şehirler arası hat (6'ya kadar) · 29 rozet |
+| Kapsam | 40 bina · 25 ürün · 7 kategori · 8 rakip profili · 10 CEO · 22 olay (11 şehir + 11 sektör) · 3 kriz · 12 karar kartı · 70 rakip sözü · 4 mizaç · 48 ilişki sözü · 5 fırsat balonu · 8 görev türü · 4 mevsim · 6 hava · 9 moda ürünü · 17 şehir yapısı (6 siluet) · 6 şehir projesi · 10 senaryo · 4 ek kural · 5 yol · 4 şehir türü · şehirler arası hat (6'ya kadar; pazardan alan, rakipleri kopyalayan) · 29 rozet |
 
 ### Render (Tur 6 sonrası)
 

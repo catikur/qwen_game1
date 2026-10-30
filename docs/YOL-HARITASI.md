@@ -244,7 +244,8 @@ kullanıcı Tur 76'dan önce değiştirmedi. Kayıt biçimi Tur 76'da değişti
 üstüne de yazmıyor. Sürüm numarası 1.1.0 (yeni içerik, eski kayıtlar
 açılıyor). Lig her zaman dengeli şehirde; Tur 76 lig izini değiştirmedi.
 Tur 77'de şema v8 (hatlar ve yoldaki mal), sürüm 1.2.0; hat yalnız
-holding'de, lig izi yine aynı.
+holding'de, lig izi yine aynı. Tur 78'de şema v9 (pazardan alan hat,
+rakip hatları), sürüm 1.3.0; lig izi yine aynı.
 Lig izini değiştiren tur (hat ve ticaret dengeli şehre de dokunursa) lig
 sunucusunun dağıtımını istiyor (`docs/YAYIN.md` §4).
 
@@ -268,11 +269,19 @@ sunucusunun dağıtımını istiyor (`docs/YAYIN.md` §4).
   nakliyeyi ödüyor, mal yolu bitince havuza giriyor. Holding'e günde
   buğday hattında 660–1.430 ₺ (6 kamyon), kumaşta 2.300–2.900 ₺ (1
   kamyon); türlü şehir çiftinde daha çok. Şema v8, sürüm 1.2.0; lig izi
-  aynı. — bu PR
+  aynı. — bitti (#107)
 - **78 · Ticaretin fiyatı.** Şehirlerin pazar fiyatları ayrışıyor: bir
   şehrin bol hammaddesi öbüründe kıt. Fiyat farkı ve taşıma bedeli kâr
   ediyor. Rakipler de hat açıyor, fark daralıyor. Denge testinde yeni
-  bölüm; ticaret tek başına bir yol mu, ölçülüyor.
+  bölüm; ticaret tek başına bir yol mu, ölçülüyor. Yapıldı: hat fazla
+  yetmezse eksiğini çıkışın pazarından alıyor (üretimsiz ticaret);
+  varışta pazara kalan mal planlı satış (%5 kırık). Pazardan alınan
+  çıkışın fiyatını yükseltiyor, varışa kalan düşürüyor. Rakip kârlı yolu
+  30 gün sonra kopyalıyor: birim kâr 1,23–1,37'den 0,18–0,23 ₺'ye iniyor.
+  Şehirlerin fiyat tablosu ve hattın birim hesabı panelde. Ölçüm:
+  ticaret tek başına bir yol değil (ikinci şehirde mağazalı oyunun
+  %1,6–3,2'si), standart oyuna eklenince başkente giden çiftlerde
+  holding'i %4–6 büyütüyor. Şema v9, sürüm 1.3.0; lig izi aynı. — bu PR
 - **79 · Ticaretle zafer.** Yeni hedef türü ("şehirler arası satış") ve
   iki senaryo. Ticaret zafere bir yol: onu kazanan bir vekil (Tur 61'in
   yöntemiyle).
