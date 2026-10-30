@@ -920,6 +920,21 @@ export function ActiveEvents(): ReactElement | null {
           </button>
         );
         break;
+      case 'tradeLoss':
+        // Zarar eden hat (Tur 79): kamyon ve kapatma Şehirler panelinin Hatlar bölümünde.
+        chip = (
+          <button
+            type="button"
+            className={`event-chip contract-chip tone-bad urgency-${item.urgency}`}
+            onClick={() => setView({ openPanel: 'cities' })}
+            title={t('trade.agenda.lossTitle')}
+            data-agenda-trade-loss={item.key}
+          >
+            <span className="contract-label">{t('trade.agenda.loss')}</span>
+            {item.label}
+          </button>
+        );
+        break;
       case 'fuelLock':
         // Enerji krizi geliyor (Tur 57): yakıtı sabitleme düğmesi santralin panelinde.
         chip = (

@@ -180,6 +180,7 @@ export const commands = {
   'core.agenda.freightOffer': '{company} · {count} mağaza · günde ~{fee}',
   'core.agenda.freightOfferChallenger': '{company} · {count} mağaza · günde ~{fee} · en yakın rakibin',
   'core.agenda.fuelLock': 'Enerji krizi geliyor: santrallerinin yakıtını sabitle',
+  'core.agenda.tradeLoss': 'Hat zararda: {good}, {from} → {to} · bugün {loss}',
   'core.agenda.renewalRequest': 'Dönüşüm başvurun: belediye ihaleyi açacak',
   'core.agenda.renewalPlot': 'Dönüşüm parselin boş: proje kur',
   'core.agenda.fad': '{good} modası',

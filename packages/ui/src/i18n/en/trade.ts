@@ -56,5 +56,8 @@ export const trade: Record<keyof typeof tr, string> = {
   'trade.prices.none': 'none',
   'trade.prices.cheap': 'cheapest',
   'trade.prices.dear': 'dearest',
+  'trade.lines.profit': 'Today’s profit: {profit} (sale at the destination price, minus goods and freight)',
+  'trade.agenda.loss': 'Losing line',
+  'trade.agenda.lossTitle': 'Pull trucks or close the line: Cities panel, Lines',
   'trade.freightDesk': '{trucks|# truck|# trucks} of the fleet run lines between cities (Cities panel).',
 };

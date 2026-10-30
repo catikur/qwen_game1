@@ -54,5 +54,8 @@ export const trade = {
   'trade.prices.none': 'yok',
   'trade.prices.cheap': 'en ucuz',
   'trade.prices.dear': 'en pahalı',
+  'trade.lines.profit': 'Bugünkü kâr: {profit} (varışın fiyatıyla satış, eksi mal ve nakliye)',
+  'trade.agenda.loss': 'Hat zararda',
+  'trade.agenda.lossTitle': 'Kamyon çek ya da hattı kapat: Şehirler paneli, Hatlar',
   'trade.freightDesk': 'Filodan {trucks} kamyon şehirler arası hatlarda (Şehirler paneli).',
 } as const;

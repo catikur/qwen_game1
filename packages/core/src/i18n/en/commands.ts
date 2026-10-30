@@ -182,6 +182,7 @@ export const commands: Record<keyof typeof trCommands, string> = {
   'core.agenda.freightOffer': '{company} · {count|# store|# stores} · ~{fee} a day',
   'core.agenda.freightOfferChallenger': '{company} · {count|# store|# stores} · ~{fee} a day · your closest rival',
   'core.agenda.fuelLock': 'Energy crisis ahead: lock your plants’ fuel',
+  'core.agenda.tradeLoss': 'Line losing money: {good}, {from} → {to} · {loss} today',
   'core.agenda.renewalRequest': 'Renewal application: the council will open the auction',
   'core.agenda.renewalPlot': 'Your renewal plot is empty: build a project',
   'core.agenda.fad': '{good} fad',

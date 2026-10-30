@@ -1,6 +1,9 @@
 import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { agenda } from '../src/agenda';
+import { foundCity } from '../src/holding';
+import { lineDailyCost, lineProfitToday } from '../src/systems/trade';
+import type { TradeLine } from '../src/types';
 import { pushNews } from '../src/news';
 import { createNewGame } from '../src/worldgen';
 
@@ -79,5 +82,29 @@ describe('gündem: lig çipi (Tur 53)', () => {
     const done = createNewGame({ companyName: 'Lig AŞ', league: { weekId: '2026-10-22' } });
     done.league!.finishedDay = 90;
     assert.equal(agenda(done).find((item) => item.kind === 'league')?.label, 'Günün koşusu · tablo');
+  });
+
+  test('zarar eden hat gündemde: kârlı hat yok, boş giden kamyondan büyük zarar karar zamanı (Tur 79)', () => {
+    const first = createNewGame({ seed: 11, companyName: 'Hat AŞ' });
+    const root = foundCity(first, 'standard', 3_000_000);
+    const away = root.holding!.dormant[0]!.state;
+    const line: TradeLine = { id: 'line-1', from: away.meta.seed, to: root.meta.seed, goodId: 'wheat', trucks: 2, transitDays: 4, fromTerminalId: 'yok', toTerminalId: 'yok' };
+    root.holding!.lines = [line];
+    const spot = root.market.spot['wheat']!;
+    // Kârlı gün: çip yok.
+    line.last = { units: 600, goods: 600 * spot * 0.5, freight: lineDailyCost(line) };
+    assert.ok(lineProfitToday(root, line)! > 0);
+    assert.ok(!agenda(root).some((item) => item.kind === 'tradeLoss'));
+    // Boş giden kamyon: zarar nakliye kadar, dikkat.
+    line.last = { units: 0, goods: 0, freight: lineDailyCost(line), short: 'surplus' };
+    const idle = agenda(root).find((item) => item.kind === 'tradeLoss')!;
+    assert.equal(idle.urgency, 1);
+    assert.equal(idle.tone, 'bad');
+    assert.match(idle.label, /Hat zararda: Buğday/);
+    // Mal varışın fiyatından pahalıya: karar zamanı.
+    line.last = { units: 600, goods: 600 * spot * 2, freight: lineDailyCost(line) };
+    const loss = agenda(root).find((item) => item.kind === 'tradeLoss')!;
+    assert.equal(loss.urgency, 2);
+    assert.equal(loss.key, 'tradeLoss:line-1');
   });
 });

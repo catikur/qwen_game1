@@ -56,5 +56,8 @@ export const trade: Record<keyof typeof tr, string> = {
   'trade.prices.none': 'keine',
   'trade.prices.cheap': 'am günstigsten',
   'trade.prices.dear': 'am teuersten',
+  'trade.lines.profit': 'Gewinn heute: {profit} (Verkauf zum Preis am Ziel, minus Ware und Fracht)',
+  'trade.agenda.loss': 'Linie im Minus',
+  'trade.agenda.lossTitle': 'Lkw abziehen oder Linie schließen: Fenster „Städte“, Linien',
   'trade.freightDesk': '{trucks|# Lkw der Flotte fährt|# Lkw der Flotte fahren} Linien zwischen Städten (Fenster „Städte“).',
 };

@@ -18,6 +18,7 @@ import { activeFad } from './systems/living';
 import { projectStandings, projectsEnabled } from './systems/projects';
 import { consortiumEnabled, consortiumStake } from './systems/consortium';
 import { scenarioDefOf, scenarioProgress } from './systems/scenario';
+import { cityBySeed, lineDailyCost, lineProfitToday, tradeLines } from './systems/trade';
 import { formatMoney, monthName } from './selectors';
 import { tc } from './i18n';
 import './i18n/gameTr';
@@ -45,6 +46,7 @@ export type AgendaKind =
   | 'contract'
   | 'freightOffer'
   | 'fuelLock'
+  | 'tradeLoss'
   | 'renewal'
   | 'auction'
   | 'unlock'
@@ -276,6 +278,28 @@ export function agenda(state: GameState): AgendaItem[] {
       }),
       tone: 'neutral',
       tileId: state.buildings[offer.terminalId]?.tileId,
+    });
+  }
+
+  // Zarar eden hat (Tur 79): bugünkü seferi malın ve nakliyenin bedelini
+  // çıkarmadı. Fark kapanınca (rakip kopyaladı, pazar doydu) oyuncu kamyon
+  // çekmeli ya da hattı kapatmalı; boş giden kamyonun bedelinden büyük
+  // zarar karar zamanı. Çip Şehirler paneline götürüyor.
+  for (const line of tradeLines(state)) {
+    const profit = lineProfitToday(state, line);
+    if (profit === undefined || profit >= 0) continue;
+    items.push({
+      kind: 'tradeLoss',
+      key: `tradeLoss:${line.id}`,
+      urgency: -profit > lineDailyCost(line) ? 2 : 1,
+      daysLeft: null,
+      label: tc('core.agenda.tradeLoss', {
+        good: GOOD_BY_ID[line.goodId]?.name ?? line.goodId,
+        from: cityBySeed(state, line.from)?.cityName ?? '',
+        to: cityBySeed(state, line.to)?.cityName ?? '',
+        loss: formatMoney(-profit),
+      }),
+      tone: 'bad',
     });
   }
 

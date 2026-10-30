@@ -636,8 +636,8 @@ export const SCENARIOS: ScenarioDef[] = [
     difficulty: 'normal',
     preludeDays: 120,
     days: 300,
-    goal: { kind: 'trade', target: 400_000 },
-    stars: { metric: 'days', two: 240, three: 180 },
+    goal: { kind: 'trade', target: 1_000_000 },
+    stars: { metric: 'days', two: 260, three: 200 },
     setup: {
       cash: 2_000_000,
       outlets: ['cafe', 'supermarket'],
@@ -670,8 +670,8 @@ export const SCENARIOS: ScenarioDef[] = [
     preludeDays: 120,
     modifiers: ['tight_credit'],
     days: 360,
-    goal: { kind: 'trade', target: 800_000 },
-    stars: { metric: 'days', two: 300, three: 240 },
+    goal: { kind: 'trade', target: 1_000_000 },
+    stars: { metric: 'days', two: 300, three: 220 },
     setup: {
       cash: 1_500_000,
       outlets: ['cafe', 'supermarket'],
