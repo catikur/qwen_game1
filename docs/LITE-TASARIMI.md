@@ -598,7 +598,7 @@ iCloud gibi Apple servisleri ücretli üyelik istiyor; B ücretsiz imzayla da
     - hesap satırı: adı değiştir, hesabı sil (onaylı; App Store 5.1.1(v)).
   - Sunucu adresi yokken "yakında"; haftalık puan yine sayılıyor.
 - **Game Center:** `cf.lite.stars` tablosuna şehir satılınca yıldız. Info.plist
-  `LiteGameCenter` ücretli üyelik gelene kadar kapalı.
+  `LiteGameCenter` L9a'dan beri açık (yetkisiyle birlikte).
 - **Kurulum:** kullanıcı adımları `ios-lite/README.md` → "Online lig (L8)".
   Dağıtım iş akışı `.github/workflows/lite-league.yml`; sırlar yokken atlanıyor.
 

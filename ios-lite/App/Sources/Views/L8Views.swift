@@ -147,7 +147,7 @@ struct LeagueSheet: View {
                         case .privateLeagues: privateLeagues(league)
                         case .stars: starsBoard(league)
                         }
-                        if !league.needsName { account(league) }
+                        if league.needsName { unnamedAccount(league) } else { account(league) }
                     }
                     if league.status != .unconfigured {
                         linkCard(league)
@@ -414,6 +414,29 @@ struct LeagueSheet: View {
             .font(Theme.text(12, .heavy))
             .foregroundStyle(Theme.ink)
             .disabled(league.busy)
+            Button(L10n.t("league.delete")) {
+                confirmDelete = true
+            }
+            .font(Theme.text(12, .heavy))
+            .foregroundStyle(Theme.bad)
+            .disabled(league.busy)
+            .accessibilityIdentifier("league-delete")
+        }
+        .glassCard(padding: 10)
+    }
+
+    /// Adsız hesap (adsız bir web hesabını kodla alan cihaz): adı yok ama sunucuda
+    /// kaydı var; silinebilmeli (Tur 81, mağazaların hesap silme kuralı).
+    private func unnamedAccount(_ league: LeagueService) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: "person.crop.circle.fill")
+                .font(.system(size: 20))
+                .foregroundStyle(Theme.muted)
+            Text(L10n.t("league.unnamedAccount"))
+                .font(Theme.text(12))
+                .foregroundStyle(Theme.muted)
+                .lineLimit(2)
+            Spacer(minLength: 4)
             Button(L10n.t("league.delete")) {
                 confirmDelete = true
             }
