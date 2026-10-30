@@ -151,6 +151,13 @@ describe('şehrin türü (Tur 76)', () => {
     const portFounder = createNewGame({ seed: 31, cityType: 'port' });
     const second = foundCity(JSON.parse(JSON.stringify(portFounder)) as GameState, 'standard', 2_000_000, 'port');
     assert.equal(rivalsOf(second).filter((id) => rivalsOf(portFounder).includes(id)).length, 0);
+    // Dengeli kurucu → liman → ikinci liman: kayma türün şehir sayısından
+    // (açılan şehir sayısından değil; 8 kayma sekizli kadroda başa sarardı).
+    const thirdPort = foundCity(JSON.parse(JSON.stringify(port)) as GameState, 'standard', 1_000_000, 'port');
+    assert.equal(rivalsOf(thirdPort).filter((id) => rivalsOf(port).includes(id)).length, 0, rivalsOf(thirdPort).join());
+    // Limandan dengeliye: dengeli kurucunun dördüyle başlamıyor.
+    const backHome = foundCity(JSON.parse(JSON.stringify(port)) as GameState, 'standard', 1_000_000);
+    assert.equal(rivalsOf(backHome).filter((id) => rivalsOf(founder).includes(id)).length, 0, rivalsOf(backHome).join());
   });
 
   test('kayıt: türlü şehir kaydedilip açılıyor; v6 kaydı dengeli şehir olarak v7e taşınıyor', () => {

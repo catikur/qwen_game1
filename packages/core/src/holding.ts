@@ -210,6 +210,19 @@ export function foundCity(state: GameState, citySize: CitySizeId, amount: number
   state.cityName ??= cityNameAt(seed, 0);
   recomputeNetWorth(state);
 
+  /*
+   * Rakip kadrosu katalogda kayıyor: yeni şehir aynı türün öbür şehirleriyle
+   * aynı dört rakiple başlamasın. Dengeli şehirlerin holdingi eskisi gibi
+   * açılan şehir sayısıyla kayıyor (Tur 22). Türlü şehrin kadrosu türden
+   * (Tur 76), kayma o türden kaç şehir olduğundan: başka türden bir şehirden
+   * açılan şehir türün kendi dördüyle başlıyor, ikinci liman ilkinin
+   * dördünü atlıyor.
+   */
+  const type = cityType ?? 'balanced';
+  const cities = [state, ...(state.holding?.dormant ?? []).map((city) => city.state)];
+  const sameType = cities.filter((city) => (city.cityType ?? 'balanced') === type).length;
+  const rivalOffset = type === 'balanced' && cities.every((city) => !city.cityType) ? opened * 4 : sameType * 4;
+
   const next = createNewGame({
     seed: citySeed(seed, opened),
     citySize,
@@ -221,14 +234,8 @@ export function foundCity(state: GameState, citySize: CitySizeId, amount: number
     ceoId: player.ceoId,
     startingCash: amount,
     startingBrand: brand,
-    /*
-     * Rakip kadrosu katalogda kayıyor: ikinci şehir aynı dört rakiple
-     * başlamasın. Türlü şehrin kadrosu türden (Tur 76); başka türden bir
-     * şehirden açılınca zaten başka rakiplerle başlıyor, kaydırmak türün
-     * rakiplerini atlatırdı. Aynı türün ikinci şehri kayıyor.
-     */
-    ...(cityType && cityType !== 'balanced' ? { cityType } : {}),
-    rivalOffset: (cityType ?? 'balanced') === (state.cityType ?? 'balanced') ? opened * 4 : 0,
+    ...(type !== 'balanced' ? { cityType: type } : {}),
+    rivalOffset,
   });
   next.flags = { ...state.flags };
   next.cityName = name;

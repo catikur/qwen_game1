@@ -9027,9 +9027,11 @@ aynı dört rakiple açılıyordu. İkinci şehrin oyuncuya gösterdiği tek yen
   hammadde, kural, rakipler, eşik. Lig ve senaryo kurulumunda seçici yok.
 - *Holding.* Yeni şehir formunda tür seçiliyor. Açılış haberi "Şehrin
   türü: Başkent" diyor. Kurucu şehrin türü holdingde saklanıyor
-  (`foundedCityType`); kariyerde koşunun özetinde görünüyor. Aynı türde
-  açılan şehirde kadro eskisi gibi kayıyor, rakipler şehirden şehre
-  farklı. Başka türde açılan şehre o türün kendi kadrosu geliyor.
+  (`foundedCityType`); kariyerde koşunun özetinde görünüyor. Kadro
+  holdingde o türden kaç şehir olduğuna göre kayıyor: aynı türün şehirleri
+  aynı dört rakiple başlamıyor, başka türden açılan şehir türün kendi
+  dördüyle başlıyor. Yalnız dengeli şehirlerden oluşan holding eskisi gibi
+  açılan şehir sayısıyla kayıyor (Tur 22).
 - *Şehirde.* Üst barda şehrin adının yanında türü yazıyor (dengelide
   yok). Üstüne gelince türün tanıtımı çıkıyor.
 - *Kayıt.* Şema v7 (`cityType`, `foundedCityType`). v6 kayıtları
