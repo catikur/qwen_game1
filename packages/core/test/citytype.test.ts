@@ -30,6 +30,10 @@ describe('şehrin türü (Tur 76)', () => {
     assert.equal(typed.cityType, undefined);
     const strip = (s: GameState) => JSON.stringify({ ...s, meta: undefined });
     assert.equal(strip(typed), strip(plain));
+    // Bilinmeyen tür (bozuk komut ya da kayıt) dengeli şehir.
+    const unknown = createNewGame({ seed: 4, cityType: 'harbor' as never });
+    assert.equal(unknown.cityType, undefined);
+    assert.equal(strip(unknown), strip(createNewGame({ seed: 4 })));
   });
 
   test('her tür iki boyutta da tam bir yerleşim; üretim arazisi türden', () => {

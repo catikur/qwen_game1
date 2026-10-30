@@ -1,4 +1,4 @@
-import { CITY_NAMES, CONSUMER_CATEGORIES, HOLDING, getCityType } from '@capital/content';
+import { CITY_NAMES, CONSUMER_CATEGORIES, HOLDING, getCityType, isCityTypeId } from '@capital/content';
 import type { CitySizeId, CityTypeId } from '@capital/content';
 import { simulateCityDay } from './day';
 import { tc } from './i18n';
@@ -218,7 +218,7 @@ export function foundCity(state: GameState, citySize: CitySizeId, amount: number
    * açılan şehir türün kendi dördüyle başlıyor, ikinci liman ilkinin
    * dördünü atlıyor.
    */
-  const type = cityType ?? 'balanced';
+  const type = isCityTypeId(cityType) ? cityType : 'balanced';
   const cities = [state, ...(state.holding?.dormant ?? []).map((city) => city.state)];
   const sameType = cities.filter((city) => (city.cityType ?? 'balanced') === type).length;
   const rivalOffset = type === 'balanced' && cities.every((city) => !city.cityType) ? opened * 4 : sameType * 4;

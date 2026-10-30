@@ -15,6 +15,7 @@ import {
   getCityType,
   getDifficulty,
   hasModifier,
+  isCityTypeId,
   normalizeModifiers,
   rootStructureOf,
 } from '@capital/content';
@@ -251,7 +252,7 @@ export function createNewGame(input: NewGameOptions = {}): GameState {
   const ceo = getCeoModifiers(ceoId);
 
   // Şehrin türü (Tur 76): ligde yok sayılıyor, herkes dengeli şehirde.
-  const cityType = !input.league && options.cityType && options.cityType !== 'balanced' ? options.cityType : undefined;
+  const cityType = !input.league && isCityTypeId(options.cityType) && options.cityType !== 'balanced' ? options.cityType : undefined;
   const typeDef = getCityType(cityType);
   const rule = typeDef.rule;
   const layout =
