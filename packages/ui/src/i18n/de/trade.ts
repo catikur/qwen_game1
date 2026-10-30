@@ -28,7 +28,7 @@ export const trade: Record<keyof typeof tr, string> = {
   'trade.lines.open.to': 'Nach',
   'trade.lines.open.good': 'Ware',
   'trade.lines.open.trucks': 'Lkw',
-  'trade.lines.open.quote': 'Heute übrig in der Ausgangsstadt: {surplus} Einheiten · nicht durch eigene Produktion der Zielstadt gedeckt: {need} Einheiten',
+  'trade.lines.open.quote': 'Heute übrig in der Ausgangsstadt: {surplus} Einheiten · in der Zielstadt noch ungedeckt: {need} Einheiten (offene Linien dieser Ware abgezogen)',
   'trade.lines.open.terms':
     'Die Linie fährt {capacity} Einheiten am Tag · {days|# Tag|# Tage} unterwegs · {cost} am Tag · Stückpreis {price} (Überschusspreis am Start; Marktpreis am Ziel {spot})',
   'trade.lines.open.go': 'Linie eröffnen',

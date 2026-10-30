@@ -134,9 +134,9 @@ export interface LineQuote {
   transitDays: number;
   capacity: number;
   dailyCost: number;
-  /** Çıkış şehrinde bugün kendi ihtiyacından artan (birim). */
+  /** Çıkış şehrinde bugün kendi ihtiyacından ve aynı malın açık hatlarından artan (birim). */
   surplus: number;
-  /** Varış şehrinde bugün kendi üretiminin karşılamadığı (birim): hattın yerini tutabileceği alım. */
+  /** Varış şehrinde bugün kendi üretiminin ve aynı malı getiren hatların karşılamadığı (birim). */
   need: number;
   /** Fazlayı ve açığı karşılayan kamyon (en az 1, boştaki kamyonla sınırlı). */
   suggestedTrucks: number;
@@ -159,9 +159,24 @@ export function lineQuote(root: GameState, from: number, to: number, goodId: str
   const terminal = source ? originTerminal(source) : undefined;
   const free = source && terminal ? freeTrucks(source, terminal) : 0;
   const good = GOOD_BY_ID[goodId];
-  const surplus = source && good ? exportableSurplus(source, goodId) : 0;
+  const lines = tradeLines(root);
+  /*
+   * Açık hatların payı (Bugbot #107). Sabah planı fazlayı önce açılan
+   * hatlara veriyor: yeni hat çıkışta onların kapasitesinden kalanı
+   * yükleyebilir. Varışta da aynı malı getiren hatların taşıdığı (dünkü
+   * seferi, ilk günde kapasitesi) açıktan düşülüyor. Düşülmeseydi form ikinci
+   * hatta boş giden kamyon önerirdi.
+   */
+  let claimed = 0;
+  let delivered = 0;
+  for (const line of lines) {
+    if (line.goodId !== goodId) continue;
+    if (line.from === from) claimed += lineCapacity(line.trucks);
+    if (line.to === to) delivered += line.last?.units ?? lineCapacity(line.trucks);
+  }
+  const surplus = source && good ? Math.max(0, exportableSurplus(source, goodId) - claimed) : 0;
   const flow = target && good ? ownGoodFlow(target, goodId) : { produced: 0, consumed: 0 };
-  const need = Math.max(0, flow.consumed - flow.produced);
+  const need = Math.max(0, flow.consumed - flow.produced - delivered);
   const base = {
     transitDays,
     capacity: lineCapacity(trucks),
@@ -180,7 +195,6 @@ export function lineQuote(root: GameState, from: number, to: number, goodId: str
   if (!source || !target) return refuse(tc('core.holding.noSuchCity'));
   if (source.gameOver || target.gameOver) return refuse(tc('core.trade.lostCity'));
   if (!good || !TRADED_GOODS.some((entry) => entry.id === goodId)) return refuse(tc('core.trade.badGood'));
-  const lines = tradeLines(root);
   if (lines.length >= TRADE_LINE.maxLines) return refuse(tc('core.trade.maxLines', { max: TRADE_LINE.maxLines }));
   if (lines.some((line) => line.from === from && line.to === to && line.goodId === goodId)) return refuse(tc('core.trade.duplicate'));
   if (lines.some((line) => line.goodId === goodId && (line.to === from || line.from === to))) return refuse(tc('core.trade.chain'));

@@ -183,6 +183,36 @@ describe('şehirler arası hat (Tur 77)', () => {
     assert.ok(!solo.dispatch({ type: 'OPEN_LINE', from: 1, to: 2, goodId: 'wheat', trucks: 1 }).ok);
   });
 
+  test('teklif açık hatların payını düşüyor: çıkışta kalan fazla, varışta kalan açık (Bugbot #107)', () => {
+    // Üç şehir: iki buğday çiftliği (A, B), bir değirmen (C, günde 1.800 buğday).
+    const first = createNewGame({ seed: 11, companyName: 'Hat AŞ' });
+    first.companies[first.playerCompanyId]!.cash += 9_000_000;
+    const second = foundCity(first, 'standard', 3_000_000);
+    second.companies[second.playerCompanyId]!.cash += 9_000_000;
+    const engine = new GameEngine(foundCity(second, 'standard', 3_000_000));
+    const c = engine.getState();
+    const [a, b] = c.holding!.dormant.map((city) => city.state) as [GameState, GameState];
+    for (const city of [a, b]) {
+      place(city, 'wheat_farm');
+      place(city, 'freight_terminal');
+    }
+    place(c, 'flour_mill');
+    place(c, 'freight_terminal');
+    assert.ok(engine.dispatch({ type: 'OPEN_LINE', from: a.meta.seed, to: c.meta.seed, goodId: 'wheat', trucks: 3 }).ok);
+    // A'nın 2.700'ünün 900'ü hatta: A'dan B'ye teklif kalan 1.800'ü görüyor.
+    assert.equal(lineQuote(c, a.meta.seed, b.meta.seed, 'wheat', 1).surplus, exportableSurplus(a, 'wheat') - lineCapacity(3));
+    // C'nin 1.800'lük açığının 900'ünü A getiriyor: B'den C'ye teklif kalan 900'ü görüyor, 3 kamyon öneriyor.
+    const fromB = lineQuote(c, b.meta.seed, c.meta.seed, 'wheat', 1);
+    assert.equal(fromB.need, 1800 - lineCapacity(3));
+    assert.equal(fromB.suggestedTrucks, 3);
+    assert.ok(engine.dispatch({ type: 'OPEN_LINE', from: b.meta.seed, to: c.meta.seed, goodId: 'wheat', trucks: fromB.suggestedTrucks }).ok);
+    engine.runDay();
+    // Önerilen kamyonlar dolu gidiyor; varışta açık kalmadı.
+    const lines = c.holding!.lines!;
+    assert.deepEqual(lines.map((line) => [line.last!.units, line.last!.short ?? null]), [[900, null], [900, null]]);
+    assert.equal(lineQuote(c, b.meta.seed, c.meta.seed, 'wheat', 1).need, 0);
+  });
+
   test('en çok altı hat', () => {
     const p = pair();
     const from = p.away.meta.seed;

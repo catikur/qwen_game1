@@ -26,7 +26,7 @@ export const trade = {
   'trade.lines.open.to': 'Varış',
   'trade.lines.open.good': 'Mal',
   'trade.lines.open.trucks': 'Kamyon',
-  'trade.lines.open.quote': 'Bugün çıkışta artan {surplus} birim · varışta kendi üretiminin karşılamadığı {need} birim',
+  'trade.lines.open.quote': 'Bugün çıkışta artan {surplus} birim · varışta karşılanmayan {need} birim (aynı malın açık hatları düşüldü)',
   'trade.lines.open.terms':
     'Hat günde {capacity} birim taşır · {days} gün yol · günde {cost} · birim bedeli {price} (çıkışta fazlanın fiyatı; varışta pazar {spot})',
   'trade.lines.open.go': 'Hattı aç',
