@@ -75,11 +75,22 @@ function mapCenter(): Box {
   return { left: x, right: x, top: y, bottom: y };
 }
 
-/** Kaydırıcı ve seçim kutusu sağa-sola değer değiştiriyor; değiştirdiyse true. */
+/**
+ * Kaydırıcı, seçim ve sayı kutusu sağa-sola değer değiştiriyor; değiştirdiyse
+ * true. Sayı kutusu Tur 80'den beri: hat formunun kamyonu, hisse adedi ve
+ * ihale teklifi kumandayla yalnız ekran klavyesinden yazılabiliyordu.
+ */
 function adjust(element: HTMLElement, step: 1 | -1): boolean {
-  if (element instanceof HTMLInputElement && element.type === 'range') {
-    if (step > 0) element.stepUp();
-    else element.stepDown();
+  if (element instanceof HTMLInputElement && (element.type === 'range' || element.type === 'number')) {
+    const before = element.value;
+    try {
+      if (step > 0) element.stepUp();
+      else element.stepDown();
+    } catch {
+      return false;
+    }
+    // Sınırdaki sayı kutusu değişmiyor: olay yollanmasın.
+    if (element.value === before) return true;
   } else if (element instanceof HTMLSelectElement && element.options.length > 0) {
     element.selectedIndex = (element.selectedIndex + step + element.options.length) % element.options.length;
   } else {
