@@ -867,6 +867,20 @@ describe('hattın kendi etkisi (Tur 80)', () => {
     assert.ok(Math.abs(outlook.destinationSpot / actual - 1) < 0.03, `${outlook.destinationSpot} · ${actual}`);
   });
 
+  test('aynı şehirden aynı malı alan ve bugün açılan hat tahminde: çıkışın fiyatı onun alımıyla (Codex #110)', () => {
+    const t = threeCities();
+    const [a, b] = t.origins;
+    const from = a!.meta.seed;
+    const alone = lineQuote(t.root, from, b!.meta.seed, 'coffee_bean', 2, true).outlook!;
+    assert.ok(t.engine.dispatch({ type: 'OPEN_LINE', from, to: t.root.meta.seed, goodId: 'coffee_bean', trucks: 2, buy: true }).ok);
+    // İlk hat henüz yüklemedi (dünkü yükü yok): tahmin onun yarınki alımını çıkışın tüketimine ve ihracat baskısına katıyor.
+    const outlook = lineQuote(t.root, from, b!.meta.seed, 'coffee_bean', 2, true).outlook!;
+    const both = lineCapacity(2) * 2;
+    const expected = spotOutlook(a!, 'coffee_bean', { consumed: both, out: both }, outlook.days);
+    assert.ok(Math.abs(outlook.originSpot - expected) < 1e-9, `${outlook.originSpot} · ${expected}`);
+    assert.ok(outlook.originSpot > alone.originSpot, `${outlook.originSpot} > ${alone.originSpot}`);
+  });
+
   test('ilk seferi yoldaki rakip hattı da tahminde: çıkışta alımı, varışta satışı (Codex #110)', () => {
     const p = coffeeRoute(21, false);
     const [from, to] = route(p);
