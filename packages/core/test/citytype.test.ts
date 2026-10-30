@@ -4,6 +4,9 @@ import { BUILDING_BY_ID, CITY_TYPES, GOOD_BY_ID, RIVAL_CEOS, getCityType, getDif
 import { GameEngine } from '../src/engine';
 import { createNewGame } from '../src/worldgen';
 import { buildCost } from '../src/actions';
+import { buildOptions } from '../src/selectors';
+import { indirectEstimate } from '../src/systems/indirect';
+import { playerStrategy } from './proxy';
 import { victoryNetWorth } from '../src/systems/goals';
 import { buildingUpkeep, freightShareOf, FREIGHT_SHARE } from '../src/systems/supply';
 import { referencePrice } from '../src/systems/cityType';
@@ -139,6 +142,36 @@ describe('şehrin türü (Tur 76)', () => {
       return JSON.stringify({ ...engine.getState(), meta: undefined });
     };
     assert.equal(run(), run());
+  });
+
+  test('yapı menüsü şehrin fiyatını gösteriyor: limanda ucuz terminale kasa yetiyor, tahmin indirimli (Codex #106)', () => {
+    const port = createNewGame({ seed: 21, cityType: 'port' });
+    const balanced = createNewGame({ seed: 21 });
+    const option = (state: GameState, defId: string) => buildOptions(state).find((o) => o.def.id === defId)!;
+    for (const defId of ['freight_terminal', 'warehouse']) {
+      const listed = BUILDING_BY_ID[defId]!.cost;
+      assert.equal(option(port, defId).cost, buildCost(port, port.playerCompanyId, defId));
+      assert.equal(option(port, defId).cost, Math.round(listed * 0.75), defId);
+      assert.equal(option(balanced, defId).cost, listed, defId);
+      // Kasa indirimli fiyata yetiyor, katalog fiyatına yetmiyor: menü kurdurmalı.
+      port.companies[port.playerCompanyId]!.cash = listed * 0.8;
+      assert.ok(option(port, defId).affordable, defId);
+      balanced.companies[balanced.playerCompanyId]!.cash = listed * 0.8;
+      assert.ok(!option(balanced, defId).affordable, defId);
+    }
+    // Deponun geri ödemesi ödenecek maliyetle: limanda katalog fiyatının dörtte üçü.
+    const engine = new GameEngine(createNewGame({ seed: 21, cityType: 'port' }));
+    const state = engine.getState();
+    for (let day = 0; day < 120; day++) {
+      if (day % 5 === 0) playerStrategy(engine);
+      engine.runDay();
+    }
+    const estimates = state.map.tiles
+      .filter((t) => t.kind === 'plot' && !t.ownerId && !t.buildingId && !t.structureId)
+      .map((t) => indirectEstimate(state, state.playerCompanyId, 'warehouse', t.districtId, t.id))
+      .filter((e) => e && e.dailyProfit > 0 && Number.isFinite(e.paybackDays));
+    assert.ok(estimates.length > 0, 'depo tahmini yok');
+    for (const e of estimates) assert.ok(Math.abs(e!.paybackDays * e!.dailyProfit - BUILDING_BY_ID.warehouse!.cost * 0.75) < 1, `${e!.paybackDays} × ${e!.dailyProfit}`);
   });
 
   test('holding: yeni şehrin türü seçiliyor; başka türden şehrin kadrosu türünden, aynı türünki kayıyor', () => {

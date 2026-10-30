@@ -7,7 +7,7 @@ import {
   getCeoModifiers,
 } from '@capital/content';
 import { categoryRevenueRate } from './council';
-import { constructionMultiplier } from '../actions';
+import { investmentCost as effectiveCost } from '../actions';
 import { dailyWealthTax, overheadMultiplier } from './economy';
 import { boostMultiplier } from './cards';
 import { campaignPriceFactor } from './rivalry';
@@ -300,8 +300,9 @@ export function estimateInvestment(
   const fixedCosts =
     (served ?? upkeepFor(state, companyId, defId) * boostMultiplier(state, companyId, 'upkeep') * projectUpkeep(state, companyId, districtId)) +
     wages;
-  // Geri ödeme, oyuncunun gerçekten ödeyeceği maliyete göre hesaplanır.
-  const investmentCost = def.cost * getCeoModifiers(company.ceoId).buildCost * constructionMultiplier(state);
+  // Geri ödeme, oyuncunun gerçekten ödeyeceği maliyete göre hesaplanır
+  // (şehrin türünün indirimi de: Codex #106).
+  const investmentCost = effectiveCost(state, companyId, defId);
 
   // ---- Üretim üniteleri: değeri kârda değil, TASARRUFTA ----
   // Bir fabrika kendi başına para basmaz; ürünü pazardan almak yerine

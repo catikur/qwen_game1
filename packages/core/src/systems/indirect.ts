@@ -7,6 +7,7 @@ import { buildingUpkeep, distributionRelief, reliefOf, resetDailyLedgers, runPro
 import { energyPotential } from './energy';
 import type { EnergyPotential } from './energy';
 import { freightPotential } from './freight';
+import { investmentCost } from '../actions';
 import type { BuildingInstance, GameState } from '../types';
 
 /**
@@ -216,7 +217,7 @@ function energyEstimate(
   return {
     dailyGain: gain,
     dailyProfit,
-    paybackDays: dailyProfit > 0 ? def.cost / dailyProfit : Infinity,
+    paybackDays: dailyProfit > 0 ? investmentCost(state, companyId, def.id) / dailyProfit : Infinity,
     rampDays: 0,
     covered,
     energy,
@@ -234,7 +235,8 @@ function compute(
   const def = BUILDING_BY_ID[defId]!;
   const company = state.companies[companyId]!;
   const fixedCosts = estimateInvestment(state, districtId, defId, companyId, tileId)?.fixedCosts ?? 0;
-  const cost = def.cost;
+  // Ödenecek maliyet (Codex #106): limanda depo ucuz, CEO ve ruhsat da sayılıyor.
+  const cost = investmentCost(state, companyId, defId);
   const result = (gain: number, rampDays: number, extra: Partial<IndirectEstimate>): IndirectEstimate => {
     const dailyProfit = gain - fixedCosts;
     return {

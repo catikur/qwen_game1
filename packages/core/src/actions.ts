@@ -79,13 +79,21 @@ export function constructionMultiplier(state: GameState): number {
   return permitMultiplier(state) * crisisBuildMultiplier(state);
 }
 
-export function buildCost(state: GameState, companyId: string, defId: string): number {
+/**
+ * Binanın gerçekten ödenecek maliyeti, yuvarlanmadan: yapı menüsü ve geri
+ * ödeme tahminleri de bunu okuyor (Codex #106). Meclisin ruhsat kolaylığı
+ * herkese aynı: oyuncu da rakip de ucuz kurar. Şehrin türü (Tur 76):
+ * limanda terminal ve depo ucuz.
+ */
+export function investmentCost(state: GameState, companyId: string, defId: string): number {
   const def = BUILDING_BY_ID[defId];
   if (!def) return 0;
   const company = state.companies[companyId];
-  // Meclisin ruhsat kolaylığı herkese aynı: oyuncu da rakip de ucuz kurar.
-  // Şehrin türü (Tur 76): limanda terminal ve depo ucuz.
-  return Math.round(def.cost * cityBuildCostScale(state, defId) * getCeoModifiers(company?.ceoId ?? null).buildCost * constructionMultiplier(state));
+  return def.cost * cityBuildCostScale(state, defId) * getCeoModifiers(company?.ceoId ?? null).buildCost * constructionMultiplier(state);
+}
+
+export function buildCost(state: GameState, companyId: string, defId: string): number {
+  return Math.round(investmentCost(state, companyId, defId));
 }
 
 /** Parselin neden alınamadığını açıklar; alınabiliyorsa null döner. */

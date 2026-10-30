@@ -1,5 +1,6 @@
 import { BUILDING_BY_ID, BUILDINGS, CONSUMER_CATEGORIES, numberLocale } from '@capital/content';
 import type { BuildingDef, CategoryId } from '@capital/content';
+import { buildCost } from './actions';
 import { estimateInvestment } from './systems/market';
 import type { InvestmentEstimate } from './systems/market';
 import { indirectEstimate } from './systems/indirect';
@@ -241,6 +242,12 @@ export function lensValue(state: GameState, tile: Tile, lens: LensId): number {
 export interface BuildOption {
   def: BuildingDef;
   unlocked: boolean;
+  /**
+   * Oyuncunun bu şehirde ödeyeceği fiyat (Codex #106): inşa komutunun aldığı.
+   * Katalogdakinden farkı şehrin türü (limanda terminal ve depo ucuz), CEO
+   * ve meclisin ruhsat kolaylığı.
+   */
+  cost: number;
   affordable: boolean;
   /** Kilitliyse gereken şirket değeri. */
   requirement: number;
@@ -248,12 +255,10 @@ export interface BuildOption {
 
 export function buildOptions(state: GameState): BuildOption[] {
   const player = getPlayer(state);
-  return BUILDINGS.map((def) => ({
-    def,
-    unlocked: player.netWorth >= def.unlockNetWorth,
-    affordable: player.cash >= def.cost,
-    requirement: def.unlockNetWorth,
-  }));
+  return BUILDINGS.map((def) => {
+    const cost = buildCost(state, player.id, def.id);
+    return { def, unlocked: player.netWorth >= def.unlockNetWorth, cost, affordable: player.cash >= cost, requirement: def.unlockNetWorth };
+  });
 }
 
 export interface RankedBuildOption extends BuildOption {
