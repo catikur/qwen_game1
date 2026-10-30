@@ -8205,6 +8205,12 @@ button.small {
   font-weight: 600;
 }
 
+/* Ticaretle zafer (Tur 79): zarar eden günün kârı. */
+.line-loss {
+  color: var(--bad);
+  font-weight: 600;
+}
+
 .line-open-buy {
   display: flex;
   align-items: center;

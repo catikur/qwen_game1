@@ -38,7 +38,8 @@ import { localizeList } from './localize';
  *   türleri").
  *
  * DENGELİ bugünkü şehrin kendisi: eski kayıtların şehirleri, Tohum Ligi ve
- * senaryolar dengeli. Bütün çarpanları 1; dengeli şehir Tur 75'teki şehirle
+ * senaryolar dengeli (ticaret senaryoları dışında: fiyat farkları iki türün
+ * arasında, Tur 79). Bütün çarpanları 1; dengeli şehir Tur 75'teki şehirle
  * birebir aynı (lig izi değişmiyor).
  */
 export type CityTypeId = 'balanced' | 'port' | 'industrial' | 'capital';

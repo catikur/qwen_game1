@@ -23,6 +23,7 @@ import { reopenDecisionCard } from './DecisionCard';
 import { useGame, useGameState } from './useGame';
 import type { ViewState } from './useGame';
 import { t } from './i18n';
+import './i18n/tradeTr';
 import { useLocale } from './i18n/locale';
 import { useSettings } from './settings';
 import { useWhatsNewUnseen } from './whatsNew';
@@ -917,6 +918,21 @@ export function ActiveEvents(): ReactElement | null {
             <span className="contract-label">{t('hud.freight.offer')}</span>
             {item.label}
             {days}
+          </button>
+        );
+        break;
+      case 'tradeLoss':
+        // Zarar eden hat (Tur 79): kamyon ve kapatma Şehirler panelinin Hatlar bölümünde.
+        chip = (
+          <button
+            type="button"
+            className={`event-chip contract-chip tone-bad urgency-${item.urgency}`}
+            onClick={() => setView({ openPanel: 'cities' })}
+            title={t('trade.agenda.lossTitle')}
+            data-agenda-trade-loss={item.key}
+          >
+            <span className="contract-label">{t('trade.agenda.loss')}</span>
+            {item.label}
           </button>
         );
         break;

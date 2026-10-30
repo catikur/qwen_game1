@@ -819,6 +819,28 @@ export const contentDe: Record<string, string> = {
     'Erneuerungsantrag (im Panel eines städtischen Gebäudes): Die nächste Auktion gilt diesem Grundstück. Ein Projekt auf einem Erneuerungsgrundstück hat 1,6-mal so viele Einheiten; die Einheiten der Alteigentümer zählen nicht zum Ziel.',
   'content.scenario.renewal.facts.2': 'Miete: Hohe Miete senkt die Belegung, niedrige Miete füllt die Einheiten.',
   'content.scenario.renewal.facts.3': 'Knappes Bauland: Grundstückspreise 70\u00a0% höher, Mindestgebote bei Auktionen ebenso; gesperrte Viertel öffnen 50\u00a0% später.',
+  'content.scenario.coffee.title': 'Die Kaffeestraße',
+  'content.scenario.coffee.tagline': 'Billig im Hafen, teuer in der Industriestadt: Verbinde beide mit einer Linie und verdiene, bevor Rivalen deine Route kopieren.',
+  'content.scenario.coffee.brief':
+    'Deine Holding expandiert von einer Hafenstadt in eine Industriestadt. Im Hafen kommen Kaffeebohnen billig per Schiff an, die Röstereien der Industriestadt zahlen dafür einen Aufschlag. Die Spanne ist groß, aber nicht von Dauer: Rivalen erkennen eine lohnende Route binnen eines Monats und kopieren sie.',
+  'content.scenario.coffee.goalText': 'Verdiene innerhalb von {days|# Tag|# Tagen} {target} mit deinen Linien zwischen den Städten.',
+  'content.scenario.coffee.facts.0':
+    'Baue in jeder Stadt ein Frachtterminal. In die Gründungsstadt wechselst du über das Holding-Panel; im Hafen ist ein Terminal 25\u00a0% billiger.',
+  'content.scenario.coffee.facts.1':
+    'Die Preistabelle im Bereich Linien zeigt die lohnenden Routen. Mit „Fehlmenge am Markt kaufen“ läuft eine Linie auch ohne eigene Produktion.',
+  'content.scenario.coffee.facts.2':
+    'Der Tagesgewinn einer Linie: der Verkaufswert ihrer Ware am Ziel, abzüglich Warenpreis und Fracht. Eine Krise oder ein Überangebot in einer Stadt kann plötzlich eine Spanne öffnen: Schau oft in die Preistabelle.',
+  'content.scenario.coffee.facts.3': 'Rivalen kopieren eine lohnende Route nach 30 Tagen; schrumpft die Spanne, such dir eine neue Ware oder eine neue Richtung.',
+  'content.scenario.supplier.title': 'Lieferant der Hauptstadt',
+  'content.scenario.supplier.tagline': 'Die Hauptstadt kauft jeden Rohstoff von außen; bring ihn aus der Industriestadt. Aber die Bank ist streng mit dir.',
+  'content.scenario.supplier.brief':
+    'In der Industriestadt gibt es reichlich Silizium und Häute; in der Hauptstadt ist jeder Rohstoff teuer und der Markt groß. Deine Holding expandiert in die Hauptstadt. Deine Kasse ist knapp, die Bank vorsichtig: Lkw und Terminals finanzierst du aus eigenem Gewinn. Wertvolle Waren bringen große Stückgewinne, aber ihre Märkte sind klein.',
+  'content.scenario.supplier.goalText': 'Verdiene innerhalb von {days|# Tag|# Tagen} {target} mit deinen Linien zwischen den Städten.',
+  'content.scenario.supplier.facts.0': 'Baue in jeder Stadt ein Frachtterminal. In die Gründungsstadt wechselst du über das Holding-Panel.',
+  'content.scenario.supplier.facts.1':
+    'Silizium und Rohhäute sind in der Industriestadt 20\u00a0% billiger, jeder Rohstoff ist in der Hauptstadt 10\u00a0% teurer. Wertvolle Waren haben kleine Märkte: Viele Lkw schließen die Lücke schnell.',
+  'content.scenario.supplier.facts.2': 'Knausrige Bank: Kredite sind teuer und das Limit ist niedrig.',
+  'content.scenario.supplier.facts.3': 'Rivalen kopieren eine lohnende Route nach 30 Tagen; schrumpft die Spanne, such dir eine neue Ware oder eine neue Richtung.',
   'content.achievement.public_company.title': 'Aufs Parkett',
   'content.achievement.public_company.hint': 'Bring dein Unternehmen per Börsengang an die Börse.',
   'content.achievement.quarter_billion.title': 'Viertelmilliarde',

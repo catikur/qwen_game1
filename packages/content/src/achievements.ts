@@ -348,7 +348,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     title: 'Kusursuz',
     hint: 'Senaryoların bütün yıldızlarını topla.',
     kind: 'scenarioStars',
-    // Her senaryonun üç yıldızı (Tur 60: on senaryo). Kazanılmış rozet kayıtta kalıyor.
+    // Her senaryonun üç yıldızı (Tur 60: on senaryo, Tur 79: on iki). Kazanılmış rozet kayıtta kalıyor.
     target: SCENARIOS.length * 3,
   },
   {

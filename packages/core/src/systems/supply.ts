@@ -522,7 +522,10 @@ function settleTradeGoods(state: GameState, trade: TradeDay, flow: CompanyFlow):
     for (const load of trade.loads[goodId] ?? []) {
       const units = load.units * (short / split.load);
       bookLine(state, load.terminalId, units * load.unitPrice, units * spot);
-      lines[load.lineId] = (lines[load.lineId] ?? 0) + units;
+      // Hat fazla fiyatını ödemişti; terminalin zararı da hattın malının bedeli (Codex #109).
+      const entry = (lines[load.lineId] ??= { units: 0, cost: 0 });
+      entry.units += units;
+      entry.cost += units * (spot - load.unitPrice);
     }
   }
   return bought;

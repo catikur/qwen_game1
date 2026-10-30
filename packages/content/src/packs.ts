@@ -1,5 +1,7 @@
 import { BUILDINGS } from './buildings';
 import { CATEGORIES } from './categories';
+import { CITY_TYPES } from './cityTypes';
+import type { CityTypeId } from './cityTypes';
 import { DIFFICULTIES } from './difficulty';
 import type { DifficultyId } from './difficulty';
 import { CITY_SIZES } from './districts';
@@ -64,6 +66,8 @@ export interface PackScenario {
   facts?: readonly PackText[];
   seed: number;
   citySize: CitySizeId;
+  /** Şehrin türü (Tur 79); yoksa dengeli. */
+  cityType?: CityTypeId;
   difficulty: DifficultyId;
   preludeDays: number;
   /** Hazır kural kimlikleri ya da paketin kendi kurallarının kimlikleri. */
@@ -153,7 +157,7 @@ export interface NumberRange {
 
 export type ScenarioGoalKind = ScenarioGoal['kind'];
 
-export const GOAL_KINDS: readonly ScenarioGoalKind[] = ['netWorth', 'leadAtEnd', 'victory', 'chain', 'sponsor', 'monopoly', 'holding', 'freight', 'power', 'rental'];
+export const GOAL_KINDS: readonly ScenarioGoalKind[] = ['netWorth', 'leadAtEnd', 'victory', 'chain', 'sponsor', 'monopoly', 'holding', 'freight', 'power', 'rental', 'trade'];
 
 /** Senaryonun şehri ve süresi. */
 export const SCENARIO_RANGES = {
@@ -178,6 +182,7 @@ export const GOAL_RANGES: Readonly<Record<ScenarioGoalKind, Readonly<Record<stri
   freight: { rivals: { min: 1, max: 6, integer: true }, outlets: { min: 1, max: 60, integer: true } },
   power: { target: { min: 100_000, max: 10_000_000_000 } },
   rental: { units: { min: 1, max: 20_000, integer: true }, renewals: { min: 0, max: 5, integer: true } },
+  trade: { target: { min: 10_000, max: 10_000_000_000 } },
 };
 
 /**
@@ -196,6 +201,7 @@ export const GOAL_PLACEHOLDERS: Readonly<Record<ScenarioGoalKind, readonly strin
   freight: ['days', 'rivals', 'outlets'],
   power: ['days', 'target'],
   rental: ['days', 'units', 'renewals'],
+  trade: ['days', 'target'],
 };
 
 /**
@@ -267,6 +273,8 @@ export const PACK_CHOICES = {
   categories: Object.keys(CATEGORIES) as CategoryId[],
   modifiers: MODIFIERS.map((modifier) => modifier.id),
   citySizes: CITY_SIZES.map((size) => size.id),
+  /** Şehrin türü (Tur 79): senaryonun şehri ve ikinci şehir. */
+  cityTypes: CITY_TYPES.map((type) => type.id),
   difficulties: DIFFICULTIES.map((difficulty) => difficulty.id),
 } as const;
 
@@ -275,6 +283,7 @@ export const PACK_ID = /^[a-z0-9][a-z0-9-]{0,31}$/;
 const ID = PACK_ID;
 const MODIFIER_IDS = PACK_CHOICES.modifiers;
 const CITY_SIZE_IDS = PACK_CHOICES.citySizes;
+const CITY_TYPE_IDS = PACK_CHOICES.cityTypes;
 const DIFFICULTY_IDS = PACK_CHOICES.difficulties;
 const CATEGORY_IDS = PACK_CHOICES.categories;
 
@@ -481,7 +490,7 @@ function checkRuleParams(check: Checker, value: unknown, path: string, base: Mod
 
 function checkScenario(check: Checker, value: unknown, path: string, ruleBase: Map<string, ModifierId>): string | undefined {
   const record = check.object(value, path, [
-    'id', 'title', 'tagline', 'brief', 'goalText', 'facts', 'seed', 'citySize', 'difficulty', 'preludeDays', 'rules', 'days', 'goal', 'stars', 'setup',
+    'id', 'title', 'tagline', 'brief', 'goalText', 'facts', 'seed', 'citySize', 'cityType', 'difficulty', 'preludeDays', 'rules', 'days', 'goal', 'stars', 'setup',
   ]);
   if (!record) return undefined;
   const id = check.id(record, 'id', path);
@@ -499,6 +508,7 @@ function checkScenario(check: Checker, value: unknown, path: string, ruleBase: M
   }
   check.range(record, 'seed', path, SCENARIO_RANGES.seed);
   check.choice(record, 'citySize', path, CITY_SIZE_IDS);
+  check.choice(record, 'cityType', path, CITY_TYPE_IDS, true);
   check.choice(record, 'difficulty', path, DIFFICULTY_IDS);
   check.range(record, 'preludeDays', path, SCENARIO_RANGES.preludeDays);
   const days = check.range(record, 'days', path, SCENARIO_RANGES.days);
@@ -636,10 +646,12 @@ function checkSetup(check: Checker, value: unknown, path: string, goalKind: Scen
       check.boolean(freeze, 'issuance', freezePath);
     }
   }
-  const city = part('secondCity', SETUP_RANGES.secondCity, ['citySize']);
-  if (city) check.choice(city, 'citySize', join(path, 'secondCity'), CITY_SIZE_IDS);
-  else if (record['secondCity'] === undefined && goalKind === 'holding') {
-    // Holding'in hedefi iki şehir: ikinci şehir kurulmadan ölçü yok.
+  const city = part('secondCity', SETUP_RANGES.secondCity, ['citySize', 'cityType']);
+  if (city) {
+    check.choice(city, 'citySize', join(path, 'secondCity'), CITY_SIZE_IDS);
+    check.choice(city, 'cityType', join(path, 'secondCity'), CITY_TYPE_IDS, true);
+  } else if (record['secondCity'] === undefined && (goalKind === 'holding' || goalKind === 'trade')) {
+    // Holding'in hedefi iki şehir, ticaretinki (Tur 79) iki şehrin arası: ikinci şehir kurulmadan ölçü yok.
     check.add(join(path, 'secondCity'), 'needsSetup');
   }
   check.range(record, 'feud', path, SETUP_RANGES.feud, true);
@@ -707,6 +719,7 @@ export function packFromScenario(def: ScenarioDef, packId = 'ornek'): Pack {
         facts: [...def.facts],
         seed: def.seed,
         citySize: def.citySize,
+        ...(def.cityType ? { cityType: def.cityType } : {}),
         difficulty: def.difficulty,
         preludeDays: def.preludeDays,
         ...(def.modifiers ? { rules: [...def.modifiers] } : {}),
@@ -748,6 +761,7 @@ export function scenarioFromPack(pack: Pack, scenario: PackScenario): ScenarioDe
     id: packScenarioId(pack.id, scenario.id),
     seed: scenario.seed,
     citySize: scenario.citySize,
+    ...(scenario.cityType ? { cityType: scenario.cityType } : {}),
     difficulty: scenario.difficulty,
     preludeDays: scenario.preludeDays,
     ...(ordered.length > 0 ? { modifiers: ordered } : {}),

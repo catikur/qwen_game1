@@ -6798,8 +6798,9 @@ async function finish(browser, consoleErrors) {
     await xp.locator('.mode-picker [data-mode="scenario"]').click();
     const cards = await xp.locator('[data-scenario]').count();
     const rules = await xp.evaluate(() => Object.fromEntries([...document.querySelectorAll('[data-scenario-rules]')].map((el) => [el.closest('[data-scenario]')?.getAttribute('data-scenario'), el.textContent])));
-    check('Listede on senaryo; yeni üçünün kartında ek kuralı',
-      cards === 10 && /Aç gözlü/.test(rules.haulage ?? '') && /Sıkı banka/.test(rules.blackout ?? '') && /Kıt arsa/.test(rules.renewal ?? '') && Object.keys(rules).length === 3,
+    check('Listede on iki senaryo; Tur 60\'ın üçünün ve Başkentin tedarikçisinin kartında ek kuralı',
+      cards === 12 && /Aç gözlü/.test(rules.haulage ?? '') && /Sıkı banka/.test(rules.blackout ?? '') && /Kıt arsa/.test(rules.renewal ?? '')
+        && /Sıkı banka/.test(rules.supplier ?? '') && Object.keys(rules).length === 4,
       `${cards} kart · ${JSON.stringify(rules)}`);
     await xp.locator('[data-scenario="haulage"]').click();
     const detail = ((await xp.locator('[data-detail="scenario"] .scenario-detail').textContent()) ?? '').trim();
@@ -8152,8 +8153,8 @@ async function finish(browser, consoleErrors) {
       text: document.querySelector('.pack-empty')?.textContent ?? '',
       builtin: document.querySelectorAll('.scenario-list [data-scenario]').length,
     }));
-    check('Senaryo sekmesinde "Kendi senaryoların" rafı: boş, nasıl ekleneceği yazıyor; hazır on senaryo yerinde',
-      empty.shelf === '0' && /paylaştığı kodu/.test(empty.text) && empty.builtin === 10, JSON.stringify(empty));
+    check('Senaryo sekmesinde "Kendi senaryoların" rafı: boş, nasıl ekleneceği yazıyor; hazır on iki senaryo yerinde',
+      empty.shelf === '0' && /paylaştığı kodu/.test(empty.text) && empty.builtin === 12, JSON.stringify(empty));
 
     // Seçili hazır senaryo (Kurtarma) örnek paket olarak kutuya; oyuncu onu değiştiriyor.
     await pp.locator('[data-pack-add] summary').click();
@@ -10516,6 +10517,171 @@ async function finish(browser, consoleErrors) {
       narrow ? `${narrow.section} px · ${narrow.overflow}` : 'bölüm yok');
     check('Ticaretin fiyatı bölümünde konsol temiz', pErrors.length === 0, pErrors.slice(0, 3).join(' | '));
     await pContext.close();
+  }
+
+  // ---------- Ticaretle zafer (Tur 79) ----------
+  // İki ticaret senaryosu listede; Kahve yolunun ayrıntısında hedef ve
+  // şehirlerin türü. Senaryoda hedef panelinin adımları (iki şehrin
+  // terminali, hat, bugünkü kâr), boş giden hattın gündem çipi ve Şehirler
+  // paneli, eşiği geçen gün zafer. Editörde ticaret hedefi ikinci şehirle,
+  // şehrin türü seçiliyor.
+  section('Ticaretle zafer');
+  {
+    const tContext = await browser.newContext({ viewport: { width: 1280, height: 860 } });
+    await tContext.addInitScript(veteran, TUTORIAL_KEY);
+    const tp = await tContext.newPage();
+    const tErrors = [];
+    tp.on('pageerror', (e) => tErrors.push(e.message));
+    tp.on('console', (m) => { if (m.type() === 'error') tErrors.push(m.text()); });
+    await tp.goto('http://127.0.0.1:8811/');
+    await tp.waitForSelector('.newgame', { timeout: 20000 });
+    await tp.locator('.mode-picker [data-mode="scenario"]').click();
+    const list = await tp.evaluate(() => ({
+      cards: document.querySelectorAll('.scenario-list [data-scenario]').length,
+      coffee: document.querySelector('[data-scenario="coffee"]')?.textContent ?? '',
+      supplier: document.querySelector('[data-scenario="supplier"]')?.textContent ?? '',
+    }));
+    check('Listede on iki senaryo; Kahve yolu ve Başkentin tedarikçisi yerinde',
+      list.cards === 12 && list.coffee.includes('Kahve yolu') && list.supplier.includes('Başkentin tedarikçisi'), `${list.cards} kart`);
+    await tp.locator('[data-scenario="supplier"]').click();
+    const supplierTypes = ((await tp.locator('[data-detail="scenario"] [data-scenario-types]').textContent().catch(() => '')) ?? '').trim();
+    await tp.locator('[data-scenario="coffee"]').click();
+    const detail = await tp.evaluate(() => ({
+      text: document.querySelector('[data-detail="scenario"] .scenario-detail')?.textContent ?? '',
+      types: document.querySelector('[data-detail="scenario"] [data-scenario-types]')?.textContent ?? '',
+    }));
+    check('Ayrıntıda hedef (300 günde hatlarla 1,00 M ₺ kâr) ve şehirlerin türü: liman → sanayi, sanayi → başkent',
+      detail.text.includes('300 gün içinde şehirler arası hatlarınla 1,00 M ₺ kâr et') && detail.types === 'Kurucu şehir: Liman kenti · yeni şehir: Sanayi kenti'
+        && supplierTypes === 'Kurucu şehir: Sanayi kenti · yeni şehir: Başkent',
+      `${detail.types} | ${supplierTypes}`);
+    await tp.locator('[data-newgame-start]').click();
+    await tp.waitForSelector('[data-scenario-brief="coffee"]', { timeout: 90000 });
+    await tp.locator('[data-scenario-begin]').click();
+    await tp.waitForTimeout(300);
+    await tp.evaluate(() => window.__capital.engine.dispatch({ type: 'SET_SPEED', speed: 0 }));
+    const goals = async () => {
+      await tp.locator('.agenda [data-agenda="scenario"] button').click();
+      await tp.waitForTimeout(300);
+      const read = await tp.evaluate(() => ({
+        terminals: [...document.querySelectorAll('.modal [data-trade-terminal]')].map((el) => ({ at: el.getAttribute('data-trade-terminal'), done: el.getAttribute('data-done') })),
+        lines: document.querySelector('.modal [data-trade-lines]')?.textContent ?? '',
+        today: document.querySelector('.modal [data-trade-today]')?.getAttribute('data-trade-today') ?? null,
+        todayText: document.querySelector('.modal [data-trade-today]')?.textContent ?? '',
+        detail: document.querySelector('.modal [data-scenario-goals="coffee"] .goal-detail')?.textContent ?? '',
+      }));
+      await tp.keyboard.press('Escape');
+      return read;
+    };
+    const empty = await goals();
+    check('Hedef panelinde ticaretin adımları: iki şehirde terminal yok, hat yok; ilerleme hatların kârı',
+      empty.terminals.length === 2 && empty.terminals.every((row) => row.done === '0') && empty.terminals[0].at === 'active'
+        && empty.lines.includes('Hat yok') && empty.today === null && /^hatlarla 0 ₺ \/ 1,00 M ₺ kâr$/.test(empty.detail),
+      JSON.stringify(empty));
+    const setup = await tp.evaluate(() => {
+      const c = window.__capital;
+      const terminal = () => {
+        const s = c.getState();
+        for (const t of s.map.tiles) {
+          if (t.kind !== 'plot' || t.structureId || t.ownerId || t.buildingId) continue;
+          if ((s.districts[t.districtId].opensOnDay ?? 0) > s.time.day) continue;
+          if (!c.engine.dispatch({ type: 'BUY_TILE', tileId: t.id }).ok) continue;
+          if (c.engine.dispatch({ type: 'BUILD', tileId: t.id, defId: 'freight_terminal' }).ok) return true;
+        }
+        return false;
+      };
+      const here = terminal();
+      // Kurucu şehre geçip terminal, geri dön: senaryo oyuncuyla geliyor.
+      c.engine.dispatch({ type: 'SWITCH_CITY', index: 0 });
+      const port = c.getState();
+      const away = terminal();
+      c.engine.dispatch({ type: 'SWITCH_CITY', index: 0 });
+      const s = c.getState();
+      const opened = c.engine.dispatch({ type: 'OPEN_LINE', from: port.meta.seed, to: s.meta.seed, goodId: 'coffee_bean', trucks: 2, buy: true });
+      c.engine.runDay();
+      c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+      return { here, away, opened: opened.ok, scenario: s.scenario?.id ?? null, profit: s.scenario?.tradeProfit ?? 0, from: port.cityType, to: s.cityType };
+    });
+    check('Terminal iki şehre (kurucu şehre geçip), kahve hattı limandan sanayiye; senaryo geri geliyor, ilk gün kârda',
+      setup.here && setup.away && setup.opened && setup.scenario === 'coffee' && setup.profit > 0 && setup.from === 'port' && setup.to === 'industrial', JSON.stringify(setup));
+    const running = await goals();
+    check('Hedef panelinde iki terminal tamam, "1 hat açık, 2 kamyon", bugünkü kâr; ilerleme kârı sayıyor',
+      running.terminals.filter((row) => row.done === '1').length === 2 && running.lines.includes('1 hat açık, 2 kamyon')
+        && Number(running.today) > 0 && running.todayText.startsWith('Bugün hatlardan') && /^hatlarla [\d.]+ ₺ \/ 1,00 M ₺ kâr$/.test(running.detail),
+      JSON.stringify(running));
+
+    // Pazardan almayı kapatınca hat boş gidiyor: yalnız nakliye, gündemde çip.
+    const idle = await tp.evaluate(() => {
+      const c = window.__capital;
+      const s = c.getState();
+      c.engine.dispatch({ type: 'SET_LINE_BUY', lineId: s.holding.lines[0].id, buy: false });
+      const before = s.scenario.tradeProfit;
+      c.engine.runDay();
+      c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+      return { before, after: s.scenario.tradeProfit, units: s.holding.lines[0].last?.units ?? -1 };
+    });
+    await tp.waitForTimeout(300);
+    const chip = await tp.evaluate(() => {
+      const el = document.querySelector('[data-agenda-trade-loss]');
+      return el ? { text: el.textContent ?? '', cls: el.className } : null;
+    });
+    check('Boş giden hat zararda: toplam düşüyor, gündemde "Hat zararda" çipi',
+      idle.units === 0 && idle.after < idle.before && chip !== null && chip.text.includes('Hat zararda') && chip.text.includes('Kahve Çekirdeği') && chip.cls.includes('tone-bad'),
+      `${JSON.stringify(idle)} · ${chip?.text ?? 'çip yok'}`);
+    await tp.locator('[data-agenda-trade-loss]').click();
+    await tp.waitForTimeout(400);
+    const lossRow = await tp.evaluate(() => {
+      const el = document.querySelector('[data-line-profit]');
+      return el ? { value: Number(el.getAttribute('data-line-profit')), cls: el.className, text: el.textContent ?? '' } : null;
+    });
+    check('Çip Şehirler panelini açıyor; hattın satırında bugünkü kâr eksi, kırmızı',
+      lossRow !== null && lossRow.value < 0 && lossRow.cls.includes('line-loss') && lossRow.text.startsWith('Bugünkü kâr'), JSON.stringify(lossRow));
+    await tp.locator('[data-line-profit]').scrollIntoViewIfNeeded().catch(() => null);
+    await tp.screenshot({ path: `${OUT}/trade-loss.png` });
+    await tp.keyboard.press('Escape');
+
+    // Eşiği geçen gün zafer: kârlı gün, 200 günden önce üç yıldız.
+    const won = await tp.evaluate(() => {
+      const c = window.__capital;
+      const s = c.getState();
+      c.engine.dispatch({ type: 'SET_LINE_BUY', lineId: s.holding.lines[0].id, buy: true });
+      s.scenario.tradeProfit = 1_000_000 - 1;
+      c.engine.runDay();
+      c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+      return { outcome: s.scenario.outcome ?? null, stars: s.scenario.stars ?? 0, score: s.scenario.score ?? 0 };
+    });
+    await tp.waitForSelector('[data-scenario-result="won"]', { timeout: 12000 }).catch(() => null);
+    const result = await tp.locator('[data-scenario-result="won"]').count();
+    check('Eşiği geçen gün kazanıyor: sonuç ekranı, üç yıldız', won.outcome === 'won' && won.stars === 3 && result === 1, JSON.stringify(won));
+    await tp.screenshot({ path: `${OUT}/trade-won.png` });
+
+    // Editör: ticaret hedefi ikinci şehri kuruyor; türsüz senaryodan (Kurtarma)
+    // başlayan taslakta şehrin türü dengeli görünüyor.
+    await tp.locator('[data-scenario-result] .gameover-actions button').last().click();
+    await tp.waitForSelector('.newgame', { timeout: 10000 });
+    await tp.locator('.mode-picker [data-mode="scenario"]').click();
+    await tp.locator('[data-scenario="rescue"]').click();
+    await tp.waitForSelector('[data-editor-open]', { timeout: 10000 });
+    await tp.locator('[data-editor-open]').click();
+    await tp.waitForSelector('[data-pack-editor]', { timeout: 10000 });
+    await tp.selectOption('[data-edit-path="scenarios[0].goal.kind"]', 'trade');
+    await tp.waitForTimeout(200);
+    const typeBefore = await tp.locator('[data-edit-path="scenarios[0].cityType"]').inputValue();
+    await tp.selectOption('[data-edit-path="scenarios[0].cityType"]', 'port');
+    await tp.selectOption('[data-edit-path="scenarios[0].setup.secondCity.cityType"]', 'capital');
+    await tp.waitForTimeout(300);
+    const editor = await tp.evaluate(() => ({
+      second: document.querySelector('[data-editor-part="secondCity"]')?.className ?? '',
+      status: document.querySelector('[data-editor-status]')?.getAttribute('data-editor-status') ?? '',
+      hint: document.querySelector('[data-edit-path="scenarios[0].cityType"]')?.closest('.editor-field')?.textContent ?? '',
+      types: document.querySelector('[data-editor-preview] [data-scenario-types]')?.textContent ?? '',
+    }));
+    check('Editörde ticaret hedefi ikinci şehirle; şehrin türü dengeliden başlıyor, seçilen tür ön izlemede',
+      typeBefore === 'balanced' && editor.second.includes('on') && editor.status === 'ok' && editor.hint.includes('Kahve ve pamuk')
+        && editor.types === 'Kurucu şehir: Liman kenti · yeni şehir: Başkent',
+      `${typeBefore} · ${JSON.stringify(editor)}`);
+
+    check('Ticaretle zafer bölümünde konsol temiz', tErrors.length === 0, tErrors.slice(0, 3).join(' | '));
+    await tContext.close();
   }
 
   section('Mobil');

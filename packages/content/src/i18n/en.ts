@@ -819,6 +819,28 @@ export const contentEn: Record<string, string> = {
     "Renewal request (in a city building's panel): the next auction is that plot. A project on a renewal plot has 1.6× the units; right holders do not count toward the goal.",
   'content.scenario.renewal.facts.2': 'Rent: high rent lowers occupancy, low rent fills units.',
   'content.scenario.renewal.facts.3': 'Scarce land: land prices 70% higher, auction reserves too; locked districts open 50% later.',
+  'content.scenario.coffee.title': 'The Coffee Road',
+  'content.scenario.coffee.tagline': 'Cheap in the port, dear in the industrial city: link the two with a line and profit before rivals copy your route.',
+  'content.scenario.coffee.brief':
+    "Your holding is expanding from a port city into an industrial city. Coffee beans arrive cheaply by ship in the port, and the industrial city's roasteries pay a premium for them. The gap is wide but it won't last: rivals spot a profitable route within a month and copy it.",
+  'content.scenario.coffee.goalText': 'Within {days|# day|# days}, earn {target} from your lines between cities.',
+  'content.scenario.coffee.facts.0':
+    'Build a freight terminal in each city. You switch to the founding city from the Holding panel; in the port a terminal is 25% cheaper.',
+  'content.scenario.coffee.facts.1':
+    'The price table in the Lines section shows the profitable routes. With "buy the shortfall on the market", a line works without any production.',
+  'content.scenario.coffee.facts.2':
+    "A line's daily profit: the sale value of its goods at the destination, minus what the goods and the freight cost. A crisis or a glut in one city can suddenly open a gap: check the price table often.",
+  'content.scenario.coffee.facts.3': 'Rivals copy a profitable route after 30 days; when the gap narrows, find a new good or a new direction.',
+  'content.scenario.supplier.title': 'Supplier to the Capital',
+  'content.scenario.supplier.tagline': 'The capital buys every raw material from outside; bring them from the industrial city. But the bank is strict with you.',
+  'content.scenario.supplier.brief':
+    'Silicon and hides are plentiful in the industrial city; in the capital every raw material is expensive and the market is large. Your holding is expanding into the capital. Your cash is limited and the bank is cautious: you grow your trucks and terminals out of your own profit. Valuable goods earn big margins per unit, but their markets are thin.',
+  'content.scenario.supplier.goalText': 'Within {days|# day|# days}, earn {target} from your lines between cities.',
+  'content.scenario.supplier.facts.0': 'Build a freight terminal in each city. You switch to the founding city from the Holding panel.',
+  'content.scenario.supplier.facts.1':
+    'Silicon and raw hides are 20% cheaper in the industrial city; every raw material is 10% dearer in the capital. Valuable goods have thin markets: many trucks close the gap quickly.',
+  'content.scenario.supplier.facts.2': 'Tight bank: loans are expensive and the limit is low.',
+  'content.scenario.supplier.facts.3': 'Rivals copy a profitable route after 30 days; when the gap narrows, find a new good or a new direction.',
   'content.achievement.public_company.title': 'Going public',
   'content.achievement.public_company.hint': 'Take your company public with an IPO.',
   'content.achievement.quarter_billion.title': 'Quarter billion',

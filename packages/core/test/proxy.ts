@@ -310,22 +310,36 @@ export function freightStrategy(engine: GameEngine, maxTerminals = 3): void {
   engine.dispatch({ type: 'BUILD', tileId: best.tileId, defId: def.id });
 }
 
+/** Tüccar vekilin ayarları (Tur 79). Varsayılanlar Tur 78'in vekili. */
+export interface TradeOptions {
+  /** Kamyon eklemenin ve yeni hattın eşiği: birim kâr, alış fiyatının bu payı. */
+  margin?: number;
+  /** Hat başına en çok kamyon. */
+  maxTrucks?: number;
+  /** Birim kâr alış fiyatının bu payının altına inince bir kamyon çekiyor; yoksa çekmiyor. */
+  drop?: number;
+}
+
 /**
  * Tüccar vekil (Tur 78): hatları fiyat tablosundan yönetiyor. Terminalleri
- * kurmuyor (uzaktaki şehre komut gitmiyor; düzenek kuruyor).
+ * kurmuyor (senaryoda `tradeTerminals` kuruyor).
  *
  *  - Pazara satışta zarar eden hattı kapatıyor; birim kârı malın çıkıştaki
- *    alış fiyatının `margin` payını geçen hatta bir kamyon ekliyor (en çok 4).
+ *    alış fiyatının `margin` payını geçen hatta bir kamyon ekliyor (en çok
+ *    `maxTrucks`). `drop` verilirse kâr o payın altına inince bir kamyon
+ *    çekiyor (Tur 79): pazar doyunca fark kapanmadan küçülüyor.
  *  - Pazara satışta en kârlı yönleri, birim kâr katalog fiyatının `margin`
  *    payını geçiyorsa, pazardan alan bir hatla açıyor: mal başına bir hat,
  *    holding'de en çok altı.
  */
-export function tradeStrategy(engine: GameEngine, margin = 0.1): void {
+export function tradeStrategy(engine: GameEngine, options: TradeOptions = {}): void {
+  const { margin = 0.1, maxTrucks = 4, drop } = options;
   const root = engine.getState();
   for (const line of [...tradeLines(root)]) {
     const m = lineMargins(root, line.from, line.to, line.goodId);
     if (!m || m.market < 0) engine.dispatch({ type: 'CLOSE_LINE', lineId: line.id });
-    else if (m.market >= margin * m.buyPrice && line.trucks < 4) engine.dispatch({ type: 'SET_LINE_TRUCKS', lineId: line.id, trucks: line.trucks + 1 });
+    else if (m.market >= margin * m.buyPrice && line.trucks < maxTrucks) engine.dispatch({ type: 'SET_LINE_TRUCKS', lineId: line.id, trucks: line.trucks + 1 });
+    else if (drop !== undefined && m.market < drop * m.buyPrice && line.trucks > 1) engine.dispatch({ type: 'SET_LINE_TRUCKS', lineId: line.id, trucks: line.trucks - 1 });
   }
   const rows = priceBoard(root)
     .filter((row) => row.best && row.best.margin >= margin * (GOOD_BY_ID[row.goodId]?.basePrice ?? Infinity))
@@ -335,6 +349,37 @@ export function tradeStrategy(engine: GameEngine, margin = 0.1): void {
     if (tradeLines(root).some((line) => line.goodId === row.goodId)) continue;
     engine.dispatch({ type: 'OPEN_LINE', from: row.best!.from, to: row.best!.to, goodId: row.goodId, trucks: 1, buy: true });
   }
+}
+
+/**
+ * Holding'in her şehrine `perCity` nakliye terminali (Tur 79), oyuncunun
+ * yaptığı gibi: oynanan şehirde kuruyor, uzaktaki şehre geçip orada kuruyor,
+ * geri dönüyor (senaryo oyuncuyla geliyor). Boş parselin ilki; nakit
+ * yetmezse kurulamayan kalıyor.
+ */
+export function tradeTerminals(engine: GameEngine, perCity = 1): void {
+  const def = BUILDINGS.find((candidate) => (candidate.fleet ?? 0) > 0);
+  if (!def) return;
+  const build = () => {
+    const state = engine.getState();
+    for (let count = freightTerminals(state).length; count < perCity; count++) {
+      const tile = state.map.tiles.find(
+        (candidate) =>
+          candidate.kind === 'plot' && !candidate.ownerId && !candidate.buildingId && !candidate.structureId && isDistrictOpen(state, candidate.districtId) &&
+          (!def.zones || def.zones.includes(state.districts[candidate.districtId]!.archetype)),
+      );
+      if (!tile || !engine.dispatch({ type: 'BUY_TILE', tileId: tile.id }).ok) return;
+      engine.dispatch({ type: 'BUILD', tileId: tile.id, defId: def.id });
+    }
+  };
+  build();
+  const away = engine.getState().holding?.dormant.length ?? 0;
+  // Her geçiş oynanan şehri listenin sonuna atıyor: sıradaki uzaktaki şehir hep başta.
+  for (let i = 0; i < away; i++) {
+    if (!engine.dispatch({ type: 'SWITCH_CITY', index: 0 }).ok) return;
+    build();
+  }
+  if (away > 0) engine.dispatch({ type: 'SWITCH_CITY', index: 0 });
 }
 
 /**

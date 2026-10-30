@@ -100,6 +100,8 @@ describe('hedef, devir, kurallar', () => {
     assert.equal(lead.stars.metric, 'lead');
     const holding = withGoalKind(base().scenarios[0]!, 'holding');
     assert.ok(holding.setup.secondCity, 'holding ikinci şehirle');
+    const trade = withGoalKind(base().scenarios[0]!, 'trade');
+    assert.ok(trade.setup.secondCity, 'ticaret ikinci şehirle (Tur 79)');
   });
 
   test('devrin her parçası eklenince geçerli, çıkarınca gidiyor', () => {

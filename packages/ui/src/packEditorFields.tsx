@@ -256,6 +256,7 @@ export function ChoiceField({
   choices,
   hint,
   onChoose,
+  fallback,
 }: {
   path: Path;
   label: string;
@@ -263,17 +264,20 @@ export function ChoiceField({
   hint?: string;
   /** Seçim belgeye yazılmadan önce başka bir şey de değiştirecekse (hedef türü). */
   onChoose?: (value: string) => void;
+  /** Alan belgede yokken seçili görünen değer: oyunun varsayılanı (şehir türü). */
+  fallback?: string;
 }): ReactElement {
   const { doc, issues, set } = useEditor();
   const id = useId();
   const key = pathKey(path);
   const value = getAt(doc, path);
+  const shown = typeof value === 'string' ? value : (fallback ?? '');
   const own = issuesAt(issues, key);
-  const known = choices.some((choice) => choice.value === value);
+  const known = choices.some((choice) => choice.value === shown);
   return (
     <Field label={label} hint={hint} issues={own} id={id}>
-      <select id={id} value={typeof value === 'string' ? value : ''} aria-invalid={own.length > 0} data-edit-path={key} onChange={(e) => (onChoose ? onChoose(e.target.value) : set(path, e.target.value))}>
-        {!known && <option value={typeof value === 'string' ? value : ''}>{typeof value === 'string' && value ? value : '—'}</option>}
+      <select id={id} value={shown} aria-invalid={own.length > 0} data-edit-path={key} onChange={(e) => (onChoose ? onChoose(e.target.value) : set(path, e.target.value))}>
+        {!known && <option value={shown}>{shown || '—'}</option>}
         {choices.map((choice) => (
           <option key={choice.value} value={choice.value}>
             {choice.label}

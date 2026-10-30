@@ -20,6 +20,7 @@ import {
   lineCapacity,
   lineDailyCost,
   lineMargins,
+  lineProfitToday,
   lineQuote,
   openCityQuote,
   priceBoard,
@@ -387,6 +388,7 @@ function LineRow({ state, line }: { state: GameState; line: TradeLine }): ReactE
   const spare = source && terminal ? fleet - fleetUsed(source, terminal.id) : 0;
   const goods = (line.goodsPaid ?? 0) + (line.freightPaid ?? 0);
   const margins = lineMargins(state, line.from, line.to, line.goodId);
+  const profit = lineProfitToday(state, line);
   const rival = rivalLineOn(state, line.from, line.to, line.goodId);
   const countdown = rivalCopyCountdown(state, line);
   return (
@@ -404,6 +406,11 @@ function LineRow({ state, line }: { state: GameState; line: TradeLine }): ReactE
         })}
       </span>
       <span data-line-today>{lineToday(line)}</span>
+      {profit !== undefined && (
+        <span className={profit < 0 ? 'line-loss' : 'muted'} data-line-profit={Math.round(profit)}>
+          {t('trade.lines.profit', { profit: formatMoney(profit) })}
+        </span>
+      )}
       {margins && (
         <span className="muted" data-line-margin={margins.market.toFixed(2)}>
           {t('trade.lines.margin', {

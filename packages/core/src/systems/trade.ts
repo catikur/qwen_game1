@@ -528,11 +528,38 @@ export function prepareTradeDay(root: GameState): void {
 }
 
 /**
+ * Bir hattın bugünkü kârı (Tur 79): bugün yüklediği mal varış şehrinin
+ * pazar fiyatından planlı satışla (`saleShare`) değerleniyor; eksi malın
+ * bedeli ve nakliye. Boş giden kamyonun bedeli de düşüyor. Malı varışta
+ * kendi tesisine veren hat da pazara satmış gibi sayılıyor (alçak değer).
+ * Bugün seferi yoksa (yeni açıldı) yok.
+ */
+export function lineProfitToday(root: GameState, line: TradeLine): number | undefined {
+  const last = line.last;
+  if (!last) return undefined;
+  const spot = cityBySeed(root, line.to)?.market.spot[line.goodId] ?? GOOD_BY_ID[line.goodId]?.basePrice ?? 0;
+  return last.units * spot * TRADE_LINE.saleShare - last.goods - last.freight;
+}
+
+/**
+ * Oyuncunun hatlarının bugünkü kârı (Tur 79), ticaret hedefi için:
+ * hatların `lineProfitToday` toplamı. Zarar eden gün toplamı azaltıyor;
+ * rakip hatları sayılmıyor.
+ */
+export function tradeProfitToday(root: GameState): number {
+  let profit = 0;
+  for (const line of tradeLines(root)) profit += lineProfitToday(root, line) ?? 0;
+  return profit;
+}
+
+/**
  * Günün sonunda, bütün şehirler yaşadıktan sonra (motorun `runDay`'i):
  * gün içinde fazlası yetmeyen yükün pazardan alınanı hattın satırına
  * (Codex #108). Sabah planından sonra grev başlarsa yükün bir kısmı ya da
  * hepsi çıkışın pazarından alınıyor; satır bunu pazardan alınan diye
- * yazıyor. Şehirlerin kaydı siliniyor: kayda geçmesin.
+ * yazıyor. Pazarın fiyatı hattın ödediği fazla fiyatından yüksek: fark da
+ * malın bedeline (Codex #109), bugünkü kâr ve ticaret hedefi onu düşüyor.
+ * Şehirlerin kaydı siliniyor: kayda geçmesin.
  */
 export function settleTradeFallbacks(root: GameState): void {
   if (!root.holding) return;
@@ -541,9 +568,12 @@ export function settleTradeFallbacks(root: GameState): void {
     const fallback = city.trade?.fallback;
     if (!fallback) continue;
     delete city.trade!.fallback;
-    for (const [lineId, units] of Object.entries(fallback)) {
-      const last = lines.get(lineId)?.last;
-      if (last) last.bought = (last.bought ?? 0) + units;
+    for (const [lineId, { units, cost }] of Object.entries(fallback)) {
+      const line = lines.get(lineId);
+      if (!line?.last) continue;
+      line.last.bought = (line.last.bought ?? 0) + units;
+      line.last.goods += cost;
+      line.goodsPaid = (line.goodsPaid ?? 0) + cost;
     }
   }
 }

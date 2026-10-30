@@ -1001,7 +1001,8 @@ export interface GameState {
   citySize?: CitySizeId;
   /**
    * Şehrin türü (Tur 76): liman, sanayi ya da başkent. Yokluğu dengeli:
-   * eski kayıtların şehirleri, Tohum Ligi ve senaryolar.
+   * eski kayıtların şehirleri, Tohum Ligi ve ticaret senaryoları (Tur 79)
+   * dışındaki senaryolar.
    */
   cityType?: CityTypeId;
   /** Son yeni rakip girişinin günü. */
@@ -1261,10 +1262,12 @@ export interface CityTrade {
   marketOut?: Record<string, number>;
   /**
    * Gün içinde (grev) fazlası yetmeyen yükün pazardan alınanı, hat başına
-   * birim (Codex #108): üretim adımı yazıyor, bütün şehirler yaşadıktan
-   * sonra hattın satırına (`last.bought`) geçip siliniyor.
+   * (Codex #108): birim ve bedelinin hattın ödediği fazla fiyatını aşan
+   * kısmı (`cost`, Codex #109). Üretim adımı yazıyor, bütün şehirler
+   * yaşadıktan sonra hattın satırına (`last.bought`, `last.goods`) geçip
+   * siliniyor.
    */
-  fallback?: Record<string, number>;
+  fallback?: Record<string, { units: number; cost: number }>;
   /** Bugün rakip hatlarıyla bu şehrin pazarına giren, mal başına birim (şehrin üretimine). */
   marketIn?: Record<string, number>;
   /** Rakiplerin bugünkü hat defteri: ciro ve mal maliyeti, şirket başına. */
@@ -1372,6 +1375,8 @@ export interface ScenarioState {
   rivalsAtStart?: number;
   /** Karanlık kış (Tur 60): senaryo boyunca santrallerin rakiplere sattığı elektrik (₺). */
   powerSold?: number;
+  /** Ticaret (Tur 79): senaryo boyunca hatların kârı (₺); zarar eden gün düşürüyor. */
+  tradeProfit?: number;
   /** Sonuç ekranı görüldü mü. */
   resultSeen?: boolean;
 }

@@ -32,7 +32,7 @@ City Builder, Economy, Management, Simulation, Strategy, Capitalism, Trading, Re
 **Kısa açıklama** (231)
 
 ```
-Yaşayan bir şehirde şirket kur: boş parselleri bul, tedarik zincirini kendin kur, rakiplerini borsada devral. Enerji, lojistik, gayrimenkul, mevsimler ve seni unutmayan rakipler — serbest şehirde, on senaryoda ya da haftalık ligde.
+Yaşayan bir şehirde şirket kur: boş parselleri bul, tedarik zincirini kendin kur, rakiplerini borsada devral. Enerji, lojistik, gayrimenkul, mevsimler ve seni unutmayan rakipler — serbest şehirde, on iki senaryoda ya da haftalık ligde.
 ```
 
 **Oyun hakkında**
@@ -71,7 +71,7 @@ Yaşayan bir şehirde şirket kur: boş parselleri bul, tedarik zincirini kendin
 [h2]Kendi yolunu seç[/h2]
 [list]
 [*]Serbest şehir: Rahat, Dengeli ya da Acımasız; dört ek kuralla daha da zor. Holding kur, üç şehri birden yönet.
-[*]On senaryo, her biri üç yıldızlı: Kurtarma'dan Kentsel dönüşüm'e.
+[*]On iki senaryo, her biri üç yıldızlı: Kurtarma'dan Başkentin tedarikçisi'ne.
 [*]Haftalık Tohum Ligi: herkes aynı şehirde, aynı kurallarla. Günün koşusu, haftanın kuralı, liderin hayalet eğrisi ve davetli arkadaş ligleri.
 [*]29 rozetli kariyer; her rozet bir Steam başarımı.
 [/list]
@@ -95,7 +95,7 @@ Yaşayan bir şehirde şirket kur: boş parselleri bul, tedarik zincirini kendin
 **Short description** (243)
 
 ```
-Build a company in a living city: find empty plots, grow your own supply chain and take over your rivals on the stock market. Energy, logistics, real estate, seasons and rivals who remember — in a free city, ten scenarios or the weekly league.
+Build a company in a living city: find empty plots, grow your own supply chain and take over your rivals on the stock market. Energy, logistics, real estate, seasons and rivals who remember — in a free city, twelve scenarios or the weekly league.
 ```
 
 **About this game**
@@ -134,7 +134,7 @@ Most of the city is already built. You will grow by finding the empty plots — 
 [h2]Choose your way[/h2]
 [list]
 [*]Free city: Relaxed, Balanced or Ruthless; four extra rules make it harder still. Found a holding and run three cities at once.
-[*]Ten scenarios with three stars each, from Rescue to Urban Renewal.
+[*]Twelve scenarios with three stars each, from Rescue to Supplier to the Capital.
 [*]The weekly Seed League: everyone in the same city, under the same rules. The daily run, the rule of the week, the leader's ghost curve and invite-only friend leagues.
 [*]A career with 29 badges; every badge is a Steam achievement.
 [/list]
@@ -158,7 +158,7 @@ Most of the city is already built. You will grow by finding the empty plots — 
 **Kurzbeschreibung** (291)
 
 ```
-Gründe ein Unternehmen in einer lebendigen Stadt: Finde freie Grundstücke, bau deine eigene Lieferkette auf und übernimm deine Rivalen an der Börse. Energie, Logistik, Immobilien, Jahreszeiten und Rivalen, die nichts vergessen – in der freien Stadt, in zehn Szenarien oder in der Wochenliga.
+Gründe ein Unternehmen in einer lebendigen Stadt: Finde freie Grundstücke, bau deine eigene Lieferkette auf und übernimm deine Rivalen an der Börse. Energie, Logistik, Immobilien, Jahreszeiten und Rivalen, die nichts vergessen – in der freien Stadt, in zwölf Szenarien oder in der Wochenliga.
 ```
 
 **Über das Spiel**
@@ -197,7 +197,7 @@ Der größte Teil der Stadt ist schon gebaut. Du wächst, indem du die freien Gr
 [h2]Wähle deinen Weg[/h2]
 [list]
 [*]Freie Stadt: Entspannt, Ausgewogen oder Gnadenlos; vier Zusatzregeln machen es noch schwerer. Gründe eine Holding und führe drei Städte zugleich.
-[*]Zehn Szenarien mit je drei Sternen, von Rettung bis Stadterneuerung.
+[*]Zwölf Szenarien mit je drei Sternen, von Rettung bis Lieferant der Hauptstadt.
 [*]Die wöchentliche Seed-Liga: alle in derselben Stadt, nach denselben Regeln. Die Tagespartie, die Regel der Woche, der „Geist“ des Spitzenreiters und private Ligen mit Freunden.
 [*]Eine Karriere mit 29 Abzeichen; jedes Abzeichen ist eine Steam-Errungenschaft.
 [/list]

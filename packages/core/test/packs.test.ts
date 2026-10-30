@@ -71,7 +71,7 @@ function pack(scenarios: PackScenario[], extra: Partial<Pack> = {}): Pack {
 const rescue = () => asPackScenario(SCENARIO_BY_ID['rescue']!, 'kurtarma');
 
 describe('paketin biçimi', () => {
-  test('hazır on senaryonun hepsi paket olarak yazılabiliyor ve doğrulanıyor', () => {
+  test('hazır senaryoların hepsi (on iki, bir paketin sınırı) paket olarak yazılabiliyor ve doğrulanıyor', () => {
     const all = pack(SCENARIOS.map((def) => asPackScenario(def)));
     const result = validatePack(JSON.parse(JSON.stringify(all)));
     assert.ok(result.ok, JSON.stringify(!result.ok && result.issues));
@@ -89,6 +89,18 @@ describe('paketin biçimi', () => {
     assert.deepEqual(copy.map, builtin.map);
     assert.deepEqual(copy.companies, builtin.companies);
     unregisterPack('ornek');
+  });
+
+  test('şehrin türü pakette de (Tur 79): kurucu şehir ve ikinci şehir aynı türle kuruluyor', () => {
+    const doc = packFromScenario(SCENARIO_BY_ID['coffee']!, 'kahve');
+    assert.equal(doc.scenarios[0]!.cityType, 'port');
+    assert.equal(doc.scenarios[0]!.setup.secondCity?.cityType, 'industrial');
+    const [def] = registerPack(doc);
+    assert.equal(def!.cityType, 'port');
+    const copy = createScenarioGame(def!.id);
+    assert.equal(copy.cityType, 'industrial');
+    assert.equal(copy.holding!.dormant[0]!.state.cityType, 'port');
+    unregisterPack('kahve');
   });
 
   test('belgedeki örnek paket (docs/ornek-paket.json) geçerli ve oynanıyor', () => {
@@ -116,6 +128,10 @@ describe('paketin biçimi', () => {
       ['ölçü', (d) => (d.scenarios[0].stars.metric = 'lead'), 'scenarios[0].stars.metric', 'metric'],
       ['yıldız sırası', (d) => (d.scenarios[0].stars = { metric: 'days', two: 200, three: 250 }), 'scenarios[0].stars.three', 'starsOrder'],
       ['holding', (d) => (d.scenarios[0].goal = { kind: 'holding' }), 'scenarios[0].setup.secondCity', 'needsSetup'],
+      // Ticaretin hedefi iki şehrin arası (Tur 79): ikinci şehir şart; türler katalogdan.
+      ['ticaret', (d) => (d.scenarios[0].goal = { kind: 'trade', target: 400_000 }), 'scenarios[0].setup.secondCity', 'needsSetup'],
+      ['şehir türü', (d) => (d.scenarios[0].cityType = 'ada'), 'scenarios[0].cityType', 'enum'],
+      ['ikinci şehrin türü', (d) => (d.scenarios[0].setup.secondCity = { capital: 3_000_000, citySize: 'standard', cityType: 'ada' }), 'scenarios[0].setup.secondCity.cityType', 'enum'],
       ['kural', (d) => (d.scenarios[0].rules = ['yok']), 'scenarios[0].rules[0]', 'unknownRef'],
       ['şube', (d) => (d.scenarios[0].setup.outlets = ['research_center']), 'scenarios[0].setup.outlets[0]', 'unknownRef'],
       // Miras adlar katalogda yok (Codex #97): `toString` krizi doğrulamadan geçiyordu.

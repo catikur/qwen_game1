@@ -185,6 +185,7 @@ export {
   lineCapacity,
   lineDailyCost,
   lineMargins,
+  lineProfitToday,
   lineQuote,
   marketBuyPrice,
   priceBoard,
@@ -193,6 +194,7 @@ export {
   rivalLines,
   tradeCities,
   tradeLines,
+  tradeProfitToday,
   transitDaysBetween,
 } from './systems/trade';
 export type { LineMargins, LineQuote, PriceBoardRow } from './systems/trade';

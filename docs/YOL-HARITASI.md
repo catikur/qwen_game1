@@ -281,10 +281,18 @@ sunucusunun dağıtımını istiyor (`docs/YAYIN.md` §4).
   Şehirlerin fiyat tablosu ve hattın birim hesabı panelde. Ölçüm:
   ticaret tek başına bir yol değil (ikinci şehirde mağazalı oyunun
   %1,4–5,2'si), standart oyuna eklenince başkente giden çiftlerde
-  holding'i %3–4 büyütüyor. Şema v9, sürüm 1.3.0; lig izi aynı. — bu PR
+  holding'i %3–4 büyütüyor. Şema v9, sürüm 1.3.0; lig izi aynı. — bitti (#108)
 - **79 · Ticaretle zafer.** Yeni hedef türü ("şehirler arası satış") ve
   iki senaryo. Ticaret zafere bir yol: onu kazanan bir vekil (Tur 61'in
-  yöntemiyle).
+  yöntemiyle). Yapıldı: hedefin ölçüsü hatların kârı (varışın fiyatıyla
+  satış, eksi mal ve nakliye; zarar eden gün düşürüyor). Kahve yolu
+  (liman → sanayi, 300 gün) ve Başkentin tedarikçisi (sanayi → başkent,
+  Sıkı banka, 360 gün), ikisi de 1 M ₺. Hat açmayan ve seyrek bakan
+  kaybediyor; ilk günün yolunu açıp bırakan 3,8–7,0 M ₺ zarar ediyor.
+  Kamyonunu kâra göre ayarlayan tüccar 232. ve 235. günde iki yıldızla,
+  mağaza kurmayan tüccar da kazanıyor. Zarar eden hat gündemde; hedef
+  panelinde terminal, hat ve bugünkü kâr. Sürüm 1.4.0; lig izi aynı.
+  — bu PR
 - **80 · Değerlendirme ve Faz 7 raporu.**
 
 ### Faz 8 · Lite'ı güncelleme (taslak)

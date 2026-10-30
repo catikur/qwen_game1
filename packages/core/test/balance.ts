@@ -79,7 +79,9 @@ import {
   createLeagueGame,
   leagueRule,
   lineMargins,
+  priceBoard,
   rivalLines,
+  tradeLines,
 } from '../src/index';
 import { build, buyTile, zoningBlocker } from '../src/actions';
 import { SURPLUS_HAIRCUT } from '../src/systems/supply';
@@ -110,8 +112,9 @@ import {
   pathStrategy,
   rivalryStrategy,
   tradeStrategy,
+  tradeTerminals,
 } from './proxy';
-import type { PathProxy } from './proxy';
+import type { PathProxy, TradeOptions } from './proxy';
 import { stanceOf, temperamentOf } from '../src/systems/relations';
 
 // Oyuncu vekili ve aktif rakip listesi tek kopya: `./proxy`.
@@ -6089,6 +6092,147 @@ section('Ticaretin fiyatı: fark, alım hattı ve rakipler', () => {
     alone.every((h) => h.trade > 0 && h.trade < h.stores * 0.1),
     alone.map((h) => `${h.a}→${h.b}: hat ${formatMoney(h.trade)} · mağaza ${formatMoney(h.stores)} (%${((h.trade / h.stores) * 100).toFixed(1)})`).join(' · '),
   );
+});
+
+section('Senaryolar V: ticaretle zafer', () => {
+  /*
+   * Tur 79: ticaret hedefi ("hatlarla şu kadar kâr") ve iki senaryo, Kahve
+   * yolu (liman → sanayi) ve Başkentin tedarikçisi (sanayi → başkent, Sıkı
+   * banka). Yöntem Senaryolar I–IV'ün: el sürmeyen ve hat açmayan
+   * kaybediyor, oyunun tavsiyesine uyan kazanıyor, üç yıldız vekillerin en
+   * iyisinden iyisini istiyor. Tur 61'in yöntemi de: zafere giden yolun
+   * kendi vekili (tüccar) ve başka şehirlerde aynı vekil.
+   *
+   * Tüccar terminalleri ilk gün kuruyor (oynanan şehirde, sonra kurucu
+   * şehre geçip orada) ve hatlarını her gün fiyat tablosundan yönetiyor.
+   */
+  interface Plan {
+    /** Temel vekilin (mağaza ve zincir) kaç günde bir oynadığı (0: hiç). */
+    every: number;
+    /** Tüccar: ayarları ve kaç günde bir baktığı. */
+    trade?: TradeOptions;
+    tradeEvery?: number;
+    /** Şehir başına terminal. */
+    terminals?: number;
+    /** İlk günün en kârlı yolu, dört kamyonla; bir daha bakılmıyor. */
+    single?: boolean;
+  }
+  function play(id: string, plan: Plan, seed?: number) {
+    const def = SCENARIO_BY_ID[id]!;
+    const saved = def.seed;
+    if (seed !== undefined) (def as { seed: number }).seed = seed;
+    let state: GameState;
+    try {
+      state = createScenarioGame(id, { companyName: 'Tüccar AŞ' });
+    } finally {
+      (def as { seed: number }).seed = saved;
+    }
+    const engine = new GameEngine(state);
+    engine.dispatch({ type: 'DISMISS_SCENARIO', screen: 'brief' });
+    if (plan.trade || plan.single) tradeTerminals(engine, plan.terminals ?? 1);
+    const start = engine.getState().time.day;
+    if (plan.single) {
+      const best = priceBoard(engine.getState())
+        .filter((row) => row.best)
+        .sort((a, b) => b.best!.margin - a.best!.margin)[0];
+      if (best) engine.dispatch({ type: 'OPEN_LINE', from: best.best!.from, to: best.best!.to, goodId: best.goodId, trucks: 4, buy: true });
+    }
+    let truckDays = 0;
+    // Ölçüm hedefsiz de sürüyor (`seed` verilen kol): kâr sürenin sonuna kadar.
+    while (true) {
+      const root = engine.getState();
+      const day = root.time.day - start;
+      if (root.scenario!.finishedDay !== undefined || day >= def.days) break;
+      if (plan.every > 0 && day % plan.every === 0) {
+        playerStrategy(engine);
+        defendAgainstRaids(engine);
+      }
+      if (plan.trade && day % (plan.tradeEvery ?? 1) === 0) tradeStrategy(engine, plan.trade);
+      engine.runDay();
+      truckDays += tradeLines(engine.getState()).reduce((sum, line) => sum + line.trucks, 0);
+    }
+    const root = engine.getState();
+    const run = root.scenario!;
+    const days = (run.finishedDay ?? root.time.day) - start;
+    return {
+      won: run.outcome === 'won',
+      stars: run.stars ?? 0,
+      day: days,
+      profit: run.tradeProfit ?? 0,
+      trucks: truckDays / Math.max(1, days),
+      goods: [...new Set(tradeLines(root).map((line) => line.goodId))].map((goodId) => GOOD_BY_ID[goodId]?.name ?? goodId).join(', '),
+    };
+  }
+  type Result = ReturnType<typeof play>;
+  const show = (result: Result) =>
+    `${result.won ? `kazandı ${result.stars}★ · ${result.day}. gün` : 'süre doldu'} · hatların kârı ${formatMoney(result.profit)} · ortalama ${result.trucks.toFixed(1)} kamyon${result.goods ? ` (${result.goods})` : ''}`;
+
+  const cautious: TradeOptions = {};
+  const informed: TradeOptions = { margin: 0.06, maxTrucks: 8, drop: 0.03 };
+  const sharp: TradeOptions = { margin: 0.05, maxTrucks: 16, drop: 0.025 };
+  const plans: Record<string, Plan> = {
+    passive: { every: 0 },
+    base: { every: 5 },
+    single: { every: 5, single: true },
+    slow: { every: 15, trade: cautious, tradeEvery: 15 },
+    cautious: { every: 5, trade: cautious },
+    informed: { every: 5, trade: informed },
+    sharp: { every: 5, trade: sharp, terminals: 2 },
+    pure: { every: 0, trade: informed },
+  };
+  for (const id of ['coffee', 'supplier']) {
+    const def = SCENARIO_BY_ID[id]!;
+    const goal = def.goal as { kind: 'trade'; target: number };
+    const r = Object.fromEntries(Object.entries(plans).map(([name, plan]) => [name, play(id, plan)])) as Record<string, Result>;
+    for (const [name, result] of Object.entries(r)) console.log(`  ${def.title} · ${name.padEnd(9)} ${show(result)}`);
+    expect(
+      `${def.title}: hat açmayan kaybediyor (el sürmeyen ve yalnız mağaza kuran)`,
+      !r.passive!.won && !r.base!.won && r.passive!.profit === 0 && r.base!.profit === 0,
+      `${show(r.passive!)} | ${show(r.base!)}`,
+    );
+    expect(
+      `${def.title}: ilk günün en kârlı yolunu açıp bırakan zarar ediyor (rakip kopyalıyor, pazar doyuyor)`,
+      !r.single!.won && r.single!.profit < 0,
+      show(r.single!),
+    );
+    expect(`${def.title}: on beş günde bir bakan tüccar süreyi dolduruyor`, !r.slow!.won, show(r.slow!));
+    expect(`${def.title}: kamyonunu kâra göre ayarlayan tüccar kazanıyor (en az iki yıldız)`, r.informed!.won && r.informed!.stars >= 2, show(r.informed!));
+    expect(
+      `${def.title}: mağaza kurmayan tüccar da kazanıyor — ticaret tek başına bir yol`,
+      r.pure!.won,
+      `${show(r.pure!)} (mağaza kuranla ${r.informed!.day}. gün)`,
+    );
+    const winners = Object.values(r).filter((result) => result.won);
+    const best = Math.min(...winners.map((result) => result.day));
+    expect(
+      `${def.title}: üç yıldız vekillerin en iyisinden iyisini istiyor`,
+      best > def.stars.three,
+      `en iyi vekil ${best}. gün > ${def.stars.three} (hedef ${formatMoney(goal.target)}, ${def.days} gün)`,
+    );
+  }
+
+  // Tur 61'in yöntemi: aynı vekil başka şehirlerde (tohum), hedefsiz koşu.
+  // Fark türlerden ve olaylardan geliyor; hattını ayarlayan her şehirde önde.
+  for (const id of ['coffee', 'supplier']) {
+    const def = SCENARIO_BY_ID[id]!;
+    const seeds = [def.seed, 7, 101];
+    const rows = seeds.map((seed) => {
+      const goal = def.goal as { target: number };
+      const target = goal.target;
+      goal.target = Number.MAX_SAFE_INTEGER;
+      try {
+        return { seed, cautious: play(id, plans.cautious!, seed), informed: play(id, plans.informed!, seed) };
+      } finally {
+        goal.target = target;
+      }
+    });
+    for (const row of rows) console.log(`  ${def.title} · tohum ${String(row.seed).padEnd(3)} temkinli ${formatMoney(row.cautious.profit)} · bilgili ${formatMoney(row.informed.profit)}`);
+    expect(
+      `${def.title}: her şehirde hattını ayarlayan tüccar kârda ve en çok dört kamyonla yetinenden çok kazanıyor`,
+      rows.every((row) => row.informed.profit > 0 && row.informed.profit > row.cautious.profit),
+      rows.map((row) => `${row.seed}: ${formatMoney(row.informed.profit)} > ${formatMoney(row.cautious.profit)}`).join(' · '),
+    );
+  }
 });
 
 /**

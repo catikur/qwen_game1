@@ -177,6 +177,7 @@ export const world = {
   'core.scenario.progressHoldingWon': '{won}/{total} şehirde zafer · bu şehirde zafer var',
   'core.scenario.progressFreight': '{served}/{rivals} rakip · {outlets}/{target} mağaza taşınıyor',
   'core.scenario.progressPower': 'rakiplere {value} / {target} elektrik',
+  'core.scenario.progressTrade': 'hatlarla {value} / {target} kâr',
   'core.scenario.progressRental': '{occupied} / {target} dolu birim · dönüşüm {renewals}/{renewalTarget}',
   'core.scenario.progressRentalBuilding': '{occupied} / {target} dolu birim · dönüşüm {renewals}/{renewalTarget} · {building} birim inşaatta',
 
