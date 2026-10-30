@@ -12,7 +12,7 @@
  * iki ölçüm aynı soruya farklı cevap verdi. Artık vekil bir tane; deney
  * yalnızca seçeneklerle (tavan, günlük) ayrışıyor.
  */
-import { BUILDINGS, BUILDING_BY_ID, CRISIS_BY_ID, ENERGY, NPC_PROFILES, REAL_ESTATE } from '@capital/content';
+import { BUILDINGS, BUILDING_BY_ID, CRISIS_BY_ID, ENERGY, GOOD_BY_ID, NPC_PROFILES, REAL_ESTATE } from '@capital/content';
 import {
   GameEngine,
   buildOptions,
@@ -45,6 +45,9 @@ import {
   amendsBlocker,
   amendsCost,
   hostileRivals,
+  lineMargins,
+  priceBoard,
+  tradeLines,
 } from '../src/index';
 import type { ChainMove } from '../src/index';
 import type { GameState } from '../src/types';
@@ -305,6 +308,33 @@ export function freightStrategy(engine: GameEngine, maxTerminals = 3): void {
   if (!best || best.count < 6) return;
   if (!engine.dispatch({ type: 'BUY_TILE', tileId: best.tileId }).ok) return;
   engine.dispatch({ type: 'BUILD', tileId: best.tileId, defId: def.id });
+}
+
+/**
+ * Tüccar vekil (Tur 78): hatları fiyat tablosundan yönetiyor. Terminalleri
+ * kurmuyor (uzaktaki şehre komut gitmiyor; düzenek kuruyor).
+ *
+ *  - Pazara satışta zarar eden hattı kapatıyor; birim kârı malın çıkıştaki
+ *    alış fiyatının `margin` payını geçen hatta bir kamyon ekliyor (en çok 4).
+ *  - Pazara satışta en kârlı yönleri, birim kâr katalog fiyatının `margin`
+ *    payını geçiyorsa, pazardan alan bir hatla açıyor: mal başına bir hat,
+ *    holding'de en çok altı.
+ */
+export function tradeStrategy(engine: GameEngine, margin = 0.1): void {
+  const root = engine.getState();
+  for (const line of [...tradeLines(root)]) {
+    const m = lineMargins(root, line.from, line.to, line.goodId);
+    if (!m || m.market < 0) engine.dispatch({ type: 'CLOSE_LINE', lineId: line.id });
+    else if (m.market >= margin * m.buyPrice && line.trucks < 4) engine.dispatch({ type: 'SET_LINE_TRUCKS', lineId: line.id, trucks: line.trucks + 1 });
+  }
+  const rows = priceBoard(root)
+    .filter((row) => row.best && row.best.margin >= margin * (GOOD_BY_ID[row.goodId]?.basePrice ?? Infinity))
+    .sort((a, b) => b.best!.margin - a.best!.margin);
+  for (const row of rows) {
+    if (tradeLines(root).length >= 6) break;
+    if (tradeLines(root).some((line) => line.goodId === row.goodId)) continue;
+    engine.dispatch({ type: 'OPEN_LINE', from: row.best!.from, to: row.best!.to, goodId: row.goodId, trucks: 1, buy: true });
+  }
 }
 
 /**

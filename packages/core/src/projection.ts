@@ -37,6 +37,10 @@ export const PROJECTION_DAYS = 120;
 function freeze(state: GameState): GameState {
   const copy = structuredClone(state);
   copy.flags.npcCompetition = false;
+  // Holding'in öbür şehirlerinin rakipleri de (Tur 78): şehirler arası hatla
+  // oynanan şehrin pazarına dokunuyorlar; yol kopyalaması ve kamyon gözden
+  // geçirmesi iki kolda ayrışmasın (Codex #108).
+  for (const city of copy.holding?.dormant ?? []) city.state.flags.npcCompetition = false;
   copy.flags.landAuctions = false;
   /*
    * Karar kartları (Tur 37b) iki kolda farklı gelebilir: yeni bina mağaza

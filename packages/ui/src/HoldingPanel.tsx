@@ -19,8 +19,12 @@ import {
   inboundByLine,
   lineCapacity,
   lineDailyCost,
+  lineMargins,
   lineQuote,
   openCityQuote,
+  priceBoard,
+  rivalCopyCountdown,
+  rivalLineOn,
   raidStatus,
   remoteIncome,
   sharePrice,
@@ -260,6 +264,10 @@ function defenseLine(city: DormantCity): string {
  * malı yazıyor; yük eksikse sebebini (çıkışta fazla yok ya da varış şehrinin
  * kasası yetmedi). Yeni hatta çıkış şehrinin fazlası ve varış şehrinin açığı
  * yan yana: kamyon sayısı ikisinin küçüğünden öneriliyor.
+ *
+ * Tur 78: şehirlerin fiyat tablosu; satırda birim hesabı (alış, satış,
+ * nakliye, pazara ve ihtiyaca birim kâr), eksiği pazardan alma ayarı ve
+ * rakip: kopyaladıysa adı ve kamyonu, yol kârlıysa kaç gün kaldığı.
  */
 function LinesSection({ state }: { state: GameState }): ReactElement {
   const lines = tradeLines(state);
@@ -270,6 +278,7 @@ function LinesSection({ state }: { state: GameState }): ReactElement {
         <span className="muted">{t('trade.lines.count', { count: lines.length, max: TRADE_LINE.maxLines })}</span>
       </div>
       <p className="muted">{t('trade.lines.blurb', { units: formatNumber(TRADE_LINE.truckUnits), cost: formatMoney(TRADE_LINE.truckCostPerTransitDay) })}</p>
+      <PriceBoard state={state} />
       {lines.length === 0 ? (
         <p className="muted">{t('trade.lines.empty')}</p>
       ) : (
@@ -284,12 +293,84 @@ function LinesSection({ state }: { state: GameState }): ReactElement {
   );
 }
 
-/** Hattın bugünkü seferi tek cümleyle: ne yüklendi, eksikse neden. */
+/**
+ * Şehirlerin fiyatları (Tur 78): her malın holding'in şehirlerindeki fiyatı
+ * ve pazardan alıp pazara satmanın en kârlı yönü. En ucuz ve en pahalı şehir
+ * renkle ve sözle işaretli.
+ */
+function PriceBoard({ state }: { state: GameState }): ReactElement | null {
+  const rows = priceBoard(state);
+  if (rows.length === 0) return null;
+  const cities = tradeCities(state).filter((city) => !city.gameOver);
+  const nameOf = (seed: number) => cities.find((city) => city.meta.seed === seed)?.cityName ?? '';
+  const profitable = rows.filter((row) => row.best).length;
+  return (
+    <details className="price-board" data-price-board={profitable}>
+      <summary>
+        <strong>{t('trade.prices.title')}</strong>
+        <span className="muted">{profitable > 0 ? t('trade.prices.summary', { count: profitable }) : t('trade.prices.summaryNone')}</span>
+      </summary>
+      <p className="muted">{t('trade.prices.blurb')}</p>
+      <div className="price-board-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">{t('trade.prices.good')}</th>
+              {cities.map((city) => (
+                <th scope="col" key={city.meta.seed}>
+                  {city.cityName}
+                </th>
+              ))}
+              <th scope="col">{t('trade.prices.best')}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row) => {
+              const spots = row.prices.map((price) => price.spot);
+              const low = Math.min(...spots);
+              const high = Math.max(...spots);
+              return (
+                <tr key={row.goodId} data-price-row={row.goodId} data-price-best={row.best ? `${row.best.from}>${row.best.to}` : 'none'}>
+                  <th scope="row">{GOOD_BY_ID[row.goodId]?.name ?? row.goodId}</th>
+                  {row.prices.map((price) => {
+                    const mark = high - low > 1e-9 ? (price.spot === low ? 'cheap' : price.spot === high ? 'dear' : '') : '';
+                    return (
+                      <td key={price.seed} className={mark} data-price-mark={mark || 'none'}>
+                        {formatUnitMoney(price.spot)}
+                        {mark && <span className="visually-hidden"> ({t(`trade.prices.${mark}`)})</span>}
+                      </td>
+                    );
+                  })}
+                  <td>
+                    {row.best ? (
+                      t('trade.prices.route', { from: nameOf(row.best.from), to: nameOf(row.best.to), margin: formatUnitMoney(row.best.margin) })
+                    ) : (
+                      <span className="muted">{t('trade.prices.none')}</span>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </details>
+  );
+}
+
+/** Hattın bugünkü seferi tek cümleyle: ne yüklendi (pazardan alınanı), eksikse neden. */
 function lineToday(line: TradeLine): string {
   const last = line.last;
   if (!last) return t('trade.lines.waiting');
   if (last.units <= 0) return t(last.short === 'cash' ? 'trade.lines.noCash' : 'trade.lines.idle', { freight: formatMoney(lineDailyCost(line)) });
-  const today = t('trade.lines.today', { units: formatNumber(Math.round(last.units)), goods: formatMoney(last.goods), freight: formatMoney(last.freight) });
+  const today = last.bought
+    ? t('trade.lines.todayBought', {
+        units: formatNumber(Math.round(last.units)),
+        bought: formatNumber(Math.round(last.bought)),
+        goods: formatMoney(last.goods),
+        freight: formatMoney(last.freight),
+      })
+    : t('trade.lines.today', { units: formatNumber(Math.round(last.units)), goods: formatMoney(last.goods), freight: formatMoney(last.freight) });
   if (last.short === 'cash') return `${today} ${t('trade.lines.shortCash')}`;
   if (last.short === 'surplus') return `${today} ${t('trade.lines.shortSurplus')}`;
   return today;
@@ -305,8 +386,11 @@ function LineRow({ state, line }: { state: GameState; line: TradeLine }): ReactE
   const fleet = terminal ? (BUILDING_BY_ID[terminal.defId]?.fleet ?? 0) : 0;
   const spare = source && terminal ? fleet - fleetUsed(source, terminal.id) : 0;
   const goods = (line.goodsPaid ?? 0) + (line.freightPaid ?? 0);
+  const margins = lineMargins(state, line.from, line.to, line.goodId);
+  const rival = rivalLineOn(state, line.from, line.to, line.goodId);
+  const countdown = rivalCopyCountdown(state, line);
   return (
-    <li className="line-row" data-line={line.id} data-line-short={line.last?.short ?? 'none'}>
+    <li className="line-row" data-line={line.id} data-line-short={line.last?.short ?? 'none'} data-line-buy={line.buy ? 'on' : 'off'}>
       <div className="city-head">
         <strong>{t('trade.lines.route', { from: source?.cityName ?? '', to: target?.cityName ?? '' })}</strong>
         <span className="city-tag">{GOOD_BY_ID[line.goodId]?.name ?? line.goodId}</span>
@@ -320,6 +404,31 @@ function LineRow({ state, line }: { state: GameState; line: TradeLine }): ReactE
         })}
       </span>
       <span data-line-today>{lineToday(line)}</span>
+      {margins && (
+        <span className="muted" data-line-margin={margins.market.toFixed(2)}>
+          {t('trade.lines.margin', {
+            buy: formatUnitMoney(margins.buyPrice),
+            spot: formatUnitMoney(margins.destinationSpot),
+            freight: formatUnitMoney(margins.freight),
+            market: formatUnitMoney(margins.market),
+            need: formatUnitMoney(margins.need),
+          })}
+        </span>
+      )}
+      {line.buy && <span className="muted">{t('trade.lines.buy.on')}</span>}
+      {rival ? (
+        <span className="line-rival" data-line-rival={rival.trucks}>
+          {t('trade.lines.rival', { name: target?.companies[rival.companyId]?.name ?? '', trucks: rival.trucks })}
+        </span>
+      ) : (
+        countdown && (
+          <span className="muted" data-line-rival-soon={countdown.left}>
+            {countdown.left > 0
+              ? t('trade.lines.rivalSoon', { days: countdown.days, left: countdown.left })
+              : t('trade.lines.rivalReady', { days: countdown.days })}
+          </span>
+        )
+      )}
       <span className="muted" data-line-road={Math.round(road?.units ?? 0)}>
         {road
           ? t('trade.lines.onRoad', { units: formatNumber(Math.round(road.units)), shipments: road.shipments, value: formatMoney(road.value) })
@@ -351,6 +460,14 @@ function LineRow({ state, line }: { state: GameState; line: TradeLine }): ReactE
         <button
           type="button"
           className="ghost"
+          data-line-buy-toggle={line.buy ? 'on' : 'off'}
+          onClick={() => run({ type: 'SET_LINE_BUY', lineId: line.id, buy: !line.buy })}
+        >
+          {t(line.buy ? 'trade.lines.buy.disable' : 'trade.lines.buy.enable')}
+        </button>
+        <button
+          type="button"
+          className="ghost"
           data-line-close
           onClick={() => {
             if (run({ type: 'CLOSE_LINE', lineId: line.id })) toast(t('trade.lines.closed'), 'good');
@@ -370,13 +487,14 @@ function OpenLineForm({ state }: { state: GameState }): ReactElement | null {
   const [to, setTo] = useState<number | null>(null);
   const [goodId, setGoodId] = useState<string>(TRADED_GOODS[0]!.id);
   const [trucks, setTrucks] = useState<number | null>(null);
+  const [buy, setBuy] = useState(false);
   if (cities.length < 2) return null;
   const fromSeed = cities.find((city) => city.meta.seed === from)?.meta.seed ?? cities[0]!.meta.seed;
   const targets = cities.filter((city) => city.meta.seed !== fromSeed);
   const toSeed = targets.find((city) => city.meta.seed === to)?.meta.seed ?? targets[0]!.meta.seed;
-  const suggested = lineQuote(state, fromSeed, toSeed, goodId, 1).suggestedTrucks;
+  const suggested = lineQuote(state, fromSeed, toSeed, goodId, 1, buy).suggestedTrucks;
   const count = trucks ?? suggested;
-  const quote = lineQuote(state, fromSeed, toSeed, goodId, count);
+  const quote = lineQuote(state, fromSeed, toSeed, goodId, count, buy);
   const nameOf = (seed: number) => cities.find((city) => city.meta.seed === seed)?.cityName ?? '';
 
   return (
@@ -447,18 +565,40 @@ function OpenLineForm({ state }: { state: GameState }): ReactElement | null {
           />
         </label>
       </div>
+      <label className="line-open-buy">
+        <input
+          type="checkbox"
+          checked={buy}
+          data-line-open-buy
+          onChange={(e) => {
+            setBuy(e.target.checked);
+            setTrucks(null);
+          }}
+        />
+        <span>{t('trade.lines.open.buy')}</span>
+      </label>
       <p className="muted" data-line-quote>
         {t('trade.lines.open.quote', {
           surplus: formatNumber(Math.round(quote.surplus)),
           need: formatNumber(Math.round(quote.need)),
         })}
       </p>
-      <p className="muted">
-        {t('trade.lines.open.terms', {
+      {quote.margins && (
+        <p className="muted" data-line-open-margin={quote.margins.market.toFixed(2)}>
+          {t('trade.lines.open.margins', {
+            market: formatUnitMoney(quote.margins.market),
+            need: formatUnitMoney(quote.margins.need),
+            freight: formatUnitMoney(quote.margins.freight),
+          })}
+        </p>
+      )}
+      <p className="muted" data-line-terms>
+        {t(buy && quote.margins ? 'trade.lines.open.termsBuy' : 'trade.lines.open.terms', {
           capacity: formatNumber(quote.capacity),
           days: quote.transitDays,
           cost: formatMoney(quote.dailyCost),
           price: formatUnitMoney(quote.unitPrice),
+          buy: formatUnitMoney(quote.margins?.buyPrice ?? quote.unitPrice),
           spot: formatUnitMoney(quote.destinationSpot),
         })}
       </p>
@@ -473,7 +613,7 @@ function OpenLineForm({ state }: { state: GameState }): ReactElement | null {
         disabled={!quote.ok}
         data-line-go
         onClick={() => {
-          if (run({ type: 'OPEN_LINE', from: fromSeed, to: toSeed, goodId, trucks: count })) {
+          if (run({ type: 'OPEN_LINE', from: fromSeed, to: toSeed, goodId, trucks: count, ...(buy ? { buy: true } : {}) })) {
             toast(t('trade.lines.open.done', { from: nameOf(fromSeed), to: nameOf(toSeed), good: GOOD_BY_ID[goodId]?.name ?? goodId }), 'good');
             setTrucks(null);
           }

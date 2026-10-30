@@ -1,11 +1,11 @@
 import type { trade as tr } from '../tr/trade';
 
-/** Deutsch — 'trade.'-Schlüssel: Linien zwischen Städten (Runde 77). */
+/** Deutsch — 'trade.'-Schlüssel: Linien zwischen Städten (Runde 77) und ihre Preise (Runde 78). */
 export const trade: Record<keyof typeof tr, string> = {
   'trade.lines.title': 'Linien zwischen Städten',
   'trade.lines.count': '{count} / {max} Linien',
   'trade.lines.blurb':
-    'Verbinde die Frachtterminals zweier Städte mit einer Ware: Was die Ausgangsstadt nicht selbst braucht, kommt in den Bestand der anderen Stadt; deren Werke und Läden nutzen es, statt am Markt zu kaufen. Die Ausgangsstadt verkauft die Ware zum Überschusspreis; die Zielstadt bezahlt Ware und Fracht. Ein Lkw fährt {units} Einheiten am Tag und kostet für jeden Tag der Strecke {cost} am Tag; die Lkw kommen aus der Flotte des Ausgangsterminals, und auch ein leerer Lkw kostet.',
+    'Verbinde die Frachtterminals zweier Städte mit einer Ware: Was die Ausgangsstadt nicht selbst braucht, kommt in den Bestand der anderen Stadt; deren Werke und Läden nutzen es, statt am Markt zu kaufen. Die Ausgangsstadt verkauft die Ware zum Überschusspreis; die Zielstadt bezahlt Ware und Fracht. Ein Lkw fährt {units} Einheiten am Tag und kostet für jeden Tag der Strecke {cost} am Tag; die Lkw kommen aus der Flotte des Ausgangsterminals, und auch ein leerer Lkw kostet. Reicht der Überschuss nicht, kann die Linie den Rest am Markt der Ausgangsstadt kaufen – dann läuft sie auch ohne Produktion.',
   'trade.lines.empty': 'Noch keine Linie. Eine Linie braucht in beiden Städten ein Frachtterminal.',
   'trade.lines.route': '{from} → {to}',
   'trade.lines.spec': '{trucks} Lkw · {capacity} Einheiten am Tag · {days|# Tag|# Tage} unterwegs · {cost} am Tag',
@@ -31,7 +31,30 @@ export const trade: Record<keyof typeof tr, string> = {
   'trade.lines.open.quote': 'Heute übrig in der Ausgangsstadt: {surplus} Einheiten · in der Zielstadt noch ungedeckt: {need} Einheiten (offene Linien dieser Ware abgezogen)',
   'trade.lines.open.terms':
     'Die Linie fährt {capacity} Einheiten am Tag · {days|# Tag|# Tage} unterwegs · {cost} am Tag · Stückpreis {price} (Überschusspreis am Start; Marktpreis am Ziel {spot})',
+  'trade.lines.open.termsBuy':
+    'Die Linie fährt {capacity} Einheiten am Tag · {days|# Tag|# Tage} unterwegs · {cost} am Tag · Stückpreis {price} aus Überschuss, {buy} vom Markt (Markt am Ziel {spot})',
   'trade.lines.open.go': 'Linie eröffnen',
   'trade.lines.open.done': 'Linie eröffnet: {from} → {to}, {good}.',
+  'trade.lines.todayBought': 'Heute {units} Einheiten geladen ({bought} davon am Markt der Ausgangsstadt gekauft): Ware {goods}, Fracht {freight}.',
+  'trade.lines.margin': 'Je Einheit: {buy} am Start · {spot} am Ziel · Fracht {freight} → Verkauf am Markt {market}, eigener Bedarf {need}',
+  'trade.lines.buy.on': 'Kauft die Fehlmenge am Markt der Ausgangsstadt.',
+  'trade.lines.buy.enable': 'Fehlmenge am Markt kaufen',
+  'trade.lines.buy.disable': 'Nur Überschuss fahren',
+  'trade.lines.rival': 'Rivalenlinie: {name}, {trucks|# Lkw|# Lkw}. Seine Ware geht auf den Markt der Zielstadt; der Preis fällt, die Spanne schrumpft.',
+  'trade.lines.rivalSoon': 'Die Route lohnt sich seit {days|# Tag|# Tagen}; noch {left|# Tag|# Tage}, dann kopieren die Rivalen sie.',
+  'trade.lines.rivalReady': 'Die Route lohnt sich seit {days|# Tag|# Tagen}; die Rivalen haben sie bemerkt, der erste mit genug Geld kopiert sie.',
+  'trade.lines.open.buy': 'Reicht der Überschuss nicht, den Rest am Markt der Ausgangsstadt kaufen',
+  'trade.lines.open.margins': 'Spanne je Einheit heute: Verkauf am Markt {market} · eigener Bedarf {need} (Fracht {freight} je Einheit)',
+  'trade.prices.title': 'Preise in deinen Städten',
+  'trade.prices.summary': 'Lohnende Route für {count|# Ware|# Waren}',
+  'trade.prices.summaryNone': 'Heute keine lohnende Route',
+  'trade.prices.blurb':
+    'Die heutigen Marktpreise. Übersteigt die Spanne Fracht und 5 % Verkaufsabschlag, lohnt es sich, in einer Stadt zu kaufen und in der anderen zu verkaufen. Kaufen hebt den Preis am Start, Verkaufen senkt ihn am Ziel; eine lohnende Route sehen auch die Rivalen.',
+  'trade.prices.good': 'Ware',
+  'trade.prices.best': 'Beste Route',
+  'trade.prices.route': '{from} → {to} · {margin} je Einheit',
+  'trade.prices.none': 'keine',
+  'trade.prices.cheap': 'am günstigsten',
+  'trade.prices.dear': 'am teuersten',
   'trade.freightDesk': '{trucks|# Lkw der Flotte fährt|# Lkw der Flotte fahren} Linien zwischen Städten (Fenster „Städte“).',
 };

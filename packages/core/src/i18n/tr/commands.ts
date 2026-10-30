@@ -131,6 +131,10 @@ export const commands = {
   'core.trade.brokenTargetLost': '{city} elden çıktı; yoldaki mal onunla gitti.',
   'core.trade.brokenSourceLost': '{city} elden çıktı; yoldaki mal yine varıyor.',
   'core.trade.brokenTerminal': '{city} şehrindeki terminal artık yok; yoldaki mal yine varıyor.',
+  'core.trade.rivalOpenTitle': 'Rakip hattı: {name}, {from} → {to} ({good})',
+  'core.trade.rivalOpenBody': '{name} yolunu kopyaladı: malı {from} pazarından alıp {to} pazarına satıyor. {to} pazarı doydukça fiyat düşecek, fark daralacak.',
+  'core.trade.rivalCloseTitle': '{name} {good} hattını kapattı',
+  'core.trade.rivalCloseBody': '{from} → {to} yolunda fark kapandı: rakibe artık kâr etmiyor.',
 
   // selectors.ts — harita lensleri
   'core.selectors.lensNoneName': 'Şehir',

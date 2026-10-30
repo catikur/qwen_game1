@@ -4,6 +4,7 @@ import {
   GOOD_BY_ID,
   REAL_ESTATE,
   TRADED_GOODS,
+  TRADE_LINE,
   getCeoModifiers,
 } from '@capital/content';
 import { collectEventModifiers } from './events';
@@ -59,6 +60,13 @@ export function freightShareOf(state: GameState): number {
 
 /** Arz fazlası referans hacme ulaştığında spot fiyat bu oranda düşer. */
 const GLUT_DEPTH = 0.4;
+
+/**
+ * İhracat baskısı (Tur 78): hatların şehrin pazarından aldığı mal, şehrin
+ * fazlasını aşınca, referans hacme ulaştığında fiyatı bu oranda yükseltir.
+ * Fazla kırığının aynası: ucuz şehirden alındıkça ucuzluk eriyor.
+ */
+const EXPORT_DEPTH = 0.4;
 
 /** Spot fiyat bir günde zıplamasın; oyuncu grafikte eğri görsün. */
 const SPOT_SMOOTHING = 0.15;
@@ -431,6 +439,19 @@ function takeTradeDay(state: GameState, flow: CompanyFlow | undefined): TradeDay
   return day;
 }
 
+/** Rakip hatlarının bugünkü defteri (Tur 78): ciro ve mal maliyeti rakibin gününe; nakit pazar adımında. */
+function bookRivalLines(state: GameState): void {
+  const books = state.trade?.rivalBooks;
+  if (!books) return;
+  for (const book of books) {
+    const company = state.companies[book.companyId];
+    if (!company) continue;
+    company.today.revenue += book.revenue;
+    company.today.cogs += book.cogs;
+  }
+  delete state.trade!.rivalBooks;
+}
+
 /** Ürünün kendi ihtiyacından artanı, hattın yükü önce (Tur 77): yüklenen, pazara kalan, yükün birim bedeli. */
 function splitSurplus(
   flow: CompanyFlow,
@@ -472,15 +493,22 @@ function bookLine(state: GameState, terminalId: string, revenue: number, cogs: n
  * - Fazla yükü karşılamadıysa (sabahki tahmin tuttu ama grev başladı)
  *   eksik çıkış şehrinin pazarından alınıyor: terminalin mal maliyetinde,
  *   bedeli de cirosunda. Para yaratılmıyor; eksik fazla fiyatıyla satılıyor.
+ *   Hattın her alışı gibi spot fiyattan (Tur 78): olayın maliyet çarpanı
+ *   şirketin işletmesine biniyor, mala değil.
+ *
+ * Döndürdüğü: ürün başına bu eksik, pazardan alınan birim. Hat başına
+ * payı şehrin kaydında (`fallback`): gün bitince hattın satırına geçiyor.
  */
-function settleTradeGoods(state: GameState, trade: TradeDay, flow: CompanyFlow, costMultiplier: number): void {
+function settleTradeGoods(state: GameState, trade: TradeDay, flow: CompanyFlow): Record<string, number> {
+  const bought: Record<string, number> = {};
   const goods = new Set([...Object.keys(trade.imported), ...Object.keys(trade.loads)]);
   for (const goodId of goods) {
     const produced = flow.produced[goodId] ?? 0;
     const spot = state.market.spot[goodId] ?? GOOD_BY_ID[goodId]?.basePrice ?? 0;
     const split = splitSurplus(flow, goodId, trade);
     if (produced > 0) {
-      const value = split.exported * split.unitPrice + split.surplus * spot * SURPLUS_HAIRCUT;
+      // Hattın getirdiği malın pazara kalanı planlı satış (Tur 78): kırığı %5.
+      const value = split.exported * split.unitPrice + split.surplus * spot * TRADE_LINE.saleShare;
       for (const [terminalId, units] of Object.entries(trade.imported[goodId] ?? {})) {
         if (value > 0) bookLine(state, terminalId, value * (units / produced), 0);
       }
@@ -489,11 +517,15 @@ function settleTradeGoods(state: GameState, trade: TradeDay, flow: CompanyFlow, 
     // değişen kapasitede (grev). Kayan noktanın kırıntısı eksik sayılmıyor.
     const short = split.load - split.exported;
     if (short <= 1e-6) continue;
+    bought[goodId] = short;
+    const lines = ((state.trade ??= { inbound: [] }).fallback ??= {});
     for (const load of trade.loads[goodId] ?? []) {
       const units = load.units * (short / split.load);
-      bookLine(state, load.terminalId, units * load.unitPrice, units * spot * costMultiplier);
+      bookLine(state, load.terminalId, units * load.unitPrice, units * spot);
+      lines[load.lineId] = (lines[load.lineId] ?? 0) + units;
     }
   }
+  return bought;
 }
 
 interface CompanyFlow {
@@ -531,6 +563,7 @@ export function runProductionTick(state: GameState): void {
 
   // Şehirler arası hat (Tur 77): varan mal havuza, günün yükü ve ödemesi.
   const trade = takeTradeDay(state, flows[state.playerCompanyId]);
+  bookRivalLines(state);
 
   // ---- 2. Üretim ve birim maliyet, kademe kademe ----
   // Sıra önemli: bir ara malın maliyeti girdisinin harmanlanmış
@@ -637,7 +670,7 @@ export function runProductionTick(state: GameState): void {
 
     building.last.capacityUsed = 1;
   }
-  if (trade) settleTradeGoods(state, trade, flows[state.playerCompanyId]!, mods.costMultiplier);
+  const fallback = trade ? settleTradeGoods(state, trade, flows[state.playerCompanyId]!) : undefined;
 
   // ---- 4. Tüketici ürünlerinin harmanlanmış maliyeti ----
   // Perakende işleme maliyeti outlet'e özeldir (depo menzili), bu yüzden
@@ -664,12 +697,24 @@ export function runProductionTick(state: GameState): void {
       consumed[goodId] = (consumed[goodId] ?? 0) + units;
     }
   }
-  // Hatta yüklenen mal şehrin pazarından çıkıyor (Tur 77).
+  // Hatta yüklenen mal şehrin pazarından çıkıyor (Tur 77). Hatların
+  // pazardan aldığı da (Tur 78); rakip hatlarının getirdiği pazara giriyor:
+  // varışta fazla büyüyor, yarının fiyatı düşüyor.
   for (const [goodId, loads] of Object.entries(trade?.loads ?? {})) {
     for (const load of loads) consumed[goodId] = (consumed[goodId] ?? 0) + load.units;
   }
+  // (Akışlar spot fiyat adımına kadar duruyor: ihracat baskısı onları okuyor.)
+  for (const [goodId, units] of Object.entries(state.trade?.marketOut ?? {})) consumed[goodId] = (consumed[goodId] ?? 0) + units;
+  for (const [goodId, units] of Object.entries(state.trade?.marketIn ?? {})) produced[goodId] = (produced[goodId] ?? 0) + units;
   state.market.produced = produced;
   state.market.consumed = consumed;
+  // Gün içinde (grev) fazlası yetmeyen yükün eksiği pazardan alındı: o da
+  // ihracat baskısına (Codex #108). Tüketimde planlı yükle zaten sayıldı;
+  // akışa tüketim sayıldıktan sonra giriyor, iki kez sayılmasın.
+  for (const [goodId, units] of Object.entries(fallback ?? {})) {
+    const out = ((state.trade ??= { inbound: [] }).marketOut ??= {});
+    out[goodId] = (out[goodId] ?? 0) + units;
+  }
 }
 
 /**
@@ -756,20 +801,34 @@ function backfillMarket(state: GameState): void {
  * almalı, yoksa zincir eklemek onu cezalandırmış olurdu. Yukarı yönlü
  * baskı olaylardan gelir — ve olay, kendi zincirini kurmuş oyuncuyu
  * vurmaz. Tedarik krizinin oyundaki karşılığı tam olarak bu asimetri.
+ * Tek istisna şehirler arası hat (Tur 78): hatların şehrin pazarından
+ * dışarı aldığı mal fiyatı yükseltiyor (`EXPORT_DEPTH`); yalnız holding'de.
  */
 export function runSpotPriceTick(state: GameState): void {
   const mods = collectEventModifiers(state);
   backfillMarket(state);
+  const exported = state.trade?.marketOut;
 
   for (const good of TRADED_GOODS) {
     const reference = Math.max(1, state.market.reference[good.id] ?? 1);
-    const surplus = Math.max(0, (state.market.produced[good.id] ?? 0) - (state.market.consumed[good.id] ?? 0));
+    const produced = state.market.produced[good.id] ?? 0;
+    const consumed = state.market.consumed[good.id] ?? 0;
+    const surplus = Math.max(0, produced - consumed);
     const glut = Math.min(1, surplus / reference);
 
     // Şehrin referans fiyatı (Tur 76): türün bol ya da kıt hammaddesi; dengeli şehirde katalogdaki.
     const base = referencePrice(state, good.id);
     const eventMultiplier = mods.goodPrice[good.id] ?? 1;
-    const target = base * eventMultiplier * (1 - GLUT_DEPTH * glut);
+    let target = base * eventMultiplier * (1 - GLUT_DEPTH * glut);
+    // İhracat baskısı (Tur 78): yalnız hatların pazardan aldığı, şehrin
+    // açığına düşen kısmı. Talep artışı fiyatı yükseltmiyor (yukarıdaki
+    // kısıt); dışarı giden mal ise şehrin pazarından eksiliyor. Pazardan
+    // alım yoksa çarpan hiç yok: hatsız şehir bitine kadar aynı.
+    const out = exported?.[good.id] ?? 0;
+    if (out > 0) {
+      const pull = Math.min(1, Math.min(out, Math.max(0, consumed - produced)) / reference);
+      if (pull > 0) target *= 1 + EXPORT_DEPTH * pull;
+    }
 
     const current = state.market.spot[good.id] ?? base;
     const next = current + (target - current) * SPOT_SMOOTHING;
@@ -778,5 +837,10 @@ export function runSpotPriceTick(state: GameState): void {
       base * SPOT_FLOOR,
       Math.min(base * SPOT_CEILING, next),
     );
+  }
+  // Günün hat akışları (Tur 78) burada bitiyor: kayıtta kalmasın.
+  if (state.trade) {
+    delete state.trade.marketOut;
+    delete state.trade.marketIn;
   }
 }

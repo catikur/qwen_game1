@@ -180,15 +180,22 @@ export { FREIGHT, FREIGHT_CHALLENGER_SHARE, fleetUsed, freightFeeEstimate, freig
 export type { FreightStanding } from './systems/freight';
 export {
   cityBySeed,
+  freightPerUnit,
   inboundByLine,
   lineCapacity,
   lineDailyCost,
+  lineMargins,
   lineQuote,
+  marketBuyPrice,
+  priceBoard,
+  rivalCopyCountdown,
+  rivalLineOn,
+  rivalLines,
   tradeCities,
   tradeLines,
   transitDaysBetween,
 } from './systems/trade';
-export type { LineQuote } from './systems/trade';
+export type { LineMargins, LineQuote, PriceBoardRow } from './systems/trade';
 export { companyPath, notePathSources, sourceOf } from './systems/paths';
 export type { CompanyPath } from './systems/paths';
 export { cityWeather, weatherOn } from './systems/weather';

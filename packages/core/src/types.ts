@@ -10,7 +10,7 @@ import type { RngState } from './rng';
  * state'te sadece kimlik ve sayı taşınır.
  */
 
-export const SCHEMA_VERSION = 8;
+export const SCHEMA_VERSION = 9;
 
 /**
  * Bir karenin şehirdeki rolü.
@@ -1151,6 +1151,10 @@ export interface HoldingState {
   lines?: TradeLine[];
   /** Hat kimliği sayacı. */
   nextLineId?: number;
+  /** Rakiplerin hatları (Tur 78): oyuncunun kârlı yolunu kopyalayanlar. Yokluğu "rakip hattı yok". */
+  rivalLines?: RivalLine[];
+  /** Rakip hattı kimliği sayacı. */
+  nextRivalLineId?: number;
 }
 
 /**
@@ -1168,12 +1172,45 @@ export interface TradeLine {
   trucks: number;
   /** İki şehrin arası (gün): şehir çiftinden, iki yönde aynı. */
   transitDays: number;
-  /** Bugünkü sefer: yüklenen birim, malın ve nakliyenin bedeli; yük eksikse sebebi. */
-  last?: { units: number; goods: number; freight: number; short?: 'surplus' | 'cash' };
+  /**
+   * Fazla yetmezse eksiği çıkış şehrinin pazarından al (Tur 78): hat
+   * üretimsiz de çalışıyor, mal pazarın fiyatıyla. Yokluğu yalnız fazla.
+   */
+  buy?: boolean;
+  /**
+   * Bugünkü sefer: yüklenen birim (pazardan alınanı dahil), malın ve
+   * nakliyenin bedeli; yük eksikse sebebi.
+   */
+  last?: { units: number; goods: number; freight: number; bought?: number; short?: 'surplus' | 'cash' };
   /** Açıldığından beri: yüklenen birim, malın ve nakliyenin bedeli. */
   shipped?: number;
   goodsPaid?: number;
   freightPaid?: number;
+  /** Yolun pazara satışta kârlı geçen ardışık günleri (Tur 78): rakip bunu görüp kopyalıyor. */
+  profitableDays?: number;
+}
+
+/**
+ * Rakibin hattı (Tur 78): oyuncunun kârlı yolunu kopyalayan, varış
+ * şehrinin bir rakibi. Malı çıkış şehrinin pazarından alıp varış şehrinin
+ * pazarına satıyor: varışta fazla büyüyor, fiyat düşüyor, fark daralıyor.
+ * Terminali yok, kamyonları soyut; yolu bitince her gün aynı akış.
+ */
+export interface RivalLine {
+  id: string;
+  from: number;
+  to: number;
+  goodId: string;
+  /** Varış şehrindeki rakip şirket. */
+  companyId: string;
+  trucks: number;
+  transitDays: number;
+  /** Açıldığı gün (oynanan şehrin takvimi; holding'in şehirleri aynı günde). */
+  openedDay: number;
+  /** Kamyon sayısını gözden geçireceği gün. */
+  reviewDay: number;
+  /** Bugünkü akış: birim ve birim kâr. */
+  last?: { units: number; margin: number };
 }
 
 /** Çıkış şehrinde bugünkü yük: havuzdan fazla olarak düşüyor, bedeli üreticilerin cirosu. */
@@ -1215,6 +1252,23 @@ export interface CityTrade {
   payments?: TradePayment[];
   /** Bugün varan, hat başına (birim). */
   arrived?: Record<string, number>;
+  /**
+   * Bugün bu şehrin pazarından hatlara alınan (Tur 78), mal başına birim:
+   * oyuncunun pazardan alımı ve rakip hatlarının yükü. Şehrin tüketimine
+   * giriyor; sabah yazılıyor (gün içinde eksik kalan yükün alışını üretim
+   * adımı ekliyor), spot fiyat adımı siliyor.
+   */
+  marketOut?: Record<string, number>;
+  /**
+   * Gün içinde (grev) fazlası yetmeyen yükün pazardan alınanı, hat başına
+   * birim (Codex #108): üretim adımı yazıyor, bütün şehirler yaşadıktan
+   * sonra hattın satırına (`last.bought`) geçip siliniyor.
+   */
+  fallback?: Record<string, number>;
+  /** Bugün rakip hatlarıyla bu şehrin pazarına giren, mal başına birim (şehrin üretimine). */
+  marketIn?: Record<string, number>;
+  /** Rakiplerin bugünkü hat defteri: ciro ve mal maliyeti, şirket başına. */
+  rivalBooks?: Array<{ companyId: string; revenue: number; cogs: number }>;
 }
 
 /** Bir şehrin koşuya kattığı (Tur 41); hepsi seçime bağlı, yokluğu 0. */
@@ -1419,9 +1473,11 @@ export type GameCommand =
   /** Kaybedilmiş bir şehri holding'den çıkarır; yeri boşalıyor (Tur 32). */
   | { type: 'CLOSE_CITY'; index: number }
   /** İki şehrin terminallerini tek bir malla bağlar (Tur 77); şehirler tohumlarıyla. */
-  | { type: 'OPEN_LINE'; from: number; to: number; goodId: string; trucks: number }
+  | { type: 'OPEN_LINE'; from: number; to: number; goodId: string; trucks: number; buy?: boolean }
   /** Hattın kamyon sayısı. */
   | { type: 'SET_LINE_TRUCKS'; lineId: string; trucks: number }
+  /** Hat fazla yetmezse eksiği çıkış şehrinin pazarından alsın mı (Tur 78). */
+  | { type: 'SET_LINE_BUY'; lineId: string; buy: boolean }
   /** Hattı kapatır; yoldaki mal yine varıyor. */
   | { type: 'CLOSE_LINE'; lineId: string };
 

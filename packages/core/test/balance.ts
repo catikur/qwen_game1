@@ -29,6 +29,7 @@ import {
   GOOD_BY_ID,
   TRADED_GOODS,
   TRADE_LINE,
+  TRADE_RIVAL,
 } from '@capital/content';
 import type { CategoryId, CityTypeId, ModifierId, SeasonId, WeatherId } from '@capital/content';
 import {
@@ -77,6 +78,8 @@ import {
   LEAGUE_RULE_ROTATION,
   createLeagueGame,
   leagueRule,
+  lineMargins,
+  rivalLines,
 } from '../src/index';
 import { build, buyTile, zoningBlocker } from '../src/actions';
 import { SURPLUS_HAIRCUT } from '../src/systems/supply';
@@ -106,6 +109,7 @@ import {
   playerStrategy,
   pathStrategy,
   rivalryStrategy,
+  tradeStrategy,
 } from './proxy';
 import type { PathProxy } from './proxy';
 import { stanceOf, temperamentOf } from '../src/systems/relations';
@@ -5774,7 +5778,8 @@ section('Şehir türleri: liman, sanayi, başkent', () => {
  *
  * Ölçülen (tohum 1/7/42, yol 6/4/3 gün; holding değeri farkı, ₺/gün):
  *   buğday → değirmen, 6 kamyon:  658 · 827 · 1.428
- *   pamuk → dokuma, 2 kamyon:   1.314 · 1.350 · 1.802
+ *   pamuk → dokuma, 2 kamyon:   1.443 · 1.480 · 1.931 (Tur 78'den beri; varışta
+ *     artan pamuk hattın planlı satışıyla, spot × %95: önce 1.314 · 1.350 · 1.802)
  *   kumaş → butik, 1 kamyon:    2.320 · 2.319 · 2.943
  * Kazancın iki kaynağı var: varış şehri pazardan tam fiyatla aldığını
  * fazla fiyatıyla alıyor (%15 eksi nakliye) ve çıkış şehrinin fazlası
@@ -5782,7 +5787,7 @@ section('Şehir türleri: liman, sanayi, başkent', () => {
  * biraz kazanıyor (değeri 97–452 ₺/gün; kârının yarısı kasaya): pazara
  * dökülen fazla spot fiyatı düşürüyordu. Türlü şehir çiftinde hammadde fiyatı da ayrışıyor: sanayi
  * kentinden başkente buğday hattı aynı tohumda dengeli çiftin 2,6 katı
- * (1.727 ₺/gün). Fiyat farkının kendisi Tur 78'in konusu.
+ * (1.727 ₺/gün). Fiyat farkının kendisi "Ticaretin fiyatı" bölümünde (Tur 78).
  */
 section('Şehirler arası hat: bir şehrin malı öbüründe', () => {
   interface LineCase { label: string; good: string; origin: string[]; destination: string[]; trucks: number }
@@ -5886,7 +5891,203 @@ section('Şehirler arası hat: bir şehrin malı öbüründe', () => {
   const balanced = runs[0]!.bySeed[0]!;
   console.log(
     `  NOT: sanayi kentinden başkente buğday hattı (tohum 1): holding +${formatMoney(typed.gain)}/gün, dengeli çift +${formatMoney(balanced.gain)}/gün ` +
-      `(×${(typed.gain / balanced.gain).toFixed(1)}): sanayide buğday %10 ucuz, başkentte hammadde pahalı. Fiyat farkı Tur 78'in konusu.`,
+      `(×${(typed.gain / balanced.gain).toFixed(1)}): sanayide buğday %10 ucuz, başkentte hammadde pahalı. Fiyat farkı "Ticaretin fiyatı" bölümünde (Tur 78).`,
+  );
+});
+
+/**
+ * Ticaretin fiyatı (Tur 78): fark, alım hattı ve rakipler.
+ *
+ * Hat artık eksiğini çıkış şehrinin pazarından alabiliyor; mal bir şehirde
+ * ucuz, öbüründe pahalıysa üretimsiz de kâr ediyor. Pazardan alınan çıkışın
+ * fiyatını yükseltiyor (ihracat baskısı), varış pazarına kalan düşürüyor:
+ * fark hattın kendi hacmiyle de daralıyor. Rakip, oyuncunun pazara satışta
+ * kârlı yolunu kopyalıyor; onun malı da varışın fazlası.
+ *
+ * Laboratuvar: liman kentinden sanayi kentine kahve çekirdeği (limanda %20
+ * ucuz, sanayide %15 pahalı), çıkışta yalnız terminal, olaylar kapalı;
+ * hatlı ve hatsız ikiz. Holding: kurucu şehirde 250 gün vekil, ikinci
+ * şehirde 360 gün dört vekil (boş, tüccar, standart, standart + tüccar),
+ * rakipler ve olaylar açık.
+ *
+ * Ölçülen (tohum 1 · 7 · 42):
+ *   kavurma tesisine 2 kamyon, rakipsiz:  +897 · +958 · +1.321 ₺/gün
+ *   pazara satış, rakipsiz, tohum 1:      1 kamyon 305, 3 kamyon 212 ₺/gün
+ *     kamyon başına; çıkış ×1,018 / ×1,054 pahalı, varış ×0,981 / ×0,943
+ *   rakipler açık, 1 kamyon:              rakip 30. günde (Nova Holding,
+ *     5–6 kamyona çıkıyor); birim kâr 1,23–1,37 → 0,18–0,23, kazanç
+ *     230–342 → 55–68 ₺/gün
+ * Holding, ikinci şehirde 360 gün (boş · tüccar · standart · ikisi):
+ *   liman → sanayi:    71,6 · 72,5 · 127,7 · 129,3 M ₺ (×1,012)
+ *   sanayi → başkent:  83,4 · 87,1 · 155,3 · 161,7 M ₺ (×1,041)
+ *   liman → başkent:   74,2 · 76,3 · 141,4 · 146,2 M ₺ (×1,034)
+ * Ticaret tek başına bir yol değil: yalnız hatla oynayan ikinci şehir
+ * holding'e 0,8–3,7 M ₺ katıyor, mağazalı oyun 56–72 M ₺ (%1,4–5,2). Ama
+ * oyuna eklenince başkente giden çiftlerde holding'i %3–4 büyütüyor:
+ * hatlar ikinci şehrin tesislerini ucuz hammaddeyle besliyor. Zafere
+ * ticaretle giden yol Tur 79'un işi (yeni hedef türü ve onu kazanan vekil).
+ */
+section('Ticaretin fiyatı: fark, alım hattı ve rakipler', () => {
+  const place = (state: ReturnType<GameEngine['getState']>, defId: string): void => {
+    const me = getPlayer(state);
+    for (const tile of state.map.tiles) {
+      if (tile.kind !== 'plot' || tile.ownerId || tile.structureId || tile.buildingId) continue;
+      if (zoningBlocker(state, tile.districtId, defId)) continue;
+      if (!buyTile(state, me.id, tile.id).ok) continue;
+      if (build(state, me.id, tile.id, defId).ok) return;
+    }
+    throw new Error(`${defId} için parsel yok`);
+  };
+  interface Lab { engine: GameEngine; twin: GameEngine; root: ReturnType<GameEngine['getState']>; away: ReturnType<GameEngine['getState']> }
+  /** Limandan sanayiye kahve hattı, yirmi günlük ısınmadan sonra; ikiz hatsız. */
+  const lab = (seed: number, rivals: boolean, trucks: number, destination: string[] = []): Lab => {
+    const first = createNewGame({ seed, companyName: 'Tüccar AŞ', cityType: 'port' });
+    first.flags.randomEvents = false;
+    getPlayer(first).cash = 500_000_000;
+    const root = foundCity(first, 'standard', 200_000_000, 'industrial');
+    root.flags.randomEvents = false;
+    if (!rivals) root.flags.npcCompetition = false;
+    const engine = new GameEngine(root);
+    const away = root.holding!.dormant[0]!.state;
+    place(away, 'freight_terminal');
+    place(root, 'freight_terminal');
+    for (const def of destination) place(root, def);
+    for (let day = 0; day < 20; day++) engine.runDay();
+    const twin = new GameEngine(structuredClone(root));
+    const opened = engine.dispatch({ type: 'OPEN_LINE', from: away.meta.seed, to: root.meta.seed, goodId: 'coffee_bean', trucks, buy: true });
+    if (!opened.ok) throw new Error(opened.reason);
+    return { engine, twin, root, away };
+  };
+  const margin = (l: Lab) => lineMargins(l.root, l.away.meta.seed, l.root.meta.seed, 'coffee_bean')!;
+  /** Penceredeki holding farkı (₺/gün) ve pazara satışta ortalama birim kâr. */
+  const window = (l: Lab, days: number) => {
+    const start = holdingNetWorth(l.engine.getState()) - holdingNetWorth(l.twin.getState());
+    let sum = 0;
+    for (let day = 0; day < days; day++) {
+      l.engine.runDay();
+      l.twin.runDay();
+      sum += margin(l).market;
+    }
+    return { gain: (holdingNetWorth(l.engine.getState()) - holdingNetWorth(l.twin.getState()) - start) / days, margin: sum / days };
+  };
+  const SEEDS = [1, 7, 42];
+
+  // Üretimsiz alım hattı, varışta kavurma tesisi (rakipsiz): ihtiyaca giden kahve.
+  const own = SEEDS.map((seed) => {
+    const l = lab(seed, false, 2, ['coffee_roastery']);
+    window(l, 30);
+    const steady = window(l, 60);
+    return { seed, ...steady, need: margin(l).need };
+  });
+  console.log(`  kavurma tesisine 2 kamyon (rakipsiz): ${own.map((r) => `tohum ${r.seed} +${formatMoney(r.gain)}/gün (ihtiyaca birim kâr ${r.need.toFixed(2)})`).join(' · ')}`);
+  expect(
+    'pazardan alan hat üretimsiz kâr ediyor: limandan sanayiye kahve, kavurma tesisine, üç tohumda',
+    own.every((r) => r.gain > 0),
+    own.map((r) => formatMoney(r.gain)).join(' / '),
+  );
+
+  // Hattın kendi hacmi: 1 ve 3 kamyon pazara satış (rakipsiz), 60 gün.
+  const volume = [1, 3].map((trucks) => {
+    const l = lab(1, false, trucks);
+    const steady = window(l, 60);
+    const twinAway = l.twin.getState().holding!.dormant[0]!.state;
+    return {
+      trucks,
+      perTruck: steady.gain / trucks,
+      originUp: l.away.market.spot['coffee_bean']! / twinAway.market.spot['coffee_bean']!,
+      destDown: l.root.market.spot['coffee_bean']! / l.twin.getState().market.spot['coffee_bean']!,
+    };
+  });
+  console.log(
+    `  pazara satış (rakipsiz, 60 gün): ${volume.map((v) => `${v.trucks} kamyon: kamyon başına ${formatMoney(v.perTruck)}/gün, çıkış fiyatı ×${v.originUp.toFixed(3)}, varış ×${v.destDown.toFixed(3)}`).join(' · ')}`,
+  );
+  expect(
+    'fark hattın kendi hacmiyle daralıyor: üç kamyonda kamyon başına kazanç bir kamyondakinden az; çıkış pahalanıyor, varış ucuzluyor',
+    volume[1]!.perTruck < volume[0]!.perTruck && volume.every((v) => v.originUp > 1 && v.destDown < 1) && volume[1]!.originUp > volume[0]!.originUp,
+    volume.map((v) => `${v.trucks}: ${formatMoney(v.perTruck)} · ×${v.originUp.toFixed(3)} · ×${v.destDown.toFixed(3)}`).join(' | '),
+  );
+
+  // Rakipler açık: 1 kamyon pazara satış; ilk 20 gün ve 90.–150. gün.
+  const rivals = SEEDS.map((seed) => {
+    const l = lab(seed, true, 1);
+    const early = window(l, 20);
+    let entry = 0;
+    for (let day = 0; day < 70; day++) {
+      l.engine.runDay();
+      l.twin.runDay();
+      if (!entry && rivalLines(l.root).length > 0) entry = 21 + day;
+    }
+    const late = window(l, 60);
+    const rival = rivalLines(l.root)[0];
+    return { seed, early, late, entry, trucks: rival?.trucks ?? 0, name: rival ? l.root.companies[rival.companyId]!.name : '' };
+  });
+  for (const r of rivals) {
+    console.log(
+      `  tohum ${r.seed} (rakipler açık): ilk 20 gün +${formatMoney(r.early.gain)}/gün, birim kâr ${r.early.margin.toFixed(2)} · rakip ${r.entry}. günde (${r.name}, şimdi ${r.trucks} kamyon) · ` +
+        `90.–150. gün ${r.late.gain >= 0 ? '+' : ''}${formatMoney(r.late.gain)}/gün, birim kâr ${r.late.margin.toFixed(2)}`,
+    );
+  }
+  expect(
+    `rakip kârlı yolu ${TRADE_RIVAL.entryDays} gün sonra kopyalıyor, fark daralıyor: 90.–150. günde birim kâr ilk 20 günün yarısından az, oyuncunun kazancı da düşük`,
+    rivals.every((r) => r.entry > 0 && r.entry <= TRADE_RIVAL.entryDays + 2 && r.late.margin < r.early.margin * 0.5 && r.late.gain < r.early.gain),
+    rivals.map((r) => `${r.entry}. gün · ${r.early.margin.toFixed(2)} → ${r.late.margin.toFixed(2)}`).join(' | '),
+  );
+
+  // Holding'de dört vekil: ikinci şehirde 360 gün. Tüccar terminalleri baştan kuruyor.
+  type Mode = 'idle' | 'trader' | 'standard' | 'both';
+  const PAIRS: Array<{ seed: number; a: CityTypeId; b: CityTypeId }> = [
+    { seed: 1, a: 'port', b: 'industrial' },
+    { seed: 7, a: 'industrial', b: 'capital' },
+    { seed: 42, a: 'port', b: 'capital' },
+  ];
+  const terminal = (state: ReturnType<GameEngine['getState']>) => {
+    if (freightTerminals(state).length === 0) place(state, 'freight_terminal');
+  };
+  const holdings = PAIRS.map(({ seed, a, b }) => {
+    const base = new GameEngine(createNewGame({ seed, companyName: 'Yol AŞ', cityType: a }));
+    for (let day = 0; day < 250; day++) {
+      if (base.getState().time.day % 5 === 0) playerStrategy(base);
+      base.runDay();
+    }
+    const founder = base.getState();
+    const capital = Math.max(2_000_000, Math.round(getPlayer(founder).cash * 0.4));
+    const founded = foundCity(founder, 'standard', capital, b);
+    const worth = {} as Record<Mode, number>;
+    let rivalCount = 0;
+    for (const mode of ['idle', 'trader', 'standard', 'both'] as const) {
+      const engine = new GameEngine(structuredClone(founded));
+      const root = engine.getState();
+      const trades = mode === 'trader' || mode === 'both';
+      if (trades) {
+        terminal(root);
+        terminal(root.holding!.dormant[0]!.state);
+      }
+      for (let day = 0; day < 360; day++) {
+        if ((mode === 'standard' || mode === 'both') && root.time.day % 5 === 0) playerStrategy(engine);
+        if (trades && root.time.day % 10 === 0) tradeStrategy(engine);
+        engine.runDay();
+      }
+      worth[mode] = holdingNetWorth(root);
+      if (mode === 'both') rivalCount = rivalLines(root).length;
+    }
+    return { seed, a, b, worth, rivalCount };
+  });
+  for (const h of holdings) {
+    console.log(
+      `  ${h.a} → ${h.b} (tohum ${h.seed}): boş ${formatMoney(h.worth.idle)} · tüccar ${formatMoney(h.worth.trader)} · standart ${formatMoney(h.worth.standard)} · ` +
+        `standart + tüccar ${formatMoney(h.worth.both)} (×${(h.worth.both / h.worth.standard).toFixed(3)}; rakip hattı ${h.rivalCount})`,
+    );
+  }
+  expect(
+    'ticaret oyuna katıyor: standart oyuna eklenen hatlar holding\'i hiçbir çiftte küçültmüyor, başkente giden iki çiftte %3\'ten çok büyütüyor',
+    holdings.every((h) => h.worth.both >= h.worth.standard * 0.995) && holdings.filter((h) => h.worth.both > h.worth.standard * 1.03).length >= 2,
+    holdings.map((h) => `${h.a}→${h.b} ×${(h.worth.both / h.worth.standard).toFixed(3)}`).join(' · '),
+  );
+  const alone = holdings.map((h) => ({ ...h, trade: h.worth.trader - h.worth.idle, stores: h.worth.standard - h.worth.idle }));
+  expect(
+    'ticaret tek başına bir yol değil: yalnız hatla oynayan ikinci şehrin holding\'e katkısı mağazalı oyununkinin %10\'undan az, ama boştan iyi',
+    alone.every((h) => h.trade > 0 && h.trade < h.stores * 0.1),
+    alone.map((h) => `${h.a}→${h.b}: hat ${formatMoney(h.trade)} · mağaza ${formatMoney(h.stores)} (%${((h.trade / h.stores) * 100).toFixed(1)})`).join(' · '),
   );
 });
 

@@ -1,9 +1,9 @@
-/** Türkçe metinler — 'trade.' önekli anahtarlar: şehirler arası hatlar (Tur 77). */
+/** Türkçe metinler — 'trade.' önekli anahtarlar: şehirler arası hatlar (Tur 77) ve fiyatları (Tur 78). */
 export const trade = {
   'trade.lines.title': 'Şehirler arası hatlar',
   'trade.lines.count': '{count} / {max} hat',
   'trade.lines.blurb':
-    'İki şehrin nakliye terminalini bir malla bağla: çıkış şehrinin kendi ihtiyacından artanı öbür şehrin havuzuna girer, oradaki tesisler ve mağazalar pazardan almak yerine onu kullanır. Çıkış şehri malı fazlanın pazar fiyatıyla satar; varış şehri malın bedelini ve nakliyeyi öder. Kamyon günde {units} birim taşır, yolun her günü için günde {cost} tutar; kamyonlar çıkış terminalinin filosundan, boş giden kamyonun da bedeli var.',
+    'İki şehrin nakliye terminalini bir malla bağla: çıkış şehrinin kendi ihtiyacından artanı öbür şehrin havuzuna girer, oradaki tesisler ve mağazalar pazardan almak yerine onu kullanır. Çıkış şehri malı fazlanın pazar fiyatıyla satar; varış şehri malın bedelini ve nakliyeyi öder. Kamyon günde {units} birim taşır, yolun her günü için günde {cost} tutar; kamyonlar çıkış terminalinin filosundan, boş giden kamyonun da bedeli var. Fazla yetmezse hat eksiğini çıkışın pazarından da alabilir; o zaman üretimsiz de çalışır.',
   'trade.lines.empty': 'Henüz hat yok. Hat için iki şehirde de nakliye terminali gerekiyor.',
   'trade.lines.route': '{from} → {to}',
   'trade.lines.spec': '{trucks} kamyon · günde {capacity} birim · {days} gün yol · günde {cost}',
@@ -29,7 +29,30 @@ export const trade = {
   'trade.lines.open.quote': 'Bugün çıkışta artan {surplus} birim · varışta karşılanmayan {need} birim (aynı malın açık hatları düşüldü)',
   'trade.lines.open.terms':
     'Hat günde {capacity} birim taşır · {days} gün yol · günde {cost} · birim bedeli {price} (çıkışta fazlanın fiyatı; varışta pazar {spot})',
+  'trade.lines.open.termsBuy':
+    'Hat günde {capacity} birim taşır · {days} gün yol · günde {cost} · birim bedeli fazladan {price}, pazardan {buy} (varışta pazar {spot})',
   'trade.lines.open.go': 'Hattı aç',
   'trade.lines.open.done': 'Hat açıldı: {from} → {to}, {good}.',
+  'trade.lines.todayBought': 'Bugün {units} birim yüklendi ({bought} birimi çıkışın pazarından): mal {goods}, nakliye {freight}.',
+  'trade.lines.margin': 'Birim: çıkışta {buy} · varışta {spot} · nakliye {freight} → pazara satışta {market}, kendi ihtiyacına {need}',
+  'trade.lines.buy.on': 'Eksiği çıkışın pazarından alıyor.',
+  'trade.lines.buy.enable': 'Eksiği pazardan al',
+  'trade.lines.buy.disable': 'Yalnız fazlayı taşı',
+  'trade.lines.rival': 'Rakip hattı: {name}, {trucks} kamyon. Malı varışın pazarına giriyor; fiyat düşüyor, fark daralıyor.',
+  'trade.lines.rivalSoon': 'Yol {days} gündür kârlı; {left} gün daha sürerse rakipler kopyalayacak.',
+  'trade.lines.rivalReady': 'Yol {days} gündür kârlı; rakipler yolu gördü, nakdi yeten ilk rakip kopyalayacak.',
+  'trade.lines.open.buy': 'Fazla yetmezse eksiği çıkışın pazarından al',
+  'trade.lines.open.margins': 'Bugün birim kâr: pazara satışta {market} · kendi ihtiyacına {need} (nakliye birim başına {freight})',
+  'trade.prices.title': 'Şehirlerin fiyatları',
+  'trade.prices.summary': '{count} malda kârlı yön',
+  'trade.prices.summaryNone': 'Bugün kârlı yön yok',
+  'trade.prices.blurb':
+    'Pazarların bugünkü fiyatı. Fark nakliyeyi ve %5\'lik satış payını aşınca bir şehirde alıp öbüründe satmak kâr eder. Alındıkça çıkış pahalanır, satıldıkça varış ucuzlar; kârlı yolu rakipler de görür.',
+  'trade.prices.good': 'Mal',
+  'trade.prices.best': 'En kârlı yön',
+  'trade.prices.route': '{from} → {to} · birim {margin}',
+  'trade.prices.none': 'yok',
+  'trade.prices.cheap': 'en ucuz',
+  'trade.prices.dear': 'en pahalı',
   'trade.freightDesk': 'Filodan {trucks} kamyon şehirler arası hatlarda (Şehirler paneli).',
 } as const;

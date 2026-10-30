@@ -36,6 +36,7 @@ const PAIRS = [
   ['arayüz · finans', 'packages/ui/src/i18n/en/finance.ts', 'finance', `packages/ui/src/i18n/${locale}/finance.ts`, 'finance'],
   ['arayüz · HUD', 'packages/ui/src/i18n/en/hud.ts', 'hud', `packages/ui/src/i18n/${locale}/hud.ts`, 'hud'],
   ['arayüz · paneller', 'packages/ui/src/i18n/en/panels.ts', 'panels', `packages/ui/src/i18n/${locale}/panels.ts`, 'panels'],
+  ['arayüz · hatlar', 'packages/ui/src/i18n/en/trade.ts', 'trade', `packages/ui/src/i18n/${locale}/trade.ts`, 'trade'],
   ['paket rafı', 'packages/ui/src/packMessages.ts', 'packEn', `packages/ui/src/packMessages.${locale}.ts`, `pack${cap(locale)}`],
   ['editör', 'packages/ui/src/packEditorMessages.ts', 'editorEn', `packages/ui/src/packEditorMessages.${locale}.ts`, `editor${cap(locale)}`],
   ['kumanda', 'packages/ui/src/padMessages.ts', 'padEn', `packages/ui/src/padMessages.${locale}.ts`, `pad${cap(locale)}`],

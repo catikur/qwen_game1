@@ -1,11 +1,11 @@
 import type { trade as tr } from '../tr/trade';
 
-/** English — 'trade.' keys: lines between cities (Turn 77). */
+/** English — 'trade.' keys: lines between cities (Turn 77) and their prices (Turn 78). */
 export const trade: Record<keyof typeof tr, string> = {
   'trade.lines.title': 'Lines between cities',
   'trade.lines.count': '{count} / {max} lines',
   'trade.lines.blurb':
-    "Connect two cities' freight terminals with one good: whatever the origin city doesn't need goes into the other city's pool, where plants and stores use it instead of buying from the market. The origin sells the goods at its surplus price; the destination pays for the goods and the freight. A truck carries {units} units a day and costs {cost} a day for every day of the route; trucks come from the origin terminal's fleet, and an empty truck costs the same.",
+    "Connect two cities' freight terminals with one good: whatever the origin city doesn't need goes into the other city's pool, where plants and stores use it instead of buying from the market. The origin sells the goods at its surplus price; the destination pays for the goods and the freight. A truck carries {units} units a day and costs {cost} a day for every day of the route; trucks come from the origin terminal's fleet, and an empty truck costs the same. If the surplus falls short, the line can buy the rest on the origin market, so it works without production too.",
   'trade.lines.empty': 'No lines yet. A line needs a freight terminal in both cities.',
   'trade.lines.route': '{from} → {to}',
   'trade.lines.spec': '{trucks|# truck|# trucks} · {capacity} units a day · {days|# day|# days} on the road · {cost} a day',
@@ -31,7 +31,30 @@ export const trade: Record<keyof typeof tr, string> = {
   'trade.lines.open.quote': 'Left over at the origin today: {surplus} units · still short at the destination: {need} units (open lines for this good deducted)',
   'trade.lines.open.terms':
     'The line carries {capacity} units a day · {days|# day|# days} on the road · {cost} a day · unit price {price} (the origin surplus price; market at the destination {spot})',
+  'trade.lines.open.termsBuy':
+    'The line carries {capacity} units a day · {days|# day|# days} on the road · {cost} a day · unit price {price} from surplus, {buy} from the market (market at the destination {spot})',
   'trade.lines.open.go': 'Open line',
   'trade.lines.open.done': 'Line opened: {from} → {to}, {good}.',
+  'trade.lines.todayBought': 'Loaded {units} units today ({bought} bought on the origin market): goods {goods}, freight {freight}.',
+  'trade.lines.margin': 'Per unit: {buy} at the origin · {spot} at the destination · freight {freight} → selling on the market {market}, for your own needs {need}',
+  'trade.lines.buy.on': 'Buys the shortfall on the origin market.',
+  'trade.lines.buy.enable': 'Buy the shortfall on the market',
+  'trade.lines.buy.disable': 'Carry surplus only',
+  'trade.lines.rival': 'Rival line: {name}, {trucks|# truck|# trucks}. Its goods go onto the destination market; the price falls and the gap narrows.',
+  'trade.lines.rivalSoon': 'The route has paid for {days|# day|# days}; {left|# more day|# more days} and rivals will copy it.',
+  'trade.lines.rivalReady': 'The route has paid for {days|# day|# days}; rivals have noticed it, and the first one with the cash will copy it.',
+  'trade.lines.open.buy': 'If the surplus falls short, buy the rest on the origin market',
+  'trade.lines.open.margins': 'Margin per unit today: selling on the market {market} · for your own needs {need} (freight {freight} per unit)',
+  'trade.prices.title': 'Prices in your cities',
+  'trade.prices.summary': 'Profitable route for {count|# good|# goods}',
+  'trade.prices.summaryNone': 'No profitable route today',
+  'trade.prices.blurb':
+    "Today's market prices. When the gap beats the freight and the 5% sales margin, buying in one city and selling in the other pays. Buying lifts the origin's price, selling lowers the destination's; rivals see a profitable route too.",
+  'trade.prices.good': 'Good',
+  'trade.prices.best': 'Best route',
+  'trade.prices.route': '{from} → {to} · {margin} per unit',
+  'trade.prices.none': 'none',
+  'trade.prices.cheap': 'cheapest',
+  'trade.prices.dear': 'dearest',
   'trade.freightDesk': '{trucks|# truck|# trucks} of the fleet run lines between cities (Cities panel).',
 };

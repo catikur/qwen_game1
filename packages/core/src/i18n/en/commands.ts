@@ -133,6 +133,10 @@ export const commands: Record<keyof typeof trCommands, string> = {
   'core.trade.brokenTargetLost': '{city} was lost; the goods on the road went with it.',
   'core.trade.brokenSourceLost': '{city} was lost; the goods on the road still arrive.',
   'core.trade.brokenTerminal': 'Your terminal in {city} is gone; the goods on the road still arrive.',
+  'core.trade.rivalOpenTitle': 'Rival line: {name}, {from} → {to} ({good})',
+  'core.trade.rivalOpenBody': '{name} copied your route: it buys on the {from} market and sells on the {to} market. As the {to} market fills up, the price falls and the gap narrows.',
+  'core.trade.rivalCloseTitle': '{name} closed its {good} line',
+  'core.trade.rivalCloseBody': 'The gap on the {from} → {to} route has closed: it no longer pays the rival.',
 
   // selectors.ts — map lenses
   'core.selectors.lensNoneName': 'City',

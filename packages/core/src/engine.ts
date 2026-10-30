@@ -37,7 +37,7 @@ import {
   setCityDirective,
   switchCity,
 } from './holding';
-import { closeLine, openLine, prepareTradeDay, setLineTrucks } from './systems/trade';
+import { closeLine, openLine, prepareTradeDay, setLineBuy, setLineTrucks, settleTradeFallbacks } from './systems/trade';
 import { simulateCityDay } from './day';
 import { tc } from './i18n';
 import './i18n/gameTr';
@@ -415,10 +415,13 @@ export class GameEngine {
         return closeCity(state, command.index);
 
       case 'OPEN_LINE':
-        return openLine(state, command.from, command.to, command.goodId, command.trucks);
+        return openLine(state, command.from, command.to, command.goodId, command.trucks, command.buy);
 
       case 'SET_LINE_TRUCKS':
         return setLineTrucks(state, command.lineId, command.trucks);
+
+      case 'SET_LINE_BUY':
+        return setLineBuy(state, command.lineId, command.buy);
 
       case 'CLOSE_LINE':
         return closeLine(state, command.lineId);
@@ -482,6 +485,8 @@ export class GameEngine {
     simulateCityDay(state);
     // Holding: bekleyen şehirler de bir gün yaşıyor, kârlarının payı kasaya (Tur 30).
     runHoldingTick(state);
+    // Hattın gün içinde pazardan aldığı (grev) satırına, bütün şehirler yaşadıktan sonra (Codex #108).
+    settleTradeFallbacks(state);
     recomputeNetWorth(state);
     // Görev panosu günün net değeriyle (Tur 37c, Codex #63).
     runQuestTick(state);

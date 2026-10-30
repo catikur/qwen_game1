@@ -211,6 +211,16 @@ const MIGRATIONS: Record<number, (raw: Record<string, unknown>) => Record<string
    * sessizce kaybolurdu.
    */
   7: (raw) => raw,
+
+  /**
+   * v8 → v9: ticaretin fiyatı (Tur 78).
+   *
+   * Eski kayıtta hat yalnız fazlayı taşıyor (`buy` yok), rakip hattı
+   * (`rivalLines`) yok; yoklukları bugünkü davranış. Sürüm yine de artıyor:
+   * rakip hattı bilmeyen eski sürüm kaydı açsaydı rakiplerin hatları ve
+   * pazardan alan hatların ayarı sessizce kaybolurdu.
+   */
+  8: (raw) => raw,
 };
 
 /**
