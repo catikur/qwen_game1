@@ -30,8 +30,8 @@ import { localizeList } from './localize';
  * - KURAL. Her türün bir kuralı: limanda nakliye, sanayide üretimin
  *   bakımı ve sendika, başkentte arsa ve gelir.
  * - ZAFER EŞİĞİ. Türlerin ekonomisi aynı büyüklükte değil: liman kentinin
- *   nüfusu ve geliri düşük, sanayide üretim ucuz, başkentin geliri yüksek
- *   ve nüfusu hızlı büyüyor. Eşik boyutunkinin üstüne türün katıyla
+ *   geliri düşük (standart boyutta nüfusu da az), sanayide üretim ucuz,
+ *   başkentin geliri yüksek ve nüfusu hızlı büyüyor. Eşik boyutunkinin üstüne türün katıyla
  *   (liman 0,9, sanayi 1,1, başkent 1,3). Katsız ölçümde beş yol
  *   vekilinin ortalama zafer günü başkentte 544, sanayide 592, limanda
  *   652'ydi (dengeli 622); katlarla 615–622 (`pnpm balance`, "Şehir
@@ -82,7 +82,7 @@ export const CITY_TYPES: CityTypeDef[] = [
     id: 'balanced',
     name: 'Dengeli',
     blurb: 'Her iş koluna biraz yer. Oyunun ölçülüp kalibre edildiği şehir.',
-    facts: ['Bir liman, bir sanayi bölgesi', 'Hammadde fiyatları referansta', 'Rakipler karışık'],
+    facts: ['Liman ve sanayi bölgesi eşit', 'Hammadde fiyatları referansta', 'Rakipler karışık'],
     layouts: { standard: DISTRICT_LAYOUT, large: DISTRICT_LAYOUT_LARGE },
     goods: {},
     rivals: [],
@@ -95,11 +95,11 @@ export const CITY_TYPES: CityTypeDef[] = [
     name: 'Liman kenti',
     blurb: 'Şehir denizden yaşıyor. Kahve ve pamuk gemiyle ucuz geliyor, tarla az. Nakliye burada büyük iş.',
     facts: [
-      'İki liman, bir sanayi bölgesi',
+      'Liman bölgesi çok, sanayi az; üretim arazisi bol',
       'Kahve çekirdeği %20, pamuk %15 ucuz; buğday ve sebze %10 pahalı',
       'Nakliye terminali ve depo %25 ucuz; taşıma ücretinin %70’i senin',
       'Rakipler pragmatik ve vefalı tüccarlar',
-      'Şehir küçük: zafer eşiği 0,9 katı',
+      'Gelir düşük: zafer eşiği 0,9 katı',
     ],
     layouts: {
       standard: [
@@ -126,7 +126,7 @@ export const CITY_TYPES: CityTypeDef[] = [
     name: 'Sanayi kenti',
     blurb: 'Fabrika bacalarının şehri. Hammadde bol, tesisin bakımı ucuz; ama işçinin cebi dar, sendika güçlü.',
     facts: [
-      'İki sanayi bölgesi, bir liman; işçi mahalleleri',
+      'Sanayi bölgesi çok, liman az; işçi mahalleleri',
       'Silikon ve ham deri %20, buğday %10 ucuz; kahve çekirdeği %15 pahalı',
       'Çiftlik ve tesislerin bakımı %20 az; sendika daha hızlı örgütleniyor',
       'Gelir düşük',
@@ -157,9 +157,9 @@ export const CITY_TYPES: CityTypeDef[] = [
   {
     id: 'capital',
     name: 'Başkent',
-    blurb: 'Bakanlıklar, elçilikler, pahalı mahalleler. Halkın geliri yüksek, arsa pahalı. Fabrikaya tek bir sanayi bölgesi kalıyor; hammadde dışarıdan.',
+    blurb: 'Bakanlıklar, elçilikler, pahalı mahalleler. Halkın geliri yüksek, arsa pahalı. Fabrikaya az yer kalıyor; hammadde dışarıdan.',
     facts: [
-      'İki merkez, iki lüks konut; tek sanayi bölgesi, liman yok',
+      'Merkez ve lüks konut çok; sanayi az, liman yok',
       'Gelir yüksek, arsa %25 pahalı',
       'Hammaddelerin hepsi %10 pahalı',
       'Rakipler şehrin seçkinleri: lüks mağazacı, iki emlakçı, bir teknoloji şirketi',

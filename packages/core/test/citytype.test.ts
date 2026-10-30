@@ -57,6 +57,20 @@ describe('şehrin türü (Tur 76)', () => {
     const port = createNewGame({ seed: 3, cityType: 'port' });
     assert.equal(port.cityType, 'port');
     assert.equal(createNewGame({ seed: 3, cityType: 'capital', citySize: 'large' }).districts.length, 25);
+    // Türün maddeleri sayı vermiyor, iki boyutta da doğru olanı söylüyor (Codex #106).
+    for (const size of ['standard', 'large'] as const) {
+      const zones = (id: 'balanced' | 'port' | 'industrial' | 'capital') => {
+        const all = getCityType(id).layouts[size].flat();
+        const n = (archetype: string) => all.filter((a) => a === archetype).length;
+        return { port: n('port'), industrial: n('industrial'), share: (n('port') + n('industrial')) / all.length, elite: n('downtown') + n('lux_residential') };
+      };
+      const balanced = zones('balanced');
+      assert.equal(balanced.port, balanced.industrial, `${size}: dengelide liman ve sanayi eşit`);
+      assert.ok(zones('port').port > zones('port').industrial && zones('port').share > balanced.share, `${size}: limanda liman çok, üretim arazisi bol`);
+      assert.ok(zones('industrial').industrial > zones('industrial').port && zones('industrial').share > balanced.share, `${size}: sanayide sanayi çok`);
+      const capital = zones('capital');
+      assert.ok(capital.port === 0 && capital.industrial < capital.elite && capital.share < balanced.share, `${size}: başkentte sanayi az, liman yok`);
+    }
   });
 
   test('hammadde fiyatı türden: limanda kahve ucuz, başkentte her hammadde pahalı', () => {

@@ -10058,8 +10058,8 @@ async function finish(browser, consoleErrors) {
       JSON.stringify(picker).slice(0, 200));
     await tp.locator('.newgame [data-city-type="port"]').click();
     const portDetail = ((await tp.locator('[data-detail="city-type"]').textContent()) ?? '').trim();
-    check('Liman kenti seçilince ayrıntı onun: iki liman, ucuz kahve ve pamuk, nakliye',
-      portDetail.includes('İki liman') && portDetail.includes('Kahve çekirdeği %20') && portDetail.includes('Nakliye terminali'),
+    check('Liman kenti seçilince ayrıntı onun: liman bölgeleri, ucuz kahve ve pamuk, nakliye',
+      portDetail.includes('Liman bölgesi çok') && portDetail.includes('Kahve çekirdeği %20') && portDetail.includes('Nakliye terminali'),
       portDetail.slice(0, 160));
     // Ligde seçici yok: herkes dengeli şehirde. Serbest şehre dönünce seçim yerinde.
     await tp.locator('.mode-picker [data-mode="league"]').click();
