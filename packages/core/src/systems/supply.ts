@@ -363,10 +363,20 @@ export function ownGoodFlow(state: GameState, goodId: string): { produced: numbe
 
 /** `ownGoodFlow` bütün mallarda: oyuncunun binalarının bugünkü üretimi ve ihtiyacı. */
 export function ownGoodFlows(state: GameState): { produced: Record<string, number>; consumed: Record<string, number> } {
+  return goodFlows(state, state.playerCompanyId);
+}
+
+/**
+ * Binaların bugünkü üretimi ve ihtiyacı, bütün mallarda, üretim adımının
+ * hesabıyla. Şirket verilirse yalnız onunki; verilmezse şehrin bütün
+ * şirketlerininki: pazarın kaydının binalardan gelen kısmı (Codex #110).
+ */
+export function goodFlows(state: GameState, companyId?: string): { produced: Record<string, number>; consumed: Record<string, number> } {
   const consumed: Record<string, number> = {};
   const produced: Record<string, number> = {};
   for (const building of Object.values(state.buildings)) {
-    if (building.companyId !== state.playerCompanyId) continue;
+    // Üretim adımı şirketi olmayan binayı saymıyor.
+    if (companyId === undefined ? !state.companies[building.companyId] : building.companyId !== companyId) continue;
     const def = BUILDING_BY_ID[building.defId];
     if (!def) continue;
     addDemand(state, building, def, consumed);
@@ -826,12 +836,12 @@ export function runSpotPriceTick(state: GameState): void {
     const target = spotTarget(state, good.id, produced, consumed, exported?.[good.id] ?? 0, mods.goodPrice[good.id] ?? 1);
     state.market.spot[good.id] = nextSpot(state, good.id, state.market.spot[good.id] ?? referencePrice(state, good.id), target);
   }
-  // Oyuncunun binalarının akışı, günün sonunda (Codex #110): hat formunun
-  // tahmini gün arasında kurulan ya da yıkılan binanın farkını bununla buluyor.
-  // Rafların satışı pazar adımında yazılıyor; kayıt ondan sonra, yoksa tahmin
-  // bir günlük satış farkını bina değişmiş sanardı (Bugbot #110). Simülasyon
-  // okumuyor.
-  state.market.own = ownGoodFlows(state);
+  // Binaların akışı, günün sonunda (Codex #110): hat formunun tahmini gün
+  // arasında kurulan, yıkılan ya da sahibi değişen binanın farkını bununla
+  // buluyor. Rafların satışı pazar adımında yazılıyor; kayıt ondan sonra, yoksa
+  // tahmin bir günlük satış farkını bina değişmiş sanardı (Bugbot #110).
+  // Rakiplerin adımı ve devralmalar bundan sonra. Simülasyon okumuyor.
+  state.market.buildingFlows = goodFlows(state);
   // Günün hat akışları (Tur 78) burada bitiyor: kayıtta kalmasın.
   if (state.trade) {
     delete state.trade.marketOut;
@@ -870,12 +880,15 @@ function nextSpot(state: GameState, goodId: string, current: number, target: num
   return Math.max(base * SPOT_FLOOR, Math.min(base * SPOT_CEILING, current + (target - current) * SPOT_SMOOTHING));
 }
 
-/** Oyuncunun binalarının bugünkü akışı eksi pazarın kaydındaki (dünkü); kayıt yoksa sıfır. */
-function ownFlowDrift(state: GameState, goodId: string): { produced: number; consumed: number } {
-  const recorded = state.market.own;
+/** Binaların bugünkü akışı eksi pazarın kaydındaki (dünün sonunda); kayıt yoksa sıfır. */
+function buildingDrift(state: GameState, goodId: string): { produced: number; consumed: number } {
+  const recorded = state.market.buildingFlows;
   if (!recorded) return { produced: 0, consumed: 0 };
-  const now = ownGoodFlow(state, goodId);
-  return { produced: now.produced - (recorded.produced[goodId] ?? 0), consumed: now.consumed - (recorded.consumed[goodId] ?? 0) };
+  const now = goodFlows(state);
+  return {
+    produced: (now.produced[goodId] ?? 0) - (recorded.produced[goodId] ?? 0),
+    consumed: (now.consumed[goodId] ?? 0) - (recorded.consumed[goodId] ?? 0),
+  };
 }
 
 /**
@@ -894,9 +907,10 @@ export function spotOutlook(
   extra: { produced?: number; consumed?: number; out?: number },
   days: number,
 ): number {
-  // Pazarın kaydı dünün: oyuncu o günden beri bina kurduysa ya da yıktıysa
-  // (Codex #110) kendi akışının farkı ekleniyor; yarınki gün de canlı binalardan sayıyor.
-  const drift = ownFlowDrift(state, goodId);
+  // Pazarın kaydı dünün: o günden beri kurulan, yıkılan ya da sahibi değişen
+  // binanın (oyuncunun, rakibin, devralmanın; Codex #110) farkı ekleniyor;
+  // yarınki gün de canlı binalardan sayıyor.
+  const drift = buildingDrift(state, goodId);
   const produced = (state.market.produced[goodId] ?? 0) + drift.produced + (extra.produced ?? 0);
   const consumed = (state.market.consumed[goodId] ?? 0) + drift.consumed + (extra.consumed ?? 0);
   // Eski kayıtta sonradan eklenen malın referansı ilk fiyat adımına dek yok

@@ -436,13 +436,13 @@ export interface MarketState {
    */
   reference: Record<string, number>;
   /**
-   * Oyuncunun binalarının akışı (`ownGoodFlows`), günün sonunda (Codex #110).
-   * Hat formunun tahmini gün arasında kurulan ya da yıkılan binanın farkını
-   * bununla buluyor; simülasyon okumuyor. Yeni şehirde boş: pazarın
-   * kaydında oyuncunun payı yok. Eski kayıtta (1.5 öncesi) kayıt açılınca
-   * bugünkü binalardan (`GameEngine`).
+   * Binaların akışı (`goodFlows`, bütün şirketler), günün sonunda (Codex
+   * #110): pazarın kaydının binalardan gelen kısmı. Hat formunun tahmini gün
+   * arasında kurulan, yıkılan ya da sahibi değişen binanın farkını bununla
+   * buluyor; simülasyon okumuyor. Yeni şehirde boş: pazarın kaydı boş. Eski
+   * kayıtta (1.5 öncesi) kayıt açılınca bugünkü binalardan (`GameEngine`).
    */
-  own?: { produced: Record<string, number>; consumed: Record<string, number> };
+  buildingFlows?: { produced: Record<string, number>; consumed: Record<string, number> };
 }
 
 export interface ActiveEvent {

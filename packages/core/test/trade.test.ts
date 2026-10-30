@@ -8,7 +8,7 @@ import { build, buyTile, demolish } from '../src/actions';
 import { simulateCityDay } from '../src/day';
 import { inTransitValue, isPurchasable, netWorthNow } from '../src/systems/city';
 import { fleetUsed } from '../src/systems/freight';
-import { SURPLUS_HAIRCUT, exportableSurplus, ownGoodFlow, ownGoodFlows, referenceVolumes, runSpotPriceTick, spotOutlook } from '../src/systems/supply';
+import { SURPLUS_HAIRCUT, exportableSurplus, goodFlows, ownGoodFlow, referenceVolumes, runSpotPriceTick, spotOutlook } from '../src/systems/supply';
 import {
   cityBySeed,
   lineCapacity,
@@ -29,9 +29,11 @@ import { SCHEMA_VERSION } from '../src/types';
 import type { GameState, RivalLine } from '../src/types';
 
 /** Boş bir parsele bina; kimliğini döndürür. */
-function place(state: GameState, defId: string): string {
-  const me = state.companies[state.playerCompanyId]!;
+function place(state: GameState, defId: string, companyId = state.playerCompanyId): string {
+  const me = state.companies[companyId]!;
   me.cash += 3_000_000;
+  // Rakibin şirket değeri günün sonunda hesaplanıyor: binanın eşiği nakitle birlikte.
+  if (companyId !== state.playerCompanyId) me.netWorth += 3_000_000;
   for (const tile of state.map.tiles) {
     if (!isPurchasable(tile) || tile.structureId || tile.buildingId) continue;
     if (!buyTile(state, me.id, tile.id).ok) continue;
@@ -944,14 +946,14 @@ describe('hattın kendi etkisi (Tur 80)', () => {
     const before = quote();
     const farmOutput = ownGoodFlow(p.away, 'wheat').produced;
     assert.ok(farmOutput > 0, `${farmOutput} birim`);
-    assert.deepEqual(p.away.market.own, ownGoodFlows(p.away), 'pazarın kaydıyla oyuncunun akışı');
+    assert.deepEqual(p.away.market.buildingFlows, goodFlows(p.away), 'pazarın kaydıyla binaların akışı');
     assert.ok(demolish(p.away, p.away.playerCompanyId, p.away.buildings[p.farm]!.tileId).ok);
     assert.equal(ownGoodFlow(p.away, 'wheat').produced, 0);
     const after = quote();
     // Aynı tahmin, pazarın kaydı yıkımdan sonra alınmış gibi: üretimden çiftliğin çıktısı düşülmüş.
     const rebased = structuredClone(p.away);
     rebased.market.produced['wheat'] = (rebased.market.produced['wheat'] ?? 0) - farmOutput;
-    rebased.market.own = ownGoodFlows(rebased);
+    rebased.market.buildingFlows = goodFlows(rebased);
     const expected = spotOutlook(rebased, 'wheat', { consumed: lineCapacity(1), out: lineCapacity(1) }, after.days);
     assert.ok(Math.abs(after.originSpot - expected) < 1e-9, `${after.originSpot} · ${expected}`);
     // Fazlası kalmayan çıkışta fiyat yükseliyor: tahmin artık dünkü fazlaya güvenmiyor.
@@ -987,7 +989,7 @@ describe('hattın kendi etkisi (Tur 80)', () => {
     place(p.root, 'restaurant');
     // Restoranın ilk günü: sabah raf payı eşit bölünüyor, pazar adımı gerçek satışı yazıyor.
     p.engine.runDay();
-    assert.deepEqual(p.root.market.own, ownGoodFlows(p.root));
+    assert.deepEqual(p.root.market.buildingFlows, goodFlows(p.root));
     const tomorrow = structuredClone(p.root);
     runSpotPriceTick(tomorrow);
     for (const good of TRADED_GOODS) {
@@ -1013,14 +1015,14 @@ describe('hattın kendi etkisi (Tur 80)', () => {
     assert.equal(p.root.market.reference['coffee_bean'], referenceVolumes(p.root.districts)['coffee_bean'] ?? 0);
   });
 
-  test('eski kayıtta oyuncunun akış kaydı yok: kayıt açılınca her şehirde bugünkü binalardan, ilk günden önce yıkılan üretici tahminde (Codex #110)', () => {
+  test('eski kayıtta binaların akış kaydı yok: kayıt açılınca her şehirde bugünkü binalardan, ilk günden önce yıkılan üretici tahminde (Codex #110)', () => {
     const p = pair();
     p.engine.runDay();
     const [from, to] = route(p);
-    // 1.5 öncesi kayıt: şema aynı (v9), pazarlarda oyuncunun akış kaydı yok.
+    // 1.5 öncesi kayıt: şema aynı (v9), pazarlarda binaların akış kaydı yok.
     const saved = JSON.parse(exportToJson(p.root));
-    delete saved.state.market.own;
-    for (const city of saved.state.holding.dormant) delete city.state.market.own;
+    delete saved.state.market.buildingFlows;
+    for (const city of saved.state.holding.dormant) delete city.state.market.buildingFlows;
     const loaded = importFromJson(JSON.stringify(saved));
     if (!loaded.ok) throw new Error(loaded.reason);
     const engine = new GameEngine(createNewGame({ seed: 3 }));
@@ -1037,22 +1039,58 @@ describe('hattın kendi etkisi (Tur 80)', () => {
     assert.ok(Math.abs(actual.destinationSpot - expected.destinationSpot) < 1e-9, `${actual.destinationSpot} · ${expected.destinationSpot}`);
   });
 
-  test('yeni şehirde pazarın kaydı boş, oyuncunun payı da: ilk günden önce kurulan bina tahminde (Codex #110)', () => {
+  test('yeni şehirde pazarın kaydı boş, binalardan gelen kısmı da: ilk günden önce kurulan bina tahminde (Codex #110)', () => {
     // Çiftlik, değirmen ve terminaller ilk günden önce kuruldu; pazarın kaydı kuruluşun (boş).
     const p = pair();
     const [from, to] = route(p);
     const outlook = lineQuote(p.root, from, to, 'wheat', 1, true).outlook!;
-    // Aynı tahmin, pazarın kaydı oyuncunun binalarını zaten sayıyormuş gibi.
+    // Aynı tahmin, pazarın kaydı binaları zaten sayıyormuş gibi.
     const counted = structuredClone(p.root);
     for (const city of [counted, ...counted.holding!.dormant.map((entry) => entry.state)]) {
-      const flows = ownGoodFlows(city);
+      const flows = goodFlows(city);
       for (const [goodId, units] of Object.entries(flows.produced)) city.market.produced[goodId] = (city.market.produced[goodId] ?? 0) + units;
       for (const [goodId, units] of Object.entries(flows.consumed)) city.market.consumed[goodId] = (city.market.consumed[goodId] ?? 0) + units;
-      city.market.own = flows;
+      city.market.buildingFlows = flows;
     }
     const expected = lineQuote(counted, from, to, 'wheat', 1, true).outlook!;
     assert.ok(Math.abs(outlook.originSpot - expected.originSpot) < 1e-9, `${outlook.originSpot} · ${expected.originSpot}`);
     assert.ok(Math.abs(outlook.destinationSpot - expected.destinationSpot) < 1e-9, `${outlook.destinationSpot} · ${expected.destinationSpot}`);
-    for (const city of [p.root, p.away]) assert.deepEqual(city.market.own, { produced: {}, consumed: {} });
+    for (const city of [p.root, p.away]) assert.deepEqual(city.market.buildingFlows, { produced: {}, consumed: {} });
+  });
+
+  test('rakibin günün sonunda kurduğu bina da tahminde: binaların akışı bütün şirketlerden (Codex #110)', () => {
+    const p = pair();
+    p.engine.runDay();
+    const [from, to] = route(p);
+    const before = lineQuote(p.root, from, to, 'wheat', 1, true).outlook!;
+    // Rakiplerin adımı fiyat adımından sonra: rakip çıkışta bir buğday çiftliği kuruyor.
+    const rival = Object.keys(p.away.companies).find((id) => id !== p.away.playerCompanyId)!;
+    place(p.away, 'wheat_farm', rival);
+    const output = BUILDING_BY_ID['wheat_farm']!.capacity;
+    const outlook = lineQuote(p.root, from, to, 'wheat', 1, true).outlook!;
+    // Aynı tahmin, pazarın kaydı çiftliği zaten sayıyormuş gibi.
+    const counted = structuredClone(p.root);
+    const away = cityBySeed(counted, from)!;
+    away.market.produced['wheat'] = (away.market.produced['wheat'] ?? 0) + output;
+    away.market.buildingFlows!.produced['wheat'] = (away.market.buildingFlows!.produced['wheat'] ?? 0) + output;
+    const expected = lineQuote(counted, from, to, 'wheat', 1, true).outlook!;
+    assert.ok(Math.abs(outlook.originSpot - expected.originSpot) < 1e-9, `${outlook.originSpot} · ${expected.originSpot}`);
+    // Çıkışta buğday bollaşıyor: fiyat düşüyor.
+    assert.ok(outlook.originSpot < before.originSpot, `${outlook.originSpot} < ${before.originSpot}`);
+  });
+
+  test('devralmayla sahibi değişen bina tahmini değiştirmiyor: şehrin binaları aynı (Codex #110)', () => {
+    const p = pair();
+    // Varışta rakibin buğday çiftliği, pazarın kaydında.
+    const rival = Object.keys(p.root.companies).find((id) => id !== p.root.playerCompanyId)!;
+    const farm = place(p.root, 'wheat_farm', rival);
+    p.engine.runDay();
+    const [from, to] = route(p);
+    const before = lineQuote(p.root, from, to, 'wheat', 1, true).outlook!;
+    // Günün sonunda çiftlik oyuncuya geçiyor (devralmanın yaptığı gibi).
+    p.root.buildings[farm]!.companyId = p.root.playerCompanyId;
+    const after = lineQuote(p.root, from, to, 'wheat', 1, true).outlook!;
+    assert.ok(Math.abs(after.originSpot - before.originSpot) < 1e-9, `${after.originSpot} · ${before.originSpot}`);
+    assert.ok(Math.abs(after.destinationSpot - before.destinationSpot) < 1e-9, `${after.destinationSpot} · ${before.destinationSpot}`);
   });
 });
