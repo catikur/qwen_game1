@@ -556,6 +556,22 @@ describe('ticaretin fiyatı (Tur 78)', () => {
     assert.ok(p.root.news.some((item) => item.title.includes(p.root.companies[rival.companyId]!.name) && item.title.includes('kapattı')));
   });
 
+  test('rakip rekabeti kapanınca rakip hattı kamyonunu gözden geçirmiyor, yükü sürüyor (Codex #108)', () => {
+    const p = coffeeRoute();
+    assert.ok(openCoffee(p, 1).ok);
+    for (let day = 0; day < TRADE_RIVAL.entryDays; day++) p.engine.runDay();
+    const rival = rivalLines(p.root)[0]!;
+    assert.ok(rival, 'rakip kopyaladı');
+    // Bina öngörüsünün kopyaları gibi: varış şehrinde rakipler hamle yapmıyor.
+    p.root.flags.npcCompetition = false;
+    const { trucks, reviewDay } = rival;
+    while (p.root.time.day <= reviewDay + TRADE_RIVAL.reviewDays) p.engine.runDay();
+    assert.equal(rival.trucks, trucks, 'kamyon sayısı aynı');
+    assert.equal(rival.reviewDay, reviewDay, 'gözden geçirme bekliyor');
+    assert.ok(rivalLines(p.root).includes(rival), 'hat duruyor');
+    assert.equal(rival.last!.units, lineCapacity(trucks), 'yükü sürüyor');
+  });
+
   test('aynı rakibin yolları tek kasadan yüklüyor: nakdi ikisine yetmezse ikincisi bekliyor (Codex #108)', () => {
     const p = coffeeRoute();
     const from = p.away.meta.seed;

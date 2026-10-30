@@ -623,7 +623,9 @@ function runRivalLines(root: GameState): void {
     const company = target?.companies[rival.companyId];
     const margins = lineMargins(root, rival.from, rival.to, rival.goodId);
     if (!source || !target || source.gameOver || target.gameOver || !company || !margins) continue;
-    if (day >= rival.reviewDay) {
+    // Rakip rekabeti kapalı şehirde rakip hamle yapmıyor (bina öngörüsünün
+    // kopyaları da onu kapatıyor): kamyonunu gözden geçirmiyor, yükü sürüyor (Codex #108).
+    if (target.flags.npcCompetition && day >= rival.reviewDay) {
       if (rivalWorthy(margins)) rival.trucks = Math.min(TRADE_RIVAL.maxTrucks, rival.trucks + 1);
       else if (margins.market < 0) rival.trucks -= 1;
       rival.reviewDay = day + TRADE_RIVAL.reviewDays;
