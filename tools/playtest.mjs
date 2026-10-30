@@ -6798,8 +6798,9 @@ async function finish(browser, consoleErrors) {
     await xp.locator('.mode-picker [data-mode="scenario"]').click();
     const cards = await xp.locator('[data-scenario]').count();
     const rules = await xp.evaluate(() => Object.fromEntries([...document.querySelectorAll('[data-scenario-rules]')].map((el) => [el.closest('[data-scenario]')?.getAttribute('data-scenario'), el.textContent])));
-    check('Listede on iki senaryo; Tur 60\'ın üçünün kartında ek kuralı',
-      cards === 12 && /Aç gözlü/.test(rules.haulage ?? '') && /Sıkı banka/.test(rules.blackout ?? '') && /Kıt arsa/.test(rules.renewal ?? '') && Object.keys(rules).length === 3,
+    check('Listede on iki senaryo; Tur 60\'ın üçünün ve Başkentin tedarikçisinin kartında ek kuralı',
+      cards === 12 && /Aç gözlü/.test(rules.haulage ?? '') && /Sıkı banka/.test(rules.blackout ?? '') && /Kıt arsa/.test(rules.renewal ?? '')
+        && /Sıkı banka/.test(rules.supplier ?? '') && Object.keys(rules).length === 4,
       `${cards} kart · ${JSON.stringify(rules)}`);
     await xp.locator('[data-scenario="haulage"]').click();
     const detail = ((await xp.locator('[data-detail="scenario"] .scenario-detail').textContent()) ?? '').trim();
