@@ -225,4 +225,27 @@ describe('şehrin türü (Tur 76)', () => {
       assert.equal(migrated.state.cityType, undefined);
     }
   });
+
+  test('kayıt: v6 holding kaydında bekleyen şehirler de v7; ona geçilince kayıt v7 yazılıyor (Codex #106)', () => {
+    // v6 holding: iki şehir, ikisinin künyesi de v6.
+    const two = foundCity(createNewGame({ seed: 14 }), 'standard', 1_000_000);
+    const legacy = JSON.parse(exportToJson(two));
+    legacy.state.meta.schemaVersion = 6;
+    legacy.state.holding.dormant[0].state.meta.schemaVersion = 6;
+    const migrated = importFromJson(JSON.stringify(legacy));
+    assert.ok(migrated.ok);
+    if (!migrated.ok) return;
+    assert.equal(migrated.state.meta.schemaVersion, 7);
+    assert.equal(migrated.state.holding!.dormant[0]!.state.meta.schemaVersion, 7);
+    // Bekleyen şehre geçilince künye yine v7: eski sürüm bu kaydı kendi kaydı sanmıyor.
+    const engine = new GameEngine(migrated.state);
+    assert.ok(engine.dispatch({ type: 'SWITCH_CITY', index: 0 }).ok);
+    assert.equal(engine.getState().meta.schemaVersion, 7);
+    assert.equal(JSON.parse(exportToJson(engine.getState())).meta.schemaVersion, 7);
+    // Bekleyen şehirlerden biri daha yeni bir sürümdense kayıt açılmıyor (üstüne yazılmasın).
+    const newer = JSON.parse(exportToJson(two));
+    newer.state.holding.dormant[0].state.meta.schemaVersion = 99;
+    const refused = importFromJson(JSON.stringify(newer));
+    assert.ok(!refused.ok && refused.problem === 'newer', JSON.stringify(refused).slice(0, 120));
+  });
 });

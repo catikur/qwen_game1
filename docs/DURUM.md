@@ -9089,6 +9089,14 @@ türde ve üç tohumda zafere kadar oynuyor (`pnpm balance`, "Şehir türleri").
   gerekçesi "şehir küçük" yerine "gelir düşük": büyük liman kentinin
   nüfusu dengeliden fazla, geliri iki boyutta da düşük. Birim testi
   maddelerin iddialarını iki boyutun dizilişinde sınıyor.
+- *Holding kaydının bekleyen şehirleri v6'da kalıyordu (Codex #106).* Göç
+  yalnız oynanan şehri taşıyordu; bekleyen şehirlerin künyesi v6 kalıyordu.
+  Oyuncu türlü bir şehir açıp eski bir şehre geçince kayıt v6 diye
+  yazılıyordu. 1.0.1 onu kendi kaydı sayıp açıyor, üstüne yazıyor, türlü
+  şehri dengeli diye oynuyordu. Artık göçün her adımı bekleyen şehirlere de
+  uygulanıyor, her biri kendi sürümünden. Bekleyen şehirlerden biri bu
+  sürümden yeniyse kayıt açılmıyor. Faz 7'nin sonraki göçleri de her şehre
+  uygulanacak.
 - *Büyük şehirde talebin boşu daha fazla.* Türlerin büyük dizilişinde
   konut iç halkada. 360. günde talep daha büyük (limanda 140 bin birim,
   dengelide 125 bin) ve %22–26'sı boş (dengelide %14). Zafer yine 600.
@@ -9097,11 +9105,11 @@ türde ve üç tohumda zafere kadar oynuyor (`pnpm balance`, "Şehir türleri").
   dahil, Tur 21'den beri).
 
 **Doğrulama.**
-- Birim testi 933 (11 yeni, `packages/core/test/citytype.test.ts`):
+- Birim testi 934 (12 yeni, `packages/core/test/citytype.test.ts`):
   dengeli şehir birebir, lig türü yok sayıyor, bilinmeyen tür dengeli,
   dizilişler ve üretim arazisi, fiyatlar, kadrolar, kurallar, eşik,
-  determinizm, yapı menüsünün fiyatı, holding'in şehirleri, kayıt ve
-  v6'dan göç.
+  determinizm, yapı menüsünün fiyatı, holding'in şehirleri, kayıt, v6'dan
+  göç ve holding kaydının bekleyen şehirleri.
 - Denge testi 387 kontrol, hepsi geçiyor (34 bölüm, CI'da); "Şehir
   türleri" bölümü 8/8.
 - Tarayıcı testi "Şehrin kimliği" 11/11:
@@ -9227,7 +9235,7 @@ mağazalar açıyordu. Tahmin düzelince bol nakitte de her tohumda önde
 |---|---|
 | Determinizm | birebir |
 | Simülasyon hızı | ~1.050–2.000 gün/sn (makineye göre; Tur 21'de bina indeksi). Senaryo şehirlerinde gün 3–17 ms (`pnpm dayperf`, Tur 43) |
-| Birim testi | **933 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de, Tur 52'de sunucuda tekrar, Tur 53'te haftanın kuralı ve günün koşusu, Tur 54'te hayalet eğri, Tur 55'te davetli ligler, Tur 56'da taşıma sözleşmeleri, Tur 57'de enerji, Tur 58'de gayrimenkul, Tur 59'da rakiplerin hafızası, Tur 60'ta senaryo paketi II, Tur 61'de şirketin yolu, Tur 62'de hava ve mevsimin görünümü, Tur 63'te önemli anlar, Tur 64'te şehir kartı, Tur 65'te telefon performansı, Tur 66'da masaüstü sürümü, Tur 67'de içerik paketleri, Tur 68'de senaryo editörü, Tur 69'da üçüncü dil, Tur 70'te Steam başarımları, Tur 71'de canlı sunucunun simülasyon izi ve Steam Deck'in varsayılanları, Tur 72'de kumanda, Tur 73'te Workshop ve skor tabloları, Tur 74'te sürüm, yenilikler ve hata raporu, Tur 75'te kaydın açılmama nedeni ve yeni sürümün kaydı, Tur 76'da şehrin türü); Rust tarafı 32 test (`cargo test`, `apps/desktop/src-tauri`; Steam'li derlemede 29) |
+| Birim testi | **934 test** (`pnpm test`; Tur 24'te render paketi, Tur 39'da arayüz paketi, Tur 40'ta yazı tipleri, Tur 41'de kariyer, Tur 42'de bloom ve GPU tanıma, Tur 43'te örnek tamponu yüklemesi, Tur 44'te Türkçe sayı biçimi, Tur 45'te ek kurallar, Tur 46'da sonradan yüklenen dil, Tur 47'de ayarlar, Tur 48'de hizmet çalışanı, Tur 49'da müzik, Tur 50'de İngilizce tekil/çoğul, Tur 51'de lig sunucusunun ana oyun uçları ve oyunun istemcisi de, Tur 52'de sunucuda tekrar, Tur 53'te haftanın kuralı ve günün koşusu, Tur 54'te hayalet eğri, Tur 55'te davetli ligler, Tur 56'da taşıma sözleşmeleri, Tur 57'de enerji, Tur 58'de gayrimenkul, Tur 59'da rakiplerin hafızası, Tur 60'ta senaryo paketi II, Tur 61'de şirketin yolu, Tur 62'de hava ve mevsimin görünümü, Tur 63'te önemli anlar, Tur 64'te şehir kartı, Tur 65'te telefon performansı, Tur 66'da masaüstü sürümü, Tur 67'de içerik paketleri, Tur 68'de senaryo editörü, Tur 69'da üçüncü dil, Tur 70'te Steam başarımları, Tur 71'de canlı sunucunun simülasyon izi ve Steam Deck'in varsayılanları, Tur 72'de kumanda, Tur 73'te Workshop ve skor tabloları, Tur 74'te sürüm, yenilikler ve hata raporu, Tur 75'te kaydın açılmama nedeni ve yeni sürümün kaydı, Tur 76'da şehrin türü); Rust tarafı 32 test (`cargo test`, `apps/desktop/src-tauri`; Steam'li derlemede 29) |
 | Denge testi | **387 kontrol, hepsi geçiyor** (34 bölüm, süreleriyle; ~21 dk; Tur 76'da "Şehir türleri") |
 | Tarayıcı testi | **817 kontrol** (Tur 76'da 11 yeni, Tur 75'te 11; Tur 74'teki 790 lig sunucusu bölümünün yarıda kalan bir koşusundan sayılmıştı, bölüm 24 kontrol), son tam koşu 817/817 (Tur 76; Tur 75'te 805/806, yük altında düşen müzik kontrolü tek başına geçti; Tur 69'da 719/719), 0 konsol hatası (bu yavaş makinede ~59 dk, CI'da `main`'de ~64 dk); duman koşusu 132 (CI'da ~5 dk, rehber dahil) |
 | CI | her PR'da tip + test + denge + paket + paket bütçesi (Tur 46; Tur 48'den beri hizmet çalışanı ve manifest de) + duman oynanışı; `main`'de tam oynanış (Tur 72'den beri 120 dk sınırı); masaüstüne dokunan PR'da Rust testleri, sürüm derlemesi ve gerçek pencerede 38 kontrol (Tur 66'da 17) |
