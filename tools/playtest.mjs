@@ -10030,6 +10030,159 @@ async function finish(browser, consoleErrors) {
     check('Faz 6 değerlendirme bölümünde konsol temiz', fErrors.length === 0, fErrors.slice(0, 3).join(' | '));
   }
 
+  section('Şehrin kimliği');
+  {
+    /*
+     * Tur 76. Şehrin türü: kurulumda dört tür ve ayrıntısı (ligde seçici
+     * yok), liman kentinde üst barda rozet, üç üretim bölgesi, ucuz kahve ve
+     * limanın tüccarları; kayıt türü taşıyor; holding'in yeni şehri türüyle
+     * açılıyor ve haberi türünü söylüyor; dengeli şehirde rozet yok; üç dil.
+     */
+    const tContext = await browser.newContext({ viewport: { width: 1280, height: 860 } });
+    await tContext.addInitScript(veteran, TUTORIAL_KEY);
+    const tp = await tContext.newPage();
+    const tErrors = [];
+    tp.on('pageerror', (e) => tErrors.push(e.message));
+    tp.on('console', (m) => { if (m.type() === 'error') tErrors.push(m.text()); });
+    await tp.goto('http://127.0.0.1:8811/');
+    await tp.waitForSelector('.newgame', { timeout: 20000 });
+    const picker = await tp.evaluate(() => ({
+      types: [...document.querySelectorAll('.newgame [data-city-type]')].map((el) => el.getAttribute('data-city-type')),
+      labels: [...document.querySelectorAll('.newgame [data-city-type]')].map((el) => el.textContent.trim()),
+      checked: document.querySelector('.newgame [data-city-type][aria-checked="true"]')?.getAttribute('data-city-type'),
+      detail: document.querySelector('[data-detail="city-type"]')?.textContent ?? '',
+    }));
+    check('Kurulumda şehrin türü: dört tür, dengeli seçili, ayrıntısı yazıyor',
+      picker.types.join() === 'balanced,port,industrial,capital' && picker.labels.join() === 'Dengeli,Liman kenti,Sanayi kenti,Başkent' &&
+        picker.checked === 'balanced' && picker.detail.includes('kalibre'),
+      JSON.stringify(picker).slice(0, 200));
+    await tp.locator('.newgame [data-city-type="port"]').click();
+    const portDetail = ((await tp.locator('[data-detail="city-type"]').textContent()) ?? '').trim();
+    check('Liman kenti seçilince ayrıntı onun: liman bölgeleri, ucuz kahve ve pamuk, nakliye',
+      portDetail.includes('Liman bölgesi çok') && portDetail.includes('Kahve çekirdeği %20') && portDetail.includes('Nakliye terminali'),
+      portDetail.slice(0, 160));
+    // Ligde seçici yok: herkes dengeli şehirde. Serbest şehre dönünce seçim yerinde.
+    await tp.locator('.mode-picker [data-mode="league"]').click();
+    const inLeague = await tp.locator('.newgame [data-city-type]').count();
+    await tp.locator('.mode-picker [data-mode="free"]').click();
+    const kept = await tp.locator('.newgame [data-city-type="port"][aria-checked="true"]').count();
+    check('Tohum Ligi’nde tür seçilmiyor; serbest şehre dönünce seçim yerinde', inLeague === 0 && kept === 1, `ligde ${inLeague} düğme · seçili ${kept}`);
+    // Üç dil: seçicinin adları dilin.
+    const labelsIn = async (locale) => {
+      await tp.locator(`.newgame [data-locale="${locale}"]`).click();
+      await tp.waitForTimeout(150);
+      return tp.evaluate(() => [...document.querySelectorAll('.newgame [data-city-type]')].map((el) => el.textContent.trim()).join(','));
+    };
+    const en = await labelsIn('en');
+    const de = await labelsIn('de');
+    await labelsIn('tr');
+    check('Türlerin adı üç dilde', en === 'Balanced,Port city,Industrial city,Capital' && de === 'Ausgewogen,Hafenstadt,Industriestadt,Hauptstadt', `${en} · ${de}`);
+
+    await tp.fill('.newgame-field input[type="text"]', 'Liman AŞ');
+    await tp.locator('button:has-text("Şirketi kur")').click();
+    await tp.waitForSelector('.topbar', { timeout: 30000 });
+    const port = await tp.evaluate(() => {
+      const c = window.__capital;
+      c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+      const s = c.getState();
+      const chip = document.querySelector('[data-city-type-chip]');
+      return {
+        type: s.cityType,
+        chip: chip?.textContent?.trim() ?? null,
+        chipType: chip?.getAttribute('data-city-type-chip') ?? null,
+        title: chip?.getAttribute('title') ?? '',
+        production: s.districts.filter((d) => d.archetype === 'port' || d.archetype === 'industrial').length,
+        coffee: s.market.spot.coffee_bean / c.basePrice('coffee_bean'),
+        roasted: s.market.spot.roasted_coffee / c.basePrice('roasted_coffee'),
+        rivals: Object.values(s.companies).filter((co) => !co.isPlayer).map((co) => co.profileId),
+      };
+    });
+    check('Liman kenti kuruluyor: üst barda rozet (adı ve açıklaması), üç üretim bölgesi',
+      port.type === 'port' && port.chip === 'Liman kenti' && port.chipType === 'port' && port.title.includes('denizden') && port.production === 3,
+      JSON.stringify({ ...port, rivals: undefined }).slice(0, 200));
+    check('Limanda kahve çekirdeği %20 ucuz, kavrulmuş kahve referansta; kadro limanın tüccarları',
+      Math.abs(port.coffee - 0.8) < 1e-6 && Math.abs(port.roasted - 1) < 1e-6 && port.rivals.join() === 'meridyen,anadolu_gida,veri_sanayi,atlas_yapi',
+      `kahve ×${port.coffee.toFixed(3)} · kavrulmuş ×${port.roasted.toFixed(3)} · ${port.rivals.join(', ')}`);
+    // Kayıt türü taşıyor.
+    await tp.locator('.topbar-actions [data-panel="saves"]').click();
+    await tp.waitForTimeout(300);
+    await tp.locator('.slot').nth(1).locator('button:has-text("Kaydet")').click();
+    await tp.waitForTimeout(700);
+    const savedType = await tp.evaluate(
+      () =>
+        new Promise((resolve) => {
+          const req = indexedDB.open('capital-game', 1);
+          req.onsuccess = () => {
+            const get = req.result.transaction('saves', 'readonly').objectStore('saves').get(1);
+            get.onsuccess = () => resolve(get.result ? { type: get.result.state?.cityType ?? null, schema: get.result.meta?.schemaVersion } : null);
+            get.onerror = () => resolve(null);
+          };
+          req.onerror = () => resolve(null);
+        }),
+    );
+    check('Kayıt şehrin türünü taşıyor (kayıt biçimi v7)', savedType?.type === 'port' && savedType?.schema === 7, JSON.stringify(savedType));
+    await tp.keyboard.press('Escape');
+
+    // Holding'in yeni şehri türüyle: zaferi ve kasayı elle ver (Holding bölümündeki gibi).
+    await tp.evaluate(() => {
+      const c = window.__capital;
+      const s = c.getState();
+      const tile = s.map.tiles.find((t) => t.kind === 'plot' && !t.structureId && !t.ownerId && !t.buildingId && s.districts[t.districtId].opensOnDay === undefined);
+      c.engine.dispatch({ type: 'BUY_TILE', tileId: tile.id });
+      c.engine.dispatch({ type: 'BUILD', tileId: tile.id, defId: 'corner_shop' });
+      for (let i = 0; i < 20; i++) c.engine.runDay();
+      const live = c.getState();
+      live.companies.player.cash = 30_000_000;
+      live.victory = { day: live.time.day, kind: 'tycoon' };
+      c.engine.dispatch({ type: 'SET_SPEED', speed: 0 });
+    });
+    await tp.waitForSelector('[data-victory-open-city]', { timeout: 8000 }).catch(() => {});
+    await tp.evaluate(() => document.querySelector('[data-victory-open-city]')?.click());
+    await tp.waitForTimeout(300);
+    const form = await tp.evaluate(() => ({
+      types: [...document.querySelectorAll('[data-holding-type]')].map((el) => el.getAttribute('data-holding-type')),
+      checked: document.querySelector('[data-holding-type][aria-checked="true"]')?.getAttribute('data-holding-type'),
+    }));
+    await tp.locator('[data-holding-type="capital"]').click();
+    const blurb = ((await tp.locator('[data-holding-type-blurb]').textContent()) ?? '').trim();
+    await tp.locator('[data-holding-size="standard"]').click();
+    await tp.locator('[data-open-city-go]').click();
+    await tp.waitForTimeout(900);
+    const opened = await tp.evaluate(() => {
+      const s = window.__capital.getState();
+      return {
+        type: s.cityType,
+        chip: document.querySelector('[data-city-type-chip]')?.textContent?.trim() ?? null,
+        founder: s.holding?.dormant[0]?.state.cityType ?? null,
+        news: s.news[0]?.body ?? '',
+        rivals: Object.values(s.companies).filter((co) => !co.isPlayer).map((co) => co.profileId),
+      };
+    });
+    check('Holding’in yeni şehir formunda tür seçiliyor: dört tür, dengeli seçili, açıklaması',
+      form.types.join() === 'balanced,port,industrial,capital' && form.checked === 'balanced' && blurb.includes('Bakanlıklar'),
+      `${JSON.stringify(form)} · ${blurb.slice(0, 60)}`);
+    check('Yeni şehir başkent: rozet, kurucu şehir liman, haber türünü söylüyor, kadro başkentin',
+      opened.type === 'capital' && opened.chip === 'Başkent' && opened.founder === 'port' && opened.news.includes('Şehrin türü: Başkent') &&
+        opened.rivals.join() === 'meridyen,kule_gayrimenkul,atlas_yapi,veri_sanayi',
+      JSON.stringify({ ...opened, news: opened.news.slice(-60) }).slice(0, 220));
+    await tContext.close();
+
+    // Dengeli şehirde rozet yok: üst bar bugünkü gibi.
+    const bContext = await browser.newContext({ viewport: { width: 1280, height: 860 } });
+    await bContext.addInitScript(veteran, TUTORIAL_KEY);
+    const bp = await bContext.newPage();
+    bp.on('pageerror', (e) => tErrors.push(e.message));
+    await bp.goto('http://127.0.0.1:8811/');
+    await bp.waitForSelector('.newgame', { timeout: 20000 });
+    await bp.fill('.newgame-field input[type="text"]', 'Dengeli AŞ');
+    await bp.locator('button:has-text("Şirketi kur")').click();
+    await bp.waitForSelector('.topbar', { timeout: 30000 });
+    const plain = await bp.evaluate(() => ({ chip: document.querySelectorAll('[data-city-type-chip]').length, type: window.__capital.getState().cityType ?? null }));
+    check('Dengeli şehirde rozet yok, kayıtta tür alanı yok', plain.chip === 0 && plain.type === null, JSON.stringify(plain));
+    await bContext.close();
+    check('Şehrin kimliği bölümünde konsol temiz', tErrors.length === 0, tErrors.slice(0, 3).join(' | '));
+  }
+
   section('Mobil');
   for (const deviceName of ['iPhone 13', 'Pixel 7']) {
     const mobileContext = await browser.newContext({ ...devices[deviceName] });

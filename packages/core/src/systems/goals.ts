@@ -7,6 +7,7 @@ import { sharesOutstanding } from './equity';
 import type { GameState, VictoryKind } from '../types';
 import { difficultyOf } from './rules';
 import { companyPath } from './paths';
+import { cityVictoryScale } from './cityType';
 
 /**
  * Hedef merdiveni ve zafer.
@@ -68,8 +69,8 @@ function bestRivalStake(state: GameState): number {
 }
 
 export function victoryNetWorth(state: GameState): number {
-  // Büyük şehirde ekonomi de büyük (Tur 21): eşik şehir boyutuyla ölçekli.
-  return difficultyOf(state).victoryNetWorth * getCitySize(state.citySize).victoryScale;
+  // Büyük şehirde ekonomi de büyük (Tur 21): eşik şehir boyutuyla ölçekli; türüyle de (Tur 76).
+  return difficultyOf(state).victoryNetWorth * getCitySize(state.citySize).victoryScale * cityVictoryScale(state);
 }
 
 /**

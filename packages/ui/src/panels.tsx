@@ -169,7 +169,7 @@ export function BuildPanel(): ReactElement {
       </header>
 
       <ul className="buildlist">
-        {options.map(({ def, unlocked, affordable, estimate, bestPick, indirect }) => {
+        {options.map(({ def, unlocked, cost, affordable, estimate, bestPick, indirect }) => {
           const selected = view.ghostDefId === def.id;
 
           return (
@@ -180,7 +180,7 @@ export function BuildPanel(): ReactElement {
                 disabled={!unlocked}
                 onClick={() => {
                   if (!affordable) {
-                    toast(t('panels.build.toast.noCash', { name: def.name, cost: formatMoney(def.cost) }), 'bad');
+                    toast(t('panels.build.toast.noCash', { name: def.name, cost: formatMoney(cost) }), 'bad');
                     return;
                   }
                   setView({ ghostDefId: selected ? null : def.id });
@@ -195,7 +195,7 @@ export function BuildPanel(): ReactElement {
                       {bestPick && <span className="buildcard-best">{t('panels.build.bestPick')}</span>}
                     </span>
                     <span className={affordable ? 'buildcard-cost' : 'buildcard-cost short'}>
-                      {formatMoney(def.cost)}
+                      {formatMoney(cost)}
                     </span>
                   </span>
                   <span className="buildcard-meta">

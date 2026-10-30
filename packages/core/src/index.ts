@@ -91,6 +91,7 @@ export {
 } from './systems/equity';
 export { districtPressure } from './systems/citygrowth';
 export { goalLadder, nextGoal, victoryNetWorth, victoryReached } from './systems/goals';
+export { cityGoodScale, cityTypeOf, referencePrice, rivalRoster } from './systems/cityType';
 export { categoryRevenueRate, interestOf, motionSupport, permitMultiplier } from './systems/council';
 export type { SupportBreakdown } from './systems/council';
 export {

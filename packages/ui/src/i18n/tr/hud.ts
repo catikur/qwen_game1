@@ -133,6 +133,10 @@ export const hud = {
   'hud.modifiers.line': 'Ek kurallar: {list} · zorluk ×{value}',
   'hud.modifiers.scenarioLine': 'Senaryonun ek kuralı: {list} (zorluk çarpanına girmiyor)',
   'hud.newGame.sizeGroup': 'Şehir boyutu',
+  // Şehrin türü (Tur 76)
+  'hud.newGame.typeQuestion': 'Nasıl bir şehir?',
+  'hud.newGame.typeGroup': 'Şehrin türü',
+  'hud.cityType.chipTitle': '{type}: {blurb}',
   'hud.newGame.cancel': 'Vazgeç',
   'hud.newGame.start': 'Şirketi kur',
   'hud.newGame.startScenario': 'Senaryoyu başlat',
@@ -271,6 +275,7 @@ export const hud = {
   'hud.holding.open.blurb':
     "Sermaye bu şehrin kasasından çıkar ve yeni şehrin zafer hedefine eklenir. Marka bilinirliğinin yarısı ve CEO'n seninle gelir; rakip kadrosu farklıdır. Bu şehir yaşamaya devam eder; kârından kasaya akan payı buradaki talimatı belirler (başlangıçta yarısı).",
   'hud.holding.open.size': 'Şehir boyutu',
+  'hud.holding.open.type': 'Şehrin türü',
   'hud.holding.open.capital': 'Sermaye',
   'hud.holding.open.terms': 'Taşınan marka bilinirliği %{brand} · bu şehirde kalan nakit {left}',
   'hud.holding.open.go': '{name} şehrini kur',

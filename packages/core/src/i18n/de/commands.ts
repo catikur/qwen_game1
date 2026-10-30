@@ -96,6 +96,7 @@ export const commands: Record<keyof typeof trCommands, string> = {
   'core.holding.openedTitle': '{city}: neue Stadt für deine Holding',
   'core.holding.openedBody':
     'Du startest mit {capital} Kapital und {brand}\u00a0% Markenbekanntheit. Rivalen: {rivals}. {previous} lebt weiter; die Hälfte des Gewinns dort fließt jeden Tag in die Holding-Kasse.',
+  'core.holding.openedType': 'Stadttyp: {type}.',
   'core.holding.remoteRaidTitle': '{city}: {name} hat {percent}\u00a0% deiner Aktien gesammelt',
   'core.holding.remoteRaidBody':
     'In deiner entfernten Stadt läuft ein Übernahmeangriff, und es gibt keine Anweisung zur Verteidigung. Im Panel „Städte“ kannst du die Leitung vor Ort anweisen, sich zu verteidigen, Geld aus der Holding-Kasse in die Stadt schicken oder zu ihr wechseln.',

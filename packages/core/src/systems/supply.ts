@@ -16,6 +16,7 @@ import { DISTRIBUTION_RELIEF, scopedDepots } from './buildingIndex';
 import { estimateBaselineDemand, goodShares } from './demand';
 import { energyPrice, gridUpkeep, powerGrid, servedUpkeep, settlePlants } from './energy';
 import { underConstruction } from './realestate';
+import { cityRule, cityUpkeepScale, referencePrice } from './cityType';
 import type { BuildingDef } from '@capital/content';
 import type { BuildingInstance, DistrictState, FreightDeal, GameState } from '../types';
 
@@ -50,6 +51,11 @@ export const SURPLUS_HAIRCUT = 0.85;
  * rakip senin kamyonunla ucuzluyor.
  */
 export const FREIGHT_SHARE = 0.6;
+
+/** Bu şehirde taşıma ücretinin terminale düşen payı: limanda daha çok (Tur 76). */
+export function freightShareOf(state: GameState): number {
+  return cityRule(state).freightShare ?? FREIGHT_SHARE;
+}
 
 /** Arz fazlası referans hacme ulaştığında spot fiyat bu oranda düşer. */
 const GLUT_DEPTH = 0.4;
@@ -125,6 +131,7 @@ function upkeepFor(state: GameState, building: BuildingInstance): number {
   const ceo = getCeoModifiers(state.companies[building.companyId]?.ceoId ?? null);
   const upkeep =
     def.upkeepPerDay *
+    cityUpkeepScale(state, def) *
     ceo.upkeep *
     overheadMultiplier(state, building.companyId) *
     boostMultiplier(state, building.companyId, 'upkeep') *
@@ -201,7 +208,7 @@ export function freightClient(state: GameState, outlet: BuildingInstance): Freig
     const b = state.map.tiles[outlet.tileId];
     if (!a || !b || Math.abs(a.x - b.x) + Math.abs(a.y - b.y) > def.radius) return null;
     const relief = reliefOf(def);
-    return { deal, relief, rate: relief * FREIGHT_SHARE };
+    return { deal, relief, rate: relief * freightShareOf(state) };
   }
   return null;
 }
@@ -560,7 +567,7 @@ function backfillMarket(state: GameState): void {
   const fresh = referenceVolumes(state.districts);
   for (const good of TRADED_GOODS) {
     if (state.market.reference[good.id] === undefined) state.market.reference[good.id] = fresh[good.id] ?? 0;
-    if (state.market.spot[good.id] === undefined) state.market.spot[good.id] = good.basePrice;
+    if (state.market.spot[good.id] === undefined) state.market.spot[good.id] = referencePrice(state, good.id);
   }
 }
 
@@ -582,15 +589,17 @@ export function runSpotPriceTick(state: GameState): void {
     const surplus = Math.max(0, (state.market.produced[good.id] ?? 0) - (state.market.consumed[good.id] ?? 0));
     const glut = Math.min(1, surplus / reference);
 
+    // Şehrin referans fiyatı (Tur 76): türün bol ya da kıt hammaddesi; dengeli şehirde katalogdaki.
+    const base = referencePrice(state, good.id);
     const eventMultiplier = mods.goodPrice[good.id] ?? 1;
-    const target = good.basePrice * eventMultiplier * (1 - GLUT_DEPTH * glut);
+    const target = base * eventMultiplier * (1 - GLUT_DEPTH * glut);
 
-    const current = state.market.spot[good.id] ?? good.basePrice;
+    const current = state.market.spot[good.id] ?? base;
     const next = current + (target - current) * SPOT_SMOOTHING;
 
     state.market.spot[good.id] = Math.max(
-      good.basePrice * SPOT_FLOOR,
-      Math.min(good.basePrice * SPOT_CEILING, next),
+      base * SPOT_FLOOR,
+      Math.min(base * SPOT_CEILING, next),
     );
   }
 }

@@ -25,6 +25,30 @@ export function changelogNotes(entry: ChangelogEntry, locale: string): string[] 
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.1.0',
+    date: '2026-10-29',
+    notes: {
+      tr: [
+        'Şehrin türü: kurulumda liman kenti, sanayi kenti ya da başkent seç. Dengeli şehir eskisi gibi.',
+        'Her türün kendi bölgeleri, hammadde fiyatları, rakipleri ve kuralı var. Limanda kahve ve pamuk ucuz, nakliye kârlı. Sanayi kentinde fabrika arazisi bol, sendika güçlü. Başkentte gelir yüksek, arsa pahalı.',
+        'Holding yeni şehri istediğin türde açıyor; şehrin türü üst barda yazıyor.',
+        'Tohum Ligi her zaman dengeli şehirde. Bu sürümün kayıtları eski sürümde açılmıyor.',
+      ],
+      en: [
+        'City types: pick a port city, an industrial city or the capital at setup. The balanced city is as before.',
+        'Each type has its own districts, raw-material prices, rivals and rule. In the port city coffee and cotton are cheap and freight pays. The industrial city has plenty of factory land and a strong union. The capital has high incomes and dear land.',
+        'Your holding opens its new city in the type you choose; the city type shows in the top bar.',
+        'The Seed League is always played in a balanced city. Saves from this version don’t open in older versions.',
+      ],
+      de: [
+        'Stadttypen: Wähle beim Start eine Hafenstadt, eine Industriestadt oder die Hauptstadt. Die ausgewogene Stadt bleibt wie bisher.',
+        'Jeder Typ hat eigene Viertel, Rohstoffpreise, Rivalen und eine Regel. In der Hafenstadt sind Kaffee und Baumwolle günstig und Fracht lohnt sich. Die Industriestadt hat viel Fabrikland und eine starke Gewerkschaft. In der Hauptstadt sind die Einkommen hoch und der Grund teuer.',
+        'Deine Holding eröffnet die neue Stadt im Typ deiner Wahl; der Stadttyp steht in der oberen Leiste.',
+        'Die Seed-Liga spielt immer in einer ausgewogenen Stadt. Spielstände dieser Version lassen sich in älteren Versionen nicht öffnen.',
+      ],
+    },
+  },
+  {
     version: '1.0.1',
     date: '2026-10-29',
     notes: {

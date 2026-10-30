@@ -189,6 +189,17 @@ const MIGRATIONS: Record<number, (raw: Record<string, unknown>) => Record<string
     }
     return raw;
   },
+
+  /**
+   * v6 → v7: şehrin türü (Tur 76).
+   *
+   * Eski kaydın şehri dengeli: alan yok, yokluğu dengeli demek; taşınacak
+   * bir şey yok. Sürüm yine de artıyor: türlü şehrin kaydını (limanın
+   * fiyatları, sanayinin kuralı) tür bilmeyen eski sürüm dengeli diye
+   * oynamasın. Tur 75'ten beri eski sürüm yeni biçimi açmıyor, üstüne de
+   * yazmıyor.
+   */
+  6: (raw) => raw,
 };
 
 /**
@@ -253,12 +264,56 @@ function migrate(raw: Record<string, unknown>): LoadOutcome {
     (current['meta'] as { schemaVersion: number }).schemaVersion = version;
   }
 
+  /*
+   * Holding'in bekleyen şehirleri de (Codex #106): her biri kendi künyesiyle
+   * tam bir şehir. Göç yalnız oynanan şehri taşıyınca bekleyen şehir eski
+   * sürümde kalıyordu; ona geçilip kaydedilince kayıt eski sürümün kaydı diye
+   * yazılıyor, eski sürüm onu açıp üstüne yazabiliyordu. Her bekleyen şehir
+   * kendi sürümünden bugüne; bu sürümden yeni bir şehir varsa kayıt açılmıyor.
+   */
+  for (const city of dormantStates(current)) {
+    const cityMeta = city.state['meta'] as { schemaVersion?: number } | undefined;
+    let cityVersion = typeof cityMeta?.schemaVersion === 'number' ? cityMeta.schemaVersion : from;
+    if (cityVersion > SCHEMA_VERSION) {
+      return {
+        ok: false,
+        problem: 'newer',
+        version: cityVersion,
+        reason: `Bu kayıt oyunun daha yeni bir sürümünden (v${cityVersion}). Oyunu güncelleyin.`,
+      };
+    }
+    while (cityVersion < SCHEMA_VERSION) {
+      const step = MIGRATIONS[cityVersion];
+      if (!step) {
+        return { ok: false, problem: 'noMigration', version: cityVersion, reason: `v${cityVersion} kaydını taşıyacak bir göç adımı yok.` };
+      }
+      try {
+        city.state = step(city.state);
+      } catch (error) {
+        return { ok: false, problem: 'broken', reason: `Kayıt eksik veya bozuk: v${cityVersion} göçü düştü (${(error as Error).message}).` };
+      }
+      cityVersion += 1;
+      const meta = city.state['meta'] as { schemaVersion?: number } | undefined;
+      if (meta) meta.schemaVersion = cityVersion;
+    }
+  }
+
   const validation = validate(current);
   if (!validation.ok) return validation;
 
   return from < SCHEMA_VERSION
     ? { ok: true, state: current as unknown as GameState, migratedFrom: from }
     : { ok: true, state: current as unknown as GameState };
+}
+
+/** Holding'in bekleyen şehirlerinin durumları (kayıtta `holding.dormant[*].state`). */
+function dormantStates(raw: Record<string, unknown>): Array<{ state: Record<string, unknown> }> {
+  const dormant = (raw['holding'] as { dormant?: unknown } | undefined)?.dormant;
+  if (!Array.isArray(dormant)) return [];
+  return dormant.filter(
+    (city): city is { state: Record<string, unknown> } =>
+      Boolean(city) && typeof city === 'object' && Boolean((city as { state?: unknown }).state) && typeof (city as { state?: unknown }).state === 'object',
+  );
 }
 
 /** Yükleme öncesi yapısal doğrulama — çöp veri motora girmesin. */

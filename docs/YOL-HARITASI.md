@@ -222,7 +222,7 @@ açılıyor.
   sayfasında Escape ve B bir adım geri, notu silmiyor. Yayın listesinin
   yanlışları düzeldi (`pnpm balance`, lig sunucusunun dağıtım kapısı,
   `/v1/seed/sim`). Düzeltmeler sürüm 1.0.1 olarak çıkıyor; Faz 6 raporu
-  `docs/DURUM.md`'de. — bu PR
+  `docs/DURUM.md`'de. — bitti (#105)
 
 ### Faz 7 · İkinci şehir ve ticaret (taslak)
 
@@ -239,17 +239,23 @@ başka bir şey kastettiyse Tur 76'dan önce düzeltilir):
   perakendenin dışında daha büyük bir mal akışına) burada büyüyor.
 
 Taslak turlar (Tur 75'te yazıldı). Haritanın varsayılan okumasına göre;
-kullanıcı Tur 76'dan önce değiştirebilir. Kayıt biçimi bu fazda değişecek
+kullanıcı Tur 76'dan önce değiştirmedi. Kayıt biçimi Tur 76'da değişti
 (şema v7): Tur 75'ten beri eski sürüm yeni biçimin kaydını açamıyor ama
 üstüne de yazmıyor. Sürüm numarası 1.1.0 (yeni içerik, eski kayıtlar
-açılıyor). Simülasyon da değişiyor: lig izi Tur 61'den beri ilk kez
-değişecek, lig sunucusu her böyle turla dağıtılmalı (`docs/YAYIN.md` §4).
+açılıyor). Lig her zaman dengeli şehirde; Tur 76 lig izini değiştirmedi.
+Lig izini değiştiren tur (hat ve ticaret dengeli şehre de dokunursa) lig
+sunucusunun dağıtımını istiyor (`docs/YAYIN.md` §4).
 
-- **76 · Şehrin kimliği.** Şehir türleri: liman, sanayi ve başkent gibi.
-  Her türün kendi talep karışımı, hammaddesi, rakip mizaçları ve kuralı
-  var. Holding'in her şehri bir tür; eski kayıtların şehirleri bugünkü
-  "dengeli" tür. Şehrin türü kurulumda ve holding'in şehir seçiminde
-  seçiliyor, şehirde görünüyor.
+- **76 · Şehrin kimliği.** Dört tür: dengeli (bugünkü şehir), liman
+  kenti, sanayi kenti, başkent. Tür bölge dizilişini ve onunla üretim
+  arazisini, hammaddenin referans fiyatını, rakip kadrosunun ilk dördünü,
+  bir kuralı (limanda nakliye, sanayide bakım ve sendika, başkentte arsa
+  ve gelir) ve zafer eşiğini değiştiriyor. Eşik türün ekonomisiyle: beş
+  yol vekilinin ortalama zafer günü dört türde 615–622. Firuze Grup hiçbir
+  türün ilk dördünde değil (zaferi kilitliyordu). Tür kurulumda ve
+  holding'in yeni şehrinde seçiliyor, üst barda yazıyor. Eski kayıtlar,
+  Tohum Ligi ve senaryolar dengeli; lig izi aynı. Şema v7, sürüm 1.1.0.
+  — bu PR
 - **77 · Şehirler arası hat.** Nakliye terminali (Tur 56) iki şehri
   bağlıyor. Mal bir şehirde üretilip öbüründe rafa giriyor. Hattın
   kapasitesi, taşıma süresi (gün) ve bedeli var; yolda kalan mal

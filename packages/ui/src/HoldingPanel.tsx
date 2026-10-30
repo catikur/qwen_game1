@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { ReactElement } from 'react';
-import { CITY_SIZES, HOLDING } from '@capital/content';
-import type { CitySizeId } from '@capital/content';
+import { CITY_SIZES, CITY_TYPES, DEFAULT_CITY_TYPE, HOLDING, getCityType } from '@capital/content';
+import type { CitySizeId, CityTypeId } from '@capital/content';
 import {
   buybackToLock,
   carriedBrand,
@@ -335,6 +335,8 @@ function TransferForm({ state }: { state: GameState }): ReactElement | null {
 function OpenCityForm({ state }: { state: GameState }): ReactElement | null {
   const { run, toast, setView } = useGame();
   const [size, setSize] = useState<CitySizeId>('standard');
+  // Yeni şehrin türü (Tur 76).
+  const [kind, setKind] = useState<CityTypeId>(DEFAULT_CITY_TYPE);
   const [wanted, setWanted] = useState<number | null>(null);
   const quote = openCityQuote(state);
   if (state.league) return null;
@@ -351,6 +353,24 @@ function OpenCityForm({ state }: { state: GameState }): ReactElement | null {
       {quote.ok ? (
         <>
           <p className="muted">{t('hud.holding.open.blurb')}</p>
+          <span className="muted">{t('hud.holding.open.type')}</span>
+          <div className="difficulty-picker mode-picker city-type-picker" role="radiogroup" aria-label={t('hud.holding.open.type')}>
+            {CITY_TYPES.map((option) => (
+              <button
+                key={option.id}
+                type="button"
+                role="radio"
+                aria-checked={option.id === kind}
+                className={`difficulty-option${option.id === kind ? ' selected' : ''}`}
+                data-holding-type={option.id}
+                style={{ ['--city-type' as string]: option.color }}
+                onClick={() => setKind(option.id)}
+              >
+                {option.name}
+              </button>
+            ))}
+          </div>
+          <p className="muted" data-holding-type-blurb>{getCityType(kind).blurb}</p>
           <span className="muted">{t('hud.holding.open.size')}</span>
           <div className="difficulty-picker mode-picker" role="radiogroup" aria-label={t('hud.holding.open.size')}>
             {CITY_SIZES.map((option) => (
@@ -391,7 +411,7 @@ function OpenCityForm({ state }: { state: GameState }): ReactElement | null {
             className="primary"
             data-open-city-go
             onClick={() => {
-              if (run({ type: 'OPEN_CITY', citySize: size, capital })) {
+              if (run({ type: 'OPEN_CITY', citySize: size, capital, ...(kind !== DEFAULT_CITY_TYPE ? { cityType: kind } : {}) })) {
                 toast(t('hud.holding.open.done', { name: quote.name }), 'good');
                 setView({ openPanel: 'none', selectedTileId: null, ghostDefId: null });
               }
@@ -404,6 +424,26 @@ function OpenCityForm({ state }: { state: GameState }): ReactElement | null {
         <p className="muted">{quote.reason}</p>
       )}
     </section>
+  );
+}
+
+/**
+ * Üst bardaki şehrin türü (Tur 76): liman, sanayi ya da başkent. Dengeli
+ * şehirde yok; bugünkü üst bar değişmiyor.
+ */
+export function CityTypeChip(): ReactElement | null {
+  const state = useGameState();
+  if (!state.cityType) return null;
+  const kind = getCityType(state.cityType);
+  return (
+    <span
+      className="brand-city-type"
+      data-city-type-chip={kind.id}
+      style={{ ['--city-type' as string]: kind.color }}
+      title={t('hud.cityType.chipTitle', { type: kind.name, blurb: kind.blurb })}
+    >
+      {kind.name}
+    </span>
   );
 }
 

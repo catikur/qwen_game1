@@ -24,9 +24,10 @@ import {
   NPC_PROFILES,
   TEMPERAMENTS,
   getCeoModifiers,
+  getCityType,
   rootStructureOf,
 } from '@capital/content';
-import type { CategoryId, ModifierId, SeasonId, WeatherId } from '@capital/content';
+import type { CategoryId, CityTypeId, ModifierId, SeasonId, WeatherId } from '@capital/content';
 import {
   GameEngine,
   buildOptions,
@@ -5509,6 +5510,57 @@ section('Senaryolar IV: nakliye, enerji ve dönüşüm', () => {
   );
 });
 
+/**
+ * Yol vekilinin zafere kadar koşusu (Tur 61; şehrin türüyle Tur 76).
+ * "Yollar" ve "Şehir türleri" bölümleri aynı koşuları okuyor: dengeli
+ * şehrin koşuları bir kez yapılıyor.
+ */
+const PATH_SEEDS = [1, 7, 42];
+const PATH_PROXIES: PathProxy[] = ['retail', 'takeover', 'realestate', 'energy', 'freight'];
+interface PathRun extends ReturnType<typeof companyPath> {
+  seed: number;
+  day: number | null;
+  lost: boolean;
+  frozen: string;
+  portfolio: number;
+  buildings: number;
+  rentals: number;
+  production: number;
+  freightEarned: number;
+  /** Nakliye vekilinde terminallerin gün toplamı (her gün terminal sayısı). */
+  terminalDays: number;
+}
+const pathRuns = new Map<string, PathRun>();
+function pathRun(seed: number, path: PathProxy, cityType?: CityTypeId): PathRun {
+  const key = `${cityType ?? 'balanced'}:${path}:${seed}`;
+  const cached = pathRuns.get(key);
+  if (cached) return cached;
+  const engine = new GameEngine(createNewGame({ seed, companyName: 'Yol AŞ', ...(cityType ? { cityType } : {}) }));
+  const state = engine.getState();
+  let terminalDays = 0;
+  for (let day = 1; day <= 1400 && !state.victory && !state.gameOver; day++) {
+    pathStrategy(engine, path);
+    engine.runDay();
+    if (path === 'freight') terminalDays += freightTerminals(state).length;
+  }
+  const own = Object.values(state.buildings).filter((b) => b.companyId === state.playerCompanyId);
+  const result: PathRun = {
+    seed,
+    day: state.victory && !state.gameOver ? state.victory.day : null,
+    lost: Boolean(state.gameOver),
+    frozen: state.victory?.path ?? '-',
+    ...companyPath(state),
+    portfolio: portfolioValue(state, state.playerCompanyId),
+    buildings: own.length,
+    rentals: own.filter((b) => BUILDING_BY_ID[b.defId]?.role === 'rental').length,
+    production: own.filter((b) => ['extract', 'process'].includes(BUILDING_BY_ID[b.defId]?.role ?? '')).length,
+    freightEarned: state.freight?.earnedTotal ?? 0,
+    terminalDays,
+  };
+  pathRuns.set(key, result);
+  return result;
+}
+
 section('Yollar: zafere farklı yollar', () => {
   /*
    * Tur 61: Faz 3'ün ölçüsü. "Zafere en az üç farklı yol var, her birini
@@ -5529,30 +5581,11 @@ section('Yollar: zafere farklı yollar', () => {
    *   enerji       641–700      · enerji %8–12
    * Burada üç şehir (süre bütçesi).
    */
-  const SEEDS = [1, 7, 42];
-  const PATH_IDS: PathProxy[] = ['retail', 'takeover', 'realestate', 'energy', 'freight'];
+  const SEEDS = PATH_SEEDS;
+  const PATH_IDS = PATH_PROXIES;
   const m = (v: number) => `${(v / 1_000_000).toFixed(1)} M`;
   const pc = (v: number) => `%${Math.round(v * 100)}`;
-  const play = (seed: number, path: PathProxy) => {
-    const engine = new GameEngine(createNewGame({ seed, companyName: 'Yol AŞ' }));
-    const state = engine.getState();
-    for (let day = 1; day <= 1400 && !state.victory && !state.gameOver; day++) {
-      pathStrategy(engine, path);
-      engine.runDay();
-    }
-    const own = Object.values(state.buildings).filter((b) => b.companyId === state.playerCompanyId);
-    const result = companyPath(state);
-    return {
-      seed,
-      day: state.victory && !state.gameOver ? state.victory.day : null,
-      frozen: state.victory?.path ?? '-',
-      ...result,
-      portfolio: portfolioValue(state, state.playerCompanyId),
-      buildings: own.length,
-      rentals: own.filter((b) => BUILDING_BY_ID[b.defId]?.role === 'rental').length,
-    };
-  };
-  const runs = PATH_IDS.map((path) => ({ path, results: SEEDS.map((seed) => play(seed, path)) }));
+  const runs = PATH_IDS.map((path) => ({ path, results: SEEDS.map((seed) => pathRun(seed, path)) }));
   for (const { path, results } of runs) {
     for (const r of results) {
       console.log(
@@ -5588,6 +5621,142 @@ section('Yollar: zafere farklı yollar', () => {
   console.log(
     `  NOT: yan iş kolları kazanıyor ama şirketi taşımıyor: enerji ${of('energy').map((r) => pc(r.shares.energy)).join(', ')}, nakliye ücreti ${of('freight').map((r) => pc(r.shares.freight)).join(', ')} (DURUM Tur 61, açık kalan).`,
   );
+});
+
+section('Şehir türleri: liman, sanayi, başkent', () => {
+  /*
+   * Tur 76. Şehrin türü bölge dizilişini (üretim arazisi), hammadde
+   * fiyatlarını, rakip kadrosunun başını ve bir kuralı değiştiriyor.
+   * "Yollar" bölümünün beş vekili her türde, üç tohumda zafere kadar.
+   * Ölçülen (ortalama zafer günü; dengeli 622):
+   *   ilk sürüm (eşik ×1; Firuze Grup sanayi kentinin ve başkentin ilk
+   *     dördünde): Firuze 720. günde oyuncuyu geçiyor; sanayide beş
+   *     vekilden üçü 1400 günde kazanamıyordu, başkentte ikisi şirketini
+   *     kaybetti
+   *   Firuze ve başkentte Nova çıkınca, eşik ×1: liman 652, sanayi 592,
+   *     başkent 544 (küçük liman yavaş; üretimi ucuz sanayi ve zengin başkent hızlı)
+   *   eşik şehrin ekonomisiyle (liman ×0,9, sanayi ×1,1, başkent ×1,3):
+   *     615 · 622 · 618; her türde yollar dengelinin ±%5'inde, enerji
+   *     liman ve sanayide %5 hızlı (santral arazisi bol)
+   * Limanda nakliye: günlük ücret dengeli şehirdekiyle aynı (8.676 · 8.619
+   *   ₺/gün). Liman kenti küçük, rakiplerin satışı %8 az; ücretin %70'i
+   *   (dengelide %60) bunu ancak karşılıyor. Kazanç terminalin fiyatında
+   *   (%25 ucuz): geri ödeme 67 → 55 gün.
+   * Büyük şehirde (5×5) sekiz rakibin hepsi var; Firuze her türde lider
+   * (dengeli dahil), zafer şartı yok: Büyük şehir bölümünün iddiaları. Tek
+   * fark boş talep: türlerin dizilişinde konut iç halkada, 360. günde
+   * talep daha büyük (limanda 140 bin birim, dengelide 125 bin) ve %22–26'sı
+   * boş (dengelide %14). Bant %30; zafer yine 600. günden önce gelmiyor.
+   */
+  const TYPES: CityTypeId[] = ['port', 'industrial', 'capital'];
+  const mean = (xs: number[]) => xs.reduce((sum, x) => sum + x, 0) / Math.max(1, xs.length);
+  const dayOf = (r: PathRun) => r.day ?? 1400;
+  const pc = (v: number) => `%${Math.round(v * 100)}`;
+  const balanced = PATH_PROXIES.map((path) => ({ path, results: PATH_SEEDS.map((seed) => pathRun(seed, path)) }));
+  const typed = TYPES.map((type) => ({
+    type,
+    runs: PATH_PROXIES.map((path) => ({ path, results: PATH_SEEDS.map((seed) => pathRun(seed, path, type)) })),
+  }));
+  for (const { type, runs } of typed) {
+    for (const { path, results } of runs) {
+      console.log(
+        `  ${type.padEnd(10)} ${path.padEnd(10)} ${results.map((r) => (r.day === null ? (r.lost ? 'KAYIP' : 'zafer yok') : `${r.day}`)).join(' / ')} · ` +
+          `perakende ${results.map((r) => pc(r.shares.retail)).join('/')} kira ${results.map((r) => pc(r.shares.realestate)).join('/')} ` +
+          `enerji ${results.map((r) => pc(r.shares.energy)).join('/')} · üretim ${results.map((r) => r.production).join('/')} bina`,
+      );
+    }
+  }
+  const pathMean = (runs: Array<{ path: PathProxy; results: PathRun[] }>, path: PathProxy) =>
+    mean(runs.find((run) => run.path === path)!.results.map(dayOf));
+  const balancedMean = mean(balanced.flatMap(({ results }) => results.map(dayOf)));
+  const typeMeans = typed.map(({ type, runs }) => ({ type, day: mean(runs.flatMap(({ results }) => results.map(dayOf))) }));
+  console.log(`  ortalama zafer günü: dengeli ${Math.round(balancedMean)} · ${typeMeans.map((t) => `${t.type} ${Math.round(t.day)}`).join(' · ')}`);
+  expect(
+    'Her türde her yolun vekili her şehirde kazanıyor',
+    typed.every(({ runs }) => runs.every(({ results }) => results.every((r) => r.day !== null))),
+    typed.map(({ type, runs }) => `${type}: ${runs.map(({ path, results }) => `${path} ${results.map((r) => r.day ?? '—').join('/')}`).join(', ')}`).join(' · '),
+  );
+  expect(
+    'Hiçbir tür baskın değil: türün ortalama zafer günü dengelininkinin ±%6’sında (eşik şehrin ekonomisiyle)',
+    typeMeans.every((t) => Math.abs(t.day / balancedMean - 1) <= 0.06),
+    `dengeli ${Math.round(balancedMean)} · ${typeMeans.map((t) => `${t.type} ${Math.round(t.day)} (${t.day >= balancedMean ? '+' : ''}${Math.round((t.day / balancedMean - 1) * 100)}%)`).join(' · ')}`,
+  );
+  const spread = typed.map(({ type, runs }) => {
+    const means = PATH_PROXIES.map((path) => pathMean(runs, path)).sort((a, b) => a - b);
+    return { type, ratio: means[0]! / means[means.length - 1]! };
+  });
+  expect(
+    'Türün içinde de hiçbir yol baskın değil: en hızlı yolun ortalaması en yavaşınkinin en az %80’i',
+    spread.every((t) => t.ratio >= 0.8),
+    spread.map((t) => `${t.type} ${t.ratio.toFixed(2)}`).join(' · '),
+  );
+  const energyBalanced = pathMean(balanced, 'energy');
+  const energyIn = (type: CityTypeId) => pathMean(typed.find((t) => t.type === type)!.runs, 'energy');
+  expect(
+    'Liman ve sanayi kentinde santral arazisi bol: enerji vekili dengeli şehirdekinden en az %2 hızlı',
+    energyIn('port') <= energyBalanced * 0.98 && energyIn('industrial') <= energyBalanced * 0.98,
+    `dengeli ${Math.round(energyBalanced)} · liman ${Math.round(energyIn('port'))} · sanayi ${Math.round(energyIn('industrial'))}`,
+  );
+  // Terminalin geri ödemesi: şehrin fiyat listesindeki bedeli, terminal
+  // başına günlük ücretten bakımı düşünce kaç günde çıkıyor.
+  const terminal = BUILDING_BY_ID.freight_terminal!;
+  const payback = (type: CityTypeId | undefined, results: PathRun[]) => {
+    const cost = terminal.cost * (getCityType(type ?? 'balanced').rule.buildCost?.freight_terminal ?? 1);
+    return results.map((r) => cost / Math.max(1, r.freightEarned / Math.max(1, r.terminalDays) - terminal.upkeepPerDay));
+  };
+  const freightOf = (runs: Array<{ path: PathProxy; results: PathRun[] }>) => runs.find((run) => run.path === 'freight')!.results;
+  const portRuns = freightOf(typed.find((t) => t.type === 'port')!.runs);
+  const balancedRuns = freightOf(balanced);
+  const portPayback = payback('port', portRuns);
+  const balancedPayback = payback(undefined, balancedRuns);
+  expect(
+    'Limanda terminal kendini daha çabuk ödüyor: nakliye vekilinin terminalinin geri ödemesi dengeli şehirdekinden en az %10 kısa',
+    mean(portPayback) <= mean(balancedPayback) * 0.9,
+    `dengeli ${balancedPayback.map((d) => Math.round(d)).join('/')} gün · liman ${portPayback.map((d) => Math.round(d)).join('/')} gün (×${(mean(portPayback) / mean(balancedPayback)).toFixed(2)})`,
+  );
+  const perDay = (results: PathRun[]) => mean(results.map((r) => r.freightEarned / Math.max(1, dayOf(r))));
+  console.log(
+    `  NOT: limanda günlük taşıma ücreti dengeli şehirdekiyle aynı (${formatMoney(perDay(balancedRuns))} · ${formatMoney(perDay(portRuns))}/gün): ` +
+      'liman kenti küçük, rakiplerin satışı az; ücretin %70’i payı bunu ancak karşılıyor. Fark terminalin fiyatında.',
+  );
+
+  // Büyük şehir (5×5): Büyük şehir bölümünün iddiaları her türde, bir tohumda.
+  for (const type of TYPES) {
+    const engine = new GameEngine(createNewGame({ seed: 42, citySize: 'large', companyName: 'Büyük AŞ', cityType: type }));
+    const state = engine.getState();
+    let unmet360 = 0;
+    let lateMs = 0;
+    for (let day = 1; day <= 720; day++) {
+      if (day % 5 === 0) playerStrategy(engine);
+      if (day % 3 === 0) defendAgainstRaids(engine);
+      const t0 = performance.now();
+      engine.runDay();
+      if (day > 660) lateMs += performance.now() - t0;
+      if (day === 360) {
+        let weighted = 0;
+        let total = 0;
+        for (const district of state.districts) {
+          if (district.opensOnDay !== undefined && day < district.opensOnDay) continue;
+          const demand = Object.values(district.demand).reduce((a, b) => a + b, 0);
+          weighted += districtOpportunity(district) * demand;
+          total += demand;
+        }
+        unmet360 = total > 0 ? weighted / total : 0;
+      }
+      if (state.gameOver) break;
+    }
+    const player = getPlayer(state);
+    const best = Object.values(state.companies).filter((c) => !c.isPlayer).reduce((a, c) => Math.max(a, c.netWorth), 0);
+    console.log(
+      `  büyük ${type.padEnd(10)} | 360. gün boş talep %${Math.round(unmet360 * 100)} · 720. gün oyuncu ${formatMoney(player.netWorth)} · ` +
+        `en iyi rakip ${formatMoney(best)} · zafer ${state.victory ? `${state.victory.day}. gün` : 'yok'} · geç oyun ${(lateMs / 60).toFixed(0)} ms/gün`,
+    );
+    expect(
+      `büyük ${type}: şehir doluyor (boş talep < %30), rakipler rekabetçi, zafer 600. günden önce değil, gün 3x hızın altında`,
+      !state.gameOver && unmet360 < 0.3 && best >= player.netWorth * 0.6 && (!state.victory || state.victory.day >= 600) && lateMs / 60 < 480,
+      `boş talep %${Math.round(unmet360 * 100)} · rakip ${formatMoney(best)} / ${formatMoney(player.netWorth)} · zafer ${state.victory?.day ?? 'yok'} · ${(lateMs / 60).toFixed(0)} ms/gün`,
+    );
+  }
 });
 
 /**

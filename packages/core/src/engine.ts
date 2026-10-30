@@ -393,7 +393,7 @@ export class GameEngine {
       case 'SWITCH_CITY': {
         const result =
           command.type === 'OPEN_CITY'
-            ? openCity(state, command.citySize, command.capital)
+            ? openCity(state, command.citySize, command.capital, command.cityType)
             : switchCity(state, command.index);
         if (!result.ok || !result.next) return { ok: false, reason: result.reason ?? tc('core.engine.cityUnchanged') };
         this.swapCity(result.next);

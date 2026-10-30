@@ -136,6 +136,10 @@ export const hud: Record<keyof typeof trHud, string> = {
   'hud.modifiers.line': 'Extra rules: {list} · difficulty ×{value}',
   'hud.modifiers.scenarioLine': "Scenario's extra rule: {list} (no difficulty multiplier)",
   'hud.newGame.sizeGroup': 'City size',
+  // City type (Tur 76)
+  'hud.newGame.typeQuestion': 'What kind of city?',
+  'hud.newGame.typeGroup': 'City type',
+  'hud.cityType.chipTitle': '{type}: {blurb}',
   'hud.newGame.cancel': 'Cancel',
   'hud.newGame.start': 'Found the company',
   'hud.newGame.startScenario': 'Start the scenario',
@@ -274,6 +278,7 @@ export const hud: Record<keyof typeof trHud, string> = {
   'hud.holding.open.blurb':
     "The capital comes out of this city's cash and is added to the new city's victory target. Half your brand awareness and your CEO come with you; the rival lineup is different. This city keeps living; the share of its profit that flows into the treasury is set by its order here (half to start).",
   'hud.holding.open.size': 'City size',
+  'hud.holding.open.type': 'City type',
   'hud.holding.open.capital': 'Capital',
   'hud.holding.open.terms': 'Brand awareness carried over {brand}% · cash left in this city {left}',
   'hud.holding.open.go': 'Found {name}',
