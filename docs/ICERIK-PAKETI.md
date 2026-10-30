@@ -62,7 +62,7 @@ ve yıldızlar, ek kurallar, devir, paketin kuralları. JSON yazmak gerekmiyor.
   hedefin başlangıç değerleri o türü kullanan hazır senaryodan. Hedef
   cümlesi yeni türün doldurmadığı bir yer tutucu taşıyorsa (`{target}`
   öndelik hedefinde) o türdeki hazır senaryonun cümlesine geçiyor; holding
-  ikinci şehri kuruyor.
+  ve ticaret (Tur 79) ikinci şehri kuruyor.
 - **Ön izleme** kurulum ekranındaki kart ve ayrıntının kendisi; sorun
   varken son geçerli hâli soluk.
 - **Dene.** Taslak kaydedilmeden oynanıyor; koşu taslağın tanımıyla (rafta
@@ -156,6 +156,7 @@ sayılmıyor.
 | `facts` | isteğe bağlı, ≤ 6 metin (her biri ≤ 220) |
 | `seed` | 1 – 2 147 483 647 tam sayı: şehrin tohumu |
 | `citySize` | `standard` · `large` |
+| `cityType` | isteğe bağlı (Tur 79): `balanced` · `port` · `industrial` · `capital`; yoksa dengeli |
 | `difficulty` | `easy` · `normal` · `hard` |
 | `preludeDays` | 0–400 tam sayı: devirden önce şehrin kaç gün yaşadığı |
 | `rules` | isteğe bağlı: hazır kural kimlikleri ya da paketin kuralları; aynı hazır kural iki kez olmaz |
@@ -165,7 +166,7 @@ sayılmıyor.
 | `setup` | devir (aşağıda) |
 
 `goalText`'in yer tutucuları oyunda doluyor: `{days}` (süre), `{target}`
-(para hedefi, biçimli; net değer ve enerji), `{share}` (zincirde pay,
+(para hedefi, biçimli; net değer, enerji ve ticaret), `{share}` (zincirde pay,
 yüzde), `{rivals}` ve `{outlets}` (nakliye), `{units}` ve `{renewals}`
 (kiralık). Hedefin doldurmadığı yer tutucu sorun (`placeholder`, Tur 68):
 metinde süslü parantezle kalırdı. Tablo `GOAL_PLACEHOLDERS`.
@@ -184,6 +185,14 @@ metinde süslü parantezle kalırdı. Tablo `GOAL_PLACEHOLDERS`.
 | `freight` | `rivals` 1–6, `outlets` 1–60 | `days` |
 | `power` | `target` 100 bin – 10 milyar ₺ (rakiplere satılan elektrik) | `days` |
 | `rental` | `units` 1–20 000, `renewals` 0–5 | `days` |
+| `trade` | `target` 10 bin – 10 milyar ₺: senaryo boyunca şehirler arası hatların kârı (Tur 79); `setup.secondCity` gerekli | `days` |
+
+Ticaretin kârı her gün: hattın o gün yüklediği mal varış şehrinin pazar
+fiyatından planlı satışla (%95) değerleniyor, malın bedeli ve nakliye
+düşülüyor. Zarar eden gün toplamı azaltıyor; rakiplerin hatları sayılmıyor.
+Hattın iki ucu terminal istiyor: iki şehre de nakliye terminali kurmak
+oyuncunun işi. Şehirlerin türleri farklıysa (`cityType`,
+`setup.secondCity.cityType`) fiyat farkı türlerden geliyor.
 
 ### Yıldızlar
 
@@ -209,7 +218,7 @@ oran (1–10, `three > two`).
 | `consortium` | `{ "warningDays": 5–120 }`: rakip konsorsiyumu |
 | `projects` | `{ "firstInDays": 0–400, "gapDays": 30–400 }`: şehir projesi takvimi |
 | `freeze` | `{ "entrants": bool, "issuance": bool }`: yeni şirket ve hisse ihracı dondurulmuş |
-| `secondCity` | `{ "capital": 100 bin – 1 milyar, "citySize": … }`: holding |
+| `secondCity` | `{ "capital": 100 bin – 1 milyar, "citySize": …, "cityType": … }`: holding ve ticaret; tür isteğe bağlı (Tur 79) |
 | `feud` | 0–4: oyuncuya kinli başlayan rakip sayısı |
 
 Kategoriler: `grocery`, `dining`, `retail`, `electronics`, `services`,
@@ -284,7 +293,7 @@ Doğrulayıcı ilk 40 sorunu döndürüyor (`{ path, code, params }`); raf ilk
 | `version` | sürüm |
 | `starsOrder` | üç yıldız ikiden zor değil |
 | `metric` | bu hedefte yıldız ölçüsü başka |
-| `needsSetup` | hedefin gerektirdiği kurulum yok (holding → `secondCity`) |
+| `needsSetup` | hedefin gerektirdiği kurulum yok (holding ve ticaret → `secondCity`) |
 | `placeholder` | hedef cümlesinde bu hedefin doldurmadığı yer tutucu (`value`) |
 
 ## Testler

@@ -627,7 +627,7 @@ export const SCENARIOS: ScenarioDef[] = [
     facts: [
       'İki şehre birer nakliye terminali kur. Kurucu şehre Holding panelinden geçiliyor; limanda terminal %25 ucuz.',
       'Hatlar bölümündeki fiyat tablosu kârlı yönleri gösteriyor. "Eksiği pazardan al" ile hat üretim olmadan da çalışıyor.',
-      'Hattın günlük kârı: malın varıştaki satış değeri, eksi malın bedeli ve nakliye. Boş giden kamyon da kârdan düşüyor.',
+      'Hattın günlük kârı: malın varıştaki satış değeri, eksi malın bedeli ve nakliye. Bir şehirdeki kriz ya da bolluk farkı birden açar: fiyat tablosuna sık bak.',
       'Rakip kârlı yolu 30 gün sonra kopyalıyor; fark daralınca yeni bir mal ya da yön bul.',
     ],
     seed: 21,

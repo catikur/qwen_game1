@@ -25,6 +25,30 @@ export function changelogNotes(entry: ChangelogEntry, locale: string): string[] 
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.4.0',
+    date: '2026-10-30',
+    notes: {
+      tr: [
+        'Ticaretle zafer: iki yeni senaryo. Kahve yolu limandan sanayiye, Başkentin tedarikçisi sanayiden başkente. Hedef, şehirler arası hatlarınla 1 M ₺ kâr etmek.',
+        'Hedefin ölçüsü kâr: hattın bugün yüklediği mal varışın fiyatıyla değerlenir, malın bedeli ve nakliye düşülür. Zarar eden gün toplamı azaltır. Hedef panelinde iki şehrin terminali, açık hatlar ve bugünkü kâr görünür.',
+        'Zarar eden hat artık gündemde: tıklayınca Şehirler paneli açılır, kamyon çekebilir ya da hattı kapatabilirsin. Hattın satırında bugünkü kârı yazıyor.',
+        'Senaryo editörü şehrin türünü ve ikinci şehrin türünü seçtiriyor; ticaret hedefi ikinci şehirle geliyor.',
+      ],
+      en: [
+        'Victory through trade: two new scenarios. The Coffee Road runs from a port to an industrial city, Supplier to the Capital from an industrial city to the capital. The goal is to earn ₺1M from your lines between cities.',
+        'The goal counts profit: what a line loads today is valued at the destination price, minus the goods and the freight. A losing day lowers the total. The goal panel shows both cities\' terminals, your open lines and today\'s profit.',
+        'A losing line now shows up on the agenda: click it to open the Cities panel, where you can pull trucks or close the line. The line\'s row shows today\'s profit.',
+        'The scenario editor lets you pick the city type and the second city\'s type; a trade goal comes with a second city.',
+      ],
+      de: [
+        'Sieg durch Handel: zwei neue Szenarien. Die Kaffeestraße führt vom Hafen in die Industriestadt, Lieferant der Hauptstadt von der Industriestadt in die Hauptstadt. Das Ziel: 1 Mio. ₺ Gewinn mit deinen Linien zwischen den Städten.',
+        'Das Ziel zählt Gewinn: Was eine Linie heute lädt, wird zum Preis am Ziel bewertet, abzüglich Ware und Fracht. Ein Verlusttag senkt die Summe. Das Zielfenster zeigt die Terminals beider Städte, die offenen Linien und den Gewinn von heute.',
+        'Eine Linie im Minus steht jetzt auf der Agenda: Ein Klick öffnet das Fenster „Städte“, wo du Lkw abziehen oder die Linie schließen kannst. Die Zeile der Linie zeigt den Gewinn von heute.',
+        'Im Szenario-Editor wählst du den Stadttyp und den Typ der zweiten Stadt; ein Handelsziel bringt eine zweite Stadt mit.',
+      ],
+    },
+  },
+  {
     version: '1.3.0',
     date: '2026-10-30',
     notes: {

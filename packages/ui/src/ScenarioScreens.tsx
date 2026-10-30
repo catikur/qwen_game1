@@ -6,6 +6,7 @@ import {
   chainGoalStatus,
   formatMoney,
   freightGoalStatus,
+  freightTerminals,
   holdingCities,
   hostileRivals,
   rentalGoalStatus,
@@ -15,11 +16,15 @@ import {
   scenarioProgress,
   scenarioResultPending,
   scenarioScoreText,
+  tradeCities,
+  tradeLines,
+  tradeProfitToday,
 } from '@capital/core';
 import type { GameState, ScenarioState } from '@capital/core';
 import { useGame, useGameState } from './useGame';
 import { recordScenarioResult, scenarioRecord, scenarioRunKey } from './scenarioBest';
 import { t } from './i18n';
+import './i18n/tradeTr';
 import { CareerRunLine } from './CareerPanel';
 import { starRow, starThresholds } from './stars';
 import { VICTORY_DELAY_MS, useMomentDelay } from './MomentLayers';
@@ -291,6 +296,7 @@ export function ScenarioGoalSection(): ReactElement | null {
       </p>
       {!finished && def.goal.kind === 'chain' && <ChainChecklist state={state} goodId={def.goal.goodId} target={def.goal.share} />}
       {!finished && def.goal.kind === 'holding' && <HoldingChecklist state={state} />}
+      {!finished && def.goal.kind === 'trade' && <TradeChecklist state={state} />}
       {!finished && def.goal.kind === 'freight' && <FreightChecklist state={state} rivals={def.goal.rivals} outlets={def.goal.outlets} />}
       {!finished && def.goal.kind === 'rental' && <RentalChecklist state={state} units={def.goal.units} renewals={def.goal.renewals} />}
       <p className="muted scenario-stars">{starThresholds(def)}</p>
@@ -361,6 +367,39 @@ function HoldingChecklist({ state }: { state: GameState }): ReactElement {
           })}
         </li>
       ))}
+    </ul>
+  );
+}
+
+/**
+ * Ticaret hedefi (Tur 79): hattın iki ucu terminal istiyor. Her şehrin
+ * terminali, açık hatlar ve bugün hatlardan gelen kâr; zarar eden gün
+ * kırmızı (toplam ondan düşüyor).
+ */
+function TradeChecklist({ state }: { state: GameState }): ReactElement {
+  const lines = tradeLines(state);
+  const trucks = lines.reduce((sum, line) => sum + line.trucks, 0);
+  const today = tradeProfitToday(state);
+  return (
+    <ul className="scenario-checklist" aria-label={t('trade.goal.label')}>
+      {tradeCities(state).map((city) => {
+        const count = freightTerminals(city).length;
+        return (
+          <li key={city.meta.seed} className={count > 0 ? 'done' : undefined} data-trade-terminal={city === state ? 'active' : 'away'} data-done={count > 0 ? '1' : '0'}>
+            <span aria-hidden="true">{count > 0 ? '✓' : '○'}</span>{' '}
+            {count > 0 ? t('trade.goal.terminal', { city: city.cityName ?? '', count }) : t('trade.goal.noTerminal', { city: city.cityName ?? '' })}
+          </li>
+        );
+      })}
+      <li className={lines.length > 0 ? 'done' : undefined} data-trade-lines={lines.length} data-done={lines.length > 0 ? '1' : '0'}>
+        <span aria-hidden="true">{lines.length > 0 ? '✓' : '○'}</span>{' '}
+        {lines.length > 0 ? t('trade.goal.lines', { count: lines.length, trucks }) : t('trade.goal.noLines')}
+      </li>
+      {lines.length > 0 && (
+        <li className={today < 0 ? 'line-loss' : undefined} data-trade-today={Math.round(today)}>
+          {t('trade.goal.today', { profit: formatMoney(today) })}
+        </li>
+      )}
     </ul>
   );
 }

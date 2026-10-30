@@ -829,7 +829,7 @@ export const contentDe: Record<string, string> = {
   'content.scenario.coffee.facts.1':
     'Die Preistabelle im Bereich Linien zeigt die lohnenden Routen. Mit „Fehlmenge am Markt kaufen“ läuft eine Linie auch ohne eigene Produktion.',
   'content.scenario.coffee.facts.2':
-    'Der Tagesgewinn einer Linie: der Verkaufswert ihrer Ware am Ziel, abzüglich Warenpreis und Fracht. Auch ein leerer Lkw schmälert den Gewinn.',
+    'Der Tagesgewinn einer Linie: der Verkaufswert ihrer Ware am Ziel, abzüglich Warenpreis und Fracht. Eine Krise oder ein Überangebot in einer Stadt kann plötzlich eine Spanne öffnen: Schau oft in die Preistabelle.',
   'content.scenario.coffee.facts.3': 'Rivalen kopieren eine lohnende Route nach 30 Tagen; schrumpft die Spanne, such dir eine neue Ware oder eine neue Richtung.',
   'content.scenario.supplier.title': 'Lieferant der Hauptstadt',
   'content.scenario.supplier.tagline': 'Die Hauptstadt kauft jeden Rohstoff von außen; bring ihn aus der Industriestadt. Aber die Bank ist streng mit dir.',

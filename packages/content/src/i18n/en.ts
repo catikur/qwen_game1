@@ -829,7 +829,7 @@ export const contentEn: Record<string, string> = {
   'content.scenario.coffee.facts.1':
     'The price table in the Lines section shows the profitable routes. With "buy the shortfall on the market", a line works without any production.',
   'content.scenario.coffee.facts.2':
-    "A line's daily profit: the sale value of its goods at the destination, minus what the goods and the freight cost. An empty truck still cuts into the profit.",
+    "A line's daily profit: the sale value of its goods at the destination, minus what the goods and the freight cost. A crisis or a glut in one city can suddenly open a gap: check the price table often.",
   'content.scenario.coffee.facts.3': 'Rivals copy a profitable route after 30 days; when the gap narrows, find a new good or a new direction.',
   'content.scenario.supplier.title': 'Supplier to the Capital',
   'content.scenario.supplier.tagline': 'The capital buys every raw material from outside; bring them from the industrial city. But the bank is strict with you.',

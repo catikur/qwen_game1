@@ -23,6 +23,7 @@ import { reopenDecisionCard } from './DecisionCard';
 import { useGame, useGameState } from './useGame';
 import type { ViewState } from './useGame';
 import { t } from './i18n';
+import './i18n/tradeTr';
 import { useLocale } from './i18n/locale';
 import { useSettings } from './settings';
 import { useWhatsNewUnseen } from './whatsNew';
