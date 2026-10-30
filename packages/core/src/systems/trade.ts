@@ -324,8 +324,9 @@ interface PlannedFlows {
  *   (akışı kayıtta kalmıyor);
  * - aynı malı aynı şehre taşıyan hat: yarınki yükü ile dün varan arasındaki
  *   fark arza (yolu bitmemiş hattın dün varanı yok);
- * - rakip hattı: çalışıyorsa dünkü yükü ihracat baskısına; ilk seferi
- *   yoldaysa yükü iki şehirde de (henüz alıp satmıyor).
+ * - rakip hattı: sabahki kararıyla ve kasasıyla (Codex #110); ilk seferi
+ *   yoldaysa da yükü iki şehirde (henüz alıp satmıyor, ufkun içinde
+ *   başlıyor).
  * Tahminin ufku (30 gün) yolu (3–6 gün) aşıyor: bu akışlar o güne pazarda.
  */
 function plannedFlows(root: GameState, plan: PlannedLoad[], source: GameState, target: GameState, goodId: string): PlannedFlows {
@@ -339,17 +340,28 @@ function plannedFlows(root: GameState, plan: PlannedLoad[], source: GameState, t
     }
     if (line.to === target.meta.seed) flows.destinationProduced += own + bought - (arrived[line.id] ?? 0);
   }
-  // Dünkü plan (`runRivalLines`) bugünün takvimiyle bir gün önce koştu: ilk seferi yoldaysa yükü sıfırdı.
-  const lastPlan = root.time.day - 1;
+  // Rakip hatları sabahki kararlarıyla (kamyonunu gözden geçirmesi dahil) ve
+  // kasalarıyla: yükünü karşılayabilen yolu sürüyor, ilk seferi yoldaysa da
+  // ufkun içinde başlıyor; karşılayamayan yüklemiyor. Fark dünkü yükten.
+  const budget = new Map<string, number>();
   for (const rival of rivalLines(root)) {
-    if (rival.goodId !== goodId) continue;
-    const running = rival.last?.units ?? 0;
-    const pending = running <= 0 && lastPlan < rival.openedDay + rival.transitDays ? lineCapacity(rival.trucks) : 0;
-    if (rival.from === source.meta.seed) {
-      flows.originOut += running + pending;
-      flows.originConsumed += pending;
+    const decision = rivalDecision(root, rival, root.time.day);
+    let units = 0;
+    if (decision && decision.trucks > 0) {
+      const wallet = rivalWallet(rival);
+      const cash = budget.get(wallet) ?? decision.company.cash;
+      if (cash >= decision.cost) {
+        budget.set(wallet, cash - decision.cost);
+        units = decision.units;
+      }
     }
-    if (rival.to === target.meta.seed) flows.destinationProduced += pending;
+    if (rival.goodId !== goodId) continue;
+    const change = units - (rival.last?.units ?? 0);
+    if (rival.from === source.meta.seed) {
+      flows.originOut += units;
+      flows.originConsumed += change;
+    }
+    if (rival.to === target.meta.seed) flows.destinationProduced += change;
   }
   return flows;
 }
@@ -806,6 +818,36 @@ function copycat(target: GameState, margins: LineMargins): string | undefined {
  * giriyor. Kâr rakibin varış şehrindeki defterine. Rakip ya da şehri
  * yoksa hat sessizce düşüyor.
  */
+/** Rakibin kasası: varış şehrindeki şirketi; aynı şirketin yolları onu paylaşıyor. */
+function rivalWallet(rival: RivalLine): string {
+  return `${rival.to}:${rival.companyId}`;
+}
+
+/**
+ * Rakip hattının bu sabahki kararı, yan etkisiz: iki şehir ve şirket yerinde
+ * mi, kamyonunu gözden geçiriyor mu, yükü ve bedeli. Günün kendisi
+ * (`runRivalLines`) ve formun tahmini (Codex #110) aynı karardan.
+ */
+function rivalDecision(root: GameState, rival: RivalLine, day: number) {
+  const source = cityBySeed(root, rival.from);
+  const target = cityBySeed(root, rival.to);
+  const company = target?.companies[rival.companyId];
+  const margins = lineMargins(root, rival.from, rival.to, rival.goodId);
+  if (!source || !target || source.gameOver || target.gameOver || !company || !margins) return undefined;
+  let trucks = rival.trucks;
+  let reviewDay = rival.reviewDay;
+  // Rakip rekabeti kapalı şehirde rakip hamle yapmıyor (bina öngörüsünün
+  // kopyaları da onu kapatıyor): kamyonunu gözden geçirmiyor, yükü sürüyor (Codex #108).
+  if (target.flags.npcCompetition && day >= reviewDay) {
+    if (rivalWorthy(margins)) trucks = Math.min(TRADE_RIVAL.maxTrucks, trucks + 1);
+    else if (margins.market < 0) trucks -= 1;
+    reviewDay = day + TRADE_RIVAL.reviewDays;
+  }
+  const units = lineCapacity(trucks);
+  const cost = units * margins.buyPrice + lineDailyCost({ trucks, transitDays: rival.transitDays });
+  return { source, target, company, margins, trucks, reviewDay, units, cost };
+}
+
 function runRivalLines(root: GameState): void {
   const holding = root.holding!;
   const day = root.time.day;
@@ -841,27 +883,18 @@ function runRivalLines(root: GameState): void {
   // birincinin bedelini düşülmüş nakitle görüyor (Codex #108).
   const budget = new Map<string, number>();
   for (const rival of holding.rivalLines ?? []) {
-    const source = cityBySeed(root, rival.from);
-    const target = cityBySeed(root, rival.to);
-    const company = target?.companies[rival.companyId];
-    const margins = lineMargins(root, rival.from, rival.to, rival.goodId);
-    if (!source || !target || source.gameOver || target.gameOver || !company || !margins) continue;
-    // Rakip rekabeti kapalı şehirde rakip hamle yapmıyor (bina öngörüsünün
-    // kopyaları da onu kapatıyor): kamyonunu gözden geçirmiyor, yükü sürüyor (Codex #108).
-    if (target.flags.npcCompetition && day >= rival.reviewDay) {
-      if (rivalWorthy(margins)) rival.trucks = Math.min(TRADE_RIVAL.maxTrucks, rival.trucks + 1);
-      else if (margins.market < 0) rival.trucks -= 1;
-      rival.reviewDay = day + TRADE_RIVAL.reviewDays;
-    }
+    const decision = rivalDecision(root, rival, day);
+    if (!decision) continue;
+    const { source, target, company, margins, units, cost } = decision;
+    rival.trucks = decision.trucks;
+    rival.reviewDay = decision.reviewDay;
     if (rival.trucks <= 0) {
       const vars = { name: company.name, from: cityName(source), to: cityName(target), good: goodName(rival.goodId) };
       pushNews(root, 'good', tc('core.trade.rivalCloseTitle', vars), tc('core.trade.rivalCloseBody', vars));
       continue;
     }
     kept.push(rival);
-    const units = lineCapacity(rival.trucks);
-    const cost = units * margins.buyPrice + lineDailyCost(rival);
-    const wallet = `${rival.to}:${rival.companyId}`;
+    const wallet = rivalWallet(rival);
     const cash = budget.get(wallet) ?? company.cash;
     // İlk sefer yolda; nakdi yükün bedeline yetmeyen rakip bugün yüklemiyor.
     if (day < rival.openedDay + rival.transitDays || cash < cost) {

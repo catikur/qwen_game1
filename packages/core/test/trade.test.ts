@@ -926,6 +926,7 @@ describe('hattın kendi etkisi (Tur 80)', () => {
     const [from, to] = route(p);
     const before = lineQuote(p.root, from, to, 'coffee_bean', 2, true).outlook!;
     const companyId = Object.keys(p.root.companies).find((id) => id !== p.root.playerCompanyId)!;
+    p.root.companies[companyId]!.cash = 1_000_000;
     const day = p.root.time.day;
     (p.root.holding!.rivalLines ??= []).push({ id: 'rival-line-1', from, to, goodId: 'coffee_bean', companyId, trucks: 2, transitDays: transitDaysBetween(from, to), openedDay: day, reviewDay: day + 60 });
     const after = lineQuote(p.root, from, to, 'coffee_bean', 2, true).outlook!;
@@ -955,6 +956,43 @@ describe('hattın kendi etkisi (Tur 80)', () => {
     assert.ok(Math.abs(after.originSpot - expected) < 1e-9, `${after.originSpot} · ${expected}`);
     // Fazlası kalmayan çıkışta fiyat yükseliyor: tahmin artık dünkü fazlaya güvenmiyor.
     assert.ok(after.originSpot > before.originSpot, `${after.originSpot} > ${before.originSpot}`);
+  });
+
+  test('rakip hattı kasasıyla: dün kasası yetmeyip bugün yeten yüklüyor, dün yükleyip bugün yetmeyen yüklemiyor (Codex #110)', () => {
+    const p = coffeeRoute(21, false);
+    const [from, to] = route(p);
+    const companyId = Object.keys(p.root.companies).find((id) => id !== p.root.playerCompanyId)!;
+    const company = p.root.companies[companyId]!;
+    const day = p.root.time.day;
+    const transitDays = transitDaysBetween(from, to);
+    // İlk seferi çoktan yolunu bitirmiş rakip hattı.
+    const rival = { id: 'rival-line-1', from, to, goodId: 'coffee_bean', companyId, trucks: 2, transitDays, openedDay: day - transitDays - 10, reviewDay: day + 60 };
+    (p.root.holding!.rivalLines ??= []).push(rival);
+    const units = lineCapacity(2);
+    // Dün kasası yetmedi (yük yok), bugün yetiyor: yarın yüklüyor, varışın arzına giriyor.
+    Object.assign(rival, { last: { units: 0, margin: 0 } });
+    company.cash = 1_000_000;
+    const resumed = lineQuote(p.root, from, to, 'coffee_bean', 2, true).outlook!;
+    assert.ok(Math.abs(resumed.destinationSpot - spotOutlook(p.root, 'coffee_bean', { produced: units + units }, resumed.days)) < 1e-9);
+    // Dün yükledi, bugün kasası yetmiyor: yarın yüklemiyor, dünkü yükü arzdan çıkıyor.
+    Object.assign(rival, { last: { units, margin: 0 } });
+    company.cash = 0;
+    const stopped = lineQuote(p.root, from, to, 'coffee_bean', 2, true).outlook!;
+    assert.ok(Math.abs(stopped.destinationSpot - spotOutlook(p.root, 'coffee_bean', { produced: units - units }, stopped.days)) < 1e-9);
+    assert.ok(stopped.destinationSpot > resumed.destinationSpot);
+  });
+
+  test('raflı şehirde tahminin farkı sıfır: oyuncunun akışı günün sonunda, satıştan sonra kaydediliyor (Bugbot #110)', () => {
+    const p = coffeeRoute(21, false);
+    place(p.root, 'restaurant');
+    // Restoranın ilk günü: sabah raf payı eşit bölünüyor, pazar adımı gerçek satışı yazıyor.
+    p.engine.runDay();
+    assert.deepEqual(p.root.market.own, ownGoodFlows(p.root));
+    const tomorrow = structuredClone(p.root);
+    runSpotPriceTick(tomorrow);
+    for (const good of TRADED_GOODS) {
+      assert.ok(Math.abs(spotOutlook(p.root, good.id, {}, 1) - tomorrow.market.spot[good.id]!) < 1e-9, good.id);
+    }
   });
 
   test('eski kayıtta eksik pazar referansı: tahmin günün sonundaki dolgunun değeriyle (Codex #110)', () => {

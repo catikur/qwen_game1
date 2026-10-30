@@ -719,10 +719,6 @@ export function runProductionTick(state: GameState): void {
   for (const [goodId, units] of Object.entries(state.trade?.marketIn ?? {})) produced[goodId] = (produced[goodId] ?? 0) + units;
   state.market.produced = produced;
   state.market.consumed = consumed;
-  // Oyuncunun binalarının akışı, pazarın kaydıyla aynı anda (Codex #110): hat
-  // formunun tahmini gün arasında kurulan ya da yıkılan binanın farkını bununla
-  // buluyor. Simülasyon okumuyor.
-  state.market.own = ownGoodFlows(state);
   // Gün içinde (grev) fazlası yetmeyen yükün eksiği pazardan alındı: o da
   // ihracat baskısına (Codex #108). Tüketimde planlı yükle zaten sayıldı;
   // akışa tüketim sayıldıktan sonra giriyor, iki kez sayılmasın.
@@ -830,6 +826,12 @@ export function runSpotPriceTick(state: GameState): void {
     const target = spotTarget(state, good.id, produced, consumed, exported?.[good.id] ?? 0, mods.goodPrice[good.id] ?? 1);
     state.market.spot[good.id] = nextSpot(state, good.id, state.market.spot[good.id] ?? referencePrice(state, good.id), target);
   }
+  // Oyuncunun binalarının akışı, günün sonunda (Codex #110): hat formunun
+  // tahmini gün arasında kurulan ya da yıkılan binanın farkını bununla buluyor.
+  // Rafların satışı pazar adımında yazılıyor; kayıt ondan sonra, yoksa tahmin
+  // bir günlük satış farkını bina değişmiş sanardı (Bugbot #110). Simülasyon
+  // okumuyor.
+  state.market.own = ownGoodFlows(state);
   // Günün hat akışları (Tur 78) burada bitiyor: kayıtta kalmasın.
   if (state.trade) {
     delete state.trade.marketOut;
