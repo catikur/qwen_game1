@@ -6,6 +6,7 @@ import { CeoPortrait } from './CeoPortrait';
 import { t } from './i18n';
 import type { MessageKey } from './i18n';
 import { useGame, useGameState } from './useGame';
+import './i18n/playTr';
 
 /**
  * Rakibin dosyası (Tur 59): CEO'su kim, nasıl biri, seni nasıl hatırlıyor.

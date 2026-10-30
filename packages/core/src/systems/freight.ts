@@ -1,6 +1,7 @@
 import { BUILDING_BY_ID, GOOD_BY_ID } from '@capital/content';
 import { formatMoney } from '../format';
 import { tc } from '../i18n';
+import '../i18n/gameTr';
 import { nextFloat } from '../rng';
 import { pushNews } from '../news';
 import { noteRelation, stanceOf } from './relations';

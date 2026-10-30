@@ -36,6 +36,7 @@ import type { DormantCity, GameState, RemotePayout, TradeLine } from '@capital/c
 import { useGame, useGameState } from './useGame';
 import { t } from './i18n';
 import './i18n/tradeTr';
+import './i18n/playTr';
 
 /**
  * Holding paneli (Tur 22): şehirler, kasa ve yeni şehir.

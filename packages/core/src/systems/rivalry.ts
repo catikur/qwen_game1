@@ -2,6 +2,7 @@ import { BUILDING_BY_ID, CAMPAIGN, CATEGORIES, CONSUMER_CATEGORIES, RELATION, fi
 import type { CategoryId, RivalBeat } from '@capital/content';
 import { pushNews } from '../news';
 import { tc } from '../i18n';
+import '../i18n/gameTr';
 import { rivalProfile } from '../profiles';
 import { createRng, nextFloat } from '../rng';
 import { hostileRivals, noteRelation, relationQuote, stanceOf } from './relations';

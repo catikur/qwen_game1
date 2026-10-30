@@ -1,6 +1,7 @@
 import { CONSUMER_CATEGORIES, ERAS, ERA_BY_ID, EVENTS, EVENT_BY_ID, SECTOR_EVENTS } from '@capital/content';
 import type { CategoryId } from '@capital/content';
 import { tc } from '../i18n';
+import '../i18n/gameTr';
 import { createRng, nextFloat, pickWeighted } from '../rng';
 import { pushNews } from '../news';
 import type { GameState } from '../types';

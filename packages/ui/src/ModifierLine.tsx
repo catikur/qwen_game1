@@ -2,6 +2,7 @@ import type { ReactElement } from 'react';
 import { formatDecimal, modifierMultiplier, normalizeModifiers, ruleName } from '@capital/content';
 import type { ModifierId, ScenarioDef } from '@capital/content';
 import { t } from './i18n';
+import './i18n/playTr';
 
 /**
  * Koşunun ek kuralları ve zorluk çarpanı (Tur 45); kural yoksa satır yok.

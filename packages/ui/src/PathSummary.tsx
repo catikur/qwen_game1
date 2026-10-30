@@ -5,6 +5,7 @@ import { companyPath } from '@capital/core';
 import type { GameState } from '@capital/core';
 import { t } from './i18n';
 import type { MessageKey } from './i18n';
+import './i18n/playTr';
 
 /**
  * Şirketin yolu (Tur 61): kârın kaynağı ve yolun adı.

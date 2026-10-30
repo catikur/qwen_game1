@@ -2,6 +2,7 @@ import { BUBBLES, BUBBLE_BY_ID, BUBBLE_TIMING, BUILDING_BY_ID, CATEGORIES, CONSU
 import type { BubbleDef, CategoryId, QuestDef } from '@capital/content';
 import { headquarters } from '../headquarters';
 import { tc } from '../i18n';
+import '../i18n/gameTr';
 import { pushNews } from '../news';
 import { createRng, nextFloat, pickWeighted } from '../rng';
 import { formatMoney, nextMonthStart, dayOfMonth } from '../selectors';

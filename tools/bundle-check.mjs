@@ -16,11 +16,17 @@ const DIST = path.resolve(process.argv[2] ?? 'apps/web/dist');
 /**
  * Kurulum ekranının yolu, gzip (KB); yazı tipleri hariç. Tur 46 öncesi 517 KB,
  * sonunda ~128 KB; Tur 73'te 151 KB. Tur 74'te oyunun Türkçe sözlükleri oyun
- * ekranına geçti (~141 KB), bütçe 160'tan 150'ye indi.
+ * ekranına geçti (~141 KB), bütçe 160'tan 150'ye indi. Tur 79'da 147,1 KB;
+ * Tur 80'de oyunun panelleri, göstergesi ve dünya metinleri de oyunla
+ * iniyor (130,1 KB), bütçe 140.
  */
-const CRITICAL_BUDGET_KB = 150;
-/** Ana parçanın kendisi, gzip (KB). Tur 46 sonunda ~58 KB; Tur 73'te 74,6 KB, Tur 74'te ~65 KB (bütçe 75'ten 70'e). */
-const ENTRY_BUDGET_KB = 70;
+const CRITICAL_BUDGET_KB = 140;
+/**
+ * Ana parçanın kendisi, gzip (KB). Tur 46 sonunda ~58 KB; Tur 73'te 74,6 KB,
+ * Tur 74'te ~65 KB (bütçe 75'ten 70'e). Tur 79'da 69,7 KB; Tur 80'de 52,7 KB
+ * (bütçe 60).
+ */
+const ENTRY_BUDGET_KB = 60;
 /** Kurulumun yolunda olmaması gerekenler. */
 const LATE = [/^three-/, /^GameRoot-/, /^locale-en-/, /^locale-de-/];
 
@@ -92,15 +98,24 @@ check('Kumandanın modülü ayrı parça: ne kurulumun yolunda ne oyun ekranın�
   Boolean(pad) && !critical.has(pad) && !gameGraph.has(pad), pad ?? 'yok');
 
 // Oyunun Türkçe sözlükleri (Tur 74): komut ve piyasa metinleri, finans
-// panelleri kurulumun yolunda değil, oyun ekranıyla iniyorlar. Her sözlükten
+// panelleri kurulumun yolunda değil, oyun ekranıyla iniyorlar. Tur 80'de
+// oyunun dünya metinleri, panelleri ve göstergesi de. Her sözlükten
 // kaçışsız ilk metin aranıyor; biri giriş sözlüğüne geri dönerse kırmızı.
 const firstText = (file) => {
   const source = fs.readFileSync(path.resolve(new URL('..', import.meta.url).pathname, file), 'utf8');
   return [...source.matchAll(/^\s*'[^']+':\s*'([^'\\{}]{12,})',?$/gm)][0]?.[1] ?? null;
 };
-const gameTexts = ['packages/core/src/i18n/tr/commands.ts', 'packages/core/src/i18n/tr/markets.ts', 'packages/ui/src/i18n/tr/finance.ts', 'packages/ui/src/i18n/tr/trade.ts'].map((file) => [file, firstText(file)]);
+const gameTexts = [
+  'packages/core/src/i18n/tr/commands.ts',
+  'packages/core/src/i18n/tr/markets.ts',
+  'packages/core/src/i18n/tr/worldPlay.ts',
+  'packages/ui/src/i18n/tr/finance.ts',
+  'packages/ui/src/i18n/tr/trade.ts',
+  'packages/ui/src/i18n/tr/panelsPlay.ts',
+  'packages/ui/src/i18n/tr/hudPlay.ts',
+].map((file) => [file, firstText(file)]);
 const misplaced = gameTexts.filter(([, text]) => text !== null && [...critical].some((file) => file.endsWith('.js') && read(file).includes(text)));
-check('Oyunun Türkçe sözlükleri (komutlar, piyasalar, finans, hatlar) kurulumun yolunda değil, oyun ekranıyla iniyor',
+check('Oyunun Türkçe sözlükleri (komutlar, piyasalar, dünya, finans, hatlar, paneller, gösterge) kurulumun yolunda değil, oyun ekranıyla iniyor',
   gameTexts.every(([, text]) => text !== null) && misplaced.length === 0 && gameTexts.every(([, text]) => [...gameGraph].some((file) => read(file).includes(text))),
   misplaced.map(([file]) => path.basename(file)).join(', ') || gameTexts.map(([file]) => path.basename(file, '.ts')).join(', '));
 

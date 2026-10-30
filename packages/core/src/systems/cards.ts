@@ -2,6 +2,7 @@ import { BUILDING_BY_ID, CARDS, CARD_BY_ID, CARD_TIMING, CATEGORIES, CONSUMER_CA
 import type { CardBoostTarget, CardChoiceDef, CardDef, CardEffect, CategoryId } from '@capital/content';
 import { pushNews } from '../news';
 import { tc } from '../i18n';
+import '../i18n/gameTr';
 import { rivalProfile } from '../profiles';
 import { createRng, nextFloat, pickWeighted } from '../rng';
 import { laborEnabled } from './labor';

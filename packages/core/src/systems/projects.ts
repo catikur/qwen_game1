@@ -1,6 +1,7 @@
 import { CATEGORIES, PROJECTS, PROJECT_BY_ID, PROJECT_TIMING, STRUCTURE_BY_ID } from '@capital/content';
 import type { CategoryId, ProjectDef } from '@capital/content';
 import { tc } from '../i18n';
+import '../i18n/gameTr';
 import { pushNews } from '../news';
 import { rivalProfile } from '../profiles';
 import { createRng, nextFloat } from '../rng';

@@ -28,6 +28,7 @@ import { ModifierLine } from './ModifierLine';
 import { PathSummary } from './PathSummary';
 import { VICTORY_DELAY_MS, useMomentDelay } from './MomentLayers';
 import { CityCardButton } from './CityCard';
+import './i18n/playTr';
 
 /** Görevin "şu an / hedef" satırı, görevin kendi biriminde. */
 function questNumbers(state: GameState, board: QuestBoard, quest: QuestState): string {

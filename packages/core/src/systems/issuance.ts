@@ -1,6 +1,7 @@
 import { ISSUANCE, NPC_ISSUANCE, numberLocale } from '@capital/content';
 import type { NpcProfileDef } from '@capital/content';
 import { tc } from '../i18n';
+import '../i18n/gameTr';
 import { pushNews } from '../news';
 import { formatMoney } from '../selectors';
 import { bookValue, confidence, ownerFraction, sharePrice, sharesHeld, sharesOutstanding } from './equity';

@@ -1,5 +1,6 @@
 import { CONSORTIUM, formatDecimal, formatPercent } from '@capital/content';
 import { tc } from '../i18n';
+import '../i18n/gameTr';
 import { pushNews } from '../news';
 import { rivalProfile } from '../profiles';
 import { noteFeat } from './feats';

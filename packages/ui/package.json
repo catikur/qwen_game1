@@ -13,6 +13,7 @@
     "*.css",
     "./src/i18n/index.ts",
     "./src/i18n/financeTr.ts",
+    "./src/i18n/playTr.ts",
     "./src/i18n/tradeTr.ts"
   ],
   "dependencies": {

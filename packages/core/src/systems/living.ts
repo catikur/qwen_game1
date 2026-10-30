@@ -1,6 +1,7 @@
 import { CATEGORIES, CONSUMER_CATEGORIES, FAD, GOODS, GOOD_BY_ID, SEASONS, TREND } from '@capital/content';
 import type { CategoryId, SeasonDef } from '@capital/content';
 import { tc } from '../i18n';
+import '../i18n/gameTr';
 import { pushNews } from '../news';
 import { createRng, nextFloat } from '../rng';
 import { monthOf } from '../selectors';

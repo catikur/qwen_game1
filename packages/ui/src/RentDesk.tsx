@@ -3,6 +3,7 @@ import { BUILDING_BY_ID, REAL_ESTATE, formatDecimal, formatPercent, numberLocale
 import { formatMoney, rentalOutlook } from '@capital/core';
 import { t } from './i18n';
 import { useGame, useGameState } from './useGame';
+import './i18n/playTr';
 
 /**
  * Kiralığın masası (Tur 58): kaç birim, ne kadar dolu, bu kirayla nereye

@@ -57,6 +57,7 @@ import { t } from './i18n';
 import type { MessageKey } from './i18n';
 import { useGame, useGameState } from './useGame';
 import { startTutorial } from './tutorial';
+import './i18n/playTr';
 
 /* ------------------------------------------------------------------ yapı */
 
@@ -1486,6 +1487,7 @@ const HELP_STEPS = [
   'ipo',
   'takeover',
   'holding',
+  'trade',
   'paths',
   'late',
   'stories',
