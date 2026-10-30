@@ -10120,7 +10120,10 @@ async function finish(browser, consoleErrors) {
           req.onerror = () => resolve(null);
         }),
     );
-    check('Kayıt şehrin türünü taşıyor (kayıt biçimi v7)', savedType?.type === 'port' && savedType?.schema === 7, JSON.stringify(savedType));
+    // Tür v7'de geldi; kayıt güncel şemayla yazılıyor (Tur 77'de v8 oldu, bu kontrol 7 bekliyordu).
+    const typeSchema = await tp.evaluate(() => window.__capital.schemaVersion);
+    check('Kayıt şehrin türünü taşıyor (güncel kayıt biçimiyle, v7 ve sonrası)', savedType?.type === 'port' && savedType?.schema === typeSchema && typeSchema >= 7,
+      `${JSON.stringify(savedType)} · güncel v${typeSchema}`);
     await tp.keyboard.press('Escape');
 
     // Holding'in yeni şehri türüyle: zaferi ve kasayı elle ver (Holding bölümündeki gibi).
