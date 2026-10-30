@@ -51,7 +51,7 @@ export const TRADE_LINE = {
  */
 export const TRADE_RIVAL = {
   /** Oyuncunun yolu bu kadar ardışık gün kârlıysa rakip kopyalıyor. */
-  entryDays: 20,
+  entryDays: 30,
   /** "Kârlı": pazara satışta birim kâr, malın çıkıştaki fiyatının bu payını geçiyor. */
   entryMargin: 0.08,
   /** Rakip kamyonunu bu kadar günde bir gözden geçiriyor: kâr sürüyorsa bir ekliyor, zarardaysa bir çekiyor. */
