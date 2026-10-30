@@ -799,4 +799,30 @@ describe('hattın kendi etkisi (Tur 80)', () => {
     assert.equal(last.units, outlook.units);
     assert.equal(last.short, 'cash');
   });
+
+  test('aynı şehre giden hattın dünkü seferini kasa kıstıysa tahmin onun yarınki payını bugünkü kasayla ayırıyor (Codex #110)', () => {
+    const p = coffeeRoute(21, false);
+    const [from, to] = route(p);
+    const company = p.root.companies[p.root.playerCompanyId]!;
+    const transitDays = transitDaysBetween(from, to);
+    const freight = lineDailyCost({ trucks: 2, transitDays });
+    assert.ok(openCoffee(p, 2).ok);
+    // Dün kasa kahve hattının yalnız kamyonlarına yetti.
+    company.cash = freight + 1;
+    p.engine.runDay();
+    assert.equal(p.root.holding!.lines![0]!.last!.short, 'cash');
+    // Kasa düzeldi: kahve hattının tam yüküne, buğday hattının kamyonlarına ve malının yarısına yetiyor.
+    const coffee = freight + lineCapacity(2) * marketBuyPrice(p.away, 'coffee_bean');
+    const wheat = lineCapacity(2) * marketBuyPrice(p.away, 'wheat');
+    company.cash = coffee + freight + wheat / 2;
+    const outlook = lineQuote(p.root, from, to, 'wheat', 2, true).outlook!;
+    assert.equal(outlook.cashShort, true);
+    assert.ok(outlook.units > 0 && outlook.units < lineCapacity(2), `${outlook.units} birim`);
+    // Ertesi sabah kahve hattı önce, tam yüküyle; buğday hattı tahminin yükünü yüklüyor.
+    assert.ok(p.engine.dispatch({ type: 'OPEN_LINE', from, to, goodId: 'wheat', trucks: 2, buy: true }).ok);
+    p.engine.runDay();
+    const [coffeeLine, wheatLine] = p.root.holding!.lines!;
+    assert.equal(coffeeLine!.last!.units, lineCapacity(2));
+    assert.equal(wheatLine!.last!.units, outlook.units);
+  });
 });

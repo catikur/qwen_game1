@@ -307,23 +307,13 @@ export interface LineOutlook {
 const OUTLOOK_DAYS = TRADE_RIVAL.entryDays;
 
 /**
- * Yeni hattın yarın sabah varışın kasasından alabileceği (Codex #110). Plan
- * hatları sırayla işliyor, yeni hat sonda: aynı şehre giden açık hatların
- * bugünkü seferinin bedeli düşülüyor. Henüz yola çıkmamış hattın tam yükü
- * pazarın fiyatıyla sayılıyor.
+ * Yeni hattın yarın sabah varışın kasasından alabileceği (Codex #110): plan
+ * hatları sırayla işliyor, yeni hat sonda. Aynı şehre giden açık hatların
+ * yarınki payı sabah planının kendisiyle, bugünkü kasa ve fiyatlarla
+ * (dünkü seferleri kasa kısıtlıyken eksik kalmış olabilir).
  */
 function destinationBudget(root: GameState, target: GameState): number {
-  let cash = target.companies[target.playerCompanyId]?.cash ?? 0;
-  for (const line of tradeLines(root)) {
-    if (line.to !== target.meta.seed) continue;
-    if (line.last) cash -= line.last.goods + line.last.freight;
-    else {
-      const source = cityBySeed(root, line.from);
-      const price = (source?.market.spot[line.goodId] ?? GOOD_BY_ID[line.goodId]?.basePrice ?? 0);
-      cash -= lineDailyCost(line) + lineCapacity(line.trucks) * price;
-    }
-  }
-  return cash;
+  return planTradeDay(root).budget.get(target.meta.seed) ?? target.companies[target.playerCompanyId]?.cash ?? 0;
 }
 
 /** `trucks` kamyonluk hattın `OUTLOOK_DAYS` sonraki fiyatları ve birim kârı; yük varışın kasasının yettiği kadar. */
@@ -579,6 +569,58 @@ function fundLoad(
   return { own: funded, bought: buyPrice > 0 ? Math.min(bought, Math.max(0, Math.floor(left / buyPrice))) : 0, freight: fixed, cashShort: true };
 }
 
+/** Sabah planında bir hattın bugünkü yükü ve bedelleri. */
+interface PlannedLoad {
+  line: TradeLine;
+  source: GameState;
+  target: GameState;
+  /** Fazladan ve pazardan yüklenen (birim). */
+  own: number;
+  bought: number;
+  /** Fazlanın birim bedeli (spot × %85). */
+  unitPrice: number;
+  freight: number;
+  goods: number;
+  short?: 'surplus' | 'cash';
+}
+
+/**
+ * Sabah planı, yan etkisiz (Codex #110). Hatlar sırayla: aynı malı aynı
+ * şehirden taşıyanlar fazlayı, aynı şehre gidenler kasayı paylaşıyor; kasa
+ * önce ucuz olana, fazlaya yetiyor (`fundLoad`). `budget` her varış
+ * şehrinin plandan sonra kalan kasası: formun tahmini yeni hattın (listede
+ * sonda) payını oradan okuyor. Plan bozuk hattı önce kapatıyor
+ * (`closeBrokenLines`); tahmin onu saymıyor.
+ */
+function planTradeDay(root: GameState): { loads: PlannedLoad[]; budget: Map<number, number> } {
+  const surplus = new Map<string, number>();
+  const budget = new Map<number, number>();
+  const loads: PlannedLoad[] = [];
+  for (const line of root.holding?.lines ?? []) {
+    const source = cityBySeed(root, line.from);
+    const target = cityBySeed(root, line.to);
+    if (!terminalAlive(source, line.fromTerminalId) || !terminalAlive(target, line.toTerminalId)) continue;
+    const good = GOOD_BY_ID[line.goodId]!;
+    const key = `${line.from}|${line.goodId}`;
+    const available = surplus.get(key) ?? exportableSurplus(source, line.goodId);
+    const cash = budget.get(line.to) ?? target.companies[target.playerCompanyId]?.cash ?? 0;
+    const unitPrice = (source.market.spot[line.goodId] ?? good.basePrice) * SURPLUS_HAIRCUT;
+    const buyPrice = line.buy ? marketBuyPrice(source, line.goodId) : 0;
+    const fixed = lineDailyCost(line);
+    const capacity = lineCapacity(line.trucks);
+
+    const fromSurplus = Math.min(capacity, available);
+    const fromMarket = line.buy ? capacity - fromSurplus : 0;
+    const { own, bought, freight, cashShort } = fundLoad(cash, fixed, fromSurplus, fromMarket, unitPrice, buyPrice);
+    const short = cashShort ? 'cash' : fromSurplus + fromMarket < capacity ? 'surplus' : undefined;
+    const goods = own * unitPrice + bought * buyPrice;
+    surplus.set(key, available - own);
+    budget.set(line.to, cash - freight - goods);
+    loads.push({ line, source, target, own, bought, unitPrice, freight, goods, ...(short ? { short } : {}) });
+  }
+  return { loads, budget };
+}
+
 /**
  * Hattın günü, şehirler yaşamadan önce (motorun `runDay`'i). Her hat için:
  * çıkış şehrinin bugünkü fazlası (aynı malı taşıyan öbür hatlardan kalanı),
@@ -606,29 +648,8 @@ export function prepareTradeDay(root: GameState): void {
   closeBrokenLines(root);
   syncLineTrucks(root);
 
-  const surplus = new Map<string, number>();
-  const budget = new Map<number, number>();
-  for (const line of holding.lines ?? []) {
-    const source = cityBySeed(root, line.from)!;
-    const target = cityBySeed(root, line.to)!;
-    const good = GOOD_BY_ID[line.goodId]!;
-    const key = `${line.from}|${line.goodId}`;
-    const available = surplus.get(key) ?? exportableSurplus(source, line.goodId);
-    const cash = budget.get(line.to) ?? target.companies[target.playerCompanyId]?.cash ?? 0;
-    const unitPrice = (source.market.spot[line.goodId] ?? good.basePrice) * SURPLUS_HAIRCUT;
-    const buyPrice = line.buy ? marketBuyPrice(source, line.goodId) : 0;
-    const fixed = lineDailyCost(line);
-    const capacity = lineCapacity(line.trucks);
-
-    const fromSurplus = Math.min(capacity, available);
-    const fromMarket = line.buy ? capacity - fromSurplus : 0;
-    const { own, bought, freight, cashShort } = fundLoad(cash, fixed, fromSurplus, fromMarket, unitPrice, buyPrice);
-    const short: 'surplus' | 'cash' | undefined = cashShort ? 'cash' : fromSurplus + fromMarket < capacity ? 'surplus' : undefined;
+  for (const { line, source, target, own, bought, unitPrice, freight, goods, short } of planTradeDay(root).loads) {
     const units = own + bought;
-    const goods = own * unitPrice + bought * buyPrice;
-    surplus.set(key, available - own);
-    budget.set(line.to, cash - freight - goods);
-
     if (freight + goods > 0) {
       const trade = (target.trade ??= { inbound: [] });
       (trade.payments ??= []).push({ lineId: line.id, terminalId: line.toTerminalId, amount: freight + goods });
