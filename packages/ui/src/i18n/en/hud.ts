@@ -151,6 +151,8 @@ export const hud: Record<keyof typeof trHud, string> = {
   'hud.scenario.goal': 'Goal',
   'hud.scenario.rules': 'Extra rule',
   'hud.scenario.setupLine': '{size} city · {difficulty} · starts on day {day} · {days|# day|# days} · cash {cash}',
+  'hud.scenario.cityTypes': 'Founding city: {from} · new city: {to}',
+  'hud.scenario.cityType': 'City type: {type}',
   'hud.scenario.setupLineHolding': '{size} new city · {difficulty} · {days|# day|# days} · capital {capital} · founding city on day {day}, cash {cash}',
   'hud.scenario.thresholdsDays': 'One star: the goal · two stars: within {two|# day|# days} · three stars: within {three|# day|# days}',
   'hud.scenario.thresholdsLead': 'One star: most valuable company · two stars: ×{two} · three stars: ×{three} (ratio to the strongest rival)',

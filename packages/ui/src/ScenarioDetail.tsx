@@ -1,5 +1,5 @@
 import type { ReactElement, ReactNode } from 'react';
-import { getCitySize, getDifficulty, ruleBlurb, ruleName } from '@capital/content';
+import { getCitySize, getCityType, getDifficulty, ruleBlurb, ruleName } from '@capital/content';
 import type { ScenarioDef } from '@capital/content';
 import { formatMoney, scenarioGoalText } from '@capital/core';
 import { t } from './i18n';
@@ -29,6 +29,18 @@ function scenarioSetupLine(def: ScenarioDef): string {
     days: def.days,
     cash: formatMoney(def.setup.cash),
   });
+}
+
+/**
+ * Şehirlerin türü (Tur 79): ticaret senaryosunun farkı türlerden. Türsüz
+ * senaryoda (dengeli) satır yok.
+ */
+function scenarioTypesLine(def: ScenarioDef): string | null {
+  const second = def.setup.secondCity;
+  if (second && (def.cityType || second.cityType)) {
+    return t('hud.scenario.cityTypes', { from: getCityType(def.cityType).name, to: getCityType(second.cityType).name });
+  }
+  return def.cityType ? t('hud.scenario.cityType', { type: getCityType(def.cityType).name }) : null;
 }
 
 /** Paketten gelen senaryonun künyesi: paket, yazarı, kariyere sayılmadığı. */
@@ -61,6 +73,11 @@ export function ScenarioDetail({ def, children }: { def: ScenarioDef; children?:
         </p>
       )}
       <p className="muted scenario-setup">{scenarioSetupLine(def)}</p>
+      {scenarioTypesLine(def) && (
+        <p className="muted scenario-types" data-scenario-types>
+          {scenarioTypesLine(def)}
+        </p>
+      )}
       <p className="muted scenario-stars">{starThresholds(def)}</p>
       {def.source && (
         <>

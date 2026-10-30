@@ -381,7 +381,7 @@ export const panels: Record<keyof typeof trPanels, string> = {
     ' Now and then a contract with a deadline arrives: put up buildings in a district or reach a market share in a category. Accept the offer from the chip in the agenda; finish in time and the reward goes to your cash, miss it and you pay a penalty. Declining is free.',
   'panels.help.step.scenario.title': 'Scenarios start at a turning point.',
   'panels.help.step.scenario.body':
-    ' Pick Scenario at setup to play one of ten ready-made situations: a company in debt, a crisis at the door, rivals who have joined forces, hauling in a city of grudges, an energy crisis, urban renewal… Each has a goal and a time limit; you earn one, two or three stars by how well you finish. Some scenarios come with their own extra rule. Your best result is kept on this device.',
+    ' Pick Scenario at setup to play one of twelve ready-made situations: a company in debt, a crisis at the door, rivals who have joined forces, hauling in a city of grudges, an energy crisis, urban renewal, trade between two cities… Each has a goal and a time limit; you earn one, two or three stars by how well you finish. Some scenarios come with their own extra rule. Your best result is kept on this device.',
   'panels.help.step.league.title': 'Seed League: everyone in the same city.',
   'panels.help.step.league.body':
     " Pick the Seed League at setup to play this week's city for 360 days; the city and its events are the same for everyone. Scores are verified by replay: the run is played again from the start in every browser and must reach the same score.",

@@ -148,6 +148,8 @@ export const hud = {
   'hud.scenario.goal': 'Hedef',
   'hud.scenario.rules': 'Ek kural',
   'hud.scenario.setupLine': '{size} şehir · {difficulty} · {day}. günde başlıyor · süre {days} gün · kasa {cash}',
+  'hud.scenario.cityTypes': 'Kurucu şehir: {from} · yeni şehir: {to}',
+  'hud.scenario.cityType': 'Şehrin türü: {type}',
   'hud.scenario.setupLineHolding': '{size} yeni şehir · {difficulty} · süre {days} gün · sermaye {capital} · kurucu şehir {day}. günde, kasa {cash}',
   'hud.scenario.thresholdsDays': 'Bir yıldız: hedef · iki yıldız: {two} gün içinde · üç yıldız: {three} gün içinde',
   'hud.scenario.thresholdsLead': 'Bir yıldız: en değerli şirket · iki yıldız: ×{two} · üç yıldız: ×{three} (en güçlü rakibe oran)',

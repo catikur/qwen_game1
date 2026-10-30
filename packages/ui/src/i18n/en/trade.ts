@@ -63,7 +63,7 @@ export const trade: Record<keyof typeof tr, string> = {
   'trade.goal.noLines': 'No lines: open one in the Lines section of the Cities panel',
   'trade.goal.today': '{profit} from the lines today',
   'trade.lines.profit': 'Today’s profit: {profit} (sale at the destination price, minus goods and freight)',
-  'trade.agenda.loss': 'Losing line',
+  'trade.agenda.loss': 'Line',
   'trade.agenda.lossTitle': 'Pull trucks or close the line: Cities panel, Lines',
   'trade.freightDesk': '{trucks|# truck|# trucks} of the fleet run lines between cities (Cities panel).',
 };

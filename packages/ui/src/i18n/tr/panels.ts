@@ -377,7 +377,7 @@ export const panels = {
     ' Ara sıra süreli bir sözleşme gelir: bir bölgeye bina kurmak ya da bir kategoride pazar payına ulaşmak. Teklifi gündemdeki çipten kabul edersin; süresinde bitirirsen ödül kasaya girer, bitiremezsen cayma bedeli ödersin. Reddetmek bedava.',
   'panels.help.step.scenario.title': 'Senaryolar hazır bir dönemeçten başlar.',
   'panels.help.step.scenario.body':
-    " Kurulumda Senaryo'yu seçersen on hazır durumdan birini oynarsın: borçlu bir şirket, kapıdaki kriz, birleşmiş rakipler, kinli rakiplerin şehrinde nakliye, enerji krizi, kentsel dönüşüm… Her birinin hedefi ve süresi var; ne kadar iyi bitirdiğine göre bir, iki ya da üç yıldız alırsın. Bazı senaryolar kendi ek kuralıyla gelir. Bu cihazdaki en iyi sonuç saklanır.",
+    " Kurulumda Senaryo'yu seçersen on iki hazır durumdan birini oynarsın: borçlu bir şirket, kapıdaki kriz, birleşmiş rakipler, kinli rakiplerin şehrinde nakliye, enerji krizi, kentsel dönüşüm, iki şehir arasında ticaret… Her birinin hedefi ve süresi var; ne kadar iyi bitirdiğine göre bir, iki ya da üç yıldız alırsın. Bazı senaryolar kendi ek kuralıyla gelir. Bu cihazdaki en iyi sonuç saklanır.",
   'panels.help.step.league.title': 'Tohum Ligi: herkes aynı şehirde.',
   'panels.help.step.league.body':
     " Kurulumda Tohum Ligi'ni seçersen haftanın şehrinde 360 gün oynarsın; şehir ve olaylar herkes için aynı. Skor tekrarla doğrulanır: koşu her tarayıcıda baştan oynanır ve aynı skoru bulmalıdır.",

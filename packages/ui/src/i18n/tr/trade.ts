@@ -61,7 +61,7 @@ export const trade = {
   'trade.goal.noLines': 'Hat yok: Şehirler panelinin Hatlar bölümünden aç',
   'trade.goal.today': 'Bugün hatlardan {profit}',
   'trade.lines.profit': 'Bugünkü kâr: {profit} (varışın fiyatıyla satış, eksi mal ve nakliye)',
-  'trade.agenda.loss': 'Hat zararda',
+  'trade.agenda.loss': 'Hat',
   'trade.agenda.lossTitle': 'Kamyon çek ya da hattı kapat: Şehirler paneli, Hatlar',
   'trade.freightDesk': 'Filodan {trucks} kamyon şehirler arası hatlarda (Şehirler paneli).',
 } as const;

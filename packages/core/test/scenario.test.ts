@@ -861,6 +861,24 @@ describe('ticaretle zafer (Tur 79)', () => {
     assert.equal(loss.scenario!.score, 0);
   });
 
+  test('kurucu şehre geçince toplam oyuncuyla geliyor, hatların kârı orada da sayılıyor', () => {
+    const engine = started('coffee');
+    const second = engine.getState();
+    const away = second.holding!.dormant[0]!.state;
+    placeAway(away, 'freight_terminal');
+    buildOn(engine, 'freight_terminal');
+    assert.ok(engine.dispatch({ type: 'OPEN_LINE', from: away.meta.seed, to: second.meta.seed, goodId: 'coffee_bean', trucks: 2, buy: true }).ok);
+    engine.runDay();
+    const before = second.scenario!.tradeProfit!;
+    assert.ok(before > 0);
+    assert.ok(engine.dispatch({ type: 'SWITCH_CITY', index: 0 }).ok);
+    const founding = engine.getState();
+    assert.equal(founding.scenario?.tradeProfit, before, 'toplam şehir değişince kaybolmuyor');
+    engine.runDay();
+    assert.equal(founding.scenario!.tradeProfit, Math.round(before + tradeProfitToday(founding)));
+    assert.ok(founding.scenario!.tradeProfit! > before, 'hat uzaktaki şehre taşımayı sürdürüyor');
+  });
+
   test('hedef cümlesi sayılarla dolu', () => {
     for (const id of ['coffee', 'supplier']) {
       const def = SCENARIO_BY_ID[id]!;
