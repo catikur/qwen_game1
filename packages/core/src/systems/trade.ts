@@ -557,7 +557,9 @@ export function tradeProfitToday(root: GameState): number {
  * gün içinde fazlası yetmeyen yükün pazardan alınanı hattın satırına
  * (Codex #108). Sabah planından sonra grev başlarsa yükün bir kısmı ya da
  * hepsi çıkışın pazarından alınıyor; satır bunu pazardan alınan diye
- * yazıyor. Şehirlerin kaydı siliniyor: kayda geçmesin.
+ * yazıyor. Pazarın fiyatı hattın ödediği fazla fiyatından yüksek: fark da
+ * malın bedeline (Codex #109), bugünkü kâr ve ticaret hedefi onu düşüyor.
+ * Şehirlerin kaydı siliniyor: kayda geçmesin.
  */
 export function settleTradeFallbacks(root: GameState): void {
   if (!root.holding) return;
@@ -566,9 +568,12 @@ export function settleTradeFallbacks(root: GameState): void {
     const fallback = city.trade?.fallback;
     if (!fallback) continue;
     delete city.trade!.fallback;
-    for (const [lineId, units] of Object.entries(fallback)) {
-      const last = lines.get(lineId)?.last;
-      if (last) last.bought = (last.bought ?? 0) + units;
+    for (const [lineId, { units, cost }] of Object.entries(fallback)) {
+      const line = lines.get(lineId);
+      if (!line?.last) continue;
+      line.last.bought = (line.last.bought ?? 0) + units;
+      line.last.goods += cost;
+      line.goodsPaid = (line.goodsPaid ?? 0) + cost;
     }
   }
 }

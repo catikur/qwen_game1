@@ -10,9 +10,11 @@ import { inTransitValue, isPurchasable, netWorthNow } from '../src/systems/city'
 import { fleetUsed } from '../src/systems/freight';
 import { SURPLUS_HAIRCUT, exportableSurplus } from '../src/systems/supply';
 import {
+  cityBySeed,
   lineCapacity,
   lineDailyCost,
   lineMargins,
+  lineProfitToday,
   lineQuote,
   marketBuyPrice,
   prepareTradeDay,
@@ -312,6 +314,30 @@ describe('şehirler arası hat (Tur 77)', () => {
     const next = p.root.holding!.lines![0]!.last!;
     assert.equal(next.bought, undefined);
     assert.equal(next.short, 'surplus');
+  });
+
+  test('grevde pazardan alınan eksik pazarın fiyatıyla malın bedelinde, bugünkü kâr onu düşüyor (Codex #109)', () => {
+    const p = pair();
+    assert.ok(openWheat(p).ok);
+    p.engine.runDay();
+    const paid = p.root.holding!.lines![0]!.goodsPaid!;
+    const labor = p.away.companies[p.away.playerCompanyId]!.labor!;
+    labor.strike = { startedDay: p.away.time.day + 1, endsOnDay: p.away.time.day + 3, raise: 0 };
+    // Yarının sabah planı da üretim adımı da bu fiyatla: spot günün sonunda değişiyor.
+    const spot = p.away.market.spot['wheat']!;
+    p.engine.runDay();
+    const line = p.root.holding!.lines![0]!;
+    const today = line.last!;
+    const bought = today.bought ?? 0;
+    assert.ok(bought > 0 && bought <= today.units, `pazardan ${bought}`);
+    // Fazlası fazla fiyatıyla, pazardan alınanı pazarın fiyatıyla (sabah planı hepsini fazla fiyatıyla yazmıştı).
+    const goods = (today.units - bought) * spot * SURPLUS_HAIRCUT + bought * spot;
+    assert.ok(Math.abs(today.goods - goods) < 1e-6 * goods, `${today.goods} · ${goods}`);
+    assert.ok(Math.abs(line.goodsPaid! - paid - today.goods) < 1e-6 * goods, 'açıldığından beri de');
+    // Çıkış terminalinin zararı hattın kârından düşüyor: ticaret hedefi şişmiyor.
+    const sale = cityBySeed(p.root, line.to)!.market.spot['wheat']!;
+    const expected = today.units * sale * TRADE_LINE.saleShare - goods - today.freight;
+    assert.ok(Math.abs(lineProfitToday(p.root, line)! - expected) < 1e-6 * goods, `${lineProfitToday(p.root, line)} · ${expected}`);
   });
 
   test('hat kapanınca yoldaki mal yine varıyor', () => {

@@ -1262,10 +1262,12 @@ export interface CityTrade {
   marketOut?: Record<string, number>;
   /**
    * Gün içinde (grev) fazlası yetmeyen yükün pazardan alınanı, hat başına
-   * birim (Codex #108): üretim adımı yazıyor, bütün şehirler yaşadıktan
-   * sonra hattın satırına (`last.bought`) geçip siliniyor.
+   * (Codex #108): birim ve bedelinin hattın ödediği fazla fiyatını aşan
+   * kısmı (`cost`, Codex #109). Üretim adımı yazıyor, bütün şehirler
+   * yaşadıktan sonra hattın satırına (`last.bought`, `last.goods`) geçip
+   * siliniyor.
    */
-  fallback?: Record<string, number>;
+  fallback?: Record<string, { units: number; cost: number }>;
   /** Bugün rakip hatlarıyla bu şehrin pazarına giren, mal başına birim (şehrin üretimine). */
   marketIn?: Record<string, number>;
   /** Rakiplerin bugünkü hat defteri: ciro ve mal maliyeti, şirket başına. */
