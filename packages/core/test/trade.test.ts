@@ -768,4 +768,35 @@ describe('hattın kendi etkisi (Tur 80)', () => {
     const expected = outlook.destinationSpot * TRADE_LINE.saleShare - outlook.originSpot * SURPLUS_HAIRCUT - freight / units;
     assert.ok(Math.abs(outlook.margin - expected) < 1e-9, `${outlook.margin} · ${expected}`);
   });
+
+  test('varışın kasası yükü kısıyorsa tahmin sabah planının yükleyeceği kadarla; kamyonların bedeline yetmezse hat yola çıkmaz (Codex #110)', () => {
+    const p = coffeeRoute(21, false);
+    const [from, to] = route(p);
+    const company = p.root.companies[p.root.playerCompanyId]!;
+    const freight = lineDailyCost({ trucks: 4, transitDays: transitDaysBetween(from, to) });
+    const goods = lineCapacity(4) * marketBuyPrice(p.away, 'coffee_bean');
+    // Kasa kamyonların bedeline ve malın yarısına yetiyor.
+    company.cash = freight + goods / 2;
+    const outlook = lineQuote(p.root, from, to, 'coffee_bean', 4, true).outlook!;
+    assert.equal(outlook.cashShort, true);
+    assert.ok(outlook.units > 0 && outlook.units < lineCapacity(4), `${outlook.units} birim`);
+    const full = lineQuote(p.root, from, to, 'coffee_bean', 2, true).outlook!;
+    assert.equal(full.cashShort, undefined, 'iki kamyonun yüküne kasa yetiyor');
+    assert.equal(full.units, lineCapacity(2));
+
+    // Kamyonların bedeline yetmeyen kasa: yük yok, kâr da zarar da yok; daha az kamyon yola çıkabilir.
+    company.cash = freight - 1;
+    const none = lineQuote(p.root, from, to, 'coffee_bean', 4, true).outlook!;
+    assert.equal(none.units, 0);
+    assert.equal(none.daily, 0);
+    assert.ok(none.bestTrucks >= 1 && none.bestTrucks < 4, `${none.bestTrucks} kamyon`);
+
+    // Sabah planı tahminin yükünü yüklüyor.
+    company.cash = freight + goods / 2;
+    assert.ok(openCoffee(p, 4).ok);
+    p.engine.runDay();
+    const last = p.root.holding!.lines![0]!.last!;
+    assert.equal(last.units, outlook.units);
+    assert.equal(last.short, 'cash');
+  });
 });

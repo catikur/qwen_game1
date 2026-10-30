@@ -369,7 +369,17 @@ function LineOutlookNote({ outlook, trucks }: { outlook: LineOutlook; trucks: nu
   const best = outlook.bestTrucks > 0 && outlook.bestTrucks !== trucks
     ? ` ${t('trade.lines.open.outlookBest', { trucks: outlook.bestTrucks, daily: formatMoney(outlook.bestDaily) })}`
     : '';
-  const data = { 'data-line-outlook': outlook.margin.toFixed(2), 'data-line-outlook-best': outlook.bestTrucks };
+  const data = { 'data-line-outlook': outlook.margin.toFixed(2), 'data-line-outlook-best': outlook.bestTrucks, 'data-line-outlook-units': Math.round(outlook.units) };
+  // Varışın kasası (Codex #110): tahmin sabah planının yükleyeceği kadarıyla.
+  if (outlook.units <= 0) {
+    return (
+      <p className="line-loss" {...data}>
+        {t('trade.lines.open.outlookNoCash')}
+        {best}
+      </p>
+    );
+  }
+  const cash = outlook.cashShort ? ` ${t('trade.lines.open.outlookCash', { units: formatNumber(Math.round(outlook.units)) })}` : '';
   if (outlook.margin > 0) {
     return (
       <p className="muted" {...data}>
@@ -380,6 +390,7 @@ function LineOutlookNote({ outlook, trucks }: { outlook: LineOutlook; trucks: nu
           margin: formatUnitMoney(outlook.margin),
           daily: formatMoney(outlook.daily),
         })}
+        {cash}
         {best}
       </p>
     );
@@ -390,6 +401,7 @@ function LineOutlookNote({ outlook, trucks }: { outlook: LineOutlook; trucks: nu
         days: outlook.days,
         margin: formatUnitMoney(outlook.margin),
       })}
+      {cash}
       {best}
     </p>
   );

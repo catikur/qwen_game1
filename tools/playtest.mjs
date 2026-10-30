@@ -10840,6 +10840,36 @@ async function finish(browser, consoleErrors) {
         && (pad.best === pad.count || pad.text.includes(`En kârlısı ${pad.best} kamyon`)),
       pad.text.slice(0, 160));
 
+    // Varışın kasası (Codex #110): kasa yükü kısıyorsa tahmin sabah planının yükleyeceğiyle, form söylüyor.
+    const cashSaved = await zp.evaluate(({ from, to }) => {
+      const s = window.__capital.getState();
+      const company = s.companies[s.playerCompanyId];
+      const before = company.cash;
+      const q = window.__capital.lineQuote(from, to, 'coffee_bean', 4, true);
+      company.cash = q.dailyCost + (q.capacity * q.margins.buyPrice) / 2;
+      return before;
+    }, { from: seeds.port, to: seeds.home });
+    await zp.locator('[data-line-count]').fill('4');
+    await zp.waitForTimeout(200);
+    const short = await zp.evaluate(() => ({
+      units: Number(document.querySelector('[data-line-outlook]')?.getAttribute('data-line-outlook-units') ?? 'NaN'),
+      text: (document.querySelector('[data-line-outlook]')?.textContent ?? '').trim(),
+    }));
+    const shortCore = await zp.evaluate(({ from, to }) => {
+      const q = window.__capital.lineQuote(from, to, 'coffee_bean', 4, true);
+      return { units: q.outlook?.units ?? null, capacity: q.capacity, cashShort: q.outlook?.cashShort ?? false };
+    }, { from: seeds.port, to: seeds.home });
+    await zp.evaluate((cash) => {
+      const s = window.__capital.getState();
+      s.companies[s.playerCompanyId].cash = cash;
+    }, cashSaved);
+    await zp.locator('[data-line-count]').fill(String(pad.count));
+    await zp.waitForTimeout(200);
+    check('Varışın kasası yükü kısıyorsa formun tahmini o yükle ve form söylüyor (Codex #110)',
+      shortCore.cashShort === true && short.units === Math.round(shortCore.units) && short.units > 0 && short.units < shortCore.capacity
+        && /Varışın kasası bugün yükün yalnız [\d.]+ birimine yetiyor/.test(short.text),
+      `${short.units} / ${shortCore.capacity} birim · ${short.text.slice(-90)}`);
+
     // Yalnız klavye: formun denetimleri Tab'la sırayla geziliyor, Enter hattı açıyor.
     await zp.locator('[data-line-from]').focus();
     const order = [];

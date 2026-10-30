@@ -49,6 +49,8 @@ export const trade: Record<keyof typeof tr, string> = {
   'trade.lines.open.outlookLoss': 'With these trucks the margin per unit is {margin} in {days|# day|# days}: the line loses money.',
   'trade.lines.open.outlookNone': 'This route turns unprofitable within {days|# day|# days}: margin per unit {margin}, even with one truck.',
   'trade.lines.open.outlookBest': 'Most profitable: {trucks|# truck|# trucks}, about {daily} a day.',
+  'trade.lines.open.outlookCash': "Today the destination's cash covers only {units} units of the load; the estimate uses that load.",
+  'trade.lines.open.outlookNoCash': "Today the destination's cash doesn't cover these trucks: the line wouldn't run.",
   'trade.prices.title': 'Prices in your cities',
   'trade.prices.summary': 'Profitable route for {count|# good|# goods}',
   'trade.prices.summaryNone': 'No profitable route today',

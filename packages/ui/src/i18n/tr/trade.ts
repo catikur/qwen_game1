@@ -47,6 +47,8 @@ export const trade = {
   'trade.lines.open.outlookLoss': 'Bu kamyonlarla {days} gün sonra birim kâr {margin}: hat zararda.',
   'trade.lines.open.outlookNone': 'Bu yol {days} gün içinde kârsız: birim kâr {margin}, tek kamyonla da.',
   'trade.lines.open.outlookBest': 'En kârlısı {trucks} kamyon: günde ~{daily}.',
+  'trade.lines.open.outlookCash': 'Varışın kasası bugün yükün yalnız {units} birimine yetiyor; tahmin bu yükle.',
+  'trade.lines.open.outlookNoCash': 'Varışın kasası bugün bu kamyonların bedeline yetmiyor: hat yola çıkmaz.',
   'trade.prices.title': 'Şehirlerin fiyatları',
   'trade.prices.summary': '{count} malda kârlı yön',
   'trade.prices.summaryNone': 'Bugün kârlı yön yok',
