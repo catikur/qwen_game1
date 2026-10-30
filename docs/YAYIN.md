@@ -13,7 +13,8 @@ belgelerde, bağlantıları adımlarda: masaüstü `docs/MASAUSTU.md`, Steam
 `docs/STEAM.md`. İlk tam sürüm 1.0.0 (Tur 74), ilk yaması 1.0.1 (Tur 75),
 ilk küçük sürümü 1.1.0 (Tur 76: şehrin türü, kayıt şeması v7); 1.2.0
 (Tur 77: şehirler arası hat, şema v8); 1.3.0 (Tur 78: ticaretin fiyatı,
-şema v9); 1.4.0 (Tur 79: ticaretle zafer, şema aynı).
+şema v9); 1.4.0 (Tur 79: ticaretle zafer, şema aynı); 1.5.0 (Tur 80:
+hat formunun tahmini, daha hafif açılış, şema aynı).
 
 ## 1. Sürüm numarası
 
@@ -29,10 +30,10 @@ Kayıt şemasının ayrı bir sürümü var (`SCHEMA_VERSION`, eski kayıtları
 parmak izine bakıyor (`packages/core/src/league.ts`). Yani sürüm numarasını
 yükseltmek ne kayıtları ne ligi bozuyor.
 
-Şema yükselince (1.1.0'da v7, 1.2.0'da v8, 1.3.0'da v9; 1.4.0'da aynı) yeni sürüm eski kayıtları taşıyarak açıyor.
+Şema yükselince (1.1.0'da v7, 1.2.0'da v8, 1.3.0'da v9; 1.4.0 ve 1.5.0'da aynı) yeni sürüm eski kayıtları taşıyarak açıyor.
 Eski sürüm yeni kaydı açmıyor ama ezmiyor da (Tur 75): oyuncu Steam'in
 beta dalından geri dönse de kaydı kalıyor. Simülasyonun parmak izi
-değişmediyse (1.1.0'dan 1.4.0'a dek değişmedi) lig sunucusunu dağıtmak gerekmiyor.
+değişmediyse (1.1.0'dan 1.5.0'a dek değişmedi) lig sunucusunu dağıtmak gerekmiyor.
 
 Adımlar:
 
